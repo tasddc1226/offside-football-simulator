@@ -1,0 +1,91 @@
+# 09. 배포·운영
+
+## 환경
+
+| 환경 | 목적 | 데이터 |
+|---|---|---|
+| local | 개발과 fixture | 합성 데이터 |
+| preview | PR 화면·계약 검증 | 임시 DB |
+| staging | 마이그레이션·E2E·부하 | 익명 합성 데이터 |
+| production | 실제 플레이 | 정본 |
+
+운영 데이터를 개발 환경으로 복사하지 않는다.
+
+## CI/CD 게이트
+
+1. lint, typecheck, unit/property test.
+2. 콘텐츠 schema와 참조 무결성 검사.
+3. API contract와 migration test.
+4. Phase P0 E2E와 접근성 smoke test.
+5. preview 배포 및 수동 핵심 화면 확인.
+6. staging migration, canary, production 점진 배포.
+
+## 배포 단위
+
+- 앱 코드.
+- DB migration.
+- immutable ruleset artifact.
+- immutable content pack artifact.
+- service season manifest.
+
+각 단위의 checksum과 호환 버전을 release manifest에 기록한다.
+
+## 관측성
+
+### 기술 지표
+
+- API latency/error by route and error code.
+- DB transaction conflict와 command duplicate 비율.
+- 시즌 결산 시간, state hash mismatch.
+- Snapshot 크기와 migration 실패.
+- Web Vitals와 JS 오류.
+
+### 제품 지표
+
+- 생성 시작→첫 계약→첫 시즌→은퇴 전환율.
+- 단계별 이탈과 오류 복구 성공률.
+- 포지션·아키타입·선택지 분포.
+- 이벤트 결과, 엔딩, 도전 과제 완료율.
+- 규칙 버전별 평균 커리어 길이와 OVR 분포.
+
+## 경보
+
+| 심각도 | 예 | 대응 |
+|---|---|---|
+| SEV-1 | 저장 손상, 다른 사용자 Career 노출 | 쓰기 중단, 즉시 대응 |
+| SEV-2 | 결산 실패 급증, 시즌 전환 실패 | 기능 플래그 차단, 1시간 내 |
+| SEV-3 | 특정 이벤트/화면 오류 | 콘텐츠/기능 우회 |
+| SEV-4 | 문구·경미한 시각 문제 | 정기 수정 |
+
+## 기능 플래그
+
+- 새 기능 플래그와 ruleset 버전을 혼동하지 않는다.
+- 플래그 OFF가 기존 Career 상태를 해석하지 못하게 해서는 안 된다.
+- 상태를 생성하는 플래그는 롤백 경로와 데이터 판독 코드를 먼저 배포한다.
+
+## 시즌 전환 런북
+
+1. 새 ruleset/content pack 검증과 checksum 고정.
+2. PRESEASON 테스트 Career 격리.
+3. 전환 공지와 신규 Career 영향 확인.
+4. 현재 시즌 ACTIVE→LOCKED 전환.
+5. 결산 Snapshot 생성·중복 검증.
+6. 새 시즌 ACTIVE 포인터 원자 교체.
+7. 이전 시즌 ARCHIVED와 보관함 열람 확인.
+8. 신규·기존 Career smoke test.
+
+콘텐츠 전환만으로 서버를 의무 중단하지 않는다. 스키마 마이그레이션이 필요한 경우에만 유지보수 창을 사용한다.
+
+## 백업과 복구
+
+- DB point-in-time recovery와 일일 복구 리허설 기준을 정한다.
+- ruleset/content pack은 원격 아티팩트와 Git 태그로 이중 보존한다.
+- 분기별로 Career Snapshot 복구, 시즌 전환 롤백, 익명 프로필 병합을 연습한다.
+
+## 개인정보와 보존
+
+- 분석 ID와 플레이 프로필 키를 분리한다.
+- 로그의 상세 보존 기간을 제한한다.
+- 사용자 삭제 요청은 Career/Player/Contract/Archive 연결 데이터를 추적 가능하게 삭제한다.
+- 집계 지표는 재식별 가능한 소표본을 노출하지 않는다.
+
