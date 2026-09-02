@@ -66,6 +66,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-012 | web + platform + engine-client + api | SCR-030 데이터 섹션(복구 코드 재발급·복구 입력·복구 뒤 대조·프로필 삭제·로그아웃·기기 데이터 삭제), 법적 문서 본문, api 복구·삭제 라우트 contracts 스키마 채택 | T-1-004, T-1-006, T-1-007, T-1-011 | 4 | todo | [브리프](briefs/T-1-012.md) |
 | T-1-013 | api + web + platform + contracts | Google OIDC start/callback/merge/unlink(가짜 OIDC로 E2E), SCR-030 Google 행, 병합 선택 화면 | T-1-004, T-1-012, U-003(실검증) | 4 | todo | [브리프](briefs/T-1-013.md) |
 | T-1-014 | web(e2e) + docs | TEST-E2E-007·008·009, 키보드 전용 주 여정, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, 완료 조건 표 | T-1-008, T-1-009, T-1-011, T-1-012 | 4 | todo | [브리프](briefs/T-1-014.md) |
+| T-1-016 | domain + contracts + web + fixtures | 선수 성별 프로필 정보, 선호/현재 포지션 분리, 생성 화면·migration·결정론 fixture | T-1-009, T-1-011 | 4 | todo | [브리프](briefs/T-1-016.md) |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
