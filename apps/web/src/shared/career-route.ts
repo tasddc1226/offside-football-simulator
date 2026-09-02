@@ -51,3 +51,38 @@ export function screenForCareer(state: CareerState): ScreenTarget {
   // RETIRED · ARCHIVED
   return { screenId: 'SCR-029', params };
 }
+
+export type PlayerCreationScreenId = 'SCR-002' | 'SCR-003' | 'SCR-004';
+
+export type StepGuardResult = { allowed: true } | { allowed: false; target: ScreenTarget };
+
+const PLAYER_CREATION_ORDER: PlayerCreationScreenId[] = ['SCR-002', 'SCR-003', 'SCR-004'];
+
+/**
+ * SCR-002·003·004 라우트 진입 가드. DRAFT 상태에서는 이 화면의 앞선 화면이 필요하면(예:
+ * archetypeId 없이 /confirm 진입) 그 화면으로 보낸다. 06 "내비게이션"의 "브라우저 뒤로 가기는
+ * DRAFT 이전 화면으로 이동할 수 있다"에 따라, draft가 이 화면보다 더 앞서 있어도(예: archetype을
+ * 이미 골랐어도) 되돌아온 방문은 막지 않는다 — 그래서 target이 expected와 같거나 더 나중이면
+ * allowed다. DRAFT를 벗어난 뒤(확정 이후)에는 SCR-004의 복구 코드 단계(URL에 남는 상태)만
+ * 예외이고, 그 외에는 항상 screenForCareer의 실제 목적지로 보낸다.
+ */
+export function guardCareerStep(
+  state: CareerState,
+  expected: PlayerCreationScreenId,
+  options?: { recoveryStepActive?: boolean },
+): StepGuardResult {
+  if (state.status === 'DRAFT') {
+    const target = screenForCareer(state);
+    const targetIndex = PLAYER_CREATION_ORDER.indexOf(target.screenId as PlayerCreationScreenId);
+    const expectedIndex = PLAYER_CREATION_ORDER.indexOf(expected);
+    if (targetIndex < 0 || targetIndex < expectedIndex) {
+      return { allowed: false, target };
+    }
+    return { allowed: true };
+  }
+
+  if (expected === 'SCR-004' && options?.recoveryStepActive === true) {
+    return { allowed: true };
+  }
+  return { allowed: false, target: screenForCareer(state) };
+}

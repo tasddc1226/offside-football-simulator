@@ -46,8 +46,55 @@ test('카드가 있는 허브 화면에 axe serious·critical 위반이 없다',
   await page.getByRole('button', { name: '다음' }).click();
   await page.getByRole('button', { name: 'KICKOFF' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/create$/);
-  await page.getByRole('link', { name: '허브로 돌아가기' }).click();
+  // SCR-002는 허브로 돌아가는 링크를 두지 않는다(hub.spec.ts와 같은 이유).
+  await page.goto('/');
   await expect(page.getByRole('heading', { level: 2, name: '이름 없는 선수' })).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, '/ (카드 있는 허브)');
+});
+
+test('SCR-002 선수 정보 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await page.goto('/onboarding');
+  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '선수 정보를 입력하세요' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-002');
+});
+
+test('SCR-003 플레이 스타일 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await page.goto('/onboarding');
+  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await page.getByLabel('이름').fill('김서준');
+  await page.getByLabel('국적').selectOption('KR');
+  await page.getByRole('radio', { name: '왼발' }).click();
+  await page.getByRole('tab', { name: '공격수' }).click();
+  await page.getByRole('radio', { name: /윙어/ }).click();
+  await page.getByRole('radio', { name: /클럽 아카데미/ }).click();
+  await page.getByRole('button', { name: '다음' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '플레이 스타일을 고르세요' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-003');
+});
+
+test('SCR-004 확인 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await page.goto('/onboarding');
+  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await page.getByLabel('이름').fill('김서준');
+  await page.getByLabel('국적').selectOption('KR');
+  await page.getByRole('radio', { name: '왼발' }).click();
+  await page.getByRole('tab', { name: '공격수' }).click();
+  await page.getByRole('radio', { name: /윙어/ }).click();
+  await page.getByRole('radio', { name: /클럽 아카데미/ }).click();
+  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
+  await page.getByRole('button', { name: '다음' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-004');
 });

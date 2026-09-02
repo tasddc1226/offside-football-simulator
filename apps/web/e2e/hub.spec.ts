@@ -21,9 +21,11 @@ test('KICKOFF로 커리어를 만들면 허브 카드가 보이고, 삭제하면
   await page.getByRole('button', { name: 'KICKOFF' }).click();
 
   await expect(page).toHaveURL(/\/career\/.+\/create$/);
-  await expect(page.getByRole('heading', { level: 1, name: '이 화면은 다음 작업에서 열립니다' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: '선수 정보를 입력하세요' })).toBeVisible();
 
-  await page.getByRole('link', { name: '허브로 돌아가기' }).click();
+  // SCR-002는(자리표시와 달리) 허브로 돌아가는 링크를 두지 않는다(01 문서 "이탈": 다음으로만
+  // 나간다) — 허브 카드 확인을 위해 직접 이동한다.
+  await page.goto('/');
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { level: 2, name: '이름 없는 선수' })).toBeVisible();
