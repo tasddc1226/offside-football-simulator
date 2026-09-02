@@ -1,6 +1,7 @@
 // TEST-E2E-009(접근성 기준): 허브·온보딩·설정·법적 문서 화면에 axe serious·critical 위반이 없다.
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
+import { triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
 
 async function expectNoSeriousOrCriticalViolations(page: Page, label: string): Promise<void> {
   const results = await new AxeBuilder({ page }).analyze();
@@ -97,4 +98,11 @@ test('SCR-004 확인 화면에 axe serious·critical 위반이 없다', async ({
   await expect(page.getByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' })).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-004');
+});
+
+test('T-1-011 충돌 대화상자가 열린 상태에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await triggerConflictAndOpenDialog(page);
+  await expect(page.getByRole('heading', { level: 2, name: '다른 기기에서 이 커리어가 더 진행됐습니다' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'T-1-011 충돌 대화상자');
 });

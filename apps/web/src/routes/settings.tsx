@@ -1,13 +1,20 @@
 // SCR-030 설정·데이터(로컬 부분만). 데이터 섹션(복구 코드·프로필 복구·Google 연결·동기화·내보내기·
 // 삭제)은 행만 두고 "준비 중" 비활성으로 둔다(T-1-012·013이 채운다). 채널 문구 분기는 platform이
 // 주는 값으로만 한다 — 이 화면은 채널별 문구가 필요 없는 로컬 부분만 다룬다.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, buttonClassName, buttonStyle, Card, RadioGroup, RadioGroupItem } from '@offside/ui';
 import { ENGINE_CLIENT_VERSION } from '@offside/engine-client';
+import type { ErrorCode } from '@offside/contracts';
 import type { SimulationMode } from '@offside/domain';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { ensureProfile } from '../api/profile.js';
+import { getAppEngine } from '../engine/engine.js';
+import { getSyncClient, requeueAllUnsynced } from '../engine/sync.js';
+import { useSyncSummary } from '../engine/use-sync.js';
 import { ACTIVE_CONTENT_PACK_VERSION, ACTIVE_RULESET_VERSION } from '../engine/versions.js';
 import { platform } from '../platform/index.js';
+import { queryClient } from '../shared/query-client.js';
+import { SyncBadge } from '../shared/SyncBadge.js';
 import {
   useUiStore,
   type ReducedMotionPreference,
@@ -50,11 +57,76 @@ const DATA_ROWS = [
   { id: 'recovery-code', label: '복구 코드' },
   { id: 'profile-recover', label: '프로필 복구' },
   { id: 'google', label: 'Google 연결' },
-  { id: 'sync', label: '지금 동기화' },
   { id: 'export', label: '내보내기' },
   { id: 'delete-profile', label: '프로필 삭제' },
   { id: 'delete-device-data', label: '이 기기 데이터 삭제' },
 ] as const;
+
+/** FAILED 코드별 안내. 목록에 없으면 "서버가 저장을 거부했습니다(코드)". */
+const FAILED_CODE_MESSAGE: Partial<Record<ErrorCode, string>> = {
+  VERSION_MISMATCH: '앱을 새로고침해 최신 버전을 받으세요',
+  CAREER_ARCHIVED: '보관된 커리어는 더 저장하지 않습니다',
+};
+
+function SyncStatusRow() {
+  const summary = useSyncSummary();
+  const [syncing, setSyncing] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
+
+  async function handleSyncNow() {
+    setSyncing(true);
+    try {
+      const sync = await getSyncClient();
+      await sync.flush();
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleReconnect() {
+    setReconnecting(true);
+    try {
+      const engine = await getAppEngine();
+      const ok = await ensureProfile(engine.store, queryClient);
+      if (ok) {
+        await requeueAllUnsynced();
+      }
+    } finally {
+      setReconnecting(false);
+    }
+  }
+
+  return (
+    <Card className="flex flex-col gap-os-3">
+      <div className="flex items-center justify-between gap-os-3">
+        <span className="font-os text-os-text">동기화 상태</span>
+        <SyncBadge state={summary} />
+      </div>
+
+      <Button variant="secondary" onClick={() => void handleSyncNow()} disabled={syncing}>
+        지금 동기화
+      </Button>
+
+      {summary.kind === 'LOCAL_ONLY' ? (
+        <div className="flex flex-col gap-os-2">
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            이 브라우저에서는 서버 저장을 할 수 없습니다. 쿠키가 차단됐거나 세션이 없습니다. 복구 코드
+            없이 브라우저 데이터를 지우면 되돌릴 수 없습니다.
+          </p>
+          <Button variant="secondary" onClick={() => void handleReconnect()} disabled={reconnecting}>
+            다시 연결
+          </Button>
+        </div>
+      ) : null}
+
+      {summary.kind === 'FAILED' ? (
+        <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+          {FAILED_CODE_MESSAGE[summary.error.code] ?? `서버가 저장을 거부했습니다(${summary.error.code})`}
+        </p>
+      ) : null}
+    </Card>
+  );
+}
 
 function SettingsScreen() {
   const theme = useUiStore((state) => state.theme);
@@ -174,6 +246,9 @@ function SettingsScreen() {
           데이터
         </h2>
         <ul className="flex flex-col gap-os-2" aria-labelledby="settings-data">
+          <li>
+            <SyncStatusRow />
+          </li>
           {DATA_ROWS.map((row) => (
             <li key={row.id}>
               <Card className="flex items-center justify-between gap-os-3">

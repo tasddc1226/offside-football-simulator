@@ -5,8 +5,11 @@
 import type { Command, PlayerDraft, SimulationMode } from '@offside/domain';
 import { selectEligibleEvents } from '@offside/content';
 import type { EngineCommand, ExecuteResult, LoadResult } from '@offside/engine-client';
+import { deleteCareerOnServer } from '../api/client.js';
 import { platform } from '../platform/index.js';
 import type { AppEngine } from './engine.js';
+import { classifyDeleteResult, queuePendingDelete } from './pending-delete.js';
+import { getSyncClient } from './sync.js';
 import { ACTIVE_SERVICE_SEASON_ID } from './versions.js';
 
 type LatencyBucket = '<100ms' | '<500ms' | '<2s' | '>=2s';
@@ -34,6 +37,21 @@ function trackResult(commandType: Command['type'], startedAt: number, result: Ex
   }
 }
 
+/**
+ * ok:true고 replayed:false(=이번에 새로 확정)일 때만 동기화 클라이언트에 통지한다. 동기화
+ * 클라이언트를 준비하지 못해도(예: Worker 생성 실패) 로컬 실행 결과에는 영향을 주지 않는다
+ * (ADR-002 로컬 우선) — fire-and-forget이라 실패는 콘솔에만 남긴다.
+ */
+function notifySync(careerId: string, result: ExecuteResult): void {
+  if (result.ok && !result.replayed) {
+    void getSyncClient()
+      .then((sync) => sync.notifyCommitted(careerId, result.domainSnapshot))
+      .catch((error: unknown) => {
+        console.error('notifySync: 동기화 클라이언트를 준비하지 못했다', error);
+      });
+  }
+}
+
 /** 이미 읽은 revision으로 명령을 만들어 실행하고, submit/resolve/fail 분석 이벤트를 함께 보낸다. */
 async function commit(engine: AppEngine, careerId: string, expectedRevision: number, command: Command): Promise<ExecuteResult> {
   const startedAt = Date.now();
@@ -43,6 +61,7 @@ async function commit(engine: AppEngine, careerId: string, expectedRevision: num
   const result = await engine.client.execute({ careerId, command: engineCommand });
 
   trackResult(command.type, startedAt, result);
+  notifySync(careerId, result);
   return result;
 }
 
@@ -85,6 +104,7 @@ export async function createCareer(
   });
 
   trackResult(command.type, startedAt, result);
+  notifySync(careerId, result);
   return result;
 }
 
@@ -106,6 +126,15 @@ export async function advance(engine: AppEngine, careerId: string): Promise<Exec
   return commit(engine, careerId, load.snapshot.revision, { type: 'ADVANCE', payload: { eligibleEvents } });
 }
 
-export function deleteCareer(engine: AppEngine, careerId: string): Promise<void> {
-  return engine.client.deleteCareer(careerId);
+/**
+ * 로컬 삭제는 항상 수행한다. 서버 삭제가 재시도 가능한 이유(네트워크·5xx·RATE_LIMITED)로
+ * 실패하면 kv sync:pending-delete에 큐잉해 앱 시작·online 때 다시 시도한다.
+ * CAREER_NOT_FOUND·CAREER_NOT_OWNED·401은 서버에 이미 없다는 뜻이라 성공으로 본다.
+ */
+export async function deleteCareer(engine: AppEngine, careerId: string): Promise<void> {
+  await engine.client.deleteCareer(careerId);
+  const result = await deleteCareerOnServer(careerId);
+  if (classifyDeleteResult(result) === 'retry') {
+    await queuePendingDelete(engine.store, careerId);
+  }
 }

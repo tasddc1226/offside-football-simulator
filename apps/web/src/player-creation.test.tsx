@@ -24,8 +24,10 @@ vi.mock('./engine/engine.js', async (importOriginal) => {
 });
 
 vi.mock('./api/client.js', () => ({
+  API_BASE_URL: 'http://localhost:8787',
   getProfile: () => apiHolder.getProfile(),
   issueRecoveryCode: () => apiHolder.issueRecoveryCode(),
+  deleteCareerOnServer: () => Promise.resolve({ ok: true, data: undefined }),
 }));
 
 function makeIdGenerator(prefix: string): () => string {

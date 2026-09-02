@@ -5,7 +5,11 @@ import { createRoot } from 'react-dom/client';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { ErrorState } from '@offside/ui';
 import { routeTree } from './routeTree.gen.js';
-import { getAppEngine } from './engine/engine.js';
+import { ensureProfile } from './api/profile.js';
+import { getAppEngine, type AppEngine } from './engine/engine.js';
+import { retryPendingDeletes, startPendingDeleteRetryOnOnline } from './engine/pending-delete.js';
+import { getSyncClient } from './engine/sync.js';
+import { queryClient } from './shared/query-client.js';
 import { hydrateUiStore } from './shared/ui-store.js';
 
 const router = createRouter({ routeTree });
@@ -32,8 +36,9 @@ async function bootstrap(rootContainer: HTMLElement): Promise<void> {
     return;
   }
 
+  let engine: AppEngine;
   try {
-    const engine = await getAppEngine();
+    engine = await getAppEngine();
     await hydrateUiStore(engine.store);
   } catch (error) {
     console.error('bootstrap: 엔진 초기화 실패', error);
@@ -47,6 +52,12 @@ async function bootstrap(rootContainer: HTMLElement): Promise<void> {
     );
     return;
   }
+
+  // 세션 확보·동기화 클라이언트 준비·미전송 삭제 재시도는 화면을 막지 않는다(로컬 우선).
+  void ensureProfile(engine.store, queryClient);
+  void getSyncClient();
+  startPendingDeleteRetryOnOnline(engine.store);
+  void retryPendingDeletes(engine.store);
 
   createRoot(rootContainer).render(
     <StrictMode>
