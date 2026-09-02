@@ -1,0 +1,42 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { getPlatformProxy, unstable_splitSqlQuery as splitSqlQuery } from 'wrangler';
+import { createDb, type Db } from '../db/client.js';
+import type { Bindings } from '../env.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const MIGRATIONS_DIR = path.resolve(__dirname, '../../migrations');
+const WRANGLER_CONFIG_PATH = path.resolve(__dirname, '../../wrangler.jsonc');
+
+/** `D1Database.exec()`는 한 줄에 한 문장만 받는다. `splitSqlQuery`로 나눈 각 문장의 내부 개행을 지운다. */
+function readMigrationStatements(): string[] {
+  return readdirSync(MIGRATIONS_DIR)
+    .filter((name) => name.endsWith('.sql'))
+    .sort()
+    .flatMap((name) => splitSqlQuery(readFileSync(path.join(MIGRATIONS_DIR, name), 'utf8')))
+    .map((statement) => statement.replace(/\s+/g, ' ').trim())
+    .filter((statement) => statement.length > 0);
+}
+
+export type TestD1 = {
+  db: Db;
+  dispose: () => Promise<void>;
+};
+
+/** 빈 D1(Miniflare)에 migration을 적용하고 격리된 `Db`를 돌려준다. 테스트 파일마다 새로 만든다. */
+export async function createTestD1(): Promise<TestD1> {
+  const proxy = await getPlatformProxy<Bindings>({
+    configPath: WRANGLER_CONFIG_PATH,
+    persist: false,
+  });
+
+  for (const statement of readMigrationStatements()) {
+    await proxy.env.DB.exec(statement);
+  }
+
+  return {
+    db: createDb(proxy.env.DB),
+    dispose: () => proxy.dispose(),
+  };
+}
