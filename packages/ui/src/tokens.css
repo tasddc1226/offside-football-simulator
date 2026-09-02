@@ -1,12 +1,6 @@
-/* 13-visual-design-system.md DSN-COL-001·TYP-001·SPC-001. 값은 문서와 동일해야 한다(변경 금지). */
-
-@font-face {
-  font-family: 'Pretendard Variable';
-  src: url('../node_modules/pretendard/dist/web/variable/woff2/PretendardVariable.woff2') format('woff2-variations');
-  font-weight: 45 920;
-  font-style: normal;
-  font-display: swap;
-}
+/* 13-visual-design-system.md DSN-COL-001·TYP-001·SPC-001. 값은 문서와 동일해야 한다(변경 금지).
+   @font-face 선언은 fonts.css(T-0-013, dynamic subset)로 옮겼다. tokens.css는 fonts.css를
+   import하지 않는다 — 앱이 두 파일을 각각 import한다. */
 
 :root {
   /* DSN-COL-001 라이트 */
@@ -26,7 +20,7 @@
   --os-focus: #0E7C8A;
 
   /* DSN-TYP-001 */
-  --os-font: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  --os-font: 'Pretendard Variable', 'Pretendard Fallback', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
   --os-tracking-display: 0.12em;
 
   --os-fs-display: 2rem;

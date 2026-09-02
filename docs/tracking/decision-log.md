@@ -2,6 +2,33 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #11 폰트 dynamic subset 머지)
+
+- **PR #11(T-0-013) 머지 `acbfd1d`.** `@offside/ui/fonts.css`(subset 94개 + 'Pretendard Fallback')를 앱이 `tailwind.css`보다 먼저 import. `check:bundle`에 폰트 예산 2종 추가(단일 woff2 200KB, preload 합 100KB).
+- **폴백 메트릭의 한계.** `size-adjust`·`ascent-override`는 macOS/iOS의 Apple SD Gothic Neo 기준으로 계산했다(fonttools 측정, 계산식은 fonts.css 주석). Windows(Malgun Gothic)·Android(Noto Sans KR)는 `local()` 순서상 같은 override 값을 받으므로 정확하지 않다. CSS만으로는 OS별 분기가 안 되므로 Phase 1 실기기 점검(08 체크리스트)에서 CLS를 보고 필요하면 플랫폼 감지로 클래스를 바꾸는 방식으로 보정한다.
+- **스크린샷 정책.** 워커는 외부 호스팅(gist·artifact) 권한이 없다. 시각 검증은 수치와 결론 문장을 PR 본문에 적고 파일은 스크래치패드에 남기는 것으로 통일(브리프 템플릿에 반영 예정).
+
+## 2026-09-02 (저녁, PR #10 런타임 간 해시 일치 머지)
+
+- **PR #10(T-0-011) 머지 `c45bede`.** workerd(Miniflare)에서 career01 재생·SHA-256 경계·canonicalize가 Node·golden과 모두 일치. 불일치 0건. 서버 측 무결성 검사(T-0-008 규칙 5)가 클라이언트 해시를 그대로 재검증해도 된다는 전제가 확인됨.
+- **Miniflare v5.** wrangler 4.127.1이 끌어오는 miniflare 5.x는 `new Miniflare({ workers: [...] })` 형태라 브리프의 v4 옵션은 패키지가 공개하는 `convertV4MiniflareOptions`로 변환해 사용. esbuild는 wrangler 내부 0.25.x와 다른 0.28.1을 명시(테스트 번들 전용이라 무해. 추후 CI에서 esbuild 중복 설치가 문제되면 정리).
+- **합류 후 검증.** main에서 api 테스트 58건 통과(2회). 다만 첫 병렬 실행에서 `cross-runtime-hash.test.ts`가 workerd 콜드스타트로 vitest 기본 5초를 넘겨 1회 실패(단독 662ms). CI 재발 방지로 해당 파일의 `beforeAll` 30초·describe 15초 타임아웃을 T-0-008 워커에게 별도 커밋으로 맡김.
+
+## 2026-09-02 (저녁, PR #9 api HTTP 계층 머지·폰트 측정 결과)
+
+- **PR #9(T-0-006) 머지 `483001b`.** 리뷰에서 잡은 결함 1건: idempotency 미들웨어가 같은 키의 동시 요청 2개를 모두 통과시킨 뒤 두 번째 INSERT가 UNIQUE 위반으로 throw해 라우트는 성공했는데 503이 나가는 레이스. `onConflictDoNothing` + 저장 실패 시 응답 불변(warn 로그 `IDEMPOTENCY_STORE_FAILED`) + 동시 요청 테스트로 수정. T-0-008의 "같은 PUT 100개 → 전부 200"은 이 수정과 서버 규칙 4("이미 반영됨 → 200")의 조합에 기댄다.
+- **세션 규칙 확정 사항.** `GET /v1/profile`은 세션이 없을 때만 익명 프로필·세션을 발급하고, 위조·만료 쿠키도 "없음"으로 취급해 새 프로필을 준다(복구는 로그인·복구 코드의 몫). Bearer가 무효면 쿠키가 있어도 401. 그 외 보호 라우트는 401 `PROFILE_REQUIRED`. 로그에 `error.message`가 남으므로 D1 오류 문자열에 값이 섞이지 않는지 T-0-010 CI 이후 점검(후속).
+- **T-0-013 측정(워커 보고, PR 전).** 전송 바이트 2109KB→269KB(87% 감소), LCP는 4G 2445→2519ms, 느린 3G 2444→2478ms로 사실상 불변, CLS 0. 원인: 기존에도 `font-display: swap`이라 폰트가 페인트를 막지 않았고 허브가 빈 상태라 JS 파싱이 LCP를 지배. 결론: 전환은 유지(전송량·향후 콘텐츠 여유), 허브 LCP 2.5초 예산은 실제 허브 화면(Phase 1)이 붙은 뒤 다시 측정. tabular-nums 검증은 숫자 UI가 없어 스크래치 HTML로 subset의 `tnum` 보존만 확인하기로 함.
+- T-0-008(커리어 동기화 API) 투입.
+
+## 2026-09-02 (저녁, PR #8 engine-client 머지·후속 과제)
+
+- **PR #8(T-0-007) 머지 `9667dc7`.** 브리프의 테스트 목록(골든 inline·worker, 100 병렬 멱등, revision 경쟁, 쓰기 단계 충돌, 롤백, 복구 a~d, decodeSnapshot, buildSyncBody, 순수성 스캔, 계약 테스트)이 모두 구현됨. `check-deps.mjs`는 `checkDeps(pkg, deps, allowed, field)`로 분리해 `TEST_ONLY_PACKAGES`를 devDependencies에서만 허용.
+- **후속 1 — 로컬 저장 크기.** idempotency 레코드가 `ExecuteSuccess` 전체(encoded Snapshot + DomainSnapshot)를 저장해 revision당 state가 최대 3벌 남는다. Phase 1에 "로컬 저장 예산·정리 정책" 작업을 두고, idempotency는 `{ revision, resultHash }`만 남기고 응답은 snapshots 테이블에서 재조립하는 방향을 검토한다(05 "저장된 최초 응답을 돌려준다"는 의미 유지).
+- **후속 2 — 동기화 전 검증.** `buildSyncBody`는 최신 Snapshot을 decode 검사 없이 싣는다. T-0-015 브리프에 "전송 전 `loadCareer`로 최신 Snapshot 검증(필요 시 복구) 후 `buildSyncBody`" 규칙을 추가했다.
+- **후속 3 — 오류 형태.** `buildSyncBody`·`markSynced`는 없는 careerId에 `EngineError`가 아니라 `Error`를 던진다. T-0-015에서 `CAREER_NOT_FOUND`로 감싼다(engine-client 변경 없음).
+- T-0-012(platform·Dexie)와 T-0-011(런타임 간 해시) 투입. 동시 워커 4명(T-0-006·T-0-013·T-0-012·T-0-011).
+
 ## 2026-09-02 (저녁, T-0-015 동기화 클라이언트 설계)
 
 - **큐 정책.** careerId당 대기 1개·진행 1개. web은 1.5초 debounce로 연속 명령을 한 PUT에 합치고 시즌 종료·은퇴·생성 체크포인트는 즉시, toss는 debounce 0(ADR-002 "모든 step 경계"). 재시도는 지수 백오프(2s→60s, 지터 ±20%), 재시도 가능 여부는 contracts `RETRYABLE_BY_CODE`. 같은 본문의 재시도는 같은 Idempotency-Key.

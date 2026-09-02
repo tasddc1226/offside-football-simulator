@@ -1,3 +1,4 @@
+import '@offside/ui/fonts.css';
 import '@offside/ui/tailwind.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
