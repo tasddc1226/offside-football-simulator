@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
 import { authAttempts } from '../schema.js';
@@ -23,20 +23,22 @@ export async function getAttemptCount(db: Db, kind: AuthAttemptKind, subject: st
   return row.count;
 }
 
-/** 시도 1회를 기록한다. 윈도우가 지났으면 새 윈도우로 리셋한다. */
+/**
+ * 시도 1회를 기록한다. 윈도우가 지났으면 새 윈도우로 리셋한다.
+ *
+ * SELECT 후 INSERT/UPDATE로 나누면 동시 요청 사이에 lost update가 생겨
+ * 레이트리밋을 우회할 수 있으므로, 단일 UPSERT 문으로 원자적으로 처리한다.
+ */
 export async function recordAttempt(db: Db, kind: AuthAttemptKind, subject: string, now: string): Promise<void> {
-  const [row] = await db
-    .select()
-    .from(authAttempts)
-    .where(and(eq(authAttempts.kind, kind), eq(authAttempts.subject, subject)));
-
-  if (!row) {
-    await db.insert(authAttempts).values({ id: newId('att'), kind, subject, windowStart: now, count: 1 });
-    return;
-  }
-  if (windowExpired(row.windowStart, now)) {
-    await db.update(authAttempts).set({ windowStart: now, count: 1 }).where(eq(authAttempts.id, row.id));
-    return;
-  }
-  await db.update(authAttempts).set({ count: row.count + 1 }).where(eq(authAttempts.id, row.id));
+  const threshold = new Date(Date.parse(now) - RATE_LIMIT_WINDOW_MS).toISOString();
+  await db
+    .insert(authAttempts)
+    .values({ id: newId('att'), kind, subject, windowStart: now, count: 1 })
+    .onConflictDoUpdate({
+      target: [authAttempts.kind, authAttempts.subject],
+      set: {
+        windowStart: sql`CASE WHEN ${authAttempts.windowStart} <= ${threshold} THEN ${now} ELSE ${authAttempts.windowStart} END`,
+        count: sql`CASE WHEN ${authAttempts.windowStart} <= ${threshold} THEN 1 ELSE ${authAttempts.count} + 1 END`,
+      },
+    });
 }
