@@ -6,7 +6,7 @@
 
 - **PR #10(T-0-011) 머지 `c45bede`.** workerd(Miniflare)에서 career01 재생·SHA-256 경계·canonicalize가 Node·golden과 모두 일치. 불일치 0건. 서버 측 무결성 검사(T-0-008 규칙 5)가 클라이언트 해시를 그대로 재검증해도 된다는 전제가 확인됨.
 - **Miniflare v5.** wrangler 4.127.1이 끌어오는 miniflare 5.x는 `new Miniflare({ workers: [...] })` 형태라 브리프의 v4 옵션은 패키지가 공개하는 `convertV4MiniflareOptions`로 변환해 사용. esbuild는 wrangler 내부 0.25.x와 다른 0.28.1을 명시(테스트 번들 전용이라 무해. 추후 CI에서 esbuild 중복 설치가 문제되면 정리).
-- api 테스트는 PR #9·#10 합류 후 main에서 재실행해 확인(아래 기록).
+- **합류 후 검증.** main에서 api 테스트 58건 통과(2회). 다만 첫 병렬 실행에서 `cross-runtime-hash.test.ts`가 workerd 콜드스타트로 vitest 기본 5초를 넘겨 1회 실패(단독 662ms). CI 재발 방지로 해당 파일의 `beforeAll` 30초·describe 15초 타임아웃을 T-0-008 워커에게 별도 커밋으로 맡김.
 
 ## 2026-09-02 (저녁, PR #9 api HTTP 계층 머지·폰트 측정 결과)
 
