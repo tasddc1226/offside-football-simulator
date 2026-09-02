@@ -35,8 +35,45 @@ const WORKSPACE_DIRS = ['apps', 'packages'];
 const TOOLING_PACKAGES = new Set(['@offside/tsconfig', '@offside/eslint-config']);
 
 /**
+ * 테스트 전용 패키지(ADR-005 표 밖). 어떤 워크스페이스든 devDependencies로는 허용하고,
+ * dependencies로 선언하면(런타임 번들에 섞여 들어갈 수 있으므로) 위반이다.
+ * @type {Set<string>}
+ */
+const TEST_ONLY_PACKAGES = new Set(['@offside/fixtures']);
+
+/**
+ * @param {string} pkgName
+ * @param {Record<string, string> | undefined} deps
+ * @param {Set<string>} allowed
+ * @param {'dependencies' | 'devDependencies'} field
+ * @returns {{ package: string; dependency: string; reason?: string }[]}
+ */
+function checkDeps(pkgName, deps, allowed, field) {
+  const violations = [];
+  for (const dependencyName of Object.keys(deps ?? {})) {
+    if (!dependencyName.startsWith('@offside/') || TOOLING_PACKAGES.has(dependencyName)) continue;
+
+    if (TEST_ONLY_PACKAGES.has(dependencyName)) {
+      if (field === 'dependencies') {
+        violations.push({
+          package: pkgName,
+          dependency: dependencyName,
+          reason: '테스트 전용 패키지는 devDependencies에서만 허용된다.',
+        });
+      }
+      continue;
+    }
+
+    if (!allowed.has(dependencyName)) {
+      violations.push({ package: pkgName, dependency: dependencyName });
+    }
+  }
+  return violations;
+}
+
+/**
  * @param {string} repoRoot
- * @returns {{ package: string; dependency: string }[]}
+ * @returns {{ package: string; dependency: string; reason?: string }[]}
  */
 export function findDependencyViolations(repoRoot) {
   const violations = [];
@@ -64,17 +101,9 @@ export function findDependencyViolations(repoRoot) {
       if (!pkg.name || !(pkg.name in ALLOWED_DEPENDENCIES)) continue;
 
       const allowed = new Set(ALLOWED_DEPENDENCIES[pkg.name]);
-      const declaredDeps = { ...pkg.dependencies, ...pkg.devDependencies };
 
-      for (const dependencyName of Object.keys(declaredDeps)) {
-        if (
-          dependencyName.startsWith('@offside/') &&
-          !TOOLING_PACKAGES.has(dependencyName) &&
-          !allowed.has(dependencyName)
-        ) {
-          violations.push({ package: pkg.name, dependency: dependencyName });
-        }
-      }
+      violations.push(...checkDeps(pkg.name, pkg.dependencies, allowed, 'dependencies'));
+      violations.push(...checkDeps(pkg.name, pkg.devDependencies, allowed, 'devDependencies'));
     }
   }
 
@@ -89,7 +118,8 @@ function main() {
   if (violations.length > 0) {
     console.error('ADR-005 의존 방향 위반:');
     for (const violation of violations) {
-      console.error(`  ${violation.package} -> ${violation.dependency}`);
+      const suffix = violation.reason ? ` (${violation.reason})` : '';
+      console.error(`  ${violation.package} -> ${violation.dependency}${suffix}`);
     }
     process.exit(1);
   }
