@@ -12,4 +12,9 @@
       "migrations_dir": "migrations",
     },
   ],
+  // 앱인토스 origin 4종은 T-0-010이 환경별로 추가한다. 비밀값 없음.
+  "vars": {
+    "ENVIRONMENT": "local",
+    "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173",
+  },
 }

@@ -21,6 +21,8 @@ function readMigrationStatements(): string[] {
 
 export type TestD1 = {
   db: Db;
+  /** `wrangler.jsonc`의 바인딩·vars 그대로. HTTP 계층 테스트가 `app.request(path, init, env)`에 넘긴다. */
+  env: Bindings;
   dispose: () => Promise<void>;
 };
 
@@ -37,6 +39,7 @@ export async function createTestD1(): Promise<TestD1> {
 
   return {
     db: createDb(proxy.env.DB),
+    env: proxy.env,
     dispose: () => proxy.dispose(),
   };
 }
