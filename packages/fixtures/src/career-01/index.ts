@@ -1,7 +1,7 @@
 import careerRaw from './career-01.json';
 import goldenRaw from './career-01.golden.json';
 import rulesetProtoRaw from './ruleset-proto.json';
-import type { AttributeKey, Command, Ruleset, SimulationMode } from '@offside/domain';
+import type { AttributeKey, Command, Ruleset, SimulationMode, SquadRole } from '@offside/domain';
 
 /**
  * fixtures는 `@offside/engine-client`를 import할 수 없으므로(ADR-005: fixtures → domain, content만
@@ -23,6 +23,8 @@ type GoldenJson = {
   baseOvr: number;
   attributes: Record<AttributeKey, number>;
   scoutedPotential: { min: number; max: number };
+  offersCount: number;
+  contract: { id: string; teamId: string; leagueTier: 'YOUTH' | 1 | 2 | 3; rolePromise: SquadRole; lengthSeasons: number };
 };
 
 const fixtureJson = careerRaw as CareerFixtureJson;

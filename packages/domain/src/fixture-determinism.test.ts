@@ -13,7 +13,31 @@ describe('career-01 fixture 결정론', () => {
     expect(snapshot.state.attributes).toEqual(golden.attributes);
     expect(snapshot.state.player.profile?.scoutedPotentialMin).toBe(golden.scoutedPotential.min);
     expect(snapshot.state.player.profile?.scoutedPotentialMax).toBe(golden.scoutedPotential.max);
+    expect(snapshot.state.contract).toEqual({
+      id: golden.contract.id,
+      offerId: 'OFR-9-0',
+      teamId: golden.contract.teamId,
+      teamName: '서울 유나이티드',
+      leagueTier: golden.contract.leagueTier,
+      lengthSeasons: golden.contract.lengthSeasons,
+      wageMinorPerWeek: 1200000,
+      signingBonusMinor: 30000000,
+      rolePromise: golden.contract.rolePromise,
+      shirtNumber: 13,
+      signatureType: 'AUTO',
+      signedAtRevision: golden.revision,
+    });
+    expect(snapshot.state.pending).toBeNull();
     expect(verifySnapshot(snapshot)).toEqual({ ok: true });
+  });
+
+  it('계약 직전 pending.offers 개수가 golden offersCount와 같다', () => {
+    const truncated: typeof careerFixture = { ...careerFixture, commands: careerFixture.commands.slice(0, -1) };
+    const snapshot = runCareerFixture(truncated);
+    expect(snapshot.state.pending?.kind).toBe('OFFERS');
+    expect(snapshot.state.pending?.kind === 'OFFERS' ? snapshot.state.pending.offers.length : -1).toBe(
+      golden.offersCount,
+    );
   });
 
   // 시간 예산 검사는 hash 일치 검사와 별도 테스트로 나눈다(2026-09-02, 워크스페이스 전체 병렬

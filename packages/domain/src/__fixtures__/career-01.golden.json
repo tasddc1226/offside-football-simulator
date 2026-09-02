@@ -1,7 +1,7 @@
 {
-  "revision": 8,
-  "stateHash": "15eea997cd2ab007130ef9e5c56db25b503dc94acafb99b766b9dc07784302ad",
-  "rngStateDraws": 25,
+  "revision": 10,
+  "stateHash": "37cc92a13cc458653ca02d658091e3ca0b59a867a26fd1cc9c1e49d96493e7c1",
+  "rngStateDraws": 30,
   "baseOvr": 59,
   "attributes": {
     "shooting": 61,
@@ -25,5 +25,13 @@
     "leadership": 37,
     "consistency": 46
   },
-  "scoutedPotential": { "min": 75, "max": 86 }
+  "scoutedPotential": { "min": 75, "max": 86 },
+  "offersCount": 1,
+  "contract": {
+    "id": "CTR-10",
+    "teamId": "seoul-tier1",
+    "leagueTier": 1,
+    "rolePromise": "BENCH",
+    "lengthSeasons": 3
+  }
 }
