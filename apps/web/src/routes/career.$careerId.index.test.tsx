@@ -1,0 +1,182 @@
+// SCR-029 대시보드의 "다음 결정 카드" 분기 표: pending EVENT/OFFERS/null(advance 성공)/
+// null(NOTHING_TO_ADVANCE) 네 가지가 각각 옳은 CTA·문구를 보여주는지 확인한다.
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
+import { loadContentPack, loadRuleset } from '@offside/content';
+import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { acceptOffer, advance, confirmPlayer, createCareer, resolveEvent, updateDraft } from '../engine/career-actions.js';
+import { createAppEngine, type AppEngine } from '../engine/engine.js';
+import { routeTree } from '../routeTree.gen.js';
+import { queryClient } from '../shared/query-client.js';
+import { useUiStore } from '../shared/ui-store.js';
+
+const engineHolder = vi.hoisted(() => ({ promise: null as Promise<unknown> | null }));
+
+vi.mock('../engine/engine.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../engine/engine.js')>();
+  return {
+    ...actual,
+    getAppEngine: () => engineHolder.promise,
+  };
+});
+
+function makeIdGenerator(prefix: string): () => string {
+  let counter = 0;
+  return () => `${prefix}-${counter++}`;
+}
+
+function setTestEngine(): AppEngine {
+  const engine = createAppEngine({
+    store: new MemoryLocalStore(),
+    simulator: inlineSimulator,
+    ruleset: loadRuleset('1.0.0'),
+    pack: loadContentPack('0.1.0'),
+    newId: makeIdGenerator('test'),
+  });
+  engineHolder.promise = Promise.resolve(engine);
+  return engine;
+}
+
+function renderAt(path: string) {
+  cleanup();
+  const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: [path] }) });
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
+/** DRAFT를 CONFIRM_PLAYER까지 채우고 careerId를 돌려준다(pending은 null). */
+async function confirmedCareerId(engine: AppEngine): Promise<string> {
+  const created = await createCareer(engine, { simulationMode: 'FAST' });
+  if (!created.ok) throw new Error('createCareer 실패');
+  const careerId = created.snapshot.careerId;
+  await updateDraft(engine, careerId, { name: '김서준', nationalityCode: 'KR', preferredFoot: 'LEFT' });
+  const confirmed = await updateDraft(engine, careerId, { position: 'W', archetypeId: 'inside-forward', backgroundId: 'club-academy' });
+  if (!confirmed.ok) throw new Error('updateDraft 실패');
+  const result = await confirmPlayer(engine, careerId);
+  if (!result.ok) throw new Error('confirmPlayer 실패');
+  return careerId;
+}
+
+beforeEach(() => {
+  setTestEngine();
+  queryClient.clear();
+  useUiStore.setState({
+    theme: 'SYSTEM',
+    reducedMotion: 'SYSTEM',
+    textScale: 100,
+    defaultSimulationMode: 'FAST',
+    onboardingSeen: true,
+  });
+});
+
+afterEach(() => {
+  useUiStore.setState({
+    theme: 'SYSTEM',
+    reducedMotion: 'SYSTEM',
+    textScale: 100,
+    defaultSimulationMode: 'FAST',
+    onboardingSeen: false,
+  });
+});
+
+describe('SCR-029 다음 결정 카드 분기', () => {
+  it('pending EVENT면 "결정이 기다립니다"와 결정하러 가기 CTA를 보여준다', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine);
+    const advanced = await advance(engine, careerId);
+    if (!advanced.ok || advanced.domainSnapshot.state.pending?.kind !== 'EVENT') {
+      throw new Error('이벤트 단계에 도달하지 못했다');
+    }
+
+    const router = renderAt(`/career/${careerId}`);
+
+    expect(await screen.findByText('결정이 기다립니다')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: '결정하러 가기' }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toMatch(/\/(event|path|tryout)$/);
+    });
+  });
+
+  it('pending OFFERS면 "제안 N건"과 제안 보기 CTA를 보여준다', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine);
+    await advance(engine, careerId);
+    await resolveEvent(engine, careerId, 'A');
+    await advance(engine, careerId);
+    await resolveEvent(engine, careerId, 'B');
+    const offered = await advance(engine, careerId);
+    if (!offered.ok || offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
+      throw new Error('제안 단계에 도달하지 못했다');
+    }
+    const offerCount = offered.domainSnapshot.state.pending.offers.length;
+
+    const router = renderAt(`/career/${careerId}`);
+
+    expect(await screen.findByText(`제안 ${offerCount}건`)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: '제안 보기' }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/career/${careerId}/offers`);
+    });
+  });
+
+  it('pending이 없고 advance가 성공하면 "진행" 버튼이 눌려서 다음 화면으로 넘어간다', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine);
+    await advance(engine, careerId);
+    await resolveEvent(engine, careerId, 'A');
+    await advance(engine, careerId);
+    await resolveEvent(engine, careerId, 'B');
+    const offered = await advance(engine, careerId);
+    if (!offered.ok || offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
+      throw new Error('제안 단계에 도달하지 못했다');
+    }
+    const offerId = offered.domainSnapshot.state.pending.offers[0]!.id;
+    const accepted = await acceptOffer(engine, careerId, offerId);
+    if (!accepted.ok || accepted.domainSnapshot.state.pending !== null) {
+      throw new Error('계약 뒤 pending이 null이어야 한다');
+    }
+
+    renderAt(`/career/${careerId}`);
+    const advanceButton = await screen.findByRole('button', { name: '진행' });
+    expect(advanceButton).not.toBeDisabled();
+
+    fireEvent.click(advanceButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText('다음 시즌은 곧 열립니다')).not.toBeInTheDocument();
+    });
+  });
+
+  it('advance가 NOTHING_TO_ADVANCE로 실패하면 버튼이 비활성화되고 안내 문구를 보여준다', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine);
+    const failingEngine: AppEngine = {
+      ...engine,
+      client: {
+        ...engine.client,
+        execute: (request) => {
+          if (request.command.type === 'ADVANCE') {
+            return Promise.resolve({
+              ok: false,
+              error: { code: 'VALIDATION_FAILED', message: '더 진행할 것이 없다.', details: { reason: 'NOTHING_TO_ADVANCE' } },
+            });
+          }
+          return engine.client.execute(request);
+        },
+      },
+    };
+    engineHolder.promise = Promise.resolve(failingEngine);
+
+    renderAt(`/career/${careerId}`);
+    const advanceButton = await screen.findByRole('button', { name: '진행' });
+    fireEvent.click(advanceButton);
+
+    expect(await screen.findByText('다음 시즌은 곧 열립니다')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '진행' })).toBeDisabled();
+    });
+  });
+});
