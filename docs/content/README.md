@@ -7,12 +7,20 @@
 ```text
 docs/content/
 ├─ README.md                        저작 형식과 체크리스트
+├─ kickoff/                         SEASON 1 콘텐츠 제작·밸런스 패키지
+│   ├─ README.md                    시즌 판타지, 최소량, 정본 우선순위
+│   ├─ archetype-bible.md           ruleset 1.0.0 아키타입 24종
+│   ├─ event-catalog.md             기존 10개 + 후보 38개 카탈로그
+│   ├─ season-challenges-and-album.md 도전 10종과 개인 시즌 앨범
+│   ├─ balance-targets.md           계약·선발·성장·Legacy 출시 게이트
+│   ├─ paper-playtest-kit.md        U-005 사람 테스트 3회 진행 키트
+│   └─ production-backlog.md        실행 pack 승격 순서와 인계 계약
 ├─ prototype/                       종이 프로토타입(코드 이전 검증)
 │   ├─ season-01-inside-forward.md  아키타입 1개 · U18 한 시즌 · 이벤트 10개 · 챕터 3개
 │   └─ playtest-log.md              (예정) 플레이 기록, 회차별 결정 수·시간·미선택 선택지
 └─ (저작 문서만 둔다)
 
-packages/content/                   실행용 원본([ADR-004](../adr/ADR-004-content-and-rules-format.md))
+packages/content/                   실행용 원본([ADR-004](../adr/ADR-004-content-format.md))
 ├─ src/schema/                      Zod 스키마(정본)와 조건 DSL 화이트리스트
 ├─ packs/<contentPackVersion>/      content pack
 │   ├─ manifest.json                pack 버전, 호환 rulesetVersion, checksum, playtested
@@ -97,3 +105,15 @@ token은 확정 값으로 렌더링한 뒤 Snapshot에 저장한다. 이후 정�
 - [`prototype/season-01-inside-forward.md`](prototype/season-01-inside-forward.md): 종이·스프레드시트로 U18 한 시즌부터 첫 프로 제안까지 플레이하는 완결 콘텐츠.
 - 플레이 결과는 `prototype/playtest-log.md`에 회차별로 기록한다. 기록 항목은 프로토타입 문서의 검증 질문과 같다.
 - 프로토타입에서 검증한 이벤트만 pack으로 옮긴다. 옮길 때 임시 ID를 정식 ID로 바꾸고 04 검증 규칙을 통과해야 한다.
+
+## SEASON 1: KICKOFF 제작 패키지
+
+- [`kickoff/README.md`](kickoff/README.md): 시즌 1에서 제작할 콘텐츠의 범위와 완료 정의.
+- [`kickoff/archetype-bible.md`](kickoff/archetype-bible.md): 24개 아키타입의 플레이 감각, 환경, 대가, 서사 훅.
+- [`kickoff/event-catalog.md`](kickoff/event-catalog.md): 현재 구현 10개와 제작 후보 38개의 커버리지.
+- [`kickoff/season-challenges-and-album.md`](kickoff/season-challenges-and-album.md): 개인 도전 10종, 판정 계약, 결산 앨범.
+- [`kickoff/balance-targets.md`](kickoff/balance-targets.md): OVR·계약·선발·성장·부상·Legacy의 목표와 출시 중단선.
+- [`kickoff/paper-playtest-kit.md`](kickoff/paper-playtest-kit.md): 고정 seed 3회 진행 절차와 인터뷰·합격 기준.
+- [`kickoff/production-backlog.md`](kickoff/production-backlog.md): 사람 검증부터 실행 JSON까지의 단계별 인계 기준.
+
+이 패키지는 실행 코드가 아니다. 개발 세션은 `SHIPPABLE`로 승인된 이벤트만 `packages/content/`에 옮긴다.
