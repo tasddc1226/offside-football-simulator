@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@11.25.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "scripts": {
     "dev": "turbo run dev",
@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@offside/eslint-config": "workspace:*",
-    "@types/node": "26.4.1",
+    "@types/node": "22.20.1",
     "eslint": "10.9.1",
     "prettier": "3.9.6",
     "turbo": "2.10.12",

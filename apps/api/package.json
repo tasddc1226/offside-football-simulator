@@ -18,10 +18,10 @@
     "hono": "4.13.5"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20260902.1",
+    "@cloudflare/workers-types": "5.20260831.1",
     "@offside/tsconfig": "workspace:*",
     "typescript": "5.9.3",
     "vitest": "4.1.11",
-    "wrangler": "4.128.0"
+    "wrangler": "4.127.1"
   }
 }
