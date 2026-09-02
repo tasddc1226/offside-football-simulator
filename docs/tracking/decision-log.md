@@ -2,6 +2,11 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, Phase 순서 준수 결정)
+
+- **사용자 결정.** 로컬 화면이 허브·자리표시자뿐이라 Phase 1 화면 작업을 병렬로 앞당길지 물었고, "정의한 Phase 순서대로 진행"으로 확정. Phase 0의 남은 항목(T-0-008 진행 중, T-0-015 대기, T-0-010은 U-002 대기)을 닫은 뒤 Phase 1 워커를 투입한다.
+- **운영.** 대기 시간에는 Phase 1 브리프를 문서로만 준비한다(T-1-001~). T-0-010이 U-002(Cloudflare 계정)에 계속 막히면 그 항목만 blocked로 남기고 Phase 1로 넘어갈지 사용자에게 확인한다.
+
 ## 2026-09-02 (저녁, PR #12 platform 골격 머지)
 
 - **PR #12(T-0-012) 머지 `675ac12`.** Dexie 구현은 `db.transaction('rw'|'r', 전체 테이블)`로 IndexedDB 원자성·직렬화를 그대로 쓰고 Dexie를 `await import`로 지연 로드(초기 청크 예산). KV 구현은 readwrite마다 prefix 전체를 백업해 throw 시 복원. 두 구현 모두 engine-client 계약 테스트와 golden 통과. 채널 분기는 `apps/web/src/platform/index.ts`의 `import.meta.env.MODE === 'toss'` 한 곳, `build:toss` 스크립트로 빌드.
