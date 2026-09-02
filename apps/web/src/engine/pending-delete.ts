@@ -24,17 +24,18 @@ async function readPending(store: LocalStore): Promise<string[]> {
   return store.transaction('readonly', async (tx) => (await tx.kv.get<string[]>(PENDING_DELETE_KEY)) ?? []);
 }
 
-async function writePending(store: LocalStore, ids: string[]): Promise<void> {
-  await store.transaction('readwrite', async (tx) => {
-    await tx.kv.put(PENDING_DELETE_KEY, ids);
-  });
-}
-
+/**
+ * queuePendingDelete와 retryPendingDeletes의 마무리 쓰기는 각각 get+put을 같은 트랜잭션 안에서
+ * 한다. 따로 트랜잭션을 열어 읽고 쓰면(TOCTOU) 그 사이 다른 호출이 끼어들어 방금 쓴 careerId를
+ * 잃어버릴 수 있다(동시에 커리어 두 개를 지우거나, online 재시도 도중 새로 지우는 경우).
+ */
 export async function queuePendingDelete(store: LocalStore, careerId: string): Promise<void> {
-  const ids = await readPending(store);
-  if (!ids.includes(careerId)) {
-    await writePending(store, [...ids, careerId]);
-  }
+  await store.transaction('readwrite', async (tx) => {
+    const ids = (await tx.kv.get<string[]>(PENDING_DELETE_KEY)) ?? [];
+    if (!ids.includes(careerId)) {
+      await tx.kv.put(PENDING_DELETE_KEY, [...ids, careerId]);
+    }
+  });
 }
 
 /** 큐에 남은 careerId마다 서버 삭제를 다시 시도하고, 재시도 대상만 큐에 남긴다. */
@@ -42,14 +43,20 @@ export async function retryPendingDeletes(store: LocalStore): Promise<void> {
   const ids = await readPending(store);
   if (ids.length === 0) return;
 
-  const remaining: string[] = [];
+  const outcomes = new Map<string, DeleteOutcome>();
   for (const careerId of ids) {
     const result = await deleteCareerOnServer(careerId);
-    if (classifyDeleteResult(result) === 'retry') {
-      remaining.push(careerId);
-    }
+    outcomes.set(careerId, classifyDeleteResult(result));
   }
-  await writePending(store, remaining);
+
+  await store.transaction('readwrite', async (tx) => {
+    const current = (await tx.kv.get<string[]>(PENDING_DELETE_KEY)) ?? [];
+    const next = current.filter((id) => {
+      const outcome = outcomes.get(id);
+      return outcome !== 'success' && outcome !== 'drop';
+    });
+    await tx.kv.put(PENDING_DELETE_KEY, next);
+  });
 }
 
 let listenerRegistered = false;

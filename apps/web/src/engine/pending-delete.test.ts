@@ -65,4 +65,29 @@ describe('queuePendingDelete·retryPendingDeletes', () => {
     const queued = await store.transaction('readonly', (tx) => tx.kv.get<string[]>('sync:pending-delete'));
     expect(queued).toEqual(['car_1']);
   });
+
+  it('동시에 큐잉해도 둘 다 남는다(읽기+쓰기가 한 트랜잭션이라 서로 덮어쓰지 않는다)', async () => {
+    const store = new MemoryLocalStore();
+    await Promise.all([queuePendingDelete(store, 'car_1'), queuePendingDelete(store, 'car_2')]);
+
+    const queued = await store.transaction('readonly', (tx) => tx.kv.get<string[]>('sync:pending-delete'));
+    expect(queued).toHaveLength(2);
+    expect(queued).toEqual(expect.arrayContaining(['car_1', 'car_2']));
+  });
+
+  it('재시도가 도는 동안 새로 큐잉된 careerId를 잃지 않는다', async () => {
+    const store = new MemoryLocalStore();
+    await queuePendingDelete(store, 'car_1');
+
+    deleteCareerOnServerMock.mockImplementation(async (careerId) => {
+      // car_1의 재시도 네트워크 호출이 진행되는 동안 car_2가 새로 큐잉된다.
+      await queuePendingDelete(store, 'car_2');
+      return careerId === 'car_1' ? ok() : fail('NETWORK_ERROR', true);
+    });
+
+    await retryPendingDeletes(store);
+
+    const remaining = await store.transaction('readonly', (tx) => tx.kv.get<string[]>('sync:pending-delete'));
+    expect(remaining).toEqual(['car_2']);
+  });
 });

@@ -127,19 +127,27 @@ export function SyncConflictDialog({
       const forked = await engine.client.loadCareer(result.newCareerId);
       platform.analytics.track('sync_conflict_resolved', { choice: 'LOCAL' });
 
-      if (forked.ok) {
-        sync.notifyCommitted(result.newCareerId, forked.snapshot);
-        onToast({
-          variant: 'success',
-          message: '이 기기의 진행을 새 커리어로 복사했습니다. 원래 커리어는 다른 기기의 진행을 따릅니다',
-        });
-        const target = screenForCareer(forked.snapshot.state);
-        // 원래 careerId 쿼리 무효화는 내비게이션이 끝난 뒤에 한다: 먼저 무효화하면 아직
-        // 마운트돼 있는 이 화면(원래 careerId의 style)의 useCareerStepGuard가 REMOTE로 덮인
-        // 원래 커리어(빈 draft)를 보고 자기 것대로 SCR-002로 replace해 버려, 방금 건 이
-        // navigate(포크로)를 덮어써 버린다(실제로 겪은 경합).
-        await navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
+      if (!forked.ok) {
+        // 여기서는 아직 내비게이션이 없으니(대화상자가 계속 열려 오류를 보여준다) 무효화가
+        // 원래 화면의 가드와 경합할 일이 없다 — resolveConflict가 이미 원본을 REMOTE로
+        // 덮었으니 캐시도 최신으로 맞춘다.
+        await queryClient.invalidateQueries({ queryKey: ['careers'] });
+        await queryClient.invalidateQueries({ queryKey: ['career', careerId] });
+        setActionError({ choice: 'LOCAL', message: forked.error.message });
+        return;
       }
+
+      sync.notifyCommitted(result.newCareerId, forked.snapshot);
+      onToast({
+        variant: 'success',
+        message: '이 기기의 진행을 새 커리어로 복사했습니다. 원래 커리어는 다른 기기의 진행을 따릅니다',
+      });
+      const target = screenForCareer(forked.snapshot.state);
+      // 원래 careerId 쿼리 무효화는 내비게이션이 끝난 뒤에 한다: 먼저 무효화하면 아직
+      // 마운트돼 있는 이 화면(원래 careerId의 style)의 useCareerStepGuard가 REMOTE로 덮인
+      // 원래 커리어(빈 draft)를 보고 자기 것대로 SCR-002로 replace해 버려, 방금 건 이
+      // navigate(포크로)를 덮어써 버린다(실제로 겪은 경합).
+      await navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
 
       await queryClient.invalidateQueries({ queryKey: ['careers'] });
       await queryClient.invalidateQueries({ queryKey: ['career', careerId] });
