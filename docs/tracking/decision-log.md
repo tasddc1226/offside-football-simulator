@@ -2,6 +2,16 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #22 contracts Phase 1 스키마 머지)
+
+**결과**: T-1-006 PR #22 squash 머지(`e2d0602`). `CommandRequestSchema`가 12개 명령의 판별 유니온이 되고 Phase 1 6종은 payload 스키마를 갖는다(Phase 2+는 임의 record). `CommandLogEntrySchema`는 `commandType`에 맞는 payload 스키마로 재검사한다(refinement가 붙은 스키마는 `.omit()`이 안 되므로 `CommandLogEntryShapeSchema` + `checkCommandTypePayload`로 분리). `PlayerPublic`은 `truePotential`을 갖지 않는 타입이고 `toPlayerPublic`은 허용 목록으로 필드를 옮긴다. `CareerStateSchema`·`Offer`·`Contract`·`Pending`·`TimelineEntry`·`Effect`는 domain 타입과 `expectTypeOf().toEqualTypeOf()`로 동일성을 고정했다(typecheck에서 검증). 복구 코드 정규화·표시 포맷·입력 스키마와 프로필 삭제 2단계 스키마 추가. `CONTRACTS_VERSION` 0.2.0. contracts 132 tests, api 113 tests, 전체 체인 통과. 비용 약 $10.5, 36분.
+
+**범위 경계 판단**: 정합 검사가 `apps/api/src/routes/careers.test.ts`의 `makeCommand` 기본 payload(`{}`)를 거부해 api 테스트 17건이 깨졌다. 워커가 멈추고 물어봤고, 헬퍼가 애초에 잘못된 payload를 쓴 것이라 한 줄 수정(`{ eligibleEvents: [] }`)만 승인했다.
+
+**후속**: `ATTRIBUTE_KEYS` 런타임 복제본이 domain·content·contracts 세 곳이 됐다(ADR-005의 타입 전용 의존 규칙 때문). 각각 `satisfies readonly AttributeKey[]`로 묶여 있어 키가 빠지면 typecheck가 잡지만, 순서 불일치는 잡지 못한다. 순서가 해시에 영향을 주는 곳은 domain뿐이라 지금은 두고, Phase 2에서 키 목록을 한 곳으로 모을지 결정한다. api의 복구·삭제 라우트는 아직 자체 검증을 쓴다. contracts 스키마 채택은 T-1-012에서 한다.
+
+**슬롯**: 활성 워커 1개(T-1-007). T-1-008·009·011은 T-1-007 머지를 기다린다. 대기 시간에 T-1-011·012 브리프를 쓴다.
+
 ## 2026-09-02 (저녁, PR #21 이벤트 선택기 머지 — web 배선 투입)
 
 **결과**: T-1-015 PR #21 squash 머지(`8a9345f`). `buildConditionContext`가 조건 DSL 필드 전부를 `CareerState`에서 채우고(도메인에 없는 필드는 기본값, `rng.injuryRoll`은 100으로 두어 부상 트리거가 헛걸리지 않게), `selectEligibleEvents`가 followUp 우선·기본 조건·쿨다운·트리거 평가로 `ADVANCE` payload를 만든다. `loadContentPack`(브라우저용, 정적 JSON import)과 `ContentPack` 타입 추가. `RulesetSchema satisfies z.ZodType<Ruleset>`을 위해 `OfferBranchSchema` 옵션 필드를 `.exactOptional()`로 바꿨다. fixtures 룰셋 일치 테스트는 `summary`·`blurb`만 제외하고 규칙 값 전부를 비교한다. content 159 tests, fixtures 13 tests, 전체 체인·`content:validate` 통과. 비용 약 $9.6, 48분.

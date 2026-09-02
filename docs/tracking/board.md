@@ -4,7 +4,7 @@
 
 ## 현재 게이트
 
-**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. 2026-09-02 20:15 기준 Wave 1 전부와 T-1-005가 머지됐고 T-1-006·015가 진행 중이다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
+**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. 2026-09-02 20:50 기준 Wave 1·2 전부 머지됐고 T-1-007(web 엔진 배선)이 진행 중이다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
 
 ## 사용자 액션
 
@@ -56,7 +56,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-004 | api | 복구 코드 발급·복구(RECOVERY_CONFLICT·병합)·프로필 삭제 2단계·로그아웃·커리어 삭제·rate limit·감사 로그 | Phase 0 종료 | 1 | done | PR #20 `4797827`. 리뷰 1회 통과. migration 0001, api 113 tests. 후속: recovery_code_hash 인덱스, 세션 미들웨어 프로필 조회 JOIN(결정 로그) |
 | T-1-005 | domain | `ADVANCE` 제안 생성(offerRules)·`ACCEPT_OFFER`·Contract·golden 확장 | T-1-001, T-1-002 | 2 | done | PR #19 `1a0ffed`. 리뷰 1회(수정 1건: verifySnapshot 계약+OFFERS만 충돌). golden revision 10 `37cc92a1…`, 계약 CTR-10. domain 129 tests |
 | T-1-015 | content | `buildConditionContext`·`selectEligibleEvents`·`loadContentPack`, 룰셋 스키마 ↔ domain 타입 바인딩, fixtures 룰셋 일치 테스트 | T-1-001, T-1-002 | 2 | done | PR #21 `8a9345f`. 리뷰 1회 통과(블로커 1건 결정: 일치 테스트는 규칙 값만 비교). content 159 tests |
-| T-1-006 | contracts | 명령 payload 유니온 6종, Player/Offer/Contract/Pending/Timeline 스키마, 복구·삭제·로그아웃·MergeChoice 스키마 | T-1-005(타입은 T-1-001에 이미 있어 병행 투입, 머지 전 main 재병합) | 2 | in-progress | `T-1-006-contracts-phase1-schemas`, [브리프](briefs/T-1-006.md) |
+| T-1-006 | contracts | 명령 payload 유니온 6종, Player/Offer/Contract/Pending/Timeline 스키마, 복구·삭제·로그아웃·MergeChoice 스키마 | T-1-005(타입은 T-1-001에 이미 있어 병행 투입, 머지 전 main 재병합) | 2 | done | PR #22 `e2d0602`. 리뷰 1회 통과(범위 밖 수정 1건 승인: api 테스트 헬퍼 payload). contracts 132 tests |
 | T-1-007 | web | 엔진 배선(engine-client·LocalStore·Worker), 룰셋·팩 로딩, 온보딩 SCR-034, 허브 SCR-001 카드·이어하기·삭제, 라우트 골격, ui-store 영속화 | T-1-001, T-1-003, T-1-015 | 2 | in-progress | `T-1-007-web-engine-wiring`, [브리프](briefs/T-1-007.md) |
 | T-1-010 | web(e2e) | Playwright + axe 도입, 허브·법적 문서 스모크·접근성, 브라우저 Web Worker state hash 검증(dev probe) | Phase 0 종료 | 1(첫 머지 후) | done | PR #18 `01d64e8`. 리뷰 1회 통과. 7 specs, axe serious·critical 0건, 브라우저 Worker 해시 = golden revision 8. 실행 `pnpm --filter @offside/web e2e` |
 | T-1-008 | web | 선수 만들기 SCR-002·003·004 + 복구 코드 발급 단계 | T-1-002, T-1-004, T-1-006, T-1-007 | 3 | todo | [브리프](briefs/T-1-008.md) |
@@ -84,7 +84,6 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
 | T-1-007 | Sonnet 5, Orca 워크트리 `T-1-007-web-engine-wiring` | 2026-09-02 | 브리프 전달 |
-| T-1-006 | Sonnet 5, Orca 워크트리 `T-1-006-contracts-phase1-schemas` | 2026-09-02 | 브리프 전달 |
 
 ## 완료
 
@@ -115,3 +114,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-005 | PR #19 `1a0ffed` | 2026-09-02 | Sonnet 5 약 $9.9, 28분, 리뷰 1회(수정 1건) |
 | T-1-004 | PR #20 `4797827` | 2026-09-02 | Sonnet 5 약 $11.6, 75분, 리뷰 1회 통과(응답 중단 1회 재개) |
 | T-1-015 | PR #21 `8a9345f` | 2026-09-02 | Sonnet 5 약 $9.6, 48분, 리뷰 1회 통과(블로커 결정 1건) |
+| T-1-006 | PR #22 `e2d0602` | 2026-09-02 | Sonnet 5 약 $10.5, 36분, 리뷰 1회 통과(범위 경계 질문 1건 답변) |
