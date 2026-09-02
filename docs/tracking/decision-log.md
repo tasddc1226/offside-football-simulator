@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #17 domain 선수 모델 머지 — Wave 2 투입)
+
+**결과**: T-1-001 PR #17 squash 머지(`3a8f7c8`). Position 8종·PlayerDraft·PlayerProfile·Pending·Timeline·Ruleset 타입, `UPDATE_PLAYER_DRAFT`·`CONFIRM_PLAYER`(rng 23회, D-7 순서)·`ADVANCE {eligibleEvents}` 가중 선택(정렬 검증, 1-based 누적)·`RESOLVE_EVENT` pending 검증, SETTLEMENT에서 제시할 것이 없으면 `NOTHING_TO_ADVANCE`. 룰셋은 `SimulationInput.ruleset`으로 받는다(해시 제외). golden revision 8(`15eea997…`, rng draws 25), 인사이드 포워드 Base OVR 59 확인. domain 90 tests, 전체 체인 통과. 결정론 예산 검사는 별도 테스트(10초)로 분리. 비용 약 $13.1, 43분.
+
+**받아들인 예외**: `SimulationInput.ruleset` 추가로 engine-client 소스가 깨져 워커가 `EngineClientDeps.ruleset` 배선과 `replayCommandLog` 룰셋 인자를 넣었다(브리프에 허용 범위로 기록). fixtures가 `rulesetProto`를 export한다. 기존 테스트 2건은 pending 모델에 맞춰 조정(`COMMAND_ALREADY_RESOLVED` → `VALIDATION_FAILED/NO_PENDING_EVENT`, 동기화 테스트는 `UPDATE_PLAYER_DRAFT` 사용). fixture-determinism 테스트 timeout 15초.
+
+**슬롯**: 선행(T-1-001·T-1-002)이 끝나 Wave 2의 T-1-005(domain 제안·계약)와 T-1-015(content 이벤트 선택기)를 투입했다. 활성 워커 4개(T-1-004·T-1-010·T-1-005·T-1-015). T-1-006(contracts)은 T-1-005 머지 뒤, T-1-007(web 배선)은 T-1-015 머지 뒤 투입한다.
+
 ## 2026-09-02 (저녁, PR #16 UI 부품 키트 머지)
 
 **결과**: T-1-003 PR #16 squash 머지(`cb7d932`). Radix RadioGroup·Dialog·Tabs 래핑과 부품 10종(Stepper·ChoiceCard·CompareCards·StatusStrip·PlayerHeader·ResultCard·DashboardSection·CareerTimeline·Toast). 키보드·포커스 테스트는 `@testing-library/user-event`로. ui 45 tests, web 번들 91.81KB 불변(새 export는 아직 web이 import하지 않아 트리셰이킹). 비용 약 $11.4, 39분.
