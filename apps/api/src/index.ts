@@ -1,1 +1,4 @@
-export { app, default } from './app.js';
+import { app } from './app.js';
+
+export { app };
+export default { fetch: app.fetch };
