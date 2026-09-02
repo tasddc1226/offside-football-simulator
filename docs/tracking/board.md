@@ -58,7 +58,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-0-001 | Sonnet 5, Orca 워크트리 `T-0-001-monorepo-skeleton` | 2026-09-02 | 브리프 전달 |
+| T-0-001 | Sonnet 5, Orca 워크트리 `T-0-001-monorepo-skeleton` | 2026-09-02 | PR [#1](https://github.com/tasddc1226/offside-football-simulator/pull/1) 열림. 1차 리뷰: 체인 통과 확인, 수정 3건 요청(Node 하한 `>=22.13`, `minimumReleaseAgeExclude` 제거, `@types/node` 22) |
 
 ## 완료
 
