@@ -13,24 +13,26 @@
 ## 논리 구성
 
 ```text
-Browser
+Browser  |  Toss App WebView (앱인토스 미니앱, 같은 SPA 번들)
   ├─ Web App (React SPA)
   │    ├─ Screen State / Accessibility
   │    ├─ Draft State / Query Cache
+  │    ├─ Platform Adapter (web | toss: 식별·저장·SafeArea·공유·분석)
   │    └─ Sync Client
   ├─ Engine Worker (Web Worker)
   │    ├─ Command Handler / Idempotency / Revision
   │    ├─ Domain Core (순수 규칙)
   │    └─ Content Pack + Ruleset (버전 고정)
-  └─ Local Store (IndexedDB)
+  └─ Local Store (web: IndexedDB | toss: 네이티브 Storage)
        ├─ Career State / Snapshots / Command Log
        └─ Profile Settings / Draft
-          │ HTTPS (checkpoint 동기화, 조회)
+          │ HTTPS (checkpoint 동기화, 조회). toss 채널은 Bearer 세션 + CORS
 Cloudflare Workers API (Hono)
   ├─ Profile / Auth / Recovery / Merge
   ├─ Career Sync (Snapshot + Command Log, If-Match)
   ├─ Archive / Legacy / Service Season / Rewards
   ├─ Replay Verifier (Domain Core 재사용, 필요 시)
+  ├─ Toss Partner Client (mTLS 바인딩: 식별키 검증)
   └─ D1 (정본 저장) · R2 (아카이브) · KV (rate limit)
 Static (Cloudflare Pages)
   └─ Web App 번들, Content Pack 번들, Ruleset Manifest
@@ -42,7 +44,8 @@ Static (Cloudflare Pages)
 
 | 패키지 | 책임 | 금지 |
 |---|---|---|
-| `apps/web` | 라우팅, 화면 상태, 접근성, 동기화 호출 | OVR·확률 계산 |
+| `apps/web` | 라우팅, 화면 상태, 접근성, 동기화 호출. web·toss 두 번들 | OVR·확률 계산, 채널 직접 분기 |
+| `packages/platform` | 채널 어댑터(web·toss): 식별키, 로컬 저장 구현, SafeArea, 공유, 리더보드, 분석 | 게임 규칙, 화면 문자열 |
 | `packages/engine-client` | 명령 처리, revision, 로컬 저장, Worker 실행 | UI 문자열 조립 |
 | `packages/domain` | 순수 규칙과 상태 전이 | 외부 import, Node·브라우저 API |
 | `apps/api` | 프로필·인증·동기화·보관·시즌, 리플레이 검증 | 플레이 경로 시뮬레이션 |
@@ -65,8 +68,8 @@ Static (Cloudflare Pages)
 
 ## 비로그인 식별
 
-- 최초 방문 시 무작위 `localProfileId`를 생성하고 보안 쿠키와 로컬 복구 키를 사용한다.
-- 서버 저장을 사용한다면 쿠키는 `HttpOnly`, `Secure`, `SameSite=Lax`를 기본으로 한다.
+- web 채널: 최초 방문 시 서버가 `profileId`를 발급하고 `HttpOnly`, `Secure`, `SameSite=Lax` 쿠키로 유지한다.
+- toss 채널: 앱인토스 SDK의 사용자 식별키(hash)를 서버가 mTLS API로 검증한 뒤 프로필에 연결하고 Bearer 세션을 준다. 미니앱은 `*.tossmini.com` origin에서 실행되므로 쿠키를 쓰지 않는다. 상세는 [ADR-009](../adr/ADR-009-apps-in-toss-channel.md).
 - 로그인 기능이 추가되면 익명 프로필을 계정으로 병합하되 커리어 ID는 유지한다.
 - **복구 코드는 Phase 1 필수다.** 첫 커리어 확정(SCR-004) 직후 사람이 옮겨 적을 수 있는 복구 코드를 발급하고, 설정(SCR-030)에서 다시 보기·재발급·복구를 제공한다. 긴 커리어가 쿠키 삭제로 사라지는 것은 이 제품 최악의 이탈 사유이므로 로그인보다 먼저 둔다.
 - 복구 코드는 서버에 해시로만 저장하고 로그에 남기지 않는다. 재발급은 이전 코드를 무효화한다.

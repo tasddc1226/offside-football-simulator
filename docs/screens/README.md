@@ -13,6 +13,8 @@
 
 공통 LOADING/DRAFT/COMMITTING/RESOLVED/EMPTY/ERROR 계약은 [`../development/06-ui-ux-specification.md`](../development/06-ui-ux-specification.md)를 따른다. 외형은 [`../development/13-visual-design-system.md`](../development/13-visual-design-system.md), 브랜드 어휘는 [`../development/12-brand-guidelines.md`](../development/12-brand-guidelines.md)를 따른다.
 
+모든 화면은 web과 toss(앱인토스 미니앱) 두 채널에서 같은 컴포넌트로 렌더링된다. 채널 차이는 세 가지뿐이다. toss에서는 Google 연결 항목이 없고 "다른 기기로 옮기기"만 복구 코드로 제공한다. 우상단 X 버튼 영역과 SafeArea를 비운다(DSN-CHN-001). 외부 링크는 새 탭이 아니라 `openURL`로 연다. 채널별 예외가 필요한 화면은 명세에 `**채널**` 필드를 둔다.
+
 화면은 두 종류다. **결정 화면**은 명령 하나를 확정하고 닫힌다. **공간 화면**(SCR-001 허브, SCR-029 대시보드)은 상태를 보여주고 결정 화면을 연다. 공간 화면에서는 아무것도 확정하지 않는다.
 
 ## 카탈로그

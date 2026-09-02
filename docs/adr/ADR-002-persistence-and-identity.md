@@ -13,7 +13,9 @@
 
 | 저장소 | 내용 | 정본 여부 |
 |---|---|---|
-| IndexedDB (Dexie) | 현재 Career 상태, 모든 Snapshot, 명령 로그, DRAFT, 설정 | 플레이 중 정본 |
+| 로컬 저장소 (`LocalStore` 포트) | 현재 Career 상태, 모든 Snapshot, 명령 로그, DRAFT, 설정 | 플레이 중 정본 |
+| · web 채널: IndexedDB (Dexie) | 브라우저 origin 기준 저장 | |
+| · toss 채널: 앱인토스 네이티브 `Storage` (문자열 KV) | iOS WebView의 IndexedDB 7일 미사용 자동 삭제와 QR·라이브 origin 분리를 피한다 | |
 | 서버 D1 | 프로필, 로그인 연결, Career 최신 Snapshot + 최근 checkpoint N개, 명령 로그, Archive, 서비스 시즌 진행 | 복구·동기화·보관 정본 |
 | Cloudflare R2 | 오래된 명령 로그와 Snapshot의 압축 보관, 콘텐츠 팩 아티팩트 | 아카이브 |
 
@@ -24,12 +26,20 @@
 - 클라이언트는 checkpoint마다 `PUT /careers/{id}`로 Snapshot과 그 사이 명령을 보낸다. `If-Match`에 서버가 아는 revision을 넣는다.
 - 서버 revision이 다르면 409를 받고, 클라이언트는 서버 Snapshot을 받아 비교한다. 로컬 revision이 더 크고 서버 상태가 로컬 명령 로그의 조상이면 다시 올린다. 아니면 사용자에게 "이 기기 / 다른 기기" 선택을 준다.
 - 오프라인에서도 플레이는 계속되고 동기화만 미룬다. 동기화 실패는 게임 진행을 막지 않는다.
+- toss 채널은 식별키가 항상 있으므로 모든 step 경계에서 동기화한다. web 채널의 비로그인 사용자는 checkpoint마다 동기화하되 쿠키가 막히면 로컬 전용이다.
+
+`LocalStore` 포트는 `packages/engine-client`가 정의하고, 구현은 `packages/platform`이 채널별로 제공한다. 엔진과 화면은 어떤 구현이 붙었는지 모른다.
 
 비로그인 식별:
 
-- 첫 API 호출에서 서버가 `profileId`를 만들고 `HttpOnly; Secure; SameSite=Lax; Max-Age=1년` 쿠키를 준다.
-- 복구 코드(Phase 1)와 Google 로그인(ADR-008)이 다른 기기 복구 수단이다.
-- 쿠키가 막힌 환경에서는 로컬 전용으로 플레이하고, 서버 동기화가 불가함을 설정 화면에 표시한다.
+| 채널 | 식별 | 세션 전달 |
+|---|---|---|
+| web | 첫 API 호출에서 서버가 `profileId`를 만들고 `HttpOnly; Secure; SameSite=Lax; Max-Age=1년` 쿠키를 준다 | 쿠키 |
+| toss | 앱인토스 SDK `User.getAnonymousKey()`가 주는 미니앱별 고정 `hash`. 서버가 mTLS로 검증한 뒤 프로필에 연결한다 | `Authorization: Bearer` 세션 토큰. 미니앱은 `*.tossmini.com` origin에서 실행되고 iOS가 서드파티 쿠키를 막으므로 쿠키를 쓸 수 없다 |
+
+- 복구 코드(Phase 1)와 Google 로그인(ADR-008)이 web 채널의 다른 기기 복구 수단이다. toss 채널은 토스 계정 자체가 복구 수단이며, web↔toss 사이 이동은 복구 코드로 한다.
+- 쿠키가 막힌 web 환경에서는 로컬 전용으로 플레이하고, 서버 동기화가 불가함을 설정 화면에 표시한다.
+- API 세션 미들웨어는 `Authorization` 헤더를 먼저 보고 없으면 쿠키를 본다. 두 채널의 세션 테이블은 같다.
 
 ## 이유
 
@@ -51,3 +61,4 @@
 - 07 API 계약은 명령 API가 아니라 동기화·조회 API로 재정의된다.
 - 05 저장 문서의 checkpoint·revision·멱등성 규칙은 그대로 유지되며 실행 주체가 클라이언트 엔진으로 바뀐다.
 - 사용자가 IndexedDB를 직접 편집할 수 있다. 단일 플레이어와 비경쟁 도전에서는 허용하고, 경쟁 요소가 생기면 ADR-003의 검증을 켠다.
+- toss 채널의 토스 게임센터 리더보드 점수는 클라이언트가 제출하며 토스가 검증하지 않는다. 리더보드에 올리는 값은 서버 리플레이 검증을 통과한 Archive의 Legacy Score만 쓴다(ADR-009).

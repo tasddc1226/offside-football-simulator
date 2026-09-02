@@ -9,13 +9,14 @@ pnpm workspaces + Turborepo. Node 22 LTS, TypeScript strict, ESLint + Prettier, 
 
 ```text
 apps/
-  web/            Vite React SPA, Cloudflare Pages
-  api/            Hono on Cloudflare Workers, D1, R2
+  web/            Vite React SPA. 빌드 2종: Pages 번들, 앱인토스 .ait 번들(apps-in-toss.config.ts)
+  api/            Hono on Cloudflare Workers, D1, R2, mTLS 인증서 바인딩
 packages/
   domain/         순수 규칙. simulate, OVR, 선발, 이벤트 해결, Legacy
   content/        팩·ruleset 원본, Zod 스키마, validate·simulate CLI
   contracts/      API 요청·응답 Zod 스키마, 오류 코드, Snapshot 직렬화 타입
-  engine-client/  Web Worker 래퍼, Dexie 저장소, 동기화 클라이언트
+  engine-client/  Web Worker 래퍼, LocalStore 포트와 Dexie 구현, 동기화 클라이언트
+  platform/       채널 어댑터. platform/web(브라우저), platform/toss(앱인토스 SDK 래퍼: 식별키·네이티브 Storage·SafeArea·공유·리더보드·분석)
   ui/             디자인 토큰, 공통 컴포넌트(PlayerHeader, ChoiceCard 등)
   fixtures/       golden fixture와 결정론 벡터
 tooling/
@@ -25,8 +26,9 @@ tooling/
 의존 방향(위에서 아래로만 허용):
 
 ```text
-apps/web  → engine-client, ui, contracts, domain(타입만), content(타입만)
+apps/web  → platform, engine-client, ui, contracts, domain(타입만), content(타입만)
 apps/api  → domain, contracts, content(스키마만)
+platform  → engine-client(LocalStore 포트 타입만), contracts(타입만)
 engine-client → domain, contracts, content(스키마만)
 ui → contracts(타입만)
 domain → (없음)
@@ -40,6 +42,7 @@ fixtures → domain, content
 - `domain`은 다른 패키지, Node API, 브라우저 API를 import하지 않는다. ESLint `no-restricted-imports`로 강제한다.
 - `apps/*`는 서로 import하지 않는다.
 - `ui`는 게임 규칙을 계산하지 않는다. 표시할 값은 props로만 받는다.
+- `@apps-in-toss/web-framework`는 `platform/toss`에서만 import한다. 화면·엔진·ui에서 직접 부르면 lint 오류다.
 
 ## 개발 명령
 
@@ -51,6 +54,8 @@ fixtures → domain, content
 | `pnpm content:validate` | 팩·ruleset 검증 |
 | `pnpm db:migrate` | Drizzle migration 생성·적용 |
 | `pnpm deploy:<env>` | wrangler로 preview/staging/production 배포 |
+| `pnpm build:toss` | `vite build --mode toss && ait build`, `apps/web/*.ait` 생성 |
+| `pnpm deploy:toss` | `ait deploy`로 앱인토스 콘솔에 번들 업로드(QR 테스트용). 출시는 콘솔에서 사람이 누른다 |
 
 ## 이유
 

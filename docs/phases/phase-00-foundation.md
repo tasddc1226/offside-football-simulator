@@ -14,13 +14,15 @@
 
 ## 포함 범위
 
-- ADR-001~008은 [`docs/adr/`](../adr/README.md)에서 확정됐다. Phase 0은 그 결정을 실행한다. 도메인 가용성(ADR-006)과 Cloudflare·Google 계정 준비는 사용자 액션이다.
+- ADR-001~009은 [`docs/adr/`](../adr/README.md)에서 확정됐다. Phase 0은 그 결정을 실행한다. 도메인 가용성(ADR-006)과 Cloudflare·Google 계정 준비는 사용자 액션이다.
 - 시각 디자인 토큰 파일과 폰트 로딩, 대비 자동 검사의 골격.
 - `apps/web`, `apps/api`, `packages/domain`, `engine-client`, `content`, `contracts`, `ui`, `fixtures` 골격과 의존 방향 lint.
 - D1 스키마: LocalProfile, Career, Snapshot, CommandLog, Idempotency, ServiceSeason. Drizzle migration.
 - IndexedDB(Dexie) 스키마: Career 상태, Snapshot, CommandLog, Draft, 설정.
 - 익명 프로필 쿠키와 `GET /profile`, health/readiness endpoint.
-- Career 동기화 `PUT /careers/{id}`와 If-Match 409.
+- Career 동기화 `PUT /careers/{id}`와 If-Match 409. CORS 허용 목록에 앱인토스 origin 포함.
+- `packages/platform` 골격: `LocalStore` 포트, web(Dexie)·toss(네이티브 Storage) 구현, 식별 어댑터. `pnpm build:toss`로 `.ait` 번들 생성과 `@apps-in-toss/devtools` 로컬 모킹.
+- `POST /auth/toss/session`: mTLS 바인딩으로 식별키 검증, Bearer 세션 발급(인증서는 U-008 이후, 그 전에는 staging에서 mock 검증기).
 - ruleset/content pack loader와 checksum, 프로토타입 이벤트 10개의 팩 0.1.0.
 - CI: lint, typecheck, unit·property, content validate, contract, migration. Pages·Workers preview 배포.
 - requestId, 구조화 로그, 오류 봉투.
@@ -46,11 +48,12 @@
 - [ ] 같은 commandId 100회 병렬 요청에도 로컬 Career와 서버 동기화 결과가 하나다.
 - [ ] 잘못된 revision 동기화가 409로 거부된다.
 - [ ] preview와 staging 배포 파이프라인이 PR과 main에서 자동으로 돈다.
+- [ ] `pnpm build:toss`가 `.ait`를 만들고, 허브 빈 상태가 앱인토스 QR 테스트에서 열리며 `POST /auth/toss/session`이 세션을 돌려준다.
 - [ ] 최소 한 세대 이전 schema fixture를 migration 후 읽는다.
 - [ ] production과 동일한 순서로 staging migration을 실행한다.
 - [ ] 로그에 프로필 키·쿠키·선수명 원문이 남지 않는다.
 
 ## 제외
 
-선수 생성 UI, 실제 OVR, 축구 시즌, 이벤트 콘텐츠, 로그인, 운영 CMS.
+선수 생성 UI, 실제 OVR, 축구 시즌, 이벤트 콘텐츠, 로그인, 운영 CMS, 앱인토스 검토 요청(Phase 2 LINE TEST에서).
 

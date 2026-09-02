@@ -16,6 +16,7 @@
 | Migration | 구 Snapshot과 스키마 | 배포 전 |
 | Accessibility | 키보드·스크린리더·모션 | PR/릴리스 |
 | Performance | 시즌 결산, 목록, 초기 로드 | 릴리스 후보 |
+| Channel (toss) | `platform/toss` 어댑터 모킹(`@apps-in-toss/devtools`), `.ait` 빌드, QR 실기기 체크리스트 | PR(모킹)/릴리스 후보(실기기) |
 
 ## 필수 불변식
 
@@ -87,6 +88,7 @@ fixture에는 개인 입력이나 운영 DB 데이터를 사용하지 않는다.
 - 마이그레이션 실패 또는 롤백/roll-forward 절차 없음.
 - 키보드로 P0 흐름 완료 불가.
 - 시즌 결산 p95가 성능 예산의 2배 초과.
+- toss 채널: QR 실기기 체크리스트 미완료(식별키 발급, Bearer 세션, 동기화, SafeArea·X 버튼 겹침 없음, 압축 해제 100MB 이하, HTTPS·CORS).
 
 ## 버그 보고 필수 정보
 

@@ -20,6 +20,8 @@
 | 로그 | Workers Logs | 구조화 JSON, requestId |
 | 배치 | Cloudflare Cron Triggers | 시즌 전환, D1 → R2 백업, 밸런스 리포트 |
 | 관리자 | Cloudflare Access로 `admin.` 보호 | Phase 7. 초기에는 wrangler CLI로 운영 |
+| 앱인토스 서버 API 호출 | Workers `mtls_certificates` 바인딩 | 앱인토스가 발급한 클라이언트 인증서를 `wrangler mtls-certificate upload`로 등록. 식별키 검증 등 `apps-in-toss-api.toss.im` 호출에만 사용 |
+| 앱인토스 미니앱 배포 | 앱인토스 콘솔(번들 호스팅은 토스) | `.ait` 번들 업로드 → QR 테스트 → 검토 → 출시. 자체 호스팅 아님. [ADR-009](ADR-009-apps-in-toss-channel.md) |
 
 ## 환경
 
@@ -32,6 +34,15 @@
 
 운영 데이터는 개발 환경으로 복사하지 않는다. staging은 합성 데이터만 쓴다.
 
+앱인토스 채널의 웹 번들은 토스가 호스팅하므로 origin이 우리 도메인이 아니다. API와 콘텐츠 정적 자산은 아래 origin을 CORS로 허용한다(`<appName>`은 콘솔 등록값).
+
+| 앱인토스 환경 | Origin | 연결되는 API |
+|---|---|---|
+| QR 테스트 | `https://<appName>.private-web.tossmini.com`, `https://<appName>.private-apps.tossmini.com` | `staging-api.<domain>` |
+| 라이브 | `https://<appName>.web.tossmini.com`, `https://<appName>.apps.tossmini.com` | `api.<domain>` |
+
+Pages의 `/content/*`는 `_headers`로 `Access-Control-Allow-Origin`을 같은 목록에 준다. 라이브 환경은 HTTPS만 허용되며 iframe은 금지다.
+
 ## CI/CD (GitHub Actions)
 
 1. PR: lint, typecheck, unit·property, `content:validate`, contract test, migration dry-run, Playwright P0 smoke, axe.
@@ -39,6 +50,9 @@
 3. main 머지: staging 배포, `wrangler d1 migrations apply`, E2E 전체.
 4. 태그 `v*`: production 배포. 콘텐츠 팩·ruleset checksum이 release manifest와 일치해야 진행.
 5. 롤백: Pages는 이전 배포로 즉시 전환, Workers는 이전 버전 재배포, D1은 roll-forward 우선(09 문서).
+6. 태그 `v*`: `pnpm build:toss` 후 `ait deploy --api-key`로 앱인토스 콘솔에 번들 업로드(QR 테스트 상태). 검토 요청과 출시 버튼은 사람이 누른다. 앱인토스 번들과 API는 같은 태그를 쓰고, API는 이전 번들 버전과 호환을 유지한다(출시 검토가 최대 3~7 영업일이라 두 버전이 동시에 살아 있다).
+
+GitHub Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SENTRY_AUTH_TOKEN`, `AIT_API_KEY`(앱인토스 콘솔 키). mTLS 인증서는 GitHub가 아니라 Cloudflare에 업로드하고 certificate_id만 wrangler 설정에 둔다.
 
 ## 백업·복구
 
@@ -57,6 +71,7 @@
 | 도메인 | 연 10~40달러 | TLD에 따라 다름 |
 | Sentry | 0 | 무료 tier, 초과 시 이벤트 샘플링 |
 | GitHub Actions | 0 | 공개 저장소면 무료, 비공개면 월 2,000분 |
+| 앱인토스 | 0 | 등록·호스팅·검토 무료. 인앱 결제·광고 수익이 생길 때만 수수료. 게임 등급분류 수수료는 별도(1회, GRAC 요율표) |
 
 목표 고정비는 도메인을 제외하고 월 5달러 안팎이다. 사용자 1만 명 규모에서도 한도 조정 없이 유지될 것으로 본다. 넘으면 먼저 Snapshot 압축과 명령 로그 R2 이관을 한다.
 

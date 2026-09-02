@@ -79,6 +79,8 @@ type LocalProfile = {
   googleSub?: string;
   email?: string;
   linkedAt?: string;
+  tossAnonKeyHash?: string; // 앱인토스 식별키의 서버 측 해시. 원문은 저장하지 않는다
+  tossLinkedAt?: string;
   settings: ProfileSettings;
   createdAt: string;
   lastSeenAt: string;
@@ -215,6 +217,7 @@ type CareerEvent = {
 - `Idempotency(ownerProfileId, commandId unique)`
 - `CommandLog(careerId, revision unique)`
 - `LocalProfile(googleSub unique)`
+- `LocalProfile(tossAnonKeyHash unique)`
 - `SeasonArchive(serviceSeasonId, ownerProfileId unique)`
 
 서버는 Career당 최신 Snapshot과 최근 checkpoint 5개, 전체 명령 로그를 D1에 두고, 오래된 Snapshot과 은퇴 커리어의 명령 로그는 R2로 옮긴다.

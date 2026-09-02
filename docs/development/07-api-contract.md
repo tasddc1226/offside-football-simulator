@@ -11,7 +11,8 @@
 - 시간은 ISO 8601 UTC, 금액은 통화 코드와 정수 최소 단위로 전달한다.
 - 모든 응답은 `requestId`를 포함한다.
 - 목록은 안정적인 cursor pagination을 사용한다.
-- 인증은 쿠키 세션이다. `Origin` 검사와 `SameSite=Lax`로 CSRF를 막는다.
+- 인증은 세션이다. web 채널은 쿠키, toss 채널은 `Authorization: Bearer <sessionToken>`. 미들웨어는 헤더를 먼저 보고 없으면 쿠키를 본다. `Origin` 검사와 `SameSite=Lax`로 CSRF를 막는다.
+- CORS 허용 origin은 우리 도메인과 [ADR-007](../adr/ADR-007-hosting-and-infra.md)의 앱인토스 origin 4종이다. `Authorization` 헤더와 `If-Match`, `Idempotency-Key`를 `Access-Control-Allow-Headers`에 포함한다.
 - 요청 본문 상한 1MB. Snapshot은 압축 전 256KB 권장 상한.
 
 ## 응답 봉투
@@ -54,6 +55,7 @@
 | API-AUTH-002 | `GET /auth/google/callback` | 콜백. 연결 또는 병합 필요 판정 |
 | API-AUTH-003 | `POST /auth/merge` | 병합 선택 확정(`MOVE_TO_LINKED` 또는 `KEEP_LINKED_ONLY`) |
 | API-AUTH-004 | `POST /auth/logout` | 세션 무효화. 로컬 데이터는 유지 |
+| API-AUTH-005 | `POST /auth/toss/session` | 본문 `{ anonKey }`. 서버가 앱인토스 식별키 검증 API(mTLS)로 확인하고 연결된 프로필의 Bearer 세션을 발급. 처음 보는 키면 프로필을 만든다. `TOSS_KEY_INVALID`(401) |
 
 - 복구 코드와 로그인 시도는 rate limit과 실패 횟수 제한을 둔다.
 - 병합 규칙은 [ADR-008](../adr/ADR-008-auth-and-account-merge.md)을 따른다.
@@ -125,6 +127,8 @@ Archive 본문은 클라이언트가 계산한 LegacyResult를 포함한다. 서
 |---:|---|---|
 | 400 | `VALIDATION_FAILED` | 필드별 오류 표시 |
 | 400 | `RECOVERY_CODE_INVALID` | 코드 재입력, 남은 시도 횟수 표시 |
+| 401 | `TOSS_KEY_INVALID` | 식별키 재발급 후 재시도, 실패 시 "토스 앱을 업데이트해 주세요" |
+| 403 | `ORIGIN_NOT_ALLOWED` | 허용되지 않은 origin. 사용자에게는 일반 오류 |
 | 401 | `PROFILE_REQUIRED` | 익명 프로필 재발급 |
 | 403 | `CAREER_NOT_OWNED` | 허브 이동 |
 | 404 | `CAREER_NOT_FOUND` | 로컬 전용 커리어로 표시, 재동기화 제안 |

@@ -32,6 +32,17 @@
 
 각 단위의 checksum과 호환 버전을 release manifest에 기록한다.
 
+## 앱인토스 채널 배포
+
+정본은 [ADR-009](../adr/ADR-009-apps-in-toss-channel.md)다.
+
+1. 태그 `v*`에서 `pnpm build:toss`로 `.ait` 번들을 만들고 `ait deploy --api-key`로 콘솔에 올린다. 업로드마다 `deploymentId`와 QR 테스트 스킴(`intoss-private://…?_deploymentId=`)이 생긴다.
+2. QR 실기기 테스트 체크리스트(08 문서)를 통과하면 콘솔에서 '검토 요청하기'. 검토는 영업일 최대 3일, 카테고리에 따라 7일 이상. 한 번에 한 버전만 검토 가능.
+3. 승인 메일 후 '출시하기'. 즉시 전체 사용자에게 반영된다. 롤백도 콘솔에서 즉시.
+4. 출시 후 `ait sentry upload-sourcemap --deployment-id`로 소스맵을 올린다.
+5. API는 검토 대기 중인 번들과 라이브 번들 두 버전을 동시에 지원해야 한다. 응답 스키마는 추가만 하고 삭제·의미 변경은 다음 두 릴리스 뒤에 한다.
+6. 콘솔 MCP(`apps-in-toss-console`)로 상태 조회·번들 업로드·검토 신청을 할 수 있다. 롤백·출시·예산 충전은 사용자가 직접 확인한 뒤 실행한다.
+
 ## 관측성
 
 ### 기술 지표
