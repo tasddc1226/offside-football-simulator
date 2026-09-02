@@ -83,7 +83,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-0-015 | Sonnet 5, Orca 워크트리 `T-0-015-client-sync-queue` | 2026-09-02 | 브리프 전달 |
+| T-0-015 | Sonnet 5, Orca 워크트리 `T-0-015-client-sync-queue` | 2026-09-02 | PR #14 리뷰 1회: 수정 3건 요청(전송 중 확정 유실 창 dirty 플래그, 409 GET 응답 분류, 저장소 예외 분류). 임시 워크트리 전체 체인 통과(52 tests) |
 
 ## 완료
 

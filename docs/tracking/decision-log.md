@@ -2,6 +2,17 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #14 동기화 클라이언트 리뷰)
+
+**상황**: T-0-015 PR #14(`createSyncClient`, 12 + golden 1 테스트, 전체 52 tests). 임시 워크트리에서 전체 체인 통과. 코드 리뷰에서 3건을 수정 요청했다.
+
+**요청한 수정**:
+1. 전송 중 확정된 명령이 유실되는 창: 사이클이 `buildSyncBody() === null`로 끝나는 순간과 `inFlight` 해제 사이에 `notifyCommitted`가 오면 예약이 사라진다. `dirty` 플래그로 사이클 종료 시 재예약.
+2. 409 뒤 `GET /careers/{id}` 응답을 PUT과 같은 기준으로 분류(401 → LOCAL_ONLY, 재시도 가능 코드 → RETRYING, 나머지 FAILED). 이전 구현은 200이 아니면 전부 FAILED.
+3. `markSynced`·`buildSyncBody` 예외를 `LocalStoreConstraintError`만 기록 제거로, 그 외 I/O 예외는 재시도로.
+
+**받아들인 것**: `resolveConflict(REMOTE)`가 idempotency 테이블을 전량 삭제하는 방식. `LocalStoreTx.idempotency`에 revision 범위 삭제가 없어서다. 오래된 commandId 재실행은 `CAREER_REVISION_CONFLICT`로 안전하게 실패한다. 포트에 범위 삭제를 넣을지는 T-1-011(동기화 배선) 때 다시 본다. `Math.random` 지터와 `Date.now()`는 엔진 밖(전송 계층)이라 허용.
+
 ## 2026-09-02 (저녁, Phase 1 실행 계획과 설계 결정 D-1~D-18)
 
 **상황**: Phase 1 다이제스트에서 설계 문서가 비워 둔 항목 14개(Position enum, 아키타입 카탈로그, 배경 효과, 역할 가중치, Contract/Offer, 제안 생성 규칙, Timeline, 복구 코드 형식·제한, API-PRO-003~005·AUTH 본문, `career.pathDecision`, SCR-004 API 오기, 잠금 표시 정본, 대학 경로, `relationships.family`)를 확인했다. 워커에게 결정을 남기지 않기 위해 오케스트레이터가 [phase-1-plan.md](phase-1-plan.md)에 결정을 적었다.
