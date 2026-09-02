@@ -7,6 +7,7 @@ import { envelope, ErrorEnvelopeSchema, successEnvelope } from './envelope.js';
 import { ERROR_CODES, ErrorCodeSchema, HTTP_STATUS_BY_CODE, RETRYABLE_BY_CODE, type ErrorCode } from './errors.js';
 import { HealthDataSchema } from './health.js';
 import { CONTRACTS_VERSION } from './index.js';
+import { ClientIdSchema } from './primitives.js';
 import { ProfileSettingsSchema } from './profile.js';
 import { CheckpointTypeSchema, RngStateSchema } from './snapshot.js';
 
@@ -28,7 +29,7 @@ describe('07 문서 JSON 예시가 그대로 파싱된다', () => {
         }
       }
     `;
-    const result = successEnvelope(z.object({}).passthrough()).safeParse(JSON.parse(json));
+    const result = successEnvelope(z.looseObject({})).safeParse(JSON.parse(json));
     expect(result.success).toBe(true);
   });
 
@@ -52,12 +53,13 @@ describe('07 문서 JSON 예시가 그대로 파싱된다', () => {
     // 07 문서 예시 그대로. "state"·"stateHash"·"resultHash"의 "..."는 형식 검사를 통과하는 값으로 바꿨다.
     // 07의 snapshot 예시는 "revision"·"checkpoint"·"state"·"stateHash"만 보여주는 축약본이라, 05
     // Snapshot 계약이 요구하는 rulesetVersion·contentPackVersion·rngState를 추가했다(PR 본문 "범위 밖
-    // 발견 사항" 참고).
+    // 발견 사항" 참고). snapshot.revision도 07 원문은 15였지만, PutCareerBodySchema는 이제
+    // snapshot.revision이 마지막 command(revision 13)와 같아야 하므로 13으로 맞췄다.
     const json = `
       {
         "baseRevision": 12,
         "snapshot": {
-          "revision": 15,
+          "revision": 13,
           "checkpoint": "STEP_BOUNDARY",
           "state": "{\\"schemaVersion\\":1}",
           "stateHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -137,8 +139,7 @@ describe('CheckpointTypeSchema·RngStateSchema는 domain 타입과 동일하다'
 });
 
 describe('PutCareerBodySchema', () => {
-  const validSnapshot = {
-    revision: 13,
+  const baseSnapshotFields = {
     checkpoint: 'STEP_BOUNDARY' as const,
     state: '{}',
     stateHash: 'a'.repeat(64),
@@ -149,7 +150,6 @@ describe('PutCareerBodySchema', () => {
 
   const baseBody = {
     baseRevision: 12,
-    snapshot: validSnapshot,
     createdServiceSeasonId: 'svc_kickoff',
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',
@@ -158,6 +158,7 @@ describe('PutCareerBodySchema', () => {
   it('commands revision이 baseRevision + 1부터 연속이 아니면 실패한다', () => {
     const result = PutCareerBodySchema.safeParse({
       ...baseBody,
+      snapshot: { ...baseSnapshotFields, revision: 14 },
       commands: [
         {
           revision: 14, // baseRevision(12) + 1 = 13이어야 한다.
@@ -171,9 +172,10 @@ describe('PutCareerBodySchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('commands가 baseRevision + 1부터 연속이면 성공한다', () => {
+  it('commands가 있으면 snapshot.revision이 마지막 command의 revision과 같아야 성공한다', () => {
     const result = PutCareerBodySchema.safeParse({
       ...baseBody,
+      snapshot: { ...baseSnapshotFields, revision: 14 },
       commands: [
         {
           revision: 13,
@@ -194,18 +196,57 @@ describe('PutCareerBodySchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('빈 commands 배열은 성공한다', () => {
-    const result = PutCareerBodySchema.safeParse({ ...baseBody, commands: [] });
+  it('commands가 비어 있으면 snapshot.revision이 baseRevision과 같아야 성공한다', () => {
+    const result = PutCareerBodySchema.safeParse({
+      ...baseBody,
+      snapshot: { ...baseSnapshotFields, revision: 12 },
+      commands: [],
+    });
     expect(result.success).toBe(true);
+  });
+
+  it('snapshot.revision이 마지막 command의 revision과 다르면 실패한다', () => {
+    const result = PutCareerBodySchema.safeParse({
+      ...baseBody,
+      snapshot: { ...baseSnapshotFields, revision: 99 },
+      commands: [
+        {
+          revision: 13,
+          commandId: 'cmd_1',
+          commandType: 'RESOLVE_EVENT',
+          payload: {},
+          resultHash: 'b'.repeat(64),
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
   });
 
   it('stateHash가 63자리면 실패한다', () => {
     const result = PutCareerBodySchema.safeParse({
       ...baseBody,
-      snapshot: { ...validSnapshot, stateHash: 'a'.repeat(63) },
+      snapshot: { ...baseSnapshotFields, revision: 12, stateHash: 'a'.repeat(63) },
       commands: [],
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('ClientIdSchema', () => {
+  it('07 예시의 cmd_... 형식을 허용한다', () => {
+    expect(ClientIdSchema.safeParse('cmd_1234567890').success).toBe(true);
+  });
+
+  it('UUID 형식도 허용한다', () => {
+    expect(ClientIdSchema.safeParse('550e8400-e29b-41d4-a716-446655440000').success).toBe(true);
+  });
+
+  it('65자는 실패한다', () => {
+    expect(ClientIdSchema.safeParse('a'.repeat(65)).success).toBe(false);
+  });
+
+  it('공백이 포함되면 실패한다', () => {
+    expect(ClientIdSchema.safeParse('cmd 1234').success).toBe(false);
   });
 });
 

@@ -79,11 +79,13 @@ export {
   IF_MATCH_HEADER,
   AUTHORIZATION_HEADER,
   REQUEST_ID_HEADER,
+  CONTENT_TYPE_HEADER,
   CORS_ALLOWED_HEADERS,
+  CORS_EXPOSED_HEADERS,
   REQUEST_BODY_MAX_BYTES,
   SNAPSHOT_STATE_RECOMMENDED_BYTES,
 } from './headers.js';
 
 export { HealthDataSchema, HealthResponseSchema, type HealthData, type HealthResponse } from './health.js';
 
-export { IsoUtcSchema, Hex64Schema, Uint32Schema } from './primitives.js';
+export { IsoUtcSchema, Hex64Schema, Uint32Schema, ClientIdSchema } from './primitives.js';

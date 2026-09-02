@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { REQUEST_BODY_MAX_BYTES } from './headers.js';
-import { Hex64Schema, IsoUtcSchema, Uint32Schema } from './primitives.js';
+import { ClientIdSchema, Hex64Schema, IsoUtcSchema, Uint32Schema } from './primitives.js';
 import { SemverSchema } from './versions.js';
 
 /** domain `CheckpointType`과 같은 9개(값·순서 동일). 타입 동일성은 index.test.ts에서 expectTypeOf로 검사한다. */
@@ -24,11 +24,10 @@ export type CheckpointType = z.infer<typeof CheckpointTypeSchema>;
  * 감싸지 않으면 튜플·객체가 mutable로 추론되어 expectTypeOf().toEqualTypeOf()가 실패한다.
  */
 export const RngStateSchema = z
-  .object({
+  .strictObject({
     s: z.tuple([Uint32Schema, Uint32Schema, Uint32Schema, Uint32Schema]).readonly(),
     draws: z.number().int().nonnegative(),
   })
-  .strict()
   .readonly();
 
 export type RngState = z.infer<typeof RngStateSchema>;
@@ -37,20 +36,18 @@ export type RngState = z.infer<typeof RngStateSchema>;
 export const SNAPSHOT_STATE_MAX_BYTES = REQUEST_BODY_MAX_BYTES;
 
 /** 05 "Snapshot 계약". */
-export const CareerSnapshotSchema = z
-  .object({
-    id: z.string().min(1),
-    careerId: z.string().min(1),
-    revision: z.number().int().positive(),
-    checkpoint: CheckpointTypeSchema,
-    state: z.string().max(SNAPSHOT_STATE_MAX_BYTES),
-    stateHash: Hex64Schema,
-    rulesetVersion: SemverSchema,
-    contentPackVersion: SemverSchema,
-    rngState: RngStateSchema,
-    createdAt: IsoUtcSchema,
-  })
-  .strict();
+export const CareerSnapshotSchema = z.strictObject({
+  id: z.string().min(1),
+  careerId: ClientIdSchema,
+  revision: z.number().int().positive(),
+  checkpoint: CheckpointTypeSchema,
+  state: z.string().max(SNAPSHOT_STATE_MAX_BYTES),
+  stateHash: Hex64Schema,
+  rulesetVersion: SemverSchema,
+  contentPackVersion: SemverSchema,
+  rngState: RngStateSchema,
+  createdAt: IsoUtcSchema,
+});
 
 export type CareerSnapshot = z.infer<typeof CareerSnapshotSchema>;
 
@@ -61,15 +58,14 @@ export type CareerSnapshot = z.infer<typeof CareerSnapshotSchema>;
  * `careerId`가 있고, Snapshot 래퍼 필드인 `revision`이 섞여 들어오지 않았는지만 본다.
  */
 export const SnapshotStateEnvelopeSchema = z
-  .object({
+  .looseObject({
     schemaVersion: z.literal(1),
     careerId: z.string().min(1),
   })
-  .passthrough()
   .superRefine((value, ctx) => {
     if ('revision' in value) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'state에는 revision이 없다. revision은 CareerSnapshot 래퍼 필드다.',
         path: ['revision'],
       });
