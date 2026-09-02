@@ -28,6 +28,8 @@ export { createWorkerSimulator } from './worker/host.js';
 
 export { replayCommandLog, type ReplayResult } from './replay.js';
 
+export { forkCareerByReplay, type ForkDeps, type ForkResult } from './fork.js';
+
 export {
   createEngineClient,
   type EngineClient,

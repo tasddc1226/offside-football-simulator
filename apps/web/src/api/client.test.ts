@@ -1,6 +1,6 @@
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, getProfile, issueRecoveryCode } from './client.js';
+import { apiFetch, deleteCareerOnServer, getProfile, issueRecoveryCode } from './client.js';
 
 const PROFILE_META = { requestId: 'req_1' };
 const PROFILE_BODY = {
@@ -124,5 +124,27 @@ describe('apiFetch', () => {
     const headers = new Headers(init.headers);
     expect(headers.get('Content-Type')).toBe('application/json');
     expect(init.body).toBe('{}');
+  });
+
+  it('204 No Content는 본문 없이 성공으로 정규화한다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+
+    const result = await apiFetch('/v1/careers/car_1', { method: 'DELETE' });
+
+    expect(result).toEqual({ ok: true, data: undefined });
+  });
+});
+
+describe('deleteCareerOnServer', () => {
+  it('DELETE /v1/careers/{id}로 보낸다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await deleteCareerOnServer('car_1');
+
+    expect(result).toEqual({ ok: true, data: undefined });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/careers/car_1');
+    expect(init.method).toBe('DELETE');
   });
 });

@@ -12,7 +12,7 @@ import {
   type Profile,
 } from '@offside/contracts';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8787';
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8787';
 
 export type ApiErrorCode = ErrorCode | 'NETWORK_ERROR' | 'INVALID_RESPONSE';
 export type ApiError = { code: ApiErrorCode; message: string; retryable: boolean };
@@ -60,9 +60,14 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, dataSche
     return failure('NETWORK_ERROR', '서버에 연결할 수 없습니다.', true);
   }
 
+  // 204는 HTTP 정의상 항상 성공 상태다(2xx) — 본문이 없어 data 봉투를 해석할 수 없으니 여기서 끝낸다.
+  if (response.status === 204) {
+    return { ok: true, data: undefined as T };
+  }
+
   let json: unknown;
   try {
-    json = response.status === 204 ? null : await response.json();
+    json = await response.json();
   } catch {
     return failure('INVALID_RESPONSE', '서버 응답을 해석할 수 없습니다.', false);
   }
@@ -99,4 +104,9 @@ export function getProfile(): Promise<ApiResult<Profile>> {
 /** API-PRO-003. 세션은 GET /v1/profile이 없으면 서버가 첫 요청에서 만들어 쿠키로 내려준다. */
 export function issueRecoveryCode(): Promise<ApiResult<IssueRecoveryCodeResponse>> {
   return apiFetch('/v1/profile/recovery-code', { method: 'POST' }, IssueRecoveryCodeResponseSchema);
+}
+
+/** API-CAR-005. 성공 시 204(본문 없음). */
+export function deleteCareerOnServer(careerId: string): Promise<ApiResult<undefined>> {
+  return apiFetch(`/v1/careers/${careerId}`, { method: 'DELETE' });
 }

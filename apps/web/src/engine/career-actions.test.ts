@@ -1,9 +1,22 @@
 import { loadContentPack } from '@offside/content';
 import { career01, career01EngineCommands, rulesetProto } from '@offside/fixtures';
-import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
-import { describe, expect, it } from 'vitest';
-import { advance, confirmPlayer, createCareer, deleteCareer, updateDraft } from './career-actions.js';
+import { MemoryLocalStore, inlineSimulator, type ExecuteResult } from '@offside/engine-client';
+import { describe, expect, it, vi } from 'vitest';
+import { advance, confirmPlayer, createCareer, deleteCareer, execute, updateDraft } from './career-actions.js';
 import { createAppEngine, type AppEngine } from './engine.js';
+
+const syncHolder = vi.hoisted(() => ({ notifyCommitted: vi.fn() }));
+vi.mock('./sync.js', () => ({
+  getSyncClient: () =>
+    Promise.resolve({
+      notifyCommitted: syncHolder.notifyCommitted,
+      flush: vi.fn(),
+      getState: vi.fn(),
+      subscribe: vi.fn(),
+      resolveConflict: vi.fn(),
+      dispose: vi.fn(),
+    }),
+}));
 
 function makeIdGenerator(prefix: string): () => string {
   let counter = 0;
@@ -131,5 +144,61 @@ describe('deleteCareer', () => {
 
     const listed = await engine.client.listCareers();
     expect(listed.map((record) => record.id)).toEqual([second.snapshot.careerId]);
+  });
+});
+
+describe('notifySync 게이팅: ok:true·replayed:false일 때만 notifyCommitted', () => {
+  it('ok:true·replayed:false면 notifyCommitted를 부른다', async () => {
+    syncHolder.notifyCommitted.mockClear();
+    const engine = makeTestEngine();
+
+    const result = await createCareer(engine, { simulationMode: 'FAST' });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+
+    await vi.waitFor(() => expect(syncHolder.notifyCommitted).toHaveBeenCalledTimes(1));
+    expect(syncHolder.notifyCommitted).toHaveBeenCalledWith(result.snapshot.careerId, result.domainSnapshot);
+  });
+
+  it('ok:true·replayed:true(재생)면 notifyCommitted를 부르지 않는다', async () => {
+    syncHolder.notifyCommitted.mockClear();
+    const seedEngine = makeTestEngine();
+    const created = await createCareer(seedEngine, { simulationMode: 'FAST' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) throw new Error('unreachable');
+    // 시드 생성 자체도 notifyCommitted를 부른다(fire-and-forget) — 그게 가라앉을 때까지
+    // 기다린 뒤 지우고, 이제부터가 진짜 검증 구간이다.
+    await vi.waitFor(() => expect(syncHolder.notifyCommitted).toHaveBeenCalledTimes(1));
+    syncHolder.notifyCommitted.mockClear();
+
+    // 같은 결과를 재생(replayed:true)으로 바꿔치기해, loadCareer는 실제로 성공시키되
+    // execute만 스크립트한다(존재하지 않는 careerId면 execute() 래퍼가 loadCareer에서
+    // CAREER_NOT_FOUND로 먼저 끝나 execute를 아예 안 부른다).
+    const replayedResult: ExecuteResult = { ...created, replayed: true };
+    const scriptedEngine: AppEngine = { ...seedEngine, client: { ...seedEngine.client, execute: async () => replayedResult } };
+
+    await execute(scriptedEngine, created.snapshot.careerId, { type: 'ADVANCE', payload: { eligibleEvents: [] } });
+
+    // 마이크로태스크가 도는 동안 실제로 안 불렸는지 확인하려고 짧게 양보한다.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(syncHolder.notifyCommitted).not.toHaveBeenCalled();
+  });
+
+  it('ok:false면 notifyCommitted를 부르지 않는다', async () => {
+    syncHolder.notifyCommitted.mockClear();
+    const seedEngine = makeTestEngine();
+    const created = await createCareer(seedEngine, { simulationMode: 'FAST' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) throw new Error('unreachable');
+    await vi.waitFor(() => expect(syncHolder.notifyCommitted).toHaveBeenCalledTimes(1));
+    syncHolder.notifyCommitted.mockClear();
+
+    const failedResult: ExecuteResult = { ok: false, error: { code: 'VALIDATION_FAILED', message: '실패' } };
+    const scriptedEngine: AppEngine = { ...seedEngine, client: { ...seedEngine.client, execute: async () => failedResult } };
+
+    await execute(scriptedEngine, created.snapshot.careerId, { type: 'ADVANCE', payload: { eligibleEvents: [] } });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(syncHolder.notifyCommitted).not.toHaveBeenCalled();
   });
 });

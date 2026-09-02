@@ -1,6 +1,15 @@
 // 06 "브랜드 언어"·12 브랜드 가이드: 화면 문구는 한국어, 브랜드 어휘는 폐쇄 목록 안에서만.
 // Record<T, string>로 선언해 ATTRIBUTE 전수(도메인 유니온 전체)를 타입으로 강제한다.
-import type { AttributeKey, CareerStatus, Position, PositionGroup, PreferredFoot, SquadRole } from '@offside/domain';
+import type {
+  AttributeKey,
+  CareerStage,
+  CareerStatus,
+  Position,
+  PositionGroup,
+  PreferredFoot,
+  SquadRole,
+  TimelineEntry,
+} from '@offside/domain';
 
 export const POSITION_LABELS: Record<Position, string> = {
   GK: '골키퍼',
@@ -76,4 +85,18 @@ export const SQUAD_ROLE_LABELS: Record<SquadRole, string> = {
   ROTATION: '로테이션',
   BENCH: '벤치',
   RESERVE: '리저브',
+};
+
+/** 충돌 대화상자 비교 카드의 "단계" 행. */
+export const CAREER_STAGE_LABELS: Record<CareerStage, string> = {
+  YOUTH: '유스',
+  PRO: '프로',
+};
+
+/** 충돌 대화상자 비교 카드의 "마지막 기록" 행. */
+export const TIMELINE_KIND_LABELS: Record<TimelineEntry['kind'], string> = {
+  CAREER_CONFIRMED: '커리어 확정',
+  EVENT_RESOLVED: '이벤트 해결',
+  CONTRACT_SIGNED: '계약 체결',
+  SEASON_SETTLED: '시즌 결산',
 };
