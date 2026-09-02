@@ -45,6 +45,8 @@ Orca 저장소 ID는 `41200e35-ac29-475d-8c7f-6cd38f9bc9e1`이다. 실행 파일
 
 워커는 서브에이전트 리뷰를 띄우지 않는다. 단, Orca는 `gh pr create` 앞에 `/simplify` 또는 `/review:pr` 실행을 요구하는 게이트를 두므로 `/review:pr` **1회**만 허용한다(`/simplify`와 병렬 fork는 금지. T-0-001에서 리뷰 fork 4개가 비용을 두 배로 올렸다). 워커가 막히면 오케스트레이터에게 질문을 남기고 멈춘다. 워커는 명세를 고치지 않는다. 명세가 틀렸으면 오케스트레이터가 문서를 고친 뒤 브리프를 갱신한다.
 
+PR을 열기 직전 `git fetch origin && git merge origin/main`으로 최신 main을 합친다. `pnpm-lock.yaml` 충돌은 손으로 고치지 말고 `git checkout origin/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile`로 재생성한 뒤 전체 체인을 다시 돌린다(2026-09-02 PR #4에서 lockfile 충돌로 머지가 한 번 실패함).
+
 ## 리뷰 체크리스트
 
 - [ ] 브리프의 요구사항 ID가 코드·테스트·PR 본문에 연결돼 있다.

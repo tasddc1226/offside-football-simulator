@@ -37,6 +37,8 @@ contracts → domain(타입만)
 fixtures → domain, content
 ```
 
+`@offside/fixtures`는 테스트 전용 패키지다. 어느 패키지든 `devDependencies`로만 의존할 수 있고 `dependencies`에 두면 `lint:deps` 위반이다(2026-09-02, T-0-007에서 golden fixture를 engine-client 테스트가 쓰기 위해 추가). 런타임 의존 방향은 위 표가 정본이다.
+
 금지:
 
 - `domain`은 다른 패키지, Node API, 브라우저 API를 import하지 않는다. ESLint `no-restricted-imports`로 강제한다.

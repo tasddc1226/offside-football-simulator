@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { hashState } from './hash.js';
 import { simulate, verifySnapshot, type Command } from './simulate.js';
 import type { AttributeKey, DomainSnapshot, Effect } from './types.js';
@@ -252,9 +252,9 @@ describe('simulate — RESOLVE_EVENT', () => {
   });
 });
 
-describe('simulate — ADVANCE_STEP', () => {
+describe('simulate — ADVANCE', () => {
   const advanceCommand = (expectedRevision: number): Command & { commandId: string; expectedRevision: number } => ({
-    type: 'ADVANCE_STEP',
+    type: 'ADVANCE',
     commandId: 'cmd-advance',
     expectedRevision,
     payload: {},
@@ -417,5 +417,11 @@ describe('결정론', () => {
     const hashXThenY = run(['EVT-X', effectA], ['EVT-Y', effectB]);
     const hashYThenX = run(['EVT-Y', effectB], ['EVT-X', effectA]);
     expect(hashXThenY).not.toBe(hashYThenX);
+  });
+});
+
+describe('Command 타입', () => {
+  it('type은 CREATE_CAREER | RESOLVE_EVENT | ADVANCE로 고정된다', () => {
+    expectTypeOf<Command['type']>().toEqualTypeOf<'CREATE_CAREER' | 'RESOLVE_EVENT' | 'ADVANCE'>();
   });
 });

@@ -32,7 +32,7 @@ describe('career-01 fixture 결정론', () => {
   });
 
   it('명령 순서를 바꾸면 hash가 달라진다', () => {
-    // ADVANCE_STEP은 RNG를 소비하지 않으므로 인접한 ADVANCE_STEP·RESOLVE_EVENT를 맞바꿔도
+    // ADVANCE는 RNG를 소비하지 않으므로 인접한 ADVANCE·RESOLVE_EVENT를 맞바꿔도
     // 우연히 같은 outcome이 선택되면 hash가 같을 수 있다. 두 RESOLVE_EVENT(EVT-P01, EVT-P02)의
     // 순서를 맞바꿔 서로 다른 weight 구간·effect가 서로 다른 roll을 받게 만든다.
     const commands = [...careerFixture.commands];
