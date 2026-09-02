@@ -15,8 +15,8 @@ packages/
   domain/         순수 규칙. simulate, OVR, 선발, 이벤트 해결, Legacy
   content/        팩·ruleset 원본, Zod 스키마, validate·simulate CLI
   contracts/      API 요청·응답 Zod 스키마, 오류 코드, Snapshot 직렬화 타입
-  engine-client/  Web Worker 래퍼, LocalStore 포트와 Dexie 구현, 동기화 클라이언트
-  platform/       채널 어댑터. platform/web(브라우저), platform/toss(앱인토스 SDK 래퍼: 식별키·네이티브 Storage·SafeArea·공유·리더보드·분석)
+  engine-client/  명령 실행기·멱등성·복구, LocalStore 포트(구현은 platform), Web Worker 시뮬레이터 프로토콜, 동기화 클라이언트
+  platform/       채널 어댑터와 LocalStore 구현. platform/web(브라우저, Dexie), platform/toss(앱인토스 SDK 래퍼: 식별키·네이티브 Storage·SafeArea·공유·리더보드·분석)
   ui/             디자인 토큰, 공통 컴포넌트(PlayerHeader, ChoiceCard 등)
   fixtures/       golden fixture와 결정론 벡터
 tooling/
@@ -36,6 +36,8 @@ content → domain(타입만)
 contracts → domain(타입만)
 fixtures → domain, content
 ```
+
+`@offside/fixtures`는 테스트 전용 패키지다. 어느 패키지든 `devDependencies`로만 의존할 수 있고 `dependencies`에 두면 `lint:deps` 위반이다(2026-09-02, T-0-007에서 golden fixture를 engine-client 테스트가 쓰기 위해 추가). 런타임 의존 방향은 위 표가 정본이다.
 
 금지:
 

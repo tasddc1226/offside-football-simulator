@@ -11,7 +11,7 @@
     "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "validate": "node ./src/cli/validate.ts"
+    "content:validate": "node ./src/cli/validate.ts"
   },
   "dependencies": {
     "zod": "4.5.4"

@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:toss": "vite build --mode toss",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:bundle": "node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@offside/contracts": "workspace:*",
@@ -18,17 +20,24 @@
     "@offside/engine-client": "workspace:*",
     "@offside/platform": "workspace:*",
     "@offside/ui": "workspace:*",
+    "@tanstack/react-query": "5.102.8",
+    "@tanstack/react-router": "1.170.32",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zustand": "5.0.15"
   },
   "devDependencies": {
     "@offside/tsconfig": "workspace:*",
+    "@tailwindcss/vite": "4.3.3",
+    "@tanstack/router-plugin": "1.168.35",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
+    "@types/node": "22.20.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
     "@vitejs/plugin-react": "6.1.1",
     "jsdom": "30.0.1",
+    "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
     "vite": "8.2.2",
     "vitest": "4.1.11"

@@ -29,6 +29,7 @@
 - 커밋 메시지는 `T-0-003: …`로 시작, 브랜치는 T-0-003-…
 
 - 서브에이전트 리뷰를 띄우지 않는다. Orca PR 게이트용 `/review:pr` 1회만 예외(`/simplify`·병렬 fork 금지).
+- PR 직전 `git fetch origin && git merge origin/main`으로 최신 main을 합친다. `pnpm-lock.yaml` 충돌은 손으로 고치지 말고 `git checkout origin/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile`로 재생성한 뒤 전체 체인을 다시 돌린다.
 
 ## 진행 보고
 - 체크포인트마다 `orca worktree set --worktree active --comment "..."` 갱신

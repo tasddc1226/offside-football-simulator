@@ -2,6 +2,32 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, fixtures 테스트 전용 의존 규칙)
+
+- **T-0-007 워커 질문.** engine-client가 golden fixture를 쓰려면 `@offside/fixtures`를 devDependency로 가져야 하는데 `check-deps.mjs` 허용 목록과 ADR-005 표에 없어 `lint:deps`가 실패한다.
+- **결정.** `@offside/fixtures`는 테스트 전용 패키지로, 어느 패키지든 `devDependencies`로만 허용하고 `dependencies`면 위반. `check-deps.mjs`에 `TEST_ONLY_PACKAGES` 개념을 추가(워커 범위 확장, 테스트 2건 포함). ADR-005 본문에 한 문단 추가. 런타임 의존 표는 그대로. 이유: platform(T-0-012)·api 테스트도 같은 fixture를 쓰게 되므로 패키지별 허용 목록에 하나씩 넣는 것보다 규칙 하나가 낫다.
+
+## 2026-09-02 (저녁, PR #4 머지·lockfile 충돌 규칙)
+
+- **T-0-003 머지(`4693202`).** 리뷰 요청 5건(zod 4.5.4 통일, `ClientIdSchema`, `PUT /careers` snapshot revision 정합성, CORS `Content-Type`·`X-Request-Id`, 주석)을 워커가 반영했고 체인 통과(50 tests).
+- **lockfile 충돌 처리.** 첫 `gh pr merge`가 `pnpm-lock.yaml` 충돌로 실패했다(T-0-009 머지가 먼저 lockfile을 바꿈). 워커 터미널을 이미 닫은 뒤라 오케스트레이터가 임시 워크트리에서 `origin/main`을 합치고 lockfile을 `pnpm install --no-frozen-lockfile`로 재생성한 뒤 체인을 재실행해 푸시·머지했다. 코드 편집은 없었다(lockfile 재생성만). 재발 방지로 README·브리프 템플릿·대기 중 브리프(T-0-006/007/012)에 "PR 직전 main 병합 + lockfile 재생성" 규칙을 넣었다. 교훈: 머지 결과를 확인하기 전에 터미널·워크트리를 정리하지 않는다.
+- **디스패치.** T-0-014(domain `ADVANCE` 정렬)와 T-0-005(api D1 스키마)를 `4693202` 기준으로 동시 시작. T-0-004는 진행 중.
+
+## 2026-09-02 (저녁, api 데이터 계층 설계)
+
+- **T-0-005 브리프 작성.** 서버 `careers` 행은 contracts `CareerSummary` + 소유자·검증 상태·시각만 갖는 요약이다. 02 DATA-CAR-001의 진행 값(`currentDate`, `currentTeamId`, `rngState` 등)은 Snapshot `state` 안에 있으므로 서버 테이블에 중복하지 않는다.
+- **D1 원자성.** 대화형 트랜잭션이 없으므로 한 요청의 쓰기는 `db.batch` 하나로 보내고, `command_log(career_id, revision)` PK와 `snapshots(career_id, revision)` UNIQUE가 동시 쓰기를 실패시킨다. T-0-008의 동기화는 "SELECT revision → 비교 → batch[조건부 UPDATE, INSERT…]" 순서다.
+- **서버 idempotency는 HTTP `Idempotency-Key` 단위**(`owner_profile_id + key`), 명령 단위 멱등성은 engine-client와 `command_log` PK가 맡는다.
+- **비밀값은 해시만**(세션 토큰·복구 코드·앱인토스 식별키, SHA-256 hex). **시각은 ISO UTC TEXT**, JSON 컬럼은 TEXT + Zod 검증. migration은 drizzle-kit 생성 SQL을 wrangler가 적용(`out = migrations_dir`), 손 편집 금지, additive만.
+- 시드(`svc_kickoff`)는 migration이 아니라 `seeds/local.sql`로 분리한다. 원격 D1·환경 블록은 U-002 뒤 T-0-010.
+
+## 2026-09-02 (저녁, T-0-004 매핑 답변·engine-client 설계)
+
+- **T-0-004 워커 질문 3건 답변.** (1) EVT-REL-001의 동료 RELATION은 문서 지칭대로 박준서→`captain`, 이도현→`rival`. (2) EVT-REL-002의 '가족' RELATION 수치는 domain에 필드가 없으므로 Effect를 만들지 않고 태그(`부모의_걱정`, `대화_회피`)와 cause 문구만 옮긴다. `relationships.family` 추가 여부는 Phase 1 결정 사항. (3) '제안 수 ±1', '대학 경로 성장 보정' 같은 서사 전용 수치는 Effect에서 제외하고 태그·문구로만 남긴다. 프로토타입의 제안 수 공식은 태그(`에이전트_계약`, `주목받는_유망주`)로 계산되므로 손실이 없다. 계약 제안 시스템은 Phase 1 이후.
+- **명령 이름 정렬(T-0-014).** domain의 `ADVANCE_STEP`을 07·contracts의 `ADVANCE`로 바꾼다. T-0-003 브리프는 "매핑은 engine-client가 한다"고 했으나, 명령 로그 `commandType`을 engine-client와 api 리플레이 양쪽에서 매핑하는 것보다 이름을 하나로 맞추는 편이 싸다. 상태 값이 바뀌지 않아 golden hash는 그대로다.
+- **engine-client 설계(T-0-007 브리프).** ① LocalStore 구현은 ADR-002대로 platform이 맡는다(web=Dexie는 T-0-012). engine-client는 포트·메모리 구현·계약 테스트만. ADR-005의 패키지 설명 두 줄을 이에 맞게 고쳤다. ② Worker에서 도는 것은 domain `simulate`뿐이고 저장소는 메인 스레드에 남는다(toss 네이티브 Storage 브리지가 Worker에서 동작한다는 보장이 없음). 실행기는 읽기 트랜잭션 → 시뮬레이션 → 쓰기 트랜잭션(재검증) 2단계다. Dexie 트랜잭션이 외부 Promise 대기 시 자동 커밋되는 제약 때문이기도 하다. ③ 명령 payload는 domain `Command` 그대로(RESOLVE_EVENT가 outcomes를 포함)라 명령 로그만으로 리플레이가 된다. 콘텐츠 팩 → payload 변환은 Phase 1 이벤트 엔진 작업. ④ golden fixture는 `packages/fixtures`로 복사하고 드리프트 테스트로 domain 원본과 동일함을 지킨다. 원본 삭제는 T-0-011.
+- **디스패치 순서.** T-0-003 머지 → T-0-014(10분 규모) → T-0-007. T-0-004는 독립적으로 병행.
+
 ## 2026-09-02 (저녁, 머지 권한)
 
 - 사용자 지시: PR 머지 승인을 따로 요청하지 않는다. 리뷰 체크리스트를 통과하면 오케스트레이터가 바로 squash 머지하고 다음 작업을 띄운다. 범위 변경·외부 계정·비용이 큰 결정은 여전히 사용자에게 묻는다.
