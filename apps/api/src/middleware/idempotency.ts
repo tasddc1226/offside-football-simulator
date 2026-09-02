@@ -49,14 +49,22 @@ export const idempotency = createMiddleware<AppEnv>(async (c, next) => {
   const shouldStore = (status >= 200 && status < 300) || status === 409;
   if (shouldStore) {
     const responseBody = await c.res.clone().text();
-    await putIdempotent(db, {
-      ownerProfileId: session.profileId,
-      key,
-      requestHash,
-      responseStatus: status,
-      responseBody,
-      createdAt: now,
-      expiresAt: new Date(Date.parse(now) + IDEMPOTENCY_TTL_MS).toISOString(),
-    });
+    try {
+      await putIdempotent(db, {
+        ownerProfileId: session.profileId,
+        key,
+        requestHash,
+        responseStatus: status,
+        responseBody,
+        createdAt: now,
+        expiresAt: new Date(Date.parse(now) + IDEMPOTENCY_TTL_MS).toISOString(),
+      });
+    } catch (err) {
+      // 라우트는 이미 성공했다. 저장 실패로 응답을 바꾸지 않고 로그로만 남긴다.
+      c.set('storeFailure', {
+        code: 'IDEMPOTENCY_STORE_FAILED',
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 });

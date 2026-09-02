@@ -24,6 +24,8 @@ export type Variables = {
   startedAt: number;
   /** bodyGuard가 읽은 상태 변경 요청의 본문. 라우트가 다시 읽지 않도록 전달한다. */
   rawBody?: string;
+  /** 응답은 이미 성공했지만 부가 저장(예: idempotency 기록)이 실패했을 때 logger가 한 줄에 함께 남긴다. */
+  storeFailure?: { code: string; message: string };
 };
 
 export type AppEnv = { Bindings: Bindings; Variables: Variables };

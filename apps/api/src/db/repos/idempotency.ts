@@ -29,8 +29,15 @@ export type PutIdempotentInput = {
   expiresAt: string;
 };
 
+/**
+ * 같은 (ownerProfileId, key) 동시 요청 레이스에서 두 번째 삽입은 조용히 건너뛴다(UNIQUE 위반으로
+ * throw하지 않는다). 먼저 커밋된 행이 재생 정본이 되고, 두 응답 모두 라우트가 이미 계산한 값을 돌려준다.
+ */
 export async function putIdempotent(db: Db, input: PutIdempotentInput): Promise<void> {
-  await db.insert(idempotency).values(input);
+  await db
+    .insert(idempotency)
+    .values(input)
+    .onConflictDoNothing({ target: [idempotency.ownerProfileId, idempotency.key] });
 }
 
 export async function purgeExpired(db: Db, now: string): Promise<number> {

@@ -332,4 +332,37 @@ describe('PATCH /v1/profile/settings', () => {
     const body = ErrorEnvelopeSchema.parse(await second.json());
     expect((body.error.details as { reason?: string } | undefined)?.reason).toBe('IDEMPOTENCY_KEY_REUSED');
   });
+
+  it('같은 키·같은 본문 동시 요청 2개는 둘 다 200이고 idempotency 행은 1개만 남는다', async () => {
+    const { token } = await issueCookie(ctx);
+    const app = createApp();
+    const key = 'idem-concurrent-1';
+
+    const [first, second] = await Promise.all([
+      app.request(
+        '/v1/profile/settings',
+        patchInit({ body: { theme: 'DARK' }, idempotencyKey: key, cookie: `offside_session=${token}` }),
+        ctx.env,
+      ),
+      app.request(
+        '/v1/profile/settings',
+        patchInit({ body: { theme: 'DARK' }, idempotencyKey: key, cookie: `offside_session=${token}` }),
+        ctx.env,
+      ),
+    ]);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+
+    const idempotencyRows = await ctx.db.select().from(idempotency).where(eq(idempotency.key, key));
+    expect(idempotencyRows).toHaveLength(1);
+
+    const third = await app.request(
+      '/v1/profile/settings',
+      patchInit({ body: { theme: 'DARK' }, idempotencyKey: key, cookie: `offside_session=${token}` }),
+      ctx.env,
+    );
+    expect(third.status).toBe(200);
+    expect(third.headers.get('Idempotent-Replayed')).toBe('true');
+  });
 });
