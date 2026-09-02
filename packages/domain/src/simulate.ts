@@ -32,7 +32,7 @@ export type Command =
         outcomes: Array<{ id: string; weight: number; effects: Effect[]; addTags?: string[]; removeTags?: string[] }>;
       };
     }
-  | { type: 'ADVANCE_STEP'; payload: Record<string, never> };
+  | { type: 'ADVANCE'; payload: Record<string, never> };
 
 export type SimulationInput = {
   snapshot: DomainSnapshot | null;
@@ -203,7 +203,7 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 function advanceStep(_input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
   const state = snapshot.state;
   if (state.currentStep === 12) {
-    return fail('VALIDATION_FAILED', 'currentStep이 12일 때는 ADVANCE_STEP을 처리할 수 없다. 시즌 결산이 필요하다.');
+    return fail('VALIDATION_FAILED', 'currentStep이 12일 때는 ADVANCE를 처리할 수 없다. 시즌 결산이 필요하다.');
   }
 
   const nextStep = state.currentStep + 1;
@@ -219,7 +219,7 @@ function advanceStep(_input: SimulationInput, snapshot: DomainSnapshot): Simulat
 }
 
 /**
- * CREATE_CAREER → RESOLVE_EVENT → ADVANCE_STEP 명령을 처리하는 순수 함수.
+ * CREATE_CAREER → RESOLVE_EVENT → ADVANCE 명령을 처리하는 순수 함수.
  * throw하지 않는다: 도메인 오류는 항상 `{ ok: false }`로 돌아온다.
  */
 export function simulate(input: SimulationInput): SimulationResult {

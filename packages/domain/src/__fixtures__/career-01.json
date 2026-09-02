@@ -34,7 +34,7 @@
     "relationships": { "managerTrust": 40, "captain": 50, "rival": 50, "fans": 50, "agent": 50 }
   },
   "commands": [
-    { "type": "ADVANCE_STEP", "payload": {} },
+    { "type": "ADVANCE", "payload": {} },
     {
       "type": "RESOLVE_EVENT",
       "payload": {
@@ -124,7 +124,7 @@
         ]
       }
     },
-    { "type": "ADVANCE_STEP", "payload": {} },
+    { "type": "ADVANCE", "payload": {} },
     {
       "type": "RESOLVE_EVENT",
       "payload": {
@@ -188,8 +188,8 @@
         ]
       }
     },
-    { "type": "ADVANCE_STEP", "payload": {} },
-    { "type": "ADVANCE_STEP", "payload": {} },
+    { "type": "ADVANCE", "payload": {} },
+    { "type": "ADVANCE", "payload": {} },
     {
       "type": "RESOLVE_EVENT",
       "payload": {
@@ -226,8 +226,8 @@
         ]
       }
     },
-    { "type": "ADVANCE_STEP", "payload": {} },
-    { "type": "ADVANCE_STEP", "payload": {} },
+    { "type": "ADVANCE", "payload": {} },
+    { "type": "ADVANCE", "payload": {} },
     {
       "type": "RESOLVE_EVENT",
       "payload": {
@@ -300,7 +300,7 @@
         ]
       }
     },
-    { "type": "ADVANCE_STEP", "payload": {} },
-    { "type": "ADVANCE_STEP", "payload": {} }
+    { "type": "ADVANCE", "payload": {} },
+    { "type": "ADVANCE", "payload": {} }
   ]
 }
