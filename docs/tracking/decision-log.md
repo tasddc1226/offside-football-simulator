@@ -2,6 +2,25 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, T-0-015 동기화 클라이언트 설계)
+
+- **큐 정책.** careerId당 대기 1개·진행 1개. web은 1.5초 debounce로 연속 명령을 한 PUT에 합치고 시즌 종료·은퇴·생성 체크포인트는 즉시, toss는 debounce 0(ADR-002 "모든 step 경계"). 재시도는 지수 백오프(2s→60s, 지터 ±20%), 재시도 가능 여부는 contracts `RETRYABLE_BY_CODE`. 같은 본문의 재시도는 같은 Idempotency-Key.
+- **409 처리.** 서버 Snapshot을 GET해 로컬에 같은 revision·같은 stateHash의 Snapshot이 있으면 서버는 로컬 로그의 조상 → `markSynced(serverRevision)` 후 빨리감기 재전송(사이클당 1회). 아니면 `CONFLICT` 상태로 멈추고 화면에 넘긴다.
+- **충돌 해소 범위.** Phase 0은 `'REMOTE'`(서버 채택: 서버 Snapshot 검증 후 로컬 revision 되감기, 버려지는 로컬 로그는 kv에 보관)만 구현. `'LOCAL'`(이 기기 우선)은 서버에 강제 덮어쓰기 API가 없고 명령 로그 계보가 섞이면 후일 리플레이 검증이 깨지므로 보류. 후보는 (a) 로컬 로그를 새 careerId로 포크해 엔진에서 재실행(결정론이라 결과 동일, API 변경 없음, 커리어가 둘이 됨) vs (b) `PUT`에 강제 플래그 추가(서버 로그 교체). 추천은 (a). 화면(Phase 1)과 함께 결정.
+- **세션 부재.** 401은 `LOCAL_ONLY`로 두고 platform이 세션을 만든 뒤 앱이 다시 알리면 재개. 재시도 불가 4xx(VERSION_MISMATCH 등)는 `FAILED`로 표시만 하고 게임은 계속(ADR-002 "동기화 실패는 진행을 막지 않는다").
+
+## 2026-09-02 (저녁, PR #6 머지·PR #7 리뷰·버전 라벨)
+
+- **PR #6(T-0-005) 머지 `9b292b1`.** 수정 2건 확인: cursor 인코딩을 `btoa/atob + TextEncoder`로 바꿔 Workers 런타임 호환, purity 테스트가 `Buffer`·`process.`·`require(`·`__dirname`을 금지. `db:check`는 `git status --porcelain -- migrations`로 미추적 migration도 잡는다(임시 컬럼으로 실패→복원 확인).
+- **Phase 0 버전 라벨.** `rulesetVersion`은 `"1.0.0"`(00 로드맵 "LINE TEST로 ruleset 1.0.0 확정", domain golden fixture, API 시드 `svc_kickoff`, 07 예시 모두 이 값), `contentPackVersion`은 `"0.1.0"`, `schemaVersion`은 1. 패키지 버전 상수(`DOMAIN_VERSION` 등)와 ruleset 라벨은 별개 이름공간. content 팩 manifest `compatibleRulesetVersions`를 `["0.1.0"]`→`["1.0.0"]`으로 고쳤다.
+- **PR #7(T-0-004) 리뷰 결정.** (1) 루트 `content:validate`는 `turbo run content:validate`를 유지하고 패키지 스크립트 이름을 `content:validate`로 통일(캐시·파이프라인 일관). (2) content CLI는 `node ./src/cli/validate.ts`(Node 22 타입 스트리핑)로 실행하므로 `.ts` 확장자 import와 `allowImportingTsExtensions`를 content 패키지에 한해 허용. (3) 콘텐츠 후속 과제로 기록: sourceId `EVT-…​.A.A1.0`처럼 `.N` 접미(같은 선택지의 다중 효과 구분), EVT-CON-002는 4지→3지선다(스키마 max 3), 선택지 weight는 임의값(합 100 미달은 경고), 조건 필드는 문자열 타입 화이트리스트. 이들은 T-0-004 브리프의 "프로토타입과 다르게 결정한 항목"으로 04 문서 갱신 시 반영.
+- **PR #7(T-0-004) 머지 `cfc868f`.** main 재병합·lockfile 재생성 후 체인·content:validate 재확인. 빈 슬롯에 T-0-013(폰트 dynamic subset, 독립 작업) 투입. T-0-011 브리프 작성(Node·workerd 해시 일치, 브라우저 Web Worker는 Playwright 도입 시). T-0-007 브리프의 "domain fixture 원본 삭제" 문구 철회(domain→fixtures devDependency는 워크스페이스 순환).
+
+## 2026-09-02 (저녁, fixtures 테스트 전용 의존 규칙)
+
+- **T-0-007 워커 질문.** engine-client가 golden fixture를 쓰려면 `@offside/fixtures`를 devDependency로 가져야 하는데 `check-deps.mjs` 허용 목록과 ADR-005 표에 없어 `lint:deps`가 실패한다.
+- **결정.** `@offside/fixtures`는 테스트 전용 패키지로, 어느 패키지든 `devDependencies`로만 허용하고 `dependencies`면 위반. `check-deps.mjs`에 `TEST_ONLY_PACKAGES` 개념을 추가(워커 범위 확장, 테스트 2건 포함). ADR-005 본문에 한 문단 추가. 런타임 의존 표는 그대로. 이유: platform(T-0-012)·api 테스트도 같은 fixture를 쓰게 되므로 패키지별 허용 목록에 하나씩 넣는 것보다 규칙 하나가 낫다.
+
 ## 2026-09-02 (저녁, PR #4 머지·lockfile 충돌 규칙)
 
 - **T-0-003 머지(`4693202`).** 리뷰 요청 5건(zod 4.5.4 통일, `ClientIdSchema`, `PUT /careers` snapshot revision 정합성, CORS `Content-Type`·`X-Request-Id`, 주석)을 워커가 반영했고 체인 통과(50 tests).

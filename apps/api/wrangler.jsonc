@@ -2,5 +2,14 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "offside-api",
   "main": "src/index.ts",
-  "compatibility_date": "2026-09-02"
+  "compatibility_date": "2026-09-02",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "offside-local",
+      // 원격 ID는 U-002 이후 T-0-010이 env.preview/staging/production에 넣는다.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
 }

@@ -220,7 +220,7 @@ type CareerEvent = {
 - `Career(createdServiceSeasonId, status)`
 - `Snapshot(careerId, revision unique)`
 - `CareerEvent(careerId, status)`
-- `Idempotency(ownerProfileId, commandId unique)`
+- `Idempotency(ownerProfileId, idempotencyKey unique)` — 서버는 HTTP `Idempotency-Key` 단위로 최초 응답을 저장한다. 명령 단위 멱등성은 로컬 엔진의 idempotency 테이블과 `CommandLog(careerId, revision unique)`가 맡는다(T-0-005, 2026-09-02)
 - `CommandLog(careerId, revision unique)`
 - `LocalProfile(googleSub unique)`
 - `LocalProfile(tossAnonKeyHash unique)`

@@ -1,0 +1,101 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { unstable_splitSqlQuery as splitSqlQuery } from 'wrangler';
+import { createTestD1, type TestD1 } from '../test/d1.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const MIGRATIONS_DIR = path.resolve(__dirname, '../../migrations');
+
+function firstMigrationStatements(): string[] {
+  const [first] = readdirSync(MIGRATIONS_DIR)
+    .filter((name) => name.endsWith('.sql'))
+    .sort();
+  if (!first) throw new Error('no migration file found');
+  return splitSqlQuery(readFileSync(path.join(MIGRATIONS_DIR, first), 'utf8')).map((statement) =>
+    statement.replace(/\s+/g, ' ').trim(),
+  );
+}
+
+/** 브리프 표의 컬럼 목록과 같다(snake_case). */
+const EXPECTED_COLUMNS: Record<string, string[]> = {
+  profiles: [
+    'id',
+    'recovery_code_hash',
+    'recovery_code_issued_at',
+    'google_sub',
+    'email',
+    'linked_at',
+    'toss_anon_key_hash',
+    'toss_linked_at',
+    'settings_json',
+    'created_at',
+    'last_seen_at',
+  ],
+  sessions: ['id', 'profile_id', 'channel', 'token_hash', 'created_at', 'expires_at', 'revoked_at', 'last_seen_at'],
+  careers: [
+    'id',
+    'owner_profile_id',
+    'status',
+    'revision',
+    'created_service_season_id',
+    'ruleset_version',
+    'content_pack_version',
+    'verification_status',
+    'last_synced_at',
+    'created_at',
+    'updated_at',
+    'archived_at',
+  ],
+  snapshots: [
+    'id',
+    'career_id',
+    'revision',
+    'checkpoint',
+    'state',
+    'state_hash',
+    'ruleset_version',
+    'content_pack_version',
+    'rng_state_json',
+    'created_at',
+  ],
+  command_log: ['career_id', 'revision', 'command_id', 'command_type', 'payload_json', 'result_hash', 'created_at'],
+  idempotency: ['owner_profile_id', 'key', 'request_hash', 'response_status', 'response_body', 'created_at', 'expires_at'],
+  service_seasons: [
+    'id',
+    'name',
+    'status',
+    'starts_at',
+    'ends_at',
+    'ruleset_version',
+    'content_pack_version',
+    'challenge_set_id',
+  ],
+};
+
+describe('migrations', () => {
+  let ctx: TestD1;
+
+  beforeAll(async () => {
+    ctx = await createTestD1();
+  });
+
+  afterAll(async () => {
+    await ctx.dispose();
+  });
+
+  it('creates the 7 tables with the expected columns', async () => {
+    for (const [table, expectedColumns] of Object.entries(EXPECTED_COLUMNS)) {
+      const result = await ctx.db.$client.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>();
+      const columns = result.results.map((row) => row.name).sort();
+      expect(columns, `table ${table}`).toEqual([...expectedColumns].sort());
+    }
+  });
+
+  it('is not idempotent: reapplying the migration on the same DB fails', async () => {
+    const [createCareers] = firstMigrationStatements();
+    if (!createCareers) throw new Error('expected at least one statement');
+    await expect(ctx.db.$client.exec(createCareers)).rejects.toThrow();
+  });
+});
