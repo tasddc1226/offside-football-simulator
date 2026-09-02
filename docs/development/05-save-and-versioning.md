@@ -24,6 +24,14 @@ type CareerSnapshot = {
 };
 ```
 
+```ts
+type CheckpointType =
+  | 'CAREER_CREATED' | 'SEASON_START' | 'STEP_BOUNDARY' | 'EVENT_OFFERED' | 'EVENT_RESOLVED'
+  | 'CHAPTER_DECISION' | 'SEASON_SETTLED' | 'CONTRACT_CONFIRMED' | 'RETIREMENT';
+```
+
+`state`는 `packages/domain`의 `CareerState`를 canonical JSON(키 정렬, 공백 없음, 정수만)으로 직렬화한 문자열이고, `stateHash`는 그 문자열의 SHA-256 hex다. `rngState`는 `state` 안의 값을 색인용으로 복사한 것이며 둘이 다르면 Snapshot은 무효다.
+
 Snapshot은 화면 애니메이션 진행률을 저장하지 않는다. 확정된 숫자와 표시 중인 숫자를 UI에서 분리한다.
 
 ## 서비스 시즌과 축구 시즌

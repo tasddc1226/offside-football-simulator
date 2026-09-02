@@ -67,6 +67,12 @@ type Career = {
 
 Career가 생성되면 세 버전 필드는 불변이다. 운영 시즌 전환은 기존 Career의 버전을 덮어쓰지 않는다.
 
+```ts
+type SquadRole = 'STARTER' | 'ROTATION' | 'BENCH' | 'RESERVE';
+```
+
+`SquadRole`은 시즌 단위의 스쿼드 지위다. 경기 단위의 선발·교체 출전·결장(RULE-SEL-001 결과)은 `MatchAppearance`(`START`, `SUB`, `OUT`)로 따로 기록하며 둘을 섞지 않는다.
+
 `nationalityRuleState`는 국적 규칙 모듈이 소유하는 상태다. 한국 모듈은 병역 상태와 특례 이력을 여기에 둔다. 모듈이 없는 국적은 빈 객체다. `ageReferenceDate`는 [시간 모델](11-time-model-and-pacing.md)의 나이 기준일이다.
 
 ### DATA-PRO-001 LocalProfile

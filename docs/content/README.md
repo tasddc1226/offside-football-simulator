@@ -10,11 +10,15 @@ docs/content/
 ├─ prototype/                       종이 프로토타입(코드 이전 검증)
 │   ├─ season-01-inside-forward.md  아키타입 1개 · U18 한 시즌 · 이벤트 10개 · 챕터 3개
 │   └─ playtest-log.md              (예정) 플레이 기록, 회차별 결정 수·시간·미선택 선택지
-├─ packs/<contentPackVersion>/      (예정) 실행용 content pack
-│   ├─ manifest.json                pack 버전, 호환 rulesetVersion, checksum
+└─ (저작 문서만 둔다)
+
+packages/content/                   실행용 원본([ADR-004](../adr/ADR-004-content-and-rules-format.md))
+├─ src/schema/                      Zod 스키마(정본)와 조건 DSL 화이트리스트
+├─ packs/<contentPackVersion>/      content pack
+│   ├─ manifest.json                pack 버전, 호환 rulesetVersion, checksum, playtested
 │   ├─ events/*.json                EventDefinition
-│   └─ narrative/*.json             문구 템플릿과 token 사전
-└─ rulesets/<rulesetVersion>/       (예정) 역할 가중치, 성장 곡선, 선발 규칙 상수
+│   └─ narrative/*.json             token 사전
+└─ rulesets/<rulesetVersion>/       역할 가중치, 성장 곡선, 선발 규칙 상수
 ```
 
 ## 이벤트 ID 체계
@@ -39,7 +43,7 @@ docs/content/
 | 필드 | 필수 | 규칙 |
 |---|---|---|
 | id, version | MUST | pack 안에서 유일. 결과에 영향을 주는 수정은 version 증가 |
-| phases | MUST | PRESEASON, LEAGUE, CUP, TRANSFER_WINDOW, SETTLEMENT, REHAB 중 하나 이상 |
+| phases | MUST | `CareerPhase`(YOUTH, PRESEASON, IN_SEASON, TRANSFER_WINDOW, NATIONAL_TEAM, REHAB, SETTLEMENT) 중 하나 이상. 시즌 step·phase 조건은 triggers의 `season.step`, `season.phase`로 쓴다 |
 | triggers | MUST | 조건 DSL. 연산자는 eq, neq, gt, gte, lt, lte, in, notIn, hasTag, all, any, not |
 | exclusionTags | SHOULD | 이 태그가 있으면 노출하지 않음 |
 | cooldown | SHOULD | 같은 이벤트 재노출까지 최소 step 수 또는 시즌 수 |

@@ -151,7 +151,7 @@ RELATION은 숫자로 기록하되 플레이어에게는 괄호 안 기억 태�
 ### EVT-P01 프리시즌 훈련 초점 (DEV, step 1, SCR-013)
 
 ```json
-{ "all": [ { "eq": ["season.step", 1] }, { "eq": ["career.phase", "U18"] } ] }
+{ "all": [ { "eq": ["season.step", 1] }, { "eq": ["career.stage", "YOUTH"] } ] }
 ```
 
 프리시즌 첫 주. 코치가 이번 달 훈련 초점을 하나 고르라고 한다. 감독은 터치라인 윙어를 원하지만 당신은 안쪽으로 파고드는 선수다.
@@ -273,7 +273,7 @@ RELATION은 숫자로 기록하되 플레이어에게는 괄호 안 기억 태�
 ### EVT-P06 학업·가족 압박과 에이전트 접근 (REL, step 9, SCR-013)
 
 ```json
-{ "all": [ { "eq": ["season.step", 9] }, { "eq": ["player.age", 17] }, { "not": { "hasTag": ["career.tags", "에이전트_계약"] } } ] }
+{ "all": [ { "eq": ["season.step", 9] }, { "eq": ["career.age", 17] }, { "not": { "hasTag": ["career.tags", "에이전트_계약"] } } ] }
 ```
 
 수능이 두 달 남았다. 부모는 대학 진학을 말하고, 같은 주에 에이전트가 찾아와 "프로 직행이면 내가 계약을 책임진다"고 한다.
@@ -343,7 +343,7 @@ RELATION은 숫자로 기록하되 플레이어에게는 괄호 안 기억 태�
 ### EVT-P09 졸업 후 진로 선택 (CON, step 12, SCR-007)
 
 ```json
-{ "all": [ { "eq": ["season.phase", "SETTLEMENT"] }, { "eq": ["career.phase", "U18"] }, { "eq": ["player.age", 17] } ] }
+{ "all": [ { "eq": ["season.phase", "SETTLEMENT"] }, { "eq": ["career.stage", "YOUTH"] }, { "eq": ["career.age", 17] } ] }
 ```
 
 시즌이 끝났다. 정찰 범위 68~82. 눈앞에 네 갈래 길이 있다. 어느 길도 정답이 아니며 각 경로는 다른 것을 준다.
@@ -465,7 +465,7 @@ EVT-P10 결과로 최대 3개를 노출한다. OVR 순위가 아니라 역할·�
 - [ ] `EVT-P01`~`EVT-P10`을 정식 ID로 재부여한다. P01·P05는 DEV, P02는 MGR, P03·P06은 REL, P04는 INJ, P07은 MEDIA, P08·P09·P10은 CON.
 - [ ] 각 표의 선택지 행을 `choices[].outcomes[]`로, roll 구간을 `weight`로 옮긴다. 구간 합은 100이어야 한다.
 - [ ] 줄여 쓴 Effect에 sourceId, clamp, appliesAt, expiresAt, stackingRule을 채운다. "= 값으로 교체"는 `stackingRule: REPLACE`로 표기한다.
-- [ ] 트리거 JSON의 필드(`season.step`, `context.tacticalFit`, `state.form`, `career.tags`, `rng.injuryRoll`, `season.chapterHighlights`, `season.stats.goals`, `career.pathDecision`, `player.baseOvr`, `player.age`)를 조건 DSL 화이트리스트에 등록한다.
+- [x] 트리거 JSON의 필드(`season.step`, `season.phase`, `season.tags`, `context.tacticalFit`, `state.form`, `career.tags`, `career.stage`, `career.age`, `rng.injuryRoll`, `season.chapterHighlights`, `season.stats.goals`, `career.pathDecision`, `player.baseOvr`)를 04 조건 DSL 화이트리스트에 등록했다(2026-09-02). `career.phase`·`player.age`는 각각 `career.stage`·`career.age`로 바꿨다.
 - [ ] 챕터 CH-P01~P03의 판단을 `EVT-MATCH-*`로 분리하고 `CH-*` 정의는 진입 조건·선발 판정·판단 순서만 가진다.
 - [ ] 결산 밴드와 SelectionScore 밴드를 ruleset manifest 상수로 옮기고 golden fixture를 만든다. 김서준 fixture의 Base OVR은 59, 결산 예시 fixture의 Base OVR은 61이어야 한다.
 - [ ] 04 이벤트 엔진 검증 규칙을 통과한다: ID·version 유일, outcome weight 합 0 초과, 존재하지 않는 Effect·필드·token 참조 없음, 후속 순환 없음, cooldown 존재, 선택지 간 동일 문구·효과 없음.

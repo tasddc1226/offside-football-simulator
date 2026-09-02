@@ -58,17 +58,17 @@ type CareerPhase =
 
 | 접두 | 필드 예 |
 |---|---|
-| `career.*` | age, currentRole, pathDecision, tags, proSeasons |
+| `career.*` | age, stage(`YOUTH`/`PRO`), currentRole, pathDecision, tags, proSeasons |
 | `player.*` | primaryPosition, positionGroup, archetypeId, baseOvr, attributes.* |
 | `state.*` | form, fitness, morale |
 | `context.*` | tacticalFit, managerTrust, squadStatus, competitionRank |
 | `relationships.*` | managerTrust, captain, rival, fans, agent |
-| `season.*` | step, phase, simulationMode, stats.*, chapterHighlights |
+| `season.*` | step, phase, simulationMode, tags, stats.*, chapterHighlights |
 | `contract.*` | monthsRemaining, rolePromise, wageBand |
 | `health.*` | injuryEpisode, recurrenceRisk |
 | `rng.*` | injuryRoll 같은 사전 추첨 값 |
 
-종이 프로토타입이 쓰는 필드는 [콘텐츠 README](../content/README.md)에 있으며 pack으로 옮길 때 이 표에 없는 필드는 먼저 등록한다.
+종이 프로토타입이 쓰는 필드는 [콘텐츠 README](../content/README.md)에 있으며 pack으로 옮길 때 이 표에 없는 필드는 먼저 등록한다. 화이트리스트 상수는 `packages/content`가 소유하고 이 표와 같은 순서로 적는다. 나이는 `career.age` 하나만 쓴다(`player.age` 없음).
 
 예시:
 
