@@ -1,5 +1,5 @@
 import type { CommandLogEntry } from '@offside/contracts';
-import type { DomainSnapshot } from '@offside/domain';
+import type { DomainSnapshot, Ruleset } from '@offside/domain';
 import type { Simulator } from './simulator/index.js';
 import type { EngineCommand } from './types.js';
 
@@ -31,6 +31,7 @@ export async function replayCommandLog(
   start: DomainSnapshot | null,
   entries: readonly CommandLogEntry[],
   versions: { rulesetVersion: string; contentPackVersion: string },
+  ruleset: Ruleset,
 ): Promise<ReplayResult> {
   let current = start;
   let expectedRevision = (start?.revision ?? 0) + 1;
@@ -51,6 +52,7 @@ export async function replayCommandLog(
     const result = await simulator.simulate({
       snapshot: current,
       command: toEngineCommand(entry),
+      ruleset,
       rulesetVersion: versions.rulesetVersion,
       contentPackVersion: versions.contentPackVersion,
     });

@@ -48,6 +48,13 @@ function makeDomainSnapshot(overrides: Partial<DomainSnapshot> = {}): DomainSnap
     rngState: { s: [1, 2, 3, 4], draws: 0 },
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',
+    player: {
+      draft: { name: null, nationalityCode: null, preferredFoot: null, position: null, archetypeId: null, backgroundId: null },
+      profile: null,
+    },
+    pending: null,
+    contract: null,
+    timeline: [],
   };
   return {
     revision: 1,

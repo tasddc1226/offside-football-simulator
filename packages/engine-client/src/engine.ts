@@ -1,5 +1,5 @@
 import type { CareerSnapshot, CommandLogEntry, PutCareerBody } from '@offside/contracts';
-import type { DomainSnapshot } from '@offside/domain';
+import type { DomainSnapshot, Ruleset } from '@offside/domain';
 import { decodeSnapshot, encodeSnapshot } from './snapshot.js';
 import { replayCommandLog } from './replay.js';
 import type { Simulator } from './simulator/index.js';
@@ -15,6 +15,11 @@ import type { LocalStore } from './ports/local-store.js';
 export type EngineClientDeps = {
   store: LocalStore;
   simulator: Simulator;
+  /**
+   * simulate()에 그대로 전달하는 룰셋. 버전별 선택·content 연동은 T-1-007·T-1-015에서 배선한다.
+   * 이 단계에서는 이 EngineClient 인스턴스의 모든 simulate 호출에 같은 룰셋을 쓴다.
+   */
+  ruleset: Ruleset;
   now?: () => string;
   newId?: () => string;
   ownerProfileId?: () => string | null;
@@ -50,6 +55,7 @@ async function recoverLatestSnapshot(
   snapshotsAscending: readonly CareerSnapshot[],
   commandLogEntries: readonly CommandLogEntry[],
   versions: Versions,
+  ruleset: Ruleset,
 ): Promise<RecoveryOutcome> {
   let start: DomainSnapshot | null = null;
   let fromRevision = 0;
@@ -68,7 +74,7 @@ async function recoverLatestSnapshot(
     .filter((entry) => entry.revision > fromRevision)
     .sort((a, b) => a.revision - b.revision);
 
-  const replay = await replayCommandLog(simulator, start, entries, versions);
+  const replay = await replayCommandLog(simulator, start, entries, versions, ruleset);
   if (!replay.ok) {
     return { ok: false, atRevision: replay.atRevision, reason: replay.reason, details: replay.details };
   }
@@ -98,6 +104,7 @@ type ReadOutcome =
 export function createEngineClient(deps: EngineClientDeps): EngineClient {
   const store = deps.store;
   const simulator = deps.simulator;
+  const ruleset = deps.ruleset;
   const now = deps.now ?? (() => new Date().toISOString());
   const ownerProfileId = deps.ownerProfileId ?? (() => null);
 
@@ -200,6 +207,7 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
         readOutcome.priorSnapshots,
         readOutcome.commandLogEntries,
         versions,
+        ruleset,
       );
       if (!recovery.ok) {
         return { ok: false, error: verificationFailedError(recovery) };
@@ -210,6 +218,7 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
     const simResult = await simulator.simulate({
       snapshot: baseSnapshot,
       command,
+      ruleset,
       rulesetVersion: versions.rulesetVersion,
       contentPackVersion: versions.contentPackVersion,
     });
@@ -343,7 +352,13 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       rulesetVersion: readOutcome.career.rulesetVersion,
       contentPackVersion: readOutcome.career.contentPackVersion,
     };
-    const recovery = await recoverLatestSnapshot(simulator, readOutcome.priorSnapshots, readOutcome.commandLogEntries, versions);
+    const recovery = await recoverLatestSnapshot(
+      simulator,
+      readOutcome.priorSnapshots,
+      readOutcome.commandLogEntries,
+      versions,
+      ruleset,
+    );
     if (!recovery.ok) {
       return { ok: false, error: verificationFailedError(recovery) };
     }

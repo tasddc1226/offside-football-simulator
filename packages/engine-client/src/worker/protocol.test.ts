@@ -1,4 +1,5 @@
 import type { SimulationInput, SimulationResult } from '@offside/domain';
+import { rulesetProto } from '@offside/fixtures';
 import { describe, expect, it } from 'vitest';
 import type { Simulator } from '../simulator/index.js';
 import { createWorkerSimulator } from './host.js';
@@ -13,38 +14,12 @@ const sampleInput: SimulationInput = {
     payload: {
       careerId: 'car_test',
       seed: 'seed',
-      stage: 'YOUTH',
-      age: 17,
-      attributes: {
-        shooting: 1,
-        passing: 1,
-        dribbling: 1,
-        tackling: 1,
-        firstTouch: 1,
-        crossing: 1,
-        goalkeeping: 1,
-        pace: 1,
-        acceleration: 1,
-        agility: 1,
-        jumping: 1,
-        stamina: 1,
-        strength: 1,
-        durability: 1,
-        decisions: 1,
-        concentration: 1,
-        composure: 1,
-        positioning: 1,
-        leadership: 1,
-        consistency: 1,
-      },
-      state: { form: 50, fitness: 80, morale: 60 },
-      context: { tacticalFit: 50, squadStatus: 50, positionProficiency: 100 },
-      relationships: { managerTrust: 50, captain: 50, rival: 50, fans: 50, agent: 50 },
       simulationMode: 'CHAPTER',
       rulesetVersion: '1.0.0',
       contentPackVersion: '0.1.0',
     },
   },
+  ruleset: rulesetProto,
   rulesetVersion: '1.0.0',
   contentPackVersion: '0.1.0',
 };
