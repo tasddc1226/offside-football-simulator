@@ -1,0 +1,1389 @@
+{
+  "version": "1.0.0",
+  "positions": [
+    "GK",
+    "CB",
+    "FB",
+    "DM",
+    "CM",
+    "AM",
+    "W",
+    "ST"
+  ],
+  "archetypes": [
+    {
+      "id": "gk-shot-stopper",
+      "position": "GK",
+      "name": "스톱퍼 골키퍼",
+      "summary": "순간 반응과 선방 능력으로 실점을 최소화하는 골키퍼.",
+      "roleWeights": {
+        "goalkeeping": 0.45,
+        "agility": 0.15,
+        "positioning": 0.12,
+        "concentration": 0.1,
+        "composure": 0.08,
+        "decisions": 0.05,
+        "jumping": 0.05
+      },
+      "template": {
+        "shooting": 30,
+        "passing": 42,
+        "dribbling": 32,
+        "tackling": 34,
+        "firstTouch": 44,
+        "crossing": 30,
+        "goalkeeping": 70,
+        "pace": 46,
+        "acceleration": 48,
+        "agility": 66,
+        "jumping": 55,
+        "stamina": 50,
+        "strength": 48,
+        "durability": 55,
+        "decisions": 58,
+        "concentration": 68,
+        "composure": 62,
+        "positioning": 60,
+        "leadership": 40,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 60,
+        "max": 78
+      }
+    },
+    {
+      "id": "gk-sweeper-keeper",
+      "position": "GK",
+      "name": "스위퍼 키퍼",
+      "summary": "패스와 위치선정으로 후방 빌드업을 시작하는 골키퍼.",
+      "roleWeights": {
+        "goalkeeping": 0.35,
+        "passing": 0.15,
+        "decisions": 0.12,
+        "positioning": 0.12,
+        "composure": 0.1,
+        "agility": 0.08,
+        "concentration": 0.08
+      },
+      "template": {
+        "shooting": 30,
+        "passing": 58,
+        "dribbling": 40,
+        "tackling": 38,
+        "firstTouch": 52,
+        "crossing": 32,
+        "goalkeeping": 64,
+        "pace": 50,
+        "acceleration": 50,
+        "agility": 58,
+        "jumping": 48,
+        "stamina": 52,
+        "strength": 44,
+        "durability": 50,
+        "decisions": 64,
+        "concentration": 58,
+        "composure": 60,
+        "positioning": 62,
+        "leadership": 44,
+        "consistency": 50
+      },
+      "potentialRange": {
+        "min": 58,
+        "max": 80
+      }
+    },
+    {
+      "id": "gk-commander",
+      "position": "GK",
+      "name": "박스 지배 골키퍼",
+      "summary": "공중볼 장악과 통솔로 수비 라인을 조율하는 골키퍼.",
+      "roleWeights": {
+        "goalkeeping": 0.38,
+        "jumping": 0.15,
+        "leadership": 0.12,
+        "positioning": 0.12,
+        "concentration": 0.1,
+        "composure": 0.08,
+        "agility": 0.05
+      },
+      "template": {
+        "shooting": 30,
+        "passing": 44,
+        "dribbling": 32,
+        "tackling": 40,
+        "firstTouch": 42,
+        "crossing": 30,
+        "goalkeeping": 66,
+        "pace": 42,
+        "acceleration": 44,
+        "agility": 50,
+        "jumping": 64,
+        "stamina": 54,
+        "strength": 58,
+        "durability": 58,
+        "decisions": 56,
+        "concentration": 62,
+        "composure": 60,
+        "positioning": 64,
+        "leadership": 55,
+        "consistency": 50
+      },
+      "potentialRange": {
+        "min": 57,
+        "max": 76
+      }
+    },
+    {
+      "id": "cb-stopper",
+      "position": "CB",
+      "name": "맨마킹 스토퍼",
+      "summary": "일대일 몸싸움과 태클로 상대 공격수를 지우는 중앙 수비수.",
+      "roleWeights": {
+        "tackling": 0.28,
+        "strength": 0.18,
+        "positioning": 0.14,
+        "concentration": 0.12,
+        "jumping": 0.1,
+        "composure": 0.08,
+        "decisions": 0.06,
+        "durability": 0.04
+      },
+      "template": {
+        "shooting": 32,
+        "passing": 44,
+        "dribbling": 34,
+        "tackling": 68,
+        "firstTouch": 42,
+        "crossing": 32,
+        "goalkeeping": 10,
+        "pace": 48,
+        "acceleration": 46,
+        "agility": 44,
+        "jumping": 58,
+        "stamina": 54,
+        "strength": 66,
+        "durability": 60,
+        "decisions": 52,
+        "concentration": 62,
+        "composure": 56,
+        "positioning": 60,
+        "leadership": 46,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 58,
+        "max": 78
+      }
+    },
+    {
+      "id": "cb-ball-playing",
+      "position": "CB",
+      "name": "빌드업 센터백",
+      "summary": "패스와 판단으로 수비 라인에서 공격을 시작하는 중앙 수비수.",
+      "roleWeights": {
+        "passing": 0.22,
+        "decisions": 0.16,
+        "composure": 0.14,
+        "positioning": 0.14,
+        "tackling": 0.14,
+        "concentration": 0.08,
+        "firstTouch": 0.08,
+        "strength": 0.04
+      },
+      "template": {
+        "shooting": 34,
+        "passing": 60,
+        "dribbling": 42,
+        "tackling": 56,
+        "firstTouch": 56,
+        "crossing": 36,
+        "goalkeeping": 10,
+        "pace": 48,
+        "acceleration": 46,
+        "agility": 46,
+        "jumping": 52,
+        "stamina": 52,
+        "strength": 54,
+        "durability": 54,
+        "decisions": 62,
+        "concentration": 56,
+        "composure": 62,
+        "positioning": 58,
+        "leadership": 48,
+        "consistency": 54
+      },
+      "potentialRange": {
+        "min": 60,
+        "max": 82
+      }
+    },
+    {
+      "id": "cb-aerial-dominator",
+      "position": "CB",
+      "name": "공중볼 지배 수비수",
+      "summary": "높이와 몸싸움으로 세트피스와 크로스 상황을 정리하는 중앙 수비수.",
+      "roleWeights": {
+        "jumping": 0.24,
+        "strength": 0.18,
+        "tackling": 0.18,
+        "positioning": 0.14,
+        "concentration": 0.12,
+        "durability": 0.08,
+        "composure": 0.06
+      },
+      "template": {
+        "shooting": 32,
+        "passing": 42,
+        "dribbling": 32,
+        "tackling": 60,
+        "firstTouch": 40,
+        "crossing": 32,
+        "goalkeeping": 10,
+        "pace": 44,
+        "acceleration": 42,
+        "agility": 40,
+        "jumping": 68,
+        "stamina": 52,
+        "strength": 68,
+        "durability": 62,
+        "decisions": 50,
+        "concentration": 58,
+        "composure": 52,
+        "positioning": 58,
+        "leadership": 44,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 56,
+        "max": 76
+      }
+    },
+    {
+      "id": "fb-overlapping",
+      "position": "FB",
+      "name": "오버래핑 풀백",
+      "summary": "측면을 오르내리며 크로스와 오버래핑으로 공격을 지원하는 풀백.",
+      "roleWeights": {
+        "crossing": 0.2,
+        "pace": 0.16,
+        "stamina": 0.14,
+        "dribbling": 0.12,
+        "tackling": 0.12,
+        "firstTouch": 0.1,
+        "positioning": 0.08,
+        "acceleration": 0.08
+      },
+      "template": {
+        "shooting": 36,
+        "passing": 52,
+        "dribbling": 54,
+        "tackling": 50,
+        "firstTouch": 54,
+        "crossing": 62,
+        "goalkeeping": 10,
+        "pace": 64,
+        "acceleration": 62,
+        "agility": 56,
+        "jumping": 46,
+        "stamina": 62,
+        "strength": 46,
+        "durability": 52,
+        "decisions": 50,
+        "concentration": 50,
+        "composure": 48,
+        "positioning": 48,
+        "leadership": 40,
+        "consistency": 48
+      },
+      "potentialRange": {
+        "min": 58,
+        "max": 80
+      }
+    },
+    {
+      "id": "fb-defensive",
+      "position": "FB",
+      "name": "수비형 풀백",
+      "summary": "자기 자리를 지키며 크로스와 침투를 먼저 차단하는 풀백.",
+      "roleWeights": {
+        "tackling": 0.24,
+        "positioning": 0.16,
+        "concentration": 0.14,
+        "strength": 0.1,
+        "stamina": 0.1,
+        "pace": 0.08,
+        "jumping": 0.08,
+        "composure": 0.1
+      },
+      "template": {
+        "shooting": 32,
+        "passing": 44,
+        "dribbling": 40,
+        "tackling": 62,
+        "firstTouch": 44,
+        "crossing": 40,
+        "goalkeeping": 10,
+        "pace": 54,
+        "acceleration": 52,
+        "agility": 48,
+        "jumping": 50,
+        "stamina": 56,
+        "strength": 54,
+        "durability": 56,
+        "decisions": 50,
+        "concentration": 60,
+        "composure": 52,
+        "positioning": 56,
+        "leadership": 42,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 56,
+        "max": 76
+      }
+    },
+    {
+      "id": "fb-inverted",
+      "position": "FB",
+      "name": "인버티드 풀백",
+      "summary": "안쪽으로 좁혀 들어가 패스 서클을 만드는 풀백.",
+      "roleWeights": {
+        "passing": 0.2,
+        "decisions": 0.16,
+        "tackling": 0.16,
+        "positioning": 0.12,
+        "firstTouch": 0.12,
+        "composure": 0.1,
+        "concentration": 0.08,
+        "stamina": 0.06
+      },
+      "template": {
+        "shooting": 36,
+        "passing": 58,
+        "dribbling": 48,
+        "tackling": 54,
+        "firstTouch": 56,
+        "crossing": 44,
+        "goalkeeping": 10,
+        "pace": 52,
+        "acceleration": 50,
+        "agility": 50,
+        "jumping": 44,
+        "stamina": 54,
+        "strength": 46,
+        "durability": 50,
+        "decisions": 58,
+        "concentration": 54,
+        "composure": 56,
+        "positioning": 54,
+        "leadership": 44,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 58,
+        "max": 80
+      }
+    },
+    {
+      "id": "dm-destroyer",
+      "position": "DM",
+      "name": "파괴자형 수비형 미드필더",
+      "summary": "볼 경합과 태클로 상대 공격을 끊어내는 수비형 미드필더.",
+      "roleWeights": {
+        "tackling": 0.26,
+        "strength": 0.14,
+        "concentration": 0.14,
+        "positioning": 0.12,
+        "stamina": 0.12,
+        "composure": 0.08,
+        "decisions": 0.08,
+        "jumping": 0.06
+      },
+      "template": {
+        "shooting": 36,
+        "passing": 48,
+        "dribbling": 40,
+        "tackling": 64,
+        "firstTouch": 46,
+        "crossing": 34,
+        "goalkeeping": 10,
+        "pace": 50,
+        "acceleration": 48,
+        "agility": 48,
+        "jumping": 50,
+        "stamina": 58,
+        "strength": 58,
+        "durability": 54,
+        "decisions": 52,
+        "concentration": 62,
+        "composure": 52,
+        "positioning": 56,
+        "leadership": 48,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 58,
+        "max": 78
+      }
+    },
+    {
+      "id": "dm-deep-lying-playmaker",
+      "position": "DM",
+      "name": "딥라잉 플레이메이커",
+      "summary": "후방에서 템포를 조절하고 전개 패스를 뿌리는 수비형 미드필더.",
+      "roleWeights": {
+        "passing": 0.24,
+        "decisions": 0.18,
+        "composure": 0.14,
+        "firstTouch": 0.12,
+        "positioning": 0.1,
+        "tackling": 0.12,
+        "concentration": 0.1
+      },
+      "template": {
+        "shooting": 38,
+        "passing": 64,
+        "dribbling": 50,
+        "tackling": 46,
+        "firstTouch": 60,
+        "crossing": 40,
+        "goalkeeping": 10,
+        "pace": 46,
+        "acceleration": 44,
+        "agility": 46,
+        "jumping": 42,
+        "stamina": 54,
+        "strength": 44,
+        "durability": 50,
+        "decisions": 64,
+        "concentration": 56,
+        "composure": 62,
+        "positioning": 54,
+        "leadership": 50,
+        "consistency": 56
+      },
+      "potentialRange": {
+        "min": 60,
+        "max": 84
+      }
+    },
+    {
+      "id": "dm-box-to-box",
+      "position": "DM",
+      "name": "박스투박스 미드필더",
+      "summary": "양 진영을 오가며 수비 가담과 전진을 모두 소화하는 미드필더.",
+      "roleWeights": {
+        "stamina": 0.18,
+        "tackling": 0.16,
+        "passing": 0.16,
+        "decisions": 0.12,
+        "positioning": 0.1,
+        "strength": 0.1,
+        "firstTouch": 0.1,
+        "concentration": 0.08
+      },
+      "template": {
+        "shooting": 40,
+        "passing": 54,
+        "dribbling": 48,
+        "tackling": 54,
+        "firstTouch": 52,
+        "crossing": 38,
+        "goalkeeping": 10,
+        "pace": 54,
+        "acceleration": 52,
+        "agility": 50,
+        "jumping": 48,
+        "stamina": 64,
+        "strength": 52,
+        "durability": 54,
+        "decisions": 54,
+        "concentration": 54,
+        "composure": 50,
+        "positioning": 52,
+        "leadership": 46,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 58,
+        "max": 80
+      }
+    },
+    {
+      "id": "cm-playmaker",
+      "position": "CM",
+      "name": "중앙 플레이메이커",
+      "summary": "넓은 시야와 패스로 팀 공격의 리듬을 만드는 중앙 미드필더.",
+      "roleWeights": {
+        "passing": 0.26,
+        "decisions": 0.18,
+        "firstTouch": 0.14,
+        "composure": 0.12,
+        "positioning": 0.1,
+        "dribbling": 0.1,
+        "concentration": 0.1
+      },
+      "template": {
+        "shooting": 42,
+        "passing": 68,
+        "dribbling": 56,
+        "tackling": 40,
+        "firstTouch": 62,
+        "crossing": 44,
+        "goalkeeping": 10,
+        "pace": 48,
+        "acceleration": 46,
+        "agility": 50,
+        "jumping": 40,
+        "stamina": 52,
+        "strength": 42,
+        "durability": 46,
+        "decisions": 66,
+        "concentration": 54,
+        "composure": 62,
+        "positioning": 54,
+        "leadership": 50,
+        "consistency": 56
+      },
+      "potentialRange": {
+        "min": 62,
+        "max": 86
+      }
+    },
+    {
+      "id": "cm-box-to-box",
+      "position": "CM",
+      "name": "박스투박스 센터미드필더",
+      "summary": "체력을 앞세워 공수 양쪽에서 꾸준히 관여하는 중앙 미드필더.",
+      "roleWeights": {
+        "stamina": 0.18,
+        "shooting": 0.12,
+        "tackling": 0.14,
+        "passing": 0.14,
+        "dribbling": 0.12,
+        "decisions": 0.1,
+        "positioning": 0.1,
+        "strength": 0.1
+      },
+      "template": {
+        "shooting": 48,
+        "passing": 54,
+        "dribbling": 54,
+        "tackling": 50,
+        "firstTouch": 54,
+        "crossing": 38,
+        "goalkeeping": 10,
+        "pace": 56,
+        "acceleration": 54,
+        "agility": 52,
+        "jumping": 46,
+        "stamina": 66,
+        "strength": 50,
+        "durability": 52,
+        "decisions": 52,
+        "concentration": 52,
+        "composure": 50,
+        "positioning": 50,
+        "leadership": 46,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 60,
+        "max": 82
+      }
+    },
+    {
+      "id": "cm-advanced",
+      "position": "CM",
+      "name": "전진형 미드필더",
+      "summary": "중앙에서 앞선 라인으로 침투해 득점 기회를 만드는 미드필더.",
+      "roleWeights": {
+        "shooting": 0.18,
+        "dribbling": 0.16,
+        "passing": 0.16,
+        "firstTouch": 0.14,
+        "decisions": 0.1,
+        "positioning": 0.1,
+        "composure": 0.08,
+        "acceleration": 0.08
+      },
+      "template": {
+        "shooting": 56,
+        "passing": 58,
+        "dribbling": 60,
+        "tackling": 36,
+        "firstTouch": 60,
+        "crossing": 42,
+        "goalkeeping": 10,
+        "pace": 54,
+        "acceleration": 54,
+        "agility": 56,
+        "jumping": 40,
+        "stamina": 52,
+        "strength": 42,
+        "durability": 46,
+        "decisions": 56,
+        "concentration": 50,
+        "composure": 54,
+        "positioning": 54,
+        "leadership": 44,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 60,
+        "max": 84
+      }
+    },
+    {
+      "id": "am-playmaker",
+      "position": "AM",
+      "name": "공격형 플레이메이커",
+      "summary": "최전방 배후에서 결정적인 패스로 득점 기회를 여는 공격형 미드필더.",
+      "roleWeights": {
+        "passing": 0.22,
+        "dribbling": 0.18,
+        "decisions": 0.16,
+        "firstTouch": 0.14,
+        "composure": 0.1,
+        "positioning": 0.1,
+        "shooting": 0.1
+      },
+      "template": {
+        "shooting": 52,
+        "passing": 66,
+        "dribbling": 64,
+        "tackling": 32,
+        "firstTouch": 64,
+        "crossing": 46,
+        "goalkeeping": 10,
+        "pace": 54,
+        "acceleration": 56,
+        "agility": 58,
+        "jumping": 38,
+        "stamina": 48,
+        "strength": 40,
+        "durability": 44,
+        "decisions": 62,
+        "concentration": 52,
+        "composure": 60,
+        "positioning": 56,
+        "leadership": 46,
+        "consistency": 54
+      },
+      "potentialRange": {
+        "min": 62,
+        "max": 86
+      }
+    },
+    {
+      "id": "am-shadow-striker",
+      "position": "AM",
+      "name": "세컨드 스트라이커형 공격형 미드필더",
+      "summary": "최전방 바로 뒤에서 마무리 기회를 노리는 공격형 미드필더.",
+      "roleWeights": {
+        "shooting": 0.24,
+        "dribbling": 0.18,
+        "positioning": 0.16,
+        "firstTouch": 0.14,
+        "composure": 0.12,
+        "decisions": 0.1,
+        "acceleration": 0.06
+      },
+      "template": {
+        "shooting": 64,
+        "passing": 52,
+        "dribbling": 60,
+        "tackling": 30,
+        "firstTouch": 60,
+        "crossing": 38,
+        "goalkeeping": 10,
+        "pace": 58,
+        "acceleration": 60,
+        "agility": 56,
+        "jumping": 40,
+        "stamina": 48,
+        "strength": 42,
+        "durability": 44,
+        "decisions": 54,
+        "concentration": 52,
+        "composure": 58,
+        "positioning": 60,
+        "leadership": 42,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 62,
+        "max": 86
+      }
+    },
+    {
+      "id": "am-wide-creator",
+      "position": "AM",
+      "name": "측면 침투형 공격형 미드필더",
+      "summary": "측면 공간으로 벌어져 크로스와 돌파를 함께 노리는 공격형 미드필더.",
+      "roleWeights": {
+        "crossing": 0.18,
+        "dribbling": 0.18,
+        "pace": 0.14,
+        "passing": 0.14,
+        "firstTouch": 0.12,
+        "acceleration": 0.1,
+        "decisions": 0.08,
+        "positioning": 0.06
+      },
+      "template": {
+        "shooting": 50,
+        "passing": 56,
+        "dribbling": 62,
+        "tackling": 32,
+        "firstTouch": 58,
+        "crossing": 58,
+        "goalkeeping": 10,
+        "pace": 64,
+        "acceleration": 64,
+        "agility": 60,
+        "jumping": 38,
+        "stamina": 52,
+        "strength": 40,
+        "durability": 44,
+        "decisions": 52,
+        "concentration": 48,
+        "composure": 52,
+        "positioning": 52,
+        "leadership": 40,
+        "consistency": 50
+      },
+      "potentialRange": {
+        "min": 60,
+        "max": 84
+      }
+    },
+    {
+      "id": "inside-forward",
+      "position": "W",
+      "name": "인사이드 포워드",
+      "summary": "측면에서 안쪽으로 파고들어 직접 슈팅을 노리는 윙어.",
+      "roleWeights": {
+        "shooting": 0.2,
+        "passing": 0.14,
+        "crossing": 0.06,
+        "dribbling": 0.14,
+        "firstTouch": 0.11,
+        "acceleration": 0.06,
+        "pace": 0.04,
+        "agility": 0.03,
+        "stamina": 0.02,
+        "positioning": 0.09,
+        "composure": 0.05,
+        "decisions": 0.04,
+        "concentration": 0.02
+      },
+      "template": {
+        "shooting": 60,
+        "passing": 54,
+        "dribbling": 66,
+        "tackling": 30,
+        "firstTouch": 62,
+        "crossing": 45,
+        "goalkeeping": 10,
+        "pace": 68,
+        "acceleration": 70,
+        "agility": 64,
+        "jumping": 50,
+        "stamina": 55,
+        "strength": 42,
+        "durability": 60,
+        "decisions": 52,
+        "concentration": 48,
+        "composure": 52,
+        "positioning": 60,
+        "leadership": 35,
+        "consistency": 45
+      },
+      "potentialRange": {
+        "min": 70,
+        "max": 84
+      }
+    },
+    {
+      "id": "w-touchline-winger",
+      "position": "W",
+      "name": "터치라인 윙어",
+      "summary": "측면 라인을 넓게 쓰며 크로스로 공격을 마무리하는 윙어.",
+      "roleWeights": {
+        "crossing": 0.22,
+        "pace": 0.18,
+        "dribbling": 0.16,
+        "acceleration": 0.12,
+        "firstTouch": 0.1,
+        "passing": 0.1,
+        "agility": 0.06,
+        "positioning": 0.06
+      },
+      "template": {
+        "shooting": 46,
+        "passing": 50,
+        "dribbling": 58,
+        "tackling": 30,
+        "firstTouch": 54,
+        "crossing": 66,
+        "goalkeeping": 10,
+        "pace": 68,
+        "acceleration": 66,
+        "agility": 58,
+        "jumping": 38,
+        "stamina": 56,
+        "strength": 40,
+        "durability": 46,
+        "decisions": 48,
+        "concentration": 46,
+        "composure": 48,
+        "positioning": 48,
+        "leadership": 38,
+        "consistency": 48
+      },
+      "potentialRange": {
+        "min": 58,
+        "max": 82
+      }
+    },
+    {
+      "id": "w-inverted-winger",
+      "position": "W",
+      "name": "창조형 인버티드 윙어",
+      "summary": "반대발 측면에서 안쪽으로 좁혀 들어가 패스 길을 여는 윙어.",
+      "roleWeights": {
+        "passing": 0.2,
+        "dribbling": 0.18,
+        "decisions": 0.14,
+        "firstTouch": 0.14,
+        "crossing": 0.1,
+        "positioning": 0.1,
+        "composure": 0.08,
+        "acceleration": 0.06
+      },
+      "template": {
+        "shooting": 48,
+        "passing": 62,
+        "dribbling": 62,
+        "tackling": 30,
+        "firstTouch": 60,
+        "crossing": 48,
+        "goalkeeping": 10,
+        "pace": 60,
+        "acceleration": 60,
+        "agility": 58,
+        "jumping": 38,
+        "stamina": 50,
+        "strength": 40,
+        "durability": 44,
+        "decisions": 58,
+        "concentration": 50,
+        "composure": 56,
+        "positioning": 52,
+        "leadership": 42,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 60,
+        "max": 84
+      }
+    },
+    {
+      "id": "st-poacher",
+      "position": "ST",
+      "name": "포처형 스트라이커",
+      "summary": "박스 안 위치선정과 마무리로 골을 만드는 스트라이커.",
+      "roleWeights": {
+        "shooting": 0.3,
+        "positioning": 0.2,
+        "composure": 0.14,
+        "firstTouch": 0.1,
+        "decisions": 0.08,
+        "acceleration": 0.1,
+        "concentration": 0.08
+      },
+      "template": {
+        "shooting": 70,
+        "passing": 44,
+        "dribbling": 50,
+        "tackling": 30,
+        "firstTouch": 58,
+        "crossing": 34,
+        "goalkeeping": 10,
+        "pace": 60,
+        "acceleration": 62,
+        "agility": 52,
+        "jumping": 46,
+        "stamina": 46,
+        "strength": 44,
+        "durability": 46,
+        "decisions": 52,
+        "concentration": 56,
+        "composure": 62,
+        "positioning": 66,
+        "leadership": 38,
+        "consistency": 54
+      },
+      "potentialRange": {
+        "min": 62,
+        "max": 88
+      }
+    },
+    {
+      "id": "st-target-man",
+      "position": "ST",
+      "name": "타겟맨",
+      "summary": "높이와 몸싸움으로 공을 지켜내고 연계를 여는 스트라이커.",
+      "roleWeights": {
+        "strength": 0.18,
+        "jumping": 0.18,
+        "shooting": 0.22,
+        "positioning": 0.14,
+        "firstTouch": 0.1,
+        "composure": 0.1,
+        "durability": 0.08
+      },
+      "template": {
+        "shooting": 62,
+        "passing": 42,
+        "dribbling": 40,
+        "tackling": 32,
+        "firstTouch": 52,
+        "crossing": 32,
+        "goalkeeping": 10,
+        "pace": 46,
+        "acceleration": 44,
+        "agility": 40,
+        "jumping": 64,
+        "stamina": 50,
+        "strength": 66,
+        "durability": 56,
+        "decisions": 48,
+        "concentration": 52,
+        "composure": 56,
+        "positioning": 58,
+        "leadership": 44,
+        "consistency": 50
+      },
+      "potentialRange": {
+        "min": 58,
+        "max": 82
+      }
+    },
+    {
+      "id": "st-false-nine",
+      "position": "ST",
+      "name": "폴스나인",
+      "summary": "최전방에서 내려와 연계를 만들고 빈 공간을 열어주는 스트라이커.",
+      "roleWeights": {
+        "passing": 0.18,
+        "dribbling": 0.18,
+        "decisions": 0.16,
+        "shooting": 0.16,
+        "firstTouch": 0.14,
+        "positioning": 0.1,
+        "composure": 0.08
+      },
+      "template": {
+        "shooting": 58,
+        "passing": 58,
+        "dribbling": 58,
+        "tackling": 30,
+        "firstTouch": 60,
+        "crossing": 38,
+        "goalkeeping": 10,
+        "pace": 52,
+        "acceleration": 52,
+        "agility": 52,
+        "jumping": 38,
+        "stamina": 48,
+        "strength": 40,
+        "durability": 42,
+        "decisions": 58,
+        "concentration": 50,
+        "composure": 56,
+        "positioning": 56,
+        "leadership": 44,
+        "consistency": 52
+      },
+      "potentialRange": {
+        "min": 60,
+        "max": 84
+      }
+    }
+  ],
+  "backgrounds": [
+    {
+      "id": "club-academy",
+      "name": "클럽 아카데미",
+      "blurb": "어린 시절부터 구단 유스 체계 안에서 자란 선수다. 훈련 환경과 전술 이해도는 안정적이지만 아직 실전 압박은 낯설다.",
+      "startTeamId": "hangang-u18",
+      "attributeDeltas": {},
+      "state": {
+        "form": 50,
+        "fitness": 80,
+        "morale": 60
+      },
+      "context": {
+        "tacticalFit": 58,
+        "squadStatus": 40,
+        "positionProficiency": 100
+      },
+      "relationships": {
+        "managerTrust": 40,
+        "captain": 50,
+        "rival": 50,
+        "fans": 50,
+        "agent": 50
+      }
+    },
+    {
+      "id": "school",
+      "name": "학원 축구",
+      "blurb": "학교 축구부에서 체계적인 체력 훈련을 받으며 성장했다. 몸은 탄탄하지만 세밀한 판단은 더 다듬어야 한다.",
+      "startTeamId": "hangang-u18",
+      "attributeDeltas": {
+        "stamina": 3,
+        "strength": 3,
+        "decisions": -2
+      },
+      "state": {
+        "form": 50,
+        "fitness": 85,
+        "morale": 65
+      },
+      "context": {
+        "tacticalFit": 50,
+        "squadStatus": 45,
+        "positionProficiency": 100
+      },
+      "relationships": {
+        "managerTrust": 45,
+        "captain": 55,
+        "rival": 50,
+        "fans": 55,
+        "agent": 40
+      }
+    },
+    {
+      "id": "street",
+      "name": "동네 클럽",
+      "blurb": "동네 축구에서 홀로 기술을 갈고닦았다. 볼을 다루는 감각은 뛰어나지만 조직적인 수비 훈련은 부족하다.",
+      "startTeamId": "hangang-u18",
+      "attributeDeltas": {
+        "dribbling": 4,
+        "agility": 3,
+        "concentration": -3,
+        "tackling": -2
+      },
+      "state": {
+        "form": 55,
+        "fitness": 75,
+        "morale": 60
+      },
+      "context": {
+        "tacticalFit": 45,
+        "squadStatus": 35,
+        "positionProficiency": 95
+      },
+      "relationships": {
+        "managerTrust": 35,
+        "captain": 45,
+        "rival": 55,
+        "fans": 45,
+        "agent": 35
+      }
+    }
+  ],
+  "nationalities": [
+    {
+      "code": "KR",
+      "name": "대한민국"
+    },
+    {
+      "code": "JP",
+      "name": "일본"
+    },
+    {
+      "code": "US",
+      "name": "미국"
+    },
+    {
+      "code": "BR",
+      "name": "브라질"
+    },
+    {
+      "code": "GB",
+      "name": "영국"
+    },
+    {
+      "code": "DE",
+      "name": "독일"
+    },
+    {
+      "code": "FR",
+      "name": "프랑스"
+    },
+    {
+      "code": "ES",
+      "name": "스페인"
+    },
+    {
+      "code": "NG",
+      "name": "나이지리아"
+    },
+    {
+      "code": "AU",
+      "name": "호주"
+    }
+  ],
+  "draftRules": {
+    "nameMin": 2,
+    "nameMax": 12
+  },
+  "scoutRange": {
+    "minBelow": {
+      "min": 5,
+      "max": 10
+    },
+    "maxAbove": {
+      "min": 3,
+      "max": 8
+    }
+  },
+  "teams": [
+    {
+      "id": "hangang-u18",
+      "name": "한강 FC U18",
+      "leagueTier": "YOUTH",
+      "reputation": 2,
+      "wageBandId": "youth"
+    },
+    {
+      "id": "seorabeol-united",
+      "name": "서라벌 유나이티드",
+      "leagueTier": 1,
+      "reputation": 5,
+      "wageBandId": "tier1"
+    },
+    {
+      "id": "cheongyeon-fc",
+      "name": "청연 FC",
+      "leagueTier": 1,
+      "reputation": 4,
+      "wageBandId": "tier1"
+    },
+    {
+      "id": "gangdong-rovers",
+      "name": "강동 로버스",
+      "leagueTier": 2,
+      "reputation": 3,
+      "wageBandId": "tier2"
+    },
+    {
+      "id": "onsaemiro-city",
+      "name": "온새미로 시티",
+      "leagueTier": 2,
+      "reputation": 3,
+      "wageBandId": "tier2"
+    },
+    {
+      "id": "byeolbit-united",
+      "name": "별빛 유나이티드",
+      "leagueTier": 2,
+      "reputation": 2,
+      "wageBandId": "tier2"
+    },
+    {
+      "id": "galmae-town",
+      "name": "갈매 타운 FC",
+      "leagueTier": 3,
+      "reputation": 2,
+      "wageBandId": "tier3"
+    },
+    {
+      "id": "noeulhang-fc",
+      "name": "노을항 FC",
+      "leagueTier": 3,
+      "reputation": 1,
+      "wageBandId": "tier3"
+    }
+  ],
+  "offerRules": {
+    "maxOffers": 3,
+    "countBonusTags": [
+      "에이전트_계약",
+      "주목받는_유망주"
+    ],
+    "branches": [
+      {
+        "id": "academy",
+        "requireTags": [
+          "진로_아카데미"
+        ],
+        "fixedTeamId": "hangang-u18",
+        "tiers": [
+          "YOUTH"
+        ]
+      },
+      {
+        "id": "lower-league",
+        "requireTags": [
+          "진로_하부리그",
+          "입단테스트_완료"
+        ],
+        "tiers": [
+          2,
+          3
+        ]
+      },
+      {
+        "id": "tryout-fail",
+        "requireTags": [
+          "진로_입단테스트",
+          "테스트_실패"
+        ],
+        "tiers": [
+          3
+        ],
+        "fixedCount": 1
+      },
+      {
+        "id": "tryout-neutral",
+        "requireTags": [
+          "진로_입단테스트",
+          "테스트_보통"
+        ],
+        "tiers": [
+          2,
+          3
+        ]
+      },
+      {
+        "id": "tryout-success",
+        "requireTags": [
+          "진로_입단테스트",
+          "테스트_성공"
+        ],
+        "tiers": [
+          1,
+          2,
+          3
+        ],
+        "topTierMinOvr": 60
+      },
+      {
+        "id": "tryout-skipped",
+        "requireTags": [
+          "진로_입단테스트"
+        ],
+        "forbidTags": [
+          "입단테스트_완료"
+        ],
+        "tiers": [
+          3
+        ],
+        "fixedCount": 1
+      }
+    ],
+    "rolePromiseByTier": {
+      "1": [
+        "RESERVE",
+        "BENCH"
+      ],
+      "2": [
+        "BENCH",
+        "ROTATION"
+      ],
+      "3": [
+        "ROTATION",
+        "STARTER"
+      ],
+      "YOUTH": [
+        "ROTATION",
+        "STARTER"
+      ]
+    },
+    "lengthSeasons": {
+      "min": 1,
+      "max": 3
+    },
+    "shirtNumber": {
+      "min": 2,
+      "max": 39
+    },
+    "tacticalFitEstimate": {
+      "min": 45,
+      "max": 75
+    }
+  },
+  "contractRules": {
+    "ovrBands": [
+      {
+        "id": "low",
+        "maxOvr": 54
+      },
+      {
+        "id": "mid",
+        "maxOvr": 64
+      },
+      {
+        "id": "high",
+        "maxOvr": 99
+      }
+    ],
+    "wageBands": {
+      "tier1": {
+        "low": 800000,
+        "mid": 1200000,
+        "high": 2000000
+      },
+      "tier2": {
+        "low": 500000,
+        "mid": 700000,
+        "high": 1000000
+      },
+      "tier3": {
+        "low": 300000,
+        "mid": 400000,
+        "high": 550000
+      },
+      "youth": {
+        "low": 0,
+        "mid": 0,
+        "high": 0
+      }
+    },
+    "signingBonus": {
+      "tier1": {
+        "low": 20000000,
+        "mid": 30000000,
+        "high": 50000000
+      },
+      "tier2": {
+        "low": 5000000,
+        "mid": 8000000,
+        "high": 12000000
+      },
+      "tier3": {
+        "low": 0,
+        "mid": 2000000,
+        "high": 3000000
+      },
+      "youth": {
+        "low": 0,
+        "mid": 0,
+        "high": 0
+      }
+    },
+    "squadStatusByRole": {
+      "STARTER": 80,
+      "ROTATION": 60,
+      "BENCH": 40,
+      "RESERVE": 25
+    },
+    "newClubManagerTrust": 40
+  }
+}

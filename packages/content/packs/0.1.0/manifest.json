@@ -5,7 +5,7 @@
   ],
   "clientMinVersion": "0.1.0",
   "playtested": false,
-  "checksum": "0c440ec73b7579fd1b0d4b0a54da5320afc7474228ecf9ff069491e261887538",
+  "checksum": "ba6747061faf658810b36f2140b70af1dba9e0b05a5e57b018aa430433c0d5a1",
   "files": [
     "events/EVT-CON-001.json",
     "events/EVT-CON-002.json",

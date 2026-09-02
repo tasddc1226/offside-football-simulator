@@ -12,3 +12,8 @@ export function computePackChecksum(files: readonly string[], contentsByFile: Re
   }
   return hash.digest('hex');
 }
+
+/** ruleset.json 한 파일의 canonical JSON을 SHA-256(hex)한다. */
+export function computeRulesetChecksum(rulesetContent: unknown): string {
+  return createHash('sha256').update(canonicalStringify(rulesetContent)).digest('hex');
+}

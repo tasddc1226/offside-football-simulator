@@ -86,7 +86,6 @@ export const CONDITION_FIELDS: readonly ConditionFieldSpec[] = [
   { path: 'career.age', type: 'int' },
   { path: 'career.stage', type: 'enum', values: Object.keys(CAREER_STAGE_SET) },
   { path: 'career.currentRole', type: 'enum', values: Object.keys(SQUAD_ROLE_SET) },
-  { path: 'career.pathDecision', type: 'string' },
   { path: 'career.tags', type: 'tags' },
   { path: 'career.proSeasons', type: 'int' },
   { path: 'player.primaryPosition', type: 'string' },
