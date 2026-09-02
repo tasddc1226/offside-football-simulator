@@ -2,7 +2,6 @@ import type { Platform } from '../types.js';
 import { createDexieLocalStore } from './dexie-store.js';
 
 export type { Platform };
-export { createDexieLocalStore };
 
 const backHandlers = new Set<() => boolean>();
 
