@@ -27,6 +27,8 @@
 - 은퇴 후 일반 진행 명령이 거부된다.
 - 서비스 시즌 변경이 기존 Career 버전을 바꾸지 않는다.
 - `currentStep`은 시즌 안에서 되돌아가지 않고, 결정이 없는 step은 roll을 소비하지 않는다.
+- 같은 fixture의 state hash가 브라우저 Web Worker, Node(Vitest), Cloudflare Workers(Miniflare)에서 모두 같다.
+- 명령 로그를 처음부터 재생한 결과가 저장된 Snapshot의 hash와 같다.
 - 관계·평판·챕터 결과가 Base OVR을 직접 바꾸지 않는다.
 - 같은 Archive와 legacyVersion의 Legacy 결과가 같고 모든 Career가 엔딩을 받는다.
 

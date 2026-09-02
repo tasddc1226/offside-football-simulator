@@ -76,9 +76,22 @@ type LocalProfile = {
   id: string;
   recoveryCodeHash?: string;
   recoveryCodeIssuedAt?: string;
+  googleSub?: string;
+  email?: string;
+  linkedAt?: string;
   settings: ProfileSettings;
   createdAt: string;
   lastSeenAt: string;
+};
+
+type CommandLogEntry = {
+  careerId: string;
+  revision: number;
+  commandId: string;
+  commandType: string;
+  payload: Record<string, unknown>;
+  resultHash: string;
+  createdAt: string;
 };
 
 type ProfileSettings = {
@@ -89,7 +102,7 @@ type ProfileSettings = {
 };
 ```
 
-복구 코드 원문은 저장하지 않는다. 해시만 저장하고 발급 시각으로 재발급 여부를 판단한다.
+복구 코드 원문은 저장하지 않는다. 해시만 저장하고 발급 시각으로 재발급 여부를 판단한다. Google 연결 필드는 [ADR-008](../adr/ADR-008-auth-and-account-merge.md)을 따른다. `CommandLogEntry`는 로컬과 서버에 같은 형태로 저장되며 리플레이 검증의 입력이다.
 
 ### DATA-SEA-001 FootballSeason
 
@@ -200,7 +213,11 @@ type CareerEvent = {
 - `Snapshot(careerId, revision unique)`
 - `CareerEvent(careerId, status)`
 - `Idempotency(ownerProfileId, commandId unique)`
+- `CommandLog(careerId, revision unique)`
+- `LocalProfile(googleSub unique)`
 - `SeasonArchive(serviceSeasonId, ownerProfileId unique)`
+
+서버는 Career당 최신 Snapshot과 최근 checkpoint 5개, 전체 명령 로그를 D1에 두고, 오래된 Snapshot과 은퇴 커리어의 명령 로그는 R2로 옮긴다.
 
 익명 프로필 삭제 요청 시 활성 데이터는 삭제하되, 집계 데이터는 개인 식별이 불가능한 형태만 유지한다.
 

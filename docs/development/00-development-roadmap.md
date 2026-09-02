@@ -54,7 +54,9 @@ Phase 0에서 다음 사항을 ADR로 확정한다.
 - ADR-005: 모노레포와 패키지 경계.
 - ADR-006: 서비스명·도메인·상표 가용성과 최종 표기.
 
-권장 기준은 TypeScript 모듈형 모놀리스, React 계열 웹 UI, PostgreSQL, 서버 권위 시뮬레이션이다. 특정 프레임워크는 ADR 승인 전 교체할 수 있으나 도메인 계약은 프레임워크에 의존하지 않는다.
+ADR-001~008은 2026-09-02에 [`docs/adr/`](../adr/README.md)에서 확정했다. 요약: Vite React SPA, 클라이언트 Web Worker 시뮬레이션, 로컬 우선 저장과 서버 동기화, JSON 콘텐츠 팩, pnpm·Turborepo 모노레포, Cloudflare Pages·Workers·D1, 익명 프로필 + Google 로그인 1종. 도메인 계약은 프레임워크에 의존하지 않는다.
+
+진행 관리와 워커 위임 규칙은 [`docs/tracking/`](../tracking/README.md)을 따른다.
 
 ## LINE TEST 공개 게이트
 

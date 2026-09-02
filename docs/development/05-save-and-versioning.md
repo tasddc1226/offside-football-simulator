@@ -2,8 +2,8 @@
 
 ## 저장 원칙
 
-- 서버 권위 저장을 기본으로 하되 비로그인 프로필을 지원한다.
-- 명령 처리 전후의 Career revision을 낙관적 잠금으로 검증한다.
+- 로컬 우선 저장이다. 플레이 중 정본은 브라우저 IndexedDB이고, 서버는 checkpoint Snapshot과 명령 로그를 동기화 받아 복구·보관 정본이 된다([ADR-002](../adr/ADR-002-persistence-and-identity.md)).
+- 명령 처리 전후의 Career revision을 낙관적 잠금으로 검증한다. 로컬 엔진과 서버 동기화 모두 같은 규칙을 쓴다.
 - 시즌 시작, 결정이 열린 step 경계, 이벤트 선택 직전, 챕터 판단 확정 직후, 시즌 결산 직후, 계약·이적·은퇴 확정 직후 Snapshot을 남긴다. CheckpointType에 `STEP_BOUNDARY`와 `CHAPTER_DECISION`을 둔다.
 - seed, event definition version, ruleset version을 기록해 버그를 재현한다.
 

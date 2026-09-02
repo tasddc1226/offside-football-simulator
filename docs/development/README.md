@@ -20,7 +20,9 @@
 14. [시각 디자인 시스템](13-visual-design-system.md)
 15. [Legacy Score·엔딩](14-legacy-score-and-endings.md)
 
-콘텐츠 저작 형식과 종이 프로토타입은 [`../content/README.md`](../content/README.md)에 있다.
+콘텐츠 저작 형식과 종이 프로토타입은 [`../content/README.md`](../content/README.md)에 있다. 기술 스택·인프라 확정 결정은 [`../adr/README.md`](../adr/README.md), 진행 보드와 워커 위임 규칙은 [`../tracking/README.md`](../tracking/README.md)에 있다.
+
+2026-09-02 ADR 확정으로 이 디렉터리의 실행 위치 관련 서술이 바뀌었다. 시뮬레이션은 브라우저 엔진이 실행하고 서버는 동기화·보관·검증만 한다. 01, 05, 07 문서가 갱신됐으며 다른 문서에서 "서버가 실행한다"는 표현이 남아 있으면 ADR-002·003이 우선한다.
 
 ## 정본 우선순위
 

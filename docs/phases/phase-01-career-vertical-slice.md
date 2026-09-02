@@ -29,15 +29,17 @@ SCR-034 온보딩
 - DRAFT→ACTIVE 전환과 첫 Career Snapshot.
 - 온보딩 3장과 점진 공개 규칙(U18 구간은 OVR·폼·체력만).
 - 커리어 대시보드 다섯 구역의 틀. Phase 1에서는 일정표·다이어리만 열리고 나머지는 잠금 상태 표시.
-- 설정·데이터 화면: 모션 감소, 텍스트 크기, 테마, 복구 코드 발급·재발급·복구, 삭제.
+- 설정·데이터 화면: 모션 감소, 텍스트 크기, 테마, 복구 코드 발급·재발급·복구, Google 연결·병합, 삭제.
+- Google OIDC 로그인과 익명 프로필 연결·병합([ADR-008](../adr/ADR-008-auth-and-account-merge.md)).
+- 랜딩의 개인정보 처리방침·이용약관 페이지.
 - 시각 디자인 시스템 토큰과 CompareCards(SCR-009 제안 비교에 첫 적용).
 
 ## 기능 요구사항
 
 - FR-CAR-001, FR-PLY-001, FR-OVR-001, FR-EVT-001, FR-CON-001, FR-SAV-001, FR-REC-001, FR-HUB-001, FR-ONB-001, FR-DSN-001.
 - 선수 생성 확정 전에는 영구 능력 seed를 소비하지 않는다.
-- 포지션과 맞지 않는 아키타입 조합은 서버에서도 거부한다.
-- 계약 확정은 Player, Career, Contract, Timeline을 한 트랜잭션으로 저장한다.
+- 포지션과 맞지 않는 아키타입 조합은 엔진 검증과 동기화 스키마 양쪽에서 거부한다.
+- 계약 확정은 Player, Career, Contract, Timeline을 IndexedDB 한 트랜잭션으로 저장하고 checkpoint로 동기화한다.
 
 ## 구현 슬라이스
 
@@ -50,10 +52,9 @@ SCR-034 온보딩
 
 ## API·데이터
 
-- API-PRO-001~005.
-- API-CAR-001, 004, 005.
-- API-EVT-001~002.
-- API-CON-001, 003.
+- API-PRO-001~005, API-AUTH-001~004.
+- API-CAR-001~003(목록·조회·동기화), API-CAR-005.
+- 로컬 명령 CMD-CAR-001~003, CMD-EVT-001, CMD-CON-002.
 - LocalProfile, Player, Career, Contract, CareerEvent, Snapshot.
 
 ## 완료 조건

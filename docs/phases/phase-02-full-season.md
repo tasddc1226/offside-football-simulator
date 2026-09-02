@@ -47,7 +47,7 @@ SCR-005 프리시즌 계획 + 시뮬레이션 모드
 
 ## API·데이터
 
-- API-SIM-001~004, API-EVT-001~002.
+- CMD-SIM-001~003, CMD-EVT-001. 동기화는 API-CAR-003.
 - FootballSeason, CompetitionRecord, SeasonResult, EffectQueue.
 
 ## 완료 조건

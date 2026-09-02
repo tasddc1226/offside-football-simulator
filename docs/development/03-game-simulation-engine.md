@@ -137,6 +137,8 @@ SimulationInput = careerSnapshot + command + seed
 
 날짜, 배열 순서, 부동소수점 반올림, 난수 소비 순서를 명시한다. 시스템 시간이나 DB 정렬에 결과를 의존시키지 않는다.
 
+시뮬레이션은 브라우저 Web Worker에서 실행되고 서버는 같은 코드로 리플레이 검증만 한다([ADR-003](../adr/ADR-003-simulation-location.md)). 따라서 `packages/domain`은 `Date.now`, `Math.random`, 파일·네트워크·DOM API를 쓰지 않고, 확률 계산은 정수 또는 고정 소수점으로 한다. 정렬은 항상 안정 키를 지정한다.
+
 ## 필수 테스트 벡터
 
 - 포지션·역할별 고정 능력 세트의 OVR golden test.

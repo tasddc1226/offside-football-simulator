@@ -2,60 +2,66 @@
 
 ## 설계 목표
 
-- 비로그인 사용자도 즉시 플레이한다.
+- 비로그인 사용자도 즉시 플레이하고 오프라인에서도 진행한다.
 - 커리어 결과는 재현 가능하고 중복 명령에 안전하다.
 - 화면·API와 게임 규칙을 분리해 밸런스 변경이 UI를 깨지 않게 한다.
 - 서비스 시즌이 바뀌어도 과거 커리어를 읽고 재생한다.
+- 서버는 프로필·로그인·동기화·보관·시즌만 다루며 규모를 작게 유지한다.
+
+실행 위치와 저장소 결정은 [ADR-002](../adr/ADR-002-persistence-and-identity.md), [ADR-003](../adr/ADR-003-simulation-location.md)을 따른다. 이 문서의 이전 판이 권장한 서버 권위 시뮬레이션은 폐기됐다.
 
 ## 논리 구성
 
 ```text
-Web Client
-  ├─ Screen State / Accessibility
-  ├─ Query Cache / Draft State
-  └─ Command Client
-          │ HTTPS
-Application API
-  ├─ Career Command Service
-  ├─ Career Query Service
-  ├─ Idempotency / Authorization
-  └─ Transaction Boundary
-          │
-Domain Core
-  ├─ Player & OVR Rules
-  ├─ Season Simulator
-  ├─ Event Resolver / EffectQueue
-  ├─ Contract & Transfer
-  └─ Retirement & Legacy
-          │
-Persistence / Content
-  ├─ Relational DB
-  ├─ Snapshot & Event Log
-  ├─ Ruleset Manifest
-  └─ Versioned Content Packs
+Browser
+  ├─ Web App (React SPA)
+  │    ├─ Screen State / Accessibility
+  │    ├─ Draft State / Query Cache
+  │    └─ Sync Client
+  ├─ Engine Worker (Web Worker)
+  │    ├─ Command Handler / Idempotency / Revision
+  │    ├─ Domain Core (순수 규칙)
+  │    └─ Content Pack + Ruleset (버전 고정)
+  └─ Local Store (IndexedDB)
+       ├─ Career State / Snapshots / Command Log
+       └─ Profile Settings / Draft
+          │ HTTPS (checkpoint 동기화, 조회)
+Cloudflare Workers API (Hono)
+  ├─ Profile / Auth / Recovery / Merge
+  ├─ Career Sync (Snapshot + Command Log, If-Match)
+  ├─ Archive / Legacy / Service Season / Rewards
+  ├─ Replay Verifier (Domain Core 재사용, 필요 시)
+  └─ D1 (정본 저장) · R2 (아카이브) · KV (rate limit)
+Static (Cloudflare Pages)
+  └─ Web App 번들, Content Pack 번들, Ruleset Manifest
 ```
 
 ## 패키지 경계
 
+정본은 [ADR-005](../adr/ADR-005-monorepo-boundaries.md)다.
+
 | 패키지 | 책임 | 금지 |
 |---|---|---|
-| `web` | 라우팅, 화면 상태, 접근성 | OVR·확률 계산 |
-| `application` | 명령 오케스트레이션, 트랜잭션 | UI 문자열 조립 |
-| `domain` | 순수 규칙과 상태 전이 | DB·HTTP 직접 접근 |
-| `persistence` | 저장 구현, 마이그레이션 | 게임 규칙 판단 |
-| `content` | 이벤트·문구·룰셋 정본 | 실행 중 임의 변형 |
-| `observability` | 로그·지표·추적 | 개인정보 원문 저장 |
+| `apps/web` | 라우팅, 화면 상태, 접근성, 동기화 호출 | OVR·확률 계산 |
+| `packages/engine-client` | 명령 처리, revision, 로컬 저장, Worker 실행 | UI 문자열 조립 |
+| `packages/domain` | 순수 규칙과 상태 전이 | 외부 import, Node·브라우저 API |
+| `apps/api` | 프로필·인증·동기화·보관·시즌, 리플레이 검증 | 플레이 경로 시뮬레이션 |
+| `packages/content` | 이벤트·문구·룰셋 정본과 검증 | 실행 중 임의 변형 |
+| `packages/contracts` | API·Snapshot 스키마 | 규칙 판단 |
+| `packages/ui` | 토큰·공통 컴포넌트 | 규칙 계산 |
 
 ## 명령 처리 계약
 
-1. 클라이언트가 `commandId`를 생성한다.
-2. API가 소유권, 현재 커리어 버전, 명령 가능 상태를 검증한다.
-3. Application이 고정된 ruleset/content pack과 seed를 읽는다.
-4. Domain이 새 상태와 도메인 이벤트를 순수 계산한다.
-5. 상태, 이벤트, Snapshot, idempotency 결과를 한 트랜잭션으로 저장한다.
-6. 응답은 확정 Snapshot과 다음 허용 동작을 반환한다.
+명령은 브라우저의 엔진 워커가 처리한다.
 
-같은 `commandId` 재요청은 저장된 최초 응답을 반환해야 한다. 충돌한 `expectedRevision`은 `409 CAREER_REVISION_CONFLICT`로 처리한다.
+1. 웹 앱이 `commandId`를 생성해 엔진 워커에 보낸다.
+2. 엔진이 현재 Career revision, 명령 가능 상태, 고정된 ruleset/content pack을 확인한다.
+3. Domain이 새 상태와 도메인 이벤트를 순수 계산한다. seed와 난수 소비는 Snapshot의 `rngState`에서 이어진다.
+4. 엔진이 상태, 이벤트, Snapshot, 명령 로그 항목, idempotency 결과를 IndexedDB 트랜잭션 하나로 저장하고 revision을 1 올린다.
+5. 응답은 확정 Snapshot과 다음 허용 동작이다. 같은 `commandId` 재요청은 저장된 최초 응답을 돌려준다.
+6. checkpoint에 해당하면 동기화 클라이언트가 Snapshot과 명령 로그를 서버에 `PUT`한다. 실패해도 플레이는 계속되고 재시도 큐에 남는다.
+
+서버 동기화 충돌은 `409 CAREER_REVISION_CONFLICT`로 처리하며 규칙은 ADR-002를 따른다. 서버는 명령을 실행하지 않고, 필요할 때만 명령 로그를 재생해 state hash를 검증한다.
 
 ## 비로그인 식별
 
@@ -68,9 +74,11 @@ Persistence / Content
 
 ## 일관성 경계
 
-- **강한 일관성**: 커리어 명령, 계약 확정, 시즌 결산, 은퇴, 시즌 보상 수령.
-- **최종 일관성 허용**: 분석 이벤트, 비핵심 통계, 운영 대시보드.
+- **로컬 강한 일관성**: 커리어 명령, 계약 확정, 시즌 결산, 은퇴. IndexedDB 트랜잭션 하나로 확정한다.
+- **서버 강한 일관성**: 프로필 연결·병합, 복구, 시즌 보상 수령, Archive 확정. D1 트랜잭션과 unique key로 보장한다.
+- **최종 일관성 허용**: 커리어 동기화(checkpoint 단위 지연), 분석 이벤트, 비핵심 통계, 운영 대시보드.
 - 캐시는 정본이 아니며 커리어 `revision`이 다르면 폐기한다.
+- 같은 Career를 두 기기에서 동시에 진행하면 한쪽 분기는 버려질 수 있다. 동기화 충돌 화면에서 사용자가 고른다.
 
 ## 보안과 개인정보
 
@@ -85,17 +93,22 @@ Persistence / Content
 | 항목 | 목표 |
 |---|---:|
 | 초기 화면 LCP(중간급 모바일) | p75 2.5초 이하 |
-| 일반 조회 API | p95 300ms 이하 |
-| 이벤트 해결 명령 | p95 500ms 이하 |
-| 시즌 결산 | p95 2초 이하 |
+| 엔진 워커 준비(허브 진입 후) | p75 1초 이하 |
+| 이벤트 해결 명령(워커, 로컬) | p95 200ms 이하 |
+| 시즌 결산(워커, 중간급 모바일) | p95 2초 이하 |
+| 동기화 PUT | p95 500ms 이하, 실패 시 백그라운드 재시도 |
+| 서버 조회 API | p95 300ms 이하 |
 | 커리어 Snapshot | 압축 전 256KB 권장 상한 |
+| 명령 로그 항목 | 평균 300B 이하 |
 
 시즌 계산이 예산을 넘으면 UI는 진행 상태를 표시하되 결과 확정 명령은 한 번만 실행한다.
 
 ## 실패 복구
 
 - 커밋 전 오류: 기존 상태 유지, 같은 명령 재시도 가능.
-- 커밋 후 응답 유실: 같은 `commandId`로 결과 복구.
+- 커밋 후 응답 유실(워커와 UI 사이): 같은 `commandId`로 결과 복구.
+- 동기화 실패: 로컬 상태 유지, 재시도 큐. 오프라인 표시만 한다.
+- 로컬 저장소 손상: 서버의 마지막 동기화 Snapshot으로 복원하고 그 이후 진행은 잃을 수 있음을 안내.
 - 잘못된 콘텐츠 배포: 새 커리어 생성 중단 후 이전 content pack 재활성화.
 - 데이터 마이그레이션 오류: 신규 쓰기 차단, 기존 Snapshot 읽기 유지, roll-forward 우선.
 
