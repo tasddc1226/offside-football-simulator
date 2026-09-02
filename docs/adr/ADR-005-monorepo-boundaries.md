@@ -26,10 +26,10 @@ tooling/
 의존 방향(위에서 아래로만 허용):
 
 ```text
-apps/web  → platform, engine-client, ui, contracts, domain(타입만), content(타입만)
+apps/web  → platform, engine-client, ui, contracts, domain(타입만), content(타입·팩/룰셋 로더·조건 평가기. 2026-09-02 Phase 1 계획 D-10)
 apps/api  → domain, contracts, content(스키마만)
 platform  → engine-client(LocalStore 포트 타입과 `LocalStoreConstraintError` 클래스만. 실행기·시뮬레이터 import 금지), contracts(타입만)
-engine-client → domain, contracts, content(스키마만)
+engine-client → domain, contracts, content(스키마·조건 평가기·팩/룰셋 로더. 2026-09-02 Phase 1 계획 D-10)
 ui → contracts(타입만)
 domain → (없음)
 content → domain(타입만)

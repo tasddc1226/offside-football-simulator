@@ -2,6 +2,25 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, Phase 1 실행 계획과 설계 결정 D-1~D-18)
+
+**상황**: Phase 1 다이제스트에서 설계 문서가 비워 둔 항목 14개(Position enum, 아키타입 카탈로그, 배경 효과, 역할 가중치, Contract/Offer, 제안 생성 규칙, Timeline, 복구 코드 형식·제한, API-PRO-003~005·AUTH 본문, `career.pathDecision`, SCR-004 API 오기, 잠금 표시 정본, 대학 경로, `relationships.family`)를 확인했다. 워커에게 결정을 남기지 않기 위해 오케스트레이터가 [phase-1-plan.md](phase-1-plan.md)에 결정을 적었다.
+
+**결정 요지**:
+- 포지션 8종·묶음 4종(D-1). 아키타입은 포지션당 3개, 룰셋 데이터로(D-2). 인사이드 포워드 가중치는 프로토타입에서 결정력 14+슈팅력 6을 `shooting` 0.20으로 합쳐 fixture 능력으로 59.30 → golden 59(D-3·D-4).
+- 배경 3종은 `state/context/relationships` 초기값과 능력 보정을 통째로 정의하고, `club-academy`는 프로토타입 김서준 값과 같다(D-5). 잠재력은 아키타입 범위에서 굴리고 정찰 범위는 −(5~10)/+(3~8)(D-6).
+- DRAFT → `UPDATE_PLAYER_DRAFT` → `CONFIRM_PLAYER`에서만 rng 소비(23회). 확정 후 Phase 1은 유스 시즌을 건너뛰고 `currentStep 12`·`SETTLEMENT`에서 시작한다. Phase 2가 그 앞에 시즌을 넣는다(D-7).
+- 룰셋 데이터는 `packages/content/rulesets/1.0.0/ruleset.json`이고 domain은 `SimulationInput.ruleset`으로 받는다. 룰셋은 해시에 넣지 않는다(D-8).
+- 이벤트 **적격 판정은 클라이언트(content `selectEligibleEvents`)**, **선택은 도메인**이 `ADVANCE{eligibleEvents}`에서 굴려 `pending`에 기록한다. `RESOLVE_EVENT`는 pending과 일치해야 한다. 재생이 콘텐츠 평가 없이 성립한다(D-10). 이를 위해 ADR-005의 engine-client·web → content 허용 범위를 "스키마·조건 평가기·팩/룰셋 로더"로 넓혔다.
+- `career.pathDecision` 필드 대신 태그(`진로_입단테스트`·`진로_아카데미`·`진로_하부리그`, `입단테스트_완료`, `테스트_성공/보통/실패`). 팩 0.1.0은 제자리 수정(사용자 없음). 대학 경로는 Phase 3, `relationships.family`는 도메인에 없으므로 참조 시 검증 실패(D-11).
+- 제안 생성은 룰셋 `offerRules.branches`(태그 분기)와 개수 수식(기본 1 + 태그 보너스, 최대 3, 최소 1). `ACCEPT_OFFER`만 Phase 1, `NEGOTIATE`·`REJECT_OFFER`는 Phase 3(D-9).
+- 복구 코드 `OFS-XXXX-XXXX-XXXX`, 30자 알파벳 12자리, SHA-256만 저장, 원문은 발급 응답에 한 번. 실패 시도 IP+세션당 시간당 5회, 발급 프로필당 시간당 5회, rate limit은 KV 없이 D1 `auth_attempts`(D-14). 프로필 삭제 2단계 토큰 10분·즉시 삭제, 로그아웃은 로컬 유지, `DELETE /careers/{id}`(D-15).
+- SCR-004의 "API-CAR-005 호출"은 오기라 screens 문서를 고쳤다. 잠금 표시 정본은 06(D-16). Google은 코드 구현 후 U-003 대기(D-17). E2E는 Playwright + axe, API 시나리오는 `wrangler dev --local`(D-18).
+
+**작업 분해**: T-1-001~T-1-015, 4 Wave. Wave 1(domain·content·ui·api) 브리프 4건 작성. 투입은 Phase 0 종료(T-0-015 머지) 후. T-0-010은 U-002 대기로 남긴 채 넘어갈지 사용자에게 확인한다.
+
+**미결**: 아키타입 23개와 팀 8개의 구체 수치는 워커 저작 후 오케스트레이터 리뷰. 복구 코드 30자 알파벳의 12자리 엔트로피(약 2^59)는 온라인 시도 제한과 함께 충분하다고 판단했다.
+
 ## 2026-09-02 (저녁, PR #13 커리어 동기화 API 머지)
 
 - **PR #13(T-0-008) 머지 `5969ec6`.** 규칙 1~9 구현 확인. 서버 해시 검사는 `sha256Hex(snapshot.state)`이며 engine-client `encodeSnapshot`이 `state = canonicalize(state)`로 직렬화하므로 클라이언트 `hashState`와 일치한다(T-0-011로 런타임 간 일치도 확인). 동시 쓰기 실패 시 재조회 → 규칙 4 → 409 흐름, `pruneSnapshots(5)` 실패는 warn.

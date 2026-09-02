@@ -44,6 +44,28 @@
 
 Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundation.md)를 따른다. T-0-006 세션 미들웨어는 쿠키와 Bearer를 모두 받도록 만든다.
 
+## Phase 1 백로그 (착수 순서, 투입은 Phase 0 종료 후)
+
+계획·설계 결정 정본: [phase-1-plan.md](phase-1-plan.md). Wave 1(T-1-001~004)은 서로 다른 패키지라 동시 투입한다. 브리프가 없는 행은 선행 작업 머지 뒤에 쓴다.
+
+| ID | 패키지 | 작업 | 선행 | Wave | 상태 | 워크트리 |
+|---|---|---|---|---|---|---|
+| T-1-001 | domain | Player 모델·룰셋 입력·DRAFT→CONFIRM_PLAYER·Base OVR golden 59·타임라인·`ADVANCE` 이벤트 제시 | Phase 0 종료 | 1 | todo | [브리프](briefs/T-1-001.md) |
+| T-1-002 | content | 룰셋 1.0.0(아키타입 24·배경 3·팀 8·제안·계약 규칙)·`RulesetSchema`·`loadRuleset`, 팩 0.1.0 진로 태그 수정 | Phase 0 종료 | 1 | todo | [브리프](briefs/T-1-002.md) |
+| T-1-003 | ui | Radix RadioGroup·Dialog·Tabs 래핑, Stepper·ChoiceCard·CompareCards·StatusStrip·PlayerHeader·ResultCard·DashboardSection·CareerTimeline·Toast | Phase 0 종료 | 1 | todo | [브리프](briefs/T-1-003.md) |
+| T-1-004 | api | 복구 코드 발급·복구(RECOVERY_CONFLICT·병합)·프로필 삭제 2단계·로그아웃·커리어 삭제·rate limit·감사 로그 | Phase 0 종료 | 1 | todo | [브리프](briefs/T-1-004.md) |
+| T-1-005 | domain | `ADVANCE` 제안 생성(offerRules)·`ACCEPT_OFFER`·Contract·golden 확장 | T-1-001, T-1-002 | 2 | todo | |
+| T-1-015 | content | `buildConditionContext`·`selectEligibleEvents`, 룰셋 스키마 ↔ domain 타입 바인딩, fixtures 룰셋 일치 테스트 | T-1-001, T-1-002 | 2 | todo | |
+| T-1-006 | contracts | 명령 payload 유니온 6종, Player/Offer/Contract/Pending/Timeline 스키마, 복구·삭제·로그아웃·MergeChoice 스키마 | T-1-005 | 2 | todo | |
+| T-1-007 | web | 엔진 배선(engine-client·LocalStore·Worker), 룰셋·팩 로딩, 온보딩 SCR-034, 허브 SCR-001 카드·이어하기·삭제, 라우트 골격, ui-store 영속화 | T-1-001, T-1-003, T-1-015 | 2 | todo | |
+| T-1-010 | web(e2e) | Playwright + axe 도입, 허브·온보딩 스모크, 브라우저 Web Worker state hash 검증 | T-1-003 | 2 | todo | |
+| T-1-008 | web | 선수 만들기 SCR-002·003·004 + 복구 코드 발급 단계 | T-1-002, T-1-004, T-1-006, T-1-007 | 3 | todo | |
+| T-1-009 | web | SCR-007 진로, SCR-013·014 입단 테스트, SCR-009 제안 비교, SCR-010 계약, SCR-029 대시보드 | T-1-005, T-1-006, T-1-007 | 3 | todo | |
+| T-1-011 | web + engine-client | 동기화 클라이언트 배선·상태 표시·충돌 화면, LOCAL 선택 fork-by-replay | T-0-015, T-1-007 | 3 | todo | |
+| T-1-012 | web | SCR-030 데이터 섹션(복구 코드·복구 입력·프로필 삭제·로그아웃·기기 데이터 삭제), 법적 문서 본문 | T-1-004, T-1-007, T-1-011 | 4 | todo | |
+| T-1-013 | api + web | Google OIDC start/callback/merge, SCR-030 Google 행, 병합 선택 화면 | T-1-004, T-1-012, U-003(실검증) | 4 | todo | |
+| T-1-014 | web(e2e) | TEST-E2E-001·007·008·009, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, 완료 조건 표 | T-1-008, T-1-009, T-1-012 | 4 | todo | |
+
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
 선행: U-007 콘솔 등록(`appName` 확정). 리드타임은 등급분류(U-009) 10~15일과 콘솔 검토 2~4주. 코드 작업은 M-001~M-004이며 구조가 준비돼 있으면 각각 워커 1건 규모다.
