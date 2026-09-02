@@ -1,0 +1,27 @@
+{
+  "name": "@offside/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "echo \"deferred: no D1 database bound yet\" && exit 0"
+  },
+  "dependencies": {
+    "@offside/content": "workspace:*",
+    "@offside/contracts": "workspace:*",
+    "@offside/domain": "workspace:*",
+    "hono": "4.13.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260902.1",
+    "@offside/tsconfig": "workspace:*",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11",
+    "wrangler": "4.128.0"
+  }
+}

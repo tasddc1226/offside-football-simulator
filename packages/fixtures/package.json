@@ -1,0 +1,23 @@
+{
+  "name": "@offside/fixtures",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@offside/content": "workspace:*",
+    "@offside/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@offside/tsconfig": "workspace:*",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

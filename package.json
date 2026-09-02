@@ -1,0 +1,29 @@
+{
+  "name": "offside",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "build:toss": "echo \"deferred: see docs/tracking/board.md M-002\" && exit 0",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "lint:deps": "node tooling/scripts/check-deps.mjs",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write .",
+    "content:validate": "turbo run content:validate",
+    "db:migrate": "turbo run db:migrate"
+  },
+  "devDependencies": {
+    "@offside/eslint-config": "workspace:*",
+    "@types/node": "26.4.1",
+    "eslint": "10.9.1",
+    "prettier": "3.9.6",
+    "turbo": "2.10.12",
+    "typescript": "5.9.3"
+  }
+}
