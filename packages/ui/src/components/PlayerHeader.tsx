@@ -1,12 +1,10 @@
-import { DisplayWord } from './DisplayWord.js';
-
 export interface PlayerHeaderField {
   label: string;
   value: string;
 }
 
 export interface PlayerHeaderProps {
-  /** DisplayWord로 렌더한다(브리프 T-1-003 지정). */
+  /** <h2> 요소로 렌더한다. 크기는 h1 토큰(--os-fs-h1/--os-lh-h1)을 쓰고 자간 보정은 없다(DSN-CMP-001). */
   name: string;
   team: string;
   position: PlayerHeaderField;
@@ -33,7 +31,14 @@ function Field({ field }: { field: PlayerHeaderField }) {
 export function PlayerHeader({ name, team, position, archetype, shirtNumber }: PlayerHeaderProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-os-4 rounded-os-m border border-os-border bg-os-surface p-os-4">
-      <DisplayWord word={name} caption={team} />
+      <div className="flex flex-col gap-os-1">
+        <h2 className="font-os font-bold text-os-text" style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' }}>
+          {name}
+        </h2>
+        <p className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+          {team}
+        </p>
+      </div>
       <div className="flex flex-wrap gap-os-4">
         <Field field={position} />
         <Field field={archetype} />

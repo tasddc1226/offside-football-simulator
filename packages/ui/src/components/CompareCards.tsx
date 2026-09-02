@@ -1,10 +1,15 @@
 import type { ReactNode } from 'react';
 
+export type CompareCardsLayout = 'stacked' | 'grid';
+
 export interface CompareCardItem {
   id: string;
   title: string;
-  /** 카드 하단 주 버튼 슬롯. */
-  action?: ReactNode;
+  /**
+   * 카드 하단 주 버튼 슬롯. 두 레이아웃(모바일 스택·데스크톱 그리드)이 DOM에 동시에
+   * 그려지므로, 호출자가 layout별로 다른 key/id를 붙일 수 있게 렌더 함수로 받는다.
+   */
+  renderAction?: (layout: CompareCardsLayout) => ReactNode;
 }
 
 export interface CompareCardCell {
@@ -56,7 +61,7 @@ export function CompareCards({ cards, rows }: CompareCardsProps) {
                 );
               })}
             </dl>
-            {card.action}
+            {card.renderAction?.('stacked')}
           </div>
         ))}
       </div>
@@ -94,7 +99,7 @@ export function CompareCards({ cards, rows }: CompareCardsProps) {
 
         <div aria-hidden="true" />
         {cards.map((card) => (
-          <div key={`${card.id}-action`}>{card.action}</div>
+          <div key={`${card.id}-action`}>{card.renderAction?.('grid')}</div>
         ))}
       </div>
     </div>

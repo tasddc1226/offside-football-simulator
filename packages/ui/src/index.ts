@@ -7,7 +7,13 @@ export type { CareerTimelineItem, CareerTimelineProps } from './components/Caree
 export { ChoiceCard } from './components/ChoiceCard.js';
 export type { ChoiceCardProps, RiskLevel } from './components/ChoiceCard.js';
 export { CompareCards } from './components/CompareCards.js';
-export type { CompareCardCell, CompareCardItem, CompareCardsProps, CompareRow } from './components/CompareCards.js';
+export type {
+  CompareCardCell,
+  CompareCardItem,
+  CompareCardsLayout,
+  CompareCardsProps,
+  CompareRow,
+} from './components/CompareCards.js';
 export { DashboardSection } from './components/DashboardSection.js';
 export type { DashboardSectionProps } from './components/DashboardSection.js';
 export { Dialog, DialogClose, DialogContent, DialogTrigger } from './components/Dialog.js';

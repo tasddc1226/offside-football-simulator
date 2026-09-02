@@ -3,9 +3,33 @@ import { describe, expect, it } from 'vitest';
 import { CompareCards } from './CompareCards.js';
 
 const CARDS = [
-  { id: 'a', title: '한강 FC', action: <button type="button">한강 FC 선택</button> },
-  { id: 'b', title: '서울 유나이티드', action: <button type="button">서울 유나이티드 선택</button> },
-  { id: 'c', title: '부산 시티', action: <button type="button">부산 시티 선택</button> },
+  {
+    id: 'a',
+    title: '한강 FC',
+    renderAction: (layout: 'stacked' | 'grid') => (
+      <button type="button" id={`select-a-${layout}`}>
+        한강 FC 선택
+      </button>
+    ),
+  },
+  {
+    id: 'b',
+    title: '서울 유나이티드',
+    renderAction: (layout: 'stacked' | 'grid') => (
+      <button type="button" id={`select-b-${layout}`}>
+        서울 유나이티드 선택
+      </button>
+    ),
+  },
+  {
+    id: 'c',
+    title: '부산 시티',
+    renderAction: (layout: 'stacked' | 'grid') => (
+      <button type="button" id={`select-c-${layout}`}>
+        부산 시티 선택
+      </button>
+    ),
+  },
 ];
 
 const ROWS = [
@@ -42,8 +66,13 @@ describe('CompareCards', () => {
     expect(within(grid).getAllByText(/^(한강 FC|서울 유나이티드|부산 시티)$/)).toHaveLength(3);
   });
 
-  it('exposes each card action slot', () => {
+  it('calls renderAction once per layout with a distinguishable layout id, avoiding duplicate DOM ids', () => {
     render(<CompareCards cards={CARDS} rows={ROWS} />);
-    expect(screen.getAllByRole('button', { name: '한강 FC 선택' })).toHaveLength(2);
+
+    const buttons = screen.getAllByRole('button', { name: '한강 FC 선택' });
+    expect(buttons).toHaveLength(2);
+
+    const ids = buttons.map((button) => button.id).sort();
+    expect(ids).toEqual(['select-a-grid', 'select-a-stacked']);
   });
 });
