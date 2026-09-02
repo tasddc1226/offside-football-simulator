@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { useApplyTheme, useUiStore } from './ui-store.js';
+import { MemoryLocalStore } from '@offside/engine-client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { hydrateUiStore, useApplyTheme, useUiStore } from './ui-store.js';
 
 describe('useApplyTheme', () => {
   beforeEach(() => {
@@ -52,5 +53,126 @@ describe('useApplyTheme', () => {
     });
 
     expect(document.documentElement.dataset.textScale).toBe('125');
+  });
+});
+
+const DEFAULTS = {
+  theme: 'SYSTEM' as const,
+  reducedMotion: 'SYSTEM' as const,
+  textScale: 100 as const,
+  defaultSimulationMode: 'FAST' as const,
+  onboardingSeen: false,
+};
+
+async function readPersisted(store: MemoryLocalStore): Promise<unknown> {
+  return store.transaction('readonly', (tx) => tx.kv.get('ui:settings'));
+}
+
+describe('hydrateUiStore', () => {
+  afterEach(() => {
+    useUiStore.setState(DEFAULTS);
+  });
+
+  it('kv에 저장된 값이 없으면 기본값을 쓴다', async () => {
+    const store = new MemoryLocalStore();
+
+    await hydrateUiStore(store);
+
+    expect(useUiStore.getState()).toMatchObject(DEFAULTS);
+  });
+
+  it('kv에 저장된 유효한 값을 읽어 스토어를 채운다', async () => {
+    const store = new MemoryLocalStore();
+    await store.transaction('readwrite', (tx) =>
+      tx.kv.put('ui:settings', {
+        theme: 'DARK',
+        reducedMotion: 'ON',
+        textScale: 150,
+        defaultSimulationMode: 'CHAPTER',
+        onboardingSeen: true,
+      }),
+    );
+
+    await hydrateUiStore(store);
+
+    expect(useUiStore.getState()).toMatchObject({
+      theme: 'DARK',
+      reducedMotion: 'ON',
+      textScale: 150,
+      defaultSimulationMode: 'CHAPTER',
+      onboardingSeen: true,
+    });
+  });
+
+  it('손상된 값(잘못된 타입·누락)은 기본값으로 대체한다', async () => {
+    const store = new MemoryLocalStore();
+    await store.transaction('readwrite', (tx) => tx.kv.put('ui:settings', { theme: 'NOT_A_THEME', onboardingSeen: true }));
+
+    await hydrateUiStore(store);
+
+    expect(useUiStore.getState()).toMatchObject(DEFAULTS);
+  });
+
+  it('onboardingSeen이 boolean이 아니면 기본값으로 대체한다', async () => {
+    const store = new MemoryLocalStore();
+    await store.transaction('readwrite', (tx) =>
+      tx.kv.put('ui:settings', { ...DEFAULTS, onboardingSeen: 'yes' }),
+    );
+
+    await hydrateUiStore(store);
+
+    expect(useUiStore.getState()).toMatchObject(DEFAULTS);
+  });
+
+  it('읽기가 실패하면 콘솔 경고만 남기고 기본값을 쓴다', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const store = new MemoryLocalStore();
+    const failingStore = {
+      kind: store.kind,
+      transaction: () => Promise.reject(new Error('강제 실패(테스트)')),
+      close: () => store.close(),
+    } as unknown as MemoryLocalStore;
+
+    await hydrateUiStore(failingStore);
+
+    expect(useUiStore.getState()).toMatchObject(DEFAULTS);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('hydrate 뒤 상태 변경은 같은 kv 키에 다시 저장된다', async () => {
+    const store = new MemoryLocalStore();
+    await hydrateUiStore(store);
+
+    act(() => {
+      useUiStore.getState().setTheme('DARK');
+    });
+
+    await vi.waitFor(async () => {
+      expect(await readPersisted(store)).toMatchObject({ theme: 'DARK' });
+    });
+  });
+
+  it('저장 실패는 화면을 막지 않고 콘솔 경고만 남긴다', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const inner = new MemoryLocalStore();
+    const throwingStore = {
+      kind: inner.kind,
+      transaction: (mode: 'readonly' | 'readwrite', run: (tx: unknown) => Promise<unknown>) =>
+        mode === 'readwrite' ? Promise.reject(new Error('저장 강제 실패(테스트)')) : inner.transaction(mode, run as never),
+      close: () => inner.close(),
+    } as unknown as MemoryLocalStore;
+
+    await hydrateUiStore(throwingStore);
+
+    act(() => {
+      useUiStore.getState().setTheme('DARK');
+    });
+
+    await vi.waitFor(() => {
+      expect(warn).toHaveBeenCalled();
+    });
+    expect(useUiStore.getState().theme).toBe('DARK');
+    warn.mockRestore();
   });
 });

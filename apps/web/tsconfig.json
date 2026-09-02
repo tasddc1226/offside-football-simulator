@@ -3,7 +3,8 @@
   "compilerOptions": {
     "rootDir": "src",
     "baseUrl": ".",
-    "types": ["vite/client", "node"]
+    "types": ["vite/client", "node"],
+    "allowImportingTsExtensions": true
   },
   "include": ["src"]
 }

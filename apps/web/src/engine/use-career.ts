@@ -1,0 +1,114 @@
+// React 훅(TanStack Query). 쿼리 키는 ['careers'] · ['career', careerId]다.
+import { queryOptions, useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
+import type { CareerState, PlayerDraft, SimulationMode } from '@offside/domain';
+import type { LocalCareerRecord } from '@offside/engine-client';
+import { advance, confirmPlayer, createCareer, deleteCareer, updateDraft } from './career-actions.js';
+import { getAppEngine } from './engine.js';
+
+export type CareerSummary = { record: LocalCareerRecord; state: CareerState };
+
+/**
+ * `LocalStore.transaction`의 careers.list() 구현(engine-client MemoryLocalStore ·
+ * platform Dexie 구현 모두)이 이미 `updatedAt` 내림차순 · `id` 오름차순으로 정렬해 돌려준다.
+ * platform의 `careers-sort.ts`는 package.json exports에 노출되어 있지 않아 apps/web에서 직접
+ * import할 수 없다(PR 본문에 기록). 정렬은 store 계층에서 이미 보장되므로 여기서는 다시 하지 않는다.
+ */
+export const careersQueryOptions = queryOptions({
+  queryKey: ['careers'] as const,
+  queryFn: async (): Promise<CareerSummary[]> => {
+    const engine = await getAppEngine();
+    const records = await engine.client.listCareers();
+    const summaries: CareerSummary[] = [];
+    for (const record of records) {
+      const load = await engine.client.loadCareer(record.id);
+      if (load.ok) {
+        summaries.push({ record: load.career, state: load.snapshot.state });
+      }
+    }
+    return summaries;
+  },
+});
+
+export function careerQueryOptions(careerId: string) {
+  return queryOptions({
+    queryKey: ['career', careerId] as const,
+    queryFn: async (): Promise<CareerSummary> => {
+      const engine = await getAppEngine();
+      const load = await engine.client.loadCareer(careerId);
+      if (!load.ok) {
+        throw new Error(load.error.message);
+      }
+      return { record: load.career, state: load.snapshot.state };
+    },
+  });
+}
+
+export function useCareerList() {
+  return useQuery(careersQueryOptions);
+}
+
+export function useCareer(careerId: string) {
+  return useQuery(careerQueryOptions(careerId));
+}
+
+export type CareerMutationKind = 'create' | 'updateDraft' | 'confirm' | 'advance' | 'delete';
+
+type CreateVariables = { simulationMode: SimulationMode };
+type UpdateDraftVariables = { careerId: string; draft: Partial<PlayerDraft> };
+type CareerIdVariables = { careerId: string };
+
+async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
+  const engine = await getAppEngine();
+  switch (kind) {
+    case 'create':
+      return createCareer(engine, variables as CreateVariables);
+    case 'updateDraft': {
+      const { careerId, draft } = variables as UpdateDraftVariables;
+      return updateDraft(engine, careerId, draft);
+    }
+    case 'confirm':
+      return confirmPlayer(engine, (variables as CareerIdVariables).careerId);
+    case 'advance':
+      return advance(engine, (variables as CareerIdVariables).careerId);
+    case 'delete':
+      await deleteCareer(engine, (variables as CareerIdVariables).careerId);
+      return undefined;
+    default: {
+      const exhaustive: never = kind;
+      throw new Error(`알 수 없는 mutation kind: ${String(exhaustive)}`);
+    }
+  }
+}
+
+type MutationDataFor<K extends CareerMutationKind> = K extends 'create'
+  ? Awaited<ReturnType<typeof createCareer>>
+  : K extends 'updateDraft'
+    ? Awaited<ReturnType<typeof updateDraft>>
+    : K extends 'confirm' | 'advance'
+      ? Awaited<ReturnType<typeof confirmPlayer>>
+      : void;
+
+type MutationVariablesFor<K extends CareerMutationKind> = K extends 'create'
+  ? CreateVariables
+  : K extends 'updateDraft'
+    ? UpdateDraftVariables
+    : CareerIdVariables;
+
+/** 액션 실행 후 ['careers']와(있다면) ['career', careerId] 쿼리를 무효화한다. */
+export function useCareerMutation<K extends CareerMutationKind>(
+  kind: K,
+): UseMutationResult<MutationDataFor<K>, Error, MutationVariablesFor<K>> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (variables: MutationVariablesFor<K>) =>
+      runCareerMutation(kind, variables) as Promise<MutationDataFor<K>>,
+    onSuccess: async (_result, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ['careers'] });
+      const careerId = 'careerId' in variables ? variables.careerId : undefined;
+      if (careerId !== undefined) {
+        await queryClient.invalidateQueries({ queryKey: ['career', careerId] });
+      }
+    },
+  });
+}
