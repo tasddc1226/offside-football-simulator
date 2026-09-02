@@ -1,3 +1,33 @@
 .DS_Store
 ~$*.docx
 
+# node
+node_modules/
+.pnpm-store/
+
+# build outputs
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+
+# vite
+.vite/
+
+# wrangler
+.wrangler/
+.dev.vars
+
+# test
+coverage/
+
+# editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+

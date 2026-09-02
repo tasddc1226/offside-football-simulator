@@ -1,0 +1,8 @@
+{
+  "extends": "@offside/tsconfig/pure.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "baseUrl": "."
+  },
+  "include": ["src"]
+}
