@@ -30,6 +30,12 @@ KICKOFF는 U18에서 첫 프로 계약과 주전 경쟁까지의 핵심 루프�
 | 한 구단에서 10시즌 | 원클럽맨 가치 인정 |
 | 우승 없이 Legacy 80 | 트로피 외 관계·기록·서사 보상 |
 
+도전 의존성:
+
+- "포지션 전환 후 국가대표 선발"은 Phase 4의 대표팀 차출(SCR-032)이 필요하다.
+- "우승 없이 Legacy 80"은 [Legacy·엔딩](../development/14-legacy-score-and-endings.md)의 RULE-LEG-002 스케일 기준이며, 참조 분포에서 80 이상이 약 상위 10%가 되도록 fixture로 검증한다.
+- KICKOFF는 Phase 5까지 완료된 뒤 여는 첫 정식 시즌이다. 첫 외부 공개는 Phase 2 이후의 `PRESEASON: LINE TEST`다.
+
 ## 운영 정책
 
 - 기존 Career는 생성 당시 ruleset으로 끝까지 진행한다.

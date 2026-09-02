@@ -58,12 +58,38 @@ type Career = {
   rulesetVersion: string;
   contentPackVersion: string;
   rngState: RngState;
+  nationalityRuleState: Record<string, unknown>;
+  ageReferenceDate: string;
   createdAt: string;
   updatedAt: string;
 };
 ```
 
 Career가 생성되면 세 버전 필드는 불변이다. 운영 시즌 전환은 기존 Career의 버전을 덮어쓰지 않는다.
+
+`nationalityRuleState`는 국적 규칙 모듈이 소유하는 상태다. 한국 모듈은 병역 상태와 특례 이력을 여기에 둔다. 모듈이 없는 국적은 빈 객체다. `ageReferenceDate`는 [시간 모델](11-time-model-and-pacing.md)의 나이 기준일이다.
+
+### DATA-PRO-001 LocalProfile
+
+```ts
+type LocalProfile = {
+  id: string;
+  recoveryCodeHash?: string;
+  recoveryCodeIssuedAt?: string;
+  settings: ProfileSettings;
+  createdAt: string;
+  lastSeenAt: string;
+};
+
+type ProfileSettings = {
+  reducedMotion: 'SYSTEM' | 'ON' | 'OFF';
+  textScale: 100 | 125 | 150;
+  theme: 'SYSTEM' | 'LIGHT' | 'DARK';
+  defaultSimulationMode: 'FAST' | 'CHAPTER';
+};
+```
+
+복구 코드 원문은 저장하지 않는다. 해시만 저장하고 발급 시각으로 재발급 여부를 판단한다.
 
 ### DATA-SEA-001 FootballSeason
 
@@ -74,13 +100,33 @@ type FootballSeason = {
   label: string;
   yearStart: number;
   phase: 'PRESEASON' | 'LEAGUE' | 'CUP' | 'TRANSFER_WINDOW' | 'SETTLEMENT';
+  simulationMode: 'FAST' | 'CHAPTER';
+  currentStep: number;
+  steps: SeasonStep[];
   teamId: string;
   squadRole: SquadRole;
   competitionRecords: CompetitionRecord[];
   effectQueue: Effect[];
   result?: SeasonResult;
 };
+
+type SeasonStep = {
+  index: number;
+  phase: FootballSeason['phase'];
+  windowOpen: boolean;
+  decisionSlots: DecisionSlot[];
+  summary?: StepSummary;
+};
+
+type DecisionSlot = {
+  kind: 'EVENT' | 'CHAPTER' | 'CONTRACT' | 'ROLE' | 'INJURY' | 'NATIONAL_TEAM' | 'SETTLEMENT';
+  required: boolean;
+  importance?: 'MAJOR' | 'MINOR';
+  refId?: string;
+};
 ```
+
+step과 모드의 의미는 [시간 모델](11-time-model-and-pacing.md)을 따른다. `steps`는 시즌 시작 시 리그 캘린더로 생성되며 이후 슬롯의 `refId`만 채워진다.
 
 ### DATA-SVC-001 ServiceSeason
 
@@ -116,7 +162,7 @@ type CareerEvent = {
 
 ## 능력과 상태의 분리
 
-- 영구 능력: 슈팅, 패스, 볼 기술, 수비, 골키핑, 신체, 정신의 세부 능력.
+- 영구 능력: 기술(슈팅, 패스, 드리블, 태클, 퍼스트터치, 크로스, 골키핑), 신체(속도, 가속, 민첩, 점프, 체력, 몸싸움, 내구성), 정신(판단, 집중, 침착, 위치선정, 리더십, 꾸준함)의 세 묶음만 `attributes`에 둔다. 관계는 능력치 묶음이 아니다.
 - 단기 상태: Form, Fitness, Morale.
 - 맥락 상태: 전술 적합도, 포지션 숙련도, 감독 신뢰, 주전 경쟁 순위.
 - 관계 상태: 감독·동료·경쟁자·팬·에이전트 관계.
@@ -144,6 +190,8 @@ type CareerEvent = {
 - Contract 기간은 겹칠 수 없으며 임대는 원소속 계약을 참조한다.
 - RETIRED Career는 일반 진행 명령을 받지 않는다.
 - Archive는 생성 후 불변이며 정정은 새 버전으로 남긴다.
+- `currentStep`은 시즌 안에서 단조 증가하며 되돌아가지 않는다.
+- 한 LocalProfile의 유효한 복구 코드는 동시에 하나다.
 
 ## 인덱스와 보존
 

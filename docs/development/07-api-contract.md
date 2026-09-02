@@ -35,6 +35,19 @@
 }
 ```
 
+## 프로필 API
+
+| ID | Method / Path | 목적 |
+|---|---|---|
+| API-PRO-001 | `GET /profile` | 현재 익명 프로필과 설정 |
+| API-PRO-002 | `PATCH /profile/settings` | 접근성·테마·기본 시뮬레이션 모드 저장 |
+| API-PRO-003 | `POST /profile/recovery-code` | 복구 코드 발급·재발급. 원문은 응답에 한 번만 포함 |
+| API-PRO-004 | `POST /profile/recover` | 복구 코드로 다른 브라우저에서 프로필 연결 |
+| API-PRO-005 | `POST /profile/delete` | 프로필과 연결 데이터 삭제(2단계 확인 토큰) |
+
+- 복구 코드 입력은 rate limit과 실패 횟수 제한을 둔다.
+- `recover` 성공 시 현재 브라우저의 빈 프로필은 폐기하고 복구된 프로필로 교체한다. 현재 브라우저에 진행 중 Career가 있으면 병합하지 않고 선택을 요구한다.
+
 ## 커리어 API
 
 | ID | Method / Path | 목적 |
@@ -59,7 +72,10 @@
 | API-SIM-003 | `GET /careers/{id}/seasons/{seasonId}` | 시즌 현황 |
 | API-SIM-004 | `POST /careers/{id}/seasons/{seasonId}/settle` | 시즌 결산 확정 |
 
-`advance`는 서버가 다음 허용 동작을 결정한다. 클라이언트가 임의 phase나 결과를 제출하지 않는다.
+- API-SIM-001 요청은 `simulationMode`(`FAST` | `CHAPTER`)를 포함한다. 생략 시 프로필 기본값을 쓴다.
+- API-SIM-002 `advance`는 서버가 다음 결정이 있는 step 또는 결산까지 진행하고, 응답에 `currentStep`, 통과한 step 요약, `nextAction`을 담는다. 클라이언트가 임의 phase, step, 결과를 제출하지 않는다.
+- 핵심 경기 챕터의 판단은 별도 API 없이 API-EVT-002로 확정한다. 챕터는 `pending-action`에 `kind: CHAPTER`로 나타난다.
+- API-LEG-002 응답은 [Legacy·엔딩](14-legacy-score-and-endings.md)의 `DATA-LEG-001` 구조를 따르며 백분위는 `detail` 아래에만 둔다.
 
 ## 계약·이적 API
 
@@ -96,6 +112,8 @@
 |---:|---|---|
 | 400 | `VALIDATION_FAILED` | 필드별 오류 표시 |
 | 401 | `PROFILE_REQUIRED` | 익명 프로필 복구/생성 |
+| 400 | `RECOVERY_CODE_INVALID` | 코드 재입력, 남은 시도 횟수 표시 |
+| 409 | `RECOVERY_CONFLICT` | 현재 브라우저 Career 유지/교체 선택 |
 | 403 | `CAREER_NOT_OWNED` | 허브 이동 |
 | 404 | `CAREER_NOT_FOUND` | 빈 상태/복구 안내 |
 | 409 | `CAREER_REVISION_CONFLICT` | 최신 Snapshot 다시 로드 |

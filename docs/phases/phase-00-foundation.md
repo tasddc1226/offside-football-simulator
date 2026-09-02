@@ -8,9 +8,14 @@
 
 개발자는 익명 프로필을 만들고 빈 커리어를 생성·조회·삭제하며, 고정 fixture 시뮬레이션 결과를 DB에 저장하고 다시 읽을 수 있다.
 
+## 시작 조건
+
+[종이 프로토타입](../content/prototype/season-01-inside-forward.md)을 3회 이상 플레이하고 결과를 기록했다. 시즌당 결정 수와 소요 시간이 [시간 모델](../development/11-time-model-and-pacing.md)의 예산 안에 들어오거나, 예산을 수정한 근거가 있다.
+
 ## 포함 범위
 
-- ADR-001~005 확정.
+- ADR-001~006 확정. ADR-006은 서비스명·도메인·상표 가용성이다.
+- 시각 디자인 토큰 파일과 폰트 로딩, 대비 자동 검사의 골격.
 - 웹 앱, API, domain, persistence, content 패키지 골격.
 - LocalProfile, Career, Snapshot, Idempotency, ServiceSeason 최소 스키마.
 - migration, seed fixture, health/readiness endpoint.

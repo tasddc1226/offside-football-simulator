@@ -11,7 +11,9 @@
 - **이탈**: 성공 시 다음 화면과 저장 checkpoint.
 - **예외**: 빈 상태, 충돌, 복구.
 
-공통 LOADING/DRAFT/COMMITTING/RESOLVED/EMPTY/ERROR 계약은 [`../development/06-ui-ux-specification.md`](../development/06-ui-ux-specification.md)를 따른다.
+공통 LOADING/DRAFT/COMMITTING/RESOLVED/EMPTY/ERROR 계약은 [`../development/06-ui-ux-specification.md`](../development/06-ui-ux-specification.md)를 따른다. 외형은 [`../development/13-visual-design-system.md`](../development/13-visual-design-system.md), 브랜드 어휘는 [`../development/12-brand-guidelines.md`](../development/12-brand-guidelines.md)를 따른다.
+
+화면은 두 종류다. **결정 화면**은 명령 하나를 확정하고 닫힌다. **공간 화면**(SCR-001 허브, SCR-029 대시보드)은 상태를 보여주고 결정 화면을 연다. 공간 화면에서는 아무것도 확정하지 않는다.
 
 ## 카탈로그
 
@@ -39,12 +41,20 @@
 | SCR-020 | 이적·임대 결과 | P0 | 3 | [관계·이적](03-career-events.md) |
 | SCR-021 | 슬럼프 대응 | P1 | 4 | [관계·이적](03-career-events.md) |
 | SCR-022 | 부상·재활 대응 | P0 | 4 | [관계·이적](03-career-events.md) |
-| SCR-023 | 포지션 전용 경기 이벤트 | P1 | 4 | [관계·이적](03-career-events.md) |
+| SCR-023 | 포지션 전용 이벤트(경기 판단·성장 이슈 두 변형) | P1 | 4/5 | [관계·이적](03-career-events.md), [허브·보조](05-hub-and-support.md) |
 | SCR-024 | SNS·평판 이벤트 | P1 | 4 | [관계·이적](03-career-events.md) |
 | SCR-025 | 은퇴·통산 기록 | P0 | 5 | [엔딩·시즌](04-legacy-and-service-season.md) |
 | SCR-026 | Legacy Score | P0 | 5 | [엔딩·시즌](04-legacy-and-service-season.md) |
 | SCR-027 | 커리어 연대기 | P1 | 5 | [엔딩·시즌](04-legacy-and-service-season.md) |
 | SCR-028 | 최종 선수 프로필 | P0 | 5 | [엔딩·시즌](04-legacy-and-service-season.md) |
+| SCR-029 | 커리어 대시보드 | P0 | 1 | [허브·보조](05-hub-and-support.md) |
+| SCR-030 | 설정·데이터 | P0 | 1 | [허브·보조](05-hub-and-support.md) |
+| SCR-031 | 핵심 경기 챕터 | P0 | 2 | [허브·보조](05-hub-and-support.md) |
+| SCR-032 | 대표팀 차출 | P1 | 4 | [허브·보조](05-hub-and-support.md) |
+| SCR-033 | 능력치 상세 | P1 | 2 | [허브·보조](05-hub-and-support.md) |
+| SCR-034 | 온보딩 | P0 | 1 | [허브·보조](05-hub-and-support.md) |
+
+SCR-029~034는 검토에서 누락으로 확인돼 추가한 화면이다. 제품 설계서의 28개 화면 카탈로그에는 없다.
 
 ## 서비스 시즌 추가 화면
 

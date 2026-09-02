@@ -7,9 +7,10 @@
 ## 완료 후 흐름
 
 ```text
-SCR-005 프리시즌 계획
+SCR-005 프리시즌 계획 + 시뮬레이션 모드
 → SCR-011 시즌 준비 선택
-→ 주전 경쟁/핵심 경기 이벤트
+→ SCR-029 대시보드에서 advance
+→ SCR-031 핵심 경기 챕터(판단 1~3개)
 → SCR-012 역할 변경
 → SCR-013 선택 이벤트
 → SCR-014 결과
@@ -18,17 +19,19 @@ SCR-005 프리시즌 계획
 
 ## 포함 범위
 
-- FootballSeason phase와 일정 요약.
+- FootballSeason phase, 12 step, `FAST`/`CHAPTER` 모드, step 경계 checkpoint.
 - 팀 전술, 감독 선호 역할, 포지션 경쟁자.
-- Base OVR와 Expected Performance 분리.
+- Base OVR와 Expected Performance 분리, RULE-SEL-001 선발 판정.
 - 선발·교체·결장, 출전 시간, 평점, 카드, 부상 이탈 가능 상태.
 - FW/MF/DF/GK 포지션별 통계 생성기.
-- 데뷔전·더비·결정전 중 최소 3종 핵심 경기 챕터.
+- 데뷔전·더비·결정전 중 최소 3종 핵심 경기 챕터와 챕터 전용 화면 SCR-031.
+- 대시보드 전술실 구역과 능력치 상세(SCR-033), 첫 프로 계약 후 전술 적합도·감독 신뢰·예상치 공개.
 - 시즌 기록, 팀 성적, 역할 변화, 능력 변화 원인 결산.
+- LINE TEST 공개 테스트를 위한 테스트 보관함 분리와 세션 길이 측정.
 
 ## 규칙
 
-- RULE-OVR-001, RULE-PERF-001, RULE-RNG-001.
+- RULE-OVR-001, RULE-PERF-001, RULE-SEL-001, RULE-RNG-001, RULE-TIME-001~004.
 - 모든 경기를 조작하지 않고 경력상 중요한 경기만 선택형 장면으로 노출한다.
 - 폼·체력·사기는 Base OVR을 바꾸지 않는다.
 - 0분, 미집계, 애니메이션 중 값을 구분한다.
@@ -55,6 +58,13 @@ SCR-005 프리시즌 계획
 - [ ] OVR이 낮아도 전술 적합도가 높은 선수가 선발되는 fixture가 있다.
 - [ ] 결과 화면이 OVR과 Expected Performance 변화 원인을 분리한다.
 - [ ] 시즌 결산 중 응답 유실 후 동일 결과를 복구한다.
+- [ ] RULE-SEL-001 계산 예의 선수 B가 선수 A보다 많이 선발된다.
+- [ ] FAST 시즌 6분, CHAPTER 시즌 12분 이내로 스크립트 플레이가 끝난다.
+- [ ] 챕터 판단 도중 새로고침해도 확정된 판단까지 재생되고 roll이 추가 소비되지 않는다.
+
+## LINE TEST 게이트
+
+이 Phase가 끝나면 [로드맵](../development/00-development-roadmap.md)의 LINE TEST를 연다. Phase 3은 LINE TEST 기준선이 기록된 뒤 시작한다.
 
 ## 제외
 

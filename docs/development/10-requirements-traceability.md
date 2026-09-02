@@ -16,6 +16,13 @@
 | FR-SVC-001 | 서비스 시즌과 축구 시즌을 분리한다 | 6 | 허브·시즌 결산 | TEST-E2E-006 |
 | FR-SAV-001 | 명령을 원자·멱등 저장하고 복구한다 | 전 Phase | 모든 명령 API | TEST-E2E-007 |
 | FR-A11Y-001 | P0 여정을 키보드·스크린리더로 완료한다 | 전 Phase | 모든 P0 화면 | 접근성 suite |
+| FR-REC-001 | 복구 코드로 다른 브라우저에서 프로필을 복원한다 | 1 | SCR-004, SCR-030, API-PRO-003~004 | TEST-E2E-008 |
+| FR-HUB-001 | 커리어 대시보드에서 상태를 보고 결정 화면으로 들어간다 | 1 | SCR-029 | TEST-E2E-001 |
+| FR-ONB-001 | 온보딩과 점진 공개로 수치를 단계적으로 연다 | 1 | SCR-034, StatusStrip | TEST-E2E-009 |
+| FR-CHP-001 | 핵심 경기 챕터에서 위험이 보이는 판단을 한다 | 2 | SCR-031, SCR-023 | TEST-E2E-010 |
+| FR-TIME-001 | 시즌을 12 step과 두 모드로 진행한다 | 2 | API-SIM-001~002 | 시간 모델 테스트 |
+| FR-NAT-001 | 대표팀 차출과 국적 규칙 모듈을 처리한다 | 4~5 | SCR-032 | TEST-E2E-004 확장 |
+| FR-DSN-001 | 모든 화면이 시각 디자인 토큰과 브랜드 어휘 폐쇄 목록을 지킨다 | 전 Phase | 13, 12 문서 | 시각 회귀·문자열 lint |
 
 ## 규칙 요구사항
 
@@ -26,17 +33,20 @@
 | RULE-RNG-001 | seed·버전·명령이 같으면 결과 동일 | [저장·버전](05-save-and-versioning.md) |
 | RULE-EVT-001 | 확정 이벤트 재추첨 금지 | [이벤트](04-event-engine.md) |
 | RULE-SVC-001 | 시즌 종료가 기존 Career 삭제/강제 은퇴를 유발하지 않음 | [저장·버전](05-save-and-versioning.md) |
-| RULE-LEG-001 | 엔딩은 세계 정상 하나가 아닌 복수 가치 인정 | [Phase 5](../phases/phase-05-retirement-and-legacy.md) |
+| RULE-SEL-001 | 선발은 전술 적합도·감독 신뢰·예상치·스쿼드 지위로 판정 | [시뮬레이션](03-game-simulation-engine.md) |
+| RULE-TIME-001~004 | 12 step 시즌, advance 규칙, FAST/CHAPTER 모드, 결정 예산 | [시간 모델](11-time-model-and-pacing.md) |
+| RULE-LEG-001 | 엔딩은 세계 정상 하나가 아닌 복수 가치 인정 | [Legacy·엔딩](14-legacy-score-and-endings.md) |
+| RULE-LEG-002~006 | Legacy 가중치, 중복 가산 금지, 참조 분포, 표현, 엔딩 해소 | [Legacy·엔딩](14-legacy-score-and-endings.md) |
 
 ## 화면→Phase 매핑
 
 | Phase | 화면 |
 |---:|---|
-| 1 | SCR-001~004, SCR-007, SCR-009~010, SCR-014 |
-| 2 | SCR-005~006, SCR-011~015 |
+| 1 | SCR-001~004, SCR-007, SCR-009~010, SCR-014, SCR-029, SCR-030, SCR-034 |
+| 2 | SCR-005~006, SCR-011~015, SCR-031, SCR-033 |
 | 3 | SCR-017, SCR-019~020 |
-| 4 | SCR-016, SCR-018, SCR-021~024 |
-| 5 | SCR-025~028 |
+| 4 | SCR-016, SCR-018, SCR-021~024(경기 판단 변형), SCR-032 |
+| 5 | SCR-023(성장 이슈 변형), SCR-025~028 |
 | 6 | SCR-001 허브 확장, SCR-006/015 결산 확장, 시즌 전환·앨범 |
 
 상세 진입 조건과 상태는 [화면 인덱스](../screens/README.md)에 있다.
@@ -47,4 +57,8 @@
 - 이벤트 Effect 변경: RULE-EVT-001, DATA-EVT-001, contentPackVersion, 결정론 fixture.
 - 시즌 상태 변경: DATA-SVC-001, API-SVC, 전환 런북, 기존 Career 호환 테스트.
 - 저장 필드 변경: schemaVersion, migration, Snapshot hash, 구 fixture 재생.
+- 선발 규칙 변경: RULE-SEL-001, 선수 A·B fixture, 결과 화면 이유 문구, rulesetVersion.
+- 시간 모델 변경: RULE-TIME-*, leagueCalendar, 결정 예산, 세션 길이 테스트, 콘텐츠 pack 배치.
+- Legacy 변경: RULE-LEG-002~006, legacyVersion, 참조 분포 아티팩트, KICKOFF 도전 보정, 과거 Archive 불변 테스트.
+- 브랜드 어휘·시각 토큰 변경: 12·13 문서, 문자열 lint, 스크린샷 회귀.
 

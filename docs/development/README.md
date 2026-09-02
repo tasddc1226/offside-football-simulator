@@ -15,14 +15,45 @@
 9. [테스트 전략](08-testing-strategy.md)
 10. [배포·운영](09-deployment-and-operations.md)
 11. [요구사항 추적표](10-requirements-traceability.md)
+12. [시간 모델과 페이싱](11-time-model-and-pacing.md)
+13. [브랜드 가이드](12-brand-guidelines.md)
+14. [시각 디자인 시스템](13-visual-design-system.md)
+15. [Legacy Score·엔딩](14-legacy-score-and-endings.md)
+
+콘텐츠 저작 형식과 종이 프로토타입은 [`../content/README.md`](../content/README.md)에 있다.
+
+## 정본 우선순위
+
+문서가 충돌하면 다음 순서로 읽는다.
+
+1. `docs/development/` 공통 명세
+2. `docs/phases/` 단계 명세
+3. `docs/screens/` 화면 명세
+4. `docs/content/` 콘텐츠와 프로토타입
+5. `docs/offside-football-simulator-design.*` 제품 설계서
+
+제품 설계서는 제품 의도와 원작 분석의 정본이다. 다음 절은 이 디렉터리로 대체됐으므로 구현 근거로 쓰지 않는다.
+
+| 설계서 절 | 대체 문서 | 이유 |
+|---|---|---|
+| 2장 화면 상태 모델(CREATE/AMATEUR/OFFSEASON 등 8종) | 02 Career.status, FootballSeason.phase, 11 step | 상태 모델 이원화 |
+| 3.1 화면별 명세의 필드명(idempotencyKey, PlayerSeed, SeasonRecord, contentPackId) | 02, 05, 07 | commandId, Player, SeasonResult, contentPackVersion으로 통일 |
+| 3.1 Screen 23 | screens/05 SCR-023 두 변형 | 경기 판단과 성장 이슈 분리 |
+| 5장 능력치 구조의 "관계" 묶음 | 02 능력과 상태의 분리 | 관계는 능력치가 아니라 별도 상태 |
+| 6.4 시장가치 지수의 Potential 항 | 03 리그와 시장가치 | 숨긴 정본 대신 정찰 범위 중간값 |
+| 11장 "월별 진행", 11.2 "공간형 UI" | 11 시간 모델, screens/05 SCR-029 | 구현 계약으로 구체화 |
+| 12장 브랜드 어휘(VAR CHECK, FULL TIME 시즌 결산, "적용됩니다") | 12 브랜드 가이드 | 어휘 정리 |
+| 13장 "2차 확장: 감독 전술 적합도" | Phase 2 | 전술 적합도는 1차 핵심 |
+| Screen 26 백분위 | 14 Legacy·엔딩 | 고정 참조 분포, 백분위는 보조 |
 
 ## 구현 단계
 
 | 단계 | 목표 | 명세 |
 |---|---|---|
+| 종이 프로토타입 | Phase 0 전 재미 검증 | [`../content/prototype/season-01-inside-forward.md`](../content/prototype/season-01-inside-forward.md) |
 | Phase 0 | 기술 기반과 데이터 계약 | [`phase-00-foundation.md`](../phases/phase-00-foundation.md) |
 | Phase 1 | 선수 생성부터 첫 계약까지 | [`phase-01-career-vertical-slice.md`](../phases/phase-01-career-vertical-slice.md) |
-| Phase 2 | 한 시즌 시뮬레이션 | [`phase-02-full-season.md`](../phases/phase-02-full-season.md) |
+| Phase 2 | 한 시즌 시뮬레이션, 이후 `LINE TEST` 공개 | [`phase-02-full-season.md`](../phases/phase-02-full-season.md) |
 | Phase 3 | 계약·임대·이적 | [`phase-03-contract-and-transfer.md`](../phases/phase-03-contract-and-transfer.md) |
 | Phase 4 | 부상·관계·평판 | [`phase-04-injury-and-relationships.md`](../phases/phase-04-injury-and-relationships.md) |
 | Phase 5 | 장기 성장·은퇴·Legacy | [`phase-05-retirement-and-legacy.md`](../phases/phase-05-retirement-and-legacy.md) |

@@ -13,10 +13,12 @@
 - Legacy Score의 구성 요소와 설명.
 - CareerTimeline, CareerTag, 최종 프로필, 선수 보관함.
 - 원클럽 레전드, 무관의 제왕, 승격 주장, 대표팀 영웅, 부상 복귀, 저니맨 등 복수 엔딩.
+- 국적 규칙 모듈(SHOULD): `nationalityRuleState`를 소유하는 모듈 인터페이스와 한국 모듈. 한국 모듈은 병역 상태, U23·아시안게임·올림픽 특례, 복무 경로 선택을 제공한다. 모듈이 없는 국적은 기본 모듈로 동작한다.
+- SCR-023 성장 이슈 변형: 노쇠 곡선과 연결된 포지션 고유 능력 추세 대응.
 
 ## 화면
 
-SCR-025 은퇴·통산 기록, SCR-026 Legacy Score, SCR-027 연대기, SCR-028 최종 프로필.
+SCR-025 은퇴·통산 기록(표제 `FULL TIME`), SCR-026 Legacy Score, SCR-027 연대기, SCR-028 최종 프로필, SCR-023 성장 이슈 변형.
 
 ## 은퇴 판정
 
@@ -29,15 +31,12 @@ Retirement Pressure = age curve + injury burden + low market demand
 
 ## Legacy Score
 
-초기 구성:
+계산·엔딩·표현 규칙은 [Legacy·엔딩](../development/14-legacy-score-and-endings.md)이 정본이다. 요약:
 
-- 경기·대회 성취.
-- 팀 기여와 중요한 역할.
-- 장기성·내구성·복귀.
-- 관계·리더십·팬 기억.
-- 희귀한 커리어 태그와 서사.
-
-총점과 함께 상위 3개 기여 요인, 아쉬운 기회, 대표 엔딩을 표시한다.
+- 0~100 정수. 성취 30, 기여 25, 장기성 15, 관계 15, 서사 15.
+- 참조 분포는 ruleset에 동봉된 합성 모집단이며 백분위는 상세에서만 보인다.
+- 주 카드는 엔딩 타이틀, 총점과 밴드, 상위 기여 요인 3개, 아쉬운 기회 1개, 최고의 순간이다.
+- 모든 Career가 엔딩을 받는다. 하위 백분위 표현은 금지한다.
 
 ## 구현 슬라이스
 
@@ -55,8 +54,10 @@ Retirement Pressure = age curve + injury burden + low market demand
 - [ ] 은퇴 후 일반 진행 명령이 거부된다.
 - [ ] 통산 합계가 FootballSeason 기록 합과 일치한다.
 - [ ] 같은 Career의 Legacy 결과가 재현된다.
-- [ ] 세계 최고가 아니어도 의미 있는 엔딩을 최소 5종 제공한다.
+- [ ] 세계 최고가 아니어도 의미 있는 엔딩을 최소 12종 제공하고 폴백 엔딩이 있다.
 - [ ] Archive는 생성 후 변경되지 않는다.
+- [ ] GK/DF/MF/FW 동일 품질 fixture의 Legacy 총점 차이가 ±5 이내다.
+- [ ] 한국 국적 fixture에서 병역 경로 선택이 커리어 연대기와 통산 기록에 반영된다.
 
 ## 제외
 

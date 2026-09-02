@@ -16,11 +16,20 @@
 
 - [`docs/offside-football-simulator-design.docx`](docs/offside-football-simulator-design.docx): 편집 가능한 73페이지 통합 설계서
 - [`docs/offside-football-simulator-design.pdf`](docs/offside-football-simulator-design.pdf): 검토·공유용 PDF
-- [`docs/development/README.md`](docs/development/README.md): 공통 기술 명세와 Phase 0~7 개발 문서 인덱스
-- [`docs/screens/README.md`](docs/screens/README.md): 28개 핵심 화면과 서비스 시즌 화면 계약
+- [`docs/development/README.md`](docs/development/README.md): 공통 기술 명세, 시간 모델, 브랜드·시각 디자인, Legacy 규칙과 Phase 0~7 개발 문서 인덱스
+- [`docs/screens/README.md`](docs/screens/README.md): 핵심 화면 34개와 서비스 시즌 화면 계약
+- [`docs/content/README.md`](docs/content/README.md): 이벤트 저작 형식과 종이 프로토타입
 - [`docs/research/slbcareer-first-run.md`](docs/research/slbcareer-first-run.md): 분석 대상 첫 플레이 기록
 - [`docs/research/slbcareer-fresh-run.md`](docs/research/slbcareer-fresh-run.md): 초기화 후 재플레이 기록
 
+문서가 충돌하면 `docs/development/`가 정본입니다. 통합 설계서의 어느 절이 대체됐는지는 [`docs/development/README.md`](docs/development/README.md)의 정본 우선순위 표에 있습니다.
+
 ## 현재 범위
 
-이 저장소는 제품 콘셉트, 화면 단위 구현 명세, OVR·이벤트·저장 데이터 구조, 차별화 전략, 브랜딩, 시즌 운영 설계와 단계별 개발 계약을 보관합니다. 실제 게임 소스 코드는 아직 포함하지 않습니다.
+이 저장소는 제품 콘셉트, 화면 단위 구현 명세, OVR·선발·이벤트·저장 데이터 구조, 시간 모델, 차별화 전략, 브랜드 가이드, 시각 디자인 시스템, Legacy·엔딩 규칙, 시즌 운영 설계, 단계별 개발 계약, 종이 프로토타입 콘텐츠를 보관합니다. 실제 게임 소스 코드는 아직 포함하지 않습니다.
+
+## 시작 순서
+
+1. [종이 프로토타입](docs/content/prototype/season-01-inside-forward.md)을 3회 플레이하고 결정 수·시간을 기록한다.
+2. [로드맵](docs/development/00-development-roadmap.md)의 Phase 0으로 들어간다.
+3. Phase 2가 끝나면 `PRESEASON: LINE TEST`로 외부 공개 테스트를 연다.
