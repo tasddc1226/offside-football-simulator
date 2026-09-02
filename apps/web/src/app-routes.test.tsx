@@ -130,7 +130,7 @@ describe('SCR-034 온보딩', () => {
       expect(router.state.location.pathname).toMatch(/^\/career\/.+\/create$/);
     });
     expect(useUiStore.getState().onboardingSeen).toBe(true);
-    expect(await screen.findByRole('heading', { level: 1, name: '이 화면은 다음 작업에서 열립니다' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' })).toBeInTheDocument();
   });
 });
 
@@ -210,9 +210,9 @@ describe('SCR-001 허브 - 카드', () => {
     if (!created.ok) throw new Error('unreachable');
     const careerId = created.snapshot.careerId;
 
-    // create 자리표시를 한 번 방문해 ['career', careerId] 쿼리 캐시(staleTime 30s)를 채운다.
+    // SCR-002를 한 번 방문해 ['career', careerId] 쿼리 캐시(staleTime 30s)를 채운다.
     renderAt(`/career/${careerId}/create`);
-    await screen.findByRole('heading', { level: 1, name: '이 화면은 다음 작업에서 열립니다' });
+    await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
 
     renderAt('/');
     await screen.findByRole('heading', { level: 2, name: '이름 없는 선수' });
