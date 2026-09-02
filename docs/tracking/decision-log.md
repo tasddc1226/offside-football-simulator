@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, D-19·D-20 결정 — 동기화 충돌 해소와 설정 데이터 섹션, T-1-011·012 브리프)
+
+**결정**: `docs/tracking/phase-1-plan.md`에 D-19(동기화 배선·충돌 해소)와 D-20(SCR-030 데이터 섹션)을 추가했다. 핵심: (1) 충돌의 "이 기기 진행 유지"는 Phase 0 결정 로그의 후보 (a) fork-by-replay를 채택한다. 로컬 명령 로그 전체를 새 careerId로 엔진에서 재실행하면 결정론 때문에 careerId만 다른 커리어가 생기고, 서버 API는 바뀌지 않는다. `PUT` 강제 플래그(b)는 서버 로그 계보를 섞어 리플레이 검증을 깨므로 기각. (2) `LocalCareerRecord.ownerProfileId`는 Phase 1에서 채우지 않는다. 소유는 서버 세션이 판정하고 마지막 프로필 id는 kv `profile:id`에 둔다. 복구로 프로필이 바뀌면 서버 목록과 사용자의 병합 선택으로 로컬을 대조한다(KEEP이면 서버에 없는 로컬 커리어 삭제, MOVE면 유지·전송, 뒤처진 커리어는 `importCareerFromServer`로 받되 미전송분이 있으면 덮어쓰지 않는다). (3) 복구 코드 "다시 보기"는 서버가 해시만 가져 불가능하므로 발급일 표시로 읽는다. (4) 로그아웃은 Google 연결 프로필에서만 활성(T-1-013 전에는 항상 비활성 + 이유). (5) 데이터 내보내기는 Phase 7이라 행을 두지 않는다. (6) 법적 문서 본문은 사실 기반 초안으로 워커가 쓰고 사업자 정보·최종 문안은 U-010으로 사용자에게 남긴다.
+
+**선행 변경**: T-1-011의 선행에 T-1-008을 추가했다(`src/api/client.ts`를 T-1-008이 만들고 T-1-011이 재사용. 둘이 동시에 만들면 충돌). 따라서 T-1-007 머지 뒤 T-1-008·009를 먼저, T-1-008 머지 뒤 T-1-011, T-1-011 머지 뒤 T-1-012 순서다. T-1-012는 platform(`clearLocalData`)·engine-client(`import.ts`)·api(복구·삭제 라우트 스키마 채택) 를 작게 만진다.
+
 ## 2026-09-02 (저녁, PR #22 contracts Phase 1 스키마 머지)
 
 **결과**: T-1-006 PR #22 squash 머지(`e2d0602`). `CommandRequestSchema`가 12개 명령의 판별 유니온이 되고 Phase 1 6종은 payload 스키마를 갖는다(Phase 2+는 임의 record). `CommandLogEntrySchema`는 `commandType`에 맞는 payload 스키마로 재검사한다(refinement가 붙은 스키마는 `.omit()`이 안 되므로 `CommandLogEntryShapeSchema` + `checkCommandTypePayload`로 분리). `PlayerPublic`은 `truePotential`을 갖지 않는 타입이고 `toPlayerPublic`은 허용 목록으로 필드를 옮긴다. `CareerStateSchema`·`Offer`·`Contract`·`Pending`·`TimelineEntry`·`Effect`는 domain 타입과 `expectTypeOf().toEqualTypeOf()`로 동일성을 고정했다(typecheck에서 검증). 복구 코드 정규화·표시 포맷·입력 스키마와 프로필 삭제 2단계 스키마 추가. `CONTRACTS_VERSION` 0.2.0. contracts 132 tests, api 113 tests, 전체 체인 통과. 비용 약 $10.5, 36분.

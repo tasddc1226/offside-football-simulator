@@ -148,6 +148,25 @@ API-AUTH-001~003은 코드로 구현하되 실제 검증은 U-003 뒤. 테스트
 
 Playwright(`@playwright/test`, Chromium만) + `@axe-core/playwright`. 위치 `apps/web/e2e/`, 스크립트 `pnpm --filter @offside/web e2e`. 프런트 단독 시나리오는 fetch를 스텁한다. API가 필요한 시나리오(복구·삭제)는 `apps/api`를 `wrangler dev --local`(포트 8787, 로컬 D1)로 띄워 실제 HTTP로 검사한다. CI 연결은 T-0-010(U-002) 이후.
 
+### D-19 동기화 배선과 충돌 해소 (T-1-011)
+
+- 배선: web은 `createSyncClient`를 앱 싱글턴으로 두고 `engine.execute` 성공(재생 아님)마다 `notifyCommitted`, `online`·`visibilitychange(hidden)`·`pagehide`에 `flush`. 앱 시작 시 미전송 커리어(`revision > lastSyncedRevision`)를 다시 큐에 넣는다. `fetch`는 `credentials: 'include'`, base URL은 `VITE_API_BASE_URL`(기본 `http://localhost:8787`). 세션은 앱 시작 시 `GET /profile` 한 번으로 만든다(실패해도 앱은 뜬다).
+- `LocalCareerRecord.ownerProfileId`는 Phase 1에서 채우지 않는다(null). 소유는 서버 세션이 판정하고, 마지막으로 본 프로필 id는 LocalStore kv `profile:id`에 둔다. 프로필이 바뀌는 복구(D-20)는 이 값과 서버 목록으로 대조한다.
+- 표시: 상태 7종(IDLE·SCHEDULED/SYNCING·RETRYING·OFFLINE·LOCAL_ONLY·CONFLICT·FAILED)을 한국어 문구+아이콘+색으로 허브 카드·커리어 헤더·설정에 보여 준다. 브랜드 어휘 없음. LOCAL_ONLY는 ADR-002의 "서버 동기화 불가 표시"다.
+- 충돌: `CONFLICT`면 커리어 화면 위에 대화상자. "다른 기기 진행 가져오기" = `resolveConflict('REMOTE')`(Phase 0 구현). "이 기기 진행 유지" = 포크: 로컬 명령 로그 전체를 새 careerId로 엔진에서 재실행한다(결정 로그의 후보 (a) 채택. `PUT` 강제 플래그(b)는 서버 로그 계보가 섞여 기각). 결과 커리어는 careerId만 다르고 나머지 상태가 같다(결정론). 포크 뒤 원본은 REMOTE로 해소하고 새 커리어는 baseRevision 0으로 동기화한다. 커리어가 둘이 되는 것을 사용자에게 문장으로 알린다. "나중에"는 로컬 진행을 막지 않는다.
+- 커리어 삭제는 로컬 삭제 + `DELETE /careers/{id}`. 재시도 가능한 실패는 kv `sync:pending-delete`에 두고 다음 시작·온라인 복귀 때 재시도한다.
+
+### D-20 SCR-030 데이터 섹션 (T-1-012)
+
+- 복구 코드: 서버는 해시만 가지므로 "다시 보기"는 없다(SCR-030 문서의 "다시 보기"는 발급일 표시로 읽는다). 행에는 발급일과 "재발급"(미발급이면 "발급"). 재발급 전 "이전 코드는 즉시 쓸 수 없게 됩니다" 확인. 결과는 대화상자에 한 번만 표시하고 복사 버튼을 둔다. 코드는 로컬·분석 어디에도 저장하지 않는다.
+- 프로필 복구: 코드 입력 → `POST /profile/recover`. `RECOVERY_CONFLICT`면 선택 대화상자(현재 기기 커리어 n개 옮기기 = `MOVE_TO_LINKED` / 복구할 프로필만 사용 = `KEEP_LINKED_ONLY`). 성공 뒤 로컬 대조: KEEP이면 서버 목록에 없는 로컬 커리어를 로컬에서 삭제, MOVE면 로컬을 두고 미전송분을 전송. 서버 목록 중 로컬에 없거나 로컬이 뒤처졌고 미전송분이 없는 커리어는 `GET /careers/{id}`로 받아 `decodeSnapshot` 검증 뒤 로컬에 넣는다(engine-client `importCareerFromServer`). 미전송분이 있는 커리어는 덮어쓰지 않는다.
+- 로그아웃: Google 연결 프로필에서만 활성(익명 프로필은 로그아웃하면 복구 수단이 사라진다). Phase 1(T-1-013 전)에는 항상 비활성이고 이유를 문장으로 보여 준다. 동작은 `POST /auth/logout` → 로컬은 그대로(ADR-008).
+- 이 기기 데이터 삭제: platform에 `clearLocalData()` 추가(web: Dexie DB 삭제). 확인 대화상자에 미전송 커리어 수와 복구 코드 미발급 경고. 실행 뒤 온보딩으로.
+- 프로필 삭제: D-15의 2단계. 1단계 응답의 `confirmToken`을 대화상자가 들고 있다가 "삭제"로 2단계. 204 뒤 이 기기 데이터 삭제와 같은 절차.
+- 데이터 내보내기는 Phase 1 범위 밖(01 문서: Phase 7). 행을 두지 않는다. Google 행은 T-1-013.
+- 법적 문서: 약관·개인정보 처리방침 본문은 ADR-002·ADR-008·09 "개인정보와 보존"의 사실만으로 초안을 쓴다. 사업자명·연락처·시행일은 `apps/web/src/legal/operator.ts` 상수 한 곳에 두고 값이 비면 "준비 중"으로 표시한다. 최종 문안·사업자 정보는 U-010(사용자)이다.
+- api의 복구·삭제 라우트는 T-1-012에서 contracts 스키마(`RecoverProfileBodySchema` 등)를 쓰도록 바꾼다(T-1-004 결정 로그의 후속).
+
 ## 3. 작업 분해
 
 | ID | 패키지 | 작업 | 선행 | Wave |
@@ -163,8 +182,8 @@ Playwright(`@playwright/test`, Chromium만) + `@axe-core/playwright`. 위치 `ap
 | T-1-010 | web(e2e) | Playwright + axe 도입, 허브·법적 문서 스모크·접근성, 브라우저 Web Worker state hash 일치 테스트(T-0-011 잔여, dev 전용 probe 라우트) | Phase 0 종료(Wave 1 첫 머지 후 5번째 슬롯) | 1 |
 | T-1-008 | web | 선수 만들기 SCR-002·003·004 + 복구 코드 발급 단계(SCR-004) | T-1-002, T-1-004, T-1-006, T-1-007 | 3 |
 | T-1-009 | web | 진로 선택 SCR-007, 입단 테스트 SCR-013·014, 제안 비교 SCR-009, 계약 SCR-010, 대시보드 SCR-029(잠금 표시 포함) | T-1-005, T-1-006, T-1-007 | 3 |
-| T-1-011 | web + engine-client | T-0-015 동기화 클라이언트 배선, 동기화 상태 표시, 충돌 화면("이 기기/다른 기기"), LOCAL 선택은 fork-by-replay 새 careerId | T-0-015, T-1-007 | 3 |
-| T-1-012 | web | SCR-030 데이터 섹션: 복구 코드 보기·재발급·복구 입력(RECOVERY_CONFLICT 선택), 프로필 삭제, 로그아웃, 이 기기 데이터 삭제; 법적 문서 페이지 본문 | T-1-004, T-1-007, T-1-011 | 4 |
+| T-1-011 | web + engine-client | T-0-015 동기화 클라이언트 배선, 동기화 상태 표시, 충돌 화면("이 기기/다른 기기"), LOCAL 선택은 fork-by-replay 새 careerId (D-19) | T-0-015, T-1-007, T-1-008(`src/api/client.ts`) | 3 |
+| T-1-012 | web + platform + engine-client + api(작게) | SCR-030 데이터 섹션: 복구 코드 재발급·복구 입력(RECOVERY_CONFLICT 선택)·복구 뒤 대조, 프로필 삭제, 로그아웃, 이 기기 데이터 삭제; 법적 문서 본문; api 복구·삭제 라우트의 contracts 스키마 채택 (D-20) | T-1-004, T-1-006, T-1-007, T-1-011 | 4 |
 | T-1-013 | api + web | Google OIDC start/callback/merge, SCR-030 Google 연결 행, 병합 선택 화면 (실검증 U-003) | T-1-004, T-1-012 | 4 |
 | T-1-014 | web(e2e) | TEST-E2E-001·007·008·009, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, Phase 1 완료 조건 표 채우기 | T-1-008, T-1-009, T-1-012 | 4 |
 
