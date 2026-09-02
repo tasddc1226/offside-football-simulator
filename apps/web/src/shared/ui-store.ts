@@ -1,7 +1,7 @@
 // 클라이언트 상태(Zustand). `hydrateUiStore(store)`가 LocalStore kv 'ui:settings'에서 읽어 채우고,
 // 이후 모든 상태 변경을 같은 키에 다시 쓴다(T-0-009·T-0-012 결정: 저장은 localStorage가 아니라
 // platform LocalStore다). 저장 실패는 콘솔 경고만 남기고 화면을 막지 않는다.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { ProfileSettingsSchema, type ProfileSettings } from '@offside/contracts';
 import type { LocalStore } from '@offside/engine-client';
@@ -100,13 +100,21 @@ export async function hydrateUiStore(store: LocalStore): Promise<void> {
   });
 }
 
+/** jsdom은 기본적으로 matchMedia를 구현하지 않는다 — 없으면 "시스템 선호 없음"으로 취급한다. */
+function reducedMotionMediaQuery(): MediaQueryList | null {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return null;
+  return window.matchMedia('(prefers-reduced-motion: reduce)');
+}
+
 /**
- * document.documentElement에 data-theme(SYSTEM이면 속성 제거)와 data-text-scale을 반영한다.
- * DSN-THM-001.
+ * document.documentElement에 data-theme(SYSTEM이면 속성 제거)·data-text-scale·data-reduced-motion을
+ * 반영한다. DSN-THM-001. data-reduced-motion은 T-1-007 리뷰에서 발견된 버그 수정: OS 미디어쿼리
+ * (`prefers-reduced-motion: reduce`)만으로는 앱 설정에서 명시적으로 ON을 고른 경우를 못 잡는다.
  */
 export function useApplyTheme() {
   const theme = useUiStore((state) => state.theme);
   const textScale = useUiStore((state) => state.textScale);
+  const reducedMotion = useUiStore((state) => state.reducedMotion);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -120,4 +128,57 @@ export function useApplyTheme() {
   useEffect(() => {
     document.documentElement.setAttribute('data-text-scale', String(textScale));
   }, [textScale]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (reducedMotion === 'ON') {
+      root.setAttribute('data-reduced-motion', 'true');
+      return;
+    }
+    if (reducedMotion === 'OFF') {
+      root.removeAttribute('data-reduced-motion');
+      return;
+    }
+
+    const query = reducedMotionMediaQuery();
+    if (query === null) {
+      root.removeAttribute('data-reduced-motion');
+      return;
+    }
+    const applyFromSystem = () => {
+      if (query.matches) root.setAttribute('data-reduced-motion', 'true');
+      else root.removeAttribute('data-reduced-motion');
+    };
+    applyFromSystem();
+    query.addEventListener('change', applyFromSystem);
+    return () => {
+      query.removeEventListener('change', applyFromSystem);
+    };
+  }, [reducedMotion]);
+}
+
+/**
+ * 애니메이션·Stepper 등 JS 쪽 모션 분기에 쓰는 boolean. 앱 설정(ON/OFF)이 시스템 선호보다 우선하고,
+ * SYSTEM이면 `prefers-reduced-motion: reduce` 미디어쿼리를 구독한다.
+ */
+export function useReducedMotion(): boolean {
+  const reducedMotion = useUiStore((state) => state.reducedMotion);
+  const [systemReduced, setSystemReduced] = useState(() => reducedMotionMediaQuery()?.matches ?? false);
+
+  useEffect(() => {
+    const query = reducedMotionMediaQuery();
+    if (query === null) return;
+    const handleChange = () => {
+      setSystemReduced(query.matches);
+    };
+    handleChange();
+    query.addEventListener('change', handleChange);
+    return () => {
+      query.removeEventListener('change', handleChange);
+    };
+  }, []);
+
+  if (reducedMotion === 'ON') return true;
+  if (reducedMotion === 'OFF') return false;
+  return systemReduced;
 }

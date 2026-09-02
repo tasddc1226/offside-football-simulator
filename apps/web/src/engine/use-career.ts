@@ -2,7 +2,7 @@
 import { queryOptions, useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import type { CareerState, PlayerDraft, SimulationMode } from '@offside/domain';
 import type { LocalCareerRecord } from '@offside/engine-client';
-import { advance, confirmPlayer, createCareer, deleteCareer, updateDraft } from './career-actions.js';
+import { acceptOffer, advance, confirmPlayer, createCareer, deleteCareer, resolveEvent, updateDraft } from './career-actions.js';
 import { getAppEngine } from './engine.js';
 
 export type CareerSummary = { record: LocalCareerRecord; state: CareerState };
@@ -51,11 +51,13 @@ export function useCareer(careerId: string) {
   return useQuery(careerQueryOptions(careerId));
 }
 
-export type CareerMutationKind = 'create' | 'updateDraft' | 'confirm' | 'advance' | 'delete';
+export type CareerMutationKind = 'create' | 'updateDraft' | 'confirm' | 'advance' | 'delete' | 'resolveEvent' | 'acceptOffer';
 
 type CreateVariables = { simulationMode: SimulationMode };
 type UpdateDraftVariables = { careerId: string; draft: Partial<PlayerDraft> };
 type CareerIdVariables = { careerId: string };
+type ResolveEventVariables = { careerId: string; choiceId: string };
+type AcceptOfferVariables = { careerId: string; offerId: string };
 
 async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
   const engine = await getAppEngine();
@@ -73,6 +75,14 @@ async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
     case 'delete':
       await deleteCareer(engine, (variables as CareerIdVariables).careerId);
       return undefined;
+    case 'resolveEvent': {
+      const { careerId, choiceId } = variables as ResolveEventVariables;
+      return resolveEvent(engine, careerId, choiceId);
+    }
+    case 'acceptOffer': {
+      const { careerId, offerId } = variables as AcceptOfferVariables;
+      return acceptOffer(engine, careerId, offerId);
+    }
     default: {
       const exhaustive: never = kind;
       throw new Error(`알 수 없는 mutation kind: ${String(exhaustive)}`);
@@ -84,7 +94,7 @@ type MutationDataFor<K extends CareerMutationKind> = K extends 'create'
   ? Awaited<ReturnType<typeof createCareer>>
   : K extends 'updateDraft'
     ? Awaited<ReturnType<typeof updateDraft>>
-    : K extends 'confirm' | 'advance'
+    : K extends 'confirm' | 'advance' | 'resolveEvent' | 'acceptOffer'
       ? Awaited<ReturnType<typeof confirmPlayer>>
       : void;
 
@@ -92,7 +102,11 @@ type MutationVariablesFor<K extends CareerMutationKind> = K extends 'create'
   ? CreateVariables
   : K extends 'updateDraft'
     ? UpdateDraftVariables
-    : CareerIdVariables;
+    : K extends 'resolveEvent'
+      ? ResolveEventVariables
+      : K extends 'acceptOffer'
+        ? AcceptOfferVariables
+        : CareerIdVariables;
 
 /**
  * 액션 실행 후 ['careers']와(있다면) ['career', careerId] 쿼리를 무효화한다. 'delete'는

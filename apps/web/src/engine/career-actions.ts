@@ -1,9 +1,7 @@
 // EngineClient 위의 순수 함수(React 없음). 06 "분석 이벤트": 실행마다 command_submitted ·
 // command_resolved(outcomeClass = nextAction) · command_failed를 보낸다.
-//
-// RESOLVE_EVENT(팩 outcome → domain Effect 변환)와 ACCEPT_OFFER는 T-1-009가 여기에 추가한다.
-import type { Command, PlayerDraft, SimulationMode } from '@offside/domain';
-import { selectEligibleEvents } from '@offside/content';
+import type { Command, Effect, PlayerDraft, SimulationMode } from '@offside/domain';
+import { selectEligibleEvents, type EventDefinition } from '@offside/content';
 import type { EngineCommand, ExecuteResult, LoadResult } from '@offside/engine-client';
 import { deleteCareerOnServer } from '../api/client.js';
 import { platform } from '../platform/index.js';
@@ -137,4 +135,82 @@ export async function deleteCareer(engine: AppEngine, careerId: string): Promise
   if (classifyDeleteResult(result) === 'retry') {
     await queuePendingDelete(engine.store, careerId);
   }
+}
+
+type ResolveEventOutcomePayload = {
+  id: string;
+  weight: number;
+  effects: Effect[];
+  addTags?: string[];
+  removeTags?: string[];
+};
+
+/**
+ * 팩 outcome(EventDefinition['choices'][number]['outcomes'])을 RESOLVE_EVENT payload의 outcome
+ * 형태로 좁힌다. `outcome.effects`는 content `EffectSchema`가 이미 `EFFECT_DEFAULTS`를 채운 완전한
+ * domain `Effect` 형태로 파싱하므로(스키마가 `satisfies z.ZodType<Effect>`) 값 변환은 없고,
+ * `cause`·`kind`·`title`·`followUps`처럼 명령 payload에 없는 필드만 걷어낸다.
+ */
+export function toResolveEventOutcomes(
+  outcomes: EventDefinition['choices'][number]['outcomes'],
+): ResolveEventOutcomePayload[] {
+  return outcomes.map((outcome) => {
+    const payload: ResolveEventOutcomePayload = {
+      id: outcome.id,
+      weight: outcome.weight,
+      effects: outcome.effects,
+    };
+    if (outcome.addTags !== undefined) payload.addTags = outcome.addTags;
+    if (outcome.removeTags !== undefined) payload.removeTags = outcome.removeTags;
+    return payload;
+  });
+}
+
+/**
+ * `state.pending.kind === 'EVENT'`의 `eventId`로 `engine.pack.eventsById`에서 정의를 찾아
+ * RESOLVE_EVENT를 보낸다. pending이 없거나 팩에 정의·선택지가 없으면(딥링크 오용 등) 커밋 없이
+ * VALIDATION_FAILED를 돌려준다.
+ */
+export async function resolveEvent(engine: AppEngine, careerId: string, choiceId: string): Promise<ExecuteResult> {
+  const load: LoadResult = await engine.client.loadCareer(careerId);
+  if (!load.ok) {
+    return { ok: false, error: load.error };
+  }
+
+  const pending = load.snapshot.state.pending;
+  if (pending === null || pending.kind !== 'EVENT') {
+    return { ok: false, error: { code: 'VALIDATION_FAILED', message: 'resolveEvent: 해소할 pending 이벤트가 없다.' } };
+  }
+
+  const definition = engine.pack.eventsById.get(pending.eventId);
+  if (definition === undefined) {
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: `resolveEvent: 팩에 이벤트 정의가 없다: ${pending.eventId}` },
+    };
+  }
+
+  const choice = definition.choices.find((candidate) => candidate.id === choiceId);
+  if (choice === undefined) {
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: `resolveEvent: 정의에 없는 choiceId: ${choiceId}` },
+    };
+  }
+
+  const command: Command = {
+    type: 'RESOLVE_EVENT',
+    payload: {
+      eventId: definition.id,
+      definitionVersion: definition.version,
+      choiceId,
+      outcomes: toResolveEventOutcomes(choice.outcomes),
+    },
+  };
+
+  return commit(engine, careerId, load.snapshot.revision, command);
+}
+
+export function acceptOffer(engine: AppEngine, careerId: string, offerId: string): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'ACCEPT_OFFER', payload: { offerId } });
 }
