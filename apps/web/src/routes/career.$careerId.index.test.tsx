@@ -45,6 +45,27 @@ function renderAt(path: string) {
   return router;
 }
 
+/** pending EVENT를 이 이벤트의 첫 선택지로 계속 확정해 OFFERS에 도달할 때까지 advance를 반복한다.
+ * CONFIRM_PLAYER 직후 FAST 모드는 도메인 가중 랜덤으로 몇 차례의 서사 이벤트를 소진한 뒤에야
+ * 제안이 열리므로(createCareer의 시드가 매 실행 랜덤이라 이벤트 개수·종류가 고정되지 않는다),
+ * 특정 이벤트·선택지 id를 하드코딩하지 않고 안전 상한(10회)까지 반복한다. */
+async function advanceUntilOffers(engine: AppEngine, careerId: string) {
+  for (let step = 0; step < 10; step += 1) {
+    const advanced = await advance(engine, careerId);
+    if (!advanced.ok) throw new Error(`advance 실패: ${advanced.error.message}`);
+    const { pending } = advanced.domainSnapshot.state;
+    if (pending === null) continue;
+    if (pending.kind === 'OFFERS') return advanced;
+    const definition = engine.pack.eventsById.get(pending.eventId);
+    if (!definition) throw new Error(`이벤트 정의를 찾지 못했다: ${pending.eventId}`);
+    const choiceId = definition.choices[0]?.id;
+    if (!choiceId) throw new Error(`이벤트에 선택지가 없다: ${pending.eventId}`);
+    const resolved = await resolveEvent(engine, careerId, choiceId);
+    if (!resolved.ok) throw new Error(`resolveEvent 실패: ${resolved.error.message}`);
+  }
+  throw new Error('제안 단계에 도달하지 못했다(최대 10회 시도)');
+}
+
 /** DRAFT를 CONFIRM_PLAYER까지 채우고 careerId를 돌려준다(pending은 null). */
 async function confirmedCareerId(engine: AppEngine): Promise<string> {
   const created = await createCareer(engine, { simulationMode: 'FAST' });
@@ -102,12 +123,8 @@ describe('SCR-029 다음 결정 카드 분기', () => {
   it('pending OFFERS면 "제안 N건"과 제안 보기 CTA를 보여준다', async () => {
     const engine = setTestEngine();
     const careerId = await confirmedCareerId(engine);
-    await advance(engine, careerId);
-    await resolveEvent(engine, careerId, 'A');
-    await advance(engine, careerId);
-    await resolveEvent(engine, careerId, 'B');
-    const offered = await advance(engine, careerId);
-    if (!offered.ok || offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
+    const offered = await advanceUntilOffers(engine, careerId);
+    if (offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
       throw new Error('제안 단계에 도달하지 못했다');
     }
     const offerCount = offered.domainSnapshot.state.pending.offers.length;
@@ -125,12 +142,8 @@ describe('SCR-029 다음 결정 카드 분기', () => {
   it('pending이 없고 advance가 성공하면 "진행" 버튼이 눌려서 다음 화면으로 넘어간다', async () => {
     const engine = setTestEngine();
     const careerId = await confirmedCareerId(engine);
-    await advance(engine, careerId);
-    await resolveEvent(engine, careerId, 'A');
-    await advance(engine, careerId);
-    await resolveEvent(engine, careerId, 'B');
-    const offered = await advance(engine, careerId);
-    if (!offered.ok || offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
+    const offered = await advanceUntilOffers(engine, careerId);
+    if (offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
       throw new Error('제안 단계에 도달하지 못했다');
     }
     const offerId = offered.domainSnapshot.state.pending.offers[0]!.id;

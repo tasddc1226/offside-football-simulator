@@ -9,7 +9,8 @@ import { expect, type Page, type Route, test } from '@playwright/test';
 
 // SCR-008 입단 테스트의 진행 연출(Stepper)을 건너뛰어 결정론적으로 만든다 — useReducedMotion()이
 // OS 미디어쿼리(SYSTEM 기본값)를 구독하므로, 브라우저 컨텍스트 자체를 reduced-motion으로 연다.
-test.use({ reducedMotion: 'reduce' });
+// reducedMotion은 PlaywrightTestOptions 최상위가 아니라 BrowserContextOptions에 있다(contextOptions로 감싸야 한다).
+test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
 const META = { requestId: 'e2e-req' };
 
