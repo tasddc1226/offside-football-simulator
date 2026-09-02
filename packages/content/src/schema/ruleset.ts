@@ -1,43 +1,45 @@
 import { z } from 'zod';
-import type { AttributeKey } from '@offside/domain';
+import type { AttributeKey, Ruleset as DomainRuleset } from '@offside/domain';
 import { SemverSchema } from './pack.ts';
 
 /**
- * `@offside/domain`은 devDependency(타입 전용)이므로 여기서 `ATTRIBUTE_KEYS` 런타임 값을
- * import할 수 없다. 아래 Record<AttributeKey, true> 리터럴은 도메인 union 타입과 어긋나면
- * (키 누락·오타) 컴파일 오류가 나서, 런타임 import 없이도 20개 키 목록이 도메인과 어긋나지
- * 않게 고정한다. `ruleset.test.ts`가 이 복제본을 `@offside/domain`의 `ATTRIBUTE_KEYS`와
- * 값으로 비교해(devDependency이므로 테스트 시점에만) 드리프트를 잡는다.
+ * `@offside/domain`은 devDependency(타입 전용)이므로 여기서 도메인의 `ATTRIBUTE_KEYS` 런타임
+ * 값을 import할 수 없다. `satisfies readonly AttributeKey[]`는 목록에 도메인 union에 없는
+ * 키가 섞이면 컴파일 오류를 내지만 원소 누락은 잡지 못하므로, 길이 20 검사(`ATTRIBUTE_KEY_COUNT`)를
+ * 더해 개수 드리프트도 컴파일 타임에 드러나게 한다. `ruleset.test.ts`가 이 목록을
+ * `@offside/domain`의 `ATTRIBUTE_KEYS`와 런타임 값으로도 비교한다(devDependency라 테스트 시점에만).
  */
-const ATTRIBUTE_KEY_SET: Record<AttributeKey, true> = {
-  shooting: true,
-  passing: true,
-  dribbling: true,
-  tackling: true,
-  firstTouch: true,
-  crossing: true,
-  goalkeeping: true,
-  pace: true,
-  acceleration: true,
-  agility: true,
-  jumping: true,
-  stamina: true,
-  strength: true,
-  durability: true,
-  decisions: true,
-  concentration: true,
-  composure: true,
-  positioning: true,
-  leadership: true,
-  consistency: true,
-};
-export const ATTRIBUTE_KEYS = Object.keys(ATTRIBUTE_KEY_SET) as AttributeKey[];
+export const ATTRIBUTE_KEYS = [
+  'shooting',
+  'passing',
+  'dribbling',
+  'tackling',
+  'firstTouch',
+  'crossing',
+  'goalkeeping',
+  'pace',
+  'acceleration',
+  'agility',
+  'jumping',
+  'stamina',
+  'strength',
+  'durability',
+  'decisions',
+  'concentration',
+  'composure',
+  'positioning',
+  'leadership',
+  'consistency',
+] as const satisfies readonly AttributeKey[];
+
+/** 도메인 AttributeKey 유니온이 20개가 아니게 되면 타입 오류로 드러난다. */
+export const ATTRIBUTE_KEY_COUNT: 20 = ATTRIBUTE_KEYS.length;
 
 export const POSITIONS = ['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST'] as const;
 export type Position = (typeof POSITIONS)[number];
 
 const PositionSchema = z.enum(POSITIONS);
-const AttributeKeySchema = z.enum(ATTRIBUTE_KEYS as [AttributeKey, ...AttributeKey[]]);
+const AttributeKeySchema = z.enum(ATTRIBUTE_KEYS);
 
 const RoleWeightsSchema = z
   .partialRecord(AttributeKeySchema, z.number())
@@ -183,11 +185,13 @@ const SquadRoleSchema = z.enum(SQUAD_ROLES);
 const OfferBranchSchema = z.strictObject({
   id: z.string().min(1),
   requireTags: z.array(z.string().min(1)).min(1),
-  forbidTags: z.array(z.string().min(1)).optional(),
-  fixedTeamId: z.string().min(1).optional(),
+  // exactOptional: 도메인 OfferBranch의 옵션 필드는 `key?: T`(생략 또는 정확히 T)라 `exactOptionalPropertyTypes`
+  // 아래 `.optional()`(`T | undefined`)로는 `satisfies z.ZodType<Ruleset>`이 통과하지 않는다.
+  forbidTags: z.array(z.string().min(1)).exactOptional(),
+  fixedTeamId: z.string().min(1).exactOptional(),
   tiers: z.array(LeagueTierSchema).min(1),
-  fixedCount: z.number().int().positive().optional(),
-  topTierMinOvr: z.number().int().optional(),
+  fixedCount: z.number().int().positive().exactOptional(),
+  topTierMinOvr: z.number().int().exactOptional(),
 });
 
 const IntRangeSchema = z
@@ -319,6 +323,6 @@ export const RulesetSchema = z
         });
       }
     }
-  });
+  }) satisfies z.ZodType<DomainRuleset>;
 
 export type Ruleset = z.infer<typeof RulesetSchema>;

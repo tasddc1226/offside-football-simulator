@@ -36,6 +36,7 @@ export {
   findNarrativeTokenIssues,
   type NarrativeTokenKey,
   type NarrativeTokenIssue,
+  type NarrativeDictionary,
 } from './schema/narrative.ts';
 
 export {
@@ -57,6 +58,7 @@ export { PackManifestSchema, SemverSchema, type PackManifest } from './schema/pa
 
 export {
   ATTRIBUTE_KEYS,
+  ATTRIBUTE_KEY_COUNT,
   POSITIONS,
   RulesetSchema,
   ArchetypeSchema,
@@ -76,3 +78,9 @@ export {
 export { RulesetManifestSchema, type RulesetManifest } from './schema/ruleset-manifest.ts';
 
 export { loadRuleset, RULESET_VERSIONS, type RulesetVersion } from './rulesets/load-ruleset.ts';
+
+export { loadContentPack, PACK_VERSIONS, type ContentPack, type PackVersion } from './packs/load-content-pack.ts';
+
+export { buildConditionContext } from './runtime/condition-context.ts';
+
+export { selectEligibleEvents, type EligibleEvent } from './runtime/select-eligible-events.ts';
