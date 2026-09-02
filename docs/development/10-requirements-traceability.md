@@ -5,7 +5,7 @@
 | ID | 요구사항 | Phase | 화면/API | 주요 테스트 |
 |---|---|---:|---|---|
 | FR-CAR-001 | 비로그인 사용자가 커리어를 생성·재개한다 | 0~1 | SCR-001, API-CAR-001~003 | TEST-E2E-001, 007 |
-| FR-PLY-001 | 포지션·주발·아키타입·배경으로 선수를 만든다 | 1 | SCR-002~004 | TEST-E2E-001 |
+| FR-PLY-001 | 이름·성별·선호 포지션·주발·아키타입·배경으로 선수를 만든다 | 1 | SCR-002~004 | TEST-E2E-001, 성별 불변식 fixture |
 | FR-OVR-001 | 역할별 가중치로 Base OVR을 계산한다 | 1 | SCR-003~004 | OVR golden |
 | FR-SIM-001 | 전술·폼·체력·관계로 시즌을 계산한다 | 2 | SCR-005~006, 015 | TEST-E2E-002 |
 | FR-EVT-001 | 조건형 선택 이벤트를 재현 가능하게 해결한다 | 1~4 | SCR-013~014 | 결정론/property |
@@ -34,6 +34,7 @@
 | RULE-EVT-001 | 확정 이벤트 재추첨 금지 | [이벤트](04-event-engine.md) |
 | RULE-SVC-001 | 시즌 종료가 기존 Career 삭제/강제 은퇴를 유발하지 않음 | [저장·버전](05-save-and-versioning.md) |
 | RULE-SEL-001 | 선발은 전술 적합도·감독 신뢰·예상치·스쿼드 지위로 판정 | [시뮬레이션](03-game-simulation-engine.md) |
+| RULE-PLY-001 | 성별은 프로필 정보로만 저장하고 선호 포지션과 현재 주포지션을 분리 | [도메인·데이터 모델](02-domain-and-data-model.md) |
 | RULE-TIME-001~004 | 12 step 시즌, advance 규칙, FAST/CHAPTER 모드, 결정 예산 | [시간 모델](11-time-model-and-pacing.md) |
 | RULE-LEG-001 | 엔딩은 세계 정상 하나가 아닌 복수 가치 인정 | [Legacy·엔딩](14-legacy-score-and-endings.md) |
 | RULE-LEG-002~006 | Legacy 가중치, 중복 가산 금지, 참조 분포, 표현, 엔딩 해소 | [Legacy·엔딩](14-legacy-score-and-endings.md) |
@@ -58,7 +59,7 @@
 - 시즌 상태 변경: DATA-SVC-001, API-SVC, 전환 런북, 기존 Career 호환 테스트.
 - 저장 필드 변경: schemaVersion, migration, Snapshot hash, 구 fixture 재생.
 - 선발 규칙 변경: RULE-SEL-001, 선수 A·B fixture, 결과 화면 이유 문구, rulesetVersion.
+- 선수 정체성 필드 변경: RULE-PLY-001, DATA-PLY-001, DRAFT·Snapshot schema, 공개 선수 카드, golden fixture와 구 Snapshot migration.
 - 시간 모델 변경: RULE-TIME-*, leagueCalendar, 결정 예산, 세션 길이 테스트, 콘텐츠 pack 배치.
 - Legacy 변경: RULE-LEG-002~006, legacyVersion, 참조 분포 아티팩트, KICKOFF 도전 보정, 과거 Archive 불변 테스트.
 - 브랜드 어휘·시각 토큰 변경: 12·13 문서, 문자열 lint, 스크린샷 회귀.
-
