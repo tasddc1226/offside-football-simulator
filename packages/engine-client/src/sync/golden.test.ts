@@ -5,7 +5,7 @@ import {
   type CommandLogEntry,
   type PutCareerBody,
 } from '@offside/contracts';
-import { career01, career01EngineCommands } from '@offside/fixtures';
+import { career01, career01EngineCommands, rulesetProto } from '@offside/fixtures';
 import { describe, expect, it } from 'vitest';
 import { createEngineClient } from '../engine.js';
 import { inlineSimulator } from '../simulator/index.js';
@@ -107,7 +107,7 @@ function createFakeServer() {
 describe('sync 클라이언트 golden 통합', () => {
   it('career01 명령을 checkpoint마다 서버로 동기화하면 최종 revision이 golden과 같다', async () => {
     const store = new MemoryLocalStore();
-    const engine = createEngineClient({ store, simulator: inlineSimulator });
+    const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
     const server = createFakeServer();
     let idCounter = 0;
 

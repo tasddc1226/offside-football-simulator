@@ -68,6 +68,97 @@ export type Effect = {
   stackingRule: 'ONCE_PER_SOURCE' | 'REPLACE' | 'SUM';
 };
 
+// D-1: 포지션과 묶음(phase-1-plan.md). CB·FB → DEF, DM·CM·AM → MID, W·ST → FWD.
+export type Position = 'GK' | 'CB' | 'FB' | 'DM' | 'CM' | 'AM' | 'W' | 'ST';
+
+export type PositionGroup = 'GK' | 'DEF' | 'MID' | 'FWD';
+
+export function positionGroupOf(position: Position): PositionGroup {
+  switch (position) {
+    case 'GK':
+      return 'GK';
+    case 'CB':
+    case 'FB':
+      return 'DEF';
+    case 'DM':
+    case 'CM':
+    case 'AM':
+      return 'MID';
+    case 'W':
+    case 'ST':
+      return 'FWD';
+  }
+}
+
+export type PreferredFoot = 'LEFT' | 'RIGHT' | 'BOTH';
+
+/** DRAFT 단계에서 채워 나가는 6개 필드. CONFIRM_PLAYER는 전부 non-null을 요구한다. */
+export type PlayerDraft = {
+  name: string | null;
+  nationalityCode: string | null;
+  preferredFoot: PreferredFoot | null;
+  position: Position | null;
+  archetypeId: string | null;
+  backgroundId: string | null;
+};
+
+/** CONFIRM_PLAYER가 룰셋·rng로 확정하는 선수 정체성·잠재력·Base OVR. */
+export type PlayerProfile = {
+  name: string;
+  nationalityCode: string;
+  preferredFoot: PreferredFoot;
+  position: Position;
+  archetypeId: string;
+  backgroundId: string;
+  truePotential: number;
+  scoutedPotentialMin: number;
+  scoutedPotentialMax: number;
+  baseOvr: number;
+};
+
+// D-9: 제안·계약(offerRules 데이터는 T-1-005가 소비, 타입만 이 작업에서 정의).
+export type Offer = {
+  id: string;
+  teamId: string;
+  teamName: string;
+  leagueTier: 'YOUTH' | 1 | 2 | 3;
+  lengthSeasons: number;
+  wageMinorPerWeek: number;
+  signingBonusMinor: number;
+  rolePromise: SquadRole;
+  shirtNumber: number;
+  tacticalFitEstimate: number;
+};
+
+export type Contract = {
+  id: string;
+  offerId: string;
+  teamId: string;
+  teamName: string;
+  leagueTier: 'YOUTH' | 1 | 2 | 3;
+  lengthSeasons: number;
+  wageMinorPerWeek: number;
+  signingBonusMinor: number;
+  rolePromise: SquadRole;
+  shirtNumber: number;
+  signatureType: 'AUTO';
+  signedAtRevision: number;
+};
+
+export type Pending =
+  | null
+  | { kind: 'EVENT'; eventId: string; version: number }
+  | { kind: 'OFFERS'; offers: Offer[] };
+
+// D-12: 타임라인. 문장은 넣지 않는다(웹이 팩·룰셋에서 조합).
+export type TimelineEntry = {
+  revision: number;
+  kind: 'CAREER_CONFIRMED' | 'EVENT_RESOLVED' | 'CONTRACT_SIGNED' | 'SEASON_SETTLED';
+  refId: string | null;
+  age: number;
+  step: number;
+};
+
 export type CareerState = {
   schemaVersion: 1;
   careerId: string;
@@ -89,6 +180,10 @@ export type CareerState = {
   rngState: RngState;
   rulesetVersion: string;
   contentPackVersion: string;
+  player: { draft: PlayerDraft; profile: PlayerProfile | null };
+  pending: Pending;
+  contract: Contract | null;
+  timeline: TimelineEntry[];
 };
 
 export type DomainSnapshot = {

@@ -1,0 +1,148 @@
+{
+  "version": "1.0.0",
+  "positions": ["GK", "CB", "FB", "DM", "CM", "AM", "W", "ST"],
+  "archetypes": [
+    {
+      "id": "inside-forward",
+      "position": "W",
+      "name": "인사이드 포워드",
+      "summary": "터치라인보다 안쪽 공간을 노리는 인사이드 포워드.",
+      "roleWeights": {
+        "shooting": 0.2,
+        "passing": 0.14,
+        "crossing": 0.06,
+        "dribbling": 0.14,
+        "firstTouch": 0.11,
+        "acceleration": 0.06,
+        "pace": 0.04,
+        "agility": 0.03,
+        "stamina": 0.02,
+        "positioning": 0.09,
+        "composure": 0.05,
+        "decisions": 0.04,
+        "concentration": 0.02
+      },
+      "template": {
+        "shooting": 60,
+        "passing": 54,
+        "dribbling": 66,
+        "tackling": 30,
+        "firstTouch": 62,
+        "crossing": 45,
+        "goalkeeping": 10,
+        "pace": 68,
+        "acceleration": 70,
+        "agility": 64,
+        "jumping": 50,
+        "stamina": 55,
+        "strength": 42,
+        "durability": 60,
+        "decisions": 52,
+        "concentration": 48,
+        "composure": 52,
+        "positioning": 60,
+        "leadership": 35,
+        "consistency": 45
+      },
+      "potentialRange": { "min": 70, "max": 84 }
+    }
+  ],
+  "backgrounds": [
+    {
+      "id": "club-academy",
+      "name": "클럽 아카데미",
+      "blurb": "한강 FC U18 아카데미에서 자랐다.",
+      "startTeamId": "hangang-u18",
+      "attributeDeltas": {},
+      "state": { "form": 50, "fitness": 80, "morale": 60 },
+      "context": { "tacticalFit": 58, "squadStatus": 40, "positionProficiency": 100 },
+      "relationships": { "managerTrust": 40, "captain": 50, "rival": 50, "fans": 50, "agent": 50 }
+    },
+    {
+      "id": "school",
+      "name": "학원 축구",
+      "blurb": "학원 축구부에서 뛰었다.",
+      "startTeamId": "hangang-u18",
+      "attributeDeltas": { "stamina": 3, "strength": 3, "decisions": -2 },
+      "state": { "form": 50, "fitness": 85, "morale": 65 },
+      "context": { "tacticalFit": 50, "squadStatus": 45, "positionProficiency": 100 },
+      "relationships": { "managerTrust": 45, "captain": 55, "rival": 50, "fans": 55, "agent": 40 }
+    },
+    {
+      "id": "street",
+      "name": "동네 클럽",
+      "blurb": "동네 축구·풋살에서 실력을 키웠다.",
+      "startTeamId": "hangang-u18",
+      "attributeDeltas": { "dribbling": 4, "agility": 3, "concentration": -3, "tackling": -2 },
+      "state": { "form": 55, "fitness": 75, "morale": 60 },
+      "context": { "tacticalFit": 45, "squadStatus": 35, "positionProficiency": 95 },
+      "relationships": { "managerTrust": 35, "captain": 45, "rival": 55, "fans": 45, "agent": 35 }
+    }
+  ],
+  "nationalities": [
+    { "code": "KR", "name": "대한민국" },
+    { "code": "JP", "name": "일본" },
+    { "code": "BR", "name": "브라질" }
+  ],
+  "draftRules": { "nameMin": 2, "nameMax": 12 },
+  "scoutRange": { "minBelow": { "min": 5, "max": 10 }, "maxAbove": { "min": 3, "max": 8 } },
+  "teams": [
+    { "id": "hangang-u18", "name": "한강 FC U18", "leagueTier": "YOUTH", "reputation": 2, "wageBandId": "youth" },
+    { "id": "seoul-tier1", "name": "서울 유나이티드", "leagueTier": 1, "reputation": 4, "wageBandId": "tier1" },
+    { "id": "busan-tier2", "name": "부산 시티", "leagueTier": 2, "reputation": 3, "wageBandId": "tier2" },
+    { "id": "daejeon-tier3", "name": "대전 FC", "leagueTier": 3, "reputation": 2, "wageBandId": "tier3" }
+  ],
+  "offerRules": {
+    "maxOffers": 3,
+    "countBonusTags": ["에이전트_계약", "주목받는_유망주"],
+    "branches": [
+      { "id": "academy", "requireTags": ["진로_아카데미"], "fixedTeamId": "hangang-u18", "tiers": ["YOUTH"] },
+      { "id": "lower-league", "requireTags": ["진로_하부리그", "입단테스트_완료"], "tiers": [2, 3] },
+      { "id": "tryout-fail", "requireTags": ["진로_입단테스트", "테스트_실패"], "tiers": [3], "fixedCount": 1 },
+      { "id": "tryout-neutral", "requireTags": ["진로_입단테스트", "테스트_보통"], "tiers": [2, 3] },
+      {
+        "id": "tryout-success",
+        "requireTags": ["진로_입단테스트", "테스트_성공"],
+        "tiers": [1, 2, 3],
+        "topTierMinOvr": 60
+      },
+      {
+        "id": "tryout-skipped",
+        "requireTags": ["진로_입단테스트"],
+        "forbidTags": ["입단테스트_완료"],
+        "tiers": [3],
+        "fixedCount": 1
+      }
+    ],
+    "rolePromiseByTier": {
+      "1": ["RESERVE", "BENCH"],
+      "2": ["BENCH", "ROTATION"],
+      "3": ["ROTATION", "STARTER"],
+      "YOUTH": ["ROTATION", "STARTER"]
+    },
+    "lengthSeasons": { "min": 1, "max": 3 },
+    "shirtNumber": { "min": 2, "max": 39 },
+    "tacticalFitEstimate": { "min": 45, "max": 75 }
+  },
+  "contractRules": {
+    "ovrBands": [
+      { "id": "low", "maxOvr": 54 },
+      { "id": "mid", "maxOvr": 64 },
+      { "id": "high", "maxOvr": 99 }
+    ],
+    "wageBands": {
+      "tier1": { "low": 800000, "mid": 1200000, "high": 2000000 },
+      "tier2": { "low": 500000, "mid": 700000, "high": 1000000 },
+      "tier3": { "low": 300000, "mid": 400000, "high": 550000 },
+      "youth": { "low": 0, "mid": 0, "high": 0 }
+    },
+    "signingBonus": {
+      "tier1": { "low": 20000000, "mid": 30000000, "high": 50000000 },
+      "tier2": { "low": 5000000, "mid": 8000000, "high": 12000000 },
+      "tier3": { "low": 0, "mid": 2000000, "high": 3000000 },
+      "youth": { "low": 0, "mid": 0, "high": 0 }
+    },
+    "squadStatusByRole": { "STARTER": 80, "ROTATION": 60, "BENCH": 40, "RESERVE": 25 },
+    "newClubManagerTrust": 40
+  }
+}

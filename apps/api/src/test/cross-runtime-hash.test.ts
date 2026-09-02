@@ -15,7 +15,7 @@ import {
   type JsonValue,
   type SimulationResult,
 } from '@offside/domain';
-import { career01 } from '@offside/fixtures';
+import { career01, rulesetProto } from '@offside/fixtures';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WRANGLER_CONFIG_PATH = path.resolve(__dirname, '../../wrangler.jsonc');
@@ -43,12 +43,6 @@ function runCareer01OnNode(): DomainSnapshot {
     payload: {
       careerId: career01.createCareer.careerId,
       seed: career01.createCareer.seed,
-      stage: career01.createCareer.stage,
-      age: career01.createCareer.age,
-      attributes: career01.createCareer.attributes,
-      state: career01.createCareer.state,
-      context: career01.createCareer.context,
-      relationships: career01.createCareer.relationships,
       simulationMode: career01.createCareer.simulationMode,
       rulesetVersion: career01.rulesetVersion,
       contentPackVersion: career01.contentPackVersion,
@@ -58,6 +52,7 @@ function runCareer01OnNode(): DomainSnapshot {
   let result: SimulationResult = simulate({
     snapshot: null,
     command: createCommand,
+    ruleset: rulesetProto,
     rulesetVersion: career01.rulesetVersion,
     contentPackVersion: career01.contentPackVersion,
   });
@@ -76,6 +71,7 @@ function runCareer01OnNode(): DomainSnapshot {
     result = simulate({
       snapshot,
       command,
+      ruleset: rulesetProto,
       rulesetVersion: career01.rulesetVersion,
       contentPackVersion: career01.contentPackVersion,
     });

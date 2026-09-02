@@ -46,6 +46,13 @@ function baseState(): CareerState {
     rngState: seedRng('effects-test'),
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',
+    player: {
+      draft: { name: null, nationalityCode: null, preferredFoot: null, position: null, archetypeId: null, backgroundId: null },
+      profile: null,
+    },
+    pending: null,
+    contract: null,
+    timeline: [],
   };
 }
 
