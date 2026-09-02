@@ -48,12 +48,21 @@ importers:
       '@cloudflare/workers-types':
         specifier: 5.20260831.1
         version: 5.20260831.1
+      '@offside/fixtures':
+        specifier: workspace:*
+        version: link:../../packages/fixtures
       '@offside/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
       drizzle-kit:
         specifier: 0.31.10
         version: 0.31.10
+      esbuild:
+        specifier: 0.28.1
+        version: 0.28.1
+      miniflare:
+        specifier: 5.20260828.0-alpha
+        version: 5.20260828.0-alpha
       typescript:
         specifier: 5.9.3
         version: 5.9.3
