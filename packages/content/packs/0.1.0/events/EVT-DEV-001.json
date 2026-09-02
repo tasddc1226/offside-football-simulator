@@ -1,0 +1,230 @@
+{
+  "id": "EVT-DEV-001",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": { "all": [{ "eq": ["season.step", 1] }, { "eq": ["career.stage", "YOUTH"] }] },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 1 },
+  "weight": 100,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "감독 역할 맞추기",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "전술 적합도 상승", "target": "tacticalFit", "direction": "UP" },
+        { "label": "크로스 소폭 성장", "target": "crossing", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 70,
+          "title": "감독이 \"말귀를 알아듣는다\"고 한다",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-DEV-001.A.A1.0",
+              "target": "tacticalFit",
+              "delta": 8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-DEV-001.A.A1.1",
+              "target": "crossing",
+              "delta": 1,
+              "clamp": { "min": 0, "max": 99 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-DEV-001.A.A1.2",
+              "target": "managerTrust",
+              "delta": 5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["지시를_따름"]
+        },
+        {
+          "id": "A2",
+          "kind": "NEUTRAL",
+          "weight": 30,
+          "title": "몸에 안 맞는 옷을 입었다",
+          "cause": "역할 불일치",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-DEV-001.A.A2.0",
+              "target": "tacticalFit",
+              "delta": 4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-001.A.A2.1",
+              "target": "morale",
+              "delta": -3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "내 역할 갈고닦기",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "결정력·드리블 성장" },
+        { "label": "적합도는 그대로" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 55,
+          "title": "마무리 훈련에서 눈에 띄었다",
+          "effects": [
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-DEV-001.B.B1.0",
+              "target": "shooting",
+              "delta": 1,
+              "clamp": { "min": 0, "max": 99 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-DEV-001.B.B1.1",
+              "target": "dribbling",
+              "delta": 1,
+              "clamp": { "min": 0, "max": 99 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-001.B.B1.2",
+              "target": "form",
+              "delta": 5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "NEUTRAL",
+          "weight": 30,
+          "title": "성장은 했지만 감독은 무관심",
+          "cause": "역할 비선호",
+          "effects": [
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-DEV-001.B.B2",
+              "target": "dribbling",
+              "delta": 1,
+              "clamp": { "min": 0, "max": 99 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        },
+        {
+          "id": "B3",
+          "kind": "FAIL",
+          "weight": 15,
+          "title": "감독 앞에서 고집으로 비쳤다",
+          "effects": [
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-DEV-001.B.B3.0",
+              "target": "dribbling",
+              "delta": 1,
+              "clamp": { "min": 0, "max": 99 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-DEV-001.B.B3.1",
+              "target": "managerTrust",
+              "delta": -4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["고집"]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "체력 집중",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "체력 상승", "target": "stamina", "direction": "UP" },
+        { "label": "능력 성장 없음" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "몸이 가볍다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-001.C.C1.0",
+              "target": "fitness",
+              "delta": 10,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "AT_STEP", "step": 6 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-DEV-001.C.C1.1",
+              "target": "stamina",
+              "delta": 1,
+              "clamp": { "min": 0, "max": 99 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "프리시즌 첫 주. 코치가 이번 달 훈련 초점을 하나 고르라고 한다. 감독은 터치라인 윙어를 원하지만 당신은 안쪽으로 파고드는 선수다."
+  }
+}

@@ -1,8 +1,9 @@
 {
   "extends": "@offside/tsconfig/base.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "baseUrl": "."
+    "rootDir": ".",
+    "baseUrl": ".",
+    "allowImportingTsExtensions": true
   },
-  "include": ["src"]
+  "include": ["src", "packs"]
 }

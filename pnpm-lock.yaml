@@ -145,10 +145,13 @@ importers:
 
   packages/content:
     dependencies:
+      zod:
+        specifier: 4.5.4
+        version: 4.5.4
+    devDependencies:
       '@offside/domain':
         specifier: workspace:*
         version: link:../domain
-    devDependencies:
       '@offside/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
