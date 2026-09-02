@@ -1,10 +1,10 @@
 # 진행 보드
 
-갱신: 2026-09-02. 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
+갱신: 2026-09-02 (ADR 승인 후). 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
 
 ## 현재 게이트
 
-**종이 프로토타입 → Phase 0 진입.** Phase 0은 사용자 액션 U-001~003과 프로토타입 플레이 기록이 있어야 시작한다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
+**Phase 0 진행 중.** ADR-001~009 승인(2026-09-02). 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
 
 ## 사용자 액션
 
@@ -15,7 +15,7 @@
 | U-003 | Google Cloud 프로젝트에서 OAuth 클라이언트 ID·시크릿 발급 | todo | ADR-008. 콜백 URL은 도메인 확정 후 |
 | U-004 | Sentry 프로젝트 생성, DSN 등록 | todo | ADR-007 |
 | U-005 | 종이 프로토타입 3회 플레이, `docs/content/prototype/playtest-log.md` 작성 | todo | 오케스트레이터가 양식 제공 |
-| U-006 | ADR-001~009 검토·승인 또는 반려 | todo | 반려 시 결정 로그에 사유 |
+| U-006 | ADR-001~009 검토·승인 또는 반려 | completed | 2026-09-02 승인 |
 | U-007 | 앱인토스 콘솔 가입(토스 비즈니스, 만 19세), 워크스페이스·제작자 이름, 앱 등록(유형 **게임**, `appName` 확정), 고객문의 이메일 | deferred | ADR-009, ADR-006. appName은 변경 불가 |
 | U-008 | 앱인토스 서버 mTLS 인증서 발급 → `wrangler mtls-certificate upload`, certificate_id 공유 | deferred | ADR-007. U-002·U-007 이후 |
 | U-009 | 게임물 등급분류 신청(GRAC, 스토어명 `기타-앱인토스`). 개인 신청 가능 여부 먼저 확인 | deferred | ADR-009. 10~15일 + 수수료. 증명서 PDF를 콘솔에 등록 |
@@ -26,7 +26,7 @@
 
 | ID | 작업 | 참조 | 상태 | 워크트리 |
 |---|---|---|---|---|
-| T-0-001 | 모노레포 골격: pnpm·Turborepo·tsconfig·ESLint·의존 방향 lint | ADR-005 | todo | |
+| T-0-001 | 모노레포 골격: pnpm·Turborepo·tsconfig·ESLint·의존 방향 lint | ADR-005 | in-progress | `T-0-001-monorepo-skeleton`, 브리프 [briefs/T-0-001.md](briefs/T-0-001.md) |
 | T-0-002 | `packages/domain` 순수 `simulate` fixture와 state hash, 결정론 1,000회 테스트 | RULE-RNG-001, TEST | todo | |
 | T-0-003 | `packages/contracts` 응답 봉투·오류 코드·Snapshot 직렬화 Zod | 07 | todo | |
 | T-0-004 | `packages/content` Zod 스키마와 `content:validate` CLI, 프로토타입 이벤트 10개를 팩 0.1.0으로 | ADR-004, 04 | todo | |
@@ -56,7 +56,9 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 ## 진행 중
 
-없음.
+| ID | 워커 | 시작 | 상태 |
+|---|---|---|---|
+| T-0-001 | Sonnet 5, Orca 워크트리 `T-0-001-monorepo-skeleton` | 2026-09-02 | 브리프 전달 |
 
 ## 완료
 
