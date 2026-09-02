@@ -16,6 +16,7 @@ export type ProfileRecord = {
   settings: ProfileSettings;
   createdAt: string;
   lastSeenAt: string;
+  deletedAt: string | null;
 };
 
 const DEFAULT_SETTINGS: ProfileSettings = ProfileSettingsSchema.parse({
@@ -38,6 +39,7 @@ function toRecord(row: typeof profiles.$inferSelect): ProfileRecord {
     settings: ProfileSettingsSchema.parse(JSON.parse(row.settingsJson)),
     createdAt: row.createdAt,
     lastSeenAt: row.lastSeenAt,
+    deletedAt: row.deletedAt,
   };
 }
 
@@ -77,4 +79,27 @@ export async function updateSettings(
 
 export async function touchLastSeen(db: Db, id: string, at: string): Promise<void> {
   await db.update(profiles).set({ lastSeenAt: at }).where(eq(profiles.id, id));
+}
+
+/** D-14: 재발급하면 이전 코드는 즉시 무효(해시를 덮어쓴다). */
+export async function setRecoveryCode(
+  db: Db,
+  id: string,
+  input: { recoveryCodeHash: string; issuedAt: string },
+): Promise<void> {
+  await db
+    .update(profiles)
+    .set({ recoveryCodeHash: input.recoveryCodeHash, recoveryCodeIssuedAt: input.issuedAt })
+    .where(eq(profiles.id, id));
+}
+
+/** 삭제된 프로필(`deletedAt` not null)도 존재 여부 판정을 위해 그대로 돌려준다. 호출자가 판단한다. */
+export async function getProfileByRecoveryCodeHash(db: Db, hash: string): Promise<ProfileRecord | undefined> {
+  const [row] = await db.select().from(profiles).where(eq(profiles.recoveryCodeHash, hash));
+  return row ? toRecord(row) : undefined;
+}
+
+/** API-PRO-005: `deleted_at` 기록만 한다. 연결 데이터 삭제는 라우트가 트랜잭션으로 처리한다. */
+export async function softDeleteProfile(db: Db, id: string, at: string): Promise<void> {
+  await db.update(profiles).set({ deletedAt: at }).where(eq(profiles.id, id));
 }

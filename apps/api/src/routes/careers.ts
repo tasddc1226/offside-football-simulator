@@ -9,7 +9,7 @@ import {
 import type { Hono } from 'hono';
 import { applySync } from '../sync/apply-sync.js';
 import { listCommandsSince } from '../db/repos/commandLog.js';
-import { getCareer, listCareersByOwner } from '../db/repos/careers.js';
+import { deleteCareerCascade, getCareer, listCareersByOwner } from '../db/repos/careers.js';
 import { getLatestSnapshot } from '../db/repos/snapshots.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
@@ -153,5 +153,20 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       meta: { requestId: c.get('requestId'), careerRevision: result.revision },
     });
     return c.json(responseBody, 200);
+  });
+
+  // API-CAR-005. 다른 사람 소유도 존재를 드러내지 않기 위해 404로 응답한다(GET의 403 CAREER_NOT_OWNED와 다르다).
+  app.delete('/v1/careers/:id', requireProfile, idempotency, async (c) => {
+    const db = getDb(c);
+    const session = getSessionOrThrow(c);
+    const careerId = c.req.param('id');
+
+    const career = await getCareer(db, careerId);
+    if (!career || career.ownerProfileId !== session.profileId) {
+      throw new AppError({ code: 'CAREER_NOT_FOUND', message: '커리어를 찾을 수 없습니다.' });
+    }
+
+    await deleteCareerCascade(db, careerId);
+    return c.body(null, 204);
   });
 }

@@ -711,4 +711,96 @@ describe('careers routes', () => {
     );
     expect(put.status).toBe(401);
   });
+
+  describe('DELETE /v1/careers/:id (API-CAR-005)', () => {
+    function deleteInit(input: { idempotencyKey?: string | null; cookie?: string; origin?: string | null }): RequestInit {
+      const { idempotencyKey = 'idem-key-0001', cookie, origin = ALLOWED_ORIGIN } = input;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (origin !== null) headers.Origin = origin;
+      if (idempotencyKey !== null) headers['Idempotency-Key'] = idempotencyKey;
+      if (cookie) headers.Cookie = cookie;
+      return { method: 'DELETE', headers, body: '{}' };
+    }
+
+    it('204로 삭제되고, 두 번째 호출은 404, 목록에서 빠진다', async () => {
+      const { cookie } = await issueCookie(ctx);
+      const app = createApp();
+      const careerId = 'car_delete_1';
+
+      await app.request(
+        `/v1/careers/${careerId}`,
+        putInit({
+          body: await putCareerBody({ careerId, baseRevision: 0, commandRevisions: [1], snapshotRevision: 1 }),
+          ifMatch: '0',
+          cookie,
+        }),
+        ctx.env,
+      );
+
+      const firstDelete = await app.request(
+        `/v1/careers/${careerId}`,
+        deleteInit({ cookie, idempotencyKey: 'idem-delete-1' }),
+        ctx.env,
+      );
+      expect(firstDelete.status).toBe(204);
+
+      const secondDelete = await app.request(
+        `/v1/careers/${careerId}`,
+        deleteInit({ cookie, idempotencyKey: 'idem-delete-2' }),
+        ctx.env,
+      );
+      expect(secondDelete.status).toBe(404);
+      expect(ErrorEnvelopeSchema.parse(await secondDelete.json()).error.code).toBe('CAREER_NOT_FOUND');
+
+      const listRes = await app.request('/v1/careers', getInit(cookie), ctx.env);
+      const listBody = successEnvelope(CareerSummaryListSchema).parse(await listRes.json());
+      expect(listBody.data.items).toHaveLength(0);
+
+      expect(await ctx.db.select().from(snapshots).where(eq(snapshots.careerId, careerId))).toHaveLength(0);
+      expect(await ctx.db.select().from(commandLog).where(eq(commandLog.careerId, careerId))).toHaveLength(0);
+    });
+
+    it('다른 사람 소유는 404 CAREER_NOT_FOUND(존재를 드러내지 않는다)', async () => {
+      const owner = await issueCookie(ctx);
+      const stranger = await issueCookie(ctx);
+      const app = createApp();
+      const careerId = 'car_delete_stranger';
+
+      await app.request(
+        `/v1/careers/${careerId}`,
+        putInit({
+          body: await putCareerBody({ careerId, baseRevision: 0, commandRevisions: [1], snapshotRevision: 1 }),
+          ifMatch: '0',
+          cookie: owner.cookie,
+        }),
+        ctx.env,
+      );
+
+      const res = await app.request(
+        `/v1/careers/${careerId}`,
+        deleteInit({ cookie: stranger.cookie, idempotencyKey: 'idem-delete-stranger' }),
+        ctx.env,
+      );
+      expect(res.status).toBe(404);
+      expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('CAREER_NOT_FOUND');
+
+      const [careerRow] = await ctx.db.select().from(careers).where(eq(careers.id, careerId));
+      expect(careerRow).toBeDefined();
+    });
+
+    it('없는 id는 404', async () => {
+      const { cookie } = await issueCookie(ctx);
+      const app = createApp();
+
+      const res = await app.request('/v1/careers/car_never_existed', deleteInit({ cookie }), ctx.env);
+      expect(res.status).toBe(404);
+      expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('CAREER_NOT_FOUND');
+    });
+
+    it('세션이 없으면 401', async () => {
+      const app = createApp();
+      const res = await app.request('/v1/careers/car_no_session_delete', deleteInit({}), ctx.env);
+      expect(res.status).toBe(401);
+    });
+  });
 });

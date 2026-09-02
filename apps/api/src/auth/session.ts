@@ -48,6 +48,17 @@ export function sessionCookie(token: string): string {
   });
 }
 
+/** API-AUTH-004: `Max-Age=0`으로 브라우저가 즉시 쿠키를 지우게 한다. */
+export function clearSessionCookie(): string {
+  return generateCookie(SESSION_COOKIE_NAME, '', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'Lax',
+    path: '/',
+    maxAge: 0,
+  });
+}
+
 /** 설계 결정 3: Authorization 헤더가 있으면 쿠키를 보지 않는다. */
 export function readSessionToken(c: Context<AppEnv>): string | undefined {
   const authHeader = c.req.header(AUTHORIZATION_HEADER);
