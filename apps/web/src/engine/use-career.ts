@@ -18,9 +18,9 @@ export const careersQueryOptions = queryOptions({
   queryFn: async (): Promise<CareerSummary[]> => {
     const engine = await getAppEngine();
     const records = await engine.client.listCareers();
+    const loads = await Promise.all(records.map((record) => engine.client.loadCareer(record.id)));
     const summaries: CareerSummary[] = [];
-    for (const record of records) {
-      const load = await engine.client.loadCareer(record.id);
+    for (const load of loads) {
       if (load.ok) {
         summaries.push({ record: load.career, state: load.snapshot.state });
       }
@@ -94,7 +94,11 @@ type MutationVariablesFor<K extends CareerMutationKind> = K extends 'create'
     ? UpdateDraftVariables
     : CareerIdVariables;
 
-/** 액션 실행 후 ['careers']와(있다면) ['career', careerId] 쿼리를 무효화한다. */
+/**
+ * 액션 실행 후 ['careers']와(있다면) ['career', careerId] 쿼리를 무효화한다. 'delete'는
+ * invalidate 대신 remove한다: staleTime(30s) 안에서 ensureQueryData(레이아웃 loader)가 캐시를
+ * 그대로 돌려주면, 삭제된 careerId로 뒤로가기·딥링크했을 때 notFound() 없이 옛 화면이 보인다.
+ */
 export function useCareerMutation<K extends CareerMutationKind>(
   kind: K,
 ): UseMutationResult<MutationDataFor<K>, Error, MutationVariablesFor<K>> {
@@ -107,7 +111,11 @@ export function useCareerMutation<K extends CareerMutationKind>(
       await queryClient.invalidateQueries({ queryKey: ['careers'] });
       const careerId = 'careerId' in variables ? variables.careerId : undefined;
       if (careerId !== undefined) {
-        await queryClient.invalidateQueries({ queryKey: ['career', careerId] });
+        if (kind === 'delete') {
+          queryClient.removeQueries({ queryKey: ['career', careerId] });
+        } else {
+          await queryClient.invalidateQueries({ queryKey: ['career', careerId] });
+        }
       }
     },
   });

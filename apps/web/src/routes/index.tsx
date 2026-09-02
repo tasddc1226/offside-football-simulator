@@ -1,5 +1,5 @@
 // SCR-001 홈·커리어 허브.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Button,
   Card,
@@ -41,7 +41,15 @@ function displayName(summary: CareerSummary): string {
   return state.player.profile?.name ?? state.player.draft.name ?? '이름 없는 선수';
 }
 
-function CareerCard({ summary, onDeleted }: { summary: CareerSummary; onDeleted: (name: string) => void }) {
+function CareerCard({
+  summary,
+  onDeleted,
+  onDeleteFailed,
+}: {
+  summary: CareerSummary;
+  onDeleted: (name: string) => void;
+  onDeleteFailed: (name: string) => void;
+}) {
   const navigate = useNavigate();
   const deleteMutation = useCareerMutation('delete');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -63,10 +71,16 @@ function CareerCard({ summary, onDeleted }: { summary: CareerSummary; onDeleted:
   }
 
   async function handleDelete() {
-    await deleteMutation.mutateAsync({ careerId: record.id });
+    // 실패 시에도 다이얼로그를 닫는다: 열어 두면 Radix가 배경(Toast 포함)을 aria-hidden 처리해
+    // role="status" 실패 안내가 접근성 트리에서 사라진다.
     setDialogOpen(false);
     setConfirmStep(1);
-    onDeleted(name);
+    try {
+      await deleteMutation.mutateAsync({ careerId: record.id });
+      onDeleted(name);
+    } catch {
+      onDeleteFailed(name);
+    }
   }
 
   return (
@@ -138,18 +152,31 @@ function HubScreen() {
   const createMutation = useCareerMutation('create');
   const navigate = useNavigate();
   const defaultSimulationMode = useUiStore((state) => state.defaultSimulationMode);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(null);
+  const startingRef = useRef(false);
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-001', careerPhase: 'NONE' });
   }, []);
 
   async function handleStart() {
-    const result = await createMutation.mutateAsync({ simulationMode: defaultSimulationMode });
-    if (result.ok) {
-      void navigate({ to: '/career/$careerId/create', params: { careerId: result.snapshot.careerId } });
-    } else {
-      setToast('커리어를 시작하지 못했습니다. 다시 시도해 주세요.');
+    // isPending은 첫 클릭 뒤 리렌더가 있어야 반영된다. 같은 틱의 연속 클릭(더블탭)이
+    // mutateAsync를 두 번 트리거해 DRAFT를 두 개 만들지 않도록 동기 플래그로 막는다.
+    if (startingRef.current) return;
+    startingRef.current = true;
+    try {
+      const result = await createMutation.mutateAsync({ simulationMode: defaultSimulationMode });
+      if (result.ok) {
+        void navigate({ to: '/career/$careerId/create', params: { careerId: result.snapshot.careerId } });
+      } else {
+        setToast({ variant: 'error', message: '커리어를 시작하지 못했습니다. 다시 시도해 주세요.' });
+      }
+    } catch {
+      // engine.client.execute의 IndexedDB 트랜잭션이 reject(예: QuotaExceededError)하면
+      // {ok:false} 대신 예외가 온다. delete와 같은 실패 안내를 보여준다.
+      setToast({ variant: 'error', message: '커리어를 시작하지 못했습니다. 다시 시도해 주세요.' });
+    } finally {
+      startingRef.current = false;
     }
   }
 
@@ -185,7 +212,13 @@ function HubScreen() {
           <ul className="flex flex-col gap-os-4">
             {query.data.map((summary) => (
               <li key={summary.record.id}>
-                <CareerCard summary={summary} onDeleted={(name) => setToast(`${name}의 커리어를 삭제했습니다`)} />
+                <CareerCard
+                  summary={summary}
+                  onDeleted={(name) => setToast({ variant: 'success', message: `${name}의 커리어를 삭제했습니다` })}
+                  onDeleteFailed={(name) =>
+                    setToast({ variant: 'error', message: `${name}의 커리어를 삭제하지 못했습니다. 다시 시도해 주세요.` })
+                  }
+                />
               </li>
             ))}
           </ul>
@@ -207,7 +240,7 @@ function HubScreen() {
         </Link>
       </nav>
 
-      {toast ? <Toast variant="success" message={toast} onDismiss={() => setToast(null)} /> : null}
+      {toast ? <Toast variant={toast.variant} message={toast.message} onDismiss={() => setToast(null)} /> : null}
     </div>
   );
 }

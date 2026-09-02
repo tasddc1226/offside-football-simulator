@@ -1,7 +1,7 @@
 // SCR-034 온보딩. 3장 이내, 대표 문장 하나와 두 문장 이내 설명. 건너뛰기·KICKOFF 모두
 // onboardingSeen = true를 저장한다. 이 라우트는 언제든 열린다(설정의 "온보딩 다시 보기").
-import { useEffect, useState } from 'react';
-import { Button, Stepper } from '@offside/ui';
+import { useEffect, useRef, useState } from 'react';
+import { Button, Stepper, Toast } from '@offside/ui';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
@@ -44,6 +44,8 @@ function OnboardingScreen() {
   const setOnboardingSeen = useUiStore((state) => state.setOnboardingSeen);
   const defaultSimulationMode = useUiStore((state) => state.defaultSimulationMode);
   const createMutation = useCareerMutation('create');
+  const [toast, setToast] = useState<string | null>(null);
+  const startingRef = useRef(false);
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-034', careerPhase: 'NONE' });
@@ -58,12 +60,24 @@ function OnboardingScreen() {
   }
 
   async function handleKickoff() {
+    // isPending은 첫 클릭 뒤 리렌더가 있어야 반영된다. 같은 틱의 연속 클릭이 mutateAsync를
+    // 두 번 트리거해 DRAFT를 두 개 만들지 않도록 동기 플래그로 막는다.
+    if (startingRef.current) return;
+    startingRef.current = true;
     setOnboardingSeen(true);
-    const result = await createMutation.mutateAsync({ simulationMode: defaultSimulationMode });
-    if (result.ok) {
-      void navigate({ to: '/career/$careerId/create', params: { careerId: result.snapshot.careerId } });
-    } else {
-      void navigate({ to: '/' });
+    try {
+      const result = await createMutation.mutateAsync({ simulationMode: defaultSimulationMode });
+      if (result.ok) {
+        void navigate({ to: '/career/$careerId/create', params: { careerId: result.snapshot.careerId } });
+      } else {
+        setToast('커리어를 시작하지 못했습니다. 다시 시도해 주세요.');
+      }
+    } catch {
+      // engine.client.execute의 IndexedDB 트랜잭션이 reject(예: QuotaExceededError)하면
+      // {ok:false} 대신 예외가 온다.
+      setToast('커리어를 시작하지 못했습니다. 다시 시도해 주세요.');
+    } finally {
+      startingRef.current = false;
     }
   }
 
@@ -90,9 +104,25 @@ function OnboardingScreen() {
           건너뛰기
         </Button>
         {isLast ? (
-          <Button variant="primary" onClick={handleKickoff} disabled={createMutation.isPending}>
-            KICKOFF
-          </Button>
+          <div className="flex flex-col items-end gap-os-1">
+            {/* DSN-BRD-001: 브랜드 어휘(KICKOFF)는 display 토큰으로만 표기하고 바로 아래 caption을 둔다. */}
+            <Button
+              variant="primary"
+              onClick={handleKickoff}
+              disabled={createMutation.isPending}
+              className="os-num font-bold uppercase"
+              style={{
+                fontSize: 'var(--os-fs-display)',
+                lineHeight: 'var(--os-lh-display)',
+                letterSpacing: 'var(--os-tracking-display)',
+              }}
+            >
+              KICKOFF
+            </Button>
+            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+              첫 커리어를 시작할 준비가 됐습니다
+            </p>
+          </div>
         ) : (
           <Button variant="primary" onClick={() => setStepIndex((index) => index + 1)}>
             다음
@@ -102,6 +132,8 @@ function OnboardingScreen() {
       <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
         건너뛰어도 각 수치는 처음 열리는 순간 한 줄 설명을 보여줍니다.
       </p>
+
+      {toast ? <Toast variant="error" message={toast} onDismiss={() => setToast(null)} /> : null}
     </div>
   );
 }

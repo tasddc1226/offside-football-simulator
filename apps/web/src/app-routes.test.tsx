@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
@@ -42,6 +42,9 @@ function setTestEngine(): AppEngine {
 }
 
 function renderAt(path: string) {
+  // 한 테스트 안에서 renderAt을 여러 번 부르는 경우(예: 삭제 뒤 딥링크 재방문)를 대비해
+  // 이전 렌더를 먼저 걷어낸다. 단일 렌더 테스트에는 영향이 없다.
+  cleanup();
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [path] }),
@@ -146,6 +149,19 @@ describe('SCR-001 허브 - 빈 상태', () => {
       expect(router.state.location.pathname).toMatch(/^\/career\/.+\/create$/);
     });
   });
+
+  it('같은 틱에 두 번 클릭해도 커리어를 하나만 만든다', async () => {
+    const engine = setTestEngine();
+    renderAt('/');
+    const button = await screen.findByRole('button', { name: '커리어 시작' });
+
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(async () => {
+      expect(await engine.client.listCareers()).toHaveLength(1);
+    });
+  });
 });
 
 describe('SCR-001 허브 - 카드', () => {
@@ -185,6 +201,59 @@ describe('SCR-001 허브 - 카드', () => {
       expect(screen.queryByRole('heading', { level: 2, name: '이름 없는 선수' })).not.toBeInTheDocument();
     });
     expect(await screen.findByRole('status')).toHaveTextContent('이름 없는 선수의 커리어를 삭제했습니다');
+  });
+
+  it('삭제된 커리어를 딥링크로 다시 열면 캐시된 화면 대신 not-found를 보여준다', async () => {
+    const engine = setTestEngine();
+    const created = await createCareer(engine, { simulationMode: 'FAST' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) throw new Error('unreachable');
+    const careerId = created.snapshot.careerId;
+
+    // create 자리표시를 한 번 방문해 ['career', careerId] 쿼리 캐시(staleTime 30s)를 채운다.
+    renderAt(`/career/${careerId}/create`);
+    await screen.findByRole('heading', { level: 1, name: '이 화면은 다음 작업에서 열립니다' });
+
+    renderAt('/');
+    await screen.findByRole('heading', { level: 2, name: '이름 없는 선수' });
+    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: '다음' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: '삭제 확정' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { level: 2, name: '이름 없는 선수' })).not.toBeInTheDocument();
+    });
+
+    // queryClient의 전역 retry:1이 실패한 fetch를 한 번 더 시도(기본 backoff 1s)한 뒤에야
+    // reject하므로 기본 waitFor 타임아웃(1s)보다 넉넉하게 잡는다.
+    renderAt(`/career/${careerId}/create`);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '찾을 수 없는 화면입니다' }, { timeout: 3000 }),
+    ).toBeInTheDocument();
+  });
+
+  it('삭제가 실패하면 카드는 남아 있고 실패 Toast를 보여준다', async () => {
+    const engine = setTestEngine();
+    await createCareer(engine, { simulationMode: 'FAST' });
+    const failingEngine: AppEngine = {
+      ...engine,
+      client: {
+        ...engine.client,
+        deleteCareer: () => Promise.reject(new Error('삭제 실패(테스트)')),
+      },
+    };
+    engineHolder.promise = Promise.resolve(failingEngine);
+
+    renderAt('/');
+    await screen.findByRole('heading', { level: 2, name: '이름 없는 선수' });
+
+    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: '다음' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: '삭제 확정' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('이름 없는 선수의 커리어를 삭제하지 못했습니다');
+    expect(screen.getByRole('heading', { level: 2, name: '이름 없는 선수' })).toBeInTheDocument();
   });
 
   it('삭제 다이얼로그는 Esc로 닫히고 포커스가 삭제 버튼으로 돌아온다', async () => {
