@@ -305,7 +305,7 @@ describe('법적 문서 라우트', () => {
     renderAt('/legal/terms');
 
     expect(await screen.findByRole('heading', { level: 1, name: '이용약관' })).toBeInTheDocument();
-    expect(screen.getByText('문서 준비 중입니다.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: '서비스 정의' })).toBeInTheDocument();
   });
 
   it('/legal/privacy를 렌더한다', async () => {

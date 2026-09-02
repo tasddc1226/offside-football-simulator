@@ -47,4 +47,34 @@ describe('platform adapters', () => {
     expect(tossStore.kind).toBe('toss-storage');
     await tossStore.close();
   });
+
+  it('clearLocalData: web은 store.close() 뒤 호출해도 예외 없이 끝나고 새 store가 정상 동작한다', async () => {
+    const store = await webPlatform.createLocalStore();
+    await store.transaction('readwrite', async (tx) => {
+      await tx.kv.put('profile:id', 'prf_before_clear');
+    });
+    await store.close();
+
+    await expect(webPlatform.clearLocalData()).resolves.toBeUndefined();
+
+    const fresh = await webPlatform.createLocalStore();
+    const value = await fresh.transaction('readonly', (tx) => tx.kv.get<string>('profile:id'));
+    expect(value).toBeUndefined();
+    await fresh.close();
+  });
+
+  it('clearLocalData: toss는 저장된 키를 전부 지운다', async () => {
+    const store = await tossPlatform.createLocalStore();
+    await store.transaction('readwrite', async (tx) => {
+      await tx.kv.put('profile:id', 'prf_before_clear');
+    });
+    await store.close();
+
+    await tossPlatform.clearLocalData();
+
+    const fresh = await tossPlatform.createLocalStore();
+    const value = await fresh.transaction('readonly', (tx) => tx.kv.get<string>('profile:id'));
+    expect(value).toBeUndefined();
+    await fresh.close();
+  });
 });

@@ -3,19 +3,28 @@
 // retryable }로 정규화한다. GET이 아닌 요청에는 Idempotency-Key 헤더를 붙인다. T-1-011 동기화
 // 클라이언트가 apiFetch를 재사용한다.
 import {
+  CareerSummaryListSchema,
+  DeleteProfileStartResponseSchema,
   ErrorEnvelopeSchema,
+  GetCareerResponseSchema,
   IDEMPOTENCY_KEY_HEADER,
   IssueRecoveryCodeResponseSchema,
   ProfileSchema,
+  RecoverProfileResponseSchema,
+  type CareerSummaryList,
+  type DeleteProfileStartResponse,
   type ErrorCode,
+  type GetCareerResponse,
   type IssueRecoveryCodeResponse,
+  type MergeChoice,
   type Profile,
+  type RecoverProfileResponse,
 } from '@offside/contracts';
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8787';
 
 export type ApiErrorCode = ErrorCode | 'NETWORK_ERROR' | 'INVALID_RESPONSE';
-export type ApiError = { code: ApiErrorCode; message: string; retryable: boolean };
+export type ApiError = { code: ApiErrorCode; message: string; retryable: boolean; details?: unknown };
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
 /**
@@ -26,8 +35,8 @@ export interface DataSchema<T> {
   safeParse(input: unknown): { success: true; data: T } | { success: false };
 }
 
-function failure<T>(code: ApiErrorCode, message: string, retryable: boolean): ApiResult<T> {
-  return { ok: false, error: { code, message, retryable } };
+function failure<T>(code: ApiErrorCode, message: string, retryable: boolean, details?: unknown): ApiResult<T> {
+  return { ok: false, error: { code, message, retryable, ...(details !== undefined ? { details } : {}) } };
 }
 
 /**
@@ -75,8 +84,8 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, dataSche
   if (!response.ok) {
     const parsedError = ErrorEnvelopeSchema.safeParse(json);
     if (parsedError.success) {
-      const { code, message, retryable } = parsedError.data.error;
-      return failure(code, message, retryable);
+      const { code, message, retryable, details } = parsedError.data.error;
+      return failure(code, message, retryable, details);
     }
     return failure('INVALID_RESPONSE', `요청이 실패했습니다(${response.status}).`, response.status >= 500);
   }
@@ -109,4 +118,38 @@ export function issueRecoveryCode(): Promise<ApiResult<IssueRecoveryCodeResponse
 /** API-CAR-005. 성공 시 204(본문 없음). */
 export function deleteCareerOnServer(careerId: string): Promise<ApiResult<undefined>> {
   return apiFetch(`/v1/careers/${careerId}`, { method: 'DELETE' });
+}
+
+/**
+ * API-PRO-004. `RECOVERY_CONFLICT`(409)면 `error.details`에 `currentCareerCount`·
+ * `targetCareerCount`가 담긴다(`RecoveryConflictDetailsSchema`로 좁혀 읽는다).
+ */
+export function recoverProfile(body: { code: string; mergeChoice?: MergeChoice }): Promise<ApiResult<RecoverProfileResponse>> {
+  return apiFetch('/v1/profile/recover', { method: 'POST', body: JSON.stringify(body) }, RecoverProfileResponseSchema);
+}
+
+/** API-PRO-005 1단계. 본문 없음 → `{ confirmToken, expiresAt }`. */
+export function startProfileDeletion(): Promise<ApiResult<DeleteProfileStartResponse>> {
+  return apiFetch('/v1/profile/delete', { method: 'POST' }, DeleteProfileStartResponseSchema);
+}
+
+/** API-PRO-005 2단계. 성공 시 204(본문 없음). */
+export function confirmProfileDeletion(confirmToken: string): Promise<ApiResult<undefined>> {
+  return apiFetch('/v1/profile/delete', { method: 'POST', body: JSON.stringify({ confirmToken }) });
+}
+
+/** API-AUTH-004. 성공 시 204(본문 없음). 로컬 IndexedDB는 건드리지 않는다(ADR-008). */
+export function logout(): Promise<ApiResult<undefined>> {
+  return apiFetch('/v1/auth/logout', { method: 'POST' });
+}
+
+/** API-CAR-001. 복구 뒤 대조(D-20)가 서버 커리어 목록을 페이지별로 읽는 데 쓴다. */
+export function listRemoteCareers(cursor?: string): Promise<ApiResult<CareerSummaryList>> {
+  const query = cursor !== undefined ? `?cursor=${encodeURIComponent(cursor)}` : '';
+  return apiFetch(`/v1/careers${query}`, { method: 'GET' }, CareerSummaryListSchema);
+}
+
+/** API-CAR-002. 복구 뒤 대조가 `importCareerFromServer`에 넘길 응답을 받는다. */
+export function getRemoteCareer(careerId: string): Promise<ApiResult<GetCareerResponse>> {
+  return apiFetch(`/v1/careers/${careerId}`, { method: 'GET' }, GetCareerResponseSchema);
 }

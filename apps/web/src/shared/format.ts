@@ -5,6 +5,13 @@ export function formatLocalDateTime(iso: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/** 06 "숫자 표시": 로컬 날짜 `YYYY-MM-DD`. 복구 코드 발급일처럼 시각까지는 필요 없는 표시용. */
+export function formatLocalDate(iso: string): string {
+  const date = new Date(iso);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 /** 동기화 배지의 "저장됨" 상대 시각: "방금"·"n분 전"·"n시간 전". */
 export function formatRelativeTime(iso: string, now: number = Date.now()): string {
   const diffMs = Math.max(0, now - new Date(iso).getTime());

@@ -152,3 +152,12 @@ export async function createDexieLocalStore(dbName = 'offside'): Promise<LocalSt
     },
   };
 }
+
+/**
+ * "이 기기 데이터 삭제"(SCR-030). 호출하는 쪽이 이미 만든 `LocalStore`의 `close()`를 먼저 불러야 한다
+ * — 열린 연결이 남아 있으면 `Dexie.delete`가 그 연결이 닫힐 때까지 대기한다.
+ */
+export async function deleteDexieLocalStore(dbName = 'offside'): Promise<void> {
+  const { default: Dexie } = await import('dexie');
+  await Dexie.delete(dbName);
+}

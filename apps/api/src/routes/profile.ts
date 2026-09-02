@@ -1,8 +1,14 @@
 import {
   AUTHORIZATION_HEADER,
+  DeleteProfileConfirmBodySchema,
+  DeleteProfileStartResponseSchema,
+  IssueRecoveryCodeResponseSchema,
   PatchProfileSettingsBodySchema,
   ProfileSchema,
+  RecoverProfileBodySchema,
+  RecoverProfileResponseSchema,
   successEnvelope,
+  type DeleteProfileConfirmBody,
   type Profile,
   type ProfileSettings,
 } from '@offside/contracts';
@@ -17,7 +23,7 @@ import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
 import { issueRecoveryCode } from '../profile/issue-recovery-code.js';
-import { recoverProfile, type MergeChoice } from '../profile/recover.js';
+import { recoverProfile } from '../profile/recover.js';
 
 const LAST_SEEN_REFRESH_MS = 60 * 60 * 1000;
 
@@ -100,7 +106,11 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
 
     const result = await issueRecoveryCode(db, { profileId: session.profileId, now });
 
-    return c.json({ data: result, meta: { requestId: c.get('requestId') } }, 200);
+    const body = successEnvelope(IssueRecoveryCodeResponseSchema).parse({
+      data: result,
+      meta: { requestId: c.get('requestId') },
+    });
+    return c.json(body, 200);
   });
 
   app.post('/v1/profile/recover', requireProfile, idempotency, async (c) => {
@@ -115,20 +125,24 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       throw new AppError({ code: 'VALIDATION_FAILED', message: '요청 본문이 올바른 JSON이 아닙니다.' });
     }
 
-    const body = parseRecoverBody(json);
+    const parsed = parseWithAppError(RecoverProfileBodySchema, json);
     const now = new Date().toISOString();
     const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
 
     const result = await recoverProfile(db, {
-      code: body.code,
-      ...(body.mergeChoice !== undefined ? { mergeChoice: body.mergeChoice } : {}),
+      code: parsed.code,
+      ...(parsed.mergeChoice !== undefined ? { mergeChoice: parsed.mergeChoice } : {}),
       currentProfileId: session.profileId,
       sessionId: session.id,
       ip,
       now,
     });
 
-    return c.json({ data: result, meta: { requestId: c.get('requestId') } }, 200);
+    const body = successEnvelope(RecoverProfileResponseSchema).parse({
+      data: result,
+      meta: { requestId: c.get('requestId') },
+    });
+    return c.json(body, 200);
   });
 
   app.post('/v1/profile/delete', requireProfile, idempotency, async (c) => {
@@ -153,7 +167,11 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
 
     if (body.confirmToken === undefined) {
       const result = await issueDeleteConfirmToken({ sessionId: session.id, sessionTokenHash, now });
-      return c.json({ data: result, meta: { requestId: c.get('requestId') } }, 200);
+      const responseBody = successEnvelope(DeleteProfileStartResponseSchema).parse({
+        data: result,
+        meta: { requestId: c.get('requestId') },
+      });
+      return c.json(responseBody, 200);
     }
 
     await executeProfileDeletion(db, {
@@ -167,49 +185,11 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
   });
 }
 
-/** 로컬 검증(브리프: contracts는 T-1-006이 담당하므로 여기서는 손으로 검증한다). */
-function parseRecoverBody(json: unknown): { code: string; mergeChoice?: MergeChoice } {
-  if (json === null || typeof json !== 'object' || Array.isArray(json)) {
-    throw new AppError({ code: 'VALIDATION_FAILED', message: '요청 본문이 올바르지 않습니다.' });
-  }
-  const record = json as Record<string, unknown>;
-
-  if (typeof record.code !== 'string' || record.code.trim().length === 0) {
-    throw new AppError({
-      code: 'VALIDATION_FAILED',
-      message: 'code가 필요합니다.',
-      details: { issues: [{ path: ['code'], message: '문자열이어야 합니다.' }] },
-    });
-  }
-
-  if (record.mergeChoice === undefined) {
-    return { code: record.code };
-  }
-  if (record.mergeChoice !== 'MOVE_TO_LINKED' && record.mergeChoice !== 'KEEP_LINKED_ONLY') {
-    throw new AppError({
-      code: 'VALIDATION_FAILED',
-      message: 'mergeChoice가 올바르지 않습니다.',
-      details: { issues: [{ path: ['mergeChoice'], message: 'MOVE_TO_LINKED 또는 KEEP_LINKED_ONLY여야 합니다.' }] },
-    });
-  }
-  return { code: record.code, mergeChoice: record.mergeChoice };
-}
-
+/** 본문 없음(빈 객체)은 1단계 요청이다. 그 외에는 contracts 스키마로 검증한다. */
 function parseDeleteBody(json: unknown): { confirmToken?: string } {
-  if (json === null || typeof json !== 'object' || Array.isArray(json)) {
-    throw new AppError({ code: 'VALIDATION_FAILED', message: '요청 본문이 올바르지 않습니다.' });
-  }
-  const record = json as Record<string, unknown>;
-
-  if (record.confirmToken === undefined) {
+  if (json !== null && typeof json === 'object' && !Array.isArray(json) && Object.keys(json).length === 0) {
     return {};
   }
-  if (typeof record.confirmToken !== 'string' || record.confirmToken.length === 0) {
-    throw new AppError({
-      code: 'VALIDATION_FAILED',
-      message: 'confirmToken이 올바르지 않습니다.',
-      details: { issues: [{ path: ['confirmToken'], message: '문자열이어야 합니다.' }] },
-    });
-  }
-  return { confirmToken: record.confirmToken };
+  const parsed: DeleteProfileConfirmBody = parseWithAppError(DeleteProfileConfirmBodySchema, json);
+  return { confirmToken: parsed.confirmToken };
 }

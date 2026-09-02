@@ -20,6 +20,11 @@ export const tossPlatform: Platform = {
   channel: 'toss',
   theme: { forced: 'dark' },
   createLocalStore: () => Promise.resolve(createKvLocalStore(tossStorage)),
+  async clearLocalData() {
+    for (const key of await tossStorage.keys()) {
+      await tossStorage.removeItem(key);
+    }
+  },
   session: {
     async getBearerToken() {
       return null;

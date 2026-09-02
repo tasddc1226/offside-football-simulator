@@ -30,6 +30,8 @@ export { replayCommandLog, type ReplayResult } from './replay.js';
 
 export { forkCareerByReplay, type ForkDeps, type ForkResult } from './fork.js';
 
+export { importCareerFromServer, type ImportCareerResult } from './import.js';
+
 export {
   createEngineClient,
   type EngineClient,
