@@ -64,8 +64,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-009 | web | SCR-007 진로, SCR-008 입단 테스트, SCR-013·014 이벤트·결과, SCR-009 제안 비교, SCR-010 계약, SCR-029 대시보드 | T-1-005, T-1-006, T-1-007 | 3 | todo | [브리프](briefs/T-1-009.md) |
 | T-1-011 | web + engine-client | 동기화 클라이언트 배선·상태 표시·충돌 화면, LOCAL 선택 fork-by-replay | T-0-015, T-1-007, T-1-008 | 3 | todo | [브리프](briefs/T-1-011.md) |
 | T-1-012 | web + platform + engine-client + api | SCR-030 데이터 섹션(복구 코드 재발급·복구 입력·복구 뒤 대조·프로필 삭제·로그아웃·기기 데이터 삭제), 법적 문서 본문, api 복구·삭제 라우트 contracts 스키마 채택 | T-1-004, T-1-006, T-1-007, T-1-011 | 4 | todo | [브리프](briefs/T-1-012.md) |
-| T-1-013 | api + web | Google OIDC start/callback/merge, SCR-030 Google 행, 병합 선택 화면 | T-1-004, T-1-012, U-003(실검증) | 4 | todo | |
-| T-1-014 | web(e2e) | TEST-E2E-001·007·008·009, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, 완료 조건 표 | T-1-008, T-1-009, T-1-012 | 4 | todo | |
+| T-1-013 | api + web + platform + contracts | Google OIDC start/callback/merge/unlink(가짜 OIDC로 E2E), SCR-030 Google 행, 병합 선택 화면 | T-1-004, T-1-012, U-003(실검증) | 4 | todo | [브리프](briefs/T-1-013.md) |
+| T-1-014 | web(e2e) + docs | TEST-E2E-007·008·009, 키보드 전용 주 여정, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, 완료 조건 표 | T-1-008, T-1-009, T-1-011, T-1-012 | 4 | todo | [브리프](briefs/T-1-014.md) |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 

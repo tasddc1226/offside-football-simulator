@@ -167,6 +167,26 @@ Playwright(`@playwright/test`, Chromium만) + `@axe-core/playwright`. 위치 `ap
 - 법적 문서: 약관·개인정보 처리방침 본문은 ADR-002·ADR-008·09 "개인정보와 보존"의 사실만으로 초안을 쓴다. 사업자명·연락처·시행일은 `apps/web/src/legal/operator.ts` 상수 한 곳에 두고 값이 비면 "준비 중"으로 표시한다. 최종 문안·사업자 정보는 U-010(사용자)이다.
 - api의 복구·삭제 라우트는 T-1-012에서 contracts 스키마(`RecoverProfileBodySchema` 등)를 쓰도록 바꾼다(T-1-004 결정 로그의 후속).
 
+### D-21 Google OIDC 연결·병합 (T-1-013)
+
+- 구현은 ADR-008대로 `arctic` + 자체 세션. `GoogleOidc` 포트(인가 URL 생성·코드 교환) 뒤에 arctic 구현과 가짜 구현을 두고, 로컬(`ENVIRONMENT=local`, `GOOGLE_FAKE=1`)에서는 가짜가 콜백으로 바로 돌아온다. 그래서 U-003 전에도 전 흐름을 E2E로 검사한다. 클라이언트 ID가 없으면 start는 503이고 앱은 그대로 뜬다.
+- ID 토큰은 토큰 엔드포인트와 직접 TLS로 받으므로 서명 검증 없이 `iss`·`aud`·`exp`만 검사한다(OIDC Core 3.1.3.7 비고). scope는 `openid email`.
+- `state`·PKCE verifier는 10분짜리 HttpOnly 쿠키(`offside_oauth`, Path `/v1/auth/google`)에 둔다. 서버 저장소 없음.
+- 콜백 결과는 `WEB_APP_URL/settings?google=linked|switched|merge_required|error`로 돌려준다. `merge_required`면 세션에 `pending_merge_profile_id`(10분)를 기록하고 `POST /auth/merge`가 그것을 소비한다. 커리어 이동 배치는 복구(`recover.ts`)와 같은 함수를 쓴다.
+- API-AUTH-006 `POST /auth/google/unlink`를 07에 추가한다(SCR-030 "연결 해제"). 프로필 삭제는 `google_sub`·`email`도 비운다(unique index가 재연결을 막던 문제).
+- 화면에는 이메일 전체 대신 마스킹(`a***@도메인`)만 보여 준다(`ProfileSchema.googleEmailMasked`). 로그·분석·오류 details에 이메일·sub 금지.
+- toss 채널의 Google 숨김은 `platform.features.googleLink`로 한다(채널 리터럴 비교 금지).
+- 실 Google 계정 검증은 U-003 뒤 오케스트레이터가 한다. Phase 1 완료 조건 표에서 그 한 줄만 대기로 남긴다.
+
+### D-22 Phase 1 완료 판정 측정 (T-1-014)
+
+- 완료 조건 표는 `docs/tracking/phase-1-completion.md`(T-1-014가 쓰는 유일한 문서). 행 = phase-01 완료 조건 11개 + ADR-008 국외 이전 명시 1개 + Google 실검증(U-003 대기) 1개. 열 = 조건 / 측정값 / 통과 / 근거 / 비고.
+- "최소 조작 시간"(08)은 화면 1.0초·선택 2.0초·텍스트 입력 4.0초·확정 1.5초의 고정 단가로 계산하고, 실제 자동화 시간과 함께 기록한다. 5분 조건은 자동화 시간으로 판정한다.
+- 키보드 전용 주 여정은 별도 스펙으로 `click()` 없이 끝낸다(출시 차단 기준 "키보드로 P0 흐름 완료 불가").
+- 허브 LCP·CLS는 `vite preview` 빌드에서 CDP 4G 에뮬레이션으로 3회 중앙값을 기록하고 assert하지 않는다. T-0-013 기준선과 비교 문장을 남긴다.
+- E2E는 세 묶음: 기본(스텁 API), `E2E_WITH_API=1`(로컬 wrangler), `E2E_PREVIEW=1`(성능). CI 연결은 T-0-010.
+- 버그는 T-1-014가 고치지 않고 표와 PR 본문에 적는다. 수정은 오케스트레이터가 별도 작업으로 낸다.
+
 ## 3. 작업 분해
 
 | ID | 패키지 | 작업 | 선행 | Wave |
@@ -184,8 +204,8 @@ Playwright(`@playwright/test`, Chromium만) + `@axe-core/playwright`. 위치 `ap
 | T-1-009 | web | 진로 선택 SCR-007, 입단 테스트 SCR-013·014, 제안 비교 SCR-009, 계약 SCR-010, 대시보드 SCR-029(잠금 표시 포함) | T-1-005, T-1-006, T-1-007 | 3 |
 | T-1-011 | web + engine-client | T-0-015 동기화 클라이언트 배선, 동기화 상태 표시, 충돌 화면("이 기기/다른 기기"), LOCAL 선택은 fork-by-replay 새 careerId (D-19) | T-0-015, T-1-007, T-1-008(`src/api/client.ts`) | 3 |
 | T-1-012 | web + platform + engine-client + api(작게) | SCR-030 데이터 섹션: 복구 코드 재발급·복구 입력(RECOVERY_CONFLICT 선택)·복구 뒤 대조, 프로필 삭제, 로그아웃, 이 기기 데이터 삭제; 법적 문서 본문; api 복구·삭제 라우트의 contracts 스키마 채택 (D-20) | T-1-004, T-1-006, T-1-007, T-1-011 | 4 |
-| T-1-013 | api + web | Google OIDC start/callback/merge, SCR-030 Google 연결 행, 병합 선택 화면 (실검증 U-003) | T-1-004, T-1-012 | 4 |
-| T-1-014 | web(e2e) | TEST-E2E-001·007·008·009, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, Phase 1 완료 조건 표 채우기 | T-1-008, T-1-009, T-1-012 | 4 |
+| T-1-013 | api + web + platform + contracts | Google OIDC start/callback/merge/unlink(가짜 OIDC로 E2E), SCR-030 Google 연결 행, 병합 선택 화면 (D-21, 실검증 U-003) | T-1-004, T-1-012 | 4 |
+| T-1-014 | web(e2e) + docs | TEST-E2E-007·008·009, 키보드 전용 주 여정, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, Phase 1 완료 조건 표 (D-22) | T-1-008, T-1-009, T-1-011, T-1-012 | 4 |
 
 Wave 1은 4개가 서로 다른 패키지라 동시에 띄운다. T-1-005·T-1-015는 T-1-001과 T-1-002가 모두 머지된 직후, T-1-006은 T-1-005 머지 직후 띄운다(짧은 작업). 남은 U-00x: U-002(CI, T-0-010), U-003(Google, T-1-013 실검증).
 

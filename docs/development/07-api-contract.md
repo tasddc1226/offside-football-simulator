@@ -56,6 +56,7 @@
 | API-AUTH-003 | `POST /auth/merge` | 병합 선택 확정(`MOVE_TO_LINKED` 또는 `KEEP_LINKED_ONLY`) |
 | API-AUTH-004 | `POST /auth/logout` | 세션 무효화. 로컬 데이터는 유지 |
 | API-AUTH-005 | `POST /auth/toss/session` | 본문 `{ anonKey }`. 서버가 앱인토스 식별키 검증 API(mTLS)로 확인하고 연결된 프로필의 Bearer 세션을 발급. 처음 보는 키면 프로필을 만든다. `TOSS_KEY_INVALID`(401) |
+| API-AUTH-006 | `POST /auth/google/unlink` | Google 연결 해제. `google_sub`·`email`·`linked_at`을 비운다. 204. (2026-09-02 D-21 추가) |
 
 - 복구 코드와 로그인 시도는 rate limit과 실패 횟수 제한을 둔다.
 - 병합 규칙은 [ADR-008](../adr/ADR-008-auth-and-account-merge.md)을 따른다.
