@@ -99,12 +99,14 @@ export function domainPurityRules({ files }) {
  * ADR-005 경계 규칙이 늘어나도 이 헬퍼를 호출하는 새 함수 하나만 추가하면 된다.
  * @param {string[]} files
  * @param {{ group: string[]; message: string }[]} patterns
+ * @param {string[]} [ignores]
  * @returns {import('eslint').Linter.Config[]}
  */
-function restrictImportRules(files, patterns) {
+function restrictImportRules(files, patterns, ignores) {
   return [
     {
       files,
+      ...(ignores && ignores.length > 0 ? { ignores } : {}),
       rules: {
         'no-restricted-imports': ['error', { patterns }],
       },
@@ -113,14 +115,58 @@ function restrictImportRules(files, patterns) {
 }
 
 /**
- * ADR-005: `@apps-in-toss/*`는 platform/toss에서만 import한다.
- * @param {{ files: string[] }} options
+ * ADR-005: `@apps-in-toss/*`는 platform/toss에서만 import한다. `ignores`로 예외 경로(예:
+ * `packages/platform/src/toss/**`)를 뺄 수 있다.
+ * @param {{ files: string[]; ignores?: string[] }} options
  * @returns {import('eslint').Linter.Config[]}
  */
-export function noTossSdkImportRules({ files }) {
-  return restrictImportRules(files, [
-    { group: ['@apps-in-toss/*'], message: 'platform/toss에서만 허용' },
-  ]);
+export function noTossSdkImportRules({ files, ignores }) {
+  return restrictImportRules(
+    files,
+    [{ group: ['@apps-in-toss/*'], message: 'platform/toss에서만 허용' }],
+    ignores,
+  );
+}
+
+/**
+ * ADR-009: 채널 분기는 `packages/platform` 안에서만 한다. 화면·엔진·ui는 `Platform`이 주는 값
+ * (예: `theme.forced`)만 보고, `channel`을 직접 비교하거나 `@offside/platform/web`·`/toss`를
+ * 바로 import하지 않는다. `allow`는 채널을 실제로 고르는 조립 지점(예:
+ * `apps/web/src/platform/index.ts`) 하나를 이 규칙에서 뺀다.
+ * @param {{ files: string[]; allow?: string[] }} options
+ * @returns {import('eslint').Linter.Config[]}
+ */
+export function noChannelBranchRules({ files, allow }) {
+  return [
+    {
+      files,
+      ...(allow && allow.length > 0 ? { ignores: allow } : {}),
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['@offside/platform/web', '@offside/platform/toss'],
+                message: '채널 분기는 packages/platform에서만 한다',
+              },
+            ],
+          },
+        ],
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector: "BinaryExpression[operator=/==|!=/] > Literal[value='toss']",
+            message: '채널 분기는 packages/platform에서만 한다',
+          },
+          {
+            selector: "BinaryExpression[operator=/==|!=/] > Literal[value='web']",
+            message: '채널 분기는 packages/platform에서만 한다',
+          },
+        ],
+      },
+    },
+  ];
 }
 
 /**

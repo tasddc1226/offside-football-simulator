@@ -1,5 +1,5 @@
 {
-  "extends": "@offside/tsconfig/base.json",
+  "extends": "@offside/tsconfig/browser.json",
   "compilerOptions": {
     "rootDir": "src",
     "baseUrl": "."
