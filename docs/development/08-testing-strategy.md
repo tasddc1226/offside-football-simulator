@@ -31,6 +31,8 @@
 - 같은 fixture의 state hash가 브라우저 Web Worker, Node(Vitest), Cloudflare Workers(Miniflare)에서 모두 같다.
 - 명령 로그를 처음부터 재생한 결과가 저장된 Snapshot의 hash와 같다.
 - 관계·평판·챕터 결과가 Base OVR을 직접 바꾸지 않는다.
+- 같은 seed와 나머지 생성 입력에서 `gender`만 바꿔도 능력·잠재력·RNG draw 수·제안·Legacy 결과가 같다.
+- 포지션 전환 뒤 `preferredPosition`은 불변이고 `primaryPosition`과 숙련도만 바뀐다.
 - 같은 Archive와 legacyVersion의 Legacy 결과가 같고 모든 Career가 엔딩을 받는다.
 
 ## Golden fixtures
@@ -51,7 +53,7 @@ fixture에는 개인 입력이나 운영 DB 데이터를 사용하지 않는다.
 
 | 테스트 ID | 여정 |
 |---|---|
-| TEST-E2E-001 | 새 선수 생성→입단 테스트→첫 계약 |
+| TEST-E2E-001 | 이름·성별·선호 포지션으로 새 선수 생성→입단 테스트→첫 계약 |
 | TEST-E2E-002 | 프리시즌→핵심 경기→시즌 결산 |
 | TEST-E2E-003 | 제안 비교→협상→임대/이적 확정 |
 | TEST-E2E-004 | 부상 선택→재활→복귀와 재발 위험 |
@@ -74,6 +76,7 @@ fixture에는 개인 입력이나 운영 DB 데이터를 사용하지 않는다.
 
 - 포커스 순서와 포커스 표시.
 - 라디오/선택 카드 이름·상태·설명.
+- 성별 선택은 기본값이 없고 세 항목 모두 키보드로 고를 수 있으며, 능력에 영향을 주지 않는다는 설명이 그룹의 접근성 설명에 연결된다.
 - 결과 변화의 한 번만 낭독되는 live region.
 - 확대 200%, 360px, 긴 한국어/영어 문구.
 - prefers-reduced-motion.
@@ -93,4 +96,3 @@ fixture에는 개인 입력이나 운영 DB 데이터를 사용하지 않는다.
 ## 버그 보고 필수 정보
 
 `careerId`, `revision`, `commandId`, `rulesetVersion`, `contentPackVersion`, `seed reference`, `requestId`, 기대/실제 상태 hash를 포함한다. 민감한 프로필 키와 선수명은 제외한다.
-
