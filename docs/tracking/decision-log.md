@@ -2,6 +2,16 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #18 E2E 도입 머지)
+
+**결과**: T-1-010 PR #18 squash 머지(`01d64e8`). `@playwright/test` 1.62.1·`@axe-core/playwright` 4.13.0(둘 다 7~8월 배포, 정책 안), Chromium 1개 프로젝트, `vite dev --port 5174` 자동 기동. 허브·법적 문서 스모크, axe serious·critical 0건(전체 위반도 0건), dev 전용 `/__dev/hash-probe`가 브라우저 Web Worker에서 career-01을 재생해 golden(revision 8, `15eea997…`)과 일치. 프로덕션 `dist/`에 probe·fixture 흔적 없음(직접 확인), 초기 청크 91.82KB. 임시 워크트리에서 전체 체인 + E2E 7 passed(6.3초). 비용 약 $5.9, 23분.
+
+**받아들인 것**: (1) `apps/web`이 `@offside/fixtures`를 devDependency로 가진다(ADR-005 테스트 전용 예외). (2) `e2e/hash-probe.spec.ts`는 golden을 `@offside/fixtures` import 대신 JSON 파일을 직접 읽는다. Node 22 ESM이 import attribute 없는 JSON import를 거부하기 때문이다. (3) `typecheck`가 `e2e/tsconfig.json`도 검사한다.
+
+**후속**: fixtures 패키지의 JSON import에 `with { type: 'json' }`을 붙이거나 TS 모듈로 감싸 Node ESM에서도 import되게 한다(T-1-014 전에). `playwright.config.ts`의 `reuseExistingServer`는 CI 연결(T-0-010) 때 `!process.env.CI`로 바꾼다. 브리프의 "라우트 등록" 표현과 달리 구현은 `main.tsx`의 부트스트랩 분기(경로 문자열 비교)인데, 라우터 밖이라 프로덕션 번들 분리가 더 확실해 그대로 둔다.
+
+**슬롯**: 활성 워커 3개(T-1-004·T-1-005·T-1-015). 남은 후보(T-1-006 contracts, T-1-007 web 배선)는 선행 머지 대기라 브리프를 먼저 쓴다.
+
 ## 2026-09-02 (저녁, PR #17 domain 선수 모델 머지 — Wave 2 투입)
 
 **결과**: T-1-001 PR #17 squash 머지(`3a8f7c8`). Position 8종·PlayerDraft·PlayerProfile·Pending·Timeline·Ruleset 타입, `UPDATE_PLAYER_DRAFT`·`CONFIRM_PLAYER`(rng 23회, D-7 순서)·`ADVANCE {eligibleEvents}` 가중 선택(정렬 검증, 1-based 누적)·`RESOLVE_EVENT` pending 검증, SETTLEMENT에서 제시할 것이 없으면 `NOTHING_TO_ADVANCE`. 룰셋은 `SimulationInput.ruleset`으로 받는다(해시 제외). golden revision 8(`15eea997…`, rng draws 25), 인사이드 포워드 Base OVR 59 확인. domain 90 tests, 전체 체인 통과. 결정론 예산 검사는 별도 테스트(10초)로 분리. 비용 약 $13.1, 43분.
