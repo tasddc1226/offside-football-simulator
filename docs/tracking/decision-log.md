@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #10 런타임 간 해시 일치 머지)
+
+- **PR #10(T-0-011) 머지 `c45bede`.** workerd(Miniflare)에서 career01 재생·SHA-256 경계·canonicalize가 Node·golden과 모두 일치. 불일치 0건. 서버 측 무결성 검사(T-0-008 규칙 5)가 클라이언트 해시를 그대로 재검증해도 된다는 전제가 확인됨.
+- **Miniflare v5.** wrangler 4.127.1이 끌어오는 miniflare 5.x는 `new Miniflare({ workers: [...] })` 형태라 브리프의 v4 옵션은 패키지가 공개하는 `convertV4MiniflareOptions`로 변환해 사용. esbuild는 wrangler 내부 0.25.x와 다른 0.28.1을 명시(테스트 번들 전용이라 무해. 추후 CI에서 esbuild 중복 설치가 문제되면 정리).
+- api 테스트는 PR #9·#10 합류 후 main에서 재실행해 확인(아래 기록).
+
 ## 2026-09-02 (저녁, PR #9 api HTTP 계층 머지·폰트 측정 결과)
 
 - **PR #9(T-0-006) 머지 `483001b`.** 리뷰에서 잡은 결함 1건: idempotency 미들웨어가 같은 키의 동시 요청 2개를 모두 통과시킨 뒤 두 번째 INSERT가 UNIQUE 위반으로 throw해 라우트는 성공했는데 503이 나가는 레이스. `onConflictDoNothing` + 저장 실패 시 응답 불변(warn 로그 `IDEMPOTENCY_STORE_FAILED`) + 동시 요청 테스트로 수정. T-0-008의 "같은 PUT 100개 → 전부 200"은 이 수정과 서버 규칙 4("이미 반영됨 → 200")의 조합에 기댄다.

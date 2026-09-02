@@ -36,7 +36,7 @@
 | T-0-008 | `apps/api` 커리어 동기화 `GET /careers`, `GET /careers/{id}`, `PUT /careers/{id}`(If-Match·409·422·무결성 검사), 100회 병렬 멱등 테스트 | API-CAR-001~003, 05, ADR-002 | in-progress | `T-0-008-api-career-sync`, [브리프](briefs/T-0-008.md) |
 | T-0-009 | `apps/web` Vite·Router·Tailwind 토큰·상태 훅 골격, 허브 빈 상태 화면 | ADR-001, 13 | completed | PR [#3](https://github.com/tasddc1226/offside-football-simulator/pull/3) squash 머지 `fdb8a72`. 대비 24쌍 PASS, 초기 번들 91.81KB gzip |
 | T-0-010 | GitHub Actions CI, Pages·Workers preview 배포, staging migration | ADR-007 | blocked | U-002 필요 |
-| T-0-011 | Node(Vitest)·Cloudflare Workers(Miniflare) 동일 fixture state hash·SHA-256 경계·canonicalize 일치 테스트 | ADR-003, 08 | in-progress | `T-0-011-cross-runtime-hash`, [브리프](briefs/T-0-011.md). 브라우저 Web Worker 검증은 Playwright 도입 시 |
+| T-0-011 | Node(Vitest)·Cloudflare Workers(Miniflare) 동일 fixture state hash·SHA-256 경계·canonicalize 일치 테스트 | ADR-003, 08 | done | [브리프](briefs/T-0-011.md). PR #10 `c45bede`. 리뷰 1회 통과. 브라우저 Web Worker 검증은 Playwright 도입 시 |
 | T-0-012 | `packages/platform` 골격: `LocalStore` 포트와 `Platform` 인터페이스, web 구현(Dexie), toss 스텁(SDK 의존성 없음), 화면·엔진의 SDK import·채널 분기 lint | ADR-009, ADR-005 | in-progress | `T-0-012-platform-localstore`, [브리프](briefs/T-0-012.md) |
 | T-0-013 | Pretendard self-host 폰트를 dynamic subset(unicode-range 분할)으로 바꿔 초기 폰트 전송량 축소, 허브 LCP 2.5초 예산 측정 | 13 구현 체크리스트, 01 성능 예산 | in-progress | `T-0-013-font-dynamic-subset`, [브리프](briefs/T-0-013.md). 현재 woff2 단일 파일 2MB |
 | T-0-014 | domain 명령 이름 `ADVANCE_STEP` → `ADVANCE` 정렬(07·contracts와 동일), contracts 주석 정리 | 07 로컬 명령 계약 | completed | PR #5, `6b8e1a3`. golden 불변, 64 tests |
@@ -63,7 +63,6 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 |---|---|---|---|
 | T-0-013 | Sonnet 5, Orca 워크트리 `T-0-013-font-dynamic-subset` | 2026-09-02 | 측정 완료, PR 생성 중 |
 | T-0-012 | Sonnet 5, Orca 워크트리 `T-0-012-platform-localstore` | 2026-09-02 | 구현 중 |
-| T-0-011 | Sonnet 5, Orca 워크트리 `T-0-011-cross-runtime-hash` | 2026-09-02 | 구현 중 |
 | T-0-008 | Sonnet 5, Orca 워크트리 `T-0-008-api-career-sync` | 2026-09-02 | 브리프 전달 |
 
 ## 완료
@@ -83,3 +82,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-0-004 | PR #7 `cfc868f` | 2026-09-02 | 약 $12. 리뷰 1회(수정 3건 + main 재병합 1회) |
 | T-0-007 | PR #8 `9667dc7` | 2026-09-02 | 약 $8. 리뷰 1회 통과 |
 | T-0-006 | PR #9 `483001b` | 2026-09-02 | 약 $9. 리뷰 1회(수정 1건) |
+| T-0-011 | PR #10 `c45bede` | 2026-09-02 | 약 $3. 리뷰 1회 통과 |
