@@ -82,9 +82,9 @@ c0, c1 = counts(phase0), counts(phase1)
 SCREENS = [
     ("SCR-034", "온보딩", "구현", "3장, 건너뛰기·KICKOFF (T-1-007)"),
     ("SCR-001", "허브(홈)", "구현", "카드·이어하기·삭제 2단계·새 커리어 (T-1-007)"),
-    ("SCR-002", "선수 만들기 1단계", "자리표시", "T-1-008"),
-    ("SCR-003", "선수 만들기 2단계", "예정", "T-1-008"),
-    ("SCR-004", "확정·복구 코드 발급", "예정", "T-1-008"),
+    ("SCR-002", "선수 만들기 1단계", "구현", "T-1-008"),
+    ("SCR-003", "선수 만들기 2단계", "구현", "T-1-008"),
+    ("SCR-004", "확정·복구 코드 발급", "구현", "T-1-008"),
     ("SCR-007", "진로 선택", "예정", "T-1-009"),
     ("SCR-013·014", "입단 테스트·결과", "예정", "T-1-009"),
     ("SCR-009", "제안 비교", "예정", "T-1-009"),
@@ -100,13 +100,14 @@ LAYERS = [
     ("engine-client", "브라우저 실행기", ["명령 실행기·멱등성·Snapshot 복구", "Web Worker 시뮬레이터", "동기화 클라이언트(재시도·409 처리)", "룰셋 배선 (T-1-001)"], ["포크(fork-by-replay)·Worker 실패 처리 (T-1-011)", "서버 커리어 가져오기 (T-1-012)"]),
     ("platform", "저장소 추상화", ["Dexie(IndexedDB) LocalStore", "KV LocalStore(토스 채널용 스텁)"], []),
     ("api", "Cloudflare Workers + D1", ["D1 스키마·migration", "세션(쿠키·Bearer)·익명 프로필·설정", "커리어 동기화 GET/PUT·If-Match·멱등", "복구 코드·프로필 복구·삭제·로그아웃·커리어 삭제 (T-1-004)"], ["Google 로그인 (T-1-013, U-003 대기)"]),
-    ("web · ui", "React 화면", ["라우터·디자인 토큰·허브 빈 상태", "Pretendard 동적 서브셋(2109KB→269KB)", "Button·Card 등 기본 부품", "Radix RadioGroup·Dialog·Tabs, ChoiceCard·CompareCards 등 부품 10종", "Playwright + axe E2E, 브라우저 Worker 해시 검증 (T-1-010)", "엔진 배선(Worker·IndexedDB)·허브·온보딩·설정 영속화 (T-1-007)"], ["선수 만들기·진로~계약·대시보드 화면 (T-1-008·009)", "동기화 배선·충돌 화면 (T-1-011)", "설정 데이터 섹션·법적 문서 (T-1-012)", "E2E 완료 조건 표·5분 세션 측정 (T-1-014)"]),
+    ("web · ui", "React 화면", ["라우터·디자인 토큰·허브 빈 상태", "Pretendard 동적 서브셋(2109KB→269KB)", "Button·Card 등 기본 부품", "Radix RadioGroup·Dialog·Tabs, ChoiceCard·CompareCards 등 부품 10종", "Playwright + axe E2E, 브라우저 Worker 해시 검증 (T-1-010)", "엔진 배선(Worker·IndexedDB)·허브·온보딩·설정 영속화 (T-1-007)", "선수 만들기 SCR-002~004·복구 코드 발급·API 클라이언트 (T-1-008)"], ["진로~계약·대시보드 화면 (T-1-009)", "동기화 배선·충돌 화면 (T-1-011)", "설정 데이터 섹션·법적 문서 (T-1-012)", "E2E 완료 조건 표·5분 세션 측정 (T-1-014)"]),
     ("CI · 배포", "GitHub Actions · Pages · Workers", [], ["U-002 Cloudflare 계정 대기 (T-0-010)"]),
 ]
 ETA = [
     ("오늘 20:50", "Wave 1·2 전부 머지(도메인 제안·계약, 이벤트 선택기, contracts 스키마). 웹 엔진 배선(T-1-007) 진행 중"),
     ("오늘 22:05", "웹 엔진 배선 머지: 온보딩→커리어 생성→허브 카드가 브라우저에서 동작. 선수 만들기(T-1-008)·진로~계약·대시보드(T-1-009) 동시 투입"),
-    ("내일 새벽", "T-1-008·009 머지 → 온보딩부터 첫 계약까지 로컬 동작. 동기화 배선(T-1-011) 투입"),
+    ("오늘 23:42", "선수 만들기(T-1-008) 머지: 이름·포지션·스타일 → KICKOFF → 복구 코드까지 브라우저에서 동작. 동기화 배선(T-1-011) 투입"),
+    ("내일 새벽", "T-1-009 머지 → 온보딩부터 첫 계약까지 로컬 동작. T-1-011 머지 → 설정 데이터 섹션(T-1-012) 투입"),
     ("내일 오전~오후", "Wave 3·4: 선수 만들기·진로·입단 테스트·제안·계약·대시보드 화면, 동기화 충돌 화면, 설정·복구 화면, E2E"),
     ("내일 오후", "온보딩부터 첫 계약까지 클릭으로 이어지는 화면 시연 목표"),
 ]
@@ -117,6 +118,8 @@ DECISIONS = [
     ("동기화 충돌·설정 데이터 D-19·D-20", "'이 기기 진행 유지'는 명령 로그를 새 커리어로 재실행(fork-by-replay). 복구 뒤 서버 목록으로 로컬 대조. 복구 코드 다시 보기는 없음(해시만 저장)."),
     ("Google 연결·완료 판정 D-21·D-22", "arctic + 가짜 OIDC로 U-003 전에도 E2E. 완료 조건 13행 표, 5분 세션은 자동화 시간으로 판정, LCP·CLS는 기록만."),
     ("브리프 15개 전부 작성", "투입 순서: T-1-007 → 008·009 → 011 → 012 → 013·014."),
+    ("PR #25 리뷰: 복구 코드 발급 400", "apiFetch가 body 없는 POST에 Content-Type을 안 붙여 서버 bodyGuard가 거부. 워커의 '일시적 400' 설명을 재현으로 반박하고 수정 후 머지."),
+    ("콘텐츠 정본 PR #24", "사용자가 docs/content/kickoff/ 6종을 머지. SHIPPABLE 전에는 개발 작업을 만들지 않는다(Phase 2 입력)."),
     ("룰셋은 데이터", "packages/content/rulesets/1.0.0, 도메인은 입력으로 받고 해시에는 넣지 않음."),
 ]
 
@@ -303,7 +306,7 @@ footer{{margin-top:44px;font-size:12.5px;color:var(--text-2);border-top:1px soli
     a('<div class="cols"><section><h2>예상 일정 <small>2026-09-02 19시 기준</small></h2><div class="tscroll"><table class="eta"><tbody>')
     for t, d in ETA:
         a(f'<tr><td>{esc(t)}</td><td>{esc(d)}</td></tr>')
-    a('</tbody></table></div><p style="font-size:12.5px;color:var(--text-2);margin-top:8px">변수: 리뷰 수정 라운드 수, 웹 화면 작업 2건(T-1-008·009)의 크기, Google 로그인 실검증(U-003).</p></section>')
+    a('</tbody></table></div><p style="font-size:12.5px;color:var(--text-2);margin-top:8px">변수: 리뷰 수정 라운드 수, T-1-009의 크기, 동기화 충돌 처리(T-1-011)의 난도, Google 로그인 실검증(U-003).</p></section>')
     a('<section><h2>주요 결정 <small>docs/tracking/decision-log.md</small></h2><div class="dec">')
     for t, d in DECISIONS:
         a(f'<div><b>{esc(t)}</b>{esc(d)}</div>')
