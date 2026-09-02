@@ -4,18 +4,30 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/tokens.css",
+    "./tailwind.css": "./src/tailwind.css"
   },
   "scripts": {
     "test": "vitest run",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:contrast": "node scripts/check-contrast.mjs"
   },
   "dependencies": {
-    "@offside/contracts": "workspace:*"
+    "@offside/contracts": "workspace:*",
+    "pretendard": "1.3.9",
+    "react": "19.2.8"
   },
   "devDependencies": {
     "@offside/tsconfig": "workspace:*",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "22.20.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "jsdom": "30.0.1",
+    "react-dom": "19.2.8",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
   }
