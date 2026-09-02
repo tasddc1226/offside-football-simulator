@@ -45,6 +45,9 @@ export function domainPurityRules({ files }) {
         'no-restricted-imports': [
           'error',
           {
+            // gitignore 스타일 group 패턴(예: ['**', '!./**'])은 쓸 수 없다: 'ignore'가 부모
+            // 세그먼트('./')를 먼저 매칭해 이미 제외 처리하면, 자식 경로의 negation이 무시된다.
+            // regex는 이 부모-자식 상속 문제 없이 "./ 또는 ../로 시작하지 않음"을 바로 표현한다.
             patterns: [
               {
                 regex: '^(?!\\.{1,2}/)',
@@ -92,29 +95,32 @@ export function domainPurityRules({ files }) {
 }
 
 /**
+ * `no-restricted-imports`의 `patterns` 그룹으로 특정 파일 집합의 import를 막는 공통 형태.
+ * ADR-005 경계 규칙이 늘어나도 이 헬퍼를 호출하는 새 함수 하나만 추가하면 된다.
+ * @param {string[]} files
+ * @param {{ group: string[]; message: string }[]} patterns
+ * @returns {import('eslint').Linter.Config[]}
+ */
+function restrictImportRules(files, patterns) {
+  return [
+    {
+      files,
+      rules: {
+        'no-restricted-imports': ['error', { patterns }],
+      },
+    },
+  ];
+}
+
+/**
  * ADR-005: `@apps-in-toss/*`는 platform/toss에서만 import한다.
  * @param {{ files: string[] }} options
  * @returns {import('eslint').Linter.Config[]}
  */
 export function noTossSdkImportRules({ files }) {
-  return [
-    {
-      files,
-      rules: {
-        'no-restricted-imports': [
-          'error',
-          {
-            patterns: [
-              {
-                group: ['@apps-in-toss/*'],
-                message: 'platform/toss에서만 허용',
-              },
-            ],
-          },
-        ],
-      },
-    },
-  ];
+  return restrictImportRules(files, [
+    { group: ['@apps-in-toss/*'], message: 'platform/toss에서만 허용' },
+  ]);
 }
 
 /**
@@ -123,26 +129,14 @@ export function noTossSdkImportRules({ files }) {
  * @returns {import('eslint').Linter.Config[]}
  */
 export function uiNoRuleEngineImportRules({ files }) {
-  return [
+  return restrictImportRules(files, [
     {
-      files,
-      rules: {
-        'no-restricted-imports': [
-          'error',
-          {
-            patterns: [
-              {
-                group: ['@offside/domain', '@offside/domain/*'],
-                message: 'packages/ui는 게임 규칙을 계산하지 않는다. @offside/domain을 import할 수 없다.',
-              },
-              {
-                group: ['@offside/engine-client', '@offside/engine-client/*'],
-                message: 'packages/ui는 게임 규칙을 계산하지 않는다. @offside/engine-client를 import할 수 없다.',
-              },
-            ],
-          },
-        ],
-      },
+      group: ['@offside/domain', '@offside/domain/*'],
+      message: 'packages/ui는 게임 규칙을 계산하지 않는다. @offside/domain을 import할 수 없다.',
     },
-  ];
+    {
+      group: ['@offside/engine-client', '@offside/engine-client/*'],
+      message: 'packages/ui는 게임 규칙을 계산하지 않는다. @offside/engine-client를 import할 수 없다.',
+    },
+  ]);
 }
