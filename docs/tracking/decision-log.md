@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #14 머지 — Phase 0 코드 작업 종료)
+
+**결과**: 워커가 리뷰 3건을 모두 반영했다(`dirty` 플래그, `classifyNonConflictError` 공유, `LocalStoreConstraintError`만 기록 제거). 회귀 테스트 3개 추가, engine-client 55 tests. 임시 워크트리에서 lint·lint:deps·typecheck·build 통과. PR #14를 squash 머지(`620a3fb`), 워크트리·터미널 정리, main 체크아웃 ff-pull. 비용 약 $10.7, 43분.
+
+**검증 중 발견**: 전체 워크스페이스 테스트를 캐시 없이 병렬 실행하자 domain `fixture-determinism.test.ts`의 "1,000회 5초 이내"가 5.5초로 실패했다. 단독 실행은 0.7초. PR과 무관한 부하 문제라 머지를 막지 않았다. 후속: T-1-001 브리프에 "예산 검사를 별도 테스트로 분리, 예산 10초, 단독 측정값 기록"을 추가했다. CI(T-0-010)에서는 도메인 테스트를 별도 job으로 돌리는 것도 고려한다.
+
+**Phase 게이트**: Phase 0에서 남은 것은 T-0-010(U-002 대기)뿐이다. 사용자 결정(Phase 순서)에 따라 Phase 1 Wave 1(T-1-001 domain, T-1-002 content, T-1-003 ui, T-1-004 api)을 투입한다. T-0-010은 U-002가 오면 바로 착수한다.
+
 ## 2026-09-02 (저녁, PR #14 동기화 클라이언트 리뷰)
 
 **상황**: T-0-015 PR #14(`createSyncClient`, 12 + golden 1 테스트, 전체 52 tests). 임시 워크트리에서 전체 체인 통과. 코드 리뷰에서 3건을 수정 요청했다.

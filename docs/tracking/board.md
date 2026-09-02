@@ -4,7 +4,7 @@
 
 ## 현재 게이트
 
-**Phase 0 진행 중.** ADR-001~009 승인(2026-09-02). Phase 순서를 지킨다(2026-09-02 사용자 결정): Phase 0 항목이 모두 done이거나 사용자 액션 대기일 때만 Phase 1 워커를 투입한다. Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
+**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)을 투입했다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
 
 ## 사용자 액션
 
@@ -40,7 +40,7 @@
 | T-0-012 | `packages/platform` 골격: `LocalStore` 포트와 `Platform` 인터페이스, web 구현(Dexie), toss 스텁(SDK 의존성 없음), 화면·엔진의 SDK import·채널 분기 lint | ADR-009, ADR-005 | done | [브리프](briefs/T-0-012.md). PR #12 `675ac12`. 리뷰 1회 통과. 후속: KV 스토어 prefix 전체 백업 비용(결정 로그) |
 | T-0-013 | Pretendard self-host 폰트를 dynamic subset(unicode-range 분할)으로 바꿔 초기 폰트 전송량 축소, 허브 LCP 2.5초 예산 측정 | 13 구현 체크리스트, 01 성능 예산 | done | [브리프](briefs/T-0-013.md). PR #11 `acbfd1d`. 전송 2109KB→269KB. 허브 LCP 재측정은 Phase 1 화면 후 |
 | T-0-014 | domain 명령 이름 `ADVANCE_STEP` → `ADVANCE` 정렬(07·contracts와 동일), contracts 주석 정리 | 07 로컬 명령 계약 | completed | PR #5, `6b8e1a3`. golden 불변, 64 tests |
-| T-0-015 | `packages/engine-client` 동기화 클라이언트: checkpoint마다 `PUT /careers/{id}`(fetch 주입), 재시도 큐, 409 시 서버 Snapshot 비교·"이 기기/다른 기기" 결정 신호, 오프라인 무시 | ADR-002 동기화 규칙, 01 명령 처리 6단계 | in-progress | `T-0-015-client-sync-queue`, [브리프](briefs/T-0-015.md). '이 기기 우선' 해소는 Phase 1(결정 로그) |
+| T-0-015 | `packages/engine-client` 동기화 클라이언트: checkpoint마다 `PUT /careers/{id}`(fetch 주입), 재시도 큐, 409 시 서버 Snapshot 비교·"이 기기/다른 기기" 결정 신호, 오프라인 무시 | ADR-002 동기화 규칙, 01 명령 처리 6단계 | done | [브리프](briefs/T-0-015.md). PR #14 `620a3fb`. 리뷰 1회(수정 3건). engine-client 55 tests. '이 기기 우선' 해소는 T-1-011 |
 
 Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundation.md)를 따른다. T-0-006 세션 미들웨어는 쿠키와 Bearer를 모두 받도록 만든다.
 
@@ -83,7 +83,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-0-015 | Sonnet 5, Orca 워크트리 `T-0-015-client-sync-queue` | 2026-09-02 | PR #14 리뷰 1회: 수정 3건 요청(전송 중 확정 유실 창 dirty 플래그, 409 GET 응답 분류, 저장소 예외 분류). 임시 워크트리 전체 체인 통과(52 tests) |
+| (없음) | | | Phase 0 코드 작업 종료. Wave 1 투입 예정 |
 
 ## 완료
 
@@ -106,3 +106,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-0-013 | PR #11 `acbfd1d` | 2026-09-02 | 약 $5. 리뷰 1회 통과(질문 2회 답변) |
 | T-0-012 | PR #12 `675ac12` | 2026-09-02 | 약 $5. 리뷰 1회 통과 |
 | T-0-008 | PR #13 `5969ec6` | 2026-09-02 | 약 $9. 리뷰 1회 통과 |
+| T-0-015 | PR #14 `620a3fb` | 2026-09-02 | Sonnet 5 약 $10.7, 43분, 리뷰 1회(수정 3건) |
