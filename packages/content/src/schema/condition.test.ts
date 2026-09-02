@@ -27,6 +27,11 @@ describe('ConditionSchema', () => {
     expect(() => ConditionSchema.parse({ eq: ['career.notAField', 1] })).toThrow();
   });
 
+  it('rejects career.pathDecision (D-11: 태그로 대체, 화이트리스트에서 제거)', () => {
+    expect(resolveConditionField('career.pathDecision')).toBeUndefined();
+    expect(() => ConditionSchema.parse({ eq: ['career.pathDecision', 'TRYOUT'] })).toThrow();
+  });
+
   it('rejects hasTag on a non-tags field', () => {
     expect(() => ConditionSchema.parse({ hasTag: ['career.age', 'x'] })).toThrow();
   });

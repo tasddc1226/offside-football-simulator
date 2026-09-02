@@ -1,5 +1,5 @@
 import { ErrorEnvelopeSchema, IDEMPOTENCY_KEY_HEADER, IF_MATCH_HEADER, type ErrorCode } from '@offside/contracts';
-import { ATTRIBUTE_KEYS, type AttributeKey } from '@offside/domain';
+import { rulesetProto } from '@offside/fixtures';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createEngineClient, type EngineClient } from '../engine.js';
 import { LocalStoreConstraintError } from '../ports/local-store.js';
@@ -9,12 +9,6 @@ import type { EngineCommand } from '../types.js';
 import { createSyncClient } from './client.js';
 import type { CareerSyncState, SyncClient, SyncDeps, SyncTransportResponse } from './types.js';
 
-function buildAttributes(value: number): Record<AttributeKey, number> {
-  const attributes = {} as Record<AttributeKey, number>;
-  for (const key of ATTRIBUTE_KEYS) attributes[key] = value;
-  return attributes;
-}
-
 function createCareerCommand(careerId: string, commandId: string): EngineCommand {
   return {
     type: 'CREATE_CAREER',
@@ -23,12 +17,6 @@ function createCareerCommand(careerId: string, commandId: string): EngineCommand
     payload: {
       careerId,
       seed: `seed-${careerId}`,
-      stage: 'YOUTH',
-      age: 17,
-      attributes: buildAttributes(50),
-      state: { form: 50, fitness: 80, morale: 60 },
-      context: { tacticalFit: 50, squadStatus: 50, positionProficiency: 100 },
-      relationships: { managerTrust: 50, captain: 50, rival: 50, fans: 50, agent: 50 },
       simulationMode: 'CHAPTER',
       rulesetVersion: '1.0.0',
       contentPackVersion: '0.1.0',
@@ -36,16 +24,18 @@ function createCareerCommand(careerId: string, commandId: string): EngineCommand
   };
 }
 
+/**
+ * DRAFT 상태에서도 성공하는 범용 "다음 명령". sync 테스트는 이 명령이 무엇인지보다 revision을
+ * 올리는 성공한 명령이라는 점만 쓰므로 UPDATE_PLAYER_DRAFT로 충분하다(commandId별로 draft.name이
+ * 달라 서로 다른 stateHash를 만든다).
+ */
 function advanceCommand(expectedRevision: number, commandId: string): EngineCommand {
-  return { type: 'ADVANCE', payload: {}, commandId, expectedRevision };
-}
-
-function resolveEventCommand(expectedRevision: number, commandId: string, eventId: string): EngineCommand {
+  // draftRules.nameMax(12) 안에 들어가야 하므로 commandId를 그대로 잘라 쓴다.
   return {
-    type: 'RESOLVE_EVENT',
+    type: 'UPDATE_PLAYER_DRAFT',
+    payload: { draft: { name: commandId.slice(0, 12) } },
     commandId,
     expectedRevision,
-    payload: { eventId, definitionVersion: 1, choiceId: 'c1', outcomes: [{ id: 'o1', weight: 1, effects: [] }] },
   };
 }
 
@@ -111,7 +101,7 @@ type Harness = {
 
 function setup(policyOverride?: Partial<import('./types.js').SyncPolicy>): Harness {
   const store = new MemoryLocalStore();
-  const engine = createEngineClient({ store, simulator: inlineSimulator });
+  const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
   const careerId = 'car_sync_test';
   const { fetchFn, calls, queue } = createFakeFetch();
   const online = { value: true };
@@ -274,7 +264,7 @@ describe('createSyncClient', () => {
 
   it('loadCareer가 저장소 I/O 오류로 throw해도 unhandled rejection 없이 RETRYING으로 처리된다', async () => {
     const store = new MemoryLocalStore();
-    const realEngine = createEngineClient({ store, simulator: inlineSimulator });
+    const realEngine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
     const careerId = 'car_io_fail';
     let failNext = true;
     const flakyEngine = {
@@ -350,10 +340,9 @@ describe('createSyncClient', () => {
     expect(headerOf(secondCall, IF_MATCH_HEADER)).toBe('1');
     expect(parsedBody(secondCall).baseRevision).toBe(1);
 
-    // advanceCommand의 notifyCommitted가 inFlight 중에 도착했으므로 dirty로 기록되어
-    // 사이클 종료 후 한 번 더 스케줄된다(보낼 것이 없으므로 그대로 IDLE로 귀결한다).
-    await vi.waitFor(() => expect(h.sync.getState(h.careerId).kind).toBe('SCHEDULED'));
-    await vi.advanceTimersByTimeAsync(1500);
+    // advanceCommand의 checkpoint(CAREER_CREATED)는 immediateCheckpoints에 속하므로 dirtyImmediate로
+    // 기록되어, 첫 사이클이 끝나자마자 지연 없이(0ms) 두 번째 PUT까지 곧바로 끝난다.
+    await vi.waitFor(() => expect(h.sync.getState(h.careerId).kind).toBe('IDLE'));
 
     expect(h.calls).toHaveLength(2);
     expect(h.sync.getState(h.careerId)).toEqual({
@@ -408,13 +397,13 @@ describe('createSyncClient', () => {
     await commit(h, advanceCommand(4, ids()));
 
     const serverStore = new MemoryLocalStore();
-    const serverEngine = createEngineClient({ store: serverStore, simulator: inlineSimulator });
+    const serverEngine = createEngineClient({ store: serverStore, simulator: inlineSimulator, ruleset: rulesetProto });
     await serverEngine.execute({
       careerId: h.careerId,
       command: createCareerCommand(h.careerId, 'server-cmd-0'),
       createdServiceSeasonId: 'season-1',
     });
-    await serverEngine.execute({ careerId: h.careerId, command: resolveEventCommand(1, 'server-cmd-1', 'ev-diverge') });
+    await serverEngine.execute({ careerId: h.careerId, command: advanceCommand(1, 'server-cmd-1') });
     const serverSnapshotAt2 = await serverStore.transaction('readonly', (tx) => tx.snapshots.get(h.careerId, 2));
     if (serverSnapshotAt2 === undefined) throw new Error('server snapshot 없음');
     const localSnapshotAt2 = await h.store.transaction('readonly', (tx) => tx.snapshots.get(h.careerId, 2));
@@ -522,7 +511,7 @@ describe('createSyncClient', () => {
 
   it('사이클이 inFlight인 동안 notifyCommitted가 오면 dirty로 기록되어, 그 사이클이 보낼 것 없이 끝나도 완료 직후 다시 전송된다', async () => {
     const store = new MemoryLocalStore();
-    const realEngine = createEngineClient({ store, simulator: inlineSimulator });
+    const realEngine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
     const careerId = 'car_dirty_race';
 
     let resolveBody!: (v: Awaited<ReturnType<EngineClient['buildSyncBody']>>) => void;
@@ -617,7 +606,7 @@ describe('createSyncClient', () => {
 
   it('LocalStoreConstraintError만 큐에서 제거하고, 그 외 저장소 I/O 예외는 재시도로 흡수한다', async () => {
     const storeA = new MemoryLocalStore();
-    const realEngineA = createEngineClient({ store: storeA, simulator: inlineSimulator });
+    const realEngineA = createEngineClient({ store: storeA, simulator: inlineSimulator, ruleset: rulesetProto });
     const careerIdA = 'car_marksync_ioerr';
     let failMarkSynced = true;
     const flakyEngineA = {
@@ -667,7 +656,7 @@ describe('createSyncClient', () => {
     });
 
     const storeB = new MemoryLocalStore();
-    const realEngineB = createEngineClient({ store: storeB, simulator: inlineSimulator });
+    const realEngineB = createEngineClient({ store: storeB, simulator: inlineSimulator, ruleset: rulesetProto });
     const careerIdB = 'car_buildbody_constraint';
     const flakyEngineB = {
       ...realEngineB,

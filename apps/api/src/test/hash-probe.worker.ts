@@ -8,10 +8,10 @@ import {
   type JsonValue,
   type SimulationResult,
 } from '@offside/domain';
-import { career01 } from '@offside/fixtures';
+import { career01, rulesetProto } from '@offside/fixtures';
 
 /**
- * career01 fixture(CREATE_CAREER + 12개 명령)을 순서대로 재생해 최종 DomainSnapshot을 돌려준다.
+ * career01 fixture(CREATE_CAREER + 나머지 명령)을 순서대로 재생해 최종 DomainSnapshot을 돌려준다.
  * `packages/domain/src/__fixtures__/career-01.ts`의 재생 로직과 같은 순서다.
  */
 function runCareer01(): DomainSnapshot {
@@ -22,12 +22,6 @@ function runCareer01(): DomainSnapshot {
     payload: {
       careerId: career01.createCareer.careerId,
       seed: career01.createCareer.seed,
-      stage: career01.createCareer.stage,
-      age: career01.createCareer.age,
-      attributes: career01.createCareer.attributes,
-      state: career01.createCareer.state,
-      context: career01.createCareer.context,
-      relationships: career01.createCareer.relationships,
       simulationMode: career01.createCareer.simulationMode,
       rulesetVersion: career01.rulesetVersion,
       contentPackVersion: career01.contentPackVersion,
@@ -37,6 +31,7 @@ function runCareer01(): DomainSnapshot {
   let result: SimulationResult = simulate({
     snapshot: null,
     command: createCommand,
+    ruleset: rulesetProto,
     rulesetVersion: career01.rulesetVersion,
     contentPackVersion: career01.contentPackVersion,
   });
@@ -55,6 +50,7 @@ function runCareer01(): DomainSnapshot {
     result = simulate({
       snapshot,
       command,
+      ruleset: rulesetProto,
       rulesetVersion: career01.rulesetVersion,
       contentPackVersion: career01.contentPackVersion,
     });

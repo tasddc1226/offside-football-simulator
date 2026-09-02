@@ -2,6 +2,42 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #18 E2E 도입 머지)
+
+**결과**: T-1-010 PR #18 squash 머지(`01d64e8`). `@playwright/test` 1.62.1·`@axe-core/playwright` 4.13.0(둘 다 7~8월 배포, 정책 안), Chromium 1개 프로젝트, `vite dev --port 5174` 자동 기동. 허브·법적 문서 스모크, axe serious·critical 0건(전체 위반도 0건), dev 전용 `/__dev/hash-probe`가 브라우저 Web Worker에서 career-01을 재생해 golden(revision 8, `15eea997…`)과 일치. 프로덕션 `dist/`에 probe·fixture 흔적 없음(직접 확인), 초기 청크 91.82KB. 임시 워크트리에서 전체 체인 + E2E 7 passed(6.3초). 비용 약 $5.9, 23분.
+
+**받아들인 것**: (1) `apps/web`이 `@offside/fixtures`를 devDependency로 가진다(ADR-005 테스트 전용 예외). (2) `e2e/hash-probe.spec.ts`는 golden을 `@offside/fixtures` import 대신 JSON 파일을 직접 읽는다. Node 22 ESM이 import attribute 없는 JSON import를 거부하기 때문이다. (3) `typecheck`가 `e2e/tsconfig.json`도 검사한다.
+
+**후속**: fixtures 패키지의 JSON import에 `with { type: 'json' }`을 붙이거나 TS 모듈로 감싸 Node ESM에서도 import되게 한다(T-1-014 전에). `playwright.config.ts`의 `reuseExistingServer`는 CI 연결(T-0-010) 때 `!process.env.CI`로 바꾼다. 브리프의 "라우트 등록" 표현과 달리 구현은 `main.tsx`의 부트스트랩 분기(경로 문자열 비교)인데, 라우터 밖이라 프로덕션 번들 분리가 더 확실해 그대로 둔다.
+
+**슬롯**: 활성 워커 3개(T-1-004·T-1-005·T-1-015). 남은 후보(T-1-006 contracts, T-1-007 web 배선)는 선행 머지 대기라 브리프를 먼저 쓴다.
+
+## 2026-09-02 (저녁, PR #17 domain 선수 모델 머지 — Wave 2 투입)
+
+**결과**: T-1-001 PR #17 squash 머지(`3a8f7c8`). Position 8종·PlayerDraft·PlayerProfile·Pending·Timeline·Ruleset 타입, `UPDATE_PLAYER_DRAFT`·`CONFIRM_PLAYER`(rng 23회, D-7 순서)·`ADVANCE {eligibleEvents}` 가중 선택(정렬 검증, 1-based 누적)·`RESOLVE_EVENT` pending 검증, SETTLEMENT에서 제시할 것이 없으면 `NOTHING_TO_ADVANCE`. 룰셋은 `SimulationInput.ruleset`으로 받는다(해시 제외). golden revision 8(`15eea997…`, rng draws 25), 인사이드 포워드 Base OVR 59 확인. domain 90 tests, 전체 체인 통과. 결정론 예산 검사는 별도 테스트(10초)로 분리. 비용 약 $13.1, 43분.
+
+**받아들인 예외**: `SimulationInput.ruleset` 추가로 engine-client 소스가 깨져 워커가 `EngineClientDeps.ruleset` 배선과 `replayCommandLog` 룰셋 인자를 넣었다(브리프에 허용 범위로 기록). fixtures가 `rulesetProto`를 export한다. 기존 테스트 2건은 pending 모델에 맞춰 조정(`COMMAND_ALREADY_RESOLVED` → `VALIDATION_FAILED/NO_PENDING_EVENT`, 동기화 테스트는 `UPDATE_PLAYER_DRAFT` 사용). fixture-determinism 테스트 timeout 15초.
+
+**슬롯**: 선행(T-1-001·T-1-002)이 끝나 Wave 2의 T-1-005(domain 제안·계약)와 T-1-015(content 이벤트 선택기)를 투입했다. 활성 워커 4개(T-1-004·T-1-010·T-1-005·T-1-015). T-1-006(contracts)은 T-1-005 머지 뒤, T-1-007(web 배선)은 T-1-015 머지 뒤 투입한다.
+
+## 2026-09-02 (저녁, PR #16 UI 부품 키트 머지)
+
+**결과**: T-1-003 PR #16 squash 머지(`cb7d932`). Radix RadioGroup·Dialog·Tabs 래핑과 부품 10종(Stepper·ChoiceCard·CompareCards·StatusStrip·PlayerHeader·ResultCard·DashboardSection·CareerTimeline·Toast). 키보드·포커스 테스트는 `@testing-library/user-event`로. ui 45 tests, web 번들 91.81KB 불변(새 export는 아직 web이 import하지 않아 트리셰이킹). 비용 약 $11.4, 39분.
+
+**리뷰에서 고친 것**: (1) 워커가 오늘 배포된 `user-event 14.6.7`을 쓰려고 `pnpm-workspace.yaml`에 `minimumReleaseAgeExclude`를 추가했다. 공급망 보호 정책 우회라 되돌리고 14.6.6으로 고정했다. 워커 규칙 문서에 "정책이 막는 버전은 예외 등록 대신 더 오래된 버전"을 추가했다. (2) PlayerHeader 이름은 브리프가 `DisplayWord`라고 잘못 적었고(브랜드 어휘 전용) 워커가 지적했다. 13 DSN-CMP-001대로 `<h2>`로 고쳤다. (3) CompareCards는 모바일·데스크톱 레이아웃을 DOM에 둘 다 그리므로 액션 슬롯을 `renderAction(layout)`으로 바꿔 중복 id를 호출자가 피할 수 있게 했다.
+
+**받아들인 것**: 위험·결과 아이콘은 13이 요구하는 SVG 자산이 없어 유니코드 문자로 대체(아이콘 자산 생기면 교체, 후속). `ResultCard`의 `FIXED` 종류 시각은 워커 임의(■, `--os-text-2`). 포커스 링은 기존 `--os-focus` 재사용.
+
+## 2026-09-02 (저녁, PR #15 룰셋 1.0.0 머지)
+
+**결과**: T-1-002 PR #15 squash 머지(`dff279f`). 룰셋 1.0.0(아키타입 24·배경 3·국적 10·팀 8·제안·계약 규칙), `RulesetSchema`·`loadRuleset`, CLI가 룰셋 checksum(`852ab110…`)도 검증. 팩 0.1.0의 EVT-CON-002/003이 태그로 이어지고 조건 DSL에서 `career.pathDecision`을 뺐다. content 80 tests, 전체 체인 통과. 비용 약 $9.4, 26분.
+
+**스펙 수정(워커 발견)**: `진로_하부리그` 경로에서 baseOvr < 55이면 EVT-CON-003이 뜨지 않아 `입단테스트_완료`가 없고, 제안 분기가 하나도 맞지 않아 제안 0개가 될 수 있었다. D-9 표와 T-1-002·T-1-005 브리프에 `lower-league-skipped`(1건, tier 3) 분기를 추가했다. 제안은 어떤 경로에서도 최소 1건이라는 원칙을 지킨다.
+
+**저작 데이터 리뷰**: 인사이드 포워드·배경 3종·팀 8개(가상 이름)·wage band가 계획 표와 일치. 아키타입 23개는 가중치 합 1, 포지션당 3개, GK만 `goalkeeping` 가중치. 수치 밸런스는 종이 프로토타입(U-005)과 Phase 2 시즌 시뮬레이션 뒤 재조정한다.
+
+**슬롯**: T-1-002가 끝나 빈 슬롯에 T-1-010(E2E 도입)을 투입했다.
+
 ## 2026-09-02 (저녁, PR #14 머지 — Phase 0 코드 작업 종료)
 
 **결과**: 워커가 리뷰 3건을 모두 반영했다(`dirty` 플래그, `classifyNonConflictError` 공유, `LocalStoreConstraintError`만 기록 제거). 회귀 테스트 3개 추가, engine-client 55 tests. 임시 워크트리에서 lint·lint:deps·typecheck·build 통과. PR #14를 squash 머지(`620a3fb`), 워크트리·터미널 정리, main 체크아웃 ff-pull. 비용 약 $10.7, 43분.

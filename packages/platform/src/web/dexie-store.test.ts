@@ -1,6 +1,6 @@
 import { createEngineClient, inlineSimulator } from '@offside/engine-client';
 import { runLocalStoreContractTests } from '@offside/engine-client/testing';
-import { career01, career01EngineCommands } from '@offside/fixtures';
+import { career01, career01EngineCommands, rulesetProto } from '@offside/fixtures';
 import { describe, expect, it } from 'vitest';
 import { createDexieLocalStore } from './dexie-store.js';
 
@@ -28,7 +28,7 @@ describe('createDexieLocalStore', () => {
 
   it('golden fixture를 실행하면 stateHash가 golden과 같다', async () => {
     const store = await createDexieLocalStore(freshDbName());
-    const engine = createEngineClient({ store, simulator: inlineSimulator });
+    const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
     const careerId = career01.createCareer.careerId;
 
     let idCounter = 0;

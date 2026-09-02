@@ -10,8 +10,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "check:bundle": "node scripts/check-bundle.mjs"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e/tsconfig.json",
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install chromium"
   },
   "dependencies": {
     "@offside/contracts": "workspace:*",
@@ -27,7 +29,10 @@
     "zustand": "5.0.15"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@offside/fixtures": "workspace:*",
     "@offside/tsconfig": "workspace:*",
+    "@playwright/test": "1.62.1",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/router-plugin": "1.168.35",
     "@testing-library/jest-dom": "7.0.1",

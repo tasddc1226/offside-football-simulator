@@ -30,6 +30,7 @@
           "weight": 100,
           "title": "EVT-P10 즉시 진행",
           "effects": [],
+          "addTags": ["진로_입단테스트"],
           "followUps": [{ "eventId": "EVT-CON-003" }]
         }
       ]
@@ -70,7 +71,7 @@
               "stackingRule": "ONCE_PER_SOURCE"
             }
           ],
-          "addTags": ["늦은_출발"]
+          "addTags": ["늦은_출발", "진로_아카데미"]
         }
       ]
     },
@@ -100,7 +101,7 @@
               "stackingRule": "REPLACE"
             }
           ],
-          "addTags": ["밑바닥부터"],
+          "addTags": ["밑바닥부터", "진로_하부리그"],
           "followUps": [{ "eventId": "EVT-CON-003" }]
         }
       ]
