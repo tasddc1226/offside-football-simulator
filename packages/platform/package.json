@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./web": "./src/web/index.ts",
-    "./toss": "./src/toss/index.ts"
+    "./toss": "./src/toss/index.ts",
+    "./types": "./src/types.ts"
   },
   "scripts": {
     "test": "vitest run",
@@ -14,10 +15,13 @@
   },
   "dependencies": {
     "@offside/contracts": "workspace:*",
-    "@offside/engine-client": "workspace:*"
+    "@offside/engine-client": "workspace:*",
+    "dexie": "4.4.5"
   },
   "devDependencies": {
+    "@offside/fixtures": "workspace:*",
     "@offside/tsconfig": "workspace:*",
+    "fake-indexeddb": "6.2.5",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
   }
