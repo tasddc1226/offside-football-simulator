@@ -2,7 +2,7 @@ import { SNAPSHOT_STATE_RECOMMENDED_BYTES, type PutCareerBody } from '@offside/c
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { runBatch } from '../db/repos/batch.js';
-import { getCareer, type CareerRecord } from '../db/repos/careers.js';
+import { getCareer } from '../db/repos/careers.js';
 import { getSnapshotByRevision, pruneSnapshots } from '../db/repos/snapshots.js';
 import { careers, commandLog, serviceSeasons, snapshots } from '../db/schema.js';
 import { AppError } from '../errors.js';
@@ -204,10 +204,11 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
     );
   }
 
-  const record: CareerRecord | undefined = existing ?? (await getCareer(db, careerId));
+  // 첫 동기화는 verification_status 컬럼의 DB 기본값(PENDING)을 그대로 쓴다. 이후 동기화는 UPDATE가
+  // 그 컬럼을 건드리지 않으므로 batch 이전에 읽어둔 `existing` 값이 여전히 정확하다.
   return {
     revision: body.snapshot.revision,
     syncedAt: now,
-    verificationStatus: record?.verificationStatus ?? 'PENDING',
+    verificationStatus: existing?.verificationStatus ?? 'PENDING',
   };
 }
