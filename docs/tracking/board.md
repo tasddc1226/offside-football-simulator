@@ -26,15 +26,15 @@
 
 | ID | 작업 | 참조 | 상태 | 워크트리 |
 |---|---|---|---|---|
-| T-0-001 | 모노레포 골격: pnpm·Turborepo·tsconfig·ESLint·의존 방향 lint | ADR-005 | in-progress | `T-0-001-monorepo-skeleton`, 브리프 [briefs/T-0-001.md](briefs/T-0-001.md) |
-| T-0-002 | `packages/domain` 순수 `simulate` fixture와 state hash, 결정론 1,000회 테스트 | RULE-RNG-001, TEST | todo | 브리프 [briefs/T-0-002.md](briefs/T-0-002.md). T-0-001 머지 후 착수 |
+| T-0-001 | 모노레포 골격: pnpm·Turborepo·tsconfig·ESLint·의존 방향 lint | ADR-005 | completed | PR [#1](https://github.com/tasddc1226/offside-football-simulator/pull/1) squash 머지 `e9d7d30`(2026-09-02). 브리프 [briefs/T-0-001.md](briefs/T-0-001.md) |
+| T-0-002 | `packages/domain` 순수 `simulate` fixture와 state hash, 결정론 1,000회 테스트 | RULE-RNG-001, TEST | in-progress | `T-0-002-domain-determinism`, 브리프 [briefs/T-0-002.md](briefs/T-0-002.md) |
 | T-0-003 | `packages/contracts` 응답 봉투·오류 코드·Snapshot 직렬화 Zod | 07 | todo | 브리프 [briefs/T-0-003.md](briefs/T-0-003.md). T-0-002 머지 후, T-0-004와 병렬 |
 | T-0-004 | `packages/content` Zod 스키마와 `content:validate` CLI, 프로토타입 이벤트 10개를 팩 0.1.0으로 | ADR-004, 04 | todo | 브리프 [briefs/T-0-004.md](briefs/T-0-004.md). T-0-002 머지 후, T-0-003과 병렬. 팩은 `playtested: false`로 두고 U-005 뒤 밸런스 조정 |
 | T-0-005 | `apps/api` Hono 골격, D1 스키마(LocalProfile·Career·Snapshot·CommandLog·Idempotency·ServiceSeason), Drizzle migration | 02, ADR-007 | todo | |
 | T-0-006 | 익명 프로필 쿠키, `GET /profile`, requestId·구조화 로그·오류 봉투 | API-PRO-001, 01 | todo | |
 | T-0-007 | `packages/engine-client` Dexie 저장소, Web Worker 엔진 래퍼, revision·commandId 멱등성 | 05, ADR-003 | todo | |
 | T-0-008 | Career 동기화 `PUT /careers/{id}` If-Match 409, 100회 병렬 멱등 테스트 | API-CAR-003, 05 | todo | |
-| T-0-009 | `apps/web` Vite·Router·Tailwind 토큰·상태 훅 골격, 허브 빈 상태 화면 | ADR-001, 13 | todo | 브리프 [briefs/T-0-009.md](briefs/T-0-009.md). T-0-001 머지 후, T-0-002와 병렬. `packages/ui` 토큰·프리미티브 포함 |
+| T-0-009 | `apps/web` Vite·Router·Tailwind 토큰·상태 훅 골격, 허브 빈 상태 화면 | ADR-001, 13 | in-progress | `T-0-009-web-skeleton`, 브리프 [briefs/T-0-009.md](briefs/T-0-009.md). `packages/ui` 토큰·프리미티브 포함 |
 | T-0-010 | GitHub Actions CI, Pages·Workers preview 배포, staging migration | ADR-007 | blocked | U-002 필요 |
 | T-0-011 | 브라우저·Workers 동일 fixture state hash 일치 테스트 | ADR-003 | todo | T-0-002, 007 이후 |
 | T-0-012 | `packages/platform` 골격: `LocalStore` 포트와 `Platform` 인터페이스, web 구현(Dexie), toss 스텁(SDK 의존성 없음), 화면·엔진의 SDK import·채널 분기 lint | ADR-009, ADR-005 | todo | T-0-007 이후 |
@@ -58,7 +58,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-0-001 | Sonnet 5, Orca 워크트리 `T-0-001-monorepo-skeleton` | 2026-09-02 | PR [#1](https://github.com/tasddc1226/offside-football-simulator/pull/1) 열림. 1차 리뷰 수정 3건 반영(`30c232e`). 2차 검증 통과(Node 22.23.1 체인 전부 성공, FULL TURBO). 머지 승인 대기 |
+| T-0-002 | Sonnet 5, Orca 워크트리 `T-0-002-domain-determinism` | 2026-09-02 | 브리프 전달 |
+| T-0-009 | Sonnet 5, Orca 워크트리 `T-0-009-web-skeleton` | 2026-09-02 | 브리프 전달 |
 
 ## 완료
 
@@ -68,3 +69,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | D-002 | 기술 스택·인프라 ADR-001~009, 진행 관리 체계 | 805f346 |
 | D-003 | 앱인토스 미니앱 ADR-009와 채널 반영, 콘솔 MCP 등록 | ce67e1f |
 | D-004 | 미니앱은 "언제든 출시 가능한 구조"로 범위 조정, 출시 준비를 보류 백로그로 분리 | 이 커밋 |
+| T-0-001 | 모노레포 골격과 패키지 의존 방향 lint (PR #1, 리뷰 2회, 워커 비용 약 $15) | e9d7d30 |
