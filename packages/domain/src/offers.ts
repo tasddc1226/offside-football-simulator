@@ -35,7 +35,7 @@ function buildTeamPool(ruleset: Ruleset, branch: OfferBranch): { pool: Team[]; f
     return { pool: [team], fixed: true };
   }
   const pool = ruleset.teams
-    .filter((team) => (branch.tiers as ReadonlyArray<Team['leagueTier']>).includes(team.leagueTier))
+    .filter((team) => branch.tiers.includes(team.leagueTier))
     .slice()
     .sort((a, b) => compareCodePoints(a.id, b.id));
   return { pool, fixed: false };
@@ -47,6 +47,14 @@ function findOvrBand(rules: ContractRules, baseOvr: number): { id: string; maxOv
     throw new RangeError(`findOvrBand: baseOvr ${baseOvr}에 맞는 ovrBand가 없다.`);
   }
   return band;
+}
+
+function lookupBandAmount(table: Record<string, Record<string, number>>, wageBandId: string, bandId: string, label: string): number {
+  const amount = table[wageBandId]?.[bandId];
+  if (amount === undefined) {
+    throw new RangeError(`lookupBandAmount: ${label}에 wageBandId '${wageBandId}'·band '${bandId}' 조합이 없다.`);
+  }
+  return amount;
 }
 
 export type GeneratedOffers = { offers: Offer[]; rngState: RngState };
@@ -108,8 +116,8 @@ export function generateOffers(
     const fitRoll = rollRange(state, rules.tacticalFitEstimate.min, rules.tacticalFitEstimate.max);
     state = fitRoll.state;
 
-    const wage = ruleset.contractRules.wageBands[team.wageBandId]?.[band.id] ?? 0;
-    const signingBonus = ruleset.contractRules.signingBonus[team.wageBandId]?.[band.id] ?? 0;
+    const wage = lookupBandAmount(ruleset.contractRules.wageBands, team.wageBandId, band.id, 'wageBands');
+    const signingBonus = lookupBandAmount(ruleset.contractRules.signingBonus, team.wageBandId, band.id, 'signingBonus');
 
     offers.push({
       id: `OFR-${revision}-${index}`,
