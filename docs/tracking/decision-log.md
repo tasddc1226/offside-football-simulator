@@ -2,6 +2,16 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, T-1-015 블로커 결정 — 룰셋 일치 테스트 범위, 브라우저 팩 로더)
+
+**블로커**: fixtures `ruleset-consistency.test.ts`가 콘텐츠 룰셋 1.0.0과 domain 테스트 픽스처 `ruleset-proto.json`의 차이로 실패했다. (1) `lower-league-skipped` 분기 누락 → T-1-005가 픽스처에 추가해 머지됐으므로 main 재병합으로 해소. (2) 아키타입 `summary`·배경 `blurb` 같은 설명 문구 차이 → 테스트를 규칙 값 비교로 좁힌다. 테스트에 `PRESENTATION_KEYS`(실제로 다른 문구 키만 명시)를 두고 재귀 제거 후 deep-equal. `name`·id·가중치·수치·태그·`startTeamId`는 계속 비교한다. domain 파일은 건드리지 않는다.
+
+**범위 추가(T-1-015)**: content에 브라우저용 `loadContentPack(version): ContentPack`(정적 JSON import, 스키마 검증, `PACK_VERSIONS`)을 추가하고 `selectEligibleEvents(pack: ContentPack, state)`로 맞춘다. CLI `loadPack`은 Node 전용이라 web이 쓸 수 없었다. T-1-007 브리프는 이 이름을 전제로 쓴다. 처음 보낸 지시가 터미널에서 잘려 들어가 세 조각으로 다시 보냈다.
+
+**받아들인 것**: fixtures `tsconfig.json`에 `allowImportingTsExtensions: true`(content의 `.ts` 접미 상대 import를 fixtures가 처음 typecheck하게 됨). engine-client·web도 content를 import하는 순간 같은 설정이 필요할 수 있다(T-1-007 참고).
+
+**브리프**: T-1-008(선수 만들기 + 복구 코드 단계, 최소 API 클라이언트), T-1-009(진로·입단 테스트·범용 이벤트/결과·제안 비교·계약·대시보드)를 미리 썼다. SCR-002의 생년 입력은 Phase 1에서 제외(도메인 나이 17 고정)하고 화면 문서에 정정을 적었다.
+
 ## 2026-09-02 (저녁, PR #19·#20 머지 — 도메인 첫 계약, api 복구·삭제)
 
 **PR #19 (T-1-005, domain)**: squash 머지(`1a0ffed`). `offers.ts`가 D-9 분기 매칭·제안 생성(개수 수식, 팀 풀 id 순 비복원 추출, `topTierMinOvr`면 첫 제안만 tier 1, 제안당 rng 소비 팀→기간→역할→등번호→적합도)을 맡고, `advance` 3단계와 `ACCEPT_OFFER`가 계약을 확정한다. golden은 첫 계약까지 확장(revision 10, draws 30, `37cc92a1…`, 이 seed는 테스트 성공 → `seoul-tier1` BENCH 1건 → `CTR-10`). domain 129 tests, 전체 체인 통과. 비용 약 $9.9, 28분.

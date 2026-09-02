@@ -59,8 +59,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-006 | contracts | 명령 payload 유니온 6종, Player/Offer/Contract/Pending/Timeline 스키마, 복구·삭제·로그아웃·MergeChoice 스키마 | T-1-005(타입은 T-1-001에 이미 있어 병행 투입, 머지 전 main 재병합) | 2 | in-progress | `T-1-006-contracts-phase1-schemas`, [브리프](briefs/T-1-006.md) |
 | T-1-007 | web | 엔진 배선(engine-client·LocalStore·Worker), 룰셋·팩 로딩, 온보딩 SCR-034, 허브 SCR-001 카드·이어하기·삭제, 라우트 골격, ui-store 영속화 | T-1-001, T-1-003, T-1-015 | 2 | todo | [브리프](briefs/T-1-007.md) |
 | T-1-010 | web(e2e) | Playwright + axe 도입, 허브·법적 문서 스모크·접근성, 브라우저 Web Worker state hash 검증(dev probe) | Phase 0 종료 | 1(첫 머지 후) | done | PR #18 `01d64e8`. 리뷰 1회 통과. 7 specs, axe serious·critical 0건, 브라우저 Worker 해시 = golden revision 8. 실행 `pnpm --filter @offside/web e2e` |
-| T-1-008 | web | 선수 만들기 SCR-002·003·004 + 복구 코드 발급 단계 | T-1-002, T-1-004, T-1-006, T-1-007 | 3 | todo | |
-| T-1-009 | web | SCR-007 진로, SCR-013·014 입단 테스트, SCR-009 제안 비교, SCR-010 계약, SCR-029 대시보드 | T-1-005, T-1-006, T-1-007 | 3 | todo | |
+| T-1-008 | web | 선수 만들기 SCR-002·003·004 + 복구 코드 발급 단계 | T-1-002, T-1-004, T-1-006, T-1-007 | 3 | todo | [브리프](briefs/T-1-008.md) |
+| T-1-009 | web | SCR-007 진로, SCR-008 입단 테스트, SCR-013·014 이벤트·결과, SCR-009 제안 비교, SCR-010 계약, SCR-029 대시보드 | T-1-005, T-1-006, T-1-007 | 3 | todo | [브리프](briefs/T-1-009.md) |
 | T-1-011 | web + engine-client | 동기화 클라이언트 배선·상태 표시·충돌 화면, LOCAL 선택 fork-by-replay | T-0-015, T-1-007 | 3 | todo | |
 | T-1-012 | web | SCR-030 데이터 섹션(복구 코드·복구 입력·프로필 삭제·로그아웃·기기 데이터 삭제), 법적 문서 본문 | T-1-004, T-1-007, T-1-011 | 4 | todo | |
 | T-1-013 | api + web | Google OIDC start/callback/merge, SCR-030 Google 행, 병합 선택 화면 | T-1-004, T-1-012, U-003(실검증) | 4 | todo | |
