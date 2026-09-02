@@ -120,6 +120,11 @@ function StyleScreen() {
       <ErrorState
         message={screenState.message}
         {...(screenState.retryable ? { onRetry: () => void handleNext() } : {})}
+        recoveryAction={
+          <Button variant="secondary" onClick={() => toDraft({})}>
+            돌아가기
+          </Button>
+        }
       />
     );
   }

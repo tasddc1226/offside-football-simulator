@@ -181,7 +181,13 @@ function CreatePlayerScreen() {
         message={screenState.message}
         {...(screenState.retryable ? { onRetry: () => void handleNext() } : {})}
         recoveryAction={
-          <Button variant="secondary" onClick={() => setErrors({})}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setErrors({});
+              toDraft({});
+            }}
+          >
             입력으로 돌아가기
           </Button>
         }

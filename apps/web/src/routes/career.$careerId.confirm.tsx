@@ -220,6 +220,23 @@ function ConfirmScreen() {
       <ErrorState
         message={screenState.message}
         {...(screenState.retryable ? { onRetry: () => void handleKickoff() } : {})}
+        recoveryAction={
+          postConfirmInFlight ? (
+            <Button variant="secondary" onClick={() => void navigate({ to: '/' })}>
+              허브로 이동
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setPostConfirmInFlight(false);
+                toDraft({});
+              }}
+            >
+              돌아가기
+            </Button>
+          )
+        }
       />
     );
   }

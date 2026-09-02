@@ -109,4 +109,20 @@ describe('apiFetch', () => {
     const headers = new Headers(init.headers);
     expect(headers.has(IDEMPOTENCY_KEY_HEADER)).toBe(false);
   });
+
+  it('body 없는 POST도 Content-Type application/json과 {} 본문으로 나간다', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse(200, { data: { code: 'OFS-ABCD-2345-EFGH', issuedAt: '2026-09-02T00:00:00Z' }, meta: PROFILE_META }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await issueRecoveryCode();
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const headers = new Headers(init.headers);
+    expect(headers.get('Content-Type')).toBe('application/json');
+    expect(init.body).toBe('{}');
+  });
 });

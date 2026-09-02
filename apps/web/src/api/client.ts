@@ -36,9 +36,11 @@ function failure<T>(code: ApiErrorCode, message: string, retryable: boolean): Ap
  */
 export async function apiFetch<T>(path: string, init: RequestInit = {}, dataSchema?: DataSchema<T>): Promise<ApiResult<T>> {
   const method = (init.method ?? 'GET').toUpperCase();
+  const isMutation = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+  const body = isMutation && init.body === undefined ? '{}' : init.body;
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
-  if (init.body !== undefined && !headers.has('Content-Type')) {
+  if ((body !== undefined || isMutation) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
   if (method !== 'GET' && method !== 'HEAD' && !headers.has(IDEMPOTENCY_KEY_HEADER)) {
@@ -47,7 +49,13 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, dataSche
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, { ...init, method, headers, credentials: 'include' });
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      method,
+      headers,
+      ...(body !== undefined ? { body } : {}),
+      credentials: 'include',
+    });
   } catch {
     return failure('NETWORK_ERROR', '서버에 연결할 수 없습니다.', true);
   }

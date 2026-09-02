@@ -127,6 +127,31 @@ describe('SCR-002 선수 정보', () => {
     expect(await screen.findByText(/이름은 .+자여야 합니다\./)).toBeInTheDocument();
     expect(screen.getByLabelText('이름')).toHaveFocus();
   });
+
+  it('저장 실패 → 입력으로 돌아가기 → 폼(이름 입력)이 다시 보인다', async () => {
+    const engine = setTestEngine();
+    const careerId = await createDraftCareer(engine);
+    vi.spyOn(engine.client, 'execute').mockResolvedValueOnce({
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: '저장하지 못했습니다.' },
+    });
+    const user = userEvent.setup();
+    renderAt(`/career/${careerId}/create`);
+    await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
+
+    await user.type(screen.getByLabelText('이름'), '김서준');
+    await user.selectOptions(screen.getByLabelText('국적'), 'KR');
+    await user.click(screen.getByRole('radio', { name: '왼발' }));
+    await user.click(screen.getByRole('tab', { name: '공격수' }));
+    await user.click(screen.getByRole('radio', { name: /스트라이커/ }));
+    await user.click(screen.getByRole('radio', { name: /클럽 아카데미/ }));
+    await user.click(screen.getByRole('button', { name: '다음' }));
+
+    await screen.findByText('저장하지 못했습니다.');
+    await user.click(screen.getByRole('button', { name: '입력으로 돌아가기' }));
+
+    expect(await screen.findByLabelText('이름')).toBeInTheDocument();
+  });
 });
 
 describe('SCR-003 플레이 스타일', () => {
