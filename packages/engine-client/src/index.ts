@@ -35,3 +35,13 @@ export {
   type ExecuteRequest,
   type LoadResult,
 } from './engine.js';
+
+export {
+  createSyncClient,
+  DEFAULT_SYNC_POLICY,
+  type CareerSyncState,
+  type SyncClient,
+  type SyncDeps,
+  type SyncPolicy,
+  type SyncTransportResponse,
+} from './sync/index.js';
