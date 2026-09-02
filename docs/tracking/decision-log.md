@@ -2,6 +2,13 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, T-0-015 동기화 클라이언트 설계)
+
+- **큐 정책.** careerId당 대기 1개·진행 1개. web은 1.5초 debounce로 연속 명령을 한 PUT에 합치고 시즌 종료·은퇴·생성 체크포인트는 즉시, toss는 debounce 0(ADR-002 "모든 step 경계"). 재시도는 지수 백오프(2s→60s, 지터 ±20%), 재시도 가능 여부는 contracts `RETRYABLE_BY_CODE`. 같은 본문의 재시도는 같은 Idempotency-Key.
+- **409 처리.** 서버 Snapshot을 GET해 로컬에 같은 revision·같은 stateHash의 Snapshot이 있으면 서버는 로컬 로그의 조상 → `markSynced(serverRevision)` 후 빨리감기 재전송(사이클당 1회). 아니면 `CONFLICT` 상태로 멈추고 화면에 넘긴다.
+- **충돌 해소 범위.** Phase 0은 `'REMOTE'`(서버 채택: 서버 Snapshot 검증 후 로컬 revision 되감기, 버려지는 로컬 로그는 kv에 보관)만 구현. `'LOCAL'`(이 기기 우선)은 서버에 강제 덮어쓰기 API가 없고 명령 로그 계보가 섞이면 후일 리플레이 검증이 깨지므로 보류. 후보는 (a) 로컬 로그를 새 careerId로 포크해 엔진에서 재실행(결정론이라 결과 동일, API 변경 없음, 커리어가 둘이 됨) vs (b) `PUT`에 강제 플래그 추가(서버 로그 교체). 추천은 (a). 화면(Phase 1)과 함께 결정.
+- **세션 부재.** 401은 `LOCAL_ONLY`로 두고 platform이 세션을 만든 뒤 앱이 다시 알리면 재개. 재시도 불가 4xx(VERSION_MISMATCH 등)는 `FAILED`로 표시만 하고 게임은 계속(ADR-002 "동기화 실패는 진행을 막지 않는다").
+
 ## 2026-09-02 (저녁, PR #6 머지·PR #7 리뷰·버전 라벨)
 
 - **PR #6(T-0-005) 머지 `9b292b1`.** 수정 2건 확인: cursor 인코딩을 `btoa/atob + TextEncoder`로 바꿔 Workers 런타임 호환, purity 테스트가 `Buffer`·`process.`·`require(`·`__dirname`을 금지. `db:check`는 `git status --porcelain -- migrations`로 미추적 migration도 잡는다(임시 컬럼으로 실패→복원 확인).
