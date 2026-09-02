@@ -1286,6 +1286,19 @@
           3
         ],
         "fixedCount": 1
+      },
+      {
+        "id": "lower-league-skipped",
+        "requireTags": [
+          "진로_하부리그"
+        ],
+        "forbidTags": [
+          "입단테스트_완료"
+        ],
+        "tiers": [
+          3
+        ],
+        "fixedCount": 1
       }
     ],
     "rolePromiseByTier": {
