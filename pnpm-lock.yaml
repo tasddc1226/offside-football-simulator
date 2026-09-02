@@ -196,6 +196,9 @@ importers:
         specifier: workspace:*
         version: link:../domain
     devDependencies:
+      '@offside/fixtures':
+        specifier: workspace:*
+        version: link:../fixtures
       '@offside/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig

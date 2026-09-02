@@ -1,0 +1,306 @@
+{
+  "rulesetVersion": "1.0.0",
+  "contentPackVersion": "0.1.0",
+  "createCareer": {
+    "careerId": "car_gimseojun_01",
+    "seed": "offside-fixture-01",
+    "stage": "YOUTH",
+    "age": 17,
+    "simulationMode": "CHAPTER",
+    "attributes": {
+      "shooting": 60,
+      "passing": 54,
+      "dribbling": 66,
+      "tackling": 30,
+      "firstTouch": 62,
+      "crossing": 45,
+      "goalkeeping": 10,
+      "pace": 68,
+      "acceleration": 70,
+      "agility": 64,
+      "jumping": 50,
+      "stamina": 55,
+      "strength": 42,
+      "durability": 60,
+      "decisions": 52,
+      "concentration": 48,
+      "composure": 52,
+      "positioning": 60,
+      "leadership": 35,
+      "consistency": 45
+    },
+    "state": { "form": 50, "fitness": 80, "morale": 60 },
+    "context": { "tacticalFit": 58, "squadStatus": 40, "positionProficiency": 100 },
+    "relationships": { "managerTrust": 40, "captain": 50, "rival": 50, "fans": 50, "agent": 50 }
+  },
+  "commands": [
+    { "type": "ADVANCE", "payload": {} },
+    {
+      "type": "RESOLVE_EVENT",
+      "payload": {
+        "eventId": "EVT-P01",
+        "definitionVersion": 1,
+        "choiceId": "B",
+        "outcomes": [
+          {
+            "id": "success",
+            "weight": 55,
+            "effects": [
+              {
+                "kind": "PERMANENT",
+                "sourceId": "EVT-P01.B.success.shooting",
+                "target": "shooting",
+                "delta": 1,
+                "clamp": { "min": 0, "max": 99 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              },
+              {
+                "kind": "PERMANENT",
+                "sourceId": "EVT-P01.B.success.dribbling",
+                "target": "dribbling",
+                "delta": 1,
+                "clamp": { "min": 0, "max": 99 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              },
+              {
+                "kind": "CURRENT",
+                "sourceId": "EVT-P01.B.success.form",
+                "target": "form",
+                "delta": 5,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+                "stackingRule": "ONCE_PER_SOURCE"
+              }
+            ]
+          },
+          {
+            "id": "neutral",
+            "weight": 30,
+            "effects": [
+              {
+                "kind": "PERMANENT",
+                "sourceId": "EVT-P01.B.neutral.dribbling",
+                "target": "dribbling",
+                "delta": 1,
+                "clamp": { "min": 0, "max": 99 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              }
+            ]
+          },
+          {
+            "id": "fail",
+            "weight": 15,
+            "effects": [
+              {
+                "kind": "PERMANENT",
+                "sourceId": "EVT-P01.B.fail.dribbling",
+                "target": "dribbling",
+                "delta": 1,
+                "clamp": { "min": 0, "max": 99 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              },
+              {
+                "kind": "RELATION",
+                "sourceId": "EVT-P01.B.fail.managerTrust",
+                "target": "managerTrust",
+                "delta": -4,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              }
+            ],
+            "addTags": ["고집"]
+          }
+        ]
+      }
+    },
+    { "type": "ADVANCE", "payload": {} },
+    {
+      "type": "RESOLVE_EVENT",
+      "payload": {
+        "eventId": "EVT-P02",
+        "definitionVersion": 1,
+        "choiceId": "A",
+        "outcomes": [
+          {
+            "id": "success",
+            "weight": 65,
+            "effects": [
+              {
+                "kind": "CONTEXT",
+                "sourceId": "EVT-P02.A.success.tacticalFit",
+                "target": "tacticalFit",
+                "delta": 14,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              },
+              {
+                "kind": "RELATION",
+                "sourceId": "EVT-P02.A.success.managerTrust",
+                "target": "managerTrust",
+                "delta": 8,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              }
+            ],
+            "addTags": ["유연한_선수"]
+          },
+          {
+            "id": "neutral",
+            "weight": 35,
+            "effects": [
+              {
+                "kind": "CONTEXT",
+                "sourceId": "EVT-P02.A.neutral.tacticalFit",
+                "target": "tacticalFit",
+                "delta": 8,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              },
+              {
+                "kind": "DEFERRED",
+                "sourceId": "EVT-P02.A.neutral.deferredTacticalFit",
+                "target": "tacticalFit",
+                "delta": 4,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "NEXT_SEASON_STEP", "step": 1 },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    { "type": "ADVANCE", "payload": {} },
+    { "type": "ADVANCE", "payload": {} },
+    {
+      "type": "RESOLVE_EVENT",
+      "payload": {
+        "eventId": "EVT-FIXTURE-03",
+        "definitionVersion": 1,
+        "choiceId": "C",
+        "outcomes": [
+          {
+            "id": "confirmed",
+            "weight": 100,
+            "effects": [
+              {
+                "kind": "CURRENT",
+                "sourceId": "EVT-FIXTURE-03.C.confirmed.fitness",
+                "target": "fitness",
+                "delta": 10,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": { "kind": "AT_STEP", "step": 6 },
+                "stackingRule": "ONCE_PER_SOURCE"
+              },
+              {
+                "kind": "PERMANENT",
+                "sourceId": "EVT-FIXTURE-03.C.confirmed.durability",
+                "target": "durability",
+                "delta": 1,
+                "clamp": { "min": 0, "max": 99 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    { "type": "ADVANCE", "payload": {} },
+    { "type": "ADVANCE", "payload": {} },
+    {
+      "type": "RESOLVE_EVENT",
+      "payload": {
+        "eventId": "EVT-FIXTURE-04",
+        "definitionVersion": 1,
+        "choiceId": "C",
+        "outcomes": [
+          {
+            "id": "success",
+            "weight": 60,
+            "effects": [
+              {
+                "kind": "CONTEXT",
+                "sourceId": "EVT-FIXTURE-04.C.success.tacticalFit",
+                "target": "tacticalFit",
+                "delta": 9,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              },
+              {
+                "kind": "CURRENT",
+                "sourceId": "EVT-FIXTURE-04.C.success.fitness",
+                "target": "fitness",
+                "delta": -6,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              }
+            ]
+          },
+          {
+            "id": "neutral",
+            "weight": 40,
+            "effects": [
+              {
+                "kind": "CONTEXT",
+                "sourceId": "EVT-FIXTURE-04.C.neutral.tacticalFit",
+                "target": "tacticalFit",
+                "delta": 4,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              },
+              {
+                "kind": "CURRENT",
+                "sourceId": "EVT-FIXTURE-04.C.neutral.fitness",
+                "target": "fitness",
+                "delta": -10,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              },
+              {
+                "kind": "CURRENT",
+                "sourceId": "EVT-FIXTURE-04.C.neutral.form",
+                "target": "form",
+                "delta": -3,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    { "type": "ADVANCE", "payload": {} },
+    { "type": "ADVANCE", "payload": {} }
+  ]
+}

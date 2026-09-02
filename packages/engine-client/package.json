@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./worker": "./src/worker/engine.worker.ts",
+    "./testing": "./src/testing/local-store-contract.ts"
   },
   "scripts": {
     "test": "vitest run",
@@ -17,6 +19,7 @@
     "@offside/domain": "workspace:*"
   },
   "devDependencies": {
+    "@offside/fixtures": "workspace:*",
     "@offside/tsconfig": "workspace:*",
     "typescript": "5.9.3",
     "vitest": "4.1.11"

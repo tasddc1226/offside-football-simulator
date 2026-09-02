@@ -55,4 +55,48 @@ describe('findDependencyViolations', () => {
 
     expect(violations).toEqual([]);
   });
+
+  it('allows a test-only package as a devDependency', () => {
+    workDir = mkdtempSync(path.join(tmpdir(), 'check-deps-test-only-dev-'));
+
+    writePackage(workDir, 'packages', 'engine-client', {
+      name: '@offside/engine-client',
+      dependencies: {
+        '@offside/domain': 'workspace:*',
+        '@offside/contracts': 'workspace:*',
+        '@offside/content': 'workspace:*',
+      },
+      devDependencies: {
+        '@offside/fixtures': 'workspace:*',
+      },
+    });
+
+    const violations = findDependencyViolations(workDir);
+
+    expect(violations).toEqual([]);
+  });
+
+  it('reports a violation when a test-only package is a runtime dependency', () => {
+    workDir = mkdtempSync(path.join(tmpdir(), 'check-deps-test-only-runtime-'));
+
+    writePackage(workDir, 'packages', 'engine-client', {
+      name: '@offside/engine-client',
+      dependencies: {
+        '@offside/domain': 'workspace:*',
+        '@offside/contracts': 'workspace:*',
+        '@offside/content': 'workspace:*',
+        '@offside/fixtures': 'workspace:*',
+      },
+    });
+
+    const violations = findDependencyViolations(workDir);
+
+    expect(violations).toEqual([
+      {
+        package: '@offside/engine-client',
+        dependency: '@offside/fixtures',
+        reason: '테스트 전용 패키지는 devDependencies에서만 허용된다.',
+      },
+    ]);
+  });
 });
