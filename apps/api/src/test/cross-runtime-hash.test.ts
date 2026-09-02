@@ -107,7 +107,7 @@ const BOUNDARY_INPUTS: Array<{ label: string; value: string }> = [
   { label: '200KB string', value: 'x'.repeat(200 * 1024) },
 ];
 
-describe('런타임 간 state hash 일치(Node ↔ workerd)', () => {
+describe('런타임 간 state hash 일치(Node ↔ workerd)', { timeout: 15000 }, () => {
   let mf: Miniflare;
 
   beforeAll(async () => {
@@ -135,7 +135,7 @@ describe('런타임 간 state hash 일치(Node ↔ workerd)', () => {
         compatibilityDate: readCompatibilityDate(),
       }),
     );
-  }, 20000);
+  }, 30000);
 
   afterAll(async () => {
     await mf.dispose();

@@ -63,6 +63,15 @@ export async function putSnapshot(db: Db, input: PutSnapshotInput): Promise<Snap
   return toRecord(row!);
 }
 
+/** 설계 결정 4(멱등)에서 요청 `(revision, stateHash)`가 이미 반영됐는지 확인하는 데 쓴다. */
+export async function getSnapshotByRevision(db: Db, careerId: string, revision: number): Promise<SnapshotRecord | undefined> {
+  const [row] = await db
+    .select()
+    .from(snapshots)
+    .where(and(eq(snapshots.careerId, careerId), eq(snapshots.revision, revision)));
+  return row ? toRecord(row) : undefined;
+}
+
 export async function getLatestSnapshot(db: Db, careerId: string): Promise<SnapshotRecord | undefined> {
   const [row] = await db
     .select()
