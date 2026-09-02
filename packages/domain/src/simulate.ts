@@ -677,7 +677,9 @@ function hasDuplicates(values: readonly string[]): boolean {
 
 /**
  * stateHash 일치, 버전 일치, 배열 정렬 불변, 타임라인 revision 단조 증가, pending·status 정합,
- * contract·pending 정합(둘 다 있으면 실패)을 검사한다.
+ * contract·pending(OFFERS) 정합을 검사한다. 계약 중에도 pending이 EVENT인 것은 유효하다
+ * (Phase 2부터 시즌 중 이벤트가 계약된 선수에게도 걸린다). 계약 중에 새 제안(OFFERS)이 pending인
+ * 것만 정합성 위반이다.
  */
 export function verifySnapshot(snapshot: DomainSnapshot): { ok: true } | { ok: false; reason: string } {
   if (hashState(snapshot.state) !== snapshot.stateHash) {
@@ -706,8 +708,8 @@ export function verifySnapshot(snapshot: DomainSnapshot): { ok: true } | { ok: f
   if (snapshot.state.status !== 'ACTIVE' && snapshot.state.pending !== null) {
     return { ok: false, reason: 'PENDING_STATUS_MISMATCH' };
   }
-  if (snapshot.state.contract !== null && snapshot.state.pending !== null) {
-    return { ok: false, reason: 'CONTRACT_PENDING_CONFLICT' };
+  if (snapshot.state.contract !== null && snapshot.state.pending?.kind === 'OFFERS') {
+    return { ok: false, reason: 'CONTRACT_OFFERS_CONFLICT' };
   }
 
   return { ok: true };

@@ -620,7 +620,7 @@ describe('verifySnapshot', () => {
     expect(verifySnapshot(rehashed)).toEqual({ ok: false, reason: 'PENDING_STATUS_MISMATCH' });
   });
 
-  it('contract와 pending이 둘 다 있으면 정합성 위반이다', () => {
+  it('contract와 pending(OFFERS)이 함께 있으면 CONTRACT_OFFERS_CONFLICT다', () => {
     const active = withTags(confirmedActiveSnapshot(), ['진로_아카데미']);
     const offered = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
     if (!offered.ok) throw new Error('setup failed');
@@ -645,7 +645,29 @@ describe('verifySnapshot', () => {
       },
     };
     const rehashed: DomainSnapshot = { ...tampered, stateHash: hashState(tampered.state) };
-    expect(verifySnapshot(rehashed)).toEqual({ ok: false, reason: 'CONTRACT_PENDING_CONFLICT' });
+    expect(verifySnapshot(rehashed)).toEqual({ ok: false, reason: 'CONTRACT_OFFERS_CONFLICT' });
+  });
+
+  it('contract와 pending(EVENT)이 함께 있어도 정합성 위반이 아니다(Phase 2 시즌 중 이벤트)', () => {
+    // 계약된 선수에게 시즌 중 이벤트가 pending으로 걸리는 것은 Phase 2부터의 정상 상태다.
+    // contract·pending 동시 존재 자체가 아니라 pending이 OFFERS일 때만 위반이다.
+    const active = withTags(confirmedActiveSnapshot(), ['진로_아카데미']);
+    const offered = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
+    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('setup failed');
+    const offerId = offered.snapshot.state.pending.offers[0]!.id;
+    const accepted = simulate({
+      ...baseInput(),
+      snapshot: offered.snapshot,
+      command: acceptOfferCommand(offered.snapshot.revision, offerId),
+    });
+    if (!accepted.ok) throw new Error('accept failed');
+
+    const tampered: DomainSnapshot = {
+      ...accepted.snapshot,
+      state: { ...accepted.snapshot.state, pending: { kind: 'EVENT', eventId: 'EVT-SEASON', version: 1 } },
+    };
+    const rehashed: DomainSnapshot = { ...tampered, stateHash: hashState(tampered.state) };
+    expect(verifySnapshot(rehashed)).toEqual({ ok: true });
   });
 });
 
