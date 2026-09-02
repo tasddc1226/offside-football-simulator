@@ -10,18 +10,39 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CareerNewRouteImport } from './routes/career.new'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as CareerCareerIdRouteImport } from './routes/career.$careerId'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
+import { Route as CareerCareerIdIndexRouteImport } from './routes/career.$careerId.index'
+import { Route as CareerCareerIdConfirmRouteImport } from './routes/career.$careerId.confirm'
+import { Route as CareerCareerIdContractRouteImport } from './routes/career.$careerId.contract'
+import { Route as CareerCareerIdCreateRouteImport } from './routes/career.$careerId.create'
+import { Route as CareerCareerIdEventRouteImport } from './routes/career.$careerId.event'
+import { Route as CareerCareerIdOffersRouteImport } from './routes/career.$careerId.offers'
+import { Route as CareerCareerIdPathRouteImport } from './routes/career.$careerId.path'
+import { Route as CareerCareerIdStyleRouteImport } from './routes/career.$careerId.style'
+import { Route as CareerCareerIdTryoutRouteImport } from './routes/career.$careerId.tryout'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CareerNewRoute = CareerNewRouteImport.update({
-  id: '/career/new',
-  path: '/career/new',
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CareerCareerIdRoute = CareerCareerIdRouteImport.update({
+  id: '/career/$careerId',
+  path: '/career/$careerId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
@@ -34,37 +55,161 @@ const LegalTermsRoute = LegalTermsRouteImport.update({
   path: '/legal/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CareerCareerIdIndexRoute = CareerCareerIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
+const CareerCareerIdConfirmRoute = CareerCareerIdConfirmRouteImport.update({
+  id: '/confirm',
+  path: '/confirm',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
+const CareerCareerIdContractRoute = CareerCareerIdContractRouteImport.update({
+  id: '/contract',
+  path: '/contract',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
+const CareerCareerIdCreateRoute = CareerCareerIdCreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
+const CareerCareerIdEventRoute = CareerCareerIdEventRouteImport.update({
+  id: '/event',
+  path: '/event',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
+const CareerCareerIdOffersRoute = CareerCareerIdOffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
+const CareerCareerIdPathRoute = CareerCareerIdPathRouteImport.update({
+  id: '/path',
+  path: '/path',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
+const CareerCareerIdStyleRoute = CareerCareerIdStyleRouteImport.update({
+  id: '/style',
+  path: '/style',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
+const CareerCareerIdTryoutRoute = CareerCareerIdTryoutRouteImport.update({
+  id: '/tryout',
+  path: '/tryout',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/career/new': typeof CareerNewRoute
+  '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
+  '/career/$careerId': typeof CareerCareerIdRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/career/$careerId/confirm': typeof CareerCareerIdConfirmRoute
+  '/career/$careerId/contract': typeof CareerCareerIdContractRoute
+  '/career/$careerId/create': typeof CareerCareerIdCreateRoute
+  '/career/$careerId/event': typeof CareerCareerIdEventRoute
+  '/career/$careerId/offers': typeof CareerCareerIdOffersRoute
+  '/career/$careerId/path': typeof CareerCareerIdPathRoute
+  '/career/$careerId/style': typeof CareerCareerIdStyleRoute
+  '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
+  '/career/$careerId/': typeof CareerCareerIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/career/new': typeof CareerNewRoute
+  '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/career/$careerId/confirm': typeof CareerCareerIdConfirmRoute
+  '/career/$careerId/contract': typeof CareerCareerIdContractRoute
+  '/career/$careerId/create': typeof CareerCareerIdCreateRoute
+  '/career/$careerId/event': typeof CareerCareerIdEventRoute
+  '/career/$careerId/offers': typeof CareerCareerIdOffersRoute
+  '/career/$careerId/path': typeof CareerCareerIdPathRoute
+  '/career/$careerId/style': typeof CareerCareerIdStyleRoute
+  '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
+  '/career/$careerId': typeof CareerCareerIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/career/new': typeof CareerNewRoute
+  '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
+  '/career/$careerId': typeof CareerCareerIdRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/career/$careerId/confirm': typeof CareerCareerIdConfirmRoute
+  '/career/$careerId/contract': typeof CareerCareerIdContractRoute
+  '/career/$careerId/create': typeof CareerCareerIdCreateRoute
+  '/career/$careerId/event': typeof CareerCareerIdEventRoute
+  '/career/$careerId/offers': typeof CareerCareerIdOffersRoute
+  '/career/$careerId/path': typeof CareerCareerIdPathRoute
+  '/career/$careerId/style': typeof CareerCareerIdStyleRoute
+  '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
+  '/career/$careerId/': typeof CareerCareerIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/career/new' | '/legal/privacy' | '/legal/terms'
+  fullPaths:
+    | '/'
+    | '/onboarding'
+    | '/settings'
+    | '/career/$careerId'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/career/$careerId/confirm'
+    | '/career/$careerId/contract'
+    | '/career/$careerId/create'
+    | '/career/$careerId/event'
+    | '/career/$careerId/offers'
+    | '/career/$careerId/path'
+    | '/career/$careerId/style'
+    | '/career/$careerId/tryout'
+    | '/career/$careerId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/career/new' | '/legal/privacy' | '/legal/terms'
-  id: '__root__' | '/' | '/career/new' | '/legal/privacy' | '/legal/terms'
+  to:
+    | '/'
+    | '/onboarding'
+    | '/settings'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/career/$careerId/confirm'
+    | '/career/$careerId/contract'
+    | '/career/$careerId/create'
+    | '/career/$careerId/event'
+    | '/career/$careerId/offers'
+    | '/career/$careerId/path'
+    | '/career/$careerId/style'
+    | '/career/$careerId/tryout'
+    | '/career/$careerId'
+  id:
+    | '__root__'
+    | '/'
+    | '/onboarding'
+    | '/settings'
+    | '/career/$careerId'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/career/$careerId/confirm'
+    | '/career/$careerId/contract'
+    | '/career/$careerId/create'
+    | '/career/$careerId/event'
+    | '/career/$careerId/offers'
+    | '/career/$careerId/path'
+    | '/career/$careerId/style'
+    | '/career/$careerId/tryout'
+    | '/career/$careerId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CareerNewRoute: typeof CareerNewRoute
+  OnboardingRoute: typeof OnboardingRoute
+  SettingsRoute: typeof SettingsRoute
+  CareerCareerIdRoute: typeof CareerCareerIdRouteWithChildren
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
 }
@@ -78,11 +223,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/career/new': {
-      id: '/career/new'
-      path: '/career/new'
-      fullPath: '/career/new'
-      preLoaderRoute: typeof CareerNewRouteImport
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/career/$careerId': {
+      id: '/career/$careerId'
+      path: '/career/$careerId'
+      fullPath: '/career/$careerId'
+      preLoaderRoute: typeof CareerCareerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/legal/privacy': {
@@ -99,12 +258,105 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalTermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/career/$careerId/': {
+      id: '/career/$careerId/'
+      path: '/'
+      fullPath: '/career/$careerId/'
+      preLoaderRoute: typeof CareerCareerIdIndexRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/confirm': {
+      id: '/career/$careerId/confirm'
+      path: '/confirm'
+      fullPath: '/career/$careerId/confirm'
+      preLoaderRoute: typeof CareerCareerIdConfirmRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/contract': {
+      id: '/career/$careerId/contract'
+      path: '/contract'
+      fullPath: '/career/$careerId/contract'
+      preLoaderRoute: typeof CareerCareerIdContractRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/create': {
+      id: '/career/$careerId/create'
+      path: '/create'
+      fullPath: '/career/$careerId/create'
+      preLoaderRoute: typeof CareerCareerIdCreateRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/event': {
+      id: '/career/$careerId/event'
+      path: '/event'
+      fullPath: '/career/$careerId/event'
+      preLoaderRoute: typeof CareerCareerIdEventRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/offers': {
+      id: '/career/$careerId/offers'
+      path: '/offers'
+      fullPath: '/career/$careerId/offers'
+      preLoaderRoute: typeof CareerCareerIdOffersRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/path': {
+      id: '/career/$careerId/path'
+      path: '/path'
+      fullPath: '/career/$careerId/path'
+      preLoaderRoute: typeof CareerCareerIdPathRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/style': {
+      id: '/career/$careerId/style'
+      path: '/style'
+      fullPath: '/career/$careerId/style'
+      preLoaderRoute: typeof CareerCareerIdStyleRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/tryout': {
+      id: '/career/$careerId/tryout'
+      path: '/tryout'
+      fullPath: '/career/$careerId/tryout'
+      preLoaderRoute: typeof CareerCareerIdTryoutRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
   }
 }
 
+interface CareerCareerIdRouteChildren {
+  CareerCareerIdConfirmRoute: typeof CareerCareerIdConfirmRoute
+  CareerCareerIdContractRoute: typeof CareerCareerIdContractRoute
+  CareerCareerIdCreateRoute: typeof CareerCareerIdCreateRoute
+  CareerCareerIdEventRoute: typeof CareerCareerIdEventRoute
+  CareerCareerIdOffersRoute: typeof CareerCareerIdOffersRoute
+  CareerCareerIdPathRoute: typeof CareerCareerIdPathRoute
+  CareerCareerIdStyleRoute: typeof CareerCareerIdStyleRoute
+  CareerCareerIdTryoutRoute: typeof CareerCareerIdTryoutRoute
+  CareerCareerIdIndexRoute: typeof CareerCareerIdIndexRoute
+}
+
+const CareerCareerIdRouteChildren: CareerCareerIdRouteChildren = {
+  CareerCareerIdConfirmRoute: CareerCareerIdConfirmRoute,
+  CareerCareerIdContractRoute: CareerCareerIdContractRoute,
+  CareerCareerIdCreateRoute: CareerCareerIdCreateRoute,
+  CareerCareerIdEventRoute: CareerCareerIdEventRoute,
+  CareerCareerIdOffersRoute: CareerCareerIdOffersRoute,
+  CareerCareerIdPathRoute: CareerCareerIdPathRoute,
+  CareerCareerIdStyleRoute: CareerCareerIdStyleRoute,
+  CareerCareerIdTryoutRoute: CareerCareerIdTryoutRoute,
+  CareerCareerIdIndexRoute: CareerCareerIdIndexRoute,
+}
+
+const CareerCareerIdRouteWithChildren = CareerCareerIdRoute._addFileChildren(
+  CareerCareerIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CareerNewRoute: CareerNewRoute,
+  OnboardingRoute: OnboardingRoute,
+  SettingsRoute: SettingsRoute,
+  CareerCareerIdRoute: CareerCareerIdRouteWithChildren,
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,
 }
