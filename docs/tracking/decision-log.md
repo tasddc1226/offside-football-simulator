@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #13 커리어 동기화 API 머지)
+
+- **PR #13(T-0-008) 머지 `5969ec6`.** 규칙 1~9 구현 확인. 서버 해시 검사는 `sha256Hex(snapshot.state)`이며 engine-client `encodeSnapshot`이 `state = canonicalize(state)`로 직렬화하므로 클라이언트 `hashState`와 일치한다(T-0-011로 런타임 간 일치도 확인). 동시 쓰기 실패 시 재조회 → 규칙 4 → 409 흐름, `pruneSnapshots(5)` 실패는 warn.
+- **후속 — 실제 fixture 본문 API 테스트.** careers 테스트는 자체 canonicalize로 본문을 만든다. api는 engine-client를 import할 수 없으므로(ADR-005) `@offside/fixtures` + `@offside/domain`으로 career01 golden 본문을 만들어 `PUT`하는 통합 테스트를 T-0-010 CI 작업에 포함한다. state 래퍼와 본문 `snapshot.revision`의 교차 검증은 규칙에 없어 넣지 않았다(클라이언트 `decodeSnapshot`이 담당).
+- T-0-015(동기화 클라이언트) 투입. Phase 0 남은 항목: T-0-015, T-0-010(U-002 대기).
+
 ## 2026-09-02 (저녁, Phase 순서 준수 결정)
 
 - **사용자 결정.** 로컬 화면이 허브·자리표시자뿐이라 Phase 1 화면 작업을 병렬로 앞당길지 물었고, "정의한 Phase 순서대로 진행"으로 확정. Phase 0의 남은 항목(T-0-008 진행 중, T-0-015 대기, T-0-010은 U-002 대기)을 닫은 뒤 Phase 1 워커를 투입한다.
