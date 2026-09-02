@@ -2,6 +2,20 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #19·#20 머지 — 도메인 첫 계약, api 복구·삭제)
+
+**PR #19 (T-1-005, domain)**: squash 머지(`1a0ffed`). `offers.ts`가 D-9 분기 매칭·제안 생성(개수 수식, 팀 풀 id 순 비복원 추출, `topTierMinOvr`면 첫 제안만 tier 1, 제안당 rng 소비 팀→기간→역할→등번호→적합도)을 맡고, `advance` 3단계와 `ACCEPT_OFFER`가 계약을 확정한다. golden은 첫 계약까지 확장(revision 10, draws 30, `37cc92a1…`, 이 seed는 테스트 성공 → `seoul-tier1` BENCH 1건 → `CTR-10`). domain 129 tests, 전체 체인 통과. 비용 약 $9.9, 28분.
+
+**리뷰에서 고친 것**: `verifySnapshot`의 새 검사가 계약과 pending이 함께 있으면 무조건 실패했다. Phase 2부터 계약 중인 선수에게도 이벤트가 pending으로 걸리므로 `pending.kind === 'OFFERS'`일 때만 `CONTRACT_OFFERS_CONFLICT`로 좁혔다. 브리프의 "둘 다 있으면 실패" 문구가 넓게 쓰인 오케스트레이터 실수다. 워커가 테스트 픽스처 `ruleset-proto.json`에 `lower-league-skipped` 분기를 보강한 것(콘텐츠 룰셋에는 이미 있었음)은 받아들였다.
+
+**PR #20 (T-1-004, api)**: squash 머지(`4797827`). migration 0001(`profiles.deleted_at`, `auth_attempts`, `audit_log`), 복구 코드 발급(30자 알파벳, rejection sampling)·복구(같은 프로필 200, 충돌 409, `MOVE_TO_LINKED` 소유권 이동 + 감사 로그, `KEEP_LINKED_ONLY` 세션 재바인딩)·프로필 삭제 2단계(세션 tokenHash로 서명한 10분 토큰, `runBatch` 원자 삭제)·로그아웃(쿠키 제거)·`DELETE /v1/careers/:id`(타인 소유도 404). rate limit은 워커 자체 리뷰에서 SELECT+UPDATE 레이스를 발견해 단일 UPSERT로 고쳤다. api 113 tests, `db:check` 통과. 비용 약 $11.6, 75분(응답 중단 1회, 재개 지시).
+
+**받아들인 것**: (1) `MOVE_TO_LINKED`는 커리어·스냅샷·명령 로그를 옮기고 idempotency 레코드는 옮기지 않는다(키가 `(ownerProfileId, key)`라 옮기면 충돌 가능, TTL로 소멸. 병합 직후 같은 키 재시도는 서버 revision 검사로 막힌다). (2) 삭제 확인 토큰 서명은 HMAC이 아닌 `sha256(secret|msg)`인데 비밀이 세션 소유자만 아는 값이라 실익 없음. (3) 요청·응답 검증은 api 로컬 코드. contracts 스키마(T-1-006)로 바꾸는 일은 T-1-012·013.
+
+**후속**: `profiles.recovery_code_hash` 인덱스(복구 호출마다 풀스캔). 세션 미들웨어가 요청마다 프로필을 한 번 더 조회하므로 `findActiveSession`에 JOIN으로 합치기. 소프트 삭제된 프로필의 `google_sub` unique가 재연결을 막을 수 있으므로 T-1-013에서 삭제 시 `google_sub`를 비우거나 재연결 규칙을 정한다.
+
+**슬롯**: 활성 워커 2개(T-1-006 contracts, T-1-015 content). T-1-007(web 배선)은 T-1-015 머지 직후, T-1-008·009는 T-1-006·007 머지 후 투입한다. 그 전에 T-1-008·009 브리프를 쓴다.
+
 ## 2026-09-02 (저녁, PR #18 E2E 도입 머지)
 
 **결과**: T-1-010 PR #18 squash 머지(`01d64e8`). `@playwright/test` 1.62.1·`@axe-core/playwright` 4.13.0(둘 다 7~8월 배포, 정책 안), Chromium 1개 프로젝트, `vite dev --port 5174` 자동 기동. 허브·법적 문서 스모크, axe serious·critical 0건(전체 위반도 0건), dev 전용 `/__dev/hash-probe`가 브라우저 Web Worker에서 career-01을 재생해 golden(revision 8, `15eea997…`)과 일치. 프로덕션 `dist/`에 probe·fixture 흔적 없음(직접 확인), 초기 청크 91.82KB. 임시 워크트리에서 전체 체인 + E2E 7 passed(6.3초). 비용 약 $5.9, 23분.
