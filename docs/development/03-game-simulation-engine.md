@@ -128,6 +128,8 @@ Market Value Index = Base OVR 35% + Scouted Potential Mid 20% + Age Curve 15%
 - `Scouted Potential Mid`는 공개된 정찰 범위의 중간값이다. 숨긴 `truePotential`을 쓰면 시장가치에서 잠재력이 역산되므로 금지한다.
 - 금액은 국가 경제, 포지션 희소성, 잔여 계약, 구단 재정을 추가 적용한다. 시장가치와 연봉은 OVR을 역산해 결정하지 않는다.
 
+해외 리그에서는 동일한 OVR 척도를 유지하고 리그·대회 정규화, 등록, 적응, 일정 우선순위를 [WORLD STAGE 규칙](15-world-stage-expansion.md#시뮬레이션-규칙)으로 확장한다. `leagueStrength`는 성취 정규화와 경기 Expected Performance에 중복 적용하지 않는다.
+
 ## 결정론 입력
 
 ```text
@@ -149,4 +151,3 @@ SimulationInput = careerSnapshot + command + seed
 - 같은 seed 1,000회 재실행 해시 일치.
 - 성장·노쇠 경계 나이와 clamp.
 - 리그 이동 전후 Base OVR 불변.
-
