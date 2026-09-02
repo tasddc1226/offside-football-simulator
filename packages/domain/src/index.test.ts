@@ -3,7 +3,7 @@ import { clamp, DOMAIN_VERSION } from './index.js';
 
 describe('DOMAIN_VERSION', () => {
   it('is exported', () => {
-    expect(DOMAIN_VERSION).toBe('0.0.0');
+    expect(DOMAIN_VERSION).toBe('0.1.0');
   });
 });
 
