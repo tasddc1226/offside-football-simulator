@@ -11,13 +11,14 @@
 - 첫 서비스 시즌 `SEASON 1: KICKOFF`
 - 시즌 전환 뒤에도 과거 커리어를 재현할 수 있는 규칙 버전 고정
 - 은퇴 결과를 프로필·연대기·Legacy Score·시즌 앨범으로 보관
+- 국내에서 시작해 가상 해외 리그·대륙대회로 이어지는 `WORLD STAGE` 확장
 
 ## 문서
 
 - [`docs/offside-football-simulator-design.docx`](docs/offside-football-simulator-design.docx): 편집 가능한 73페이지 통합 설계서
 - [`docs/offside-football-simulator-design.pdf`](docs/offside-football-simulator-design.pdf): 검토·공유용 PDF
-- [`docs/development/README.md`](docs/development/README.md): 공통 기술 명세, 시간 모델, 브랜드·시각 디자인, Legacy 규칙과 Phase 0~7 개발 문서 인덱스
-- [`docs/screens/README.md`](docs/screens/README.md): 핵심 화면 34개와 서비스 시즌 화면 계약
+- [`docs/development/README.md`](docs/development/README.md): 공통 기술 명세, 시간 모델, 브랜드·시각 디자인, Legacy·WORLD STAGE 규칙과 Phase 0~8 개발 문서 인덱스
+- [`docs/screens/README.md`](docs/screens/README.md): 핵심 화면 40개와 서비스 시즌 화면 계약
 - [`docs/content/README.md`](docs/content/README.md): 이벤트 저작 형식과 종이 프로토타입
 - [`docs/adr/README.md`](docs/adr/README.md): 확정된 기술 스택·인프라 결정 8건
 - [`docs/tracking/README.md`](docs/tracking/README.md): 역할, 진행 보드, 결정 로그, 워커 위임 워크플로
@@ -28,7 +29,7 @@
 
 ## 현재 범위
 
-이 저장소는 제품 콘셉트, 화면 단위 구현 명세, OVR·선발·이벤트·저장 데이터 구조, 시간 모델, 차별화 전략, 브랜드 가이드, 시각 디자인 시스템, Legacy·엔딩 규칙, 시즌 운영 설계, 단계별 개발 계약, 종이 프로토타입 콘텐츠를 보관합니다. 실제 게임 소스 코드는 아직 포함하지 않습니다.
+이 저장소는 제품 콘셉트와 단계별 개발 계약뿐 아니라 도메인·콘텐츠·API·웹 클라이언트의 플레이 가능한 수직 슬라이스를 함께 보관합니다. WORLD STAGE는 국내 MVP와 운영 기반을 완성한 뒤 새 ruleset으로 출시하는 후속 확장입니다.
 
 ## 기술 스택 요약
 
@@ -40,3 +41,4 @@ Vite + React SPA가 브라우저 Web Worker에서 게임을 실행하고 로컬�
 2. [종이 프로토타입](docs/content/prototype/season-01-inside-forward.md)을 3회 플레이하고 결정 수·시간을 기록한다.
 3. [로드맵](docs/development/00-development-roadmap.md)의 Phase 0으로 들어간다. 구현은 워커 에이전트가, 명세·리뷰는 오케스트레이터가 맡는다.
 4. Phase 2가 끝나면 `PRESEASON: LINE TEST`로 외부 공개 테스트를 연다.
+5. Phase 3~7의 계약·관계·Legacy·운영 기반이 안정되면 [Phase 8 WORLD STAGE](docs/phases/phase-08-world-stage.md)를 착수한다.

@@ -19,6 +19,7 @@
 13. [브랜드 가이드](12-brand-guidelines.md)
 14. [시각 디자인 시스템](13-visual-design-system.md)
 15. [Legacy Score·엔딩](14-legacy-score-and-endings.md)
+16. [WORLD STAGE 세계관 확장](15-world-stage-expansion.md)
 
 콘텐츠 저작 형식과 종이 프로토타입은 [`../content/README.md`](../content/README.md)에 있다. 기술 스택·인프라·앱인토스 채널 확정 결정은 [`../adr/README.md`](../adr/README.md), 진행 보드와 워커 위임 규칙은 [`../tracking/README.md`](../tracking/README.md)에 있다.
 
@@ -61,6 +62,7 @@
 | Phase 5 | 장기 성장·은퇴·Legacy | [`phase-05-retirement-and-legacy.md`](../phases/phase-05-retirement-and-legacy.md) |
 | Phase 6 | SEASON 1: KICKOFF | [`phase-06-service-season-kickoff.md`](../phases/phase-06-service-season-kickoff.md) |
 | Phase 7 | 운영·밸런스·확장 | [`phase-07-live-operations.md`](../phases/phase-07-live-operations.md) |
+| Phase 8 | WORLD STAGE 해외 리그·국제 무대 확장 | [`phase-08-world-stage.md`](../phases/phase-08-world-stage.md) |
 
 ## 규범 키워드
 
@@ -75,4 +77,3 @@
 - 이벤트 데이터만 바뀌어도 결과 확률·효과가 달라지면 `contentPackVersion`을 올린다.
 - 기존 커리어의 결과를 새 규칙으로 소급 재계산하지 않는다.
 - 명세 변경 PR에는 관련 요구사항 ID와 테스트 ID를 함께 적는다.
-

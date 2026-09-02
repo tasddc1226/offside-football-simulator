@@ -242,3 +242,7 @@ type CareerEvent = {
 서버는 Career당 최신 Snapshot과 최근 checkpoint 5개, 전체 명령 로그를 D1에 두고, 오래된 Snapshot과 은퇴 커리어의 명령 로그는 R2로 옮긴다.
 
 익명 프로필 삭제 요청 시 활성 데이터는 삭제하되, 집계 데이터는 개인 식별이 불가능한 형태만 유지한다.
+
+## WORLD STAGE 확장 경계
+
+Phase 8은 `Country`, `League`, `Competition`, `RegistrationPolicy`, `AdaptationContext`를 추가하고 기존 `Team`을 국가·리그 참조 방식으로 확장한다. 현재 `leagueTier` 기반 Team은 삭제하지 않고 ruleset 1.x 호환 어댑터로 읽는다. 필드, 불변 조건, 구 Snapshot 정책은 [WORLD STAGE 세계관 확장](15-world-stage-expansion.md)이 정본이다.

@@ -34,6 +34,10 @@
 - 같은 seed와 나머지 생성 입력에서 `gender`만 바꿔도 능력·잠재력·RNG draw 수·제안·Legacy 결과가 같다.
 - 포지션 전환 뒤 `preferredPosition`은 불변이고 `primaryPosition`과 숙련도만 바뀐다.
 - 같은 Archive와 legacyVersion의 Legacy 결과가 같고 모든 Career가 엔딩을 받는다.
+- 국가·리그 이동 전후 Base OVR과 영구 능력이 같다.
+- 등록 실패는 기존 계약·팀·적응 상태를 변경하지 않는다.
+- 한 출전은 리그·컵·대륙대회·대표팀 중 정확히 한 CompetitionRecord에만 집계된다.
+- ruleset 1.x Team 호환 어댑터 적용 전후 구 Career state hash가 같다.
 
 ## Golden fixtures
 
@@ -63,6 +67,9 @@ fixture에는 개인 입력이나 운영 DB 데이터를 사용하지 않는다.
 | TEST-E2E-008 | 복구 코드 발급→다른 브라우저 복구→충돌 선택 |
 | TEST-E2E-009 | 온보딩 건너뛰기→첫 프로 계약 5분 이내 도달 |
 | TEST-E2E-010 | 핵심 경기 챕터 판단 3개→새로고침→확정 판단 재생 |
+| TEST-E2E-011 | 국내 첫 계약→해외 관심→제안 비교→등록 성공→현지 첫 시즌 |
+| TEST-E2E-012 | 조건부 등록 실패→기존 계약·팀·revision 안전 복구 |
+| TEST-E2E-013 | 리그·컵·대륙대회·대표팀 일정 충돌→단일 출전·정확한 집계 |
 
 ## 세션 길이·결정 예산 테스트
 

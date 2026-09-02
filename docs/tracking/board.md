@@ -1,10 +1,12 @@
 # 진행 보드
 
-갱신: 2026-09-02 (ADR 승인 후). 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
+갱신: 2026-09-03. 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
 
 ## 현재 게이트
 
 **Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. 2026-09-02 23:42 기준 Wave 3의 T-1-008(선수 만들기)까지 머지됐고, T-1-009(진로~계약·대시보드)와 Wave 4의 T-1-011(동기화 배선)이 진행 중이다. 사용자가 작성한 콘텐츠 정본 `docs/content/kickoff/`(PR #24)는 Phase 2 콘텐츠 작업의 입력이며 지금 코드 작업을 요구하지 않는다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
+
+WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. 현재 Phase 1~7의 국내 MVP 순서를 바꾸지 않으며, Phase 3~5와 Phase 7 완료 후 새 ruleset의 신규 Career에 해외 이적·가상 해외 리그·대륙대회를 연다. 정본은 [WORLD STAGE 개발 명세](../development/15-world-stage-expansion.md)와 [Phase 8](../phases/phase-08-world-stage.md)이다.
 
 ## 사용자 액션
 
@@ -68,6 +70,23 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-014 | web(e2e) + docs | TEST-E2E-007·008·009, 키보드 전용 주 여정, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, 완료 조건 표 | T-1-008, T-1-009, T-1-011, T-1-012 | 4 | todo | [브리프](briefs/T-1-014.md) |
 | T-1-016 | domain + contracts + web + fixtures | 선수 성별 프로필 정보, 선호/현재 포지션 분리, 생성 화면·migration·결정론 fixture | T-1-009, T-1-011 | 4 | todo | [브리프](briefs/T-1-016.md) |
 
+## Phase 8 WORLD STAGE 백로그 (Phase 3~7 완료 후 착수)
+
+| ID | 패키지 | 작업 | 선행 | 슬라이스 | 상태 |
+|---|---|---|---|---|---|
+| T-8-001 | domain + content + contracts | Country·League·Competition·Team 확장·RegistrationPolicy·AdaptationContext 스키마 | Phase 3, 4 | 8A | todo |
+| T-8-002 | domain + fixtures | ruleset 1.x Team 호환 어댑터와 구 Snapshot/Archive hash 회귀 | T-8-001 | 8A | todo |
+| T-8-003 | domain + content + contracts | 해외 제안 생성, 통화 비교 지수, 등록 자격·원자 계약 판정·계약 근거 보존 | T-8-001, T-8-002 | 8B | todo |
+| T-8-004 | web + ui | SCR-035~037 세계 관심·해외 제안 비교·등록 결과 | T-8-003 | 8B | todo |
+| T-8-005 | domain + content + web | 적응 Context, SCR-038, 원인 태그와 적응 이벤트 | T-8-003 | 8B | todo |
+| T-8-006 | domain + content | 복수 Competition 일정·우선순위·기록 집계 | T-8-001, Phase 2 | 8C | todo |
+| T-8-007 | web + content | SCR-039 국제 경기 챕터와 SCR-032 대표팀 연계 | T-8-005, T-8-006 | 8C | todo |
+| T-8-008 | content + ui assets | 해외 2개국·4개 디비전·24개 가상 구단·대륙대회 첫 팩 | T-8-001, Phase 7 | 8B~C | todo |
+| T-8-009 | domain + web + api | SCR-040, Timeline·Archive·Legacy 리그 정규화 | T-8-006, Phase 5 | 8C | todo |
+| T-8-010 | e2e + docs | TEST-E2E-011~013, 접근성·결정론·마이그레이션·밸런스 게이트 | T-8-004~009 | 8D | todo |
+
+초기 24개 구단 슬라이스가 완주·선택 분포 게이트를 통과한 뒤에만 5개 리그 스타일로 확장한다. 실명 라이선스는 이 백로그에 포함하지 않는다.
+
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
 선행: U-007 콘솔 등록(`appName` 확정). 리드타임은 등급분류(U-009) 10~15일과 콘솔 검토 2~4주. 코드 작업은 M-001~M-004이며 구조가 준비돼 있으면 각각 워커 1건 규모다.
@@ -96,6 +115,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | D-002 | 기술 스택·인프라 ADR-001~009, 진행 관리 체계 | 805f346 |
 | D-003 | 앱인토스 미니앱 ADR-009와 채널 반영, 콘솔 MCP 등록 | ce67e1f |
 | D-004 | 미니앱은 "언제든 출시 가능한 구조"로 범위 조정, 출시 준비를 보류 백로그로 분리 | 이 커밋 |
+| D-005 | WORLD STAGE 세계관·화면·데이터·검증 명세와 Phase 8 백로그 확정 | 이 PR |
 | T-0-001 | 모노레포 골격과 패키지 의존 방향 lint (PR #1, 리뷰 2회, 워커 비용 약 $15) | e9d7d30 |
 | T-0-002 | domain 결정론 코어 (PR #2, 리뷰 1회 통과, 워커 비용 약 $5) | fcb49d4 |
 | T-0-009 | web 라우터·디자인 토큰·공통 상태 훅·허브 빈 상태 (PR #3, 리뷰 1회 통과, 워커 비용 약 $14) | fdb8a72 |

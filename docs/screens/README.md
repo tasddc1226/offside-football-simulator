@@ -55,8 +55,14 @@
 | SCR-032 | 대표팀 차출 | P1 | 4 | [허브·보조](05-hub-and-support.md) |
 | SCR-033 | 능력치 상세 | P1 | 2 | [허브·보조](05-hub-and-support.md) |
 | SCR-034 | 온보딩 | P0 | 1 | [허브·보조](05-hub-and-support.md) |
+| SCR-035 | 세계 무대·관심 현황 | P1 | 8 | [WORLD STAGE](06-world-stage.md) |
+| SCR-036 | 해외 제안 비교 | P0 | 8 | [WORLD STAGE](06-world-stage.md) |
+| SCR-037 | 등록·이적 결과 | P0 | 8 | [WORLD STAGE](06-world-stage.md) |
+| SCR-038 | 현지 적응 계획 | P0 | 8 | [WORLD STAGE](06-world-stage.md) |
+| SCR-039 | 국제 경기 챕터 | P1 | 8 | [WORLD STAGE](06-world-stage.md) |
+| SCR-040 | 월드 커리어 결산 | P1 | 8 | [WORLD STAGE](06-world-stage.md) |
 
-SCR-029~034는 검토에서 누락으로 확인돼 추가한 화면이다. 제품 설계서의 28개 화면 카탈로그에는 없다.
+SCR-029~034는 검토에서 누락으로 확인돼 추가한 화면이다. SCR-035~040은 WORLD STAGE 확장 화면이다. 제품 설계서의 28개 화면 카탈로그에는 없다.
 
 ## 서비스 시즌 추가 화면
 
@@ -66,4 +72,3 @@ SCR-029~034는 검토에서 누락으로 확인돼 추가한 화면이다. 제�
 | SCR-SVC-002 | 시즌 도전 목록 | 6 |
 | SCR-SVC-003 | 개인 시즌 결산 | 6 |
 | SCR-SVC-004 | 선수 보관함·시즌 앨범 | 6 |
-
