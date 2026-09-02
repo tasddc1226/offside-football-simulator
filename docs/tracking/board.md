@@ -50,12 +50,12 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 패키지 | 작업 | 선행 | Wave | 상태 | 워크트리 |
 |---|---|---|---|---|---|---|
-| T-1-001 | domain | Player 모델·룰셋 입력·DRAFT→CONFIRM_PLAYER·Base OVR golden 59·타임라인·`ADVANCE` 이벤트 제시 | Phase 0 종료 | 1 | todo | [브리프](briefs/T-1-001.md) |
-| T-1-002 | content | 룰셋 1.0.0(아키타입 24·배경 3·팀 8·제안·계약 규칙)·`RulesetSchema`·`loadRuleset`, 팩 0.1.0 진로 태그 수정 | Phase 0 종료 | 1 | todo | [브리프](briefs/T-1-002.md) |
-| T-1-003 | ui | Radix RadioGroup·Dialog·Tabs 래핑, Stepper·ChoiceCard·CompareCards·StatusStrip·PlayerHeader·ResultCard·DashboardSection·CareerTimeline·Toast | Phase 0 종료 | 1 | todo | [브리프](briefs/T-1-003.md) |
-| T-1-004 | api | 복구 코드 발급·복구(RECOVERY_CONFLICT·병합)·프로필 삭제 2단계·로그아웃·커리어 삭제·rate limit·감사 로그 | Phase 0 종료 | 1 | todo | [브리프](briefs/T-1-004.md) |
-| T-1-005 | domain | `ADVANCE` 제안 생성(offerRules)·`ACCEPT_OFFER`·Contract·golden 확장 | T-1-001, T-1-002 | 2 | todo | |
-| T-1-015 | content | `buildConditionContext`·`selectEligibleEvents`, 룰셋 스키마 ↔ domain 타입 바인딩, fixtures 룰셋 일치 테스트 | T-1-001, T-1-002 | 2 | todo | |
+| T-1-001 | domain | Player 모델·룰셋 입력·DRAFT→CONFIRM_PLAYER·Base OVR golden 59·타임라인·`ADVANCE` 이벤트 제시 | Phase 0 종료 | 1 | in-progress | `T-1-001-domain-player-model`, [브리프](briefs/T-1-001.md) |
+| T-1-002 | content | 룰셋 1.0.0(아키타입 24·배경 3·팀 8·제안·계약 규칙)·`RulesetSchema`·`loadRuleset`, 팩 0.1.0 진로 태그 수정 | Phase 0 종료 | 1 | in-progress | `T-1-002-content-ruleset`, [브리프](briefs/T-1-002.md) |
+| T-1-003 | ui | Radix RadioGroup·Dialog·Tabs 래핑, Stepper·ChoiceCard·CompareCards·StatusStrip·PlayerHeader·ResultCard·DashboardSection·CareerTimeline·Toast | Phase 0 종료 | 1 | in-progress | `T-1-003-ui-component-kit`, [브리프](briefs/T-1-003.md) |
+| T-1-004 | api | 복구 코드 발급·복구(RECOVERY_CONFLICT·병합)·프로필 삭제 2단계·로그아웃·커리어 삭제·rate limit·감사 로그 | Phase 0 종료 | 1 | in-progress | `T-1-004-api-recovery-delete`, [브리프](briefs/T-1-004.md) |
+| T-1-005 | domain | `ADVANCE` 제안 생성(offerRules)·`ACCEPT_OFFER`·Contract·golden 확장 | T-1-001, T-1-002 | 2 | todo | [브리프](briefs/T-1-005.md) |
+| T-1-015 | content | `buildConditionContext`·`selectEligibleEvents`, 룰셋 스키마 ↔ domain 타입 바인딩, fixtures 룰셋 일치 테스트 | T-1-001, T-1-002 | 2 | todo | [브리프](briefs/T-1-015.md) |
 | T-1-006 | contracts | 명령 payload 유니온 6종, Player/Offer/Contract/Pending/Timeline 스키마, 복구·삭제·로그아웃·MergeChoice 스키마 | T-1-005 | 2 | todo | |
 | T-1-007 | web | 엔진 배선(engine-client·LocalStore·Worker), 룰셋·팩 로딩, 온보딩 SCR-034, 허브 SCR-001 카드·이어하기·삭제, 라우트 골격, ui-store 영속화 | T-1-001, T-1-003, T-1-015 | 2 | todo | |
 | T-1-010 | web(e2e) | Playwright + axe 도입, 허브·법적 문서 스모크·접근성, 브라우저 Web Worker state hash 검증(dev probe) | Phase 0 종료 | 1(첫 머지 후) | todo | [브리프](briefs/T-1-010.md) |
@@ -83,7 +83,10 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| (없음) | | | Phase 0 코드 작업 종료. Wave 1 투입 예정 |
+| T-1-001 | Sonnet 5, Orca 워크트리 `T-1-001-domain-player-model` | 2026-09-02 | 브리프 전달 |
+| T-1-002 | Sonnet 5, Orca 워크트리 `T-1-002-content-ruleset` | 2026-09-02 | 브리프 전달 |
+| T-1-003 | Sonnet 5, Orca 워크트리 `T-1-003-ui-component-kit` | 2026-09-02 | 브리프 전달 |
+| T-1-004 | Sonnet 5, Orca 워크트리 `T-1-004-api-recovery-delete` | 2026-09-02 | 브리프 전달 |
 
 ## 완료
 
