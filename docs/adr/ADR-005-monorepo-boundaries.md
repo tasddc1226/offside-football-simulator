@@ -28,7 +28,7 @@ tooling/
 ```text
 apps/web  → platform, engine-client, ui, contracts, domain(타입만), content(타입만)
 apps/api  → domain, contracts, content(스키마만)
-platform  → engine-client(LocalStore 포트 타입만), contracts(타입만)
+platform  → engine-client(LocalStore 포트 타입과 `LocalStoreConstraintError` 클래스만. 실행기·시뮬레이터 import 금지), contracts(타입만)
 engine-client → domain, contracts, content(스키마만)
 ui → contracts(타입만)
 domain → (없음)

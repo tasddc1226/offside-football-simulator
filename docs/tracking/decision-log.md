@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #12 platform 골격 머지)
+
+- **PR #12(T-0-012) 머지 `675ac12`.** Dexie 구현은 `db.transaction('rw'|'r', 전체 테이블)`로 IndexedDB 원자성·직렬화를 그대로 쓰고 Dexie를 `await import`로 지연 로드(초기 청크 예산). KV 구현은 readwrite마다 prefix 전체를 백업해 throw 시 복원. 두 구현 모두 engine-client 계약 테스트와 golden 통과. 채널 분기는 `apps/web/src/platform/index.ts`의 `import.meta.env.MODE === 'toss'` 한 곳, `build:toss` 스크립트로 빌드.
+- **ADR-005 해석 확정.** platform이 engine-client에서 가져올 수 있는 것은 LocalStore 포트 **타입**과 `LocalStoreConstraintError` **클래스**(계약 테스트의 `instanceof`에 필요). ADR-005 표의 문구를 "포트 타입·오류 클래스"로 고침. `createEngineClient` 등 실행기는 여전히 platform에서 import 금지(경계 스캔 테스트가 강제).
+- **후속 — KV 스토어 백업 비용.** prefix 전체 백업은 커리어가 커지면 명령마다 수 MB 복사가 된다. toss 채널 착수(M-001) 때 "건드린 키만 저널링"으로 바꾼다. 지금은 스텁이라 그대로 둔다.
+
 ## 2026-09-02 (저녁, PR #11 폰트 dynamic subset 머지)
 
 - **PR #11(T-0-013) 머지 `acbfd1d`.** `@offside/ui/fonts.css`(subset 94개 + 'Pretendard Fallback')를 앱이 `tailwind.css`보다 먼저 import. `check:bundle`에 폰트 예산 2종 추가(단일 woff2 200KB, preload 합 100KB).
