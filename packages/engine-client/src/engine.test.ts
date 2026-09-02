@@ -1,6 +1,5 @@
 import { PutCareerBodySchema } from '@offside/contracts';
-import { ATTRIBUTE_KEYS, type AttributeKey } from '@offside/domain';
-import { career01, career01EngineCommands } from '@offside/fixtures';
+import { career01, career01EngineCommands, rulesetProto } from '@offside/fixtures';
 import { describe, expect, it } from 'vitest';
 import { createEngineClient, type EngineClient } from './engine.js';
 import { inlineSimulator, type Simulator } from './simulator/index.js';
@@ -9,12 +8,6 @@ import type { EngineCommand, ExecuteResult } from './types.js';
 import { attachSimulatorHandler } from './worker/protocol.js';
 import { createWorkerSimulator } from './worker/host.js';
 import type { LocalStore, LocalStoreTx } from './ports/local-store.js';
-
-function buildAttributes(value: number): Record<AttributeKey, number> {
-  const attributes = {} as Record<AttributeKey, number>;
-  for (const key of ATTRIBUTE_KEYS) attributes[key] = value;
-  return attributes;
-}
 
 function makeIdGenerator(prefix: string): () => string {
   let counter = 0;
@@ -29,12 +22,6 @@ function makeCreateCommand(careerId: string, commandId: string): EngineCommand {
     payload: {
       careerId,
       seed: `seed-${careerId}`,
-      stage: 'YOUTH',
-      age: 17,
-      attributes: buildAttributes(50),
-      state: { form: 50, fitness: 80, morale: 60 },
-      context: { tacticalFit: 50, squadStatus: 50, positionProficiency: 100 },
-      relationships: { managerTrust: 50, captain: 50, rival: 50, fans: 50, agent: 50 },
       simulationMode: 'CHAPTER',
       rulesetVersion: '1.0.0',
       contentPackVersion: '0.1.0',
@@ -44,7 +31,7 @@ function makeCreateCommand(careerId: string, commandId: string): EngineCommand {
 
 async function runGoldenOnFreshStore(): Promise<{ store: MemoryLocalStore; engine: EngineClient; careerId: string }> {
   const store = new MemoryLocalStore();
-  const engine = createEngineClient({ store, simulator: inlineSimulator });
+  const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
   const careerId = career01.createCareer.careerId;
   const commands = career01EngineCommands(makeIdGenerator('golden-cmd'));
 
@@ -118,9 +105,9 @@ describe('golden fixture', () => {
     expect(latest?.stateHash).toBe(career01.golden.stateHash);
 
     const logs = await store.transaction('readonly', (tx) => tx.commandLog.listSince(careerId, 0));
-    expect(logs.length).toBe(13);
+    expect(logs.length).toBe(career01.golden.revision);
     const snapshots = await store.transaction('readonly', (tx) => tx.snapshots.listByCareer(careerId));
-    expect(snapshots.length).toBe(13);
+    expect(snapshots.length).toBe(career01.golden.revision);
 
     const loaded = await engine.loadCareer(careerId);
     expect(loaded.ok).toBe(true);
@@ -138,7 +125,7 @@ describe('golden fixture', () => {
     const workerSimulator = createWorkerSimulator(channel.port1 as unknown as Parameters<typeof createWorkerSimulator>[0]);
 
     const store = new MemoryLocalStore();
-    const engine = createEngineClient({ store, simulator: workerSimulator });
+    const engine = createEngineClient({ store, simulator: workerSimulator, ruleset: rulesetProto });
     const careerId = career01.createCareer.careerId;
     const commands = career01EngineCommands(makeIdGenerator('worker-cmd'));
 
@@ -166,7 +153,7 @@ describe('golden fixture', () => {
 describe('멱등성', () => {
   it('같은 commandId 100개 동시 실행은 결과 하나로 수렴한다', async () => {
     const store = new MemoryLocalStore();
-    const engine = createEngineClient({ store, simulator: inlineSimulator });
+    const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
     const careerId = 'car_idem_test';
 
     const createResult = await engine.execute({
@@ -178,10 +165,10 @@ describe('멱등성', () => {
     if (!createResult.ok) throw new Error('unreachable');
 
     const command: EngineCommand = {
-      type: 'ADVANCE',
+      type: 'UPDATE_PLAYER_DRAFT',
       commandId: 'advance-shared',
       expectedRevision: createResult.domainSnapshot.revision,
-      payload: {},
+      payload: { draft: { name: '테스트' } },
     };
 
     const results = await Promise.all(Array.from({ length: 100 }, () => engine.execute({ careerId, command })));
@@ -201,14 +188,14 @@ describe('멱등성', () => {
 
   it('영속 멱등성: 새 EngineClient에서도 idempotency가 유지된다', async () => {
     const store = new MemoryLocalStore();
-    const engine1 = createEngineClient({ store, simulator: inlineSimulator });
+    const engine1 = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
     const careerId = 'car_persist';
     const createCommand = makeCreateCommand(careerId, 'create-1');
 
     const createResult = await engine1.execute({ careerId, command: createCommand, createdServiceSeasonId: 'season-01' });
     expect(createResult.ok).toBe(true);
 
-    const engine2 = createEngineClient({ store, simulator: inlineSimulator });
+    const engine2 = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
     const replay = await engine2.execute({ careerId, command: createCommand, createdServiceSeasonId: 'season-01' });
     expect(replay.ok).toBe(true);
     if (replay.ok) expect(replay.replayed).toBe(true);
@@ -221,7 +208,7 @@ describe('멱등성', () => {
 describe('revision 경쟁', () => {
   it('commandId만 다른 100개(같은 expectedRevision) 동시 실행은 하나만 성공한다', async () => {
     const store = new MemoryLocalStore();
-    const engine = createEngineClient({ store, simulator: inlineSimulator });
+    const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
     const careerId = 'car_race_test';
 
     const createResult = await engine.execute({
@@ -234,10 +221,10 @@ describe('revision 경쟁', () => {
 
     const baseRevision = createResult.domainSnapshot.revision;
     const commands: EngineCommand[] = Array.from({ length: 100 }, (_, i) => ({
-      type: 'ADVANCE',
+      type: 'UPDATE_PLAYER_DRAFT',
       commandId: `race-${i}`,
       expectedRevision: baseRevision,
-      payload: {},
+      payload: { draft: { name: '테스트' } },
     }));
 
     const results = await Promise.all(commands.map((command) => engine.execute({ careerId, command })));
@@ -256,7 +243,7 @@ describe('revision 경쟁', () => {
 describe('쓰기 단계 충돌', () => {
   it('시뮬레이션 도중 revision이 바뀌면 CAREER_REVISION_CONFLICT이고 아무것도 추가되지 않는다', async () => {
     const store = new MemoryLocalStore();
-    const engine = createEngineClient({ store, simulator: inlineSimulator });
+    const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
     const careerId = 'car_write_conflict';
 
     const createResult = await engine.execute({
@@ -278,13 +265,13 @@ describe('쓰기 단계 충돌', () => {
         return inlineSimulator.simulate(input);
       },
     };
-    const faultyEngine = createEngineClient({ store, simulator: faultySimulator });
+    const faultyEngine = createEngineClient({ store, simulator: faultySimulator, ruleset: rulesetProto });
 
     const advanceCommand: EngineCommand = {
-      type: 'ADVANCE',
+      type: 'UPDATE_PLAYER_DRAFT',
       commandId: 'advance-conflict',
       expectedRevision: createResult.domainSnapshot.revision,
-      payload: {},
+      payload: { draft: { name: '테스트' } },
     };
     const result = await faultyEngine.execute({ careerId, command: advanceCommand });
 
@@ -303,7 +290,7 @@ describe('쓰기 단계 충돌', () => {
 describe('롤백', () => {
   it('쓰기 트랜잭션이 throw하면 이전 상태가 유지된다', async () => {
     const inner = new MemoryLocalStore();
-    const engine = createEngineClient({ store: inner, simulator: inlineSimulator });
+    const engine = createEngineClient({ store: inner, simulator: inlineSimulator, ruleset: rulesetProto });
     const careerId = 'car_rollback';
 
     const createResult = await engine.execute({
@@ -315,13 +302,13 @@ describe('롤백', () => {
     if (!createResult.ok) throw new Error('unreachable');
 
     const throwingStore = wrapStoreWithThrowingAppend(inner);
-    const throwingEngine = createEngineClient({ store: throwingStore, simulator: inlineSimulator });
+    const throwingEngine = createEngineClient({ store: throwingStore, simulator: inlineSimulator, ruleset: rulesetProto });
 
     const advanceCommand: EngineCommand = {
-      type: 'ADVANCE',
+      type: 'UPDATE_PLAYER_DRAFT',
       commandId: 'advance-throw',
       expectedRevision: createResult.domainSnapshot.revision,
-      payload: {},
+      payload: { draft: { name: '테스트' } },
     };
 
     await expect(throwingEngine.execute({ careerId, command: advanceCommand })).rejects.toThrow();
@@ -380,7 +367,7 @@ describe('복구', () => {
 
   it('(d) 없는 careerId는 CAREER_NOT_FOUND다', async () => {
     const store = new MemoryLocalStore();
-    const engine = createEngineClient({ store, simulator: inlineSimulator });
+    const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
 
     const loaded = await engine.loadCareer('does-not-exist');
     expect(loaded.ok).toBe(false);
@@ -389,11 +376,11 @@ describe('복구', () => {
 });
 
 describe('도메인 오류 전달', () => {
-  it('이미 확정된 이벤트를 다시 RESOLVE_EVENT하면 COMMAND_ALREADY_RESOLVED이고 아무것도 저장되지 않는다', async () => {
+  it('이미 확정된 이벤트를 다시 RESOLVE_EVENT하면 pending이 없어 VALIDATION_FAILED이고 아무것도 저장되지 않는다', async () => {
     const { store, engine, careerId } = await runGoldenOnFreshStore();
-    const template = career01.commands[1];
+    const template = career01.commands[4];
     if (template === undefined || template.type !== 'RESOLVE_EVENT') {
-      throw new Error('fixture assumption changed: commands[1]은 RESOLVE_EVENT여야 한다.');
+      throw new Error('fixture assumption changed: commands[4]는 RESOLVE_EVENT여야 한다.');
     }
 
     const command = {
@@ -405,30 +392,33 @@ describe('도메인 오류 전달', () => {
 
     const result = await engine.execute({ careerId, command });
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe('COMMAND_ALREADY_RESOLVED');
+    if (!result.ok) {
+      expect(result.error.code).toBe('VALIDATION_FAILED');
+      expect(result.error.details).toMatchObject({ reason: 'NO_PENDING_EVENT' });
+    }
 
     const logs = await store.transaction('readonly', (tx) => tx.commandLog.listSince(careerId, 0));
-    expect(logs.length).toBe(13);
+    expect(logs.length).toBe(career01.golden.revision);
   });
 });
 
 describe('buildSyncBody / markSynced', () => {
-  it('golden 실행 뒤 baseRevision 0·commands 13개가 PutCareerBodySchema를 통과한다', async () => {
+  it('golden 실행 뒤 baseRevision 0·commands N개가 PutCareerBodySchema를 통과한다', async () => {
     const { engine, careerId } = await runGoldenOnFreshStore();
 
     const body = await engine.buildSyncBody(careerId);
     expect(body).not.toBeNull();
     if (body === null) throw new Error('unreachable');
     expect(body.baseRevision).toBe(0);
-    expect(body.commands.length).toBe(13);
+    expect(body.commands.length).toBe(career01.golden.revision);
     expect(PutCareerBodySchema.safeParse(body).success).toBe(true);
 
-    await engine.markSynced(careerId, 13);
+    await engine.markSynced(careerId, career01.golden.revision);
     const afterSync = await engine.buildSyncBody(careerId);
     expect(afterSync).toBeNull();
   });
 
-  it('markSynced(5) 뒤에는 revision 6~13 명령만 남는다', async () => {
+  it('markSynced(5) 뒤에는 revision 6부터의 명령만 남는다', async () => {
     const { engine, careerId } = await runGoldenOnFreshStore();
 
     await engine.markSynced(careerId, 5);
@@ -436,7 +426,11 @@ describe('buildSyncBody / markSynced', () => {
     expect(body).not.toBeNull();
     if (body === null) throw new Error('unreachable');
     expect(body.baseRevision).toBe(5);
-    expect(body.commands.map((c) => c.revision)).toEqual([6, 7, 8, 9, 10, 11, 12, 13]);
+    const expectedRevisions = Array.from(
+      { length: career01.golden.revision - 5 },
+      (_, i) => i + 6,
+    );
+    expect(body.commands.map((c) => c.revision)).toEqual(expectedRevisions);
     expect(PutCareerBodySchema.safeParse(body).success).toBe(true);
   });
 });

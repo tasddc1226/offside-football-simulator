@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #16 UI 부품 키트 머지)
+
+**결과**: T-1-003 PR #16 squash 머지(`cb7d932`). Radix RadioGroup·Dialog·Tabs 래핑과 부품 10종(Stepper·ChoiceCard·CompareCards·StatusStrip·PlayerHeader·ResultCard·DashboardSection·CareerTimeline·Toast). 키보드·포커스 테스트는 `@testing-library/user-event`로. ui 45 tests, web 번들 91.81KB 불변(새 export는 아직 web이 import하지 않아 트리셰이킹). 비용 약 $11.4, 39분.
+
+**리뷰에서 고친 것**: (1) 워커가 오늘 배포된 `user-event 14.6.7`을 쓰려고 `pnpm-workspace.yaml`에 `minimumReleaseAgeExclude`를 추가했다. 공급망 보호 정책 우회라 되돌리고 14.6.6으로 고정했다. 워커 규칙 문서에 "정책이 막는 버전은 예외 등록 대신 더 오래된 버전"을 추가했다. (2) PlayerHeader 이름은 브리프가 `DisplayWord`라고 잘못 적었고(브랜드 어휘 전용) 워커가 지적했다. 13 DSN-CMP-001대로 `<h2>`로 고쳤다. (3) CompareCards는 모바일·데스크톱 레이아웃을 DOM에 둘 다 그리므로 액션 슬롯을 `renderAction(layout)`으로 바꿔 중복 id를 호출자가 피할 수 있게 했다.
+
+**받아들인 것**: 위험·결과 아이콘은 13이 요구하는 SVG 자산이 없어 유니코드 문자로 대체(아이콘 자산 생기면 교체, 후속). `ResultCard`의 `FIXED` 종류 시각은 워커 임의(■, `--os-text-2`). 포커스 링은 기존 `--os-focus` 재사용.
+
 ## 2026-09-02 (저녁, PR #15 룰셋 1.0.0 머지)
 
 **결과**: T-1-002 PR #15 squash 머지(`dff279f`). 룰셋 1.0.0(아키타입 24·배경 3·국적 10·팀 8·제안·계약 규칙), `RulesetSchema`·`loadRuleset`, CLI가 룰셋 checksum(`852ab110…`)도 검증. 팩 0.1.0의 EVT-CON-002/003이 태그로 이어지고 조건 DSL에서 `career.pathDecision`을 뺐다. content 80 tests, 전체 체인 통과. 비용 약 $9.4, 26분.

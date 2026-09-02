@@ -1,6 +1,7 @@
 import careerRaw from './career-01.json';
 import goldenRaw from './career-01.golden.json';
-import type { AttributeKey, CareerStage, Command, SimulationMode } from '@offside/domain';
+import rulesetProtoRaw from './ruleset-proto.json';
+import type { AttributeKey, Command, Ruleset, SimulationMode } from '@offside/domain';
 
 /**
  * fixtures는 `@offside/engine-client`를 import할 수 없으므로(ADR-005: fixtures → domain, content만
@@ -11,21 +12,18 @@ export type EngineCommand = Command & { commandId: string; expectedRevision: num
 type CareerFixtureJson = {
   rulesetVersion: string;
   contentPackVersion: string;
-  createCareer: {
-    careerId: string;
-    seed: string;
-    stage: CareerStage;
-    age: number;
-    simulationMode: SimulationMode;
-    attributes: Record<AttributeKey, number>;
-    state: { form: number; fitness: number; morale: number };
-    context: { tacticalFit: number; squadStatus: number; positionProficiency: number };
-    relationships: { managerTrust: number; captain: number; rival: number; fans: number; agent: number };
-  };
+  createCareer: { careerId: string; seed: string; simulationMode: SimulationMode };
   commands: Array<{ type: Command['type']; payload: unknown }>;
 };
 
-type GoldenJson = { revision: number; stateHash: string; rngStateDraws: number };
+type GoldenJson = {
+  revision: number;
+  stateHash: string;
+  rngStateDraws: number;
+  baseOvr: number;
+  attributes: Record<AttributeKey, number>;
+  scoutedPotential: { min: number; max: number };
+};
 
 const fixtureJson = careerRaw as CareerFixtureJson;
 
@@ -37,7 +35,10 @@ export const career01 = {
   golden: goldenRaw as GoldenJson,
 };
 
-/** CREATE_CAREER + 12개 명령. `expectedRevision`은 0부터 연속이다. */
+/** T-1-001 `src/__fixtures__/ruleset-proto.json`과 같은 내용의 최소 테스트 룰셋. */
+export const rulesetProto = rulesetProtoRaw as Ruleset;
+
+/** CREATE_CAREER + UPDATE_PLAYER_DRAFT×2 + CONFIRM_PLAYER + ADVANCE/RESOLVE_EVENT×2. */
 export function career01EngineCommands(newId: () => string): EngineCommand[] {
   const createCommand: EngineCommand = {
     type: 'CREATE_CAREER',
@@ -46,12 +47,6 @@ export function career01EngineCommands(newId: () => string): EngineCommand[] {
     payload: {
       careerId: career01.createCareer.careerId,
       seed: career01.createCareer.seed,
-      stage: career01.createCareer.stage,
-      age: career01.createCareer.age,
-      attributes: career01.createCareer.attributes,
-      state: career01.createCareer.state,
-      context: career01.createCareer.context,
-      relationships: career01.createCareer.relationships,
       simulationMode: career01.createCareer.simulationMode,
       rulesetVersion: career01.rulesetVersion,
       contentPackVersion: career01.contentPackVersion,

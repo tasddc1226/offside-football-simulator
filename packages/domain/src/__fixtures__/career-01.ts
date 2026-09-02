@@ -1,32 +1,26 @@
 import careerFixtureRaw from './career-01.json';
+import rulesetProtoRaw from './ruleset-proto.json';
 import type { Command, SimulationResult } from '../simulate.js';
 import { simulate } from '../simulate.js';
-import type { AttributeKey, CareerStage, DomainSnapshot, SimulationMode } from '../types.js';
+import type { DomainSnapshot, SimulationMode } from '../types.js';
+import type { Ruleset } from '../ruleset.js';
 
 type CareerFixture = {
   rulesetVersion: string;
   contentPackVersion: string;
-  createCareer: {
-    careerId: string;
-    seed: string;
-    stage: CareerStage;
-    age: number;
-    simulationMode: SimulationMode;
-    attributes: Record<AttributeKey, number>;
-    state: { form: number; fitness: number; morale: number };
-    context: { tacticalFit: number; squadStatus: number; positionProficiency: number };
-    relationships: { managerTrust: number; captain: number; rival: number; fans: number; agent: number };
-  };
+  createCareer: { careerId: string; seed: string; simulationMode: SimulationMode };
   commands: Array<{ type: Command['type']; payload: unknown }>;
 };
 
 export const careerFixture = careerFixtureRaw as CareerFixture;
+export const rulesetProto = rulesetProtoRaw as Ruleset;
 
 /**
- * career-01 fixture(CREATE_CAREER + 12개 명령)을 순서대로 실행해 최종 DomainSnapshot을 돌려준다.
- * 매 실행마다 새 commandId를 쓰지만 payload와 명령 순서는 fixture와 동일하므로 결과는 항상 같다.
+ * career-01 fixture(CREATE_CAREER + UPDATE_PLAYER_DRAFT×2 + CONFIRM_PLAYER + ADVANCE/RESOLVE_EVENT×2)를
+ * 순서대로 실행해 최종 DomainSnapshot을 돌려준다. 매 실행마다 새 commandId를 쓰지만 payload와
+ * 명령 순서는 fixture와 동일하므로 결과는 항상 같다.
  */
-export function runCareerFixture(fixture: CareerFixture = careerFixture): DomainSnapshot {
+export function runCareerFixture(fixture: CareerFixture = careerFixture, ruleset: Ruleset = rulesetProto): DomainSnapshot {
   const createCommand: Command & { commandId: string; expectedRevision: number } = {
     type: 'CREATE_CAREER',
     commandId: 'fixture-create',
@@ -34,12 +28,6 @@ export function runCareerFixture(fixture: CareerFixture = careerFixture): Domain
     payload: {
       careerId: fixture.createCareer.careerId,
       seed: fixture.createCareer.seed,
-      stage: fixture.createCareer.stage,
-      age: fixture.createCareer.age,
-      attributes: fixture.createCareer.attributes,
-      state: fixture.createCareer.state,
-      context: fixture.createCareer.context,
-      relationships: fixture.createCareer.relationships,
       simulationMode: fixture.createCareer.simulationMode,
       rulesetVersion: fixture.rulesetVersion,
       contentPackVersion: fixture.contentPackVersion,
@@ -49,6 +37,7 @@ export function runCareerFixture(fixture: CareerFixture = careerFixture): Domain
   let result: SimulationResult = simulate({
     snapshot: null,
     command: createCommand,
+    ruleset,
     rulesetVersion: fixture.rulesetVersion,
     contentPackVersion: fixture.contentPackVersion,
   });
@@ -67,6 +56,7 @@ export function runCareerFixture(fixture: CareerFixture = careerFixture): Domain
     result = simulate({
       snapshot,
       command,
+      ruleset,
       rulesetVersion: fixture.rulesetVersion,
       contentPackVersion: fixture.contentPackVersion,
     });

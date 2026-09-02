@@ -1,5 +1,29 @@
 {
-  "revision": 13,
-  "stateHash": "ac3aae07e47e853c792c53dfc9899c042b02621f339903c65548181d27354e82",
-  "rngStateDraws": 4
+  "revision": 8,
+  "stateHash": "15eea997cd2ab007130ef9e5c56db25b503dc94acafb99b766b9dc07784302ad",
+  "rngStateDraws": 25,
+  "baseOvr": 59,
+  "attributes": {
+    "shooting": 61,
+    "passing": 52,
+    "dribbling": 64,
+    "tackling": 28,
+    "firstTouch": 62,
+    "crossing": 44,
+    "goalkeeping": 10,
+    "pace": 69,
+    "acceleration": 71,
+    "agility": 66,
+    "jumping": 50,
+    "stamina": 56,
+    "strength": 42,
+    "durability": 62,
+    "decisions": 50,
+    "concentration": 49,
+    "composure": 50,
+    "positioning": 58,
+    "leadership": 37,
+    "consistency": 46
+  },
+  "scoutedPotential": { "min": 75, "max": 86 }
 }
