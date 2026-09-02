@@ -24,6 +24,7 @@ import { Route as CareerCareerIdOffersRouteImport } from './routes/career.$caree
 import { Route as CareerCareerIdPathRouteImport } from './routes/career.$careerId.path'
 import { Route as CareerCareerIdStyleRouteImport } from './routes/career.$careerId.style'
 import { Route as CareerCareerIdTryoutRouteImport } from './routes/career.$careerId.tryout'
+import { Route as CareerCareerIdEventResultRouteImport } from './routes/career.$careerId.event_.result'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -100,6 +101,12 @@ const CareerCareerIdTryoutRoute = CareerCareerIdTryoutRouteImport.update({
   path: '/tryout',
   getParentRoute: () => CareerCareerIdRoute,
 } as any)
+const CareerCareerIdEventResultRoute =
+  CareerCareerIdEventResultRouteImport.update({
+    id: '/event_/result',
+    path: '/event/result',
+    getParentRoute: () => CareerCareerIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/career/$careerId/style': typeof CareerCareerIdStyleRoute
   '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
   '/career/$careerId/': typeof CareerCareerIdIndexRoute
+  '/career/$careerId/event/result': typeof CareerCareerIdEventResultRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -133,6 +141,7 @@ export interface FileRoutesByTo {
   '/career/$careerId/style': typeof CareerCareerIdStyleRoute
   '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
   '/career/$careerId': typeof CareerCareerIdIndexRoute
+  '/career/$careerId/event/result': typeof CareerCareerIdEventResultRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -151,6 +160,7 @@ export interface FileRoutesById {
   '/career/$careerId/style': typeof CareerCareerIdStyleRoute
   '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
   '/career/$careerId/': typeof CareerCareerIdIndexRoute
+  '/career/$careerId/event_/result': typeof CareerCareerIdEventResultRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/career/$careerId/style'
     | '/career/$careerId/tryout'
     | '/career/$careerId/'
+    | '/career/$careerId/event/result'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/career/$careerId/style'
     | '/career/$careerId/tryout'
     | '/career/$careerId'
+    | '/career/$careerId/event/result'
   id:
     | '__root__'
     | '/'
@@ -203,6 +215,7 @@ export interface FileRouteTypes {
     | '/career/$careerId/style'
     | '/career/$careerId/tryout'
     | '/career/$careerId/'
+    | '/career/$careerId/event_/result'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -321,6 +334,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CareerCareerIdTryoutRouteImport
       parentRoute: typeof CareerCareerIdRoute
     }
+    '/career/$careerId/event_/result': {
+      id: '/career/$careerId/event_/result'
+      path: '/event/result'
+      fullPath: '/career/$careerId/event/result'
+      preLoaderRoute: typeof CareerCareerIdEventResultRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
   }
 }
 
@@ -334,6 +354,7 @@ interface CareerCareerIdRouteChildren {
   CareerCareerIdStyleRoute: typeof CareerCareerIdStyleRoute
   CareerCareerIdTryoutRoute: typeof CareerCareerIdTryoutRoute
   CareerCareerIdIndexRoute: typeof CareerCareerIdIndexRoute
+  CareerCareerIdEventResultRoute: typeof CareerCareerIdEventResultRoute
 }
 
 const CareerCareerIdRouteChildren: CareerCareerIdRouteChildren = {
@@ -346,6 +367,7 @@ const CareerCareerIdRouteChildren: CareerCareerIdRouteChildren = {
   CareerCareerIdStyleRoute: CareerCareerIdStyleRoute,
   CareerCareerIdTryoutRoute: CareerCareerIdTryoutRoute,
   CareerCareerIdIndexRoute: CareerCareerIdIndexRoute,
+  CareerCareerIdEventResultRoute: CareerCareerIdEventResultRoute,
 }
 
 const CareerCareerIdRouteWithChildren = CareerCareerIdRoute._addFileChildren(

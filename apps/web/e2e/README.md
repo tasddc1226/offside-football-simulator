@@ -15,3 +15,7 @@ pnpm --filter @offside/web e2e           # 전체 스펙 실행(dev 서버 자�
 - `hash-probe.spec.ts`: dev 전용 라우트 `/__dev/hash-probe`(브라우저 Web Worker에서 `@offside/fixtures`의 career-01을 재생)가 렌더한 `revision`·`stateHash`가 golden과 같은지 확인한다. 이 라우트는 `import.meta.env.DEV`일 때만 등록되며 프로덕션 빌드에는 포함되지 않는다(`apps/web/src/main.tsx`, `apps/web/src/dev/hash-probe.tsx`).
 
 Vitest는 `src/**/*.test.{ts,tsx}`만 본다. `e2e/`는 Vitest 대상이 아니다.
+
+## 보류: T-1-009(커리어 화면) E2E
+
+`first-contract.spec.ts`(온보딩→생성→이벤트→오퍼→계약→대시보드 전 구간)와 `a11y.spec.ts`의 이벤트·결과·제안·계약·대시보드 화면 추가는 T-1-008(선수 생성 SCR-002~004)이 아직 병합되지 않아 보류한다. 이 스펙들은 ACTIVE 상태의 커리어에 도달해야 하는데, 그 경로가 T-1-008의 스코프라 지금은 자리표시 화면만 있다. T-1-008 병합 뒤 추가한다.

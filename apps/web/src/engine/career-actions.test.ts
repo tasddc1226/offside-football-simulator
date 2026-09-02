@@ -1,8 +1,17 @@
-import { loadContentPack } from '@offside/content';
+import { EFFECT_DEFAULTS, loadContentPack } from '@offside/content';
 import { career01, career01EngineCommands, rulesetProto } from '@offside/fixtures';
 import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
 import { describe, expect, it } from 'vitest';
-import { advance, confirmPlayer, createCareer, deleteCareer, updateDraft } from './career-actions.js';
+import {
+  acceptOffer,
+  advance,
+  confirmPlayer,
+  createCareer,
+  deleteCareer,
+  resolveEvent,
+  toResolveEventOutcomes,
+  updateDraft,
+} from './career-actions.js';
 import { createAppEngine, type AppEngine } from './engine.js';
 
 function makeIdGenerator(prefix: string): () => string {
@@ -116,6 +125,142 @@ describe('advance: selectEligibleEvents 배선', () => {
     expect(result.ok).toBe(true);
     expect(capturedPayloads).toHaveLength(1);
     expect(capturedPayloads[0]?.eligibleEvents.some((event) => event.eventId === 'EVT-CON-002')).toBe(true);
+  });
+});
+
+/** career01 픽스처를 CONFIRM_PLAYER까지 raw engine.client.execute로 재생하고 careerId를 돌려준다. */
+async function replayToConfirmed(engine: AppEngine): Promise<string> {
+  const careerId = career01.createCareer.careerId;
+  const commands = career01EngineCommands(makeIdGenerator('replay'));
+  for (const command of commands.slice(0, 4)) {
+    const result = await engine.client.execute({
+      careerId,
+      command,
+      ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc_kickoff' } : {}),
+    });
+    if (!result.ok) throw new Error(`재생 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+  }
+  return careerId;
+}
+
+describe('toResolveEventOutcomes', () => {
+  it('EVT-CON-002 B의 DEFERRED effect가 EFFECT_DEFAULTS로 채워진 완전한 Effect 필드를 갖는다', () => {
+    const pack = loadContentPack('0.1.0');
+    const definition = pack.eventsById.get('EVT-CON-002')!;
+    const choiceB = definition.choices.find((choice) => choice.id === 'B')!;
+
+    const outcomes = toResolveEventOutcomes(choiceB.outcomes);
+    const effect = outcomes[0]!.effects[0]!;
+
+    expect(effect).toMatchObject({
+      kind: 'DEFERRED',
+      target: 'tacticalFit',
+      delta: 6,
+      clamp: EFFECT_DEFAULTS.DEFERRED.clamp,
+      appliesAt: { kind: 'NEXT_SEASON_STEP', step: 1 },
+      expiresAt: EFFECT_DEFAULTS.DEFERRED.expiresAt,
+      stackingRule: EFFECT_DEFAULTS.DEFERRED.stackingRule,
+    });
+  });
+
+  it('addTags·removeTags가 없는 outcome은 그 필드를 payload에 넣지 않는다', () => {
+    const pack = loadContentPack('0.1.0');
+    const definition = pack.eventsById.get('EVT-CON-003')!;
+    const choiceA = definition.choices.find((choice) => choice.id === 'A')!;
+    const neutralOutcome = choiceA.outcomes.find((outcome) => outcome.id === 'A2')!;
+    expect(neutralOutcome.removeTags).toBeUndefined();
+
+    const [outcome] = toResolveEventOutcomes([neutralOutcome]);
+
+    expect(outcome).not.toHaveProperty('removeTags');
+    expect(outcome?.addTags).toEqual(['입단테스트_완료', '테스트_보통']);
+  });
+});
+
+describe('resolveEvent', () => {
+  it('정의에 없는 choiceId는 커밋 없이 VALIDATION_FAILED다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToConfirmed(engine);
+    await advance(engine, careerId);
+
+    const result = await resolveEvent(engine, careerId, 'Z');
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.error.code).toBe('VALIDATION_FAILED');
+  });
+});
+
+describe('acceptOffer', () => {
+  it('제안 수락 후 checkpoint가 CONTRACT_CONFIRMED고 contract가 채워진다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToConfirmed(engine);
+    await advance(engine, careerId);
+    await resolveEvent(engine, careerId, 'A');
+    await advance(engine, careerId);
+    await resolveEvent(engine, careerId, 'B');
+    const offered = await advance(engine, careerId);
+    if (!offered.ok || offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
+      throw new Error('제안 단계에 도달하지 못했다');
+    }
+    const offerId = offered.domainSnapshot.state.pending.offers[0]!.id;
+
+    const result = await acceptOffer(engine, careerId, offerId);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.domainSnapshot.checkpoint).toBe('CONTRACT_CONFIRMED');
+    expect(result.domainSnapshot.state.contract?.offerId).toBe(offerId);
+    expect(result.domainSnapshot.state.pending).toBeNull();
+  });
+});
+
+describe('결정론: 픽스처 재생 vs 액션 경로', () => {
+  it('career01 명령을 raw로 재생한 stateHash와 resolveEvent·acceptOffer로 같은 선택을 밟은 stateHash가 같다', async () => {
+    // advance()는 selectEligibleEvents(pack, state)로 "지금 제시 가능한" 이벤트를 실시간 계산해
+    // 보낸다(career-actions.ts). career01.json의 ADVANCE payload는 골든 경로를 고정하려고 미리
+    // 박아둔 후보 목록이라 실제 계산 결과와 다를 수 있다(예: FAST 모드 CONFIRM_PLAYER 직후
+    // currentStep이 이미 12라 EVT-REL-001도 같이 eligible해진다 — advance()는 정상 동작이고,
+    // 픽스처가 그 시점 후보군을 그대로 반영하진 않는다는 뜻이다. PR 본문에 범위 밖 발견으로 남긴다).
+    // 그래서 ADVANCE 단계는 픽스처의 raw 명령(고정 eligibleEvents)을 그대로 재생하고, 이 브리프가
+    // 새로 만드는 resolveEvent·acceptOffer만 액션 경로로 검증한다.
+    const fixtureEngine = makeTestEngine();
+    const careerId = career01.createCareer.careerId;
+    const fixtureCommands = career01EngineCommands(makeIdGenerator('fixture'));
+    let fixtureFinalHash: string | null = null;
+    for (const command of fixtureCommands) {
+      const result = await fixtureEngine.client.execute({
+        careerId,
+        command,
+        ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc_kickoff' } : {}),
+      });
+      if (!result.ok) throw new Error(`fixture 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+      fixtureFinalHash = result.domainSnapshot.stateHash;
+    }
+    expect(fixtureFinalHash).toBe(career01.golden.stateHash);
+
+    const actionEngine = makeTestEngine();
+    const actionCommands = career01EngineCommands(makeIdGenerator('action'));
+    const [firstAdvance, secondAdvance, thirdAdvance] = [actionCommands[4]!, actionCommands[6]!, actionCommands[8]!];
+
+    await replayToConfirmed(actionEngine);
+    const advanced1 = await actionEngine.client.execute({ careerId, command: firstAdvance });
+    if (!advanced1.ok) throw new Error(`ADVANCE#1 실패: ${advanced1.error.code} ${advanced1.error.message}`);
+    await resolveEvent(actionEngine, careerId, 'A');
+    const advanced2 = await actionEngine.client.execute({ careerId, command: secondAdvance });
+    if (!advanced2.ok) throw new Error(`ADVANCE#2 실패: ${advanced2.error.code} ${advanced2.error.message}`);
+    await resolveEvent(actionEngine, careerId, 'B');
+    const offered = await actionEngine.client.execute({ careerId, command: thirdAdvance });
+    if (!offered.ok || offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
+      throw new Error('제안 단계에 도달하지 못했다');
+    }
+    const offerId = offered.domainSnapshot.state.pending.offers[0]!.id;
+    expect(offerId).toBe('OFR-9-0');
+    const finalResult = await acceptOffer(actionEngine, careerId, offerId);
+
+    expect(finalResult.ok).toBe(true);
+    if (!finalResult.ok) throw new Error('unreachable');
+    expect(finalResult.domainSnapshot.stateHash).toBe(fixtureFinalHash);
   });
 });
 

@@ -4,3 +4,8 @@ export function formatLocalDateTime(iso: string): string {
   const pad = (value: number) => String(value).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+
+/** SCR-009·010: 원 단위 정수(KRW, `Minor` 접미어는 소수 단위가 아니라 정수 원을 뜻한다 — D-9). */
+export function formatKrw(amountMinor: number): string {
+  return `${amountMinor.toLocaleString('ko-KR')}원`;
+}
