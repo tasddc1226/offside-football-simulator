@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #11 폰트 dynamic subset 머지)
+
+- **PR #11(T-0-013) 머지 `acbfd1d`.** `@offside/ui/fonts.css`(subset 94개 + 'Pretendard Fallback')를 앱이 `tailwind.css`보다 먼저 import. `check:bundle`에 폰트 예산 2종 추가(단일 woff2 200KB, preload 합 100KB).
+- **폴백 메트릭의 한계.** `size-adjust`·`ascent-override`는 macOS/iOS의 Apple SD Gothic Neo 기준으로 계산했다(fonttools 측정, 계산식은 fonts.css 주석). Windows(Malgun Gothic)·Android(Noto Sans KR)는 `local()` 순서상 같은 override 값을 받으므로 정확하지 않다. CSS만으로는 OS별 분기가 안 되므로 Phase 1 실기기 점검(08 체크리스트)에서 CLS를 보고 필요하면 플랫폼 감지로 클래스를 바꾸는 방식으로 보정한다.
+- **스크린샷 정책.** 워커는 외부 호스팅(gist·artifact) 권한이 없다. 시각 검증은 수치와 결론 문장을 PR 본문에 적고 파일은 스크래치패드에 남기는 것으로 통일(브리프 템플릿에 반영 예정).
+
 ## 2026-09-02 (저녁, PR #10 런타임 간 해시 일치 머지)
 
 - **PR #10(T-0-011) 머지 `c45bede`.** workerd(Miniflare)에서 career01 재생·SHA-256 경계·canonicalize가 Node·golden과 모두 일치. 불일치 0건. 서버 측 무결성 검사(T-0-008 규칙 5)가 클라이언트 해시를 그대로 재검증해도 된다는 전제가 확인됨.
