@@ -11,6 +11,7 @@ import {
   type ErrorCode,
 } from '@offside/contracts';
 import type { DomainSnapshot } from '@offside/domain';
+import { LocalStoreConstraintError } from '../ports/local-store.js';
 import { decodeSnapshot } from '../snapshot.js';
 import type { EngineError } from '../types.js';
 import {
@@ -34,6 +35,13 @@ type CareerRecord = {
   lastSyncedAt: string | null;
   idempotency: IdempotencyMemo | null;
   disposed: boolean;
+  /**
+   * inFlight 사이클이 끝나기 직전(예: buildSyncBody가 null을 돌려준 뒤)에
+   * notifyCommitted가 도착하면 scheduleSend가 예약을 걸지 못하고 조용히 사라진다.
+   * 이 창을 메우기 위해 "inFlight 종료 후 한 번 더 보내라"는 표시를 남긴다.
+   */
+  dirty: boolean;
+  dirtyImmediate: boolean;
 };
 
 type ConflictResolution =
@@ -78,6 +86,8 @@ export function createSyncClient(deps: SyncDeps): SyncClient {
         lastSyncedAt: null,
         idempotency: null,
         disposed: false,
+        dirty: false,
+        dirtyImmediate: false,
       };
       records.set(careerId, record);
     }
@@ -106,7 +116,11 @@ export function createSyncClient(deps: SyncDeps): SyncClient {
   }
 
   function scheduleSend(record: CareerRecord, delayMs: number): void {
-    if (record.inFlight !== null) return;
+    if (record.inFlight !== null) {
+      record.dirty = true;
+      if (delayMs === 0) record.dirtyImmediate = true;
+      return;
+    }
     clearTimer(record);
     const dueAt = Date.now() + delayMs;
     setState(record, { kind: 'SCHEDULED', dueAt });
@@ -122,7 +136,14 @@ export function createSyncClient(deps: SyncDeps): SyncClient {
     clearTimer(record);
     if (record.inFlight !== null) return record.inFlight;
     const promise = doCycle(record).finally(() => {
-      if (records.get(careerId) === record) record.inFlight = null;
+      if (records.get(careerId) !== record) return;
+      record.inFlight = null;
+      if (record.dirty && !record.disposed && !disposed) {
+        const delay = record.dirtyImmediate ? 0 : policy.debounceMs;
+        record.dirty = false;
+        record.dirtyImmediate = false;
+        scheduleSend(record, delay);
+      }
     });
     record.inFlight = promise;
     return promise;
@@ -153,6 +174,34 @@ export function createSyncClient(deps: SyncDeps): SyncClient {
     }
   }
 
+  /**
+   * 200이 아닌 응답을 401/CAREER_REVISION_CONFLICT 이외의 경우로 분류한다.
+   * PUT·GET(fast-forward 조회) 양쪽에서 공유한다: RETRYABLE_BY_CODE는 재시도,
+   * 그 외는 FAILED.
+   */
+  function classifyNonConflictError(
+    record: CareerRecord,
+    error: { code: ErrorCode; message: string; details?: unknown },
+  ): void {
+    if (RETRYABLE_BY_CODE[error.code]) {
+      scheduleRetry(record, {
+        code: error.code,
+        message: error.message,
+        ...(error.details !== undefined ? { details: error.details } : {}),
+      });
+      return;
+    }
+    setState(record, {
+      kind: 'FAILED',
+      error: {
+        code: error.code,
+        message: error.message,
+        ...(error.details !== undefined ? { details: error.details } : {}),
+      },
+    });
+    record.attempt = 0;
+  }
+
   function scheduleRetry(record: CareerRecord, error: EngineError): void {
     record.attempt += 1;
     if (policy.retryMaxAttempts > 0 && record.attempt > policy.retryMaxAttempts) {
@@ -171,13 +220,21 @@ export function createSyncClient(deps: SyncDeps): SyncClient {
     }, delay);
   }
 
+  /**
+   * `LocalStoreConstraintError`(예: 커리어 없음 등 계약 위반)만 큐에서 제거한다.
+   * 그 외 저장소 I/O 예외는 상위(`doCycle`)로 던져 재시도로 흡수시킨다 —
+   * `loadCareer`와 같은 원칙이다.
+   */
   async function markSyncedSafely(careerId: string, revision: number): Promise<boolean> {
     try {
       await deps.engine.markSynced(careerId, revision);
       return true;
-    } catch {
-      removeRecord(careerId);
-      return false;
+    } catch (err) {
+      if (err instanceof LocalStoreConstraintError) {
+        removeRecord(careerId);
+        return false;
+      }
+      throw err;
     }
   }
 
@@ -198,9 +255,14 @@ export function createSyncClient(deps: SyncDeps): SyncClient {
     if (record.disposed || disposed) return { outcome: 'stopped' };
 
     if (response.status !== 200) {
+      if (response.status === 401) {
+        setState(record, { kind: 'LOCAL_ONLY', reason: 'NO_SESSION' });
+        record.attempt = 0;
+        return { outcome: 'stopped' };
+      }
       const error = await parseErrorEnvelope(response);
-      setState(record, { kind: 'FAILED', error });
-      record.attempt = 0;
+      if (record.disposed || disposed) return { outcome: 'stopped' };
+      classifyNonConflictError(record, error);
       return { outcome: 'stopped' };
     }
 
@@ -267,9 +329,12 @@ export function createSyncClient(deps: SyncDeps): SyncClient {
       let body;
       try {
         body = await deps.engine.buildSyncBody(careerId);
-      } catch {
-        removeRecord(careerId);
-        return;
+      } catch (err) {
+        if (err instanceof LocalStoreConstraintError) {
+          removeRecord(careerId);
+          return;
+        }
+        throw err;
       }
       if (record.disposed || disposed) return;
 
@@ -363,24 +428,7 @@ export function createSyncClient(deps: SyncDeps): SyncClient {
         return;
       }
 
-      if (RETRYABLE_BY_CODE[error.code]) {
-        scheduleRetry(record, {
-          code: error.code,
-          message: error.message,
-          ...(error.details !== undefined ? { details: error.details } : {}),
-        });
-        return;
-      }
-
-      setState(record, {
-        kind: 'FAILED',
-        error: {
-          code: error.code,
-          message: error.message,
-          ...(error.details !== undefined ? { details: error.details } : {}),
-        },
-      });
-      record.attempt = 0;
+      classifyNonConflictError(record, error);
       return;
     }
   }

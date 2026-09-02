@@ -2,6 +2,7 @@ import { ErrorEnvelopeSchema, IDEMPOTENCY_KEY_HEADER, IF_MATCH_HEADER, type Erro
 import { ATTRIBUTE_KEYS, type AttributeKey } from '@offside/domain';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createEngineClient, type EngineClient } from '../engine.js';
+import { LocalStoreConstraintError } from '../ports/local-store.js';
 import { inlineSimulator } from '../simulator/index.js';
 import { MemoryLocalStore } from '../store/memory.js';
 import type { EngineCommand } from '../types.js';
@@ -348,6 +349,13 @@ describe('createSyncClient', () => {
     const secondCall = h.calls[1] as FetchCall;
     expect(headerOf(secondCall, IF_MATCH_HEADER)).toBe('1');
     expect(parsedBody(secondCall).baseRevision).toBe(1);
+
+    // advanceCommand의 notifyCommitted가 inFlight 중에 도착했으므로 dirty로 기록되어
+    // 사이클 종료 후 한 번 더 스케줄된다(보낼 것이 없으므로 그대로 IDLE로 귀결한다).
+    await vi.waitFor(() => expect(h.sync.getState(h.careerId).kind).toBe('SCHEDULED'));
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(h.calls).toHaveLength(2);
     expect(h.sync.getState(h.careerId)).toEqual({
       kind: 'IDLE',
       lastSyncedRevision: 2,
@@ -510,5 +518,185 @@ describe('createSyncClient', () => {
     await vi.advanceTimersByTimeAsync(10_000);
 
     expect(h.calls).toHaveLength(0);
+  });
+
+  it('사이클이 inFlight인 동안 notifyCommitted가 오면 dirty로 기록되어, 그 사이클이 보낼 것 없이 끝나도 완료 직후 다시 전송된다', async () => {
+    const store = new MemoryLocalStore();
+    const realEngine = createEngineClient({ store, simulator: inlineSimulator });
+    const careerId = 'car_dirty_race';
+
+    let resolveBody!: (v: Awaited<ReturnType<EngineClient['buildSyncBody']>>) => void;
+    let bodyCallCount = 0;
+    const firstBody = new Promise<Awaited<ReturnType<EngineClient['buildSyncBody']>>>((resolve) => {
+      resolveBody = resolve;
+    });
+    const flakyEngine = {
+      ...realEngine,
+      buildSyncBody: (id: string) => {
+        bodyCallCount += 1;
+        if (bodyCallCount === 1) return firstBody;
+        return realEngine.buildSyncBody(id);
+      },
+    };
+    const { fetchFn, calls, queue } = createFakeFetch();
+    const sync = createSyncClient({
+      engine: flakyEngine,
+      store,
+      fetch: fetchFn,
+      baseUrl: '/v1',
+      now: () => new Date().toISOString(),
+      newId: makeIdGenerator('idem'),
+    });
+
+    const created = await realEngine.execute({
+      careerId,
+      command: createCareerCommand(careerId, 'cmd-0'),
+      createdServiceSeasonId: 'season-1',
+    });
+    if (!created.ok) throw new Error('setup 실패');
+
+    // flush()가 runCycle을 동기적으로 시작해 record.inFlight를 세팅한 직후,
+    // 첫 buildSyncBody 호출이 아직 대기 중인 사이(firstBody 미해결)에 notifyCommitted를 호출한다.
+    const flushPromise = sync.flush(careerId);
+    sync.notifyCommitted(careerId, created.domainSnapshot);
+    resolveBody(null);
+    await flushPromise;
+
+    expect(calls).toHaveLength(0);
+    expect(bodyCallCount).toBe(1);
+    expect(sync.getState(careerId).kind).toBe('SCHEDULED');
+
+    queue.push(() => makeResponse(200, successData({ revision: 1, syncedAt: '2026-01-01T00:00:00.000Z' })));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(calls).toHaveLength(1);
+    // 후속 사이클: buildSyncBody #2(보낼 명령 있음, real) → PUT 전송 → buildSyncBody #3(보낼 것 없음, real) → IDLE.
+    expect(bodyCallCount).toBe(3);
+    expect(sync.getState(careerId).kind).toBe('IDLE');
+  });
+
+  it('409 뒤 fast-forward GET이 503이면 RETRYING, 재시도 후 GET이 200이면 정상 진행한다', async () => {
+    const h = setup();
+    const ids = makeIdGenerator('cmd');
+
+    await commit(h, createCareerCommand(h.careerId, ids()), 'season-1');
+    for (let i = 0; i < 7; i++) {
+      await commit(h, advanceCommand(i + 1, ids()));
+    }
+    const serverSnapshotAt5 = await h.store.transaction('readonly', (tx) => tx.snapshots.get(h.careerId, 5));
+    if (serverSnapshotAt5 === undefined) throw new Error('revision 5 snapshot 없음');
+
+    h.queue.push(() =>
+      makeResponse(409, errorData('CAREER_REVISION_CONFLICT', false, { serverRevision: 5, serverSnapshotUrl: `/v1/careers/${h.careerId}` })),
+    );
+    h.queue.push(() => makeResponse(503, errorData('SERVICE_UNAVAILABLE', true)));
+
+    await h.sync.flush(h.careerId);
+
+    expect(h.calls).toHaveLength(2);
+    expect(h.calls[1]?.init.method).toBe('GET');
+    const retrying = h.sync.getState(h.careerId);
+    expect(retrying.kind).toBe('RETRYING');
+    if (retrying.kind !== 'RETRYING') throw new Error('RETRYING 상태가 아니다');
+
+    h.queue.push(() =>
+      makeResponse(409, errorData('CAREER_REVISION_CONFLICT', false, { serverRevision: 5, serverSnapshotUrl: `/v1/careers/${h.careerId}` })),
+    );
+    h.queue.push(() => makeResponse(200, successData({ snapshot: serverSnapshotAt5, commands: [] })));
+    h.queue.push(() => makeResponse(200, successData({ revision: 8, syncedAt: '2026-01-01T00:00:05.000Z' })));
+
+    await vi.advanceTimersByTimeAsync(retrying.nextAt - Date.now());
+
+    expect(h.calls).toHaveLength(5);
+    expect(h.sync.getState(h.careerId)).toEqual({
+      kind: 'IDLE',
+      lastSyncedRevision: 8,
+      lastSyncedAt: '2026-01-01T00:00:05.000Z',
+    });
+  });
+
+  it('LocalStoreConstraintError만 큐에서 제거하고, 그 외 저장소 I/O 예외는 재시도로 흡수한다', async () => {
+    const storeA = new MemoryLocalStore();
+    const realEngineA = createEngineClient({ store: storeA, simulator: inlineSimulator });
+    const careerIdA = 'car_marksync_ioerr';
+    let failMarkSynced = true;
+    const flakyEngineA = {
+      ...realEngineA,
+      markSynced: (id: string, revision: number) => {
+        if (failMarkSynced) {
+          failMarkSynced = false;
+          return Promise.reject(new Error('저장소 쓰기 실패(테스트)'));
+        }
+        return realEngineA.markSynced(id, revision);
+      },
+    };
+    const fetchA = createFakeFetch();
+    const syncA = createSyncClient({
+      engine: flakyEngineA,
+      store: storeA,
+      fetch: fetchA.fetchFn,
+      baseUrl: '/v1',
+      now: () => new Date().toISOString(),
+      newId: makeIdGenerator('idem'),
+    });
+
+    const createdA = await realEngineA.execute({
+      careerId: careerIdA,
+      command: createCareerCommand(careerIdA, 'cmd-0'),
+      createdServiceSeasonId: 'season-1',
+    });
+    if (!createdA.ok) throw new Error('setup 실패');
+
+    fetchA.queue.push(() => makeResponse(200, successData({ revision: 1, syncedAt: '2026-01-01T00:00:00.000Z' })));
+    syncA.notifyCommitted(careerIdA, createdA.domainSnapshot);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetchA.calls).toHaveLength(1);
+    const retryingA = syncA.getState(careerIdA);
+    expect(retryingA.kind).toBe('RETRYING');
+    if (retryingA.kind !== 'RETRYING') throw new Error('RETRYING 상태가 아니다(markSynced 예외가 removeRecord로 처리됨)');
+
+    fetchA.queue.push(() => makeResponse(200, successData({ revision: 1, syncedAt: '2026-01-01T00:00:01.000Z' })));
+    await vi.advanceTimersByTimeAsync(retryingA.nextAt - Date.now());
+
+    expect(fetchA.calls).toHaveLength(2);
+    expect(syncA.getState(careerIdA)).toEqual({
+      kind: 'IDLE',
+      lastSyncedRevision: 1,
+      lastSyncedAt: '2026-01-01T00:00:01.000Z',
+    });
+
+    const storeB = new MemoryLocalStore();
+    const realEngineB = createEngineClient({ store: storeB, simulator: inlineSimulator });
+    const careerIdB = 'car_buildbody_constraint';
+    const flakyEngineB = {
+      ...realEngineB,
+      buildSyncBody: (_id: string) => Promise.reject(new LocalStoreConstraintError('테스트: 계약 위반')),
+    };
+    const fetchB = createFakeFetch();
+    const syncB = createSyncClient({
+      engine: flakyEngineB,
+      store: storeB,
+      fetch: fetchB.fetchFn,
+      baseUrl: '/v1',
+      now: () => new Date().toISOString(),
+      newId: makeIdGenerator('idem'),
+    });
+
+    const createdB = await realEngineB.execute({
+      careerId: careerIdB,
+      command: createCareerCommand(careerIdB, 'cmd-0'),
+      createdServiceSeasonId: 'season-1',
+    });
+    if (!createdB.ok) throw new Error('setup 실패');
+
+    syncB.notifyCommitted(careerIdB, createdB.domainSnapshot);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetchB.calls).toHaveLength(0);
+    expect(syncB.getState(careerIdB)).toEqual({ kind: 'IDLE', lastSyncedRevision: 0, lastSyncedAt: null });
+
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(fetchB.calls).toHaveLength(0);
   });
 });
