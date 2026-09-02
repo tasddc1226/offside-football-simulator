@@ -20,10 +20,19 @@ function collectSourceFiles(dir: string): string[] {
   return files;
 }
 
+/** Workers 런타임(nodejs_compat 없음)에는 없는 Node 전용 API·모듈 시스템 사용을 막는다. */
+const FORBIDDEN_PATTERNS: { name: string; pattern: RegExp }[] = [
+  { name: `from 'node:`, pattern: /from 'node:/ },
+  { name: 'Buffer', pattern: /\bBuffer\b/ },
+  { name: 'process.', pattern: /\bprocess\./ },
+  { name: 'require(', pattern: /\brequire\(/ },
+  { name: '__dirname', pattern: /__dirname/ },
+];
+
 describe('Workers runtime purity', () => {
-  it('has no `from \'node:` imports outside tests and src/test', () => {
+  it.each(FORBIDDEN_PATTERNS)('has no `$name` usage outside tests and src/test', ({ pattern }) => {
     const offenders = collectSourceFiles(SRC_DIR)
-      .filter((file) => readFileSync(file, 'utf8').includes(`from 'node:`))
+      .filter((file) => pattern.test(readFileSync(file, 'utf8')))
       .map((file) => path.relative(SRC_DIR, file));
 
     expect(offenders).toEqual([]);

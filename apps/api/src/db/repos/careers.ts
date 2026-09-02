@@ -12,12 +12,28 @@ export async function getCareer(db: Db, id: string): Promise<CareerRecord | unde
 
 export type ListCareersResult = { items: CareerRecord[]; nextCursor: string | null };
 
+/** Workers 런타임(nodejs_compat 없음)에는 Node 전용 바이너리 유틸이 없다. `btoa`/`atob` + `TextEncoder`/`TextDecoder`로 base64url을 구현한다. */
+function toBase64Url(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function fromBase64Url(encoded: string): string {
+  const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 function encodeCursor(updatedAt: string, id: string): string {
-  return Buffer.from(`${updatedAt}|${id}`, 'utf8').toString('base64url');
+  return toBase64Url(`${updatedAt}|${id}`);
 }
 
 function decodeCursor(cursor: string): { updatedAt: string; id: string } {
-  const decoded = Buffer.from(cursor, 'base64url').toString('utf8');
+  const decoded = fromBase64Url(cursor);
   const separatorIndex = decoded.indexOf('|');
   return { updatedAt: decoded.slice(0, separatorIndex), id: decoded.slice(separatorIndex + 1) };
 }
