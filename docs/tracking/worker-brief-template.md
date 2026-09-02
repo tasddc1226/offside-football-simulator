@@ -28,7 +28,7 @@
 - 시간·난수는 입력으로만
 - 커밋 메시지는 `T-0-003: …`로 시작, 브랜치는 T-0-003-…
 
-- 서브에이전트(fork·review·simplify 등)를 띄우지 않는다. 검토는 오케스트레이터가 한다.
+- 서브에이전트 리뷰를 띄우지 않는다. Orca PR 게이트용 `/review:pr` 1회만 예외(`/simplify`·병렬 fork 금지).
 
 ## 진행 보고
 - 체크포인트마다 `orca worktree set --worktree active --comment "..."` 갱신
