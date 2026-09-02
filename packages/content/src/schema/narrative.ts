@@ -19,6 +19,8 @@ export const NarrativeDictionarySchema = z
   })
   .strict();
 
+export type NarrativeDictionary = z.infer<typeof NarrativeDictionarySchema>;
+
 const TOKEN_PATTERN = /\{([a-zA-Z]+)(?::([^}]*))?\}/g;
 
 export type NarrativeTokenIssue = { token: string; message: string };
