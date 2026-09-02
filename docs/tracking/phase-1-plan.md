@@ -74,6 +74,7 @@ T-0-002가 프로토타입 능력을 `ATTRIBUTE_KEYS`로 옮길 때 슈팅력을
 |---|---|
 | `진로_아카데미` | `hangang-u18` 유스 계약 연장 1건 고정 |
 | `진로_하부리그` + `입단테스트_완료` | 수식 개수, 팀 풀 tier 2~3 |
+| `진로_하부리그`, 테스트 미응시(baseOvr < 55) | 1건, tier 3 (2026-09-02 T-1-002 워커 발견으로 추가) |
 | `진로_입단테스트` + `테스트_실패` | 1건, tier 3 |
 | `진로_입단테스트` + `테스트_보통` | 수식 개수, tier 2~3 |
 | `진로_입단테스트` + `테스트_성공` | 수식 개수, tier 1~3. baseOvr ≥ 60이면 첫 제안은 tier 1에서 |
@@ -99,7 +100,7 @@ T-0-002가 프로토타입 능력을 `ATTRIBUTE_KEYS`로 옮길 때 슈팅력을
 `career.pathDecision` 필드는 만들지 않고 태그로 대신한다. 사용자 없음(`playtested: false`)이므로 0.1.0을 제자리에서 고친다(버전 올림은 KICKOFF 이후).
 
 - EVT-CON-002: A 결과 `addTags: ['진로_입단테스트']`, B 결과 `addTags: ['늦은_출발', '진로_아카데미']`, C 결과 `addTags: ['밑바닥부터', '진로_하부리그']`. B의 followUp 없음, A·C는 `EVT-CON-003`.
-- EVT-CON-003 trigger: `{ all: [ { any: [ hasTag '진로_입단테스트', hasTag '진로_하부리그' ] }, { gte: ['player.baseOvr', 55] } ] }`. baseOvr < 55이면 테스트 없이 곧바로 제안(태그 `입단테스트_완료` 대신 `진로_입단테스트`만 있는 경우 → 오퍼 규칙에 `테스트_미응시` 분기 추가: 1건 tier 3). 모든 CON-003 결과에 `입단테스트_완료` + 종류 태그(`테스트_성공`/`테스트_보통`/`테스트_실패`).
+- EVT-CON-003 trigger: `{ all: [ { any: [ hasTag '진로_입단테스트', hasTag '진로_하부리그' ] }, { gte: ['player.baseOvr', 55] } ] }`. baseOvr < 55이면 테스트 없이 곧바로 제안(`입단테스트_완료`가 없는 `진로_입단테스트`·`진로_하부리그` 각각에 미응시 분기: 1건 tier 3). 모든 CON-003 결과에 `입단테스트_완료` + 종류 태그(`테스트_성공`/`테스트_보통`/`테스트_실패`).
 - `player.baseOvr`, `career.tags`, `career.stage`, `career.age`, `season.phase`가 조건 DSL의 상태 경로와 실제 `CareerState` 경로에 모두 존재하는지 검증기가 확인한다(`player.baseOvr` → `state.player.profile.baseOvr`).
 - 대학 경로는 Phase 3 콘텐츠로 미룬다. `relationships.family`는 도메인에 없으므로 팩이 참조하면 검증 실패여야 한다.
 
