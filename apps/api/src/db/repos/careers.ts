@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gt, lt, or } from 'drizzle-orm';
 import type { Db } from '../client.js';
-import { careers } from '../schema.js';
+import { careers, commandLog, snapshots } from '../schema.js';
+import { runBatch } from './batch.js';
 
 export type CareerRecord = typeof careers.$inferSelect;
 export type CareerStatus = CareerRecord['status'];
@@ -8,6 +9,25 @@ export type CareerStatus = CareerRecord['status'];
 export async function getCareer(db: Db, id: string): Promise<CareerRecord | undefined> {
   const [row] = await db.select().from(careers).where(eq(careers.id, id));
   return row;
+}
+
+/** T-1-004: 복구 병합·프로필 삭제가 쓴다. 페이지 없이 소유한 커리어 id 전부를 돌려준다. */
+export async function listCareerIdsByOwner(db: Db, ownerProfileId: string): Promise<string[]> {
+  const rows = await db.select({ id: careers.id }).from(careers).where(eq(careers.ownerProfileId, ownerProfileId));
+  return rows.map((row) => row.id);
+}
+
+export async function countCareersByOwner(db: Db, ownerProfileId: string): Promise<number> {
+  return (await listCareerIdsByOwner(db, ownerProfileId)).length;
+}
+
+/** API-CAR-005: 커리어와 그 Snapshot·명령 로그를 한 트랜잭션으로 즉시 삭제한다. */
+export async function deleteCareerCascade(db: Db, careerId: string): Promise<void> {
+  await runBatch(db, [
+    db.delete(snapshots).where(eq(snapshots.careerId, careerId)),
+    db.delete(commandLog).where(eq(commandLog.careerId, careerId)),
+    db.delete(careers).where(eq(careers.id, careerId)),
+  ]);
 }
 
 export type ListCareersResult = { items: CareerRecord[]; nextCursor: string | null };

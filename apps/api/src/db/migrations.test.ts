@@ -32,7 +32,10 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'settings_json',
     'created_at',
     'last_seen_at',
+    'deleted_at',
   ],
+  auth_attempts: ['id', 'kind', 'subject', 'window_start', 'count'],
+  audit_log: ['id', 'kind', 'profile_id', 'payload_json', 'created_at'],
   sessions: ['id', 'profile_id', 'channel', 'token_hash', 'created_at', 'expires_at', 'revoked_at', 'last_seen_at'],
   careers: [
     'id',
@@ -85,7 +88,7 @@ describe('migrations', () => {
     await ctx.dispose();
   });
 
-  it('creates the 7 tables with the expected columns', async () => {
+  it('creates the 9 tables with the expected columns', async () => {
     for (const [table, expectedColumns] of Object.entries(EXPECTED_COLUMNS)) {
       const result = await ctx.db.$client.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>();
       const columns = result.results.map((row) => row.name).sort();

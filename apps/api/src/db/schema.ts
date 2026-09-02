@@ -15,6 +15,8 @@ export const profiles = sqliteTable(
     settingsJson: text('settings_json').notNull(),
     createdAt: text('created_at').notNull(),
     lastSeenAt: text('last_seen_at').notNull(),
+    /** T-1-004 API-PRO-005. NULL이 아니면 삭제된 프로필이다(09 문서: 사용자 요청 삭제는 즉시). */
+    deletedAt: text('deleted_at'),
   },
   (table) => [
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
@@ -134,6 +136,35 @@ export const idempotency = sqliteTable(
     primaryKey({ columns: [table.ownerProfileId, table.key] }),
     index('idempotency_expires_at_idx').on(table.expiresAt),
   ],
+);
+
+/**
+ * T-1-004 D-14·D-15. 고정 윈도우 rate limit 카운터. `(kind, subject)`당 한 행만 유지하며 윈도우가
+ * 지나면 재사용한다(설계: `window_start`가 지금부터 윈도우 길이 이전이면 리셋).
+ */
+export const authAttempts = sqliteTable(
+  'auth_attempts',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind', { enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM'] }).notNull(),
+    subject: text('subject').notNull(),
+    windowStart: text('window_start').notNull(),
+    count: integer('count').notNull(),
+  },
+  (table) => [uniqueIndex('auth_attempts_kind_subject_unique').on(table.kind, table.subject)],
+);
+
+/** T-1-004, ADR-008. `PROFILE_MERGED`·`PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`. */
+export const auditLog = sqliteTable(
+  'audit_log',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind', { enum: ['PROFILE_MERGED', 'PROFILE_DELETED', 'RECOVERY_CODE_ISSUED'] }).notNull(),
+    profileId: text('profile_id').notNull(),
+    payloadJson: text('payload_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('audit_log_profile_id_idx').on(table.profileId)],
 );
 
 /** 02 DATA-SVC-001. */

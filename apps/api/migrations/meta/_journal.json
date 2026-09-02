@@ -8,6 +8,13 @@
       "when": 1788332746312,
       "tag": "0000_rainy_ozymandias",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788345261618,
+      "tag": "0001_gifted_maelstrom",
+      "breakpoints": true
     }
   ]
 }

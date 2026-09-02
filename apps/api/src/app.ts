@@ -7,6 +7,7 @@ import { logger } from './middleware/logger.js';
 import { originGuard } from './middleware/originGuard.js';
 import { requestId } from './middleware/requestId.js';
 import { session } from './middleware/session.js';
+import { registerAuthRoutes } from './routes/auth.js';
 import { registerCareerRoutes } from './routes/careers.js';
 import { registerProfileRoutes } from './routes/profile.js';
 
@@ -29,6 +30,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
 
   registerProfileRoutes(app);
   registerCareerRoutes(app);
+  registerAuthRoutes(app);
 
   if (options.testRoutes) {
     app.get('/v1/test/throw', () => {
