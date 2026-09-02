@@ -4,7 +4,7 @@
 
 ## 현재 게이트
 
-**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. 2026-09-02 23:42 기준 Wave 3의 T-1-008(선수 만들기)까지 머지됐고, T-1-009(진로~계약·대시보드)와 Wave 4의 T-1-011(동기화 배선)이 진행 중이다. 사용자가 작성한 콘텐츠 정본 `docs/content/kickoff/`(PR #24)는 Phase 2 콘텐츠 작업의 입력이며 지금 코드 작업을 요구하지 않는다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
+**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. 2026-09-03 01:55 기준 Wave 4의 T-1-011(동기화 배선, PR #30)까지 머지됐고, T-1-009(진로~계약·대시보드, PR #26 재검증 중)와 T-1-012(설정 데이터 섹션·법적 문서)가 진행 중이다. T-1-016(선수 성별·선호 포지션)은 T-1-009 머지 뒤 T-1-012와 병렬로 투입한다. 사용자가 작성한 콘텐츠 정본 `docs/content/kickoff/`(PR #24)는 Phase 2 콘텐츠 작업의 입력이며 지금 코드 작업을 요구하지 않는다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
 
 WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. 현재 Phase 1~7의 국내 MVP 순서를 바꾸지 않으며, Phase 3~5와 Phase 7 완료 후 새 ruleset의 신규 Career에 해외 이적·가상 해외 리그·대륙대회를 연다. 정본은 [WORLD STAGE 개발 명세](../development/15-world-stage-expansion.md)와 [Phase 8](../phases/phase-08-world-stage.md)이다.
 
@@ -64,8 +64,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-010 | web(e2e) | Playwright + axe 도입, 허브·법적 문서 스모크·접근성, 브라우저 Web Worker state hash 검증(dev probe) | Phase 0 종료 | 1(첫 머지 후) | done | PR #18 `01d64e8`. 리뷰 1회 통과. 7 specs, axe serious·critical 0건, 브라우저 Worker 해시 = golden revision 8. 실행 `pnpm --filter @offside/web e2e` |
 | T-1-008 | web | 선수 만들기 SCR-002·003·004 + 복구 코드 발급 단계 | T-1-002, T-1-004, T-1-006, T-1-007 | 3 | done | PR #25 `122144f`. 리뷰 1회(수정 3건: apiFetch Content-Type, 오류 화면 복귀 버튼). web 99 tests, e2e 18 |
 | T-1-009 | web | SCR-007 진로, SCR-008 입단 테스트, SCR-013·014 이벤트·결과, SCR-009 제안 비교, SCR-010 계약, SCR-029 대시보드 | T-1-005, T-1-006, T-1-007 | 3 | in-progress | `T-1-009-career-screens`, [브리프](briefs/T-1-009.md) |
-| T-1-011 | web + engine-client | 동기화 클라이언트 배선·상태 표시·충돌 화면, LOCAL 선택 fork-by-replay | T-0-015, T-1-007, T-1-008 | 3 | in-progress | `T-1-011-sync-wiring`, [브리프](briefs/T-1-011.md) |
-| T-1-012 | web + platform + engine-client + api | SCR-030 데이터 섹션(복구 코드 재발급·복구 입력·복구 뒤 대조·프로필 삭제·로그아웃·기기 데이터 삭제), 법적 문서 본문, api 복구·삭제 라우트 contracts 스키마 채택 | T-1-004, T-1-006, T-1-007, T-1-011 | 4 | todo | [브리프](briefs/T-1-012.md) |
+| T-1-011 | web + engine-client | 동기화 클라이언트 배선·상태 표시·충돌 화면, LOCAL 선택 fork-by-replay | T-0-015, T-1-007, T-1-008 | 3 | done | PR #30 `280e2f4`. 리뷰 2회(/review:pr 1 + 오케스트레이터 2: 새로고침 뒤 저장 상태 보정, 401 삭제 재시도, CORS X-Request-Id 범위 확장). web 139 tests, engine-client 65, api 113, e2e 24 |
+| T-1-012 | web + platform + engine-client + api | SCR-030 데이터 섹션(복구 코드 재발급·복구 입력·복구 뒤 대조·프로필 삭제·로그아웃·기기 데이터 삭제), 법적 문서 본문, api 복구·삭제 라우트 contracts 스키마 채택 | T-1-004, T-1-006, T-1-007, T-1-011 | 4 | in-progress | `T-1-012-settings-data`, [브리프](briefs/T-1-012.md) |
 | T-1-013 | api + web + platform + contracts | Google OIDC start/callback/merge/unlink(가짜 OIDC로 E2E), SCR-030 Google 행, 병합 선택 화면 | T-1-004, T-1-012, U-003(실검증) | 4 | todo | [브리프](briefs/T-1-013.md) |
 | T-1-014 | web(e2e) + docs | TEST-E2E-007·008·009, 키보드 전용 주 여정, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, 완료 조건 표 | T-1-008, T-1-009, T-1-011, T-1-012 | 4 | todo | [브리프](briefs/T-1-014.md) |
 | T-1-016 | domain + contracts + web + fixtures | 선수 성별 프로필 정보, 선호/현재 포지션 분리, 생성 화면·migration·결정론 fixture | T-1-009, T-1-011 | 4 | todo | [브리프](briefs/T-1-016.md) |
@@ -125,8 +125,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-1-011 | Sonnet 5, Orca 워크트리 `T-1-011-sync-wiring` | 2026-09-02 | 브리프 전달 |
-| T-1-009 | Sonnet 5, Orca 워크트리 `T-1-009-career-screens` | 2026-09-02 | PR #26 열림(2026-09-03 01:20). main 충돌 해결·first-contract e2e·리뷰 수정 4건 요청 중 |
+| T-1-009 | Sonnet 5, Orca 워크트리 `T-1-009-career-screens` | 2026-09-02 | PR #26 갱신(89fb2ac, 리뷰 수정 4건 반영) 재검증에서 e2e typecheck 1건 실패 → 수정·main(PR #30) 재병합 요청 중 |
+| T-1-012 | Sonnet 5, Orca 워크트리 `T-1-012-settings-data` | 2026-09-03 | 브리프 전달 |
 
 ## 완료
 
@@ -161,3 +161,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-006 | PR #22 `e2d0602` | 2026-09-02 | Sonnet 5 약 $10.5, 36분, 리뷰 1회 통과(범위 경계 질문 1건 답변) |
 | T-1-007 | PR #23 `b400922` | 2026-09-02 | Sonnet 5 약 $28.1, 87분, 리뷰 1회 통과(워커가 허용되지 않은 gstack /review를 추가 실행해 비용 증가 — 결정 로그) |
 | T-1-008 | PR #25 `122144f` | 2026-09-02 | Sonnet 5 약 $22.1, 78분, 리뷰 1회(수정 3건). 첫 세션 TUI 멈춤으로 같은 워크트리에 재투입 1회 |
+| T-1-011 | PR #30 `280e2f4` | 2026-09-03 | Sonnet 5 약 $34.9, 123분, 리뷰 2회(필수 2건·권장 3건 + CORS 범위 확장). 재투입 없음 |
