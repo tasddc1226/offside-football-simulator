@@ -28,7 +28,7 @@
 |---|---|---|---|---|
 | T-0-001 | 모노레포 골격: pnpm·Turborepo·tsconfig·ESLint·의존 방향 lint | ADR-005 | completed | PR [#1](https://github.com/tasddc1226/offside-football-simulator/pull/1) squash 머지 `e9d7d30`(2026-09-02). 브리프 [briefs/T-0-001.md](briefs/T-0-001.md) |
 | T-0-002 | `packages/domain` 순수 `simulate` fixture와 state hash, 결정론 1,000회 테스트 | RULE-RNG-001, TEST | completed | PR [#2](https://github.com/tasddc1226/offside-football-simulator/pull/2) squash 머지 `fcb49d4`. golden stateHash `ac3aae07…354e82`, 63 tests |
-| T-0-003 | `packages/contracts` 응답 봉투·오류 코드·Snapshot 직렬화 Zod | 07 | in-progress | `T-0-003-contracts-zod`, 브리프 [briefs/T-0-003.md](briefs/T-0-003.md) |
+| T-0-003 | `packages/contracts` 응답 봉투·오류 코드·Snapshot 직렬화 Zod | 07 | review | [브리프](briefs/T-0-003.md). PR #4 1차 리뷰: zod 4.5.4 통일 등 수정 5건 요청(2026-09-02 저녁) |
 | T-0-004 | `packages/content` Zod 스키마와 `content:validate` CLI, 프로토타입 이벤트 10개를 팩 0.1.0으로 | ADR-004, 04 | in-progress | `T-0-004-content-schema-pack`, 브리프 [briefs/T-0-004.md](briefs/T-0-004.md). 팩은 `playtested: false` |
 | T-0-005 | `apps/api` D1 스키마(profiles·sessions·careers·snapshots·command_log·idempotency·service_seasons), Drizzle migration, 저장소 함수, 로컬 D1 테스트 | 02, ADR-002, ADR-007, ADR-008 | todo | [브리프](briefs/T-0-005.md). T-0-003 머지 후 시작(T-0-007과 병렬 가능) |
 | T-0-006 | 익명 프로필 쿠키, `GET /profile`, requestId·구조화 로그·오류 봉투 | API-PRO-001, 01 | todo | |
