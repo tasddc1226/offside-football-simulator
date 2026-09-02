@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #8 engine-client 머지·후속 과제)
+
+- **PR #8(T-0-007) 머지 `9667dc7`.** 브리프의 테스트 목록(골든 inline·worker, 100 병렬 멱등, revision 경쟁, 쓰기 단계 충돌, 롤백, 복구 a~d, decodeSnapshot, buildSyncBody, 순수성 스캔, 계약 테스트)이 모두 구현됨. `check-deps.mjs`는 `checkDeps(pkg, deps, allowed, field)`로 분리해 `TEST_ONLY_PACKAGES`를 devDependencies에서만 허용.
+- **후속 1 — 로컬 저장 크기.** idempotency 레코드가 `ExecuteSuccess` 전체(encoded Snapshot + DomainSnapshot)를 저장해 revision당 state가 최대 3벌 남는다. Phase 1에 "로컬 저장 예산·정리 정책" 작업을 두고, idempotency는 `{ revision, resultHash }`만 남기고 응답은 snapshots 테이블에서 재조립하는 방향을 검토한다(05 "저장된 최초 응답을 돌려준다"는 의미 유지).
+- **후속 2 — 동기화 전 검증.** `buildSyncBody`는 최신 Snapshot을 decode 검사 없이 싣는다. T-0-015 브리프에 "전송 전 `loadCareer`로 최신 Snapshot 검증(필요 시 복구) 후 `buildSyncBody`" 규칙을 추가했다.
+- **후속 3 — 오류 형태.** `buildSyncBody`·`markSynced`는 없는 careerId에 `EngineError`가 아니라 `Error`를 던진다. T-0-015에서 `CAREER_NOT_FOUND`로 감싼다(engine-client 변경 없음).
+- T-0-012(platform·Dexie)와 T-0-011(런타임 간 해시) 투입. 동시 워커 4명(T-0-006·T-0-013·T-0-012·T-0-011).
+
 ## 2026-09-02 (저녁, T-0-015 동기화 클라이언트 설계)
 
 - **큐 정책.** careerId당 대기 1개·진행 1개. web은 1.5초 debounce로 연속 명령을 한 PUT에 합치고 시즌 종료·은퇴·생성 체크포인트는 즉시, toss는 debounce 0(ADR-002 "모든 step 경계"). 재시도는 지수 백오프(2s→60s, 지터 ±20%), 재시도 가능 여부는 contracts `RETRYABLE_BY_CODE`. 같은 본문의 재시도는 같은 Idempotency-Key.
