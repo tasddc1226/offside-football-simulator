@@ -151,8 +151,10 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 
   const outcomes = command.payload.outcomes;
   const weightSum = outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
-  if (weightSum <= 0) {
-    return fail('VALIDATION_FAILED', 'outcome 가중치 합은 0보다 커야 한다.');
+  // rollInt는 maxExclusive가 1 이상의 정수가 아니면 throw한다(프로그래밍 오류 가정). 여기서
+  // 미리 검증해 simulate()가 throw하지 않는다는 규칙을 content 데이터 오류로도 어기지 않게 한다.
+  if (!Number.isInteger(weightSum) || weightSum <= 0 || weightSum > 0xffffffff) {
+    return fail('VALIDATION_FAILED', 'outcome 가중치 합은 1 이상 2^32 이하의 정수여야 한다.');
   }
 
   const rolled = rollInt(state.rngState, weightSum);

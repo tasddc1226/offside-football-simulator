@@ -222,6 +222,34 @@ describe('simulate — RESOLVE_EVENT', () => {
     if (result.ok) return;
     expect(result.error.code).toBe('VALIDATION_FAILED');
   });
+
+  it('outcome 가중치 합이 정수가 아니면 throw하지 않고 VALIDATION_FAILED를 돌려준다', () => {
+    const snapshot = createCareerSnapshot();
+    const command = resolveCommand();
+    if (command.type !== 'RESOLVE_EVENT') throw new Error('unreachable');
+    command.payload.outcomes[0]!.weight = 33.3;
+    expect(() =>
+      simulate({ snapshot, command, rulesetVersion: RULESET, contentPackVersion: CONTENT_PACK }),
+    ).not.toThrow();
+    const result = simulate({ snapshot, command, rulesetVersion: RULESET, contentPackVersion: CONTENT_PACK });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('VALIDATION_FAILED');
+  });
+
+  it('outcome 가중치 합이 2^32를 넘으면 throw하지 않고 VALIDATION_FAILED를 돌려준다', () => {
+    const snapshot = createCareerSnapshot();
+    const command = resolveCommand();
+    if (command.type !== 'RESOLVE_EVENT') throw new Error('unreachable');
+    command.payload.outcomes[0]!.weight = 0x100000000;
+    expect(() =>
+      simulate({ snapshot, command, rulesetVersion: RULESET, contentPackVersion: CONTENT_PACK }),
+    ).not.toThrow();
+    const result = simulate({ snapshot, command, rulesetVersion: RULESET, contentPackVersion: CONTENT_PACK });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('VALIDATION_FAILED');
+  });
 });
 
 describe('simulate — ADVANCE_STEP', () => {
