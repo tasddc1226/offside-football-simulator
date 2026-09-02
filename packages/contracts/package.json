@@ -12,9 +12,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@offside/domain": "workspace:*"
+    "zod": "3.25.76"
   },
   "devDependencies": {
+    "@offside/domain": "workspace:*",
     "@offside/tsconfig": "workspace:*",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
