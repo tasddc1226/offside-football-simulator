@@ -467,6 +467,7 @@ EVT-P10 결과로 최대 3개를 노출한다. OVR 순위가 아니라 역할·�
 - [ ] 줄여 쓴 Effect에 sourceId, clamp, appliesAt, expiresAt, stackingRule을 채운다. "= 값으로 교체"는 `stackingRule: REPLACE`로 표기한다.
 - [x] 트리거 JSON의 필드(`season.step`, `season.phase`, `season.tags`, `context.tacticalFit`, `state.form`, `career.tags`, `career.stage`, `career.age`, `rng.injuryRoll`, `season.chapterHighlights`, `season.stats.goals`, `career.pathDecision`, `player.baseOvr`)를 04 조건 DSL 화이트리스트에 등록했다(2026-09-02). `career.phase`·`player.age`는 각각 `career.stage`·`career.age`로 바꿨다.
 - [ ] 챕터 CH-P01~P03의 판단을 `EVT-MATCH-*`로 분리하고 `CH-*` 정의는 진입 조건·선발 판정·판단 순서만 가진다.
+- [ ] 세부 능력 이름을 02 문서의 20개 키로 맞춘다. 결정력→`shooting`(슈팅력 삭제), 오프더볼→`positioning`, `jumping`·`goalkeeping` 행을 추가한다(기본 50·10). 역할 가중치 표도 같은 키로 다시 쓴다. 결정 근거는 [결정 로그](../../tracking/decision-log.md) 2026-09-02.
 - [ ] 결산 밴드와 SelectionScore 밴드를 ruleset manifest 상수로 옮기고 golden fixture를 만든다. 김서준 fixture의 Base OVR은 59, 결산 예시 fixture의 Base OVR은 61이어야 한다.
 - [ ] 04 이벤트 엔진 검증 규칙을 통과한다: ID·version 유일, outcome weight 합 0 초과, 존재하지 않는 Effect·필드·token 참조 없음, 후속 순환 없음, cooldown 존재, 선택지 간 동일 문구·효과 없음.
 - [ ] `playtest-log.md`의 미선택 선택지가 0이 아닌 이벤트는 pack에 넣기 전에 대가를 조정한다.
