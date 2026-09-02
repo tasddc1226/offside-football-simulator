@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #21 이벤트 선택기 머지 — web 배선 투입)
+
+**결과**: T-1-015 PR #21 squash 머지(`8a9345f`). `buildConditionContext`가 조건 DSL 필드 전부를 `CareerState`에서 채우고(도메인에 없는 필드는 기본값, `rng.injuryRoll`은 100으로 두어 부상 트리거가 헛걸리지 않게), `selectEligibleEvents`가 followUp 우선·기본 조건·쿨다운·트리거 평가로 `ADVANCE` payload를 만든다. `loadContentPack`(브라우저용, 정적 JSON import)과 `ContentPack` 타입 추가. `RulesetSchema satisfies z.ZodType<Ruleset>`을 위해 `OfferBranchSchema` 옵션 필드를 `.exactOptional()`로 바꿨다. fixtures 룰셋 일치 테스트는 `summary`·`blurb`만 제외하고 규칙 값 전부를 비교한다. content 159 tests, fixtures 13 tests, 전체 체인·`content:validate` 통과. 비용 약 $9.6, 48분.
+
+**후속**: 조건 DSL의 `context.managerTrust`와 `relationships.managerTrust`가 둘 다 있는데 전자는 도메인에 없어 0으로 채운다. 팩은 후자만 쓴다. 04 문서에서 `context.managerTrust`를 빼거나 후자로 매핑하도록 정리한다(콘텐츠 작업 때).
+
+**슬롯**: T-1-007(web 엔진 배선·허브·온보딩·설정)을 투입했다. 활성 워커 2개(T-1-006, T-1-007). T-1-006 머지 뒤에도 T-1-008·009는 T-1-007을 기다린다.
+
 ## 2026-09-02 (저녁, T-1-015 블로커 결정 — 룰셋 일치 테스트 범위, 브라우저 팩 로더)
 
 **블로커**: fixtures `ruleset-consistency.test.ts`가 콘텐츠 룰셋 1.0.0과 domain 테스트 픽스처 `ruleset-proto.json`의 차이로 실패했다. (1) `lower-league-skipped` 분기 누락 → T-1-005가 픽스처에 추가해 머지됐으므로 main 재병합으로 해소. (2) 아키타입 `summary`·배경 `blurb` 같은 설명 문구 차이 → 테스트를 규칙 값 비교로 좁힌다. 테스트에 `PRESENTATION_KEYS`(실제로 다른 문구 키만 명시)를 두고 재귀 제거 후 deep-equal. `name`·id·가중치·수치·태그·`startTeamId`는 계속 비교한다. domain 파일은 건드리지 않는다.
