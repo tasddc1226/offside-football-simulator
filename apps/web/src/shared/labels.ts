@@ -112,33 +112,14 @@ export const TIMELINE_KIND_LABEL_KO: Record<TimelineEntry['kind'], string> = {
 };
 
 /**
- * SCR-014 결과 카드·SCR-029 전술실의 효과 대상 한국어 라벨. `Record<AttributeKey, …>`로 능력치
- * 20종 전수를 타입으로 강제하고, 나머지(state·context·relationships) 대상을 유니온으로 더한다.
+ * SCR-014 결과 카드·SCR-029 전술실의 효과 대상 한국어 라벨. 능력치 20종은 `ATTRIBUTE_LABELS`를
+ * 그대로 재사용하고(중복 정의 금지), 나머지(state·context·relationships) 대상만 여기서 더한다.
  */
 export const EFFECT_TARGET_LABEL_KO: Record<
   AttributeKey | 'form' | 'fitness' | 'morale' | 'tacticalFit' | 'squadStatus' | 'positionProficiency' | 'managerTrust' | 'captain' | 'rival' | 'fans' | 'agent',
   string
 > = {
-  shooting: '슈팅',
-  passing: '패스',
-  dribbling: '드리블',
-  tackling: '태클',
-  firstTouch: '퍼스트터치',
-  crossing: '크로스',
-  goalkeeping: '골키핑',
-  pace: '스피드',
-  acceleration: '가속력',
-  agility: '민첩성',
-  jumping: '점프력',
-  stamina: '스태미나',
-  strength: '피지컬',
-  durability: '내구성',
-  decisions: '판단력',
-  concentration: '집중력',
-  composure: '침착성',
-  positioning: '포지셔닝',
-  leadership: '리더십',
-  consistency: '꾸준함',
+  ...ATTRIBUTE_LABELS,
   form: '폼',
   fitness: '체력',
   morale: '사기',

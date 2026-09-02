@@ -11,6 +11,7 @@ import {
   Card,
   CareerTimeline,
   DashboardSection,
+  ErrorState,
   PlayerHeader,
   StatusStrip,
   Tabs,
@@ -24,7 +25,7 @@ import { activeContentPack, activeRuleset } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { useEngine } from '../engine/use-engine.js';
 import { screenForCareer } from '../shared/career-route.js';
-import { currentTeamName } from '../shared/current-team.js';
+import { archetypeName, currentTeamName } from '../shared/current-team.js';
 import {
   EFFECT_TARGET_LABEL_KO,
   LEAGUE_TIER_LABEL_KO,
@@ -104,6 +105,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   const navigate = useNavigate();
   const advanceMutation = useCareerMutation('advance');
   const [nothingToAdvance, setNothingToAdvance] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const submittingRef = useRef(false);
 
   const pending = state.pending;
@@ -138,6 +140,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   async function handleAdvance() {
     if (submittingRef.current) return;
     submittingRef.current = true;
+    setErrorMessage(null);
     try {
       const result = await advanceMutation.mutateAsync({ careerId });
       if (result.ok) {
@@ -149,7 +152,11 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
       const reason = typeof details === 'object' && details !== null && 'reason' in details ? (details as { reason?: unknown }).reason : undefined;
       if (reason === 'NOTHING_TO_ADVANCE') {
         setNothingToAdvance(true);
+        return;
       }
+      setErrorMessage('진행하지 못했습니다. 다시 시도해 주세요.');
+    } catch {
+      setErrorMessage('진행하지 못했습니다. 다시 시도해 주세요.');
     } finally {
       submittingRef.current = false;
     }
@@ -165,6 +172,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
           다음 시즌은 곧 열립니다
         </p>
       ) : null}
+      {errorMessage ? <ErrorState message={errorMessage} onRetry={handleAdvance} /> : null}
     </Card>
   );
 }
@@ -208,7 +216,7 @@ function CareerDashboard() {
         name={name}
         team={currentTeamName(state, activeRuleset)}
         position={{ label: '포지션', value: position ? POSITION_LABELS[position] : '—' }}
-        archetype={{ label: '아키타입', value: profile?.archetypeId ?? '—' }}
+        archetype={{ label: '아키타입', value: archetypeName(activeRuleset, profile?.archetypeId ?? draft.archetypeId) }}
         shirtNumber={{ label: '등번호', value: state.contract ? String(state.contract.shirtNumber) : '—' }}
       />
 

@@ -1,8 +1,9 @@
 // SCR-014 선택 결과 카드. `rev` 검색 파라미터가 가리키는 EVENT_RESOLVED 타임라인 항목만으로
 // 결과를 재구성한다(event-result.ts) — appliedEffects를 쓰지 않으므로 새로고침·뒤로 가기가
 // roll을 다시 소비하지 않는다. "다음"은 advance를 실행하고 결과 상태를 screenForCareer로 해석해
-// 이동한다(정산 단계에서 더 진행할 게 없으면 advance는 실패하고 현재 상태 그대로 SCR-029로 간다).
-import { useEffect, useRef } from 'react';
+// 이동한다 — NOTHING_TO_ADVANCE(정산 단계에서 더 진행할 게 없음)만 그렇게 처리하고, 그 외 실패는
+// 결과 화면에 남아 오류를 보여준다(오류를 조용히 삼키고 이동하지 않는다).
+import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Button, ErrorState, ResultCard, Skeleton } from '@offside/ui';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
@@ -36,6 +37,7 @@ function EventResultScreen() {
   const advanceMutation = useCareerMutation('advance');
   const navigate = useNavigate();
   const submittingRef = useRef(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-014', careerPhase: query.data?.state.seasonPhase ?? 'NONE' });
@@ -68,11 +70,26 @@ function EventResultScreen() {
   async function handleNext() {
     if (submittingRef.current) return;
     submittingRef.current = true;
+    setErrorMessage(null);
     try {
       const result = await advanceMutation.mutateAsync({ careerId });
-      const targetState = result.ok ? result.domainSnapshot.state : state;
-      const target = screenForCareer(targetState);
-      void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
+      if (result.ok) {
+        const target = screenForCareer(result.domainSnapshot.state);
+        void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
+        return;
+      }
+      const details = result.error.details;
+      const reason = typeof details === 'object' && details !== null && 'reason' in details ? (details as { reason?: unknown }).reason : undefined;
+      if (reason === 'NOTHING_TO_ADVANCE') {
+        // 정산 단계에서 더 진행할 게 없다 — 결과 화면에 남을 이유가 없으니 현재 상태 그대로
+        // screenForCareer로 이동한다(보통 SCR-029).
+        const target = screenForCareer(state);
+        void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
+        return;
+      }
+      setErrorMessage('다음으로 넘어가지 못했습니다. 다시 시도해 주세요.');
+    } catch {
+      setErrorMessage('다음으로 넘어가지 못했습니다. 다시 시도해 주세요.');
     } finally {
       submittingRef.current = false;
     }
@@ -84,6 +101,7 @@ function EventResultScreen() {
       <Button variant="primary" onClick={handleNext} disabled={advanceMutation.isPending}>
         다음
       </Button>
+      {errorMessage ? <ErrorState message={errorMessage} onRetry={handleNext} /> : null}
     </div>
   );
 }

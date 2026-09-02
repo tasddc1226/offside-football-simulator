@@ -13,3 +13,9 @@ export function currentTeamName(state: CareerState, ruleset: Ruleset): string {
   const team = ruleset.teams.find((candidate) => candidate.id === background.startTeamId);
   return team?.name ?? '무소속';
 }
+
+/** 룰셋에서 아키타입 한글 이름을 찾는다. id가 없거나 룰셋에 없으면 id를 그대로 돌려준다(방어적). */
+export function archetypeName(ruleset: Ruleset, archetypeId: string | null | undefined): string {
+  if (archetypeId === null || archetypeId === undefined) return '—';
+  return ruleset.archetypes.find((candidate) => candidate.id === archetypeId)?.name ?? archetypeId;
+}

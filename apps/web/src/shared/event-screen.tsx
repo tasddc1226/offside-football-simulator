@@ -11,6 +11,7 @@ import { activeContentPack, activeRuleset } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
+import { archetypeName } from './current-team.js';
 import { POSITION_LABELS, RISK_LABEL_KO } from './labels.js';
 import { buildNarrativeTokens, renderNarrative, type NarrativeTokenValues } from './narrative.js';
 import { u18StatusStripItems } from './status-strip.js';
@@ -124,7 +125,7 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
         name={tokens.name}
         team={tokens.team}
         position={{ label: '포지션', value: position ? POSITION_LABELS[position] : '—' }}
-        archetype={{ label: '아키타입', value: profile?.archetypeId ?? '—' }}
+        archetype={{ label: '아키타입', value: archetypeName(activeRuleset, profile?.archetypeId ?? state.player.draft.archetypeId) }}
         shirtNumber={{ label: '등번호', value: state.contract ? String(state.contract.shirtNumber) : '—' }}
       />
       <StatusStrip items={u18StatusStripItems(state)} />

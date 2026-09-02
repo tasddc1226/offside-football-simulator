@@ -179,4 +179,35 @@ describe('SCR-029 다음 결정 카드 분기', () => {
       expect(screen.getByRole('button', { name: '진행' })).toBeDisabled();
     });
   });
+
+  it('advance가 NOTHING_TO_ADVANCE가 아닌 이유로 실패하면 오류 문구를 보여주고 버튼은 다시 눌릴 수 있다', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine);
+    const failingEngine: AppEngine = {
+      ...engine,
+      client: {
+        ...engine.client,
+        execute: (request) => {
+          if (request.command.type === 'ADVANCE') {
+            return Promise.resolve({
+              ok: false,
+              error: { code: 'VALIDATION_FAILED', message: 'Worker 응답 없음.' },
+            });
+          }
+          return engine.client.execute(request);
+        },
+      },
+    };
+    engineHolder.promise = Promise.resolve(failingEngine);
+
+    renderAt(`/career/${careerId}`);
+    const advanceButton = await screen.findByRole('button', { name: '진행' });
+    fireEvent.click(advanceButton);
+
+    expect(await screen.findByText('진행하지 못했습니다. 다시 시도해 주세요.')).toBeInTheDocument();
+    expect(screen.queryByText('다음 시즌은 곧 열립니다')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '진행' })).not.toBeDisabled();
+    });
+  });
 });
