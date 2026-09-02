@@ -2,6 +2,11 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, fixtures 테스트 전용 의존 규칙)
+
+- **T-0-007 워커 질문.** engine-client가 golden fixture를 쓰려면 `@offside/fixtures`를 devDependency로 가져야 하는데 `check-deps.mjs` 허용 목록과 ADR-005 표에 없어 `lint:deps`가 실패한다.
+- **결정.** `@offside/fixtures`는 테스트 전용 패키지로, 어느 패키지든 `devDependencies`로만 허용하고 `dependencies`면 위반. `check-deps.mjs`에 `TEST_ONLY_PACKAGES` 개념을 추가(워커 범위 확장, 테스트 2건 포함). ADR-005 본문에 한 문단 추가. 런타임 의존 표는 그대로. 이유: platform(T-0-012)·api 테스트도 같은 fixture를 쓰게 되므로 패키지별 허용 목록에 하나씩 넣는 것보다 규칙 하나가 낫다.
+
 ## 2026-09-02 (저녁, PR #4 머지·lockfile 충돌 규칙)
 
 - **T-0-003 머지(`4693202`).** 리뷰 요청 5건(zod 4.5.4 통일, `ClientIdSchema`, `PUT /careers` snapshot revision 정합성, CORS `Content-Type`·`X-Request-Id`, 주석)을 워커가 반영했고 체인 통과(50 tests).
