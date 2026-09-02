@@ -2,7 +2,12 @@
   "id": "EVT-CON-003",
   "version": 1,
   "phases": ["YOUTH"],
-  "triggers": { "all": [{ "eq": ["career.pathDecision", "TRYOUT"] }, { "gte": ["player.baseOvr", 55] }] },
+  "triggers": {
+    "all": [
+      { "any": [{ "hasTag": ["career.tags", "진로_입단테스트"] }, { "hasTag": ["career.tags", "진로_하부리그"] }] },
+      { "gte": ["player.baseOvr", 55] }
+    ]
+  },
   "exclusionTags": [],
   "weight": 10,
   "safety": { "minorSafe": true },
@@ -29,14 +34,16 @@
               "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
               "stackingRule": "ONCE_PER_SOURCE"
             }
-          ]
+          ],
+          "addTags": ["입단테스트_완료", "테스트_성공"]
         },
         {
           "id": "A2",
           "kind": "NEUTRAL",
           "weight": 35,
           "title": "인상은 남겼다",
-          "effects": []
+          "effects": [],
+          "addTags": ["입단테스트_완료", "테스트_보통"]
         },
         {
           "id": "A3",
@@ -44,7 +51,7 @@
           "weight": 20,
           "title": "무리한 슛만 기억됐다",
           "effects": [],
-          "addTags": ["테스트_실패"]
+          "addTags": ["입단테스트_완료", "테스트_실패"]
         }
       ]
     },
@@ -70,14 +77,16 @@
               "expiresAt": null,
               "stackingRule": "ONCE_PER_SOURCE"
             }
-          ]
+          ],
+          "addTags": ["입단테스트_완료", "테스트_성공"]
         },
         {
           "id": "B2",
           "kind": "NEUTRAL",
           "weight": 15,
           "title": "특징이 없다는 평",
-          "effects": []
+          "effects": [],
+          "addTags": ["입단테스트_완료", "테스트_보통"]
         }
       ]
     }
