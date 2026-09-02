@@ -271,6 +271,60 @@ describe('createSyncClient', () => {
     expect(h.sync.getState(h.careerId).kind).toBe('RETRYING');
   });
 
+  it('loadCareer가 저장소 I/O 오류로 throw해도 unhandled rejection 없이 RETRYING으로 처리된다', async () => {
+    const store = new MemoryLocalStore();
+    const realEngine = createEngineClient({ store, simulator: inlineSimulator });
+    const careerId = 'car_io_fail';
+    let failNext = true;
+    const flakyEngine = {
+      ...realEngine,
+      loadCareer: (id: string) => {
+        if (failNext) {
+          failNext = false;
+          return Promise.reject(new Error('IndexedDB 트랜잭션 실패(테스트)'));
+        }
+        return realEngine.loadCareer(id);
+      },
+    };
+    const { fetchFn, calls, queue } = createFakeFetch();
+    const sync = createSyncClient({
+      engine: flakyEngine,
+      store,
+      fetch: fetchFn,
+      baseUrl: '/v1',
+      now: () => new Date().toISOString(),
+      newId: makeIdGenerator('idem'),
+    });
+
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const created = await realEngine.execute({
+        careerId,
+        command: createCareerCommand(careerId, 'cmd-0'),
+        createdServiceSeasonId: 'season-1',
+      });
+      if (!created.ok) throw new Error('setup 실패');
+      sync.notifyCommitted(careerId, created.domainSnapshot);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(calls).toHaveLength(0);
+      expect(sync.getState(careerId).kind).toBe('RETRYING');
+
+      queue.push(() => makeResponse(200, successData({ revision: 1, syncedAt: '2026-01-01T00:00:00.000Z' })));
+      const retrying = sync.getState(careerId);
+      if (retrying.kind !== 'RETRYING') throw new Error('RETRYING 상태가 아니다');
+      await vi.advanceTimersByTimeAsync(retrying.nextAt - Date.now());
+
+      expect(calls).toHaveLength(1);
+      expect(sync.getState(careerId).kind).toBe('IDLE');
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+    expect(unhandled).toEqual([]);
+  });
+
   it('전송 중 새 명령이 확정되면 완료 뒤 곧바로 두 번째 PUT을 보낸다(baseRevision = 첫 응답 revision)', async () => {
     const h = setup();
     let resolveFirst!: (r: SyncTransportResponse) => void;

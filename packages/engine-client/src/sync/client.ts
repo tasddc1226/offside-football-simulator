@@ -231,6 +231,20 @@ export function createSyncClient(deps: SyncDeps): SyncClient {
   }
 
   async function doCycle(record: CareerRecord): Promise<void> {
+    try {
+      await runDoCycle(record);
+    } catch (err) {
+      if (record.disposed || disposed) return;
+      scheduleRetry(record, toEngineError(err, 'SERVICE_UNAVAILABLE'));
+    }
+  }
+
+  /**
+   * `loadCareer`·store 읽기는 프로그래밍 오류가 아닌 저장소 I/O 실패로도 throw할 수 있다
+   * (LocalStore 계약). 여기서 잡지 못한 예외는 `doCycle`이 재시도 가능한 실패로 처리한다 —
+   * 타이머 콜백에서 `void runCycle(...)`으로 실행되므로 처리하지 않으면 unhandled rejection이 된다.
+   */
+  async function runDoCycle(record: CareerRecord): Promise<void> {
     const careerId = record.careerId;
     setState(record, { kind: 'SYNCING', attempt: record.attempt });
     let fastForwarded = false;
