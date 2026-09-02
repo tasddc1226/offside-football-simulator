@@ -1,0 +1,107 @@
+/* 13-visual-design-system.md DSN-COL-001·TYP-001·SPC-001. 값은 문서와 동일해야 한다(변경 금지). */
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  src: url('../node_modules/pretendard/dist/web/variable/woff2/PretendardVariable.woff2') format('woff2-variations');
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* DSN-COL-001 라이트 */
+  --os-bg: #F7F6F1;
+  --os-surface: #FFFFFF;
+  --os-surface-2: #EEECE4;
+  --os-border: #D6D3C9;
+  --os-text: #141A17;
+  --os-text-2: #4F5A54;
+  --os-accent: #F5C400;
+  --os-on-accent: #0B1410;
+  --os-line: #0E7C8A;
+  --os-success: #1E7B45;
+  --os-warning: #8A5A00;
+  --os-danger: #B3261E;
+  --os-neutral: #4F5A54;
+  --os-focus: #0E7C8A;
+
+  /* DSN-TYP-001 */
+  --os-font: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  --os-tracking-display: 0.12em;
+
+  --os-fs-display: 2rem;
+  --os-lh-display: 2.5rem;
+  --os-fs-h1: 1.5rem;
+  --os-lh-h1: 2rem;
+  --os-fs-h2: 1.125rem;
+  --os-lh-h2: 1.625rem;
+  --os-fs-body: 1rem;
+  --os-lh-body: 1.5rem;
+  --os-fs-caption: 0.8125rem;
+  --os-lh-caption: 1.125rem;
+  --os-fs-num-xl: 3rem;
+  --os-lh-num-xl: 3.25rem;
+  --os-fs-num-lg: 1.75rem;
+  --os-lh-num-lg: 2rem;
+  --os-fs-num-md: 1.125rem;
+  --os-lh-num-md: 1.5rem;
+  --os-fs-num-sm: 0.875rem;
+  --os-lh-num-sm: 1.25rem;
+
+  /* DSN-SPC-001 */
+  --os-space-1: 4px;
+  --os-space-2: 8px;
+  --os-space-3: 12px;
+  --os-space-4: 16px;
+  --os-space-5: 24px;
+  --os-space-6: 32px;
+  --os-space-7: 48px;
+  --os-space-8: 64px;
+  --os-radius-s: 4px;
+  --os-radius-m: 8px;
+  --os-touch-min: 44px;
+
+  /* DSN-CHN-001, web 채널 값 */
+  --os-safe-top: env(safe-area-inset-top, 0px);
+  --os-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+:root[data-theme='dark'] {
+  --os-bg: #0B1410;
+  --os-surface: #121C17;
+  --os-surface-2: #1A2620;
+  --os-border: #2B3A32;
+  --os-text: #F2F5F3;
+  --os-text-2: #A7B3AC;
+  --os-accent: #F5C400;
+  --os-on-accent: #0B1410;
+  --os-line: #7DF2FF;
+  --os-success: #5BD98A;
+  --os-warning: #FFB020;
+  --os-danger: #FF6B6B;
+  --os-neutral: #A7B3AC;
+  --os-focus: #7DF2FF;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --os-bg: #0B1410;
+    --os-surface: #121C17;
+    --os-surface-2: #1A2620;
+    --os-border: #2B3A32;
+    --os-text: #F2F5F3;
+    --os-text-2: #A7B3AC;
+    --os-accent: #F5C400;
+    --os-on-accent: #0B1410;
+    --os-line: #7DF2FF;
+    --os-success: #5BD98A;
+    --os-warning: #FFB020;
+    --os-danger: #FF6B6B;
+    --os-neutral: #A7B3AC;
+    --os-focus: #7DF2FF;
+  }
+}
+
+.os-num {
+  font-variant-numeric: tabular-nums;
+}

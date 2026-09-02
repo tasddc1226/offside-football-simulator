@@ -1,0 +1,55 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+/* apps/web은 이 파일을 apps/web/node_modules 심볼릭 링크로 소비하므로 Tailwind의
+   자동 콘텐츠 탐지(Vite 루트=apps/web 기준)가 packages/ui/src를 건너뛴다.
+   컴포넌트 유틸리티 클래스가 실제로 컴파일되도록 명시적으로 포함한다. */
+@source './components';
+
+@theme {
+  --color-os-bg: var(--os-bg);
+  --color-os-surface: var(--os-surface);
+  --color-os-surface-2: var(--os-surface-2);
+  --color-os-border: var(--os-border);
+  --color-os-text: var(--os-text);
+  --color-os-text-2: var(--os-text-2);
+  --color-os-accent: var(--os-accent);
+  --color-os-on-accent: var(--os-on-accent);
+  /* 오프사이드 라인 색은 여기 매핑하지 않는다. DSN-LINE-001은 등장을 세 순간으로 제한하므로
+     일반 Tailwind 유틸리티로 노출하면 다른 화면이 남용할 수 있다. OffsideLine 컴포넌트만
+     해당 CSS 변수를 인라인 스타일로 직접 참조한다. */
+  --color-os-success: var(--os-success);
+  --color-os-warning: var(--os-warning);
+  --color-os-danger: var(--os-danger);
+  --color-os-neutral: var(--os-neutral);
+  --color-os-focus: var(--os-focus);
+
+  --spacing-os-1: var(--os-space-1);
+  --spacing-os-2: var(--os-space-2);
+  --spacing-os-3: var(--os-space-3);
+  --spacing-os-4: var(--os-space-4);
+  --spacing-os-5: var(--os-space-5);
+  --spacing-os-6: var(--os-space-6);
+  --spacing-os-7: var(--os-space-7);
+  --spacing-os-8: var(--os-space-8);
+  --spacing-os-touch-min: var(--os-touch-min);
+  --spacing-os-safe-top: var(--os-safe-top);
+  --spacing-os-safe-bottom: var(--os-safe-bottom);
+
+  --radius-os-s: var(--os-radius-s);
+  --radius-os-m: var(--os-radius-m);
+
+  --font-os: var(--os-font);
+}
+
+/* 06 "접근성": 모션 감소 설정에서는 모든 전환·카운트업이 즉시 완료된다. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

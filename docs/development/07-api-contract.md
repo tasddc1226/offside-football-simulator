@@ -12,7 +12,7 @@
 - 모든 응답은 `requestId`를 포함한다.
 - 목록은 안정적인 cursor pagination을 사용한다.
 - 인증은 세션이다. web 채널은 쿠키, toss 채널은 `Authorization: Bearer <sessionToken>`. 미들웨어는 헤더를 먼저 보고 없으면 쿠키를 본다. `Origin` 검사와 `SameSite=Lax`로 CSRF를 막는다.
-- CORS 허용 origin은 우리 도메인과 [ADR-007](../adr/ADR-007-hosting-and-infra.md)의 앱인토스 origin 4종이다. `Authorization` 헤더와 `If-Match`, `Idempotency-Key`를 `Access-Control-Allow-Headers`에 포함한다.
+- CORS 허용 origin은 우리 도메인과 [ADR-007](../adr/ADR-007-hosting-and-infra.md)의 앱인토스 origin 4종이다. `Authorization` 헤더와 `If-Match`, `Idempotency-Key`, `Content-Type`을 `Access-Control-Allow-Headers`에 포함하고, `X-Request-Id`를 `Access-Control-Expose-Headers`에 포함한다.
 - 요청 본문 상한 1MB. Snapshot은 압축 전 256KB 권장 상한.
 
 ## 응답 봉투
