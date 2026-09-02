@@ -59,6 +59,14 @@ describe('RulesetSchema', () => {
     expect(() => RulesetSchema.parse(ruleset)).toThrowError(/30~72/);
   });
 
+  it('rejects a GK archetype whose own goalkeeping template value is out of the 30~72 range', () => {
+    const ruleset = cloneRuleset();
+    const archetype = ruleset.archetypes.find((a) => a.id === 'gk-shot-stopper');
+    if (!archetype) throw new Error('fixture missing gk-shot-stopper');
+    archetype.template.goalkeeping = 90;
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/30~72/);
+  });
+
   it('rejects a non-GK archetype with a goalkeeping roleWeight', () => {
     const ruleset = cloneRuleset();
     const archetype = ruleset.archetypes.find((a) => a.id === 'inside-forward');

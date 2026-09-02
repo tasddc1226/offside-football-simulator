@@ -76,20 +76,9 @@ export const ArchetypeSchema = z
   .superRefine((archetype, ctx) => {
     for (const key of Object.keys(archetype.template) as AttributeKey[]) {
       const value = archetype.template[key];
-      const isGoalkeeping = key === 'goalkeeping';
-      if (archetype.position === 'GK') {
-        if (isGoalkeeping) continue;
-        if (value < 30 || value > 72) {
-          ctx.addIssue({
-            code: 'custom',
-            message: `template.${key}는 30~72 사이여야 한다: ${value}`,
-            path: ['template', key],
-          });
-        }
-        continue;
-      }
+      const isNonGkGoalkeeping = key === 'goalkeeping' && archetype.position !== 'GK';
 
-      if (isGoalkeeping) {
+      if (isNonGkGoalkeeping) {
         if (value < 5 || value > 15) {
           ctx.addIssue({
             code: 'custom',
