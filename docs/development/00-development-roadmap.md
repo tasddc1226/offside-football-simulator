@@ -54,6 +54,19 @@ ADR-001~009는 2026-09-02에 [`docs/adr/`](../adr/README.md)에서 확정했다.
 
 진행 관리와 워커 위임 규칙은 [`docs/tracking/`](../tracking/README.md)을 따른다.
 
+## Phase 3 이후 병렬화
+
+2026-09-03 결정. Phase 2까지는 순차다. 이후 모든 Phase가 시즌 루프(FootballSeason, 전술 적합도, 경기 통계, 시즌 집계 Effect) 위에서 돌기 때문이다. Phase 2 안에서도 도메인 슬라이스는 순서대로, 화면·검증만 병렬로 간다.
+
+Phase 2가 끝나면 다음 구조로 병렬화한다.
+
+1. **공유 계약을 먼저 닫는다**(Phase 2 계획의 T-2-014). Effect 큐의 만료·중첩 규칙, 시장가치의 입력 항목과 소유 Phase, CareerTag 목록과 부여 인터페이스. ADR 또는 contracts 작업으로 확정한다.
+2. **트랙 A·B 병렬**: Phase 3(계약·임대·이적)과 Phase 4(부상·관계·평판). 도메인 영역이 겹치지 않는다. 맞물리는 지점은 Phase 4의 평판이 Phase 3의 시장가치 입력이 되는 것과, Effect 규칙을 둘 다 쓰는 것뿐이며 1번이 그 경계를 정한다.
+3. **트랙 C·D 병렬**: Phase 5(은퇴·Legacy)와 Phase 6(KICKOFF 시즌 도전·결산). Phase 5는 다년 진행과 Phase 3 이적을 실제로 태워야 검증되고 태그는 Phase 4 산출물이다. Phase 6의 인프라(ServiceSeason 전이, 도전 evaluator, 보관함)는 먼저 만들 수 있으나 정식 시즌은 Phase 5까지 끝난 뒤 연다.
+4. **LINE TEST와 겹치기**: LINE TEST가 도는 동안 Phase 3·4의 도메인 골격(계약 상태기계, 부상 모델)을 만든다. 밸런스 수치 조정만 LINE TEST 기준선 뒤로 미룬다. "LINE TEST 결과로 룰셋 1.0.0을 확정한 뒤 Phase 3"는 수치 확정에 대한 규칙으로 읽는다.
+
+상한은 트랙 3개다. 워커 수보다 오케스트레이터 리뷰 병목, 5시간 사용량 한도, `packages/domain`·`contracts` 동시 수정 충돌이 한계를 정한다. 병렬 Phase는 서로 다른 상태 필드에만 쓰고, 공유 필드는 1번의 계약을 통해서만 바꾼다.
+
 ## LINE TEST 공개 게이트
 
 Phase 2가 끝나면 `PRESEASON: LINE TEST` 서비스 시즌으로 외부 공개 테스트를 연다. Phase 3~5를 기다리지 않는다. 이 테스트의 커리어는 테스트 보관함으로 분리하고 정식 시즌 도전에 집계하지 않는다.

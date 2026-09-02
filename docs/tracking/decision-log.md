@@ -12,6 +12,14 @@
 
 **추적**: FR-WLD-001~004, DATA-WLD-001~007, RULE-WLD-001~006, SCR-035~040, TEST-E2E-011~013. 구현 백로그는 T-8-001~010이며 정본은 [개발 명세](../development/15-world-stage-expansion.md)와 [Phase 8](../phases/phase-08-world-stage.md)이다.
 
+## 2026-09-03 (새벽, Phase 2 계획과 Phase 3 이후 병렬화 — D-24~D-32)
+
+**사용자 결정**: "Phase 2까지 순차, 그 뒤 병렬"을 확인하고 그대로 진행하라고 했다. 로드맵에 "Phase 3 이후 병렬화" 절을 추가했다: Phase 2 종료 → 공유 계약(Effect 만료·중첩, 시장가치 입력, CareerTag 인터페이스) 확정 → Phase 3·4 병렬 → Phase 5·6 병렬. LINE TEST가 도는 동안 Phase 3·4의 도메인 골격은 먼저 만들고 밸런스 수치만 기준선 뒤로 미룬다. 트랙 상한 3개.
+
+**Phase 2 계획 초안**: [phase-2-plan.md](phase-2-plan.md). 작업 14건(T-2-001~014), Wave 4개. 도메인 Wave 1·2(시즌 구조 → 선발 판정 → 통계 generator → 챕터·집계)는 순차, 화면 3건과 공유 계약 작업은 Wave 3에서 병렬, 검증·콘텐츠·LINE TEST 준비가 Wave 4. 설계 결정 D-24~D-32은 초안이며 각 Wave 투입 전에 확정한다. 열린 질문 3개(리그·컵 구조의 데이터화 정도, 경쟁자 아키타입 분포, Snapshot 크기)는 Wave 1 전에 닫는다.
+
+**투입 시점**: Phase 순서 규칙대로 Phase 1 보드가 전부 done(또는 U 대기 blocked)이 된 뒤 T-2-001을 띄운다. 브리프는 미리 쓴다.
+
 ## 2026-09-02 (밤, PR #25 선수 만들기 머지 — T-1-011 투입)
 
 **결과**: T-1-008 PR #25 squash 머지(`122144f`). SCR-002(정보)·SCR-003(스타일)·SCR-004(확정·복구 코드) 화면과 최소 API 클라이언트(`apiFetch`, `getProfile`, `issueRecoveryCode`)가 들어갔다. `guardCareerStep`이 DRAFT 단계 순서를 지키고, 확정 뒤 복구 코드 단계는 `?step=recovery`로 남아 새로고침에도 유지된다. web 99 tests, e2e 18. 전체 체인·e2e를 오케스트레이터가 재실행해 확인했다. 비용 약 $22.1, 78분.

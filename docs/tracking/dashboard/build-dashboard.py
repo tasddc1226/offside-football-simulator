@@ -119,6 +119,7 @@ DECISIONS = [
     ("Google 연결·완료 판정 D-21·D-22", "arctic + 가짜 OIDC로 U-003 전에도 E2E. 완료 조건 13행 표, 5분 세션은 자동화 시간으로 판정, LCP·CLS는 기록만."),
     ("브리프 15개 전부 작성", "투입 순서: T-1-007 → 008·009 → 011 → 012 → 013·014."),
     ("PR #25 리뷰: 복구 코드 발급 400", "apiFetch가 body 없는 POST에 Content-Type을 안 붙여 서버 bodyGuard가 거부. 워커의 '일시적 400' 설명을 재현으로 반박하고 수정 후 머지."),
+    ("Phase 3 이후 병렬화 D-32", "Phase 2까지 순차. 공유 계약(Effect·시장가치·태그) 확정 뒤 Phase 3·4 병렬, 그 위에 5·6 병렬. Phase 2 계획 T-2-001~014 초안."),
     ("콘텐츠 정본 PR #24", "사용자가 docs/content/kickoff/ 6종을 머지. SHIPPABLE 전에는 개발 작업을 만들지 않는다(Phase 2 입력)."),
     ("룰셋은 데이터", "packages/content/rulesets/1.0.0, 도메인은 입력으로 받고 해시에는 넣지 않음."),
 ]

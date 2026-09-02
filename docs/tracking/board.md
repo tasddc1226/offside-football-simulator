@@ -87,6 +87,27 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 초기 24개 구단 슬라이스가 완주·선택 분포 게이트를 통과한 뒤에만 5개 리그 스타일로 확장한다. 실명 라이선스는 이 백로그에 포함하지 않는다.
 
+## Phase 2 백로그 (착수 순서, 투입은 Phase 1 종료 후)
+
+계획·결정은 [phase-2-plan.md](phase-2-plan.md). Phase 2는 순차 Phase(도메인 Wave 1·2 순서대로, 화면·검증 Wave 3·4 병렬). Phase 3 이후는 [로드맵 "Phase 3 이후 병렬화"](../development/00-development-roadmap.md#phase-3-이후-병렬화).
+
+| ID | 패키지 | 작업 | 선행 | Wave | 상태 | 메모 |
+|---|---|---|---|---|---|---|
+| T-2-001 | domain + content | FootballSeason·CompetitionRecord·12 step 캘린더, START_SEASON·SETTLE_SEASON, ADVANCE 재정의, checkpoint·결정 예산 | Phase 1 종료 | 1 | todo | |
+| T-2-002 | domain + content | 팀 전술·경쟁자, Tactical Fit·Squad Status, RULE-PERF-001·RULE-SEL-001, golden fixture A·B | T-2-001 | 1 | todo | |
+| T-2-003 | domain | 포지션별 경기 통계 generator, 0분·교체·퇴장·부상, FAST/CHAPTER 분포 동일성, 1,000회 hash | T-2-002 | 2 | todo | |
+| T-2-004 | domain + content | 핵심 경기 챕터 선택·판단 resolver, 팩 `chapters` 스키마 + 3종 | T-2-003 | 2 | todo | |
+| T-2-005 | domain | 시즌 집계·SeasonResult, 성장·폼·체력·사기 Effect, 원인 태그, 결산 hash | T-2-003, T-2-004 | 2 | todo | |
+| T-2-006 | contracts + api + engine-client | CMD-SIM 스키마, 시즌·결산·EffectQueue 스키마, Snapshot 크기, 동기화 회귀, Worker 계산 시간 | T-2-001 | 2 | todo | |
+| T-2-007 | web | SCR-005·011·029(advance·전술실)·033 | T-2-002, T-2-006 | 3 | todo | |
+| T-2-008 | web | SCR-031 챕터·SCR-012 역할 변경·재생 복원 | T-2-004, T-2-006 | 3 | todo | |
+| T-2-009 | web | SCR-015 시즌 결산·연대기 요약·응답 유실 복구 | T-2-005, T-2-006 | 3 | todo | |
+| T-2-010 | content | 콘텐츠 팩 0.2.0(챕터 3종·시즌 이벤트, SHIPPABLE 항목만) | T-2-004, 콘텐츠 승격 | 4 | todo | `docs/content/kickoff/production-backlog.md` 상태 기준 |
+| T-2-011 | domain + web(e2e) | 포지션군 4종 완주 fixture, B > A, 집계, FAST 6분·CHAPTER 12분, TEST-E2E-002·010 | T-2-007~009 | 4 | todo | |
+| T-2-012 | api + web + platform | LINE TEST 준비: `svc_line_test`, 테스트 보관함, 분석 이벤트, 스테이징 배포 | T-2-011, T-0-010 | 4 | todo | U-002 필요 |
+| T-2-013 | docs | LINE TEST 운영 계획·기준선 양식·완료 조건 표 | T-2-012 | 4 | todo | |
+| T-2-014 | domain + contracts | Phase 3+ 공유 계약: Effect 만료·중첩, 시장가치 입력, CareerTag 인터페이스 | T-2-005 | 3 | todo | Phase 3·4 병렬의 전제 |
+
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
 선행: U-007 콘솔 등록(`appName` 확정). 리드타임은 등급분류(U-009) 10~15일과 콘솔 검토 2~4주. 코드 작업은 M-001~M-004이며 구조가 준비돼 있으면 각각 워커 1건 규모다.
