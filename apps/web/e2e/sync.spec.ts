@@ -23,11 +23,15 @@ test('(a) 커리어 생성 즉시 저장하고 배지가 "저장됨"으로 바�
 
   await startNewCareer(page);
 
-  // 커리어 레이아웃 헤더(브리프 6 배치 중 하나)에서 확인한다: 허브로 되돌아가려면
-  // page.goto('/')가 필요한데, 이는 완전한 문서 재로드라 SyncClient 싱글턴(세션 스코프)이
-  // 통째로 새로 생기고, 이미 서버와 동기화된 커리어라도 그 세션엔 기록이 없어 "아직 저장 안
-  // 됨"으로 보인다(엔진 쪽 lastSyncedAt 미보존 — PR 본문 범위 밖 발견).
+  // 커리어 레이아웃 헤더(브리프 6 배치 중 하나)에서 확인한다.
   await expect(page.getByText('저장됨')).toBeVisible();
+
+  // 새로고침하면 SyncClient 싱글턴(세션 스코프)이 통째로 새로 생겨 이 careerId의 기록이 없다.
+  // useSyncState가 LocalCareerRecord(revision·lastSyncedRevision은 DB에 영속된다)로 보정해
+  // "아직 저장 안 됨"으로 되돌아가지 않고 "저장됨"을 유지해야 한다.
+  await page.reload();
+  await expect(page.getByText('저장됨')).toBeVisible();
+  await expect(page.getByText('아직 저장 안 됨')).not.toBeVisible();
 });
 
 test('(b) "다른 기기 진행 가져오기": 로컬을 서버 상태로 덮고 배지가 저장됨, 서버 단계 화면으로 이동한다', async ({ page }) => {

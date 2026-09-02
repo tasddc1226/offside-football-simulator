@@ -94,6 +94,10 @@ export function SyncConflictDialog({
       onToast({ variant: 'success', message: '다른 기기의 진행을 가져왔습니다' });
       const target = screenForCareer(load.snapshot.state);
       void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
+    } catch (error) {
+      // resolveConflict·store I/O가 예상 밖으로 throw하면(구조화된 { ok:false } 대신) 여기서
+      // 잡아 화면에 보여준다 — 잡지 않으면 unhandled rejection으로 사용자는 아무 안내도 못 받는다.
+      setActionError({ choice: 'REMOTE', message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다' });
     } finally {
       setBusy(null);
     }

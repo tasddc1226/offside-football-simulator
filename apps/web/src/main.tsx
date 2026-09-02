@@ -55,7 +55,11 @@ async function bootstrap(rootContainer: HTMLElement): Promise<void> {
 
   // 세션 확보·동기화 클라이언트 준비·미전송 삭제 재시도는 화면을 막지 않는다(로컬 우선).
   void ensureProfile(engine.store, queryClient);
-  void getSyncClient();
+  // 실패해도(예: Worker 생성 실패) 배지는 DEFAULT_STATE("아직 저장 안 됨")에 머문다 — 화면은
+  // 그대로 뜨되, 원인은 콘솔에 남긴다(잡지 않으면 unhandled rejection).
+  void getSyncClient().catch((error: unknown) => {
+    console.error('bootstrap: 동기화 클라이언트를 준비하지 못했다', error);
+  });
   startPendingDeleteRetryOnOnline(engine.store);
   void retryPendingDeletes(engine.store);
 

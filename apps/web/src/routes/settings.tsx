@@ -9,6 +9,7 @@ import type { SimulationMode } from '@offside/domain';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { ensureProfile } from '../api/profile.js';
 import { getAppEngine } from '../engine/engine.js';
+import { retryPendingDeletes } from '../engine/pending-delete.js';
 import { getSyncClient, requeueAllUnsynced } from '../engine/sync.js';
 import { useSyncSummary } from '../engine/use-sync.js';
 import { ACTIVE_CONTENT_PACK_VERSION, ACTIVE_RULESET_VERSION } from '../engine/versions.js';
@@ -90,6 +91,8 @@ function SyncStatusRow() {
       const ok = await ensureProfile(engine.store, queryClient);
       if (ok) {
         await requeueAllUnsynced();
+        // 세션이 없어(401) 큐에 남아 있던 삭제도 세션을 되찾은 지금 함께 다시 시도한다.
+        await retryPendingDeletes(engine.store);
       }
     } finally {
       setReconnecting(false);

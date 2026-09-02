@@ -21,13 +21,18 @@ describe('classifyDeleteResult', () => {
     expect(classifyDeleteResult(ok())).toBe('success');
   });
 
-  it.each(['CAREER_NOT_FOUND', 'CAREER_NOT_OWNED', 'PROFILE_REQUIRED'] as const)(
+  it.each(['CAREER_NOT_FOUND', 'CAREER_NOT_OWNED'] as const)(
     '%s는 서버에 이미 없다는 뜻이라 success다(retryable 여부와 무관)',
     (code) => {
       expect(classifyDeleteResult(fail(code, false))).toBe('success');
       expect(classifyDeleteResult(fail(code, true))).toBe('success');
     },
   );
+
+  it('PROFILE_REQUIRED(401)는 서버에 없다는 뜻이 아니라 세션을 몰라서다 — retry다', () => {
+    expect(classifyDeleteResult(fail('PROFILE_REQUIRED', false))).toBe('retry');
+    expect(classifyDeleteResult(fail('PROFILE_REQUIRED', true))).toBe('retry');
+  });
 
   it('retryable한 그 외 실패(네트워크·5xx·RATE_LIMITED)는 retry다', () => {
     expect(classifyDeleteResult(fail('NETWORK_ERROR', true))).toBe('retry');

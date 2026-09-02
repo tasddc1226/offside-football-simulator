@@ -1,6 +1,6 @@
-import type { CareerSyncState } from '@offside/engine-client';
+import type { CareerSyncState, LocalCareerRecord } from '@offside/engine-client';
 import { describe, expect, it } from 'vitest';
-import { pickWorstSyncState } from './use-sync.js';
+import { displaySyncState, pickWorstSyncState } from './use-sync.js';
 
 const STATE_BY_KIND: Record<CareerSyncState['kind'], CareerSyncState> = {
   IDLE: { kind: 'IDLE', lastSyncedRevision: 0, lastSyncedAt: null },
@@ -52,5 +52,46 @@ describe('pickWorstSyncState: 요약 우선순위', () => {
 
   it('단일 상태는 그대로 돌려준다(참조 동일)', () => {
     expect(pickWorstSyncState([STATE_BY_KIND.OFFLINE])).toBe(STATE_BY_KIND.OFFLINE);
+  });
+});
+
+function record(revision: number, lastSyncedRevision: number): Pick<LocalCareerRecord, 'revision' | 'lastSyncedRevision' | 'updatedAt'> {
+  return { revision, lastSyncedRevision, updatedAt: '2026-01-01T00:00:00Z' };
+}
+
+describe('displaySyncState: 새로고침 뒤 세션 스코프 IDLE 보정', () => {
+  it('IDLE·lastSyncedAt null인데 record가 이미 최신 revision까지 저장됐으면 저장됨으로 보정한다', () => {
+    const result = displaySyncState(STATE_BY_KIND.IDLE, record(3, 3));
+    expect(result).toEqual({ kind: 'IDLE', lastSyncedRevision: 3, lastSyncedAt: '2026-01-01T00:00:00Z' });
+  });
+
+  it('record가 IDLE보다 앞서 있어도(lastSyncedRevision > revision) 보정한다', () => {
+    const result = displaySyncState(STATE_BY_KIND.IDLE, record(2, 3));
+    expect(result.kind).toBe('IDLE');
+    expect((result as { lastSyncedAt: string | null }).lastSyncedAt).not.toBeNull();
+  });
+
+  it('record가 아직 한 번도 안 저장됐으면(lastSyncedRevision < revision) 보정하지 않는다', () => {
+    expect(displaySyncState(STATE_BY_KIND.IDLE, record(2, 0))).toBe(STATE_BY_KIND.IDLE);
+    expect(displaySyncState(STATE_BY_KIND.IDLE, record(2, 1))).toBe(STATE_BY_KIND.IDLE);
+  });
+
+  it('record가 revision 0(아직 아무 것도 확정 안 됨)이면 보정하지 않는다', () => {
+    expect(displaySyncState(STATE_BY_KIND.IDLE, record(0, 0))).toBe(STATE_BY_KIND.IDLE);
+  });
+
+  it('record가 없으면(아직 로드되지 않음) 보정하지 않는다', () => {
+    expect(displaySyncState(STATE_BY_KIND.IDLE, undefined)).toBe(STATE_BY_KIND.IDLE);
+  });
+
+  it('이미 lastSyncedAt이 있는 IDLE은 그대로 둔다', () => {
+    const idleWithTime: CareerSyncState = { kind: 'IDLE', lastSyncedRevision: 3, lastSyncedAt: '2026-01-01T00:00:00Z' };
+    expect(displaySyncState(idleWithTime, record(3, 3))).toBe(idleWithTime);
+  });
+
+  it('IDLE이 아닌 상태는 record와 무관하게 그대로 둔다', () => {
+    for (const kind of ['SCHEDULED', 'SYNCING', 'RETRYING', 'OFFLINE', 'LOCAL_ONLY', 'CONFLICT', 'FAILED'] as const) {
+      expect(displaySyncState(STATE_BY_KIND[kind], record(3, 3))).toBe(STATE_BY_KIND[kind]);
+    }
   });
 });

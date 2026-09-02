@@ -3,10 +3,10 @@
 // 돌려준다.
 import { useCallback, useMemo } from 'react';
 import { useSyncExternalStore } from 'react';
-import type { CareerSyncState, SyncClient } from '@offside/engine-client';
+import type { CareerSyncState, LocalCareerRecord, SyncClient } from '@offside/engine-client';
 import { platform } from '../platform/index.js';
 import { getSyncClient } from './sync.js';
-import { useCareerList } from './use-career.js';
+import { useCareer, useCareerList } from './use-career.js';
 
 const DEFAULT_STATE: CareerSyncState = { kind: 'IDLE', lastSyncedRevision: 0, lastSyncedAt: null };
 
@@ -47,23 +47,46 @@ function stableState(state: CareerSyncState): CareerSyncState {
   return state.kind === 'IDLE' && state.lastSyncedRevision === 0 && state.lastSyncedAt === null ? DEFAULT_STATE : state;
 }
 
+/**
+ * SyncClient의 상태는 세션(메모리) 스코프다 — 새로고침하면 레코드가 없어 `getState()`가 항상
+ * `IDLE/0/null`("아직 저장 안 됨")을 돌려준다. 이미 서버에 저장된 커리어라도 새로고침 뒤에는
+ * 저장 안 됨으로 보여 신뢰를 깎아 먹는다. `LocalCareerRecord`(revision·lastSyncedRevision는 DB에
+ * 영속된다)를 함께 봐서, 로컬 기록상 이미 최신 revision까지 저장된 상태면 "저장됨"으로 보정한다.
+ * 정확한 마지막 저장 시각은 모르니 `record.updatedAt`(마지막으로 로컬에 쓴 시각)을 대신 쓴다.
+ */
+export function displaySyncState(
+  state: CareerSyncState,
+  record: Pick<LocalCareerRecord, 'revision' | 'lastSyncedRevision' | 'updatedAt'> | undefined,
+): CareerSyncState {
+  if (state.kind !== 'IDLE' || state.lastSyncedAt !== null) return state;
+  if (record === undefined || record.revision === 0) return state;
+  if (record.lastSyncedRevision < record.revision) return state;
+  return { kind: 'IDLE', lastSyncedRevision: record.lastSyncedRevision, lastSyncedAt: record.updatedAt };
+}
+
 function notifySubscribers(): void {
   for (const subscriber of subscribers) subscriber();
 }
 
 function ensureClientBridge(): void {
   if (client !== null) return;
-  void getSyncClient().then((sync) => {
-    client = sync;
-    sync.subscribe((careerId, state) => {
-      if (lastAnnouncedKind.get(careerId) !== state.kind) {
-        lastAnnouncedKind.set(careerId, state.kind);
-        platform.analytics.track('sync_state_changed', { kind: state.kind });
-      }
+  void getSyncClient()
+    .then((sync) => {
+      client = sync;
+      sync.subscribe((careerId, state) => {
+        if (lastAnnouncedKind.get(careerId) !== state.kind) {
+          lastAnnouncedKind.set(careerId, state.kind);
+          platform.analytics.track('sync_state_changed', { kind: state.kind });
+        }
+        notifySubscribers();
+      });
       notifySubscribers();
+    })
+    .catch((error: unknown) => {
+      // client가 계속 null이면 배지는 DEFAULT_STATE("아직 저장 안 됨")에 머문다 — 화면이
+      // 멈추지는 않지만 원인을 콘솔에는 남긴다.
+      console.error('ensureClientBridge: 동기화 클라이언트를 준비하지 못했다', error);
     });
-    notifySubscribers();
-  });
 }
 
 function subscribe(onStoreChange: () => void): () => void {
@@ -72,25 +95,30 @@ function subscribe(onStoreChange: () => void): () => void {
   return () => subscribers.delete(onStoreChange);
 }
 
-/** 특정 커리어의 동기화 상태. 클라이언트가 준비되기 전에는 IDLE(미저장)로 본다. */
+/**
+ * 특정 커리어의 동기화 상태. 클라이언트가 준비되기 전에는 IDLE(미저장)로 본다. `LocalCareerRecord`가
+ * 있으면(이미 로드된 커리어) `displaySyncState`로 새로고침 직후의 "아직 저장 안 됨" 오표시를 보정한다.
+ */
 export function useSyncState(careerId: string): CareerSyncState {
+  const { data } = useCareer(careerId);
   const getSnapshot = useCallback(
     () => (client === null ? DEFAULT_STATE : stableState(client.getState(careerId))),
     [careerId],
   );
-  return useSyncExternalStore(subscribe, getSnapshot);
+  const state = useSyncExternalStore(subscribe, getSnapshot);
+  return useMemo(() => displaySyncState(state, data?.record), [state, data?.record]);
 }
 
 /** 로컬에 있는 모든 커리어 중 가장 급한 동기화 상태 하나(허브·설정 요약 배지용). */
 export function useSyncSummary(): CareerSyncState {
   const { data } = useCareerList();
-  const careerIds = useMemo(() => (data ?? []).map((summary) => summary.record.id), [data]);
+  const summaries = useMemo(() => data ?? [], [data]);
 
   const getSnapshot = useCallback((): CareerSyncState => {
     if (client === null) return DEFAULT_STATE;
-    const states = careerIds.map((id) => stableState(client!.getState(id)));
+    const states = summaries.map((summary) => displaySyncState(stableState(client!.getState(summary.record.id)), summary.record));
     return pickWorstSyncState(states) ?? DEFAULT_STATE;
-  }, [careerIds]);
+  }, [summaries]);
 
   return useSyncExternalStore(subscribe, getSnapshot);
 }

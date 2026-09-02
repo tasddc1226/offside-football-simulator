@@ -1,3 +1,6 @@
+// TODO(Phase 2): 지금 타임아웃은 요청당이 아니라 포트 전체를 broken으로 만든다(하나가 늦으면
+// 대기 중인 나머지 요청까지 전부 거부된다) — Phase 1 ADVANCE에는 문제없지만, 한 요청이 길어질 수
+// 있는 시즌 시뮬레이션이 들어오면 요청당 예산으로 바꿀 것.
 import type { SimulationInput, SimulationResult } from '@offside/domain';
 import type { Simulator } from '../simulator/index.js';
 import type { MessagePortLike, SimulateReply, SimulateRequest } from './protocol.js';

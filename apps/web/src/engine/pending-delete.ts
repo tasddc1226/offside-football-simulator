@@ -8,15 +8,17 @@ const PENDING_DELETE_KEY = 'sync:pending-delete';
 export type DeleteOutcome = 'success' | 'retry' | 'drop';
 
 /**
- * CAREER_NOT_FOUND·CAREER_NOT_OWNED·PROFILE_REQUIRED(401)는 서버에 이미 없다는 뜻이라
- * 성공으로 본다. 그 외에는 retryable 여부로 재시도할지(retry) 포기할지(drop) 가른다.
+ * CAREER_NOT_FOUND·CAREER_NOT_OWNED는 서버에 이미 없다는 뜻이라 성공으로 본다. PROFILE_REQUIRED
+ * (401)는 다르다 — "서버에 없다"가 아니라 "지금 세션이 없어 누구인지 모른다"이므로, 여기서 성공
+ * 처리하면 쿠키를 잃은 채 지운 커리어가 서버에 그대로 남아 "다시 연결" 뒤에도(Phase 3 다른 기기
+ * 이어하기 때) 되살아난다. 재시도 대상으로 큐에 남긴다. 그 외에는 retryable 여부로 재시도할지
+ * (retry) 포기할지(drop) 가른다.
  */
 export function classifyDeleteResult(result: ApiResult<undefined>): DeleteOutcome {
   if (result.ok) return 'success';
   const { code, retryable } = result.error;
-  if (code === 'CAREER_NOT_FOUND' || code === 'CAREER_NOT_OWNED' || code === 'PROFILE_REQUIRED') {
-    return 'success';
-  }
+  if (code === 'CAREER_NOT_FOUND' || code === 'CAREER_NOT_OWNED') return 'success';
+  if (code === 'PROFILE_REQUIRED') return 'retry';
   return retryable ? 'retry' : 'drop';
 }
 
