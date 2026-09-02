@@ -126,7 +126,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
 | T-1-011 | Sonnet 5, Orca 워크트리 `T-1-011-sync-wiring` | 2026-09-02 | 브리프 전달 |
-| T-1-009 | Sonnet 5, Orca 워크트리 `T-1-009-career-screens` | 2026-09-02 | 브리프 전달 |
+| T-1-009 | Sonnet 5, Orca 워크트리 `T-1-009-career-screens` | 2026-09-02 | PR #26 열림(2026-09-03 01:20). main 충돌 해결·first-contract e2e·리뷰 수정 4건 요청 중 |
 
 ## 완료
 
