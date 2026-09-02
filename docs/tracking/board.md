@@ -31,9 +31,9 @@
 | T-0-003 | `packages/contracts` 응답 봉투·오류 코드·Snapshot 직렬화 Zod | 07 | completed | PR #4, `4693202`. zod 4.5.4, 50 tests |
 | T-0-004 | `packages/content` Zod 스키마와 `content:validate` CLI, 프로토타입 이벤트 10개를 팩 0.1.0으로 | ADR-004, 04 | done | [브리프](briefs/T-0-004.md). PR #7 `cfc868f`. 리뷰 1회(수정 3건). 팩은 `playtested: false`, 콘텐츠 후속 항목은 결정 로그 참조 |
 | T-0-005 | `apps/api` D1 스키마(profiles·sessions·careers·snapshots·command_log·idempotency·service_seasons), Drizzle migration, 저장소 함수, 로컬 D1 테스트 | 02, ADR-002, ADR-007, ADR-008 | done | [브리프](briefs/T-0-005.md). PR #6 `9b292b1`. 리뷰 1회(수정 2건: Workers 호환 base64url, db:check 미추적 파일) |
-| T-0-006 | `apps/api` HTTP 계층: requestId·구조화 로그·오류 봉투·CORS/Origin, 세션 미들웨어(쿠키+Bearer), 익명 프로필 발급 `GET /profile`, `PATCH /profile/settings`, Idempotency-Key | API-PRO-001/002, 07, ADR-002, ADR-008 | in-progress | `T-0-006-api-session-profile`, [브리프](briefs/T-0-006.md) |
+| T-0-006 | `apps/api` HTTP 계층: requestId·구조화 로그·오류 봉투·CORS/Origin, 세션 미들웨어(쿠키+Bearer), 익명 프로필 발급 `GET /profile`, `PATCH /profile/settings`, Idempotency-Key | API-PRO-001/002, 07, ADR-002, ADR-008 | done | [브리프](briefs/T-0-006.md). PR #9 `483001b`. 리뷰 1회(수정 1건: idempotency 동시 저장 레이스) |
 | T-0-007 | `packages/engine-client` LocalStore 포트(메모리 구현 + 계약 테스트), 명령 실행기, revision·commandId 멱등성, Snapshot 복구, Web Worker 시뮬레이터 프로토콜, golden fixture를 `packages/fixtures`로 이관 | 05, ADR-002, ADR-003 | done | [브리프](briefs/T-0-007.md). PR #8 `9667dc7`. 리뷰 1회 통과(워커 /review:pr 1회 자체 수정). 후속: idempotency 응답 저장 크기(결정 로그) |
-| T-0-008 | `apps/api` 커리어 동기화 `GET /careers`, `GET /careers/{id}`, `PUT /careers/{id}`(If-Match·409·422·무결성 검사), 100회 병렬 멱등 테스트 | API-CAR-001~003, 05, ADR-002 | todo | [브리프](briefs/T-0-008.md). T-0-005·T-0-006 머지 후 |
+| T-0-008 | `apps/api` 커리어 동기화 `GET /careers`, `GET /careers/{id}`, `PUT /careers/{id}`(If-Match·409·422·무결성 검사), 100회 병렬 멱등 테스트 | API-CAR-001~003, 05, ADR-002 | in-progress | `T-0-008-api-career-sync`, [브리프](briefs/T-0-008.md) |
 | T-0-009 | `apps/web` Vite·Router·Tailwind 토큰·상태 훅 골격, 허브 빈 상태 화면 | ADR-001, 13 | completed | PR [#3](https://github.com/tasddc1226/offside-football-simulator/pull/3) squash 머지 `fdb8a72`. 대비 24쌍 PASS, 초기 번들 91.81KB gzip |
 | T-0-010 | GitHub Actions CI, Pages·Workers preview 배포, staging migration | ADR-007 | blocked | U-002 필요 |
 | T-0-011 | Node(Vitest)·Cloudflare Workers(Miniflare) 동일 fixture state hash·SHA-256 경계·canonicalize 일치 테스트 | ADR-003, 08 | in-progress | `T-0-011-cross-runtime-hash`, [브리프](briefs/T-0-011.md). 브라우저 Web Worker 검증은 Playwright 도입 시 |
@@ -61,10 +61,10 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-0-006 | Sonnet 5, Orca 워크트리 `T-0-006-api-session-profile` | 2026-09-02 | 구현 중 |
-| T-0-013 | Sonnet 5, Orca 워크트리 `T-0-013-font-dynamic-subset` | 2026-09-02 | 구현 중 |
-| T-0-012 | Sonnet 5, Orca 워크트리 `T-0-012-platform-localstore` | 2026-09-02 | 브리프 전달 |
-| T-0-011 | Sonnet 5, Orca 워크트리 `T-0-011-cross-runtime-hash` | 2026-09-02 | 브리프 전달 |
+| T-0-013 | Sonnet 5, Orca 워크트리 `T-0-013-font-dynamic-subset` | 2026-09-02 | 측정 완료, PR 생성 중 |
+| T-0-012 | Sonnet 5, Orca 워크트리 `T-0-012-platform-localstore` | 2026-09-02 | 구현 중 |
+| T-0-011 | Sonnet 5, Orca 워크트리 `T-0-011-cross-runtime-hash` | 2026-09-02 | 구현 중 |
+| T-0-008 | Sonnet 5, Orca 워크트리 `T-0-008-api-career-sync` | 2026-09-02 | 브리프 전달 |
 
 ## 완료
 
@@ -82,3 +82,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-0-005 | PR #6 `9b292b1` | 2026-09-02 | 약 $7. 리뷰 1회(수정 2건) |
 | T-0-004 | PR #7 `cfc868f` | 2026-09-02 | 약 $12. 리뷰 1회(수정 3건 + main 재병합 1회) |
 | T-0-007 | PR #8 `9667dc7` | 2026-09-02 | 약 $8. 리뷰 1회 통과 |
+| T-0-006 | PR #9 `483001b` | 2026-09-02 | 약 $9. 리뷰 1회(수정 1건) |

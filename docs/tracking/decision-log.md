@@ -2,6 +2,13 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #9 api HTTP 계층 머지·폰트 측정 결과)
+
+- **PR #9(T-0-006) 머지 `483001b`.** 리뷰에서 잡은 결함 1건: idempotency 미들웨어가 같은 키의 동시 요청 2개를 모두 통과시킨 뒤 두 번째 INSERT가 UNIQUE 위반으로 throw해 라우트는 성공했는데 503이 나가는 레이스. `onConflictDoNothing` + 저장 실패 시 응답 불변(warn 로그 `IDEMPOTENCY_STORE_FAILED`) + 동시 요청 테스트로 수정. T-0-008의 "같은 PUT 100개 → 전부 200"은 이 수정과 서버 규칙 4("이미 반영됨 → 200")의 조합에 기댄다.
+- **세션 규칙 확정 사항.** `GET /v1/profile`은 세션이 없을 때만 익명 프로필·세션을 발급하고, 위조·만료 쿠키도 "없음"으로 취급해 새 프로필을 준다(복구는 로그인·복구 코드의 몫). Bearer가 무효면 쿠키가 있어도 401. 그 외 보호 라우트는 401 `PROFILE_REQUIRED`. 로그에 `error.message`가 남으므로 D1 오류 문자열에 값이 섞이지 않는지 T-0-010 CI 이후 점검(후속).
+- **T-0-013 측정(워커 보고, PR 전).** 전송 바이트 2109KB→269KB(87% 감소), LCP는 4G 2445→2519ms, 느린 3G 2444→2478ms로 사실상 불변, CLS 0. 원인: 기존에도 `font-display: swap`이라 폰트가 페인트를 막지 않았고 허브가 빈 상태라 JS 파싱이 LCP를 지배. 결론: 전환은 유지(전송량·향후 콘텐츠 여유), 허브 LCP 2.5초 예산은 실제 허브 화면(Phase 1)이 붙은 뒤 다시 측정. tabular-nums 검증은 숫자 UI가 없어 스크래치 HTML로 subset의 `tnum` 보존만 확인하기로 함.
+- T-0-008(커리어 동기화 API) 투입.
+
 ## 2026-09-02 (저녁, PR #8 engine-client 머지·후속 과제)
 
 - **PR #8(T-0-007) 머지 `9667dc7`.** 브리프의 테스트 목록(골든 inline·worker, 100 병렬 멱등, revision 경쟁, 쓰기 단계 충돌, 롤백, 복구 a~d, decodeSnapshot, buildSyncBody, 순수성 스캔, 계약 테스트)이 모두 구현됨. `check-deps.mjs`는 `checkDeps(pkg, deps, allowed, field)`로 분리해 `TEST_ONLY_PACKAGES`를 devDependencies에서만 허용.
