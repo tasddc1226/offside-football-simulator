@@ -14,12 +14,14 @@ import {
 } from '@offside/ui';
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
 import { careersQueryOptions, useCareerList, useCareerMutation, type CareerSummary } from '../engine/use-career.js';
+import { useSyncState } from '../engine/use-sync.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { CAREER_STATUS_LABELS, POSITION_LABELS } from '../shared/labels.js';
 import { formatLocalDateTime } from '../shared/format.js';
 import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
+import { SyncBadge } from '../shared/SyncBadge.js';
 import { useUiStore } from '../shared/ui-store.js';
 
 export const Route = createFileRoute('/')({
@@ -59,6 +61,7 @@ function CareerCard({
   const name = displayName(summary);
   const position = state.player.profile?.position ?? state.player.draft.position;
   const positionLabel = position ? POSITION_LABELS[position] : '—';
+  const syncState = useSyncState(record.id);
 
   function handleContinue() {
     const target = screenForCareer(state);
@@ -96,6 +99,8 @@ function CareerCard({
           {CAREER_STATUS_LABELS[state.status]}
         </span>
       </div>
+
+      <SyncBadge state={syncState} />
 
       <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
         <div>

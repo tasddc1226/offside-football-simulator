@@ -40,6 +40,9 @@ describe('CORS', () => {
     expect(allowHeaders).toContain('Idempotency-Key');
     expect(allowHeaders).toContain('If-Match');
     expect(allowHeaders).toContain('Authorization');
+    // SyncClient(packages/engine-client)가 모든 GET/PUT에 X-Request-Id 요청 헤더를 보낸다 —
+    // Allow-Headers에 없으면 실제 브라우저 preflight가 이 헤더를 거부해 동기화가 전부 실패한다.
+    expect(allowHeaders).toContain('X-Request-Id');
     expect(res.headers.get('Access-Control-Expose-Headers')).toContain('X-Request-Id');
   });
 

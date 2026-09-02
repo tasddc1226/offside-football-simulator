@@ -10,6 +10,7 @@ export const CORS_ALLOWED_HEADERS = [
   IF_MATCH_HEADER,
   IDEMPOTENCY_KEY_HEADER,
   CONTENT_TYPE_HEADER,
+  REQUEST_ID_HEADER,
 ] as const;
 
 /** Access-Control-Expose-Headers. 클라이언트가 응답에서 읽어야 하는 커스텀 헤더. */

@@ -2,6 +2,20 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (새벽, PR #30 동기화 배선 머지 — T-1-012 투입)
+
+**결과**: T-1-011(PR #30, `280e2f4`) 머지. engine-client `forkCareerByReplay`·Worker 실패 처리(error/messageerror/타임아웃 → 재생성), web 동기화 싱글턴 배선(online/visibilitychange/pagehide flush, 시작 시 미전송분 재개), 허브 카드·커리어 레이아웃 저장 배지, 설정 동기화 행("지금 동기화"·"다시 연결"), 충돌 대화상자(REMOTE/LOCAL fork/LATER), pending-delete 큐. 검증 체인 전체 통과, e2e 24건. 워커 비용 약 $34.9, 123분, 리뷰 2회.
+
+**리뷰에서 잡은 것(필수 2건)**: (1) SyncClient 상태가 메모리에만 있어 새로고침 뒤 이미 저장된 커리어가 전부 "아직 저장 안 됨"으로 보였다 → 웹 순수 함수 `displaySyncState(state, LocalCareerRecord)`로 보정(engine-client 시드 API는 넣지 않음). (2) 세션 없는(401) 서버 삭제를 "서버에 없음"으로 분류해 큐에서 버렸다 → 재시도로 재분류하고 "다시 연결" 성공 시 삭제 재시도. 권장 3건(충돌 대화상자 catch, `getSyncClient` 거부 catch 2곳, Worker 타임아웃 TODO 주석)도 반영.
+
+**범위 확장 결정**: `CORS_ALLOWED_HEADERS`에 `X-Request-Id`가 없어 실제 브라우저에서는 동기화 PUT/GET preflight가 항상 실패했다(e2e는 `page.route` 스텁이라 못 잡음, 워커가 임시 헤더 패치로 수동 확인하다 발견). 이 기능이 동작하려면 필수라 contracts·api 수정을 이 PR 범위에 넣었다. 교훈: 실서버 수동 확인은 "임시 패치 없이" 재현해야 하며, CORS 허용 헤더 목록은 클라이언트가 보내는 헤더 상수와 같은 파일에서 유지한다.
+
+**후속(보드로 옮김)**: `createWorkerSimulator` 타임아웃이 요청당이 아니라 포트 전체를 broken으로 만든다 → Phase 2 시즌 시뮬레이션 전에 요청당 예산으로(T-2-011 timing). 새로고침 뒤 표시 시각은 `record.updatedAt` 근사(서버 저장 시각과 초 단위 차이 가능). Playwright `context.setOffline`은 Vite HMR을 끊어 문서를 비우므로 e2e 오프라인은 `navigator.onLine` 스푸핑 + `online/offline` 이벤트로 한다(관례로 기록). `@offside/fixtures` JSON import attribute 문제는 e2e에서 `loadRuleset` 우회 중.
+
+**운영**: T-1-009 워커가 PR 본문에 `pnpm exec tsc --noEmit` 통과를 적고 "체인 통과"라 보고했으나 web 패키지의 typecheck 스크립트는 e2e tsconfig도 검사한다 → 오케스트레이터 재검증에서 `reducedMotion` 타입 오류 1건 발견. 규칙: PR 본문 "테스트 방법"은 루트 체인 명령을 그대로 적고, 워커가 대체 명령을 쓴 흔적이 있으면 재검증 전에 되돌려 보낸다.
+
+**투입**: T-1-012(설정 데이터 섹션·법적 문서, `T-1-012-settings-data`)를 PR #30 머지 직후 투입. T-1-016은 PR #26 머지 뒤 병렬 투입.
+
 ## 2026-09-03 (WORLD STAGE 세계관 확장 승인)
 
 **사용자 결정**: 국내 프로에서 끝내지 않고 해외 유명 리그를 연상시키는 국제 커리어까지 세계관을 확장한다. 현재 국내 MVP 개발 순서는 유지하고, Phase 3~5의 이적·관계·대표팀과 Phase 7 운영 기반을 완성한 뒤 Phase 8 `WORLD STAGE`로 출시한다. Phase 번호는 개발 순서이며 새 ruleset의 선수는 은퇴 전 이적시장부터 해외 경로를 경험한다.
