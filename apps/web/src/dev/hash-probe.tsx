@@ -3,7 +3,7 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createWorkerSimulator } from '@offside/engine-client';
-import { career01, career01EngineCommands } from '@offside/fixtures';
+import { career01, career01EngineCommands, rulesetProto } from '@offside/fixtures';
 import type { DomainSnapshot } from '@offside/domain';
 
 type ProbeResult = { revision: number; stateHash: string } | { error: string };
@@ -21,6 +21,7 @@ async function runProbe(): Promise<ProbeResult> {
       const result = await simulator.simulate({
         snapshot,
         command,
+        ruleset: rulesetProto,
         rulesetVersion: career01.rulesetVersion,
         contentPackVersion: career01.contentPackVersion,
       });
