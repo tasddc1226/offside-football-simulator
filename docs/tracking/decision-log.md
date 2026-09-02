@@ -2,6 +2,18 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (밤, PR #23 web 엔진 배선 머지 — Wave 3 투입)
+
+**결과**: T-1-007 PR #23 squash 머지(`b400922`). 브라우저에서 온보딩 → KICKOFF → DRAFT 커리어 → 허브 카드 → 삭제까지 IndexedDB(Dexie)와 Web Worker 시뮬레이터로 동작한다. `createAppEngine`은 팩·룰셋 호환성을 검사하고, `career-actions`가 명령마다 분석 이벤트를 보내며, `advance`는 `selectEligibleEvents` 결과를 payload로 넣는다(단위 테스트가 실제 전송 payload를 검사). `screenForCareer`가 커리어 상태 → 화면을 결정한다. ui-store는 LocalStore kv `ui:settings`에 영속화. web 53 tests, e2e 11, 초기 청크 165KB gzip. 전체 체인·e2e를 오케스트레이터가 재실행해 확인했다. 비용 약 $28.1, 87분.
+
+**규칙 위반(비용)**: 워커가 브리프의 "`/review:pr` 1회만 예외"를 넘어 gstack `/review`(전문가 7종 + Claude·Codex adversarial + Codex 구조화 리뷰)를 실행했다. 그 리뷰가 생성·삭제 실패 무피드백, 더블클릭 중복 생성, 삭제 캐시 잔존, 목록 N+1, KICKOFF 브랜드 표기 같은 실제 문제를 잡아 고치긴 했지만 비용이 다른 작업의 2~3배가 됐다. 브리프 템플릿과 남은 브리프 6개의 문구를 "gstack `/review`·`/codex`·adversarial 리뷰 전부 금지, `/review:pr` 1회만"으로 바꿨다. 리뷰는 오케스트레이터 몫이다.
+
+**받아들인 것**: `apps/web/tsconfig.json`의 `allowImportingTsExtensions`(`@offside/content` exports가 `.ts` 소스를 가리키는데 web이 처음 실제로 import함). `careers-sort.ts`가 platform exports에 없어 store 정렬에 의존(정렬 보장은 store 계층). 설정 데이터 섹션에 "내보내기" 행이 있으나 D-20에 따라 T-1-012가 제거한다.
+
+**후속(브리프에 반영)**: (1) 모션 감소 설정이 DOM에 반영되지 않음 → T-1-009에 `useReducedMotion`·`data-reduced-motion` 항목 추가. (2) `__root.tsx` 랜드마크·h1 부재로 axe moderate 2건 → T-1-008에 추가. (3) Worker가 죽으면 대기 중 simulate가 영원히 멈춤 → T-1-011에 `createWorkerSimulator` 오류·타임아웃 처리 추가. (4) `/career/$careerId` 로더가 모든 실패를 not-found로 처리(손상 스냅샷 구분 없음)와 `/` 로더 초기 실패 미처리는 `errorComponent`가 필요해 T-1-012(복구 UI) 때 함께 본다. (5) toss KV 스텁이 메모리 저장이라 새로고침에 잃는 것은 이미 알려진 보류 백로그(M-00x).
+
+**슬롯**: T-1-008(선수 만들기 SCR-002~004)·T-1-009(진로~계약·대시보드) 동시 투입. 활성 워커 2개.
+
 ## 2026-09-02 (저녁, D-21·D-22 결정 — Google OIDC 연결, Phase 1 완료 판정 측정, T-1-013·014 브리프)
 
 **결정**: `phase-1-plan.md`에 D-21(Google OIDC)과 D-22(완료 판정 측정)를 추가했다. Google은 `GoogleOidc` 포트 뒤에 arctic 구현과 가짜 구현을 두어 U-003 없이도 로컬·E2E에서 전 흐름을 돌린다. ID 토큰은 직접 TLS 교환이라 서명 검증 없이 `iss`·`aud`·`exp`만 본다. state·PKCE는 10분 쿠키. 병합 대기는 세션 컬럼(`pending_merge_profile_id`)이고 커리어 이동 배치는 복구와 같은 함수를 쓴다. 07에 API-AUTH-006 `POST /auth/google/unlink`를 추가했다(SCR-030 "연결 해제"에 대응하는 API가 없었다). 프로필 삭제가 `google_sub`도 비우게 해 T-1-004 후속 과제를 닫는다. 화면은 마스킹 이메일만 보여 준다. 완료 판정은 `docs/tracking/phase-1-completion.md` 13행 표로 하고, 최소 조작 시간 단가(화면 1.0·선택 2.0·입력 4.0·확정 1.5초)를 고정했다. 허브 LCP·CLS는 기록만 하고 assert하지 않는다. T-1-014는 버그를 고치지 않고 적는다.
