@@ -2,6 +2,13 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #6 머지·PR #7 리뷰·버전 라벨)
+
+- **PR #6(T-0-005) 머지 `9b292b1`.** 수정 2건 확인: cursor 인코딩을 `btoa/atob + TextEncoder`로 바꿔 Workers 런타임 호환, purity 테스트가 `Buffer`·`process.`·`require(`·`__dirname`을 금지. `db:check`는 `git status --porcelain -- migrations`로 미추적 migration도 잡는다(임시 컬럼으로 실패→복원 확인).
+- **Phase 0 버전 라벨.** `rulesetVersion`은 `"1.0.0"`(00 로드맵 "LINE TEST로 ruleset 1.0.0 확정", domain golden fixture, API 시드 `svc_kickoff`, 07 예시 모두 이 값), `contentPackVersion`은 `"0.1.0"`, `schemaVersion`은 1. 패키지 버전 상수(`DOMAIN_VERSION` 등)와 ruleset 라벨은 별개 이름공간. content 팩 manifest `compatibleRulesetVersions`를 `["0.1.0"]`→`["1.0.0"]`으로 고쳤다.
+- **PR #7(T-0-004) 리뷰 결정.** (1) 루트 `content:validate`는 `turbo run content:validate`를 유지하고 패키지 스크립트 이름을 `content:validate`로 통일(캐시·파이프라인 일관). (2) content CLI는 `node ./src/cli/validate.ts`(Node 22 타입 스트리핑)로 실행하므로 `.ts` 확장자 import와 `allowImportingTsExtensions`를 content 패키지에 한해 허용. (3) 콘텐츠 후속 과제로 기록: sourceId `EVT-…​.A.A1.0`처럼 `.N` 접미(같은 선택지의 다중 효과 구분), EVT-CON-002는 4지→3지선다(스키마 max 3), 선택지 weight는 임의값(합 100 미달은 경고), 조건 필드는 문자열 타입 화이트리스트. 이들은 T-0-004 브리프의 "프로토타입과 다르게 결정한 항목"으로 04 문서 갱신 시 반영.
+- **PR #7 머지 대기.** 브랜치가 T-0-005 머지 이전 기준이라 lockfile 규칙대로 main 재병합·lockfile 재생성 요청.
+
 ## 2026-09-02 (저녁, fixtures 테스트 전용 의존 규칙)
 
 - **T-0-007 워커 질문.** engine-client가 golden fixture를 쓰려면 `@offside/fixtures`를 devDependency로 가져야 하는데 `check-deps.mjs` 허용 목록과 ADR-005 표에 없어 `lint:deps`가 실패한다.

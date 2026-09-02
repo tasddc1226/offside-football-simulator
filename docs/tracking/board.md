@@ -29,9 +29,9 @@
 | T-0-001 | 모노레포 골격: pnpm·Turborepo·tsconfig·ESLint·의존 방향 lint | ADR-005 | completed | PR [#1](https://github.com/tasddc1226/offside-football-simulator/pull/1) squash 머지 `e9d7d30`(2026-09-02). 브리프 [briefs/T-0-001.md](briefs/T-0-001.md) |
 | T-0-002 | `packages/domain` 순수 `simulate` fixture와 state hash, 결정론 1,000회 테스트 | RULE-RNG-001, TEST | completed | PR [#2](https://github.com/tasddc1226/offside-football-simulator/pull/2) squash 머지 `fcb49d4`. golden stateHash `ac3aae07…354e82`, 63 tests |
 | T-0-003 | `packages/contracts` 응답 봉투·오류 코드·Snapshot 직렬화 Zod | 07 | completed | PR #4, `4693202`. zod 4.5.4, 50 tests |
-| T-0-004 | `packages/content` Zod 스키마와 `content:validate` CLI, 프로토타입 이벤트 10개를 팩 0.1.0으로 | ADR-004, 04 | in-progress | `T-0-004-content-schema-pack`, 브리프 [briefs/T-0-004.md](briefs/T-0-004.md). 팩은 `playtested: false` |
-| T-0-005 | `apps/api` D1 스키마(profiles·sessions·careers·snapshots·command_log·idempotency·service_seasons), Drizzle migration, 저장소 함수, 로컬 D1 테스트 | 02, ADR-002, ADR-007, ADR-008 | review | [브리프](briefs/T-0-005.md). PR #6 1차 리뷰: Buffer(Workers 비호환)·db:check 미추적 파일 2건 수정 요청 |
-| T-0-006 | `apps/api` HTTP 계층: requestId·구조화 로그·오류 봉투·CORS/Origin, 세션 미들웨어(쿠키+Bearer), 익명 프로필 발급 `GET /profile`, `PATCH /profile/settings`, Idempotency-Key | API-PRO-001/002, 07, ADR-002, ADR-008 | todo | [브리프](briefs/T-0-006.md). T-0-005 머지 후 |
+| T-0-004 | `packages/content` Zod 스키마와 `content:validate` CLI, 프로토타입 이벤트 10개를 팩 0.1.0으로 | ADR-004, 04 | review | `T-0-004-content-schema-pack`, 브리프 [briefs/T-0-004.md](briefs/T-0-004.md). PR #7 리뷰 통과(수정 3건 반영: 스크립트 turbo 경유, ruleset 라벨 1.0.0, main 병합). T-0-005 머지로 main 재병합 대기. 팩은 `playtested: false` |
+| T-0-005 | `apps/api` D1 스키마(profiles·sessions·careers·snapshots·command_log·idempotency·service_seasons), Drizzle migration, 저장소 함수, 로컬 D1 테스트 | 02, ADR-002, ADR-007, ADR-008 | done | [브리프](briefs/T-0-005.md). PR #6 `9b292b1`. 리뷰 1회(수정 2건: Workers 호환 base64url, db:check 미추적 파일) |
+| T-0-006 | `apps/api` HTTP 계층: requestId·구조화 로그·오류 봉투·CORS/Origin, 세션 미들웨어(쿠키+Bearer), 익명 프로필 발급 `GET /profile`, `PATCH /profile/settings`, Idempotency-Key | API-PRO-001/002, 07, ADR-002, ADR-008 | in-progress | `T-0-006-api-session-profile`, [브리프](briefs/T-0-006.md) |
 | T-0-007 | `packages/engine-client` LocalStore 포트(메모리 구현 + 계약 테스트), 명령 실행기, revision·commandId 멱등성, Snapshot 복구, Web Worker 시뮬레이터 프로토콜, golden fixture를 `packages/fixtures`로 이관 | 05, ADR-002, ADR-003 | in-progress | `T-0-007-engine-client-core`, [브리프](briefs/T-0-007.md). Dexie 구현은 T-0-012 |
 | T-0-008 | `apps/api` 커리어 동기화 `GET /careers`, `GET /careers/{id}`, `PUT /careers/{id}`(If-Match·409·422·무결성 검사), 100회 병렬 멱등 테스트 | API-CAR-001~003, 05, ADR-002 | todo | [브리프](briefs/T-0-008.md). T-0-005·T-0-006 머지 후 |
 | T-0-009 | `apps/web` Vite·Router·Tailwind 토큰·상태 훅 골격, 허브 빈 상태 화면 | ADR-001, 13 | completed | PR [#3](https://github.com/tasddc1226/offside-football-simulator/pull/3) squash 머지 `fdb8a72`. 대비 24쌍 PASS, 초기 번들 91.81KB gzip |
@@ -61,9 +61,9 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-0-004 | Sonnet 5, Orca 워크트리 `T-0-004-content-schema-pack` | 2026-09-02 | 브리프 전달 |
-| T-0-005 | Sonnet 5, Orca 워크트리 `T-0-005-api-d1-schema` | 2026-09-02 | 브리프 전달 |
-| T-0-007 | Sonnet 5, Orca 워크트리 `T-0-007-engine-client-core` | 2026-09-02 | 브리프 전달 |
+| T-0-004 | Sonnet 5, Orca 워크트리 `T-0-004-content-schema-pack` | 2026-09-02 | PR #7 리뷰 통과, main 재병합 후 머지 |
+| T-0-007 | Sonnet 5, Orca 워크트리 `T-0-007-engine-client-core` | 2026-09-02 | 구현 중 |
+| T-0-006 | Sonnet 5, Orca 워크트리 `T-0-006-api-session-profile` | 2026-09-02 | 브리프 전달 |
 
 ## 완료
 
@@ -78,3 +78,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-0-009 | web 라우터·디자인 토큰·공통 상태 훅·허브 빈 상태 (PR #3, 리뷰 1회 통과, 워커 비용 약 $14) | fdb8a72 |
 | T-0-003 | PR #4 `4693202` | 2026-09-02 | 약 $3. 리뷰 1회(수정 5건) |
 | T-0-014 | PR #5 `6b8e1a3` | 2026-09-02 | 약 $1. 리뷰 1회 통과 |
+| T-0-005 | PR #6 `9b292b1` | 2026-09-02 | 약 $7. 리뷰 1회(수정 2건) |
