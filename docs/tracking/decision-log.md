@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #4 머지·lockfile 충돌 규칙)
+
+- **T-0-003 머지(`4693202`).** 리뷰 요청 5건(zod 4.5.4 통일, `ClientIdSchema`, `PUT /careers` snapshot revision 정합성, CORS `Content-Type`·`X-Request-Id`, 주석)을 워커가 반영했고 체인 통과(50 tests).
+- **lockfile 충돌 처리.** 첫 `gh pr merge`가 `pnpm-lock.yaml` 충돌로 실패했다(T-0-009 머지가 먼저 lockfile을 바꿈). 워커 터미널을 이미 닫은 뒤라 오케스트레이터가 임시 워크트리에서 `origin/main`을 합치고 lockfile을 `pnpm install --no-frozen-lockfile`로 재생성한 뒤 체인을 재실행해 푸시·머지했다. 코드 편집은 없었다(lockfile 재생성만). 재발 방지로 README·브리프 템플릿·대기 중 브리프(T-0-006/007/012)에 "PR 직전 main 병합 + lockfile 재생성" 규칙을 넣었다. 교훈: 머지 결과를 확인하기 전에 터미널·워크트리를 정리하지 않는다.
+- **디스패치.** T-0-014(domain `ADVANCE` 정렬)와 T-0-005(api D1 스키마)를 `4693202` 기준으로 동시 시작. T-0-004는 진행 중.
+
 ## 2026-09-02 (저녁, api 데이터 계층 설계)
 
 - **T-0-005 브리프 작성.** 서버 `careers` 행은 contracts `CareerSummary` + 소유자·검증 상태·시각만 갖는 요약이다. 02 DATA-CAR-001의 진행 값(`currentDate`, `currentTeamId`, `rngState` 등)은 Snapshot `state` 안에 있으므로 서버 테이블에 중복하지 않는다.
