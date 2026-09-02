@@ -1,0 +1,22 @@
+{
+  "contentPackVersion": "0.1.0",
+  "compatibleRulesetVersions": [
+    "0.1.0"
+  ],
+  "clientMinVersion": "0.1.0",
+  "playtested": false,
+  "checksum": "0c440ec73b7579fd1b0d4b0a54da5320afc7474228ecf9ff069491e261887538",
+  "files": [
+    "events/EVT-CON-001.json",
+    "events/EVT-CON-002.json",
+    "events/EVT-CON-003.json",
+    "events/EVT-DEV-001.json",
+    "events/EVT-DEV-002.json",
+    "events/EVT-INJ-001.json",
+    "events/EVT-MEDIA-001.json",
+    "events/EVT-MGR-001.json",
+    "events/EVT-REL-001.json",
+    "events/EVT-REL-002.json",
+    "narrative/tokens.json"
+  ]
+}

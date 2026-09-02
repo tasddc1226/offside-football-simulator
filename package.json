@@ -15,7 +15,7 @@
     "lint:deps": "node tooling/scripts/check-deps.mjs",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
-    "content:validate": "turbo run content:validate",
+    "content:validate": "pnpm --filter @offside/content validate",
     "db:migrate": "turbo run db:migrate"
   },
   "devDependencies": {
