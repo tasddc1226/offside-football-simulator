@@ -30,7 +30,7 @@
 | T-0-002 | `packages/domain` 순수 `simulate` fixture와 state hash, 결정론 1,000회 테스트 | RULE-RNG-001, TEST | completed | PR [#2](https://github.com/tasddc1226/offside-football-simulator/pull/2) squash 머지 `fcb49d4`. golden stateHash `ac3aae07…354e82`, 63 tests |
 | T-0-003 | `packages/contracts` 응답 봉투·오류 코드·Snapshot 직렬화 Zod | 07 | in-progress | `T-0-003-contracts-zod`, 브리프 [briefs/T-0-003.md](briefs/T-0-003.md) |
 | T-0-004 | `packages/content` Zod 스키마와 `content:validate` CLI, 프로토타입 이벤트 10개를 팩 0.1.0으로 | ADR-004, 04 | in-progress | `T-0-004-content-schema-pack`, 브리프 [briefs/T-0-004.md](briefs/T-0-004.md). 팩은 `playtested: false` |
-| T-0-005 | `apps/api` Hono 골격, D1 스키마(LocalProfile·Career·Snapshot·CommandLog·Idempotency·ServiceSeason), Drizzle migration | 02, ADR-007 | todo | |
+| T-0-005 | `apps/api` D1 스키마(profiles·sessions·careers·snapshots·command_log·idempotency·service_seasons), Drizzle migration, 저장소 함수, 로컬 D1 테스트 | 02, ADR-002, ADR-007, ADR-008 | todo | [브리프](briefs/T-0-005.md). T-0-003 머지 후 시작(T-0-007과 병렬 가능) |
 | T-0-006 | 익명 프로필 쿠키, `GET /profile`, requestId·구조화 로그·오류 봉투 | API-PRO-001, 01 | todo | |
 | T-0-007 | `packages/engine-client` LocalStore 포트(메모리 구현 + 계약 테스트), 명령 실행기, revision·commandId 멱등성, Snapshot 복구, Web Worker 시뮬레이터 프로토콜, golden fixture를 `packages/fixtures`로 이관 | 05, ADR-002, ADR-003 | todo | [브리프](briefs/T-0-007.md). T-0-003·T-0-014 머지 후 시작. Dexie 구현은 T-0-012 |
 | T-0-008 | Career 동기화 `PUT /careers/{id}` If-Match 409, 100회 병렬 멱등 테스트 | API-CAR-003, 05 | todo | |

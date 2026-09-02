@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, api 데이터 계층 설계)
+
+- **T-0-005 브리프 작성.** 서버 `careers` 행은 contracts `CareerSummary` + 소유자·검증 상태·시각만 갖는 요약이다. 02 DATA-CAR-001의 진행 값(`currentDate`, `currentTeamId`, `rngState` 등)은 Snapshot `state` 안에 있으므로 서버 테이블에 중복하지 않는다.
+- **D1 원자성.** 대화형 트랜잭션이 없으므로 한 요청의 쓰기는 `db.batch` 하나로 보내고, `command_log(career_id, revision)` PK와 `snapshots(career_id, revision)` UNIQUE가 동시 쓰기를 실패시킨다. T-0-008의 동기화는 "SELECT revision → 비교 → batch[조건부 UPDATE, INSERT…]" 순서다.
+- **서버 idempotency는 HTTP `Idempotency-Key` 단위**(`owner_profile_id + key`), 명령 단위 멱등성은 engine-client와 `command_log` PK가 맡는다.
+- **비밀값은 해시만**(세션 토큰·복구 코드·앱인토스 식별키, SHA-256 hex). **시각은 ISO UTC TEXT**, JSON 컬럼은 TEXT + Zod 검증. migration은 drizzle-kit 생성 SQL을 wrangler가 적용(`out = migrations_dir`), 손 편집 금지, additive만.
+- 시드(`svc_kickoff`)는 migration이 아니라 `seeds/local.sql`로 분리한다. 원격 D1·환경 블록은 U-002 뒤 T-0-010.
+
 ## 2026-09-02 (저녁, T-0-004 매핑 답변·engine-client 설계)
 
 - **T-0-004 워커 질문 3건 답변.** (1) EVT-REL-001의 동료 RELATION은 문서 지칭대로 박준서→`captain`, 이도현→`rival`. (2) EVT-REL-002의 '가족' RELATION 수치는 domain에 필드가 없으므로 Effect를 만들지 않고 태그(`부모의_걱정`, `대화_회피`)와 cause 문구만 옮긴다. `relationships.family` 추가 여부는 Phase 1 결정 사항. (3) '제안 수 ±1', '대학 경로 성장 보정' 같은 서사 전용 수치는 Effect에서 제외하고 태그·문구로만 남긴다. 프로토타입의 제안 수 공식은 태그(`에이전트_계약`, `주목받는_유망주`)로 계산되므로 손실이 없다. 계약 제안 시스템은 Phase 1 이후.
