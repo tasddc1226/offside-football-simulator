@@ -2,6 +2,16 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-02 (저녁, PR #15 룰셋 1.0.0 머지)
+
+**결과**: T-1-002 PR #15 squash 머지(`dff279f`). 룰셋 1.0.0(아키타입 24·배경 3·국적 10·팀 8·제안·계약 규칙), `RulesetSchema`·`loadRuleset`, CLI가 룰셋 checksum(`852ab110…`)도 검증. 팩 0.1.0의 EVT-CON-002/003이 태그로 이어지고 조건 DSL에서 `career.pathDecision`을 뺐다. content 80 tests, 전체 체인 통과. 비용 약 $9.4, 26분.
+
+**스펙 수정(워커 발견)**: `진로_하부리그` 경로에서 baseOvr < 55이면 EVT-CON-003이 뜨지 않아 `입단테스트_완료`가 없고, 제안 분기가 하나도 맞지 않아 제안 0개가 될 수 있었다. D-9 표와 T-1-002·T-1-005 브리프에 `lower-league-skipped`(1건, tier 3) 분기를 추가했다. 제안은 어떤 경로에서도 최소 1건이라는 원칙을 지킨다.
+
+**저작 데이터 리뷰**: 인사이드 포워드·배경 3종·팀 8개(가상 이름)·wage band가 계획 표와 일치. 아키타입 23개는 가중치 합 1, 포지션당 3개, GK만 `goalkeeping` 가중치. 수치 밸런스는 종이 프로토타입(U-005)과 Phase 2 시즌 시뮬레이션 뒤 재조정한다.
+
+**슬롯**: T-1-002가 끝나 빈 슬롯에 T-1-010(E2E 도입)을 투입했다.
+
 ## 2026-09-02 (저녁, PR #14 머지 — Phase 0 코드 작업 종료)
 
 **결과**: 워커가 리뷰 3건을 모두 반영했다(`dirty` 플래그, `classifyNonConflictError` 공유, `LocalStoreConstraintError`만 기록 제거). 회귀 테스트 3개 추가, engine-client 55 tests. 임시 워크트리에서 lint·lint:deps·typecheck·build 통과. PR #14를 squash 머지(`620a3fb`), 워크트리·터미널 정리, main 체크아웃 ff-pull. 비용 약 $10.7, 43분.
