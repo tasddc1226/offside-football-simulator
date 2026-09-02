@@ -20,9 +20,9 @@
 - D1 스키마: LocalProfile, Career, Snapshot, CommandLog, Idempotency, ServiceSeason. Drizzle migration.
 - IndexedDB(Dexie) 스키마: Career 상태, Snapshot, CommandLog, Draft, 설정.
 - 익명 프로필 쿠키와 `GET /profile`, health/readiness endpoint.
-- Career 동기화 `PUT /careers/{id}`와 If-Match 409. CORS 허용 목록에 앱인토스 origin 포함.
-- `packages/platform` 골격: `LocalStore` 포트, web(Dexie)·toss(네이티브 Storage) 구현, 식별 어댑터. `pnpm build:toss`로 `.ait` 번들 생성과 `@apps-in-toss/devtools` 로컬 모킹.
-- `POST /auth/toss/session`: mTLS 바인딩으로 식별키 검증, Bearer 세션 발급(인증서는 U-008 이후, 그 전에는 staging에서 mock 검증기).
+- Career 동기화 `PUT /careers/{id}`와 If-Match 409. CORS 허용 목록은 환경 변수로 관리한다(앱인토스 origin은 출시 준비 시 추가).
+- `packages/platform` 골격: `LocalStore` 포트와 `Platform` 인터페이스(식별, 저장, SafeArea, 뒤로 가기, 종료 확인, 공유, 분석), web 구현(Dexie). toss 구현은 인터페이스를 만족하는 스텁만 두고 앱인토스 SDK 의존성은 추가하지 않는다.
+- 세션 미들웨어는 쿠키와 `Authorization: Bearer`를 모두 받는다. 토스 식별키 검증 엔드포인트는 미니앱 출시 준비 단계(M-003)에서 붙인다.
 - ruleset/content pack loader와 checksum, 프로토타입 이벤트 10개의 팩 0.1.0.
 - CI: lint, typecheck, unit·property, content validate, contract, migration. Pages·Workers preview 배포.
 - requestId, 구조화 로그, 오류 봉투.
@@ -48,12 +48,12 @@
 - [ ] 같은 commandId 100회 병렬 요청에도 로컬 Career와 서버 동기화 결과가 하나다.
 - [ ] 잘못된 revision 동기화가 409로 거부된다.
 - [ ] preview와 staging 배포 파이프라인이 PR과 main에서 자동으로 돈다.
-- [ ] `pnpm build:toss`가 `.ait`를 만들고, 허브 빈 상태가 앱인토스 QR 테스트에서 열리며 `POST /auth/toss/session`이 세션을 돌려준다.
+- [ ] `platform` 어댑터를 toss 스텁으로 바꿔도 화면·엔진 코드 변경 없이 빌드와 테스트가 통과한다.
 - [ ] 최소 한 세대 이전 schema fixture를 migration 후 읽는다.
 - [ ] production과 동일한 순서로 staging migration을 실행한다.
 - [ ] 로그에 프로필 키·쿠키·선수명 원문이 남지 않는다.
 
 ## 제외
 
-선수 생성 UI, 실제 OVR, 축구 시즌, 이벤트 콘텐츠, 로그인, 운영 CMS, 앱인토스 검토 요청(Phase 2 LINE TEST에서).
+선수 생성 UI, 실제 OVR, 축구 시즌, 이벤트 콘텐츠, 로그인, 운영 CMS, 앱인토스 SDK 연동·검토 요청(출시 결정 후).
 

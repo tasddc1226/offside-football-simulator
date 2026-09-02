@@ -45,9 +45,9 @@ Phase 0을 시작하기 전에 [종이 프로토타입](../content/prototype/sea
 
 ## 의사결정 게이트
 
-ADR-001~009는 2026-09-02에 [`docs/adr/`](../adr/README.md)에서 확정했다. 요약: Vite React SPA, 클라이언트 Web Worker 시뮬레이션, 로컬 우선 저장과 서버 동기화, JSON 콘텐츠 팩, pnpm·Turborepo 모노레포, Cloudflare Pages·Workers·D1, 익명 프로필 + Google 로그인 1종, 같은 SPA를 앱인토스 미니앱으로 동시 출시. 도메인 계약은 프레임워크에 의존하지 않는다.
+ADR-001~009는 2026-09-02에 [`docs/adr/`](../adr/README.md)에서 확정했다. 요약: Vite React SPA, 클라이언트 Web Worker 시뮬레이션, 로컬 우선 저장과 서버 동기화, JSON 콘텐츠 팩, pnpm·Turborepo 모노레포, Cloudflare Pages·Workers·D1, 익명 프로필 + Google 로그인 1종, 앱인토스 미니앱으로 언제든 출시할 수 있는 채널 구조. 도메인 계약은 프레임워크에 의존하지 않는다.
 
-남은 게이트는 사용자 액션이다. 도메인·Cloudflare·Google OAuth(U-001~003), 앱인토스 콘솔 앱 등록과 `appName`(U-007), mTLS 인증서(U-008), 게임 등급분류(U-009). 상세는 [진행 보드](../tracking/board.md).
+남은 게이트는 사용자 액션 U-001~003(도메인·Cloudflare·Google OAuth)이다. 앱인토스 출시 준비(U-007~U-011)는 미니앱 출시를 결정한 뒤 착수한다. 상세는 [진행 보드](../tracking/board.md).
 
 진행 관리와 워커 위임 규칙은 [`docs/tracking/`](../tracking/README.md)을 따른다.
 

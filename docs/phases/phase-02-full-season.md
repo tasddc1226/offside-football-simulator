@@ -66,7 +66,7 @@ SCR-005 프리시즌 계획 + 시뮬레이션 모드
 
 이 Phase가 끝나면 [로드맵](../development/00-development-roadmap.md)의 LINE TEST를 연다. Phase 3은 LINE TEST 기준선이 기록된 뒤 시작한다.
 
-LINE TEST는 web(staging 도메인)과 toss(앱인토스 QR 테스트, 워크스페이스 멤버 한정) 두 채널에서 같은 빌드로 진행한다. 앱인토스 첫 검토 요청은 LINE TEST 결함이 닫힌 뒤 보낸다. 게임 등급분류 증빙(U-009)이 없으면 검토 요청을 보낼 수 없다.
+LINE TEST는 web(staging 도메인)에서 진행한다. 이 시점에 미니앱 출시가 결정돼 있으면 앱인토스 QR 테스트(워크스페이스 멤버 한정)를 같은 빌드로 병행하고, 첫 검토 요청은 LINE TEST 결함이 닫힌 뒤 보낸다.
 
 ## 제외
 

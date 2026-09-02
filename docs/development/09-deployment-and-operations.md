@@ -34,7 +34,7 @@
 
 ## 앱인토스 채널 배포
 
-정본은 [ADR-009](../adr/ADR-009-apps-in-toss-channel.md)다.
+정본은 [ADR-009](../adr/ADR-009-apps-in-toss-channel.md)다. 미니앱 출시가 결정된 뒤 활성화되는 절차이며, 그 전에는 CI에 포함하지 않는다.
 
 1. 태그 `v*`에서 `pnpm build:toss`로 `.ait` 번들을 만들고 `ait deploy --api-key`로 콘솔에 올린다. 업로드마다 `deploymentId`와 QR 테스트 스킴(`intoss-private://…?_deploymentId=`)이 생긴다.
 2. QR 실기기 테스트 체크리스트(08 문서)를 통과하면 콘솔에서 '검토 요청하기'. 검토는 영업일 최대 3일, 카테고리에 따라 7일 이상. 한 번에 한 버전만 검토 가능.

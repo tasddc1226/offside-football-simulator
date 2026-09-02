@@ -50,7 +50,7 @@ Pages의 `/content/*`는 `_headers`로 `Access-Control-Allow-Origin`을 같은 �
 3. main 머지: staging 배포, `wrangler d1 migrations apply`, E2E 전체.
 4. 태그 `v*`: production 배포. 콘텐츠 팩·ruleset checksum이 release manifest와 일치해야 진행.
 5. 롤백: Pages는 이전 배포로 즉시 전환, Workers는 이전 버전 재배포, D1은 roll-forward 우선(09 문서).
-6. 태그 `v*`: `pnpm build:toss` 후 `ait deploy --api-key`로 앱인토스 콘솔에 번들 업로드(QR 테스트 상태). 검토 요청과 출시 버튼은 사람이 누른다. 앱인토스 번들과 API는 같은 태그를 쓰고, API는 이전 번들 버전과 호환을 유지한다(출시 검토가 최대 3~7 영업일이라 두 버전이 동시에 살아 있다).
+6. (미니앱 출시 결정 후) 태그 `v*`: `pnpm build:toss` 후 `ait deploy --api-key`로 앱인토스 콘솔에 번들 업로드(QR 테스트 상태). 검토 요청과 출시 버튼은 사람이 누른다. 앱인토스 번들과 API는 같은 태그를 쓰고, API는 이전 번들 버전과 호환을 유지한다(출시 검토가 최대 3~7 영업일이라 두 버전이 동시에 살아 있다).
 
 GitHub Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SENTRY_AUTH_TOKEN`, `AIT_API_KEY`(앱인토스 콘솔 키). mTLS 인증서는 GitHub가 아니라 Cloudflare에 업로드하고 certificate_id만 wrangler 설정에 둔다.
 
