@@ -56,6 +56,10 @@ export type CareerSnapshot = z.infer<typeof CareerSnapshotSchema>;
  * 않는다. contracts → domain은 타입만 허용하므로(ADR-005) 런타임 해시 검증은 engine-client(T-0-007)와
  * api(T-0-008) 몫이다. 여기서는 파싱된 state의 최상위 형태만 검사한다: `schemaVersion: 1`이고
  * `careerId`가 있고, Snapshot 래퍼 필드인 `revision`이 섞여 들어오지 않았는지만 본다.
+ *
+ * `career-state.ts`의 `CareerStateSchema`와 용도가 다르다: 이 스키마는 API 봉투 최상위에서 과거
+ * schemaVersion·미래 필드를 깨지 않고 통과시켜야 하는 느슨한 검사이고, `CareerStateSchema`는 domain이
+ * 만드는 Phase 1 `CareerState`의 정확한 필드 전체를 `strictObject`로 강제하는 엄격한 검사다.
  */
 export const SnapshotStateEnvelopeSchema = z
   .looseObject({

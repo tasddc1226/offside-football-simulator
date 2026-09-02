@@ -1,7 +1,10 @@
 import { z } from 'zod';
+import { EffectSchema } from './career-state.js';
 import { successEnvelope } from './envelope.js';
+import { PlayerDraftSchema } from './player.js';
 import { ClientIdSchema, Hex64Schema, IsoUtcSchema } from './primitives.js';
 import { CareerSnapshotSchema } from './snapshot.js';
+import { SemverSchema } from './versions.js';
 
 /**
  * 07 "로컬 명령 계약"의 12개 명령. domain Command의 이름과 같게 유지한다(T-0-014가 domain의
@@ -25,17 +28,139 @@ export const COMMAND_TYPES = [
 export const CommandTypeSchema = z.enum(COMMAND_TYPES);
 export type CommandType = z.infer<typeof CommandTypeSchema>;
 
-export const CommandRequestSchema = z.strictObject({
-  commandId: ClientIdSchema,
-  expectedRevision: z.number().int().nonnegative(),
-  type: CommandTypeSchema,
-  payload: z.record(z.string(), z.unknown()),
+/** T-1-006에서 payload 스키마를 갖는 Phase 1 명령 6종(domain `Command` 유니온과 D-9 `ACCEPT_OFFER`). */
+export type Phase1CommandType =
+  | 'CREATE_CAREER'
+  | 'UPDATE_PLAYER_DRAFT'
+  | 'CONFIRM_PLAYER'
+  | 'ADVANCE'
+  | 'RESOLVE_EVENT'
+  | 'ACCEPT_OFFER';
+
+// D-7: CREATE_CAREER payload.
+export const CreateCareerPayloadSchema = z.strictObject({
+  careerId: ClientIdSchema,
+  seed: z.string().min(1),
+  simulationMode: z.enum(['FAST', 'CHAPTER']),
+  rulesetVersion: SemverSchema,
+  contentPackVersion: SemverSchema,
 });
+
+// D-7: UPDATE_PLAYER_DRAFT payload. 준 필드만 검증 후 병합하므로 draft는 partial이다.
+export const UpdatePlayerDraftPayloadSchema = z.strictObject({
+  draft: PlayerDraftSchema.partial(),
+});
+
+// D-7: CONFIRM_PLAYER payload. 필드 없음(domain Command payload는 `Record<string, never>`).
+export const ConfirmPlayerPayloadSchema = z.strictObject({});
+
+const EligibleEventSchema = z.strictObject({
+  eventId: z.string().min(1),
+  version: z.number().int().min(1),
+  weight: z.number().int().min(1),
+});
+
+// D-10: ADVANCE payload. eligibleEvents는 클라이언트가 eventId 오름차순으로 정렬해 보낸다.
+export const AdvancePayloadSchema = z
+  .strictObject({
+    eligibleEvents: z.array(EligibleEventSchema),
+  })
+  .superRefine((payload, ctx) => {
+    const events = payload.eligibleEvents;
+    for (let i = 1; i < events.length; i++) {
+      // eventId는 'EVT-…' 같은 ASCII 케밥 케이스라 서로게이트 쌍이 없다. 그 범위에서 문자열 `<` 비교는
+      // domain `compareCodePoints`가 정의하는 코드포인트 순 비교와 같은 결과를 낸다. domain
+      // `isEligibleEventsSorted`처럼 엄격 증가가 아니라 비내림차순(동률 허용)을 요구한다.
+      if (events[i - 1]!.eventId > events[i]!.eventId) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'eligibleEvents는 eventId 오름차순이어야 한다.',
+          path: ['eligibleEvents', i, 'eventId'],
+        });
+        return;
+      }
+    }
+  });
+
+const ResolveEventOutcomeSchema = z.strictObject({
+  id: z.string().min(1),
+  weight: z.number().int().min(1),
+  effects: z.array(EffectSchema),
+  addTags: z.array(z.string()).optional(),
+  removeTags: z.array(z.string()).optional(),
+});
+
+// D-10: RESOLVE_EVENT payload.
+export const ResolveEventPayloadSchema = z.strictObject({
+  eventId: z.string().min(1),
+  definitionVersion: z.number().int().min(1),
+  choiceId: z.string().min(1),
+  outcomes: z.array(ResolveEventOutcomeSchema).min(1),
+});
+
+// D-9: ACCEPT_OFFER payload. T-1-005가 main에 머지되어 domain `Command`에도 같은 형태로 있다.
+export const AcceptOfferPayloadSchema = z.strictObject({
+  offerId: z.string().min(1),
+});
+
+/** Phase 2+ 명령(아직 domain에 없음)은 형태를 모르므로 임의 payload를 통과시킨다. */
+const UnknownPayloadSchema = z.record(z.string(), z.unknown());
+
+/**
+ * 명령 타입 → payload 스키마 맵. `CommandRequestSchema`의 판별 유니온 멤버와
+ * `CommandLogEntrySchema`의 `commandType`·payload 정합 검사가 이 맵을 공유한다.
+ */
+export const COMMAND_PAYLOAD_SCHEMAS = {
+  CREATE_CAREER: CreateCareerPayloadSchema,
+  UPDATE_PLAYER_DRAFT: UpdatePlayerDraftPayloadSchema,
+  CONFIRM_PLAYER: ConfirmPlayerPayloadSchema,
+  RESOLVE_EVENT: ResolveEventPayloadSchema,
+  START_SEASON: UnknownPayloadSchema,
+  ADVANCE: AdvancePayloadSchema,
+  SETTLE_SEASON: UnknownPayloadSchema,
+  NEGOTIATE: UnknownPayloadSchema,
+  ACCEPT_OFFER: AcceptOfferPayloadSchema,
+  REJECT_OFFER: UnknownPayloadSchema,
+  LOAN_RETURN: UnknownPayloadSchema,
+  RETIRE: UnknownPayloadSchema,
+} as const satisfies Record<CommandType, z.ZodTypeAny>;
+
+export type CommandPayloadByType = {
+  [K in CommandType]: z.infer<(typeof COMMAND_PAYLOAD_SCHEMAS)[K]>;
+};
+
+function commandRequestMember<Type extends CommandType>(type: Type, payload: (typeof COMMAND_PAYLOAD_SCHEMAS)[Type]) {
+  return z.strictObject({
+    commandId: ClientIdSchema,
+    expectedRevision: z.number().int().nonnegative(),
+    type: z.literal(type),
+    payload,
+  });
+}
+
+export const CommandRequestSchema = z.discriminatedUnion('type', [
+  commandRequestMember('CREATE_CAREER', COMMAND_PAYLOAD_SCHEMAS.CREATE_CAREER),
+  commandRequestMember('UPDATE_PLAYER_DRAFT', COMMAND_PAYLOAD_SCHEMAS.UPDATE_PLAYER_DRAFT),
+  commandRequestMember('CONFIRM_PLAYER', COMMAND_PAYLOAD_SCHEMAS.CONFIRM_PLAYER),
+  commandRequestMember('RESOLVE_EVENT', COMMAND_PAYLOAD_SCHEMAS.RESOLVE_EVENT),
+  commandRequestMember('START_SEASON', COMMAND_PAYLOAD_SCHEMAS.START_SEASON),
+  commandRequestMember('ADVANCE', COMMAND_PAYLOAD_SCHEMAS.ADVANCE),
+  commandRequestMember('SETTLE_SEASON', COMMAND_PAYLOAD_SCHEMAS.SETTLE_SEASON),
+  commandRequestMember('NEGOTIATE', COMMAND_PAYLOAD_SCHEMAS.NEGOTIATE),
+  commandRequestMember('ACCEPT_OFFER', COMMAND_PAYLOAD_SCHEMAS.ACCEPT_OFFER),
+  commandRequestMember('REJECT_OFFER', COMMAND_PAYLOAD_SCHEMAS.REJECT_OFFER),
+  commandRequestMember('LOAN_RETURN', COMMAND_PAYLOAD_SCHEMAS.LOAN_RETURN),
+  commandRequestMember('RETIRE', COMMAND_PAYLOAD_SCHEMAS.RETIRE),
+]);
 
 export type CommandRequest = z.infer<typeof CommandRequestSchema>;
 
-/** 02 `CommandLogEntry`. `commandId`·`careerId`는 클라이언트가 발급한 ID이며 UUID 형식을 강제하지 않는다. */
-export const CommandLogEntrySchema = z.strictObject({
+/**
+ * 02 `CommandLogEntry`의 필드만 갖는 미검증(refinement 없는) 형태. `.omit()`은 refinement가 붙은
+ * 스키마에는 쓸 수 없으므로(zod4), `careers.ts`의 `PutCareerCommandSchema`처럼 필드를 덜어낸
+ * 변형이 필요한 소비처는 이 스키마에서 `.omit()`한 뒤 `checkCommandTypePayload`를 다시 붙인다.
+ */
+export const CommandLogEntryShapeSchema = z.strictObject({
   careerId: ClientIdSchema,
   revision: z.number().int().positive(),
   commandId: ClientIdSchema,
@@ -44,6 +169,27 @@ export const CommandLogEntrySchema = z.strictObject({
   resultHash: Hex64Schema,
   createdAt: IsoUtcSchema,
 });
+
+/** `commandType`에 맞는 payload 스키마로 다시 검사해 불일치를 거부한다. */
+export function checkCommandTypePayload(
+  entry: { commandType: CommandType; payload: Record<string, unknown> },
+  ctx: z.RefinementCtx,
+): void {
+  const payloadSchema = COMMAND_PAYLOAD_SCHEMAS[entry.commandType];
+  const result = payloadSchema.safeParse(entry.payload);
+  if (!result.success) {
+    for (const issue of result.error.issues) {
+      ctx.addIssue({ ...issue, path: ['payload', ...issue.path] });
+    }
+  }
+}
+
+/**
+ * 02 `CommandLogEntry`. `commandId`·`careerId`는 클라이언트가 발급한 ID이며 UUID 형식을 강제하지
+ * 않는다. `payload`는 record로 느슨하게 받되, `commandType`에 맞는 payload 스키마로 다시 검사해
+ * 불일치를 거부한다(로그는 이미 확정된 명령의 기록이라 discriminatedUnion 대신 이 방식을 쓴다).
+ */
+export const CommandLogEntrySchema = CommandLogEntryShapeSchema.superRefine(checkCommandTypePayload);
 
 export type CommandLogEntry = z.infer<typeof CommandLogEntrySchema>;
 

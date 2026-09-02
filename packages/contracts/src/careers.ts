@@ -1,11 +1,13 @@
 import { z } from 'zod';
-import { CommandLogEntrySchema } from './commands.js';
+import { checkCommandTypePayload, CommandLogEntrySchema, CommandLogEntryShapeSchema } from './commands.js';
 import { ClientIdSchema, IsoUtcSchema } from './primitives.js';
 import { CareerSnapshotSchema } from './snapshot.js';
 import { SemverSchema } from './versions.js';
 
 const PutCareerSnapshotSchema = CareerSnapshotSchema.omit({ id: true, careerId: true, createdAt: true });
-const PutCareerCommandSchema = CommandLogEntrySchema.omit({ careerId: true, createdAt: true });
+const PutCareerCommandSchema = CommandLogEntryShapeSchema.omit({ careerId: true, createdAt: true }).superRefine(
+  checkCommandTypePayload,
+);
 
 /** 07 `PUT /careers/{id}` 본문. */
 export const PutCareerBodySchema = z
