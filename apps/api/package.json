@@ -23,8 +23,11 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260831.1",
+    "@offside/fixtures": "workspace:*",
     "@offside/tsconfig": "workspace:*",
     "drizzle-kit": "0.31.10",
+    "esbuild": "0.28.1",
+    "miniflare": "5.20260828.0-alpha",
     "typescript": "5.9.3",
     "vitest": "4.1.11",
     "wrangler": "4.127.1"
