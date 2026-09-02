@@ -1,4 +1,4 @@
-export const CONTRACTS_VERSION = '0.1.0';
+export const CONTRACTS_VERSION = '0.2.0';
 
 export {
   MetaSchema,
@@ -39,12 +39,68 @@ export {
   CommandLogEntrySchema,
   NextActionSchema,
   CommandResponseSchema,
+  CreateCareerPayloadSchema,
+  UpdatePlayerDraftPayloadSchema,
+  ConfirmPlayerPayloadSchema,
+  AdvancePayloadSchema,
+  ResolveEventPayloadSchema,
+  AcceptOfferPayloadSchema,
+  COMMAND_PAYLOAD_SCHEMAS,
   type CommandType,
   type CommandRequest,
   type CommandLogEntry,
   type NextAction,
   type CommandResponse,
+  type CommandPayloadByType,
+  type Phase1CommandType,
 } from './commands.js';
+
+export {
+  PositionSchema,
+  PositionGroupSchema,
+  PreferredFootSchema,
+  PlayerDraftSchema,
+  PlayerProfileSchema,
+  PlayerPublicSchema,
+  toPlayerPublic,
+  type PlayerDraft,
+  type PlayerPublic,
+} from './player.js';
+
+export {
+  SquadRoleSchema,
+  LeagueTierSchema,
+  OfferSchema,
+  ContractSchema,
+  PendingSchema,
+  TimelineEntrySchema,
+  EffectSchema,
+  CAREER_STATE_ATTRIBUTE_KEYS,
+  AttributesSchema,
+  CareerStateSchema,
+  type CareerState,
+} from './career-state.js';
+
+export {
+  RECOVERY_CODE_ALPHABET,
+  normalizeRecoveryCode,
+  formatRecoveryCode,
+  RecoveryCodeInputSchema,
+  MergeChoiceSchema,
+  IssueRecoveryCodeResponseSchema,
+  RecoverProfileBodySchema,
+  RecoverProfileResponseSchema,
+  RecoveryConflictDetailsSchema,
+  DeleteProfileStartResponseSchema,
+  DeleteProfileConfirmBodySchema,
+  type MergeChoice,
+  type IssueRecoveryCodeResponse,
+  type RecoverProfileBody,
+  type RecoverProfileResponse,
+  type RecoveryConflictDetails,
+  type DeleteProfileStartResponse,
+  type DeleteProfileConfirmBody,
+} from './auth.js';
 
 export {
   PutCareerBodySchema,

@@ -110,7 +110,9 @@ async function makeSnapshot(input: {
 
 function makeCommand(input: { revision: number; commandId: string; resultHash: string; commandType?: string }) {
   const { revision, commandId, resultHash, commandType = 'ADVANCE' } = input;
-  return { revision, commandId, commandType, payload: {}, resultHash };
+  // T-1-006: CommandLogEntrySchema가 commandType·payload 정합을 검사하므로, 기본 ADVANCE에 맞는
+  // 유효한 payload를 쓴다(eligibleEvents는 빈 배열도 유효하다).
+  return { revision, commandId, commandType, payload: { eligibleEvents: [] }, resultHash };
 }
 
 /** 마지막이 아닌 command의 resultHash는 검증 대상이 아니므로 임의의 유효한 hex64를 쓴다. */

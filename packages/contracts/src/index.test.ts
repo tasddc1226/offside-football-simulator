@@ -13,7 +13,7 @@ import { CheckpointTypeSchema, RngStateSchema } from './snapshot.js';
 
 describe('CONTRACTS_VERSION', () => {
   it('is exported', () => {
-    expect(CONTRACTS_VERSION).toBe('0.1.0');
+    expect(CONTRACTS_VERSION).toBe('0.2.0');
   });
 });
 
@@ -54,7 +54,9 @@ describe('07 문서 JSON 예시가 그대로 파싱된다', () => {
     // 07의 snapshot 예시는 "revision"·"checkpoint"·"state"·"stateHash"만 보여주는 축약본이라, 05
     // Snapshot 계약이 요구하는 rulesetVersion·contentPackVersion·rngState를 추가했다(PR 본문 "범위 밖
     // 발견 사항" 참고). snapshot.revision도 07 원문은 15였지만, PutCareerBodySchema는 이제
-    // snapshot.revision이 마지막 command(revision 13)와 같아야 하므로 13으로 맞췄다.
+    // snapshot.revision이 마지막 command(revision 13)와 같아야 하므로 13으로 맞췄다. "payload": {}도
+    // 07 원문은 자리표시자였지만, T-1-006이 CommandLogEntrySchema에 commandType·payload 정합 검사를
+    // 추가해 RESOLVE_EVENT에 맞는 최소 payload로 바꿨다.
     const json = `
       {
         "baseRevision": 12,
@@ -72,7 +74,12 @@ describe('07 문서 JSON 예시가 그대로 파싱된다', () => {
             "revision": 13,
             "commandId": "cmd_...",
             "commandType": "RESOLVE_EVENT",
-            "payload": {},
+            "payload": {
+              "eventId": "EVT-CON-002",
+              "definitionVersion": 1,
+              "choiceId": "a",
+              "outcomes": [{ "id": "o1", "weight": 1, "effects": [] }]
+            },
             "resultHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
           }
         ],
@@ -181,14 +188,14 @@ describe('PutCareerBodySchema', () => {
           revision: 13,
           commandId: 'cmd_1',
           commandType: 'RESOLVE_EVENT',
-          payload: {},
+          payload: { eventId: 'EVT-CON-002', definitionVersion: 1, choiceId: 'a', outcomes: [{ id: 'o1', weight: 1, effects: [] }] },
           resultHash: 'b'.repeat(64),
         },
         {
           revision: 14,
           commandId: 'cmd_2',
           commandType: 'ADVANCE',
-          payload: {},
+          payload: { eligibleEvents: [] },
           resultHash: 'c'.repeat(64),
         },
       ],
