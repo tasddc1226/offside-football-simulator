@@ -72,6 +72,14 @@
           }
         ]
       }
+    },
+    {
+      "type": "ADVANCE",
+      "payload": { "eligibleEvents": [] }
+    },
+    {
+      "type": "ACCEPT_OFFER",
+      "payload": { "offerId": "OFR-9-0" }
     }
   ]
 }

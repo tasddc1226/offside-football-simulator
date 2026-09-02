@@ -1,9 +1,10 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { rulesetProto } from './__fixtures__/career-01.js';
+import { compareCodePoints } from './canonical.js';
 import { hashState } from './hash.js';
 import { rollRange } from './roll-range.js';
 import { simulate, verifySnapshot, type Command, type SimulationInput } from './simulate.js';
-import type { DomainSnapshot, Effect, TimelineEntry } from './types.js';
+import type { DomainSnapshot, Effect, PlayerProfile, TimelineEntry } from './types.js';
 
 const RULESET_VERSION = '1.0.0';
 const CONTENT_PACK = '0.1.0';
@@ -153,6 +154,34 @@ function withPendingEvent(active: DomainSnapshot): DomainSnapshot {
   });
   if (!result.ok) throw new Error('withPendingEvent failed');
   return result.snapshot;
+}
+
+/** ACTIVE: 배경을 골라 CONFIRM_PLAYER까지 마친 snapshot(관계 초기값이 배경마다 다름을 이용한 테스트용). */
+function confirmedActiveSnapshotWithBackground(backgroundId: string, seed?: string): DomainSnapshot {
+  let snapshot = createDraftSnapshot(seed);
+  const step1 = updateDraft(snapshot, FULL_DRAFT_STEP_1);
+  if (!step1.ok) throw new Error('draft step1 failed');
+  snapshot = step1.snapshot;
+  const step2 = updateDraft(snapshot, { position: 'W', archetypeId: 'inside-forward', backgroundId });
+  if (!step2.ok) throw new Error('draft step2 failed');
+  const result = simulate({ ...baseInput(), snapshot: step2.snapshot, command: confirmPlayerCommand(step2.snapshot.revision) });
+  if (!result.ok) throw new Error(`CONFIRM_PLAYER failed: ${result.error.code} ${result.error.message}`);
+  return result.snapshot;
+}
+
+/** 제안 분기 테스트용으로 offerRules 태그만 강제로 덮어쓴다(정렬·중복 없이 이미 정렬된 태그를 준다). */
+function withTags(snapshot: DomainSnapshot, tags: string[]): DomainSnapshot {
+  return { ...snapshot, state: { ...snapshot.state, tags: [...tags].sort(compareCodePoints) } };
+}
+
+/** baseOvr 경계 테스트용으로 player.profile.baseOvr만 강제로 덮어쓴다. */
+function withBaseOvr(snapshot: DomainSnapshot, baseOvr: number): DomainSnapshot {
+  const profile = snapshot.state.player.profile as PlayerProfile;
+  return { ...snapshot, state: { ...snapshot.state, player: { ...snapshot.state.player, profile: { ...profile, baseOvr } } } };
+}
+
+function acceptOfferCommand(expectedRevision: number, offerId: string): EngineCommand {
+  return { type: 'ACCEPT_OFFER', commandId: `cmd-accept-${expectedRevision}`, expectedRevision, payload: { offerId } };
 }
 
 describe('simulate — CREATE_CAREER', () => {
@@ -590,6 +619,56 @@ describe('verifySnapshot', () => {
     const rehashed: DomainSnapshot = { ...tampered, stateHash: hashState(tampered.state) };
     expect(verifySnapshot(rehashed)).toEqual({ ok: false, reason: 'PENDING_STATUS_MISMATCH' });
   });
+
+  it('contract와 pending(OFFERS)이 함께 있으면 CONTRACT_OFFERS_CONFLICT다', () => {
+    const active = withTags(confirmedActiveSnapshot(), ['진로_아카데미']);
+    const offered = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
+    if (!offered.ok) throw new Error('setup failed');
+    const tampered: DomainSnapshot = {
+      ...offered.snapshot,
+      state: {
+        ...offered.snapshot.state,
+        contract: {
+          id: 'CTR-x',
+          offerId: 'OFR-x-0',
+          teamId: 'hangang-u18',
+          teamName: '한강 FC U18',
+          leagueTier: 'YOUTH',
+          lengthSeasons: 1,
+          wageMinorPerWeek: 0,
+          signingBonusMinor: 0,
+          rolePromise: 'STARTER',
+          shirtNumber: 9,
+          signatureType: 'AUTO',
+          signedAtRevision: offered.snapshot.revision,
+        },
+      },
+    };
+    const rehashed: DomainSnapshot = { ...tampered, stateHash: hashState(tampered.state) };
+    expect(verifySnapshot(rehashed)).toEqual({ ok: false, reason: 'CONTRACT_OFFERS_CONFLICT' });
+  });
+
+  it('contract와 pending(EVENT)이 함께 있어도 정합성 위반이 아니다(Phase 2 시즌 중 이벤트)', () => {
+    // 계약된 선수에게 시즌 중 이벤트가 pending으로 걸리는 것은 Phase 2부터의 정상 상태다.
+    // contract·pending 동시 존재 자체가 아니라 pending이 OFFERS일 때만 위반이다.
+    const active = withTags(confirmedActiveSnapshot(), ['진로_아카데미']);
+    const offered = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
+    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('setup failed');
+    const offerId = offered.snapshot.state.pending.offers[0]!.id;
+    const accepted = simulate({
+      ...baseInput(),
+      snapshot: offered.snapshot,
+      command: acceptOfferCommand(offered.snapshot.revision, offerId),
+    });
+    if (!accepted.ok) throw new Error('accept failed');
+
+    const tampered: DomainSnapshot = {
+      ...accepted.snapshot,
+      state: { ...accepted.snapshot.state, pending: { kind: 'EVENT', eventId: 'EVT-SEASON', version: 1 } },
+    };
+    const rehashed: DomainSnapshot = { ...tampered, stateHash: hashState(tampered.state) };
+    expect(verifySnapshot(rehashed)).toEqual({ ok: true });
+  });
 });
 
 describe('결정론', () => {
@@ -660,10 +739,258 @@ describe('결정론', () => {
   });
 });
 
+describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
+  function advanceWithTags(tags: string[], baseOvr?: number) {
+    let active = confirmedActiveSnapshot();
+    active = withTags(active, tags);
+    if (baseOvr !== undefined) active = withBaseOvr(active, baseOvr);
+    const result = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
+    return { active, result };
+  }
+
+  it('academy 분기: hangang-u18 고정 1건, YOUTH', () => {
+    const { active, result } = advanceWithTags(['진로_아카데미']);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.pending).toEqual({
+      kind: 'OFFERS',
+      offers: [expect.objectContaining({ teamId: 'hangang-u18', leagueTier: 'YOUTH' })],
+    });
+    expect(result.snapshot.checkpoint).toBe('CHAPTER_DECISION');
+    expect(result.nextAction).toBe('DECISION');
+    expect(result.snapshot.revision).toBe(active.revision + 1);
+    // 고정 팀은 팀 추출 roll을 생략한다 → 4회(lengthSeasons·rolePromise·shirtNumber·tacticalFitEstimate).
+    expect(result.snapshot.state.rngState.draws).toBe(active.state.rngState.draws + 4);
+  });
+
+  it('lower-league 분기: 풀이 desiredCount보다 작으면 풀 크기만큼만, 비복원 추출(팀 중복 없음)', () => {
+    const { result } = advanceWithTags(['진로_하부리그', '입단테스트_완료', '에이전트_계약', '주목받는_유망주']);
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.snapshot.state.pending?.kind !== 'OFFERS') return;
+    const offers = result.snapshot.state.pending.offers;
+    // desiredCount는 1+2=3(상한 3)이지만 tier 2~3 풀은 2팀뿐이다.
+    expect(offers).toHaveLength(2);
+    expect(new Set(offers.map((o) => o.teamId)).size).toBe(2);
+    expect(offers.map((o) => o.teamId).sort()).toEqual(['busan-tier2', 'daejeon-tier3']);
+    expect(offers.every((o) => o.leagueTier === 2 || o.leagueTier === 3)).toBe(true);
+  });
+
+  it('tryout-fail 분기: 고정 1건, tier 3. 비고정 팀 추출은 5회 소비한다', () => {
+    const { active, result } = advanceWithTags(['진로_입단테스트', '테스트_실패']);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.pending).toEqual({
+      kind: 'OFFERS',
+      offers: [expect.objectContaining({ teamId: 'daejeon-tier3', leagueTier: 3 })],
+    });
+    expect(result.snapshot.state.rngState.draws).toBe(active.state.rngState.draws + 5);
+  });
+
+  it('tryout-neutral 분기: tier 2~3 풀에서 뽑는다', () => {
+    const { result } = advanceWithTags(['진로_입단테스트', '테스트_보통']);
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.snapshot.state.pending?.kind !== 'OFFERS') return;
+    expect(result.snapshot.state.pending.offers).toHaveLength(1);
+    expect(['busan-tier2', 'daejeon-tier3']).toContain(result.snapshot.state.pending.offers[0]!.teamId);
+  });
+
+  it('tryout-success 분기: baseOvr가 topTierMinOvr(60) 이상이면 첫 제안은 tier 1 팀으로 고정된다', () => {
+    const { result } = advanceWithTags(['진로_입단테스트', '테스트_성공'], 60);
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.snapshot.state.pending?.kind !== 'OFFERS') return;
+    expect(result.snapshot.state.pending.offers[0]!.teamId).toBe('seoul-tier1');
+  });
+
+  it('tryout-success 분기: baseOvr가 topTierMinOvr(60) 미만(59)이면 tier 1 강제가 없다', () => {
+    // 룰셋에 tier1 팀이 하나뿐이라 "강제 없음"은 offers.test.ts에서 같은 rng seed로 비교해
+    // 엄밀히 검증한다. 여기서는 매 실행마다 항상 seoul-tier1로 고정되지는 않음만 스모크로 확인한다.
+    const { result } = advanceWithTags(['진로_입단테스트', '테스트_성공'], 59);
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.snapshot.state.pending?.kind !== 'OFFERS') return;
+    expect(result.snapshot.state.pending.offers).toHaveLength(1);
+    expect(['busan-tier2', 'daejeon-tier3', 'seoul-tier1']).toContain(result.snapshot.state.pending.offers[0]!.teamId);
+  });
+
+  it('tryout-skipped 분기: 미응시(입단테스트_완료 없음)면 고정 1건, tier 3', () => {
+    const { result } = advanceWithTags(['진로_입단테스트']);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.pending).toEqual({
+      kind: 'OFFERS',
+      offers: [expect.objectContaining({ teamId: 'daejeon-tier3', leagueTier: 3 })],
+    });
+  });
+
+  it('lower-league-skipped 분기: 미응시(입단테스트_완료 없음)면 고정 1건, tier 3', () => {
+    const { result } = advanceWithTags(['진로_하부리그']);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.pending).toEqual({
+      kind: 'OFFERS',
+      offers: [expect.objectContaining({ teamId: 'daejeon-tier3', leagueTier: 3 })],
+    });
+  });
+
+  it('일치하는 분기가 없으면 offers를 만들지 않고 다음 단계(SETTLEMENT라 NOTHING_TO_ADVANCE)로 넘어간다', () => {
+    // Phase 1은 CONFIRM_PLAYER 직후 seasonPhase가 이미 SETTLEMENT다(D-7) — 4단계는 STEP_BOUNDARY
+    // 대신 5단계 NOTHING_TO_ADVANCE로 떨어진다. 여기서 검증하려는 것은 "분기 불일치 시 pending을
+    // 만들지 않는다"는 3단계 자체의 동작이다.
+    const { result } = advanceWithTags([]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'NOTHING_TO_ADVANCE' });
+  });
+
+  it('이미 contract가 있으면 분기를 다시 타지 않고 SETTLEMENT라 NOTHING_TO_ADVANCE다', () => {
+    const active = withTags(confirmedActiveSnapshot(), ['진로_아카데미']);
+    const offered = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
+    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('setup failed');
+    const offerId = offered.snapshot.state.pending.offers[0]!.id;
+    const accepted = simulate({
+      ...baseInput(),
+      snapshot: offered.snapshot,
+      command: acceptOfferCommand(offered.snapshot.revision, offerId),
+    });
+    if (!accepted.ok) throw new Error('accept failed');
+    const result = simulate({
+      ...baseInput(),
+      snapshot: accepted.snapshot,
+      command: advanceCommand(accepted.snapshot.revision, []),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'NOTHING_TO_ADVANCE' });
+  });
+});
+
+describe('simulate — ACCEPT_OFFER', () => {
+  function offeredSnapshot(tags: string[], backgroundId = 'club-academy', baseOvr?: number) {
+    let active = confirmedActiveSnapshotWithBackground(backgroundId);
+    active = withTags(active, tags);
+    if (baseOvr !== undefined) active = withBaseOvr(active, baseOvr);
+    const result = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
+    if (!result.ok || result.snapshot.state.pending?.kind !== 'OFFERS') {
+      throw new Error('offeredSnapshot 설정 실패');
+    }
+    return result.snapshot;
+  }
+
+  it('같은 클럽(academy) 계약: stage는 YOUTH 유지, managerTrust는 그대로다', () => {
+    const offered = offeredSnapshot(['진로_아카데미'], 'street');
+    const pending = offered.state.pending;
+    if (pending === null || pending.kind !== 'OFFERS') throw new Error('unreachable');
+    const offer = pending.offers[0]!;
+    const result = simulate({
+      ...baseInput(),
+      snapshot: offered,
+      command: acceptOfferCommand(offered.revision, offer.id),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.stage).toBe('YOUTH');
+    expect(result.snapshot.state.relationships.managerTrust).toBe(35); // street 배경 초기값 유지
+    expect(result.snapshot.state.context.squadStatus).toBe(RULESET.contractRules.squadStatusByRole[offer.rolePromise]);
+    expect(result.snapshot.state.context.tacticalFit).toBe(offer.tacticalFitEstimate);
+    expect(result.snapshot.state.contract).toEqual({
+      id: `CTR-${result.snapshot.revision}`,
+      offerId: offer.id,
+      teamId: offer.teamId,
+      teamName: offer.teamName,
+      leagueTier: offer.leagueTier,
+      lengthSeasons: offer.lengthSeasons,
+      wageMinorPerWeek: offer.wageMinorPerWeek,
+      signingBonusMinor: offer.signingBonusMinor,
+      rolePromise: offer.rolePromise,
+      shirtNumber: offer.shirtNumber,
+      signatureType: 'AUTO',
+      signedAtRevision: result.snapshot.revision,
+    });
+    expect(result.snapshot.state.pending).toBeNull();
+    expect(result.snapshot.checkpoint).toBe('CONTRACT_CONFIRMED');
+    expect(result.nextAction).toBe('SETTLEMENT');
+    const lastEntry = result.snapshot.state.timeline.at(-1);
+    expect(lastEntry).toEqual({
+      revision: result.snapshot.revision,
+      kind: 'CONTRACT_SIGNED',
+      refId: result.snapshot.state.contract!.id,
+      age: offered.state.age,
+      step: offered.state.currentStep,
+    });
+    // ACCEPT_OFFER는 rng를 소비하지 않는다.
+    expect(result.snapshot.state.rngState.draws).toBe(offered.state.rngState.draws);
+  });
+
+  it('새 클럽 계약: stage는 PRO, managerTrust는 newClubManagerTrust로 바뀐다', () => {
+    const offered = offeredSnapshot(['진로_입단테스트', '테스트_성공'], 'street', 60);
+    const pending = offered.state.pending;
+    if (pending === null || pending.kind !== 'OFFERS') throw new Error('unreachable');
+    const offer = pending.offers[0]!;
+    expect(offer.teamId).not.toBe('hangang-u18'); // street 배경의 startTeamId
+    const result = simulate({
+      ...baseInput(),
+      snapshot: offered,
+      command: acceptOfferCommand(offered.revision, offer.id),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.stage).toBe('PRO');
+    expect(result.snapshot.state.relationships.managerTrust).toBe(RULESET.contractRules.newClubManagerTrust);
+  });
+
+  it('pending이 없으면 NO_PENDING_OFFERS다', () => {
+    const active = confirmedActiveSnapshot();
+    const result = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: acceptOfferCommand(active.revision, 'OFR-does-not-exist'),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'NO_PENDING_OFFERS' });
+  });
+
+  it('pending이 EVENT면 NO_PENDING_OFFERS다', () => {
+    const active = confirmedActiveSnapshot();
+    const withEvent = withPendingEvent(active);
+    const result = simulate({
+      ...baseInput(),
+      snapshot: withEvent,
+      command: acceptOfferCommand(withEvent.revision, 'OFR-x-0'),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'NO_PENDING_OFFERS' });
+  });
+
+  it('제안 목록에 없는 offerId는 OFFER_NOT_FOUND다', () => {
+    const offered = offeredSnapshot(['진로_아카데미']);
+    const result = simulate({
+      ...baseInput(),
+      snapshot: offered,
+      command: acceptOfferCommand(offered.revision, 'OFR-not-real-9'),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'OFFER_NOT_FOUND' });
+  });
+
+  it('ACTIVE가 아니면 NOT_ACTIVE다', () => {
+    const snapshot = createDraftSnapshot();
+    const result = simulate({
+      ...baseInput(),
+      snapshot,
+      command: acceptOfferCommand(snapshot.revision, 'OFR-x-0'),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'NOT_ACTIVE' });
+  });
+});
+
 describe('Command 타입', () => {
-  it('type은 5개 명령으로 고정된다', () => {
+  it('type은 6개 명령으로 고정된다', () => {
     expectTypeOf<Command['type']>().toEqualTypeOf<
-      'CREATE_CAREER' | 'UPDATE_PLAYER_DRAFT' | 'CONFIRM_PLAYER' | 'ADVANCE' | 'RESOLVE_EVENT'
+      'CREATE_CAREER' | 'UPDATE_PLAYER_DRAFT' | 'CONFIRM_PLAYER' | 'ADVANCE' | 'RESOLVE_EVENT' | 'ACCEPT_OFFER'
     >();
   });
 });

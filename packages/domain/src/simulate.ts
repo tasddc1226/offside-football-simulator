@@ -1,6 +1,7 @@
 import { compareCodePoints, type JsonValue } from './canonical.js';
 import { applyEffects, expireEffects } from './effects.js';
 import { hashState } from './hash.js';
+import { findMatchingOfferBranch, generateOffers } from './offers.js';
 import { generatePlayerProfile, type ConfirmedPlayerDraft } from './player.js';
 import { rollInt, seedRng } from './rng.js';
 import { rollRange } from './roll-range.js';
@@ -8,7 +9,9 @@ import type { Ruleset } from './ruleset.js';
 import {
   ATTRIBUTE_KEYS,
   type AttributeKey,
+  type CareerStage,
   type CareerState,
+  type Contract,
   type DomainSnapshot,
   type Effect,
   type PlayerDraft,
@@ -39,7 +42,8 @@ export type Command =
         choiceId: string;
         outcomes: Array<{ id: string; weight: number; effects: Effect[]; addTags?: string[]; removeTags?: string[] }>;
       };
-    };
+    }
+  | { type: 'ACCEPT_OFFER'; payload: { offerId: string } };
 
 export type SimulationInput = {
   snapshot: DomainSnapshot | null;
@@ -413,7 +417,34 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
     };
   }
 
-  // 3단계(제안 생성, offerRules 기반)는 T-1-005. 이 작업에서는 태그와 무관하게 건너뛴다.
+  if (state.contract === null) {
+    const branch = findMatchingOfferBranch(input.ruleset.offerRules, state.tags);
+    if (branch !== null) {
+      if (state.player.profile === null) {
+        throw new RangeError('advance: ACTIVE 상태인데 player.profile이 null이다.');
+      }
+      const nextRevision = snapshot.revision + 1;
+      const generated = generateOffers(
+        input.ruleset,
+        branch,
+        state.tags,
+        state.player.profile.baseOvr,
+        nextRevision,
+        state.rngState,
+      );
+      const nextState: CareerState = {
+        ...state,
+        rngState: generated.rngState,
+        pending: { kind: 'OFFERS', offers: generated.offers },
+      };
+      return {
+        ok: true,
+        snapshot: buildSnapshot(nextState, nextRevision, 'CHAPTER_DECISION'),
+        appliedEffects: [],
+        nextAction: 'DECISION',
+      };
+    }
+  }
 
   if (state.seasonPhase !== 'SETTLEMENT') {
     const nextStep = state.currentStep + 1;
@@ -514,9 +545,86 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   };
 }
 
+function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
+  const command = input.command;
+  if (command.type !== 'ACCEPT_OFFER') {
+    return fail('VALIDATION_FAILED', 'ACCEPT_OFFER 처리기에 다른 명령이 전달되었다.');
+  }
+  const state = snapshot.state;
+  if (state.status !== 'ACTIVE') {
+    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 ACCEPT_OFFER를 받을 수 없다.`, {
+      reason: 'NOT_ACTIVE',
+    });
+  }
+
+  const pending = state.pending;
+  if (pending === null || pending.kind !== 'OFFERS') {
+    return fail('VALIDATION_FAILED', '결정 대기 중인 제안이 없다.', { reason: 'NO_PENDING_OFFERS' });
+  }
+  const offer = pending.offers.find((candidate) => candidate.id === command.payload.offerId);
+  if (offer === undefined) {
+    return fail('VALIDATION_FAILED', '제안 목록에 없는 offerId다.', { reason: 'OFFER_NOT_FOUND' });
+  }
+  if (state.player.profile === null) {
+    throw new RangeError('acceptOffer: ACTIVE 상태인데 player.profile이 null이다.');
+  }
+  const backgroundId = state.player.profile.backgroundId;
+
+  const ruleset = input.ruleset;
+  const background = ruleset.backgrounds.find((candidate) => candidate.id === backgroundId);
+  if (background === undefined) {
+    throw new RangeError(`acceptOffer: 룰셋에 backgroundId '${backgroundId}'가 없다.`);
+  }
+
+  const nextRevision = snapshot.revision + 1;
+  const stage: CareerStage = offer.leagueTier === 'YOUTH' ? 'YOUTH' : 'PRO';
+  const isNewClub = offer.teamId !== background.startTeamId;
+
+  const contract: Contract = {
+    id: `CTR-${nextRevision}`,
+    offerId: offer.id,
+    teamId: offer.teamId,
+    teamName: offer.teamName,
+    leagueTier: offer.leagueTier,
+    lengthSeasons: offer.lengthSeasons,
+    wageMinorPerWeek: offer.wageMinorPerWeek,
+    signingBonusMinor: offer.signingBonusMinor,
+    rolePromise: offer.rolePromise,
+    shirtNumber: offer.shirtNumber,
+    signatureType: 'AUTO',
+    signedAtRevision: nextRevision,
+  };
+
+  const nextState: CareerState = {
+    ...state,
+    stage,
+    contract,
+    pending: null,
+    context: {
+      ...state.context,
+      squadStatus: ruleset.contractRules.squadStatusByRole[offer.rolePromise],
+      tacticalFit: offer.tacticalFitEstimate,
+    },
+    relationships: isNewClub
+      ? { ...state.relationships, managerTrust: ruleset.contractRules.newClubManagerTrust }
+      : state.relationships,
+    timeline: [
+      ...state.timeline,
+      { revision: nextRevision, kind: 'CONTRACT_SIGNED', refId: contract.id, age: state.age, step: state.currentStep },
+    ],
+  };
+
+  return {
+    ok: true,
+    snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'),
+    appliedEffects: [],
+    nextAction: 'SETTLEMENT',
+  };
+}
+
 /**
- * CREATE_CAREER → UPDATE_PLAYER_DRAFT → CONFIRM_PLAYER → ADVANCE → RESOLVE_EVENT 명령을 처리하는
- * 순수 함수. throw하지 않는다: 도메인 오류는 항상 `{ ok: false }`로 돌아온다.
+ * CREATE_CAREER → UPDATE_PLAYER_DRAFT → CONFIRM_PLAYER → ADVANCE → RESOLVE_EVENT → ACCEPT_OFFER
+ * 명령을 처리하는 순수 함수. throw하지 않는다: 도메인 오류는 항상 `{ ok: false }`로 돌아온다.
  */
 export function simulate(input: SimulationInput): SimulationResult {
   if (input.ruleset.version !== input.rulesetVersion) {
@@ -551,6 +659,8 @@ export function simulate(input: SimulationInput): SimulationResult {
       return advance(input, snapshot);
     case 'RESOLVE_EVENT':
       return resolveEvent(input, snapshot);
+    case 'ACCEPT_OFFER':
+      return acceptOffer(input, snapshot);
   }
 }
 
@@ -566,8 +676,10 @@ function hasDuplicates(values: readonly string[]): boolean {
 }
 
 /**
- * stateHash 일치, 버전 일치, 배열 정렬 불변, 타임라인 revision 단조 증가, pending·status 정합을
- * 검사한다.
+ * stateHash 일치, 버전 일치, 배열 정렬 불변, 타임라인 revision 단조 증가, pending·status 정합,
+ * contract·pending(OFFERS) 정합을 검사한다. 계약 중에도 pending이 EVENT인 것은 유효하다
+ * (Phase 2부터 시즌 중 이벤트가 계약된 선수에게도 걸린다). 계약 중에 새 제안(OFFERS)이 pending인
+ * 것만 정합성 위반이다.
  */
 export function verifySnapshot(snapshot: DomainSnapshot): { ok: true } | { ok: false; reason: string } {
   if (hashState(snapshot.state) !== snapshot.stateHash) {
@@ -595,6 +707,9 @@ export function verifySnapshot(snapshot: DomainSnapshot): { ok: true } | { ok: f
 
   if (snapshot.state.status !== 'ACTIVE' && snapshot.state.pending !== null) {
     return { ok: false, reason: 'PENDING_STATUS_MISMATCH' };
+  }
+  if (snapshot.state.contract !== null && snapshot.state.pending?.kind === 'OFFERS') {
+    return { ok: false, reason: 'CONTRACT_OFFERS_CONFLICT' };
   }
 
   return { ok: true };
