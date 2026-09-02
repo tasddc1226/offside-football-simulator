@@ -14,6 +14,7 @@ function isSimulateReply(value: unknown): value is SimulateReply {
  */
 export function createWorkerSimulator(port: MessagePortLike): Simulator & { dispose(): void } {
   let nextId = 1;
+  let disposed = false;
   const pending = new Map<number, { resolve: (result: SimulationResult) => void; reject: (error: Error) => void }>();
 
   const listener = (event: { data: unknown }): void => {
@@ -35,6 +36,9 @@ export function createWorkerSimulator(port: MessagePortLike): Simulator & { disp
 
   return {
     simulate(input: SimulationInput): Promise<SimulationResult> {
+      if (disposed) {
+        return Promise.reject(new Error('createWorkerSimulator: dispose() 후에는 simulate()를 호출할 수 없다.'));
+      }
       const id = nextId++;
       return new Promise<SimulationResult>((resolve, reject) => {
         pending.set(id, { resolve, reject });
@@ -43,6 +47,7 @@ export function createWorkerSimulator(port: MessagePortLike): Simulator & { disp
       });
     },
     dispose(): void {
+      disposed = true;
       for (const entry of pending.values()) {
         entry.reject(new Error('createWorkerSimulator: dispose()로 대기 중인 요청이 취소되었다.'));
       }

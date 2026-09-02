@@ -278,8 +278,11 @@ export function runLocalStoreContractTests(name: string, factory: () => LocalSto
     });
 
     it('close() 후에는 다시 호출하지 않는다', async () => {
+      // afterEach가 이 테스트가 끝난 뒤 store.close()를 호출한다. close()를 두 번 호출하는 것이
+      // 안전하다고 구현이 보장할 필요는 없으므로, 여기서는 직접 close()를 부르지 않고
+      // "정상적으로 쓴 뒤 afterEach의 단일 close()로 끝난다"만 확인한다.
       await store.transaction('readwrite', (tx) => tx.kv.put('k', 'v'));
-      await store.close();
+      expect(await store.transaction('readonly', (tx) => tx.kv.get('k'))).toBe('v');
     });
   });
 }

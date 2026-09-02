@@ -169,4 +169,12 @@ describe('createWorkerSimulator', () => {
 
     await expect(pending).rejects.toThrow();
   });
+
+  it('dispose() 이후의 simulate() 호출은 즉시 reject한다(응답을 받을 리스너가 이미 떨어졌으므로)', async () => {
+    const { hostPort } = makeChannel();
+    const worker = createWorkerSimulator(hostPort);
+    worker.dispose();
+
+    await expect(worker.simulate(sampleInput)).rejects.toThrow();
+  });
 });
