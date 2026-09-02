@@ -1,6 +1,6 @@
 import { ATTRIBUTE_KEYS, type AttributeKey, type CareerState, type PlayerDraft } from '@offside/domain';
 import { describe, expect, it } from 'vitest';
-import { screenForCareer } from './career-route.js';
+import { guardCareerStep, screenForCareer } from './career-route.js';
 
 const FULL_DRAFT: PlayerDraft = {
   name: '김서준',
@@ -84,5 +84,50 @@ describe('screenForCareer', () => {
   it('careerId를 params.careerId로 그대로 돌려준다', () => {
     const state = baseState({ status: 'ACTIVE', pending: null, careerId: 'car_abc' });
     expect(screenForCareer(state).params).toEqual({ careerId: 'car_abc' });
+  });
+});
+
+describe('guardCareerStep', () => {
+  const missingCoreDraft = baseState({ player: { draft: { ...FULL_DRAFT, name: null }, profile: null } });
+  const missingArchetypeDraft = baseState({ player: { draft: { ...FULL_DRAFT, archetypeId: null }, profile: null } });
+  const fullDraft = baseState({ player: { draft: FULL_DRAFT, profile: null } });
+  const active = baseState({ status: 'ACTIVE', pending: { kind: 'EVENT', eventId: 'EVT-CON-002', version: 1 } });
+
+  it('DRAFT: archetypeId 없이 SCR-004 진입 → SCR-003으로 막는다', () => {
+    expect(guardCareerStep(missingArchetypeDraft, 'SCR-004')).toEqual({
+      allowed: false,
+      target: { screenId: 'SCR-003', params: { careerId: 'car_test' } },
+    });
+  });
+
+  it('DRAFT: 핵심 필드 없이 SCR-003 진입 → SCR-002로 막는다', () => {
+    expect(guardCareerStep(missingCoreDraft, 'SCR-003')).toEqual({
+      allowed: false,
+      target: { screenId: 'SCR-002', params: { careerId: 'car_test' } },
+    });
+  });
+
+  it('DRAFT: 더 앞선 화면(SCR-002)으로 되돌아오는 방문은 막지 않는다(브라우저 뒤로 가기 허용)', () => {
+    expect(guardCareerStep(fullDraft, 'SCR-002')).toEqual({ allowed: true });
+  });
+
+  it('DRAFT: 이미 채워진 단계에 맞는 화면 진입은 허용한다', () => {
+    expect(guardCareerStep(fullDraft, 'SCR-004')).toEqual({ allowed: true });
+  });
+
+  it('ACTIVE: recoveryStepActive 없이 SCR-004 재진입은 실제 목적지로 보낸다(확정 반복 방지)', () => {
+    expect(guardCareerStep(active, 'SCR-004')).toEqual({
+      allowed: false,
+      target: { screenId: 'SCR-007', params: { careerId: 'car_test' } },
+    });
+  });
+
+  it('ACTIVE: recoveryStepActive면 SCR-004(복구 코드 단계) 진입을 허용한다', () => {
+    expect(guardCareerStep(active, 'SCR-004', { recoveryStepActive: true })).toEqual({ allowed: true });
+  });
+
+  it('ACTIVE: recoveryStepActive여도 SCR-002·SCR-003은 여전히 막는다', () => {
+    expect(guardCareerStep(active, 'SCR-002', { recoveryStepActive: true }).allowed).toBe(false);
+    expect(guardCareerStep(active, 'SCR-003', { recoveryStepActive: true }).allowed).toBe(false);
   });
 });

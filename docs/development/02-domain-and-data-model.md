@@ -22,9 +22,11 @@
 type Player = {
   id: string;
   name: string;
+  gender: 'FEMALE' | 'MALE' | 'UNSPECIFIED';
   birthDate: string;
   nationalityCode: string;
   preferredFoot: 'RIGHT' | 'LEFT' | 'BOTH';
+  preferredPosition: Position;
   primaryPosition: Position;
   positionFamiliarity: Record<Position, number>;
   archetypeId: string;
@@ -40,6 +42,17 @@ type Player = {
 ```
 
 `truePotential`은 서버 정본이며 사용자에게 직접 노출하지 않는다. 정찰 정확도가 올라갈수록 공개 범위만 좁아진다.
+
+### RULE-PLY-001 선수 정체성과 시뮬레이션 입력 분리
+
+- `gender`는 캐릭터 프로필 정보다. 화면 라벨은 `여성`, `남성`, `선택하지 않음`이고 저장 값은 각각 `FEMALE`, `MALE`, `UNSPECIFIED`다. 기본 선택은 없다.
+- `gender`는 능력, Base OVR, truePotential, 성장·노쇠, 부상, 선발, 계약 금액·제안 수, 시장가치, Legacy, 시즌 도전의 입력이 될 수 없다. 이벤트 조건 DSL과 Effect target에도 등록하지 않는다.
+- 성별은 사용자의 성별을 뜻하지 않는다. 분석 이벤트·로그·오류 details에는 보내지 않고 Career Snapshot과 공개 선수 카드에만 저장한다.
+- 한국어 서사는 성별 대명사 대신 `{name}`을 사용한다. 성별에 따라 같은 사건의 결과·보상·위험을 바꾸지 않는다.
+- `preferredPosition`은 생성 시 사용자가 고른 최초 선호 포지션으로 Career 동안 보존한다. `primaryPosition`은 현재 주포지션이며 생성 시 `preferredPosition`과 같고 포지션 전환으로 바뀔 수 있다.
+- 아키타입 후보와 초기 역할 가중치는 `preferredPosition`으로 고르고, 확정 뒤 이벤트·선발·OVR은 현재 `primaryPosition`을 사용한다. 포지션 전환 서사만 두 값의 차이를 읽을 수 있다.
+
+Phase 1의 현재 런타임 필드 `PlayerDraft.position`과 `PlayerProfile.position`은 생성 시 선호 포지션과 최초 주포지션을 겸한다. 후속 구현은 DRAFT에 `gender`를 추가하고 확정 시 `preferredPosition`과 `primaryPosition`을 같은 값으로 저장해야 한다. 공개 출시 전이므로 저장 스키마를 갱신하고 golden fixture를 재생성하되, 성별 선택 때문에 RNG draw 수가 늘어나서는 안 된다.
 
 ### DATA-CAR-001 Career
 
@@ -230,3 +243,6 @@ type CareerEvent = {
 
 익명 프로필 삭제 요청 시 활성 데이터는 삭제하되, 집계 데이터는 개인 식별이 불가능한 형태만 유지한다.
 
+## WORLD STAGE 확장 경계
+
+Phase 8은 `Country`, `League`, `Competition`, `RegistrationPolicy`, `AdaptationContext`를 추가하고 기존 `Team`을 국가·리그 참조 방식으로 확장한다. 현재 `leagueTier` 기반 Team은 삭제하지 않고 ruleset 1.x 호환 어댑터로 읽는다. 필드, 불변 조건, 구 Snapshot 정책은 [WORLD STAGE 세계관 확장](15-world-stage-expansion.md)이 정본이다.

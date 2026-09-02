@@ -43,6 +43,13 @@ Orca 저장소 ID는 `41200e35-ac29-475d-8c7f-6cd38f9bc9e1`이다. 실행 파일
 6. 통과하면 오케스트레이터가 squash 머지한다(2026-09-02 사용자 지시: 머지 승인은 따로 묻지 않는다). 워크트리는 `orca worktree rm`으로 정리하고 보드에 머지 커밋을 적는다.
 7. 보드를 `completed`로 옮기고 결정이 있었으면 결정 로그에 적는다.
 
+위 2~3단계와 감시는 `docs/tracking/scripts/`의 스크립트로 한다. 상태 파일(`<T>.handle`, `<T>.dir`, `active.txt`)은 `ORCH_STATE_DIR`(기본 `~/.offside-orch`)에 둔다 — 세션 스크래치 디렉터리는 세션이 끝나면 사라지므로 거기에 두지 않는다.
+
+- `dispatch.sh <T> <suffix>`: origin/main에서 워크트리를 만들고 Sonnet 5 터미널을 연 뒤 브리프를 읽으라는 지시를 보낸다.
+- `redispatch.sh <T> "<메시지>"`: 같은 워크트리에 새 터미널을 열어 메시지를 보낸다. 워커 TUI가 멈췄을 때 쓴다(2026-09-02 T-1-008: 다른 워크트리의 죽은 `wrangler dev`가 8787을 잡고 있어 워커의 `curl`이 영원히 기다렸고, Claude 프로세스가 좀비 셸을 회수하지 못한 채 입력을 받지 않았다. 증상은 `orca terminal show`의 `lastOutputAt`이 멈추고 `--screen` 읽기에 보낸 텍스트가 안 보이는 것. 조치는 `pgrep -P <claude pid>`로 매달린 자식을 찾아 죽이고, 그래도 안 움직이면 프로세스를 죽인 뒤 `redispatch.sh`).
+- `watch.py`: `active.txt`의 터미널을 45초마다 읽어 RESULT/DIALOG/ERROR/IDLE-LONG을 한 줄씩 낸다. 오케스트레이터 세션에서 Monitor로 띄운다.
+- 긴 피드백은 터미널에 직접 붙이지 말고 파일(예: `~/.offside-orch/T-x-xxx-review.md`)로 쓰고 경로를 읽으라고 보낸다.
+
 워커는 서브에이전트 리뷰를 띄우지 않는다. 단, Orca는 `gh pr create` 앞에 `/simplify` 또는 `/review:pr` 실행을 요구하는 게이트를 두므로 `/review:pr` **1회**만 허용한다(`/simplify`와 병렬 fork는 금지. T-0-001에서 리뷰 fork 4개가 비용을 두 배로 올렸다). 워커가 막히면 오케스트레이터에게 질문을 남기고 멈춘다. 워커는 명세를 고치지 않는다. 명세가 틀렸으면 오케스트레이터가 문서를 고친 뒤 브리프를 갱신한다.
 
 PR을 열기 직전 `git fetch origin && git merge origin/main`으로 최신 main을 합친다. `pnpm-lock.yaml` 충돌은 손으로 고치지 말고 `git checkout origin/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile`로 재생성한 뒤 전체 체인을 다시 돌린다(2026-09-02 PR #4에서 lockfile 충돌로 머지가 한 번 실패함).

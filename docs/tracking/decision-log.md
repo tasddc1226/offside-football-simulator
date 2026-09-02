@@ -2,6 +2,40 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (WORLD STAGE 세계관 확장 승인)
+
+**사용자 결정**: 국내 프로에서 끝내지 않고 해외 유명 리그를 연상시키는 국제 커리어까지 세계관을 확장한다. 현재 국내 MVP 개발 순서는 유지하고, Phase 3~5의 이적·관계·대표팀과 Phase 7 운영 기반을 완성한 뒤 Phase 8 `WORLD STAGE`로 출시한다. Phase 번호는 개발 순서이며 새 ruleset의 선수는 은퇴 전 이적시장부터 해외 경로를 경험한다.
+
+**범위 결정**: 실명 리그·구단·선수·로고·유니폼은 사용하지 않는다. 첫 확장은 해외 2개국·4개 디비전·24개 가상 구단·대륙 클럽 대회 1개로 완주와 선택 분포를 검증하고, 통과 뒤 최대 5개 리그 스타일로 넓힌다. 실제 환율·세금·이민 법률을 실시간 복제하지 않고 설명 가능한 가상 등록 규칙을 쓴다.
+
+**기술 결정**: 기존 `Team` ID는 유지하고 ruleset 1.x의 `LegacyTeam`을 `WorldTeam`으로 정규화하는 로더를 둔다. 해외 이동은 Base OVR을 바꾸지 않으며 적응은 Context, 리그·대회 수준은 기록·시장가치·Legacy 정규화 입력이다. 해외 계약은 기존 `ACCEPT_OFFER` 명령 안에서 등록 재검증, 계약, 팀·국가 변경, 적응 상태, Timeline을 원자 확정한다. 등록 실패 시 기존 계약과 팀을 보존한다. 기존 Career를 새 ruleset으로 자동 승격하지 않는다.
+
+**추적**: FR-WLD-001~004, DATA-WLD-001~007, RULE-WLD-001~006, SCR-035~040, TEST-E2E-011~013. 구현 백로그는 T-8-001~010이며 정본은 [개발 명세](../development/15-world-stage-expansion.md)와 [Phase 8](../phases/phase-08-world-stage.md)이다.
+
+## 2026-09-03 (새벽, Phase 2 계획과 Phase 3 이후 병렬화 — D-24~D-32)
+
+**사용자 결정**: "Phase 2까지 순차, 그 뒤 병렬"을 확인하고 그대로 진행하라고 했다. 로드맵에 "Phase 3 이후 병렬화" 절을 추가했다: Phase 2 종료 → 공유 계약(Effect 만료·중첩, 시장가치 입력, CareerTag 인터페이스) 확정 → Phase 3·4 병렬 → Phase 5·6 병렬. LINE TEST가 도는 동안 Phase 3·4의 도메인 골격은 먼저 만들고 밸런스 수치만 기준선 뒤로 미룬다. 트랙 상한 3개.
+
+**Phase 2 계획 초안**: [phase-2-plan.md](phase-2-plan.md). 작업 14건(T-2-001~014), Wave 4개. 도메인 Wave 1·2(시즌 구조 → 선발 판정 → 통계 generator → 챕터·집계)는 순차, 화면 3건과 공유 계약 작업은 Wave 3에서 병렬, 검증·콘텐츠·LINE TEST 준비가 Wave 4. 설계 결정 D-24~D-32은 초안이며 각 Wave 투입 전에 확정한다. 열린 질문 3개(리그·컵 구조의 데이터화 정도, 경쟁자 아키타입 분포, Snapshot 크기)는 Wave 1 전에 닫는다.
+
+**투입 시점**: Phase 순서 규칙대로 Phase 1 보드가 전부 done(또는 U 대기 blocked)이 된 뒤 T-2-001을 띄운다. 브리프는 미리 쓴다.
+
+## 2026-09-02 (밤, PR #25 선수 만들기 머지 — T-1-011 투입)
+
+**결과**: T-1-008 PR #25 squash 머지(`122144f`). SCR-002(정보)·SCR-003(스타일)·SCR-004(확정·복구 코드) 화면과 최소 API 클라이언트(`apiFetch`, `getProfile`, `issueRecoveryCode`)가 들어갔다. `guardCareerStep`이 DRAFT 단계 순서를 지키고, 확정 뒤 복구 코드 단계는 `?step=recovery`로 남아 새로고침에도 유지된다. web 99 tests, e2e 18. 전체 체인·e2e를 오케스트레이터가 재실행해 확인했다. 비용 약 $22.1, 78분.
+
+**리뷰에서 잡은 것(수정 후 머지)**: (1) `apiFetch`가 body 없는 POST에 `Content-Type`을 붙이지 않아 api의 전역 `bodyGuard`(결정 4)가 `VALIDATION_FAILED`(JSON_BODY_REQUIRED)로 거부했다. 워커는 이를 "로컬 크로스 포트 구성의 일시적 400"으로 적었지만 api 테스트 하니스로 재현하니 결정적이었다 — 브라우저에서 복구 코드 발급은 항상 실패했고 e2e는 라우트를 모킹해 잡지 못했다. 상태 변경 메서드는 body가 없어도 `{}` + JSON Content-Type을 보내도록 고쳤다. (2) SCR-002 오류 화면의 "입력으로 돌아가기"가 필드 오류만 지우고 화면 상태를 바꾸지 않아 아무 동작도 하지 않았다. (3) SCR-003·004 오류 화면에 retryable이 아닐 때 빠져나갈 길이 없었다. 교훈: 워커가 "실서버 수동 검증"이라고 적어도 재현 근거(요청·응답)가 없으면 믿지 않는다. 실제로 워커가 상대한 8787 서버는 Phase 0 워크트리의 죽은 `wrangler dev`였다.
+
+**받아들인 것**: 복구 코드 표시에 Tailwind `font-mono` 사용(`--os-font-mono` 토큰은 `packages/ui` 후속). ADVANCE 직후 도착 화면이 가중 랜덤이라 e2e는 SCR-007 계열(path·tryout·event) 중 하나로 검증. 포지션군 탭을 바꿔도 이전 선택을 유지(라디오는 실제 선택값 기준).
+
+**후속**: `--os-font-mono` 토큰 추가(packages/ui, M 백로그 또는 T-1-014와 함께). `a11y.spec.ts`의 `analyze()` 전 렌더 대기(T-1-014). `/career/$careerId` 로더 not-found 처리(T-1-012, 기존). SCR-004에서 ADVANCE만 실패했을 때 '재시도'가 CONFIRM_PLAYER부터 다시 보내는 문제(확정 뒤에는 ADVANCE만 재시도해야 함) — 작은 수정, T-1-009 머지 뒤 화면 정리 때 함께.
+
+**운영**: T-1-008 첫 세션은 Stop 훅 뒤 `curl localhost:8787`이 죽은 서버에 영원히 걸려 Claude TUI가 입력을 받지 않았다. 프로세스를 정리하고 같은 워크트리에 새 세션을 띄워 리뷰 파일을 읽게 했다(`docs/tracking/scripts/redispatch.sh`). 투입·감시 스크립트를 저장소 `docs/tracking/scripts/`로 옮기고 상태 디렉터리를 `~/.offside-orch`로 고정했다(세션 스크래치는 사라진다).
+
+**콘텐츠 정본**: 사용자가 PR #24로 `docs/content/kickoff/`(아키타입 바이블, 이벤트 카탈로그 48개, 시즌 도전·앨범, 밸런스 목표, 종이 플레이테스트 키트, 제작 백로그)를 머지했다. 백로그 문서대로 콘텐츠가 `SHIPPABLE`이 되기 전에는 개발 작업을 만들지 않는다. Phase 2 계획 때 입력으로 쓴다.
+
+**다음**: T-1-011(동기화 배선) 투입. T-1-009 PR 대기. T-1-011 머지 뒤 T-1-012, 그다음 T-1-013·014 동시.
+
 ## 2026-09-02 (밤, PR #23 web 엔진 배선 머지 — Wave 3 투입)
 
 **결과**: T-1-007 PR #23 squash 머지(`b400922`). 브라우저에서 온보딩 → KICKOFF → DRAFT 커리어 → 허브 카드 → 삭제까지 IndexedDB(Dexie)와 Web Worker 시뮬레이터로 동작한다. `createAppEngine`은 팩·룰셋 호환성을 검사하고, `career-actions`가 명령마다 분석 이벤트를 보내며, `advance`는 `selectEligibleEvents` 결과를 payload로 넣는다(단위 테스트가 실제 전송 payload를 검사). `screenForCareer`가 커리어 상태 → 화면을 결정한다. ui-store는 LocalStore kv `ui:settings`에 영속화. web 53 tests, e2e 11, 초기 청크 165KB gzip. 전체 체인·e2e를 오케스트레이터가 재실행해 확인했다. 비용 약 $28.1, 87분.
@@ -287,3 +321,4 @@
 | GRAC 등급분류 개인 신청 가능 여부, 수수료 | Phase 1 중 | 사용자 |
 | toss 채널 다크 팔레트가 검토를 통과하는지 | 첫 검토 요청 | 사용자·오케스트레이터 |
 | 토스 게임센터 리더보드 도입 여부(Phase 7) | Phase 6 말 | 사용자 |
+| WORLD STAGE 가상 리그명·국가별 축구 문화·24개 구단 브랜드 확정 | T-8-008 착수 전 | 사용자·콘텐츠 |

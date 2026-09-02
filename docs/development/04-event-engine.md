@@ -59,7 +59,7 @@ type CareerPhase =
 | 접두 | 필드 예 |
 |---|---|
 | `career.*` | age, stage(`YOUTH`/`PRO`), currentRole, pathDecision, tags, proSeasons |
-| `player.*` | primaryPosition, positionGroup, archetypeId, baseOvr, attributes.* |
+| `player.*` | preferredPosition, primaryPosition, positionGroup, archetypeId, baseOvr, attributes.* |
 | `state.*` | form, fitness, morale |
 | `context.*` | tacticalFit, managerTrust, squadStatus, competitionRank |
 | `relationships.*` | managerTrust, captain, rival, fans, agent |
@@ -69,6 +69,8 @@ type CareerPhase =
 | `rng.*` | injuryRoll 같은 사전 추첨 값 |
 
 종이 프로토타입이 쓰는 필드는 [콘텐츠 README](../content/README.md)에 있으며 pack으로 옮길 때 이 표에 없는 필드는 먼저 등록한다. 화이트리스트 상수는 `packages/content`가 소유하고 이 표와 같은 순서로 적는다. 나이는 `career.age` 하나만 쓴다(`player.age` 없음).
+
+`player.gender`는 조건 DSL 화이트리스트와 Effect target에 넣지 않는다(RULE-PLY-001). 성별에 따라 사건의 성공 확률·보상·위험·계약 경로를 나누지 않는다. 포지션 전환처럼 최초 선호와 현재 역할의 차이가 서사 핵심인 이벤트만 `preferredPosition`과 `primaryPosition`을 함께 읽을 수 있다.
 
 예시:
 
@@ -137,4 +139,3 @@ type CareerPhase =
 - 이벤트별 평균 OVR·관계·시장가치 delta.
 
 지표는 밸런스 진단용이며 개인 결과를 서버에서 임의 교정하지 않는다.
-

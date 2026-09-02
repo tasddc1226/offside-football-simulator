@@ -161,6 +161,8 @@ Archive 본문은 클라이언트가 계산한 LegacyResult를 포함한다. 서
 
 각 명령은 `commandId`, `expectedRevision`, `payload`를 받고 확정 Snapshot과 `nextAction`을 돌려준다. 멱등성·revision·checkpoint 규칙은 [저장·버전](05-save-and-versioning.md)을 따른다.
 
+Phase 8 WORLD STAGE는 새 서버 명령을 만들지 않는다. 해외 제안 협상·확정은 `CMD-CON-001~004`, 적응 선택은 `CMD-EVT-001`, 국제 시즌·경기는 `CMD-SIM-001~003`을 재사용한다. 확장 payload와 원자 등록 판정은 [WORLD STAGE 명세](15-world-stage-expansion.md)를 따른다.
+
 ## 계약 테스트
 
 - `packages/contracts`의 Zod 스키마와 서버 응답의 CI 검증.

@@ -1,6 +1,6 @@
 # Phase 1 실행 계획 — 커리어 수직 슬라이스
 
-정본: [`docs/phases/phase-01-career-vertical-slice.md`](../phases/phase-01-career-vertical-slice.md). 이 문서는 그 범위를 워커 작업(T-1-xxx)으로 쪼개고, 설계 문서에 비어 있던 항목을 오케스트레이터 결정(D-1~D-18)으로 채운다. 브리프는 이 문서의 결정을 그대로 따른다. 결정을 바꾸려면 결정 로그에 사유를 남긴다.
+정본: [`docs/phases/phase-01-career-vertical-slice.md`](../phases/phase-01-career-vertical-slice.md). 이 문서는 그 범위를 워커 작업(T-1-xxx)으로 쪼개고, 설계 문서에 비어 있던 항목을 오케스트레이터 결정(D-1~D-23)으로 채운다. 브리프는 이 문서의 결정을 그대로 따른다. 결정을 바꾸려면 결정 로그에 사유를 남긴다.
 
 투입 규칙: Phase 0 보드가 모두 done(또는 U-00x 대기 blocked)이 된 뒤에 Wave 1을 띄운다(결정 로그 2026-09-02 "Phase 순서"). 동시 워커는 최대 4명, 서로 다른 패키지에만 배치한다.
 
@@ -12,7 +12,7 @@
 
 ### D-1 포지션과 묶음
 
-`Position = 'GK' | 'CB' | 'FB' | 'DM' | 'CM' | 'AM' | 'W' | 'ST'`. 묶음 `PositionGroup = 'GK' | 'DEF' | 'MID' | 'FWD'` (CB·FB → DEF, DM·CM·AM → MID, W·ST → FWD). 프로토타입 김서준 "AM/W 인사이드 포워드"는 `position: 'W'`, `archetypeId: 'inside-forward'`.
+`Position = 'GK' | 'CB' | 'FB' | 'DM' | 'CM' | 'AM' | 'W' | 'ST'`. 묶음 `PositionGroup = 'GK' | 'DEF' | 'MID' | 'FWD'` (CB·FB → DEF, DM·CM·AM → MID, W·ST → FWD). 프로토타입 김서준 "AM/W 인사이드 포워드"는 생성 DRAFT의 선호 `position: 'W'`, `archetypeId: 'inside-forward'`다. 확정 시 `preferredPosition`과 `primaryPosition`을 모두 `W`로 시작한다(D-23).
 
 ### D-2 아키타입 카탈로그 (룰셋 데이터)
 
@@ -55,8 +55,8 @@ T-0-002가 프로토타입 능력을 `ATTRIBUTE_KEYS`로 옮길 때 슈팅력을
 ### D-7 DRAFT → ACTIVE 명령 셋
 
 - `CREATE_CAREER` payload는 `{ careerId, seed, simulationMode, rulesetVersion, contentPackVersion }`로 줄인다. 결과 `status: 'DRAFT'`, `stage: 'YOUTH'`, `age: 17`, `currentStep: 0`, `seasonPhase: 'PRESEASON'`, 능력 전부 0, `player.draft` 전 필드 null, `player.profile: null`, `rngState = seedRng(seed)`(draws 0). checkpoint `CAREER_CREATED`.
-- `UPDATE_PLAYER_DRAFT` payload `{ draft: Partial<PlayerDraft> }`. 준 필드만 검증 후 병합. 검증: `name` trim 후 2~12자, 제어문자·줄바꿈 금지; `nationalityCode`는 룰셋 `nationalities`에 있어야 함; `preferredFoot ∈ LEFT|RIGHT|BOTH`; `position ∈ Position`; `archetypeId`는 룰셋에 있고 `position`과 일치(둘 다 주면 같이 검사, archetype만 바꾸면 현재 position 기준); `backgroundId`는 룰셋에 있어야 함. DRAFT 상태에서만 허용. checkpoint `CAREER_CREATED`, rng 소비 없음.
-- `CONFIRM_PLAYER` payload `{}`. draft 6개 필드가 모두 채워져야 한다(아니면 `VALIDATION_FAILED`, details `{ missing: [...] }`). 순서대로 rng 소비: (1) `ATTRIBUTE_KEYS` 순서로 키마다 `rollInt(-2, 2)` 20회 → `attributes[k] = clamp(template[k] + backgroundDelta[k] + jitter, 1, 99)`, (2) truePotential, (3) scoutedMin 편차, (4) scoutedMax 편차. 그다음 `baseOvr`(D-4), state/context/relationships는 배경 값, `status: 'ACTIVE'`, `currentStep: 12`, `seasonPhase: 'SETTLEMENT'`(Phase 1은 유스 시즌을 건너뛴 채 정산 시점에서 시작한다. Phase 2가 그 앞에 시즌을 넣는다), `player.profile` 채움, 타임라인 `CAREER_CONFIRMED`. checkpoint `CAREER_CREATED`, nextAction `'ADVANCE'`.
+- `UPDATE_PLAYER_DRAFT` payload `{ draft: Partial<PlayerDraft> }`. 준 필드만 검증 후 병합. 검증: `name` trim 후 2~12자, 제어문자·줄바꿈 금지; `gender ∈ FEMALE|MALE|UNSPECIFIED`; `nationalityCode`는 룰셋 `nationalities`에 있어야 함; `preferredFoot ∈ LEFT|RIGHT|BOTH`; `position ∈ Position`이며 생성 UI에서는 선호 포지션으로 부름; `archetypeId`는 룰셋에 있고 `position`과 일치(둘 다 주면 같이 검사, archetype만 바꾸면 현재 position 기준); `backgroundId`는 룰셋에 있어야 함. DRAFT 상태에서만 허용. checkpoint `CAREER_CREATED`, rng 소비 없음.
+- `CONFIRM_PLAYER` payload `{}`. draft 7개 필드가 모두 채워져야 한다(아니면 `VALIDATION_FAILED`, details `{ missing: [...] }`). 순서대로 rng 소비: (1) `ATTRIBUTE_KEYS` 순서로 키마다 `rollInt(-2, 2)` 20회 → `attributes[k] = clamp(template[k] + backgroundDelta[k] + jitter, 1, 99)`, (2) truePotential, (3) scoutedMin 편차, (4) scoutedMax 편차. 성별은 draw를 소비하지 않는다. 그다음 `baseOvr`(D-4), `preferredPosition = draft.position`, `primaryPosition = draft.position`, state/context/relationships는 배경 값, `status: 'ACTIVE'`, `currentStep: 12`, `seasonPhase: 'SETTLEMENT'`(Phase 1은 유스 시즌을 건너뛴 채 정산 시점에서 시작한다. Phase 2가 그 앞에 시즌을 넣는다), `player.profile` 채움, 타임라인 `CAREER_CONFIRMED`. checkpoint `CAREER_CREATED`, nextAction `'ADVANCE'`.
 
 확정 전에는 어떤 명령도 rng를 소비하지 않는다(테스트로 고정). 기존 fixture의 `CREATE_CAREER`가 능력을 직접 받던 형태는 사라진다. golden fixture `career-01`은 새 명령 셋(CREATE → UPDATE_PLAYER_DRAFT → CONFIRM_PLAYER → …)으로 다시 만들고, 김서준 golden은 "확정 후 능력이 fixture 능력과 같도록" jitter를 포함한 값이 아니라 **Base OVR 계산 테스트에 프로토타입 능력을 직접 넣어** 59를 검증한다. 결정론 1,000회·복제 drift 테스트는 새 golden으로 유지한다.
 
@@ -187,6 +187,15 @@ Playwright(`@playwright/test`, Chromium만) + `@axe-core/playwright`. 위치 `ap
 - E2E는 세 묶음: 기본(스텁 API), `E2E_WITH_API=1`(로컬 wrangler), `E2E_PREVIEW=1`(성능). CI 연결은 T-0-010.
 - 버그는 T-1-014가 고치지 않고 표와 PR 본문에 적는다. 수정은 오케스트레이터가 별도 작업으로 낸다.
 
+### D-23 선수 성별과 선호 포지션 (T-1-016)
+
+- 선수 생성에 `gender: 'FEMALE' | 'MALE' | 'UNSPECIFIED'`를 필수 선택으로 추가한다. UI는 `여성`, `남성`, `선택하지 않음`이며 기본 선택은 없다. 이 값은 캐릭터 정보이지 사용자 프로필 정보가 아니다.
+- `gender`는 RNG, 능력·OVR·잠재력·성장·부상·선발·계약·시장가치·Legacy, content trigger/Effect의 입력이 아니다. 클라이언트 분석 이벤트와 서버 로그에도 보내지 않는다.
+- 생성 DRAFT의 기존 `position`은 UI에서 `선호 포지션`으로 부른다. 확정 프로필은 불변 `preferredPosition`과 변경 가능한 `primaryPosition`을 저장하고 둘 다 DRAFT `position`으로 초기화한다.
+- T-1-008까지 저장된 개발용 DRAFT·fixture는 `gender: 'UNSPECIFIED'`, 확정 프로필의 기존 `position`은 두 포지션 필드로 올리는 명시적 migration fixture를 둔다. 공개 사용자 데이터는 아직 없으므로 `schemaVersion`은 D-13대로 1을 유지하고 golden hash를 재생성한다.
+- 한국어 콘텐츠는 성별 대명사 대신 `{name}`을 쓴다. 성별별 별도 성공률·보상·위험 변형은 금지한다.
+- T-1-016은 진행 중인 T-1-009·011이 main에 정리된 뒤 투입한다. domain·contracts·web·fixtures를 한 작업으로 바꾸어 중간 스키마 불일치가 main에 남지 않게 한다.
+
 ## 3. 작업 분해
 
 | ID | 패키지 | 작업 | 선행 | Wave |
@@ -206,6 +215,7 @@ Playwright(`@playwright/test`, Chromium만) + `@axe-core/playwright`. 위치 `ap
 | T-1-012 | web + platform + engine-client + api(작게) | SCR-030 데이터 섹션: 복구 코드 재발급·복구 입력(RECOVERY_CONFLICT 선택)·복구 뒤 대조, 프로필 삭제, 로그아웃, 이 기기 데이터 삭제; 법적 문서 본문; api 복구·삭제 라우트의 contracts 스키마 채택 (D-20) | T-1-004, T-1-006, T-1-007, T-1-011 | 4 |
 | T-1-013 | api + web + platform + contracts | Google OIDC start/callback/merge/unlink(가짜 OIDC로 E2E), SCR-030 Google 연결 행, 병합 선택 화면 (D-21, 실검증 U-003) | T-1-004, T-1-012 | 4 |
 | T-1-014 | web(e2e) + docs | TEST-E2E-007·008·009, 키보드 전용 주 여정, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, Phase 1 완료 조건 표 (D-22) | T-1-008, T-1-009, T-1-011, T-1-012 | 4 |
+| T-1-016 | domain + contracts + web + fixtures | DRAFT 성별, 선호/현재 포지션 분리, SCR-002·004와 저장 migration·결정론 fixture (D-23) | T-1-009, T-1-011 | 4 |
 
 Wave 1은 4개가 서로 다른 패키지라 동시에 띄운다. T-1-005·T-1-015는 T-1-001과 T-1-002가 모두 머지된 직후, T-1-006은 T-1-005 머지 직후 띄운다(짧은 작업). 남은 U-00x: U-002(CI, T-0-010), U-003(Google, T-1-013 실검증).
 

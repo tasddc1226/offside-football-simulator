@@ -25,6 +25,7 @@
 | SEASON 3: DERBY | 라이벌·라커룸 관계 |
 | SEASON 4: EXTRA TIME | 노장·부상 복귀·은퇴 번복 |
 | SEASON 5: THE FINAL | 대표팀·국제대회 중심 엔딩 |
+| SEASON 6: WORLD STAGE | 가상 해외 리그·대륙 클럽 대회 |
 
 ## 밸런스 검토 질문
 
@@ -50,4 +51,3 @@
 - [ ] 콘텐츠 pack의 잘못된 참조가 production 전에 차단된다.
 - [ ] 구/신 ruleset Career E2E를 매 릴리스 실행한다.
 - [ ] 장애 시 신규 쓰기 차단과 기존 보관함 읽기를 분리할 수 있다.
-
