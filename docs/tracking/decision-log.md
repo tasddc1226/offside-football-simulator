@@ -8,6 +8,8 @@
 
 **머지**: T-2-008 수정 커밋 `401e62e`(exact locator 분리·클릭 뒤 `step k/12`/pathname 변화 대기, `createCareer`의 DEV 전용 `localStorage['offside:e2e-seed']` 오버라이드 + `seedDeterministicChapterRun`, README) 검토 통과 → main 위 전체 체인 e2e 62 통과 → PR #44 `4f11110` 01:56 머지. 남은 위험(T-2-011 e2e 견고화 항목으로): `Promise.race`의 패자 `waitForURL`이 60s 뒤 늦게 거부되는 구조, `/legal/privacy` axe `scrollable-region-focusable`가 `--repeat-each 3`에서 2/96 실패(기존 플레이크), 시드 상수는 콘텐츠·룰셋 변경 시 재선정 필요. T-2-009에 `MAIN UPDATED 4f11110` 전송.
 
+**PR #45 머지**: T-2-009가 `MAIN UPDATED 4f11110`을 받아 main을 머지(`56ae745`: labels.ts 양쪽 유지, PR #44의 season.spec exact locator·step 대기 구현을 `helpers/player-creation.ts`로 옮겨 유지 + `resolveCurrentChapterScreen`, a11y 중복 import 정리) → main 위 전체 체인 e2e 66 통과 → PR #45 `1065272` 02:08 머지. 후속(Phase 3 브리프에 배정): (a) 결산 뒤 `season`이 비워져 다이어리의 step 요약("3승 1무" 등 STEP_PASSED 연대기)이 사라짐 — 도메인이 `SeasonResult`에 step별 요약을 남겨야 함, (b) SCR-006 유소년 변형은 단위 테스트만 있고 e2e·axe 미커버(유소년 fixture 필요), (c) 시즌 결산 화면의 D-29 "경계 회귀" 캡션 문구는 콘텐츠 검토 대상. T-2-011에 `MAIN UPDATED 1065272` 전송(web 항목 착수, `/legal/privacy` axe 플레이크 재현 시 최소 수정 허용).
+
 **운영**: T-2-008 워커 TUI가 입력을 받지 않아(`send` accepted, 화면 미반영, 매달린 자식 없음) 프로세스를 끝내고 `redispatch.sh`로 같은 워크트리에 새 터미널을 띄워 지시 파일 경로만 보냈다. 멀티라인 `orca terminal send`는 입력창에 들어가지 않는다 — 긴 지시는 파일로 쓰고 한 줄로 경로를 보낸다.
 
 **투입**: T-2-011(Phase 2 완료 조건 검증, 워크트리 `T-2-011-phase2-verify`, 포트 5187)을 3번째 워커로 투입. #44·#45가 아직 main에 없으므로 브리프에 "도메인·API 항목 먼저(fixture 3종→결정론→집계→career-03→B > A→후속 3건), web 항목(세션 길이·e2e 3회·TrainingFocus import)은 `MAIN UPDATED` 뒤" 절을 추가했다. #45 후속으로 결산 뒤 `season` 초기화로 다이어리 step 요약("3승 1무")이 사라지는 문제(도메인이 `SeasonResult`에 step 요약을 남겨야 함)를 T-2-011 또는 Phase 3 초에 배정한다.
