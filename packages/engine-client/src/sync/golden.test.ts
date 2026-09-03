@@ -5,9 +5,20 @@ import {
   type CommandLogEntry,
   type PutCareerBody,
 } from '@offside/contracts';
-import { career01, career01EngineCommands, rulesetProto } from '@offside/fixtures';
+import type { SimulationMode } from '@offside/domain';
+import {
+  career01,
+  career01EngineCommands,
+  career02Season,
+  career02SeasonEngineCommands,
+  rulesetProto,
+  type EngineCommand,
+} from '@offside/fixtures';
 import { describe, expect, it } from 'vitest';
 import { createEngineClient } from '../engine.js';
+import { forkCareerByReplay } from '../fork.js';
+import { importCareerFromServer } from '../import.js';
+import { replayCommandLog } from '../replay.js';
 import { inlineSimulator } from '../simulator/index.js';
 import { MemoryLocalStore } from '../store/memory.js';
 import { createSyncClient } from './client.js';
@@ -150,5 +161,144 @@ describe('sync 클라이언트 golden 통합', () => {
 
     const nextBody = await engine.buildSyncBody(careerId);
     expect(nextBody).toBeNull();
+  });
+});
+
+/**
+ * T-2-006: career01 뒤에 이어 career-02-season(FAST·CHAPTER)을 재생하는 명령 로그로 sync
+ * 클라이언트·`replayCommandLog`·`forkCareerByReplay`·`importCareerFromServer`가 모두 golden과
+ * 같은 hash를 내는지 검사한다(시즌 명령 START_SEASON·RESOLVE_ROLE·ADVANCE·SETTLE_SEASON 포함).
+ */
+function makeIdGenerator(prefix: string): () => string {
+  let counter = 0;
+  return () => `${prefix}-${counter++}`;
+}
+
+function buildCareer01ThenSeasonCommands(mode: SimulationMode): EngineCommand[] {
+  const newId = makeIdGenerator(`golden-season-${mode}`);
+  return [...career01EngineCommands(newId), ...career02SeasonEngineCommands(mode, newId, career01.golden.revision)];
+}
+
+async function runCommandsOnFreshStore(commands: EngineCommand[], createdServiceSeasonId: string) {
+  const store = new MemoryLocalStore();
+  const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
+  const careerId = career01.createCareer.careerId;
+
+  for (const command of commands) {
+    const result = await engine.execute({
+      careerId,
+      command,
+      ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId } : {}),
+    });
+    if (!result.ok) {
+      throw new Error(`시즌 golden 명령 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+    }
+  }
+
+  return { store, engine, careerId };
+}
+
+describe('시즌 명령을 포함한 golden: sync 클라이언트·replay·fork·import', () => {
+  it.each(['FAST', 'CHAPTER'] as const)(
+    '%s 모드: sync 클라이언트로 career01+시즌 전체를 동기화하면 최종 revision·hash가 golden과 같다',
+    async (mode) => {
+      const store = new MemoryLocalStore();
+      const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
+      const server = createFakeServer();
+      let reqCounter = 0;
+
+      const sync = createSyncClient({
+        engine,
+        store,
+        fetch: server.fetchFn,
+        baseUrl: '/v1',
+        now: () => '2026-01-01T00:00:00.000Z',
+        newId: () => `req-season-${reqCounter++}`,
+      });
+
+      const careerId = career01.createCareer.careerId;
+      for (const command of buildCareer01ThenSeasonCommands(mode)) {
+        const result = await engine.execute({
+          careerId,
+          command,
+          ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'season-2025-26' } : {}),
+        });
+        if (!result.ok) {
+          throw new Error(`시즌 golden 명령 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+        }
+        sync.notifyCommitted(careerId, result.domainSnapshot);
+        await sync.flush(careerId);
+      }
+
+      const serverRow = server.db.get(careerId);
+      expect(serverRow?.revision).toBe(career02Season.golden[mode].revision);
+      expect(serverRow?.snapshot.stateHash).toBe(career02Season.golden[mode].stateHash);
+    },
+  );
+
+  it.each(['FAST', 'CHAPTER'] as const)('%s 모드: replayCommandLog가 저장된 로그에서 golden과 같은 hash를 낸다', async (mode) => {
+    const commands = buildCareer01ThenSeasonCommands(mode);
+    const { store, careerId } = await runCommandsOnFreshStore(commands, 'season-2025-26');
+
+    const entries = await store.transaction('readonly', (tx) => tx.commandLog.listSince(careerId, 0));
+    const result = await replayCommandLog(
+      inlineSimulator,
+      null,
+      entries,
+      { rulesetVersion: career01.rulesetVersion, contentPackVersion: career01.contentPackVersion },
+      rulesetProto,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.snapshot.revision).toBe(career02Season.golden[mode].revision);
+    expect(result.snapshot.stateHash).toBe(career02Season.golden[mode].stateHash);
+  });
+
+  it.each(['FAST', 'CHAPTER'] as const)(
+    '%s 모드: forkCareerByReplay가 시즌 필드를 그대로 옮기고 careerId·hash만 다른 상태를 만든다',
+    async (mode) => {
+      const commands = buildCareer01ThenSeasonCommands(mode);
+      const { store, engine, careerId } = await runCommandsOnFreshStore(commands, 'season-2025-26');
+
+      const before = await engine.loadCareer(careerId);
+      if (!before.ok) throw new Error('unreachable');
+
+      const result = await forkCareerByReplay({ engine, store, newId: makeIdGenerator(`fork-season-${mode}`) }, careerId);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error('unreachable');
+
+      const forked = await engine.loadCareer(result.newCareerId);
+      if (!forked.ok) throw new Error('unreachable');
+
+      expect(forked.snapshot.revision).toBe(career02Season.golden[mode].revision);
+      expect(forked.snapshot.stateHash).not.toBe(before.snapshot.stateHash);
+      // FootballSeason은 careerId를 담지 않으므로 fork 뒤에도 그대로 같아야 한다.
+      expect(forked.snapshot.state.season).toEqual(before.snapshot.state.season);
+      expect(forked.snapshot.state.seasonHistory).toEqual(before.snapshot.state.seasonHistory);
+    },
+  );
+
+  it.each(['FAST', 'CHAPTER'] as const)('%s 모드: importCareerFromServer가 시즌 로그를 새 로컬 store로 복원한다', async (mode) => {
+    const commands = buildCareer01ThenSeasonCommands(mode);
+    const { store: sourceStore, careerId } = await runCommandsOnFreshStore(commands, 'season-2025-26');
+
+    const snapshot = await sourceStore.transaction('readonly', (tx) => tx.snapshots.getLatest(careerId));
+    const commandEntries = await sourceStore.transaction('readonly', (tx) => tx.commandLog.listSince(careerId, 0));
+    if (!snapshot) throw new Error('스냅샷이 없다.');
+
+    const targetStore = new MemoryLocalStore();
+    const importResult = await importCareerFromServer(
+      targetStore,
+      { snapshot, commands: commandEntries },
+      { createdServiceSeasonId: 'season-2025-26', now: '2026-01-01T00:00:00.000Z' },
+    );
+
+    expect(importResult.ok).toBe(true);
+    if (!importResult.ok) throw new Error('unreachable');
+    expect(importResult.revision).toBe(career02Season.golden[mode].revision);
+
+    const restored = await targetStore.transaction('readonly', (tx) => tx.snapshots.getLatest(careerId));
+    expect(restored?.stateHash).toBe(career02Season.golden[mode].stateHash);
   });
 });

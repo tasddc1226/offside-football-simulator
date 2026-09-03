@@ -10,12 +10,20 @@ import {
   sha256Hex,
   simulate,
   verifySnapshot,
-  type Command,
   type DomainSnapshot,
   type JsonValue,
-  type SimulationResult,
+  type SimulationMode,
 } from '@offside/domain';
-import { career01, rulesetProto } from '@offside/fixtures';
+import {
+  career01,
+  career01EngineCommands,
+  career02Season,
+  career02SeasonEngineCommands,
+  career03Underdog,
+  career03UnderdogEngineCommands,
+  rulesetProto,
+  type EngineCommand,
+} from '@offside/fixtures';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WRANGLER_CONFIG_PATH = path.resolve(__dirname, '../../wrangler.jsonc');
@@ -31,56 +39,63 @@ function readCompatibilityDate(): string {
   return match[1] as string;
 }
 
+function runOrThrow(
+  snapshot: DomainSnapshot | null,
+  command: EngineCommand,
+  versions: { rulesetVersion: string; contentPackVersion: string },
+): DomainSnapshot {
+  const result = simulate({
+    snapshot,
+    command,
+    ruleset: rulesetProto,
+    rulesetVersion: versions.rulesetVersion,
+    contentPackVersion: versions.contentPackVersion,
+  });
+  if (!result.ok) {
+    throw new Error(`${command.type} 실패: ${result.error.code} ${result.error.message}`);
+  }
+  return result.snapshot;
+}
+
 /**
  * career01 fixture를 Node에서 직접 재생한다. `hash-probe.worker.ts`의 `runCareer01`과 같은
  * 로직이지만 이 파일은 workerd로 번들되지 않고 Node(Vitest) 프로세스에서 그대로 실행된다.
  */
 function runCareer01OnNode(): DomainSnapshot {
-  const createCommand: Command & { commandId: string; expectedRevision: number } = {
-    type: 'CREATE_CAREER',
-    commandId: 'node-create',
-    expectedRevision: 0,
-    payload: {
-      careerId: career01.createCareer.careerId,
-      seed: career01.createCareer.seed,
-      simulationMode: career01.createCareer.simulationMode,
-      rulesetVersion: career01.rulesetVersion,
-      contentPackVersion: career01.contentPackVersion,
-    },
-  };
-
-  let result: SimulationResult = simulate({
-    snapshot: null,
-    command: createCommand,
-    ruleset: rulesetProto,
-    rulesetVersion: career01.rulesetVersion,
-    contentPackVersion: career01.contentPackVersion,
-  });
-  if (!result.ok) {
-    throw new Error(`CREATE_CAREER 실패: ${result.error.code} ${result.error.message}`);
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career01EngineCommands(() => `node-c1-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career01);
   }
-  let snapshot = result.snapshot;
+  if (snapshot === null) throw new Error('career01 명령 목록이 비어 있다.');
+  return snapshot;
+}
 
-  career01.commands.forEach((rawCommand, index) => {
-    const command = {
-      ...(rawCommand as Command),
-      commandId: `node-${index + 1}`,
-      expectedRevision: snapshot.revision,
-    } as Command & { commandId: string; expectedRevision: number };
+/** T-2-006: career01 뒤에 이어 career02Season(mode)을 Node에서 재생한다. `hash-probe.worker.ts`의 `runCareer02Season`과 같은 로직. */
+function runCareer02SeasonOnNode(mode: SimulationMode): DomainSnapshot {
+  let counter = 0;
+  const newId = () => `node-c2-${mode}-${counter++}`;
 
-    result = simulate({
-      snapshot,
-      command,
-      ruleset: rulesetProto,
-      rulesetVersion: career01.rulesetVersion,
-      contentPackVersion: career01.contentPackVersion,
-    });
-    if (!result.ok) {
-      throw new Error(`명령 ${index + 1}(${command.type}) 실패: ${result.error.code} ${result.error.message}`);
-    }
-    snapshot = result.snapshot;
-  });
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career01EngineCommands(newId)) {
+    snapshot = runOrThrow(snapshot, command, career01);
+  }
+  if (snapshot === null) throw new Error('career01 선행 재생이 비어 있다.');
 
+  for (const command of career02SeasonEngineCommands(mode, newId, snapshot.revision)) {
+    snapshot = runOrThrow(snapshot, command, career02Season);
+  }
+  return snapshot;
+}
+
+/** T-2-006: career03Underdog을 Node에서 재생한다. `hash-probe.worker.ts`의 `runCareer03Underdog`과 같은 로직. */
+function runCareer03UnderdogOnNode(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career03UnderdogEngineCommands(() => `node-c3-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career03Underdog);
+  }
+  if (snapshot === null) throw new Error('career03Underdog 명령 목록이 비어 있다.');
   return snapshot;
 }
 
@@ -146,25 +161,56 @@ describe('런타임 간 state hash 일치(Node ↔ workerd)', { timeout: 15000 }
     return (await res.json()) as T;
   }
 
-  it('career01 재생의 revision·stateHash·rngState.draws가 Node·workerd·golden에서 모두 같다', async () => {
-    const nodeSnapshot = runCareer01OnNode();
+  type ReplayGolden = { revision: number; stateHash: string; rngStateDraws: number };
+
+  type WorkerdReplayResult = { revision: number; stateHash: string; rngStateDraws: number; verifySnapshotOk: boolean };
+
+  /**
+   * T-2-006 API-CAR-003: career01뿐 아니라 career-02-season(FAST·CHAPTER)·career-03-underdog까지
+   * golden 전부를 Node·workerd 양쪽에서 재생해 revision·stateHash·rngState.draws가 golden과 같은지
+   * 검사한다. Node 쪽 재생 시간(ms)도 재서 PR 본문 표(T-2-003 domain 계산 시간과 나란히)에 옮긴다.
+   */
+  it.each([
+    { label: 'career-01', runOnNode: runCareer01OnNode, probeRequest: { kind: 'replay' as const }, golden: career01.golden },
+    {
+      label: 'career-02-season(FAST)',
+      runOnNode: () => runCareer02SeasonOnNode('FAST'),
+      probeRequest: { kind: 'replaySeason' as const, mode: 'FAST' as const },
+      golden: career02Season.golden.FAST,
+    },
+    {
+      label: 'career-02-season(CHAPTER)',
+      runOnNode: () => runCareer02SeasonOnNode('CHAPTER'),
+      probeRequest: { kind: 'replaySeason' as const, mode: 'CHAPTER' as const },
+      golden: career02Season.golden.CHAPTER,
+    },
+    {
+      label: 'career-03-underdog',
+      runOnNode: runCareer03UnderdogOnNode,
+      probeRequest: { kind: 'replayUnderdog' as const },
+      golden: career03Underdog.golden,
+    },
+  ])('$label 재생의 revision·stateHash·rngState.draws가 Node·workerd·golden에서 모두 같다', async ({ runOnNode, probeRequest, golden }) => {
+    const typedGolden = golden as ReplayGolden;
+
+    const nodeStartedAt = performance.now();
+    const nodeSnapshot = runOnNode();
+    const nodeElapsedMs = performance.now() - nodeStartedAt;
     const nodeVerify = verifySnapshot(nodeSnapshot);
 
-    const workerdResult = await fetchProbe<{
-      revision: number;
-      stateHash: string;
-      rngStateDraws: number;
-      verifySnapshotOk: boolean;
-    }>({ kind: 'replay' });
+    const workerdResult = await fetchProbe<WorkerdReplayResult>(probeRequest);
 
-    expect(nodeSnapshot.revision).toBe(career01.golden.revision);
-    expect(nodeSnapshot.stateHash).toBe(career01.golden.stateHash);
-    expect(nodeSnapshot.state.rngState.draws).toBe(career01.golden.rngStateDraws);
+    // Node(Vitest) 재생 소요 시간. PR 본문 "Worker 계산 시간" 표에 옮긴다.
+    console.log(JSON.stringify({ label: probeRequest.kind, revision: nodeSnapshot.revision, nodeElapsedMs }));
+
+    expect(nodeSnapshot.revision).toBe(typedGolden.revision);
+    expect(nodeSnapshot.stateHash).toBe(typedGolden.stateHash);
+    expect(nodeSnapshot.state.rngState.draws).toBe(typedGolden.rngStateDraws);
     expect(nodeVerify).toEqual({ ok: true });
 
-    expect(workerdResult.revision).toBe(career01.golden.revision);
-    expect(workerdResult.stateHash).toBe(career01.golden.stateHash);
-    expect(workerdResult.rngStateDraws).toBe(career01.golden.rngStateDraws);
+    expect(workerdResult.revision).toBe(typedGolden.revision);
+    expect(workerdResult.stateHash).toBe(typedGolden.stateHash);
+    expect(workerdResult.rngStateDraws).toBe(typedGolden.rngStateDraws);
     expect(workerdResult.verifySnapshotOk).toBe(true);
   });
 

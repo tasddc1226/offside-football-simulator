@@ -173,6 +173,25 @@ export function runLocalStoreContractTests(name: string, factory: () => LocalSto
       expect(await store.transaction('readonly', (tx) => tx.snapshots.getLatest('x'))).toBeUndefined();
     });
 
+    // T-2-006 05 "저장" checkpoint 종류: STEP_BOUNDARY(위 테스트에 이미 있음)에 더해 시즌 경계
+    // checkpoint(SEASON_START·SEASON_SETTLED)도 저장·복원(get·getLatest)이 값을 그대로 돌려주는지 본다.
+    it('snapshots: SEASON_START·SEASON_SETTLED checkpoint도 그대로 저장·복원된다', async () => {
+      await store.transaction('readwrite', async (tx) => {
+        await tx.snapshots.put(makeCareerSnapshot({ id: 'season:11', careerId: 'season', revision: 11, checkpoint: 'SEASON_START' }));
+        await tx.snapshots.put(makeCareerSnapshot({ id: 'season:17', careerId: 'season', revision: 17, checkpoint: 'SEASON_SETTLED' }));
+      });
+
+      const start = await store.transaction('readonly', (tx) => tx.snapshots.get('season', 11));
+      expect(start?.checkpoint).toBe('SEASON_START');
+
+      const latest = await store.transaction('readonly', (tx) => tx.snapshots.getLatest('season'));
+      expect(latest?.revision).toBe(17);
+      expect(latest?.checkpoint).toBe('SEASON_SETTLED');
+
+      const all = await store.transaction('readonly', (tx) => tx.snapshots.listByCareer('season'));
+      expect(all.map((s) => s.checkpoint)).toEqual(['SEASON_START', 'SEASON_SETTLED']);
+    });
+
     it('snapshots: listByCareer는 닫힌 구간을 revision 오름차순으로 돌려준다', async () => {
       await store.transaction('readwrite', async (tx) => {
         for (let revision = 1; revision <= 5; revision++) {

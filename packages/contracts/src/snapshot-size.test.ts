@@ -1,0 +1,180 @@
+import { canonicalize, simulate, type DomainSnapshot, type JsonValue } from '@offside/domain';
+import {
+  career01,
+  career02Season,
+  career01EngineCommands,
+  career02SeasonEngineCommands,
+  career03Underdog,
+  career03UnderdogEngineCommands,
+  rulesetProto,
+  type EngineCommand,
+} from '@offside/fixtures';
+import { describe, expect, it } from 'vitest';
+import { REQUEST_BODY_MAX_BYTES, SNAPSHOT_STATE_RECOMMENDED_BYTES } from './headers.js';
+import type { CommandLogEntry } from './commands.js';
+
+/**
+ * T-2-006 D-33: golden fixture를 domain `simulate`로 재생하며 시즌 상태 크기(canonical JSON
+ * 바이트)와 `PUT /careers/{id}` 본문 크기(Snapshot + 명령 로그)를 잰다. 수치는 PR 본문 표로 옮긴다.
+ * 상한 테스트만 여기 남긴다: `SNAPSHOT_STATE_RECOMMENDED_BYTES`(256 KB)를 넘으면 실패, 절반(128 KB)
+ * 초과 여부는 PR 본문에서 사람이 판단한다(브리프: 넘으면 압축 설계를 적고 구현하지 않는다).
+ */
+
+function byteLength(s: string): number {
+  return new TextEncoder().encode(s).length;
+}
+
+function runOrThrow(
+  snapshot: DomainSnapshot | null,
+  command: EngineCommand,
+  versions: { rulesetVersion: string; contentPackVersion: string },
+): DomainSnapshot {
+  const result = simulate({
+    snapshot,
+    command,
+    ruleset: rulesetProto,
+    rulesetVersion: versions.rulesetVersion,
+    contentPackVersion: versions.contentPackVersion,
+  });
+  if (!result.ok) {
+    throw new Error(`${command.type} 실패: ${result.error.code} ${result.error.message}`);
+  }
+  return result.snapshot;
+}
+
+function stateBytes(snapshot: DomainSnapshot): number {
+  return byteLength(canonicalize(snapshot.state as unknown as JsonValue));
+}
+
+/** 스냅샷 하나 + 명령 로그(revision `from+1`..`to`)로 이뤄진 PUT 본문의 근사 바이트 수. */
+function putBodyBytes(snapshots: readonly DomainSnapshot[], from: number): number {
+  const commandsPart = snapshots
+    .filter((s) => s.revision > from)
+    .map(
+      (s): Pick<CommandLogEntry, 'revision' | 'commandId' | 'commandType' | 'payload' | 'resultHash'> => ({
+        revision: s.revision,
+        commandId: `cmd_${s.revision}`,
+        commandType: 'ADVANCE',
+        payload: {},
+        resultHash: s.stateHash,
+      }),
+    );
+  const last = snapshots[snapshots.length - 1]!;
+  const body = {
+    baseRevision: from,
+    snapshot: {
+      revision: last.revision,
+      checkpoint: last.checkpoint,
+      state: canonicalize(last.state as unknown as JsonValue),
+      stateHash: last.stateHash,
+      rulesetVersion: last.rulesetVersion,
+      contentPackVersion: last.contentPackVersion,
+      rngState: { s: [...last.state.rngState.s], draws: last.state.rngState.draws },
+    },
+    commands: commandsPart,
+    createdServiceSeasonId: 'svc_size_probe',
+    rulesetVersion: last.rulesetVersion,
+    contentPackVersion: last.contentPackVersion,
+  };
+  // commandType·payload는 크기 근사에만 쓴다(실제 명령 종류별 payload보다 작을 수 있음, PR 본문 표에 표기).
+  return byteLength(JSON.stringify(body));
+}
+
+describe('Snapshot·PUT 본문 크기(D-33)', () => {
+  it('career-01: 최종 상태·PUT 본문 크기가 상한 안에 든다', () => {
+    let counter = 0;
+    const commands = career01EngineCommands(() => `size-c1-${counter++}`);
+    const snapshots: DomainSnapshot[] = [];
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career01);
+      snapshots.push(snapshot);
+    }
+    if (snapshot === null) throw new Error('career01 명령 목록이 비어 있다.');
+
+    const finalStateBytes = stateBytes(snapshot);
+    const bodyBytes = putBodyBytes(snapshots, 0);
+
+    console.log(
+      JSON.stringify({ fixture: 'career-01', checkpoint: 'final', revision: snapshot.revision, finalStateBytes, bodyBytes }),
+    );
+
+    expect(finalStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+    expect(bodyBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+  });
+
+  it.each(['FAST', 'CHAPTER'] as const)(
+    'career-02-season(%s): 시즌 중 최대 상태 크기·시즌 종료 상태 크기·시즌 한 개 분량 PUT 본문 크기가 상한 안에 든다',
+    (mode) => {
+      let counter = 0;
+      const newId = () => `size-c2-${mode}-${counter++}`;
+
+      let snapshot: DomainSnapshot | null = null;
+      for (const command of career01EngineCommands(newId)) {
+        snapshot = runOrThrow(snapshot, command, career01);
+      }
+      if (snapshot === null) throw new Error('career01 선행 재생이 비어 있다.');
+      const seasonStart = snapshot.revision;
+
+      const seasonSnapshots: DomainSnapshot[] = [];
+      for (const command of career02SeasonEngineCommands(mode, newId, seasonStart)) {
+        snapshot = runOrThrow(snapshot, command, career02Season);
+        seasonSnapshots.push(snapshot);
+      }
+
+      const finalSnapshot = seasonSnapshots[seasonSnapshots.length - 1]!;
+      const peak = seasonSnapshots.reduce((max, s) => (stateBytes(s) > stateBytes(max) ? s : max));
+
+      const peakStateBytes = stateBytes(peak);
+      const finalStateBytes = stateBytes(finalSnapshot);
+      const bodyBytes = putBodyBytes(seasonSnapshots, seasonStart);
+
+      console.log(
+        JSON.stringify({
+          fixture: `career-02-season(${mode})`,
+          peakCheckpoint: peak.checkpoint,
+          peakRevision: peak.revision,
+          peakStateBytes,
+          finalCheckpoint: finalSnapshot.checkpoint,
+          finalRevision: finalSnapshot.revision,
+          finalStateBytes,
+          bodyBytes,
+          halfBudget: SNAPSHOT_STATE_RECOMMENDED_BYTES / 2,
+        }),
+      );
+
+      // D-33 상한: 권장치(256KB)를 넘으면 실패. 절반(128KB) 초과 여부는 PR 본문에서 사람이 판단한다.
+      expect(peakStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+      expect(finalStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+      expect(bodyBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+    },
+  );
+
+  it('career-03-underdog(시즌 중, ROLE_PROPOSAL pending): 상태·PUT 본문 크기가 상한 안에 든다', () => {
+    let counter = 0;
+    const commands = career03UnderdogEngineCommands(() => `size-c3-${counter++}`);
+    const snapshots: DomainSnapshot[] = [];
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career03Underdog);
+      snapshots.push(snapshot);
+    }
+    if (snapshot === null) throw new Error('career03Underdog 명령 목록이 비어 있다.');
+
+    const finalStateBytes = stateBytes(snapshot);
+    const bodyBytes = putBodyBytes(snapshots, 0);
+
+    console.log(
+      JSON.stringify({
+        fixture: 'career-03-underdog',
+        checkpoint: snapshot.checkpoint,
+        revision: snapshot.revision,
+        finalStateBytes,
+        bodyBytes,
+      }),
+    );
+
+    expect(finalStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+    expect(bodyBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+  });
+});
