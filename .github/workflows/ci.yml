@@ -29,9 +29,10 @@ jobs:
       - run: pnpm lint
       - run: pnpm lint:deps
       - run: pnpm typecheck
-      # The domain suite contains explicit wall-clock performance budgets. Run it
-      # without the API integration suite competing for the same CPU.
-      - run: pnpm turbo run test --filter='!@offside/domain'
+      # API concurrency tests and domain performance budgets are wall-clock
+      # sensitive. Keep both off the shared package-test CPU pool.
+      - run: pnpm turbo run test --filter='!@offside/api' --filter='!@offside/domain'
+      - run: pnpm --filter @offside/api test
       - run: pnpm --filter @offside/domain test
       - run: pnpm build
       - run: pnpm --filter @offside/web check:bundle
