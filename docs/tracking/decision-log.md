@@ -2,6 +2,10 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (오후, T-2-002 브리프 선작성 — D-34)
+
+**결정 D-34**(phase-2-plan 3절): T-2-001이 진행되는 동안 다음 순서인 T-2-002(팀 전술·경쟁자·선발) 브리프를 미리 썼다. 전술 스타일 3종·팀 `squadStrength`·리그 팀 수·컵 R2 step 7, Tactical Fit(스타일 내적 0.6 + 선호 아키타입 0.4), 숙련도 등급화(기존 `positionProficiency` 재사용), Squad Status 식, 경쟁자 8포지션 × 2명과 RNG 순서, step 1 감독 역할 제안과 새 명령 `RESOLVE_ROLE`(CMD-SIM-004)을 확정했다. 계획서에 없던 "역할 제안을 어느 명령이 닫는가"의 빈틈을 여기서 메웠고, "조건부 훈련"은 T-2-005로 미뤘다. 투입은 T-2-001 머지 뒤(순차).
+
 ## 2026-09-03 (정오, PR #35 머지 — Phase 1 종료, Phase 2 Wave 1 투입)
 
 **결과**: T-1-017(PR #35, `d5fbf11`) 머지. SCR-002 포지션 구분 `Tabs`를 `RadioGroup` 형제로 분리해 Radix roving-tabindex 충돌을 없앴고(keyboard e2e가 우회 없이 "공격수 탭 → 윙어"로 완주), `PlayerHeader` caption으로 주포지션·선호 포지션 구분, 개인정보 처리방침 "개인정보의 국외 이전" 절·표(Cloudflare, Inc. / Google LLC), SCR-014 전용 aria-live(정확히 1회), `careerPhase` 상수화. COMMITTING 이탈 경고는 `beforeunload` 최소 구현 — popstate 대화상자는 TanStack history가 내부 키 `__TSR_index`로 방향을 계산해 더미 항목이 인덱스를 깨뜨리므로 보류(워커가 소스로 확인, 브리프가 허용한 대안). 리뷰 수정 요청 0건, 워커 비용 약 $12.2, 51분. 재검증: 체인(e2e 54)·실 api 58건 통과.
