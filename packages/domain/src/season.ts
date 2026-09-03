@@ -62,7 +62,10 @@ function buildSlot(calendarSlot: LeagueCalendarSlot): DecisionSlot {
 /**
  * 룰셋 `leagueCalendar`에서 시즌 `steps`를 만들고 RULE-TIME-004 결정 예산을 적용한다. 챕터 상한(4)을
  * 먼저 자르고, 남은 선택 슬롯에 모드별 총 상한(FAST 6·CHAPTER 10)을 적용한다. 두 절단 모두 같은
- * 결정론적 순서(step 내림차순, 같은 step이면 MINOR 먼저)를 쓴다.
+ * 결정론적 순서(step 내림차순, 같은 step이면 MINOR 먼저)를 쓴다. 예산은 "그 모드가 실제로 여는
+ * 결정"에만 적용된다(RULE-TIME-004) — FAST가 애초에 열지 않는 슬롯(EVENT·MINOR 챕터, RULE-TIME-003)은
+ * 후보에서 빠진다. 이 필터가 없으면 FAST 예산(6)이 모드와 무관한 슬롯 수까지 세어, FAST가 실제로
+ * 여는 MAJOR 챕터·CONTRACT 같은 슬롯이 예산 초과로 잘못 잘린다.
  */
 export function buildSeasonSteps(calendar: LeagueCalendar, mode: SimulationMode): SeasonStep[] {
   let steps: SeasonStep[] = calendar.steps.map((calendarStep) => ({
@@ -73,14 +76,16 @@ export function buildSeasonSteps(calendar: LeagueCalendar, mode: SimulationMode)
     summary: null,
   }));
 
-  const chapterCandidates = collectCuttable(steps, (slot) => slot.kind === 'CHAPTER');
+  const isBudgetedInMode = (slot: DecisionSlot): boolean => mode === 'CHAPTER' || isOpenableInFastMode(slot);
+
+  const chapterCandidates = collectCuttable(steps, (slot) => slot.kind === 'CHAPTER' && isBudgetedInMode(slot));
   if (chapterCandidates.length > CHAPTER_BUDGET_CAP) {
     const excess = chapterCandidates.length - CHAPTER_BUDGET_CAP;
     steps = applyCut(steps, orderForCut(chapterCandidates).slice(0, excess));
   }
 
   const cap = totalBudgetCap(mode);
-  const optionalCandidates = collectCuttable(steps, () => true);
+  const optionalCandidates = collectCuttable(steps, isBudgetedInMode);
   if (optionalCandidates.length > cap) {
     const excess = optionalCandidates.length - cap;
     steps = applyCut(steps, orderForCut(optionalCandidates).slice(0, excess));

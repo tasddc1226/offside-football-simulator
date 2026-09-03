@@ -55,6 +55,8 @@ function makeDomainSnapshot(overrides: Partial<DomainSnapshot> = {}): DomainSnap
     pending: null,
     contract: null,
     timeline: [],
+    season: null,
+    seasonHistory: [],
   };
   return {
     revision: 1,

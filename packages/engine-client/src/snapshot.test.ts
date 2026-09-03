@@ -38,6 +38,8 @@ function buildValidDomainSnapshot(): DomainSnapshot {
     pending: null,
     contract: null,
     timeline: [],
+    season: null,
+    seasonHistory: [],
   };
   return {
     revision: 1,

@@ -1,7 +1,7 @@
 {
   "FAST": {
-    "revision": 15,
-    "stateHash": "74e3ba267098e521e4433c3a66384b5d07ef37e9940161da2f7752a208ef43f6",
+    "revision": 16,
+    "stateHash": "859c2e1c84a349dde189d9d9316d19208188d068fc5dfbafc792d34a12f7e0ba",
     "rngStateDraws": 30,
     "age": 18,
     "seasonHistory": [
@@ -13,10 +13,10 @@
           { "competitionId": "LEAGUE", "kind": "LEAGUE", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": null },
           { "competitionId": "CUP", "kind": "CUP", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": "R1" }
         ],
-        "settledAtRevision": 15
+        "settledAtRevision": 16
       }
     ],
-    "checkpoints": ["SEASON_START", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "SEASON_SETTLED"],
+    "checkpoints": ["SEASON_START", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "SEASON_SETTLED"],
     "stepSummaries": [
       { "index": 1, "summary": { "passedAtRevision": 12, "decisionsOpened": 1, "matchesPlayed": 0 } },
       { "index": 2, "summary": { "passedAtRevision": 12, "decisionsOpened": 0, "matchesPlayed": 0 } },
@@ -28,7 +28,7 @@
       { "index": 8, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
       { "index": 9, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
       { "index": 10, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 11, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 11, "summary": { "passedAtRevision": 15, "decisionsOpened": 1, "matchesPlayed": 0 } },
       { "index": 12, "summary": null }
     ]
   },

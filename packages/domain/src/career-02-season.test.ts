@@ -33,9 +33,9 @@ describe('career-02-season fixture 결정론', () => {
     });
   }
 
-  it('FAST 모드: 예산 절단(step 8~11)으로 실제 열리는 결정은 step 1·3·7(ROLE·CHAPTER·CONTRACT)뿐이다', () => {
+  it('FAST 모드: 예산(6)을 넘지 않아 아무것도 잘리지 않고, 실제 열리는 결정은 step 1·3·7·11(ROLE·CHAPTER·CONTRACT·CHAPTER)뿐이다', () => {
     const opened = golden.FAST.stepSummaries.filter((s) => s.summary !== null && s.summary.decisionsOpened === 1);
-    expect(opened.map((s) => s.index)).toEqual([1, 3, 7]);
+    expect(opened.map((s) => s.index)).toEqual([1, 3, 7, 11]);
   });
 
   it('CHAPTER 모드: 예산 상한(10)에 정확히 맞아 잘리는 슬롯이 없고, step 1~11 전부 결정이 열린다', () => {

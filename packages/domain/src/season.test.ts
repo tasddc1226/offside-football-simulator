@@ -32,15 +32,61 @@ describe('buildSeasonSteps: RULE-TIME-004 결정 예산', () => {
     expect(cut).toEqual([]);
   });
 
-  it('FAST 모드에서는 상한(6)을 넘는 4개가 step 내림차순으로 잘린다', () => {
+  it('FAST 모드는 FAST가 여는 선택 슬롯만 예산 후보로 세므로, 기본 캘린더는 아무것도 잘리지 않는다', () => {
     const steps = buildSeasonSteps(DEFAULT_CALENDAR, 'FAST');
-    const cutSteps = steps.filter((s) => s.decisionSlots.some((slot) => slot.skippedByBudget === true)).map((s) => s.index);
-    expect(cutSteps).toEqual([8, 9, 10, 11]);
+    const cut = steps.flatMap((s) => s.decisionSlots.filter((slot) => slot.skippedByBudget === true));
+    expect(cut).toEqual([]);
 
-    const remainingOptional = steps
+    // FAST가 실제로 여는 선택 슬롯(required 제외)은 MAJOR 챕터(3·11)·CONTRACT(7) 3개뿐이다 —
+    // 상한(6)에 못 미쳐 잘릴 것이 없다. EVENT(2·4·5·8·9)·MINOR 챕터(6)·importance 없는 챕터(10)는
+    // FAST가 애초에 열지 않으므로(RULE-TIME-003) 예산 후보에도 들어가지 않는다.
+    const fastOpenableOptional = steps
       .flatMap((s) => s.decisionSlots.map((slot) => ({ step: s.index, slot })))
-      .filter(({ slot }) => !slot.required && !slot.skippedByBudget);
-    expect(remainingOptional.map((r) => r.step)).toEqual([2, 3, 4, 5, 6, 7]);
+      .filter(({ slot }) => !slot.required && (slot.kind === 'CHAPTER' ? slot.importance === 'MAJOR' : slot.kind === 'CONTRACT'));
+    expect(fastOpenableOptional.map((r) => r.step)).toEqual([3, 7, 11]);
+  });
+
+  it('FAST 모드에서 FAST가 여는 슬롯 수가 상한을 넘으면 그 슬롯들만 절단 대상이다(합성 캘린더)', () => {
+    // MAJOR 챕터 5개(step 2~6)+CONTRACT 3개(step 7~9) = FAST가 여는 선택 슬롯 8개로 상한(6)을
+    // 넘긴다. step 10 EVENT는 FAST가 애초에 열지 않는 슬롯이 섞여도 후보에서 빠지는지 확인한다.
+    const calendar: LeagueCalendar = {
+      id: 'test-fast-budget',
+      transferWindowStep: 7,
+      cupRounds: [],
+      steps: [
+        { index: 1, phase: 'PRESEASON', windowOpen: false, slots: [{ kind: 'ROLE', required: true }] },
+        { index: 2, phase: 'LEAGUE', windowOpen: false, slots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }] },
+        { index: 3, phase: 'LEAGUE', windowOpen: false, slots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }] },
+        { index: 4, phase: 'LEAGUE', windowOpen: false, slots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }] },
+        { index: 5, phase: 'LEAGUE', windowOpen: false, slots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }] },
+        { index: 6, phase: 'LEAGUE', windowOpen: false, slots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }] },
+        { index: 7, phase: 'LEAGUE', windowOpen: true, slots: [{ kind: 'CONTRACT', required: false }] },
+        { index: 8, phase: 'LEAGUE', windowOpen: false, slots: [{ kind: 'CONTRACT', required: false }] },
+        { index: 9, phase: 'LEAGUE', windowOpen: false, slots: [{ kind: 'CONTRACT', required: false }] },
+        { index: 10, phase: 'LEAGUE', windowOpen: false, slots: [{ kind: 'EVENT', required: false }] },
+        { index: 11, phase: 'LEAGUE', windowOpen: false, slots: [] },
+        { index: 12, phase: 'SETTLEMENT', windowOpen: false, slots: [{ kind: 'SETTLEMENT', required: true }] },
+      ],
+    };
+
+    const steps = buildSeasonSteps(calendar, 'FAST');
+
+    // FAST가 열지 않는 step 10 EVENT는 예산 후보가 아니므로 잘리지 않는다.
+    expect(findSeasonStep(steps, 10).decisionSlots[0]?.skippedByBudget).toBeUndefined();
+
+    // 챕터 상한(4): 5개 중 step 내림차순으로 1개(step 6)가 먼저 잘린다.
+    expect(findSeasonStep(steps, 6).decisionSlots[0]?.skippedByBudget).toBe(true);
+    expect(findSeasonStep(steps, 2).decisionSlots[0]?.skippedByBudget).toBeUndefined();
+
+    // 총 상한(FAST 6): 남은 7개(챕터 4+CONTRACT 3) 중 step 내림차순으로 1개(step 9 CONTRACT)가 더 잘린다.
+    expect(findSeasonStep(steps, 9).decisionSlots[0]?.skippedByBudget).toBe(true);
+    expect(findSeasonStep(steps, 7).decisionSlots[0]?.skippedByBudget).toBeUndefined();
+    expect(findSeasonStep(steps, 8).decisionSlots[0]?.skippedByBudget).toBeUndefined();
+
+    const openableRemaining = steps
+      .flatMap((s) => s.decisionSlots.map((slot) => ({ step: s.index, slot })))
+      .filter(({ slot }) => !slot.required && !slot.skippedByBudget && (slot.kind === 'CHAPTER' || slot.kind === 'CONTRACT'));
+    expect(openableRemaining.map((r) => r.step)).toEqual([2, 3, 4, 5, 7, 8]);
   });
 
   it('required 슬롯(step1 ROLE·step12 SETTLEMENT)은 절대 잘리지 않는다', () => {
@@ -382,6 +428,75 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     expect(closed.snapshot.state.season?.currentStep).toBeGreaterThan(2);
   });
 
+  it('시즌 중 walk가 여러 step을 건너뛰어도, 지나간 step마다 AT_STEP 효과를 만료시킨다', () => {
+    // 회귀 테스트: Phase 1 advance()는 매 step 전환마다 expireEffects를 부르지만, 시즌 walk가 한
+    // ADVANCE에서 여러 step을 한 번에 건너뛰면(FAST의 예산 절단·EVENT 후보 없음 등) 그 사이에 있는
+    // step에 걸린 AT_STEP 효과가 만료되지 않는 문제가 있었다. expireEffectsThroughWalk가 walk가
+    // 지나간 step마다 순서대로 expireEffects를 접어 적용해 고쳤다.
+    const snapshot = activeSnapshotWithContract();
+    const started = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'CHAPTER'));
+    if (!started.ok) throw new Error('setup 실패');
+
+    // step1 ROLE 자동 통과 → step2 EVENT에서 멈춘다(eligibleEvents 제공).
+    const opened = runSimulate(
+      started.snapshot,
+      advanceCommand(started.snapshot.revision, [{ eventId: 'EVT-EFFECT-TEST', version: 1, weight: 1 }]),
+    );
+    if (!opened.ok) throw new Error(`실패: ${opened.error.code} ${opened.error.message}`);
+    expect(opened.snapshot.state.season?.currentStep).toBe(2);
+    const beforeMorale = opened.snapshot.state.state.morale;
+
+    // step2 EVENT를 morale +10(AT_STEP 5 만료) 효과로 해소한다.
+    const resolved = runSimulate(opened.snapshot, {
+      type: 'RESOLVE_EVENT',
+      commandId: 'resolve-effect-1',
+      expectedRevision: opened.snapshot.revision,
+      payload: {
+        eventId: 'EVT-EFFECT-TEST',
+        definitionVersion: 1,
+        choiceId: 'A',
+        outcomes: [
+          {
+            id: 'A1',
+            weight: 100,
+            effects: [
+              {
+                kind: 'CURRENT',
+                sourceId: 'test-effect-src-t2001',
+                target: 'morale',
+                delta: 10,
+                clamp: { min: 0, max: 100 },
+                appliesAt: { kind: 'IMMEDIATE' },
+                expiresAt: { kind: 'AT_STEP', step: 5 },
+                stackingRule: 'ONCE_PER_SOURCE',
+              },
+            ],
+          },
+        ],
+      },
+    });
+    if (!resolved.ok) throw new Error(`실패: ${resolved.error.code} ${resolved.error.message}`);
+    expect(resolved.snapshot.state.activeEffects).toHaveLength(1);
+    const afterEffectMorale = resolved.snapshot.state.state.morale;
+    expect(afterEffectMorale).toBe(Math.min(beforeMorale + 10, 100));
+
+    // step2를 닫고 step3(CHAPTER MAJOR)에서 멈춘다 — 아직 step5 전이라 효과가 살아있어야 한다.
+    const atStep3 = runSimulate(resolved.snapshot, advanceCommand(resolved.snapshot.revision));
+    if (!atStep3.ok) throw new Error(`실패: ${atStep3.error.code} ${atStep3.error.message}`);
+    expect(atStep3.snapshot.state.season?.currentStep).toBe(3);
+    expect(atStep3.snapshot.state.activeEffects).toHaveLength(1);
+    expect(atStep3.snapshot.state.state.morale).toBe(afterEffectMorale);
+
+    // step3을 닫고 eligibleEvents 없이 진행하면 step4·5(EVENT, 후보 없어 건너뜀)를 지나 step6
+    // (CHAPTER)에서 멈춘다 — 한 ADVANCE가 step 4·5·6을 한 번에 지나가므로, expireEffects가 step5를
+    // 포함해 매 step마다 적용되지 않으면 이 회귀가 통과하지 않는다.
+    const pastStep5 = runSimulate(atStep3.snapshot, advanceCommand(atStep3.snapshot.revision));
+    if (!pastStep5.ok) throw new Error(`실패: ${pastStep5.error.code} ${pastStep5.error.message}`);
+    expect(pastStep5.snapshot.state.season?.currentStep).toBe(6);
+    expect(pastStep5.snapshot.state.activeEffects).toEqual([]);
+    expect(pastStep5.snapshot.state.state.morale).toBe(beforeMorale);
+  });
+
   it('step 경계 Snapshot에서 재개한 진행의 결산 hash가 연속 실행과 같다', () => {
     const continuous = playFullSeason(activeSnapshotWithContract(), 'CHAPTER');
 
@@ -444,5 +559,25 @@ describe('SETTLE_SEASON (CMD-SIM-003)', () => {
     expect(settled.state.state).toEqual(rulesetProto.seasonBoundaryReset);
     expect(settled.state.attributes).toEqual(attributesBefore);
     expect(settled.state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_SETTLED' });
+  });
+
+  it('성공하면 nextAction이 DECISION이다(결산 다음은 새 시즌을 열지 말지 결정하는 화면)', () => {
+    // 회귀 테스트: season이 null이 된 채로 nextAction이 'ADVANCE'면, 클라이언트가 그대로 ADVANCE를
+    // 보낼 때 seasonPhase가 SETTLEMENT로 남아 있어 NOTHING_TO_ADVANCE로 실패한다.
+    let snapshot = activeSnapshotWithContract();
+    const started = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'FAST'));
+    if (!started.ok) throw new Error('setup 실패');
+    snapshot = started.snapshot;
+
+    for (let guard = 0; guard < 100 && snapshot.state.pending?.kind !== 'SETTLEMENT'; guard++) {
+      const advanced = runSimulate(snapshot, advanceCommand(snapshot.revision));
+      if (!advanced.ok) throw new Error(`ADVANCE 실패: ${advanced.error.code} ${advanced.error.message}`);
+      snapshot = advanced.snapshot;
+    }
+    expect(snapshot.state.pending?.kind).toBe('SETTLEMENT');
+
+    const settled = runSimulate(snapshot, settleSeasonCommand(snapshot.revision));
+    if (!settled.ok) throw new Error(`실패: ${settled.error.code} ${settled.error.message}`);
+    expect(settled.nextAction).toBe('DECISION');
   });
 });

@@ -14,6 +14,7 @@ import {
   markStepPassed,
   walkToNextDecision,
   type EligibleEvent,
+  type SeasonWalkResult,
 } from './season.js';
 import {
   ATTRIBUTE_KEYS,
@@ -383,8 +384,21 @@ function confirmPlayer(input: SimulationInput, snapshot: DomainSnapshot): Simula
 }
 
 /**
+ * Phase 1 `advance()`가 매 step 전환마다 `expireEffects`를 부르는 것과 같은 규칙을, 시즌 walk가
+ * 한 번에 여러 step을 건너뛸 때도 지키기 위한 헬퍼. `walked`가 이번 walk에서 지나간 step(결정 없이
+ * 닫은 step들)과 마지막으로 멈춘 step을 오름차순으로 갖고 있으므로, 그 순서대로 `expireEffects`를
+ * 접어 적용한다 — 그래야 AT_STEP 효과가 시즌 중에도(여러 step을 건너뛰어도) 정확히 만료된다.
+ */
+function expireEffectsThroughWalk(state: CareerState, walked: SeasonWalkResult): CareerState {
+  const crossedSteps = [...walked.passedStepIndexes, walked.currentStepIndex];
+  return crossedSteps.reduce((acc, step) => expireEffects(acc, step), state);
+}
+
+/**
  * T-2-001 D-25 CMD-SIM-001. step 1 슬롯을 즉시 연다(대부분 룰셋 기본 캘린더의 ROLE 필수 슬롯).
- * `command.payload.serviceSeasonId`는 `Command` 타입 정의 주석 참조.
+ * `command.payload.serviceSeasonId`는 `Command` 타입 정의 주석 참조. 이 walk는 `eligibleEvents:
+ * []`로 도니, step 1이 EVENT 슬롯뿐인 캘린더라면 그 슬롯은 열리지 않고 건너뛴다(roll 없음) — 기본
+ * 캘린더는 step 1이 필수 ROLE이라 문제되지 않는다.
  */
 function startSeason(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
   const command = input.command;
@@ -413,6 +427,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   const nextRevision = snapshot.revision + 1;
 
   const walked = walkToNextDecision(initialSteps, 1, mode, [], state.rngState, nextRevision);
+  const expiredState = expireEffectsThroughWalk(state, walked);
 
   const season: FootballSeason = {
     index: state.seasonHistory.length + 1,
@@ -430,7 +445,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   };
 
   const nextState: CareerState = {
-    ...state,
+    ...expiredState,
     season,
     currentStep: season.currentStep,
     seasonPhase: season.phase,
@@ -540,6 +555,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
   }
 
   const walked = walkToNextDecision(steps, currentStepIndex, season.simulationMode, eligibleEvents, state.rngState, nextRevision);
+  const expiredState = expireEffectsThroughWalk(state, walked);
   timeline = [
     ...timeline,
     ...walked.passedStepIndexes.map((stepIndex) => ({
@@ -559,7 +575,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
   };
 
   const nextState: CareerState = {
-    ...state,
+    ...expiredState,
     season: nextSeason,
     currentStep: nextSeason.currentStep,
     seasonPhase: nextSeason.phase,
@@ -894,7 +910,10 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     ok: true,
     snapshot: buildSnapshot(nextState, nextRevision, 'SEASON_SETTLED'),
     appliedEffects: [],
-    nextAction: 'ADVANCE',
+    // 결산 다음은 새 시즌을 열지 말지 결정하는 화면(START_SEASON, SCR-005)이라 'ADVANCE'가 아니라
+    // 'DECISION'이다 — season이 null인 채로 'ADVANCE'를 보내면 seasonPhase가 SETTLEMENT로 남아
+    // NOTHING_TO_ADVANCE로 실패한다.
+    nextAction: 'DECISION',
   };
 }
 
