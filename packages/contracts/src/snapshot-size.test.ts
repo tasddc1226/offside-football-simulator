@@ -46,20 +46,22 @@ function stateBytes(snapshot: DomainSnapshot): number {
   return byteLength(canonicalize(snapshot.state as unknown as JsonValue));
 }
 
-/** 스냅샷 하나 + 명령 로그(revision `from+1`..`to`)로 이뤄진 PUT 본문의 근사 바이트 수. */
-function putBodyBytes(snapshots: readonly DomainSnapshot[], from: number): number {
-  const commandsPart = snapshots
-    .filter((s) => s.revision > from)
+type Step = { snapshot: DomainSnapshot; command: EngineCommand };
+
+/** 스냅샷 하나 + 실제 명령 로그(revision `from+1`..`to`, 실제 commandType·payload)로 이뤄진 PUT 본문의 바이트 수. */
+function putBodyBytes(steps: readonly Step[], from: number): number {
+  const commandsPart = steps
+    .filter((step) => step.snapshot.revision > from)
     .map(
-      (s): Pick<CommandLogEntry, 'revision' | 'commandId' | 'commandType' | 'payload' | 'resultHash'> => ({
-        revision: s.revision,
-        commandId: `cmd_${s.revision}`,
-        commandType: 'ADVANCE',
-        payload: {},
-        resultHash: s.stateHash,
+      (step): Pick<CommandLogEntry, 'revision' | 'commandId' | 'commandType' | 'payload' | 'resultHash'> => ({
+        revision: step.snapshot.revision,
+        commandId: step.command.commandId,
+        commandType: step.command.type,
+        payload: step.command.payload as CommandLogEntry['payload'],
+        resultHash: step.snapshot.stateHash,
       }),
     );
-  const last = snapshots[snapshots.length - 1]!;
+  const last = steps[steps.length - 1]!.snapshot;
   const body = {
     baseRevision: from,
     snapshot: {
@@ -76,7 +78,6 @@ function putBodyBytes(snapshots: readonly DomainSnapshot[], from: number): numbe
     rulesetVersion: last.rulesetVersion,
     contentPackVersion: last.contentPackVersion,
   };
-  // commandType·payload는 크기 근사에만 쓴다(실제 명령 종류별 payload보다 작을 수 있음, PR 본문 표에 표기).
   return byteLength(JSON.stringify(body));
 }
 
@@ -84,16 +85,16 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
   it('career-01: 최종 상태·PUT 본문 크기가 상한 안에 든다', () => {
     let counter = 0;
     const commands = career01EngineCommands(() => `size-c1-${counter++}`);
-    const snapshots: DomainSnapshot[] = [];
+    const steps: Step[] = [];
     let snapshot: DomainSnapshot | null = null;
     for (const command of commands) {
       snapshot = runOrThrow(snapshot, command, career01);
-      snapshots.push(snapshot);
+      steps.push({ snapshot, command });
     }
     if (snapshot === null) throw new Error('career01 명령 목록이 비어 있다.');
 
     const finalStateBytes = stateBytes(snapshot);
-    const bodyBytes = putBodyBytes(snapshots, 0);
+    const bodyBytes = putBodyBytes(steps, 0);
 
     console.log(
       JSON.stringify({ fixture: 'career-01', checkpoint: 'final', revision: snapshot.revision, finalStateBytes, bodyBytes }),
@@ -116,18 +117,18 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
       if (snapshot === null) throw new Error('career01 선행 재생이 비어 있다.');
       const seasonStart = snapshot.revision;
 
-      const seasonSnapshots: DomainSnapshot[] = [];
+      const seasonSteps: Step[] = [];
       for (const command of career02SeasonEngineCommands(mode, newId, seasonStart)) {
         snapshot = runOrThrow(snapshot, command, career02Season);
-        seasonSnapshots.push(snapshot);
+        seasonSteps.push({ snapshot, command });
       }
 
-      const finalSnapshot = seasonSnapshots[seasonSnapshots.length - 1]!;
-      const peak = seasonSnapshots.reduce((max, s) => (stateBytes(s) > stateBytes(max) ? s : max));
+      const finalSnapshot = seasonSteps[seasonSteps.length - 1]!.snapshot;
+      const peak = seasonSteps.reduce((max, step) => (stateBytes(step.snapshot) > stateBytes(max) ? step.snapshot : max), seasonSteps[0]!.snapshot);
 
       const peakStateBytes = stateBytes(peak);
       const finalStateBytes = stateBytes(finalSnapshot);
-      const bodyBytes = putBodyBytes(seasonSnapshots, seasonStart);
+      const bodyBytes = putBodyBytes(seasonSteps, seasonStart);
 
       console.log(
         JSON.stringify({
@@ -153,16 +154,16 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
   it('career-03-underdog(시즌 중, ROLE_PROPOSAL pending): 상태·PUT 본문 크기가 상한 안에 든다', () => {
     let counter = 0;
     const commands = career03UnderdogEngineCommands(() => `size-c3-${counter++}`);
-    const snapshots: DomainSnapshot[] = [];
+    const steps: Step[] = [];
     let snapshot: DomainSnapshot | null = null;
     for (const command of commands) {
       snapshot = runOrThrow(snapshot, command, career03Underdog);
-      snapshots.push(snapshot);
+      steps.push({ snapshot, command });
     }
     if (snapshot === null) throw new Error('career03Underdog 명령 목록이 비어 있다.');
 
     const finalStateBytes = stateBytes(snapshot);
-    const bodyBytes = putBodyBytes(snapshots, 0);
+    const bodyBytes = putBodyBytes(steps, 0);
 
     console.log(
       JSON.stringify({
