@@ -2,6 +2,16 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (정오, PR #35 머지 — Phase 1 종료, Phase 2 Wave 1 투입)
+
+**결과**: T-1-017(PR #35, `d5fbf11`) 머지. SCR-002 포지션 구분 `Tabs`를 `RadioGroup` 형제로 분리해 Radix roving-tabindex 충돌을 없앴고(keyboard e2e가 우회 없이 "공격수 탭 → 윙어"로 완주), `PlayerHeader` caption으로 주포지션·선호 포지션 구분, 개인정보 처리방침 "개인정보의 국외 이전" 절·표(Cloudflare, Inc. / Google LLC), SCR-014 전용 aria-live(정확히 1회), `careerPhase` 상수화. COMMITTING 이탈 경고는 `beforeunload` 최소 구현 — popstate 대화상자는 TanStack history가 내부 키 `__TSR_index`로 방향을 계산해 더미 항목이 인덱스를 깨뜨리므로 보류(워커가 소스로 확인, 브리프가 허용한 대안). 리뷰 수정 요청 0건, 워커 비용 약 $12.2, 51분. 재검증: 체인(e2e 54)·실 api 58건 통과.
+
+**Phase 1 종료 선언**: 완료 조건 표 15행 중 14행 ✅. #12(시각 토큰·폐기 어휘)는 오케스트레이터가 수동 점검(12 문서 폐기 어휘 `VAR CHECK`·시즌 결산의 `FULL TIME`·`적용됩니다`가 UI 문자열에 0건, 화면 소스에 hex 리터럴 0건). #15 Google 실계정 검증만 U-003 대기(코드는 PR #33으로 준비). Phase 1 워커 비용 합계는 보드 완료 표 참조. 남은 결함은 Phase 2 후속으로 넘겼다: 로그아웃 뒤 커리어 소유자 불일치(T-2-011), COMMITTING 뒤로 가기 대화상자(라우터 API로 다시 시도, T-2-010 화면 작업 때), axe heading-one moderate.
+
+**D-33 Phase 2 열린 질문 확정**(phase-2-plan 4절 제안 채택): 리그 팀 수는 룰셋 `leagues[].teamCount`, 리그는 홈·원정 2회전, 컵은 4라운드(R1·R2·SEMI·FINAL 중 캘린더에 R1 step 5·SEMI 9·FINAL 11); 경쟁자 아키타입은 팀 선호 60%·나머지 40%; Snapshot 크기는 T-2-006이 측정해 상한을 넘으면 결산 시 요약 압축. T-2-001은 캘린더(`leagueCalendar`)만 룰셋에 넣고 팀 수·컵 라운드 데이터는 T-2-002가 넣는다.
+
+**투입**: T-2-001(시즌 구조: FootballSeason·12 step 캘린더·START_SEASON/SETTLE_SEASON·ADVANCE 재정의·STEP_BOUNDARY checkpoint·결정 예산 절단). 브리프에서 CHAPTER·CONTRACT 등 슬롯은 "열되 자동 통과"하는 플레이스홀더로 두고 실제 내용은 T-2-002~005가 채운다. career-01 golden은 stateHash만 바뀌어야 하고, 새 golden career-02-season(FAST·CHAPTER)을 만든다. 시즌 없을 때의 ADVANCE 경로는 손대지 않는다(Phase 1 화면 호환).
+
 ## 2026-09-03 (오전, PR #34 E2E 완료 조건 머지 — T-1-017 투입, Phase 1 종료 보류)
 
 **결과**: T-1-014(PR #34, `2bbfdf0`) 머지. resilience(새로고침 복원, 확정 이중 클릭 시 revision 정확히 +2, PUT 유실 뒤 같은 Idempotency-Key 재시도, COMMITTING 뒤로가기 특성화), recovery-conflict(실 api, 두 기기 다른 선택으로 진짜 409 → 두 선택 검사), session-length(자동화 약 4.7초, D-22 단가 최소 조작 58초 — 화면 13·선택 10·입력 1·확정 14), keyboard(클릭 없이 완주), a11y 6건 확장, perf(실제 빌드 4G 스로틀: 허브 LCP 1136ms vs T-0-013 기준 2519ms, CLS ≈ 0). 헬퍼 추출로 create·first-contract 중복 제거. `e2e:api`·`e2e:perf` 스크립트. 리뷰 수정 요청 0건, 워커 비용 약 $19.8, 80분. 오케스트레이터 재검증: 체인(e2e 53) + 실 api 5건 + perf 1건 통과.

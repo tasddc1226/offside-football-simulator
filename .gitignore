@@ -31,3 +31,6 @@ coverage/
 npm-debug.log*
 pnpm-debug.log*
 
+
+# Python bytecode (docs/tracking/scripts 감시 스크립트)
+__pycache__/
