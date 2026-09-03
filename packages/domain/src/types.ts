@@ -156,23 +156,47 @@ export type Contract = {
   signedAtRevision: number;
 };
 
+// T-2-002 D-34: 감독 역할 제안 세 유형. roll 없이 rankSelection 결과로 결정론적으로 산출한다
+// (season.ts computeRoleProposal 호출부 참고). `KEEP`도 명시적 타입으로 남겨 감독 신뢰
+// keepConfirmTrustDelta를 적용할 근거를 갖는다.
+export type RoleProposal =
+  | { type: 'KEEP'; position: Position; squadRole: SquadRole }
+  | {
+      type: 'POSITION_CHANGE';
+      from: Position;
+      to: Position;
+      squadRoleAfter: SquadRole;
+      tacticalFitAfter: number;
+      proficiencyAfter: number;
+    }
+  | { type: 'ROLE_CHANGE'; position: Position; from: SquadRole; to: SquadRole };
+
 // T-2-001 D-24: 핵심 경기 챕터·계약·역할·부상·대표팀·시즌 결산 슬롯. 실제 판단 내용(챕터 판단,
-// 계약 협상 등)은 T-2-002~005 몫이라 이 작업은 열고 "자동 통과"로 닫는 플레이스홀더만 둔다.
+// 계약 협상 등)은 T-2-003~005 몫이라 이 작업은 열고 "자동 통과"로 닫는 플레이스홀더만 둔다.
+// T-2-002 D-34: ROLE 슬롯만 `ROLE_PROPOSAL`로 실제 결정이 된다(RESOLVE_ROLE로 닫는다, 자동 통과 아님).
 export type Pending =
   | null
   | { kind: 'EVENT'; eventId: string; version: number }
   | { kind: 'OFFERS'; offers: Offer[] }
   | { kind: 'CHAPTER'; step: number; importance?: 'MAJOR' | 'MINOR' }
   | { kind: 'CONTRACT'; step: number }
-  | { kind: 'ROLE'; step: number }
+  | { kind: 'ROLE_PROPOSAL'; step: number; proposal: RoleProposal }
   | { kind: 'INJURY'; step: number }
   | { kind: 'NATIONAL_TEAM'; step: number }
   | { kind: 'SETTLEMENT'; step: number };
 
-// D-12: 타임라인. 문장은 넣지 않는다(웹이 팩·룰셋에서 조합).
+// D-12: 타임라인. 문장은 넣지 않는다(웹이 팩·룰셋에서 조합). T-2-002: `ROLE_RESOLVED`의 refId는
+// RoleProposal['type'].
 export type TimelineEntry = {
   revision: number;
-  kind: 'CAREER_CONFIRMED' | 'EVENT_RESOLVED' | 'CONTRACT_SIGNED' | 'SEASON_STARTED' | 'STEP_PASSED' | 'SEASON_SETTLED';
+  kind:
+    | 'CAREER_CONFIRMED'
+    | 'EVENT_RESOLVED'
+    | 'CONTRACT_SIGNED'
+    | 'SEASON_STARTED'
+    | 'STEP_PASSED'
+    | 'SEASON_SETTLED'
+    | 'ROLE_RESOLVED';
   refId: string | null;
   age: number;
   step: number;
@@ -221,7 +245,56 @@ export type MatchRecord = {
   result: { goalsFor: number; goalsAgainst: number } | null;
 };
 
+// T-2-002 D-26/D-34: 시즌 시작 시 포지션마다 생성하는 주전 경쟁자. `expectedPerformance`·`score`는
+// 저장하지 않고 판정마다 `selection.ts`가 다시 계산한다(RULE-SEL-001은 "매 판정마다").
+export type Competitor = {
+  id: string;
+  name: string;
+  position: Position;
+  archetypeId: string;
+  attributes: Record<AttributeKey, number>;
+  baseOvr: number;
+  form: number;
+  fitness: number;
+  morale: number;
+  tacticalFit: number;
+  managerTrust: number;
+  squadStatus: number;
+  rolePromise: SquadRole;
+};
+
+// T-2-002 D-26/D-34: RULE-SEL-001 선발 판정 한 후보. `excluded`는 필드만 두고 값은 T-2-003·Phase 4가
+// 채운다(부상·징계·대표팀 차출).
+export type SelectionCandidate = {
+  id: 'PLAYER' | string;
+  name: string;
+  baseOvr: number;
+  tacticalFit: number;
+  managerTrust: number;
+  expectedPerformance: number;
+  squadStatus: number;
+  score: number;
+  excluded: null | 'INJURY' | 'SUSPENSION' | 'NATIONAL_TEAM';
+};
+
+export type SelectionAppearance = 'START' | 'SUB' | 'OUT';
+
+export type SelectionReasonComponent = 'TACTICAL_FIT' | 'MANAGER_TRUST' | 'EXPECTED_PERFORMANCE' | 'SQUAD_STATUS';
+
+// T-2-002 D-26/D-34: `rankSelection`의 결과. `playerReason`은 선수(id 'PLAYER')와 경계 후보의 가중
+// 차이가 가장 큰 구성 요소다(선수가 없거나 제외됐으면 null).
+export type SelectionRanking = {
+  position: Position;
+  slots: number;
+  benchSlots: number;
+  candidates: Array<SelectionCandidate & { rank: number; appearance: SelectionAppearance }>;
+  playerReason: { component: SelectionReasonComponent; delta: number } | null;
+};
+
 // T-2-001 D-24: 시즌 구조. `ageReferenceStep`은 항상 1(11 "나이·시즌 경계": 나이는 step 1 기준).
+// T-2-002 D-26/D-34: `squad.competitors`는 START_SEASON에서 포지션마다 생성해 시즌 내내 고정한다.
+// `selection`은 선수 현재 포지션의 최신 순위(START_SEASON·역할 결정 시 재계산). `styleId`는
+// `teamId`가 속한 팀의 `tacticalStyleId` 스냅샷이다.
 export type FootballSeason = {
   index: number;
   serviceSeasonId: string;
@@ -231,10 +304,13 @@ export type FootballSeason = {
   phase: SeasonPhase;
   steps: SeasonStep[];
   teamId: string;
+  styleId: string;
   squadRole: SquadRole;
   competitions: CompetitionRecord[];
   matches: MatchRecord[];
   ageReferenceStep: 1;
+  squad: { competitors: Competitor[] };
+  selection: SelectionRanking;
 };
 
 export type SeasonSummary = {

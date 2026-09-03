@@ -24,7 +24,17 @@ describe('career-02-season fixture 결정론', () => {
         expect(verifySnapshot(snapshot)).toEqual({ ok: true });
       });
 
-      it('같은 fixture를 100회 실행해도 매번 golden hash와 같다', () => {
+      // 브리프 golden 절차 3: START_SEASON 다음 RESOLVE_ROLE 직후(경쟁자 생성 직후) 스쿼드 상태.
+      it('RESOLVE_ROLE 직후 경쟁자 수·선수 selection·전술 적합도·스쿼드 상태가 golden과 같다', () => {
+        const { afterRoleResolve } = runSeasonFixture(mode);
+        expect(afterRoleResolve).toEqual(golden[mode].afterRoleResolve);
+      });
+
+      // 시간 예산 검사는 hash 일치 검사와 별도 테스트로 나눈다(fixture-determinism.test.ts의
+      // 1,000회 테스트와 같은 이유: 워크스페이스 전체 병렬 실행 시 부하로 5초 기본 타임아웃을
+      // 넘길 수 있다). T-2-002가 START_SEASON에 경쟁자 생성·전술 적합도 계산을 더해 반복당
+      // 비용이 늘어 CHAPTER 모드에서 실제로 초과가 관측됐다(2026-09-03).
+      it('같은 fixture를 100회 실행해도 매번 golden hash와 같다', { timeout: 15000 }, () => {
         for (let i = 0; i < 100; i++) {
           const { snapshot } = runSeasonFixture(mode);
           expect(snapshot.stateHash).toBe(golden[mode].stateHash);

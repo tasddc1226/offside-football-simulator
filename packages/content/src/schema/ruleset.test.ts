@@ -141,4 +141,49 @@ describe('RulesetSchema', () => {
     const parsed = RulesetSchema.parse(ruleset100);
     expect(parsed.nationalities[0]).toEqual({ code: 'KR', name: '대한민국' });
   });
+
+  // T-2-002 D-34: 브리프 인수 조건 "룰셋 검증: 정원 합 ≠ 11, roleWeights 합 ≠ 1, 존재하지 않는
+  // tacticalStyleId·leagueId, 이름 중복 — 각각 로더에서 거부된다"를 각각 확인한다.
+  it('rejects a tacticalStyle whose slots do not sum to 11', () => {
+    const ruleset = cloneRuleset();
+    const style = ruleset.tacticalStyles.find((s) => s.id === 'possession');
+    if (!style) throw new Error('fixture missing possession style');
+    style.slots.ST += 1;
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/slots 합은 11이어야 한다/);
+  });
+
+  it('rejects a tacticalStyle whose roleWeights for a position do not sum to 1', () => {
+    const ruleset = cloneRuleset();
+    const style = ruleset.tacticalStyles.find((s) => s.id === 'possession');
+    if (!style) throw new Error('fixture missing possession style');
+    const weights = style.roleWeights.W as Record<string, number>;
+    const [firstKey] = Object.keys(weights);
+    if (!firstKey) throw new Error('fixture missing W roleWeights');
+    weights[firstKey] = (weights[firstKey] ?? 0) + 0.1;
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/roleWeights의 합은 1/);
+  });
+
+  it('rejects a team referencing an unknown tacticalStyleId', () => {
+    const ruleset = cloneRuleset();
+    const team = ruleset.teams[0];
+    if (!team) throw new Error('fixture missing teams');
+    (team as { tacticalStyleId: string }).tacticalStyleId = 'not-a-real-style';
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/tacticalStyleId가 tacticalStyles에 없다/);
+  });
+
+  it('rejects a team referencing an unknown leagueId', () => {
+    const ruleset = cloneRuleset();
+    const team = ruleset.teams[0];
+    if (!team) throw new Error('fixture missing teams');
+    (team as { leagueId: string }).leagueId = 'not-a-real-league';
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/leagueId가 leagues에 없다/);
+  });
+
+  it('rejects duplicate competitorNames', () => {
+    const ruleset = cloneRuleset();
+    const [first] = ruleset.competitorNames;
+    if (!first) throw new Error('fixture missing competitorNames');
+    ruleset.competitorNames = [...ruleset.competitorNames, first];
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/competitorNames에 중복된 이름이 있다/);
+  });
 });

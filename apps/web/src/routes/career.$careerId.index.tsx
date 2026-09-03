@@ -71,6 +71,10 @@ function timelineSentence(entry: TimelineEntry, state: CareerState): string {
       const outcome = choice?.outcomes.find((candidate) => candidate.id === outcomeId);
       return choice === undefined || outcome === undefined ? '이벤트' : `${choice.label} → ${outcome.title}`;
     }
+    // T-2-002 D-34: exhaustive switch가 typecheck에서 깨져 최소 수정(PR 본문 참고). 화면 전용
+    // 문구는 T-2-007(전술실)이 다듬는다.
+    case 'ROLE_RESOLVED':
+      return '역할 결정';
   }
 }
 

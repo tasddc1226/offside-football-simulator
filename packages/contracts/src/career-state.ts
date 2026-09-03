@@ -1,6 +1,6 @@
 import type { AttributeKey } from '@offside/domain';
 import { z } from 'zod';
-import { PlayerDraftSchema, PlayerProfileSchema } from './player.js';
+import { PlayerDraftSchema, PlayerProfileSchema, PositionSchema } from './player.js';
 import { RngStateSchema } from './snapshot.js';
 import { SemverSchema } from './versions.js';
 
@@ -49,16 +49,32 @@ export const ContractSchema = z.strictObject({
 export const DecisionSlotKindSchema = z.enum(['EVENT', 'CHAPTER', 'CONTRACT', 'ROLE', 'INJURY', 'NATIONAL_TEAM', 'SETTLEMENT']);
 export const SlotImportanceSchema = z.enum(['MAJOR', 'MINOR']);
 
-// D-10 + T-2-001: `pending`은 판별 유니온. `null`(대기 없음), `EVENT`(RESOLVE_EVENT 대기),
-// `OFFERS`(ACCEPT_OFFER 대기), 나머지 6종은 시즌 안 결정 슬롯 대기(자동 통과 대상은 domain
-// `isAutoPassablePending` 참고 — CHAPTER·CONTRACT·ROLE·INJURY·NATIONAL_TEAM. SETTLEMENT만 아니다).
+// T-2-002 D-34: 감독 역할 제안. `POSITION_CHANGE`는 인접 포지션 전환 제안, `ROLE_CHANGE`는
+// squadRole만 바뀌는 제안, `KEEP`은 현상 유지 확인.
+export const RoleProposalSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('KEEP'), position: PositionSchema, squadRole: SquadRoleSchema }),
+  z.strictObject({
+    type: z.literal('POSITION_CHANGE'),
+    from: PositionSchema,
+    to: PositionSchema,
+    squadRoleAfter: SquadRoleSchema,
+    tacticalFitAfter: z.number().int(),
+    proficiencyAfter: z.number().int(),
+  }),
+  z.strictObject({ type: z.literal('ROLE_CHANGE'), position: PositionSchema, from: SquadRoleSchema, to: SquadRoleSchema }),
+]);
+
+// D-10 + T-2-001/T-2-002: `pending`은 판별 유니온. `null`(대기 없음), `EVENT`(RESOLVE_EVENT 대기),
+// `OFFERS`(ACCEPT_OFFER 대기), `ROLE_PROPOSAL`(RESOLVE_ROLE 대기, T-2-002가 자동 통과이던 `ROLE`을
+// 대체), 나머지 5종은 시즌 안 결정 슬롯 대기(자동 통과 대상은 domain `isAutoPassablePending` 참고 —
+// CHAPTER·CONTRACT·INJURY·NATIONAL_TEAM. ROLE_PROPOSAL·SETTLEMENT는 아니다).
 export const PendingSchema = z
   .discriminatedUnion('kind', [
     z.strictObject({ kind: z.literal('EVENT'), eventId: z.string().min(1), version: z.number().int().positive() }),
     z.strictObject({ kind: z.literal('OFFERS'), offers: z.array(OfferSchema) }),
     z.strictObject({ kind: z.literal('CHAPTER'), step: z.number().int().min(1).max(12), importance: SlotImportanceSchema.exactOptional() }),
     z.strictObject({ kind: z.literal('CONTRACT'), step: z.number().int().min(1).max(12) }),
-    z.strictObject({ kind: z.literal('ROLE'), step: z.number().int().min(1).max(12) }),
+    z.strictObject({ kind: z.literal('ROLE_PROPOSAL'), step: z.number().int().min(1).max(12), proposal: RoleProposalSchema }),
     z.strictObject({ kind: z.literal('INJURY'), step: z.number().int().min(1).max(12) }),
     z.strictObject({ kind: z.literal('NATIONAL_TEAM'), step: z.number().int().min(1).max(12) }),
     z.strictObject({ kind: z.literal('SETTLEMENT'), step: z.number().int().min(1).max(12) }),
@@ -69,7 +85,7 @@ export const PendingSchema = z
 // `EVT-…:choiceId:outcomeId`, 계약이면 contract id. `SEASON_STARTED`/`STEP_PASSED`는 T-2-001.
 export const TimelineEntrySchema = z.strictObject({
   revision: z.number().int().positive(),
-  kind: z.enum(['CAREER_CONFIRMED', 'EVENT_RESOLVED', 'CONTRACT_SIGNED', 'SEASON_STARTED', 'STEP_PASSED', 'SEASON_SETTLED']),
+  kind: z.enum(['CAREER_CONFIRMED', 'EVENT_RESOLVED', 'CONTRACT_SIGNED', 'SEASON_STARTED', 'STEP_PASSED', 'SEASON_SETTLED', 'ROLE_RESOLVED']),
   refId: z.string().nullable(),
   age: z.number().int(),
   step: z.number().int(),
@@ -121,7 +137,73 @@ export const MatchRecordSchema = z.strictObject({
   result: z.strictObject({ goalsFor: z.number().int().nonnegative(), goalsAgainst: z.number().int().nonnegative() }).nullable(),
 });
 
-// T-2-001 D-24: 시즌 구조. `ageReferenceStep`은 항상 1(11 "나이·시즌 경계").
+/**
+ * domain `ATTRIBUTE_KEYS`의 복제(위 `CAREER_STATE_ATTRIBUTE_KEYS`와 같은 목록이 필요하지만 이 값은
+ * 아래에서 선언되므로 여기서도 한 번 더 상수를 만든다 — 순서 의존 관계를 피하려 인라인 배열을 쓴다).
+ */
+const SELECTION_ATTRIBUTE_KEYS = [
+  'shooting', 'passing', 'dribbling', 'tackling', 'firstTouch', 'crossing', 'goalkeeping',
+  'pace', 'acceleration', 'agility', 'jumping', 'stamina', 'strength', 'durability',
+  'decisions', 'concentration', 'composure', 'positioning', 'leadership', 'consistency',
+] as const satisfies readonly AttributeKey[];
+const selectionAttributesShape = Object.fromEntries(
+  SELECTION_ATTRIBUTE_KEYS.map((key) => [key, z.number().int()]),
+) as { [K in (typeof SELECTION_ATTRIBUTE_KEYS)[number]]: z.ZodNumber };
+
+// T-2-002 D-34: START_SEASON이 만드는 같은 포지션 경쟁자.
+export const CompetitorSchema = z.strictObject({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  position: PositionSchema,
+  archetypeId: z.string().min(1),
+  attributes: z.strictObject(selectionAttributesShape),
+  baseOvr: z.number().int(),
+  form: z.number().int(),
+  fitness: z.number().int(),
+  morale: z.number().int(),
+  tacticalFit: z.number().int(),
+  managerTrust: z.number().int(),
+  squadStatus: z.number().int(),
+  rolePromise: SquadRoleSchema,
+});
+
+// T-2-002 RULE-SEL-001: 선발 순위 후보. `excluded`는 이 작업에서 항상 null(부상·징계·대표팀 제외는
+// T-2-003·Phase 4).
+export const SelectionCandidateSchema = z.strictObject({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  baseOvr: z.number().int(),
+  tacticalFit: z.number().int(),
+  managerTrust: z.number().int(),
+  expectedPerformance: z.number().int(),
+  squadStatus: z.number().int(),
+  score: z.number().int(),
+  excluded: z.enum(['INJURY', 'SUSPENSION', 'NATIONAL_TEAM']).nullable(),
+});
+
+// domain `SelectionRanking['candidates']`은 `SelectionCandidate & { rank; appearance }`(교차 타입)이다.
+// `z.strictObject({ ...SelectionCandidateSchema.shape, rank, appearance })`처럼 펼쳐 합치면 결과
+// 타입이 평평한 단일 object로 추론되어 domain의 교차 타입과 `expectTypeOf().toEqualTypeOf()`가
+// 구조적으로는 같아도 표현 형태가 달라 불일치로 본다 — `.and()`로 실제 교차 타입을 만들어 맞춘다.
+const RankedSelectionCandidateSchema = SelectionCandidateSchema.and(
+  z.strictObject({ rank: z.number().int().positive(), appearance: z.enum(['START', 'SUB', 'OUT']) }),
+);
+
+export const SelectionRankingSchema = z.strictObject({
+  position: PositionSchema,
+  slots: z.number().int().nonnegative(),
+  benchSlots: z.number().int().nonnegative(),
+  candidates: z.array(RankedSelectionCandidateSchema),
+  playerReason: z
+    .strictObject({
+      component: z.enum(['TACTICAL_FIT', 'MANAGER_TRUST', 'EXPECTED_PERFORMANCE', 'SQUAD_STATUS']),
+      delta: z.number().int(),
+    })
+    .nullable(),
+});
+
+// T-2-001 D-24/T-2-002 D-34: 시즌 구조. `ageReferenceStep`은 항상 1(11 "나이·시즌 경계"). `styleId`·
+// `squad`·`selection`은 T-2-002가 추가한다.
 export const FootballSeasonSchema = z.strictObject({
   index: z.number().int().positive(),
   serviceSeasonId: z.string().min(1),
@@ -131,10 +213,13 @@ export const FootballSeasonSchema = z.strictObject({
   phase: SeasonPhaseSchema,
   steps: z.array(SeasonStepSchema),
   teamId: z.string().min(1),
+  styleId: z.string().min(1),
   squadRole: SquadRoleSchema,
   competitions: z.array(CompetitionRecordSchema),
   matches: z.array(MatchRecordSchema),
   ageReferenceStep: z.literal(1),
+  squad: z.strictObject({ competitors: z.array(CompetitorSchema) }),
+  selection: SelectionRankingSchema,
 });
 
 export const SeasonSummarySchema = z.strictObject({

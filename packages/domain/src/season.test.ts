@@ -164,7 +164,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       ],
       summary: null,
     };
-    const result = selectOpenSlot(step, 'CHAPTER', [{ eventId: 'EVT-X', version: 1, weight: 1 }], rng);
+    const result = selectOpenSlot(step, 'CHAPTER', [{ eventId: 'EVT-X', version: 1, weight: 1 }], rng, null);
     expect(result.opened).toBe(true);
     if (result.opened) expect(result.pending?.kind).toBe('CONTRACT');
   });
@@ -177,7 +177,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'EVENT', required: false }],
       summary: null,
     };
-    const result = selectOpenSlot(step, 'CHAPTER', [], rng);
+    const result = selectOpenSlot(step, 'CHAPTER', [], rng, null);
     expect(result).toEqual({ opened: false });
   });
 
@@ -189,7 +189,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'CHAPTER', required: false, importance: 'MINOR' }],
       summary: null,
     };
-    expect(selectOpenSlot(minorStep, 'FAST', [], rng)).toEqual({ opened: false });
+    expect(selectOpenSlot(minorStep, 'FAST', [], rng, null)).toEqual({ opened: false });
 
     const majorStep: SeasonStep = {
       index: 3,
@@ -198,7 +198,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }],
       summary: null,
     };
-    const result = selectOpenSlot(majorStep, 'FAST', [], rng);
+    const result = selectOpenSlot(majorStep, 'FAST', [], rng, null);
     expect(result.opened).toBe(true);
   });
 
@@ -210,21 +210,27 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'CONTRACT', required: false, skippedByBudget: true }],
       summary: null,
     };
-    expect(selectOpenSlot(step, 'CHAPTER', [], rng)).toEqual({ opened: false });
+    expect(selectOpenSlot(step, 'CHAPTER', [], rng, null)).toEqual({ opened: false });
   });
 });
 
 describe('isAutoPassablePending', () => {
-  it('CHAPTER·CONTRACT·ROLE·INJURY·NATIONAL_TEAM만 자동 통과 대상이다', () => {
+  it('CHAPTER·CONTRACT·INJURY·NATIONAL_TEAM만 자동 통과 대상이다', () => {
     expect(isAutoPassablePending({ kind: 'CHAPTER', step: 3 })).toBe(true);
     expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7 })).toBe(true);
-    expect(isAutoPassablePending({ kind: 'ROLE', step: 1 })).toBe(true);
     expect(isAutoPassablePending({ kind: 'INJURY', step: 5 })).toBe(true);
     expect(isAutoPassablePending({ kind: 'NATIONAL_TEAM', step: 8 })).toBe(true);
     expect(isAutoPassablePending({ kind: 'EVENT', eventId: 'x', version: 1 })).toBe(false);
     expect(isAutoPassablePending({ kind: 'OFFERS', offers: [] })).toBe(false);
     expect(isAutoPassablePending({ kind: 'SETTLEMENT', step: 12 })).toBe(false);
     expect(isAutoPassablePending(null)).toBe(false);
+  });
+
+  // T-2-002 D-34: ROLE은 더 이상 자동 통과 대상이 아니다 — RESOLVE_ROLE로만 닫힌다.
+  it('ROLE_PROPOSAL은 자동 통과 대상이 아니다', () => {
+    expect(
+      isAutoPassablePending({ kind: 'ROLE_PROPOSAL', step: 1, proposal: { type: 'KEEP', position: 'W', squadRole: 'STARTER' } }),
+    ).toBe(false);
   });
 });
 
@@ -254,11 +260,21 @@ function settleSeasonCommand(revision: number): Command & { commandId: string; e
   return { type: 'SETTLE_SEASON', commandId: `settle-${revision}`, expectedRevision: revision, payload: {} };
 }
 
+function resolveRoleCommand(
+  revision: number,
+  decision: 'ACCEPT' | 'DECLINE' = 'ACCEPT',
+): Command & { commandId: string; expectedRevision: number } {
+  return { type: 'RESOLVE_ROLE', commandId: `role-${revision}`, expectedRevision: revision, payload: { decision } };
+}
+
 function runSimulate(snapshot: DomainSnapshot, command: Command & { commandId: string; expectedRevision: number }) {
   return simulate({ ...baseInput(), snapshot, command });
 }
 
-/** START_SEASON부터 SETTLE_SEASON까지, pending 종류에 맞춰 자동으로 명령을 이어 보낸다. */
+/**
+ * START_SEASON부터 SETTLE_SEASON까지, pending 종류에 맞춰 자동으로 명령을 이어 보낸다. T-2-002:
+ * ROLE_PROPOSAL은 더 이상 자동 통과 대상이 아니라 RESOLVE_ROLE(ACCEPT)로 직접 닫는다.
+ */
 function playFullSeason(startSnapshot: DomainSnapshot, mode: 'FAST' | 'CHAPTER'): DomainSnapshot {
   const started = runSimulate(startSnapshot, startSeasonCommand(startSnapshot.revision, mode));
   if (!started.ok) throw new Error(`START_SEASON 실패: ${started.error.code} ${started.error.message}`);
@@ -266,12 +282,18 @@ function playFullSeason(startSnapshot: DomainSnapshot, mode: 'FAST' | 'CHAPTER')
 
   for (let guard = 0; guard < 100; guard++) {
     const pending = snapshot.state.pending;
-    if (pending === null) throw new Error('pending이 null인데 시즌이 안 끝났다.');
-    if (pending.kind === 'SETTLEMENT') {
+    if (pending?.kind === 'SETTLEMENT') {
       const settled = runSimulate(snapshot, settleSeasonCommand(snapshot.revision));
       if (!settled.ok) throw new Error(`SETTLE_SEASON 실패: ${settled.error.code} ${settled.error.message}`);
       return settled.snapshot;
     }
+    if (pending?.kind === 'ROLE_PROPOSAL') {
+      const resolved = runSimulate(snapshot, resolveRoleCommand(snapshot.revision, 'ACCEPT'));
+      if (!resolved.ok) throw new Error(`RESOLVE_ROLE 실패: ${resolved.error.code} ${resolved.error.message}`);
+      snapshot = resolved.snapshot;
+      continue;
+    }
+    // pending이 null이거나(RESOLVE_ROLE·RESOLVE_EVENT 직후) 자동 통과 대상이면 ADVANCE로 진행한다.
     const result = runSimulate(snapshot, advanceCommand(snapshot.revision));
     if (!result.ok) throw new Error(`ADVANCE 실패: ${result.error.code} ${result.error.message}`);
     snapshot = result.snapshot;
@@ -296,10 +318,10 @@ describe('START_SEASON (CMD-SIM-001)', () => {
     const snapshot = activeSnapshotWithContract();
     const started = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'FAST'));
     if (!started.ok) throw new Error('setup 실패');
-    // 첫 step의 pending(ROLE)을 자동 통과시켜 pending을 비운 뒤 다시 START_SEASON을 보낸다.
-    const advanced = runSimulate(started.snapshot, advanceCommand(started.snapshot.revision));
-    if (!advanced.ok) throw new Error('setup 실패');
-    const result = runSimulate(advanced.snapshot, startSeasonCommand(advanced.snapshot.revision, 'FAST'));
+    // 첫 step의 ROLE_PROPOSAL을 RESOLVE_ROLE(ACCEPT)로 닫아 pending을 비운 뒤 다시 START_SEASON을 보낸다.
+    const resolved = runSimulate(started.snapshot, resolveRoleCommand(started.snapshot.revision, 'ACCEPT'));
+    if (!resolved.ok) throw new Error('setup 실패');
+    const result = runSimulate(resolved.snapshot, startSeasonCommand(resolved.snapshot.revision, 'FAST'));
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({ reason: 'SEASON_ALREADY_ACTIVE' });
@@ -341,8 +363,18 @@ describe('START_SEASON (CMD-SIM-001)', () => {
     expect(state.season?.competitions).toEqual(buildInitialCompetitions(DEFAULT_CALENDAR));
     expect(state.currentStep).toBe(1);
     expect(state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_STARTED', step: 1 });
-    // step1 ROLE은 required라 즉시 pending으로 열린다.
-    expect(state.pending).toEqual({ kind: 'ROLE', step: 1 });
+    // T-2-002 D-34: step1 ROLE은 required라 즉시 열리지만, 더 이상 플레이스홀더가 아니라
+    // computeRoleProposal이 산출한 실제 ROLE_PROPOSAL이다(roll 없음, RESOLVE_ROLE로만 닫힌다).
+    const pending = state.pending;
+    expect(pending?.kind).toBe('ROLE_PROPOSAL');
+    if (pending?.kind === 'ROLE_PROPOSAL') {
+      expect(pending.step).toBe(1);
+      expect(['KEEP', 'POSITION_CHANGE', 'ROLE_CHANGE']).toContain(pending.proposal.type);
+    }
+    // T-2-002 D-26/D-34: 경쟁자·전술 스타일·선발 순위도 START_SEASON에서 함께 채워진다.
+    expect(state.season?.styleId).toBe('possession');
+    expect(state.season?.squad.competitors.length).toBeGreaterThan(0);
+    expect(state.season?.selection.candidates.some((c) => c.id === 'PLAYER')).toBe(true);
   });
 });
 
@@ -352,8 +384,11 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     const started = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'CHAPTER'));
     if (!started.ok) throw new Error('setup 실패');
 
-    // step1 ROLE 자동 통과 → step2 EVENT(eligibleEvents 없음, 건너뜀) → step3 CHAPTER에서 멈춘다.
-    const advanced = runSimulate(started.snapshot, advanceCommand(started.snapshot.revision));
+    // step1 ROLE_PROPOSAL을 RESOLVE_ROLE(ACCEPT)로 닫고 → step2 EVENT(eligibleEvents 없음, 건너뜀) →
+    // step3 CHAPTER에서 멈춘다.
+    const roleResolved = runSimulate(started.snapshot, resolveRoleCommand(started.snapshot.revision, 'ACCEPT'));
+    if (!roleResolved.ok) throw new Error('setup 실패');
+    const advanced = runSimulate(roleResolved.snapshot, advanceCommand(roleResolved.snapshot.revision));
     if (!advanced.ok) throw new Error(`실패: ${advanced.error.code} ${advanced.error.message}`);
     const state = advanced.snapshot.state;
     expect(state.season?.currentStep).toBe(3);
@@ -396,10 +431,12 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     const started = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'CHAPTER'));
     if (!started.ok) throw new Error('setup 실패');
 
-    // step1 ROLE 자동 통과 → step2 EVENT(eligibleEvents 하나 제공)에서 멈춘다.
+    // step1 ROLE_PROPOSAL을 RESOLVE_ROLE(ACCEPT)로 닫고 → step2 EVENT(eligibleEvents 하나 제공)에서 멈춘다.
+    const roleResolved = runSimulate(started.snapshot, resolveRoleCommand(started.snapshot.revision, 'ACCEPT'));
+    if (!roleResolved.ok) throw new Error('setup 실패');
     const opened = runSimulate(
-      started.snapshot,
-      advanceCommand(started.snapshot.revision, [{ eventId: 'EVT-SEASON-TEST', version: 1, weight: 1 }]),
+      roleResolved.snapshot,
+      advanceCommand(roleResolved.snapshot.revision, [{ eventId: 'EVT-SEASON-TEST', version: 1, weight: 1 }]),
     );
     if (!opened.ok) throw new Error(`실패: ${opened.error.code} ${opened.error.message}`);
     expect(opened.snapshot.state.pending).toEqual({ kind: 'EVENT', eventId: 'EVT-SEASON-TEST', version: 1 });
@@ -437,10 +474,12 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     const started = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'CHAPTER'));
     if (!started.ok) throw new Error('setup 실패');
 
-    // step1 ROLE 자동 통과 → step2 EVENT에서 멈춘다(eligibleEvents 제공).
+    // step1 ROLE_PROPOSAL을 RESOLVE_ROLE(ACCEPT)로 닫고 → step2 EVENT에서 멈춘다(eligibleEvents 제공).
+    const roleResolved = runSimulate(started.snapshot, resolveRoleCommand(started.snapshot.revision, 'ACCEPT'));
+    if (!roleResolved.ok) throw new Error('setup 실패');
     const opened = runSimulate(
-      started.snapshot,
-      advanceCommand(started.snapshot.revision, [{ eventId: 'EVT-EFFECT-TEST', version: 1, weight: 1 }]),
+      roleResolved.snapshot,
+      advanceCommand(roleResolved.snapshot.revision, [{ eventId: 'EVT-EFFECT-TEST', version: 1, weight: 1 }]),
     );
     if (!opened.ok) throw new Error(`실패: ${opened.error.code} ${opened.error.message}`);
     expect(opened.snapshot.state.season?.currentStep).toBe(2);
@@ -497,14 +536,17 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     expect(pastStep5.snapshot.state.state.morale).toBe(beforeMorale);
   });
 
-  it('step 경계 Snapshot에서 재개한 진행의 결산 hash가 연속 실행과 같다', () => {
+  it('step 경계 Snapshot에서 재개한 진행의 결산 hash가 연속 실행과 같다(RESOLVE_ROLE 포함 시나리오)', () => {
     const continuous = playFullSeason(activeSnapshotWithContract(), 'CHAPTER');
 
     const startSnapshot = activeSnapshotWithContract();
     const started = runSimulate(startSnapshot, startSeasonCommand(startSnapshot.revision, 'CHAPTER'));
     if (!started.ok) throw new Error('setup 실패');
-    // 한 번만 진행한 뒤 JSON round-trip으로 "checkpoint에서 재개"를 흉내낸다.
-    const oneStepIn = runSimulate(started.snapshot, advanceCommand(started.snapshot.revision));
+    // step1 ROLE_PROPOSAL을 RESOLVE_ROLE(ACCEPT)로 닫고 한 번 더 진행한 뒤, JSON round-trip으로
+    // "checkpoint에서 재개"를 흉내낸다.
+    const roleResolved = runSimulate(started.snapshot, resolveRoleCommand(started.snapshot.revision, 'ACCEPT'));
+    if (!roleResolved.ok) throw new Error('setup 실패');
+    const oneStepIn = runSimulate(roleResolved.snapshot, advanceCommand(roleResolved.snapshot.revision));
     if (!oneStepIn.ok) throw new Error('setup 실패');
     const resumed = JSON.parse(JSON.stringify(oneStepIn.snapshot)) as DomainSnapshot;
     expect(resumed.stateHash).toBe(oneStepIn.snapshot.stateHash);
@@ -512,8 +554,7 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     let snapshot = resumed;
     for (let guard = 0; guard < 100; guard++) {
       const pending = snapshot.state.pending;
-      if (pending === null) throw new Error('pending이 null이다.');
-      if (pending.kind === 'SETTLEMENT') {
+      if (pending?.kind === 'SETTLEMENT') {
         const settled = runSimulate(snapshot, settleSeasonCommand(snapshot.revision));
         if (!settled.ok) throw new Error('실패');
         expect(settled.snapshot.stateHash).toBe(continuous.stateHash);
@@ -570,8 +611,12 @@ describe('SETTLE_SEASON (CMD-SIM-003)', () => {
     snapshot = started.snapshot;
 
     for (let guard = 0; guard < 100 && snapshot.state.pending?.kind !== 'SETTLEMENT'; guard++) {
-      const advanced = runSimulate(snapshot, advanceCommand(snapshot.revision));
-      if (!advanced.ok) throw new Error(`ADVANCE 실패: ${advanced.error.code} ${advanced.error.message}`);
+      const command =
+        snapshot.state.pending?.kind === 'ROLE_PROPOSAL'
+          ? resolveRoleCommand(snapshot.revision, 'ACCEPT')
+          : advanceCommand(snapshot.revision);
+      const advanced = runSimulate(snapshot, command);
+      if (!advanced.ok) throw new Error(`진행 실패: ${advanced.error.code} ${advanced.error.message}`);
       snapshot = advanced.snapshot;
     }
     expect(snapshot.state.pending?.kind).toBe('SETTLEMENT');

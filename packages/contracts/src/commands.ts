@@ -7,8 +7,8 @@ import { CareerSnapshotSchema } from './snapshot.js';
 import { SemverSchema } from './versions.js';
 
 /**
- * 07 "로컬 명령 계약"의 12개 명령. domain Command의 이름과 같게 유지한다(T-0-014가 domain의
- * ADVANCE_STEP을 ADVANCE로 정렬).
+ * 07 "로컬 명령 계약"의 13개 명령(T-2-002가 RESOLVE_ROLE 추가). domain Command의 이름과 같게
+ * 유지한다(T-0-014가 domain의 ADVANCE_STEP을 ADVANCE로 정렬).
  */
 export const COMMAND_TYPES = [
   'CREATE_CAREER',
@@ -18,6 +18,8 @@ export const COMMAND_TYPES = [
   'START_SEASON',
   'ADVANCE',
   'SETTLE_SEASON',
+  // T-2-002 D-34 CMD-SIM-004: step 1 ROLE_PROPOSAL pending을 닫는다.
+  'RESOLVE_ROLE',
   'NEGOTIATE',
   'ACCEPT_OFFER',
   'REJECT_OFFER',
@@ -116,6 +118,11 @@ export const StartSeasonPayloadSchema = z.strictObject({
 // T-2-001 D-25: SETTLE_SEASON payload. 필드 없음(domain Command payload는 `Record<string, never>`).
 export const SettleSeasonPayloadSchema = z.strictObject({});
 
+// T-2-002 D-34 CMD-SIM-004: RESOLVE_ROLE payload.
+export const ResolveRolePayloadSchema = z.strictObject({
+  decision: z.enum(['ACCEPT', 'DECLINE']),
+});
+
 /** Phase 2+ 명령(아직 domain에 없음)은 형태를 모르므로 임의 payload를 통과시킨다. */
 const UnknownPayloadSchema = z.record(z.string(), z.unknown());
 
@@ -131,6 +138,7 @@ export const COMMAND_PAYLOAD_SCHEMAS = {
   START_SEASON: StartSeasonPayloadSchema,
   ADVANCE: AdvancePayloadSchema,
   SETTLE_SEASON: SettleSeasonPayloadSchema,
+  RESOLVE_ROLE: ResolveRolePayloadSchema,
   NEGOTIATE: UnknownPayloadSchema,
   ACCEPT_OFFER: AcceptOfferPayloadSchema,
   REJECT_OFFER: UnknownPayloadSchema,
@@ -159,6 +167,7 @@ export const CommandRequestSchema = z.discriminatedUnion('type', [
   commandRequestMember('START_SEASON', COMMAND_PAYLOAD_SCHEMAS.START_SEASON),
   commandRequestMember('ADVANCE', COMMAND_PAYLOAD_SCHEMAS.ADVANCE),
   commandRequestMember('SETTLE_SEASON', COMMAND_PAYLOAD_SCHEMAS.SETTLE_SEASON),
+  commandRequestMember('RESOLVE_ROLE', COMMAND_PAYLOAD_SCHEMAS.RESOLVE_ROLE),
   commandRequestMember('NEGOTIATE', COMMAND_PAYLOAD_SCHEMAS.NEGOTIATE),
   commandRequestMember('ACCEPT_OFFER', COMMAND_PAYLOAD_SCHEMAS.ACCEPT_OFFER),
   commandRequestMember('REJECT_OFFER', COMMAND_PAYLOAD_SCHEMAS.REJECT_OFFER),

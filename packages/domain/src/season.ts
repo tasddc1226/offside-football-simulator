@@ -1,6 +1,7 @@
 import { rollRange } from './roll-range.js';
 import type { RngState } from './rng.js';
 import type { LeagueCalendar, LeagueCalendarSlot } from './ruleset.js';
+import { computeRoleProposal, type RoleProposalContext } from './selection.js';
 import type { CompetitionRecord, DecisionSlot, Pending, SeasonStep, SimulationMode } from './types.js';
 
 /** RULE-TIME-004: 시즌당 핵심 경기 챕터 상한(모드 공통). */
@@ -160,13 +161,16 @@ export type SlotOpenResult =
 /**
  * 한 step의 decisionSlots 중 이번 ADVANCE에서 열 슬롯 하나를 고른다. 예산에 잘린 슬롯과 모드가
  * 거르는 슬롯은 후보에서 빠진다. EVENT는 eligibleEvents가 비어 있으면 건너뛴다(roll 없음, RULE-TIME-004
- * 문서 "eligibleEvents가 비어 있으면 그 슬롯은 건너뛴다"). 나머지 종류는 플레이스홀더로 무조건 연다.
+ * 문서 "eligibleEvents가 비어 있으면 그 슬롯은 건너뛴다"). ROLE은 `roleContext`로 `computeRoleProposal`을
+ * 계산해 `ROLE_PROPOSAL` pending을 연다(roll을 소비하지 않는다 — D-34). 나머지 종류는 플레이스홀더로
+ * 무조건 연다.
  */
 export function selectOpenSlot(
   step: SeasonStep,
   mode: SimulationMode,
   eligibleEvents: readonly EligibleEvent[],
   rngState: RngState,
+  roleContext: RoleProposalContext | null,
 ): SlotOpenResult {
   const candidates = step.decisionSlots
     .filter((slot) => !slot.skippedByBudget)
@@ -215,6 +219,14 @@ export function selectOpenSlot(
       };
     }
 
+    if (slot.kind === 'ROLE') {
+      if (roleContext === null) {
+        throw new RangeError('selectOpenSlot: ROLE 슬롯을 열려는데 roleContext가 없다.');
+      }
+      const proposal = computeRoleProposal(roleContext);
+      return { opened: true, pending: { kind: 'ROLE_PROPOSAL', step: step.index, proposal }, rngState };
+    }
+
     return { opened: true, pending: { kind: slot.kind, step: step.index }, rngState };
   }
 
@@ -244,6 +256,7 @@ export function walkToNextDecision(
   eligibleEvents: readonly EligibleEvent[],
   rngState: RngState,
   revision: number,
+  roleContext: RoleProposalContext | null,
 ): SeasonWalkResult {
   let currentStepIndex = startStepIndex;
   let pending: Pending = null;
@@ -253,7 +266,7 @@ export function walkToNextDecision(
 
   while (currentStepIndex < 12) {
     const step = findSeasonStep(nextSteps, currentStepIndex);
-    const opened = selectOpenSlot(step, mode, eligibleEvents, nextRngState);
+    const opened = selectOpenSlot(step, mode, eligibleEvents, nextRngState, roleContext);
     if (opened.opened) {
       pending = opened.pending;
       nextRngState = opened.rngState;
@@ -271,13 +284,16 @@ export function walkToNextDecision(
   return { steps: nextSteps, currentStepIndex, pending, rngState: nextRngState, passedStepIndexes };
 }
 
-/** ADVANCE가 CHAPTER·CONTRACT·ROLE·INJURY·NATIONAL_TEAM pending을 "자동 통과"로 닫을 수 있는지. */
+/**
+ * ADVANCE가 CHAPTER·CONTRACT·INJURY·NATIONAL_TEAM pending을 "자동 통과"로 닫을 수 있는지. T-2-002
+ * D-34: ROLE은 더 이상 자동 통과 대상이 아니다 — `selectOpenSlot`이 ROLE 슬롯을 `ROLE_PROPOSAL`
+ * pending으로 열고, `RESOLVE_ROLE` 명령으로만 닫힌다.
+ */
 export function isAutoPassablePending(pending: Pending): boolean {
   return (
     pending !== null &&
     (pending.kind === 'CHAPTER' ||
       pending.kind === 'CONTRACT' ||
-      pending.kind === 'ROLE' ||
       pending.kind === 'INJURY' ||
       pending.kind === 'NATIONAL_TEAM')
   );

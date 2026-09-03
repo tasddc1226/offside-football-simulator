@@ -1,0 +1,50 @@
+{
+  "_comment": "T-2-002 브리프 '골든·fixture 절차' 1번: 문서 03 RULE-PERF-001/RULE-SEL-001 계산 예의 선수 A·B. docRound1Golden은 브리프·문서 03이 명시한 round1(소수 1자리, Math.round(x*10)/10) 기준 기대값이다. actualRoundToIntGolden은 이 저장소가 실제로 저장하는 값으로, selection.ts 상단 주석에 기록한 스펙 충돌(canonicalize의 안전 정수 불변식과 round1의 충돌)에 따라 정수로 반올림한다 — computeExpectedPerformance·computeSelectionScore를 실제로 실행해서 얻은 값이며 손계산이 아니다. B의 예상치는 부동소수점 오차 때문에 raw 값이 수학적으로는 77.5지만 JS에서 77.49999999999999로 계산되어 Math.round가 77로 내림한다(round1은 ×10 뒤 반올림해 이 오차를 우연히 상쇄하고 77.5를 보존하지만, roundToInt는 그대로 드러낸다) — PR 본문에 별도로 기록한다.",
+  "rules": "RULESET.selectionRules (packages/domain/src/__fixtures__/ruleset-proto.json)",
+  "candidates": {
+    "A": {
+      "id": "RIVAL-A",
+      "baseOvr": 80,
+      "tacticalFit": 50,
+      "managerTrust": 45,
+      "form": 70,
+      "fitness": 60,
+      "morale": 70,
+      "familiarity": 1.0,
+      "rolePromiseForSquadStatus": "BENCH",
+      "lastRatingForRepeatTest": 6.8
+    },
+    "B": {
+      "id": "PLAYER",
+      "baseOvr": 74,
+      "tacticalFit": 88,
+      "managerTrust": 70,
+      "form": 85,
+      "fitness": 85,
+      "morale": 81,
+      "familiarity": 1.0,
+      "rolePromiseForSquadStatus": "ROTATION",
+      "lastRatingForRepeatTest": 7.2
+    }
+  },
+  "docRound1Golden": {
+    "A": { "expectedPerformance": 74.0, "squadStatus": 40, "score": 53.8 },
+    "B": { "expectedPerformance": 77.5, "squadStatus": 60, "score": 78.1 }
+  },
+  "actualRoundToIntGolden": {
+    "A": { "expectedPerformance": 74, "squadStatus": 40, "score": 54 },
+    "B": { "expectedPerformance": 77, "squadStatus": 60, "score": 78 }
+  },
+  "rankingSlots1Bench1": {
+    "position": "W",
+    "playerId": "PLAYER",
+    "playerAppearance": "START",
+    "rivalAppearance": "SUB",
+    "playerReason": { "component": "TACTICAL_FIT", "delta": 15 }
+  },
+  "repeatTest12Rounds": {
+    "description": "직전 평점을 12번(A 6.8 고정, B 7.2 고정) 넣어 computeSquadStatus로 Squad Status를 다시 계산하며 판정을 반복해도(결정론적 순수 함수라 매 라운드 결과가 같다) B의 START 횟수(12) > A의 START 횟수(0)다.",
+    "A": { "squadStatus": 42, "score": 54 },
+    "B": { "squadStatus": 66, "score": 79 }
+  }
+}
