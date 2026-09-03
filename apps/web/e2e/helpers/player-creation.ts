@@ -81,3 +81,24 @@ export async function advanceUntilOffers(page: Page): Promise<void> {
   }
   throw new Error('offers 화면에 도달하지 못했다(최대 10회 시도)');
 }
+
+/** SCR-009(제안 비교)에서 첫 제안을 골라 SCR-010(계약)에서 사인한다. 대시보드(SCR-029)로
+ * 돌아온다(T-2-007: first-contract.spec.ts 원래 정의에서 뽑았다, season.spec.ts와 공유). */
+export async function signFirstOffer(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
+  await page.getByRole('link', { name: '이 제안 보기' }).first().click();
+
+  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+  await page.getByRole('button', { name: '사인' }).click();
+
+  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
+}
+
+/** 온보딩부터 첫 프로 계약 체결까지(대시보드 도착) 전 구간. first-contract.spec.ts·season.spec.ts가
+ * 공유한다. */
+export async function completeOnboardingThroughContract(page: Page): Promise<void> {
+  await completeOnboardingAndConfirm(page);
+  await advanceUntilOffers(page);
+  await signFirstOffer(page);
+}

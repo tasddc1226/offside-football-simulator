@@ -9,6 +9,8 @@ pnpm --filter @offside/web e2e:perf      # 실제 빌드 대상 성능 측정(E2
 
 `playwright.config.ts`가 기본적으로 `vite dev --port 5174`를 `webServer`로 자동 기동한다(이미 떠 있으면 재사용). Chromium 1개 프로젝트, 기본 뷰포트 360×780, 실패 시 trace `retain-on-failure`. `E2E_PREVIEW=1`이면 대신 `pnpm build && vite preview --port 5175`를 띄운다(dev 서버는 HMR·미압축 번들이라 LCP·CLS가 실제 배포본과 다르게 나온다).
 
+워크트리를 여러 개 병행 투입해 e2e를 동시에 돌릴 때는 기본 포트(5174/5173/5175)가 충돌할 수 있다 — `E2E_PORT=<port>`로 웹 서버 포트를, `E2E_API_URL=<url>`로 `E2E_WITH_API=1`일 때의 API 주소를 각각 오버라이드한다(예: `E2E_PORT=5184 pnpm --filter @offside/web e2e`).
+
 ## 스펙
 
 - `hub.spec.ts`: 첫 방문 → 온보딩 → 건너뛰기 → 빈 허브 → KICKOFF → DRAFT 생성 → 허브 카드(새로고침 뒤 IndexedDB 영속 확인) → 삭제.

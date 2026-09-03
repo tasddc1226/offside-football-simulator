@@ -4,11 +4,15 @@ import type {
   AttributeKey,
   CareerStage,
   CareerStatus,
+  DecisionSlot,
+  MatchAppearance,
+  OutReason,
   PlayerGender,
   Position,
   PositionGroup,
   PreferredFoot,
   SeasonPhase,
+  SelectionCandidate,
   SquadRole,
   TimelineEntry,
 } from '@offside/domain';
@@ -174,6 +178,47 @@ export const EFFECT_TARGET_LABEL_KO: Record<
 export const CAREER_STAGE_LABELS: Record<CareerStage, string> = {
   YOUTH: '유스',
   PRO: '프로',
+};
+
+/** T-2-007 SCR-029 SeasonTimeline·일정표: 결정 슬롯 종류 라벨. */
+export const DECISION_SLOT_KIND_LABEL_KO: Record<DecisionSlot['kind'], string> = {
+  EVENT: '이벤트',
+  CHAPTER: '핵심 경기',
+  CONTRACT: '계약',
+  ROLE: '역할',
+  INJURY: '부상',
+  NATIONAL_TEAM: '대표팀',
+  SETTLEMENT: '결산',
+};
+
+/** T-2-007 SCR-029 일정표: 경기 출전 상태 라벨. START·SUB는 outReason이 항상 null이라 appearance만 본다. */
+export const MATCH_APPEARANCE_LABEL_KO: Record<MatchAppearance, string> = {
+  START: '선발',
+  SUB: '교체',
+  OUT: '결장',
+};
+
+/** T-2-007 SCR-029 일정표: OUT일 때의 사유 라벨. */
+export const OUT_REASON_LABEL_KO: Record<NonNullable<OutReason>, string> = {
+  NOT_SELECTED: '미선발',
+  UNUSED_SUB: '벤치 대기',
+  INJURY: '부상',
+  SUSPENSION: '정지',
+};
+
+/** T-2-007 SCR-029 전술실: 선발 제외 사유 라벨. */
+export const SELECTION_EXCLUDED_LABEL_KO: Record<NonNullable<SelectionCandidate['excluded']>, string> = {
+  INJURY: '부상',
+  SUSPENSION: '정지',
+  NATIONAL_TEAM: '대표팀 차출',
+};
+
+/** T-2-007 SCR-029 일정표: 컵 라운드 라벨. */
+export const CUP_ROUND_LABEL_KO: Record<'R1' | 'R2' | 'SEMI' | 'FINAL', string> = {
+  R1: '1라운드',
+  R2: '2라운드',
+  SEMI: '준결승',
+  FINAL: '결승',
 };
 
 /** 충돌 대화상자 비교 카드의 "마지막 기록" 행. */

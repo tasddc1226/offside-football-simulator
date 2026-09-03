@@ -10,10 +10,15 @@ import {
   deleteCareer,
   execute,
   resolveEvent,
+  resolveRole,
+  settleSeason,
+  startSeason,
   toResolveEventOutcomes,
+  toStartSeasonPayload,
   updateDraft,
 } from './career-actions.js';
 import { createAppEngine, type AppEngine } from './engine.js';
+import { ACTIVE_SERVICE_SEASON_ID } from './versions.js';
 
 const syncHolder = vi.hoisted(() => ({ notifyCommitted: vi.fn() }));
 vi.mock('./sync.js', () => ({
@@ -156,6 +161,106 @@ async function replayToConfirmed(engine: AppEngine): Promise<string> {
   }
   return careerId;
 }
+
+/** career01 픽스처를 계약 체결까지(pending null, season null) 재생한다. */
+async function replayToSigned(engine: AppEngine): Promise<string> {
+  const careerId = await replayToConfirmed(engine);
+  await advance(engine, careerId);
+  await resolveEvent(engine, careerId, 'A');
+  await advance(engine, careerId);
+  await resolveEvent(engine, careerId, 'B');
+  const offered = await advance(engine, careerId);
+  if (!offered.ok || offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
+    throw new Error('제안 단계에 도달하지 못했다');
+  }
+  const offerId = offered.domainSnapshot.state.pending.offers[0]!.id;
+  const accepted = await acceptOffer(engine, careerId, offerId);
+  if (!accepted.ok || accepted.domainSnapshot.state.pending !== null) {
+    throw new Error('계약 뒤 pending이 null이어야 한다');
+  }
+  return careerId;
+}
+
+describe('toStartSeasonPayload', () => {
+  it('simulationMode·ACTIVE_SERVICE_SEASON_ID를 담은 START_SEASON 명령을 만든다', () => {
+    const command = toStartSeasonPayload({ simulationMode: 'FAST' });
+    expect(command).toEqual({
+      type: 'START_SEASON',
+      payload: { simulationMode: 'FAST', serviceSeasonId: ACTIVE_SERVICE_SEASON_ID },
+    });
+  });
+
+  it('trainingFocus를 고르면 payload에 함께 싣는다(T-2-005 접점, PR #40 머지 확인)', () => {
+    const command = toStartSeasonPayload({ simulationMode: 'CHAPTER', trainingFocus: 'TECHNICAL' });
+    expect(command).toEqual({
+      type: 'START_SEASON',
+      payload: { simulationMode: 'CHAPTER', serviceSeasonId: ACTIVE_SERVICE_SEASON_ID, trainingFocus: 'TECHNICAL' },
+    });
+  });
+});
+
+describe('startSeason', () => {
+  it('SEASON_STARTED 타임라인 항목을 남기고 step 1 ROLE_PROPOSAL pending을 연다(RULE-TIME-002)', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToSigned(engine);
+
+    const result = await startSeason(engine, careerId, { simulationMode: 'FAST' });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.domainSnapshot.state.season?.index).toBe(1);
+    expect(result.domainSnapshot.state.season?.simulationMode).toBe('FAST');
+    expect(result.domainSnapshot.state.pending?.kind).toBe('ROLE_PROPOSAL');
+    expect(result.domainSnapshot.state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_STARTED' });
+  });
+});
+
+describe('resolveRole', () => {
+  it('ACCEPT는 ROLE_RESOLVED 타임라인 항목을 남기고 pending을 닫는다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToSigned(engine);
+    const started = await startSeason(engine, careerId, { simulationMode: 'FAST' });
+    if (!started.ok) throw new Error('startSeason 실패');
+
+    const result = await resolveRole(engine, careerId, 'ACCEPT');
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.domainSnapshot.state.pending).toBeNull();
+    expect(result.domainSnapshot.state.season).not.toBeNull();
+    expect(result.domainSnapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED' });
+  });
+});
+
+describe('settleSeason', () => {
+  it('SETTLEMENT pending을 닫고 season을 null로 되돌린다(다음 시즌 시작 준비)', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToSigned(engine);
+    const started = await startSeason(engine, careerId, { simulationMode: 'FAST' });
+    if (!started.ok) throw new Error('startSeason 실패');
+    const roleResolved = await resolveRole(engine, careerId, 'ACCEPT');
+    if (!roleResolved.ok) throw new Error('resolveRole 실패');
+
+    // FAST 모드는 CHAPTER·CONTRACT 같은 자동 통과 슬롯만 남기고 SETTLEMENT까지 곧장 advance된다
+    // (실측: 역할 수락 뒤 최대 4회). 안전 상한 20회.
+    let current = roleResolved;
+    for (let step = 0; step < 20 && current.domainSnapshot.state.pending?.kind !== 'SETTLEMENT'; step += 1) {
+      const advanced = await advance(engine, careerId);
+      if (!advanced.ok) throw new Error(`advance 실패: ${advanced.error.message}`);
+      current = advanced;
+    }
+    expect(current.domainSnapshot.state.pending?.kind).toBe('SETTLEMENT');
+
+    const result = await settleSeason(engine, careerId);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.domainSnapshot.state.season).toBeNull();
+    expect(result.domainSnapshot.state.pending).toBeNull();
+    expect(result.domainSnapshot.state.seasonHistory).toHaveLength(1);
+    expect(result.domainSnapshot.state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_SETTLED' });
+  });
+});
 
 describe('toResolveEventOutcomes', () => {
   it('EVT-CON-002 B의 DEFERRED effect가 EFFECT_DEFAULTS로 채워진 완전한 Effect 필드를 갖는다', () => {
