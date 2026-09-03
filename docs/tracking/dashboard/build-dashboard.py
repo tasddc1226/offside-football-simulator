@@ -101,7 +101,7 @@ LAYERS = [
     ("engine-client", "브라우저 실행기", ["명령 실행기·멱등성·Snapshot 복구", "Web Worker 시뮬레이터", "동기화 클라이언트(재시도·409 처리)", "룰셋 배선 (T-1-001)", "포크(fork-by-replay)·Worker 실패 처리 (T-1-011)", "서버 커리어 가져오기 importCareerFromServer (T-1-012)"], []),
     ("platform", "저장소 추상화", ["Dexie(IndexedDB) LocalStore", "KV LocalStore(토스 채널용 스텁)", "features.googleLink 채널 기능 플래그 (T-1-013)"], []),
     ("api", "Cloudflare Workers + D1", ["D1 스키마·migration", "세션(쿠키·Bearer)·익명 프로필·설정", "커리어 동기화 GET/PUT·If-Match·멱등", "복구 코드·프로필 복구·삭제·로그아웃·커리어 삭제 (T-1-004)", "Google OIDC start/callback/merge/unlink·가짜 OIDC (T-1-013)"], ["실제 Google 계정 검증 (U-003 대기)"]),
-    ("web · ui", "React 화면", ["라우터·디자인 토큰·허브 빈 상태", "Pretendard 동적 서브셋(2109KB→269KB)", "Button·Card 등 기본 부품", "Radix RadioGroup·Dialog·Tabs, ChoiceCard·CompareCards 등 부품 10종", "Playwright + axe E2E, 브라우저 Worker 해시 검증 (T-1-010)", "엔진 배선(Worker·IndexedDB)·허브·온보딩·설정 영속화 (T-1-007)", "선수 만들기 SCR-002~004·복구 코드 발급·API 클라이언트 (T-1-008)", "동기화 배선·저장 배지·충돌 대화상자·오프라인 (T-1-011)", "진로·입단 테스트·이벤트·결과·제안·계약·대시보드 화면, first-contract e2e (T-1-009)", "설정 데이터 섹션(복구·삭제·대조)·법적 문서·실제 api 복구 e2e (T-1-012)", "선수 성별 RadioGroup·선호 포지션 라벨·확인 요약 (T-1-016)", "Google 연결 행·병합 선택·로그아웃, google-link e2e (T-1-013)"], ["E2E 완료 조건 표·키보드 여정·5분 세션 측정 (T-1-014)"]),
+    ("web · ui", "React 화면", ["라우터·디자인 토큰·허브 빈 상태", "Pretendard 동적 서브셋(2109KB→269KB)", "Button·Card 등 기본 부품", "Radix RadioGroup·Dialog·Tabs, ChoiceCard·CompareCards 등 부품 10종", "Playwright + axe E2E, 브라우저 Worker 해시 검증 (T-1-010)", "엔진 배선(Worker·IndexedDB)·허브·온보딩·설정 영속화 (T-1-007)", "선수 만들기 SCR-002~004·복구 코드 발급·API 클라이언트 (T-1-008)", "동기화 배선·저장 배지·충돌 대화상자·오프라인 (T-1-011)", "진로·입단 테스트·이벤트·결과·제안·계약·대시보드 화면, first-contract e2e (T-1-009)", "설정 데이터 섹션(복구·삭제·대조)·법적 문서·실제 api 복구 e2e (T-1-012)", "선수 성별 RadioGroup·선호 포지션 라벨·확인 요약 (T-1-016)", "Google 연결 행·병합 선택·로그아웃, google-link e2e (T-1-013)", "resilience·recovery-conflict·keyboard·session-length·perf e2e, 완료 조건 표 15행 (T-1-014)"], ["완료 조건 보완: 포지션 탭 키보드·선호 포지션 표시·국외 이전 표·결과 aria-live·이탈 경고 (T-1-017)"]),
     ("CI · 배포", "GitHub Actions · Pages · Workers", [], ["U-002 Cloudflare 계정 대기 (T-0-010)"]),
 ]
 ETA = [
@@ -113,7 +113,8 @@ ETA = [
     ("9/3 09:25", "설정 데이터 섹션·법적 문서(T-1-012) 머지: 복구 코드 재발급·프로필 복구·삭제가 실제 api로 동작. Google 연결(T-1-013) 투입"),
     ("9/3 09:55", "성별·선호 포지션(T-1-016) 머지: 선수 생성에 성별·선호 포지션, 결과 불변 확인(golden stateHash만 변경). E2E 완료 조건(T-1-014) 투입"),
     ("9/3 10:50", "Google 연결·로그아웃(T-1-013) 머지: 가짜 OIDC로 연결·병합·해제 동작. 남은 Phase 1은 T-1-014 하나"),
-    ("9/3 오후", "E2E 완료 조건·완료 조건 표(T-1-014) 리뷰·머지 → Phase 1 종료"),
+    ("9/3 11:15", "E2E 완료 조건(T-1-014) 머지: 최소 조작 58초, 허브 LCP 1.1초(4G), 완료 조건 표 15행. 미구현 5건(포지션 탭 키보드 도달 불가 등) → T-1-017 투입"),
+    ("9/3 오후", "완료 조건 보완(T-1-017) 리뷰·머지 → Phase 1 종료"),
     ("9/3 오후~저녁", "Phase 2 Wave 1(시즌 구조·12스텝, T-2-001) 투입"),
 ]
 DECISIONS = [
@@ -125,6 +126,7 @@ DECISIONS = [
     ("브리프 15개 전부 작성", "투입 순서: T-1-007 → 008·009 → 011 → 012 → 013·014."),
     ("PR #25 리뷰: 복구 코드 발급 400", "apiFetch가 body 없는 POST에 Content-Type을 안 붙여 서버 bodyGuard가 거부. 워커의 '일시적 400' 설명을 재현으로 반박하고 수정 후 머지."),
     ("Phase 3 이후 병렬화 D-32", "Phase 2까지 순차. 공유 계약(Effect·시장가치·태그) 확정 뒤 Phase 3·4 병렬, 그 위에 5·6 병렬. Phase 2 계획 T-2-001~014 초안."),
+    ("PR #34 리뷰: 완료 조건 표 15행, Phase 1 종료 보류", "키보드 완주가 조건부(SCR-002 포지션 탭이 RadioGroup 중첩으로 Tab 도달 불가 — 출시 차단 기준), 선호 포지션 미표시, 국외 이전 표 미기재, 결과 aria-live·COMMITTING 이탈 경고 없음. T-1-017로 묶어 투입, 머지 뒤 Phase 1 종료."),
     ("PR #33 리뷰: Google 연결 수정 요청 0건", "state·PKCE 쿠키, 병합 대기 TTL·재검증, 삭제 시 sub 비움, 채널 기능 플래그를 확인. 실 api recovery-api 스펙이 PR #32 성별 필수화로 깨진 것을 발견해 T-1-014에 배정. 로그아웃 뒤 커리어 소유자 불일치는 T-2-011 후속."),
     ("PR #32 리뷰: 성별 불변식·golden", "성별이 RNG·능력·이벤트·계약을 바꾸지 않음을 golden(stateHash만 변경)과 content 불변식 테스트로 확인. gender는 분석·로그·오류 details에 없음. 수정 요청 0건."),
     ("PR #31 리뷰: 대조 부분 실패·캐시 갱신", "복구 뒤 서버 커리어 대조가 일부 실패해도 성공 토스트가 뜨던 것을 실패 집계로, 목록 조회 실패 시 프로필 캐시 미갱신을 수정. 워커 질문(리뷰 지적 처리 방식)에 문구 수정 + '다시 연결' 대조 확장으로 답함."),

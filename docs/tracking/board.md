@@ -4,7 +4,7 @@
 
 ## 현재 게이트
 
-**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. 2026-09-03 09:25 기준 T-1-009(PR #26)·T-1-011(PR #30)·T-1-012(설정 데이터 섹션·법적 문서, PR #31)까지 머지돼 온보딩부터 첫 계약·대시보드, 복구 코드·프로필 복구·삭제까지 브라우저에서 이어진다. 2026-09-03 09:55 기준 T-1-016(선수 성별·선호 포지션, PR #32)도 머지돼 선수 생성에 성별과 선호 포지션이 들어갔다. 2026-09-03 10:50 기준 T-1-013(Google 연결·로그아웃, PR #33)도 머지돼 설정에서 Google 연결·병합·해제·로그아웃이 가짜 OIDC로 동작한다(실계정 검증은 U-003 대기). 남은 Phase 1 코드 작업은 T-1-014(E2E 완료 조건·완료 조건 표) 하나이며, 머지되면 Phase 1을 닫는다. 사용자가 작성한 콘텐츠 정본 `docs/content/kickoff/`(PR #24)는 Phase 2 콘텐츠 작업의 입력이며 지금 코드 작업을 요구하지 않는다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
+**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. 2026-09-03 09:25 기준 T-1-009(PR #26)·T-1-011(PR #30)·T-1-012(설정 데이터 섹션·법적 문서, PR #31)까지 머지돼 온보딩부터 첫 계약·대시보드, 복구 코드·프로필 복구·삭제까지 브라우저에서 이어진다. 2026-09-03 09:55 기준 T-1-016(선수 성별·선호 포지션, PR #32)도 머지돼 선수 생성에 성별과 선호 포지션이 들어갔다. 2026-09-03 10:50 기준 T-1-013(Google 연결·로그아웃, PR #33)도 머지돼 설정에서 Google 연결·병합·해제·로그아웃이 가짜 OIDC로 동작한다(실계정 검증은 U-003 대기). 2026-09-03 11:15 기준 T-1-014(E2E 완료 조건, PR #34)도 머지돼 [완료 조건 표](phase-1-completion.md) 15행이 생겼다. 표에서 ❌·조건부로 남은 항목(SCR-002 포지션 탭 키보드 도달 불가 — 08 출시 차단 기준, 선호 포지션 미표시, 국외 이전 표 미기재, 결과 aria-live 없음, COMMITTING 이탈 경고 없음)을 T-1-017로 묶어 투입했다. T-1-017이 머지되면 Phase 1을 닫고 Phase 2 Wave 1을 투입한다. 사용자가 작성한 콘텐츠 정본 `docs/content/kickoff/`(PR #24)는 Phase 2 콘텐츠 작업의 입력이며 지금 코드 작업을 요구하지 않는다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
 
 WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. 현재 Phase 1~7의 국내 MVP 순서를 바꾸지 않으며, Phase 3~5와 Phase 7 완료 후 새 ruleset의 신규 Career에 해외 이적·가상 해외 리그·대륙대회를 연다. 정본은 [WORLD STAGE 개발 명세](../development/15-world-stage-expansion.md)와 [Phase 8](../phases/phase-08-world-stage.md)이다.
 
@@ -67,8 +67,9 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-011 | web + engine-client | 동기화 클라이언트 배선·상태 표시·충돌 화면, LOCAL 선택 fork-by-replay | T-0-015, T-1-007, T-1-008 | 3 | done | PR #30 `280e2f4`. 리뷰 2회(/review:pr 1 + 오케스트레이터 2: 새로고침 뒤 저장 상태 보정, 401 삭제 재시도, CORS X-Request-Id 범위 확장). web 139 tests, engine-client 65, api 113, e2e 24 |
 | T-1-012 | web + platform + engine-client + api | SCR-030 데이터 섹션(복구 코드 재발급·복구 입력·복구 뒤 대조·프로필 삭제·로그아웃·기기 데이터 삭제), 법적 문서 본문, api 복구·삭제 라우트 contracts 스키마 채택 | T-1-004, T-1-006, T-1-007, T-1-011 | 4 | done | PR #31 `1e97406`. 리뷰 1회(/review:pr 1 + 오케스트레이터 필수 2건: 대조 부분 실패 집계·실패 경로 캐시 갱신) + 범위 확장 1건(대조 실패 토스트·"다시 연결" 대조). web 203 tests, api 114, e2e 37+1(실제 api 복구 왕복) |
 | T-1-013 | api + web + platform + contracts | Google OIDC start/callback/merge/unlink(가짜 OIDC로 E2E), SCR-030 Google 행, 병합 선택 화면 | T-1-004, T-1-012, U-003(실검증) | 4 | done | PR #33 547686c, [브리프](briefs/T-1-013.md). 실계정 검증은 U-003 뒤 |
-| T-1-014 | web(e2e) + docs | TEST-E2E-007·008·009, 키보드 전용 주 여정, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, 완료 조건 표 | T-1-008, T-1-009, T-1-011, T-1-012 | 4 | in-progress | `T-1-014-e2e-completion`, [브리프](briefs/T-1-014.md) 후속(PR #31): "다시 연결" 뒤 LOCAL_ONLY 배지 잔류 확인, packages/ui Toast warning·Button danger 변형, `careerPhase` 분석 값 고정. 후속(PR #33): recovery-api 스펙 성별 필수화 수정(첫 커밋), 로그아웃 뒤 로컬 커리어 동기화 배지 확인. |
+| T-1-014 | web(e2e) + docs | TEST-E2E-007·008·009, 키보드 전용 주 여정, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, 완료 조건 표 | T-1-008, T-1-009, T-1-011, T-1-012 | 4 | done | PR #34 2bbfdf0, [브리프](briefs/T-1-014.md), [완료 조건 표](phase-1-completion.md). 미구현분은 T-1-017 |
 | T-1-016 | domain + contracts + web + fixtures | 선수 성별 프로필 정보, 선호/현재 포지션 분리, 생성 화면·migration·결정론 fixture | T-1-009, T-1-011 | 4 | done | PR #32 4eb8112, [브리프](briefs/T-1-016.md) |
+| T-1-017 | web + ui | Phase 1 완료 조건 보완: SCR-002 포지션 탭 키보드 도달(출시 차단), 선호/주포지션 구분 표시, 국외 이전 표, 결과 aria-live, COMMITTING 이탈 경고, careerPhase 상수 | T-1-014 | 3 | in-progress | `T-1-017-phase1-completion-fixes`, [브리프](briefs/T-1-017.md) |
 
 ## Phase 8 WORLD STAGE 백로그 (Phase 3~7 완료 후 착수)
 
@@ -125,7 +126,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-1-014 | Sonnet 5, Orca 워크트리 `T-1-014-e2e-completion` | 2026-09-03 | origin/main 병합·recovery-api 스펙 수정 지시(10:50) |
+| T-1-017 | Sonnet 5, Orca 워크트리 `T-1-017-phase1-completion-fixes` | 2026-09-03 | 브리프 전달 |
 
 ## 완료
 
@@ -165,3 +166,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-012 | PR #31 `1e97406` | 2026-09-03 | Sonnet 5 약 $20.7, 448분(질문 대화상자 대기 약 7시간 포함, 실작업 약 1시간 반), 리뷰 1회(필수 2건) + 질문 1회. 재투입 없음 |
 | T-1-016 | 선수 성별·선호/현재 포지션 프로필 계약, golden 갱신(PR #32, 리뷰 수정 0건, 워커 비용 약 $15.7, 43분) | 4eb8112 |
 | T-1-013 | Google OIDC 연결·병합·해제, SCR-030 Google 행·로그아웃, 가짜 OIDC e2e(PR #33, 리뷰 수정 0건, 워커 비용 약 $22.2, 79분) | 547686c |
+| T-1-014 | Phase 1 E2E 완료 조건 측정(resilience·recovery-conflict·session-length·keyboard·a11y 확장·perf), 완료 조건 표 15행(PR #34, 리뷰 수정 0건, 워커 비용 약 $19.8, 80분) | 2bbfdf0 |

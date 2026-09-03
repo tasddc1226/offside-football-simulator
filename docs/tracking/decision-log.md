@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (오전, PR #34 E2E 완료 조건 머지 — T-1-017 투입, Phase 1 종료 보류)
+
+**결과**: T-1-014(PR #34, `2bbfdf0`) 머지. resilience(새로고침 복원, 확정 이중 클릭 시 revision 정확히 +2, PUT 유실 뒤 같은 Idempotency-Key 재시도, COMMITTING 뒤로가기 특성화), recovery-conflict(실 api, 두 기기 다른 선택으로 진짜 409 → 두 선택 검사), session-length(자동화 약 4.7초, D-22 단가 최소 조작 58초 — 화면 13·선택 10·입력 1·확정 14), keyboard(클릭 없이 완주), a11y 6건 확장, perf(실제 빌드 4G 스로틀: 허브 LCP 1136ms vs T-0-013 기준 2519ms, CLS ≈ 0). 헬퍼 추출로 create·first-contract 중복 제거. `e2e:api`·`e2e:perf` 스크립트. 리뷰 수정 요청 0건, 워커 비용 약 $19.8, 80분. 오케스트레이터 재검증: 체인(e2e 53) + 실 api 5건 + perf 1건 통과.
+
+**결정 — Phase 1 종료 보류**: 완료 조건 표 15행 중 #1(키보드 완주)이 조건부 — SCR-002 포지션 구분 `Tabs`가 `RadioGroup` 안에 중첩돼 트리거 4개가 Tab으로 도달 불가(08 "출시 차단 기준: 키보드로 P0 흐름 완료 불가"). #5(선호/주포지션 구분 표시)·#14(ADR-008 국외 이전 표) ❌, 08 체크리스트의 결과 aria-live 낭독과 06 COMMITTING 이탈 경고도 미구현. 사용자 규칙(Phase 1을 닫은 뒤 Phase 2)에 따라 이 다섯과 `careerPhase` 상수화를 T-1-017(web + ui, 크기 3)로 묶어 투입하고, 머지 뒤 Phase 1을 닫는다. 표 행 수는 D-22의 13이 아니라 15(T-1-016이 phase-01 조건 2개를 추가) — 워커가 문서에 기록.
+
+**남긴 것**: #12(시각 토큰·폐기 어휘)는 자동 검사가 없다 — Phase 2 전에 오케스트레이터가 수동 검토하거나 lint 작업을 별도로 연다. Google 로그아웃 뒤 로컬 커리어 PUT이 404를 받아 "서버 저장 실패"만 반복(원인 안내 없음) — T-2-011. axe `page-has-heading-one`(moderate) 여러 화면 — 완료 조건 무관, Phase 2 화면 작업에서 정리. "다시 연결" 뒤 LOCAL_ONLY 배지 잔존은 버그 아님으로 확인(반응형 구독).
+
 ## 2026-09-03 (오전, PR #33 Google 연결 머지 — Phase 1 잔여 T-1-014 하나)
 
 **결과**: T-1-013(PR #33, `547686c`) 머지. Google OIDC(Authorization Code + PKCE, arctic 3.7.0) start/callback/merge/unlink. state·codeVerifier는 10분 HttpOnly 쿠키(`Path=/v1/auth/google`), 시작은 IP당 시간당 30회. 콜백 결과는 ADR-008 표대로 linked/switched/merge_required(세션 `pending_merge_*` 10분 TTL, 확정 직전 대상 프로필 재검증). 프로필 삭제 시 google_sub·email을 비워 같은 계정 재연결을 허용. `Profile`에 `googleEmailMasked`·`pendingMerge`(default null). `platform.features.googleLink`로만 채널 분기(toss false). SCR-030 Google 행·병합 선택 대화상자·로그아웃 활성화. 가짜 OIDC는 `ENVIRONMENT=local && GOOGLE_FAKE=1`일 때만. 리뷰 수정 요청 0건(워커가 /review:pr Important 1건 — 병합 확정 시 대상 프로필 삭제 여부 미검증 — 을 스스로 고쳤다). 워커 비용 약 $22.2, 79분.
