@@ -2,7 +2,7 @@ import { rollRange } from './roll-range.js';
 import type { RngState } from './rng.js';
 import type { LeagueCalendar, LeagueCalendarSlot } from './ruleset.js';
 import { computeRoleProposal, type RoleProposalContext } from './selection.js';
-import type { CompetitionRecord, DecisionSlot, Pending, SeasonStep, SimulationMode } from './types.js';
+import type { CompetitionRecord, DecisionSlot, Pending, SeasonStep, SimulationMode, StepMatchResult } from './types.js';
 
 /** RULE-TIME-004: 시즌당 핵심 경기 챕터 상한(모드 공통). */
 const CHAPTER_BUDGET_CAP = 4;
@@ -243,11 +243,21 @@ export type SeasonWalkResult = {
 };
 
 /**
+ * T-2-003 D-35: step 하나의 예정 경기를 결정 슬롯 확인 전에 처리한다. 경기는 `season.rngState`가
+ * 아니라 별도 경기 전용 RNG 스트림을 쓴다(호출자가 closure로 관리 — FAST·CHAPTER가 결정 슬롯에서
+ * 쓰는 rngState 소비량이 달라도 경기 결과가 byte-identical하도록 결정 RNG와 완전히 분리한다).
+ */
+export type PlayStepMatches = (stepIndex: number) => { results: StepMatchResult[] };
+
+/**
  * RULE-TIME-002: `startStepIndex`부터 다음 결정이 열리는 step 또는 step 12(SETTLEMENT)까지 걷는다.
  * 열리지 않는 step은 같은 호출 안에서 즉시 decisionsOpened: 0으로 닫는다(그래서 이 함수가 반환한
  * 뒤에는 항상 "pending이 가리키는 step만 summary가 비어 있다"가 성립한다 — startSeason·
  * advanceInSeason이 공유하는 이 불변식 덕분에, EVENT처럼 RESOLVE_EVENT로 별도 해소되는 pending도
  * "다음에 이 step을 다시 보면 summary가 비어 있으니 결정이 열렸던 step이다"로 정확히 닫힌다).
+ * T-2-003 D-35: 각 step의 결정 슬롯을 확인하기 전에 `playStepMatches`로 그 step의 예정 경기를
+ * 먼저 처리한다(pending이 열리는 step도 포함 — 그 step이 나중에 닫힐 때 결과를 쓸 수 있도록
+ * `season.matches`에 남는다).
  */
 export function walkToNextDecision(
   steps: SeasonStep[],
@@ -257,6 +267,7 @@ export function walkToNextDecision(
   rngState: RngState,
   revision: number,
   roleContext: RoleProposalContext | null,
+  playStepMatches: PlayStepMatches,
 ): SeasonWalkResult {
   let currentStepIndex = startStepIndex;
   let pending: Pending = null;
@@ -266,13 +277,14 @@ export function walkToNextDecision(
 
   while (currentStepIndex < 12) {
     const step = findSeasonStep(nextSteps, currentStepIndex);
+    const matchResult = playStepMatches(currentStepIndex);
     const opened = selectOpenSlot(step, mode, eligibleEvents, nextRngState, roleContext);
     if (opened.opened) {
       pending = opened.pending;
       nextRngState = opened.rngState;
       break;
     }
-    nextSteps = markStepPassed(nextSteps, currentStepIndex, revision, 0);
+    nextSteps = markStepPassed(nextSteps, currentStepIndex, revision, 0, matchResult.results);
     passedStepIndexes.push(currentStepIndex);
     currentStepIndex += 1;
   }
@@ -304,10 +316,11 @@ export function markStepPassed(
   stepIndex: number,
   revision: number,
   decisionsOpened: number,
+  results: StepMatchResult[],
 ): SeasonStep[] {
   return steps.map((step) =>
     step.index === stepIndex
-      ? { ...step, summary: { passedAtRevision: revision, decisionsOpened, matchesPlayed: 0 } }
+      ? { ...step, summary: { passedAtRevision: revision, decisionsOpened, matchesPlayed: results.length, results } }
       : step,
   );
 }

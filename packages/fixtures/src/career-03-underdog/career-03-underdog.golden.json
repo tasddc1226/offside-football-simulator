@@ -1,6 +1,6 @@
 {
   "revision": 11,
-  "stateHash": "1fe12d4090d405ed18ec33e1ad780623107c90c4cb057bdbe5eeff6d5ae98c59",
+  "stateHash": "3d6ab2f0bc58d8def3afae4c7e5319294b3b872c9a116c95b1c22dda73a33a68",
   "rngStateDraws": 398,
   "checkpoint": "SEASON_START",
   "baseOvr": 58,
@@ -23,7 +23,12 @@
   "pending": {
     "kind": "ROLE_PROPOSAL",
     "step": 1,
-    "proposal": { "type": "ROLE_CHANGE", "position": "W", "from": "BENCH", "to": "STARTER" }
+    "proposal": {
+      "type": "ROLE_CHANGE",
+      "position": "W",
+      "from": "BENCH",
+      "to": "STARTER"
+    }
   },
   "selection": {
     "_comment": "핵심 인수 조건: PLAYER는 baseOvr 58로 W 포지션 경쟁자 두 명(둘 다 baseOvr 80)보다 22 낮지만, 감독 선호 아키타입(w-inverted-winger)이라 Tactical Fit이 75로 경쟁자(49/46)를 크게 앞서 rank 1(START)이다.",
@@ -31,10 +36,40 @@
     "slots": 2,
     "benchSlots": 1,
     "candidates": [
-      { "id": "PLAYER", "baseOvr": 58, "tacticalFit": 75, "expectedPerformance": 61, "squadStatus": 40, "score": 59, "rank": 1, "appearance": "START" },
-      { "id": "COMP-W-1", "baseOvr": 80, "tacticalFit": 49, "expectedPerformance": 73, "squadStatus": 80, "score": 58, "rank": 2, "appearance": "START" },
-      { "id": "COMP-W-2", "baseOvr": 80, "tacticalFit": 46, "expectedPerformance": 73, "squadStatus": 80, "score": 56, "rank": 3, "appearance": "SUB" }
+      {
+        "id": "PLAYER",
+        "baseOvr": 58,
+        "tacticalFit": 75,
+        "expectedPerformance": 61,
+        "squadStatus": 40,
+        "score": 59,
+        "rank": 1,
+        "appearance": "START"
+      },
+      {
+        "id": "COMP-W-1",
+        "baseOvr": 80,
+        "tacticalFit": 49,
+        "expectedPerformance": 73,
+        "squadStatus": 80,
+        "score": 58,
+        "rank": 2,
+        "appearance": "START"
+      },
+      {
+        "id": "COMP-W-2",
+        "baseOvr": 80,
+        "tacticalFit": 46,
+        "expectedPerformance": 73,
+        "squadStatus": 80,
+        "score": 56,
+        "rank": 3,
+        "appearance": "SUB"
+      }
     ],
-    "playerReason": { "component": "TACTICAL_FIT", "delta": 12 }
+    "playerReason": {
+      "component": "TACTICAL_FIT",
+      "delta": 12
+    }
   }
 }

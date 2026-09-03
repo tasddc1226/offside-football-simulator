@@ -460,6 +460,164 @@ const SeasonBoundaryResetSchema = z.strictObject({
   morale: z.number().int(),
 });
 
+// T-2-003 D-35: 경기 계산 상수. `@offside/domain`은 devDependency(타입 전용)라 `match.ts`의
+// `STAT_KEYS`를 런타임 import할 수 없다(위 ATTRIBUTE_KEYS와 같은 이유) — 여기서 그대로 미러링한다.
+export const STAT_GROUPS = ['GK', 'DF', 'MF', 'FW'] as const;
+
+export const MATCH_STAT_KEYS: Record<(typeof STAT_GROUPS)[number], readonly string[]> = {
+  FW: ['goals', 'assists', 'xgCenti', 'shots', 'offsides'],
+  MF: ['assists', 'chancesCreated', 'progressivePasses', 'passesAttempted', 'passesCompleted', 'ballRecoveries'],
+  DF: ['tackles', 'interceptions', 'aerialsWon', 'goalsConcededInvolved'],
+  GK: ['saves', 'psxgMinusGoalsCenti', 'crossesClaimed', 'buildUpPasses'],
+};
+
+const ResultTableRowSchema = z.strictObject({
+  diffMin: z.number().int(),
+  diffMax: z.number().int(),
+  win: z.number().int().nonnegative(),
+  draw: z.number().int().nonnegative(),
+  loss: z.number().int().nonnegative(),
+});
+
+const MatchScoreTableSchema = z.strictObject({
+  winnerGoals: z.array(z.number().int().nonnegative()).min(1),
+  loserGoalsRaw: z.array(z.number().int().nonnegative()).min(1),
+  drawGoals: z.array(z.number().int().nonnegative()).min(1),
+});
+
+const MinutesStartOptionSchema = z.strictObject({
+  subOut: z.boolean(),
+  minute: z.number().int().min(0).max(90),
+});
+
+const MatchMinutesTableSchema = z.strictObject({
+  start: z.array(MinutesStartOptionSchema).min(1),
+  sub: z.array(z.number().int().min(0).max(90)).min(1),
+});
+
+const InvolvementRulesSchema = z.strictObject({
+  performanceWeight: z.number(),
+  opponentStrengthWeight: z.number(),
+  rollMin: z.number().int(),
+  rollMax: z.number().int(),
+});
+
+const StatBucketSchema = z
+  .strictObject({
+    min: z.number().int().min(0).max(100),
+    max: z.number().int().min(0).max(100),
+    values: z.array(z.number().int()).min(1),
+  })
+  .refine((bucket) => bucket.min <= bucket.max, { message: 'min은 max보다 클 수 없다.' });
+
+const StatDistributionTableSchema = z.array(StatBucketSchema).min(1);
+
+const StatTablesSchema = z.strictObject({
+  GK: z.record(z.string(), StatDistributionTableSchema),
+  DF: z.record(z.string(), StatDistributionTableSchema),
+  MF: z.record(z.string(), StatDistributionTableSchema),
+  FW: z.record(z.string(), StatDistributionTableSchema),
+});
+
+const DisciplineRowSchema = z.strictObject({ yellow: z.number().int().min(0).max(100), red: z.number().int().min(0).max(100) });
+const DisciplineTableSchema = z.strictObject({ GK: DisciplineRowSchema, DF: DisciplineRowSchema, MF: DisciplineRowSchema, FW: DisciplineRowSchema });
+
+const MatchInjuryRulesSchema = z.strictObject({
+  perMatchPercent: z.number().int().min(0).max(100),
+  lowFitnessBelow: z.number().int().min(0).max(100),
+  lowFitnessExtraPercent: z.number().int().min(0).max(100),
+  outMatches: z.strictObject({ min: z.number().int().positive(), max: z.number().int().positive() }),
+});
+
+const MatchRatingWeightsSchema = z.strictObject({
+  stats: z.strictObject({
+    GK: z.partialRecord(z.string(), z.number()),
+    DF: z.partialRecord(z.string(), z.number()),
+    MF: z.partialRecord(z.string(), z.number()),
+    FW: z.partialRecord(z.string(), z.number()),
+  }),
+  resultBonusTenths: z.strictObject({ WIN: z.number().int(), DRAW: z.number().int(), LOSS: z.number().int() }),
+  cardPenaltyTenths: z.strictObject({ yellow: z.number().int().nonnegative(), red: z.number().int().nonnegative() }),
+});
+
+export const MatchRulesSchema = z
+  .strictObject({
+    homeBonus: z.number().int(),
+    resultTable: z.array(ResultTableRowSchema).min(1),
+    scoreTable: MatchScoreTableSchema,
+    minutesTable: MatchMinutesTableSchema,
+    involvement: InvolvementRulesSchema,
+    statTables: StatTablesSchema,
+    disciplineTable: DisciplineTableSchema,
+    yellowSuspensionAt: z.number().int().positive(),
+    redSuspension: z.strictObject({ min: z.number().int().positive(), max: z.number().int().positive() }),
+    injury: MatchInjuryRulesSchema,
+    ratingWeights: MatchRatingWeightsSchema,
+    competitorFormDrift: z.strictObject({ amplitude: z.number().int().nonnegative() }),
+    opponentNameTemplate: z.string().min(1),
+    cupStrengthByRound: z.strictObject({
+      R1: z.number().int().min(0).max(100),
+      R2: z.number().int().min(0).max(100),
+      SEMI: z.number().int().min(0).max(100),
+      FINAL: z.number().int().min(0).max(100),
+    }),
+    cleanSheetMinMinutes: z.number().int().min(0).max(90),
+  })
+  .superRefine((rules, ctx) => {
+    for (const [index, row] of rules.resultTable.entries()) {
+      if (row.win + row.draw + row.loss !== 100) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `resultTable[${index}]의 win+draw+loss 합은 100이어야 한다: ${row.win + row.draw + row.loss}`,
+          path: ['resultTable', index],
+        });
+      }
+      if (index > 0) {
+        const prev = rules.resultTable[index - 1]!;
+        if (row.diffMin !== prev.diffMax + 1) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `resultTable 구간이 연속이 아니다: [${index - 1}].diffMax=${prev.diffMax} → [${index}].diffMin=${row.diffMin}`,
+            path: ['resultTable', index, 'diffMin'],
+          });
+        }
+      }
+    }
+
+    for (const group of STAT_GROUPS) {
+      const table = rules.statTables[group];
+      const actualKeys = Object.keys(table).sort();
+      const expectedKeys = [...MATCH_STAT_KEYS[group]].sort();
+      if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `statTables.${group}의 키가 PositionStats 항목과 다르다: [${actualKeys.join(',')}] !== [${expectedKeys.join(',')}]`,
+          path: ['statTables', group],
+        });
+      }
+      for (const key of Object.keys(table)) {
+        const buckets = [...table[key]!].sort((a, b) => a.min - b.min);
+        if (buckets[0]?.min !== 0 || buckets[buckets.length - 1]?.max !== 100) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `statTables.${group}.${key}는 0~100을 전부 덮어야 한다.`,
+            path: ['statTables', group, key],
+          });
+        }
+        for (let i = 1; i < buckets.length; i++) {
+          if (buckets[i]!.min !== buckets[i - 1]!.max + 1) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `statTables.${group}.${key} 구간이 연속이 아니다(index ${i}).`,
+              path: ['statTables', group, key],
+            });
+          }
+        }
+      }
+    }
+
+  });
+
 export const RulesetSchema = z
   .strictObject({
     version: SemverSchema,
@@ -480,6 +638,8 @@ export const RulesetSchema = z
     tacticalStyles: z.array(TacticalStyleSchema).min(1),
     competitorNames: z.array(z.string().min(1)),
     selectionRules: SelectionRulesSchema,
+    // T-2-003 D-35.
+    matchRules: MatchRulesSchema,
   })
   .superRefine((ruleset, ctx) => {
     const archetypeIds = new Set<string>();

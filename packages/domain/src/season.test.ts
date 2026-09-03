@@ -461,7 +461,12 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     const closed = runSimulate(resolved.snapshot, advanceCommand(resolved.snapshot.revision));
     if (!closed.ok) throw new Error(`실패: ${closed.error.code} ${closed.error.message}`);
     const step2Summary = findSeasonStep(closed.snapshot.state.season!.steps, 2).summary;
-    expect(step2Summary).toEqual({ passedAtRevision: closed.snapshot.revision, decisionsOpened: 1, matchesPlayed: 0 });
+    expect(step2Summary).toEqual({
+      passedAtRevision: closed.snapshot.revision,
+      decisionsOpened: 1,
+      matchesPlayed: 0,
+      results: [],
+    });
     expect(closed.snapshot.state.season?.currentStep).toBeGreaterThan(2);
   });
 
@@ -536,7 +541,9 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     expect(pastStep5.snapshot.state.state.morale).toBe(beforeMorale);
   });
 
-  it('step 경계 Snapshot에서 재개한 진행의 결산 hash가 연속 실행과 같다(RESOLVE_ROLE 포함 시나리오)', () => {
+  // T-2-003 D-35 필수 테스트 벡터: 이 시나리오의 팀(seoul-tier1)은 실제 리그 일정이 있어(schedule.ts)
+  // step을 지날 때마다 경기가 낀다 — "경기가 낀 시나리오"에서도 재개 hash가 연속 실행과 같음을 검증한다.
+  it('step 경계 Snapshot에서 재개한 진행의 결산 hash가 연속 실행과 같다(RESOLVE_ROLE·경기 포함 시나리오)', () => {
     const continuous = playFullSeason(activeSnapshotWithContract(), 'CHAPTER');
 
     const startSnapshot = activeSnapshotWithContract();
@@ -548,6 +555,8 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     if (!roleResolved.ok) throw new Error('setup 실패');
     const oneStepIn = runSimulate(roleResolved.snapshot, advanceCommand(roleResolved.snapshot.revision));
     if (!oneStepIn.ok) throw new Error('setup 실패');
+    // step3부터 리그 경기가 있으므로(schedule.ts) 이 시점에 이미 경기가 낀 상태여야 한다.
+    expect((oneStepIn.snapshot.state.season?.matches.length ?? 0)).toBeGreaterThan(0);
     const resumed = JSON.parse(JSON.stringify(oneStepIn.snapshot)) as DomainSnapshot;
     expect(resumed.stateHash).toBe(oneStepIn.snapshot.stateHash);
 

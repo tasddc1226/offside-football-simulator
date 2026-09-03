@@ -4,10 +4,12 @@ import { generateCompetitors } from './competitors.js';
 import { applyEffects, expireEffects } from './effects.js';
 import { hashState } from './hash.js';
 import { findMatchingOfferBranch, generateOffers } from './offers.js';
+import { playMatch } from './match.js';
 import { generatePlayerProfile, type ConfirmedPlayerDraft } from './player.js';
-import { rollInt, seedRng } from './rng.js';
+import { rollInt, seedRng, type RngState } from './rng.js';
 import { rollRange } from './roll-range.js';
-import type { Ruleset } from './ruleset.js';
+import type { League, LeagueCalendar, Ruleset, Team } from './ruleset.js';
+import { buildSchedule, findLeague } from './schedule.js';
 import {
   buildInitialCompetitions,
   buildSeasonSteps,
@@ -16,8 +18,10 @@ import {
   markStepPassed,
   walkToNextDecision,
   type EligibleEvent,
+  type PlayStepMatches,
   type SeasonWalkResult,
 } from './season.js';
+import { applyPlayedMatch, initialSeasonPlayerStats, stepMatchResultsFor, type SeasonMatchBooks } from './season-stats.js';
 import {
   computeSquadStatus,
   computeTacticalFit,
@@ -29,6 +33,8 @@ import {
 } from './selection.js';
 import {
   ATTRIBUTE_KEYS,
+  statGroupOf,
+  type Availability,
   type AttributeKey,
   type CareerStage,
   type CareerState,
@@ -40,11 +46,13 @@ import {
   type Pending,
   type PlayerDraft,
   type PlayerGender,
+  type PlayerProfile,
   type Position,
   type PreferredFoot,
   type SelectionRanking,
   type SeasonSummary,
   type SimulationMode,
+  type SquadRole,
 } from './types.js';
 
 export type Command =
@@ -451,6 +459,132 @@ function buildRoleContext(
   };
 }
 
+type StepMatchWiring = {
+  playStepMatches: PlayStepMatches;
+  getMatches: () => FootballSeason['matches'];
+  getCompetitions: () => FootballSeason['competitions'];
+  getSchedule: () => FootballSeason['schedule'];
+  getPlayerStats: () => FootballSeason['playerStats'];
+  getCompetitors: () => Competitor[];
+  getSelection: () => SelectionRanking;
+  getSquadRole: () => SquadRole;
+  getAvailability: () => Availability;
+  getLastRatingTenths: () => number | null;
+  getYellowSuspensionCount: () => number;
+  getSquadStatus: () => number;
+  getMatchRngState: () => RngState;
+};
+
+type StepMatchWiringInitial = SeasonMatchBooks & {
+  competitors: readonly Competitor[];
+  selection: SelectionRanking;
+  squadRole: SquadRole;
+  availability: Availability;
+  lastRatingTenths: number | null;
+  yellowSuspensionCount: number;
+  squadStatus: number;
+  matchRngState: RngState;
+};
+
+/**
+ * T-2-003 D-35: `walkToNextDecision`이 매 step마다 부르는 `playStepMatches`를 만든다. 이 시즌의
+ * 예정 경기(스킵된 컵 라운드 제외)를 순서대로 재생하며 경기 전용 RNG 스트림(`matchRngState` — 결정
+ * 슬롯이 쓰는 `state.rngState`와 분리, FAST·CHAPTER byte-identical 요구사항의 근거)·경기 기록·시즌
+ * 통계·대회 기록·일정(컵 탈락 skip)·경쟁자 form·선수 selection/squadRole/availability/
+ * lastRatingTenths/squadStatus/경고 카운트를 함께 갱신한다(closure로 누적 — walkToNextDecision
+ * 자체는 이 값들의 모양을 모른다). walk가 끝난 뒤 `get*`로 최종 값을 꺼내 season/state에 반영한다.
+ */
+function createStepMatchWiring(
+  ruleset: Ruleset,
+  team: Team,
+  league: League,
+  calendar: LeagueCalendar,
+  styleId: string,
+  profile: PlayerProfile,
+  rolePromise: SquadRole,
+  managerTrust: number,
+  playerState: { form: number; fitness: number; morale: number },
+  tacticalFit: number,
+  positionProficiency: number,
+  seasonIndex: number,
+  initial: StepMatchWiringInitial,
+): StepMatchWiring {
+  let matches = initial.matches;
+  let competitions = initial.competitions;
+  let schedule = initial.schedule;
+  let playerStats = initial.playerStats;
+  let competitors: Competitor[] = [...initial.competitors];
+  let selection = initial.selection;
+  let squadRole = initial.squadRole;
+  let availability = initial.availability;
+  let lastRatingTenths = initial.lastRatingTenths;
+  let yellowSuspensionCount = initial.yellowSuspensionCount;
+  let squadStatus = initial.squadStatus;
+  let matchRngState = initial.matchRngState;
+
+  const playStepMatches: PlayStepMatches = (stepIndex) => {
+    const entries = schedule.filter((entry) => entry.step === stepIndex && entry.skipped === undefined);
+    for (const entry of entries) {
+      const matchIndex = matches.length;
+      const result = playMatch({
+        ruleset,
+        rngState: matchRngState,
+        seasonIndex,
+        matchIndex,
+        scheduleEntry: entry,
+        team,
+        league,
+        styleId,
+        playerName: profile.name,
+        primaryPosition: profile.primaryPosition,
+        baseOvr: profile.baseOvr,
+        tacticalFit,
+        managerTrust,
+        form: playerState.form,
+        fitness: playerState.fitness,
+        morale: playerState.morale,
+        positionProficiency,
+        squadStatus,
+        rolePromise,
+        competitors,
+        availability,
+        seasonYellowCount: yellowSuspensionCount,
+        lastRatingTenths,
+      });
+      matchRngState = result.rngState;
+      const books = applyPlayedMatch(ruleset, team, league, calendar, { matches, competitions, playerStats, schedule }, result.match);
+      matches = books.matches;
+      competitions = books.competitions;
+      playerStats = books.playerStats;
+      schedule = books.schedule;
+      competitors = result.nextCompetitors;
+      selection = result.selection;
+      squadRole = squadRoleFromSelection(result.selection);
+      availability = result.nextAvailability;
+      lastRatingTenths = result.nextLastRatingTenths;
+      yellowSuspensionCount = result.nextSeasonYellowCount;
+      squadStatus = result.nextSquadStatus;
+    }
+    return { results: stepMatchResultsFor(matches, stepIndex) };
+  };
+
+  return {
+    playStepMatches,
+    getMatches: () => matches,
+    getCompetitions: () => competitions,
+    getSchedule: () => schedule,
+    getPlayerStats: () => playerStats,
+    getCompetitors: () => competitors,
+    getSelection: () => selection,
+    getSquadRole: () => squadRole,
+    getAvailability: () => availability,
+    getLastRatingTenths: () => lastRatingTenths,
+    getYellowSuspensionCount: () => yellowSuspensionCount,
+    getSquadStatus: () => squadStatus,
+    getMatchRngState: () => matchRngState,
+  };
+}
+
 /**
  * T-2-001 D-25 CMD-SIM-001, T-2-002 D-26/D-34 확장. step 1 슬롯을 즉시 연다(대부분 룰셋 기본
  * 캘린더의 ROLE 필수 슬롯). `command.payload.serviceSeasonId`는 `Command` 타입 정의 주석 참조. 이
@@ -527,7 +661,38 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   const nextRevision = snapshot.revision + 1;
   const roleContext = buildRoleContext(stateAfterSelection, ruleset, team.tacticalStyleId, selection, generatedCompetitors.competitors);
 
-  const walked = walkToNextDecision(initialSteps, 1, mode, [], stateAfterSelection.rngState, nextRevision, roleContext);
+  const league = findLeague(ruleset, team.leagueId);
+  const schedule = buildSchedule(ruleset, team);
+  const wiring = createStepMatchWiring(
+    ruleset,
+    team,
+    league,
+    calendar,
+    team.tacticalStyleId,
+    profile,
+    state.contract.rolePromise,
+    state.relationships.managerTrust,
+    state.state,
+    tacticalFit,
+    state.context.positionProficiency,
+    state.seasonHistory.length + 1,
+    {
+      matches: [],
+      competitions: buildInitialCompetitions(calendar),
+      schedule,
+      playerStats: initialSeasonPlayerStats(statGroupOf(profile.primaryPosition)),
+      competitors: generatedCompetitors.competitors,
+      selection,
+      squadRole,
+      availability: null,
+      lastRatingTenths: null,
+      yellowSuspensionCount: 0,
+      squadStatus,
+      matchRngState: stateAfterSelection.rngState,
+    },
+  );
+
+  const walked = walkToNextDecision(initialSteps, 1, mode, [], stateAfterSelection.rngState, nextRevision, roleContext, wiring.playStepMatches);
   const expiredState = expireEffectsThroughWalk(stateAfterSelection, walked);
 
   const season: FootballSeason = {
@@ -540,12 +705,18 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     steps: walked.steps,
     teamId: state.contract.teamId,
     styleId: team.tacticalStyleId,
-    squadRole,
-    competitions: buildInitialCompetitions(calendar),
-    matches: [],
+    squadRole: wiring.getSquadRole(),
+    competitions: wiring.getCompetitions(),
+    schedule: wiring.getSchedule(),
+    matches: wiring.getMatches(),
     ageReferenceStep: 1,
-    squad: { competitors: generatedCompetitors.competitors },
-    selection,
+    squad: { competitors: wiring.getCompetitors() },
+    selection: wiring.getSelection(),
+    playerStats: wiring.getPlayerStats(),
+    availability: wiring.getAvailability(),
+    lastRatingTenths: wiring.getLastRatingTenths(),
+    yellowSuspensionCount: wiring.getYellowSuspensionCount(),
+    matchRngState: wiring.getMatchRngState(),
   };
 
   const nextState: CareerState = {
@@ -554,6 +725,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     currentStep: season.currentStep,
     seasonPhase: season.phase,
     simulationMode: season.simulationMode,
+    context: { ...expiredState.context, squadStatus: wiring.getSquadStatus() },
     rngState: walked.rngState,
     pending: walked.pending,
     timeline: [
@@ -617,6 +789,9 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     return fail('VALIDATION_FAILED', 'ADVANCE 처리기에 다른 명령이 전달되었다.');
   }
   const state = snapshot.state;
+  const profile = state.player.profile;
+  if (profile === null) throw new RangeError('advanceInSeason: player.profile이 null이다.');
+  if (state.contract === null) throw new RangeError('advanceInSeason: contract가 null이다.');
   const eligibleEvents: EligibleEvent[] = command.payload.eligibleEvents;
 
   if (eligibleEvents.length > 0) {
@@ -652,7 +827,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
   // 안에서 즉시 닫히므로, summary === null인 step은 항상 결정이 열렸던 step이다).
   const currentStep = findSeasonStep(steps, currentStepIndex);
   if (currentStep.summary === null) {
-    steps = markStepPassed(steps, currentStepIndex, nextRevision, 1);
+    steps = markStepPassed(steps, currentStepIndex, nextRevision, 1, stepMatchResultsFor(season.matches, currentStepIndex));
     timeline = [
       ...timeline,
       { revision: nextRevision, kind: 'STEP_PASSED', refId: null, age: state.age, step: currentStepIndex },
@@ -661,6 +836,39 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
   }
 
   const roleContext = buildRoleContext(state, input.ruleset, season.styleId, season.selection, season.squad.competitors);
+
+  const ruleset = input.ruleset;
+  const team = findTeam(ruleset, season.teamId);
+  const league = findLeague(ruleset, team.leagueId);
+  const wiring = createStepMatchWiring(
+    ruleset,
+    team,
+    league,
+    ruleset.leagueCalendar,
+    season.styleId,
+    profile,
+    state.contract.rolePromise,
+    state.relationships.managerTrust,
+    state.state,
+    state.context.tacticalFit,
+    state.context.positionProficiency,
+    season.index,
+    {
+      matches: season.matches,
+      competitions: season.competitions,
+      schedule: season.schedule,
+      playerStats: season.playerStats,
+      competitors: season.squad.competitors,
+      selection: season.selection,
+      squadRole: season.squadRole,
+      availability: season.availability,
+      lastRatingTenths: season.lastRatingTenths,
+      yellowSuspensionCount: season.yellowSuspensionCount,
+      squadStatus: state.context.squadStatus,
+      matchRngState: season.matchRngState,
+    },
+  );
+
   const walked = walkToNextDecision(
     steps,
     currentStepIndex,
@@ -669,6 +877,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     state.rngState,
     nextRevision,
     roleContext,
+    wiring.playStepMatches,
   );
   const expiredState = expireEffectsThroughWalk(state, walked);
   timeline = [
@@ -687,6 +896,17 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     steps: walked.steps,
     currentStep: walked.currentStepIndex,
     phase: findSeasonStep(walked.steps, walked.currentStepIndex).phase,
+    squadRole: wiring.getSquadRole(),
+    competitions: wiring.getCompetitions(),
+    schedule: wiring.getSchedule(),
+    matches: wiring.getMatches(),
+    squad: { competitors: wiring.getCompetitors() },
+    selection: wiring.getSelection(),
+    playerStats: wiring.getPlayerStats(),
+    availability: wiring.getAvailability(),
+    lastRatingTenths: wiring.getLastRatingTenths(),
+    yellowSuspensionCount: wiring.getYellowSuspensionCount(),
+    matchRngState: wiring.getMatchRngState(),
   };
 
   const nextState: CareerState = {
@@ -694,6 +914,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     season: nextSeason,
     currentStep: nextSeason.currentStep,
     seasonPhase: nextSeason.phase,
+    context: { ...expiredState.context, squadStatus: wiring.getSquadStatus() },
     rngState: walked.rngState,
     pending: walked.pending,
     timeline,

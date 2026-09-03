@@ -90,6 +90,27 @@ export function positionGroupOf(position: Position): PositionGroup {
   }
 }
 
+// T-2-003 D-35: 브리프 데이터 계약(`PositionStats.group`)이 쓰는 포지션군 약어. 화면용 `PositionGroup`
+// ('DEF'|'MID'|'FWD')과 다른 별개 리터럴 집합이다(경기 통계 전용, 섞지 않는다).
+export type StatGroup = 'GK' | 'DF' | 'MF' | 'FW';
+
+export function statGroupOf(position: Position): StatGroup {
+  switch (position) {
+    case 'GK':
+      return 'GK';
+    case 'CB':
+    case 'FB':
+      return 'DF';
+    case 'DM':
+    case 'CM':
+    case 'AM':
+      return 'MF';
+    case 'W':
+    case 'ST':
+      return 'FW';
+  }
+}
+
 export type PreferredFoot = 'LEFT' | 'RIGHT' | 'BOTH';
 
 // RULE-PLY-001: 캐릭터 프로필 정보다. 시뮬레이션 입력이 아니다(능력·성장·이벤트·계약·시장가치에
@@ -212,7 +233,64 @@ export type DecisionSlot = {
   skippedByBudget?: boolean;
 };
 
-export type StepSummary = { passedAtRevision: number; decisionsOpened: number; matchesPlayed: number };
+// T-2-003 D-35: 경기 단위 선발·교체 출전·결장(RULE-SEL-001 결과). `SquadRole`(시즌 지위)과 섞지
+// 않는다(02 "구분 유지").
+export type MatchAppearance = 'START' | 'SUB' | 'OUT';
+
+export type OutReason = null | 'NOT_SELECTED' | 'UNUSED_SUB' | 'INJURY' | 'SUSPENSION';
+
+// T-2-003 D-35 데이터 계약: 포지션군별 필수 통계(03 "포지션별 결과"). 전환율(FW)은 goals/shots
+// 파생값이라 저장하지 않는다.
+export type PositionStats =
+  | { group: 'FW'; goals: number; assists: number; xgCenti: number; shots: number; offsides: number }
+  | {
+      group: 'MF';
+      assists: number;
+      chancesCreated: number;
+      progressivePasses: number;
+      passesAttempted: number;
+      passesCompleted: number;
+      ballRecoveries: number;
+    }
+  | { group: 'DF'; tackles: number; interceptions: number; aerialsWon: number; goalsConcededInvolved: number; cleanSheet: boolean }
+  | { group: 'GK'; saves: number; psxgMinusGoalsCenti: number; cleanSheet: boolean; crossesClaimed: number; buildUpPasses: number };
+
+// PositionStats.group의 리터럴은 StatGroup과 같은 값이다(선언은 각 분기 리터럴로 유지 — 판별
+// 유니온의 narrowing이 `group: StatGroup`보다 `group: 'FW'` 같은 리터럴에서 더 잘 동작한다).
+
+/**
+ * `SeasonPlayerStats.totals`의 실제 타입(브리프 "totals: PositionStats, boolean은 count"). `PositionStats`와
+ * 같은 항목이지만 `cleanSheet: boolean` 자리가 시즌 누적 횟수(number)로 바뀐다.
+ */
+export type PositionStatsTotals =
+  | { group: 'FW'; goals: number; assists: number; xgCenti: number; shots: number; offsides: number }
+  | {
+      group: 'MF';
+      assists: number;
+      chancesCreated: number;
+      progressivePasses: number;
+      passesAttempted: number;
+      passesCompleted: number;
+      ballRecoveries: number;
+    }
+  | { group: 'DF'; tackles: number; interceptions: number; aerialsWon: number; goalsConcededInvolved: number; cleanSheet: number }
+  | { group: 'GK'; saves: number; psxgMinusGoalsCenti: number; cleanSheet: number; crossesClaimed: number; buildUpPasses: number };
+
+export type StepMatchResult = {
+  matchId: string;
+  outcome: 'WIN' | 'DRAW' | 'LOSS';
+  goalsFor: number;
+  goalsAgainst: number;
+  appearance: MatchAppearance;
+  ratingTenths: number | null;
+};
+
+export type StepSummary = {
+  passedAtRevision: number;
+  decisionsOpened: number;
+  matchesPlayed: number;
+  results: StepMatchResult[];
+};
 
 export type SeasonStep = {
   index: number;
@@ -235,15 +313,58 @@ export type CompetitionRecord = {
   cupRound: string | null;
 };
 
-/** 이 작업은 타입만 정의한다(값은 T-2-003). `season.matches`는 이 작업에서 항상 []다. */
+// T-2-003 D-35: 시즌 시작 시 확정하는 일정 한 항목(roll 없음). `opponentId`는 룰셋 `teams`의 실제
+// id이거나 이름 없는 상대(`${leagueId}-opp-${n}`) 또는 컵 라운드 상대(`${cupId}-${round}`)다.
+// `skipped`는 컵 탈락 뒤 남은 라운드를 표시한다(경기를 돌리지 않는다).
+export type ScheduleEntry = {
+  step: number;
+  order: number;
+  competitionId: string;
+  kind: 'LEAGUE' | 'CUP';
+  round: string | null;
+  opponentId: string;
+  home: boolean;
+  skipped?: 'ELIMINATED';
+};
+
+// T-2-001이 타입만 두었던 것을 T-2-003이 확정한다(브리프 데이터 계약 D-35).
 export type MatchRecord = {
   id: string;
   step: number;
+  order: number;
   competitionId: string;
-  opponentTeamId: string;
+  kind: 'LEAGUE' | 'CUP';
+  round: string | null;
+  opponent: { id: string; name: string; strength: number };
   home: boolean;
-  result: { goalsFor: number; goalsAgainst: number } | null;
+  result: { goalsFor: number; goalsAgainst: number; outcome: 'WIN' | 'DRAW' | 'LOSS' };
+  appearance: MatchAppearance;
+  outReason: OutReason;
+  minutes: number;
+  involvement: number;
+  stats: PositionStats;
+  ratingTenths: number | null;
+  cards: { yellow: 0 | 1 | 2; red: boolean };
+  injuredOff: boolean;
+  chapterId: string | null;
 };
+
+// T-2-003 D-35: 시즌 누계(결산 이전 진행 중 값). `totals`의 boolean 필드는 누적 횟수(count)다.
+export type SeasonPlayerStats = {
+  group: StatGroup;
+  appearances: { total: number; started: number; sub: number; zeroMinute: number; out: number };
+  minutes: number;
+  ratingSumTenths: number;
+  ratedMatches: number;
+  yellow: number;
+  red: number;
+  injuries: number;
+  totals: PositionStatsTotals;
+};
+
+// T-2-003 D-35: 부상·정지만 표현한다(능력치·재활은 Phase 4). `excluded`(SelectionCandidate)와 같은
+// 문자열('INJURY' | 'SUSPENSION')을 쓴다.
+export type Availability = null | { kind: 'INJURY' | 'SUSPENSION'; matchesRemaining: number; sinceMatchId: string };
 
 // T-2-002 D-26/D-34: 시즌 시작 시 포지션마다 생성하는 주전 경쟁자. `expectedPerformance`·`score`는
 // 저장하지 않고 판정마다 `selection.ts`가 다시 계산한다(RULE-SEL-001은 "매 판정마다").
@@ -307,10 +428,24 @@ export type FootballSeason = {
   styleId: string;
   squadRole: SquadRole;
   competitions: CompetitionRecord[];
+  /** T-2-003 D-35: roll 없이 시즌 시작 시 확정하는 리그·컵 일정(step·order 순 정렬). */
+  schedule: ScheduleEntry[];
   matches: MatchRecord[];
   ageReferenceStep: 1;
   squad: { competitors: Competitor[] };
   selection: SelectionRanking;
+  /** T-2-003 D-35: 시즌 누계 통계(포지션군은 선수 현재 primaryPosition 기준으로 고정). */
+  playerStats: SeasonPlayerStats;
+  availability: Availability;
+  /** T-2-003 8번 규칙: 직전 평점(×10 정수). Squad Status 재계산의 lastRating 입력. */
+  lastRatingTenths: number | null;
+  /** T-2-003 D-35: 경고 정지 기준(`yellowSuspensionAt`) 판정용 누적 경고 수. 정지가 걸리면 0으로
+   * 리셋된다(`playerStats.yellow`는 시즌 통계 누계라 리셋되지 않는다 — 이 필드와는 다른 값이다). */
+  yellowSuspensionCount: number;
+  /** T-2-003 D-35: 경기 전용 RNG 스트림(브리프 "FAST와 CHAPTER의 matches가 byte-identical"). 결정
+   * 슬롯(EVENT 가중치 등)이 소비하는 `CareerState.rngState`와 분리해, 경기 결과가 모드별 결정 타이밍에
+   * 영향받지 않게 한다. START_SEASON에서 mode를 쓰기 전 시점의 `state.rngState`로 시드한다. */
+  matchRngState: RngState;
 };
 
 export type SeasonSummary = {

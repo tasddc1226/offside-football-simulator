@@ -1,0 +1,94 @@
+{
+  "revision": 17,
+  "stateHash": "1a844c777691db76eb251928028ee163514d432c886942818a875e78445f8ac4",
+  "rngStateDraws": 398,
+  "age": 18,
+  "seasonHistory": [
+    {
+      "index": 1,
+      "simulationMode": "FAST",
+      "teamId": "busan-tier2",
+      "competitions": [
+        {
+          "competitionId": "LEAGUE",
+          "kind": "LEAGUE",
+          "played": 22,
+          "won": 10,
+          "drawn": 7,
+          "lost": 5,
+          "goalsFor": 34,
+          "goalsAgainst": 22,
+          "position": 2,
+          "cupRound": null
+        },
+        {
+          "competitionId": "CUP",
+          "kind": "CUP",
+          "played": 3,
+          "won": 2,
+          "drawn": 0,
+          "lost": 1,
+          "goalsFor": 4,
+          "goalsAgainst": 2,
+          "position": null,
+          "cupRound": "OUT_SEMI"
+        }
+      ],
+      "settledAtRevision": 17
+    }
+  ],
+  "beforeSettlement": {
+    "matchesPlayed": 25,
+    "playerStats": {
+      "group": "GK",
+      "appearances": {
+        "total": 25,
+        "started": 23,
+        "sub": 0,
+        "zeroMinute": 2,
+        "out": 2
+      },
+      "minutes": 1930,
+      "ratingSumTenths": 1640,
+      "ratedMatches": 23,
+      "yellow": 4,
+      "red": 0,
+      "injuries": 1,
+      "totals": {
+        "group": "GK",
+        "saves": 63,
+        "psxgMinusGoalsCenti": 80,
+        "cleanSheet": 10,
+        "crossesClaimed": 29,
+        "buildUpPasses": 466
+      }
+    },
+    "averageRatingTenths": 71,
+    "competitions": [
+      {
+        "competitionId": "LEAGUE",
+        "kind": "LEAGUE",
+        "played": 22,
+        "won": 10,
+        "drawn": 7,
+        "lost": 5,
+        "goalsFor": 34,
+        "goalsAgainst": 22,
+        "position": 2,
+        "cupRound": null
+      },
+      {
+        "competitionId": "CUP",
+        "kind": "CUP",
+        "played": 3,
+        "won": 2,
+        "drawn": 0,
+        "lost": 1,
+        "goalsFor": 4,
+        "goalsAgainst": 2,
+        "position": null,
+        "cupRound": "OUT_SEMI"
+      }
+    ]
+  }
+}

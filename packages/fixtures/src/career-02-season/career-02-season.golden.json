@@ -1,7 +1,7 @@
 {
   "FAST": {
     "revision": 17,
-    "stateHash": "1828a9365fe713b55331af284866688fbfaba8f4ef60a82abcbec556fa6a5ec7",
+    "stateHash": "cde0612d0c5982bfc6e54a97cdf0c8ae9ef60700d32e4f3fffc53619f7773006",
     "rngStateDraws": 398,
     "age": 18,
     "seasonHistory": [
@@ -10,26 +10,340 @@
         "simulationMode": "FAST",
         "teamId": "seoul-tier1",
         "competitions": [
-          {"competitionId": "LEAGUE", "kind": "LEAGUE", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": null},
-          {"competitionId": "CUP", "kind": "CUP", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": "R1"}
+          {
+            "competitionId": "LEAGUE",
+            "kind": "LEAGUE",
+            "played": 22,
+            "won": 7,
+            "drawn": 3,
+            "lost": 12,
+            "goalsFor": 24,
+            "goalsAgainst": 31,
+            "position": 11,
+            "cupRound": null
+          },
+          {
+            "competitionId": "CUP",
+            "kind": "CUP",
+            "played": 1,
+            "won": 0,
+            "drawn": 0,
+            "lost": 1,
+            "goalsFor": 0,
+            "goalsAgainst": 2,
+            "position": null,
+            "cupRound": "OUT_R1"
+          }
         ],
         "settledAtRevision": 17
       }
     ],
-    "checkpoints": ["SEASON_START", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "SEASON_SETTLED"],
+    "checkpoints": [
+      "SEASON_START",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "SEASON_SETTLED"
+    ],
     "stepSummaries": [
-      { "index": 1, "summary": { "passedAtRevision": 13, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 2, "summary": { "passedAtRevision": 13, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 3, "summary": { "passedAtRevision": 14, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 4, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 5, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 6, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 7, "summary": { "passedAtRevision": 15, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 8, "summary": { "passedAtRevision": 15, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 9, "summary": { "passedAtRevision": 15, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 10, "summary": { "passedAtRevision": 15, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 11, "summary": { "passedAtRevision": 16, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 12, "summary": null }
+      {
+        "index": 1,
+        "summary": {
+          "passedAtRevision": 13,
+          "decisionsOpened": 1,
+          "matchesPlayed": 0,
+          "results": []
+        }
+      },
+      {
+        "index": 2,
+        "summary": {
+          "passedAtRevision": 13,
+          "decisionsOpened": 0,
+          "matchesPlayed": 0,
+          "results": []
+        }
+      },
+      {
+        "index": 3,
+        "summary": {
+          "passedAtRevision": 14,
+          "decisionsOpened": 1,
+          "matchesPlayed": 3,
+          "results": [
+            {
+              "matchId": "1-3-0",
+              "outcome": "DRAW",
+              "goalsFor": 1,
+              "goalsAgainst": 1,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-3-1",
+              "outcome": "WIN",
+              "goalsFor": 2,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 66
+            },
+            {
+              "matchId": "1-3-2",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 1,
+              "appearance": "SUB",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 4,
+        "summary": {
+          "passedAtRevision": 14,
+          "decisionsOpened": 0,
+          "matchesPlayed": 2,
+          "results": [
+            {
+              "matchId": "1-4-0",
+              "outcome": "LOSS",
+              "goalsFor": 1,
+              "goalsAgainst": 2,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-4-1",
+              "outcome": "LOSS",
+              "goalsFor": 2,
+              "goalsAgainst": 4,
+              "appearance": "SUB",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 5,
+        "summary": {
+          "passedAtRevision": 14,
+          "decisionsOpened": 0,
+          "matchesPlayed": 4,
+          "results": [
+            {
+              "matchId": "1-5-0",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 1,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-5-1",
+              "outcome": "DRAW",
+              "goalsFor": 0,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 61
+            },
+            {
+              "matchId": "1-5-2",
+              "outcome": "WIN",
+              "goalsFor": 2,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 66
+            },
+            {
+              "matchId": "1-5-3",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 2,
+              "appearance": "SUB",
+              "ratingTenths": 57
+            }
+          ]
+        }
+      },
+      {
+        "index": 6,
+        "summary": {
+          "passedAtRevision": 14,
+          "decisionsOpened": 0,
+          "matchesPlayed": 2,
+          "results": [
+            {
+              "matchId": "1-6-0",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 3,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-6-1",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 1,
+              "appearance": "SUB",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 7,
+        "summary": {
+          "passedAtRevision": 15,
+          "decisionsOpened": 1,
+          "matchesPlayed": 3,
+          "results": [
+            {
+              "matchId": "1-7-0",
+              "outcome": "WIN",
+              "goalsFor": 4,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 66
+            },
+            {
+              "matchId": "1-7-1",
+              "outcome": "WIN",
+              "goalsFor": 3,
+              "goalsAgainst": 2,
+              "appearance": "SUB",
+              "ratingTenths": 74
+            },
+            {
+              "matchId": "1-7-2",
+              "outcome": "WIN",
+              "goalsFor": 2,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 66
+            }
+          ]
+        }
+      },
+      {
+        "index": 8,
+        "summary": {
+          "passedAtRevision": 15,
+          "decisionsOpened": 0,
+          "matchesPlayed": 2,
+          "results": [
+            {
+              "matchId": "1-8-0",
+              "outcome": "LOSS",
+              "goalsFor": 1,
+              "goalsAgainst": 2,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-8-1",
+              "outcome": "DRAW",
+              "goalsFor": 0,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 65
+            }
+          ]
+        }
+      },
+      {
+        "index": 9,
+        "summary": {
+          "passedAtRevision": 15,
+          "decisionsOpened": 0,
+          "matchesPlayed": 3,
+          "results": [
+            {
+              "matchId": "1-9-0",
+              "outcome": "WIN",
+              "goalsFor": 1,
+              "goalsAgainst": 0,
+              "appearance": "OUT",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-9-1",
+              "outcome": "WIN",
+              "goalsFor": 2,
+              "goalsAgainst": 1,
+              "appearance": "OUT",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-9-2",
+              "outcome": "LOSS",
+              "goalsFor": 1,
+              "goalsAgainst": 2,
+              "appearance": "OUT",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 10,
+        "summary": {
+          "passedAtRevision": 15,
+          "decisionsOpened": 0,
+          "matchesPlayed": 2,
+          "results": [
+            {
+              "matchId": "1-10-0",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 2,
+              "appearance": "OUT",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-10-1",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 4,
+              "appearance": "SUB",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 11,
+        "summary": {
+          "passedAtRevision": 16,
+          "decisionsOpened": 1,
+          "matchesPlayed": 2,
+          "results": [
+            {
+              "matchId": "1-11-0",
+              "outcome": "LOSS",
+              "goalsFor": 1,
+              "goalsAgainst": 3,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-11-1",
+              "outcome": "LOSS",
+              "goalsFor": 1,
+              "goalsAgainst": 2,
+              "appearance": "SUB",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 12,
+        "summary": null
+      }
     ],
     "afterRoleResolve": {
       "competitorsCount": 16,
@@ -40,12 +354,69 @@
       "benchSlots": 1,
       "playerRank": 3,
       "playerAppearance": "SUB",
-      "playerReason": { "component": "TACTICAL_FIT", "delta": -20 }
+      "playerReason": {
+        "component": "TACTICAL_FIT",
+        "delta": -20
+      }
+    },
+    "beforeSettlement": {
+      "matchesPlayed": 23,
+      "playerStats": {
+        "group": "FW",
+        "appearances": {
+          "total": 23,
+          "started": 0,
+          "sub": 19,
+          "zeroMinute": 15,
+          "out": 4
+        },
+        "minutes": 205,
+        "ratingSumTenths": 521,
+        "ratedMatches": 8,
+        "yellow": 0,
+        "red": 0,
+        "injuries": 1,
+        "totals": {
+          "group": "FW",
+          "goals": 1,
+          "assists": 0,
+          "xgCenti": 255,
+          "shots": 9,
+          "offsides": 2
+        }
+      },
+      "averageRatingTenths": 65,
+      "competitions": [
+        {
+          "competitionId": "LEAGUE",
+          "kind": "LEAGUE",
+          "played": 22,
+          "won": 7,
+          "drawn": 3,
+          "lost": 12,
+          "goalsFor": 24,
+          "goalsAgainst": 31,
+          "position": 11,
+          "cupRound": null
+        },
+        {
+          "competitionId": "CUP",
+          "kind": "CUP",
+          "played": 1,
+          "won": 0,
+          "drawn": 0,
+          "lost": 1,
+          "goalsFor": 0,
+          "goalsAgainst": 2,
+          "position": null,
+          "cupRound": "OUT_R1"
+        }
+      ]
     }
   },
   "CHAPTER": {
     "revision": 29,
-    "stateHash": "c6f67a3a48d9e2b90429bbbe261b6f7a7330c169271333cfdbd99f8f8491b91a",
+    "stateHash": "ecc5ad8256ed114ae6f49be1b3b9ee2f20879ff3767b1cd5e4155b3d008d9949",
     "rngStateDraws": 403,
     "age": 18,
     "seasonHistory": [
@@ -54,26 +425,352 @@
         "simulationMode": "CHAPTER",
         "teamId": "seoul-tier1",
         "competitions": [
-          {"competitionId": "LEAGUE", "kind": "LEAGUE", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": null},
-          {"competitionId": "CUP", "kind": "CUP", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": "R1"}
+          {
+            "competitionId": "LEAGUE",
+            "kind": "LEAGUE",
+            "played": 22,
+            "won": 7,
+            "drawn": 3,
+            "lost": 12,
+            "goalsFor": 24,
+            "goalsAgainst": 31,
+            "position": 11,
+            "cupRound": null
+          },
+          {
+            "competitionId": "CUP",
+            "kind": "CUP",
+            "played": 1,
+            "won": 0,
+            "drawn": 0,
+            "lost": 1,
+            "goalsFor": 0,
+            "goalsAgainst": 2,
+            "position": null,
+            "cupRound": "OUT_R1"
+          }
         ],
         "settledAtRevision": 29
       }
     ],
-    "checkpoints": ["SEASON_START", "STEP_BOUNDARY", "STEP_BOUNDARY", "EVENT_RESOLVED", "STEP_BOUNDARY", "STEP_BOUNDARY", "EVENT_RESOLVED", "STEP_BOUNDARY", "EVENT_RESOLVED", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "EVENT_RESOLVED", "STEP_BOUNDARY", "EVENT_RESOLVED", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "SEASON_SETTLED"],
+    "checkpoints": [
+      "SEASON_START",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "EVENT_RESOLVED",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "EVENT_RESOLVED",
+      "STEP_BOUNDARY",
+      "EVENT_RESOLVED",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "EVENT_RESOLVED",
+      "STEP_BOUNDARY",
+      "EVENT_RESOLVED",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "SEASON_SETTLED"
+    ],
     "stepSummaries": [
-      { "index": 1, "summary": { "passedAtRevision": 13, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 2, "summary": { "passedAtRevision": 15, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 3, "summary": { "passedAtRevision": 16, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 4, "summary": { "passedAtRevision": 18, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 5, "summary": { "passedAtRevision": 20, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 6, "summary": { "passedAtRevision": 21, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 7, "summary": { "passedAtRevision": 22, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 8, "summary": { "passedAtRevision": 24, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 9, "summary": { "passedAtRevision": 26, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 10, "summary": { "passedAtRevision": 27, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 11, "summary": { "passedAtRevision": 28, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 12, "summary": null }
+      {
+        "index": 1,
+        "summary": {
+          "passedAtRevision": 13,
+          "decisionsOpened": 1,
+          "matchesPlayed": 0,
+          "results": []
+        }
+      },
+      {
+        "index": 2,
+        "summary": {
+          "passedAtRevision": 15,
+          "decisionsOpened": 1,
+          "matchesPlayed": 0,
+          "results": []
+        }
+      },
+      {
+        "index": 3,
+        "summary": {
+          "passedAtRevision": 16,
+          "decisionsOpened": 1,
+          "matchesPlayed": 3,
+          "results": [
+            {
+              "matchId": "1-3-0",
+              "outcome": "DRAW",
+              "goalsFor": 1,
+              "goalsAgainst": 1,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-3-1",
+              "outcome": "WIN",
+              "goalsFor": 2,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 66
+            },
+            {
+              "matchId": "1-3-2",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 1,
+              "appearance": "SUB",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 4,
+        "summary": {
+          "passedAtRevision": 18,
+          "decisionsOpened": 1,
+          "matchesPlayed": 2,
+          "results": [
+            {
+              "matchId": "1-4-0",
+              "outcome": "LOSS",
+              "goalsFor": 1,
+              "goalsAgainst": 2,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-4-1",
+              "outcome": "LOSS",
+              "goalsFor": 2,
+              "goalsAgainst": 4,
+              "appearance": "SUB",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 5,
+        "summary": {
+          "passedAtRevision": 20,
+          "decisionsOpened": 1,
+          "matchesPlayed": 4,
+          "results": [
+            {
+              "matchId": "1-5-0",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 1,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-5-1",
+              "outcome": "DRAW",
+              "goalsFor": 0,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 61
+            },
+            {
+              "matchId": "1-5-2",
+              "outcome": "WIN",
+              "goalsFor": 2,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 66
+            },
+            {
+              "matchId": "1-5-3",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 2,
+              "appearance": "SUB",
+              "ratingTenths": 57
+            }
+          ]
+        }
+      },
+      {
+        "index": 6,
+        "summary": {
+          "passedAtRevision": 21,
+          "decisionsOpened": 1,
+          "matchesPlayed": 2,
+          "results": [
+            {
+              "matchId": "1-6-0",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 3,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-6-1",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 1,
+              "appearance": "SUB",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 7,
+        "summary": {
+          "passedAtRevision": 22,
+          "decisionsOpened": 1,
+          "matchesPlayed": 3,
+          "results": [
+            {
+              "matchId": "1-7-0",
+              "outcome": "WIN",
+              "goalsFor": 4,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 66
+            },
+            {
+              "matchId": "1-7-1",
+              "outcome": "WIN",
+              "goalsFor": 3,
+              "goalsAgainst": 2,
+              "appearance": "SUB",
+              "ratingTenths": 74
+            },
+            {
+              "matchId": "1-7-2",
+              "outcome": "WIN",
+              "goalsFor": 2,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 66
+            }
+          ]
+        }
+      },
+      {
+        "index": 8,
+        "summary": {
+          "passedAtRevision": 24,
+          "decisionsOpened": 1,
+          "matchesPlayed": 2,
+          "results": [
+            {
+              "matchId": "1-8-0",
+              "outcome": "LOSS",
+              "goalsFor": 1,
+              "goalsAgainst": 2,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-8-1",
+              "outcome": "DRAW",
+              "goalsFor": 0,
+              "goalsAgainst": 0,
+              "appearance": "SUB",
+              "ratingTenths": 65
+            }
+          ]
+        }
+      },
+      {
+        "index": 9,
+        "summary": {
+          "passedAtRevision": 26,
+          "decisionsOpened": 1,
+          "matchesPlayed": 3,
+          "results": [
+            {
+              "matchId": "1-9-0",
+              "outcome": "WIN",
+              "goalsFor": 1,
+              "goalsAgainst": 0,
+              "appearance": "OUT",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-9-1",
+              "outcome": "WIN",
+              "goalsFor": 2,
+              "goalsAgainst": 1,
+              "appearance": "OUT",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-9-2",
+              "outcome": "LOSS",
+              "goalsFor": 1,
+              "goalsAgainst": 2,
+              "appearance": "OUT",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 10,
+        "summary": {
+          "passedAtRevision": 27,
+          "decisionsOpened": 1,
+          "matchesPlayed": 2,
+          "results": [
+            {
+              "matchId": "1-10-0",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 2,
+              "appearance": "OUT",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-10-1",
+              "outcome": "LOSS",
+              "goalsFor": 0,
+              "goalsAgainst": 4,
+              "appearance": "SUB",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 11,
+        "summary": {
+          "passedAtRevision": 28,
+          "decisionsOpened": 1,
+          "matchesPlayed": 2,
+          "results": [
+            {
+              "matchId": "1-11-0",
+              "outcome": "LOSS",
+              "goalsFor": 1,
+              "goalsAgainst": 3,
+              "appearance": "SUB",
+              "ratingTenths": null
+            },
+            {
+              "matchId": "1-11-1",
+              "outcome": "LOSS",
+              "goalsFor": 1,
+              "goalsAgainst": 2,
+              "appearance": "SUB",
+              "ratingTenths": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 12,
+        "summary": null
+      }
     ],
     "afterRoleResolve": {
       "competitorsCount": 16,
@@ -84,7 +781,64 @@
       "benchSlots": 1,
       "playerRank": 3,
       "playerAppearance": "SUB",
-      "playerReason": { "component": "TACTICAL_FIT", "delta": -20 }
+      "playerReason": {
+        "component": "TACTICAL_FIT",
+        "delta": -20
+      }
+    },
+    "beforeSettlement": {
+      "matchesPlayed": 23,
+      "playerStats": {
+        "group": "FW",
+        "appearances": {
+          "total": 23,
+          "started": 0,
+          "sub": 19,
+          "zeroMinute": 15,
+          "out": 4
+        },
+        "minutes": 205,
+        "ratingSumTenths": 521,
+        "ratedMatches": 8,
+        "yellow": 0,
+        "red": 0,
+        "injuries": 1,
+        "totals": {
+          "group": "FW",
+          "goals": 1,
+          "assists": 0,
+          "xgCenti": 255,
+          "shots": 9,
+          "offsides": 2
+        }
+      },
+      "averageRatingTenths": 65,
+      "competitions": [
+        {
+          "competitionId": "LEAGUE",
+          "kind": "LEAGUE",
+          "played": 22,
+          "won": 7,
+          "drawn": 3,
+          "lost": 12,
+          "goalsFor": 24,
+          "goalsAgainst": 31,
+          "position": 11,
+          "cupRound": null
+        },
+        {
+          "competitionId": "CUP",
+          "kind": "CUP",
+          "played": 1,
+          "won": 0,
+          "drawn": 0,
+          "lost": 1,
+          "goalsFor": 0,
+          "goalsAgainst": 2,
+          "position": null,
+          "cupRound": "OUT_R1"
+        }
+      ]
     }
   }
 }
