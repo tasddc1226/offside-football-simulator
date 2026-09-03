@@ -414,6 +414,27 @@ describe('expireAtSeasonEnd', () => {
     expect(expired.activeEffects).toEqual([]);
   });
 
+  // T-2-014 R2-1: AT_SEASON_INDEX 비교는 `===`가 아니라 `<=`다 — 유스 구간(season: null)에서
+  // SEASONS_AFTER 0으로 적용된 효과는 AT_SEASON_INDEX 0으로 저장되는데, `===`였다면 실제 시즌 index가
+  // 1부터 시작해 영원히 만료되지 않았을 것이다.
+  it('유스 구간에서 SEASONS_AFTER 0으로 저장된 AT_SEASON_INDEX 0 효과는 첫 시즌 결산에서 만료된다', () => {
+    const state = { ...baseState(), season: null };
+    const effect = makeEffect({
+      kind: 'RELATION',
+      target: 'fans',
+      delta: 7,
+      stackingRule: 'SUM',
+      expiresAt: { kind: 'SEASONS_AFTER', seasons: 0 },
+    });
+    const applied = applyEffects(state, [effect], { step: 1 }).state;
+    expect(applied.relationships.fans).toBe(7);
+    expect(applied.activeEffects).toEqual([{ ...effect, expiresAt: { kind: 'AT_SEASON_INDEX', index: 0 } }]);
+
+    const expired = expireAtSeasonEnd(applied, 1);
+    expect(expired.relationships.fans).toBe(0);
+    expect(expired.activeEffects).toEqual([]);
+  });
+
   it('시즌을 넘긴 AT_STEP은 다음 시즌 같은 step을 기다리지 않고 결산 시 강제로 되돌아온다', () => {
     const state = { ...baseState(), season: seasonWithIndex(1) };
     const effect = makeEffect({

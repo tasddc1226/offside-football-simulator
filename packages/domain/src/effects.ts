@@ -83,9 +83,9 @@ function dedupeKeyFor(state: CareerState, effect: Effect): string | null {
 /**
  * D-40 규칙 3: `activeEffects`에 저장하기 직전, 상대 표기(`STEPS_AFTER`·`SEASONS_AFTER`)를 절대 표기
  * (`AT_STEP`·`AT_SEASON_INDEX`)로 치환한다. `SEASONS_AFTER`는 시즌이 없으면(유스 구간) 0을 기준으로
- * 삼는다(`dedupeKeyFor`의 시즌 0 관례와 같다 — 실제 시즌 index는 1부터라 절대 되돌아오지 않으므로
- * 사실상 "결산으로는 만료되지 않는다"와 같은 뜻이고, 그런 효과는 `expireAtSeasonEnd`가 부르는 시점의
- * `season`도 항상 null이라 문제가 되지 않는다).
+ * 삼는다(`dedupeKeyFor`의 시즌 0 관례와 같다). `expireAtSeasonEnd`가 `AT_SEASON_INDEX`를 `<=`로
+ * 비교하므로(R2-1), 이렇게 저장된 index 0짜리 효과는 영원히 남지 않고 첫 시즌 결산(seasonIndex 1)에서
+ * 만료된다 — "실제 시즌 index는 1부터라 절대 되돌아오지 않는다"는 옛 가정은 틀렸다.
  */
 function resolveExpiresAtForStorage(
   expiresAt: Exclude<Effect['expiresAt'], null>,
@@ -253,9 +253,12 @@ export function expireEffects(state: CareerState, step: number): CareerState {
 /**
  * D-40 규칙 3: 시즌 결산 직전에만 부른다(`expireEffects`가 걷기의 step 진입 시 부르는 것과 짝).
  * 세 가지를 되돌린다 — `AT_SEASON_END`(항상), `AT_SEASON_INDEX`(그 `index`가 지금 결산하는
- * `seasonIndex`와 같을 때만 — 아직 멀었으면 다음 시즌들로 넘어간다), 그리고 시즌 안에서 자연 만료되지
+ * `seasonIndex` 이하일 때 — 아직 멀었으면 다음 시즌들로 넘어간다), 그리고 시즌 안에서 자연 만료되지
  * 못하고 남은 `AT_STEP`(정의상 시즌을 넘겨 만료되는 게 아니라 결산 시 강제 만료된다 — "시즌 경계를
- * 넘는 AT_STEP은 다음 시즌의 같은 step에서 만료된다고 정의하지 않는다").
+ * 넘는 AT_STEP은 다음 시즌의 같은 step에서 만료된다고 정의하지 않는다"). `AT_SEASON_INDEX`를 `===`가
+ * 아니라 `<=`로 비교하는 이유(R2-1): `index`가 이미 지난 경우(예: 유스 구간에서 저장된 index 0, 또는
+ * 어떤 경로로든 그 시즌 결산을 건너뛴 경우)에도 다음 결산에서 반드시 되돌아와야 하고, 영원히
+ * `activeEffects`에 남아서는 안 된다.
  */
 export function expireAtSeasonEnd(state: CareerState, seasonIndex: number): CareerState {
   const bags = cloneBags(state);
@@ -265,7 +268,7 @@ export function expireAtSeasonEnd(state: CareerState, seasonIndex: number): Care
     const expiresAt = effect.expiresAt;
     const shouldExpire =
       expiresAt !== null &&
-      (expiresAt.kind === 'AT_STEP' || expiresAt.kind === 'AT_SEASON_END' || (expiresAt.kind === 'AT_SEASON_INDEX' && expiresAt.index === seasonIndex));
+      (expiresAt.kind === 'AT_STEP' || expiresAt.kind === 'AT_SEASON_END' || (expiresAt.kind === 'AT_SEASON_INDEX' && expiresAt.index <= seasonIndex));
     if (!shouldExpire) {
       remaining.push(effect);
       continue;
