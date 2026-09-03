@@ -498,7 +498,7 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
   it('시즌 중 walk가 여러 step을 건너뛰어도, 지나간 step마다 AT_STEP 효과를 만료시킨다', () => {
     // 회귀 테스트: Phase 1 advance()는 매 step 전환마다 expireEffects를 부르지만, 시즌 walk가 한
     // ADVANCE에서 여러 step을 한 번에 건너뛰면(FAST의 예산 절단·EVENT 후보 없음 등) 그 사이에 있는
-    // step에 걸린 AT_STEP 효과가 만료되지 않는 문제가 있었다. expireEffectsThroughWalk가 walk가
+    // step에 걸린 AT_STEP 효과가 만료되지 않는 문제가 있었다. advanceEffectsThroughWalk가 walk가
     // 지나간 step마다 순서대로 expireEffects를 접어 적용해 고쳤다.
     const snapshot = activeSnapshotWithContract();
     const started = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'CHAPTER'));
@@ -513,9 +513,11 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     );
     if (!opened.ok) throw new Error(`실패: ${opened.error.code} ${opened.error.message}`);
     expect(opened.snapshot.state.season?.currentStep).toBe(2);
-    const beforeMorale = opened.snapshot.state.state.morale;
+    const beforeFans = opened.snapshot.state.relationships.fans;
 
-    // step2 EVENT를 morale +10(AT_STEP 5 만료) 효과로 해소한다.
+    // step2 EVENT를 fans +10(AT_STEP 5 만료) 효과로 해소한다. fans는 selection·매치 계산 어디에도
+    // 쓰이지 않으므로(form·morale과 달리) 경기 결과에 영향을 주지 않고 순수히 effect 만료 회귀만
+    // 검증할 수 있다.
     const resolved = runSimulate(opened.snapshot, {
       type: 'RESOLVE_EVENT',
       commandId: 'resolve-effect-1',
@@ -530,9 +532,9 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
             weight: 100,
             effects: [
               {
-                kind: 'CURRENT',
+                kind: 'RELATION',
                 sourceId: 'test-effect-src-t2001',
-                target: 'morale',
+                target: 'fans',
                 delta: 10,
                 clamp: { min: 0, max: 100 },
                 appliesAt: { kind: 'IMMEDIATE' },
@@ -546,19 +548,19 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     });
     if (!resolved.ok) throw new Error(`실패: ${resolved.error.code} ${resolved.error.message}`);
     expect(resolved.snapshot.state.activeEffects).toHaveLength(1);
-    const afterEffectMorale = resolved.snapshot.state.state.morale;
-    expect(afterEffectMorale).toBe(Math.min(beforeMorale + 10, 100));
+    const afterEffectFans = resolved.snapshot.state.relationships.fans;
+    expect(afterEffectFans).toBe(Math.min(beforeFans + 10, 100));
 
     // T-2-004 D-38: chapterCandidates를 안 보내면 step3·6(CHAPTER)도 후보가 없어 열리지 않으므로,
     // step2를 닫은 뒤 한 ADVANCE가 step3~6(CHAPTER·EVENT·EVENT·CHAPTER, 전부 건너뜀)을 한 번에 지나
     // step7(CONTRACT)에서 멈춘다 — step5의 AT_STEP 효과가 이 한 번의 walk 안에서 만료돼야 한다.
-    // expireEffectsThroughWalk가 walk가 지나간 step마다(step5 포함) 순서대로 적용되지 않으면 이
+    // advanceEffectsThroughWalk가 walk가 지나간 step마다(step5 포함) 순서대로 적용되지 않으면 이
     // 회귀가 통과하지 않는다.
     const afterWalk = runSimulate(resolved.snapshot, advanceCommand(resolved.snapshot.revision));
     if (!afterWalk.ok) throw new Error(`실패: ${afterWalk.error.code} ${afterWalk.error.message}`);
     expect(afterWalk.snapshot.state.season?.currentStep).toBe(7);
     expect(afterWalk.snapshot.state.activeEffects).toEqual([]);
-    expect(afterWalk.snapshot.state.state.morale).toBe(beforeMorale);
+    expect(afterWalk.snapshot.state.relationships.fans).toBe(beforeFans);
   });
 
   // T-2-003 D-35 필수 테스트 벡터: 이 시나리오의 팀(seoul-tier1)은 실제 리그 일정이 있어(schedule.ts)
@@ -616,9 +618,8 @@ describe('SETTLE_SEASON (CMD-SIM-003)', () => {
     expect(result.error.details).toEqual({ reason: 'SEASON_NOT_SETTLEABLE' });
   });
 
-  it('성공하면 seasonHistory 1건, season null, age+1, 상태가 회귀하고 능력치는 그대로다', () => {
+  it('성공하면 seasonHistory 1건, season null, age+1, 상태가 회귀하고 능력치는 성장식 결과와 일치한다', () => {
     const before = activeSnapshotWithContract();
-    const attributesBefore = before.state.attributes;
     const ageBefore = before.state.age;
 
     const settled = playFullSeason(before, 'FAST');
@@ -627,7 +628,11 @@ describe('SETTLE_SEASON (CMD-SIM-003)', () => {
     expect(settled.state.seasonHistory[0]?.index).toBe(1);
     expect(settled.state.age).toBe(ageBefore + 1);
     expect(settled.state.state).toEqual(rulesetProto.seasonBoundaryReset);
-    expect(settled.state.attributes).toEqual(attributesBefore);
+    // T-2-005 D-39: 능력치는 더 이상 결산 전후로 그대로가 아니다 — 성장식 결과(attributeDeltas)로
+    // 갱신되고, 갱신된 값이 곧 seasonHistory[0].result.attributes에 기록된 baseOvr.after와 정합한다.
+    const result = settled.state.seasonHistory[0]?.result;
+    expect(result).toBeDefined();
+    expect(settled.state.player.profile?.baseOvr).toBe(result?.baseOvr.after);
     expect(settled.state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_SETTLED' });
   });
 

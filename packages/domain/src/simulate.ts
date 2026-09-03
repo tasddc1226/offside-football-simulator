@@ -1,8 +1,10 @@
 import { compareCodePoints, type JsonValue } from './canonical.js';
 import { clamp } from './clamp.js';
 import { resolveChapter, type ChapterCandidateInput } from './chapter.js';
+import { applyCondition, type ConditionState } from './condition.js';
 import { generateCompetitors } from './competitors.js';
-import { applyEffects, expireEffects } from './effects.js';
+import { applyEffects, expireEffects, resolveDeferredEffects } from './effects.js';
+import { computeGrowth } from './growth.js';
 import { hashState } from './hash.js';
 import { findMatchingOfferBranch, generateOffers } from './offers.js';
 import { playMatch } from './match.js';
@@ -24,6 +26,7 @@ import {
   type SeasonWalkResult,
 } from './season.js';
 import { applyPlayedMatch, initialSeasonPlayerStats, stepMatchResultsFor, type SeasonMatchBooks } from './season-stats.js';
+import { buildSeasonResult, hashSeasonResult } from './settlement.js';
 import {
   computeSquadStatus,
   computeTacticalFit,
@@ -53,9 +56,11 @@ import {
   type Position,
   type PreferredFoot,
   type SelectionRanking,
+  type SeasonResult,
   type SeasonSummary,
   type SimulationMode,
   type SquadRole,
+  type TrainingFocus,
 } from './types.js';
 
 export type Command =
@@ -76,7 +81,8 @@ export type Command =
       // D-25는 payload를 { simulationMode }로만 적었지만, FootballSeason.serviceSeasonId(브리프
       // 데이터 계약)는 domain CareerState 어디에도 없다(engine-client Career 래퍼 필드라 T-2-001
       // 범위 밖). CREATE_CAREER처럼 payload로 받는다(PR 본문에 기록).
-      payload: { simulationMode: SimulationMode; serviceSeasonId: string };
+      // T-2-005 D-39: trainingFocus는 없으면 'ROLE'(기존 골든 호환).
+      payload: { simulationMode: SimulationMode; serviceSeasonId: string; trainingFocus?: TrainingFocus };
     }
   | {
       type: 'ADVANCE';
@@ -135,6 +141,9 @@ export type SimulationResult =
       outcomeId?: string;
       appliedEffects: Effect[];
       nextAction: 'DECISION' | 'ADVANCE' | 'SETTLEMENT';
+      /** T-2-005 D-39: SETTLE_SEASON 응답에만 실린다(snapshot.state.seasonHistory에도 같은 값이
+       * 있으니 웹은 둘 중 하나만 써도 된다). */
+      seasonResult?: SeasonResult;
     }
   | {
       ok: false;
@@ -180,6 +189,11 @@ function zeroAttributes(): Record<AttributeKey, number> {
   return attributes;
 }
 
+/** T-2-005 D-39: `growthCarryCenti`의 초기값(정수 centi 이월, CREATE_CAREER 시점엔 전부 0). */
+function zeroGrowthCarry(): Record<AttributeKey, number> {
+  return zeroAttributes();
+}
+
 function emptyDraft(): PlayerDraft {
   return {
     name: null,
@@ -223,6 +237,7 @@ function createCareer(input: SimulationInput): SimulationResult {
     seasonPhase: 'PRESEASON',
     simulationMode: command.payload.simulationMode,
     attributes: zeroAttributes(),
+    growthCarryCenti: zeroGrowthCarry(),
     state: { form: 0, fitness: 0, morale: 0 },
     context: { tacticalFit: 0, squadStatus: 0, positionProficiency: 0 },
     relationships: { managerTrust: 0, captain: 0, rival: 0, fans: 0, agent: 0 },
@@ -439,12 +454,14 @@ function confirmPlayer(input: SimulationInput, snapshot: DomainSnapshot): Simula
 /**
  * Phase 1 `advance()`가 매 step 전환마다 `expireEffects`를 부르는 것과 같은 규칙을, 시즌 walk가
  * 한 번에 여러 step을 건너뛸 때도 지키기 위한 헬퍼. `walked`가 이번 walk에서 지나간 step(결정 없이
- * 닫은 step들)과 마지막으로 멈춘 step을 오름차순으로 갖고 있으므로, 그 순서대로 `expireEffects`를
- * 접어 적용한다 — 그래야 AT_STEP 효과가 시즌 중에도(여러 step을 건너뛰어도) 정확히 만료된다.
+ * 닫은 step들)과 마지막으로 멈춘 step을 오름차순으로 갖고 있으므로, 그 순서대로 접어 적용한다 —
+ * 그래야 AT_STEP 효과가 시즌 중에도(여러 step을 건너뛰어도) 정확히 만료된다. T-2-005 D-39: 각
+ * step마다 "DEFERRED 해석(`resolveDeferredEffects`) → AT_STEP 만료(`expireEffects`)" 순서로 접는다
+ * (DEFERRED가 새로 activeEffects를 등록할 수 있으니 만료보다 먼저 온다).
  */
-function expireEffectsThroughWalk(state: CareerState, walked: SeasonWalkResult): CareerState {
+function advanceEffectsThroughWalk(state: CareerState, walked: SeasonWalkResult): CareerState {
   const crossedSteps = [...walked.passedStepIndexes, walked.currentStepIndex];
-  return crossedSteps.reduce((acc, step) => expireEffects(acc, step), state);
+  return crossedSteps.reduce((acc, step) => expireEffects(resolveDeferredEffects(acc, step), step), state);
 }
 
 /**
@@ -515,6 +532,8 @@ type StepMatchWiring = {
   getYellowSuspensionCount: () => number;
   getSquadStatus: () => number;
   getMatchRngState: () => RngState;
+  /** T-2-005 D-39: 매 step 경기 뒤 `applyCondition`이 갱신한 선수 본인 폼·체력·사기. */
+  getPlayerCondition: () => ConditionState;
 };
 
 type StepMatchWiringInitial = SeasonMatchBooks & {
@@ -535,6 +554,9 @@ type StepMatchWiringInitial = SeasonMatchBooks & {
  * 통계·대회 기록·일정(컵 탈락 skip)·경쟁자 form·선수 selection/squadRole/availability/
  * lastRatingTenths/squadStatus/경고 카운트를 함께 갱신한다(closure로 누적 — walkToNextDecision
  * 자체는 이 값들의 모양을 모른다). walk가 끝난 뒤 `get*`로 최종 값을 꺼내 season/state에 반영한다.
+ * T-2-005 D-39: 이 step의 경기를 다 돌린 직후(entries가 비어도) `applyCondition`을 한 번 불러 선수
+ * 본인 폼·체력·사기(`playerCondition`)를 갱신한다 — 이후 step의 경기는 갱신된 값을 쓴다(같은 step
+ * 안 여러 경기는 그 step이 끝나기 전까지 같은 값을 공유한다, roll 없음 규칙).
  */
 function createStepMatchWiring(
   ruleset: Ruleset,
@@ -545,7 +567,7 @@ function createStepMatchWiring(
   profile: PlayerProfile,
   rolePromise: SquadRole,
   managerTrust: number,
-  playerState: { form: number; fitness: number; morale: number },
+  initialCondition: ConditionState,
   tacticalFit: number,
   positionProficiency: number,
   seasonIndex: number,
@@ -563,6 +585,7 @@ function createStepMatchWiring(
   let yellowSuspensionCount = initial.yellowSuspensionCount;
   let squadStatus = initial.squadStatus;
   let matchRngState = initial.matchRngState;
+  let playerCondition = initialCondition;
 
   const playStepMatches: PlayStepMatches = (stepIndex) => {
     const entries = schedule.filter((entry) => entry.step === stepIndex && entry.skipped === undefined);
@@ -582,9 +605,9 @@ function createStepMatchWiring(
         baseOvr: profile.baseOvr,
         tacticalFit,
         managerTrust,
-        form: playerState.form,
-        fitness: playerState.fitness,
-        morale: playerState.morale,
+        form: playerCondition.form,
+        fitness: playerCondition.fitness,
+        morale: playerCondition.morale,
         positionProficiency,
         squadStatus,
         rolePromise,
@@ -607,9 +630,11 @@ function createStepMatchWiring(
       yellowSuspensionCount = result.nextSeasonYellowCount;
       squadStatus = result.nextSquadStatus;
     }
+    const stepRecords = matches.filter((match) => match.step === stepIndex);
+    playerCondition = applyCondition(playerCondition, stepRecords, ruleset.conditionRules, ruleset.seasonBoundaryReset.form);
     return {
       results: stepMatchResultsFor(matches, stepIndex),
-      records: matches.filter((match) => match.step === stepIndex),
+      records: stepRecords,
       competitions,
     };
   };
@@ -628,6 +653,7 @@ function createStepMatchWiring(
     getYellowSuspensionCount: () => yellowSuspensionCount,
     getSquadStatus: () => squadStatus,
     getMatchRngState: () => matchRngState,
+    getPlayerCondition: () => playerCondition,
   };
 }
 
@@ -709,6 +735,51 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
 
   const league = findLeague(ruleset, team.leagueId);
   const schedule = buildSchedule(ruleset, team);
+  const trainingFocus: TrainingFocus = command.payload.trainingFocus ?? 'ROLE';
+  const initialCompetitions = buildInitialCompetitions(calendar);
+  const initialPlayerStats = initialSeasonPlayerStats(statGroupOf(profile.primaryPosition));
+  // T-2-003 오케스트레이터 리뷰 1차: 결정 스트림 상태를 그대로 복사하면 첫 경기 roll이 결정 스트림이
+  // 다음에 뽑을 값과 원소 단위로 같아져(같은 xoshiro 상태 출발) 경기 결과와 이벤트 roll이 숨은
+  // 상관을 갖는다. 해시 파생 시드로 완전히 떼어낸다(careerId는 안 쓴다 — fork-by-replay 뒤 시즌이
+  // 그대로 같아야 하는 T-2-006 테스트가 있다).
+  const initialMatchRngState = seedRng(`match:${state.seasonHistory.length + 1}:${stateAfterSelection.rngState.s.join(',')}`);
+
+  // T-2-005 D-39 오케스트레이터 리뷰 2차(R2-1): DEFERRED 효과는 시즌 step 번호로만 해석할 수 있으니
+  // season이 배정된 뒤에만 풀 수 있다 — season 없이 미룬 효과(유스 구간 등)는 `state.deferredEffects`에
+  // 쌓여 있다가 여기서 이번 시즌 `scheduledEffects`로 옮겨진다. 옮긴 뒤의 `deferredEffects`는 이번
+  // 시즌 중 새로 미루는 효과를 받을 빈 목록으로 다시 시작한다. season 객체는 나머지 필드(matches·
+  // schedule 등)가 walk 중 wiring closure로만 채워지므로, 여기서 예비값으로 한 번 만들어 walk에
+  // 넘기고(`resolveDeferredEffects`가 walk 도중 이 예비 season의 scheduledEffects를 읽고 지운다),
+  // walk가 끝난 뒤 wiring getter 값 + 갱신된 scheduledEffects로 다시 채운다.
+  const initialSeason: FootballSeason = {
+    index: state.seasonHistory.length + 1,
+    serviceSeasonId: command.payload.serviceSeasonId,
+    simulationMode: mode,
+    calendarId: calendar.id,
+    currentStep: 1,
+    phase: findSeasonStep(initialSteps, 1).phase,
+    steps: initialSteps,
+    teamId: state.contract.teamId,
+    styleId: team.tacticalStyleId,
+    squadRole,
+    squadRoleAtStart: squadRole,
+    trainingFocus,
+    competitions: initialCompetitions,
+    schedule,
+    matches: [],
+    ageReferenceStep: 1,
+    squad: { competitors: generatedCompetitors.competitors },
+    selection,
+    playerStats: initialPlayerStats,
+    availability: null,
+    lastRatingTenths: null,
+    yellowSuspensionCount: 0,
+    matchRngState: initialMatchRngState,
+    scheduledEffects: state.deferredEffects,
+    chapters: [],
+  };
+  const stateBeforeWalk: CareerState = { ...stateAfterSelection, deferredEffects: [], season: initialSeason };
+
   const wiring = createStepMatchWiring(
     ruleset,
     team,
@@ -724,9 +795,9 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     state.seasonHistory.length + 1,
     {
       matches: [],
-      competitions: buildInitialCompetitions(calendar),
+      competitions: initialCompetitions,
       schedule,
-      playerStats: initialSeasonPlayerStats(statGroupOf(profile.primaryPosition)),
+      playerStats: initialPlayerStats,
       competitors: generatedCompetitors.competitors,
       selection,
       squadRole,
@@ -734,11 +805,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
       lastRatingTenths: null,
       yellowSuspensionCount: 0,
       squadStatus,
-      // T-2-003 오케스트레이터 리뷰 1차: 결정 스트림 상태를 그대로 복사하면 첫 경기 roll이 결정
-      // 스트림이 다음에 뽑을 값과 원소 단위로 같아져(같은 xoshiro 상태 출발) 경기 결과와 이벤트
-      // roll이 숨은 상관을 갖는다. 해시 파생 시드로 완전히 떼어낸다(careerId는 안 쓴다 —
-      // fork-by-replay 뒤 시즌이 그대로 같아야 하는 T-2-006 테스트가 있다).
-      matchRngState: seedRng(`match:${state.seasonHistory.length + 1}:${stateAfterSelection.rngState.s.join(',')}`),
+      matchRngState: initialMatchRngState,
     },
   );
 
@@ -746,8 +813,8 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   // 같은 이유로 빈 배열([])을 넘긴다. season.matches·chapters도 이 시점엔 비어 있다.
   const chapterContext: ChapterWalkContext = {
     chapterCandidates: [],
-    tags: stateAfterSelection.tags,
-    resolvedChapterIds: stateAfterSelection.resolvedChapterIds,
+    tags: stateBeforeWalk.tags,
+    resolvedChapterIds: stateBeforeWalk.resolvedChapterIds,
     existingChapterIds: [],
     league,
     seasonIndex: state.seasonHistory.length + 1,
@@ -757,25 +824,23 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     1,
     mode,
     [],
-    stateAfterSelection.rngState,
+    stateBeforeWalk.rngState,
     nextRevision,
     roleContext,
     wiring.playStepMatches,
     [],
     chapterContext,
   );
-  const expiredState = expireEffectsThroughWalk(stateAfterSelection, walked);
+  const expiredState = advanceEffectsThroughWalk(stateBeforeWalk, walked);
+  if (expiredState.season === null) {
+    throw new RangeError('startSeason: walk 이후 season이 null이다(있을 수 없는 상태).');
+  }
 
   const season: FootballSeason = {
-    index: state.seasonHistory.length + 1,
-    serviceSeasonId: command.payload.serviceSeasonId,
-    simulationMode: mode,
-    calendarId: calendar.id,
+    ...initialSeason,
     currentStep: walked.currentStepIndex,
     phase: findSeasonStep(walked.steps, walked.currentStepIndex).phase,
     steps: walked.steps,
-    teamId: state.contract.teamId,
-    styleId: team.tacticalStyleId,
     squadRole: wiring.getSquadRole(),
     competitions: wiring.getCompetitions(),
     schedule: wiring.getSchedule(),
@@ -789,6 +854,8 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     yellowSuspensionCount: wiring.getYellowSuspensionCount(),
     matchRngState: wiring.getMatchRngState(),
     chapters: [],
+    // R2-1: walk 중 resolveDeferredEffects가 지운 뒤 남은 목록(원칙적으로 12 step을 다 걸었으니 0개).
+    scheduledEffects: expiredState.season.scheduledEffects,
   };
 
   const nextState: CareerState = {
@@ -798,6 +865,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     seasonPhase: season.phase,
     simulationMode: season.simulationMode,
     context: { ...expiredState.context, squadStatus: wiring.getSquadStatus() },
+    state: wiring.getPlayerCondition(),
     rngState: walked.rngState,
     pending: walked.pending,
     timeline: [
@@ -961,7 +1029,10 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     season.matches,
     chapterContext,
   );
-  const expiredState = expireEffectsThroughWalk(state, walked);
+  const expiredState = advanceEffectsThroughWalk(state, walked);
+  if (expiredState.season === null) {
+    throw new RangeError('advanceInSeason: walk 이후 season이 null이다(있을 수 없는 상태).');
+  }
   timeline = [
     ...timeline,
     ...walked.passedStepIndexes.map((stepIndex) => ({
@@ -989,6 +1060,10 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     lastRatingTenths: wiring.getLastRatingTenths(),
     yellowSuspensionCount: wiring.getYellowSuspensionCount(),
     matchRngState: wiring.getMatchRngState(),
+    // T-2-005 D-39 오케스트레이터 리뷰 2차(R2-1): walk 중 resolveDeferredEffects가 이 시즌의
+    // scheduledEffects에서 이번에 해석된 항목을 지운다 — season(위 ...season)은 walk 이전 값이라
+    // 그대로 두면 지워진 항목이 되살아난다. expiredState.season의 값으로 덮어써야 한다.
+    scheduledEffects: expiredState.season.scheduledEffects,
   };
 
   const nextState: CareerState = {
@@ -997,6 +1072,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     currentStep: nextSeason.currentStep,
     seasonPhase: nextSeason.phase,
     context: { ...expiredState.context, squadStatus: wiring.getSquadStatus() },
+    state: wiring.getPlayerCondition(),
     rngState: walked.rngState,
     pending: walked.pending,
     timeline,
@@ -1351,9 +1427,10 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
 }
 
 /**
- * T-2-001 D-25 CMD-SIM-003. `season.currentStep === 12`이고 SETTLEMENT pending이 열려 있을 때만
- * 유효하다. 능력치는 바꾸지 않는다(성장식은 T-2-005 몫). form·fitness·morale은 룰셋
- * `seasonBoundaryReset`으로 회귀한다.
+ * T-2-001 D-25 CMD-SIM-003, T-2-005 D-39 확장. `season.currentStep === 12`이고 SETTLEMENT pending이
+ * 열려 있을 때만 유효하다. 순서(브리프 settlement.ts 절): 결산 전 값 기록 → 성장(`computeGrowth`) →
+ * 경계 회귀(`seasonBoundaryReset`) → after 값 기록 → `SeasonResult` 조립·해시 → `seasonHistory`에
+ * `{ …, result }`로 남긴다.
  */
 function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
   const command = input.command;
@@ -1365,10 +1442,46 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   if (season === null || season.currentStep !== 12 || state.pending === null || state.pending.kind !== 'SETTLEMENT') {
     return fail('VALIDATION_FAILED', '시즌을 결산할 수 없다.', { reason: 'SEASON_NOT_SETTLEABLE' });
   }
+  const profile = state.player.profile;
+  if (profile === null) {
+    throw new RangeError('settleSeason: season이 있는데 player.profile이 null이다.');
+  }
 
   const nextRevision = snapshot.revision + 1;
   const nextAge = state.age + 1;
   const reset = input.ruleset.seasonBoundaryReset;
+
+  const growth = computeGrowth(
+    {
+      age: state.age,
+      attributes: state.attributes,
+      archetypeId: profile.archetypeId,
+      truePotential: profile.truePotential,
+      baseOvrBefore: profile.baseOvr,
+      minutes: season.playerStats.minutes,
+      ratedMatches: season.playerStats.ratedMatches,
+      ratingSumTenths: season.playerStats.ratingSumTenths,
+      trainingFocus: season.trainingFocus,
+      growthCarryCenti: state.growthCarryCenti,
+    },
+    input.ruleset,
+  );
+
+  const stateDeltas: SeasonResult['stateDeltas'] = {
+    form: { before: state.state.form, after: reset.form },
+    fitness: { before: state.state.fitness, after: reset.fitness },
+    morale: { before: state.state.morale, after: reset.morale },
+    managerTrust: { before: state.relationships.managerTrust, after: state.relationships.managerTrust },
+  };
+
+  const resultWithoutHash = buildSeasonResult({
+    state,
+    ruleset: input.ruleset,
+    attributeDeltas: growth.attributeDeltas,
+    baseOvr: growth.baseOvr,
+    stateDeltas,
+  });
+  const result: SeasonResult = { ...resultWithoutHash, hash: hashSeasonResult(resultWithoutHash) };
 
   const summary: SeasonSummary = {
     index: season.index,
@@ -1376,11 +1489,15 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     teamId: season.teamId,
     competitions: season.competitions,
     settledAtRevision: nextRevision,
+    result,
   };
 
   const nextState: CareerState = {
     ...state,
     age: nextAge,
+    attributes: growth.attributes,
+    growthCarryCenti: growth.growthCarryCenti,
+    player: { ...state.player, profile: { ...profile, baseOvr: growth.baseOvr.after } },
     season: null,
     seasonHistory: [...state.seasonHistory, summary],
     state: { form: reset.form, fitness: reset.fitness, morale: reset.morale },
@@ -1399,6 +1516,7 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     // 'DECISION'이다 — season이 null인 채로 'ADVANCE'를 보내면 seasonPhase가 SETTLEMENT로 남아
     // NOTHING_TO_ADVANCE로 실패한다.
     nextAction: 'DECISION',
+    seasonResult: result,
   };
 }
 
@@ -1493,7 +1611,16 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     pending: null,
     timeline: [
       ...state.timeline,
-      { revision: nextRevision, kind: 'ROLE_RESOLVED', refId: proposal.type, age: state.age, step: state.currentStep },
+      {
+        revision: nextRevision,
+        kind: 'ROLE_RESOLVED',
+        // T-2-005 D-39: `${type}:${decision}` 형식(브리프 "roleChanges: 이 시즌 timeline의
+        // ROLE_RESOLVED 항목에서 type(refId)·decision을 뽑는다" — settlement.ts가 이 형식을 파싱한다).
+        // 기존 골든의 refId가 `proposal.type`뿐이던 형식에서 바뀐다(재기록 사유).
+        refId: `${proposal.type}:${decision}`,
+        age: state.age,
+        step: state.currentStep,
+      },
     ],
   };
 

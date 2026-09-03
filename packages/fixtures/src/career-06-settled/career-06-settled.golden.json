@@ -1,12 +1,12 @@
 {
-  "revision": 18,
-  "stateHash": "7f75c083c3652925fdad2cc7da3cfe63232346fce7147d6c7bc797d58259169c",
-  "rngStateDraws": 400,
+  "revision": 15,
+  "stateHash": "6ae56bd8978c2783c5759a13143fa5fa74ed012ad660787faf568b32bc8365be",
+  "rngStateDraws": 398,
   "age": 18,
   "seasonHistory": [
     {
       "index": 1,
-      "simulationMode": "CHAPTER",
+      "simulationMode": "FAST",
       "teamId": "seoul-tier1",
       "competitions": [
         {
@@ -34,10 +34,10 @@
           "cupRound": "WON"
         }
       ],
-      "settledAtRevision": 18,
+      "settledAtRevision": 15,
       "result": {
         "index": 1,
-        "simulationMode": "CHAPTER",
+        "simulationMode": "FAST",
         "teamId": "seoul-tier1",
         "competitions": [
           {
@@ -75,7 +75,7 @@
             "out": 0
           },
           "minutes": 285,
-          "ratingSumTenths": 765,
+          "ratingSumTenths": 764,
           "ratedMatches": 12,
           "yellow": 2,
           "red": 0,
@@ -481,7 +481,7 @@
         },
         "stateDeltas": {
           "form": {
-            "before": 51,
+            "before": 50,
             "after": 50
           },
           "fitness": {
@@ -497,52 +497,11 @@
             "after": 45
           }
         },
-        "chapters": [
-          {
-            "chapterId": "CHP-MATCH-001",
-            "version": 1,
-            "step": 3,
-            "matchId": "1-3-0",
-            "importance": "MAJOR",
-            "decisions": [
-              {
-                "decisionId": "D1",
-                "optionId": "OPT-CONFIDENT",
-                "outcomeId": "D1-SUCCESS"
-              },
-              {
-                "decisionId": "D2",
-                "optionId": "OPT-SIMPLE",
-                "outcomeId": "D2-FAIL"
-              }
-            ],
-            "ratingDeltaTenths": 1
-          }
-        ],
-        "hash": "8cb2fef67eec1760029ee7c0dbaa829a7a3678e5a11298c29ed5f051a39b4dac"
+        "chapters": [],
+        "hash": "eab77259e1f68f13f6deb7ecb908504e7014d4844c9d5a6fc3754e4a68e56e54"
       }
     }
   ],
-  "chapterRecord": {
-    "chapterId": "CHP-MATCH-001",
-    "version": 1,
-    "step": 3,
-    "matchId": "1-3-0",
-    "importance": "MAJOR",
-    "decisions": [
-      {
-        "decisionId": "D1",
-        "optionId": "OPT-CONFIDENT",
-        "outcomeId": "D1-SUCCESS"
-      },
-      {
-        "decisionId": "D2",
-        "optionId": "OPT-SIMPLE",
-        "outcomeId": "D2-FAIL"
-      }
-    ],
-    "ratingDeltaTenths": 1
-  },
   "beforeSettlement": {
     "matchesPlayed": 26,
     "playerStats": {
@@ -555,7 +514,7 @@
         "out": 0
       },
       "minutes": 285,
-      "ratingSumTenths": 765,
+      "ratingSumTenths": 764,
       "ratedMatches": 12,
       "yellow": 2,
       "red": 0,

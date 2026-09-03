@@ -400,48 +400,13 @@ export const SelectionRankingSchema = z.strictObject({
     .nullable(),
 });
 
+// T-2-005 D-39: domain `TrainingFocus`와 동일(ROLE = 아키타입 roleWeights 그대로).
+export const TrainingFocusSchema = z.enum(['ROLE', 'TECHNICAL', 'PHYSICAL', 'MENTAL']);
+
 // T-2-001 D-24/T-2-002 D-34: 시즌 구조. `ageReferenceStep`은 항상 1(11 "나이·시즌 경계"). `styleId`·
 // `squad`·`selection`은 T-2-002가 추가한다.
-export const FootballSeasonSchema = z.strictObject({
-  index: z.number().int().positive(),
-  serviceSeasonId: z.string().min(1),
-  simulationMode: SimulationModeSchema,
-  calendarId: z.string().min(1),
-  currentStep: z.number().int().min(1).max(12),
-  phase: SeasonPhaseSchema,
-  steps: z.array(SeasonStepSchema),
-  teamId: z.string().min(1),
-  styleId: z.string().min(1),
-  squadRole: SquadRoleSchema,
-  competitions: z.array(CompetitionRecordSchema),
-  // T-2-003 D-35: roll 없이 시즌 시작 시 확정하는 리그·컵 일정(step·order 순 정렬).
-  schedule: z.array(ScheduleEntrySchema),
-  matches: z.array(MatchRecordSchema),
-  ageReferenceStep: z.literal(1),
-  squad: z.strictObject({ competitors: z.array(CompetitorSchema) }),
-  selection: SelectionRankingSchema,
-  // T-2-003 D-35: 시즌 누계 통계(포지션군은 선수 현재 primaryPosition 기준으로 고정).
-  playerStats: SeasonPlayerStatsSchema,
-  availability: AvailabilitySchema,
-  // T-2-003 8번 규칙: 직전 평점(×10 정수). Squad Status 재계산의 lastRating 입력.
-  lastRatingTenths: z.number().int().min(40).max(100).nullable(),
-  // T-2-003 D-35: 경고 정지 기준 판정용 누적 경고 수(정지가 걸리면 0으로 리셋).
-  yellowSuspensionCount: z.number().int().nonnegative(),
-  // T-2-003 D-35: 경기 전용 RNG 스트림(결정 슬롯이 쓰는 rngState와 분리 — FAST·CHAPTER byte-identical).
-  matchRngState: RngStateSchema,
-  // T-2-004 D-38: 이 시즌에 판단이 모두 끝난 핵심 경기 챕터(step·확정 순).
-  chapters: z.array(ChapterRecordSchema),
-});
-
-export const SeasonSummarySchema = z.strictObject({
-  index: z.number().int().positive(),
-  simulationMode: SimulationModeSchema,
-  teamId: z.string().min(1),
-  competitions: z.array(CompetitionRecordSchema),
-  settledAtRevision: z.number().int().positive(),
-});
-
 // domain `Effect`와 동일한 형태(kind·sourceId·target·delta·clamp·appliesAt·expiresAt·stackingRule).
+// FootballSeasonSchema.scheduledEffects가 참조하므로 그 앞에 둔다.
 export const EffectSchema = z.strictObject({
   kind: z.enum(['PERMANENT', 'CURRENT', 'CONTEXT', 'RELATION', 'DEFERRED']),
   sourceId: z.string(),
@@ -459,6 +424,107 @@ export const EffectSchema = z.strictObject({
     ])
     .nullable(),
   stackingRule: z.enum(['ONCE_PER_SOURCE', 'REPLACE', 'SUM']),
+});
+
+export const FootballSeasonSchema = z.strictObject({
+  index: z.number().int().positive(),
+  serviceSeasonId: z.string().min(1),
+  simulationMode: SimulationModeSchema,
+  calendarId: z.string().min(1),
+  currentStep: z.number().int().min(1).max(12),
+  phase: SeasonPhaseSchema,
+  steps: z.array(SeasonStepSchema),
+  teamId: z.string().min(1),
+  styleId: z.string().min(1),
+  squadRole: SquadRoleSchema,
+  // T-2-005 D-39: START_SEASON이 만든 시즌 시작 시점 squadRole(RESOLVE_ROLE로도 바뀌지 않는다).
+  squadRoleAtStart: SquadRoleSchema,
+  // T-2-005 D-39: 이 시즌 훈련 초점.
+  trainingFocus: TrainingFocusSchema,
+  competitions: z.array(CompetitionRecordSchema),
+  // T-2-003 D-35: roll 없이 시즌 시작 시 확정하는 리그·컵 일정(step·order 순 정렬).
+  schedule: z.array(ScheduleEntrySchema),
+  matches: z.array(MatchRecordSchema),
+  ageReferenceStep: z.literal(1),
+  squad: z.strictObject({ competitors: z.array(CompetitorSchema) }),
+  selection: SelectionRankingSchema,
+  // T-2-003 D-35: 시즌 누계 통계(포지션군은 선수 현재 primaryPosition 기준으로 고정).
+  playerStats: SeasonPlayerStatsSchema,
+  availability: AvailabilitySchema,
+  // T-2-003 8번 규칙: 직전 평점(×10 정수). Squad Status 재계산의 lastRating 입력.
+  lastRatingTenths: z.number().int().min(40).max(100).nullable(),
+  // T-2-003 D-35: 경고 정지 기준 판정용 누적 경고 수(정지가 걸리면 0으로 리셋).
+  yellowSuspensionCount: z.number().int().nonnegative(),
+  // T-2-003 D-35: 경기 전용 RNG 스트림(결정 슬롯이 쓰는 rngState와 분리 — FAST·CHAPTER byte-identical).
+  matchRngState: RngStateSchema,
+  // T-2-005 D-39, 오케스트레이터 리뷰 2차(R2-1): 이번 시즌에 적용 예정인 DEFERRED 효과 목록.
+  scheduledEffects: z.array(EffectSchema),
+  // T-2-004 D-38: 이 시즌에 판단이 모두 끝난 핵심 경기 챕터(step·확정 순).
+  chapters: z.array(ChapterRecordSchema),
+});
+
+// T-2-005 D-39: domain `GrowthCause`와 동일.
+export const GrowthCauseSchema = z.enum(['TRAINING', 'MINUTES', 'EXPERIENCE', 'AGE_DECLINE', 'POTENTIAL_CAP']);
+
+// domain `RoleProposal['type']`과 동일.
+const RoleProposalTypeSchema = z.enum(['KEEP', 'POSITION_CHANGE', 'ROLE_CHANGE']);
+
+// T-2-005 D-39: SETTLE_SEASON이 만드는 시즌 결산 결과. domain `SeasonResult`와 동일.
+export const SeasonResultSchema = z.strictObject({
+  index: z.number().int().positive(),
+  simulationMode: SimulationModeSchema,
+  teamId: z.string().min(1),
+  competitions: z.array(CompetitionRecordSchema),
+  playerStats: SeasonPlayerStatsSchema,
+  selectionSummary: z.strictObject({
+    squadRoleAtStart: SquadRoleSchema,
+    squadRoleAtEnd: SquadRoleSchema,
+    started: z.number().int().nonnegative(),
+    sub: z.number().int().nonnegative(),
+    zeroMinute: z.number().int().nonnegative(),
+    out: z.number().int().nonnegative(),
+    minutes: z.number().int().nonnegative(),
+    possibleMinutes: z.number().int().nonnegative(),
+    finalRank: z.number().int().positive(),
+  }),
+  roleChanges: z.array(
+    z.strictObject({
+      step: z.number().int().min(1).max(12),
+      type: RoleProposalTypeSchema,
+      decision: z.enum(['ACCEPT', 'DECLINE']),
+    }),
+  ),
+  promiseFulfilment: z.strictObject({
+    promised: SquadRoleSchema,
+    delivered: SquadRoleSchema,
+    fulfilled: z.boolean(),
+    minutesShareBp: z.number().int().nonnegative(),
+  }),
+  attributeDeltas: z.array(
+    z.strictObject({
+      key: z.enum(SELECTION_ATTRIBUTE_KEYS),
+      delta: z.number().int(),
+      causes: z.array(z.strictObject({ cause: GrowthCauseSchema, centi: z.number().int() })),
+    }),
+  ),
+  baseOvr: z.strictObject({ before: z.number().int(), after: z.number().int() }),
+  stateDeltas: z.strictObject({
+    form: z.strictObject({ before: z.number().int(), after: z.number().int() }),
+    fitness: z.strictObject({ before: z.number().int(), after: z.number().int() }),
+    morale: z.strictObject({ before: z.number().int(), after: z.number().int() }),
+    managerTrust: z.strictObject({ before: z.number().int(), after: z.number().int() }),
+  }),
+  chapters: z.array(ChapterRecordSchema),
+  hash: z.string().min(1),
+});
+
+export const SeasonSummarySchema = z.strictObject({
+  index: z.number().int().positive(),
+  simulationMode: SimulationModeSchema,
+  teamId: z.string().min(1),
+  competitions: z.array(CompetitionRecordSchema),
+  settledAtRevision: z.number().int().positive(),
+  result: SeasonResultSchema,
 });
 
 /**
@@ -513,6 +579,8 @@ export const CareerStateSchema = z.strictObject({
   seasonPhase: SeasonPhaseSchema,
   simulationMode: SimulationModeSchema,
   attributes: AttributesSchema,
+  // T-2-005 D-39: 성장식 이월(정수 centi, 1/100). 결산 시 매번 갱신된다.
+  growthCarryCenti: AttributesSchema,
   state: z.strictObject({
     form: z.number().int(),
     fitness: z.number().int(),

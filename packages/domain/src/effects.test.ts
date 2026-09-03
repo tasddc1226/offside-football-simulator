@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { applyEffects, expireEffects } from './effects.js';
+import { applyEffects, expireEffects, resolveDeferredEffects, resolveDeferredKind } from './effects.js';
 import { seedRng } from './rng.js';
-import type { CareerState, Effect } from './types.js';
+import { initialSeasonPlayerStats } from './season-stats.js';
+import { statGroupOf, type CareerState, type Effect, type FootballSeason } from './types.js';
 
 function baseState(): CareerState {
   return {
@@ -34,6 +35,28 @@ function baseState(): CareerState {
       positioning: 60,
       leadership: 35,
       consistency: 45,
+    },
+    growthCarryCenti: {
+      shooting: 0,
+      passing: 0,
+      dribbling: 0,
+      tackling: 0,
+      firstTouch: 0,
+      crossing: 0,
+      goalkeeping: 0,
+      pace: 0,
+      acceleration: 0,
+      agility: 0,
+      jumping: 0,
+      stamina: 0,
+      strength: 0,
+      durability: 0,
+      decisions: 0,
+      concentration: 0,
+      composure: 0,
+      positioning: 0,
+      leadership: 0,
+      consistency: 0,
     },
     state: { form: 50, fitness: 80, morale: 60 },
     context: { tacticalFit: 58, squadStatus: 40, positionProficiency: 100 },
@@ -196,5 +219,89 @@ describe('applyEffects', () => {
     const snapshot = baseState();
     applyEffects(state, [makeEffect({ delta: 5, stackingRule: 'SUM' })], { step: 1 });
     expect(state).toEqual(snapshot);
+  });
+});
+
+describe('resolveDeferredKind', () => {
+  it('state.* → CURRENT, relationships.* → RELATION, context.* → CONTEXT, 그 외 → PERMANENT', () => {
+    expect(resolveDeferredKind('state.fitness')).toEqual({ kind: 'CURRENT', target: 'fitness' });
+    expect(resolveDeferredKind('relationships.fans')).toEqual({ kind: 'RELATION', target: 'fans' });
+    expect(resolveDeferredKind('context.tacticalFit')).toEqual({ kind: 'CONTEXT', target: 'tacticalFit' });
+    expect(resolveDeferredKind('shooting')).toEqual({ kind: 'PERMANENT', target: 'shooting' });
+  });
+});
+
+describe('resolveDeferredEffects', () => {
+  function deferredEffect(step: number): Effect {
+    return makeEffect({
+      kind: 'DEFERRED',
+      target: 'state.fitness',
+      delta: 5,
+      clamp: { min: 0, max: 100 },
+      stackingRule: 'SUM',
+      sourceId: 'EVT-DEFERRED.a.1',
+      appliesAt: { kind: 'NEXT_SEASON_STEP', step },
+    });
+  }
+
+  // T-2-005 D-39, 오케스트레이터 리뷰 2차(R2-1): DEFERRED 효과는 시즌 step 번호로만 해석할 수 있으니
+  // `state.deferredEffects`(season 없이 미룬 것들의 대기열)가 아니라 이번 시즌에 배정된
+  // `state.season.scheduledEffects`를 읽고 쓴다. 나머지 season 필드는 이 함수가 건드리지 않으므로
+  // 최소값으로 채운다.
+  function baseSeason(scheduledEffects: Effect[]): FootballSeason {
+    return {
+      index: 1,
+      serviceSeasonId: 'svc-test',
+      simulationMode: 'FAST',
+      calendarId: 'cal-test',
+      currentStep: 1,
+      phase: 'LEAGUE',
+      steps: [],
+      teamId: 'team-test',
+      styleId: 'style-test',
+      squadRole: 'ROTATION',
+      squadRoleAtStart: 'ROTATION',
+      trainingFocus: 'ROLE',
+      competitions: [],
+      schedule: [],
+      matches: [],
+      ageReferenceStep: 1,
+      squad: { competitors: [] },
+      selection: { position: 'W', slots: 1, benchSlots: 0, candidates: [], playerReason: null },
+      playerStats: initialSeasonPlayerStats(statGroupOf('W')),
+      availability: null,
+      lastRatingTenths: null,
+      yellowSuspensionCount: 0,
+      matchRngState: seedRng('effects-test-season'),
+      scheduledEffects,
+      chapters: [],
+    };
+  }
+
+  it('season이 없으면(유스 구간) no-op이다 — deferredEffects는 손대지 않는다', () => {
+    const state = { ...baseState(), season: null, deferredEffects: [deferredEffect(3)] };
+    const result = resolveDeferredEffects(state, 3);
+    expect(result).toBe(state);
+  });
+
+  it('아직 그 step이 아니면 scheduledEffects도 값도 그대로다', () => {
+    const state = { ...baseState(), season: baseSeason([deferredEffect(3)]) };
+    const result = resolveDeferredEffects(state, 2);
+    expect(result.season!.scheduledEffects).toEqual([deferredEffect(3)]);
+    expect(result.state.fitness).toBe(state.state.fitness);
+  });
+
+  it('NEXT_SEASON_STEP 3 효과는 그 시즌 step 3에 적용되고 scheduledEffects에서 사라진다', () => {
+    const state = { ...baseState(), season: baseSeason([deferredEffect(3)]) };
+    const result = resolveDeferredEffects(state, 3);
+    expect(result.season!.scheduledEffects).toEqual([]);
+    expect(result.state.fitness).toBe(state.state.fitness + 5);
+  });
+
+  it('같은 step에 여러 개가 있어도 그 step 것만 풀리고 다른 step 것은 남는다', () => {
+    const state = { ...baseState(), season: baseSeason([deferredEffect(3), deferredEffect(5)]) };
+    const result = resolveDeferredEffects(state, 3);
+    expect(result.season!.scheduledEffects).toEqual([deferredEffect(5)]);
+    expect(result.state.fitness).toBe(state.state.fitness + 5);
   });
 });

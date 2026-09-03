@@ -126,6 +126,8 @@ function buildSeasonStub(): FootballSeason {
     teamId: 'team-1',
     styleId: 'style-1',
     squadRole: 'STARTER' as const,
+    squadRoleAtStart: 'STARTER' as const,
+    trainingFocus: 'ROLE' as const,
     competitions: [],
     schedule: [],
     matches: [],
@@ -147,6 +149,7 @@ function buildSeasonStub(): FootballSeason {
     lastRatingTenths: null,
     yellowSuspensionCount: 0,
     matchRngState: { s: [1, 2, 3, 4] as [number, number, number, number], draws: 0 },
+    scheduledEffects: [],
     chapters: [],
   };
 }

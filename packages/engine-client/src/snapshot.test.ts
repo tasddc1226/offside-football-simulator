@@ -20,6 +20,7 @@ function buildValidDomainSnapshot(): DomainSnapshot {
     seasonPhase: 'PRESEASON',
     simulationMode: 'CHAPTER',
     attributes: buildAttributes(50),
+    growthCarryCenti: buildAttributes(0),
     state: { form: 50, fitness: 80, morale: 60 },
     context: { tacticalFit: 50, squadStatus: 50, positionProficiency: 100 },
     relationships: { managerTrust: 50, captain: 50, rival: 50, fans: 50, agent: 50 },

@@ -1233,7 +1233,7 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(lastEntry).toEqual({
         revision: result.snapshot.revision,
         kind: 'ROLE_RESOLVED',
-        refId: 'KEEP',
+        refId: 'KEEP:ACCEPT',
         age: snapshot.state.age,
         step: snapshot.state.currentStep,
       });
@@ -1251,7 +1251,7 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
       expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
       expect(result.snapshot.state.pending).toBeNull();
-      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'KEEP' });
+      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'KEEP:DECLINE' });
     });
   });
 
@@ -1284,7 +1284,7 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(result.snapshot.state.contract?.rolePromise).toBe(rolePromiseBefore);
       expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
       expect(result.snapshot.state.pending).toBeNull();
-      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'ROLE_CHANGE' });
+      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'ROLE_CHANGE:ACCEPT' });
     });
 
     it('DECLINE: contract.rolePromise·context.squadStatus는 그대로, season.selection·squadRole은 declineTrustDelta 반영 재산출 결과다', () => {
@@ -1349,7 +1349,7 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(result.snapshot.state.season?.selection.candidates.some((c) => c.id === 'PLAYER')).toBe(true);
       expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore + TRUST_DELTAS.acceptTrustDelta);
       expect(result.snapshot.state.pending).toBeNull();
-      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'POSITION_CHANGE' });
+      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'POSITION_CHANGE:ACCEPT' });
     });
 
     // season.squadRole은 항상 season.selection에서 유도된 값이어야 한다(squadRoleFromSelection이
@@ -1412,6 +1412,157 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.snapshot.state.rngState.draws).toBe(snapshot.state.rngState.draws);
+  });
+});
+
+// T-2-005 D-39, 오케스트레이터 리뷰 2차(R2-1): DEFERRED 효과가 실제로는 한 번도 적용되지 않던 버그의
+// 회귀 방지. 헬퍼(resolveDeferredEffects) 단위 테스트만으로는 startSeason/advanceInSeason이 season을
+// 어떻게 조립하는지까지 검증할 수 없어(리뷰 지적 그대로) simulate() 수준으로 확인한다.
+describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 R2-1)', () => {
+  function resolveRoleCommand(expectedRevision: number, decision: 'ACCEPT' | 'DECLINE'): EngineCommand {
+    return { type: 'RESOLVE_ROLE', commandId: `cmd-role-${expectedRevision}`, expectedRevision, payload: { decision } };
+  }
+
+  function settleSeasonCommand(expectedRevision: number): EngineCommand {
+    return { type: 'SETTLE_SEASON', commandId: `cmd-settle-${expectedRevision}`, expectedRevision, payload: {} };
+  }
+
+  function startSeasonFastCommand(expectedRevision: number, serviceSeasonId: string): EngineCommand {
+    return {
+      type: 'START_SEASON',
+      commandId: `cmd-start-${expectedRevision}`,
+      expectedRevision,
+      payload: { simulationMode: 'FAST', serviceSeasonId },
+    };
+  }
+
+  /** ACTIVE + 계약(academy) 상태에서 START_SEASON 직전까지(ACCEPT_OFFER 완료) 진행한 snapshot.
+   * `activeSnapshotWithRolePending`과 같은 계약 경로를 START_SEASON 직전에서 멈춘 것뿐이다. */
+  function preSeasonSnapshot(): DomainSnapshot {
+    const active = confirmedActiveSnapshotWithBackground('club-academy');
+    const offered = simulate({
+      ...baseInput(),
+      snapshot: withTags(active, ['진로_아카데미']),
+      command: advanceCommand(active.revision, []),
+    });
+    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('setup: OFFERS 실패');
+    const offer = offered.snapshot.state.pending.offers[0]!;
+    const accepted = simulate({
+      ...baseInput(),
+      snapshot: offered.snapshot,
+      command: acceptOfferCommand(offered.snapshot.revision, offer.id),
+    });
+    if (!accepted.ok) throw new Error('setup: ACCEPT_OFFER 실패');
+    return accepted.snapshot;
+  }
+
+  function deferredEffect(step: number, sourceId: string): Effect {
+    return {
+      kind: 'DEFERRED',
+      sourceId,
+      target: 'context.tacticalFit',
+      delta: 6,
+      clamp: { min: 0, max: 100 },
+      appliesAt: { kind: 'NEXT_SEASON_STEP', step },
+      expiresAt: null,
+      stackingRule: 'SUM',
+    };
+  }
+
+  /** withRoleProposal과 같은 패턴: pending 값만 바꿔치기하지 않고 deferredEffects에 하나 얹는다. */
+  function withDeferredEffect(snapshot: DomainSnapshot, effect: Effect): DomainSnapshot {
+    const state = { ...snapshot.state, deferredEffects: [...snapshot.state.deferredEffects, effect] };
+    return { ...snapshot, state, stateHash: hashState(state) };
+  }
+
+  /** ROLE_PROPOSAL은 ACCEPT로, 그 외 pending은 ADVANCE로 자동 통과하며 SETTLEMENT까지 몬다(FAST
+   * 모드는 시즌 중 EVENT 슬롯을 열지 않는다 — RULE-TIME-003). ADVANCE 한 번이 몇 step을 건너뛰는지는
+   * (CONTRACT·INJURY·NATIONAL_TEAM 같은 auto-passable 슬롯이 몇 번 여는지에) 좌우되므로 정확한
+   * step 수 대신 SETTLEMENT 도달까지 반복한다 — 그래도 각 ADVANCE 안에서 지나친 모든 step은
+   * advanceEffectsThroughWalk가 하나씩 접어 처리하므로(walkToNextDecision이 한 번에 여러 step을
+   * 건너뛰어도) step 5를 "지나침" 자체는 정확히 일어난다. */
+  function driveToSettlement(snapshot: DomainSnapshot): DomainSnapshot {
+    let current = snapshot;
+    for (let guard = 0; guard < 100; guard++) {
+      const pending = current.state.pending;
+      if (pending?.kind === 'SETTLEMENT') return current;
+      const command: EngineCommand =
+        pending?.kind === 'ROLE_PROPOSAL' ? resolveRoleCommand(current.revision, 'ACCEPT') : advanceCommand(current.revision, []);
+      const result = simulate({ ...baseInput(), snapshot: current, command });
+      if (!result.ok) throw new Error(`driveToSettlement: ${command.type} 실패: ${result.error.code} ${result.error.message}`);
+      current = result.snapshot;
+    }
+    throw new Error('driveToSettlement: 100회 안에 SETTLEMENT에 이르지 못했다(무한루프 의심).');
+  }
+
+  it('(a) season 배정 전(유스 구간)에 미룬 효과가 START_SEASON에서 이번 시즌 step에 정확히 적용된다', () => {
+    const preSeason = preSeasonSnapshot();
+    const withDeferred = withDeferredEffect(preSeason, deferredEffect(1, 'TEST-R2-1-A'));
+
+    const baseline = simulate({ ...baseInput(), snapshot: preSeason, command: startSeasonFastCommand(preSeason.revision, 'svc-r2-1-a-base') });
+    const withEffect = simulate({ ...baseInput(), snapshot: withDeferred, command: startSeasonFastCommand(withDeferred.revision, 'svc-r2-1-a') });
+    if (!baseline.ok) throw new Error(`setup: baseline START_SEASON 실패: ${baseline.error.code} ${baseline.error.message}`);
+    if (!withEffect.ok) throw new Error(`setup: withEffect START_SEASON 실패: ${withEffect.error.code} ${withEffect.error.message}`);
+
+    // 리뷰 (a): walk 이후 context.tacticalFit이 +6, season.scheduledEffects 비어 있음, deferredEffects 비어 있음.
+    expect(withEffect.snapshot.state.context.tacticalFit).toBe(baseline.snapshot.state.context.tacticalFit + 6);
+    expect(withEffect.snapshot.state.season?.scheduledEffects).toEqual([]);
+    expect(withEffect.snapshot.state.deferredEffects).toEqual([]);
+  });
+
+  it('(b) 시즌 N 중에 미룬 NEXT_SEASON_STEP 5 효과는 시즌 N에는 적용되지 않고, 시즌 N+1에서 적용된다', () => {
+    const preSeason = preSeasonSnapshot();
+    const season1Started = simulate({ ...baseInput(), snapshot: preSeason, command: startSeasonFastCommand(preSeason.revision, 'svc-r2-1-b-s1') });
+    if (!season1Started.ok || season1Started.snapshot.state.pending?.kind !== 'ROLE_PROPOSAL') {
+      throw new Error('setup: 시즌 1 START_SEASON 실패');
+    }
+    const season1RoleAccepted = simulate({
+      ...baseInput(),
+      snapshot: season1Started.snapshot,
+      command: resolveRoleCommand(season1Started.snapshot.revision, 'ACCEPT'),
+    });
+    if (!season1RoleAccepted.ok) throw new Error('setup: 시즌 1 RESOLVE_ROLE 실패');
+
+    // "시즌 N step 2에서 미룬다": season이 이미 배정된 뒤라 이 효과는 season.scheduledEffects가 아니라
+    // state.deferredEffects로 들어간다(이번 시즌 중 새로 미루는 효과의 대기열 — season 배정 시점엔
+    // 이미 지나서, 다음 START_SEASON이 옮겨줄 때까지는 어느 season에도 속하지 않는다).
+    const withDeferred = withDeferredEffect(season1RoleAccepted.snapshot, deferredEffect(5, 'TEST-R2-1-B'));
+    const tacticalFitBeforeSeason1 = withDeferred.state.context.tacticalFit;
+
+    const season1Settled = driveToSettlement(withDeferred);
+    // 리뷰 (b) 전반부: 시즌 N step 5를 지나도 적용되지 않는다.
+    expect(season1Settled.state.context.tacticalFit).toBe(tacticalFitBeforeSeason1);
+    expect(season1Settled.state.season?.scheduledEffects).toEqual([]);
+    expect(season1Settled.state.deferredEffects).toEqual(withDeferred.state.deferredEffects);
+
+    const settleResult = simulate({ ...baseInput(), snapshot: season1Settled, command: settleSeasonCommand(season1Settled.revision) });
+    if (!settleResult.ok) throw new Error(`setup: SETTLE_SEASON 실패: ${settleResult.error.code} ${settleResult.error.message}`);
+    expect(settleResult.snapshot.state.deferredEffects).toEqual(withDeferred.state.deferredEffects);
+
+    const season2Started = simulate({
+      ...baseInput(),
+      snapshot: settleResult.snapshot,
+      command: startSeasonFastCommand(settleResult.snapshot.revision, 'svc-r2-1-b-s2'),
+    });
+    if (!season2Started.ok || season2Started.snapshot.state.pending?.kind !== 'ROLE_PROPOSAL') {
+      throw new Error('setup: 시즌 2 START_SEASON 실패');
+    }
+    expect(season2Started.snapshot.state.deferredEffects).toEqual([]);
+    expect(season2Started.snapshot.state.season?.scheduledEffects).toEqual(withDeferred.state.deferredEffects);
+
+    const season2RoleAccepted = simulate({
+      ...baseInput(),
+      snapshot: season2Started.snapshot,
+      command: resolveRoleCommand(season2Started.snapshot.revision, 'ACCEPT'),
+    });
+    if (!season2RoleAccepted.ok) throw new Error('setup: 시즌 2 RESOLVE_ROLE 실패');
+    const tacticalFitBeforeSeason2 = season2RoleAccepted.snapshot.state.context.tacticalFit;
+
+    const season2Settled = driveToSettlement(season2RoleAccepted.snapshot);
+    // 리뷰 (b) 후반부: 시즌 N+1 step 5에서 적용된다.
+    expect(season2Settled.state.context.tacticalFit).toBe(tacticalFitBeforeSeason2 + 6);
+    expect(season2Settled.state.season?.scheduledEffects).toEqual([]);
+    expect(season2Settled.state.deferredEffects).toEqual([]);
   });
 });
 

@@ -385,8 +385,77 @@ export const ContractRulesSchema = z.strictObject({
     RESERVE: z.number(),
   }),
   newClubManagerTrust: z.number(),
+  // T-2-005 D-39: 출전 약속 이행 판정 기준(minutesShareBp 이상인 가장 높은 역할).
+  promiseMinutesShareBp: z.strictObject({
+    STARTER: z.number(),
+    ROTATION: z.number(),
+    BENCH: z.number(),
+    RESERVE: z.number(),
+  }),
 });
 export type ContractRules = z.infer<typeof ContractRulesSchema>;
+
+// T-2-005 D-39: 성장식이 쓰는 능력 그룹(연령대는 budgetCenti의 키로만 쓰여 별도 스키마가 필요 없다).
+const GROWTH_ATTRIBUTE_GROUPS = ['TECHNICAL', 'PHYSICAL', 'MENTAL', 'GOALKEEPING'] as const;
+
+const GrowthAgeCurveRowSchema = z.strictObject({ maxAge: z.number().int(), multBp: z.number().int() });
+const GrowthByAttributeGroupRecordSchema = <T extends z.core.SomeType>(valueSchema: T) =>
+  z.strictObject({ TECHNICAL: valueSchema, PHYSICAL: valueSchema, MENTAL: valueSchema, GOALKEEPING: valueSchema });
+
+// T-2-005 D-39: 결산 성장식 상수(`growth.ts`가 소비). 값은 balance-targets를 만족하도록 튜닝된다 —
+// 여기서는 형태만 검사하고 구체적인 수치 범위는 강제하지 않는다.
+export const GrowthRulesSchema = z.strictObject({
+  budgetCenti: z.strictObject({ U21: z.number().int(), PRIME: z.number().int(), VETERAN: z.number().int() }),
+  gapCap: z.number().int().positive(),
+  minutesFull: z.number().int().positive(),
+  minutesFloorBp: z.number().int().min(0).max(10000),
+  experiencePerRatedMatchCenti: z.number().int(),
+  experienceCapCenti: z.number().int(),
+  goodRatingTenths: z.number().int(),
+  goodRatingBonusCenti: z.number().int(),
+  roleWeightScale: z.number().int(),
+  baseShareBp: z.number().int().min(0).max(10000),
+  focusShareBp: z.number().int().min(0).max(10000),
+  seasonDeltaMin: z.number().int(),
+  seasonDeltaMax: z.number().int(),
+  ageCurves: GrowthByAttributeGroupRecordSchema(z.array(GrowthAgeCurveRowSchema).min(1)),
+  decline: GrowthByAttributeGroupRecordSchema(z.strictObject({ startAge: z.number().int(), perYearCenti: z.number().int() })),
+})
+  .refine((rules) => rules.seasonDeltaMin <= rules.seasonDeltaMax, {
+    message: 'growthRules.seasonDeltaMin은 seasonDeltaMax 이하여야 한다.',
+  })
+  .superRefine((rules, ctx) => {
+    for (const group of GROWTH_ATTRIBUTE_GROUPS) {
+      const curve = rules.ageCurves[group];
+      const last = curve[curve.length - 1];
+      if (last?.maxAge !== 99) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `growthRules.ageCurves.${group}의 마지막 원소 maxAge는 99여야 한다.`,
+          path: ['ageCurves', group],
+        });
+      }
+    }
+  });
+export type GrowthRules = z.infer<typeof GrowthRulesSchema>;
+
+// T-2-005 D-39: 시즌 중 매 step 경기 뒤 폼·체력·사기 갱신 상수(`condition.ts`가 소비).
+export const ConditionRulesSchema = z.strictObject({
+  formPivotTenths: z.number().int(),
+  formDivisorTenths: z.number().int().positive(),
+  formStepMax: z.number().int().nonnegative(),
+  formDriftPerStep: z.number().int().nonnegative(),
+  fitnessRecoveryPerStep: z.number().int(),
+  fitnessCostMinutes: z.number().int().positive(),
+  injuryFitnessCost: z.number().int().nonnegative(),
+  moraleWin: z.number().int(),
+  moraleLoss: z.number().int(),
+  moraleStart: z.number().int(),
+  moraleNotSelected: z.number().int(),
+  moraleUnusedSub: z.number().int(),
+  moraleStepMax: z.number().int().nonnegative(),
+});
+export type ConditionRules = z.infer<typeof ConditionRulesSchema>;
 
 // T-2-001 D-33: 슬롯 kind는 domain `DecisionSlot['kind']`와 같은 7개.
 const DECISION_SLOT_KINDS = ['EVENT', 'CHAPTER', 'CONTRACT', 'ROLE', 'INJURY', 'NATIONAL_TEAM', 'SETTLEMENT'] as const;
@@ -669,6 +738,9 @@ export const RulesetSchema = z
     selectionRules: SelectionRulesSchema,
     // T-2-003 D-35.
     matchRules: MatchRulesSchema,
+    // T-2-005 D-39.
+    growthRules: GrowthRulesSchema,
+    conditionRules: ConditionRulesSchema,
   })
   .superRefine((ruleset, ctx) => {
     const archetypeIds = new Set<string>();

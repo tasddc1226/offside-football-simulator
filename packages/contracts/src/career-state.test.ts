@@ -28,6 +28,8 @@ import {
   career04GkEngineCommands,
   career05Chapter,
   career05ChapterEngineCommands,
+  career06Settled,
+  career06SettledEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -217,6 +219,7 @@ function confirmedStateLiteral() {
     seasonPhase: 'SETTLEMENT' as const,
     simulationMode: 'FAST' as const,
     attributes: zeroAttributes(),
+    growthCarryCenti: zeroAttributes(),
     state: { form: 50, fitness: 80, morale: 60 },
     context: { tacticalFit: 58, squadStatus: 40, positionProficiency: 100 },
     relationships: { managerTrust: 40, captain: 50, rival: 50, fans: 50, agent: 50 },
@@ -314,6 +317,7 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     'career-03-underdog.golden.json',
     'career-04-gk.golden.json',
     'career-05-chapter.golden.json',
+    'career-06-settled.golden.json',
   ];
 
   it('packages/fixtures/src/*/의 *.golden.json 목록이 이 테스트가 재생하는 목록과 같다', () => {
@@ -441,5 +445,22 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     expect(sawChapterPending, 'CHAPTER pending 상태를 거쳐야 한다').toBe(true);
     expect(snapshot.revision).toBe(career05Chapter.golden.revision);
     expect(snapshot.stateHash).toBe(career05Chapter.golden.stateHash);
+  });
+
+  // T-2-005 D-39: career-01·03·04와 같은 독립 실행 fixture다(career06SettledEngineCommands가
+  // CREATE_CAREER부터 자체적으로 만든다). seasonHistory[0].result가 포함된 결산 골든이다.
+  it('career-06-settled: 매 명령 뒤 상태가 스키마를 통과하고 최종 hash가 golden과 같다(SETTLE_SEASON까지)', () => {
+    let counter = 0;
+    const commands = career06SettledEngineCommands(() => `golden-c6-${counter++}`);
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career06Settled);
+      assertStateRoundTrips(snapshot, `career06Settled revision ${snapshot.revision}`);
+    }
+    if (snapshot === null) throw new Error('career06Settled 명령 목록이 비어 있다.');
+    expect(snapshot.revision).toBe(career06Settled.golden.revision);
+    expect(snapshot.stateHash).toBe(career06Settled.golden.stateHash);
+    expect(snapshot.state.season).toBeNull();
+    expect(snapshot.state.seasonHistory[0]?.result).toBeDefined();
   });
 });

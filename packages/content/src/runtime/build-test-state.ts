@@ -25,6 +25,10 @@ const BASE_ATTRIBUTES: Record<AttributeKey, number> = {
   consistency: 45,
 };
 
+const ZERO_GROWTH_CARRY_CENTI: Record<AttributeKey, number> = Object.fromEntries(
+  (Object.keys(BASE_ATTRIBUTES) as AttributeKey[]).map((key) => [key, 0]),
+) as Record<AttributeKey, number>;
+
 export const TEST_DRAFT: PlayerDraft = {
   name: '테스트 선수',
   gender: 'UNSPECIFIED',
@@ -61,6 +65,7 @@ export function buildTestState(overrides: Partial<CareerState> = {}): CareerStat
     seasonPhase: 'SETTLEMENT',
     simulationMode: 'FAST',
     attributes: { ...BASE_ATTRIBUTES },
+    growthCarryCenti: { ...ZERO_GROWTH_CARRY_CENTI },
     state: { form: 60, fitness: 80, morale: 60 },
     context: { tacticalFit: 58, squadStatus: 40, positionProficiency: 100 },
     relationships: { managerTrust: 40, captain: 50, rival: 50, fans: 50, agent: 50 },
