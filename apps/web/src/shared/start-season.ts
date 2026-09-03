@@ -1,6 +1,6 @@
 // SCR-005 프리시즌 계획: 시뮬레이션 모드·훈련 계획 선택지와 RULE-TIME-003 기본값 규칙(순수 함수,
-// 단위 테스트). `trainingFocus`는 domain Command에 아직 없다(T-2-005 접점, career-actions.ts 참고) —
-// 여기서는 화면 선택지·라벨만 소유한다.
+// 단위 테스트). `trainingFocus`는 domain Command에도 실려 나간다(T-2-005 접점, PR #40 머지 후
+// career-actions.ts의 toStartSeasonPayload가 전송) — 여기서는 화면 선택지·라벨만 소유한다.
 import type { CareerState, SimulationMode } from '@offside/domain';
 
 export type TrainingFocus = 'ROLE' | 'TECHNICAL' | 'PHYSICAL' | 'MENTAL';
