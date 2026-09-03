@@ -125,6 +125,54 @@ describe('createWorkerSimulator: 실패 처리', () => {
     worker.dispose();
   });
 
+  it('T-2-011 10번(b): 타임아웃은 그 요청 하나만 거부한다 — 같은 포트로 다음 요청은 정상 처리된다', async () => {
+    const port = new FakePort();
+    const worker = createWorkerSimulator(port, { timeoutMs: 1000 });
+
+    const timedOut = worker.simulate(sampleInput);
+    const assertion = expect(timedOut).rejects.toBeInstanceOf(WorkerUnavailableError);
+    await vi.advanceTimersByTimeAsync(1000);
+    await assertion;
+
+    // 첫 요청이 타임아웃 났다고 포트가 broken으로 바뀌지 않는다 — 같은 포트에 바로 이어서 보낸
+    // 다음 요청이 정상 응답을 받으면 그 사실이 증명된다(broken이었다면 workerFactory 없이
+    // WorkerUnavailableError로 즉시 거부됐을 것이다).
+    port.onPostMessage = (message) => {
+      const request = message as { id: number };
+      port.emitReply({
+        id: request.id,
+        kind: 'result',
+        result: { ok: true, snapshot: {} as never, appliedEffects: [], nextAction: 'ADVANCE' },
+      });
+    };
+    const next = await worker.simulate(sampleInput);
+    expect(next.ok).toBe(true);
+
+    worker.dispose();
+  });
+
+  it('T-2-011 10번(b): 같이 대기 중이던 다른 요청은 하나가 타임아웃 나도 영향받지 않고, 뒤늦게 온 응답은 무시된다', async () => {
+    const port = new FakePort();
+    const worker = createWorkerSimulator(port, { timeoutMs: 1000 });
+
+    const slow = worker.simulate(sampleInput); // id 1, t=0에 시작 → t=1000에 타임아웃 예정
+    await vi.advanceTimersByTimeAsync(500); // t=500
+    const stillWaiting = worker.simulate(sampleInput); // id 2, t=500에 시작 → t=1500에 타임아웃 예정
+
+    const slowAssertion = expect(slow).rejects.toBeInstanceOf(WorkerUnavailableError);
+    await vi.advanceTimersByTimeAsync(500); // t=1000 → id 1만 타임아웃, id 2는 아직 500ms 남음
+    await slowAssertion;
+
+    // id 1의 응답이 타임아웃 후에 뒤늦게 도착 — 이미 pending에서 지워졌으니 조용히 무시된다.
+    port.emitReply({ id: 1, kind: 'result', result: { ok: true, snapshot: {} as never, appliedEffects: [], nextAction: 'ADVANCE' } });
+
+    // id 2는 옆에서 다른 요청이 타임아웃 나는 동안에도 계속 살아 있다가, 응답이 오면 정상 resolve된다.
+    port.emitReply({ id: 2, kind: 'result', result: { ok: true, snapshot: {} as never, appliedEffects: [], nextAction: 'ADVANCE' } });
+    await expect(stillWaiting).resolves.toMatchObject({ ok: true });
+
+    worker.dispose();
+  });
+
   it('workerFactory가 있으면 죽은 뒤 다음 요청에서 새 포트로 정상 재개한다', async () => {
     const brokenPort = new FakePort();
     const freshPort = makeRespondingPort();

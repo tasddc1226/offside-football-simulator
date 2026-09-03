@@ -1,6 +1,3 @@
-// TODO(Phase 2): 지금 타임아웃은 요청당이 아니라 포트 전체를 broken으로 만든다(하나가 늦으면
-// 대기 중인 나머지 요청까지 전부 거부된다) — Phase 1 ADVANCE에는 문제없지만, 한 요청이 길어질 수
-// 있는 시즌 시뮬레이션이 들어오면 요청당 예산으로 바꿀 것.
 import type { SimulationInput, SimulationResult } from '@offside/domain';
 import type { Simulator } from '../simulator/index.js';
 import type { MessagePortLike, SimulateReply, SimulateRequest } from './protocol.js';
@@ -53,10 +50,12 @@ export type WorkerSimulatorOptions = {
 };
 
 /**
- * 메인 스레드 쪽. id로 요청·응답을 짝짓는다. 'error' 응답은 reject한다. 요청마다 타임아웃을 걸어
- * 두고, `error`·`messageerror` 이벤트나 타임아웃이 나면 대기 중인 요청 전부를
- * `WorkerUnavailableError`로 거부하고 포트를 "broken"으로 표시한다. broken 상태에서 새
- * `simulate()`가 오면 `workerFactory()`로 포트를 다시 만들어 보낸다(옵션이 없으면 거부).
+ * 메인 스레드 쪽. id로 요청·응답을 짝짓는다. 'error' 응답은 reject한다. 요청마다 자기 몫의
+ * 타임아웃(요청당 예산)을 걸어 두고, 시간 안에 응답이 없으면 그 요청 하나만
+ * `WorkerUnavailableError`로 거부한다 — 다른 대기 중인 요청도, 포트도 건드리지 않는다(한 요청이
+ * 길어져도 나머지는 정상 진행). 포트를 "broken"으로 표시하는 건 `error`·`messageerror`
+ * 이벤트뿐이다 — 이때는 포트 자체가 죽었다고 보고 대기 중인 요청 전부를 거부한다. broken 상태에서
+ * 새 `simulate()`가 오면 `workerFactory()`로 포트를 다시 만들어 보낸다(옵션이 없으면 거부).
  * `dispose()`는 대기 중인 요청을 모두 reject하고 리스너를 떼고 `port.close?.()`를 부른다.
  */
 export function createWorkerSimulator(
@@ -80,6 +79,20 @@ export function createWorkerSimulator(
       entry.reject(reason);
     }
     pending.clear();
+  }
+
+  /**
+   * T-2-011 10번(b), PR #30 후속: 타임아웃은 그 요청 하나만의 예산이다 — 나머지 대기 중인 요청도,
+   * 포트 자체도 건드리지 않는다(포트를 broken으로 만드는 건 `error`/`messageerror`처럼 포트가 실제로
+   * 죽었다는 신호뿐이다). 타임아웃 뒤 원래 응답이 늦게 도착해도 `pending`에서 이미 지워졌으니
+   * `messageListener`가 조용히 무시한다.
+   */
+  function rejectOne(id: number, reason: Error): void {
+    const entry = pending.get(id);
+    if (entry === undefined) return;
+    pending.delete(id);
+    clearTimeout(entry.timer);
+    entry.reject(reason);
   }
 
   function messageListener(event: { data: unknown }): void {
@@ -138,9 +151,7 @@ export function createWorkerSimulator(
 
       const id = nextId++;
       return new Promise<SimulationResult>((resolve, reject) => {
-        // 타이머가 markBrokenAndRejectPending()을 부르면 pending 전체(이 항목 포함)를 reject하고
-        // 지운다 — 여기서 따로 pending.delete(id)를 하면 이 항목이 지워진 뒤라 reject를 못 받는다.
-        const timer = setTimeout(markBrokenAndRejectPending, timeoutMs);
+        const timer = setTimeout(() => rejectOne(id, new WorkerUnavailableError()), timeoutMs);
         pending.set(id, { resolve, reject, timer });
         const request: SimulateRequest = { id, kind: 'simulate', input };
         currentPort.postMessage(request);
