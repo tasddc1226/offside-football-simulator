@@ -99,7 +99,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-2-003 | domain | 포지션별 경기 통계 generator, 0분·교체·퇴장·부상, FAST/CHAPTER 분포 동일성, 1,000회 hash | T-2-002 | 2 | in-progress | `T-2-003-match-engine`, [브리프](briefs/T-2-003.md) |
 | T-2-004 | domain + content | 핵심 경기 챕터 선택·판단 resolver, 팩 `chapters` 스키마 + 3종 | T-2-003 | 2 | todo | |
 | T-2-005 | domain | 시즌 집계·SeasonResult, 성장·폼·체력·사기 Effect, 원인 태그, 결산 hash | T-2-003, T-2-004 | 2 | todo | |
-| T-2-006 | contracts + api + engine-client | CMD-SIM 스키마, 시즌·결산·EffectQueue 스키마, Snapshot 크기, 동기화 회귀, Worker 계산 시간 | T-2-001 | 2 | in-progress | `T-2-006-contracts-sync`, [브리프](briefs/T-2-006.md) |
+| T-2-006 | contracts + api + engine-client | CMD-SIM 스키마, 시즌·결산·EffectQueue 스키마, Snapshot 크기, 동기화 회귀, Worker 계산 시간 | T-2-001 | 2 | done | PR #38 6f2f00e, [브리프](briefs/T-2-006.md) |
 | T-2-007 | web | SCR-005·011·029(advance·전술실)·033 | T-2-002, T-2-006 | 3 | todo | |
 | T-2-008 | web | SCR-031 챕터·SCR-012 역할 변경·재생 복원 | T-2-004, T-2-006 | 3 | todo | |
 | T-2-009 | web | SCR-015 시즌 결산·연대기 요약·응답 유실 복구 | T-2-005, T-2-006 | 3 | todo | |
@@ -126,8 +126,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-2-003 | Sonnet 5, Orca 워크트리 `T-2-003-match-engine` | 2026-09-03 | 브리프 전달 |
-| T-2-006 | Sonnet 5, Orca 워크트리 `T-2-006-contracts-sync` | 2026-09-03 | 브리프 전달 |
+| T-2-003 | Sonnet 5, Orca 워크트리 `T-2-003-match-engine` | 2026-09-03 | PR #39 리뷰 1차 수정 중 |
 
 ## 완료
 
@@ -171,3 +170,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-017 | Phase 1 완료 조건 보완: 포지션 탭 키보드 도달·선호/주포지션 표시·국외 이전 표·결과 aria-live·COMMITTING 이탈 경고(PR #35, 리뷰 수정 0건, 워커 비용 약 $12.2, 51분) | d5fbf11 |
 | T-2-001 | 시즌 구조: FootballSeason·12 step 캘린더·START_SEASON/SETTLE_SEASON·ADVANCE 재정의·결정 예산·STEP_BOUNDARY, golden career-02-season FAST·CHAPTER(PR #36, 리뷰 수정 4건, 워커 비용 약 $24.3, 102분) | a806e21 |
 | T-2-002 | 팀 전술 스타일 3종·리그 4·FA컵·경쟁자 8×2·Tactical Fit·Squad Status·Selection Score(RULE-SEL-001)·step-1 역할 제안 RESOLVE_ROLE·전술실 뷰, golden career-02(RESOLVE_ROLE)·career-03-underdog(OVR 58 선발)(PR #37, 리뷰 수정 3건, 워커 비용 약 $30.6, 109분) | 41b89e6 |
+| T-2-006 | 계약·동기화 검증 체인: contracts golden 순회(strict 파싱+재해시)·목록 가드, Snapshot·PUT 크기 측정(최대 15.3 KB, 예산 6%), api 3경로 시즌 동기화·Miniflare 순회, engine-client replay·fork·import 시즌 golden, 로컬 저장 checkpoint 계약, 브라우저 Worker 시즌 리플레이 9.6~15 ms(PR #38, 리뷰 수정 2건, 워커 비용 약 $11.3, 114분) | 6f2f00e |

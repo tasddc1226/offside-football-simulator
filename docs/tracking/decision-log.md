@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (저녁, PR #38 T-2-006 머지 — Wave 2 절반)
+
+**결과**: T-2-006(PR #38, `6f2f00e`) 머지. 도메인 규칙 변경 없이 검증 체인만 넓혔다: contracts에 fixture 전체를 처음부터 재생하며 매 명령 뒤 `CareerStateSchema` strict 파싱 + 재해시로 golden hash와 대조하는 순회 테스트와 golden 파일 목록 가드(`KNOWN_GOLDEN_FILES`, T-2-003의 career-04 추가 시 갱신 필요), Snapshot·PUT 본문 크기 측정(시즌 중 최대 15,343 B ≈ 권장치 256 KB의 6% — **D-33 결론: 현 구조 유지, 압축 불필요**), api 3경로 시즌 동기화(단일 PUT·checkpoint 분할·Idempotency-Key 재시도)와 Miniflare golden 순회, engine-client replay·fork·import 시즌 golden, 로컬 저장 SEASON_START·SEASON_SETTLED 계약, 브라우저 Web Worker career-02 FAST 시즌 리플레이 hash 일치·시즌 구간 9.6~15 ms(상한 5,000 ms, Node 52 ms, domain 단독 7.4 ms). 워커 비용 약 $11.3, 114분, 리뷰 1회 2건.
+
+**리뷰 결정**: 워커가 `apps/web/src` 금지와 충돌해 미착수로 남긴 브라우저 Worker 항목은 dev 전용 `apps/web/src/dev/hash-probe.tsx`·`apps/web/e2e/hash-probe.spec.ts` 두 파일만 예외로 허용해 같은 PR에서 끝냈다. PUT 본문 크기는 `ADVANCE`·빈 payload 근사 대신 실제 명령 type·payload로 다시 쟀다(career-01 4,376 → 5,564 B).
+
+**운영 메모**: 워커 세션의 UserPromptSubmit 훅(claude-mem 플러그인 연결 실패)이 투입 프롬프트와 리뷰 프롬프트를 각각 한 번씩 막았다 — 화면에서 "operation blocked by hook"을 확인하고 같은 프롬프트를 재전송하면 통과한다. T-2-003 워커는 조사용 fork 5개로 7분에 약 $10를 써 중단시켰고, 브리프 템플릿의 금지 문구를 조사용 서브에이전트까지 명시했다(ab6603c).
+
 ## 2026-09-03 (오후, PR #37 T-2-002 머지 — T-2-003·T-2-006 병행 투입)
 
 **결과**: T-2-002(PR #37, `41b89e6`) 머지. 룰셋에 전술 스타일 3종(possession 4-3-3·counter 4-2-3-1·press 4-1-4-1, 포지션별 선호 아키타입)·리그 4(유스 8·1부 12·2부 12·3부 10)·FA컵(1~3부, R2 step 7)·선발 상수·경쟁자 이름 40, domain `selection.ts`(Tactical Fit·familiarity·Expected Performance·Squad Status·Selection Score·rankSelection·rankPositionForPlayer·computeRoleProposal·deriveTacticalRoom)와 `competitors.ts`(포지션 8×2, 23롤/명 = 368롤), step-1 ROLE_PROPOSAL pending과 `RESOLVE_ROLE {ACCEPT|DECLINE}`(CMD-SIM-004), contracts 스키마, golden career-02(RESOLVE_ROLE 포함)·career-03-underdog(OVR 58이 OVR 80 경쟁자를 제치고 START). 전체 체인 통과(e2e 54, 번들 100.8 KB). 워커 비용 약 $30.6, 109분, 리뷰 1회 3건.
