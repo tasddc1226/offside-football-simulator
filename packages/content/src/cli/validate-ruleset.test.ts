@@ -61,3 +61,49 @@ describe('validateRulesetDir (fixtures)', () => {
     expect(result.errors.some((e) => e.includes('version'))).toBe(true);
   });
 });
+
+// T-2-001 완료 조건: "룰셋 leagueCalendar 검증: 12 step, phase 순서, step 12 SETTLEMENT 필수.
+// 잘못된 캘린더 3종이 로더에서 거부된다."
+describe('validateRulesetDir (leagueCalendar 검증)', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'offside-content-calendar-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  function writeRuleset(content: unknown): void {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'ruleset.json'), JSON.stringify(content, null, 2));
+    const manifest = { version: (content as { version: string }).version, checksum: computeRulesetChecksum(content) };
+    writeFileSync(join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+  }
+
+  it('step이 12개가 아니면 거부한다', () => {
+    const invalid = structuredClone(ruleset100) as typeof ruleset100;
+    invalid.leagueCalendar.steps.pop();
+    writeRuleset(invalid);
+    const result = validateRulesetDir(loadRulesetDir(dir), { writeChecksum: false });
+    expect(result.errors.some((e) => e.includes('ruleset.json') && e.includes('steps'))).toBe(true);
+  });
+
+  it('phase 순서가 되돌아가면 거부한다', () => {
+    const invalid = structuredClone(ruleset100) as typeof ruleset100;
+    // step 5(LEAGUE)를 SETTLEMENT로 바꿔 step 6(LEAGUE)보다 뒤로 가게 만든다.
+    invalid.leagueCalendar.steps[4]!.phase = 'SETTLEMENT';
+    writeRuleset(invalid);
+    const result = validateRulesetDir(loadRulesetDir(dir), { writeChecksum: false });
+    expect(result.errors.some((e) => e.includes('ruleset.json') && e.includes('phase'))).toBe(true);
+  });
+
+  it('step 12에 필수 SETTLEMENT 슬롯이 없으면 거부한다', () => {
+    const invalid = structuredClone(ruleset100) as typeof ruleset100;
+    invalid.leagueCalendar.steps[11]!.slots = [{ kind: 'EVENT', required: false }];
+    writeRuleset(invalid);
+    const result = validateRulesetDir(loadRulesetDir(dir), { writeChecksum: false });
+    expect(result.errors.some((e) => e.includes('ruleset.json') && e.includes('SETTLEMENT'))).toBe(true);
+  });
+});

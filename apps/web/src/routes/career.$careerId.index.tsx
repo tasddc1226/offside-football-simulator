@@ -57,6 +57,10 @@ function timelineSentence(entry: TimelineEntry, state: CareerState): string {
       return '선수 생활 시작';
     case 'CONTRACT_SIGNED':
       return state.contract !== null && entry.refId === state.contract.id ? `${state.contract.teamName}과 계약` : '계약';
+    case 'SEASON_STARTED':
+      return '시즌 시작';
+    case 'STEP_PASSED':
+      return '진행';
     case 'SEASON_SETTLED':
       return '시즌 정산';
     case 'EVENT_RESOLVED': {

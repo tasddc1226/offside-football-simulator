@@ -233,6 +233,106 @@ export const ContractRulesSchema = z.strictObject({
 });
 export type ContractRules = z.infer<typeof ContractRulesSchema>;
 
+// T-2-001 D-33: 슬롯 kind는 domain `DecisionSlot['kind']`와 같은 7개.
+const DECISION_SLOT_KINDS = ['EVENT', 'CHAPTER', 'CONTRACT', 'ROLE', 'INJURY', 'NATIONAL_TEAM', 'SETTLEMENT'] as const;
+const DecisionSlotKindSchema = z.enum(DECISION_SLOT_KINDS);
+const SlotImportanceSchema = z.enum(['MAJOR', 'MINOR']);
+
+const LeagueCalendarSlotSchema = z.strictObject({
+  kind: DecisionSlotKindSchema,
+  required: z.boolean(),
+  importance: SlotImportanceSchema.exactOptional(),
+});
+
+const SEASON_PHASES = ['PRESEASON', 'LEAGUE', 'CUP', 'TRANSFER_WINDOW', 'SETTLEMENT'] as const;
+const SeasonPhaseSchema = z.enum(SEASON_PHASES);
+
+const LeagueCalendarStepSchema = z.strictObject({
+  index: z.number().int().min(1).max(12),
+  phase: SeasonPhaseSchema,
+  windowOpen: z.boolean(),
+  slots: z.array(LeagueCalendarSlotSchema),
+});
+
+const CupRoundSchema = z.strictObject({
+  round: z.enum(['R1', 'SEMI', 'FINAL']),
+  step: z.number().int().min(1).max(12),
+});
+
+/**
+ * T-2-001 D-33/RULE-TIME-001: 12 step·index 연속·phase 순서(PRESEASON → LEAGUE → SETTLEMENT,
+ * 되돌아가지 않음)·step 12는 SETTLEMENT 필수 슬롯 1개를 검사한다.
+ */
+export const LeagueCalendarSchema = z
+  .strictObject({
+    id: z.string().min(1),
+    steps: z.array(LeagueCalendarStepSchema),
+    transferWindowStep: z.number().int().min(1).max(12),
+    cupRounds: z.array(CupRoundSchema),
+  })
+  .superRefine((calendar, ctx) => {
+    if (calendar.steps.length !== 12) {
+      ctx.addIssue({ code: 'custom', message: 'leagueCalendar.steps는 12개여야 한다.', path: ['steps'] });
+      return;
+    }
+
+    const phaseRank: Record<(typeof SEASON_PHASES)[number], number> = {
+      PRESEASON: 0,
+      LEAGUE: 1,
+      CUP: 1,
+      TRANSFER_WINDOW: 1,
+      SETTLEMENT: 2,
+    };
+    let previousRank = -1;
+    for (const [i, step] of calendar.steps.entries()) {
+      if (step.index !== i + 1) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `leagueCalendar.steps[${i}].index는 ${i + 1}이어야 한다: ${step.index}`,
+          path: ['steps', i, 'index'],
+        });
+      }
+      const rank = phaseRank[step.phase];
+      if (rank < previousRank) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `leagueCalendar.steps[${i}].phase가 되돌아갔다: ${step.phase}`,
+          path: ['steps', i, 'phase'],
+        });
+      }
+      previousRank = rank;
+    }
+
+    const lastStep = calendar.steps[11];
+    if (lastStep !== undefined) {
+      const settlementSlots = lastStep.slots.filter((slot) => slot.kind === 'SETTLEMENT' && slot.required);
+      if (lastStep.phase !== 'SETTLEMENT' || settlementSlots.length !== 1) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'leagueCalendar.steps[11]은 phase SETTLEMENT이고 필수 SETTLEMENT 슬롯이 정확히 1개여야 한다.',
+          path: ['steps', 11],
+        });
+      }
+    }
+
+    const windowStepIndex = calendar.transferWindowStep;
+    const windowStep = calendar.steps.find((step) => step.index === windowStepIndex);
+    if (windowStep !== undefined && !windowStep.windowOpen) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `transferWindowStep(${windowStepIndex})이 가리키는 step의 windowOpen이 false다.`,
+        path: ['transferWindowStep'],
+      });
+    }
+  });
+export type LeagueCalendar = z.infer<typeof LeagueCalendarSchema>;
+
+const SeasonBoundaryResetSchema = z.strictObject({
+  form: z.number().int(),
+  fitness: z.number().int(),
+  morale: z.number().int(),
+});
+
 export const RulesetSchema = z
   .strictObject({
     version: SemverSchema,
@@ -245,6 +345,8 @@ export const RulesetSchema = z
     teams: z.array(TeamSchema).min(1),
     offerRules: OfferRulesSchema,
     contractRules: ContractRulesSchema,
+    leagueCalendar: LeagueCalendarSchema,
+    seasonBoundaryReset: SeasonBoundaryResetSchema,
   })
   .superRefine((ruleset, ctx) => {
     const archetypeIds = new Set<string>();

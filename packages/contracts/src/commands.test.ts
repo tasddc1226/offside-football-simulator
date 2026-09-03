@@ -188,14 +188,43 @@ describe('CommandRequestSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('Phase 2+ 명령(START_SEASON)은 임의 payload를 통과시킨다', () => {
+  // T-2-001: START_SEASON은 domain Command와 같은 형태의 payload 스키마를 갖는다(더는 임의 payload가 아니다).
+  it('START_SEASON은 simulationMode·serviceSeasonId가 있으면 통과한다', () => {
     const result = CommandRequestSchema.safeParse({
       commandId: 'cmd_1',
       expectedRevision: 1,
       type: 'START_SEASON',
-      payload: { anything: 'goes', nested: { a: 1 } },
+      payload: { simulationMode: 'FAST', serviceSeasonId: 'svc_1' },
     });
     expect(result.success).toBe(true);
+  });
+
+  it('START_SEASON은 임의 payload를 거부한다', () => {
+    const result = CommandRequestSchema.safeParse({
+      commandId: 'cmd_1',
+      expectedRevision: 1,
+      type: 'START_SEASON',
+      payload: { anything: 'goes' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('SETTLE_SEASON은 빈 payload면 통과하고, 필드가 있으면 거부한다', () => {
+    const ok = CommandRequestSchema.safeParse({
+      commandId: 'cmd_1',
+      expectedRevision: 1,
+      type: 'SETTLE_SEASON',
+      payload: {},
+    });
+    expect(ok.success).toBe(true);
+
+    const rejected = CommandRequestSchema.safeParse({
+      commandId: 'cmd_1',
+      expectedRevision: 1,
+      type: 'SETTLE_SEASON',
+      payload: { extra: true },
+    });
+    expect(rejected.success).toBe(false);
   });
 
   it('Phase 2+ 명령(RETIRE)도 임의 payload를 통과시킨다', () => {

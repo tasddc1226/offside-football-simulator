@@ -1,0 +1,87 @@
+{
+  "FAST": {
+    "revision": 16,
+    "stateHash": "859c2e1c84a349dde189d9d9316d19208188d068fc5dfbafc792d34a12f7e0ba",
+    "rngStateDraws": 30,
+    "age": 18,
+    "seasonHistory": [
+      {
+        "index": 1,
+        "simulationMode": "FAST",
+        "teamId": "seoul-tier1",
+        "competitions": [
+          { "competitionId": "LEAGUE", "kind": "LEAGUE", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": null },
+          { "competitionId": "CUP", "kind": "CUP", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": "R1" }
+        ],
+        "settledAtRevision": 16
+      }
+    ],
+    "checkpoints": ["SEASON_START", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "SEASON_SETTLED"],
+    "stepSummaries": [
+      { "index": 1, "summary": { "passedAtRevision": 12, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 2, "summary": { "passedAtRevision": 12, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 3, "summary": { "passedAtRevision": 13, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 4, "summary": { "passedAtRevision": 13, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 5, "summary": { "passedAtRevision": 13, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 6, "summary": { "passedAtRevision": 13, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 7, "summary": { "passedAtRevision": 14, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 8, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 9, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 10, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 11, "summary": { "passedAtRevision": 15, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 12, "summary": null }
+    ]
+  },
+  "CHAPTER": {
+    "revision": 28,
+    "stateHash": "31316350573f1b57167dac719b6b3cebf00ef0bb5765762cfc48aedf2556228a",
+    "rngStateDraws": 35,
+    "age": 18,
+    "seasonHistory": [
+      {
+        "index": 1,
+        "simulationMode": "CHAPTER",
+        "teamId": "seoul-tier1",
+        "competitions": [
+          { "competitionId": "LEAGUE", "kind": "LEAGUE", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": null },
+          { "competitionId": "CUP", "kind": "CUP", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": "R1" }
+        ],
+        "settledAtRevision": 28
+      }
+    ],
+    "checkpoints": [
+      "SEASON_START",
+      "STEP_BOUNDARY",
+      "EVENT_RESOLVED",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "EVENT_RESOLVED",
+      "STEP_BOUNDARY",
+      "EVENT_RESOLVED",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "EVENT_RESOLVED",
+      "STEP_BOUNDARY",
+      "EVENT_RESOLVED",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "STEP_BOUNDARY",
+      "SEASON_SETTLED"
+    ],
+    "stepSummaries": [
+      { "index": 1, "summary": { "passedAtRevision": 12, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 2, "summary": { "passedAtRevision": 14, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 3, "summary": { "passedAtRevision": 15, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 4, "summary": { "passedAtRevision": 17, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 5, "summary": { "passedAtRevision": 19, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 6, "summary": { "passedAtRevision": 20, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 7, "summary": { "passedAtRevision": 21, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 8, "summary": { "passedAtRevision": 23, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 9, "summary": { "passedAtRevision": 25, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 10, "summary": { "passedAtRevision": 26, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 11, "summary": { "passedAtRevision": 27, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 12, "summary": null }
+    ]
+  }
+}

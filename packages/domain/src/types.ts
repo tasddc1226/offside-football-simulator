@@ -156,18 +156,93 @@ export type Contract = {
   signedAtRevision: number;
 };
 
+// T-2-001 D-24: 핵심 경기 챕터·계약·역할·부상·대표팀·시즌 결산 슬롯. 실제 판단 내용(챕터 판단,
+// 계약 협상 등)은 T-2-002~005 몫이라 이 작업은 열고 "자동 통과"로 닫는 플레이스홀더만 둔다.
 export type Pending =
   | null
   | { kind: 'EVENT'; eventId: string; version: number }
-  | { kind: 'OFFERS'; offers: Offer[] };
+  | { kind: 'OFFERS'; offers: Offer[] }
+  | { kind: 'CHAPTER'; step: number; importance?: 'MAJOR' | 'MINOR' }
+  | { kind: 'CONTRACT'; step: number }
+  | { kind: 'ROLE'; step: number }
+  | { kind: 'INJURY'; step: number }
+  | { kind: 'NATIONAL_TEAM'; step: number }
+  | { kind: 'SETTLEMENT'; step: number };
 
 // D-12: 타임라인. 문장은 넣지 않는다(웹이 팩·룰셋에서 조합).
 export type TimelineEntry = {
   revision: number;
-  kind: 'CAREER_CONFIRMED' | 'EVENT_RESOLVED' | 'CONTRACT_SIGNED' | 'SEASON_SETTLED';
+  kind: 'CAREER_CONFIRMED' | 'EVENT_RESOLVED' | 'CONTRACT_SIGNED' | 'SEASON_STARTED' | 'STEP_PASSED' | 'SEASON_SETTLED';
   refId: string | null;
   age: number;
   step: number;
+};
+
+// T-2-001 DATA-SEA-001(브리프 데이터 계약): 시즌 안 step 하나의 결정 슬롯. `skippedByBudget`은
+// RULE-TIME-004 결정 예산 절단이 이 슬롯을 영구히 잘라냈다는 표시다(다음 시즌 후보는 Phase 2 후반 몫).
+export type DecisionSlot = {
+  kind: 'EVENT' | 'CHAPTER' | 'CONTRACT' | 'ROLE' | 'INJURY' | 'NATIONAL_TEAM' | 'SETTLEMENT';
+  required: boolean;
+  importance?: 'MAJOR' | 'MINOR';
+  refId?: string;
+  skippedByBudget?: boolean;
+};
+
+export type StepSummary = { passedAtRevision: number; decisionsOpened: number; matchesPlayed: number };
+
+export type SeasonStep = {
+  index: number;
+  phase: SeasonPhase;
+  windowOpen: boolean;
+  decisionSlots: DecisionSlot[];
+  summary: StepSummary | null;
+};
+
+export type CompetitionRecord = {
+  competitionId: string;
+  kind: 'LEAGUE' | 'CUP';
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  position: number | null;
+  cupRound: string | null;
+};
+
+/** 이 작업은 타입만 정의한다(값은 T-2-003). `season.matches`는 이 작업에서 항상 []다. */
+export type MatchRecord = {
+  id: string;
+  step: number;
+  competitionId: string;
+  opponentTeamId: string;
+  home: boolean;
+  result: { goalsFor: number; goalsAgainst: number } | null;
+};
+
+// T-2-001 D-24: 시즌 구조. `ageReferenceStep`은 항상 1(11 "나이·시즌 경계": 나이는 step 1 기준).
+export type FootballSeason = {
+  index: number;
+  serviceSeasonId: string;
+  simulationMode: SimulationMode;
+  calendarId: string;
+  currentStep: number;
+  phase: SeasonPhase;
+  steps: SeasonStep[];
+  teamId: string;
+  squadRole: SquadRole;
+  competitions: CompetitionRecord[];
+  matches: MatchRecord[];
+  ageReferenceStep: 1;
+};
+
+export type SeasonSummary = {
+  index: number;
+  simulationMode: SimulationMode;
+  teamId: string;
+  competitions: CompetitionRecord[];
+  settledAtRevision: number;
 };
 
 export type CareerState = {
@@ -195,6 +270,8 @@ export type CareerState = {
   pending: Pending;
   contract: Contract | null;
   timeline: TimelineEntry[];
+  season: FootballSeason | null;
+  seasonHistory: SeasonSummary[];
 };
 
 export type DomainSnapshot = {

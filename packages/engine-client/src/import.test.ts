@@ -81,9 +81,14 @@ describe('importCareerFromServer', () => {
   it('손상된 hash는 거부한다', async () => {
     const { store: sourceStore } = await runGoldenOnFreshStore();
     const response = await buildGetCareerResponse(sourceStore, CAREER_ID);
+    // 마지막 글자를 고정값으로 바꾸면 원래 글자가 우연히 같을 때 무효화(no-op)된다 — 항상
+    // 달라지도록 마지막 글자가 '0'이면 '1'로, 아니면 '0'으로 뒤집는다.
+    const originalHash = response.snapshot.stateHash;
+    const lastChar = originalHash.slice(-1);
+    const flippedChar = lastChar === '0' ? '1' : '0';
     const corrupted: GetCareerResponse = {
       ...response,
-      snapshot: { ...response.snapshot, stateHash: `${response.snapshot.stateHash.slice(0, -1)}0` },
+      snapshot: { ...response.snapshot, stateHash: `${originalHash.slice(0, -1)}${flippedChar}` },
     };
 
     const destStore = new MemoryLocalStore();

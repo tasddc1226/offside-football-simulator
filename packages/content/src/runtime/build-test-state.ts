@@ -76,6 +76,8 @@ export function buildTestState(overrides: Partial<CareerState> = {}): CareerStat
     pending: null,
     contract: null,
     timeline: [],
+    season: null,
+    seasonHistory: [],
     ...overrides,
   };
 }

@@ -642,12 +642,28 @@ describe('verifySnapshot', () => {
     expect(result.reason).toBe('STATE_HASH_MISMATCH');
   });
 
-  it('timeline revision이 단조 증가하지 않으면 실패한다', () => {
+  it('timeline revision이 줄어들면 실패한다', () => {
     const active = confirmedActiveSnapshot();
-    const badTimeline = [...active.state.timeline, { ...active.state.timeline[0]!, revision: active.state.timeline[0]!.revision }];
+    const badTimeline = [
+      ...active.state.timeline,
+      { ...active.state.timeline[0]!, revision: active.state.timeline[0]!.revision - 1 },
+    ];
     const tampered: DomainSnapshot = { ...active, state: { ...active.state, timeline: badTimeline } };
     const rehashed: DomainSnapshot = { ...tampered, stateHash: hashState(tampered.state) };
     expect(verifySnapshot(rehashed)).toEqual({ ok: false, reason: 'TIMELINE_NOT_MONOTONIC' });
+  });
+
+  // T-2-001: ADVANCE 한 번이 여러 step을 지나갈 수 있어(RULE-TIME-002) 같은 revision에
+  // STEP_PASSED 항목이 여럿 남을 수 있다. "단조 증가"가 아니라 "비감소"만 검사한다.
+  it('timeline revision이 같은 값으로 이어지면(같은 ADVANCE 안의 여러 STEP_PASSED) 통과한다', () => {
+    const active = confirmedActiveSnapshot();
+    const sameRevisionTimeline = [
+      ...active.state.timeline,
+      { ...active.state.timeline[0]!, revision: active.state.timeline[0]!.revision },
+    ];
+    const tampered: DomainSnapshot = { ...active, state: { ...active.state, timeline: sameRevisionTimeline } };
+    const rehashed: DomainSnapshot = { ...tampered, stateHash: hashState(tampered.state) };
+    expect(verifySnapshot(rehashed)).toEqual({ ok: true });
   });
 
   it('DRAFT 상태에 pending이 있으면 정합성 위반이다', () => {
@@ -1101,9 +1117,16 @@ describe('simulate — ACCEPT_OFFER', () => {
 });
 
 describe('Command 타입', () => {
-  it('type은 6개 명령으로 고정된다', () => {
+  it('type은 8개 명령으로 고정된다', () => {
     expectTypeOf<Command['type']>().toEqualTypeOf<
-      'CREATE_CAREER' | 'UPDATE_PLAYER_DRAFT' | 'CONFIRM_PLAYER' | 'ADVANCE' | 'RESOLVE_EVENT' | 'ACCEPT_OFFER'
+      | 'CREATE_CAREER'
+      | 'UPDATE_PLAYER_DRAFT'
+      | 'CONFIRM_PLAYER'
+      | 'START_SEASON'
+      | 'ADVANCE'
+      | 'SETTLE_SEASON'
+      | 'RESOLVE_EVENT'
+      | 'ACCEPT_OFFER'
     >();
   });
 });
