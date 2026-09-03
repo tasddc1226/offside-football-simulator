@@ -98,9 +98,14 @@ export function generatePlayerProfile(draft: ConfirmedPlayerDraft, ruleset: Rule
     attributes[key] = clamp(archetype.template[key] + delta + jitter.value, 1, 99);
   }
 
+  const baseOvr = computeBaseOvr(attributes, archetype.roleWeights);
+
+  // T-2-011 10번(a), decision-log 2026-09-03 후속 기록: attributes와 truePotential을 독립으로 굴리면
+  // 표본의 7%가 처음부터 baseOvr > truePotential(성장 여지가 없거나 음수)가 나온다 — roll은 그대로
+  // 두고(rollRange 인자·소비 순서 불변) 결과값만 baseOvr + 1 이상으로 끌어올린다.
   const truePotentialRoll = rollRange(state, archetype.potentialRange.min, archetype.potentialRange.max);
   state = truePotentialRoll.state;
-  const truePotential = truePotentialRoll.value;
+  const truePotential = clamp(Math.max(truePotentialRoll.value, baseOvr + 1), 40, 99);
 
   const minBelowRoll = rollRange(state, ruleset.scoutRange.minBelow.min, ruleset.scoutRange.minBelow.max);
   state = minBelowRoll.state;
@@ -109,8 +114,6 @@ export function generatePlayerProfile(draft: ConfirmedPlayerDraft, ruleset: Rule
   const maxAboveRoll = rollRange(state, ruleset.scoutRange.maxAbove.min, ruleset.scoutRange.maxAbove.max);
   state = maxAboveRoll.state;
   const scoutedPotentialMax = clamp(truePotential + maxAboveRoll.value, 40, 99);
-
-  const baseOvr = computeBaseOvr(attributes, archetype.roleWeights);
 
   return {
     profile: {

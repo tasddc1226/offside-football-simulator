@@ -30,6 +30,12 @@ import {
   career05ChapterEngineCommands,
   career06Settled,
   career06SettledEngineCommands,
+  career07Df,
+  career07DfEngineCommands,
+  career08Mf,
+  career08MfEngineCommands,
+  career09Fw,
+  career09FwEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -320,6 +326,9 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     'career-04-gk.golden.json',
     'career-05-chapter.golden.json',
     'career-06-settled.golden.json',
+    'career-07-df.golden.json',
+    'career-08-mf.golden.json',
+    'career-09-fw.golden.json',
   ];
 
   it('packages/fixtures/src/*/의 *.golden.json 목록이 이 테스트가 재생하는 목록과 같다', () => {
@@ -464,5 +473,49 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     expect(snapshot.stateHash).toBe(career06Settled.golden.stateHash);
     expect(snapshot.state.season).toBeNull();
     expect(snapshot.state.seasonHistory[0]?.result).toBeDefined();
+  });
+
+  // T-2-011 1번: DF/MF/FW 포지션군 fixture. career-04-gk와 같은 독립 실행 형태로 FAST 모드
+  // CREATE_CAREER부터 SETTLE_SEASON까지 이어 재생한다.
+  it('career-07-df: 매 명령 뒤 상태가 스키마를 통과하고 최종 hash가 golden과 같다(SETTLE_SEASON까지)', () => {
+    let counter = 0;
+    const commands = career07DfEngineCommands(() => `golden-c7-${counter++}`);
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career07Df);
+      assertStateRoundTrips(snapshot, `career07Df revision ${snapshot.revision}`);
+    }
+    if (snapshot === null) throw new Error('career07Df 명령 목록이 비어 있다.');
+    expect(snapshot.revision).toBe(career07Df.golden.revision);
+    expect(snapshot.stateHash).toBe(career07Df.golden.stateHash);
+    expect(snapshot.state.season).toBeNull();
+  });
+
+  it('career-08-mf: 매 명령 뒤 상태가 스키마를 통과하고 최종 hash가 golden과 같다(SETTLE_SEASON까지)', () => {
+    let counter = 0;
+    const commands = career08MfEngineCommands(() => `golden-c8-${counter++}`);
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career08Mf);
+      assertStateRoundTrips(snapshot, `career08Mf revision ${snapshot.revision}`);
+    }
+    if (snapshot === null) throw new Error('career08Mf 명령 목록이 비어 있다.');
+    expect(snapshot.revision).toBe(career08Mf.golden.revision);
+    expect(snapshot.stateHash).toBe(career08Mf.golden.stateHash);
+    expect(snapshot.state.season).toBeNull();
+  });
+
+  it('career-09-fw: 매 명령 뒤 상태가 스키마를 통과하고 최종 hash가 golden과 같다(SETTLE_SEASON까지)', () => {
+    let counter = 0;
+    const commands = career09FwEngineCommands(() => `golden-c9-${counter++}`);
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career09Fw);
+      assertStateRoundTrips(snapshot, `career09Fw revision ${snapshot.revision}`);
+    }
+    if (snapshot === null) throw new Error('career09Fw 명령 목록이 비어 있다.');
+    expect(snapshot.revision).toBe(career09Fw.golden.revision);
+    expect(snapshot.stateHash).toBe(career09Fw.golden.stateHash);
+    expect(snapshot.state.season).toBeNull();
   });
 });

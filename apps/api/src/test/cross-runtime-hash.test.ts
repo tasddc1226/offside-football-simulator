@@ -25,6 +25,12 @@ import {
   career04GkEngineCommands,
   career06Settled,
   career06SettledEngineCommands,
+  career07Df,
+  career07DfEngineCommands,
+  career08Mf,
+  career08MfEngineCommands,
+  career09Fw,
+  career09FwEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -122,6 +128,38 @@ function runCareer06SettledOnNode(): DomainSnapshot {
     snapshot = runOrThrow(snapshot, command, career06Settled);
   }
   if (snapshot === null) throw new Error('career06Settled 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
+/** T-2-011: career07Df/career08Mf/career09Fw를 Node에서 재생한다. `hash-probe.worker.ts`의
+ * `runCareer07Df`/`runCareer08Mf`/`runCareer09Fw`와 같은 로직. */
+function runCareer07DfOnNode(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career07DfEngineCommands(() => `node-c7-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career07Df);
+  }
+  if (snapshot === null) throw new Error('career07Df 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
+function runCareer08MfOnNode(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career08MfEngineCommands(() => `node-c8-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career08Mf);
+  }
+  if (snapshot === null) throw new Error('career08Mf 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
+function runCareer09FwOnNode(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career09FwEngineCommands(() => `node-c9-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career09Fw);
+  }
+  if (snapshot === null) throw new Error('career09Fw 명령 목록이 비어 있다.');
   return snapshot;
 }
 
@@ -227,6 +265,24 @@ describe('런타임 간 state hash 일치(Node ↔ workerd)', { timeout: 15000 }
       runOnNode: runCareer06SettledOnNode,
       probeRequest: { kind: 'replaySettled' as const },
       golden: career06Settled.golden,
+    },
+    {
+      label: 'career-07-df',
+      runOnNode: runCareer07DfOnNode,
+      probeRequest: { kind: 'replayDf' as const },
+      golden: career07Df.golden,
+    },
+    {
+      label: 'career-08-mf',
+      runOnNode: runCareer08MfOnNode,
+      probeRequest: { kind: 'replayMf' as const },
+      golden: career08Mf.golden,
+    },
+    {
+      label: 'career-09-fw',
+      runOnNode: runCareer09FwOnNode,
+      probeRequest: { kind: 'replayFw' as const },
+      golden: career09Fw.golden,
     },
   ])('$label 재생의 revision·stateHash·rngState.draws가 Node·workerd·golden에서 모두 같다', async ({ runOnNode, probeRequest, golden }) => {
     const typedGolden = golden as ReplayGolden;

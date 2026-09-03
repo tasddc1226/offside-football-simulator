@@ -18,6 +18,50 @@ async function readRevisionAndReturn(page: Page): Promise<number> {
   return revision;
 }
 
+/**
+ * T-2-011 9번(TEST-E2E-010): 새로고침이 roll을 다시 소비하지 않는지는 화면에 보이는 스코어만으로는
+ * 완전히 확인되지 않는다(우연히 같은 스코어가 나올 수 있다) — `rngState.draws`(도메인 RNG가 지금까지
+ * 소비한 횟수)를 직접 비교한다. 현재 URL의 careerId로 로컬 저장소(packages/platform 웹 채널,
+ * `createDexieLocalStore` 기본 DB명 'offside', `snapshots` 스토어)에서 가장 최근 revision의 스냅샷을
+ * 읽는다 — CareerSnapshot.rngState는 state 문자열과 별개인 최상위 필드라 파싱 없이 바로 읽힌다.
+ */
+async function readLatestRngDraws(page: Page): Promise<number> {
+  const match = /\/career\/([^/]+)/.exec(page.url());
+  if (match === null) throw new Error(`readLatestRngDraws: URL에서 careerId를 찾지 못했다(${page.url()})`);
+  const careerId = match[1];
+
+  return page.evaluate(
+    (cid) =>
+      new Promise<number>((resolve, reject) => {
+        const openReq = indexedDB.open('offside');
+        openReq.onerror = () => reject(openReq.error);
+        openReq.onsuccess = () => {
+          const db = openReq.result;
+          const tx = db.transaction('snapshots', 'readonly');
+          const index = tx.objectStore('snapshots').index('careerId');
+          const records: Array<{ revision: number; rngState: { draws: number } }> = [];
+          const cursorReq = index.openCursor(IDBKeyRange.only(cid));
+          cursorReq.onerror = () => reject(cursorReq.error);
+          cursorReq.onsuccess = () => {
+            const cursor = cursorReq.result;
+            if (cursor) {
+              records.push(cursor.value as { revision: number; rngState: { draws: number } });
+              cursor.continue();
+              return;
+            }
+            if (records.length === 0) {
+              reject(new Error(`readLatestRngDraws: careerId ${cid}의 스냅샷이 없다.`));
+              return;
+            }
+            records.sort((a, b) => a.revision - b.revision);
+            resolve(records[records.length - 1]!.rngState.draws);
+          };
+        };
+      }),
+    careerId,
+  );
+}
+
 test('CHAPTER 모드 데뷔전: 경기 전 맥락 → 판단 확정 → 경기 결과 → 대시보드, 새로고침·뒤로 가기가 재생만 한다', async ({
   page,
 }) => {
@@ -58,16 +102,20 @@ test('CHAPTER 모드 데뷔전: 경기 전 맥락 → 판단 확정 → 경기 �
   await expect(page.getByRole('button', { name: '다음 판단' })).toHaveCount(0);
 
   // mid-flow 새로고침(경기 결과로 넘어가기 전): 판단을 다시 묻지 않고 곧장 결과로 간다 — roll을
-  // 다시 소비했다면 스코어·평점이 실행마다 달라질 것이다(아래에서 대조).
+  // 다시 소비했다면 스코어·평점이 실행마다 달라질 것이다(아래에서 대조). TEST-E2E-010: 화면 스코어
+  // 일치만으로는 우연의 일치를 배제할 수 없으므로 rngState.draws 자체도 새로고침 전후로 비교한다.
+  const rngDrawsBeforeReload = await readLatestRngDraws(page);
   await page.reload();
   await expect(page.getByRole('heading', { level: 2, name: '경기 결과' })).toBeVisible();
   await expect(page.getByRole('radio')).toHaveCount(0);
   const finalScore = await page.locator('[aria-label^="최종 스코어"]').textContent();
+  expect(await readLatestRngDraws(page)).toBe(rngDrawsBeforeReload);
 
   // 한 번 더 새로고침해도 같은 값이다(결정론).
   await page.reload();
   await expect(page.getByRole('heading', { level: 2, name: '경기 결과' })).toBeVisible();
   expect(await page.locator('[aria-label^="최종 스코어"]').textContent()).toBe(finalScore);
+  expect(await readLatestRngDraws(page)).toBe(rngDrawsBeforeReload);
 
   // "다음"은 advance()를 부르지 않고 대시보드로만 이동한다(브리프 — pending은 이미 null).
   await page.getByRole('button', { name: '다음' }).click();

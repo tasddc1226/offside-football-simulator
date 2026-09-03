@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { rulesetProto } from './__fixtures__/career-01.js';
-import { computeBaseOvr } from './player.js';
+import { computeBaseOvr, generatePlayerProfile } from './player.js';
+import { seedRng } from './rng.js';
 import type { AttributeKey } from './types.js';
 
 // 프로토타입 김서준의 세부 능력(docs/content/prototype/season-01-inside-forward.md).
@@ -42,5 +43,39 @@ describe('computeBaseOvr', () => {
   it('가중치에 없는 키는 0으로 취급한다', () => {
     const ovr = computeBaseOvr(PROTOTYPE_ATTRIBUTES, { shooting: 1 });
     expect(ovr).toBe(60);
+  });
+});
+
+/**
+ * T-2-011 10번(a), decision-log 2026-09-03 후속 기록: attributes jitter와 truePotential roll을
+ * 독립으로 굴리면 표본의 약 7%가 `baseOvr > truePotential`로 나온다(성장 여지가 없거나 음수). 모든
+ * archetype × 배경 200개 seed(총 3400 표본, 실제로 관측된 7% 발생률을 여유 있게 덮는 크기)를 훑어
+ * `truePotential >= baseOvr + 1` 불변식이 예외 없이 성립하는지 확인한다.
+ */
+describe('generatePlayerProfile — truePotential ≥ baseOvr + 1 불변식(T-2-011 10번 a)', () => {
+  it('모든 archetype·배경 조합에서 200개 seed 전부 truePotential이 baseOvr보다 최소 1 크다', () => {
+    let sampleCount = 0;
+    for (const archetype of rulesetProto.archetypes) {
+      for (const background of rulesetProto.backgrounds) {
+        for (let i = 0; i < 200; i++) {
+          const draft = {
+            name: '표본',
+            gender: 'UNSPECIFIED' as const,
+            nationalityCode: 'KR',
+            preferredFoot: 'RIGHT' as const,
+            position: archetype.position,
+            archetypeId: archetype.id,
+            backgroundId: background.id,
+          };
+          const generated = generatePlayerProfile(draft, rulesetProto, seedRng(`truepotential-invariant-${archetype.id}-${background.id}-${i}`));
+          sampleCount += 1;
+          expect(
+            generated.profile.truePotential,
+            `${archetype.id}/${background.id}#${i}: baseOvr=${generated.profile.baseOvr}`,
+          ).toBeGreaterThanOrEqual(generated.profile.baseOvr + 1);
+        }
+      }
+    }
+    expect(sampleCount).toBeGreaterThan(1000);
   });
 });

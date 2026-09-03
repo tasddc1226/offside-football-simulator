@@ -1,0 +1,26 @@
+{
+  "commands": [
+    {
+      "type": "RESOLVE_ROLE",
+      "payload": {
+        "decision": "ACCEPT"
+      }
+    },
+    {
+      "type": "ADVANCE",
+      "payload": {
+        "eligibleEvents": []
+      }
+    },
+    {
+      "type": "ADVANCE",
+      "payload": {
+        "eligibleEvents": []
+      }
+    },
+    {
+      "type": "SETTLE_SEASON",
+      "payload": {}
+    }
+  ]
+}

@@ -1,0 +1,206 @@
+{
+  "revision": 15,
+  "stateHash": "4a0febe06980baf2924a0f1d722b544c828f0d0dd14d6bb109de19cb2bbf3450",
+  "rngStateDraws": 398,
+  "age": 18,
+  "seasonHistory": [
+    {
+      "index": 1,
+      "simulationMode": "FAST",
+      "teamId": "seoul-tier1",
+      "competitions": [
+        {
+          "competitionId": "LEAGUE",
+          "kind": "LEAGUE",
+          "played": 22,
+          "won": 8,
+          "drawn": 3,
+          "lost": 11,
+          "goalsFor": 31,
+          "goalsAgainst": 41,
+          "position": 7,
+          "cupRound": null
+        },
+        {
+          "competitionId": "CUP",
+          "kind": "CUP",
+          "played": 4,
+          "won": 4,
+          "drawn": 0,
+          "lost": 0,
+          "goalsFor": 5,
+          "goalsAgainst": 0,
+          "position": null,
+          "cupRound": "WON"
+        }
+      ],
+      "settledAtRevision": 15,
+      "result": {
+        "index": 1,
+        "simulationMode": "FAST",
+        "teamId": "seoul-tier1",
+        "competitions": [
+          {
+            "competitionId": "LEAGUE",
+            "kind": "LEAGUE",
+            "played": 22,
+            "won": 8,
+            "drawn": 3,
+            "lost": 11,
+            "goalsFor": 31,
+            "goalsAgainst": 41,
+            "position": 7,
+            "cupRound": null
+          },
+          {
+            "competitionId": "CUP",
+            "kind": "CUP",
+            "played": 4,
+            "won": 4,
+            "drawn": 0,
+            "lost": 0,
+            "goalsFor": 5,
+            "goalsAgainst": 0,
+            "position": null,
+            "cupRound": "WON"
+          }
+        ],
+        "playerStats": {
+          "group": "MF",
+          "appearances": {
+            "total": 26,
+            "started": 0,
+            "sub": 20,
+            "zeroMinute": 17,
+            "out": 6
+          },
+          "minutes": 170,
+          "ratingSumTenths": 568,
+          "ratedMatches": 9,
+          "yellow": 1,
+          "red": 1,
+          "injuries": 0,
+          "totals": {
+            "group": "MF",
+            "assists": 2,
+            "chancesCreated": 13,
+            "progressivePasses": 39,
+            "passesAttempted": 260,
+            "passesCompleted": 225,
+            "ballRecoveries": 46
+          }
+        },
+        "selectionSummary": {
+          "squadRoleAtStart": "ROTATION",
+          "squadRoleAtEnd": "RESERVE",
+          "started": 0,
+          "sub": 20,
+          "zeroMinute": 17,
+          "out": 6,
+          "minutes": 170,
+          "possibleMinutes": 2340,
+          "finalRank": 2
+        },
+        "roleChanges": [
+          {
+            "step": 1,
+            "type": "ROLE_CHANGE",
+            "decision": "ACCEPT"
+          }
+        ],
+        "promiseFulfilment": {
+          "promised": "RESERVE",
+          "delivered": "RESERVE",
+          "fulfilled": true,
+          "minutesShareBp": 726
+        },
+        "attributeDeltas": [
+          { "key": "shooting", "delta": 1, "causes": [{ "cause": "TRAINING", "centi": 250 }, { "cause": "MINUTES", "centi": -175 }, { "cause": "EXPERIENCE", "centi": 27 }] },
+          { "key": "passing", "delta": 1, "causes": [{ "cause": "TRAINING", "centi": 264 }, { "cause": "MINUTES", "centi": -185 }, { "cause": "EXPERIENCE", "centi": 28 }] },
+          { "key": "dribbling", "delta": 1, "causes": [{ "cause": "TRAINING", "centi": 264 }, { "cause": "MINUTES", "centi": -185 }, { "cause": "EXPERIENCE", "centi": 28 }] },
+          { "key": "tackling", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 39 }, { "cause": "MINUTES", "centi": -28 }, { "cause": "EXPERIENCE", "centi": 4 }] },
+          { "key": "firstTouch", "delta": 1, "causes": [{ "cause": "TRAINING", "centi": 264 }, { "cause": "MINUTES", "centi": -185 }, { "cause": "EXPERIENCE", "centi": 28 }] },
+          { "key": "crossing", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 39 }, { "cause": "MINUTES", "centi": -28 }, { "cause": "EXPERIENCE", "centi": 4 }] },
+          { "key": "goalkeeping", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 39 }, { "cause": "MINUTES", "centi": -28 }, { "cause": "EXPERIENCE", "centi": 4 }] },
+          { "key": "pace", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 49 }, { "cause": "MINUTES", "centi": -35 }, { "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "acceleration", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 49 }, { "cause": "MINUTES", "centi": -35 }, { "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "agility", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 49 }, { "cause": "MINUTES", "centi": -35 }, { "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "jumping", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 49 }, { "cause": "MINUTES", "centi": -35 }, { "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "stamina", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 49 }, { "cause": "MINUTES", "centi": -35 }, { "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "strength", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 49 }, { "cause": "MINUTES", "centi": -35 }, { "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "durability", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 49 }, { "cause": "MINUTES", "centi": -35 }, { "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "decisions", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 230 }, { "cause": "MINUTES", "centi": -161 }, { "cause": "EXPERIENCE", "centi": 25 }] },
+          { "key": "concentration", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 34 }, { "cause": "MINUTES", "centi": -24 }, { "cause": "EXPERIENCE", "centi": 3 }] },
+          { "key": "composure", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 219 }, { "cause": "MINUTES", "centi": -154 }, { "cause": "EXPERIENCE", "centi": 23 }] },
+          { "key": "positioning", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 219 }, { "cause": "MINUTES", "centi": -154 }, { "cause": "EXPERIENCE", "centi": 23 }] },
+          { "key": "leadership", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 34 }, { "cause": "MINUTES", "centi": -24 }, { "cause": "EXPERIENCE", "centi": 3 }] },
+          { "key": "consistency", "delta": 0, "causes": [{ "cause": "TRAINING", "centi": 34 }, { "cause": "MINUTES", "centi": -24 }, { "cause": "EXPERIENCE", "centi": 3 }] }
+        ],
+        "baseOvr": { "before": 63, "after": 64 },
+        "stateDeltas": {
+          "form": { "before": 50, "after": 50 },
+          "fitness": { "before": 100, "after": 80 },
+          "morale": { "before": 46, "after": 60 },
+          "managerTrust": { "before": 45, "after": 45 }
+        },
+        "chapters": [],
+        "hash": "29af0ebc78273f0c49e56c23d4978ce17aa86b6c7b39a6934f8fe1328eaef711"
+      }
+    }
+  ],
+  "beforeSettlement": {
+    "matchesPlayed": 26,
+    "playerStats": {
+      "group": "MF",
+      "appearances": {
+        "total": 26,
+        "started": 0,
+        "sub": 20,
+        "zeroMinute": 17,
+        "out": 6
+      },
+      "minutes": 170,
+      "ratingSumTenths": 568,
+      "ratedMatches": 9,
+      "yellow": 1,
+      "red": 1,
+      "injuries": 0,
+      "totals": {
+        "group": "MF",
+        "assists": 2,
+        "chancesCreated": 13,
+        "progressivePasses": 39,
+        "passesAttempted": 260,
+        "passesCompleted": 225,
+        "ballRecoveries": 46
+      }
+    },
+    "averageRatingTenths": 63,
+    "competitions": [
+      {
+        "competitionId": "LEAGUE",
+        "kind": "LEAGUE",
+        "played": 22,
+        "won": 8,
+        "drawn": 3,
+        "lost": 11,
+        "goalsFor": 31,
+        "goalsAgainst": 41,
+        "position": 7,
+        "cupRound": null
+      },
+      {
+        "competitionId": "CUP",
+        "kind": "CUP",
+        "played": 4,
+        "won": 4,
+        "drawn": 0,
+        "lost": 0,
+        "goalsFor": 5,
+        "goalsAgainst": 0,
+        "position": null,
+        "cupRound": "WON"
+      }
+    ]
+  }
+}

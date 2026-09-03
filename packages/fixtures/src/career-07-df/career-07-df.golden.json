@@ -1,103 +1,103 @@
 {
   "revision": 15,
-  "stateHash": "40c4bf4265ecb2f8413f40c055551482bed4b54ae1f12d5b95f1890d120ac9ad",
+  "stateHash": "7c7ba0bc885ef40874a3f0d4fe0d6df9659e02972055e1e6035cdfb924af90c8",
   "rngStateDraws": 398,
   "age": 18,
   "seasonHistory": [
     {
       "index": 1,
       "simulationMode": "FAST",
-      "teamId": "busan-tier2",
+      "teamId": "seoul-tier1",
       "competitions": [
         {
           "competitionId": "LEAGUE",
           "kind": "LEAGUE",
           "played": 22,
-          "won": 7,
-          "drawn": 9,
-          "lost": 6,
-          "goalsFor": 30,
-          "goalsAgainst": 27,
-          "position": 5,
+          "won": 9,
+          "drawn": 10,
+          "lost": 3,
+          "goalsFor": 28,
+          "goalsAgainst": 20,
+          "position": 1,
           "cupRound": null
         },
         {
           "competitionId": "CUP",
           "kind": "CUP",
-          "played": 3,
-          "won": 1,
-          "drawn": 1,
-          "lost": 1,
-          "goalsFor": 5,
-          "goalsAgainst": 5,
+          "played": 4,
+          "won": 4,
+          "drawn": 0,
+          "lost": 0,
+          "goalsFor": 7,
+          "goalsAgainst": 0,
           "position": null,
-          "cupRound": "OUT_SEMI"
+          "cupRound": "WON"
         }
       ],
       "settledAtRevision": 15,
       "result": {
         "index": 1,
         "simulationMode": "FAST",
-        "teamId": "busan-tier2",
+        "teamId": "seoul-tier1",
         "competitions": [
           {
             "competitionId": "LEAGUE",
             "kind": "LEAGUE",
             "played": 22,
-            "won": 7,
-            "drawn": 9,
-            "lost": 6,
-            "goalsFor": 30,
-            "goalsAgainst": 27,
-            "position": 5,
+            "won": 9,
+            "drawn": 10,
+            "lost": 3,
+            "goalsFor": 28,
+            "goalsAgainst": 20,
+            "position": 1,
             "cupRound": null
           },
           {
             "competitionId": "CUP",
             "kind": "CUP",
-            "played": 3,
-            "won": 1,
-            "drawn": 1,
-            "lost": 1,
-            "goalsFor": 5,
-            "goalsAgainst": 5,
+            "played": 4,
+            "won": 4,
+            "drawn": 0,
+            "lost": 0,
+            "goalsFor": 7,
+            "goalsAgainst": 0,
             "position": null,
-            "cupRound": "OUT_SEMI"
+            "cupRound": "WON"
           }
         ],
         "playerStats": {
-          "group": "GK",
+          "group": "DF",
           "appearances": {
-            "total": 25,
-            "started": 21,
-            "sub": 0,
-            "zeroMinute": 4,
-            "out": 4
+            "total": 26,
+            "started": 0,
+            "sub": 24,
+            "zeroMinute": 15,
+            "out": 2
           },
-          "minutes": 1700,
-          "ratingSumTenths": 1447,
-          "ratedMatches": 21,
-          "yellow": 0,
-          "red": 0,
-          "injuries": 2,
+          "minutes": 220,
+          "ratingSumTenths": 712,
+          "ratedMatches": 11,
+          "yellow": 1,
+          "red": 1,
+          "injuries": 1,
           "totals": {
-            "group": "GK",
-            "saves": 57,
-            "psxgMinusGoalsCenti": 60,
-            "cleanSheet": 6,
-            "crossesClaimed": 32,
-            "buildUpPasses": 414
+            "group": "DF",
+            "tackles": 18,
+            "interceptions": 18,
+            "aerialsWon": 23,
+            "goalsConcededInvolved": 3,
+            "cleanSheet": 0
           }
         },
         "selectionSummary": {
-          "squadRoleAtStart": "STARTER",
-          "squadRoleAtEnd": "RESERVE",
-          "started": 21,
-          "sub": 0,
-          "zeroMinute": 4,
-          "out": 4,
-          "minutes": 1700,
-          "possibleMinutes": 2250,
+          "squadRoleAtStart": "ROTATION",
+          "squadRoleAtEnd": "ROTATION",
+          "started": 0,
+          "sub": 24,
+          "zeroMinute": 15,
+          "out": 2,
+          "minutes": 220,
+          "possibleMinutes": 2340,
           "finalRank": 3
         },
         "roleChanges": [
@@ -108,10 +108,10 @@
           }
         ],
         "promiseFulfilment": {
-          "promised": "BENCH",
-          "delivered": "STARTER",
+          "promised": "RESERVE",
+          "delivered": "RESERVE",
           "fulfilled": true,
-          "minutesShareBp": 7556
+          "minutesShareBp": 940
         },
         "attributeDeltas": [
           {
@@ -124,11 +124,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 5
               }
             ]
           },
@@ -142,11 +142,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 5
               }
             ]
           },
@@ -160,11 +160,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 5
               }
             ]
           },
@@ -174,15 +174,15 @@
             "causes": [
               {
                 "cause": "TRAINING",
-                "centi": 3
+                "centi": 24
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -17
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 35
               }
             ]
           },
@@ -196,11 +196,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 5
               }
             ]
           },
@@ -214,11 +214,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 5
               }
             ]
           },
@@ -228,15 +228,15 @@
             "causes": [
               {
                 "cause": "TRAINING",
-                "centi": 24
+                "centi": 3
               },
               {
                 "cause": "MINUTES",
-                "centi": -7
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 67
+                "centi": 5
               }
             ]
           },
@@ -250,11 +250,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -2
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 6
               }
             ]
           },
@@ -268,29 +268,29 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -2
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 6
               }
             ]
           },
           {
             "key": "agility",
-            "delta": 1,
+            "delta": 0,
             "causes": [
               {
                 "cause": "TRAINING",
-                "centi": 30
+                "centi": 4
               },
               {
                 "cause": "MINUTES",
-                "centi": -9
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 84
+                "centi": 6
               }
             ]
           },
@@ -300,15 +300,15 @@
             "causes": [
               {
                 "cause": "TRAINING",
-                "centi": 16
+                "centi": 28
               },
               {
                 "cause": "MINUTES",
-                "centi": -5
+                "centi": -20
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 46
+                "centi": 41
               }
             ]
           },
@@ -322,11 +322,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -2
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 6
               }
             ]
           },
@@ -336,15 +336,15 @@
             "causes": [
               {
                 "cause": "TRAINING",
-                "centi": 4
+                "centi": 30
               },
               {
                 "cause": "MINUTES",
-                "centi": -2
+                "centi": -21
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 44
               }
             ]
           },
@@ -354,15 +354,15 @@
             "causes": [
               {
                 "cause": "TRAINING",
-                "centi": 4
+                "centi": 14
               },
               {
                 "cause": "MINUTES",
-                "centi": -2
+                "centi": -10
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 20
               }
             ]
           },
@@ -372,15 +372,15 @@
             "causes": [
               {
                 "cause": "TRAINING",
-                "centi": 11
+                "centi": 13
               },
               {
                 "cause": "MINUTES",
-                "centi": -4
+                "centi": -10
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 32
+                "centi": 19
               }
             ]
           },
@@ -390,15 +390,15 @@
             "causes": [
               {
                 "cause": "TRAINING",
-                "centi": 19
+                "centi": 21
               },
               {
                 "cause": "MINUTES",
-                "centi": -6
+                "centi": -15
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 55
+                "centi": 30
               }
             ]
           },
@@ -412,11 +412,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -5
+                "centi": -12
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 46
+                "centi": 24
               }
             ]
           },
@@ -430,11 +430,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -7
+                "centi": -15
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 58
+                "centi": 30
               }
             ]
           },
@@ -448,11 +448,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 8
+                "centi": 4
               }
             ]
           },
@@ -466,30 +466,30 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 8
+                "centi": 4
               }
             ]
           }
         ],
         "baseOvr": {
-          "before": 65,
-          "after": 65
+          "before": 62,
+          "after": 62
         },
         "stateDeltas": {
           "form": {
-            "before": 54,
+            "before": 48,
             "after": 50
           },
           "fitness": {
-            "before": 50,
+            "before": 97,
             "after": 80
           },
           "morale": {
-            "before": 79,
+            "before": 67,
             "after": 60
           },
           "managerTrust": {
@@ -498,61 +498,61 @@
           }
         },
         "chapters": [],
-        "hash": "6dbb6873add8ecb9c87f9eb04389169d099ab54ae3539327431e6b58dfc69a8d"
+        "hash": "5a824bf7cefebdb5a7d3a4429a0d09291789560d9e4ff4d01f63a2209d56d3ce"
       }
     }
   ],
   "beforeSettlement": {
-    "matchesPlayed": 25,
+    "matchesPlayed": 26,
     "playerStats": {
-      "group": "GK",
+      "group": "DF",
       "appearances": {
-        "total": 25,
-        "started": 21,
-        "sub": 0,
-        "zeroMinute": 4,
-        "out": 4
+        "total": 26,
+        "started": 0,
+        "sub": 24,
+        "zeroMinute": 15,
+        "out": 2
       },
-      "minutes": 1700,
-      "ratingSumTenths": 1447,
-      "ratedMatches": 21,
-      "yellow": 0,
-      "red": 0,
-      "injuries": 2,
+      "minutes": 220,
+      "ratingSumTenths": 712,
+      "ratedMatches": 11,
+      "yellow": 1,
+      "red": 1,
+      "injuries": 1,
       "totals": {
-        "group": "GK",
-        "saves": 57,
-        "psxgMinusGoalsCenti": 60,
-        "cleanSheet": 6,
-        "crossesClaimed": 32,
-        "buildUpPasses": 414
+        "group": "DF",
+        "tackles": 18,
+        "interceptions": 18,
+        "aerialsWon": 23,
+        "goalsConcededInvolved": 3,
+        "cleanSheet": 0
       }
     },
-    "averageRatingTenths": 69,
+    "averageRatingTenths": 65,
     "competitions": [
       {
         "competitionId": "LEAGUE",
         "kind": "LEAGUE",
         "played": 22,
-        "won": 7,
-        "drawn": 9,
-        "lost": 6,
-        "goalsFor": 30,
-        "goalsAgainst": 27,
-        "position": 5,
+        "won": 9,
+        "drawn": 10,
+        "lost": 3,
+        "goalsFor": 28,
+        "goalsAgainst": 20,
+        "position": 1,
         "cupRound": null
       },
       {
         "competitionId": "CUP",
         "kind": "CUP",
-        "played": 3,
-        "won": 1,
-        "drawn": 1,
-        "lost": 1,
-        "goalsFor": 5,
-        "goalsAgainst": 5,
+        "played": 4,
+        "won": 4,
+        "drawn": 0,
+        "lost": 0,
+        "goalsFor": 7,
+        "goalsAgainst": 0,
         "position": null,
-        "cupRound": "OUT_SEMI"
+        "cupRound": "WON"
       }
     ]
   }
