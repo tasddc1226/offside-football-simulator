@@ -9,13 +9,21 @@ import { PERMANENT_TARGETS, CURRENT_TARGETS, CONTEXT_TARGETS, RELATION_TARGETS }
 const PACK_DIR = dirname(fileURLToPath(import.meta.url));
 
 describe('packs/0.1.0', () => {
-  it('has exactly 10 events that load and validate without errors', () => {
+  it('has exactly 10 events and 3 chapters that load and validate without errors', () => {
     const loaded = loadPack(PACK_DIR);
     expect(loaded.events).toHaveLength(10);
+    expect(loaded.chapters).toHaveLength(3);
 
     const result = validatePack(loaded, { writeChecksum: false });
     expect(result.errors).toEqual([]);
     expect(result.eventCount).toBe(10);
+    expect(result.chapterCount).toBe(3);
+  });
+
+  it('every chapter id is unique', () => {
+    const loaded = loadPack(PACK_DIR);
+    const ids = loaded.chapters.map((c) => (c.raw as { id: string }).id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('every event id is unique', () => {

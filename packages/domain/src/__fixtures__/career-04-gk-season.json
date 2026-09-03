@@ -23,18 +23,6 @@
       }
     },
     {
-      "type": "ADVANCE",
-      "payload": {
-        "eligibleEvents": []
-      }
-    },
-    {
-      "type": "ADVANCE",
-      "payload": {
-        "eligibleEvents": []
-      }
-    },
-    {
       "type": "SETTLE_SEASON",
       "payload": {}
     }

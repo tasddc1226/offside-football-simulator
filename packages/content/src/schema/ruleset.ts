@@ -223,14 +223,43 @@ export const TacticalStyleSchema = z
   });
 export type TacticalStyle = z.infer<typeof TacticalStyleSchema>;
 
-export const LeagueSchema = z.strictObject({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  tier: LeagueTierSchema,
-  teamCount: z.number().int().min(4),
-  rounds: z.literal(2),
-  strength: z.number().int().min(0).max(100),
-});
+// T-2-004 D-38: `rivalOpponentIndex`(1~teamCount-1, 이름 없는 상대 `${league.id}-opp-${n}` 중
+// 라이벌)와 `promotionSpots`·`relegationSpots`(DECIDER 승격·강등 경계, 0이면 그 경계 없음).
+export const LeagueSchema = z
+  .strictObject({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    tier: LeagueTierSchema,
+    teamCount: z.number().int().min(4),
+    rounds: z.literal(2),
+    strength: z.number().int().min(0).max(100),
+    rivalOpponentIndex: z.number().int().min(1),
+    promotionSpots: z.number().int().nonnegative(),
+    relegationSpots: z.number().int().nonnegative(),
+  })
+  .superRefine((league, ctx) => {
+    if (league.rivalOpponentIndex > league.teamCount - 1) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `rivalOpponentIndex는 1 이상 teamCount-1(${league.teamCount - 1}) 이하여야 한다: ${league.rivalOpponentIndex}`,
+        path: ['rivalOpponentIndex'],
+      });
+    }
+    if (league.promotionSpots > league.teamCount) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `promotionSpots는 teamCount(${league.teamCount}) 이하여야 한다: ${league.promotionSpots}`,
+        path: ['promotionSpots'],
+      });
+    }
+    if (league.relegationSpots > league.teamCount) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `relegationSpots는 teamCount(${league.teamCount}) 이하여야 한다: ${league.relegationSpots}`,
+        path: ['relegationSpots'],
+      });
+    }
+  });
 export type League = z.infer<typeof LeagueSchema>;
 
 export const CupSchema = z.strictObject({

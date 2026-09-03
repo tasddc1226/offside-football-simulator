@@ -5,6 +5,7 @@ import {
   hashState,
   simulate,
   type CareerState as DomainCareerState,
+  type ChapterRecord as DomainChapterRecord,
   type Contract as DomainContract,
   type DomainSnapshot,
   type Effect as DomainEffect,
@@ -25,6 +26,8 @@ import {
   career03UnderdogEngineCommands,
   career04Gk,
   career04GkEngineCommands,
+  career05Chapter,
+  career05ChapterEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -32,6 +35,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
 import {
   CareerStateSchema,
+  ChapterRecordSchema,
   ContractSchema,
   EffectSchema,
   FootballSeasonSchema,
@@ -79,6 +83,12 @@ describe('domain 타입 동일성', () => {
 
   it('SeasonSummary', () => {
     expectTypeOf<z.infer<typeof SeasonSummarySchema>>().toEqualTypeOf<DomainSeasonSummary>();
+  });
+
+  // T-2-004 D-38: FootballSeason과 마찬가지로 CareerState 전체 비교가 이미 포함하지만, chapters
+  // 드리프트를 더 좁게 잡기 위해 따로 둔다.
+  it('ChapterRecord', () => {
+    expectTypeOf<z.infer<typeof ChapterRecordSchema>>().toEqualTypeOf<DomainChapterRecord>();
   });
 });
 
@@ -215,6 +225,7 @@ function confirmedStateLiteral() {
     activeEffects: [],
     deferredEffects: [],
     resolvedEventIds: [],
+    resolvedChapterIds: [],
     rngState: { s: [1, 2, 3, 4] as const, draws: 23 },
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',
@@ -302,6 +313,7 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     'career-02-season.golden.json',
     'career-03-underdog.golden.json',
     'career-04-gk.golden.json',
+    'career-05-chapter.golden.json',
   ];
 
   it('packages/fixtures/src/*/의 *.golden.json 목록이 이 테스트가 재생하는 목록과 같다', () => {
@@ -405,5 +417,29 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     expect(snapshot.revision).toBe(career04Gk.golden.revision);
     expect(snapshot.stateHash).toBe(career04Gk.golden.stateHash);
     expect(snapshot.state.season).toBeNull();
+  });
+
+  // T-2-004 D-38: career-01 뒤에 CHAPTER 모드로 START_SEASON → RESOLVE_ROLE → ADVANCE(chapterCandidates
+  // 포함) → RESOLVE_CHAPTER×2 → ADVANCE×2 → SETTLE_SEASON까지 이어 재생한다(career-02-season과 같은 방식).
+  it('career-05-chapter: career-01 뒤에 이어 재생한 매 명령 뒤 상태가 스키마를 통과하고(CHAPTER pending 포함) 최종 hash가 golden과 같다', () => {
+    let counter = 0;
+    const newId = () => `golden-c5-${counter++}`;
+
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of career01EngineCommands(newId)) {
+      snapshot = runOrThrow(snapshot, command, career01);
+    }
+    if (snapshot === null) throw new Error('career01 선행 재생이 비어 있다.');
+
+    let sawChapterPending = false;
+    for (const command of career05ChapterEngineCommands(newId, snapshot.revision)) {
+      snapshot = runOrThrow(snapshot, command, career05Chapter);
+      assertStateRoundTrips(snapshot, `career05Chapter revision ${snapshot.revision}`);
+      if (snapshot.state.pending?.kind === 'CHAPTER') sawChapterPending = true;
+    }
+
+    expect(sawChapterPending, 'CHAPTER pending 상태를 거쳐야 한다').toBe(true);
+    expect(snapshot.revision).toBe(career05Chapter.golden.revision);
+    expect(snapshot.stateHash).toBe(career05Chapter.golden.stateHash);
   });
 });

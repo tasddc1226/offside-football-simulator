@@ -1,7 +1,7 @@
 {
   "FAST": {
-    "revision": 17,
-    "stateHash": "fd52cd7582c5d3f7e4e0f5b93a8efa439c95c01a4f508d4c566862e32f92f06a",
+    "revision": 15,
+    "stateHash": "db167c3e09a9eeab567f7068ab8c8552434fae6e494be2771d8e6b0e29d0d3da",
     "rngStateDraws": 398,
     "age": 18,
     "seasonHistory": [
@@ -35,13 +35,11 @@
             "cupRound": "WON"
           }
         ],
-        "settledAtRevision": 17
+        "settledAtRevision": 15
       }
     ],
     "checkpoints": [
       "SEASON_START",
-      "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
       "STEP_BOUNDARY",
       "STEP_BOUNDARY",
       "STEP_BOUNDARY",
@@ -69,8 +67,8 @@
       {
         "index": 3,
         "summary": {
-          "passedAtRevision": 14,
-          "decisionsOpened": 1,
+          "passedAtRevision": 13,
+          "decisionsOpened": 0,
           "matchesPlayed": 3,
           "results": [
             {
@@ -103,7 +101,7 @@
       {
         "index": 4,
         "summary": {
-          "passedAtRevision": 14,
+          "passedAtRevision": 13,
           "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
@@ -129,7 +127,7 @@
       {
         "index": 5,
         "summary": {
-          "passedAtRevision": 14,
+          "passedAtRevision": 13,
           "decisionsOpened": 0,
           "matchesPlayed": 4,
           "results": [
@@ -171,7 +169,7 @@
       {
         "index": 6,
         "summary": {
-          "passedAtRevision": 14,
+          "passedAtRevision": 13,
           "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
@@ -197,7 +195,7 @@
       {
         "index": 7,
         "summary": {
-          "passedAtRevision": 15,
+          "passedAtRevision": 14,
           "decisionsOpened": 1,
           "matchesPlayed": 4,
           "results": [
@@ -239,7 +237,7 @@
       {
         "index": 8,
         "summary": {
-          "passedAtRevision": 15,
+          "passedAtRevision": 14,
           "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
@@ -265,7 +263,7 @@
       {
         "index": 9,
         "summary": {
-          "passedAtRevision": 15,
+          "passedAtRevision": 14,
           "decisionsOpened": 0,
           "matchesPlayed": 4,
           "results": [
@@ -307,7 +305,7 @@
       {
         "index": 10,
         "summary": {
-          "passedAtRevision": 15,
+          "passedAtRevision": 14,
           "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
@@ -333,8 +331,8 @@
       {
         "index": 11,
         "summary": {
-          "passedAtRevision": 16,
-          "decisionsOpened": 1,
+          "passedAtRevision": 14,
+          "decisionsOpened": 0,
           "matchesPlayed": 3,
           "results": [
             {
@@ -439,8 +437,8 @@
     }
   },
   "CHAPTER": {
-    "revision": 29,
-    "stateHash": "e567639d4f35e53c46990af81ac1dac8bf6612ba421fa77001e275525a26a307",
+    "revision": 25,
+    "stateHash": "ff3f217bcc882913b70882f673ab0a0e56b20489dc7081ed9ea8cf55280927d6",
     "rngStateDraws": 403,
     "age": 18,
     "seasonHistory": [
@@ -474,7 +472,7 @@
             "cupRound": "WON"
           }
         ],
-        "settledAtRevision": 29
+        "settledAtRevision": 25
       }
     ],
     "checkpoints": [
@@ -483,18 +481,14 @@
       "STEP_BOUNDARY",
       "EVENT_RESOLVED",
       "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
       "EVENT_RESOLVED",
       "STEP_BOUNDARY",
       "EVENT_RESOLVED",
       "STEP_BOUNDARY",
       "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
       "EVENT_RESOLVED",
       "STEP_BOUNDARY",
       "EVENT_RESOLVED",
-      "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
       "STEP_BOUNDARY",
       "SEASON_SETTLED"
     ],
@@ -520,8 +514,8 @@
       {
         "index": 3,
         "summary": {
-          "passedAtRevision": 16,
-          "decisionsOpened": 1,
+          "passedAtRevision": 15,
+          "decisionsOpened": 0,
           "matchesPlayed": 3,
           "results": [
             {
@@ -554,7 +548,7 @@
       {
         "index": 4,
         "summary": {
-          "passedAtRevision": 18,
+          "passedAtRevision": 17,
           "decisionsOpened": 1,
           "matchesPlayed": 2,
           "results": [
@@ -580,7 +574,7 @@
       {
         "index": 5,
         "summary": {
-          "passedAtRevision": 20,
+          "passedAtRevision": 19,
           "decisionsOpened": 1,
           "matchesPlayed": 4,
           "results": [
@@ -622,8 +616,8 @@
       {
         "index": 6,
         "summary": {
-          "passedAtRevision": 21,
-          "decisionsOpened": 1,
+          "passedAtRevision": 19,
+          "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
             {
@@ -648,7 +642,7 @@
       {
         "index": 7,
         "summary": {
-          "passedAtRevision": 22,
+          "passedAtRevision": 20,
           "decisionsOpened": 1,
           "matchesPlayed": 4,
           "results": [
@@ -690,7 +684,7 @@
       {
         "index": 8,
         "summary": {
-          "passedAtRevision": 24,
+          "passedAtRevision": 22,
           "decisionsOpened": 1,
           "matchesPlayed": 2,
           "results": [
@@ -716,7 +710,7 @@
       {
         "index": 9,
         "summary": {
-          "passedAtRevision": 26,
+          "passedAtRevision": 24,
           "decisionsOpened": 1,
           "matchesPlayed": 4,
           "results": [
@@ -758,8 +752,8 @@
       {
         "index": 10,
         "summary": {
-          "passedAtRevision": 27,
-          "decisionsOpened": 1,
+          "passedAtRevision": 24,
+          "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
             {
@@ -784,8 +778,8 @@
       {
         "index": 11,
         "summary": {
-          "passedAtRevision": 28,
-          "decisionsOpened": 1,
+          "passedAtRevision": 24,
+          "decisionsOpened": 0,
           "matchesPlayed": 3,
           "results": [
             {

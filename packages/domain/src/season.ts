@@ -1,8 +1,9 @@
+import { selectChapter, type ChapterCandidateInput, type ChapterOpenResult } from './chapter.js';
 import { rollRange } from './roll-range.js';
 import type { RngState } from './rng.js';
-import type { LeagueCalendar, LeagueCalendarSlot } from './ruleset.js';
+import type { League, LeagueCalendar, LeagueCalendarSlot } from './ruleset.js';
 import { computeRoleProposal, type RoleProposalContext } from './selection.js';
-import type { CompetitionRecord, DecisionSlot, Pending, SeasonStep, SimulationMode, StepMatchResult } from './types.js';
+import type { CompetitionRecord, DecisionSlot, MatchRecord, Pending, SeasonStep, SimulationMode, StepMatchResult } from './types.js';
 
 /** RULE-TIME-004: 시즌당 핵심 경기 챕터 상한(모드 공통). */
 const CHAPTER_BUDGET_CAP = 4;
@@ -162,7 +163,9 @@ export type SlotOpenResult =
  * 한 step의 decisionSlots 중 이번 ADVANCE에서 열 슬롯 하나를 고른다. 예산에 잘린 슬롯과 모드가
  * 거르는 슬롯은 후보에서 빠진다. EVENT는 eligibleEvents가 비어 있으면 건너뛴다(roll 없음, RULE-TIME-004
  * 문서 "eligibleEvents가 비어 있으면 그 슬롯은 건너뛴다"). ROLE은 `roleContext`로 `computeRoleProposal`을
- * 계산해 `ROLE_PROPOSAL` pending을 연다(roll을 소비하지 않는다 — D-34). 나머지 종류는 플레이스홀더로
+ * 계산해 `ROLE_PROPOSAL` pending을 연다(roll을 소비하지 않는다 — D-34). T-2-004 D-38: CHAPTER는
+ * `walkToNextDecision`이 미리 계산해 넘긴 `chapterOpen`(roll 없음, `selectChapter` 결과)이 null이면
+ * 건너뛴다(이 step에 맞는 챕터 후보가 없었다는 뜻 — 일반 경기로 지나간다). 나머지 종류는 플레이스홀더로
  * 무조건 연다.
  */
 export function selectOpenSlot(
@@ -171,6 +174,7 @@ export function selectOpenSlot(
   eligibleEvents: readonly EligibleEvent[],
   rngState: RngState,
   roleContext: RoleProposalContext | null,
+  chapterOpen: ChapterOpenResult | null,
 ): SlotOpenResult {
   const candidates = step.decisionSlots
     .filter((slot) => !slot.skippedByBudget)
@@ -209,12 +213,19 @@ export function selectOpenSlot(
     }
 
     if (slot.kind === 'CHAPTER') {
+      if (chapterOpen === null) continue;
       return {
         opened: true,
-        pending:
-          slot.importance === undefined
-            ? { kind: 'CHAPTER', step: step.index }
-            : { kind: 'CHAPTER', step: step.index, importance: slot.importance },
+        pending: {
+          kind: 'CHAPTER',
+          step: step.index,
+          chapterId: chapterOpen.chapterId,
+          version: chapterOpen.version,
+          importance: chapterOpen.importance,
+          matchId: chapterOpen.matchId,
+          decisionsTotal: chapterOpen.decisionsTotal,
+          resolved: [],
+        },
         rngState,
       };
     }
@@ -246,8 +257,24 @@ export type SeasonWalkResult = {
  * T-2-003 D-35: step 하나의 예정 경기를 결정 슬롯 확인 전에 처리한다. 경기는 `season.rngState`가
  * 아니라 별도 경기 전용 RNG 스트림을 쓴다(호출자가 closure로 관리 — FAST·CHAPTER가 결정 슬롯에서
  * 쓰는 rngState 소비량이 달라도 경기 결과가 byte-identical하도록 결정 RNG와 완전히 분리한다).
+ * T-2-004 D-38: `records`는 이 step에서 방금 재생된 `MatchRecord[]`(순서대로), `competitions`는 그
+ * 경기까지 반영된 현재 대회 기록(DECIDER의 리그 순위 판정용) — `selectChapter`가 이 둘을 쓴다.
  */
-export type PlayStepMatches = (stepIndex: number) => { results: StepMatchResult[] };
+export type PlayStepMatches = (stepIndex: number) => {
+  results: StepMatchResult[];
+  records: MatchRecord[];
+  competitions: readonly CompetitionRecord[];
+};
+
+/** T-2-004 D-38: `walkToNextDecision`이 매 step마다 `selectChapter`에 넘기는, step에 안 걸리는 맥락. */
+export type ChapterWalkContext = {
+  chapterCandidates: readonly ChapterCandidateInput[];
+  tags: readonly string[];
+  resolvedChapterIds: readonly string[];
+  existingChapterIds: readonly string[];
+  league: League;
+  seasonIndex: number;
+};
 
 /**
  * RULE-TIME-002: `startStepIndex`부터 다음 결정이 열리는 step 또는 step 12(SETTLEMENT)까지 걷는다.
@@ -257,7 +284,10 @@ export type PlayStepMatches = (stepIndex: number) => { results: StepMatchResult[
  * "다음에 이 step을 다시 보면 summary가 비어 있으니 결정이 열렸던 step이다"로 정확히 닫힌다).
  * T-2-003 D-35: 각 step의 결정 슬롯을 확인하기 전에 `playStepMatches`로 그 step의 예정 경기를
  * 먼저 처리한다(pending이 열리는 step도 포함 — 그 step이 나중에 닫힐 때 결과를 쓸 수 있도록
- * `season.matches`에 남는다).
+ * `season.matches`에 남는다). T-2-004 D-38: 경기를 돌린 직후, `selectOpenSlot` 전에 `selectChapter`를
+ * 불러 이 step에 핵심 경기 챕터가 열리는지 본다(roll 없음). `matchesBeforeWalk`는 이 walk 이전에
+ * 이미 시즌에 쌓인 경기(전 ADVANCE 호출분, DEBUT의 "커리어 첫 출전" 판정에 필요)이고, 이 walk 동안
+ * 재생되는 경기는 step마다 `matchesSoFar`에 누적한다.
  */
 export function walkToNextDecision(
   steps: SeasonStep[],
@@ -268,17 +298,35 @@ export function walkToNextDecision(
   revision: number,
   roleContext: RoleProposalContext | null,
   playStepMatches: PlayStepMatches,
+  matchesBeforeWalk: readonly MatchRecord[],
+  chapterContext: ChapterWalkContext,
 ): SeasonWalkResult {
   let currentStepIndex = startStepIndex;
   let pending: Pending = null;
   let nextRngState = rngState;
   let nextSteps = steps;
+  let matchesSoFar = [...matchesBeforeWalk];
   const passedStepIndexes: number[] = [];
 
   while (currentStepIndex < 12) {
     const step = findSeasonStep(nextSteps, currentStepIndex);
     const matchResult = playStepMatches(currentStepIndex);
-    const opened = selectOpenSlot(step, mode, eligibleEvents, nextRngState, roleContext);
+    const chapterOpen = selectChapter({
+      step,
+      steps: nextSteps,
+      seasonIndex: chapterContext.seasonIndex,
+      mode,
+      matchesThisStep: matchResult.records,
+      matchesBeforeThisStep: matchesSoFar,
+      competitions: matchResult.competitions,
+      candidates: chapterContext.chapterCandidates,
+      tags: chapterContext.tags,
+      resolvedChapterIds: chapterContext.resolvedChapterIds,
+      existingChapterIds: chapterContext.existingChapterIds,
+      league: chapterContext.league,
+    });
+    matchesSoFar = [...matchesSoFar, ...matchResult.records];
+    const opened = selectOpenSlot(step, mode, eligibleEvents, nextRngState, roleContext, chapterOpen);
     if (opened.opened) {
       pending = opened.pending;
       nextRngState = opened.rngState;
@@ -297,17 +345,15 @@ export function walkToNextDecision(
 }
 
 /**
- * ADVANCE가 CHAPTER·CONTRACT·INJURY·NATIONAL_TEAM pending을 "자동 통과"로 닫을 수 있는지. T-2-002
- * D-34: ROLE은 더 이상 자동 통과 대상이 아니다 — `selectOpenSlot`이 ROLE 슬롯을 `ROLE_PROPOSAL`
- * pending으로 열고, `RESOLVE_ROLE` 명령으로만 닫힌다.
+ * ADVANCE가 CONTRACT·INJURY·NATIONAL_TEAM pending을 "자동 통과"로 닫을 수 있는지. T-2-002 D-34:
+ * ROLE은 더 이상 자동 통과 대상이 아니다 — `selectOpenSlot`이 ROLE 슬롯을 `ROLE_PROPOSAL` pending으로
+ * 열고, `RESOLVE_ROLE` 명령으로만 닫힌다. T-2-004 D-38: CHAPTER도 같은 이유로 자동 통과 대상에서
+ * 뺐다 — `RESOLVE_CHAPTER`로만 닫힌다(판단 1~3개가 각각 roll 1회를 쓴다).
  */
 export function isAutoPassablePending(pending: Pending): boolean {
   return (
     pending !== null &&
-    (pending.kind === 'CHAPTER' ||
-      pending.kind === 'CONTRACT' ||
-      pending.kind === 'INJURY' ||
-      pending.kind === 'NATIONAL_TEAM')
+    (pending.kind === 'CONTRACT' || pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM')
   );
 }
 

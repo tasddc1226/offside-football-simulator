@@ -1416,7 +1416,7 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
 });
 
 describe('Command 타입', () => {
-  it('type은 9개 명령으로 고정된다', () => {
+  it('type은 10개 명령으로 고정된다', () => {
     expectTypeOf<Command['type']>().toEqualTypeOf<
       | 'CREATE_CAREER'
       | 'UPDATE_PLAYER_DRAFT'
@@ -1426,6 +1426,7 @@ describe('Command 타입', () => {
       | 'SETTLE_SEASON'
       | 'RESOLVE_ROLE'
       | 'RESOLVE_EVENT'
+      | 'RESOLVE_CHAPTER'
       | 'ACCEPT_OFFER'
     >();
   });

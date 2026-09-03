@@ -13,6 +13,11 @@ function clampStrength(value: number): number {
   return Math.min(100, Math.max(0, value));
 }
 
+/** T-2-004 D-38: DERBY 트리거. 이름 있는 상대는 라이벌이 아니다(이름 없는 상대만 rivalOpponentIndex로 지정). */
+export function isRivalOpponent(league: League, opponentId: string): boolean {
+  return opponentId === `${league.id}-opp-${league.rivalOpponentIndex}`;
+}
+
 export function findLeague(ruleset: Ruleset, leagueId: string): League {
   const league = ruleset.leagues.find((candidate) => candidate.id === leagueId);
   if (league === undefined) {

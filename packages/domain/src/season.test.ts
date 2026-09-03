@@ -164,7 +164,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       ],
       summary: null,
     };
-    const result = selectOpenSlot(step, 'CHAPTER', [{ eventId: 'EVT-X', version: 1, weight: 1 }], rng, null);
+    const result = selectOpenSlot(step, 'CHAPTER', [{ eventId: 'EVT-X', version: 1, weight: 1 }], rng, null, null);
     expect(result.opened).toBe(true);
     if (result.opened) expect(result.pending?.kind).toBe('CONTRACT');
   });
@@ -177,11 +177,14 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'EVENT', required: false }],
       summary: null,
     };
-    const result = selectOpenSlot(step, 'CHAPTER', [], rng, null);
+    const result = selectOpenSlot(step, 'CHAPTER', [], rng, null, null);
     expect(result).toEqual({ opened: false });
   });
 
-  it('FAST 모드는 MINOR 챕터를 열지 않고, MAJOR 챕터는 연다', () => {
+  // T-2-004 D-38: CHAPTER는 이제 `selectChapter`가 미리 계산한 `chapterOpen`이 있어야 열린다 — 이
+  // 슬롯 자체는 `selectOpenSlot`의 관심사가 아니므로(FAST가 애초에 후보를 안 걸러낸 MAJOR 챕터
+  // 슬롯이라도) chapterOpen이 null이면 열지 않고, 있으면 그 값 그대로 pending에 옮긴다.
+  it('FAST 모드는 MINOR 챕터 슬롯을 후보에서 아예 거르고, MAJOR 챕터는 chapterOpen이 있어야 연다', () => {
     const minorStep: SeasonStep = {
       index: 6,
       phase: 'LEAGUE',
@@ -189,7 +192,8 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'CHAPTER', required: false, importance: 'MINOR' }],
       summary: null,
     };
-    expect(selectOpenSlot(minorStep, 'FAST', [], rng, null)).toEqual({ opened: false });
+    const chapterOpen = { chapterId: 'CHP-TEST-001', version: 1, importance: 'MAJOR' as const, matchId: 'test-match', decisionsTotal: 1 };
+    expect(selectOpenSlot(minorStep, 'FAST', [], rng, null, chapterOpen)).toEqual({ opened: false });
 
     const majorStep: SeasonStep = {
       index: 3,
@@ -198,8 +202,10 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }],
       summary: null,
     };
-    const result = selectOpenSlot(majorStep, 'FAST', [], rng, null);
+    expect(selectOpenSlot(majorStep, 'FAST', [], rng, null, null)).toEqual({ opened: false });
+    const result = selectOpenSlot(majorStep, 'FAST', [], rng, null, chapterOpen);
     expect(result.opened).toBe(true);
+    if (result.opened) expect(result.pending).toEqual({ kind: 'CHAPTER', step: 3, resolved: [], ...chapterOpen });
   });
 
   it('skippedByBudget 슬롯은 모드와 무관하게 열리지 않는다', () => {
@@ -210,13 +216,12 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'CONTRACT', required: false, skippedByBudget: true }],
       summary: null,
     };
-    expect(selectOpenSlot(step, 'CHAPTER', [], rng, null)).toEqual({ opened: false });
+    expect(selectOpenSlot(step, 'CHAPTER', [], rng, null, null)).toEqual({ opened: false });
   });
 });
 
 describe('isAutoPassablePending', () => {
-  it('CHAPTER·CONTRACT·INJURY·NATIONAL_TEAM만 자동 통과 대상이다', () => {
-    expect(isAutoPassablePending({ kind: 'CHAPTER', step: 3 })).toBe(true);
+  it('CONTRACT·INJURY·NATIONAL_TEAM만 자동 통과 대상이다', () => {
     expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7 })).toBe(true);
     expect(isAutoPassablePending({ kind: 'INJURY', step: 5 })).toBe(true);
     expect(isAutoPassablePending({ kind: 'NATIONAL_TEAM', step: 8 })).toBe(true);
@@ -230,6 +235,23 @@ describe('isAutoPassablePending', () => {
   it('ROLE_PROPOSAL은 자동 통과 대상이 아니다', () => {
     expect(
       isAutoPassablePending({ kind: 'ROLE_PROPOSAL', step: 1, proposal: { type: 'KEEP', position: 'W', squadRole: 'STARTER' } }),
+    ).toBe(false);
+  });
+
+  // T-2-004 D-38: CHAPTER도 판단 1~3개가 각각 roll을 쓰므로 더 이상 자동 통과 대상이 아니다 —
+  // RESOLVE_CHAPTER로만 닫힌다.
+  it('CHAPTER는 자동 통과 대상이 아니다', () => {
+    expect(
+      isAutoPassablePending({
+        kind: 'CHAPTER',
+        step: 3,
+        chapterId: 'CHP-MATCH-001',
+        version: 1,
+        importance: 'MAJOR',
+        matchId: 'm1',
+        decisionsTotal: 1,
+        resolved: [],
+      }),
     ).toBe(false);
   });
 });
@@ -385,20 +407,23 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     if (!started.ok) throw new Error('setup 실패');
 
     // step1 ROLE_PROPOSAL을 RESOLVE_ROLE(ACCEPT)로 닫고 → step2 EVENT(eligibleEvents 없음, 건너뜀) →
-    // step3 CHAPTER에서 멈춘다.
+    // T-2-004 D-38: chapterCandidates를 안 보내면 step3·6(CHAPTER)도 후보가 없어 열리지 않고
+    // 지나간다 → step4·5(EVENT, 건너뜀) → step7 CONTRACT에서 멈춘다.
     const roleResolved = runSimulate(started.snapshot, resolveRoleCommand(started.snapshot.revision, 'ACCEPT'));
     if (!roleResolved.ok) throw new Error('setup 실패');
     const advanced = runSimulate(roleResolved.snapshot, advanceCommand(roleResolved.snapshot.revision));
     if (!advanced.ok) throw new Error(`실패: ${advanced.error.code} ${advanced.error.message}`);
     const state = advanced.snapshot.state;
-    expect(state.season?.currentStep).toBe(3);
-    expect(state.pending).toEqual({ kind: 'CHAPTER', step: 3, importance: 'MAJOR' });
+    expect(state.season?.currentStep).toBe(7);
+    expect(state.pending).toEqual({ kind: 'CONTRACT', step: 7 });
     expect(findSeasonStep(state.season!.steps, 1).summary?.decisionsOpened).toBe(1);
     expect(findSeasonStep(state.season!.steps, 2).summary?.decisionsOpened).toBe(0);
-    expect(findSeasonStep(state.season!.steps, 3).summary).toBeNull();
+    expect(findSeasonStep(state.season!.steps, 3).summary?.decisionsOpened).toBe(0);
+    expect(findSeasonStep(state.season!.steps, 6).summary?.decisionsOpened).toBe(0);
+    expect(findSeasonStep(state.season!.steps, 7).summary).toBeNull();
 
     const stepPassedRevisions = state.timeline.filter((t) => t.kind === 'STEP_PASSED').map((t) => t.step);
-    expect(stepPassedRevisions).toEqual([1, 2]);
+    expect(stepPassedRevisions).toEqual([1, 2, 3, 4, 5, 6]);
 
     const previousStep = state.season!.currentStep;
     const next = runSimulate(advanced.snapshot, advanceCommand(advanced.snapshot.revision));
@@ -524,21 +549,16 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     const afterEffectMorale = resolved.snapshot.state.state.morale;
     expect(afterEffectMorale).toBe(Math.min(beforeMorale + 10, 100));
 
-    // step2를 닫고 step3(CHAPTER MAJOR)에서 멈춘다 — 아직 step5 전이라 효과가 살아있어야 한다.
-    const atStep3 = runSimulate(resolved.snapshot, advanceCommand(resolved.snapshot.revision));
-    if (!atStep3.ok) throw new Error(`실패: ${atStep3.error.code} ${atStep3.error.message}`);
-    expect(atStep3.snapshot.state.season?.currentStep).toBe(3);
-    expect(atStep3.snapshot.state.activeEffects).toHaveLength(1);
-    expect(atStep3.snapshot.state.state.morale).toBe(afterEffectMorale);
-
-    // step3을 닫고 eligibleEvents 없이 진행하면 step4·5(EVENT, 후보 없어 건너뜀)를 지나 step6
-    // (CHAPTER)에서 멈춘다 — 한 ADVANCE가 step 4·5·6을 한 번에 지나가므로, expireEffects가 step5를
-    // 포함해 매 step마다 적용되지 않으면 이 회귀가 통과하지 않는다.
-    const pastStep5 = runSimulate(atStep3.snapshot, advanceCommand(atStep3.snapshot.revision));
-    if (!pastStep5.ok) throw new Error(`실패: ${pastStep5.error.code} ${pastStep5.error.message}`);
-    expect(pastStep5.snapshot.state.season?.currentStep).toBe(6);
-    expect(pastStep5.snapshot.state.activeEffects).toEqual([]);
-    expect(pastStep5.snapshot.state.state.morale).toBe(beforeMorale);
+    // T-2-004 D-38: chapterCandidates를 안 보내면 step3·6(CHAPTER)도 후보가 없어 열리지 않으므로,
+    // step2를 닫은 뒤 한 ADVANCE가 step3~6(CHAPTER·EVENT·EVENT·CHAPTER, 전부 건너뜀)을 한 번에 지나
+    // step7(CONTRACT)에서 멈춘다 — step5의 AT_STEP 효과가 이 한 번의 walk 안에서 만료돼야 한다.
+    // expireEffectsThroughWalk가 walk가 지나간 step마다(step5 포함) 순서대로 적용되지 않으면 이
+    // 회귀가 통과하지 않는다.
+    const afterWalk = runSimulate(resolved.snapshot, advanceCommand(resolved.snapshot.revision));
+    if (!afterWalk.ok) throw new Error(`실패: ${afterWalk.error.code} ${afterWalk.error.message}`);
+    expect(afterWalk.snapshot.state.season?.currentStep).toBe(7);
+    expect(afterWalk.snapshot.state.activeEffects).toEqual([]);
+    expect(afterWalk.snapshot.state.state.morale).toBe(beforeMorale);
   });
 
   // T-2-003 D-35 필수 테스트 벡터: 이 시나리오의 팀(seoul-tier1)은 실제 리그 일정이 있어(schedule.ts)

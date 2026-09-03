@@ -1,4 +1,4 @@
-import type { AttributeKey } from '@offside/domain';
+import type { AttributeKey, ChapterTrigger } from '@offside/domain';
 import { z } from 'zod';
 import { PlayerDraftSchema, PlayerProfileSchema, PositionSchema } from './player.js';
 import { RngStateSchema } from './snapshot.js';
@@ -49,6 +49,37 @@ export const ContractSchema = z.strictObject({
 export const DecisionSlotKindSchema = z.enum(['EVENT', 'CHAPTER', 'CONTRACT', 'ROLE', 'INJURY', 'NATIONAL_TEAM', 'SETTLEMENT']);
 export const SlotImportanceSchema = z.enum(['MAJOR', 'MINOR']);
 
+// T-2-004 D-38: 핵심 경기 챕터 후보가 이 step의 경기에 맞는지 판정하는 조건. domain `ChapterTrigger`와
+// 동일(TAG는 Phase 3+ 용으로 스키마만 둔다). commands.ts의 ADVANCE payload `chapterCandidates`가 쓴다.
+export const ChapterTriggerSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('DEBUT') }),
+  z.strictObject({ kind: z.literal('DERBY') }),
+  z.strictObject({ kind: z.literal('CUP_FINAL') }),
+  z.strictObject({ kind: z.literal('DECIDER'), maxRankGap: z.number().int() }),
+  z.strictObject({ kind: z.literal('TAG'), tag: z.string().min(1) }),
+]) satisfies z.ZodType<ChapterTrigger>;
+
+// T-2-004 D-38: CHAPTER pending의 판단마다 확정된 순서대로 쌓는 기록. `roll`은 재생 시 검증용이 아니라
+// 그 판단이 소비한 rngState.rollInt 결과값 자체(감사·리플레이 확인용)다.
+export const ResolvedChapterDecisionSchema = z.strictObject({
+  decisionId: z.string().min(1),
+  optionId: z.string().min(1),
+  outcomeId: z.string().min(1),
+  roll: z.number().int().nonnegative(),
+});
+
+// T-2-004 D-38: 챕터 하나가 판단을 모두 확정하면 `season.chapters`에 남는 기록. domain `ChapterRecord`와
+// 동일(`decisions`는 `roll`을 남기지 않는다 — Pending.resolved와 다른 점).
+export const ChapterRecordSchema = z.strictObject({
+  chapterId: z.string().min(1),
+  version: z.number().int().min(1),
+  step: z.number().int().min(1).max(12),
+  matchId: z.string().min(1),
+  importance: SlotImportanceSchema,
+  decisions: z.array(z.strictObject({ decisionId: z.string().min(1), optionId: z.string().min(1), outcomeId: z.string().min(1) })),
+  ratingDeltaTenths: z.number().int(),
+});
+
 // T-2-002 D-34: 감독 역할 제안. `POSITION_CHANGE`는 인접 포지션 전환 제안, `ROLE_CHANGE`는
 // squadRole만 바뀌는 제안, `KEEP`은 현상 유지 확인.
 export const RoleProposalSchema = z.discriminatedUnion('type', [
@@ -64,15 +95,25 @@ export const RoleProposalSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('ROLE_CHANGE'), position: PositionSchema, from: SquadRoleSchema, to: SquadRoleSchema }),
 ]);
 
-// D-10 + T-2-001/T-2-002: `pending`은 판별 유니온. `null`(대기 없음), `EVENT`(RESOLVE_EVENT 대기),
-// `OFFERS`(ACCEPT_OFFER 대기), `ROLE_PROPOSAL`(RESOLVE_ROLE 대기, T-2-002가 자동 통과이던 `ROLE`을
-// 대체), 나머지 5종은 시즌 안 결정 슬롯 대기(자동 통과 대상은 domain `isAutoPassablePending` 참고 —
+// D-10 + T-2-001/T-2-002/T-2-004: `pending`은 판별 유니온. `null`(대기 없음), `EVENT`(RESOLVE_EVENT
+// 대기), `OFFERS`(ACCEPT_OFFER 대기), `ROLE_PROPOSAL`(RESOLVE_ROLE 대기, T-2-002가 자동 통과이던
+// `ROLE`을 대체), `CHAPTER`(RESOLVE_CHAPTER 대기, T-2-004 D-38이 placeholder `{ step; importance? }`를
+// 대체), 나머지 4종은 시즌 안 결정 슬롯 대기(자동 통과 대상은 domain `isAutoPassablePending` 참고 —
 // CHAPTER·CONTRACT·INJURY·NATIONAL_TEAM. ROLE_PROPOSAL·SETTLEMENT는 아니다).
 export const PendingSchema = z
   .discriminatedUnion('kind', [
     z.strictObject({ kind: z.literal('EVENT'), eventId: z.string().min(1), version: z.number().int().positive() }),
     z.strictObject({ kind: z.literal('OFFERS'), offers: z.array(OfferSchema) }),
-    z.strictObject({ kind: z.literal('CHAPTER'), step: z.number().int().min(1).max(12), importance: SlotImportanceSchema.exactOptional() }),
+    z.strictObject({
+      kind: z.literal('CHAPTER'),
+      step: z.number().int().min(1).max(12),
+      chapterId: z.string().min(1),
+      version: z.number().int().min(1),
+      importance: SlotImportanceSchema,
+      matchId: z.string().min(1),
+      decisionsTotal: z.number().int().min(1).max(3),
+      resolved: z.array(ResolvedChapterDecisionSchema),
+    }),
     z.strictObject({ kind: z.literal('CONTRACT'), step: z.number().int().min(1).max(12) }),
     z.strictObject({ kind: z.literal('ROLE_PROPOSAL'), step: z.number().int().min(1).max(12), proposal: RoleProposalSchema }),
     z.strictObject({ kind: z.literal('INJURY'), step: z.number().int().min(1).max(12) }),
@@ -85,7 +126,17 @@ export const PendingSchema = z
 // `EVT-…:choiceId:outcomeId`, 계약이면 contract id. `SEASON_STARTED`/`STEP_PASSED`는 T-2-001.
 export const TimelineEntrySchema = z.strictObject({
   revision: z.number().int().positive(),
-  kind: z.enum(['CAREER_CONFIRMED', 'EVENT_RESOLVED', 'CONTRACT_SIGNED', 'SEASON_STARTED', 'STEP_PASSED', 'SEASON_SETTLED', 'ROLE_RESOLVED']),
+  kind: z.enum([
+    'CAREER_CONFIRMED',
+    'EVENT_RESOLVED',
+    'CONTRACT_SIGNED',
+    'SEASON_STARTED',
+    'STEP_PASSED',
+    'SEASON_SETTLED',
+    'ROLE_RESOLVED',
+    // T-2-004 D-38: 챕터 판단 하나가 확정될 때마다 1건(refId `${chapterId}:${decisionId}:${optionId}:${outcomeId}`).
+    'CHAPTER_RESOLVED',
+  ]),
   refId: z.string().nullable(),
   age: z.number().int(),
   step: z.number().int(),
@@ -378,6 +429,8 @@ export const FootballSeasonSchema = z.strictObject({
   yellowSuspensionCount: z.number().int().nonnegative(),
   // T-2-003 D-35: 경기 전용 RNG 스트림(결정 슬롯이 쓰는 rngState와 분리 — FAST·CHAPTER byte-identical).
   matchRngState: RngStateSchema,
+  // T-2-004 D-38: 이 시즌에 판단이 모두 끝난 핵심 경기 챕터(step·확정 순).
+  chapters: z.array(ChapterRecordSchema),
 });
 
 export const SeasonSummarySchema = z.strictObject({
@@ -482,6 +535,8 @@ export const CareerStateSchema = z.strictObject({
   activeEffects: z.array(EffectSchema),
   deferredEffects: z.array(EffectSchema),
   resolvedEventIds: z.array(z.string()),
+  // T-2-004 D-38: resolvedEventIds와 같은 역할, 챕터용(`${chapterId}@${seasonIndex}` 형식).
+  resolvedChapterIds: z.array(z.string()),
   rngState: RngStateSchema,
   rulesetVersion: SemverSchema,
   contentPackVersion: SemverSchema,

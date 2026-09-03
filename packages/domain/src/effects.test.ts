@@ -43,6 +43,7 @@ function baseState(): CareerState {
     activeEffects: [],
     deferredEffects: [],
     resolvedEventIds: [],
+    resolvedChapterIds: [],
     rngState: seedRng('effects-test'),
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',

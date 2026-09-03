@@ -30,6 +30,15 @@ export type CheckpointType =
   | 'CONTRACT_CONFIRMED'
   | 'RETIREMENT';
 
+// T-2-004 D-38: 핵심 경기 챕터 후보가 이 step의 경기에 맞는지 판정하는 조건. TAG는 Phase 3+ 용으로
+// 스키마·타입만 두고(`state.tags` 판정), 이번 작업의 3종 팩(DEBUT·DERBY·DECIDER)은 쓰지 않는다.
+export type ChapterTrigger =
+  | { kind: 'DEBUT' }
+  | { kind: 'DERBY' }
+  | { kind: 'CUP_FINAL' }
+  | { kind: 'DECIDER'; maxRankGap: number }
+  | { kind: 'TAG'; tag: string };
+
 export const ATTRIBUTE_KEYS = [
   'shooting',
   'passing',
@@ -195,11 +204,23 @@ export type RoleProposal =
 // T-2-001 D-24: 핵심 경기 챕터·계약·역할·부상·대표팀·시즌 결산 슬롯. 실제 판단 내용(챕터 판단,
 // 계약 협상 등)은 T-2-003~005 몫이라 이 작업은 열고 "자동 통과"로 닫는 플레이스홀더만 둔다.
 // T-2-002 D-34: ROLE 슬롯만 `ROLE_PROPOSAL`로 실제 결정이 된다(RESOLVE_ROLE로 닫는다, 자동 통과 아님).
+// T-2-004 D-38: CHAPTER 분기는 챕터 하나가 열려 판단 1~3개를 확정해 가는 동안의 진행 상태를 갖는다.
+// `resolved`는 확정된 판단만 순서대로 쌓는다(재생 시 같은 decisionId를 다시 보내면 거부해 roll을
+// 두 번 소비하지 않는다).
 export type Pending =
   | null
   | { kind: 'EVENT'; eventId: string; version: number }
   | { kind: 'OFFERS'; offers: Offer[] }
-  | { kind: 'CHAPTER'; step: number; importance?: 'MAJOR' | 'MINOR' }
+  | {
+      kind: 'CHAPTER';
+      step: number;
+      chapterId: string;
+      version: number;
+      importance: 'MAJOR' | 'MINOR';
+      matchId: string;
+      decisionsTotal: number;
+      resolved: Array<{ decisionId: string; optionId: string; outcomeId: string; roll: number }>;
+    }
   | { kind: 'CONTRACT'; step: number }
   | { kind: 'ROLE_PROPOSAL'; step: number; proposal: RoleProposal }
   | { kind: 'INJURY'; step: number }
@@ -217,7 +238,8 @@ export type TimelineEntry = {
     | 'SEASON_STARTED'
     | 'STEP_PASSED'
     | 'SEASON_SETTLED'
-    | 'ROLE_RESOLVED';
+    | 'ROLE_RESOLVED'
+    | 'CHAPTER_RESOLVED';
   refId: string | null;
   age: number;
   step: number;
@@ -446,6 +468,23 @@ export type FootballSeason = {
    * 슬롯(EVENT 가중치 등)이 소비하는 `CareerState.rngState`와 분리해, 경기 결과가 모드별 결정 타이밍에
    * 영향받지 않게 한다. START_SEASON에서 mode를 쓰기 전 시점의 `state.rngState`로 시드한다. */
   matchRngState: RngState;
+  /** T-2-004 D-38: 이 시즌에 판단이 모두 끝난 핵심 경기 챕터(step·확정 순). */
+  chapters: ChapterRecord[];
+};
+
+// T-2-004 D-38: 챕터 하나가 판단을 모두 확정하면 남기는 기록. `ratingDeltaTenths`는 이 챕터가 경기
+// 평점에 더한 합(정수 ×10). 판단마다 즉시 clamp(40,100)가 걸려 개별 델타의 원본 합은 복원할 수
+// 없으므로(Pending.CHAPTER.resolved는 roll만 남기고 델타를 남기지 않는 고정 계약), 최종 평점에서
+// 챕터가 없었을 때의 원래 평점(chapter.ts가 `computeRatingTenths`로 재도출 — match.stats·outcome·
+// cards는 챕터로 바뀌지 않는 순수 입력이라 항상 같은 값을 돌려준다)을 뺀 값으로 정의한다.
+export type ChapterRecord = {
+  chapterId: string;
+  version: number;
+  step: number;
+  matchId: string;
+  importance: 'MAJOR' | 'MINOR';
+  decisions: Array<{ decisionId: string; optionId: string; outcomeId: string }>;
+  ratingDeltaTenths: number;
 };
 
 export type SeasonSummary = {
@@ -474,6 +513,10 @@ export type CareerState = {
   activeEffects: Effect[];
   deferredEffects: Effect[];
   resolvedEventIds: string[];
+  /** T-2-004 D-38: `resolvedEventIds`와 같은 역할, 챕터용. `${chapterId}@${seasonIndex}` 형식이라
+   * 시즌마다 같은 chapterId가 다시 후보로 남는다(더비처럼 매 시즌 열릴 수 있는 챕터를 위해). 정렬은
+   * `sortUniqueTags`와 같은 코드포인트 오름차순을 유지한다. */
+  resolvedChapterIds: string[];
   rngState: RngState;
   rulesetVersion: string;
   contentPackVersion: string;

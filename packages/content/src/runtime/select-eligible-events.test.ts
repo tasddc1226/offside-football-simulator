@@ -26,12 +26,14 @@ const MINIMAL_NARRATIVE: NarrativeDictionary = {
   delta: [],
 };
 
-/** selectEligibleEvents는 events/eventsById만 읽는다. manifest·narrativeTokens는 최소값으로 채운다. */
+/** selectEligibleEvents는 events/eventsById만 읽는다. manifest·narrativeTokens·chapters는 최소값으로 채운다. */
 function makeContentPack(events: EventDefinition[]): ContentPack {
   return {
     manifest: MINIMAL_MANIFEST,
     events,
     eventsById: new Map(events.map((event) => [event.id, event])),
+    chapters: [],
+    chaptersById: new Map(),
     narrativeTokens: MINIMAL_NARRATIVE,
   };
 }

@@ -1,5 +1,6 @@
 import { compareCodePoints, type JsonValue } from './canonical.js';
 import { clamp } from './clamp.js';
+import { resolveChapter, type ChapterCandidateInput } from './chapter.js';
 import { generateCompetitors } from './competitors.js';
 import { applyEffects, expireEffects } from './effects.js';
 import { hashState } from './hash.js';
@@ -17,6 +18,7 @@ import {
   isAutoPassablePending,
   markStepPassed,
   walkToNextDecision,
+  type ChapterWalkContext,
   type EligibleEvent,
   type PlayStepMatches,
   type SeasonWalkResult,
@@ -43,6 +45,7 @@ import {
   type DomainSnapshot,
   type Effect,
   type FootballSeason,
+  type MatchRecord,
   type Pending,
   type PlayerDraft,
   type PlayerGender,
@@ -75,7 +78,15 @@ export type Command =
       // 범위 밖). CREATE_CAREER처럼 payload로 받는다(PR 본문에 기록).
       payload: { simulationMode: SimulationMode; serviceSeasonId: string };
     }
-  | { type: 'ADVANCE'; payload: { eligibleEvents: Array<{ eventId: string; version: number; weight: number }> } }
+  | {
+      type: 'ADVANCE';
+      payload: {
+        eligibleEvents: Array<{ eventId: string; version: number; weight: number }>;
+        // T-2-004 D-38: 웹이 팩 chapters[]에서 요약해 보낸다. 비면(undefined 포함) 챕터는 열리지
+        // 않는다(기존 골든 호환 — chapterCandidates를 보내지 않던 골든은 stateHash가 그대로다).
+        chapterCandidates?: ChapterCandidateInput[];
+      };
+    }
   | { type: 'SETTLE_SEASON'; payload: Record<string, never> }
   // T-2-002 D-34 CMD-SIM-004: step 1 ROLE_PROPOSAL pending을 닫는다.
   | { type: 'RESOLVE_ROLE'; payload: { decision: 'ACCEPT' | 'DECLINE' } }
@@ -86,6 +97,24 @@ export type Command =
         definitionVersion: number;
         choiceId: string;
         outcomes: Array<{ id: string; weight: number; effects: Effect[]; addTags?: string[]; removeTags?: string[] }>;
+      };
+    }
+  // T-2-004 D-38 CMD-SIM-005: CHAPTER pending의 판단 하나를 닫는다.
+  | {
+      type: 'RESOLVE_CHAPTER';
+      payload: {
+        chapterId: string;
+        definitionVersion: number;
+        decisionId: string;
+        optionId: string;
+        outcomes: Array<{
+          id: string;
+          weight: number;
+          effects: Effect[];
+          ratingDeltaTenths: number;
+          addTags?: string[];
+          removeTags?: string[];
+        }>;
       };
     }
   | { type: 'ACCEPT_OFFER'; payload: { offerId: string } };
@@ -202,6 +231,7 @@ function createCareer(input: SimulationInput): SimulationResult {
     activeEffects: [],
     deferredEffects: [],
     resolvedEventIds: [],
+    resolvedChapterIds: [],
     rngState: seedRng(command.payload.seed),
     rulesetVersion: command.payload.rulesetVersion,
     contentPackVersion: command.payload.contentPackVersion,
@@ -417,6 +447,18 @@ function expireEffectsThroughWalk(state: CareerState, walked: SeasonWalkResult):
   return crossedSteps.reduce((acc, step) => expireEffects(acc, step), state);
 }
 
+/**
+ * T-2-004 D-38: 챕터가 열린 순간 `MatchRecord.chapterId`를 세운다(판단이 남아 있어도). `season.ts`는
+ * matches 배열을 갖고 있지 않아 이 patch를 여기서 한다 — `walked.pending`이 CHAPTER일 때만 그
+ * `matchId`와 같은 레코드 하나를 바꾼다.
+ */
+function patchOpenedChapterMatch(matches: readonly MatchRecord[], pending: Pending): MatchRecord[] {
+  if (pending === null || pending.kind !== 'CHAPTER') return [...matches];
+  const matchId = pending.matchId;
+  const chapterId = pending.chapterId;
+  return matches.map((match) => (match.id === matchId ? { ...match, chapterId } : match));
+}
+
 function findTeam(ruleset: Ruleset, teamId: string): Ruleset['teams'][number] {
   const team = ruleset.teams.find((candidate) => candidate.id === teamId);
   if (team === undefined) {
@@ -565,7 +607,11 @@ function createStepMatchWiring(
       yellowSuspensionCount = result.nextSeasonYellowCount;
       squadStatus = result.nextSquadStatus;
     }
-    return { results: stepMatchResultsFor(matches, stepIndex) };
+    return {
+      results: stepMatchResultsFor(matches, stepIndex),
+      records: matches.filter((match) => match.step === stepIndex),
+      competitions,
+    };
   };
 
   return {
@@ -696,7 +742,28 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     },
   );
 
-  const walked = walkToNextDecision(initialSteps, 1, mode, [], stateAfterSelection.rngState, nextRevision, roleContext, wiring.playStepMatches);
+  // T-2-004 D-38: START_SEASON payload에는 chapterCandidates가 없다(ADVANCE 전용) — eligibleEvents와
+  // 같은 이유로 빈 배열([])을 넘긴다. season.matches·chapters도 이 시점엔 비어 있다.
+  const chapterContext: ChapterWalkContext = {
+    chapterCandidates: [],
+    tags: stateAfterSelection.tags,
+    resolvedChapterIds: stateAfterSelection.resolvedChapterIds,
+    existingChapterIds: [],
+    league,
+    seasonIndex: state.seasonHistory.length + 1,
+  };
+  const walked = walkToNextDecision(
+    initialSteps,
+    1,
+    mode,
+    [],
+    stateAfterSelection.rngState,
+    nextRevision,
+    roleContext,
+    wiring.playStepMatches,
+    [],
+    chapterContext,
+  );
   const expiredState = expireEffectsThroughWalk(stateAfterSelection, walked);
 
   const season: FootballSeason = {
@@ -712,7 +779,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     squadRole: wiring.getSquadRole(),
     competitions: wiring.getCompetitions(),
     schedule: wiring.getSchedule(),
-    matches: wiring.getMatches(),
+    matches: patchOpenedChapterMatch(wiring.getMatches(), walked.pending),
     ageReferenceStep: 1,
     squad: { competitors: wiring.getCompetitors() },
     selection: wiring.getSelection(),
@@ -721,6 +788,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     lastRatingTenths: wiring.getLastRatingTenths(),
     yellowSuspensionCount: wiring.getYellowSuspensionCount(),
     matchRngState: wiring.getMatchRngState(),
+    chapters: [],
   };
 
   const nextState: CareerState = {
@@ -769,10 +837,10 @@ function nextActionForPending(pending: Pending): 'DECISION' | 'ADVANCE' | 'SETTL
     case 'EVENT':
     case 'OFFERS':
     case 'ROLE_PROPOSAL':
+    case 'CHAPTER':
       return 'DECISION';
     case 'SETTLEMENT':
       return 'SETTLEMENT';
-    case 'CHAPTER':
     case 'CONTRACT':
     case 'INJURY':
     case 'NATIONAL_TEAM':
@@ -873,6 +941,14 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     },
   );
 
+  const chapterContext: ChapterWalkContext = {
+    chapterCandidates: command.payload.chapterCandidates ?? [],
+    tags: state.tags,
+    resolvedChapterIds: state.resolvedChapterIds,
+    existingChapterIds: season.chapters.map((chapter) => chapter.chapterId),
+    league,
+    seasonIndex: season.index,
+  };
   const walked = walkToNextDecision(
     steps,
     currentStepIndex,
@@ -882,6 +958,8 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     nextRevision,
     roleContext,
     wiring.playStepMatches,
+    season.matches,
+    chapterContext,
   );
   const expiredState = expireEffectsThroughWalk(state, walked);
   timeline = [
@@ -903,7 +981,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     squadRole: wiring.getSquadRole(),
     competitions: wiring.getCompetitions(),
     schedule: wiring.getSchedule(),
-    matches: wiring.getMatches(),
+    matches: patchOpenedChapterMatch(wiring.getMatches(), walked.pending),
     squad: { competitors: wiring.getCompetitors() },
     selection: wiring.getSelection(),
     playerStats: wiring.getPlayerStats(),
@@ -1126,6 +1204,73 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     appliedEffects: effectResult.applied,
     nextAction: 'ADVANCE',
   };
+}
+
+/**
+ * T-2-004 D-38 CMD-SIM-005: CHAPTER pending의 판단 하나를 닫는다. 검증·roll·Effect·평점·태그·
+ * `ChapterRecord` 조립은 전부 `chapter.ts`의 `resolveChapter`(순수 함수)가 한다 — 여기서는 status
+ * ACTIVE 검사(다른 명령들과 같은 메시지 관례)와 timeline 조립, checkpoint·nextAction만 정한다.
+ */
+function resolveChapterCommand(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
+  const command = input.command;
+  if (command.type !== 'RESOLVE_CHAPTER') {
+    return fail('VALIDATION_FAILED', 'RESOLVE_CHAPTER 처리기에 다른 명령이 전달되었다.');
+  }
+  const state = snapshot.state;
+  if (state.status !== 'ACTIVE') {
+    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 RESOLVE_CHAPTER를 받을 수 없다.`, {
+      reason: 'NOT_ACTIVE',
+    });
+  }
+
+  const result = resolveChapter({
+    state,
+    ruleset: input.ruleset,
+    chapterId: command.payload.chapterId,
+    definitionVersion: command.payload.definitionVersion,
+    decisionId: command.payload.decisionId,
+    optionId: command.payload.optionId,
+    outcomes: command.payload.outcomes,
+  });
+
+  if (!result.ok) {
+    return result.reason === undefined
+      ? fail('VALIDATION_FAILED', result.message)
+      : fail('VALIDATION_FAILED', result.message, { reason: result.reason });
+  }
+
+  const nextRevision = snapshot.revision + 1;
+  const nextState: CareerState = {
+    ...result.state,
+    timeline: [
+      ...result.state.timeline,
+      {
+        revision: nextRevision,
+        kind: 'CHAPTER_RESOLVED',
+        refId: `${command.payload.chapterId}:${command.payload.decisionId}:${command.payload.optionId}:${result.outcomeId}`,
+        age: state.age,
+        step: state.currentStep,
+      },
+    ],
+  };
+
+  return {
+    ok: true,
+    snapshot: buildSnapshot(nextState, nextRevision, 'CHAPTER_DECISION'),
+    roll: result.roll,
+    outcomeId: result.outcomeId,
+    appliedEffects: result.appliedEffects,
+    nextAction: nextActionAfterChapterResolve(nextState.pending),
+  };
+}
+
+/**
+ * `RESOLVE_CHAPTER`는 `nextActionForPending`(pending이 null이면 throw)과 달리 pending이 null(마지막
+ * 판단 확정)인 경우도 유효해서 별도 함수로 뺐다 — null이면 다음 경기로 ADVANCE, 아니면(같은 챕터의
+ * 다음 판단) DECISION이다.
+ */
+function nextActionAfterChapterResolve(pending: Pending): 'DECISION' | 'ADVANCE' {
+  return pending === null ? 'ADVANCE' : 'DECISION';
 }
 
 function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
@@ -1361,9 +1506,9 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
 }
 
 /**
- * CREATE_CAREER → UPDATE_PLAYER_DRAFT → CONFIRM_PLAYER → ADVANCE → RESOLVE_EVENT → ACCEPT_OFFER →
- * RESOLVE_ROLE 명령을 처리하는 순수 함수. throw하지 않는다: 도메인 오류는 항상 `{ ok: false }`로
- * 돌아온다.
+ * CREATE_CAREER → UPDATE_PLAYER_DRAFT → CONFIRM_PLAYER → ADVANCE → RESOLVE_EVENT → RESOLVE_CHAPTER →
+ * ACCEPT_OFFER → RESOLVE_ROLE 명령을 처리하는 순수 함수. throw하지 않는다: 도메인 오류는 항상
+ * `{ ok: false }`로 돌아온다.
  */
 export function simulate(input: SimulationInput): SimulationResult {
   if (input.ruleset.version !== input.rulesetVersion) {
@@ -1402,6 +1547,8 @@ export function simulate(input: SimulationInput): SimulationResult {
       return settleSeason(input, snapshot);
     case 'RESOLVE_EVENT':
       return resolveEvent(input, snapshot);
+    case 'RESOLVE_CHAPTER':
+      return resolveChapterCommand(input, snapshot);
     case 'ACCEPT_OFFER':
       return acceptOffer(input, snapshot);
     case 'RESOLVE_ROLE':

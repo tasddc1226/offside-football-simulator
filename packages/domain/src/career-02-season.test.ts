@@ -58,14 +58,17 @@ describe('career-02-season fixture 결정론', () => {
     });
   }
 
-  it('FAST 모드: 예산(6)을 넘지 않아 아무것도 잘리지 않고, 실제 열리는 결정은 step 1·3·7·11(ROLE·CHAPTER·CONTRACT·CHAPTER)뿐이다', () => {
+  // T-2-004 D-38: 이 fixture는 chapterCandidates를 보내지 않으므로(챕터 시스템은 별도
+  // career-05-chapter fixture가 다룬다) step 3·6·10·11(CHAPTER)은 두 모드 모두 후보가 없어 열리지
+  // 않는다 — 실제로 열리는 결정은 ROLE(1)·CONTRACT(7)뿐이다.
+  it('FAST 모드: 예산(6)을 넘지 않아 아무것도 잘리지 않고, 실제 열리는 결정은 step 1·7(ROLE·CONTRACT)뿐이다', () => {
     const opened = golden.FAST.stepSummaries.filter((s) => s.summary !== null && s.summary.decisionsOpened === 1);
-    expect(opened.map((s) => s.index)).toEqual([1, 3, 7, 11]);
+    expect(opened.map((s) => s.index)).toEqual([1, 7]);
   });
 
-  it('CHAPTER 모드: 예산 상한(10)에 정확히 맞아 잘리는 슬롯이 없고, step 1~11 전부 결정이 열린다', () => {
+  it('CHAPTER 모드: 예산 상한(10)에 정확히 맞아 잘리는 슬롯이 없고, ROLE·EVENT·CONTRACT(챕터 제외 step 1~11) 전부 결정이 열린다', () => {
     const opened = golden.CHAPTER.stepSummaries.filter((s) => s.summary !== null && s.summary.decisionsOpened === 1);
-    expect(opened.map((s) => s.index)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(opened.map((s) => s.index)).toEqual([1, 2, 4, 5, 7, 8, 9]);
   });
 
   it('FAST가 여는 결정 step 집합은 CHAPTER가 여는 결정 step 집합의 부분집합이다', () => {
