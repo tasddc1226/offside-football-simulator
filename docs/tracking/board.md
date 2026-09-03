@@ -26,7 +26,7 @@ WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. �
 | U-011 | (U-009에서 개인 신청 불가 시) 개인사업자 등록 후 콘솔 사업자 등록 | deferred | 조건부. 면세 사업자 불가 |
 | U-013 | Phase 3·4 워커가 이벤트 문구를 `PROTOTYPE`(`playtested: false`)으로 직접 작성해도 되는지 확인(콘텐츠 백로그 "SHIPPABLE 전 JSON 요청 금지"와의 관계), 팀 풀 8→12 확장 여부 | todo | [phase-3-4-plan.md](phase-3-4-plan.md) 5절. 승인 전에는 메커니즘 검증용 최소 문구만 |
 | U-012 | ADR-010(Phase 3+ 공유 계약: Effect 규칙·시장가치 입력·CareerTag) 검토·승인 또는 반려 | todo | PR #43(2026-09-03). 태그 ownerPhase 배정, 시장가치 가중치·popularity 5000 고정, PERMANENT 만료 금지가 주요 결정. 승인 전에도 Phase 3·4 브리프는 이 계약을 전제로 작성 |
-| U-013 | Workers Paid 플랜으로 전환 | todo | LINE TEST(T-2-012) 배포 직전. 개발·PR preview·내부 staging은 Free 유지 |
+| U-014 | Workers Paid 플랜으로 전환 | todo | LINE TEST(T-2-012) 배포 직전. 개발·PR preview·내부 staging은 Free 유지 |
 
 ## Phase 0 백로그 (착수 순서)
 
