@@ -2,6 +2,20 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (오후, PR #36 T-2-001 머지 — T-2-002 투입)
+
+**결과**: T-2-001(PR #36, `a806e21`) 머지. FootballSeason·12 step 캘린더(룰셋 `leagueCalendar`)·START_SEASON/SETTLE_SEASON·ADVANCE 재정의(다음 결정 step 또는 결산까지)·결정 예산 절단·STEP_BOUNDARY checkpoint·golden career-02-season(FAST 결정 step {1,3,7,11}, CHAPTER 1~11). 새 roll 없음(FAST 30·CHAPTER 35 draws). 워커 비용 약 $24.3, 102분. 오케스트레이터 재검증 체인 통과(e2e 54).
+
+**리뷰 수정 4건**: (1) engine-client·platform typecheck 2건·취약한 hash 손상 테스트 1건이 브리프의 수정 금지 목록에 걸려 빨간 채 남음 → 최소 수정 예외 확장. (2) FAST 결정 예산이 모드가 열지 않는 슬롯(EVENT·MINOR 챕터)까지 세어 step 11 MAJOR 챕터를 잘랐음(golden에서 발견) → 예산은 그 모드가 여는 슬롯에만. (3) 시즌 walk가 step을 넘길 때 `expireEffects`를 부르지 않아 시즌 중 AT_STEP 만료 누락 → 지나간 step마다 접어 적용. (4) 결산 뒤 nextAction 'ADVANCE'가 NOTHING_TO_ADVANCE로 실패 → 'DECISION'. 워커가 스스로 찾은 버그(EVENT를 별도 명령으로 닫은 뒤 step이 안 닫힘)는 회귀 테스트와 함께 고쳐져 있었다.
+
+**수용한 편차**: `START_SEASON` payload는 `{ simulationMode, serviceSeasonId }`(domain 상태에 서비스 시즌 id가 없어 CREATE_CAREER처럼 payload로 받음, D-25 보완). competitions는 `LEAGUE`·`CUP` 자리표시자 2건(T-2-002가 룰셋 리그·컵으로 대체). 룰셋 `seasonBoundaryReset { form 50, fitness 80, morale 60 }`은 임의값(밸런스는 D-29·LINE TEST 뒤). step 10 CHAPTER는 importance 미지정 → MINOR 취급. step 8 대표팀 창은 EVENT kind 그대로.
+
+**교훈**: 브리프의 "typecheck 깨지면 최소 수정" 예외는 web·api만이 아니라 상태 타입을 소비하는 모든 패키지(engine-client·platform 포함)에 둔다 — T-2-002 이후 브리프에 반영. 예산·모드처럼 두 규칙이 겹치는 곳은 브리프에 계산 예(기본 캘린더에서 기대 결정 집합)를 적어 준다.
+
+**남긴 것**: DEFERRED 효과(`appliesAt: NEXT_SEASON_STEP`)를 새 시즌 해당 step에서 적용하는 경로가 없다 → T-2-005. Phase 1 step 번호와 시즌 step 번호가 겹쳐 유스 단계 AT_STEP 효과가 첫 시즌 같은 번호 step에서 만료된다 → T-2-014(Effect 만료 규칙). `advance()`·`advanceInSeason()`의 eligibleEvents 검증 중복 → T-2-014 정리 후보. ADVANCE가 walk 시작 상태로 평가한 EVENT 후보(D-10)를 여러 step 뒤 슬롯에 그대로 쓰는 방식은 경기가 상태를 바꾸는 T-2-003부터 재검토.
+
+**투입**: T-2-002(팀 전술 스타일·경쟁자 생성·Tactical Fit·Squad Status·RULE-PERF-001·RULE-SEL-001·감독 역할 제안 `RESOLVE_ROLE`, D-26·D-34). 브리프에 PR #36 접점(ROLE 자동 통과 제거, cupRounds R2, 자리표시자 대체, 브리프 예외 범위 확장)을 적었다.
+
 ## 2026-09-03 (오후, T-2-002 브리프 선작성 — D-34)
 
 **결정 D-34**(phase-2-plan 3절): T-2-001이 진행되는 동안 다음 순서인 T-2-002(팀 전술·경쟁자·선발) 브리프를 미리 썼다. 전술 스타일 3종·팀 `squadStrength`·리그 팀 수·컵 R2 step 7, Tactical Fit(스타일 내적 0.6 + 선호 아키타입 0.4), 숙련도 등급화(기존 `positionProficiency` 재사용), Squad Status 식, 경쟁자 8포지션 × 2명과 RNG 순서, step 1 감독 역할 제안과 새 명령 `RESOLVE_ROLE`(CMD-SIM-004)을 확정했다. 계획서에 없던 "역할 제안을 어느 명령이 닫는가"의 빈틈을 여기서 메웠고, "조건부 훈련"은 T-2-005로 미뤘다. 투입은 T-2-001 머지 뒤(순차).
