@@ -98,9 +98,9 @@ jobs:
           pnpm --filter @offside/web exec wrangler deploy --env preview --name "offside-web-pr-${PR_NUMBER}"
       - name: Smoke test preview
         run: |
-          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
             "https://offside-api-pr-${PR_NUMBER}.tasddc1569.workers.dev/v1/health"
-          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
             "https://offside-web-pr-${PR_NUMBER}.tasddc1569.workers.dev/" >/dev/null
 
   deploy-staging:
@@ -138,7 +138,7 @@ jobs:
           pnpm --filter @offside/web deploy:staging
       - name: Smoke test staging
         run: |
-          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
             "https://offside-api-staging.tasddc1569.workers.dev/v1/health"
-          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
             "https://offside-web-staging.tasddc1569.workers.dev/" >/dev/null
