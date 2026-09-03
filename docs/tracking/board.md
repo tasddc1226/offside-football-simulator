@@ -1,6 +1,6 @@
 # 진행 보드
 
-갱신: 2026-09-03. 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
+갱신: 2026-09-04. 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
 
 ## 현재 게이트
 
@@ -13,7 +13,7 @@ WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. �
 | ID | 내용 | 상태 | 메모 |
 |---|---|---|---|
 | U-001 | 도메인 구매, 네임서버를 Cloudflare로 | todo | ADR-006 후보 참고 |
-| U-002 | Cloudflare 계정과 Workers Paid 플랜, API 토큰을 GitHub Secrets에 등록 | todo | ADR-007 |
+| U-002 | Cloudflare 계정·최소 권한 API 토큰·환경별 D1 준비 | completed | 2026-09-04. GitHub Secrets 2종 등록, APAC D1 `offside-preview`·`staging`·`production` 생성. Free 플랜 유지 |
 | U-003 | Google Cloud 프로젝트에서 OAuth 클라이언트 ID·시크릿 발급 | todo | ADR-008. 콜백 URL은 도메인 확정 후. 코드는 PR #33으로 준비됨(가짜 OIDC 검증 완료) — ID·시크릿은 `wrangler secret put`, 발급 뒤 오케스트레이터가 실계정 검증 |
 | U-004 | Sentry 프로젝트 생성, DSN 등록 | todo | ADR-007 |
 | U-005 | 종이 프로토타입 3회 플레이, `docs/content/prototype/playtest-log.md` 작성 | todo | 양식 제공됨(2026-09-02). 회차별 시트와 3회 합산 답만 채우면 된다. 고정 seed 3종 키트는 `docs/content/kickoff/paper-playtest-kit.md`(PR #24) |
@@ -26,6 +26,7 @@ WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. �
 | U-011 | (U-009에서 개인 신청 불가 시) 개인사업자 등록 후 콘솔 사업자 등록 | deferred | 조건부. 면세 사업자 불가 |
 | U-013 | Phase 3·4 워커가 이벤트 문구를 `PROTOTYPE`(`playtested: false`)으로 직접 작성해도 되는지 확인(콘텐츠 백로그 "SHIPPABLE 전 JSON 요청 금지"와의 관계), 팀 풀 8→12 확장 여부 | todo | [phase-3-4-plan.md](phase-3-4-plan.md) 5절. 승인 전에는 메커니즘 검증용 최소 문구만 |
 | U-012 | ADR-010(Phase 3+ 공유 계약: Effect 규칙·시장가치 입력·CareerTag) 검토·승인 또는 반려 | todo | PR #43(2026-09-03). 태그 ownerPhase 배정, 시장가치 가중치·popularity 5000 고정, PERMANENT 만료 금지가 주요 결정. 승인 전에도 Phase 3·4 브리프는 이 계약을 전제로 작성 |
+| U-013 | Workers Paid 플랜으로 전환 | todo | LINE TEST(T-2-012) 배포 직전. 개발·PR preview·내부 staging은 Free 유지 |
 
 ## Phase 0 백로그 (착수 순서)
 
@@ -40,7 +41,7 @@ WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. �
 | T-0-007 | `packages/engine-client` LocalStore 포트(메모리 구현 + 계약 테스트), 명령 실행기, revision·commandId 멱등성, Snapshot 복구, Web Worker 시뮬레이터 프로토콜, golden fixture를 `packages/fixtures`로 이관 | 05, ADR-002, ADR-003 | done | [브리프](briefs/T-0-007.md). PR #8 `9667dc7`. 리뷰 1회 통과(워커 /review:pr 1회 자체 수정). 후속: idempotency 응답 저장 크기(결정 로그) |
 | T-0-008 | `apps/api` 커리어 동기화 `GET /careers`, `GET /careers/{id}`, `PUT /careers/{id}`(If-Match·409·422·무결성 검사), 100회 병렬 멱등 테스트 | API-CAR-001~003, 05, ADR-002 | done | [브리프](briefs/T-0-008.md). PR #13 `5969ec6`. 리뷰 1회 통과. 100회 병렬 테스트 timeout 20초 |
 | T-0-009 | `apps/web` Vite·Router·Tailwind 토큰·상태 훅 골격, 허브 빈 상태 화면 | ADR-001, 13 | completed | PR [#3](https://github.com/tasddc1226/offside-football-simulator/pull/3) squash 머지 `fdb8a72`. 대비 24쌍 PASS, 초기 번들 91.81KB gzip |
-| T-0-010 | GitHub Actions CI, Pages·Workers preview 배포, staging migration | ADR-007 | blocked | U-002 필요 |
+| T-0-010 | GitHub Actions CI, 웹 Static Assets·API Workers preview 배포, staging migration | ADR-007 | in-progress | `infra/cloudflare-bootstrap`, [브리프](briefs/T-0-010.md). U-002 완료 |
 | T-0-011 | Node(Vitest)·Cloudflare Workers(Miniflare) 동일 fixture state hash·SHA-256 경계·canonicalize 일치 테스트 | ADR-003, 08 | done | [브리프](briefs/T-0-011.md). PR #10 `c45bede`. 리뷰 1회 통과. 브라우저 Web Worker 검증은 Playwright 도입 시 |
 | T-0-012 | `packages/platform` 골격: `LocalStore` 포트와 `Platform` 인터페이스, web 구현(Dexie), toss 스텁(SDK 의존성 없음), 화면·엔진의 SDK import·채널 분기 lint | ADR-009, ADR-005 | done | [브리프](briefs/T-0-012.md). PR #12 `675ac12`. 리뷰 1회 통과. 후속: KV 스토어 prefix 전체 백업 비용(결정 로그) |
 | T-0-013 | Pretendard self-host 폰트를 dynamic subset(unicode-range 분할)으로 바꿔 초기 폰트 전송량 축소, 허브 LCP 2.5초 예산 측정 | 13 구현 체크리스트, 01 성능 예산 | done | [브리프](briefs/T-0-013.md). PR #11 `acbfd1d`. 전송 2109KB→269KB. 허브 LCP 재측정은 Phase 1 화면 후 |
@@ -137,7 +138,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | ID | 작업 | 참조 | 상태 |
 |---|---|---|---|
 | M-001 | `platform/toss` 실제 구현: `@apps-in-toss/web-framework` 3.x, 네이티브 Storage, 식별키, SafeArea·백버튼·종료 모달, `@apps-in-toss/devtools` 모킹 | ADR-009 | deferred |
-| M-002 | `apps/web` toss 빌드 모드: `apps-in-toss.config.ts`, `pnpm build:toss` → `.ait`, CORS origin 4종, Pages `_headers` | ADR-009, ADR-007 | deferred |
+| M-002 | `apps/web` toss 빌드 모드: `apps-in-toss.config.ts`, `pnpm build:toss` → `.ait`, CORS origin 4종, Static Assets `/content/*` handler | ADR-009, ADR-007 | deferred |
 | M-003 | `POST /auth/toss/session`: mTLS 바인딩 식별키 검증, `LocalProfile.tossAnonKeyHash` | ADR-008, ADR-009 | deferred |
 | M-004 | CI: 태그에서 `ait deploy`, `ait sentry upload-sourcemap` | ADR-007 | deferred |
 | M-005 | 콘솔 제출: 로고 600×600, 썸네일 1932×828, 스크린샷, 앱 정보·개인정보 URL, 등급분류 증빙 | 13, ADR-009 | deferred |

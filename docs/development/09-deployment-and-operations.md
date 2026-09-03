@@ -7,7 +7,7 @@
 | 환경 | 목적 | 웹 | API | 데이터 |
 |---|---|---|---|---|
 | local | 개발과 fixture | `vite dev` | `wrangler dev` | 로컬 D1, 합성 데이터 |
-| preview | PR 화면·계약 검증 | Pages PR preview | Workers preview | PR별 preview D1 |
+| preview | PR 화면·계약 검증 | PR별 Static Assets Worker | PR별 API Worker | 공유 preview D1, 합성 데이터, 배포 직렬화 |
 | staging | 마이그레이션·E2E·시즌 전환 리허설 | `staging.<domain>` | `staging-api.<domain>` | staging D1, 합성 데이터 |
 | production | 실제 플레이 | `<domain>` | `api.<domain>` | production D1, 정본 |
 
@@ -24,9 +24,9 @@
 
 ## 배포 단위
 
-- 웹 앱(Pages)과 API(Workers)는 따로 배포하되 같은 태그를 쓴다.
+- 웹 앱(Workers Static Assets)과 API Worker는 따로 배포하되 같은 태그를 쓴다.
 - D1 migration(`wrangler d1 migrations apply`).
-- immutable ruleset artifact와 content pack 번들(Pages 정적 자산 + R2 보관).
+- immutable ruleset artifact와 content pack 번들(Static Assets + R2 보관).
 - service season manifest.
 - 백업: 매일 Cron으로 D1 export를 R2에 저장, D1 Time Travel 30일.
 
@@ -101,4 +101,3 @@
 - 로그의 상세 보존 기간을 제한한다.
 - 사용자 삭제 요청은 Career/Player/Contract/Archive 연결 데이터를 추적 가능하게 삭제한다.
 - 집계 지표는 재식별 가능한 소표본을 노출하지 않는다.
-

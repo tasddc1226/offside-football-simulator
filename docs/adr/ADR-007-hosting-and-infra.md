@@ -1,6 +1,6 @@
 # ADR-007. 호스팅·인프라·CI·비용
 
-- 상태: 확정 (2026-09-02)
+- 상태: 확정 (2026-09-02, Workers Static Assets 전환 2026-09-04)
 - 관련: [ADR-002](ADR-002-persistence-and-identity.md), [ADR-005](ADR-005-monorepo-boundaries.md), [배포·운영](../development/09-deployment-and-operations.md)
 
 ## 결정
@@ -9,7 +9,7 @@
 
 | 역할 | 서비스 | 비고 |
 |---|---|---|
-| 웹 앱·정적 콘텐츠 팩 | Cloudflare Pages | Git 연동, PR마다 preview URL |
+| 웹 앱·정적 콘텐츠 팩 | Cloudflare Workers Static Assets | API Worker와 분리. SPA fallback, PR별 preview Worker |
 | API | Cloudflare Workers + Hono | 라우트 `api.<domain>/v1/*` |
 | DB | Cloudflare D1 (SQLite) + Drizzle ORM | 리전은 APAC(서울 근접) 우선 |
 | 객체 저장 | Cloudflare R2 | 과거 콘텐츠 팩, 명령 로그 아카이브, D1 백업 export |
@@ -28,7 +28,7 @@
 | 환경 | 웹 | API | DB | 용도 |
 |---|---|---|---|---|
 | local | `vite dev` | `wrangler dev` | D1 로컬(Miniflare) | 개발, fixture |
-| preview | Pages PR preview | Workers preview (`<pr>.api-preview.`) | preview D1 (PR별 초기화) | PR 검증 |
+| preview | `offside-web-pr-<N>.tasddc1569.workers.dev` | `offside-api-pr-<N>.tasddc1569.workers.dev` | 공유 preview D1(배포 직렬화, 합성 데이터) | PR 검증 |
 | staging | `staging.<domain>` | `staging-api.<domain>` | staging D1 | migration·E2E·시즌 전환 리허설 |
 | production | `<domain>` | `api.<domain>` | production D1 | 정본 |
 
@@ -41,15 +41,15 @@
 | QR 테스트 | `https://<appName>.private-web.tossmini.com`, `https://<appName>.private-apps.tossmini.com` | `staging-api.<domain>` |
 | 라이브 | `https://<appName>.web.tossmini.com`, `https://<appName>.apps.tossmini.com` | `api.<domain>` |
 
-Pages의 `/content/*`는 `_headers`로 `Access-Control-Allow-Origin`을 같은 목록에 준다. 라이브 환경은 HTTPS만 허용되며 iframe은 금지다.
+웹 Static Assets Worker의 `/content/*`는 앱인토스 채널을 활성화할 때 Worker handler로 같은 CORS 목록을 적용한다. 라이브 환경은 HTTPS만 허용되며 iframe은 금지다.
 
 ## CI/CD (GitHub Actions)
 
 1. PR: lint, typecheck, unit·property, `content:validate`, contract test, migration dry-run, Playwright P0 smoke, axe.
-2. PR: Pages preview 자동 배포, Workers preview `wrangler deploy --env preview`.
+2. PR: API와 웹을 `offside-api-pr-<N>`, `offside-web-pr-<N>` Worker로 배포한다. 공유 preview D1 migration은 concurrency group으로 직렬화한다.
 3. main 머지: staging 배포, `wrangler d1 migrations apply`, E2E 전체.
 4. 태그 `v*`: production 배포. 콘텐츠 팩·ruleset checksum이 release manifest와 일치해야 진행.
-5. 롤백: Pages는 이전 배포로 즉시 전환, Workers는 이전 버전 재배포, D1은 roll-forward 우선(09 문서).
+5. 롤백: 웹·API Worker는 이전 버전을 재배포하고, D1은 roll-forward를 우선한다(09 문서).
 6. (미니앱 출시 결정 후) 태그 `v*`: `pnpm build:toss` 후 `ait deploy --api-key`로 앱인토스 콘솔에 번들 업로드(QR 테스트 상태). 검토 요청과 출시 버튼은 사람이 누른다. 앱인토스 번들과 API는 같은 태그를 쓰고, API는 이전 번들 버전과 호환을 유지한다(출시 검토가 최대 3~7 영업일이라 두 버전이 동시에 살아 있다).
 
 GitHub Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SENTRY_AUTH_TOKEN`, `AIT_API_KEY`(앱인토스 콘솔 키). mTLS 인증서는 GitHub가 아니라 Cloudflare에 업로드하고 certificate_id만 wrangler 설정에 둔다.
@@ -65,8 +65,8 @@ GitHub Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SENTRY_AUTH_TO
 
 | 항목 | 월 비용 | 메모 |
 |---|---:|---|
-| Workers Paid 플랜 | 5달러 | D1·KV·R2 한도 확장, Time Travel. 출시 시점부터 |
-| Pages | 0 | 무료 tier로 충분 |
+| Workers Free 플랜 | 0 | 개발·PR preview·내부 staging. LINE TEST 전까지 |
+| Workers Paid 플랜 | 5달러 | D1·KV·R2 한도 확장, Time Travel. LINE TEST 직전 전환 |
 | D1·R2·KV 사용량 | 0~2달러 | 초기 사용량은 포함 한도 안 |
 | 도메인 | 연 10~40달러 | TLD에 따라 다름 |
 | Sentry | 0 | 무료 tier, 초과 시 이벤트 샘플링 |

@@ -75,7 +75,7 @@ export function PrivacyContent() {
             <tbody>
               <tr>
                 <td className="border border-os-border p-os-2">Cloudflare, Inc.</td>
-                <td className="border border-os-border p-os-2">미국 등 해외 리전(Workers·D1·Pages)</td>
+                <td className="border border-os-border p-os-2">미국 등 해외 리전(Workers Static Assets·D1)</td>
                 <td className="border border-os-border p-os-2">
                   프로필 식별자·세션·복구 코드 해시·게임 저장 데이터·오류 로그
                 </td>
