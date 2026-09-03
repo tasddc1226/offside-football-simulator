@@ -330,12 +330,21 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   }
 
   if (pending !== null && pending.kind === 'CHAPTER') {
+    // 상대 이름은 season.matches에서 찾아 덧붙인다 — 기존 단위 테스트가 matchId 없이 CHAPTER
+    // pending을 주입하므로(match 조회 실패), 그때는 상대 이름 없이 "핵심 경기"로만 낮춘다.
+    const opponentName = state.season?.matches.find((candidate) => candidate.id === pending.matchId)?.opponent.name;
     return (
       <Card className="flex flex-wrap items-center justify-between gap-os-3">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          핵심 경기
+          {opponentName === undefined ? '핵심 경기' : `핵심 경기 — ${opponentName}`}
         </p>
-        <Link to="/career/$careerId/chapter" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
+        <Link
+          to="/career/$careerId/chapter"
+          params={{ careerId }}
+          search={{ d: pending.resolved.length }}
+          className={buttonClassName('primary')}
+          style={buttonStyle}
+        >
           경기 보기
         </Link>
       </Card>

@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-04 (새벽, PR #44 검증 실패 — e2e 결함 2건, T-2-011 투입)
+
+**결과**: PR #44(T-2-008, `0ffc00f`)·PR #45(T-2-009, `3fa150f`) 리뷰는 수정 요청 0건. 그러나 #44를 main 위에서 전체 체인으로 돌리자 e2e 60 통과·2 실패(병렬 부하). trace·error-context로 원인 확정: (1) `season.spec.ts` `advanceThroughSeasonToSettlement` — '진행' 클릭 직후 다음 루프의 `toBeEnabled`가 isPending 반영 전 틱에 통과 → `textContent()`는 '진행' → `click()`의 actionability 대기가 disabled→enabled 전환을 건너 step 12/12의 '결산하기'(같은 `/^(진행|결산하기)$/` locator)에 클릭이 떨어져 `season-result` 자리표시("준비 중")로 이동, 거기서 60s 타임아웃. (2) `chapter.spec.ts`(a11y.spec SCR-031도 같은 helper) — 시드에 따라 17세 OVR 59 선수가 19경기 전부 `미선발 · 0분`이라 DEBUT 트리거(minutes>0)가 한 번도 안 맞아 챕터가 안 열리고 step 12에서 타임아웃. 둘 다 이 PR의 e2e 설계 결함이라 PR 안에서 수정 후 머지: (1) 클릭 locator를 `'진행'` exact로 분리, 클릭 뒤 `step k/12`·pathname 변화를 기다린 뒤 다음 루프(chapter helper도 동일), (2) `createCareer`에 DEV 전용 시드 오버라이드(`localStorage['offside:e2e-seed']`, `import.meta.env.DEV` 가드)를 두고 chapter·a11y e2e는 데뷔 챕터가 이른 step에 열리는 시드를 상수로 심는다. 전체 e2e 3회 + 해당 스펙 `--repeat-each 3` 통과를 요구.
+
+**운영**: T-2-008 워커 TUI가 입력을 받지 않아(`send` accepted, 화면 미반영, 매달린 자식 없음) 프로세스를 끝내고 `redispatch.sh`로 같은 워크트리에 새 터미널을 띄워 지시 파일 경로만 보냈다. 멀티라인 `orca terminal send`는 입력창에 들어가지 않는다 — 긴 지시는 파일로 쓰고 한 줄로 경로를 보낸다.
+
+**투입**: T-2-011(Phase 2 완료 조건 검증, 워크트리 `T-2-011-phase2-verify`, 포트 5187)을 3번째 워커로 투입. #44·#45가 아직 main에 없으므로 브리프에 "도메인·API 항목 먼저(fixture 3종→결정론→집계→career-03→B > A→후속 3건), web 항목(세션 길이·e2e 3회·TrainingFocus import)은 `MAIN UPDATED` 뒤" 절을 추가했다. #45 후속으로 결산 뒤 `season` 초기화로 다이어리 step 요약("3승 1무")이 사라지는 문제(도메인이 `SeasonResult`에 step 요약을 남겨야 함)를 T-2-011 또는 Phase 3 초에 배정한다.
+
 ## 2026-09-03 (밤, PR #43 T-2-014 머지 — Phase 3+ 공유 계약 D-40~D-42, ADR-010 승인 대기)
 
 **결과**: T-2-014(PR #43, `dd480a2`) 머지. (D-40) Effect: kind→타깃 소유권 표(ADR-010), `ONCE_PER_SEASON`(dedupe 키 `season:<index>:<sourceId>`, 결산 회귀 시 정리), `AT_SEASON_END`·`SEASONS_AFTER`(저장 시 `AT_SEASON_INDEX`로 치환), `REPLACE`는 적용 전 값을 `restoreTo`에 저장해 복원, `reasonTag`, 결산 직전 `expireAtSeasonEnd`(AT_SEASON_END·이번 시즌 이하 AT_SEASON_INDEX·자연 만료 못 한 AT_STEP 강제 만료) → 그 위에서 성장·회귀. PERMANENT는 만료 금지(콘텐츠 스키마). (D-41) `computeMarketValueIndex(input, marketValueRules)` 순수 함수(bp 가중 7성분, 0~10000 centi), `MarketValueInput`에 `truePotential` 타입 배제(`expectTypeOf`), `buildMarketValueInput` 어댑터(`contractSeasonsRemaining = lengthSeasons − 서명 이후 SEASON_STARTED 횟수`, `popularityCenti` 5000 고정은 Phase 4까지). (D-42) `CAREER_TAG_IDS` 16종(14 문서 순서)·`CAREER_TAGS`(label·rarity·evaluateAt·ownerPhase), `state.careerTags`·`careerTagGrants`, `grantCareerTag`(멱등·정렬), `evaluateCareerTags` 결산 훅(seasonHistory 반영 뒤 평가, timeline `CAREER_TAG_GRANTED`), 평가기 TAG-BIG-GAME(챕터 SUCCESS 5회)·TAG-DERBY-HERO(더비 3회)·TAG-IRONMAN(10시즌 80%). `RESOLVE_CHAPTER.outcomes[].kind` 필수, `ChapterRecord.trigger`·`decisions[].outcomeKind`. 골든은 hash·신규 필드만 변경.

@@ -13,6 +13,10 @@ import {
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
 test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제안 → 진행 반복 → 시즌 결산 → 다음 시즌', async ({ page }) => {
+  // 12 step 전체 시즌을 결산까지 미는 데다(T-2-008: FAST 모드에서도 MAJOR 챕터가 열려 판단까지 거칠
+  // 수 있다) 매 실행 새 시드(crypto.getRandomValues)로 필요한 "진행" 횟수가 달라진다 — 기본 30s
+  // 테스트 타임아웃은 그 편차를 흡수하기엔 빠듯하다.
+  test.slow();
   const startedAt = Date.now();
 
   await completeOnboardingThroughContract(page);

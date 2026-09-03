@@ -101,7 +101,7 @@ LAYERS = [
     ("engine-client", "브라우저 실행기", ["명령 실행기·멱등성·Snapshot 복구", "Web Worker 시뮬레이터", "동기화 클라이언트(재시도·409 처리)", "룰셋 배선 (T-1-001)", "포크(fork-by-replay)·Worker 실패 처리 (T-1-011)", "서버 커리어 가져오기 importCareerFromServer (T-1-012)", "시즌 명령 replay·fork·import golden, 로컬 저장 시즌 checkpoint 계약 (T-2-006)"], []),
     ("platform", "저장소 추상화", ["Dexie(IndexedDB) LocalStore", "KV LocalStore(토스 채널용 스텁)", "features.googleLink 채널 기능 플래그 (T-1-013)"], []),
     ("api", "Cloudflare Workers + D1", ["D1 스키마·migration", "세션(쿠키·Bearer)·익명 프로필·설정", "커리어 동기화 GET/PUT·If-Match·멱등", "복구 코드·프로필 복구·삭제·로그아웃·커리어 삭제 (T-1-004)", "Google OIDC start/callback/merge/unlink·가짜 OIDC (T-1-013)", "시즌 3경로 동기화·Miniflare golden 순회 (T-2-006)"], ["실제 Google 계정 검증 (U-003 대기)"]),
-    ("web · ui", "React 화면", ["라우터·디자인 토큰·허브 빈 상태", "Pretendard 동적 서브셋(2109KB→269KB)", "Button·Card 등 기본 부품", "Radix RadioGroup·Dialog·Tabs, ChoiceCard·CompareCards 등 부품 10종", "Playwright + axe E2E, 브라우저 Worker 해시 검증 (T-1-010)", "엔진 배선(Worker·IndexedDB)·허브·온보딩·설정 영속화 (T-1-007)", "선수 만들기 SCR-002~004·복구 코드 발급·API 클라이언트 (T-1-008)", "동기화 배선·저장 배지·충돌 대화상자·오프라인 (T-1-011)", "진로·입단 테스트·이벤트·결과·제안·계약·대시보드 화면, first-contract e2e (T-1-009)", "설정 데이터 섹션(복구·삭제·대조)·법적 문서·실제 api 복구 e2e (T-1-012)", "선수 성별 RadioGroup·선호 포지션 라벨·확인 요약 (T-1-016)", "Google 연결 행·병합 선택·로그아웃, google-link e2e (T-1-013)", "resilience·recovery-conflict·keyboard·session-length·perf e2e, 완료 조건 표 15행 (T-1-014)", "포지션 탭 키보드 도달·선호/주포지션 표시·국외 이전 표·결과 aria-live·이탈 경고 (T-1-017)", "브라우저 Worker 시즌 리플레이 hash·9.6~15 ms (T-2-006)", "프리시즌 계획·시즌 준비·역할 제안·대시보드 시즌화·능력치 상세, season/a11y e2e, E2E_PORT (T-2-007)"], ["핵심 경기 챕터 화면 SCR-031·RESOLVE_CHAPTER 배선 (T-2-008)", "시즌 결산 화면 SCR-015·응답 유실 복구 (T-2-009)"]),
+    ("web · ui", "React 화면", ["라우터·디자인 토큰·허브 빈 상태", "Pretendard 동적 서브셋(2109KB→269KB)", "Button·Card 등 기본 부품", "Radix RadioGroup·Dialog·Tabs, ChoiceCard·CompareCards 등 부품 10종", "Playwright + axe E2E, 브라우저 Worker 해시 검증 (T-1-010)", "엔진 배선(Worker·IndexedDB)·허브·온보딩·설정 영속화 (T-1-007)", "선수 만들기 SCR-002~004·복구 코드 발급·API 클라이언트 (T-1-008)", "동기화 배선·저장 배지·충돌 대화상자·오프라인 (T-1-011)", "진로·입단 테스트·이벤트·결과·제안·계약·대시보드 화면, first-contract e2e (T-1-009)", "설정 데이터 섹션(복구·삭제·대조)·법적 문서·실제 api 복구 e2e (T-1-012)", "선수 성별 RadioGroup·선호 포지션 라벨·확인 요약 (T-1-016)", "Google 연결 행·병합 선택·로그아웃, google-link e2e (T-1-013)", "resilience·recovery-conflict·keyboard·session-length·perf e2e, 완료 조건 표 15행 (T-1-014)", "포지션 탭 키보드 도달·선호/주포지션 표시·국외 이전 표·결과 aria-live·이탈 경고 (T-1-017)", "브라우저 Worker 시즌 리플레이 hash·9.6~15 ms (T-2-006)", "프리시즌 계획·시즌 준비·역할 제안·대시보드 시즌화·능력치 상세, season/a11y e2e, E2E_PORT (T-2-007)"], ["핵심 경기 챕터 화면 SCR-031·RESOLVE_CHAPTER 배선 — PR #44 e2e 결함 2건 수정 중 (T-2-008)", "시즌 결산 화면 SCR-015·응답 유실 복구 — PR #45 main 머지 대기 (T-2-009)", "Phase 2 완료 조건 검증: 세션 길이 e2e·3회 무결점·TrainingFocus 정리 (T-2-011, #44·#45 뒤)"]),
     ("CI · 배포", "GitHub Actions · Pages · Workers", [], ["U-002 Cloudflare 계정 대기 (T-0-010)"]),
 ]
 ETA = [
@@ -124,7 +124,8 @@ ETA = [
     ("9/3 22:03", "핵심 경기 챕터(T-2-004) 머지(PR #41): 데뷔전·더비·승격 결정전 챕터가 경기 직후 열리고 판단마다 roll 1회, golden career-05-chapter. 리뷰 수정 1건 + main 머지. Wave 3 종료. T-2-014(Phase 3+ 공유 계약) 투입"),
     ("9/3 23:15", "시즌 화면(T-2-007) 머지(PR #42): 계약→프리시즌 계획→시즌 준비→역할 제안→대시보드(일정표·전술실)→결산까지 브라우저에서 돈다(e2e 60 통과). 리뷰 수정 0건. T-2-008(챕터 화면)·T-2-009(결산 화면) 투입"),
     ("9/3 23:32", "공유 계약(T-2-014) 머지(PR #43): Effect 만료·중첩·복원, 시장가치 지수, CareerTag 16종·결산 훅, ADR-010(사용자 승인 대기 U-012). 리뷰 수정 2건"),
-    ("9/4", "T-2-008(챕터 화면)·T-2-009(결산 화면) 머지 → Phase 2 잔여 T-2-010(콘텐츠, U-005 대기)·T-2-011(fixture·밸런스). Phase 3·4 브리프 작성"),
+    ("9/4 01:20", "PR #44(챕터 화면)·#45(결산 화면) 리뷰 통과(수정 0건). #44 검증 체인 e2e 2건 실패(season.spec 이중 클릭 TOCTOU·chapter.spec 0분 시즌 데뷔 미발생) → 수정 요청. T-2-011(Phase 2 완료 조건 검증) 3번째 워커 투입"),
+    ("9/4", "#44·#45 머지 → T-2-011 web 항목 → Phase 2 잔여 T-2-010(콘텐츠, U-005 대기). Phase 3·4 브리프 작성"),
 ]
 DECISIONS = [
     ("Phase 순서 준수", "Phase 0을 닫은 뒤 Phase 1 워커 투입. 브리프는 미리 작성."),
@@ -137,6 +138,7 @@ DECISIONS = [
     ("PR #39 리뷰: 경기 계산·D-37", "matchRngState를 결정 스트림 복사 대신 해시 파생 시드로, yellowSuspensionAt 5 복원(강제 카운트 테스트), PR #38 후속으로 career-04-gk를 contracts·api 검증에 추가해 머지. 수용: 부상 1~4경기, 리그 순위 기대 승점 근사, 컵 무승부 진출."),
     ("Wave 3 브리프 D-38·D-39", "챕터: 경기 계산 직후 훅, chapterCandidates·trigger 5종, RESOLVE_CHAPTER 판단당 roll 1회, 평점 delta·CURRENT/RELATION만. 결산: SeasonResult hash, 연령대 예산×잠재력 gap×출전 계수+경험, 훈련 초점, carry centi, 잠재력 cap, 시즌 중 폼·체력·사기 갱신, 밸런스 테스트로 상수 조정."),
     ("Wave 3 리뷰: DEFERRED 시즌 적용", "미룬 효과는 START_SEASON에서 season.scheduledEffects로 옮겨 그 시즌 step에 적용(유실·같은 시즌 오적용 방지). 성장 상수 75/65/8 확정, player.ts 잠재력 불변식은 T-2-011."),
+    ("PR #44 검증: e2e 결함 2건", "리뷰는 통과했으나 부하 아래 e2e 실패를 trace로 확정 — 공용 locator의 이중 클릭이 결산하기로 새는 TOCTOU, 시드에 따라 0분 시즌이면 데뷔 챕터가 안 열림. 수정(exact locator·step 변화 대기, DEV 전용 e2e 시드 훅) 뒤 머지."),
     ("D-38 확정: 챕터", "후보는 ADVANCE.chapterCandidates로, 출전한 경기만, FAST는 MAJOR만. CHAPTER pending은 RESOLVE_CHAPTER로만 닫힘. tier1~3 리그 라이벌/승격 상수는 임시값, DEBUT는 첫 시즌만(후속)."),
     ("D-40~D-42 공유 계약(ADR-010)", "Effect kind→타깃 소유권·ONCE_PER_SEASON·시즌 만료·REPLACE 복원, 시장가치 입력 소유권(truePotential 배제), CareerTag 16종 ownerPhase. 워커 작성본이라 사용자 승인 대기(U-012)."),
     ("PR #37 리뷰: 역할 제안 도달성·D-36 정수 상태", "POSITION_CHANGE 후보 필터가 실제 룰셋에서 항상 false였던 것(브리프 모호), RESOLVE_ROLE 뒤 squadRole·selection 불일치, fixtures export 누락을 고쳐 머지. 저장 상태는 정수만(D-36), 아키타입 +40의 밸런스 리스크는 T-2-011 측정 항목."),

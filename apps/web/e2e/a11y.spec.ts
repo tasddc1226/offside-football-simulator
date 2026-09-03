@@ -12,6 +12,7 @@ import {
   resolveRoleProposal,
 } from './helpers/player-creation.js';
 import { E2E_META, fulfillJson, triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
+import { advanceToChapter, planPreseasonChapterMode, seedDeterministicChapterRun } from './helpers/chapter.js';
 
 const PROFILE_WITH_CODE = {
   id: 'prf_e2e',
@@ -563,4 +564,39 @@ test('T-1-013 설정: 로그아웃 확인 대화상자에 axe serious·critical 
   await expect(page.getByRole('heading', { level: 2, name: '로그아웃' })).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'T-1-013 설정: 로그아웃 확인');
+});
+
+// T-2-008(TEST-E2E-010 접근성 체크리스트): SCR-031 핵심 경기 챕터(판단 확정 화면·경기 결과 화면).
+// 실제 팩의 챕터 3종(CHP-MATCH-001·002·004) 모두 판단이 1개뿐이라("다음 판단"이 아니라 "경기 결과"
+// 버튼이 뜬다) chapter.spec.ts와 같은 전제로 확정 직후 곧장 결과 화면까지 확인한다.
+test.describe('SCR-031 핵심 경기 챕터', () => {
+  test.use({ contextOptions: { reducedMotion: 'reduce' } });
+
+  test('판단 확정 화면·경기 결과 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+    // CHAPTER 모드로 시즌을 시작해 챕터에 도달하기까지 몇 번의 "진행"이 필요한지는 시드에 달렸다 —
+    // seedDeterministicChapterRun으로 chapter.spec.ts와 같은 결정론 시드를 강제한다(같은 이유, 같은
+    // helpers/chapter.ts). 그래도 병렬 워커로 CPU를 나눠 쓰면 mutateAsync가 느려질 수 있어 기본 30s
+    // 테스트 타임아웃 대신 넉넉히 기다린다.
+    test.slow();
+
+    await seedDeterministicChapterRun(page);
+    await completeOnboardingThroughContract(page);
+    await planPreseasonChapterMode(page);
+    await page.getByRole('button', { name: '시즌 시작' }).click();
+    await resolveRoleProposal(page);
+    await expect(page).toHaveURL(/\/career\/[^/]+$/);
+
+    await advanceToChapter(page);
+    await expect(page.getByRole('radio').first()).toBeVisible();
+
+    await expectNoSeriousOrCriticalViolations(page, 'SCR-031(판단 확정)');
+
+    await page.getByRole('radio').first().click();
+    await page.getByRole('button', { name: '확정' }).click();
+    await expect(page.getByRole('button', { name: '경기 결과' })).toBeVisible();
+    await page.getByRole('button', { name: '경기 결과' }).click();
+    await expect(page.getByRole('heading', { level: 2, name: '경기 결과' })).toBeVisible();
+
+    await expectNoSeriousOrCriticalViolations(page, 'SCR-031(경기 결과)');
+  });
 });
