@@ -1,6 +1,18 @@
 // D-20 대조 표: KEEP_LINKED_ONLY·MOVE_TO_LINKED·NONE × 로컬만·서버만·둘 다(동기화됨)·둘 다(미전송).
-import { describe, expect, it } from 'vitest';
-import { planReconciliation, type ReconcileLocalCareer, type ReconcileServerCareer } from './reconcile.js';
+import type { QueryClient } from '@tanstack/react-query';
+import { describe, expect, it, vi } from 'vitest';
+import { planReconciliation, reconcileAfterRecovery, type ReconcileLocalCareer, type ReconcileServerCareer } from './reconcile.js';
+
+const listRemoteCareersMock = vi.fn();
+vi.mock('../api/client.js', () => ({
+  listRemoteCareers: (cursor?: string) => listRemoteCareersMock(cursor),
+  getRemoteCareer: vi.fn(),
+}));
+
+// getAppEngine()은 대조 실패 경로에서는 반환값을 쓰지 않는다 — 존재만 하면 된다.
+vi.mock('./engine.js', () => ({
+  getAppEngine: () => Promise.resolve({ client: { listCareers: vi.fn() }, store: {} }),
+}));
 
 const LOCAL_ONLY_SYNCED: ReconcileLocalCareer = { id: 'car_local_only', revision: 3, lastSyncedRevision: 3 };
 const LOCAL_ONLY_UNSENT: ReconcileLocalCareer = { id: 'car_local_unsent', revision: 5, lastSyncedRevision: 2 };
@@ -90,5 +102,23 @@ describe('planReconciliation', () => {
     );
     expect(plan.toDelete).toEqual(['car_local_only']);
     expect(plan.toDownload).toEqual(['car_both_behind', 'car_server_only']);
+  });
+});
+
+describe('reconcileAfterRecovery', () => {
+  it('서버 커리어 목록을 받지 못하면 로컬 대조를 하지 않고 ok:false를 돌려준다', async () => {
+    listRemoteCareersMock.mockResolvedValue({
+      ok: false,
+      error: { code: 'NETWORK_ERROR', message: '실패', retryable: true },
+    });
+    const invalidateQueries = vi.fn().mockResolvedValue(undefined);
+    const queryClient = { invalidateQueries } as unknown as QueryClient;
+
+    const result = await reconcileAfterRecovery('NONE', queryClient);
+
+    // 설정 화면(ProfileRecoverRow)은 이 ok:false를 보고 "커리어 목록을 불러오지 못했습니다" 경고
+    // 토스트로 갈아탄다(성공 토스트를 그대로 보여주지 않는다).
+    expect(result).toEqual({ ok: false });
+    expect(invalidateQueries).not.toHaveBeenCalled();
   });
 });

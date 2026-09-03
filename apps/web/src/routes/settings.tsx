@@ -116,6 +116,9 @@ function SyncStatusRow() {
         await requeueAllUnsynced();
         // 세션이 없어(401) 큐에 남아 있던 삭제도 세션을 되찾은 지금 함께 다시 시도한다.
         await retryPendingDeletes(engine.store);
+        // 이 기기가 LOCAL_ONLY였던 동안 서버에만 생긴 커리어를 받아온다(D-20 대조, choice: NONE —
+        // 로컬 커리어는 지우지 않고 미전송분만 알린다).
+        await reconcileAfterRecovery('NONE', queryClient);
       }
     } finally {
       setReconnecting(false);
@@ -328,7 +331,7 @@ function ProfileRecoverRow() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
-  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const conflictCancelRef = useRef<HTMLButtonElement>(null);
 
@@ -343,10 +346,20 @@ function ProfileRecoverRow() {
         setConflict(null);
         const engine = await getAppEngine();
         await engine.store.transaction('readwrite', (tx) => tx.kv.put(PROFILE_ID_KV_KEY, result.data.profileId));
-        await reconcileAfterRecovery(mergeChoice ?? 'NONE', queryClient);
+        const reconciled = await reconcileAfterRecovery(mergeChoice ?? 'NONE', queryClient);
         platform.analytics.track('profile_recovered', { mergeChoice: mergeChoice ?? 'NONE' });
         setCode('');
-        setSuccessToast(`프로필을 복구했습니다. 커리어 ${result.data.careerCount}개`);
+        setToast(
+          reconciled.ok
+            ? { variant: 'success', message: `프로필을 복구했습니다. 커리어 ${result.data.careerCount}개` }
+            : {
+                // packages/ui의 Toast는 success·error 2종뿐이라(warning 없음, packages/ui는 수정 범위
+                // 밖) error 변형을 대신 쓴다 — 계정 전환 자체는 됐지만 커리어 목록을 마저 못 받아온
+                // 상태임을 알린다.
+                variant: 'error',
+                message: '프로필은 복구했지만 커리어 목록을 불러오지 못했습니다. 설정의 다시 연결로 다시 시도하세요.',
+              },
+        );
         return;
       }
 
@@ -471,12 +484,12 @@ function ProfileRecoverRow() {
         </DialogContent>
       </Dialog>
 
-      {successToast !== null ? (
+      {toast !== null ? (
         <Toast
-          variant="success"
-          message={successToast}
+          variant={toast.variant}
+          message={toast.message}
           onDismiss={() => {
-            setSuccessToast(null);
+            setToast(null);
             void navigate({ to: '/' });
           }}
         />
