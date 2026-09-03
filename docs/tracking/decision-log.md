@@ -2,6 +2,16 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (밤, PR #42 T-2-007 머지 — 시즌이 브라우저에서 돈다, T-2-008·T-2-009 투입)
+
+**결과**: T-2-007(PR #42, `4feeb15`) 머지. 계약 → 프리시즌 계획(SCR-005: 모드 FAST/CHAPTER 기본값 RULE-TIME-003, 훈련 계획 ROLE/TECHNICAL/PHYSICAL/MENTAL → `START_SEASON.trainingFocus`) → 시즌 준비(SCR-011: 12 step 미리보기·컵 일정·시즌 시작) → 역할 제안(SCR-012: KEEP/POSITION_CHANGE CompareCards/ROLE_CHANGE → `RESOLVE_ROLE`) → 대시보드 시즌화(SCR-029: pending 종류별 다음 결정 카드, 일정표 탭 경기별 스코어·출전·평점, 전술실 탭 `deriveTacticalRoom`) → 결산까지 브라우저에서 이어진다. SCR-033 능력치 상세(묶음·역할 가중치·OVR 미리보기, truePotential 미노출 테스트). SCR-031·015는 자리표시(T-2-008·009). playwright `E2E_PORT`/`E2E_API_URL` override. e2e 60 통과(season 2·a11y 4 신규), 초기 번들 97 KB gzip. 계약 뒤 시즌 1 전체(계획→결산)→시즌 2 계획까지 e2e 3.9~5.0초.
+
+**리뷰 결정**: 수정 필수 없음. 훈련 계획은 02 명세의 "2~3개" 대신 D-39 `trainingFocus` 4종과 1:1(명세는 고치지 않고 기록). "조건부 훈련"은 도메인 명령이 없어 미구현. 웹의 `TrainingFocus` 타입은 domain 타입을 import하지 않고 재선언 — T-2-009에서 정리 가능(비차단).
+
+**투입**: T-2-008(SCR-031 챕터 화면: `selectChapterCandidates`→`ADVANCE.chapterCandidates`, `RESOLVE_CHAPTER`, 재생, e2e 포트 5185)·T-2-009(SCR-015 결산 화면: `deriveSeasonResultView`, 카운트업, 응답 유실 복구, 포트 5186). 동시 워커 3개(T-2-014·008·009). 접점: T-2-014(PR #43)가 `RESOLVE_CHAPTER.outcomes[].kind`를 필수로 만들므로 T-2-008은 팩 outcome의 `kind`를 처음부터 실어 보내게 안내.
+
+**운영 메모**: 브리프 템플릿의 e2e 절을 워커별 `E2E_PORT`로 갱신. 워커 Bash 분류기 장애(T-2-007, 약 20분)는 재시도 지시로 풀렸다.
+
 ## 2026-09-03 (밤, PR #41 T-2-004 머지 — Wave 3 종료, T-2-014 투입)
 
 **결과**: T-2-004(PR #41, `7859e8a`) 머지. `walkToNextDecision`이 step의 경기를 돌린 직후 `selectChapter`(roll 없음)로 후보를 대조한다 — 출전(minutes > 0)한 경기만 대상, FAST는 MAJOR만, `resolvedChapterIds`(`${chapterId}@${seasonIndex}`)와 이번 시즌 `season.chapters`로 재열림 방지, MAJOR > weight > id. `RESOLVE_CHAPTER`(CMD-SIM-005)는 판단마다 `state.rngState`에서 roll 1회(경기 스트림은 건드리지 않음), 같은 decisionId 재전송은 `DECISION_ALREADY_RESOLVED`. 판단이 모두 끝나면 `ChapterRecord`(평점 델타는 최종 평점 − `computeRatingTenths` 재도출 원래 평점)를 `season.chapters`에 남기고 timeline `CHAPTER_RESOLVED`. 팩 `chapters/CHP-MATCH-001/002/004`, 스키마는 CURRENT/RELATION/DEFERRED만·±12·`ratingDeltaTenths` ±15·`priorProbability.successBp` ±500bp. 룰셋 `leagues[]`에 `rivalOpponentIndex`·`promotionSpots`·`relegationSpots`. golden career-05-chapter(CHAPTER 모드, step 3 데뷔전, 판단 2개, 100회 재생 불변) 신규. 기존 골든은 필수 필드 추가로 hash만 변경(RNG 소비 5개 전부 불변), career-02·04는 placeholder CHAPTER 자동 통과용 여분 `ADVANCE`가 사라져 명령 로그가 줄었다. 실제 1.0.0 룰셋·0.1.0 팩으로 CREATE_CAREER부터 진행해 유스 첫 시즌 step 3에서 데뷔전 챕터가 실제로 열리는 것을 테스트로 확인(도달 불가 분기 없음).
