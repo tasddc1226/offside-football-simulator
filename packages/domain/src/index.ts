@@ -16,6 +16,7 @@ export {
   type CareerState,
   type CareerStatus,
   type ChapterRecord,
+  type ChapterTrigger,
   type CheckpointType,
   type CompetitionRecord,
   type Competitor,
@@ -130,7 +131,19 @@ export {
   type SimulationInput,
   type SimulationResult,
 } from './simulate.js';
-export { buildSchedule, findLeague, resolveOpponent } from './schedule.js';
+export {
+  matchesTrigger,
+  resolveChapter,
+  selectChapter,
+  type ChapterCandidateInput,
+  type ChapterOpenResult,
+  type ResolveChapterFailureReason,
+  type ResolveChapterInput,
+  type ResolveChapterOutcome,
+  type ResolveChapterResult,
+  type SelectChapterInput,
+} from './chapter.js';
+export { buildSchedule, findLeague, isRivalOpponent, resolveOpponent } from './schedule.js';
 export { applyCompetitorFormDrift, playMatch, type PlayMatchInput, type PlayMatchResult } from './match.js';
 export {
   applyMatchToCompetitions,

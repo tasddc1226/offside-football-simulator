@@ -39,7 +39,19 @@ export type Team = {
 
 // T-2-002 D-34: 리그 하나. `teamCount`는 이름 있는 팀 + 이름 없는 상대를 합한 총 팀 수(T-2-003이
 // 이름 없는 상대를 strength로 파생한다). `rounds`는 항상 2(홈·원정 2회전).
-export type League = { id: string; name: string; tier: 'YOUTH' | 1 | 2 | 3; teamCount: number; rounds: 2; strength: number };
+// T-2-004 D-38: `rivalOpponentIndex`(1~teamCount-1, 이름 없는 상대 `${league.id}-opp-${n}` 중 라이벌)와
+// `promotionSpots`·`relegationSpots`(DECIDER 승격·강등 경계, 0이면 그 경계 없음 — 최상위·최하위 리그).
+export type League = {
+  id: string;
+  name: string;
+  tier: 'YOUTH' | 1 | 2 | 3;
+  teamCount: number;
+  rounds: 2;
+  strength: number;
+  rivalOpponentIndex: number;
+  promotionSpots: number;
+  relegationSpots: number;
+};
 
 // T-2-002 D-34: 컵 대회 하나. `rounds`는 항상 4라운드 고정 순서(R1 → R2 → SEMI → FINAL)다(content
 // 스키마가 정확한 값·순서를 강제한다. 여기서 튜플 타입을 쓰지 않는 이유는 JSON에서 그대로 `as Ruleset`

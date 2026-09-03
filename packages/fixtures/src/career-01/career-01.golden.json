@@ -1,6 +1,6 @@
 {
   "revision": 10,
-  "stateHash": "a624688596d42df77302e1f7100541bd3c6a2e46493851509fb8462f849e3c8c",
+  "stateHash": "0f791c688a1dcc169c924efdfd831524f6958d570ea30f670692fb60badbb286",
   "rngStateDraws": 30,
   "baseOvr": 59,
   "attributes": {
@@ -25,7 +25,10 @@
     "leadership": 37,
     "consistency": 46
   },
-  "scoutedPotential": { "min": 75, "max": 86 },
+  "scoutedPotential": {
+    "min": 75,
+    "max": 86
+  },
   "offersCount": 1,
   "contract": {
     "id": "CTR-10",

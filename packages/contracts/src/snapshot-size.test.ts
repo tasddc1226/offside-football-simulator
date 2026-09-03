@@ -8,6 +8,8 @@ import {
   career03UnderdogEngineCommands,
   career04Gk,
   career04GkEngineCommands,
+  career05Chapter,
+  career05ChapterEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -202,6 +204,48 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
     console.log(
       JSON.stringify({
         fixture: 'career-04-gk',
+        peakCheckpoint: peak.checkpoint,
+        peakRevision: peak.revision,
+        peakStateBytes,
+        checkpoint: snapshot.checkpoint,
+        revision: snapshot.revision,
+        finalStateBytes,
+        bodyBytes,
+      }),
+    );
+
+    expect(peakStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+    expect(finalStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+    expect(bodyBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+  });
+
+  // T-2-004 D-38: 데뷔전 챕터(판단 2개 확정)를 포함한 시즌 결산까지 — season.chapters·CHAPTER pending
+  // 필드가 더해진 상태의 대표 크기.
+  it('career-05-chapter(시즌 결산까지, CHAPTER 판단 포함): 최대 상태·PUT 본문 크기가 상한 안에 든다', () => {
+    let counter = 0;
+    const newId = () => `size-c5-${counter++}`;
+
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of career01EngineCommands(newId)) {
+      snapshot = runOrThrow(snapshot, command, career01);
+    }
+    if (snapshot === null) throw new Error('career01 선행 재생이 비어 있다.');
+    const seasonStart = snapshot.revision;
+
+    const seasonSteps: Step[] = [];
+    for (const command of career05ChapterEngineCommands(newId, seasonStart)) {
+      snapshot = runOrThrow(snapshot, command, career05Chapter);
+      seasonSteps.push({ snapshot, command });
+    }
+
+    const peak = seasonSteps.reduce((max, step) => (stateBytes(step.snapshot) > stateBytes(max) ? step.snapshot : max), seasonSteps[0]!.snapshot);
+    const peakStateBytes = stateBytes(peak);
+    const finalStateBytes = stateBytes(snapshot);
+    const bodyBytes = putBodyBytes(seasonSteps, seasonStart);
+
+    console.log(
+      JSON.stringify({
+        fixture: 'career-05-chapter',
         peakCheckpoint: peak.checkpoint,
         peakRevision: peak.revision,
         peakStateBytes,

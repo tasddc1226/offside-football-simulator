@@ -105,9 +105,7 @@ export function buildSeasonResult(input: BuildSeasonResultInput): Omit<SeasonRes
     attributeDeltas: input.attributeDeltas,
     baseOvr: input.baseOvr,
     stateDeltas: input.stateDeltas,
-    // T-2-004(핵심 경기 챕터)가 아직 main에 없다 — 머지되면 season.chapters ?? []로 바꾼다(브리프
-    // "T-2-004와의 병행" 접점 한 줄).
-    chapters: [],
+    chapters: season.chapters,
   };
 }
 

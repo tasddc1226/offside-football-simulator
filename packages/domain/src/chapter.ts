@@ -1,0 +1,313 @@
+import { compareCodePoints } from './canonical.js';
+import { clamp } from './clamp.js';
+import { applyEffects } from './effects.js';
+import { computeRatingTenths } from './match.js';
+import { rollInt } from './rng.js';
+import { isRivalOpponent } from './schedule.js';
+import type { League, Ruleset } from './ruleset.js';
+import type {
+  CareerState,
+  ChapterRecord,
+  ChapterTrigger,
+  CompetitionRecord,
+  Effect,
+  MatchRecord,
+  Pending,
+  SeasonStep,
+  SimulationMode,
+} from './types.js';
+
+/** T-2-004 D-38: 웹이 콘텐츠 팩 `chapters[]`에서 요약해 `ADVANCE.payload.chapterCandidates`로 보내는 후보 하나. */
+export type ChapterCandidateInput = {
+  chapterId: string;
+  version: number;
+  importance: 'MAJOR' | 'MINOR';
+  trigger: ChapterTrigger;
+  weight: number;
+  decisionsTotal: number;
+};
+
+export type ChapterOpenResult = {
+  chapterId: string;
+  version: number;
+  importance: 'MAJOR' | 'MINOR';
+  matchId: string;
+  decisionsTotal: number;
+};
+
+export type SelectChapterInput = {
+  /** 지금 결정 슬롯을 확인 중인 step(경기는 이미 반영된 뒤). */
+  step: SeasonStep;
+  /** 시즌 전체 step 목록(DECIDER의 "리그 마지막 step" 판정용). */
+  steps: readonly SeasonStep[];
+  seasonIndex: number;
+  mode: SimulationMode;
+  /** 이 step에서 방금 재생된 경기 기록(순서 무관하게 넘겨도 된다 — order로 다시 정렬한다). */
+  matchesThisStep: readonly MatchRecord[];
+  /** 이 step 전까지 이번 시즌에 쌓인 경기 기록(DEBUT의 "커리어 첫 출전" 판정용). */
+  matchesBeforeThisStep: readonly MatchRecord[];
+  competitions: readonly CompetitionRecord[];
+  candidates: readonly ChapterCandidateInput[];
+  tags: readonly string[];
+  resolvedChapterIds: readonly string[];
+  /** `season.chapters[].chapterId`(이번 시즌에 이미 확정된 챕터, 재열림 방지). */
+  existingChapterIds: readonly string[];
+  league: League;
+};
+
+function stepAllowsImportance(step: SeasonStep, importance: 'MAJOR' | 'MINOR'): boolean {
+  return step.decisionSlots.some(
+    (slot) => slot.kind === 'CHAPTER' && !slot.skippedByBudget && (slot.importance === undefined || slot.importance === importance),
+  );
+}
+
+/** DECIDER 경계: 승격 마지노선(promotionSpots)·강등 마지노선(teamCount - relegationSpots + 1) 중 하나에서 maxRankGap 이내. */
+function isNearPromotionOrRelegation(league: League, position: number | null, maxRankGap: number): boolean {
+  if (position === null) return false;
+  const nearPromotion = league.promotionSpots > 0 && Math.abs(position - league.promotionSpots) <= maxRankGap;
+  const relegationBoundary = league.teamCount - league.relegationSpots + 1;
+  const nearRelegation = league.relegationSpots > 0 && Math.abs(position - relegationBoundary) <= maxRankGap;
+  return nearPromotion || nearRelegation;
+}
+
+function lastLeagueStepIndex(steps: readonly SeasonStep[]): number {
+  let last = -1;
+  for (const step of steps) {
+    if (step.phase === 'LEAGUE') last = Math.max(last, step.index);
+  }
+  return last;
+}
+
+type TriggerContext = {
+  seasonIndex: number;
+  isFirstCareerAppearance: boolean;
+  isLastLeagueStep: boolean;
+  league: League;
+  leaguePosition: number | null;
+  tags: readonly string[];
+};
+
+/**
+ * `trigger`가 `match`에 맞는지 본다. 모든 트리거는 그 경기에 실제로 출전(minutes > 0)했을 때만
+ * 맞는다 — 판단이 그 경기에서 선수가 겪은 순간을 다루므로 0분 경기는 대상이 아니다.
+ */
+export function matchesTrigger(trigger: ChapterTrigger, match: MatchRecord, ctx: TriggerContext): boolean {
+  if (match.minutes <= 0) return false;
+  switch (trigger.kind) {
+    case 'DEBUT':
+      return ctx.seasonIndex === 1 && ctx.isFirstCareerAppearance;
+    case 'DERBY':
+      return match.kind === 'LEAGUE' && isRivalOpponent(ctx.league, match.opponent.id);
+    case 'CUP_FINAL':
+      return match.kind === 'CUP' && match.round === 'FINAL';
+    case 'DECIDER':
+      return ctx.isLastLeagueStep && isNearPromotionOrRelegation(ctx.league, ctx.leaguePosition, trigger.maxRankGap);
+    case 'TAG':
+      return ctx.tags.includes(trigger.tag);
+  }
+}
+
+/**
+ * T-2-004 D-38 규칙 2·3: 후보를 필터(step 슬롯 존재·importance 일치·FAST는 MAJOR만·중복 제외)한 뒤
+ * 이 step의 경기 중 트리거가 맞는 첫 경기(order 오름차순)를 찾고, 남은 후보를 MAJOR > weight > id
+ * 순으로 정렬해 하나를 고른다. roll을 소비하지 않는다.
+ */
+export function selectChapter(input: SelectChapterInput): ChapterOpenResult | null {
+  const isFirstCareerAppearanceAtStepStart = !input.matchesBeforeThisStep.some((match) => match.minutes > 0);
+  const isLastLeagueStep = input.step.index === lastLeagueStepIndex(input.steps);
+  const leaguePosition = input.competitions.find((c) => c.competitionId === 'LEAGUE')?.position ?? null;
+  const orderedMatches = [...input.matchesThisStep].sort((a, b) => a.order - b.order);
+
+  const eligibleCandidates = input.candidates.filter((candidate) => {
+    if (input.mode === 'FAST' && candidate.importance !== 'MAJOR') return false;
+    if (!stepAllowsImportance(input.step, candidate.importance)) return false;
+    if (input.resolvedChapterIds.includes(`${candidate.chapterId}@${input.seasonIndex}`)) return false;
+    if (input.existingChapterIds.includes(candidate.chapterId)) return false;
+    return true;
+  });
+
+  const opened: Array<{ candidate: ChapterCandidateInput; matchId: string }> = [];
+  for (const candidate of eligibleCandidates) {
+    let isFirstCareerAppearance = isFirstCareerAppearanceAtStepStart;
+    for (const match of orderedMatches) {
+      if (
+        matchesTrigger(candidate.trigger, match, {
+          seasonIndex: input.seasonIndex,
+          isFirstCareerAppearance,
+          isLastLeagueStep,
+          league: input.league,
+          leaguePosition,
+          tags: input.tags,
+        })
+      ) {
+        opened.push({ candidate, matchId: match.id });
+        break;
+      }
+      if (match.minutes > 0) isFirstCareerAppearance = false;
+    }
+  }
+
+  if (opened.length === 0) return null;
+
+  opened.sort((a, b) => {
+    if (a.candidate.importance !== b.candidate.importance) return a.candidate.importance === 'MAJOR' ? -1 : 1;
+    if (a.candidate.weight !== b.candidate.weight) return b.candidate.weight - a.candidate.weight;
+    return compareCodePoints(a.candidate.chapterId, b.candidate.chapterId);
+  });
+
+  const winner = opened[0]!;
+  return {
+    chapterId: winner.candidate.chapterId,
+    version: winner.candidate.version,
+    importance: winner.candidate.importance,
+    matchId: winner.matchId,
+    decisionsTotal: winner.candidate.decisionsTotal,
+  };
+}
+
+export type ResolveChapterOutcome = {
+  id: string;
+  weight: number;
+  effects: Effect[];
+  ratingDeltaTenths: number;
+  addTags?: string[];
+  removeTags?: string[];
+};
+
+export type ResolveChapterInput = {
+  state: CareerState;
+  ruleset: Ruleset;
+  chapterId: string;
+  definitionVersion: number;
+  decisionId: string;
+  optionId: string;
+  outcomes: ResolveChapterOutcome[];
+};
+
+export type ResolveChapterFailureReason = 'NO_PENDING_CHAPTER' | 'PENDING_CHAPTER_MISMATCH' | 'DECISION_ALREADY_RESOLVED';
+
+// 브리프가 정한 reason 값은 3개뿐이다(가중치 검사 실패는 `resolveEvent`처럼 reason 없이 message만
+// 돌려준다 — simulate.ts는 reason이 없으면 fail()에 details를 붙이지 않는다).
+export type ResolveChapterResult =
+  | { ok: false; message: string; reason?: ResolveChapterFailureReason }
+  | { ok: true; state: CareerState; roll: number; outcomeId: string; appliedEffects: Effect[] };
+
+function sortUniqueTags(tags: string[]): string[] {
+  return Array.from(new Set(tags)).sort(compareCodePoints);
+}
+
+/**
+ * T-2-004 D-38 "판단 resolver 규칙": 판단 하나를 검증·roll·적용한다. `resolveEvent`(simulate.ts)와
+ * 같은 누적 가중치 선택을 쓰되, roll은 `state.rngState`(경기 전용 `matchRngState`가 아니다 — 경기
+ * 결과는 이미 확정됐다)에서 뽑는다. season.ts·simulate.ts는 이 함수를 command 분기·revision·
+ * timeline 조립에만 쓴다(명령 검증·roll·Effect·평점·통계 재계산은 전부 여기서 끝낸다).
+ */
+export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult {
+  const state = input.state;
+  const pending = state.pending;
+  if (pending === null || pending.kind !== 'CHAPTER') {
+    return { ok: false, message: '해소할 pending 챕터가 없다.', reason: 'NO_PENDING_CHAPTER' };
+  }
+  if (pending.chapterId !== input.chapterId || pending.version !== input.definitionVersion) {
+    return { ok: false, message: 'pending 챕터와 요청이 다르다.', reason: 'PENDING_CHAPTER_MISMATCH' };
+  }
+  if (pending.resolved.some((entry) => entry.decisionId === input.decisionId)) {
+    return { ok: false, message: '이미 확정된 판단이다.', reason: 'DECISION_ALREADY_RESOLVED' };
+  }
+
+  const outcomes = input.outcomes;
+  const weightSum = outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
+  // resolveEvent(simulate.ts)와 같은 검사·같은 규칙(reason 없이 message만) — rollInt가
+  // maxExclusive를 1 이상의 정수로 요구하는 프로그래밍 오류 가정을 여기서 미리 걸러낸다.
+  if (!Number.isInteger(weightSum) || weightSum <= 0 || weightSum > 0xffffffff) {
+    return { ok: false, message: 'outcome 가중치 합은 1 이상 2^32 이하의 정수여야 한다.' };
+  }
+
+  const rolled = rollInt(state.rngState, weightSum);
+  let cumulative = 0;
+  let chosen = outcomes[0];
+  for (const outcome of outcomes) {
+    cumulative += outcome.weight;
+    if (rolled.value < cumulative) {
+      chosen = outcome;
+      break;
+    }
+  }
+  if (chosen === undefined) {
+    return { ok: false, message: 'outcomes가 비어 있다.' };
+  }
+
+  const effectResult = applyEffects(state, chosen.effects, { step: state.currentStep });
+
+  let tags = effectResult.state.tags;
+  if (chosen.addTags && chosen.addTags.length > 0) tags = [...tags, ...chosen.addTags];
+  if (chosen.removeTags && chosen.removeTags.length > 0) {
+    const removeSet = new Set(chosen.removeTags);
+    tags = tags.filter((tag) => !removeSet.has(tag));
+  }
+  tags = sortUniqueTags(tags);
+
+  const season = effectResult.state.season;
+  if (season === null) {
+    throw new RangeError('resolveChapter: CHAPTER pending인데 season이 null이다.');
+  }
+  const matchIndex = season.matches.findIndex((candidate) => candidate.id === pending.matchId);
+  if (matchIndex === -1) {
+    throw new RangeError(`resolveChapter: season.matches에 matchId '${pending.matchId}'가 없다.`);
+  }
+  const match = season.matches[matchIndex]!;
+  const beforeRating = match.ratingTenths;
+  const afterRating = beforeRating === null ? null : clamp(beforeRating + chosen.ratingDeltaTenths, 40, 100);
+
+  const matches = season.matches.map((candidate, index) =>
+    index === matchIndex ? { ...candidate, ratingTenths: afterRating } : candidate,
+  );
+
+  const isLastMatchInSeason = matchIndex === season.matches.length - 1;
+  const lastRatingTenths = isLastMatchInSeason && afterRating !== null ? afterRating : season.lastRatingTenths;
+
+  const ratingSumDelta = beforeRating === null || afterRating === null ? 0 : afterRating - beforeRating;
+  const playerStats = { ...season.playerStats, ratingSumTenths: season.playerStats.ratingSumTenths + ratingSumDelta };
+
+  const resolvedEntry = { decisionId: input.decisionId, optionId: input.optionId, outcomeId: chosen.id, roll: rolled.value };
+  const resolved = [...pending.resolved, resolvedEntry];
+  const isLastDecision = resolved.length >= pending.decisionsTotal;
+
+  let chapters = season.chapters;
+  let resolvedChapterIds = state.resolvedChapterIds;
+  let nextPending: Pending;
+
+  if (isLastDecision) {
+    // 챕터가 경기 평점에 더한 총합은 판단 이전 원래 평점(경기 통계에서 다시 계산 — 챕터로 바뀌지
+    // 않는 값이라 순수 함수로 재도출할 수 있다)과 최종 평점의 차이다.
+    const originalRating =
+      match.minutes > 0 ? computeRatingTenths(match.stats.group, match.stats, match.result.outcome, match.cards, input.ruleset) : null;
+    const chapterRatingDeltaTenths = originalRating === null || afterRating === null ? 0 : afterRating - originalRating;
+
+    const chapterRecord: ChapterRecord = {
+      chapterId: pending.chapterId,
+      version: pending.version,
+      step: pending.step,
+      matchId: pending.matchId,
+      importance: pending.importance,
+      decisions: resolved.map((entry) => ({ decisionId: entry.decisionId, optionId: entry.optionId, outcomeId: entry.outcomeId })),
+      ratingDeltaTenths: chapterRatingDeltaTenths,
+    };
+    chapters = [...season.chapters, chapterRecord];
+    resolvedChapterIds = sortUniqueTags([...state.resolvedChapterIds, `${pending.chapterId}@${season.index}`]);
+    nextPending = null;
+  } else {
+    nextPending = { ...pending, resolved };
+  }
+
+  const nextState: CareerState = {
+    ...effectResult.state,
+    tags,
+    resolvedChapterIds,
+    rngState: rolled.state,
+    pending: nextPending,
+    season: { ...season, matches, playerStats, lastRatingTenths, chapters },
+  };
+
+  return { ok: true, state: nextState, roll: rolled.value, outcomeId: chosen.id, appliedEffects: effectResult.applied };
+}

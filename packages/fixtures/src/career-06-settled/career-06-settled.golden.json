@@ -1,6 +1,6 @@
 {
-  "revision": 17,
-  "stateHash": "5c20750bebd55a6a4a706a40b99b4b05332818c95af316801285eb3da649dfc8",
+  "revision": 15,
+  "stateHash": "6ae56bd8978c2783c5759a13143fa5fa74ed012ad660787faf568b32bc8365be",
   "rngStateDraws": 398,
   "age": 18,
   "seasonHistory": [
@@ -34,7 +34,7 @@
           "cupRound": "WON"
         }
       ],
-      "settledAtRevision": 17,
+      "settledAtRevision": 15,
       "result": {
         "index": 1,
         "simulationMode": "FAST",

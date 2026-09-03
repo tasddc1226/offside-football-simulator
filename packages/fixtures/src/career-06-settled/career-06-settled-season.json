@@ -37,30 +37,6 @@
       }
     },
     {
-      "type": "ADVANCE",
-      "payload": {
-        "eligibleEvents": [
-          {
-            "eventId": "EVT-SEASON-FIXTURE",
-            "version": 1,
-            "weight": 1
-          }
-        ]
-      }
-    },
-    {
-      "type": "ADVANCE",
-      "payload": {
-        "eligibleEvents": [
-          {
-            "eventId": "EVT-SEASON-FIXTURE",
-            "version": 1,
-            "weight": 1
-          }
-        ]
-      }
-    },
-    {
       "type": "SETTLE_SEASON",
       "payload": {}
     }

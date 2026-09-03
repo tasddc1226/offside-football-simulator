@@ -1,7 +1,7 @@
 {
   "FAST": {
-    "revision": 17,
-    "stateHash": "000896411f9634ff8998053350e9c8dd1ad47949f1133db0d4c3da078356f762",
+    "revision": 15,
+    "stateHash": "31ca204524a1912010917b731dccc8245154db5146a3061d7346988316290f83",
     "rngStateDraws": 398,
     "age": 18,
     "seasonHistory": [
@@ -35,7 +35,7 @@
             "cupRound": "WON"
           }
         ],
-        "settledAtRevision": 17,
+        "settledAtRevision": 15,
         "result": {
           "index": 1,
           "simulationMode": "FAST",
@@ -508,8 +508,6 @@
       "STEP_BOUNDARY",
       "STEP_BOUNDARY",
       "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
       "SEASON_SETTLED"
     ],
     "stepSummaries": [
@@ -534,8 +532,8 @@
       {
         "index": 3,
         "summary": {
-          "passedAtRevision": 14,
-          "decisionsOpened": 1,
+          "passedAtRevision": 13,
+          "decisionsOpened": 0,
           "matchesPlayed": 3,
           "results": [
             {
@@ -568,7 +566,7 @@
       {
         "index": 4,
         "summary": {
-          "passedAtRevision": 14,
+          "passedAtRevision": 13,
           "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
@@ -594,7 +592,7 @@
       {
         "index": 5,
         "summary": {
-          "passedAtRevision": 14,
+          "passedAtRevision": 13,
           "decisionsOpened": 0,
           "matchesPlayed": 4,
           "results": [
@@ -636,7 +634,7 @@
       {
         "index": 6,
         "summary": {
-          "passedAtRevision": 14,
+          "passedAtRevision": 13,
           "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
@@ -662,7 +660,7 @@
       {
         "index": 7,
         "summary": {
-          "passedAtRevision": 15,
+          "passedAtRevision": 14,
           "decisionsOpened": 1,
           "matchesPlayed": 4,
           "results": [
@@ -704,7 +702,7 @@
       {
         "index": 8,
         "summary": {
-          "passedAtRevision": 15,
+          "passedAtRevision": 14,
           "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
@@ -730,7 +728,7 @@
       {
         "index": 9,
         "summary": {
-          "passedAtRevision": 15,
+          "passedAtRevision": 14,
           "decisionsOpened": 0,
           "matchesPlayed": 4,
           "results": [
@@ -772,7 +770,7 @@
       {
         "index": 10,
         "summary": {
-          "passedAtRevision": 15,
+          "passedAtRevision": 14,
           "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
@@ -798,8 +796,8 @@
       {
         "index": 11,
         "summary": {
-          "passedAtRevision": 16,
-          "decisionsOpened": 1,
+          "passedAtRevision": 14,
+          "decisionsOpened": 0,
           "matchesPlayed": 3,
           "results": [
             {
@@ -904,8 +902,8 @@
     }
   },
   "CHAPTER": {
-    "revision": 29,
-    "stateHash": "181745d2d860831ad34b483193399a9d1fabcd76728ed0afa6e4c61b24c1d07b",
+    "revision": 25,
+    "stateHash": "5d8d665d6057e070f634080091236752898e1475a596d318e60e419f8cc847a8",
     "rngStateDraws": 403,
     "age": 18,
     "seasonHistory": [
@@ -939,7 +937,7 @@
             "cupRound": "WON"
           }
         ],
-        "settledAtRevision": 29,
+        "settledAtRevision": 25,
         "result": {
           "index": 1,
           "simulationMode": "CHAPTER",
@@ -1413,18 +1411,14 @@
       "STEP_BOUNDARY",
       "EVENT_RESOLVED",
       "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
       "EVENT_RESOLVED",
       "STEP_BOUNDARY",
       "EVENT_RESOLVED",
       "STEP_BOUNDARY",
       "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
       "EVENT_RESOLVED",
       "STEP_BOUNDARY",
       "EVENT_RESOLVED",
-      "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
       "STEP_BOUNDARY",
       "SEASON_SETTLED"
     ],
@@ -1450,8 +1444,8 @@
       {
         "index": 3,
         "summary": {
-          "passedAtRevision": 16,
-          "decisionsOpened": 1,
+          "passedAtRevision": 15,
+          "decisionsOpened": 0,
           "matchesPlayed": 3,
           "results": [
             {
@@ -1484,7 +1478,7 @@
       {
         "index": 4,
         "summary": {
-          "passedAtRevision": 18,
+          "passedAtRevision": 17,
           "decisionsOpened": 1,
           "matchesPlayed": 2,
           "results": [
@@ -1510,7 +1504,7 @@
       {
         "index": 5,
         "summary": {
-          "passedAtRevision": 20,
+          "passedAtRevision": 19,
           "decisionsOpened": 1,
           "matchesPlayed": 4,
           "results": [
@@ -1552,8 +1546,8 @@
       {
         "index": 6,
         "summary": {
-          "passedAtRevision": 21,
-          "decisionsOpened": 1,
+          "passedAtRevision": 19,
+          "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
             {
@@ -1578,7 +1572,7 @@
       {
         "index": 7,
         "summary": {
-          "passedAtRevision": 22,
+          "passedAtRevision": 20,
           "decisionsOpened": 1,
           "matchesPlayed": 4,
           "results": [
@@ -1620,7 +1614,7 @@
       {
         "index": 8,
         "summary": {
-          "passedAtRevision": 24,
+          "passedAtRevision": 22,
           "decisionsOpened": 1,
           "matchesPlayed": 2,
           "results": [
@@ -1646,7 +1640,7 @@
       {
         "index": 9,
         "summary": {
-          "passedAtRevision": 26,
+          "passedAtRevision": 24,
           "decisionsOpened": 1,
           "matchesPlayed": 4,
           "results": [
@@ -1688,8 +1682,8 @@
       {
         "index": 10,
         "summary": {
-          "passedAtRevision": 27,
-          "decisionsOpened": 1,
+          "passedAtRevision": 24,
+          "decisionsOpened": 0,
           "matchesPlayed": 2,
           "results": [
             {
@@ -1714,8 +1708,8 @@
       {
         "index": 11,
         "summary": {
-          "passedAtRevision": 28,
-          "decisionsOpened": 1,
+          "passedAtRevision": 24,
+          "decisionsOpened": 0,
           "matchesPlayed": 3,
           "results": [
             {

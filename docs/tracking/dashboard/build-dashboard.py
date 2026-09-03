@@ -95,8 +95,8 @@ SCREENS = [
     ("법적 문서", "개인정보·약관", "구현", "본문 초안 (T-1-012). 운영자명·연락처는 U-010"),
 ]
 LAYERS = [
-    ("domain", "결정론 시뮬레이터", ["시드 RNG·canonical hash·golden fixture", "CREATE_CAREER·RESOLVE_EVENT·ADVANCE", "효과 5종·태그·지연 효과", "선수 모델·Base OVR 59·DRAFT→확정·이벤트 제시 (T-1-001)", "제안 생성·계약 확정, golden 첫 계약까지 (T-1-005)", "선수 성별(결과 불변)·선호/현재 포지션 분리·golden 갱신 (T-1-016)", "시즌 구조·12 step·START/SETTLE_SEASON·ADVANCE 재정의·결정 예산 (T-2-001)", "전술 스타일·경쟁자 8×2·Tactical Fit·선발 순위·step-1 역할 제안 RESOLVE_ROLE, golden underdog (T-2-002)", "경기 계산: 일정·팀 결과·출전 시간·통계·평점·카드·부상·시즌 집계, 경기 전용 RNG (T-2-003)", "시즌 결산 SeasonResult·성장식(D-39)·폼/체력/사기·출전 약속·DEFERRED 시즌 적용 (T-2-005)"], ["핵심 경기 챕터·RESOLVE_CHAPTER (T-2-004, PR #41 main 머지 중)"]),
-    ("content", "이벤트·룰셋 데이터", ["프로토타입 팩 0.1.0(이벤트 10개)", "조건 DSL·효과 스키마·검증 CLI", "룰셋 1.0.0(아키타입 24·배경 3·팀 8·제안·계약 규칙)", "조건 컨텍스트·적격 이벤트 선택기·브라우저 팩 로더 (T-1-015)", "룰셋 leagueCalendar 12 step·seasonBoundaryReset (T-2-001)", "리그 4·FA컵·전술 스타일 3종·선발 상수·경쟁자 이름 40 (T-2-002)", "matchRules·결과표·통계표·징계·부상 (T-2-003)", "growthRules·conditionRules·promiseMinutesShareBp (T-2-005)"], ["팩 chapters 3종·리그 라이벌/승격 정보 (T-2-004)"]),
+    ("domain", "결정론 시뮬레이터", ["시드 RNG·canonical hash·golden fixture", "CREATE_CAREER·RESOLVE_EVENT·ADVANCE", "효과 5종·태그·지연 효과", "선수 모델·Base OVR 59·DRAFT→확정·이벤트 제시 (T-1-001)", "제안 생성·계약 확정, golden 첫 계약까지 (T-1-005)", "선수 성별(결과 불변)·선호/현재 포지션 분리·golden 갱신 (T-1-016)", "시즌 구조·12 step·START/SETTLE_SEASON·ADVANCE 재정의·결정 예산 (T-2-001)", "전술 스타일·경쟁자 8×2·Tactical Fit·선발 순위·step-1 역할 제안 RESOLVE_ROLE, golden underdog (T-2-002)", "경기 계산: 일정·팀 결과·출전 시간·통계·평점·카드·부상·시즌 집계, 경기 전용 RNG (T-2-003)", "시즌 결산 SeasonResult·성장식(D-39)·폼/체력/사기·출전 약속·DEFERRED 시즌 적용 (T-2-005)", "핵심 경기 챕터: 후보 선택·RESOLVE_CHAPTER·ChapterRecord, golden career-05-chapter (T-2-004)"], ["Phase 3+ 공유 계약: Effect 규칙 D-40·시장가치 D-41·CareerTag D-42·ADR-010 (T-2-014)"]),
+    ("content", "이벤트·룰셋 데이터", ["프로토타입 팩 0.1.0(이벤트 10개)", "조건 DSL·효과 스키마·검증 CLI", "룰셋 1.0.0(아키타입 24·배경 3·팀 8·제안·계약 규칙)", "조건 컨텍스트·적격 이벤트 선택기·브라우저 팩 로더 (T-1-015)", "룰셋 leagueCalendar 12 step·seasonBoundaryReset (T-2-001)", "리그 4·FA컵·전술 스타일 3종·선발 상수·경쟁자 이름 40 (T-2-002)", "matchRules·결과표·통계표·징계·부상 (T-2-003)", "growthRules·conditionRules·promiseMinutesShareBp (T-2-005)", "팩 chapters 3종(CHP-MATCH-001/002/004)·챕터 스키마·리그 라이벌/승격·강등 정보 (T-2-004)"], []),
     ("contracts", "API·명령 스키마(Zod)", ["요청·응답 봉투·오류 코드·프로필 설정", "커리어 동기화 GET/PUT·Snapshot 봉투", "Phase 1 명령 payload 판별 유니온·CareerState·PlayerPublic(잠재력 비노출)·복구·삭제 스키마 (T-1-006)", "api 복구·삭제 라우트가 contracts 스키마로 검증 (T-1-012)", "선수 성별·선호/현재 포지션 스키마 (T-1-016)", "Google 병합·pendingMerge 스키마 (T-1-013)", "RESOLVE_ROLE·ROLE_PROPOSAL·경쟁자·선발 순위 스키마 (T-2-002)", "golden 순회 strict 정합·목록 가드·Snapshot 크기 15.3 KB(예산 6%) (T-2-006)"], []),
     ("engine-client", "브라우저 실행기", ["명령 실행기·멱등성·Snapshot 복구", "Web Worker 시뮬레이터", "동기화 클라이언트(재시도·409 처리)", "룰셋 배선 (T-1-001)", "포크(fork-by-replay)·Worker 실패 처리 (T-1-011)", "서버 커리어 가져오기 importCareerFromServer (T-1-012)", "시즌 명령 replay·fork·import golden, 로컬 저장 시즌 checkpoint 계약 (T-2-006)"], []),
     ("platform", "저장소 추상화", ["Dexie(IndexedDB) LocalStore", "KV LocalStore(토스 채널용 스텁)", "features.googleLink 채널 기능 플래그 (T-1-013)"], []),
@@ -121,7 +121,8 @@ ETA = [
     ("9/3 19:05", "경기 계산(T-2-003) 머지(PR #39): 일정·경기 결과·출전·통계·평점·카드·부상·시즌 집계가 골든으로 고정, 경기 전용 RNG 스트림(D-37), FAST 시즌 domain 7.4 ms. 리뷰 수정 2건 + PR #38 후속. Wave 2 종료"),
     ("9/3 20:55", "Wave 3 T-2-004(핵심 경기 챕터)·T-2-005(결산·성장) 병행 투입. 사용자 '속도 올리자'로 T-2-007(시즌 화면)을 3번째 워커로 투입, T-2-008·009·014 브리프 선작성"),
     ("9/3 21:20", "시즌 결산·성장(T-2-005) 머지(PR #40): SeasonResult·성장식(D-39)·폼/체력/사기·출전 약속·DEFERRED 효과의 시즌 단위 적용, 밸런스 표 통과(200 seed×3 연령). 리뷰 수정 2건(DEFERRED 유실 버그 포함)"),
-    ("9/3 밤", "T-2-004(챕터, PR #41) 리뷰 수정·main 머지 → 검증·머지 → T-2-014 투입. T-2-007 머지 뒤 T-2-008·009 투입"),
+    ("9/3 22:03", "핵심 경기 챕터(T-2-004) 머지(PR #41): 데뷔전·더비·승격 결정전 챕터가 경기 직후 열리고 판단마다 roll 1회, golden career-05-chapter. 리뷰 수정 1건 + main 머지. Wave 3 종료. T-2-014(Phase 3+ 공유 계약) 투입"),
+    ("9/3 밤~9/4", "T-2-007(시즌 화면) 머지 → T-2-008(챕터 화면)·T-2-009(결산 화면) 투입. T-2-014 머지 뒤 Phase 3·4 병렬 준비"),
 ]
 DECISIONS = [
     ("Phase 순서 준수", "Phase 0을 닫은 뒤 Phase 1 워커 투입. 브리프는 미리 작성."),
@@ -134,6 +135,7 @@ DECISIONS = [
     ("PR #39 리뷰: 경기 계산·D-37", "matchRngState를 결정 스트림 복사 대신 해시 파생 시드로, yellowSuspensionAt 5 복원(강제 카운트 테스트), PR #38 후속으로 career-04-gk를 contracts·api 검증에 추가해 머지. 수용: 부상 1~4경기, 리그 순위 기대 승점 근사, 컵 무승부 진출."),
     ("Wave 3 브리프 D-38·D-39", "챕터: 경기 계산 직후 훅, chapterCandidates·trigger 5종, RESOLVE_CHAPTER 판단당 roll 1회, 평점 delta·CURRENT/RELATION만. 결산: SeasonResult hash, 연령대 예산×잠재력 gap×출전 계수+경험, 훈련 초점, carry centi, 잠재력 cap, 시즌 중 폼·체력·사기 갱신, 밸런스 테스트로 상수 조정."),
     ("Wave 3 리뷰: DEFERRED 시즌 적용", "미룬 효과는 START_SEASON에서 season.scheduledEffects로 옮겨 그 시즌 step에 적용(유실·같은 시즌 오적용 방지). 성장 상수 75/65/8 확정, player.ts 잠재력 불변식은 T-2-011."),
+    ("D-38 확정: 챕터", "후보는 ADVANCE.chapterCandidates로, 출전한 경기만, FAST는 MAJOR만. CHAPTER pending은 RESOLVE_CHAPTER로만 닫힘. tier1~3 리그 라이벌/승격 상수는 임시값, DEBUT는 첫 시즌만(후속)."),
     ("PR #37 리뷰: 역할 제안 도달성·D-36 정수 상태", "POSITION_CHANGE 후보 필터가 실제 룰셋에서 항상 false였던 것(브리프 모호), RESOLVE_ROLE 뒤 squadRole·selection 불일치, fixtures export 누락을 고쳐 머지. 저장 상태는 정수만(D-36), 아키타입 +40의 밸런스 리스크는 T-2-011 측정 항목."),
     ("PR #36 리뷰: 시즌 구조·D-34·D-35", "FAST 예산이 모드가 열지 않는 슬롯까지 세어 MAJOR 챕터를 잘랐던 것, 시즌 walk 효과 만료 누락, 결산 뒤 nextAction, engine-client 최소 수정을 고쳐 머지. T-2-002(전술·역할 제안·경쟁자)·T-2-003(경기 계산 순서) 상세를 D-34·D-35로 확정."),
     ("Phase 3 이후 병렬화 D-32", "Phase 2까지 순차. 공유 계약(Effect·시장가치·태그) 확정 뒤 Phase 3·4 병렬, 그 위에 5·6 병렬. Phase 2 계획 T-2-001~014 초안."),

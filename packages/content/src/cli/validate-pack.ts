@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ChapterDefinitionSchema, type ChapterDefinition } from '../schema/chapter.ts';
 import { EventDefinitionSchema, type EventDefinition } from '../schema/event.ts';
 import { PackManifestSchema, type PackManifest } from '../schema/pack.ts';
 import { NarrativeDictionarySchema } from '../schema/narrative.ts';
@@ -8,6 +9,7 @@ import type { LoadedPack } from './load-pack.ts';
 
 export type PackValidationResult = {
   eventCount: number;
+  chapterCount: number;
   errors: string[];
   warnings: string[];
   computedChecksum: string;
@@ -49,6 +51,17 @@ export function validatePack(pack: LoadedPack, options: { writeChecksum: boolean
   checkCooldownWarning(events, warnings);
   checkMinorSafeWarning(events, warnings);
 
+  const chapters: { file: string; chapter: ChapterDefinition }[] = [];
+  for (const { file, raw } of pack.chapters) {
+    const result = ChapterDefinitionSchema.safeParse(raw);
+    if (!result.success) {
+      errors.push(...formatZodError(file, result.error));
+      continue;
+    }
+    chapters.push({ file, chapter: result.data });
+  }
+  checkDuplicateChapterIds(chapters, errors);
+
   // 목록에 있지만 실제로 없는 파일은 걸러낸다. 없는 파일을 그대로 넘기면
   // computePackChecksum이 undefined 콘텐츠로 해시를 시도해 예외를 던진다.
   // 그 경우는 missingOnDisk 에러로 이미 보고하므로 여기서는 조용히 제외한다.
@@ -78,6 +91,7 @@ export function validatePack(pack: LoadedPack, options: { writeChecksum: boolean
 
   return {
     eventCount: events.length,
+    chapterCount: chapters.length,
     errors,
     warnings,
     computedChecksum,
@@ -94,6 +108,19 @@ function checkDuplicateIds(events: { file: string; event: EventDefinition }[], e
       continue;
     }
     seen.set(event.id, file);
+  }
+}
+
+// T-2-004 D-38.
+function checkDuplicateChapterIds(chapters: { file: string; chapter: ChapterDefinition }[], errors: string[]): void {
+  const seen = new Map<string, string>();
+  for (const { file, chapter } of chapters) {
+    const existing = seen.get(chapter.id);
+    if (existing) {
+      errors.push(`${file}: id 중복: ${chapter.id} (${existing}와 중복)`);
+      continue;
+    }
+    seen.set(chapter.id, file);
   }
 }
 

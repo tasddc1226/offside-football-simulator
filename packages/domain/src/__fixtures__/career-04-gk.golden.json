@@ -1,6 +1,6 @@
 {
-  "revision": 17,
-  "stateHash": "b3385ca74ed74f9c82f846a668c8da933d57178acd5af8184b08c1f103c98870",
+  "revision": 15,
+  "stateHash": "966850fa240304ca5535e8f8953519b64be9b39f09e93968d3095a5e6584de22",
   "rngStateDraws": 398,
   "age": 18,
   "seasonHistory": [
@@ -34,7 +34,7 @@
           "cupRound": "OUT_SEMI"
         }
       ],
-      "settledAtRevision": 17,
+      "settledAtRevision": 15,
       "result": {
         "index": 1,
         "simulationMode": "FAST",
