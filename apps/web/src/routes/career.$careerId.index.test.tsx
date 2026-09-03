@@ -272,11 +272,10 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     expect(await screen.findByText('프리시즌 계획')).toBeInTheDocument();
   });
 
-  it('pending이 CHAPTER고 chapterId가 있으면(향후 T-2-008) "핵심 경기" CTA를 보여준다', async () => {
+  it('pending이 CHAPTER면 "핵심 경기" CTA를 보여준다(T-2-004 PR #41 머지, 자리표시 SCR-031로 연결)', async () => {
     const engine = setTestEngine();
     const careerId = await seasonActiveNoPendingCareerId(engine);
 
-    renderAt(`/career/${careerId}`);
     const router = renderAt(`/career/${careerId}`);
     await screen.findByRole('button', { name: '진행' });
 
@@ -288,9 +287,16 @@ describe('SCR-029 다음 결정 카드 분기', () => {
         ...current,
         state: {
           ...current.state,
-          // 도메인이 아직 CHAPTER pending에 chapterId를 붙이지 않는다(T-2-008 몫) — 화면 분기만
-          // 미리 검증하려고 타입을 우회해 주입한다.
-          pending: { kind: 'CHAPTER', step: current.state.currentStep, chapterId: 'CH-TEST' } as unknown as typeof current.state.pending,
+          pending: {
+            kind: 'CHAPTER',
+            step: current.state.currentStep,
+            chapterId: 'CH-TEST',
+            version: 1,
+            importance: 'MAJOR',
+            matchId: 'match-test',
+            decisionsTotal: 3,
+            resolved: [],
+          } satisfies typeof current.state.pending,
         },
       });
     });

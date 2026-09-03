@@ -92,17 +92,21 @@ describe('screenForCareer', () => {
       'SCR-012',
     ],
     [
-      'ACTIVE, pending CHAPTER(chapterId 있음, T-2-008 이후) → SCR-031',
+      'ACTIVE, pending CHAPTER → SCR-031(자리표시, T-2-008이 채운다)',
       baseState({
         status: 'ACTIVE',
-        pending: { kind: 'CHAPTER', step: 3, chapterId: 'CH-001' } as unknown as CareerState['pending'],
+        pending: {
+          kind: 'CHAPTER',
+          step: 3,
+          chapterId: 'CH-001',
+          version: 1,
+          importance: 'MAJOR',
+          matchId: 'match-1',
+          decisionsTotal: 3,
+          resolved: [],
+        },
       }),
       'SCR-031',
-    ],
-    [
-      'ACTIVE, pending CHAPTER(chapterId 없음, 현재 도메인) → SCR-029',
-      baseState({ status: 'ACTIVE', pending: { kind: 'CHAPTER', step: 3, importance: 'MAJOR' } }),
-      'SCR-029',
     ],
     ['ACTIVE, pending SETTLEMENT → SCR-029(대시보드가 결산 CTA를 보여준다)', baseState({ status: 'ACTIVE', pending: { kind: 'SETTLEMENT', step: 12 } }), 'SCR-029'],
     ['ACTIVE, pending CONTRACT → SCR-029(자동 통과, 대시보드 진행 버튼)', baseState({ status: 'ACTIVE', pending: { kind: 'CONTRACT', step: 7 } }), 'SCR-029'],

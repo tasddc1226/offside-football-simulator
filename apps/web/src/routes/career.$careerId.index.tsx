@@ -241,7 +241,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
     );
   }
 
-  if (pending !== null && pending.kind === 'CHAPTER' && 'chapterId' in pending) {
+  if (pending !== null && pending.kind === 'CHAPTER') {
     return (
       <Card className="flex flex-wrap items-center justify-between gap-os-3">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>

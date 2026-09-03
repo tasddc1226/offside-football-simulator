@@ -25,7 +25,9 @@ const DRAFT_FIELDS_WITHOUT_ARCHETYPE = [
 /**
  * DRAFT: archetypeId를 뺀 6개 필드 중 하나라도 null이면 SCR-002, archetypeId만 비었으면 SCR-003,
  * 그 외 SCR-004. ACTIVE: pending.kind === 'EVENT'면 이벤트별 화면(기본 SCR-013), 'OFFERS'면
- * SCR-009, 그 외 SCR-029. RETIRED·ARCHIVED는 SCR-029(phase-1-plan.md D-13 화면 해석 규칙).
+ * SCR-009, 'ROLE_PROPOSAL'이면 SCR-012, 'CHAPTER'면 SCR-031(자리표시), 그 외(SETTLEMENT·CONTRACT·
+ * INJURY·NATIONAL_TEAM)와 pending 없음은 SCR-029. RETIRED·ARCHIVED는 SCR-029(phase-1-plan.md D-13
+ * 화면 해석 규칙).
  */
 export function screenForCareer(state: CareerState): ScreenTarget {
   const params = { careerId: state.careerId };
@@ -50,10 +52,9 @@ export function screenForCareer(state: CareerState): ScreenTarget {
     if (pending !== null && pending.kind === 'ROLE_PROPOSAL') {
       return { screenId: 'SCR-012', params };
     }
-    // T-2-004(미머지)가 CHAPTER pending에 chapterId를 더할 때까지는 이 분기가 항상 false라
-    // CHAPTER pending은 SETTLEMENT·CONTRACT·INJURY·NATIONAL_TEAM과 함께 대시보드로 간다(SCR-029가
-    // "핵심 경기" CTA로 안내한다).
-    if (pending !== null && pending.kind === 'CHAPTER' && 'chapterId' in pending) {
+    // T-2-004(PR #41, origin/main 머지 확인)가 CHAPTER pending에 chapterId 등 실제 형태를 채웠다.
+    // 실제 경기 화면은 T-2-008 몫이라 여기서는 자리표시(SCR-031)로만 보낸다.
+    if (pending !== null && pending.kind === 'CHAPTER') {
       return { screenId: 'SCR-031', params };
     }
     return { screenId: 'SCR-029', params };
