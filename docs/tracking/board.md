@@ -4,7 +4,7 @@
 
 ## 현재 게이트
 
-**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. **Phase 1 코드 작업 종료(2026-09-03 12:12, PR #35).** T-1-009~017이 전부 머지돼 온보딩부터 첫 계약·대시보드, 복구 코드·프로필 복구·삭제, Google 연결·로그아웃, 성별·선호 포지션까지 브라우저에서 이어진다. [완료 조건 표](phase-1-completion.md) 15행 중 14행 ✅(#12는 오케스트레이터 수동 점검), #15 Google 실계정 검증만 U-003 대기. Phase 2 Wave 1 종료: T-2-001(시즌 구조, PR #36)·T-2-002(팀 전술·경쟁자·선발, PR #37)가 머지됐고 Wave 2로 T-2-003(경기 계산)·T-2-006(계약·동기화·크기)을 나란히 투입했다 — Phase 2는 순차(웨이브 안 병행)이며 계획·결정은 [phase-2-plan.md](phase-2-plan.md)(D-24~D-36). 사용자가 작성한 콘텐츠 정본 `docs/content/kickoff/`(PR #24)는 Phase 2 콘텐츠 작업의 입력이며 지금 코드 작업을 요구하지 않는다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다. **Phase 2 Wave 2 종료(2026-09-03 19:05, PR #39).** 시즌 구조·전술/선발·경기 계산·계약/동기화 검증이 main에 있고, Wave 3 T-2-004(챕터)·T-2-005(결산·성장)를 병행 투입했고, 사용자의 '속도 올리자'(2026-09-03 저녁)에 따라 선행 작업이 머지되는 즉시 다음 작업을 투입한다(동시 3개 상한). T-2-007(시즌 화면)을 3번째 워커로 투입했고, **T-2-005(PR #40)가 먼저 머지**됐다. **Phase 2 Wave 3 종료(2026-09-03 22:03, PR #41)**: T-2-004(챕터)도 머지됐다. T-2-014(Phase 3+ 공유 계약)를 투입했고, T-2-007(시즌 화면, PR #42, 23:15)이 머지돼 T-2-008(챕터 화면)·T-2-009(결산 화면)를 투입했다(동시 3개: T-2-014·008·009). T-2-014(공유 계약, PR #43, 23:32)가 머지돼 Phase 3·4 병렬 투입의 전제가 닫혔다 — **ADR-010은 워커 작성본이라 사용자 승인 대기(U-012)**.
+**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. **Phase 1 코드 작업 종료(2026-09-03 12:12, PR #35).** T-1-009~017이 전부 머지돼 온보딩부터 첫 계약·대시보드, 복구 코드·프로필 복구·삭제, Google 연결·로그아웃, 성별·선호 포지션까지 브라우저에서 이어진다. [완료 조건 표](phase-1-completion.md) 15행 중 14행 ✅(#12는 오케스트레이터 수동 점검), #15 Google 실계정 검증만 U-003 대기. Phase 2 Wave 1 종료: T-2-001(시즌 구조, PR #36)·T-2-002(팀 전술·경쟁자·선발, PR #37)가 머지됐고 Wave 2로 T-2-003(경기 계산)·T-2-006(계약·동기화·크기)을 나란히 투입했다 — Phase 2는 순차(웨이브 안 병행)이며 계획·결정은 [phase-2-plan.md](phase-2-plan.md)(D-24~D-36). 사용자가 작성한 콘텐츠 정본 `docs/content/kickoff/`(PR #24)는 Phase 2 콘텐츠 작업의 입력이며 지금 코드 작업을 요구하지 않는다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다. **Phase 2 Wave 2 종료(2026-09-03 19:05, PR #39).** 시즌 구조·전술/선발·경기 계산·계약/동기화 검증이 main에 있고, Wave 3 T-2-004(챕터)·T-2-005(결산·성장)를 병행 투입했고, 사용자의 '속도 올리자'(2026-09-03 저녁)에 따라 선행 작업이 머지되는 즉시 다음 작업을 투입한다(동시 3개 상한). T-2-007(시즌 화면)을 3번째 워커로 투입했고, **T-2-005(PR #40)가 먼저 머지**됐다. **Phase 2 Wave 3 종료(2026-09-03 22:03, PR #41)**: T-2-004(챕터)도 머지됐다. T-2-014(Phase 3+ 공유 계약)를 투입했고, T-2-007(시즌 화면, PR #42, 23:15)이 머지돼 T-2-008(챕터 화면)·T-2-009(결산 화면)를 투입했다(동시 3개: T-2-014·008·009). T-2-014(공유 계약, PR #43, 23:32)가 머지돼 Phase 3·4 병렬 투입의 전제가 닫혔다 — **ADR-010은 워커 작성본이라 사용자 승인 대기(U-012)**. 2026-09-04 01:20 PR #44(T-2-008) 검증 체인에서 e2e 2건이 실패(season.spec 이중 클릭 TOCTOU, chapter.spec 0분 시즌으로 데뷔 챕터 미발생)해 워커에게 수정을 요청했고(TUI 멈춤으로 터미널 재투입), PR #45(T-2-009)는 #44 뒤 main 머지 대기. 01:31 T-2-011(Phase 2 완료 조건 검증)을 3번째 워커로 투입 — 도메인 항목 먼저, web 항목은 #44·#45 머지 뒤. **PR #44(T-2-008 챕터 화면, `4f11110`) 01:56 머지** — 챕터가 브라우저에서 열리고 판단→결과→재생까지 e2e 62 통과. **PR #45(T-2-009 결산 화면, `1065272`) 02:08 머지** — Phase 2 화면 작업(T-2-007·008·009)이 전부 main에 있어 계약→프리시즌→시즌 12 step(챕터 포함)→결산→다음 시즌이 브라우저에서 이어진다(e2e 66 통과). 남은 Phase 2: T-2-011(진행 중, web 항목 착수)·T-2-010(콘텐츠, U-005 대기). 동시 워커 1개. 02:18 **Phase 3·4 병렬 계획 초안**([phase-3-4-plan.md](phase-3-4-plan.md), D-43~D-53, T-3-001~006·T-4-001~006) 작성 — 투입은 Phase 2 종료·U-012 승인 뒤, 브리프는 미리 쓴다.
 
 WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. 현재 Phase 1~7의 국내 MVP 순서를 바꾸지 않으며, Phase 3~5와 Phase 7 완료 후 새 ruleset의 신규 Career에 해외 이적·가상 해외 리그·대륙대회를 연다. 정본은 [WORLD STAGE 개발 명세](../development/15-world-stage-expansion.md)와 [Phase 8](../phases/phase-08-world-stage.md)이다.
 
@@ -24,6 +24,7 @@ WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. �
 | U-010 | 약관·개인정보 처리방침 최종 문안 검토, 사업자명·문의 이메일·시행일 확정(`apps/web/src/legal/operator.ts`) | todo | D-20. 초안 완료(PR #31, `apps/web/src/legal/privacy.tsx`·`terms.tsx`, 연락처는 "준비 중"으로 표시). 사용자가 문안·사업자명·문의 이메일·시행일을 정하면 오케스트레이터가 반영 작업을 만든다. 출시 전 필수 |
 | U-010 | 이 세션에서 `/mcp` → `apps-in-toss-console` 인증 완료 | deferred | 서버는 등록됨, OAuth 로그인만 남음 |
 | U-011 | (U-009에서 개인 신청 불가 시) 개인사업자 등록 후 콘솔 사업자 등록 | deferred | 조건부. 면세 사업자 불가 |
+| U-013 | Phase 3·4 워커가 이벤트 문구를 `PROTOTYPE`(`playtested: false`)으로 직접 작성해도 되는지 확인(콘텐츠 백로그 "SHIPPABLE 전 JSON 요청 금지"와의 관계), 팀 풀 8→12 확장 여부 | todo | [phase-3-4-plan.md](phase-3-4-plan.md) 5절. 승인 전에는 메커니즘 검증용 최소 문구만 |
 | U-012 | ADR-010(Phase 3+ 공유 계약: Effect 규칙·시장가치 입력·CareerTag) 검토·승인 또는 반려 | todo | PR #43(2026-09-03). 태그 ownerPhase 배정, 시장가치 가중치·popularity 5000 고정, PERMANENT 만료 금지가 주요 결정. 승인 전에도 Phase 3·4 브리프는 이 계약을 전제로 작성 |
 
 ## Phase 0 백로그 (착수 순서)
@@ -102,13 +103,32 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-2-005 | domain | 시즌 집계·SeasonResult, 성장·폼·체력·사기 Effect, 원인 태그, 결산 hash | T-2-003, T-2-004 | 2 | done | PR #40 eaeb6cf, [브리프](briefs/T-2-005.md) |
 | T-2-006 | contracts + api + engine-client | CMD-SIM 스키마, 시즌·결산·EffectQueue 스키마, Snapshot 크기, 동기화 회귀, Worker 계산 시간 | T-2-001 | 2 | done | PR #38 6f2f00e, [브리프](briefs/T-2-006.md) |
 | T-2-007 | web | SCR-005·011·012·029(시즌화·전술실)·033, e2e 포트 override | T-2-002, T-2-006 | 3 | done | PR #42 4feeb15, [브리프](briefs/T-2-007.md) |
-| T-2-008 | web | SCR-031 챕터·chapterCandidates 전달·재생 복원(SCR-012는 T-2-007로 이동) | T-2-004, T-2-007 | 3 | in-progress | `T-2-008-chapter-screen`, [브리프](briefs/T-2-008.md) |
-| T-2-009 | web | SCR-015 시즌 결산(+SCR-006)·연대기 요약·응답 유실 복구 | T-2-005, T-2-007 | 3 | in-progress | `T-2-009-season-result`, [브리프](briefs/T-2-009.md) |
+| T-2-008 | web | SCR-031 챕터·chapterCandidates 전달·재생 복원(SCR-012는 T-2-007로 이동) | T-2-004, T-2-007 | 3 | done | PR #44 4f11110, [브리프](briefs/T-2-008.md) |
+| T-2-009 | web | SCR-015 시즌 결산(+SCR-006)·연대기 요약·응답 유실 복구 | T-2-005, T-2-007 | 3 | done | PR #45 1065272, [브리프](briefs/T-2-009.md) |
 | T-2-010 | content | 콘텐츠 팩 0.2.0(챕터 3종·시즌 이벤트, SHIPPABLE 항목만) | T-2-004, 콘텐츠 승격 | 4 | todo | `docs/content/kickoff/production-backlog.md` 상태 기준 후속(PR #26): previewEffects에 성장·출전·제안 범위 구조화 필드, EVT-CON-002 C 성장 기대 줄 누락, 태그 한글 라벨(라커룸이 id 노출). |
-| T-2-011 | domain + web(e2e) | 포지션군 4종 완주 fixture, B > A, 집계, FAST 6분·CHAPTER 12분, TEST-E2E-002·010 | T-2-007~009 | 4 | todo | [브리프](briefs/T-2-011.md) 선작성(T-2-008·009 머지 뒤 투입, E2E_PORT 5187). 후속(PR #30): createWorkerSimulator 타임아웃을 포트 전체 broken이 아니라 요청당 예산으로. fixtures eligibleEvents가 selectEligibleEvents 실제 후보군과 다름(PR #26 기록). |
+| T-2-011 | domain + web(e2e) | 포지션군 4종 완주 fixture, B > A, 집계, FAST 6분·CHAPTER 12분, TEST-E2E-002·010 | T-2-007~009 | 4 | in-progress | `T-2-011-phase2-verify`, [브리프](briefs/T-2-011.md)(2026-09-04 01:31 투입, 도메인 먼저·web은 #44·#45 머지 뒤, E2E_PORT 5187). 후속(PR #30): createWorkerSimulator 타임아웃을 포트 전체 broken이 아니라 요청당 예산으로. fixtures eligibleEvents가 selectEligibleEvents 실제 후보군과 다름(PR #26 기록). |
 | T-2-012 | api + web + platform | LINE TEST 준비: `svc_line_test`, 테스트 보관함, 분석 이벤트, 스테이징 배포 | T-2-011, T-0-010 | 4 | todo | U-002 필요 |
 | T-2-013 | docs | LINE TEST 운영 계획·기준선 양식·완료 조건 표 | T-2-012 | 4 | todo | |
 | T-2-014 | domain + contracts | Phase 3+ 공유 계약: Effect 만료·중첩, 시장가치 입력, CareerTag 인터페이스, ADR-010 | T-2-004, T-2-005 | 3 | done | PR #43 dd480a2, [브리프](briefs/T-2-014.md) |
+
+## Phase 3·4 백로그 (계획 초안 2026-09-04, 투입은 Phase 2 종료·U-012 승인 후)
+
+계획·결정(D-43~D-53)은 [phase-3-4-plan.md](phase-3-4-plan.md). 트랙 A(계약·임대·이적)와 트랙 B(부상·관계·평판)를 병렬로 돌리되 타입 슬라이스(T-3-001 → T-4-001)는 순차. 동시 워커 3개.
+
+| ID | 트랙 | 영역 | 내용 | 선행 | 상태 | 비고 |
+|---|---|---|---|---|---|---|
+| T-3-001 | A | domain + contracts + content | 계약·제안 v2 타입, clubHistory, 제안 상태기계, 타임라인 kind 예약(양 트랙), DSL contract.*, CON payload 스키마 | U-012 | todo | 브리프 예정 |
+| T-3-002 | A | domain + content | 결산 뒤 이적시장 생성(D-43·D-44), 안전 잔류 제안, step 7 사전 협상, offerRulesV2·transferRules | T-3-001 | todo | |
+| T-3-003 | A | domain | NEGOTIATE·ACCEPT_OFFER v2·REJECT_OFFER·LOAN_RETURN, 원자 전환(D-45), 임대(D-46), 약속 위반(D-47), 태그 5종(D-48), golden career-10·11 | T-3-002 | todo | |
+| T-3-004 | A | contracts + api + engine-client | payload·상태 strict 검증, 동기화 회귀, Snapshot 크기 | T-3-003 | todo | |
+| T-3-005 | A | web | SCR-017 계약 상태·제안 비교·협상, SCR-019 루머, SCR-020 이적·임대 결과, TEST-E2E-003 | T-3-003, T-3-004 | todo | |
+| T-3-006 | A | content | 루머·잔류·에이전트 이벤트, 협상·이적 문구, 팀 풀 확장(열린 질문) | T-3-001 | todo | U-013 |
+| T-4-001 | B | domain + contracts + content | 관계 로그·감독·부상·평판 타입, HEALTH Effect(ADR-010 표 갱신), RESOLVE_EVENT의 INJURY·NATIONAL_TEAM 수용(D-52), 훅 골격 | U-012, T-3-001 | todo | T-3-001 뒤 리베이스 |
+| T-4-002 | B | domain + content | 부상 모델(D-49): 심각도·부위·진단 범위·재활 선택·재발·후유증, 강제 사건 상한, career-12-injury | T-4-001 | todo | |
+| T-4-003 | B | domain + content | 감독 교체·라커룸·슬럼프·윤리·SNS 이벤트 pool, popularityCenti, 관계 로그, 안전장치, 태그 5종(D-50) | T-4-001 | todo | T-4-002와 병행 |
+| T-4-004 | B | domain + content | 대표팀 차출 기본 모듈(D-51), NATIONAL_DEBUT 챕터 | T-4-002, T-4-003 | todo | |
+| T-4-005 | B | web | SCR-016·018·021·022·024·032, 라커룸·휴대폰 관계 수치 점진 공개, SCR-023 경기 판단 변형, TEST-E2E-004 | T-4-004 | todo | |
+| T-4-006 | A+B | domain + web(e2e) | 트랙 통합 검증: 3시즌 fixture, OVR 불변 property, 결정 예산·세션 길이, e2e 3회, 완료 조건 표 | T-3-005, T-4-005 | todo | |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
@@ -127,8 +147,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-2-008 | Sonnet 5, Orca 워크트리 `T-2-008-chapter-screen` | 2026-09-03 | 투입(SCR-031 핵심 경기 챕터 화면·chapterCandidates·RESOLVE_CHAPTER) |
-| T-2-009 | Sonnet 5, Orca 워크트리 `T-2-009-season-result` | 2026-09-03 | 투입(SCR-015 시즌 결산 화면·응답 유실 복구) |
+| T-2-011 | Sonnet 5, Orca 워크트리 `T-2-011-phase2-verify` | 2026-09-04 | 도메인 항목(fixture 3종·결정론·집계·career-03·B > A) 진행 중 → 02:08 `MAIN UPDATED 1065272` 전송, main 머지 뒤 web 항목(세션 길이 e2e·3회 무결점·TrainingFocus) 진행 |
 
 ## 완료
 
@@ -178,3 +197,5 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-2-004 | 핵심 경기 챕터: 후보 선택(`ADVANCE.chapterCandidates`, roll 없음, 0분 경기 제외, FAST는 MAJOR만, MAJOR>weight>id)·`RESOLVE_CHAPTER` resolver(판단당 roll 1회, 재전송 거부, 평점 ±1.5 clamp)·`ChapterRecord`·`resolvedChapterIds`(`id@season`)·팩 chapters 스키마(CURRENT/RELATION/DEFERRED만, ±12, priorProbability ±500bp)·CHP-MATCH-001/002/004·리그 라이벌/승격·강등 정보·`selectChapterCandidates`·golden career-05-chapter(PR #41, 리뷰 수정 1건 + main 머지 placeholder 교체, 워커 비용 약 $45.8, 177분) | 7859e8a |
 | T-2-007 | 시즌 화면: SCR-005 프리시즌 계획(모드 기본값 RULE-TIME-003·훈련 계획 4종→trainingFocus)·SCR-011 시즌 준비·SCR-012 역할 제안(KEEP/POSITION_CHANGE/ROLE_CHANGE→RESOLVE_ROLE)·SCR-029 대시보드 시즌화(다음 결정 카드·일정표·전술실)·SCR-033 능력치 상세(truePotential 미노출)·SCR-031/015 자리표시·startSeason/resolveRole/settleSeason 액션·playwright E2E_PORT·e2e season/a11y 6개(PR #42, 리뷰 수정 0건, 워커 비용 약 $27.6, 111분) | 4feeb15 |
 | T-2-014 | Phase 3+ 공유 계약(ADR-010): Effect kind→타깃 소유권·ONCE_PER_SEASON·AT_SEASON_END/SEASONS_AFTER 만료·REPLACE 복원·reasonTag·결산 직전 만료(D-40), 시장가치 지수 순수 함수·marketValueRules·truePotential 배제(D-41), CareerTag 16종·grant/evaluate·결산 훅·평가기 3종(D-42), RESOLVE_CHAPTER outcomes.kind·ChapterRecord.trigger/outcomeKind(PR #43, 리뷰 수정 2건, 워커 비용 약 $24.8, 84분) | dd480a2 |
+| T-2-008 | 핵심 경기 챕터 화면 SCR-031: advance()가 selectChapterCandidates→ADVANCE.chapterCandidates를 채워 챕터가 실제로 열림·경기 전 맥락(트리거·상대·출전·선발 사유·감독 지시)·스코어보드(D-30 표시 전용, OffsideLine 320ms)·판단 1~3(ChoiceCard→RESOLVE_CHAPTER, outcomes.kind)·ResultCard·경기 결과(평점 변화·태그)·deriveChapterView 새로고침/뒤로 가기 재생(roll 미소비, revision 불변)·chapter e2e(TEST-E2E-010)·a11y SCR-031·season.spec CHAPTER-aware 헬퍼·e2e 결정론(exact locator·step 변화 대기, DEV 전용 시드 오버라이드 `offside:e2e-seed`)(PR #44, 리뷰 수정 0건 + 검증 e2e 결함 2건 수정, 워커 비용 약 $30.0, 140분) | 4f11110 |
+| T-2-009 | 시즌 결산 화면 SCR-015(+SCR-006 유소년 변형): deriveSeasonResultView(공통 지표·포지션 카드·팀 성적·역할 시작/종료·출전 약속·챕터)·OVR 변화(원인 태그·가장 큰 원인)와 경기 예상치 변화(폼·체력·사기·감독 신뢰, 경계 회귀 캡션) 분리(D-29)·CompareCards(지난 시즌/계약 약속, 차이만 보기)·CountUp(data-value 확정값·건너뛰기·모션 감소)·결산 응답 유실 복구(commandId 멱등, 같은 result.hash)·대시보드 다이어리 연대기(시즌 N 결산 보기)·e2e season-result.spec(TEST-E2E-002)·a11y SCR-015·main(PR #44) 머지 시 e2e 헬퍼를 helpers/player-creation.ts로 통합(PR #45, 리뷰 수정 0건, 워커 비용 약 $33.6, 165분) | 1065272 |

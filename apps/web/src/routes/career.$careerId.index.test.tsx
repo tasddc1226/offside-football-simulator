@@ -11,6 +11,7 @@ import {
   advance,
   confirmPlayer,
   createCareer,
+  resolveChapter,
   resolveEvent,
   resolveRole,
   settleSeason,
@@ -22,6 +23,7 @@ import { routeTree } from '../routeTree.gen.js';
 import { careerQueryOptions } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { useUiStore } from '../shared/ui-store.js';
+import { buildPastSeasonLinks, buildSeasonChronicleItems } from './career.$careerId.index.js';
 
 const engineHolder = vi.hoisted(() => ({ promise: null as Promise<unknown> | null }));
 
@@ -127,14 +129,25 @@ async function seasonActiveNoPendingCareerId(engine: AppEngine): Promise<string>
   return careerId;
 }
 
-/** CHAPTER·CONTRACT 자동 통과 슬롯을 advance로 흘려보내 SETTLEMENT pending에 도달한다(FAST 모드
- * 실측: 역할 수락 뒤 CHAPTER→CONTRACT→CHAPTER→SETTLEMENT 순서, 안전 상한 20회). */
+/** CONTRACT 자동 통과 슬롯은 advance로 흘려보내고, CHAPTER(T-2-004 D-38: 자동 통과 대상이 아니다 —
+ * T-2-008이 advance에 chapterCandidates를 채우면서 FAST 모드에서도 MAJOR 챕터, 예: 데뷔전이 실제로
+ * 열린다)는 첫 옵션으로 확정해 SETTLEMENT pending에 도달한다(안전 상한 20회). */
 async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
   const careerId = await seasonActiveNoPendingCareerId(engine);
   for (let step = 0; step < 20; step += 1) {
     const load = await engine.client.loadCareer(careerId);
     if (!load.ok) throw new Error('loadCareer 실패');
-    if (load.snapshot.state.pending?.kind === 'SETTLEMENT') return careerId;
+    const pending = load.snapshot.state.pending;
+    if (pending?.kind === 'SETTLEMENT') return careerId;
+    if (pending?.kind === 'CHAPTER') {
+      const definition = engine.pack.chaptersById.get(pending.chapterId);
+      if (!definition) throw new Error(`팩에 챕터 정의가 없다: ${pending.chapterId}`);
+      const decision = definition.decisions[pending.resolved.length];
+      if (!decision) throw new Error('이미 모든 판단이 끝났다');
+      const resolved = await resolveChapter(engine, careerId, decision.id, decision.options[0]!.id);
+      if (!resolved.ok) throw new Error(`resolveChapter 실패: ${resolved.error.message}`);
+      continue;
+    }
     const advanced = await advance(engine, careerId);
     if (!advanced.ok) throw new Error(`advance 실패: ${advanced.error.message}`);
   }
@@ -256,7 +269,7 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/career/${careerId}/season-result`);
     });
-    expect(await screen.findByText('준비 중')).toBeInTheDocument();
+    expect(await screen.findByText('프로 시즌 결과')).toBeInTheDocument();
   });
 
   it('시즌 결산 뒤 대시보드로 돌아오면 다시 "프리시즌 계획" CTA를 보여준다(시즌 2)', async () => {
@@ -426,5 +439,39 @@ describe('SCR-029 PlayerHeader 포지션 칸(완료 조건 표 #5, RULE-PLY-001)
     expect(await screen.findByText('스트라이커')).toBeInTheDocument();
     expect(screen.getByText('선호 윙어')).toBeInTheDocument();
     expect(screen.queryByText('선호 포지션과 같음')).not.toBeInTheDocument();
+  });
+});
+
+describe('T-2-009 다이어리 연대기 요약: buildSeasonChronicleItems·buildPastSeasonLinks', () => {
+  it('결산 전에는 SEASON_STARTED부터 지금까지 시간순으로 항목을 돌려주고 seasonResultHistoryIndex는 없다', async () => {
+    const engine = setTestEngine();
+    const careerId = await seasonActiveNoPendingCareerId(engine);
+    const load = await engine.client.loadCareer(careerId);
+    if (!load.ok) throw new Error('loadCareer 실패');
+    const state = load.snapshot.state;
+
+    const items = buildSeasonChronicleItems(state);
+
+    expect(items[0]?.sentence).toBe('시즌 시작');
+    expect(items.every((item) => item.seasonResultHistoryIndex === null)).toBe(true);
+    // SEASON_STARTED 이전 항목(선수 생활 시작·계약)은 빠져야 한다.
+    expect(items.some((item) => item.sentence === '선수 생활 시작')).toBe(false);
+  });
+
+  it('결산 뒤에는 SEASON_SETTLED 항목이 방금 결산한 seasonHistory 위치를 가리키고, 지난 시즌 링크는 그 시즌을 뺀 최신순이다', async () => {
+    const engine = setTestEngine();
+    const careerId = await settlementPendingCareerId(engine);
+    const settled = await settleSeason(engine, careerId);
+    if (!settled.ok) throw new Error('settleSeason 실패');
+    const state = settled.domainSnapshot.state;
+    const justSettledIndex = state.seasonHistory.length - 1;
+
+    const items = buildSeasonChronicleItems(state);
+    expect(items[items.length - 1]?.sentence).toBe('시즌 정산');
+    expect(items[items.length - 1]?.seasonResultHistoryIndex).toBe(justSettledIndex);
+    expect(items.slice(0, -1).every((item) => item.seasonResultHistoryIndex === null)).toBe(true);
+
+    const pastLinks = buildPastSeasonLinks(state);
+    expect(pastLinks.some((link) => link.historyIndex === justSettledIndex)).toBe(false);
   });
 });
