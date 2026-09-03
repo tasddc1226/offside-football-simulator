@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { MemoryLocalStore } from '@offside/engine-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { hydrateUiStore, useApplyTheme, useUiStore } from './ui-store.js';
+import { hydrateUiStore, useApplyTheme, useReducedMotion, useUiStore } from './ui-store.js';
 
 describe('useApplyTheme', () => {
   beforeEach(() => {
@@ -11,6 +11,7 @@ describe('useApplyTheme', () => {
   afterEach(() => {
     document.documentElement.removeAttribute('data-theme');
     document.documentElement.removeAttribute('data-text-scale');
+    document.documentElement.removeAttribute('data-reduced-motion');
   });
 
   it('SYSTEM이면 data-theme 속성을 제거한다', () => {
@@ -53,6 +54,52 @@ describe('useApplyTheme', () => {
     });
 
     expect(document.documentElement.dataset.textScale).toBe('125');
+  });
+
+  it('reducedMotion ON은 data-reduced-motion=true를 설정한다', () => {
+    renderHook(() => useApplyTheme());
+
+    act(() => {
+      useUiStore.getState().setReducedMotion('ON');
+    });
+    expect(document.documentElement.dataset.reducedMotion).toBe('true');
+
+    act(() => {
+      useUiStore.getState().setReducedMotion('OFF');
+    });
+    expect(document.documentElement.hasAttribute('data-reduced-motion')).toBe(false);
+  });
+
+  it('reducedMotion SYSTEM은(matchMedia 미구현 jsdom에서) data-reduced-motion을 남기지 않는다', () => {
+    renderHook(() => useApplyTheme());
+
+    act(() => {
+      useUiStore.getState().setReducedMotion('SYSTEM');
+    });
+
+    expect(document.documentElement.hasAttribute('data-reduced-motion')).toBe(false);
+  });
+});
+
+describe('useReducedMotion', () => {
+  beforeEach(() => {
+    useUiStore.setState({ theme: 'SYSTEM', reducedMotion: 'SYSTEM', textScale: 100 });
+  });
+
+  it('ON이면 true, OFF면 false를 돌려준다', () => {
+    useUiStore.setState({ reducedMotion: 'ON' });
+    const on = renderHook(() => useReducedMotion());
+    expect(on.result.current).toBe(true);
+
+    useUiStore.setState({ reducedMotion: 'OFF' });
+    const off = renderHook(() => useReducedMotion());
+    expect(off.result.current).toBe(false);
+  });
+
+  it('SYSTEM이고 matchMedia가 없으면 false로 안전하게 대체한다', () => {
+    useUiStore.setState({ reducedMotion: 'SYSTEM' });
+    const { result } = renderHook(() => useReducedMotion());
+    expect(result.current).toBe(false);
   });
 });
 

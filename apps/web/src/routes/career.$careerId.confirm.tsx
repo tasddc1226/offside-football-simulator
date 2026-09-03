@@ -6,13 +6,13 @@ import { Button, DisplayWord, ErrorState, OffsideLine, PlayerHeader, Skeleton, T
 import { RETRYABLE_BY_CODE } from '@offside/contracts';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { getProfile, issueRecoveryCode } from '../api/client.js';
+import { activeRuleset as ruleset } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { ACTIVE_CONTENT_PACK_VERSION } from '../engine/versions.js';
 import { platform } from '../platform/index.js';
 import { POSITION_LABELS, PREFERRED_FOOT_LABELS } from '../shared/labels.js';
 import { attributeLabelList, topAttributeKeys } from '../shared/player-draft.js';
 import { screenForCareer } from '../shared/career-route.js';
-import { ruleset } from '../shared/ruleset.js';
 import { useScreenState } from '../shared/screen-state.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
 import { SCREEN_ROUTES } from '../routes.js';

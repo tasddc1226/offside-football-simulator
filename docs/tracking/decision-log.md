@@ -2,6 +2,20 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (아침, PR #26 진로~계약·대시보드 머지 — T-1-016 투입)
+
+**결과**: T-1-009(PR #26, `b40c168`) 머지. SCR-007 진로 선택·SCR-008 입단 테스트·SCR-013/014 이벤트·결과·SCR-009 제안 비교·SCR-010 계약·SCR-029 대시보드. 온보딩부터 첫 계약·대시보드까지 브라우저에서 이어지고 `first-contract.spec.ts`가 전 구간을 3.4~5.5초에 통과한다(5분 세션 예산 판정, D-22). 워커 비용 약 $36.9, 353분(main 병합 2회 포함), 리뷰 2회 + 재검증 1회.
+
+**리뷰에서 잡은 것(4건)**: 대시보드 "진행"과 SCR-014 "다음"이 `NOTHING_TO_ADVANCE` 외 실패를 조용히 삼킴 → `ErrorState`+재시도; 아키타입이 kebab id로 노출 → `archetypeName` 헬퍼; T-1-008 `shared/ruleset.ts`와 T-1-009 `engine/content.ts`의 룰셋 이중 파싱 → 후자로 통합; 능력치 20종 라벨 이중 정의(문구도 3곳이 달랐음) → `ATTRIBUTE_LABELS` 재사용. 재검증에서 e2e tsconfig 타입 오류(`test.use({ reducedMotion })`는 `contextOptions` 소속) 1건과 SCR-029 단위 테스트의 시드 의존 플레이키(`advanceUntilOffers`로 교체)를 추가로 잡았다.
+
+**승인·후속**: SCR-014를 timeline `EVENT_RESOLVED`로 재구성해 새로고침이 roll을 소비하지 않는 설계, `event_.result.tsx` 파일명(TanStack 플랫 라우트 부모 추론), 모션 감소 `data-reduced-motion` 수정 승인. 후속은 보드 T-2-010(previewEffects 구조화, EVT-CON-002 C 성장 줄, 태그 라벨)·T-2-011(fixtures eligibleEvents 불일치 기록)·T-1-014(`careerPhase` 분석 값 고정)에 적었다. SCR-014 "리플레이" 버튼은 브리프 비요구라 미구현.
+
+**T-1-012 질문 처리**: /review:pr가 잡은 "복구 뒤 대조(`reconcileAfterRecovery`) 실패가 성공 토스트로 가려짐"에 대해 워커가 셋 중 하나를 물었다 → 사용자 문구까지 수정으로 결정. 단 "새로고침해 주세요"는 대조를 다시 돌리지 않으므로 경고 토스트 "프로필은 복구했지만 커리어 목록을 불러오지 못했습니다. 설정의 다시 연결로 다시 시도하세요"로 하고, 설정 "다시 연결" 성공 경로에 `reconcileAfterRecovery('NONE')`을 추가하는 작은 범위 확장을 승인했다.
+
+**투입**: T-1-016(선수 성별·선호 포지션, `T-1-016-player-gender-position`)을 PR #26 머지 직후(08:58) 투입. 워커 2명(T-1-012·T-1-016) 병렬. Phase 1 잔여는 T-1-013·T-1-014.
+
+**운영 사고**: PR #30 머지(01:47) 뒤 감시 스크립트(watch.py)가 T-1-009의 갱신 보고(01:57)와 T-1-012의 질문 대화상자(02:00대)를 약 7시간 동안 알리지 못했다. 사용자가 08:55에 진행 여부를 물어 발견. 원인: BUSY 판정 정규식의 단어 목록(`Running`·`Working` 등)이 워커 산문("Running the single allowed /review:pr")에 오탐해 화면을 계속 "작업 중"으로 봤다(프로세스는 살아 있었음). 조치: BUSY를 스피너 줄(`\S+… (`·`…` 끝·`esc to interrupt`)만 보도록 고치고 감시 재시작, 워커 질문 즉시 응답. 재발 방지: 워커가 90초 이상 프롬프트만 보이면 무조건 이벤트를 내고, 오케스트레이터는 턴마다 감시 출력 파일의 마지막 이벤트 시각을 확인한다.
+
 ## 2026-09-03 (새벽, PR #30 동기화 배선 머지 — T-1-012 투입)
 
 **결과**: T-1-011(PR #30, `280e2f4`) 머지. engine-client `forkCareerByReplay`·Worker 실패 처리(error/messageerror/타임아웃 → 재생성), web 동기화 싱글턴 배선(online/visibilitychange/pagehide flush, 시작 시 미전송분 재개), 허브 카드·커리어 레이아웃 저장 배지, 설정 동기화 행("지금 동기화"·"다시 연결"), 충돌 대화상자(REMOTE/LOCAL fork/LATER), pending-delete 큐. 검증 체인 전체 통과, e2e 24건. 워커 비용 약 $34.9, 123분, 리뷰 2회.

@@ -6,6 +6,7 @@ import type { CompareCardItem, CompareRow } from '@offside/ui';
 import { RETRYABLE_BY_CODE } from '@offside/contracts';
 import type { Position } from '@offside/domain';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { activeRuleset as ruleset } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import {
@@ -15,7 +16,6 @@ import {
   topAttributeKeys,
   weakestAttributeKeys,
 } from '../shared/player-draft.js';
-import { ruleset } from '../shared/ruleset.js';
 import { useScreenState } from '../shared/screen-state.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
 

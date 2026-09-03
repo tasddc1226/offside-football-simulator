@@ -16,6 +16,7 @@ pnpm --filter @offside/web e2e           # 전체 스펙 실행(dev 서버 자�
 - `recovery-api.spec.ts`(T-1-012, D-18): `E2E_WITH_API=1`일 때만 실행되며 스텁 없이 실제 `apps/api`(`wrangler dev --local`, 로컬 D1)에 붙는다. 서로 다른 브라우저 컨텍스트(별도 쿠키 = 별도 익명 프로필) A에서 발급한 복구 코드로 컨텍스트 B가 같은 커리어를 되찾는 왕복을 검사한다. 로컬 D1은 `pnpm --filter @offside/api db:migrate`와 `db:seed`(career 저장에 필요한 `service_seasons` 시드)를 먼저 실행해 둬야 한다.
 - `a11y.spec.ts`: `/legal/privacy`·`/legal/terms`·`/onboarding`·`/settings`·빈 허브·카드 있는 허브·SCR-002·SCR-003·SCR-004·T-1-011 충돌 대화상자·T-1-012 설정의 새 대화상자(재발급 확인·복구 코드 결과·복구 충돌 선택·이 기기 데이터 삭제 확인·프로필 삭제 확인)에서 axe `serious`·`critical` 위반 0건(콘솔에 요약 출력).
 - `hash-probe.spec.ts`: dev 전용 라우트 `/__dev/hash-probe`(브라우저 Web Worker에서 `@offside/fixtures`의 career-01을 재생)가 렌더한 `revision`·`stateHash`가 golden과 같은지 확인한다. 이 라우트는 `import.meta.env.DEV`일 때만 등록되며 프로덕션 빌드에는 포함되지 않는다(`apps/web/src/main.tsx`, `apps/web/src/dev/hash-probe.tsx`).
+- `first-contract.spec.ts`: 온보딩 → SCR-002~004 → KICKOFF → 이벤트 화면(SCR-007/008/013, 반복) → SCR-014 → SCR-009 → SCR-010 → SCR-029 전 구간. `test.use({ contextOptions: { reducedMotion: 'reduce' } })`로 SCR-008 진행 연출을 건너뛴다. CONFIRM_PLAYER 직후 FAST 모드는 SETTLEMENT 단계에서 몇 차례의 서사 이벤트(도메인 가중 랜덤)를 소진한 뒤에야 제안이 열리므로, 어떤 이벤트·화면이 몇 번 뜨는지는 고정하지 않고 offers 도착까지 반복한다(안전 상한 10회).
 
 ## 실제 API로 실행(E2E_WITH_API=1)
 
