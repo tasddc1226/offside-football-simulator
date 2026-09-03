@@ -100,10 +100,23 @@ export const DecisionSlotSchema = z.strictObject({
   skippedByBudget: z.boolean().exactOptional(),
 });
 
+// T-2-003 D-35: domain `MatchAppearance`와 동일.
+export const MatchAppearanceSchema = z.enum(['START', 'SUB', 'OUT']);
+
+export const StepMatchResultSchema = z.strictObject({
+  matchId: z.string().min(1),
+  outcome: z.enum(['WIN', 'DRAW', 'LOSS']),
+  goalsFor: z.number().int().nonnegative(),
+  goalsAgainst: z.number().int().nonnegative(),
+  appearance: MatchAppearanceSchema,
+  ratingTenths: z.number().int().min(40).max(100).nullable(),
+});
+
 export const StepSummarySchema = z.strictObject({
   passedAtRevision: z.number().int().positive(),
   decisionsOpened: z.number().int().nonnegative(),
   matchesPlayed: z.number().int().nonnegative(),
+  results: z.array(StepMatchResultSchema),
 });
 
 export const SeasonStepSchema = z.strictObject({
@@ -127,15 +140,149 @@ export const CompetitionRecordSchema = z.strictObject({
   cupRound: z.string().nullable(),
 });
 
-// T-2-001 범위 밖: `matches`는 이 작업에서 항상 []다(값 채우기는 T-2-002/003).
+// T-2-003 D-35: domain `OutReason`과 동일.
+export const OutReasonSchema = z.enum(['NOT_SELECTED', 'UNUSED_SUB', 'INJURY', 'SUSPENSION']).nullable();
+
+// T-2-003 D-35: domain `PositionStats`(브리프 "포지션별 결과" 표)와 동일한 판별 유니온.
+export const PositionStatsSchema = z.discriminatedUnion('group', [
+  z.strictObject({
+    group: z.literal('FW'),
+    goals: z.number().int().nonnegative(),
+    assists: z.number().int().nonnegative(),
+    xgCenti: z.number().int().nonnegative(),
+    shots: z.number().int().nonnegative(),
+    offsides: z.number().int().nonnegative(),
+  }),
+  z.strictObject({
+    group: z.literal('MF'),
+    assists: z.number().int().nonnegative(),
+    chancesCreated: z.number().int().nonnegative(),
+    progressivePasses: z.number().int().nonnegative(),
+    passesAttempted: z.number().int().nonnegative(),
+    passesCompleted: z.number().int().nonnegative(),
+    ballRecoveries: z.number().int().nonnegative(),
+  }),
+  z.strictObject({
+    group: z.literal('DF'),
+    tackles: z.number().int().nonnegative(),
+    interceptions: z.number().int().nonnegative(),
+    aerialsWon: z.number().int().nonnegative(),
+    goalsConcededInvolved: z.number().int().nonnegative(),
+    cleanSheet: z.boolean(),
+  }),
+  z.strictObject({
+    group: z.literal('GK'),
+    saves: z.number().int().nonnegative(),
+    psxgMinusGoalsCenti: z.number().int(),
+    cleanSheet: z.boolean(),
+    crossesClaimed: z.number().int().nonnegative(),
+    buildUpPasses: z.number().int().nonnegative(),
+  }),
+]);
+
+// T-2-003 D-35: domain `PositionStatsTotals` — `PositionStats`와 같은 항목이지만 `cleanSheet`가
+// 시즌 누적 횟수(number)다.
+export const PositionStatsTotalsSchema = z.discriminatedUnion('group', [
+  z.strictObject({
+    group: z.literal('FW'),
+    goals: z.number().int().nonnegative(),
+    assists: z.number().int().nonnegative(),
+    xgCenti: z.number().int().nonnegative(),
+    shots: z.number().int().nonnegative(),
+    offsides: z.number().int().nonnegative(),
+  }),
+  z.strictObject({
+    group: z.literal('MF'),
+    assists: z.number().int().nonnegative(),
+    chancesCreated: z.number().int().nonnegative(),
+    progressivePasses: z.number().int().nonnegative(),
+    passesAttempted: z.number().int().nonnegative(),
+    passesCompleted: z.number().int().nonnegative(),
+    ballRecoveries: z.number().int().nonnegative(),
+  }),
+  z.strictObject({
+    group: z.literal('DF'),
+    tackles: z.number().int().nonnegative(),
+    interceptions: z.number().int().nonnegative(),
+    aerialsWon: z.number().int().nonnegative(),
+    goalsConcededInvolved: z.number().int().nonnegative(),
+    cleanSheet: z.number().int().nonnegative(),
+  }),
+  z.strictObject({
+    group: z.literal('GK'),
+    saves: z.number().int().nonnegative(),
+    psxgMinusGoalsCenti: z.number().int(),
+    cleanSheet: z.number().int().nonnegative(),
+    crossesClaimed: z.number().int().nonnegative(),
+    buildUpPasses: z.number().int().nonnegative(),
+  }),
+]);
+
+// T-2-003 D-35: roll 없이 시즌 시작 시 확정하는 일정 한 항목. domain `ScheduleEntry`와 동일.
+export const ScheduleEntrySchema = z.strictObject({
+  step: z.number().int().min(1).max(12),
+  order: z.number().int().nonnegative(),
+  competitionId: z.string().min(1),
+  kind: z.enum(['LEAGUE', 'CUP']),
+  round: z.string().nullable(),
+  opponentId: z.string().min(1),
+  home: z.boolean(),
+  skipped: z.literal('ELIMINATED').exactOptional(),
+});
+
+// T-2-001이 타입만 두었던 것을 T-2-003이 확정한다(브리프 데이터 계약 D-35).
 export const MatchRecordSchema = z.strictObject({
   id: z.string().min(1),
   step: z.number().int().min(1).max(12),
+  order: z.number().int().nonnegative(),
   competitionId: z.string().min(1),
-  opponentTeamId: z.string().min(1),
+  kind: z.enum(['LEAGUE', 'CUP']),
+  round: z.string().nullable(),
+  opponent: z.strictObject({ id: z.string().min(1), name: z.string().min(1), strength: z.number().int().min(0).max(100) }),
   home: z.boolean(),
-  result: z.strictObject({ goalsFor: z.number().int().nonnegative(), goalsAgainst: z.number().int().nonnegative() }).nullable(),
+  result: z.strictObject({
+    goalsFor: z.number().int().nonnegative(),
+    goalsAgainst: z.number().int().nonnegative(),
+    outcome: z.enum(['WIN', 'DRAW', 'LOSS']),
+  }),
+  appearance: MatchAppearanceSchema,
+  outReason: OutReasonSchema,
+  minutes: z.number().int().min(0).max(90),
+  involvement: z.number().int().min(0).max(100),
+  stats: PositionStatsSchema,
+  ratingTenths: z.number().int().min(40).max(100).nullable(),
+  cards: z.strictObject({ yellow: z.union([z.literal(0), z.literal(1), z.literal(2)]), red: z.boolean() }),
+  injuredOff: z.boolean(),
+  chapterId: z.string().nullable(),
 });
+
+// T-2-003 D-35: 시즌 누계(결산 이전 진행 중 값). domain `SeasonPlayerStats`와 동일.
+export const SeasonPlayerStatsSchema = z.strictObject({
+  group: z.enum(['GK', 'DF', 'MF', 'FW']),
+  appearances: z.strictObject({
+    total: z.number().int().nonnegative(),
+    started: z.number().int().nonnegative(),
+    sub: z.number().int().nonnegative(),
+    zeroMinute: z.number().int().nonnegative(),
+    out: z.number().int().nonnegative(),
+  }),
+  minutes: z.number().int().nonnegative(),
+  ratingSumTenths: z.number().int().nonnegative(),
+  ratedMatches: z.number().int().nonnegative(),
+  yellow: z.number().int().nonnegative(),
+  red: z.number().int().nonnegative(),
+  injuries: z.number().int().nonnegative(),
+  totals: PositionStatsTotalsSchema,
+});
+
+// T-2-003 D-35: 부상·정지만 표현한다(능력치·재활은 Phase 4). domain `Availability`와 동일.
+export const AvailabilitySchema = z
+  .strictObject({
+    kind: z.enum(['INJURY', 'SUSPENSION']),
+    matchesRemaining: z.number().int().positive(),
+    sinceMatchId: z.string().min(1),
+  })
+  .nullable();
 
 /**
  * domain `ATTRIBUTE_KEYS`의 복제(위 `CAREER_STATE_ATTRIBUTE_KEYS`와 같은 목록이 필요하지만 이 값은
@@ -216,10 +363,21 @@ export const FootballSeasonSchema = z.strictObject({
   styleId: z.string().min(1),
   squadRole: SquadRoleSchema,
   competitions: z.array(CompetitionRecordSchema),
+  // T-2-003 D-35: roll 없이 시즌 시작 시 확정하는 리그·컵 일정(step·order 순 정렬).
+  schedule: z.array(ScheduleEntrySchema),
   matches: z.array(MatchRecordSchema),
   ageReferenceStep: z.literal(1),
   squad: z.strictObject({ competitors: z.array(CompetitorSchema) }),
   selection: SelectionRankingSchema,
+  // T-2-003 D-35: 시즌 누계 통계(포지션군은 선수 현재 primaryPosition 기준으로 고정).
+  playerStats: SeasonPlayerStatsSchema,
+  availability: AvailabilitySchema,
+  // T-2-003 8번 규칙: 직전 평점(×10 정수). Squad Status 재계산의 lastRating 입력.
+  lastRatingTenths: z.number().int().min(40).max(100).nullable(),
+  // T-2-003 D-35: 경고 정지 기준 판정용 누적 경고 수(정지가 걸리면 0으로 리셋).
+  yellowSuspensionCount: z.number().int().nonnegative(),
+  // T-2-003 D-35: 경기 전용 RNG 스트림(결정 슬롯이 쓰는 rngState와 분리 — FAST·CHAPTER byte-identical).
+  matchRngState: RngStateSchema,
 });
 
 export const SeasonSummarySchema = z.strictObject({
