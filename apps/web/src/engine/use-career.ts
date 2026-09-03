@@ -2,7 +2,19 @@
 import { queryOptions, useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import type { CareerState, PlayerDraft, SimulationMode } from '@offside/domain';
 import type { LocalCareerRecord } from '@offside/engine-client';
-import { acceptOffer, advance, confirmPlayer, createCareer, deleteCareer, resolveEvent, updateDraft } from './career-actions.js';
+import type { StartSeasonChoice } from './career-actions.js';
+import {
+  acceptOffer,
+  advance,
+  confirmPlayer,
+  createCareer,
+  deleteCareer,
+  resolveEvent,
+  resolveRole,
+  settleSeason,
+  startSeason,
+  updateDraft,
+} from './career-actions.js';
 import { getAppEngine } from './engine.js';
 
 export type CareerSummary = { record: LocalCareerRecord; state: CareerState };
@@ -51,13 +63,25 @@ export function useCareer(careerId: string) {
   return useQuery(careerQueryOptions(careerId));
 }
 
-export type CareerMutationKind = 'create' | 'updateDraft' | 'confirm' | 'advance' | 'delete' | 'resolveEvent' | 'acceptOffer';
+export type CareerMutationKind =
+  | 'create'
+  | 'updateDraft'
+  | 'confirm'
+  | 'advance'
+  | 'delete'
+  | 'resolveEvent'
+  | 'acceptOffer'
+  | 'startSeason'
+  | 'resolveRole'
+  | 'settleSeason';
 
 type CreateVariables = { simulationMode: SimulationMode };
 type UpdateDraftVariables = { careerId: string; draft: Partial<PlayerDraft> };
 type CareerIdVariables = { careerId: string };
 type ResolveEventVariables = { careerId: string; choiceId: string };
 type AcceptOfferVariables = { careerId: string; offerId: string };
+type StartSeasonVariables = { careerId: string; choice: StartSeasonChoice };
+type ResolveRoleVariables = { careerId: string; decision: 'ACCEPT' | 'DECLINE' };
 
 async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
   const engine = await getAppEngine();
@@ -83,6 +107,16 @@ async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
       const { careerId, offerId } = variables as AcceptOfferVariables;
       return acceptOffer(engine, careerId, offerId);
     }
+    case 'startSeason': {
+      const { careerId, choice } = variables as StartSeasonVariables;
+      return startSeason(engine, careerId, choice);
+    }
+    case 'resolveRole': {
+      const { careerId, decision } = variables as ResolveRoleVariables;
+      return resolveRole(engine, careerId, decision);
+    }
+    case 'settleSeason':
+      return settleSeason(engine, (variables as CareerIdVariables).careerId);
     default: {
       const exhaustive: never = kind;
       throw new Error(`알 수 없는 mutation kind: ${String(exhaustive)}`);
@@ -94,7 +128,7 @@ type MutationDataFor<K extends CareerMutationKind> = K extends 'create'
   ? Awaited<ReturnType<typeof createCareer>>
   : K extends 'updateDraft'
     ? Awaited<ReturnType<typeof updateDraft>>
-    : K extends 'confirm' | 'advance' | 'resolveEvent' | 'acceptOffer'
+    : K extends 'confirm' | 'advance' | 'resolveEvent' | 'acceptOffer' | 'startSeason' | 'resolveRole' | 'settleSeason'
       ? Awaited<ReturnType<typeof confirmPlayer>>
       : void;
 
@@ -106,7 +140,11 @@ type MutationVariablesFor<K extends CareerMutationKind> = K extends 'create'
       ? ResolveEventVariables
       : K extends 'acceptOffer'
         ? AcceptOfferVariables
-        : CareerIdVariables;
+        : K extends 'startSeason'
+          ? StartSeasonVariables
+          : K extends 'resolveRole'
+            ? ResolveRoleVariables
+            : CareerIdVariables;
 
 /**
  * 액션 실행 후 ['careers']와(있다면) ['career', careerId] 쿼리를 무효화한다. 'delete'는

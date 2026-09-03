@@ -16,12 +16,18 @@ import { Route as CareerCareerIdRouteImport } from './routes/career.$careerId'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as CareerCareerIdIndexRouteImport } from './routes/career.$careerId.index'
+import { Route as CareerCareerIdAttributesRouteImport } from './routes/career.$careerId.attributes'
+import { Route as CareerCareerIdChapterRouteImport } from './routes/career.$careerId.chapter'
 import { Route as CareerCareerIdConfirmRouteImport } from './routes/career.$careerId.confirm'
 import { Route as CareerCareerIdContractRouteImport } from './routes/career.$careerId.contract'
 import { Route as CareerCareerIdCreateRouteImport } from './routes/career.$careerId.create'
 import { Route as CareerCareerIdEventRouteImport } from './routes/career.$careerId.event'
 import { Route as CareerCareerIdOffersRouteImport } from './routes/career.$careerId.offers'
 import { Route as CareerCareerIdPathRouteImport } from './routes/career.$careerId.path'
+import { Route as CareerCareerIdPreseasonRouteImport } from './routes/career.$careerId.preseason'
+import { Route as CareerCareerIdRoleRouteImport } from './routes/career.$careerId.role'
+import { Route as CareerCareerIdSeasonPrepRouteImport } from './routes/career.$careerId.season-prep'
+import { Route as CareerCareerIdSeasonResultRouteImport } from './routes/career.$careerId.season-result'
 import { Route as CareerCareerIdStyleRouteImport } from './routes/career.$careerId.style'
 import { Route as CareerCareerIdTryoutRouteImport } from './routes/career.$careerId.tryout'
 import { Route as CareerCareerIdEventResultRouteImport } from './routes/career.$careerId.event_.result'
@@ -61,6 +67,17 @@ const CareerCareerIdIndexRoute = CareerCareerIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CareerCareerIdRoute,
 } as any)
+const CareerCareerIdAttributesRoute =
+  CareerCareerIdAttributesRouteImport.update({
+    id: '/attributes',
+    path: '/attributes',
+    getParentRoute: () => CareerCareerIdRoute,
+  } as any)
+const CareerCareerIdChapterRoute = CareerCareerIdChapterRouteImport.update({
+  id: '/chapter',
+  path: '/chapter',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
 const CareerCareerIdConfirmRoute = CareerCareerIdConfirmRouteImport.update({
   id: '/confirm',
   path: '/confirm',
@@ -91,6 +108,28 @@ const CareerCareerIdPathRoute = CareerCareerIdPathRouteImport.update({
   path: '/path',
   getParentRoute: () => CareerCareerIdRoute,
 } as any)
+const CareerCareerIdPreseasonRoute = CareerCareerIdPreseasonRouteImport.update({
+  id: '/preseason',
+  path: '/preseason',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
+const CareerCareerIdRoleRoute = CareerCareerIdRoleRouteImport.update({
+  id: '/role',
+  path: '/role',
+  getParentRoute: () => CareerCareerIdRoute,
+} as any)
+const CareerCareerIdSeasonPrepRoute =
+  CareerCareerIdSeasonPrepRouteImport.update({
+    id: '/season-prep',
+    path: '/season-prep',
+    getParentRoute: () => CareerCareerIdRoute,
+  } as any)
+const CareerCareerIdSeasonResultRoute =
+  CareerCareerIdSeasonResultRouteImport.update({
+    id: '/season-result',
+    path: '/season-result',
+    getParentRoute: () => CareerCareerIdRoute,
+  } as any)
 const CareerCareerIdStyleRoute = CareerCareerIdStyleRouteImport.update({
   id: '/style',
   path: '/style',
@@ -115,12 +154,18 @@ export interface FileRoutesByFullPath {
   '/career/$careerId': typeof CareerCareerIdRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/career/$careerId/attributes': typeof CareerCareerIdAttributesRoute
+  '/career/$careerId/chapter': typeof CareerCareerIdChapterRoute
   '/career/$careerId/confirm': typeof CareerCareerIdConfirmRoute
   '/career/$careerId/contract': typeof CareerCareerIdContractRoute
   '/career/$careerId/create': typeof CareerCareerIdCreateRoute
   '/career/$careerId/event': typeof CareerCareerIdEventRoute
   '/career/$careerId/offers': typeof CareerCareerIdOffersRoute
   '/career/$careerId/path': typeof CareerCareerIdPathRoute
+  '/career/$careerId/preseason': typeof CareerCareerIdPreseasonRoute
+  '/career/$careerId/role': typeof CareerCareerIdRoleRoute
+  '/career/$careerId/season-prep': typeof CareerCareerIdSeasonPrepRoute
+  '/career/$careerId/season-result': typeof CareerCareerIdSeasonResultRoute
   '/career/$careerId/style': typeof CareerCareerIdStyleRoute
   '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
   '/career/$careerId/': typeof CareerCareerIdIndexRoute
@@ -132,12 +177,18 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/career/$careerId/attributes': typeof CareerCareerIdAttributesRoute
+  '/career/$careerId/chapter': typeof CareerCareerIdChapterRoute
   '/career/$careerId/confirm': typeof CareerCareerIdConfirmRoute
   '/career/$careerId/contract': typeof CareerCareerIdContractRoute
   '/career/$careerId/create': typeof CareerCareerIdCreateRoute
   '/career/$careerId/event': typeof CareerCareerIdEventRoute
   '/career/$careerId/offers': typeof CareerCareerIdOffersRoute
   '/career/$careerId/path': typeof CareerCareerIdPathRoute
+  '/career/$careerId/preseason': typeof CareerCareerIdPreseasonRoute
+  '/career/$careerId/role': typeof CareerCareerIdRoleRoute
+  '/career/$careerId/season-prep': typeof CareerCareerIdSeasonPrepRoute
+  '/career/$careerId/season-result': typeof CareerCareerIdSeasonResultRoute
   '/career/$careerId/style': typeof CareerCareerIdStyleRoute
   '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
   '/career/$careerId': typeof CareerCareerIdIndexRoute
@@ -151,12 +202,18 @@ export interface FileRoutesById {
   '/career/$careerId': typeof CareerCareerIdRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/career/$careerId/attributes': typeof CareerCareerIdAttributesRoute
+  '/career/$careerId/chapter': typeof CareerCareerIdChapterRoute
   '/career/$careerId/confirm': typeof CareerCareerIdConfirmRoute
   '/career/$careerId/contract': typeof CareerCareerIdContractRoute
   '/career/$careerId/create': typeof CareerCareerIdCreateRoute
   '/career/$careerId/event': typeof CareerCareerIdEventRoute
   '/career/$careerId/offers': typeof CareerCareerIdOffersRoute
   '/career/$careerId/path': typeof CareerCareerIdPathRoute
+  '/career/$careerId/preseason': typeof CareerCareerIdPreseasonRoute
+  '/career/$careerId/role': typeof CareerCareerIdRoleRoute
+  '/career/$careerId/season-prep': typeof CareerCareerIdSeasonPrepRoute
+  '/career/$careerId/season-result': typeof CareerCareerIdSeasonResultRoute
   '/career/$careerId/style': typeof CareerCareerIdStyleRoute
   '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
   '/career/$careerId/': typeof CareerCareerIdIndexRoute
@@ -171,12 +228,18 @@ export interface FileRouteTypes {
     | '/career/$careerId'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/career/$careerId/attributes'
+    | '/career/$careerId/chapter'
     | '/career/$careerId/confirm'
     | '/career/$careerId/contract'
     | '/career/$careerId/create'
     | '/career/$careerId/event'
     | '/career/$careerId/offers'
     | '/career/$careerId/path'
+    | '/career/$careerId/preseason'
+    | '/career/$careerId/role'
+    | '/career/$careerId/season-prep'
+    | '/career/$careerId/season-result'
     | '/career/$careerId/style'
     | '/career/$careerId/tryout'
     | '/career/$careerId/'
@@ -188,12 +251,18 @@ export interface FileRouteTypes {
     | '/settings'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/career/$careerId/attributes'
+    | '/career/$careerId/chapter'
     | '/career/$careerId/confirm'
     | '/career/$careerId/contract'
     | '/career/$careerId/create'
     | '/career/$careerId/event'
     | '/career/$careerId/offers'
     | '/career/$careerId/path'
+    | '/career/$careerId/preseason'
+    | '/career/$careerId/role'
+    | '/career/$careerId/season-prep'
+    | '/career/$careerId/season-result'
     | '/career/$careerId/style'
     | '/career/$careerId/tryout'
     | '/career/$careerId'
@@ -206,12 +275,18 @@ export interface FileRouteTypes {
     | '/career/$careerId'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/career/$careerId/attributes'
+    | '/career/$careerId/chapter'
     | '/career/$careerId/confirm'
     | '/career/$careerId/contract'
     | '/career/$careerId/create'
     | '/career/$careerId/event'
     | '/career/$careerId/offers'
     | '/career/$careerId/path'
+    | '/career/$careerId/preseason'
+    | '/career/$careerId/role'
+    | '/career/$careerId/season-prep'
+    | '/career/$careerId/season-result'
     | '/career/$careerId/style'
     | '/career/$careerId/tryout'
     | '/career/$careerId/'
@@ -278,6 +353,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CareerCareerIdIndexRouteImport
       parentRoute: typeof CareerCareerIdRoute
     }
+    '/career/$careerId/attributes': {
+      id: '/career/$careerId/attributes'
+      path: '/attributes'
+      fullPath: '/career/$careerId/attributes'
+      preLoaderRoute: typeof CareerCareerIdAttributesRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/chapter': {
+      id: '/career/$careerId/chapter'
+      path: '/chapter'
+      fullPath: '/career/$careerId/chapter'
+      preLoaderRoute: typeof CareerCareerIdChapterRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
     '/career/$careerId/confirm': {
       id: '/career/$careerId/confirm'
       path: '/confirm'
@@ -320,6 +409,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CareerCareerIdPathRouteImport
       parentRoute: typeof CareerCareerIdRoute
     }
+    '/career/$careerId/preseason': {
+      id: '/career/$careerId/preseason'
+      path: '/preseason'
+      fullPath: '/career/$careerId/preseason'
+      preLoaderRoute: typeof CareerCareerIdPreseasonRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/role': {
+      id: '/career/$careerId/role'
+      path: '/role'
+      fullPath: '/career/$careerId/role'
+      preLoaderRoute: typeof CareerCareerIdRoleRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/season-prep': {
+      id: '/career/$careerId/season-prep'
+      path: '/season-prep'
+      fullPath: '/career/$careerId/season-prep'
+      preLoaderRoute: typeof CareerCareerIdSeasonPrepRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
+    '/career/$careerId/season-result': {
+      id: '/career/$careerId/season-result'
+      path: '/season-result'
+      fullPath: '/career/$careerId/season-result'
+      preLoaderRoute: typeof CareerCareerIdSeasonResultRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
     '/career/$careerId/style': {
       id: '/career/$careerId/style'
       path: '/style'
@@ -345,12 +462,18 @@ declare module '@tanstack/react-router' {
 }
 
 interface CareerCareerIdRouteChildren {
+  CareerCareerIdAttributesRoute: typeof CareerCareerIdAttributesRoute
+  CareerCareerIdChapterRoute: typeof CareerCareerIdChapterRoute
   CareerCareerIdConfirmRoute: typeof CareerCareerIdConfirmRoute
   CareerCareerIdContractRoute: typeof CareerCareerIdContractRoute
   CareerCareerIdCreateRoute: typeof CareerCareerIdCreateRoute
   CareerCareerIdEventRoute: typeof CareerCareerIdEventRoute
   CareerCareerIdOffersRoute: typeof CareerCareerIdOffersRoute
   CareerCareerIdPathRoute: typeof CareerCareerIdPathRoute
+  CareerCareerIdPreseasonRoute: typeof CareerCareerIdPreseasonRoute
+  CareerCareerIdRoleRoute: typeof CareerCareerIdRoleRoute
+  CareerCareerIdSeasonPrepRoute: typeof CareerCareerIdSeasonPrepRoute
+  CareerCareerIdSeasonResultRoute: typeof CareerCareerIdSeasonResultRoute
   CareerCareerIdStyleRoute: typeof CareerCareerIdStyleRoute
   CareerCareerIdTryoutRoute: typeof CareerCareerIdTryoutRoute
   CareerCareerIdIndexRoute: typeof CareerCareerIdIndexRoute
@@ -358,12 +481,18 @@ interface CareerCareerIdRouteChildren {
 }
 
 const CareerCareerIdRouteChildren: CareerCareerIdRouteChildren = {
+  CareerCareerIdAttributesRoute: CareerCareerIdAttributesRoute,
+  CareerCareerIdChapterRoute: CareerCareerIdChapterRoute,
   CareerCareerIdConfirmRoute: CareerCareerIdConfirmRoute,
   CareerCareerIdContractRoute: CareerCareerIdContractRoute,
   CareerCareerIdCreateRoute: CareerCareerIdCreateRoute,
   CareerCareerIdEventRoute: CareerCareerIdEventRoute,
   CareerCareerIdOffersRoute: CareerCareerIdOffersRoute,
   CareerCareerIdPathRoute: CareerCareerIdPathRoute,
+  CareerCareerIdPreseasonRoute: CareerCareerIdPreseasonRoute,
+  CareerCareerIdRoleRoute: CareerCareerIdRoleRoute,
+  CareerCareerIdSeasonPrepRoute: CareerCareerIdSeasonPrepRoute,
+  CareerCareerIdSeasonResultRoute: CareerCareerIdSeasonResultRoute,
   CareerCareerIdStyleRoute: CareerCareerIdStyleRoute,
   CareerCareerIdTryoutRoute: CareerCareerIdTryoutRoute,
   CareerCareerIdIndexRoute: CareerCareerIdIndexRoute,

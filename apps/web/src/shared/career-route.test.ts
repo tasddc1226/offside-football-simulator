@@ -83,6 +83,35 @@ describe('screenForCareer', () => {
       'SCR-013',
     ],
     ['ACTIVE, pending OFFERS → SCR-009', baseState({ status: 'ACTIVE', pending: { kind: 'OFFERS', offers: [] } }), 'SCR-009'],
+    [
+      'ACTIVE, pending ROLE_PROPOSAL → SCR-012',
+      baseState({
+        status: 'ACTIVE',
+        pending: { kind: 'ROLE_PROPOSAL', step: 1, proposal: { type: 'KEEP', position: 'W', squadRole: 'STARTER' } },
+      }),
+      'SCR-012',
+    ],
+    [
+      'ACTIVE, pending CHAPTER → SCR-031(자리표시, T-2-008이 채운다)',
+      baseState({
+        status: 'ACTIVE',
+        pending: {
+          kind: 'CHAPTER',
+          step: 3,
+          chapterId: 'CH-001',
+          version: 1,
+          importance: 'MAJOR',
+          matchId: 'match-1',
+          decisionsTotal: 3,
+          resolved: [],
+        },
+      }),
+      'SCR-031',
+    ],
+    ['ACTIVE, pending SETTLEMENT → SCR-029(대시보드가 결산 CTA를 보여준다)', baseState({ status: 'ACTIVE', pending: { kind: 'SETTLEMENT', step: 12 } }), 'SCR-029'],
+    ['ACTIVE, pending CONTRACT → SCR-029(자동 통과, 대시보드 진행 버튼)', baseState({ status: 'ACTIVE', pending: { kind: 'CONTRACT', step: 7 } }), 'SCR-029'],
+    ['ACTIVE, pending INJURY → SCR-029(자동 통과, 대시보드 진행 버튼)', baseState({ status: 'ACTIVE', pending: { kind: 'INJURY', step: 4 } }), 'SCR-029'],
+    ['ACTIVE, pending NATIONAL_TEAM → SCR-029(자동 통과, 대시보드 진행 버튼)', baseState({ status: 'ACTIVE', pending: { kind: 'NATIONAL_TEAM', step: 5 } }), 'SCR-029'],
     ['RETIRED → SCR-029', baseState({ status: 'RETIRED' }), 'SCR-029'],
     ['ARCHIVED → SCR-029', baseState({ status: 'ARCHIVED' }), 'SCR-029'],
   ] as const)('%s', (_label, state, expected) => {

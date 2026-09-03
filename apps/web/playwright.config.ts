@@ -7,11 +7,15 @@ import { defineConfig, devices } from '@playwright/test';
 //
 // T-1-014: E2E_PREVIEW=1이면 perf.spec.ts가 실제 빌드(vite build && vite preview, 포트 5175)를
 // 쓴다 — dev 서버(HMR·미압축 번들)로는 LCP·CLS가 실제 배포본과 다르게 나온다.
+//
+// T-2-007: 워크트리 병행 투입 시 여러 세션이 동시에 e2e를 돌리면 기본 포트가 충돌한다 —
+// E2E_PORT/E2E_API_URL로 오버라이드할 수 있게 연다(기본값은 그대로, reuseExistingServer 동작도
+// 그대로 — apps/web/e2e/README.md 참고).
 const WITH_API = process.env.E2E_WITH_API === '1';
 const WITH_PREVIEW = process.env.E2E_PREVIEW === '1';
-const PORT = WITH_PREVIEW ? 5175 : WITH_API ? 5173 : 5174;
+const PORT = Number(process.env.E2E_PORT) || (WITH_PREVIEW ? 5175 : WITH_API ? 5173 : 5174);
 const BASE_URL = `http://localhost:${PORT}`;
-const API_URL = 'http://localhost:8787';
+const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8787';
 
 const webServer: NonNullable<ReturnType<typeof defineConfig>['webServer']> = [
   {

@@ -5,6 +5,7 @@ import { selectEligibleEvents, type EventDefinition } from '@offside/content';
 import type { EngineCommand, ExecuteResult, LoadResult } from '@offside/engine-client';
 import { deleteCareerOnServer } from '../api/client.js';
 import { platform } from '../platform/index.js';
+import type { TrainingFocus } from '../shared/start-season.js';
 import type { AppEngine } from './engine.js';
 import { classifyDeleteResult, queuePendingDelete } from './pending-delete.js';
 import { getSyncClient } from './sync.js';
@@ -213,4 +214,33 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
 
 export function acceptOffer(engine: AppEngine, careerId: string, offerId: string): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'ACCEPT_OFFER', payload: { offerId } });
+}
+
+export type StartSeasonChoice = { simulationMode: SimulationMode; trainingFocus?: TrainingFocus };
+
+/**
+ * T-2-005 접점(PR #40, origin/main 머지 확인): domain `Command['START_SEASON']['payload']`에
+ * `trainingFocus`가 붙었다 — SCR-005의 선택을 그대로 실어 보낸다.
+ */
+export function toStartSeasonPayload(choice: StartSeasonChoice): Command {
+  return {
+    type: 'START_SEASON',
+    payload: {
+      simulationMode: choice.simulationMode,
+      serviceSeasonId: ACTIVE_SERVICE_SEASON_ID,
+      ...(choice.trainingFocus !== undefined ? { trainingFocus: choice.trainingFocus } : {}),
+    },
+  };
+}
+
+export function startSeason(engine: AppEngine, careerId: string, choice: StartSeasonChoice): Promise<ExecuteResult> {
+  return execute(engine, careerId, toStartSeasonPayload(choice));
+}
+
+export function resolveRole(engine: AppEngine, careerId: string, decision: 'ACCEPT' | 'DECLINE'): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'RESOLVE_ROLE', payload: { decision } });
+}
+
+export function settleSeason(engine: AppEngine, careerId: string): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'SETTLE_SEASON', payload: {} });
 }
