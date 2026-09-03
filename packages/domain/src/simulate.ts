@@ -1035,10 +1035,14 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 /**
  * T-2-002 D-34 CMD-SIM-004: ROLE_PROPOSAL pending을 ACCEPT/DECLINE으로 닫는다. DECLINE과
  * ACCEPT+KEEP은 managerTrust만 바꾼다. ACCEPT+POSITION_CHANGE는 `primaryPosition`·
- * `context.tacticalFit`·`context.positionProficiency`·`season.selection`을 제안이 들고 있던 값으로
- * 갱신한다(제안 산출 때 이미 계산된 값이라 재계산하지 않는다 — roll 없음 불변식 유지).
- * ACCEPT+ROLE_CHANGE는 `season.squadRole`만 제안값으로 옮긴다 — `contract.rolePromise`(계약 조건)는
- * 브리프 명시대로 그대로 둔다.
+ * `context.tacticalFit`·`context.positionProficiency`를 제안이 들고 있던 값(tacticalFitAfter·
+ * proficiencyAfter — roll 없음 불변식 유지, 재계산하지 않는다)으로 옮기고, `season.selection`은 새
+ * 포지션 경쟁자 풀로 다시 산출한다. `season.squadRole`은 그 재산출된 selection에서
+ * `squadRoleFromSelection`으로 다시 유도한다 — `proposal.squadRoleAfter`(제안 계산 시점의 managerTrust
+ * 기준)를 그대로 쓰면 이 함수가 방금 반영한 managerTrust 변화가 selection 점수에 반영되면서
+ * squadRole과 selection이 서로 어긋날 수 있어서다. ACCEPT+ROLE_CHANGE는 `season.squadRole`을
+ * 제안값으로 옮기고 `context.squadStatus`를 새 squadRole 기준으로 다시 계산한다(브리프: "ROLE_CHANGE →
+ * … context.squadStatus 재계산") — `contract.rolePromise`(계약 조건)는 브리프 명시대로 그대로 둔다.
  */
 function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
   const command = input.command;
@@ -1093,10 +1097,18 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
       squadStatus: context.squadStatus,
       competitors: season.squad.competitors,
     });
-    nextSeason = { ...season, squadRole: proposal.squadRoleAfter, selection: ranking };
+    nextSeason = { ...season, squadRole: squadRoleFromSelection(ranking), selection: ranking };
   } else {
     // proposal.type === 'ROLE_CHANGE'
     managerTrust = clamp(managerTrust + rules.roleProposal.acceptTrustDelta, 0, 100);
+    context = {
+      ...context,
+      squadStatus: computeSquadStatus(
+        { rolePromise: proposal.to, captaincy: 'NONE', lastRating: null },
+        rules,
+        input.ruleset.contractRules.squadStatusByRole,
+      ),
+    };
     nextSeason = { ...season, squadRole: proposal.to };
   }
 

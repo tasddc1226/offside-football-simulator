@@ -152,6 +152,23 @@ describe('RulesetSchema', () => {
     expect(() => RulesetSchema.parse(ruleset)).toThrowError(/slots 합은 11이어야 한다/);
   });
 
+  it('rejects a tacticalStyle whose preferredArchetypeIds for a position is empty', () => {
+    const ruleset = cloneRuleset();
+    const style = ruleset.tacticalStyles.find((s) => s.id === 'possession');
+    if (!style) throw new Error('fixture missing possession style');
+    (style.preferredArchetypeIds as Record<string, string[]>).W = [];
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/preferredArchetypeIds\.W는 1~2개여야 한다/);
+  });
+
+  it('rejects a tacticalStyle whose preferredArchetypeIds for a position covers all 3 archetypes', () => {
+    const ruleset = cloneRuleset();
+    const style = ruleset.tacticalStyles.find((s) => s.id === 'possession');
+    if (!style) throw new Error('fixture missing possession style');
+    const wArchetypeIds = ruleset.archetypes.filter((a) => a.position === 'W').map((a) => a.id);
+    (style.preferredArchetypeIds as Record<string, string[]>).W = wArchetypeIds;
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/preferredArchetypeIds\.W는 1~2개여야 한다/);
+  });
+
   it('rejects a tacticalStyle whose roleWeights for a position do not sum to 1', () => {
     const ruleset = cloneRuleset();
     const style = ruleset.tacticalStyles.find((s) => s.id === 'possession');

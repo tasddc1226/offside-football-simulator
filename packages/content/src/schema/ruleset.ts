@@ -206,6 +206,20 @@ export const TacticalStyleSchema = z
     if (slotsSum !== 11) {
       ctx.addIssue({ code: 'custom', message: `tacticalStyles[${style.id}].slots 합은 11이어야 한다: ${slotsSum}`, path: ['slots'] });
     }
+    // 포지션마다 아키타입은 항상 정확히 3개다(ArchetypeSchema 쪽 superRefine이 보장).
+    // `competitors.ts`의 `pickArchetype`이 선호/비선호 두 그룹 모두를 가중 roll 후보로 쓰므로,
+    // 한 그룹이 비면(0개 또는 3개) 가중치 합이 0이 되어 roll이 깨진다. 브리프가 명시한 "포지션마다
+    // 1~2개"를 스키마로 강제해 그 경우를 원천 차단한다.
+    for (const position of POSITIONS) {
+      const count = style.preferredArchetypeIds[position]?.length ?? 0;
+      if (count < 1 || count > 2) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `tacticalStyles[${style.id}].preferredArchetypeIds.${position}는 1~2개여야 한다: ${count}`,
+          path: ['preferredArchetypeIds', position],
+        });
+      }
+    }
   });
 export type TacticalStyle = z.infer<typeof TacticalStyleSchema>;
 

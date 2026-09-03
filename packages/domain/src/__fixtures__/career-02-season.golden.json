@@ -1,7 +1,7 @@
 {
   "FAST": {
     "revision": 17,
-    "stateHash": "91d46e51190de16c78909bef83c6adb10f3e05b514c3c9c486620804774f350f",
+    "stateHash": "1828a9365fe713b55331af284866688fbfaba8f4ef60a82abcbec556fa6a5ec7",
     "rngStateDraws": 398,
     "age": 18,
     "seasonHistory": [
@@ -34,7 +34,7 @@
     "afterRoleResolve": {
       "competitorsCount": 16,
       "tacticalFit": 37,
-      "squadStatus": 40,
+      "squadStatus": 60,
       "selectionPosition": "W",
       "slots": 2,
       "benchSlots": 1,
@@ -45,7 +45,7 @@
   },
   "CHAPTER": {
     "revision": 29,
-    "stateHash": "b1ac4fdbb8c37863b020ab448176d74f168310538dec90cf959cde494ef77ed3",
+    "stateHash": "c6f67a3a48d9e2b90429bbbe261b6f7a7330c169271333cfdbd99f8f8491b91a",
     "rngStateDraws": 403,
     "age": 18,
     "seasonHistory": [
@@ -78,7 +78,7 @@
     "afterRoleResolve": {
       "competitorsCount": 16,
       "tacticalFit": 37,
-      "squadStatus": 40,
+      "squadStatus": 60,
       "selectionPosition": "W",
       "slots": 2,
       "benchSlots": 1,

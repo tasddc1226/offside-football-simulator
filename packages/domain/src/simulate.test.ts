@@ -3,6 +3,7 @@ import { rulesetProto } from './__fixtures__/career-01.js';
 import { compareCodePoints } from './canonical.js';
 import { hashState } from './hash.js';
 import { rollRange } from './roll-range.js';
+import { computeSquadStatus, squadRoleFromSelection } from './selection.js';
 import { simulate, verifySnapshot, type Command, type SimulationInput } from './simulate.js';
 import type { DomainSnapshot, Effect, PlayerProfile, TimelineEntry } from './types.js';
 
@@ -1247,6 +1248,21 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(result.snapshot.state.season?.squadRole).toBe(squadRoleBefore);
       expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore + TRUST_DELTAS.declineTrustDelta);
     });
+
+    // 브리프: "ROLE_CHANGE → … context.squadStatus 재계산". squadRole이 STARTER→ROTATION으로
+    // 바뀌므로 squadStatus도 ROTATION 기준값으로 다시 계산돼야 한다(옛 STARTER 기준값이 남으면 안 된다).
+    it('ACCEPT: context.squadStatus가 새 squadRole(ROTATION) 기준으로 재계산된다', () => {
+      const snapshot = roleChangeSnapshot();
+      const expected = computeSquadStatus(
+        { rolePromise: 'ROTATION', captaincy: 'NONE', lastRating: null },
+        RULESET.selectionRules,
+        RULESET.contractRules.squadStatusByRole,
+      );
+      const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'ACCEPT') });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.snapshot.state.context.squadStatus).toBe(expected);
+    });
   });
 
   describe('POSITION_CHANGE', () => {
@@ -1271,12 +1287,28 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(result.snapshot.state.player.profile?.primaryPosition).toBe('AM');
       expect(result.snapshot.state.context.tacticalFit).toBe(88);
       expect(result.snapshot.state.context.positionProficiency).toBe(RULESET.selectionRules.proficiencyOnChange.adjacent);
-      expect(result.snapshot.state.season?.squadRole).toBe('STARTER');
+      // squadRoleAfter('STARTER')는 제안 계산 시점의 값일 뿐이다 — resolveRole은 이를 그대로 믿지
+      // 않고 재산출된 selection에서 다시 유도한다(아래 "재산출된 selection에서 유도된 값과 같다"
+      // 테스트 참고). AM은 이 팀 전술의 slots가 0이라 재산출 결과는 ROTATION이다.
+      expect(result.snapshot.state.season?.squadRole).toBe('ROTATION');
       expect(result.snapshot.state.season?.selection.position).toBe('AM');
       expect(result.snapshot.state.season?.selection.candidates.some((c) => c.id === 'PLAYER')).toBe(true);
       expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore + TRUST_DELTAS.acceptTrustDelta);
       expect(result.snapshot.state.pending).toBeNull();
       expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'POSITION_CHANGE' });
+    });
+
+    // season.squadRole은 항상 season.selection에서 유도된 값이어야 한다(squadRoleFromSelection이
+    // 그 유일한 유도 규칙이다). accept가 managerTrust를 먼저 올린 뒤 selection을 그 새 managerTrust로
+    // 재산출하므로, squadRole도 그 재산출된 selection에서 다시 유도해야 둘이 어긋나지 않는다 — 제안
+    // 계산 시점(managerTrust 변경 전)의 squadRoleAfter를 그대로 쓰면 어긋날 수 있다.
+    it('ACCEPT: season.squadRole은 재산출된 season.selection에서 유도된 값과 같다', () => {
+      const snapshot = positionChangeSnapshot();
+      const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'ACCEPT') });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const season = result.snapshot.state.season!;
+      expect(season.squadRole).toBe(squadRoleFromSelection(season.selection));
     });
 
     it('DECLINE: primaryPosition·season.selection이 바뀌지 않는다', () => {
