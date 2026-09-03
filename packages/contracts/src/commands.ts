@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EffectSchema } from './career-state.js';
+import { EffectSchema, TrainingFocusSchema } from './career-state.js';
 import { successEnvelope } from './envelope.js';
 import { PlayerDraftSchema } from './player.js';
 import { ClientIdSchema, Hex64Schema, IsoUtcSchema } from './primitives.js';
@@ -110,9 +110,11 @@ export const AcceptOfferPayloadSchema = z.strictObject({
 // domain `CareerState` 어디에도 없어(engine-client는 이 작업 범위 밖), CREATE_CAREER처럼
 // payload로 받도록 domain Command를 확장했다(PR 본문 "범위 밖 발견 사항" 참고). 이 스키마는
 // domain Command payload 형태를 그대로 따른다.
+// T-2-005 D-39: trainingFocus는 없으면 'ROLE'(기존 골든 호환).
 export const StartSeasonPayloadSchema = z.strictObject({
   simulationMode: z.enum(['FAST', 'CHAPTER']),
   serviceSeasonId: z.string().min(1),
+  trainingFocus: TrainingFocusSchema.exactOptional(),
 });
 
 // T-2-001 D-25: SETTLE_SEASON payload. 필드 없음(domain Command payload는 `Record<string, never>`).

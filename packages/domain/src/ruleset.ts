@@ -170,6 +170,49 @@ export type ContractRules = {
   signingBonus: Record<string, Record<string, number>>;
   squadStatusByRole: Record<SquadRole, number>;
   newClubManagerTrust: number;
+  /** T-2-005 D-39: 출전 약속 이행 판정 기준(minutesShareBp 이상인 가장 높은 역할). */
+  promiseMinutesShareBp: Record<SquadRole, number>;
+};
+
+// T-2-005 D-39: 성장식이 쓰는 연령대·능력 그룹.
+export type GrowthAgeBand = 'U21' | 'PRIME' | 'VETERAN';
+export type GrowthAttributeGroup = 'TECHNICAL' | 'PHYSICAL' | 'MENTAL' | 'GOALKEEPING';
+
+// T-2-005 D-39: 결산 성장식 상수(`packages/content` 소유, `growth.ts`가 소비).
+export type GrowthRules = {
+  budgetCenti: Record<GrowthAgeBand, number>;
+  gapCap: number;
+  minutesFull: number;
+  minutesFloorBp: number;
+  experiencePerRatedMatchCenti: number;
+  experienceCapCenti: number;
+  goodRatingTenths: number;
+  goodRatingBonusCenti: number;
+  roleWeightScale: number;
+  baseShareBp: number;
+  focusShareBp: number;
+  seasonDeltaMin: number;
+  seasonDeltaMax: number;
+  /** 오름차순 구간표, 마지막 원소의 maxAge는 항상 99. */
+  ageCurves: Record<GrowthAttributeGroup, Array<{ maxAge: number; multBp: number }>>;
+  decline: Record<GrowthAttributeGroup, { startAge: number; perYearCenti: number }>;
+};
+
+// T-2-005 D-39: 시즌 중 매 step 경기 뒤 폼·체력·사기 갱신 상수(`packages/content` 소유, `condition.ts`가 소비).
+export type ConditionRules = {
+  formPivotTenths: number;
+  formDivisorTenths: number;
+  formStepMax: number;
+  formDriftPerStep: number;
+  fitnessRecoveryPerStep: number;
+  fitnessCostMinutes: number;
+  injuryFitnessCost: number;
+  moraleWin: number;
+  moraleLoss: number;
+  moraleStart: number;
+  moraleNotSelected: number;
+  moraleUnusedSub: number;
+  moraleStepMax: number;
 };
 
 // T-2-001 D-33: 룰셋 slot 정의(step 안의 결정 슬롯 후보). `FootballSeason.steps[].decisionSlots`는
@@ -215,4 +258,8 @@ export type Ruleset = {
   selectionRules: SelectionRules;
   /** T-2-003 D-35: 경기 계산 상수. */
   matchRules: MatchRules;
+  /** T-2-005 D-39: 결산 성장식 상수. */
+  growthRules: GrowthRules;
+  /** T-2-005 D-39: 시즌 중 폼·체력·사기 갱신 상수. */
+  conditionRules: ConditionRules;
 };

@@ -23,6 +23,7 @@ const EMPTY_DRAFT: PlayerDraft = {
 };
 
 const ZERO_ATTRIBUTES = Object.fromEntries(ATTRIBUTE_KEYS.map((key) => [key, 50])) as Record<AttributeKey, number>;
+const ZERO_GROWTH_CARRY = Object.fromEntries(ATTRIBUTE_KEYS.map((key) => [key, 0])) as Record<AttributeKey, number>;
 
 function baseState(overrides: Partial<CareerState>): CareerState {
   return {
@@ -35,6 +36,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     seasonPhase: 'PRESEASON',
     simulationMode: 'FAST',
     attributes: ZERO_ATTRIBUTES,
+    growthCarryCenti: ZERO_GROWTH_CARRY,
     state: { form: 50, fitness: 100, morale: 50 },
     context: { tacticalFit: 50, squadStatus: 50, positionProficiency: 50 },
     relationships: { managerTrust: 50, captain: 0, rival: 0, fans: 0, agent: 0 },

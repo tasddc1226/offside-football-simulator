@@ -62,6 +62,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     seasonPhase: 'SETTLEMENT',
     simulationMode: 'FAST',
     attributes: {} as CareerState['attributes'],
+    growthCarryCenti: {} as CareerState['growthCarryCenti'],
     state: { form: 50, fitness: 100, morale: 50 },
     context: { tacticalFit: 0, squadStatus: 0, positionProficiency: 0 },
     relationships: { managerTrust: 0, captain: 0, rival: 0, fans: 0, agent: 0 },

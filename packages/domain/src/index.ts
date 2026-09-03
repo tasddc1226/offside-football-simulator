@@ -15,6 +15,7 @@ export {
   type CareerStage,
   type CareerState,
   type CareerStatus,
+  type ChapterRecord,
   type CheckpointType,
   type CompetitionRecord,
   type Competitor,
@@ -24,6 +25,7 @@ export {
   type Effect,
   type EffectKind,
   type FootballSeason,
+  type GrowthCause,
   type MatchAppearance,
   type MatchRecord,
   type Offer,
@@ -41,6 +43,7 @@ export {
   type ScheduleEntry,
   type SeasonPhase,
   type SeasonPlayerStats,
+  type SeasonResult,
   type SeasonStep,
   type SeasonSummary,
   type SelectionAppearance,
@@ -53,12 +56,17 @@ export {
   type StepMatchResult,
   type StepSummary,
   type TimelineEntry,
+  type TrainingFocus,
 } from './types.js';
 export type {
   Archetype,
   Background,
   ContractRules,
   Cup,
+  ConditionRules,
+  GrowthAgeBand,
+  GrowthAttributeGroup,
+  GrowthRules,
   League,
   LeagueCalendar,
   LeagueCalendarSlot,
@@ -70,7 +78,23 @@ export type {
   TacticalStyle,
   Team,
 } from './ruleset.js';
-export { applyEffects, expireEffects, type ApplyEffectsResult, type RejectedEffect } from './effects.js';
+export {
+  applyEffects,
+  expireEffects,
+  resolveDeferredEffects,
+  resolveDeferredKind,
+  type ApplyEffectsResult,
+  type RejectedEffect,
+  type ResolvedDeferredKind,
+} from './effects.js';
+export { attributeGroupOf, computeGrowth, type GrowthAttributeDelta, type GrowthInput, type GrowthResult } from './growth.js';
+export { applyCondition, type ConditionState } from './condition.js';
+export {
+  buildSeasonResult,
+  computePromiseFulfilment,
+  hashSeasonResult,
+  type BuildSeasonResultInput,
+} from './settlement.js';
 export { computeBaseOvr, generatePlayerProfile, type ConfirmedPlayerDraft, type GeneratedPlayer } from './player.js';
 export {
   buildInitialCompetitions,

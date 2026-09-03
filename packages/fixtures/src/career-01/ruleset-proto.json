@@ -1353,7 +1353,13 @@
       "BENCH": 40,
       "RESERVE": 25
     },
-    "newClubManagerTrust": 40
+    "newClubManagerTrust": 40,
+    "promiseMinutesShareBp": {
+      "STARTER": 6500,
+      "ROTATION": 4000,
+      "BENCH": 1500,
+      "RESERVE": 0
+    }
   },
   "leagueCalendar": {
     "id": "default-12",
@@ -2927,5 +2933,119 @@
       "FINAL": 85
     },
     "cleanSheetMinMinutes": 60
+  },
+  "growthRules": {
+    "budgetCenti": {
+      "U21": 600,
+      "PRIME": 200,
+      "VETERAN": 0
+    },
+    "gapCap": 20,
+    "minutesFull": 2400,
+    "minutesFloorBp": 3000,
+    "experiencePerRatedMatchCenti": 4,
+    "experienceCapCenti": 120,
+    "goodRatingTenths": 75,
+    "goodRatingBonusCenti": 60,
+    "roleWeightScale": 8,
+    "baseShareBp": 1500,
+    "focusShareBp": 2500,
+    "seasonDeltaMin": -3,
+    "seasonDeltaMax": 4,
+    "ageCurves": {
+      "PHYSICAL": [
+        {
+          "maxAge": 25,
+          "multBp": 10000
+        },
+        {
+          "maxAge": 28,
+          "multBp": 5000
+        },
+        {
+          "maxAge": 99,
+          "multBp": 0
+        }
+      ],
+      "TECHNICAL": [
+        {
+          "maxAge": 20,
+          "multBp": 8000
+        },
+        {
+          "maxAge": 29,
+          "multBp": 10000
+        },
+        {
+          "maxAge": 32,
+          "multBp": 5000
+        },
+        {
+          "maxAge": 99,
+          "multBp": 0
+        }
+      ],
+      "MENTAL": [
+        {
+          "maxAge": 23,
+          "multBp": 7000
+        },
+        {
+          "maxAge": 33,
+          "multBp": 10000
+        },
+        {
+          "maxAge": 99,
+          "multBp": 3000
+        }
+      ],
+      "GOALKEEPING": [
+        {
+          "maxAge": 26,
+          "multBp": 8000
+        },
+        {
+          "maxAge": 34,
+          "multBp": 10000
+        },
+        {
+          "maxAge": 99,
+          "multBp": 3000
+        }
+      ]
+    },
+    "decline": {
+      "PHYSICAL": {
+        "startAge": 29,
+        "perYearCenti": 40
+      },
+      "TECHNICAL": {
+        "startAge": 32,
+        "perYearCenti": 25
+      },
+      "MENTAL": {
+        "startAge": 34,
+        "perYearCenti": 20
+      },
+      "GOALKEEPING": {
+        "startAge": 35,
+        "perYearCenti": 25
+      }
+    }
+  },
+  "conditionRules": {
+    "formPivotTenths": 65,
+    "formDivisorTenths": 8,
+    "formStepMax": 4,
+    "formDriftPerStep": 2,
+    "fitnessRecoveryPerStep": 4,
+    "fitnessCostMinutes": 30,
+    "injuryFitnessCost": 10,
+    "moraleWin": 2,
+    "moraleLoss": 2,
+    "moraleStart": 1,
+    "moraleNotSelected": 2,
+    "moraleUnusedSub": 1,
+    "moraleStepMax": 5
   }
 }
