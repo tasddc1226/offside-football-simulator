@@ -29,15 +29,14 @@ T-1-014 산출물. `docs/phases/phase-01-career-vertical-slice.md` "완료 조�
 
 ## 측정값(TEST-E2E-009 + 11 "세션 길이 목표")
 
-`test-results/session-length.json`(스텁 API, `e2e/session-length.spec.ts`):
+`test-results/session-length.json`(스텁 API, `e2e/session-length.spec.ts`, 최근 실행 예시):
 
 ```json
-{"automationMs":2302.8,"minimalHandlingSec":58,"counts":{"screens":13,"selections":10,"textInputs":1,"confirmations":14}}
+{"automationMs":4749.82,"minimalHandlingSec":58,"counts":{"screens":13,"selections":10,"textInputs":1,"confirmations":14}}
 ```
 
-- 자동화 시간(브라우저 조작 자체): 약 2.3초(5분 미만).
-- 최소 조작 시간(D-22 단가: 화면 1.0초·선택 2.0초·텍스트 입력 4.0초·확정 1.5초, 애니메이션 대기는 건너뛰어 0) = 13×1.0 + 10×2.0 + 1×4.0 + 14×1.5 = **58초**(5분 미만).
-- 실행마다 값이 100% 동일함을 5회 연속 확인(도메인 가중 랜덤이지만 스텁 seed가 고정이라 결정론적).
+- 최소 조작 시간(D-22 단가: 화면 1.0초·선택 2.0초·텍스트 입력 4.0초·확정 1.5초, 애니메이션 대기는 건너뛰어 0) = 13×1.0 + 10×2.0 + 1×4.0 + 14×1.5 = **58초**(5분 미만). `counts`(화면·선택·텍스트 입력·확정 횟수)와 이 값은 5회 연속 실행에서 100% 동일함을 확인했다(도메인 가중 랜덤이지만 스텁 seed가 고정이라 결정론적인 것은 이 경로뿐이다).
+- 자동화 시간(`automationMs`, 브라우저 조작 자체의 실제 소요 시간)은 `counts`와 달리 결정론적이지 않다 — 같은 세션 안에서도 2.3초~4.9초로 편차가 있었다(시스템 부하에 따른 실제 wall-clock 시간이라 당연하다). 5회 연속 재실행 모두 5분(300000ms) 문턱에 비해 훨씬 낮아 assert(`toBeLessThan(5*60*1000)`)는 항상 통과했다.
 
 ## 측정값(허브 LCP·폰트 CLS, `E2E_PREVIEW=1`)
 
