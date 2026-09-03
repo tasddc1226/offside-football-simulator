@@ -427,6 +427,12 @@ export type FootballSeason = {
   teamId: string;
   styleId: string;
   squadRole: SquadRole;
+  /** T-2-005 D-39: `startSeason`이 만든 시즌 시작 시점 squadRole(이후 RESOLVE_ROLE로도 바뀌지 않는다).
+   * `SeasonResult.selectionSummary.squadRoleAtStart`가 쓴다 — D-39가 요구하는 필드지만 별도 저장소가
+   * 없어 이 자리에 추가했다(PR 본문 "범위 밖 발견 사항" 참고). */
+  squadRoleAtStart: SquadRole;
+  /** T-2-005 D-39: 이 시즌 훈련 초점(ROLE = 아키타입 roleWeights 그대로). */
+  trainingFocus: TrainingFocus;
   competitions: CompetitionRecord[];
   /** T-2-003 D-35: roll 없이 시즌 시작 시 확정하는 리그·컵 일정(step·order 순 정렬). */
   schedule: ScheduleEntry[];
@@ -446,6 +452,59 @@ export type FootballSeason = {
    * 슬롯(EVENT 가중치 등)이 소비하는 `CareerState.rngState`와 분리해, 경기 결과가 모드별 결정 타이밍에
    * 영향받지 않게 한다. START_SEASON에서 mode를 쓰기 전 시점의 `state.rngState`로 시드한다. */
   matchRngState: RngState;
+  /** T-2-005 D-39, 오케스트레이터 리뷰 2차(R2-1): 이번 시즌에 적용 예정인 DEFERRED 효과 목록
+   * (`appliesAt.kind === 'NEXT_SEASON_STEP'`). `startSeason`이 그 시점의 `state.deferredEffects`
+   * 전부를 이 필드로 옮겨 채운다(season이 없으면 step 번호를 해석할 대상이 없어 미룰 수 없으므로,
+   * season 배정 전에 미룬 효과는 여기가 아니라 `state.deferredEffects`에 쌓여 있다가 옮겨진다).
+   * `resolveDeferredEffects`가 매 step 이 목록에서 `appliesAt.step === step`인 항목을 꺼내 적용하고
+   * 지운다 — `state.deferredEffects`가 아니라 이 필드를 읽고 쓴다(예전엔 `state.deferredEffects`를
+   * `START_SEASON`이 곧바로 비웠기 때문에 실제로는 한 번도 적용되지 않는 버그였다). */
+  scheduledEffects: Effect[];
+};
+
+// T-2-005 D-39: 결산 성장 원인 태그와 훈련 초점(ROLE = 아키타입 roleWeights 그대로).
+export type GrowthCause = 'TRAINING' | 'MINUTES' | 'EXPERIENCE' | 'AGE_DECLINE' | 'POTENTIAL_CAP';
+export type TrainingFocus = 'ROLE' | 'TECHNICAL' | 'PHYSICAL' | 'MENTAL';
+
+/**
+ * T-2-005: T-2-004(핵심 경기 챕터)가 아직 main에 없어 실제 형태를 모른다 — `SeasonResult.chapters`
+ * 타입만 필요한 자리에 두는 플레이스홀더다. T-2-004가 머지되면 그쪽 정의가 정본이고, 이 타입은
+ * 병합 시 그 정의로 맞춘다(브리프: "두 작업 모두 types.ts를 건드리므로 충돌은 예상된 것이다").
+ */
+export type ChapterRecord = { id: string; step: number };
+
+// T-2-005 D-39: SETTLE_SEASON이 만드는 시즌 결산 결과. `seasonHistory`에 그대로 남는다(FootballSeason에는
+// 두지 않는다 — season은 다음 START_SEASON에서 교체된다). 02 DATA-SEA-001은 `result?: SeasonResult`로
+// 적었지만 이 브리프(D-39)가 "결산은 항상 result를 만든다"로 확정해 필수 필드로 둔다.
+export type SeasonResult = {
+  index: number;
+  simulationMode: SimulationMode;
+  teamId: string;
+  competitions: CompetitionRecord[];
+  playerStats: SeasonPlayerStats;
+  selectionSummary: {
+    squadRoleAtStart: SquadRole;
+    squadRoleAtEnd: SquadRole;
+    started: number;
+    sub: number;
+    zeroMinute: number;
+    out: number;
+    minutes: number;
+    possibleMinutes: number;
+    finalRank: number;
+  };
+  roleChanges: Array<{ step: number; type: RoleProposal['type']; decision: 'ACCEPT' | 'DECLINE' }>;
+  promiseFulfilment: { promised: SquadRole; delivered: SquadRole; fulfilled: boolean; minutesShareBp: number };
+  attributeDeltas: Array<{ key: AttributeKey; delta: number; causes: Array<{ cause: GrowthCause; centi: number }> }>;
+  baseOvr: { before: number; after: number };
+  stateDeltas: {
+    form: { before: number; after: number };
+    fitness: { before: number; after: number };
+    morale: { before: number; after: number };
+    managerTrust: { before: number; after: number };
+  };
+  chapters: ChapterRecord[];
+  hash: string;
 };
 
 export type SeasonSummary = {
@@ -454,6 +513,7 @@ export type SeasonSummary = {
   teamId: string;
   competitions: CompetitionRecord[];
   settledAtRevision: number;
+  result: SeasonResult;
 };
 
 export type CareerState = {
@@ -466,6 +526,8 @@ export type CareerState = {
   seasonPhase: SeasonPhase;
   simulationMode: SimulationMode;
   attributes: Record<AttributeKey, number>;
+  /** T-2-005 D-39: 성장식 이월(정수 centi, 1/100). 결산 시 매번 갱신된다. */
+  growthCarryCenti: Record<AttributeKey, number>;
   state: { form: number; fitness: number; morale: number };
   context: { tacticalFit: number; squadStatus: number; positionProficiency: number };
   relationships: { managerTrust: number; captain: number; rival: number; fans: number; agent: number };

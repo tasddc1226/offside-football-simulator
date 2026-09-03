@@ -1,6 +1,6 @@
 {
   "revision": 17,
-  "stateHash": "5f868c11056f462e59fd3c7e2afffd8c8cbcb2f2b65cb53ba76363a0079cd5ee",
+  "stateHash": "b3385ca74ed74f9c82f846a668c8da933d57178acd5af8184b08c1f103c98870",
   "rngStateDraws": 398,
   "age": 18,
   "seasonHistory": [
@@ -13,11 +13,11 @@
           "competitionId": "LEAGUE",
           "kind": "LEAGUE",
           "played": 22,
-          "won": 8,
+          "won": 7,
           "drawn": 9,
-          "lost": 5,
+          "lost": 6,
           "goalsFor": 30,
-          "goalsAgainst": 25,
+          "goalsAgainst": 27,
           "position": 5,
           "cupRound": null
         },
@@ -34,7 +34,312 @@
           "cupRound": "OUT_SEMI"
         }
       ],
-      "settledAtRevision": 17
+      "settledAtRevision": 17,
+      "result": {
+        "index": 1,
+        "simulationMode": "FAST",
+        "teamId": "busan-tier2",
+        "competitions": [
+          {
+            "competitionId": "LEAGUE",
+            "kind": "LEAGUE",
+            "played": 22,
+            "won": 7,
+            "drawn": 9,
+            "lost": 6,
+            "goalsFor": 30,
+            "goalsAgainst": 27,
+            "position": 5,
+            "cupRound": null
+          },
+          {
+            "competitionId": "CUP",
+            "kind": "CUP",
+            "played": 3,
+            "won": 1,
+            "drawn": 1,
+            "lost": 1,
+            "goalsFor": 5,
+            "goalsAgainst": 5,
+            "position": null,
+            "cupRound": "OUT_SEMI"
+          }
+        ],
+        "playerStats": {
+          "group": "GK",
+          "appearances": {
+            "total": 25,
+            "started": 21,
+            "sub": 0,
+            "zeroMinute": 4,
+            "out": 4
+          },
+          "minutes": 1700,
+          "ratingSumTenths": 1447,
+          "ratedMatches": 21,
+          "yellow": 0,
+          "red": 0,
+          "injuries": 2,
+          "totals": {
+            "group": "GK",
+            "saves": 57,
+            "psxgMinusGoalsCenti": 60,
+            "cleanSheet": 6,
+            "crossesClaimed": 32,
+            "buildUpPasses": 414
+          }
+        },
+        "selectionSummary": {
+          "squadRoleAtStart": "STARTER",
+          "squadRoleAtEnd": "RESERVE",
+          "started": 21,
+          "sub": 0,
+          "zeroMinute": 4,
+          "out": 4,
+          "minutes": 1700,
+          "possibleMinutes": 2250,
+          "finalRank": 3
+        },
+        "roleChanges": [
+          {
+            "step": 1,
+            "type": "ROLE_CHANGE",
+            "decision": "ACCEPT"
+          }
+        ],
+        "promiseFulfilment": {
+          "promised": "BENCH",
+          "delivered": "STARTER",
+          "fulfilled": true,
+          "minutesShareBp": 7556
+        },
+        "attributeDeltas": [
+          {
+            "key": "shooting",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 10
+              }
+            ]
+          },
+          {
+            "key": "passing",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 10
+              }
+            ]
+          },
+          {
+            "key": "dribbling",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 10
+              }
+            ]
+          },
+          {
+            "key": "tackling",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 10
+              }
+            ]
+          },
+          {
+            "key": "firstTouch",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 10
+              }
+            ]
+          },
+          {
+            "key": "crossing",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 10
+              }
+            ]
+          },
+          {
+            "key": "goalkeeping",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 67
+              }
+            ]
+          },
+          {
+            "key": "pace",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 12
+              }
+            ]
+          },
+          {
+            "key": "acceleration",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 12
+              }
+            ]
+          },
+          {
+            "key": "agility",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 84
+              }
+            ]
+          },
+          {
+            "key": "jumping",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 46
+              }
+            ]
+          },
+          {
+            "key": "stamina",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 12
+              }
+            ]
+          },
+          {
+            "key": "strength",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 12
+              }
+            ]
+          },
+          {
+            "key": "durability",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 12
+              }
+            ]
+          },
+          {
+            "key": "decisions",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 32
+              }
+            ]
+          },
+          {
+            "key": "concentration",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 55
+              }
+            ]
+          },
+          {
+            "key": "composure",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 46
+              }
+            ]
+          },
+          {
+            "key": "positioning",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 58
+              }
+            ]
+          },
+          {
+            "key": "leadership",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 8
+              }
+            ]
+          },
+          {
+            "key": "consistency",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "EXPERIENCE",
+                "centi": 8
+              }
+            ]
+          }
+        ],
+        "baseOvr": {
+          "before": 65,
+          "after": 65
+        },
+        "stateDeltas": {
+          "form": {
+            "before": 54,
+            "after": 50
+          },
+          "fitness": {
+            "before": 50,
+            "after": 80
+          },
+          "morale": {
+            "before": 79,
+            "after": 60
+          },
+          "managerTrust": {
+            "before": 45,
+            "after": 45
+          }
+        },
+        "chapters": [],
+        "hash": "395562b1101174afe27641043adc28329afcc2e4d0421d2197e686b7de576f0a"
+      }
     }
   ],
   "beforeSettlement": {
@@ -43,24 +348,24 @@
       "group": "GK",
       "appearances": {
         "total": 25,
-        "started": 22,
+        "started": 21,
         "sub": 0,
-        "zeroMinute": 3,
-        "out": 3
+        "zeroMinute": 4,
+        "out": 4
       },
-      "minutes": 1790,
-      "ratingSumTenths": 1518,
-      "ratedMatches": 22,
+      "minutes": 1700,
+      "ratingSumTenths": 1447,
+      "ratedMatches": 21,
       "yellow": 0,
       "red": 0,
-      "injuries": 1,
+      "injuries": 2,
       "totals": {
         "group": "GK",
-        "saves": 61,
-        "psxgMinusGoalsCenti": 80,
+        "saves": 57,
+        "psxgMinusGoalsCenti": 60,
         "cleanSheet": 6,
-        "crossesClaimed": 34,
-        "buildUpPasses": 436
+        "crossesClaimed": 32,
+        "buildUpPasses": 414
       }
     },
     "averageRatingTenths": 69,
@@ -69,11 +374,11 @@
         "competitionId": "LEAGUE",
         "kind": "LEAGUE",
         "played": 22,
-        "won": 8,
+        "won": 7,
         "drawn": 9,
-        "lost": 5,
+        "lost": 6,
         "goalsFor": 30,
-        "goalsAgainst": 25,
+        "goalsAgainst": 27,
         "position": 5,
         "cupRound": null
       },
