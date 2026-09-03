@@ -56,7 +56,18 @@ function seasonResult(overrides: Partial<SeasonResult> = {}): SeasonResult {
       morale: { before: 60, after: 60 },
       managerTrust: { before: 40, after: 48 },
     },
-    chapters: [{ chapterId: 'CHP-MATCH-001', version: 1, step: 9, matchId: 'm-9', importance: 'MAJOR', decisions: [{ decisionId: 'd1', optionId: 'o1', outcomeId: 'out1' }], ratingDeltaTenths: 5 }],
+    chapters: [
+      {
+        chapterId: 'CHP-MATCH-001',
+        version: 1,
+        step: 9,
+        matchId: 'm-9',
+        importance: 'MAJOR',
+        trigger: 'DEBUT',
+        decisions: [{ decisionId: 'd1', optionId: 'o1', outcomeId: 'out1', outcomeKind: 'SUCCESS' }],
+        ratingDeltaTenths: 5,
+      },
+    ],
     hash: 'hash-season-1',
     ...overrides,
   };
@@ -82,6 +93,8 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     context: { tacticalFit: 12, squadStatus: 0, positionProficiency: 0 },
     relationships: { managerTrust: 8, captain: 0, rival: 0, fans: 0, agent: 0 },
     tags: [],
+    careerTags: [],
+    careerTagGrants: [],
     appliedSourceIds: [],
     activeEffects: [],
     deferredEffects: [],
