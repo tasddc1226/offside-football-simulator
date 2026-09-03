@@ -1,4 +1,4 @@
-// SCR-002 선수 정보. 이름·국적·주발·포지션·배경 5개 필드를 한 번의 UPDATE_PLAYER_DRAFT로 저장한다
+// SCR-002 선수 정보. 이름·성별·국적·주발·선호 포지션·배경 6개 필드를 한 번의 UPDATE_PLAYER_DRAFT로 저장한다
 // (키 입력마다 명령을 보내지 않는다). 포지션이 바뀌어 기존 archetypeId가 새 포지션과 맞지 않으면
 // 같은 명령에 archetypeId: null을 함께 보낸다(SCR-003 인수 조건).
 import { useEffect, useRef, useState } from 'react';
@@ -16,12 +16,20 @@ import {
   TabsTrigger,
 } from '@offside/ui';
 import { RETRYABLE_BY_CODE } from '@offside/contracts';
-import { positionGroupOf, type PlayerDraft, type Position, type PositionGroup, type PreferredFoot } from '@offside/domain';
+import {
+  positionGroupOf,
+  type PlayerDraft,
+  type PlayerGender,
+  type Position,
+  type PositionGroup,
+  type PreferredFoot,
+} from '@offside/domain';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { activeRuleset as ruleset } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import {
+  GENDER_LABELS,
   POSITION_DESCRIPTIONS,
   POSITION_GROUP_LABELS,
   POSITION_LABELS,
@@ -45,13 +53,23 @@ export const Route = createFileRoute('/career/$careerId/create')({
 
 type FormFields = {
   name: string;
+  gender: PlayerGender | '';
   nationalityCode: string;
   preferredFoot: PreferredFoot | '';
   position: Position | '';
   backgroundId: string;
 };
 
-const EMPTY_FORM: FormFields = { name: '', nationalityCode: '', preferredFoot: '', position: '', backgroundId: '' };
+const EMPTY_FORM: FormFields = {
+  name: '',
+  gender: '',
+  nationalityCode: '',
+  preferredFoot: '',
+  position: '',
+  backgroundId: '',
+};
+
+const GENDER_OPTIONS = ['FEMALE', 'MALE', 'UNSPECIFIED'] as const satisfies readonly PlayerGender[];
 
 type FieldErrors = Partial<Record<keyof FormFields, string>>;
 
@@ -68,9 +86,10 @@ function validateForm(form: FormFields): FieldErrors {
   const errors: FieldErrors = {};
   const name = validateDraftName(form.name, ruleset.draftRules);
   if (!name.ok) errors.name = name.message;
+  if (form.gender === '') errors.gender = '성별을 선택해 주세요.';
   if (form.nationalityCode === '') errors.nationalityCode = '국적을 선택해 주세요.';
   if (form.preferredFoot === '') errors.preferredFoot = '주발을 선택해 주세요.';
-  if (form.position === '') errors.position = '포지션을 선택해 주세요.';
+  if (form.position === '') errors.position = '선호 포지션을 선택해 주세요.';
   if (form.backgroundId === '') errors.backgroundId = '배경을 선택해 주세요.';
   return errors;
 }
@@ -102,6 +121,7 @@ function CreatePlayerScreen() {
     const draft = query.data.state.player.draft;
     setForm({
       name: draft.name ?? '',
+      gender: draft.gender ?? '',
       nationalityCode: draft.nationalityCode ?? '',
       preferredFoot: draft.preferredFoot ?? '',
       position: draft.position ?? '',
@@ -142,6 +162,7 @@ function CreatePlayerScreen() {
 
     const draftPatch: Partial<PlayerDraft> = {
       name: form.name.trim(),
+      gender: form.gender as PlayerGender,
       nationalityCode: form.nationalityCode,
       preferredFoot: form.preferredFoot as PreferredFoot,
       position,
@@ -227,6 +248,32 @@ function CreatePlayerScreen() {
       </div>
 
       <div className="flex flex-col gap-os-3">
+        <h2 id="draft-gender-heading" className="font-os font-semibold text-os-text" style={H2_STYLE}>
+          성별
+        </h2>
+        <p id="draft-gender-description" className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          능력치와 성장에는 영향을 주지 않습니다
+        </p>
+        <RadioGroup
+          aria-labelledby="draft-gender-heading"
+          aria-describedby={['draft-gender-description', errors.gender !== undefined ? 'draft-gender-error' : undefined]
+            .filter((id): id is string => id !== undefined)
+            .join(' ')}
+          value={form.gender}
+          onValueChange={(value) => updateField('gender', value as PlayerGender)}
+        >
+          {GENDER_OPTIONS.map((gender) => (
+            <RadioGroupItemRow key={gender} value={gender} label={GENDER_LABELS[gender]} disabled={committing} />
+          ))}
+        </RadioGroup>
+        {errors.gender !== undefined ? (
+          <p id="draft-gender-error" role="alert" className="font-os text-os-danger" style={CAPTION_STYLE}>
+            {errors.gender}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-os-3">
         <label htmlFor="draft-nationality" className="font-os font-semibold text-os-text" style={H2_STYLE}>
           국적
         </label>
@@ -278,7 +325,7 @@ function CreatePlayerScreen() {
 
       <div className="flex flex-col gap-os-3">
         <h2 id="draft-position-heading" className="font-os font-semibold text-os-text" style={H2_STYLE}>
-          포지션
+          선호 포지션
         </h2>
         <RadioGroup
           aria-labelledby="draft-position-heading"

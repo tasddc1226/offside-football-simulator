@@ -92,9 +92,14 @@ export function positionGroupOf(position: Position): PositionGroup {
 
 export type PreferredFoot = 'LEFT' | 'RIGHT' | 'BOTH';
 
-/** DRAFT 단계에서 채워 나가는 6개 필드. CONFIRM_PLAYER는 전부 non-null을 요구한다. */
+// RULE-PLY-001: 캐릭터 프로필 정보다. 시뮬레이션 입력이 아니다(능력·성장·이벤트·계약·시장가치에
+// 영향을 주지 않는다). 사용자의 실제 성별을 뜻하지 않는다.
+export type PlayerGender = 'FEMALE' | 'MALE' | 'UNSPECIFIED';
+
+/** DRAFT 단계에서 채워 나가는 7개 필드. CONFIRM_PLAYER는 전부 non-null을 요구한다. */
 export type PlayerDraft = {
   name: string | null;
+  gender: PlayerGender | null;
   nationalityCode: string | null;
   preferredFoot: PreferredFoot | null;
   position: Position | null;
@@ -102,12 +107,18 @@ export type PlayerDraft = {
   backgroundId: string | null;
 };
 
-/** CONFIRM_PLAYER가 룰셋·rng로 확정하는 선수 정체성·잠재력·Base OVR. */
+/**
+ * CONFIRM_PLAYER가 룰셋·rng로 확정하는 선수 정체성·잠재력·Base OVR. RULE-PLY-001: `preferredPosition`은
+ * 생성 시 고른 최초 선호 포지션으로 Career 동안 보존되고, `primaryPosition`은 현재 주포지션이며 생성
+ * 시 `preferredPosition`과 같은 값에서 시작해 포지션 전환으로만 바뀐다.
+ */
 export type PlayerProfile = {
   name: string;
+  gender: PlayerGender;
   nationalityCode: string;
   preferredFoot: PreferredFoot;
-  position: Position;
+  preferredPosition: Position;
+  primaryPosition: Position;
   archetypeId: string;
   backgroundId: string;
   truePotential: number;

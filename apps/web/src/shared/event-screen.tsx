@@ -80,7 +80,7 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
 
   const tokens = buildNarrativeTokens(state, activeContentPack, activeRuleset);
   const profile = state.player.profile;
-  const position = profile?.position ?? state.player.draft.position;
+  const position = profile?.primaryPosition ?? state.player.draft.position;
 
   function handleSelect(choiceId: string) {
     setSelectedChoiceId(choiceId);

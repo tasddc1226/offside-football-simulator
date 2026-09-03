@@ -23,6 +23,7 @@ async function startNewCareer(page: Page): Promise<void> {
 
 async function fillPlayerInfo(page: Page, name = '김서준'): Promise<void> {
   await page.getByLabel('이름').fill(name);
+  await page.getByRole('radio', { name: '남성' }).click();
   await page.getByLabel('국적').selectOption('KR');
   await page.getByRole('radio', { name: '왼발' }).click();
   await page.getByRole('tab', { name: '공격수' }).click();

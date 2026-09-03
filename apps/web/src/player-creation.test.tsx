@@ -107,6 +107,7 @@ describe('SCR-002 선수 정보', () => {
     await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
 
     await user.type(screen.getByLabelText('이름'), '김서준');
+    await user.click(screen.getByRole('radio', { name: '남성' }));
     await user.selectOptions(screen.getByLabelText('국적'), 'KR');
     await user.click(screen.getByRole('radio', { name: '왼발' }));
     await user.click(screen.getByRole('tab', { name: '공격수' }));
@@ -144,6 +145,7 @@ describe('SCR-002 선수 정보', () => {
     await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
 
     await user.type(screen.getByLabelText('이름'), '김서준');
+    await user.click(screen.getByRole('radio', { name: '남성' }));
     await user.selectOptions(screen.getByLabelText('국적'), 'KR');
     await user.click(screen.getByRole('radio', { name: '왼발' }));
     await user.click(screen.getByRole('tab', { name: '공격수' }));
@@ -161,7 +163,7 @@ describe('SCR-002 선수 정보', () => {
 describe('SCR-003 플레이 스타일', () => {
   async function seedToStyle(engine: AppEngine): Promise<string> {
     const careerId = await createDraftCareer(engine);
-    await updateDraft(engine, careerId, { name: '김서준', nationalityCode: 'KR', preferredFoot: 'LEFT' });
+    await updateDraft(engine, careerId, { name: '김서준', gender: 'UNSPECIFIED', nationalityCode: 'KR', preferredFoot: 'LEFT' });
     await updateDraft(engine, careerId, { position: 'W', backgroundId: 'club-academy' });
     return careerId;
   }
@@ -216,6 +218,7 @@ describe('가드: DRAFT 단계가 맞지 않으면 앞선 화면으로 보낸다
     const careerId = await createDraftCareer(engine);
     await updateDraft(engine, careerId, {
       name: '김서준',
+      gender: 'UNSPECIFIED',
       nationalityCode: 'KR',
       preferredFoot: 'LEFT',
       position: 'W',
@@ -234,6 +237,7 @@ describe('가드: DRAFT 단계가 맞지 않으면 앞선 화면으로 보낸다
     const careerId = await createDraftCareer(engine);
     await updateDraft(engine, careerId, {
       name: '김서준',
+      gender: 'UNSPECIFIED',
       nationalityCode: 'KR',
       preferredFoot: 'LEFT',
       position: 'W',
@@ -254,6 +258,7 @@ describe('SCR-002→003: 포지션 변경 시 기존 아키타입을 자동 확�
     const careerId = await createDraftCareer(engine);
     await updateDraft(engine, careerId, {
       name: '김서준',
+      gender: 'UNSPECIFIED',
       nationalityCode: 'KR',
       preferredFoot: 'LEFT',
       position: 'W',
@@ -279,6 +284,7 @@ describe('SCR-004 확인 및 복구 코드', () => {
     const careerId = await createDraftCareer(engine);
     await updateDraft(engine, careerId, {
       name: '김서준',
+      gender: 'UNSPECIFIED',
       nationalityCode: 'KR',
       preferredFoot: 'LEFT',
       position: 'W',

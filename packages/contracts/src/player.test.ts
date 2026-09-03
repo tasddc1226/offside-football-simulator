@@ -1,5 +1,6 @@
 import type {
   PlayerDraft as DomainPlayerDraft,
+  PlayerGender as DomainPlayerGender,
   PlayerProfile as DomainPlayerProfile,
   PositionGroup,
   Position,
@@ -10,6 +11,7 @@ import type { z } from 'zod';
 import {
   type PlayerDraft,
   PlayerDraftSchema,
+  PlayerGenderSchema,
   type PlayerPublic,
   PlayerPublicSchema,
   PlayerProfileSchema,
@@ -32,6 +34,10 @@ describe('domain 타입 동일성', () => {
     expectTypeOf<z.infer<typeof PreferredFootSchema>>().toEqualTypeOf<PreferredFoot>();
   });
 
+  it('PlayerGender', () => {
+    expectTypeOf<z.infer<typeof PlayerGenderSchema>>().toEqualTypeOf<DomainPlayerGender>();
+  });
+
   it('PlayerDraft', () => {
     expectTypeOf<PlayerDraft>().toEqualTypeOf<DomainPlayerDraft>();
   });
@@ -43,9 +49,11 @@ describe('domain 타입 동일성', () => {
 
 const VALID_PROFILE = {
   name: '김서준',
+  gender: 'UNSPECIFIED' as const,
   nationalityCode: 'KR',
   preferredFoot: 'RIGHT' as const,
-  position: 'W' as const,
+  preferredPosition: 'W' as const,
+  primaryPosition: 'W' as const,
   archetypeId: 'inside-forward',
   backgroundId: 'club-academy',
   truePotential: 80,
@@ -55,9 +63,10 @@ const VALID_PROFILE = {
 };
 
 describe('PlayerDraftSchema', () => {
-  it('6개 필드 전부 null을 허용한다', () => {
+  it('7개 필드 전부 null을 허용한다', () => {
     const result = PlayerDraftSchema.safeParse({
       name: null,
+      gender: null,
       nationalityCode: null,
       preferredFoot: null,
       position: null,
@@ -70,6 +79,7 @@ describe('PlayerDraftSchema', () => {
   it('알 수 없는 필드는 거부한다(strictObject)', () => {
     const result = PlayerDraftSchema.safeParse({
       name: null,
+      gender: null,
       nationalityCode: null,
       preferredFoot: null,
       position: null,
@@ -101,9 +111,11 @@ describe('toPlayerPublic', () => {
     expect(publicProfile).not.toHaveProperty('truePotential');
     expect(publicProfile).toEqual({
       name: VALID_PROFILE.name,
+      gender: VALID_PROFILE.gender,
       nationalityCode: VALID_PROFILE.nationalityCode,
       preferredFoot: VALID_PROFILE.preferredFoot,
-      position: VALID_PROFILE.position,
+      preferredPosition: VALID_PROFILE.preferredPosition,
+      primaryPosition: VALID_PROFILE.primaryPosition,
       archetypeId: VALID_PROFILE.archetypeId,
       backgroundId: VALID_PROFILE.backgroundId,
       scoutedPotentialMin: VALID_PROFILE.scoutedPotentialMin,

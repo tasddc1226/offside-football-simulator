@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (오전, PR #32 선수 성별·선호 포지션 머지 — T-1-014 투입)
+
+**결과**: T-1-016(PR #32, `4eb8112`) 머지. `PlayerDraft`에 `gender`(FEMALE·MALE·UNSPECIFIED) 추가, CONFIRM_PLAYER는 7개 필드를 요구. `PlayerProfile`·`PlayerPublic`의 `position`을 `preferredPosition`(불변)·`primaryPosition`(현재 주포지션, 확정 시 같은 값)으로 분리. SCR-002 성별 RadioGroup(설명 `aria-describedby`)·"선호 포지션" 라벨, SCR-004 요약, PlayerHeader는 확정 뒤 `primaryPosition`. content에 gender가 조건 DSL·Effect target 어디에도 없다는 불변식 테스트. golden은 revision 10·rngStateDraws 30·baseOvr 59 그대로이고 stateHash만 바뀌었다(성별이 결과를 바꾸지 않음을 확인). 런타임 migration 함수는 없다(출시 전 `schemaVersion: 1`, 기존에도 없었음). gender는 분석·로그·오류 details에 복사되지 않는다(grep 확인). 리뷰 수정 요청 0건, 워커 비용 약 $15.7, 43분.
+
+**투입**: T-1-014(E2E 완료 조건·완료 조건 표) 투입, T-1-013과 병렬. T-1-013에는 PR #32 머지와 PR 전 `origin/main` 병합을 지시했다. 남은 Phase 1 코드 작업은 T-1-013·T-1-014 둘뿐이다.
+
 ## 2026-09-03 (오전, PR #31 설정 데이터 섹션·법적 문서 머지 — T-1-013 투입)
 
 **결과**: T-1-012(PR #31, `1e97406`) 머지. api 복구·삭제 라우트의 contracts 스키마 채택, `Platform.clearLocalData`, `importCareerFromServer`, D-20 대조(`planReconciliation` 순수 함수 13건 테스트), SCR-030 데이터 섹션(복구 코드 발급·재발급, 프로필 복구·충돌 선택, 프로필 삭제 2단계, 이 기기 데이터 삭제, 로그아웃 비활성), 법적 문서 초안(운영자 정보는 U-010). 실제 api를 띄운 복구 왕복 e2e(컨텍스트 A 발급 → B 복구)는 워커 8.3초, 오케스트레이터 재실행 12.9초 통과. 워커 비용 약 $20.7.

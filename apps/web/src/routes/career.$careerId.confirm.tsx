@@ -10,7 +10,7 @@ import { activeRuleset as ruleset } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { ACTIVE_CONTENT_PACK_VERSION } from '../engine/versions.js';
 import { platform } from '../platform/index.js';
-import { POSITION_LABELS, PREFERRED_FOOT_LABELS } from '../shared/labels.js';
+import { GENDER_LABELS, POSITION_LABELS, PREFERRED_FOOT_LABELS } from '../shared/labels.js';
 import { attributeLabelList, topAttributeKeys } from '../shared/player-draft.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { useScreenState } from '../shared/screen-state.js';
@@ -256,7 +256,14 @@ function ConfirmScreen() {
   const background = ruleset.backgrounds.find((candidate) => candidate.id === draft.backgroundId);
   const startTeam = background ? ruleset.teams.find((team) => team.id === background.startTeamId) : undefined;
 
-  if (draft.name === null || draft.position === null || archetype === undefined || background === undefined || draft.preferredFoot === null) {
+  if (
+    draft.name === null ||
+    draft.gender === null ||
+    draft.position === null ||
+    archetype === undefined ||
+    background === undefined ||
+    draft.preferredFoot === null
+  ) {
     return null;
   }
 
@@ -269,12 +276,16 @@ function ConfirmScreen() {
       <PlayerHeader
         name={draft.name}
         team={startTeam?.name ?? background.startTeamId}
-        position={{ label: '포지션', value: POSITION_LABELS[draft.position] }}
+        position={{ label: '선호 포지션', value: POSITION_LABELS[draft.position] }}
         archetype={{ label: '아키타입', value: archetype.name }}
         shirtNumber={{ label: '등번호', value: '-' }}
       />
 
       <dl className="flex flex-col gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+        <div className="flex justify-between gap-os-2">
+          <dt>성별</dt>
+          <dd className="text-os-text">{GENDER_LABELS[draft.gender]}</dd>
+        </div>
         <div className="flex justify-between gap-os-2">
           <dt>주발</dt>
           <dd className="text-os-text">{PREFERRED_FOOT_LABELS[draft.preferredFoot]}</dd>

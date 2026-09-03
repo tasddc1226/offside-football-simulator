@@ -50,7 +50,7 @@ async function resultUrl(engine: AppEngine): Promise<string> {
   const created = await createCareer(engine, { simulationMode: 'FAST' });
   if (!created.ok) throw new Error('createCareer 실패');
   const careerId = created.snapshot.careerId;
-  await updateDraft(engine, careerId, { name: '김서준', nationalityCode: 'KR', preferredFoot: 'LEFT' });
+  await updateDraft(engine, careerId, { name: '김서준', gender: 'UNSPECIFIED', nationalityCode: 'KR', preferredFoot: 'LEFT' });
   await updateDraft(engine, careerId, { position: 'W', archetypeId: 'inside-forward', backgroundId: 'club-academy' });
   const confirmed = await confirmPlayer(engine, careerId);
   if (!confirmed.ok) throw new Error('confirmPlayer 실패');

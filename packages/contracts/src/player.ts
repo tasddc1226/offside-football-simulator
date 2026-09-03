@@ -9,12 +9,17 @@ export const PositionGroupSchema = z.enum(['GK', 'DEF', 'MID', 'FWD']);
 
 export const PreferredFootSchema = z.enum(['LEFT', 'RIGHT', 'BOTH']);
 
+// RULE-PLY-001: 캐릭터 프로필 정보다. 화면 라벨은 여성·남성·선택하지 않음이고 시뮬레이션 입력이
+// 아니다.
+export const PlayerGenderSchema = z.enum(['FEMALE', 'MALE', 'UNSPECIFIED']);
+
 /**
- * DRAFT 단계 입력. 6개 필드 전부 nullable(채워지지 않은 값은 null). 이름 길이·국적·아키타입 같은
+ * DRAFT 단계 입력. 7개 필드 전부 nullable(채워지지 않은 값은 null). 이름 길이·국적·아키타입 같은
  * 룰셋 의존 검증은 여기서 하지 않는다(contracts는 룰셋을 모른다) — domain `simulate`가 룰셋으로 검사한다.
  */
 export const PlayerDraftSchema = z.strictObject({
   name: z.string().nullable(),
+  gender: PlayerGenderSchema.nullable(),
   nationalityCode: z.string().nullable(),
   preferredFoot: PreferredFootSchema.nullable(),
   position: PositionSchema.nullable(),
@@ -27,12 +32,16 @@ export type PlayerDraft = z.infer<typeof PlayerDraftSchema>;
 /**
  * CONFIRM_PLAYER가 확정하는 선수 정체성·잠재력·Base OVR 전체(D-6). `truePotential`을 포함하므로
  * Snapshot `state` 내부 검증에만 쓴다 — 화면·API 응답은 이 필드가 없는 `PlayerPublic`만 쓴다.
+ * RULE-PLY-001: `preferredPosition`(최초 선호, 불변)과 `primaryPosition`(현재 주포지션, 전환으로
+ * 바뀔 수 있음)은 확정 시 같은 값에서 시작한다.
  */
 export const PlayerProfileSchema = z.strictObject({
   name: z.string(),
+  gender: PlayerGenderSchema,
   nationalityCode: z.string(),
   preferredFoot: PreferredFootSchema,
-  position: PositionSchema,
+  preferredPosition: PositionSchema,
+  primaryPosition: PositionSchema,
   archetypeId: z.string(),
   backgroundId: z.string(),
   truePotential: z.number().int().min(40).max(99),
@@ -55,9 +64,11 @@ export type PlayerPublic = z.infer<typeof PlayerPublicSchema>;
 export function toPlayerPublic(profile: PlayerProfile): PlayerPublic {
   return {
     name: profile.name,
+    gender: profile.gender,
     nationalityCode: profile.nationalityCode,
     preferredFoot: profile.preferredFoot,
-    position: profile.position,
+    preferredPosition: profile.preferredPosition,
+    primaryPosition: profile.primaryPosition,
     archetypeId: profile.archetypeId,
     backgroundId: profile.backgroundId,
     scoutedPotentialMin: profile.scoutedPotentialMin,

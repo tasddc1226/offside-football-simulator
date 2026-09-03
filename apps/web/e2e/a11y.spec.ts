@@ -88,6 +88,7 @@ test('SCR-003 플레이 스타일 화면에 axe serious·critical 위반이 없�
   await page.getByRole('button', { name: '다음' }).click();
   await page.getByRole('button', { name: 'KICKOFF' }).click();
   await page.getByLabel('이름').fill('김서준');
+  await page.getByRole('radio', { name: '남성' }).click();
   await page.getByLabel('국적').selectOption('KR');
   await page.getByRole('radio', { name: '왼발' }).click();
   await page.getByRole('tab', { name: '공격수' }).click();
@@ -105,6 +106,7 @@ test('SCR-004 확인 화면에 axe serious·critical 위반이 없다', async ({
   await page.getByRole('button', { name: '다음' }).click();
   await page.getByRole('button', { name: 'KICKOFF' }).click();
   await page.getByLabel('이름').fill('김서준');
+  await page.getByRole('radio', { name: '남성' }).click();
   await page.getByLabel('국적').selectOption('KR');
   await page.getByRole('radio', { name: '왼발' }).click();
   await page.getByRole('tab', { name: '공격수' }).click();
