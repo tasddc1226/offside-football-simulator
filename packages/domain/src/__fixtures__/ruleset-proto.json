@@ -2861,7 +2861,7 @@
         "red": 1
       }
     },
-    "yellowSuspensionAt": 3,
+    "yellowSuspensionAt": 5,
     "redSuspension": {
       "min": 1,
       "max": 2

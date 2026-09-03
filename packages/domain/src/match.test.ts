@@ -314,6 +314,39 @@ describe('playMatch — 정지·부상 중 excluded·matchesRemaining 감소', (
   });
 });
 
+describe('playMatch — 경고 누적 정지(yellowSuspensionAt) 전체 흐름', () => {
+  // 오케스트레이터 리뷰 1차: 실제 축구의 "경고 5장 → 1경기 정지"를 재현하려면 브리프대로
+  // yellowSuspensionAt=5여야 하지만(시즌 25~30경기·경고 확률 8~14%면 기대 경고 2~4장), 자연
+  // 누적을 기다리는 seed 탐색은 비현실적이다. 대신 seasonYellowCount를 yellowSuspensionAt−1(=4)로
+  // 직접 구성하고 yellow 카드가 나오는 seed 하나만 찾아 "누적 5번째 경고 → 정지"를 한 경기로
+  // 재현한다(밸런스 값 자체는 건드리지 않는다).
+  it('seasonYellowCount가 yellowSuspensionAt-1일 때 yellow 카드를 받으면 SUSPENSION(1경기)이 걸리고 카운트는 0으로 리셋된다', () => {
+    const input = baseStartInput('yellow-suspension-search-2', {
+      seasonYellowCount: rulesetProto.matchRules.yellowSuspensionAt - 1,
+    });
+    const result = playMatch(input);
+    expect(result.match.cards).toEqual({ yellow: 1, red: false });
+    expect(result.nextAvailability).toEqual({ kind: 'SUSPENSION', matchesRemaining: 1, sinceMatchId: result.match.id });
+    expect(result.nextSeasonYellowCount).toBe(0);
+  });
+
+  it('정지가 걸린 다음 경기는 excluded(SUSPENSION)로 결장하고, 그 경기 뒤 정지가 해제된다', () => {
+    const suspended = playMatch(
+      baseStartInput('yellow-suspension-search-2', { seasonYellowCount: rulesetProto.matchRules.yellowSuspensionAt - 1 }),
+    );
+    const next = playMatch(
+      baseStartInput('yellow-suspension-next', {
+        availability: suspended.nextAvailability,
+        seasonYellowCount: suspended.nextSeasonYellowCount,
+      }),
+    );
+    expect(next.match.appearance).toBe('OUT');
+    expect(next.match.outReason).toBe('SUSPENSION');
+    expect(next.selection.candidates.find((c) => c.id === 'PLAYER')!.excluded).toBe('SUSPENSION');
+    expect(next.nextAvailability).toBeNull();
+  });
+});
+
 describe('playMatch — 결정론·안전성', () => {
   it('같은 입력을 1,000회 실행해도 매번 완전히 같은 결과가 나온다', () => {
     const input = baseStartInput('repeat-seed');

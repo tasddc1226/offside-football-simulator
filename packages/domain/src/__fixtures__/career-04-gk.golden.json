@@ -1,6 +1,6 @@
 {
   "revision": 17,
-  "stateHash": "1a844c777691db76eb251928028ee163514d432c886942818a875e78445f8ac4",
+  "stateHash": "5f868c11056f462e59fd3c7e2afffd8c8cbcb2f2b65cb53ba76363a0079cd5ee",
   "rngStateDraws": 398,
   "age": 18,
   "seasonHistory": [
@@ -13,23 +13,23 @@
           "competitionId": "LEAGUE",
           "kind": "LEAGUE",
           "played": 22,
-          "won": 10,
-          "drawn": 7,
+          "won": 8,
+          "drawn": 9,
           "lost": 5,
-          "goalsFor": 34,
-          "goalsAgainst": 22,
-          "position": 2,
+          "goalsFor": 30,
+          "goalsAgainst": 25,
+          "position": 5,
           "cupRound": null
         },
         {
           "competitionId": "CUP",
           "kind": "CUP",
           "played": 3,
-          "won": 2,
-          "drawn": 0,
+          "won": 1,
+          "drawn": 1,
           "lost": 1,
-          "goalsFor": 4,
-          "goalsAgainst": 2,
+          "goalsFor": 5,
+          "goalsAgainst": 5,
           "position": null,
           "cupRound": "OUT_SEMI"
         }
@@ -43,49 +43,49 @@
       "group": "GK",
       "appearances": {
         "total": 25,
-        "started": 23,
+        "started": 22,
         "sub": 0,
-        "zeroMinute": 2,
-        "out": 2
+        "zeroMinute": 3,
+        "out": 3
       },
-      "minutes": 1930,
-      "ratingSumTenths": 1640,
-      "ratedMatches": 23,
-      "yellow": 4,
+      "minutes": 1790,
+      "ratingSumTenths": 1518,
+      "ratedMatches": 22,
+      "yellow": 0,
       "red": 0,
       "injuries": 1,
       "totals": {
         "group": "GK",
-        "saves": 63,
+        "saves": 61,
         "psxgMinusGoalsCenti": 80,
-        "cleanSheet": 10,
-        "crossesClaimed": 29,
-        "buildUpPasses": 466
+        "cleanSheet": 6,
+        "crossesClaimed": 34,
+        "buildUpPasses": 436
       }
     },
-    "averageRatingTenths": 71,
+    "averageRatingTenths": 69,
     "competitions": [
       {
         "competitionId": "LEAGUE",
         "kind": "LEAGUE",
         "played": 22,
-        "won": 10,
-        "drawn": 7,
+        "won": 8,
+        "drawn": 9,
         "lost": 5,
-        "goalsFor": 34,
-        "goalsAgainst": 22,
-        "position": 2,
+        "goalsFor": 30,
+        "goalsAgainst": 25,
+        "position": 5,
         "cupRound": null
       },
       {
         "competitionId": "CUP",
         "kind": "CUP",
         "played": 3,
-        "won": 2,
-        "drawn": 0,
+        "won": 1,
+        "drawn": 1,
         "lost": 1,
-        "goalsFor": 4,
-        "goalsAgainst": 2,
+        "goalsFor": 5,
+        "goalsAgainst": 5,
         "position": null,
         "cupRound": "OUT_SEMI"
       }

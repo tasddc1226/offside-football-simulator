@@ -688,7 +688,11 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
       lastRatingTenths: null,
       yellowSuspensionCount: 0,
       squadStatus,
-      matchRngState: stateAfterSelection.rngState,
+      // T-2-003 오케스트레이터 리뷰 1차: 결정 스트림 상태를 그대로 복사하면 첫 경기 roll이 결정
+      // 스트림이 다음에 뽑을 값과 원소 단위로 같아져(같은 xoshiro 상태 출발) 경기 결과와 이벤트
+      // roll이 숨은 상관을 갖는다. 해시 파생 시드로 완전히 떼어낸다(careerId는 안 쓴다 —
+      // fork-by-replay 뒤 시즌이 그대로 같아야 하는 T-2-006 테스트가 있다).
+      matchRngState: seedRng(`match:${state.seasonHistory.length + 1}:${stateAfterSelection.rngState.s.join(',')}`),
     },
   );
 
