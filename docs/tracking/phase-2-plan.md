@@ -103,6 +103,10 @@ D-34 보정: 역할 제안의 POSITION_CHANGE 후보는 `positionAdjacency[prima
 
 **확정(PR #40, `eaeb6cf`)**: 룰셋 `growthRules`(budgetCenti U21 600/PRIME 200/VETERAN 0, gapCap 20, minutesFull 2400, minutesFloorBp 3000, experiencePerRatedMatchCenti 4·cap 120, goodRatingTenths 75·bonus 60, roleWeightScale 8, baseShareBp 1500, focusShareBp 2500)·`conditionRules`(formPivotTenths 65, formDivisorTenths 8)·`promiseMinutesShareBp {6500, 4000, 1500, 0}`이 정본이다(브리프의 700/650은 평점 스케일 착오). DEFERRED 효과는 `FootballSeason.scheduledEffects`로 시즌 단위 적용한다 — `START_SEASON`이 `state.deferredEffects`를 통째로 옮기고 walk 중 step마다 풀며, 시즌 중 새로 미룬 효과는 다음 `START_SEASON`까지 `state.deferredEffects`에 머문다(리뷰에서 잡은 유실 버그의 수정). 후속: `player.ts` 생성 시 `baseOvr ≤ truePotential` 불변식(T-2-011).
 
+### D-40~D-42 확정 (2026-09-03, PR #43 `dd480a2`, ADR-010)
+
+Effect 중첩·만료·복원 규칙(D-40), 시장가치 지수 입력·가중치(D-41), CareerTag 카탈로그·부여 인터페이스(D-42)는 [ADR-010](../adr/ADR-010-shared-contracts.md)이 정본이다. 결정 로그 2026-09-03 밤(PR #43) 항목에 구현 요약과 사용자 승인 대기 항목(U-012)이 있다.
+
 ## 4. 열린 질문 (Wave 1 전에 닫는다)
 
 - 리그·컵 구조를 룰셋 데이터로 얼마나 구체화할지(팀 수, 경기 수, 컵 라운드 수). 제안: 리그 팀 수는 룰셋 `leagues[].teamCount`, 경기 수는 홈·원정 2회전, 컵은 4라운드.

@@ -152,6 +152,8 @@ export const TIMELINE_KIND_LABEL_KO: Record<TimelineEntry['kind'], string> = {
   ROLE_RESOLVED: '역할 결정',
   // T-2-004 D-38: exhaustive Record가 typecheck에서 깨져 최소 수정(PR 본문 참고).
   CHAPTER_RESOLVED: '챕터 판단',
+  // T-2-014 D-42: exhaustive Record가 typecheck에서 깨져 최소 수정(PR 본문 참고).
+  CAREER_TAG_GRANTED: '커리어 태그 획득',
 };
 
 /**
@@ -261,4 +263,6 @@ export const TIMELINE_KIND_LABELS: Record<TimelineEntry['kind'], string> = {
   ROLE_RESOLVED: '역할 결정',
   // T-2-004 D-38: exhaustive Record가 typecheck에서 깨져 최소 수정(PR 본문 참고).
   CHAPTER_RESOLVED: '챕터 판단',
+  // T-2-014 D-42: exhaustive Record가 typecheck에서 깨져 최소 수정(PR 본문 참고).
+  CAREER_TAG_GRANTED: '커리어 태그 획득',
 };

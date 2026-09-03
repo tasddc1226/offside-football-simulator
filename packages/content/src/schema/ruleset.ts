@@ -457,6 +457,48 @@ export const ConditionRulesSchema = z.strictObject({
 });
 export type ConditionRules = z.infer<typeof ConditionRulesSchema>;
 
+// T-2-014 D-41: 시장가치 지수(`computeMarketValueIndex`) 가중치·구간표. `weightsBp`는 bp 단위로 합이
+// 10000이어야 한다(03 "리그와 시장가치").
+const MarketValueWeightsBpSchema = z.strictObject({
+  baseOvr: z.number().int().nonnegative(),
+  scoutedPotentialMid: z.number().int().nonnegative(),
+  ageCurve: z.number().int().nonnegative(),
+  contract: z.number().int().nonnegative(),
+  league: z.number().int().nonnegative(),
+  form: z.number().int().nonnegative(),
+  popularity: z.number().int().nonnegative(),
+});
+
+export const MarketValueRulesSchema = z
+  .strictObject({
+    weightsBp: MarketValueWeightsBpSchema,
+    ageCurve: z.array(z.strictObject({ maxAge: z.number().int().positive(), valueCenti: z.number().int().min(0).max(10000) })).min(1),
+    contractCurve: z.strictObject({
+      remaining0: z.number().int().min(0).max(10000),
+      remaining1: z.number().int().min(0).max(10000),
+      remaining2Plus: z.number().int().min(0).max(10000),
+    }),
+    leagueTierValueCenti: z.strictObject({
+      '1': z.number().int().min(0).max(10000),
+      '2': z.number().int().min(0).max(10000),
+      '3': z.number().int().min(0).max(10000),
+      YOUTH: z.number().int().min(0).max(10000),
+    }),
+  })
+  .refine(
+    (rules) =>
+      rules.weightsBp.baseOvr +
+        rules.weightsBp.scoutedPotentialMid +
+        rules.weightsBp.ageCurve +
+        rules.weightsBp.contract +
+        rules.weightsBp.league +
+        rules.weightsBp.form +
+        rules.weightsBp.popularity ===
+      10000,
+    { message: 'marketValueRules.weightsBp 합은 10000(bp)이어야 한다.', path: ['weightsBp'] },
+  );
+export type MarketValueRules = z.infer<typeof MarketValueRulesSchema>;
+
 // T-2-001 D-33: 슬롯 kind는 domain `DecisionSlot['kind']`와 같은 7개.
 const DECISION_SLOT_KINDS = ['EVENT', 'CHAPTER', 'CONTRACT', 'ROLE', 'INJURY', 'NATIONAL_TEAM', 'SETTLEMENT'] as const;
 const DecisionSlotKindSchema = z.enum(DECISION_SLOT_KINDS);
@@ -741,6 +783,8 @@ export const RulesetSchema = z
     // T-2-005 D-39.
     growthRules: GrowthRulesSchema,
     conditionRules: ConditionRulesSchema,
+    // T-2-014 D-41.
+    marketValueRules: MarketValueRulesSchema,
   })
   .superRefine((ruleset, ctx) => {
     const archetypeIds = new Set<string>();

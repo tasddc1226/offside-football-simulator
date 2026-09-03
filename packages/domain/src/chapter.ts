@@ -7,6 +7,7 @@ import { isRivalOpponent } from './schedule.js';
 import type { League, Ruleset } from './ruleset.js';
 import type {
   CareerState,
+  ChapterOutcomeKind,
   ChapterRecord,
   ChapterTrigger,
   CompetitionRecord,
@@ -33,6 +34,9 @@ export type ChapterOpenResult = {
   importance: 'MAJOR' | 'MINOR';
   matchId: string;
   decisionsTotal: number;
+  // T-2-014 D-42: 이긴 후보의 trigger kind(전체 ChapterTrigger가 아니라 판별 리터럴만 — Pending.CHAPTER·
+  // ChapterRecord가 그대로 옮겨 담는다).
+  trigger: ChapterTrigger['kind'];
 };
 
 export type SelectChapterInput = {
@@ -162,11 +166,13 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
     importance: winner.candidate.importance,
     matchId: winner.matchId,
     decisionsTotal: winner.candidate.decisionsTotal,
+    trigger: winner.candidate.trigger.kind,
   };
 }
 
 export type ResolveChapterOutcome = {
   id: string;
+  kind: ChapterOutcomeKind;
   weight: number;
   effects: Effect[];
   ratingDeltaTenths: number;
@@ -269,7 +275,13 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
   const ratingSumDelta = beforeRating === null || afterRating === null ? 0 : afterRating - beforeRating;
   const playerStats = { ...season.playerStats, ratingSumTenths: season.playerStats.ratingSumTenths + ratingSumDelta };
 
-  const resolvedEntry = { decisionId: input.decisionId, optionId: input.optionId, outcomeId: chosen.id, roll: rolled.value };
+  const resolvedEntry = {
+    decisionId: input.decisionId,
+    optionId: input.optionId,
+    outcomeId: chosen.id,
+    roll: rolled.value,
+    outcomeKind: chosen.kind,
+  };
   const resolved = [...pending.resolved, resolvedEntry];
   const isLastDecision = resolved.length >= pending.decisionsTotal;
 
@@ -290,7 +302,13 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
       step: pending.step,
       matchId: pending.matchId,
       importance: pending.importance,
-      decisions: resolved.map((entry) => ({ decisionId: entry.decisionId, optionId: entry.optionId, outcomeId: entry.outcomeId })),
+      trigger: pending.trigger,
+      decisions: resolved.map((entry) => ({
+        decisionId: entry.decisionId,
+        optionId: entry.optionId,
+        outcomeId: entry.outcomeId,
+        outcomeKind: entry.outcomeKind,
+      })),
       ratingDeltaTenths: chapterRatingDeltaTenths,
     };
     chapters = [...season.chapters, chapterRecord];

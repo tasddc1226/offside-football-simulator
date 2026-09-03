@@ -3,7 +3,8 @@ import { clamp } from './clamp.js';
 import { resolveChapter, type ChapterCandidateInput } from './chapter.js';
 import { applyCondition, type ConditionState } from './condition.js';
 import { generateCompetitors } from './competitors.js';
-import { applyEffects, expireEffects, resolveDeferredEffects } from './effects.js';
+import { applyEffects, expireAtSeasonEnd, expireEffects, resolveDeferredEffects } from './effects.js';
+import { evaluateCareerTags, grantCareerTag } from './career-tags.js';
 import { computeGrowth } from './growth.js';
 import { hashState } from './hash.js';
 import { findMatchingOfferBranch, generateOffers } from './offers.js';
@@ -43,6 +44,7 @@ import {
   type AttributeKey,
   type CareerStage,
   type CareerState,
+  type ChapterOutcomeKind,
   type Competitor,
   type Contract,
   type DomainSnapshot,
@@ -105,7 +107,8 @@ export type Command =
         outcomes: Array<{ id: string; weight: number; effects: Effect[]; addTags?: string[]; removeTags?: string[] }>;
       };
     }
-  // T-2-004 D-38 CMD-SIM-005: CHAPTER pending의 판단 하나를 닫는다.
+  // T-2-004 D-38 CMD-SIM-005: CHAPTER pending의 판단 하나를 닫는다. T-2-014 D-42: outcomes[].kind는
+  // 필수(웹 T-2-008이 채운다).
   | {
       type: 'RESOLVE_CHAPTER';
       payload: {
@@ -115,6 +118,7 @@ export type Command =
         optionId: string;
         outcomes: Array<{
           id: string;
+          kind: ChapterOutcomeKind;
           weight: number;
           effects: Effect[];
           ratingDeltaTenths: number;
@@ -247,6 +251,8 @@ function createCareer(input: SimulationInput): SimulationResult {
     deferredEffects: [],
     resolvedEventIds: [],
     resolvedChapterIds: [],
+    careerTags: [],
+    careerTagGrants: [],
     rngState: seedRng(command.payload.seed),
     rulesetVersion: command.payload.rulesetVersion,
     contentPackVersion: command.payload.contentPackVersion,
@@ -1427,10 +1433,12 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
 }
 
 /**
- * T-2-001 D-25 CMD-SIM-003, T-2-005 D-39 확장. `season.currentStep === 12`이고 SETTLEMENT pending이
- * 열려 있을 때만 유효하다. 순서(브리프 settlement.ts 절): 결산 전 값 기록 → 성장(`computeGrowth`) →
- * 경계 회귀(`seasonBoundaryReset`) → after 값 기록 → `SeasonResult` 조립·해시 → `seasonHistory`에
- * `{ …, result }`로 남긴다.
+ * T-2-001 D-25 CMD-SIM-003, T-2-005 D-39 확장, T-2-014 D-40/D-42 확장. `season.currentStep === 12`이고
+ * SETTLEMENT pending이 열려 있을 때만 유효하다. 순서(브리프 settlement.ts 절 + D-40 "만료 → 회귀"):
+ * 시즌 만료(`expireAtSeasonEnd`) → 결산 전 값 기록 → 성장(`computeGrowth`) → 경계 회귀
+ * (`seasonBoundaryReset` — form·fitness·morale 리셋 + `appliedSourceIds`의 `season:` 접두 항목 정리) →
+ * after 값 기록 → `SeasonResult` 조립·해시 → `seasonHistory`에 `{ …, result }`로 남긴다 → 태그 평가
+ * (`evaluateCareerTags`)·부여(`grantCareerTag`).
  */
 function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
   const command = input.command;
@@ -1451,10 +1459,14 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   const nextAge = state.age + 1;
   const reset = input.ruleset.seasonBoundaryReset;
 
+  // D-40 규칙 3·4: 결산 직전 만료(AT_SEASON_END·이번 시즌 AT_SEASON_INDEX·자연 만료 못한 AT_STEP)를
+  // 먼저 되돌린 뒤 나머지 결산 절차를 이 상태 위에서 진행한다.
+  const expiredState = expireAtSeasonEnd(state, season.index);
+
   const growth = computeGrowth(
     {
-      age: state.age,
-      attributes: state.attributes,
+      age: expiredState.age,
+      attributes: expiredState.attributes,
       archetypeId: profile.archetypeId,
       truePotential: profile.truePotential,
       baseOvrBefore: profile.baseOvr,
@@ -1462,20 +1474,20 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
       ratedMatches: season.playerStats.ratedMatches,
       ratingSumTenths: season.playerStats.ratingSumTenths,
       trainingFocus: season.trainingFocus,
-      growthCarryCenti: state.growthCarryCenti,
+      growthCarryCenti: expiredState.growthCarryCenti,
     },
     input.ruleset,
   );
 
   const stateDeltas: SeasonResult['stateDeltas'] = {
-    form: { before: state.state.form, after: reset.form },
-    fitness: { before: state.state.fitness, after: reset.fitness },
-    morale: { before: state.state.morale, after: reset.morale },
-    managerTrust: { before: state.relationships.managerTrust, after: state.relationships.managerTrust },
+    form: { before: expiredState.state.form, after: reset.form },
+    fitness: { before: expiredState.state.fitness, after: reset.fitness },
+    morale: { before: expiredState.state.morale, after: reset.morale },
+    managerTrust: { before: expiredState.relationships.managerTrust, after: expiredState.relationships.managerTrust },
   };
 
   const resultWithoutHash = buildSeasonResult({
-    state,
+    state: expiredState,
     ruleset: input.ruleset,
     attributeDeltas: growth.attributeDeltas,
     baseOvr: growth.baseOvr,
@@ -1492,21 +1504,44 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     result,
   };
 
-  const nextState: CareerState = {
-    ...state,
+  // D-40 규칙 2: 시즌 경계 회귀가 `appliedSourceIds`의 `season:` 접두 항목(ONCE_PER_SEASON 중복 검사
+  // 키)을 지운다 — 다음 시즌에 같은 sourceId가 다시 적용될 수 있어야 한다.
+  const clearedAppliedSourceIds = expiredState.appliedSourceIds.filter((id) => !id.startsWith('season:'));
+
+  const settledState: CareerState = {
+    ...expiredState,
     age: nextAge,
     attributes: growth.attributes,
     growthCarryCenti: growth.growthCarryCenti,
-    player: { ...state.player, profile: { ...profile, baseOvr: growth.baseOvr.after } },
+    appliedSourceIds: clearedAppliedSourceIds,
+    player: { ...expiredState.player, profile: { ...profile, baseOvr: growth.baseOvr.after } },
     season: null,
-    seasonHistory: [...state.seasonHistory, summary],
+    seasonHistory: [...expiredState.seasonHistory, summary],
     state: { form: reset.form, fitness: reset.fitness, morale: reset.morale },
     pending: null,
     timeline: [
-      ...state.timeline,
+      ...expiredState.timeline,
       { revision: nextRevision, kind: 'SEASON_SETTLED', refId: null, age: nextAge, step: 12 },
     ],
   };
+
+  // D-42: `seasonHistory`에 이번 시즌 result가 들어간 뒤에 평가한다(커리어 누적 챕터 집계가 이번
+  // 시즌 몫까지 포함하도록).
+  const grantedTagIds = evaluateCareerTags(settledState, result, input.ruleset);
+  const nextState = grantedTagIds.reduce((acc, tagId) => {
+    const granted = grantCareerTag(acc, tagId, {
+      seasonIndex: season.index,
+      revision: nextRevision,
+      refId: `SETTLE_SEASON:${season.index}`,
+    });
+    return {
+      ...granted,
+      timeline: [
+        ...granted.timeline,
+        { revision: nextRevision, kind: 'CAREER_TAG_GRANTED' as const, refId: tagId, age: nextAge, step: 12 },
+      ],
+    };
+  }, settledState);
 
   return {
     ok: true,

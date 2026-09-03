@@ -32,7 +32,8 @@ type MinimalCareerState = {
       | 'STEP_PASSED'
       | 'SEASON_SETTLED'
       | 'ROLE_RESOLVED'
-      | 'CHAPTER_RESOLVED';
+      | 'CHAPTER_RESOLVED'
+      | 'CAREER_TAG_GRANTED';
   }>;
 };
 

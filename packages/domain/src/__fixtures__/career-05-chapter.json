@@ -30,6 +30,7 @@
         "outcomes": [
           {
             "id": "D1-SUCCESS",
+            "kind": "SUCCESS",
             "weight": 70,
             "effects": [
               {
@@ -45,7 +46,7 @@
             ],
             "ratingDeltaTenths": 5
           },
-          { "id": "D1-FAIL", "weight": 30, "effects": [], "ratingDeltaTenths": -3 }
+          { "id": "D1-FAIL", "kind": "FAIL", "weight": 30, "effects": [], "ratingDeltaTenths": -3 }
         ]
       }
     },
@@ -59,6 +60,7 @@
         "outcomes": [
           {
             "id": "D2-SUCCESS",
+            "kind": "SUCCESS",
             "weight": 50,
             "effects": [
               {
@@ -74,7 +76,7 @@
             ],
             "ratingDeltaTenths": 4
           },
-          { "id": "D2-FAIL", "weight": 50, "effects": [], "ratingDeltaTenths": -4 }
+          { "id": "D2-FAIL", "kind": "FAIL", "weight": 50, "effects": [], "ratingDeltaTenths": -4 }
         ]
       }
     },
