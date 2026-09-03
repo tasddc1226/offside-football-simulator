@@ -21,6 +21,12 @@ export interface Platform {
   readonly channel: Channel;
   readonly theme: { forced: 'light' | 'dark' | null };
   createLocalStore(): Promise<LocalStore>;
+  /**
+   * "이 기기 데이터 삭제"(SCR-030): 채널의 로컬 저장소를 통째로 지운다. 호출 전에 앱이 이미 만든
+   * `LocalStore`의 `close()`를 불러 열린 연결이 없어야 한다(web: 열린 IndexedDB 연결이 있으면
+   * `Dexie.delete`가 대기한다).
+   */
+  clearLocalData(): Promise<void>;
   session: {
     getBearerToken(): Promise<string | null>;
     setBearerToken(token: string | null): Promise<void>;

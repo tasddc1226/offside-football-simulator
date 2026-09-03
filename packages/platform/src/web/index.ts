@@ -1,5 +1,5 @@
 import type { Platform } from '../types.js';
-import { createDexieLocalStore } from './dexie-store.js';
+import { createDexieLocalStore, deleteDexieLocalStore } from './dexie-store.js';
 
 export type { Platform };
 
@@ -20,6 +20,7 @@ export const webPlatform: Platform = {
   channel: 'web',
   theme: { forced: null },
   createLocalStore: () => createDexieLocalStore(),
+  clearLocalData: () => deleteDexieLocalStore(),
   session: {
     async getBearerToken() {
       return null;

@@ -3,7 +3,10 @@ import sys, json, re, subprocess, time, os
 # RESULT(HEAD 변경·PR URL) / DIALOG / ERROR / IDLE-LONG 이벤트를 stdout에 한 줄씩 낸다.
 S = os.environ.get("ORCH_STATE_DIR") or os.path.expanduser("~/.offside-orch")
 os.environ["PATH"] = "/Users/suyoung/.nvm/versions/node/v22.23.1/bin:" + os.environ["PATH"]
-BUSY = re.compile(r'ing…|tokens ·|esc to interrupt|Running|Bash\(|Noodling|Crunching|Fermenting|Doing…|Thinking|Zesting|Roosting|Imagining|Befuddling|Zigzagging|Hyperspacing|Pondering|Cogitating|Brewing|Simmering|Marinating|Percolating|Wrangling|Puzzling|Sautéing|Baking|Working|Compacting|Channelling|Channeling|Reticulating|Meandering|Whirring|Buffering|Scheming')
+# BUSY는 스피너 줄만 본다: '✳ Musing… (12m 25s · …)', '⏺ Reading 1 file, running 2 shell commands…', 'esc to interrupt'.
+# 예전 단어 목록(Running·Working·Thinking…)은 워커의 산문("Running the single allowed /review:pr")에 오탐해
+# 2026-09-03 새벽 T-1-012 질문 대화상자와 T-1-009 완료 보고를 7시간 놓쳤다.
+BUSY = re.compile(r'\S+… \(\d|…\s*$|esc to interrupt', re.M)
 DIALOG = re.compile(r'AskUserQuestion|Do you want to|❯ 1\.|Yes, and|Esc to cancel')
 DONE = re.compile(r'수정 완료|github\.com/\S+/pull/\d+')
 ERR = re.compile(r'API Error|Connection lost|rate limit|usage limit')

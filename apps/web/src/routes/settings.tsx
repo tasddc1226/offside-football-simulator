@@ -1,20 +1,43 @@
-// SCR-030 설정·데이터(로컬 부분만). 데이터 섹션(복구 코드·프로필 복구·Google 연결·동기화·내보내기·
-// 삭제)은 행만 두고 "준비 중" 비활성으로 둔다(T-1-012·013이 채운다). 채널 문구 분기는 platform이
-// 주는 값으로만 한다 — 이 화면은 채널별 문구가 필요 없는 로컬 부분만 다룬다.
-import { useEffect, useState } from 'react';
-import { Button, buttonClassName, buttonStyle, Card, RadioGroup, RadioGroupItem } from '@offside/ui';
+// SCR-030 설정·데이터. 데이터 섹션(복구 코드·프로필 복구·로그아웃·이 기기 데이터 삭제·프로필 삭제)은
+// T-1-012가 채운다. Google 연결 행은 T-1-013까지 "준비 중"으로 둔다. 채널 문구 분기는 platform이
+// 주는 값으로만 한다(lint noChannelBranchRules) — 이 화면은 채널별 문구가 필요 없는 부분만 다룬다.
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Button,
+  buttonClassName,
+  buttonStyle,
+  Card,
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  RadioGroup,
+  RadioGroupItem,
+  Toast,
+} from '@offside/ui';
 import { ENGINE_CLIENT_VERSION } from '@offside/engine-client';
-import type { ErrorCode } from '@offside/contracts';
+import { RecoveryConflictDetailsSchema, type ErrorCode, type MergeChoice, type Profile } from '@offside/contracts';
 import type { SimulationMode } from '@offside/domain';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import {
+  confirmProfileDeletion,
+  getProfile,
+  issueRecoveryCode,
+  recoverProfile,
+  startProfileDeletion,
+} from '../api/client.js';
 import { ensureProfile } from '../api/profile.js';
 import { getAppEngine } from '../engine/engine.js';
 import { retryPendingDeletes } from '../engine/pending-delete.js';
+import { reconcileAfterRecovery } from '../engine/reconcile.js';
 import { getSyncClient, requeueAllUnsynced } from '../engine/sync.js';
+import { useCareerList } from '../engine/use-career.js';
 import { useSyncSummary } from '../engine/use-sync.js';
 import { ACTIVE_CONTENT_PACK_VERSION, ACTIVE_RULESET_VERSION } from '../engine/versions.js';
 import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
+import { formatLocalDate, formatLocalDateTime } from '../shared/format.js';
+import { validateRecoveryCodeInput } from '../shared/recovery-code-input.js';
 import { SyncBadge } from '../shared/SyncBadge.js';
 import {
   useUiStore,
@@ -30,6 +53,15 @@ export const Route = createFileRoute('/settings')({
 const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
 const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+
+/**
+ * 되돌릴 수 없는 삭제 버튼 색. packages/ui의 Button은 danger variant가 없고 이 작업은 packages/ui를
+ * 만질 수 없다 — inline style로 --os-danger 토큰을 얹는다(인라인은 클래스 소스 순서와 무관하게
+ * 항상 우선한다).
+ */
+const DANGER_STYLE: CSSProperties = { color: 'var(--os-danger)', borderColor: 'var(--os-danger)' };
+
+const PROFILE_ID_KV_KEY = 'profile:id';
 
 const THEME_OPTIONS: Array<{ value: ThemePreference; label: string }> = [
   { value: 'SYSTEM', label: '시스템 설정' },
@@ -53,15 +85,6 @@ const SIMULATION_MODE_OPTIONS: Array<{ value: SimulationMode; label: string }> =
   { value: 'FAST', label: '빠르게' },
   { value: 'CHAPTER', label: '챕터로 자세히' },
 ];
-
-const DATA_ROWS = [
-  { id: 'recovery-code', label: '복구 코드' },
-  { id: 'profile-recover', label: '프로필 복구' },
-  { id: 'google', label: 'Google 연결' },
-  { id: 'export', label: '내보내기' },
-  { id: 'delete-profile', label: '프로필 삭제' },
-  { id: 'delete-device-data', label: '이 기기 데이터 삭제' },
-] as const;
 
 /** FAILED 코드별 안내. 목록에 없으면 "서버가 저장을 거부했습니다(코드)". */
 const FAILED_CODE_MESSAGE: Partial<Record<ErrorCode, string>> = {
@@ -93,6 +116,9 @@ function SyncStatusRow() {
         await requeueAllUnsynced();
         // 세션이 없어(401) 큐에 남아 있던 삭제도 세션을 되찾은 지금 함께 다시 시도한다.
         await retryPendingDeletes(engine.store);
+        // 이 기기가 LOCAL_ONLY였던 동안 서버에만 생긴 커리어를 받아온다(D-20 대조, choice: NONE —
+        // 로컬 커리어는 지우지 않고 미전송분만 알린다).
+        await reconcileAfterRecovery('NONE', queryClient);
       }
     } finally {
       setReconnecting(false);
@@ -127,6 +153,599 @@ function SyncStatusRow() {
           {FAILED_CODE_MESSAGE[summary.error.code] ?? `서버가 저장을 거부했습니다(${summary.error.code})`}
         </p>
       ) : null}
+    </Card>
+  );
+}
+
+/** `['profile']`은 부트스트랩(main.tsx의 ensureProfile)이 채우고, 이 훅은 그 캐시를 읽고 신선하게 유지한다. */
+function useProfileQuery() {
+  return useQuery({
+    queryKey: ['profile'] as const,
+    queryFn: async (): Promise<Profile> => {
+      const result = await getProfile();
+      if (!result.ok) throw new Error(result.error.message);
+      return result.data;
+    },
+  });
+}
+
+function RecoveryCodeRow() {
+  const profileQuery = useProfileQuery();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [issuing, setIssuing] = useState(false);
+  const [issueError, setIssueError] = useState<string | null>(null);
+  const [issuedCode, setIssuedCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  const issuedAt = profileQuery.data?.recoveryCodeIssuedAt ?? null;
+
+  async function handleIssue() {
+    setIssuing(true);
+    setIssueError(null);
+    try {
+      const result = await issueRecoveryCode();
+      if (result.ok) {
+        setConfirmOpen(false);
+        setIssuedCode(result.data.code);
+        platform.analytics.track('recovery_code_issued', {});
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      } else if (result.error.code === 'RATE_LIMITED') {
+        setIssueError('발급 횟수를 넘었습니다. 잠시 뒤 다시 시도하세요.');
+      } else {
+        setIssueError(result.error.message);
+      }
+    } finally {
+      setIssuing(false);
+    }
+  }
+
+  function handleTriggerClick() {
+    // 재발급(이전 코드가 있음)만 "이전 코드는 즉시 쓸 수 없게 됩니다" 확인이 필요하다. 첫 발급은
+    // 무효화할 이전 코드가 없어 바로 발급한다.
+    if (issuedAt !== null) {
+      setConfirmOpen(true);
+      return;
+    }
+    void handleIssue();
+  }
+
+  async function handleCopy() {
+    if (issuedCode === null) return;
+    try {
+      await navigator.clipboard.writeText(issuedCode);
+      setCopied(true);
+    } catch {
+      // 복사 실패는 대화상자에 코드가 그대로 보이니 조용히 무시한다.
+    }
+  }
+
+  return (
+    <Card className="flex flex-col gap-os-3">
+      <div className="flex items-center justify-between gap-os-3">
+        <div className="flex flex-col gap-os-1">
+          <span className="font-os text-os-text">복구 코드</span>
+          <span className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            {issuedAt !== null ? (
+              <>
+                발급일 <time dateTime={issuedAt}>{formatLocalDate(issuedAt)}</time>
+              </>
+            ) : (
+              '아직 없음'
+            )}
+          </span>
+        </div>
+        <Button variant="secondary" onClick={handleTriggerClick} disabled={issuing}>
+          {issuedAt !== null ? '재발급' : '발급'}
+        </Button>
+      </div>
+
+      {issueError !== null ? (
+        <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+          {issueError}
+        </p>
+      ) : null}
+
+      <Dialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (issuing) return;
+          setConfirmOpen(open);
+        }}
+      >
+        <DialogContent
+          title="복구 코드 재발급"
+          description="이전 코드는 즉시 쓸 수 없게 됩니다. 새 코드를 적어 두세요."
+          closeLabel="닫기"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            cancelRef.current?.focus();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (issuing) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (issuing) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (issuing) event.preventDefault();
+          }}
+        >
+          <div className="flex gap-os-3">
+            <button
+              ref={cancelRef}
+              type="button"
+              className={buttonClassName('ghost')}
+              style={buttonStyle}
+              onClick={() => setConfirmOpen(false)}
+              disabled={issuing}
+            >
+              취소
+            </button>
+            <Button variant="primary" onClick={() => void handleIssue()} disabled={issuing}>
+              재발급
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={issuedCode !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIssuedCode(null);
+            setCopied(false);
+          }
+        }}
+      >
+        <DialogContent title="복구 코드" closeLabel="닫기">
+          <div className="flex flex-col gap-os-3">
+            <p className="os-num font-os font-bold text-os-text" style={H2_STYLE}>
+              {issuedCode}
+            </p>
+            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+              다른 기기에서 이 프로필을 되찾을 유일한 열쇠입니다. 안전한 곳에 적어 두세요.
+            </p>
+            <div className="flex gap-os-3">
+              <Button variant="secondary" onClick={() => void handleCopy()}>
+                복사
+              </Button>
+              <Button variant="primary" onClick={() => setIssuedCode(null)}>
+                적어 두었습니다
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {copied ? <Toast variant="success" message="복사했습니다" onDismiss={() => setCopied(false)} /> : null}
+    </Card>
+  );
+}
+
+type ConflictState = { code: string; currentCareerCount: number; targetCareerCount: number };
+
+function ProfileRecoverRow() {
+  const navigate = useNavigate();
+  const [code, setCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [conflict, setConflict] = useState<ConflictState | null>(null);
+  const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const conflictCancelRef = useRef<HTMLButtonElement>(null);
+
+  async function attemptRecover(normalizedCode: string, mergeChoice?: MergeChoice) {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await recoverProfile(
+        mergeChoice !== undefined ? { code: normalizedCode, mergeChoice } : { code: normalizedCode },
+      );
+      if (result.ok) {
+        setConflict(null);
+        const engine = await getAppEngine();
+        await engine.store.transaction('readwrite', (tx) => tx.kv.put(PROFILE_ID_KV_KEY, result.data.profileId));
+        const reconciled = await reconcileAfterRecovery(mergeChoice ?? 'NONE', queryClient);
+        // reconcileAfterRecovery도 실패 경로에서 invalidateQueries를 부르지만, 이 시점엔 세션이 이미
+        // 새 프로필로 바뀌어 있으니 ['profile']만은 결과와 무관하게 한 번 더 확실히 갱신해 둔다.
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        platform.analytics.track('profile_recovered', { mergeChoice: mergeChoice ?? 'NONE' });
+        setCode('');
+        setToast(
+          reconciled.ok
+            ? { variant: 'success', message: `프로필을 복구했습니다. 커리어 ${result.data.careerCount}개` }
+            : {
+                // packages/ui의 Toast는 success·error 2종뿐이라(warning 없음, packages/ui는 수정 범위
+                // 밖) error 변형을 대신 쓴다 — 계정 전환 자체는 됐지만 커리어 목록을 마저 못 받아온
+                // 상태임을 알린다.
+                variant: 'error',
+                message: '프로필은 복구했지만 커리어 목록을 불러오지 못했습니다. 설정의 다시 연결로 다시 시도하세요.',
+              },
+        );
+        return;
+      }
+
+      if (result.error.code === 'RECOVERY_CONFLICT') {
+        const parsed = RecoveryConflictDetailsSchema.safeParse(result.error.details);
+        if (parsed.success) {
+          setConflict({ code: normalizedCode, ...parsed.data });
+        } else {
+          setError(result.error.message);
+        }
+        return;
+      }
+      if (result.error.code === 'RECOVERY_CODE_INVALID') {
+        setError('코드가 맞지 않습니다.');
+      } else if (result.error.code === 'RATE_LIMITED') {
+        setError('시도 횟수를 넘었습니다. 잠시 뒤 다시 시도하세요.');
+      } else {
+        setError(result.error.message);
+      }
+      inputRef.current?.focus();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const validation = validateRecoveryCodeInput(code);
+    if (!validation.ok) {
+      setError(validation.message);
+      return;
+    }
+    setError(null);
+    void attemptRecover(validation.normalized);
+  }
+
+  return (
+    <Card className="flex flex-col gap-os-3">
+      <span className="font-os text-os-text">프로필 복구</span>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-os-2">
+        <label htmlFor="recover-code-input" className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          다른 기기에서 발급받은 복구 코드
+        </label>
+        <input
+          id="recover-code-input"
+          ref={inputRef}
+          type="text"
+          autoComplete="off"
+          inputMode="text"
+          placeholder="OFS-XXXX-XXXX-XXXX"
+          value={code}
+          onChange={(event) => setCode(event.target.value.toUpperCase())}
+          aria-invalid={error !== null}
+          aria-describedby={error !== null ? 'recover-code-error' : undefined}
+          className="os-num rounded-os-m border border-os-border bg-os-surface px-os-3 font-os text-os-text"
+          style={buttonStyle}
+        />
+        {error !== null ? (
+          <p id="recover-code-error" className="font-os text-os-danger" style={CAPTION_STYLE}>
+            {error}
+          </p>
+        ) : null}
+        <Button type="submit" variant="primary" disabled={busy}>
+          복구
+        </Button>
+      </form>
+
+      <Dialog
+        open={conflict !== null}
+        onOpenChange={(open) => {
+          if (busy) return;
+          if (!open) setConflict(null);
+        }}
+      >
+        <DialogContent
+          title="이미 커리어가 있는 기기입니다"
+          description="이 기기의 커리어와 복구할 프로필의 커리어 중 무엇을 남길지 골라 주세요."
+          closeLabel="닫기"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            conflictCancelRef.current?.focus();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (busy) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (busy) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (busy) event.preventDefault();
+          }}
+        >
+          {conflict !== null ? (
+            <div className="flex flex-col gap-os-3">
+              <Button
+                variant="secondary"
+                onClick={() => void attemptRecover(conflict.code, 'MOVE_TO_LINKED')}
+                disabled={busy}
+              >
+                이 기기의 커리어 {conflict.currentCareerCount}개를 복구할 프로필로 옮기기
+              </Button>
+              <Button
+                variant="secondary"
+                style={DANGER_STYLE}
+                onClick={() => void attemptRecover(conflict.code, 'KEEP_LINKED_ONLY')}
+                disabled={busy}
+              >
+                복구할 프로필(커리어 {conflict.targetCareerCount}개)만 사용하고 이 기기의 커리어는 지우기
+              </Button>
+              <button
+                ref={conflictCancelRef}
+                type="button"
+                className={buttonClassName('ghost')}
+                style={buttonStyle}
+                onClick={() => setConflict(null)}
+                disabled={busy}
+              >
+                취소
+              </button>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {toast !== null ? (
+        <Toast
+          variant={toast.variant}
+          message={toast.message}
+          onDismiss={() => {
+            setToast(null);
+            void navigate({ to: '/' });
+          }}
+        />
+      ) : null}
+    </Card>
+  );
+}
+
+function LogoutRow() {
+  return (
+    <Card className="flex flex-col gap-os-2">
+      <div className="flex items-center justify-between gap-os-3">
+        <span className="font-os text-os-text">로그아웃</span>
+        <Button variant="secondary" disabled>
+          로그아웃
+        </Button>
+      </div>
+      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+        Google을 연결한 프로필에서만 쓸 수 있습니다. 지금 로그아웃하면 이 프로필을 되찾을 수 없습니다.
+      </p>
+    </Card>
+  );
+}
+
+/** 이 기기 데이터 삭제 실행부. "이 기기 데이터 삭제"·"프로필 삭제" 2단계가 공유한다(D-20). */
+async function clearThisDeviceAndGoToOnboarding(): Promise<void> {
+  try {
+    const sync = await getSyncClient();
+    await sync.flush();
+  } catch {
+    // 브리프: "flush() 시도(실패 무시)" — 저장 못한 진행이 있어도 삭제는 계속한다.
+  }
+  const engine = await getAppEngine();
+  await engine.store.close();
+  await platform.clearLocalData();
+  platform.analytics.track('local_data_cleared', {});
+  // 엔진·동기화 싱글턴이 다음 로드에서 새로 만들어지도록 SPA 이동이 아니라 전체 새로고침으로 이동한다.
+  location.assign('/onboarding');
+}
+
+function DeleteProfileRow() {
+  const [stage, setStage] = useState<'idle' | 'confirm'>('idle');
+  const [confirmToken, setConfirmToken] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  async function handleStart() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await startProfileDeletion();
+      if (result.ok) {
+        setConfirmToken(result.data.confirmToken);
+        setExpiresAt(result.data.expiresAt);
+        setStage('confirm');
+      } else {
+        setError(result.error.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleConfirm() {
+    if (confirmToken === null) return;
+    setBusy(true);
+    try {
+      const result = await confirmProfileDeletion(confirmToken);
+      if (result.ok) {
+        platform.analytics.track('profile_deleted', {});
+        await clearThisDeviceAndGoToOnboarding();
+        return;
+      }
+      setStage('idle');
+      setConfirmToken(null);
+      setExpiresAt(null);
+      setError(
+        result.error.code === 'VALIDATION_FAILED' ? '확인 시간이 지났습니다. 다시 시작해 주세요.' : result.error.message,
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleCancel() {
+    if (busy) return;
+    setStage('idle');
+    setConfirmToken(null);
+    setExpiresAt(null);
+  }
+
+  return (
+    <Card className="flex flex-col gap-os-2">
+      <div className="flex items-center justify-between gap-os-3">
+        <span className="font-os text-os-text">프로필 삭제</span>
+        <Button variant="secondary" style={DANGER_STYLE} onClick={() => void handleStart()} disabled={busy}>
+          삭제
+        </Button>
+      </div>
+      {error !== null ? (
+        <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+          {error}
+        </p>
+      ) : null}
+
+      <Dialog
+        open={stage === 'confirm'}
+        onOpenChange={(open) => {
+          if (!open) handleCancel();
+        }}
+      >
+        <DialogContent
+          title="프로필 삭제"
+          closeLabel="닫기"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            cancelRef.current?.focus();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (busy) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (busy) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (busy) event.preventDefault();
+          }}
+        >
+          <div className="flex flex-col gap-os-3">
+            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+              모든 커리어, 복구 코드, 서버 저장 데이터가 즉시 삭제됩니다. 되돌릴 수 없습니다.
+            </p>
+            {expiresAt !== null ? (
+              <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                이 확인은 <time dateTime={expiresAt}>{formatLocalDateTime(expiresAt)}</time>까지 유효합니다.
+              </p>
+            ) : null}
+            <div className="flex gap-os-3">
+              <button
+                ref={cancelRef}
+                type="button"
+                className={buttonClassName('ghost')}
+                style={buttonStyle}
+                onClick={handleCancel}
+                disabled={busy}
+              >
+                취소
+              </button>
+              <Button variant="secondary" style={DANGER_STYLE} onClick={() => void handleConfirm()} disabled={busy}>
+                삭제
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+function DeleteDeviceDataRow() {
+  const profileQuery = useProfileQuery();
+  const careerQuery = useCareerList();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  const unsentCount = (careerQuery.data ?? []).filter((career) => career.record.revision > career.record.lastSyncedRevision).length;
+  const noRecoveryCode = (profileQuery.data?.recoveryCodeIssuedAt ?? null) === null;
+
+  async function handleConfirm() {
+    setBusy(true);
+    setError(null);
+    try {
+      await clearThisDeviceAndGoToOnboarding();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '데이터를 지우지 못했습니다. 다시 시도해 주세요.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="flex items-center justify-between gap-os-3">
+      <span className="font-os text-os-text">이 기기 데이터 삭제</span>
+
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (busy) return;
+          setOpen(next);
+        }}
+      >
+        <DialogTrigger asChild>
+          <Button variant="secondary" style={DANGER_STYLE}>
+            삭제
+          </Button>
+        </DialogTrigger>
+        <DialogContent
+          title="이 기기 데이터 삭제"
+          closeLabel="닫기"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            cancelRef.current?.focus();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (busy) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (busy) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (busy) event.preventDefault();
+          }}
+        >
+          <div className="flex flex-col gap-os-3">
+            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+              이 기기의 모든 커리어와 설정이 지워집니다. 되돌릴 수 없습니다.
+            </p>
+            {unsentCount > 0 ? (
+              <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+                아직 서버에 저장하지 못한 커리어가 {unsentCount}개 있습니다. 지우면 그 진행은 사라집니다.
+              </p>
+            ) : null}
+            {noRecoveryCode ? (
+              <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+                복구 코드가 없어 되돌릴 수 없습니다.
+              </p>
+            ) : null}
+            {error !== null ? (
+              <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+                {error}
+              </p>
+            ) : null}
+            <div className="flex gap-os-3">
+              <button
+                ref={cancelRef}
+                type="button"
+                className={buttonClassName('ghost')}
+                style={buttonStyle}
+                onClick={() => setOpen(false)}
+                disabled={busy}
+              >
+                취소
+              </button>
+              <Button variant="secondary" style={DANGER_STYLE} onClick={() => void handleConfirm()} disabled={busy}>
+                삭제
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
@@ -252,16 +871,29 @@ function SettingsScreen() {
           <li>
             <SyncStatusRow />
           </li>
-          {DATA_ROWS.map((row) => (
-            <li key={row.id}>
-              <Card className="flex items-center justify-between gap-os-3">
-                <span className="font-os text-os-text">{row.label}</span>
-                <Button variant="secondary" disabled>
-                  준비 중
-                </Button>
-              </Card>
-            </li>
-          ))}
+          <li>
+            <RecoveryCodeRow />
+          </li>
+          <li>
+            <ProfileRecoverRow />
+          </li>
+          <li>
+            <Card className="flex items-center justify-between gap-os-3">
+              <span className="font-os text-os-text">Google 연결</span>
+              <Button variant="secondary" disabled>
+                준비 중
+              </Button>
+            </Card>
+          </li>
+          <li>
+            <LogoutRow />
+          </li>
+          <li>
+            <DeleteProfileRow />
+          </li>
+          <li>
+            <DeleteDeviceDataRow />
+          </li>
         </ul>
       </section>
 

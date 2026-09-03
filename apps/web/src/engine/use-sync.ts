@@ -48,6 +48,14 @@ function stableState(state: CareerSyncState): CareerSyncState {
 }
 
 /**
+ * displaySyncState의 "이미 저장됨" 보정이 만드는 객체를 record별로 캐싱한다. useSyncSummary는 이
+ * 함수를 useSyncExternalStore의 getSnapshot 안에서 직접 부른다 — 매 호출 새 객체 리터럴을 돌려주면
+ * (record 참조가 같은데도) getSnapshot이 매번 "달라졌다"고 보여 무한 렌더 루프에 빠진다(실제로
+ * 겪음 — react-query의 구조 공유로 record 참조는 안 바뀌지만 이 함수가 그때마다 새로 만들었다).
+ */
+const correctedStateCache = new WeakMap<object, CareerSyncState>();
+
+/**
  * SyncClient의 상태는 세션(메모리) 스코프다 — 새로고침하면 레코드가 없어 `getState()`가 항상
  * `IDLE/0/null`("아직 저장 안 됨")을 돌려준다. 이미 서버에 저장된 커리어라도 새로고침 뒤에는
  * 저장 안 됨으로 보여 신뢰를 깎아 먹는다. `LocalCareerRecord`(revision·lastSyncedRevision는 DB에
@@ -61,7 +69,12 @@ export function displaySyncState(
   if (state.kind !== 'IDLE' || state.lastSyncedAt !== null) return state;
   if (record === undefined || record.revision === 0) return state;
   if (record.lastSyncedRevision < record.revision) return state;
-  return { kind: 'IDLE', lastSyncedRevision: record.lastSyncedRevision, lastSyncedAt: record.updatedAt };
+
+  const cached = correctedStateCache.get(record);
+  if (cached !== undefined) return cached;
+  const corrected: CareerSyncState = { kind: 'IDLE', lastSyncedRevision: record.lastSyncedRevision, lastSyncedAt: record.updatedAt };
+  correctedStateCache.set(record, corrected);
+  return corrected;
 }
 
 function notifySubscribers(): void {
