@@ -54,7 +54,12 @@ export async function executeProfileDeletion(db: Db, input: ExecuteProfileDeleti
   const careerIds = await listCareerIdsByOwner(db, input.profileId);
 
   await runBatch(db, [
-    db.update(profiles).set({ deletedAt: input.now }).where(eq(profiles.id, input.profileId)),
+    // T-1-013 D-21: google_sub·email·linked_at도 비운다 — 그러지 않으면 unique index
+    // (profiles_google_sub_unique)가 같은 Google 계정의 재연결을 막는다.
+    db
+      .update(profiles)
+      .set({ deletedAt: input.now, googleSub: null, email: null, linkedAt: null })
+      .where(eq(profiles.id, input.profileId)),
     ...(careerIds.length > 0
       ? [
           db.delete(snapshots).where(inArray(snapshots.careerId, careerIds)),

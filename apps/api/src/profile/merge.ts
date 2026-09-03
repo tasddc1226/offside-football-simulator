@@ -1,0 +1,40 @@
+import { eq } from 'drizzle-orm';
+import type { Db } from '../db/client.js';
+import { newId } from '../db/ids.js';
+import { listCareerIdsByOwner } from '../db/repos/careers.js';
+import { runBatch } from '../db/repos/batch.js';
+import { auditLog, careers, sessions } from '../db/schema.js';
+
+export type MoveCareersAndRebindInput = {
+  fromProfileId: string;
+  toProfileId: string;
+  sessionId: string;
+  now: string;
+};
+
+/**
+ * ADR-008 병합의 공통 배치: `fromProfileId`의 커리어 전부를 `toProfileId`로 옮기고(careerId 유지),
+ * 감사 로그 `PROFILE_MERGED`를 남기고, 현재 세션을 대상 프로필로 재바인딩한다. 대기 중인 병합
+ * (D-21)이 있었다면 같은 문으로 지운다. `apps/api/src/profile/recover.ts`(D-14)와
+ * `apps/api/src/routes/auth.ts`의 `POST /v1/auth/merge`(D-21)가 함께 쓴다.
+ */
+export async function moveCareersAndRebind(db: Db, input: MoveCareersAndRebindInput): Promise<void> {
+  const careerIds = await listCareerIdsByOwner(db, input.fromProfileId);
+  await runBatch(db, [
+    db
+      .update(careers)
+      .set({ ownerProfileId: input.toProfileId, updatedAt: input.now })
+      .where(eq(careers.ownerProfileId, input.fromProfileId)),
+    db.insert(auditLog).values({
+      id: newId('aud'),
+      kind: 'PROFILE_MERGED',
+      profileId: input.toProfileId,
+      payloadJson: JSON.stringify({ fromProfileId: input.fromProfileId, toProfileId: input.toProfileId, careerIds }),
+      createdAt: input.now,
+    }),
+    db
+      .update(sessions)
+      .set({ profileId: input.toProfileId, pendingMergeProfileId: null, pendingMergeExpiresAt: null })
+      .where(eq(sessions.id, input.sessionId)),
+  ]);
+}

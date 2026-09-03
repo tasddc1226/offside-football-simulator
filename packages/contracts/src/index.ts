@@ -93,6 +93,9 @@ export {
   RecoveryConflictDetailsSchema,
   DeleteProfileStartResponseSchema,
   DeleteProfileConfirmBodySchema,
+  MergeRequestBodySchema,
+  MergeResponseSchema,
+  PendingMergeSchema,
   type MergeChoice,
   type IssueRecoveryCodeResponse,
   type RecoverProfileBody,
@@ -100,6 +103,9 @@ export {
   type RecoveryConflictDetails,
   type DeleteProfileStartResponse,
   type DeleteProfileConfirmBody,
+  type MergeRequestBody,
+  type MergeResponse,
+  type PendingMerge,
 } from './auth.js';
 
 export {

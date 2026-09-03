@@ -16,6 +16,11 @@ describe('platform adapters', () => {
     expect(tossPlatform.theme.forced).toBe('dark');
   });
 
+  it('T-1-013 D-21: Google 연결은 web만 켜져 있다(ADR-009: WebView OAuth 차단)', () => {
+    expect(webPlatform.features.googleLink).toBe(true);
+    expect(tossPlatform.features.googleLink).toBe(false);
+  });
+
   it('web 세션은 쿠키 기반이라 항상 null이다', async () => {
     expect(await webPlatform.session.getBearerToken()).toBeNull();
     await expect(webPlatform.session.setBearerToken('token')).resolves.toBeUndefined();

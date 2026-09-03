@@ -9,6 +9,7 @@ import {
   GetCareerResponseSchema,
   IDEMPOTENCY_KEY_HEADER,
   IssueRecoveryCodeResponseSchema,
+  MergeResponseSchema,
   ProfileSchema,
   RecoverProfileResponseSchema,
   type CareerSummaryList,
@@ -17,6 +18,7 @@ import {
   type GetCareerResponse,
   type IssueRecoveryCodeResponse,
   type MergeChoice,
+  type MergeResponse,
   type Profile,
   type RecoverProfileResponse,
 } from '@offside/contracts';
@@ -152,4 +154,14 @@ export function listRemoteCareers(cursor?: string): Promise<ApiResult<CareerSumm
 /** API-CAR-002. 복구 뒤 대조가 `importCareerFromServer`에 넘길 응답을 받는다. */
 export function getRemoteCareer(careerId: string): Promise<ApiResult<GetCareerResponse>> {
   return apiFetch(`/v1/careers/${careerId}`, { method: 'GET' }, GetCareerResponseSchema);
+}
+
+/** API-AUTH-003. `merge_required` 콜백 뒤 선택을 확정한다. */
+export function submitGoogleMerge(mergeChoice: MergeChoice): Promise<ApiResult<MergeResponse>> {
+  return apiFetch('/v1/auth/merge', { method: 'POST', body: JSON.stringify({ mergeChoice }) }, MergeResponseSchema);
+}
+
+/** API-AUTH-006. 성공 시 204(본문 없음). */
+export function unlinkGoogle(): Promise<ApiResult<undefined>> {
+  return apiFetch('/v1/auth/google/unlink', { method: 'POST' });
 }

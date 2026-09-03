@@ -8,6 +8,14 @@ export type Bindings = {
   ENVIRONMENT: string;
   /** 쉼표 구분 origin 목록. */
   ALLOWED_ORIGINS: string;
+  /** D-21. U-003 전에는 비어 있을 수 있다 — 그러면 /auth/google/start가 503을 낸다. */
+  GOOGLE_CLIENT_ID?: string;
+  /** secret. wrangler vars에 두지 않는다. */
+  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_REDIRECT_URI: string;
+  WEB_APP_URL: string;
+  /** 로컬 전용. `'1'`이면 ENVIRONMENT === 'local'과 함께 가짜 OIDC를 쓴다. */
+  GOOGLE_FAKE?: string;
 };
 
 export type SessionContext = {

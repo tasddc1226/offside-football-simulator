@@ -96,3 +96,22 @@ export type DeleteProfileConfirmBody = z.infer<typeof DeleteProfileConfirmBodySc
 
 // POST /auth/logout(API-AUTH-004)과 DELETE /careers/{id}(API-CAR-005)는 요청 본문이 없고 응답이
 // 204(본문 없음)라 이 파일에 스키마가 없다.
+
+/** API-AUTH-003 요청 본문(D-21). */
+export const MergeRequestBodySchema = z.strictObject({
+  mergeChoice: MergeChoiceSchema,
+});
+export type MergeRequestBody = z.infer<typeof MergeRequestBodySchema>;
+
+/** API-AUTH-003 응답. RecoverProfileResponseSchema와 같은 모양이다(D-21). */
+export const MergeResponseSchema = z.strictObject({
+  profileId: z.string().min(1),
+  careerCount: z.number().int().nonnegative(),
+});
+export type MergeResponse = z.infer<typeof MergeResponseSchema>;
+
+/** `GET /v1/profile`의 `pendingMerge` 필드(D-21): 콜백이 `merge_required`로 끝났을 때만 채워진다. */
+export const PendingMergeSchema = z.strictObject({
+  targetCareerCount: z.number().int().nonnegative(),
+});
+export type PendingMerge = z.infer<typeof PendingMergeSchema>;
