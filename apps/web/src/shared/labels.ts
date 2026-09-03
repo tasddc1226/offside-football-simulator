@@ -12,7 +12,7 @@ import type {
   SquadRole,
   TimelineEntry,
 } from '@offside/domain';
-import type { ResultKind, RiskLevel } from '@offside/ui';
+import type { PlayerHeaderField, ResultKind, RiskLevel } from '@offside/ui';
 
 /** SCR-002 성별 RadioGroup·SCR-004 확인 요약. RULE-PLY-001: 능력·성장에 영향을 주지 않는다. */
 export const GENDER_LABELS: Record<PlayerGender, string> = {
@@ -31,6 +31,19 @@ export const POSITION_LABELS: Record<Position, string> = {
   W: '윙어',
   ST: '스트라이커',
 };
+
+/**
+ * 완료 조건 표 #5, RULE-PLY-001: 확정 뒤 화면(대시보드 SCR-029, 이벤트 화면)의 PlayerHeader 포지션
+ * 칸. 포지션 전환 전(주포지션 == 최초 선호 포지션)에는 "같음"을, 전환 뒤에는 선호 포지션을 보조
+ * 문구로 구분해 보여준다 — 06 "선수 생성 입력": 포지션 전환 서사만 두 값의 차이를 읽을 수 있다.
+ */
+export function positionHeaderField(primaryPosition: Position, preferredPosition: Position): PlayerHeaderField {
+  return {
+    label: '포지션',
+    value: POSITION_LABELS[primaryPosition],
+    caption: preferredPosition === primaryPosition ? '선호 포지션과 같음' : `선호 ${POSITION_LABELS[preferredPosition]}`,
+  };
+}
 
 /** SCR-002 포지션 탭. 룰셋 `positions`에는 그룹 라벨이 없어 화면 문구로 둔다. */
 export const POSITION_GROUP_LABELS: Record<PositionGroup, string> = {

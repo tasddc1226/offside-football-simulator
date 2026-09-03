@@ -18,6 +18,12 @@ export const PLAYER_CREATION_STEPS: StepperStep[] = [
   { id: 'confirm', label: '확인' },
 ];
 
+/**
+ * SCR-002·003·004 `screen_viewed`의 `careerPhase`. 세 화면 모두 Career 확정 전(DRAFT)이고 Phase 1은
+ * 생성 단계가 YOUTH뿐이라 고정값이 맞다(발견 사항 6) — state에서 읽지 않고 이 상수 하나를 공유한다.
+ */
+export const PLAYER_CREATION_CAREER_PHASE = 'YOUTH';
+
 const POSITION_GROUP_ORDER: PositionGroup[] = ['GK', 'DEF', 'MID', 'FWD'];
 
 /** 룰셋 `positions`를 포지션군 4개 탭으로 나눈다(GK·DEF·MID·FWD 순, 각 그룹 안은 룰셋 원래 순서). */

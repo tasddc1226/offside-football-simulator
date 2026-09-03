@@ -1,6 +1,8 @@
 export interface PlayerHeaderField {
   label: string;
   value: string;
+  /** 값 아래 보조 문구(예: RULE-PLY-001 주포지션·선호 포지션 비교). */
+  caption?: string;
 }
 
 export interface PlayerHeaderProps {
@@ -24,6 +26,11 @@ function Field({ field }: { field: PlayerHeaderField }) {
       >
         {field.value}
       </span>
+      {field.caption !== undefined ? (
+        <span className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+          {field.caption}
+        </span>
+      ) : null}
     </div>
   );
 }

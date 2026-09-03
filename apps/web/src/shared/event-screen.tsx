@@ -12,9 +12,10 @@ import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { archetypeName } from './current-team.js';
-import { POSITION_LABELS, RISK_LABEL_KO } from './labels.js';
+import { positionHeaderField, POSITION_LABELS, RISK_LABEL_KO } from './labels.js';
 import { buildNarrativeTokens, renderNarrative, type NarrativeTokenValues } from './narrative.js';
 import { u18StatusStripItems } from './status-strip.js';
+import { useCommittingExitGuard } from './use-committing-exit-guard.js';
 
 const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
@@ -43,6 +44,8 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const submittingRef = useRef(false);
+
+  useCommittingExitGuard(resolveMutation.isPending);
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId, careerPhase: query.data?.state.seasonPhase ?? 'NONE' });
@@ -80,7 +83,9 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
 
   const tokens = buildNarrativeTokens(state, activeContentPack, activeRuleset);
   const profile = state.player.profile;
-  const position = profile?.primaryPosition ?? state.player.draft.position;
+  const positionField = profile
+    ? positionHeaderField(profile.primaryPosition, profile.preferredPosition)
+    : { label: '포지션', value: state.player.draft.position ? POSITION_LABELS[state.player.draft.position] : '—' };
 
   function handleSelect(choiceId: string) {
     setSelectedChoiceId(choiceId);
@@ -124,7 +129,7 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
       <PlayerHeader
         name={tokens.name}
         team={tokens.team}
-        position={{ label: '포지션', value: position ? POSITION_LABELS[position] : '—' }}
+        position={positionField}
         archetype={{ label: '아키타입', value: archetypeName(activeRuleset, profile?.archetypeId ?? state.player.draft.archetypeId) }}
         shirtNumber={{ label: '등번호', value: state.contract ? String(state.contract.shirtNumber) : '—' }}
       />

@@ -11,10 +11,11 @@ import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { ACTIVE_CONTENT_PACK_VERSION } from '../engine/versions.js';
 import { platform } from '../platform/index.js';
 import { GENDER_LABELS, POSITION_LABELS, PREFERRED_FOOT_LABELS } from '../shared/labels.js';
-import { attributeLabelList, topAttributeKeys } from '../shared/player-draft.js';
+import { attributeLabelList, PLAYER_CREATION_CAREER_PHASE, topAttributeKeys } from '../shared/player-draft.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { useScreenState } from '../shared/screen-state.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
+import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
 import { SCREEN_ROUTES } from '../routes.js';
 
 export const Route = createFileRoute('/career/$careerId/confirm')({
@@ -48,8 +49,10 @@ function ConfirmScreen() {
   const [recoveryPhase, setRecoveryPhase] = useState<RecoveryPhase>({ kind: 'CHECKING' });
   const [copyToast, setCopyToast] = useState<string | null>(null);
 
+  useCommittingExitGuard(screenState.kind === 'COMMITTING');
+
   useEffect(() => {
-    platform.analytics.track('screen_viewed', { screenId: 'SCR-004', careerPhase: 'YOUTH' });
+    platform.analytics.track('screen_viewed', { screenId: 'SCR-004', careerPhase: PLAYER_CREATION_CAREER_PHASE });
   }, []);
 
   useEffect(() => {

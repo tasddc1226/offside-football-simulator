@@ -39,4 +39,19 @@ describe('PlayerHeader', () => {
     expect(heading.className).not.toContain('uppercase');
     expect(heading.className).not.toContain('os-num');
   });
+
+  it('renders a field caption when given (RULE-PLY-001 주포지션·선호 포지션 비교)', () => {
+    render(
+      <PlayerHeader
+        name="김서준"
+        team="한강 유나이티드 U18"
+        position={{ label: '포지션', value: '스트라이커', caption: '선호 윙어' }}
+        archetype={{ label: '아키타입', value: '인사이드 포워드' }}
+        shirtNumber={{ label: '등번호', value: '11' }}
+      />,
+    );
+
+    expect(screen.getByText('스트라이커')).toBeInTheDocument();
+    expect(screen.getByText('선호 윙어')).toBeInTheDocument();
+  });
 });
