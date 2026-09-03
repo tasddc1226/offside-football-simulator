@@ -73,10 +73,15 @@ async function fetchAllRemoteCareers(): Promise<ReconcileServerCareer[] | null> 
 export async function reconcileAfterRecovery(
   choice: ReconcileChoice,
   queryClient: QueryClient,
-): Promise<{ ok: true } | { ok: false }> {
+): Promise<{ ok: true } | { ok: false; failed: string[] }> {
   const engine = await getAppEngine();
   const serverCareers = await fetchAllRemoteCareers();
-  if (serverCareers === null) return { ok: false };
+  if (serverCareers === null) {
+    // 세션은 이미 새 프로필로 바뀐 뒤다(recoverProfile 성공) — 커리어 대조는 못 했어도 프로필
+    // 쪽 캐시(발급일·linked 등)는 갱신해야 옛 프로필 상태로 남지 않는다.
+    await queryClient.invalidateQueries();
+    return { ok: false, failed: [] };
+  }
 
   const localRecords = await engine.client.listCareers();
   const local: ReconcileLocalCareer[] = localRecords.map((record) => ({
@@ -100,15 +105,24 @@ export async function reconcileAfterRecovery(
   }
 
   const now = new Date().toISOString();
+  const failed: string[] = [];
   for (const careerId of plan.toDownload) {
     const result = await getRemoteCareer(careerId);
-    if (!result.ok) continue;
-    await importCareerFromServer(engine.store, result.data, {
+    if (!result.ok) {
+      failed.push(careerId);
+      continue;
+    }
+    const imported = await importCareerFromServer(engine.store, result.data, {
       createdServiceSeasonId: ACTIVE_SERVICE_SEASON_ID,
       now,
     });
+    // CAREER_REVISION_CONFLICT는 이 기기의 미전송 진행을 보호하려는 의도된 건너뛰기라 실패로 세지 않는다.
+    if (!imported.ok && imported.error.code !== 'CAREER_REVISION_CONFLICT') {
+      failed.push(careerId);
+    }
   }
 
+  // 일부만 실패해도 나머지는 반영됐으니 화면은 갱신한다.
   await queryClient.invalidateQueries();
-  return { ok: true };
+  return failed.length > 0 ? { ok: false, failed } : { ok: true };
 }

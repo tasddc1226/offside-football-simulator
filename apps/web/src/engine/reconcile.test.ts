@@ -4,14 +4,24 @@ import { describe, expect, it, vi } from 'vitest';
 import { planReconciliation, reconcileAfterRecovery, type ReconcileLocalCareer, type ReconcileServerCareer } from './reconcile.js';
 
 const listRemoteCareersMock = vi.fn();
+const getRemoteCareerMock = vi.fn();
 vi.mock('../api/client.js', () => ({
   listRemoteCareers: (cursor?: string) => listRemoteCareersMock(cursor),
-  getRemoteCareer: vi.fn(),
+  getRemoteCareer: (careerId: string) => getRemoteCareerMock(careerId),
 }));
 
+// importCareerFromServer 자체(decodeSnapshot·트랜잭션 반영)는 packages/engine-client의
+// import.test.ts가 이미 검사한다 — 여기서는 reconcileAfterRecovery가 그 결과(성공·실패)를
+// 어떻게 집계하는지만 본다.
+const importCareerFromServerMock = vi.fn();
+vi.mock('@offside/engine-client', () => ({
+  importCareerFromServer: (...args: unknown[]) => importCareerFromServerMock(...args),
+}));
+
+const listCareersMock = vi.fn().mockResolvedValue([]);
 // getAppEngine()은 대조 실패 경로에서는 반환값을 쓰지 않는다 — 존재만 하면 된다.
 vi.mock('./engine.js', () => ({
-  getAppEngine: () => Promise.resolve({ client: { listCareers: vi.fn() }, store: {} }),
+  getAppEngine: () => Promise.resolve({ client: { listCareers: () => listCareersMock() }, store: {} }),
 }));
 
 const LOCAL_ONLY_SYNCED: ReconcileLocalCareer = { id: 'car_local_only', revision: 3, lastSyncedRevision: 3 };
@@ -118,7 +128,40 @@ describe('reconcileAfterRecovery', () => {
 
     // 설정 화면(ProfileRecoverRow)은 이 ok:false를 보고 "커리어 목록을 불러오지 못했습니다" 경고
     // 토스트로 갈아탄다(성공 토스트를 그대로 보여주지 않는다).
-    expect(result).toEqual({ ok: false });
-    expect(invalidateQueries).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: false, failed: [] });
+    // recoverProfile은 이미 성공해 세션이 새 프로필로 바뀐 뒤다 — 커리어 대조를 못 했어도 ['profile']
+    // 캐시(발급일·linked 등)는 갱신해야 한다.
+    expect(invalidateQueries).toHaveBeenCalledTimes(1);
+  });
+
+  it('여러 건 중 일부만 가져오기에 실패하면 ok:false로 알리되, 성공한 나머지는 반영한다', async () => {
+    listRemoteCareersMock.mockResolvedValue({
+      ok: true,
+      data: {
+        items: [
+          { id: 'car_ok', revision: 2 },
+          { id: 'car_fail', revision: 2 },
+        ],
+        nextCursor: null,
+      },
+    });
+    getRemoteCareerMock.mockImplementation((careerId: string) =>
+      Promise.resolve({ ok: true, data: { snapshot: { careerId }, commands: [] } }),
+    );
+    importCareerFromServerMock.mockImplementation((_store: unknown, response: { snapshot: { careerId: string } }) =>
+      Promise.resolve(
+        response.snapshot.careerId === 'car_fail'
+          ? { ok: false, error: { code: 'VERIFICATION_FAILED', message: '검증 실패' } }
+          : { ok: true, revision: 2 },
+      ),
+    );
+    const invalidateQueries = vi.fn().mockResolvedValue(undefined);
+    const queryClient = { invalidateQueries } as unknown as QueryClient;
+
+    const result = await reconcileAfterRecovery('NONE', queryClient);
+
+    expect(result).toEqual({ ok: false, failed: ['car_fail'] });
+    // car_ok는 반영됐으니 화면은 그래도 갱신한다.
+    expect(invalidateQueries).toHaveBeenCalledTimes(1);
   });
 });

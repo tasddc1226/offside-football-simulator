@@ -347,6 +347,9 @@ function ProfileRecoverRow() {
         const engine = await getAppEngine();
         await engine.store.transaction('readwrite', (tx) => tx.kv.put(PROFILE_ID_KV_KEY, result.data.profileId));
         const reconciled = await reconcileAfterRecovery(mergeChoice ?? 'NONE', queryClient);
+        // reconcileAfterRecovery도 실패 경로에서 invalidateQueries를 부르지만, 이 시점엔 세션이 이미
+        // 새 프로필로 바뀌어 있으니 ['profile']만은 결과와 무관하게 한 번 더 확실히 갱신해 둔다.
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
         platform.analytics.track('profile_recovered', { mergeChoice: mergeChoice ?? 'NONE' });
         setCode('');
         setToast(
