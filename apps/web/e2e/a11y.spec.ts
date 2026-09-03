@@ -2,14 +2,17 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import {
+  advanceThroughSeasonToSettlement,
   advanceUntilOffers,
   completeOnboardingAndConfirm,
   completeOnboardingThroughContract,
   fulfillJson as fulfillJsonPlayer,
   META,
+  planPreseason,
+  resolveRoleProposal,
 } from './helpers/player-creation.js';
 import { E2E_META, fulfillJson, triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
-import { advanceToChapter, planPreseasonChapterMode, resolveRoleProposal, seedDeterministicChapterRun } from './helpers/chapter.js';
+import { advanceToChapter, planPreseasonChapterMode, seedDeterministicChapterRun } from './helpers/chapter.js';
 
 const PROFILE_WITH_CODE = {
   id: 'prf_e2e',
@@ -358,6 +361,21 @@ test('SCR-033 능력치 상세 화면에 axe serious·critical 위반이 없다'
   await expect(page).toHaveURL(/\/career\/.+\/attributes$/);
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-033');
+});
+
+// T-2-009(TEST-E2E-009 접근성 체크리스트): 시즌 결산 화면(SCR-015) 추가.
+
+test('SCR-015 프로 시즌 결과 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await completeOnboardingThroughContract(page);
+  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await resolveRoleProposal(page);
+  await advanceThroughSeasonToSettlement(page);
+  await page.getByRole('button', { name: '결산하기' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expect(page.getByRole('heading', { level: 1, name: '프로 시즌 결과' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-015');
 });
 
 test('텍스트 크기 150% + 360px에서 가로 스크롤이 생기지 않는다', async ({ page }) => {

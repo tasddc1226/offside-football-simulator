@@ -12,6 +12,7 @@ import type {
   Position,
   PositionGroup,
   PreferredFoot,
+  RoleProposal,
   SeasonPhase,
   SelectionCandidate,
   SelectionReasonComponent,
@@ -224,6 +225,45 @@ export const CUP_ROUND_LABEL_KO: Record<'R1' | 'R2' | 'SEMI' | 'FINAL', string> 
   SEMI: '준결승',
   FINAL: '결승',
 };
+
+/** T-2-009 SCR-015 역할 변화 목록: 감독 제안 유형·수락/거절 라벨. */
+export const ROLE_PROPOSAL_TYPE_LABEL_KO: Record<RoleProposal['type'], string> = {
+  KEEP: '유지',
+  POSITION_CHANGE: '포지션 변경',
+  ROLE_CHANGE: '역할 변경',
+};
+
+export const ROLE_DECISION_LABEL_KO: Record<'ACCEPT' | 'DECLINE', string> = {
+  ACCEPT: '수락',
+  DECLINE: '거절',
+};
+
+/**
+ * T-2-009 SCR-015 포지션 카드: `PositionStatsTotals`(FW·MF·DF·GK 판별 유니온) 필드의 한국어 라벨.
+ * 같은 필드명(assists·cleanSheet)은 그룹이 달라도 의미가 같아 하나의 평면 맵으로 둔다.
+ */
+export const POSITION_STAT_LABEL_KO = {
+  goals: '득점',
+  assists: '도움',
+  xgCenti: 'xG',
+  shots: '슈팅',
+  offsides: '오프사이드',
+  chancesCreated: '기회 창출',
+  progressivePasses: '전진 패스',
+  passesAttempted: '패스 시도',
+  passesCompleted: '패스 성공',
+  passSuccessRate: '패스 성공률',
+  ballRecoveries: '볼 회수',
+  tackles: '태클',
+  interceptions: '인터셉트',
+  aerialsWon: '공중볼',
+  goalsConcededInvolved: '실점 관여',
+  cleanSheet: '클린시트',
+  saves: '세이브',
+  psxgMinusGoalsCenti: 'PSxG−실점',
+  crossesClaimed: '크로스 처리',
+  buildUpPasses: '빌드업 패스',
+} as const;
 
 /** T-2-008 SCR-031: 챕터 트리거를 "왜 이 경기인가" 문구로 바꾼다. TAG는 Phase 3+ 전용이라 정의
  * 자체의 tag 문구를 그대로 쓴다(고정 사전이 없다 — D-38). */
