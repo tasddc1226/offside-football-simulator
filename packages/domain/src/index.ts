@@ -21,6 +21,7 @@ export {
   type Offer,
   type Pending,
   type PlayerDraft,
+  type PlayerGender,
   type PlayerProfile,
   type Position,
   type PositionGroup,

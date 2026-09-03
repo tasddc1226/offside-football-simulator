@@ -15,6 +15,7 @@ import {
   type DomainSnapshot,
   type Effect,
   type PlayerDraft,
+  type PlayerGender,
   type Position,
   type PreferredFoot,
   type SimulationMode,
@@ -109,6 +110,7 @@ function zeroAttributes(): Record<AttributeKey, number> {
 function emptyDraft(): PlayerDraft {
   return {
     name: null,
+    gender: null,
     nationalityCode: null,
     preferredFoot: null,
     position: null,
@@ -175,6 +177,7 @@ function createCareer(input: SimulationInput): SimulationResult {
 
 const POSITIONS: readonly Position[] = ['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST'];
 const PREFERRED_FEET: readonly PreferredFoot[] = ['LEFT', 'RIGHT', 'BOTH'];
+const GENDERS: readonly PlayerGender[] = ['FEMALE', 'MALE', 'UNSPECIFIED'];
 
 function hasControlChars(value: string): boolean {
   for (let i = 0; i < value.length; i++) {
@@ -223,6 +226,14 @@ function updatePlayerDraft(input: SimulationInput, snapshot: DomainSnapshot): Si
       }
       merged.name = trimmed;
     }
+  }
+
+  if (has(patch, 'gender')) {
+    const raw = patch.gender as PlayerGender | null;
+    if (raw !== null && !GENDERS.includes(raw)) {
+      return fail('VALIDATION_FAILED', `알 수 없는 성별: ${raw}`, { field: 'gender', reason: 'UNKNOWN' });
+    }
+    merged.gender = raw;
   }
 
   if (has(patch, 'nationalityCode')) {
@@ -286,6 +297,7 @@ function updatePlayerDraft(input: SimulationInput, snapshot: DomainSnapshot): Si
 
 const DRAFT_FIELDS: Array<keyof PlayerDraft> = [
   'name',
+  'gender',
   'nationalityCode',
   'preferredFoot',
   'position',
@@ -311,6 +323,7 @@ function confirmPlayer(input: SimulationInput, snapshot: DomainSnapshot): Simula
 
   const confirmedDraft: ConfirmedPlayerDraft = {
     name: draft.name as string,
+    gender: draft.gender as PlayerGender,
     nationalityCode: draft.nationalityCode as string,
     preferredFoot: draft.preferredFoot as PreferredFoot,
     position: draft.position as Position,

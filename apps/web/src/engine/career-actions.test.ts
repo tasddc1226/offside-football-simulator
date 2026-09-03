@@ -83,7 +83,7 @@ describe('updateDraft·confirmPlayer', () => {
     if (!created.ok) throw new Error('unreachable');
     const careerId = created.snapshot.careerId;
 
-    await updateDraft(engine, careerId, { name: '김서준', nationalityCode: 'KR', preferredFoot: 'LEFT' });
+    await updateDraft(engine, careerId, { name: '김서준', gender: 'UNSPECIFIED', nationalityCode: 'KR', preferredFoot: 'LEFT' });
     const secondDraft = await updateDraft(engine, careerId, {
       position: 'W',
       archetypeId: 'inside-forward',

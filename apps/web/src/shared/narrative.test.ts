@@ -74,7 +74,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',
     player: {
-      draft: { name: '김서준', nationalityCode: 'KR', preferredFoot: 'LEFT', position: 'W', archetypeId: 'inside-forward', backgroundId: 'club-academy' },
+      draft: { name: '김서준', gender: 'UNSPECIFIED', nationalityCode: 'KR', preferredFoot: 'LEFT', position: 'W', archetypeId: 'inside-forward', backgroundId: 'club-academy' },
       profile: null,
     },
     pending: null,

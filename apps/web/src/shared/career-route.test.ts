@@ -4,6 +4,7 @@ import { guardCareerStep, screenForCareer } from './career-route.js';
 
 const FULL_DRAFT: PlayerDraft = {
   name: '김서준',
+  gender: 'UNSPECIFIED',
   nationalityCode: 'KR',
   preferredFoot: 'LEFT',
   position: 'W',
@@ -13,6 +14,7 @@ const FULL_DRAFT: PlayerDraft = {
 
 const EMPTY_DRAFT: PlayerDraft = {
   name: null,
+  gender: null,
   nationalityCode: null,
   preferredFoot: null,
   position: null,
@@ -55,6 +57,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
 describe('screenForCareer', () => {
   it.each([
     ['DRAFT, 핵심 필드 일부 비어있음 → SCR-002', baseState({ player: { draft: { ...FULL_DRAFT, name: null }, profile: null } }), 'SCR-002'],
+    ['DRAFT, gender만 비어있음 → SCR-002', baseState({ player: { draft: { ...FULL_DRAFT, gender: null }, profile: null } }), 'SCR-002'],
     ['DRAFT, 필드 전부 비어있음 → SCR-002', baseState({ player: { draft: EMPTY_DRAFT, profile: null } }), 'SCR-002'],
     ['DRAFT, archetypeId만 비어있음 → SCR-003', baseState({ player: { draft: { ...FULL_DRAFT, archetypeId: null }, profile: null } }), 'SCR-003'],
     ['DRAFT, 모든 필드 채움 → SCR-004', baseState({ player: { draft: FULL_DRAFT, profile: null } }), 'SCR-004'],
