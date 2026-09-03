@@ -78,15 +78,26 @@ async function resolveCurrentChapterScreen(page: Page): Promise<void> {
 /** SCR-029에서 "진행"을 반복해(CONTRACT 자동 통과 슬롯, CHAPTER는 위 resolveCurrentChapterScreen으로
  * 직접 통과시킨다) SETTLEMENT("결산하기")까지 도달한다. 안전 상한 20회.
  *
- * "진행"과 "결산하기"를 하나의 locator로 묶는다 — advance 뒤 이 버튼이 통째로 다른 Card로 바뀔 수
- * 있다(NextDecisionCard 분기). CHAPTER/EVENT를 열면 대시보드에 머물지 않고 이 버튼째 곧장 그
- * 화면으로 내비게이트된다("버튼이 다시 켜짐"과 "화면이 전환됨"은 매 스텝마다 어느 쪽이 일어날지
- * 모르는 두 갈래다) — 클릭 직후에만 기다리고 다음 스텝 진입 시점의 pathname 재검사에만 기대면,
- * mutateAsync가 아직 안 끝난 채 다음 스텝에 들어가 "곧 사라질 버튼이 다시 켜지길" 기다리다
- * 타임아웃할 수 있다(실제로는 정상적으로 화면이 전환되는 중이다). 그래서 매 스텝 진입 시 이 둘을
- * 함께 기다린 뒤에야 pathname으로 어느 쪽이었는지 가린다. */
+ * "진행"·"결산하기"는 exact locator로 서로 완전히 분리한다 — 예전에는 하나의 regex locator
+ * (`/^(진행|결산하기)$/`)로 묶었는데, "진행" 클릭 직후 다음 루프에 들어가면 mutateAsync의 isPending
+ * 반영(disabled)이 아직 DOM에 안 실린 틈이 있어 `toBeEnabled`가 즉시 통과 → click()이 actionability
+ * 재확인 중 대기하는 사이 step 12/12가 되어 버튼이 결산하기로 바뀌는데, 같은 regex locator라 그
+ * 바뀐 버튼에 클릭이 그대로 떨어져(TOCTOU) season-result로 새는 경우가 있었다(부하가 걸려 창이
+ * 넓어지면 재현). "진행" exact locator는 이름이 바뀐 순간 더 이상 매치되지 않으므로 이 오클릭이
+ * 원천적으로 없다.
+ *
+ * CHAPTER/EVENT를 열면 대시보드에 머물지 않고 버튼째 곧장 그 화면으로 내비게이트된다("버튼이 다시
+ * 켜짐"과 "화면이 전환됨"은 매 스텝마다 어느 쪽이 일어날지 모르는 두 갈래다) — 클릭 직후에만
+ * 기다리고 다음 스텝 진입 시점의 pathname 재검사에만 기대면, mutateAsync가 아직 안 끝난 채 다음
+ * 스텝에 들어가 "곧 사라질 버튼이 다시 켜지길" 기다리다 타임아웃할 수 있다(실제로는 정상적으로
+ * 화면이 전환되는 중이다). 그래서 매 스텝 진입 시 이 둘을 함께 기다린 뒤에야 pathname으로 어느
+ * 쪽이었는지 가린다. 클릭 뒤에도 마찬가지로 헤더의 step 텍스트 변화 또는 pathname 변화 — 관측
+ * 가능한 상태 변화 — 를 기다린 뒤에야 다음 루프로 들어가서, 같은 step에서 두 번 클릭하는 일이 없게
+ * 한다. */
 async function advanceThroughSeasonToSettlement(page: Page): Promise<void> {
-  const nextButton = page.getByRole('button', { name: /^(진행|결산하기)$/ });
+  const progressButton = page.getByRole('button', { name: '진행', exact: true });
+  const settleButton = page.getByRole('button', { name: '결산하기', exact: true });
+  const stepCaption = page.getByText(/step \d+\/12/);
   for (let step = 0; step < 20; step += 1) {
     const pathnameBefore = new URL(page.url()).pathname;
     if (pathnameBefore.endsWith('/chapter')) {
@@ -97,19 +108,26 @@ async function advanceThroughSeasonToSettlement(page: Page): Promise<void> {
       await resolveCurrentEventScreen(page);
       continue;
     }
+    if (await settleButton.isVisible()) return;
     // 병렬 워커로 같이 도는 다른 테스트와 CPU를 나눠 쓰면 mutateAsync가 기본 5s보다 오래 걸릴 수
     // 있다 — 넉넉히 기다린다.
     await Promise.race([
       page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
-      expect(nextButton).toBeEnabled({ timeout: 60_000 }),
+      expect(progressButton).toBeEnabled({ timeout: 60_000 }),
+      settleButton.waitFor({ state: 'visible', timeout: 60_000 }),
     ]);
     if (new URL(page.url()).pathname !== pathnameBefore) continue;
-    if ((await nextButton.textContent()) === '결산하기') return;
+    if (await settleButton.isVisible()) return;
+    const stepTextBefore = await stepCaption.textContent();
     // 클릭 액션 자체의 actionability 재확인 도중에도(디스패치 전) advance 성공→화면 전환이 끼어들어
     // 버튼이 사라질 수 있다 — 그 detach는 실패로 삼키고(클릭이 실제로 먹혔는지는 다음 스텝 진입 시
-    // 위 Promise.race·pathname 재검사가 가린다), 여기서 무한정(테스트 전체 타임아웃까지) 기다리지
+    // 위 pathname·step 텍스트 재검사가 가린다), 여기서 무한정(테스트 전체 타임아웃까지) 기다리지
     // 않는다.
-    await nextButton.click({ timeout: 15_000 }).catch(() => {});
+    await progressButton.click({ timeout: 15_000 }).catch(() => {});
+    await Promise.race([
+      page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
+      expect(stepCaption).not.toHaveText(stepTextBefore ?? '', { timeout: 60_000 }),
+    ]);
   }
   throw new Error('SETTLEMENT(결산하기)에 도달하지 못했다(최대 20회 시도)');
 }

@@ -9,7 +9,7 @@ import {
   META,
 } from './helpers/player-creation.js';
 import { E2E_META, fulfillJson, triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
-import { advanceToChapter, planPreseasonChapterMode, resolveRoleProposal } from './helpers/chapter.js';
+import { advanceToChapter, planPreseasonChapterMode, resolveRoleProposal, seedDeterministicChapterRun } from './helpers/chapter.js';
 
 const PROFILE_WITH_CODE = {
   id: 'prf_e2e',
@@ -555,11 +555,13 @@ test.describe('SCR-031 핵심 경기 챕터', () => {
   test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
   test('판단 확정 화면·경기 결과 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
-    // CHAPTER 모드로 시즌을 시작해 챕터에 도달하기까지 몇 번의 "진행"이 필요한지는 매 실행 새로 뽑는
-    // 시드(crypto.getRandomValues)에 달렸다 — 기본 30s 테스트 타임아웃은 그 편차를 흡수하기엔 빠듯하다
-    // (chapter.spec.ts와 같은 이유).
+    // CHAPTER 모드로 시즌을 시작해 챕터에 도달하기까지 몇 번의 "진행"이 필요한지는 시드에 달렸다 —
+    // seedDeterministicChapterRun으로 chapter.spec.ts와 같은 결정론 시드를 강제한다(같은 이유, 같은
+    // helpers/chapter.ts). 그래도 병렬 워커로 CPU를 나눠 쓰면 mutateAsync가 느려질 수 있어 기본 30s
+    // 테스트 타임아웃 대신 넉넉히 기다린다.
     test.slow();
 
+    await seedDeterministicChapterRun(page);
     await completeOnboardingThroughContract(page);
     await planPreseasonChapterMode(page);
     await page.getByRole('button', { name: '시즌 시작' }).click();

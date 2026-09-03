@@ -6,7 +6,7 @@
 // 재생하는지 표시된 최종 스코어·revision으로 확인한다.
 import { expect, test, type Page } from '@playwright/test';
 import { completeOnboardingThroughContract } from './helpers/player-creation.js';
-import { advanceToChapter, planPreseasonChapterMode, resolveRoleProposal } from './helpers/chapter.js';
+import { advanceToChapter, planPreseasonChapterMode, resolveRoleProposal, seedDeterministicChapterRun } from './helpers/chapter.js';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
@@ -22,12 +22,14 @@ test('CHAPTER 모드 데뷔전: 경기 전 맥락 → 판단 확정 → 경기 �
   page,
 }) => {
   // DEBUT 트리거(matchesTrigger: seasonIndex===1 && isFirstCareerAppearance && minutes>0)까지 몇 번의
-  // "진행"이 필요한지는 매 실행 새로 뽑는 시드에 달렸다(crypto.getRandomValues 기반, career-actions.ts
-  // createCareer) — 대부분 한두 번이면 열리지만, 기본 30s 테스트 타임아웃은 그 편차를 흡수하기엔
-  // 빠듯하다.
+  // "진행"이 필요한지는 시드에 달렸다(career-actions.ts createCareer) — 매 실행 crypto.getRandomValues로
+  // 새 시드를 뽑으면 시즌 12 step 내내 한 번도 안 맞는 시드가 걸릴 수 있다. seedDeterministicChapterRun이
+  // "진행" 1회 만에 데뷔 챕터가 열리는 것을 확인해 둔 시드(helpers/chapter.ts)를 강제해 결정론으로
+  // 만든다 — 그래도 병렬 워커로 CPU를 나눠 쓰면 mutateAsync가 느려질 수 있어 넉넉히 기다린다.
   test.slow();
   const startedAt = Date.now();
 
+  await seedDeterministicChapterRun(page);
   await completeOnboardingThroughContract(page);
   await planPreseasonChapterMode(page);
   await page.getByRole('button', { name: '시즌 시작' }).click();

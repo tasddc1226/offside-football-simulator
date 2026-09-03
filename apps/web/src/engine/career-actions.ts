@@ -73,13 +73,27 @@ export async function execute(engine: AppEngine, careerId: string, command: Comm
   return commit(engine, careerId, load.snapshot.revision, command);
 }
 
+/** e2e 결정론 훅(T-2-008): DEV 서버에서만 `localStorage['offside:e2e-seed']`가 있으면 그 값을
+ * seed로 쓴다. `import.meta.env.DEV`는 프로덕션 빌드에서 상수 false로 치환돼 이 분기가 죽은
+ * 코드로 제거된다(같은 관례: apps/web/src/main.tsx의 `/__dev/hash-probe` 분기) — 프로덕션
+ * 번들·경로는 바뀌지 않는다. */
+const E2E_SEED_STORAGE_KEY = 'offside:e2e-seed';
+
+function newCareerSeed(): string {
+  if (import.meta.env.DEV) {
+    const override = localStorage.getItem(E2E_SEED_STORAGE_KEY);
+    if (override !== null) return override;
+  }
+  const seedBytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(seedBytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export async function createCareer(
   engine: AppEngine,
   options: { simulationMode: SimulationMode },
 ): Promise<ExecuteResult> {
   const careerId = engine.newId();
-  const seedBytes = crypto.getRandomValues(new Uint8Array(8));
-  const seed = Array.from(seedBytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  const seed = newCareerSeed();
 
   const command: Command = {
     type: 'CREATE_CAREER',
