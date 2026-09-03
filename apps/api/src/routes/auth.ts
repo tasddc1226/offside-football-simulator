@@ -13,7 +13,7 @@ import { clearSessionCookie } from '../auth/session.js';
 import { insertAuditLog } from '../db/repos/auditLog.js';
 import { getAttemptCount, recordAttempt } from '../db/repos/authAttempts.js';
 import { countCareersByOwner } from '../db/repos/careers.js';
-import { unlinkGoogleAccount } from '../db/repos/profiles.js';
+import { getProfile, unlinkGoogleAccount } from '../db/repos/profiles.js';
 import { getSessionById, rebindSessionProfile, revokeSession } from '../db/repos/sessions.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
@@ -155,6 +155,17 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
     }
 
     const targetProfileId = sessionRow.pendingMergeProfileId;
+    // pending_merge는 콜백 시점에 남고 확정은 별도 요청이라(최대 10분 간격), 그 사이 다른
+    // 세션에서 대상 프로필을 삭제했을 수 있다 — 확정 직전 다시 확인한다.
+    const targetProfile = await getProfile(db, targetProfileId);
+    if (!targetProfile || targetProfile.deletedAt !== null) {
+      throw new AppError({
+        code: 'VALIDATION_FAILED',
+        message: '대기 중인 병합이 없습니다.',
+        details: { reason: 'NO_PENDING_MERGE' },
+      });
+    }
+
     if (parsed.mergeChoice === 'MOVE_TO_LINKED') {
       await moveCareersAndRebind(db, {
         fromProfileId: session.profileId,

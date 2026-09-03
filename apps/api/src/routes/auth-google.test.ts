@@ -7,7 +7,7 @@ import { createApp } from '../app.js';
 import type { Bindings } from '../env.js';
 import { insertCareer } from '../db/repos/careers.js';
 import { upsertServiceSeason } from '../db/repos/serviceSeasons.js';
-import { auditLog, careers, sessions } from '../db/schema.js';
+import { auditLog, careers, profiles, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
@@ -168,19 +168,26 @@ describe('GET /v1/auth/google/start', () => {
     expect(res.status).toBe(401);
   });
 
-  it('시간당 30회 초과(31번째)는 429', async () => {
-    const { cookie } = await issueCookie(ctx);
-    const app = createApp();
+  it(
+    '시간당 30회 초과(31번째)는 429',
+    async () => {
+      const { cookie } = await issueCookie(ctx);
+      const app = createApp();
 
-    for (let i = 1; i <= 30; i++) {
+      for (let i = 1; i <= 30; i++) {
+        const res = await app.request('/v1/auth/google/start', { headers: { Cookie: cookie } }, ctx.env);
+        expect(res.status).toBe(302);
+      }
+
       const res = await app.request('/v1/auth/google/start', { headers: { Cookie: cookie } }, ctx.env);
-      expect(res.status).toBe(302);
-    }
-
-    const res = await app.request('/v1/auth/google/start', { headers: { Cookie: cookie } }, ctx.env);
-    expect(res.status).toBe(429);
-    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('RATE_LIMITED');
-  });
+      expect(res.status).toBe(429);
+      expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('RATE_LIMITED');
+    },
+    // 순차 요청 31회 × 로컬 D1 왕복이라 vitest 기본 5000ms로는 부족할 때가 있다(동시에 여러
+    // 워크트리가 테스트·빌드를 돌리는 공유 머신에서 특히). 로직 자체의 타임아웃이 아니라
+    // 테스트 예산만 넉넉히 잡는다.
+    20_000,
+  );
 });
 
 describe('GET /v1/auth/google/callback', () => {
@@ -406,6 +413,23 @@ describe('POST /v1/auth/merge', () => {
     );
     expect(res.status).toBe(400);
     expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({ reason: 'NO_PENDING_MERGE' });
+  });
+
+  it('대상 프로필이 확정 전에 삭제되면 400 VALIDATION_FAILED(NO_PENDING_MERGE)', async () => {
+    const { a, b } = await setUpMergeRequired();
+    await ctx.db.update(profiles).set({ deletedAt: new Date().toISOString() }).where(eq(profiles.id, b.profileId));
+    const app = createApp();
+
+    const res = await app.request(
+      '/v1/auth/merge',
+      jsonInit({ body: { mergeChoice: 'MOVE_TO_LINKED' }, cookie: a.cookie }),
+      ctx.env,
+    );
+    expect(res.status).toBe(400);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({ reason: 'NO_PENDING_MERGE' });
+
+    const aCareers = await ctx.db.select().from(careers).where(eq(careers.ownerProfileId, a.profileId));
+    expect(aCareers.map((row) => row.id)).toEqual(['car_route_a1']);
   });
 
   it('세션이 없으면 401', async () => {
