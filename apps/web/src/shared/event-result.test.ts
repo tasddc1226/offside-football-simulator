@@ -24,6 +24,8 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     deferredEffects: [],
     resolvedEventIds: [],
     resolvedChapterIds: [],
+    careerTags: [],
+    careerTagGrants: [],
     rngState: { s: [1, 2, 3, 4], draws: 0 },
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',

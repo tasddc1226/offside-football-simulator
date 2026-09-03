@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ChapterTriggerSchema, EffectSchema, SlotImportanceSchema, TrainingFocusSchema } from './career-state.js';
+import { ChapterOutcomeKindSchema, ChapterTriggerSchema, EffectSchema, SlotImportanceSchema, TrainingFocusSchema } from './career-state.js';
 import { successEnvelope } from './envelope.js';
 import { PlayerDraftSchema } from './player.js';
 import { ClientIdSchema, Hex64Schema, IsoUtcSchema } from './primitives.js';
@@ -117,8 +117,11 @@ export const ResolveEventPayloadSchema = z.strictObject({
 
 // T-2-004 D-38 CMD-SIM-005: RESOLVE_CHAPTER payload의 outcome 하나. ResolveEventOutcomeSchema와
 // 같은 형태에 챕터 전용 ratingDeltaTenths가 더해진다(경기 평점에 더할 값, clamp(40,100)은 domain 몫).
+// T-2-014 D-42: `kind`가 필수다 — `ChapterRecord.decisions[].outcomeKind`(CAREER_TAG_EVALUATORS가
+// SUCCESS 개수를 센다)로 그대로 저장된다.
 const ResolveChapterOutcomeSchema = z.strictObject({
   id: z.string().min(1),
+  kind: ChapterOutcomeKindSchema,
   weight: z.number().int().min(1),
   effects: z.array(EffectSchema),
   ratingDeltaTenths: z.number().int(),

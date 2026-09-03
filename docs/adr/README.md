@@ -13,6 +13,7 @@
 | [ADR-007](ADR-007-hosting-and-infra.md) | Cloudflare Pages·Workers·D1·R2, 환경·CI·비용 | 확정 |
 | [ADR-008](ADR-008-auth-and-account-merge.md) | 익명 플레이 + Google 로그인 1종, 계정 연결·병합 | 확정 |
 | [ADR-009](ADR-009-apps-in-toss-channel.md) | 앱인토스 미니앱 대응 구조(출시 시점은 별도 결정): 채널 어댑터, 식별키·Bearer 세션, 네이티브 Storage, mTLS, 게임 등급분류 | 확정, 출시 준비는 보류 |
+| [ADR-010](ADR-010-shared-contracts.md) | Phase 3 이후 병렬화를 위한 공유 계약: Effect 만료·중첩·타깃 소유권, 시장가치 입력 소유권, CareerTag 카탈로그·부여 인터페이스 | 확정 |
 
 ## 한 줄 요약
 

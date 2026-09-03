@@ -91,6 +91,9 @@ function timelineSentence(entry: TimelineEntry, state: CareerState): string {
       return '역할 결정';
     case 'CHAPTER_RESOLVED':
       return '챕터 판단';
+    // T-2-014 D-42: exhaustive switch가 typecheck에서 깨져 최소 수정(PR 본문 참고).
+    case 'CAREER_TAG_GRANTED':
+      return '커리어 태그 획득';
   }
 }
 

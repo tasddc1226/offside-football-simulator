@@ -15,6 +15,8 @@ export {
   type CareerStage,
   type CareerState,
   type CareerStatus,
+  type CareerTagGrant,
+  type ChapterOutcomeKind,
   type ChapterRecord,
   type ChapterTrigger,
   type CheckpointType,
@@ -24,7 +26,9 @@ export {
   type DecisionSlot,
   type DomainSnapshot,
   type Effect,
+  type EffectExpiresAt,
   type EffectKind,
+  type EffectStackingRule,
   type FootballSeason,
   type GrowthCause,
   type MatchAppearance,
@@ -72,6 +76,7 @@ export type {
   LeagueCalendar,
   LeagueCalendarSlot,
   LeagueCalendarStep,
+  MarketValueRules,
   OfferBranch,
   OfferRules,
   Ruleset,
@@ -81,6 +86,7 @@ export type {
 } from './ruleset.js';
 export {
   applyEffects,
+  expireAtSeasonEnd,
   expireEffects,
   resolveDeferredEffects,
   resolveDeferredKind,
@@ -88,6 +94,26 @@ export {
   type RejectedEffect,
   type ResolvedDeferredKind,
 } from './effects.js';
+export {
+  CAREER_TAGS,
+  CAREER_TAG_EVALUATORS,
+  CAREER_TAG_IDS,
+  evaluateCareerTags,
+  grantCareerTag,
+  type CareerTagDefinition,
+  type CareerTagEvaluateAt,
+  type CareerTagEvaluator,
+  type CareerTagId,
+  type CareerTagRarity,
+  type GrantCareerTagSource,
+} from './career-tags.js';
+export {
+  buildMarketValueInput,
+  computeMarketValueIndex,
+  type MarketValueComponent,
+  type MarketValueInput,
+  type MarketValueResult,
+} from './market-value.js';
 export { attributeGroupOf, computeGrowth, type GrowthAttributeDelta, type GrowthInput, type GrowthResult } from './growth.js';
 export { applyCondition, type ConditionState } from './condition.js';
 export {

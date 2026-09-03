@@ -296,6 +296,7 @@ describe('SCR-029 다음 결정 카드 분기', () => {
             importance: 'MAJOR',
             matchId: 'match-test',
             decisionsTotal: 3,
+            trigger: 'DEBUT',
             resolved: [],
           } satisfies typeof current.state.pending,
         },
