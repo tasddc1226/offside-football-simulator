@@ -354,6 +354,27 @@ export const TrainingFocusSchema = z.enum(['ROLE', 'TECHNICAL', 'PHYSICAL', 'MEN
 
 // T-2-001 D-24/T-2-002 D-34: 시즌 구조. `ageReferenceStep`은 항상 1(11 "나이·시즌 경계"). `styleId`·
 // `squad`·`selection`은 T-2-002가 추가한다.
+// domain `Effect`와 동일한 형태(kind·sourceId·target·delta·clamp·appliesAt·expiresAt·stackingRule).
+// FootballSeasonSchema.scheduledEffects가 참조하므로 그 앞에 둔다.
+export const EffectSchema = z.strictObject({
+  kind: z.enum(['PERMANENT', 'CURRENT', 'CONTEXT', 'RELATION', 'DEFERRED']),
+  sourceId: z.string(),
+  target: z.string(),
+  delta: z.number().int(),
+  clamp: z.strictObject({ min: z.number().int(), max: z.number().int() }),
+  appliesAt: z.discriminatedUnion('kind', [
+    z.strictObject({ kind: z.literal('IMMEDIATE') }),
+    z.strictObject({ kind: z.literal('NEXT_SEASON_STEP'), step: z.number().int() }),
+  ]),
+  expiresAt: z
+    .discriminatedUnion('kind', [
+      z.strictObject({ kind: z.literal('STEPS_AFTER'), steps: z.number().int() }),
+      z.strictObject({ kind: z.literal('AT_STEP'), step: z.number().int() }),
+    ])
+    .nullable(),
+  stackingRule: z.enum(['ONCE_PER_SOURCE', 'REPLACE', 'SUM']),
+});
+
 export const FootballSeasonSchema = z.strictObject({
   index: z.number().int().positive(),
   serviceSeasonId: z.string().min(1),
@@ -385,6 +406,8 @@ export const FootballSeasonSchema = z.strictObject({
   yellowSuspensionCount: z.number().int().nonnegative(),
   // T-2-003 D-35: 경기 전용 RNG 스트림(결정 슬롯이 쓰는 rngState와 분리 — FAST·CHAPTER byte-identical).
   matchRngState: RngStateSchema,
+  // T-2-005 D-39, 오케스트레이터 리뷰 2차(R2-1): 이번 시즌에 적용 예정인 DEFERRED 효과 목록.
+  scheduledEffects: z.array(EffectSchema),
 });
 
 // T-2-005 D-39: T-2-004(핵심 경기 챕터)가 아직 main에 없어 실제 형태를 모른다 — domain과 같은
@@ -453,26 +476,6 @@ export const SeasonSummarySchema = z.strictObject({
   competitions: z.array(CompetitionRecordSchema),
   settledAtRevision: z.number().int().positive(),
   result: SeasonResultSchema,
-});
-
-// domain `Effect`와 동일한 형태(kind·sourceId·target·delta·clamp·appliesAt·expiresAt·stackingRule).
-export const EffectSchema = z.strictObject({
-  kind: z.enum(['PERMANENT', 'CURRENT', 'CONTEXT', 'RELATION', 'DEFERRED']),
-  sourceId: z.string(),
-  target: z.string(),
-  delta: z.number().int(),
-  clamp: z.strictObject({ min: z.number().int(), max: z.number().int() }),
-  appliesAt: z.discriminatedUnion('kind', [
-    z.strictObject({ kind: z.literal('IMMEDIATE') }),
-    z.strictObject({ kind: z.literal('NEXT_SEASON_STEP'), step: z.number().int() }),
-  ]),
-  expiresAt: z
-    .discriminatedUnion('kind', [
-      z.strictObject({ kind: z.literal('STEPS_AFTER'), steps: z.number().int() }),
-      z.strictObject({ kind: z.literal('AT_STEP'), step: z.number().int() }),
-    ])
-    .nullable(),
-  stackingRule: z.enum(['ONCE_PER_SOURCE', 'REPLACE', 'SUM']),
 });
 
 /**

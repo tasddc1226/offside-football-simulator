@@ -149,24 +149,31 @@ export function resolveDeferredKind(target: string): ResolvedDeferredKind {
 }
 
 /**
- * T-2-005 D-39: `step`에 도달한 `state.deferredEffects`(`appliesAt.kind === 'NEXT_SEASON_STEP'`이고
- * `appliesAt.step === step`)를 `resolveDeferredKind`로 실제 kind로 되돌려 `applyEffects`로 적용하고
- * 목록에서 제거한다. 스키마가 허용하지 않는 target은 `applyEffects`가 그대로 reject한다(기존 관례대로
- * 조용히 무시 — throw하지 않는다).
+ * T-2-005 D-39, 오케스트레이터 리뷰 2차(R2-1)로 정정: DEFERRED 효과는 시즌 step 번호로만 해석할 수
+ * 있으므로 `state.deferredEffects`(season 없이 미룬 것들의 대기열)가 아니라 `state.season.scheduledEffects`
+ * (이번 시즌에 적용 예정인 목록 — `startSeason`이 `state.deferredEffects`를 옮겨 채운다)를 읽는다.
+ * `step`에 도달한 항목(`appliesAt.kind === 'NEXT_SEASON_STEP'`이고 `appliesAt.step === step`)을
+ * `resolveDeferredKind`로 실제 kind로 되돌려 `applyEffects`로 적용하고 `scheduledEffects`에서
+ * 제거한다. `season`이 없으면(유스 구간 등) no-op — 그 사이 미룬 효과는 `state.deferredEffects`에
+ * 그대로 쌓여 있다가 다음 `START_SEASON`에서 옮겨진다. 스키마가 허용하지 않는 target은 `applyEffects`가
+ * 그대로 reject한다(기존 관례대로 조용히 무시 — throw하지 않는다).
  */
 export function resolveDeferredEffects(state: CareerState, step: number): CareerState {
-  const due = state.deferredEffects.filter(
+  const season = state.season;
+  if (season === null) return state;
+
+  const due = season.scheduledEffects.filter(
     (effect) => effect.appliesAt.kind === 'NEXT_SEASON_STEP' && effect.appliesAt.step === step,
   );
   if (due.length === 0) return state;
 
-  const remaining = state.deferredEffects.filter((effect) => !due.includes(effect));
+  const remaining = season.scheduledEffects.filter((effect) => !due.includes(effect));
   const resolvedEffects: Effect[] = due.map((effect) => {
     const resolved = resolveDeferredKind(effect.target);
     return { ...effect, kind: resolved.kind, target: resolved.target, appliesAt: { kind: 'IMMEDIATE' } };
   });
 
-  return applyEffects({ ...state, deferredEffects: remaining }, resolvedEffects, { step }).state;
+  return applyEffects({ ...state, season: { ...season, scheduledEffects: remaining } }, resolvedEffects, { step }).state;
 }
 
 /** `AT_STEP`에 도달한 활성 효과를 되돌리고(clamp 적용) `activeEffects`에서 제거한다. */

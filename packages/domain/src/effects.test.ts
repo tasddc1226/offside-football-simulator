@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { applyEffects, expireEffects, resolveDeferredEffects, resolveDeferredKind } from './effects.js';
 import { seedRng } from './rng.js';
-import type { CareerState, Effect } from './types.js';
+import { initialSeasonPlayerStats } from './season-stats.js';
+import { statGroupOf, type CareerState, type Effect, type FootballSeason } from './types.js';
 
 function baseState(): CareerState {
   return {
@@ -242,24 +243,63 @@ describe('resolveDeferredEffects', () => {
     });
   }
 
-  it('아직 그 step이 아니면 deferredEffects도 값도 그대로다', () => {
-    const state = { ...baseState(), deferredEffects: [deferredEffect(3)] };
+  // T-2-005 D-39, 오케스트레이터 리뷰 2차(R2-1): DEFERRED 효과는 시즌 step 번호로만 해석할 수 있으니
+  // `state.deferredEffects`(season 없이 미룬 것들의 대기열)가 아니라 이번 시즌에 배정된
+  // `state.season.scheduledEffects`를 읽고 쓴다. 나머지 season 필드는 이 함수가 건드리지 않으므로
+  // 최소값으로 채운다.
+  function baseSeason(scheduledEffects: Effect[]): FootballSeason {
+    return {
+      index: 1,
+      serviceSeasonId: 'svc-test',
+      simulationMode: 'FAST',
+      calendarId: 'cal-test',
+      currentStep: 1,
+      phase: 'LEAGUE',
+      steps: [],
+      teamId: 'team-test',
+      styleId: 'style-test',
+      squadRole: 'ROTATION',
+      squadRoleAtStart: 'ROTATION',
+      trainingFocus: 'ROLE',
+      competitions: [],
+      schedule: [],
+      matches: [],
+      ageReferenceStep: 1,
+      squad: { competitors: [] },
+      selection: { position: 'W', slots: 1, benchSlots: 0, candidates: [], playerReason: null },
+      playerStats: initialSeasonPlayerStats(statGroupOf('W')),
+      availability: null,
+      lastRatingTenths: null,
+      yellowSuspensionCount: 0,
+      matchRngState: seedRng('effects-test-season'),
+      scheduledEffects,
+    };
+  }
+
+  it('season이 없으면(유스 구간) no-op이다 — deferredEffects는 손대지 않는다', () => {
+    const state = { ...baseState(), season: null, deferredEffects: [deferredEffect(3)] };
+    const result = resolveDeferredEffects(state, 3);
+    expect(result).toBe(state);
+  });
+
+  it('아직 그 step이 아니면 scheduledEffects도 값도 그대로다', () => {
+    const state = { ...baseState(), season: baseSeason([deferredEffect(3)]) };
     const result = resolveDeferredEffects(state, 2);
-    expect(result.deferredEffects).toEqual([deferredEffect(3)]);
+    expect(result.season!.scheduledEffects).toEqual([deferredEffect(3)]);
     expect(result.state.fitness).toBe(state.state.fitness);
   });
 
-  it('NEXT_SEASON_STEP 3 효과는 다음 시즌 step 3에 적용되고 deferredEffects에서 사라진다', () => {
-    const state = { ...baseState(), deferredEffects: [deferredEffect(3)] };
+  it('NEXT_SEASON_STEP 3 효과는 그 시즌 step 3에 적용되고 scheduledEffects에서 사라진다', () => {
+    const state = { ...baseState(), season: baseSeason([deferredEffect(3)]) };
     const result = resolveDeferredEffects(state, 3);
-    expect(result.deferredEffects).toEqual([]);
+    expect(result.season!.scheduledEffects).toEqual([]);
     expect(result.state.fitness).toBe(state.state.fitness + 5);
   });
 
   it('같은 step에 여러 개가 있어도 그 step 것만 풀리고 다른 step 것은 남는다', () => {
-    const state = { ...baseState(), deferredEffects: [deferredEffect(3), deferredEffect(5)] };
+    const state = { ...baseState(), season: baseSeason([deferredEffect(3), deferredEffect(5)]) };
     const result = resolveDeferredEffects(state, 3);
-    expect(result.deferredEffects).toEqual([deferredEffect(5)]);
+    expect(result.season!.scheduledEffects).toEqual([deferredEffect(5)]);
     expect(result.state.fitness).toBe(state.state.fitness + 5);
   });
 });

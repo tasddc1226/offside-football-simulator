@@ -452,6 +452,14 @@ export type FootballSeason = {
    * 슬롯(EVENT 가중치 등)이 소비하는 `CareerState.rngState`와 분리해, 경기 결과가 모드별 결정 타이밍에
    * 영향받지 않게 한다. START_SEASON에서 mode를 쓰기 전 시점의 `state.rngState`로 시드한다. */
   matchRngState: RngState;
+  /** T-2-005 D-39, 오케스트레이터 리뷰 2차(R2-1): 이번 시즌에 적용 예정인 DEFERRED 효과 목록
+   * (`appliesAt.kind === 'NEXT_SEASON_STEP'`). `startSeason`이 그 시점의 `state.deferredEffects`
+   * 전부를 이 필드로 옮겨 채운다(season이 없으면 step 번호를 해석할 대상이 없어 미룰 수 없으므로,
+   * season 배정 전에 미룬 효과는 여기가 아니라 `state.deferredEffects`에 쌓여 있다가 옮겨진다).
+   * `resolveDeferredEffects`가 매 step 이 목록에서 `appliesAt.step === step`인 항목을 꺼내 적용하고
+   * 지운다 — `state.deferredEffects`가 아니라 이 필드를 읽고 쓴다(예전엔 `state.deferredEffects`를
+   * `START_SEASON`이 곧바로 비웠기 때문에 실제로는 한 번도 적용되지 않는 버그였다). */
+  scheduledEffects: Effect[];
 };
 
 // T-2-005 D-39: 결산 성장 원인 태그와 훈련 초점(ROLE = 아키타입 roleWeights 그대로).

@@ -679,9 +679,6 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     ...state,
     context: { ...state.context, tacticalFit, squadStatus },
     rngState: generatedCompetitors.rngState,
-    // T-2-005 D-39: 새 시즌은 이전 시즌에서 못 다 쓴 DEFERRED를 들고 오지 않는다(그 step 번호는
-    // 이전 시즌 것이라 이번 시즌에서 다시 해석하면 안 된다) — 빈 목록으로 시작한다.
-    deferredEffects: [],
   };
 
   const calendar = ruleset.leagueCalendar;
@@ -693,6 +690,49 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   const league = findLeague(ruleset, team.leagueId);
   const schedule = buildSchedule(ruleset, team);
   const trainingFocus: TrainingFocus = command.payload.trainingFocus ?? 'ROLE';
+  const initialCompetitions = buildInitialCompetitions(calendar);
+  const initialPlayerStats = initialSeasonPlayerStats(statGroupOf(profile.primaryPosition));
+  // T-2-003 오케스트레이터 리뷰 1차: 결정 스트림 상태를 그대로 복사하면 첫 경기 roll이 결정 스트림이
+  // 다음에 뽑을 값과 원소 단위로 같아져(같은 xoshiro 상태 출발) 경기 결과와 이벤트 roll이 숨은
+  // 상관을 갖는다. 해시 파생 시드로 완전히 떼어낸다(careerId는 안 쓴다 — fork-by-replay 뒤 시즌이
+  // 그대로 같아야 하는 T-2-006 테스트가 있다).
+  const initialMatchRngState = seedRng(`match:${state.seasonHistory.length + 1}:${stateAfterSelection.rngState.s.join(',')}`);
+
+  // T-2-005 D-39 오케스트레이터 리뷰 2차(R2-1): DEFERRED 효과는 시즌 step 번호로만 해석할 수 있으니
+  // season이 배정된 뒤에만 풀 수 있다 — season 없이 미룬 효과(유스 구간 등)는 `state.deferredEffects`에
+  // 쌓여 있다가 여기서 이번 시즌 `scheduledEffects`로 옮겨진다. 옮긴 뒤의 `deferredEffects`는 이번
+  // 시즌 중 새로 미루는 효과를 받을 빈 목록으로 다시 시작한다. season 객체는 나머지 필드(matches·
+  // schedule 등)가 walk 중 wiring closure로만 채워지므로, 여기서 예비값으로 한 번 만들어 walk에
+  // 넘기고(`resolveDeferredEffects`가 walk 도중 이 예비 season의 scheduledEffects를 읽고 지운다),
+  // walk가 끝난 뒤 wiring getter 값 + 갱신된 scheduledEffects로 다시 채운다.
+  const initialSeason: FootballSeason = {
+    index: state.seasonHistory.length + 1,
+    serviceSeasonId: command.payload.serviceSeasonId,
+    simulationMode: mode,
+    calendarId: calendar.id,
+    currentStep: 1,
+    phase: findSeasonStep(initialSteps, 1).phase,
+    steps: initialSteps,
+    teamId: state.contract.teamId,
+    styleId: team.tacticalStyleId,
+    squadRole,
+    squadRoleAtStart: squadRole,
+    trainingFocus,
+    competitions: initialCompetitions,
+    schedule,
+    matches: [],
+    ageReferenceStep: 1,
+    squad: { competitors: generatedCompetitors.competitors },
+    selection,
+    playerStats: initialPlayerStats,
+    availability: null,
+    lastRatingTenths: null,
+    yellowSuspensionCount: 0,
+    matchRngState: initialMatchRngState,
+    scheduledEffects: state.deferredEffects,
+  };
+  const stateBeforeWalk: CareerState = { ...stateAfterSelection, deferredEffects: [], season: initialSeason };
+
   const wiring = createStepMatchWiring(
     ruleset,
     team,
@@ -708,9 +748,9 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     state.seasonHistory.length + 1,
     {
       matches: [],
-      competitions: buildInitialCompetitions(calendar),
+      competitions: initialCompetitions,
       schedule,
-      playerStats: initialSeasonPlayerStats(statGroupOf(profile.primaryPosition)),
+      playerStats: initialPlayerStats,
       competitors: generatedCompetitors.competitors,
       selection,
       squadRole,
@@ -718,34 +758,25 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
       lastRatingTenths: null,
       yellowSuspensionCount: 0,
       squadStatus,
-      // T-2-003 오케스트레이터 리뷰 1차: 결정 스트림 상태를 그대로 복사하면 첫 경기 roll이 결정
-      // 스트림이 다음에 뽑을 값과 원소 단위로 같아져(같은 xoshiro 상태 출발) 경기 결과와 이벤트
-      // roll이 숨은 상관을 갖는다. 해시 파생 시드로 완전히 떼어낸다(careerId는 안 쓴다 —
-      // fork-by-replay 뒤 시즌이 그대로 같아야 하는 T-2-006 테스트가 있다).
-      matchRngState: seedRng(`match:${state.seasonHistory.length + 1}:${stateAfterSelection.rngState.s.join(',')}`),
+      matchRngState: initialMatchRngState,
     },
   );
 
-  const walked = walkToNextDecision(initialSteps, 1, mode, [], stateAfterSelection.rngState, nextRevision, roleContext, wiring.playStepMatches);
-  const expiredState = advanceEffectsThroughWalk(stateAfterSelection, walked);
+  const walked = walkToNextDecision(initialSteps, 1, mode, [], stateBeforeWalk.rngState, nextRevision, roleContext, wiring.playStepMatches);
+  const expiredState = advanceEffectsThroughWalk(stateBeforeWalk, walked);
+  if (expiredState.season === null) {
+    throw new RangeError('startSeason: walk 이후 season이 null이다(있을 수 없는 상태).');
+  }
 
   const season: FootballSeason = {
-    index: state.seasonHistory.length + 1,
-    serviceSeasonId: command.payload.serviceSeasonId,
-    simulationMode: mode,
-    calendarId: calendar.id,
+    ...initialSeason,
     currentStep: walked.currentStepIndex,
     phase: findSeasonStep(walked.steps, walked.currentStepIndex).phase,
     steps: walked.steps,
-    teamId: state.contract.teamId,
-    styleId: team.tacticalStyleId,
     squadRole: wiring.getSquadRole(),
-    squadRoleAtStart: wiring.getSquadRole(),
-    trainingFocus,
     competitions: wiring.getCompetitions(),
     schedule: wiring.getSchedule(),
     matches: wiring.getMatches(),
-    ageReferenceStep: 1,
     squad: { competitors: wiring.getCompetitors() },
     selection: wiring.getSelection(),
     playerStats: wiring.getPlayerStats(),
@@ -753,6 +784,8 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     lastRatingTenths: wiring.getLastRatingTenths(),
     yellowSuspensionCount: wiring.getYellowSuspensionCount(),
     matchRngState: wiring.getMatchRngState(),
+    // R2-1: walk 중 resolveDeferredEffects가 지운 뒤 남은 목록(원칙적으로 12 step을 다 걸었으니 0개).
+    scheduledEffects: expiredState.season.scheduledEffects,
   };
 
   const nextState: CareerState = {
@@ -917,6 +950,9 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     wiring.playStepMatches,
   );
   const expiredState = advanceEffectsThroughWalk(state, walked);
+  if (expiredState.season === null) {
+    throw new RangeError('advanceInSeason: walk 이후 season이 null이다(있을 수 없는 상태).');
+  }
   timeline = [
     ...timeline,
     ...walked.passedStepIndexes.map((stepIndex) => ({
@@ -944,6 +980,10 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     lastRatingTenths: wiring.getLastRatingTenths(),
     yellowSuspensionCount: wiring.getYellowSuspensionCount(),
     matchRngState: wiring.getMatchRngState(),
+    // T-2-005 D-39 오케스트레이터 리뷰 2차(R2-1): walk 중 resolveDeferredEffects가 이 시즌의
+    // scheduledEffects에서 이번에 해석된 항목을 지운다 — season(위 ...season)은 walk 이전 값이라
+    // 그대로 두면 지워진 항목이 되살아난다. expiredState.season의 값으로 덮어써야 한다.
+    scheduledEffects: expiredState.season.scheduledEffects,
   };
 
   const nextState: CareerState = {
