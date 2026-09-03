@@ -23,8 +23,16 @@ type MinimalCareerState = {
   age: number;
   stage: 'YOUTH' | 'PRO';
   timeline: ReadonlyArray<{
-    // T-2-002 D-34: exhaustive union이 typecheck에서 깨져 최소 수정(PR 본문 참고).
-    kind: 'CAREER_CONFIRMED' | 'EVENT_RESOLVED' | 'CONTRACT_SIGNED' | 'SEASON_STARTED' | 'STEP_PASSED' | 'SEASON_SETTLED' | 'ROLE_RESOLVED';
+    // T-2-002 D-34·T-2-004 D-38: exhaustive union이 typecheck에서 깨져 최소 수정(PR 본문 참고).
+    kind:
+      | 'CAREER_CONFIRMED'
+      | 'EVENT_RESOLVED'
+      | 'CONTRACT_SIGNED'
+      | 'SEASON_STARTED'
+      | 'STEP_PASSED'
+      | 'SEASON_SETTLED'
+      | 'ROLE_RESOLVED'
+      | 'CHAPTER_RESOLVED';
   }>;
 };
 
