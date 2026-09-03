@@ -117,7 +117,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 트랙 | 영역 | 내용 | 선행 | 상태 | 비고 |
 |---|---|---|---|---|---|---|
-| T-3-001 | A | domain + contracts + content | 계약·제안 v2 타입, clubHistory, 제안 상태기계, 타임라인 kind 예약(양 트랙), DSL contract.*, CON payload 스키마 | U-012 | todo | 브리프 예정 |
+| T-3-001 | A | domain + contracts + content | 계약·제안 v2 타입, clubHistory, 제안 상태기계, 타임라인 kind 예약(양 트랙), DSL contract.*, CON payload 스키마 | U-012 | todo | 브리프 예정 [브리프](briefs/T-3-001.md)(2026-09-04 03:46 선작성, 투입은 U-012·U-013 뒤) |
 | T-3-002 | A | domain + content | 결산 뒤 이적시장 생성(D-43·D-44), 안전 잔류 제안, step 7 사전 협상, offerRulesV2·transferRules | T-3-001 | todo | |
 | T-3-003 | A | domain | NEGOTIATE·ACCEPT_OFFER v2·REJECT_OFFER·LOAN_RETURN, 원자 전환(D-45), 임대(D-46), 약속 위반(D-47), 태그 5종(D-48), golden career-10·11 | T-3-002 | todo | |
 | T-3-004 | A | contracts + api + engine-client | payload·상태 strict 검증, 동기화 회귀, Snapshot 크기 | T-3-003 | todo | |
