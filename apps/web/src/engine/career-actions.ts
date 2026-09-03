@@ -1,6 +1,6 @@
 // EngineClient 위의 순수 함수(React 없음). 06 "분석 이벤트": 실행마다 command_submitted ·
 // command_resolved(outcomeClass = nextAction) · command_failed를 보낸다.
-import type { Command, Effect, PlayerDraft, SimulationMode } from '@offside/domain';
+import type { ChapterOutcomeKind, Command, Effect, PlayerDraft, SimulationMode } from '@offside/domain';
 import { selectChapterCandidates, selectEligibleEvents, type ChapterDefinition, type EventDefinition } from '@offside/content';
 import type { EngineCommand, ExecuteResult, LoadResult } from '@offside/engine-client';
 import { deleteCareerOnServer } from '../api/client.js';
@@ -255,6 +255,7 @@ export function settleSeason(engine: AppEngine, careerId: string): Promise<Execu
 
 type ResolveChapterOutcomePayload = {
   id: string;
+  kind: ChapterOutcomeKind;
   weight: number;
   effects: Effect[];
   ratingDeltaTenths: number;
@@ -265,10 +266,7 @@ type ResolveChapterOutcomePayload = {
 /**
  * 팩 outcome(ChapterDefinition['decisions'][number]['options'][number]['outcomes'])을
  * RESOLVE_CHAPTER payload의 outcome 형태로 좁힌다(toResolveEventOutcomes와 같은 관례).
- *
- * PR #43(T-2-014, main 미머지)이 이 payload에 `kind`를 필수로 만들 예정이다 — 지금 main의
- * `ResolveChapterPayloadSchema`는 strictObject라 `kind`를 실으면 거부되므로, PR 직전
- * `git fetch origin && git merge origin/main`으로 그 스키마가 들어온 뒤에 outcome.kind를 추가한다.
+ * T-2-014 D-42: `kind`가 필수다(ChapterRecord.decisions[].outcomeKind로 그대로 저장된다).
  */
 export function toResolveChapterOutcomes(
   outcomes: ChapterDefinition['decisions'][number]['options'][number]['outcomes'],
@@ -276,6 +274,7 @@ export function toResolveChapterOutcomes(
   return outcomes.map((outcome) => {
     const payload: ResolveChapterOutcomePayload = {
       id: outcome.id,
+      kind: outcome.kind,
       weight: outcome.weight,
       effects: outcome.effects,
       ratingDeltaTenths: outcome.ratingDeltaTenths,

@@ -112,6 +112,8 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     deferredEffects: [],
     resolvedEventIds: [],
     resolvedChapterIds: [],
+    careerTags: [],
+    careerTagGrants: [],
     rngState: { s: [1, 2, 3, 4], draws: 0 },
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',
@@ -144,7 +146,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
 describe('deriveChapterView', () => {
   it('pending CHAPTER면 진행 중 뷰를 만든다(아직 확정된 판단 없음: currentDecisionIndex 0)', () => {
     const state = baseState({
-      pending: { kind: 'CHAPTER', step: 2, chapterId: DEFINITION.id, version: 1, importance: 'MAJOR', matchId: MATCH.id, decisionsTotal: 2, resolved: [] },
+      pending: { kind: 'CHAPTER', step: 2, chapterId: DEFINITION.id, version: 1, importance: 'MAJOR', trigger: 'DEBUT', matchId: MATCH.id, decisionsTotal: 2, resolved: [] },
       season: seasonWith({}),
     });
 
@@ -167,9 +169,10 @@ describe('deriveChapterView', () => {
         chapterId: DEFINITION.id,
         version: 1,
         importance: 'MAJOR',
+        trigger: 'DEBUT',
         matchId: MATCH.id,
         decisionsTotal: 2,
-        resolved: [{ decisionId: 'D1', optionId: 'SAFE', outcomeId: 'D1-SUCCESS', roll: 1234 }],
+        resolved: [{ decisionId: 'D1', optionId: 'SAFE', outcomeId: 'D1-SUCCESS', roll: 1234, outcomeKind: 'SUCCESS' }],
       },
       season: seasonWith({}),
     });
@@ -191,9 +194,10 @@ describe('deriveChapterView', () => {
       step: 2,
       matchId: MATCH.id,
       importance: 'MAJOR',
+      trigger: 'DEBUT',
       decisions: [
-        { decisionId: 'D1', optionId: 'SAFE', outcomeId: 'D1-SUCCESS' },
-        { decisionId: 'D2', optionId: 'BOLD', outcomeId: 'D2-FAIL' },
+        { decisionId: 'D1', optionId: 'SAFE', outcomeId: 'D1-SUCCESS', outcomeKind: 'SUCCESS' },
+        { decisionId: 'D2', optionId: 'BOLD', outcomeId: 'D2-FAIL', outcomeKind: 'FAIL' },
       ],
       ratingDeltaTenths: -2,
     };
@@ -221,9 +225,10 @@ describe('deriveChapterView', () => {
         chapterId: DEFINITION.id,
         version: 1,
         importance: 'MAJOR',
+        trigger: 'DEBUT',
         matchId: MATCH.id,
         decisionsTotal: 2,
-        resolved: [{ decisionId: 'D1', optionId: 'SAFE', outcomeId: 'D1-SUCCESS', roll: 1234 }],
+        resolved: [{ decisionId: 'D1', optionId: 'SAFE', outcomeId: 'D1-SUCCESS', roll: 1234, outcomeKind: 'SUCCESS' }],
       },
       season: seasonWith({}),
     });
@@ -245,7 +250,7 @@ describe('deriveChapterView', () => {
 
   it('pending CHAPTER인데 season이 없으면 null이다(방어적)', () => {
     const state = baseState({
-      pending: { kind: 'CHAPTER', step: 2, chapterId: DEFINITION.id, version: 1, importance: 'MAJOR', matchId: MATCH.id, decisionsTotal: 2, resolved: [] },
+      pending: { kind: 'CHAPTER', step: 2, chapterId: DEFINITION.id, version: 1, importance: 'MAJOR', trigger: 'DEBUT', matchId: MATCH.id, decisionsTotal: 2, resolved: [] },
       season: null,
     });
 
@@ -254,7 +259,7 @@ describe('deriveChapterView', () => {
 
   it('pending CHAPTER인데 season.matches에 matchId가 없으면 null이다(방어적)', () => {
     const state = baseState({
-      pending: { kind: 'CHAPTER', step: 2, chapterId: DEFINITION.id, version: 1, importance: 'MAJOR', matchId: 'missing-match', decisionsTotal: 2, resolved: [] },
+      pending: { kind: 'CHAPTER', step: 2, chapterId: DEFINITION.id, version: 1, importance: 'MAJOR', trigger: 'DEBUT', matchId: 'missing-match', decisionsTotal: 2, resolved: [] },
       season: seasonWith({}),
     });
 
@@ -263,7 +268,7 @@ describe('deriveChapterView', () => {
 
   it('pending CHAPTER인데 팩에 chapterId 정의가 없으면 null이다(방어적)', () => {
     const state = baseState({
-      pending: { kind: 'CHAPTER', step: 2, chapterId: 'CHP-MISSING', version: 1, importance: 'MAJOR', matchId: MATCH.id, decisionsTotal: 1, resolved: [] },
+      pending: { kind: 'CHAPTER', step: 2, chapterId: 'CHP-MISSING', version: 1, importance: 'MAJOR', trigger: 'DEBUT', matchId: MATCH.id, decisionsTotal: 1, resolved: [] },
       season: seasonWith({}),
     });
 
@@ -278,9 +283,10 @@ describe('deriveChapterView', () => {
         chapterId: DEFINITION.id,
         version: 1,
         importance: 'MAJOR',
+        trigger: 'DEBUT',
         matchId: MATCH.id,
         decisionsTotal: 2,
-        resolved: [{ decisionId: 'D1', optionId: 'DOES-NOT-EXIST', outcomeId: 'D1-SUCCESS', roll: 1 }],
+        resolved: [{ decisionId: 'D1', optionId: 'DOES-NOT-EXIST', outcomeId: 'D1-SUCCESS', roll: 1, outcomeKind: 'SUCCESS' }],
       },
       season: seasonWith({}),
     });

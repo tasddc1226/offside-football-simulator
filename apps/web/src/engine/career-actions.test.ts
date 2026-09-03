@@ -409,6 +409,7 @@ describe('toResolveChapterOutcomes', () => {
     expect(outcomes).toEqual([
       {
         id: 'ROLE-SUCCESS',
+        kind: 'SUCCESS',
         weight: 50,
         effects: roleOption.outcomes[0]!.effects,
         ratingDeltaTenths: 6,
@@ -416,6 +417,7 @@ describe('toResolveChapterOutcomes', () => {
       },
       {
         id: 'ROLE-FAIL',
+        kind: 'FAIL',
         weight: 50,
         effects: roleOption.outcomes[1]!.effects,
         ratingDeltaTenths: -4,
