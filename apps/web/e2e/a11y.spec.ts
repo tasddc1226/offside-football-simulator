@@ -1,11 +1,22 @@
 // TEST-E2E-009(접근성 기준): 허브·온보딩·설정·법적 문서 화면에 axe serious·critical 위반이 없다.
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
+import {
+  advanceUntilOffers,
+  completeOnboardingAndConfirm,
+  fulfillJson as fulfillJsonPlayer,
+  META,
+} from './helpers/player-creation.js';
 import { E2E_META, fulfillJson, triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
 
 const PROFILE_WITH_CODE = {
   id: 'prf_e2e',
-  settings: { reducedMotion: 'SYSTEM' as const, textScale: 100 as const, theme: 'SYSTEM' as const, defaultSimulationMode: 'FAST' as const },
+  settings: {
+    reducedMotion: 'SYSTEM' as const,
+    textScale: 100 as const,
+    theme: 'SYSTEM' as const,
+    defaultSimulationMode: 'FAST' as const,
+  },
   linked: { google: false, toss: false },
   recoveryCodeIssuedAt: '2026-08-01T08:00:00Z',
   createdAt: '2026-08-01T00:00:00Z',
@@ -17,11 +28,17 @@ async function expectNoSeriousOrCriticalViolations(page: Page, label: string): P
     (violation) => violation.impact === 'serious' || violation.impact === 'critical',
   );
 
-  console.log(`[a11y] ${label}: 전체 위반 ${results.violations.length}건, serious/critical ${seriousOrCritical.length}건`);
+  console.log(
+    `[a11y] ${label}: 전체 위반 ${results.violations.length}건, serious/critical ${seriousOrCritical.length}건`,
+  );
   if (results.violations.length > 0) {
     console.log(
       JSON.stringify(
-        results.violations.map((violation) => ({ id: violation.id, impact: violation.impact, nodes: violation.nodes.length })),
+        results.violations.map((violation) => ({
+          id: violation.id,
+          impact: violation.impact,
+          nodes: violation.nodes.length,
+        })),
         null,
         2,
       ),
@@ -40,11 +57,15 @@ for (const path of STATIC_SCREENS) {
   });
 }
 
-test('빈 허브(첫 방문, 온보딩 건너뛴 뒤) 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+test('빈 허브(첫 방문, 온보딩 건너뛴 뒤) 화면에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
   await page.goto('/onboarding');
   await page.getByRole('button', { name: '건너뛰기' }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { level: 1, name: '아직 만든 커리어가 없습니다' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '아직 만든 커리어가 없습니다' }),
+  ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, '/ (빈 허브)');
 });
@@ -67,7 +88,9 @@ test('SCR-002 선수 정보 화면에 axe serious·critical 위반이 없다', a
   await page.getByRole('button', { name: '다음' }).click();
   await page.getByRole('button', { name: '다음' }).click();
   await page.getByRole('button', { name: 'KICKOFF' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: '선수 정보를 입력하세요' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '선수 정보를 입력하세요' }),
+  ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-002');
 });
@@ -85,7 +108,9 @@ test('SCR-003 플레이 스타일 화면에 axe serious·critical 위반이 없�
   await page.getByRole('radio', { name: /윙어/ }).click();
   await page.getByRole('radio', { name: /클럽 아카데미/ }).click();
   await page.getByRole('button', { name: '다음' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: '플레이 스타일을 고르세요' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '플레이 스타일을 고르세요' }),
+  ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-003');
 });
@@ -105,19 +130,25 @@ test('SCR-004 확인 화면에 axe serious·critical 위반이 없다', async ({
   await page.getByRole('button', { name: '다음' }).click();
   await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
   await page.getByRole('button', { name: '다음' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' }),
+  ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-004');
 });
 
 test('T-1-011 충돌 대화상자가 열린 상태에 axe serious·critical 위반이 없다', async ({ page }) => {
   await triggerConflictAndOpenDialog(page);
-  await expect(page.getByRole('heading', { level: 2, name: '다른 기기에서 이 커리어가 더 진행됐습니다' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 2, name: '다른 기기에서 이 커리어가 더 진행됐습니다' }),
+  ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'T-1-011 충돌 대화상자');
 });
 
-test('T-1-012 설정: 복구 코드 재발급 확인 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
+test('T-1-012 설정: 복구 코드 재발급 확인 대화상자에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
   await page.route('**/v1/profile', async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();
@@ -133,9 +164,14 @@ test('T-1-012 설정: 복구 코드 재발급 확인 대화상자에 axe serious
   await expectNoSeriousOrCriticalViolations(page, 'T-1-012 설정: 복구 코드 재발급 확인');
 });
 
-test('T-1-012 설정: 복구 코드 결과 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
+test('T-1-012 설정: 복구 코드 결과 대화상자에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
   await page.route('**/v1/profile/recovery-code', (route) =>
-    fulfillJson(route, 200, { data: { code: 'OFS-ABCD-2345-EFGH', issuedAt: '2026-09-03T08:00:00Z' }, meta: E2E_META }),
+    fulfillJson(route, 200, {
+      data: { code: 'OFS-ABCD-2345-EFGH', issuedAt: '2026-09-03T08:00:00Z' },
+      meta: E2E_META,
+    }),
   );
 
   await page.goto('/settings');
@@ -145,7 +181,9 @@ test('T-1-012 설정: 복구 코드 결과 대화상자에 axe serious·critical
   await expectNoSeriousOrCriticalViolations(page, 'T-1-012 설정: 복구 코드 결과');
 });
 
-test('T-1-012 설정: 프로필 복구 충돌 선택 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
+test('T-1-012 설정: 프로필 복구 충돌 선택 대화상자에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
   await page.route('**/v1/profile/recover', (route) =>
     fulfillJson(route, 409, {
       error: {
@@ -161,12 +199,16 @@ test('T-1-012 설정: 프로필 복구 충돌 선택 대화상자에 axe serious
   await page.goto('/settings');
   await page.getByLabel('다른 기기에서 발급받은 복구 코드').fill('OFS-ABCD-EFGH-JKMN');
   await page.getByRole('button', { name: '복구' }).click();
-  await expect(page.getByRole('heading', { level: 2, name: '이미 커리어가 있는 기기입니다' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 2, name: '이미 커리어가 있는 기기입니다' }),
+  ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'T-1-012 설정: 프로필 복구 충돌 선택');
 });
 
-test('T-1-012 설정: 이 기기 데이터 삭제 확인 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
+test('T-1-012 설정: 이 기기 데이터 삭제 확인 대화상자에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
   await page.goto('/settings');
   const row = page.locator('li').filter({ hasText: '이 기기 데이터 삭제' });
   await row.getByRole('button', { name: '삭제' }).click();
@@ -175,9 +217,14 @@ test('T-1-012 설정: 이 기기 데이터 삭제 확인 대화상자에 axe ser
   await expectNoSeriousOrCriticalViolations(page, 'T-1-012 설정: 이 기기 데이터 삭제 확인');
 });
 
-test('T-1-012 설정: 프로필 삭제 확인 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
+test('T-1-012 설정: 프로필 삭제 확인 대화상자에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
   await page.route('**/v1/profile/delete', (route) =>
-    fulfillJson(route, 200, { data: { confirmToken: 'tok_a11y', expiresAt: '2026-09-03T00:10:00Z' }, meta: E2E_META }),
+    fulfillJson(route, 200, {
+      data: { confirmToken: 'tok_a11y', expiresAt: '2026-09-03T00:10:00Z' },
+      meta: E2E_META,
+    }),
   );
 
   await page.goto('/settings');
@@ -186,4 +233,201 @@ test('T-1-012 설정: 프로필 삭제 확인 대화상자에 axe serious·criti
   await expect(page.getByRole('heading', { level: 2, name: '프로필 삭제' })).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'T-1-012 설정: 프로필 삭제 확인');
+});
+
+// T-1-014(TEST-E2E-009 접근성 체크리스트): 나머지 Phase 1 화면(SCR-007·008·013·014·009·010·029) +
+// 텍스트 크기 150%·모션 감소·aria-live 확인. 기존 줄은 옮기지 않는다(T-1-013 동시 작업 제약).
+
+test('SCR-007/008/013 이벤트 화면·SCR-014 결과 화면에 axe serious·critical 위반이 없다(등장하는 만큼)', async ({
+  page,
+}) => {
+  await completeOnboardingAndConfirm(page);
+
+  let reachedOffers = false;
+  const seenScreenIds = new Set<string>();
+  for (let step = 0; step < 10 && !reachedOffers; step += 1) {
+    await page.waitForURL(/\/career\/.+\/(path|tryout|event|offers)$/);
+    const pathname = new URL(page.url()).pathname;
+    if (pathname.endsWith('/offers')) {
+      reachedOffers = true;
+      break;
+    }
+    const screenId = pathname.endsWith('/path')
+      ? 'SCR-007'
+      : pathname.endsWith('/tryout')
+        ? 'SCR-008'
+        : 'SCR-013';
+    seenScreenIds.add(screenId);
+    await expectNoSeriousOrCriticalViolations(page, `${screenId}(${pathname})`);
+
+    await page.getByRole('radio').first().click();
+    await page.getByRole('button', { name: '확정' }).click();
+    await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+    seenScreenIds.add('SCR-014');
+    await expectNoSeriousOrCriticalViolations(page, 'SCR-014(/event/result)');
+    await page.getByRole('button', { name: '다음' }).click();
+  }
+  if (!reachedOffers) throw new Error('offers 화면에 도달하지 못했다(최대 10회 시도)');
+  console.log(`[a11y] 이벤트 반복에서 실제로 만난 화면: ${[...seenScreenIds].sort().join(', ')}`);
+});
+
+test('SCR-009 제안 비교 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await completeOnboardingAndConfirm(page);
+  await advanceUntilOffers(page);
+  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-009');
+});
+
+test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
+  await completeOnboardingAndConfirm(page);
+  await advanceUntilOffers(page);
+  await page.getByRole('link', { name: '이 제안 보기' }).first().click();
+  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-010');
+
+  await page.getByRole('button', { name: '사인' }).click();
+  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  const signedToast = page.getByText('계약을 맺었습니다');
+  await expect(signedToast).toBeVisible();
+  // Toast는 마운트 뒤 opacity-0→opacity-100로 200ms 전환한다(packages/ui/src/components/Toast.tsx) —
+  // 전환 중간에 axe를 돌리면 실제로는 존재하지 않는 명암비 위반이 잡힌다(중간 opacity가 배경과
+  // 섞여 글자색이 흐려 보이는 것뿐). 전환이 끝난 뒤(opacity: 1) 상태 기반으로 기다린다.
+  await expect(signedToast).toHaveCSS('opacity', '1');
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-029(일정표, 기본)');
+
+  await page.getByRole('tab', { name: '휴대폰' }).click();
+  await expect(page.getByText('주급')).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-029(휴대폰)');
+});
+
+test('텍스트 크기 150% + 360px에서 가로 스크롤이 생기지 않는다', async ({ page }) => {
+  await page.goto('/settings');
+  await page.getByRole('radio', { name: '150%' }).click();
+
+  // 텍스트 크기는 useUiStore(zustand persist)로 전역 적용된다 — 실제 게임 화면(허브)에서 확인한다.
+  await page.goto('/onboarding');
+  await page.getByRole('button', { name: '건너뛰기' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(
+    page.getByRole('heading', { level: 1, name: '아직 만든 커리어가 없습니다' }),
+  ).toBeVisible();
+
+  const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(scrollWidth).toBeLessThanOrEqual(360);
+});
+
+test.describe('모션 감소', () => {
+  // useReducedMotion()은 OS prefers-reduced-motion 미디어쿼리(SYSTEM 기본값)를 구독한다
+  // (first-contract.spec.ts와 같은 이유) — 컨텍스트 자체를 reduced-motion으로 연다.
+  test.use({ contextOptions: { reducedMotion: 'reduce' } });
+
+  test('SCR-008 입단 테스트 결과가 연출 없이 즉시 표시된다(카운트업 없음)', async ({ page }) => {
+    // TryoutAnimation은 reducedMotion이면 애니메이션 분기를 아예 마운트하지 않고 onDone을 즉시 부른다
+    // (career.$careerId.tryout.tsx:43-56, STEP_DURATION_MS=500·3단계=1500ms). 그 미만 시간 안에
+    // /event/result로 넘어가면 연출이 실행되지 않았다는 뜻이다 — ResultCard 자체엔 카운트업 로직이
+    // 없어(packages/ui/src/components/ResultCard.tsx) 값은 항상 첫 프레임에 최종값이다.
+    await page.route('**/v1/profile', (route) =>
+      fulfillJsonPlayer(route, 503, {
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: '서비스를 이용할 수 없습니다.',
+          retryable: true,
+        },
+        meta: META,
+      }),
+    );
+
+    await page.goto('/onboarding');
+    await page.getByRole('button', { name: '다음' }).click();
+    await page.getByRole('button', { name: '다음' }).click();
+    await page.getByRole('button', { name: 'KICKOFF' }).click();
+    await page.getByLabel('이름').fill('김서준');
+    await page.getByRole('radio', { name: '남성' }).click();
+    await page.getByLabel('국적').selectOption('KR');
+    await page.getByRole('radio', { name: '왼발' }).click();
+    await page.getByRole('tab', { name: '공격수' }).click();
+    await page.getByRole('radio', { name: /윙어/ }).click();
+    await page.getByRole('radio', { name: /클럽 아카데미/ }).click();
+    await page.getByRole('button', { name: '다음' }).click();
+    await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
+    await page.getByRole('button', { name: '다음' }).click();
+    await page.getByRole('button', { name: 'KICKOFF' }).click();
+    await expect(
+      page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.'),
+    ).toBeVisible();
+    await page.getByRole('button', { name: '계속' }).click();
+
+    let reachedTryout = false;
+    for (let step = 0; step < 10 && !reachedTryout; step += 1) {
+      await page.waitForURL(/\/career\/.+\/(path|tryout|event)$/);
+      const pathname = new URL(page.url()).pathname;
+      if (pathname.endsWith('/tryout')) {
+        reachedTryout = true;
+        break;
+      }
+      await page.getByRole('radio').first().click();
+      await page.getByRole('button', { name: '확정' }).click();
+      await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+      await page.getByRole('button', { name: '다음' }).click();
+    }
+    if (!reachedTryout)
+      throw new Error(
+        'SCR-008(tryout) 화면에 도달하지 못했다(최대 10회 시도) — 이 테스트는 건너뛸 수 없다',
+      );
+
+    await expect(page.getByText('평가는 자동으로 진행되며 다시 볼 수 없습니다.')).toHaveCount(0);
+
+    await page.getByRole('radio').first().click();
+    await page.getByRole('button', { name: '확정' }).click();
+
+    // 연출 텍스트가 뜬 적이 아예 없어야 한다(폴링이 아니라, 연출 분기가 렌더된 적이 있는지 확인).
+    await expect(page.getByText('평가는 자동으로 진행되며 다시 볼 수 없습니다.')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/, { timeout: 1500 });
+    await expect(page.getByText('평가는 자동으로 진행되며 다시 볼 수 없습니다.')).toHaveCount(0);
+  });
+});
+
+test('결과 확정 시 aria-live 영역이 갱신되는지 확인한다(범위 밖 발견 사항: 현재 없음)', async ({
+  page,
+}) => {
+  // 08 접근성 체크리스트: "결과 변화가 aria-live로 한 번만 낭독"을 요구한다. 실제로는 이벤트 확정
+  // →결과 화면 전환 경로 어디에도 aria-live/role=status 요소가 없다(grep 확인: apps/web/src,
+  // packages/ui 전체에서 이 경로에 해당하는 요소가 없다 — Toast의 role=status는 삭제·저장 안내 등
+  // 다른 용도다). 그래서 이 테스트는 "1번 갱신"을 assert하지 않고, MutationObserver로 실제 개수를
+  // 세어 그대로 보고한다 — 결과는 0건이며, 이것 자체가 범위 밖 발견 사항이다(고치지 않는다).
+  await completeOnboardingAndConfirm(page);
+  await page.waitForURL(/\/career\/.+\/(path|tryout|event)$/);
+
+  await page.evaluate(() => {
+    (window as unknown as { __liveMutations: number }).__liveMutations = 0;
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        const target =
+          mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
+        if (target?.closest('[aria-live], [role="status"], [role="alert"]') !== null) {
+          (window as unknown as { __liveMutations: number }).__liveMutations += 1;
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    (window as unknown as { __liveObserver: MutationObserver }).__liveObserver = observer;
+  });
+
+  await page.getByRole('radio').first().click();
+  await page.getByRole('button', { name: '확정' }).click();
+  await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+
+  const liveMutations = await page.evaluate(
+    () => (window as unknown as { __liveMutations: number }).__liveMutations,
+  );
+  console.log(
+    `[a11y] 결과 확정 시 aria-live/status/alert 영역 갱신 횟수: ${liveMutations}건(기대: 1건, 범위 밖 발견 사항)`,
+  );
+  expect(liveMutations).toBe(0);
 });

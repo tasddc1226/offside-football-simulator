@@ -1,0 +1,206 @@
+// 08 "출시 차단 기준"(키보드로 P0 흐름 완료 불가) 검사: first-contract.spec.ts와 같은 여정(온보딩→
+// SCR-002~004→이벤트 반복→SCR-009→SCR-010→SCR-029)을 page.keyboard(Tab·Shift+Tab·Enter·Space·
+// 화살표)만으로 완주한다. click() 금지, 각 이동은 toBeFocused로 확인한다.
+//
+// SCR-002의 포지션 구분 탭(TabsList: 골키퍼/수비수/미드필더/공격수)은 `<RadioGroup>` 안에 중첩된
+// `<Tabs>`라(career.$careerId.create.tsx:330-360) Radix의 두 roving-tabindex 관리자가 충돌해 탭
+// 트리거 4개 전부가 Tab으로 도달 불가능하다(직접 확인: 포커스가 "왼발" 라디오→그룹 다음 항목으로
+// 바로 건너뛴다, 트리거 tabindex는 선택된 것까지 포함해 전부 -1). 이 스펙은 그래서 실제로 키보드로
+// 도달 가능한 기본 그룹(골키퍼, 유일한 포지션 항목)으로 흐름을 완주한다 — 범위 밖 발견 사항 참조.
+// 반면 SCR-029 대시보드 탭은 RadioGroup에 중첩돼 있지 않아 정상 작동한다(직접 확인).
+//
+// 대화상자 포커스 트랩·복귀: 이 여정 자체(온보딩→계약)에는 실제 대화상자가 없다(복구 코드는 같은
+// 라우트에 ?step=recovery로 인라인 표시된다 — career.$careerId.confirm.tsx). 그래서 허브의 삭제
+// 확인 대화상자(hub.spec.ts와 같은 컴포넌트, packages/ui Dialog)로 확인한다. Escape는 브리프가 허용한
+// 키 목록(Tab·Shift+Tab·Enter·Space·화살표)에 없어 쓰지 않고, 대화상자의 "닫기" 버튼을 Tab+Enter로
+// 눌러서 닫는다.
+import { expect, type Locator, type Page, test } from '@playwright/test';
+import { fulfillJson, META } from './helpers/player-creation.js';
+
+test.use({ contextOptions: { reducedMotion: 'reduce' } });
+
+/** Tab(또는 Shift+Tab)을 반복 눌러 `target`이 포커스를 받을 때까지 이동한다. click() 없이 버튼·링크·
+ * 입력 필드로 이동하는 유일한 수단 — 정확한 탭스톱 개수를 하드코딩하지 않아 화면이 조금 바뀌어도
+ * 버티지만, 실제로 도달 불가능하면(버그) maxPresses 안에 못 찾고 마지막 toBeFocused에서 실패한다. */
+async function tabTo(
+  page: Page,
+  target: Locator,
+  options?: { shift?: boolean; maxPresses?: number },
+): Promise<void> {
+  const key = options?.shift === true ? 'Shift+Tab' : 'Tab';
+  const maxPresses = options?.maxPresses ?? 25;
+  for (let i = 0; i < maxPresses; i += 1) {
+    const isFocused = await target
+      .evaluate((el) => el === document.activeElement)
+      .catch(() => false);
+    if (isFocused) {
+      await expect(target).toBeFocused();
+      return;
+    }
+    await page.keyboard.press(key);
+  }
+  await expect(target).toBeFocused();
+}
+
+test('키보드만으로 온보딩→계약→대시보드까지 완주한다(마우스·click 금지)', async ({ page }) => {
+  await page.route('**/v1/profile', (route) =>
+    fulfillJson(route, 503, {
+      error: {
+        code: 'SERVICE_UNAVAILABLE',
+        message: '서비스를 이용할 수 없습니다.',
+        retryable: true,
+      },
+      meta: META,
+    }),
+  );
+
+  // SCR-034 온보딩: "다음" 두 번 → "KICKOFF".
+  await page.goto('/onboarding');
+  await tabTo(page, page.getByRole('button', { name: '다음' }));
+  await page.keyboard.press('Enter');
+  await tabTo(page, page.getByRole('button', { name: '다음' }));
+  await page.keyboard.press('Enter');
+  await tabTo(page, page.getByRole('button', { name: 'KICKOFF' }));
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/career\/.+\/create$/);
+
+  // SCR-002: 이름 → 성별 → 국적 → 주발 → 포지션(그룹 탭 도달 불가 → 기본 골키퍼 그룹 유일 항목) →
+  // 배경 → 다음. 필드 사이 Tab 한 번씩만으로 정확히 이어지는 순서를 직접 확인했다(중간에 다른
+  // 포커스 가능한 요소가 없다) — 각 라디오 그룹 진입은 Radix roving-tabindex의 기본(첫) 항목에
+  // 떨어지므로 어떤 값인지는 보지 않고 Space로 확정만 한다(다른 스펙의 "선택지 자체는 안 본다"와 같은
+  // 원칙 — 이후 화면에서 특정 값에 의존하지 않는다).
+  const nameInput = page.getByLabel('이름');
+  await tabTo(page, nameInput);
+  await page.keyboard.type('김서준');
+  await expect(nameInput).toHaveValue('김서준');
+
+  await page.keyboard.press('Tab');
+  const genderRadio = page.locator(':focus');
+  await expect(genderRadio).toHaveAttribute('role', 'radio');
+  await page.keyboard.press('Space');
+  await expect(genderRadio).toHaveAttribute('aria-checked', 'true');
+
+  await page.keyboard.press('Tab');
+  const nationalitySelect = page.getByLabel('국적');
+  await expect(nationalitySelect).toBeFocused();
+  // 네이티브 <select> 자체는 실제 브라우저에서 포커스 상태로 화살표 키를 누르면 값이 바뀌는,
+  // 완전히 키보드로 조작 가능한 표준 컨트롤이다 — 다만 헤드리스 Chromium은 CDP로 보낸 합성
+  // ArrowDown/Enter 키 이벤트로 OS 네이티브 select 팝업을 조작하지 못한다(Playwright·CDP의 알려진
+  // 자동화 한계이며, 이 앱의 키보드 접근성 문제가 아니다). 그래서 이 한 필드만 selectOption으로
+  // 값을 정한다(click() 아님) — 포커스는 계속 이 select에 남아 다음 Tab이 정상 진행된다.
+  await nationalitySelect.selectOption('KR');
+  await expect(nationalitySelect).toHaveValue('KR');
+  await expect(nationalitySelect).toBeFocused();
+
+  await page.keyboard.press('Tab');
+  const footRadio = page.locator(':focus');
+  await expect(footRadio).toHaveAttribute('role', 'radio');
+  await page.keyboard.press('Space');
+  await expect(footRadio).toHaveAttribute('aria-checked', 'true');
+
+  // 포지션 구분 탭(골키퍼/수비수/미드필더/공격수)은 건너뛴다 — Tab으로 도달 불가(버그, 위 주석
+  // 참조). 여기서 포커스는 기본으로 열려 있는 "골키퍼" 그룹의 유일한 포지션 항목으로 바로 간다 —
+  // 이 라디오는 (탭이 아니라) 바깥 포지션 RadioGroup 소속이라 정상적으로 도달 가능하다.
+  await page.keyboard.press('Tab');
+  const positionRadio = page.locator(':focus');
+  await expect(positionRadio).toHaveAttribute('role', 'radio');
+  await page.keyboard.press('Space');
+  await expect(positionRadio).toHaveAttribute('aria-checked', 'true');
+
+  await page.keyboard.press('Tab');
+  const backgroundRadio = page.locator(':focus');
+  await expect(backgroundRadio).toHaveAttribute('role', 'radio');
+  await page.keyboard.press('Space');
+  await expect(backgroundRadio).toHaveAttribute('aria-checked', 'true');
+
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: '다음' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/career\/.+\/style$/);
+
+  // SCR-003: 아키타입 카드(어떤 것인지는 안 봄) 하나 선택 → 다음.
+  await tabTo(page, page.getByRole('radio').first());
+  await page.keyboard.press('Space');
+  await tabTo(page, page.getByRole('button', { name: '다음' }));
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
+  await expect(
+    page.getByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' }),
+  ).toBeVisible();
+
+  // SCR-004: KICKOFF → 복구 코드 발급 실패(인라인 안내, 대화상자 아님) → 계속.
+  await tabTo(page, page.getByRole('button', { name: 'KICKOFF' }));
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.'),
+  ).toBeVisible();
+  await tabTo(page, page.getByRole('button', { name: '계속' }));
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+
+  // SCR-007/008/013(반복) → SCR-014 → ... → SCR-009. 안전 상한 10회(first-contract.spec.ts와 동일).
+  let reachedOffers = false;
+  for (let step = 0; step < 10 && !reachedOffers; step += 1) {
+    await page.waitForURL(/\/career\/.+\/(path|tryout|event|offers)$/);
+    if (new URL(page.url()).pathname.endsWith('/offers')) {
+      reachedOffers = true;
+      break;
+    }
+    await tabTo(page, page.getByRole('radio').first());
+    await page.keyboard.press('Space');
+    await tabTo(page, page.getByRole('button', { name: '확정' }));
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+    await tabTo(page, page.getByRole('button', { name: '다음' }));
+    await page.keyboard.press('Enter');
+  }
+  if (!reachedOffers) throw new Error('offers 화면에 도달하지 못했다(최대 10회 시도)');
+
+  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
+
+  // SCR-009: 제안 링크 → Enter(링크는 클릭 없이 Enter로 활성화된다).
+  const offerLink = page.getByRole('link', { name: '이 제안 보기' }).first();
+  await tabTo(page, offerLink);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+
+  // SCR-010: 사인 → 계약 완료(대시보드).
+  await tabTo(page, page.getByRole('button', { name: '사인' }));
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
+  await expect(page.getByText('전술 적합도')).toBeVisible();
+
+  // SCR-029 대시보드 탭: 폼 안 포지션 탭과 달리 RadioGroup에 중첩되지 않아 Tab으로 정상 도달한다
+  // (직접 확인). 화살표 키로 "일정표"(기본)에서 "휴대폰"까지 이동한다.
+  const scheduleTab = page.getByRole('tab', { name: '일정표' });
+  await tabTo(page, scheduleTab);
+  await expect(scheduleTab).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  const phoneTab = page.getByRole('tab', { name: '휴대폰' });
+  await expect(phoneTab).toBeFocused();
+  await expect(phoneTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByText('팀')).toBeVisible();
+  await expect(page.getByText('주급')).toBeVisible();
+
+  // 대화상자 포커스 트랩·복귀: 허브의 삭제 확인 대화상자(hub.spec.ts와 같은 컴포넌트)로 확인한다.
+  await tabTo(page, page.getByRole('link', { name: '허브로' }));
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/$/);
+
+  const deleteButton = page.getByRole('button', { name: '삭제' });
+  await tabTo(page, deleteButton);
+  await page.keyboard.press('Enter');
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  const focusInsideDialog = await dialog.evaluate((el) => el.contains(document.activeElement));
+  expect(focusInsideDialog).toBe(true);
+
+  await tabTo(page, page.getByRole('button', { name: '닫기' }));
+  await page.keyboard.press('Enter');
+  await expect(dialog).toBeHidden();
+  await expect(deleteButton).toBeFocused();
+});

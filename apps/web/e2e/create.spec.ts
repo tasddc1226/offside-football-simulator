@@ -5,43 +5,8 @@
 // 그중 하나를 domain이 weight로 고른다)이라 항상 EVT-CON-002(SCR-007)가 뽑힌다는 보장이 없다.
 // 그래서 도착 지점은 screenForCareer가 매핑하는 SCR-007 계열 라우트(path·tryout·event) 중
 // 하나인지로 검증한다.
-import { expect, type Page, type Route, test } from '@playwright/test';
-
-const META = { requestId: 'e2e-req' };
-
-async function fulfillJson(route: Route, status: number, body: unknown): Promise<void> {
-  await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
-}
-
-async function startNewCareer(page: Page): Promise<void> {
-  await page.goto('/onboarding');
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/create$/);
-}
-
-async function fillPlayerInfo(page: Page, name = '김서준'): Promise<void> {
-  await page.getByLabel('이름').fill(name);
-  await page.getByRole('radio', { name: '남성' }).click();
-  await page.getByLabel('국적').selectOption('KR');
-  await page.getByRole('radio', { name: '왼발' }).click();
-  await page.getByRole('tab', { name: '공격수' }).click();
-  await page.getByRole('radio', { name: /윙어/ }).click();
-  await page.getByRole('radio', { name: /클럽 아카데미/ }).click();
-}
-
-async function goToConfirm(page: Page): Promise<void> {
-  await startNewCareer(page);
-  await fillPlayerInfo(page);
-  await page.getByRole('button', { name: '다음' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/style$/);
-
-  await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
-  await expect(page.getByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' })).toBeVisible();
-}
+import { expect, test } from '@playwright/test';
+import { fillPlayerInfo, fulfillJson, goToConfirm, META, startNewCareer } from './helpers/player-creation.js';
 
 test('SCR-002→003→004를 거쳐 복구 코드를 발급하고 SCR-007 계열로 도착한다', async ({ page }) => {
   await goToConfirm(page);

@@ -87,7 +87,7 @@ function CareerCard({
   }
 
   return (
-    <Card className="flex flex-col gap-os-3">
+    <Card className="flex flex-col gap-os-3" data-testid="career-card" data-revision={record.revision}>
       <div className="flex items-center justify-between gap-os-2">
         <h2 className="font-os font-bold text-os-text" style={H2_STYLE}>
           {name}
