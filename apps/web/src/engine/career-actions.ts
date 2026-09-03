@@ -1,7 +1,7 @@
 // EngineClient 위의 순수 함수(React 없음). 06 "분석 이벤트": 실행마다 command_submitted ·
 // command_resolved(outcomeClass = nextAction) · command_failed를 보낸다.
 import type { Command, Effect, PlayerDraft, SimulationMode } from '@offside/domain';
-import { selectEligibleEvents, type EventDefinition } from '@offside/content';
+import { selectChapterCandidates, selectEligibleEvents, type ChapterDefinition, type EventDefinition } from '@offside/content';
 import type { EngineCommand, ExecuteResult, LoadResult } from '@offside/engine-client';
 import { deleteCareerOnServer } from '../api/client.js';
 import { platform } from '../platform/index.js';
@@ -115,14 +115,22 @@ export function confirmPlayer(engine: AppEngine, careerId: string): Promise<Exec
   return execute(engine, careerId, { type: 'CONFIRM_PLAYER', payload: {} });
 }
 
-/** 최신 상태로 selectEligibleEvents(pack, state)를 계산해 ADVANCE { eligibleEvents }를 보낸다. */
+/**
+ * 최신 상태로 selectEligibleEvents(pack, state)·selectChapterCandidates(pack, state)를 계산해
+ * ADVANCE { eligibleEvents, chapterCandidates }를 보낸다(T-2-008 D-38: chapterCandidates가 비면
+ * 챕터는 열리지 않는다).
+ */
 export async function advance(engine: AppEngine, careerId: string): Promise<ExecuteResult> {
   const load: LoadResult = await engine.client.loadCareer(careerId);
   if (!load.ok) {
     return { ok: false, error: load.error };
   }
   const eligibleEvents = selectEligibleEvents(engine.pack, load.snapshot.state);
-  return commit(engine, careerId, load.snapshot.revision, { type: 'ADVANCE', payload: { eligibleEvents } });
+  const chapterCandidates = selectChapterCandidates(engine.pack, load.snapshot.state);
+  return commit(engine, careerId, load.snapshot.revision, {
+    type: 'ADVANCE',
+    payload: { eligibleEvents, chapterCandidates },
+  });
 }
 
 /**
@@ -243,4 +251,96 @@ export function resolveRole(engine: AppEngine, careerId: string, decision: 'ACCE
 
 export function settleSeason(engine: AppEngine, careerId: string): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'SETTLE_SEASON', payload: {} });
+}
+
+type ResolveChapterOutcomePayload = {
+  id: string;
+  weight: number;
+  effects: Effect[];
+  ratingDeltaTenths: number;
+  addTags?: string[];
+  removeTags?: string[];
+};
+
+/**
+ * 팩 outcome(ChapterDefinition['decisions'][number]['options'][number]['outcomes'])을
+ * RESOLVE_CHAPTER payload의 outcome 형태로 좁힌다(toResolveEventOutcomes와 같은 관례).
+ *
+ * PR #43(T-2-014, main 미머지)이 이 payload에 `kind`를 필수로 만들 예정이다 — 지금 main의
+ * `ResolveChapterPayloadSchema`는 strictObject라 `kind`를 실으면 거부되므로, PR 직전
+ * `git fetch origin && git merge origin/main`으로 그 스키마가 들어온 뒤에 outcome.kind를 추가한다.
+ */
+export function toResolveChapterOutcomes(
+  outcomes: ChapterDefinition['decisions'][number]['options'][number]['outcomes'],
+): ResolveChapterOutcomePayload[] {
+  return outcomes.map((outcome) => {
+    const payload: ResolveChapterOutcomePayload = {
+      id: outcome.id,
+      weight: outcome.weight,
+      effects: outcome.effects,
+      ratingDeltaTenths: outcome.ratingDeltaTenths,
+    };
+    if (outcome.addTags !== undefined) payload.addTags = outcome.addTags;
+    if (outcome.removeTags !== undefined) payload.removeTags = outcome.removeTags;
+    return payload;
+  });
+}
+
+/**
+ * `state.pending.kind === 'CHAPTER'`의 `chapterId`로 `engine.pack.chaptersById`에서 정의를 찾아
+ * RESOLVE_CHAPTER를 보낸다. pending이 없거나 팩에 정의·판단·옵션이 없으면(딥링크 오용 등) 커밋
+ * 없이 VALIDATION_FAILED를 돌려준다.
+ */
+export async function resolveChapter(
+  engine: AppEngine,
+  careerId: string,
+  decisionId: string,
+  optionId: string,
+): Promise<ExecuteResult> {
+  const load: LoadResult = await engine.client.loadCareer(careerId);
+  if (!load.ok) {
+    return { ok: false, error: load.error };
+  }
+
+  const pending = load.snapshot.state.pending;
+  if (pending === null || pending.kind !== 'CHAPTER') {
+    return { ok: false, error: { code: 'VALIDATION_FAILED', message: 'resolveChapter: 해소할 pending 챕터가 없다.' } };
+  }
+
+  const definition = engine.pack.chaptersById.get(pending.chapterId);
+  if (definition === undefined) {
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: `resolveChapter: 팩에 챕터 정의가 없다: ${pending.chapterId}` },
+    };
+  }
+
+  const decision = definition.decisions.find((candidate) => candidate.id === decisionId);
+  if (decision === undefined) {
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: `resolveChapter: 정의에 없는 decisionId: ${decisionId}` },
+    };
+  }
+
+  const option = decision.options.find((candidate) => candidate.id === optionId);
+  if (option === undefined) {
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: `resolveChapter: 정의에 없는 optionId: ${optionId}` },
+    };
+  }
+
+  const command: Command = {
+    type: 'RESOLVE_CHAPTER',
+    payload: {
+      chapterId: definition.id,
+      definitionVersion: definition.version,
+      decisionId,
+      optionId,
+      outcomes: toResolveChapterOutcomes(option.outcomes),
+    },
+  };
+
+  return commit(engine, careerId, load.snapshot.revision, command);
 }

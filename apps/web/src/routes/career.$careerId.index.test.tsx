@@ -11,6 +11,7 @@ import {
   advance,
   confirmPlayer,
   createCareer,
+  resolveChapter,
   resolveEvent,
   resolveRole,
   settleSeason,
@@ -127,14 +128,25 @@ async function seasonActiveNoPendingCareerId(engine: AppEngine): Promise<string>
   return careerId;
 }
 
-/** CHAPTER·CONTRACT 자동 통과 슬롯을 advance로 흘려보내 SETTLEMENT pending에 도달한다(FAST 모드
- * 실측: 역할 수락 뒤 CHAPTER→CONTRACT→CHAPTER→SETTLEMENT 순서, 안전 상한 20회). */
+/** CONTRACT 자동 통과 슬롯은 advance로 흘려보내고, CHAPTER(T-2-004 D-38: 자동 통과 대상이 아니다 —
+ * T-2-008이 advance에 chapterCandidates를 채우면서 FAST 모드에서도 MAJOR 챕터, 예: 데뷔전이 실제로
+ * 열린다)는 첫 옵션으로 확정해 SETTLEMENT pending에 도달한다(안전 상한 20회). */
 async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
   const careerId = await seasonActiveNoPendingCareerId(engine);
   for (let step = 0; step < 20; step += 1) {
     const load = await engine.client.loadCareer(careerId);
     if (!load.ok) throw new Error('loadCareer 실패');
-    if (load.snapshot.state.pending?.kind === 'SETTLEMENT') return careerId;
+    const pending = load.snapshot.state.pending;
+    if (pending?.kind === 'SETTLEMENT') return careerId;
+    if (pending?.kind === 'CHAPTER') {
+      const definition = engine.pack.chaptersById.get(pending.chapterId);
+      if (!definition) throw new Error(`팩에 챕터 정의가 없다: ${pending.chapterId}`);
+      const decision = definition.decisions[pending.resolved.length];
+      if (!decision) throw new Error('이미 모든 판단이 끝났다');
+      const resolved = await resolveChapter(engine, careerId, decision.id, decision.options[0]!.id);
+      if (!resolved.ok) throw new Error(`resolveChapter 실패: ${resolved.error.message}`);
+      continue;
+    }
     const advanced = await advance(engine, careerId);
     if (!advanced.ok) throw new Error(`advance 실패: ${advanced.error.message}`);
   }

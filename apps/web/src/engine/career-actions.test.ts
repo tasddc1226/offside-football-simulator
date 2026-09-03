@@ -1,5 +1,5 @@
 import { EFFECT_DEFAULTS, loadContentPack } from '@offside/content';
-import { career01, career01EngineCommands, rulesetProto } from '@offside/fixtures';
+import { career01, career01EngineCommands, career05Chapter, career05ChapterEngineCommands, rulesetProto } from '@offside/fixtures';
 import { MemoryLocalStore, inlineSimulator, type ExecuteResult } from '@offside/engine-client';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -9,10 +9,12 @@ import {
   createCareer,
   deleteCareer,
   execute,
+  resolveChapter,
   resolveEvent,
   resolveRole,
   settleSeason,
   startSeason,
+  toResolveChapterOutcomes,
   toResolveEventOutcomes,
   toStartSeasonPayload,
   updateDraft,
@@ -241,10 +243,23 @@ describe('settleSeason', () => {
     const roleResolved = await resolveRole(engine, careerId, 'ACCEPT');
     if (!roleResolved.ok) throw new Error('resolveRole 실패');
 
-    // FAST 모드는 CHAPTER·CONTRACT 같은 자동 통과 슬롯만 남기고 SETTLEMENT까지 곧장 advance된다
-    // (실측: 역할 수락 뒤 최대 4회). 안전 상한 20회.
+    // FAST 모드는 CONTRACT 같은 자동 통과 슬롯만 advance로 흘려보내면 SETTLEMENT까지 곧장
+    // 도달한다. CHAPTER는 자동 통과 대상이 아니라서(T-2-004 D-38) advance에 chapterCandidates가
+    // 실리면(T-2-008) FAST 모드에서도 MAJOR 챕터(예: 데뷔전)가 실제로 열린다 — 첫 옵션으로 확정해
+    // 넘긴다. 안전 상한 20회.
     let current = roleResolved;
     for (let step = 0; step < 20 && current.domainSnapshot.state.pending?.kind !== 'SETTLEMENT'; step += 1) {
+      const pending = current.domainSnapshot.state.pending;
+      if (pending?.kind === 'CHAPTER') {
+        const definition = engine.pack.chaptersById.get(pending.chapterId);
+        if (!definition) throw new Error(`팩에 챕터 정의가 없다: ${pending.chapterId}`);
+        const decision = definition.decisions[pending.resolved.length];
+        if (!decision) throw new Error('이미 모든 판단이 끝났다');
+        const resolved = await resolveChapter(engine, careerId, decision.id, decision.options[0]!.id);
+        if (!resolved.ok) throw new Error(`resolveChapter 실패: ${resolved.error.message}`);
+        current = resolved;
+        continue;
+      }
       const advanced = await advance(engine, careerId);
       if (!advanced.ok) throw new Error(`advance 실패: ${advanced.error.message}`);
       current = advanced;
@@ -380,6 +395,196 @@ describe('결정론: 픽스처 재생 vs 액션 경로', () => {
     expect(finalResult.ok).toBe(true);
     if (!finalResult.ok) throw new Error('unreachable');
     expect(finalResult.domainSnapshot.stateHash).toBe(fixtureFinalHash);
+  });
+});
+
+describe('toResolveChapterOutcomes', () => {
+  it('CHP-MATCH-001 D1.ROLE의 outcome을 ratingDeltaTenths·effects·addTags를 실은 payload로 좁힌다', () => {
+    const pack = loadContentPack('0.1.0');
+    const definition = pack.chaptersById.get('CHP-MATCH-001')!;
+    const roleOption = definition.decisions[0]!.options.find((option) => option.id === 'ROLE')!;
+
+    const outcomes = toResolveChapterOutcomes(roleOption.outcomes);
+
+    expect(outcomes).toEqual([
+      {
+        id: 'ROLE-SUCCESS',
+        weight: 50,
+        effects: roleOption.outcomes[0]!.effects,
+        ratingDeltaTenths: 6,
+        addTags: ['프로_데뷔'],
+      },
+      {
+        id: 'ROLE-FAIL',
+        weight: 50,
+        effects: roleOption.outcomes[1]!.effects,
+        ratingDeltaTenths: -4,
+        addTags: ['프로_데뷔'],
+      },
+    ]);
+  });
+
+  it('removeTags가 없는 outcome은 그 필드를 payload에 넣지 않는다', () => {
+    const pack = loadContentPack('0.1.0');
+    const definition = pack.chaptersById.get('CHP-MATCH-001')!;
+    const safeOption = definition.decisions[0]!.options.find((option) => option.id === 'SAFE')!;
+    expect(safeOption.outcomes[0]!.removeTags).toBeUndefined();
+
+    const [outcome] = toResolveChapterOutcomes([safeOption.outcomes[0]!]);
+
+    expect(outcome).not.toHaveProperty('removeTags');
+  });
+});
+
+describe('resolveChapter', () => {
+  it('pending CHAPTER가 없으면 커밋 없이 VALIDATION_FAILED다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToSigned(engine);
+
+    const result = await resolveChapter(engine, careerId, 'D1', 'SAFE');
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.error.code).toBe('VALIDATION_FAILED');
+  });
+
+  /** replayToSigned 뒤 CHAPTER 모드로 시즌을 시작해 역할을 수락하고, EVENT는 첫 선택지로 흘려보내며
+   * pending이 CHAPTER(CHP-MATCH-001 데뷔전)가 될 때까지 advance를 반복한다(안전 상한 15회). */
+  async function reachDebutChapter(engine: AppEngine): Promise<string> {
+    const careerId = await replayToSigned(engine);
+    const started = await startSeason(engine, careerId, { simulationMode: 'CHAPTER' });
+    if (!started.ok) throw new Error(`startSeason 실패: ${started.error.message}`);
+    const roleResolved = await resolveRole(engine, careerId, 'ACCEPT');
+    if (!roleResolved.ok) throw new Error(`resolveRole 실패: ${roleResolved.error.message}`);
+
+    let current = roleResolved;
+    for (let step = 0; step < 15; step += 1) {
+      const pending = current.domainSnapshot.state.pending;
+      if (pending?.kind === 'CHAPTER') return careerId;
+      if (pending?.kind === 'EVENT') {
+        const definition = engine.pack.eventsById.get(pending.eventId);
+        const choiceId = definition?.choices[0]?.id;
+        if (!choiceId) throw new Error(`이벤트에 선택지가 없다: ${pending.eventId}`);
+        const resolved = await resolveEvent(engine, careerId, choiceId);
+        if (!resolved.ok) throw new Error(`resolveEvent 실패: ${resolved.error.message}`);
+        current = resolved;
+        continue;
+      }
+      const advanced = await advance(engine, careerId);
+      if (!advanced.ok) throw new Error(`advance 실패: ${advanced.error.message}`);
+      current = advanced;
+    }
+    throw new Error('데뷔전 챕터에 도달하지 못했다(최대 15회 시도)');
+  }
+
+  it('정의에 없는 decisionId·optionId는 커밋 없이 VALIDATION_FAILED다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await reachDebutChapter(engine);
+
+    const badDecision = await resolveChapter(engine, careerId, 'NOT-A-DECISION', 'SAFE');
+    expect(badDecision.ok).toBe(false);
+    if (badDecision.ok) throw new Error('unreachable');
+    expect(badDecision.error.code).toBe('VALIDATION_FAILED');
+
+    const badOption = await resolveChapter(engine, careerId, 'D1', 'NOT-AN-OPTION');
+    expect(badOption.ok).toBe(false);
+    if (badOption.ok) throw new Error('unreachable');
+    expect(badOption.error.code).toBe('VALIDATION_FAILED');
+  });
+
+  it('CHP-MATCH-001의 유일한 판단(D1)을 확정하면 pending이 닫히고(nextAction ADVANCE) CHAPTER_RESOLVED가 남는다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await reachDebutChapter(engine);
+
+    const result = await resolveChapter(engine, careerId, 'D1', 'SAFE');
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.nextAction).toBe('ADVANCE');
+    expect(result.domainSnapshot.state.pending).toBeNull();
+    expect(result.domainSnapshot.state.timeline.at(-1)).toMatchObject({ kind: 'CHAPTER_RESOLVED' });
+    expect(result.domainSnapshot.state.season?.chapters.at(-1)?.chapterId).toBe('CHP-MATCH-001');
+  });
+
+  it('결정론(실제 팩 자기 일관성): raw execute로 만든 RESOLVE_CHAPTER 명령과 resolveChapter() 액션이 같은 stateHash를 만든다. ' +
+    'career-05-chapter 골든 픽스처는 이 팩의 실제 형태(D1 판단 1개, 옵션 SAFE/ROLE/BOLD)와 다른 합성 시나리오(판단 D1·D2, 옵션 OPT-CONFIDENT/OPT-SIMPLE)라 ' +
+    '이 액션 경로로는 그 골든을 재현할 수 없다(PR 본문 "범위 밖 발견 사항" 참고) — 대신 실제 팩으로 raw 경로와 액션 경로가 서로 일치하는지만 본다.', async () => {
+    const rawEngine = makeTestEngine();
+    const rawCareerId = await reachDebutChapter(rawEngine);
+    const rawLoad = await rawEngine.client.loadCareer(rawCareerId);
+    if (!rawLoad.ok) throw new Error('loadCareer 실패');
+    const rawPending = rawLoad.snapshot.state.pending;
+    if (rawPending === null || rawPending.kind !== 'CHAPTER') throw new Error('CHAPTER pending이 아니다');
+    expect(rawPending.chapterId).toBe('CHP-MATCH-001');
+
+    const definition = rawEngine.pack.chaptersById.get('CHP-MATCH-001')!;
+    const decision = definition.decisions[0]!;
+    const option = decision.options.find((candidate) => candidate.id === 'SAFE')!;
+
+    const rawResult = await rawEngine.client.execute({
+      careerId: rawCareerId,
+      command: {
+        type: 'RESOLVE_CHAPTER',
+        commandId: 'raw-resolve-chapter',
+        expectedRevision: rawLoad.snapshot.revision,
+        payload: {
+          chapterId: definition.id,
+          definitionVersion: definition.version,
+          decisionId: decision.id,
+          optionId: option.id,
+          outcomes: toResolveChapterOutcomes(option.outcomes),
+        },
+      },
+    });
+    if (!rawResult.ok) throw new Error(`raw RESOLVE_CHAPTER 실패: ${rawResult.error.message}`);
+
+    const actionEngine = makeTestEngine();
+    const actionCareerId = await reachDebutChapter(actionEngine);
+    const actionResult = await resolveChapter(actionEngine, actionCareerId, decision.id, option.id);
+    if (!actionResult.ok) throw new Error(`resolveChapter 실패: ${actionResult.error.message}`);
+
+    expect(actionResult.domainSnapshot.stateHash).toBe(rawResult.domainSnapshot.stateHash);
+  });
+});
+
+describe('결정론: career-05-chapter 픽스처 raw 재생(합성 시나리오, 액션 경로와는 무관)', () => {
+  it('career01 뒤에 이어 붙인 career-05-chapter 명령을 raw로 재생하면 pending 골든(D1 확정 직후)과 최종 골든(SETTLE_SEASON 이후) stateHash를 모두 맞춘다', async () => {
+    const engine = makeTestEngine();
+    const newId = makeIdGenerator('chapter-fixture');
+    const careerId = career01.createCareer.careerId;
+
+    for (const command of career01EngineCommands(newId)) {
+      const result = await engine.client.execute({
+        careerId,
+        command,
+        ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc_kickoff' } : {}),
+      });
+      if (!result.ok) throw new Error(`career01 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+    }
+
+    const chapterCommands = career05ChapterEngineCommands(newId, career01.golden.revision);
+    // START_SEASON · RESOLVE_ROLE · ADVANCE · RESOLVE_CHAPTER(D1) — D1 확정 직후 pending 골든과 대조한다.
+    const pendingCommands = chapterCommands.slice(0, 4);
+    let lastResult: ExecuteResult | null = null;
+    for (const command of pendingCommands) {
+      const result = await engine.client.execute({ careerId, command });
+      if (!result.ok) throw new Error(`career-05-chapter 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+      lastResult = result;
+    }
+    if (lastResult === null || !lastResult.ok) throw new Error('unreachable');
+    expect(lastResult.domainSnapshot.stateHash).toBe(career05Chapter.pendingGolden.stateHash);
+    expect(lastResult.domainSnapshot.state.pending).toEqual(career05Chapter.pendingGolden.pending);
+
+    const remainingCommands = chapterCommands.slice(pendingCommands.length);
+    let finalResult: ExecuteResult | null = null;
+    for (const command of remainingCommands) {
+      const result = await engine.client.execute({ careerId, command });
+      if (!result.ok) throw new Error(`career-05-chapter 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+      finalResult = result;
+    }
+    if (finalResult === null || !finalResult.ok) throw new Error('unreachable');
+
+    expect(finalResult.domainSnapshot.stateHash).toBe(career05Chapter.golden.stateHash);
   });
 });
 
