@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (오전, PR #33 Google 연결 머지 — Phase 1 잔여 T-1-014 하나)
+
+**결과**: T-1-013(PR #33, `547686c`) 머지. Google OIDC(Authorization Code + PKCE, arctic 3.7.0) start/callback/merge/unlink. state·codeVerifier는 10분 HttpOnly 쿠키(`Path=/v1/auth/google`), 시작은 IP당 시간당 30회. 콜백 결과는 ADR-008 표대로 linked/switched/merge_required(세션 `pending_merge_*` 10분 TTL, 확정 직전 대상 프로필 재검증). 프로필 삭제 시 google_sub·email을 비워 같은 계정 재연결을 허용. `Profile`에 `googleEmailMasked`·`pendingMerge`(default null). `platform.features.googleLink`로만 채널 분기(toss false). SCR-030 Google 행·병합 선택 대화상자·로그아웃 활성화. 가짜 OIDC는 `ENVIRONMENT=local && GOOGLE_FAKE=1`일 때만. 리뷰 수정 요청 0건(워커가 /review:pr Important 1건 — 병합 확정 시 대상 프로필 삭제 여부 미검증 — 을 스스로 고쳤다). 워커 비용 약 $22.2, 79분.
+
+**검증**: 루트 체인 통과(e2e 41). 실 api e2e는 google-link 2건 통과, `recovery-api.spec.ts` 1건 실패 — PR #32(T-1-016)가 SCR-002 성별을 필수로 만들면서 이 실 api 전용 스펙의 온보딩 헬퍼가 `/create`에 머문다. 기본 체인은 실 api 스펙을 건너뛰어 PR #32 검증에서 잡히지 않았다. T-1-014가 첫 커밋으로 고친다. 교훈: 화면 폼을 바꾸는 PR은 `E2E_WITH_API=1` 스펙도 돌린다.
+
+**남긴 것**: Google 연결 프로필에서 로그아웃하면 로컬 커리어는 남지만 다음 `GET /v1/profile`이 새 익명 프로필을 발급하므로 기존 커리어 PUT이 소유자 불일치가 될 수 있다 — T-1-014가 재현·기록하고 처리 규칙은 Phase 2 T-2-011에서 정한다. 실제 Google 계정 검증은 U-003(클라이언트 ID·시크릿) 뒤.
+
 ## 2026-09-03 (오전, PR #32 선수 성별·선호 포지션 머지 — T-1-014 투입)
 
 **결과**: T-1-016(PR #32, `4eb8112`) 머지. `PlayerDraft`에 `gender`(FEMALE·MALE·UNSPECIFIED) 추가, CONFIRM_PLAYER는 7개 필드를 요구. `PlayerProfile`·`PlayerPublic`의 `position`을 `preferredPosition`(불변)·`primaryPosition`(현재 주포지션, 확정 시 같은 값)으로 분리. SCR-002 성별 RadioGroup(설명 `aria-describedby`)·"선호 포지션" 라벨, SCR-004 요약, PlayerHeader는 확정 뒤 `primaryPosition`. content에 gender가 조건 DSL·Effect target 어디에도 없다는 불변식 테스트. golden은 revision 10·rngStateDraws 30·baseOvr 59 그대로이고 stateHash만 바뀌었다(성별이 결과를 바꾸지 않음을 확인). 런타임 migration 함수는 없다(출시 전 `schemaVersion: 1`, 기존에도 없었음). gender는 분석·로그·오류 details에 복사되지 않는다(grep 확인). 리뷰 수정 요청 0건, 워커 비용 약 $15.7, 43분.

@@ -19,6 +19,7 @@ const tossStorage = new MemoryStringKV();
 export const tossPlatform: Platform = {
   channel: 'toss',
   theme: { forced: 'dark' },
+  features: { googleLink: false },
   createLocalStore: () => Promise.resolve(createKvLocalStore(tossStorage)),
   async clearLocalData() {
     for (const key of await tossStorage.keys()) {

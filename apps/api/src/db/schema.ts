@@ -38,6 +38,9 @@ export const sessions = sqliteTable(
     expiresAt: text('expires_at').notNull(),
     revokedAt: text('revoked_at'),
     lastSeenAt: text('last_seen_at').notNull(),
+    /** T-1-013 D-21. Google 콜백이 병합 선택을 기다릴 때만 채워진다(10분 TTL). */
+    pendingMergeProfileId: text('pending_merge_profile_id'),
+    pendingMergeExpiresAt: text('pending_merge_expires_at'),
   },
   (table) => [
     uniqueIndex('sessions_token_hash_unique').on(table.tokenHash),
@@ -146,7 +149,7 @@ export const authAttempts = sqliteTable(
   'auth_attempts',
   {
     id: text('id').primaryKey(),
-    kind: text('kind', { enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM'] }).notNull(),
+    kind: text('kind', { enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START'] }).notNull(),
     subject: text('subject').notNull(),
     windowStart: text('window_start').notNull(),
     count: integer('count').notNull(),
@@ -154,12 +157,14 @@ export const authAttempts = sqliteTable(
   (table) => [uniqueIndex('auth_attempts_kind_subject_unique').on(table.kind, table.subject)],
 );
 
-/** T-1-004, ADR-008. `PROFILE_MERGED`·`PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`. */
+/** T-1-004, ADR-008. `PROFILE_MERGED`·`PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`·`GOOGLE_LINKED`·`GOOGLE_UNLINKED`(T-1-013). */
 export const auditLog = sqliteTable(
   'audit_log',
   {
     id: text('id').primaryKey(),
-    kind: text('kind', { enum: ['PROFILE_MERGED', 'PROFILE_DELETED', 'RECOVERY_CODE_ISSUED'] }).notNull(),
+    kind: text('kind', {
+      enum: ['PROFILE_MERGED', 'PROFILE_DELETED', 'RECOVERY_CODE_ISSUED', 'GOOGLE_LINKED', 'GOOGLE_UNLINKED'],
+    }).notNull(),
     profileId: text('profile_id').notNull(),
     payloadJson: text('payload_json').notNull(),
     createdAt: text('created_at').notNull(),

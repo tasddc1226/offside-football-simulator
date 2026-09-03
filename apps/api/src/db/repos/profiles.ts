@@ -103,3 +103,30 @@ export async function getProfileByRecoveryCodeHash(db: Db, hash: string): Promis
 export async function softDeleteProfile(db: Db, id: string, at: string): Promise<void> {
   await db.update(profiles).set({ deletedAt: at }).where(eq(profiles.id, id));
 }
+
+/**
+ * D-21. 삭제된 프로필(`deletedAt` not null)도 존재 여부 판정을 위해 그대로 돌려준다 — 콜백은 그
+ * sub를 "처음 보는 sub"로 취급해 재연결을 허용한다(delete-profile.ts가 삭제 시 google_sub를 이미
+ * null로 비우므로 실무에서는 겹치지 않지만, 방어적으로 호출자가 다시 판단한다).
+ */
+export async function getProfileByGoogleSub(db: Db, sub: string): Promise<ProfileRecord | undefined> {
+  const [row] = await db.select().from(profiles).where(eq(profiles.googleSub, sub));
+  return row ? toRecord(row) : undefined;
+}
+
+/** D-21: 이미 같은 값이면 그대로 둔다(브리프: "이미 같은 값이면 그대로") — 호출자가 판단해도 되지만 항상 덮어써도 결과는 같다. */
+export async function linkGoogleAccount(
+  db: Db,
+  id: string,
+  input: { googleSub: string; email: string | null; linkedAt: string },
+): Promise<void> {
+  await db
+    .update(profiles)
+    .set({ googleSub: input.googleSub, email: input.email, linkedAt: input.linkedAt })
+    .where(eq(profiles.id, id));
+}
+
+/** API-AUTH-006: `google_sub`·`email`·`linked_at`을 비운다. */
+export async function unlinkGoogleAccount(db: Db, id: string): Promise<void> {
+  await db.update(profiles).set({ googleSub: null, email: null, linkedAt: null }).where(eq(profiles.id, id));
+}

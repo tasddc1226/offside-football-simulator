@@ -66,6 +66,8 @@ const UNISSUED_PROFILE: Profile = {
   linked: { google: false, toss: false },
   recoveryCodeIssuedAt: null,
   createdAt: '2026-09-01T00:00:00Z',
+  googleEmailMasked: null,
+  pendingMerge: null,
 };
 
 beforeEach(() => {
