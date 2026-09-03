@@ -30,6 +30,7 @@
 
 - 서브에이전트를 띄우지 않는다 — 리뷰용이든 조사용이든 전부. gstack `/review`·`/codex`·adversarial 리뷰·`/simplify`·병렬 fork·Agent/Explore 조사 에이전트 금지(컨텍스트를 복제해 비용이 배로 든다). 파일은 직접 읽는다. 유일한 예외는 Orca PR 게이트용 `/review:pr` 1회(로컬 모드)다. 리뷰는 오케스트레이터가 한다.
 - 의존성 추가 시 정확한 버전으로 고정한다. pnpm의 최소 배포 경과 정책이 막는 버전은 `minimumReleaseAgeExclude`로 우회하지 말고 정책을 통과하는 더 오래된 버전을 쓴다.
+- 전체 체인의 e2e 단계 전에 `lsof -nP -iTCP:5174 -sTCP:LISTEN`이 비어 있는지 확인한다. Playwright가 이미 떠 있는 Vite 서버를 재사용하므로(포트 고정 5174), 다른 워커나 오케스트레이터의 e2e와 겹치면 다른 코드를 테스트하게 된다. 비어 있지 않으면 끝날 때까지 기다린다(`until ! lsof -nP -iTCP:5174 -sTCP:LISTEN >/dev/null; do sleep 10; done`).
 - PR 직전 `git fetch origin && git merge origin/main`으로 최신 main을 합친다. `pnpm-lock.yaml` 충돌은 손으로 고치지 말고 `git checkout origin/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile`로 재생성한 뒤 전체 체인을 다시 돌린다.
 
 ## 진행 보고
