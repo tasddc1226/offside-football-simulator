@@ -80,7 +80,7 @@ export async function execute(engine: AppEngine, careerId: string, command: Comm
 const E2E_SEED_STORAGE_KEY = 'offside:e2e-seed';
 
 function newCareerSeed(): string {
-  if (import.meta.env.DEV) {
+  if (import.meta.env.DEV && typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
     const override = localStorage.getItem(E2E_SEED_STORAGE_KEY);
     if (override !== null) return override;
   }
