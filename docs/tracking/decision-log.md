@@ -2,6 +2,16 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (밤, PR #43 T-2-014 머지 — Phase 3+ 공유 계약 D-40~D-42, ADR-010 승인 대기)
+
+**결과**: T-2-014(PR #43, `dd480a2`) 머지. (D-40) Effect: kind→타깃 소유권 표(ADR-010), `ONCE_PER_SEASON`(dedupe 키 `season:<index>:<sourceId>`, 결산 회귀 시 정리), `AT_SEASON_END`·`SEASONS_AFTER`(저장 시 `AT_SEASON_INDEX`로 치환), `REPLACE`는 적용 전 값을 `restoreTo`에 저장해 복원, `reasonTag`, 결산 직전 `expireAtSeasonEnd`(AT_SEASON_END·이번 시즌 이하 AT_SEASON_INDEX·자연 만료 못 한 AT_STEP 강제 만료) → 그 위에서 성장·회귀. PERMANENT는 만료 금지(콘텐츠 스키마). (D-41) `computeMarketValueIndex(input, marketValueRules)` 순수 함수(bp 가중 7성분, 0~10000 centi), `MarketValueInput`에 `truePotential` 타입 배제(`expectTypeOf`), `buildMarketValueInput` 어댑터(`contractSeasonsRemaining = lengthSeasons − 서명 이후 SEASON_STARTED 횟수`, `popularityCenti` 5000 고정은 Phase 4까지). (D-42) `CAREER_TAG_IDS` 16종(14 문서 순서)·`CAREER_TAGS`(label·rarity·evaluateAt·ownerPhase), `state.careerTags`·`careerTagGrants`, `grantCareerTag`(멱등·정렬), `evaluateCareerTags` 결산 훅(seasonHistory 반영 뒤 평가, timeline `CAREER_TAG_GRANTED`), 평가기 TAG-BIG-GAME(챕터 SUCCESS 5회)·TAG-DERBY-HERO(더비 3회)·TAG-IRONMAN(10시즌 80%). `RESOLVE_CHAPTER.outcomes[].kind` 필수, `ChapterRecord.trigger`·`decisions[].outcomeKind`. 골든은 hash·신규 필드만 변경.
+
+**리뷰 결정**: 수정 필수 2건 — (1) 세 번째 반복된 "타입 확장으로 깨진 apps/web typecheck": main(PR #42) 머지 뒤 테스트 리터럴·labels·SyncConflictDialog·대시보드 timeline switch 최소 수정, e2e는 `E2E_PORT=5194`로 필수. 워커가 또 "기존 오류"라 적었으나 이 PR의 `CAREER_TAG_GRANTED` 추가가 원인. (2) `expireAtSeasonEnd`의 `AT_SEASON_INDEX` 비교를 `===`에서 `<=`로(유스 구간 index 0 효과가 영원히 남지 않게, 테스트 추가). 수용: `contractSeasonsRemaining` 유도식, 태그 ownerPhase/evaluateAt 배정(ADR-010 표), `popularityCenti` 고정.
+
+**사용자 결정 필요(U-012)**: ADR-010(공유 계약)은 워커가 작성했다 — ADR-001~009처럼 사용자 승인이 필요하다. 특히 (a) 태그별 ownerPhase 배정, (b) 시장가치 가중치(bp 3500/2000/1500/1000/1000/500/500)와 `popularityCenti` 5000 고정, (c) PERMANENT 만료 금지. 승인 전에도 Phase 3·4 브리프 작성은 이 계약을 전제로 진행한다.
+
+**후속 기록**: `MarketValueInput.leagueTier`는 `contract.leagueTier`에서 오므로 Phase 3 이적이 계약을 바꿀 때 함께 갱신해야 한다. 웹 `TrainingFocus` 재선언(T-2-007)은 domain 타입 import로 정리(T-2-009 또는 T-2-011).
+
 ## 2026-09-03 (밤, PR #42 T-2-007 머지 — 시즌이 브라우저에서 돈다, T-2-008·T-2-009 투입)
 
 **결과**: T-2-007(PR #42, `4feeb15`) 머지. 계약 → 프리시즌 계획(SCR-005: 모드 FAST/CHAPTER 기본값 RULE-TIME-003, 훈련 계획 ROLE/TECHNICAL/PHYSICAL/MENTAL → `START_SEASON.trainingFocus`) → 시즌 준비(SCR-011: 12 step 미리보기·컵 일정·시즌 시작) → 역할 제안(SCR-012: KEEP/POSITION_CHANGE CompareCards/ROLE_CHANGE → `RESOLVE_ROLE`) → 대시보드 시즌화(SCR-029: pending 종류별 다음 결정 카드, 일정표 탭 경기별 스코어·출전·평점, 전술실 탭 `deriveTacticalRoom`) → 결산까지 브라우저에서 이어진다. SCR-033 능력치 상세(묶음·역할 가중치·OVR 미리보기, truePotential 미노출 테스트). SCR-031·015는 자리표시(T-2-008·009). playwright `E2E_PORT`/`E2E_API_URL` override. e2e 60 통과(season 2·a11y 4 신규), 초기 번들 97 KB gzip. 계약 뒤 시즌 1 전체(계획→결산)→시즌 2 계획까지 e2e 3.9~5.0초.
