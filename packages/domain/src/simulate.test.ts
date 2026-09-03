@@ -3,9 +3,9 @@ import { rulesetProto } from './__fixtures__/career-01.js';
 import { compareCodePoints } from './canonical.js';
 import { hashState } from './hash.js';
 import { rollRange } from './roll-range.js';
-import { computeSquadStatus, squadRoleFromSelection } from './selection.js';
+import { computeSquadStatus, familiarityOf, rankPositionForPlayer, squadRoleFromSelection } from './selection.js';
 import { simulate, verifySnapshot, type Command, type SimulationInput } from './simulate.js';
-import type { DomainSnapshot, Effect, PlayerProfile, TimelineEntry } from './types.js';
+import type { DomainSnapshot, Effect, PlayerProfile, Position, TimelineEntry } from './types.js';
 
 const RULESET_VERSION = '1.0.0';
 const CONTENT_PACK = '0.1.0';
@@ -1175,22 +1175,56 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
 
   const TRUST_DELTAS = RULESET.selectionRules.roleProposal;
 
+  /**
+   * resolveRole이 네 분기 공통으로 재산출하는 season.selection을 테스트에서 독립적으로 재현한다.
+   * `overrides`로 넘긴 값만 각 분기가 실제로 바꾸는 필드(POSITION_CHANGE의 position/tacticalFit/
+   * positionProficiency, ROLE_CHANGE의 squadStatus)에 반영하고 나머지는 resolve 전 snapshot 값을
+   * 그대로 쓴다.
+   */
+  function expectedSelectionAfter(
+    before: DomainSnapshot,
+    managerTrust: number,
+    overrides: { primaryPosition?: Position; tacticalFit?: number; positionProficiency?: number; squadStatus?: number } = {},
+  ) {
+    const season = before.state.season!;
+    const profile = before.state.player.profile!;
+    const rules = RULESET.selectionRules;
+    return rankPositionForPlayer({
+      ruleset: RULESET,
+      styleId: season.styleId,
+      position: overrides.primaryPosition ?? profile.primaryPosition,
+      playerName: profile.name,
+      baseOvr: profile.baseOvr,
+      tacticalFit: overrides.tacticalFit ?? before.state.context.tacticalFit,
+      managerTrust,
+      form: before.state.state.form,
+      fitness: before.state.state.fitness,
+      morale: before.state.state.morale,
+      familiarity: familiarityOf(overrides.positionProficiency ?? before.state.context.positionProficiency, rules),
+      squadStatus: overrides.squadStatus ?? before.state.context.squadStatus,
+      competitors: season.squad.competitors,
+    });
+  }
+
   describe('KEEP', () => {
     function keepSnapshot(): DomainSnapshot {
       const base = activeSnapshotWithRolePending();
       return withRoleProposal(base, { type: 'KEEP', position: 'W', squadRole: 'STARTER' });
     }
 
-    it('ACCEPT: managerTrust += keepConfirmTrustDelta, season은 그대로, pending은 닫힌다', () => {
+    it('ACCEPT: managerTrust += keepConfirmTrustDelta, primaryPosition은 그대로, season.selection은 새 managerTrust로 재산출된다, pending은 닫힌다', () => {
       const snapshot = keepSnapshot();
       const trustBefore = snapshot.state.relationships.managerTrust;
-      const seasonBefore = snapshot.state.season;
       const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'ACCEPT') });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore + TRUST_DELTAS.keepConfirmTrustDelta);
-      expect(result.snapshot.state.season?.squadRole).toBe(seasonBefore?.squadRole);
-      expect(result.snapshot.state.season?.selection).toEqual(seasonBefore?.selection);
+      const trustAfter = trustBefore + TRUST_DELTAS.keepConfirmTrustDelta;
+      const expectedSelection = expectedSelectionAfter(snapshot, trustAfter);
+      expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
+      expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
+      // 브리프 D-26: season.squadRole은 항상 재산출된 season.selection에서 유도된다(squadRoleFromSelection
+      // 이 유일한 유도 규칙) — proposal이 들고 있던 예측값을 그대로 옮기지 않는다.
+      expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
       expect(result.snapshot.state.player.profile?.primaryPosition).toBe('W');
       expect(result.snapshot.state.pending).toBeNull();
       expect(result.snapshot.checkpoint).toBe('STEP_BOUNDARY');
@@ -1205,14 +1239,17 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       });
     });
 
-    it('DECLINE: managerTrust += declineTrustDelta, season은 그대로다', () => {
+    it('DECLINE: managerTrust += declineTrustDelta, season.selection·squadRole도 그 새 managerTrust로 재산출된다', () => {
       const snapshot = keepSnapshot();
       const trustBefore = snapshot.state.relationships.managerTrust;
       const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'DECLINE') });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore + TRUST_DELTAS.declineTrustDelta);
-      expect(result.snapshot.state.season?.squadRole).toBe(snapshot.state.season?.squadRole);
+      const trustAfter = trustBefore + TRUST_DELTAS.declineTrustDelta;
+      const expectedSelection = expectedSelectionAfter(snapshot, trustAfter);
+      expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
+      expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
+      expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
       expect(result.snapshot.state.pending).toBeNull();
       expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'KEEP' });
     });
@@ -1224,34 +1261,51 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       return withRoleProposal(base, { type: 'ROLE_CHANGE', position: 'W', from: 'STARTER', to: 'ROTATION' });
     }
 
-    it('ACCEPT: season.squadRole만 제안값으로 바뀌고, contract.rolePromise는 그대로다', () => {
+    // proposal.to('ROTATION')는 제안 계산 시점의 예측값일 뿐이다 — resolveRole은 이를 season.squadRole에
+    // 그대로 옮기지 않고, context.squadStatus를 그 값 기준으로 재계산한 뒤 selection을 다시 산출해
+    // squadRole을 유도한다(D-26). 이 fixture는 재산출해도 PLAYER가 여전히 선발권 안이라 결과가
+    // 'STARTER'다 — proposal.to를 맹신했다면 'ROTATION'이 되어 실제와 어긋났을 것이다.
+    it('ACCEPT: contract.rolePromise는 그대로, season.squadRole·selection은 재산출 결과에서 나온다', () => {
       const snapshot = roleChangeSnapshot();
       const trustBefore = snapshot.state.relationships.managerTrust;
       const rolePromiseBefore = snapshot.state.contract?.rolePromise;
       const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'ACCEPT') });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.snapshot.state.season?.squadRole).toBe('ROTATION');
+      const trustAfter = trustBefore + TRUST_DELTAS.acceptTrustDelta;
+      const squadStatusAfter = computeSquadStatus(
+        { rolePromise: 'ROTATION', captaincy: 'NONE', lastRating: null },
+        RULESET.selectionRules,
+        RULESET.contractRules.squadStatusByRole,
+      );
+      const expectedSelection = expectedSelectionAfter(snapshot, trustAfter, { squadStatus: squadStatusAfter });
+      expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
+      expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
       expect(result.snapshot.state.contract?.rolePromise).toBe(rolePromiseBefore);
-      expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore + TRUST_DELTAS.acceptTrustDelta);
+      expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
       expect(result.snapshot.state.pending).toBeNull();
       expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'ROLE_CHANGE' });
     });
 
-    it('DECLINE: season.squadRole은 바뀌지 않는다', () => {
+    it('DECLINE: contract.rolePromise·context.squadStatus는 그대로, season.selection·squadRole은 declineTrustDelta 반영 재산출 결과다', () => {
       const snapshot = roleChangeSnapshot();
-      const squadRoleBefore = snapshot.state.season?.squadRole;
+      const squadStatusBefore = snapshot.state.context.squadStatus;
       const trustBefore = snapshot.state.relationships.managerTrust;
       const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'DECLINE') });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.snapshot.state.season?.squadRole).toBe(squadRoleBefore);
-      expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore + TRUST_DELTAS.declineTrustDelta);
+      const trustAfter = trustBefore + TRUST_DELTAS.declineTrustDelta;
+      const expectedSelection = expectedSelectionAfter(snapshot, trustAfter);
+      expect(result.snapshot.state.context.squadStatus).toBe(squadStatusBefore);
+      expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
+      expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
+      expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
     });
 
-    // 브리프: "ROLE_CHANGE → … context.squadStatus 재계산". squadRole이 STARTER→ROTATION으로
-    // 바뀌므로 squadStatus도 ROTATION 기준값으로 다시 계산돼야 한다(옛 STARTER 기준값이 남으면 안 된다).
-    it('ACCEPT: context.squadStatus가 새 squadRole(ROTATION) 기준으로 재계산된다', () => {
+    // 브리프: "ROLE_CHANGE → … context.squadStatus 재계산". context.squadStatus는 proposal.to(제안된
+    // 새 역할, 여기선 ROTATION) 기준으로 재계산한다 — 재산출된 season.squadRole이 실제로 무엇이
+    // 되는지와는 무관하다(재산출 결과에 맞춰 순환 계산하면 피드백 루프가 생긴다).
+    it('ACCEPT: context.squadStatus는 proposal.to(ROTATION) 기준으로 재계산된다', () => {
       const snapshot = roleChangeSnapshot();
       const expected = computeSquadStatus(
         { rolePromise: 'ROTATION', captaincy: 'NONE', lastRating: null },
@@ -1311,17 +1365,19 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(season.squadRole).toBe(squadRoleFromSelection(season.selection));
     });
 
-    it('DECLINE: primaryPosition·season.selection이 바뀌지 않는다', () => {
+    it('DECLINE: primaryPosition은 그대로, season.selection·squadRole은 declineTrustDelta 반영 재산출 결과다', () => {
       const snapshot = positionChangeSnapshot();
       const positionBefore = snapshot.state.player.profile?.primaryPosition;
-      const selectionBefore = snapshot.state.season?.selection;
       const trustBefore = snapshot.state.relationships.managerTrust;
       const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'DECLINE') });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
+      const trustAfter = trustBefore + TRUST_DELTAS.declineTrustDelta;
+      const expectedSelection = expectedSelectionAfter(snapshot, trustAfter);
       expect(result.snapshot.state.player.profile?.primaryPosition).toBe(positionBefore);
-      expect(result.snapshot.state.season?.selection).toEqual(selectionBefore);
-      expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore + TRUST_DELTAS.declineTrustDelta);
+      expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
+      expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
+      expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
     });
   });
 

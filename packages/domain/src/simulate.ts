@@ -1033,16 +1033,19 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 }
 
 /**
- * T-2-002 D-34 CMD-SIM-004: ROLE_PROPOSAL pending을 ACCEPT/DECLINE으로 닫는다. DECLINE과
- * ACCEPT+KEEP은 managerTrust만 바꾼다. ACCEPT+POSITION_CHANGE는 `primaryPosition`·
- * `context.tacticalFit`·`context.positionProficiency`를 제안이 들고 있던 값(tacticalFitAfter·
- * proficiencyAfter — roll 없음 불변식 유지, 재계산하지 않는다)으로 옮기고, `season.selection`은 새
- * 포지션 경쟁자 풀로 다시 산출한다. `season.squadRole`은 그 재산출된 selection에서
- * `squadRoleFromSelection`으로 다시 유도한다 — `proposal.squadRoleAfter`(제안 계산 시점의 managerTrust
- * 기준)를 그대로 쓰면 이 함수가 방금 반영한 managerTrust 변화가 selection 점수에 반영되면서
- * squadRole과 selection이 서로 어긋날 수 있어서다. ACCEPT+ROLE_CHANGE는 `season.squadRole`을
- * 제안값으로 옮기고 `context.squadStatus`를 새 squadRole 기준으로 다시 계산한다(브리프: "ROLE_CHANGE →
- * … context.squadStatus 재계산") — `contract.rolePromise`(계약 조건)는 브리프 명시대로 그대로 둔다.
+ * T-2-002 D-34 CMD-SIM-004: ROLE_PROPOSAL pending을 ACCEPT/DECLINE으로 닫는다. DECLINE·KEEP·
+ * POSITION_CHANGE·ROLE_CHANGE 네 분기 모두 managerTrust(그리고 POSITION_CHANGE는 `primaryPosition`·
+ * `context.tacticalFit`·`context.positionProficiency`를 제안이 들고 있던 값 — tacticalFitAfter·
+ * proficiencyAfter, roll 없음 불변식 유지, 재계산하지 않는다 —, ROLE_CHANGE는 `context.squadStatus`를
+ * 제안된 새 역할(`proposal.to`) 기준으로)만 먼저 갱신한 뒤, **네 분기 공통으로** `season.selection`을
+ * `rankPositionForPlayer`(갱신된 position·tacticalFit·managerTrust·squadStatus·familiarity·
+ * form/fitness/morale·competitors)로 다시 산출하고 `season.squadRole`을 그 결과에서
+ * `squadRoleFromSelection`으로 유도한다(D-26). DECLINE(-8)·KEEP(+2)도 managerTrust가 바뀌어 선발
+ * 점수 입력이 달라지므로 재산출이 필요하다. `proposal.squadRoleAfter`/`proposal.to`는 "제안 계산
+ * 시점의 예측값"일 뿐이고, 실제 `season.squadRole`은 이 재산출된 순위가 정한다 — 제안값을 그대로
+ * squadRole에 옮기면 이 함수가 방금 반영한 managerTrust·squadStatus 변화가 selection 점수에 반영되면서
+ * squadRole과 selection이 서로 어긋날 수 있다. `contract.rolePromise`(계약 조건)는 브리프 명시대로
+ * ROLE_CHANGE에서도 바꾸지 않는다(계약은 Phase 3).
  */
 function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
   const command = input.command;
@@ -1072,7 +1075,6 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   let managerTrust = state.relationships.managerTrust;
   let context = state.context;
   let profile = state.player.profile;
-  let nextSeason = season;
 
   if (decision === 'DECLINE') {
     managerTrust = clamp(managerTrust + rules.roleProposal.declineTrustDelta, 0, 100);
@@ -1082,22 +1084,6 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     managerTrust = clamp(managerTrust + rules.roleProposal.acceptTrustDelta, 0, 100);
     profile = { ...profile, primaryPosition: proposal.to };
     context = { ...context, tacticalFit: proposal.tacticalFitAfter, positionProficiency: proposal.proficiencyAfter };
-    const ranking = rankPositionForPlayer({
-      ruleset: input.ruleset,
-      styleId: season.styleId,
-      position: proposal.to,
-      playerName: profile.name,
-      baseOvr: profile.baseOvr,
-      tacticalFit: proposal.tacticalFitAfter,
-      managerTrust,
-      form: state.state.form,
-      fitness: state.state.fitness,
-      morale: state.state.morale,
-      familiarity: familiarityOf(proposal.proficiencyAfter, rules),
-      squadStatus: context.squadStatus,
-      competitors: season.squad.competitors,
-    });
-    nextSeason = { ...season, squadRole: squadRoleFromSelection(ranking), selection: ranking };
   } else {
     // proposal.type === 'ROLE_CHANGE'
     managerTrust = clamp(managerTrust + rules.roleProposal.acceptTrustDelta, 0, 100);
@@ -1109,8 +1095,24 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
         input.ruleset.contractRules.squadStatusByRole,
       ),
     };
-    nextSeason = { ...season, squadRole: proposal.to };
   }
+
+  const ranking = rankPositionForPlayer({
+    ruleset: input.ruleset,
+    styleId: season.styleId,
+    position: profile.primaryPosition,
+    playerName: profile.name,
+    baseOvr: profile.baseOvr,
+    tacticalFit: context.tacticalFit,
+    managerTrust,
+    form: state.state.form,
+    fitness: state.state.fitness,
+    morale: state.state.morale,
+    familiarity: familiarityOf(context.positionProficiency, rules),
+    squadStatus: context.squadStatus,
+    competitors: season.squad.competitors,
+  });
+  const nextSeason: FootballSeason = { ...season, squadRole: squadRoleFromSelection(ranking), selection: ranking };
 
   const nextState: CareerState = {
     ...state,

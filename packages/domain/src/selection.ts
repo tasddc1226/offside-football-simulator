@@ -319,12 +319,17 @@ export type RoleProposalContext = {
 };
 
 /**
- * D-34 제안 산출(결정론, roll 없음). (a) 감독 선호 아키타입 포지션 후보 중 `positionAdjacency`에
- * 속하고 `computeTacticalFit`이 현재보다 15 이상 높으며 그 포지션 projectedRole이 현재보다 좋으면
- * POSITION_CHANGE(후보가 여럿이면 `ruleset.positions` 순서로 첫 번째). (b) 아니면 projectedRole이
- * `rolePromise`와 다르면 ROLE_CHANGE. (c) 아니면 KEEP. 후보 포지션 평가는 accept 시 부여될 숙련도
- * (`proficiencyOnChange.adjacent`)를 그대로 가정한다 — 이 함수가 거르는 후보는 항상 adjacency 안이라
- * accept하면 실제로 그 값이 적용되기 때문이다.
+ * D-34 제안 산출(결정론, roll 없음). (a) `positionAdjacency[primaryPosition]`의 인접 포지션 전부
+ * (`ruleset.positions` 순서, 아키타입 필터 없음) 중 `computeTacticalFit`이 현재보다 15 이상 높으며 그
+ * 포지션 projectedRole이 현재보다 좋으면 POSITION_CHANGE(첫 번째로 만족하는 후보). 아키타입 필터를
+ * 두지 않는 이유: archetypeId는 포지션 고유값이라 다른 포지션의 `preferredArchetypeIds`에는 애초에
+ * 들어갈 수 없다 — 필터를 두면 POSITION_CHANGE가 실제 룰셋에서 영원히 나오지 않는다. 아키타입이
+ * 바뀌지 않으므로 후보 포지션 fit의 아키타입 항은 항상 0(= tacticalFitWeights.archetype × 0) — 선호
+ * 아키타입 선수는 사실상 받지 못하고, 비선호 아키타입 선수가 인접 포지션 스타일 점수에서 크게 앞설
+ * 때만 나온다(의도한 "드문 제안"). (b) 아니면 projectedRole이 `rolePromise`와 다르면 ROLE_CHANGE.
+ * (c) 아니면 KEEP. 후보 포지션 평가는 accept 시 부여될 숙련도(`proficiencyOnChange.adjacent`)를 그대로
+ * 가정한다 — 이 함수가 거르는 후보는 항상 adjacency 안이라 accept하면 실제로 그 값이 적용되기
+ * 때문이다.
  */
 export function computeRoleProposal(context: RoleProposalContext): RoleProposal {
   const rules = context.ruleset.selectionRules;
@@ -338,10 +343,7 @@ export function computeRoleProposal(context: RoleProposalContext): RoleProposal 
 
   const adjacentPositions = rules.positionAdjacency[context.primaryPosition];
   const candidatePositions = context.ruleset.positions.filter(
-    (position) =>
-      position !== context.primaryPosition &&
-      adjacentPositions.includes(position) &&
-      style.preferredArchetypeIds[position].includes(context.archetypeId),
+    (position) => position !== context.primaryPosition && adjacentPositions.includes(position),
   );
 
   for (const position of candidatePositions) {
