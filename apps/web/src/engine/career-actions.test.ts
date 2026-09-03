@@ -190,9 +190,12 @@ describe('toStartSeasonPayload', () => {
     });
   });
 
-  it('trainingFocus를 골라도 payload에는 아직 싣지 않는다(T-2-005 접점, PR 본문 참고)', () => {
+  it('trainingFocus를 고르면 payload에 함께 싣는다(T-2-005 접점, PR #40 머지 확인)', () => {
     const command = toStartSeasonPayload({ simulationMode: 'CHAPTER', trainingFocus: 'TECHNICAL' });
-    expect(command.payload).not.toHaveProperty('trainingFocus');
+    expect(command).toEqual({
+      type: 'START_SEASON',
+      payload: { simulationMode: 'CHAPTER', serviceSeasonId: ACTIVE_SERVICE_SEASON_ID, trainingFocus: 'TECHNICAL' },
+    });
   });
 });
 

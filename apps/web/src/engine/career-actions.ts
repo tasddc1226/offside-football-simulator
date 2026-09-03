@@ -219,14 +219,17 @@ export function acceptOffer(engine: AppEngine, careerId: string, offerId: string
 export type StartSeasonChoice = { simulationMode: SimulationMode; trainingFocus?: TrainingFocus };
 
 /**
- * T-2-005 접점: domain `Command['START_SEASON']['payload']`에 `trainingFocus`가 아직 없다(이
- * 워크트리 시점의 `@offside/domain`, PR 본문에 기록). 붙으면 여기서 payload에 실어 보내고, UI
- * 선택(SCR-005)은 이미 값을 들고 있으니 화면 쪽은 바꾸지 않는다.
+ * T-2-005 접점(PR #40, origin/main 머지 확인): domain `Command['START_SEASON']['payload']`에
+ * `trainingFocus`가 붙었다 — SCR-005의 선택을 그대로 실어 보낸다.
  */
 export function toStartSeasonPayload(choice: StartSeasonChoice): Command {
   return {
     type: 'START_SEASON',
-    payload: { simulationMode: choice.simulationMode, serviceSeasonId: ACTIVE_SERVICE_SEASON_ID },
+    payload: {
+      simulationMode: choice.simulationMode,
+      serviceSeasonId: ACTIVE_SERVICE_SEASON_ID,
+      ...(choice.trainingFocus !== undefined ? { trainingFocus: choice.trainingFocus } : {}),
+    },
   };
 }
 

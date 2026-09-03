@@ -17,23 +17,23 @@ describe('defaultSimulationMode', () => {
   });
 
   it('새 팀 첫 시즌(직전 시즌 teamId와 계약 teamId가 다름)이면 CHAPTER다', () => {
-    const history: CareerState['seasonHistory'] = [
+    const history = [
       { index: 1, simulationMode: 'FAST', teamId: 'team-a', competitions: [], settledAtRevision: 10 },
-    ];
+    ] as unknown as CareerState['seasonHistory'];
     expect(defaultSimulationMode(stateWith(history, 'team-b'), 'FAST')).toBe('CHAPTER');
   });
 
   it('같은 팀에서 이어가는 시즌이면 프로필 기본값을 쓴다', () => {
-    const history: CareerState['seasonHistory'] = [
+    const history = [
       { index: 1, simulationMode: 'CHAPTER', teamId: 'team-a', competitions: [], settledAtRevision: 10 },
-    ];
+    ] as unknown as CareerState['seasonHistory'];
     expect(defaultSimulationMode(stateWith(history, 'team-a'), 'FAST')).toBe('FAST');
   });
 
   it('프로필 기본값이 없으면 직전 시즌 모드로 되돌아간다', () => {
-    const history: CareerState['seasonHistory'] = [
+    const history = [
       { index: 1, simulationMode: 'CHAPTER', teamId: 'team-a', competitions: [], settledAtRevision: 10 },
-    ];
+    ] as unknown as CareerState['seasonHistory'];
     const profileDefault: SimulationMode | null = null;
     expect(defaultSimulationMode(stateWith(history, 'team-a'), profileDefault)).toBe('CHAPTER');
   });
