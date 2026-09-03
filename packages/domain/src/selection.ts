@@ -255,6 +255,8 @@ export type RankPositionForPlayerInput = {
   familiarity: number;
   squadStatus: number;
   competitors: readonly Competitor[];
+  /** T-2-003: 부상·정지 중이면 판정 전 후보에서 제외한다(기본 null). */
+  excluded?: SelectionCandidate['excluded'];
 };
 
 /** 선수를 특정 포지션(현재 포지션이든 역할 제안이 검토하는 후보 포지션이든)에서 그 포지션 경쟁자와 함께 줄 세운다. */
@@ -284,7 +286,7 @@ export function rankPositionForPlayer(input: RankPositionForPlayerInput): Select
       { tacticalFit: input.tacticalFit, managerTrust: input.managerTrust, expectedPerformance, squadStatus: input.squadStatus },
       rules,
     ),
-    excluded: null,
+    excluded: input.excluded ?? null,
   };
   const positionCompetitors = input.competitors
     .filter((competitor) => competitor.position === input.position)

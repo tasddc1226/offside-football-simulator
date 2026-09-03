@@ -1,4 +1,4 @@
-import type { AttributeKey, DecisionSlot, Position, SeasonPhase, SquadRole } from './types.js';
+import type { AttributeKey, DecisionSlot, Position, SeasonPhase, SquadRole, StatGroup } from './types.js';
 
 // D-2: 아키타입 카탈로그. roleWeights 합은 1(±1e-9), template은 20키 전부.
 export type Archetype = {
@@ -85,6 +85,63 @@ export type SelectionRules = {
   roleProposal: { acceptTrustDelta: number; declineTrustDelta: number; keepConfirmTrustDelta: number };
 };
 
+// T-2-003 D-35: 경기 결과(diff 구간 → 승·무·패 정수 확률, 합 100). 구간은 연속이어야 한다(content
+// 스키마가 검사).
+export type ResultTableRow = { diffMin: number; diffMax: number; win: number; draw: number; loss: number };
+
+// T-2-003 D-35: 득점 rollInt 2회 표. WIN은 (winnerGoals, min(loserGoalsRaw, winnerGoals-1)),
+// LOSS는 대칭(상대가 winnerGoals, 우리가 min(loserGoalsRaw, winnerGoals-1)), DRAW는 roll1(drawGoals)만
+// 쓰고 roll2(loserGoalsRaw)는 소비만 하고 버린다(RNG 순서 고정 목적, match.ts 참고).
+export type MatchScoreTable = { winnerGoals: number[]; loserGoalsRaw: number[]; drawGoals: number[] };
+
+// T-2-003 D-35: START 출전 시간 후보 하나(roll 1회로 이 표에서 고른다). subOut이 false면 90분,
+// true면 minute에 교체 아웃.
+export type MinutesStartOption = { subOut: boolean; minute: number };
+
+export type MatchMinutesTable = { start: MinutesStartOption[]; sub: number[] };
+
+// T-2-003 D-35: 관여량 구간(0~100)별 정수 분포 표. roll 1회로 `values`에서 고른다.
+export type StatBucket = { min: number; max: number; values: number[] };
+export type StatDistributionTable = StatBucket[];
+
+// T-2-003 D-35: 포지션군별 카드 확률(roll100 1회, 백분율 정수). yellow+red는 100 이하.
+export type DisciplineTable = Record<StatGroup, { yellow: number; red: number }>;
+
+export type MatchInjuryRules = {
+  perMatchPercent: number;
+  lowFitnessBelow: number;
+  lowFitnessExtraPercent: number;
+  outMatches: { min: number; max: number };
+};
+
+// T-2-003 8번 규칙: `ratingTenths = clamp(60 + Σ 항목별 가중치 + 결과 보정 − 카드 보정, 40, 100)`.
+export type MatchRatingWeights = {
+  stats: Record<StatGroup, Partial<Record<string, number>>>;
+  resultBonusTenths: { WIN: number; DRAW: number; LOSS: number };
+  cardPenaltyTenths: { yellow: number; red: number };
+};
+
+// T-2-003 D-35: 경기 계산 상수 묶음(`packages/content` 소유, `schedule.ts`·`match.ts`가 소비).
+export type MatchRules = {
+  homeBonus: number;
+  resultTable: ResultTableRow[];
+  scoreTable: MatchScoreTable;
+  minutesTable: MatchMinutesTable;
+  involvement: { performanceWeight: number; opponentStrengthWeight: number; rollMin: number; rollMax: number };
+  statTables: Record<StatGroup, Record<string, StatDistributionTable>>;
+  disciplineTable: DisciplineTable;
+  yellowSuspensionAt: number;
+  redSuspension: { min: number; max: number };
+  injury: MatchInjuryRules;
+  ratingWeights: MatchRatingWeights;
+  /** 경쟁자 `form`만 경기 index 기반으로 결정론적으로 흔든다(roll 없음). */
+  competitorFormDrift: { amplitude: number };
+  /** `{league}`·`{n}` 토큰을 치환해 이름 없는 상대 이름을 만든다. */
+  opponentNameTemplate: string;
+  cupStrengthByRound: Record<'R1' | 'R2' | 'SEMI' | 'FINAL', number>;
+  cleanSheetMinMinutes: number;
+};
+
 // D-9: 제안 분기·규칙. 이 작업에서는 타입만 정의하고 사용하지 않는다(T-1-005가 소비한다).
 export type OfferBranch = {
   id: string;
@@ -156,4 +213,6 @@ export type Ruleset = {
   /** T-2-002 D-34: 경쟁자 이름 풀. 중복 없이 뽑는다. */
   competitorNames: string[];
   selectionRules: SelectionRules;
+  /** T-2-003 D-35: 경기 계산 상수. */
+  matchRules: MatchRules;
 };

@@ -8,7 +8,9 @@ export { rollRange } from './roll-range.js';
 export {
   ATTRIBUTE_KEYS,
   positionGroupOf,
+  statGroupOf,
   type AttributeKey,
+  type Availability,
   type CareerPhase,
   type CareerStage,
   type CareerState,
@@ -22,17 +24,23 @@ export {
   type Effect,
   type EffectKind,
   type FootballSeason,
+  type MatchAppearance,
   type MatchRecord,
   type Offer,
+  type OutReason,
   type Pending,
   type PlayerDraft,
   type PlayerGender,
   type PlayerProfile,
   type Position,
   type PositionGroup,
+  type PositionStats,
+  type PositionStatsTotals,
   type PreferredFoot,
   type RoleProposal,
+  type ScheduleEntry,
   type SeasonPhase,
+  type SeasonPlayerStats,
   type SeasonStep,
   type SeasonSummary,
   type SelectionAppearance,
@@ -41,6 +49,8 @@ export {
   type SelectionReasonComponent,
   type SimulationMode,
   type SquadRole,
+  type StatGroup,
+  type StepMatchResult,
   type StepSummary,
   type TimelineEntry,
 } from './types.js';
@@ -96,3 +106,15 @@ export {
   type SimulationInput,
   type SimulationResult,
 } from './simulate.js';
+export { buildSchedule, findLeague, resolveOpponent } from './schedule.js';
+export { applyCompetitorFormDrift, playMatch, type PlayMatchInput, type PlayMatchResult } from './match.js';
+export {
+  applyMatchToCompetitions,
+  applyMatchToPlayerStats,
+  applyPlayedMatch,
+  computeLeaguePosition,
+  initialSeasonPlayerStats,
+  markCupEliminated,
+  stepMatchResultsFor,
+  type SeasonMatchBooks,
+} from './season-stats.js';

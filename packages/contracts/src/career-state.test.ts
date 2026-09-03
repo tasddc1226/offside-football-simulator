@@ -23,6 +23,8 @@ import {
   career02SeasonEngineCommands,
   career03Underdog,
   career03UnderdogEngineCommands,
+  career04Gk,
+  career04GkEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -295,7 +297,12 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
   // (fixture마다 명령 생성 함수의 시그니처가 달라 — career01/03은 독립 실행, career02는 career01 뒤에
   // 이어 붙는 방식 — export 이름만으로 완전히 자동 실행할 수는 없다. packages/fixtures는 이 작업에서
   // 읽기만 허용되어 공통 실행 인터페이스를 새로 만들 수 없다. PR 본문 "범위 밖 발견 사항" 참고).
-  const KNOWN_GOLDEN_FILES = ['career-01.golden.json', 'career-02-season.golden.json', 'career-03-underdog.golden.json'];
+  const KNOWN_GOLDEN_FILES = [
+    'career-01.golden.json',
+    'career-02-season.golden.json',
+    'career-03-underdog.golden.json',
+    'career-04-gk.golden.json',
+  ];
 
   it('packages/fixtures/src/*/의 *.golden.json 목록이 이 테스트가 재생하는 목록과 같다', () => {
     const fixturesSrcDir = fileURLToPath(new URL('../../fixtures/src', import.meta.url));
@@ -382,5 +389,21 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     expect(snapshot.revision).toBe(career03Underdog.golden.revision);
     expect(snapshot.stateHash).toBe(career03Underdog.golden.stateHash);
     expect(snapshot.state.pending?.kind).toBe('ROLE_PROPOSAL');
+  });
+
+  // T-2-003: GK 아키타입으로 START_SEASON부터 SETTLE_SEASON까지(FAST) 이어 재생한다. career01·03과
+  // 같은 독립 실행 fixture다(career04GkEngineCommands가 CREATE_CAREER부터 자체적으로 만든다).
+  it('career-04-gk: 매 명령 뒤 상태가 스키마를 통과하고 최종 hash가 golden과 같다(SETTLE_SEASON까지)', () => {
+    let counter = 0;
+    const commands = career04GkEngineCommands(() => `golden-c4-${counter++}`);
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career04Gk);
+      assertStateRoundTrips(snapshot, `career04Gk revision ${snapshot.revision}`);
+    }
+    if (snapshot === null) throw new Error('career04Gk 명령 목록이 비어 있다.');
+    expect(snapshot.revision).toBe(career04Gk.golden.revision);
+    expect(snapshot.stateHash).toBe(career04Gk.golden.stateHash);
+    expect(snapshot.state.season).toBeNull();
   });
 });

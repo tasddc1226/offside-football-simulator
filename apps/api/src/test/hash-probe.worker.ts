@@ -14,6 +14,8 @@ import {
   career02SeasonEngineCommands,
   career03Underdog,
   career03UnderdogEngineCommands,
+  career04Gk,
+  career04GkEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -78,10 +80,22 @@ function runCareer03Underdog(): DomainSnapshot {
   return snapshot;
 }
 
+/** T-2-003: career04Gk(GK 아키타입, 독립 시나리오, START_SEASON부터 SETTLE_SEASON까지)를 재생한다. */
+function runCareer04Gk(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career04GkEngineCommands(() => `probe-c4-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career04Gk);
+  }
+  if (snapshot === null) throw new Error('career04Gk 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
 type ProbeRequest =
   | { kind: 'replay' }
   | { kind: 'replaySeason'; mode: SimulationMode }
   | { kind: 'replayUnderdog' }
+  | { kind: 'replayGk' }
   | { kind: 'sha256'; inputs: string[] }
   | { kind: 'canonical'; value: JsonValue };
 
@@ -112,6 +126,10 @@ export default {
 
     if (body.kind === 'replayUnderdog') {
       return snapshotResponse(runCareer03Underdog());
+    }
+
+    if (body.kind === 'replayGk') {
+      return snapshotResponse(runCareer04Gk());
     }
 
     if (body.kind === 'sha256') {

@@ -21,6 +21,8 @@ import {
   career02SeasonEngineCommands,
   career03Underdog,
   career03UnderdogEngineCommands,
+  career04Gk,
+  career04GkEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -96,6 +98,17 @@ function runCareer03UnderdogOnNode(): DomainSnapshot {
     snapshot = runOrThrow(snapshot, command, career03Underdog);
   }
   if (snapshot === null) throw new Error('career03Underdog 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
+/** T-2-003: career04Gk를 Node에서 재생한다. `hash-probe.worker.ts`의 `runCareer04Gk`와 같은 로직. */
+function runCareer04GkOnNode(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career04GkEngineCommands(() => `node-c4-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career04Gk);
+  }
+  if (snapshot === null) throw new Error('career04Gk 명령 목록이 비어 있다.');
   return snapshot;
 }
 
@@ -189,6 +202,12 @@ describe('런타임 간 state hash 일치(Node ↔ workerd)', { timeout: 15000 }
       runOnNode: runCareer03UnderdogOnNode,
       probeRequest: { kind: 'replayUnderdog' as const },
       golden: career03Underdog.golden,
+    },
+    {
+      label: 'career-04-gk',
+      runOnNode: runCareer04GkOnNode,
+      probeRequest: { kind: 'replayGk' as const },
+      golden: career04Gk.golden,
     },
   ])('$label 재생의 revision·stateHash·rngState.draws가 Node·workerd·golden에서 모두 같다', async ({ runOnNode, probeRequest, golden }) => {
     const typedGolden = golden as ReplayGolden;

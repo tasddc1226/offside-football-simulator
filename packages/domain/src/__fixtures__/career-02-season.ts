@@ -2,7 +2,7 @@ import careerSeasonRaw from './career-02-season.json';
 import { runCareerFixture, rulesetProto } from './career-01.js';
 import type { Command, SimulationResult } from '../simulate.js';
 import { simulate } from '../simulate.js';
-import type { DomainSnapshot, SimulationMode, StepSummary } from '../types.js';
+import type { CompetitionRecord, DomainSnapshot, MatchRecord, SeasonPlayerStats, SimulationMode, StepSummary } from '../types.js';
 
 type CareerSeasonFixture = {
   rulesetVersion: string;
@@ -57,6 +57,16 @@ export type SeasonFixtureRun = {
   stepSummaries: Array<{ index: number; summary: StepSummary | null }>;
   /** RESOLVE_ROLE(commands[mode][0]) 직후의 경쟁자·selection 스냅샷. */
   afterRoleResolve: SeasonSelectionSnapshot;
+  /** SETTLE_SEASON 직전(season이 null이 되기 전) 경기·시즌 통계·대회 기록 스냅샷. 브리프 golden
+   * 절차: matches 수·playerStats.appearances·minutes·시즌 평균 평점·최종 competitions. */
+  beforeSettlement: {
+    matchesPlayed: number;
+    playerStats: SeasonPlayerStats;
+    averageRatingTenths: number | null;
+    competitions: CompetitionRecord[];
+    /** golden에는 안 남긴다(용량) — FAST·CHAPTER byte-identical 검증 전용(career-02-season.test.ts). */
+    matches: MatchRecord[];
+  };
 };
 
 /**
@@ -78,10 +88,22 @@ export function runSeasonFixture(mode: SimulationMode): SeasonFixtureRun {
 
   let stepSummaries: Array<{ index: number; summary: StepSummary | null }> = [];
   let afterRoleResolve: SeasonSelectionSnapshot | null = null;
+  let beforeSettlement: SeasonFixtureRun['beforeSettlement'] | null = null;
 
   careerSeasonFixture.commands[mode].forEach((rawCommand, index) => {
     if (rawCommand.type === 'SETTLE_SEASON') {
-      stepSummaries = snapshot.state.season!.steps.map((step) => ({ index: step.index, summary: step.summary }));
+      const season = snapshot.state.season!;
+      stepSummaries = season.steps.map((step) => ({ index: step.index, summary: step.summary }));
+      beforeSettlement = {
+        matchesPlayed: season.matches.length,
+        playerStats: season.playerStats,
+        averageRatingTenths:
+          season.playerStats.ratedMatches > 0
+            ? Math.round(season.playerStats.ratingSumTenths / season.playerStats.ratedMatches)
+            : null,
+        competitions: season.competitions,
+        matches: season.matches,
+      };
     }
     const command = buildCommand(rawCommand.type, `season-${index}`, snapshot.revision, rawCommand.payload);
     snapshot = runOrThrow(snapshot, command);
@@ -104,5 +126,5 @@ export function runSeasonFixture(mode: SimulationMode): SeasonFixtureRun {
     }
   });
 
-  return { snapshot, checkpoints, stepSummaries, afterRoleResolve: afterRoleResolve! };
+  return { snapshot, checkpoints, stepSummaries, afterRoleResolve: afterRoleResolve!, beforeSettlement: beforeSettlement! };
 }

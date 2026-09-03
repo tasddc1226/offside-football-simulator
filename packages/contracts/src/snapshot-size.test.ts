@@ -6,6 +6,8 @@ import {
   career02SeasonEngineCommands,
   career03Underdog,
   career03UnderdogEngineCommands,
+  career04Gk,
+  career04GkEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -175,6 +177,42 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
       }),
     );
 
+    expect(finalStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+    expect(bodyBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+  });
+
+  // T-2-003: GK 아키타입으로 SETTLE_SEASON까지(FAST, 경기 25개 누적) 다 돈 뒤(season이 null이 되는
+  // 시점) 상태 크기 — season.matches가 가장 많이 쌓인 시점을 대표한다.
+  it('career-04-gk(SETTLE_SEASON 직후, season null): 상태·PUT 본문 크기가 상한 안에 든다', () => {
+    let counter = 0;
+    const commands = career04GkEngineCommands(() => `size-c4-${counter++}`);
+    const steps: Step[] = [];
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career04Gk);
+      steps.push({ snapshot, command });
+    }
+    if (snapshot === null) throw new Error('career04Gk 명령 목록이 비어 있다.');
+
+    const peak = steps.reduce((max, step) => (stateBytes(step.snapshot) > stateBytes(max) ? step.snapshot : max), steps[0]!.snapshot);
+    const peakStateBytes = stateBytes(peak);
+    const finalStateBytes = stateBytes(snapshot);
+    const bodyBytes = putBodyBytes(steps, 0);
+
+    console.log(
+      JSON.stringify({
+        fixture: 'career-04-gk',
+        peakCheckpoint: peak.checkpoint,
+        peakRevision: peak.revision,
+        peakStateBytes,
+        checkpoint: snapshot.checkpoint,
+        revision: snapshot.revision,
+        finalStateBytes,
+        bodyBytes,
+      }),
+    );
+
+    expect(peakStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
     expect(finalStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
     expect(bodyBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
   });
