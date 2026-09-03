@@ -3,7 +3,15 @@
 // 결정 확정은 전용 화면(SCR-007·008·009·010·012·013·014)에서만 일어난다.
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { deriveTacticalRoom, type CareerState, type CompetitionRecord, type FootballSeason, type Ruleset, type TimelineEntry } from '@offside/domain';
+import {
+  deriveTacticalRoom,
+  type CareerState,
+  type CompetitionRecord,
+  type FootballSeason,
+  type RoleProposal,
+  type Ruleset,
+  type TimelineEntry,
+} from '@offside/domain';
 import {
   Button,
   buttonClassName,
@@ -31,7 +39,9 @@ import {
   LEAGUE_TIER_LABEL_KO,
   positionHeaderField,
   POSITION_LABELS,
+  ROLE_DECISION_LABEL_KO,
   ROLE_PROMISE_SENTENCE,
+  ROLE_PROPOSAL_TYPE_LABEL_KO,
   SEASON_PHASE_LABEL_KO,
   SQUAD_ROLE_LABELS,
   TIMELINE_KIND_LABEL_KO,
@@ -85,12 +95,87 @@ function timelineSentence(entry: TimelineEntry, state: CareerState): string {
 }
 
 function buildTimelineItems(state: CareerState): CareerTimelineItem[] {
-  return [...state.timeline].reverse().map((entry) => ({
-    id: `${entry.kind}-${entry.revision}`,
+  return [...state.timeline].reverse().map((entry, index) => ({
+    // RULE-TIME-002: ADVANCE 한 번이 여러 step을 지나가면 STEP_PASSED 항목 여럿이 같은
+    // revision을 공유한다(packages/domain/src/simulate.ts) — revision만으로는 key가
+    // 중복될 수 있어 배열 위치를 덧붙인다(T-2-009에서 발견, PR 본문 기록).
+    id: `${entry.kind}-${entry.revision}-${index}`,
     age: entry.age,
     stage: TIMELINE_KIND_LABEL_KO[entry.kind],
     title: timelineSentence(entry, state),
   }));
+}
+
+/** T-2-009 목표 "다이어리에 이번 시즌 연대기 요약을 붙인다": 이번 시즌(진행 중이면 현재, 아니면
+ * 방금 결산한 시즌) timeline 구간의 [SEASON_STARTED revision, SEASON_SETTLED revision 또는 끝]. */
+function currentSeasonChronicleBounds(state: CareerState): { startRevision: number; endRevision: number | null } | null {
+  const startEntry = [...state.timeline].reverse().find((entry) => entry.kind === 'SEASON_STARTED');
+  if (startEntry === undefined) return null;
+  const settledEntry = state.timeline.find((entry) => entry.kind === 'SEASON_SETTLED' && entry.revision > startEntry.revision);
+  return { startRevision: startEntry.revision, endRevision: settledEntry?.revision ?? null };
+}
+
+/** STEP_PASSED은 `state.season.steps[].summary.results`가 있을 때만 "3승 1무"로 세분화한다 — 결산
+ * 뒤에는 season이 null이라(step별 경기 기록이 사라진다) 일반 "진행"으로 남는다(데이터 모델 한계,
+ * PR 본문에 기록). */
+function stepPassedChronicleSentence(entry: TimelineEntry, state: CareerState): string {
+  if (state.season === null) return '진행';
+  const step = state.season.steps.find((candidate) => candidate.index === entry.step);
+  const results = step?.summary?.results ?? [];
+  if (results.length === 0) return '진행';
+  const wins = results.filter((result) => result.outcome === 'WIN').length;
+  const draws = results.filter((result) => result.outcome === 'DRAW').length;
+  const losses = results.filter((result) => result.outcome === 'LOSS').length;
+  const parts = [wins > 0 ? `${wins}승` : null, draws > 0 ? `${draws}무` : null, losses > 0 ? `${losses}패` : null].filter(
+    (part): part is string => part !== null,
+  );
+  return parts.length > 0 ? parts.join(' ') : '진행';
+}
+
+function roleResolvedChronicleSentence(entry: TimelineEntry): string {
+  const [type, decision] = (entry.refId ?? '').split(':');
+  const typeLabel = type !== undefined && type in ROLE_PROPOSAL_TYPE_LABEL_KO ? ROLE_PROPOSAL_TYPE_LABEL_KO[type as RoleProposal['type']] : '역할';
+  const decisionLabel = decision === 'ACCEPT' || decision === 'DECLINE' ? ROLE_DECISION_LABEL_KO[decision] : '';
+  return decisionLabel === '' ? `${typeLabel} 제안` : `${typeLabel} 제안 · ${decisionLabel}`;
+}
+
+export type SeasonChronicleItem = { id: string; sentence: string; seasonResultHistoryIndex: number | null };
+
+/** SEASON_SETTLED 카드는 이 시즌의 `seasonHistory` 위치를 실어 SCR-015 링크를 만들 수 있게 한다. */
+export function buildSeasonChronicleItems(state: CareerState): SeasonChronicleItem[] {
+  const bounds = currentSeasonChronicleBounds(state);
+  if (bounds === null) return [];
+  return state.timeline
+    .filter((entry) => entry.revision >= bounds.startRevision && (bounds.endRevision === null || entry.revision <= bounds.endRevision))
+    .map((entry, index) => {
+      const seasonResultHistoryIndex =
+        entry.kind === 'SEASON_SETTLED' ? state.seasonHistory.findIndex((summary) => summary.settledAtRevision === entry.revision) : -1;
+      const sentence =
+        entry.kind === 'STEP_PASSED'
+          ? stepPassedChronicleSentence(entry, state)
+          : entry.kind === 'ROLE_RESOLVED'
+            ? roleResolvedChronicleSentence(entry)
+            : timelineSentence(entry, state);
+      return {
+        // RULE-TIME-002: ADVANCE 한 번이 여러 step을 지나가면 STEP_PASSED 항목 여럿이 같은
+        // revision을 공유한다(packages/domain/src/simulate.ts) — revision만으로는 key가
+        // 중복될 수 있어 배열 위치를 덧붙인다.
+        id: `chronicle-${entry.kind}-${entry.revision}-${index}`,
+        sentence,
+        seasonResultHistoryIndex: seasonResultHistoryIndex < 0 ? null : seasonResultHistoryIndex,
+      };
+    });
+}
+
+export type PastSeasonLink = { historyIndex: number; seasonNumber: number };
+
+/** 연대기 카드에 이미 나온 시즌(방금 결산한 시즌)은 과거 목록에서 뺀다. */
+export function buildPastSeasonLinks(state: CareerState): PastSeasonLink[] {
+  const excludeHistoryIndex = state.season === null && state.seasonHistory.length > 0 ? state.seasonHistory.length - 1 : null;
+  return state.seasonHistory
+    .map((summary, historyIndex) => ({ historyIndex, seasonNumber: summary.index }))
+    .filter((entry) => entry.historyIndex !== excludeHistoryIndex)
+    .reverse();
 }
 
 /** 계약 전에는 전술실·휴대폰을 잠근다. 계약 직후 처음 열릴 때만 한 줄 설명을 보여준다(브리프:
@@ -318,6 +403,8 @@ function CareerDashboard() {
   const hasContract = state.contract !== null;
   const season = state.season;
   const room = deriveTacticalRoom(state, activeRuleset);
+  const seasonChronicleItems = buildSeasonChronicleItems(state);
+  const pastSeasonLinks = buildPastSeasonLinks(state);
 
   return (
     <div className="flex flex-col gap-os-6">
@@ -502,7 +589,59 @@ function CareerDashboard() {
 
         <TabsContent value="diary">
           <DashboardSection title="다이어리" description="이번 커리어의 연대기입니다.">
-            <CareerTimeline items={buildTimelineItems(state)} emptyMessage="아직 기록이 없습니다" />
+            <div className="flex flex-col gap-os-4">
+              {seasonChronicleItems.length > 0 ? (
+                <div className="flex flex-col gap-os-2">
+                  <h3 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+                    이번 시즌
+                  </h3>
+                  <ol className="flex flex-col gap-os-1">
+                    {seasonChronicleItems.map((item) =>
+                      item.seasonResultHistoryIndex !== null ? (
+                        <li key={item.id}>
+                          <Link
+                            to="/career/$careerId/season-result"
+                            params={{ careerId }}
+                            search={{ season: item.seasonResultHistoryIndex }}
+                            className="font-os text-os-text underline"
+                            style={CAPTION_STYLE}
+                          >
+                            {item.sentence}
+                          </Link>
+                        </li>
+                      ) : (
+                        <li key={item.id} className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                          {item.sentence}
+                        </li>
+                      ),
+                    )}
+                  </ol>
+                </div>
+              ) : null}
+              {pastSeasonLinks.length > 0 ? (
+                <div className="flex flex-col gap-os-2">
+                  <h3 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+                    지난 시즌
+                  </h3>
+                  <ul className="flex flex-col gap-os-1">
+                    {pastSeasonLinks.map((link) => (
+                      <li key={link.historyIndex}>
+                        <Link
+                          to="/career/$careerId/season-result"
+                          params={{ careerId }}
+                          search={{ season: link.historyIndex }}
+                          className="font-os text-os-text underline"
+                          style={CAPTION_STYLE}
+                        >
+                          시즌 {link.seasonNumber} 결산 보기
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <CareerTimeline items={buildTimelineItems(state)} emptyMessage="아직 기록이 없습니다" />
+            </div>
           </DashboardSection>
         </TabsContent>
       </Tabs>
