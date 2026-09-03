@@ -19,6 +19,7 @@ if (typeof window !== 'undefined') {
 export const webPlatform: Platform = {
   channel: 'web',
   theme: { forced: null },
+  features: { googleLink: true },
   createLocalStore: () => createDexieLocalStore(),
   clearLocalData: () => deleteDexieLocalStore(),
   session: {

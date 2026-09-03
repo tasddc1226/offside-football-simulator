@@ -1,15 +1,12 @@
-import { eq } from 'drizzle-orm';
 import { normalizeRecoveryCode } from '../auth/recovery-code.js';
 import type { Db } from '../db/client.js';
 import { sha256Hex } from '../db/hash.js';
-import { newId } from '../db/ids.js';
 import { getAttemptCount, RATE_LIMIT_MAX, recordAttempt } from '../db/repos/authAttempts.js';
-import { runBatch } from '../db/repos/batch.js';
-import { countCareersByOwner, listCareerIdsByOwner } from '../db/repos/careers.js';
+import { countCareersByOwner } from '../db/repos/careers.js';
 import { getProfileByRecoveryCodeHash } from '../db/repos/profiles.js';
 import { rebindSessionProfile } from '../db/repos/sessions.js';
-import { auditLog, careers, sessions } from '../db/schema.js';
 import { AppError } from '../errors.js';
+import { moveCareersAndRebind } from './merge.js';
 
 export type MergeChoice = 'MOVE_TO_LINKED' | 'KEEP_LINKED_ONLY';
 
@@ -61,21 +58,12 @@ export async function recoverProfile(db: Db, input: RecoverProfileInput): Promis
     }
 
     if (input.mergeChoice === 'MOVE_TO_LINKED') {
-      const careerIds = await listCareerIdsByOwner(db, input.currentProfileId);
-      await runBatch(db, [
-        db
-          .update(careers)
-          .set({ ownerProfileId: target.id, updatedAt: input.now })
-          .where(eq(careers.ownerProfileId, input.currentProfileId)),
-        db.insert(auditLog).values({
-          id: newId('aud'),
-          kind: 'PROFILE_MERGED',
-          profileId: target.id,
-          payloadJson: JSON.stringify({ fromProfileId: input.currentProfileId, toProfileId: target.id, careerIds }),
-          createdAt: input.now,
-        }),
-        db.update(sessions).set({ profileId: target.id }).where(eq(sessions.id, input.sessionId)),
-      ]);
+      await moveCareersAndRebind(db, {
+        fromProfileId: input.currentProfileId,
+        toProfileId: target.id,
+        sessionId: input.sessionId,
+        now: input.now,
+      });
       return { profileId: target.id, careerCount: await countCareersByOwner(db, target.id) };
     }
   }

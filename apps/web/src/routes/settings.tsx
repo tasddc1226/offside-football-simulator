@@ -1,6 +1,6 @@
-// SCR-030 설정·데이터. 데이터 섹션(복구 코드·프로필 복구·로그아웃·이 기기 데이터 삭제·프로필 삭제)은
-// T-1-012가 채운다. Google 연결 행은 T-1-013까지 "준비 중"으로 둔다. 채널 문구 분기는 platform이
-// 주는 값으로만 한다(lint noChannelBranchRules) — 이 화면은 채널별 문구가 필요 없는 부분만 다룬다.
+// SCR-030 설정·데이터. 데이터 섹션(복구 코드·프로필 복구·로그아웃·이 기기 데이터 삭제·프로필 삭제,
+// Google 연결)은 T-1-012·T-1-013이 채운다. 채널 문구 분기는 platform이 주는 값으로만 한다(lint
+// noChannelBranchRules) — 이 화면은 채널별 문구가 필요 없는 부분만 다룬다.
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -20,11 +20,15 @@ import { RecoveryConflictDetailsSchema, type ErrorCode, type MergeChoice, type P
 import type { SimulationMode } from '@offside/domain';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import {
+  API_BASE_URL,
   confirmProfileDeletion,
   getProfile,
   issueRecoveryCode,
+  logout,
   recoverProfile,
   startProfileDeletion,
+  submitGoogleMerge,
+  unlinkGoogle,
 } from '../api/client.js';
 import { ensureProfile } from '../api/profile.js';
 import { getAppEngine } from '../engine/engine.js';
@@ -46,7 +50,21 @@ import {
   type ThemePreference,
 } from '../shared/ui-store.js';
 
+/** `GET /v1/auth/google/callback`이 `/settings`로 되돌려줄 때 붙이는 쿼리(ADR-008). */
+type GoogleQueryResult = 'linked' | 'switched' | 'merge_required' | 'error';
+const GOOGLE_QUERY_RESULTS: readonly GoogleQueryResult[] = ['linked', 'switched', 'merge_required', 'error'];
+
+function isGoogleQueryResult(value: unknown): value is GoogleQueryResult {
+  return typeof value === 'string' && (GOOGLE_QUERY_RESULTS as readonly string[]).includes(value);
+}
+
+type SettingsSearch = { google?: GoogleQueryResult; reason?: string };
+
 export const Route = createFileRoute('/settings')({
+  validateSearch: (search: Record<string, unknown>): SettingsSearch => ({
+    ...(isGoogleQueryResult(search.google) ? { google: search.google } : {}),
+    ...(typeof search.reason === 'string' ? { reason: search.reason } : {}),
+  }),
   component: SettingsScreen,
 });
 
@@ -91,6 +109,16 @@ const FAILED_CODE_MESSAGE: Partial<Record<ErrorCode, string>> = {
   VERSION_MISMATCH: '앱을 새로고침해 최신 버전을 받으세요',
   CAREER_ARCHIVED: '보관된 커리어는 더 저장하지 않습니다',
 };
+
+/** `?google=error&reason=` 값별 안내(auth.ts의 redirectToSettings 사유와 맞춘다). */
+const GOOGLE_ERROR_REASON_MESSAGE: Record<string, string> = {
+  state: '연결 요청이 만료됐습니다. 다시 시도해 주세요.',
+  exchange: 'Google 인증에 실패했습니다. 다시 시도해 주세요.',
+};
+
+function googleErrorMessage(reason: string | undefined): string {
+  return (reason !== undefined ? GOOGLE_ERROR_REASON_MESSAGE[reason] : undefined) ?? 'Google 연결에 실패했습니다. 다시 시도해 주세요.';
+}
 
 function SyncStatusRow() {
   const summary = useSyncSummary();
@@ -501,18 +529,372 @@ function ProfileRecoverRow() {
   );
 }
 
+/**
+ * T-1-013 D-21: Google 연결 행. toss는 `platform.features.googleLink`로만 걸러 다른 문구를 보여준다
+ * (채널 리터럴 비교 금지, lint noChannelBranchRules). 콜백이 되돌려주는 `?google=` 쿼리 처리와 대기
+ * 병합(`pendingMerge`) 재안내를 이 컴포넌트가 함께 맡는다(ADR-008).
+ */
+function GoogleRow() {
+  const profileQuery = useProfileQuery();
+  const careerQuery = useCareerList();
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const [unlinkOpen, setUnlinkOpen] = useState(false);
+  const [mergeDismissed, setMergeDismissed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(null);
+  const unlinkCancelRef = useRef<HTMLButtonElement>(null);
+  const mergeCancelRef = useRef<HTMLButtonElement>(null);
+
+  const googleLinked = profileQuery.data?.linked.google === true;
+  const googleEmailMasked = profileQuery.data?.googleEmailMasked ?? null;
+  const pendingMerge = profileQuery.data?.pendingMerge ?? null;
+  const noRecoveryCode = (profileQuery.data?.recoveryCodeIssuedAt ?? null) === null;
+  const localCareerCount = (careerQuery.data ?? []).length;
+  const mergeDialogOpen = pendingMerge !== null && !mergeDismissed;
+
+  function clearGoogleQuery() {
+    void navigate({ to: '/settings', search: {}, replace: true });
+  }
+
+  // search.google 값이 바뀔 때만 처리한다(clearGoogleQuery 등 다른 클로저는 매 렌더 새로 만들어져
+  // 의존성 배열에 넣으면 무한 반복이 된다).
+  useEffect(() => {
+    if (search.google === undefined) return;
+    if (search.google === 'linked') {
+      platform.analytics.track('google_link_result', { result: 'linked' });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setToast({ variant: 'success', message: 'Google을 연결했습니다' });
+      clearGoogleQuery();
+      return;
+    }
+    if (search.google === 'switched') {
+      platform.analytics.track('google_link_result', { result: 'switched' });
+      void (async () => {
+        const engine = await getAppEngine();
+        await ensureProfile(engine.store, queryClient);
+        const reconciled = await reconcileAfterRecovery('NONE', queryClient);
+        setToast(
+          reconciled.ok
+            ? { variant: 'success', message: 'Google에 연결된 프로필로 바꿨습니다' }
+            : {
+                variant: 'error',
+                message: '프로필은 바꿨지만 커리어 목록을 불러오지 못했습니다. 설정의 다시 연결로 다시 시도하세요.',
+              },
+        );
+      })();
+      clearGoogleQuery();
+      return;
+    }
+    if (search.google === 'merge_required') {
+      platform.analytics.track('google_link_result', { result: 'merge_required' });
+      setMergeDismissed(false);
+      clearGoogleQuery();
+      return;
+    }
+    platform.analytics.track('google_link_result', { result: 'error' });
+    setToast({ variant: 'error', message: googleErrorMessage(search.reason) });
+    clearGoogleQuery();
+  }, [search.google]);
+
+  function handleConnect() {
+    platform.analytics.track('google_link_started');
+    platform.openExternal(`${API_BASE_URL}/v1/auth/google/start`);
+  }
+
+  async function handleUnlink() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await unlinkGoogle();
+      if (result.ok) {
+        setUnlinkOpen(false);
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        platform.analytics.track('google_unlinked');
+      } else {
+        setError(result.error.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleMergeChoice(choice: MergeChoice) {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await submitGoogleMerge(choice);
+      if (result.ok) {
+        const engine = await getAppEngine();
+        await engine.store.transaction('readwrite', (tx) => tx.kv.put(PROFILE_ID_KV_KEY, result.data.profileId));
+        const reconciled = await reconcileAfterRecovery(choice, queryClient);
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        platform.analytics.track('google_merge_resolved', { mergeChoice: choice });
+        setToast(
+          reconciled.ok
+            ? { variant: 'success', message: `Google 프로필과 합쳤습니다. 커리어 ${result.data.careerCount}개` }
+            : {
+                variant: 'error',
+                message: '연결은 됐지만 커리어 목록을 불러오지 못했습니다. 설정의 다시 연결로 다시 시도하세요.',
+              },
+        );
+        return;
+      }
+      setError(result.error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!platform.features.googleLink) {
+    return (
+      <Card className="flex items-center justify-between gap-os-3">
+        <span className="font-os text-os-text">Google 연결</span>
+        <span className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          이 채널의 계정으로 자동 저장됩니다
+        </span>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="flex flex-col gap-os-2">
+      <div className="flex items-center justify-between gap-os-3">
+        <div className="flex flex-col gap-os-1">
+          <span className="font-os text-os-text">Google 연결</span>
+          {googleLinked && googleEmailMasked !== null ? (
+            <span className="os-num font-os text-os-text-2" style={CAPTION_STYLE}>
+              {googleEmailMasked}
+            </span>
+          ) : null}
+        </div>
+
+        {googleLinked ? (
+          <Dialog
+            open={unlinkOpen}
+            onOpenChange={(open) => {
+              if (busy) return;
+              setUnlinkOpen(open);
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="secondary" style={DANGER_STYLE}>
+                연결 해제
+              </Button>
+            </DialogTrigger>
+            <DialogContent
+              title="Google 연결 해제"
+              closeLabel="닫기"
+              onOpenAutoFocus={(event) => {
+                event.preventDefault();
+                unlinkCancelRef.current?.focus();
+              }}
+              onEscapeKeyDown={(event) => {
+                if (busy) event.preventDefault();
+              }}
+              onPointerDownOutside={(event) => {
+                if (busy) event.preventDefault();
+              }}
+              onInteractOutside={(event) => {
+                if (busy) event.preventDefault();
+              }}
+            >
+              <div className="flex flex-col gap-os-3">
+                <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                  Google 연결을 해제하면 이 계정으로 다시 찾아올 수 없습니다.
+                </p>
+                {noRecoveryCode ? (
+                  <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+                    복구 코드가 없어 연결을 해제하면 이 프로필을 되돌릴 방법이 없습니다.
+                  </p>
+                ) : null}
+                {error !== null ? (
+                  <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+                    {error}
+                  </p>
+                ) : null}
+                <div className="flex gap-os-3">
+                  <button
+                    ref={unlinkCancelRef}
+                    type="button"
+                    className={buttonClassName('ghost')}
+                    style={buttonStyle}
+                    onClick={() => setUnlinkOpen(false)}
+                    disabled={busy}
+                  >
+                    취소
+                  </button>
+                  <Button variant="secondary" style={DANGER_STYLE} onClick={() => void handleUnlink()} disabled={busy}>
+                    연결 해제
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <Button variant="secondary" onClick={handleConnect}>
+            Google로 연결
+          </Button>
+        )}
+      </div>
+
+      <Dialog
+        open={mergeDialogOpen}
+        onOpenChange={(open) => {
+          if (busy) return;
+          if (!open) setMergeDismissed(true);
+        }}
+      >
+        <DialogContent
+          title="Google에 연결된 프로필이 있습니다"
+          description="이 기기의 커리어와 Google에 연결된 프로필의 커리어 중 무엇을 남길지 골라 주세요."
+          closeLabel="닫기"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            mergeCancelRef.current?.focus();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (busy) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (busy) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (busy) event.preventDefault();
+          }}
+        >
+          {pendingMerge !== null ? (
+            <div className="flex flex-col gap-os-3">
+              {error !== null ? (
+                <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+                  {error}
+                </p>
+              ) : null}
+              <Button variant="secondary" onClick={() => void handleMergeChoice('MOVE_TO_LINKED')} disabled={busy}>
+                이 기기의 커리어 {localCareerCount}개를 Google 프로필로 옮기기
+              </Button>
+              <Button
+                variant="secondary"
+                style={DANGER_STYLE}
+                onClick={() => void handleMergeChoice('KEEP_LINKED_ONLY')}
+                disabled={busy}
+              >
+                Google 프로필(커리어 {pendingMerge.targetCareerCount}개)만 사용하고 이 기기의 커리어는 지우기
+              </Button>
+              <button
+                ref={mergeCancelRef}
+                type="button"
+                className={buttonClassName('ghost')}
+                style={buttonStyle}
+                onClick={() => setMergeDismissed(true)}
+                disabled={busy}
+              >
+                취소
+              </button>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {toast !== null ? (
+        <Toast variant={toast.variant} message={toast.message} onDismiss={() => setToast(null)} />
+      ) : null}
+    </Card>
+  );
+}
+
 function LogoutRow() {
+  const profileQuery = useProfileQuery();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  const canLogout = profileQuery.data?.linked.google === true;
+
+  async function handleConfirm() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await logout();
+      if (result.ok) {
+        setOpen(false);
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        platform.analytics.track('logout');
+        setToast('로그아웃했습니다. 이 기기의 진행은 그대로 남습니다');
+      } else {
+        setError(result.error.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <Card className="flex flex-col gap-os-2">
       <div className="flex items-center justify-between gap-os-3">
         <span className="font-os text-os-text">로그아웃</span>
-        <Button variant="secondary" disabled>
-          로그아웃
-        </Button>
+        <Dialog
+          open={open}
+          onOpenChange={(next) => {
+            if (busy) return;
+            setOpen(next);
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button variant="secondary" disabled={!canLogout}>
+              로그아웃
+            </Button>
+          </DialogTrigger>
+          <DialogContent
+            title="로그아웃"
+            description="지금 로그아웃하면 이 프로필을 되찾을 수 없습니다. 이 기기의 진행은 그대로 남습니다."
+            closeLabel="닫기"
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              cancelRef.current?.focus();
+            }}
+            onEscapeKeyDown={(event) => {
+              if (busy) event.preventDefault();
+            }}
+            onPointerDownOutside={(event) => {
+              if (busy) event.preventDefault();
+            }}
+            onInteractOutside={(event) => {
+              if (busy) event.preventDefault();
+            }}
+          >
+            <div className="flex flex-col gap-os-3">
+              {error !== null ? (
+                <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+                  {error}
+                </p>
+              ) : null}
+              <div className="flex gap-os-3">
+                <button
+                  ref={cancelRef}
+                  type="button"
+                  className={buttonClassName('ghost')}
+                  style={buttonStyle}
+                  onClick={() => setOpen(false)}
+                  disabled={busy}
+                >
+                  취소
+                </button>
+                <Button variant="secondary" style={DANGER_STYLE} onClick={() => void handleConfirm()} disabled={busy}>
+                  로그아웃
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
       <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
         Google을 연결한 프로필에서만 쓸 수 있습니다. 지금 로그아웃하면 이 프로필을 되찾을 수 없습니다.
       </p>
+      {toast !== null ? <Toast variant="success" message={toast} onDismiss={() => setToast(null)} /> : null}
     </Card>
   );
 }
@@ -878,12 +1260,7 @@ function SettingsScreen() {
             <ProfileRecoverRow />
           </li>
           <li>
-            <Card className="flex items-center justify-between gap-os-3">
-              <span className="font-os text-os-text">Google 연결</span>
-              <Button variant="secondary" disabled>
-                준비 중
-              </Button>
-            </Card>
+            <GoogleRow />
           </li>
           <li>
             <LogoutRow />

@@ -20,6 +20,11 @@ export interface StringKV {
 export interface Platform {
   readonly channel: Channel;
   readonly theme: { forced: 'light' | 'dark' | null };
+  /**
+   * T-1-013 D-21, ADR-009: 화면은 채널 리터럴을 비교하지 않고 이 값으로만 기능을 켜고 끈다.
+   * `googleLink`는 web만 true다(toss는 WebView OAuth를 막고 토스 계정이 이미 식별 수단이다).
+   */
+  readonly features: { googleLink: boolean };
   createLocalStore(): Promise<LocalStore>;
   /**
    * "이 기기 데이터 삭제"(SCR-030): 채널의 로컬 저장소를 통째로 지운다. 호출 전에 앱이 이미 만든

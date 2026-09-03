@@ -1,0 +1,5 @@
+# D-21. `wrangler dev`가 로컬에서 읽는 비밀값. 실제 값은 커밋하지 않는다.
+# U-003(Google 클라이언트 ID·시크릿) 전에는 비워 둔다 — GOOGLE_FAKE=1(wrangler.jsonc vars)이면
+# 가짜 OIDC가 대신 쓰인다.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

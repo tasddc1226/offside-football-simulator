@@ -18,6 +18,7 @@
     "@offside/content": "workspace:*",
     "@offside/contracts": "workspace:*",
     "@offside/domain": "workspace:*",
+    "arctic": "3.7.0",
     "drizzle-orm": "0.45.2",
     "hono": "4.13.5"
   },

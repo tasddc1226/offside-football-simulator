@@ -16,5 +16,10 @@
   "vars": {
     "ENVIRONMENT": "local",
     "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173",
+    // D-21. GOOGLE_CLIENT_ID·GOOGLE_CLIENT_SECRET은 U-003 뒤 `wrangler secret put`으로 넣는다.
+    // GOOGLE_FAKE=1은 로컬에서만 의미가 있다(가짜 OIDC).
+    "WEB_APP_URL": "http://localhost:5173",
+    "GOOGLE_REDIRECT_URI": "http://localhost:8787/v1/auth/google/callback",
+    "GOOGLE_FAKE": "1",
   },
 }

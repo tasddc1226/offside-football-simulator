@@ -11,6 +11,16 @@ const PROFILE_WITH_CODE = {
   createdAt: '2026-08-01T00:00:00Z',
 };
 
+const PROFILE_GOOGLE_LINKED = {
+  id: 'prf_e2e_google',
+  settings: { reducedMotion: 'SYSTEM' as const, textScale: 100 as const, theme: 'SYSTEM' as const, defaultSimulationMode: 'FAST' as const },
+  linked: { google: true, toss: false },
+  recoveryCodeIssuedAt: null,
+  createdAt: '2026-08-01T00:00:00Z',
+  googleEmailMasked: 'a***@gmail.com',
+  pendingMerge: null,
+};
+
 async function expectNoSeriousOrCriticalViolations(page: Page, label: string): Promise<void> {
   const results = await new AxeBuilder({ page }).analyze();
   const seriousOrCritical = results.violations.filter(
@@ -186,4 +196,62 @@ test('T-1-012 설정: 프로필 삭제 확인 대화상자에 axe serious·criti
   await expect(page.getByRole('heading', { level: 2, name: '프로필 삭제' })).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'T-1-012 설정: 프로필 삭제 확인');
+});
+
+test('T-1-013 설정: Google 연결 해제 확인 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await page.route('**/v1/profile', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await fulfillJson(route, 200, { data: PROFILE_GOOGLE_LINKED, meta: E2E_META });
+  });
+
+  await page.goto('/settings');
+  await page.getByRole('button', { name: '연결 해제' }).click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Google 연결 해제' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'T-1-013 설정: Google 연결 해제 확인');
+});
+
+test('T-1-013 설정: Google 병합 선택 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await page.route('**/v1/profile', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await fulfillJson(route, 200, {
+      data: {
+        id: 'prf_e2e_pending',
+        settings: { reducedMotion: 'SYSTEM', textScale: 100, theme: 'SYSTEM', defaultSimulationMode: 'FAST' },
+        linked: { google: false, toss: false },
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-08-01T00:00:00Z',
+        googleEmailMasked: null,
+        pendingMerge: { targetCareerCount: 2 },
+      },
+      meta: E2E_META,
+    });
+  });
+
+  await page.goto('/settings');
+  await expect(page.getByRole('heading', { level: 2, name: 'Google에 연결된 프로필이 있습니다' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'T-1-013 설정: Google 병합 선택');
+});
+
+test('T-1-013 설정: 로그아웃 확인 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await page.route('**/v1/profile', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await fulfillJson(route, 200, { data: PROFILE_GOOGLE_LINKED, meta: E2E_META });
+  });
+
+  await page.goto('/settings');
+  await page.getByRole('button', { name: '로그아웃' }).click();
+  await expect(page.getByRole('heading', { level: 2, name: '로그아웃' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'T-1-013 설정: 로그아웃 확인');
 });
