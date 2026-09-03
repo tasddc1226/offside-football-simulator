@@ -127,6 +127,7 @@ ETA = [
     ("9/4 01:20", "PR #44(챕터 화면)·#45(결산 화면) 리뷰 통과(수정 0건). #44 검증 체인 e2e 2건 실패(season.spec 이중 클릭 TOCTOU·chapter.spec 0분 시즌 데뷔 미발생) → 수정 요청. T-2-011(Phase 2 완료 조건 검증) 3번째 워커 투입"),
     ("9/4 01:56", "핵심 경기 챕터 화면(T-2-008) 머지(PR #44): 챕터가 브라우저에서 열리고 판단 확정→경기 결과→재생까지, e2e 결정론 시드 훅. 리뷰 수정 0건 + 검증 e2e 결함 2건 수정. T-2-009 main 머지·재검증 중"),
     ("9/4 02:08", "시즌 결산 화면(T-2-009) 머지(PR #45): OVR 변화와 경기 예상치 변화 분리, CompareCards·CountUp, 결산 응답 유실 복구, 다이어리 연대기. Phase 2 화면 3종 완료 — 계약→시즌→챕터→결산→다음 시즌이 브라우저에서 이어짐(e2e 66). 리뷰 수정 0건"),
+    ("9/4 02:18", "Phase 3·4 병렬 계획 초안(D-43~D-53): 트랙 A 계약·임대·이적 T-3-001~006, 트랙 B 부상·관계·평판 T-4-001~006. 투입은 Phase 2 종료·ADR-010 승인(U-012) 뒤, U-013(워커 PROTOTYPE 문구) 확인 요청"),
     ("9/4", "T-2-011(Phase 2 완료 조건 검증) PR → Phase 2 잔여 T-2-010(콘텐츠, U-005 대기). Phase 3·4 브리프 작성"),
 ]
 DECISIONS = [
@@ -140,6 +141,7 @@ DECISIONS = [
     ("PR #39 리뷰: 경기 계산·D-37", "matchRngState를 결정 스트림 복사 대신 해시 파생 시드로, yellowSuspensionAt 5 복원(강제 카운트 테스트), PR #38 후속으로 career-04-gk를 contracts·api 검증에 추가해 머지. 수용: 부상 1~4경기, 리그 순위 기대 승점 근사, 컵 무승부 진출."),
     ("Wave 3 브리프 D-38·D-39", "챕터: 경기 계산 직후 훅, chapterCandidates·trigger 5종, RESOLVE_CHAPTER 판단당 roll 1회, 평점 delta·CURRENT/RELATION만. 결산: SeasonResult hash, 연령대 예산×잠재력 gap×출전 계수+경험, 훈련 초점, carry centi, 잠재력 cap, 시즌 중 폼·체력·사기 갱신, 밸런스 테스트로 상수 조정."),
     ("Wave 3 리뷰: DEFERRED 시즌 적용", "미룬 효과는 START_SEASON에서 season.scheduledEffects로 옮겨 그 시즌 step에 적용(유실·같은 시즌 오적용 방지). 성장 상수 75/65/8 확정, player.ts 잠재력 불변식은 T-2-011."),
+    ("Phase 3·4 계획 D-43~D-53", "팀 변경은 결산 뒤 시장에서만, Offer v2·협상 1회·안전 잔류, ACCEPT_OFFER 원자 전환, 임대 1시즌, 부상 심각도·재활·재발·후유증 확정 시점, 관계 로그·감독 교체·평판, 대표팀 기본 모듈, 새 명령은 CMD-CON-001~004뿐, 트랙별 파일 소유권."),
     ("PR #44 검증: e2e 결함 2건", "리뷰는 통과했으나 부하 아래 e2e 실패를 trace로 확정 — 공용 locator의 이중 클릭이 결산하기로 새는 TOCTOU, 시드에 따라 0분 시즌이면 데뷔 챕터가 안 열림. 수정(exact locator·step 변화 대기, DEV 전용 e2e 시드 훅) 뒤 머지."),
     ("D-38 확정: 챕터", "후보는 ADVANCE.chapterCandidates로, 출전한 경기만, FAST는 MAJOR만. CHAPTER pending은 RESOLVE_CHAPTER로만 닫힘. tier1~3 리그 라이벌/승격 상수는 임시값, DEBUT는 첫 시즌만(후속)."),
     ("D-40~D-42 공유 계약(ADR-010)", "Effect kind→타깃 소유권·ONCE_PER_SEASON·시즌 만료·REPLACE 복원, 시장가치 입력 소유권(truePotential 배제), CareerTag 16종 ownerPhase. 워커 작성본이라 사용자 승인 대기(U-012)."),

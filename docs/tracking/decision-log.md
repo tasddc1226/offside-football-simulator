@@ -2,6 +2,10 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-04 (새벽, Phase 3·4 병렬 계획 초안 D-43~D-53)
+
+**결과**: [phase-3-4-plan.md](phase-3-4-plan.md) 작성(02:18). phase-03·04 정본, ADR-010, 로드맵 "Phase 3 이후 병렬화", 03·04·11 개발 명세, 현재 도메인 타입(Offer/Contract/Pending/FootballSeason/CareerState, offers.ts, season.ts 슬롯 규칙, contracts commands.ts의 CMD-CON 예약 리터럴)을 대조해 트랙 A(T-3-001~006)·트랙 B(T-4-001~006)로 분해했다. 주요 결정: (D-43) 팀 변경은 결산 뒤 이적시장에서만, step 7 창은 재계약 사전 협상·루머 태도만; (D-44) Offer v2(kind·유효 revision·출전 약속·협상 1회·안전 잔류 제안); (D-45) ACCEPT_OFFER 원자 전환과 context·관계 이월 표; (D-46) 임대 1시즌·LOAN_RETURN; (D-47) 약속 위반·배신 이적 Effect·태그; (D-48) Phase 3 태그 5종 코드화(구단 tier 실제 변경은 Phase 6·8); (D-49) 부상 모델(심각도·부위·범위·재활·재발·후유증은 확정 시점에만, 강제 사건 상한 2); (D-50) 관계 5축 + relationshipLog·memoryTags, season.manager와 결산 교체, reputation.popularityCenti; (D-51) 대표팀 기본 모듈·NATIONAL_DEBUT 챕터; (D-52) 새 명령은 CMD-CON-001~004뿐, 부상·대표팀·관계 결정은 RESOLVE_EVENT + presentation 변형; (D-53) 트랙별 파일·필드 소유권, 타임라인 kind 사전 예약, 타입 슬라이스 순차(T-3-001 → T-4-001), schemaVersion 1 유지. 열린 질문에 U-013(워커 PROTOTYPE 문구 작성 허용, 팀 풀 확장) 추가. PR #45 후속(결산 뒤 step 요약 유실)은 타입 슬라이스에 `SeasonResult.stepSummaries[]`로 배정.
+
 ## 2026-09-04 (새벽, PR #44 검증 실패 — e2e 결함 2건, T-2-011 투입)
 
 **결과**: PR #44(T-2-008, `0ffc00f`)·PR #45(T-2-009, `3fa150f`) 리뷰는 수정 요청 0건. 그러나 #44를 main 위에서 전체 체인으로 돌리자 e2e 60 통과·2 실패(병렬 부하). trace·error-context로 원인 확정: (1) `season.spec.ts` `advanceThroughSeasonToSettlement` — '진행' 클릭 직후 다음 루프의 `toBeEnabled`가 isPending 반영 전 틱에 통과 → `textContent()`는 '진행' → `click()`의 actionability 대기가 disabled→enabled 전환을 건너 step 12/12의 '결산하기'(같은 `/^(진행|결산하기)$/` locator)에 클릭이 떨어져 `season-result` 자리표시("준비 중")로 이동, 거기서 60s 타임아웃. (2) `chapter.spec.ts`(a11y.spec SCR-031도 같은 helper) — 시드에 따라 17세 OVR 59 선수가 19경기 전부 `미선발 · 0분`이라 DEBUT 트리거(minutes>0)가 한 번도 안 맞아 챕터가 안 열리고 step 12에서 타임아웃. 둘 다 이 PR의 e2e 설계 결함이라 PR 안에서 수정 후 머지: (1) 클릭 locator를 `'진행'` exact로 분리, 클릭 뒤 `step k/12`·pathname 변화를 기다린 뒤 다음 루프(chapter helper도 동일), (2) `createCareer`에 DEV 전용 시드 오버라이드(`localStorage['offside:e2e-seed']`, `import.meta.env.DEV` 가드)를 두고 chapter·a11y e2e는 데뷔 챕터가 이른 step에 열리는 시드를 상수로 심는다. 전체 e2e 3회 + 해당 스펙 `--repeat-each 3` 통과를 요구.
