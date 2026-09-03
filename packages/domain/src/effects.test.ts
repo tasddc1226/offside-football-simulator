@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyEffects, expireEffects, resolveDeferredEffects, resolveDeferredKind } from './effects.js';
+import { applyEffects, expireAtSeasonEnd, expireEffects, resolveDeferredEffects, resolveDeferredKind } from './effects.js';
 import { seedRng } from './rng.js';
 import { initialSeasonPlayerStats } from './season-stats.js';
 import { statGroupOf, type CareerState, type Effect, type FootballSeason } from './types.js';
@@ -67,6 +67,8 @@ function baseState(): CareerState {
     deferredEffects: [],
     resolvedEventIds: [],
     resolvedChapterIds: [],
+    careerTags: [],
+    careerTagGrants: [],
     rngState: seedRng('effects-test'),
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',
@@ -303,5 +305,187 @@ describe('resolveDeferredEffects', () => {
     const result = resolveDeferredEffects(state, 3);
     expect(result.season!.scheduledEffects).toEqual([deferredEffect(5)]);
     expect(result.state.fitness).toBe(state.state.fitness + 5);
+  });
+});
+
+// T-2-014 D-40: 시즌 index만 있으면 되는 최소 season(effects.ts가 이 필드 외엔 안 읽는다).
+function seasonWithIndex(index: number): FootballSeason {
+  return {
+    index,
+    serviceSeasonId: 'svc-test',
+    simulationMode: 'FAST',
+    calendarId: 'cal-test',
+    currentStep: 1,
+    phase: 'LEAGUE',
+    steps: [],
+    teamId: 'team-test',
+    styleId: 'style-test',
+    squadRole: 'ROTATION',
+    squadRoleAtStart: 'ROTATION',
+    trainingFocus: 'ROLE',
+    competitions: [],
+    schedule: [],
+    matches: [],
+    ageReferenceStep: 1,
+    squad: { competitors: [] },
+    selection: { position: 'W', slots: 1, benchSlots: 0, candidates: [], playerReason: null },
+    playerStats: initialSeasonPlayerStats(statGroupOf('W')),
+    availability: null,
+    lastRatingTenths: null,
+    yellowSuspensionCount: 0,
+    matchRngState: seedRng('effects-test-season-index'),
+    scheduledEffects: [],
+    chapters: [],
+  };
+}
+
+// T-2-014 D-40 규칙 2: ONCE_PER_SEASON.
+describe('ONCE_PER_SEASON', () => {
+  it('같은 시즌에 두 번째 적용은 reject되고, 다음 시즌에는 다시 적용된다', () => {
+    const season1 = { ...baseState(), season: seasonWithIndex(1) };
+    const effect = makeEffect({
+      kind: 'RELATION',
+      target: 'managerTrust',
+      delta: 5,
+      stackingRule: 'ONCE_PER_SEASON',
+      sourceId: 'EVT-SEASONAL.a.1',
+    });
+
+    const first = applyEffects(season1, [effect], { step: 1 });
+    expect(first.state.relationships.managerTrust).toBe(45);
+    expect(first.state.appliedSourceIds).toEqual(['season:1:EVT-SEASONAL.a.1']);
+
+    const second = applyEffects(first.state, [effect], { step: 2 });
+    expect(second.state.relationships.managerTrust).toBe(45);
+    expect(second.rejected).toEqual([{ effect, reason: 'ONCE_PER_SEASON_DUPLICATE' }]);
+
+    // seasonBoundaryReset이 `season:` 접두 항목을 지운 뒤 시즌 2로 넘어간 상태를 흉내낸다.
+    const nextSeasonState = { ...second.state, appliedSourceIds: [], season: seasonWithIndex(2) };
+    const third = applyEffects(nextSeasonState, [effect], { step: 1 });
+    expect(third.state.relationships.managerTrust).toBe(50);
+    expect(third.rejected).toEqual([]);
+  });
+});
+
+// T-2-014 D-40 규칙 3: AT_SEASON_END·SEASONS_AFTER(저장 시 AT_SEASON_INDEX)·시즌 넘는 AT_STEP 강제 만료.
+describe('expireAtSeasonEnd', () => {
+  it('AT_SEASON_END 효과는 expireEffects(step)로는 안 지워지고 expireAtSeasonEnd로만 되돌아온다', () => {
+    const state = { ...baseState(), season: seasonWithIndex(1) };
+    const effect = makeEffect({
+      kind: 'CURRENT',
+      target: 'morale',
+      delta: 8,
+      stackingRule: 'SUM',
+      expiresAt: { kind: 'AT_SEASON_END' },
+    });
+    const applied = applyEffects(state, [effect], { step: 3 }).state;
+    expect(applied.state.morale).toBe(68);
+    expect(applied.activeEffects).toEqual([{ ...effect, expiresAt: { kind: 'AT_SEASON_END' } }]);
+
+    const stillActive = expireEffects(applied, 12);
+    expect(stillActive.state.morale).toBe(68);
+    expect(stillActive.activeEffects).toHaveLength(1);
+
+    const expired = expireAtSeasonEnd(applied, 1);
+    expect(expired.state.morale).toBe(60);
+    expect(expired.activeEffects).toEqual([]);
+  });
+
+  it('SEASONS_AFTER 2는 저장 시 AT_SEASON_INDEX 3으로 치환되고, 그 시즌 결산에서만 되돌아온다', () => {
+    const state = { ...baseState(), season: seasonWithIndex(1) };
+    const effect = makeEffect({
+      kind: 'CURRENT',
+      target: 'form',
+      delta: 6,
+      stackingRule: 'SUM',
+      expiresAt: { kind: 'SEASONS_AFTER', seasons: 2 },
+    });
+    const applied = applyEffects(state, [effect], { step: 3 }).state;
+    expect(applied.state.form).toBe(56);
+    expect(applied.activeEffects).toEqual([{ ...effect, expiresAt: { kind: 'AT_SEASON_INDEX', index: 3 } }]);
+
+    // 아직 대상 시즌(3)이 아니면 되돌리지 않는다.
+    const notYet = expireAtSeasonEnd(applied, 2);
+    expect(notYet.state.form).toBe(56);
+    expect(notYet.activeEffects).toHaveLength(1);
+
+    const expired = expireAtSeasonEnd(applied, 3);
+    expect(expired.state.form).toBe(50);
+    expect(expired.activeEffects).toEqual([]);
+  });
+
+  // T-2-014 R2-1: AT_SEASON_INDEX 비교는 `===`가 아니라 `<=`다 — 유스 구간(season: null)에서
+  // SEASONS_AFTER 0으로 적용된 효과는 AT_SEASON_INDEX 0으로 저장되는데, `===`였다면 실제 시즌 index가
+  // 1부터 시작해 영원히 만료되지 않았을 것이다.
+  it('유스 구간에서 SEASONS_AFTER 0으로 저장된 AT_SEASON_INDEX 0 효과는 첫 시즌 결산에서 만료된다', () => {
+    const state = { ...baseState(), season: null };
+    const effect = makeEffect({
+      kind: 'RELATION',
+      target: 'fans',
+      delta: 7,
+      stackingRule: 'SUM',
+      expiresAt: { kind: 'SEASONS_AFTER', seasons: 0 },
+    });
+    const applied = applyEffects(state, [effect], { step: 1 }).state;
+    expect(applied.relationships.fans).toBe(7);
+    expect(applied.activeEffects).toEqual([{ ...effect, expiresAt: { kind: 'AT_SEASON_INDEX', index: 0 } }]);
+
+    const expired = expireAtSeasonEnd(applied, 1);
+    expect(expired.relationships.fans).toBe(0);
+    expect(expired.activeEffects).toEqual([]);
+  });
+
+  it('시즌을 넘긴 AT_STEP은 다음 시즌 같은 step을 기다리지 않고 결산 시 강제로 되돌아온다', () => {
+    const state = { ...baseState(), season: seasonWithIndex(1) };
+    const effect = makeEffect({
+      kind: 'CURRENT',
+      target: 'fitness',
+      delta: 10,
+      stackingRule: 'SUM',
+      expiresAt: { kind: 'STEPS_AFTER', steps: 5 },
+    });
+    // step 10에 적용 → AT_STEP 15로 저장되지만 이 시즌은 step 12에서 끝난다.
+    const applied = applyEffects(state, [effect], { step: 10 }).state;
+    expect(applied.activeEffects).toEqual([{ ...effect, expiresAt: { kind: 'AT_STEP', step: 15 } }]);
+
+    const expired = expireAtSeasonEnd(applied, 1);
+    expect(expired.state.fitness).toBe(80);
+    expect(expired.activeEffects).toEqual([]);
+  });
+
+  it('REPLACE + expiresAt: 만료 시 −delta가 아니라 적용 전 원래 값(restoreTo)으로 복원한다', () => {
+    const state = { ...baseState(), season: seasonWithIndex(1) };
+    const effect = makeEffect({
+      kind: 'CONTEXT',
+      target: 'tacticalFit',
+      delta: 90,
+      stackingRule: 'REPLACE',
+      expiresAt: { kind: 'AT_SEASON_END' },
+    });
+    const applied = applyEffects(state, [effect], { step: 1 }).state;
+    expect(applied.context.tacticalFit).toBe(90);
+    expect(applied.activeEffects).toEqual([{ ...effect, expiresAt: { kind: 'AT_SEASON_END' }, restoreTo: 58 }]);
+
+    const expired = expireAtSeasonEnd(applied, 1);
+    // −delta(90)였다면 음수로 clamp돼 0이 됐을 것이다 — restoreTo(58)로 정확히 되돌아온다.
+    expect(expired.context.tacticalFit).toBe(58);
+  });
+});
+
+// T-2-014 D-40 규칙 6: reasonTag는 그대로 보존된다(effects.ts가 손대지 않는 통과 필드).
+describe('reasonTag', () => {
+  it('applyEffects가 activeEffects·applied에 reasonTag를 그대로 남긴다', () => {
+    const state = { ...baseState(), season: seasonWithIndex(1) };
+    const effect = makeEffect({
+      kind: 'CURRENT',
+      target: 'morale',
+      delta: 3,
+      stackingRule: 'SUM',
+      expiresAt: { kind: 'AT_SEASON_END' },
+      reasonTag: 'EVT-MORALE.win',
+    });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.applied[0]?.reasonTag).toBe('EVT-MORALE.win');
+    expect(result.state.activeEffects[0]?.reasonTag).toBe('EVT-MORALE.win');
   });
 });

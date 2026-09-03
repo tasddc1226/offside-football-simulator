@@ -224,6 +224,7 @@ export function selectOpenSlot(
           importance: chapterOpen.importance,
           matchId: chapterOpen.matchId,
           decisionsTotal: chapterOpen.decisionsTotal,
+          trigger: chapterOpen.trigger,
           resolved: [],
         },
         rngState,

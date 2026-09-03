@@ -3127,5 +3127,34 @@
     "moraleNotSelected": 2,
     "moraleUnusedSub": 1,
     "moraleStepMax": 5
+  },
+  "marketValueRules": {
+    "weightsBp": {
+      "baseOvr": 3500,
+      "scoutedPotentialMid": 2000,
+      "ageCurve": 1500,
+      "contract": 1000,
+      "league": 1000,
+      "form": 500,
+      "popularity": 500
+    },
+    "ageCurve": [
+      { "maxAge": 21, "valueCenti": 7000 },
+      { "maxAge": 25, "valueCenti": 10000 },
+      { "maxAge": 29, "valueCenti": 9000 },
+      { "maxAge": 32, "valueCenti": 6000 },
+      { "maxAge": 99, "valueCenti": 3000 }
+    ],
+    "contractCurve": {
+      "remaining0": 4000,
+      "remaining1": 7000,
+      "remaining2Plus": 10000
+    },
+    "leagueTierValueCenti": {
+      "YOUTH": 2000,
+      "1": 10000,
+      "2": 7500,
+      "3": 5000
+    }
   }
 }

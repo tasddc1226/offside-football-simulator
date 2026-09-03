@@ -227,6 +227,26 @@ export type ConditionRules = {
   moraleStepMax: number;
 };
 
+// T-2-014 D-41: 시장가치 지수 상수(`packages/content` 소유, `market-value.ts`가 소비). 가중치는
+// bp 단위(합 10000), 값은 0~10000 centi로 정규화한 뒤 가중 평균한다.
+export type MarketValueRules = {
+  weightsBp: {
+    baseOvr: number;
+    scoutedPotentialMid: number;
+    ageCurve: number;
+    contract: number;
+    league: number;
+    form: number;
+    popularity: number;
+  };
+  /** 오름차순 구간표(`maxAge` 기준), 마지막 원소의 maxAge는 항상 99. */
+  ageCurve: Array<{ maxAge: number; valueCenti: number }>;
+  /** 잔여 계약 시즌 0·1·2+ 구간. */
+  contractCurve: { remaining0: number; remaining1: number; remaining2Plus: number };
+  /** `offerRules.rolePromiseByTier`와 같은 키 관례(JSON 객체 키는 문자열). */
+  leagueTierValueCenti: Record<'1' | '2' | '3' | 'YOUTH', number>;
+};
+
 // T-2-001 D-33: 룰셋 slot 정의(step 안의 결정 슬롯 후보). `FootballSeason.steps[].decisionSlots`는
 // 시즌 시작 시 이 목록에서 결정 예산(RULE-TIME-004)을 적용해 만든다.
 export type LeagueCalendarSlot = Pick<DecisionSlot, 'kind' | 'required' | 'importance'>;
@@ -274,4 +294,6 @@ export type Ruleset = {
   growthRules: GrowthRules;
   /** T-2-005 D-39: 시즌 중 폼·체력·사기 갱신 상수. */
   conditionRules: ConditionRules;
+  /** T-2-014 D-41: 시장가치 지수 상수. */
+  marketValueRules: MarketValueRules;
 };

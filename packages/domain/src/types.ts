@@ -39,6 +39,10 @@ export type ChapterTrigger =
   | { kind: 'DECIDER'; maxRankGap: number }
   | { kind: 'TAG'; tag: string };
 
+// T-2-014 D-42: RESOLVE_CHAPTER outcome·ChapterRecord.decisions[]가 남기는 결과 종류(content
+// `event.ts`의 `OUTCOME_KINDS`와 같은 값).
+export type ChapterOutcomeKind = 'SUCCESS' | 'NEUTRAL' | 'FAIL' | 'FIXED';
+
 export const ATTRIBUTE_KEYS = [
   'shooting',
   'passing',
@@ -64,7 +68,49 @@ export const ATTRIBUTE_KEYS = [
 
 export type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
 
+// T-2-014 D-42: 커리어 태그 카탈로그 ID 16종(14 "커리어 태그 카탈로그" 표 순서 그대로). 이 목록은
+// types.ts가 소유해 ATTRIBUTE_KEYS와 같은 패턴으로 순환 import 없이 공유한다 — 카탈로그 내용
+// (라벨·희귀도·평가 시점·소유 Phase·평가기)은 career-tags.ts가 소유하고 이 목록을 재수출한다.
+export const CAREER_TAG_IDS = [
+  'TAG-ONE-CLUB',
+  'TAG-JOURNEYMAN',
+  'TAG-LOAN-LEGEND',
+  'TAG-BIG-GAME',
+  'TAG-GLASS-GENIUS',
+  'TAG-MANAGER-FAVOURITE',
+  'TAG-LOCKER-LEADER',
+  'TAG-PROMOTION-EXPERT',
+  'TAG-DERBY-HERO',
+  'TAG-TRAITOR',
+  'TAG-LATE-BLOOMER',
+  'TAG-IRONMAN',
+  'TAG-COMEBACK',
+  'TAG-MENTOR',
+  'TAG-CONTROVERSIAL',
+  'TAG-UNCROWNED',
+] as const;
+
+export type CareerTagId = (typeof CAREER_TAG_IDS)[number];
+
+// T-2-014 D-42: 태그 하나가 부여된 기록.
+export type CareerTagGrant = { tagId: CareerTagId; seasonIndex: number; atRevision: number; sourceRefId: string };
+
 export type EffectKind = 'PERMANENT' | 'CURRENT' | 'CONTEXT' | 'RELATION' | 'DEFERRED';
+
+// D-40 규칙 2: `ONCE_PER_SOURCE`는 커리어 전체 1회, 신규 `ONCE_PER_SEASON`은 시즌마다 1회
+// (`appliedSourceIds`에 `season:<index>:<sourceId>`로 기록 — effects.ts 참고).
+export type EffectStackingRule = 'ONCE_PER_SOURCE' | 'ONCE_PER_SEASON' | 'REPLACE' | 'SUM';
+
+// D-40 규칙 3: 기존 `STEPS_AFTER`(저장 시 `AT_STEP`으로 치환)에 신규 `AT_SEASON_END`(결산 직전
+// 되돌림)·`SEASONS_AFTER`(저장 시 `AT_SEASON_INDEX`로 치환)가 더해진다. `AT_STEP`은 시즌 경계를
+// 넘기면(다음 시즌 같은 step을 기다리지 않고) 결산 직전 강제 만료된다(effects.ts `expireAtSeasonEnd`).
+export type EffectExpiresAt =
+  | null
+  | { kind: 'STEPS_AFTER'; steps: number }
+  | { kind: 'AT_STEP'; step: number }
+  | { kind: 'AT_SEASON_END' }
+  | { kind: 'SEASONS_AFTER'; seasons: number }
+  | { kind: 'AT_SEASON_INDEX'; index: number };
 
 export type Effect = {
   kind: EffectKind;
@@ -73,8 +119,14 @@ export type Effect = {
   delta: number;
   clamp: { min: number; max: number };
   appliesAt: { kind: 'IMMEDIATE' } | { kind: 'NEXT_SEASON_STEP'; step: number };
-  expiresAt: null | { kind: 'STEPS_AFTER'; steps: number } | { kind: 'AT_STEP'; step: number };
-  stackingRule: 'ONCE_PER_SOURCE' | 'REPLACE' | 'SUM';
+  expiresAt: EffectExpiresAt;
+  stackingRule: EffectStackingRule;
+  /** D-40 규칙 6: 결과 원인 태그(선택, 04 "결과가 0이면… 원인 문구"). */
+  reasonTag?: string;
+  /** D-40 규칙 4: `stackingRule === 'REPLACE'`이고 `expiresAt`이 있는 효과가 `activeEffects`에
+   * 저장될 때 `applyEffects`가 채우는 적용 전 원래 값(만료 시 이 값으로 복원한다). 콘텐츠가 직접
+   * 채우지 않는다(content `EffectSchema`는 이 필드를 모른다). */
+  restoreTo?: number;
 };
 
 // D-1: 포지션과 묶음(phase-1-plan.md). CB·FB → DEF, DM·CM·AM → MID, W·ST → FWD.
@@ -219,7 +271,10 @@ export type Pending =
       importance: 'MAJOR' | 'MINOR';
       matchId: string;
       decisionsTotal: number;
-      resolved: Array<{ decisionId: string; optionId: string; outcomeId: string; roll: number }>;
+      // T-2-014 D-42: 이 챕터를 연 trigger의 kind(전체 ChapterTrigger가 아니라 판별 리터럴만 —
+      // ChapterRecord.trigger와 TAG-DERBY-HERO 같은 평가기가 이 값으로 필터한다).
+      trigger: ChapterTrigger['kind'];
+      resolved: Array<{ decisionId: string; optionId: string; outcomeId: string; roll: number; outcomeKind: ChapterOutcomeKind }>;
     }
   | { kind: 'CONTRACT'; step: number }
   | { kind: 'ROLE_PROPOSAL'; step: number; proposal: RoleProposal }
@@ -239,7 +294,9 @@ export type TimelineEntry = {
     | 'STEP_PASSED'
     | 'SEASON_SETTLED'
     | 'ROLE_RESOLVED'
-    | 'CHAPTER_RESOLVED';
+    | 'CHAPTER_RESOLVED'
+    // T-2-014 D-42: `evaluateCareerTags`가 새 태그를 부여할 때마다 1건(refId = tagId).
+    | 'CAREER_TAG_GRANTED';
   refId: string | null;
   age: number;
   step: number;
@@ -497,7 +554,9 @@ export type ChapterRecord = {
   step: number;
   matchId: string;
   importance: 'MAJOR' | 'MINOR';
-  decisions: Array<{ decisionId: string; optionId: string; outcomeId: string }>;
+  // T-2-014 D-42: 이 챕터를 연 trigger의 kind(`pending.trigger`에서 그대로 옮긴다).
+  trigger: ChapterTrigger['kind'];
+  decisions: Array<{ decisionId: string; optionId: string; outcomeId: string; outcomeKind: ChapterOutcomeKind }>;
   ratingDeltaTenths: number;
 };
 
@@ -573,6 +632,11 @@ export type CareerState = {
    * 시즌마다 같은 chapterId가 다시 후보로 남는다(더비처럼 매 시즌 열릴 수 있는 챕터를 위해). 정렬은
    * `sortUniqueTags`와 같은 코드포인트 오름차순을 유지한다. */
   resolvedChapterIds: string[];
+  // T-2-014 D-42: 부여된 커리어 태그 ID(정렬·중복 없음). `tags`(콘텐츠 기억 태그, 자유 문자열)와는
+  // 별개다 — 이쪽은 CAREER_TAG_IDS 카탈로그에 속한 값만 들어간다.
+  careerTags: CareerTagId[];
+  /** T-2-014 D-42: 태그가 부여된 순서대로 쌓는 감사 기록(`grantCareerTag`가 추가한다). */
+  careerTagGrants: CareerTagGrant[];
   rngState: RngState;
   rulesetVersion: string;
   contentPackVersion: string;
