@@ -81,6 +81,12 @@ Phase 2가 끝나면 T-2-014의 공유 계약을 먼저 닫고, Phase 3(계약·
 - 경기 하나의 RNG 순서: 팀 결과(roll100 + 득점 rollInt 2) → 선발(roll 없음, `availability` 제외) → 출전 시간 → 관여량 → 포지션군 통계 항목(고정 키 순서) → 카드 → 부상 이탈 → 평점(roll 없음). 0분·OUT 경기는 팀 결과 roll만 소비한다. `ADVANCE`는 step의 경기를 먼저 돌리고 결정 슬롯을 연다(챕터 훅은 그 사이 — T-2-004).
 - 부상·정지는 Phase 2에서 `availability { INJURY | SUSPENSION, matchesRemaining }`로만 표현한다(능력치·재활은 Phase 4). 평점은 통계 가중합으로 roll 없이 산출해 `lastRating`으로 Squad Status(D-34)에 들어간다. FAST·CHAPTER는 같은 generator라 챕터가 없는 T-2-003 시점에는 `matches`가 byte-identical하다.
 
+### D-36 저장 상태의 모든 수는 정수 (2026-09-03, PR #37 리뷰)
+
+`canonicalize`가 safe integer만 허용하므로 CareerState·Snapshot에 저장되는 모든 수는 정수다. 소수가 필요한 값(평점·xG·PSxG·기대 승점)은 `…Tenths`·`…Centi` 정수 필드로 들고 표시 계층에서 나눈다. 함수 안의 중간값은 부동소수여도 되지만 저장 전에 `Math.round` 한 번, 더하는 순서 고정. T-2-002 `selection.ts`가 `roundToInt`로 이 규칙을 먼저 적용했고 T-2-003 브리프의 평점은 `ratingTenths`(40~100)다.
+
+D-34 보정: 역할 제안의 POSITION_CHANGE 후보는 `positionAdjacency[primaryPosition]` 전부(아키타입 필터 없음)이고, RESOLVE_ROLE 네 분기 뒤 `season.squadRole === squadRoleFromSelection(season.selection)` 불변식을 유지한다.
+
 ## 4. 열린 질문 (Wave 1 전에 닫는다)
 
 - 리그·컵 구조를 룰셋 데이터로 얼마나 구체화할지(팀 수, 경기 수, 컵 라운드 수). 제안: 리그 팀 수는 룰셋 `leagues[].teamCount`, 경기 수는 홈·원정 2회전, 컵은 4라운드.

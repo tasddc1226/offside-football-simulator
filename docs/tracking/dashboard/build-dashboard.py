@@ -95,9 +95,9 @@ SCREENS = [
     ("법적 문서", "개인정보·약관", "구현", "본문 초안 (T-1-012). 운영자명·연락처는 U-010"),
 ]
 LAYERS = [
-    ("domain", "결정론 시뮬레이터", ["시드 RNG·canonical hash·golden fixture", "CREATE_CAREER·RESOLVE_EVENT·ADVANCE", "효과 5종·태그·지연 효과", "선수 모델·Base OVR 59·DRAFT→확정·이벤트 제시 (T-1-001)", "제안 생성·계약 확정, golden 첫 계약까지 (T-1-005)", "선수 성별(결과 불변)·선호/현재 포지션 분리·golden 갱신 (T-1-016)", "시즌 구조·12 step·START/SETTLE_SEASON·ADVANCE 재정의·결정 예산 (T-2-001)"], ["전술 스타일·경쟁자·Tactical Fit·선발 판정·역할 제안 (T-2-002)", "경기 계산·통계·평점 (T-2-003)"]),
-    ("content", "이벤트·룰셋 데이터", ["프로토타입 팩 0.1.0(이벤트 10개)", "조건 DSL·효과 스키마·검증 CLI", "룰셋 1.0.0(아키타입 24·배경 3·팀 8·제안·계약 규칙)", "조건 컨텍스트·적격 이벤트 선택기·브라우저 팩 로더 (T-1-015)", "룰셋 leagueCalendar 12 step·seasonBoundaryReset (T-2-001)"], ["리그·컵·전술 스타일·선발 상수·경쟁자 이름 (T-2-002)", "matchRules (T-2-003)"]),
-    ("contracts", "API·명령 스키마(Zod)", ["요청·응답 봉투·오류 코드·프로필 설정", "커리어 동기화 GET/PUT·Snapshot 봉투", "Phase 1 명령 payload 판별 유니온·CareerState·PlayerPublic(잠재력 비노출)·복구·삭제 스키마 (T-1-006)", "api 복구·삭제 라우트가 contracts 스키마로 검증 (T-1-012)", "선수 성별·선호/현재 포지션 스키마 (T-1-016)", "Google 병합·pendingMerge 스키마 (T-1-013)"], []),
+    ("domain", "결정론 시뮬레이터", ["시드 RNG·canonical hash·golden fixture", "CREATE_CAREER·RESOLVE_EVENT·ADVANCE", "효과 5종·태그·지연 효과", "선수 모델·Base OVR 59·DRAFT→확정·이벤트 제시 (T-1-001)", "제안 생성·계약 확정, golden 첫 계약까지 (T-1-005)", "선수 성별(결과 불변)·선호/현재 포지션 분리·golden 갱신 (T-1-016)", "시즌 구조·12 step·START/SETTLE_SEASON·ADVANCE 재정의·결정 예산 (T-2-001)", "전술 스타일·경쟁자 8×2·Tactical Fit·선발 순위·step-1 역할 제안 RESOLVE_ROLE, golden underdog (T-2-002)"], ["경기 계산·통계·평점·부상·정지 (T-2-003)"]),
+    ("content", "이벤트·룰셋 데이터", ["프로토타입 팩 0.1.0(이벤트 10개)", "조건 DSL·효과 스키마·검증 CLI", "룰셋 1.0.0(아키타입 24·배경 3·팀 8·제안·계약 규칙)", "조건 컨텍스트·적격 이벤트 선택기·브라우저 팩 로더 (T-1-015)", "룰셋 leagueCalendar 12 step·seasonBoundaryReset (T-2-001)", "리그 4·FA컵·전술 스타일 3종·선발 상수·경쟁자 이름 40 (T-2-002)"], ["matchRules·경기 표 (T-2-003)"]),
+    ("contracts", "API·명령 스키마(Zod)", ["요청·응답 봉투·오류 코드·프로필 설정", "커리어 동기화 GET/PUT·Snapshot 봉투", "Phase 1 명령 payload 판별 유니온·CareerState·PlayerPublic(잠재력 비노출)·복구·삭제 스키마 (T-1-006)", "api 복구·삭제 라우트가 contracts 스키마로 검증 (T-1-012)", "선수 성별·선호/현재 포지션 스키마 (T-1-016)", "Google 병합·pendingMerge 스키마 (T-1-013)", "RESOLVE_ROLE·ROLE_PROPOSAL·경쟁자·선발 순위 스키마 (T-2-002)"], ["golden 순회 정합·Snapshot 크기·동기화 회귀·Worker 시간 (T-2-006)"]),
     ("engine-client", "브라우저 실행기", ["명령 실행기·멱등성·Snapshot 복구", "Web Worker 시뮬레이터", "동기화 클라이언트(재시도·409 처리)", "룰셋 배선 (T-1-001)", "포크(fork-by-replay)·Worker 실패 처리 (T-1-011)", "서버 커리어 가져오기 importCareerFromServer (T-1-012)"], []),
     ("platform", "저장소 추상화", ["Dexie(IndexedDB) LocalStore", "KV LocalStore(토스 채널용 스텁)", "features.googleLink 채널 기능 플래그 (T-1-013)"], []),
     ("api", "Cloudflare Workers + D1", ["D1 스키마·migration", "세션(쿠키·Bearer)·익명 프로필·설정", "커리어 동기화 GET/PUT·If-Match·멱등", "복구 코드·프로필 복구·삭제·로그아웃·커리어 삭제 (T-1-004)", "Google OIDC start/callback/merge/unlink·가짜 OIDC (T-1-013)"], ["실제 Google 계정 검증 (U-003 대기)"]),
@@ -116,7 +116,8 @@ ETA = [
     ("9/3 11:15", "E2E 완료 조건(T-1-014) 머지: 최소 조작 58초, 허브 LCP 1.1초(4G), 완료 조건 표 15행. 미구현 5건(포지션 탭 키보드 도달 불가 등) → T-1-017 투입"),
     ("9/3 12:12", "완료 조건 보완(T-1-017) 머지 → Phase 1 종료(완료 조건 15행 중 14 ✅, Google 실계정만 U-003 대기). Phase 2 Wave 1 T-2-001(시즌 구조) 투입"),
     ("9/3 14:25", "시즌 구조(T-2-001) 머지(PR #36): START_SEASON→ADVANCE→SETTLE_SEASON이 12 step 캘린더 위에서 결정론적으로 돈다(golden FAST·CHAPTER). 리뷰 수정 4건. T-2-002(팀 전술·경쟁자·선발) 투입"),
-    ("9/3 저녁~9/4", "T-2-002 리뷰·머지 → T-2-003(경기 계산)·T-2-006(계약·동기화·크기) 병행 투입(브리프 작성 완료)"),
+    ("9/3 17:00", "팀 전술·경쟁자·선발(T-2-002) 머지(PR #37): 전술 스타일 3종·리그·컵·경쟁자 16명·Selection Score·step-1 역할 제안이 골든으로 고정(OVR 58 선수가 전술 적합도로 선발). 리뷰 수정 3건. Wave 2 T-2-003(경기 계산)·T-2-006(계약·동기화·크기) 병행 투입"),
+    ("9/4", "T-2-003·T-2-006 리뷰·머지 → Wave 3 T-2-004(챕터)·T-2-005(결산·성장) 투입"),
 ]
 DECISIONS = [
     ("Phase 순서 준수", "Phase 0을 닫은 뒤 Phase 1 워커 투입. 브리프는 미리 작성."),
@@ -126,6 +127,7 @@ DECISIONS = [
     ("Google 연결·완료 판정 D-21·D-22", "arctic + 가짜 OIDC로 U-003 전에도 E2E. 완료 조건 13행 표, 5분 세션은 자동화 시간으로 판정, LCP·CLS는 기록만."),
     ("브리프 15개 전부 작성", "투입 순서: T-1-007 → 008·009 → 011 → 012 → 013·014."),
     ("PR #25 리뷰: 복구 코드 발급 400", "apiFetch가 body 없는 POST에 Content-Type을 안 붙여 서버 bodyGuard가 거부. 워커의 '일시적 400' 설명을 재현으로 반박하고 수정 후 머지."),
+    ("PR #37 리뷰: 역할 제안 도달성·D-36 정수 상태", "POSITION_CHANGE 후보 필터가 실제 룰셋에서 항상 false였던 것(브리프 모호), RESOLVE_ROLE 뒤 squadRole·selection 불일치, fixtures export 누락을 고쳐 머지. 저장 상태는 정수만(D-36), 아키타입 +40의 밸런스 리스크는 T-2-011 측정 항목."),
     ("PR #36 리뷰: 시즌 구조·D-34·D-35", "FAST 예산이 모드가 열지 않는 슬롯까지 세어 MAJOR 챕터를 잘랐던 것, 시즌 walk 효과 만료 누락, 결산 뒤 nextAction, engine-client 최소 수정을 고쳐 머지. T-2-002(전술·역할 제안·경쟁자)·T-2-003(경기 계산 순서) 상세를 D-34·D-35로 확정."),
     ("Phase 3 이후 병렬화 D-32", "Phase 2까지 순차. 공유 계약(Effect·시장가치·태그) 확정 뒤 Phase 3·4 병렬, 그 위에 5·6 병렬. Phase 2 계획 T-2-001~014 초안."),
     ("Phase 1 종료·D-33", "PR #35로 완료 조건 미구현 5건 해소, #12는 오케스트레이터 수동 점검(폐기 어휘·hex 리터럴 0건). Phase 2 열린 질문은 계획의 제안대로 확정(리그 2회전·컵 4라운드·경쟁자 60/40·Snapshot 크기 T-2-006 측정)."),
