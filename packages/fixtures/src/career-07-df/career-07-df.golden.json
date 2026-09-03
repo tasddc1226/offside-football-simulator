@@ -1,6 +1,6 @@
 {
   "revision": 15,
-  "stateHash": "fabbebb81a4bb0c89edcc773beadbcaf8ddb6a4ad5b202a7a49d95eee863bd54",
+  "stateHash": "7c7ba0bc885ef40874a3f0d4fe0d6df9659e02972055e1e6035cdfb924af90c8",
   "rngStateDraws": 398,
   "age": 18,
   "seasonHistory": [
@@ -114,36 +114,391 @@
           "minutesShareBp": 940
         },
         "attributeDeltas": [
-          { "key": "shooting", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
-          { "key": "passing", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
-          { "key": "dribbling", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
-          { "key": "tackling", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 35 }] },
-          { "key": "firstTouch", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
-          { "key": "crossing", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
-          { "key": "goalkeeping", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
-          { "key": "pace", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 6 }] },
-          { "key": "acceleration", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 6 }] },
-          { "key": "agility", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 6 }] },
-          { "key": "jumping", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 41 }] },
-          { "key": "stamina", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 6 }] },
-          { "key": "strength", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 44 }] },
-          { "key": "durability", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 20 }] },
-          { "key": "decisions", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 19 }] },
-          { "key": "concentration", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 30 }] },
-          { "key": "composure", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 24 }] },
-          { "key": "positioning", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 30 }] },
-          { "key": "leadership", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 4 }] },
-          { "key": "consistency", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 4 }] }
+          {
+            "key": "shooting",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 3
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 5
+              }
+            ]
+          },
+          {
+            "key": "passing",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 3
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 5
+              }
+            ]
+          },
+          {
+            "key": "dribbling",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 3
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 5
+              }
+            ]
+          },
+          {
+            "key": "tackling",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 24
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -17
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 35
+              }
+            ]
+          },
+          {
+            "key": "firstTouch",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 3
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 5
+              }
+            ]
+          },
+          {
+            "key": "crossing",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 3
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 5
+              }
+            ]
+          },
+          {
+            "key": "goalkeeping",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 3
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 5
+              }
+            ]
+          },
+          {
+            "key": "pace",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 4
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 6
+              }
+            ]
+          },
+          {
+            "key": "acceleration",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 4
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 6
+              }
+            ]
+          },
+          {
+            "key": "agility",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 4
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 6
+              }
+            ]
+          },
+          {
+            "key": "jumping",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 28
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -20
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 41
+              }
+            ]
+          },
+          {
+            "key": "stamina",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 4
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 6
+              }
+            ]
+          },
+          {
+            "key": "strength",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 30
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -21
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 44
+              }
+            ]
+          },
+          {
+            "key": "durability",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 14
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -10
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 20
+              }
+            ]
+          },
+          {
+            "key": "decisions",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 13
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -10
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 19
+              }
+            ]
+          },
+          {
+            "key": "concentration",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 21
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -15
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 30
+              }
+            ]
+          },
+          {
+            "key": "composure",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 16
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -12
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 24
+              }
+            ]
+          },
+          {
+            "key": "positioning",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 21
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -15
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 30
+              }
+            ]
+          },
+          {
+            "key": "leadership",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 3
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 4
+              }
+            ]
+          },
+          {
+            "key": "consistency",
+            "delta": 0,
+            "causes": [
+              {
+                "cause": "TRAINING",
+                "centi": 3
+              },
+              {
+                "cause": "MINUTES",
+                "centi": -3
+              },
+              {
+                "cause": "EXPERIENCE",
+                "centi": 4
+              }
+            ]
+          }
         ],
-        "baseOvr": { "before": 62, "after": 62 },
+        "baseOvr": {
+          "before": 62,
+          "after": 62
+        },
         "stateDeltas": {
-          "form": { "before": 48, "after": 50 },
-          "fitness": { "before": 97, "after": 80 },
-          "morale": { "before": 67, "after": 60 },
-          "managerTrust": { "before": 45, "after": 45 }
+          "form": {
+            "before": 48,
+            "after": 50
+          },
+          "fitness": {
+            "before": 97,
+            "after": 80
+          },
+          "morale": {
+            "before": 67,
+            "after": 60
+          },
+          "managerTrust": {
+            "before": 45,
+            "after": 45
+          }
         },
         "chapters": [],
-        "hash": "2044f3eb2ecb9b1f2a81a24756500bba2f536e032c4975b49257df084fb78779"
+        "hash": "5a824bf7cefebdb5a7d3a4429a0d09291789560d9e4ff4d01f63a2209d56d3ce"
       }
     }
   ],
