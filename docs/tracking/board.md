@@ -105,7 +105,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-2-008 | web | SCR-031 챕터·chapterCandidates 전달·재생 복원(SCR-012는 T-2-007로 이동) | T-2-004, T-2-007 | 3 | in-progress | `T-2-008-chapter-screen`, [브리프](briefs/T-2-008.md) |
 | T-2-009 | web | SCR-015 시즌 결산(+SCR-006)·연대기 요약·응답 유실 복구 | T-2-005, T-2-007 | 3 | in-progress | `T-2-009-season-result`, [브리프](briefs/T-2-009.md) |
 | T-2-010 | content | 콘텐츠 팩 0.2.0(챕터 3종·시즌 이벤트, SHIPPABLE 항목만) | T-2-004, 콘텐츠 승격 | 4 | todo | `docs/content/kickoff/production-backlog.md` 상태 기준 후속(PR #26): previewEffects에 성장·출전·제안 범위 구조화 필드, EVT-CON-002 C 성장 기대 줄 누락, 태그 한글 라벨(라커룸이 id 노출). |
-| T-2-011 | domain + web(e2e) | 포지션군 4종 완주 fixture, B > A, 집계, FAST 6분·CHAPTER 12분, TEST-E2E-002·010 | T-2-007~009 | 4 | todo | 후속(PR #30): createWorkerSimulator 타임아웃을 포트 전체 broken이 아니라 요청당 예산으로. fixtures eligibleEvents가 selectEligibleEvents 실제 후보군과 다름(PR #26 기록). |
+| T-2-011 | domain + web(e2e) | 포지션군 4종 완주 fixture, B > A, 집계, FAST 6분·CHAPTER 12분, TEST-E2E-002·010 | T-2-007~009 | 4 | todo | [브리프](briefs/T-2-011.md) 선작성(T-2-008·009 머지 뒤 투입, E2E_PORT 5187). 후속(PR #30): createWorkerSimulator 타임아웃을 포트 전체 broken이 아니라 요청당 예산으로. fixtures eligibleEvents가 selectEligibleEvents 실제 후보군과 다름(PR #26 기록). |
 | T-2-012 | api + web + platform | LINE TEST 준비: `svc_line_test`, 테스트 보관함, 분석 이벤트, 스테이징 배포 | T-2-011, T-0-010 | 4 | todo | U-002 필요 |
 | T-2-013 | docs | LINE TEST 운영 계획·기준선 양식·완료 조건 표 | T-2-012 | 4 | todo | |
 | T-2-014 | domain + contracts | Phase 3+ 공유 계약: Effect 만료·중첩, 시장가치 입력, CareerTag 인터페이스, ADR-010 | T-2-004, T-2-005 | 3 | done | PR #43 dd480a2, [브리프](briefs/T-2-014.md) |
