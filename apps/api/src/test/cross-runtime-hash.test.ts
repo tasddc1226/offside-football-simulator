@@ -23,6 +23,8 @@ import {
   career03UnderdogEngineCommands,
   career04Gk,
   career04GkEngineCommands,
+  career06Settled,
+  career06SettledEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -109,6 +111,17 @@ function runCareer04GkOnNode(): DomainSnapshot {
     snapshot = runOrThrow(snapshot, command, career04Gk);
   }
   if (snapshot === null) throw new Error('career04Gk 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
+/** T-2-005 D-39: career06Settled를 Node에서 재생한다. `hash-probe.worker.ts`의 `runCareer06Settled`와 같은 로직. */
+function runCareer06SettledOnNode(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career06SettledEngineCommands(() => `node-c6-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career06Settled);
+  }
+  if (snapshot === null) throw new Error('career06Settled 명령 목록이 비어 있다.');
   return snapshot;
 }
 
@@ -208,6 +221,12 @@ describe('런타임 간 state hash 일치(Node ↔ workerd)', { timeout: 15000 }
       runOnNode: runCareer04GkOnNode,
       probeRequest: { kind: 'replayGk' as const },
       golden: career04Gk.golden,
+    },
+    {
+      label: 'career-06-settled',
+      runOnNode: runCareer06SettledOnNode,
+      probeRequest: { kind: 'replaySettled' as const },
+      golden: career06Settled.golden,
     },
   ])('$label 재생의 revision·stateHash·rngState.draws가 Node·workerd·golden에서 모두 같다', async ({ runOnNode, probeRequest, golden }) => {
     const typedGolden = golden as ReplayGolden;

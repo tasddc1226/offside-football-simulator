@@ -16,6 +16,8 @@ import {
   career03UnderdogEngineCommands,
   career04Gk,
   career04GkEngineCommands,
+  career06Settled,
+  career06SettledEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -91,11 +93,23 @@ function runCareer04Gk(): DomainSnapshot {
   return snapshot;
 }
 
+/** T-2-005 D-39: career-06-settled(독립 시나리오, 유스 첫 시즌을 FAST로 결산까지)를 재생한다. */
+function runCareer06Settled(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career06SettledEngineCommands(() => `probe-c6-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career06Settled);
+  }
+  if (snapshot === null) throw new Error('career06Settled 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
 type ProbeRequest =
   | { kind: 'replay' }
   | { kind: 'replaySeason'; mode: SimulationMode }
   | { kind: 'replayUnderdog' }
   | { kind: 'replayGk' }
+  | { kind: 'replaySettled' }
   | { kind: 'sha256'; inputs: string[] }
   | { kind: 'canonical'; value: JsonValue };
 
@@ -130,6 +144,10 @@ export default {
 
     if (body.kind === 'replayGk') {
       return snapshotResponse(runCareer04Gk());
+    }
+
+    if (body.kind === 'replaySettled') {
+      return snapshotResponse(runCareer06Settled());
     }
 
     if (body.kind === 'sha256') {

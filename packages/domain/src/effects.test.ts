@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyEffects, expireEffects } from './effects.js';
+import { applyEffects, expireEffects, resolveDeferredEffects, resolveDeferredKind } from './effects.js';
 import { seedRng } from './rng.js';
 import type { CareerState, Effect } from './types.js';
 
@@ -34,6 +34,28 @@ function baseState(): CareerState {
       positioning: 60,
       leadership: 35,
       consistency: 45,
+    },
+    growthCarryCenti: {
+      shooting: 0,
+      passing: 0,
+      dribbling: 0,
+      tackling: 0,
+      firstTouch: 0,
+      crossing: 0,
+      goalkeeping: 0,
+      pace: 0,
+      acceleration: 0,
+      agility: 0,
+      jumping: 0,
+      stamina: 0,
+      strength: 0,
+      durability: 0,
+      decisions: 0,
+      concentration: 0,
+      composure: 0,
+      positioning: 0,
+      leadership: 0,
+      consistency: 0,
     },
     state: { form: 50, fitness: 80, morale: 60 },
     context: { tacticalFit: 58, squadStatus: 40, positionProficiency: 100 },
@@ -195,5 +217,49 @@ describe('applyEffects', () => {
     const snapshot = baseState();
     applyEffects(state, [makeEffect({ delta: 5, stackingRule: 'SUM' })], { step: 1 });
     expect(state).toEqual(snapshot);
+  });
+});
+
+describe('resolveDeferredKind', () => {
+  it('state.* → CURRENT, relationships.* → RELATION, context.* → CONTEXT, 그 외 → PERMANENT', () => {
+    expect(resolveDeferredKind('state.fitness')).toEqual({ kind: 'CURRENT', target: 'fitness' });
+    expect(resolveDeferredKind('relationships.fans')).toEqual({ kind: 'RELATION', target: 'fans' });
+    expect(resolveDeferredKind('context.tacticalFit')).toEqual({ kind: 'CONTEXT', target: 'tacticalFit' });
+    expect(resolveDeferredKind('shooting')).toEqual({ kind: 'PERMANENT', target: 'shooting' });
+  });
+});
+
+describe('resolveDeferredEffects', () => {
+  function deferredEffect(step: number): Effect {
+    return makeEffect({
+      kind: 'DEFERRED',
+      target: 'state.fitness',
+      delta: 5,
+      clamp: { min: 0, max: 100 },
+      stackingRule: 'SUM',
+      sourceId: 'EVT-DEFERRED.a.1',
+      appliesAt: { kind: 'NEXT_SEASON_STEP', step },
+    });
+  }
+
+  it('아직 그 step이 아니면 deferredEffects도 값도 그대로다', () => {
+    const state = { ...baseState(), deferredEffects: [deferredEffect(3)] };
+    const result = resolveDeferredEffects(state, 2);
+    expect(result.deferredEffects).toEqual([deferredEffect(3)]);
+    expect(result.state.fitness).toBe(state.state.fitness);
+  });
+
+  it('NEXT_SEASON_STEP 3 효과는 다음 시즌 step 3에 적용되고 deferredEffects에서 사라진다', () => {
+    const state = { ...baseState(), deferredEffects: [deferredEffect(3)] };
+    const result = resolveDeferredEffects(state, 3);
+    expect(result.deferredEffects).toEqual([]);
+    expect(result.state.fitness).toBe(state.state.fitness + 5);
+  });
+
+  it('같은 step에 여러 개가 있어도 그 step 것만 풀리고 다른 step 것은 남는다', () => {
+    const state = { ...baseState(), deferredEffects: [deferredEffect(3), deferredEffect(5)] };
+    const result = resolveDeferredEffects(state, 3);
+    expect(result.deferredEffects).toEqual([deferredEffect(5)]);
+    expect(result.state.fitness).toBe(state.state.fitness + 5);
   });
 });

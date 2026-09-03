@@ -488,9 +488,11 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     );
     if (!opened.ok) throw new Error(`실패: ${opened.error.code} ${opened.error.message}`);
     expect(opened.snapshot.state.season?.currentStep).toBe(2);
-    const beforeMorale = opened.snapshot.state.state.morale;
+    const beforeFans = opened.snapshot.state.relationships.fans;
 
-    // step2 EVENT를 morale +10(AT_STEP 5 만료) 효과로 해소한다.
+    // step2 EVENT를 fans +10(AT_STEP 5 만료) 효과로 해소한다. fans는 selection·매치 계산 어디에도
+    // 쓰이지 않으므로(form·morale과 달리) 경기 결과에 영향을 주지 않고 순수히 effect 만료 회귀만
+    // 검증할 수 있다.
     const resolved = runSimulate(opened.snapshot, {
       type: 'RESOLVE_EVENT',
       commandId: 'resolve-effect-1',
@@ -505,9 +507,9 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
             weight: 100,
             effects: [
               {
-                kind: 'CURRENT',
+                kind: 'RELATION',
                 sourceId: 'test-effect-src-t2001',
-                target: 'morale',
+                target: 'fans',
                 delta: 10,
                 clamp: { min: 0, max: 100 },
                 appliesAt: { kind: 'IMMEDIATE' },
@@ -521,15 +523,15 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     });
     if (!resolved.ok) throw new Error(`실패: ${resolved.error.code} ${resolved.error.message}`);
     expect(resolved.snapshot.state.activeEffects).toHaveLength(1);
-    const afterEffectMorale = resolved.snapshot.state.state.morale;
-    expect(afterEffectMorale).toBe(Math.min(beforeMorale + 10, 100));
+    const afterEffectFans = resolved.snapshot.state.relationships.fans;
+    expect(afterEffectFans).toBe(Math.min(beforeFans + 10, 100));
 
     // step2를 닫고 step3(CHAPTER MAJOR)에서 멈춘다 — 아직 step5 전이라 효과가 살아있어야 한다.
     const atStep3 = runSimulate(resolved.snapshot, advanceCommand(resolved.snapshot.revision));
     if (!atStep3.ok) throw new Error(`실패: ${atStep3.error.code} ${atStep3.error.message}`);
     expect(atStep3.snapshot.state.season?.currentStep).toBe(3);
     expect(atStep3.snapshot.state.activeEffects).toHaveLength(1);
-    expect(atStep3.snapshot.state.state.morale).toBe(afterEffectMorale);
+    expect(atStep3.snapshot.state.relationships.fans).toBe(afterEffectFans);
 
     // step3을 닫고 eligibleEvents 없이 진행하면 step4·5(EVENT, 후보 없어 건너뜀)를 지나 step6
     // (CHAPTER)에서 멈춘다 — 한 ADVANCE가 step 4·5·6을 한 번에 지나가므로, expireEffects가 step5를
@@ -538,7 +540,7 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     if (!pastStep5.ok) throw new Error(`실패: ${pastStep5.error.code} ${pastStep5.error.message}`);
     expect(pastStep5.snapshot.state.season?.currentStep).toBe(6);
     expect(pastStep5.snapshot.state.activeEffects).toEqual([]);
-    expect(pastStep5.snapshot.state.state.morale).toBe(beforeMorale);
+    expect(pastStep5.snapshot.state.relationships.fans).toBe(beforeFans);
   });
 
   // T-2-003 D-35 필수 테스트 벡터: 이 시나리오의 팀(seoul-tier1)은 실제 리그 일정이 있어(schedule.ts)
@@ -596,9 +598,8 @@ describe('SETTLE_SEASON (CMD-SIM-003)', () => {
     expect(result.error.details).toEqual({ reason: 'SEASON_NOT_SETTLEABLE' });
   });
 
-  it('성공하면 seasonHistory 1건, season null, age+1, 상태가 회귀하고 능력치는 그대로다', () => {
+  it('성공하면 seasonHistory 1건, season null, age+1, 상태가 회귀하고 능력치는 성장식 결과와 일치한다', () => {
     const before = activeSnapshotWithContract();
-    const attributesBefore = before.state.attributes;
     const ageBefore = before.state.age;
 
     const settled = playFullSeason(before, 'FAST');
@@ -607,7 +608,11 @@ describe('SETTLE_SEASON (CMD-SIM-003)', () => {
     expect(settled.state.seasonHistory[0]?.index).toBe(1);
     expect(settled.state.age).toBe(ageBefore + 1);
     expect(settled.state.state).toEqual(rulesetProto.seasonBoundaryReset);
-    expect(settled.state.attributes).toEqual(attributesBefore);
+    // T-2-005 D-39: 능력치는 더 이상 결산 전후로 그대로가 아니다 — 성장식 결과(attributeDeltas)로
+    // 갱신되고, 갱신된 값이 곧 seasonHistory[0].result.attributes에 기록된 baseOvr.after와 정합한다.
+    const result = settled.state.seasonHistory[0]?.result;
+    expect(result).toBeDefined();
+    expect(settled.state.player.profile?.baseOvr).toBe(result?.baseOvr.after);
     expect(settled.state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_SETTLED' });
   });
 

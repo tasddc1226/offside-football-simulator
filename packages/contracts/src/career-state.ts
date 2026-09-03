@@ -349,6 +349,9 @@ export const SelectionRankingSchema = z.strictObject({
     .nullable(),
 });
 
+// T-2-005 D-39: domain `TrainingFocus`와 동일(ROLE = 아키타입 roleWeights 그대로).
+export const TrainingFocusSchema = z.enum(['ROLE', 'TECHNICAL', 'PHYSICAL', 'MENTAL']);
+
 // T-2-001 D-24/T-2-002 D-34: 시즌 구조. `ageReferenceStep`은 항상 1(11 "나이·시즌 경계"). `styleId`·
 // `squad`·`selection`은 T-2-002가 추가한다.
 export const FootballSeasonSchema = z.strictObject({
@@ -362,6 +365,10 @@ export const FootballSeasonSchema = z.strictObject({
   teamId: z.string().min(1),
   styleId: z.string().min(1),
   squadRole: SquadRoleSchema,
+  // T-2-005 D-39: START_SEASON이 만든 시즌 시작 시점 squadRole(RESOLVE_ROLE로도 바뀌지 않는다).
+  squadRoleAtStart: SquadRoleSchema,
+  // T-2-005 D-39: 이 시즌 훈련 초점.
+  trainingFocus: TrainingFocusSchema,
   competitions: z.array(CompetitionRecordSchema),
   // T-2-003 D-35: roll 없이 시즌 시작 시 확정하는 리그·컵 일정(step·order 순 정렬).
   schedule: z.array(ScheduleEntrySchema),
@@ -380,12 +387,72 @@ export const FootballSeasonSchema = z.strictObject({
   matchRngState: RngStateSchema,
 });
 
+// T-2-005 D-39: T-2-004(핵심 경기 챕터)가 아직 main에 없어 실제 형태를 모른다 — domain과 같은
+// 플레이스홀더(`{ id, step }`)다. T-2-004가 머지되면 그쪽 정의로 맞춘다.
+export const ChapterRecordSchema = z.strictObject({ id: z.string().min(1), step: z.number().int().min(1).max(12) });
+
+// T-2-005 D-39: domain `GrowthCause`와 동일.
+export const GrowthCauseSchema = z.enum(['TRAINING', 'MINUTES', 'EXPERIENCE', 'AGE_DECLINE', 'POTENTIAL_CAP']);
+
+// domain `RoleProposal['type']`과 동일.
+const RoleProposalTypeSchema = z.enum(['KEEP', 'POSITION_CHANGE', 'ROLE_CHANGE']);
+
+// T-2-005 D-39: SETTLE_SEASON이 만드는 시즌 결산 결과. domain `SeasonResult`와 동일.
+export const SeasonResultSchema = z.strictObject({
+  index: z.number().int().positive(),
+  simulationMode: SimulationModeSchema,
+  teamId: z.string().min(1),
+  competitions: z.array(CompetitionRecordSchema),
+  playerStats: SeasonPlayerStatsSchema,
+  selectionSummary: z.strictObject({
+    squadRoleAtStart: SquadRoleSchema,
+    squadRoleAtEnd: SquadRoleSchema,
+    started: z.number().int().nonnegative(),
+    sub: z.number().int().nonnegative(),
+    zeroMinute: z.number().int().nonnegative(),
+    out: z.number().int().nonnegative(),
+    minutes: z.number().int().nonnegative(),
+    possibleMinutes: z.number().int().nonnegative(),
+    finalRank: z.number().int().positive(),
+  }),
+  roleChanges: z.array(
+    z.strictObject({
+      step: z.number().int().min(1).max(12),
+      type: RoleProposalTypeSchema,
+      decision: z.enum(['ACCEPT', 'DECLINE']),
+    }),
+  ),
+  promiseFulfilment: z.strictObject({
+    promised: SquadRoleSchema,
+    delivered: SquadRoleSchema,
+    fulfilled: z.boolean(),
+    minutesShareBp: z.number().int().nonnegative(),
+  }),
+  attributeDeltas: z.array(
+    z.strictObject({
+      key: z.enum(SELECTION_ATTRIBUTE_KEYS),
+      delta: z.number().int(),
+      causes: z.array(z.strictObject({ cause: GrowthCauseSchema, centi: z.number().int() })),
+    }),
+  ),
+  baseOvr: z.strictObject({ before: z.number().int(), after: z.number().int() }),
+  stateDeltas: z.strictObject({
+    form: z.strictObject({ before: z.number().int(), after: z.number().int() }),
+    fitness: z.strictObject({ before: z.number().int(), after: z.number().int() }),
+    morale: z.strictObject({ before: z.number().int(), after: z.number().int() }),
+    managerTrust: z.strictObject({ before: z.number().int(), after: z.number().int() }),
+  }),
+  chapters: z.array(ChapterRecordSchema),
+  hash: z.string().min(1),
+});
+
 export const SeasonSummarySchema = z.strictObject({
   index: z.number().int().positive(),
   simulationMode: SimulationModeSchema,
   teamId: z.string().min(1),
   competitions: z.array(CompetitionRecordSchema),
   settledAtRevision: z.number().int().positive(),
+  result: SeasonResultSchema,
 });
 
 // domain `Effect`와 동일한 형태(kind·sourceId·target·delta·clamp·appliesAt·expiresAt·stackingRule).
@@ -460,6 +527,8 @@ export const CareerStateSchema = z.strictObject({
   seasonPhase: SeasonPhaseSchema,
   simulationMode: SimulationModeSchema,
   attributes: AttributesSchema,
+  // T-2-005 D-39: 성장식 이월(정수 centi, 1/100). 결산 시 매번 갱신된다.
+  growthCarryCenti: AttributesSchema,
   state: z.strictObject({
     form: z.number().int(),
     fitness: z.number().int(),

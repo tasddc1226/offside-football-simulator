@@ -1233,7 +1233,7 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(lastEntry).toEqual({
         revision: result.snapshot.revision,
         kind: 'ROLE_RESOLVED',
-        refId: 'KEEP',
+        refId: 'KEEP:ACCEPT',
         age: snapshot.state.age,
         step: snapshot.state.currentStep,
       });
@@ -1251,7 +1251,7 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
       expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
       expect(result.snapshot.state.pending).toBeNull();
-      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'KEEP' });
+      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'KEEP:DECLINE' });
     });
   });
 
@@ -1284,7 +1284,7 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(result.snapshot.state.contract?.rolePromise).toBe(rolePromiseBefore);
       expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
       expect(result.snapshot.state.pending).toBeNull();
-      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'ROLE_CHANGE' });
+      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'ROLE_CHANGE:ACCEPT' });
     });
 
     it('DECLINE: contract.rolePromise·context.squadStatus는 그대로, season.selection·squadRole은 declineTrustDelta 반영 재산출 결과다', () => {
@@ -1349,7 +1349,7 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(result.snapshot.state.season?.selection.candidates.some((c) => c.id === 'PLAYER')).toBe(true);
       expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore + TRUST_DELTAS.acceptTrustDelta);
       expect(result.snapshot.state.pending).toBeNull();
-      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'POSITION_CHANGE' });
+      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'POSITION_CHANGE:ACCEPT' });
     });
 
     // season.squadRole은 항상 season.selection에서 유도된 값이어야 한다(squadRoleFromSelection이
