@@ -142,6 +142,8 @@ export const TIMELINE_KIND_LABEL_KO: Record<TimelineEntry['kind'], string> = {
   SEASON_STARTED: '시즌 시작',
   STEP_PASSED: '진행',
   SEASON_SETTLED: '시즌 정산',
+  // T-2-002 D-34: exhaustive Record가 typecheck에서 깨져 최소 수정(PR 본문 참고).
+  ROLE_RESOLVED: '역할 결정',
 };
 
 /**
@@ -180,4 +182,6 @@ export const TIMELINE_KIND_LABELS: Record<TimelineEntry['kind'], string> = {
   SEASON_STARTED: '시즌 시작',
   STEP_PASSED: '진행',
   SEASON_SETTLED: '시즌 결산',
+  // T-2-002 D-34: exhaustive Record가 typecheck에서 깨져 최소 수정(PR 본문 참고).
+  ROLE_RESOLVED: '역할 결정',
 };

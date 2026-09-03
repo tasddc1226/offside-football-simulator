@@ -1,4 +1,6 @@
 import { compareCodePoints, type JsonValue } from './canonical.js';
+import { clamp } from './clamp.js';
+import { generateCompetitors } from './competitors.js';
 import { applyEffects, expireEffects } from './effects.js';
 import { hashState } from './hash.js';
 import { findMatchingOfferBranch, generateOffers } from './offers.js';
@@ -17,10 +19,20 @@ import {
   type SeasonWalkResult,
 } from './season.js';
 import {
+  computeSquadStatus,
+  computeTacticalFit,
+  familiarityOf,
+  findTacticalStyle,
+  rankPositionForPlayer,
+  squadRoleFromSelection,
+  type RoleProposalContext,
+} from './selection.js';
+import {
   ATTRIBUTE_KEYS,
   type AttributeKey,
   type CareerStage,
   type CareerState,
+  type Competitor,
   type Contract,
   type DomainSnapshot,
   type Effect,
@@ -30,6 +42,7 @@ import {
   type PlayerGender,
   type Position,
   type PreferredFoot,
+  type SelectionRanking,
   type SeasonSummary,
   type SimulationMode,
 } from './types.js';
@@ -56,6 +69,8 @@ export type Command =
     }
   | { type: 'ADVANCE'; payload: { eligibleEvents: Array<{ eventId: string; version: number; weight: number }> } }
   | { type: 'SETTLE_SEASON'; payload: Record<string, never> }
+  // T-2-002 D-34 CMD-SIM-004: step 1 ROLE_PROPOSAL pending을 닫는다.
+  | { type: 'RESOLVE_ROLE'; payload: { decision: 'ACCEPT' | 'DECLINE' } }
   | {
       type: 'RESOLVE_EVENT';
       payload: {
@@ -394,11 +409,56 @@ function expireEffectsThroughWalk(state: CareerState, walked: SeasonWalkResult):
   return crossedSteps.reduce((acc, step) => expireEffects(acc, step), state);
 }
 
+function findTeam(ruleset: Ruleset, teamId: string): Ruleset['teams'][number] {
+  const team = ruleset.teams.find((candidate) => candidate.id === teamId);
+  if (team === undefined) {
+    throw new RangeError(`findTeam: 룰셋에 teamId '${teamId}'가 없다.`);
+  }
+  return team;
+}
+
 /**
- * T-2-001 D-25 CMD-SIM-001. step 1 슬롯을 즉시 연다(대부분 룰셋 기본 캘린더의 ROLE 필수 슬롯).
- * `command.payload.serviceSeasonId`는 `Command` 타입 정의 주석 참조. 이 walk는 `eligibleEvents:
- * []`로 도니, step 1이 EVENT 슬롯뿐인 캘린더라면 그 슬롯은 열리지 않고 건너뛴다(roll 없음) — 기본
- * 캘린더는 step 1이 필수 ROLE이라 문제되지 않는다.
+ * T-2-002 D-34: ROLE_PROPOSAL·컴퓨티터 순위가 참조하는 현재 시점의 맥락. `season.selection`·
+ * `season.squad.competitors`·`season.styleId`가 이미 있어야 하므로 `startSeason`(자체 계산분을 직접
+ * 넘긴다)과 `advanceInSeason`(저장된 season 값을 그대로 넘긴다) 양쪽에서 쓴다.
+ */
+function buildRoleContext(
+  state: CareerState,
+  ruleset: Ruleset,
+  styleId: string,
+  selection: SelectionRanking,
+  competitors: readonly Competitor[],
+): RoleProposalContext {
+  const profile = state.player.profile;
+  if (profile === null) throw new RangeError('buildRoleContext: player.profile이 null이다.');
+  if (state.contract === null) throw new RangeError('buildRoleContext: contract가 null이다.');
+  return {
+    ruleset,
+    styleId,
+    playerName: profile.name,
+    primaryPosition: profile.primaryPosition,
+    archetypeId: profile.archetypeId,
+    attributes: state.attributes,
+    baseOvr: profile.baseOvr,
+    rolePromise: state.contract.rolePromise,
+    managerTrust: state.relationships.managerTrust,
+    form: state.state.form,
+    fitness: state.state.fitness,
+    morale: state.state.morale,
+    squadStatus: state.context.squadStatus,
+    currentSelection: selection,
+    competitors,
+  };
+}
+
+/**
+ * T-2-001 D-25 CMD-SIM-001, T-2-002 D-26/D-34 확장. step 1 슬롯을 즉시 연다(대부분 룰셋 기본
+ * 캘린더의 ROLE 필수 슬롯). `command.payload.serviceSeasonId`는 `Command` 타입 정의 주석 참조. 이
+ * walk는 `eligibleEvents: []`로 도니, step 1이 EVENT 슬롯뿐인 캘린더라면 그 슬롯은 열리지 않고
+ * 건너뛴다(roll 없음) — 기본 캘린더는 step 1이 필수 ROLE이라 문제되지 않는다. T-2-002: 경쟁자
+ * 생성(rng 소비 — walk보다 먼저 실행해 RNG 순서를 "포지션→경쟁자→…"로 고정한다) → `context.tacticalFit`·
+ * `context.squadStatus` 재계산 → 선수 현재 포지션 순위 산출 → `season.squadRole` 갱신 → walk(역할
+ * 제안은 roll 없음).
  */
 function startSeason(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
   const command = input.command;
@@ -420,14 +480,55 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   if (state.pending !== null) {
     return fail('VALIDATION_FAILED', '이미 결정 대기 중인 pending이 있다.', { reason: 'PENDING_DECISION' });
   }
+  if (state.player.profile === null) {
+    throw new RangeError('startSeason: ACTIVE 상태인데 player.profile이 null이다.');
+  }
 
-  const calendar = input.ruleset.leagueCalendar;
+  const ruleset = input.ruleset;
+  const team = findTeam(ruleset, state.contract.teamId);
+  const rules = ruleset.selectionRules;
+  const profile = state.player.profile;
+
+  const generatedCompetitors = generateCompetitors(ruleset, team, state.rngState);
+
+  const tacticalFit = computeTacticalFit(state.attributes, profile.archetypeId, profile.primaryPosition, findTacticalStyle(ruleset, team.tacticalStyleId), rules);
+  const squadStatus = computeSquadStatus(
+    { rolePromise: state.contract.rolePromise, captaincy: 'NONE', lastRating: null },
+    rules,
+    ruleset.contractRules.squadStatusByRole,
+  );
+  const familiarity = familiarityOf(state.context.positionProficiency, rules);
+  const selection = rankPositionForPlayer({
+    ruleset,
+    styleId: team.tacticalStyleId,
+    position: profile.primaryPosition,
+    playerName: profile.name,
+    baseOvr: profile.baseOvr,
+    tacticalFit,
+    managerTrust: state.relationships.managerTrust,
+    form: state.state.form,
+    fitness: state.state.fitness,
+    morale: state.state.morale,
+    familiarity,
+    squadStatus,
+    competitors: generatedCompetitors.competitors,
+  });
+  const squadRole = squadRoleFromSelection(selection);
+
+  const stateAfterSelection: CareerState = {
+    ...state,
+    context: { ...state.context, tacticalFit, squadStatus },
+    rngState: generatedCompetitors.rngState,
+  };
+
+  const calendar = ruleset.leagueCalendar;
   const mode = command.payload.simulationMode;
   const initialSteps = buildSeasonSteps(calendar, mode);
   const nextRevision = snapshot.revision + 1;
+  const roleContext = buildRoleContext(stateAfterSelection, ruleset, team.tacticalStyleId, selection, generatedCompetitors.competitors);
 
-  const walked = walkToNextDecision(initialSteps, 1, mode, [], state.rngState, nextRevision);
-  const expiredState = expireEffectsThroughWalk(state, walked);
+  const walked = walkToNextDecision(initialSteps, 1, mode, [], stateAfterSelection.rngState, nextRevision, roleContext);
+  const expiredState = expireEffectsThroughWalk(stateAfterSelection, walked);
 
   const season: FootballSeason = {
     index: state.seasonHistory.length + 1,
@@ -438,10 +539,13 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     phase: findSeasonStep(walked.steps, walked.currentStepIndex).phase,
     steps: walked.steps,
     teamId: state.contract.teamId,
-    squadRole: state.contract.rolePromise,
+    styleId: team.tacticalStyleId,
+    squadRole,
     competitions: buildInitialCompetitions(calendar),
     matches: [],
     ageReferenceStep: 1,
+    squad: { competitors: generatedCompetitors.competitors },
+    selection,
   };
 
   const nextState: CareerState = {
@@ -488,12 +592,12 @@ function nextActionForPending(pending: Pending): 'DECISION' | 'ADVANCE' | 'SETTL
   switch (pending.kind) {
     case 'EVENT':
     case 'OFFERS':
+    case 'ROLE_PROPOSAL':
       return 'DECISION';
     case 'SETTLEMENT':
       return 'SETTLEMENT';
     case 'CHAPTER':
     case 'CONTRACT':
-    case 'ROLE':
     case 'INJURY':
     case 'NATIONAL_TEAM':
       return 'ADVANCE';
@@ -501,9 +605,11 @@ function nextActionForPending(pending: Pending): 'DECISION' | 'ADVANCE' | 'SETTL
 }
 
 /**
- * T-2-001 D-25: 시즌이 있을 때 ADVANCE. `state.pending`이 자동 통과 대상(CHAPTER·CONTRACT·ROLE·
- * INJURY·NATIONAL_TEAM)이면 그 step을 지나간 것으로 표시하고 다음 step으로 넘어간 뒤, 다음 결정이
- * 열리는 step 또는 step 12(SETTLEMENT)까지 한 번에 걷는다. 지나간 step마다 STEP_PASSED를 남긴다.
+ * T-2-001 D-25: 시즌이 있을 때 ADVANCE. `state.pending`이 자동 통과 대상(CHAPTER·CONTRACT·INJURY·
+ * NATIONAL_TEAM)이면 그 step을 지나간 것으로 표시하고 다음 step으로 넘어간 뒤, 다음 결정이 열리는
+ * step 또는 step 12(SETTLEMENT)까지 한 번에 걷는다. 지나간 step마다 STEP_PASSED를 남긴다. T-2-002:
+ * ROLE 슬롯은 더 이상 자동 통과 대상이 아니라 `walkToNextDecision`에 `roleContext`를 넘겨 실제
+ * ROLE_PROPOSAL을 연다(RESOLVE_ROLE로만 닫힌다).
  */
 function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, season: FootballSeason): SimulationResult {
   const command = input.command;
@@ -554,7 +660,16 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     currentStepIndex += 1;
   }
 
-  const walked = walkToNextDecision(steps, currentStepIndex, season.simulationMode, eligibleEvents, state.rngState, nextRevision);
+  const roleContext = buildRoleContext(state, input.ruleset, season.styleId, season.selection, season.squad.competitors);
+  const walked = walkToNextDecision(
+    steps,
+    currentStepIndex,
+    season.simulationMode,
+    eligibleEvents,
+    state.rngState,
+    nextRevision,
+    roleContext,
+  );
   const expiredState = expireEffectsThroughWalk(state, walked);
   timeline = [
     ...timeline,
@@ -918,8 +1033,112 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 }
 
 /**
- * CREATE_CAREER → UPDATE_PLAYER_DRAFT → CONFIRM_PLAYER → ADVANCE → RESOLVE_EVENT → ACCEPT_OFFER
- * 명령을 처리하는 순수 함수. throw하지 않는다: 도메인 오류는 항상 `{ ok: false }`로 돌아온다.
+ * T-2-002 D-34 CMD-SIM-004: ROLE_PROPOSAL pending을 ACCEPT/DECLINE으로 닫는다. DECLINE·KEEP·
+ * POSITION_CHANGE·ROLE_CHANGE 네 분기 모두 managerTrust(그리고 POSITION_CHANGE는 `primaryPosition`·
+ * `context.tacticalFit`·`context.positionProficiency`를 제안이 들고 있던 값 — tacticalFitAfter·
+ * proficiencyAfter, roll 없음 불변식 유지, 재계산하지 않는다 —, ROLE_CHANGE는 `context.squadStatus`를
+ * 제안된 새 역할(`proposal.to`) 기준으로)만 먼저 갱신한 뒤, **네 분기 공통으로** `season.selection`을
+ * `rankPositionForPlayer`(갱신된 position·tacticalFit·managerTrust·squadStatus·familiarity·
+ * form/fitness/morale·competitors)로 다시 산출하고 `season.squadRole`을 그 결과에서
+ * `squadRoleFromSelection`으로 유도한다(D-26). DECLINE(-8)·KEEP(+2)도 managerTrust가 바뀌어 선발
+ * 점수 입력이 달라지므로 재산출이 필요하다. `proposal.squadRoleAfter`/`proposal.to`는 "제안 계산
+ * 시점의 예측값"일 뿐이고, 실제 `season.squadRole`은 이 재산출된 순위가 정한다 — 제안값을 그대로
+ * squadRole에 옮기면 이 함수가 방금 반영한 managerTrust·squadStatus 변화가 selection 점수에 반영되면서
+ * squadRole과 selection이 서로 어긋날 수 있다. `contract.rolePromise`(계약 조건)는 브리프 명시대로
+ * ROLE_CHANGE에서도 바꾸지 않는다(계약은 Phase 3).
+ */
+function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
+  const command = input.command;
+  if (command.type !== 'RESOLVE_ROLE') {
+    return fail('VALIDATION_FAILED', 'RESOLVE_ROLE 처리기에 다른 명령이 전달되었다.');
+  }
+  const state = snapshot.state;
+  if (state.status !== 'ACTIVE') {
+    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 RESOLVE_ROLE을 받을 수 없다.`, {
+      reason: 'NOT_ACTIVE',
+    });
+  }
+  const pending = state.pending;
+  if (pending === null || pending.kind !== 'ROLE_PROPOSAL') {
+    return fail('VALIDATION_FAILED', '결정 대기 중인 역할 제안이 없다.', { reason: 'NO_ROLE_PROPOSAL' });
+  }
+  if (state.season === null || state.player.profile === null || state.contract === null) {
+    throw new RangeError('resolveRole: ROLE_PROPOSAL pending인데 season·player.profile·contract 중 null이 있다.');
+  }
+
+  const proposal = pending.proposal;
+  const rules = input.ruleset.selectionRules;
+  const nextRevision = snapshot.revision + 1;
+  const season = state.season;
+  const decision = command.payload.decision;
+
+  let managerTrust = state.relationships.managerTrust;
+  let context = state.context;
+  let profile = state.player.profile;
+
+  if (decision === 'DECLINE') {
+    managerTrust = clamp(managerTrust + rules.roleProposal.declineTrustDelta, 0, 100);
+  } else if (proposal.type === 'KEEP') {
+    managerTrust = clamp(managerTrust + rules.roleProposal.keepConfirmTrustDelta, 0, 100);
+  } else if (proposal.type === 'POSITION_CHANGE') {
+    managerTrust = clamp(managerTrust + rules.roleProposal.acceptTrustDelta, 0, 100);
+    profile = { ...profile, primaryPosition: proposal.to };
+    context = { ...context, tacticalFit: proposal.tacticalFitAfter, positionProficiency: proposal.proficiencyAfter };
+  } else {
+    // proposal.type === 'ROLE_CHANGE'
+    managerTrust = clamp(managerTrust + rules.roleProposal.acceptTrustDelta, 0, 100);
+    context = {
+      ...context,
+      squadStatus: computeSquadStatus(
+        { rolePromise: proposal.to, captaincy: 'NONE', lastRating: null },
+        rules,
+        input.ruleset.contractRules.squadStatusByRole,
+      ),
+    };
+  }
+
+  const ranking = rankPositionForPlayer({
+    ruleset: input.ruleset,
+    styleId: season.styleId,
+    position: profile.primaryPosition,
+    playerName: profile.name,
+    baseOvr: profile.baseOvr,
+    tacticalFit: context.tacticalFit,
+    managerTrust,
+    form: state.state.form,
+    fitness: state.state.fitness,
+    morale: state.state.morale,
+    familiarity: familiarityOf(context.positionProficiency, rules),
+    squadStatus: context.squadStatus,
+    competitors: season.squad.competitors,
+  });
+  const nextSeason: FootballSeason = { ...season, squadRole: squadRoleFromSelection(ranking), selection: ranking };
+
+  const nextState: CareerState = {
+    ...state,
+    season: nextSeason,
+    context,
+    player: { ...state.player, profile },
+    relationships: { ...state.relationships, managerTrust },
+    pending: null,
+    timeline: [
+      ...state.timeline,
+      { revision: nextRevision, kind: 'ROLE_RESOLVED', refId: proposal.type, age: state.age, step: state.currentStep },
+    ],
+  };
+
+  return {
+    ok: true,
+    snapshot: buildSnapshot(nextState, nextRevision, 'STEP_BOUNDARY'),
+    appliedEffects: [],
+    nextAction: 'ADVANCE',
+  };
+}
+
+/**
+ * CREATE_CAREER → UPDATE_PLAYER_DRAFT → CONFIRM_PLAYER → ADVANCE → RESOLVE_EVENT → ACCEPT_OFFER →
+ * RESOLVE_ROLE 명령을 처리하는 순수 함수. throw하지 않는다: 도메인 오류는 항상 `{ ok: false }`로
+ * 돌아온다.
  */
 export function simulate(input: SimulationInput): SimulationResult {
   if (input.ruleset.version !== input.rulesetVersion) {
@@ -960,6 +1179,8 @@ export function simulate(input: SimulationInput): SimulationResult {
       return resolveEvent(input, snapshot);
     case 'ACCEPT_OFFER':
       return acceptOffer(input, snapshot);
+    case 'RESOLVE_ROLE':
+      return resolveRole(input, snapshot);
   }
 }
 

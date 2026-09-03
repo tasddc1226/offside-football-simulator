@@ -1,8 +1,8 @@
 {
   "FAST": {
-    "revision": 16,
-    "stateHash": "859c2e1c84a349dde189d9d9316d19208188d068fc5dfbafc792d34a12f7e0ba",
-    "rngStateDraws": 30,
+    "revision": 17,
+    "stateHash": "1828a9365fe713b55331af284866688fbfaba8f4ef60a82abcbec556fa6a5ec7",
+    "rngStateDraws": 398,
     "age": 18,
     "seasonHistory": [
       {
@@ -10,32 +10,43 @@
         "simulationMode": "FAST",
         "teamId": "seoul-tier1",
         "competitions": [
-          { "competitionId": "LEAGUE", "kind": "LEAGUE", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": null },
-          { "competitionId": "CUP", "kind": "CUP", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": "R1" }
+          {"competitionId": "LEAGUE", "kind": "LEAGUE", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": null},
+          {"competitionId": "CUP", "kind": "CUP", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": "R1"}
         ],
-        "settledAtRevision": 16
+        "settledAtRevision": 17
       }
     ],
-    "checkpoints": ["SEASON_START", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "SEASON_SETTLED"],
+    "checkpoints": ["SEASON_START", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "SEASON_SETTLED"],
     "stepSummaries": [
-      { "index": 1, "summary": { "passedAtRevision": 12, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 2, "summary": { "passedAtRevision": 12, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 3, "summary": { "passedAtRevision": 13, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 4, "summary": { "passedAtRevision": 13, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 5, "summary": { "passedAtRevision": 13, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 6, "summary": { "passedAtRevision": 13, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 7, "summary": { "passedAtRevision": 14, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 8, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 9, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 10, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
-      { "index": 11, "summary": { "passedAtRevision": 15, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 1, "summary": { "passedAtRevision": 13, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 2, "summary": { "passedAtRevision": 13, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 3, "summary": { "passedAtRevision": 14, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 4, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 5, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 6, "summary": { "passedAtRevision": 14, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 7, "summary": { "passedAtRevision": 15, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 8, "summary": { "passedAtRevision": 15, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 9, "summary": { "passedAtRevision": 15, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 10, "summary": { "passedAtRevision": 15, "decisionsOpened": 0, "matchesPlayed": 0 } },
+      { "index": 11, "summary": { "passedAtRevision": 16, "decisionsOpened": 1, "matchesPlayed": 0 } },
       { "index": 12, "summary": null }
-    ]
+    ],
+    "afterRoleResolve": {
+      "competitorsCount": 16,
+      "tacticalFit": 37,
+      "squadStatus": 60,
+      "selectionPosition": "W",
+      "slots": 2,
+      "benchSlots": 1,
+      "playerRank": 3,
+      "playerAppearance": "SUB",
+      "playerReason": { "component": "TACTICAL_FIT", "delta": -20 }
+    }
   },
   "CHAPTER": {
-    "revision": 28,
-    "stateHash": "31316350573f1b57167dac719b6b3cebf00ef0bb5765762cfc48aedf2556228a",
-    "rngStateDraws": 35,
+    "revision": 29,
+    "stateHash": "c6f67a3a48d9e2b90429bbbe261b6f7a7330c169271333cfdbd99f8f8491b91a",
+    "rngStateDraws": 403,
     "age": 18,
     "seasonHistory": [
       {
@@ -43,45 +54,37 @@
         "simulationMode": "CHAPTER",
         "teamId": "seoul-tier1",
         "competitions": [
-          { "competitionId": "LEAGUE", "kind": "LEAGUE", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": null },
-          { "competitionId": "CUP", "kind": "CUP", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": "R1" }
+          {"competitionId": "LEAGUE", "kind": "LEAGUE", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": null},
+          {"competitionId": "CUP", "kind": "CUP", "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "position": null, "cupRound": "R1"}
         ],
-        "settledAtRevision": 28
+        "settledAtRevision": 29
       }
     ],
-    "checkpoints": [
-      "SEASON_START",
-      "STEP_BOUNDARY",
-      "EVENT_RESOLVED",
-      "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
-      "EVENT_RESOLVED",
-      "STEP_BOUNDARY",
-      "EVENT_RESOLVED",
-      "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
-      "EVENT_RESOLVED",
-      "STEP_BOUNDARY",
-      "EVENT_RESOLVED",
-      "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
-      "STEP_BOUNDARY",
-      "SEASON_SETTLED"
-    ],
+    "checkpoints": ["SEASON_START", "STEP_BOUNDARY", "STEP_BOUNDARY", "EVENT_RESOLVED", "STEP_BOUNDARY", "STEP_BOUNDARY", "EVENT_RESOLVED", "STEP_BOUNDARY", "EVENT_RESOLVED", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "EVENT_RESOLVED", "STEP_BOUNDARY", "EVENT_RESOLVED", "STEP_BOUNDARY", "STEP_BOUNDARY", "STEP_BOUNDARY", "SEASON_SETTLED"],
     "stepSummaries": [
-      { "index": 1, "summary": { "passedAtRevision": 12, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 2, "summary": { "passedAtRevision": 14, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 3, "summary": { "passedAtRevision": 15, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 4, "summary": { "passedAtRevision": 17, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 5, "summary": { "passedAtRevision": 19, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 6, "summary": { "passedAtRevision": 20, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 7, "summary": { "passedAtRevision": 21, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 8, "summary": { "passedAtRevision": 23, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 9, "summary": { "passedAtRevision": 25, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 10, "summary": { "passedAtRevision": 26, "decisionsOpened": 1, "matchesPlayed": 0 } },
-      { "index": 11, "summary": { "passedAtRevision": 27, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 1, "summary": { "passedAtRevision": 13, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 2, "summary": { "passedAtRevision": 15, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 3, "summary": { "passedAtRevision": 16, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 4, "summary": { "passedAtRevision": 18, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 5, "summary": { "passedAtRevision": 20, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 6, "summary": { "passedAtRevision": 21, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 7, "summary": { "passedAtRevision": 22, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 8, "summary": { "passedAtRevision": 24, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 9, "summary": { "passedAtRevision": 26, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 10, "summary": { "passedAtRevision": 27, "decisionsOpened": 1, "matchesPlayed": 0 } },
+      { "index": 11, "summary": { "passedAtRevision": 28, "decisionsOpened": 1, "matchesPlayed": 0 } },
       { "index": 12, "summary": null }
-    ]
+    ],
+    "afterRoleResolve": {
+      "competitorsCount": 16,
+      "tacticalFit": 37,
+      "squadStatus": 60,
+      "selectionPosition": "W",
+      "slots": 2,
+      "benchSlots": 1,
+      "playerRank": 3,
+      "playerAppearance": "SUB",
+      "playerReason": { "component": "TACTICAL_FIT", "delta": -20 }
+    }
   }
 }

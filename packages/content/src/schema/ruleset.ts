@@ -176,8 +176,134 @@ export const TeamSchema = z.strictObject({
   leagueTier: LeagueTierSchema,
   reputation: z.number().int().min(1).max(5),
   wageBandId: WageBandIdSchema,
+  // T-2-002 D-34.
+  leagueId: z.string().min(1),
+  tacticalStyleId: z.string().min(1),
+  squadStrength: z.number().int().min(40).max(90),
 });
 export type Team = z.infer<typeof TeamSchema>;
+
+// T-2-002 D-34: 전술 스타일·리그·컵·경쟁자 생성·선발 규칙(`selection.ts`가 소비).
+const StylePositionRecord = <T extends z.core.SomeType>(valueSchema: T) => z.record(PositionSchema, valueSchema);
+
+const TacticalFitStyleRoleWeightsSchema = StylePositionRecord(RoleWeightsSchema);
+const PreferredArchetypeIdsSchema = StylePositionRecord(z.array(z.string().min(1)));
+const SlotCountRecordSchema = StylePositionRecord(z.number().int().nonnegative());
+
+export const TacticalStyleSchema = z
+  .strictObject({
+    id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'id는 kebab-case여야 한다.'),
+    name: z.string().min(1),
+    summary: z.string().min(1),
+    formation: z.string().min(1),
+    slots: SlotCountRecordSchema,
+    benchSlots: SlotCountRecordSchema,
+    roleWeights: TacticalFitStyleRoleWeightsSchema,
+    preferredArchetypeIds: PreferredArchetypeIdsSchema,
+  })
+  .superRefine((style, ctx) => {
+    const slotsSum = POSITIONS.reduce((sum, position) => sum + style.slots[position], 0);
+    if (slotsSum !== 11) {
+      ctx.addIssue({ code: 'custom', message: `tacticalStyles[${style.id}].slots 합은 11이어야 한다: ${slotsSum}`, path: ['slots'] });
+    }
+    // 포지션마다 아키타입은 항상 정확히 3개다(ArchetypeSchema 쪽 superRefine이 보장).
+    // `competitors.ts`의 `pickArchetype`이 선호/비선호 두 그룹 모두를 가중 roll 후보로 쓰므로,
+    // 한 그룹이 비면(0개 또는 3개) 가중치 합이 0이 되어 roll이 깨진다. 브리프가 명시한 "포지션마다
+    // 1~2개"를 스키마로 강제해 그 경우를 원천 차단한다.
+    for (const position of POSITIONS) {
+      const count = style.preferredArchetypeIds[position]?.length ?? 0;
+      if (count < 1 || count > 2) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `tacticalStyles[${style.id}].preferredArchetypeIds.${position}는 1~2개여야 한다: ${count}`,
+          path: ['preferredArchetypeIds', position],
+        });
+      }
+    }
+  });
+export type TacticalStyle = z.infer<typeof TacticalStyleSchema>;
+
+export const LeagueSchema = z.strictObject({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  tier: LeagueTierSchema,
+  teamCount: z.number().int().min(4),
+  rounds: z.literal(2),
+  strength: z.number().int().min(0).max(100),
+});
+export type League = z.infer<typeof LeagueSchema>;
+
+export const CupSchema = z.strictObject({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  tiers: z.array(LeagueTierSchema).min(1),
+  rounds: z.tuple([z.literal('R1'), z.literal('R2'), z.literal('SEMI'), z.literal('FINAL')]),
+});
+export type Cup = z.infer<typeof CupSchema>;
+
+const PerformanceWeightsSchema = z.strictObject({
+  baseOvr: z.number(),
+  tacticalFit: z.number(),
+  form: z.number(),
+  fitness: z.number(),
+  morale: z.number(),
+});
+const SelectionWeightsSchema = z.strictObject({
+  tacticalFit: z.number(),
+  managerTrust: z.number(),
+  expectedPerformance: z.number(),
+  squadStatus: z.number(),
+});
+const TacticalFitWeightsSchema = z.strictObject({ style: z.number(), archetype: z.number() });
+const PositionFamiliaritySchema = z.strictObject({ natural: z.number(), trained: z.number(), makeshift: z.number() });
+const ProficiencyThresholdsSchema = z.strictObject({ natural: z.number(), trained: z.number() });
+const PositionAdjacencySchema = StylePositionRecord(z.array(PositionSchema));
+const ProficiencyOnChangeSchema = z.strictObject({ adjacent: z.number(), other: z.number() });
+const SquadStatusRuleSchema = z.strictObject({
+  captainBonus: z.strictObject({ NONE: z.number(), VICE: z.number(), CAPTAIN: z.number() }),
+  ratingNeutral: z.number(),
+  ratingScale: z.number(),
+  ratingAdjMax: z.number(),
+});
+const CompetitorRuleSchema = z.strictObject({
+  perPosition: z.number().int().positive(),
+  preferredArchetypeShare: z.number(),
+  ovrSpread: z.number(),
+  managerTrustBase: z.number(),
+  managerTrustSpread: z.number(),
+});
+const RoleProposalRulesSchema = z.strictObject({
+  acceptTrustDelta: z.number(),
+  declineTrustDelta: z.number(),
+  keepConfirmTrustDelta: z.number(),
+});
+
+function refineSum1(ctx: z.core.$RefinementCtx, weights: Record<string, number>, label: string, path: (string | number)[]) {
+  const sum = Object.values(weights).reduce((total, w) => total + w, 0);
+  if (Math.abs(sum - 1) > 1e-9) {
+    ctx.addIssue({ code: 'custom', message: `${label} 합은 1(오차 1e-9 이내)이어야 한다: ${sum}`, path });
+  }
+}
+
+export const SelectionRulesSchema = z
+  .strictObject({
+    performanceWeights: PerformanceWeightsSchema,
+    selectionWeights: SelectionWeightsSchema,
+    tacticalFitWeights: TacticalFitWeightsSchema,
+    positionFamiliarity: PositionFamiliaritySchema,
+    proficiencyThresholds: ProficiencyThresholdsSchema,
+    positionAdjacency: PositionAdjacencySchema,
+    proficiencyOnChange: ProficiencyOnChangeSchema,
+    squadStatusRule: SquadStatusRuleSchema,
+    competitorRule: CompetitorRuleSchema,
+    roleProposal: RoleProposalRulesSchema,
+  })
+  .superRefine((rules, ctx) => {
+    refineSum1(ctx, rules.performanceWeights, 'selectionRules.performanceWeights', ['performanceWeights']);
+    refineSum1(ctx, rules.selectionWeights, 'selectionRules.selectionWeights', ['selectionWeights']);
+    refineSum1(ctx, rules.tacticalFitWeights, 'selectionRules.tacticalFitWeights', ['tacticalFitWeights']);
+  });
+export type SelectionRules = z.infer<typeof SelectionRulesSchema>;
 
 const SQUAD_ROLES = ['STARTER', 'ROTATION', 'BENCH', 'RESERVE'] as const;
 const SquadRoleSchema = z.enum(SQUAD_ROLES);
@@ -254,8 +380,9 @@ const LeagueCalendarStepSchema = z.strictObject({
   slots: z.array(LeagueCalendarSlotSchema),
 });
 
+// T-2-002 D-34: 'R2'(8강, step 7) 추가.
 const CupRoundSchema = z.strictObject({
-  round: z.enum(['R1', 'SEMI', 'FINAL']),
+  round: z.enum(['R1', 'R2', 'SEMI', 'FINAL']),
   step: z.number().int().min(1).max(12),
 });
 
@@ -347,6 +474,12 @@ export const RulesetSchema = z
     contractRules: ContractRulesSchema,
     leagueCalendar: LeagueCalendarSchema,
     seasonBoundaryReset: SeasonBoundaryResetSchema,
+    // T-2-002 D-34.
+    leagues: z.array(LeagueSchema).min(1),
+    cups: z.array(CupSchema).min(1),
+    tacticalStyles: z.array(TacticalStyleSchema).min(1),
+    competitorNames: z.array(z.string().min(1)),
+    selectionRules: SelectionRulesSchema,
   })
   .superRefine((ruleset, ctx) => {
     const archetypeIds = new Set<string>();
@@ -424,6 +557,57 @@ export const RulesetSchema = z
           path: ['offerRules', 'branches', index, 'fixedTeamId'],
         });
       }
+    }
+
+    // T-2-002 D-34.
+    const leagueById = new Map(ruleset.leagues.map((league) => [league.id, league]));
+    const tacticalStyleIds = new Set(ruleset.tacticalStyles.map((style) => style.id));
+    for (const [index, team] of ruleset.teams.entries()) {
+      const league = leagueById.get(team.leagueId);
+      if (league === undefined) {
+        ctx.addIssue({ code: 'custom', message: `teams[${index}].leagueId가 leagues에 없다: ${team.leagueId}`, path: ['teams', index, 'leagueId'] });
+      } else if (league.tier !== team.leagueTier) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `teams[${index}].leagueTier(${team.leagueTier})가 leagues[${team.leagueId}].tier(${league.tier})와 다르다.`,
+          path: ['teams', index, 'leagueTier'],
+        });
+      }
+      if (!tacticalStyleIds.has(team.tacticalStyleId)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `teams[${index}].tacticalStyleId가 tacticalStyles에 없다: ${team.tacticalStyleId}`,
+          path: ['teams', index, 'tacticalStyleId'],
+        });
+      }
+    }
+
+    for (const [styleIndex, style] of ruleset.tacticalStyles.entries()) {
+      for (const position of ruleset.positions) {
+        const archetypesAtPosition = new Set(ruleset.archetypes.filter((a) => a.position === position).map((a) => a.id));
+        for (const archetypeId of style.preferredArchetypeIds[position] ?? []) {
+          if (!archetypesAtPosition.has(archetypeId)) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `tacticalStyles[${styleIndex}].preferredArchetypeIds.${position}의 아키타입이 그 포지션 것이 아니다: ${archetypeId}`,
+              path: ['tacticalStyles', styleIndex, 'preferredArchetypeIds', position],
+            });
+          }
+        }
+      }
+    }
+
+    const uniqueCompetitorNames = new Set(ruleset.competitorNames);
+    if (uniqueCompetitorNames.size !== ruleset.competitorNames.length) {
+      ctx.addIssue({ code: 'custom', message: 'competitorNames에 중복된 이름이 있다.', path: ['competitorNames'] });
+    }
+    const minCompetitorNames = ruleset.selectionRules.competitorRule.perPosition * ruleset.positions.length * 2;
+    if (ruleset.competitorNames.length < minCompetitorNames) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `competitorNames 길이는 ${minCompetitorNames} 이상이어야 한다: ${ruleset.competitorNames.length}`,
+        path: ['competitorNames'],
+      });
     }
   }) satisfies z.ZodType<DomainRuleset>;
 

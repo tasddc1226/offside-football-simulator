@@ -5,7 +5,7 @@ import { simulate } from '../simulate.js';
 import type { DomainSnapshot, SimulationMode } from '../types.js';
 import type { Ruleset } from '../ruleset.js';
 
-type CareerFixture = {
+export type CareerFixture = {
   rulesetVersion: string;
   contentPackVersion: string;
   createCareer: { careerId: string; seed: string; simulationMode: SimulationMode };

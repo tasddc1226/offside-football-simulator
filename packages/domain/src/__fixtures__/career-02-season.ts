@@ -36,12 +36,27 @@ function runOrThrow(snapshot: DomainSnapshot, command: Command & { commandId: st
   return result.snapshot;
 }
 
+/** RESOLVE_ROLE 직후(commands[mode][0]) 시즌·선수 선발 상태 요약. 브리프 golden 절차 3. */
+export type SeasonSelectionSnapshot = {
+  competitorsCount: number;
+  tacticalFit: number;
+  squadStatus: number;
+  selectionPosition: string;
+  slots: number;
+  benchSlots: number;
+  playerRank: number;
+  playerAppearance: string;
+  playerReason: { component: string; delta: number } | null;
+};
+
 export type SeasonFixtureRun = {
   snapshot: DomainSnapshot;
   /** START_SEASON부터 SETTLE_SEASON까지, 명령 하나마다 남긴 checkpoint 종류(순서대로). */
   checkpoints: string[];
   /** SETTLE_SEASON 직전(season이 null이 되기 전) 각 step의 index·summary. */
   stepSummaries: Array<{ index: number; summary: StepSummary | null }>;
+  /** RESOLVE_ROLE(commands[mode][0]) 직후의 경쟁자·selection 스냅샷. */
+  afterRoleResolve: SeasonSelectionSnapshot;
 };
 
 /**
@@ -62,6 +77,7 @@ export function runSeasonFixture(mode: SimulationMode): SeasonFixtureRun {
   checkpoints.push(snapshot.checkpoint);
 
   let stepSummaries: Array<{ index: number; summary: StepSummary | null }> = [];
+  let afterRoleResolve: SeasonSelectionSnapshot | null = null;
 
   careerSeasonFixture.commands[mode].forEach((rawCommand, index) => {
     if (rawCommand.type === 'SETTLE_SEASON') {
@@ -70,7 +86,23 @@ export function runSeasonFixture(mode: SimulationMode): SeasonFixtureRun {
     const command = buildCommand(rawCommand.type, `season-${index}`, snapshot.revision, rawCommand.payload);
     snapshot = runOrThrow(snapshot, command);
     checkpoints.push(snapshot.checkpoint);
+
+    if (rawCommand.type === 'RESOLVE_ROLE') {
+      const season = snapshot.state.season!;
+      const player = season.selection.candidates.find((candidate) => candidate.id === 'PLAYER')!;
+      afterRoleResolve = {
+        competitorsCount: season.squad.competitors.length,
+        tacticalFit: snapshot.state.context.tacticalFit,
+        squadStatus: snapshot.state.context.squadStatus,
+        selectionPosition: season.selection.position,
+        slots: season.selection.slots,
+        benchSlots: season.selection.benchSlots,
+        playerRank: player.rank,
+        playerAppearance: player.appearance,
+        playerReason: season.selection.playerReason,
+      };
+    }
   });
 
-  return { snapshot, checkpoints, stepSummaries };
+  return { snapshot, checkpoints, stepSummaries, afterRoleResolve: afterRoleResolve! };
 }

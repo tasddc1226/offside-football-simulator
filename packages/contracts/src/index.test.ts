@@ -126,8 +126,8 @@ describe('오류 코드 표', () => {
 });
 
 describe('CommandTypeSchema', () => {
-  it('12개다', () => {
-    expect(COMMAND_TYPES.length).toBe(12);
+  it('13개다', () => {
+    expect(COMMAND_TYPES.length).toBe(13);
   });
 
   it.each(COMMAND_TYPES)('%s를 허용한다', (type) => {

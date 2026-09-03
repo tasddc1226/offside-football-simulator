@@ -1159,56 +1159,80 @@
       "name": "한강 FC U18",
       "leagueTier": "YOUTH",
       "reputation": 2,
-      "wageBandId": "youth"
+      "wageBandId": "youth",
+      "leagueId": "league-youth",
+      "tacticalStyleId": "possession",
+      "squadStrength": 45
     },
     {
       "id": "seorabeol-united",
       "name": "서라벌 유나이티드",
       "leagueTier": 1,
       "reputation": 5,
-      "wageBandId": "tier1"
+      "wageBandId": "tier1",
+      "leagueId": "league-tier1",
+      "tacticalStyleId": "possession",
+      "squadStrength": 82
     },
     {
       "id": "cheongyeon-fc",
       "name": "청연 FC",
       "leagueTier": 1,
       "reputation": 4,
-      "wageBandId": "tier1"
+      "wageBandId": "tier1",
+      "leagueId": "league-tier1",
+      "tacticalStyleId": "counter",
+      "squadStrength": 75
     },
     {
       "id": "gangdong-rovers",
       "name": "강동 로버스",
       "leagueTier": 2,
       "reputation": 3,
-      "wageBandId": "tier2"
+      "wageBandId": "tier2",
+      "leagueId": "league-tier2",
+      "tacticalStyleId": "press",
+      "squadStrength": 65
     },
     {
       "id": "onsaemiro-city",
       "name": "온새미로 시티",
       "leagueTier": 2,
       "reputation": 3,
-      "wageBandId": "tier2"
+      "wageBandId": "tier2",
+      "leagueId": "league-tier2",
+      "tacticalStyleId": "possession",
+      "squadStrength": 63
     },
     {
       "id": "byeolbit-united",
       "name": "별빛 유나이티드",
       "leagueTier": 2,
       "reputation": 2,
-      "wageBandId": "tier2"
+      "wageBandId": "tier2",
+      "leagueId": "league-tier2",
+      "tacticalStyleId": "counter",
+      "squadStrength": 58
     },
     {
       "id": "galmae-town",
       "name": "갈매 타운 FC",
       "leagueTier": 3,
       "reputation": 2,
-      "wageBandId": "tier3"
+      "wageBandId": "tier3",
+      "leagueId": "league-tier3",
+      "tacticalStyleId": "press",
+      "squadStrength": 52
     },
     {
       "id": "noeulhang-fc",
       "name": "노을항 FC",
       "leagueTier": 3,
       "reputation": 1,
-      "wageBandId": "tier3"
+      "wageBandId": "tier3",
+      "leagueId": "league-tier3",
+      "tacticalStyleId": "counter",
+      "squadStrength": 48
     }
   ],
   "offerRules": {
@@ -1407,7 +1431,10 @@
         "phase": "PRESEASON",
         "windowOpen": false,
         "slots": [
-          { "kind": "ROLE", "required": true }
+          {
+            "kind": "ROLE",
+            "required": true
+          }
         ]
       },
       {
@@ -1415,7 +1442,10 @@
         "phase": "PRESEASON",
         "windowOpen": false,
         "slots": [
-          { "kind": "EVENT", "required": false }
+          {
+            "kind": "EVENT",
+            "required": false
+          }
         ]
       },
       {
@@ -1423,7 +1453,11 @@
         "phase": "LEAGUE",
         "windowOpen": false,
         "slots": [
-          { "kind": "CHAPTER", "required": false, "importance": "MAJOR" }
+          {
+            "kind": "CHAPTER",
+            "required": false,
+            "importance": "MAJOR"
+          }
         ]
       },
       {
@@ -1431,7 +1465,10 @@
         "phase": "LEAGUE",
         "windowOpen": false,
         "slots": [
-          { "kind": "EVENT", "required": false }
+          {
+            "kind": "EVENT",
+            "required": false
+          }
         ]
       },
       {
@@ -1439,7 +1476,10 @@
         "phase": "LEAGUE",
         "windowOpen": false,
         "slots": [
-          { "kind": "EVENT", "required": false }
+          {
+            "kind": "EVENT",
+            "required": false
+          }
         ]
       },
       {
@@ -1447,7 +1487,11 @@
         "phase": "LEAGUE",
         "windowOpen": false,
         "slots": [
-          { "kind": "CHAPTER", "required": false, "importance": "MINOR" }
+          {
+            "kind": "CHAPTER",
+            "required": false,
+            "importance": "MINOR"
+          }
         ]
       },
       {
@@ -1455,7 +1499,10 @@
         "phase": "LEAGUE",
         "windowOpen": true,
         "slots": [
-          { "kind": "CONTRACT", "required": false }
+          {
+            "kind": "CONTRACT",
+            "required": false
+          }
         ]
       },
       {
@@ -1463,7 +1510,10 @@
         "phase": "LEAGUE",
         "windowOpen": false,
         "slots": [
-          { "kind": "EVENT", "required": false }
+          {
+            "kind": "EVENT",
+            "required": false
+          }
         ]
       },
       {
@@ -1471,7 +1521,10 @@
         "phase": "LEAGUE",
         "windowOpen": false,
         "slots": [
-          { "kind": "EVENT", "required": false }
+          {
+            "kind": "EVENT",
+            "required": false
+          }
         ]
       },
       {
@@ -1479,7 +1532,10 @@
         "phase": "LEAGUE",
         "windowOpen": false,
         "slots": [
-          { "kind": "CHAPTER", "required": false }
+          {
+            "kind": "CHAPTER",
+            "required": false
+          }
         ]
       },
       {
@@ -1487,7 +1543,11 @@
         "phase": "LEAGUE",
         "windowOpen": false,
         "slots": [
-          { "kind": "CHAPTER", "required": false, "importance": "MAJOR" }
+          {
+            "kind": "CHAPTER",
+            "required": false,
+            "importance": "MAJOR"
+          }
         ]
       },
       {
@@ -1495,20 +1555,616 @@
         "phase": "SETTLEMENT",
         "windowOpen": false,
         "slots": [
-          { "kind": "SETTLEMENT", "required": true }
+          {
+            "kind": "SETTLEMENT",
+            "required": true
+          }
         ]
       }
     ],
     "transferWindowStep": 7,
     "cupRounds": [
-      { "round": "R1", "step": 5 },
-      { "round": "SEMI", "step": 9 },
-      { "round": "FINAL", "step": 11 }
+      {
+        "round": "R1",
+        "step": 5
+      },
+      {
+        "round": "R2",
+        "step": 7
+      },
+      {
+        "round": "SEMI",
+        "step": 9
+      },
+      {
+        "round": "FINAL",
+        "step": 11
+      }
     ]
   },
   "seasonBoundaryReset": {
     "form": 50,
     "fitness": 80,
     "morale": 60
+  },
+  "tacticalStyles": [
+    {
+      "id": "possession",
+      "name": "점유",
+      "summary": "짧은 패스로 볼을 오래 소유하며 빌드업을 통해 공간을 만드는 스타일.",
+      "formation": "4-3-3",
+      "slots": {
+        "GK": 1,
+        "CB": 2,
+        "FB": 2,
+        "DM": 1,
+        "CM": 2,
+        "AM": 0,
+        "W": 2,
+        "ST": 1
+      },
+      "benchSlots": {
+        "GK": 1,
+        "CB": 1,
+        "FB": 1,
+        "DM": 1,
+        "CM": 1,
+        "AM": 1,
+        "W": 1,
+        "ST": 1
+      },
+      "roleWeights": {
+        "GK": {
+          "goalkeeping": 0.35,
+          "positioning": 0.15,
+          "composure": 0.12,
+          "concentration": 0.12,
+          "agility": 0.1,
+          "jumping": 0.08,
+          "decisions": 0.08
+        },
+        "CB": {
+          "tackling": 0.2,
+          "positioning": 0.18,
+          "strength": 0.14,
+          "jumping": 0.14,
+          "concentration": 0.12,
+          "composure": 0.1,
+          "decisions": 0.07,
+          "durability": 0.05
+        },
+        "FB": {
+          "pace": 0.16,
+          "stamina": 0.14,
+          "crossing": 0.14,
+          "tackling": 0.14,
+          "positioning": 0.12,
+          "acceleration": 0.1,
+          "decisions": 0.1,
+          "firstTouch": 0.1
+        },
+        "DM": {
+          "tackling": 0.18,
+          "positioning": 0.16,
+          "passing": 0.14,
+          "decisions": 0.14,
+          "concentration": 0.12,
+          "strength": 0.1,
+          "stamina": 0.09,
+          "composure": 0.07
+        },
+        "CM": {
+          "passing": 0.2,
+          "decisions": 0.16,
+          "firstTouch": 0.14,
+          "stamina": 0.12,
+          "positioning": 0.12,
+          "composure": 0.1,
+          "tackling": 0.08,
+          "concentration": 0.08
+        },
+        "AM": {
+          "passing": 0.16,
+          "dribbling": 0.16,
+          "decisions": 0.14,
+          "firstTouch": 0.14,
+          "composure": 0.12,
+          "positioning": 0.12,
+          "shooting": 0.1,
+          "agility": 0.06
+        },
+        "W": {
+          "pace": 0.16,
+          "dribbling": 0.16,
+          "crossing": 0.14,
+          "acceleration": 0.12,
+          "firstTouch": 0.12,
+          "agility": 0.1,
+          "shooting": 0.1,
+          "decisions": 0.1
+        },
+        "ST": {
+          "shooting": 0.24,
+          "positioning": 0.18,
+          "firstTouch": 0.14,
+          "composure": 0.12,
+          "decisions": 0.1,
+          "acceleration": 0.1,
+          "strength": 0.06,
+          "concentration": 0.06
+        }
+      },
+      "preferredArchetypeIds": {
+        "GK": [
+          "gk-sweeper-keeper"
+        ],
+        "CB": [
+          "cb-ball-playing"
+        ],
+        "FB": [
+          "fb-overlapping"
+        ],
+        "DM": [
+          "dm-deep-lying-playmaker"
+        ],
+        "CM": [
+          "cm-playmaker"
+        ],
+        "AM": [
+          "am-playmaker"
+        ],
+        "W": [
+          "w-inverted-winger"
+        ],
+        "ST": [
+          "st-false-nine"
+        ]
+      }
+    },
+    {
+      "id": "counter",
+      "name": "역습",
+      "summary": "수비 블록을 낮게 두고 볼을 되찾으면 빠르게 전방으로 찔러 넣는 스타일.",
+      "formation": "4-2-3-1",
+      "slots": {
+        "GK": 1,
+        "CB": 2,
+        "FB": 2,
+        "DM": 2,
+        "CM": 0,
+        "AM": 1,
+        "W": 2,
+        "ST": 1
+      },
+      "benchSlots": {
+        "GK": 1,
+        "CB": 1,
+        "FB": 1,
+        "DM": 1,
+        "CM": 1,
+        "AM": 1,
+        "W": 1,
+        "ST": 1
+      },
+      "roleWeights": {
+        "GK": {
+          "goalkeeping": 0.35,
+          "positioning": 0.15,
+          "composure": 0.12,
+          "concentration": 0.12,
+          "agility": 0.1,
+          "jumping": 0.08,
+          "decisions": 0.08
+        },
+        "CB": {
+          "tackling": 0.2,
+          "positioning": 0.18,
+          "strength": 0.14,
+          "jumping": 0.14,
+          "concentration": 0.12,
+          "composure": 0.1,
+          "decisions": 0.07,
+          "durability": 0.05
+        },
+        "FB": {
+          "pace": 0.16,
+          "stamina": 0.14,
+          "crossing": 0.14,
+          "tackling": 0.14,
+          "positioning": 0.12,
+          "acceleration": 0.1,
+          "decisions": 0.1,
+          "firstTouch": 0.1
+        },
+        "DM": {
+          "tackling": 0.18,
+          "positioning": 0.16,
+          "passing": 0.14,
+          "decisions": 0.14,
+          "concentration": 0.12,
+          "strength": 0.1,
+          "stamina": 0.09,
+          "composure": 0.07
+        },
+        "CM": {
+          "passing": 0.2,
+          "decisions": 0.16,
+          "firstTouch": 0.14,
+          "stamina": 0.12,
+          "positioning": 0.12,
+          "composure": 0.1,
+          "tackling": 0.08,
+          "concentration": 0.08
+        },
+        "AM": {
+          "passing": 0.16,
+          "dribbling": 0.16,
+          "decisions": 0.14,
+          "firstTouch": 0.14,
+          "composure": 0.12,
+          "positioning": 0.12,
+          "shooting": 0.1,
+          "agility": 0.06
+        },
+        "W": {
+          "pace": 0.16,
+          "dribbling": 0.16,
+          "crossing": 0.14,
+          "acceleration": 0.12,
+          "firstTouch": 0.12,
+          "agility": 0.1,
+          "shooting": 0.1,
+          "decisions": 0.1
+        },
+        "ST": {
+          "shooting": 0.24,
+          "positioning": 0.18,
+          "firstTouch": 0.14,
+          "composure": 0.12,
+          "decisions": 0.1,
+          "acceleration": 0.1,
+          "strength": 0.06,
+          "concentration": 0.06
+        }
+      },
+      "preferredArchetypeIds": {
+        "GK": [
+          "gk-shot-stopper"
+        ],
+        "CB": [
+          "cb-stopper"
+        ],
+        "FB": [
+          "fb-defensive"
+        ],
+        "DM": [
+          "dm-destroyer"
+        ],
+        "CM": [
+          "cm-box-to-box"
+        ],
+        "AM": [
+          "am-shadow-striker"
+        ],
+        "W": [
+          "w-touchline-winger"
+        ],
+        "ST": [
+          "st-poacher"
+        ]
+      }
+    },
+    {
+      "id": "press",
+      "name": "압박",
+      "summary": "전방부터 강하게 압박해 상대 실수를 유도하고 높은 지점에서 볼을 되찾는 스타일.",
+      "formation": "4-1-4-1",
+      "slots": {
+        "GK": 1,
+        "CB": 2,
+        "FB": 2,
+        "DM": 1,
+        "CM": 3,
+        "AM": 0,
+        "W": 1,
+        "ST": 1
+      },
+      "benchSlots": {
+        "GK": 1,
+        "CB": 1,
+        "FB": 1,
+        "DM": 1,
+        "CM": 1,
+        "AM": 1,
+        "W": 1,
+        "ST": 1
+      },
+      "roleWeights": {
+        "GK": {
+          "goalkeeping": 0.35,
+          "positioning": 0.15,
+          "composure": 0.12,
+          "concentration": 0.12,
+          "agility": 0.1,
+          "jumping": 0.08,
+          "decisions": 0.08
+        },
+        "CB": {
+          "tackling": 0.2,
+          "positioning": 0.18,
+          "strength": 0.14,
+          "jumping": 0.14,
+          "concentration": 0.12,
+          "composure": 0.1,
+          "decisions": 0.07,
+          "durability": 0.05
+        },
+        "FB": {
+          "pace": 0.16,
+          "stamina": 0.14,
+          "crossing": 0.14,
+          "tackling": 0.14,
+          "positioning": 0.12,
+          "acceleration": 0.1,
+          "decisions": 0.1,
+          "firstTouch": 0.1
+        },
+        "DM": {
+          "tackling": 0.18,
+          "positioning": 0.16,
+          "passing": 0.14,
+          "decisions": 0.14,
+          "concentration": 0.12,
+          "strength": 0.1,
+          "stamina": 0.09,
+          "composure": 0.07
+        },
+        "CM": {
+          "passing": 0.2,
+          "decisions": 0.16,
+          "firstTouch": 0.14,
+          "stamina": 0.12,
+          "positioning": 0.12,
+          "composure": 0.1,
+          "tackling": 0.08,
+          "concentration": 0.08
+        },
+        "AM": {
+          "passing": 0.16,
+          "dribbling": 0.16,
+          "decisions": 0.14,
+          "firstTouch": 0.14,
+          "composure": 0.12,
+          "positioning": 0.12,
+          "shooting": 0.1,
+          "agility": 0.06
+        },
+        "W": {
+          "pace": 0.16,
+          "dribbling": 0.16,
+          "crossing": 0.14,
+          "acceleration": 0.12,
+          "firstTouch": 0.12,
+          "agility": 0.1,
+          "shooting": 0.1,
+          "decisions": 0.1
+        },
+        "ST": {
+          "shooting": 0.24,
+          "positioning": 0.18,
+          "firstTouch": 0.14,
+          "composure": 0.12,
+          "decisions": 0.1,
+          "acceleration": 0.1,
+          "strength": 0.06,
+          "concentration": 0.06
+        }
+      },
+      "preferredArchetypeIds": {
+        "GK": [
+          "gk-commander"
+        ],
+        "CB": [
+          "cb-aerial-dominator"
+        ],
+        "FB": [
+          "fb-inverted"
+        ],
+        "DM": [
+          "dm-box-to-box"
+        ],
+        "CM": [
+          "cm-advanced"
+        ],
+        "AM": [
+          "am-wide-creator"
+        ],
+        "W": [
+          "inside-forward"
+        ],
+        "ST": [
+          "st-target-man"
+        ]
+      }
+    }
+  ],
+  "leagues": [
+    {
+      "id": "league-youth",
+      "name": "유스리그",
+      "tier": "YOUTH",
+      "teamCount": 8,
+      "rounds": 2,
+      "strength": 30
+    },
+    {
+      "id": "league-tier1",
+      "name": "1부리그",
+      "tier": 1,
+      "teamCount": 12,
+      "rounds": 2,
+      "strength": 85
+    },
+    {
+      "id": "league-tier2",
+      "name": "2부리그",
+      "tier": 2,
+      "teamCount": 12,
+      "rounds": 2,
+      "strength": 60
+    },
+    {
+      "id": "league-tier3",
+      "name": "3부리그",
+      "tier": 3,
+      "teamCount": 10,
+      "rounds": 2,
+      "strength": 40
+    }
+  ],
+  "cups": [
+    {
+      "id": "fa-cup",
+      "name": "축구협회컵",
+      "tiers": [
+        1,
+        2,
+        3
+      ],
+      "rounds": [
+        "R1",
+        "R2",
+        "SEMI",
+        "FINAL"
+      ]
+    }
+  ],
+  "competitorNames": [
+    "김도윤",
+    "김서준",
+    "김하준",
+    "김시우",
+    "김주원",
+    "김지호",
+    "김현우",
+    "김민준",
+    "김준서",
+    "김유준",
+    "김건우",
+    "김우진",
+    "김선우",
+    "김예준",
+    "김지훈",
+    "김승우",
+    "김재윤",
+    "김태윤",
+    "김로운",
+    "김시윤",
+    "이도윤",
+    "이서준",
+    "이하준",
+    "이시우",
+    "이주원",
+    "이지호",
+    "이현우",
+    "이민준",
+    "이준서",
+    "이유준",
+    "이건우",
+    "이우진",
+    "이선우",
+    "이예준",
+    "이지훈",
+    "이승우",
+    "이재윤",
+    "이태윤",
+    "이로운",
+    "이시윤"
+  ],
+  "selectionRules": {
+    "performanceWeights": {
+      "baseOvr": 0.7,
+      "tacticalFit": 0.12,
+      "form": 0.08,
+      "fitness": 0.06,
+      "morale": 0.04
+    },
+    "selectionWeights": {
+      "tacticalFit": 0.4,
+      "managerTrust": 0.25,
+      "expectedPerformance": 0.25,
+      "squadStatus": 0.1
+    },
+    "tacticalFitWeights": {
+      "style": 0.6,
+      "archetype": 0.4
+    },
+    "positionFamiliarity": {
+      "natural": 1.0,
+      "trained": 0.97,
+      "makeshift": 0.92
+    },
+    "proficiencyThresholds": {
+      "natural": 95,
+      "trained": 80
+    },
+    "positionAdjacency": {
+      "GK": [],
+      "CB": [
+        "FB",
+        "DM"
+      ],
+      "FB": [
+        "CB",
+        "W"
+      ],
+      "DM": [
+        "CB",
+        "CM"
+      ],
+      "CM": [
+        "DM",
+        "AM"
+      ],
+      "AM": [
+        "CM",
+        "W"
+      ],
+      "W": [
+        "FB",
+        "AM",
+        "ST"
+      ],
+      "ST": [
+        "AM",
+        "W"
+      ]
+    },
+    "proficiencyOnChange": {
+      "adjacent": 80,
+      "other": 60
+    },
+    "squadStatusRule": {
+      "captainBonus": {
+        "NONE": 0,
+        "VICE": 10,
+        "CAPTAIN": 20
+      },
+      "ratingNeutral": 6.5,
+      "ratingScale": 8,
+      "ratingAdjMax": 20
+    },
+    "competitorRule": {
+      "perPosition": 2,
+      "preferredArchetypeShare": 60,
+      "ovrSpread": 6,
+      "managerTrustBase": 50,
+      "managerTrustSpread": 10
+    },
+    "roleProposal": {
+      "acceptTrustDelta": 5,
+      "declineTrustDelta": -8,
+      "keepConfirmTrustDelta": 2
+    }
   }
 }
