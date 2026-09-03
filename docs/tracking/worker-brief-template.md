@@ -28,7 +28,7 @@
 - 시간·난수는 입력으로만
 - 커밋 메시지는 `T-0-003: …`로 시작, 브랜치는 T-0-003-…
 
-- 서브에이전트 리뷰를 띄우지 않는다. gstack `/review`·`/codex`·adversarial 리뷰·`/simplify`·병렬 fork 전부 금지. 유일한 예외는 Orca PR 게이트용 `/review:pr` 1회(로컬 모드)다. 리뷰는 오케스트레이터가 한다.
+- 서브에이전트를 띄우지 않는다 — 리뷰용이든 조사용이든 전부. gstack `/review`·`/codex`·adversarial 리뷰·`/simplify`·병렬 fork·Agent/Explore 조사 에이전트 금지(컨텍스트를 복제해 비용이 배로 든다). 파일은 직접 읽는다. 유일한 예외는 Orca PR 게이트용 `/review:pr` 1회(로컬 모드)다. 리뷰는 오케스트레이터가 한다.
 - 의존성 추가 시 정확한 버전으로 고정한다. pnpm의 최소 배포 경과 정책이 막는 버전은 `minimumReleaseAgeExclude`로 우회하지 말고 정책을 통과하는 더 오래된 버전을 쓴다.
 - PR 직전 `git fetch origin && git merge origin/main`으로 최신 main을 합친다. `pnpm-lock.yaml` 충돌은 손으로 고치지 말고 `git checkout origin/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile`로 재생성한 뒤 전체 체인을 다시 돌린다.
 
