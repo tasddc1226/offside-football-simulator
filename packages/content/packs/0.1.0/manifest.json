@@ -5,8 +5,11 @@
   ],
   "clientMinVersion": "0.1.0",
   "playtested": false,
-  "checksum": "ba6747061faf658810b36f2140b70af1dba9e0b05a5e57b018aa430433c0d5a1",
+  "checksum": "d9a9ad520ecc6d2f932eeec18b497ccf8347bc5c0b92874bc5b1c85637aed851",
   "files": [
+    "chapters/CHP-MATCH-001.json",
+    "chapters/CHP-MATCH-002.json",
+    "chapters/CHP-MATCH-004.json",
     "events/EVT-CON-001.json",
     "events/EVT-CON-002.json",
     "events/EVT-CON-003.json",

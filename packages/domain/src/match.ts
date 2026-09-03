@@ -182,7 +182,10 @@ function rollStatsForGroup(
   }
 }
 
-function computeRatingTenths(
+/** T-2-004: chapter.ts가 챕터 판단이 적용되기 전 원래 평점을 되짚어 계산하는 데 재사용한다(순수
+ * 함수 — match.stats·result.outcome·cards는 챕터 판단으로 바뀌지 않으므로 같은 입력이면 항상 같은
+ * 원래 평점을 돌려준다). */
+export function computeRatingTenths(
   group: StatGroup,
   stats: PositionStats,
   outcome: 'WIN' | 'DRAW' | 'LOSS',

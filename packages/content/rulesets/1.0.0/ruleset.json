@@ -2001,7 +2001,10 @@
       "tier": "YOUTH",
       "teamCount": 8,
       "rounds": 2,
-      "strength": 30
+      "strength": 30,
+      "rivalOpponentIndex": 4,
+      "promotionSpots": 2,
+      "relegationSpots": 2
     },
     {
       "id": "league-tier1",
@@ -2009,7 +2012,10 @@
       "tier": 1,
       "teamCount": 12,
       "rounds": 2,
-      "strength": 85
+      "strength": 85,
+      "rivalOpponentIndex": 1,
+      "promotionSpots": 0,
+      "relegationSpots": 3
     },
     {
       "id": "league-tier2",
@@ -2017,7 +2023,10 @@
       "tier": 2,
       "teamCount": 12,
       "rounds": 2,
-      "strength": 60
+      "strength": 60,
+      "rivalOpponentIndex": 1,
+      "promotionSpots": 3,
+      "relegationSpots": 3
     },
     {
       "id": "league-tier3",
@@ -2025,7 +2034,10 @@
       "tier": 3,
       "teamCount": 10,
       "rounds": 2,
-      "strength": 40
+      "strength": 40,
+      "rivalOpponentIndex": 1,
+      "promotionSpots": 3,
+      "relegationSpots": 0
     }
   ],
   "cups": [

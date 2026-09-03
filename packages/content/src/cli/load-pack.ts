@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 export type LoadedPack = {
@@ -6,6 +6,8 @@ export type LoadedPack = {
   manifestPath: string;
   manifestRaw: unknown;
   events: { file: string; raw: unknown }[];
+  // T-2-004 D-38.
+  chapters: { file: string; raw: unknown }[];
   narrativeTokensFile: string;
   narrativeTokensRaw: unknown;
   /** manifest.files와 같은 상대 경로를 키로 쓰는 파싱된 JSON. checksum 계산에 쓴다. */
@@ -30,12 +32,24 @@ export function loadPack(dir: string): LoadedPack {
     raw: parseJsonFile(join(eventsDir, name)),
   }));
 
+  const chaptersDir = join(dir, 'chapters');
+  const chapterFileNames = existsSync(chaptersDir)
+    ? readdirSync(chaptersDir)
+        .filter((name) => name.endsWith('.json'))
+        .sort()
+    : [];
+  const chapters = chapterFileNames.map((name) => ({
+    file: `chapters/${name}`,
+    raw: parseJsonFile(join(chaptersDir, name)),
+  }));
+
   const narrativeTokensFile = 'narrative/tokens.json';
   const narrativeTokensRaw = parseJsonFile(join(dir, 'narrative', 'tokens.json'));
 
   const fileContents = new Map<string, unknown>();
   for (const event of events) fileContents.set(event.file, event.raw);
+  for (const chapter of chapters) fileContents.set(chapter.file, chapter.raw);
   fileContents.set(narrativeTokensFile, narrativeTokensRaw);
 
-  return { dir, manifestPath, manifestRaw, events, narrativeTokensFile, narrativeTokensRaw, fileContents };
+  return { dir, manifestPath, manifestRaw, events, chapters, narrativeTokensFile, narrativeTokensRaw, fileContents };
 }

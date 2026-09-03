@@ -29,6 +29,7 @@ function buildValidDomainSnapshot(): DomainSnapshot {
     activeEffects: [],
     deferredEffects: [],
     resolvedEventIds: [],
+    resolvedChapterIds: [],
     rngState: { s: [1, 2, 3, 4], draws: 2 },
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',

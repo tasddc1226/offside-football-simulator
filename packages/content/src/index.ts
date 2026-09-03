@@ -54,6 +54,17 @@ export {
   type EventDefinition,
 } from './schema/event.ts';
 
+export {
+  CHAPTER_ID_PATTERN,
+  ChapterDefinitionSchema,
+  ChapterDecisionSchema,
+  ChapterOptionSchema,
+  ChapterOutcomeSchema,
+  ChapterEffectSchema,
+  ChapterTriggerSchema,
+  type ChapterDefinition,
+} from './schema/chapter.ts';
+
 export { PackManifestSchema, SemverSchema, type PackManifest } from './schema/pack.ts';
 
 export {
@@ -84,3 +95,5 @@ export { loadContentPack, PACK_VERSIONS, type ContentPack, type PackVersion } fr
 export { buildConditionContext } from './runtime/condition-context.ts';
 
 export { selectEligibleEvents, type EligibleEvent } from './runtime/select-eligible-events.ts';
+
+export { selectChapterCandidates, type ChapterCandidate } from './runtime/select-chapter-candidates.ts';
