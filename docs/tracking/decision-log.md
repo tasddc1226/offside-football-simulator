@@ -2,6 +2,20 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (밤, PR #41 T-2-004 머지 — Wave 3 종료, T-2-014 투입)
+
+**결과**: T-2-004(PR #41, `7859e8a`) 머지. `walkToNextDecision`이 step의 경기를 돌린 직후 `selectChapter`(roll 없음)로 후보를 대조한다 — 출전(minutes > 0)한 경기만 대상, FAST는 MAJOR만, `resolvedChapterIds`(`${chapterId}@${seasonIndex}`)와 이번 시즌 `season.chapters`로 재열림 방지, MAJOR > weight > id. `RESOLVE_CHAPTER`(CMD-SIM-005)는 판단마다 `state.rngState`에서 roll 1회(경기 스트림은 건드리지 않음), 같은 decisionId 재전송은 `DECISION_ALREADY_RESOLVED`. 판단이 모두 끝나면 `ChapterRecord`(평점 델타는 최종 평점 − `computeRatingTenths` 재도출 원래 평점)를 `season.chapters`에 남기고 timeline `CHAPTER_RESOLVED`. 팩 `chapters/CHP-MATCH-001/002/004`, 스키마는 CURRENT/RELATION/DEFERRED만·±12·`ratingDeltaTenths` ±15·`priorProbability.successBp` ±500bp. 룰셋 `leagues[]`에 `rivalOpponentIndex`·`promotionSpots`·`relegationSpots`. golden career-05-chapter(CHAPTER 모드, step 3 데뷔전, 판단 2개, 100회 재생 불변) 신규. 기존 골든은 필수 필드 추가로 hash만 변경(RNG 소비 5개 전부 불변), career-02·04는 placeholder CHAPTER 자동 통과용 여분 `ADVANCE`가 사라져 명령 로그가 줄었다. 실제 1.0.0 룰셋·0.1.0 팩으로 CREATE_CAREER부터 진행해 유스 첫 시즌 step 3에서 데뷔전 챕터가 실제로 열리는 것을 테스트로 확인(도달 불가 분기 없음).
+
+**D-38 확정**: 브리프대로. 추가로 (1) `ADVANCE.payload.chapterCandidates`가 비면 챕터는 열리지 않는다(기존 골든 호환, START_SEASON은 step 1이 항상 ROLE_PROPOSAL이라 후보 없이 걷는다), (2) CHAPTER pending은 자동 통과 대상에서 빠졌다(`RESOLVE_CHAPTER`로만 닫힘), (3) 웹의 `selectChapterCandidates`(content runtime)는 `positionGroups`·`resolvedChapterIds`만 거르고 실제 판정은 domain이 한다.
+
+**리뷰 결정**: 수정 필수 1건 — 타입 확장(`resolvedChapterIds`·`CHAPTER_RESOLVED`)으로 깨진 apps/web typecheck를 같은 PR에서 최소 수정. 워커가 "T-2-002 때부터의 기존 버그"라 적은 대시보드 `timelineSentence` 오류는 실제로 이 PR의 `CHAPTER_RESOLVED` 추가가 원인(exhaustive switch)이었다 — 브리프 템플릿에 "'기존 버그'라 적기 전에 origin/main에서 확인" 규칙 추가(b112c98). 수용: 골든 hash 변경·명령 로그 축소, `ChapterRecord.ratingDeltaTenths` 정의.
+
+**후속 기록**: tier1~3 리그의 `rivalOpponentIndex`(전부 1)·`promotionSpots`/`relegationSpots`(0/3, 3/3, 3/0)는 스키마 통과용 임시값 — 콘텐츠 정본(`docs/content/kickoff/`)에서 확정할 것. DEBUT 트리거가 `seasonIndex === 1`로 제한돼 2번째 시즌 데뷔(첫 시즌 0분)는 열리지 않는다 — Phase 3 태그 작업(T-2-014 이후)에서 `seasonHistory` 출전 합산으로 넓힌다. 챕터 판단이 바꾼 평점은 그 step의 폼 갱신(`applyCondition`, walk 중 계산)에는 반영되지 않는다 — 결산 통계에는 반영됨.
+
+**투입**: T-2-004·T-2-005가 모두 main에 있어 T-2-014(Phase 3+ 공유 계약: D-40 Effect 규칙·D-41 시장가치·D-42 CareerTag·ADR-010)를 투입했다. 동시 워커 2개(T-2-007·T-2-014). T-2-007 머지 뒤 T-2-008(챕터 화면)·T-2-009(결산 화면)를 투입한다.
+
+**운영 메모**: T-2-007 워커가 Bash 안전 분류기 장애("claude-sonnet-5 temporarily unavailable (overloaded)", auto 모드가 셸 명령 판정 불가)로 약 20분 멈췄다. 다른 워커에서 셸이 정상인 것을 확인하고 재시도를 지시해 풀렸다 — 감시의 IDLE-LONG이 잡아 준다. T-2-004 워커 비용 약 $45.8(177분, main 머지·골든 재생성 포함).
+
 ## 2026-09-03 (밤, PR #40 T-2-005 머지 — Wave 3 절반, T-2-004 PR #41 리뷰 중)
 
 **결과**: T-2-005(PR #40, `eaeb6cf`) 머지. `SETTLE_SEASON`이 `SeasonResult`(팀 성적·개인 통계·성장 Δ·원인 태그·canonical hash)를 `seasonHistory[].result`로 남기고, 성장은 결산 시 1회 roll 없이 정수 산술(연령대 예산 U21 600/PRIME 200/VETERAN 0 centi, 잠재력 gap cap 20, 출전 계수 2,400분 기준·바닥 30%, 경험 보너스 평점 7.5 이상, 훈련 집중 `START_SEASON.payload.trainingFocus`, 소수 이월 `growthCarryCenti`). 폼·체력·사기는 매 step 경기 결과로 갱신(`conditionRules`, 폼 기준 평점 6.5·나눔 0.8). 밸런스 테스트(200 seed × 17/25/31세)가 balance-targets 표를 만족한다(U21 중앙값 +1·90백분위 +3, PRIME 0/+1, VETERAN 0/0). golden career-06-settled 신규, 다른 골든은 hash만 변경(RNG 소비 불변). Snapshot 최대 34.1 KB.
