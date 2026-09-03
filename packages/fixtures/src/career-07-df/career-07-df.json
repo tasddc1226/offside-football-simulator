@@ -1,0 +1,121 @@
+{
+  "rulesetVersion": "1.0.0",
+  "contentPackVersion": "0.1.0",
+  "createCareer": {
+    "careerId": "car_df_07",
+    "seed": "df-search-cb-stopper-17",
+    "simulationMode": "FAST"
+  },
+  "commands": [
+    {
+      "type": "UPDATE_PLAYER_DRAFT",
+      "payload": {
+        "draft": {
+          "name": "이강산",
+          "gender": "UNSPECIFIED",
+          "nationalityCode": "KR",
+          "preferredFoot": "RIGHT"
+        }
+      }
+    },
+    {
+      "type": "UPDATE_PLAYER_DRAFT",
+      "payload": {
+        "draft": {
+          "position": "CB",
+          "archetypeId": "cb-stopper",
+          "backgroundId": "club-academy"
+        }
+      }
+    },
+    {
+      "type": "CONFIRM_PLAYER",
+      "payload": {}
+    },
+    {
+      "type": "ADVANCE",
+      "payload": {
+        "eligibleEvents": [
+          {
+            "eventId": "EVT-CON-002",
+            "version": 1,
+            "weight": 10
+          }
+        ]
+      }
+    },
+    {
+      "type": "RESOLVE_EVENT",
+      "payload": {
+        "eventId": "EVT-CON-002",
+        "definitionVersion": 1,
+        "choiceId": "A",
+        "outcomes": [
+          {
+            "id": "A1",
+            "weight": 100,
+            "effects": [],
+            "addTags": ["진로_입단테스트"]
+          }
+        ]
+      }
+    },
+    {
+      "type": "ADVANCE",
+      "payload": {
+        "eligibleEvents": [
+          {
+            "eventId": "EVT-CON-003",
+            "version": 1,
+            "weight": 10
+          }
+        ]
+      }
+    },
+    {
+      "type": "RESOLVE_EVENT",
+      "payload": {
+        "eventId": "EVT-CON-003",
+        "definitionVersion": 1,
+        "choiceId": "B",
+        "outcomes": [
+          {
+            "id": "B1",
+            "weight": 85,
+            "effects": [
+              {
+                "kind": "RELATION",
+                "sourceId": "EVT-CON-003.B.B1",
+                "target": "managerTrust",
+                "delta": 5,
+                "clamp": { "min": 0, "max": 100 },
+                "appliesAt": { "kind": "IMMEDIATE" },
+                "expiresAt": null,
+                "stackingRule": "ONCE_PER_SOURCE"
+              }
+            ],
+            "addTags": ["입단테스트_완료", "테스트_성공"]
+          },
+          {
+            "id": "B2",
+            "weight": 15,
+            "effects": [],
+            "addTags": ["입단테스트_완료", "테스트_보통"]
+          }
+        ]
+      }
+    },
+    {
+      "type": "ADVANCE",
+      "payload": {
+        "eligibleEvents": []
+      }
+    },
+    {
+      "type": "ACCEPT_OFFER",
+      "payload": {
+        "offerId": "OFR-9-0"
+      }
+    }
+  ]
+}

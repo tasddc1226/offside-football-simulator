@@ -10,6 +10,12 @@ import {
   career04GkEngineCommands,
   career05Chapter,
   career05ChapterEngineCommands,
+  career07Df,
+  career07DfEngineCommands,
+  career08Mf,
+  career08MfEngineCommands,
+  career09Fw,
+  career09FwEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -246,6 +252,46 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
     console.log(
       JSON.stringify({
         fixture: 'career-05-chapter',
+        peakCheckpoint: peak.checkpoint,
+        peakRevision: peak.revision,
+        peakStateBytes,
+        checkpoint: snapshot.checkpoint,
+        revision: snapshot.revision,
+        finalStateBytes,
+        bodyBytes,
+      }),
+    );
+
+    expect(peakStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+    expect(finalStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+    expect(bodyBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+  });
+
+  // T-2-011 1번: DF/MF/FW 포지션군 fixture. career-04-gk와 같은 대표 지점(SETTLE_SEASON 직후, season
+  // null — season.matches가 가장 많이 쌓인 시점)에서 크기를 잰다.
+  it.each([
+    { label: 'career-07-df', engineCommands: career07DfEngineCommands, versions: career07Df, prefix: 'size-c7' },
+    { label: 'career-08-mf', engineCommands: career08MfEngineCommands, versions: career08Mf, prefix: 'size-c8' },
+    { label: 'career-09-fw', engineCommands: career09FwEngineCommands, versions: career09Fw, prefix: 'size-c9' },
+  ])('$label(SETTLE_SEASON 직후, season null): 상태·PUT 본문 크기가 상한 안에 든다', ({ label, engineCommands, versions, prefix }) => {
+    let counter = 0;
+    const commands = engineCommands(() => `${prefix}-${counter++}`);
+    const steps: Step[] = [];
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, versions);
+      steps.push({ snapshot, command });
+    }
+    if (snapshot === null) throw new Error(`${label} 명령 목록이 비어 있다.`);
+
+    const peak = steps.reduce((max, step) => (stateBytes(step.snapshot) > stateBytes(max) ? step.snapshot : max), steps[0]!.snapshot);
+    const peakStateBytes = stateBytes(peak);
+    const finalStateBytes = stateBytes(snapshot);
+    const bodyBytes = putBodyBytes(steps, 0);
+
+    console.log(
+      JSON.stringify({
+        fixture: label,
         peakCheckpoint: peak.checkpoint,
         peakRevision: peak.revision,
         peakStateBytes,

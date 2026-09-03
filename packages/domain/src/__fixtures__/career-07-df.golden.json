@@ -1,0 +1,204 @@
+{
+  "revision": 15,
+  "stateHash": "fabbebb81a4bb0c89edcc773beadbcaf8ddb6a4ad5b202a7a49d95eee863bd54",
+  "rngStateDraws": 398,
+  "age": 18,
+  "seasonHistory": [
+    {
+      "index": 1,
+      "simulationMode": "FAST",
+      "teamId": "seoul-tier1",
+      "competitions": [
+        {
+          "competitionId": "LEAGUE",
+          "kind": "LEAGUE",
+          "played": 22,
+          "won": 9,
+          "drawn": 10,
+          "lost": 3,
+          "goalsFor": 28,
+          "goalsAgainst": 20,
+          "position": 1,
+          "cupRound": null
+        },
+        {
+          "competitionId": "CUP",
+          "kind": "CUP",
+          "played": 4,
+          "won": 4,
+          "drawn": 0,
+          "lost": 0,
+          "goalsFor": 7,
+          "goalsAgainst": 0,
+          "position": null,
+          "cupRound": "WON"
+        }
+      ],
+      "settledAtRevision": 15,
+      "result": {
+        "index": 1,
+        "simulationMode": "FAST",
+        "teamId": "seoul-tier1",
+        "competitions": [
+          {
+            "competitionId": "LEAGUE",
+            "kind": "LEAGUE",
+            "played": 22,
+            "won": 9,
+            "drawn": 10,
+            "lost": 3,
+            "goalsFor": 28,
+            "goalsAgainst": 20,
+            "position": 1,
+            "cupRound": null
+          },
+          {
+            "competitionId": "CUP",
+            "kind": "CUP",
+            "played": 4,
+            "won": 4,
+            "drawn": 0,
+            "lost": 0,
+            "goalsFor": 7,
+            "goalsAgainst": 0,
+            "position": null,
+            "cupRound": "WON"
+          }
+        ],
+        "playerStats": {
+          "group": "DF",
+          "appearances": {
+            "total": 26,
+            "started": 0,
+            "sub": 24,
+            "zeroMinute": 15,
+            "out": 2
+          },
+          "minutes": 220,
+          "ratingSumTenths": 712,
+          "ratedMatches": 11,
+          "yellow": 1,
+          "red": 1,
+          "injuries": 1,
+          "totals": {
+            "group": "DF",
+            "tackles": 18,
+            "interceptions": 18,
+            "aerialsWon": 23,
+            "goalsConcededInvolved": 3,
+            "cleanSheet": 0
+          }
+        },
+        "selectionSummary": {
+          "squadRoleAtStart": "ROTATION",
+          "squadRoleAtEnd": "ROTATION",
+          "started": 0,
+          "sub": 24,
+          "zeroMinute": 15,
+          "out": 2,
+          "minutes": 220,
+          "possibleMinutes": 2340,
+          "finalRank": 3
+        },
+        "roleChanges": [
+          {
+            "step": 1,
+            "type": "ROLE_CHANGE",
+            "decision": "ACCEPT"
+          }
+        ],
+        "promiseFulfilment": {
+          "promised": "RESERVE",
+          "delivered": "RESERVE",
+          "fulfilled": true,
+          "minutesShareBp": 940
+        },
+        "attributeDeltas": [
+          { "key": "shooting", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "passing", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "dribbling", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "tackling", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 35 }] },
+          { "key": "firstTouch", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "crossing", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "goalkeeping", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 5 }] },
+          { "key": "pace", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 6 }] },
+          { "key": "acceleration", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 6 }] },
+          { "key": "agility", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 6 }] },
+          { "key": "jumping", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 41 }] },
+          { "key": "stamina", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 6 }] },
+          { "key": "strength", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 44 }] },
+          { "key": "durability", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 20 }] },
+          { "key": "decisions", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 19 }] },
+          { "key": "concentration", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 30 }] },
+          { "key": "composure", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 24 }] },
+          { "key": "positioning", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 30 }] },
+          { "key": "leadership", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 4 }] },
+          { "key": "consistency", "delta": 0, "causes": [{ "cause": "EXPERIENCE", "centi": 4 }] }
+        ],
+        "baseOvr": { "before": 62, "after": 62 },
+        "stateDeltas": {
+          "form": { "before": 48, "after": 50 },
+          "fitness": { "before": 97, "after": 80 },
+          "morale": { "before": 67, "after": 60 },
+          "managerTrust": { "before": 45, "after": 45 }
+        },
+        "chapters": [],
+        "hash": "2044f3eb2ecb9b1f2a81a24756500bba2f536e032c4975b49257df084fb78779"
+      }
+    }
+  ],
+  "beforeSettlement": {
+    "matchesPlayed": 26,
+    "playerStats": {
+      "group": "DF",
+      "appearances": {
+        "total": 26,
+        "started": 0,
+        "sub": 24,
+        "zeroMinute": 15,
+        "out": 2
+      },
+      "minutes": 220,
+      "ratingSumTenths": 712,
+      "ratedMatches": 11,
+      "yellow": 1,
+      "red": 1,
+      "injuries": 1,
+      "totals": {
+        "group": "DF",
+        "tackles": 18,
+        "interceptions": 18,
+        "aerialsWon": 23,
+        "goalsConcededInvolved": 3,
+        "cleanSheet": 0
+      }
+    },
+    "averageRatingTenths": 65,
+    "competitions": [
+      {
+        "competitionId": "LEAGUE",
+        "kind": "LEAGUE",
+        "played": 22,
+        "won": 9,
+        "drawn": 10,
+        "lost": 3,
+        "goalsFor": 28,
+        "goalsAgainst": 20,
+        "position": 1,
+        "cupRound": null
+      },
+      {
+        "competitionId": "CUP",
+        "kind": "CUP",
+        "played": 4,
+        "won": 4,
+        "drawn": 0,
+        "lost": 0,
+        "goalsFor": 7,
+        "goalsAgainst": 0,
+        "position": null,
+        "cupRound": "WON"
+      }
+    ]
+  }
+}

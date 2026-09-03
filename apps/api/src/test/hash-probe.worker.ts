@@ -18,6 +18,12 @@ import {
   career04GkEngineCommands,
   career06Settled,
   career06SettledEngineCommands,
+  career07Df,
+  career07DfEngineCommands,
+  career08Mf,
+  career08MfEngineCommands,
+  career09Fw,
+  career09FwEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -104,12 +110,46 @@ function runCareer06Settled(): DomainSnapshot {
   return snapshot;
 }
 
+/** T-2-011: career07Df/career08Mf/career09Fw(독립 실행, career04Gk와 같은 형태)를 재생한다. */
+function runCareer07Df(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career07DfEngineCommands(() => `probe-c7-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career07Df);
+  }
+  if (snapshot === null) throw new Error('career07Df 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
+function runCareer08Mf(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career08MfEngineCommands(() => `probe-c8-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career08Mf);
+  }
+  if (snapshot === null) throw new Error('career08Mf 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
+function runCareer09Fw(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career09FwEngineCommands(() => `probe-c9-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career09Fw);
+  }
+  if (snapshot === null) throw new Error('career09Fw 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
 type ProbeRequest =
   | { kind: 'replay' }
   | { kind: 'replaySeason'; mode: SimulationMode }
   | { kind: 'replayUnderdog' }
   | { kind: 'replayGk' }
   | { kind: 'replaySettled' }
+  | { kind: 'replayDf' }
+  | { kind: 'replayMf' }
+  | { kind: 'replayFw' }
   | { kind: 'sha256'; inputs: string[] }
   | { kind: 'canonical'; value: JsonValue };
 
@@ -148,6 +188,18 @@ export default {
 
     if (body.kind === 'replaySettled') {
       return snapshotResponse(runCareer06Settled());
+    }
+
+    if (body.kind === 'replayDf') {
+      return snapshotResponse(runCareer07Df());
+    }
+
+    if (body.kind === 'replayMf') {
+      return snapshotResponse(runCareer08Mf());
+    }
+
+    if (body.kind === 'replayFw') {
+      return snapshotResponse(runCareer09Fw());
     }
 
     if (body.kind === 'sha256') {
