@@ -67,6 +67,20 @@ SCR-005·011·012·015·031·033은 06 문서와 13 디자인 시스템 토큰�
 
 Phase 2가 끝나면 T-2-014의 공유 계약을 먼저 닫고, Phase 3(계약·이적)과 Phase 4(부상·관계)를 병렬 트랙으로 돌린다. 그 위에 Phase 5(은퇴·Legacy)와 Phase 6(KICKOFF 시즌)을 병렬로 얹는다. LINE TEST가 도는 동안 Phase 3·4의 도메인 골격(계약 상태기계, 부상 모델)은 먼저 만들고 밸런스 수치만 LINE TEST 기준선 뒤로 미룬다. 트랙은 최대 3개(리뷰 병목·사용량 한도·`packages/domain` 충돌이 상한). 상세는 로드맵.
 
+### D-34 전술 스타일·역할 제안·경쟁자 생성 상세 (2026-09-03, T-2-002 투입 전 확정)
+
+- 룰셋: `tacticalStyles` 3종(점유·역습·압박)에 포지션별 정원(합 11)·벤치 정원·요구 능력 가중치(합 1)·감독 선호 아키타입. 팀은 `leagueId`·`tacticalStyleId`·`squadStrength`(주전 평균 Base OVR 목표). `leagues[]`는 `teamCount` YOUTH 8·1부 12·2부 12·3부 10, 홈·원정 2회전. 컵은 4라운드 R1 step 5·R2 7·SEMI 9·FINAL 11(D-33의 R2 위치 확정). 가중치·숙련도 상수는 룰셋 `selectionRules`에 둔다(03 초기 기준식 그대로).
+- Tactical Fit = round(스타일 가중 내적 × 0.6 + 감독 선호 아키타입 여부(100/0) × 0.4). 내적만으로는 Base OVR과 거의 같이 움직여 03 계산 예(A 50·B 88)의 폭이 나오지 않으므로 아키타입 항을 둔다. 포지션 숙련도는 기존 `context.positionProficiency`(현재 주포지션의 0~100)를 95/80 기준으로 1.0·0.97·0.92 등급화한다(배경 초기값 유지). Squad Status = 출전 약속 기준값(`squadStatusByRole`) + 주장 보너스(Phase 2는 NONE=0) + 직전 평점 보정(6.5 중립, ±20 상한) — 평점이 없으면 기존 초기값과 같다.
+- 경쟁자는 `START_SEASON`에서 룰셋 `positions` 순서로 8포지션 × 2명 생성한다(선수 포지션 전환 시 재추첨 없음). Base OVR은 팀 `squadStrength ± 6`, 아키타입은 감독 선호 60%·나머지 40%(D-33), 이름은 룰셋 `competitorNames`에서 중복 없이. RNG 순서: 포지션 → 경쟁자 → 아키타입 roll → 이름 roll → 능력치 jitter 20 → managerTrust roll. 새 roll은 이것뿐이다.
+- step 1 필수 슬롯(RULE-TIME-001 "역할 제안")은 감독 역할 제안이다: `KEEP` / `POSITION_CHANGE`(인접 포지션, Tactical Fit +15 이상, 순위 개선) / `ROLE_CHANGE`(순위로 본 역할 ≠ 계약 약속). roll 없이 산출하고 새 명령 `RESOLVE_ROLE { decision: ACCEPT | DECLINE }`(CMD-SIM-004)로 닫는다. SCR-012의 "조건부 훈련"은 훈련 Effect가 생기는 T-2-005가 붙인다. 포지션 전환은 능력치를 즉시 바꾸지 않고 `primaryPosition`·숙련도(인접 80·그 외 60)·Tactical Fit만 바꾼다. `contract.rolePromise`는 Phase 3 계약 작업 전까지 바꾸지 않는다.
+- 선발 순위는 순수 함수 `rankSelection`(정렬 키 score → baseOvr → id, 정원 안 START·벤치 SUB·나머지 OUT)이고 이유는 선수와 경계 후보 사이 가중 차이가 가장 큰 구성 요소다. `season.squadRole`은 순위에서 파생한다(`SquadRole`은 시즌 지위, `MatchAppearance`는 경기 결과 — 02 구분 유지). 화면(T-2-007 전술실·SCR-033)은 도메인 선택자 `deriveTacticalRoom`이 주는 값만 쓴다.
+
+### D-35 경기 계산 상세 (2026-09-03, T-2-003 브리프 선작성)
+
+- 일정은 roll 없이 시즌 시작 시 확정한다: 리그는 `teamCount` 원형 라운드로빈 2회전을 step 3~11에 균등 배치, 컵은 R1 5·R2 7·SEMI 9·FINAL 11. 이름 없는 상대는 `league.strength`에 index 기반 균등 오프셋, 컵 상대는 라운드별 기준 strength. 리그 순위는 다른 팀 경기를 돌리지 않고 strength 기반 기대 승점(정수 ×100)과 우리 실제 승점을 비교해 매긴다.
+- 경기 하나의 RNG 순서: 팀 결과(roll100 + 득점 rollInt 2) → 선발(roll 없음, `availability` 제외) → 출전 시간 → 관여량 → 포지션군 통계 항목(고정 키 순서) → 카드 → 부상 이탈 → 평점(roll 없음). 0분·OUT 경기는 팀 결과 roll만 소비한다. `ADVANCE`는 step의 경기를 먼저 돌리고 결정 슬롯을 연다(챕터 훅은 그 사이 — T-2-004).
+- 부상·정지는 Phase 2에서 `availability { INJURY | SUSPENSION, matchesRemaining }`로만 표현한다(능력치·재활은 Phase 4). 평점은 통계 가중합으로 roll 없이 산출해 `lastRating`으로 Squad Status(D-34)에 들어간다. FAST·CHAPTER는 같은 generator라 챕터가 없는 T-2-003 시점에는 `matches`가 byte-identical하다.
+
 ## 4. 열린 질문 (Wave 1 전에 닫는다)
 
 - 리그·컵 구조를 룰셋 데이터로 얼마나 구체화할지(팀 수, 경기 수, 컵 라운드 수). 제안: 리그 팀 수는 룰셋 `leagues[].teamCount`, 경기 수는 홈·원정 2회전, 컵은 4라운드.
