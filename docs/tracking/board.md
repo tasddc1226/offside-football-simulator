@@ -100,7 +100,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-2-004 | domain + content | 핵심 경기 챕터 선택·판단 resolver, 팩 `chapters` 스키마 + 3종 | T-2-003 | 2 | in-progress | `T-2-004-chapters`, [브리프](briefs/T-2-004.md) |
 | T-2-005 | domain | 시즌 집계·SeasonResult, 성장·폼·체력·사기 Effect, 원인 태그, 결산 hash | T-2-003, T-2-004 | 2 | in-progress | `T-2-005-settlement`, [브리프](briefs/T-2-005.md) |
 | T-2-006 | contracts + api + engine-client | CMD-SIM 스키마, 시즌·결산·EffectQueue 스키마, Snapshot 크기, 동기화 회귀, Worker 계산 시간 | T-2-001 | 2 | done | PR #38 6f2f00e, [브리프](briefs/T-2-006.md) |
-| T-2-007 | web | SCR-005·011·029(advance·전술실)·033 | T-2-002, T-2-006 | 3 | todo | |
+| T-2-007 | web | SCR-005·011·012·029(시즌화·전술실)·033, e2e 포트 override | T-2-002, T-2-006 | 3 | in-progress | `T-2-007-season-screens`, [브리프](briefs/T-2-007.md) |
 | T-2-008 | web | SCR-031 챕터·SCR-012 역할 변경·재생 복원 | T-2-004, T-2-006 | 3 | todo | |
 | T-2-009 | web | SCR-015 시즌 결산·연대기 요약·응답 유실 복구 | T-2-005, T-2-006 | 3 | todo | |
 | T-2-010 | content | 콘텐츠 팩 0.2.0(챕터 3종·시즌 이벤트, SHIPPABLE 항목만) | T-2-004, 콘텐츠 승격 | 4 | todo | `docs/content/kickoff/production-backlog.md` 상태 기준 후속(PR #26): previewEffects에 성장·출전·제안 범위 구조화 필드, EVT-CON-002 C 성장 기대 줄 누락, 태그 한글 라벨(라커룸이 id 노출). |
@@ -128,6 +128,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 |---|---|---|---|
 | T-2-004 | Sonnet 5, Orca 워크트리 `T-2-004-chapters` | 2026-09-03 | 투입(챕터 선택·RESOLVE_CHAPTER·팩 chapters) |
 | T-2-005 | Sonnet 5, Orca 워크트리 `T-2-005-settlement` | 2026-09-03 | 투입(SeasonResult·성장·폼/체력/사기) |
+| T-2-007 | Sonnet 5, Orca 워크트리 `T-2-007-season-screens` | 2026-09-03 | 투입(시즌 진입·역할 제안·대시보드 시즌화·능력치 상세; 사용자 '속도 올리자'로 3번째 워커) |
 
 ## 완료
 
