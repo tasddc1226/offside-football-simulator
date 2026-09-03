@@ -29,6 +29,7 @@ import { archetypeName, currentTeamName } from '../shared/current-team.js';
 import {
   EFFECT_TARGET_LABEL_KO,
   LEAGUE_TIER_LABEL_KO,
+  positionHeaderField,
   POSITION_LABELS,
   SEASON_PHASE_LABEL_KO,
   SQUAD_ROLE_LABELS,
@@ -207,7 +208,9 @@ function CareerDashboard() {
   const profile = state.player.profile;
   const draft = state.player.draft;
   const name = profile?.name ?? draft.name ?? '이름 없는 선수';
-  const position = profile?.primaryPosition ?? draft.position;
+  const positionField = profile
+    ? positionHeaderField(profile.primaryPosition, profile.preferredPosition)
+    : { label: '포지션', value: draft.position ? POSITION_LABELS[draft.position] : '—' };
   const hasContract = state.contract !== null;
 
   return (
@@ -215,7 +218,7 @@ function CareerDashboard() {
       <PlayerHeader
         name={name}
         team={currentTeamName(state, activeRuleset)}
-        position={{ label: '포지션', value: position ? POSITION_LABELS[position] : '—' }}
+        position={positionField}
         archetype={{ label: '아키타입', value: archetypeName(activeRuleset, profile?.archetypeId ?? draft.archetypeId) }}
         shirtNumber={{ label: '등번호', value: state.contract ? String(state.contract.shirtNumber) : '—' }}
       />

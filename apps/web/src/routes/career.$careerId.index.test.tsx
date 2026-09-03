@@ -1,6 +1,6 @@
 // SCR-029 대시보드의 "다음 결정 카드" 분기 표: pending EVENT/OFFERS/null(advance 성공)/
 // null(NOTHING_TO_ADVANCE) 네 가지가 각각 옳은 CTA·문구를 보여주는지 확인한다.
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
 import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { acceptOffer, advance, confirmPlayer, createCareer, resolveEvent, updateDraft } from '../engine/career-actions.js';
 import { createAppEngine, type AppEngine } from '../engine/engine.js';
 import { routeTree } from '../routeTree.gen.js';
+import { careerQueryOptions } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { useUiStore } from '../shared/ui-store.js';
 
@@ -222,5 +223,48 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '진행' })).not.toBeDisabled();
     });
+  });
+});
+
+describe('SCR-029 PlayerHeader 포지션 칸(완료 조건 표 #5, RULE-PLY-001)', () => {
+  it('주포지션과 선호 포지션이 같으면 "선호 포지션과 같음"을 보조 문구로 보여준다', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine); // position: 'W' → preferred == primary.
+
+    renderAt(`/career/${careerId}`);
+
+    expect(await screen.findByText('윙어')).toBeInTheDocument();
+    expect(screen.getByText('선호 포지션과 같음')).toBeInTheDocument();
+  });
+
+  it('주포지션이 선호 포지션과 다르면 두 값을 구분해 보여준다(포지션 전환 명령이 아직 없어 상태를 직접 구성한다)', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine); // preferred == primary == 'W'.
+
+    renderAt(`/career/${careerId}`);
+    expect(await screen.findByText('윙어')).toBeInTheDocument();
+
+    const options = careerQueryOptions(careerId);
+    const current = queryClient.getQueryData(options.queryKey);
+    const profile = current?.state.player.profile;
+    if (current === undefined || profile === null || profile === undefined) {
+      throw new Error('확정된 커리어에 profile이 있어야 한다');
+    }
+    act(() => {
+      queryClient.setQueryData(options.queryKey, {
+        ...current,
+        state: {
+          ...current.state,
+          player: {
+            ...current.state.player,
+            profile: { ...profile, primaryPosition: 'ST' },
+          },
+        },
+      });
+    });
+
+    expect(await screen.findByText('스트라이커')).toBeInTheDocument();
+    expect(screen.getByText('선호 윙어')).toBeInTheDocument();
+    expect(screen.queryByText('선호 포지션과 같음')).not.toBeInTheDocument();
   });
 });

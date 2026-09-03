@@ -38,11 +38,23 @@ function EventResultScreen() {
   const navigate = useNavigate();
   const submittingRef = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+
+  const view = query.data === undefined ? null : resolveEventResultView(query.data.state, activeContentPack, rev);
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-014', careerPhase: query.data?.state.seasonPhase ?? 'NONE' });
     // 마운트 시 1회만(로더가 이미 캐시를 채웠다).
   }, []);
+
+  // 08 접근성 체크리스트: 결과 변화를 aria-live로 한 번만 낭독한다. `ScreenStateView`의 영역은
+  // LOADING·COMMITTING 단계 문구 전용이라 재사용하지 않고, 이 화면 전용 영역을 둔다 — 처음엔 빈
+  // 문자열로 마운트해 뒀다가 결과가 정해지면 텍스트만 한 번 바꾼다(이미 채워진 채로 새로 마운트되면
+  // 스크린리더가 놓칠 수 있다).
+  useEffect(() => {
+    if (view === null) return;
+    setAnnouncement(`${view.kindLabel}: ${view.title}`);
+  }, [rev, view?.kindLabel, view?.title]);
 
   if (query.isPending) {
     return (
@@ -61,7 +73,6 @@ function EventResultScreen() {
   }
 
   const { state } = query.data;
-  const view = resolveEventResultView(state, activeContentPack, rev);
   if (view === null) {
     // 라우트 loader가 이미 screenForCareer로 redirect했어야 한다. 방어적 fallback.
     return null;
@@ -97,6 +108,9 @@ function EventResultScreen() {
 
   return (
     <div className="flex flex-col gap-os-6">
+      <p className="sr-only" aria-live="polite" data-testid="event-result-announcement">
+        {announcement}
+      </p>
       <ResultCard kind={view.kind} kindLabel={view.kindLabel} title={view.title} body={view.body} effects={view.effects} tags={view.tags} />
       <Button variant="primary" onClick={handleNext} disabled={advanceMutation.isPending}>
         다음

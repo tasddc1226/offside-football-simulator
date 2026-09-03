@@ -38,6 +38,7 @@ import {
 import {
   backgroundEffectLines,
   backgroundRiskLevel,
+  PLAYER_CREATION_CAREER_PHASE,
   PLAYER_CREATION_STEPS,
   positionsByGroup,
   RISK_LABELS,
@@ -112,7 +113,7 @@ function CreatePlayerScreen() {
   const nationalitySelectRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
-    platform.analytics.track('screen_viewed', { screenId: 'SCR-002', careerPhase: 'YOUTH' });
+    platform.analytics.track('screen_viewed', { screenId: 'SCR-002', careerPhase: PLAYER_CREATION_CAREER_PHASE });
   }, []);
 
   useEffect(() => {
@@ -327,36 +328,39 @@ function CreatePlayerScreen() {
         <h2 id="draft-position-heading" className="font-os font-semibold text-os-text" style={H2_STYLE}>
           선호 포지션
         </h2>
+        {/* 08 출시 차단 기준(키보드로 P0 흐름 완료 불가): 이 Tabs는 포지션 RadioGroup 밖의 형제로
+            둔다. 이전엔 RadioGroup 안에 중첩돼 Radix의 두 roving-tabindex 관리자가 충돌해 트리거
+            4개 전부가 tabindex="-1"이 되어 Tab으로 도달할 수 없었다. TabsContent는 실제 포지션
+            목록(아래 RadioGroup)을 담지 않고 비워 둔다 — TabsTrigger의 aria-controls가 가리키는
+            id를 만들어 주는 용도뿐이다(axe aria-valid-attr-value). tabIndex=-1로 빈 패널이 Tab
+            순서에 끼어들지 않게 한다(Radix 기본은 role="tabpanel"에 tabindex="0"을 준다). */}
+        <Tabs value={positionGroup} onValueChange={(value) => handlePositionGroupChange(value as PositionGroup)}>
+          <TabsList aria-label="포지션 구분">
+            {POSITION_GROUPS.map(({ group }) => (
+              <TabsTrigger key={group} value={group}>
+                {POSITION_GROUP_LABELS[group]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {POSITION_GROUPS.map(({ group }) => (
+            <TabsContent key={group} value={group} tabIndex={-1} />
+          ))}
+        </Tabs>
         <RadioGroup
           aria-labelledby="draft-position-heading"
           aria-describedby={errors.position !== undefined ? 'draft-position-error' : undefined}
           value={form.position}
           onValueChange={(value) => updateField('position', value as Position)}
         >
-          <Tabs value={positionGroup} onValueChange={(value) => handlePositionGroupChange(value as PositionGroup)}>
-            <TabsList aria-label="포지션 구분">
-              {POSITION_GROUPS.map(({ group }) => (
-                <TabsTrigger key={group} value={group}>
-                  {POSITION_GROUP_LABELS[group]}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {POSITION_GROUPS.map(({ group, positions }) => (
-              <TabsContent key={group} value={group}>
-                <div className="flex flex-col gap-os-2">
-                  {positions.map((position) => (
-                    <RadioGroupItemRow
-                      key={position}
-                      value={position}
-                      label={POSITION_LABELS[position]}
-                      description={POSITION_DESCRIPTIONS[position]}
-                      disabled={committing}
-                    />
-                  ))}
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
+          {(POSITION_GROUPS.find((entry) => entry.group === positionGroup)?.positions ?? []).map((position) => (
+            <RadioGroupItemRow
+              key={position}
+              value={position}
+              label={POSITION_LABELS[position]}
+              description={POSITION_DESCRIPTIONS[position]}
+              disabled={committing}
+            />
+          ))}
         </RadioGroup>
         {errors.position !== undefined ? (
           <p id="draft-position-error" role="alert" className="font-os text-os-danger" style={CAPTION_STYLE}>

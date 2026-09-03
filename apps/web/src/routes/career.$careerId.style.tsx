@@ -12,6 +12,7 @@ import { platform } from '../platform/index.js';
 import {
   archetypesForPosition,
   attributeLabelList,
+  PLAYER_CREATION_CAREER_PHASE,
   PLAYER_CREATION_STEPS,
   topAttributeKeys,
   weakestAttributeKeys,
@@ -65,7 +66,7 @@ function StyleScreen() {
   const seededRef = useRef(false);
 
   useEffect(() => {
-    platform.analytics.track('screen_viewed', { screenId: 'SCR-003', careerPhase: 'YOUTH' });
+    platform.analytics.track('screen_viewed', { screenId: 'SCR-003', careerPhase: PLAYER_CREATION_CAREER_PHASE });
   }, []);
 
   useEffect(() => {

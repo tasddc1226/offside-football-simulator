@@ -144,9 +144,11 @@ test('(d) 명령 응답 대기 중(COMMITTING) 뒤로 가기: 재진입하면 �
   await page.getByRole('button', { name: 'KICKOFF' }).click();
   await expect(page.getByText('커리어를 확정하는 중입니다')).toBeVisible({ timeout: 10_000 });
 
-  // 06 문서는 COMMITTING 중 뒤로 가기에 경고 대화상자를 요구하지만, platform.lifecycle.onBackPressed는
-  // 앱 어디에서도 호출되지 않는다(확인됨 — PR 본문 "범위 밖 발견 사항"). 그래서 뒤로 가기는 아무
-  // 경고 없이 즉시 진행된다 — 현재 동작을 그대로 기록한다.
+  // T-1-017: COMMITTING 중 이탈 경고는 beforeunload(탭 닫기·새로고침·주소창 이동)만 연결하는 최소
+  // 구현으로 남겼다 — popstate 기반 뒤로 가기 경고를 만들려면 더미 히스토리 항목이 필요한데, 그
+  // 항목엔 TanStack Router(`@tanstack/history`)가 popstate 방향 계산에 쓰는 내부 키
+  // `state.__TSR_index`가 없어 라우터의 히스토리 인덱스 추적이 깨진다(직접 확인, PR 본문 기록).
+  // 그래서 인앱 뒤로 가기는 여전히 대화상자 없이 즉시 진행된다 — 현재 동작을 그대로 기록한다.
   await page.goBack();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 

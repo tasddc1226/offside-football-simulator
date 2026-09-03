@@ -2,12 +2,10 @@
 // SCR-002~004→이벤트 반복→SCR-009→SCR-010→SCR-029)을 page.keyboard(Tab·Shift+Tab·Enter·Space·
 // 화살표)만으로 완주한다. click() 금지, 각 이동은 toBeFocused로 확인한다.
 //
-// SCR-002의 포지션 구분 탭(TabsList: 골키퍼/수비수/미드필더/공격수)은 `<RadioGroup>` 안에 중첩된
-// `<Tabs>`라(career.$careerId.create.tsx:330-360) Radix의 두 roving-tabindex 관리자가 충돌해 탭
-// 트리거 4개 전부가 Tab으로 도달 불가능하다(직접 확인: 포커스가 "왼발" 라디오→그룹 다음 항목으로
-// 바로 건너뛴다, 트리거 tabindex는 선택된 것까지 포함해 전부 -1). 이 스펙은 그래서 실제로 키보드로
-// 도달 가능한 기본 그룹(골키퍼, 유일한 포지션 항목)으로 흐름을 완주한다 — 범위 밖 발견 사항 참조.
-// 반면 SCR-029 대시보드 탭은 RadioGroup에 중첩돼 있지 않아 정상 작동한다(직접 확인).
+// SCR-002의 포지션 구분 탭(TabsList: 골키퍼/수비수/미드필더/공격수)은 이제 포지션 RadioGroup의
+// 형제로 렌더된다(T-1-017, career.$careerId.create.tsx) — 예전엔 `<RadioGroup>` 안에 `<Tabs>`가
+// 중첩돼 Radix의 두 roving-tabindex 관리자가 충돌해 트리거 4개 전부가 Tab으로 도달 불가능했다.
+// 이 스펙은 실제 탭 전환 경로(공격수 탭 → 윙어)로 완주해 그 수정을 검증한다.
 //
 // 대화상자 포커스 트랩·복귀: 이 여정 자체(온보딩→계약)에는 실제 대화상자가 없다(복구 코드는 같은
 // 라우트에 ?step=recovery로 인라인 표시된다 — career.$careerId.confirm.tsx). 그래서 허브의 삭제
@@ -64,11 +62,11 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/career\/.+\/create$/);
 
-  // SCR-002: 이름 → 성별 → 국적 → 주발 → 포지션(그룹 탭 도달 불가 → 기본 골키퍼 그룹 유일 항목) →
-  // 배경 → 다음. 필드 사이 Tab 한 번씩만으로 정확히 이어지는 순서를 직접 확인했다(중간에 다른
-  // 포커스 가능한 요소가 없다) — 각 라디오 그룹 진입은 Radix roving-tabindex의 기본(첫) 항목에
-  // 떨어지므로 어떤 값인지는 보지 않고 Space로 확정만 한다(다른 스펙의 "선택지 자체는 안 본다"와 같은
-  // 원칙 — 이후 화면에서 특정 값에 의존하지 않는다).
+  // SCR-002: 이름 → 성별 → 국적 → 주발 → 포지션 구분 탭 → 포지션 → 배경 → 다음. 필드 사이 Tab
+  // 한 번씩만으로 정확히 이어지는 순서를 직접 확인했다(중간에 다른 포커스 가능한 요소가 없다) —
+  // 성별·주발·배경 라디오 그룹 진입은 Radix roving-tabindex의 기본(첫) 항목에 떨어지므로 어떤
+  // 값인지는 보지 않고 Space로 확정만 한다(다른 스펙의 "선택지 자체는 안 본다"와 같은 원칙 — 이후
+  // 화면에서 특정 값에 의존하지 않는다). 포지션만은 실제 탭 전환 경로(공격수 → 윙어)로 검증한다.
   const nameInput = page.getByLabel('이름');
   await tabTo(page, nameInput);
   await page.keyboard.type('김서준');
@@ -98,12 +96,25 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   await page.keyboard.press('Space');
   await expect(footRadio).toHaveAttribute('aria-checked', 'true');
 
-  // 포지션 구분 탭(골키퍼/수비수/미드필더/공격수)은 건너뛴다 — Tab으로 도달 불가(버그, 위 주석
-  // 참조). 여기서 포커스는 기본으로 열려 있는 "골키퍼" 그룹의 유일한 포지션 항목으로 바로 간다 —
-  // 이 라디오는 (탭이 아니라) 바깥 포지션 RadioGroup 소속이라 정상적으로 도달 가능하다.
+  // 포지션 구분 탭: Tab으로 도달(기본 선택된 골키퍼 트리거) → 화살표 세 번으로 공격수까지 이동
+  // (Radix Tabs 기본 activationMode="automatic"이라 포커스 이동이 곧 선택이다) → Tab으로 포지션
+  // RadioGroup 진입 → 그 그룹의 첫 항목(윙어)에 Space로 확정.
+  await page.keyboard.press('Tab');
+  const gkTab = page.locator(':focus');
+  await expect(gkTab).toHaveAttribute('role', 'tab');
+  await expect(gkTab).toHaveAttribute('aria-selected', 'true');
+
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  const forwardTab = page.getByRole('tab', { name: '공격수' });
+  await expect(forwardTab).toBeFocused();
+  await expect(forwardTab).toHaveAttribute('aria-selected', 'true');
+
   await page.keyboard.press('Tab');
   const positionRadio = page.locator(':focus');
   await expect(positionRadio).toHaveAttribute('role', 'radio');
+  await expect(positionRadio).toContainText('윙어');
   await page.keyboard.press('Space');
   await expect(positionRadio).toHaveAttribute('aria-checked', 'true');
 

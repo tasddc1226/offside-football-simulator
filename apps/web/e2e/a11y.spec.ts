@@ -403,14 +403,13 @@ test.describe('모션 감소', () => {
   });
 });
 
-test('결과 확정 시 aria-live 영역이 갱신되는지 확인한다(범위 밖 발견 사항: 현재 없음)', async ({
+test('결과 확정 시 aria-live 영역이 정확히 한 번 갱신된다(08 접근성 체크리스트)', async ({
   page,
 }) => {
-  // 08 접근성 체크리스트: "결과 변화가 aria-live로 한 번만 낭독"을 요구한다. 실제로는 이벤트 확정
-  // →결과 화면 전환 경로 어디에도 aria-live/role=status 요소가 없다(grep 확인: apps/web/src,
-  // packages/ui 전체에서 이 경로에 해당하는 요소가 없다 — Toast의 role=status는 삭제·저장 안내 등
-  // 다른 용도다). 그래서 이 테스트는 "1번 갱신"을 assert하지 않고, MutationObserver로 실제 개수를
-  // 세어 그대로 보고한다 — 결과는 0건이며, 이것 자체가 범위 밖 발견 사항이다(고치지 않는다).
+  // 08 접근성 체크리스트: "결과 변화가 aria-live로 한 번만 낭독"을 요구한다. SCR-014
+  // (career.$careerId.event_.result.tsx)가 이 화면 전용 aria-live 영역을 두고, 빈 문자열로 마운트한
+  // 뒤 결과가 정해지면 텍스트를 한 번만 바꾼다(T-1-017) — MutationObserver로 실제 갱신 횟수를 세어
+  // 정확히 1건임을 확인한다.
   await completeOnboardingAndConfirm(page);
   await page.waitForURL(/\/career\/.+\/(path|tryout|event)$/);
 
@@ -433,13 +432,18 @@ test('결과 확정 시 aria-live 영역이 갱신되는지 확인한다(범위 
   await page.getByRole('button', { name: '확정' }).click();
   await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
 
+  // 낭독 문구는 마운트 뒤 effect에서 한 번 채워진다(빈 문자열로 먼저 마운트해야 실제 텍스트 변경이
+  // characterData 변형으로 잡힌다) — URL이 바뀐 시점과 effect 실행 시점 사이에 짧은 간극이 있어,
+  // 텍스트가 채워지길 먼저 기다린 뒤에 갱신 횟수를 읽는다(그렇지 않으면 부하가 큰 환경에서 이 검사가
+  // 0건으로 읽는 경쟁 상태가 생긴다). `[aria-live]`는 이 페이지에 항상 떠 있는 SyncBadge의 영역과도
+  // 겹쳐(여러 요소가 매칭되면 toHaveText가 깨진다) SCR-014 전용 영역만 data-testid로 짚는다.
+  await expect(page.getByTestId('event-result-announcement')).not.toHaveText('');
+
   const liveMutations = await page.evaluate(
     () => (window as unknown as { __liveMutations: number }).__liveMutations,
   );
-  console.log(
-    `[a11y] 결과 확정 시 aria-live/status/alert 영역 갱신 횟수: ${liveMutations}건(기대: 1건, 범위 밖 발견 사항)`,
-  );
-  expect(liveMutations).toBe(0);
+  console.log(`[a11y] 결과 확정 시 aria-live/status/alert 영역 갱신 횟수: ${liveMutations}건(기대: 1건)`);
+  expect(liveMutations).toBe(1);
 });
 
 test('T-1-013 설정: Google 연결 해제 확인 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
