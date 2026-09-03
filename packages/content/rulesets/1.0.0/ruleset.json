@@ -1398,5 +1398,117 @@
       "RESERVE": 25
     },
     "newClubManagerTrust": 40
+  },
+  "leagueCalendar": {
+    "id": "default-12",
+    "steps": [
+      {
+        "index": 1,
+        "phase": "PRESEASON",
+        "windowOpen": false,
+        "slots": [
+          { "kind": "ROLE", "required": true }
+        ]
+      },
+      {
+        "index": 2,
+        "phase": "PRESEASON",
+        "windowOpen": false,
+        "slots": [
+          { "kind": "EVENT", "required": false }
+        ]
+      },
+      {
+        "index": 3,
+        "phase": "LEAGUE",
+        "windowOpen": false,
+        "slots": [
+          { "kind": "CHAPTER", "required": false, "importance": "MAJOR" }
+        ]
+      },
+      {
+        "index": 4,
+        "phase": "LEAGUE",
+        "windowOpen": false,
+        "slots": [
+          { "kind": "EVENT", "required": false }
+        ]
+      },
+      {
+        "index": 5,
+        "phase": "LEAGUE",
+        "windowOpen": false,
+        "slots": [
+          { "kind": "EVENT", "required": false }
+        ]
+      },
+      {
+        "index": 6,
+        "phase": "LEAGUE",
+        "windowOpen": false,
+        "slots": [
+          { "kind": "CHAPTER", "required": false, "importance": "MINOR" }
+        ]
+      },
+      {
+        "index": 7,
+        "phase": "LEAGUE",
+        "windowOpen": true,
+        "slots": [
+          { "kind": "CONTRACT", "required": false }
+        ]
+      },
+      {
+        "index": 8,
+        "phase": "LEAGUE",
+        "windowOpen": false,
+        "slots": [
+          { "kind": "EVENT", "required": false }
+        ]
+      },
+      {
+        "index": 9,
+        "phase": "LEAGUE",
+        "windowOpen": false,
+        "slots": [
+          { "kind": "EVENT", "required": false }
+        ]
+      },
+      {
+        "index": 10,
+        "phase": "LEAGUE",
+        "windowOpen": false,
+        "slots": [
+          { "kind": "CHAPTER", "required": false }
+        ]
+      },
+      {
+        "index": 11,
+        "phase": "LEAGUE",
+        "windowOpen": false,
+        "slots": [
+          { "kind": "CHAPTER", "required": false, "importance": "MAJOR" }
+        ]
+      },
+      {
+        "index": 12,
+        "phase": "SETTLEMENT",
+        "windowOpen": false,
+        "slots": [
+          { "kind": "SETTLEMENT", "required": true }
+        ]
+      }
+    ],
+    "transferWindowStep": 7,
+    "cupRounds": [
+      { "round": "R1", "step": 5 },
+      { "round": "SEMI", "step": 9 },
+      { "round": "FINAL", "step": 11 }
+    ]
+  },
+  "seasonBoundaryReset": {
+    "form": 50,
+    "fitness": 80,
+    "morale": 60
   }
 }

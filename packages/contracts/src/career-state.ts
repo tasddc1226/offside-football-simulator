@@ -6,6 +6,12 @@ import { SemverSchema } from './versions.js';
 
 export const SquadRoleSchema = z.enum(['STARTER', 'ROTATION', 'BENCH', 'RESERVE']);
 
+// domain `SeasonPhase`와 동일.
+export const SeasonPhaseSchema = z.enum(['PRESEASON', 'LEAGUE', 'CUP', 'TRANSFER_WINDOW', 'SETTLEMENT']);
+
+// domain `SimulationMode`와 동일.
+export const SimulationModeSchema = z.enum(['FAST', 'CHAPTER']);
+
 // D-9: 팀 리그 등급. 유스는 'YOUTH', 그 외는 1~3부 숫자 리터럴이다(domain `LeagueTier`와 같은 값).
 export const LeagueTierSchema = z.union([z.literal('YOUTH'), z.literal(1), z.literal(2), z.literal(3)]);
 
@@ -39,22 +45,104 @@ export const ContractSchema = z.strictObject({
   signedAtRevision: z.number().int().positive(),
 });
 
-// D-10: `pending`은 판별 유니온. `null`(대기 없음), `EVENT`(RESOLVE_EVENT 대기), `OFFERS`(ACCEPT_OFFER 대기).
+// T-2-001 RULE-TIME-002: step 안 결정 슬롯 종류. domain `DecisionSlot.kind`와 동일.
+export const DecisionSlotKindSchema = z.enum(['EVENT', 'CHAPTER', 'CONTRACT', 'ROLE', 'INJURY', 'NATIONAL_TEAM', 'SETTLEMENT']);
+export const SlotImportanceSchema = z.enum(['MAJOR', 'MINOR']);
+
+// D-10 + T-2-001: `pending`은 판별 유니온. `null`(대기 없음), `EVENT`(RESOLVE_EVENT 대기),
+// `OFFERS`(ACCEPT_OFFER 대기), 나머지 6종은 시즌 안 결정 슬롯 대기(자동 통과 대상은 domain
+// `isAutoPassablePending` 참고 — CHAPTER·CONTRACT·ROLE·INJURY·NATIONAL_TEAM. SETTLEMENT만 아니다).
 export const PendingSchema = z
   .discriminatedUnion('kind', [
     z.strictObject({ kind: z.literal('EVENT'), eventId: z.string().min(1), version: z.number().int().positive() }),
     z.strictObject({ kind: z.literal('OFFERS'), offers: z.array(OfferSchema) }),
+    z.strictObject({ kind: z.literal('CHAPTER'), step: z.number().int().min(1).max(12), importance: SlotImportanceSchema.exactOptional() }),
+    z.strictObject({ kind: z.literal('CONTRACT'), step: z.number().int().min(1).max(12) }),
+    z.strictObject({ kind: z.literal('ROLE'), step: z.number().int().min(1).max(12) }),
+    z.strictObject({ kind: z.literal('INJURY'), step: z.number().int().min(1).max(12) }),
+    z.strictObject({ kind: z.literal('NATIONAL_TEAM'), step: z.number().int().min(1).max(12) }),
+    z.strictObject({ kind: z.literal('SETTLEMENT'), step: z.number().int().min(1).max(12) }),
   ])
   .nullable();
 
-// D-12: 타임라인. 문장은 넣지 않는다(웹이 팩·룰셋에서 조합한다). `refId`는 이벤트면
-// `EVT-…:choiceId:outcomeId`, 계약이면 contract id.
+// D-12 + T-2-001: 타임라인. 문장은 넣지 않는다(웹이 팩·룰셋에서 조합한다). `refId`는 이벤트면
+// `EVT-…:choiceId:outcomeId`, 계약이면 contract id. `SEASON_STARTED`/`STEP_PASSED`는 T-2-001.
 export const TimelineEntrySchema = z.strictObject({
   revision: z.number().int().positive(),
-  kind: z.enum(['CAREER_CONFIRMED', 'EVENT_RESOLVED', 'CONTRACT_SIGNED', 'SEASON_SETTLED']),
+  kind: z.enum(['CAREER_CONFIRMED', 'EVENT_RESOLVED', 'CONTRACT_SIGNED', 'SEASON_STARTED', 'STEP_PASSED', 'SEASON_SETTLED']),
   refId: z.string().nullable(),
   age: z.number().int(),
   step: z.number().int(),
+});
+
+// T-2-001 DATA-SEA-001: 시즌 안 step 하나의 결정 슬롯.
+export const DecisionSlotSchema = z.strictObject({
+  kind: DecisionSlotKindSchema,
+  required: z.boolean(),
+  importance: SlotImportanceSchema.exactOptional(),
+  refId: z.string().exactOptional(),
+  skippedByBudget: z.boolean().exactOptional(),
+});
+
+export const StepSummarySchema = z.strictObject({
+  passedAtRevision: z.number().int().positive(),
+  decisionsOpened: z.number().int().nonnegative(),
+  matchesPlayed: z.number().int().nonnegative(),
+});
+
+export const SeasonStepSchema = z.strictObject({
+  index: z.number().int().min(1).max(12),
+  phase: SeasonPhaseSchema,
+  windowOpen: z.boolean(),
+  decisionSlots: z.array(DecisionSlotSchema),
+  summary: StepSummarySchema.nullable(),
+});
+
+export const CompetitionRecordSchema = z.strictObject({
+  competitionId: z.string().min(1),
+  kind: z.enum(['LEAGUE', 'CUP']),
+  played: z.number().int().nonnegative(),
+  won: z.number().int().nonnegative(),
+  drawn: z.number().int().nonnegative(),
+  lost: z.number().int().nonnegative(),
+  goalsFor: z.number().int().nonnegative(),
+  goalsAgainst: z.number().int().nonnegative(),
+  position: z.number().int().positive().nullable(),
+  cupRound: z.string().nullable(),
+});
+
+// T-2-001 범위 밖: `matches`는 이 작업에서 항상 []다(값 채우기는 T-2-002/003).
+export const MatchRecordSchema = z.strictObject({
+  id: z.string().min(1),
+  step: z.number().int().min(1).max(12),
+  competitionId: z.string().min(1),
+  opponentTeamId: z.string().min(1),
+  home: z.boolean(),
+  result: z.strictObject({ goalsFor: z.number().int().nonnegative(), goalsAgainst: z.number().int().nonnegative() }).nullable(),
+});
+
+// T-2-001 D-24: 시즌 구조. `ageReferenceStep`은 항상 1(11 "나이·시즌 경계").
+export const FootballSeasonSchema = z.strictObject({
+  index: z.number().int().positive(),
+  serviceSeasonId: z.string().min(1),
+  simulationMode: SimulationModeSchema,
+  calendarId: z.string().min(1),
+  currentStep: z.number().int().min(1).max(12),
+  phase: SeasonPhaseSchema,
+  steps: z.array(SeasonStepSchema),
+  teamId: z.string().min(1),
+  squadRole: SquadRoleSchema,
+  competitions: z.array(CompetitionRecordSchema),
+  matches: z.array(MatchRecordSchema),
+  ageReferenceStep: z.literal(1),
+});
+
+export const SeasonSummarySchema = z.strictObject({
+  index: z.number().int().positive(),
+  simulationMode: SimulationModeSchema,
+  teamId: z.string().min(1),
+  competitions: z.array(CompetitionRecordSchema),
+  settledAtRevision: z.number().int().positive(),
 });
 
 // domain `Effect`와 동일한 형태(kind·sourceId·target·delta·clamp·appliesAt·expiresAt·stackingRule).
@@ -126,8 +214,8 @@ export const CareerStateSchema = z.strictObject({
   stage: z.enum(['YOUTH', 'PRO']),
   age: z.number().int(),
   currentStep: z.number().int(),
-  seasonPhase: z.enum(['PRESEASON', 'LEAGUE', 'CUP', 'TRANSFER_WINDOW', 'SETTLEMENT']),
-  simulationMode: z.enum(['FAST', 'CHAPTER']),
+  seasonPhase: SeasonPhaseSchema,
+  simulationMode: SimulationModeSchema,
   attributes: AttributesSchema,
   state: z.strictObject({
     form: z.number().int(),
@@ -161,6 +249,8 @@ export const CareerStateSchema = z.strictObject({
   pending: PendingSchema,
   contract: ContractSchema.nullable(),
   timeline: z.array(TimelineEntrySchema),
+  season: FootballSeasonSchema.nullable(),
+  seasonHistory: z.array(SeasonSummarySchema),
 });
 
 export type CareerState = z.infer<typeof CareerStateSchema>;

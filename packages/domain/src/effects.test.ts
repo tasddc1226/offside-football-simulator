@@ -53,6 +53,8 @@ function baseState(): CareerState {
     pending: null,
     contract: null,
     timeline: [],
+    season: null,
+    seasonHistory: [],
   };
 }
 

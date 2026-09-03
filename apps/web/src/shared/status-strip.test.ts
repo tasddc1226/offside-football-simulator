@@ -44,6 +44,8 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     pending: null,
     contract: null,
     timeline: [],
+    season: null,
+    seasonHistory: [],
     ...overrides,
   };
 }

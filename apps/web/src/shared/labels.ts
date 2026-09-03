@@ -139,6 +139,8 @@ export const TIMELINE_KIND_LABEL_KO: Record<TimelineEntry['kind'], string> = {
   CAREER_CONFIRMED: '데뷔',
   EVENT_RESOLVED: '이벤트',
   CONTRACT_SIGNED: '계약',
+  SEASON_STARTED: '시즌 시작',
+  STEP_PASSED: '진행',
   SEASON_SETTLED: '시즌 정산',
 };
 
@@ -175,5 +177,7 @@ export const TIMELINE_KIND_LABELS: Record<TimelineEntry['kind'], string> = {
   CAREER_CONFIRMED: '커리어 확정',
   EVENT_RESOLVED: '이벤트 해결',
   CONTRACT_SIGNED: '계약 체결',
+  SEASON_STARTED: '시즌 시작',
+  STEP_PASSED: '진행',
   SEASON_SETTLED: '시즌 결산',
 };

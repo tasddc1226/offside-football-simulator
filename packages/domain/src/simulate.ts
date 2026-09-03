@@ -7,6 +7,15 @@ import { rollInt, seedRng } from './rng.js';
 import { rollRange } from './roll-range.js';
 import type { Ruleset } from './ruleset.js';
 import {
+  buildInitialCompetitions,
+  buildSeasonSteps,
+  findSeasonStep,
+  isAutoPassablePending,
+  markStepPassed,
+  walkToNextDecision,
+  type EligibleEvent,
+} from './season.js';
+import {
   ATTRIBUTE_KEYS,
   type AttributeKey,
   type CareerStage,
@@ -14,10 +23,13 @@ import {
   type Contract,
   type DomainSnapshot,
   type Effect,
+  type FootballSeason,
+  type Pending,
   type PlayerDraft,
   type PlayerGender,
   type Position,
   type PreferredFoot,
+  type SeasonSummary,
   type SimulationMode,
 } from './types.js';
 
@@ -34,7 +46,15 @@ export type Command =
     }
   | { type: 'UPDATE_PLAYER_DRAFT'; payload: { draft: Partial<PlayerDraft> } }
   | { type: 'CONFIRM_PLAYER'; payload: Record<string, never> }
+  | {
+      type: 'START_SEASON';
+      // D-25는 payload를 { simulationMode }로만 적었지만, FootballSeason.serviceSeasonId(브리프
+      // 데이터 계약)는 domain CareerState 어디에도 없다(engine-client Career 래퍼 필드라 T-2-001
+      // 범위 밖). CREATE_CAREER처럼 payload로 받는다(PR 본문에 기록).
+      payload: { simulationMode: SimulationMode; serviceSeasonId: string };
+    }
   | { type: 'ADVANCE'; payload: { eligibleEvents: Array<{ eventId: string; version: number; weight: number }> } }
+  | { type: 'SETTLE_SEASON'; payload: Record<string, never> }
   | {
       type: 'RESOLVE_EVENT';
       payload: {
@@ -165,6 +185,8 @@ function createCareer(input: SimulationInput): SimulationResult {
     pending: null,
     contract: null,
     timeline: [],
+    season: null,
+    seasonHistory: [],
   };
 
   return {
@@ -360,11 +382,198 @@ function confirmPlayer(input: SimulationInput, snapshot: DomainSnapshot): Simula
   };
 }
 
+/**
+ * T-2-001 D-25 CMD-SIM-001. step 1 슬롯을 즉시 연다(대부분 룰셋 기본 캘린더의 ROLE 필수 슬롯).
+ * `command.payload.serviceSeasonId`는 `Command` 타입 정의 주석 참조.
+ */
+function startSeason(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
+  const command = input.command;
+  if (command.type !== 'START_SEASON') {
+    return fail('VALIDATION_FAILED', 'START_SEASON 처리기에 다른 명령이 전달되었다.');
+  }
+  const state = snapshot.state;
+  if (state.status !== 'ACTIVE') {
+    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 START_SEASON을 받을 수 없다.`, {
+      reason: 'NOT_ACTIVE',
+    });
+  }
+  if (state.season !== null) {
+    return fail('VALIDATION_FAILED', '이미 활성 시즌이 있다.', { reason: 'SEASON_ALREADY_ACTIVE' });
+  }
+  if (state.contract === null) {
+    return fail('VALIDATION_FAILED', '계약이 없으면 시즌을 시작할 수 없다.', { reason: 'NO_CONTRACT' });
+  }
+  if (state.pending !== null) {
+    return fail('VALIDATION_FAILED', '이미 결정 대기 중인 pending이 있다.', { reason: 'PENDING_DECISION' });
+  }
+
+  const calendar = input.ruleset.leagueCalendar;
+  const mode = command.payload.simulationMode;
+  const initialSteps = buildSeasonSteps(calendar, mode);
+  const nextRevision = snapshot.revision + 1;
+
+  const walked = walkToNextDecision(initialSteps, 1, mode, [], state.rngState, nextRevision);
+
+  const season: FootballSeason = {
+    index: state.seasonHistory.length + 1,
+    serviceSeasonId: command.payload.serviceSeasonId,
+    simulationMode: mode,
+    calendarId: calendar.id,
+    currentStep: walked.currentStepIndex,
+    phase: findSeasonStep(walked.steps, walked.currentStepIndex).phase,
+    steps: walked.steps,
+    teamId: state.contract.teamId,
+    squadRole: state.contract.rolePromise,
+    competitions: buildInitialCompetitions(calendar),
+    matches: [],
+    ageReferenceStep: 1,
+  };
+
+  const nextState: CareerState = {
+    ...state,
+    season,
+    currentStep: season.currentStep,
+    seasonPhase: season.phase,
+    simulationMode: season.simulationMode,
+    rngState: walked.rngState,
+    pending: walked.pending,
+    timeline: [
+      ...state.timeline,
+      { revision: nextRevision, kind: 'SEASON_STARTED', refId: null, age: state.age, step: 1 },
+      ...walked.passedStepIndexes.map((stepIndex) => ({
+        revision: nextRevision,
+        kind: 'STEP_PASSED' as const,
+        refId: null,
+        age: state.age,
+        step: stepIndex,
+      })),
+    ],
+  };
+
+  return {
+    ok: true,
+    snapshot: buildSnapshot(nextState, nextRevision, 'SEASON_START'),
+    appliedEffects: [],
+    nextAction: nextActionForPending(walked.pending),
+  };
+}
+
 function isEligibleEventsSorted(events: ReadonlyArray<{ eventId: string }>): boolean {
   for (let i = 1; i < events.length; i++) {
     if (compareCodePoints(events[i - 1]!.eventId, events[i]!.eventId) > 0) return false;
   }
   return true;
+}
+
+/** T-2-001 RULE-TIME-002: pending 종류에 따라 다음에 클라이언트가 보낼 명령을 알려준다. */
+function nextActionForPending(pending: Pending): 'DECISION' | 'ADVANCE' | 'SETTLEMENT' {
+  if (pending === null) {
+    throw new RangeError('nextActionForPending: pending이 null이다.');
+  }
+  switch (pending.kind) {
+    case 'EVENT':
+    case 'OFFERS':
+      return 'DECISION';
+    case 'SETTLEMENT':
+      return 'SETTLEMENT';
+    case 'CHAPTER':
+    case 'CONTRACT':
+    case 'ROLE':
+    case 'INJURY':
+    case 'NATIONAL_TEAM':
+      return 'ADVANCE';
+  }
+}
+
+/**
+ * T-2-001 D-25: 시즌이 있을 때 ADVANCE. `state.pending`이 자동 통과 대상(CHAPTER·CONTRACT·ROLE·
+ * INJURY·NATIONAL_TEAM)이면 그 step을 지나간 것으로 표시하고 다음 step으로 넘어간 뒤, 다음 결정이
+ * 열리는 step 또는 step 12(SETTLEMENT)까지 한 번에 걷는다. 지나간 step마다 STEP_PASSED를 남긴다.
+ */
+function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, season: FootballSeason): SimulationResult {
+  const command = input.command;
+  if (command.type !== 'ADVANCE') {
+    return fail('VALIDATION_FAILED', 'ADVANCE 처리기에 다른 명령이 전달되었다.');
+  }
+  const state = snapshot.state;
+  const eligibleEvents: EligibleEvent[] = command.payload.eligibleEvents;
+
+  if (eligibleEvents.length > 0) {
+    if (!isEligibleEventsSorted(eligibleEvents)) {
+      return fail('VALIDATION_FAILED', 'eligibleEvents는 eventId 오름차순이어야 한다.', {
+        reason: 'UNSORTED_ELIGIBLE_EVENTS',
+      });
+    }
+    for (const event of eligibleEvents) {
+      if (!Number.isInteger(event.weight) || event.weight <= 0) {
+        return fail('VALIDATION_FAILED', 'eligibleEvents의 weight는 양의 정수여야 한다.', {
+          reason: 'INVALID_WEIGHT',
+        });
+      }
+    }
+    if (eligibleEvents.length >= 2) {
+      const weightSum = eligibleEvents.reduce((sum, event) => sum + event.weight, 0);
+      if (weightSum > 0xffffffff) {
+        return fail('VALIDATION_FAILED', 'eligibleEvents weight 합이 2^32를 넘는다.', { reason: 'INVALID_WEIGHT' });
+      }
+    }
+  }
+
+  const nextRevision = snapshot.revision + 1;
+  let steps = season.steps;
+  let timeline = state.timeline;
+  let currentStepIndex = season.currentStep;
+
+  // 현재 step이 아직 닫히지 않았으면(summary === null) decisionsOpened: 1로 닫는다. state.pending이
+  // 자동 통과 대상(CHAPTER·CONTRACT·ROLE·INJURY·NATIONAL_TEAM)이면 이번 ADVANCE가 직접 닫는
+  // 경우이고, pending이 이미 null이면 그 사이 RESOLVE_EVENT로 EVENT가 해소된 경우다 — 두 경우 모두
+  // "이 step에 결정이 열렸었다"를 뜻한다(walkToNextDecision 불변식: 열리지 않은 step은 같은 호출
+  // 안에서 즉시 닫히므로, summary === null인 step은 항상 결정이 열렸던 step이다).
+  const currentStep = findSeasonStep(steps, currentStepIndex);
+  if (currentStep.summary === null) {
+    steps = markStepPassed(steps, currentStepIndex, nextRevision, 1);
+    timeline = [
+      ...timeline,
+      { revision: nextRevision, kind: 'STEP_PASSED', refId: null, age: state.age, step: currentStepIndex },
+    ];
+    currentStepIndex += 1;
+  }
+
+  const walked = walkToNextDecision(steps, currentStepIndex, season.simulationMode, eligibleEvents, state.rngState, nextRevision);
+  timeline = [
+    ...timeline,
+    ...walked.passedStepIndexes.map((stepIndex) => ({
+      revision: nextRevision,
+      kind: 'STEP_PASSED' as const,
+      refId: null,
+      age: state.age,
+      step: stepIndex,
+    })),
+  ];
+
+  const nextSeason: FootballSeason = {
+    ...season,
+    steps: walked.steps,
+    currentStep: walked.currentStepIndex,
+    phase: findSeasonStep(walked.steps, walked.currentStepIndex).phase,
+  };
+
+  const nextState: CareerState = {
+    ...state,
+    season: nextSeason,
+    currentStep: nextSeason.currentStep,
+    seasonPhase: nextSeason.phase,
+    rngState: walked.rngState,
+    pending: walked.pending,
+    timeline,
+  };
+
+  return {
+    ok: true,
+    snapshot: buildSnapshot(nextState, nextRevision, 'STEP_BOUNDARY'),
+    appliedEffects: [],
+    nextAction: nextActionForPending(walked.pending),
+  };
 }
 
 function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
@@ -378,8 +587,13 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
       reason: 'NOT_ACTIVE',
     });
   }
-  if (state.pending !== null) {
+  const canAutoPassPending = state.season !== null && isAutoPassablePending(state.pending);
+  if (state.pending !== null && !canAutoPassPending) {
     return fail('VALIDATION_FAILED', '이미 결정 대기 중인 pending이 있다.', { reason: 'PENDING_DECISION' });
+  }
+
+  if (state.season !== null) {
+    return advanceInSeason(input, snapshot, state.season);
   }
 
   const eligibleEvents = command.payload.eligibleEvents;
@@ -636,6 +850,55 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
 }
 
 /**
+ * T-2-001 D-25 CMD-SIM-003. `season.currentStep === 12`이고 SETTLEMENT pending이 열려 있을 때만
+ * 유효하다. 능력치는 바꾸지 않는다(성장식은 T-2-005 몫). form·fitness·morale은 룰셋
+ * `seasonBoundaryReset`으로 회귀한다.
+ */
+function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
+  const command = input.command;
+  if (command.type !== 'SETTLE_SEASON') {
+    return fail('VALIDATION_FAILED', 'SETTLE_SEASON 처리기에 다른 명령이 전달되었다.');
+  }
+  const state = snapshot.state;
+  const season = state.season;
+  if (season === null || season.currentStep !== 12 || state.pending === null || state.pending.kind !== 'SETTLEMENT') {
+    return fail('VALIDATION_FAILED', '시즌을 결산할 수 없다.', { reason: 'SEASON_NOT_SETTLEABLE' });
+  }
+
+  const nextRevision = snapshot.revision + 1;
+  const nextAge = state.age + 1;
+  const reset = input.ruleset.seasonBoundaryReset;
+
+  const summary: SeasonSummary = {
+    index: season.index,
+    simulationMode: season.simulationMode,
+    teamId: season.teamId,
+    competitions: season.competitions,
+    settledAtRevision: nextRevision,
+  };
+
+  const nextState: CareerState = {
+    ...state,
+    age: nextAge,
+    season: null,
+    seasonHistory: [...state.seasonHistory, summary],
+    state: { form: reset.form, fitness: reset.fitness, morale: reset.morale },
+    pending: null,
+    timeline: [
+      ...state.timeline,
+      { revision: nextRevision, kind: 'SEASON_SETTLED', refId: null, age: nextAge, step: 12 },
+    ],
+  };
+
+  return {
+    ok: true,
+    snapshot: buildSnapshot(nextState, nextRevision, 'SEASON_SETTLED'),
+    appliedEffects: [],
+    nextAction: 'ADVANCE',
+  };
+}
+
+/**
  * CREATE_CAREER → UPDATE_PLAYER_DRAFT → CONFIRM_PLAYER → ADVANCE → RESOLVE_EVENT → ACCEPT_OFFER
  * 명령을 처리하는 순수 함수. throw하지 않는다: 도메인 오류는 항상 `{ ok: false }`로 돌아온다.
  */
@@ -668,8 +931,12 @@ export function simulate(input: SimulationInput): SimulationResult {
       return updatePlayerDraft(input, snapshot);
     case 'CONFIRM_PLAYER':
       return confirmPlayer(input, snapshot);
+    case 'START_SEASON':
+      return startSeason(input, snapshot);
     case 'ADVANCE':
       return advance(input, snapshot);
+    case 'SETTLE_SEASON':
+      return settleSeason(input, snapshot);
     case 'RESOLVE_EVENT':
       return resolveEvent(input, snapshot);
     case 'ACCEPT_OFFER':
@@ -689,10 +956,11 @@ function hasDuplicates(values: readonly string[]): boolean {
 }
 
 /**
- * stateHash 일치, 버전 일치, 배열 정렬 불변, 타임라인 revision 단조 증가, pending·status 정합,
+ * stateHash 일치, 버전 일치, 배열 정렬 불변, 타임라인 revision 비감소, pending·status 정합,
  * contract·pending(OFFERS) 정합을 검사한다. 계약 중에도 pending이 EVENT인 것은 유효하다
  * (Phase 2부터 시즌 중 이벤트가 계약된 선수에게도 걸린다). 계약 중에 새 제안(OFFERS)이 pending인
- * 것만 정합성 위반이다.
+ * 것만 정합성 위반이다. T-2-001: ADVANCE 한 번이 여러 step을 지나갈 수 있어(RULE-TIME-002) 같은
+ * revision에 STEP_PASSED 항목이 여럿 남을 수 있으므로 "단조 증가"가 아니라 "비감소"만 요구한다.
  */
 export function verifySnapshot(snapshot: DomainSnapshot): { ok: true } | { ok: false; reason: string } {
   if (hashState(snapshot.state) !== snapshot.stateHash) {
@@ -713,7 +981,7 @@ export function verifySnapshot(snapshot: DomainSnapshot): { ok: true } | { ok: f
 
   const timeline = snapshot.state.timeline;
   for (let i = 1; i < timeline.length; i++) {
-    if (timeline[i]!.revision <= timeline[i - 1]!.revision) {
+    if (timeline[i]!.revision < timeline[i - 1]!.revision) {
       return { ok: false, reason: 'TIMELINE_NOT_MONOTONIC' };
     }
   }

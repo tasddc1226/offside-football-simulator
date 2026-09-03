@@ -57,6 +57,7 @@ async function advanceUntilOffers(engine: AppEngine, careerId: string) {
     const { pending } = advanced.domainSnapshot.state;
     if (pending === null) continue;
     if (pending.kind === 'OFFERS') return advanced;
+    if (pending.kind !== 'EVENT') throw new Error(`이 테스트는 시즌을 시작하지 않으므로 EVENT·OFFERS만 예상한다: ${pending.kind}`);
     const definition = engine.pack.eventsById.get(pending.eventId);
     if (!definition) throw new Error(`이벤트 정의를 찾지 못했다: ${pending.eventId}`);
     const choiceId = definition.choices[0]?.id;

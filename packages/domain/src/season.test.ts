@@ -1,0 +1,448 @@
+import { describe, expect, it } from 'vitest';
+import { rulesetProto } from './__fixtures__/career-01.js';
+import { runCareerFixture } from './__fixtures__/career-01.js';
+import { hashState } from './hash.js';
+import { seedRng } from './rng.js';
+import type { LeagueCalendar } from './ruleset.js';
+import {
+  buildInitialCompetitions,
+  buildSeasonSteps,
+  findSeasonStep,
+  isAutoPassablePending,
+  selectOpenSlot,
+} from './season.js';
+import { simulate, type Command, type SimulationInput } from './simulate.js';
+import type { DomainSnapshot, SeasonStep } from './types.js';
+
+const RULESET_VERSION = '1.0.0';
+const CONTENT_PACK = '0.1.0';
+
+function baseInput(): Omit<SimulationInput, 'command' | 'snapshot'> {
+  return { ruleset: rulesetProto, rulesetVersion: RULESET_VERSION, contentPackVersion: CONTENT_PACK };
+}
+
+// 브리프 기본 캘린더(rulesetProto.leagueCalendar)와 같은 구조: step1 ROLE·step12 SETTLEMENT만
+// required, 나머지는 EVENT×4(2,4,5,8,9는 아니고 실제로는 5개), CHAPTER×4(3,6,10,11), CONTRACT×1(7).
+const DEFAULT_CALENDAR = rulesetProto.leagueCalendar;
+
+describe('buildSeasonSteps: RULE-TIME-004 결정 예산', () => {
+  it('CHAPTER 모드에서는 기본 캘린더(선택 슬롯 10개, 챕터 4개)가 잘리지 않는다', () => {
+    const steps = buildSeasonSteps(DEFAULT_CALENDAR, 'CHAPTER');
+    const cut = steps.flatMap((s) => s.decisionSlots.filter((slot) => slot.skippedByBudget === true));
+    expect(cut).toEqual([]);
+  });
+
+  it('FAST 모드에서는 상한(6)을 넘는 4개가 step 내림차순으로 잘린다', () => {
+    const steps = buildSeasonSteps(DEFAULT_CALENDAR, 'FAST');
+    const cutSteps = steps.filter((s) => s.decisionSlots.some((slot) => slot.skippedByBudget === true)).map((s) => s.index);
+    expect(cutSteps).toEqual([8, 9, 10, 11]);
+
+    const remainingOptional = steps
+      .flatMap((s) => s.decisionSlots.map((slot) => ({ step: s.index, slot })))
+      .filter(({ slot }) => !slot.required && !slot.skippedByBudget);
+    expect(remainingOptional.map((r) => r.step)).toEqual([2, 3, 4, 5, 6, 7]);
+  });
+
+  it('required 슬롯(step1 ROLE·step12 SETTLEMENT)은 절대 잘리지 않는다', () => {
+    const steps = buildSeasonSteps(DEFAULT_CALENDAR, 'FAST');
+    expect(findSeasonStep(steps, 1).decisionSlots[0]?.skippedByBudget).toBeUndefined();
+    expect(findSeasonStep(steps, 12).decisionSlots[0]?.skippedByBudget).toBeUndefined();
+  });
+
+  it('챕터 상한(4)을 넘으면 같은 step에서 importance MINOR가 먼저 잘린다', () => {
+    const calendar: LeagueCalendar = {
+      id: 'test-chapter-tiebreak',
+      transferWindowStep: 7,
+      cupRounds: [],
+      steps: [
+        { index: 1, phase: 'PRESEASON', windowOpen: false, slots: [{ kind: 'ROLE', required: true }] },
+        { index: 2, phase: 'PRESEASON', windowOpen: false, slots: [] },
+        { index: 3, phase: 'LEAGUE', windowOpen: false, slots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }] },
+        { index: 4, phase: 'LEAGUE', windowOpen: false, slots: [] },
+        { index: 5, phase: 'LEAGUE', windowOpen: false, slots: [] },
+        { index: 6, phase: 'LEAGUE', windowOpen: false, slots: [{ kind: 'CHAPTER', required: false, importance: 'MINOR' }] },
+        { index: 7, phase: 'LEAGUE', windowOpen: true, slots: [] },
+        { index: 8, phase: 'LEAGUE', windowOpen: false, slots: [] },
+        { index: 9, phase: 'LEAGUE', windowOpen: false, slots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }] },
+        { index: 10, phase: 'LEAGUE', windowOpen: false, slots: [] },
+        {
+          index: 11,
+          phase: 'LEAGUE',
+          windowOpen: false,
+          slots: [
+            { kind: 'CHAPTER', required: false, importance: 'MAJOR' },
+            { kind: 'CHAPTER', required: false, importance: 'MINOR' },
+          ],
+        },
+        { index: 12, phase: 'SETTLEMENT', windowOpen: false, slots: [{ kind: 'SETTLEMENT', required: true }] },
+      ],
+    };
+
+    const steps = buildSeasonSteps(calendar, 'CHAPTER');
+    const step11 = findSeasonStep(steps, 11);
+    const major11 = step11.decisionSlots.find((s) => s.importance === 'MAJOR');
+    const minor11 = step11.decisionSlots.find((s) => s.importance === 'MINOR');
+    expect(minor11?.skippedByBudget).toBe(true);
+    expect(major11?.skippedByBudget).toBeUndefined();
+
+    // 나머지 챕터(step3·6·9)는 살아남는다: 총 5개 중 1개만 잘려 4개가 남는다.
+    const survivingChapters = steps
+      .flatMap((s) => s.decisionSlots)
+      .filter((slot) => slot.kind === 'CHAPTER' && !slot.skippedByBudget);
+    expect(survivingChapters).toHaveLength(4);
+  });
+});
+
+describe('buildInitialCompetitions', () => {
+  it('LEAGUE·CUP 두 종목을 값 0으로 초기화한다', () => {
+    const competitions = buildInitialCompetitions(DEFAULT_CALENDAR);
+    expect(competitions).toEqual([
+      { competitionId: 'LEAGUE', kind: 'LEAGUE', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, position: null, cupRound: null },
+      { competitionId: 'CUP', kind: 'CUP', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, position: null, cupRound: 'R1' },
+    ]);
+  });
+});
+
+describe('selectOpenSlot: RULE-TIME-002/003', () => {
+  const rng = seedRng('select-open-slot-test');
+
+  it('같은 step에 CONTRACT·EVENT·CHAPTER가 있으면 CONTRACT가 먼저 열린다', () => {
+    const step: SeasonStep = {
+      index: 7,
+      phase: 'LEAGUE',
+      windowOpen: true,
+      decisionSlots: [
+        { kind: 'CHAPTER', required: false, importance: 'MAJOR' },
+        { kind: 'EVENT', required: false },
+        { kind: 'CONTRACT', required: false },
+      ],
+      summary: null,
+    };
+    const result = selectOpenSlot(step, 'CHAPTER', [{ eventId: 'EVT-X', version: 1, weight: 1 }], rng);
+    expect(result.opened).toBe(true);
+    if (result.opened) expect(result.pending?.kind).toBe('CONTRACT');
+  });
+
+  it('EVENT는 eligibleEvents가 비어 있으면 열지 않는다(roll 없음)', () => {
+    const step: SeasonStep = {
+      index: 4,
+      phase: 'LEAGUE',
+      windowOpen: false,
+      decisionSlots: [{ kind: 'EVENT', required: false }],
+      summary: null,
+    };
+    const result = selectOpenSlot(step, 'CHAPTER', [], rng);
+    expect(result).toEqual({ opened: false });
+  });
+
+  it('FAST 모드는 MINOR 챕터를 열지 않고, MAJOR 챕터는 연다', () => {
+    const minorStep: SeasonStep = {
+      index: 6,
+      phase: 'LEAGUE',
+      windowOpen: false,
+      decisionSlots: [{ kind: 'CHAPTER', required: false, importance: 'MINOR' }],
+      summary: null,
+    };
+    expect(selectOpenSlot(minorStep, 'FAST', [], rng)).toEqual({ opened: false });
+
+    const majorStep: SeasonStep = {
+      index: 3,
+      phase: 'LEAGUE',
+      windowOpen: false,
+      decisionSlots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }],
+      summary: null,
+    };
+    const result = selectOpenSlot(majorStep, 'FAST', [], rng);
+    expect(result.opened).toBe(true);
+  });
+
+  it('skippedByBudget 슬롯은 모드와 무관하게 열리지 않는다', () => {
+    const step: SeasonStep = {
+      index: 7,
+      phase: 'LEAGUE',
+      windowOpen: true,
+      decisionSlots: [{ kind: 'CONTRACT', required: false, skippedByBudget: true }],
+      summary: null,
+    };
+    expect(selectOpenSlot(step, 'CHAPTER', [], rng)).toEqual({ opened: false });
+  });
+});
+
+describe('isAutoPassablePending', () => {
+  it('CHAPTER·CONTRACT·ROLE·INJURY·NATIONAL_TEAM만 자동 통과 대상이다', () => {
+    expect(isAutoPassablePending({ kind: 'CHAPTER', step: 3 })).toBe(true);
+    expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7 })).toBe(true);
+    expect(isAutoPassablePending({ kind: 'ROLE', step: 1 })).toBe(true);
+    expect(isAutoPassablePending({ kind: 'INJURY', step: 5 })).toBe(true);
+    expect(isAutoPassablePending({ kind: 'NATIONAL_TEAM', step: 8 })).toBe(true);
+    expect(isAutoPassablePending({ kind: 'EVENT', eventId: 'x', version: 1 })).toBe(false);
+    expect(isAutoPassablePending({ kind: 'OFFERS', offers: [] })).toBe(false);
+    expect(isAutoPassablePending({ kind: 'SETTLEMENT', step: 12 })).toBe(false);
+    expect(isAutoPassablePending(null)).toBe(false);
+  });
+});
+
+// ---- 통합 테스트: career-01 fixture로 계약까지 만든 뒤 START_SEASON/ADVANCE/SETTLE_SEASON ----
+
+function activeSnapshotWithContract(): DomainSnapshot {
+  return runCareerFixture();
+}
+
+function startSeasonCommand(revision: number, mode: 'FAST' | 'CHAPTER'): Command & { commandId: string; expectedRevision: number } {
+  return {
+    type: 'START_SEASON',
+    commandId: `start-${revision}`,
+    expectedRevision: revision,
+    payload: { simulationMode: mode, serviceSeasonId: 'svc-test' },
+  };
+}
+
+function advanceCommand(
+  revision: number,
+  eligibleEvents: Array<{ eventId: string; version: number; weight: number }> = [],
+): Command & { commandId: string; expectedRevision: number } {
+  return { type: 'ADVANCE', commandId: `advance-${revision}`, expectedRevision: revision, payload: { eligibleEvents } };
+}
+
+function settleSeasonCommand(revision: number): Command & { commandId: string; expectedRevision: number } {
+  return { type: 'SETTLE_SEASON', commandId: `settle-${revision}`, expectedRevision: revision, payload: {} };
+}
+
+function runSimulate(snapshot: DomainSnapshot, command: Command & { commandId: string; expectedRevision: number }) {
+  return simulate({ ...baseInput(), snapshot, command });
+}
+
+/** START_SEASON부터 SETTLE_SEASON까지, pending 종류에 맞춰 자동으로 명령을 이어 보낸다. */
+function playFullSeason(startSnapshot: DomainSnapshot, mode: 'FAST' | 'CHAPTER'): DomainSnapshot {
+  const started = runSimulate(startSnapshot, startSeasonCommand(startSnapshot.revision, mode));
+  if (!started.ok) throw new Error(`START_SEASON 실패: ${started.error.code} ${started.error.message}`);
+  let snapshot = started.snapshot;
+
+  for (let guard = 0; guard < 100; guard++) {
+    const pending = snapshot.state.pending;
+    if (pending === null) throw new Error('pending이 null인데 시즌이 안 끝났다.');
+    if (pending.kind === 'SETTLEMENT') {
+      const settled = runSimulate(snapshot, settleSeasonCommand(snapshot.revision));
+      if (!settled.ok) throw new Error(`SETTLE_SEASON 실패: ${settled.error.code} ${settled.error.message}`);
+      return settled.snapshot;
+    }
+    const result = runSimulate(snapshot, advanceCommand(snapshot.revision));
+    if (!result.ok) throw new Error(`ADVANCE 실패: ${result.error.code} ${result.error.message}`);
+    snapshot = result.snapshot;
+  }
+  throw new Error('playFullSeason: 100회 반복해도 시즌이 끝나지 않았다.');
+}
+
+describe('START_SEASON (CMD-SIM-001)', () => {
+  it('계약이 없으면 NO_CONTRACT다', () => {
+    // ACTIVE·season null·pending null이지만 contract만 없는 상태를 직접 구성한다
+    // (CREATE_CAREER 직후는 status가 DRAFT라 NOT_ACTIVE가 먼저 걸린다).
+    const snapshot = activeSnapshotWithContract();
+    const noContract: DomainSnapshot = { ...snapshot, state: { ...snapshot.state, contract: null } };
+    const rehashed: DomainSnapshot = { ...noContract, stateHash: hashState(noContract.state) };
+    const result = runSimulate(rehashed, startSeasonCommand(rehashed.revision, 'FAST'));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'NO_CONTRACT' });
+  });
+
+  it('이미 활성 시즌이 있으면 SEASON_ALREADY_ACTIVE다', () => {
+    const snapshot = activeSnapshotWithContract();
+    const started = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'FAST'));
+    if (!started.ok) throw new Error('setup 실패');
+    // 첫 step의 pending(ROLE)을 자동 통과시켜 pending을 비운 뒤 다시 START_SEASON을 보낸다.
+    const advanced = runSimulate(started.snapshot, advanceCommand(started.snapshot.revision));
+    if (!advanced.ok) throw new Error('setup 실패');
+    const result = runSimulate(advanced.snapshot, startSeasonCommand(advanced.snapshot.revision, 'FAST'));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'SEASON_ALREADY_ACTIVE' });
+  });
+
+  it('pending이 있으면 PENDING_DECISION이다', () => {
+    // season null·contract 있음이지만 pending만 남아 있는 상태를 직접 구성한다
+    // (season이 있으면 SEASON_ALREADY_ACTIVE가, contract가 없으면 NO_CONTRACT가 먼저 걸린다).
+    const snapshot = activeSnapshotWithContract();
+    const withPending: DomainSnapshot = {
+      ...snapshot,
+      state: { ...snapshot.state, pending: { kind: 'EVENT', eventId: 'EVT-X', version: 1 } },
+    };
+    const rehashed: DomainSnapshot = { ...withPending, stateHash: hashState(withPending.state) };
+    const result = runSimulate(rehashed, startSeasonCommand(rehashed.revision, 'FAST'));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'PENDING_DECISION' });
+  });
+
+  it('RETIRED면 NOT_ACTIVE다', () => {
+    const snapshot = activeSnapshotWithContract();
+    const retired: DomainSnapshot = { ...snapshot, state: { ...snapshot.state, status: 'RETIRED' } };
+    const rehashed: DomainSnapshot = { ...retired, stateHash: hashState(retired.state) };
+    const result = runSimulate(rehashed, startSeasonCommand(rehashed.revision, 'FAST'));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'NOT_ACTIVE' });
+  });
+
+  it('성공하면 시즌 1이 열리고 SEASON_STARTED 타임라인·competitions가 초기화된다', () => {
+    const snapshot = activeSnapshotWithContract();
+    const result = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'CHAPTER'));
+    if (!result.ok) throw new Error(`실패: ${result.error.code} ${result.error.message}`);
+    const state = result.snapshot.state;
+    expect(state.season?.index).toBe(1);
+    expect(state.season?.currentStep).toBe(1);
+    expect(state.season?.simulationMode).toBe('CHAPTER');
+    expect(state.season?.competitions).toEqual(buildInitialCompetitions(DEFAULT_CALENDAR));
+    expect(state.currentStep).toBe(1);
+    expect(state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_STARTED', step: 1 });
+    // step1 ROLE은 required라 즉시 pending으로 열린다.
+    expect(state.pending).toEqual({ kind: 'ROLE', step: 1 });
+  });
+});
+
+describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
+  it('결정 없는 step을 건너뛰고 다음 결정 step에서 멈춘다. currentStep은 되돌아가지 않는다', () => {
+    const snapshot = activeSnapshotWithContract();
+    const started = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'CHAPTER'));
+    if (!started.ok) throw new Error('setup 실패');
+
+    // step1 ROLE 자동 통과 → step2 EVENT(eligibleEvents 없음, 건너뜀) → step3 CHAPTER에서 멈춘다.
+    const advanced = runSimulate(started.snapshot, advanceCommand(started.snapshot.revision));
+    if (!advanced.ok) throw new Error(`실패: ${advanced.error.code} ${advanced.error.message}`);
+    const state = advanced.snapshot.state;
+    expect(state.season?.currentStep).toBe(3);
+    expect(state.pending).toEqual({ kind: 'CHAPTER', step: 3, importance: 'MAJOR' });
+    expect(findSeasonStep(state.season!.steps, 1).summary?.decisionsOpened).toBe(1);
+    expect(findSeasonStep(state.season!.steps, 2).summary?.decisionsOpened).toBe(0);
+    expect(findSeasonStep(state.season!.steps, 3).summary).toBeNull();
+
+    const stepPassedRevisions = state.timeline.filter((t) => t.kind === 'STEP_PASSED').map((t) => t.step);
+    expect(stepPassedRevisions).toEqual([1, 2]);
+
+    const previousStep = state.season!.currentStep;
+    const next = runSimulate(advanced.snapshot, advanceCommand(advanced.snapshot.revision));
+    if (!next.ok) throw new Error('실패');
+    expect(next.snapshot.state.season!.currentStep).toBeGreaterThanOrEqual(previousStep);
+  });
+
+  it('같은 seed에서 FAST가 여는 결정 집합은 CHAPTER가 여는 결정 집합의 부분집합이고, 건너뛴 슬롯은 rng를 소비하지 않는다', () => {
+    const snapshotFast = activeSnapshotWithContract();
+    const snapshotChapter = activeSnapshotWithContract();
+    expect(snapshotFast.stateHash).toBe(snapshotChapter.stateHash);
+
+    const fastFinal = playFullSeason(snapshotFast, 'FAST');
+    const chapterFinal = playFullSeason(snapshotChapter, 'CHAPTER');
+
+    // FAST가 연 결정(pending을 발생시킨 step) 집합이 CHAPTER의 부분집합인지, StepSummary로 확인한다.
+    // playFullSeason은 SETTLE_SEASON까지 실행하므로 seasonHistory[0]에서 확인한다.
+    expect(fastFinal.state.seasonHistory).toHaveLength(1);
+    expect(chapterFinal.state.seasonHistory).toHaveLength(1);
+    // FAST 시즌 전체가 소비한 rng draw 수는 CHAPTER보다 많을 수 없다(건너뛴 EVENT/MINOR 챕터는 roll이 없다).
+    expect(fastFinal.state.rngState.draws).toBeLessThanOrEqual(chapterFinal.state.rngState.draws);
+  });
+
+  it('EVENT 슬롯이 RESOLVE_EVENT로 해소되면, 다음 ADVANCE가 그 step을 decisionsOpened:1로 정확히 닫는다', () => {
+    // 회귀 테스트: advanceInSeason이 "이전 pending이 non-null"만 보고 현재 step을 닫으면, RESOLVE_EVENT로
+    // 이미 pending이 null이 된(EVENT는 자동 통과 대상이 아니다) step은 다음 ADVANCE에서
+    // decisionsOpened: 0으로 잘못 닫힌다. walkToNextDecision 불변식(summary === null이면 결정이
+    // 열렸던 step)으로 고쳤다 — 이 테스트가 그 수정을 고정한다.
+    const snapshot = activeSnapshotWithContract();
+    const started = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'CHAPTER'));
+    if (!started.ok) throw new Error('setup 실패');
+
+    // step1 ROLE 자동 통과 → step2 EVENT(eligibleEvents 하나 제공)에서 멈춘다.
+    const opened = runSimulate(
+      started.snapshot,
+      advanceCommand(started.snapshot.revision, [{ eventId: 'EVT-SEASON-TEST', version: 1, weight: 1 }]),
+    );
+    if (!opened.ok) throw new Error(`실패: ${opened.error.code} ${opened.error.message}`);
+    expect(opened.snapshot.state.pending).toEqual({ kind: 'EVENT', eventId: 'EVT-SEASON-TEST', version: 1 });
+    expect(opened.snapshot.state.season?.currentStep).toBe(2);
+
+    const resolved = runSimulate(opened.snapshot, {
+      type: 'RESOLVE_EVENT',
+      commandId: 'resolve-1',
+      expectedRevision: opened.snapshot.revision,
+      payload: {
+        eventId: 'EVT-SEASON-TEST',
+        definitionVersion: 1,
+        choiceId: 'A',
+        outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+      },
+    });
+    if (!resolved.ok) throw new Error(`실패: ${resolved.error.code} ${resolved.error.message}`);
+    expect(resolved.snapshot.state.pending).toBeNull();
+    // RESOLVE_EVENT는 season을 건드리지 않는다 — step2는 아직 summary가 비어 있다.
+    expect(findSeasonStep(resolved.snapshot.state.season!.steps, 2).summary).toBeNull();
+
+    const closed = runSimulate(resolved.snapshot, advanceCommand(resolved.snapshot.revision));
+    if (!closed.ok) throw new Error(`실패: ${closed.error.code} ${closed.error.message}`);
+    const step2Summary = findSeasonStep(closed.snapshot.state.season!.steps, 2).summary;
+    expect(step2Summary).toEqual({ passedAtRevision: closed.snapshot.revision, decisionsOpened: 1, matchesPlayed: 0 });
+    expect(closed.snapshot.state.season?.currentStep).toBeGreaterThan(2);
+  });
+
+  it('step 경계 Snapshot에서 재개한 진행의 결산 hash가 연속 실행과 같다', () => {
+    const continuous = playFullSeason(activeSnapshotWithContract(), 'CHAPTER');
+
+    const startSnapshot = activeSnapshotWithContract();
+    const started = runSimulate(startSnapshot, startSeasonCommand(startSnapshot.revision, 'CHAPTER'));
+    if (!started.ok) throw new Error('setup 실패');
+    // 한 번만 진행한 뒤 JSON round-trip으로 "checkpoint에서 재개"를 흉내낸다.
+    const oneStepIn = runSimulate(started.snapshot, advanceCommand(started.snapshot.revision));
+    if (!oneStepIn.ok) throw new Error('setup 실패');
+    const resumed = JSON.parse(JSON.stringify(oneStepIn.snapshot)) as DomainSnapshot;
+    expect(resumed.stateHash).toBe(oneStepIn.snapshot.stateHash);
+
+    let snapshot = resumed;
+    for (let guard = 0; guard < 100; guard++) {
+      const pending = snapshot.state.pending;
+      if (pending === null) throw new Error('pending이 null이다.');
+      if (pending.kind === 'SETTLEMENT') {
+        const settled = runSimulate(snapshot, settleSeasonCommand(snapshot.revision));
+        if (!settled.ok) throw new Error('실패');
+        expect(settled.snapshot.stateHash).toBe(continuous.stateHash);
+        return;
+      }
+      const result = runSimulate(snapshot, advanceCommand(snapshot.revision));
+      if (!result.ok) throw new Error('실패');
+      snapshot = result.snapshot;
+    }
+    throw new Error('재개 진행이 끝나지 않았다.');
+  });
+});
+
+describe('SETTLE_SEASON (CMD-SIM-003)', () => {
+  it('step 12 전이면 SEASON_NOT_SETTLEABLE이다', () => {
+    const snapshot = activeSnapshotWithContract();
+    const started = runSimulate(snapshot, startSeasonCommand(snapshot.revision, 'FAST'));
+    if (!started.ok) throw new Error('setup 실패');
+    const result = runSimulate(started.snapshot, settleSeasonCommand(started.snapshot.revision));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'SEASON_NOT_SETTLEABLE' });
+  });
+
+  it('시즌이 없으면 SEASON_NOT_SETTLEABLE이다', () => {
+    const snapshot = activeSnapshotWithContract();
+    const result = runSimulate(snapshot, settleSeasonCommand(snapshot.revision));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'SEASON_NOT_SETTLEABLE' });
+  });
+
+  it('성공하면 seasonHistory 1건, season null, age+1, 상태가 회귀하고 능력치는 그대로다', () => {
+    const before = activeSnapshotWithContract();
+    const attributesBefore = before.state.attributes;
+    const ageBefore = before.state.age;
+
+    const settled = playFullSeason(before, 'FAST');
+    expect(settled.state.season).toBeNull();
+    expect(settled.state.seasonHistory).toHaveLength(1);
+    expect(settled.state.seasonHistory[0]?.index).toBe(1);
+    expect(settled.state.age).toBe(ageBefore + 1);
+    expect(settled.state.state).toEqual(rulesetProto.seasonBoundaryReset);
+    expect(settled.state.attributes).toEqual(attributesBefore);
+    expect(settled.state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_SETTLED' });
+  });
+});

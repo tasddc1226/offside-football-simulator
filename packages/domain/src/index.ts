@@ -14,10 +14,14 @@ export {
   type CareerState,
   type CareerStatus,
   type CheckpointType,
+  type CompetitionRecord,
   type Contract,
+  type DecisionSlot,
   type DomainSnapshot,
   type Effect,
   type EffectKind,
+  type FootballSeason,
+  type MatchRecord,
   type Offer,
   type Pending,
   type PlayerDraft,
@@ -27,13 +31,37 @@ export {
   type PositionGroup,
   type PreferredFoot,
   type SeasonPhase,
+  type SeasonStep,
+  type SeasonSummary,
   type SimulationMode,
   type SquadRole,
+  type StepSummary,
   type TimelineEntry,
 } from './types.js';
-export type { Archetype, Background, ContractRules, OfferBranch, OfferRules, Ruleset, Team } from './ruleset.js';
+export type {
+  Archetype,
+  Background,
+  ContractRules,
+  LeagueCalendar,
+  LeagueCalendarSlot,
+  LeagueCalendarStep,
+  OfferBranch,
+  OfferRules,
+  Ruleset,
+  Team,
+} from './ruleset.js';
 export { applyEffects, expireEffects, type ApplyEffectsResult, type RejectedEffect } from './effects.js';
 export { computeBaseOvr, generatePlayerProfile, type ConfirmedPlayerDraft, type GeneratedPlayer } from './player.js';
+export {
+  buildInitialCompetitions,
+  buildSeasonSteps,
+  findSeasonStep,
+  isAutoPassablePending,
+  markStepPassed,
+  selectOpenSlot,
+  type EligibleEvent,
+  type SlotOpenResult,
+} from './season.js';
 export {
   simulate,
   verifySnapshot,

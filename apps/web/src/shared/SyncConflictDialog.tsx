@@ -22,7 +22,9 @@ export type SyncToast = { variant: 'success' | 'error'; message: string };
 type MinimalCareerState = {
   age: number;
   stage: 'YOUTH' | 'PRO';
-  timeline: ReadonlyArray<{ kind: 'CAREER_CONFIRMED' | 'EVENT_RESOLVED' | 'CONTRACT_SIGNED' | 'SEASON_SETTLED' }>;
+  timeline: ReadonlyArray<{
+    kind: 'CAREER_CONFIRMED' | 'EVENT_RESOLVED' | 'CONTRACT_SIGNED' | 'SEASON_STARTED' | 'STEP_PASSED' | 'SEASON_SETTLED';
+  }>;
 };
 
 function parseServerState(snapshot: CareerSnapshot): MinimalCareerState | null {

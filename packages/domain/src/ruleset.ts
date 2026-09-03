@@ -1,4 +1,4 @@
-import type { AttributeKey, Position, SquadRole } from './types.js';
+import type { AttributeKey, DecisionSlot, Position, SeasonPhase, SquadRole } from './types.js';
 
 // D-2: 아키타입 카탈로그. roleWeights 합은 1(±1e-9), template은 20키 전부.
 export type Archetype = {
@@ -61,6 +61,25 @@ export type ContractRules = {
   newClubManagerTrust: number;
 };
 
+// T-2-001 D-33: 룰셋 slot 정의(step 안의 결정 슬롯 후보). `FootballSeason.steps[].decisionSlots`는
+// 시즌 시작 시 이 목록에서 결정 예산(RULE-TIME-004)을 적용해 만든다.
+export type LeagueCalendarSlot = Pick<DecisionSlot, 'kind' | 'required' | 'importance'>;
+
+export type LeagueCalendarStep = {
+  index: number;
+  phase: SeasonPhase;
+  windowOpen: boolean;
+  slots: LeagueCalendarSlot[];
+};
+
+// D-33: 기본 캘린더는 RULE-TIME-001 표 그대로다. `cupRounds`는 R1(step 5)·SEMI(9)·FINAL(11).
+export type LeagueCalendar = {
+  id: string;
+  steps: LeagueCalendarStep[];
+  transferWindowStep: number;
+  cupRounds: Array<{ round: 'R1' | 'SEMI' | 'FINAL'; step: number }>;
+};
+
 // D-8: 룰셋 데이터는 콘텐츠 패키지가 소유하고, domain은 이 타입으로 입력만 받는다.
 export type Ruleset = {
   version: string;
@@ -73,4 +92,7 @@ export type Ruleset = {
   teams: Team[];
   offerRules: OfferRules;
   contractRules: ContractRules;
+  leagueCalendar: LeagueCalendar;
+  /** T-2-001 D-25 SETTLE_SEASON: 시즌 경계에서 폼·체력·사기가 회귀하는 상수(11 "나이·시즌 경계"). */
+  seasonBoundaryReset: { form: number; fitness: number; morale: number };
 };

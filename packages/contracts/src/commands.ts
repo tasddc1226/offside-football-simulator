@@ -103,6 +103,19 @@ export const AcceptOfferPayloadSchema = z.strictObject({
   offerId: z.string().min(1),
 });
 
+// T-2-001 D-25: START_SEASON payload. 브리프는 `{ simulationMode }`만 적었지만, domain
+// `FootballSeason.serviceSeasonId`(브리프 데이터 계약)가 engine-client `Career` 래퍼에만 있고
+// domain `CareerState` 어디에도 없어(engine-client는 이 작업 범위 밖), CREATE_CAREER처럼
+// payload로 받도록 domain Command를 확장했다(PR 본문 "범위 밖 발견 사항" 참고). 이 스키마는
+// domain Command payload 형태를 그대로 따른다.
+export const StartSeasonPayloadSchema = z.strictObject({
+  simulationMode: z.enum(['FAST', 'CHAPTER']),
+  serviceSeasonId: z.string().min(1),
+});
+
+// T-2-001 D-25: SETTLE_SEASON payload. 필드 없음(domain Command payload는 `Record<string, never>`).
+export const SettleSeasonPayloadSchema = z.strictObject({});
+
 /** Phase 2+ 명령(아직 domain에 없음)은 형태를 모르므로 임의 payload를 통과시킨다. */
 const UnknownPayloadSchema = z.record(z.string(), z.unknown());
 
@@ -115,9 +128,9 @@ export const COMMAND_PAYLOAD_SCHEMAS = {
   UPDATE_PLAYER_DRAFT: UpdatePlayerDraftPayloadSchema,
   CONFIRM_PLAYER: ConfirmPlayerPayloadSchema,
   RESOLVE_EVENT: ResolveEventPayloadSchema,
-  START_SEASON: UnknownPayloadSchema,
+  START_SEASON: StartSeasonPayloadSchema,
   ADVANCE: AdvancePayloadSchema,
-  SETTLE_SEASON: UnknownPayloadSchema,
+  SETTLE_SEASON: SettleSeasonPayloadSchema,
   NEGOTIATE: UnknownPayloadSchema,
   ACCEPT_OFFER: AcceptOfferPayloadSchema,
   REJECT_OFFER: UnknownPayloadSchema,

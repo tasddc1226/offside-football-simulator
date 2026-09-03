@@ -213,6 +213,8 @@ function confirmedStateLiteral() {
     pending: null,
     contract: null,
     timeline: [{ revision: 2, kind: 'CAREER_CONFIRMED' as const, refId: null, age: 17, step: 12 }],
+    season: null,
+    seasonHistory: [],
   };
 }
 

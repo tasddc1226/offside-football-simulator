@@ -1,0 +1,35 @@
+{
+  "rulesetVersion": "1.0.0",
+  "contentPackVersion": "0.1.0",
+  "startSeason": {
+    "FAST": { "simulationMode": "FAST", "serviceSeasonId": "svc-fixture-02" },
+    "CHAPTER": { "simulationMode": "CHAPTER", "serviceSeasonId": "svc-fixture-02" }
+  },
+  "commands": {
+    "FAST": [
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "SETTLE_SEASON", "payload": {} }
+    ],
+    "CHAPTER": [
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "RESOLVE_EVENT", "payload": { "eventId": "EVT-SEASON-FIXTURE", "definitionVersion": 1, "choiceId": "A", "outcomes": [{ "id": "A1", "weight": 100, "effects": [] }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "RESOLVE_EVENT", "payload": { "eventId": "EVT-SEASON-FIXTURE", "definitionVersion": 1, "choiceId": "A", "outcomes": [{ "id": "A1", "weight": 100, "effects": [] }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "RESOLVE_EVENT", "payload": { "eventId": "EVT-SEASON-FIXTURE", "definitionVersion": 1, "choiceId": "A", "outcomes": [{ "id": "A1", "weight": 100, "effects": [] }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "RESOLVE_EVENT", "payload": { "eventId": "EVT-SEASON-FIXTURE", "definitionVersion": 1, "choiceId": "A", "outcomes": [{ "id": "A1", "weight": 100, "effects": [] }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "RESOLVE_EVENT", "payload": { "eventId": "EVT-SEASON-FIXTURE", "definitionVersion": 1, "choiceId": "A", "outcomes": [{ "id": "A1", "weight": 100, "effects": [] }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "ADVANCE", "payload": { "eligibleEvents": [{ "eventId": "EVT-SEASON-FIXTURE", "version": 1, "weight": 1 }] } },
+      { "type": "SETTLE_SEASON", "payload": {} }
+    ]
+  }
+}
