@@ -1,11 +1,22 @@
-// SCR-029 대시보드의 "다음 결정 카드" 분기 표: pending EVENT/OFFERS/null(advance 성공)/
-// null(NOTHING_TO_ADVANCE) 네 가지가 각각 옳은 CTA·문구를 보여주는지 확인한다.
+// SCR-029 대시보드의 "다음 결정 카드" 분기 표: pending EVENT/OFFERS/ROLE_PROPOSAL/SETTLEMENT,
+// season===null&&contract!==null(프리시즌 계획), season 있고 pending 없음(진행), NOTHING_TO_ADVANCE
+// 가 각각 옳은 CTA·문구를 보여주는지 확인한다.
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
 import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { acceptOffer, advance, confirmPlayer, createCareer, resolveEvent, updateDraft } from '../engine/career-actions.js';
+import {
+  acceptOffer,
+  advance,
+  confirmPlayer,
+  createCareer,
+  resolveEvent,
+  resolveRole,
+  settleSeason,
+  startSeason,
+  updateDraft,
+} from '../engine/career-actions.js';
 import { createAppEngine, type AppEngine } from '../engine/engine.js';
 import { routeTree } from '../routeTree.gen.js';
 import { careerQueryOptions } from '../engine/use-career.js';
@@ -81,6 +92,55 @@ async function confirmedCareerId(engine: AppEngine): Promise<string> {
   return careerId;
 }
 
+/** OFFERS까지 진행해 첫 제안을 수락한다(계약 체결, pending null, season null). */
+async function signedCareerId(engine: AppEngine): Promise<string> {
+  const careerId = await confirmedCareerId(engine);
+  const offered = await advanceUntilOffers(engine, careerId);
+  if (offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
+    throw new Error('제안 단계에 도달하지 못했다');
+  }
+  const offerId = offered.domainSnapshot.state.pending.offers[0]!.id;
+  const accepted = await acceptOffer(engine, careerId, offerId);
+  if (!accepted.ok || accepted.domainSnapshot.state.pending !== null) {
+    throw new Error('계약 뒤 pending이 null이어야 한다');
+  }
+  return careerId;
+}
+
+/** 계약 체결까지 마친 커리어에서 FAST 시즌을 시작한다(RULE-TIME-002: step 1은 항상 ROLE_PROPOSAL). */
+async function startedSeasonCareerId(engine: AppEngine): Promise<string> {
+  const careerId = await signedCareerId(engine);
+  const started = await startSeason(engine, careerId, { simulationMode: 'FAST' });
+  if (!started.ok || started.domainSnapshot.state.pending?.kind !== 'ROLE_PROPOSAL') {
+    throw new Error('시즌 시작 뒤 ROLE_PROPOSAL에 도달하지 못했다');
+  }
+  return careerId;
+}
+
+/** 역할 제안까지 수락해 시즌이 진행 중이고 pending이 없는 상태로 만든다. */
+async function seasonActiveNoPendingCareerId(engine: AppEngine): Promise<string> {
+  const careerId = await startedSeasonCareerId(engine);
+  const resolved = await resolveRole(engine, careerId, 'ACCEPT');
+  if (!resolved.ok || resolved.domainSnapshot.state.pending !== null || resolved.domainSnapshot.state.season === null) {
+    throw new Error('역할 수락 뒤 시즌이 진행 중이고 pending이 없어야 한다');
+  }
+  return careerId;
+}
+
+/** CHAPTER·CONTRACT 자동 통과 슬롯을 advance로 흘려보내 SETTLEMENT pending에 도달한다(FAST 모드
+ * 실측: 역할 수락 뒤 CHAPTER→CONTRACT→CHAPTER→SETTLEMENT 순서, 안전 상한 20회). */
+async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
+  const careerId = await seasonActiveNoPendingCareerId(engine);
+  for (let step = 0; step < 20; step += 1) {
+    const load = await engine.client.loadCareer(careerId);
+    if (!load.ok) throw new Error('loadCareer 실패');
+    if (load.snapshot.state.pending?.kind === 'SETTLEMENT') return careerId;
+    const advanced = await advance(engine, careerId);
+    if (!advanced.ok) throw new Error(`advance 실패: ${advanced.error.message}`);
+  }
+  throw new Error('SETTLEMENT에 도달하지 못했다(최대 20회 시도)');
+}
+
 beforeEach(() => {
   setTestEngine();
   queryClient.clear();
@@ -141,18 +201,37 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     });
   });
 
-  it('pending이 없고 advance가 성공하면 "진행" 버튼이 눌려서 다음 화면으로 넘어간다', async () => {
+  it('season===null && contract!==null이면 "프리시즌 계획" CTA를 보여준다', async () => {
     const engine = setTestEngine();
-    const careerId = await confirmedCareerId(engine);
-    const offered = await advanceUntilOffers(engine, careerId);
-    if (offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
-      throw new Error('제안 단계에 도달하지 못했다');
-    }
-    const offerId = offered.domainSnapshot.state.pending.offers[0]!.id;
-    const accepted = await acceptOffer(engine, careerId, offerId);
-    if (!accepted.ok || accepted.domainSnapshot.state.pending !== null) {
-      throw new Error('계약 뒤 pending이 null이어야 한다');
-    }
+    const careerId = await signedCareerId(engine);
+
+    const router = renderAt(`/career/${careerId}`);
+
+    expect(await screen.findByText('프리시즌 계획')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: '계획하러 가기' }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/career/${careerId}/preseason`);
+    });
+  });
+
+  it('pending ROLE_PROPOSAL이면 "감독 제안이 기다립니다"와 제안 보기 CTA를 보여준다', async () => {
+    const engine = setTestEngine();
+    const careerId = await startedSeasonCareerId(engine);
+
+    const router = renderAt(`/career/${careerId}`);
+
+    expect(await screen.findByText('감독 제안이 기다립니다')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: '제안 보기' }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/career/${careerId}/role`);
+    });
+  });
+
+  it('시즌이 있고 pending이 없으면 "진행" 버튼이 눌려서 다음 결정으로 넘어간다', async () => {
+    const engine = setTestEngine();
+    const careerId = await seasonActiveNoPendingCareerId(engine);
 
     renderAt(`/career/${careerId}`);
     const advanceButton = await screen.findByRole('button', { name: '진행' });
@@ -162,6 +241,67 @@ describe('SCR-029 다음 결정 카드 분기', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('다음 시즌은 곧 열립니다')).not.toBeInTheDocument();
+    });
+  });
+
+  it('pending SETTLEMENT면 "시즌 결산" CTA를 보여주고, 결산하면 시즌 결과 자리표시로 이동한다', async () => {
+    const engine = setTestEngine();
+    const careerId = await settlementPendingCareerId(engine);
+
+    const router = renderAt(`/career/${careerId}`);
+
+    expect(await screen.findByText('시즌 결산')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '결산하기' }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/career/${careerId}/season-result`);
+    });
+    expect(await screen.findByText('준비 중')).toBeInTheDocument();
+  });
+
+  it('시즌 결산 뒤 대시보드로 돌아오면 다시 "프리시즌 계획" CTA를 보여준다(시즌 2)', async () => {
+    const engine = setTestEngine();
+    const careerId = await settlementPendingCareerId(engine);
+    const settled = await settleSeason(engine, careerId);
+    if (!settled.ok || settled.domainSnapshot.state.season !== null || settled.domainSnapshot.state.pending !== null) {
+      throw new Error('시즌 결산 뒤 season·pending이 모두 null이어야 한다');
+    }
+
+    renderAt(`/career/${careerId}`);
+
+    expect(await screen.findByText('프리시즌 계획')).toBeInTheDocument();
+  });
+
+  it('pending이 CHAPTER고 chapterId가 있으면(향후 T-2-008) "핵심 경기" CTA를 보여준다', async () => {
+    const engine = setTestEngine();
+    const careerId = await seasonActiveNoPendingCareerId(engine);
+
+    renderAt(`/career/${careerId}`);
+    const router = renderAt(`/career/${careerId}`);
+    await screen.findByRole('button', { name: '진행' });
+
+    const options = careerQueryOptions(careerId);
+    const current = queryClient.getQueryData(options.queryKey);
+    if (current === undefined) throw new Error('캐시된 커리어가 있어야 한다');
+    act(() => {
+      queryClient.setQueryData(options.queryKey, {
+        ...current,
+        state: {
+          ...current.state,
+          // 도메인이 아직 CHAPTER pending에 chapterId를 붙이지 않는다(T-2-008 몫) — 화면 분기만
+          // 미리 검증하려고 타입을 우회해 주입한다.
+          pending: { kind: 'CHAPTER', step: current.state.currentStep, chapterId: 'CH-TEST' } as unknown as typeof current.state.pending,
+        },
+      });
+    });
+
+    // "핵심 경기"는 SeasonTimeline의 CHAPTER 결정 슬롯 라벨로도 나타나 텍스트만으로는 모호하다
+    // (season.steps에 실제 CHAPTER 슬롯이 있다) — CTA 전용 "경기 보기" 링크로 확인한다.
+    const link = await screen.findByRole('link', { name: '경기 보기' });
+    fireEvent.click(link);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/career/${careerId}/chapter`);
     });
   });
 
@@ -224,6 +364,18 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '진행' })).not.toBeDisabled();
     });
+  });
+});
+
+describe('SCR-029 일정표 구역: 시즌 중이면 SeasonTimeline과 일정 행을 보여준다', () => {
+  it('시즌이 있으면 step 12개의 시즌 타임라인이 보인다', async () => {
+    const engine = setTestEngine();
+    const careerId = await seasonActiveNoPendingCareerId(engine);
+
+    renderAt(`/career/${careerId}`);
+
+    const timeline = await screen.findByLabelText('시즌 진행 12 step');
+    expect(timeline.querySelectorAll('li')).toHaveLength(12);
   });
 });
 

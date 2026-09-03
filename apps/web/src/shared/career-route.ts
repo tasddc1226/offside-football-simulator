@@ -46,6 +46,16 @@ export function screenForCareer(state: CareerState): ScreenTarget {
     if (pending !== null && pending.kind === 'OFFERS') {
       return { screenId: 'SCR-009', params };
     }
+    // T-2-002 D-34: 감독 역할 제안은 RESOLVE_ROLE로만 닫히는 실제 결정이라 전용 화면으로 보낸다.
+    if (pending !== null && pending.kind === 'ROLE_PROPOSAL') {
+      return { screenId: 'SCR-012', params };
+    }
+    // T-2-004(미머지)가 CHAPTER pending에 chapterId를 더할 때까지는 이 분기가 항상 false라
+    // CHAPTER pending은 SETTLEMENT·CONTRACT·INJURY·NATIONAL_TEAM과 함께 대시보드로 간다(SCR-029가
+    // "핵심 경기" CTA로 안내한다).
+    if (pending !== null && pending.kind === 'CHAPTER' && 'chapterId' in pending) {
+      return { screenId: 'SCR-031', params };
+    }
     return { screenId: 'SCR-029', params };
   }
 

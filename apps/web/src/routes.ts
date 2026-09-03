@@ -14,4 +14,11 @@ export const SCREEN_ROUTES = {
   'SCR-009': '/career/$careerId/offers',
   'SCR-010': '/career/$careerId/contract',
   'SCR-029': '/career/$careerId',
+  // T-2-007: SCR-031·015은 자리표시(T-2-008·009가 채운다).
+  'SCR-005': '/career/$careerId/preseason',
+  'SCR-011': '/career/$careerId/season-prep',
+  'SCR-012': '/career/$careerId/role',
+  'SCR-033': '/career/$careerId/attributes',
+  'SCR-031': '/career/$careerId/chapter',
+  'SCR-015': '/career/$careerId/season-result',
 } as const;

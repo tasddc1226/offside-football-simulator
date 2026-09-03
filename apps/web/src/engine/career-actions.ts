@@ -5,6 +5,7 @@ import { selectEligibleEvents, type EventDefinition } from '@offside/content';
 import type { EngineCommand, ExecuteResult, LoadResult } from '@offside/engine-client';
 import { deleteCareerOnServer } from '../api/client.js';
 import { platform } from '../platform/index.js';
+import type { TrainingFocus } from '../shared/start-season.js';
 import type { AppEngine } from './engine.js';
 import { classifyDeleteResult, queuePendingDelete } from './pending-delete.js';
 import { getSyncClient } from './sync.js';
@@ -213,4 +214,30 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
 
 export function acceptOffer(engine: AppEngine, careerId: string, offerId: string): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'ACCEPT_OFFER', payload: { offerId } });
+}
+
+export type StartSeasonChoice = { simulationMode: SimulationMode; trainingFocus?: TrainingFocus };
+
+/**
+ * T-2-005 접점: domain `Command['START_SEASON']['payload']`에 `trainingFocus`가 아직 없다(이
+ * 워크트리 시점의 `@offside/domain`, PR 본문에 기록). 붙으면 여기서 payload에 실어 보내고, UI
+ * 선택(SCR-005)은 이미 값을 들고 있으니 화면 쪽은 바꾸지 않는다.
+ */
+export function toStartSeasonPayload(choice: StartSeasonChoice): Command {
+  return {
+    type: 'START_SEASON',
+    payload: { simulationMode: choice.simulationMode, serviceSeasonId: ACTIVE_SERVICE_SEASON_ID },
+  };
+}
+
+export function startSeason(engine: AppEngine, careerId: string, choice: StartSeasonChoice): Promise<ExecuteResult> {
+  return execute(engine, careerId, toStartSeasonPayload(choice));
+}
+
+export function resolveRole(engine: AppEngine, careerId: string, decision: 'ACCEPT' | 'DECLINE'): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'RESOLVE_ROLE', payload: { decision } });
+}
+
+export function settleSeason(engine: AppEngine, careerId: string): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'SETTLE_SEASON', payload: {} });
 }

@@ -4,6 +4,7 @@ import { expect, type Page, test } from '@playwright/test';
 import {
   advanceUntilOffers,
   completeOnboardingAndConfirm,
+  completeOnboardingThroughContract,
   fulfillJson as fulfillJsonPlayer,
   META,
 } from './helpers/player-creation.js';
@@ -314,6 +315,48 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
   await expect(page.getByText('주급')).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-029(휴대폰)');
+});
+
+// T-2-007(TEST-E2E-009 접근성 체크리스트): 새 화면 4개(SCR-005·011·012·033).
+
+test('SCR-005 프리시즌 계획 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await completeOnboardingThroughContract(page);
+  await page.getByRole('link', { name: '계획하러 가기' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '프리시즌 계획' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-005');
+});
+
+test('SCR-011 시즌 준비 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await completeOnboardingThroughContract(page);
+  await page.getByRole('link', { name: '계획하러 가기' }).click();
+  await page.getByRole('radio', { name: /^빠른 시즌/ }).click();
+  await page.getByRole('radio', { name: /^역할 집중/ }).click();
+  await page.getByRole('link', { name: '다음' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '시즌 준비' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-011');
+});
+
+test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await completeOnboardingThroughContract(page);
+  await page.getByRole('link', { name: '계획하러 가기' }).click();
+  await page.getByRole('radio', { name: /^빠른 시즌/ }).click();
+  await page.getByRole('radio', { name: /^역할 집중/ }).click();
+  await page.getByRole('link', { name: '다음' }).click();
+  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/role$/);
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-012');
+});
+
+test('SCR-033 능력치 상세 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+  await completeOnboardingThroughContract(page);
+  await page.getByRole('tab', { name: '전술실' }).click();
+  await page.getByRole('link', { name: '능력치 상세' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/attributes$/);
+
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-033');
 });
 
 test('텍스트 크기 150% + 360px에서 가로 스크롤이 생기지 않는다', async ({ page }) => {

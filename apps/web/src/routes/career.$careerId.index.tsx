@@ -1,9 +1,9 @@
 // SCR-029 커리어 대시보드. 다섯 구역 탭 + "다음 결정" 카드. 대시보드에서는 어떤 명령도 확정하지
-// 않는다 — advance는 결정이 아니라 "진행"이며(다음에 뭐가 뜰지는 도메인이 정한다), 확정은 전용
-// 결정 화면(SCR-007·008·009·010·013·014)에서만 일어난다.
+// 않는다 — advance/settleSeason은 결정이 아니라 "진행"이며(다음에 뭐가 뜰지는 도메인이 정한다),
+// 결정 확정은 전용 화면(SCR-007·008·009·010·012·013·014)에서만 일어난다.
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { ATTRIBUTE_KEYS, type CareerState, type TimelineEntry } from '@offside/domain';
+import { deriveTacticalRoom, type CareerState, type CompetitionRecord, type FootballSeason, type Ruleset, type TimelineEntry } from '@offside/domain';
 import {
   Button,
   buttonClassName,
@@ -27,10 +27,11 @@ import { useEngine } from '../engine/use-engine.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
 import {
-  EFFECT_TARGET_LABEL_KO,
+  CUP_ROUND_LABEL_KO,
   LEAGUE_TIER_LABEL_KO,
   positionHeaderField,
   POSITION_LABELS,
+  ROLE_PROMISE_SENTENCE,
   SEASON_PHASE_LABEL_KO,
   SQUAD_ROLE_LABELS,
   TIMELINE_KIND_LABEL_KO,
@@ -40,6 +41,9 @@ import { proStatusStripItems, u18StatusStripItems } from '../shared/status-strip
 import { formatKrw } from '../shared/format.js';
 import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
+import { SeasonTimeline } from '../shared/season-timeline.js';
+import { buildScheduleRows } from '../shared/season-schedule.js';
+import { familiarityPercentLabel, SelectionRankingList } from '../shared/tactical-room.js';
 
 type DashboardSearch = { signed?: boolean };
 
@@ -110,14 +114,74 @@ function useStatsRevealCaption(unlocked: boolean): boolean {
   return show;
 }
 
+/** T-2-007 일정표 구역: 리그는 순위/팀 수, 컵은 라운드를 함께 보여준다(팀의 leagueId·leagueTier로
+ * 리그·컵 이름을 룰셋에서 찾는다 — season.competitions는 'LEAGUE'|'CUP' 고정 id만 갖는다). */
+function competitionSummaryLine(record: CompetitionRecord, season: FootballSeason, ruleset: Ruleset): string {
+  const team = ruleset.teams.find((candidate) => candidate.id === season.teamId);
+  const winDrawLoss = `${record.won}승 ${record.drawn}무 ${record.lost}패`;
+  if (record.kind === 'LEAGUE') {
+    const league = team === undefined ? undefined : ruleset.leagues.find((candidate) => candidate.id === team.leagueId);
+    const positionText = record.position === null ? '—' : `${record.position}위/${league?.teamCount ?? '—'}팀`;
+    return `${league?.name ?? '리그'} · ${positionText} · ${winDrawLoss}`;
+  }
+  const cup = team === undefined ? undefined : ruleset.cups.find((candidate) => candidate.tiers.includes(team.leagueTier));
+  const roundText = record.cupRound === null ? '—' : (CUP_ROUND_LABEL_KO[record.cupRound as keyof typeof CUP_ROUND_LABEL_KO] ?? record.cupRound);
+  return `${cup?.name ?? '컵'} · ${roundText} · ${winDrawLoss}`;
+}
+
 function NextDecisionCard({ careerId, state }: { careerId: string; state: CareerState }) {
   const navigate = useNavigate();
   const advanceMutation = useCareerMutation('advance');
+  const settleSeasonMutation = useCareerMutation('settleSeason');
   const [nothingToAdvance, setNothingToAdvance] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const submittingRef = useRef(false);
 
   const pending = state.pending;
+
+  const handleAdvance = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setErrorMessage(null);
+    platform.analytics.track('advance_clicked', { step: state.currentStep });
+    try {
+      const result = await advanceMutation.mutateAsync({ careerId });
+      if (result.ok) {
+        const target = screenForCareer(result.domainSnapshot.state);
+        void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
+        return;
+      }
+      const details = result.error.details;
+      const reason = typeof details === 'object' && details !== null && 'reason' in details ? (details as { reason?: unknown }).reason : undefined;
+      if (reason === 'NOTHING_TO_ADVANCE') {
+        setNothingToAdvance(true);
+        return;
+      }
+      setErrorMessage('진행하지 못했습니다. 다시 시도해 주세요.');
+    } catch {
+      setErrorMessage('진행하지 못했습니다. 다시 시도해 주세요.');
+    } finally {
+      submittingRef.current = false;
+    }
+  };
+
+  const handleSettle = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setErrorMessage(null);
+    try {
+      const result = await settleSeasonMutation.mutateAsync({ careerId });
+      if (!result.ok) {
+        setErrorMessage('시즌을 결산하지 못했습니다. 다시 시도해 주세요.');
+        return;
+      }
+      void navigate({ to: SCREEN_ROUTES['SCR-015'], params: { careerId } });
+    } catch {
+      setErrorMessage('시즌을 결산하지 못했습니다. 다시 시도해 주세요.');
+    } finally {
+      submittingRef.current = false;
+    }
+  };
 
   if (pending !== null && pending.kind === 'EVENT') {
     const target = screenForCareer(state);
@@ -146,34 +210,64 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
     );
   }
 
-  async function handleAdvance() {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    setErrorMessage(null);
-    try {
-      const result = await advanceMutation.mutateAsync({ careerId });
-      if (result.ok) {
-        const target = screenForCareer(result.domainSnapshot.state);
-        void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
-        return;
-      }
-      const details = result.error.details;
-      const reason = typeof details === 'object' && details !== null && 'reason' in details ? (details as { reason?: unknown }).reason : undefined;
-      if (reason === 'NOTHING_TO_ADVANCE') {
-        setNothingToAdvance(true);
-        return;
-      }
-      setErrorMessage('진행하지 못했습니다. 다시 시도해 주세요.');
-    } catch {
-      setErrorMessage('진행하지 못했습니다. 다시 시도해 주세요.');
-    } finally {
-      submittingRef.current = false;
-    }
+  if (pending !== null && pending.kind === 'ROLE_PROPOSAL') {
+    return (
+      <Card className="flex flex-wrap items-center justify-between gap-os-3">
+        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          감독 제안이 기다립니다
+        </p>
+        <Link to="/career/$careerId/role" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
+          제안 보기
+        </Link>
+      </Card>
+    );
+  }
+
+  if (pending !== null && pending.kind === 'SETTLEMENT') {
+    return (
+      <Card className="flex flex-col gap-os-2">
+        <div className="flex flex-wrap items-center justify-between gap-os-3">
+          <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+            시즌 결산
+          </p>
+          <Button variant="primary" disabled={settleSeasonMutation.isPending} onClick={() => void handleSettle()}>
+            결산하기
+          </Button>
+        </div>
+        {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void handleSettle()} /> : null}
+      </Card>
+    );
+  }
+
+  if (pending !== null && pending.kind === 'CHAPTER' && 'chapterId' in pending) {
+    return (
+      <Card className="flex flex-wrap items-center justify-between gap-os-3">
+        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          핵심 경기
+        </p>
+        <Link to="/career/$careerId/chapter" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
+          경기 보기
+        </Link>
+      </Card>
+    );
+  }
+
+  if (pending === null && state.season === null && state.contract !== null) {
+    return (
+      <Card className="flex flex-wrap items-center justify-between gap-os-3">
+        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          프리시즌 계획
+        </p>
+        <Link to="/career/$careerId/preseason" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
+          계획하러 가기
+        </Link>
+      </Card>
+    );
   }
 
   return (
     <Card className="flex flex-col gap-os-2">
-      <Button variant="primary" onClick={handleAdvance} disabled={nothingToAdvance || advanceMutation.isPending}>
+      <Button variant="primary" onClick={() => void handleAdvance()} disabled={nothingToAdvance || advanceMutation.isPending}>
         진행
       </Button>
       {nothingToAdvance ? (
@@ -181,7 +275,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
           다음 시즌은 곧 열립니다
         </p>
       ) : null}
-      {errorMessage ? <ErrorState message={errorMessage} onRetry={handleAdvance} /> : null}
+      {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void handleAdvance()} /> : null}
     </Card>
   );
 }
@@ -220,6 +314,8 @@ function CareerDashboard() {
     ? positionHeaderField(profile.primaryPosition, profile.preferredPosition)
     : { label: '포지션', value: draft.position ? POSITION_LABELS[draft.position] : '—' };
   const hasContract = state.contract !== null;
+  const season = state.season;
+  const room = deriveTacticalRoom(state, activeRuleset);
 
   return (
     <div className="flex flex-col gap-os-6">
@@ -234,7 +330,9 @@ function CareerDashboard() {
       <StatusStrip items={hasContract ? proStatusStripItems(state) : u18StatusStripItems(state)} />
 
       <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-        {state.age}세 · {SEASON_PHASE_LABEL_KO[state.seasonPhase]} · step {state.currentStep}
+        {season !== null
+          ? `${state.age}세 · 시즌 ${season.index} · ${SEASON_PHASE_LABEL_KO[state.seasonPhase]} · step ${state.currentStep}/12`
+          : `${state.age}세 · ${SEASON_PHASE_LABEL_KO[state.seasonPhase]} · step ${state.currentStep}`}
       </p>
 
       <NextDecisionCard careerId={careerId} state={state} />
@@ -250,12 +348,48 @@ function CareerDashboard() {
 
         <TabsContent value="schedule">
           <DashboardSection title="일정표" description="현재 진행 상황과 다음 결정을 확인합니다.">
-            <p className="font-os text-os-text" style={BODY_STYLE}>
-              step {state.currentStep} · {SEASON_PHASE_LABEL_KO[state.seasonPhase]}
-            </p>
-            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-              {state.pending === null ? '다음 결정은 진행 후 열립니다.' : '위 카드에서 결정을 확인하세요.'}
-            </p>
+            {season === null ? (
+              <>
+                <p className="font-os text-os-text" style={BODY_STYLE}>
+                  step {state.currentStep} · {SEASON_PHASE_LABEL_KO[state.seasonPhase]}
+                </p>
+                <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                  {state.pending === null ? '다음 결정은 진행 후 열립니다.' : '위 카드에서 결정을 확인하세요.'}
+                </p>
+              </>
+            ) : (
+              <div className="flex flex-col gap-os-4">
+                <SeasonTimeline steps={season.steps} currentStep={season.currentStep} />
+                {hasContract && state.contract ? (
+                  <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                    시즌 목표: {ROLE_PROMISE_SENTENCE[state.contract.rolePromise]}
+                  </p>
+                ) : null}
+                <div className="flex flex-col gap-os-1">
+                  {season.competitions.map((record) => (
+                    <p key={record.competitionId} className="os-num font-os text-os-text-2" style={CAPTION_STYLE}>
+                      {competitionSummaryLine(record, season, activeRuleset)}
+                    </p>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-os-1 overflow-x-auto">
+                  {buildScheduleRows(season, activeRuleset).map((row) => (
+                    <div key={`${row.step}-${row.order}`} className="flex items-center justify-between gap-os-2 rounded-os-s px-os-2 py-os-1 font-os text-os-text-2" style={CAPTION_STYLE}>
+                      <span>
+                        step {row.step} · {row.competitionLabel} · {row.home ? '홈' : '원정'} · {row.opponentName}
+                      </span>
+                      <span className="os-num">
+                        {row.eliminated
+                          ? '탈락'
+                          : row.match === null
+                            ? '—'
+                            : `${row.match.scoreText} · ${row.match.appearanceLabel} · ${row.match.minutes}분 · ${row.match.ratingText}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </DashboardSection>
         </TabsContent>
 
@@ -280,7 +414,7 @@ function CareerDashboard() {
         <TabsContent value="tactics">
           <DashboardSection
             title="전술실"
-            description="역할 약속과 전술 적합도, 세부 능력을 봅니다."
+            description="역할 약속과 전술 적합도, 선발 순위를 봅니다."
             locked={!hasContract}
             lockReason="첫 프로 계약 후 열림"
           >
@@ -291,17 +425,49 @@ function CareerDashboard() {
                     전술 적합도·감독 신뢰가 새로 열렸습니다.
                   </p>
                 ) : null}
-                <p className="font-os text-os-text" style={BODY_STYLE}>
-                  역할 약속: {SQUAD_ROLE_LABELS[state.contract.rolePromise]} · 전술 적합도 {state.context.tacticalFit}
-                </p>
-                <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 sm:grid-cols-3" style={CAPTION_STYLE}>
-                  {ATTRIBUTE_KEYS.map((key) => (
-                    <div key={key}>
-                      <dt>{EFFECT_TARGET_LABEL_KO[key]}</dt>
-                      <dd className="os-num text-os-text">{state.attributes[key]}</dd>
-                    </div>
-                  ))}
-                </dl>
+                {room === null ? (
+                  <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                    시즌 시작 후 열립니다
+                  </p>
+                ) : (
+                  <>
+                    <p className="font-os text-os-text" style={BODY_STYLE}>
+                      {room.styleName} · {room.formation}
+                    </p>
+                    <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                      {POSITION_LABELS[room.playerPosition]} · {SQUAD_ROLE_LABELS[room.playerRole]}
+                    </p>
+                    <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 sm:grid-cols-4" style={CAPTION_STYLE}>
+                      <div>
+                        <dt>전술 적합도</dt>
+                        <dd className="os-num text-os-text">{room.tacticalFit}</dd>
+                      </div>
+                      <div>
+                        <dt>감독 신뢰</dt>
+                        <dd className="os-num text-os-text">{room.managerTrust}</dd>
+                      </div>
+                      <div>
+                        <dt>경기 예상치</dt>
+                        <dd className="os-num text-os-text">{room.expectedPerformance}</dd>
+                      </div>
+                      <div>
+                        <dt>숙련도</dt>
+                        <dd className="os-num text-os-text">{familiarityPercentLabel(room.familiarity)}</dd>
+                      </div>
+                    </dl>
+                    <SelectionRankingList ranking={room.ranking} />
+                  </>
+                )}
+                <div className="flex gap-os-4">
+                  <Link to="/career/$careerId/attributes" params={{ careerId }} className="font-os text-os-text-2 underline" style={CAPTION_STYLE}>
+                    능력치 상세
+                  </Link>
+                  {state.pending !== null && state.pending.kind === 'ROLE_PROPOSAL' ? (
+                    <Link to="/career/$careerId/role" params={{ careerId }} className="font-os text-os-text-2 underline" style={CAPTION_STYLE}>
+                      감독 제안 보기
+                    </Link>
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </DashboardSection>
