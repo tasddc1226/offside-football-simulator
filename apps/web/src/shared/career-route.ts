@@ -15,6 +15,7 @@ const EVENT_SCREEN_OVERRIDES: Partial<Record<string, keyof typeof SCREEN_ROUTES>
 
 const DRAFT_FIELDS_WITHOUT_ARCHETYPE = [
   'name',
+  'gender',
   'nationalityCode',
   'preferredFoot',
   'position',
@@ -22,7 +23,7 @@ const DRAFT_FIELDS_WITHOUT_ARCHETYPE = [
 ] as const;
 
 /**
- * DRAFT: archetypeId를 뺀 5개 필드 중 하나라도 null이면 SCR-002, archetypeId만 비었으면 SCR-003,
+ * DRAFT: archetypeId를 뺀 6개 필드 중 하나라도 null이면 SCR-002, archetypeId만 비었으면 SCR-003,
  * 그 외 SCR-004. ACTIVE: pending.kind === 'EVENT'면 이벤트별 화면(기본 SCR-013), 'OFFERS'면
  * SCR-009, 그 외 SCR-029. RETIRED·ARCHIVED는 SCR-029(phase-1-plan.md D-13 화면 해석 규칙).
  */

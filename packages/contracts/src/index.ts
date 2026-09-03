@@ -59,6 +59,7 @@ export {
   PositionSchema,
   PositionGroupSchema,
   PreferredFootSchema,
+  PlayerGenderSchema,
   PlayerDraftSchema,
   PlayerProfileSchema,
   PlayerPublicSchema,

@@ -60,10 +60,15 @@ function updateDraft(snapshot: DomainSnapshot, draft: Record<string, unknown>) {
   return simulate({ ...baseInput(), snapshot, command });
 }
 
-const FULL_DRAFT_STEP_1 = { name: '김서준', nationalityCode: 'KR', preferredFoot: 'LEFT' as const };
+const FULL_DRAFT_STEP_1 = {
+  name: '김서준',
+  gender: 'UNSPECIFIED' as const,
+  nationalityCode: 'KR',
+  preferredFoot: 'LEFT' as const,
+};
 const FULL_DRAFT_STEP_2 = { position: 'W' as const, archetypeId: 'inside-forward', backgroundId: 'club-academy' };
 
-/** DRAFT: CREATE_CAREER 뒤 6개 필드를 모두 채운 snapshot(아직 CONFIRM_PLAYER 전). */
+/** DRAFT: CREATE_CAREER 뒤 7개 필드를 모두 채운 snapshot(아직 CONFIRM_PLAYER 전). */
 function fullyDraftedSnapshot(seed?: string): DomainSnapshot {
   let snapshot = createDraftSnapshot(seed);
   const step1 = updateDraft(snapshot, FULL_DRAFT_STEP_1);
@@ -199,6 +204,7 @@ describe('simulate — CREATE_CAREER', () => {
     expect(result.snapshot.state.player).toEqual({
       draft: {
         name: null,
+        gender: null,
         nationalityCode: null,
         preferredFoot: null,
         position: null,
@@ -281,6 +287,25 @@ describe('simulate — UPDATE_PLAYER_DRAFT', () => {
     expect(result.error.details).toEqual({ field: 'name', reason: 'CONTROL_CHARS' });
   });
 
+  it('알 수 없는 성별은 VALIDATION_FAILED다', () => {
+    const snapshot = createDraftSnapshot();
+    const result = updateDraft(snapshot, { gender: 'OTHER' });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ field: 'gender', reason: 'UNKNOWN' });
+  });
+
+  it('성별 세 값(FEMALE·MALE·UNSPECIFIED)을 모두 받아들이고 rng를 소비하지 않는다', () => {
+    const snapshot = createDraftSnapshot();
+    for (const gender of ['FEMALE', 'MALE', 'UNSPECIFIED'] as const) {
+      const result = updateDraft(snapshot, { gender });
+      expect(result.ok).toBe(true);
+      if (!result.ok) continue;
+      expect(result.snapshot.state.player.draft.gender).toBe(gender);
+      expect(result.snapshot.state.rngState.draws).toBe(0);
+    }
+  });
+
   it('알 수 없는 국적 코드는 VALIDATION_FAILED다', () => {
     const snapshot = createDraftSnapshot();
     const result = updateDraft(snapshot, { nationalityCode: 'ZZ' });
@@ -340,8 +365,23 @@ describe('simulate — CONFIRM_PLAYER', () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({
-      missing: ['name', 'nationalityCode', 'preferredFoot', 'position', 'archetypeId', 'backgroundId'],
+      missing: ['name', 'gender', 'nationalityCode', 'preferredFoot', 'position', 'archetypeId', 'backgroundId'],
     });
+  });
+
+  it('gender만 비어 있으면 missing에 gender만 담긴다', () => {
+    let snapshot = createDraftSnapshot();
+    const step1 = updateDraft(snapshot, { name: '김서준', nationalityCode: 'KR', preferredFoot: 'LEFT' });
+    if (!step1.ok) throw new Error('draft step1 failed');
+    snapshot = step1.snapshot;
+    const step2 = updateDraft(snapshot, FULL_DRAFT_STEP_2);
+    if (!step2.ok) throw new Error('draft step2 failed');
+    snapshot = step2.snapshot;
+
+    const result = simulate({ ...baseInput(), snapshot, command: confirmPlayerCommand(snapshot.revision) });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ missing: ['gender'] });
   });
 
   it('DRAFT가 아닌 상태에서는 VALIDATION_FAILED다', () => {
@@ -736,6 +776,79 @@ describe('결정론', () => {
     const hashXThenY = run(['EVT-X', effectA], ['EVT-Y', effectB]);
     const hashYThenX = run(['EVT-Y', effectB], ['EVT-X', effectA]);
     expect(hashXThenY).not.toBe(hashYThenX);
+  });
+});
+
+describe('RULE-PLY-001: gender는 시뮬레이션 입력이 아니다', () => {
+  function confirmedSnapshotWithGender(gender: 'FEMALE' | 'MALE' | 'UNSPECIFIED', seed?: string): DomainSnapshot {
+    let snapshot = createDraftSnapshot(seed);
+    const step1 = updateDraft(snapshot, { ...FULL_DRAFT_STEP_1, gender });
+    if (!step1.ok) throw new Error('draft step1 failed');
+    snapshot = step1.snapshot;
+    const step2 = updateDraft(snapshot, FULL_DRAFT_STEP_2);
+    if (!step2.ok) throw new Error('draft step2 failed');
+    const result = simulate({ ...baseInput(), snapshot: step2.snapshot, command: confirmPlayerCommand(step2.snapshot.revision) });
+    if (!result.ok) throw new Error(`CONFIRM_PLAYER failed: ${result.error.code} ${result.error.message}`);
+    return result.snapshot;
+  }
+
+  it('같은 seed·나머지 DRAFT에서 성별 세 값의 attributes·truePotential·Base OVR·RNG state가 같다', () => {
+    const female = confirmedSnapshotWithGender('FEMALE');
+    const male = confirmedSnapshotWithGender('MALE');
+    const unspecified = confirmedSnapshotWithGender('UNSPECIFIED');
+
+    for (const other of [male, unspecified]) {
+      expect(other.state.attributes).toEqual(female.state.attributes);
+      expect(other.state.player.profile?.truePotential).toBe(female.state.player.profile?.truePotential);
+      expect(other.state.player.profile?.baseOvr).toBe(female.state.player.profile?.baseOvr);
+      expect(other.state.player.profile?.scoutedPotentialMin).toBe(female.state.player.profile?.scoutedPotentialMin);
+      expect(other.state.player.profile?.scoutedPotentialMax).toBe(female.state.player.profile?.scoutedPotentialMax);
+      expect(other.state.rngState).toEqual(female.state.rngState);
+    }
+
+    // 정체성 필드(gender)가 다르므로 전체 상태 hash는 다르다. RULE-PLY-001은 시뮬레이션 결과가
+    // 같아야 한다는 규칙이지 상태 전체가 같아야 한다는 뜻이 아니다.
+    expect(male.stateHash).not.toBe(female.stateHash);
+  });
+
+  it('생성 시 preferredPosition·primaryPosition이 선택한 포지션과 같다', () => {
+    const snapshot = confirmedSnapshotWithGender('UNSPECIFIED');
+    expect(snapshot.state.player.profile?.preferredPosition).toBe('W');
+    expect(snapshot.state.player.profile?.primaryPosition).toBe('W');
+  });
+
+  it('primaryPosition이 바뀌어도 preferredPosition은 유지된다', () => {
+    // Phase 1 도메인에는 아직 주포지션 전환 명령이 없다. RULE-PLY-001이 요구하는 "두 필드는
+    // 서로 독립적으로 저장되고 preferredPosition은 전환으로 바뀌지 않는다"는 불변식을,
+    // primaryPosition만 바꾼 상태를 직접 구성해 preferredPosition이 영향받지 않음을 확인한다.
+    const snapshot = confirmedSnapshotWithGender('UNSPECIFIED');
+    const profile = snapshot.state.player.profile;
+    if (profile === null) throw new Error('unreachable');
+    const switched = { ...profile, primaryPosition: 'ST' as const };
+    expect(switched.preferredPosition).toBe('W');
+    expect(switched.primaryPosition).toBe('ST');
+  });
+
+  it('같은 상태에서 성별만 달라도 제안 내용·계약이 같다', () => {
+    function offerAndContractFor(gender: 'FEMALE' | 'MALE' | 'UNSPECIFIED') {
+      const active = withTags(confirmedSnapshotWithGender(gender), ['진로_아카데미']);
+      const advanced = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
+      if (!advanced.ok) throw new Error(`ADVANCE failed: ${advanced.error.code} ${advanced.error.message}`);
+      if (advanced.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('unreachable');
+      const offer = advanced.snapshot.state.pending.offers[0]!;
+      const accepted = simulate({
+        ...baseInput(),
+        snapshot: advanced.snapshot,
+        command: acceptOfferCommand(advanced.snapshot.revision, offer.id),
+      });
+      if (!accepted.ok) throw new Error(`ACCEPT_OFFER failed: ${accepted.error.code} ${accepted.error.message}`);
+      return { offer, contract: accepted.snapshot.state.contract };
+    }
+
+    const female = offerAndContractFor('FEMALE');
+    const male = offerAndContractFor('MALE');
+    expect(male.offer).toEqual(female.offer);
+    expect(male.contract).toEqual(female.contract);
   });
 });
 

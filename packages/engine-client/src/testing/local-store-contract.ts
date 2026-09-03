@@ -49,7 +49,7 @@ function makeDomainSnapshot(overrides: Partial<DomainSnapshot> = {}): DomainSnap
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',
     player: {
-      draft: { name: null, nationalityCode: null, preferredFoot: null, position: null, archetypeId: null, backgroundId: null },
+      draft: { name: null, gender: null, nationalityCode: null, preferredFoot: null, position: null, archetypeId: null, backgroundId: null },
       profile: null,
     },
     pending: null,

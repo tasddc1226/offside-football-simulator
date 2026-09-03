@@ -59,7 +59,7 @@ function CareerCard({
 
   const { record, state } = summary;
   const name = displayName(summary);
-  const position = state.player.profile?.position ?? state.player.draft.position;
+  const position = state.player.profile?.primaryPosition ?? state.player.draft.position;
   const positionLabel = position ? POSITION_LABELS[position] : '—';
   const syncState = useSyncState(record.id);
 

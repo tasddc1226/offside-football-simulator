@@ -9,7 +9,7 @@
   "commands": [
     {
       "type": "UPDATE_PLAYER_DRAFT",
-      "payload": { "draft": { "name": "김서준", "nationalityCode": "KR", "preferredFoot": "LEFT" } }
+      "payload": { "draft": { "name": "김서준", "gender": "UNSPECIFIED", "nationalityCode": "KR", "preferredFoot": "LEFT" } }
     },
     {
       "type": "UPDATE_PLAYER_DRAFT",

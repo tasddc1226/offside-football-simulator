@@ -27,6 +27,7 @@ const BASE_ATTRIBUTES: Record<AttributeKey, number> = {
 
 export const TEST_DRAFT: PlayerDraft = {
   name: '테스트 선수',
+  gender: 'UNSPECIFIED',
   nationalityCode: 'KR',
   preferredFoot: 'RIGHT',
   position: 'W',
@@ -36,9 +37,11 @@ export const TEST_DRAFT: PlayerDraft = {
 
 export const TEST_PROFILE: PlayerProfile = {
   name: '테스트 선수',
+  gender: 'UNSPECIFIED',
   nationalityCode: 'KR',
   preferredFoot: 'RIGHT',
-  position: 'W',
+  preferredPosition: 'W',
+  primaryPosition: 'W',
   archetypeId: 'inside-forward',
   backgroundId: 'club-academy',
   truePotential: 75,

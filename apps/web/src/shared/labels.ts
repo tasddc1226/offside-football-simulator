@@ -4,6 +4,7 @@ import type {
   AttributeKey,
   CareerStage,
   CareerStatus,
+  PlayerGender,
   Position,
   PositionGroup,
   PreferredFoot,
@@ -12,6 +13,13 @@ import type {
   TimelineEntry,
 } from '@offside/domain';
 import type { ResultKind, RiskLevel } from '@offside/ui';
+
+/** SCR-002 성별 RadioGroup·SCR-004 확인 요약. RULE-PLY-001: 능력·성장에 영향을 주지 않는다. */
+export const GENDER_LABELS: Record<PlayerGender, string> = {
+  FEMALE: '여성',
+  MALE: '남성',
+  UNSPECIFIED: '선택하지 않음',
+};
 
 export const POSITION_LABELS: Record<Position, string> = {
   GK: '골키퍼',

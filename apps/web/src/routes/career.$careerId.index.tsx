@@ -207,7 +207,7 @@ function CareerDashboard() {
   const profile = state.player.profile;
   const draft = state.player.draft;
   const name = profile?.name ?? draft.name ?? '이름 없는 선수';
-  const position = profile?.position ?? draft.position;
+  const position = profile?.primaryPosition ?? draft.position;
   const hasContract = state.contract !== null;
 
   return (

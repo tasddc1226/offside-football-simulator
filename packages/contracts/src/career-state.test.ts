@@ -188,6 +188,7 @@ function confirmedStateLiteral() {
     player: {
       draft: {
         name: '김서준',
+        gender: 'UNSPECIFIED' as const,
         nationalityCode: 'KR',
         preferredFoot: 'RIGHT' as const,
         position: 'W' as const,
@@ -196,9 +197,11 @@ function confirmedStateLiteral() {
       },
       profile: {
         name: '김서준',
+        gender: 'UNSPECIFIED' as const,
         nationalityCode: 'KR',
         preferredFoot: 'RIGHT' as const,
-        position: 'W' as const,
+        preferredPosition: 'W' as const,
+        primaryPosition: 'W' as const,
         archetypeId: 'inside-forward',
         backgroundId: 'club-academy',
         truePotential: 80,

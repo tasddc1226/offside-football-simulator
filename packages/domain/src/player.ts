@@ -2,11 +2,12 @@ import { clamp } from './clamp.js';
 import { rollRange } from './roll-range.js';
 import type { RngState } from './rng.js';
 import type { Archetype, Background, Ruleset } from './ruleset.js';
-import { ATTRIBUTE_KEYS, type AttributeKey, type Position, type PreferredFoot } from './types.js';
+import { ATTRIBUTE_KEYS, type AttributeKey, type PlayerGender, type Position, type PreferredFoot } from './types.js';
 
-/** CONFIRM_PLAYER가 요구하는, 6개 필드가 모두 채워진 draft. */
+/** CONFIRM_PLAYER가 요구하는, 7개 필드가 모두 채워진 draft. */
 export type ConfirmedPlayerDraft = {
   name: string;
+  gender: PlayerGender;
   nationalityCode: string;
   preferredFoot: PreferredFoot;
   position: Position;
@@ -17,9 +18,11 @@ export type ConfirmedPlayerDraft = {
 export type GeneratedPlayer = {
   profile: {
     name: string;
+    gender: PlayerGender;
     nationalityCode: string;
     preferredFoot: PreferredFoot;
-    position: Position;
+    preferredPosition: Position;
+    primaryPosition: Position;
     archetypeId: string;
     backgroundId: string;
     truePotential: number;
@@ -112,9 +115,11 @@ export function generatePlayerProfile(draft: ConfirmedPlayerDraft, ruleset: Rule
   return {
     profile: {
       name: draft.name,
+      gender: draft.gender,
       nationalityCode: draft.nationalityCode,
       preferredFoot: draft.preferredFoot,
-      position: draft.position,
+      preferredPosition: draft.position,
+      primaryPosition: draft.position,
       archetypeId: draft.archetypeId,
       backgroundId: draft.backgroundId,
       truePotential,
