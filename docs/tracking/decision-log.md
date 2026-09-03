@@ -2,6 +2,13 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-04 (새벽, PR #47 머지 — Phase 2 코드 작업 종료)
+
+**결과**: PR #47(T-2-011, `0c27965`, 03:41) 리뷰 수정 요청 0건. 오케스트레이터 검증 체인(origin/main 5a16831 + 116dc62) 녹색 — lint·deps·typecheck·test·build·bundle·e2e 68 통과. [Phase 2 완료 조건 표](phase-2-completion.md) 9행 전부 ✅: 포지션군 fixture 4종(GK 기존 + DF·MF·FW 신규, `@offside/fixtures` export·contracts 크기/스키마·api Node↔workerd 해시 등록), 시즌 결정론(같은 시드 2회 재생 stateHash 일치)·집계(playerStats ↔ matches 재합산), career-03-underdog 시즌 완주 + shadow-replay(선수 START 수 > COMP-W-2), selection A/B 시즌 B > A, FAST·CHAPTER 시즌 완주 자동화 시간·명령 수 기록, TEST-E2E-002·010(새로고침 전후 `rngState.draws` 동일), e2e 68건 3회 무결점(5187).
+**후속 정리**: (a) `generatePlayerProfile` truePotential ≥ baseOvr+1 불변식(roll 순서·소비 불변, 표본 7%의 역전 해소; career-04-gk·07-df golden 갱신 — 저장된 커리어는 생성 시점 값 유지, schemaVersion 1 그대로). (b) 워커 시뮬레이터 타임아웃을 요청당 예산으로(`rejectOne`; 포트 broken은 error/messageerror만, 늦은 응답은 무시). (d) `TrainingFocus`를 domain에서 re-export. (c) EVT-REL-001(가중치 100) vs EVT-CON-002(10) 가중치 관찰은 수정하지 않고 T-2-010 콘텐츠 입력으로 기록 — "사용자 확인"이 아니라 오케스트레이터 지시였음을 명시.
+**발견(범위 밖, 기록만)**: W 포지션 slots=2 구조상 "선수 선발 수 > COMP-W-1"은 성립 불가(선수 제외 경기에도 COMP-W-1이 rank 1 START) → 완료 조건 비교 대상을 전술 적합도에 밀려 벤치인 COMP-W-2로 고정. A/B 시즌 비교는 선발이 갈린 뒤 경기 RNG가 분기해 시즌 전체는 선발 수·출전 시간으로만 비교. 세션 자동화 시간은 FAST 2.9~4.5초·CHAPTER 3.0~4.7초(명령 4건) — 사람 기준 6분/12분 판정은 U-005 플레이테스트 결과와 합쳐 오케스트레이터가 낸다.
+**Phase 2 코드 작업 종료**: 남은 T-2-010(U-005)·T-2-012(U-002)·T-2-013(012 뒤)은 사용자 게이트. Phase 3·4는 U-012(ADR-010)·U-013 확인 뒤 투입하며 T-3-001 브리프를 먼저 쓴다. 7D 사용량 86%(9/5 21:00 리셋)라 브리프 작성은 오케스트레이터가 직접 하고 워커 투입은 리셋·승인 뒤로 둔다.
+
 ## 2026-09-04 (새벽, Phase 3·4 병렬 계획 초안 D-43~D-53)
 
 **결과**: [phase-3-4-plan.md](phase-3-4-plan.md) 작성(02:18). phase-03·04 정본, ADR-010, 로드맵 "Phase 3 이후 병렬화", 03·04·11 개발 명세, 현재 도메인 타입(Offer/Contract/Pending/FootballSeason/CareerState, offers.ts, season.ts 슬롯 규칙, contracts commands.ts의 CMD-CON 예약 리터럴)을 대조해 트랙 A(T-3-001~006)·트랙 B(T-4-001~006)로 분해했다. 주요 결정: (D-43) 팀 변경은 결산 뒤 이적시장에서만, step 7 창은 재계약 사전 협상·루머 태도만; (D-44) Offer v2(kind·유효 revision·출전 약속·협상 1회·안전 잔류 제안); (D-45) ACCEPT_OFFER 원자 전환과 context·관계 이월 표; (D-46) 임대 1시즌·LOAN_RETURN; (D-47) 약속 위반·배신 이적 Effect·태그; (D-48) Phase 3 태그 5종 코드화(구단 tier 실제 변경은 Phase 6·8); (D-49) 부상 모델(심각도·부위·범위·재활·재발·후유증은 확정 시점에만, 강제 사건 상한 2); (D-50) 관계 5축 + relationshipLog·memoryTags, season.manager와 결산 교체, reputation.popularityCenti; (D-51) 대표팀 기본 모듈·NATIONAL_DEBUT 챕터; (D-52) 새 명령은 CMD-CON-001~004뿐, 부상·대표팀·관계 결정은 RESOLVE_EVENT + presentation 변형; (D-53) 트랙별 파일·필드 소유권, 타임라인 kind 사전 예약, 타입 슬라이스 순차(T-3-001 → T-4-001), schemaVersion 1 유지. 열린 질문에 U-013(워커 PROTOTYPE 문구 작성 허용, 팀 풀 확장) 추가. PR #45 후속(결산 뒤 step 요약 유실)은 타입 슬라이스에 `SeasonResult.stepSummaries[]`로 배정.
