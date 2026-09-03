@@ -9,6 +9,9 @@ import {
   ConfirmPlayerPayloadSchema,
   CreateCareerPayloadSchema,
   ResolveEventPayloadSchema,
+  ResolveRolePayloadSchema,
+  SettleSeasonPayloadSchema,
+  StartSeasonPayloadSchema,
   UpdatePlayerDraftPayloadSchema,
 } from './commands.js';
 
@@ -48,6 +51,25 @@ describe('명령 payload 타입 동일성(domain Command와)', () => {
   it('ACCEPT_OFFER', () => {
     expectTypeOf<z.infer<typeof AcceptOfferPayloadSchema>>().toEqualTypeOf<
       Extract<Command, { type: 'ACCEPT_OFFER' }>['payload']
+    >();
+  });
+
+  // T-2-001·T-2-002 D-25/D-34: 시즌 명령 3종.
+  it('START_SEASON', () => {
+    expectTypeOf<z.infer<typeof StartSeasonPayloadSchema>>().toEqualTypeOf<
+      Extract<Command, { type: 'START_SEASON' }>['payload']
+    >();
+  });
+
+  it('SETTLE_SEASON', () => {
+    expectTypeOf<z.infer<typeof SettleSeasonPayloadSchema>>().toEqualTypeOf<
+      Extract<Command, { type: 'SETTLE_SEASON' }>['payload']
+    >();
+  });
+
+  it('RESOLVE_ROLE', () => {
+    expectTypeOf<z.infer<typeof ResolveRolePayloadSchema>>().toEqualTypeOf<
+      Extract<Command, { type: 'RESOLVE_ROLE' }>['payload']
     >();
   });
 });
@@ -225,6 +247,43 @@ describe('CommandRequestSchema', () => {
       payload: { extra: true },
     });
     expect(rejected.success).toBe(false);
+  });
+
+  // T-2-002 D-34 CMD-SIM-004: RESOLVE_ROLE도 START_SEASON·SETTLE_SEASON처럼 domain Command와 같은
+  // 형태의 payload 스키마를 갖는다(임의 payload가 아니다). COMMAND_TYPES에 있는지는 index.test.ts의
+  // CommandTypeSchema 순회 테스트가 이미 검사한다.
+  it('RESOLVE_ROLE은 decision이 ACCEPT·DECLINE이면 통과하고 그 외 값·임의 payload는 거부한다', () => {
+    const accept = CommandRequestSchema.safeParse({
+      commandId: 'cmd_1',
+      expectedRevision: 1,
+      type: 'RESOLVE_ROLE',
+      payload: { decision: 'ACCEPT' },
+    });
+    expect(accept.success).toBe(true);
+
+    const decline = CommandRequestSchema.safeParse({
+      commandId: 'cmd_1',
+      expectedRevision: 1,
+      type: 'RESOLVE_ROLE',
+      payload: { decision: 'DECLINE' },
+    });
+    expect(decline.success).toBe(true);
+
+    const invalidDecision = CommandRequestSchema.safeParse({
+      commandId: 'cmd_1',
+      expectedRevision: 1,
+      type: 'RESOLVE_ROLE',
+      payload: { decision: 'MAYBE' },
+    });
+    expect(invalidDecision.success).toBe(false);
+
+    const arbitraryPayload = CommandRequestSchema.safeParse({
+      commandId: 'cmd_1',
+      expectedRevision: 1,
+      type: 'RESOLVE_ROLE',
+      payload: { anything: 'goes' },
+    });
+    expect(arbitraryPayload.success).toBe(false);
   });
 
   it('Phase 2+ 명령(RETIRE)도 임의 payload를 통과시킨다', () => {
