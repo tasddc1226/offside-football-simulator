@@ -87,6 +87,18 @@ Phase 2가 끝나면 T-2-014의 공유 계약을 먼저 닫고, Phase 3(계약·
 
 D-34 보정: 역할 제안의 POSITION_CHANGE 후보는 `positionAdjacency[primaryPosition]` 전부(아키타입 필터 없음)이고, RESOLVE_ROLE 네 분기 뒤 `season.squadRole === squadRoleFromSelection(season.selection)` 불변식을 유지한다.
 
+### D-37 경기 전용 RNG 스트림 (2026-09-03, PR #39 리뷰)
+
+`FootballSeason.matchRngState`는 결정 슬롯이 쓰는 `CareerState.rngState`와 별개다. START_SEASON에서 `seedRng(\`match:${seasonIndex}:${rngState.s.join(',')}\`)`로 시드해 FAST/CHAPTER의 `matches`가 byte-identical하고 fork-by-replay 뒤에도 같다. 챕터 판단 roll(T-2-004)은 결정 스트림을 쓴다.
+
+### D-38 핵심 경기 챕터 상세 (2026-09-03, T-2-004 브리프)
+
+챕터 훅은 `walkToNextDecision`이 step의 경기를 돌린 직후·슬롯을 열기 전. `ADVANCE.payload.chapterCandidates`(웹이 팩에서 요약)와 trigger(DEBUT·DERBY·CUP_FINAL·DECIDER·TAG)를 그 step의 `MatchRecord`에 대조해 roll 없이 후보를 고른다(MAJOR > weight > id, step당 1개, FAST는 MAJOR만). 새 명령 `RESOLVE_CHAPTER`(CMD-SIM-005)가 판단 하나를 닫고 roll 1회를 소비한다. 결과는 `CURRENT`·`RELATION`·`DEFERRED` Effect와 경기 평점 delta(±15 tenths)·태그만(Base OVR·Fit 불변). 확정 판단은 `pending.resolved`·`season.chapters`·`resolvedChapterIds`에 남아 재생 시 roll을 다시 소비하지 않는다. 룰셋 리그에 `rivalOpponentIndex`·`promotionSpots`·`relegationSpots`, 팩에 `chapters/CHP-MATCH-001·002·004`.
+
+### D-39 결산·성장 상세 (2026-09-03, T-2-005 브리프)
+
+`SeasonResult`는 `seasonHistory[].result`로 남긴다(hash = canonical JSON sha256). 성장은 결산 시 1회, roll 없이 정수 산술: 연령대별 예산(centi) × 잠재력 gap 비율 × 출전 계수(0분도 30%) + 경험 보너스, 능력별 몫은 아키타입 roleWeights·기본 몫·훈련 초점(`START_SEASON.payload.trainingFocus`, 기본 ROLE), 그룹별 연령 곡선(신체 25/28, 기술 20~29/32, 정신 23~33, 골키핑 26~34)과 연령 하락. 소수 이월은 `growthCarryCenti`. 한 시즌 능력당 −3~+4, Base OVR은 잠재력을 넘지 않는다(초과분은 roleWeight 순으로 되돌리고 `POTENTIAL_CAP` 원인). 시즌 중 폼·체력·사기는 매 step 경기 결과로 roll 없이 갱신(`conditionRules`). 출전 약속 이행은 출전 시간 비율(`promiseMinutesShareBp`)로 판정하고 기록만 한다. 상수는 밸런스 테스트(seed 200 × 연령 3)가 balance-targets 표를 만족하도록 워커가 조정한다.
+
 ## 4. 열린 질문 (Wave 1 전에 닫는다)
 
 - 리그·컵 구조를 룰셋 데이터로 얼마나 구체화할지(팀 수, 경기 수, 컵 라운드 수). 제안: 리그 팀 수는 룰셋 `leagues[].teamCount`, 경기 수는 홈·원정 2회전, 컵은 4라운드.

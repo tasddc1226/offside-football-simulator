@@ -2,6 +2,18 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (밤, PR #39 T-2-003 머지 — Wave 2 종료, Wave 3 T-2-004·T-2-005 투입)
+
+**결과**: T-2-003(PR #39, `4409052`) 머지. 시즌 시작 시 리그·컵 일정을 roll 없이 확정하고 `ADVANCE`가 step의 경기를 순서대로 계산한다(팀 결과 → 선발 → 출전 시간 → 관여량 → 포지션군 통계 → 카드 → 부상 → 평점). 평점은 ×10 정수(40~100), 시즌 누계·리그 순위·컵 진행이 `season.playerStats`·`competitions`에 남는다. 골든 career-04-gk(GK) 신규, 02·03 재기록. FAST 시즌 1개 domain 계산 7.4 ms(Node). revision·결정 RNG draws는 T-2-002 골든과 동일 — 경기 계산이 결정 흐름에 영향을 주지 않는다.
+
+**D-37 경기 전용 RNG 스트림**: `season.matchRngState`를 결정 스트림과 분리하고 시즌 시작 시 `match:<seasonIndex>:<rngState.s>` 해시로 시드한다. 경기 결과가 FAST/CHAPTER의 결정 타이밍에 영향받지 않고, fork-by-replay 뒤에도 시즌이 그대로 같다(careerId는 시드에 넣지 않는다).
+
+**리뷰 결정**: 수정 필수 2건 — matchRngState를 결정 스트림 복사 대신 해시 파생 시드로, `yellowSuspensionAt`을 브리프 값 5로 복원(자연 누적 seed 탐색 대신 `seasonYellowCount = yellowSuspensionAt − 1` 강제 테스트). PR #38 머지 뒤 후속으로 career-04-gk를 contracts golden 가드·순회·크기·api cross-runtime에 추가. 수용한 편차: `injury.outMatches {1,4}`(브리프 {1,3}), 리그 순위는 resultTable 기대 승점 근사, 컵 무승부는 다음 라운드 진출, MF/DF ratingWeights 워커 튜닝.
+
+**Wave 3 투입**: T-2-004(챕터, D-38)·T-2-005(결산·성장, D-39) 브리프를 확정해 병행 투입. 두 작업이 `types.ts`·contracts 스키마·골든을 같이 만지므로 충돌은 origin/main 정본으로 해소하게 했고, T-2-005는 T-2-004 미머지 시 `chapters: []`로 두게 했다. 챕터 후보 계산의 웹 연결은 T-2-008, 결산 화면은 T-2-009.
+
+**운영 메모**: 검증 체인이 turbo 캐시 적중으로 2.5분에 끝났다(같은 커밋 입력 해시 → 워커 실행 결과 재생, e2e·build는 실제 실행 54 통과). PR #38 때 세운 규칙(5174 비어 있을 때만 e2e, `CHAIN EXIT 0`을 읽은 뒤 별도 명령으로 머지)을 지켰다. 워커 세션에 남아 있던 `/loop` 잔여 알림은 터미널을 닫으며 정리됐다.
+
 ## 2026-09-03 (저녁, PR #38 T-2-006 머지 — Wave 2 절반)
 
 **결과**: T-2-006(PR #38, `6f2f00e`) 머지. 도메인 규칙 변경 없이 검증 체인만 넓혔다: contracts에 fixture 전체를 처음부터 재생하며 매 명령 뒤 `CareerStateSchema` strict 파싱 + 재해시로 golden hash와 대조하는 순회 테스트와 golden 파일 목록 가드(`KNOWN_GOLDEN_FILES`, T-2-003의 career-04 추가 시 갱신 필요), Snapshot·PUT 본문 크기 측정(시즌 중 최대 15,343 B ≈ 권장치 256 KB의 6% — **D-33 결론: 현 구조 유지, 압축 불필요**), api 3경로 시즌 동기화(단일 PUT·checkpoint 분할·Idempotency-Key 재시도)와 Miniflare golden 순회, engine-client replay·fork·import 시즌 golden, 로컬 저장 SEASON_START·SEASON_SETTLED 계약, 브라우저 Web Worker career-02 FAST 시즌 리플레이 hash 일치·시즌 구간 9.6~15 ms(상한 5,000 ms, Node 52 ms, domain 단독 7.4 ms). 워커 비용 약 $11.3, 114분, 리뷰 1회 2건.
