@@ -4,6 +4,7 @@ import type {
   AttributeKey,
   CareerStage,
   CareerStatus,
+  ChapterTrigger,
   DecisionSlot,
   MatchAppearance,
   OutReason,
@@ -13,6 +14,7 @@ import type {
   PreferredFoot,
   SeasonPhase,
   SelectionCandidate,
+  SelectionReasonComponent,
   SquadRole,
   TimelineEntry,
 } from '@offside/domain';
@@ -221,6 +223,32 @@ export const CUP_ROUND_LABEL_KO: Record<'R1' | 'R2' | 'SEMI' | 'FINAL', string> 
   R2: '2라운드',
   SEMI: '준결승',
   FINAL: '결승',
+};
+
+/** T-2-008 SCR-031: 챕터 트리거를 "왜 이 경기인가" 문구로 바꾼다. TAG는 Phase 3+ 전용이라 정의
+ * 자체의 tag 문구를 그대로 쓴다(고정 사전이 없다 — D-38). */
+export function chapterTriggerLabel(trigger: ChapterTrigger): string {
+  switch (trigger.kind) {
+    case 'DEBUT':
+      return '프로 데뷔전';
+    case 'DERBY':
+      return '라이벌 더비';
+    case 'CUP_FINAL':
+      return '컵 결승';
+    case 'DECIDER':
+      return '결정전';
+    case 'TAG':
+      return trigger.tag;
+  }
+}
+
+/** T-2-008 SCR-031: `season.selection.playerReason.component`(선발 판정에서 선수·경계 후보 사이
+ * 가중 차이가 가장 큰 구성 요소) 라벨. */
+export const SELECTION_REASON_LABEL_KO: Record<SelectionReasonComponent, string> = {
+  TACTICAL_FIT: '전술 적합도',
+  MANAGER_TRUST: '감독 신뢰',
+  EXPECTED_PERFORMANCE: '경기 예상치',
+  SQUAD_STATUS: '스쿼드 상태',
 };
 
 /** 충돌 대화상자 비교 카드의 "마지막 기록" 행. */

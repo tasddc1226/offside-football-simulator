@@ -9,6 +9,7 @@ import {
   confirmPlayer,
   createCareer,
   deleteCareer,
+  resolveChapter,
   resolveEvent,
   resolveRole,
   settleSeason,
@@ -73,7 +74,8 @@ export type CareerMutationKind =
   | 'acceptOffer'
   | 'startSeason'
   | 'resolveRole'
-  | 'settleSeason';
+  | 'settleSeason'
+  | 'resolveChapter';
 
 type CreateVariables = { simulationMode: SimulationMode };
 type UpdateDraftVariables = { careerId: string; draft: Partial<PlayerDraft> };
@@ -82,6 +84,7 @@ type ResolveEventVariables = { careerId: string; choiceId: string };
 type AcceptOfferVariables = { careerId: string; offerId: string };
 type StartSeasonVariables = { careerId: string; choice: StartSeasonChoice };
 type ResolveRoleVariables = { careerId: string; decision: 'ACCEPT' | 'DECLINE' };
+type ResolveChapterVariables = { careerId: string; decisionId: string; optionId: string };
 
 async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
   const engine = await getAppEngine();
@@ -117,6 +120,10 @@ async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
     }
     case 'settleSeason':
       return settleSeason(engine, (variables as CareerIdVariables).careerId);
+    case 'resolveChapter': {
+      const { careerId, decisionId, optionId } = variables as ResolveChapterVariables;
+      return resolveChapter(engine, careerId, decisionId, optionId);
+    }
     default: {
       const exhaustive: never = kind;
       throw new Error(`알 수 없는 mutation kind: ${String(exhaustive)}`);
@@ -128,7 +135,15 @@ type MutationDataFor<K extends CareerMutationKind> = K extends 'create'
   ? Awaited<ReturnType<typeof createCareer>>
   : K extends 'updateDraft'
     ? Awaited<ReturnType<typeof updateDraft>>
-    : K extends 'confirm' | 'advance' | 'resolveEvent' | 'acceptOffer' | 'startSeason' | 'resolveRole' | 'settleSeason'
+    : K extends
+          | 'confirm'
+          | 'advance'
+          | 'resolveEvent'
+          | 'acceptOffer'
+          | 'startSeason'
+          | 'resolveRole'
+          | 'settleSeason'
+          | 'resolveChapter'
       ? Awaited<ReturnType<typeof confirmPlayer>>
       : void;
 
@@ -144,7 +159,9 @@ type MutationVariablesFor<K extends CareerMutationKind> = K extends 'create'
           ? StartSeasonVariables
           : K extends 'resolveRole'
             ? ResolveRoleVariables
-            : CareerIdVariables;
+            : K extends 'resolveChapter'
+              ? ResolveChapterVariables
+              : CareerIdVariables;
 
 /**
  * 액션 실행 후 ['careers']와(있다면) ['career', careerId] 쿼리를 무효화한다. 'delete'는
