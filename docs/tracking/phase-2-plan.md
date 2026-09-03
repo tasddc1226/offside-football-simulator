@@ -99,6 +99,8 @@ D-34 보정: 역할 제안의 POSITION_CHANGE 후보는 `positionAdjacency[prima
 
 `SeasonResult`는 `seasonHistory[].result`로 남긴다(hash = canonical JSON sha256). 성장은 결산 시 1회, roll 없이 정수 산술: 연령대별 예산(centi) × 잠재력 gap 비율 × 출전 계수(0분도 30%) + 경험 보너스, 능력별 몫은 아키타입 roleWeights·기본 몫·훈련 초점(`START_SEASON.payload.trainingFocus`, 기본 ROLE), 그룹별 연령 곡선(신체 25/28, 기술 20~29/32, 정신 23~33, 골키핑 26~34)과 연령 하락. 소수 이월은 `growthCarryCenti`. 한 시즌 능력당 −3~+4, Base OVR은 잠재력을 넘지 않는다(초과분은 roleWeight 순으로 되돌리고 `POTENTIAL_CAP` 원인). 시즌 중 폼·체력·사기는 매 step 경기 결과로 roll 없이 갱신(`conditionRules`). 출전 약속 이행은 출전 시간 비율(`promiseMinutesShareBp`)로 판정하고 기록만 한다. 상수는 밸런스 테스트(seed 200 × 연령 3)가 balance-targets 표를 만족하도록 워커가 조정한다.
 
+**확정(PR #40, `eaeb6cf`)**: 룰셋 `growthRules`(budgetCenti U21 600/PRIME 200/VETERAN 0, gapCap 20, minutesFull 2400, minutesFloorBp 3000, experiencePerRatedMatchCenti 4·cap 120, goodRatingTenths 75·bonus 60, roleWeightScale 8, baseShareBp 1500, focusShareBp 2500)·`conditionRules`(formPivotTenths 65, formDivisorTenths 8)·`promiseMinutesShareBp {6500, 4000, 1500, 0}`이 정본이다(브리프의 700/650은 평점 스케일 착오). DEFERRED 효과는 `FootballSeason.scheduledEffects`로 시즌 단위 적용한다 — `START_SEASON`이 `state.deferredEffects`를 통째로 옮기고 walk 중 step마다 풀며, 시즌 중 새로 미룬 효과는 다음 `START_SEASON`까지 `state.deferredEffects`에 머문다(리뷰에서 잡은 유실 버그의 수정). 후속: `player.ts` 생성 시 `baseOvr ≤ truePotential` 불변식(T-2-011).
+
 ## 4. 열린 질문 (Wave 1 전에 닫는다)
 
 - 리그·컵 구조를 룰셋 데이터로 얼마나 구체화할지(팀 수, 경기 수, 컵 라운드 수). 제안: 리그 팀 수는 룰셋 `leagues[].teamCount`, 경기 수는 홈·원정 2회전, 컵은 4라운드.
