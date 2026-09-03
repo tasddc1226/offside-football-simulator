@@ -31,6 +31,7 @@ test.describe('Google 연결·병합(실제 api)', () => {
       await pageB.getByRole('button', { name: '다음' }).click();
       await pageB.getByRole('button', { name: 'KICKOFF' }).click();
       await pageB.getByLabel('이름').fill('박은비');
+      await pageB.getByRole('radio', { name: '여성' }).click();
       await pageB.getByLabel('국적').selectOption('KR');
       await pageB.getByRole('radio', { name: '오른발' }).click();
       await pageB.getByRole('tab', { name: '공격수' }).click();
@@ -40,15 +41,23 @@ test.describe('Google 연결·병합(실제 api)', () => {
       await expect(pageB).toHaveURL(/\/career\/.+\/style$/);
 
       await pageB.goto('/settings');
+      // 서버의 currentCareerCount(ADR-008)는 서버에 실제로 저장된 커리어만 센다 — 디바운스된 PUT이
+      // 끝나길 기다리지 않고 연결하면 0개로 보여 switched로 새고, merge_required를 못 본다.
+      await expect(pageB.getByText('저장됨')).toBeVisible({ timeout: 15_000 });
       await pageB.getByRole('button', { name: 'Google로 연결' }).click();
-      await expect(pageB).toHaveURL(/\/settings\?google=merge_required/, { timeout: 15_000 });
-      await expect(pageB.getByRole('heading', { level: 2, name: 'Google에 연결된 프로필이 있습니다' })).toBeVisible();
+      // GoogleRow는 ?google= 쿼리를 받는 즉시 지운다(대화상자는 서버의 pendingMerge로 유지된다) —
+      // 그래서 쿼리가 아니라 대화상자 자체가 뜨는지로 검사한다.
+      await expect(pageB.getByRole('heading', { level: 2, name: 'Google에 연결된 프로필이 있습니다' })).toBeVisible({
+        timeout: 15_000,
+      });
 
       await pageB.getByRole('button', { name: '이 기기의 커리어 1개를 Google 프로필로 옮기기' }).click();
       await expect(pageB.getByText(/Google 프로필과 합쳤습니다\. 커리어 \d+개/)).toBeVisible({ timeout: 15_000 });
 
       await pageB.goto('/');
-      await expect(pageB.getByRole('heading', { level: 2, name: '박은비' })).toBeVisible({ timeout: 15_000 });
+      // 로컬 D1이 반복 실행 상태를 남기면 같은 이름의 이전 커리어가 남아있을 수 있어(고정된
+      // 가짜 sub, D-21) 정확히 하나가 아니라 적어도 하나가 보이는지만 본다.
+      await expect(pageB.getByRole('heading', { level: 2, name: '박은비' }).first()).toBeVisible({ timeout: 15_000 });
     } finally {
       await contextA.close();
       await contextB.close();
