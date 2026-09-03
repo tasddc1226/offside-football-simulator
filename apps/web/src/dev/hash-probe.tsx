@@ -3,21 +3,33 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createWorkerSimulator } from '@offside/engine-client';
-import { career01, career01EngineCommands, rulesetProto } from '@offside/fixtures';
+import {
+  career01,
+  career01EngineCommands,
+  career02Season,
+  career02SeasonEngineCommands,
+  rulesetProto,
+} from '@offside/fixtures';
 import type { DomainSnapshot } from '@offside/domain';
 
-type ProbeResult = { revision: number; stateHash: string } | { error: string };
+type ProbeResult =
+  | {
+      career01: { revision: number; stateHash: string };
+      career02Fast: { revision: number; stateHash: string; seasonElapsedMs: number };
+    }
+  | { error: string };
 
+/** T-2-006 08: career01에 이어 career-02 FAST 시즌을 같은 Worker simulator로 재생한다. */
 async function runProbe(): Promise<ProbeResult> {
   const worker = new Worker(new URL('@offside/engine-client/worker', import.meta.url), { type: 'module' });
   const simulator = createWorkerSimulator(worker as unknown as Parameters<typeof createWorkerSimulator>[0]);
 
   try {
     let counter = 0;
-    const commands = career01EngineCommands(() => `hash-probe-${counter++}`);
+    const newId = () => `hash-probe-${counter++}`;
     let snapshot: DomainSnapshot | null = null;
 
-    for (const command of commands) {
+    for (const command of career01EngineCommands(newId)) {
       const result = await simulator.simulate({
         snapshot,
         command,
@@ -35,7 +47,28 @@ async function runProbe(): Promise<ProbeResult> {
       return { error: 'career01EngineCommands가 빈 배열을 반환했다.' };
     }
 
-    return { revision: snapshot.revision, stateHash: snapshot.stateHash };
+    const career01Result = { revision: snapshot.revision, stateHash: snapshot.stateHash };
+
+    const seasonStartedAt = performance.now();
+    for (const command of career02SeasonEngineCommands('FAST', newId, snapshot.revision)) {
+      const result = await simulator.simulate({
+        snapshot,
+        command,
+        ruleset: rulesetProto,
+        rulesetVersion: career02Season.rulesetVersion,
+        contentPackVersion: career02Season.contentPackVersion,
+      });
+      if (!result.ok) {
+        return { error: `${result.error.code}: ${result.error.message}` };
+      }
+      snapshot = result.snapshot;
+    }
+    const seasonElapsedMs = performance.now() - seasonStartedAt;
+
+    return {
+      career01: career01Result,
+      career02Fast: { revision: snapshot.revision, stateHash: snapshot.stateHash, seasonElapsedMs },
+    };
   } finally {
     simulator.dispose();
     worker.terminate();
