@@ -190,6 +190,23 @@ describe('POST /v1/profile/recover', () => {
     expect(profileBody.data.id).toBe(owner.profileId);
   });
 
+  it('소문자·공백·ofs 접두가 섞인 코드도 받아들인다(contracts RecoveryCodeInputSchema 정규화)', async () => {
+    const owner = await issueCookie(ctx);
+    const code = await issueRecoveryCode(owner.cookie);
+    const messyCode = `ofs ${code.slice(4).toLowerCase().replace(/-/g, ' ')}`;
+    const other = await issueCookie(ctx);
+    const app = createApp();
+
+    const res = await app.request(
+      '/v1/profile/recover',
+      jsonInit({ method: 'POST', body: { code: messyCode }, cookie: other.cookie }),
+      ctx.env,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { profileId: string } };
+    expect(body.data.profileId).toBe(owner.profileId);
+  });
+
   it('현재 프로필과 같은 코드면 그대로 200', async () => {
     const owner = await issueCookie(ctx);
     const code = await issueRecoveryCode(owner.cookie);
@@ -208,7 +225,7 @@ describe('POST /v1/profile/recover', () => {
 
     const notFoundRes = await app.request(
       '/v1/profile/recover',
-      jsonInit({ method: 'POST', body: { code: 'OFS-0000-0000-0000' }, cookie: currentA.cookie, idempotencyKey: 'idem-not-found' }),
+      jsonInit({ method: 'POST', body: { code: 'OFS-ZZZZ-ZZZZ-ZZZZ' }, cookie: currentA.cookie, idempotencyKey: 'idem-not-found' }),
       ctx.env,
     );
     expect(notFoundRes.status).toBe(400);
@@ -316,7 +333,7 @@ describe('POST /v1/profile/recover', () => {
   it('실패 시도 6번째(IP+세션 기준)는 429, 다른 IP는 영향 없음', async () => {
     const current = await issueCookie(ctx);
     const app = createApp();
-    const badCode = 'OFS-0000-0000-0001';
+    const badCode = 'OFS-ZZZZ-ZZZZ-ZZZY';
 
     for (let i = 1; i <= 5; i++) {
       const res = await app.request(
