@@ -4,7 +4,7 @@
 
 ## 현재 게이트
 
-**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. 2026-09-03 08:57 기준 Wave 3·4의 T-1-009(진로~계약·대시보드, PR #26)와 T-1-011(동기화 배선, PR #30)까지 머지돼 온보딩부터 첫 계약·대시보드까지 브라우저에서 이어진다. T-1-012(설정 데이터 섹션·법적 문서)와 T-1-016(선수 성별·선호 포지션)이 병렬로 진행 중이며, 남은 Phase 1 작업은 T-1-013(Google, T-1-012 뒤)·T-1-014(E2E 완료 조건, T-1-012·016 뒤)다. 사용자가 작성한 콘텐츠 정본 `docs/content/kickoff/`(PR #24)는 Phase 2 콘텐츠 작업의 입력이며 지금 코드 작업을 요구하지 않는다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
+**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. 2026-09-03 09:25 기준 T-1-009(PR #26)·T-1-011(PR #30)·T-1-012(설정 데이터 섹션·법적 문서, PR #31)까지 머지돼 온보딩부터 첫 계약·대시보드, 복구 코드·프로필 복구·삭제까지 브라우저에서 이어진다. T-1-013(Google 연결)과 T-1-016(선수 성별·선호 포지션)이 병렬로 진행 중이며, 남은 Phase 1 작업은 T-1-014(E2E 완료 조건, T-1-016 머지 뒤 T-1-013과 병렬 투입)뿐이다. 사용자가 작성한 콘텐츠 정본 `docs/content/kickoff/`(PR #24)는 Phase 2 콘텐츠 작업의 입력이며 지금 코드 작업을 요구하지 않는다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
 
 WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. 현재 Phase 1~7의 국내 MVP 순서를 바꾸지 않으며, Phase 3~5와 Phase 7 완료 후 새 ruleset의 신규 Career에 해외 이적·가상 해외 리그·대륙대회를 연다. 정본은 [WORLD STAGE 개발 명세](../development/15-world-stage-expansion.md)와 [Phase 8](../phases/phase-08-world-stage.md)이다.
 
@@ -21,7 +21,7 @@ WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. �
 | U-007 | 앱인토스 콘솔 가입(토스 비즈니스, 만 19세), 워크스페이스·제작자 이름, 앱 등록(유형 **게임**, `appName` 확정), 고객문의 이메일 | deferred | ADR-009, ADR-006. appName은 변경 불가 |
 | U-008 | 앱인토스 서버 mTLS 인증서 발급 → `wrangler mtls-certificate upload`, certificate_id 공유 | deferred | ADR-007. U-002·U-007 이후 |
 | U-009 | 게임물 등급분류 신청(GRAC, 스토어명 `기타-앱인토스`). 개인 신청 가능 여부 먼저 확인 | deferred | ADR-009. 10~15일 + 수수료. 증명서 PDF를 콘솔에 등록 |
-| U-010 | 약관·개인정보 처리방침 최종 문안 검토, 사업자명·문의 이메일·시행일 확정(`apps/web/src/legal/operator.ts`) | todo | D-20. T-1-012가 사실 기반 초안을 쓴다. 출시 전 필수 |
+| U-010 | 약관·개인정보 처리방침 최종 문안 검토, 사업자명·문의 이메일·시행일 확정(`apps/web/src/legal/operator.ts`) | todo | D-20. 초안 완료(PR #31, `apps/web/src/legal/privacy.tsx`·`terms.tsx`, 연락처는 "준비 중"으로 표시). 사용자가 문안·사업자명·문의 이메일·시행일을 정하면 오케스트레이터가 반영 작업을 만든다. 출시 전 필수 |
 | U-010 | 이 세션에서 `/mcp` → `apps-in-toss-console` 인증 완료 | deferred | 서버는 등록됨, OAuth 로그인만 남음 |
 | U-011 | (U-009에서 개인 신청 불가 시) 개인사업자 등록 후 콘솔 사업자 등록 | deferred | 조건부. 면세 사업자 불가 |
 
@@ -65,9 +65,9 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-008 | web | 선수 만들기 SCR-002·003·004 + 복구 코드 발급 단계 | T-1-002, T-1-004, T-1-006, T-1-007 | 3 | done | PR #25 `122144f`. 리뷰 1회(수정 3건: apiFetch Content-Type, 오류 화면 복귀 버튼). web 99 tests, e2e 18 |
 | T-1-009 | web | SCR-007 진로, SCR-008 입단 테스트, SCR-013·014 이벤트·결과, SCR-009 제안 비교, SCR-010 계약, SCR-029 대시보드 | T-1-005, T-1-006, T-1-007 | 3 | done | PR #26 `b40c168`. 리뷰 2회(수정 4건: 진행·다음 실패 표시, 아키타입 한글명, 룰셋·라벨 중복 정리) + 재검증 1회(e2e typecheck). web 181 tests, e2e 25(first-contract 전 구간 3.4~5.5초) |
 | T-1-011 | web + engine-client | 동기화 클라이언트 배선·상태 표시·충돌 화면, LOCAL 선택 fork-by-replay | T-0-015, T-1-007, T-1-008 | 3 | done | PR #30 `280e2f4`. 리뷰 2회(/review:pr 1 + 오케스트레이터 2: 새로고침 뒤 저장 상태 보정, 401 삭제 재시도, CORS X-Request-Id 범위 확장). web 139 tests, engine-client 65, api 113, e2e 24 |
-| T-1-012 | web + platform + engine-client + api | SCR-030 데이터 섹션(복구 코드 재발급·복구 입력·복구 뒤 대조·프로필 삭제·로그아웃·기기 데이터 삭제), 법적 문서 본문, api 복구·삭제 라우트 contracts 스키마 채택 | T-1-004, T-1-006, T-1-007, T-1-011 | 4 | in-progress | `T-1-012-settings-data`, [브리프](briefs/T-1-012.md) |
-| T-1-013 | api + web + platform + contracts | Google OIDC start/callback/merge/unlink(가짜 OIDC로 E2E), SCR-030 Google 행, 병합 선택 화면 | T-1-004, T-1-012, U-003(실검증) | 4 | todo | [브리프](briefs/T-1-013.md) |
-| T-1-014 | web(e2e) + docs | TEST-E2E-007·008·009, 키보드 전용 주 여정, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, 완료 조건 표 | T-1-008, T-1-009, T-1-011, T-1-012 | 4 | todo | [브리프](briefs/T-1-014.md) |
+| T-1-012 | web + platform + engine-client + api | SCR-030 데이터 섹션(복구 코드 재발급·복구 입력·복구 뒤 대조·프로필 삭제·로그아웃·기기 데이터 삭제), 법적 문서 본문, api 복구·삭제 라우트 contracts 스키마 채택 | T-1-004, T-1-006, T-1-007, T-1-011 | 4 | done | PR #31 `1e97406`. 리뷰 1회(/review:pr 1 + 오케스트레이터 필수 2건: 대조 부분 실패 집계·실패 경로 캐시 갱신) + 범위 확장 1건(대조 실패 토스트·"다시 연결" 대조). web 203 tests, api 114, e2e 37+1(실제 api 복구 왕복) |
+| T-1-013 | api + web + platform + contracts | Google OIDC start/callback/merge/unlink(가짜 OIDC로 E2E), SCR-030 Google 행, 병합 선택 화면 | T-1-004, T-1-012, U-003(실검증) | 4 | in-progress | `T-1-013-google-oidc`, [브리프](briefs/T-1-013.md) |
+| T-1-014 | web(e2e) + docs | TEST-E2E-007·008·009, 키보드 전용 주 여정, 5분 세션 측정, 허브 LCP·폰트 CLS 재측정, 완료 조건 표 | T-1-008, T-1-009, T-1-011, T-1-012 | 4 | todo | [브리프](briefs/T-1-014.md) 후속(PR #31): "다시 연결" 뒤 LOCAL_ONLY 배지 잔류 확인, packages/ui Toast warning·Button danger 변형, `careerPhase` 분석 값 고정. |
 | T-1-016 | domain + contracts + web + fixtures | 선수 성별 프로필 정보, 선호/현재 포지션 분리, 생성 화면·migration·결정론 fixture | T-1-009, T-1-011 | 4 | in-progress | `T-1-016-player-gender-position`, [브리프](briefs/T-1-016.md) |
 
 ## Phase 8 WORLD STAGE 백로그 (Phase 3~7 완료 후 착수)
@@ -125,8 +125,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-1-012 | Sonnet 5, Orca 워크트리 `T-1-012-settings-data` | 2026-09-03 | 구현 완료·/review:pr 1회 끝. 복구 뒤 대조 실패를 경고 토스트로 알리고 "다시 연결"에 대조 추가하도록 지시(08:56), PR 준비 중 |
-| T-1-016 | Sonnet 5, Orca 워크트리 `T-1-016-player-gender-position` | 2026-09-03 | 브리프 전달 |
+| T-1-016 | Sonnet 5, Orca 워크트리 `T-1-016-player-gender-position` | 2026-09-03 | 도메인·contracts 구현·테스트 중(09:25) |
+| T-1-013 | Sonnet 5, Orca 워크트리 `T-1-013-google-oidc` | 2026-09-03 | 브리프 전달 |
 
 ## 완료
 
@@ -163,3 +163,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-008 | PR #25 `122144f` | 2026-09-02 | Sonnet 5 약 $22.1, 78분, 리뷰 1회(수정 3건). 첫 세션 TUI 멈춤으로 같은 워크트리에 재투입 1회 |
 | T-1-011 | PR #30 `280e2f4` | 2026-09-03 | Sonnet 5 약 $34.9, 123분, 리뷰 2회(필수 2건·권장 3건 + CORS 범위 확장). 재투입 없음 |
 | T-1-009 | PR #26 `b40c168` | 2026-09-03 | Sonnet 5 약 $36.9, 353분(main 병합 2회·first-contract e2e 포함), 리뷰 2회(수정 4건) + 재검증 1회. 재투입 없음 |
+| T-1-012 | PR #31 `1e97406` | 2026-09-03 | Sonnet 5 약 $20.7, 448분(질문 대화상자 대기 약 7시간 포함, 실작업 약 1시간 반), 리뷰 1회(필수 2건) + 질문 1회. 재투입 없음 |
