@@ -1,6 +1,6 @@
 {
   "revision": 14,
-  "stateHash": "db2b08921fdece28e0be90d9a194fd1711d7833ec8296aff023f1dc74b6a427b",
+  "stateHash": "2896ef9907bf5f30a30de1e71b9e9f30422bd907d74cd612f7375b9b1f1e1a2a",
   "rngStateDraws": 399,
   "pending": {
     "kind": "CHAPTER",
@@ -10,12 +10,14 @@
     "importance": "MAJOR",
     "matchId": "1-3-0",
     "decisionsTotal": 2,
+    "trigger": "DEBUT",
     "resolved": [
       {
         "decisionId": "D1",
         "optionId": "OPT-CONFIDENT",
         "outcomeId": "D1-SUCCESS",
-        "roll": 39
+        "roll": 39,
+        "outcomeKind": "SUCCESS"
       }
     ]
   },

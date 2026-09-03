@@ -45,7 +45,8 @@ const EFFECT_KIND_SET: Record<EffectKind, true> = {
 };
 export const EFFECT_KINDS = Object.keys(EFFECT_KIND_SET) as EffectKind[];
 
-export const STACKING_RULES = ['ONCE_PER_SOURCE', 'REPLACE', 'SUM'] as const;
+// T-2-014 D-40 규칙 2: `ONCE_PER_SEASON`은 시즌마다 1회(`season:<index>:<sourceId>`로 dedupe).
+export const STACKING_RULES = ['ONCE_PER_SOURCE', 'ONCE_PER_SEASON', 'REPLACE', 'SUM'] as const;
 
 const ClampSchema = z.strictObject({ min: z.number(), max: z.number() });
 
@@ -54,10 +55,18 @@ const AppliesAtSchema = z.union([
   z.strictObject({ kind: z.literal('NEXT_SEASON_STEP'), step: z.number().int().min(1) }),
 ]);
 
+// T-2-014 D-40 규칙 3: `AT_SEASON_END`(결산 직전 되돌림)·`SEASONS_AFTER`(저장 시 도메인이
+// `AT_SEASON_INDEX`로 치환 — effects.ts `resolveExpiresAtForStorage`)가 콘텐츠 저작 대상으로
+// 더해진다. `AT_STEP`·`AT_SEASON_INDEX`는 도메인이 저장 시 채우는 형태라 콘텐츠가 직접 쓰지 않지만,
+// `EffectSchema`가 도메인 `Effect` 전체 union을 만족해야 하므로(`satisfies z.ZodType<Effect>`) 스키마
+// 자체는 계속 허용한다.
 const ExpiresAtSchema = z.union([
   z.null(),
   z.strictObject({ kind: z.literal('STEPS_AFTER'), steps: z.number().int().min(1) }),
   z.strictObject({ kind: z.literal('AT_STEP'), step: z.number().int().min(1) }),
+  z.strictObject({ kind: z.literal('AT_SEASON_END') }),
+  z.strictObject({ kind: z.literal('SEASONS_AFTER'), seasons: z.number().int().min(1) }),
+  z.strictObject({ kind: z.literal('AT_SEASON_INDEX'), index: z.number().int().min(0) }),
 ]);
 
 export const EffectSchema = z
@@ -70,6 +79,9 @@ export const EffectSchema = z
     appliesAt: AppliesAtSchema,
     expiresAt: ExpiresAtSchema,
     stackingRule: z.enum(STACKING_RULES),
+    // T-2-014 D-40 규칙 6: 결과 원인 태그(선택, 04 "결과가 0이면… 원인 문구"). `restoreTo`는 여기
+    // 없다 — `applyEffects`가 REPLACE 적용 시점에 채우는 런타임 전용 필드다(콘텐츠가 직접 쓰지 않는다).
+    reasonTag: z.string().min(1).exactOptional(),
   })
   .superRefine((effect, ctx) => {
     validateEffectTarget(effect, ctx);
@@ -82,10 +94,12 @@ export const EffectSchema = z
       });
     }
 
-    if (effect.stackingRule === 'REPLACE' && effect.expiresAt !== null) {
+    // T-2-014 D-40 규칙 3: PERMANENT는 영구 변화라 만료가 있으면 안 된다(만료 시 되돌릴 "이전 값"
+    // 개념 자체가 PERMANENT엔 없다 — CURRENT/RELATION처럼 일시 상태가 아니다).
+    if (effect.kind === 'PERMANENT' && effect.expiresAt !== null) {
       ctx.addIssue({
         code: 'custom',
-        message: "stackingRule이 REPLACE인 효과는 expiresAt이 null이어야 한다(만료 되돌리기가 delta 감산이라 REPLACE와 맞지 않는다).",
+        message: 'PERMANENT 효과는 expiresAt이 null이어야 한다(영구 변화라 만료 개념이 없다).',
         path: ['expiresAt'],
       });
     }

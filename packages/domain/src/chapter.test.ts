@@ -142,6 +142,7 @@ describe('selectChapter', () => {
       importance: 'MAJOR',
       matchId: 'm1',
       decisionsTotal: 1,
+      trigger: 'DEBUT',
     });
 
     // 이 step 이전에 이미 minutes>0 출전이 있었다면 "첫 출전"이 아니다.
@@ -162,6 +163,7 @@ describe('selectChapter', () => {
       importance: 'MINOR',
       matchId: 'm1',
       decisionsTotal: 1,
+      trigger: 'DERBY',
     });
 
     const otherMatch = makeMatch({ opponent: { id: 'league-youth-opp-1', name: 'Other', strength: 50 } });
@@ -189,7 +191,7 @@ describe('selectChapter', () => {
       selectChapter(
         baseSelectInput({ step: lastStep, steps: [earlyStep, lastStep], candidates: [candidate], competitions: [nearPromotion] }),
       ),
-    ).toEqual({ chapterId: 'CHP-MATCH-004', version: 1, importance: 'MAJOR', matchId: 'm1', decisionsTotal: 1 });
+    ).toEqual({ chapterId: 'CHP-MATCH-004', version: 1, importance: 'MAJOR', matchId: 'm1', decisionsTotal: 1, trigger: 'DECIDER' });
 
     // 경계에서 멀다(4위, promotionSpots=2·relegationBoundary=7에서 모두 maxRankGap=1 밖).
     const farFromBoundary: CompetitionRecord = { ...nearPromotion, position: 4 };
@@ -275,6 +277,7 @@ function makePendingChapter(overrides: Partial<Extract<Pending, { kind: 'CHAPTER
     importance: 'MAJOR',
     matchId: 'm1',
     decisionsTotal: 1,
+    trigger: 'DEBUT',
     resolved: [],
     ...overrides,
   };
@@ -386,6 +389,8 @@ function makeState(overrides: Partial<CareerState> = {}): CareerState {
     deferredEffects: [],
     resolvedEventIds: [],
     resolvedChapterIds: [],
+    careerTags: [],
+    careerTagGrants: [],
     rngState: seedRng('chapter-test'),
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',
@@ -407,8 +412,8 @@ describe('resolveChapter', () => {
     const state = makeState();
     const expectedRoll = rollInt(state.rngState, 100);
     const outcomes = [
-      { id: 'A', weight: 30, effects: [], ratingDeltaTenths: 0 },
-      { id: 'B', weight: 70, effects: [], ratingDeltaTenths: 0 },
+      { id: 'A', kind: 'SUCCESS' as const, weight: 30, effects: [], ratingDeltaTenths: 0 },
+      { id: 'B', kind: 'FAIL' as const, weight: 70, effects: [], ratingDeltaTenths: 0 },
     ];
 
     const result = resolveChapter({
@@ -432,7 +437,7 @@ describe('resolveChapter', () => {
     const state = makeState({
       pending: makePendingChapter({
         decisionsTotal: 2,
-        resolved: [{ decisionId: 'D1', optionId: 'OPT-A', outcomeId: 'A', roll: 0 }],
+        resolved: [{ decisionId: 'D1', optionId: 'OPT-A', outcomeId: 'A', roll: 0, outcomeKind: 'SUCCESS' }],
       }),
     });
     const result = resolveChapter({
@@ -442,7 +447,7 @@ describe('resolveChapter', () => {
       definitionVersion: 1,
       decisionId: 'D1',
       optionId: 'OPT-B',
-      outcomes: [{ id: 'X', weight: 1, effects: [], ratingDeltaTenths: 0 }],
+      outcomes: [{ id: 'X', kind: 'SUCCESS', weight: 1, effects: [], ratingDeltaTenths: 0 }],
     });
     expect(result).toMatchObject({ ok: false, reason: 'DECISION_ALREADY_RESOLVED' });
   });
@@ -456,7 +461,7 @@ describe('resolveChapter', () => {
       definitionVersion: 1,
       decisionId: 'D1',
       optionId: 'OPT-A',
-      outcomes: [{ id: 'X', weight: 1, effects: [], ratingDeltaTenths: 0 }],
+      outcomes: [{ id: 'X', kind: 'SUCCESS', weight: 1, effects: [], ratingDeltaTenths: 0 }],
     });
     expect(wrongChapterId).toMatchObject({ ok: false, reason: 'PENDING_CHAPTER_MISMATCH' });
 
@@ -467,7 +472,7 @@ describe('resolveChapter', () => {
       definitionVersion: 2,
       decisionId: 'D1',
       optionId: 'OPT-A',
-      outcomes: [{ id: 'X', weight: 1, effects: [], ratingDeltaTenths: 0 }],
+      outcomes: [{ id: 'X', kind: 'SUCCESS', weight: 1, effects: [], ratingDeltaTenths: 0 }],
     });
     expect(wrongVersion).toMatchObject({ ok: false, reason: 'PENDING_CHAPTER_MISMATCH' });
   });
@@ -481,7 +486,7 @@ describe('resolveChapter', () => {
       definitionVersion: 1,
       decisionId: 'D1',
       optionId: 'OPT-A',
-      outcomes: [{ id: 'X', weight: 1, effects: [], ratingDeltaTenths: 0 }],
+      outcomes: [{ id: 'X', kind: 'SUCCESS', weight: 1, effects: [], ratingDeltaTenths: 0 }],
     });
     expect(result).toMatchObject({ ok: false, reason: 'NO_PENDING_CHAPTER' });
   });
@@ -509,7 +514,7 @@ describe('resolveChapter', () => {
       definitionVersion: 1,
       decisionId: 'D1',
       optionId: 'OPT-A',
-      outcomes: [{ id: 'ONLY', weight: 1, effects: [], ratingDeltaTenths: 1000 }],
+      outcomes: [{ id: 'ONLY', kind: 'SUCCESS', weight: 1, effects: [], ratingDeltaTenths: 1000 }],
     });
     expect(upperResult.ok).toBe(true);
     if (!upperResult.ok) return;
@@ -528,7 +533,7 @@ describe('resolveChapter', () => {
       definitionVersion: 1,
       decisionId: 'D1',
       optionId: 'OPT-A',
-      outcomes: [{ id: 'ONLY', weight: 1, effects: [], ratingDeltaTenths: -1000 }],
+      outcomes: [{ id: 'ONLY', kind: 'FAIL', weight: 1, effects: [], ratingDeltaTenths: -1000 }],
     });
     expect(lowerResult.ok).toBe(true);
     if (!lowerResult.ok) return;
@@ -565,7 +570,7 @@ describe('resolveChapter', () => {
             definitionVersion: 1,
             decisionId,
             optionId: 'OPT-A',
-            outcomes: [{ id: `${decisionId}-OUT`, weight: 1, effects: [], ratingDeltaTenths: 1 }],
+            outcomes: [{ id: `${decisionId}-OUT`, kind: 'SUCCESS', weight: 1, effects: [], ratingDeltaTenths: 1 }],
           },
         },
         ruleset: rulesetProto,

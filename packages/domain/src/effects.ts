@@ -39,6 +39,64 @@ function clampValue(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+type EffectBags = {
+  attributes: Record<AttributeKey, number>;
+  state: { form: number; fitness: number; morale: number };
+  context: { tacticalFit: number; squadStatus: number; positionProficiency: number };
+  relationships: { managerTrust: number; captain: number; rival: number; fans: number; agent: number };
+};
+
+function cloneBags(state: CareerState): EffectBags {
+  return {
+    attributes: { ...state.attributes },
+    state: { ...state.state },
+    context: { ...state.context },
+    relationships: { ...state.relationships },
+  };
+}
+
+function bagObjFor(bags: EffectBags, bag: Exclude<FieldBag, null>): Record<string, number> {
+  switch (bag) {
+    case 'attributes':
+      return bags.attributes as Record<string, number>;
+    case 'state':
+      return bags.state as Record<string, number>;
+    case 'context':
+      return bags.context as Record<string, number>;
+    case 'relationships':
+      return bags.relationships as Record<string, number>;
+  }
+}
+
+/**
+ * D-40 규칙 2: `stackingRule`이 커리어 전체 1회(`ONCE_PER_SOURCE`)면 `sourceId` 그대로, 시즌마다
+ * 1회(`ONCE_PER_SEASON`)면 `season:<index>:<sourceId>`가 `appliedSourceIds`의 중복 검사 키다. 시즌이
+ * 없을 때(유스 구간 등 `state.season === null`) 적용되는 `ONCE_PER_SEASON`은 실질적으로 "그 시즌 배정
+ * 전에 한 번뿐"이라 index 0(실제 시즌 index는 항상 1부터라 절대 다시 매칭되지 않는다)을 쓴다.
+ */
+function dedupeKeyFor(state: CareerState, effect: Effect): string | null {
+  if (effect.stackingRule === 'ONCE_PER_SOURCE') return effect.sourceId;
+  if (effect.stackingRule === 'ONCE_PER_SEASON') return `season:${state.season?.index ?? 0}:${effect.sourceId}`;
+  return null;
+}
+
+/**
+ * D-40 규칙 3: `activeEffects`에 저장하기 직전, 상대 표기(`STEPS_AFTER`·`SEASONS_AFTER`)를 절대 표기
+ * (`AT_STEP`·`AT_SEASON_INDEX`)로 치환한다. `SEASONS_AFTER`는 시즌이 없으면(유스 구간) 0을 기준으로
+ * 삼는다(`dedupeKeyFor`의 시즌 0 관례와 같다 — 실제 시즌 index는 1부터라 절대 되돌아오지 않으므로
+ * 사실상 "결산으로는 만료되지 않는다"와 같은 뜻이고, 그런 효과는 `expireAtSeasonEnd`가 부르는 시점의
+ * `season`도 항상 null이라 문제가 되지 않는다).
+ */
+function resolveExpiresAtForStorage(
+  expiresAt: Exclude<Effect['expiresAt'], null>,
+  state: CareerState,
+  now: { step: number },
+): Exclude<Effect['expiresAt'], null> {
+  if (expiresAt.kind === 'STEPS_AFTER') return { kind: 'AT_STEP', step: now.step + expiresAt.steps };
+  if (expiresAt.kind === 'SEASONS_AFTER') return { kind: 'AT_SEASON_INDEX', index: (state.season?.index ?? 0) + expiresAt.seasons };
+  return expiresAt;
+}
+
 export type RejectedEffect = { effect: Effect; reason: string };
 
 export type ApplyEffectsResult = {
@@ -49,20 +107,13 @@ export type ApplyEffectsResult = {
 
 /**
  * Effect 목록을 순서대로 적용한다. RELATION·CONTEXT는 attributes를 바꿀 수 없고,
- * PERMANENT만 attributes를 바꾼다. ONCE_PER_SOURCE는 `appliedSourceIds`에 있으면 reject한다.
- * expiresAt이 있는 효과는 `activeEffects`에 기록해 만료 시 delta를 되돌릴 수 있게 한다.
+ * PERMANENT만 attributes를 바꾼다. `ONCE_PER_SOURCE`·`ONCE_PER_SEASON`은 `dedupeKeyFor`가 이미
+ * `appliedSourceIds`에 있으면 reject한다. expiresAt이 있는 효과는 `activeEffects`에 기록해 만료 시
+ * 되돌릴 수 있게 한다 — D-40 규칙 4: `REPLACE`는 적용 전 원래 값을 `restoreTo`에 함께 저장한다(만료
+ * 시 `−delta`가 아니라 이 값으로 복원해야 하므로).
  */
 export function applyEffects(state: CareerState, effects: Effect[], now: { step: number }): ApplyEffectsResult {
-  const attributes: Record<AttributeKey, number> = { ...state.attributes };
-  const current: { form: number; fitness: number; morale: number } = { ...state.state };
-  const context: { tacticalFit: number; squadStatus: number; positionProficiency: number } = { ...state.context };
-  const relationships: {
-    managerTrust: number;
-    captain: number;
-    rival: number;
-    fans: number;
-    agent: number;
-  } = { ...state.relationships };
+  const bags = cloneBags(state);
   const appliedSourceIds = [...state.appliedSourceIds];
   const activeEffects = [...state.activeEffects];
   const deferredEffects = [...state.deferredEffects];
@@ -71,17 +122,16 @@ export function applyEffects(state: CareerState, effects: Effect[], now: { step:
   const rejected: RejectedEffect[] = [];
 
   for (const effect of effects) {
-    if (effect.stackingRule === 'ONCE_PER_SOURCE' && appliedSourceIds.includes(effect.sourceId)) {
-      rejected.push({ effect, reason: 'ONCE_PER_SOURCE_DUPLICATE' });
+    const dedupeKey = dedupeKeyFor(state, effect);
+    if (dedupeKey !== null && appliedSourceIds.includes(dedupeKey)) {
+      rejected.push({ effect, reason: `${effect.stackingRule}_DUPLICATE` });
       continue;
     }
 
     if (effect.kind === 'DEFERRED') {
       deferredEffects.push(effect);
       applied.push(effect);
-      if (effect.stackingRule === 'ONCE_PER_SOURCE') {
-        appliedSourceIds.push(effect.sourceId);
-      }
+      if (dedupeKey !== null) appliedSourceIds.push(dedupeKey);
       continue;
     }
 
@@ -91,30 +141,22 @@ export function applyEffects(state: CareerState, effects: Effect[], now: { step:
       continue;
     }
 
-    const bagObj =
-      bag === 'attributes'
-        ? (attributes as Record<string, number>)
-        : bag === 'state'
-          ? (current as Record<string, number>)
-          : bag === 'context'
-            ? (context as Record<string, number>)
-            : (relationships as Record<string, number>);
-
+    const bagObj = bagObjFor(bags, bag);
     const key = effect.target;
-    const currentValue = bagObj[key] as number;
-    const nextValue = effect.stackingRule === 'REPLACE' ? effect.delta : currentValue + effect.delta;
+    const previousValue = bagObj[key] as number;
+    const nextValue = effect.stackingRule === 'REPLACE' ? effect.delta : previousValue + effect.delta;
     bagObj[key] = clampValue(nextValue, effect.clamp.min, effect.clamp.max);
 
     applied.push(effect);
-    if (effect.stackingRule === 'ONCE_PER_SOURCE') {
-      appliedSourceIds.push(effect.sourceId);
-    }
+    if (dedupeKey !== null) appliedSourceIds.push(dedupeKey);
 
     if (effect.expiresAt !== null) {
-      const storedEffect: Effect =
-        effect.expiresAt.kind === 'STEPS_AFTER'
-          ? { ...effect, expiresAt: { kind: 'AT_STEP', step: now.step + effect.expiresAt.steps } }
-          : effect;
+      const resolvedExpiresAt = resolveExpiresAtForStorage(effect.expiresAt, state, now);
+      const storedEffect: Effect = {
+        ...effect,
+        expiresAt: resolvedExpiresAt,
+        ...(effect.stackingRule === 'REPLACE' ? { restoreTo: previousValue } : {}),
+      };
       activeEffects.push(storedEffect);
     }
   }
@@ -122,10 +164,10 @@ export function applyEffects(state: CareerState, effects: Effect[], now: { step:
   return {
     state: {
       ...state,
-      attributes,
-      state: current,
-      context,
-      relationships,
+      attributes: bags.attributes,
+      state: bags.state,
+      context: bags.context,
+      relationships: bags.relationships,
       appliedSourceIds: appliedSourceIds.sort(compareCodePoints),
       activeEffects,
       deferredEffects,
@@ -176,19 +218,23 @@ export function resolveDeferredEffects(state: CareerState, step: number): Career
   return applyEffects({ ...state, season: { ...season, scheduledEffects: remaining } }, resolvedEffects, { step }).state;
 }
 
+/**
+ * D-40 규칙 4: 활성 효과 하나를 되돌린다. `SUM`은 `−delta`, `REPLACE`는 적용 전 저장해 둔
+ * `restoreTo`(없으면 방어적으로 현재 값 유지)로 복원한다 — 둘 다 clamp를 다시 건다.
+ */
+function revertOne(effect: Effect, bags: EffectBags): void {
+  const bag = bagForKind(effect.kind);
+  if (bag === null) return;
+  const bagObj = bagObjFor(bags, bag);
+  const key = effect.target;
+  const currentValue = bagObj[key] as number;
+  const restored = effect.stackingRule === 'REPLACE' ? (effect.restoreTo ?? currentValue) : currentValue - effect.delta;
+  bagObj[key] = clampValue(restored, effect.clamp.min, effect.clamp.max);
+}
+
 /** `AT_STEP`에 도달한 활성 효과를 되돌리고(clamp 적용) `activeEffects`에서 제거한다. */
 export function expireEffects(state: CareerState, step: number): CareerState {
-  const attributes: Record<AttributeKey, number> = { ...state.attributes };
-  const current: { form: number; fitness: number; morale: number } = { ...state.state };
-  const context: { tacticalFit: number; squadStatus: number; positionProficiency: number } = { ...state.context };
-  const relationships: {
-    managerTrust: number;
-    captain: number;
-    rival: number;
-    fans: number;
-    agent: number;
-  } = { ...state.relationships };
-
+  const bags = cloneBags(state);
   const remaining: Effect[] = [];
 
   for (const effect of state.activeEffects) {
@@ -198,30 +244,34 @@ export function expireEffects(state: CareerState, step: number): CareerState {
       remaining.push(effect);
       continue;
     }
-
-    const bag = bagForKind(effect.kind);
-    if (bag === null) continue;
-
-    const bagObj =
-      bag === 'attributes'
-        ? (attributes as Record<string, number>)
-        : bag === 'state'
-          ? (current as Record<string, number>)
-          : bag === 'context'
-            ? (context as Record<string, number>)
-            : (relationships as Record<string, number>);
-
-    const key = effect.target;
-    const reverted = clampValue((bagObj[key] as number) - effect.delta, effect.clamp.min, effect.clamp.max);
-    bagObj[key] = reverted;
+    revertOne(effect, bags);
   }
 
-  return {
-    ...state,
-    attributes,
-    state: current,
-    context,
-    relationships,
-    activeEffects: remaining,
-  };
+  return { ...state, attributes: bags.attributes, state: bags.state, context: bags.context, relationships: bags.relationships, activeEffects: remaining };
+}
+
+/**
+ * D-40 규칙 3: 시즌 결산 직전에만 부른다(`expireEffects`가 걷기의 step 진입 시 부르는 것과 짝).
+ * 세 가지를 되돌린다 — `AT_SEASON_END`(항상), `AT_SEASON_INDEX`(그 `index`가 지금 결산하는
+ * `seasonIndex`와 같을 때만 — 아직 멀었으면 다음 시즌들로 넘어간다), 그리고 시즌 안에서 자연 만료되지
+ * 못하고 남은 `AT_STEP`(정의상 시즌을 넘겨 만료되는 게 아니라 결산 시 강제 만료된다 — "시즌 경계를
+ * 넘는 AT_STEP은 다음 시즌의 같은 step에서 만료된다고 정의하지 않는다").
+ */
+export function expireAtSeasonEnd(state: CareerState, seasonIndex: number): CareerState {
+  const bags = cloneBags(state);
+  const remaining: Effect[] = [];
+
+  for (const effect of state.activeEffects) {
+    const expiresAt = effect.expiresAt;
+    const shouldExpire =
+      expiresAt !== null &&
+      (expiresAt.kind === 'AT_STEP' || expiresAt.kind === 'AT_SEASON_END' || (expiresAt.kind === 'AT_SEASON_INDEX' && expiresAt.index === seasonIndex));
+    if (!shouldExpire) {
+      remaining.push(effect);
+      continue;
+    }
+    revertOne(effect, bags);
+  }
+
+  return { ...state, attributes: bags.attributes, state: bags.state, context: bags.context, relationships: bags.relationships, activeEffects: remaining };
 }

@@ -4,8 +4,11 @@ import { z } from 'zod';
 import { EFFECT_DEFAULTS, EffectSchema } from './effect.ts';
 
 describe('EffectSchema type', () => {
-  it('matches the domain Effect shape exactly', () => {
-    expectTypeOf<z.infer<typeof EffectSchema>>().toEqualTypeOf<DomainEffect>();
+  // T-2-014 D-40 규칙 4: `restoreTo`는 `applyEffects`가 REPLACE 적용 시점에 채우는 런타임 전용
+  // 필드라 콘텐츠 `EffectSchema`는 이 필드를 모른다(effect.ts 주석 참고) — 도메인 `Effect`와
+  // 완전히 같은 모양이 아니라 `restoreTo`를 뺀 모양과 같아야 한다.
+  it('matches the domain Effect shape exactly except the runtime-only restoreTo field', () => {
+    expectTypeOf<z.infer<typeof EffectSchema>>().toEqualTypeOf<Omit<DomainEffect, 'restoreTo'>>();
   });
 });
 
@@ -73,7 +76,9 @@ describe('EffectSchema validation', () => {
     ).not.toThrow();
   });
 
-  it('rejects a REPLACE effect that has a non-null expiresAt', () => {
+  // T-2-014 D-40 규칙 4: REPLACE는 이제 만료될 수 있다(만료 시 `applyEffects`가 채운
+  // `restoreTo`로 되돌린다 — 콘텐츠 저작 시점엔 이 필드가 없어도 된다).
+  it('accepts a REPLACE effect that has a non-null expiresAt', () => {
     expect(() =>
       EffectSchema.parse({
         kind: 'CURRENT',
@@ -85,7 +90,23 @@ describe('EffectSchema validation', () => {
         expiresAt: { kind: 'STEPS_AFTER', steps: 2 },
         stackingRule: 'REPLACE',
       }),
-    ).toThrowError(/REPLACE/);
+    ).not.toThrow();
+  });
+
+  // T-2-014 D-40 규칙 3: PERMANENT는 영구 변화라 만료 개념이 없다.
+  it('rejects a PERMANENT effect that has a non-null expiresAt', () => {
+    expect(() =>
+      EffectSchema.parse({
+        kind: 'PERMANENT',
+        sourceId: 'x',
+        target: 'shooting',
+        delta: 1,
+        clamp: { min: 0, max: 99 },
+        appliesAt: { kind: 'IMMEDIATE' },
+        expiresAt: { kind: 'STEPS_AFTER', steps: 2 },
+        stackingRule: 'ONCE_PER_SOURCE',
+      }),
+    ).toThrowError(/PERMANENT/);
   });
 
   it('accepts a REPLACE effect with a null expiresAt', () => {

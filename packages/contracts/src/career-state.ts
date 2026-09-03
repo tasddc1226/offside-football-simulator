@@ -1,4 +1,4 @@
-import type { AttributeKey, ChapterTrigger } from '@offside/domain';
+import type { AttributeKey, CareerTagId, ChapterTrigger } from '@offside/domain';
 import { z } from 'zod';
 import { PlayerDraftSchema, PlayerProfileSchema, PositionSchema } from './player.js';
 import { RngStateSchema } from './snapshot.js';
@@ -59,6 +59,16 @@ export const ChapterTriggerSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('TAG'), tag: z.string().min(1) }),
 ]) satisfies z.ZodType<ChapterTrigger>;
 
+// T-2-014 D-42: `ChapterTrigger['kind']` 리터럴만 뽑은 스키마. `ChapterRecord.trigger`·
+// `Pending`(CHAPTER).trigger가 판별 유니온 전체가 아니라 kind 하나만 저장하므로 따로 둔다.
+export const ChapterTriggerKindSchema = z.enum(['DEBUT', 'DERBY', 'CUP_FINAL', 'DECIDER', 'TAG']) satisfies z.ZodType<
+  ChapterTrigger['kind']
+>;
+
+// T-2-014 D-42: RESOLVE_CHAPTER.payload.outcomes[]·ChapterRecord.decisions[]가 남기는 결과 종류.
+// domain `ChapterOutcomeKind`와 동일 — `CAREER_TAG_EVALUATORS`(TAG-BIG-GAME 등)가 SUCCESS 개수를 센다.
+export const ChapterOutcomeKindSchema = z.enum(['SUCCESS', 'NEUTRAL', 'FAIL', 'FIXED']);
+
 // T-2-004 D-38: CHAPTER pending의 판단마다 확정된 순서대로 쌓는 기록. `roll`은 재생 시 검증용이 아니라
 // 그 판단이 소비한 rngState.rollInt 결과값 자체(감사·리플레이 확인용)다.
 export const ResolvedChapterDecisionSchema = z.strictObject({
@@ -66,6 +76,8 @@ export const ResolvedChapterDecisionSchema = z.strictObject({
   optionId: z.string().min(1),
   outcomeId: z.string().min(1),
   roll: z.number().int().nonnegative(),
+  // T-2-014 D-42.
+  outcomeKind: ChapterOutcomeKindSchema,
 });
 
 // T-2-004 D-38: 챕터 하나가 판단을 모두 확정하면 `season.chapters`에 남는 기록. domain `ChapterRecord`와
@@ -76,7 +88,18 @@ export const ChapterRecordSchema = z.strictObject({
   step: z.number().int().min(1).max(12),
   matchId: z.string().min(1),
   importance: SlotImportanceSchema,
-  decisions: z.array(z.strictObject({ decisionId: z.string().min(1), optionId: z.string().min(1), outcomeId: z.string().min(1) })),
+  // T-2-014 D-42: 어떤 트리거로 열렸는지(`CAREER_TAG_EVALUATORS`의 TAG-DERBY-HERO 등이 참조). domain
+  // `ChapterTrigger['kind']`와 동일한 리터럴 5개(위 `ChapterTriggerSchema`의 kind와 같은 목록).
+  trigger: ChapterTriggerKindSchema,
+  decisions: z.array(
+    z.strictObject({
+      decisionId: z.string().min(1),
+      optionId: z.string().min(1),
+      outcomeId: z.string().min(1),
+      // T-2-014 D-42.
+      outcomeKind: ChapterOutcomeKindSchema,
+    }),
+  ),
   ratingDeltaTenths: z.number().int(),
 });
 
@@ -112,6 +135,8 @@ export const PendingSchema = z
       importance: SlotImportanceSchema,
       matchId: z.string().min(1),
       decisionsTotal: z.number().int().min(1).max(3),
+      // T-2-014 D-42.
+      trigger: ChapterTriggerKindSchema,
       resolved: z.array(ResolvedChapterDecisionSchema),
     }),
     z.strictObject({ kind: z.literal('CONTRACT'), step: z.number().int().min(1).max(12) }),
@@ -136,6 +161,8 @@ export const TimelineEntrySchema = z.strictObject({
     'ROLE_RESOLVED',
     // T-2-004 D-38: 챕터 판단 하나가 확정될 때마다 1건(refId `${chapterId}:${decisionId}:${optionId}:${outcomeId}`).
     'CHAPTER_RESOLVED',
+    // T-2-014 D-42: 커리어 태그가 하나 부여될 때마다 1건(refId는 tagId).
+    'CAREER_TAG_GRANTED',
   ]),
   refId: z.string().nullable(),
   age: z.number().int(),
@@ -417,13 +444,24 @@ export const EffectSchema = z.strictObject({
     z.strictObject({ kind: z.literal('IMMEDIATE') }),
     z.strictObject({ kind: z.literal('NEXT_SEASON_STEP'), step: z.number().int() }),
   ]),
+  // T-2-014 D-40 규칙 3: `AT_SEASON_END`(결산 직전 되돌림)·`SEASONS_AFTER`(저장 시 도메인이
+  // `AT_SEASON_INDEX`로 치환)가 더해진다.
   expiresAt: z
     .discriminatedUnion('kind', [
       z.strictObject({ kind: z.literal('STEPS_AFTER'), steps: z.number().int() }),
       z.strictObject({ kind: z.literal('AT_STEP'), step: z.number().int() }),
+      z.strictObject({ kind: z.literal('AT_SEASON_END') }),
+      z.strictObject({ kind: z.literal('SEASONS_AFTER'), seasons: z.number().int() }),
+      z.strictObject({ kind: z.literal('AT_SEASON_INDEX'), index: z.number().int() }),
     ])
     .nullable(),
-  stackingRule: z.enum(['ONCE_PER_SOURCE', 'REPLACE', 'SUM']),
+  // T-2-014 D-40 규칙 2: `ONCE_PER_SEASON`은 시즌마다 1회(`season:<index>:<sourceId>`로 dedupe).
+  stackingRule: z.enum(['ONCE_PER_SOURCE', 'ONCE_PER_SEASON', 'REPLACE', 'SUM']),
+  // T-2-014 D-40 규칙 6: 결과 원인 태그(선택).
+  reasonTag: z.string().exactOptional(),
+  // T-2-014 D-40 규칙 4: REPLACE + expiresAt 조합이 `activeEffects`에 저장될 때 `applyEffects`가
+  // 채우는 적용 전 원래 값(만료 시 이 값으로 복원한다).
+  restoreTo: z.number().exactOptional(),
 });
 
 export const FootballSeasonSchema = z.strictObject({
@@ -556,6 +594,38 @@ export const CAREER_STATE_ATTRIBUTE_KEYS = [
 
 type AttributesShape = { [K in (typeof CAREER_STATE_ATTRIBUTE_KEYS)[number]]: z.ZodNumber };
 
+/**
+ * T-2-014 D-42: domain `CAREER_TAG_IDS`의 복제(ADR-005 패턴, 14 "커리어 태그 카탈로그" 표 순서 그대로).
+ */
+export const CAREER_TAG_IDS = [
+  'TAG-ONE-CLUB',
+  'TAG-JOURNEYMAN',
+  'TAG-LOAN-LEGEND',
+  'TAG-BIG-GAME',
+  'TAG-GLASS-GENIUS',
+  'TAG-MANAGER-FAVOURITE',
+  'TAG-LOCKER-LEADER',
+  'TAG-PROMOTION-EXPERT',
+  'TAG-DERBY-HERO',
+  'TAG-TRAITOR',
+  'TAG-LATE-BLOOMER',
+  'TAG-IRONMAN',
+  'TAG-COMEBACK',
+  'TAG-MENTOR',
+  'TAG-CONTROVERSIAL',
+  'TAG-UNCROWNED',
+] as const satisfies readonly CareerTagId[];
+
+export const CareerTagIdSchema = z.enum(CAREER_TAG_IDS);
+
+// T-2-014 D-42: 태그 하나가 부여된 기록. domain `CareerTagGrant`와 동일.
+export const CareerTagGrantSchema = z.strictObject({
+  tagId: CareerTagIdSchema,
+  seasonIndex: z.number().int().positive(),
+  atRevision: z.number().int().positive(),
+  sourceRefId: z.string().min(1),
+});
+
 const attributesShape = Object.fromEntries(
   CAREER_STATE_ATTRIBUTE_KEYS.map((key) => [key, z.number().int()]),
 ) as AttributesShape;
@@ -605,6 +675,9 @@ export const CareerStateSchema = z.strictObject({
   resolvedEventIds: z.array(z.string()),
   // T-2-004 D-38: resolvedEventIds와 같은 역할, 챕터용(`${chapterId}@${seasonIndex}` 형식).
   resolvedChapterIds: z.array(z.string()),
+  // T-2-014 D-42.
+  careerTags: z.array(CareerTagIdSchema),
+  careerTagGrants: z.array(CareerTagGrantSchema),
   rngState: RngStateSchema,
   rulesetVersion: SemverSchema,
   contentPackVersion: SemverSchema,

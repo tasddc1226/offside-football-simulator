@@ -192,7 +192,14 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'CHAPTER', required: false, importance: 'MINOR' }],
       summary: null,
     };
-    const chapterOpen = { chapterId: 'CHP-TEST-001', version: 1, importance: 'MAJOR' as const, matchId: 'test-match', decisionsTotal: 1 };
+    const chapterOpen = {
+      chapterId: 'CHP-TEST-001',
+      version: 1,
+      importance: 'MAJOR' as const,
+      matchId: 'test-match',
+      decisionsTotal: 1,
+      trigger: 'DEBUT' as const,
+    };
     expect(selectOpenSlot(minorStep, 'FAST', [], rng, null, chapterOpen)).toEqual({ opened: false });
 
     const majorStep: SeasonStep = {
@@ -250,6 +257,7 @@ describe('isAutoPassablePending', () => {
         importance: 'MAJOR',
         matchId: 'm1',
         decisionsTotal: 1,
+        trigger: 'DEBUT',
         resolved: [],
       }),
     ).toBe(false);

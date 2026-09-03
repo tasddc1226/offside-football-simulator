@@ -1,6 +1,6 @@
 {
   "revision": 18,
-  "stateHash": "7f75c083c3652925fdad2cc7da3cfe63232346fce7147d6c7bc797d58259169c",
+  "stateHash": "cac5846f063b520f0e3da7988acdfff4ec2d91273e6d15bd45cd20cdb4761aa2",
   "rngStateDraws": 400,
   "age": 18,
   "seasonHistory": [
@@ -504,22 +504,25 @@
             "step": 3,
             "matchId": "1-3-0",
             "importance": "MAJOR",
+            "trigger": "DEBUT",
             "decisions": [
               {
                 "decisionId": "D1",
                 "optionId": "OPT-CONFIDENT",
-                "outcomeId": "D1-SUCCESS"
+                "outcomeId": "D1-SUCCESS",
+                "outcomeKind": "SUCCESS"
               },
               {
                 "decisionId": "D2",
                 "optionId": "OPT-SIMPLE",
-                "outcomeId": "D2-FAIL"
+                "outcomeId": "D2-FAIL",
+                "outcomeKind": "FAIL"
               }
             ],
             "ratingDeltaTenths": 1
           }
         ],
-        "hash": "8cb2fef67eec1760029ee7c0dbaa829a7a3678e5a11298c29ed5f051a39b4dac"
+        "hash": "5ff53732b2f83a9591af11be6e2589e41992ad8e73750ca9ca169bb29cc55a96"
       }
     }
   ],
@@ -529,16 +532,19 @@
     "step": 3,
     "matchId": "1-3-0",
     "importance": "MAJOR",
+    "trigger": "DEBUT",
     "decisions": [
       {
         "decisionId": "D1",
         "optionId": "OPT-CONFIDENT",
-        "outcomeId": "D1-SUCCESS"
+        "outcomeId": "D1-SUCCESS",
+        "outcomeKind": "SUCCESS"
       },
       {
         "decisionId": "D2",
         "optionId": "OPT-SIMPLE",
-        "outcomeId": "D2-FAIL"
+        "outcomeId": "D2-FAIL",
+        "outcomeKind": "FAIL"
       }
     ],
     "ratingDeltaTenths": 1
