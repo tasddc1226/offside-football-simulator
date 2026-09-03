@@ -4,7 +4,7 @@
 
 ## 현재 게이트
 
-**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. **Phase 1 코드 작업 종료(2026-09-03 12:12, PR #35).** T-1-009~017이 전부 머지돼 온보딩부터 첫 계약·대시보드, 복구 코드·프로필 복구·삭제, Google 연결·로그아웃, 성별·선호 포지션까지 브라우저에서 이어진다. [완료 조건 표](phase-1-completion.md) 15행 중 14행 ✅(#12는 오케스트레이터 수동 점검), #15 Google 실계정 검증만 U-003 대기. Phase 2 Wave 1: T-2-001(시즌 구조)이 PR #36으로 머지됐고 T-2-002(팀 전술·경쟁자·선발)를 투입했다 — Phase 2는 순차이며 계획·결정은 [phase-2-plan.md](phase-2-plan.md)(D-24~D-35). T-2-003·T-2-006 브리프는 미리 써 두었다. 사용자가 작성한 콘텐츠 정본 `docs/content/kickoff/`(PR #24)는 Phase 2 콘텐츠 작업의 입력이며 지금 코드 작업을 요구하지 않는다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
+**Phase 0 코드 작업 종료(2026-09-02 저녁, PR #14).** 남은 Phase 0 항목은 T-0-010(CI·배포)뿐이며 U-002 Cloudflare 계정을 기다린다. Phase 순서 규칙(2026-09-02 사용자 결정)에 따라 Phase 1 Wave 1(T-1-001~004)과 Wave 2(T-1-005·006·015)를 투입했다. **Phase 1 코드 작업 종료(2026-09-03 12:12, PR #35).** T-1-009~017이 전부 머지돼 온보딩부터 첫 계약·대시보드, 복구 코드·프로필 복구·삭제, Google 연결·로그아웃, 성별·선호 포지션까지 브라우저에서 이어진다. [완료 조건 표](phase-1-completion.md) 15행 중 14행 ✅(#12는 오케스트레이터 수동 점검), #15 Google 실계정 검증만 U-003 대기. Phase 2 Wave 1 종료: T-2-001(시즌 구조, PR #36)·T-2-002(팀 전술·경쟁자·선발, PR #37)가 머지됐고 Wave 2로 T-2-003(경기 계산)·T-2-006(계약·동기화·크기)을 나란히 투입했다 — Phase 2는 순차(웨이브 안 병행)이며 계획·결정은 [phase-2-plan.md](phase-2-plan.md)(D-24~D-36). 사용자가 작성한 콘텐츠 정본 `docs/content/kickoff/`(PR #24)는 Phase 2 콘텐츠 작업의 입력이며 지금 코드 작업을 요구하지 않는다. 계획·결정은 [phase-1-plan.md](phase-1-plan.md). ADR-001~009 승인(2026-09-02). Phase 1 브리프는 미리 작성한다. 계정·프로토타입에 의존하지 않는 골격 작업(T-0-001~004, 007, 009)은 먼저 진행한다. 게임 규칙 fixture의 수치(T-0-002 이후 실제 규칙)와 CI 배포(T-0-010)는 각각 프로토타입 기록(U-005)과 Cloudflare(U-002)를 기다린다. 앱인토스 출시 준비(U-007~U-011, M-001~M-006)는 사용자가 미니앱 출시를 결정할 때 착수한다.
 
 WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. 현재 Phase 1~7의 국내 MVP 순서를 바꾸지 않으며, Phase 3~5와 Phase 7 완료 후 새 ruleset의 신규 Career에 해외 이적·가상 해외 리그·대륙대회를 연다. 정본은 [WORLD STAGE 개발 명세](../development/15-world-stage-expansion.md)와 [Phase 8](../phases/phase-08-world-stage.md)이다.
 
@@ -95,11 +95,11 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | ID | 패키지 | 작업 | 선행 | Wave | 상태 | 메모 |
 |---|---|---|---|---|---|---|
 | T-2-001 | domain + content | FootballSeason·CompetitionRecord·12 step 캘린더, START_SEASON·SETTLE_SEASON, ADVANCE 재정의, checkpoint·결정 예산 | Phase 1 종료 | 1 | done | PR #36 a806e21, [브리프](briefs/T-2-001.md) |
-| T-2-002 | domain + content | 팀 전술·경쟁자, Tactical Fit·Squad Status, RULE-PERF-001·RULE-SEL-001, golden fixture A·B | T-2-001 | 1 | in-progress | `T-2-002-tactics-selection`, [브리프](briefs/T-2-002.md) |
-| T-2-003 | domain | 포지션별 경기 통계 generator, 0분·교체·퇴장·부상, FAST/CHAPTER 분포 동일성, 1,000회 hash | T-2-002 | 2 | todo | |
+| T-2-002 | domain + content | 팀 전술·경쟁자, Tactical Fit·Squad Status, RULE-PERF-001·RULE-SEL-001, golden fixture A·B | T-2-001 | 1 | done | PR #37 41b89e6, [브리프](briefs/T-2-002.md) |
+| T-2-003 | domain | 포지션별 경기 통계 generator, 0분·교체·퇴장·부상, FAST/CHAPTER 분포 동일성, 1,000회 hash | T-2-002 | 2 | in-progress | `T-2-003-match-engine`, [브리프](briefs/T-2-003.md) |
 | T-2-004 | domain + content | 핵심 경기 챕터 선택·판단 resolver, 팩 `chapters` 스키마 + 3종 | T-2-003 | 2 | todo | |
 | T-2-005 | domain | 시즌 집계·SeasonResult, 성장·폼·체력·사기 Effect, 원인 태그, 결산 hash | T-2-003, T-2-004 | 2 | todo | |
-| T-2-006 | contracts + api + engine-client | CMD-SIM 스키마, 시즌·결산·EffectQueue 스키마, Snapshot 크기, 동기화 회귀, Worker 계산 시간 | T-2-001 | 2 | todo | |
+| T-2-006 | contracts + api + engine-client | CMD-SIM 스키마, 시즌·결산·EffectQueue 스키마, Snapshot 크기, 동기화 회귀, Worker 계산 시간 | T-2-001 | 2 | in-progress | `T-2-006-contracts-sync`, [브리프](briefs/T-2-006.md) |
 | T-2-007 | web | SCR-005·011·029(advance·전술실)·033 | T-2-002, T-2-006 | 3 | todo | |
 | T-2-008 | web | SCR-031 챕터·SCR-012 역할 변경·재생 복원 | T-2-004, T-2-006 | 3 | todo | |
 | T-2-009 | web | SCR-015 시즌 결산·연대기 요약·응답 유실 복구 | T-2-005, T-2-006 | 3 | todo | |
@@ -126,7 +126,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-2-002 | Sonnet 5, Orca 워크트리 `T-2-002-tactics-selection` | 2026-09-03 | 브리프 전달 |
+| T-2-003 | Sonnet 5, Orca 워크트리 `T-2-003-match-engine` | 2026-09-03 | 브리프 전달 |
+| T-2-006 | Sonnet 5, Orca 워크트리 `T-2-006-contracts-sync` | 2026-09-03 | 브리프 전달 |
 
 ## 완료
 
@@ -169,3 +170,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-1-014 | Phase 1 E2E 완료 조건 측정(resilience·recovery-conflict·session-length·keyboard·a11y 확장·perf), 완료 조건 표 15행(PR #34, 리뷰 수정 0건, 워커 비용 약 $19.8, 80분) | 2bbfdf0 |
 | T-1-017 | Phase 1 완료 조건 보완: 포지션 탭 키보드 도달·선호/주포지션 표시·국외 이전 표·결과 aria-live·COMMITTING 이탈 경고(PR #35, 리뷰 수정 0건, 워커 비용 약 $12.2, 51분) | d5fbf11 |
 | T-2-001 | 시즌 구조: FootballSeason·12 step 캘린더·START_SEASON/SETTLE_SEASON·ADVANCE 재정의·결정 예산·STEP_BOUNDARY, golden career-02-season FAST·CHAPTER(PR #36, 리뷰 수정 4건, 워커 비용 약 $24.3, 102분) | a806e21 |
+| T-2-002 | 팀 전술 스타일 3종·리그 4·FA컵·경쟁자 8×2·Tactical Fit·Squad Status·Selection Score(RULE-SEL-001)·step-1 역할 제안 RESOLVE_ROLE·전술실 뷰, golden career-02(RESOLVE_ROLE)·career-03-underdog(OVR 58 선발)(PR #37, 리뷰 수정 3건, 워커 비용 약 $30.6, 109분) | 41b89e6 |

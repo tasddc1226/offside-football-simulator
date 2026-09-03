@@ -2,6 +2,18 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-03 (오후, PR #37 T-2-002 머지 — T-2-003·T-2-006 병행 투입)
+
+**결과**: T-2-002(PR #37, `41b89e6`) 머지. 룰셋에 전술 스타일 3종(possession 4-3-3·counter 4-2-3-1·press 4-1-4-1, 포지션별 선호 아키타입)·리그 4(유스 8·1부 12·2부 12·3부 10)·FA컵(1~3부, R2 step 7)·선발 상수·경쟁자 이름 40, domain `selection.ts`(Tactical Fit·familiarity·Expected Performance·Squad Status·Selection Score·rankSelection·rankPositionForPlayer·computeRoleProposal·deriveTacticalRoom)와 `competitors.ts`(포지션 8×2, 23롤/명 = 368롤), step-1 ROLE_PROPOSAL pending과 `RESOLVE_ROLE {ACCEPT|DECLINE}`(CMD-SIM-004), contracts 스키마, golden career-02(RESOLVE_ROLE 포함)·career-03-underdog(OVR 58이 OVR 80 경쟁자를 제치고 START). 전체 체인 통과(e2e 54, 번들 100.8 KB). 워커 비용 약 $30.6, 109분, 리뷰 1회 3건.
+
+**리뷰 수정 3건**: (1) `computeRoleProposal`의 후보 포지션 필터가 "다른 포지션의 선호 아키타입에 선수 아키타입이 포함"이라 항상 false — 아키타입이 포지션 고유라 POSITION_CHANGE가 운영 룰셋에서 도달 불가였다. 브리프 표현이 모호했던 오케스트레이터 책임. 후보 = 인접 포지션 전부(아키타입 필터 없음)로 확정(D-34 보정). 실제 룰셋으로 도달 케이스·GK 불가·선호 아키타입 선수 불가 테스트 추가. (2) RESOLVE_ROLE 네 분기 공통 불변식 `season.squadRole === squadRoleFromSelection(season.selection)` — 제안의 `to`·`squadRoleAfter`는 예측값이고 실제 역할은 재산출 순위가 정한다(D-26). (3) `packages/fixtures` index에 career-03 export 누락.
+
+**수용한 편차 → D-36 정수 상태**: 브리프의 소수 첫째 자리 반올림 대신 정수 반올림(`roundToInt`). `canonicalize`가 safe integer만 허용하므로 **저장 상태의 모든 수는 정수**이며 소수가 필요한 값은 `…Tenths`·`…Centi` 정수 필드로 든다. T-2-003 브리프의 평점을 `ratingTenths`(40~100)로 고쳤다(00c362d). 그 밖에 RESOLVE_ROLE `nextAction: 'ADVANCE'`, web 최소 수정('역할 결정' 라벨), 100× 반복 테스트 timeout 15초(공유 머신 부하).
+
+**남긴 것·리스크**: (a) 밸런스 — career-03에서 아키타입 항(+40)만으로 OVR이 22 낮은 선수가 1부 팀 주전이 된다. balance-targets "8 이상 낮은 선수의 장기 주전 5% 미만"과 긴장 → T-2-011 측정 항목에 넣고 `tacticalFitWeights.archetype`(0.4)을 조정 후보로 둔다. (b) 계약 제안의 `tacticalFitEstimate`(45~75)가 실제 스타일 계산값(career-02는 37)과 무관 → Phase 3 계약 작업에서 실제 계산으로 추정치를 만든다. (c) 경쟁자 부상·정지, 주장(captaincy) 모델 없음(Phase 4). (d) `season.selection`은 시즌 시작·RESOLVE_ROLE 시점 스냅샷이며 경기마다 재산출·저장은 T-2-003.
+
+**투입**: Wave 2로 T-2-003(경기 계산, domain·content)과 T-2-006(계약 정합·Snapshot 크기·동기화 회귀·Worker 시간)을 나란히 투입. 두 브리프에 T-2-002 접점 절(정수 tenths·selection API·스키마 동반 추가)을 더했다.
+
 ## 2026-09-03 (오후, PR #36 T-2-001 머지 — T-2-002 투입)
 
 **결과**: T-2-001(PR #36, `a806e21`) 머지. FootballSeason·12 step 캘린더(룰셋 `leagueCalendar`)·START_SEASON/SETTLE_SEASON·ADVANCE 재정의(다음 결정 step 또는 결산까지)·결정 예산 절단·STEP_BOUNDARY checkpoint·golden career-02-season(FAST 결정 step {1,3,7,11}, CHAPTER 1~11). 새 roll 없음(FAST 30·CHAPTER 35 draws). 워커 비용 약 $24.3, 102분. 오케스트레이터 재검증 체인 통과(e2e 54).
