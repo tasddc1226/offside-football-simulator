@@ -24,6 +24,7 @@ import {
   type EngineCommand,
 } from '@offside/fixtures';
 import { describe, expect, it } from 'vitest';
+import { PutCareerBodySchema } from './careers.js';
 import { REQUEST_BODY_MAX_BYTES, SNAPSHOT_STATE_RECOMMENDED_BYTES } from './headers.js';
 import type { CommandLogEntry } from './commands.js';
 
@@ -65,15 +66,16 @@ type Step = { snapshot: DomainSnapshot; command: EngineCommand };
 /** 스냅샷 하나 + 실제 명령 로그(revision `from+1`..`to`, 실제 commandType·payload)로 이뤄진 PUT 본문의 바이트 수. */
 function buildPutBody(steps: readonly Step[], from: number, target?: Step) {
   const last = (target ?? steps[steps.length - 1]!).snapshot;
+  const lastRevision = last.revision;
   const commandsPart = steps
-    .filter((step) => step.snapshot.revision > from && step.snapshot.revision <= last.revision)
+    .filter((step) => step.snapshot.revision > from && step.snapshot.revision <= lastRevision)
     .map(
       (step): Pick<CommandLogEntry, 'revision' | 'commandId' | 'commandType' | 'payload' | 'resultHash'> => ({
         revision: step.snapshot.revision,
         commandId: step.command.commandId,
         commandType: step.command.type,
         payload: step.command.payload as CommandLogEntry['payload'],
-        resultHash: step.snapshot.stateHash,
+        resultHash: step.snapshot.revision === lastRevision ? last.stateHash : step.snapshot.stateHash,
       }),
     );
   return {
@@ -392,6 +394,10 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
     const offerCount = market.snapshot.state.pending?.kind === 'OFFERS' ? market.snapshot.state.pending.offers.length : 0;
     expect(offerCount, `${label} 3-offer size probe`).toBeGreaterThanOrEqual(3);
     const marketBody = buildPutBody(steps, 0, market);
+    const parsedMarketBody = PutCareerBodySchema.parse(marketBody);
+    expect(parsedMarketBody.commands.at(-1)?.resultHash, `${label} 3-offer PUT resultHash`).toBe(
+      parsedMarketBody.snapshot.stateHash,
+    );
     const marketBodyState = JSON.parse(marketBody.snapshot.state) as {
       pending?: { kind?: string; offers?: unknown[] };
     };
