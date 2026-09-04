@@ -112,6 +112,58 @@ describe('career-12-injury fixture — 실제 중증→재활→회복→재발 
     expect(resumedSeason.steps.find((step) => step.index === pending.step)?.summary?.decisionsOpened).toBe(1);
   });
 
+  it('재활 직후 같은 step의 자동 통과 CONTRACT pending은 injury 재개로 오인하지 않고 step을 닫는다', () => {
+    let snapshot = runCareerFixture(careerInjuryFixture);
+    snapshot = runCommand(snapshot, {
+      type: 'START_SEASON',
+      payload: { simulationMode: 'FAST', serviceSeasonId: 'svc-injury-12-pending-guard' },
+    });
+    snapshot = runCommand(snapshot, { type: 'RESOLVE_ROLE', payload: { decision: 'ACCEPT' } });
+
+    const firstPending = runCommand(snapshot, { type: 'ADVANCE', payload: { eligibleEvents: [] } });
+    expect(firstPending.state.pending?.kind).toBe('INJURY');
+    if (firstPending.state.pending?.kind !== 'INJURY') return;
+    const firstResolved = runCommand(firstPending, {
+      type: 'RESOLVE_EVENT',
+      payload: {
+        eventId: firstPending.state.pending.eventId,
+        definitionVersion: firstPending.state.pending.version,
+        choiceId: 'A',
+        rehabPlan: 'STANDARD',
+        outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+      },
+    });
+
+    const secondPending = runCommand(firstResolved, { type: 'ADVANCE', payload: { eligibleEvents: [] } });
+    expect(secondPending.state.pending?.kind).toBe('INJURY');
+    if (secondPending.state.pending?.kind !== 'INJURY') return;
+    const secondResolved = runCommand(secondPending, {
+      type: 'RESOLVE_EVENT',
+      payload: {
+        eventId: secondPending.state.pending.eventId,
+        definitionVersion: secondPending.state.pending.version,
+        choiceId: 'A',
+        rehabPlan: 'STANDARD',
+        outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+      },
+    });
+
+    // RESOLVE_EVENT leaves the step open. Its first continuation opens the existing-contract
+    // auto-pass pending, so the next ADVANCE enters the guard's state.pending !== null branch.
+    const autoPassPending = runCommand(secondResolved, { type: 'ADVANCE', payload: { eligibleEvents: [] } });
+    const interruptedStep = autoPassPending.state.season!.currentStep;
+    expect(autoPassPending.state.pending).toMatchObject({ kind: 'CONTRACT', offers: [], step: interruptedStep });
+    expect(autoPassPending.state.season!.steps.find((step) => step.index === interruptedStep)?.summary).toBeNull();
+    expect(autoPassPending.state.timeline.at(-1)).toMatchObject({ kind: 'REHAB_CHOSEN', step: interruptedStep });
+
+    const afterAutoPass = runCommand(autoPassPending, { type: 'ADVANCE', payload: { eligibleEvents: [] } });
+    const closedStep = afterAutoPass.state.season!.steps.find((step) => step.index === interruptedStep);
+    expect(closedStep?.summary?.decisionsOpened).toBe(2);
+    expect(closedStep?.summary?.matchesPlayed).toBeGreaterThanOrEqual(1);
+    expect(afterAutoPass.state.season!.currentStep).toBeGreaterThan(interruptedStep);
+    expect(afterAutoPass.state.pending).not.toMatchObject({ kind: 'CONTRACT', step: interruptedStep, offers: [] });
+  });
+
   it('복수 경기 step의 재개는 duration·condition·match RNG를 이어서 적용하고 일반 slot은 그 뒤에 연다', () => {
     // First reach the production fixture's forced pending with the unmodified ruleset. Only then clone
     // the current pending step for this timing test, so the added deterministic EVENT cannot alter the

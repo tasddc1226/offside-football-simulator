@@ -1188,6 +1188,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
   const currentStep = findSeasonStep(steps, currentStepIndex);
   const lastTimelineEntry = state.timeline[state.timeline.length - 1];
   const resumesInjuryStep =
+    state.pending === null &&
     currentStep.summary === null &&
     lastTimelineEntry?.kind === 'REHAB_CHOSEN' &&
     lastTimelineEntry.step === currentStepIndex;
