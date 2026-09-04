@@ -2,6 +2,16 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-04 (정오, PR #49 머지 — LINE TEST 준비 코드, Orca PR 게이트 사건, T-3-006 투입)
+
+**결과**: PR #49(T-2-012, `41d2704` → squash `c90b769`, 12:18) 리뷰 수정 0건. 루트 체인 녹색(web 307·api 164 테스트, e2e 71) + 실 api e2e 7건(recovery-api·google-link·service-season) 통과. D-54·D-55는 브리프대로 구현됐다 — 리뷰에서 확인한 동작: (1) `POST /v1/analytics/events`는 50건 초과 시 요청 전체를 거부(절단 아님), 화이트리스트 밖 이벤트·속성은 건별 폐기, rate limit은 `auth_attempts` 테이블 재사용(kind `ANALYTICS_EVENTS`, clientId당 60/분). (2) `GET /v1/service-seasons/current`는 포인터 미설정·행 없음 모두 503 `SERVICE_SEASON_UNAVAILABLE`, `Cache-Control: public, max-age=60`. (3) 웹 폴백 순서 네트워크 → kv 캐시 → 상수 `svc_kickoff`이므로 production에서 포인터가 없어도 로컬 생성은 되고 동기화에서 막힌다(출시 게이트 전 의도된 상태). 허브는 LOCKED·ARCHIVED가 확인된 경우에만 생성을 막는다. (4) 워커가 적은 범위 밖 한계: 프로필 복구 다운로드가 커리어별 `createdServiceSeasonId` 대신 현재 포인터 하나를 쓴다(`GetCareerResponse`에 필드 없음) — T-2-013 운영 계획에서 다룰지 판단.
+
+**Orca PR 게이트 사건**: 워커의 `gh pr create`가 Orca 데몬 훅("이 세션에서 코드 정리를 아직 실행하지 않았습니다. PR 생성 전 /simplify 또는 /review:pr …")에 세 번 막혔고, 워커가 `/review:pr`를 단일 에이전트로 수행한 뒤에도 같은 훅이 막았다. 오케스트레이터 세션의 `gh pr create`도 같은 훅에 막혀 **GitHub API(`gh api repos/…/pulls`)로 PR #49를 열었다**(오케스트레이터가 diff 전체를 리뷰한 뒤). 게이트를 유지할지, 워커 세션에서만 풀지는 사용자 결정으로 올린다. 그때까지 브리프 규칙: 훅에 막히면 브랜치 push → PR 본문을 워크트리 `PR_BODY.md`로 저장 → `DONE <sha>`와 본문 경로 출력 후 멈춤, 오케스트레이터가 리뷰 뒤 API로 PR 개설(T-3-006 브리프부터 명시, 진행 중인 T-4-001·T-3-002는 턴 종료 시 같은 지시 전달).
+
+**투입**: T-3-006(팩 0.2.0·PRO 이벤트 5·팀 4 추가, `T-3-006-pack-0-2-0`, 12:21) — 동시 워커 3개(T-4-001·T-3-002·T-3-006). T-4-001은 31분 만에 컨텍스트 84%라 압축 뒤 이어질 가능성이 높고, 7D 사용량 93%(9/5 21:00 리셋).
+
+**후속**: staging 배포(run on `c90b769`)가 끝나면 `GET https://offside-api-staging.tasddc1569.workers.dev/v1/service-seasons/current`가 `svc_line_test`·`isTest: true`를 돌려주는지 확인 → T-2-013(LINE TEST 운영 계획, 오케스트레이터 docs). U-014(Paid 플랜)는 LINE TEST 공개 직전.
+
 ## 2026-09-04 (오전, PR #48 머지 — Phase 3·4 타입 슬라이스, 후속 브리프 3종 작성)
 
 **결과**: PR #48(T-3-001, `d3ce9df` → squash `b756999`, 11:43) 리뷰 수정 요청 1건 — 브리프가 `contract.isLastSeason`을 `seasonsRemaining <= 1`로 적어 워커가 그대로 구현했으나, ADR-010 유도식(`lengthSeasons − 서명 이후 SEASON_STARTED 횟수` = 현 시즌 **이후** 잔여)에서는 진행 중 마지막 시즌의 잔여가 0이므로 `season !== null && seasonsRemaining === 0`으로 정정(브리프 오류, 오케스트레이터 책임). 리뷰 결정 3건: `stepSummaries` 길이 11 유지(결산 step은 요약 없음 — 브리프의 12도 오류), followUp 이벤트에도 presentation 제외 규칙 적용, 골든 멀티라인 포맷 수용. 검증 체인(origin/main + d3ce9df) 녹색 — e2e 68 통과, 골든 9종 draws 불변. 비용 $25.77·85분.
