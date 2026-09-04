@@ -19,7 +19,28 @@ import chapterMatch002 from '../../packs/0.1.0/chapters/CHP-MATCH-002.json' with
 import chapterMatch004 from '../../packs/0.1.0/chapters/CHP-MATCH-004.json' with { type: 'json' };
 import narrativeTokens010 from '../../packs/0.1.0/narrative/tokens.json' with { type: 'json' };
 
-export const PACK_VERSIONS = ['0.1.0'] as const;
+import manifest020 from '../../packs/0.2.0/manifest.json' with { type: 'json' };
+import eventCon001v020 from '../../packs/0.2.0/events/EVT-CON-001.json' with { type: 'json' };
+import eventCon002v020 from '../../packs/0.2.0/events/EVT-CON-002.json' with { type: 'json' };
+import eventCon003v020 from '../../packs/0.2.0/events/EVT-CON-003.json' with { type: 'json' };
+import eventCon010 from '../../packs/0.2.0/events/EVT-CON-010.json' with { type: 'json' };
+import eventCon011 from '../../packs/0.2.0/events/EVT-CON-011.json' with { type: 'json' };
+import eventCon012 from '../../packs/0.2.0/events/EVT-CON-012.json' with { type: 'json' };
+import eventCon013 from '../../packs/0.2.0/events/EVT-CON-013.json' with { type: 'json' };
+import eventDev001v020 from '../../packs/0.2.0/events/EVT-DEV-001.json' with { type: 'json' };
+import eventDev002v020 from '../../packs/0.2.0/events/EVT-DEV-002.json' with { type: 'json' };
+import eventInj001v020 from '../../packs/0.2.0/events/EVT-INJ-001.json' with { type: 'json' };
+import eventMedia001v020 from '../../packs/0.2.0/events/EVT-MEDIA-001.json' with { type: 'json' };
+import eventMedia006 from '../../packs/0.2.0/events/EVT-MEDIA-006.json' with { type: 'json' };
+import eventMgr001v020 from '../../packs/0.2.0/events/EVT-MGR-001.json' with { type: 'json' };
+import eventRel001v020 from '../../packs/0.2.0/events/EVT-REL-001.json' with { type: 'json' };
+import eventRel002v020 from '../../packs/0.2.0/events/EVT-REL-002.json' with { type: 'json' };
+import chapterMatch001v020 from '../../packs/0.2.0/chapters/CHP-MATCH-001.json' with { type: 'json' };
+import chapterMatch002v020 from '../../packs/0.2.0/chapters/CHP-MATCH-002.json' with { type: 'json' };
+import chapterMatch004v020 from '../../packs/0.2.0/chapters/CHP-MATCH-004.json' with { type: 'json' };
+import narrativeTokens020 from '../../packs/0.2.0/narrative/tokens.json' with { type: 'json' };
+
+export const PACK_VERSIONS = ['0.1.0', '0.2.0'] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
 export type ContentPack = {
@@ -50,6 +71,28 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
     ],
     chapters: [chapterMatch001, chapterMatch002, chapterMatch004],
     narrativeTokens: narrativeTokens010,
+  },
+  '0.2.0': {
+    manifest: manifest020,
+    events: [
+      eventCon001v020,
+      eventCon002v020,
+      eventCon003v020,
+      eventCon010,
+      eventCon011,
+      eventCon012,
+      eventCon013,
+      eventDev001v020,
+      eventDev002v020,
+      eventInj001v020,
+      eventMedia001v020,
+      eventMedia006,
+      eventMgr001v020,
+      eventRel001v020,
+      eventRel002v020,
+    ],
+    chapters: [chapterMatch001v020, chapterMatch002v020, chapterMatch004v020],
+    narrativeTokens: narrativeTokens020,
   },
 };
 

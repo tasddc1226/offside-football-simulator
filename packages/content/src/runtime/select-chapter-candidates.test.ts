@@ -57,7 +57,7 @@ function makeContentPack(chapters: ChapterDefinition[]): ContentPack {
     eventsById: new Map(),
     chapters,
     chaptersById: new Map(chapters.map((chapter) => [chapter.id, chapter])),
-    narrativeTokens: { name: ['x'], club: ['x'], manager: ['x'], rival: ['x'], captain: ['x'], team: ['x'], delta: [] },
+    narrativeTokens: { name: ['x'], club: ['x'], manager: ['x'], rival: ['x'], captain: ['x'], team: ['x'], agent: ['x'], delta: [] },
   };
 }
 
