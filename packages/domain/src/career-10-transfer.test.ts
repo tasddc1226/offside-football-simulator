@@ -43,6 +43,50 @@ describe('career-10-transfer fixture — EXPIRED 시장 NEGOTIATE·ACCEPT_OFFER(
     expect(snapshot.state.parentContract).toBeNull();
   });
 
+  it('두 번째 결산의 INTEREST pending은 OFR-23-0 안전 잔류를 열고, 수락 뒤 START_SEASON으로 닫힌다', () => {
+    const { steps } = runTransferFixture();
+    const marketStep = steps.find(
+      (step) => step.command.type === 'SETTLE_SEASON' && step.snapshot.revision === 23,
+    );
+    if (marketStep === undefined) throw new Error('career-10: 두 번째 SETTLE_SEASON step이 없다.');
+    const pending = marketStep.snapshot.state.pending;
+    if (pending === null || pending.kind !== 'OFFERS') {
+      throw new Error('career-10: 두 번째 결산 뒤 OFFERS pending이 없다.');
+    }
+    expect(pending.market).toEqual({
+      openedAtRevision: 23,
+      seasonIndex: 2,
+      reason: 'INTEREST',
+      safeOfferId: 'OFR-23-0',
+    });
+    expect(pending.offers[0]).toMatchObject({ id: 'OFR-23-0', kind: 'RENEWAL' });
+
+    const acceptIndex = steps.findIndex(
+      (step) => step.command.type === 'ACCEPT_OFFER' && step.command.payload.offerId === 'OFR-23-0',
+    );
+    if (acceptIndex < 0) throw new Error('career-10: OFR-23-0 ACCEPT_OFFER step이 없다.');
+    const acceptStep = steps[acceptIndex]!;
+    const acceptCommand = acceptStep.command;
+    if (acceptCommand.type !== 'ACCEPT_OFFER') throw new Error('career-10: 안전 수락 command가 아니다.');
+    expect(acceptCommand.payload.offerId).toBe('OFR-23-0');
+    expect(acceptStep.snapshot.revision).toBe(24);
+    expect(acceptStep.snapshot.state.pending).toBeNull();
+    expect(acceptStep.snapshot.state.contract).toEqual(marketStep.snapshot.state.contract);
+    expect(acceptStep.snapshot.state.clubHistory).toEqual(marketStep.snapshot.state.clubHistory);
+    expect(acceptStep.snapshot.state.rngState.draws).toBe(marketStep.snapshot.state.rngState.draws);
+
+    const startStep = steps[acceptIndex + 1];
+    if (startStep === undefined || startStep.command.type !== 'START_SEASON') {
+      throw new Error('career-10: 안전 수락 직후 START_SEASON이 없다.');
+    }
+    expect(startStep.snapshot.revision).toBe(25);
+    expect(startStep.snapshot.checkpoint).toBe('SEASON_START');
+  });
+
+  it('같은 career-10 명령 로그를 replay하면 trace와 최종 snapshot이 완전히 같다', () => {
+    expect(runTransferFixture()).toEqual(runTransferFixture());
+  });
+
   it('이적_희망·잔류_선언 태그는 없고, NEGOTIATE·ACCEPT_OFFER 타임라인이 순서대로 남는다', () => {
     const { snapshot } = runTransferFixture();
     expect(snapshot.state.tags).toEqual(golden.tags);

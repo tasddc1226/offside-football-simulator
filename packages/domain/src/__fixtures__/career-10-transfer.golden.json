@@ -1,8 +1,8 @@
 {
-  "revision": 24,
-  "stateHash": "b73b934d0f4b6554a3718b19fd7f060edb7f89a445432b4d1c1474daf41f82ab",
+  "revision": 25,
+  "stateHash": "0022499023681d2ec46e6cb806442f702a4e423aa380ce3230a8c14fe837fc58",
   "checkpoint": "SEASON_START",
-  "rngStateDraws": 1142,
+  "rngStateDraws": 1146,
   "age": 19,
   "seasonHistoryLength": 2,
   "contract": {

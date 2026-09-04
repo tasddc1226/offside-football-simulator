@@ -76,6 +76,7 @@
     { "type": "ADVANCE", "payload": { "eligibleEvents": [] } },
     { "type": "ADVANCE", "payload": { "eligibleEvents": [] } },
     { "type": "SETTLE_SEASON", "payload": {} },
+    { "type": "ACCEPT_OFFER", "payload": { "offerId": "OFR-23-0" } },
     { "type": "START_SEASON", "payload": { "simulationMode": "FAST", "serviceSeasonId": "svc-10-s3" } }
   ]
 }

@@ -357,6 +357,7 @@ function majorEpisode(seasonIndex: number): InjuryEpisode {
     diagnosisRange: { minMatches: 3, maxMatches: 6 },
     rehab: null,
     recurrenceRiskBp: 0,
+    recurrenceChecksRemaining: 0,
     status: 'RECOVERED',
     permanentDelta: null,
   };

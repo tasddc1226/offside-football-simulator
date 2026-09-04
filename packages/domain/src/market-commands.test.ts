@@ -664,6 +664,12 @@ describe('T-3-003 P1 market command regressions', () => {
   it('강제 감독 교체가 예약된 임대 결산→PERMANENT→START_SEASON에서 감독·신뢰·전술·선발·주장단을 보존한다', () => {
     const forcedRuleset = {
       ...rulesetProto,
+      // This regression isolates settlement manager reservation from the unrelated
+      // T-4-002 forced-injury decision that can block the fixture's ADVANCE tail.
+      injuryRules: {
+        ...rulesetProto.injuryRules,
+        maxForcedPerSeason: 0,
+      },
       managerRules: {
         ...rulesetProto.managerRules,
         changeProbability: {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { initialSeasonPlayerStats } from './season-stats.js';
 import { onSettlementRelations } from './relationships.js';
 import { rulesetProto } from './__fixtures__/career-01.js';
-import { seedRng } from './rng.js';
+import { rollInt, seedRng } from './rng.js';
 import {
   ATTRIBUTE_KEYS,
   type CareerState,
@@ -286,7 +286,7 @@ describe('onSettlementRelations', () => {
     ).toBeLessThanOrEqual(10);
   });
 
-  it('manager replacement consumes one roll and shares the settlement revision', () => {
+  it('manager replacement consumes one derived roll without changing main rng and shares the settlement revision', () => {
     const ruleset = {
       ...rulesetProto,
       managerRules: {
@@ -298,7 +298,15 @@ describe('onSettlementRelations', () => {
         },
       },
     };
-    const state = makeState({ seasonHistory: [makeSummary(1)] });
+    const state = makeState({
+      seasonHistory: [makeSummary(1)],
+      // The manager stream must not accidentally inherit the main stream's draw counter.
+      rngState: { ...seedRng('relationships-test'), draws: 37 },
+    });
+    const inputRngBytes = JSON.stringify(state.rngState);
+    const directRoll = rollInt(state.rngState, 10000);
+    const resetCounterRoll = rollInt({ s: state.rngState.s, draws: 0 }, 10000);
+    expect(resetCounterRoll.value).toBe(directRoll.value);
     const result = onSettlementRelations({
       state,
       season: makeSeason(makeManager({ tenureSeasons: 3 })),
@@ -310,7 +318,10 @@ describe('onSettlementRelations', () => {
 
     // manager 판정은 기존 T-3 결정 순서를 이동시키지 않는 전용 substream에서 정확히 1회 소비한다.
     expect(result.rng).toEqual(state.rngState);
+    expect(JSON.stringify(result.rng)).toBe(inputRngBytes);
+    expect(result.rng.draws).toBe(state.rngState.draws);
     expect(result.managerDecisionRng?.draws).toBe(1);
+    expect(result.managerDecisionRng).toEqual(resetCounterRoll.state);
     const replay = onSettlementRelations({
       state,
       season: makeSeason(makeManager({ tenureSeasons: 3 })),
@@ -320,6 +331,20 @@ describe('onSettlementRelations', () => {
       timelineRevision: 10,
     });
     expect(replay.managerDecisionRng).toEqual(result.managerDecisionRng);
+
+    const forked = onSettlementRelations({
+      state: { ...state, careerId: 'relationships-fork' },
+      season: makeSeason(makeManager({ tenureSeasons: 3 })),
+      result: makeResult(),
+      ruleset,
+      rng: state.rngState,
+      timelineRevision: 10,
+    });
+    expect(forked.rng).toEqual(result.rng);
+    expect(forked.managerDecisionRng).toEqual(result.managerDecisionRng);
+    expect(forked.state.nextManager).toEqual(result.state.nextManager);
+    expect(forked.state.timeline).toEqual(result.state.timeline);
+
     expect(result.state.nextManager?.id).toBe('seoul-tier1-mgr-2');
     expect(result.state.timeline.at(-1)?.kind).toBe('MANAGER_CHANGED');
     expect(result.state.timeline.at(-1)?.revision).toBe(10);

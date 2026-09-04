@@ -25,6 +25,21 @@ describe('judgeMarketReason', () => {
   // 시장가치 지수 7235(≥7000)라 override 없이 그대로 쓰면 index발 INTEREST가 나온다.
   const { beforeSettlementState: base } = runSettledFixture();
 
+  function stateAtMarketIndex(target: number): CareerState {
+    for (let popularityCenti = 0; popularityCenti <= 10000; popularityCenti += 1) {
+      const state: CareerState = {
+        ...base,
+        reputation: { ...base.reputation, popularityCenti },
+      };
+      const index = computeMarketValueIndex(
+        buildMarketValueInput(state, rulesetProto),
+        rulesetProto.marketValueRules,
+      ).indexCenti;
+      if (index === target) return state;
+    }
+    throw new Error(`market index ${target}를 만드는 popularityCenti를 찾지 못했다.`);
+  }
+
   it('계약 잔여 0이면 EXPIRED — 다른 조건과 무관하게 우선한다', () => {
     const state: CareerState = { ...base, contract: { ...contractOf(base), lengthSeasons: 1 } };
     expect(judgeMarketReason(state, rulesetProto)).toBe('EXPIRED');
@@ -38,6 +53,17 @@ describe('judgeMarketReason', () => {
     const index = computeMarketValueIndex(buildMarketValueInput(base, rulesetProto), rulesetProto.marketValueRules).indexCenti;
     expect(index).toBeGreaterThanOrEqual(rulesetProto.transferRules.interest.minIndexCenti);
     expect(judgeMarketReason(base, rulesetProto)).toBe('INTEREST');
+  });
+
+  it.each([
+    { target: 6999, expected: null },
+    { target: 7000, expected: 'INTEREST' as const },
+  ])('시장가치 지수 $target/$expected 경계를 정확히 평가한다', ({ target, expected }) => {
+    const state = stateAtMarketIndex(target);
+    expect(
+      computeMarketValueIndex(buildMarketValueInput(state, rulesetProto), rulesetProto.marketValueRules).indexCenti,
+    ).toBe(target);
+    expect(judgeMarketReason(state, rulesetProto)).toBe(expected);
   });
 
   // 지수발 INTEREST를 걷어내려고 baseOvr·scoutedPotential을 낮춘 공통 베이스(index 5535 < 7000).

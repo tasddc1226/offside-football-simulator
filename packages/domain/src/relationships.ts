@@ -1,5 +1,5 @@
 import type { RngState } from './rng.js';
-import { rollInt, seedRng } from './rng.js';
+import { rollInt } from './rng.js';
 import { compareCodePoints } from './canonical.js';
 import { buildReplacementManager } from './manager.js';
 import { applySettlementReputation } from './reputation.js';
@@ -47,7 +47,7 @@ type SettlementRelationsResult = {
   managerDecisionRng: RngState | null;
 };
 
-/** 결산 manager roll을 기존 파생-seed 관례의 전용 decision substream에서 정확히 1회 적용한다. */
+/** 결산 manager roll을 main state에서 복제한 전용 decision substream에서 정확히 1회 적용한다. */
 function applyManagerDecision(input: SettlementRelationsInput): SettlementRelationsResult {
   let state = input.state;
   const relationTimelineRevision = input.timelineRevision ?? nextTimelineRevision(state);
@@ -61,13 +61,13 @@ function applyManagerDecision(input: SettlementRelationsInput): SettlementRelati
   const gap =
     expectedRank === null || finalRank === null ? 0 : Math.max(0, finalRank - expectedRank);
   const managerRules = input.ruleset.managerRules.changeProbability;
-  let rng = input.rng;
+  const rng = input.rng;
   let shouldChange = false;
   let managerDecisionRng: RngState | null = null;
   if (currentManager.tenureSeasons >= managerRules.minTenureSeasons) {
-    const managerStream = seedRng(
-      `manager:${state.careerId}:${input.season.index}:${input.season.teamId}:${currentManager.id}`,
-    );
+    // Reuse only the main stream words. Resetting the counter makes this derived
+    // stream exactly one draw without mutating the main decision stream.
+    const managerStream: RngState = { s: input.rng.s, draws: 0 };
     const rolled = rollInt(managerStream, 10000);
     managerDecisionRng = rolled.state;
     const probabilityBp = Math.min(
