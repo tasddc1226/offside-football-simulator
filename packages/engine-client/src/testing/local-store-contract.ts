@@ -202,6 +202,86 @@ export function runLocalStoreContractTests(name: string, factory: () => LocalSto
       expect(all.map((s) => s.checkpoint)).toEqual(['SEASON_START', 'SEASON_SETTLED']);
     });
 
+    it('snapshots: transfer·loan의 CONTRACT_CONFIRMED·SEASON_SETTLED·STEP_BOUNDARY 상태를 그대로 보존한다', async () => {
+      const expected = [
+        makeCareerSnapshot({
+          id: 'transfer:18',
+          careerId: 'transfer',
+          revision: 18,
+          checkpoint: 'CONTRACT_CONFIRMED',
+          state: JSON.stringify({
+            schemaVersion: 1,
+            careerId: 'transfer',
+            contract: { kind: 'PERMANENT', teamId: 'busan-tier2' },
+            parentContract: null,
+            clubHistory: [{ kind: 'PERMANENT', toSeasonIndex: null }],
+          }),
+        }),
+        makeCareerSnapshot({
+          id: 'transfer:22',
+          careerId: 'transfer',
+          revision: 22,
+          checkpoint: 'SEASON_SETTLED',
+          state: JSON.stringify({
+            schemaVersion: 1,
+            careerId: 'transfer',
+            contract: { kind: 'PERMANENT', teamId: 'busan-tier2' },
+            parentContract: null,
+            clubHistory: [{ kind: 'PERMANENT', toSeasonIndex: null }],
+          }),
+        }),
+        makeCareerSnapshot({
+          id: 'loan:16',
+          careerId: 'loan',
+          revision: 16,
+          checkpoint: 'CONTRACT_CONFIRMED',
+          state: JSON.stringify({
+            schemaVersion: 1,
+            careerId: 'loan',
+            contract: { kind: 'LOAN', teamId: 'busan-tier2' },
+            parentContract: { kind: 'PERMANENT', suspended: true, teamId: 'seoul-tier1' },
+            clubHistory: [{ kind: 'LOAN', toSeasonIndex: null }],
+          }),
+        }),
+        makeCareerSnapshot({
+          id: 'loan:21',
+          careerId: 'loan',
+          revision: 21,
+          checkpoint: 'SEASON_SETTLED',
+          state: JSON.stringify({
+            schemaVersion: 1,
+            careerId: 'loan',
+            contract: { kind: 'LOAN', teamId: 'busan-tier2' },
+            parentContract: { kind: 'PERMANENT', suspended: true, teamId: 'seoul-tier1' },
+            clubHistory: [{ kind: 'LOAN', toSeasonIndex: null }],
+          }),
+        }),
+        makeCareerSnapshot({
+          id: 'loan:22',
+          careerId: 'loan',
+          revision: 22,
+          checkpoint: 'STEP_BOUNDARY',
+          state: JSON.stringify({
+            schemaVersion: 1,
+            careerId: 'loan',
+            contract: { kind: 'PERMANENT', teamId: 'seoul-tier1' },
+            parentContract: null,
+            clubHistory: [{ kind: 'PERMANENT', toSeasonIndex: null }],
+          }),
+        }),
+      ];
+
+      await store.transaction('readwrite', async (tx) => {
+        for (const snapshot of expected) await tx.snapshots.put(snapshot);
+      });
+
+      const transfer = await store.transaction('readonly', (tx) => tx.snapshots.listByCareer('transfer'));
+      const loan = await store.transaction('readonly', (tx) => tx.snapshots.listByCareer('loan'));
+      expect(transfer.map((snapshot) => snapshot.checkpoint)).toEqual(['CONTRACT_CONFIRMED', 'SEASON_SETTLED']);
+      expect(loan.map((snapshot) => snapshot.checkpoint)).toEqual(['CONTRACT_CONFIRMED', 'SEASON_SETTLED', 'STEP_BOUNDARY']);
+      expect(transfer.concat(loan).map((snapshot) => snapshot.state)).toEqual(expected.map((snapshot) => snapshot.state));
+    });
+
     it('snapshots: listByCareer는 닫힌 구간을 revision 오름차순으로 돌려준다', async () => {
       await store.transaction('readwrite', async (tx) => {
         for (let revision = 1; revision <= 5; revision++) {
