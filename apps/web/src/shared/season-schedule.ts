@@ -11,6 +11,7 @@ import {
   type ScheduleEntry,
 } from '@offside/domain';
 import { CUP_ROUND_LABEL_KO, MATCH_APPEARANCE_LABEL_KO, OUT_REASON_LABEL_KO } from './labels.js';
+import { opponentDisplayName } from './competition-labels.js';
 
 export type ScheduleRowMatch = {
   scoreText: string;
@@ -72,7 +73,7 @@ export function buildScheduleRows(season: FootballSeason, ruleset: Ruleset): Sch
       step: entry.step,
       order: entry.order,
       competitionLabel: label,
-      opponentName: opponent.name,
+      opponentName: opponentDisplayName(opponent, ruleset),
       home: entry.home,
       eliminated: false,
       match:

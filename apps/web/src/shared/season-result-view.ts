@@ -13,7 +13,7 @@ import {
   type SquadRole,
 } from '@offside/domain';
 import { attributeGroups, type AttributeGroupId } from './attribute-groups.js';
-import { CUP_ROUND_LABEL_KO } from './labels.js';
+import { cupProgressLabel } from './competition-labels.js';
 
 export type CommonMetrics = {
   started: number;
@@ -124,8 +124,7 @@ function buildTeamRecords(result: SeasonResult, ruleset: Ruleset): TeamRecordVie
       };
     }
     const cup = team === undefined ? undefined : ruleset.cups.find((candidate) => candidate.tiers.includes(team.leagueTier));
-    const standingText =
-      record.cupRound === null ? '—' : (CUP_ROUND_LABEL_KO[record.cupRound as keyof typeof CUP_ROUND_LABEL_KO] ?? record.cupRound);
+    const standingText = cupProgressLabel(record.cupRound);
     return {
       competitionId: record.competitionId,
       kind: 'CUP',
