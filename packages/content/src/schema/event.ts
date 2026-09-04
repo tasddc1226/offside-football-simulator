@@ -66,6 +66,11 @@ export const NarrativeSchema = z.strictObject({ situation: z.string().min(1) });
 export const PRESENTATION_KINDS = ['INJURY', 'SLUMP', 'LOCKER_ROOM', 'ETHICS', 'MEDIA', 'NATIONAL_TEAM', 'RUMOUR'] as const;
 export const PresentationKindSchema = z.enum(PRESENTATION_KINDS);
 
+// T-3-006 U-013 (A): 워커가 쓴 최소 문구는 authoring: 'PROTOTYPE'로 표시하고 manifest
+// playtested: false와 함께 다닌다. 정식 문구 승격 전까지는 이 표시로 구분한다.
+export const AUTHORING_KINDS = ['PROTOTYPE', 'PLAYTESTED'] as const;
+export const AuthoringKindSchema = z.enum(AUTHORING_KINDS);
+
 export const EventDefinitionSchema = z
   .strictObject({
     id: z.string().regex(EVENT_ID_PATTERN),
@@ -81,6 +86,7 @@ export const EventDefinitionSchema = z
     choices: z.array(ChoiceSchema).min(2).max(3),
     narrative: NarrativeSchema,
     presentation: PresentationKindSchema.optional(),
+    authoring: AuthoringKindSchema.optional(),
   })
   .superRefine((event, ctx) => {
     const seenPhases = new Set<string>();

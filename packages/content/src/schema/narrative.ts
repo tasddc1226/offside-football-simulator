@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-/** `docs/content/README.md` narrative token 사전. */
-export const NARRATIVE_TOKEN_KEYS = ['name', 'club', 'manager', 'rival', 'captain', 'team', 'delta'] as const;
+/** `docs/content/README.md` narrative token 사전. `agent`는 T-3-006(0.2.0)이 추가했다. */
+export const NARRATIVE_TOKEN_KEYS = ['name', 'club', 'manager', 'rival', 'captain', 'team', 'agent', 'delta'] as const;
 export type NarrativeTokenKey = (typeof NARRATIVE_TOKEN_KEYS)[number];
 
 /** README 조사 쌍. 순서가 정본이며 `{club:와/과}`처럼 순서가 뒤집히면 오류다. */
@@ -15,6 +15,7 @@ export const NarrativeDictionarySchema = z
     rival: z.array(z.string()).min(1),
     captain: z.array(z.string()).min(1),
     team: z.array(z.string()).min(1),
+    agent: z.array(z.string()).min(1),
     delta: z.array(z.string()),
   })
   .strict();

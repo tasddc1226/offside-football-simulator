@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Stepper, Toast } from '@offside/ui';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { markOnboardingPending } from '../engine/funnel.js';
+import { useServiceSeason } from '../engine/service-season.js';
 import { useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
+import { SERVICE_SEASON_NOTICE_KO } from '../shared/labels.js';
 import { useUiStore } from '../shared/ui-store.js';
 
 export const Route = createFileRoute('/onboarding')({
@@ -42,6 +44,7 @@ const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-
 function OnboardingScreen() {
   const [stepIndex, setStepIndex] = useState(0);
   const navigate = useNavigate();
+  const serviceSeason = useServiceSeason();
   const setOnboardingSeen = useUiStore((state) => state.setOnboardingSeen);
   const defaultSimulationMode = useUiStore((state) => state.defaultSimulationMode);
   const createMutation = useCareerMutation('create');
@@ -97,6 +100,11 @@ function OnboardingScreen() {
         {slide.note ? (
           <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
             {slide.note}
+          </p>
+        ) : null}
+        {stepIndex === 0 && serviceSeason.data?.notice === 'LINE_TEST' ? (
+          <p data-testid="onboarding-service-season-notice" className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            {SERVICE_SEASON_NOTICE_KO.LINE_TEST}
           </p>
         ) : null}
       </div>
