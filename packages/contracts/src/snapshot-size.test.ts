@@ -16,6 +16,10 @@ import {
   career08MfEngineCommands,
   career09Fw,
   career09FwEngineCommands,
+  career10Transfer,
+  career10TransferEngineCommands,
+  career11Loan,
+  career11LoanEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -89,6 +93,22 @@ function putBodyBytes(steps: readonly Step[], from: number): number {
     contentPackVersion: last.contentPackVersion,
   };
   return byteLength(JSON.stringify(body));
+}
+
+function replayIndependentFixture(
+  engineCommands: (newId: () => string) => EngineCommand[],
+  versions: { rulesetVersion: string; contentPackVersion: string },
+  prefix: string,
+): Step[] {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  const steps: Step[] = [];
+  for (const command of engineCommands(() => `${prefix}-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, versions);
+    steps.push({ snapshot, command });
+  }
+  if (snapshot === null) throw new Error(`${prefix} 명령 목록이 비어 있다.`);
+  return steps;
 }
 
 describe('Snapshot·PUT 본문 크기(D-33)', () => {
@@ -305,5 +325,69 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
     expect(peakStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
     expect(finalStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
     expect(bodyBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+  });
+
+  it.each([
+    { label: 'career-10-transfer', engineCommands: career10TransferEngineCommands, versions: career10Transfer, prefix: 'size-c10' },
+    { label: 'career-11-loan', engineCommands: career11LoanEngineCommands, versions: career11Loan, prefix: 'size-c11' },
+  ])('$label: 시장·협상·계약 전환·최종 Snapshot과 전체 PUT 본문이 예산 안에 든다', ({ label, engineCommands, versions, prefix }) => {
+    const steps = replayIndependentFixture(engineCommands, versions, prefix);
+    const findStep = (predicate: (step: Step) => boolean, name: string): Step => {
+      const step = steps.find(predicate);
+      if (step === undefined) throw new Error(`${label} ${name} 지점을 찾지 못했다.`);
+      return step;
+    };
+    const offersSteps = steps.filter((step) => step.snapshot.state.pending?.kind === 'OFFERS');
+    const market = offersSteps.reduce<Step | undefined>(
+      (largest, step) =>
+        largest === undefined ||
+        (step.snapshot.state.pending?.kind === 'OFFERS' &&
+          largest.snapshot.state.pending?.kind === 'OFFERS' &&
+          step.snapshot.state.pending.offers.length > largest.snapshot.state.pending.offers.length)
+          ? step
+          : largest,
+      undefined,
+    );
+    if (market === undefined) throw new Error(`${label} 제안 시장 지점을 찾지 못했다.`);
+    const negotiated = label === 'career-10-transfer' ? findStep((step) => step.command.type === 'NEGOTIATE', '협상 직후') : undefined;
+    const transfer =
+      label === 'career-10-transfer'
+        ? findStep(
+            (step) => step.command.type === 'ACCEPT_OFFER' && step.command.payload.offerId === 'OFR-16-1',
+            '이적 직후',
+          )
+        : undefined;
+    const loan =
+      label === 'career-11-loan'
+        ? findStep((step) => step.snapshot.state.contract?.kind === 'LOAN', '임대 중(parentContract 포함)')
+        : undefined;
+    const final = steps[steps.length - 1]!;
+    const measured = [
+      {
+        checkpoint: 'market-largest-offers',
+        snapshot: market.snapshot,
+        offerCount: market.snapshot.state.pending?.kind === 'OFFERS' ? market.snapshot.state.pending.offers.length : 0,
+      },
+      ...(negotiated === undefined ? [] : [{ checkpoint: 'after-negotiate', snapshot: negotiated.snapshot }]),
+      ...(transfer === undefined ? [] : [{ checkpoint: 'after-transfer', snapshot: transfer.snapshot }]),
+      ...(loan === undefined ? [] : [{ checkpoint: 'during-loan', snapshot: loan.snapshot }]),
+      { checkpoint: 'final-3-season', snapshot: final.snapshot },
+    ].map(({ checkpoint, snapshot }) => ({ checkpoint, revision: snapshot.revision, stateBytes: stateBytes(snapshot) }));
+    const bodyBytes = putBodyBytes(steps, 0);
+
+    console.log(
+      JSON.stringify({
+        fixture: label,
+        checkpoints: measured,
+        bodyBytes,
+        stateBudgetBytes: SNAPSHOT_STATE_RECOMMENDED_BYTES,
+        requestBudgetBytes: REQUEST_BODY_MAX_BYTES,
+      }),
+    );
+
+    for (const point of measured) {
+      expect(point.stateBytes, `${label} ${point.checkpoint}`).toBeLessThan(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+    }
+    expect(bodyBytes, `${label} full PUT`).toBeLessThan(REQUEST_BODY_MAX_BYTES);
   });
 });
