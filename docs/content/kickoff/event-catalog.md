@@ -47,6 +47,10 @@
 | `EVT-CON-008` | 에이전트 계약, 다수 제안 | 최고 급여 / 최고 적합도 / 가족 지역 | 시장가치·관계·CareerTag 후보 |
 | `EVT-CON-009` | 이적창 마지막 step | 막판 이적 / 임대 / 잔류 | 불확실한 역할과 즉시 적응, 재추첨 금지 |
 
+`EVT-CON-005`(계약 6개월 이하)·`EVT-CON-008`(에이전트 계약)과 개념이 겹치는 신규 이벤트
+`EVT-CON-011`~`EVT-CON-013`이 **0.2.0 PROTOTYPE(T-3-006)**로 등록됐다 — 10절 참고. 위 6개
+후보 자체는 아직 CANDIDATE다(JSON 승격 안 됨).
+
 ## 4. 관계·정체성 후보 6개
 
 | ID | 발생 조건 | 상황과 선택 축 | 주요 효과·후속 |
@@ -94,6 +98,9 @@ MATCH 이벤트는 포지션별 선택 문구와 결과 지표가 달라야 한�
 | `EVT-MEDIA-004` | 부정 경기 outcome | 즉시 사과 / 경기 분석 / 침묵 | 감독·팬·폼, 조롱 문구 금지 |
 | `EVT-MEDIA-005` | 친정팀 원정 | 존중 / 세리머니 예고 / 질문 회피 | 팬 기억·`배신자` 조건 후보 |
 
+`EVT-MEDIA-005`와 동일한 개념(존중/세리머니 예고/질문 회피)이 `EVT-MEDIA-006`으로
+**0.2.0 PROTOTYPE(T-3-006)** 등록됐다 — 10절 참고. `EVT-MEDIA-005` 자체는 아직 CANDIDATE다.
+
 ## 8. 국가대표 후보 2개
 
 | ID | 발생 조건 | 상황과 선택 축 | 주요 효과·후속 |
@@ -107,6 +114,25 @@ MATCH 이벤트는 포지션별 선택 문구와 결과 지표가 달라야 한�
 |---|---|---|---|
 | `EVT-DEV-003` | 반대발 약점 반복 | 약한 발 집중 / 강한 발 극대화 / 역할 전환 | 영구 기술·단기 폼·숙련도 |
 | `EVT-DEV-004` | 2개 포지션 숙련 가능 | 주포지션 깊이 / 멀티포지션 / 감독 역할 전용 | 성장 효율·출전 폭·정체성 |
+
+## 10. 0.2.0 팩(PROTOTYPE)
+
+T-3-006이 pack `0.2.0`에 등록한 PRO 단계 이벤트 5개다. 전부 `authoring: 'PROTOTYPE'`이고
+manifest `playtested: false`다(U-013 (A) — 메커니즘 검증용 최소 문구, 정식 문구는 콘텐츠 승격
+뒤 교체). 활성 팩은 여전히 `0.1.0`이라 이 5개는 아직 플레이어에게 노출되지 않는다.
+
+| ID | 발생 조건 | 선택 축 → 효과·태그 |
+|---|---|---|
+| `EVT-CON-010` 루머와 관심 | `season.step == 7`, 계약이 임대가 아니고 마지막 시즌도 아님, 출전·평점이 관심 받을 만함(`season.stats.appearances ≥ 15` 또는 `season.stats.rating ≥ 65`) | 관심 표명(`이적_희망`, fans −4·managerTrust −4) / 침묵(fans −1) / 잔류 선언(`잔류_선언`, fans +5·managerTrust +4). `presentation: 'RUMOUR'`라 일반 EVENT 슬롯 후보에서 빠지고 step 7 CONTRACT 슬롯 전용(T-3-005가 공급) |
+| `EVT-CON-011` 에이전트 제안 | 프로 시즌 ≥ 1, `에이전트_계약`·`직접_협상` 태그 없음 | 계약(`에이전트_계약`, agent +8·fans −2) / 보류(변화 없음) / 직접 협상(`직접_협상`, agent −5·managerTrust +3) |
+| `EVT-CON-012` 약속이 지켜지지 않았다 | `contract.promiseBreaches ≥ 1`, `season.step ≤ 3` | 면담 요구(managerTrust −3·squadStatus +5, 확률적으로 `이적_희망`) / 언론에 말함(fans +3·managerTrust −8, `언론_충돌`) / 참는다(morale −3·captain +3) |
+| `EVT-CON-013` 재계약 압박 | `contract.seasonsRemaining ≤ 1`, `contract.kind == 'PERMANENT'`, `season.step` 4~6 | 장기 안정 선호(`장기_계약_선호`, managerTrust +3) / 짧게 가고 싶다(`단기_계약_선호`) / 시장을 보겠다(`이적_희망`, managerTrust −5·agent +3) |
+| `EVT-MEDIA-006` 친정팀 원정 | `career.permanentTransfers ≥ 1`, `season.phase == 'LEAGUE'`, cooldown 1시즌 | 존중(fans +2) / 세리머니 예고(fans −6, `도발_예고`) / 질문 회피(`언론_회피`) |
+
+`이적_희망`·`잔류_선언`·`에이전트_계약`은 T-3-002 시장 생성기가 태그로 읽는 정확한 문자열이다.
+`이적_희망`과 `잔류_선언`은 배타(같은 outcome이 둘을 함께 주지 않고, `EVT-CON-010`은 한쪽을 줄 때
+반대쪽을 `removeTags`로 정리한다). 효과는 `RELATION`(managerTrust·captain·fans·agent)·
+`CURRENT`(morale)·`CONTEXT`(squadStatus)만 쓰고, 한 outcome의 관계 변화 절댓값은 8 이하다.
 
 ## 전체 커버리지
 
