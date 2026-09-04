@@ -1574,6 +1574,11 @@ function prepareMarketOffers(
   return { kept, timelineAdds };
 }
 
+/** 시장 응답이 닫힐 때 제거하는 선언 태그. 이적 판정은 제거 전에 원본 태그를 읽어야 한다. */
+function stripMarketDeclarationTags(tags: readonly string[]): string[] {
+  return sortUniqueTags(tags.filter((tag) => tag !== '이적_희망' && tag !== '잔류_선언'));
+}
+
 /**
  * T-3-003 §3/§4 "잔류": 계약·팀·context·관계는 손대지 않고, `이적_희망`·`잔류_선언` 태그만 제거한 뒤
  * pending을 닫는다. REJECT_OFFER(null, OFFERS)와 ACCEPT_OFFER(안전 잔류)가 공유한다.
@@ -1582,7 +1587,7 @@ function buildStayState(state: CareerState, nextRevision: number): CareerState {
   return {
     ...state,
     pending: null,
-    tags: sortUniqueTags(state.tags.filter((tag) => tag !== '이적_희망' && tag !== '잔류_선언')),
+    tags: stripMarketDeclarationTags(state.tags),
     timeline: [
       ...state.timeline,
       { revision: nextRevision, kind: 'OFFER_REJECTED', refId: 'ALL', age: state.age, step: state.currentStep },
@@ -1593,21 +1598,20 @@ function buildStayState(state: CareerState, nextRevision: number): CareerState {
 type NewClubTransition = { context: CareerState['context']; relationships: CareerState['relationships']; tags: string[] };
 
 /**
- * T-3-003 §4 TRANSFER·FREE_AGENT·LOAN 공통 context·관계 전환(D-45). `applyRivalEffects`가 false면(LOAN)
- * 라이벌 직행 판정·`rivalMoveFansDelta`·`배신_이적` 태그를 적용하지 않는다(임대는 배신이 아니다) — 약속
- * 위반 이적의 팬 하락(`promiseBreachMoveFansDelta`)은 라이벌 여부와 무관해 양쪽 다 적용한다.
+ * T-3-003 §4 TRANSFER·FREE_AGENT·LOAN 공통 context·관계 전환(D-45). `applyMoveEffects`가 false면(LOAN)
+ * 라이벌·약속 위반 이적의 팬 델타와 `배신_이적` 태그를 적용하지 않는다(임대는 배신이 아니다).
  */
 function buildNewClubTransition(
   state: CareerState,
   ruleset: Ruleset,
   previousContract: Contract,
   offer: Offer,
-  applyRivalEffects: boolean,
+  applyMoveEffects: boolean,
 ): NewClubTransition {
   const carryRules = ruleset.transferRules.relationshipCarry;
   const isRivalMove =
-    applyRivalEffects && (isRivalPair(ruleset, previousContract.teamId, offer.teamId) || state.tags.includes('잔류_선언'));
-  const isPromiseBreachMove = previousContract.promiseBreaches >= 1;
+    applyMoveEffects && (isRivalPair(ruleset, previousContract.teamId, offer.teamId) || state.tags.includes('잔류_선언'));
+  const isPromiseBreachMove = applyMoveEffects && previousContract.promiseBreaches >= 1;
 
   const profile = state.player.profile;
   const positionProficiency =
@@ -1630,7 +1634,7 @@ function buildNewClubTransition(
       positionProficiency,
     },
     relationships: { managerTrust: carryRules.newManagerTrustBase, captain: 0, rival: 0, fans, agent: state.relationships.agent },
-    tags: isRivalMove ? sortUniqueTags([...state.tags, '배신_이적']) : state.tags,
+    tags: stripMarketDeclarationTags(isRivalMove ? [...state.tags, '배신_이적'] : state.tags),
   };
 }
 
@@ -2044,7 +2048,8 @@ function acceptLoanOffer(state: CareerState, ruleset: Ruleset, contract: Contrac
 /**
  * T-3-001 D-45, T-3-003 §4: ACCEPT_OFFER v2 — rng 없음, kind별 원자 전환. `pending.kind`가 `OFFERS`
  * 또는 `CONTRACT`(offers ≥ 1)일 때 받는다. Phase 1 첫 계약(`market.reason === 'FIRST_CONTRACT'`)은
- * 지금 코드 경로 그대로(회귀 금지). 공통: §1 만료 정리 → `이적_희망`·`잔류_선언` 태그 제거.
+ * 지금 코드 경로 그대로(회귀 금지). 공통: §1 만료 정리 후 이적 판정을 수행하고, 그 다음
+ * `이적_희망`·`잔류_선언` 태그를 제거한다.
  */
 function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
   const command = input.command;
@@ -2076,8 +2081,9 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   }
   const offer = lookup.offer;
 
-  const strippedTags = sortUniqueTags(state.tags.filter((tag) => tag !== '이적_희망' && tag !== '잔류_선언'));
-  const baseState: CareerState = { ...state, tags: strippedTags, timeline: [...state.timeline, ...timelineAdds] };
+  const baseState: CareerState = { ...state, tags: stripMarketDeclarationTags(state.tags), timeline: [...state.timeline, ...timelineAdds] };
+  // TRANSFER/FREE_AGENT의 라이벌·배신 판정은 원본 `잔류_선언`을 사용한 뒤에 선언 태그를 제거한다.
+  const stateWithExpiry: CareerState = { ...state, timeline: [...state.timeline, ...timelineAdds] };
 
   if (pending.market.reason === 'FIRST_CONTRACT') {
     return acceptFirstContractOffer(baseState, ruleset, offer, nextRevision);
@@ -2096,16 +2102,16 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     return acceptRenewalOffer(baseState, offer, nextRevision);
   }
   if (offer.kind === 'LOAN') {
-    return acceptLoanOffer(baseState, ruleset, contract, offer, nextRevision);
+    return acceptLoanOffer(stateWithExpiry, ruleset, contract, offer, nextRevision);
   }
-  return acceptNewClubOffer(baseState, ruleset, contract, offer, nextRevision);
+  return acceptNewClubOffer(stateWithExpiry, ruleset, contract, offer, nextRevision);
 }
 
 /**
  * T-3-003 §6(D-46): 임대 원소속 계약 복원 — `parentContract`(suspended: true)를 `contract`
  * (suspended: false)로 되돌리고 `parentContract`를 null로, 임대 stint를 `'RETURNED'`로 마감한 뒤
- * 원소속 stint를 새로 연다. 관계·context는 이 함수가 건드리지 않는다 — D-46의 두 진입점(결산 중 자동
- * FA 분기, `LOAN_RETURN{RETURN}` 명령)이 이 값을 다르게 다루므로 호출자 책임이다.
+ * 원소속 stint를 새로 연다. 관계·context 복원은 아래 `restoreParentClubState`가 명시적 RETURN과
+ * 결산 중 자동 FA 분기에서 함께 적용한다.
  */
 function restoreParentContractAndStint(state: CareerState, nextRevision: number): CareerState {
   const parent = state.parentContract;
@@ -2138,6 +2144,37 @@ function restoreParentContractAndStint(state: CareerState, nextRevision: number)
 }
 
 /**
+ * D-46 원소속 복귀의 공통 context·관계 규칙. 임대 구단에서의 전술 적합도·역할·감독 신뢰·주장·라이벌은
+ * 버리고, 원소속 계약 기준으로 재설정한다. positionProficiency는 명시적 RETURN과 동일하게 원래
+ * 포지션 계획이면 현재 값을 유지하고, 아니면 룰셋의 강제값을 쓴다.
+ */
+function restoreParentClubState(state: CareerState, ruleset: Ruleset): CareerState {
+  const parent = state.contract;
+  const profile = state.player.profile;
+  if (parent === null || profile === null) {
+    throw new RangeError('restoreParentClubState: 복원된 contract·player.profile이 null이다.');
+  }
+  const carryRules = ruleset.transferRules.relationshipCarry;
+  const positionProficiency =
+    parent.positionPlan === profile.primaryPosition ? state.context.positionProficiency : ruleset.contractRules.imposedPositionProficiency;
+  return {
+    ...state,
+    context: {
+      tacticalFit: ruleset.offerRules.tacticalFitEstimate.min,
+      squadStatus: ruleset.contractRules.squadStatusByRole[parent.rolePromise],
+      positionProficiency,
+    },
+    relationships: {
+      ...state.relationships,
+      managerTrust: carryRules.newManagerTrustBase,
+      captain: 0,
+      rival: 0,
+      fans: Math.floor((state.relationships.fans * carryRules.fansCarryBp) / 10000),
+    },
+  };
+}
+
+/**
  * T-3-003 §6(D-46): 결산 뒤 `contract.kind === 'LOAN'`이면 `settleSeason`이 이 함수로 넘긴다. 원소속
  * 잔여 시즌이 0이면 복귀 대신 FA로 곧장 EXPIRED 시장을 연다. 아니면 `LOAN_RETURN` pending을 연다
  * (`RETURN` + 매입 옵션이 되면 `PERMANENT`). rng는 `parentRemaining === 0`일 때만(재사용하는 시장
@@ -2156,7 +2193,7 @@ function settleLoanSeason(state: CareerState, ruleset: Ruleset, result: SeasonRe
   const parentRemaining = computeContractSeasonsRemaining(parent.lengthSeasons, parent.signedAtRevision, state.timeline);
 
   if (parentRemaining === 0) {
-    const restored = restoreParentContractAndStint(state, nextRevision);
+    const restored = restoreParentClubState(restoreParentContractAndStint(state, nextRevision), ruleset);
     const generated = generateMarket({ state: restored, ruleset, reason: 'EXPIRED', revision: nextRevision, rng: restored.rngState });
     return { ...restored, rngState: generated.rngState, pending: generated.pending };
   }
@@ -2202,29 +2239,14 @@ function loanReturn(input: SimulationInput, snapshot: DomainSnapshot): Simulatio
   const ruleset = input.ruleset;
 
   if (decision === 'RETURN') {
-    const restored = restoreParentContractAndStint(state, nextRevision);
+    const restored = restoreParentClubState(restoreParentContractAndStint(state, nextRevision), ruleset);
     const parent = restored.contract;
     if (parent === null) {
       throw new RangeError('loanReturn: 복원 뒤 contract가 null이다.');
     }
-    const carryRules = ruleset.transferRules.relationshipCarry;
-    const positionProficiency =
-      parent.positionPlan === profile.primaryPosition ? state.context.positionProficiency : ruleset.contractRules.imposedPositionProficiency;
     const nextState: CareerState = {
       ...restored,
       pending: null,
-      context: {
-        tacticalFit: ruleset.offerRules.tacticalFitEstimate.min,
-        squadStatus: ruleset.contractRules.squadStatusByRole[parent.rolePromise],
-        positionProficiency,
-      },
-      relationships: {
-        ...restored.relationships,
-        managerTrust: carryRules.newManagerTrustBase,
-        captain: 0,
-        rival: 0,
-        fans: Math.floor((restored.relationships.fans * carryRules.fansCarryBp) / 10000),
-      },
     };
     return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'), appliedEffects: [], nextAction: 'ADVANCE' };
   }
