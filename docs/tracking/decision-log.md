@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-04 (오후, PR #50 머지 — 이적시장 생성기, T-3-003 투입)
+
+**결과**: PR #50(T-3-002, `0674ee4` → squash `408a765`, 13:33). 리뷰 수정 1건(결산 뒤 상태에서 STARTER·평점 INTEREST 분기 도달 불가 → `currentSquadPerformance` 폴백 헬퍼, 시장 골든 값·rng 소비 불변, 테스트 3건)을 워커가 반영했고 PR #51과의 manifest 체크섬 충돌도 origin/main 머지 뒤 재계산으로 스스로 해결해 준비해 둔 후속 지시(review-2)는 보내지 않았다. 체인(origin/main + 0674ee4) 녹색(e2e 72). Phase 3 완료 조건 1·2·5의 생성기 쪽 근거 확보, 배선은 T-3-003.
+
+**T-3-003 투입(13:34)**: 브리프(13:20)대로. 동시 워커 2개(T-4-001·T-3-003). T-4-001과 `simulate.ts`·`types.ts`가 겹치므로 먼저 머지되는 쪽 뒤에 다른 쪽이 origin/main을 머지한다(브리프에 명시).
+
 ## 2026-09-04 (오후, PR #52 머지 — LINE TEST 결함 3건 수정, T-3-003 브리프)
 
 **결과**: PR #52(T-2-015, `ff45412` → squash `5462dc7`, 13:21) 리뷰 수정 0건. 워커는 PR 게이트 폴백대로 push → `PR_BODY.md` → `DONE`으로 멈췄고 오케스트레이터가 REST(curl)로 PR을 열었다. 체인 녹색(mock e2e 72, 실 api e2e recovery-api·google-link·service-season 8). 워커가 로컬 D1로 20건 curl 202도 확인했다. 변경: `insertAnalyticsEvents` 14행 청크 순차 insert(spy 테스트 50 → 14·14·14·8, 로컬 Miniflare가 상한을 재현하지 않아 재현 시도 안 함), `toErrorEnvelope` unknown error 고정 문구(원문은 logger `errorMessage` 500자), 온보딩 첫 슬라이드 `onboarding-service-season-notice`. 투입 13:02 → 머지 13:21(19분).
