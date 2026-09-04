@@ -15,6 +15,7 @@ export const ChapterTriggerSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('DERBY') }),
   z.strictObject({ kind: z.literal('CUP_FINAL') }),
   z.strictObject({ kind: z.literal('DECIDER'), maxRankGap: z.number().int().nonnegative() }),
+  z.strictObject({ kind: z.literal('INJURY_RETURN') }),
   z.strictObject({ kind: z.literal('TAG'), tag: z.string().min(1) }),
 ]) satisfies z.ZodType<ChapterTrigger>;
 

@@ -1,6 +1,7 @@
 import { EFFECT_DEFAULTS, loadContentPack } from '@offside/content';
+import { hashState } from '@offside/domain';
 import { career01, career01EngineCommands, career05Chapter, career05ChapterEngineCommands, rulesetProto } from '@offside/fixtures';
-import { MemoryLocalStore, inlineSimulator, type ExecuteResult } from '@offside/engine-client';
+import { encodeSnapshot, MemoryLocalStore, inlineSimulator, type ExecuteResult } from '@offside/engine-client';
 import { describe, expect, it, vi } from 'vitest';
 import {
   acceptOffer,
@@ -328,6 +329,88 @@ describe('resolveEvent', () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('unreachable');
     expect(result.error.code).toBe('VALIDATION_FAILED');
+  });
+
+  it('INJURY pending은 generic event action에서 rehabPlan을 함께 보내고 커밋한다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToConfirmed(engine);
+    const loaded = await engine.client.loadCareer(careerId);
+    if (!loaded.ok) throw new Error('loadCareer 실패');
+
+    const episode = {
+      id: 'INJ-web-action',
+      severity: 'MODERATE' as const,
+      bodyPart: 'KNEE' as const,
+      occurredAt: { seasonIndex: 0, step: 1, matchId: 'm-injury' },
+      diagnosisRange: { minMatches: 3, maxMatches: 6 },
+      rehab: null,
+      recurrenceRiskBp: 3000,
+      recurrenceChecksRemaining: 0,
+      status: 'ACTIVE' as const,
+      permanentDelta: null,
+      remainingMatches: 3,
+    };
+    const state = {
+      ...loaded.snapshot.state,
+      health: { episodes: [episode] },
+      pending: { kind: 'INJURY' as const, step: 1, episodeId: episode.id, eventId: 'EVT-INJ-001', version: 1 },
+    };
+    const pendingSnapshot = { ...loaded.snapshot, state, stateHash: hashState(state) };
+    let capturedCommand: Parameters<AppEngine['client']['execute']>[0]['command'] | null = null;
+    const wrappedEngine: AppEngine = {
+      ...engine,
+      client: {
+        ...engine.client,
+        loadCareer: async () => ({ ...loaded, snapshot: pendingSnapshot }),
+        execute: async (request) => {
+          capturedCommand = request.command;
+          return {
+            ok: true,
+            snapshot: encodeSnapshot(pendingSnapshot, { careerId, createdAt: '2026-09-05T00:00:00.000Z' }),
+            domainSnapshot: pendingSnapshot,
+            nextAction: 'ADVANCE',
+            appliedEffects: [],
+            replayed: false,
+          };
+        },
+      },
+    };
+
+    const result = await resolveEvent(wrappedEngine, careerId, 'A');
+
+    expect(result.ok).toBe(true);
+    expect(capturedCommand).toMatchObject({
+      type: 'RESOLVE_EVENT',
+      payload: { eventId: 'EVT-INJ-001', definitionVersion: 1, choiceId: 'A', rehabPlan: 'STANDARD' },
+    });
+  });
+
+  it('일반 EVENT pending으로 INJURY presentation 이벤트를 우회 해소할 수 없다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToConfirmed(engine);
+    const loaded = await engine.client.loadCareer(careerId);
+    if (!loaded.ok) throw new Error('loadCareer 실패');
+    const state = {
+      ...loaded.snapshot.state,
+      pending: { kind: 'EVENT' as const, eventId: 'EVT-INJ-001', version: 1 },
+    };
+    const pendingSnapshot = { ...loaded.snapshot, state, stateHash: hashState(state) };
+    const execute = vi.fn();
+    const wrappedEngine: AppEngine = {
+      ...engine,
+      client: {
+        ...engine.client,
+        loadCareer: async () => ({ ...loaded, snapshot: pendingSnapshot }),
+        execute,
+      },
+    };
+
+    const result = await resolveEvent(wrappedEngine, careerId, 'A');
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.error.code).toBe('VALIDATION_FAILED');
+    expect(execute).not.toHaveBeenCalled();
   });
 });
 

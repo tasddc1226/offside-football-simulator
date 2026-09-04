@@ -320,7 +320,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
     }
   };
 
-  if (pending !== null && pending.kind === 'EVENT') {
+  if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY')) {
     const target = screenForCareer(state);
     return (
       <Card className="flex flex-wrap items-center justify-between gap-os-3">

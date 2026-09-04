@@ -24,9 +24,9 @@ const DRAFT_FIELDS_WITHOUT_ARCHETYPE = [
 
 /**
  * DRAFT: archetypeId를 뺀 6개 필드 중 하나라도 null이면 SCR-002, archetypeId만 비었으면 SCR-003,
- * 그 외 SCR-004. ACTIVE: pending.kind === 'EVENT'면 이벤트별 화면(기본 SCR-013), 'OFFERS'면
+ * 그 외 SCR-004. ACTIVE: pending.kind === 'EVENT'면 이벤트별 화면(기본 SCR-013), 'INJURY'면 SCR-013, 'OFFERS'면
  * SCR-009/017, 'ROLE_PROPOSAL'이면 SCR-012, 'CHAPTER'면 SCR-031(자리표시), LOAN_RETURN은 대시보드의
- * 전용 SCR-020 CTA가 열고, 그 외(SETTLEMENT·CONTRACT·INJURY·NATIONAL_TEAM)와 pending 없음은 SCR-029.
+ * 전용 SCR-020 CTA가 열고, 그 외(SETTLEMENT·CONTRACT·NATIONAL_TEAM)와 pending 없음은 SCR-029.
  * RETIRED·ARCHIVED는 SCR-029(phase-1-plan.md D-13 화면 해석 규칙).
  */
 export function screenForCareer(state: CareerState): ScreenTarget {
@@ -42,8 +42,9 @@ export function screenForCareer(state: CareerState): ScreenTarget {
 
   if (state.status === 'ACTIVE') {
     const pending = state.pending;
-    if (pending !== null && pending.kind === 'EVENT') {
-      return { screenId: EVENT_SCREEN_OVERRIDES[pending.eventId] ?? 'SCR-013', params };
+    if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY')) {
+      const screenId = pending.kind === 'EVENT' ? EVENT_SCREEN_OVERRIDES[pending.eventId] ?? 'SCR-013' : 'SCR-013';
+      return { screenId, params };
     }
     if (pending !== null && pending.kind === 'OFFERS') {
       return { screenId: pending.market.reason === 'FIRST_CONTRACT' ? 'SCR-009' : 'SCR-017', params };

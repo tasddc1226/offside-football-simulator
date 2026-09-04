@@ -174,9 +174,9 @@ describe('screenForCareer', () => {
       'SCR-029',
     ],
     [
-      'ACTIVE, pending INJURY → SCR-029(자동 통과, 대시보드 진행 버튼)',
+      'ACTIVE, pending INJURY → SCR-013(범용 이벤트 화면, SCR-022는 T-4-005)',
       baseState({ status: 'ACTIVE', pending: { kind: 'INJURY', step: 4, episodeId: '', eventId: '', version: 0 } }),
-      'SCR-029',
+      'SCR-013',
     ],
     [
       'ACTIVE, pending NATIONAL_TEAM → SCR-029(자동 통과, 대시보드 진행 버튼)',

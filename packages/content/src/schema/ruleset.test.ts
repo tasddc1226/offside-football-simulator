@@ -213,10 +213,10 @@ describe('RulesetSchema', () => {
     expect(() => RulesetSchema.parse(ruleset)).toThrow();
   });
 
-  it('rejects injuryRules.severityWeights that do not sum to 100', () => {
+  it('rejects injuryRules.severityWeights that do not sum to 10000bp', () => {
     const ruleset = cloneRuleset();
     ruleset.injuryRules.severityWeights.MINOR += 1;
-    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/injuryRules\.severityWeights 합은 100이어야 한다/);
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/injuryRules\.severityWeights 합은 10000이어야 한다/);
   });
 
   it('rejects injuryRules.bodyParts whose weights do not sum to 100', () => {

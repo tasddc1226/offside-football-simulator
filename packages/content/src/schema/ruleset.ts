@@ -510,7 +510,7 @@ export const GrowthRulesSchema = z.strictObject({
   });
 export type GrowthRules = z.infer<typeof GrowthRulesSchema>;
 
-// T-4-001 D-49: 부상 규칙(소유 T-4-002). severityWeights·bodyParts[].weight는 합이 100이어야 한다.
+// T-4-002 D-49: 부상 규칙. severityWeights는 basis point 합 10000, bodyParts[].weight는 합 100이어야 한다.
 // `sequelaKeys`는 AttributeKey만 허용한다.
 export const INJURY_SEVERITIES = ['MINOR', 'MODERATE', 'MAJOR'] as const;
 export const INJURY_BODY_PARTS = ['KNEE', 'ANKLE', 'HAMSTRING', 'SHOULDER', 'HEAD'] as const;
@@ -526,6 +526,7 @@ const RehabPlanRuleSchema = z.strictObject({ returnShiftMatches: z.number().int(
 
 export const InjuryRulesSchema = z
   .strictObject({
+    event: z.strictObject({ id: z.string().min(1), version: z.number().int().positive() }),
     severityWeights: z.strictObject({
       MINOR: z.number().int().nonnegative(),
       MODERATE: z.number().int().nonnegative(),
@@ -554,8 +555,8 @@ export const InjuryRulesSchema = z
   })
   .superRefine((rules, ctx) => {
     const severitySum = rules.severityWeights.MINOR + rules.severityWeights.MODERATE + rules.severityWeights.MAJOR;
-    if (severitySum !== 100) {
-      ctx.addIssue({ code: 'custom', message: `injuryRules.severityWeights 합은 100이어야 한다: ${severitySum}`, path: ['severityWeights'] });
+    if (severitySum !== 10000) {
+      ctx.addIssue({ code: 'custom', message: `injuryRules.severityWeights 합은 10000이어야 한다: ${severitySum}`, path: ['severityWeights'] });
     }
     const bodyPartWeightSum = rules.bodyParts.reduce((sum, part) => sum + part.weight, 0);
     if (bodyPartWeightSum !== 100) {
@@ -862,7 +863,6 @@ const MatchInjuryRulesSchema = z.strictObject({
   perMatchPercent: z.number().int().min(0).max(100),
   lowFitnessBelow: z.number().int().min(0).max(100),
   lowFitnessExtraPercent: z.number().int().min(0).max(100),
-  outMatches: z.strictObject({ min: z.number().int().positive(), max: z.number().int().positive() }),
 });
 
 const MatchRatingWeightsSchema = z.strictObject({

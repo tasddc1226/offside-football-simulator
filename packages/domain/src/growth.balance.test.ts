@@ -163,6 +163,22 @@ function runRealSeasonReplay(seed: string, archetypeId: string): ReplayedSeason 
       snapshot = runOrThrow(snapshot, withMeta({ type: 'RESOLVE_ROLE', payload: { decision: 'ACCEPT' } }));
       continue;
     }
+    if (pending?.kind === 'INJURY') {
+      snapshot = runOrThrow(
+        snapshot,
+        withMeta({
+          type: 'RESOLVE_EVENT',
+          payload: {
+            eventId: pending.eventId,
+            definitionVersion: pending.version,
+            choiceId: 'A',
+            outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+            rehabPlan: 'STANDARD',
+          },
+        }),
+      );
+      continue;
+    }
     // T-3-003 §5: step 7 CONTRACT(제안 있음)는 더 이상 ADVANCE로 자동 통과하지 않는다(응답 필수).
     // 재계약 없이 시즌을 그대로 이어간다.
     if (pending?.kind === 'CONTRACT' && pending.offers.length > 0) {
