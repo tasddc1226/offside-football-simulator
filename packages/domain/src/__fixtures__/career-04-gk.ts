@@ -37,22 +37,6 @@ function runOrThrow(snapshot: DomainSnapshot, command: Command & { commandId: st
   return result.snapshot;
 }
 
-/**
- * T-3-003 §5: 이 fixture의 첫 계약이 룰셋 min(1시즌)으로 뽑혀 step 7이 재계약 사전 협상(CONTRACT,
- * 제안 있음)을 연다. 더 이상 ADVANCE로 자동 통과하지 않으므로(응답 필수) 재계약 없이 시즌을 그대로
- * 이어가는 `REJECT_OFFER(null)`로 자동 응답한다(revision +1, golden도 이 값을 반영한다).
- */
-function autoRejectContractIfOpen(snapshot: DomainSnapshot): DomainSnapshot {
-  const pending = snapshot.state.pending;
-  if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
-    return runOrThrow(
-      snapshot,
-      buildCommand('REJECT_OFFER', `gk-auto-reject-${snapshot.revision}`, snapshot.revision, { offerId: null }),
-    );
-  }
-  return snapshot;
-}
-
 export type GkFixtureRun = {
   snapshot: DomainSnapshot;
   /** SETTLE_SEASON 직전(season이 null이 되기 전) 경기·시즌 통계·대회 기록 스냅샷. GK 클린시트·선방
@@ -73,9 +57,7 @@ export type GkFixtureRun = {
 export function runGkFixture(): GkFixtureRun {
   let snapshot = runCareerFixture(careerGkFixture);
 
-  snapshot = autoRejectContractIfOpen(
-    runOrThrow(snapshot, buildCommand('START_SEASON', 'gk-season-start', snapshot.revision, seasonCommandLog.startSeason)),
-  );
+  snapshot = runOrThrow(snapshot, buildCommand('START_SEASON', 'gk-season-start', snapshot.revision, seasonCommandLog.startSeason));
 
   let beforeSettlement: GkFixtureRun['beforeSettlement'] | null = null;
 
@@ -93,7 +75,7 @@ export function runGkFixture(): GkFixtureRun {
       };
     }
     const command = buildCommand(rawCommand.type, `gk-season-${index}`, snapshot.revision, rawCommand.payload);
-    snapshot = autoRejectContractIfOpen(runOrThrow(snapshot, command));
+    snapshot = runOrThrow(snapshot, command);
   });
 
   return { snapshot, beforeSettlement: beforeSettlement! };

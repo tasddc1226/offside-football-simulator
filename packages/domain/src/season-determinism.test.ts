@@ -43,28 +43,11 @@ function roundTripJson(snapshot: DomainSnapshot): DomainSnapshot {
   return JSON.parse(JSON.stringify(snapshot)) as DomainSnapshot;
 }
 
-/**
- * T-3-003 §5: step 7 CONTRACT(제안 있음)는 더 이상 ADVANCE로 자동 통과하지 않는다(응답 필수). 이
- * fixture들의 첫 계약이 룰셋 min(1시즌)으로 뽑혀 step 7이 재계약 사전 협상을 여는 경우, 이 시즌 로그는
- * "재계약 없이 시즌 계속"만 확인하면 되므로 `REJECT_OFFER(null)`로 자동 응답해 원래 스크립트를 그대로
- * 이어간다.
- */
-function autoRejectContractIfOpen(snapshot: DomainSnapshot): DomainSnapshot {
-  const pending = snapshot.state.pending;
-  if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
-    return runOrThrow(
-      snapshot,
-      buildCommand('REJECT_OFFER', `auto-reject-contract-${snapshot.revision}`, snapshot.revision, { offerId: null }),
-    );
-  }
-  return snapshot;
-}
-
 function runFullSeason(careerFixture: CareerFixture, seasonLog: SeasonLog): DomainSnapshot {
   let snapshot = runCareerFixture(careerFixture);
-  snapshot = autoRejectContractIfOpen(runOrThrow(snapshot, buildCommand('START_SEASON', 's0', snapshot.revision, seasonLog.startSeason)));
+  snapshot = runOrThrow(snapshot, buildCommand('START_SEASON', 's0', snapshot.revision, seasonLog.startSeason));
   seasonLog.commands.forEach((raw, index) => {
-    snapshot = autoRejectContractIfOpen(runOrThrow(snapshot, buildCommand(raw.type, `s-${index}`, snapshot.revision, raw.payload)));
+    snapshot = runOrThrow(snapshot, buildCommand(raw.type, `s-${index}`, snapshot.revision, raw.payload));
   });
   return snapshot;
 }
@@ -100,13 +83,12 @@ function runSplitAtMidSeason(careerFixture: CareerFixture, seasonLog: SeasonLog)
   );
   expect(snapshot.state.season!.currentStep).toBeGreaterThanOrEqual(6);
 
-  // JSON 직렬화로 끊었다가 이어 재생한다(CONTRACT pending이 열려 있는 채로 끊는 경우 포함).
+  // JSON 직렬화로 끊었다가 이어 재생한다.
   snapshot = roundTripJson(snapshot);
-  snapshot = autoRejectContractIfOpen(snapshot);
 
   for (let index = firstAdvanceIndex + 1; index < seasonLog.commands.length; index++) {
     const raw = seasonLog.commands[index]!;
-    snapshot = autoRejectContractIfOpen(runOrThrow(snapshot, buildCommand(raw.type, `s-${index}`, snapshot.revision, raw.payload)));
+    snapshot = runOrThrow(snapshot, buildCommand(raw.type, `s-${index}`, snapshot.revision, raw.payload));
   }
   return snapshot;
 }

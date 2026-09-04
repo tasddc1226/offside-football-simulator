@@ -36,6 +36,10 @@ import {
   career08MfEngineCommands,
   career09Fw,
   career09FwEngineCommands,
+  career10Transfer,
+  career10TransferEngineCommands,
+  career11Loan,
+  career11LoanEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -383,6 +387,8 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     'career-07-df.golden.json',
     'career-08-mf.golden.json',
     'career-09-fw.golden.json',
+    'career-10-transfer.golden.json',
+    'career-11-loan.golden.json',
   ];
 
   it('packages/fixtures/src/*/의 *.golden.json 목록이 이 테스트가 재생하는 목록과 같다', () => {
@@ -571,5 +577,38 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     expect(snapshot.revision).toBe(career09Fw.golden.revision);
     expect(snapshot.stateHash).toBe(career09Fw.golden.stateHash);
     expect(snapshot.state.season).toBeNull();
+  });
+
+  // T-3-003 §8: EXPIRED 시장 NEGOTIATE·ACCEPT_OFFER(FREE_AGENT) 골든. career-01·03·04와 같은 독립
+  // 실행 형태다(career10TransferEngineCommands가 CREATE_CAREER부터 자체적으로 만든다).
+  it('career-10-transfer: 매 명령 뒤 상태가 스키마를 통과하고 최종 hash가 golden과 같다', () => {
+    let counter = 0;
+    const commands = career10TransferEngineCommands(() => `golden-c10-${counter++}`);
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career10Transfer);
+      assertStateRoundTrips(snapshot, `career10Transfer revision ${snapshot.revision}`);
+    }
+    if (snapshot === null) throw new Error('career10Transfer 명령 목록이 비어 있다.');
+    expect(snapshot.revision).toBe(career10Transfer.golden.revision);
+    expect(snapshot.stateHash).toBe(career10Transfer.golden.stateHash);
+    expect(snapshot.state.clubHistory).toHaveLength(2);
+  });
+
+  // T-3-003 §8: INTEREST 시장 LOAN·LOAN_RETURN(RETURN) 골든. career-01·03·04와 같은 독립 실행
+  // 형태다(career11LoanEngineCommands가 CREATE_CAREER부터 자체적으로 만든다).
+  it('career-11-loan: 매 명령 뒤 상태가 스키마를 통과하고 최종 hash가 golden과 같다', () => {
+    let counter = 0;
+    const commands = career11LoanEngineCommands(() => `golden-c11-${counter++}`);
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career11Loan);
+      assertStateRoundTrips(snapshot, `career11Loan revision ${snapshot.revision}`);
+    }
+    if (snapshot === null) throw new Error('career11Loan 명령 목록이 비어 있다.');
+    expect(snapshot.revision).toBe(career11Loan.golden.revision);
+    expect(snapshot.stateHash).toBe(career11Loan.golden.stateHash);
+    expect(snapshot.state.parentContract).toBeNull();
+    expect(snapshot.state.clubHistory).toHaveLength(3);
   });
 });

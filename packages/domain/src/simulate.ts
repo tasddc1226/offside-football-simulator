@@ -2516,9 +2516,12 @@ function hasDuplicates(values: readonly string[]): boolean {
 /**
  * stateHash 일치, 버전 일치, 배열 정렬 불변, 타임라인 revision 비감소, pending·status 정합,
  * contract·pending(OFFERS) 정합을 검사한다. 계약 중에도 pending이 EVENT인 것은 유효하다
- * (Phase 2부터 시즌 중 이벤트가 계약된 선수에게도 걸린다). 계약 중에 새 제안(OFFERS)이 pending인
- * 것만 정합성 위반이다. T-2-001: ADVANCE 한 번이 여러 step을 지나갈 수 있어(RULE-TIME-002) 같은
- * revision에 STEP_PASSED 항목이 여럿 남을 수 있으므로 "단조 증가"가 아니라 "비감소"만 요구한다.
+ * (Phase 2부터 시즌 중 이벤트가 계약된 선수에게도 걸린다). contract와 pending(OFFERS)이 함께 있어도
+ * market.reason이 FIRST_CONTRACT가 아니면 유효하다(T-3-003 §5: `openMarketAfterSettlement`가 여는
+ * EXPIRED·INTEREST 시장은 계약이 아직 만료 처리되지 않은 채로 pending만 연다 — 응답 전까지 contract가
+ * 남아 있는 것이 정상이다). 첫 계약(FIRST_CONTRACT) 경로만 계약이 없어야 하는 불변이 유효하다.
+ * T-2-001: ADVANCE 한 번이 여러 step을 지나갈 수 있어(RULE-TIME-002) 같은 revision에 STEP_PASSED
+ * 항목이 여럿 남을 수 있으므로 "단조 증가"가 아니라 "비감소"만 요구한다.
  */
 export function verifySnapshot(snapshot: DomainSnapshot): { ok: true } | { ok: false; reason: string } {
   if (hashState(snapshot.state) !== snapshot.stateHash) {
@@ -2547,7 +2550,11 @@ export function verifySnapshot(snapshot: DomainSnapshot): { ok: true } | { ok: f
   if (snapshot.state.status !== 'ACTIVE' && snapshot.state.pending !== null) {
     return { ok: false, reason: 'PENDING_STATUS_MISMATCH' };
   }
-  if (snapshot.state.contract !== null && snapshot.state.pending?.kind === 'OFFERS') {
+  if (
+    snapshot.state.contract !== null &&
+    snapshot.state.pending?.kind === 'OFFERS' &&
+    snapshot.state.pending.market.reason === 'FIRST_CONTRACT'
+  ) {
     return { ok: false, reason: 'CONTRACT_OFFERS_CONFLICT' };
   }
 

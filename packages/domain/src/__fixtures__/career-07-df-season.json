@@ -17,6 +17,12 @@
       }
     },
     {
+      "type": "REJECT_OFFER",
+      "payload": {
+        "offerId": null
+      }
+    },
+    {
       "type": "ADVANCE",
       "payload": {
         "eligibleEvents": []
