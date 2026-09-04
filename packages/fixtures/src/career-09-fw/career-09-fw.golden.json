@@ -1,6 +1,6 @@
 {
   "revision": 15,
-  "stateHash": "51faaa241eb8e5391487181407c1a6cbb0e36913c361fe9626b3e861343afe1e",
+  "stateHash": "f4dda6a21fc5e9319aab8e713954d40827a23ba31796947b45ec2330b71de71d",
   "rngStateDraws": 398,
   "age": 18,
   "seasonHistory": [
@@ -13,11 +13,11 @@
           "competitionId": "LEAGUE",
           "kind": "LEAGUE",
           "played": 22,
-          "won": 10,
+          "won": 9,
           "drawn": 3,
-          "lost": 9,
+          "lost": 10,
           "goalsFor": 22,
-          "goalsAgainst": 25,
+          "goalsAgainst": 29,
           "position": 5,
           "cupRound": null
         },
@@ -44,11 +44,11 @@
             "competitionId": "LEAGUE",
             "kind": "LEAGUE",
             "played": 22,
-            "won": 10,
+            "won": 9,
             "drawn": 3,
-            "lost": 9,
+            "lost": 10,
             "goalsFor": 22,
-            "goalsAgainst": 25,
+            "goalsAgainst": 29,
             "position": 5,
             "cupRound": null
           },
@@ -70,13 +70,13 @@
           "appearances": {
             "total": 23,
             "started": 0,
-            "sub": 18,
-            "zeroMinute": 13,
-            "out": 5
+            "sub": 21,
+            "zeroMinute": 12,
+            "out": 2
           },
-          "minutes": 185,
-          "ratingSumTenths": 655,
-          "ratedMatches": 10,
+          "minutes": 200,
+          "ratingSumTenths": 713,
+          "ratedMatches": 11,
           "yellow": 0,
           "red": 1,
           "injuries": 1,
@@ -84,21 +84,21 @@
             "group": "FW",
             "goals": 3,
             "assists": 2,
-            "xgCenti": 370,
-            "shots": 18,
+            "xgCenti": 390,
+            "shots": 19,
             "offsides": 3
           }
         },
         "selectionSummary": {
           "squadRoleAtStart": "ROTATION",
-          "squadRoleAtEnd": "RESERVE",
+          "squadRoleAtEnd": "ROTATION",
           "started": 0,
-          "sub": 18,
-          "zeroMinute": 13,
-          "out": 5,
-          "minutes": 185,
+          "sub": 21,
+          "zeroMinute": 12,
+          "out": 2,
+          "minutes": 200,
           "possibleMinutes": 2070,
-          "finalRank": 3
+          "finalRank": 2
         },
         "roleChanges": [
           {
@@ -111,7 +111,7 @@
           "promised": "ROTATION",
           "delivered": "RESERVE",
           "fulfilled": false,
-          "minutesShareBp": 894
+          "minutesShareBp": 966
         },
         "attributeDeltas": [
           {
@@ -128,7 +128,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 32
+                "centi": 35
               }
             ]
           },
@@ -146,7 +146,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 4
+                "centi": 5
               }
             ]
           },
@@ -164,7 +164,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 4
+                "centi": 5
               }
             ]
           },
@@ -182,7 +182,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 4
+                "centi": 5
               }
             ]
           },
@@ -200,7 +200,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 30
+                "centi": 33
               }
             ]
           },
@@ -218,7 +218,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 4
+                "centi": 5
               }
             ]
           },
@@ -236,7 +236,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 4
+                "centi": 5
               }
             ]
           },
@@ -272,7 +272,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 38
+                "centi": 41
               }
             ]
           },
@@ -380,7 +380,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 22
+                "centi": 24
               }
             ]
           },
@@ -398,7 +398,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 22
+                "centi": 24
               }
             ]
           },
@@ -416,7 +416,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 28
+                "centi": 30
               }
             ]
           },
@@ -434,7 +434,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 28
+                "centi": 30
               }
             ]
           },
@@ -489,7 +489,7 @@
             "after": 80
           },
           "morale": {
-            "before": 52,
+            "before": 46,
             "after": 60
           },
           "managerTrust": {
@@ -577,7 +577,7 @@
             "passedAtRevision": 14
           }
         ],
-        "hash": "ba73b127ba163ac420f96b5bc5cb22f6d8d5e57ba317f489d12c3dd7256df069"
+        "hash": "deb999ef7c869830a30fa57de7c6ca2682b992a5b359418f198cfec0f7f7be46"
       }
     }
   ],
@@ -588,13 +588,13 @@
       "appearances": {
         "total": 23,
         "started": 0,
-        "sub": 18,
-        "zeroMinute": 13,
-        "out": 5
+        "sub": 21,
+        "zeroMinute": 12,
+        "out": 2
       },
-      "minutes": 185,
-      "ratingSumTenths": 655,
-      "ratedMatches": 10,
+      "minutes": 200,
+      "ratingSumTenths": 713,
+      "ratedMatches": 11,
       "yellow": 0,
       "red": 1,
       "injuries": 1,
@@ -602,22 +602,22 @@
         "group": "FW",
         "goals": 3,
         "assists": 2,
-        "xgCenti": 370,
-        "shots": 18,
+        "xgCenti": 390,
+        "shots": 19,
         "offsides": 3
       }
     },
-    "averageRatingTenths": 66,
+    "averageRatingTenths": 65,
     "competitions": [
       {
         "competitionId": "LEAGUE",
         "kind": "LEAGUE",
         "played": 22,
-        "won": 10,
+        "won": 9,
         "drawn": 3,
-        "lost": 9,
+        "lost": 10,
         "goalsFor": 22,
-        "goalsAgainst": 25,
+        "goalsAgainst": 29,
         "position": 5,
         "cupRound": null
       },

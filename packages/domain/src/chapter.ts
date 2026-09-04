@@ -57,6 +57,8 @@ export type SelectChapterInput = {
   /** `season.chapters[].chapterId`(이번 시즌에 이미 확정된 챕터, 재열림 방지). */
   existingChapterIds: readonly string[];
   league: League;
+  /** 첫 회복 후 실제 출전 경기 id. 없으면 INJURY_RETURN 후보는 열리지 않는다. */
+  injuryReturnMatchId?: string | null;
 };
 
 function stepAllowsImportance(step: SeasonStep, importance: 'MAJOR' | 'MINOR'): boolean {
@@ -89,6 +91,7 @@ type TriggerContext = {
   league: League;
   leaguePosition: number | null;
   tags: readonly string[];
+  injuryReturnMatchId?: string | null;
 };
 
 /**
@@ -106,6 +109,8 @@ export function matchesTrigger(trigger: ChapterTrigger, match: MatchRecord, ctx:
       return match.kind === 'CUP' && match.round === 'FINAL';
     case 'DECIDER':
       return ctx.isLastLeagueStep && isNearPromotionOrRelegation(ctx.league, ctx.leaguePosition, trigger.maxRankGap);
+    case 'INJURY_RETURN':
+      return ctx.injuryReturnMatchId === match.id;
     case 'TAG':
       return ctx.tags.includes(trigger.tag);
   }
@@ -135,14 +140,19 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
     let isFirstCareerAppearance = isFirstCareerAppearanceAtStepStart;
     for (const match of orderedMatches) {
       if (
-        matchesTrigger(candidate.trigger, match, {
-          seasonIndex: input.seasonIndex,
-          isFirstCareerAppearance,
-          isLastLeagueStep,
-          league: input.league,
-          leaguePosition,
-          tags: input.tags,
-        })
+        matchesTrigger(
+          candidate.trigger,
+          match,
+          {
+            seasonIndex: input.seasonIndex,
+            isFirstCareerAppearance,
+            isLastLeagueStep,
+            league: input.league,
+            leaguePosition,
+            tags: input.tags,
+            ...(input.injuryReturnMatchId === undefined ? {} : { injuryReturnMatchId: input.injuryReturnMatchId }),
+          },
+        )
       ) {
         opened.push({ candidate, matchId: match.id });
         break;

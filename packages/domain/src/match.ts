@@ -52,6 +52,8 @@ export type PlayMatchInput = {
   seasonYellowCount: number;
   /** season.lastRatingTenths(이번 경기 전 값). 0분 경기는 이 값을 그대로 유지한다. */
   lastRatingTenths: number | null;
+  /** 회복 직후 실제 출전의 재발 검사. 이 값이 있으면 새 부상 판정보다 먼저 1회 소비한다. */
+  recurrenceCheck?: { episodeId: string; riskBp: number };
 };
 
 export type PlayMatchResult = {
@@ -63,6 +65,7 @@ export type PlayMatchResult = {
   nextSquadStatus: number;
   nextLastRatingTenths: number | null;
   nextSeasonYellowCount: number;
+  recurrenceTriggered: boolean;
 };
 
 function zeroStatsForGroup(group: StatGroup): PositionStats {
@@ -231,7 +234,7 @@ export function applyCompetitorFormDrift(
  * T-2-003 D-35: 경기 하나를 계산한다. RNG 소비 순서(고정, 테스트가 draw 카운트로 검사한다):
  * 1. 팀 결과(`roll100` 1 + `rollInt` 2) 2. 선발(roll 없음) 3. 출전 시간(START·SUB만 각 1회, OUT은 0)
  * 4. 관여량(minutes>0만 1회) 5. 포지션군 통계(minutes>0만, 고정 키 순서로 각 1회)
- * 6. 카드(minutes>0만 1회) 7. 부상 이탈(minutes>0만 1회, 부상이면 이탈 경기 수 1회 추가)
+ * 6. 카드(minutes>0만 1회) 7. 재발 검사(대상 출전이면 1회)→새 부상 이탈(minutes>0만 1회)
  * 8. 평점(roll 없음). 경쟁자 `form` drift도 이 함수가 매 경기 적용한다(roll 없음).
  */
 export function playMatch(input: PlayMatchInput): PlayMatchResult {
@@ -375,18 +378,25 @@ export function playMatch(input: PlayMatchInput): PlayMatchResult {
     }
   }
 
-  // 7. 부상 이탈(minutes>0만).
+  // 7. 재발 검사 후 새 부상 이탈(minutes>0만). 재발 성공이면 별도 duration roll은 injury.ts가
+  // consume한다. match.ts에서는 이전 availability를 건드리지 않는다.
   let injuredOff = false;
+  let recurrenceTriggered = false;
   if (minutes > 0) {
-    const threshold =
-      rules.injury.perMatchPercent + (input.fitness < rules.injury.lowFitnessBelow ? rules.injury.lowFitnessExtraPercent : 0);
-    const injuryRoll = roll100(state);
-    state = injuryRoll.state;
-    if (injuryRoll.value <= threshold) {
-      injuredOff = true;
-      const outMatchesRoll = rollRange(state, rules.injury.outMatches.min, rules.injury.outMatches.max);
-      state = outMatchesRoll.state;
-      nextAvailability = { kind: 'INJURY', matchesRemaining: outMatchesRoll.value, sinceMatchId: matchId };
+    if (input.recurrenceCheck !== undefined) {
+      const recurrenceRoll = rollInt(state, 10000);
+      state = recurrenceRoll.state;
+      recurrenceTriggered = recurrenceRoll.value < clamp(input.recurrenceCheck.riskBp, 0, 10000);
+      if (recurrenceTriggered) injuredOff = true;
+    }
+    if (!recurrenceTriggered) {
+      const threshold =
+        rules.injury.perMatchPercent + (input.fitness < rules.injury.lowFitnessBelow ? rules.injury.lowFitnessExtraPercent : 0);
+      const injuryRoll = roll100(state);
+      state = injuryRoll.state;
+      if (injuryRoll.value <= threshold) {
+        injuredOff = true;
+      }
     }
   }
 
@@ -436,5 +446,6 @@ export function playMatch(input: PlayMatchInput): PlayMatchResult {
     nextSquadStatus,
     nextLastRatingTenths,
     nextSeasonYellowCount,
+    recurrenceTriggered,
   };
 }

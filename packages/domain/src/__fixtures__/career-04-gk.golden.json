@@ -1,6 +1,6 @@
 {
   "revision": 16,
-  "stateHash": "fc0dec702c7ab48ecc0c8d5381490fa825f52dfa90107ccb72fd16fe1c5210e2",
+  "stateHash": "6442d0c4e7b8ef86496114e73234458783bf4a2a277bcbb8c64bfa36cd611f0b",
   "rngStateDraws": 403,
   "age": 18,
   "seasonHistory": [
@@ -13,25 +13,25 @@
           "competitionId": "LEAGUE",
           "kind": "LEAGUE",
           "played": 22,
-          "won": 7,
-          "drawn": 9,
-          "lost": 6,
-          "goalsFor": 30,
-          "goalsAgainst": 27,
-          "position": 5,
+          "won": 8,
+          "drawn": 11,
+          "lost": 3,
+          "goalsFor": 31,
+          "goalsAgainst": 19,
+          "position": 2,
           "cupRound": null
         },
         {
           "competitionId": "CUP",
           "kind": "CUP",
-          "played": 3,
+          "played": 2,
           "won": 1,
-          "drawn": 1,
+          "drawn": 0,
           "lost": 1,
-          "goalsFor": 5,
-          "goalsAgainst": 5,
+          "goalsFor": 3,
+          "goalsAgainst": 1,
           "position": null,
-          "cupRound": "OUT_SEMI"
+          "cupRound": "OUT_R2"
         }
       ],
       "settledAtRevision": 16,
@@ -44,61 +44,61 @@
             "competitionId": "LEAGUE",
             "kind": "LEAGUE",
             "played": 22,
-            "won": 7,
-            "drawn": 9,
-            "lost": 6,
-            "goalsFor": 30,
-            "goalsAgainst": 27,
-            "position": 5,
+            "won": 8,
+            "drawn": 11,
+            "lost": 3,
+            "goalsFor": 31,
+            "goalsAgainst": 19,
+            "position": 2,
             "cupRound": null
           },
           {
             "competitionId": "CUP",
             "kind": "CUP",
-            "played": 3,
+            "played": 2,
             "won": 1,
-            "drawn": 1,
+            "drawn": 0,
             "lost": 1,
-            "goalsFor": 5,
-            "goalsAgainst": 5,
+            "goalsFor": 3,
+            "goalsAgainst": 1,
             "position": null,
-            "cupRound": "OUT_SEMI"
+            "cupRound": "OUT_R2"
           }
         ],
         "playerStats": {
           "group": "GK",
           "appearances": {
-            "total": 25,
-            "started": 21,
+            "total": 24,
+            "started": 23,
             "sub": 0,
-            "zeroMinute": 4,
-            "out": 4
+            "zeroMinute": 1,
+            "out": 1
           },
-          "minutes": 1700,
-          "ratingSumTenths": 1447,
-          "ratedMatches": 21,
-          "yellow": 0,
+          "minutes": 2020,
+          "ratingSumTenths": 1661,
+          "ratedMatches": 23,
+          "yellow": 3,
           "red": 0,
-          "injuries": 2,
+          "injuries": 1,
           "totals": {
             "group": "GK",
-            "saves": 57,
-            "psxgMinusGoalsCenti": 60,
-            "cleanSheet": 6,
-            "crossesClaimed": 32,
-            "buildUpPasses": 414
+            "saves": 71,
+            "psxgMinusGoalsCenti": 460,
+            "cleanSheet": 9,
+            "crossesClaimed": 46,
+            "buildUpPasses": 503
           }
         },
         "selectionSummary": {
           "squadRoleAtStart": "STARTER",
-          "squadRoleAtEnd": "RESERVE",
-          "started": 21,
+          "squadRoleAtEnd": "STARTER",
+          "started": 23,
           "sub": 0,
-          "zeroMinute": 4,
-          "out": 4,
-          "minutes": 1700,
-          "possibleMinutes": 2250,
-          "finalRank": 3
+          "zeroMinute": 1,
+          "out": 1,
+          "minutes": 2020,
+          "possibleMinutes": 2160,
+          "finalRank": 1
         },
         "roleChanges": [
           {
@@ -108,10 +108,10 @@
           }
         ],
         "promiseFulfilment": {
-          "promised": "BENCH",
+          "promised": "ROTATION",
           "delivered": "STARTER",
           "fulfilled": true,
-          "minutesShareBp": 7556
+          "minutesShareBp": 9352
         },
         "attributeDeltas": [
           {
@@ -128,7 +128,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 11
               }
             ]
           },
@@ -146,7 +146,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 11
               }
             ]
           },
@@ -164,7 +164,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 11
               }
             ]
           },
@@ -182,7 +182,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 11
               }
             ]
           },
@@ -200,7 +200,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 11
               }
             ]
           },
@@ -218,7 +218,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 11
               }
             ]
           },
@@ -232,11 +232,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -7
+                "centi": -4
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 67
+                "centi": 73
               }
             ]
           },
@@ -250,11 +250,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -2
+                "centi": -1
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 13
               }
             ]
           },
@@ -268,11 +268,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -2
+                "centi": -1
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 13
               }
             ]
           },
@@ -286,11 +286,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -9
+                "centi": -5
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 84
+                "centi": 92
               }
             ]
           },
@@ -304,11 +304,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -5
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 46
+                "centi": 50
               }
             ]
           },
@@ -322,11 +322,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -2
+                "centi": -1
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 13
               }
             ]
           },
@@ -340,11 +340,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -2
+                "centi": -1
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 13
               }
             ]
           },
@@ -358,11 +358,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -2
+                "centi": -1
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 13
               }
             ]
           },
@@ -376,11 +376,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -4
+                "centi": -2
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 32
+                "centi": 35
               }
             ]
           },
@@ -394,11 +394,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -6
+                "centi": -4
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 55
+                "centi": 61
               }
             ]
           },
@@ -412,11 +412,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -5
+                "centi": -3
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 46
+                "centi": 50
               }
             ]
           },
@@ -430,11 +430,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -7
+                "centi": -4
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 58
+                "centi": 64
               }
             ]
           },
@@ -452,7 +452,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 8
+                "centi": 9
               }
             ]
           },
@@ -470,7 +470,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 8
+                "centi": 9
               }
             ]
           }
@@ -485,11 +485,11 @@
             "after": 50
           },
           "fitness": {
-            "before": 50,
+            "before": 47,
             "after": 80
           },
           "morale": {
-            "before": 79,
+            "before": 84,
             "after": 60
           },
           "managerTrust": {
@@ -558,7 +558,7 @@
           {
             "step": 9,
             "phase": "LEAGUE",
-            "matchesPlayed": 4,
+            "matchesPlayed": 3,
             "decisionsOpened": 0,
             "passedAtRevision": 15
           },
@@ -577,61 +577,61 @@
             "passedAtRevision": 15
           }
         ],
-        "hash": "31c6eb8bcca6a4c7aaf26a2bb7468ecc65d74a7b18299009765604fc3b401f5c"
+        "hash": "c80ed350d53fe7d5539e43e3b5bcd4412a06fa25475c93da2c91399afabed577"
       }
     }
   ],
   "beforeSettlement": {
-    "matchesPlayed": 25,
+    "matchesPlayed": 24,
     "playerStats": {
       "group": "GK",
       "appearances": {
-        "total": 25,
-        "started": 21,
+        "total": 24,
+        "started": 23,
         "sub": 0,
-        "zeroMinute": 4,
-        "out": 4
+        "zeroMinute": 1,
+        "out": 1
       },
-      "minutes": 1700,
-      "ratingSumTenths": 1447,
-      "ratedMatches": 21,
-      "yellow": 0,
+      "minutes": 2020,
+      "ratingSumTenths": 1661,
+      "ratedMatches": 23,
+      "yellow": 3,
       "red": 0,
-      "injuries": 2,
+      "injuries": 1,
       "totals": {
         "group": "GK",
-        "saves": 57,
-        "psxgMinusGoalsCenti": 60,
-        "cleanSheet": 6,
-        "crossesClaimed": 32,
-        "buildUpPasses": 414
+        "saves": 71,
+        "psxgMinusGoalsCenti": 460,
+        "cleanSheet": 9,
+        "crossesClaimed": 46,
+        "buildUpPasses": 503
       }
     },
-    "averageRatingTenths": 69,
+    "averageRatingTenths": 72,
     "competitions": [
       {
         "competitionId": "LEAGUE",
         "kind": "LEAGUE",
         "played": 22,
-        "won": 7,
-        "drawn": 9,
-        "lost": 6,
-        "goalsFor": 30,
-        "goalsAgainst": 27,
-        "position": 5,
+        "won": 8,
+        "drawn": 11,
+        "lost": 3,
+        "goalsFor": 31,
+        "goalsAgainst": 19,
+        "position": 2,
         "cupRound": null
       },
       {
         "competitionId": "CUP",
         "kind": "CUP",
-        "played": 3,
+        "played": 2,
         "won": 1,
-        "drawn": 1,
+        "drawn": 0,
         "lost": 1,
-        "goalsFor": 5,
-        "goalsAgainst": 5,
+        "goalsFor": 3,
+        "goalsAgainst": 1,
         "position": null,
-        "cupRound": "OUT_SEMI"
+        "cupRound": "OUT_R2"
       }
     ]
   }

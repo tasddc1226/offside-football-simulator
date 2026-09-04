@@ -11,3 +11,4 @@ export { career08Mf, career08MfEngineCommands } from './career-08-mf/index.js';
 export { career09Fw, career09FwEngineCommands } from './career-09-fw/index.js';
 export { career10Transfer, career10TransferEngineCommands } from './career-10-transfer/index.js';
 export { career11Loan, career11LoanEngineCommands } from './career-11-loan/index.js';
+export { career12Injury, career12InjuryEngineCommands } from './career-12-injury/index.js';

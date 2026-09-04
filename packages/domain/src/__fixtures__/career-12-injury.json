@@ -2,8 +2,8 @@
   "rulesetVersion": "1.0.0",
   "contentPackVersion": "0.1.0",
   "createCareer": {
-    "careerId": "car_gk_04",
-    "seed": "gk-search-gk-shot-stopper-194",
+    "careerId": "car_injury_12",
+    "seed": "career-12-fixed-search-59",
     "simulationMode": "FAST"
   },
   "commands": [

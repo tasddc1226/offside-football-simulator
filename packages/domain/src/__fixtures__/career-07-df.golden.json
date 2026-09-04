@@ -1,6 +1,6 @@
 {
   "revision": 16,
-  "stateHash": "b94c5da33465f5e07e7fb7d7dd05891762d424a33d61ccbd328a6cc3706809a4",
+  "stateHash": "54abf4c147708f959f074a4f701907086e7c0e23a62371e0670d0b23cc484c41",
   "rngStateDraws": 403,
   "age": 18,
   "seasonHistory": [
@@ -13,11 +13,11 @@
           "competitionId": "LEAGUE",
           "kind": "LEAGUE",
           "played": 22,
-          "won": 9,
-          "drawn": 10,
+          "won": 8,
+          "drawn": 11,
           "lost": 3,
-          "goalsFor": 28,
-          "goalsAgainst": 20,
+          "goalsFor": 30,
+          "goalsAgainst": 23,
           "position": 1,
           "cupRound": null
         },
@@ -25,13 +25,13 @@
           "competitionId": "CUP",
           "kind": "CUP",
           "played": 4,
-          "won": 4,
+          "won": 3,
           "drawn": 0,
-          "lost": 0,
-          "goalsFor": 7,
-          "goalsAgainst": 0,
+          "lost": 1,
+          "goalsFor": 6,
+          "goalsAgainst": 1,
           "position": null,
-          "cupRound": "WON"
+          "cupRound": "OUT_FINAL"
         }
       ],
       "settledAtRevision": 16,
@@ -44,11 +44,11 @@
             "competitionId": "LEAGUE",
             "kind": "LEAGUE",
             "played": 22,
-            "won": 9,
-            "drawn": 10,
+            "won": 8,
+            "drawn": 11,
             "lost": 3,
-            "goalsFor": 28,
-            "goalsAgainst": 20,
+            "goalsFor": 30,
+            "goalsAgainst": 23,
             "position": 1,
             "cupRound": null
           },
@@ -56,13 +56,13 @@
             "competitionId": "CUP",
             "kind": "CUP",
             "played": 4,
-            "won": 4,
+            "won": 3,
             "drawn": 0,
-            "lost": 0,
-            "goalsFor": 7,
-            "goalsAgainst": 0,
+            "lost": 1,
+            "goalsFor": 6,
+            "goalsAgainst": 1,
             "position": null,
-            "cupRound": "WON"
+            "cupRound": "OUT_FINAL"
           }
         ],
         "playerStats": {
@@ -71,21 +71,21 @@
             "total": 26,
             "started": 0,
             "sub": 24,
-            "zeroMinute": 15,
+            "zeroMinute": 14,
             "out": 2
           },
-          "minutes": 220,
-          "ratingSumTenths": 712,
-          "ratedMatches": 11,
-          "yellow": 1,
+          "minutes": 245,
+          "ratingSumTenths": 755,
+          "ratedMatches": 12,
+          "yellow": 2,
           "red": 1,
           "injuries": 1,
           "totals": {
             "group": "DF",
-            "tackles": 18,
-            "interceptions": 18,
+            "tackles": 17,
+            "interceptions": 19,
             "aerialsWon": 23,
-            "goalsConcededInvolved": 3,
+            "goalsConcededInvolved": 4,
             "cleanSheet": 0
           }
         },
@@ -94,9 +94,9 @@
           "squadRoleAtEnd": "ROTATION",
           "started": 0,
           "sub": 24,
-          "zeroMinute": 15,
+          "zeroMinute": 14,
           "out": 2,
-          "minutes": 220,
+          "minutes": 245,
           "possibleMinutes": 2340,
           "finalRank": 3
         },
@@ -111,7 +111,7 @@
           "promised": "RESERVE",
           "delivered": "RESERVE",
           "fulfilled": true,
-          "minutesShareBp": 940
+          "minutesShareBp": 1047
         },
         "attributeDeltas": [
           {
@@ -182,7 +182,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 35
+                "centi": 38
               }
             ]
           },
@@ -254,7 +254,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 6
+                "centi": 7
               }
             ]
           },
@@ -272,7 +272,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 6
+                "centi": 7
               }
             ]
           },
@@ -290,7 +290,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 6
+                "centi": 7
               }
             ]
           },
@@ -308,7 +308,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 41
+                "centi": 45
               }
             ]
           },
@@ -326,7 +326,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 6
+                "centi": 7
               }
             ]
           },
@@ -344,7 +344,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 44
+                "centi": 48
               }
             ]
           },
@@ -362,7 +362,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 20
+                "centi": 22
               }
             ]
           },
@@ -380,7 +380,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 19
+                "centi": 21
               }
             ]
           },
@@ -398,7 +398,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 30
+                "centi": 33
               }
             ]
           },
@@ -416,7 +416,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 24
+                "centi": 26
               }
             ]
           },
@@ -434,7 +434,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 30
+                "centi": 33
               }
             ]
           },
@@ -452,7 +452,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 4
+                "centi": 5
               }
             ]
           },
@@ -470,7 +470,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 4
+                "centi": 5
               }
             ]
           }
@@ -481,7 +481,7 @@
         },
         "stateDeltas": {
           "form": {
-            "before": 48,
+            "before": 47,
             "after": 50
           },
           "fitness": {
@@ -489,7 +489,7 @@
             "after": 80
           },
           "morale": {
-            "before": 67,
+            "before": 62,
             "after": 60
           },
           "managerTrust": {
@@ -577,7 +577,7 @@
             "passedAtRevision": 15
           }
         ],
-        "hash": "20afa4a250ecde088efa7689afb236a5d9c53af2606db30799cbbb76889fbd40"
+        "hash": "8df32a76a0c7becba817f2a7334a4e3eaa2c8e63777ebd5a31a8b7fc7b90e157"
       }
     }
   ],
@@ -589,35 +589,35 @@
         "total": 26,
         "started": 0,
         "sub": 24,
-        "zeroMinute": 15,
+        "zeroMinute": 14,
         "out": 2
       },
-      "minutes": 220,
-      "ratingSumTenths": 712,
-      "ratedMatches": 11,
-      "yellow": 1,
+      "minutes": 245,
+      "ratingSumTenths": 755,
+      "ratedMatches": 12,
+      "yellow": 2,
       "red": 1,
       "injuries": 1,
       "totals": {
         "group": "DF",
-        "tackles": 18,
-        "interceptions": 18,
+        "tackles": 17,
+        "interceptions": 19,
         "aerialsWon": 23,
-        "goalsConcededInvolved": 3,
+        "goalsConcededInvolved": 4,
         "cleanSheet": 0
       }
     },
-    "averageRatingTenths": 65,
+    "averageRatingTenths": 63,
     "competitions": [
       {
         "competitionId": "LEAGUE",
         "kind": "LEAGUE",
         "played": 22,
-        "won": 9,
-        "drawn": 10,
+        "won": 8,
+        "drawn": 11,
         "lost": 3,
-        "goalsFor": 28,
-        "goalsAgainst": 20,
+        "goalsFor": 30,
+        "goalsAgainst": 23,
         "position": 1,
         "cupRound": null
       },
@@ -625,13 +625,13 @@
         "competitionId": "CUP",
         "kind": "CUP",
         "played": 4,
-        "won": 4,
+        "won": 3,
         "drawn": 0,
-        "lost": 0,
-        "goalsFor": 7,
-        "goalsAgainst": 0,
+        "lost": 1,
+        "goalsFor": 6,
+        "goalsAgainst": 1,
         "position": null,
-        "cupRound": "WON"
+        "cupRound": "OUT_FINAL"
       }
     ]
   }

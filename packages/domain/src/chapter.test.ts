@@ -132,6 +132,22 @@ describe('matchesTrigger', () => {
     expect(matchesTrigger({ kind: 'TAG', tag: 'TAG-X' }, match, ctx)).toBe(true);
     expect(matchesTrigger({ kind: 'TAG', tag: 'TAG-Y' }, match, ctx)).toBe(false);
   });
+
+  it('INJURY_RETURN은 재발 성공·실패와 무관하게 첫 실제 복귀 경기 id가 맞으면 열린다', () => {
+    const match = makeMatch({ id: 'm-return' });
+    for (const recurrenceOutcome of ['SUCCESS', 'FAIL'] as const) {
+      expect(
+        matchesTrigger(
+          { kind: 'INJURY_RETURN' },
+          match,
+          { ...ctx, injuryReturnMatchId: 'm-return' },
+        ),
+        recurrenceOutcome,
+      ).toBe(true);
+    }
+    expect(matchesTrigger({ kind: 'INJURY_RETURN' }, match, { ...ctx, injuryReturnMatchId: null })).toBe(false);
+    expect(matchesTrigger({ kind: 'INJURY_RETURN' }, match, { ...ctx, injuryReturnMatchId: 'm-other' })).toBe(false);
+  });
 });
 
 describe('selectChapter', () => {
@@ -230,7 +246,9 @@ describe('selectChapter', () => {
     const steps = [derbyStep, ...trailingSteps];
 
     const playStepMatches: PlayStepMatches = (stepIndex) =>
-      stepIndex === 6 ? { results: [], records: [derbyMatch], competitions: [] } : { results: [], records: [], competitions: [] };
+      stepIndex === 6
+        ? { results: [], records: [derbyMatch], competitions: [], forcedPending: null, injuryReturnMatchId: null }
+        : { results: [], records: [], competitions: [], forcedPending: null, injuryReturnMatchId: null };
 
     const chapterContext: ChapterWalkContext = {
       chapterCandidates: [derbyCandidate],

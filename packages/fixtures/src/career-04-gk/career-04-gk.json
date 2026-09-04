@@ -3,7 +3,7 @@
   "contentPackVersion": "0.1.0",
   "createCareer": {
     "careerId": "car_gk_04",
-    "seed": "gk-search-gk-shot-stopper-20",
+    "seed": "gk-search-gk-shot-stopper-194",
     "simulationMode": "FAST"
   },
   "commands": [

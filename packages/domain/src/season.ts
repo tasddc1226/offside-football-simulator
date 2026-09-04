@@ -283,7 +283,7 @@ export type SeasonWalkResult = {
   currentStepIndex: number;
   pending: Pending;
   rngState: RngState;
-  /** 이번 걷기에서 결정 없이 지나간(decisionsOpened: 0) step 번호들, 순서대로. */
+  /** 이번 걷기에서 닫힌 step 번호들, 순서대로(강제 부상만 있었던 재개 step은 1 이상일 수 있다). */
   passedStepIndexes: number[];
 };
 
@@ -291,13 +291,18 @@ export type SeasonWalkResult = {
  * T-2-003 D-35: step 하나의 예정 경기를 결정 슬롯 확인 전에 처리한다. 경기는 `season.rngState`가
  * 아니라 별도 경기 전용 RNG 스트림을 쓴다(호출자가 closure로 관리 — FAST·CHAPTER가 결정 슬롯에서
  * 쓰는 rngState 소비량이 달라도 경기 결과가 byte-identical하도록 결정 RNG와 완전히 분리한다).
- * T-2-004 D-38: `records`는 이 step에서 방금 재생된 `MatchRecord[]`(순서대로), `competitions`는 그
- * 경기까지 반영된 현재 대회 기록(DECIDER의 리그 순위 판정용) — `selectChapter`가 이 둘을 쓴다.
+ * T-2-004 D-38: `records`는 이 호출 뒤 현재 step에 기록된 `MatchRecord[]`(기존 기록 + 이번에 재생된
+ * 기록, 순서대로), `competitions`는 그 경기까지 반영된 현재 대회 기록(DECIDER의 리그 순위 판정용) —
+ * `selectChapter`가 이 둘을 쓴다.
  */
 export type PlayStepMatches = (stepIndex: number) => {
   results: StepMatchResult[];
   records: MatchRecord[];
   competitions: readonly CompetitionRecord[];
+  /** 경기 직후 강제로 열어야 하는 중등도 이상 부상 재활 판단. */
+  forcedPending: Extract<Pending, { kind: 'INJURY' }> | null;
+  /** 첫 회복 후 첫 실제 출전의 챕터 trigger를 위한 match id. */
+  injuryReturnMatchId: string | null;
 };
 
 /** T-2-004 D-38: `walkToNextDecision`이 매 step마다 `selectChapter`에 넘기는, step에 안 걸리는 맥락. */
@@ -312,8 +317,9 @@ export type ChapterWalkContext = {
 
 /**
  * RULE-TIME-002: `startStepIndex`부터 다음 결정이 열리는 step 또는 step 12(SETTLEMENT)까지 걷는다.
- * 열리지 않는 step은 같은 호출 안에서 즉시 decisionsOpened: 0으로 닫는다(그래서 이 함수가 반환한
- * 뒤에는 항상 "pending이 가리키는 step만 summary가 비어 있다"가 성립한다 — startSeason·
+ * 열리지 않는 step은 같은 호출 안에서 즉시 decisionsOpened: 0으로 닫는다(강제 INJURY를 해소한
+ * 뒤 재개한 시작 step은 호출자가 이미 센 강제 결정 수를 넘겨 그 수로 닫는다). 그래서 이 함수가
+ * 반환한 뒤에는 항상 "pending이 가리키는 step만 summary가 비어 있다"가 성립한다 — startSeason·
  * advanceInSeason이 공유하는 이 불변식 덕분에, EVENT처럼 RESOLVE_EVENT로 별도 해소되는 pending도
  * "다음에 이 step을 다시 보면 summary가 비어 있으니 결정이 열렸던 step이다"로 정확히 닫힌다).
  * T-2-003 D-35: 각 step의 결정 슬롯을 확인하기 전에 `playStepMatches`로 그 step의 예정 경기를
@@ -337,6 +343,8 @@ export function walkToNextDecision(
   // T-3-002 D-43 (a): `selectOpenSlot`의 CONTRACT 분기(`buildRenewalOffer`)에 그대로 넘긴다(roll 없음).
   state: CareerState,
   ruleset: Ruleset,
+  /** RESOLVE_EVENT 뒤 재개한 시작 step에서 이미 해소한 강제 INJURY 결정 수. */
+  decisionsAlreadyOpenedForStartStep = 0,
 ): SeasonWalkResult {
   let currentStepIndex = startStepIndex;
   let pending: Pending = null;
@@ -348,6 +356,13 @@ export function walkToNextDecision(
   while (currentStepIndex < 12) {
     const step = findSeasonStep(nextSteps, currentStepIndex);
     const matchResult = playStepMatches(currentStepIndex);
+
+    // MODERATE/MAJOR forced injury decision은 모든 일반 EVENT/CHAPTER/CONTRACT보다 우선한다.
+    if (matchResult.forcedPending !== null) {
+      pending = matchResult.forcedPending;
+      break;
+    }
+
     const chapterOpen = selectChapter({
       step,
       steps: nextSteps,
@@ -361,6 +376,7 @@ export function walkToNextDecision(
       resolvedChapterIds: chapterContext.resolvedChapterIds,
       existingChapterIds: chapterContext.existingChapterIds,
       league: chapterContext.league,
+      injuryReturnMatchId: matchResult.injuryReturnMatchId,
     });
     matchesSoFar = [...matchesSoFar, ...matchResult.records];
     // T-3-001: MarketSummary.seasonIndex는 "시장이 열린 시점의 seasonHistory.length"(D-43) — season.index
@@ -371,7 +387,8 @@ export function walkToNextDecision(
       nextRngState = opened.rngState;
       break;
     }
-    nextSteps = markStepPassed(nextSteps, currentStepIndex, revision, 0, matchResult.results);
+    const decisionsOpened = currentStepIndex === startStepIndex ? decisionsAlreadyOpenedForStartStep : 0;
+    nextSteps = markStepPassed(nextSteps, currentStepIndex, revision, decisionsOpened, matchResult.results);
     passedStepIndexes.push(currentStepIndex);
     currentStepIndex += 1;
   }
