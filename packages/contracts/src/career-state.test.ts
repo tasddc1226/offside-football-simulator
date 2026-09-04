@@ -12,6 +12,7 @@ import {
   type DomainSnapshot,
   type Effect as DomainEffect,
   type FootballSeason as DomainFootballSeason,
+  type JsonValue,
   type Offer as DomainOffer,
   type Pending as DomainPending,
   type SeasonSummary as DomainSeasonSummary,
