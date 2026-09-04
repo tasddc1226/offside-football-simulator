@@ -38,6 +38,22 @@ function runOrThrow(snapshot: DomainSnapshot, command: Cmd): DomainSnapshot {
   return result.snapshot;
 }
 
+/**
+ * T-3-003 §5: step 7 CONTRACT(제안 있음)는 더 이상 ADVANCE로 자동 통과하지 않는다(응답 필수). 이
+ * fixture들의 첫 계약이 룰셋 min(1시즌)일 수 있어, 재계약 없이 시즌을 그대로 이어가는
+ * `REJECT_OFFER(null)`로 자동 응답한다.
+ */
+function autoRejectContractIfOpen(snapshot: DomainSnapshot): DomainSnapshot {
+  const pending = snapshot.state.pending;
+  if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
+    return runOrThrow(
+      snapshot,
+      buildCommand('REJECT_OFFER', `auto-reject-contract-${snapshot.revision}`, snapshot.revision, { offerId: null }),
+    );
+  }
+  return snapshot;
+}
+
 /** START_SEASON부터 시즌 명령 로그를 끝까지 실행하고, SETTLE_SEASON 직전(season이 null이 되기 전)
  * `season.matches`와 `season.playerStats`를 함께 돌려준다. */
 function runToBeforeSettlement(
@@ -45,10 +61,10 @@ function runToBeforeSettlement(
   seasonLog: SeasonLog,
 ): { matches: MatchRecord[]; playerStats: SeasonPlayerStats } {
   let snapshot = runCareerFixture(careerFixture);
-  snapshot = runOrThrow(snapshot, buildCommand('START_SEASON', 's0', snapshot.revision, seasonLog.startSeason));
+  snapshot = autoRejectContractIfOpen(runOrThrow(snapshot, buildCommand('START_SEASON', 's0', snapshot.revision, seasonLog.startSeason)));
   seasonLog.commands.forEach((raw, index) => {
     if (raw.type === 'SETTLE_SEASON') return;
-    snapshot = runOrThrow(snapshot, buildCommand(raw.type, `s-${index}`, snapshot.revision, raw.payload));
+    snapshot = autoRejectContractIfOpen(runOrThrow(snapshot, buildCommand(raw.type, `s-${index}`, snapshot.revision, raw.payload)));
   });
   const season = snapshot.state.season!;
   return { matches: season.matches, playerStats: season.playerStats };

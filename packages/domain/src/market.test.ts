@@ -93,11 +93,16 @@ describe('judgeMarketReason', () => {
 // 오케스트레이터 리뷰(PR #50): season === null(결산 뒤)이면 STARTER·평점 조건을 아예 건너뛰던 버그를
 // 고쳤다 — 이제 그 조건은 `seasonHistory.at(-1)`의 `squadRoleAtEnd`·`playerStats`로 판정한다.
 describe('judgeMarketReason·generateMarket — 결산 뒤 상태(season null)에서도 STARTER·평점 조건에 도달한다', () => {
-  const { snapshot } = runSettledFixture();
+  const { snapshot, beforeSettlementState } = runSettledFixture();
   // 지수발 INTEREST를 걷어내(judgeMarketReason describe 블록의 lowIndexBase와 같은 방식) STARTER·평점
-  // 신호만 남긴다.
+  // 신호만 남긴다. T-3-003 §5로 SETTLE_SEASON 자체가 openMarketAfterSettlement를 호출해 rng를
+  // 소비·pending을 세팅하므로, 결산 뒤 상태(season null·seasonHistory 갱신)는 유지하되 rng·pending은
+  // 그 호출 이전(beforeSettlementState) 값으로 되돌려 이 describe 블록이 자체적으로 시장을 새로
+  // 생성하는 시나리오와 격리한다.
   const settledLowIndex: CareerState = {
     ...snapshot.state,
+    rngState: beforeSettlementState.rngState,
+    pending: null,
     player: { ...snapshot.state.player, profile: { ...snapshot.state.player.profile!, baseOvr: 35, scoutedPotentialMin: 30, scoutedPotentialMax: 45 } },
   };
 
@@ -419,18 +424,22 @@ describe('step 7 CONTRACT 슬롯(season.ts의 selectOpenSlot) 통합', () => {
   });
 });
 
-describe('step 7 미응답 만료 통합(simulate.ts의 ADVANCE) — career-04-gk 골든', () => {
-  it('마지막 시즌 계약의 step 7 RENEWAL 제안이 자동 통과되며 OFFER_EXPIRED 타임라인을 남긴다', () => {
+describe('step 7 CONTRACT 응답 필수 통합(simulate.ts의 ADVANCE) — career-04-gk 골든', () => {
+  it('마지막 시즌 계약의 step 7 RENEWAL 제안은 더 이상 ADVANCE로 자동 통과하지 않고, REJECT_OFFER(null) 응답이 OFFER_REJECTED(ALL) 타임라인을 남긴다', () => {
     // career-04-gk는 lengthSeasons 1(계약이 시즌 1의 마지막 시즌)이라 실제 전체 시즌 재생에서
-    // 이 경로를 그대로 지난다(이 fixture의 golden hash가 이 PR에서 바뀐 이유이기도 하다).
+    // step 7에 CONTRACT(제안 있음) pending이 열린다. T-3-003 §5로 이 pending은 더 이상 ADVANCE로
+    // 자동 통과하지 않으므로(응답 필수), fixture(runGkFixture)가 REJECT_OFFER({ offerId: null })로
+    // 자동 응답한다 — 이 fixture의 golden hash·revision이 이 PR에서 바뀐 이유이기도 하다.
     const { snapshot } = runGkFixture();
     const expiredEntries = snapshot.state.timeline.filter((entry) => entry.kind === 'OFFER_EXPIRED');
-    expect(expiredEntries.length).toBeGreaterThan(0);
-    for (const entry of expiredEntries) {
-      expect(entry.refId).toMatch(/^OFR-/);
-      expect(entry.step).toBe(7);
-    }
-    expect(snapshot.state.pending).toBeNull();
+    expect(expiredEntries).toHaveLength(0);
+    const rejectedAllAtStep7 = snapshot.state.timeline.filter(
+      (entry) => entry.kind === 'OFFER_REJECTED' && entry.refId === 'ALL' && entry.step === 7,
+    );
+    expect(rejectedAllAtStep7).toHaveLength(1);
+    // SETTLE_SEASON 시점에 계약 잔여가 0(EXPIRED)이라 §5 배선으로 결산 뒤 새 시장이 열린다 — step 7의
+    // 재계약 제안 거절과는 별개 이벤트다.
+    expect(snapshot.state.pending?.kind).toBe('OFFERS');
   });
 
   it('계약 잔여 시즌이 있으면(career-01) step 7에서 OFFER_EXPIRED가 없다', () => {

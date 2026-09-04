@@ -37,6 +37,22 @@ function runOrThrow(snapshot: DomainSnapshot, command: Command & { commandId: st
   return result.snapshot;
 }
 
+/**
+ * T-3-003 §5: 이 fixture의 첫 계약이 룰셋 min(1시즌)으로 뽑혀 step 7이 재계약 사전 협상(CONTRACT,
+ * 제안 있음)을 연다. 더 이상 ADVANCE로 자동 통과하지 않으므로(응답 필수) 재계약 없이 시즌을 그대로
+ * 이어가는 `REJECT_OFFER(null)`로 자동 응답한다(revision +1, golden도 이 값을 반영한다).
+ */
+function autoRejectContractIfOpen(snapshot: DomainSnapshot): DomainSnapshot {
+  const pending = snapshot.state.pending;
+  if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
+    return runOrThrow(
+      snapshot,
+      buildCommand('REJECT_OFFER', `df-auto-reject-${snapshot.revision}`, snapshot.revision, { offerId: null }),
+    );
+  }
+  return snapshot;
+}
+
 export type DfFixtureRun = {
   snapshot: DomainSnapshot;
   /** SETTLE_SEASON 직전(season이 null이 되기 전) 경기·시즌 통계·대회 기록 스냅샷. 브리프 1번: DF
@@ -62,9 +78,8 @@ export type DfFixtureRun = {
 export function runDfFixture(): DfFixtureRun {
   let snapshot = runCareerFixture(careerDfFixture);
 
-  snapshot = runOrThrow(
-    snapshot,
-    buildCommand('START_SEASON', 'df-season-start', snapshot.revision, seasonCommandLog.startSeason),
+  snapshot = autoRejectContractIfOpen(
+    runOrThrow(snapshot, buildCommand('START_SEASON', 'df-season-start', snapshot.revision, seasonCommandLog.startSeason)),
   );
 
   let beforeSettlement: DfFixtureRun['beforeSettlement'] | null = null;
@@ -84,7 +99,7 @@ export function runDfFixture(): DfFixtureRun {
       };
     }
     const command = buildCommand(rawCommand.type, `df-season-${index}`, snapshot.revision, rawCommand.payload);
-    snapshot = runOrThrow(snapshot, command);
+    snapshot = autoRejectContractIfOpen(runOrThrow(snapshot, command));
   });
 
   return { snapshot, beforeSettlement: beforeSettlement! };
