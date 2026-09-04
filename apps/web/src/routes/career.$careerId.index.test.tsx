@@ -27,7 +27,6 @@ import { useUiStore } from '../shared/ui-store.js';
 import { buildPastSeasonLinks, buildSeasonChronicleItems } from './career.$careerId.index.js';
 
 const engineHolder = vi.hoisted(() => ({ promise: null as Promise<unknown> | null }));
-const CHRONICLE_TEST_SEED = 'e2e-season-result-01';
 
 vi.mock('../engine/engine.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../engine/engine.js')>();
@@ -189,7 +188,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  localStorage.removeItem('offside:e2e-seed');
   useUiStore.setState({
     theme: 'SYSTEM',
     reducedMotion: 'SYSTEM',
@@ -491,9 +489,6 @@ describe('T-2-009 다이어리 연대기 요약: buildSeasonChronicleItems·buil
   });
 
   it('결산 뒤에는 SEASON_SETTLED 항목이 방금 결산한 seasonHistory 위치를 가리키고, 지난 시즌 링크는 그 시즌을 뺀 최신순이다', async () => {
-    // T-4-003 can validly append MANAGER_CHANGED at the settlement revision. Pin this
-    // fixture so this test only asserts the T-2-009 chronicle contract.
-    localStorage.setItem('offside:e2e-seed', CHRONICLE_TEST_SEED);
     const engine = setTestEngine();
     const careerId = await settlementPendingCareerId(engine);
     const settled = await settleSeason(engine, careerId);
@@ -502,9 +497,12 @@ describe('T-2-009 다이어리 연대기 요약: buildSeasonChronicleItems·buil
     const justSettledIndex = state.seasonHistory.length - 1;
 
     const items = buildSeasonChronicleItems(state);
-    expect(items[items.length - 1]?.sentence).toBe('시즌 정산');
-    expect(items[items.length - 1]?.seasonResultHistoryIndex).toBe(justSettledIndex);
-    expect(items.slice(0, -1).every((item) => item.seasonResultHistoryIndex === null)).toBe(true);
+    const settledItems = items.filter((item) => item.sentence === '시즌 정산');
+    expect(settledItems).toHaveLength(1);
+    expect(settledItems[0]).toEqual(
+      expect.objectContaining({ sentence: '시즌 정산', seasonResultHistoryIndex: justSettledIndex }),
+    );
+    expect(items.filter((item) => item.sentence !== '시즌 정산').every((item) => item.seasonResultHistoryIndex === null)).toBe(true);
 
     const pastLinks = buildPastSeasonLinks(state);
     expect(pastLinks.some((link) => link.historyIndex === justSettledIndex)).toBe(false);
