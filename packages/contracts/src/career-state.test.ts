@@ -3,13 +3,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   hashState,
+  canonicalize,
   simulate,
+  type ClubStint as DomainClubStint,
   type CareerState as DomainCareerState,
   type ChapterRecord as DomainChapterRecord,
   type Contract as DomainContract,
   type DomainSnapshot,
   type Effect as DomainEffect,
   type FootballSeason as DomainFootballSeason,
+  type JsonValue,
   type Offer as DomainOffer,
   type Pending as DomainPending,
   type SeasonSummary as DomainSeasonSummary,
@@ -50,6 +53,7 @@ import type { z } from 'zod';
 import {
   CareerStateSchema,
   ChapterRecordSchema,
+  ClubStintSchema,
   ContractSchema,
   EffectSchema,
   FootballSeasonSchema,
@@ -71,6 +75,10 @@ describe('domain 타입 동일성', () => {
 
   it('Contract', () => {
     expectTypeOf<z.infer<typeof ContractSchema>>().toEqualTypeOf<DomainContract>();
+  });
+
+  it('ClubStint', () => {
+    expectTypeOf<z.infer<typeof ClubStintSchema>>().toEqualTypeOf<DomainClubStint>();
   });
 
   it('Pending', () => {
@@ -364,6 +372,68 @@ describe('CareerStateSchema', () => {
     const state = { ...confirmedStateLiteral(), pending: { kind: 'OFFERS' } };
     expect(CareerStateSchema.safeParse(state).success).toBe(false);
   });
+
+  it('열린 club stint가 두 개면 거부한다', () => {
+    const openStint = {
+      teamId: 'hangang-u18',
+      teamName: '한강 U18',
+      leagueTier: 'YOUTH' as const,
+      kind: 'PERMANENT' as const,
+      fromSeasonIndex: 1,
+      toSeasonIndex: null,
+      endReason: null,
+      contractId: 'CTR-1',
+    };
+    expect(CareerStateSchema.safeParse({ ...confirmedStateLiteral(), clubHistory: [openStint, openStint] }).success).toBe(
+      false,
+    );
+  });
+
+  it('LOAN 계약의 parentContract null·비정지 parentContract를 거부한다', () => {
+    const loanContract = {
+      ...VALID_CONTRACT,
+      id: 'CTR-loan',
+      kind: 'LOAN' as const,
+      loan: { parentTeamId: 'hangang-u18', seasons: 1 as const, wageShareBp: 5000, buyOptionMinor: null },
+    };
+    const loanStint = {
+      teamId: loanContract.teamId,
+      teamName: loanContract.teamName,
+      leagueTier: loanContract.leagueTier,
+      kind: 'LOAN' as const,
+      fromSeasonIndex: 1,
+      toSeasonIndex: null,
+      endReason: null,
+      contractId: loanContract.id,
+    };
+    const state = { ...confirmedStateLiteral(), contract: loanContract, clubHistory: [loanStint] };
+
+    expect(CareerStateSchema.safeParse({ ...state, parentContract: null }).success).toBe(false);
+    expect(
+      CareerStateSchema.safeParse({
+        ...state,
+        parentContract: { ...VALID_CONTRACT, id: 'CTR-parent', suspended: false },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('열린 club stint의 contractId가 현재 contract.id와 다르면 거부한다', () => {
+    const contract = { ...VALID_CONTRACT, id: 'CTR-current' };
+    const currentStint = {
+      teamId: contract.teamId,
+      teamName: contract.teamName,
+      leagueTier: contract.leagueTier,
+      kind: contract.kind,
+      fromSeasonIndex: 1,
+      toSeasonIndex: null,
+      endReason: null,
+      contractId: 'CTR-other',
+    };
+
+    expect(CareerStateSchema.safeParse({ ...confirmedStateLiteral(), contract, clubHistory: [currentStint] }).success).toBe(
+      false,
+    );
+  });
 });
 
 /**
@@ -427,9 +497,12 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     return result.snapshot;
   }
 
-  /** 매 명령 뒤 상태를 strict 스키마로 파싱하고, 파싱 결과를 재해시해 domain이 계산한 hash와 비교한다. */
+  /** 매 명령 뒤 상태를 strict 스키마로 파싱하고, canonical 재직렬화·재해시를 domain hash와 비교한다. */
   function assertStateRoundTrips(snapshot: DomainSnapshot, label: string): void {
     const parsed = CareerStateSchema.parse(snapshot.state);
+    const originalCanonical = canonicalize(snapshot.state as unknown as JsonValue);
+    const parsedCanonical = canonicalize(parsed as unknown as JsonValue);
+    expect(parsedCanonical, `${label} canonical round-trip`).toBe(originalCanonical);
     expect(hashState(parsed as unknown as DomainCareerState), label).toBe(snapshot.stateHash);
   }
 
@@ -593,8 +666,25 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     const commands = career10TransferEngineCommands(() => `golden-c10-${counter++}`);
     let snapshot: DomainSnapshot | null = null;
     for (const command of commands) {
+      const previous = snapshot;
       snapshot = runOrThrow(snapshot, command, career10Transfer);
       assertStateRoundTrips(snapshot, `career10Transfer revision ${snapshot.revision}`);
+
+      if (command.type === 'NEGOTIATE') {
+        const pending = snapshot.state.pending;
+        expect(pending?.kind).toBe('OFFERS');
+        if (pending?.kind === 'OFFERS') {
+          const negotiated = pending.offers.find((offer) => offer.id === command.payload.offerId);
+          expect(negotiated).toEqual(expect.objectContaining({ negotiationState: 'COUNTERED', negotiatedAsk: 'WAGE' }));
+        }
+      }
+      if (command.type === 'ACCEPT_OFFER' && command.payload.offerId === 'OFR-16-1') {
+        expect(previous?.state.pending?.kind).toBe('OFFERS');
+        expect(snapshot.checkpoint).toBe('CONTRACT_CONFIRMED');
+        expect(snapshot.state.contract?.kind).toBe('PERMANENT');
+        expect(snapshot.state.parentContract).toBeNull();
+        expect(snapshot.state.clubHistory.filter((stint) => stint.toSeasonIndex === null)).toHaveLength(1);
+      }
     }
     if (snapshot === null) throw new Error('career10Transfer 명령 목록이 비어 있다.');
     expect(snapshot.revision).toBe(career10Transfer.golden.revision);
@@ -611,6 +701,20 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     for (const command of commands) {
       snapshot = runOrThrow(snapshot, command, career11Loan);
       assertStateRoundTrips(snapshot, `career11Loan revision ${snapshot.revision}`);
+
+      if (command.type === 'ACCEPT_OFFER' && snapshot.state.contract?.kind === 'LOAN') {
+        expect(snapshot.checkpoint).toBe('CONTRACT_CONFIRMED');
+        expect(snapshot.state.parentContract).toEqual(expect.objectContaining({ suspended: true }));
+        expect(snapshot.state.clubHistory.filter((stint) => stint.toSeasonIndex === null)).toEqual([
+          expect.objectContaining({ kind: 'LOAN' }),
+        ]);
+      }
+      if (command.type === 'LOAN_RETURN') {
+        expect(snapshot.state.parentContract).toBeNull();
+        expect(snapshot.state.clubHistory.filter((stint) => stint.toSeasonIndex === null)).toEqual([
+          expect.objectContaining({ kind: 'PERMANENT' }),
+        ]);
+      }
     }
     if (snapshot === null) throw new Error('career11Loan 명령 목록이 비어 있다.');
     expect(snapshot.revision).toBe(career11Loan.golden.revision);

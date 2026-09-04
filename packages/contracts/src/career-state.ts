@@ -814,7 +814,7 @@ export const ReputationSchema = z.strictObject({
  * 느슨하게 받아야 하는 API 봉투 최상위 검사용이고, 이 스키마는 domain이 만드는 Phase 1 state의
  * 정확한 형태를 강제한다. 서로 다른 용도이므로 하나로 합치지 않는다.
  */
-export const CareerStateSchema = z.strictObject({
+const CareerStateShapeSchema = z.strictObject({
   schemaVersion: z.literal(1),
   careerId: z.string().min(1),
   status: z.enum(['DRAFT', 'ACTIVE', 'RETIRED', 'ARCHIVED']),
@@ -883,6 +883,102 @@ export const CareerStateSchema = z.strictObject({
   }),
   // T-4-001 D-49: 인기·미디어 평판.
   reputation: ReputationSchema,
+});
+
+export type CareerStateInvariantIssue = {
+  path: Array<string | number>;
+  message: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+/**
+ * 계약·소속 이력 사이에서만 확인할 수 있는 교차 불변식이다. SnapshotStateEnvelopeSchema는 미래 필드를
+ * 보존하기 위해 느슨해야 하므로, 이 검사는 전체 CareerState 파싱과 분리해 API 동기화 경계에서도
+ * 동일하게 재사용한다. 값이 아직 해당 필드를 포함하지 않는 구형/부분 Snapshot에는 적용하지 않는다.
+ */
+export function getCareerStateInvariantIssues(value: unknown): CareerStateInvariantIssue[] {
+  if (!isRecord(value)) return [];
+
+  const issues: CareerStateInvariantIssue[] = [];
+  const contract = value.contract;
+  const parentContract = value.parentContract;
+  const clubHistory = value.clubHistory;
+  const hasContract = hasOwn(value, 'contract');
+  const hasParentContract = hasOwn(value, 'parentContract');
+  const hasClubHistory = hasOwn(value, 'clubHistory');
+
+  const openStints = Array.isArray(clubHistory)
+    ? clubHistory.filter((stint): stint is Record<string, unknown> => isRecord(stint) && stint.toSeasonIndex === null)
+    : [];
+
+  if (Array.isArray(clubHistory) && openStints.length > 1) {
+    issues.push({ path: ['clubHistory'], message: 'clubHistory에는 열린 stint가 하나만 있어야 한다.' });
+  }
+
+  if (hasContract && isRecord(contract)) {
+    if (hasClubHistory && Array.isArray(clubHistory)) {
+      if (openStints.length === 0) {
+        issues.push({ path: ['clubHistory'], message: '계약이 있으면 열린 stint가 있어야 한다.' });
+      } else if (openStints.length === 1) {
+        const currentStint = openStints[0]!;
+        const contractIdMismatch =
+          hasOwn(contract, 'id') && hasOwn(currentStint, 'contractId') && contract.id !== currentStint.contractId;
+        const teamIdMismatch =
+          hasOwn(contract, 'teamId') && hasOwn(currentStint, 'teamId') && contract.teamId !== currentStint.teamId;
+        const kindMismatch = hasOwn(contract, 'kind') && hasOwn(currentStint, 'kind') && contract.kind !== currentStint.kind;
+        if (contractIdMismatch || teamIdMismatch || kindMismatch) {
+          issues.push({ path: ['clubHistory'], message: '열린 stint가 현재 계약과 일치해야 한다.' });
+        }
+      }
+    }
+
+    if (contract.kind === 'LOAN') {
+      if (!isRecord(contract.loan)) {
+        issues.push({ path: ['contract', 'loan'], message: 'LOAN 계약에는 loan 정보가 있어야 한다.' });
+      }
+      if (!isRecord(parentContract)) {
+        issues.push({ path: ['parentContract'], message: 'LOAN 계약에는 parentContract가 있어야 한다.' });
+      } else {
+        if (parentContract.kind !== 'PERMANENT') {
+          issues.push({ path: ['parentContract', 'kind'], message: 'parentContract는 PERMANENT여야 한다.' });
+        }
+        if (parentContract.suspended !== true) {
+          issues.push({ path: ['parentContract', 'suspended'], message: '임대 중 parentContract는 suspended여야 한다.' });
+        }
+        if (
+          isRecord(contract.loan) &&
+          hasOwn(contract.loan, 'parentTeamId') &&
+          hasOwn(parentContract, 'teamId') &&
+          contract.loan.parentTeamId !== parentContract.teamId
+        ) {
+          issues.push({ path: ['parentContract', 'teamId'], message: 'parentContract가 loan의 원소속과 일치해야 한다.' });
+        }
+      }
+    } else if (hasParentContract && parentContract !== null) {
+      issues.push({ path: ['parentContract'], message: '비임대 계약에는 parentContract가 없어야 한다.' });
+    }
+  } else if (hasParentContract && parentContract !== null) {
+    issues.push({ path: ['parentContract'], message: '계약이 없으면 parentContract가 없어야 한다.' });
+  }
+
+  if (hasContract && contract === null && hasClubHistory && openStints.length > 0) {
+    issues.push({ path: ['clubHistory'], message: '계약이 없으면 열린 stint가 없어야 한다.' });
+  }
+
+  return issues;
+}
+
+export const CareerStateSchema = CareerStateShapeSchema.superRefine((value, ctx) => {
+  for (const issue of getCareerStateInvariantIssues(value)) {
+    ctx.addIssue({ code: 'custom', path: issue.path, message: issue.message });
+  }
 });
 
 export type CareerState = z.infer<typeof CareerStateSchema>;

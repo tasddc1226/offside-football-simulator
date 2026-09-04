@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
+import { runMarketWorkerHashProbe } from './helpers/hash-probe.js';
 
 const CAREER01_GOLDEN_URL = new URL(
   '../../../packages/fixtures/src/career-01/career-01.golden.json',
@@ -27,6 +28,26 @@ const career02SeasonGolden = JSON.parse(readFileSync(fileURLToPath(CAREER02_SEAS
 };
 
 const SEASON_ELAPSED_MS_CAP = 5000;
+
+const CAREER10_TRANSFER_GOLDEN_URL = new URL(
+  '../../../packages/fixtures/src/career-10-transfer/career-10-transfer.golden.json',
+  import.meta.url,
+);
+const career10TransferGolden = JSON.parse(readFileSync(fileURLToPath(CAREER10_TRANSFER_GOLDEN_URL), 'utf8')) as {
+  revision: number;
+  stateHash: string;
+  rngStateDraws: number;
+};
+
+const CAREER11_LOAN_GOLDEN_URL = new URL(
+  '../../../packages/fixtures/src/career-11-loan/career-11-loan.golden.json',
+  import.meta.url,
+);
+const career11LoanGolden = JSON.parse(readFileSync(fileURLToPath(CAREER11_LOAN_GOLDEN_URL), 'utf8')) as {
+  revision: number;
+  stateHash: string;
+  rngStateDraws: number;
+};
 
 test('브라우저 Web Worker의 career-01·career-02 FAST 시즌 state hash가 golden과 같다', async ({ page }) => {
   await page.goto('/__dev/hash-probe');
@@ -49,4 +70,26 @@ test('브라우저 Web Worker의 career-01·career-02 FAST 시즌 state hash가 
   // T-2-006 08: 상한 5,000ms. 실제 값은 PR 본문 Worker 계산 시간 표에 옮긴다.
   console.log(JSON.stringify({ label: 'browser-worker-career02Fast', seasonElapsedMs: parsed.career02Fast.seasonElapsedMs }));
   expect(parsed.career02Fast.seasonElapsedMs).toBeLessThanOrEqual(SEASON_ELAPSED_MS_CAP);
+});
+
+test('브라우저 Web Worker의 career-10 transfer·career-11 loan hash가 golden과 같다', async ({ page }) => {
+  await page.goto('/__dev/hash-probe');
+
+  const parsed = await runMarketWorkerHashProbe(page);
+  expect(parsed.transfer.revision).toBe(career10TransferGolden.revision);
+  expect(parsed.transfer.stateHash).toBe(career10TransferGolden.stateHash);
+  expect(parsed.transfer.rngStateDraws).toBe(career10TransferGolden.rngStateDraws);
+  expect(parsed.loan.revision).toBe(career11LoanGolden.revision);
+  expect(parsed.loan.stateHash).toBe(career11LoanGolden.stateHash);
+  expect(parsed.loan.rngStateDraws).toBe(career11LoanGolden.rngStateDraws);
+
+  console.log(
+    JSON.stringify({
+      label: 'browser-worker-market',
+      transferElapsedMs: parsed.transfer.elapsedMs,
+      loanElapsedMs: parsed.loan.elapsedMs,
+    }),
+  );
+  expect(parsed.transfer.elapsedMs).toBeLessThan(SEASON_ELAPSED_MS_CAP);
+  expect(parsed.loan.elapsedMs).toBeLessThan(SEASON_ELAPSED_MS_CAP);
 });

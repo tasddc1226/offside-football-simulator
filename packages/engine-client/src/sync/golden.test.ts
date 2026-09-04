@@ -3,14 +3,19 @@ import {
   IF_MATCH_HEADER,
   type CareerSnapshot,
   type CommandLogEntry,
+  type GetCareerResponse,
   type PutCareerBody,
 } from '@offside/contracts';
-import type { SimulationMode } from '@offside/domain';
+import type { CareerState, SimulationMode } from '@offside/domain';
 import {
   career01,
   career01EngineCommands,
   career02Season,
   career02SeasonEngineCommands,
+  career10Transfer,
+  career10TransferEngineCommands,
+  career11Loan,
+  career11LoanEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -174,15 +179,28 @@ function makeIdGenerator(prefix: string): () => string {
   return () => `${prefix}-${counter++}`;
 }
 
+function withoutCareerId(state: CareerState): Omit<CareerState, 'careerId'> {
+  const rest: Partial<CareerState> = { ...state };
+  delete rest.careerId;
+  return rest as Omit<CareerState, 'careerId'>;
+}
+
 function buildCareer01ThenSeasonCommands(mode: SimulationMode): EngineCommand[] {
   const newId = makeIdGenerator(`golden-season-${mode}`);
   return [...career01EngineCommands(newId), ...career02SeasonEngineCommands(mode, newId, career01.golden.revision)];
 }
 
-async function runCommandsOnFreshStore(commands: EngineCommand[], createdServiceSeasonId: string) {
+type DuplicatePredicate = (command: EngineCommand) => boolean;
+
+async function runCommandsOnFreshStore(
+  commands: EngineCommand[],
+  createdServiceSeasonId: string,
+  careerId = career01.createCareer.careerId,
+  options: { duplicate?: DuplicatePredicate } = {},
+) {
   const store = new MemoryLocalStore();
   const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
-  const careerId = career01.createCareer.careerId;
+  let duplicateResponse: Awaited<ReturnType<typeof engine.execute>> | null = null;
 
   for (const command of commands) {
     const result = await engine.execute({
@@ -193,9 +211,21 @@ async function runCommandsOnFreshStore(commands: EngineCommand[], createdService
     if (!result.ok) {
       throw new Error(`시즌 golden 명령 실패: ${command.type} ${result.error.code} ${result.error.message}`);
     }
+    if (options.duplicate?.(command)) {
+      duplicateResponse = await engine.execute({
+        careerId,
+        command,
+        ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId } : {}),
+      });
+      if (!duplicateResponse.ok) {
+        throw new Error(`중복 명령 실패: ${command.type} ${duplicateResponse.error.code} ${duplicateResponse.error.message}`);
+      }
+      expect(duplicateResponse.replayed).toBe(true);
+      expect(duplicateResponse.snapshot.stateHash).toBe(result.snapshot.stateHash);
+    }
   }
 
-  return { store, engine, careerId };
+  return { store, engine, careerId, duplicateResponse };
 }
 
 describe('시즌 명령을 포함한 golden: sync 클라이언트·replay·fork·import', () => {
@@ -300,5 +330,109 @@ describe('시즌 명령을 포함한 golden: sync 클라이언트·replay·fork�
 
     const restored = await targetStore.transaction('readonly', (tx) => tx.snapshots.getLatest(careerId));
     expect(restored?.stateHash).toBe(career02Season.golden[mode].stateHash);
+  });
+});
+
+type MarketGoldenScenario = {
+  label: string;
+  careerId: string;
+  versions: { rulesetVersion: string; contentPackVersion: string };
+  golden: { revision: number; stateHash: string };
+  makeCommands: () => EngineCommand[];
+  duplicate: DuplicatePredicate;
+};
+
+const MARKET_GOLDEN_SCENARIOS: readonly MarketGoldenScenario[] = [
+  {
+    label: 'career-10-transfer',
+    careerId: career10Transfer.createCareer.careerId,
+    versions: career10Transfer,
+    golden: career10Transfer.golden,
+    makeCommands: () => career10TransferEngineCommands(makeIdGenerator('golden-transfer')),
+    duplicate: (command) => command.type === 'ACCEPT_OFFER' && command.payload.offerId === 'OFR-16-1',
+  },
+  {
+    label: 'career-11-loan',
+    careerId: career11Loan.createCareer.careerId,
+    versions: career11Loan,
+    golden: career11Loan.golden,
+    makeCommands: () => career11LoanEngineCommands(makeIdGenerator('golden-loan')),
+    duplicate: (command) => command.type === 'LOAN_RETURN',
+  },
+];
+
+async function buildGetCareerResponse(store: MemoryLocalStore, careerId: string): Promise<GetCareerResponse> {
+  return store.transaction('readonly', async (tx) => {
+    const snapshot = await tx.snapshots.getLatest(careerId);
+    if (snapshot === undefined) throw new Error(`${careerId} snapshot 없음`);
+    const commands = await tx.commandLog.listSince(careerId, 0);
+    return { snapshot, commands: commands.slice().sort((a, b) => a.revision - b.revision) };
+  });
+}
+
+describe('T-3-004 transfer·loan golden: replay·fork·import·중복 명령', () => {
+  it.each(MARKET_GOLDEN_SCENARIOS)('$label의 최종 hash와 로그·checkpoint가 모든 경로에서 보존된다', async (scenario) => {
+    const commands = scenario.makeCommands();
+    const source = await runCommandsOnFreshStore(
+      commands,
+      `svc-${scenario.label}`,
+      scenario.careerId,
+      { duplicate: scenario.duplicate },
+    );
+
+    const loaded = await source.engine.loadCareer(scenario.careerId);
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) throw new Error('unreachable');
+    expect(loaded.snapshot.revision).toBe(scenario.golden.revision);
+    expect(loaded.snapshot.stateHash).toBe(scenario.golden.stateHash);
+    expect(loaded.snapshot.state.clubHistory.filter((stint) => stint.kind === 'PERMANENT' && stint.toSeasonIndex === null)).toHaveLength(1);
+    expect(source.duplicateResponse?.ok).toBe(true);
+
+    const commandEntries = await source.store.transaction('readonly', (tx) => tx.commandLog.listSince(scenario.careerId, 0));
+    expect(commandEntries.map((entry) => entry.revision)).toEqual(commands.map((_, index) => index + 1));
+    expect(commandEntries.map((entry) => entry.commandType)).toEqual(commands.map((command) => command.type));
+
+    const snapshots = await source.store.transaction('readonly', (tx) => tx.snapshots.listByCareer(scenario.careerId));
+    expect(snapshots).toHaveLength(commands.length);
+    expect(snapshots.at(-1)?.checkpoint).toBe('SEASON_START');
+
+    const replay = await replayCommandLog(
+      inlineSimulator,
+      null,
+      commandEntries,
+      scenario.versions,
+      rulesetProto,
+    );
+    expect(replay.ok).toBe(true);
+    if (!replay.ok) throw new Error('unreachable');
+    expect(replay.snapshot.revision).toBe(scenario.golden.revision);
+    expect(replay.snapshot.stateHash).toBe(scenario.golden.stateHash);
+
+    const fork = await forkCareerByReplay(
+      { engine: source.engine, store: source.store, newId: makeIdGenerator(`fork-${scenario.label}`) },
+      scenario.careerId,
+    );
+    expect(fork.ok).toBe(true);
+    if (!fork.ok) throw new Error('unreachable');
+    const forked = await source.engine.loadCareer(fork.newCareerId);
+    expect(forked.ok).toBe(true);
+    if (!forked.ok) throw new Error('unreachable');
+    expect(forked.snapshot.revision).toBe(scenario.golden.revision);
+    expect(forked.snapshot.stateHash).not.toBe(scenario.golden.stateHash);
+    expect(forked.snapshot.state.careerId).toBe(fork.newCareerId);
+    expect(withoutCareerId(forked.snapshot.state)).toEqual(withoutCareerId(loaded.snapshot.state));
+
+    const targetStore = new MemoryLocalStore();
+    const imported = await importCareerFromServer(
+      targetStore,
+      await buildGetCareerResponse(source.store, scenario.careerId),
+      { createdServiceSeasonId: `svc-${scenario.label}`, now: '2026-09-04T00:00:00.000Z' },
+    );
+    expect(imported.ok).toBe(true);
+    if (!imported.ok) throw new Error('unreachable');
+    expect(imported.revision).toBe(scenario.golden.revision);
+    const restored = await targetStore.transaction('readonly', (tx) => tx.snapshots.getLatest(scenario.careerId));
+    expect(restored?.stateHash).toBe(scenario.golden.stateHash);
+    expect(restored?.checkpoint).toBe('SEASON_START');
   });
 });
