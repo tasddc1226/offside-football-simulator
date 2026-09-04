@@ -86,17 +86,96 @@ describe('T-3-005 revision-based offer state', () => {
 });
 
 describe('T-3-005 current contract summary', () => {
-  it('진행 중 시즌의 SEASON_STARTED까지 정본 함수로 잔여 시즌을 계산한다', () => {
+  it('현재 계약에 속한 시즌만 이행 횟수에 포함하고 이전 계약 시즌은 섞지 않는다', () => {
     const state = {
-      contract: { lengthSeasons: 1, signedAtRevision: 3, rolePromise: 'STARTER', teamName: '현재 팀', leagueTier: 1, wageMinorPerWeek: 1000, promiseBreaches: 0 },
+      contract: {
+        id: 'CTR-CURRENT',
+        lengthSeasons: 1,
+        signedAtRevision: 3,
+        signedSeasonIndex: 2,
+        rolePromise: 'STARTER',
+        teamId: 'team-current',
+        teamName: '현재 팀',
+        leagueTier: 1,
+        wageMinorPerWeek: 1000,
+        promiseBreaches: 0,
+      },
+      clubHistory: [
+        {
+          teamId: 'team-current',
+          teamName: '현재 팀',
+          leagueTier: 1,
+          kind: 'PERMANENT',
+          fromSeasonIndex: 2,
+          toSeasonIndex: null,
+          endReason: null,
+          contractId: 'CTR-CURRENT',
+        },
+      ],
       seasonHistory: [
-        { result: { promiseFulfilment: { fulfilled: true } } },
-        { result: { promiseFulfilment: { fulfilled: false } } },
+        { index: 1, teamId: 'team-previous', result: { promiseFulfilment: { fulfilled: true } } },
+        { index: 2, teamId: 'team-current', result: { promiseFulfilment: { fulfilled: false } } },
       ],
       timeline: [{ revision: 4, kind: 'SEASON_STARTED' }],
     } as CareerState;
     expect(buildCurrentContractSummary(state).find((item) => item.label === '남은 계약')?.value).toBe('0시즌');
     expect(buildCurrentContractSummary(state).find((item) => item.label === '현재 역할')?.value).toBe('주전');
+    expect(buildCurrentContractSummary(state).find((item) => item.label === '출전 약속 이행/위반')?.value).toBe('이행 0회 · 위반 0회');
+  });
+
+  it('임대 중 제외된 시즌은 빼고 복귀한 부모 계약의 시즌만 이행 횟수에 포함한다', () => {
+    const state = {
+      contract: {
+        id: 'CTR-PARENT',
+        lengthSeasons: 3,
+        signedAtRevision: 1,
+        signedSeasonIndex: 1,
+        rolePromise: 'STARTER',
+        teamId: 'team-parent',
+        teamName: '원소속 팀',
+        leagueTier: 1,
+        wageMinorPerWeek: 1000,
+        promiseBreaches: 0,
+      },
+      clubHistory: [
+        {
+          teamId: 'team-parent',
+          teamName: '원소속 팀',
+          leagueTier: 1,
+          kind: 'PERMANENT',
+          fromSeasonIndex: 1,
+          toSeasonIndex: 1,
+          endReason: 'LOANED',
+          contractId: 'CTR-PARENT',
+        },
+        {
+          teamId: 'team-loan',
+          teamName: '임대 팀',
+          leagueTier: 2,
+          kind: 'LOAN',
+          fromSeasonIndex: 2,
+          toSeasonIndex: 2,
+          endReason: 'RETURNED',
+          contractId: 'CTR-LOAN',
+        },
+        {
+          teamId: 'team-parent',
+          teamName: '원소속 팀',
+          leagueTier: 1,
+          kind: 'PERMANENT',
+          fromSeasonIndex: 3,
+          toSeasonIndex: null,
+          endReason: null,
+          contractId: 'CTR-PARENT',
+        },
+      ],
+      seasonHistory: [
+        { index: 1, teamId: 'team-parent', result: { promiseFulfilment: { fulfilled: true } } },
+        { index: 2, teamId: 'team-loan', result: { promiseFulfilment: { fulfilled: true } } },
+        { index: 3, teamId: 'team-parent', result: { promiseFulfilment: { fulfilled: false } } },
+      ],
+      timeline: [],
+    } as unknown as CareerState;
     expect(buildCurrentContractSummary(state).find((item) => item.label === '출전 약속 이행/위반')?.value).toBe('이행 1회 · 위반 0회');
   });
 });

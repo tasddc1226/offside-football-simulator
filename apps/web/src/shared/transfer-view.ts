@@ -31,11 +31,24 @@ export const MARKET_REASON_LABEL_KO: Record<
 
 export type CurrentContractSummary = { label: string; value: string };
 
+/** 현재 계약 ID와 시즌 구간이 모두 일치하는 결산만 현재 계약의 이행으로 센다. */
+function isSeasonInCurrentContract(state: CareerState, contract: NonNullable<CareerState['contract']>, seasonIndex: number): boolean {
+  // 갱신은 기존 열린 stint의 contractId만 새 계약 ID로 바꾸므로, stint의 시작보다
+  // 늦은 signedSeasonIndex를 함께 적용해야 갱신 전 시즌을 새 계약에 섞지 않는다.
+  if (seasonIndex < contract.signedSeasonIndex) return false;
+  const contractStints = state.clubHistory.filter((stint) => stint.contractId === contract.id);
+  return contractStints.some(
+    (stint) => seasonIndex >= stint.fromSeasonIndex && (stint.toSeasonIndex === null || seasonIndex <= stint.toSeasonIndex),
+  );
+}
+
 /** SCR-017 상단·SCR-029 휴대폰이 공유하는 현재 계약 공개 요약. */
 export function buildCurrentContractSummary(state: CareerState): CurrentContractSummary[] {
   const contract = state.contract;
   if (contract === null) return [];
-  const fulfilledPromises = state.seasonHistory.filter((summary) => summary.result.promiseFulfilment.fulfilled).length;
+  const fulfilledPromises = state.seasonHistory.filter(
+    (summary) => isSeasonInCurrentContract(state, contract, summary.index) && summary.result.promiseFulfilment.fulfilled,
+  ).length;
   return [
     // SCR-029 휴대폰의 기존 "팀"·"기간" 문구를 유지한다. SCR-017은 값의 의미로 현재
     // 계약을 설명하므로 별도 raw enum/내부 id 없이 같은 view-model을 재사용한다.
