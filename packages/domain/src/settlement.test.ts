@@ -117,6 +117,7 @@ describe('hashSeasonResult', () => {
         managerTrust: { before: 45, after: 45 },
       },
       chapters: [],
+      stepSummaries: [{ step: 1, phase: 'LEAGUE', matchesPlayed: 1, decisionsOpened: 1, passedAtRevision: 2 }],
       hash: '',
     };
   }

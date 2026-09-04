@@ -83,6 +83,16 @@ export function buildSeasonResult(input: BuildSeasonResultInput): Omit<SeasonRes
       return { step: entry.step, type: type as RoleProposal['type'], decision: decision as 'ACCEPT' | 'DECLINE' };
     });
 
+  const stepSummaries = season.steps
+    .filter((seasonStep) => seasonStep.summary !== null)
+    .map((seasonStep) => ({
+      step: seasonStep.index,
+      phase: seasonStep.phase,
+      matchesPlayed: seasonStep.summary!.matchesPlayed,
+      decisionsOpened: seasonStep.summary!.decisionsOpened,
+      passedAtRevision: seasonStep.summary!.passedAtRevision,
+    }));
+
   return {
     index: season.index,
     simulationMode: season.simulationMode,
@@ -106,6 +116,7 @@ export function buildSeasonResult(input: BuildSeasonResultInput): Omit<SeasonRes
     baseOvr: input.baseOvr,
     stateDeltas: input.stateDeltas,
     chapters: season.chapters,
+    stepSummaries,
   };
 }
 

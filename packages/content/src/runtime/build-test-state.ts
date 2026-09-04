@@ -83,6 +83,7 @@ export function buildTestState(overrides: Partial<CareerState> = {}): CareerStat
     player: { draft: TEST_DRAFT, profile: TEST_PROFILE },
     pending: null,
     contract: null,
+    clubHistory: [],
     timeline: [],
     season: null,
     seasonHistory: [],

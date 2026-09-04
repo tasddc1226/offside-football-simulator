@@ -23,7 +23,7 @@ type MinimalCareerState = {
   age: number;
   stage: 'YOUTH' | 'PRO';
   timeline: ReadonlyArray<{
-    // T-2-002 D-34·T-2-004 D-38: exhaustive union이 typecheck에서 깨져 최소 수정(PR 본문 참고).
+    // T-2-002 D-34·T-2-004 D-38·T-3-001: exhaustive union이 typecheck에서 깨져 최소 수정(PR 본문 참고).
     kind:
       | 'CAREER_CONFIRMED'
       | 'EVENT_RESOLVED'
@@ -33,7 +33,22 @@ type MinimalCareerState = {
       | 'SEASON_SETTLED'
       | 'ROLE_RESOLVED'
       | 'CHAPTER_RESOLVED'
-      | 'CAREER_TAG_GRANTED';
+      | 'CAREER_TAG_GRANTED'
+      | 'CONTRACT_RENEWED'
+      | 'TRANSFERRED'
+      | 'LOANED'
+      | 'LOAN_RETURNED'
+      | 'OFFER_REJECTED'
+      | 'OFFER_EXPIRED'
+      | 'NEGOTIATED'
+      | 'INJURED'
+      | 'REHAB_CHOSEN'
+      | 'RECOVERED'
+      | 'INJURY_RECURRED'
+      | 'MANAGER_CHANGED'
+      | 'NATIONAL_TEAM_CALLED'
+      | 'NATIONAL_TEAM_DECLINED'
+      | 'CAPTAIN_APPOINTED';
   }>;
 };
 

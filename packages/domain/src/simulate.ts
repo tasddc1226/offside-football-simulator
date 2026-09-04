@@ -45,12 +45,14 @@ import {
   type CareerStage,
   type CareerState,
   type ChapterOutcomeKind,
+  type ClubStint,
   type Competitor,
   type Contract,
   type DomainSnapshot,
   type Effect,
   type FootballSeason,
   type MatchRecord,
+  type NegotiationAsk,
   type Pending,
   type PlayerDraft,
   type PlayerGender,
@@ -127,7 +129,12 @@ export type Command =
         }>;
       };
     }
-  | { type: 'ACCEPT_OFFER'; payload: { offerId: string } };
+  | { type: 'ACCEPT_OFFER'; payload: { offerId: string } }
+  // T-3-001 D-52 CMD-CON-001~003 예약: 처리기는 T-3-003 전까지 "T-3-003에서 구현" 오류를 돌려준다
+  // (throw 금지). payload 형태는 phase-3-4-plan D-44/D-46이 정한 것을 그대로 옮긴다.
+  | { type: 'NEGOTIATE'; payload: { offerId: string; ask: NegotiationAsk } }
+  | { type: 'REJECT_OFFER'; payload: { offerId: string | null } } // null = 전부 거절 → 잔류
+  | { type: 'LOAN_RETURN'; payload: { decision: 'RETURN' | 'PERMANENT' } };
 
 export type SimulationInput = {
   snapshot: DomainSnapshot | null;
@@ -259,6 +266,7 @@ function createCareer(input: SimulationInput): SimulationResult {
     player: { draft: emptyDraft(), profile: null },
     pending: null,
     contract: null,
+    clubHistory: [],
     timeline: [],
     season: null,
     seasonHistory: [],
@@ -912,6 +920,7 @@ function nextActionForPending(pending: Pending): 'DECISION' | 'ADVANCE' | 'SETTL
     case 'OFFERS':
     case 'ROLE_PROPOSAL':
     case 'CHAPTER':
+    case 'LOAN_RETURN': // T-3-001 D-46: 임대 시즌 결산 뒤 복귀/완전 이적 결정도 사용자 결정이 필요하다(생성기는 T-3-003).
       return 'DECISION';
     case 'SETTLEMENT':
       return 'SETTLEMENT';
@@ -1172,13 +1181,19 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
         branch,
         state.tags,
         state.player.profile.baseOvr,
+        state.player.profile.primaryPosition,
         nextRevision,
         state.rngState,
       );
       const nextState: CareerState = {
         ...state,
         rngState: generated.rngState,
-        pending: { kind: 'OFFERS', offers: generated.offers },
+        pending: {
+          kind: 'OFFERS',
+          offers: generated.offers,
+          // T-3-001 D-43: Phase 1 첫 계약 시장. 안전 잔류 제안 생성기는 T-3-002 몫이라 지금은 null.
+          market: { openedAtRevision: nextRevision, seasonIndex: state.seasonHistory.length, reason: 'FIRST_CONTRACT', safeOfferId: null },
+        },
       };
       return {
         ok: true,
@@ -1389,6 +1404,7 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   const nextRevision = snapshot.revision + 1;
   const stage: CareerStage = offer.leagueTier === 'YOUTH' ? 'YOUTH' : 'PRO';
   const isNewClub = offer.teamId !== background.startTeamId;
+  const signedSeasonIndex = state.seasonHistory.length + 1;
 
   const contract: Contract = {
     id: `CTR-${nextRevision}`,
@@ -1403,12 +1419,32 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     shirtNumber: offer.shirtNumber,
     signatureType: 'AUTO',
     signedAtRevision: nextRevision,
+    // T-3-001 D-44/D-45: Phase 1 첫 계약은 항상 'PERMANENT'(임대 전환은 T-3-003).
+    kind: 'PERMANENT',
+    appearancePromise: offer.appearancePromise,
+    positionPlan: offer.positionPlan,
+    suspended: false,
+    loan: null,
+    promiseBreaches: 0,
+    signedSeasonIndex,
+  };
+
+  const clubStint: ClubStint = {
+    teamId: offer.teamId,
+    teamName: offer.teamName,
+    leagueTier: offer.leagueTier,
+    kind: contract.kind,
+    fromSeasonIndex: signedSeasonIndex,
+    toSeasonIndex: null,
+    endReason: null,
+    contractId: contract.id,
   };
 
   const nextState: CareerState = {
     ...state,
     stage,
     contract,
+    clubHistory: [...state.clubHistory, clubStint],
     pending: null,
     context: {
       ...state.context,
@@ -1715,6 +1751,12 @@ export function simulate(input: SimulationInput): SimulationResult {
       return acceptOffer(input, snapshot);
     case 'RESOLVE_ROLE':
       return resolveRole(input, snapshot);
+    case 'NEGOTIATE':
+      return fail('VALIDATION_FAILED', 'NEGOTIATE는 T-3-003에서 구현한다.', { reason: 'NOT_IMPLEMENTED' });
+    case 'REJECT_OFFER':
+      return fail('VALIDATION_FAILED', 'REJECT_OFFER는 T-3-003에서 구현한다.', { reason: 'NOT_IMPLEMENTED' });
+    case 'LOAN_RETURN':
+      return fail('VALIDATION_FAILED', 'LOAN_RETURN은 T-3-003에서 구현한다.', { reason: 'NOT_IMPLEMENTED' });
   }
 }
 

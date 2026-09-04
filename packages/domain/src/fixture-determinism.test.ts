@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import golden from './__fixtures__/career-01.golden.json';
-import { careerFixture, runCareerFixture } from './__fixtures__/career-01.js';
+import { careerFixture, runCareerFixture, rulesetProto } from './__fixtures__/career-01.js';
 import { verifySnapshot } from './simulate.js';
 
 describe('career-01 fixture 결정론', () => {
@@ -26,7 +26,28 @@ describe('career-01 fixture 결정론', () => {
       shirtNumber: 13,
       signatureType: 'AUTO',
       signedAtRevision: golden.revision,
+      kind: 'PERMANENT',
+      appearancePromise: {
+        minutesShareBp: rulesetProto.contractRules.promiseMinutesShareBp[golden.contract.rolePromise as keyof typeof rulesetProto.contractRules.promiseMinutesShareBp],
+      },
+      positionPlan: snapshot.state.player.profile?.primaryPosition,
+      suspended: false,
+      loan: null,
+      promiseBreaches: 0,
+      signedSeasonIndex: 1,
     });
+    expect(snapshot.state.clubHistory).toEqual([
+      {
+        teamId: golden.contract.teamId,
+        teamName: '서울 유나이티드',
+        leagueTier: golden.contract.leagueTier,
+        kind: 'PERMANENT',
+        fromSeasonIndex: 1,
+        toSeasonIndex: null,
+        endReason: null,
+        contractId: golden.contract.id,
+      },
+    ]);
     expect(snapshot.state.pending).toBeNull();
     expect(verifySnapshot(snapshot)).toEqual({ ok: true });
   });

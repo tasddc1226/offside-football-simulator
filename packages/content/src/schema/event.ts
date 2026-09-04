@@ -61,6 +61,11 @@ export const ChoiceSchema = z.strictObject({
 
 export const NarrativeSchema = z.strictObject({ situation: z.string().min(1) });
 
+// T-3-001 D-52: 이 값이 있는 정의는 일반 EVENT 슬롯 후보에서 제외되고, 해당 pending 생성기(T-3-002·
+// T-4-002·T-4-004)만 고른다. 현재 팩에는 이 필드를 쓰는 정의가 없다.
+export const PRESENTATION_KINDS = ['INJURY', 'SLUMP', 'LOCKER_ROOM', 'ETHICS', 'MEDIA', 'NATIONAL_TEAM', 'RUMOUR'] as const;
+export const PresentationKindSchema = z.enum(PRESENTATION_KINDS);
+
 export const EventDefinitionSchema = z
   .strictObject({
     id: z.string().regex(EVENT_ID_PATTERN),
@@ -75,6 +80,7 @@ export const EventDefinitionSchema = z
     safety: SafetySchema,
     choices: z.array(ChoiceSchema).min(2).max(3),
     narrative: NarrativeSchema,
+    presentation: PresentationKindSchema.optional(),
   })
   .superRefine((event, ctx) => {
     const seenPhases = new Set<string>();

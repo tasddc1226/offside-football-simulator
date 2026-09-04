@@ -209,19 +209,43 @@ export type PlayerProfile = {
   baseOvr: number;
 };
 
-// D-9: 제안·계약(offerRules 데이터는 T-1-005가 소비, 타입만 이 작업에서 정의).
+// T-3-001 D-44: 제안 종류. RENEWAL은 현 구단 재계약, FREE_AGENT는 무소속 계약(Phase 1 첫 계약 포함).
+export type OfferKind = 'RENEWAL' | 'TRANSFER' | 'LOAN' | 'FREE_AGENT';
+
+// T-3-001 D-44: 협상 1회의 대상 항목.
+export type NegotiationAsk = 'WAGE' | 'ROLE' | 'LENGTH';
+
+// T-3-001 D-44: 저장 상태에 남기는 협상 상태(GENERATED·OFFERED·ACCEPTED·REJECTED·EXPIRED는 pending
+// 목록 존재 여부·타임라인으로 표현하고 저장 필드로 중복하지 않는다).
+export type NegotiationState = 'OPEN' | 'COUNTERED' | 'WITHDRAWN';
+
+// D-9, T-3-001 D-44 확장: 제안(offerRules 데이터는 T-1-005·T-3-002가 소비, 타입만 이 작업에서 정의).
 export type Offer = {
   id: string;
+  kind: OfferKind; // Phase 1 첫 계약은 'FREE_AGENT'
   teamId: string;
   teamName: string;
+  fromTeamId: string | null; // RENEWAL이면 현 구단 id, 그 외 null
   leagueTier: 'YOUTH' | 1 | 2 | 3;
   lengthSeasons: number;
   wageMinorPerWeek: number;
   signingBonusMinor: number;
+  transferFeeMinor: number | null; // TRANSFER만(표시용), 그 외 null
   rolePromise: SquadRole;
+  appearancePromise: { minutesShareBp: number }; // Phase 1: contractRules.promiseMinutesShareBp[rolePromise]
+  positionPlan: Position; // Phase 1: profile.primaryPosition
   shirtNumber: number;
   tacticalFitEstimate: number;
+  competitorSummary: { rank: number; ovrGap: number } | null; // T-3-002가 채운다, Phase 1은 null
+  validUntilRevision: number | null; // null = 만료 없음(Phase 1 제안·안전 잔류 제안)
+  negotiable: { wage: boolean; role: boolean; length: boolean }; // Phase 1: 전부 false
+  negotiationState: NegotiationState; // 생성 시 'OPEN'
+  negotiatedAsk: NegotiationAsk | null; // NEGOTIATE 뒤 T-3-003이 기록, 생성 시 null
+  loan: { parentTeamId: string; seasons: 1; wageShareBp: number; buyOptionMinor: number | null } | null;
 };
+
+// T-3-001 D-44/D-46: Phase 1은 항상 'PERMANENT'. 'LOAN'은 임대 계약(T-3-003이 생성).
+export type ContractKind = 'PERMANENT' | 'LOAN';
 
 export type Contract = {
   id: string;
@@ -236,6 +260,37 @@ export type Contract = {
   shirtNumber: number;
   signatureType: 'AUTO';
   signedAtRevision: number;
+  kind: ContractKind; // Phase 1: 'PERMANENT'
+  appearancePromise: { minutesShareBp: number };
+  positionPlan: Position;
+  suspended: boolean; // 임대 중 원소속 계약이면 true(D-46). Phase 1: false
+  loan: Offer['loan']; // kind LOAN일 때만 non-null
+  promiseBreaches: number; // D-47(T-3-003이 증가), 생성 시 0
+  signedSeasonIndex: number; // 서명 시점의 seasonHistory.length + 1(= 다음에 시작할 시즌)
+};
+
+// T-3-001 D-45: 소속 이력 한 항목. `toSeasonIndex: null`이면 현재 소속(clubHistory[]는 이 항목을 항상
+// 포함한다). 마감·이어붙이기(다음 stint 시작)는 T-3-003 몫이다.
+export type ClubStintEndReason = 'EXPIRED' | 'TRANSFERRED' | 'LOANED' | 'RETURNED' | 'RENEWED';
+
+export type ClubStint = {
+  teamId: string;
+  teamName: string;
+  leagueTier: Contract['leagueTier'];
+  kind: ContractKind;
+  fromSeasonIndex: number; // 이 소속으로 처음 시작하는 시즌 index
+  toSeasonIndex: number | null; // 아직 소속이면 null
+  endReason: ClubStintEndReason | null;
+  contractId: string;
+};
+
+// T-3-001 D-43: 결산 뒤(또는 step 7 사전 협상) 열리는 이적시장 하나를 요약한다. 시장가치는 상태에
+// 저장하지 않는다(ADR-010) — 이 요약은 "왜 열렸는가"·"안전 잔류 제안이 무엇인가"만 담는다.
+export type MarketSummary = {
+  openedAtRevision: number;
+  seasonIndex: number; // 시장이 열린 시점의 seasonHistory.length(첫 계약은 0)
+  reason: 'FIRST_CONTRACT' | 'EXPIRED' | 'INTEREST' | 'LOAN_END' | 'PRE_NEGOTIATION';
+  safeOfferId: string | null; // 안전 잔류 제안 id(D-44), 첫 계약은 null
 };
 
 // T-2-002 D-34: 감독 역할 제안 세 유형. roll 없이 rankSelection 결과로 결정론적으로 산출한다
@@ -262,7 +317,8 @@ export type RoleProposal =
 export type Pending =
   | null
   | { kind: 'EVENT'; eventId: string; version: number }
-  | { kind: 'OFFERS'; offers: Offer[] }
+  // T-3-001 D-43/D-44: Phase 1 `generateOffers` 경로가 `market.reason: 'FIRST_CONTRACT'`를 채운다.
+  | { kind: 'OFFERS'; offers: Offer[]; market: MarketSummary }
   | {
       kind: 'CHAPTER';
       step: number;
@@ -276,10 +332,16 @@ export type Pending =
       trigger: ChapterTrigger['kind'];
       resolved: Array<{ decisionId: string; optionId: string; outcomeId: string; roll: number; outcomeKind: ChapterOutcomeKind }>;
     }
-  | { kind: 'CONTRACT'; step: number }
+  // T-3-001 D-43 (a): step 7 재계약 사전 협상. `offers.length === 0`이면 자동 통과(지금은 생성기가
+  // 없어 항상 이 상태), 1건 이상이면 정지한다(T-3-002가 채운다).
+  | { kind: 'CONTRACT'; step: number; offers: Offer[]; market: MarketSummary }
   | { kind: 'ROLE_PROPOSAL'; step: number; proposal: RoleProposal }
-  | { kind: 'INJURY'; step: number }
-  | { kind: 'NATIONAL_TEAM'; step: number }
+  // T-3-001 D-52 예약(값은 T-4-002가 채운다, 생성기가 없는 지금은 형태만).
+  | { kind: 'INJURY'; step: number; episodeId: string; eventId: string; version: number }
+  // T-3-001 D-51 예약(값은 T-4-004가 채운다, 생성기가 없는 지금은 형태만).
+  | { kind: 'NATIONAL_TEAM'; step: number; eventId: string; version: number }
+  // T-3-001 D-46: 임대 시즌 결산 뒤 원소속 복귀·완전 이적 선택(생성기는 T-3-003).
+  | { kind: 'LOAN_RETURN'; options: Array<'RETURN' | 'PERMANENT'>; buyOptionMinor: number | null }
   | { kind: 'SETTLEMENT'; step: number };
 
 // D-12: 타임라인. 문장은 넣지 않는다(웹이 팩·룰셋에서 조합). T-2-002: `ROLE_RESOLVED`의 refId는
@@ -296,7 +358,24 @@ export type TimelineEntry = {
     | 'ROLE_RESOLVED'
     | 'CHAPTER_RESOLVED'
     // T-2-014 D-42: `evaluateCareerTags`가 새 태그를 부여할 때마다 1건(refId = tagId).
-    | 'CAREER_TAG_GRANTED';
+    | 'CAREER_TAG_GRANTED'
+    // T-3-001 D-53 표: 트랙 A(계약·임대·이적) 예약. 이 작업에서 실제로 기록하는 건 없다.
+    | 'CONTRACT_RENEWED'
+    | 'TRANSFERRED'
+    | 'LOANED'
+    | 'LOAN_RETURNED'
+    | 'OFFER_REJECTED'
+    | 'OFFER_EXPIRED'
+    | 'NEGOTIATED'
+    // T-3-001 D-53 표: 트랙 B(부상·관계·평판) 예약. 이 작업에서 실제로 기록하는 건 없다.
+    | 'INJURED'
+    | 'REHAB_CHOSEN'
+    | 'RECOVERED'
+    | 'INJURY_RECURRED'
+    | 'MANAGER_CHANGED'
+    | 'NATIONAL_TEAM_CALLED'
+    | 'NATIONAL_TEAM_DECLINED'
+    | 'CAPTAIN_APPOINTED';
   refId: string | null;
   age: number;
   step: number;
@@ -596,6 +675,10 @@ export type SeasonResult = {
     managerTrust: { before: number; after: number };
   };
   chapters: ChapterRecord[];
+  // T-3-001(PR #45 후속): 결산 뒤 `season`이 null이 되며 사라지던 다이어리 step 요약을 보존한다.
+  // `settleSeason`이 `season.steps[].summary`에서 채운다(이 작업의 유일한 로직 변경). SETTLEMENT
+  // step(12)은 결산 자체라 요약이 없다 — 포함되지 않는다(길이 11, PR #48 리뷰로 확정).
+  stepSummaries: Array<{ step: number; phase: SeasonPhase; matchesPlayed: number; decisionsOpened: number; passedAtRevision: number }>;
   hash: string;
 };
 
@@ -643,6 +726,9 @@ export type CareerState = {
   player: { draft: PlayerDraft; profile: PlayerProfile | null };
   pending: Pending;
   contract: Contract | null;
+  // T-3-001 D-45: 소속 이력. 현재 소속 항목(`toSeasonIndex: null`)을 항상 포함한다. Phase 1
+  // `acceptOffer`가 첫 항목을 push한다 — 마감·이어붙이기는 T-3-003 몫.
+  clubHistory: ClubStint[];
   timeline: TimelineEntry[];
   season: FootballSeason | null;
   seasonHistory: SeasonSummary[];

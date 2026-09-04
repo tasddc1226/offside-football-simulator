@@ -162,6 +162,12 @@ describe('selectEligibleEvents: 필터(합성 이벤트)', () => {
     ]);
   });
 
+  // T-3-001 D-52: presentation이 있는 정의는 일반 EVENT 후보에서 빠진다(해당 pending 생성기만 고른다).
+  it('presentation이 있는 정의는 트리거를 통과해도 일반 EVENT 후보에서 빠진다', () => {
+    const pack = makeContentPack([makeEvent({ id: 'EVT-DEV-905', presentation: 'INJURY' })]);
+    expect(selectEligibleEvents(pack, buildTestState())).toEqual([]);
+  });
+
   it('결과는 eventId 오름차순으로 정렬된다', () => {
     const pack = makeContentPack([
       makeEvent({ id: 'EVT-DEV-902', weight: 5 }),
