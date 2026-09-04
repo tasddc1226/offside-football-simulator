@@ -45,6 +45,8 @@ export function computeTacticalFit(
   position: Position,
   style: TacticalStyle,
   rules: SelectionRules,
+  /** T-4-003: 교체 감독이 선호하는 현재 선수 포지션 아키타입 집합. */
+  preferredArchetypeIds: readonly string[] = style.preferredArchetypeIds[position],
 ): number {
   const weights = style.roleWeights[position];
   let styleScore = 0;
@@ -54,7 +56,7 @@ export function computeTacticalFit(
       styleScore += weight * attributes[key];
     }
   }
-  const archetypeScore = style.preferredArchetypeIds[position].includes(archetypeId) ? 100 : 0;
+  const archetypeScore = preferredArchetypeIds.includes(archetypeId) ? 100 : 0;
   return Math.round(styleScore * rules.tacticalFitWeights.style + archetypeScore * rules.tacticalFitWeights.archetype);
 }
 

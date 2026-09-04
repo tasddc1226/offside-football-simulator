@@ -4,7 +4,7 @@ import { CAREER_PHASES, ConditionSchema } from './condition.ts';
 import { EffectSchema } from './effect.ts';
 import { findNarrativeTokenIssues } from './narrative.ts';
 
-export const EVENT_ID_PATTERN = /^EVT-(MGR|CON|REL|INJ|MATCH|MEDIA|NAT|DEV)-\d{3}$/;
+export const EVENT_ID_PATTERN = /^EVT-(MGR|CON|REL|INJ|MATCH|MEDIA|NAT|DEV|ETH|SLUMP)-\d{3}$/;
 
 const CareerPhaseSchema = z.enum(CAREER_PHASES as [CareerPhase, ...CareerPhase[]]);
 
@@ -15,7 +15,10 @@ export const CooldownSchema = z
   })
   .superRefine((cooldown, ctx) => {
     if (cooldown.steps === undefined && cooldown.seasons === undefined) {
-      ctx.addIssue({ code: 'custom', message: 'cooldown은 steps 또는 seasons 중 하나 이상이 필요하다.' });
+      ctx.addIssue({
+        code: 'custom',
+        message: 'cooldown은 steps 또는 seasons 중 하나 이상이 필요하다.',
+      });
     }
   });
 
@@ -72,7 +75,15 @@ export const NarrativeSchema = z.strictObject({ situation: z.string().min(1) });
 
 // T-3-001 D-52: 이 값이 있는 정의는 일반 EVENT 슬롯 후보에서 제외되고, 해당 pending 생성기(T-3-002·
 // T-4-002·T-4-004)만 고른다. 현재 팩에는 이 필드를 쓰는 정의가 없다.
-export const PRESENTATION_KINDS = ['INJURY', 'SLUMP', 'LOCKER_ROOM', 'ETHICS', 'MEDIA', 'NATIONAL_TEAM', 'RUMOUR'] as const;
+export const PRESENTATION_KINDS = [
+  'INJURY',
+  'SLUMP',
+  'LOCKER_ROOM',
+  'ETHICS',
+  'MEDIA',
+  'NATIONAL_TEAM',
+  'RUMOUR',
+] as const;
 export const PresentationKindSchema = z.enum(PRESENTATION_KINDS);
 
 // T-3-006 U-013 (A): 워커가 쓴 최소 문구는 authoring: 'PROTOTYPE'로 표시하고 manifest
@@ -101,7 +112,11 @@ export const EventDefinitionSchema = z
     const seenPhases = new Set<string>();
     event.phases.forEach((phase, index) => {
       if (seenPhases.has(phase)) {
-        ctx.addIssue({ code: 'custom', message: `phases에 중복된 값: ${phase}`, path: ['phases', index] });
+        ctx.addIssue({
+          code: 'custom',
+          message: `phases에 중복된 값: ${phase}`,
+          path: ['phases', index],
+        });
       }
       seenPhases.add(phase);
     });
@@ -117,27 +132,91 @@ export const EventDefinitionSchema = z
     event.choices.forEach((choice, index) => {
       if (event.presentation === 'INJURY') {
         if (choice.rehabPlan === undefined) {
-          ctx.addIssue({ code: 'custom', message: 'presentation이 INJURY인 이벤트의 choice는 rehabPlan이 필요하다.', path: ['choices', index, 'rehabPlan'] });
+          ctx.addIssue({
+            code: 'custom',
+            message: 'presentation이 INJURY인 이벤트의 choice는 rehabPlan이 필요하다.',
+            path: ['choices', index, 'rehabPlan'],
+          });
         }
         if (choice.callUp !== undefined) {
-          ctx.addIssue({ code: 'custom', message: 'presentation이 INJURY인 이벤트의 choice에는 callUp을 쓸 수 없다.', path: ['choices', index, 'callUp'] });
+          ctx.addIssue({
+            code: 'custom',
+            message: 'presentation이 INJURY인 이벤트의 choice에는 callUp을 쓸 수 없다.',
+            path: ['choices', index, 'callUp'],
+          });
         }
       } else if (event.presentation === 'NATIONAL_TEAM') {
         if (choice.callUp === undefined) {
-          ctx.addIssue({ code: 'custom', message: 'presentation이 NATIONAL_TEAM인 이벤트의 choice는 callUp이 필요하다.', path: ['choices', index, 'callUp'] });
+          ctx.addIssue({
+            code: 'custom',
+            message: 'presentation이 NATIONAL_TEAM인 이벤트의 choice는 callUp이 필요하다.',
+            path: ['choices', index, 'callUp'],
+          });
         }
         if (choice.rehabPlan !== undefined) {
-          ctx.addIssue({ code: 'custom', message: 'presentation이 NATIONAL_TEAM인 이벤트의 choice에는 rehabPlan을 쓸 수 없다.', path: ['choices', index, 'rehabPlan'] });
+          ctx.addIssue({
+            code: 'custom',
+            message: 'presentation이 NATIONAL_TEAM인 이벤트의 choice에는 rehabPlan을 쓸 수 없다.',
+            path: ['choices', index, 'rehabPlan'],
+          });
         }
       } else {
         if (choice.rehabPlan !== undefined) {
-          ctx.addIssue({ code: 'custom', message: 'rehabPlan은 presentation이 INJURY인 choice에만 쓸 수 있다.', path: ['choices', index, 'rehabPlan'] });
+          ctx.addIssue({
+            code: 'custom',
+            message: 'rehabPlan은 presentation이 INJURY인 choice에만 쓸 수 있다.',
+            path: ['choices', index, 'rehabPlan'],
+          });
         }
         if (choice.callUp !== undefined) {
-          ctx.addIssue({ code: 'custom', message: 'callUp은 presentation이 NATIONAL_TEAM인 choice에만 쓸 수 있다.', path: ['choices', index, 'callUp'] });
+          ctx.addIssue({
+            code: 'custom',
+            message: 'callUp은 presentation이 NATIONAL_TEAM인 choice에만 쓸 수 있다.',
+            path: ['choices', index, 'callUp'],
+          });
         }
       }
     });
+
+    // T-4-003 P4-6: presentation 실패가 커리어를 막지 않도록 후속 이벤트 또는 유한 만료 경로를
+    // 반드시 둔다. PERMANENT 음수 효과는 어떤 경우에도 허용하지 않는다.
+    if (
+      event.presentation === 'SLUMP' ||
+      event.presentation === 'LOCKER_ROOM' ||
+      event.presentation === 'ETHICS' ||
+      event.presentation === 'MEDIA'
+    ) {
+      event.choices.forEach((choice, choiceIndex) => {
+        choice.outcomes.forEach((outcome, outcomeIndex) => {
+          if (outcome.kind !== 'FAIL') return;
+          const hasFollowUp = (outcome.followUps?.length ?? 0) > 0;
+          const hasPermanentNegative = outcome.effects.some(
+            (effect) => effect.kind === 'PERMANENT' && effect.delta < 0,
+          );
+          if (hasPermanentNegative) {
+            ctx.addIssue({
+              code: 'custom',
+              message: 'presentation FAIL outcome에는 PERMANENT 음수 효과를 쓸 수 없다.',
+              path: ['choices', choiceIndex, 'outcomes', outcomeIndex],
+            });
+          }
+          const hasUnboundedTransientNegative = outcome.effects.some(
+            (effect) =>
+              (effect.kind === 'CURRENT' || effect.kind === 'CONTEXT') &&
+              effect.delta < 0 &&
+              effect.expiresAt === null,
+          );
+          if (!hasFollowUp && hasUnboundedTransientNegative) {
+            ctx.addIssue({
+              code: 'custom',
+              message:
+                'presentation FAIL outcome은 followUp 또는 유한 만료 효과 회복 경로가 필요하다.',
+              path: ['choices', choiceIndex, 'outcomes', outcomeIndex],
+            });
+          }
+        });
+      });
+    }
   });
 
 export type EventDefinition = z.infer<typeof EventDefinitionSchema>;
@@ -150,12 +229,17 @@ function collectNarrativeStrings(event: {
     outcomes: { title: string; cause?: string | undefined }[];
   }[];
 }): [(string | number)[], string][] {
-  const entries: [(string | number)[], string][] = [['narrative.situation'.split('.'), event.narrative.situation]];
+  const entries: [(string | number)[], string][] = [
+    ['narrative.situation'.split('.'), event.narrative.situation],
+  ];
 
   event.choices.forEach((choice, choiceIndex) => {
     entries.push([['choices', choiceIndex, 'label'], choice.label]);
     choice.previewEffects.forEach((preview, previewIndex) => {
-      entries.push([['choices', choiceIndex, 'previewEffects', previewIndex, 'label'], preview.label]);
+      entries.push([
+        ['choices', choiceIndex, 'previewEffects', previewIndex, 'label'],
+        preview.label,
+      ]);
     });
     choice.outcomes.forEach((outcome, outcomeIndex) => {
       entries.push([['choices', choiceIndex, 'outcomes', outcomeIndex, 'title'], outcome.title]);

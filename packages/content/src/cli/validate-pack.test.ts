@@ -3,9 +3,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loadPack } from './load-pack.ts';
-import { validatePack } from './validate-pack.ts';
+import { checkPresentationFailSafety, validatePack } from './validate-pack.ts';
 import { computePackChecksum } from './checksum.ts';
 import { EFFECT_DEFAULTS } from '../schema/effect.ts';
+import type { EventDefinition } from '../schema/event.ts';
 
 function minimalEvent(id: string, followUpEventId?: string) {
   return {
@@ -29,7 +30,15 @@ function minimalEvent(id: string, followUpEventId?: string) {
             kind: 'SUCCESS',
             weight: 100,
             title: '성공',
-            effects: [{ kind: 'PERMANENT', sourceId: `${id}.A.A1`, target: 'crossing', delta: 1, ...EFFECT_DEFAULTS.PERMANENT }],
+            effects: [
+              {
+                kind: 'PERMANENT',
+                sourceId: `${id}.A.A1`,
+                target: 'crossing',
+                delta: 1,
+                ...EFFECT_DEFAULTS.PERMANENT,
+              },
+            ],
             ...(followUpEventId ? { followUps: [{ eventId: followUpEventId }] } : {}),
           },
         ],
@@ -65,7 +74,10 @@ function writePackFixture(
   mkdirSync(join(dir, 'narrative'), { recursive: true });
 
   for (const event of options.events) {
-    writeFileSync(join(dir, 'events', `${(event as { id: string }).id}.json`), JSON.stringify(event, null, 2));
+    writeFileSync(
+      join(dir, 'events', `${(event as { id: string }).id}.json`),
+      JSON.stringify(event, null, 2),
+    );
   }
   writeFileSync(join(dir, 'narrative', 'tokens.json'), JSON.stringify(NARRATIVE_TOKENS, null, 2));
 
@@ -75,7 +87,8 @@ function writePackFixture(
   ];
 
   const fileContents = new Map<string, unknown>();
-  for (const event of options.events) fileContents.set(`events/${(event as { id: string }).id}.json`, event);
+  for (const event of options.events)
+    fileContents.set(`events/${(event as { id: string }).id}.json`, event);
   fileContents.set('narrative/tokens.json', NARRATIVE_TOKENS);
 
   const checksum = options.checksum ?? computePackChecksum(files, fileContents);
@@ -147,7 +160,10 @@ describe('validatePack (fixtures)', () => {
 
   it('detects a followUps cycle', () => {
     writePackFixture(dir, {
-      events: [minimalEvent('EVT-DEV-001', 'EVT-DEV-002'), minimalEvent('EVT-DEV-002', 'EVT-DEV-001')],
+      events: [
+        minimalEvent('EVT-DEV-001', 'EVT-DEV-002'),
+        minimalEvent('EVT-DEV-002', 'EVT-DEV-001'),
+      ],
     });
     const result = validatePack(loadPack(dir), { writeChecksum: false });
     expect(result.errors.some((e) => e.includes('순환'))).toBe(true);
@@ -157,7 +173,11 @@ describe('validatePack (fixtures)', () => {
     writePackFixture(dir, {
       events: [minimalEvent('EVT-DEV-001')],
       checksum: '0'.repeat(64),
-      filesOverride: ['events/EVT-DEV-001.json', 'events/EVT-DOES-NOT-EXIST.json', 'narrative/tokens.json'],
+      filesOverride: [
+        'events/EVT-DEV-001.json',
+        'events/EVT-DOES-NOT-EXIST.json',
+        'narrative/tokens.json',
+      ],
     });
     expect(() => validatePack(loadPack(dir), { writeChecksum: false })).not.toThrow();
     const result = validatePack(loadPack(dir), { writeChecksum: false });
@@ -181,7 +201,9 @@ describe('validatePack (fixtures)', () => {
 
     const revalidated = validatePack(loadPack(dir), { writeChecksum: false });
     expect(revalidated.errors).toEqual([]);
-    expect(JSON.parse(readFileSync(loaded.manifestPath, 'utf8')).checksum).toBe(result.computedChecksum);
+    expect(JSON.parse(readFileSync(loaded.manifestPath, 'utf8')).checksum).toBe(
+      result.computedChecksum,
+    );
   });
 
   it('warns when weight >= 50 has no cooldown', () => {
@@ -195,7 +217,10 @@ describe('validatePack (fixtures)', () => {
 
   it('warns when outcome weights in a choice do not sum to 100', () => {
     const event = minimalEvent('EVT-DEV-001');
-    const choice = (event as { choices: Record<string, unknown>[] }).choices[0] as Record<string, unknown>;
+    const choice = (event as { choices: Record<string, unknown>[] }).choices[0] as Record<
+      string,
+      unknown
+    >;
     const outcome = (choice.outcomes as Record<string, unknown>[])[0] as Record<string, unknown>;
     choice.outcomes = [{ ...outcome, weight: 40 }];
     writePackFixture(dir, { events: [event] });
@@ -209,5 +234,65 @@ describe('validatePack (fixtures)', () => {
     writePackFixture(dir, { events: [event] });
     const result = validatePack(loadPack(dir), { writeChecksum: false });
     expect(result.warnings.some((w) => w.includes('minorSafe'))).toBe(true);
+  });
+
+  it('presentation FAIL의 PERMANENT 음수는 followUp이 있어도 거부한다', () => {
+    const event = minimalEvent('EVT-ETH-001') as {
+      presentation?: string;
+      choices: Array<{ outcomes: Array<Record<string, unknown>> }>;
+    };
+    event.presentation = 'ETHICS';
+    for (const choice of event.choices) {
+      choice.outcomes[0] = {
+        ...choice.outcomes[0],
+        kind: 'FAIL',
+        effects: [
+          {
+            kind: 'PERMANENT',
+            sourceId: 'EVT-ETH-001.A.A1',
+            target: 'crossing',
+            delta: -1,
+            ...EFFECT_DEFAULTS.PERMANENT,
+          },
+        ],
+        followUps: [{ eventId: 'EVT-ETH-001' }],
+      };
+    }
+    const errors: string[] = [];
+    checkPresentationFailSafety(
+      [{ file: 'events/EVT-ETH-001.json', event: event as unknown as EventDefinition }],
+      errors,
+    );
+    expect(errors.some((error) => error.includes('PERMANENT 음수'))).toBe(true);
+  });
+
+  it('presentation FAIL의 무기한 음수 CURRENT는 followUp 없이는 거부한다', () => {
+    const event = minimalEvent('EVT-ETH-002') as {
+      presentation?: string;
+      choices: Array<{ outcomes: Array<Record<string, unknown>> }>;
+    };
+    event.presentation = 'ETHICS';
+    for (const choice of event.choices) {
+      choice.outcomes[0] = {
+        ...choice.outcomes[0],
+        kind: 'FAIL',
+        effects: [
+          {
+            kind: 'CURRENT',
+            sourceId: 'EVT-ETH-002.A.A1',
+            target: 'form',
+            delta: -1,
+            ...EFFECT_DEFAULTS.CURRENT,
+            expiresAt: null,
+          },
+        ],
+      };
+    }
+    const errors: string[] = [];
+    checkPresentationFailSafety(
+      [{ file: 'events/EVT-ETH-002.json', event: event as unknown as EventDefinition }],
+      errors,
+    );
+    expect(errors.some((error) => error.includes('회복 경로'))).toBe(true);
   });
 });

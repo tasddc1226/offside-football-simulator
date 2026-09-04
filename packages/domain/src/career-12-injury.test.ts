@@ -94,7 +94,7 @@ describe('career-12-injury fixture — 실제 중증→재활→회복→재발 
         definitionVersion: pending.version,
         choiceId: 'A',
         rehabPlan: 'STANDARD',
-        outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
       },
     });
     const firstMatchBeforeResume = resolved.state.season!.matches.find((match) => match.id === stepMatches[0]!.id);
@@ -130,7 +130,7 @@ describe('career-12-injury fixture — 실제 중증→재활→회복→재발 
         definitionVersion: firstPending.state.pending.version,
         choiceId: 'A',
         rehabPlan: 'STANDARD',
-        outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
       },
     });
 
@@ -144,7 +144,7 @@ describe('career-12-injury fixture — 실제 중증→재활→회복→재발 
         definitionVersion: secondPending.state.pending.version,
         choiceId: 'A',
         rehabPlan: 'STANDARD',
-        outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
       },
     });
 
@@ -229,7 +229,7 @@ describe('career-12-injury fixture — 실제 중증→재활→회복→재발 
         definitionVersion: pending.version,
         choiceId: 'A',
         rehabPlan: 'STANDARD',
-        outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
       },
     }, timingRuleset);
     expect(resolved.state.season!.matchRngState).toEqual(matchRngAfterFirst);
@@ -288,7 +288,7 @@ describe('career-12-injury fixture — 실제 중증→재활→회복→재발 
         eventId: eventPending.eventId,
         definitionVersion: eventPending.version,
         choiceId: 'A',
-        outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
       },
     }, timingRuleset);
     const afterStepClose = runCommand(afterEvent, { type: 'ADVANCE', payload: { eligibleEvents: [] } }, timingRuleset);

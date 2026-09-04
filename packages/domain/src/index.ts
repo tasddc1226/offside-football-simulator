@@ -194,8 +194,15 @@ export {
   syncInjuryRemaining,
 } from './injury.js';
 export { findInjuryReturnMatchId } from './injury-return.js';
-export { buildDefaultManager, managerTenureSeasons } from './manager.js';
+export { buildDefaultManager, buildReplacementManager, codePointSum, managerTenureSeasons } from './manager.js';
 export { onSettlementRelations } from './relationships.js';
+export { appendRelationshipLog } from './effects.js';
+export {
+  applySettlementReputation,
+  computePopularityDelta,
+  computeSettlementPopularityDelta,
+  seasonWonTitle,
+} from './reputation.js';
 export {
   simulate,
   verifySnapshot,

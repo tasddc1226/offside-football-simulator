@@ -592,6 +592,16 @@ export const RelationshipRulesSchema = z.strictObject({
   logMax: z.number().int().positive(),
   memoryTagsMax: z.number().int().positive(),
   captainAppointment: z.strictObject({ minCaptain: z.number().int().min(0).max(100), minSeasons: z.number().int().nonnegative() }),
+  tagThresholds: z.strictObject({
+    glassPotential: z.number().int().min(0).max(100),
+    glassMajorEpisodes: z.number().int().nonnegative(),
+    managerTrust: z.number().int().min(0).max(100),
+    managerSeasons: z.number().int().nonnegative(),
+    lockerRelation: z.number().int().min(0).max(100),
+    lockerSeasons: z.number().int().nonnegative(),
+    comebackRole: SquadRoleSchema,
+    controversialFailures: z.number().int().nonnegative(),
+  }),
 });
 export type RelationshipRules = z.infer<typeof RelationshipRulesSchema>;
 

@@ -157,7 +157,7 @@ async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
           eventId: pending.eventId,
           definitionVersion: pending.version,
           choiceId: 'STANDARD',
-          outcomes: [{ id: 'STANDARD', weight: 1, effects: [] }],
+          outcomes: [{ id: 'STANDARD', kind: 'FIXED', weight: 1, effects: [] }],
           rehabPlan: 'STANDARD',
         },
       });

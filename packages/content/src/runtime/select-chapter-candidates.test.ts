@@ -272,13 +272,21 @@ function runOrThrow(
   return result.snapshot;
 }
 
-type ResolveEventOutcomePayload = { id: string; weight: number; effects: Effect[]; addTags?: string[]; removeTags?: string[] };
+type ResolveEventOutcomePayload = {
+  id: string;
+  kind?: EventDefinition['choices'][number]['outcomes'][number]['kind'];
+  weight: number;
+  effects: Effect[];
+  addTags?: string[];
+  removeTags?: string[];
+};
 
 /** apps/web career-actions.ts의 toResolveEventOutcomes와 같은 매핑(팩 outcome → RESOLVE_EVENT payload). */
 function toResolveEventOutcomes(outcomes: EventDefinition['choices'][number]['outcomes']): ResolveEventOutcomePayload[] {
   return outcomes.map((outcome) => {
     const payload: ResolveEventOutcomePayload = {
       id: outcome.id,
+      kind: outcome.kind,
       weight: outcome.weight,
       effects: outcome.effects,
     };

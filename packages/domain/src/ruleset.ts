@@ -284,6 +284,17 @@ export type RelationshipRules = {
   logMax: number;
   memoryTagsMax: number;
   captainAppointment: { minCaptain: number; minSeasons: number };
+  /** T-4-003 Phase 4 커리어 태그 판정 기준. */
+  tagThresholds: {
+    glassPotential: number;
+    glassMajorEpisodes: number;
+    managerTrust: number;
+    managerSeasons: number;
+    lockerRelation: number;
+    lockerSeasons: number;
+    comebackRole: SquadRole;
+    controversialFailures: number;
+  };
 };
 
 // T-4-001 D-49/D-50: 평판 규칙(`packages/content` 소유). `CREATE_CAREER`가 `initialPopularityCenti`·

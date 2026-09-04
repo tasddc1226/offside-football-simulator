@@ -1,7 +1,7 @@
 {
   "FAST": {
     "revision": 15,
-    "stateHash": "5f473c4468c787c4d8d6eb743a12f90acf8a49370184c9a2c94a1203182fe24a",
+    "stateHash": "4cd9da0e89ce26a9e89e8c274bdff2ff51151bfe0fb48e46367102e623b1b0e5",
     "rngStateDraws": 404,
     "age": 18,
     "seasonHistory": [
@@ -40,6 +40,8 @@
           "index": 1,
           "simulationMode": "FAST",
           "teamId": "seoul-tier1",
+          "managerId": "seoul-tier1-mgr-1",
+          "captaincyAtEnd": "NONE",
           "competitions": [
             {
               "competitionId": "LEAGUE",
@@ -495,7 +497,7 @@
             },
             "managerTrust": {
               "before": 45,
-              "after": 45
+              "after": 37
             }
           },
           "chapters": [],
@@ -578,7 +580,7 @@
               "passedAtRevision": 14
             }
           ],
-          "hash": "7f921ba513d59d7e3065c387bfd7ef84a308bce97062793ce4257d3bda04651c"
+          "hash": "de84b1c2c7f11ddcaa8aa62f59b5f7788e7f21660dd8d8c8e937339640d57eb9"
         }
       }
     ],
@@ -982,7 +984,7 @@
   },
   "CHAPTER": {
     "revision": 25,
-    "stateHash": "d4d7d903db5bd525ebf41ac38ead95c3280ccfd58ac49518d0c96492bcf0cd44",
+    "stateHash": "e3742854e3d0d2db99a2d13f7e925d5a838fdcd8b86280fa12173a2b9f33e0c8",
     "rngStateDraws": 409,
     "age": 18,
     "seasonHistory": [
@@ -1021,6 +1023,8 @@
           "index": 1,
           "simulationMode": "CHAPTER",
           "teamId": "seoul-tier1",
+          "managerId": "seoul-tier1-mgr-1",
+          "captaincyAtEnd": "NONE",
           "competitions": [
             {
               "competitionId": "LEAGUE",
@@ -1476,7 +1480,7 @@
             },
             "managerTrust": {
               "before": 45,
-              "after": 45
+              "after": 37
             }
           },
           "chapters": [],
@@ -1559,7 +1563,7 @@
               "passedAtRevision": 24
             }
           ],
-          "hash": "dffc796baa0e181f7960f24cb9b219f5e51a9cd23c81728449185cd11b3a543c"
+          "hash": "19b4215661fcc038919e809f7c401cea0d44880e953ec99b82341f323771ac2e"
         }
       }
     ],

@@ -10,6 +10,7 @@ import {
   type ChapterRecord,
   type ClubStint,
   type FootballSeason,
+  type InjuryEpisode,
   type SeasonResult,
   type SeasonSummary,
 } from './types.js';
@@ -96,6 +97,10 @@ function baseCareerTagState(): CareerState {
     timeline: [],
     season: null,
     seasonHistory: [],
+    nextManager: null,
+    captaincy: 'NONE',
+    captaincySeasons: 0,
+    controversyFailures: 0,
     health: { episodes: [] },
     relationshipLog: [],
     memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
@@ -123,6 +128,8 @@ function chapterRecord(overrides: Partial<ChapterRecord> & { decisions: ChapterR
 const DUMMY_SEASON_RESULT_BASE: Omit<SeasonResult, 'chapters' | 'index'> = {
   simulationMode: 'FAST',
   teamId: 'team-1',
+  managerId: 'team-1-mgr-1',
+  captaincyAtEnd: 'NONE',
   competitions: [],
   playerStats: {
     group: 'FW',
@@ -341,6 +348,192 @@ describe('evaluateCareerTags — Phase 3 태그 5종', () => {
   });
 });
 
+function majorEpisode(seasonIndex: number): InjuryEpisode {
+  return {
+    id: `INJ-${seasonIndex}-3-1`,
+    severity: 'MAJOR',
+    bodyPart: 'KNEE',
+    occurredAt: { seasonIndex, step: 3, matchId: `match-${seasonIndex}` },
+    diagnosisRange: { minMatches: 3, maxMatches: 6 },
+    rehab: null,
+    recurrenceRiskBp: 0,
+    recurrenceChecksRemaining: 0,
+    status: 'RECOVERED',
+    permanentDelta: null,
+  };
+}
+
+function expectPhase4TagBoundary(input: {
+  tagId: CareerTagId;
+  atThreshold: CareerState;
+  atThresholdResult: SeasonResult;
+  belowThreshold: CareerState;
+  belowThresholdResult?: SeasonResult;
+}): void {
+  const belowResult = input.belowThresholdResult ?? input.atThresholdResult;
+  expect(evaluateCareerTags(input.belowThreshold, belowResult, rulesetProto)).not.toContain(
+    input.tagId,
+  );
+
+  const rngBefore = {
+    s: [...input.atThreshold.rngState.s],
+    draws: input.atThreshold.rngState.draws,
+  };
+  const tagsBefore = [...input.atThreshold.careerTags];
+  const grantsBefore = [...input.atThreshold.careerTagGrants];
+  const evaluated = evaluateCareerTags(input.atThreshold, input.atThresholdResult, rulesetProto);
+  expect(evaluated).toContain(input.tagId);
+  expect(input.atThreshold.rngState).toEqual(rngBefore);
+  expect(input.atThreshold.careerTags).toEqual(tagsBefore);
+  expect(input.atThreshold.careerTagGrants).toEqual(grantsBefore);
+
+  const source = { seasonIndex: 4, revision: 40, refId: 'SETTLE_SEASON:4' };
+  const granted = grantCareerTag(input.atThreshold, input.tagId, source);
+  expect(granted.careerTags.filter((tag) => tag === input.tagId)).toHaveLength(1);
+  expect(granted.careerTagGrants.filter((grant) => grant.tagId === input.tagId)).toHaveLength(1);
+  expect(evaluateCareerTags(granted, input.atThresholdResult, rulesetProto)).not.toContain(
+    input.tagId,
+  );
+
+  const grantedAgain = grantCareerTag(granted, input.tagId, {
+    ...source,
+    revision: source.revision + 1,
+  });
+  expect(grantedAgain).toBe(granted);
+  expect(grantedAgain.careerTagGrants.filter((grant) => grant.tagId === input.tagId)).toHaveLength(
+    1,
+  );
+}
+
+// T-4-003: Phase 4 태그는 룰셋 threshold를 정확히 경계로 평가하고, 평가/멱등 부여가 결정 RNG를
+// 소비하거나 기존 grant를 중복하지 않는다.
+describe('evaluateCareerTags — Phase 4 태그 5종 threshold 경계', () => {
+  it('TAG-GLASS-GENIUS: truePotential 85·MAJOR 3회는 참, potential 84는 거짓이다', () => {
+    const atThreshold = {
+      ...baseCareerTagState(),
+      player: {
+        ...baseCareerTagState().player,
+        profile: {
+          name: '유리몸 천재',
+          gender: 'UNSPECIFIED' as const,
+          nationalityCode: 'KR',
+          preferredFoot: 'RIGHT' as const,
+          preferredPosition: 'ST' as const,
+          primaryPosition: 'ST' as const,
+          archetypeId: 'inside-forward',
+          backgroundId: 'club-academy',
+          truePotential: 85,
+          scoutedPotentialMin: 80,
+          scoutedPotentialMax: 90,
+          baseOvr: 60,
+        },
+      },
+      health: { episodes: [1, 2, 3].map(majorEpisode) },
+    };
+    const belowThreshold = {
+      ...atThreshold,
+      player: {
+        ...atThreshold.player,
+        profile: { ...atThreshold.player.profile!, truePotential: 84 },
+      },
+    };
+    expectPhase4TagBoundary({
+      tagId: 'TAG-GLASS-GENIUS',
+      atThreshold,
+      atThresholdResult: seasonSummary(4, []).result,
+      belowThreshold,
+    });
+  });
+
+  it('TAG-MANAGER-FAVOURITE: 동일 감독 신뢰 80으로 3시즌은 참, 2시즌은 거짓이다', () => {
+    const makeManagerSummary = (index: number, managerTrustAfter: number): SeasonSummary => {
+      const result: SeasonResult = {
+        ...DUMMY_SEASON_RESULT_BASE,
+        index,
+        chapters: [],
+        managerId: 'team-1-mgr-1',
+        stateDeltas: {
+          ...DUMMY_SEASON_RESULT_BASE.stateDeltas,
+          managerTrust: { before: managerTrustAfter, after: managerTrustAfter },
+        },
+      };
+      return {
+        index,
+        simulationMode: 'FAST',
+        teamId: 'team-1',
+        competitions: [],
+        settledAtRevision: index * 10,
+        result,
+      };
+    };
+    const threeSeasons = [1, 2, 3].map((index) => makeManagerSummary(index, 80));
+    const twoSeasons = threeSeasons.slice(0, 2);
+    const atThreshold = { ...baseCareerTagState(), seasonHistory: threeSeasons };
+    const belowThreshold = { ...baseCareerTagState(), seasonHistory: twoSeasons };
+    expectPhase4TagBoundary({
+      tagId: 'TAG-MANAGER-FAVOURITE',
+      atThreshold,
+      atThresholdResult: threeSeasons[2]!.result,
+      belowThreshold,
+    });
+  });
+
+  it('TAG-LOCKER-LEADER: VICE·captaincySeasons 3·captain 75는 참, 2시즌은 거짓이다', () => {
+    const atThreshold = {
+      ...baseCareerTagState(),
+      captaincy: 'VICE' as const,
+      captaincySeasons: 3,
+      relationships: { ...baseCareerTagState().relationships, captain: 75 },
+    };
+    const belowThreshold = { ...atThreshold, captaincySeasons: 2 };
+    expectPhase4TagBoundary({
+      tagId: 'TAG-LOCKER-LEADER',
+      atThreshold,
+      atThresholdResult: seasonSummary(4, []).result,
+      belowThreshold,
+    });
+  });
+
+  it('TAG-COMEBACK: 직전 MAJOR 부상 뒤 STARTER는 참, ROTATION은 거짓이다', () => {
+    const result: SeasonResult = {
+      ...DUMMY_SEASON_RESULT_BASE,
+      index: 2,
+      chapters: [],
+      selectionSummary: {
+        ...DUMMY_SEASON_RESULT_BASE.selectionSummary,
+        squadRoleAtEnd: 'STARTER',
+      },
+    };
+    const atThreshold = {
+      ...baseCareerTagState(),
+      seasonHistory: [seasonSummary(1, [])],
+      health: { episodes: [majorEpisode(1)] },
+    };
+    const belowThresholdResult = {
+      ...result,
+      selectionSummary: { ...result.selectionSummary, squadRoleAtEnd: 'ROTATION' as const },
+    };
+    expectPhase4TagBoundary({
+      tagId: 'TAG-COMEBACK',
+      atThreshold,
+      atThresholdResult: result,
+      belowThreshold: atThreshold,
+      belowThresholdResult,
+    });
+  });
+
+  it('TAG-CONTROVERSIAL: controversyFailures 3회는 참, 2회는 거짓이다', () => {
+    const atThreshold = { ...baseCareerTagState(), controversyFailures: 3 };
+    const belowThreshold = { ...baseCareerTagState(), controversyFailures: 2 };
+    expectPhase4TagBoundary({
+      tagId: 'TAG-CONTROVERSIAL',
+      atThreshold,
+      atThresholdResult: seasonSummary(4, []).result,
+      belowThreshold,
+    });
+  });
+});
+
 describe('grantCareerTag', () => {
   it('멱등: 이미 있는 태그를 다시 부여해도 무변경이다', () => {
     const state = { ...baseCareerTagState(), careerTags: ['TAG-BIG-GAME'] as CareerTagId[] };
@@ -490,6 +683,38 @@ describe('settleSeason의 커리어 태그 결산 훅', () => {
     expect(grantEntry).toMatchObject({ kind: 'CAREER_TAG_GRANTED', refId: 'TAG-BIG-GAME' });
     expect(result.snapshot.state.careerTagGrants).toContainEqual(
       expect.objectContaining({ tagId: 'TAG-BIG-GAME', seasonIndex: 1, sourceRefId: 'SETTLE_SEASON:1' }),
+    );
+  });
+
+  it('settleSeason이 Phase 4 TAG-CONTROVERSIAL을 evaluate→grant하고 CAREER_TAG_GRANTED를 남긴다', () => {
+    const state = {
+      ...makeSettleableState(),
+      controversyFailures: rulesetProto.relationshipRules.tagThresholds.controversialFailures,
+    };
+    const snapshot = {
+      revision: 20,
+      checkpoint: 'STEP_BOUNDARY' as const,
+      state,
+      stateHash: 'x',
+      rulesetVersion: '1.0.0',
+      contentPackVersion: '0.1.0',
+    };
+    const result = simulate({
+      snapshot,
+      command: { type: 'SETTLE_SEASON', commandId: 'cmd-settle-tag-phase4', expectedRevision: 20, payload: {} },
+      ruleset: rulesetProto,
+      rulesetVersion: rulesetProto.version,
+      contentPackVersion: '0.1.0',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.snapshot.state.careerTags).toContain('TAG-CONTROVERSIAL');
+    expect(result.snapshot.state.careerTagGrants).toContainEqual(
+      expect.objectContaining({ tagId: 'TAG-CONTROVERSIAL', seasonIndex: 1, sourceRefId: 'SETTLE_SEASON:1' }),
+    );
+    expect(result.snapshot.state.timeline).toContainEqual(
+      expect.objectContaining({ kind: 'CAREER_TAG_GRANTED', refId: 'TAG-CONTROVERSIAL', revision: 21 }),
     );
   });
 });

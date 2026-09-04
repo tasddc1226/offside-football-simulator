@@ -21,7 +21,10 @@ function formatZodError(prefix: string, error: z.ZodError): string[] {
   return error.issues.map((issue) => `${prefix}: ${issue.path.join('.')}: ${issue.message}`);
 }
 
-export function validatePack(pack: LoadedPack, options: { writeChecksum: boolean }): PackValidationResult {
+export function validatePack(
+  pack: LoadedPack,
+  options: { writeChecksum: boolean },
+): PackValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -50,6 +53,7 @@ export function validatePack(pack: LoadedPack, options: { writeChecksum: boolean
   checkChoiceQuality(events, warnings);
   checkCooldownWarning(events, warnings);
   checkMinorSafeWarning(events, warnings);
+  checkPresentationFailSafety(events, errors);
 
   const chapters: { file: string; chapter: ChapterDefinition }[] = [];
   for (const { file, raw } of pack.chapters) {
@@ -71,7 +75,9 @@ export function validatePack(pack: LoadedPack, options: { writeChecksum: boolean
   const computedChecksum = computePackChecksum(filesForChecksum, pack.fileContents);
 
   if (manifestResult.success) {
-    const missingFromManifest = [...pack.fileContents.keys()].filter((f) => !manifestResult.data.files.includes(f));
+    const missingFromManifest = [...pack.fileContents.keys()].filter(
+      (f) => !manifestResult.data.files.includes(f),
+    );
     const missingOnDisk = manifestResult.data.files.filter((f) => !pack.fileContents.has(f));
     for (const file of missingFromManifest) {
       errors.push(`manifest.json: files: 팩에 있는 파일이 목록에 없다: ${file}`);
@@ -99,7 +105,10 @@ export function validatePack(pack: LoadedPack, options: { writeChecksum: boolean
   };
 }
 
-function checkDuplicateIds(events: { file: string; event: EventDefinition }[], errors: string[]): void {
+function checkDuplicateIds(
+  events: { file: string; event: EventDefinition }[],
+  errors: string[],
+): void {
   const seen = new Map<string, string>();
   for (const { file, event } of events) {
     const existing = seen.get(event.id);
@@ -112,7 +121,10 @@ function checkDuplicateIds(events: { file: string; event: EventDefinition }[], e
 }
 
 // T-2-004 D-38.
-function checkDuplicateChapterIds(chapters: { file: string; chapter: ChapterDefinition }[], errors: string[]): void {
+function checkDuplicateChapterIds(
+  chapters: { file: string; chapter: ChapterDefinition }[],
+  errors: string[],
+): void {
   const seen = new Map<string, string>();
   for (const { file, chapter } of chapters) {
     const existing = seen.get(chapter.id);
@@ -124,7 +136,10 @@ function checkDuplicateChapterIds(chapters: { file: string; chapter: ChapterDefi
   }
 }
 
-function checkFollowUps(events: { file: string; event: EventDefinition }[], errors: string[]): void {
+function checkFollowUps(
+  events: { file: string; event: EventDefinition }[],
+  errors: string[],
+): void {
   const knownIds = new Set(events.map(({ event }) => event.id));
   const edges = new Map<string, string[]>();
 
@@ -186,12 +201,17 @@ function findCycle(edges: ReadonlyMap<string, string[]>): string[] | undefined {
   return undefined;
 }
 
-function checkChoiceQuality(events: { file: string; event: EventDefinition }[], warnings: string[]): void {
+function checkChoiceQuality(
+  events: { file: string; event: EventDefinition }[],
+  warnings: string[],
+): void {
   for (const { file, event } of events) {
     for (const choice of event.choices) {
       const weightSum = choice.outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
       if (weightSum !== 100) {
-        warnings.push(`${file}: 선택지 ${choice.id} outcome weight 합이 100이 아니다: ${weightSum}`);
+        warnings.push(
+          `${file}: 선택지 ${choice.id} outcome weight 합이 100이 아니다: ${weightSum}`,
+        );
       }
     }
 
@@ -215,7 +235,10 @@ function checkChoiceQuality(events: { file: string; event: EventDefinition }[], 
   }
 }
 
-function checkCooldownWarning(events: { file: string; event: EventDefinition }[], warnings: string[]): void {
+function checkCooldownWarning(
+  events: { file: string; event: EventDefinition }[],
+  warnings: string[],
+): void {
   for (const { file, event } of events) {
     if (event.cooldown === undefined && event.weight >= 50) {
       warnings.push(`${file}: cooldown이 없는 고빈도(weight>=50) 이벤트다.`);
@@ -223,10 +246,48 @@ function checkCooldownWarning(events: { file: string; event: EventDefinition }[]
   }
 }
 
-function checkMinorSafeWarning(events: { file: string; event: EventDefinition }[], warnings: string[]): void {
+function checkMinorSafeWarning(
+  events: { file: string; event: EventDefinition }[],
+  warnings: string[],
+): void {
   for (const { file, event } of events) {
     if (!event.safety.minorSafe && event.minAge === undefined) {
       warnings.push(`${file}: minorSafe가 false인데 minAge가 없다.`);
+    }
+  }
+}
+
+export function checkPresentationFailSafety(
+  events: { file: string; event: EventDefinition }[],
+  errors: string[],
+): void {
+  const presentations = new Set(['SLUMP', 'LOCKER_ROOM', 'ETHICS', 'MEDIA']);
+  for (const { file, event } of events) {
+    if (!event.presentation || !presentations.has(event.presentation)) continue;
+    for (const choice of event.choices) {
+      for (const outcome of choice.outcomes) {
+        if (outcome.kind !== 'FAIL') continue;
+        const hasFollowUp = (outcome.followUps?.length ?? 0) > 0;
+        const hasPermanentNegative = outcome.effects.some(
+          (effect) => effect.kind === 'PERMANENT' && effect.delta < 0,
+        );
+        if (hasPermanentNegative) {
+          errors.push(
+            `${file}: ${event.id}.${choice.id}.${outcome.id}: presentation FAIL outcome에 PERMANENT 음수 효과가 있다.`,
+          );
+        }
+        const hasUnboundedTransientNegative = outcome.effects.some(
+          (effect) =>
+            (effect.kind === 'CURRENT' || effect.kind === 'CONTEXT') &&
+            effect.delta < 0 &&
+            effect.expiresAt === null,
+        );
+        if (!hasFollowUp && hasUnboundedTransientNegative) {
+          errors.push(
+            `${file}: ${event.id}.${choice.id}.${outcome.id}: presentation FAIL outcome 회복 경로가 없다.`,
+          );
+        }
+      }
     }
   }
 }

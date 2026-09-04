@@ -5,7 +5,7 @@
   ],
   "clientMinVersion": "0.1.0",
   "playtested": false,
-  "checksum": "4758d255d847cedeae6ffaafc79d43971fc0ae6c27da7440f6ccce405ae21283",
+  "checksum": "044261a4b8f41b1d6f56f2e7d8ab5348d9d5052137e34d9b1053212514a5e92c",
   "files": [
     "chapters/CHP-MATCH-001.json",
     "chapters/CHP-MATCH-002.json",
@@ -19,12 +19,16 @@
     "events/EVT-CON-013.json",
     "events/EVT-DEV-001.json",
     "events/EVT-DEV-002.json",
+    "events/EVT-ETH-010.json",
     "events/EVT-INJ-001.json",
     "events/EVT-MEDIA-001.json",
     "events/EVT-MEDIA-006.json",
+    "events/EVT-MEDIA-010.json",
     "events/EVT-MGR-001.json",
     "events/EVT-REL-001.json",
     "events/EVT-REL-002.json",
+    "events/EVT-REL-010.json",
+    "events/EVT-SLUMP-010.json",
     "narrative/tokens.json"
   ]
 }

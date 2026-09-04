@@ -58,6 +58,22 @@ function findActiveEpisode(episodes: CareerState['health']['episodes']): CareerS
   return null;
 }
 
+function recentFormAverage(state: CareerState): number {
+  if (state.season === null) return 0;
+  const ratings = state.season.matches
+    .map((match) => match.ratingTenths)
+    .filter((rating): rating is number => rating !== null)
+    .slice(-5);
+  if (ratings.length === 0) return 0;
+  return Math.round(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length);
+}
+
+function proSeasonCount(state: CareerState): number {
+  return state.seasonHistory.filter((summary) =>
+    state.clubHistory.some((stint) => stint.teamId === summary.teamId && stint.leagueTier !== 'YOUTH'),
+  ).length;
+}
+
 /** `CareerState`를 04 이벤트 엔진 조건 DSL(`ConditionContext`)로 매핑한다. */
 export function buildConditionContext(state: CareerState): ConditionContext {
   const profile = state.player.profile;
@@ -70,7 +86,7 @@ export function buildConditionContext(state: CareerState): ConditionContext {
     'career.stage': state.stage,
     'career.currentRole': state.contract?.rolePromise ?? 'RESERVE',
     'career.tags': state.tags,
-    'career.proSeasons': 0,
+    'career.proSeasons': proSeasonCount(state),
 
     'player.primaryPosition': profile?.primaryPosition ?? NOT_MODELED_STRING,
     'player.positionGroup': profile ? resolvePositionGroup(profile.primaryPosition) : NOT_MODELED_STRING,
@@ -122,15 +138,15 @@ export function buildConditionContext(state: CareerState): ConditionContext {
     'career.permanentTransfers': state.clubHistory.filter((stint) => stint.endReason === 'TRANSFERRED').length,
     'career.clubsCount': new Set(state.clubHistory.map((stint) => stint.teamId)).size,
 
-    // T-3-001 D-53 예약, T-4-001이 값을 채운다(생성기가 없는 발생 roll·감독 교체 자체는 여전히
-    // T-4-002·T-4-003 몫이라 season.stats.recentFormAvg만 NOT_MODELED로 남는다, 소유 T-4-003).
+    // T-3-001 D-53 예약. 부상·감독 교체 필드는 현재 상태에서 읽고, 최근 폼은 저장하지 않는
+    // 활성 시즌 경기 rating의 파생값으로 계산한다.
     'health.activeSeverity': activeEpisode?.severity ?? NOT_MODELED_STRING,
     'health.recurrenceRiskBp': activeEpisode?.recurrenceRiskBp ?? NOT_MODELED_INT,
     'health.majorInjuries': state.health.episodes.filter((episode) => episode.severity === 'MAJOR').length,
     'reputation.popularityCenti': state.reputation.popularityCenti,
     'season.manager.tenureSeasons': state.season?.manager?.tenureSeasons ?? NOT_MODELED_INT,
     'season.manager.id': state.season?.manager?.id ?? NOT_MODELED_STRING,
-    'season.stats.recentFormAvg': NOT_MODELED_INT,
+    'season.stats.recentFormAvg': recentFormAverage(state),
   };
 
   for (const key of ATTRIBUTE_KEYS) {

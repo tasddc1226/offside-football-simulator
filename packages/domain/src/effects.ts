@@ -1,5 +1,7 @@
 import { compareCodePoints } from './canonical.js';
+import type { RelationshipRules } from './ruleset.js';
 import { ATTRIBUTE_KEYS, type AttributeKey, type CareerState, type Effect, type InjuryEpisode } from './types.js';
+import type { RelationTarget, RelationshipLogEntry } from './types.js';
 import { syncInjuryRemaining } from './injury.js';
 
 const CURRENT_KEYS = ['form', 'fitness', 'morale'] as const;
@@ -62,6 +64,38 @@ type EffectBags = {
   relationships: { managerTrust: number; captain: number; rival: number; fans: number; agent: number };
   reputation: { popularityCenti: number; mediaCenti: number };
 };
+
+const DEFAULT_RELATIONSHIP_RULES: Pick<RelationshipRules, 'logMax' | 'memoryTagsMax'> = {
+  logMax: 40,
+  memoryTagsMax: 3,
+};
+
+function relationshipRulesFor(
+  relationshipRules: Pick<RelationshipRules, 'logMax' | 'memoryTagsMax'> | undefined,
+): Pick<RelationshipRules, 'logMax' | 'memoryTagsMax'> {
+  return relationshipRules ?? DEFAULT_RELATIONSHIP_RULES;
+}
+
+/** T-4-003: 관계 축은 값 하나만 유지하고, 변화 이력은 최근 로그로 남긴다. */
+export function appendRelationshipLog(
+  state: CareerState,
+  entry: RelationshipLogEntry,
+  relationshipRules?: Pick<RelationshipRules, 'logMax' | 'memoryTagsMax'>,
+): CareerState {
+  if (entry.delta === 0) return state;
+  const limits = relationshipRulesFor(relationshipRules);
+  const relationshipLog = [...state.relationshipLog, entry].slice(-limits.logMax);
+  let memoryTags = state.memoryTags;
+  if (entry.reasonTag !== null) {
+    memoryTags = {
+      ...state.memoryTags,
+      [entry.target]: [...state.memoryTags[entry.target].filter((tag) => tag !== entry.reasonTag), entry.reasonTag].slice(
+        -limits.memoryTagsMax,
+      ),
+    };
+  }
+  return { ...state, relationshipLog, memoryTags };
+}
 
 function cloneBags(state: CareerState): EffectBags {
   return {
@@ -145,7 +179,12 @@ export type ApplyEffectsResult = {
  * 별도 경로다 — `activeEffects`에 저장하지 않는다(적용 즉시 소멸, `stackingRule: 'SUM'`·
  * `appliesAt: IMMEDIATE`·`expiresAt: null`만 허용, 아니면 reason `HEALTH_RULE`로 reject).
  */
-export function applyEffects(state: CareerState, effects: Effect[], now: { step: number }): ApplyEffectsResult {
+export function applyEffects(
+  state: CareerState,
+  effects: Effect[],
+  now: { step: number },
+  relationshipRules?: Pick<RelationshipRules, 'logMax' | 'memoryTagsMax'>,
+): ApplyEffectsResult {
   const bags = cloneBags(state);
   const appliedSourceIds = [...state.appliedSourceIds];
   const activeEffects = [...state.activeEffects];
@@ -155,6 +194,7 @@ export function applyEffects(state: CareerState, effects: Effect[], now: { step:
 
   const applied: Effect[] = [];
   const rejected: RejectedEffect[] = [];
+  let loggedState: CareerState = state;
 
   for (const effect of effects) {
     const dedupeKey = dedupeKeyFor(state, effect);
@@ -216,7 +256,8 @@ export function applyEffects(state: CareerState, effects: Effect[], now: { step:
     const key = bagFieldFor(bag, effect.target);
     const previousValue = bagObj[key] as number;
     const nextValue = effect.stackingRule === 'REPLACE' ? effect.delta : previousValue + effect.delta;
-    bagObj[key] = clampValue(nextValue, effect.clamp.min, effect.clamp.max);
+    const clampedValue = clampValue(nextValue, effect.clamp.min, effect.clamp.max);
+    bagObj[key] = clampedValue;
 
     applied.push(effect);
     if (dedupeKey !== null) appliedSourceIds.push(dedupeKey);
@@ -230,11 +271,31 @@ export function applyEffects(state: CareerState, effects: Effect[], now: { step:
       };
       activeEffects.push(storedEffect);
     }
+
+    // popularity/media는 별도 reputation bag이므로 5축 관계 로그에 섞지 않는다. 로그에는 clamp 뒤
+    // 실제 delta만 남겨, 상·하한에 막힌 0 변화가 기억 태그나 감사 항목을 만들지 않게 한다.
+    if (effect.kind === 'RELATION' && (RELATION_KEYS as readonly string[]).includes(effect.target)) {
+      const actualDelta = clampedValue - previousValue;
+      if (actualDelta !== 0) {
+        loggedState = appendRelationshipLog(
+          loggedState,
+          {
+            target: effect.target as RelationTarget,
+            delta: actualDelta,
+            sourceId: effect.sourceId,
+            reasonTag: effect.reasonTag ?? null,
+            seasonIndex: state.season?.index ?? state.seasonHistory.length,
+            step: now.step,
+          },
+          relationshipRules,
+        );
+      }
+    }
   }
 
   return {
     state: {
-      ...state,
+      ...loggedState,
       attributes: bags.attributes,
       state: bags.state,
       context: bags.context,
@@ -276,7 +337,11 @@ export function resolveDeferredKind(target: string): ResolvedDeferredKind {
  * 그대로 쌓여 있다가 다음 `START_SEASON`에서 옮겨진다. 스키마가 허용하지 않는 target은 `applyEffects`가
  * 그대로 reject한다(기존 관례대로 조용히 무시 — throw하지 않는다).
  */
-export function resolveDeferredEffects(state: CareerState, step: number): CareerState {
+export function resolveDeferredEffects(
+  state: CareerState,
+  step: number,
+  relationshipRules?: Pick<RelationshipRules, 'logMax' | 'memoryTagsMax'>,
+): CareerState {
   const season = state.season;
   if (season === null) return state;
 
@@ -291,7 +356,7 @@ export function resolveDeferredEffects(state: CareerState, step: number): Career
     return { ...effect, kind: resolved.kind, target: resolved.target, appliesAt: { kind: 'IMMEDIATE' } };
   });
 
-  return applyEffects({ ...state, season: { ...season, scheduledEffects: remaining } }, resolvedEffects, { step }).state;
+  return applyEffects({ ...state, season: { ...season, scheduledEffects: remaining } }, resolvedEffects, { step }, relationshipRules).state;
 }
 
 /**

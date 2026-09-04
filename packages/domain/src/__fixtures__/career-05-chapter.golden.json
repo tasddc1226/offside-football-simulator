@@ -1,6 +1,6 @@
 {
   "revision": 18,
-  "stateHash": "6adcf5f73dc741bd5fae3309e3625e3a3149c3d30f4eeb0346fb421bb5dda749",
+  "stateHash": "aa89247294ed31b5e0c88abb7e2004d299754d7803f1f37c45d8c8ca43d711fc",
   "rngStateDraws": 406,
   "age": 18,
   "seasonHistory": [
@@ -39,6 +39,8 @@
         "index": 1,
         "simulationMode": "CHAPTER",
         "teamId": "seoul-tier1",
+        "managerId": "seoul-tier1-mgr-1",
+        "captaincyAtEnd": "NONE",
         "competitions": [
           {
             "competitionId": "LEAGUE",
@@ -492,10 +494,10 @@
             "before": 46,
             "after": 60
           },
-          "managerTrust": {
-            "before": 45,
-            "after": 45
-          }
+        "managerTrust": {
+          "before": 45,
+          "after": 37
+        }
         },
         "chapters": [
           {
@@ -601,7 +603,7 @@
             "passedAtRevision": 17
           }
         ],
-        "hash": "91c60fabceced68d81b0d8f04d401fda1197692100759746e6620ca723644f54"
+        "hash": "64f944fcff83ed4199c3af98a7455fbc63781a96c951b9944d4ee3b928404437"
       }
     }
   ],

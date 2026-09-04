@@ -78,7 +78,7 @@ describe('07 문서 JSON 예시가 그대로 파싱된다', () => {
               "eventId": "EVT-CON-002",
               "definitionVersion": 1,
               "choiceId": "a",
-              "outcomes": [{ "id": "o1", "weight": 1, "effects": [] }]
+              "outcomes": [{ "id": "o1", "kind": "FIXED", "weight": 1, "effects": [] }]
             },
             "resultHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
           }
@@ -191,7 +191,7 @@ describe('PutCareerBodySchema', () => {
           revision: 13,
           commandId: 'cmd_1',
           commandType: 'RESOLVE_EVENT',
-          payload: { eventId: 'EVT-CON-002', definitionVersion: 1, choiceId: 'a', outcomes: [{ id: 'o1', weight: 1, effects: [] }] },
+          payload: { eventId: 'EVT-CON-002', definitionVersion: 1, choiceId: 'a', outcomes: [{ id: 'o1', kind: 'FIXED', weight: 1, effects: [] }] },
           resultHash: 'b'.repeat(64),
         },
         {

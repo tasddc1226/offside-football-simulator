@@ -25,7 +25,13 @@ function baseEvent(overrides: Record<string, unknown> = {}) {
             weight: 100,
             title: '성공',
             effects: [
-              { kind: 'PERMANENT', sourceId: 'EVT-DEV-001.A.A1', target: 'crossing', delta: 1, ...EFFECT_DEFAULTS.PERMANENT },
+              {
+                kind: 'PERMANENT',
+                sourceId: 'EVT-DEV-001.A.A1',
+                target: 'crossing',
+                delta: 1,
+                ...EFFECT_DEFAULTS.PERMANENT,
+              },
             ],
           },
         ],
@@ -57,7 +63,11 @@ describe('EventDefinitionSchema', () => {
   it('rejects four choices', () => {
     const event = baseEvent();
     const choices = (event as { choices: Record<string, unknown>[] }).choices;
-    (event as { choices: unknown[] }).choices = [...choices, { ...choices[1], id: 'C' }, { ...choices[1], id: 'D' }];
+    (event as { choices: unknown[] }).choices = [
+      ...choices,
+      { ...choices[1], id: 'C' },
+      { ...choices[1], id: 'D' },
+    ];
     expect(() => EventDefinitionSchema.parse(event)).toThrow();
   });
 
@@ -127,5 +137,63 @@ describe('EventDefinitionSchema — presentation과 rehabPlan/callUp 짝(T-4-001
     choices[1]!.callUp = 'ACCEPT';
     (event as Record<string, unknown>).presentation = 'NATIONAL_TEAM';
     expect(() => EventDefinitionSchema.parse(event)).toThrow(/rehabPlan을 쓸 수 없다/);
+  });
+});
+
+describe('EventDefinitionSchema — presentation FAIL safety (T-4-003 P4-6)', () => {
+  function failPresentationEvent(effect: Record<string, unknown>, followUps?: unknown[]) {
+    const event = baseEvent({ presentation: 'ETHICS' });
+    const choices = (event as { choices: Record<string, unknown>[] }).choices;
+    for (const choice of choices) {
+      const outcomes = choice.outcomes as Record<string, unknown>[];
+      outcomes[0] = {
+        ...outcomes[0],
+        kind: 'FAIL',
+        effects: [effect],
+        ...(followUps === undefined ? {} : { followUps }),
+      };
+    }
+    return event;
+  }
+
+  it('followUp이 있어도 PERMANENT 음수 효과는 거부한다', () => {
+    const event = failPresentationEvent(
+      {
+        kind: 'PERMANENT',
+        sourceId: 'EVT-DEV-001.A.A1',
+        target: 'crossing',
+        delta: -1,
+        ...EFFECT_DEFAULTS.PERMANENT,
+      },
+      [{ eventId: 'EVT-DEV-001' }],
+    );
+    expect(() => EventDefinitionSchema.parse(event)).toThrow(/PERMANENT 음수/);
+  });
+
+  it('followUp이 있으면 음수 CURRENT/CONTEXT의 유한 만료를 요구하지 않는다', () => {
+    const event = failPresentationEvent(
+      {
+        kind: 'CURRENT',
+        sourceId: 'EVT-DEV-001.A.A1',
+        target: 'form',
+        delta: -1,
+        ...EFFECT_DEFAULTS.CURRENT,
+        expiresAt: null,
+      },
+      [{ eventId: 'EVT-DEV-001' }],
+    );
+    expect(() => EventDefinitionSchema.parse(event)).not.toThrow();
+  });
+
+  it('followUp이 없는 음수 CURRENT/CONTEXT는 유한 만료가 없으면 거부한다', () => {
+    const event = failPresentationEvent({
+      kind: 'CURRENT',
+      sourceId: 'EVT-DEV-001.A.A1',
+      target: 'form',
+      delta: -1,
+      ...EFFECT_DEFAULTS.CURRENT,
+      expiresAt: null,
+    });
+    expect(() => EventDefinitionSchema.parse(event)).toThrow(/회복 경로/);
   });
 });
