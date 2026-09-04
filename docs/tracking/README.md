@@ -7,8 +7,8 @@
 | 역할 | 담당 | 하는 일 | 하지 않는 일 |
 |---|---|---|---|
 | 프로덕트 오너 | 사용자 | 우선순위, 외부 계정·도메인·결제, 범위 변경 승인 | 개별 PR 머지 승인(오케스트레이터에게 위임) |
-| 기술 책임자·오케스트레이터 | Claude (이 세션) | 명세·ADR·보드 관리, 작업 브리프 작성, 워커 생성·전달, 결과 리뷰, 머지 판단 | 앱 코드 직접 수정 |
-| 구현 워커 | Claude Code (Sonnet 5) | 브리프 범위의 코드·테스트 구현, PR | 명세 변경, 범위 밖 수정 |
+| 기술 책임자·오케스트레이터 | Codex (인계 세션) | 명세·ADR·보드 관리, 작업 브리프 작성, 워커 생성·전달, 결과 리뷰, 머지 판단 | 앱 코드 직접 수정 |
+| 구현 워커 | Codex CLI (`gpt-5.6-luna`, reasoning `max`) | 브리프 범위의 코드·테스트 구현, PR | 명세 변경, 범위 밖 수정 |
 
 오케스트레이터는 `apps/`, `packages/`, `tooling/`을 편집하지 않는다. 코드 변경이 필요하면 브리프를 써서 워커에게 넘긴다. 문서(`docs/`)와 CI 설정 리뷰는 오케스트레이터가 직접 한다.
 
@@ -23,34 +23,40 @@
 
 Orca 저장소 ID는 `41200e35-ac29-475d-8c7f-6cd38f9bc9e1`이다. 실행 파일은 `orca`.
 
-1. 보드에서 작업을 `in-progress`로 옮기고 브리프를 `docs/tracking/briefs/T-x-xxx.md`에 저장한다.
+1. 보드에서 작업을 `in-progress`로 옮기고 브리프를 `docs/tracking/briefs/T-x-xxx.md`에 저장한 뒤 현재 Orchestration Run에 task를 만든다.
+
+   ```text
+   orca orchestration task-create --run <runId> --task-title T-0-003 --display-name T-0-003 --spec "docs/tracking/briefs/T-0-003.md를 읽고 범위대로 구현·검증·PR 준비" --json
+   ```
+
 2. 독립 워크트리를 만든다. 베이스는 저장소 기본(main)이다.
 
    ```text
    orca worktree create --repo id:41200e35-ac29-475d-8c7f-6cd38f9bc9e1 --name T-0-003-domain-skeleton --no-parent --json
    ```
 
-3. 워커 터미널을 Sonnet 5로 연다. `--agent claude`는 모델을 지정할 수 없으므로 두 단계로 연다.
+3. 워커 터미널을 Luna Max로 열고 TUI가 준비되면 task에 붙인다. 구현·테스트 코드 작업은 이 모델 조합만 사용한다.
 
    ```text
-   orca terminal create --worktree id:41200e35-ac29-475d-8c7f-6cd38f9bc9e1::<worktreePath> --title T-0-003 --command 'claude --model claude-sonnet-5' --json
+   orca terminal create --worktree id:41200e35-ac29-475d-8c7f-6cd38f9bc9e1::<worktreePath> --title T-0-003 --command 'codex --model gpt-5.6-luna -c model_reasoning_effort="max"' --json
    orca terminal wait --terminal <handle> --for tui-idle --timeout-ms 60000 --json
-   orca terminal send --terminal <handle> --text "<브리프 전문 또는 브리프 파일 경로를 읽으라는 지시>" --enter --json
+   orca orchestration worker-start --run <runId> --task <taskId> --worktree path:<worktreePath> --terminal <handle> --json
    ```
 
-4. 진행은 `orca terminal read`와 워크트리 comment로 본다. 워커는 체크포인트마다 `orca worktree set --worktree active --comment "..."`를 갱신한다.
+   `worker-start --agent codex --model gpt-5.6-luna --effort max` 직접 생성은 2026-09-04 CLI 명령 파싱 오류(`agent_prompt_stalled`, `zsh: parse error near ')'`)가 있어, 수정 확인 전에는 위의 수동 터미널 생성 + `--terminal` 연결 방식을 쓴다.
+
+4. 진행은 `orca orchestration check`와 `orca orchestration worker-read --dispatch <dispatchId>`로 본다. 워커가 샌드박스에서 Orca 런타임에 접근하지 못해 `worker_done`을 보내지 못하면 터미널 transcript와 git/PR 상태를 직접 검증하고 `worker-abandon` 뒤 task 상태를 수동 정리한다. 워커는 가능하면 체크포인트마다 worktree comment도 갱신한다.
 5. 워커가 PR을 열면 오케스트레이터가 리뷰 체크리스트로 검토한다. 수정이 필요하면 같은 터미널에 `orca terminal send`로 피드백을 보낸다.
 6. 통과하면 오케스트레이터가 squash 머지한다(2026-09-02 사용자 지시: 머지 승인은 따로 묻지 않는다). 워크트리는 `orca worktree rm`으로 정리하고 보드에 머지 커밋을 적는다.
 7. 보드를 `completed`로 옮기고 결정이 있었으면 결정 로그에 적는다.
 
-위 2~3단계와 감시는 `docs/tracking/scripts/`의 스크립트로 한다. 상태 파일(`<T>.handle`, `<T>.dir`, `active.txt`)은 `ORCH_STATE_DIR`(기본 `~/.offside-orch`)에 둔다 — 세션 스크래치 디렉터리는 세션이 끝나면 사라지므로 거기에 두지 않는다.
+현재 정본은 Orca Orchestration Run/task/dispatch다. `docs/tracking/scripts/`와 상태 파일(`<T>.handle`, `<T>.dir`, `active.txt`)은 이전 Sonnet 워크플로의 운영 기록으로만 유지한다.
 
-- `dispatch.sh <T> <suffix>`: origin/main에서 워크트리를 만들고 Sonnet 5 터미널을 연 뒤 브리프를 읽으라는 지시를 보낸다.
-- `redispatch.sh <T> "<메시지>"`: 같은 워크트리에 새 터미널을 열어 메시지를 보낸다. 워커 TUI가 멈췄을 때 쓴다(2026-09-02 T-1-008: 다른 워크트리의 죽은 `wrangler dev`가 8787을 잡고 있어 워커의 `curl`이 영원히 기다렸고, Claude 프로세스가 좀비 셸을 회수하지 못한 채 입력을 받지 않았다. 증상은 `orca terminal show`의 `lastOutputAt`이 멈추고 `--screen` 읽기에 보낸 텍스트가 안 보이는 것. 조치는 `pgrep -P <claude pid>`로 매달린 자식을 찾아 죽이고, 그래도 안 움직이면 프로세스를 죽인 뒤 `redispatch.sh`).
-- `watch.py`: `active.txt`의 터미널을 45초마다 읽어 RESULT/DIALOG/ERROR/IDLE-LONG을 한 줄씩 낸다. 오케스트레이터 세션에서 Monitor로 띄운다.
+- `dispatch.sh`·`redispatch.sh`: **legacy Sonnet 전용**이라 새 코드 작업에 사용하지 않는다.
+- `watch.py`: legacy 터미널 상태 파일을 읽는 보조 도구다. 신규 워커는 Orchestration `check`·`worker-read`를 우선한다.
 - 긴 피드백은 터미널에 직접 붙이지 말고 파일(예: `~/.offside-orch/T-x-xxx-review.md`)로 쓰고 경로를 읽으라고 보낸다.
 
-워커는 서브에이전트 리뷰를 띄우지 않는다. 단, Orca는 `gh pr create` 앞에 `/simplify` 또는 `/review:pr` 실행을 요구하는 게이트를 두므로 `/review:pr` **1회**만 허용한다(`/simplify`와 병렬 fork는 금지. T-0-001에서 리뷰 fork 4개가 비용을 두 배로 올렸다). 워커가 막히면 오케스트레이터에게 질문을 남기고 멈춘다. 워커는 명세를 고치지 않는다. 명세가 틀렸으면 오케스트레이터가 문서를 고친 뒤 브리프를 갱신한다.
+워커는 서브에이전트 리뷰를 띄우지 않는다. PR 전 자체 점검은 현재 워커 세션의 단일 패스로 수행하고 병렬 fork는 금지한다. 워커가 막히면 오케스트레이터에게 질문을 남기고 멈춘다. 워커는 명세를 고치지 않는다. 명세가 틀렸으면 오케스트레이터가 문서를 고친 뒤 브리프를 갱신한다.
 
 PR을 열기 직전 `git fetch origin && git merge origin/main`으로 최신 main을 합친다. `pnpm-lock.yaml` 충돌은 손으로 고치지 말고 `git checkout origin/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile`로 재생성한 뒤 전체 체인을 다시 돌린다(2026-09-02 PR #4에서 lockfile 충돌로 머지가 한 번 실패함).
 

@@ -1,6 +1,6 @@
 # 개발 현황판 생성기
 
-`board.md`·`decision-log.md`·git 로그에서 HTML 현황판을 만든다. 오케스트레이터가 머지·투입 때마다 실행해 Claude 아티팩트(https://claude.ai/code/artifact/aaef7e81-f9f3-4588-9e4e-5e2ec916570b)로 다시 게시한다.
+`board.md`·`decision-log.md`·git 로그에서 HTML 현황판을 만든다. 오케스트레이터가 머지·투입 때마다 다시 생성한다. 기존 Claude 아티팩트(https://claude.ai/code/artifact/aaef7e81-f9f3-4588-9e4e-5e2ec916570b)는 인계 전 게시본이며, 외부 재게시는 해당 게시 채널을 사용할 수 있을 때 수행한다.
 
 ```bash
 DASHBOARD_OUT=/path/to/dashboard.html python3 docs/tracking/dashboard/build-dashboard.py

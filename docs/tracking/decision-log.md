@@ -2,6 +2,18 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-04 (오후, 오케스트레이터 인계·PR #54 머지)
+
+**인계**: Claude Code 세션 `ec0b55e0-72c5-48f4-81e0-e287cece7700`의 전체 흐름과 마지막 상태를 확인했다. 이 세션은 T-3-003 종료를 경계로 정지했으며 `claude --resume ec0b55e0-72c5-48f4-81e0-e287cece7700`으로만 재개한다. 기술 책임자·오케스트레이터는 Codex로 인계했고, 구현·테스트 코드 변경은 Orca Orchestration Run `run_d5981c30764b` 아래 **`gpt-5.6-luna` + reasoning `max` 워커에게만** 위임한다(동시 최대 3개). 오케스트레이터는 계속 `apps/`·`packages/`·`tooling/`을 직접 편집하지 않는다.
+
+**T-3-003 결과**: PR #54의 최초 구현 head `cafb870`을 Luna Max가 독립 리뷰해 P1 세 건을 찾았다. (1) `잔류_선언`을 먼저 제거해 태그 기반 배신 이적이 영원히 판정되지 않음, (2) 임대에도 약속 위반 이적 팬 페널티가 적용됨, (3) 임대 만료 뒤 자동 FA 분기에서 원소속 복원 없이 임대 구단 context·관계가 남음. 같은 Luna Max 수정 워커가 공통 복원·태그 처리와 처리기 행렬 회귀 테스트 11건을 추가해 `7d31f07`로 push했고, PR #54를 16:47 KST squash 머지(`e1ae3de`)했다. 새 head의 Quality gates·Browser gates·Deploy PR preview가 모두 성공했고, 오케스트레이터 환경(Node 22) 전체 `pnpm test`도 domain 535·web 308·api 169를 포함해 10/10 task 통과했다.
+
+**명세 정정·수용 결정**: 결산 뒤 시장 개설과 step 7 응답 필수화로 기존 golden의 revision/draws가 달라지는 것은 기능 요구의 필연적 결과라 수용한다. `career-11-loan` 첫 계약 길이 3은 임대 시즌에도 원계약 잔여가 소비되는 D-46을 실제 RETURN 분기로 검증하기 위해 수용한다. `rivalPairs`는 대칭으로 유지한다. 브리프의 `Contract.transferFeeMinor`는 현재 정본 Contract 계약에 없는 필드이므로 추가하지 않고 표시 투영은 T-3-005로 미룬다.
+
+**Orca 운용 메모**: `worker-start --agent codex --model gpt-5.6-luna --effort max` 직접 생성은 이번 실행에서 명령 파싱 오류가 났다. 수정 확인 전에는 Luna Max 터미널을 수동 생성해 TUI idle을 확인한 뒤 `worker-start --terminal`로 task에 연결한다. 워커 샌드박스가 Orca 런타임에 접근하지 못해 `worker_done`을 못 보내는 경우에는 transcript·git·PR 증거를 회수하고 `worker-abandon` + 수동 task 완료 처리한다.
+
+**다음 Wave 브리프**: [T-3-004](briefs/T-3-004.md)·[T-4-002](briefs/T-4-002.md)·[T-4-003](briefs/T-4-003.md)를 병렬 슬롯 3개로 확정했다. T-3-004는 Phase 3 상태를 바꾸지 않고 strict/runtime/sync 증거만 만든다. T-4-002는 부상 발생 뒤 강제 pending을 일반 슬롯보다 우선하고 재발 창을 additive episode counter로 추적한다. T-4-003은 시즌 사이 감독 예약(`nextManager`)·주장단 상태·실패 누계를 additive 상태로 두며, D-52 원문에 맞춰 전용 생성기 대상(INJURY/NATIONAL_TEAM/RUMOUR)만 일반 이벤트 후보에서 제외한다. 두 B 트랙 PR은 먼저 머지된 쪽의 공용 타입을 다른 쪽이 main merge로 보존한다.
+
 ## 2026-09-04 (오후, PR #53 머지 — 트랙 B 타입 슬라이스)
 
 **결과**: PR #53(T-4-001, `7188327` → squash `aba154a`, 13:57). 리뷰 수정 0건 — HEALTH Effect 규칙(SUM·즉시·만료 없음, activeEffects 미저장), 기본 감독 rng 0, 훅 골격 3개의 실제 호출 지점 배선(spy 테스트), INJURY·NATIONAL_TEAM의 RESOLVE_EVENT 전용 닫힘, 골든 draws 불변을 확인했다. 사건 2건: (1) PR #50이 먼저 들어가 CONFLICTING → 재머지 지시(양쪽 규칙 보존·체크섬 재계산·골든 재기록). (2) 재기록 골든 4개를 커밋하지 않고 push → 오케스트레이터 체인이 contracts 골든 순회 실패로 잡음 → 추가 커밋 뒤 체인 녹색(e2e 72). 워커 워크트리 `git status`를 DONE 직후 확인하는 절차를 메모리에 추가.
