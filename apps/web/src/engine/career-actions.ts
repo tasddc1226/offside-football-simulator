@@ -168,7 +168,7 @@ export async function deleteCareer(engine: AppEngine, careerId: string): Promise
 
 type ResolveEventOutcomePayload = {
   id: string;
-  kind?: EventDefinition['choices'][number]['outcomes'][number]['kind'];
+  kind: EventDefinition['choices'][number]['outcomes'][number]['kind'];
   weight: number;
   effects: Effect[];
   addTags?: string[];
@@ -179,7 +179,8 @@ type ResolveEventOutcomePayload = {
  * 팩 outcome(EventDefinition['choices'][number]['outcomes'])을 RESOLVE_EVENT payload의 outcome
  * 형태로 좁힌다. `outcome.effects`는 content `EffectSchema`가 이미 `EFFECT_DEFAULTS`를 채운 완전한
  * domain `Effect` 형태로 파싱하므로(스키마가 `satisfies z.ZodType<Effect>`) 값 변환은 없고,
- * `cause`·`kind`·`title`·`followUps`처럼 명령 payload에 없는 필드만 걷어낸다.
+ * `cause`·`title`·`followUps`처럼 명령 payload에 없는 필드만 걷어낸다. `kind`는
+ * ETHICS/MEDIA FAIL 누계에 필요하므로 보존한다.
  */
 export function toResolveEventOutcomes(
   outcomes: EventDefinition['choices'][number]['outcomes'],

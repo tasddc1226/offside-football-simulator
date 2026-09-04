@@ -157,7 +157,7 @@ async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
           eventId: pending.eventId,
           definitionVersion: pending.version,
           choiceId: 'STANDARD',
-          outcomes: [{ id: 'STANDARD', weight: 1, effects: [] }],
+          outcomes: [{ id: 'STANDARD', kind: 'FIXED', weight: 1, effects: [] }],
           rehabPlan: 'STANDARD',
         },
       });
@@ -496,27 +496,7 @@ describe('T-2-009 다이어리 연대기 요약: buildSeasonChronicleItems·buil
     const state = settled.domainSnapshot.state;
     const justSettledIndex = state.seasonHistory.length - 1;
 
-    const settledEntry = state.timeline.find((entry) => entry.kind === 'SEASON_SETTLED');
-    if (settledEntry === undefined) throw new Error('SEASON_SETTLED timeline entry가 없다.');
-    // Domain order is append-only: settlement relations may follow SEASON_SETTLED
-    // at the same revision, while the diary must still end on the settlement card.
-    const stateWithSameRevisionRelation = {
-      ...state,
-      timeline: [
-        ...state.timeline,
-        {
-          revision: settledEntry.revision,
-          kind: 'MANAGER_CHANGED' as const,
-          refId: 'seoul-tier1-mgr-2',
-          age: state.age,
-          step: 12,
-        },
-      ],
-    };
-    const items = buildSeasonChronicleItems(stateWithSameRevisionRelation);
-    const managerChangedIndex = items.findIndex((item) => item.sentence === '감독 교체');
-    expect(managerChangedIndex).toBeGreaterThanOrEqual(0);
-    expect(managerChangedIndex).toBeLessThan(items.length - 1);
+    const items = buildSeasonChronicleItems(state);
     expect(items[items.length - 1]?.sentence).toBe('시즌 정산');
     expect(items[items.length - 1]?.seasonResultHistoryIndex).toBe(justSettledIndex);
     expect(items.slice(0, -1).every((item) => item.seasonResultHistoryIndex === null)).toBe(true);

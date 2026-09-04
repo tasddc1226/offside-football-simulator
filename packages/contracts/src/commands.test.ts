@@ -168,7 +168,7 @@ describe('AdvancePayloadSchema', () => {
 });
 
 describe('ResolveEventPayloadSchema', () => {
-  const validOutcome = { id: 'a', weight: 1, effects: [] };
+  const validOutcome = { id: 'a', kind: 'FIXED' as const, weight: 1, effects: [] };
 
   it('outcomes 1개 이상이면 받아들인다', () => {
     const result = ResolveEventPayloadSchema.safeParse({
@@ -178,6 +178,35 @@ describe('ResolveEventPayloadSchema', () => {
       outcomes: [validOutcome],
     });
     expect(result.success).toBe(true);
+  });
+
+  it('outcome kind이 없으면 payload·request·log 경계에서 거부한다', () => {
+    const payload = {
+      eventId: 'EVT-CON-002',
+      definitionVersion: 1,
+      choiceId: 'a',
+      outcomes: [{ id: 'a', weight: 1, effects: [] }],
+    };
+    expect(ResolveEventPayloadSchema.safeParse(payload).success).toBe(false);
+    expect(
+      CommandRequestSchema.safeParse({
+        commandId: 'cmd-resolve-event',
+        expectedRevision: 1,
+        type: 'RESOLVE_EVENT',
+        payload,
+      }).success,
+    ).toBe(false);
+    expect(
+      CommandLogEntrySchema.safeParse({
+        careerId: 'car_contract_sync',
+        revision: 1,
+        commandId: 'cmd-resolve-event-log',
+        commandType: 'RESOLVE_EVENT',
+        payload,
+        resultHash: 'a'.repeat(64),
+        createdAt: '2026-09-05T00:00:00Z',
+      }).success,
+    ).toBe(false);
   });
 
   it('outcomes가 빈 배열이면 거부한다', () => {

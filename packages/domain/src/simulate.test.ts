@@ -146,7 +146,7 @@ function resolveEventCommand(
     eventId: string;
     definitionVersion: number;
     choiceId: string;
-    outcomes: Array<{ id: string; weight: number; effects: Effect[]; addTags?: string[] }>;
+    outcomes: Array<{ id: string; kind: 'SUCCESS' | 'NEUTRAL' | 'FAIL' | 'FIXED'; weight: number; effects: Effect[]; addTags?: string[] }>;
     rehabPlan: RehabPlan;
     callUp: NationalTeamCallUp;
   }>,
@@ -154,6 +154,7 @@ function resolveEventCommand(
   const outcomes = overrides?.outcomes ?? [
     {
       id: 'success',
+      kind: 'SUCCESS',
       weight: 70,
       effects: [
         {
@@ -171,6 +172,7 @@ function resolveEventCommand(
     },
     {
       id: 'neutral',
+      kind: 'NEUTRAL',
       weight: 30,
       effects: [
         {
@@ -202,11 +204,11 @@ function resolveEventCommand(
 }
 
 /** ACTIVE 스냅샷에 EVT-TEST를 pending으로 올려 둔다(단일 후보라 rng를 소비하지 않는다). */
-function withPendingEvent(active: DomainSnapshot): DomainSnapshot {
+function withPendingEvent(active: DomainSnapshot, eventId = 'EVT-TEST'): DomainSnapshot {
   const result = simulate({
     ...baseInput(),
     snapshot: active,
-    command: advanceCommand(active.revision, [{ eventId: 'EVT-TEST', version: 1, weight: 10 }]),
+    command: advanceCommand(active.revision, [{ eventId, version: 1, weight: 10 }]),
   });
   if (!result.ok) throw new Error('withPendingEvent failed');
   return result.snapshot;
@@ -786,6 +788,41 @@ describe('simulate — RESOLVE_EVENT', () => {
     if (result.ok) return;
     expect(result.error.code).toBe('VALIDATION_FAILED');
   });
+
+  it('outcome kind이 없으면 RNG를 소비하지 않고 OUTCOME_KIND_REQUIRED로 거부한다', () => {
+    const active = confirmedActiveSnapshot();
+    const pending = withPendingEvent(active);
+    const beforeDraws = pending.state.rngState.draws;
+    const command = resolveEventCommand(pending.revision);
+    const malformed = JSON.parse(JSON.stringify(command)) as EngineCommand;
+    if (malformed.type !== 'RESOLVE_EVENT') throw new Error('unreachable');
+    delete (malformed.payload.outcomes[0] as unknown as { kind?: unknown }).kind;
+
+    expect(() => simulate({ ...baseInput(), snapshot: pending, command: malformed })).not.toThrow();
+    const result = simulate({ ...baseInput(), snapshot: pending, command: malformed });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'OUTCOME_KIND_REQUIRED' });
+    expect(pending.state.rngState.draws).toBe(beforeDraws);
+  });
+
+  it.each(['EVT-ETH-010', 'EVT-MEDIA-010'] as const)('%s FAIL은 controversyFailures를 증가시킨다', (eventId) => {
+    const active = confirmedActiveSnapshot();
+    const pending = withPendingEvent(active, eventId);
+    const result = simulate({
+      ...baseInput(),
+      snapshot: pending,
+      command: resolveEventCommand(pending.revision, {
+        eventId,
+        outcomes: [{ id: 'fail', kind: 'FAIL', weight: 100, effects: [] }],
+      }),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.controversyFailures).toBe(1);
+    expect(result.snapshot.state.rngState.draws).toBe(pending.state.rngState.draws + 1);
+  });
 });
 
 // T-4-001 D-52: RESOLVE_EVENT가 INJURY·NATIONAL_TEAM pending도 닫는다. 생성기(T-4-002·T-4-004)가
@@ -1113,7 +1150,7 @@ describe('결정론', () => {
           eventId,
           definitionVersion: 1,
           choiceId: 'a',
-          outcomes: [{ id: '1', weight: 1, effects: [effect] }],
+          outcomes: [{ id: '1', kind: 'SUCCESS', weight: 1, effects: [effect] }],
         },
       };
     }
@@ -2082,7 +2119,7 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
             eventId: pending.eventId,
             definitionVersion: pending.version,
             rehabPlan: 'STANDARD',
-            outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+            outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
           }),
         });
         if (!result.ok) throw new Error(`driveToSettlement: RESOLVE_EVENT 실패: ${result.error.code} ${result.error.message}`);

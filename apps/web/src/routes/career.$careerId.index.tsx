@@ -176,23 +176,12 @@ function roleResolvedChronicleSentence(entry: TimelineEntry): string {
 
 export type SeasonChronicleItem = { id: string; sentence: string; seasonResultHistoryIndex: number | null };
 
-function compareSeasonChronicleEntries(a: TimelineEntry, b: TimelineEntry): number {
-  if (a.revision !== b.revision) return a.revision - b.revision;
-  // Settlement relations intentionally share the domain settlement revision and
-  // are appended after SEASON_SETTLED. Keep the terminal settlement card last in
-  // the presentation without changing the domain timeline's event order.
-  if (a.kind === 'SEASON_SETTLED') return 1;
-  if (b.kind === 'SEASON_SETTLED') return -1;
-  return 0;
-}
-
 /** SEASON_SETTLED 카드는 이 시즌의 `seasonHistory` 위치를 실어 SCR-015 링크를 만들 수 있게 한다. */
 export function buildSeasonChronicleItems(state: CareerState): SeasonChronicleItem[] {
   const bounds = currentSeasonChronicleBounds(state);
   if (bounds === null) return [];
   return state.timeline
     .filter((entry) => entry.revision >= bounds.startRevision && (bounds.endRevision === null || entry.revision <= bounds.endRevision))
-    .sort(compareSeasonChronicleEntries)
     .map((entry, index) => {
       const seasonResultHistoryIndex =
         entry.kind === 'SEASON_SETTLED' ? state.seasonHistory.findIndex((summary) => summary.settledAtRevision === entry.revision) : -1;

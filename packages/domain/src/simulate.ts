@@ -147,7 +147,7 @@ export type Command =
         choiceId: string;
         outcomes: Array<{
           id: string;
-          kind?: ChapterOutcomeKind;
+          kind: ChapterOutcomeKind;
           weight: number;
           effects: Effect[];
           addTags?: string[];
@@ -231,6 +231,10 @@ function fail(
   return details === undefined
     ? { ok: false, error: { code, message } }
     : { ok: false, error: { code, message, details } };
+}
+
+function isChapterOutcomeKind(value: unknown): value is ChapterOutcomeKind {
+  return value === 'SUCCESS' || value === 'NEUTRAL' || value === 'FAIL' || value === 'FIXED';
 }
 
 function sortUniqueTags(tags: string[]): string[] {
@@ -1716,6 +1720,13 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   }
 
   const outcomes = command.payload.outcomes;
+  // Commands are client-supplied at this boundary. Keep the shared contract's required `kind`
+  // invariant at runtime too, before any RNG draw or outcome effect is applied.
+  if (outcomes.some((outcome) => !isChapterOutcomeKind(outcome.kind))) {
+    return fail('VALIDATION_FAILED', 'RESOLVE_EVENT outcome에는 kind이 필요하다.', {
+      reason: 'OUTCOME_KIND_REQUIRED',
+    });
+  }
   const weightSum = outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
   // rollInt는 maxExclusive가 1 이상의 정수가 아니면 throw한다(프로그래밍 오류 가정). 여기서
   // 미리 검증해 simulate()가 throw하지 않는다는 규칙을 content 데이터 오류로도 어기지 않게 한다.
