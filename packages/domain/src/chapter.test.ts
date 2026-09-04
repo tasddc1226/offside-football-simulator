@@ -404,6 +404,7 @@ function makeState(overrides: Partial<CareerState> = {}): CareerState {
     },
     pending: makePendingChapter(),
     contract: null,
+    parentContract: null,
     clubHistory: [],
     timeline: [],
     season: makeSeason(),

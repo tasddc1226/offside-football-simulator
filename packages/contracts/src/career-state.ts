@@ -797,6 +797,8 @@ export const CareerStateSchema = z.strictObject({
   }),
   pending: PendingSchema,
   contract: ContractSchema.nullable(),
+  // T-3-003 D-46: 임대 중 원소속 계약(`suspended: true`). Phase 1·비임대 상태는 항상 null.
+  parentContract: ContractSchema.nullable(),
   // T-3-001 D-45: 소속 이력. `acceptOffer`가 매 계약마다 항목을 추가한다(현재 소속은 toSeasonIndex: null).
   clubHistory: z.array(ClubStintSchema),
   timeline: z.array(TimelineEntrySchema),

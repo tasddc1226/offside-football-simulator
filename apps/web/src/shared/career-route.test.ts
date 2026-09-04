@@ -54,6 +54,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     player: { draft: EMPTY_DRAFT, profile: null },
     pending: null,
     contract: null,
+    parentContract: null,
     clubHistory: [],
     timeline: [],
     season: null,

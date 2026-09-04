@@ -51,6 +51,8 @@ export type League = {
   rivalOpponentIndex: number;
   promotionSpots: number;
   relegationSpots: number;
+  /** T-3-003 D-48 TAG-PROMOTION-EXPERT: 그 시즌 `finalRank`가 이 값 이하면 승격권 시즌으로 센다. */
+  promotionSlots: number;
 };
 
 // T-2-002 D-34: 컵 대회 하나. `rounds`는 항상 4라운드 고정 순서(R1 → R2 → SEMI → FINAL)다(content
@@ -184,6 +186,9 @@ export type ContractRules = {
   newClubManagerTrust: number;
   /** T-2-005 D-39: 출전 약속 이행 판정 기준(minutesShareBp 이상인 가장 높은 역할). */
   promiseMinutesShareBp: Record<SquadRole, number>;
+  /** T-3-003 D-45: 이적 시 `positionPlan ≠ profile.primaryPosition`이면 `context.positionProficiency`를
+   * 이 값으로 둔다(같으면 유지). */
+  imposedPositionProficiency: number;
 };
 
 // T-2-005 D-39: 성장식이 쓰는 연령대·능력 그룹.

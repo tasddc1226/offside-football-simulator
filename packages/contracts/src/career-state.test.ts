@@ -319,6 +319,7 @@ function confirmedStateLiteral() {
     },
     pending: null,
     contract: null,
+    parentContract: null,
     clubHistory: [],
     timeline: [{ revision: 2, kind: 'CAREER_CONFIRMED' as const, refId: null, age: 17, step: 12 }],
     season: null,

@@ -58,6 +58,7 @@ function makeDomainSnapshot(overrides: Partial<DomainSnapshot> = {}): DomainSnap
     },
     pending: null,
     contract: null,
+    parentContract: null,
     clubHistory: [],
     timeline: [],
     season: null,
