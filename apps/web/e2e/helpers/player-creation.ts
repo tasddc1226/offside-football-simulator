@@ -89,8 +89,8 @@ export async function advanceUntilOffers(page: Page): Promise<void> {
  * FIRST_CONTRACT로 오인되지 않는다.
  */
 export async function signFirstOffer(page: Page, options: { preferredMinLengthSeasons?: number } = {}): Promise<void> {
-  const firstContractHeading = page.getByRole('heading', { level: 1, name: '제안 비교' });
-  const marketHeading = page.getByRole('heading', { level: 1, name: '이적시장 제안 비교' });
+  const firstContractHeading = page.getByRole('heading', { level: 1, name: '제안 비교', exact: true });
+  const marketHeading = page.getByRole('heading', { level: 1, name: '이적시장 제안 비교', exact: true });
   await firstContractHeading.or(marketHeading).first().waitFor({ state: 'visible', timeout: 60_000 });
   if (await firstContractHeading.isVisible()) {
     const offerLinks = page.getByRole('link', { name: '이 제안 보기' });
