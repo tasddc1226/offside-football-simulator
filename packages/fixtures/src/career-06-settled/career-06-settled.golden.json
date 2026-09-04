@@ -1,6 +1,6 @@
 {
   "revision": 15,
-  "stateHash": "e5da2c2dfbcb39451c30d79c9777ad1ab3bc0115bde55d702a2b8173fc8fd15c",
+  "stateHash": "a18083edc716f25e24a3dfe8d9e83da7208ebd98a7f6b4ca7c6d9b0d9ce97625",
   "rngStateDraws": 405,
   "age": 18,
   "seasonHistory": [
@@ -494,10 +494,10 @@
             "before": 46,
             "after": 60
           },
-          "managerTrust": {
-            "before": 45,
-            "after": 45
-          }
+        "managerTrust": {
+          "before": 45,
+          "after": 37
+        }
         },
         "chapters": [],
         "stepSummaries": [
@@ -579,7 +579,7 @@
             "passedAtRevision": 14
           }
         ],
-        "hash": "220e1e9e71a269f58ff9696adcb5256d69feabe6cfd26240ce1f28bd093284d1"
+        "hash": "de84b1c2c7f11ddcaa8aa62f59b5f7788e7f21660dd8d8c8e937339640d57eb9"
       }
     }
   ],

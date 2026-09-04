@@ -31,7 +31,7 @@ const fixtureJson = careerRaw as CareerFixtureJson;
 
 /**
  * T-3-003 §8 골든 1: 첫 계약 1시즌(min) → 시즌1 완주(step 7 RENEWAL은 REJECT_OFFER(null)) → 결산
- * (EXPIRED 시장) → NEGOTIATE(LENGTH, COUNTERED) → ACCEPT_OFFER(FREE_AGENT) → 새 구단 시즌2 완주·결산·관심 시장 거절 →
+ * (EXPIRED 시장) → NEGOTIATE(WAGE, COUNTERED) → ACCEPT_OFFER(FREE_AGENT) → 새 구단 시즌2 완주·결산 →
  * 시즌3 시작까지. career-01과 같은 형태(자체 CREATE_CAREER + UPDATE_PLAYER_DRAFT×2 + CONFIRM_PLAYER +
  * ACCEPT_OFFER + START_SEASON…)의 독립 시나리오다.
  */

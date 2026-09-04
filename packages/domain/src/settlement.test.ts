@@ -120,6 +120,81 @@ describe('buildSeasonResult (career-02-season FAST 재생으로 통합 확인)',
       Math.max(...settled.snapshot.state.timeline.map((entry) => entry.revision), 0),
     ).toBeLessThanOrEqual(settled.snapshot.revision);
   });
+
+  it('실제 약속 위반 결산은 최종 managerTrust를 기록하고 stale TAG-MANAGER-FAVOURITE를 지급하지 않는다', () => {
+    const fixture = runSettledFixture();
+    const source = fixture.beforeSettlementState;
+    const currentSeason = source.season;
+    const contract = source.contract;
+    if (currentSeason === null || currentSeason.manager === null || contract === null) {
+      throw new Error('setup 실패: 결산 전 season.manager·contract가 없다.');
+    }
+    const prior = runSeasonFixture('FAST').snapshot.state.seasonHistory[0];
+    if (prior === undefined) throw new Error('setup 실패: manager favourite 선행 시즌이 없다.');
+
+    const managerId = currentSeason.manager.id;
+    const teamId = contract.teamId;
+    const priorHistory = [1, 2].map((index) => ({
+      ...prior,
+      index,
+      teamId,
+      result: {
+        ...prior.result,
+        index,
+        teamId,
+        managerId,
+        stateDeltas: {
+          ...prior.result.stateDeltas,
+          managerTrust: { before: 80, after: 80 },
+        },
+      },
+    }));
+    const state: CareerState = {
+      ...source,
+      season: {
+        ...currentSeason,
+        index: 3,
+        playerStats: { ...currentSeason.playerStats, minutes: 0 },
+      },
+      seasonHistory: priorHistory,
+      relationships: { ...source.relationships, managerTrust: 80 },
+      careerTags: source.careerTags.filter((tag) => tag !== 'TAG-MANAGER-FAVOURITE'),
+      careerTagGrants: source.careerTagGrants.filter((grant) => grant.tagId !== 'TAG-MANAGER-FAVOURITE'),
+    };
+    const baseSnapshot: DomainSnapshot = {
+      ...fixture.snapshot,
+      revision: fixture.snapshot.revision - 1,
+      state,
+      stateHash: hashState(state),
+    };
+
+    const settled = simulate({
+      snapshot: baseSnapshot,
+      command: {
+        type: 'SETTLE_SEASON',
+        commandId: 'settlement-manager-favourite-breach',
+        expectedRevision: baseSnapshot.revision,
+        payload: {},
+      },
+      ruleset: rulesetProto,
+      rulesetVersion: '1.0.0',
+      contentPackVersion: '0.1.0',
+    });
+
+    expect(settled.ok).toBe(true);
+    if (!settled.ok) return;
+    const result = settled.seasonResult;
+    if (result === undefined) throw new Error('setup 실패: SETTLE_SEASON 결과가 없다.');
+    expect(result.promiseFulfilment.fulfilled).toBe(false);
+    expect(result.stateDeltas.managerTrust).toEqual({ before: 80, after: 72 });
+    expect(settled.snapshot.state.relationships.managerTrust).toBe(72);
+    expect(settled.snapshot.state.seasonHistory.at(-1)?.result).toEqual(result);
+    expect(hashSeasonResult(result)).toBe(result.hash);
+    expect(settled.snapshot.state.careerTags).not.toContain('TAG-MANAGER-FAVOURITE');
+    expect(settled.snapshot.state.careerTagGrants).not.toContainEqual(
+      expect.objectContaining({ tagId: 'TAG-MANAGER-FAVOURITE' }),
+    );
+  });
 });
 
 describe('computePromiseFulfilment', () => {

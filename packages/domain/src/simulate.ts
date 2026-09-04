@@ -2964,9 +2964,76 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     rngState: relationsResult.rng,
   };
 
-  // D-42: `seasonHistory`에 이번 시즌 result가 들어간 뒤에 평가한다(커리어 누적 챕터 집계가 이번
-  // 시즌 몫까지 포함하도록).
-  const grantedTagIds = evaluateCareerTags(stateAfterRelations, result, input.ruleset);
+  // T-3-003 D-47/D-46/D-43, T-4-003 P1: 약속 위반은 관계 상태를 바꾸므로 태그 평가보다 먼저
+  // 적용한다. 그래야 TAG-MANAGER-FAVOURITE가 위반 전 managerTrust와 결산 result를 보고 지급되지
+  // 않는다.
+  const contractForPromise = stateAfterRelations.contract;
+  if (contractForPromise === null) {
+    throw new RangeError('settleSeason: 결산 뒤 contract가 null이다.');
+  }
+  const carryRules = input.ruleset.transferRules.relationshipCarry;
+  const promiseBreachState: CareerState = result.promiseFulfilment.fulfilled
+    ? {
+        ...stateAfterRelations,
+        tags: sortUniqueTags(stateAfterRelations.tags.filter((tag) => tag !== '약속_위반')),
+      }
+    : (() => {
+        const breachEffect: Effect = {
+          kind: 'RELATION',
+          target: 'managerTrust',
+          delta: carryRules.managerTrustPromiseBreach,
+          clamp: { min: 0, max: 100 },
+          appliesAt: { kind: 'IMMEDIATE' },
+          expiresAt: null,
+          stackingRule: 'SUM',
+          sourceId: `SETTLE_SEASON:${season.index}:PROMISE_BREACH`,
+          reasonTag: 'PROMISE_BREACH',
+        };
+        const applied = applyEffects(
+          stateAfterRelations,
+          [breachEffect],
+          { step: 12 },
+          input.ruleset.relationshipRules,
+        ).state;
+        return {
+          ...applied,
+          contract: {
+            ...contractForPromise,
+            promiseBreaches: contractForPromise.promiseBreaches + 1,
+          },
+          tags: sortUniqueTags([...applied.tags, '약속_위반']),
+        };
+      })();
+
+  // 약속 위반을 포함한 최종 managerTrust를 SeasonResult와 seasonHistory 양쪽에 기록한다. 결과를
+  // 먼저 history에 넣어 둔 뒤 관계·위반 효과를 적용하므로, 여기서 결과를 다시 해시하고 이번
+  // 시즌 summary만 교체해야 누적 태그 평가와 snapshot이 같은 결산 값을 읽는다.
+  const finalizedResultWithoutHash: Omit<SeasonResult, 'hash'> = {
+    ...result,
+    stateDeltas: {
+      ...result.stateDeltas,
+      managerTrust: {
+        ...result.stateDeltas.managerTrust,
+        after: promiseBreachState.relationships.managerTrust,
+      },
+    },
+  };
+  const finalizedResult: SeasonResult = {
+    ...finalizedResultWithoutHash,
+    hash: hashSeasonResult(finalizedResultWithoutHash),
+  };
+  const stateBeforeTags: CareerState = {
+    ...promiseBreachState,
+    seasonHistory: promiseBreachState.seasonHistory.map((seasonSummary) =>
+      seasonSummary.index === season.index && seasonSummary.settledAtRevision === nextRevision
+        ? { ...seasonSummary, result: finalizedResult }
+        : seasonSummary,
+    ),
+  };
+
+  // D-42: 이번 시즌의 최종 result가 `seasonHistory`에 들어간 뒤 평가한다(커리어 누적 챕터 집계가
+  // 이번 시즌 몫까지 포함하고 약속 위반 뒤의 managerTrust를 사용하도록 한다).
+  const grantedTagIds = evaluateCareerTags(stateBeforeTags, finalizedResult, input.ruleset);
   const nextState = grantedTagIds.reduce((acc, tagId) => {
     const granted = grantCareerTag(acc, tagId, {
       seasonIndex: season.index,
@@ -2986,49 +3053,12 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
         },
       ],
     };
-  }, stateAfterRelations);
-
-  // T-3-003 D-47/D-46/D-43: 태그 부여 뒤 순서대로 — (a) 약속 위반 판정 → (b) 임대면 LOAN_RETURN 분기
-  // → (c) 아니면 결산 뒤 시장 개방.
-  const contractForPromise = nextState.contract;
-  if (contractForPromise === null) {
-    throw new RangeError('settleSeason: 결산 뒤 contract가 null이다.');
-  }
-  const carryRules = input.ruleset.transferRules.relationshipCarry;
-  const promiseBreachState: CareerState = result.promiseFulfilment.fulfilled
-    ? { ...nextState, tags: sortUniqueTags(nextState.tags.filter((tag) => tag !== '약속_위반')) }
-    : (() => {
-        const breachEffect: Effect = {
-          kind: 'RELATION',
-          target: 'managerTrust',
-          delta: carryRules.managerTrustPromiseBreach,
-          clamp: { min: 0, max: 100 },
-          appliesAt: { kind: 'IMMEDIATE' },
-          expiresAt: null,
-          stackingRule: 'SUM',
-          sourceId: `SETTLE_SEASON:${season.index}:PROMISE_BREACH`,
-          reasonTag: 'PROMISE_BREACH',
-        };
-        const applied = applyEffects(
-          nextState,
-          [breachEffect],
-          { step: 12 },
-          input.ruleset.relationshipRules,
-        ).state;
-        return {
-          ...applied,
-          contract: {
-            ...contractForPromise,
-            promiseBreaches: contractForPromise.promiseBreaches + 1,
-          },
-          tags: sortUniqueTags([...applied.tags, '약속_위반']),
-        };
-      })();
+  }, stateBeforeTags);
 
   const finalState =
-    promiseBreachState.contract !== null && promiseBreachState.contract.kind === 'LOAN'
-      ? settleLoanSeason(promiseBreachState, input.ruleset, result, nextRevision)
-      : openMarketAfterSettlement(promiseBreachState, input.ruleset, nextRevision).state;
+    nextState.contract !== null && nextState.contract.kind === 'LOAN'
+      ? settleLoanSeason(nextState, input.ruleset, finalizedResult, nextRevision)
+      : openMarketAfterSettlement(nextState, input.ruleset, nextRevision).state;
 
   return {
     ok: true,
@@ -3038,7 +3068,7 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     // 결정이라 'ADVANCE'가 아니라 'DECISION'이다 — season이 null인 채로 'ADVANCE'를 보내면 seasonPhase가
     // SETTLEMENT로 남아 NOTHING_TO_ADVANCE로 실패한다.
     nextAction: 'DECISION',
-    seasonResult: result,
+    seasonResult: finalizedResult,
   };
 }
 
