@@ -112,7 +112,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-2-011 | domain + web(e2e) | 포지션군 4종 완주 fixture, B > A, 집계, FAST 6분·CHAPTER 12분, TEST-E2E-002·010 | T-2-007~009 | 4 | done | PR #47 0c27965, [브리프](briefs/T-2-011.md), [완료 조건 표](phase-2-completion.md). 후속 PR #30 타임아웃(요청당 예산)·PR #26 eligibleEvents(EVT-REL-001 가중치 관찰 → T-2-010 입력) 처리 |
 | T-2-012 | api + web + platform | LINE TEST 준비: 서비스 시즌 포인터·`svc_line_test` 테스트 보관함·분석 이벤트 수집·스테이징 시드 | T-2-011, T-0-010 | 4 | done | PR #49 c90b769(2026-09-04 12:18), [브리프](briefs/T-2-012.md), D-54·D-55. 리뷰 수정 0건, 실 api e2e 7건 통과. Orca PR 게이트(`gh pr create` 차단)로 오케스트레이터가 GitHub API로 PR 개설. 후속: staging `svc_line_test` 확인, U-014, T-2-013 |
 | T-2-013 | docs | LINE TEST 운영 계획·기준선 양식·완료 조건 표 | T-2-012 | 4 | done | [line-test-plan.md](line-test-plan.md)(2026-09-04 오케스트레이터 작성): 일정 제안 09-08~09-21, 측정 쿼리 7종, 기준선 양식, 게이트 완료 조건 7행. 공개 전 사용자 할 일 U-014·U-015 |
-| T-2-015 | api + web | 분석 이벤트 삽입 D1 변수 상한 청크(예행 503), 알 수 없는 오류 메시지 고정(SQL 노출), 온보딩 LINE TEST 안내 | T-2-012 | 4 | in-progress | `T-2-015-analytics-d1-chunk`, [브리프](briefs/T-2-015.md)(2026-09-04 13:02 투입, E2E_PORT 5193). LINE TEST(09-08) 전 머지 필수 |
+| T-2-015 | api + web | 분석 이벤트 삽입 D1 변수 상한 청크(예행 503), 알 수 없는 오류 메시지 고정(SQL 노출), 온보딩 LINE TEST 안내 | T-2-012 | 4 | done | PR #52 5462dc7(2026-09-04 13:21), [브리프](briefs/T-2-015.md). 14행 청크 순차 insert·고정 문구·`onboarding-service-season-notice`. 리뷰 수정 0건, 실 api e2e 8건 포함 녹색. 후속: staging 재예행 |
 | T-2-014 | domain + contracts | Phase 3+ 공유 계약: Effect 만료·중첩, 시장가치 입력, CareerTag 인터페이스, ADR-010 | T-2-004, T-2-005 | 3 | done | PR #43 dd480a2, [브리프](briefs/T-2-014.md) |
 
 ## Phase 3·4 백로그 (계획 초안 2026-09-04, 투입은 Phase 2 종료·U-012 승인 후)
@@ -153,7 +153,6 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 |---|---|---|---|
 | T-4-001 | Sonnet 5, Orca 워크트리 `T-4-001-track-b-types` | 2026-09-04 | 트랙 B 타입 슬라이스(health·relationshipLog·manager·reputation·HEALTH Effect·RESOLVE_EVENT 확장·훅 골격) |
 | T-3-002 | Sonnet 5, Orca 워크트리 `T-3-002-transfer-market` | 2026-09-04 | 이적시장 생성기·step 7 재계약 사전 협상·transferRules·시장 골든 3종(결산 배선·명령은 T-3-003) |
-| T-2-015 | Sonnet 5, Orca 워크트리 `T-2-015-analytics-d1-chunk` | 2026-09-04 | 분석 이벤트 삽입 14행 청크·unknown error 메시지 고정·온보딩 LINE TEST 안내(LINE TEST 전 필수) |
 
 ## 완료
 
@@ -209,4 +208,5 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-3-001 | Phase 3·4 타입 슬라이스(D-53): Offer/Contract v2·ClubStint·MarketSummary, pending OFFERS/CONTRACT/LOAN_RETURN/INJURY/NATIONAL_TEAM, 타임라인 kind 15종 예약, 제안 상태기계 함수(negotiation.ts), Command NEGOTIATE·REJECT_OFFER·LOAN_RETURN 스텁 + payload 스키마, DSL contract.* 등 15경로(트랙 B는 NOT_MODELED), 이벤트 presentation 필터, SeasonResult.stepSummaries(11), 골든 9종 재기록(draws 불변) | b756999 |
 | T-2-012 | LINE TEST 준비(D-54·D-55): API `ACTIVE_SERVICE_SEASON_ID` 포인터(local/preview `svc_kickoff`, staging `svc_line_test`, production 미설정→503), `GET /v1/service-seasons/current`(status·isTest·notice), 신규 커리어 생성 시 시즌 상태 검사(LOCKED/ARCHIVED 409), `service_seasons.is_test`·`analytics_events` 마이그레이션 0003, `POST /v1/analytics/events`(12개 이벤트 화이트리스트·32KB·50건·rate limit 60/분·익명 clientId), platform 분석 큐(배치 20/10초/pagehide, sendBeacon→fetch keepalive), web `useServiceSeason`(kv 캐시·폴백)·허브 LINE TEST 배너·테스트 시즌 배지·LOCKED 시 생성 비활성·퍼널/결산/이탈 이벤트, e2e service-season 4종. 리뷰 수정 0건 | c90b769 |
 | T-2-013 | LINE TEST 운영 계획(line-test-plan.md): 환경·일정·준비 체크리스트·테스터 안내문·D1 측정 쿼리 7종·기준선 기록 양식·게이트 완료 조건 7행. 종료는 시드 status LOCKED PR로 | 이 커밋 |
+| T-2-015 | 분석 이벤트 INSERT를 D1 변수 상한(문장당 100개)에 맞춰 14행씩 순차 청크(`ANALYTICS_INSERT_CHUNK_ROWS`, spy 테스트 50→14·14·14·8), unknown error 응답을 고정 문구로(원문은 logger `errorMessage` 500자), 온보딩 첫 슬라이드 LINE TEST 안내 + e2e 스텁. 리뷰 수정 0건 | 5462dc7 |
 | T-3-006 | 콘텐츠 팩 0.2.0 등록(활성 0.1.0 유지): 0.1.0 복제 + PRO 이벤트 5종(EVT-CON-010 루머 RUMOUR·011 에이전트·012 약속 위반·013 재계약 압박·EVT-MEDIA-006 친정팀 원정) `authoring: PROTOTYPE`, RELATION delta ≤ 8, `EventDefinitionSchema.authoring`, 내러티브 토큰 `agent`, 룰셋 1.0.0 팀 12개(tier 3·4·4·YOUTH 1), 이벤트 카탈로그 10절. 골든 재기록 불필요(domain ruleset-proto 사용). 리뷰 수정 0건 | 31e321d |

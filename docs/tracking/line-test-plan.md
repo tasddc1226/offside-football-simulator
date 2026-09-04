@@ -34,8 +34,8 @@
 | # | 항목 | 담당 | 상태 |
 |---|---|---|---|
 | 1 | staging `GET /v1/service-seasons/current`가 `svc_line_test`·`isTest: true`를 돌려준다 | 오케스트레이터 | ✅ 2026-09-04 12:34(run `2270e81`): PRESEASON·isTest·notice LINE_TEST |
-| 2 | 허브에 LINE TEST 배너·"테스트 시즌" 배지가 보이고 커리어 생성 PUT 본문에 `svc_line_test`가 실린다 | 오케스트레이터 | ✅ 12:56 예행(Playwright, staging)에서 배너·배지 확인. 빈 기기는 온보딩으로 가서 안내를 못 본다 → T-2-015 #3 |
-| 3 | FAST·CHAPTER 각 한 시즌 완주 → `analytics_events`에 `funnel_reached` 5단계·`season_settled`가 쌓인다 | 오케스트레이터 | ⚠ 12:56 예행: 완주 통과, 소배치 202. **20건 배치는 503**(D1 문장당 변수 100개 상한, 7열×20행) → T-2-015 #1 머지 뒤 재예행. D1 건수 확인은 U-016(wrangler 로그인) 뒤 |
+| 2 | 허브에 LINE TEST 배너·"테스트 시즌" 배지가 보이고 커리어 생성 PUT 본문에 `svc_line_test`가 실린다 | 오케스트레이터 | ✅ 12:56 예행(Playwright, staging)에서 배너·배지 확인. 빈 기기는 온보딩으로 가서 안내를 못 본다 → T-2-015 #3(PR #52 5462dc7 머지, 재예행에서 확인) |
+| 3 | FAST·CHAPTER 각 한 시즌 완주 → `analytics_events`에 `funnel_reached` 5단계·`season_settled`가 쌓인다 | 오케스트레이터 | ⚠ 12:56 예행: 완주 통과, 소배치 202. **20건 배치는 503**(D1 문장당 변수 100개 상한, 7열×20행) → T-2-015 #1(PR #52 5462dc7, 13:21 머지) → 배포 뒤 재예행·20건 curl 202 확인 예정. D1 건수 확인은 U-016(wrangler 로그인) 뒤 |
 | 4 | U-014 Workers Paid 플랜 전환(무료 한도: 일 10만 요청·D1 5M 행 읽기 — 30명 규모면 넘지 않지만 rate limit·큐 flush 폭주 대비) | 사용자 | 공개 직전 |
 | 5 | U-010 약관·개인정보 문안: 연락처가 "준비 중"이면 안내문에 문의 채널을 따로 적는다 | 사용자 | 출시 전 필수, LINE TEST는 안내문으로 보완 |
 | 6 | 테스터 안내문(4절) 발송, 피드백 채널 결정 | 사용자 | |

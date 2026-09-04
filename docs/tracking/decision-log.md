@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-04 (오후, PR #52 머지 — LINE TEST 결함 3건 수정, T-3-003 브리프)
+
+**결과**: PR #52(T-2-015, `ff45412` → squash `5462dc7`, 13:21) 리뷰 수정 0건. 워커는 PR 게이트 폴백대로 push → `PR_BODY.md` → `DONE`으로 멈췄고 오케스트레이터가 REST(curl)로 PR을 열었다. 체인 녹색(mock e2e 72, 실 api e2e recovery-api·google-link·service-season 8). 워커가 로컬 D1로 20건 curl 202도 확인했다. 변경: `insertAnalyticsEvents` 14행 청크 순차 insert(spy 테스트 50 → 14·14·14·8, 로컬 Miniflare가 상한을 재현하지 않아 재현 시도 안 함), `toErrorEnvelope` unknown error 고정 문구(원문은 logger `errorMessage` 500자), 온보딩 첫 슬라이드 `onboarding-service-season-notice`. 투입 13:02 → 머지 13:21(19분).
+
+**T-3-003 브리프(13:20)**: PR #50 머지 뒤 투입. 설계 결정 — `CareerState.parentContract`(임대 중 원소속 계약 보관, 기존 골든 9종 stateHash만 갱신), 룰셋 `contractRules.imposedPositionProficiency`·`leagues[].promotionSlots`, NEGOTIATE roll 1회(성공 bp = successBp + reputation 보정, 시장가치 보정은 룰셋 상수가 없어 보류), 재계약은 새 stint 없이 열린 stint의 contractId만 교체(`RENEWED` 예약 유지), 결산 순서 D-47 → 임대 분기 → 시장 개설, step 7 제안 자동 만료 임시 규칙 제거(응답 필수), 태그 평가기 5종 조건을 표로 고정, 웹은 SCR-009 재사용 라우팅·e2e 헬퍼만(첫 계약 1시즌이 가능해 step 7·결산 뒤 시장이 e2e에서 실제로 열린다).
+
+**후속**: staging 배포(5462dc7) 뒤 재예행(온보딩 안내·20건 배치 202) → line-test-plan 3절 #2·#3, 7절 2행 갱신. 동시 워커 2개(T-4-001·T-3-002), 슬롯 1개 비어 있으나 T-3-003은 PR #50 선행이라 대기.
+
 ## 2026-09-04 (오후, PR #51 머지 — 팩 0.2.0·팀 12, PR #50 수정 요청, T-2-015 투입)
 
 **결과**: PR #51(T-3-006, `6911b74` → squash `31e321d`, 13:01) 리뷰 수정 0건, 체인 녹색(e2e 71). 워커는 브리프의 Orca PR 게이트 폴백대로 `gh pr create`를 시도하지 않고 push → `PR_BODY.md` → `DONE`을 출력했고, 오케스트레이터가 GitHub REST로 PR을 열었다(오케스트레이터 세션의 `gh api …/pulls`도 이번엔 훅에 막혀 curl로 열었다). **브리프 정정 2건**(워커가 옳게 처리): (1) `phases: ['PRO']`는 CareerPhase가 아니라 stage라 스키마에 없다 → 각 이벤트의 실제 phase + `career.stage eq PRO` 트리거. (2) "팀 풀 확장 → 골든 9종 재기록"은 틀린 가정 — 골든은 domain 소유 `ruleset-proto.json`(팀 4개 고정)으로 생성되고 content 룰셋과 무관하다. 후보 풀 크기 변화는 `load-ruleset.test.ts`의 `poolSizeForTiers`로 검증. **후속**: web `apps/web/src/shared/narrative.ts` `STATIC_TOKEN_KEYS`에 `agent`가 없어 0.2.0을 활성화하면 `{agent}`가 그대로 노출된다 → T-3-005 브리프 선행 항목. `EVT-CON-010`은 `presentation: 'RUMOUR'`라 일반 후보 풀에서 제외되며 SCR-019(T-3-005)가 소비한다.
