@@ -106,7 +106,14 @@ async function makeSnapshot(input: {
     contentPackVersion = '0.1.0',
     stateOverrides,
   } = input;
-  const state = buildState({ careerId, status, draws, rulesetVersion, contentPackVersion, stateOverrides });
+  const state = buildState({
+    careerId,
+    status,
+    draws,
+    rulesetVersion,
+    contentPackVersion,
+    ...(stateOverrides === undefined ? {} : { stateOverrides }),
+  });
   const stateHash = await sha256Hex(state);
   return {
     revision,
@@ -167,7 +174,7 @@ async function putCareerBody(input: {
     draws,
     rulesetVersion,
     contentPackVersion,
-    stateOverrides,
+    ...(stateOverrides === undefined ? {} : { stateOverrides }),
   });
   const commands = commandRevisions.map((revision, index) =>
     makeCommand({
