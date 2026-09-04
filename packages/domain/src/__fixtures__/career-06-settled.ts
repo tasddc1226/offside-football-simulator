@@ -3,7 +3,7 @@ import seasonRaw from './career-06-settled-season.json';
 import { runCareerFixture, rulesetProto, type CareerFixture } from './career-01.js';
 import type { Command, SimulationResult } from '../simulate.js';
 import { simulate } from '../simulate.js';
-import type { CompetitionRecord, DomainSnapshot, SeasonPhase, SeasonPlayerStats, StepSummary } from '../types.js';
+import type { CareerState, CompetitionRecord, DomainSnapshot, SeasonPhase, SeasonPlayerStats, StepSummary } from '../types.js';
 
 export const careerSettledFixture = careerRaw as CareerFixture;
 
@@ -49,6 +49,9 @@ export type SettledFixtureRun = {
     averageRatingTenths: number | null;
     competitions: CompetitionRecord[];
   };
+  /** T-3-002: SETTLE_SEASON 직전(`season !== null`, step 12) 상태 전체. `judgeMarketReason`이 받는
+   * "결산 직전 상태"를 market.test.ts가 합성(태그·역할만 override)하는 베이스로 쓴다. */
+  beforeSettlementState: CareerState;
 };
 
 /**
@@ -67,6 +70,7 @@ export function runSettledFixture(): SettledFixtureRun {
 
   let stepSummaries: SettledFixtureRun['stepSummaries'] = [];
   let beforeSettlement: SettledFixtureRun['beforeSettlement'] | null = null;
+  let beforeSettlementState: CareerState | null = null;
 
   seasonCommandLog.commands.forEach((rawCommand, index) => {
     if (rawCommand.type === 'SETTLE_SEASON') {
@@ -81,10 +85,11 @@ export function runSettledFixture(): SettledFixtureRun {
             : null,
         competitions: season.competitions,
       };
+      beforeSettlementState = snapshot.state;
     }
     const command = buildCommand(rawCommand.type, `settled-season-${index}`, snapshot.revision, rawCommand.payload);
     snapshot = runOrThrow(snapshot, command);
   });
 
-  return { snapshot, stepSummaries, beforeSettlement: beforeSettlement! };
+  return { snapshot, stepSummaries, beforeSettlement: beforeSettlement!, beforeSettlementState: beforeSettlementState! };
 }

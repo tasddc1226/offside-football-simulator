@@ -1,0 +1,63 @@
+{
+  "reason": "EXPIRED",
+  "revision": 15,
+  "rngStateDrawsBefore": 398,
+  "rngStateDrawsAfter": 403,
+  "pending": {
+    "kind": "OFFERS",
+    "offers": [
+      {
+        "id": "OFR-15-0",
+        "kind": "RENEWAL",
+        "teamId": "seoul-tier1",
+        "teamName": "서울 유나이티드",
+        "fromTeamId": "seoul-tier1",
+        "leagueTier": 1,
+        "positionPlan": "W",
+        "shirtNumber": 13,
+        "lengthSeasons": 1,
+        "wageMinorPerWeek": 960000,
+        "signingBonusMinor": 0,
+        "transferFeeMinor": null,
+        "rolePromise": "RESERVE",
+        "appearancePromise": { "minutesShareBp": 0 },
+        "tacticalFitEstimate": 37,
+        "competitorSummary": null,
+        "validUntilRevision": null,
+        "negotiable": { "wage": false, "role": false, "length": false },
+        "negotiationState": "OPEN",
+        "negotiatedAsk": null,
+        "loan": null
+      },
+      {
+        "id": "OFR-15-1",
+        "kind": "FREE_AGENT",
+        "teamId": "incheon-tier1",
+        "teamName": "인천 유나이티드",
+        "fromTeamId": null,
+        "leagueTier": 1,
+        "lengthSeasons": 2,
+        "wageMinorPerWeek": 1200000,
+        "signingBonusMinor": 30000000,
+        "transferFeeMinor": null,
+        "rolePromise": "BENCH",
+        "appearancePromise": { "minutesShareBp": 1500 },
+        "positionPlan": "W",
+        "shirtNumber": 39,
+        "tacticalFitEstimate": 58,
+        "competitorSummary": { "rank": 3, "ovrGap": -18 },
+        "validUntilRevision": 18,
+        "negotiable": { "wage": true, "role": true, "length": true },
+        "negotiationState": "OPEN",
+        "negotiatedAsk": null,
+        "loan": null
+      }
+    ],
+    "market": {
+      "openedAtRevision": 15,
+      "seasonIndex": 1,
+      "reason": "EXPIRED",
+      "safeOfferId": "OFR-15-0"
+    }
+  }
+}
