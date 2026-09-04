@@ -1,13 +1,20 @@
 import { compareCodePoints } from './canonical.js';
-import { ATTRIBUTE_KEYS, type AttributeKey, type CareerState, type Effect } from './types.js';
+import { ATTRIBUTE_KEYS, type AttributeKey, type CareerState, type Effect, type InjuryEpisode } from './types.js';
 
 const CURRENT_KEYS = ['form', 'fitness', 'morale'] as const;
 const CONTEXT_KEYS = ['tacticalFit', 'squadStatus', 'positionProficiency'] as const;
 const RELATION_KEYS = ['managerTrust', 'captain', 'rival', 'fans', 'agent'] as const;
+// T-4-001 D-49: RELATION이 다루는 두 번째 bag(평판). 타깃 이름(popularity/media)은 실제 state 필드
+// 이름(popularityCenti/mediaCenti)과 달라 REPUTATION_FIELD로 옮긴다.
+const REPUTATION_KEYS = ['popularity', 'media'] as const;
+const REPUTATION_FIELD = { popularity: 'popularityCenti', media: 'mediaCenti' } as const;
 
-type FieldBag = 'attributes' | 'state' | 'context' | 'relationships' | null;
+type FieldBag = 'attributes' | 'state' | 'context' | 'relationships' | 'reputation' | null;
 
-function bagForKind(kind: Effect['kind']): FieldBag {
+// T-4-001 D-49: RELATION은 타깃에 따라 relationships(기존 5축) 또는 reputation(popularity/media) 두
+// bag 중 하나를 쓴다 — kind만으로는 bag을 정할 수 없어 target도 받는다. HEALTH는 이 네·다섯 bag
+// 어디에도 속하지 않는 별도 경로(season.availability·health.episodes)라 null을 돌려준다.
+function bagForKind(kind: Effect['kind'], target: string): FieldBag {
   switch (kind) {
     case 'PERMANENT':
       return 'attributes';
@@ -16,8 +23,9 @@ function bagForKind(kind: Effect['kind']): FieldBag {
     case 'CONTEXT':
       return 'context';
     case 'RELATION':
-      return 'relationships';
+      return (REPUTATION_KEYS as readonly string[]).includes(target) ? 'reputation' : 'relationships';
     case 'DEFERRED':
+    case 'HEALTH':
       return null;
   }
 }
@@ -32,7 +40,14 @@ function isValidTarget(bag: Exclude<FieldBag, null>, target: string): boolean {
       return (CONTEXT_KEYS as readonly string[]).includes(target);
     case 'relationships':
       return (RELATION_KEYS as readonly string[]).includes(target);
+    case 'reputation':
+      return (REPUTATION_KEYS as readonly string[]).includes(target);
   }
+}
+
+/** bag 안에서 실제로 읽고 쓸 필드 이름. reputation만 타깃 이름과 필드 이름이 다르다. */
+function bagFieldFor(bag: Exclude<FieldBag, null>, target: string): string {
+  return bag === 'reputation' ? REPUTATION_FIELD[target as keyof typeof REPUTATION_FIELD] : target;
 }
 
 function clampValue(value: number, min: number, max: number): number {
@@ -44,6 +59,7 @@ type EffectBags = {
   state: { form: number; fitness: number; morale: number };
   context: { tacticalFit: number; squadStatus: number; positionProficiency: number };
   relationships: { managerTrust: number; captain: number; rival: number; fans: number; agent: number };
+  reputation: { popularityCenti: number; mediaCenti: number };
 };
 
 function cloneBags(state: CareerState): EffectBags {
@@ -52,6 +68,7 @@ function cloneBags(state: CareerState): EffectBags {
     state: { ...state.state },
     context: { ...state.context },
     relationships: { ...state.relationships },
+    reputation: { ...state.reputation },
   };
 }
 
@@ -65,7 +82,18 @@ function bagObjFor(bags: EffectBags, bag: Exclude<FieldBag, null>): Record<strin
       return bags.context as Record<string, number>;
     case 'relationships':
       return bags.relationships as Record<string, number>;
+    case 'reputation':
+      return bags.reputation as Record<string, number>;
   }
+}
+
+/** T-4-001 D-49: "활성 에피소드" = status가 ACTIVE 또는 REHAB인 것 중 배열 마지막 항목. 없으면 -1. */
+function findActiveEpisodeIndex(episodes: readonly InjuryEpisode[]): number {
+  for (let i = episodes.length - 1; i >= 0; i--) {
+    const status = episodes[i]!.status;
+    if (status === 'ACTIVE' || status === 'REHAB') return i;
+  }
+  return -1;
 }
 
 /**
@@ -111,12 +139,18 @@ export type ApplyEffectsResult = {
  * `appliedSourceIds`에 있으면 reject한다. expiresAt이 있는 효과는 `activeEffects`에 기록해 만료 시
  * 되돌릴 수 있게 한다 — D-40 규칙 4: `REPLACE`는 적용 전 원래 값을 `restoreTo`에 함께 저장한다(만료
  * 시 `−delta`가 아니라 이 값으로 복원해야 하므로).
+ *
+ * T-4-001 D-49: HEALTH는 4(+reputation)bag 밖의 `season.availability`·`health.episodes`를 갱신하는
+ * 별도 경로다 — `activeEffects`에 저장하지 않는다(적용 즉시 소멸, `stackingRule: 'SUM'`·
+ * `appliesAt: IMMEDIATE`·`expiresAt: null`만 허용, 아니면 reason `HEALTH_RULE`로 reject).
  */
 export function applyEffects(state: CareerState, effects: Effect[], now: { step: number }): ApplyEffectsResult {
   const bags = cloneBags(state);
   const appliedSourceIds = [...state.appliedSourceIds];
   const activeEffects = [...state.activeEffects];
   const deferredEffects = [...state.deferredEffects];
+  let health = state.health;
+  let availability = state.season?.availability ?? null;
 
   const applied: Effect[] = [];
   const rejected: RejectedEffect[] = [];
@@ -135,14 +169,49 @@ export function applyEffects(state: CareerState, effects: Effect[], now: { step:
       continue;
     }
 
-    const bag = bagForKind(effect.kind);
+    if (effect.kind === 'HEALTH') {
+      if (effect.stackingRule !== 'SUM' || effect.appliesAt.kind !== 'IMMEDIATE' || effect.expiresAt !== null) {
+        rejected.push({ effect, reason: 'HEALTH_RULE' });
+        continue;
+      }
+      if (effect.target === 'availability.matchesRemaining') {
+        if (availability === null || availability.kind !== 'INJURY') {
+          rejected.push({ effect, reason: 'NO_ACTIVE_INJURY' });
+          continue;
+        }
+        availability = {
+          ...availability,
+          matchesRemaining: clampValue(availability.matchesRemaining + effect.delta, effect.clamp.min, effect.clamp.max),
+        };
+        applied.push(effect);
+        if (dedupeKey !== null) appliedSourceIds.push(dedupeKey);
+        continue;
+      }
+      if (effect.target === 'health.recurrenceRiskBp') {
+        const activeIndex = findActiveEpisodeIndex(health.episodes);
+        if (activeIndex === -1) {
+          rejected.push({ effect, reason: 'NO_ACTIVE_EPISODE' });
+          continue;
+        }
+        const episode = health.episodes[activeIndex]!;
+        const nextRisk = clampValue(episode.recurrenceRiskBp + effect.delta, effect.clamp.min, effect.clamp.max);
+        health = { episodes: health.episodes.map((candidate, i) => (i === activeIndex ? { ...candidate, recurrenceRiskBp: nextRisk } : candidate)) };
+        applied.push(effect);
+        if (dedupeKey !== null) appliedSourceIds.push(dedupeKey);
+        continue;
+      }
+      rejected.push({ effect, reason: `INVALID_TARGET_FOR_KIND:HEALTH:${effect.target}` });
+      continue;
+    }
+
+    const bag = bagForKind(effect.kind, effect.target);
     if (bag === null || !isValidTarget(bag, effect.target)) {
       rejected.push({ effect, reason: `INVALID_TARGET_FOR_KIND:${effect.kind}:${effect.target}` });
       continue;
     }
 
     const bagObj = bagObjFor(bags, bag);
-    const key = effect.target;
+    const key = bagFieldFor(bag, effect.target);
     const previousValue = bagObj[key] as number;
     const nextValue = effect.stackingRule === 'REPLACE' ? effect.delta : previousValue + effect.delta;
     bagObj[key] = clampValue(nextValue, effect.clamp.min, effect.clamp.max);
@@ -168,6 +237,9 @@ export function applyEffects(state: CareerState, effects: Effect[], now: { step:
       state: bags.state,
       context: bags.context,
       relationships: bags.relationships,
+      reputation: bags.reputation,
+      health,
+      season: state.season === null ? null : { ...state.season, availability },
       appliedSourceIds: appliedSourceIds.sort(compareCodePoints),
       activeEffects,
       deferredEffects,
@@ -181,11 +253,13 @@ export type ResolvedDeferredKind = { kind: Exclude<Effect['kind'], 'DEFERRED'>; 
 
 /**
  * T-2-005 D-39: DEFERRED 효과의 `target` 접두사로 실제 kind를 되돌린다 — `state.*`는 CURRENT,
- * `relationships.*`는 RELATION, `context.*`는 CONTEXT, 그 외(접두사 없는 속성 키)는 PERMANENT.
+ * `relationships.*`·`reputation.*`(T-4-001 D-49)는 RELATION, `context.*`는 CONTEXT, 그 외(접두사
+ * 없는 속성 키)는 PERMANENT.
  */
 export function resolveDeferredKind(target: string): ResolvedDeferredKind {
   if (target.startsWith('state.')) return { kind: 'CURRENT', target: target.slice('state.'.length) };
   if (target.startsWith('relationships.')) return { kind: 'RELATION', target: target.slice('relationships.'.length) };
+  if (target.startsWith('reputation.')) return { kind: 'RELATION', target: target.slice('reputation.'.length) };
   if (target.startsWith('context.')) return { kind: 'CONTEXT', target: target.slice('context.'.length) };
   return { kind: 'PERMANENT', target };
 }
@@ -223,10 +297,10 @@ export function resolveDeferredEffects(state: CareerState, step: number): Career
  * `restoreTo`(없으면 방어적으로 현재 값 유지)로 복원한다 — 둘 다 clamp를 다시 건다.
  */
 function revertOne(effect: Effect, bags: EffectBags): void {
-  const bag = bagForKind(effect.kind);
+  const bag = bagForKind(effect.kind, effect.target);
   if (bag === null) return;
   const bagObj = bagObjFor(bags, bag);
-  const key = effect.target;
+  const key = bagFieldFor(bag, effect.target);
   const currentValue = bagObj[key] as number;
   const restored = effect.stackingRule === 'REPLACE' ? (effect.restoreTo ?? currentValue) : currentValue - effect.delta;
   bagObj[key] = clampValue(restored, effect.clamp.min, effect.clamp.max);
@@ -247,7 +321,15 @@ export function expireEffects(state: CareerState, step: number): CareerState {
     revertOne(effect, bags);
   }
 
-  return { ...state, attributes: bags.attributes, state: bags.state, context: bags.context, relationships: bags.relationships, activeEffects: remaining };
+  return {
+    ...state,
+    attributes: bags.attributes,
+    state: bags.state,
+    context: bags.context,
+    relationships: bags.relationships,
+    reputation: bags.reputation,
+    activeEffects: remaining,
+  };
 }
 
 /**
@@ -276,5 +358,13 @@ export function expireAtSeasonEnd(state: CareerState, seasonIndex: number): Care
     revertOne(effect, bags);
   }
 
-  return { ...state, attributes: bags.attributes, state: bags.state, context: bags.context, relationships: bags.relationships, activeEffects: remaining };
+  return {
+    ...state,
+    attributes: bags.attributes,
+    state: bags.state,
+    context: bags.context,
+    relationships: bags.relationships,
+    reputation: bags.reputation,
+    activeEffects: remaining,
+  };
 }

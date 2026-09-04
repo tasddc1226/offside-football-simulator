@@ -146,8 +146,13 @@ describe('EFFECT_DEFAULTS', () => {
     expect(EFFECT_DEFAULTS.RELATION.expiresAt).toBeNull();
     expect(EFFECT_DEFAULTS.DEFERRED.appliesAt).toEqual({ kind: 'NEXT_SEASON_STEP', step: 1 });
     expect(EFFECT_DEFAULTS.PERMANENT.appliesAt).toEqual({ kind: 'IMMEDIATE' });
+    // T-4-001 D-49: HEALTH만 예외(SUM·IMMEDIATE·만료 없음이 유일하게 허용되는 조합).
     for (const kind of Object.keys(EFFECT_DEFAULTS) as (keyof typeof EFFECT_DEFAULTS)[]) {
+      if (kind === 'HEALTH') continue;
       expect(EFFECT_DEFAULTS[kind].stackingRule).toBe('ONCE_PER_SOURCE');
     }
+    expect(EFFECT_DEFAULTS.HEALTH.stackingRule).toBe('SUM');
+    expect(EFFECT_DEFAULTS.HEALTH.appliesAt).toEqual({ kind: 'IMMEDIATE' });
+    expect(EFFECT_DEFAULTS.HEALTH.expiresAt).toBeNull();
   });
 });
