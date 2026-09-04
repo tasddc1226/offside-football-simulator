@@ -64,3 +64,7 @@ DF·MF·FW의 낮은 출전 시간(대부분 SUB·0분)은 3번 완료 조건이
    EVT-REL-001 트리거(`career.tags에 '고집'` 또는 `season.step>=4`)가 이 시점에 이미 참이라 실제로는 적격 후보다. **콘텐츠 가중치 관찰(T-2-010 입력)**: 이 시점에 EVT-CON-002(weight 10)와 EVT-REL-001(weight 100)이 함께 뜨면 실제 플레이에서는 EVT-REL-001이 ~91%(100/110) 확률로 뽑혀, "온보딩 직후 진로 선택 이벤트를 보여준다"는 의도와 달리 열에 아홉은 진로 선택 이벤트(EVT-CON-002)가 노출되지 않는다 — EVT-CON-002의 weight를 올리거나 EVT-REL-001의 트리거를 진로 이벤트 이후로 미루는 조정이 필요해 보인다. 두 번째 ADVANCE(EVT-CON-003 직전)는 fixture와 실제 출력이 정확히 일치해 문제없다. `career-02-season`·`career-06-settled`의 시즌 파트에 있는 `EVT-SEASON-FIXTURE` placeholder 불일치는 별개로 — FAST 모드가 EVENT 슬롯 자체를 열지 않아(RULE-TIME-003) 이미 무해하다고 문서화돼 있다(문제 아님).
 
    수정 범위: 브리프대로 "실제 출력으로 재생성"하면 weighted-roll 결과가 통째로 바뀌어(위 91%) 7개 fixture 전부의 RESOLVE_EVENT·후속 이벤트 체인·golden을 서사 판단과 함께 재설계해야 한다 — 이번 후속 3건(각 1개 함수 수정)과 규모가 달라 **수정하지 않고 기록만 남긴다**(사용자 확인).
+
+## LINE TEST 게이트(T-2-013)
+
+이 9행 뒤의 외부 공개 테스트 게이트는 [line-test-plan.md](line-test-plan.md) 7절의 7행으로 관리한다(staging `svc_line_test` 확인, 예행, 테스터 10명 이상, 기준선 기록, 결함 배정, ruleset 1.0.0 확정, 시즌 LOCKED). 사람 기준 세션 길이(FAST 6분·CHAPTER 12분) 판정은 그 문서 5-3·6절의 분석 이벤트 값으로 닫는다.

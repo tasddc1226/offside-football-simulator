@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, Stepper, Toast } from '@offside/ui';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { markOnboardingPending } from '../engine/funnel.js';
 import { useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { useUiStore } from '../shared/ui-store.js';
@@ -49,6 +50,7 @@ function OnboardingScreen() {
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-034', careerPhase: 'NONE' });
+    void markOnboardingPending();
   }, []);
 
   const slide = SLIDES[stepIndex]!;

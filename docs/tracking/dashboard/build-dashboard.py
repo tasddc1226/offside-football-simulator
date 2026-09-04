@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""docs/tracking/board.md + git log -> dashboard.html (OFFSIDE 개발 현황)."""
+"""docs/tracking/board.md + git log -> dashboard.html (OFFSIDE 개발 현황판).
+
+읽는 사람: 프로젝트 소유자(사용자). 위에서 아래로 "지금 어디까지 왔나 → 지금 무슨 일이 돌고 있나 → 내가 할 일 →
+다음에 올 일 → 오늘 한 일 → (펼쳐 보기) 작업 보드·구현 현황·기록·결정·용어" 순서로 읽히게 만든다.
+"""
 import re, json, subprocess, datetime, html, os, sys
 # 저장소 사본: docs/tracking/dashboard/build-dashboard.py (ROOT = 저장소 루트). 출력은 DASHBOARD_OUT 환경 변수,
 # 없으면 이 파일 옆 dashboard.html(.gitignore 대상). 오케스트레이터가 머지·투입 때마다 실행해 아티팩트로 재게시한다.
@@ -16,18 +20,34 @@ def section(title):
     m = re.search(r"^## " + re.escape(title) + r".*?$(.*?)(?=^## |\Z)", board, re.M | re.S)
     return m.group(1) if m else ""
 
-def table_rows(text):
-    rows = []
+def parse_table(text):
+    """헤더 이름으로 열을 찾아 dict 목록으로. ID·작업/내용·상태·비고류 열을 표준 키로 맞춘다."""
+    header = None; rows = []
     for line in text.splitlines():
-        if line.startswith("|") and not re.match(r"^\|\s*-", line) and not re.match(r"^\|\s*ID", line):
-            cells = [c.strip() for c in line.strip().strip("|").split("|")]
-            rows.append(cells)
+        if not line.startswith("|") or re.match(r"^\|\s*-", line):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if header is None:
+            header = cells; continue
+        if len(cells) < len(header):
+            cells += [""] * (len(header) - len(cells))
+        d = dict(zip(header, cells))
+        row = dict(
+            id=d.get("ID", ""),
+            task=d.get("작업") or d.get("내용") or "",
+            status=d.get("상태", ""),
+            note=d.get("비고") or d.get("메모") or d.get("워크트리") or d.get("결과") or "",
+            area=d.get("패키지") or d.get("영역") or "",
+            track=d.get("트랙", ""), deps=d.get("선행", ""), wave=d.get("Wave") or d.get("슬라이스") or "",
+        )
+        if row["id"] and row["id"] != "(없음)":
+            rows.append(row)
     return rows
 
 def md_inline(s):
     """markdown links/code -> html (escape the rest)."""
     out = ""; i = 0
-    pat = re.compile(r"\[([^\]]+)\]\(([^)]+)\)|`([^`]+)`|PR #(\d+)")
+    pat = re.compile(r"\[([^\]]+)\]\(([^)]+)\)|`([^`]+)`|PR #(\d+)|\*\*([^*]+)\*\*")
     for m in pat.finditer(s):
         out += html.escape(s[i:m.start()])
         if m.group(1):
@@ -37,34 +57,34 @@ def md_inline(s):
             out += f'<a href="{html.escape(href)}" target="_blank" rel="noopener">{html.escape(m.group(1))}</a>'
         elif m.group(3):
             out += f"<code>{html.escape(m.group(3))}</code>"
-        else:
+        elif m.group(4):
             n = m.group(4)
             out += f'<a href="{GH}/pull/{n}" target="_blank" rel="noopener">PR #{n}</a>'
+        else:
+            out += f"<strong>{html.escape(m.group(5))}</strong>"
         i = m.end()
     return out + html.escape(s[i:])
 
-gate = re.sub(r"\*\*(.*?)\*\*", r"\1", section("현재 게이트").strip())
-gate = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", gate)
+def plain(s):
+    s = re.sub(r"\*\*(.*?)\*\*", r"\1", s)
+    return re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
 
-phase0 = [dict(id=r[0], task=r[1], ref=r[2], status=r[3], note=r[4]) for r in table_rows(section("Phase 0 백로그")) if len(r) >= 5]
-phase1 = [dict(id=r[0], pkg=r[1], task=r[2], deps=r[3], wave=r[4], status=r[5], note=r[6] if len(r) > 6 else "") for r in table_rows(section("Phase 1 백로그")) if len(r) >= 6]
-active = [dict(id=r[0], worker=r[1], start=r[2], status=r[3]) for r in table_rows(section("진행 중")) if len(r) >= 4 and r[0] != "(없음)"]
-uacts = [dict(id=r[0], task=r[1], status=r[2], note=r[3]) for r in table_rows(section("사용자 액션")) if len(r) >= 4]
+gate = plain(section("현재 게이트").strip())
 
-log = subprocess.run(["git", "-C", ROOT, "log", "origin/main", "--format=%h|%ci|%s", "-n", "80"], capture_output=True, text=True).stdout
-merges = []
-for line in log.splitlines():
-    h, ts, subj = line.split("|", 2)
-    if re.match(r"^T-\d-\d{3}:", subj):
-        m = re.search(r"\(#(\d+)\)$", subj)
-        merges.append(dict(sha=h, time=ts[11:16], date=ts[:10], task=subj.split(":")[0], title=re.sub(r"\s*\(#\d+\)$", "", subj.split(":", 1)[1]).strip(), pr=m.group(1) if m else None))
-
-now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
-updated = now.strftime("%Y-%m-%d %H:%M KST")
-
+# Phase 로드맵: (표시 이름, 설명, board.md 섹션 제목 또는 None, 한 줄 의미)
+PHASES = [
+    ("Phase 0", "기술 기반", "Phase 0 백로그", "저장소·CI·배포·데이터 계약"),
+    ("Phase 1", "첫 계약까지", "Phase 1 백로그", "온보딩 → 선수 만들기 → 진로 → 첫 계약 → 대시보드"),
+    ("Phase 2", "한 시즌", "Phase 2 백로그", "12 step 시즌 · 경기 · 핵심 경기 챕터 · 결산·성장"),
+    ("Phase 3·4", "계약·이적 + 부상·관계", "Phase 3·4 백로그", "트랙 A 계약·임대·이적, 트랙 B 부상·관계·평판 (병렬)"),
+    ("Phase 5", "장기 성장·은퇴·Legacy", None, "노쇠·은퇴·Legacy 점수·엔딩"),
+    ("Phase 6", "SEASON 1: KICKOFF", None, "첫 서비스 시즌 출시"),
+    ("Phase 7", "운영·밸런스", None, "라이브 운영·밸런스 조정·확장"),
+    ("Phase 8", "WORLD STAGE", "Phase 8 WORLD STAGE 백로그", "해외 이적·가상 해외 리그·대륙대회 (Phase 3~7 뒤)"),
+]
 STATUS = {
     "done": ("완료", "done"), "completed": ("완료", "done"), "in-progress": ("진행 중", "active"),
-    "todo": ("예정", "todo"), "blocked": ("대기", "blocked"), "deferred": ("보류", "todo"),
+    "todo": ("예정", "todo"), "blocked": ("대기", "blocked"), "deferred": ("보류", "todo"), "in-review": ("리뷰 중", "active"),
 }
 def pill(status):
     label, cls = STATUS.get(status, (status, "todo"))
@@ -76,7 +96,43 @@ def counts(rows):
         c[STATUS.get(r["status"], ("", "todo"))[1]] += 1
     return c
 
-c0, c1 = counts(phase0), counts(phase1)
+phase_rows = {name: (parse_table(section(sec)) if sec else []) for name, _, sec, _ in PHASES}
+release_rows = parse_table(section("미니앱 출시 준비 백로그"))
+active = [dict(id=r["id"], worker=r["task"], start=r["status"], status=r["note"]) for r in
+          [dict(zip(["id", "task", "status", "note"], [c.strip() for c in l.strip().strip("|").split("|")])) for l in section("진행 중").splitlines() if l.startswith("| T-")]]
+uacts = parse_table(section("사용자 액션"))
+all_rows = {r["id"]: r for rows in phase_rows.values() for r in rows}
+all_rows.update({r["id"]: r for r in release_rows})
+
+log = subprocess.run(["git", "-C", ROOT, "log", "origin/main", "--format=%h|%ci|%s", "-n", "120"], capture_output=True, text=True).stdout
+merges = []
+for line in log.splitlines():
+    h, ts, subj = line.split("|", 2)
+    if re.match(r"^T-\d-\d{3}:", subj):
+        m = re.search(r"\(#(\d+)\)$", subj)
+        merges.append(dict(sha=h, time=ts[11:16], date=ts[:10], task=subj.split(":")[0], title=re.sub(r"\s*\(#\d+\)$", "", subj.split(":", 1)[1]).strip(), pr=m.group(1) if m else None))
+
+now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+updated = now.strftime("%Y-%m-%d %H:%M KST")
+today_md = f"{now.month}/{now.day}"
+
+# 한 줄 현황(오케스트레이터가 머지·투입마다 손으로 갱신)
+NOW = ("Phase 0·1은 끝났고 Phase 2는 코드가 끝나 사용자 게이트(플레이테스트·LINE TEST)만 남았습니다. "
+       "LINE TEST 준비 코드(T-2-012)가 정오에 머지됐고 운영 계획(T-2-013)도 썼습니다. staging 예행에서 찾은 분석 이벤트 유실 결함은 T-2-015 워커가 고치는 중입니다(LINE TEST 전 머지). 오후에 팩 0.2.0·팀 12(T-3-006)가 머지됐고 이적시장 생성기(T-3-002)는 리뷰 수정 1건 뒤 머지합니다. 공개까지 남은 사용자 일은 U-014·U-015·U-016입니다. "
+       "오늘 오전 Phase 3(계약·이적)과 Phase 4(부상·관계·평판)를 병렬로 열었고, 워커 3명(T-4-001·T-3-002·T-3-006)이 동시에 돌고 있습니다. "
+       "다음 사용자 결정은 U-014(Workers Paid 플랜, LINE TEST 배포 직전)와 U-005(종이 플레이테스트)입니다.")
+
+GLOSSARY = [
+    ("T-3-002", "작업 번호. T-<Phase>-<순번>. 워커 한 명이 브리프 하나를 받아 PR 하나로 끝낸다"),
+    ("U-014", "사용자 액션. 계정·결제·도메인·승인처럼 사용자만 할 수 있는 일"),
+    ("D-44 / ADR-010", "설계 결정 번호 / 아키텍처 결정 기록. 결정 로그·ADR 문서에 원문"),
+    ("PR #48", "GitHub Pull Request. 워커가 열고 오케스트레이터가 검증 뒤 squash 머지"),
+    ("워커", "Sonnet 5 세션. Orca 워크트리 하나에서 브리프대로 구현. 동시 최대 3명"),
+    ("브리프", "워커에게 주는 작업 지시서(docs/tracking/briefs). 범위·파일·테스트·금지 사항"),
+    ("골든", "결정론 검증용 고정 결과(golden fixture). 같은 시드면 같은 결과가 나와야 함"),
+    ("트랙 A / B", "Phase 3(계약·이적) / Phase 4(부상·관계·평판). 파일 소유권을 나눠 병렬 진행"),
+    ("LINE TEST", "첫 외부 테스트 서비스 시즌(svc_line_test). staging 환경에서 소수 사용자 대상"),
+]
 
 # --- 손으로 유지하는 데이터 ---
 SCREENS = [
@@ -95,13 +151,13 @@ SCREENS = [
     ("법적 문서", "개인정보·약관", "구현", "본문 초안 (T-1-012). 운영자명·연락처는 U-010"),
 ]
 LAYERS = [
-    ("domain", "결정론 시뮬레이터", ["시드 RNG·canonical hash·golden fixture", "CREATE_CAREER·RESOLVE_EVENT·ADVANCE", "효과 5종·태그·지연 효과", "선수 모델·Base OVR 59·DRAFT→확정·이벤트 제시 (T-1-001)", "제안 생성·계약 확정, golden 첫 계약까지 (T-1-005)", "선수 성별(결과 불변)·선호/현재 포지션 분리·golden 갱신 (T-1-016)", "시즌 구조·12 step·START/SETTLE_SEASON·ADVANCE 재정의·결정 예산 (T-2-001)", "전술 스타일·경쟁자 8×2·Tactical Fit·선발 순위·step-1 역할 제안 RESOLVE_ROLE, golden underdog (T-2-002)", "경기 계산: 일정·팀 결과·출전 시간·통계·평점·카드·부상·시즌 집계, 경기 전용 RNG (T-2-003)", "시즌 결산 SeasonResult·성장식(D-39)·폼/체력/사기·출전 약속·DEFERRED 시즌 적용 (T-2-005)", "핵심 경기 챕터: 후보 선택·RESOLVE_CHAPTER·ChapterRecord, golden career-05-chapter (T-2-004)", "Effect 중첩·만료·복원(D-40)·시장가치 지수(D-41)·CareerTag 16종·결산 훅(D-42), ADR-010 (T-2-014)"], ["Phase 3·4 타입 슬라이스: Offer/Contract v2·clubHistory·타임라인/pending 예약·DSL contract.* (T-3-001)"]),
-    ("content", "이벤트·룰셋 데이터", ["프로토타입 팩 0.1.0(이벤트 10개)", "조건 DSL·효과 스키마·검증 CLI", "룰셋 1.0.0(아키타입 24·배경 3·팀 8·제안·계약 규칙)", "조건 컨텍스트·적격 이벤트 선택기·브라우저 팩 로더 (T-1-015)", "룰셋 leagueCalendar 12 step·seasonBoundaryReset (T-2-001)", "리그 4·FA컵·전술 스타일 3종·선발 상수·경쟁자 이름 40 (T-2-002)", "matchRules·결과표·통계표·징계·부상 (T-2-003)", "growthRules·conditionRules·promiseMinutesShareBp (T-2-005)", "팩 chapters 3종(CHP-MATCH-001/002/004)·챕터 스키마·리그 라이벌/승격·강등 정보 (T-2-004)", "marketValueRules·EffectSchema 확장(ONCE_PER_SEASON·AT_SEASON_END·SEASONS_AFTER·reasonTag) (T-2-014)"], []),
-    ("contracts", "API·명령 스키마(Zod)", ["요청·응답 봉투·오류 코드·프로필 설정", "커리어 동기화 GET/PUT·Snapshot 봉투", "Phase 1 명령 payload 판별 유니온·CareerState·PlayerPublic(잠재력 비노출)·복구·삭제 스키마 (T-1-006)", "api 복구·삭제 라우트가 contracts 스키마로 검증 (T-1-012)", "선수 성별·선호/현재 포지션 스키마 (T-1-016)", "Google 병합·pendingMerge 스키마 (T-1-013)", "RESOLVE_ROLE·ROLE_PROPOSAL·경쟁자·선발 순위 스키마 (T-2-002)", "golden 순회 strict 정합·목록 가드·Snapshot 크기 15.3 KB(예산 6%) (T-2-006)"], []),
+    ("domain", "결정론 시뮬레이터", ["시드 RNG·canonical hash·golden fixture", "CREATE_CAREER·RESOLVE_EVENT·ADVANCE", "효과 5종·태그·지연 효과", "선수 모델·Base OVR 59·DRAFT→확정·이벤트 제시 (T-1-001)", "제안 생성·계약 확정, golden 첫 계약까지 (T-1-005)", "선수 성별(결과 불변)·선호/현재 포지션 분리·golden 갱신 (T-1-016)", "시즌 구조·12 step·START/SETTLE_SEASON·ADVANCE 재정의·결정 예산 (T-2-001)", "전술 스타일·경쟁자 8×2·Tactical Fit·선발 순위·step-1 역할 제안 RESOLVE_ROLE, golden underdog (T-2-002)", "경기 계산: 일정·팀 결과·출전 시간·통계·평점·카드·부상·시즌 집계, 경기 전용 RNG (T-2-003)", "시즌 결산 SeasonResult·성장식(D-39)·폼/체력/사기·출전 약속·DEFERRED 시즌 적용 (T-2-005)", "핵심 경기 챕터: 후보 선택·RESOLVE_CHAPTER·ChapterRecord, golden career-05-chapter (T-2-004)", "Effect 중첩·만료·복원(D-40)·시장가치 지수(D-41)·CareerTag 16종·결산 훅(D-42), ADR-010 (T-2-014)", "Phase 3·4 타입 슬라이스: Offer/Contract v2·clubHistory·MarketSummary·pending 5종·타임라인 kind 15종·제안 상태기계·CMD-CON payload·DSL contract.* (T-3-001)"], ["트랙 B 타입: health·relationshipLog·season.manager·reputation·HEALTH Effect·RESOLVE_EVENT INJURY/NATIONAL_TEAM·훅 골격 (T-4-001)", "이적시장 생성기: 사유 판정·후보 구단·제안 4종·안전 잔류·유효기간·step 7 재계약 제안·transferRules (T-3-002, PR #50 리뷰 수정 중)"]),
+    ("content", "이벤트·룰셋 데이터", ["프로토타입 팩 0.1.0(이벤트 10개)", "조건 DSL·효과 스키마·검증 CLI", "룰셋 1.0.0(아키타입 24·배경 3·팀 8·제안·계약 규칙)", "조건 컨텍스트·적격 이벤트 선택기·브라우저 팩 로더 (T-1-015)", "룰셋 leagueCalendar 12 step·seasonBoundaryReset (T-2-001)", "리그 4·FA컵·전술 스타일 3종·선발 상수·경쟁자 이름 40 (T-2-002)", "matchRules·결과표·통계표·징계·부상 (T-2-003)", "growthRules·conditionRules·promiseMinutesShareBp (T-2-005)", "팩 chapters 3종(CHP-MATCH-001/002/004)·챕터 스키마·리그 라이벌/승격·강등 정보 (T-2-004)", "marketValueRules·EffectSchema 확장(ONCE_PER_SEASON·AT_SEASON_END·SEASONS_AFTER·reasonTag) (T-2-014)", "팩 0.2.0 등록(활성 0.1.0 유지)·PRO 이벤트 5종 PROTOTYPE·authoring 스키마·agent 토큰·룰셋 팀 12 (T-3-006)"], []),
+    ("contracts", "API·명령 스키마(Zod)", ["요청·응답 봉투·오류 코드·프로필 설정", "커리어 동기화 GET/PUT·Snapshot 봉투", "Phase 1 명령 payload 판별 유니온·CareerState·PlayerPublic(잠재력 비노출)·복구·삭제 스키마 (T-1-006)", "api 복구·삭제 라우트가 contracts 스키마로 검증 (T-1-012)", "선수 성별·선호/현재 포지션 스키마 (T-1-016)", "Google 병합·pendingMerge 스키마 (T-1-013)", "RESOLVE_ROLE·ROLE_PROPOSAL·경쟁자·선발 순위 스키마 (T-2-002)", "golden 순회 strict 정합·목록 가드·Snapshot 크기 15.3 KB(예산 6%) (T-2-006)", "분석 이벤트 12종 strict props·service-season current·오류 코드 SERVICE_SEASON_UNAVAILABLE/CLOSED (T-2-012)"], []),
     ("engine-client", "브라우저 실행기", ["명령 실행기·멱등성·Snapshot 복구", "Web Worker 시뮬레이터", "동기화 클라이언트(재시도·409 처리)", "룰셋 배선 (T-1-001)", "포크(fork-by-replay)·Worker 실패 처리 (T-1-011)", "서버 커리어 가져오기 importCareerFromServer (T-1-012)", "시즌 명령 replay·fork·import golden, 로컬 저장 시즌 checkpoint 계약 (T-2-006)"], []),
-    ("platform", "저장소 추상화", ["Dexie(IndexedDB) LocalStore", "KV LocalStore(토스 채널용 스텁)", "features.googleLink 채널 기능 플래그 (T-1-013)"], []),
-    ("api", "Cloudflare Workers + D1", ["D1 스키마·migration", "세션(쿠키·Bearer)·익명 프로필·설정", "커리어 동기화 GET/PUT·If-Match·멱등", "복구 코드·프로필 복구·삭제·로그아웃·커리어 삭제 (T-1-004)", "Google OIDC start/callback/merge/unlink·가짜 OIDC (T-1-013)", "시즌 3경로 동기화·Miniflare golden 순회 (T-2-006)"], ["실제 Google 계정 검증 (U-003 대기)"]),
-    ("web · ui", "React 화면", ["라우터·디자인 토큰·허브 빈 상태", "Pretendard 동적 서브셋(2109KB→269KB)", "Button·Card 등 기본 부품", "Radix RadioGroup·Dialog·Tabs, ChoiceCard·CompareCards 등 부품 10종", "Playwright + axe E2E, 브라우저 Worker 해시 검증 (T-1-010)", "엔진 배선(Worker·IndexedDB)·허브·온보딩·설정 영속화 (T-1-007)", "선수 만들기 SCR-002~004·복구 코드 발급·API 클라이언트 (T-1-008)", "동기화 배선·저장 배지·충돌 대화상자·오프라인 (T-1-011)", "진로·입단 테스트·이벤트·결과·제안·계약·대시보드 화면, first-contract e2e (T-1-009)", "설정 데이터 섹션(복구·삭제·대조)·법적 문서·실제 api 복구 e2e (T-1-012)", "선수 성별 RadioGroup·선호 포지션 라벨·확인 요약 (T-1-016)", "Google 연결 행·병합 선택·로그아웃, google-link e2e (T-1-013)", "resilience·recovery-conflict·keyboard·session-length·perf e2e, 완료 조건 표 15행 (T-1-014)", "포지션 탭 키보드 도달·선호/주포지션 표시·국외 이전 표·결과 aria-live·이탈 경고 (T-1-017)", "브라우저 Worker 시즌 리플레이 hash·9.6~15 ms (T-2-006)", "프리시즌 계획·시즌 준비·역할 제안·대시보드 시즌화·능력치 상세, season/a11y e2e, E2E_PORT (T-2-007)", "핵심 경기 챕터 화면 SCR-031·chapterCandidates·RESOLVE_CHAPTER·재생, chapter e2e·DEV 시드 오버라이드 (T-2-008)", "시즌 결산 화면 SCR-015(+SCR-006)·변화 원인 분리·CompareCards·CountUp·응답 유실 복구·다이어리 연대기 (T-2-009)", "Phase 2 완료 조건 검증: 포지션군 fixture 3종·결정론·집계·B > A·시즌 완주 세션 측정·rngState.draws e2e·68건 3회 무결점 (T-2-011)"], ["LINE TEST 준비: 서비스 시즌 포인터·테스트 보관함·분석 이벤트 수집 (T-2-012)"]),
+    ("platform", "저장소 추상화", ["Dexie(IndexedDB) LocalStore", "KV LocalStore(토스 채널용 스텁)", "features.googleLink 채널 기능 플래그 (T-1-013)", "웹 분석 클라이언트: 배치 20건/10초/pagehide, sendBeacon→fetch keepalive, 익명 clientId (T-2-012)"], []),
+    ("api", "Cloudflare Workers + D1", ["D1 스키마·migration", "세션(쿠키·Bearer)·익명 프로필·설정", "커리어 동기화 GET/PUT·If-Match·멱등", "복구 코드·프로필 복구·삭제·로그아웃·커리어 삭제 (T-1-004)", "Google OIDC start/callback/merge/unlink·가짜 OIDC (T-1-013)", "시즌 3경로 동기화·Miniflare golden 순회 (T-2-006)", "서비스 시즌 포인터 ACTIVE_SERVICE_SEASON_ID·GET /service-seasons/current·생성 시 시즌 상태 검사(409)·analytics_events 수집(화이트리스트·rate limit)·svc_line_test 시드·마이그레이션 0003 (T-2-012)"], ["실제 Google 계정 검증 (U-003 대기)", "analytics_events 삽입 14행 청크(D1 변수 100개 상한, 예행 503)·unknown error 메시지 고정 (T-2-015)"]),
+    ("web · ui", "React 화면", ["라우터·디자인 토큰·허브 빈 상태", "Pretendard 동적 서브셋(2109KB→269KB)", "Button·Card 등 기본 부품", "Radix RadioGroup·Dialog·Tabs, ChoiceCard·CompareCards 등 부품 10종", "Playwright + axe E2E, 브라우저 Worker 해시 검증 (T-1-010)", "엔진 배선(Worker·IndexedDB)·허브·온보딩·설정 영속화 (T-1-007)", "선수 만들기 SCR-002~004·복구 코드 발급·API 클라이언트 (T-1-008)", "동기화 배선·저장 배지·충돌 대화상자·오프라인 (T-1-011)", "진로·입단 테스트·이벤트·결과·제안·계약·대시보드 화면, first-contract e2e (T-1-009)", "설정 데이터 섹션(복구·삭제·대조)·법적 문서·실제 api 복구 e2e (T-1-012)", "선수 성별 RadioGroup·선호 포지션 라벨·확인 요약 (T-1-016)", "Google 연결 행·병합 선택·로그아웃, google-link e2e (T-1-013)", "resilience·recovery-conflict·keyboard·session-length·perf e2e, 완료 조건 표 15행 (T-1-014)", "포지션 탭 키보드 도달·선호/주포지션 표시·국외 이전 표·결과 aria-live·이탈 경고 (T-1-017)", "브라우저 Worker 시즌 리플레이 hash·9.6~15 ms (T-2-006)", "프리시즌 계획·시즌 준비·역할 제안·대시보드 시즌화·능력치 상세, season/a11y e2e, E2E_PORT (T-2-007)", "핵심 경기 챕터 화면 SCR-031·chapterCandidates·RESOLVE_CHAPTER·재생, chapter e2e·DEV 시드 오버라이드 (T-2-008)", "시즌 결산 화면 SCR-015(+SCR-006)·변화 원인 분리·CompareCards·CountUp·응답 유실 복구·다이어리 연대기 (T-2-009)", "Phase 2 완료 조건 검증: 포지션군 fixture 3종·결정론·집계·B > A·시즌 완주 세션 측정·rngState.draws e2e·68건 3회 무결점 (T-2-011)", "LINE TEST 준비: useServiceSeason(kv 캐시·폴백)·허브 LINE TEST 배너·테스트 시즌 배지·LOCKED 시 생성 비활성·퍼널/결산/이탈 분석 이벤트·service-season e2e 4종 (T-2-012)"], ["온보딩 LINE TEST 안내 1줄 (T-2-015)", "narrative.ts agent 토큰(팩 0.2.0 활성화 전, T-3-005)"]),
     ("CI · 배포", "GitHub Actions · Pages · Workers", [], ["U-002 Cloudflare 계정 대기 (T-0-010)"]),
 ]
 ETA = [
@@ -132,9 +188,19 @@ ETA = [
     ("9/4 03:46", "T-3-001(계약·제안 v2 타입 슬라이스) 브리프 선작성 — Offer/Contract v2·clubHistory·제안 상태기계 함수·타임라인/pending 예약·DSL contract.*·CMD-CON payload 스키마"),
     ("9/4 10:07", "사용자 결정 4건: PR #46(Cloudflare 배포 파이프라인, T-0-010) 머지 승인 → abf9bfa, ADR-010 설계 승인(U-012), 이벤트 문구 PROTOTYPE 허용(U-013 A), 가상 구단 12개. T-2-012(LINE TEST 준비)·T-3-001(Phase 3·4 타입 슬라이스) 나란히 투입"),
     ("9/4 10:40", "T-0-010 completed: main 푸시 staging 자동 배포 성공(Quality·Browser·Deploy staging), api health·web 200. Phase 0 전 항목 종료. 후속: docs/** paths-ignore"),
-    ("9/4~", "T-3-001 머지 뒤 T-4-001·T-3-002·T-3-006 투입. U-005 플레이테스트 뒤 T-2-010"),
+    ("9/4 11:43", "Phase 3·4 타입 슬라이스(T-3-001) 머지(PR #48): Offer/Contract v2·clubHistory·pending/타임라인 예약·DSL contract.*·CMD-CON payload 스키마. 리뷰 수정 1건(contract.isLastSeason 의미 — 브리프 오류 정정), 골든 9종 draws 불변"),
+    ("9/4 11:46", "T-4-001(트랙 B 타입 슬라이스)·T-3-002(이적시장 생성기) 투입 — Phase 3·4 병렬 시작. 브리프 3종 작성(T-4-001·T-3-002·T-3-006). T-3-006(팩 0.2.0·팀 12)은 T-2-012 머지 뒤"),
+    ("9/4 12:18", "LINE TEST 준비(T-2-012) 머지(PR #49): 서비스 시즌 포인터·GET /service-seasons/current·svc_line_test 테스트 시즌·분석 이벤트 수집(12종 화이트리스트)·허브 배너/배지·퍼널 이벤트. 리뷰 수정 0건, 실 api e2e 7건. Orca PR 게이트가 gh pr create를 막아 GitHub API로 PR 개설"),
+    ("9/4 12:21", "T-3-006(팩 0.2.0·PRO 이벤트 5·팀 12) 투입 — 동시 워커 3개"),
+    ("9/4 12:26", "T-2-013 완료: LINE TEST 운영 계획(일정 09-08~09-21 제안, D1 측정 쿼리 7종, 기준선 양식, 게이트 7행). 새 사용자 액션 U-015(테스터 모집·안내문)"),
+    ("9/4 12:56", "staging svc_line_test 확인·예행 통과(온보딩→계약→FAST·CHAPTER 시즌 39초). 결함 3건 발견: 분석 이벤트 20건 배치 503(D1 변수 100개 상한, 유실), 오류 본문 SQL 노출, 온보딩 안내 없음 → T-2-015 브리프(12:36). 기준선 D1 조회는 wrangler 로그인 필요(U-016)"),
+    ("9/4 13:01", "콘텐츠 팩 0.2.0(T-3-006) 머지(PR #51): PRO 이벤트 5종 PROTOTYPE·팀 12·authoring 스키마·agent 토큰. 활성 팩은 0.1.0 유지. 리뷰 수정 0건, 브리프 정정 2건(phases PRO·골든 재기록 불필요). PR #50(이적시장)은 수정 요청 1건(결산 뒤 STARTER 판정 도달 불가)"),
+    ("9/4 13:02", "T-2-015(분석 이벤트 D1 청크·오류 메시지·온보딩 안내) 투입 — LINE TEST 전 머지 필수"),
+    ("9/4~", "T-2-015 머지 뒤 재예행. T-3-002 뒤 T-3-003(명령·결산 배선), T-4-001 뒤 T-4-002·T-4-003. U-005 플레이테스트 뒤 T-2-010. Orca PR 게이트 유지 여부는 사용자 결정"),
 ]
 DECISIONS = [
+    ("PR #48 리뷰: contract.isLastSeason 정정", "ADR-010 유도식에서 진행 중 마지막 시즌의 잔여는 0이므로 season !== null && remaining === 0일 때만 1(브리프의 <= 1은 오류). stepSummaries 11개 유지, followUp도 presentation 제외, 골든 멀티라인 수용."),
+    ("T-3-002·T-4-001·T-3-006 브리프 결정", "T-3-002는 생성기까지(결산 배선·명령은 T-3-003, step 7 제안은 미응답 만료 임시), 안전 잔류는 현 구단, 관계 이월 값은 transferRules.relationshipCarry. T-4-001 HEALTH Effect는 SUM·즉시·만료 없음, 기본 감독은 rng 없이, 훅 골격 선배치. T-3-006 팩 0.2.0은 등록만(활성 0.1.0 유지), PROTOTYPE authoring 필드, 팀 4개 추가."),
     ("ADR-010 승인·LINE TEST 준비(U-012·U-013, D-54·D-55)", "사용자가 ADR-010 설계를 승인하고 이벤트 문구 PROTOTYPE 작성(A)·가상 구단 12개를 결정. 서비스 시즌 포인터는 API 환경 변수, 테스트 시즌은 is_test, 분석 이벤트는 platform 큐 → D1 화이트리스트."),
     ("PR #47 리뷰: Phase 2 완료 조건 9/9", "리뷰 수정 0건. truePotential ≥ baseOvr+1 불변식(roll 순서 불변, golden 2종 갱신), 워커 타임아웃 요청당 예산, career-03 비교 대상을 2-slot 구조상 COMP-W-2로 고정, 세션 자동화 수 초 — 사람 기준 6/12분 판정은 U-005와 합쳐 오케스트레이터 몫."),
     ("Phase 순서 준수", "Phase 0을 닫은 뒤 Phase 1 워커 투입. 브리프는 미리 작성."),
@@ -167,194 +233,313 @@ DECISIONS = [
 
 def esc(s): return html.escape(s)
 
-def render():
-    p = []
-    a = p.append
-    a(f"""<title>OFFSIDE 개발 현황판</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<style>
-:root{{
-  --bg:#F7F6F1;--surface:#FFFFFF;--surface-2:#EEECE4;--border:#D6D3C9;--text:#141A17;--text-2:#4F5A54;
+CSS = """
+:root{
+  --bg:#F4F5EF;--surface:#FFFFFF;--surface-2:#ECEDE4;--border:#D5D7CB;--text:#141A17;--text-2:#57625C;
   --accent:#F5C400;--on-accent:#0B1410;--line:#0E7C8A;--success:#1E7B45;--warning:#8A5A00;--danger:#B3261E;
-  --pill-done-bg:#DCEFE3;--pill-active-bg:#FFF3B8;--pill-todo-bg:#EEECE4;--pill-blocked-bg:#F6DEDC;
+  --pill-done-bg:#DCEFE3;--pill-active-bg:#FFF3B8;--pill-todo-bg:#ECEDE4;--pill-blocked-bg:#F6DEDC;
   --font:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,'Apple SD Gothic Neo',sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-}}
-@media (prefers-color-scheme: dark){{:root:not([data-theme="light"]){{
-  --bg:#0B1410;--surface:#121C17;--surface-2:#1A2620;--border:#2A3A32;--text:#EDEFEA;--text-2:#A6B0AA;
-  --line:#3FB8C6;--success:#5CC080;--warning:#E0A93A;--danger:#EF7A72;
-  --pill-done-bg:#173A27;--pill-active-bg:#4A3B00;--pill-todo-bg:#1A2620;--pill-blocked-bg:#4A1F1C;
-}}}}
-:root[data-theme="dark"]{{
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0B1410;--surface:#121C17;--surface-2:#1A2620;--border:#2A3A32;--text:#EDEFEA;--text-2:#A6B0AA;
   --line:#3FB8C6;--success:#5CC080;--warning:#E0A93A;--danger:#EF7A72;
   --pill-done-bg:#173A27;--pill-active-bg:#4A3B00;--pill-todo-bg:#1A2620;--pill-blocked-bg:#4A1F1C;
 }}
-*{{box-sizing:border-box}}
-body{{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}}
-a{{color:var(--line);text-decoration:none;border-bottom:1px solid transparent}}
-a:hover,a:focus-visible{{border-bottom-color:currentColor;outline:none}}
-:focus-visible{{outline:2px solid var(--line);outline-offset:2px}}
-code{{font-family:var(--mono);font-size:.86em;background:var(--surface-2);padding:1px 5px;border-radius:3px}}
-.wrap{{max-width:1180px;margin:0 auto;padding:28px 20px 60px}}
-header{{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:18px;border-bottom:3px solid var(--line)}}
-.wordmark{{font-weight:900;letter-spacing:.12em;font-size:13px;color:var(--text-2);margin:0 0 6px}}
-h1{{font-size:28px;line-height:1.2;margin:0;font-weight:800;text-wrap:balance}}
-.meta{{font-family:var(--mono);font-size:12.5px;color:var(--text-2);text-align:right}}
-.meta strong{{color:var(--text);font-weight:500}}
-.gate{{margin:18px 0 0;padding:14px 18px;background:var(--surface-2);border-left:4px solid var(--accent);font-size:14.5px;max-width:80ch}}
-h2{{font-size:17px;margin:0 0 12px;font-weight:700;display:flex;align-items:baseline;gap:10px}}
-h2 small{{font-family:var(--mono);font-weight:400;font-size:12px;color:var(--text-2);letter-spacing:.04em}}
-section{{margin-top:34px}}
-.tiles{{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:22px}}
-.tile{{background:var(--surface);border:1px solid var(--border);padding:16px 18px 14px}}
-.tile .label{{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);font-weight:500}}
-.tile .num{{font-size:34px;line-height:1.1;font-weight:800;font-variant-numeric:tabular-nums;margin-top:6px}}
-.tile .num small{{font-size:15px;font-weight:500;color:var(--text-2);margin-left:4px}}
-.tile .sub{{font-size:12.5px;color:var(--text-2);margin-top:6px}}
-.bar{{position:relative;height:10px;background:var(--surface-2);border:1px solid var(--border);margin-top:10px;overflow:hidden}}
-.bar > i{{display:block;position:absolute;top:0;bottom:0;left:0}}
-.bar .d{{background:var(--success)}}
-.bar .a{{background:var(--accent)}}
-.bar .b{{background:var(--danger);opacity:.6}}
-.legend{{display:flex;gap:14px;font-size:12px;color:var(--text-2);margin-top:6px;flex-wrap:wrap}}
-.legend i{{display:inline-block;width:10px;height:10px;vertical-align:-1px;margin-right:5px}}
-.cols{{display:grid;grid-template-columns:1fr 1fr;gap:28px}}
-@media (max-width:820px){{.cols{{grid-template-columns:1fr}}}}
-table{{width:100%;border-collapse:collapse;font-size:14px}}
-th{{text-align:left;font-size:12px;letter-spacing:.05em;color:var(--text-2);font-weight:500;padding:8px 10px;border-bottom:2px solid var(--border);white-space:nowrap}}
-td{{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}}
-tr:last-child td{{border-bottom:0}}
-.tid{{font-family:var(--mono);font-size:12.5px;white-space:nowrap;color:var(--text)}}
-.tscroll{{overflow-x:auto;background:var(--surface);border:1px solid var(--border)}}
-.pill{{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap;line-height:1.5}}
-.pill.done{{background:var(--pill-done-bg);color:var(--success)}}
-.pill.active{{background:var(--pill-active-bg);color:var(--warning)}}
-.pill.todo{{background:var(--pill-todo-bg);color:var(--text-2)}}
-.pill.blocked{{background:var(--pill-blocked-bg);color:var(--danger)}}
-.pill.part{{background:var(--pill-active-bg);color:var(--warning)}}
-.workers{{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}}
-.worker{{background:var(--surface);border:1px solid var(--border);border-top:4px solid var(--accent);padding:14px 16px}}
-.worker .tid{{font-size:13px;font-weight:500}}
-.worker .pkg{{font-family:var(--mono);font-size:12px;color:var(--line);margin-left:8px}}
-.worker p{{margin:6px 0 0;font-size:13.5px;color:var(--text)}}
-.worker .st{{margin-top:8px;font-size:12.5px;color:var(--text-2)}}
-.timeline{{list-style:none;margin:0;padding:0;border-left:2px solid var(--border);margin-left:6px}}
-.timeline li{{position:relative;padding:0 0 12px 18px;font-size:13.5px}}
-.timeline li::before{{content:"";position:absolute;left:-7px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--success);border:2px solid var(--bg)}}
-.timeline .t{{font-family:var(--mono);font-size:12px;color:var(--text-2);margin-right:8px}}
-.timeline .k{{font-family:var(--mono);font-size:12px;color:var(--line);margin-right:6px}}
-.layers{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}}
-.layer{{background:var(--surface);border:1px solid var(--border);padding:14px 16px}}
-.layer h3{{margin:0;font-size:14px;font-weight:700}}
-.layer h3 span{{font-family:var(--mono);font-weight:400;font-size:12px;color:var(--text-2);margin-left:8px}}
-.layer ul{{margin:8px 0 0;padding-left:18px;font-size:13.5px}}
-.layer li{{margin:2px 0}}
-.layer .todo-list li{{color:var(--text-2)}}
-.layer .cap{{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);margin-top:10px;font-weight:500}}
-.wave{{font-family:var(--mono);font-size:12px;color:var(--text-2)}}
-.waverow td{{background:var(--surface-2);font-weight:600;font-size:13px;padding:6px 10px}}
-.eta td:first-child{{white-space:nowrap;font-weight:600;width:1%}}
-.dec{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}}
-.dec div{{background:var(--surface);border:1px solid var(--border);padding:12px 14px;font-size:13.5px}}
-.dec b{{display:block;margin-bottom:4px}}
-footer{{margin-top:44px;font-size:12.5px;color:var(--text-2);border-top:1px solid var(--border);padding-top:14px}}
-@media (prefers-reduced-motion:no-preference){{.bar>i{{transition:width .4s ease}}}}
-</style>
+:root[data-theme="dark"]{
+  --bg:#0B1410;--surface:#121C17;--surface-2:#1A2620;--border:#2A3A32;--text:#EDEFEA;--text-2:#A6B0AA;
+  --line:#3FB8C6;--success:#5CC080;--warning:#E0A93A;--danger:#EF7A72;
+  --pill-done-bg:#173A27;--pill-active-bg:#4A3B00;--pill-todo-bg:#1A2620;--pill-blocked-bg:#4A1F1C;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--line);text-decoration:none;border-bottom:1px solid transparent}
+a:hover,a:focus-visible{border-bottom-color:currentColor;outline:none}
+:focus-visible{outline:2px solid var(--line);outline-offset:2px}
+code{font-family:var(--mono);font-size:.85em;background:var(--surface-2);padding:1px 5px;border-radius:3px}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 20px 64px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:3px solid var(--line)}
+.wordmark{font-weight:900;letter-spacing:.12em;font-size:13px;color:var(--text-2);margin:0 0 6px}
+h1{font-size:30px;line-height:1.2;margin:0;font-weight:800;text-wrap:balance}
+.meta{font-family:var(--mono);font-size:12.5px;color:var(--text-2);text-align:right;line-height:1.7}
+.meta strong{color:var(--text);font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);padding:5px 12px;font-size:14px;border-radius:999px}
+.chip b{font-variant-numeric:tabular-nums}
+.chip.warn{border-color:var(--danger);color:var(--danger)}
+.now{margin:16px 0 0;padding:16px 20px;background:var(--surface);border-left:5px solid var(--accent);font-size:17px;line-height:1.65;max-width:78ch;text-wrap:pretty}
+h2{font-size:20px;margin:0 0 4px;font-weight:800;text-wrap:balance}
+.sub{font-size:14px;color:var(--text-2);margin:0 0 14px}
+section{margin-top:40px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+@media (max-width:860px){.cols{grid-template-columns:1fr}}
+/* 로드맵 */
+.road{display:grid;grid-template-columns:repeat(8,minmax(128px,1fr));gap:8px;overflow-x:auto;padding-bottom:6px}
+@media (max-width:1000px){.road{grid-template-columns:repeat(4,minmax(150px,1fr))}}
+@media (max-width:640px){.road{grid-template-columns:repeat(2,minmax(140px,1fr))}}
+.ph{background:var(--surface);border:1px solid var(--border);border-top:4px solid var(--border);padding:12px 12px 10px;min-width:0}
+.ph.done{border-top-color:var(--success)}
+.ph.active{border-top-color:var(--accent)}
+.ph .n{font-family:var(--mono);font-size:12px;color:var(--text-2);letter-spacing:.04em}
+.ph .t{font-weight:800;font-size:15px;line-height:1.3;margin:2px 0 6px;text-wrap:balance}
+.ph .m{font-size:12.5px;color:var(--text-2);line-height:1.45;margin-top:6px;min-height:2.8em}
+.ph .c{font-family:var(--mono);font-size:12px;color:var(--text-2);margin-top:6px;font-variant-numeric:tabular-nums}
+.bar{position:relative;height:8px;background:var(--surface-2);border:1px solid var(--border);margin-top:8px;overflow:hidden}
+.bar > i{display:block;position:absolute;top:0;bottom:0;left:0}
+.bar .d{background:var(--success)}
+.bar .a{background:var(--accent)}
+.bar .b{background:var(--danger);opacity:.6}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--text-2);margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;vertical-align:-1px;margin-right:5px}
+/* 워커 */
+.workers{display:grid;gap:12px}
+.worker{background:var(--surface);border:1px solid var(--border);border-left:5px solid var(--accent);padding:14px 16px}
+.worker .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px}
+.worker .tid{font-family:var(--mono);font-size:14px;font-weight:600}
+.worker .pkg{font-family:var(--mono);font-size:12px;color:var(--line)}
+.worker p{margin:6px 0 0;font-size:15px}
+.worker .st{margin-top:8px;font-size:13.5px;color:var(--text-2)}
+/* 할 일 */
+.todo{display:grid;gap:10px}
+.todo .item{background:var(--surface);border:1px solid var(--border);border-left:5px solid var(--danger);padding:12px 16px}
+.todo .item .head{display:flex;align-items:baseline;gap:10px}
+.todo .item .tid{font-family:var(--mono);font-size:13px;color:var(--danger);font-weight:600}
+.todo .item p{margin:4px 0 0;font-size:15px}
+.todo .item .why{font-size:13.5px;color:var(--text-2);margin-top:4px}
+.empty{color:var(--text-2);font-size:15px}
+/* 다음·오늘 */
+.next{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.next li{background:var(--surface);border:1px solid var(--border);padding:10px 14px;font-size:15px;position:relative;padding-left:38px}
+.next li::before{content:"→";position:absolute;left:14px;top:9px;color:var(--line);font-weight:700}
+.timeline{list-style:none;margin:0;padding:0;border-left:2px solid var(--border);margin-left:6px}
+.timeline li{position:relative;padding:0 0 14px 18px;font-size:14.5px}
+.timeline li::before{content:"";position:absolute;left:-7px;top:8px;width:10px;height:10px;border-radius:50%;background:var(--success);border:2px solid var(--bg)}
+.timeline li.future::before{background:var(--accent)}
+.timeline .t{font-family:var(--mono);font-size:12.5px;color:var(--text-2);margin-right:8px}
+.timeline .lead{font-weight:700}
+.timeline .rest{color:var(--text-2);font-size:13.5px;display:block;margin-top:2px}
+.prs{margin:0 0 12px;font-size:14px;color:var(--text-2)}
+.prs a{font-family:var(--mono);margin-right:6px}
+/* 펼쳐 보기 */
+details{background:var(--surface);border:1px solid var(--border);margin-top:12px}
+details > summary{cursor:pointer;padding:14px 18px;font-weight:700;font-size:16px;list-style:none;display:flex;align-items:baseline;gap:10px}
+details > summary::-webkit-details-marker{display:none}
+details > summary::before{content:"▸";color:var(--line);font-size:14px}
+details[open] > summary::before{content:"▾"}
+details > summary small{font-weight:400;font-size:13px;color:var(--text-2)}
+details > .body{padding:0 18px 18px}
+details.inner{border:0;border-top:1px solid var(--border);margin:0}
+details.inner > summary{font-size:15px;padding:12px 0}
+details.inner > .body{padding:0 0 12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12.5px;letter-spacing:.04em;color:var(--text-2);font-weight:500;padding:8px 10px;border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.tid{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+.muted{color:var(--text-2);font-size:13px}
+.tscroll{overflow-x:auto}
+.pill{display:inline-block;font-size:12.5px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap;line-height:1.5}
+.pill.done{background:var(--pill-done-bg);color:var(--success)}
+.pill.active{background:var(--pill-active-bg);color:var(--warning)}
+.pill.todo{background:var(--pill-todo-bg);color:var(--text-2)}
+.pill.blocked{background:var(--pill-blocked-bg);color:var(--danger)}
+.pill.part{background:var(--pill-active-bg);color:var(--warning)}
+.layers{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.layer{border:1px solid var(--border);padding:12px 14px}
+.layer h3{margin:0;font-size:14.5px;font-weight:700}
+.layer h3 span{font-family:var(--mono);font-weight:400;font-size:12px;color:var(--text-2);margin-left:8px}
+.layer ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}
+.layer li{margin:2px 0}
+.layer .todo-list li{color:var(--text-2)}
+.layer .cap{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);margin-top:10px;font-weight:500}
+.dec{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.dec div{border:1px solid var(--border);padding:12px 14px;font-size:13.5px}
+.dec b{display:block;margin-bottom:4px;font-size:14px}
+.gloss{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:6px 24px;margin:0;font-size:14px}
+.gloss div{display:grid;grid-template-columns:120px 1fr;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)}
+.gloss dt{font-family:var(--mono);font-size:13px;font-weight:600;margin:0}
+.gloss dd{margin:0;color:var(--text-2)}
+.gate{font-size:14px;color:var(--text-2);white-space:pre-wrap;line-height:1.7}
+footer{margin-top:44px;font-size:13px;color:var(--text-2);border-top:1px solid var(--border);padding-top:14px}
+@media (prefers-reduced-motion:no-preference){.bar>i{transition:width .4s ease}}
+"""
+
+def bar(c, total):
+    d = c["done"] / total * 100 if total else 0; ac = c["active"] / total * 100 if total else 0; b = c["blocked"] / total * 100 if total else 0
+    return f'<div class="bar"><i class="d" style="width:{d:.1f}%"></i><i class="a" style="left:{d:.1f}%;width:{ac:.1f}%"></i><i class="b" style="left:{d+ac:.1f}%;width:{b:.1f}%"></i></div>'
+
+def phase_state(rows):
+    if not rows: return "todo"
+    c = counts(rows)
+    if c["done"] == len(rows): return "done"
+    if c["active"] or c["done"]: return "active"
+    return "todo"
+
+def lead_split(text):
+    """타임라인 문장을 '굵은 앞부분 + 나머지'로 나눈다(첫 ':' 또는 첫 마침표 기준)."""
+    m = re.search(r"[:：]\s", text)
+    if m and m.start() < 70:
+        return text[:m.start()], text[m.end():]
+    m = re.search(r"\.\s", text)
+    if m and m.start() < 70:
+        return text[:m.start() + 1], text[m.end():]
+    return text, ""
+
+def render():
+    p = []; a = p.append
+    prs_today = [m for m in merges if m["date"] == now.strftime("%Y-%m-%d")]
+    open_u = [u for u in uacts if u["status"] == "todo"]
+    deferred_u = [u for u in uacts if u["status"] == "deferred"]
+    done_u = [u for u in uacts if u["status"] in ("completed", "done")]
+    cur_phase = next((n for n, _, sec, _ in PHASES if sec and phase_state(phase_rows[n]) == "active"), None)
+
+    a(f"""<title>OFFSIDE 개발 현황판</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>{CSS}</style>
 <div class="wrap">
 <header>
   <div>
     <p class="wordmark">OFFSIDE · 축구 커리어 시뮬레이터</p>
     <h1>개발 현황판</h1>
   </div>
-  <div class="meta">갱신 <strong>{esc(updated)}</strong><br>정본 <a href="{GH}/blob/main/docs/tracking/board.md" target="_blank" rel="noopener">docs/tracking/board.md</a> · <a href="{GH}/pulls?q=is%3Apr" target="_blank" rel="noopener">PR 목록</a></div>
+  <div class="meta">갱신 <strong>{esc(updated)}</strong><br>정본 <a href="{GH}/blob/main/docs/tracking/board.md" target="_blank" rel="noopener">board.md</a> · <a href="{GH}/blob/main/docs/tracking/decision-log.md" target="_blank" rel="noopener">결정 로그</a> · <a href="{GH}/pulls?q=is%3Apr" target="_blank" rel="noopener">PR 목록</a></div>
 </header>
-<p class="gate">{esc(gate)}</p>
+<div class="chips">
+  <span class="chip">현재 <b>{esc(cur_phase or "-")}</b> 진행 중</span>
+  <span class="chip">워커 <b>{len(active)}</b>명 작업 중</span>
+  <span class="chip">오늘 머지 <b>{len(prs_today)}</b>건</span>
+  <span class="chip{' warn' if open_u else ''}">사용자 할 일 <b>{len(open_u)}</b>건</span>
+</div>
+<p class="now">{esc(NOW)}</p>
 """)
-    # tiles
-    total0 = len(phase0); total1 = len(phase1)
-    prs_today = [m for m in merges if m["date"] == now.strftime("%Y-%m-%d")]
-    def bar(c, total):
-        d = c["done"] / total * 100 if total else 0; ac = c["active"] / total * 100 if total else 0; b = c["blocked"] / total * 100 if total else 0
-        return f'<div class="bar"><i class="d" style="width:{d:.1f}%"></i><i class="a" style="left:{d:.1f}%;width:{ac:.1f}%"></i><i class="b" style="left:{d+ac:.1f}%;width:{b:.1f}%"></i></div>'
-    a('<div class="tiles">')
-    a(f'<div class="tile"><div class="label">Phase 0 · 기반</div><div class="num">{c0["done"]}<small>/ {total0} 완료</small></div>{bar(c0,total0)}<div class="sub">{c0["blocked"]}건 사용자 액션 대기(U-002)</div></div>')
-    a(f'<div class="tile"><div class="label">Phase 1 · 첫 계약까지</div><div class="num">{c1["done"]}<small>/ {total1} 완료</small></div>{bar(c1,total1)}<div class="sub">{c1["active"]}건 진행 중 · {c1["todo"]}건 예정</div></div>')
-    a(f'<div class="tile"><div class="label">지금 도는 워커</div><div class="num">{len(active)}<small>명</small></div><div class="sub">Sonnet 5 · Orca 워크트리 · 최대 4명 병렬</div></div>')
-    a(f'<div class="tile"><div class="label">오늘 머지된 PR</div><div class="num">{len(prs_today)}<small>건</small></div><div class="sub">첫 머지 {prs_today[-1]["time"] if prs_today else "-"} · 최근 {prs_today[0]["time"] if prs_today else "-"}</div></div>')
-    a('</div><div class="legend"><span><i style="background:var(--success)"></i>완료</span><span><i style="background:var(--accent)"></i>진행 중</span><span><i style="background:var(--danger);opacity:.6"></i>사용자 액션 대기</span><span><i style="background:var(--surface-2);border:1px solid var(--border)"></i>예정</span></div>')
 
-    # workers + timeline
-    a('<div class="cols"><section><h2>지금 돌고 있는 워커 <small>docs/tracking/board.md · 진행 중</small></h2>')
+    # 1. 로드맵
+    a('<section><h2>어디까지 왔나</h2><p class="sub">Phase 8단계 로드맵. 막대는 각 Phase 작업의 완료·진행·사용자 대기 비율입니다.</p><div class="road">')
+    for name, title, sec, meaning in PHASES:
+        rows = phase_rows[name]; st = phase_state(rows); c = counts(rows) if rows else None
+        label = {"done": "완료", "active": "진행 중", "todo": "예정"}[st]
+        a(f'<div class="ph {st}"><div class="n">{esc(name)}</div><div class="t">{esc(title)}</div>{pill({"done":"done","active":"in-progress","todo":"todo"}[st])}')
+        if rows:
+            a(f'{bar(c, len(rows))}<div class="c">{c["done"]}/{len(rows)} 완료' + (f' · {c["active"]} 진행' if c["active"] else '') + (f' · {c["blocked"]} 대기' if c["blocked"] else '') + '</div>')
+        a(f'<div class="m">{esc(meaning)}</div></div>')
+    a('</div><div class="legend"><span><i style="background:var(--success)"></i>완료</span><span><i style="background:var(--accent)"></i>진행 중</span><span><i style="background:var(--danger);opacity:.6"></i>사용자 액션 대기</span><span><i style="background:var(--surface-2);border:1px solid var(--border)"></i>예정</span></div></section>')
+
+    # 2. 워커 + 사용자 할 일
+    a('<div class="cols"><section><h2>지금 돌고 있는 워커</h2><p class="sub">Sonnet 5 세션이 Orca 워크트리 하나씩 맡아 브리프대로 구현합니다. 동시 최대 3명.</p>')
     if active:
         a('<div class="workers">')
-        p1 = {r["id"]: r for r in phase1}
         for w in active:
-            r = p1.get(w["id"], {})
-            a(f'<div class="worker"><span class="tid">{esc(w["id"])}</span><span class="pkg">{esc(r.get("pkg",""))}</span><p>{esc(r.get("task",""))}</p><div class="st">{md_inline(w["status"])} · 시작 {esc(w["start"])}</div></div>')
+            r = all_rows.get(w["id"], {})
+            a(f'<div class="worker"><div class="head"><span class="tid">{esc(w["id"])}</span><span class="pkg">{esc(r.get("area",""))}</span>{pill("in-progress")}</div><p>{md_inline(r.get("task",""))}</p><div class="st">{md_inline(w["status"])}<br>시작 {esc(w["start"])} · {esc(w["worker"])}</div></div>')
         a('</div>')
     else:
-        a('<p>지금은 도는 워커가 없습니다.</p>')
-    a('</section><section><h2>오늘 머지 타임라인 <small>git log origin/main</small></h2><ul class="timeline">')
-    for m in prs_today:
-        link = f'<a href="{GH}/pull/{m["pr"]}" target="_blank" rel="noopener">#{m["pr"]}</a> ' if m["pr"] else ""
-        a(f'<li><span class="t">{esc(m["time"])}</span><span class="k">{esc(m["task"])}</span>{link}{esc(m["title"])}</li>')
+        a('<p class="empty">지금은 도는 워커가 없습니다.</p>')
+    a('</section><section><h2>사용자가 해야 할 일</h2><p class="sub">계정·결제·승인처럼 사용자만 할 수 있는 일입니다. 위에 있을수록 급합니다.</p>')
+    if open_u:
+        a('<div class="todo">')
+        for u in open_u:
+            a(f'<div class="item"><div class="head"><span class="tid">{esc(u["id"])}</span>{pill("blocked")}</div><p>{md_inline(u["task"])}</p><div class="why">{md_inline(u["note"])}</div></div>')
+        a('</div>')
+    else:
+        a('<p class="empty">지금 기다리는 사용자 액션이 없습니다.</p>')
+    if deferred_u:
+        a(f'<details class="inner" style="margin-top:12px"><summary>보류 중 {len(deferred_u)}건 <small>출시 준비 단계에서 다시 봅니다</small></summary><div class="body"><div class="tscroll"><table><tbody>')
+        for u in deferred_u:
+            a(f'<tr><td class="tid">{esc(u["id"])}</td><td>{md_inline(u["task"])}</td><td class="muted">{md_inline(u["note"])}</td></tr>')
+        a('</tbody></table></div></div></details>')
+    if done_u:
+        a(f'<details class="inner"><summary>끝난 사용자 액션 {len(done_u)}건</summary><div class="body"><div class="tscroll"><table><tbody>')
+        for u in done_u:
+            a(f'<tr><td class="tid">{esc(u["id"])}</td><td>{md_inline(u["task"])}</td><td class="muted">{md_inline(u["note"])}</td></tr>')
+        a('</tbody></table></div></div></details>')
+    a('</section></div>')
+
+    # 3. 다음 + 오늘
+    future = [d for t, d in ETA if t.endswith("~")]
+    today_entries = [(t, d) for t, d in ETA if t.startswith(today_md + " ")]
+    a('<div class="cols"><section><h2>다음에 올 일</h2><p class="sub">지금 워커가 끝나면 이어서 투입할 작업입니다.</p><ul class="next">')
+    for chunk in future:
+        for item in re.split(r"\.\s+", chunk.strip().rstrip(".")):
+            if item.strip(): a(f'<li>{md_inline(item.strip())}</li>')
+    a('</ul></section><section><h2>오늘 한 일</h2><p class="sub">머지된 PR과 주요 사건, 시간순.</p>')
+    if prs_today:
+        a('<p class="prs">머지된 PR: ' + " ".join(f'<a href="{GH}/pull/{m["pr"]}" target="_blank" rel="noopener">#{m["pr"]}</a>' for m in reversed(prs_today) if m["pr"]) + '</p>')
+    a('<ul class="timeline">')
+    for t, d in today_entries:
+        lead, rest = lead_split(d)
+        a(f'<li><span class="t">{esc(t)}</span><span class="lead">{md_inline(lead)}</span>' + (f'<span class="rest">{md_inline(rest)}</span>' if rest else '') + '</li>')
     a('</ul></section></div>')
 
-    # screens + layers
-    a('<section><h2>화면·기능 구현 현황 <small>무엇이 실제로 보이는가</small></h2><div class="cols">')
+    # 4. 펼쳐 보기: 작업 보드
+    a('<section><h2>더 보기</h2><p class="sub">자세한 표는 접어 두었습니다. 제목을 누르면 펼쳐집니다.</p>')
+    a(f'<details open><summary>작업 보드 <small>Phase별 작업 목록과 상태. 지금 진행 중인 Phase가 펼쳐져 있습니다</small></summary><div class="body">')
+    for name, title, sec, meaning in PHASES:
+        rows = phase_rows[name]
+        if not rows: continue
+        st = phase_state(rows); c = counts(rows)
+        a(f'<details class="inner"{" open" if st == "active" else ""}><summary>{esc(name)} · {esc(title)} <small>{c["done"]}/{len(rows)} 완료</small></summary><div class="body"><div class="tscroll"><table><thead><tr><th>ID</th><th>영역</th><th>작업</th><th>상태</th><th>메모</th></tr></thead><tbody>')
+        for r in rows:
+            area = " · ".join(x for x in [r["track"] and f"트랙 {r['track']}", r["area"], r["wave"] and f"Wave {r['wave']}"] if x)
+            a(f'<tr><td class="tid">{esc(r["id"])}</td><td class="muted">{esc(area)}</td><td>{md_inline(r["task"])}</td><td>{pill(r["status"])}</td><td class="muted">{md_inline(r["note"])}</td></tr>')
+        a('</tbody></table></div></div></details>')
+    if release_rows:
+        c = counts(release_rows)
+        a(f'<details class="inner"><summary>미니앱 출시 준비 <small>{c["done"]}/{len(release_rows)} 완료 · 사용자 결정 시 착수</small></summary><div class="body"><div class="tscroll"><table><thead><tr><th>ID</th><th>작업</th><th>상태</th></tr></thead><tbody>')
+        for r in release_rows:
+            a(f'<tr><td class="tid">{esc(r["id"])}</td><td>{md_inline(r["task"])}</td><td>{pill(r["status"])}</td></tr>')
+        a('</tbody></table></div></div></details>')
+    a('</div></details>')
+
+    # 화면·패키지
+    a('<details><summary>무엇이 실제로 보이나 <small>화면 구현 현황과 패키지별 구현 내용</small></summary><div class="body">')
     a('<div class="tscroll"><table><thead><tr><th>화면</th><th>이름</th><th>상태</th><th>담당 작업</th></tr></thead><tbody>')
     SP = {"구현": "done", "부분": "part", "자리표시": "todo", "예정": "todo"}
     for sid, name, st, note in SCREENS:
-        a(f'<tr><td class="tid">{esc(sid)}</td><td>{esc(name)}</td><td><span class="pill {SP[st]}">{esc(st)}</span></td><td style="color:var(--text-2);font-size:13px">{esc(note)}</td></tr>')
-    a('</tbody></table></div>')
-    a('<div class="layers">')
+        a(f'<tr><td class="tid">{esc(sid)}</td><td>{esc(name)}</td><td><span class="pill {SP[st]}">{esc(st)}</span></td><td class="muted">{esc(note)}</td></tr>')
+    a('</tbody></table></div><div class="layers" style="margin-top:16px">')
     for key, title, done, todo in LAYERS:
         a(f'<div class="layer"><h3>{esc(key)}<span>{esc(title)}</span></h3>')
         if done:
             a('<div class="cap">구현됨</div><ul>' + "".join(f"<li>{esc(x)}</li>" for x in done) + "</ul>")
         if todo:
-            a('<div class="cap">다음</div><ul class="todo-list">' + "".join(f"<li>{esc(x)}</li>" for x in todo) + "</ul>")
+            a('<div class="cap">진행 중·다음</div><ul class="todo-list">' + "".join(f"<li>{esc(x)}</li>" for x in todo) + "</ul>")
         a('</div>')
-    a('</div></div></section>')
+    a('</div></div></details>')
 
-    # phase 1 board
-    a('<section><h2>Phase 1 작업 보드 <small>15건 · 4 Wave · 의존 순서</small></h2><div class="tscroll"><table><thead><tr><th>ID</th><th>패키지</th><th>작업</th><th>선행</th><th>상태</th><th>메모</th></tr></thead><tbody>')
-    def wave_key(r):
-        m = re.match(r"(\d)", r["wave"]); return int(m.group(1)) if m else 9
-    cur = None
-    for r in sorted(phase1, key=lambda r: (wave_key(r), r["id"])):
-        wk = wave_key(r)
-        if wk != cur:
-            cur = wk
-            a(f'<tr class="waverow"><td colspan="6">Wave {wk}</td></tr>')
-        a(f'<tr><td class="tid">{esc(r["id"])}</td><td class="wave">{esc(r["pkg"])}</td><td>{md_inline(r["task"])}</td><td style="font-size:12.5px;color:var(--text-2)">{esc(r["deps"])}</td><td>{pill(r["status"])}</td><td style="font-size:12.5px">{md_inline(r["note"])}</td></tr>')
-    a('</tbody></table></div></section>')
-
-    # phase 0
-    a('<section><h2>Phase 0 기반 작업 <small>15건</small></h2><div class="tscroll"><table><thead><tr><th>ID</th><th>작업</th><th>상태</th><th>결과</th></tr></thead><tbody>')
-    for r in phase0:
-        a(f'<tr><td class="tid">{esc(r["id"])}</td><td>{md_inline(r["task"])}</td><td>{pill(r["status"])}</td><td style="font-size:12.5px">{md_inline(r["note"])}</td></tr>')
-    a('</tbody></table></div></section>')
-
-    # user actions
-    a('<section><h2>사용자 액션 <small>사용자만 할 수 있는 일</small></h2><div class="tscroll"><table><thead><tr><th>ID</th><th>내용</th><th>상태</th><th>메모</th></tr></thead><tbody>')
-    for r in uacts:
-        a(f'<tr><td class="tid">{esc(r["id"])}</td><td>{md_inline(r["task"])}</td><td>{pill(r["status"])}</td><td style="font-size:12.5px;color:var(--text-2)">{md_inline(r["note"])}</td></tr>')
-    a('</tbody></table></div></section>')
-
-    # eta + decisions
-    a('<div class="cols"><section><h2>예상 일정 <small>2026-09-02 19시 기준</small></h2><div class="tscroll"><table class="eta"><tbody>')
+    # 진행 기록(지난 날)
+    days = []
     for t, d in ETA:
-        a(f'<tr><td>{esc(t)}</td><td>{esc(d)}</td></tr>')
-    a('</tbody></table></div><p style="font-size:12.5px;color:var(--text-2);margin-top:8px">변수: 리뷰 수정 라운드 수, T-1-009의 크기, 동기화 충돌 처리(T-1-011)의 난도, Google 로그인 실검증(U-003).</p></section>')
-    a('<section><h2>주요 결정 <small>docs/tracking/decision-log.md</small></h2><div class="dec">')
+        if t.endswith("~"): continue
+        day = t.split(" ")[0]
+        if not days or days[-1][0] != day: days.append((day, []))
+        days[-1][1].append((t, d))
+    a('<details><summary>진행 기록 <small>날짜별 머지·투입·결정, 시간순</small></summary><div class="body">')
+    for day, items in days:
+        a(f'<details class="inner"{" open" if day == today_md else ""}><summary>{esc(day)} <small>{len(items)}건</small></summary><div class="body"><ul class="timeline">')
+        for t, d in items:
+            lead, rest = lead_split(d)
+            a(f'<li><span class="t">{esc(t.split(" ",1)[1] if " " in t else t)}</span><span class="lead">{md_inline(lead)}</span>' + (f'<span class="rest">{md_inline(rest)}</span>' if rest else '') + '</li>')
+        a('</ul></div></details>')
+    a('</div></details>')
+
+    # 결정
+    a(f'<details><summary>주요 결정 <small>{len(DECISIONS)}건 · 최근 것이 위 · 원문은 결정 로그</small></summary><div class="body"><div class="dec">')
     for t, d in DECISIONS:
         a(f'<div><b>{esc(t)}</b>{esc(d)}</div>')
-    a('</div></section></div>')
+    a('</div></div></details>')
+
+    # 현재 게이트 원문
+    a('<details><summary>현재 게이트 원문 <small>board.md의 "현재 게이트" 문단 그대로</small></summary><div class="body"><p class="gate">' + esc(gate) + '</p></div></details>')
+
+    # 용어
+    a('<details><summary>용어 안내 <small>이 페이지에 나오는 번호와 말</small></summary><div class="body"><dl class="gloss">')
+    for k, v in GLOSSARY:
+        a(f'<div><dt>{esc(k)}</dt><dd>{esc(v)}</dd></div>')
+    a('</dl></div></details></section>')
+
     a(f'<footer>이 페이지는 <code>docs/tracking/board.md</code>와 git 로그에서 생성됩니다. 오케스트레이터가 머지·투입 때마다 다시 게시합니다. 마지막 갱신 {esc(updated)}.</footer></div>')
     return "\n".join(p)
 
 open(OUT, "w", encoding="utf-8").write(render())
-print(OUT, len(open(OUT).read()), "bytes; phase0", c0, "phase1", c1, "active", len(active), "merges today", len([m for m in merges if m['date']==now.strftime('%Y-%m-%d')]))
+print(OUT, len(open(OUT).read()), "bytes; phases", {n: counts(phase_rows[n]) for n in phase_rows if phase_rows[n]}, "active", len(active), "merges today", len([m for m in merges if m['date']==now.strftime('%Y-%m-%d')]))

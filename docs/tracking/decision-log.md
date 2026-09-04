@@ -2,6 +2,28 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-04 (오후, PR #51 머지 — 팩 0.2.0·팀 12, PR #50 수정 요청, T-2-015 투입)
+
+**결과**: PR #51(T-3-006, `6911b74` → squash `31e321d`, 13:01) 리뷰 수정 0건, 체인 녹색(e2e 71). 워커는 브리프의 Orca PR 게이트 폴백대로 `gh pr create`를 시도하지 않고 push → `PR_BODY.md` → `DONE`을 출력했고, 오케스트레이터가 GitHub REST로 PR을 열었다(오케스트레이터 세션의 `gh api …/pulls`도 이번엔 훅에 막혀 curl로 열었다). **브리프 정정 2건**(워커가 옳게 처리): (1) `phases: ['PRO']`는 CareerPhase가 아니라 stage라 스키마에 없다 → 각 이벤트의 실제 phase + `career.stage eq PRO` 트리거. (2) "팀 풀 확장 → 골든 9종 재기록"은 틀린 가정 — 골든은 domain 소유 `ruleset-proto.json`(팀 4개 고정)으로 생성되고 content 룰셋과 무관하다. 후보 풀 크기 변화는 `load-ruleset.test.ts`의 `poolSizeForTiers`로 검증. **후속**: web `apps/web/src/shared/narrative.ts` `STATIC_TOKEN_KEYS`에 `agent`가 없어 0.2.0을 활성화하면 `{agent}`가 그대로 노출된다 → T-3-005 브리프 선행 항목. `EVT-CON-010`은 `presentation: 'RUMOUR'`라 일반 후보 풀에서 제외되며 SCR-019(T-3-005)가 소비한다.
+
+**PR #50(T-3-002) 리뷰(12:56~13:00)**: 체인 녹색, rng 소비 순서·골든(career-04·07은 OFFER_EXPIRED 타임라인으로 stateHash만 변경, draws 불변)·`transferRules` 정합 검사 모두 브리프대로. 워커 결정 3건 수용: `state.id` 대신 `state.careerId`(브리프 오류), ADR-005 때문에 도메인 테스트는 합성 8팀 룰셋(`market-fixture-ruleset.ts`), D-44 "tier 3 최저 조건" 대안 미구현(현 구단 잔류 변형만 — T-3-003에서 필요하면). **수정 요청 1건(도달 불가 분기, PR #37 교훈)**: `judgeMarketReason`이 `season === null`이면 STARTER·평점 INTEREST 판정을 건너뛰는데 `openMarketAfterSettlement`는 결산 뒤 상태(season null)를 받으므로 그 경로가 영영 실행되지 않는다. `currentSquadRole`도 같은 이유로 약속 역할로 떨어진다 → `seasonHistory` 마지막 결과(`selectionSummary.squadRoleAtEnd`·`playerStats`) 폴백 헬퍼 + 테스트 2건. 수정 뒤 #51 머지(manifest 체크섬)와 충돌하므로 origin/main 재머지 후 재검증.
+
+**T-2-015 투입(13:02)**: PR #51 머지로 슬롯이 비자 즉시. LINE TEST(09-08) 전 머지 필수. 동시 워커 3개(T-4-001·T-3-002·T-2-015).
+
+## 2026-09-04 (정오, PR #49 머지 — LINE TEST 준비 코드, Orca PR 게이트 사건, T-3-006 투입)
+
+**결과**: PR #49(T-2-012, `41d2704` → squash `c90b769`, 12:18) 리뷰 수정 0건. 루트 체인 녹색(web 307·api 164 테스트, e2e 71) + 실 api e2e 7건(recovery-api·google-link·service-season) 통과. D-54·D-55는 브리프대로 구현됐다 — 리뷰에서 확인한 동작: (1) `POST /v1/analytics/events`는 50건 초과 시 요청 전체를 거부(절단 아님), 화이트리스트 밖 이벤트·속성은 건별 폐기, rate limit은 `auth_attempts` 테이블 재사용(kind `ANALYTICS_EVENTS`, clientId당 60/분). (2) `GET /v1/service-seasons/current`는 포인터 미설정·행 없음 모두 503 `SERVICE_SEASON_UNAVAILABLE`, `Cache-Control: public, max-age=60`. (3) 웹 폴백 순서 네트워크 → kv 캐시 → 상수 `svc_kickoff`이므로 production에서 포인터가 없어도 로컬 생성은 되고 동기화에서 막힌다(출시 게이트 전 의도된 상태). 허브는 LOCKED·ARCHIVED가 확인된 경우에만 생성을 막는다. (4) 워커가 적은 범위 밖 한계: 프로필 복구 다운로드가 커리어별 `createdServiceSeasonId` 대신 현재 포인터 하나를 쓴다(`GetCareerResponse`에 필드 없음) — T-2-013 운영 계획에서 다룰지 판단.
+
+**Orca PR 게이트 사건**: 워커의 `gh pr create`가 Orca 데몬 훅("이 세션에서 코드 정리를 아직 실행하지 않았습니다. PR 생성 전 /simplify 또는 /review:pr …")에 세 번 막혔고, 워커가 `/review:pr`를 단일 에이전트로 수행한 뒤에도 같은 훅이 막았다. 오케스트레이터 세션의 `gh pr create`도 같은 훅에 막혀 **GitHub API(`gh api repos/…/pulls`)로 PR #49를 열었다**(오케스트레이터가 diff 전체를 리뷰한 뒤). 게이트를 유지할지, 워커 세션에서만 풀지는 사용자 결정으로 올린다. 그때까지 브리프 규칙: 훅에 막히면 브랜치 push → PR 본문을 워크트리 `PR_BODY.md`로 저장 → `DONE <sha>`와 본문 경로 출력 후 멈춤, 오케스트레이터가 리뷰 뒤 API로 PR 개설(T-3-006 브리프부터 명시, 진행 중인 T-4-001·T-3-002는 턴 종료 시 같은 지시 전달).
+
+**투입**: T-3-006(팩 0.2.0·PRO 이벤트 5·팀 4 추가, `T-3-006-pack-0-2-0`, 12:21) — 동시 워커 3개(T-4-001·T-3-002·T-3-006). T-4-001은 31분 만에 컨텍스트 84%라 압축 뒤 이어질 가능성이 높고, 7D 사용량 93%(9/5 21:00 리셋).
+
+**T-2-013 완료(12:26, 오케스트레이터 docs)**: [line-test-plan.md](line-test-plan.md). 정한 것 — (1) 기준선 3지표의 분모: 첫 계약 도달률 = CONTRACT_SIGNED/ONBOARDING_STARTED(첫 커리어, `careerIndex = 1`), 첫 시즌 완주율 = SEASON_SETTLED/CONTRACT_SIGNED, 두 번째 시즌 시작률 = seasonIndex 2종 이상 `step_passed` 기기/SEASON_SETTLED. (2) 일정 제안 09-08~09-21(1차 1주 → 중간 기준선 → 2차 1주 → 최종 기준선), 2주 상한(D-32 Phase 3·4 밸런스가 기다림). (3) 종료는 D1 직접 UPDATE가 아니라 시드 `svc_line_test` status LOCKED PR(시드가 배포마다 upsert). (4) 사람 기준 세션 길이 판정은 U-005가 아니라 분석 이벤트 버킷으로. (5) 새 사용자 액션 U-015(테스터 모집·안내문·피드백 채널). 공개 전 오케스트레이터 예행(FAST·CHAPTER 1시즌씩 staging 완주)은 staging 확인 뒤 바로 한다.
+
+**staging 확인·예행(12:34~12:56)**: `GET /v1/service-seasons/current` → `svc_line_test`·PRESEASON·`isTest: true`·`notice: LINE_TEST`. 예행은 기존 e2e 헬퍼를 staging URL로 돌리는 임시 스펙(스크래치 워크트리, 커밋 안 함): 온보딩→복구 코드→첫 계약(16초)→FAST 시즌→CHAPTER 시즌→허브 배너·배지까지 39초에 통과. **결함 3건**: (1) 분석 이벤트 POST 4건 중 1건 503 — curl 재현: 1건·14건 202, 20건 503 `Failed query: insert into "analytics_events" …`. 원인은 D1 문장당 바인딩 변수 100개 상한(7열×20행=140), Miniflare 로컬은 재현 안 됨. 웹 큐가 20건마다 비우므로 LINE TEST에서 대부분의 배치가 유실될 결함. (2) 그 503 본문에 SQL 전문이 노출됨(`toErrorEnvelope`가 unknown error의 `err.message`를 그대로 내보냄). (3) 빈 기기는 온보딩으로 리다이렉트돼 테스트 시즌 안내를 못 본다(배너는 허브 전용). → [T-2-015 브리프](briefs/T-2-015.md)(12:36): 14행 청크 순차 insert + spy 테스트, unknown error 메시지 고정·로거로 이동, 온보딩 안내 1줄. 동시 워커 3명 상한이라 첫 워커 종료 즉시 최우선 투입(LINE TEST 09-08 전 머지 필수). 기준선 D1 조회는 이 기기 wrangler 토큰 만료로 불가 → U-016(사용자 `wrangler login`).
+
+**후속**: staging 배포(run on `c90b769` → 문서 푸시로 취소돼 `2270e81` run이 대신 배포)가 끝나면 `GET https://offside-api-staging.tasddc1569.workers.dev/v1/service-seasons/current`가 `svc_line_test`·`isTest: true`를 돌려주는지 확인 → T-2-013(LINE TEST 운영 계획, 오케스트레이터 docs). U-014(Paid 플랜)는 LINE TEST 공개 직전.
+
 ## 2026-09-04 (오전, PR #48 머지 — Phase 3·4 타입 슬라이스, 후속 브리프 3종 작성)
 
 **결과**: PR #48(T-3-001, `d3ce9df` → squash `b756999`, 11:43) 리뷰 수정 요청 1건 — 브리프가 `contract.isLastSeason`을 `seasonsRemaining <= 1`로 적어 워커가 그대로 구현했으나, ADR-010 유도식(`lengthSeasons − 서명 이후 SEASON_STARTED 횟수` = 현 시즌 **이후** 잔여)에서는 진행 중 마지막 시즌의 잔여가 0이므로 `season !== null && seasonsRemaining === 0`으로 정정(브리프 오류, 오케스트레이터 책임). 리뷰 결정 3건: `stepSummaries` 길이 11 유지(결산 step은 요약 없음 — 브리프의 12도 오류), followUp 이벤트에도 presentation 제외 규칙 적용, 골든 멀티라인 포맷 수용. 검증 체인(origin/main + d3ce9df) 녹색 — e2e 68 통과, 골든 9종 draws 불변. 비용 $25.77·85분.

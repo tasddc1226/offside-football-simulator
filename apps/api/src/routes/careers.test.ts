@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { sha256Hex } from '../db/hash.js';
 import { upsertServiceSeason } from '../db/repos/serviceSeasons.js';
-import { careers, commandLog, snapshots } from '../db/schema.js';
+import { careers, commandLog, serviceSeasons, snapshots } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
@@ -463,6 +463,45 @@ describe('careers routes', () => {
       expect((ErrorEnvelopeSchema.parse(await res.json()).error.details as { reason?: string }).reason).toBe(
         'CAREER_ID_MISMATCH',
       );
+    });
+
+    it('T-2-012 D-54: LOCKED 시즌으로 신규 생성하면 409 SERVICE_SEASON_CLOSED', async () => {
+      const { cookie } = await issueCookie(ctx);
+      const app = createApp();
+      const careerId = 'car_integrity_locked_season';
+      const lockedSeasonId = await ensureServiceSeason(ctx, 'svc_locked');
+      await ctx.db.update(serviceSeasons).set({ status: 'LOCKED' }).where(eq(serviceSeasons.id, lockedSeasonId));
+
+      const body = await putCareerBody({
+        careerId,
+        baseRevision: 0,
+        commandRevisions: [1],
+        snapshotRevision: 1,
+        createdServiceSeasonId: lockedSeasonId,
+      });
+
+      const res = await app.request(`/v1/careers/${careerId}`, putInit({ body, ifMatch: '0', cookie }), ctx.env);
+      expect(res.status).toBe(409);
+      expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('SERVICE_SEASON_CLOSED');
+    });
+
+    it('T-2-012 D-54: PRESEASON 시즌은 신규 생성을 허용한다', async () => {
+      const { cookie } = await issueCookie(ctx);
+      const app = createApp();
+      const careerId = 'car_integrity_preseason';
+      const preseasonId = await ensureServiceSeason(ctx, 'svc_preseason');
+      await ctx.db.update(serviceSeasons).set({ status: 'PRESEASON' }).where(eq(serviceSeasons.id, preseasonId));
+
+      const body = await putCareerBody({
+        careerId,
+        baseRevision: 0,
+        commandRevisions: [1],
+        snapshotRevision: 1,
+        createdServiceSeasonId: preseasonId,
+      });
+
+      const res = await app.request(`/v1/careers/${careerId}`, putInit({ body, ifMatch: '0', cookie }), ctx.env);
+      expect(res.status).toBe(200);
     });
 
     it('createdServiceSeasonId가 없으면 400 SERVICE_SEASON_UNKNOWN', async () => {

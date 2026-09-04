@@ -12,6 +12,7 @@ import {
   MergeResponseSchema,
   ProfileSchema,
   RecoverProfileResponseSchema,
+  ServiceSeasonCurrentSchema,
   type CareerSummaryList,
   type DeleteProfileStartResponse,
   type ErrorCode,
@@ -21,6 +22,7 @@ import {
   type MergeResponse,
   type Profile,
   type RecoverProfileResponse,
+  type ServiceSeasonCurrent,
 } from '@offside/contracts';
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8787';
@@ -164,4 +166,9 @@ export function submitGoogleMerge(mergeChoice: MergeChoice): Promise<ApiResult<M
 /** API-AUTH-006. 성공 시 204(본문 없음). */
 export function unlinkGoogle(): Promise<ApiResult<undefined>> {
   return apiFetch('/v1/auth/google/unlink', { method: 'POST' });
+}
+
+/** API-SVC-001. 프로필 세션이 필요 없는 공개 엔드포인트. */
+export function getServiceSeasonCurrent(): Promise<ApiResult<ServiceSeasonCurrent>> {
+  return apiFetch('/v1/service-seasons/current', { method: 'GET' }, ServiceSeasonCurrentSchema);
 }

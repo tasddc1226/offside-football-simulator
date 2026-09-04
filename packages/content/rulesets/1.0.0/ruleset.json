@@ -1233,6 +1233,46 @@
       "leagueId": "league-tier3",
       "tacticalStyleId": "counter",
       "squadStrength": 48
+    },
+    {
+      "id": "geumbit-fc",
+      "name": "금빛 FC",
+      "leagueTier": 1,
+      "reputation": 4,
+      "wageBandId": "tier1",
+      "leagueId": "league-tier1",
+      "tacticalStyleId": "press",
+      "squadStrength": 78
+    },
+    {
+      "id": "eunha-rovers",
+      "name": "은하 로버스",
+      "leagueTier": 2,
+      "reputation": 3,
+      "wageBandId": "tier2",
+      "leagueId": "league-tier2",
+      "tacticalStyleId": "press",
+      "squadStrength": 60
+    },
+    {
+      "id": "gangnaru-united",
+      "name": "강나루 유나이티드",
+      "leagueTier": 3,
+      "reputation": 2,
+      "wageBandId": "tier3",
+      "leagueId": "league-tier3",
+      "tacticalStyleId": "possession",
+      "squadStrength": 50
+    },
+    {
+      "id": "dalbit-town-fc",
+      "name": "달빛 타운 FC",
+      "leagueTier": 3,
+      "reputation": 1,
+      "wageBandId": "tier3",
+      "leagueId": "league-tier3",
+      "tacticalStyleId": "counter",
+      "squadStrength": 45
     }
   ],
   "offerRules": {

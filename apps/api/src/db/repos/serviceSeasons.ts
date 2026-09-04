@@ -1,16 +1,15 @@
-import { and, eq, lte, gte } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { serviceSeasons } from '../schema.js';
 
 export type ServiceSeasonRecord = typeof serviceSeasons.$inferSelect;
 
-/** `status = 'ACTIVE'`이고 기간 안(`startsAt <= now <= endsAt`)인 것 1개. */
-export async function getCurrentServiceSeason(db: Db, now: string): Promise<ServiceSeasonRecord | undefined> {
-  const [row] = await db
-    .select()
-    .from(serviceSeasons)
-    .where(and(eq(serviceSeasons.status, 'ACTIVE'), lte(serviceSeasons.startsAt, now), gte(serviceSeasons.endsAt, now)))
-    .limit(1);
+/**
+ * T-2-012 D-54: "현재 시즌"은 시간 창이 아니라 `ACTIVE_SERVICE_SEASON_ID` 환경변수가 가리키는
+ * id다(포인터 방식 — 09 런북 "ACTIVE 포인터 원자 교체"). 그 행이 없으면 undefined.
+ */
+export async function getServiceSeasonById(db: Db, id: string): Promise<ServiceSeasonRecord | undefined> {
+  const [row] = await db.select().from(serviceSeasons).where(eq(serviceSeasons.id, id)).limit(1);
   return row;
 }
 
@@ -23,12 +22,14 @@ export type UpsertServiceSeasonInput = {
   rulesetVersion: string;
   contentPackVersion: string;
   challengeSetId: string;
+  isTest?: boolean;
 };
 
 export async function upsertServiceSeason(db: Db, input: UpsertServiceSeasonInput): Promise<ServiceSeasonRecord> {
+  const isTest = (input.isTest ?? false) ? 1 : 0;
   const [row] = await db
     .insert(serviceSeasons)
-    .values(input)
+    .values({ ...input, isTest })
     .onConflictDoUpdate({
       target: serviceSeasons.id,
       set: {
@@ -39,6 +40,7 @@ export async function upsertServiceSeason(db: Db, input: UpsertServiceSeasonInpu
         rulesetVersion: input.rulesetVersion,
         contentPackVersion: input.contentPackVersion,
         challengeSetId: input.challengeSetId,
+        isTest,
       },
     })
     .returning();

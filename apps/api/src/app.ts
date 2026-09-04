@@ -7,9 +7,11 @@ import { logger } from './middleware/logger.js';
 import { originGuard } from './middleware/originGuard.js';
 import { requestId } from './middleware/requestId.js';
 import { session } from './middleware/session.js';
+import { registerAnalyticsRoutes } from './routes/analytics.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerCareerRoutes } from './routes/careers.js';
 import { registerProfileRoutes } from './routes/profile.js';
+import { registerServiceSeasonRoutes } from './routes/service-seasons.js';
 
 export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -31,6 +33,8 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerProfileRoutes(app);
   registerCareerRoutes(app);
   registerAuthRoutes(app);
+  registerServiceSeasonRoutes(app);
+  registerAnalyticsRoutes(app);
 
   if (options.testRoutes) {
     app.get('/v1/test/throw', () => {

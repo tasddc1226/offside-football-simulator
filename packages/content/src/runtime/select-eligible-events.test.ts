@@ -23,6 +23,7 @@ const MINIMAL_NARRATIVE: NarrativeDictionary = {
   rival: ['x'],
   captain: ['x'],
   team: ['x'],
+  agent: ['x'],
   delta: [],
 };
 

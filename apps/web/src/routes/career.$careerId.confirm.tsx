@@ -7,6 +7,7 @@ import { RETRYABLE_BY_CODE } from '@offside/contracts';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { getProfile, issueRecoveryCode } from '../api/client.js';
 import { activeRuleset as ruleset } from '../engine/content.js';
+import { recordFunnelReached } from '../engine/funnel.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { ACTIVE_CONTENT_PACK_VERSION } from '../engine/versions.js';
 import { platform } from '../platform/index.js';
@@ -127,6 +128,7 @@ function ConfirmScreen() {
         setPostConfirmInFlight(false);
         return;
       }
+      await recordFunnelReached(careerId, 'PLAYER_CONFIRMED');
 
       const advanced = await advanceMutation.mutateAsync({ careerId });
       if (!advanced.ok) {

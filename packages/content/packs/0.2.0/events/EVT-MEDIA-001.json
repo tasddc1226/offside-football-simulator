@@ -1,0 +1,172 @@
+{
+  "id": "EVT-MEDIA-001",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": { "all": [{ "gte": ["season.chapterHighlights", 1] }, { "gte": ["season.step", 10] }] },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 1 },
+  "weight": 100,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "인터뷰 수락, 팀 이야기만",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "팬 관심 상승", "target": "fans", "direction": "UP" },
+        { "label": "감독 신뢰 유지" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "\"팀이 먼저\"라는 문장이 제목이 됐다",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-001.A.A1.0",
+              "target": "fans",
+              "delta": 8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-001.A.A1.1",
+              "target": "managerTrust",
+              "delta": 3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["팀_우선", "주목받는_유망주"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "인터뷰 수락, 출전 불만 언급",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "주목도 급상승" },
+        { "label": "감독 신뢰 하락", "target": "managerTrust", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 30,
+          "title": "여론이 편을 들고 감독이 기회를 준다",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-001.B.B1.0",
+              "target": "fans",
+              "delta": 15,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-001.B.B1.1",
+              "target": "managerTrust",
+              "delta": -3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MEDIA-001.B.B1.2",
+              "target": "squadStatus",
+              "delta": 8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["주목받는_유망주"]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 70,
+          "title": "감독이 기사를 읽었다",
+          "cause": "공개 불만",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-001.B.B2.0",
+              "target": "fans",
+              "delta": 10,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-001.B.B2.1",
+              "target": "managerTrust",
+              "delta": -12,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MEDIA-001.B.B2.2",
+              "target": "squadStatus",
+              "delta": -8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["언론_플레이"]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "거절, 구단 통해서만",
+      "riskLabel": "LOW",
+      "previewEffects": [{ "label": "변화 작음" }, { "label": "팀 규율 태그" }],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "조용히 지나갔다",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-001.C.C1",
+              "target": "managerTrust",
+              "delta": 2,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["규율"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "더비 활약 영상이 유소년 축구 커뮤니티에서 돌고 있다. 지역 매체가 인터뷰를 요청하고, 댓글에는 \"감독이 왜 안 쓰냐\"는 말이 많다."
+  }
+}
