@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { webPlatform } from './web/index.js';
+import { createWebPlatform } from './web/index.js';
 import { tossPlatform } from './toss/index.js';
+
+const webPlatform = createWebPlatform({ analyticsEndpoint: 'https://example.com/v1/analytics/events' });
 
 describe('platform adapters', () => {
   it('web adapter reports the web channel', () => {

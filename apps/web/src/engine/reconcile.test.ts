@@ -24,6 +24,10 @@ vi.mock('./engine.js', () => ({
   getAppEngine: () => Promise.resolve({ client: { listCareers: () => listCareersMock() }, store: {} }),
 }));
 
+vi.mock('./service-season.js', () => ({
+  resolveServiceSeasonId: () => Promise.resolve('svc_kickoff'),
+}));
+
 const LOCAL_ONLY_SYNCED: ReconcileLocalCareer = { id: 'car_local_only', revision: 3, lastSyncedRevision: 3 };
 const LOCAL_ONLY_UNSENT: ReconcileLocalCareer = { id: 'car_local_unsent', revision: 5, lastSyncedRevision: 2 };
 const BOTH_IN_SYNC_LOCAL: ReconcileLocalCareer = { id: 'car_both_sync', revision: 4, lastSyncedRevision: 4 };

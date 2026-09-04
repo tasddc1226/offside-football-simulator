@@ -4,8 +4,8 @@ import type { QueryClient } from '@tanstack/react-query';
 import { importCareerFromServer } from '@offside/engine-client';
 import { getRemoteCareer, listRemoteCareers } from '../api/client.js';
 import { getAppEngine } from './engine.js';
+import { resolveServiceSeasonId } from './service-season.js';
 import { getSyncClient } from './sync.js';
-import { ACTIVE_SERVICE_SEASON_ID } from './versions.js';
 
 export type ReconcileChoice = 'MOVE_TO_LINKED' | 'KEEP_LINKED_ONLY' | 'NONE';
 
@@ -106,19 +106,24 @@ export async function reconcileAfterRecovery(
 
   const now = new Date().toISOString();
   const failed: string[] = [];
-  for (const careerId of plan.toDownload) {
-    const result = await getRemoteCareer(careerId);
-    if (!result.ok) {
-      failed.push(careerId);
-      continue;
-    }
-    const imported = await importCareerFromServer(engine.store, result.data, {
-      createdServiceSeasonId: ACTIVE_SERVICE_SEASON_ID,
-      now,
-    });
-    // CAREER_REVISION_CONFLICT는 이 기기의 미전송 진행을 보호하려는 의도된 건너뛰기라 실패로 세지 않는다.
-    if (!imported.ok && imported.error.code !== 'CAREER_REVISION_CONFLICT') {
-      failed.push(careerId);
+  // GetCareerResponse는 원래 createdServiceSeasonId를 담지 않는다(서버 커리어 행에만 있다) — 다운로드
+  // 항목 전체에 현재 시즌 포인터 하나를 쓴다(이 파일이 손대기 전부터 있던 한계, T-2-012 범위 밖).
+  if (plan.toDownload.length > 0) {
+    const createdServiceSeasonId = await resolveServiceSeasonId();
+    for (const careerId of plan.toDownload) {
+      const result = await getRemoteCareer(careerId);
+      if (!result.ok) {
+        failed.push(careerId);
+        continue;
+      }
+      const imported = await importCareerFromServer(engine.store, result.data, {
+        createdServiceSeasonId,
+        now,
+      });
+      // CAREER_REVISION_CONFLICT는 이 기기의 미전송 진행을 보호하려는 의도된 건너뛰기라 실패로 세지 않는다.
+      if (!imported.ok && imported.error.code !== 'CAREER_REVISION_CONFLICT') {
+        failed.push(careerId);
+      }
     }
   }
 

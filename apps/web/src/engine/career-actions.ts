@@ -7,9 +7,10 @@ import { deleteCareerOnServer } from '../api/client.js';
 import { platform } from '../platform/index.js';
 import type { TrainingFocus } from '../shared/start-season.js';
 import type { AppEngine } from './engine.js';
+import { startCareerFunnel } from './funnel.js';
 import { classifyDeleteResult, queuePendingDelete } from './pending-delete.js';
+import { resolveServiceSeasonId } from './service-season.js';
 import { getSyncClient } from './sync.js';
-import { ACTIVE_SERVICE_SEASON_ID } from './versions.js';
 
 type LatencyBucket = '<100ms' | '<500ms' | '<2s' | '>=2s';
 
@@ -106,6 +107,8 @@ export async function createCareer(
     },
   };
 
+  const serviceSeasonId = await resolveServiceSeasonId();
+
   const startedAt = Date.now();
   trackSubmitted(command.type);
 
@@ -113,11 +116,14 @@ export async function createCareer(
   const result = await engine.client.execute({
     careerId,
     command: engineCommand,
-    createdServiceSeasonId: ACTIVE_SERVICE_SEASON_ID,
+    createdServiceSeasonId: serviceSeasonId,
   });
 
   trackResult(command.type, startedAt, result);
   notifySync(careerId, result);
+  if (result.ok && !result.replayed) {
+    await startCareerFunnel(engine, careerId);
+  }
   return result;
 }
 
@@ -242,21 +248,23 @@ export type StartSeasonChoice = { simulationMode: SimulationMode; trainingFocus?
 
 /**
  * T-2-005 접점(PR #40, origin/main 머지 확인): domain `Command['START_SEASON']['payload']`에
- * `trainingFocus`가 붙었다 — SCR-005의 선택을 그대로 실어 보낸다.
+ * `trainingFocus`가 붙었다 — SCR-005의 선택을 그대로 실어 보낸다. `serviceSeasonId`는 호출하는 쪽이
+ * `resolveServiceSeasonId()`(T-2-012 D-54)로 구해 넘긴다 — 이 함수는 순수 함수로 남긴다.
  */
-export function toStartSeasonPayload(choice: StartSeasonChoice): Command {
+export function toStartSeasonPayload(choice: StartSeasonChoice, serviceSeasonId: string): Command {
   return {
     type: 'START_SEASON',
     payload: {
       simulationMode: choice.simulationMode,
-      serviceSeasonId: ACTIVE_SERVICE_SEASON_ID,
+      serviceSeasonId,
       ...(choice.trainingFocus !== undefined ? { trainingFocus: choice.trainingFocus } : {}),
     },
   };
 }
 
-export function startSeason(engine: AppEngine, careerId: string, choice: StartSeasonChoice): Promise<ExecuteResult> {
-  return execute(engine, careerId, toStartSeasonPayload(choice));
+export async function startSeason(engine: AppEngine, careerId: string, choice: StartSeasonChoice): Promise<ExecuteResult> {
+  const serviceSeasonId = await resolveServiceSeasonId();
+  return execute(engine, careerId, toStartSeasonPayload(choice, serviceSeasonId));
 }
 
 export function resolveRole(engine: AppEngine, careerId: string, decision: 'ACCEPT' | 'DECLINE'): Promise<ExecuteResult> {

@@ -63,7 +63,7 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
       throw new AppError({ code: 'CAREER_NOT_FOUND', message: '커리어를 찾을 수 없습니다.' });
     }
     const [season] = await db
-      .select({ id: serviceSeasons.id })
+      .select({ id: serviceSeasons.id, status: serviceSeasons.status })
       .from(serviceSeasons)
       .where(eq(serviceSeasons.id, body.createdServiceSeasonId))
       .limit(1);
@@ -73,6 +73,10 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
         message: '알 수 없는 서비스 시즌입니다.',
         details: { reason: 'SERVICE_SEASON_UNKNOWN' },
       });
+    }
+    // T-2-012 D-54: 신규 생성만 검사한다 — 시즌이 닫혀도 기존 커리어의 후속 PUT은 계속된다.
+    if (season.status !== 'PRESEASON' && season.status !== 'ACTIVE') {
+      throw new AppError({ code: 'SERVICE_SEASON_CLOSED', message: '서비스 시즌이 닫혔습니다.' });
     }
   } else {
     if (existing.ownerProfileId !== profileId) {

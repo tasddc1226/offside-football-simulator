@@ -6,6 +6,7 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Button, ErrorState } from '@offside/ui';
 import { buildSeasonSteps, type SimulationMode } from '@offside/domain';
 import { activeRuleset } from '../engine/content.js';
+import { recordFunnelReached, recordSeasonStart } from '../engine/funnel.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { CUP_ROUND_LABEL_KO, LEAGUE_TIER_LABEL_KO, ROLE_PROMISE_SENTENCE } from '../shared/labels.js';
@@ -91,6 +92,8 @@ function SeasonPrepScreen() {
         return;
       }
       platform.analytics.track('season_started', { simulationMode: mode, trainingFocus: focus });
+      await recordFunnelReached(careerId, 'SEASON_STARTED');
+      await recordSeasonStart(careerId);
       const target = screenForCareer(result.domainSnapshot.state);
       void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
     } catch {

@@ -99,6 +99,12 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
     if (selectedChoiceId === null || submittingRef.current) return;
     submittingRef.current = true;
     setErrorMessage(null);
+    // definition은 위에서 undefined 체크를 거친 const지만, TS는 뒤에서 정의되는 이벤트 핸들러
+    // 클로저까지 그 좁힘을 전파하지 않는다.
+    const choice = definition!.choices.find((candidate) => candidate.id === selectedChoiceId);
+    if (choice !== undefined) {
+      platform.analytics.track('choice_selected', { eventId: definition!.id, choiceId: choice.id, riskLabel: choice.riskLabel });
+    }
     try {
       const result = await resolveMutation.mutateAsync({ careerId, choiceId: selectedChoiceId });
       if (!result.ok) {

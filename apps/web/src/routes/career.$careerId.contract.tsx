@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Button, ErrorState } from '@offside/ui';
+import { recordFunnelReached } from '../engine/funnel.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { queryClient } from '../shared/query-client.js';
@@ -68,6 +69,7 @@ function ContractScreen() {
         setErrorMessage('계약을 맺지 못했습니다. 다시 시도해 주세요.');
         return;
       }
+      await recordFunnelReached(careerId, 'CONTRACT_SIGNED');
       void navigate({ to: '/career/$careerId', params: { careerId }, search: { signed: true } });
     } catch {
       setErrorMessage('계약을 맺지 못했습니다. 다시 시도해 주세요.');

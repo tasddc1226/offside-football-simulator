@@ -20,7 +20,7 @@ import {
   updateDraft,
 } from './career-actions.js';
 import { createAppEngine, type AppEngine } from './engine.js';
-import { ACTIVE_SERVICE_SEASON_ID } from './versions.js';
+import { FALLBACK_SERVICE_SEASON_ID } from './versions.js';
 
 const syncHolder = vi.hoisted(() => ({ notifyCommitted: vi.fn() }));
 vi.mock('./sync.js', () => ({
@@ -33,6 +33,12 @@ vi.mock('./sync.js', () => ({
       resolveConflict: vi.fn(),
       dispose: vi.fn(),
     }),
+}));
+
+// service-season.ts는 네트워크(TanStack Query)를 거친다 — 이 테스트는 시즌 id 주입 자체가 아니라
+// createCareer·startSeason의 명령 조립·재생을 본다(폴백 순서는 service-season.test.ts가 본다).
+vi.mock('./service-season.js', () => ({
+  resolveServiceSeasonId: () => Promise.resolve(FALLBACK_SERVICE_SEASON_ID),
 }));
 
 function makeIdGenerator(prefix: string): () => string {
@@ -184,19 +190,19 @@ async function replayToSigned(engine: AppEngine): Promise<string> {
 }
 
 describe('toStartSeasonPayload', () => {
-  it('simulationMode·ACTIVE_SERVICE_SEASON_ID를 담은 START_SEASON 명령을 만든다', () => {
-    const command = toStartSeasonPayload({ simulationMode: 'FAST' });
+  it('simulationMode·주어진 serviceSeasonId를 담은 START_SEASON 명령을 만든다', () => {
+    const command = toStartSeasonPayload({ simulationMode: 'FAST' }, FALLBACK_SERVICE_SEASON_ID);
     expect(command).toEqual({
       type: 'START_SEASON',
-      payload: { simulationMode: 'FAST', serviceSeasonId: ACTIVE_SERVICE_SEASON_ID },
+      payload: { simulationMode: 'FAST', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID },
     });
   });
 
   it('trainingFocus를 고르면 payload에 함께 싣는다(T-2-005 접점, PR #40 머지 확인)', () => {
-    const command = toStartSeasonPayload({ simulationMode: 'CHAPTER', trainingFocus: 'TECHNICAL' });
+    const command = toStartSeasonPayload({ simulationMode: 'CHAPTER', trainingFocus: 'TECHNICAL' }, FALLBACK_SERVICE_SEASON_ID);
     expect(command).toEqual({
       type: 'START_SEASON',
-      payload: { simulationMode: 'CHAPTER', serviceSeasonId: ACTIVE_SERVICE_SEASON_ID, trainingFocus: 'TECHNICAL' },
+      payload: { simulationMode: 'CHAPTER', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID, trainingFocus: 'TECHNICAL' },
     });
   });
 });

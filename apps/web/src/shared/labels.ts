@@ -307,6 +307,12 @@ export const SELECTION_REASON_LABEL_KO: Record<SelectionReasonComponent, string>
   SQUAD_STATUS: '스쿼드 상태',
 };
 
+/** T-2-012 D-54: `GET /v1/service-seasons/current`의 `notice` 키 → 실제 문구. 서버는 문장을
+ * 보내지 않는다(D-12 관례) — SCR-001 허브 배너가 이 문구를 그대로 쓴다. */
+export const SERVICE_SEASON_NOTICE_KO: Record<'LINE_TEST', string> = {
+  LINE_TEST: 'LINE TEST 시즌입니다. 이 커리어는 테스트 보관함에 남고 정식 시즌 도전에는 집계되지 않습니다.',
+};
+
 /** 충돌 대화상자 비교 카드의 "마지막 기록" 행. */
 export const TIMELINE_KIND_LABELS: Record<TimelineEntry['kind'], string> = {
   CAREER_CONFIRMED: '커리어 확정',

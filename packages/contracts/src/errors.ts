@@ -18,6 +18,9 @@ export const ERROR_CODES = [
   'VERIFICATION_FAILED',
   'RATE_LIMITED',
   'SERVICE_UNAVAILABLE',
+  // T-2-012 D-54: 서비스 시즌 포인터 라우트·커리어 생성 검증이 쓴다(07 문서에는 없다 — 이 브리프로 추가).
+  'SERVICE_SEASON_UNAVAILABLE',
+  'SERVICE_SEASON_CLOSED',
 ] as const;
 
 export const ErrorCodeSchema = z.enum(ERROR_CODES);
@@ -43,6 +46,8 @@ export const HTTP_STATUS_BY_CODE: Record<ErrorCode, HttpStatus> = {
   VERIFICATION_FAILED: 422,
   RATE_LIMITED: 429,
   SERVICE_UNAVAILABLE: 503,
+  SERVICE_SEASON_UNAVAILABLE: 503,
+  SERVICE_SEASON_CLOSED: 409,
 };
 
 /** RATE_LIMITED, SERVICE_UNAVAILABLE만 재시도 가능. */
@@ -63,4 +68,6 @@ export const RETRYABLE_BY_CODE: Record<ErrorCode, boolean> = {
   VERIFICATION_FAILED: false,
   RATE_LIMITED: true,
   SERVICE_UNAVAILABLE: true,
+  SERVICE_SEASON_UNAVAILABLE: true,
+  SERVICE_SEASON_CLOSED: false,
 };

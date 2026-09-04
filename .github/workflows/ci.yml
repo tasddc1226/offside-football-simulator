@@ -90,7 +90,8 @@ jobs:
             --var "ALLOWED_ORIGINS:${WEB_URL}" \
             --var "WEB_APP_URL:${WEB_URL}" \
             --var "GOOGLE_REDIRECT_URI:${API_URL}/v1/auth/google/callback" \
-            --var "GOOGLE_FAKE:0"
+            --var "GOOGLE_FAKE:0" \
+            --var "ACTIVE_SERVICE_SEASON_ID:svc_kickoff"
       - name: Build and deploy web preview
         run: |
           API_URL="https://offside-api-pr-${PR_NUMBER}.tasddc1569.workers.dev"

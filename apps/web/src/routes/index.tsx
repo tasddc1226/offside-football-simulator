@@ -13,11 +13,14 @@ import {
   Toast,
 } from '@offside/ui';
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
+import type { ServiceSeasonCurrent } from '@offside/contracts';
+import { trackCareerAbandonedHint } from '../engine/funnel.js';
+import { useServiceSeason } from '../engine/service-season.js';
 import { careersQueryOptions, useCareerList, useCareerMutation, type CareerSummary } from '../engine/use-career.js';
 import { useSyncState } from '../engine/use-sync.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { SCREEN_ROUTES } from '../routes.js';
-import { CAREER_STATUS_LABELS, POSITION_LABELS } from '../shared/labels.js';
+import { CAREER_STATUS_LABELS, POSITION_LABELS, SERVICE_SEASON_NOTICE_KO } from '../shared/labels.js';
 import { formatLocalDateTime } from '../shared/format.js';
 import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
@@ -45,10 +48,12 @@ function displayName(summary: CareerSummary): string {
 
 function CareerCard({
   summary,
+  currentServiceSeason,
   onDeleted,
   onDeleteFailed,
 }: {
   summary: CareerSummary;
+  currentServiceSeason: ServiceSeasonCurrent | undefined;
   onDeleted: (name: string) => void;
   onDeleteFailed: (name: string) => void;
 }) {
@@ -62,6 +67,10 @@ function CareerCard({
   const position = state.player.profile?.primaryPosition ?? state.player.draft.position;
   const positionLabel = position ? POSITION_LABELS[position] : '—';
   const syncState = useSyncState(record.id);
+  // T-2-012 D-54: 현재 시즌 조회가 아직 없으면(로딩·실패) 판단할 근거가 없으니 배지를 달지 않는다.
+  const isTestArchiveCard =
+    currentServiceSeason !== undefined &&
+    (record.createdServiceSeasonId !== currentServiceSeason.id || currentServiceSeason.isTest);
 
   function handleContinue() {
     const target = screenForCareer(state);
@@ -78,6 +87,7 @@ function CareerCard({
     // role="status" 실패 안내가 접근성 트리에서 사라진다.
     setDialogOpen(false);
     setConfirmStep(1);
+    trackCareerAbandonedHint(state);
     try {
       await deleteMutation.mutateAsync({ careerId: record.id });
       onDeleted(name);
@@ -92,12 +102,23 @@ function CareerCard({
         <h2 className="font-os font-bold text-os-text" style={H2_STYLE}>
           {name}
         </h2>
-        <span
-          className="rounded-os-s bg-os-surface-2 px-os-2 py-os-1 font-os text-os-text-2"
-          style={CAPTION_STYLE}
-        >
-          {CAREER_STATUS_LABELS[state.status]}
-        </span>
+        <div className="flex items-center gap-os-2">
+          {isTestArchiveCard ? (
+            <span
+              data-testid="career-card-test-badge"
+              className="rounded-os-s bg-os-surface-2 px-os-2 py-os-1 font-os text-os-text-2"
+              style={CAPTION_STYLE}
+            >
+              테스트 시즌
+            </span>
+          ) : null}
+          <span
+            className="rounded-os-s bg-os-surface-2 px-os-2 py-os-1 font-os text-os-text-2"
+            style={CAPTION_STYLE}
+          >
+            {CAREER_STATUS_LABELS[state.status]}
+          </span>
+        </div>
       </div>
 
       <SyncBadge state={syncState} />
@@ -159,6 +180,10 @@ function HubScreen() {
   const defaultSimulationMode = useUiStore((state) => state.defaultSimulationMode);
   const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(null);
   const startingRef = useRef(false);
+  const serviceSeason = useServiceSeason();
+  // T-2-012 D-54: 조회가 안 끝났으면(로딩·에러) 폴백으로 커리어 생성은 그대로 허용한다 —
+  // LOCKED·ARCHIVED가 확인된 경우에만 막는다.
+  const newCareerDisabled = serviceSeason.data?.status === 'LOCKED' || serviceSeason.data?.status === 'ARCHIVED';
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-001', careerPhase: 'NONE' });
@@ -203,9 +228,16 @@ function HubScreen() {
           <EmptyState
             reason="아직 만든 커리어가 없습니다"
             action={
-              <Button variant="primary" onClick={handleStart} disabled={createMutation.isPending}>
-                커리어 시작
-              </Button>
+              <div className="flex flex-col items-center gap-os-2">
+                <Button variant="primary" onClick={handleStart} disabled={createMutation.isPending || newCareerDisabled}>
+                  커리어 시작
+                </Button>
+                {newCareerDisabled ? (
+                  <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                    지금은 새 커리어를 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.
+                  </p>
+                ) : null}
+              </div>
             }
           />
         </div>
@@ -214,11 +246,21 @@ function HubScreen() {
           <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
             커리어 허브
           </h1>
+          {serviceSeason.data?.notice === 'LINE_TEST' ? (
+            <p
+              data-testid="service-season-banner"
+              className="rounded-os-s bg-os-surface-2 px-os-3 py-os-2 font-os text-os-text-2"
+              style={CAPTION_STYLE}
+            >
+              {SERVICE_SEASON_NOTICE_KO.LINE_TEST}
+            </p>
+          ) : null}
           <ul className="flex flex-col gap-os-4">
             {query.data.map((summary) => (
               <li key={summary.record.id}>
                 <CareerCard
                   summary={summary}
+                  currentServiceSeason={serviceSeason.data}
                   onDeleted={(name) => setToast({ variant: 'success', message: `${name}의 커리어를 삭제했습니다` })}
                   onDeleteFailed={(name) =>
                     setToast({ variant: 'error', message: `${name}의 커리어를 삭제하지 못했습니다. 다시 시도해 주세요.` })
@@ -227,9 +269,14 @@ function HubScreen() {
               </li>
             ))}
           </ul>
-          <Button variant="secondary" onClick={handleStart} disabled={createMutation.isPending}>
+          <Button variant="secondary" onClick={handleStart} disabled={createMutation.isPending || newCareerDisabled}>
             새 커리어
           </Button>
+          {newCareerDisabled ? (
+            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+              지금은 새 커리어를 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.
+            </p>
+          ) : null}
         </div>
       )}
 
