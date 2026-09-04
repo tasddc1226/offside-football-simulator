@@ -12,7 +12,7 @@ const CUP_PROGRESS_LABELS: Readonly<Record<string, string>> = {
 
 /** 저장된 경기 코드·해시는 그대로 두고 화면에서만 번역한다. */
 export function cupProgressLabel(round: string | null): string {
-  return round === null ? '—' : (CUP_PROGRESS_LABELS[round] ?? '—');
+  return round !== null && Object.hasOwn(CUP_PROGRESS_LABELS, round) ? CUP_PROGRESS_LABELS[round]! : '—';
 }
 
 export function opponentDisplayName(opponent: { id: string; name: string }, ruleset: Ruleset): string {

@@ -8,7 +8,7 @@ describe('컵 표시 호환성 (#57)', () => {
   it.each([
     ['R1', '1라운드'], ['R2', '2라운드'], ['SEMI', '준결승'], ['FINAL', '결승'],
     ['WON', '우승'], ['OUT_R1', '1라운드 탈락'], ['OUT_R2', '2라운드 탈락'],
-    ['OUT_SEMI', '준결승 탈락'], ['OUT_FINAL', '준우승'], [null, '—'], ['FUTURE', '—'],
+    ['OUT_SEMI', '준결승 탈락'], ['OUT_FINAL', '준우승'], [null, '—'], ['FUTURE', '—'], ['constructor', '—'],
   ])('%s → %s', (code, label) => {
     expect(cupProgressLabel(code)).toBe(label);
   });

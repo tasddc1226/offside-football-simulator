@@ -2,6 +2,7 @@ import { loadRuleset } from '@offside/content';
 import { career06Settled } from '@offside/fixtures';
 import { describe, expect, it } from 'vitest';
 import { appearanceSummary } from './appearance-summary.js';
+import { activeRuleset } from '../engine/content.js';
 
 describe('실제 출전 집계 (#60)', () => {
   it('26경기 중 0분 12경기를 빼고 미사용 교체 6회를 제외한다', () => {
@@ -24,8 +25,10 @@ describe('실제 출전 집계 (#60)', () => {
   });
 
   it('지원 룰셋에서 0분 선발은 없다는 파생 전제를 검증한다', () => {
-    for (const option of loadRuleset('1.0.0').matchRules.minutesTable.start) {
-      expect(option.subOut ? option.minute : 90).toBeGreaterThan(0);
+    for (const ruleset of [loadRuleset('1.0.0'), activeRuleset]) {
+      for (const option of ruleset.matchRules.minutesTable.start) {
+        expect(option.subOut ? option.minute : 90).toBeGreaterThan(0);
+      }
     }
   });
 });
