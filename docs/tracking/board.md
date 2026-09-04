@@ -127,7 +127,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-3-004 | A | contracts + api + engine-client | payload·상태 strict 검증, 동기화 회귀, Snapshot 크기 | T-3-003 | todo | |
 | T-3-005 | A | web | SCR-017 계약 상태·제안 비교·협상, SCR-019 루머, SCR-020 이적·임대 결과, TEST-E2E-003 | T-3-003, T-3-004 | todo | |
 | T-3-006 | A | content | 루머·잔류·에이전트 이벤트, 협상·이적 문구, 팀 풀 확장(열린 질문) | T-3-001 | done | PR #51 31e321d(2026-09-04 13:01), [브리프](briefs/T-3-006.md). 팩 0.2.0 등록(활성 0.1.0 유지)·PRO 이벤트 5종 PROTOTYPE·팀 12·authoring 스키마·agent 토큰. 리뷰 수정 0건. 후속: web narrative.ts에 `agent` 토큰(T-3-005) |
-| T-4-001 | B | domain + contracts + content | 관계 로그·감독·부상·평판 타입, HEALTH Effect(ADR-010 표 갱신), RESOLVE_EVENT의 INJURY·NATIONAL_TEAM 수용(D-52), 훅 골격 | U-012, T-3-001 | in-progress | `T-4-001-track-b-types`, [브리프](briefs/T-4-001.md)(2026-09-04 11:46 투입, E2E_PORT 5190) |
+| T-4-001 | B | domain + contracts + content | 관계 로그·감독·부상·평판 타입, HEALTH Effect(ADR-010 표 갱신), RESOLVE_EVENT의 INJURY·NATIONAL_TEAM 수용(D-52), 훅 골격 | U-012, T-3-001 | done | PR #53 aba154a(2026-09-04 13:57), [브리프](briefs/T-4-001.md). 리뷰 수정 0건. main 재머지 2회(PR #50 충돌 해결), 재기록 골든 미커밋(PLACEHOLDER)을 오케스트레이터 체인이 잡아 추가 커밋. 후속: T-4-002(부상)·T-4-003(관계) 브리프 |
 | T-4-002 | B | domain + content | 부상 모델(D-49): 심각도·부위·진단 범위·재활 선택·재발·후유증, 강제 사건 상한, career-12-injury | T-4-001 | todo | |
 | T-4-003 | B | domain + content | 감독 교체·라커룸·슬럼프·윤리·SNS 이벤트 pool, popularityCenti, 관계 로그, 안전장치, 태그 5종(D-50) | T-4-001 | todo | T-4-002와 병행 |
 | T-4-004 | B | domain + content | 대표팀 차출 기본 모듈(D-51), NATIONAL_DEBUT 챕터 | T-4-002, T-4-003 | todo | |
@@ -151,7 +151,6 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-4-001 | Sonnet 5, Orca 워크트리 `T-4-001-track-b-types` | 2026-09-04 | 트랙 B 타입 슬라이스(health·relationshipLog·manager·reputation·HEALTH Effect·RESOLVE_EVENT 확장·훅 골격) |
 | T-3-003 | Sonnet 5, Orca 워크트리 `T-3-003-market-commands` | 2026-09-04 | NEGOTIATE·ACCEPT_OFFER v2·REJECT_OFFER·LOAN_RETURN·결산 배선·임대·약속 위반·태그 5종·골든 career-10·11, 웹 SCR-009 재사용 라우팅 |
 
 ## 완료
@@ -208,6 +207,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-3-001 | Phase 3·4 타입 슬라이스(D-53): Offer/Contract v2·ClubStint·MarketSummary, pending OFFERS/CONTRACT/LOAN_RETURN/INJURY/NATIONAL_TEAM, 타임라인 kind 15종 예약, 제안 상태기계 함수(negotiation.ts), Command NEGOTIATE·REJECT_OFFER·LOAN_RETURN 스텁 + payload 스키마, DSL contract.* 등 15경로(트랙 B는 NOT_MODELED), 이벤트 presentation 필터, SeasonResult.stepSummaries(11), 골든 9종 재기록(draws 불변) | b756999 |
 | T-2-012 | LINE TEST 준비(D-54·D-55): API `ACTIVE_SERVICE_SEASON_ID` 포인터(local/preview `svc_kickoff`, staging `svc_line_test`, production 미설정→503), `GET /v1/service-seasons/current`(status·isTest·notice), 신규 커리어 생성 시 시즌 상태 검사(LOCKED/ARCHIVED 409), `service_seasons.is_test`·`analytics_events` 마이그레이션 0003, `POST /v1/analytics/events`(12개 이벤트 화이트리스트·32KB·50건·rate limit 60/분·익명 clientId), platform 분석 큐(배치 20/10초/pagehide, sendBeacon→fetch keepalive), web `useServiceSeason`(kv 캐시·폴백)·허브 LINE TEST 배너·테스트 시즌 배지·LOCKED 시 생성 비활성·퍼널/결산/이탈 이벤트, e2e service-season 4종. 리뷰 수정 0건 | c90b769 |
 | T-2-013 | LINE TEST 운영 계획(line-test-plan.md): 환경·일정·준비 체크리스트·테스터 안내문·D1 측정 쿼리 7종·기준선 기록 양식·게이트 완료 조건 7행. 종료는 시드 status LOCKED PR로 | 이 커밋 |
+| T-4-001 | 트랙 B 타입 슬라이스(D-49~D-53): InjuryEpisode·RehabPlan·NationalTeamCallUp·SeasonManager·RelationshipLogEntry, CareerState.health/relationshipLog/memoryTags/reputation, season.manager/injuryCount, Effect kind HEALTH(SUM·즉시·만료 없음, activeEffects 미저장)·RELATION reputation.* bag, RESOLVE_EVENT가 INJURY(rehabPlan)·NATIONAL_TEAM(callUp) pending을 닫음(자동 통과 제외), 훅 골격 onMatchInjury·onSettlementRelations·buildDefaultManager(rng 없음), 룰셋 섹션 5종·DSL 토큰·contracts·ADR-010 표. 골든 11종 stateHash만 변경(draws 불변). 리뷰 수정 0건 | aba154a |
 | T-3-002 | 이적시장 생성기: `judgeMarketReason`(만료·태그·STARTER 평점·시장가치 지수, rng 0)·`generateMarket`(구단 후보·kind 가중 추첨·제안 3~5 + 안전 잔류)·`buildRenewalOffer`(step 7 사전 협상, 미응답 자동 만료는 T-3-003까지 임시)·`openMarketAfterSettlement`·negotiation.ts, offerRulesV2·transferRules 룰셋 1.0.0/proto, 시장 골든 3종, career-04·07 stateHash만 변경. 리뷰 수정 1건(결산 뒤 상태 도달 불가 분기 → `currentSquadPerformance` 폴백, 테스트 3건) | 408a765 |
 | T-2-015 | 분석 이벤트 INSERT를 D1 변수 상한(문장당 100개)에 맞춰 14행씩 순차 청크(`ANALYTICS_INSERT_CHUNK_ROWS`, spy 테스트 50→14·14·14·8), unknown error 응답을 고정 문구로(원문은 logger `errorMessage` 500자), 온보딩 첫 슬라이드 LINE TEST 안내 + e2e 스텁. 리뷰 수정 0건 | 5462dc7 |
 | T-3-006 | 콘텐츠 팩 0.2.0 등록(활성 0.1.0 유지): 0.1.0 복제 + PRO 이벤트 5종(EVT-CON-010 루머 RUMOUR·011 에이전트·012 약속 위반·013 재계약 압박·EVT-MEDIA-006 친정팀 원정) `authoring: PROTOTYPE`, RELATION delta ≤ 8, `EventDefinitionSchema.authoring`, 내러티브 토큰 `agent`, 룰셋 1.0.0 팀 12개(tier 3·4·4·YOUTH 1), 이벤트 카탈로그 10절. 골든 재기록 불필요(domain ruleset-proto 사용). 리뷰 수정 0건 | 31e321d |
