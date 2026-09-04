@@ -1610,6 +1610,10 @@
           {
             "kind": "EVENT",
             "required": false
+          },
+          {
+            "kind": "NATIONAL_TEAM",
+            "required": true
           }
         ]
       },
@@ -3261,8 +3265,10 @@
     "settlement": { "starterSeasonCenti": 300, "ratingAbove70Centi": 200, "titleCenti": 500, "decayCenti": 100 }
   },
   "nationalTeamRules": {
+    "event": { "id": "EVT-NAT-001", "version": 1 },
     "callUpStep": 8,
     "minOvrByTier": { "YOUTH": 70, "1": 68, "2": 74, "3": 78 },
+    "minRatingTenths": 70,
     "minPopularityCenti": 6000,
     "fitnessCost": { "ACCEPT": 15, "CONDITIONAL": 8, "DECLINE": 0 },
     "relationDelta": {

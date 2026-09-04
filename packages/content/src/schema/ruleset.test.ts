@@ -257,6 +257,20 @@ describe('RulesetSchema', () => {
     expect(() => RulesetSchema.parse(ruleset)).toThrow();
   });
 
+  it('requires the strict national-team event ref and minRatingTenths additive fields', () => {
+    const parsed = RulesetSchema.parse(ruleset100);
+    expect(parsed.nationalTeamRules.event).toEqual({ id: 'EVT-NAT-001', version: 1 });
+    expect(parsed.nationalTeamRules.minRatingTenths).toBe(70);
+
+    const missingEvent = cloneRuleset();
+    delete (missingEvent.nationalTeamRules as Record<string, unknown>).event;
+    expect(() => RulesetSchema.parse(missingEvent)).toThrow();
+
+    const extraField = cloneRuleset();
+    (extraField.nationalTeamRules as Record<string, unknown>).naturalization = true;
+    expect(() => RulesetSchema.parse(extraField)).toThrow();
+  });
+
   // T-3-002 D-43/D-44: transferRules 정합성 4가지.
   describe('transferRules', () => {
     it('rejects a kindWeightsByRole whose TRANSFER+LOAN does not sum to 100', () => {

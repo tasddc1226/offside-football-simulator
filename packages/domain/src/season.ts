@@ -1,11 +1,28 @@
 import { selectChapter, type ChapterCandidateInput, type ChapterOpenResult } from './chapter.js';
 import { buildRenewalOffer } from './market.js';
 import { computeContractSeasonsRemaining } from './market-value.js';
+import {
+  applyNationalTeamCallUp,
+  buildNationalTeamCallUpRecord,
+  qualifyNationalTeam,
+} from './national-team.js';
 import { rollRange } from './roll-range.js';
 import type { RngState } from './rng.js';
 import type { League, LeagueCalendar, LeagueCalendarSlot, Ruleset } from './ruleset.js';
 import { computeRoleProposal, type RoleProposalContext } from './selection.js';
-import type { CareerState, CompetitionRecord, DecisionSlot, MarketSummary, MatchRecord, Pending, SeasonStep, SimulationMode, StepMatchResult } from './types.js';
+import type {
+  CareerState,
+  CompetitionRecord,
+  DecisionSlot,
+  MarketSummary,
+  MatchRecord,
+  NationalTeamCallUpRecord,
+  Pending,
+  SeasonStep,
+  SimulationMode,
+  StepMatchResult,
+  TimelineEntry,
+} from './types.js';
 
 /** RULE-TIME-004: 시즌당 핵심 경기 챕터 상한(모드 공통). */
 const CHAPTER_BUDGET_CAP = 4;
@@ -158,7 +175,7 @@ function slotPriority(kind: DecisionSlot['kind']): number {
 export type EligibleEvent = { eventId: string; version: number; weight: number };
 
 export type SlotOpenResult =
-  | { opened: false }
+  | { opened: false; nationalTeamAutoDecline?: NationalTeamCallUpRecord }
   | { opened: true; pending: Pending; rngState: RngState; eventId?: string };
 
 /**
@@ -167,8 +184,8 @@ export type SlotOpenResult =
  * 문서 "eligibleEvents가 비어 있으면 그 슬롯은 건너뛴다"). ROLE은 `roleContext`로 `computeRoleProposal`을
  * 계산해 `ROLE_PROPOSAL` pending을 연다(roll을 소비하지 않는다 — D-34). T-2-004 D-38: CHAPTER는
  * `walkToNextDecision`이 미리 계산해 넘긴 `chapterOpen`(roll 없음, `selectChapter` 결과)이 null이면
- * 건너뛴다(이 step에 맞는 챕터 후보가 없었다는 뜻 — 일반 경기로 지나간다). 나머지 종류는 플레이스홀더로
- * 무조건 연다.
+ * 건너뛴다(이 step에 맞는 챕터 후보가 없었다는 뜻 — 일반 경기로 지나간다). CONTRACT·INJURY는 기존
+ * 호환 형태를 열고, NATIONAL_TEAM은 자격 판정·부상 우선 규칙을 거친 뒤 연다.
  */
 export function selectOpenSlot(
   step: SeasonStep,
@@ -184,6 +201,8 @@ export function selectOpenSlot(
   // T-3-002 D-43 (a): CONTRACT 분기가 `buildRenewalOffer`를 부르는 데만 쓴다(roll 없음).
   state: CareerState,
   ruleset: Ruleset,
+  /** 이번 step 경기에서 새로 발생한 minor injury까지 포함한 대표팀 출전 불가 여부. */
+  injuryUnavailable = false,
 ): SlotOpenResult {
   const candidates = step.decisionSlots
     .filter((slot) => !slot.skippedByBudget)
@@ -235,6 +254,7 @@ export function selectOpenSlot(
           decisionsTotal: chapterOpen.decisionsTotal,
           trigger: chapterOpen.trigger,
           resolved: [],
+          ...(chapterOpen.virtualOpponent === undefined ? {} : { virtualOpponent: chapterOpen.virtualOpponent }),
         },
         rngState,
       };
@@ -270,9 +290,35 @@ export function selectOpenSlot(
       return { opened: true, pending: { kind: 'INJURY', step: step.index, episodeId: '', eventId: '', version: 0 }, rngState };
     }
 
-    // slot.kind === 'NATIONAL_TEAM'. T-3-001 D-51 예약: 생성기(T-4-004)가 없는 지금은 형태만
-    // 채운다(현재 룰셋에 NATIONAL_TEAM 슬롯이 없어 이 분기는 실제로 도달하지 않는다).
-    return { opened: true, pending: { kind: 'NATIONAL_TEAM', step: step.index, eventId: '', version: 0 }, rngState };
+    // slot.kind === 'NATIONAL_TEAM'. qualification/auto-decline은 모두 RNG 0이다.
+    const qualification = qualifyNationalTeam(state, ruleset, step.index);
+    if (!qualification.eligible) continue;
+
+    const activeInjury = state.health.episodes.some((episode) => episode.status === 'ACTIVE' || episode.status === 'REHAB');
+    const seasonInjury = state.season?.availability?.kind === 'INJURY';
+    if (injuryUnavailable || activeInjury || seasonInjury) {
+      return {
+        opened: false,
+        nationalTeamAutoDecline: buildNationalTeamCallUpRecord(
+          state,
+          ruleset.nationalTeamRules.event.id,
+          ruleset.nationalTeamRules.event.version,
+          'DECLINE',
+          'INJURY',
+          step.index,
+        ),
+      };
+    }
+    return {
+      opened: true,
+      pending: {
+        kind: 'NATIONAL_TEAM',
+        step: step.index,
+        eventId: ruleset.nationalTeamRules.event.id,
+        version: ruleset.nationalTeamRules.event.version,
+      },
+      rngState,
+    };
   }
 
   return { opened: false };
@@ -285,6 +331,9 @@ export type SeasonWalkResult = {
   rngState: RngState;
   /** 이번 걷기에서 닫힌 step 번호들, 순서대로(강제 부상만 있었던 재개 step은 1 이상일 수 있다). */
   passedStepIndexes: number[];
+  /** 같은 walk 중 자동 INJURY decline으로 갱신된 대표팀 이력. */
+  nationalTeamState: CareerState['nationalTeam'];
+  nationalTeamTimeline: TimelineEntry[];
 };
 
 /**
@@ -303,6 +352,8 @@ export type PlayStepMatches = (stepIndex: number) => {
   forcedPending: Extract<Pending, { kind: 'INJURY' }> | null;
   /** 첫 회복 후 첫 실제 출전의 챕터 trigger를 위한 match id. */
   injuryReturnMatchId: string | null;
+  /** walk 중 새로 갱신된 health/availability까지 포함한 출전 불가 상태. */
+  injuryUnavailable?: boolean;
 };
 
 /** T-2-004 D-38: `walkToNextDecision`이 매 step마다 `selectChapter`에 넘기는, step에 안 걸리는 맥락. */
@@ -352,6 +403,9 @@ export function walkToNextDecision(
   let nextSteps = steps;
   let matchesSoFar = [...matchesBeforeWalk];
   const passedStepIndexes: number[] = [];
+  let nationalTeamState = state.nationalTeam;
+  const nationalTeamTimeline: TimelineEntry[] = [];
+  let autoDecisionsThisStep = 0;
 
   while (currentStepIndex < 12) {
     const step = findSeasonStep(nextSteps, currentStepIndex);
@@ -362,6 +416,12 @@ export function walkToNextDecision(
       pending = matchResult.forcedPending;
       break;
     }
+
+    const injuryUnavailable =
+      matchResult.injuryUnavailable === true ||
+      matchResult.records.some((match) => match.injuredOff) ||
+      state.season?.availability?.kind === 'INJURY' ||
+      state.health.episodes.some((episode) => episode.status === 'ACTIVE' || episode.status === 'REHAB');
 
     const chapterOpen = selectChapter({
       step,
@@ -377,27 +437,77 @@ export function walkToNextDecision(
       existingChapterIds: chapterContext.existingChapterIds,
       league: chapterContext.league,
       injuryReturnMatchId: matchResult.injuryReturnMatchId,
+      // An injury discovered after the match must preserve the persistent debut reservation;
+      // it cannot open a NATIONAL_DEBUT chapter on an unavailable appearance.
+      nationalDebutReservation: injuryUnavailable ? null : nationalTeamState.pendingDebut,
     });
     matchesSoFar = [...matchesSoFar, ...matchResult.records];
     // T-3-001: MarketSummary.seasonIndex는 "시장이 열린 시점의 seasonHistory.length"(D-43) — season.index
     // (1부터 시작)가 아니라 그보다 1 작은 값이다.
-    const opened = selectOpenSlot(step, mode, eligibleEvents, nextRngState, roleContext, chapterOpen, revision, chapterContext.seasonIndex - 1, state, ruleset);
+    let opened = selectOpenSlot(
+      step,
+      mode,
+      eligibleEvents,
+      nextRngState,
+      roleContext,
+      chapterOpen,
+      revision,
+      chapterContext.seasonIndex - 1,
+      { ...state, nationalTeam: nationalTeamState },
+      ruleset,
+      injuryUnavailable,
+    );
+    while (!opened.opened && opened.nationalTeamAutoDecline !== undefined) {
+      const record = opened.nationalTeamAutoDecline;
+      nationalTeamState = applyNationalTeamCallUp(nationalTeamState, record);
+      autoDecisionsThisStep += 1;
+      nationalTeamTimeline.push({
+        revision,
+        kind: 'NATIONAL_TEAM_DECLINED',
+        refId: 'INJURY',
+        age: state.age,
+        step: step.index,
+      });
+      opened = selectOpenSlot(
+        step,
+        mode,
+        eligibleEvents,
+        nextRngState,
+        roleContext,
+        chapterOpen,
+        revision,
+        chapterContext.seasonIndex - 1,
+        { ...state, nationalTeam: nationalTeamState },
+        ruleset,
+        injuryUnavailable,
+      );
+    }
     if (opened.opened) {
       pending = opened.pending;
       nextRngState = opened.rngState;
       break;
     }
-    const decisionsOpened = currentStepIndex === startStepIndex ? decisionsAlreadyOpenedForStartStep : 0;
+    const decisionsOpened =
+      (currentStepIndex === startStepIndex ? decisionsAlreadyOpenedForStartStep : 0) + autoDecisionsThisStep;
     nextSteps = markStepPassed(nextSteps, currentStepIndex, revision, decisionsOpened, matchResult.results);
     passedStepIndexes.push(currentStepIndex);
     currentStepIndex += 1;
+    autoDecisionsThisStep = 0;
   }
 
   if (pending === null && currentStepIndex === 12) {
     pending = { kind: 'SETTLEMENT', step: 12 };
   }
 
-  return { steps: nextSteps, currentStepIndex, pending, rngState: nextRngState, passedStepIndexes };
+  return {
+    steps: nextSteps,
+    currentStepIndex,
+    pending,
+    rngState: nextRngState,
+    passedStepIndexes,
+    nationalTeamState,
+    nationalTeamTimeline,
+  };
 }
 
 /**

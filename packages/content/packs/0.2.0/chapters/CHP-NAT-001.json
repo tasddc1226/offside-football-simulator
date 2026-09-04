@@ -1,0 +1,40 @@
+{
+  "id": "CHP-NAT-001",
+  "version": 1,
+  "importance": "MAJOR",
+  "trigger": { "kind": "NATIONAL_DEBUT" },
+  "weight": 100,
+  "authoring": "PROTOTYPE",
+  "decisions": [
+    {
+      "id": "D1",
+      "prompt": "대표팀 데뷔 무대에서 경기 계획을 어떻게 실행할까?",
+      "options": [
+        {
+          "id": "STEADY",
+          "label": "기본 역할을 지킨다",
+          "riskLabel": "LOW",
+          "priorProbability": null,
+          "previewEffects": [{ "label": "경기 평점 유지" }],
+          "outcomes": [{ "id": "STEADY-1", "kind": "FIXED", "weight": 100, "title": "계획대로 움직였다", "ratingDeltaTenths": 1, "effects": [], "narrative": { "situation": "준비한 역할을 차분하게 수행했다." } }]
+        },
+        {
+          "id": "ADAPT",
+          "label": "상황에 맞춰 조정한다",
+          "riskLabel": "MEDIUM",
+          "priorProbability": null,
+          "previewEffects": [{ "label": "경기 평점 변동" }],
+          "outcomes": [{ "id": "ADAPT-1", "kind": "FIXED", "weight": 100, "title": "흐름을 읽고 조정했다", "ratingDeltaTenths": 2, "effects": [], "narrative": { "situation": "동료의 움직임에 맞춰 판단을 바꿨다." } }]
+        },
+        {
+          "id": "BOLD",
+          "label": "주도적으로 시도한다",
+          "riskLabel": "HIGH",
+          "priorProbability": null,
+          "previewEffects": [{ "label": "경기 평점 변동 폭 확대" }],
+          "outcomes": [{ "id": "BOLD-1", "kind": "FIXED", "weight": 100, "title": "첫 무대에서 존재감을 보였다", "ratingDeltaTenths": 3, "effects": [], "narrative": { "situation": "주저하지 않고 첫 기회를 만들었다." } }]
+        }
+      ]
+    }
+  ]
+}

@@ -308,8 +308,10 @@ export type ReputationRules = {
 
 // T-4-001 D-51: 대표팀 차출 규칙(`packages/content` 소유). 자격 판정·pending 생성은 T-4-004.
 export type NationalTeamRules = {
+  event: { id: string; version: number };
   callUpStep: number;
   minOvrByTier: Record<'YOUTH' | '1' | '2' | '3', number>;
+  minRatingTenths: number;
   minPopularityCenti: number;
   fitnessCost: { ACCEPT: number; CONDITIONAL: number; DECLINE: number };
   relationDelta: {

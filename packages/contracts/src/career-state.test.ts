@@ -343,6 +343,8 @@ function confirmedStateLiteral() {
     captaincy: 'NONE' as const,
     captaincySeasons: 0,
     controversyFailures: 0,
+    nationalityRuleState: { moduleId: 'DEFAULT', exceptions: [] },
+    nationalTeam: { callUps: [], debuted: false, pendingDebut: null },
     health: { episodes: [] },
     relationshipLog: [],
     memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
@@ -354,6 +356,24 @@ describe('CareerStateSchema', () => {
   it('확정 직후 상태 리터럴을 받아들인다', () => {
     const result = CareerStateSchema.safeParse(confirmedStateLiteral());
     expect(result.success).toBe(true);
+  });
+
+  it('대표팀 기본 상태는 최소 strict shape이고 수락 여부는 callUps에서 파생한다', () => {
+    const state = confirmedStateLiteral();
+    expect(state.nationalityRuleState).toEqual({ moduleId: 'DEFAULT', exceptions: [] });
+    expect(state.nationalTeam).toEqual({ callUps: [], debuted: false, pendingDebut: null });
+
+    const duplicateAccepted = {
+      ...state,
+      nationalTeam: { ...state.nationalTeam, accepted: true },
+    };
+    expect(CareerStateSchema.safeParse(duplicateAccepted).success).toBe(false);
+
+    const specialNationalityField = {
+      ...state,
+      nationalityRuleState: { ...state.nationalityRuleState, naturalization: true },
+    };
+    expect(CareerStateSchema.safeParse(specialNationalityField).success).toBe(false);
   });
 
   it('알 수 없는 최상위 키는 거부한다', () => {

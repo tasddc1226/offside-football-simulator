@@ -977,7 +977,11 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
       const result = simulate({
         ...baseInput(),
         snapshot: pending,
-        command: resolveEventCommand(pending.revision, { eventId: 'EVT-NAT-001', callUp }),
+        command: resolveEventCommand(pending.revision, {
+          eventId: 'EVT-NAT-001',
+          choiceId: callUp === 'ACCEPT' ? 'A' : 'B',
+          callUp,
+        }),
       });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
@@ -985,6 +989,8 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
       const lastEntry = result.snapshot.state.timeline.at(-1);
       expect(lastEntry?.kind).toBe('NATIONAL_TEAM_CALLED');
       expect(lastEntry?.refId).toBe('EVT-NAT-001');
+      expect(result.snapshot.state.tags).toContain('대표팀_소집');
+      expect(result.snapshot.state.tags).not.toContain('NATIONAL_TEAM_CALLED');
     },
   );
 
@@ -993,12 +999,18 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
     const result = simulate({
       ...baseInput(),
       snapshot: pending,
-      command: resolveEventCommand(pending.revision, { eventId: 'EVT-NAT-001', callUp: 'DECLINE' }),
+      command: resolveEventCommand(pending.revision, {
+        eventId: 'EVT-NAT-001',
+        choiceId: 'C',
+        callUp: 'DECLINE',
+      }),
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const lastEntry = result.snapshot.state.timeline.at(-1);
     expect(lastEntry?.kind).toBe('NATIONAL_TEAM_DECLINED');
+    expect(result.snapshot.state.tags).not.toContain('대표팀_소집');
+    expect(result.snapshot.state.tags).not.toContain('NATIONAL_TEAM_DECLINED');
   });
 });
 

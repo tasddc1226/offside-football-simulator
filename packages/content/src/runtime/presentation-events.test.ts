@@ -18,6 +18,7 @@ const PRESENTATION_EVENT_IDS = [
   'EVT-REL-010',
   'EVT-ETH-010',
   'EVT-MEDIA-010',
+  'EVT-NAT-001',
 ] as const;
 
 type EngineCommand = Command & { commandId: string; expectedRevision: number };
@@ -36,7 +37,10 @@ function pendingSnapshot(definition: EventDefinition, controversyFailures = 0): 
   const state = buildTestState({
     contentPackVersion: CONTENT_PACK_VERSION,
     controversyFailures,
-    pending: { kind: 'EVENT', eventId: definition.id, version: definition.version },
+    pending:
+      definition.presentation === 'NATIONAL_TEAM'
+        ? { kind: 'NATIONAL_TEAM', step: 8, eventId: definition.id, version: definition.version }
+        : { kind: 'EVENT', eventId: definition.id, version: definition.version },
   });
   return {
     revision: 1,
@@ -77,6 +81,7 @@ function resolveEventCommand(
       definitionVersion: definition.version,
       choiceId,
       outcomes,
+      ...(choice.callUp === undefined ? {} : { callUp: choice.callUp }),
     },
   };
 }

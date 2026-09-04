@@ -624,6 +624,8 @@ export type ReputationRules = z.infer<typeof ReputationRulesSchema>;
 const NationalTeamRelationDeltaSchema = z.strictObject({ fans: z.number().int(), agent: z.number().int() });
 
 export const NationalTeamRulesSchema = z.strictObject({
+  // T-4-004: 실제 생성/해소 경로가 반드시 이 event ref를 사용한다. placeholder 호환성은 domain에만 둔다.
+  event: z.strictObject({ id: z.string().min(1), version: z.number().int().positive() }),
   callUpStep: z.number().int().min(1).max(12),
   minOvrByTier: z.strictObject({
     YOUTH: z.number().int().min(0).max(99),
@@ -631,6 +633,7 @@ export const NationalTeamRulesSchema = z.strictObject({
     '2': z.number().int().min(0).max(99),
     '3': z.number().int().min(0).max(99),
   }),
+  minRatingTenths: z.number().int().min(0).max(100),
   minPopularityCenti: z.number().int().min(0).max(10000),
   fitnessCost: z.strictObject({
     ACCEPT: z.number().int().nonnegative(),

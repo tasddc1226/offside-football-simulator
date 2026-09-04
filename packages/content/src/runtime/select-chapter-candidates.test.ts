@@ -274,7 +274,7 @@ function runOrThrow(
 
 type ResolveEventOutcomePayload = {
   id: string;
-  kind?: EventDefinition['choices'][number]['outcomes'][number]['kind'];
+  kind: EventDefinition['choices'][number]['outcomes'][number]['kind'];
   weight: number;
   effects: Effect[];
   addTags?: string[];

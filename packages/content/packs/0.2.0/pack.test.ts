@@ -9,15 +9,15 @@ import { PERMANENT_TARGETS, CURRENT_TARGETS, CONTEXT_TARGETS, RELATION_TARGETS }
 const PACK_DIR = dirname(fileURLToPath(import.meta.url));
 
 describe('packs/0.2.0', () => {
-  it('has exactly 19 events and 3 chapters that load and validate without errors', () => {
+  it('has exactly 20 events and 4 chapters that load and validate without errors', () => {
     const loaded = loadPack(PACK_DIR);
-    expect(loaded.events).toHaveLength(19);
-    expect(loaded.chapters).toHaveLength(3);
+    expect(loaded.events).toHaveLength(20);
+    expect(loaded.chapters).toHaveLength(4);
 
     const result = validatePack(loaded, { writeChecksum: false });
     expect(result.errors).toEqual([]);
-    expect(result.eventCount).toBe(19);
-    expect(result.chapterCount).toBe(3);
+    expect(result.eventCount).toBe(20);
+    expect(result.chapterCount).toBe(4);
   });
 
   it('every chapter id is unique', () => {
@@ -86,7 +86,7 @@ describe('packs/0.2.0', () => {
     expect(result.errors.filter((e) => e.includes('checksum'))).toEqual([]);
   });
 
-  // T-3-006/T-4-002/T-4-003: 신규 이벤트와 문구가 바뀐 EVT-INJ-001은 PROTOTYPE으로 표시한다.
+  // T-3-006/T-4-002/T-4-003/T-4-004: 신규 이벤트와 문구가 바뀐 EVT-INJ-001은 PROTOTYPE으로 표시한다.
   // 나머지 0.1.0 유래 이벤트는 authoring이 없다.
   it('신규 이벤트와 문구가 바뀐 EVT-INJ-001은 authoring이 PROTOTYPE이다', () => {
     const loaded = loadPack(PACK_DIR);
@@ -100,6 +100,7 @@ describe('packs/0.2.0', () => {
       'EVT-REL-010',
       'EVT-ETH-010',
       'EVT-MEDIA-010',
+      'EVT-NAT-001',
     ]);
     const changedIds = new Set([...newIds, 'EVT-INJ-001']);
     for (const { raw } of loaded.events) {

@@ -5,11 +5,12 @@
   ],
   "clientMinVersion": "0.1.0",
   "playtested": false,
-  "checksum": "d9550d3de6727505d6531e5650d59bfa8efa939b5feb4fadd67986546e76f70b",
+  "checksum": "c4f1024dbca7466d9bc4e8ac69e4e1993975df612a0ef87673656f8e1c233d99",
   "files": [
     "chapters/CHP-MATCH-001.json",
     "chapters/CHP-MATCH-002.json",
     "chapters/CHP-MATCH-004.json",
+    "chapters/CHP-NAT-001.json",
     "events/EVT-CON-001.json",
     "events/EVT-CON-002.json",
     "events/EVT-CON-003.json",
@@ -18,6 +19,7 @@
     "events/EVT-INJ-001.json",
     "events/EVT-MEDIA-001.json",
     "events/EVT-MGR-001.json",
+    "events/EVT-NAT-001.json",
     "events/EVT-REL-001.json",
     "events/EVT-REL-002.json",
     "narrative/tokens.json"

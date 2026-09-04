@@ -13,6 +13,7 @@ import type {
   CompetitionRecord,
   Effect,
   MatchRecord,
+  NationalDebutReservation,
   Pending,
   SeasonStep,
   SimulationMode,
@@ -37,6 +38,7 @@ export type ChapterOpenResult = {
   // T-2-014 D-42: 이긴 후보의 trigger kind(전체 ChapterTrigger가 아니라 판별 리터럴만 — Pending.CHAPTER·
   // ChapterRecord가 그대로 옮겨 담는다).
   trigger: ChapterTrigger['kind'];
+  virtualOpponent?: NationalDebutReservation;
 };
 
 export type SelectChapterInput = {
@@ -59,6 +61,8 @@ export type SelectChapterInput = {
   league: League;
   /** 첫 회복 후 실제 출전 경기 id. 없으면 INJURY_RETURN 후보는 열리지 않는다. */
   injuryReturnMatchId?: string | null;
+  /** 최초 수락 뒤 유지되는 NATIONAL_DEBUT 예약. null/undefined면 대표팀 데뷔 후보를 열지 않는다. */
+  nationalDebutReservation?: NationalDebutReservation | null;
 };
 
 function stepAllowsImportance(step: SeasonStep, importance: 'MAJOR' | 'MINOR'): boolean {
@@ -92,6 +96,7 @@ type TriggerContext = {
   leaguePosition: number | null;
   tags: readonly string[];
   injuryReturnMatchId?: string | null;
+  nationalDebutReservation?: NationalDebutReservation | null;
 };
 
 /**
@@ -111,6 +116,8 @@ export function matchesTrigger(trigger: ChapterTrigger, match: MatchRecord, ctx:
       return ctx.isLastLeagueStep && isNearPromotionOrRelegation(ctx.league, ctx.leaguePosition, trigger.maxRankGap);
     case 'INJURY_RETURN':
       return ctx.injuryReturnMatchId === match.id;
+    case 'NATIONAL_DEBUT':
+      return ctx.nationalDebutReservation !== null && ctx.nationalDebutReservation !== undefined;
     case 'TAG':
       return ctx.tags.includes(trigger.tag);
   }
@@ -132,10 +139,12 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
     if (!stepAllowsImportance(input.step, candidate.importance)) return false;
     if (input.resolvedChapterIds.includes(`${candidate.chapterId}@${input.seasonIndex}`)) return false;
     if (input.existingChapterIds.includes(candidate.chapterId)) return false;
+    if (candidate.trigger.kind === 'NATIONAL_DEBUT' && input.nationalDebutReservation === null) return false;
+    if (candidate.trigger.kind === 'NATIONAL_DEBUT' && input.nationalDebutReservation === undefined) return false;
     return true;
   });
 
-  const opened: Array<{ candidate: ChapterCandidateInput; matchId: string }> = [];
+  const opened: Array<{ candidate: ChapterCandidateInput; matchId: string; virtualOpponent?: NationalDebutReservation }> = [];
   for (const candidate of eligibleCandidates) {
     let isFirstCareerAppearance = isFirstCareerAppearanceAtStepStart;
     for (const match of orderedMatches) {
@@ -151,10 +160,17 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
             leaguePosition,
             tags: input.tags,
             ...(input.injuryReturnMatchId === undefined ? {} : { injuryReturnMatchId: input.injuryReturnMatchId }),
+            ...(input.nationalDebutReservation === undefined ? {} : { nationalDebutReservation: input.nationalDebutReservation }),
           },
         )
       ) {
-        opened.push({ candidate, matchId: match.id });
+        opened.push({
+          candidate,
+          matchId: match.id,
+          ...(candidate.trigger.kind === 'NATIONAL_DEBUT' && input.nationalDebutReservation !== null && input.nationalDebutReservation !== undefined
+            ? { virtualOpponent: input.nationalDebutReservation }
+            : {}),
+        });
         break;
       }
       if (match.minutes > 0) isFirstCareerAppearance = false;
@@ -164,6 +180,9 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
   if (opened.length === 0) return null;
 
   opened.sort((a, b) => {
+    const aNationalDebut = a.candidate.trigger.kind === 'NATIONAL_DEBUT';
+    const bNationalDebut = b.candidate.trigger.kind === 'NATIONAL_DEBUT';
+    if (aNationalDebut !== bNationalDebut) return aNationalDebut ? -1 : 1;
     if (a.candidate.importance !== b.candidate.importance) return a.candidate.importance === 'MAJOR' ? -1 : 1;
     if (a.candidate.weight !== b.candidate.weight) return b.candidate.weight - a.candidate.weight;
     return compareCodePoints(a.candidate.chapterId, b.candidate.chapterId);
@@ -177,6 +196,7 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
     matchId: winner.matchId,
     decisionsTotal: winner.candidate.decisionsTotal,
     trigger: winner.candidate.trigger.kind,
+    ...(winner.virtualOpponent === undefined ? {} : { virtualOpponent: winner.virtualOpponent }),
   };
 }
 
@@ -297,6 +317,7 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
 
   let chapters = season.chapters;
   let resolvedChapterIds = state.resolvedChapterIds;
+  let nationalTeam = state.nationalTeam;
   let nextPending: Pending;
 
   if (isLastDecision) {
@@ -320,9 +341,16 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
         outcomeKind: entry.outcomeKind,
       })),
       ratingDeltaTenths: chapterRatingDeltaTenths,
+      ...(pending.virtualOpponent === undefined ? {} : { virtualOpponent: pending.virtualOpponent }),
     };
     chapters = [...season.chapters, chapterRecord];
     resolvedChapterIds = sortUniqueTags([...state.resolvedChapterIds, `${pending.chapterId}@${season.index}`]);
+    if (pending.trigger === 'NATIONAL_DEBUT') {
+      if (nationalTeam.pendingDebut === null) {
+        return { ok: false, message: 'NATIONAL_DEBUT 챕터에 소비할 대표팀 데뷔 예약이 없다.' };
+      }
+      nationalTeam = { ...nationalTeam, debuted: true, pendingDebut: null };
+    }
     nextPending = null;
   } else {
     nextPending = { ...pending, resolved };
@@ -332,6 +360,7 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
     ...effectResult.state,
     tags,
     resolvedChapterIds,
+    nationalTeam,
     rngState: rolled.state,
     pending: nextPending,
     season: { ...season, matches, playerStats, lastRatingTenths, chapters },
