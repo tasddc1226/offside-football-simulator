@@ -3,6 +3,7 @@
 // 결정 확정은 전용 화면(SCR-007·008·009·010·012·013·014)에서만 일어난다.
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { useIsMutating } from '@tanstack/react-query';
 import {
   deriveTacticalRoom,
   type CareerState,
@@ -23,6 +24,7 @@ import {
   PlayerHeader,
   ScreenIntro,
   StatusStrip,
+  SwipeSurface,
   Tabs,
   TabsContent,
   TabsList,
@@ -57,6 +59,8 @@ import { buildScheduleRows } from '../shared/season-schedule.js';
 import { cupProgressLabel, opponentDisplayName } from '../shared/competition-labels.js';
 import { eventOutcomeTitle } from '../shared/legacy-event-copy.js';
 import { familiarityPercentLabel, SelectionRankingList } from '../shared/tactical-room.js';
+import { useReducedMotion } from '../shared/ui-store.js';
+import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 
 type DashboardSearch = { signed?: boolean };
 
@@ -508,6 +512,8 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   );
 }
 
+const DASHBOARD_TABS = ['schedule', 'locker', 'tactics', 'phone', 'diary'] as const;
+
 function CareerDashboard() {
   const { careerId } = Route.useParams();
   const { signed } = Route.useSearch();
@@ -515,6 +521,18 @@ function CareerDashboard() {
   const query = useCareer(careerId);
   const [showSignedToast, setShowSignedToast] = useState(signed === true);
   const initialisedRef = useRef(false);
+  const [tab, setTab] = useState<string>('schedule');
+  const [tabDirection, setTabDirection] = useState<ScreenDirection>('forward');
+  const reducedMotion = useReducedMotion();
+  const mutating = useIsMutating() > 0;
+  const tabIndex = DASHBOARD_TABS.findIndex((value) => value === tab);
+
+  function changeTab(value: string) {
+    const nextIndex = DASHBOARD_TABS.findIndex((candidate) => candidate === value);
+    if (nextIndex < 0) return;
+    setTabDirection(nextIndex < tabIndex ? 'back' : 'forward');
+    setTab(value);
+  }
 
   useEffect(() => {
     if (initialisedRef.current) return;
@@ -585,7 +603,7 @@ function CareerDashboard() {
         <NextDecisionCard careerId={careerId} state={state} />
       </section>
 
-      <Tabs defaultValue="schedule">
+      <Tabs value={tab} onValueChange={changeTab}>
         <TabsList aria-label="대시보드 구역">
           <TabsTrigger value="schedule">일정표</TabsTrigger>
           <TabsTrigger value="locker">라커룸</TabsTrigger>
@@ -594,263 +612,285 @@ function CareerDashboard() {
           <TabsTrigger value="diary">다이어리</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="schedule">
-          <DashboardSection title="일정표" description="현재 진행 상황과 다음 결정을 확인합니다.">
-            {season === null ? (
-              <>
-                <p className="font-os text-os-text" style={BODY_STYLE}>
-                  step {state.currentStep} · {SEASON_PHASE_LABEL_KO[state.seasonPhase]}
-                </p>
-                <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                  {state.pending === null
-                    ? '다음 결정은 진행 후 열립니다.'
-                    : '위 카드에서 결정을 확인하세요.'}
-                </p>
-              </>
-            ) : (
-              <div className="flex flex-col gap-os-4">
-                <SeasonTimeline steps={season.steps} currentStep={season.currentStep} />
-                {hasContract && state.contract ? (
-                  <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                    시즌 목표: {ROLE_PROMISE_SENTENCE[state.contract.rolePromise]}
-                  </p>
-                ) : null}
-                <div className="flex flex-col gap-os-2 rounded-os-m bg-os-surface-2 p-os-3">
-                  {season.competitions.map((record) => (
-                    <p
-                      key={record.competitionId}
-                      className="os-num font-os text-os-text-2"
-                      style={CAPTION_STYLE}
-                    >
-                      {competitionSummaryLine(record, season, activeRuleset)}
-                    </p>
-                  ))}
-                </div>
-                <div className="flex flex-col gap-os-2">
-                  {buildScheduleRows(season, activeRuleset).map((row) => (
-                    <div
-                      key={`${row.step}-${row.order}`}
-                      className="flex min-w-0 flex-col gap-os-1 rounded-os-m border border-os-border px-os-3 py-os-3 font-os text-os-text-2"
-                      style={CAPTION_STYLE}
-                    >
-                      <span className="break-words">
-                        step {row.step} · {row.competitionLabel} · {row.home ? '홈' : '원정'} ·{' '}
-                        {row.opponentName}
-                      </span>
-                      <span className="os-num font-semibold text-os-text">
-                        {row.eliminated
-                          ? '탈락'
-                          : row.match === null
-                            ? '—'
-                            : `${row.match.scoreText} · ${row.match.appearanceLabel} · ${row.match.minutes}분 · ${row.match.ratingText}`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </DashboardSection>
-        </TabsContent>
-
-        <TabsContent value="locker">
-          <DashboardSection
-            title="라커룸"
-            description="감독·주장·경쟁자·동료 관계의 최근 기억입니다."
+        <p className="os-swipe-hint">탭을 누르거나 내용을 좌우로 밀어 둘러보세요</p>
+        <MotionPanel motionKey={tab} direction={tabDirection} className="os-dashboard-tabs-motion">
+          <SwipeSurface
+            canSwipeLeft={tabIndex < DASHBOARD_TABS.length - 1}
+            canSwipeRight={tabIndex > 0}
+            disabled={mutating}
+            reducedMotion={reducedMotion}
+            onSwipe={(swipe) => {
+              const next = DASHBOARD_TABS[tabIndex + (swipe === 'left' ? 1 : -1)];
+              if (next) changeTab(next);
+            }}
           >
-            {state.tags.length === 0 ? (
-              <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                아직 기억 태그가 없습니다.
-              </p>
-            ) : (
-              <ul className="flex flex-wrap gap-os-1">
-                {state.tags.map((tag) => (
-                  <li
-                    key={tag}
-                    className="rounded-os-s bg-os-surface-2 px-os-2 py-os-1 font-os text-os-text-2"
-                    style={CAPTION_STYLE}
-                  >
-                    {tag}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </DashboardSection>
-        </TabsContent>
-
-        <TabsContent value="tactics">
-          <DashboardSection
-            title="전술실"
-            description="역할 약속과 전술 적합도, 선발 순위를 봅니다."
-            locked={!hasContract}
-            lockReason="첫 프로 계약 후 열림"
-          >
-            {hasContract && state.contract ? (
-              <div className="flex flex-col gap-os-3">
-                {showRevealCaption ? (
-                  <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                    전술 적합도·감독 신뢰가 새로 열렸습니다.
-                  </p>
-                ) : null}
-                {room === null ? (
-                  <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                    시즌 시작 후 열립니다
-                  </p>
-                ) : (
+            <TabsContent value="schedule">
+              <DashboardSection
+                title="일정표"
+                description="현재 진행 상황과 다음 결정을 확인합니다."
+              >
+                {season === null ? (
                   <>
                     <p className="font-os text-os-text" style={BODY_STYLE}>
-                      {room.styleName} · {room.formation}
+                      step {state.currentStep} · {SEASON_PHASE_LABEL_KO[state.seasonPhase]}
                     </p>
                     <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                      {POSITION_LABELS[room.playerPosition]} · {SQUAD_ROLE_LABELS[room.playerRole]}
+                      {state.pending === null
+                        ? '다음 결정은 진행 후 열립니다.'
+                        : '위 카드에서 결정을 확인하세요.'}
                     </p>
-                    <dl
-                      className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
-                      style={CAPTION_STYLE}
-                    >
-                      <div>
-                        <dt>전술 적합도</dt>
-                        <dd className="os-num text-os-text">{room.tacticalFit}</dd>
-                      </div>
-                      <div>
-                        <dt>감독 신뢰</dt>
-                        <dd className="os-num text-os-text">{room.managerTrust}</dd>
-                      </div>
-                      <div>
-                        <dt>경기 예상치</dt>
-                        <dd className="os-num text-os-text">{room.expectedPerformance}</dd>
-                      </div>
-                      <div>
-                        <dt>숙련도</dt>
-                        <dd className="os-num text-os-text">
-                          {familiarityPercentLabel(room.familiarity)}
-                        </dd>
-                      </div>
-                    </dl>
-                    <SelectionRankingList ranking={room.ranking} />
                   </>
-                )}
-                <div className="flex flex-col gap-os-2">
-                  <Link
-                    to="/career/$careerId/attributes"
-                    params={{ careerId }}
-                    className={buttonClassName('secondary')}
-                    style={buttonStyle}
-                  >
-                    능력치 상세
-                  </Link>
-                  {state.pending !== null && state.pending.kind === 'ROLE_PROPOSAL' ? (
-                    <Link
-                      to="/career/$careerId/role"
-                      params={{ careerId }}
-                      className={buttonClassName('secondary')}
-                      style={buttonStyle}
-                    >
-                      감독 제안 보기
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
-          </DashboardSection>
-        </TabsContent>
-
-        <TabsContent value="phone">
-          <DashboardSection
-            title="휴대폰"
-            description="계약 상태를 확인합니다."
-            locked={!hasContract}
-            lockReason="첫 프로 계약 후 열림"
-          >
-            {hasContract && state.contract ? (
-              <dl
-                className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
-                style={CAPTION_STYLE}
-              >
-                <div>
-                  <dt>팀</dt>
-                  <dd className="text-os-text">{state.contract.teamName}</dd>
-                </div>
-                <div>
-                  <dt>리그</dt>
-                  <dd className="text-os-text">
-                    {LEAGUE_TIER_LABEL_KO[state.contract.leagueTier]}
-                  </dd>
-                </div>
-                <div>
-                  <dt>기간</dt>
-                  <dd className="os-num text-os-text">{state.contract.lengthSeasons}시즌</dd>
-                </div>
-                <div>
-                  <dt>주급</dt>
-                  <dd className="os-num text-os-text">
-                    {formatKrw(state.contract.wageMinorPerWeek)}
-                  </dd>
-                </div>
-              </dl>
-            ) : null}
-          </DashboardSection>
-        </TabsContent>
-
-        <TabsContent value="diary">
-          <DashboardSection title="다이어리" description="이번 커리어의 연대기입니다.">
-            <div className="flex flex-col gap-os-4">
-              {seasonChronicleItems.length > 0 ? (
-                <div className="flex flex-col gap-os-2">
-                  <h3 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-                    이번 시즌
-                  </h3>
-                  <ol className="flex flex-col gap-os-1">
-                    {seasonChronicleItems.map((item) =>
-                      item.seasonResultHistoryIndex !== null ? (
-                        <li key={item.id}>
-                          <Link
-                            to="/career/$careerId/season-result"
-                            params={{ careerId }}
-                            search={{ season: item.seasonResultHistoryIndex }}
-                            className="font-os text-os-text underline"
-                            style={CAPTION_STYLE}
-                          >
-                            {item.sentence}
-                          </Link>
-                        </li>
-                      ) : (
-                        <li key={item.id} className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                          {item.sentence}
-                        </li>
-                      ),
-                    )}
-                  </ol>
-                </div>
-              ) : null}
-              {pastSeasonLinks.length > 0 ? (
-                <div className="flex flex-col gap-os-2">
-                  <h3 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-                    지난 시즌
-                  </h3>
-                  <ul className="flex flex-col gap-os-1">
-                    {pastSeasonLinks.map((link) => (
-                      <li key={link.historyIndex}>
-                        <Link
-                          to="/career/$careerId/season-result"
-                          params={{ careerId }}
-                          search={{ season: link.historyIndex }}
-                          className="font-os text-os-text underline"
+                ) : (
+                  <div className="flex flex-col gap-os-4">
+                    <SeasonTimeline steps={season.steps} currentStep={season.currentStep} />
+                    {hasContract && state.contract ? (
+                      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                        시즌 목표: {ROLE_PROMISE_SENTENCE[state.contract.rolePromise]}
+                      </p>
+                    ) : null}
+                    <div className="flex flex-col gap-os-2 rounded-os-m bg-os-surface-2 p-os-3">
+                      {season.competitions.map((record) => (
+                        <p
+                          key={record.competitionId}
+                          className="os-num font-os text-os-text-2"
                           style={CAPTION_STYLE}
                         >
-                          시즌 {link.seasonNumber} 결산 보기
-                        </Link>
+                          {competitionSummaryLine(record, season, activeRuleset)}
+                        </p>
+                      ))}
+                    </div>
+                    <div className="flex flex-col gap-os-2">
+                      {buildScheduleRows(season, activeRuleset).map((row) => (
+                        <div
+                          key={`${row.step}-${row.order}`}
+                          className="flex min-w-0 flex-col gap-os-1 rounded-os-m border border-os-border px-os-3 py-os-3 font-os text-os-text-2"
+                          style={CAPTION_STYLE}
+                        >
+                          <span className="break-words">
+                            step {row.step} · {row.competitionLabel} · {row.home ? '홈' : '원정'} ·{' '}
+                            {row.opponentName}
+                          </span>
+                          <span className="os-num font-semibold text-os-text">
+                            {row.eliminated
+                              ? '탈락'
+                              : row.match === null
+                                ? '—'
+                                : `${row.match.scoreText} · ${row.match.appearanceLabel} · ${row.match.minutes}분 · ${row.match.ratingText}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </DashboardSection>
+            </TabsContent>
+
+            <TabsContent value="locker">
+              <DashboardSection
+                title="라커룸"
+                description="감독·주장·경쟁자·동료 관계의 최근 기억입니다."
+              >
+                {state.tags.length === 0 ? (
+                  <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                    아직 기억 태그가 없습니다.
+                  </p>
+                ) : (
+                  <ul className="flex flex-wrap gap-os-1">
+                    {state.tags.map((tag) => (
+                      <li
+                        key={tag}
+                        className="rounded-os-s bg-os-surface-2 px-os-2 py-os-1 font-os text-os-text-2"
+                        style={CAPTION_STYLE}
+                      >
+                        {tag}
                       </li>
                     ))}
                   </ul>
+                )}
+              </DashboardSection>
+            </TabsContent>
+
+            <TabsContent value="tactics">
+              <DashboardSection
+                title="전술실"
+                description="역할 약속과 전술 적합도, 선발 순위를 봅니다."
+                locked={!hasContract}
+                lockReason="첫 프로 계약 후 열림"
+              >
+                {hasContract && state.contract ? (
+                  <div className="flex flex-col gap-os-3">
+                    {showRevealCaption ? (
+                      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                        전술 적합도·감독 신뢰가 새로 열렸습니다.
+                      </p>
+                    ) : null}
+                    {room === null ? (
+                      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                        시즌 시작 후 열립니다
+                      </p>
+                    ) : (
+                      <>
+                        <p className="font-os text-os-text" style={BODY_STYLE}>
+                          {room.styleName} · {room.formation}
+                        </p>
+                        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                          {POSITION_LABELS[room.playerPosition]} ·{' '}
+                          {SQUAD_ROLE_LABELS[room.playerRole]}
+                        </p>
+                        <dl
+                          className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
+                          style={CAPTION_STYLE}
+                        >
+                          <div>
+                            <dt>전술 적합도</dt>
+                            <dd className="os-num text-os-text">{room.tacticalFit}</dd>
+                          </div>
+                          <div>
+                            <dt>감독 신뢰</dt>
+                            <dd className="os-num text-os-text">{room.managerTrust}</dd>
+                          </div>
+                          <div>
+                            <dt>경기 예상치</dt>
+                            <dd className="os-num text-os-text">{room.expectedPerformance}</dd>
+                          </div>
+                          <div>
+                            <dt>숙련도</dt>
+                            <dd className="os-num text-os-text">
+                              {familiarityPercentLabel(room.familiarity)}
+                            </dd>
+                          </div>
+                        </dl>
+                        <SelectionRankingList ranking={room.ranking} />
+                      </>
+                    )}
+                    <div className="flex flex-col gap-os-2">
+                      <Link
+                        to="/career/$careerId/attributes"
+                        params={{ careerId }}
+                        className={buttonClassName('secondary')}
+                        style={buttonStyle}
+                      >
+                        능력치 상세
+                      </Link>
+                      {state.pending !== null && state.pending.kind === 'ROLE_PROPOSAL' ? (
+                        <Link
+                          to="/career/$careerId/role"
+                          params={{ careerId }}
+                          className={buttonClassName('secondary')}
+                          style={buttonStyle}
+                        >
+                          감독 제안 보기
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </DashboardSection>
+            </TabsContent>
+
+            <TabsContent value="phone">
+              <DashboardSection
+                title="휴대폰"
+                description="계약 상태를 확인합니다."
+                locked={!hasContract}
+                lockReason="첫 프로 계약 후 열림"
+              >
+                {hasContract && state.contract ? (
+                  <dl
+                    className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
+                    style={CAPTION_STYLE}
+                  >
+                    <div>
+                      <dt>팀</dt>
+                      <dd className="text-os-text">{state.contract.teamName}</dd>
+                    </div>
+                    <div>
+                      <dt>리그</dt>
+                      <dd className="text-os-text">
+                        {LEAGUE_TIER_LABEL_KO[state.contract.leagueTier]}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>기간</dt>
+                      <dd className="os-num text-os-text">{state.contract.lengthSeasons}시즌</dd>
+                    </div>
+                    <div>
+                      <dt>주급</dt>
+                      <dd className="os-num text-os-text">
+                        {formatKrw(state.contract.wageMinorPerWeek)}
+                      </dd>
+                    </div>
+                  </dl>
+                ) : null}
+              </DashboardSection>
+            </TabsContent>
+
+            <TabsContent value="diary">
+              <DashboardSection title="다이어리" description="이번 커리어의 연대기입니다.">
+                <div className="flex flex-col gap-os-4">
+                  {seasonChronicleItems.length > 0 ? (
+                    <div className="flex flex-col gap-os-2">
+                      <h3 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+                        이번 시즌
+                      </h3>
+                      <ol className="flex flex-col gap-os-1">
+                        {seasonChronicleItems.map((item) =>
+                          item.seasonResultHistoryIndex !== null ? (
+                            <li key={item.id}>
+                              <Link
+                                to="/career/$careerId/season-result"
+                                params={{ careerId }}
+                                search={{ season: item.seasonResultHistoryIndex }}
+                                className="font-os text-os-text underline"
+                                style={CAPTION_STYLE}
+                              >
+                                {item.sentence}
+                              </Link>
+                            </li>
+                          ) : (
+                            <li
+                              key={item.id}
+                              className="font-os text-os-text-2"
+                              style={CAPTION_STYLE}
+                            >
+                              {item.sentence}
+                            </li>
+                          ),
+                        )}
+                      </ol>
+                    </div>
+                  ) : null}
+                  {pastSeasonLinks.length > 0 ? (
+                    <div className="flex flex-col gap-os-2">
+                      <h3 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+                        지난 시즌
+                      </h3>
+                      <ul className="flex flex-col gap-os-1">
+                        {pastSeasonLinks.map((link) => (
+                          <li key={link.historyIndex}>
+                            <Link
+                              to="/career/$careerId/season-result"
+                              params={{ careerId }}
+                              search={{ season: link.historyIndex }}
+                              className="font-os text-os-text underline"
+                              style={CAPTION_STYLE}
+                            >
+                              시즌 {link.seasonNumber} 결산 보기
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <CareerTimeline
+                    items={buildTimelineItems(state)}
+                    emptyMessage="아직 기록이 없습니다"
+                  />
                 </div>
-              ) : null}
-              <CareerTimeline
-                items={buildTimelineItems(state)}
-                emptyMessage="아직 기록이 없습니다"
-              />
-            </div>
-          </DashboardSection>
-        </TabsContent>
+              </DashboardSection>
+            </TabsContent>
+          </SwipeSurface>
+        </MotionPanel>
       </Tabs>
 
       <div className="flex gap-os-4">

@@ -35,7 +35,7 @@ export function DialogContent({
 
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="os-dialog-overlay fixed inset-0 bg-os-text/50" />
+      <DialogPrimitive.Overlay className="os-dialog-overlay fixed inset-0" />
       <DialogPrimitive.Content className={contentClasses} {...props}>
         <DialogPrimitive.Title
           className="font-os font-bold text-os-text"

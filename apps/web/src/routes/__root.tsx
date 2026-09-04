@@ -4,6 +4,7 @@ import { QueryClientProvider, useIsMutating } from '@tanstack/react-query';
 import { createRootRoute, Link, Outlet, useRouterState } from '@tanstack/react-router';
 import { queryClient } from '../shared/query-client.js';
 import { useApplyTheme } from '../shared/ui-store.js';
+import { AppMotionFrame } from '../shared/app-motion-frame.js';
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -16,7 +17,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <PageShell header={<GameNavigation />}>
-        <Outlet />
+        <AppMotionFrame>
+          <Outlet />
+        </AppMotionFrame>
       </PageShell>
     </QueryClientProvider>
   );

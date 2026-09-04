@@ -1,0 +1,25 @@
+/* A stable route viewport keeps headers still and only clips horizontal slide overshoot.
+   overflow:clip is not a scroll container, so the existing sticky action docks keep working. */
+.os-shell-canvas {
+  overflow-x: clip;
+}
+
+.os-route-motion,
+.os-motion-panel {
+  min-width: 0;
+}
+
+.os-swipe-hint {
+  color: var(--os-text-2);
+  font-size: var(--os-fs-caption);
+  line-height: var(--os-lh-caption);
+  text-align: center;
+}
+
+/* No permanent transform/will-change: fixed and sticky descendants retain their normal containing block. */
+@media (prefers-reduced-motion: reduce) {
+  .os-route-motion,
+  .os-motion-panel {
+    transform: none;
+  }
+}

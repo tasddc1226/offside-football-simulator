@@ -57,4 +57,51 @@ describe('Dialog', () => {
     await user.click(screen.getByRole('button', { name: '열기' }));
     expect(screen.getByRole('button', { name: '닫기' })).toBeInTheDocument();
   });
+
+  it('exposes the same modal motion hooks for the content and backdrop', async () => {
+    const user = userEvent.setup();
+    render(<TestDialog />);
+
+    await user.click(screen.getByRole('button', { name: '열기' }));
+
+    const backdrop = document.querySelector('.os-dialog-overlay');
+    expect(backdrop).toHaveAttribute('data-state', 'open');
+    expect(backdrop).not.toHaveClass('bg-os-text/50');
+    expect(screen.getByRole('dialog')).toHaveClass('os-dialog');
+    expect(screen.getByRole('dialog')).toHaveAttribute('data-state', 'open');
+  });
+
+  it('dismisses from the backdrop and restores trigger focus', async () => {
+    const user = userEvent.setup();
+    render(<TestDialog />);
+
+    const trigger = screen.getByRole('button', { name: '열기' });
+    await user.click(trigger);
+    const backdrop = document.querySelector<HTMLElement>('.os-dialog-overlay');
+    expect(backdrop).not.toBeNull();
+    await user.click(backdrop!);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.querySelector('.os-dialog-overlay')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('keeps keyboard focus trapped and supports reopening after dismissal', async () => {
+    const user = userEvent.setup();
+    render(<TestDialog />);
+
+    const trigger = screen.getByRole('button', { name: '열기' });
+    await user.click(trigger);
+    expect(screen.getByRole('button', { name: '확정' })).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(screen.getByRole('button', { name: '닫기' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: '확정' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    await user.click(trigger);
+
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(document.querySelectorAll('.os-dialog-overlay')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: '확정' })).toHaveFocus();
+  });
 });

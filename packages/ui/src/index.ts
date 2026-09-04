@@ -40,6 +40,8 @@ export type { SkeletonProps } from './components/Skeleton.js';
 export { StatusStrip } from './components/StatusStrip.js';
 export type { StatusStripItem, StatusStripProps } from './components/StatusStrip.js';
 export { Stepper } from './components/Stepper.js';
+export { SwipeSurface } from './components/SwipeSurface.js';
+export type { SwipeSurfaceProps } from './components/SwipeSurface.js';
 export type { StepperProps, StepperStep } from './components/Stepper.js';
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './components/Tabs.js';
 export type {

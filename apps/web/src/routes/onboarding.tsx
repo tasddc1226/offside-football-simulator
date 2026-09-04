@@ -1,14 +1,15 @@
 // SCR-034 온보딩. 3장 이내, 대표 문장 하나와 두 문장 이내 설명. 건너뛰기·KICKOFF 모두
 // onboardingSeen = true를 저장한다. 이 라우트는 언제든 열린다(설정의 "온보딩 다시 보기").
 import { useEffect, useRef, useState } from 'react';
-import { Button, ScreenIntro, Stepper, Toast } from '@offside/ui';
+import { Button, ScreenIntro, Stepper, SwipeSurface, Toast } from '@offside/ui';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { markOnboardingPending } from '../engine/funnel.js';
 import { useServiceSeason } from '../engine/service-season.js';
 import { useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { SERVICE_SEASON_NOTICE_KO } from '../shared/labels.js';
-import { useUiStore } from '../shared/ui-store.js';
+import { useReducedMotion, useUiStore } from '../shared/ui-store.js';
+import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 
 export const Route = createFileRoute('/onboarding')({
   component: OnboardingScreen,
@@ -47,6 +48,8 @@ const CAPTION_STYLE = {
 
 function OnboardingScreen() {
   const [stepIndex, setStepIndex] = useState(0);
+  const [direction, setDirection] = useState<ScreenDirection>('forward');
+  const reducedMotion = useReducedMotion();
   const navigate = useNavigate();
   const serviceSeason = useServiceSeason();
   const setOnboardingSeen = useUiStore((state) => state.setOnboardingSeen);
@@ -62,6 +65,12 @@ function OnboardingScreen() {
 
   const slide = SLIDES[stepIndex]!;
   const isLast = stepIndex === SLIDES.length - 1;
+
+  function changeSlide(delta: number) {
+    if (startingRef.current) return;
+    setDirection(delta > 0 ? 'forward' : 'back');
+    setStepIndex((index) => Math.max(0, Math.min(SLIDES.length - 1, index + delta)));
+  }
 
   function handleSkip() {
     setOnboardingSeen(true);
@@ -97,53 +106,78 @@ function OnboardingScreen() {
     <div className="os-screen">
       <Stepper steps={STEPPER_STEPS} currentStepId={slide.id} />
 
-      <ScreenIntro
-        eyebrow={`OFFSIDE · 플레이 가이드 ${stepIndex + 1}`}
-        title={slide.headline}
-        description={slide.body}
-      />
+      <MotionPanel motionKey={stepIndex} direction={direction} className="os-onboarding-motion">
+        <SwipeSurface
+          canSwipeLeft={!isLast}
+          canSwipeRight={stepIndex > 0}
+          disabled={createMutation.isPending}
+          reducedMotion={reducedMotion}
+          onSwipe={(swipe) => changeSlide(swipe === 'left' ? 1 : -1)}
+        >
+          <div className="os-screen">
+            <ScreenIntro
+              eyebrow={`OFFSIDE · 플레이 가이드 ${stepIndex + 1}`}
+              title={slide.headline}
+              description={slide.body}
+            />
 
-      <div className="os-panel flex flex-col gap-os-4">
-        <p className="os-eyebrow">시작하기 전에</p>
-        <ol className="flex flex-col gap-os-4" aria-label="오프사이드 플레이 원칙">
-          {[
-            { title: '나만의 선수', detail: '이름과 선호 포지션을 정하고 출발해요.' },
-            { title: '선택으로 쌓는 커리어', detail: '매 순간의 결정이 다음 기회를 바꿔요.' },
-            { title: '이어지는 축구 인생', detail: '플레이 기록을 저장하고 다시 이어가요.' },
-          ].map((item, index) => (
-            <li key={item.title} className="flex items-start gap-os-3">
-              <span
-                aria-hidden="true"
-                className="os-num rounded-os-m bg-os-surface-2 px-os-3 py-os-2 font-semibold text-os-accent"
-              >
-                {String(index + 1).padStart(2, '0')}
-              </span>
-              <div className="min-w-0">
-                <p className="font-os font-semibold text-os-text">{item.title}</p>
-                <p className="os-muted" style={CAPTION_STYLE}>
-                  {item.detail}
+            <div className="os-panel flex flex-col gap-os-4">
+              <p className="os-eyebrow">시작하기 전에</p>
+              <ol className="flex flex-col gap-os-4" aria-label="오프사이드 플레이 원칙">
+                {[
+                  { title: '나만의 선수', detail: '이름과 선호 포지션을 정하고 출발해요.' },
+                  { title: '선택으로 쌓는 커리어', detail: '매 순간의 결정이 다음 기회를 바꿔요.' },
+                  { title: '이어지는 축구 인생', detail: '플레이 기록을 저장하고 다시 이어가요.' },
+                ].map((item, index) => (
+                  <li key={item.title} className="flex items-start gap-os-3">
+                    <span
+                      aria-hidden="true"
+                      className="os-num rounded-os-m bg-os-surface-2 px-os-3 py-os-2 font-semibold text-os-accent"
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-os font-semibold text-os-text">{item.title}</p>
+                      <p className="os-muted" style={CAPTION_STYLE}>
+                        {item.detail}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              {slide.note ? (
+                <p
+                  className="border-t border-os-border pt-os-4 font-os font-semibold text-os-text"
+                  style={CAPTION_STYLE}
+                >
+                  {slide.note}
                 </p>
-              </div>
-            </li>
-          ))}
-        </ol>
-        {slide.note ? (
-          <p
-            className="border-t border-os-border pt-os-4 font-os font-semibold text-os-text"
-            style={CAPTION_STYLE}
+              ) : null}
+              {stepIndex === 0 && serviceSeason.data?.notice === 'LINE_TEST' ? (
+                <p
+                  data-testid="onboarding-service-season-notice"
+                  className="font-os text-os-text-2"
+                  style={CAPTION_STYLE}
+                >
+                  {SERVICE_SEASON_NOTICE_KO.LINE_TEST}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </SwipeSurface>
+      </MotionPanel>
+
+      <div className="flex items-center justify-between gap-os-2">
+        {stepIndex > 0 ? (
+          <Button
+            variant="ghost"
+            onClick={() => changeSlide(-1)}
+            disabled={createMutation.isPending}
           >
-            {slide.note}
-          </p>
+            이전 안내
+          </Button>
         ) : null}
-        {stepIndex === 0 && serviceSeason.data?.notice === 'LINE_TEST' ? (
-          <p
-            data-testid="onboarding-service-season-notice"
-            className="font-os text-os-text-2"
-            style={CAPTION_STYLE}
-          >
-            {SERVICE_SEASON_NOTICE_KO.LINE_TEST}
-          </p>
-        ) : null}
+        <p className="os-swipe-hint">좌우로 밀거나 버튼으로 안내를 넘겨보세요</p>
       </div>
 
       <div className="os-action-dock os-action-row">
@@ -171,11 +205,7 @@ function OnboardingScreen() {
             </p>
           </div>
         ) : (
-          <Button
-            variant="primary"
-            className="flex-1"
-            onClick={() => setStepIndex((index) => index + 1)}
-          >
+          <Button variant="primary" className="flex-1" onClick={() => changeSlide(1)}>
             다음
           </Button>
         )}
