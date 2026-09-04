@@ -119,7 +119,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | ID | 트랙 | 영역 | 내용 | 선행 | 상태 | 비고 |
 |---|---|---|---|---|---|---|
 | T-3-001 | A | domain + contracts + content | 계약·제안 v2 타입, clubHistory, 제안 상태기계, 타임라인 kind 예약(양 트랙), DSL contract.*, CON payload 스키마 | U-012 | done | PR #48 b756999(2026-09-04 11:43), [브리프](briefs/T-3-001.md). 리뷰 수정 1건(`contract.isLastSeason` 의미), 골든 9종 재기록(draws 불변) |
-| T-3-002 | A | domain + content | 결산 뒤 이적시장 생성(D-43·D-44), 안전 잔류 제안, step 7 사전 협상, offerRulesV2·transferRules | T-3-001 | todo [브리프](briefs/T-3-002.md) 작성(11:40) — 생성기·step 7 사전 협상·transferRules까지, 결산 배선·명령은 T-3-003 |
+| T-3-002 | A | domain + content | 결산 뒤 이적시장 생성(D-43·D-44), 안전 잔류 제안, step 7 사전 협상, offerRulesV2·transferRules | T-3-001 | in-progress | `T-3-002-transfer-market`, [브리프](briefs/T-3-002.md)(2026-09-04 11:46 투입, E2E_PORT 5191) — 생성기·step 7 사전 협상·transferRules까지, 결산 배선·명령은 T-3-003 |
 | T-3-003 | A | domain | NEGOTIATE·ACCEPT_OFFER v2·REJECT_OFFER·LOAN_RETURN, 원자 전환(D-45), 임대(D-46), 약속 위반(D-47), 태그 5종(D-48), golden career-10·11 | T-3-002 | todo | |
 | T-3-004 | A | contracts + api + engine-client | payload·상태 strict 검증, 동기화 회귀, Snapshot 크기 | T-3-003 | todo | |
 | T-3-005 | A | web | SCR-017 계약 상태·제안 비교·협상, SCR-019 루머, SCR-020 이적·임대 결과, TEST-E2E-003 | T-3-003, T-3-004 | todo | |
