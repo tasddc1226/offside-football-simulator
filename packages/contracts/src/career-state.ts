@@ -948,6 +948,14 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
         if (parentContract.suspended !== true) {
           issues.push({ path: ['parentContract', 'suspended'], message: '임대 중 parentContract는 suspended여야 한다.' });
         }
+        if (
+          isRecord(contract.loan) &&
+          hasOwn(contract.loan, 'parentTeamId') &&
+          hasOwn(parentContract, 'teamId') &&
+          contract.loan.parentTeamId !== parentContract.teamId
+        ) {
+          issues.push({ path: ['parentContract', 'teamId'], message: 'parentContract가 loan의 원소속과 일치해야 한다.' });
+        }
       }
     } else if (hasParentContract && parentContract !== null) {
       issues.push({ path: ['parentContract'], message: '비임대 계약에는 parentContract가 없어야 한다.' });
