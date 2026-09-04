@@ -33,7 +33,7 @@ function seasonResult(overrides: Partial<SeasonResult> = {}): SeasonResult {
     ],
     playerStats: {
       group: 'FW',
-      appearances: { total: 28, started: 24, sub: 4, zeroMinute: 2, out: 2 },
+      appearances: { total: 30, started: 24, sub: 4, zeroMinute: 2, out: 2 },
       minutes: 2100,
       ratingSumTenths: 28 * 68,
       ratedMatches: 28,
@@ -137,6 +137,22 @@ function baseState(overrides: Partial<CareerState>): CareerState {
 }
 
 describe('deriveSeasonResultView', () => {
+  it('저장된 팀 경기 수가 아니라 실제 출전을 표시한다 (#60)', () => {
+    const result = seasonResult();
+    result.playerStats.appearances = { total: 26, started: 8, sub: 12, zeroMinute: 12, out: 6 };
+    const view = deriveSeasonResultView(baseState({ seasonHistory: [summary(result)] }), 0, ruleset);
+    expect(view?.common).toMatchObject({ total: 14, started: 8, sub: 6, zeroMinute: 12, out: 6 });
+    expect(result.playerStats.appearances.total).toBe(26);
+  });
+
+  it.each([['WON', '우승'], ['OUT_R2', '2라운드 탈락'], ['OUT_FINAL', '준우승']])(
+    '결산 컵 상태 %s를 %s로 표시한다 (#57)', (code, label) => {
+      const result = seasonResult();
+      result.competitions[1]!.cupRound = code;
+      const view = deriveSeasonResultView(baseState({ seasonHistory: [summary(result)] }), 0, ruleset);
+      expect(view?.teamRecords[1]?.standingText).toBe(label);
+    },
+  );
   it('seasonHistory[index]가 없으면 null이다', () => {
     expect(deriveSeasonResultView(baseState({ seasonHistory: [] }), 0, ruleset)).toBeNull();
   });

@@ -37,6 +37,7 @@ function findMatch(matches: readonly MatchRecord[], entry: ScheduleEntry): Match
 }
 
 function appearanceLabel(appearance: MatchAppearance, outReason: MatchRecord['outReason']): string {
+  if (outReason === 'UNUSED_SUB') return OUT_REASON_LABEL_KO.UNUSED_SUB;
   if (appearance !== 'OUT' || outReason === null) return MATCH_APPEARANCE_LABEL_KO[appearance];
   return OUT_REASON_LABEL_KO[outReason];
 }

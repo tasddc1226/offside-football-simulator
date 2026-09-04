@@ -62,10 +62,7 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   await expect(minutesValueEl).toHaveText(minutesDataValue ?? '');
   await expect(minutesDd.getByRole('button', { name: '건너뛰기' })).toHaveCount(0);
 
-  // 공통 지표 합 불변식: 선발+교체+결장 = 출전(세 항목은 서로 배타적이다). "0분"은 이 셋과 별개로
-  // "그중 실제 출전 시간이 0분이었던 경기 수"를 세는 교차 집계라(packages/domain/src/season-stats.ts
-  // addStatsToTotals, PR 본문 기록) 네 항목을 그대로 더하면 출전과 같지 않다 — 그래서 0분은
-  // 출전을 넘지 않는지만 확인한다.
+  // #60: 실제 출전 = 선발 + 실제 교체. 결장·미사용 교체(0분)는 출전에서 제외한다.
   const [started, sub, zeroMinute, out, total] = await Promise.all([
     statValue(page, '선발'),
     statValue(page, '교체'),
@@ -73,8 +70,8 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
     statValue(page, '결장'),
     countUpValue(page, '출전'),
   ]);
-  expect(started + sub + out).toBe(total);
-  expect(zeroMinute).toBeLessThanOrEqual(total);
+  expect(started + sub).toBe(total);
+  expect(out).toBeLessThanOrEqual(zeroMinute);
 
   // 평균 평점: 미집계(ratedMatches 0)면 "—", 아니면 소수 1자리. CountUp이 애니메이션 중이면
   // "건너뛰기" 버튼이 dd 안에 같이 있어 dd 전체 textContent에는 버튼 라벨까지 섞인다 — 값

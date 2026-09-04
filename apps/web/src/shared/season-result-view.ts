@@ -14,6 +14,7 @@ import {
 } from '@offside/domain';
 import { attributeGroups, type AttributeGroupId } from './attribute-groups.js';
 import { cupProgressLabel } from './competition-labels.js';
+import { appearanceSummary } from './appearance-summary.js';
 
 export type CommonMetrics = {
   started: number;
@@ -182,11 +183,7 @@ export function deriveSeasonResultView(state: CareerState, index: number, rulese
 
   const stats = result.playerStats;
   const common: CommonMetrics = {
-    started: stats.appearances.started,
-    sub: stats.appearances.sub,
-    zeroMinute: stats.appearances.zeroMinute,
-    out: stats.appearances.out,
-    total: stats.appearances.total,
+    ...appearanceSummary(stats.appearances),
     minutes: stats.minutes,
     avgRatingTenths: stats.ratedMatches === 0 ? null : Math.round(stats.ratingSumTenths / stats.ratedMatches),
     yellow: stats.yellow,

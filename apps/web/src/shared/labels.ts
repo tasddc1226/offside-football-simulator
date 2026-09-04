@@ -212,14 +212,14 @@ export const DECISION_SLOT_KIND_LABEL_KO: Record<DecisionSlot['kind'], string> =
   SETTLEMENT: '결산',
 };
 
-/** T-2-007 SCR-029 일정표: 경기 출전 상태 라벨. START·SUB는 outReason이 항상 null이라 appearance만 본다. */
+/** T-2-007 SCR-029 일정표: 경기 출전 상태 라벨. SUB + UNUSED_SUB는 벤치 대기로 별도 표시한다. */
 export const MATCH_APPEARANCE_LABEL_KO: Record<MatchAppearance, string> = {
   START: '선발',
   SUB: '교체',
   OUT: '결장',
 };
 
-/** T-2-007 SCR-029 일정표: OUT일 때의 사유 라벨. */
+/** T-2-007 SCR-029 일정표: 결장·미사용 교체 사유 라벨. */
 export const OUT_REASON_LABEL_KO: Record<NonNullable<OutReason>, string> = {
   NOT_SELECTED: '미선발',
   UNUSED_SUB: '벤치 대기',
