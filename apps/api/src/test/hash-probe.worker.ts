@@ -24,6 +24,10 @@ import {
   career08MfEngineCommands,
   career09Fw,
   career09FwEngineCommands,
+  career10Transfer,
+  career10TransferEngineCommands,
+  career11Loan,
+  career11LoanEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -141,6 +145,26 @@ function runCareer09Fw(): DomainSnapshot {
   return snapshot;
 }
 
+function runCareer10Transfer(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career10TransferEngineCommands(() => `probe-c10-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career10Transfer);
+  }
+  if (snapshot === null) throw new Error('career10Transfer 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
+function runCareer11Loan(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career11LoanEngineCommands(() => `probe-c11-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career11Loan);
+  }
+  if (snapshot === null) throw new Error('career11Loan 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
 type ProbeRequest =
   | { kind: 'replay' }
   | { kind: 'replaySeason'; mode: SimulationMode }
@@ -150,6 +174,8 @@ type ProbeRequest =
   | { kind: 'replayDf' }
   | { kind: 'replayMf' }
   | { kind: 'replayFw' }
+  | { kind: 'replayTransfer' }
+  | { kind: 'replayLoan' }
   | { kind: 'sha256'; inputs: string[] }
   | { kind: 'canonical'; value: JsonValue };
 
@@ -200,6 +226,14 @@ export default {
 
     if (body.kind === 'replayFw') {
       return snapshotResponse(runCareer09Fw());
+    }
+
+    if (body.kind === 'replayTransfer') {
+      return snapshotResponse(runCareer10Transfer());
+    }
+
+    if (body.kind === 'replayLoan') {
+      return snapshotResponse(runCareer11Loan());
     }
 
     if (body.kind === 'sha256') {
