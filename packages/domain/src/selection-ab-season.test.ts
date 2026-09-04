@@ -37,6 +37,24 @@ function runOrThrow(snapshot: DomainSnapshot | null, command: EngineCommand): Do
   return result.snapshot;
 }
 
+/**
+ * T-3-003 §5: step 7 CONTRACT(제안 있음)는 더 이상 ADVANCE로 자동 통과하지 않는다(응답 필수). 이
+ * 시드가 뽑은 첫 계약이 룰셋 min(1시즌)일 수 있어, 재계약 없이 시즌을 그대로 이어가는
+ * `REJECT_OFFER(null)`로 자동 응답한다.
+ */
+function autoRejectContractIfOpen(snapshot: DomainSnapshot, newId: () => string): DomainSnapshot {
+  const pending = snapshot.state.pending;
+  if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
+    return runOrThrow(snapshot, {
+      type: 'REJECT_OFFER',
+      commandId: newId(),
+      expectedRevision: snapshot.revision,
+      payload: { offerId: null },
+    } as EngineCommand);
+  }
+  return snapshot;
+}
+
 const SEED = 'underdog-search-10';
 
 /** A(RIVAL-A 역): 비선호 아키타입 `inside-forward` — `selection.test.ts`의 `confirmedActiveSnapshot`와
@@ -132,12 +150,15 @@ function runFullSeason(archetypeId: string): SeasonRun {
   // context.tacticalFit은 CONFIRM_PLAYER 직후엔 아직 archetype·스타일을 반영한 실제 값이 아니다
   // (computeTacticalFit은 startSeason이 team.tacticalStyleId를 알아야 계산할 수 있다) — START_SEASON
   // 직후 값을 시즌 내내 고정되는 Tactical Fit으로 쓴다.
-  snapshot = runOrThrow(snapshot, {
-    type: 'START_SEASON',
-    commandId: newId(),
-    expectedRevision: snapshot.revision,
-    payload: { simulationMode: 'FAST', serviceSeasonId: `svc-ab-${archetypeId}` },
-  } as EngineCommand);
+  snapshot = autoRejectContractIfOpen(
+    runOrThrow(snapshot, {
+      type: 'START_SEASON',
+      commandId: newId(),
+      expectedRevision: snapshot.revision,
+      payload: { simulationMode: 'FAST', serviceSeasonId: `svc-ab-${archetypeId}` },
+    } as EngineCommand),
+    newId,
+  );
   const tacticalFit = snapshot.state.context.tacticalFit;
 
   let started = -1;
@@ -148,7 +169,10 @@ function runFullSeason(archetypeId: string): SeasonRun {
       started = season.playerStats.appearances.started;
       matches = season.matches;
     }
-    snapshot = runOrThrow(snapshot, { ...raw, commandId: newId(), expectedRevision: snapshot.revision } as EngineCommand);
+    snapshot = autoRejectContractIfOpen(
+      runOrThrow(snapshot, { ...raw, commandId: newId(), expectedRevision: snapshot.revision } as EngineCommand),
+      newId,
+    );
   }
 
   return { snapshot, preSeasonBaseOvr, tacticalFit, teamId, started, matches };

@@ -123,6 +123,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     },
     pending: null,
     contract: null,
+    parentContract: null,
     clubHistory: [],
     timeline: [],
     season: null,

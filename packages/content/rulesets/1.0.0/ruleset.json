@@ -1517,7 +1517,8 @@
       "ROTATION": 4000,
       "BENCH": 1500,
       "RESERVE": 0
-    }
+    },
+    "imposedPositionProficiency": 55
   },
   "leagueCalendar": {
     "id": "default-12",
@@ -2094,7 +2095,8 @@
       "strength": 30,
       "rivalOpponentIndex": 4,
       "promotionSpots": 2,
-      "relegationSpots": 2
+      "relegationSpots": 2,
+      "promotionSlots": 0
     },
     {
       "id": "league-tier1",
@@ -2105,7 +2107,8 @@
       "strength": 85,
       "rivalOpponentIndex": 1,
       "promotionSpots": 0,
-      "relegationSpots": 3
+      "relegationSpots": 3,
+      "promotionSlots": 0
     },
     {
       "id": "league-tier2",
@@ -2116,7 +2119,8 @@
       "strength": 60,
       "rivalOpponentIndex": 1,
       "promotionSpots": 3,
-      "relegationSpots": 3
+      "relegationSpots": 3,
+      "promotionSlots": 2
     },
     {
       "id": "league-tier3",
@@ -2127,7 +2131,8 @@
       "strength": 40,
       "rivalOpponentIndex": 1,
       "promotionSpots": 3,
-      "relegationSpots": 0
+      "relegationSpots": 0,
+      "promotionSlots": 2
     }
   ],
   "cups": [

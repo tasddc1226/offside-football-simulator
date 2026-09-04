@@ -39,6 +39,22 @@ function runOrThrow(snapshot: DomainSnapshot, command: Command & { commandId: st
   return result.snapshot;
 }
 
+/**
+ * T-3-003 §5: 이 fixture의 첫 계약이 룰셋 min(1시즌)으로 뽑혀 시즌 중 step 7이 재계약 사전 협상
+ * (CONTRACT, 제안 있음)을 연다. 더 이상 ADVANCE로 자동 통과하지 않으므로(응답 필수) 재계약 없이
+ * 시즌을 그대로 이어가는 `REJECT_OFFER(null)`로 자동 응답한다.
+ */
+function autoRejectContractIfOpen(snapshot: DomainSnapshot): DomainSnapshot {
+  const pending = snapshot.state.pending;
+  if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
+    return runOrThrow(
+      snapshot,
+      buildCommand('REJECT_OFFER', `underdog-auto-reject-${snapshot.revision}`, snapshot.revision, { offerId: null }),
+    );
+  }
+  return snapshot;
+}
+
 /** T-2-011 4번 shadow-replay가 rankPositionForPlayer를 다시 부르는 데 필요한, RESOLVE_ROLE 직후(첫
  * ADVANCE 전) 시즌 내내 고정되는 입력값. tacticalFit·managerTrust·positionProficiency·baseOvr·
  * rolePromise(계약 값, RESOLVE_ROLE이 건드리지 않는다)·competitors(시즌 시작 시 1회 생성, 이후 form만
@@ -82,9 +98,8 @@ export function runUnderdogSeasonFixture(): UnderdogSeasonRun {
 
   underdogSeasonLog.commands.forEach((rawCommand, index) => {
     if (rawCommand.type === 'RESOLVE_ROLE') {
-      snapshot = runOrThrow(
-        snapshot,
-        buildCommand(rawCommand.type, `underdog-season-${index}`, snapshot.revision, rawCommand.payload),
+      snapshot = autoRejectContractIfOpen(
+        runOrThrow(snapshot, buildCommand(rawCommand.type, `underdog-season-${index}`, snapshot.revision, rawCommand.payload)),
       );
       const state = snapshot.state;
       const profile = state.player.profile;
@@ -119,9 +134,8 @@ export function runUnderdogSeasonFixture(): UnderdogSeasonRun {
         matches: season.matches,
       };
     }
-    snapshot = runOrThrow(
-      snapshot,
-      buildCommand(rawCommand.type, `underdog-season-${index}`, snapshot.revision, rawCommand.payload),
+    snapshot = autoRejectContractIfOpen(
+      runOrThrow(snapshot, buildCommand(rawCommand.type, `underdog-season-${index}`, snapshot.revision, rawCommand.payload)),
     );
   });
 

@@ -62,10 +62,7 @@ export type DfFixtureRun = {
 export function runDfFixture(): DfFixtureRun {
   let snapshot = runCareerFixture(careerDfFixture);
 
-  snapshot = runOrThrow(
-    snapshot,
-    buildCommand('START_SEASON', 'df-season-start', snapshot.revision, seasonCommandLog.startSeason),
-  );
+  snapshot = runOrThrow(snapshot, buildCommand('START_SEASON', 'df-season-start', snapshot.revision, seasonCommandLog.startSeason));
 
   let beforeSettlement: DfFixtureRun['beforeSettlement'] | null = null;
 

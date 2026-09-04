@@ -129,9 +129,10 @@ async function seasonActiveNoPendingCareerId(engine: AppEngine): Promise<string>
   return careerId;
 }
 
-/** CONTRACT 자동 통과 슬롯은 advance로 흘려보내고, CHAPTER(T-2-004 D-38: 자동 통과 대상이 아니다 —
- * T-2-008이 advance에 chapterCandidates를 채우면서 FAST 모드에서도 MAJOR 챕터, 예: 데뷔전이 실제로
- * 열린다)는 첫 옵션으로 확정해 SETTLEMENT pending에 도달한다(안전 상한 20회). */
+/** CHAPTER(T-2-004 D-38: 자동 통과 대상이 아니다 — T-2-008이 advance에 chapterCandidates를 채우면서
+ * FAST 모드에서도 MAJOR 챕터, 예: 데뷔전이 실제로 열린다)는 첫 옵션으로 확정하고, CONTRACT(T-3-003
+ * §5: 첫 계약이 룰셋 min 1시즌으로 뽑히면 step 7이 재계약 사전 협상을 연다 — 더 이상 advance로
+ * 자동 통과하지 않는다)는 첫 제안을 수락해 SETTLEMENT pending에 도달한다(안전 상한 20회). */
 async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
   const careerId = await seasonActiveNoPendingCareerId(engine);
   for (let step = 0; step < 20; step += 1) {
@@ -146,6 +147,11 @@ async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
       if (!decision) throw new Error('이미 모든 판단이 끝났다');
       const resolved = await resolveChapter(engine, careerId, decision.id, decision.options[0]!.id);
       if (!resolved.ok) throw new Error(`resolveChapter 실패: ${resolved.error.message}`);
+      continue;
+    }
+    if (pending?.kind === 'CONTRACT' && pending.offers.length > 0) {
+      const accepted = await acceptOffer(engine, careerId, pending.offers[0]!.id);
+      if (!accepted.ok) throw new Error(`acceptOffer 실패: ${accepted.error.message}`);
       continue;
     }
     const advanced = await advance(engine, careerId);
@@ -276,8 +282,17 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     const engine = setTestEngine();
     const careerId = await settlementPendingCareerId(engine);
     const settled = await settleSeason(engine, careerId);
-    if (!settled.ok || settled.domainSnapshot.state.season !== null || settled.domainSnapshot.state.pending !== null) {
-      throw new Error('시즌 결산 뒤 season·pending이 모두 null이어야 한다');
+    if (!settled.ok || settled.domainSnapshot.state.season !== null) {
+      throw new Error('시즌 결산 뒤 season이 null이어야 한다');
+    }
+    // T-3-003 §5: 결산 뒤 계약이 만료·관심 조건에 걸리면 시장이 자동으로 열린다 — 이 CTA 분기의
+    // 관심사는 그 다음(안전 잔류 뒤 진짜 "프리시즌 계획")이라 뜨면 안전 잔류(첫 제안)를 수락한다.
+    const pendingAfterSettle = settled.domainSnapshot.state.pending;
+    if (pendingAfterSettle?.kind === 'OFFERS') {
+      const accepted = await acceptOffer(engine, careerId, pendingAfterSettle.offers[0]!.id);
+      if (!accepted.ok) throw new Error(`acceptOffer 실패: ${accepted.error.message}`);
+    } else if (pendingAfterSettle !== null) {
+      throw new Error('시즌 결산 뒤 pending은 null 또는 OFFERS여야 한다');
     }
 
     renderAt(`/career/${careerId}`);

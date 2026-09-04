@@ -14,7 +14,9 @@ describe('career-05-chapter fixture 결정론(데뷔전 챕터)', () => {
     expect(snapshot.state.rngState.draws).toBe(golden.rngStateDraws);
     expect(snapshot.state.age).toBe(golden.age);
     expect(snapshot.state.season).toBeNull();
-    expect(snapshot.state.pending).toBeNull();
+    // T-3-003 §5: 결산 뒤 계약이 만료·관심 조건에 걸리면 시장이 자동으로 열린다(더 이상 pending null이
+    // 보장되지 않는다) — 이 fixture의 관심사는 챕터 판단 완주이지 시장 내용이 아니라 kind만 고정한다.
+    expect(snapshot.state.pending?.kind).toBe('OFFERS');
     expect(snapshot.state.seasonHistory).toEqual(golden.seasonHistory);
     expect(verifySnapshot(snapshot)).toEqual({ ok: true });
   });

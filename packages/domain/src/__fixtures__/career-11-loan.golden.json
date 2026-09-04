@@ -1,0 +1,41 @@
+{
+  "revision": 23,
+  "stateHash": "54f70c895e6de0a2a7555b157069cf56307d8e437d5b05f865c0308016721e9c",
+  "checkpoint": "SEASON_START",
+  "rngStateDraws": 1140,
+  "age": 19,
+  "seasonHistoryLength": 2,
+  "contract": {
+    "id": "CTR-10",
+    "teamId": "seoul-tier1",
+    "leagueTier": 1,
+    "kind": "PERMANENT",
+    "lengthSeasons": 3,
+    "suspended": false
+  },
+  "clubHistory": [
+    {
+      "teamId": "seoul-tier1",
+      "kind": "PERMANENT",
+      "fromSeasonIndex": 1,
+      "toSeasonIndex": 1,
+      "endReason": "LOANED",
+      "contractId": "CTR-10"
+    },
+    {
+      "teamId": "busan-tier2",
+      "kind": "LOAN",
+      "fromSeasonIndex": 2,
+      "toSeasonIndex": 2,
+      "endReason": "RETURNED"
+    },
+    {
+      "teamId": "seoul-tier1",
+      "kind": "PERMANENT",
+      "fromSeasonIndex": 3,
+      "toSeasonIndex": null,
+      "endReason": null,
+      "contractId": "CTR-10"
+    }
+  ]
+}

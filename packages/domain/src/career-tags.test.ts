@@ -8,6 +8,7 @@ import {
   type CareerState,
   type CareerTagId,
   type ChapterRecord,
+  type ClubStint,
   type FootballSeason,
   type SeasonResult,
   type SeasonSummary,
@@ -90,6 +91,7 @@ function baseCareerTagState(): CareerState {
     },
     pending: null,
     contract: null,
+    parentContract: null,
     clubHistory: [],
     timeline: [],
     season: null,
@@ -204,6 +206,138 @@ describe('evaluateCareerTags', () => {
     ]);
     const alreadyGranted = { ...baseCareerTagState(), seasonHistory: [fiveSuccesses], careerTags: ['TAG-BIG-GAME'] as CareerTagId[] };
     expect(evaluateCareerTags(alreadyGranted, fiveSuccesses.result, rulesetProto)).not.toContain('TAG-BIG-GAME');
+  });
+});
+
+// T-3-003 D-48: Phase 3 태그 5종 각각 참·거짓 1쌍(ruleset-proto·합성 clubHistory).
+describe('evaluateCareerTags — Phase 3 태그 5종', () => {
+  function stint(overrides: Partial<ClubStint> & Pick<ClubStint, 'teamId' | 'kind' | 'fromSeasonIndex'>): ClubStint {
+    return {
+      teamName: overrides.teamId,
+      leagueTier: 1,
+      toSeasonIndex: null,
+      endReason: null,
+      contractId: `CTR-${overrides.teamId}-${overrides.fromSeasonIndex}`,
+      ...overrides,
+    };
+  }
+
+  it('TAG-ONE-CLUB: 한 클럽(PERMANENT)에서만 8시즌 이상이면 참, 클럽이 둘이면 거짓이다', () => {
+    const history = Array.from({ length: 8 }, (_, i) => seasonSummary(i + 1, []));
+
+    const oneClub = [stint({ teamId: 'seoul-tier1', kind: 'PERMANENT', fromSeasonIndex: 1 })];
+    const trueState = { ...baseCareerTagState(), seasonHistory: history, clubHistory: oneClub };
+    expect(evaluateCareerTags(trueState, history[7]!.result, rulesetProto)).toContain('TAG-ONE-CLUB');
+
+    const twoClubs = [
+      stint({ teamId: 'seoul-tier1', kind: 'PERMANENT', fromSeasonIndex: 1, toSeasonIndex: 4, endReason: 'TRANSFERRED' }),
+      stint({ teamId: 'busan-tier2', leagueTier: 2, kind: 'PERMANENT', fromSeasonIndex: 5 }),
+    ];
+    const falseState = { ...baseCareerTagState(), seasonHistory: history, clubHistory: twoClubs };
+    expect(evaluateCareerTags(falseState, history[7]!.result, rulesetProto)).not.toContain('TAG-ONE-CLUB');
+  });
+
+  it('TAG-JOURNEYMAN: 서로 다른 클럽(임대 포함) 6곳 이상이면 참, 4곳뿐이면 거짓이다', () => {
+    const dummyResult = seasonSummary(1, []).result;
+
+    const sixClubs = Array.from({ length: 6 }, (_, i) =>
+      stint({ teamId: `team-${i}`, kind: i % 2 === 0 ? 'PERMANENT' : 'LOAN', fromSeasonIndex: i, toSeasonIndex: i, endReason: 'LOANED' }),
+    );
+    const trueState = { ...baseCareerTagState(), clubHistory: sixClubs };
+    expect(evaluateCareerTags(trueState, dummyResult, rulesetProto)).toContain('TAG-JOURNEYMAN');
+
+    const fourClubs = Array.from({ length: 4 }, (_, i) =>
+      stint({ teamId: `team-${i}`, kind: 'PERMANENT', fromSeasonIndex: i, toSeasonIndex: i, endReason: 'TRANSFERRED' }),
+    );
+    const falseState = { ...baseCareerTagState(), clubHistory: fourClubs };
+    expect(evaluateCareerTags(falseState, dummyResult, rulesetProto)).not.toContain('TAG-JOURNEYMAN');
+  });
+
+  it('TAG-LOAN-LEGEND: 임대 시즌 출전 비율·평점을 채우고 복귀 다음 시즌 STARTER면 참, STARTER가 아니면 거짓이다', () => {
+    const loanSeason: SeasonSummary = {
+      index: 1,
+      simulationMode: 'FAST',
+      teamId: 'busan-tier2',
+      competitions: [],
+      settledAtRevision: 10,
+      result: { ...DUMMY_SEASON_RESULT_BASE, index: 1, chapters: [], playerStats: { ...DUMMY_SEASON_RESULT_BASE.playerStats, ratingSumTenths: 2000 } },
+    };
+    const loanStint = stint({ teamId: 'busan-tier2', leagueTier: 2, kind: 'LOAN', fromSeasonIndex: 1, toSeasonIndex: 1, endReason: 'RETURNED' });
+    const parentStint = stint({ teamId: 'seoul-tier1', kind: 'PERMANENT', fromSeasonIndex: 2 });
+
+    const starterReturnSeason: SeasonSummary = {
+      index: 2,
+      simulationMode: 'FAST',
+      teamId: 'seoul-tier1',
+      competitions: [],
+      settledAtRevision: 20,
+      result: { ...DUMMY_SEASON_RESULT_BASE, index: 2, chapters: [], selectionSummary: { ...DUMMY_SEASON_RESULT_BASE.selectionSummary, squadRoleAtEnd: 'STARTER' } },
+    };
+    const trueState = {
+      ...baseCareerTagState(),
+      seasonHistory: [loanSeason, starterReturnSeason],
+      clubHistory: [loanStint, parentStint],
+    };
+    expect(evaluateCareerTags(trueState, starterReturnSeason.result, rulesetProto)).toContain('TAG-LOAN-LEGEND');
+
+    const rotationReturnSeason: SeasonSummary = {
+      ...starterReturnSeason,
+      result: { ...starterReturnSeason.result, selectionSummary: { ...starterReturnSeason.result.selectionSummary, squadRoleAtEnd: 'ROTATION' } },
+    };
+    const falseState = {
+      ...baseCareerTagState(),
+      seasonHistory: [loanSeason, rotationReturnSeason],
+      clubHistory: [loanStint, parentStint],
+    };
+    expect(evaluateCareerTags(falseState, rotationReturnSeason.result, rulesetProto)).not.toContain('TAG-LOAN-LEGEND');
+  });
+
+  it('TAG-PROMOTION-EXPERT: 승격권 순위·STARTER 시즌이 2회면 참, 1회면 거짓이다', () => {
+    function promotionSeason(index: number, finalRank: number, squadRoleAtEnd: SeasonResult['selectionSummary']['squadRoleAtEnd']): SeasonSummary {
+      return {
+        index,
+        simulationMode: 'FAST',
+        teamId: 'busan-tier2', // league-tier2, promotionSlots 2
+        competitions: [],
+        settledAtRevision: index * 10,
+        result: {
+          ...DUMMY_SEASON_RESULT_BASE,
+          index,
+          chapters: [],
+          selectionSummary: { ...DUMMY_SEASON_RESULT_BASE.selectionSummary, finalRank, squadRoleAtEnd },
+        },
+      };
+    }
+
+    const twoQualifying = [promotionSeason(1, 2, 'STARTER'), promotionSeason(2, 1, 'STARTER')];
+    const trueState = { ...baseCareerTagState(), seasonHistory: twoQualifying };
+    expect(evaluateCareerTags(trueState, twoQualifying[1]!.result, rulesetProto)).toContain('TAG-PROMOTION-EXPERT');
+
+    const oneQualifying = [promotionSeason(1, 2, 'STARTER'), promotionSeason(2, 5, 'STARTER')];
+    const falseState = { ...baseCareerTagState(), seasonHistory: oneQualifying };
+    expect(evaluateCareerTags(falseState, oneQualifying[1]!.result, rulesetProto)).not.toContain('TAG-PROMOTION-EXPERT');
+  });
+
+  it('TAG-TRAITOR: 배신_이적 태그·이적 후 첫 시즌·팬 ≤30이면 참, 팬이 30을 넘으면 거짓이다', () => {
+    const resultAtIndex3: SeasonResult = { ...DUMMY_SEASON_RESULT_BASE, index: 3, chapters: [] };
+    const history: SeasonSummary[] = [
+      seasonSummary(1, []),
+      seasonSummary(2, []),
+      { index: 3, simulationMode: 'FAST', teamId: 'seoul-tier1', competitions: [], settledAtRevision: 30, result: resultAtIndex3 },
+    ];
+    const currentStint = stint({ teamId: 'seoul-tier1', kind: 'PERMANENT', fromSeasonIndex: 3 });
+
+    const trueState = {
+      ...baseCareerTagState(),
+      tags: ['배신_이적'],
+      relationships: { ...baseCareerTagState().relationships, fans: 20 },
+      seasonHistory: history,
+      clubHistory: [currentStint],
+    };
+    expect(evaluateCareerTags(trueState, resultAtIndex3, rulesetProto)).toContain('TAG-TRAITOR');
+
+    const falseState = { ...trueState, relationships: { ...trueState.relationships, fans: 40 } };
+    expect(evaluateCareerTags(falseState, resultAtIndex3, rulesetProto)).not.toContain('TAG-TRAITOR');
   });
 });
 

@@ -48,6 +48,11 @@ export function screenForCareer(state: CareerState): ScreenTarget {
     if (pending !== null && pending.kind === 'OFFERS') {
       return { screenId: 'SCR-009', params };
     }
+    // T-3-003 §9: step 7 재계약 사전 협상(CONTRACT, 제안 있음)도 OFFERS와 같은 화면(SCR-009)을
+    // 재사용한다. offers.length === 0이면 자동 통과 대상이라 여기 도달하지 않는다.
+    if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
+      return { screenId: 'SCR-009', params };
+    }
     // T-2-002 D-34: 감독 역할 제안은 RESOLVE_ROLE로만 닫히는 실제 결정이라 전용 화면으로 보낸다.
     if (pending !== null && pending.kind === 'ROLE_PROPOSAL') {
       return { screenId: 'SCR-012', params };

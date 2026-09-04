@@ -274,12 +274,12 @@ describe('isAutoPassablePending', () => {
     expect(isAutoPassablePending(null)).toBe(false);
   });
 
-  // T-3-002 D-43: NEGOTIATE/ACCEPT_OFFER v2가 아직 없어(T-3-003) CONTRACT의 제안을 사람이 처리할
-  // 방법이 없다 — offers.length와 무관하게 자동 통과시키고 만료 처리한다(simulate.ts의 OFFER_EXPIRED
-  // 타임라인 기록과 짝을 이루는 임시 규칙, T-3-003이 뒤집는다).
-  it('CONTRACT는 offers.length > 0이어도 자동 통과한다(임시 규칙)', () => {
+  // T-3-003 §5: NEGOTIATE·ACCEPT_OFFER·REJECT_OFFER로 응답할 방법이 생겨(T-3-002의 "제안 있어도
+  // 자동 통과" 임시 규칙 제거) offers.length > 0인 CONTRACT는 더 이상 자동 통과하지 않는다 — 응답이
+  // 필수다.
+  it('CONTRACT는 offers.length > 0이면 자동 통과하지 않는다(응답 필수)', () => {
     const offer = buildTestOffer();
-    expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7, offers: [offer], market: EMPTY_MARKET })).toBe(true);
+    expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7, offers: [offer], market: EMPTY_MARKET })).toBe(false);
   });
 
   // T-2-002 D-34: ROLE은 더 이상 자동 통과 대상이 아니다 — RESOLVE_ROLE로만 닫힌다.

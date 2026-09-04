@@ -99,6 +99,65 @@ export const CAREER_TAG_EVALUATORS: Partial<Record<CareerTagId, CareerTagEvaluat
       return shareBp >= 8000;
     });
   },
+  // T-3-003 D-48: clubHistory 중 kind PERMANENT 항목의 서로 다른 teamId가 1개(임대는 세지 않는다)이고
+  // 커리어가 8시즌 이상이면 원클럽맨이다.
+  'TAG-ONE-CLUB': (state) => {
+    const permanentTeamIds = new Set(state.clubHistory.filter((stint) => stint.kind === 'PERMANENT').map((stint) => stint.teamId));
+    return permanentTeamIds.size === 1 && state.seasonHistory.length >= 8;
+  },
+  // T-3-003 D-48: 완전 이적(TRANSFERRED)로 stint를 닫은 횟수 ≥5, 또는 clubHistory 전체(임대 포함)의
+  // 서로 다른 teamId ≥6이면 저니맨이다.
+  'TAG-JOURNEYMAN': (state) => {
+    const transferredCount = state.clubHistory.filter((stint) => stint.endReason === 'TRANSFERRED').length;
+    const distinctTeamIds = new Set(state.clubHistory.map((stint) => stint.teamId)).size;
+    return transferredCount >= 5 || distinctTeamIds >= 6;
+  },
+  // T-3-003 D-48: 직전에 끝난 시즌이 LOAN stint에 속하고(그 시즌 index를 fromSeasonIndex~toSeasonIndex가
+  // 포함), 그 시즌의 출전 비율 ≥7000bp·평균 평점 ≥70(tenths)이며, 복귀 뒤 이번 결산 시즌에
+  // squadRoleAtEnd가 STARTER면 임대 신화다 — 즉 복귀 다음 시즌 결산에서만 판정된다.
+  'TAG-LOAN-LEGEND': (state, result) => {
+    if (result.selectionSummary.squadRoleAtEnd !== 'STARTER') return false;
+    const previousIndex = state.seasonHistory.length - 2;
+    if (previousIndex < 0) return false;
+    const previousSummary = state.seasonHistory[previousIndex]!;
+    const wasLoanSeason = state.clubHistory.some(
+      (stint) =>
+        stint.kind === 'LOAN' &&
+        stint.fromSeasonIndex <= previousSummary.index &&
+        (stint.toSeasonIndex === null || stint.toSeasonIndex >= previousSummary.index),
+    );
+    if (!wasLoanSeason) return false;
+    const possibleMinutes = previousSummary.result.selectionSummary.possibleMinutes;
+    if (possibleMinutes === 0) return false;
+    const shareBp = Math.round((previousSummary.result.playerStats.minutes * 10000) / possibleMinutes);
+    if (shareBp < 7000) return false;
+    if (previousSummary.result.playerStats.ratedMatches === 0) return false;
+    const avgRatingTenths = Math.round(previousSummary.result.playerStats.ratingSumTenths / previousSummary.result.playerStats.ratedMatches);
+    return avgRatingTenths >= 70;
+  },
+  // T-3-003 D-48: 그 시즌 teamId가 속한 리그의 promotionSlots 이내 finalRank로 STARTER였던 시즌이
+  // 2회 이상이면 승격 전문가다(리그는 시즌 teamId → ruleset.teams → leagueId로 찾는다).
+  'TAG-PROMOTION-EXPERT': (state, _result, ruleset) => {
+    let promotionStarterSeasons = 0;
+    for (const summary of state.seasonHistory) {
+      const team = ruleset.teams.find((candidate) => candidate.id === summary.teamId);
+      if (team === undefined) continue;
+      const league = ruleset.leagues.find((candidate) => candidate.id === team.leagueId);
+      if (league === undefined) continue;
+      const { finalRank, squadRoleAtEnd } = summary.result.selectionSummary;
+      if (finalRank <= league.promotionSlots && squadRoleAtEnd === 'STARTER') promotionStarterSeasons += 1;
+    }
+    return promotionStarterSeasons >= 2;
+  },
+  // T-3-003 D-48: `배신_이적` 태그가 있고, 그 이적으로 연 stint가 바로 이번 결산 시즌(=이적 후 첫
+  // 시즌)이며 팬 지표가 30 이하면 배신자다.
+  'TAG-TRAITOR': (state, result) => {
+    if (!state.tags.includes('배신_이적')) return false;
+    if (state.relationships.fans > 30) return false;
+    const currentStint = state.clubHistory.find((stint) => stint.toSeasonIndex === null);
+    if (currentStint === undefined) return false;
+    return currentStint.fromSeasonIndex === result.index;
+  },
 };
 
 /**

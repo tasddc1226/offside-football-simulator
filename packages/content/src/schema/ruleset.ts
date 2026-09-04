@@ -236,6 +236,8 @@ export const LeagueSchema = z
     rivalOpponentIndex: z.number().int().min(1),
     promotionSpots: z.number().int().nonnegative(),
     relegationSpots: z.number().int().nonnegative(),
+    // T-3-003 D-48 TAG-PROMOTION-EXPERT: finalRank가 이 값 이하면 승격권 시즌으로 센다.
+    promotionSlots: z.number().int().nonnegative(),
   })
   .superRefine((league, ctx) => {
     if (league.rivalOpponentIndex > league.teamCount - 1) {
@@ -257,6 +259,13 @@ export const LeagueSchema = z
         code: 'custom',
         message: `relegationSpots는 teamCount(${league.teamCount}) 이하여야 한다: ${league.relegationSpots}`,
         path: ['relegationSpots'],
+      });
+    }
+    if (league.promotionSlots > league.teamCount) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `promotionSlots는 teamCount(${league.teamCount}) 이하여야 한다: ${league.promotionSlots}`,
+        path: ['promotionSlots'],
       });
     }
   });
@@ -451,6 +460,9 @@ export const ContractRulesSchema = z.strictObject({
     BENCH: z.number(),
     RESERVE: z.number(),
   }),
+  // T-3-003 D-45: 이적 시 positionPlan ≠ profile.primaryPosition이면 context.positionProficiency를
+  // 이 값으로 둔다(같으면 유지).
+  imposedPositionProficiency: z.number().int(),
 });
 export type ContractRules = z.infer<typeof ContractRulesSchema>;
 

@@ -172,8 +172,13 @@ export async function resolveCurrentChapterScreen(page: Page): Promise<void> {
   throw new Error('챕터 화면(SCR-031)을 벗어나지 못했다(최대 10회 시도)');
 }
 
-/** SCR-029에서 "진행"을 반복해(CONTRACT 자동 통과 슬롯, CHAPTER는 위 resolveCurrentChapterScreen으로
- * 직접 통과시킨다) SETTLEMENT("결산하기")까지 도달한다. 안전 상한 20회.
+/** SCR-029에서 "진행"을 반복해(CHAPTER는 위 resolveCurrentChapterScreen으로 직접 통과시킨다)
+ * SETTLEMENT("결산하기")까지 도달한다. 안전 상한 20회.
+ *
+ * T-3-003 §9: 첫 계약 기간이 룰셋 min(1시즌)이면 step 7에서 재계약 사전 협상(CONTRACT, 제안 있음)이
+ * 열려 더 이상 "진행"으로 자동 통과하지 않는다 — SCR-009(offers 화면)가 뜨면 signFirstOffer로
+ * 첫 제안을 수락하고 계속한다(안전 잔류 제안이 항상 offers[0]이므로 재계약이든 결산 뒤 새 시장이든
+ * 같은 헬퍼로 충분하다).
  *
  * "진행"·"결산하기"는 exact locator로 서로 완전히 분리한다 — 예전에는 하나의 regex locator
  * (`/^(진행|결산하기)$/`)로 묶었는데, "진행" 클릭 직후 다음 루프에 들어가면 mutateAsync의 isPending
@@ -203,6 +208,10 @@ export async function advanceThroughSeasonToSettlement(page: Page): Promise<void
     }
     if (/\/(event|path|tryout)$/.test(pathnameBefore)) {
       await resolveCurrentEventScreen(page);
+      continue;
+    }
+    if (pathnameBefore.endsWith('/offers')) {
+      await signFirstOffer(page);
       continue;
     }
     if (await settleButton.isVisible()) return;

@@ -184,6 +184,7 @@ describe('buildMarketValueInput', () => {
         kind: 'PERMANENT', appearancePromise: { minutesShareBp: 8000 }, positionPlan: 'ST',
         suspended: false, loan: null, promiseBreaches: 0, signedSeasonIndex: 1,
       },
+      parentContract: null,
       clubHistory: [],
       timeline: [],
       season: null,

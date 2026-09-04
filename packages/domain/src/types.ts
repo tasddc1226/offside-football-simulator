@@ -776,6 +776,9 @@ export type CareerState = {
   player: { draft: PlayerDraft; profile: PlayerProfile | null };
   pending: Pending;
   contract: Contract | null;
+  // T-3-003 D-46: 임대 중 원소속 계약(`suspended: true`). Phase 1·비임대 상태는 항상 null.
+  // `state.contract`는 항상 "지금 뛰는 계약"(임대면 kind LOAN)이고, 원소속 계약은 이 필드로 보관한다.
+  parentContract: Contract | null;
   // T-3-001 D-45: 소속 이력. 현재 소속 항목(`toSeasonIndex: null`)을 항상 포함한다. Phase 1
   // `acceptOffer`가 첫 항목을 push한다 — 마감·이어붙이기는 T-3-003 몫.
   clubHistory: ClubStint[];

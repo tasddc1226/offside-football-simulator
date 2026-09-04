@@ -14,8 +14,11 @@ export const MARKET_02_REVISION = 15;
  * 80%)를 쓰는 TRANSFER 위주 시나리오를 만들려면 그 값을 `STARTER`로 override해야 한다.
  */
 export function buildMarket02InterestStarterState(): CareerState {
-  const { snapshot } = runSettledFixture();
-  const base = snapshot.state;
+  const { snapshot, beforeSettlementState } = runSettledFixture();
+  // T-3-003 §5: settleSeason이 이제 결산 뒤 시장을 실제로 연다(openMarketAfterSettlement 배선). 이
+  // fixture는 "생성기만" 보는 게 목적이라, 그 배선이 소비했을 rng·pending을 결산 이전(SETTLE_SEASON
+  // 직전) 값으로 되돌려 시장 골든이 그 배선과 무관하게 그대로 유지되게 한다.
+  const base = { ...snapshot.state, rngState: beforeSettlementState.rngState, pending: null };
   if (base.contract === null) throw new RangeError('market-02: contract가 null이다.');
   const lastIndex = base.seasonHistory.length - 1;
   if (lastIndex < 0) throw new RangeError('market-02: seasonHistory가 비어 있다.');

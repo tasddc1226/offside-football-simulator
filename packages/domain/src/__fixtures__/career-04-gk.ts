@@ -57,10 +57,7 @@ export type GkFixtureRun = {
 export function runGkFixture(): GkFixtureRun {
   let snapshot = runCareerFixture(careerGkFixture);
 
-  snapshot = runOrThrow(
-    snapshot,
-    buildCommand('START_SEASON', 'gk-season-start', snapshot.revision, seasonCommandLog.startSeason),
-  );
+  snapshot = runOrThrow(snapshot, buildCommand('START_SEASON', 'gk-season-start', snapshot.revision, seasonCommandLog.startSeason));
 
   let beforeSettlement: GkFixtureRun['beforeSettlement'] | null = null;
 

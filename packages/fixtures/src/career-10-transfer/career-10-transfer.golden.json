@@ -1,0 +1,37 @@
+{
+  "revision": 24,
+  "stateHash": "3f19fef50478c07403b3124e2193f5c2a3eb6c462c0cc3d701419aa3ad974a96",
+  "checkpoint": "SEASON_START",
+  "rngStateDraws": 1140,
+  "age": 19,
+  "seasonHistoryLength": 2,
+  "contract": {
+    "id": "CTR-18",
+    "teamId": "busan-tier2",
+    "leagueTier": 2,
+    "kind": "PERMANENT",
+    "lengthSeasons": 3
+  },
+  "clubHistory": [
+    {
+      "teamId": "seoul-tier1",
+      "kind": "PERMANENT",
+      "fromSeasonIndex": 1,
+      "toSeasonIndex": 1,
+      "endReason": "EXPIRED"
+    },
+    {
+      "teamId": "busan-tier2",
+      "kind": "PERMANENT",
+      "fromSeasonIndex": 2,
+      "toSeasonIndex": null,
+      "endReason": null
+    }
+  ],
+  "tags": [
+    "약속_위반",
+    "입단테스트_완료",
+    "진로_입단테스트",
+    "테스트_성공"
+  ]
+}
