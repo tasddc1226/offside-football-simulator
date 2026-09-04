@@ -1,4 +1,5 @@
 import {
+  CareerStateSchema,
   GetCareerResponseSchema,
   IF_MATCH_HEADER,
   ProfileSchema,
@@ -11,6 +12,10 @@ import {
   career01EngineCommands,
   career02Season,
   career02SeasonEngineCommands,
+  career10Transfer,
+  career10TransferEngineCommands,
+  career11Loan,
+  career11LoanEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -77,6 +82,15 @@ function runOrThrow(
 }
 
 type ReplayStep = { snapshot: DomainSnapshot; command: EngineCommand };
+
+type MarketScenario = {
+  label: string;
+  careerId: string;
+  versions: { rulesetVersion: string; contentPackVersion: string };
+  engineCommands: (newId: () => string) => EngineCommand[];
+  golden: { revision: number; stateHash: string };
+  retryCommandType: 'NEGOTIATE' | 'LOAN_RETURN';
+};
 
 /** career01(revision 1~10) 뒤에 이어 career-02-season(FAST, revision 11~17)을 재생한다. */
 function buildSteps(): ReplayStep[] {
@@ -157,21 +171,22 @@ function putInit(input: { body: unknown; baseRevision: number; idempotencyKey: s
 async function putChunk(input: {
   ctx: TestD1;
   cookie: string;
+  careerId?: string;
   chunk: readonly ReplayStep[];
   baseRevision: number;
   idempotencyKey: string;
 }) {
-  const { ctx, cookie, chunk, baseRevision, idempotencyKey } = input;
+  const { ctx, cookie, careerId = CAREER_ID, chunk, baseRevision, idempotencyKey } = input;
   const app = createApp();
   const body = buildPutBody(chunk, baseRevision);
-  const res = await app.request(`/v1/careers/${CAREER_ID}`, putInit({ body, baseRevision, idempotencyKey, cookie }), ctx.env);
+  const res = await app.request(`/v1/careers/${careerId}`, putInit({ body, baseRevision, idempotencyKey, cookie }), ctx.env);
   expect(res.status, `PUT baseRevision=${baseRevision} 실패: ${await res.clone().text()}`).toBe(200);
   return successEnvelope(PutCareerResponseSchema).parse(await res.json());
 }
 
-async function getFinalCareer(ctx: TestD1, cookie: string) {
+async function getFinalCareer(ctx: TestD1, cookie: string, careerId = CAREER_ID) {
   const app = createApp();
-  const res = await app.request(`/v1/careers/${CAREER_ID}`, { headers: { Cookie: cookie } }, ctx.env);
+  const res = await app.request(`/v1/careers/${careerId}`, { headers: { Cookie: cookie } }, ctx.env);
   expect(res.status).toBe(200);
   return successEnvelope(GetCareerResponseSchema).parse(await res.json());
 }
@@ -287,4 +302,150 @@ describe('시즌 동기화 3경로 통합(단일 PUT·checkpoint 분할·Idempot
       await Promise.all(contexts.map((ctx) => ctx.dispose()));
     }
   }, 30000);
+});
+
+const MARKET_COMMAND_TYPES = new Set(['NEGOTIATE', 'ACCEPT_OFFER', 'REJECT_OFFER', 'LOAN_RETURN']);
+
+const MARKET_SCENARIOS: readonly MarketScenario[] = [
+  {
+    label: 'career-10-transfer',
+    careerId: career10Transfer.createCareer.careerId,
+    versions: career10Transfer,
+    engineCommands: career10TransferEngineCommands,
+    golden: career10Transfer.golden,
+    retryCommandType: 'NEGOTIATE',
+  },
+  {
+    label: 'career-11-loan',
+    careerId: career11Loan.createCareer.careerId,
+    versions: career11Loan,
+    engineCommands: career11LoanEngineCommands,
+    golden: career11Loan.golden,
+    retryCommandType: 'LOAN_RETURN',
+  },
+];
+
+function buildMarketSteps(scenario: MarketScenario): ReplayStep[] {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  const steps: ReplayStep[] = [];
+  for (const command of scenario.engineCommands(() => `${scenario.label}-sync-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, scenario.versions);
+    steps.push({ snapshot, command });
+  }
+  if (snapshot === null) throw new Error(`${scenario.label} 명령 목록이 비어 있다.`);
+  return steps;
+}
+
+/** checkpoint가 바뀌거나 시장 결정 명령이 끝날 때마다 chunk를 닫아 baseRevision 연쇄를 검증한다. */
+function splitMarketSteps(steps: readonly ReplayStep[]): ReplayStep[][] {
+  const chunks: ReplayStep[][] = [];
+  let current: ReplayStep[] = [];
+  for (let index = 0; index < steps.length; index++) {
+    const step = steps[index]!;
+    const next = steps[index + 1];
+    current.push(step);
+    const closesAtMarket = MARKET_COMMAND_TYPES.has(step.command.type);
+    const changesCheckpoint = next !== undefined && next.snapshot.checkpoint !== step.snapshot.checkpoint;
+    if (closesAtMarket || next === undefined || changesCheckpoint || (next !== undefined && MARKET_COMMAND_TYPES.has(next.command.type))) {
+      chunks.push(current);
+      current = [];
+    }
+  }
+  if (current.length > 0) chunks.push(current);
+  return chunks;
+}
+
+async function syncMarketScenario(
+  ctx: TestD1,
+  cookie: string,
+  scenario: MarketScenario,
+  steps: readonly ReplayStep[],
+  route: 'full' | 'split' | 'retry',
+): Promise<Awaited<ReturnType<typeof putChunk>>> {
+  if (route === 'full') {
+    return putChunk({
+      ctx,
+      cookie,
+      careerId: scenario.careerId,
+      chunk: steps,
+      baseRevision: 0,
+      idempotencyKey: `${scenario.label}-full`,
+    });
+  }
+
+  let last: Awaited<ReturnType<typeof putChunk>> | null = null;
+  let retried = false;
+  for (const chunk of splitMarketSteps(steps)) {
+    const first = chunk[0]!;
+    const baseRevision = first.snapshot.revision - 1;
+    const idempotencyKey = `${scenario.label}-${route}-${first.snapshot.revision}`;
+    last = await putChunk({
+      ctx,
+      cookie,
+      careerId: scenario.careerId,
+      chunk,
+      baseRevision,
+      idempotencyKey,
+    });
+
+    if (route === 'retry' && !retried && chunk.some((step) => step.command.type === scenario.retryCommandType)) {
+      const retry = await putChunk({
+        ctx,
+        cookie,
+        careerId: scenario.careerId,
+        chunk,
+        baseRevision,
+        idempotencyKey,
+      });
+      expect(retry.data).toEqual(last.data);
+      retried = true;
+    }
+  }
+  if (last === null) throw new Error(`${scenario.label} 분할 chunk가 비어 있다.`);
+  if (route === 'retry') expect(retried, `${scenario.label} ${scenario.retryCommandType} retry`).toBe(true);
+  return last;
+}
+
+function openPermanentStintCount(state: string): number {
+  const parsed = CareerStateSchema.parse(JSON.parse(state));
+  return parsed.clubHistory.filter((stint) => stint.kind === 'PERMANENT' && stint.toSeasonIndex === null).length;
+}
+
+describe('T-3-004 transfer·loan 동기화 3경로', () => {
+  it.each(MARKET_SCENARIOS)('$label: 전체·경계 분할·멱등 재시도의 최종 상태가 같다', async (scenario) => {
+    const steps = buildMarketSteps(scenario);
+    const contexts: TestD1[] = [];
+    try {
+      const routes = ['full', 'split', 'retry'] as const;
+      const results: Array<Awaited<ReturnType<typeof putChunk>>> = [];
+      const finals: Array<Awaited<ReturnType<typeof getFinalCareer>>> = [];
+
+      for (const route of routes) {
+        const ctx = await createTestD1();
+        contexts.push(ctx);
+        await ensureServiceSeason(ctx);
+        const cookie = await issueCookie(ctx);
+        results.push(await syncMarketScenario(ctx, cookie, scenario, steps, route));
+        finals.push(await getFinalCareer(ctx, cookie, scenario.careerId));
+      }
+
+      for (const [index, result] of results.entries()) {
+        expect(result.data.revision, `${scenario.label} ${routes[index]} revision`).toBe(scenario.golden.revision);
+        expect(finals[index]!.data.snapshot.stateHash, `${scenario.label} ${routes[index]} hash`).toBe(scenario.golden.stateHash);
+        expect(finals[index]!.data.snapshot.revision, `${scenario.label} ${routes[index]} final revision`).toBe(scenario.golden.revision);
+        expect(openPermanentStintCount(finals[index]!.data.snapshot.state), `${scenario.label} ${routes[index]} open permanent`).toBe(1);
+      }
+      expect(results.map((result) => result.data.verificationStatus), `${scenario.label} verificationStatus`).toEqual([
+        results[0]!.data.verificationStatus,
+        results[0]!.data.verificationStatus,
+        results[0]!.data.verificationStatus,
+      ]);
+      expect(finals.map((final) => final.data.snapshot.stateHash), `${scenario.label} final hashes`).toEqual(
+        Array(3).fill(scenario.golden.stateHash),
+      );
+    } finally {
+      await Promise.all(contexts.map((ctx) => ctx.dispose()));
+    }
+  }, 60000);
 });

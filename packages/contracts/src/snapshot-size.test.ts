@@ -1,4 +1,4 @@
-import { canonicalize, simulate, type DomainSnapshot, type JsonValue } from '@offside/domain';
+import { canonicalize, hashState, simulate, type DomainSnapshot, type JsonValue } from '@offside/domain';
 import {
   career01,
   career02Season,
@@ -16,10 +16,15 @@ import {
   career08MfEngineCommands,
   career09Fw,
   career09FwEngineCommands,
+  career10Transfer,
+  career10TransferEngineCommands,
+  career11Loan,
+  career11LoanEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
 import { describe, expect, it } from 'vitest';
+import { PutCareerBodySchema } from './careers.js';
 import { REQUEST_BODY_MAX_BYTES, SNAPSHOT_STATE_RECOMMENDED_BYTES } from './headers.js';
 import type { CommandLogEntry } from './commands.js';
 
@@ -59,20 +64,21 @@ function stateBytes(snapshot: DomainSnapshot): number {
 type Step = { snapshot: DomainSnapshot; command: EngineCommand };
 
 /** 스냅샷 하나 + 실제 명령 로그(revision `from+1`..`to`, 실제 commandType·payload)로 이뤄진 PUT 본문의 바이트 수. */
-function putBodyBytes(steps: readonly Step[], from: number): number {
+function buildPutBody(steps: readonly Step[], from: number, target?: Step) {
+  const last = (target ?? steps[steps.length - 1]!).snapshot;
+  const lastRevision = last.revision;
   const commandsPart = steps
-    .filter((step) => step.snapshot.revision > from)
+    .filter((step) => step.snapshot.revision > from && step.snapshot.revision <= lastRevision)
     .map(
       (step): Pick<CommandLogEntry, 'revision' | 'commandId' | 'commandType' | 'payload' | 'resultHash'> => ({
         revision: step.snapshot.revision,
         commandId: step.command.commandId,
         commandType: step.command.type,
         payload: step.command.payload as CommandLogEntry['payload'],
-        resultHash: step.snapshot.stateHash,
+        resultHash: step.snapshot.revision === lastRevision ? last.stateHash : step.snapshot.stateHash,
       }),
     );
-  const last = steps[steps.length - 1]!.snapshot;
-  const body = {
+  return {
     baseRevision: from,
     snapshot: {
       revision: last.revision,
@@ -88,7 +94,49 @@ function putBodyBytes(steps: readonly Step[], from: number): number {
     rulesetVersion: last.rulesetVersion,
     contentPackVersion: last.contentPackVersion,
   };
-  return byteLength(JSON.stringify(body));
+}
+
+function putBodyBytes(steps: readonly Step[], from: number, target?: Step): number {
+  return byteLength(JSON.stringify(buildPutBody(steps, from, target)));
+}
+
+function replayIndependentFixture(
+  engineCommands: (newId: () => string) => EngineCommand[],
+  versions: { rulesetVersion: string; contentPackVersion: string },
+  prefix: string,
+): Step[] {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  const steps: Step[] = [];
+  for (const command of engineCommands(() => `${prefix}-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, versions);
+    steps.push({ snapshot, command });
+  }
+  if (snapshot === null) throw new Error(`${prefix} 명령 목록이 비어 있다.`);
+  return steps;
+}
+
+/**
+ * T-3-004의 "제안 3개 이상" 크기 지점은 정본 fixture에 현재 최대 2개 제안만 있어 합성한다.
+ * fixture/golden 본문은 읽기 전용으로 유지하고, 실제 replay 결과의 첫 offer를 복제한 불투명 payload를
+ * 하나 추가해 Snapshot 직렬화 예산만 계측한다. 이 합성 Snapshot을 replay·hash golden 검증에 사용하지 않는다.
+ */
+function withAtLeastThreeOffersForSize(step: Step): Step {
+  const pending = step.snapshot.state.pending;
+  if (pending?.kind !== 'OFFERS' || pending.offers.length >= 3) return step;
+  const template = pending.offers[0];
+  if (template === undefined) throw new Error('제안 시장이 비어 있어 3개 제안 크기를 합성할 수 없다.');
+  const syntheticState = {
+    ...step.snapshot.state,
+    pending: {
+      ...pending,
+      offers: [...pending.offers, { ...template, id: `${template.id}-size-probe-3` }],
+    },
+  };
+  return {
+    ...step,
+    snapshot: { ...step.snapshot, state: syntheticState, stateHash: hashState(syntheticState) },
+  };
 }
 
 describe('Snapshot·PUT 본문 크기(D-33)', () => {
@@ -305,5 +353,95 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
     expect(peakStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
     expect(finalStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
     expect(bodyBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+  });
+
+  it.each([
+    { label: 'career-10-transfer', engineCommands: career10TransferEngineCommands, versions: career10Transfer, prefix: 'size-c10' },
+    { label: 'career-11-loan', engineCommands: career11LoanEngineCommands, versions: career11Loan, prefix: 'size-c11' },
+  ])('$label: 시장·협상·계약 전환·최종 Snapshot과 전체 PUT 본문이 예산 안에 든다', ({ label, engineCommands, versions, prefix }) => {
+    const steps = replayIndependentFixture(engineCommands, versions, prefix);
+    const findStep = (predicate: (step: Step) => boolean, name: string): Step => {
+      const step = steps.find(predicate);
+      if (step === undefined) throw new Error(`${label} ${name} 지점을 찾지 못했다.`);
+      return step;
+    };
+    const offersSteps = steps.filter((step) => step.snapshot.state.pending?.kind === 'OFFERS');
+    const fixtureMarket = offersSteps.reduce<Step | undefined>(
+      (largest, step) =>
+        largest === undefined ||
+        (step.snapshot.state.pending?.kind === 'OFFERS' &&
+          largest.snapshot.state.pending?.kind === 'OFFERS' &&
+          step.snapshot.state.pending.offers.length > largest.snapshot.state.pending.offers.length)
+          ? step
+          : largest,
+      undefined,
+    );
+    if (fixtureMarket === undefined) throw new Error(`${label} 제안 시장 지점을 찾지 못했다.`);
+    const market = withAtLeastThreeOffersForSize(fixtureMarket);
+    const negotiated = label === 'career-10-transfer' ? findStep((step) => step.command.type === 'NEGOTIATE', '협상 직후') : undefined;
+    const transfer =
+      label === 'career-10-transfer'
+        ? findStep(
+            (step) => step.command.type === 'ACCEPT_OFFER' && step.command.payload.offerId === 'OFR-16-1',
+            '이적 직후',
+          )
+        : undefined;
+    const loan =
+      label === 'career-11-loan'
+        ? findStep((step) => step.snapshot.state.contract?.kind === 'LOAN', '임대 중(parentContract 포함)')
+        : undefined;
+    const final = steps[steps.length - 1]!;
+    const offerCount = market.snapshot.state.pending?.kind === 'OFFERS' ? market.snapshot.state.pending.offers.length : 0;
+    expect(offerCount, `${label} 3-offer size probe`).toBeGreaterThanOrEqual(3);
+    const marketBody = buildPutBody(steps, 0, market);
+    const parsedMarketBody = PutCareerBodySchema.parse(marketBody);
+    expect(parsedMarketBody.commands.at(-1)?.resultHash, `${label} 3-offer PUT resultHash`).toBe(
+      parsedMarketBody.snapshot.stateHash,
+    );
+    const marketBodyState = JSON.parse(marketBody.snapshot.state) as {
+      pending?: { kind?: string; offers?: unknown[] };
+    };
+    const marketBodyOfferCount =
+      marketBodyState.pending?.kind === 'OFFERS' && Array.isArray(marketBodyState.pending.offers)
+        ? marketBodyState.pending.offers.length
+        : 0;
+    expect(marketBodyOfferCount, `${label} 3-offer PUT body`).toBe(offerCount);
+    expect(putBodyBytes(steps, 0, market), `${label} 3-offer PUT body`).toBeGreaterThan(
+      putBodyBytes(steps, 0, fixtureMarket),
+    );
+    const measured = [
+      {
+        checkpoint: 'market-3-offers-size-probe',
+        step: market,
+        offerCount,
+      },
+      ...(negotiated === undefined ? [] : [{ checkpoint: 'after-negotiate', step: negotiated }]),
+      ...(transfer === undefined ? [] : [{ checkpoint: 'after-transfer', step: transfer }]),
+      ...(loan === undefined ? [] : [{ checkpoint: 'during-loan', step: loan }]),
+      { checkpoint: 'final-3-season', step: final },
+    ].map(({ checkpoint, step, offerCount }) => ({
+      checkpoint,
+      revision: step.snapshot.revision,
+      stateBytes: stateBytes(step.snapshot),
+      bodyBytes: putBodyBytes(steps, 0, step),
+      ...(offerCount === undefined ? {} : { offerCount }),
+    }));
+    const bodyBytes = putBodyBytes(steps, 0);
+
+    console.log(
+      JSON.stringify({
+        fixture: label,
+        checkpoints: measured,
+        bodyBytes,
+        stateBudgetBytes: SNAPSHOT_STATE_RECOMMENDED_BYTES,
+        requestBudgetBytes: REQUEST_BODY_MAX_BYTES,
+      }),
+    );
+
+    for (const point of measured) {
+      expect(point.stateBytes, `${label} ${point.checkpoint}`).toBeLessThan(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+      expect(point.bodyBytes, `${label} ${point.checkpoint} PUT`).toBeLessThan(REQUEST_BODY_MAX_BYTES);
+    }
+    expect(bodyBytes, `${label} full PUT`).toBeLessThan(REQUEST_BODY_MAX_BYTES);
   });
 });

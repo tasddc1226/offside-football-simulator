@@ -12,6 +12,10 @@ import {
   resolveRoleProposal,
 } from './helpers/player-creation.js';
 
+/** CompareCards assertions need a settlement without a random post-season market; this DEV-only seed was replayed
+ * repeatedly and keeps the second-season setup on the intended deterministic path. */
+const E2E_SEASON_RESULT_SEED = 'e2e-season-result-01';
+
 /** "공통 지표" dl에서 라벨이 정확히 일치하는 dt의 형제 dd 텍스트를 정수로 읽는다(선발·교체 등
  * CountUp이 아닌 평범한 값). */
 async function statValue(page: Page, label: string): Promise<number> {
@@ -121,6 +125,9 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
 });
 
 test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그먼트를 전환한다', async ({ page }) => {
+  await page.addInitScript((seed) => {
+    window.localStorage.setItem('offside:e2e-seed', seed);
+  }, E2E_SEASON_RESULT_SEED);
   await completeOnboardingThroughContract(page);
   await settleOneSeason(page);
 

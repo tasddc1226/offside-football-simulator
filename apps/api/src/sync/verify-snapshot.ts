@@ -1,4 +1,4 @@
-import { SnapshotStateEnvelopeSchema, type PutCareerBody } from '@offside/contracts';
+import { SnapshotStateEnvelopeSchema, getCareerStateInvariantIssues, type PutCareerBody } from '@offside/contracts';
 import { sha256Hex } from '../db/hash.js';
 
 const CAREER_STATUSES = ['DRAFT', 'ACTIVE', 'RETIRED', 'ARCHIVED'] as const;
@@ -10,7 +10,8 @@ export type VerifyFailureReason =
   | 'CAREER_ID_MISMATCH'
   | 'RNG_STATE_MISMATCH'
   | 'VERSION_FIELD_MISMATCH'
-  | 'RESULT_HASH_MISMATCH';
+  | 'RESULT_HASH_MISMATCH'
+  | 'STATE_INVARIANT_VIOLATION';
 
 export type VerifySnapshotResult =
   | { ok: true; status: CareerStatus }
@@ -78,6 +79,12 @@ export async function verifyIncomingSnapshot(body: PutCareerBody, careerId: stri
 
   if (!isCareerStatus(parsed.status)) {
     return { ok: false, reason: 'STATE_INVALID' };
+  }
+
+  // SnapshotStateEnvelopeSchema는 미래 additive 필드를 보존하기 위해 느슨하게 두되, 계약·임대·소속
+  // 이력 사이의 교차 불변식은 저장 전에 좁은 경계에서 검사한다. domain simulate/replay는 호출하지 않는다.
+  if (getCareerStateInvariantIssues(parsed).length > 0) {
+    return { ok: false, reason: 'STATE_INVARIANT_VIOLATION' };
   }
 
   if (commands.length > 0) {
