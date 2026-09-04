@@ -15,6 +15,7 @@ import {
 import { Button, ChoiceCard, ErrorState, PlayerHeader, RadioGroup, ResultCard, Skeleton, StatusStrip } from '@offside/ui';
 import type { ChapterDefinition } from '@offside/content';
 import { activeContentPack, activeRuleset } from '../engine/content.js';
+import { opponentDisplayName } from '../shared/competition-labels.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
@@ -358,7 +359,7 @@ function ChapterScreen() {
           {chapterTriggerLabel(view.definition.trigger)}
         </h1>
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-          {chapterCompetitionLabel(view.match)} · {view.match.home ? '홈' : '원정'} · {view.match.opponent.name}
+          {chapterCompetitionLabel(view.match)} · {view.match.home ? '홈' : '원정'} · {opponentDisplayName(view.match.opponent, activeRuleset)}
         </p>
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           {APPEARANCE_CONTEXT_LABEL[view.match.appearance]}

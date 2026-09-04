@@ -1,0 +1,45 @@
+import { expect, test } from '@playwright/test';
+import { completeOnboardingAndConfirm, resolveCurrentEventScreen } from './helpers/player-creation.js';
+
+test.use({ contextOptions: { reducedMotion: 'reduce' } });
+
+for (const choice of [0, 2]) {
+  test(`진로 ${choice === 0 ? '프로 테스트' : '하부리그'}: 사용자용 서사와 실제 선택지만 표시한다 (#58, #59)`, async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('offside:e2e-seed', 'e2e-season-result-01'));
+    await completeOnboardingAndConfirm(page);
+
+    let sawPath = false;
+    let sawTryout = false;
+    for (let step = 0; step < 10; step += 1) {
+      await page.waitForURL(/\/career\/.+\/(path|tryout|event|offers)$/);
+      const pathname = new URL(page.url()).pathname;
+      if (pathname.endsWith('/offers')) break;
+      if (pathname.endsWith('/path')) {
+        sawPath = true;
+        await expect(page.getByRole('radio')).toHaveCount(3);
+        await expect(page.getByText(/^정찰 범위 \d+~\d+$/)).toHaveCount(1);
+        await expect(page.getByText(/네 갈래/)).toHaveCount(0);
+        await expect(page.getByText(/각 경로는 서로 다른 기회/)).toBeVisible();
+        await page.getByRole('radio').nth(choice).click();
+        await page.getByRole('button', { name: '확정' }).click();
+        await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+        const title = choice === 0 ? '프로 입단 테스트에 도전한다' : '하부리그에서 첫 기회를 찾는다';
+        await expect(page.getByText(title, { exact: true })).toBeVisible();
+        await expect(page.getByText(/EVT-P10/)).toHaveCount(0);
+        await page.reload();
+        await expect(page.getByText(title, { exact: true })).toBeVisible();
+        await page.getByRole('button', { name: '다음' }).click();
+      } else {
+        if (pathname.endsWith('/tryout')) {
+          sawTryout = true;
+          await expect(page.getByText(/입단 테스트에서 갈고닦은 실력/)).toBeVisible();
+          await expect(page.getByText(/제안 수 =|결과는 화면 진입/)).toHaveCount(0);
+        }
+        await resolveCurrentEventScreen(page);
+      }
+    }
+    expect(sawPath).toBe(true);
+    expect(sawTryout).toBe(true);
+    await expect(page).toHaveURL(/\/offers$/);
+  });
+}
