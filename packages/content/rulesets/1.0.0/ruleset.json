@@ -1356,6 +1356,56 @@
       "max": 75
     }
   },
+  "transferRules": {
+    "offerValidityRevisions": 3,
+    "demandBands": [
+      { "maxIndexCenti": 3499, "tiers": [3] },
+      { "maxIndexCenti": 5499, "tiers": [2, 3] },
+      { "maxIndexCenti": 7499, "tiers": [1, 2] },
+      { "maxIndexCenti": 10000, "tiers": [1, 2] }
+    ],
+    "interest": { "minRatingTenths": 70, "minIndexCenti": 7000 },
+    "kindWeightsByRole": {
+      "STARTER": { "TRANSFER": 80, "LOAN": 20 },
+      "ROTATION": { "TRANSFER": 60, "LOAN": 40 },
+      "BENCH": { "TRANSFER": 30, "LOAN": 70 },
+      "RESERVE": { "TRANSFER": 20, "LOAN": 80 }
+    },
+    "loan": { "seasons": 1, "wageShareBp": 5000, "buyOptionChanceBp": 4000, "buyMinShareBp": 5000 },
+    "feeByIndexBand": [
+      { "maxIndexCenti": 3499, "feeMinor": 20000000 },
+      { "maxIndexCenti": 5499, "feeMinor": 50000000 },
+      { "maxIndexCenti": 7499, "feeMinor": 120000000 },
+      { "maxIndexCenti": 10000, "feeMinor": 300000000 }
+    ],
+    "safeRenewal": { "lengthSeasons": 1, "wageBp": 8000 },
+    "renewal": {
+      "lengthSeasons": 2,
+      "wageBpByRole": { "STARTER": 12000, "ROTATION": 10000, "BENCH": 9000, "RESERVE": 8000 }
+    },
+    "negotiation": {
+      "successBp": {
+        "TRANSFER": { "WAGE": 5000, "ROLE": 4000, "LENGTH": 6000 },
+        "FREE_AGENT": { "WAGE": 5500, "ROLE": 4500, "LENGTH": 6500 },
+        "LOAN": { "WAGE": 0, "ROLE": 5000, "LENGTH": 0 },
+        "RENEWAL": { "WAGE": 6000, "ROLE": 0, "LENGTH": 7000 }
+      },
+      "reputationAdjustBpPerPoint": -500,
+      "counter": { "wageBp": 11000, "lengthDelta": 1 }
+    },
+    "relationshipCarry": {
+      "newManagerTrustBase": 40,
+      "fansCarryBp": 3000,
+      "rivalMoveFansDelta": -30,
+      "promiseBreachMoveFansDelta": -10,
+      "managerTrustPromiseBreach": -8
+    },
+    "rivalPairs": [
+      ["seorabeol-united", "cheongyeon-fc"],
+      ["gangdong-rovers", "onsaemiro-city"],
+      ["galmae-town", "noeulhang-fc"]
+    ]
+  },
   "contractRules": {
     "ovrBands": [
       {

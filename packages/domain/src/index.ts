@@ -90,6 +90,7 @@ export type {
   SelectionRules,
   TacticalStyle,
   Team,
+  TransferRules,
 } from './ruleset.js';
 export {
   applyEffects,
