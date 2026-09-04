@@ -86,7 +86,7 @@ describe('오류 봉투', () => {
     expect(parsed.error.code).toBe('VALIDATION_FAILED');
   });
 
-  it('예상하지 못한 예외는 503 SERVICE_UNAVAILABLE(retryable)로 나가고 스택은 담지 않는다', async () => {
+  it('예상하지 못한 예외는 503 SERVICE_UNAVAILABLE(retryable)로 나가고 원문 대신 고정 문구를 담는다(T-2-015)', async () => {
     const app = createApp({ testRoutes: true });
     const res = await app.request('/v1/test/throw', {}, ctx.env);
 
@@ -95,7 +95,8 @@ describe('오류 봉투', () => {
     const parsed = ErrorEnvelopeSchema.parse(body);
     expect(parsed.error.code).toBe('SERVICE_UNAVAILABLE');
     expect(parsed.error.retryable).toBe(true);
-    expect(parsed.error.message).toContain('boom');
+    expect(parsed.error.message).toBe('일시적인 오류입니다. 잠시 후 다시 시도해 주세요.');
+    expect(parsed.error.message).not.toContain('boom');
     expect(JSON.stringify(body)).not.toContain('.ts:');
   });
 

@@ -46,6 +46,10 @@ export function parseWithAppError<T>(schema: SchemaLike<T>, data: unknown): T {
   return result.data;
 }
 
+/** T-2-015: unknown error(AppError 아님)는 원문(예: SQL 전문)을 응답에 절대 담지 않는다. 원문은
+ * middleware/logger.ts가 서버 로그로만 남긴다. */
+const UNKNOWN_ERROR_MESSAGE = '일시적인 오류입니다. 잠시 후 다시 시도해 주세요.';
+
 export function toErrorEnvelope(err: unknown, requestId: string): { status: ErrorStatus; body: ErrorEnvelope } {
   if (err instanceof AppError) {
     return {
@@ -62,11 +66,10 @@ export function toErrorEnvelope(err: unknown, requestId: string): { status: Erro
     };
   }
 
-  const message = err instanceof Error ? err.message : '알 수 없는 오류입니다.';
   return {
     status: 503,
     body: {
-      error: { code: 'SERVICE_UNAVAILABLE', message, retryable: true },
+      error: { code: 'SERVICE_UNAVAILABLE', message: UNKNOWN_ERROR_MESSAGE, retryable: true },
       meta: { requestId },
     },
   };
