@@ -6,6 +6,7 @@ import { CompareCards, Tabs, TabsList, TabsTrigger, type CompareCardItem, type C
 import type { SeasonResultView } from './season-result-view.js';
 import { ratingText } from './season-schedule.js';
 import { SQUAD_ROLE_LABELS } from './labels.js';
+import { appearanceSummary } from './appearance-summary.js';
 
 const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
 
@@ -29,6 +30,7 @@ export function availableCompareTargets(view: SeasonResultView): CompareTarget[]
 function buildPreviousSeasonRows(view: SeasonResultView): CompareRowView[] {
   const previous = view.previousResult;
   if (previous === null) return [];
+  const previousAppearances = appearanceSummary(previous.playerStats.appearances);
   const previousAvgTenths =
     previous.playerStats.ratedMatches === 0
       ? null
@@ -39,8 +41,8 @@ function buildPreviousSeasonRows(view: SeasonResultView): CompareRowView[] {
       id: 'appearances',
       label: '출전',
       baselineText: String(view.common.total),
-      comparisonText: String(previous.playerStats.appearances.total),
-      same: view.common.total === previous.playerStats.appearances.total,
+      comparisonText: String(previousAppearances.total),
+      same: view.common.total === previousAppearances.total,
     },
     {
       id: 'minutes',

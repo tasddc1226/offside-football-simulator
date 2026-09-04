@@ -25,6 +25,17 @@ describe('ratingText', () => {
 });
 
 describe('buildScheduleRows', () => {
+  it('컵 준결승 상대와 미사용 교체를 플레이어용 문구로 표시한다 (#57, #60)', () => {
+    const cup = ruleset.cups[0]!;
+    const entry: ScheduleEntry = { step: 9, order: 0, competitionId: 'CUP', kind: 'CUP', round: 'SEMI', opponentId: `${cup.id}-SEMI`, home: true };
+    const match = {
+      step: 9, order: 0, result: { goalsFor: 0, goalsAgainst: 1, outcome: 'LOSS' },
+      appearance: 'SUB', outReason: 'UNUSED_SUB', minutes: 0, ratingTenths: null,
+    } as MatchRecord;
+    const [row] = buildScheduleRows(seasonWith([entry], [match]), ruleset);
+    expect(row?.opponentName).toBe(`${cup.name} 준결승 상대`);
+    expect(row?.match).toMatchObject({ appearanceLabel: '벤치 대기', minutes: 0, ratingText: '—' });
+  });
   it('리그 홈 경기: 상대 이름을 룰셋에서 찾고 평점·출전·득실을 그대로 옮긴다', () => {
     const entry: ScheduleEntry = { step: 2, order: 0, competitionId: 'LEAGUE', kind: 'LEAGUE', round: null, opponentId: OPPONENT_ID, home: true };
     const match: MatchRecord = {

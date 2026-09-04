@@ -36,7 +36,6 @@ import { useEngine } from '../engine/use-engine.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
 import {
-  CUP_ROUND_LABEL_KO,
   LEAGUE_TIER_LABEL_KO,
   positionHeaderField,
   POSITION_LABELS,
@@ -54,6 +53,8 @@ import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { SeasonTimeline } from '../shared/season-timeline.js';
 import { buildScheduleRows } from '../shared/season-schedule.js';
+import { cupProgressLabel, opponentDisplayName } from '../shared/competition-labels.js';
+import { eventOutcomeTitle } from '../shared/legacy-event-copy.js';
 import { familiarityPercentLabel, SelectionRankingList } from '../shared/tactical-room.js';
 
 type DashboardSearch = { signed?: boolean };
@@ -84,7 +85,7 @@ function timelineSentence(entry: TimelineEntry, state: CareerState): string {
       const definition = eventId === undefined ? undefined : activeContentPack.eventsById.get(eventId);
       const choice = definition?.choices.find((candidate) => candidate.id === choiceId);
       const outcome = choice?.outcomes.find((candidate) => candidate.id === outcomeId);
-      return choice === undefined || outcome === undefined ? '이벤트' : `${choice.label} → ${outcome.title}`;
+      return definition === undefined || choice === undefined || outcome === undefined ? '이벤트' : `${choice.label} → ${eventOutcomeTitle(definition, outcome)}`;
     }
     // T-2-002 D-34·T-2-004 D-38: exhaustive switch가 typecheck에서 깨져 최소 수정(PR 본문 참고).
     // 화면 전용 문구는 T-2-007(전술실)·T-2-008(챕터 화면)이 다듬는다.
@@ -247,7 +248,7 @@ function competitionSummaryLine(record: CompetitionRecord, season: FootballSeaso
     return `${league?.name ?? '리그'} · ${positionText} · ${winDrawLoss}`;
   }
   const cup = team === undefined ? undefined : ruleset.cups.find((candidate) => candidate.tiers.includes(team.leagueTier));
-  const roundText = record.cupRound === null ? '—' : (CUP_ROUND_LABEL_KO[record.cupRound as keyof typeof CUP_ROUND_LABEL_KO] ?? record.cupRound);
+  const roundText = cupProgressLabel(record.cupRound);
   return `${cup?.name ?? '컵'} · ${roundText} · ${winDrawLoss}`;
 }
 
@@ -379,7 +380,8 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   if (pending !== null && pending.kind === 'CHAPTER') {
     // 상대 이름은 season.matches에서 찾아 덧붙인다 — 기존 단위 테스트가 matchId 없이 CHAPTER
     // pending을 주입하므로(match 조회 실패), 그때는 상대 이름 없이 "핵심 경기"로만 낮춘다.
-    const opponentName = state.season?.matches.find((candidate) => candidate.id === pending.matchId)?.opponent.name;
+    const opponent = state.season?.matches.find((candidate) => candidate.id === pending.matchId)?.opponent;
+    const opponentName = opponent === undefined ? undefined : opponentDisplayName(opponent, activeRuleset);
     return (
       <Card className="flex flex-wrap items-center justify-between gap-os-3">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>

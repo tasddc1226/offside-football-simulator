@@ -13,7 +13,8 @@ import {
   type SquadRole,
 } from '@offside/domain';
 import { attributeGroups, type AttributeGroupId } from './attribute-groups.js';
-import { CUP_ROUND_LABEL_KO } from './labels.js';
+import { cupProgressLabel } from './competition-labels.js';
+import { appearanceSummary } from './appearance-summary.js';
 
 export type CommonMetrics = {
   started: number;
@@ -124,8 +125,7 @@ function buildTeamRecords(result: SeasonResult, ruleset: Ruleset): TeamRecordVie
       };
     }
     const cup = team === undefined ? undefined : ruleset.cups.find((candidate) => candidate.tiers.includes(team.leagueTier));
-    const standingText =
-      record.cupRound === null ? '—' : (CUP_ROUND_LABEL_KO[record.cupRound as keyof typeof CUP_ROUND_LABEL_KO] ?? record.cupRound);
+    const standingText = cupProgressLabel(record.cupRound);
     return {
       competitionId: record.competitionId,
       kind: 'CUP',
@@ -183,11 +183,7 @@ export function deriveSeasonResultView(state: CareerState, index: number, rulese
 
   const stats = result.playerStats;
   const common: CommonMetrics = {
-    started: stats.appearances.started,
-    sub: stats.appearances.sub,
-    zeroMinute: stats.appearances.zeroMinute,
-    out: stats.appearances.out,
-    total: stats.appearances.total,
+    ...appearanceSummary(stats.appearances),
     minutes: stats.minutes,
     avgRatingTenths: stats.ratedMatches === 0 ? null : Math.round(stats.ratingSumTenths / stats.ratedMatches),
     yellow: stats.yellow,
