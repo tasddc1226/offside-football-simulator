@@ -100,7 +100,11 @@ export function createAnalytics(
       send(cachedClientId, batch);
       return;
     }
-    void ensureClientIdReady().then((id) => send(id, batch));
+    ensureClientIdReady()
+      .then((id) => send(id, batch))
+      .catch(() => {
+        // clientId를 못 구하면(IndexedDB 사용 불가 등) 이 배치는 유실한다 — 재시도 없음(01 최종 일관성 허용).
+      });
   }
 
   if (typeof window !== 'undefined') {
