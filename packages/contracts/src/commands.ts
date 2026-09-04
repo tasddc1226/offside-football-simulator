@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { ChapterOutcomeKindSchema, ChapterTriggerSchema, EffectSchema, SlotImportanceSchema, TrainingFocusSchema } from './career-state.js';
+import {
+  ChapterOutcomeKindSchema,
+  ChapterTriggerSchema,
+  EffectSchema,
+  NegotiationAskSchema,
+  SlotImportanceSchema,
+  TrainingFocusSchema,
+} from './career-state.js';
 import { successEnvelope } from './envelope.js';
 import { PlayerDraftSchema } from './player.js';
 import { ClientIdSchema, Hex64Schema, IsoUtcSchema } from './primitives.js';
@@ -166,6 +173,23 @@ export const ResolveRolePayloadSchema = z.strictObject({
 /** Phase 2+ 명령(아직 domain에 없음)은 형태를 모르므로 임의 payload를 통과시킨다. */
 const UnknownPayloadSchema = z.record(z.string(), z.unknown());
 
+// T-3-001 D-44: NEGOTIATE payload. 처리기는 T-3-003 전까지 VALIDATION_FAILED만 돌려주지만, 계약
+// 형태는 이 작업이 확정한다.
+export const NegotiatePayloadSchema = z.strictObject({
+  offerId: z.string().min(1),
+  ask: NegotiationAskSchema,
+});
+
+// T-3-001 D-44: REJECT_OFFER payload. `offerId: null`은 "전부 거절 → 잔류"를 뜻한다.
+export const RejectOfferPayloadSchema = z.strictObject({
+  offerId: z.string().min(1).nullable(),
+});
+
+// T-3-001 D-46: LOAN_RETURN payload.
+export const LoanReturnPayloadSchema = z.strictObject({
+  decision: z.enum(['RETURN', 'PERMANENT']),
+});
+
 /**
  * 명령 타입 → payload 스키마 맵. `CommandRequestSchema`의 판별 유니온 멤버와
  * `CommandLogEntrySchema`의 `commandType`·payload 정합 검사가 이 맵을 공유한다.
@@ -180,10 +204,10 @@ export const COMMAND_PAYLOAD_SCHEMAS = {
   SETTLE_SEASON: SettleSeasonPayloadSchema,
   RESOLVE_ROLE: ResolveRolePayloadSchema,
   RESOLVE_CHAPTER: ResolveChapterPayloadSchema,
-  NEGOTIATE: UnknownPayloadSchema,
+  NEGOTIATE: NegotiatePayloadSchema,
   ACCEPT_OFFER: AcceptOfferPayloadSchema,
-  REJECT_OFFER: UnknownPayloadSchema,
-  LOAN_RETURN: UnknownPayloadSchema,
+  REJECT_OFFER: RejectOfferPayloadSchema,
+  LOAN_RETURN: LoanReturnPayloadSchema,
   RETIRE: UnknownPayloadSchema,
 } as const satisfies Record<CommandType, z.ZodTypeAny>;
 

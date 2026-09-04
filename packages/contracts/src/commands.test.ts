@@ -8,6 +8,9 @@ import {
   CommandRequestSchema,
   ConfirmPlayerPayloadSchema,
   CreateCareerPayloadSchema,
+  LoanReturnPayloadSchema,
+  NegotiatePayloadSchema,
+  RejectOfferPayloadSchema,
   ResolveEventPayloadSchema,
   ResolveRolePayloadSchema,
   SettleSeasonPayloadSchema,
@@ -70,6 +73,25 @@ describe('명령 payload 타입 동일성(domain Command와)', () => {
   it('RESOLVE_ROLE', () => {
     expectTypeOf<z.infer<typeof ResolveRolePayloadSchema>>().toEqualTypeOf<
       Extract<Command, { type: 'RESOLVE_ROLE' }>['payload']
+    >();
+  });
+
+  // T-3-001 D-44/D-46: 처리기는 T-3-003 전까지 없지만, payload 형태는 domain Command와 여기서 맞춘다.
+  it('NEGOTIATE', () => {
+    expectTypeOf<z.infer<typeof NegotiatePayloadSchema>>().toEqualTypeOf<
+      Extract<Command, { type: 'NEGOTIATE' }>['payload']
+    >();
+  });
+
+  it('REJECT_OFFER', () => {
+    expectTypeOf<z.infer<typeof RejectOfferPayloadSchema>>().toEqualTypeOf<
+      Extract<Command, { type: 'REJECT_OFFER' }>['payload']
+    >();
+  });
+
+  it('LOAN_RETURN', () => {
+    expectTypeOf<z.infer<typeof LoanReturnPayloadSchema>>().toEqualTypeOf<
+      Extract<Command, { type: 'LOAN_RETURN' }>['payload']
     >();
   });
 });
@@ -176,6 +198,49 @@ describe('AcceptOfferPayloadSchema', () => {
 
   it('offerId가 없으면 거부한다', () => {
     expect(AcceptOfferPayloadSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('NegotiatePayloadSchema', () => {
+  it('offerId·ask가 유효하면 받아들인다', () => {
+    expect(NegotiatePayloadSchema.safeParse({ offerId: 'OFR-2-0', ask: 'WAGE' }).success).toBe(true);
+  });
+
+  it('ask가 화이트리스트 밖이면 거부한다', () => {
+    expect(NegotiatePayloadSchema.safeParse({ offerId: 'OFR-2-0', ask: 'SIGNING_BONUS' }).success).toBe(false);
+  });
+
+  it('offerId가 빈 문자열이면 거부한다', () => {
+    expect(NegotiatePayloadSchema.safeParse({ offerId: '', ask: 'WAGE' }).success).toBe(false);
+  });
+});
+
+describe('RejectOfferPayloadSchema', () => {
+  it('offerId가 문자열이면 받아들인다', () => {
+    expect(RejectOfferPayloadSchema.safeParse({ offerId: 'OFR-2-0' }).success).toBe(true);
+  });
+
+  it('offerId가 null이면 받아들인다(전부 거절 → 잔류)', () => {
+    expect(RejectOfferPayloadSchema.safeParse({ offerId: null }).success).toBe(true);
+  });
+
+  it('offerId가 빈 문자열이면 거부한다', () => {
+    expect(RejectOfferPayloadSchema.safeParse({ offerId: '' }).success).toBe(false);
+  });
+
+  it('offerId가 없으면 거부한다', () => {
+    expect(RejectOfferPayloadSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('LoanReturnPayloadSchema', () => {
+  it('decision이 RETURN/PERMANENT면 받아들인다', () => {
+    expect(LoanReturnPayloadSchema.safeParse({ decision: 'RETURN' }).success).toBe(true);
+    expect(LoanReturnPayloadSchema.safeParse({ decision: 'PERMANENT' }).success).toBe(true);
+  });
+
+  it('decision이 화이트리스트 밖이면 거부한다', () => {
+    expect(LoanReturnPayloadSchema.safeParse({ decision: 'EXTEND' }).success).toBe(false);
   });
 });
 
@@ -327,7 +392,7 @@ describe('CommandLogEntrySchema', () => {
   it('Phase 2+ 명령은 임의 payload로 성공한다', () => {
     const result = CommandLogEntrySchema.safeParse({
       ...base,
-      commandType: 'NEGOTIATE',
+      commandType: 'RETIRE',
       payload: { anything: true },
     });
     expect(result.success).toBe(true);

@@ -102,15 +102,33 @@ describe('domain 타입 동일성', () => {
 
 const VALID_OFFER = {
   id: 'OFR-2-0',
+  kind: 'FREE_AGENT' as const,
   teamId: 'hangang-u18',
   teamName: '한강 U18',
+  fromTeamId: null,
   leagueTier: 'YOUTH' as const,
   lengthSeasons: 1,
   wageMinorPerWeek: 300_000,
   signingBonusMinor: 0,
+  transferFeeMinor: null,
   rolePromise: 'STARTER' as const,
+  appearancePromise: { minutesShareBp: 6000 },
+  positionPlan: 'ST' as const,
   shirtNumber: 10,
   tacticalFitEstimate: 60,
+  competitorSummary: null,
+  validUntilRevision: null,
+  negotiable: { wage: false, role: false, length: false },
+  negotiationState: 'OPEN' as const,
+  negotiatedAsk: null,
+  loan: null,
+};
+
+const VALID_MARKET_SUMMARY = {
+  openedAtRevision: 2,
+  seasonIndex: 0,
+  reason: 'FIRST_CONTRACT' as const,
+  safeOfferId: null,
 };
 
 const VALID_CONTRACT = {
@@ -126,6 +144,13 @@ const VALID_CONTRACT = {
   shirtNumber: 10,
   signatureType: 'AUTO' as const,
   signedAtRevision: 3,
+  kind: 'PERMANENT' as const,
+  appearancePromise: { minutesShareBp: 6000 },
+  positionPlan: 'ST' as const,
+  suspended: false,
+  loan: null,
+  promiseBreaches: 0,
+  signedSeasonIndex: 1,
 };
 
 const VALID_EFFECT = {
@@ -176,11 +201,38 @@ describe('PendingSchema', () => {
   });
 
   it("kind 'OFFERS'를 받아들인다", () => {
-    expect(PendingSchema.safeParse({ kind: 'OFFERS', offers: [VALID_OFFER] }).success).toBe(true);
+    expect(
+      PendingSchema.safeParse({ kind: 'OFFERS', offers: [VALID_OFFER], market: VALID_MARKET_SUMMARY }).success,
+    ).toBe(true);
   });
 
   it("kind 'OFFERS'인데 offers가 없으면 거부한다", () => {
-    expect(PendingSchema.safeParse({ kind: 'OFFERS' }).success).toBe(false);
+    expect(PendingSchema.safeParse({ kind: 'OFFERS', market: VALID_MARKET_SUMMARY }).success).toBe(false);
+  });
+
+  it("kind 'OFFERS'인데 market이 없으면 거부한다", () => {
+    expect(PendingSchema.safeParse({ kind: 'OFFERS', offers: [] }).success).toBe(false);
+  });
+
+  it("kind 'CONTRACT'는 offers·market이 필요하다", () => {
+    expect(
+      PendingSchema.safeParse({ kind: 'CONTRACT', step: 7, offers: [], market: VALID_MARKET_SUMMARY }).success,
+    ).toBe(true);
+    expect(PendingSchema.safeParse({ kind: 'CONTRACT', step: 7 }).success).toBe(false);
+  });
+
+  it("kind 'LOAN_RETURN'을 받아들인다", () => {
+    expect(
+      PendingSchema.safeParse({ kind: 'LOAN_RETURN', options: ['RETURN', 'PERMANENT'], buyOptionMinor: null })
+        .success,
+    ).toBe(true);
+  });
+
+  it("kind 'INJURY'·'NATIONAL_TEAM' 예약 형태를 받아들인다", () => {
+    expect(
+      PendingSchema.safeParse({ kind: 'INJURY', step: 3, episodeId: '', eventId: '', version: 0 }).success,
+    ).toBe(true);
+    expect(PendingSchema.safeParse({ kind: 'NATIONAL_TEAM', step: 3, eventId: '', version: 0 }).success).toBe(true);
   });
 });
 
@@ -267,6 +319,7 @@ function confirmedStateLiteral() {
     },
     pending: null,
     contract: null,
+    clubHistory: [],
     timeline: [{ revision: 2, kind: 'CAREER_CONFIRMED' as const, refId: null, age: 17, step: 12 }],
     season: null,
     seasonHistory: [],
