@@ -37,8 +37,19 @@ async function settleOneSeason(page: Page): Promise<void> {
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
+  // 결산 전 일정의 실제 분 수를 독립 기준으로 삼는다. 저장 집계의 잘못된 total을
+  // 기대값으로 재사용하면 같은 오류를 화면과 테스트가 함께 통과시킬 수 있다.
+  const scheduleTexts = await page.locator('span.os-num').allTextContents();
+  const matches = scheduleTexts.flatMap((text) => {
+    const match = /^\d+:\d+ · (.+) · (\d+)분 · /.exec(text);
+    return match === null ? [] : [{ appearance: match[1], minutes: Number(match[2]) }];
+  });
+  expect(matches.length).toBeGreaterThan(0);
   await page.getByRole('button', { name: '결산하기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  expect(await countUpValue(page, '출전')).toBe(matches.filter((match) => match.minutes > 0).length);
+  expect(await statValue(page, '교체')).toBe(matches.filter((match) => match.appearance === '교체' && match.minutes > 0).length);
+  expect(await statValue(page, '0분')).toBe(matches.filter((match) => match.minutes === 0).length);
 }
 
 test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보여주고 헤더 OVR과 일치한다', async ({ page }) => {

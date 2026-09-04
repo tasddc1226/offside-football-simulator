@@ -54,6 +54,7 @@ import { SCREEN_ROUTES } from '../routes.js';
 import { SeasonTimeline } from '../shared/season-timeline.js';
 import { buildScheduleRows } from '../shared/season-schedule.js';
 import { cupProgressLabel, opponentDisplayName } from '../shared/competition-labels.js';
+import { eventOutcomeTitle } from '../shared/legacy-event-copy.js';
 import { familiarityPercentLabel, SelectionRankingList } from '../shared/tactical-room.js';
 
 type DashboardSearch = { signed?: boolean };
@@ -84,7 +85,7 @@ function timelineSentence(entry: TimelineEntry, state: CareerState): string {
       const definition = eventId === undefined ? undefined : activeContentPack.eventsById.get(eventId);
       const choice = definition?.choices.find((candidate) => candidate.id === choiceId);
       const outcome = choice?.outcomes.find((candidate) => candidate.id === outcomeId);
-      return choice === undefined || outcome === undefined ? '이벤트' : `${choice.label} → ${outcome.title}`;
+      return definition === undefined || choice === undefined || outcome === undefined ? '이벤트' : `${choice.label} → ${eventOutcomeTitle(definition, outcome)}`;
     }
     // T-2-002 D-34·T-2-004 D-38: exhaustive switch가 typecheck에서 깨져 최소 수정(PR 본문 참고).
     // 화면 전용 문구는 T-2-007(전술실)·T-2-008(챕터 화면)이 다듬는다.

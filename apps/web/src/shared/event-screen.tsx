@@ -14,6 +14,7 @@ import { SCREEN_ROUTES } from '../routes.js';
 import { archetypeName } from './current-team.js';
 import { positionHeaderField, POSITION_LABELS, RISK_LABEL_KO } from './labels.js';
 import { buildNarrativeTokens, renderNarrative, type NarrativeTokenValues } from './narrative.js';
+import { eventSituation } from './legacy-event-copy.js';
 import { u18StatusStripItems } from './status-strip.js';
 import { useCommittingExitGuard } from './use-committing-exit-guard.js';
 
@@ -144,7 +145,7 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
       {renderAbove?.({ state, definition, tokens })}
 
       <p className="font-os text-os-text" style={BODY_STYLE}>
-        {renderNarrative(definition.narrative.situation, tokens)}
+        {renderNarrative(eventSituation(definition), tokens)}
       </p>
 
       <RadioGroup
