@@ -101,6 +101,19 @@ export async function recordSeasonStart(careerId: string): Promise<void> {
   });
 }
 
+/** SETTLE_SEASON 제출 직전 상태에서 season.steps[].summary를 합한다(브리프 D-55 season_settled). */
+export function sumStepSummaries(season: {
+  steps: { summary: { decisionsOpened: number; matchesPlayed: number } | null }[];
+}): { decisionsOpened: number; matchesPlayed: number } {
+  return season.steps.reduce(
+    (totals, step) => ({
+      decisionsOpened: totals.decisionsOpened + (step.summary?.decisionsOpened ?? 0),
+      matchesPlayed: totals.matchesPlayed + (step.summary?.matchesPlayed ?? 0),
+    }),
+    { decisionsOpened: 0, matchesPlayed: 0 },
+  );
+}
+
 export type SeasonSettledProps = {
   seasonIndex: number;
   simulationMode: SimulationMode;
