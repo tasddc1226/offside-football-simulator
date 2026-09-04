@@ -107,6 +107,18 @@ D-34 보정: 역할 제안의 POSITION_CHANGE 후보는 `positionAdjacency[prima
 
 Effect 중첩·만료·복원 규칙(D-40), 시장가치 지수 입력·가중치(D-41), CareerTag 카탈로그·부여 인터페이스(D-42)는 [ADR-010](../adr/ADR-010-shared-contracts.md)이 정본이다. 결정 로그 2026-09-03 밤(PR #43) 항목에 구현 요약과 사용자 승인 대기 항목(U-012)이 있다.
 
+### D-54 서비스 시즌 포인터·테스트 시즌 (2026-09-04, T-2-012 브리프)
+
+- 현재 서비스 시즌은 API 환경 변수 `ACTIVE_SERVICE_SEASON_ID`가 가리킨다(local·preview `svc_kickoff`, staging `svc_line_test`, production 미설정 → 503). 09 런북의 "ACTIVE 포인터 원자 교체"는 이 변수 교체 + 재배포다.
+- `service_seasons.is_test`(0/1)로 테스트 시즌을 표시한다. `svc_line_test`는 PRESEASON·is_test 1. Phase 6 도전·앨범 집계는 `is_test = 0`만 읽는다. 테스트 시즌 커리어는 삭제·강제 은퇴하지 않는다.
+- API-SVC-001 `GET /v1/service-seasons/current`는 공개 라우트이며 `notice`는 문구 키만 보낸다(문장은 웹). 커리어 신규 생성은 시즌이 PRESEASON·ACTIVE일 때만(LOCKED·ARCHIVED → 409 `SERVICE_SEASON_CLOSED`), 기존 커리어 PUT은 검사하지 않는다.
+- 웹은 상수 대신 이 라우트로 시즌을 얻고(kv-store 캐시 → 상수 폴백), 허브에 테스트 시즌 배너와 카드 배지를 보인다. 상세는 [briefs/T-2-012.md](briefs/T-2-012.md).
+
+### D-55 분석 이벤트 수집 경로 (2026-09-04, T-2-012 브리프)
+
+- 웹 platform 어댑터가 이벤트를 큐에 모아(20건·10초·pagehide) `POST /v1/analytics/events`(API-ANA-001, 익명 허용, `clientId` = 기기 무작위 UUID)로 보낸다. 재시도 없음. 서버는 `analytics_events` D1 테이블에 쌓고, 이벤트 이름·prop 키를 zod 화이트리스트로 검증해 맞지 않는 건은 건별로 버린다. Workers Analytics Engine은 쓰지 않는다(LINE TEST 규모에서는 D1 조회가 단순하고, T-2-013 기준선을 wrangler d1로 바로 뽑을 수 있다).
+- D-31의 네 지표는 신규 이벤트 `funnel_reached`(단계·경과 버킷)·`step_passed`·`season_settled`(decisionsOpened 합)·`choice_selected`로 낸다. 값은 열거형·정수·버킷뿐이며 선수 이름·성별·자유 입력·서사 전문은 스키마에 키가 없다.
+
 ## 4. 열린 질문 (Wave 1 전에 닫는다)
 
 - 리그·컵 구조를 룰셋 데이터로 얼마나 구체화할지(팀 수, 경기 수, 컵 라운드 수). 제안: 리그 팀 수는 룰셋 `leagues[].teamCount`, 경기 수는 홈·원정 2회전, 컵은 4라운드.

@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-04 (오전, 사용자 결정 4건 — PR #46 머지·ADR-010 승인·U-013 (A)·구단 12개, T-2-012·T-3-001 투입)
+
+**사용자 결정**: (1) PR #46(T-0-010, 사용자 작성 Cloudflare 배포 파이프라인) 머지 승인 → `abf9bfa` squash 머지(10:07). 리뷰: GitHub Actions 3잡 + 오케스트레이터 로컬 체인(e2e 68) 녹색, 코드 변경 4건 타당, 안전 경계(fork 시크릿 미전달·preview D1 직렬화·production 자동 배포 없음) 확인. 권고 1건 — private 저장소 Actions 무료 한도(월 2,000분) 대비 `docs/**`만 바뀐 푸시도 전체 CI·staging 배포가 돌므로 `paths-ignore` 추가(후속 PR). (2) **ADR-010 설계 승인(U-012 닫힘)**. (3) U-013 **(A)**: Phase 3·4 워커가 메커니즘 검증용 최소 이벤트 문구를 `PROTOTYPE`·`playtested: false`로 직접 쓰고 정식 문구는 콘텐츠 승격 뒤 교체. (4) 가상 구단 8→12 확장(T-3-006 범위, 브랜드 어휘 준수).
+**투입**: T-2-012(LINE TEST 준비, [브리프](briefs/T-2-012.md), 포트 5189)와 T-3-001(타입 슬라이스, [브리프](briefs/T-3-001.md), 포트 5188)을 나란히. 파일 경계: T-2-012는 domain·content·contracts career-state/commands/careers를 만지지 않고, T-3-001은 apps·platform·contracts analytics/service-seasons를 만지지 않는다. T-0-010은 main 푸시 staging 자동 배포·smoke 확인 뒤 completed.
+**D-54·D-55**([phase-2-plan.md](phase-2-plan.md)): 서비스 시즌 포인터는 API 환경 변수 `ACTIVE_SERVICE_SEASON_ID`(staging `svc_line_test`, production 미설정 → 503), `service_seasons.is_test`로 테스트 보관함 구분, API-SVC-001 공개 라우트, 신규 생성만 PRESEASON·ACTIVE 허용. 분석 이벤트는 platform 큐 → `POST /v1/analytics/events` → D1 `analytics_events`, zod 화이트리스트, 신규 이벤트 4종(`funnel_reached`·`step_passed`·`season_settled`·`choice_selected`)으로 D-31 네 지표를 낸다. Analytics Engine 미사용.
+
 ## 2026-09-04 (새벽, PR #47 머지 — Phase 2 코드 작업 종료)
 
 **결과**: PR #47(T-2-011, `0c27965`, 03:41) 리뷰 수정 요청 0건. 오케스트레이터 검증 체인(origin/main 5a16831 + 116dc62) 녹색 — lint·deps·typecheck·test·build·bundle·e2e 68 통과. [Phase 2 완료 조건 표](phase-2-completion.md) 9행 전부 ✅: 포지션군 fixture 4종(GK 기존 + DF·MF·FW 신규, `@offside/fixtures` export·contracts 크기/스키마·api Node↔workerd 해시 등록), 시즌 결정론(같은 시드 2회 재생 stateHash 일치)·집계(playerStats ↔ matches 재합산), career-03-underdog 시즌 완주 + shadow-replay(선수 START 수 > COMP-W-2), selection A/B 시즌 B > A, FAST·CHAPTER 시즌 완주 자동화 시간·명령 수 기록, TEST-E2E-002·010(새로고침 전후 `rngState.draws` 동일), e2e 68건 3회 무결점(5187).

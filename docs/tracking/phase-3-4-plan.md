@@ -21,7 +21,7 @@
 | T-3-003 | A | domain | 명령 CMD-CON-001~004(D-44·D-45·D-46): `NEGOTIATE` 1회(roll 1)·역제안/철회, `ACCEPT_OFFER` v2 원자 전환(계약 종료·새 계약·팀 변경·context 재설정·관계 이월·`clubHistory`), `REJECT_OFFER`(개별/전부 → 잔류), 임대 계약·`LOAN_RETURN`(복귀/완전 이적), 약속 위반 → `promiseBreaches`·태그·관계 Effect(D-47), Phase 3 태그 평가기 5종(D-48), golden career-10-transfer·career-11-loan(3시즌) | T-3-002 | A3 |
 | T-3-004 | A | contracts + api + engine-client | payload·상태 스키마 strict 검증, 동기화 3경로·Miniflare 회귀, Snapshot 크기 재측정(임대·clubHistory 포함), replay·fork 골든 | T-3-003 | A3 (T-3-003 뒤 짧게) |
 | T-3-005 | A | web | SCR-017 계약 상태·FA(휴대폰 탭 상태 + step 7 사전 협상 결정 화면 + 결산 뒤 제안 비교 화면: CompareCards로 역할·전술 적합도·출전 약속·경쟁·리그·급여, 협상 1회, 유효기간 표시), SCR-019 루머·관심(EVT-CON 이벤트 변형 렌더링), SCR-020 이적·임대 결과(원자 저장·뒤로 가기 재협상 불가), 새 팀 프리시즌 진입(CHAPTER 기본), 응답 유실 복구, e2e TEST-E2E-003·axe | T-3-003, T-3-004 | A4 |
-| T-3-006 | A | content | 팩 0.2.x: 루머·잔류 선언·에이전트 이벤트(EVT-CON), 협상·이적 결과 문구 토큰, 팀 풀 확장(D-44 열린 질문) — 워커 작성분은 `PROTOTYPE` 표시(U-013) | T-3-001 | A2 (T-3-002와 병행 가능) |
+| T-3-006 | A | content | 팩 0.2.x: 루머·잔류 선언·에이전트 이벤트(EVT-CON), 협상·이적 결과 문구 토큰, 팀 풀 8→12 확장(U-013 확정) — 워커 작성분은 `PROTOTYPE`·`playtested: false` 표시(U-013 (A)) | T-3-001 | A2 (T-3-002와 병행 가능) |
 | T-4-001 | B | domain + contracts + content(스키마) | 관계·부상·평판 타입(D-49·D-50): `relationshipLog[]`·`memoryTags`, `season.manager`(id·이름·선호 아키타입·재직 시즌), `health`(`InjuryEpisode`·`RehabPlan`·`recurrenceRiskBp`), `reputation.popularityCenti`, Effect kind `HEALTH`와 타깃(ADR-010 소유권 표 갱신), `RESOLVE_EVENT`가 `INJURY`·`NATIONAL_TEAM` pending을 닫는 규칙(D-52), 타임라인 kind 예약, DSL `health.*`·`relationships.*`·`season.manager.*` 화이트리스트, 확장 훅(`onMatchInjury`·`onSettlementRelations`) 골격 | U-012, **T-3-001 머지 뒤 리베이스** | B1 |
 | T-4-002 | B | domain + content | 부상 모델(D-49): 경기 `injuredOff` → 심각도·부위 roll(matchRng), 진단 범위 → INJURY pending(MODERATE+)·EVT-INJ 이벤트 선택, 조기/표준/보수 재활 → 복귀 범위·재발 위험·`availability`, 재발 판정, 후유증 확정(PERMANENT, 재활 종료 시), 시즌당 강제 사건 상한, 재발 fixture 결정론, 복귀 첫 경기 MINOR 챕터 후보 | T-4-001 | B2 |
 | T-4-003 | B | domain + content | 관계·평판 모델(D-50): 감독 교체(결산 판정·새 감독 생성·tacticalFit/managerTrust/선발 재평가), 라커룸·주장 중재·슬럼프·윤리·SNS 이벤트 pool과 조건(슬럼프는 최근 5경기 폼 파생 조건), `popularityCenti` 갱신 규칙, 관계 변화 source·reasonTag 로그·중복 Edge 금지, 단일 실패 이벤트 안전장치, Phase 4 태그 평가기 5종 | T-4-001 | B2 (T-4-002와 병행, 파일 분리: `injury.ts` vs `relationships.ts`·`manager.ts`) |
@@ -140,9 +140,9 @@
 
 | 질문 | 제안 | 담당 |
 |---|---|---|
-| U-012 ADR-010 승인 | 승인 전에는 브리프만 작성, 워커 투입 금지 | 사용자 |
-| 워커가 Phase 3·4 이벤트 문구를 `PROTOTYPE`으로 작성해도 되는가(콘텐츠 백로그 "SHIPPABLE 전 JSON 요청 금지"와의 관계) | 메커니즘 검증용 최소 문구는 워커가 쓰고 `playtested: false`·`PROTOTYPE` 표시, 정식 문구는 콘텐츠 승격 뒤 교체(D-11 선례). 새 U-013으로 사용자 확인 | 사용자 |
-| 팀 풀 8개로 시장 다양성이 충분한가 | tier별 2~3팀 추가(가상 이름, 브랜드 어휘 준수)를 T-3-006에 포함할지 결정 | 사용자·콘텐츠 |
+| U-012 ADR-010 승인 | **승인(2026-09-04 오전, 사용자)** → T-3-001 투입 | 사용자 |
+| 워커가 Phase 3·4 이벤트 문구를 `PROTOTYPE`으로 작성해도 되는가(콘텐츠 백로그 "SHIPPABLE 전 JSON 요청 금지"와의 관계) | **(A) 확정(2026-09-04 오전, U-013)**: 메커니즘 검증용 최소 문구는 워커가 쓰고 `playtested: false`·`PROTOTYPE` 표시, 정식 문구는 콘텐츠 승격 뒤 교체(D-11 선례) | 사용자 |
+| 팀 풀 8개로 시장 다양성이 충분한가 | **12개로 확정(2026-09-04 오전, U-013)**: tier별 가상 구단 추가(브랜드 어휘 준수)를 T-3-006에 포함, `squadStrength`·`reputation`·전술 스타일은 T-3-002 시장 생성이 읽는다 | 사용자·콘텐츠 |
 | 시즌 중 이적(step 7 완전 이적) | Phase 3 제외(D-43), Phase 8 등록 창과 함께 재검토 | 오케스트레이터 |
 | 부상 부위·심각도 확률, 감독 교체 확률, 협상 성공률 등 밸런스 수치 | 전부 룰셋 데이터, 초기값은 브리프 표로 제시하고 LINE TEST 기준선 뒤 조정 | 오케스트레이터 |
 | 주장 임명 규칙(LOCKER-LEADER 입력) | 결산에서 `captain ≥ 70`·프로 시즌 ≥ 3·STARTER면 부주장 → 주장 승격, T-4-003에 포함 | 오케스트레이터 |
