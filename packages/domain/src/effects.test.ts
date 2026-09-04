@@ -568,6 +568,7 @@ describe('HEALTH Effect (T-4-001 D-49)', () => {
       recurrenceChecksRemaining: 0,
       status: 'ACTIVE',
       permanentDelta: null,
+      remainingMatches: 3,
       ...overrides,
     };
   }

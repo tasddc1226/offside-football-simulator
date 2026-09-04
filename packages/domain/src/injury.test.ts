@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   adjustedSeverityWeights,
   applyRehabPlan,
+  injuryAvailabilityFromHealth,
   onInjuryRecovered,
   onMatchInjury,
   onMatchRecurrence,
@@ -27,6 +28,7 @@ function baseEpisode(overrides: Partial<InjuryEpisode> = {}): InjuryEpisode {
     recurrenceChecksRemaining: 0,
     status: 'ACTIVE',
     permanentDelta: null,
+    remainingMatches: 3,
     ...overrides,
   };
 }
@@ -112,6 +114,12 @@ describe('onMatchInjury', () => {
     const severityRoll = rollInt(seedRng(seed), 10000);
     return rollInt(severityRoll.state, 100).value;
   }
+
+  it('ACTIVE/REHAB episode에 remainingMatches가 없으면 다음 시즌 carry를 거부한다', () => {
+    const incomplete = { ...baseEpisode() };
+    delete incomplete.remainingMatches;
+    expect(() => injuryAvailabilityFromHealth({ episodes: [incomplete] })).toThrow(/remainingMatches/);
+  });
 
   it('심각도·부위·이탈기간 순으로 3회 roll하고 에피소드/availability/timeline을 만든다', () => {
     const rng = seedRng('injury-test');
@@ -329,6 +337,54 @@ describe('onMatchInjury', () => {
     });
     expect(recovered.attributes.durability).toBe(48);
     expect(recovered.health.episodes[1]!.permanentDelta).toEqual([{ key: 'durability', delta: -2 }]);
+  });
+
+  it('새 별도 부상은 기존 RECOVERED 재발 창을 닫고 새 회복 창만 연다', () => {
+    const older = baseEpisode({ id: 'INJ-older', status: 'RECOVERED', recurrenceChecksRemaining: 4 });
+    const source = state('overlap-new-injury', { health: { episodes: [older] } });
+    const created = onMatchInjury({
+      state: source,
+      seasonIndex: 1,
+      step: 7,
+      match: match('overlap-new-0'),
+      availability: null,
+      injuryCount: 0,
+      ruleset: rulesetProto,
+      rng: seedRng('overlap-new-0'),
+    });
+    expect(created.health.episodes.at(-1)?.severity).toBe('MINOR');
+    expect(created.health.episodes[0]).toMatchObject({ id: 'INJ-older', status: 'RECOVERED', recurrenceChecksRemaining: 0 });
+
+    const newEpisode = created.health.episodes[1]!;
+    const recovered = onInjuryRecovered({
+      state: { ...source, health: created.health },
+      availability: { kind: 'INJURY', matchesRemaining: 0, sinceMatchId: newEpisode.occurredAt.matchId },
+      match: match('overlap-new-return'),
+      ruleset: rulesetProto,
+      step: 8,
+      rng: created.rng,
+    });
+    expect(recovered.health.episodes[0]).toMatchObject({ id: 'INJ-older', recurrenceChecksRemaining: 0 });
+    expect(recovered.health.episodes[1]).toMatchObject({ status: 'RECOVERED', recurrenceChecksRemaining: 6 });
+  });
+
+  it('재발 성공도 다른 RECOVERED 창을 직렬 연장하지 않고 닫는다', () => {
+    const older = baseEpisode({ id: 'INJ-older', status: 'RECOVERED', recurrenceChecksRemaining: 4 });
+    const newer = baseEpisode({ id: 'INJ-newer', status: 'RECOVERED', occurredAt: { seasonIndex: 1, step: 6, matchId: 'm-newer' }, recurrenceChecksRemaining: 6 });
+    const source = state('overlap-recurrence', { health: { episodes: [older, newer] } });
+    const result = onMatchRecurrence({
+      state: source,
+      seasonIndex: 1,
+      step: 8,
+      match: match('m-recur-overlap'),
+      episodeId: newer.id,
+      injuryCount: 0,
+      ruleset: rulesetProto,
+      rng: seedRng('overlap-recurrence-roll'),
+      allowForcedPending: false,
+    });
+    expect(result.health.episodes[0]).toMatchObject({ id: 'INJ-older', recurrenceChecksRemaining: 0 });
+    expect(result.health.episodes[1]).toMatchObject({ id: 'INJ-newer', status: 'RECURRED', recurrenceChecksRemaining: 0 });
   });
 
   it('MINOR 재발은 MODERATE로 상승하고 재발 창 실패는 0에서 더 줄지 않는다', () => {

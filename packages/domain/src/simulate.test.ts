@@ -661,6 +661,7 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
     recurrenceChecksRemaining: 0,
     status: 'ACTIVE',
     permanentDelta: null,
+    remainingMatches: 3,
   };
 
   function withPendingInjury(active: DomainSnapshot, episode: InjuryEpisode = TEST_EPISODE): DomainSnapshot {
@@ -1930,11 +1931,10 @@ describe('simulate — onMatchInjury 훅 호출 지점(T-4-001 D-49)', () => {
     }
   });
 
-  it('career-04의 두 forced injury가 closure에 누적되고 각각 RESOLVE_EVENT 뒤 health 이력에 남는다', () => {
+  it('legacy career-04는 RESOLVE_EVENT 없이 자동 처리되는 MINOR injury를 보존한다', () => {
     const { snapshot, beforeSettlement } = runGkFixture();
-    expect(beforeSettlement.playerStats.injuries).toBe(2);
-    expect(snapshot.state.health.episodes).toHaveLength(2);
-    expect(snapshot.state.health.episodes.map((episode) => episode.id)).toEqual(['INJ-1-7-1', 'INJ-1-10-2']);
-    expect(snapshot.state.health.episodes.every((episode) => episode.rehab === 'STANDARD')).toBe(true);
+    expect(beforeSettlement.playerStats.injuries).toBe(1);
+    expect(snapshot.state.health.episodes).toHaveLength(1);
+    expect(snapshot.state.health.episodes[0]).toMatchObject({ severity: 'MINOR', status: 'RECOVERED', rehab: 'STANDARD' });
   });
 });

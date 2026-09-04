@@ -29,6 +29,44 @@ type InjuryHookResult = {
   forcedPending: InjuryPending | null;
 };
 
+/** 활성 부상의 availability와 episode 잔여치를 같은 값으로 유지한다. */
+export function syncInjuryRemaining(
+  health: CareerState['health'],
+  availability: Availability,
+): CareerState['health'] {
+  if (availability === null || availability.kind !== 'INJURY') return health;
+  const index = health.episodes.findIndex(
+    (episode) =>
+      (episode.status === 'ACTIVE' || episode.status === 'REHAB') &&
+      episode.occurredAt.matchId === availability.sinceMatchId,
+  );
+  if (index < 0) return health;
+  return {
+    episodes: health.episodes.map((episode, i) =>
+      i === index ? { ...episode, remainingMatches: availability.matchesRemaining } : episode,
+    ),
+  };
+}
+
+/** 다음 시즌 시작 시 부상만 carry한다. 정지(SUSPENSION)는 시즌 경계를 넘지 않는다. */
+export function injuryAvailabilityFromHealth(health: CareerState['health']): Availability {
+  for (let i = health.episodes.length - 1; i >= 0; i -= 1) {
+    const episode = health.episodes[i]!;
+    if (episode.status !== 'ACTIVE' && episode.status !== 'REHAB') continue;
+    if (episode.remainingMatches === undefined) {
+      throw new RangeError(`injuryAvailabilityFromHealth: ${episode.id}에 remainingMatches가 없다.`);
+    }
+    if (episode.remainingMatches > 0) {
+      return {
+        kind: 'INJURY',
+        matchesRemaining: episode.remainingMatches,
+        sinceMatchId: episode.occurredAt.matchId,
+      };
+    }
+  }
+  return null;
+}
+
 function timelineEntry(
   revision: number,
   kind: TimelineEntry['kind'],
@@ -159,6 +197,19 @@ function identityHook(input: {
   };
 }
 
+/**
+ * 부상 episode는 한 출전에서 match RNG를 한 번만 재발 검사에 쓴다. 새 별도 부상이 생긴
+ * 순간에는 이전 RECOVERED 창을 명시적으로 닫아, 최신 창만 검사하는 호출자와 실제
+ * `recurrenceWindowMatches` 길이가 어긋나거나 창이 조용히 직렬 연장되지 않게 한다.
+ */
+function closeOpenRecurrenceWindows(episodes: readonly InjuryEpisode[]): InjuryEpisode[] {
+  return episodes.map((episode) =>
+    episode.status === 'RECOVERED' && episode.recurrenceChecksRemaining > 0
+      ? { ...episode, recurrenceChecksRemaining: 0 }
+      : episode,
+  );
+}
+
 /** 경기의 injuredOff 한 번에 대해 심각도→부위→이탈 경기 수 순서로 정확히 3회 roll한다. */
 export function onMatchInjury(input: {
   state: CareerState;
@@ -200,10 +251,12 @@ export function onMatchInjury(input: {
     recurrenceChecksRemaining: 0,
     status: forced ? 'ACTIVE' : 'REHAB',
     permanentDelta: null,
+    remainingMatches: durationResult.value,
   };
   const timelineRevision = input.revision ?? 1;
+  const priorEpisodes = closeOpenRecurrenceWindows(input.state.health.episodes);
   return {
-    health: { episodes: [...input.state.health.episodes, episode] },
+    health: { episodes: [...priorEpisodes, episode] },
     availability: { kind: 'INJURY', matchesRemaining: durationResult.value, sinceMatchId: input.match.id },
     injuryCount: forced ? input.injuryCount + 1 : input.injuryCount,
     timeline: [timelineEntry(timelineRevision, 'INJURED', episode.id, input.state, input.step)],
@@ -242,8 +295,10 @@ export function onInjuryRecovered(input: {
     episode.permanentDelta === null
       ? applySequela(input.state, episode, input.ruleset, magnitude)
       : { episode, attributes: input.state.attributes, profile: input.state.player.profile };
+  const recoveredEpisode = { ...sequela.episode };
+  delete recoveredEpisode.remainingMatches;
   const recovered = {
-    ...sequela.episode,
+    ...recoveredEpisode,
     status: 'RECOVERED' as const,
     recurrenceChecksRemaining: input.ruleset.injuryRules.recurrenceWindowMatches,
   };
@@ -303,6 +358,7 @@ export function onMatchRecurrence(input: {
     recurrenceChecksRemaining: 0,
     status: forced ? 'ACTIVE' : 'REHAB',
     permanentDelta: null,
+    remainingMatches: durationResult.value,
   };
   // 재발 후유증은 새 severity가 확정되는 즉시 적용한다. applySequela는 실제
   // clamp 결과를 permanentDelta에 남기고 같은 입력 상태에서 profile.baseOvr를
@@ -316,7 +372,7 @@ export function onMatchRecurrence(input: {
   };
   const closedOriginal = { ...original, status: 'RECURRED' as const, recurrenceChecksRemaining: 0 };
   const health = {
-    episodes: input.state.health.episodes
+    episodes: closeOpenRecurrenceWindows(input.state.health.episodes)
       .map((candidate, i) => (i === originalIndex ? closedOriginal : candidate))
       .concat(recurrentEpisode),
   };
@@ -336,12 +392,20 @@ export function onMatchRecurrence(input: {
 /** RESOLVE_EVENT가 INJURY pending을 닫을 때 고른 재활 계획을 에피소드에 적용한다. */
 export function applyRehabPlan(episode: InjuryEpisode, plan: RehabPlan, injuryRules: InjuryRules): InjuryEpisode {
   const rehabRule = injuryRules.rehab[plan];
+  const shiftedRange = rehabDurationRange(episode, plan, injuryRules);
+  const returnMatches =
+    plan === 'EARLY'
+      ? shiftedRange.minMatches
+      : plan === 'CONSERVATIVE'
+        ? shiftedRange.maxMatches
+        : Math.floor((shiftedRange.minMatches + shiftedRange.maxMatches) / 2);
   return {
     ...episode,
     status: 'REHAB',
     rehab: plan,
     recurrenceRiskBp: clamp(episode.recurrenceRiskBp + rehabRule.recurrenceAddBp, 0, 10000),
     recurrenceChecksRemaining: 0,
+    remainingMatches: returnMatches,
   };
 }
 

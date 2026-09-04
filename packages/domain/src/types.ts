@@ -716,6 +716,8 @@ export type InjuryEpisode = {
   recurrenceChecksRemaining: number;
   status: 'ACTIVE' | 'REHAB' | 'RECOVERED' | 'RECURRED';
   permanentDelta: Array<{ key: AttributeKey; delta: number }> | null;
+  /** 활성/재활 중인 부상의 잔여 결장 경기 수. 회복 시 필드를 제거해 기존 회복 이력의 shape을 보존한다. */
+  remainingMatches?: number;
 };
 
 // T-4-001 D-50: 관계 로그·기억 태그가 다루는 대상 축 5개(`CareerState.relationships`와 같은 키).

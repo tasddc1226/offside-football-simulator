@@ -10,9 +10,10 @@ import {
   findSeasonStep,
   isAutoPassablePending,
   selectOpenSlot,
+  walkToNextDecision,
 } from './season.js';
 import { simulate, type Command, type SimulationInput } from './simulate.js';
-import type { DomainSnapshot, Offer, SeasonStep } from './types.js';
+import type { DomainSnapshot, Offer, Pending, SeasonStep } from './types.js';
 
 function buildTestOffer(): Offer {
   return {
@@ -254,6 +255,49 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       summary: null,
     };
     expect(selectOpenSlot(step, 'CHAPTER', [], rng, null, null, 1, 0, testState, rulesetProto)).toEqual({ opened: false });
+  });
+
+  it('forced INJURY는 같은 step의 일반 슬롯보다 먼저 열리고 경기 처리를 즉시 멈춘다', () => {
+    const forcedPending: Extract<Pending, { kind: 'INJURY' }> = {
+      kind: 'INJURY',
+      step: 5,
+      episodeId: 'INJ-1-5-1',
+      eventId: 'EVT-INJ-001',
+      version: 1,
+    };
+    const steps: SeasonStep[] = [
+      {
+        index: 5,
+        phase: 'LEAGUE',
+        windowOpen: false,
+        decisionSlots: [{ kind: 'EVENT', required: false }],
+        summary: null,
+      },
+      { index: 6, phase: 'LEAGUE', windowOpen: false, decisionSlots: [], summary: null },
+      { index: 12, phase: 'SETTLEMENT', windowOpen: false, decisionSlots: [{ kind: 'SETTLEMENT', required: true }], summary: null },
+    ];
+    const playCalls: number[] = [];
+    const walked = walkToNextDecision(
+      steps,
+      5,
+      'CHAPTER',
+      [{ eventId: 'EVT-GENERAL', version: 1, weight: 100 }],
+      seedRng('forced-injury-priority'),
+      1,
+      null,
+      (stepIndex) => {
+        playCalls.push(stepIndex);
+        return { results: [], records: [], competitions: [], forcedPending, injuryReturnMatchId: null };
+      },
+      [],
+      { chapterCandidates: [], tags: [], resolvedChapterIds: [], existingChapterIds: [], league: rulesetProto.leagues[0]!, seasonIndex: 1 },
+      testState,
+      rulesetProto,
+    );
+
+    expect(walked.pending).toEqual(forcedPending);
+    expect(playCalls).toEqual([5]);
+    expect(findSeasonStep(walked.steps, 5).summary).toBeNull();
   });
 });
 

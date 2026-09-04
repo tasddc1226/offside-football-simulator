@@ -1,5 +1,6 @@
 import { compareCodePoints } from './canonical.js';
 import { ATTRIBUTE_KEYS, type AttributeKey, type CareerState, type Effect, type InjuryEpisode } from './types.js';
+import { syncInjuryRemaining } from './injury.js';
 
 const CURRENT_KEYS = ['form', 'fitness', 'morale'] as const;
 const CONTEXT_KEYS = ['tacticalFit', 'squadStatus', 'positionProficiency'] as const;
@@ -183,6 +184,7 @@ export function applyEffects(state: CareerState, effects: Effect[], now: { step:
           ...availability,
           matchesRemaining: clampValue(availability.matchesRemaining + effect.delta, effect.clamp.min, effect.clamp.max),
         };
+        health = syncInjuryRemaining(health, availability);
         applied.push(effect);
         if (dedupeKey !== null) appliedSourceIds.push(dedupeKey);
         continue;

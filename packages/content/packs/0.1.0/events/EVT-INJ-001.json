@@ -15,8 +15,8 @@
       "riskLabel": "MEDIUM",
       "rehabPlan": "STANDARD",
       "previewEffects": [
-        { "label": "복귀: 진단 범위 중간값" },
-        { "label": "재발 위험: 변화 없음" },
+        { "label": "복귀 경기 범위 이동: 0경기 (중간값)" },
+        { "label": "재발 위험: 0bp 변화" },
         { "label": "출전 기회: 중간 수준 상실" }
       ],
       "outcomes": [{ "id": "A1", "kind": "FIXED", "weight": 100, "title": "예정대로 복귀", "cause": "표준 재활", "effects": [] }]
@@ -27,8 +27,8 @@
       "riskLabel": "HIGH",
       "rehabPlan": "EARLY",
       "previewEffects": [
-        { "label": "복귀: 가장 빠른 시점" },
-        { "label": "재발 위험: 상승" },
+        { "label": "복귀 경기 범위 이동: -2경기 (최소값)" },
+        { "label": "재발 위험: +1500bp" },
         { "label": "출전 기회: 가장 적게 상실" }
       ],
       "outcomes": [{ "id": "B1", "kind": "FIXED", "weight": 100, "title": "빠르게 복귀", "cause": "조기 재활", "effects": [] }]
@@ -39,8 +39,8 @@
       "riskLabel": "LOW",
       "rehabPlan": "CONSERVATIVE",
       "previewEffects": [
-        { "label": "복귀: 가장 늦은 시점" },
-        { "label": "재발 위험: 하락" },
+        { "label": "복귀 경기 범위 이동: +2경기 (최대값)" },
+        { "label": "재발 위험: -1000bp" },
         { "label": "출전 기회: 가장 많이 상실" }
       ],
       "outcomes": [{ "id": "C1", "kind": "FIXED", "weight": 100, "title": "완전히 회복", "cause": "보수 재활", "effects": [] }]

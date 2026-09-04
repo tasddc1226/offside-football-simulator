@@ -185,12 +185,15 @@ export { generateCompetitors, type GeneratedCompetitors } from './competitors.js
 export {
   adjustedSeverityWeights,
   applyRehabPlan,
+  injuryAvailabilityFromHealth,
   onInjuryRecovered,
   onMatchInjury,
   onMatchRecurrence,
   onRecurrenceCheckFailed,
   rehabDurationRange,
+  syncInjuryRemaining,
 } from './injury.js';
+export { findInjuryReturnMatchId } from './injury-return.js';
 export { buildDefaultManager, managerTenureSeasons } from './manager.js';
 export { onSettlementRelations } from './relationships.js';
 export {

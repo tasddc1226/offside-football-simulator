@@ -47,8 +47,8 @@ export type InjuryFixtureRun = {
 };
 
 /**
- * T-4-002 §4 seed 탐색 결과(`career-12-search-168`): 실제 1.0.0 룰셋으로 첫 MODERATE 부상과
- * 재활(STANDARD)을 거친 뒤 RECOVERED 상태에서 같은 SHOULDER 재발(MAJOR)까지 한 시즌 안에
+ * T-4-002 §4 seed 탐색 결과(`career-12-fixed-search-59`): 실제 1.0.0 룰셋으로 첫 MODERATE 부상과
+ * 재활(STANDARD)을 거친 뒤 RECOVERED 상태에서 같은 부위 MAJOR 재발까지 한 시즌 안에
  * 재생한다. 탐색은 테스트에 넣지 않고 이 고정 seed와 명령 log만 fixture로 남긴다.
  */
 export function runInjuryFixture(): InjuryFixtureRun {

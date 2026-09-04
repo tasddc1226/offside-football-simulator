@@ -766,27 +766,39 @@ export const RehabPlanSchema = z.enum(['EARLY', 'STANDARD', 'CONSERVATIVE']);
 
 // T-4-002 D-49: 부상 에피소드 하나. "활성 에피소드" 판정(status ACTIVE|REHAB, 배열 마지막 항목)은
 // domain effects.ts `findActiveEpisodeIndex`가 정본이다.
-export const InjuryEpisodeSchema = z.strictObject({
-  id: z.string().min(1),
-  severity: InjurySeveritySchema,
-  bodyPart: InjuryBodyPartSchema,
-  occurredAt: z.strictObject({
-    seasonIndex: z.number().int().positive(),
-    step: z.number().int().min(1).max(12),
-    matchId: z.string().min(1),
-  }),
-  diagnosisRange: z.strictObject({
-    minMatches: z.number().int().positive(),
-    maxMatches: z.number().int().positive(),
-  }),
-  rehab: RehabPlanSchema.nullable(),
-  recurrenceRiskBp: z.number().int().min(0).max(10000),
-  recurrenceChecksRemaining: z.number().int().nonnegative(),
-  status: z.enum(['ACTIVE', 'REHAB', 'RECOVERED', 'RECURRED']),
-  permanentDelta: z
-    .array(z.strictObject({ key: z.enum(CAREER_STATE_ATTRIBUTE_KEYS), delta: z.number().int() }))
-    .nullable(),
-});
+export const InjuryEpisodeSchema = z
+  .strictObject({
+    id: z.string().min(1),
+    severity: InjurySeveritySchema,
+    bodyPart: InjuryBodyPartSchema,
+    occurredAt: z.strictObject({
+      seasonIndex: z.number().int().positive(),
+      step: z.number().int().min(1).max(12),
+      matchId: z.string().min(1),
+    }),
+    diagnosisRange: z.strictObject({
+      minMatches: z.number().int().positive(),
+      maxMatches: z.number().int().positive(),
+    }),
+    rehab: RehabPlanSchema.nullable(),
+    recurrenceRiskBp: z.number().int().min(0).max(10000),
+    recurrenceChecksRemaining: z.number().int().nonnegative(),
+    status: z.enum(['ACTIVE', 'REHAB', 'RECOVERED', 'RECURRED']),
+    permanentDelta: z
+      .array(z.strictObject({ key: z.enum(CAREER_STATE_ATTRIBUTE_KEYS), delta: z.number().int() }))
+      .nullable(),
+    // 시즌 결산으로 FootballSeason.availability가 폐기되어도 활성 부상의 정확한 잔여 결장을 보존한다.
+    remainingMatches: z.number().int().nonnegative().exactOptional(),
+  })
+  .superRefine((episode, ctx) => {
+    if ((episode.status === 'ACTIVE' || episode.status === 'REHAB') && episode.remainingMatches === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['remainingMatches'],
+        message: 'ACTIVE/REHAB 부상에는 remainingMatches가 필요하다.',
+      });
+    }
+  });
 
 // T-4-001 D-50: 관계 로그·기억 태그가 다루는 대상 축 5개. domain `RelationTarget`과 동일(순서는
 // `relationships` 필드와 같은 순서를 유지한다).

@@ -57,6 +57,7 @@ import {
   ContractSchema,
   EffectSchema,
   FootballSeasonSchema,
+  InjuryEpisodeSchema,
   OfferSchema,
   PendingSchema,
   SeasonSummarySchema,
@@ -366,6 +367,25 @@ describe('CareerStateSchema', () => {
   it('schemaVersion: 2는 거부한다', () => {
     const state = { ...confirmedStateLiteral(), schemaVersion: 2 };
     expect(CareerStateSchema.safeParse(state).success).toBe(false);
+  });
+
+  it('ACTIVE/REHAB episode는 remainingMatches를 요구하지만 RECOVERED/RECURRED는 구형 shape을 허용한다', () => {
+    const episode = {
+      id: 'INJ-1-3-1',
+      severity: 'MAJOR' as const,
+      bodyPart: 'KNEE' as const,
+      occurredAt: { seasonIndex: 1, step: 3, matchId: 'm1' },
+      diagnosisRange: { minMatches: 7, maxMatches: 14 },
+      rehab: 'STANDARD' as const,
+      recurrenceRiskBp: 3000,
+      recurrenceChecksRemaining: 0,
+      status: 'ACTIVE' as const,
+      permanentDelta: null,
+    };
+    expect(InjuryEpisodeSchema.safeParse(episode).success).toBe(false);
+    expect(InjuryEpisodeSchema.safeParse({ ...episode, remainingMatches: 2 }).success).toBe(true);
+    const legacyRecovered = { ...episode, status: 'RECOVERED' as const };
+    expect(InjuryEpisodeSchema.safeParse({ ...legacyRecovered, status: 'RECOVERED' }).success).toBe(true);
   });
 
   it("pending이 { kind: 'OFFERS' }인데 offers가 없으면 거부한다", () => {

@@ -291,8 +291,9 @@ export type SeasonWalkResult = {
  * T-2-003 D-35: step 하나의 예정 경기를 결정 슬롯 확인 전에 처리한다. 경기는 `season.rngState`가
  * 아니라 별도 경기 전용 RNG 스트림을 쓴다(호출자가 closure로 관리 — FAST·CHAPTER가 결정 슬롯에서
  * 쓰는 rngState 소비량이 달라도 경기 결과가 byte-identical하도록 결정 RNG와 완전히 분리한다).
- * T-2-004 D-38: `records`는 이 step에서 방금 재생된 `MatchRecord[]`(순서대로), `competitions`는 그
- * 경기까지 반영된 현재 대회 기록(DECIDER의 리그 순위 판정용) — `selectChapter`가 이 둘을 쓴다.
+ * T-2-004 D-38: `records`는 이 호출 뒤 현재 step에 기록된 `MatchRecord[]`(기존 기록 + 이번에 재생된
+ * 기록, 순서대로), `competitions`는 그 경기까지 반영된 현재 대회 기록(DECIDER의 리그 순위 판정용) —
+ * `selectChapter`가 이 둘을 쓴다.
  */
 export type PlayStepMatches = (stepIndex: number) => {
   results: StepMatchResult[];

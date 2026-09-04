@@ -48,7 +48,12 @@ function isAlreadyResolvedThisSeason(chapter: ChapterDefinition, state: CareerSt
 
 function passesInjuryReturnFilter(chapter: ChapterDefinition, state: CareerState): boolean {
   if (chapter.trigger.kind !== 'INJURY_RETURN') return true;
-  return state.health.episodes.some((episode) => episode.status === 'RECOVERED' && episode.recurrenceChecksRemaining > 0);
+  // Content는 ADVANCE 직전의 불완전한 state만 본다. 한 번의 walk가 REHAB 결장 해소와 첫 복귀
+  // 경기까지 진행할 수 있고, 그 경기 직후 forced pending이 열리면 payload state에는 아직
+  // RECOVERED/window 또는 transient marker가 없다. 후보를 여기서 제거하면 domain의 실제
+  // `injuryReturnMatchId` 판정에 도달할 기회 자체를 잃으므로, readiness는 domain에 위임한다.
+  void state;
+  return true;
 }
 
 function compareChapterId(a: ChapterCandidate, b: ChapterCandidate): number {
