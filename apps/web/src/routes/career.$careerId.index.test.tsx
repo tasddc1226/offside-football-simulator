@@ -27,6 +27,7 @@ import { useUiStore } from '../shared/ui-store.js';
 import { buildPastSeasonLinks, buildSeasonChronicleItems } from './career.$careerId.index.js';
 
 const engineHolder = vi.hoisted(() => ({ promise: null as Promise<unknown> | null }));
+const CHRONICLE_TEST_SEED = 'e2e-season-result-01';
 
 vi.mock('../engine/engine.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../engine/engine.js')>();
@@ -188,6 +189,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  localStorage.removeItem('offside:e2e-seed');
   useUiStore.setState({
     theme: 'SYSTEM',
     reducedMotion: 'SYSTEM',
@@ -489,6 +491,9 @@ describe('T-2-009 다이어리 연대기 요약: buildSeasonChronicleItems·buil
   });
 
   it('결산 뒤에는 SEASON_SETTLED 항목이 방금 결산한 seasonHistory 위치를 가리키고, 지난 시즌 링크는 그 시즌을 뺀 최신순이다', async () => {
+    // T-4-003 can validly append MANAGER_CHANGED at the settlement revision. Pin this
+    // fixture so this test only asserts the T-2-009 chronicle contract.
+    localStorage.setItem('offside:e2e-seed', CHRONICLE_TEST_SEED);
     const engine = setTestEngine();
     const careerId = await settlementPendingCareerId(engine);
     const settled = await settleSeason(engine, careerId);
