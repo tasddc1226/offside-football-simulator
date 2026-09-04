@@ -55,10 +55,18 @@ export function createAnalytics(
   const queue: QueuedEvent[] = [];
   let flushTimer: ReturnType<typeof setTimeout> | undefined;
   let cachedClientId: string | undefined;
-  const clientIdReady = getClientId().then((id) => {
-    cachedClientId = id;
-    return id;
-  });
+  // 첫 track() 호출 전까지는 clientId를 건드리지 않는다 — createWebPlatform()은 앱 시작 시 모듈
+  // 스코프에서 바로 만들어지므로, 여기서 즉시 실행하면 track을 한 번도 안 부른 환경(jsdom 등
+  // IndexedDB가 없는 테스트)에서도 처리되지 않는 rejection이 뜬다.
+  let clientIdReady: Promise<string> | undefined;
+
+  function ensureClientIdReady(): Promise<string> {
+    clientIdReady ??= getClientId().then((id) => {
+      cachedClientId = id;
+      return id;
+    });
+    return clientIdReady;
+  }
 
   function clearTimer(): void {
     if (flushTimer !== undefined) {
@@ -92,7 +100,7 @@ export function createAnalytics(
       send(cachedClientId, batch);
       return;
     }
-    void clientIdReady.then((id) => send(id, batch));
+    void ensureClientIdReady().then((id) => send(id, batch));
   }
 
   if (typeof window !== 'undefined') {
