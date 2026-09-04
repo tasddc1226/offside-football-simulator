@@ -10,7 +10,9 @@
 
 **투입**: T-3-006(팩 0.2.0·PRO 이벤트 5·팀 4 추가, `T-3-006-pack-0-2-0`, 12:21) — 동시 워커 3개(T-4-001·T-3-002·T-3-006). T-4-001은 31분 만에 컨텍스트 84%라 압축 뒤 이어질 가능성이 높고, 7D 사용량 93%(9/5 21:00 리셋).
 
-**후속**: staging 배포(run on `c90b769`)가 끝나면 `GET https://offside-api-staging.tasddc1569.workers.dev/v1/service-seasons/current`가 `svc_line_test`·`isTest: true`를 돌려주는지 확인 → T-2-013(LINE TEST 운영 계획, 오케스트레이터 docs). U-014(Paid 플랜)는 LINE TEST 공개 직전.
+**T-2-013 완료(12:26, 오케스트레이터 docs)**: [line-test-plan.md](line-test-plan.md). 정한 것 — (1) 기준선 3지표의 분모: 첫 계약 도달률 = CONTRACT_SIGNED/ONBOARDING_STARTED(첫 커리어, `careerIndex = 1`), 첫 시즌 완주율 = SEASON_SETTLED/CONTRACT_SIGNED, 두 번째 시즌 시작률 = seasonIndex 2종 이상 `step_passed` 기기/SEASON_SETTLED. (2) 일정 제안 09-08~09-21(1차 1주 → 중간 기준선 → 2차 1주 → 최종 기준선), 2주 상한(D-32 Phase 3·4 밸런스가 기다림). (3) 종료는 D1 직접 UPDATE가 아니라 시드 `svc_line_test` status LOCKED PR(시드가 배포마다 upsert). (4) 사람 기준 세션 길이 판정은 U-005가 아니라 분석 이벤트 버킷으로. (5) 새 사용자 액션 U-015(테스터 모집·안내문·피드백 채널). 공개 전 오케스트레이터 예행(FAST·CHAPTER 1시즌씩 staging 완주)은 staging 확인 뒤 바로 한다.
+
+**후속**: staging 배포(run on `c90b769` → 문서 푸시로 취소돼 `2270e81` run이 대신 배포)가 끝나면 `GET https://offside-api-staging.tasddc1569.workers.dev/v1/service-seasons/current`가 `svc_line_test`·`isTest: true`를 돌려주는지 확인 → T-2-013(LINE TEST 운영 계획, 오케스트레이터 docs). U-014(Paid 플랜)는 LINE TEST 공개 직전.
 
 ## 2026-09-04 (오전, PR #48 머지 — Phase 3·4 타입 슬라이스, 후속 브리프 3종 작성)
 
