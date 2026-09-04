@@ -45,7 +45,7 @@
       "id": "C",
       "label": "당분간 말을 아낀다",
       "riskLabel": "HIGH",
-      "previewEffects": [{ "label": "감독 신뢰 하락", "target": "managerTrust", "direction": "DOWN" }, { "label": "관계 손실은 일시적" }],
+      "previewEffects": [{ "label": "감독 신뢰 하락", "target": "managerTrust", "direction": "DOWN" }, { "label": "감독 신뢰가 영구 하락" }],
       "outcomes": [{
         "id": "C1",
         "kind": "FAIL",

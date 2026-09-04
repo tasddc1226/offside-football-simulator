@@ -76,6 +76,30 @@ describe('buildConditionContext: 매핑', () => {
   });
 });
 
+describe('buildConditionContext: season.stats.recentFormAvg', () => {
+  it('활성 시즌의 non-null 최근 평점 최대 5개만 골라 Math.round 평균을 낸다', () => {
+    const context = buildConditionContext(
+      buildTestState({ season: seasonWithRatings([10, null, 20, 30, 40, 50, 60]) }),
+    );
+    // 첫 평점 10은 최근 5개에 포함되지 않고, null은 표본에서 제외된다.
+    expect(context['season.stats.recentFormAvg']).toBe(40);
+  });
+
+  it('활성 시즌에서는 null 평점을 제외하고 평균을 반올림한다', () => {
+    const context = buildConditionContext(buildTestState({ season: seasonWithRatings([71, null, 72]) }));
+    expect(context['season.stats.recentFormAvg']).toBe(72);
+  });
+
+  it('시즌 밖이거나 유효한 평점이 없으면 0이다', () => {
+    expect(buildConditionContext(buildTestState({ season: null }))['season.stats.recentFormAvg']).toBe(0);
+    expect(
+      buildConditionContext(buildTestState({ season: seasonWithRatings([null, null]) }))[
+        'season.stats.recentFormAvg'
+      ],
+    ).toBe(0);
+  });
+});
+
 // T-3-001 D-53: 트랙 A·B 조건 DSL 화이트리스트 예약.
 describe('buildConditionContext: T-3-001 신규 필드', () => {
   it('contract가 없으면 contract.* 신규 필드는 전부 NOT_MODELED 기본값이다', () => {
@@ -311,5 +335,12 @@ function buildSeasonStub(): FootballSeason {
     chapters: [],
     manager: null,
     injuryCount: 0,
+  };
+}
+
+function seasonWithRatings(ratings: Array<number | null>): FootballSeason {
+  return {
+    ...buildSeasonStub(),
+    matches: ratings.map((ratingTenths) => ({ ratingTenths }) as FootballSeason['matches'][number]),
   };
 }

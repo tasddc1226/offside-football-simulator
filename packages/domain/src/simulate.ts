@@ -2811,9 +2811,12 @@ function loanReturn(input: SimulationInput, snapshot: DomainSnapshot): Simulatio
     ...state,
     contract: newContract,
     parentContract: null,
-    nextManager: null,
-    captaincy: 'NONE',
-    captaincySeasons: 0,
+    // PERMANENT는 실제 teamId가 같은 임대 구단 잔류이므로 결산에서 예약한 감독 교체와
+    // 해당 구단의 주장단 상태·누적을 다음 START_SEASON까지 보존한다. RETURN 분기는 위의
+    // restoreParentClubState에서 원소속 기준으로 명시적으로 초기화한다.
+    nextManager: state.nextManager,
+    captaincy: state.captaincy,
+    captaincySeasons: state.captaincySeasons,
     clubHistory: [...closedHistory, newStint],
     pending: null,
     timeline: [

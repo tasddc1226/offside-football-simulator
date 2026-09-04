@@ -4,6 +4,7 @@ import { rulesetProto } from './__fixtures__/career-01.js';
 import { runSettledFixture } from './__fixtures__/career-06-settled.js';
 import { hashState } from './hash.js';
 import { rollInt, seedRng } from './rng.js';
+import { computeTacticalFit, findTacticalStyle } from './selection.js';
 import { simulate, type Command, type SimulationResult } from './simulate.js';
 import type { CareerState, DomainSnapshot, Offer } from './types.js';
 
@@ -186,16 +187,21 @@ function runLoanFixtureCommands(
   snapshot: DomainSnapshot,
   startIndex: number,
   endIndex: number,
+  ruleset = rulesetProto,
 ): DomainSnapshot {
   let next = snapshot;
   for (let index = startIndex; index < endIndex; index++) {
     const raw = careerLoanFixture.commands[index];
     if (raw === undefined) throw new Error(`loan fixture command ${index} is missing`);
-    next = runCommand(next, {
-      ...(raw as Command),
-      commandId: `loan-test-tail-${index + 1}`,
-      expectedRevision: next.revision,
-    });
+    next = runCommand(
+      next,
+      {
+        ...(raw as Command),
+        commandId: `loan-test-tail-${index + 1}`,
+        expectedRevision: next.revision,
+      },
+      ruleset,
+    );
   }
   return next;
 }
@@ -604,9 +610,9 @@ describe('T-3-003 P1 market command regressions', () => {
     expect(permanent.snapshot.state.contract?.teamId).toBe(loaned.state.contract?.teamId);
     expect(permanent.snapshot.state.parentContract).toBeNull();
     expect(permanent.snapshot.state.timeline.at(-2)?.refId).toBe('PERMANENT');
-    expect(permanent.snapshot.state.captaincy).toBe('NONE');
-    expect(permanent.snapshot.state.captaincySeasons).toBe(0);
-    expect(permanent.snapshot.state.nextManager).toBeNull();
+    expect(permanent.snapshot.state.captaincy).toBe(captainLoaned.state.captaincy);
+    expect(permanent.snapshot.state.captaincySeasons).toBe(captainLoaned.state.captaincySeasons);
+    expect(permanent.snapshot.state.nextManager).toBe(captainLoaned.state.nextManager);
 
     const loanState: CareerState = {
       ...loaned.state,
@@ -653,5 +659,97 @@ describe('T-3-003 P1 market command regressions', () => {
     expect(afterSafeRenewal.state.contract?.teamId).toBe(loanState.parentContract!.teamId);
     expect(afterSafeRenewal.state.context).toEqual(autoFaSettled.state.context);
     expect(afterSafeRenewal.state.relationships).toEqual(autoFaSettled.state.relationships);
+  });
+
+  it('강제 감독 교체가 예약된 임대 결산→PERMANENT→START_SEASON에서 감독·신뢰·전술·선발·주장단을 보존한다', () => {
+    const forcedRuleset = {
+      ...rulesetProto,
+      managerRules: {
+        ...rulesetProto.managerRules,
+        changeProbability: {
+          ...rulesetProto.managerRules.changeProbability,
+          baseBp: 10000,
+          maxBp: 10000,
+        },
+      },
+    };
+    const loaned = runLoanPrefix(15);
+    const captaincyState = rehashSnapshot(loaned, {
+      ...loaned.state,
+      relationships: { ...loaned.state.relationships, managerTrust: 83 },
+      captaincy: 'CAPTAIN',
+      captaincySeasons: 4,
+    });
+
+    // career-11 명령을 임대 구단 시즌 시작부터 결산 직전까지 그대로 재생한다. 매입 옵션이
+    // 열리는 실제 결산 경계를 고정하기 위해 해당 시즌의 기록된 가능 시간만큼 출전 시간을 채운다.
+    const beforeSettlement = runLoanFixtureCommands(captaincyState, 15, 19, forcedRuleset);
+    const loanSeason = beforeSettlement.state.season;
+    const loanContract = beforeSettlement.state.contract;
+    if (loanSeason === null || loanContract === null || loanContract.loan === null) {
+      throw new Error('loan season or buy option is missing before settlement');
+    }
+    const possibleMinutes = loanSeason.schedule.filter((entry) => entry.skipped === undefined).length * 90;
+    const settledInput = rehashSnapshot(beforeSettlement, {
+      ...beforeSettlement.state,
+      contract: {
+        ...loanContract,
+        loan: { ...loanContract.loan, buyOptionMinor: 120_000_000 },
+      },
+      season: {
+        ...loanSeason,
+        playerStats: { ...loanSeason.playerStats, minutes: possibleMinutes },
+      },
+    });
+    const settled = runLoanFixtureCommands(settledInput, 19, 20, forcedRuleset);
+    const loanTeamId = settled.state.contract?.teamId;
+    if (loanTeamId === undefined) throw new Error('loan settlement did not keep a contract');
+    const replacementId = `${loanTeamId}-mgr-2`;
+    const settledManagerTrust = settled.state.relationships.managerTrust;
+
+    expect(settled.state.pending?.kind).toBe('LOAN_RETURN');
+    expect(settled.state.nextManager?.id).toBe(replacementId);
+    expect(settled.state.timeline).toContainEqual(
+      expect.objectContaining({ kind: 'MANAGER_CHANGED', refId: replacementId }),
+    );
+
+    const permanent = runCommand(
+      settled,
+      loanReturnCommand(settled, 'PERMANENT'),
+      forcedRuleset,
+    );
+    expect(permanent.state.contract?.teamId).toBe(loanTeamId);
+    expect(permanent.state.nextManager?.id).toBe(replacementId);
+    expect(permanent.state.captaincy).toBe('CAPTAIN');
+    expect(permanent.state.captaincySeasons).toBe(5);
+    expect(permanent.state.relationships.managerTrust).toBe(settledManagerTrust);
+
+    const started = runLoanFixtureCommands(permanent, 21, 22, forcedRuleset);
+    const season = started.state.season;
+    const profile = started.state.player.profile;
+    const team = forcedRuleset.teams.find((candidate) => candidate.id === loanTeamId);
+    const manager = permanent.state.nextManager;
+    if (season === null || profile === null || team === undefined || manager === null) {
+      throw new Error('PERMANENT START_SEASON did not create the expected team state');
+    }
+    const expectedTacticalFit = computeTacticalFit(
+      permanent.state.attributes,
+      profile.archetypeId,
+      profile.primaryPosition,
+      findTacticalStyle(forcedRuleset, team.tacticalStyleId),
+      forcedRuleset.selectionRules,
+      manager.preferredArchetypeIds,
+    );
+    const playerCandidate = season.selection.candidates.find((candidate) => candidate.id === 'PLAYER');
+
+    expect(season.manager?.id).toBe(replacementId);
+    expect(started.state.relationships.managerTrust).toBe(forcedRuleset.managerRules.trustBase);
+    expect(started.state.context.tacticalFit).toBe(expectedTacticalFit);
+    expect(playerCandidate).toMatchObject({
+      tacticalFit: expectedTacticalFit,
+      managerTrust: forcedRuleset.managerRules.trustBase,
+    });
+    expect(started.state.captaincy).toBe('CAPTAIN');
+    expect(started.state.captaincySeasons).toBe(5);
   });
 });

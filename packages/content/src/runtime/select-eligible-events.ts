@@ -6,6 +6,8 @@ import { buildConditionContext } from './condition-context.ts';
 
 export type EligibleEvent = { eventId: string; version: number; weight: number };
 
+const STEPS_PER_SEASON = 12;
+
 function currentCareerPhase(state: CareerState): CareerPhase {
   if (state.stage === 'YOUTH') return 'YOUTH';
   switch (state.seasonPhase) {
@@ -34,7 +36,13 @@ function isWithinCooldown(event: EventDefinition, state: CareerState): boolean {
   if (!lastResolvedEntry) return false;
 
   if (cooldown.steps !== undefined) {
-    return state.currentStep - lastResolvedEntry.step < cooldown.steps;
+    // career step은 시즌 경계에서 currentStep이 다시 시작하므로, 마지막 해소 뒤 결산 횟수를
+    // 시즌당 12 step으로 환산해 같은 연속 시간축으로 만든다. 같은 시즌에는 기존 차이를 그대로 쓴다.
+    const settledSeasons = state.timeline
+      .slice(lastResolvedIndex + 1)
+      .filter((entry) => entry.kind === 'SEASON_SETTLED').length;
+    const elapsedCareerSteps = state.currentStep - lastResolvedEntry.step + settledSeasons * STEPS_PER_SEASON;
+    return elapsedCareerSteps < cooldown.steps;
   }
   if (cooldown.seasons !== undefined) {
     const seasonsElapsed = state.timeline

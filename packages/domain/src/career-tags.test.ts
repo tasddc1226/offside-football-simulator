@@ -684,4 +684,36 @@ describe('settleSeason의 커리어 태그 결산 훅', () => {
       expect.objectContaining({ tagId: 'TAG-BIG-GAME', seasonIndex: 1, sourceRefId: 'SETTLE_SEASON:1' }),
     );
   });
+
+  it('settleSeason이 Phase 4 TAG-CONTROVERSIAL을 evaluate→grant하고 CAREER_TAG_GRANTED를 남긴다', () => {
+    const state = {
+      ...makeSettleableState(),
+      controversyFailures: rulesetProto.relationshipRules.tagThresholds.controversialFailures,
+    };
+    const snapshot = {
+      revision: 20,
+      checkpoint: 'STEP_BOUNDARY' as const,
+      state,
+      stateHash: 'x',
+      rulesetVersion: '1.0.0',
+      contentPackVersion: '0.1.0',
+    };
+    const result = simulate({
+      snapshot,
+      command: { type: 'SETTLE_SEASON', commandId: 'cmd-settle-tag-phase4', expectedRevision: 20, payload: {} },
+      ruleset: rulesetProto,
+      rulesetVersion: rulesetProto.version,
+      contentPackVersion: '0.1.0',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.snapshot.state.careerTags).toContain('TAG-CONTROVERSIAL');
+    expect(result.snapshot.state.careerTagGrants).toContainEqual(
+      expect.objectContaining({ tagId: 'TAG-CONTROVERSIAL', seasonIndex: 1, sourceRefId: 'SETTLE_SEASON:1' }),
+    );
+    expect(result.snapshot.state.timeline).toContainEqual(
+      expect.objectContaining({ kind: 'CAREER_TAG_GRANTED', refId: 'TAG-CONTROVERSIAL', revision: 21 }),
+    );
+  });
 });
