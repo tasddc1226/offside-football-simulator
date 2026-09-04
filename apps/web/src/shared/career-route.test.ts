@@ -72,6 +72,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
 }
 
 const TEST_MARKET_SUMMARY = { openedAtRevision: 1, seasonIndex: 0, reason: 'FIRST_CONTRACT', safeOfferId: null } as const;
+const TEST_TRANSFER_MARKET_SUMMARY = { openedAtRevision: 9, seasonIndex: 1, reason: 'EXPIRED', safeOfferId: 'OFR-safe' } as const;
 
 describe('screenForCareer', () => {
   it.each([
@@ -165,6 +166,16 @@ describe('screenForCareer', () => {
         },
       }),
       'SCR-009',
+    ],
+    [
+      'ACTIVE, pending OFFERS(EXPIRED) → SCR-017(시장 비교)',
+      baseState({ status: 'ACTIVE', pending: { kind: 'OFFERS', offers: [], market: TEST_TRANSFER_MARKET_SUMMARY } }),
+      'SCR-017',
+    ],
+    [
+      'ACTIVE, pending LOAN_RETURN은 전역 SCR-020이 아닌 대시보드 목적지다',
+      baseState({ status: 'ACTIVE', pending: { kind: 'LOAN_RETURN', options: ['RETURN'], buyOptionMinor: null } }),
+      'SCR-029',
     ],
     [
       'ACTIVE, pending INJURY → SCR-013(범용 이벤트 화면, SCR-022는 T-4-005)',

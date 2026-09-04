@@ -82,17 +82,44 @@ export async function advanceUntilOffers(page: Page): Promise<void> {
   throw new Error('offers 화면에 도달하지 못했다(최대 10회 시도)');
 }
 
-/** SCR-009(제안 비교)에서 첫 제안을 골라 SCR-010(계약)에서 사인한다. 대시보드(SCR-029)로
- * 돌아온다(T-2-007: first-contract.spec.ts 원래 정의에서 뽑았다, season.spec.ts와 공유). */
-export async function signFirstOffer(page: Page): Promise<void> {
-  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
-  await page.getByRole('link', { name: '이 제안 보기' }).first().click();
+/**
+ * SCR-009 첫 계약이면 기존 `제안 비교`·`이 제안 보기`·`사인` 퍼널을 그대로 타고, Phase 3
+ * 시장 제안이면 `이적시장 제안 비교`·`제안 상세·결정`·`이 조건 수락`·SCR-020을 탄다. 두
+ * 화면을 heading/link로 먼저 구분해야 PRE_NEGOTIATION의 새 UI가 기존 시즌 진행 헬퍼에서
+ * FIRST_CONTRACT로 오인되지 않는다.
+ */
+export async function signFirstOffer(page: Page, options: { preferredMinLengthSeasons?: number } = {}): Promise<void> {
+  const firstContractHeading = page.getByRole('heading', { level: 1, name: '제안 비교', exact: true });
+  const marketHeading = page.getByRole('heading', { level: 1, name: '이적시장 제안 비교', exact: true });
+  await firstContractHeading.or(marketHeading).first().waitFor({ state: 'visible', timeout: 60_000 });
+  if (await firstContractHeading.isVisible()) {
+    const offerLinks = page.getByRole('link', { name: '이 제안 보기' });
+    const offerCards = page.locator('[data-compare-layout="stacked"] > div');
+    let targetOffer = offerLinks.first();
+    if ((await offerCards.count()) > 1 && options.preferredMinLengthSeasons !== undefined) {
+      // 기존 helper의 기본값은 첫 제안 수락으로 보존한다. 특정 E2E만 원하는 계약 기간을 명시한다.
+      const preferredLength = options.preferredMinLengthSeasons;
+      const preferredCard = offerCards.filter({ hasText: new RegExp(`[${preferredLength}-9]시즌`) }).first();
+      await expect(preferredCard).toHaveCount(1);
+      targetOffer = preferredCard.getByRole('link', { name: '이 제안 보기' });
+    }
+    await targetOffer.click();
 
+    await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+    await page.getByRole('button', { name: '사인' }).click();
+
+    await expect(page).toHaveURL(/\/career\/[^/]+$/);
+    await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
+    return;
+  }
+
+  await expect(marketHeading).toBeVisible();
+  await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
   await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
-  await page.getByRole('button', { name: '사인' }).click();
-
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
-  await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
+  await page.getByRole('button', { name: '이 조건 수락' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/transfer-result\?rev=\d+$/);
+  await page.getByRole('link', { name: /^(대시보드로|새 시즌 준비)$/ }).click();
+  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/preseason)?$/);
 }
 
 /** 온보딩부터 첫 프로 계약 체결까지(대시보드 도착) 전 구간. first-contract.spec.ts·season.spec.ts가
@@ -109,6 +136,12 @@ export async function completeOnboardingThroughContract(page: Page): Promise<voi
 export async function planPreseason(page: Page, mode: 'FAST' | 'CHAPTER', modeLabel: string, focusLabel: string): Promise<void> {
   await page.getByRole('link', { name: '계획하러 가기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
+  await fillPreseasonPlan(page, mode, modeLabel, focusLabel);
+}
+
+/** 이미 SCR-005 프리시즌 화면에 있는 경우의 입력 경로. 결과 화면 CTA가 프리시즌으로 이동한
+ * 뒤에는 `계획하러 가기`가 없으므로 planPreseason과 분리해 같은 저장·진행 검증을 재사용한다. */
+export async function fillPreseasonPlan(page: Page, mode: 'FAST' | 'CHAPTER', modeLabel: string, focusLabel: string): Promise<void> {
   await expect(page.getByRole('heading', { level: 1, name: '프리시즌 계획' })).toBeVisible();
 
   await page.getByRole('radio', { name: new RegExp(`^${modeLabel}`) }).click();
@@ -144,30 +177,42 @@ export async function resolveRoleProposal(page: Page): Promise<void> {
  * chapter.spec.ts가 검증하므로, 여기서는 남은 판단을 모두 첫 선택지로 확정하고 결과 화면을 지나
  * "다음"으로 대시보드까지 최단 경로로 통과시킨다. 안전 상한 10회.
  *
- * 라디오·진행 버튼 중 뭐가 뜰지 매 스텝 다르므로, 그중 하나가 나타날 때까지 먼저 기다린 뒤에야
- * count()로 어느 쪽인지 가린다(기다리지 않고 바로 count()를 읽으면 로더 직후 첫 렌더 전 0을 읽는
- * 경합이 난다 — resolveRoleProposal과 같은 종류의 문제). */
+ * 라디오·진행 버튼 중 뭐가 뜰지 매 스텝 다르므로, 각 후보를 현재 visible+enabled 상태로 좁힌
+ * union의 첫 locator 자체를 클릭한다. count()는 hidden·disabled 요소도 세므로 actionability 판정에
+ * 쓰지 않는다 — 특히 hidden "다음"이 visible한 진행 CTA보다 먼저 선택되면 안 된다. */
 export async function resolveCurrentChapterScreen(page: Page): Promise<void> {
   for (let step = 0; step < 10; step += 1) {
-    const nextButton = page.getByRole('button', { name: '다음' });
-    const progressButton = page.getByRole('button', { name: /^(다음 판단|경기 결과)$/ });
-    const radio = page.getByRole('radio').first();
-    await nextButton.or(progressButton).or(radio).first().waitFor({ state: 'visible' });
+    const enabled = page.locator(':enabled:not([aria-disabled="true"])');
+    const nextButton = page
+      .getByRole('button', { name: '다음', exact: true })
+      .filter({ visible: true })
+      .and(enabled);
+    const progressButton = page
+      .getByRole('button', { name: /^(다음 판단|경기 결과)$/ })
+      .filter({ visible: true })
+      .and(enabled);
+    const radio = page.getByRole('radio').filter({ visible: true }).and(enabled).first();
+    const current = nextButton.or(progressButton).or(radio).first();
+    await current.waitFor({ state: 'visible' });
+    await expect(current).toBeEnabled();
 
-    if ((await nextButton.count()) > 0) {
-      await nextButton.click();
-      return;
-    }
-    if ((await progressButton.count()) > 0) {
-      await progressButton.click();
+    const role = await current.getAttribute('role');
+    const accessibleName = (
+      (await current.getAttribute('aria-label')) ?? (await current.innerText())
+    ).trim();
+    await current.click();
+
+    if (role === 'radio') {
+      await page.getByRole('button', { name: '확정', exact: true }).click();
+      // 확정 뒤 결과(다음 판단·경기 결과 버튼)로 전환되길 기다린다 — 이 대기 없이 곧장 다음 루프로
+      // 가면 라디오가 checked·disabled로 전환되는 프레임을 "아직 안 골랐다"로 오판해 같은 라디오를
+      // 다시 클릭해 버린다(사라지기 직전 라디오를 잡는 detach 경합).
+      await progressButton.or(nextButton).first().waitFor({ state: 'visible' });
       continue;
     }
-    await radio.click();
-    await page.getByRole('button', { name: '확정' }).click();
-    // 확정 뒤 결과(다음 판단·경기 결과 버튼)로 전환되길 기다린다 — 이 대기 없이 곧장 다음 루프로
-    // 가면 라디오가 checked·disabled로 전환되는 프레임을 "아직 안 골랐다"로 오판해 같은 라디오를
-    // 다시 클릭해 버린다(사라지기 직전 라디오를 잡는 detach 경합).
-    await progressButton.or(nextButton).first().waitFor({ state: 'visible' });
+    if (accessibleName === '다음') return;
+
+    // 진행 CTA를 누른 뒤에는 다음 반복에서 visible+enabled인 현재 CTA를 다시 resolve한다.
   }
   throw new Error('챕터 화면(SCR-031)을 벗어나지 못했다(최대 10회 시도)');
 }

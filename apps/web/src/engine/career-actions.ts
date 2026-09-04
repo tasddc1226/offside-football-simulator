@@ -1,6 +1,6 @@
 // EngineClient 위의 순수 함수(React 없음). 06 "분석 이벤트": 실행마다 command_submitted ·
 // command_resolved(outcomeClass = nextAction) · command_failed를 보낸다.
-import type { ChapterOutcomeKind, Command, Effect, PlayerDraft, SimulationMode } from '@offside/domain';
+import type { ChapterOutcomeKind, Command, Effect, NegotiationAsk, PlayerDraft, SimulationMode } from '@offside/domain';
 import { selectChapterCandidates, selectEligibleEvents, type ChapterDefinition, type EventDefinition } from '@offside/content';
 import type { EngineCommand, ExecuteResult, LoadResult } from '@offside/engine-client';
 import { deleteCareerOnServer } from '../api/client.js';
@@ -267,6 +267,30 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
 
 export function acceptOffer(engine: AppEngine, careerId: string, offerId: string): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'ACCEPT_OFFER', payload: { offerId } });
+}
+
+/** T-3-005 시장 결정 어댑터. expectedRevision은 execute()가 매번 최신 Snapshot에서 채운다. */
+export function negotiateOffer(
+  engine: AppEngine,
+  careerId: string,
+  offerId: string,
+  ask: NegotiationAsk,
+): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'NEGOTIATE', payload: { offerId, ask } });
+}
+
+/** 개별 offerId 또는 null(전체 거절 → 안전 잔류)을 domain 명령으로 그대로 전달한다. */
+export function rejectOffer(engine: AppEngine, careerId: string, offerId: string | null): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'REJECT_OFFER', payload: { offerId } });
+}
+
+/** LOAN_RETURN 전용 결정 어댑터. domain이 pending.options를 최종 검증한다. */
+export function resolveLoanReturn(
+  engine: AppEngine,
+  careerId: string,
+  decision: 'RETURN' | 'PERMANENT',
+): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'LOAN_RETURN', payload: { decision } });
 }
 
 export type StartSeasonChoice = { simulationMode: SimulationMode; trainingFocus?: TrainingFocus };

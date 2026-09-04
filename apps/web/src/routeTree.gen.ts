@@ -29,6 +29,7 @@ import { Route as CareerCareerIdRoleRouteImport } from './routes/career.$careerI
 import { Route as CareerCareerIdSeasonPrepRouteImport } from './routes/career.$careerId.season-prep'
 import { Route as CareerCareerIdSeasonResultRouteImport } from './routes/career.$careerId.season-result'
 import { Route as CareerCareerIdStyleRouteImport } from './routes/career.$careerId.style'
+import { Route as CareerCareerIdTransferResultRouteImport } from './routes/career.$careerId.transfer-result'
 import { Route as CareerCareerIdTryoutRouteImport } from './routes/career.$careerId.tryout'
 import { Route as CareerCareerIdEventResultRouteImport } from './routes/career.$careerId.event_.result'
 
@@ -135,6 +136,12 @@ const CareerCareerIdStyleRoute = CareerCareerIdStyleRouteImport.update({
   path: '/style',
   getParentRoute: () => CareerCareerIdRoute,
 } as any)
+const CareerCareerIdTransferResultRoute =
+  CareerCareerIdTransferResultRouteImport.update({
+    id: '/transfer-result',
+    path: '/transfer-result',
+    getParentRoute: () => CareerCareerIdRoute,
+  } as any)
 const CareerCareerIdTryoutRoute = CareerCareerIdTryoutRouteImport.update({
   id: '/tryout',
   path: '/tryout',
@@ -167,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/career/$careerId/season-prep': typeof CareerCareerIdSeasonPrepRoute
   '/career/$careerId/season-result': typeof CareerCareerIdSeasonResultRoute
   '/career/$careerId/style': typeof CareerCareerIdStyleRoute
+  '/career/$careerId/transfer-result': typeof CareerCareerIdTransferResultRoute
   '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
   '/career/$careerId/': typeof CareerCareerIdIndexRoute
   '/career/$careerId/event/result': typeof CareerCareerIdEventResultRoute
@@ -190,6 +198,7 @@ export interface FileRoutesByTo {
   '/career/$careerId/season-prep': typeof CareerCareerIdSeasonPrepRoute
   '/career/$careerId/season-result': typeof CareerCareerIdSeasonResultRoute
   '/career/$careerId/style': typeof CareerCareerIdStyleRoute
+  '/career/$careerId/transfer-result': typeof CareerCareerIdTransferResultRoute
   '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
   '/career/$careerId': typeof CareerCareerIdIndexRoute
   '/career/$careerId/event/result': typeof CareerCareerIdEventResultRoute
@@ -215,6 +224,7 @@ export interface FileRoutesById {
   '/career/$careerId/season-prep': typeof CareerCareerIdSeasonPrepRoute
   '/career/$careerId/season-result': typeof CareerCareerIdSeasonResultRoute
   '/career/$careerId/style': typeof CareerCareerIdStyleRoute
+  '/career/$careerId/transfer-result': typeof CareerCareerIdTransferResultRoute
   '/career/$careerId/tryout': typeof CareerCareerIdTryoutRoute
   '/career/$careerId/': typeof CareerCareerIdIndexRoute
   '/career/$careerId/event_/result': typeof CareerCareerIdEventResultRoute
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/career/$careerId/season-prep'
     | '/career/$careerId/season-result'
     | '/career/$careerId/style'
+    | '/career/$careerId/transfer-result'
     | '/career/$careerId/tryout'
     | '/career/$careerId/'
     | '/career/$careerId/event/result'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/career/$careerId/season-prep'
     | '/career/$careerId/season-result'
     | '/career/$careerId/style'
+    | '/career/$careerId/transfer-result'
     | '/career/$careerId/tryout'
     | '/career/$careerId'
     | '/career/$careerId/event/result'
@@ -288,6 +300,7 @@ export interface FileRouteTypes {
     | '/career/$careerId/season-prep'
     | '/career/$careerId/season-result'
     | '/career/$careerId/style'
+    | '/career/$careerId/transfer-result'
     | '/career/$careerId/tryout'
     | '/career/$careerId/'
     | '/career/$careerId/event_/result'
@@ -444,6 +457,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CareerCareerIdStyleRouteImport
       parentRoute: typeof CareerCareerIdRoute
     }
+    '/career/$careerId/transfer-result': {
+      id: '/career/$careerId/transfer-result'
+      path: '/transfer-result'
+      fullPath: '/career/$careerId/transfer-result'
+      preLoaderRoute: typeof CareerCareerIdTransferResultRouteImport
+      parentRoute: typeof CareerCareerIdRoute
+    }
     '/career/$careerId/tryout': {
       id: '/career/$careerId/tryout'
       path: '/tryout'
@@ -475,6 +495,7 @@ interface CareerCareerIdRouteChildren {
   CareerCareerIdSeasonPrepRoute: typeof CareerCareerIdSeasonPrepRoute
   CareerCareerIdSeasonResultRoute: typeof CareerCareerIdSeasonResultRoute
   CareerCareerIdStyleRoute: typeof CareerCareerIdStyleRoute
+  CareerCareerIdTransferResultRoute: typeof CareerCareerIdTransferResultRoute
   CareerCareerIdTryoutRoute: typeof CareerCareerIdTryoutRoute
   CareerCareerIdIndexRoute: typeof CareerCareerIdIndexRoute
   CareerCareerIdEventResultRoute: typeof CareerCareerIdEventResultRoute
@@ -494,6 +515,7 @@ const CareerCareerIdRouteChildren: CareerCareerIdRouteChildren = {
   CareerCareerIdSeasonPrepRoute: CareerCareerIdSeasonPrepRoute,
   CareerCareerIdSeasonResultRoute: CareerCareerIdSeasonResultRoute,
   CareerCareerIdStyleRoute: CareerCareerIdStyleRoute,
+  CareerCareerIdTransferResultRoute: CareerCareerIdTransferResultRoute,
   CareerCareerIdTryoutRoute: CareerCareerIdTryoutRoute,
   CareerCareerIdIndexRoute: CareerCareerIdIndexRoute,
   CareerCareerIdEventResultRoute: CareerCareerIdEventResultRoute,
