@@ -3,7 +3,7 @@ import { ATTRIBUTE_KEYS } from '../schema/ruleset.ts';
 import { CONDITION_FIELDS, SEASON_STATS, resolveConditionField } from '../schema/condition.ts';
 import { buildConditionContext } from './condition-context.ts';
 import { buildTestState, TEST_DRAFT, TEST_PROFILE, timelineEntry } from './build-test-state.ts';
-import type { Contract } from '@offside/domain';
+import type { Contract, FootballSeason } from '@offside/domain';
 
 const TEST_CONTRACT: Contract = {
   id: 'CTR-1',
@@ -127,16 +127,57 @@ describe('buildConditionContext: T-3-001 신규 필드', () => {
     expect(context['contract.isLastSeason']).toBe(0);
   });
 
-  it('contract.isLastSeason은 seasonsRemaining이 1 이하일 때만 1이다', () => {
-    const contract = { ...TEST_CONTRACT, lengthSeasons: 1, signedAtRevision: 1 };
+  // PR #48 리뷰 수정: seasonsRemaining은 "지금 진행 중인 시즌 뒤에 남은 시즌 수"다 — 2시즌 계약을
+  // 시즌 1 시작 전에 서명하면 시즌 1 진행 중 remaining 1(마지막 아님), 시즌 2 진행 중 remaining
+  // 0(마지막). isLastSeason은 시즌이 실제로 진행 중일 때만(season !== null) remaining === 0으로 판단한다.
+  it('contract.isLastSeason은 시즌 1 진행 중(마지막 아님)이면 0이다(2시즌 계약)', () => {
+    const contract = { ...TEST_CONTRACT, lengthSeasons: 2, signedAtRevision: 1 };
     const context = buildConditionContext(
       buildTestState({
         contract,
-        timeline: [timelineEntry({ kind: 'CONTRACT_SIGNED', revision: 1 })],
+        season: buildSeasonStub(),
+        timeline: [
+          timelineEntry({ kind: 'CONTRACT_SIGNED', revision: 1 }),
+          timelineEntry({ kind: 'SEASON_STARTED', revision: 2 }),
+        ],
       }),
     );
     expect(context['contract.seasonsRemaining']).toBe(1);
+    expect(context['contract.isLastSeason']).toBe(0);
+  });
+
+  it('contract.isLastSeason은 시즌 2(마지막) 진행 중이면 1이다(같은 2시즌 계약)', () => {
+    const contract = { ...TEST_CONTRACT, lengthSeasons: 2, signedAtRevision: 1 };
+    const context = buildConditionContext(
+      buildTestState({
+        contract,
+        season: buildSeasonStub(),
+        timeline: [
+          timelineEntry({ kind: 'CONTRACT_SIGNED', revision: 1 }),
+          timelineEntry({ kind: 'SEASON_STARTED', revision: 2 }),
+          timelineEntry({ kind: 'SEASON_STARTED', revision: 3 }),
+        ],
+      }),
+    );
+    expect(context['contract.seasonsRemaining']).toBe(0);
     expect(context['contract.isLastSeason']).toBe(1);
+  });
+
+  it('contract.isLastSeason은 시즌 사이(season === null)면 seasonsRemaining이 0이어도 0이다', () => {
+    const contract = { ...TEST_CONTRACT, lengthSeasons: 2, signedAtRevision: 1 };
+    const context = buildConditionContext(
+      buildTestState({
+        contract,
+        season: null,
+        timeline: [
+          timelineEntry({ kind: 'CONTRACT_SIGNED', revision: 1 }),
+          timelineEntry({ kind: 'SEASON_STARTED', revision: 2 }),
+          timelineEntry({ kind: 'SEASON_STARTED', revision: 3 }),
+        ],
+      }),
+    );
+    expect(context['contract.seasonsRemaining']).toBe(0);
+    expect(context['contract.isLastSeason']).toBe(0);
   });
 
   it('career.permanentTransfers·career.clubsCount는 clubHistory에서 유도된다', () => {
@@ -163,3 +204,45 @@ describe('buildConditionContext: T-3-001 신규 필드', () => {
     expect(context['season.stats.recentFormAvg']).toBe(0);
   });
 });
+
+// isLastSeason 시즌 진행 중 분기 테스트 전용 최소 season 스텁. buildConditionContext는
+// season !== null 여부만 본다(select-chapter-candidates.test.ts의 buildSeasonStub과 같은 패턴).
+function buildSeasonStub(): FootballSeason {
+  return {
+    index: 1,
+    serviceSeasonId: 'svc-test',
+    simulationMode: 'FAST',
+    calendarId: 'default',
+    currentStep: 3,
+    phase: 'LEAGUE',
+    steps: [],
+    teamId: 'team-1',
+    styleId: 'style-1',
+    squadRole: 'STARTER',
+    squadRoleAtStart: 'STARTER',
+    trainingFocus: 'ROLE',
+    competitions: [],
+    schedule: [],
+    matches: [],
+    ageReferenceStep: 1,
+    squad: { competitors: [] },
+    selection: { position: 'ST', slots: 1, benchSlots: 0, candidates: [], playerReason: null },
+    playerStats: {
+      group: 'FW',
+      appearances: { total: 0, started: 0, sub: 0, zeroMinute: 0, out: 0 },
+      minutes: 0,
+      ratingSumTenths: 0,
+      ratedMatches: 0,
+      yellow: 0,
+      red: 0,
+      injuries: 0,
+      totals: { group: 'FW', goals: 0, assists: 0, xgCenti: 0, shots: 0, offsides: 0 },
+    },
+    availability: null,
+    lastRatingTenths: null,
+    yellowSuspensionCount: 0,
+    matchRngState: { s: [1, 2, 3, 4], draws: 0 },
+    scheduledEffects: [],
+    chapters: [],
+  };
+}

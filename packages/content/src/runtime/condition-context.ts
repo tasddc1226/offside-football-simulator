@@ -93,10 +93,13 @@ export function buildConditionContext(state: CareerState): ConditionContext {
 
     'rng.injuryRoll': NO_INJURY_ROLL,
 
-    // T-3-001 D-53: 트랙 A(계약·이적) 조건 화이트리스트.
+    // T-3-001 D-53: 트랙 A(계약·이적) 조건 화이트리스트. seasonsRemaining은 "지금 진행 중인 시즌
+    // 뒤에 남은 시즌 수"다 — 예: 2시즌 계약을 시즌 1 시작 전 서명 → 시즌 1 진행 중 remaining
+    // 1(마지막 아님), 시즌 2 진행 중 remaining 0(마지막). 시즌 사이(season === null)에는 isLastSeason이
+    // 항상 0이고, 그때는 contract.seasonsRemaining으로 판단한다.
     'contract.kind': contract?.kind ?? NOT_MODELED_STRING,
     'contract.seasonsRemaining': seasonsRemaining,
-    'contract.isLastSeason': contract !== null && seasonsRemaining <= 1 ? 1 : 0,
+    'contract.isLastSeason': state.season !== null && contract !== null && seasonsRemaining === 0 ? 1 : 0,
     'contract.promiseBreaches': contract?.promiseBreaches ?? NOT_MODELED_INT,
     'contract.onLoan': contract?.kind === 'LOAN' ? 1 : 0,
     'contract.leagueTier': contract ? String(contract.leagueTier) : NOT_MODELED_STRING,

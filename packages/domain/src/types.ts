@@ -676,7 +676,8 @@ export type SeasonResult = {
   };
   chapters: ChapterRecord[];
   // T-3-001(PR #45 후속): 결산 뒤 `season`이 null이 되며 사라지던 다이어리 step 요약을 보존한다.
-  // `settleSeason`이 `season.steps[].summary`에서 채운다(이 작업의 유일한 로직 변경).
+  // `settleSeason`이 `season.steps[].summary`에서 채운다(이 작업의 유일한 로직 변경). SETTLEMENT
+  // step(12)은 결산 자체라 요약이 없다 — 포함되지 않는다(길이 11, PR #48 리뷰로 확정).
   stepSummaries: Array<{ step: number; phase: SeasonPhase; matchesPlayed: number; decisionsOpened: number; passedAtRevision: number }>;
   hash: string;
 };
