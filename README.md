@@ -33,7 +33,7 @@
 
 ## 기술 스택 요약
 
-Vite + React SPA가 브라우저 Web Worker에서 게임을 실행하고 로컬에 저장한다. 일반 웹(Cloudflare Pages)으로 먼저 배포하며, 같은 번들을 앱인토스 미니앱(토스 앱 WebView)으로도 언제든 배포할 수 있는 구조다. Cloudflare Workers(Hono) + D1이 프로필·Google 로그인·복구·checkpoint 동기화·보관함·서비스 시즌을 담당하고, 필요할 때만 명령 로그를 재생해 결과를 검증한다. 콘텐츠 팩은 JSON 정적 번들이다. 상세는 [`docs/adr/`](docs/adr/README.md).
+Vite + React SPA가 브라우저 Web Worker에서 게임을 실행하고 로컬에 저장한다. 일반 웹(Cloudflare Workers Static Assets)으로 먼저 배포하며, 같은 번들을 앱인토스 미니앱(토스 앱 WebView)으로도 언제든 배포할 수 있는 구조다. Cloudflare Workers(Hono) + D1이 프로필·Google 로그인·복구·checkpoint 동기화·보관함·서비스 시즌을 담당하고, 필요할 때만 명령 로그를 재생해 결과를 검증한다. 콘텐츠 팩은 JSON 정적 번들이다. 상세는 [`docs/adr/`](docs/adr/README.md).
 
 ## 시작 순서
 

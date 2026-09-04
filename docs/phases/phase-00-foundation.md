@@ -24,7 +24,7 @@
 - `packages/platform` 골격: `LocalStore` 포트와 `Platform` 인터페이스(식별, 저장, SafeArea, 뒤로 가기, 종료 확인, 공유, 분석), web 구현(Dexie). toss 구현은 인터페이스를 만족하는 스텁만 두고 앱인토스 SDK 의존성은 추가하지 않는다.
 - 세션 미들웨어는 쿠키와 `Authorization: Bearer`를 모두 받는다. 토스 식별키 검증 엔드포인트는 미니앱 출시 준비 단계(M-003)에서 붙인다.
 - ruleset/content pack loader와 checksum, 프로토타입 이벤트 10개의 팩 0.1.0.
-- CI: lint, typecheck, unit·property, content validate, contract, migration. Pages·Workers preview 배포.
+- CI: lint, typecheck, unit·property, content validate, contract, migration. 웹 Static Assets·API Workers preview 배포.
 - requestId, 구조화 로그, 오류 봉투.
 
 ## 구현 순서
@@ -56,4 +56,3 @@
 ## 제외
 
 선수 생성 UI, 실제 OVR, 축구 시즌, 이벤트 콘텐츠, 로그인, 운영 CMS, 앱인토스 SDK 연동·검토 요청(출시 결정 후).
-

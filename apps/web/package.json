@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "build:toss": "vite build --mode toss",
+    "deploy:preview": "wrangler deploy --env preview",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint .",
@@ -48,6 +51,7 @@
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
     "vite": "8.2.2",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "wrangler": "4.127.1"
   }
 }

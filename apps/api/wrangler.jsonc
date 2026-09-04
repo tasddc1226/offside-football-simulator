@@ -22,4 +22,60 @@
     "GOOGLE_REDIRECT_URI": "http://localhost:8787/v1/auth/google/callback",
     "GOOGLE_FAKE": "1",
   },
+  "env": {
+    "preview": {
+      "name": "offside-api-preview",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "offside-preview",
+          "database_id": "c6edc33e-e879-4ccf-9fc1-807aeb61561d",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "vars": {
+        "ENVIRONMENT": "preview",
+        "ALLOWED_ORIGINS": "https://offside-web-preview.tasddc1569.workers.dev",
+        "WEB_APP_URL": "https://offside-web-preview.tasddc1569.workers.dev",
+        "GOOGLE_REDIRECT_URI": "https://offside-api-preview.tasddc1569.workers.dev/v1/auth/google/callback",
+        "GOOGLE_FAKE": "0",
+      },
+    },
+    "staging": {
+      "name": "offside-api-staging",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "offside-staging",
+          "database_id": "37688e3f-b905-4240-abdb-e23e778dfad9",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "ALLOWED_ORIGINS": "https://offside-web-staging.tasddc1569.workers.dev",
+        "WEB_APP_URL": "https://offside-web-staging.tasddc1569.workers.dev",
+        "GOOGLE_REDIRECT_URI": "https://offside-api-staging.tasddc1569.workers.dev/v1/auth/google/callback",
+        "GOOGLE_FAKE": "0",
+      },
+    },
+    "production": {
+      "name": "offside-api",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "offside-production",
+          "database_id": "2cfe462c-204e-4842-805c-5840fc9b1758",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "vars": {
+        "ENVIRONMENT": "production",
+        "ALLOWED_ORIGINS": "https://offside-web.tasddc1569.workers.dev",
+        "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
+        "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",
+        "GOOGLE_FAKE": "0",
+      },
+    },
+  },
 }

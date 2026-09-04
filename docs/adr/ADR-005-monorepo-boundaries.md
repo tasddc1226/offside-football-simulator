@@ -9,7 +9,7 @@ pnpm workspaces + Turborepo. Node 22 LTS, TypeScript strict, ESLint + Prettier, 
 
 ```text
 apps/
-  web/            Vite React SPA. 빌드 2종: Pages 번들, 앱인토스 .ait 번들(apps-in-toss.config.ts)
+  web/            Vite React SPA. 빌드 2종: Workers Static Assets 번들, 앱인토스 .ait 번들(apps-in-toss.config.ts)
   api/            Hono on Cloudflare Workers, D1, R2, mTLS 인증서 바인딩
 packages/
   domain/         순수 규칙. simulate, OVR, 선발, 이벤트 해결, Legacy

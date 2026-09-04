@@ -10,14 +10,14 @@
 | [ADR-004](ADR-004-content-format.md) | JSON 콘텐츠 팩과 ruleset, Zod 검증, 불변 아티팩트 | 확정 |
 | [ADR-005](ADR-005-monorepo-boundaries.md) | pnpm + Turborepo 모노레포와 패키지 의존 방향 | 확정 |
 | [ADR-006](ADR-006-service-name-and-domain.md) | 서비스명 표기, 도메인 구매·DNS | 확정, 도메인 가용성만 미확인 |
-| [ADR-007](ADR-007-hosting-and-infra.md) | Cloudflare Pages·Workers·D1·R2, 환경·CI·비용 | 확정 |
+| [ADR-007](ADR-007-hosting-and-infra.md) | Cloudflare Workers Static Assets·API Workers·D1·R2, 환경·CI·비용 | 확정 |
 | [ADR-008](ADR-008-auth-and-account-merge.md) | 익명 플레이 + Google 로그인 1종, 계정 연결·병합 | 확정 |
 | [ADR-009](ADR-009-apps-in-toss-channel.md) | 앱인토스 미니앱 대응 구조(출시 시점은 별도 결정): 채널 어댑터, 식별키·Bearer 세션, 네이티브 Storage, mTLS, 게임 등급분류 | 확정, 출시 준비는 보류 |
 | [ADR-010](ADR-010-shared-contracts.md) | Phase 3 이후 병렬화를 위한 공유 계약: Effect 만료·중첩·타깃 소유권, 시장가치 입력 소유권, CareerTag 카탈로그·부여 인터페이스 | 확정 |
 
 ## 한 줄 요약
 
-브라우저가 게임을 실행하고 저장하며, 서버는 프로필·로그인·동기화 스냅샷·보관함·서비스 시즌만 다룬다. 일반 웹으로 먼저 배포하되, 같은 SPA 번들을 앱인토스 미니앱으로 언제든 배포할 수 있게 채널 차이를 `packages/platform` 어댑터 하나에 가둔다. 시뮬레이션은 결정론적이므로 서버는 필요할 때 명령 로그를 재생해 결과를 검증할 수 있다. 모든 인프라는 Cloudflare 한 곳에 두고 월 고정비를 도메인 외 약 5달러로 잡는다.
+브라우저가 게임을 실행하고 저장하며, 서버는 프로필·로그인·동기화 스냅샷·보관함·서비스 시즌만 다룬다. 일반 웹으로 먼저 배포하되, 같은 SPA 번들을 앱인토스 미니앱으로 언제든 배포할 수 있게 채널 차이를 `packages/platform` 어댑터 하나에 가둔다. 시뮬레이션은 결정론적이므로 서버는 필요할 때 명령 로그를 재생해 결과를 검증할 수 있다. 모든 인프라는 Cloudflare 한 곳에 두고 개발기에는 Free, LINE TEST부터 월 고정비를 도메인 외 약 5달러로 잡는다.
 
 ## 결정 원칙
 

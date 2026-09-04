@@ -1,0 +1,144 @@
+name: CI and Cloudflare Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm lint:deps
+      - run: pnpm typecheck
+      # API concurrency tests and domain performance budgets are wall-clock
+      # sensitive. Keep both off the shared package-test CPU pool.
+      - run: pnpm turbo run test --filter='!@offside/api' --filter='!@offside/domain'
+      - run: pnpm --filter @offside/api test
+      - run: pnpm --filter @offside/domain test
+      - run: pnpm build
+      - run: pnpm --filter @offside/web check:bundle
+      - run: pnpm --filter @offside/api db:check
+
+  e2e:
+    name: Browser gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @offside/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @offside/web e2e
+        env:
+          CI: 'true'
+
+  deploy-preview:
+    name: Deploy PR preview
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: [quality, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: cloudflare-preview-d1
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Migrate and seed preview D1
+        run: |
+          pnpm --filter @offside/api db:migrate:preview
+          pnpm --filter @offside/api exec wrangler d1 execute offside-preview --remote --env preview --file seeds/bootstrap-non-production.sql
+      - name: Deploy API preview
+        run: |
+          API_URL="https://offside-api-pr-${PR_NUMBER}.tasddc1569.workers.dev"
+          WEB_URL="https://offside-web-pr-${PR_NUMBER}.tasddc1569.workers.dev"
+          pnpm --filter @offside/api exec wrangler deploy --env preview \
+            --name "offside-api-pr-${PR_NUMBER}" \
+            --var "ENVIRONMENT:preview" \
+            --var "ALLOWED_ORIGINS:${WEB_URL}" \
+            --var "WEB_APP_URL:${WEB_URL}" \
+            --var "GOOGLE_REDIRECT_URI:${API_URL}/v1/auth/google/callback" \
+            --var "GOOGLE_FAKE:0"
+      - name: Build and deploy web preview
+        run: |
+          API_URL="https://offside-api-pr-${PR_NUMBER}.tasddc1569.workers.dev"
+          VITE_API_BASE_URL="${API_URL}" pnpm --filter @offside/web build
+          pnpm --filter @offside/web exec wrangler deploy --env preview --name "offside-web-pr-${PR_NUMBER}"
+      - name: Smoke test preview
+        run: |
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            "https://offside-api-pr-${PR_NUMBER}.tasddc1569.workers.dev/v1/health"
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            "https://offside-web-pr-${PR_NUMBER}.tasddc1569.workers.dev/" >/dev/null
+
+  deploy-staging:
+    name: Deploy staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [quality, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: cloudflare-staging
+      cancel-in-progress: false
+    environment:
+      name: staging
+      url: https://offside-web-staging.tasddc1569.workers.dev
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Migrate and seed staging D1
+        run: |
+          pnpm --filter @offside/api db:migrate:staging
+          pnpm --filter @offside/api exec wrangler d1 execute offside-staging --remote --env staging --file seeds/bootstrap-non-production.sql
+      - name: Deploy staging API
+        run: pnpm --filter @offside/api deploy:staging
+      - name: Build and deploy staging web
+        run: |
+          VITE_API_BASE_URL="https://offside-api-staging.tasddc1569.workers.dev" pnpm --filter @offside/web build
+          pnpm --filter @offside/web deploy:staging
+      - name: Smoke test staging
+        run: |
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            "https://offside-api-staging.tasddc1569.workers.dev/v1/health"
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            "https://offside-web-staging.tasddc1569.workers.dev/" >/dev/null

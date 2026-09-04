@@ -21,7 +21,7 @@ const webServer: NonNullable<ReturnType<typeof defineConfig>['webServer']> = [
   {
     command: WITH_PREVIEW ? `pnpm build && vite preview --port ${PORT}` : `vite dev --port ${PORT}`,
     url: BASE_URL,
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
     timeout: WITH_PREVIEW ? 120_000 : 30_000,
   },
 ];
@@ -30,7 +30,7 @@ if (WITH_API) {
   webServer.push({
     command: 'pnpm --filter @offside/api dev',
     url: `${API_URL}/v1/health`,
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   });
 }

@@ -34,7 +34,7 @@ Cloudflare Workers API (Hono)
   ├─ Replay Verifier (Domain Core 재사용, 필요 시)
   ├─ Toss Partner Client (mTLS 바인딩: 식별키 검증)
   └─ D1 (정본 저장) · R2 (아카이브) · KV (rate limit)
-Static (Cloudflare Pages)
+Static (Cloudflare Workers Static Assets)
   └─ Web App 번들, Content Pack 번들, Ruleset Manifest
 ```
 
@@ -114,4 +114,3 @@ Static (Cloudflare Pages)
 - 로컬 저장소 손상: 서버의 마지막 동기화 Snapshot으로 복원하고 그 이후 진행은 잃을 수 있음을 안내.
 - 잘못된 콘텐츠 배포: 새 커리어 생성 중단 후 이전 content pack 재활성화.
 - 데이터 마이그레이션 오류: 신규 쓰기 차단, 기존 Snapshot 읽기 유지, roll-forward 우선.
-

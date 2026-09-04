@@ -30,7 +30,7 @@
 | 로그인 | 미니앱 안에서는 토스 로그인 외 어떤 로그인도 금지다. Google 로그인은 toss 채널에 노출하지 않는다. 토스 로그인은 사업자 등록이 필요하고 식별키만으로 충분하므로 쓰지 않는다 |
 | 로컬 저장 | 네이티브 `Storage`(문자열 KV, 용량 제한 없음). IndexedDB는 iOS WebView에서 7일 미사용 시 삭제되고 QR·라이브 origin이 달라 공유되지 않으므로 정본으로 쓰지 않는다 |
 | 동기화 | 모든 step 경계에서 `PUT /careers/{id}`. 식별키가 항상 있으므로 서버가 사실상 정본 복제본이 된다 |
-| 서버 통신 | 미니앱 origin `https://<appName>.web.tossmini.com`·`private-web`·`apps`·`private-apps` 4종을 API와 Pages `/content/*` CORS에 허용. HTTPS만. 앱인토스 서버 API는 Workers `mtls_certificates` 바인딩으로 호출 |
+| 서버 통신 | 미니앱 origin `https://<appName>.web.tossmini.com`·`private-web`·`apps`·`private-apps` 4종을 API와 Static Assets `/content/*` CORS에 허용. HTTPS만. 앱인토스 서버 API는 Workers `mtls_certificates` 바인딩으로 호출 |
 | 수익화 | 인앱 결제·인앱 광고·토스 포인트 프로모션은 넣지 않는다. 따라서 사업자 등록 없이 출시 가능하다(정책: "사업자 등록은 필수가 아니지만 인앱 결제·토스페이·프로모션·비즈 월렛·토스 로그인을 사용하려면 필수") |
 | 성장 기능 | Phase 7에서 토스 게임센터 리더보드(미니앱당 1개, Legacy Score), `Share.createLink`, `Analytics`, `Review.request`. 리더보드는 클라이언트 제출값을 토스가 검증하지 않으므로 서버 리플레이 검증을 통과한 Archive만 제출한다 |
 | 디자인 시스템 | TDS를 쓰지 않는다. 방송 그래픽 방향 유지. toss 채널은 시스템 테마 감지를 끄고 고정 팔레트를 쓴다(아래 위험 참조) |

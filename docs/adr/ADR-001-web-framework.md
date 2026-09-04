@@ -22,7 +22,7 @@
 | 접근성 | Radix Primitives 일부(Dialog, RadioGroup, Tabs)만 사용 |
 | 테스트 | Vitest, Testing Library, Playwright, axe-core |
 | 랜딩 | `apps/web`의 정적 사전 렌더링 페이지 1장 (vite-plugin 또는 빌드 스크립트) |
-| 배포 채널 | 같은 SPA를 두 채널로 빌드한다. `web`(Pages)과 `toss`(앱인토스 WebView 미니앱). 채널별 차이는 `packages/platform` 어댑터 뒤에 둔다. [ADR-009](ADR-009-apps-in-toss-channel.md) |
+| 배포 채널 | 같은 SPA를 두 채널로 빌드한다. `web`(Workers Static Assets)과 `toss`(앱인토스 WebView 미니앱). 채널별 차이는 `packages/platform` 어댑터 뒤에 둔다. [ADR-009](ADR-009-apps-in-toss-channel.md) |
 | 앱인토스 SDK | `@apps-in-toss/web-framework` 3.x(설정 `apps-in-toss.config.ts`), `@apps-in-toss/devtools` Vite 플러그인(로컬 브라우저 모킹). TDS(`@toss/tds-mobile`)는 쓰지 않고 자체 디자인 시스템을 유지 |
 
 ## 이유
@@ -44,4 +44,4 @@
 - 화면 명세의 SCR ID가 라우트 이름이 된다. 예: `/career/$careerId/dashboard` = SCR-029.
 - 06 문서의 상태 계약(LOADING·DRAFT·COMMITTING·RESOLVED·EMPTY·ERROR)은 화면 컴포넌트의 공통 훅으로 구현한다.
 - 성능 예산(01 문서)의 LCP 2.5초는 랜딩과 허브 기준이다. 엔진 워커 로딩은 허브 진입 후 백그라운드다.
-- `apps/web`의 빌드 스크립트는 `build`(Pages용)와 `build:toss`(`vite build --mode toss && ait build`, 산출물 `.ait`)로 나뉜다. 화면 컴포넌트는 채널을 직접 분기하지 않고 `platform` 어댑터만 호출한다.
+- `apps/web`의 빌드 스크립트는 `build`(Workers Static Assets용)와 `build:toss`(`vite build --mode toss && ait build`, 산출물 `.ait`)로 나뉜다. 화면 컴포넌트는 채널을 직접 분기하지 않고 `platform` 어댑터만 호출한다.
