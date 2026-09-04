@@ -84,9 +84,9 @@ export async function advanceUntilOffers(page: Page): Promise<void> {
 
 /**
  * SCR-009 첫 계약이면 기존 `제안 비교`·`이 제안 보기`·`사인` 퍼널을 그대로 타고, Phase 3
- * 시장 제안이면 `이적시장 제안 비교`·`제안 상세·결정`·`이 조건 수락`·SCR-020을 탄다. 두
- * 화면을 heading/link로 먼저 구분해야 PRE_NEGOTIATION의 새 UI가 기존 시즌 진행 헬퍼에서
- * FIRST_CONTRACT로 오인되지 않는다.
+ * 시장 제안이면 `이적시장 제안 비교`·`제안 상세·결정`·`이 조건 수락`을 탄다. 안전 잔류는
+ * 대시보드로, 실제 계약 전환은 SCR-020으로 이어진다. 두 화면을 heading/link로 먼저 구분해야
+ * PRE_NEGOTIATION의 새 UI가 기존 시즌 진행 헬퍼에서 FIRST_CONTRACT로 오인되지 않는다.
  */
 export async function signFirstOffer(page: Page, options: { preferredMinLengthSeasons?: number } = {}): Promise<void> {
   const firstContractHeading = page.getByRole('heading', { level: 1, name: '제안 비교', exact: true });
@@ -114,12 +114,35 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
   }
 
   await expect(marketHeading).toBeVisible();
-  await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
+  // 시장 첫 카드에는 항상 안전 잔류 제안이 먼저 온다. 다만 안전 제안만으로는 부족하다.
+  // EXPIRED도 같은 안전 RENEWAL을 만들지만 계약 전환을 하므로, INTEREST 이유와 안전 상태를
+  // 함께 확인해야 ACCEPT_OFFER 뒤 대시보드로 돌아가는 경우만 구분할 수 있다.
+  const firstMarketCard = page.locator('[data-compare-layout="stacked"] > div').first();
+  await expect(firstMarketCard).toBeVisible();
+  const marketReason = page.locator('dt:text-is("시장 이유") + dd');
+  await expect(marketReason).toBeVisible();
+  const isInterest = (await marketReason.textContent())?.trim() === '타 구단 관심';
+  const isSafeStay = isInterest && (await firstMarketCard.getByText('안전 잔류 제안', { exact: true }).isVisible());
+  await firstMarketCard.getByRole('link', { name: '제안 상세·결정' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+  if (isSafeStay) await expect(page.locator('dt:text-is("상태") + dd')).toHaveText('안전 잔류 제안');
   await page.getByRole('button', { name: '이 조건 수락' }).click();
+  if (isSafeStay) {
+    await expect(page).toHaveURL(/\/career\/[^/]+$/);
+    return;
+  }
+
   await expect(page).toHaveURL(/\/career\/.+\/transfer-result\?rev=\d+$/);
-  await page.getByRole('link', { name: /^(대시보드로|새 시즌 준비)$/ }).click();
-  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/preseason)?$/);
+  const resultNextLink = page.getByRole('link', { name: /^(대시보드로|새 시즌 준비)$/ });
+  await expect(resultNextLink).toBeVisible();
+  const resultNextLabel = (await resultNextLink.textContent())?.trim();
+  await resultNextLink.click();
+  if (resultNextLabel === '새 시즌 준비') {
+    await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
+  } else {
+    expect(resultNextLabel).toBe('대시보드로');
+    await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  }
 }
 
 /** 온보딩부터 첫 프로 계약 체결까지(대시보드 도착) 전 구간. first-contract.spec.ts·season.spec.ts가

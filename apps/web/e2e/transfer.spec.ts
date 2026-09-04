@@ -13,6 +13,7 @@ import {
 } from './helpers/player-creation.js';
 
 const CAREER_10_SEED = 't10-search-1';
+const CAREER_EXPIRED_SAFE_SEED = 't10-search-4';
 // Domain prefilter with runtime loadRuleset(1.0.0) + UI verification: A+B, first contract 3 seasons,
 // INTEREST LOAN, then LOAN_RETURN.
 const CAREER_11_SEED = 't11-search-61';
@@ -336,6 +337,57 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   expect(saved.stateHash).toMatch(/^[0-9a-f]{64}$/);
   expect(saved.openStints).toBe(1);
   expect(saved.baseOvr).toBe(returnOvr.before);
+});
+
+test('시장 안전 잔류 제안: EXPIRED는 SCR-020 결과를 거쳐 프리시즌으로 간다', async ({ page }) => {
+  test.slow();
+  await page.addInitScript((seed) => {
+    window.localStorage.setItem('offside:e2e-seed', seed);
+  }, CAREER_EXPIRED_SAFE_SEED);
+
+  await reachFirstContractOffers(page);
+  await signFirstOffer(page, { preferredMinLengthSeasons: 1 });
+  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await resolveRoleProposal(page);
+  await advanceToSettlementRejectingRenewal(page);
+  await settleAndOpenOffers(page);
+
+  await expect(page.locator('dt:text-is("시장 이유") + dd')).toHaveText('계약 만료');
+  const safeCard = page.locator('[data-compare-layout="stacked"] > div').first();
+  await expect(safeCard.getByText('안전 잔류 제안', { exact: true })).toBeVisible();
+  await safeCard.getByRole('link', { name: '제안 상세·결정' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+  await expect(page.locator('dt:text-is("상태") + dd')).toHaveText('안전 잔류 제안');
+
+  await page.getByRole('button', { name: '이 조건 수락' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/transfer-result\?rev=\d+$/);
+  await expect(page.getByTestId('transfer-result')).toBeVisible();
+  await expect(page.getByRole('link', { name: '새 시즌 준비' })).toBeVisible();
+  await page.getByRole('link', { name: '새 시즌 준비' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
+});
+
+test('시장 안전 잔류 제안: INTEREST는 결과 전환 없이 대시보드로 간다', async ({ page }) => {
+  test.slow();
+  await page.addInitScript((seed) => {
+    window.localStorage.setItem('offside:e2e-seed', seed);
+  }, CAREER_11_SEED);
+
+  await reachFirstContractOffers(page);
+  await signFirstOffer(page, { preferredMinLengthSeasons: 3 });
+  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await resolveRoleProposal(page);
+  await advanceToSettlementRejectingRenewal(page);
+  await settleAndOpenOffers(page);
+
+  await expect(page.locator('dt:text-is("시장 이유") + dd')).toHaveText('타 구단 관심');
+  const safeCard = page.locator('[data-compare-layout="stacked"] > div').first();
+  await expect(safeCard.getByText('안전 잔류 제안', { exact: true })).toBeVisible();
+  await signFirstOffer(page);
+  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expect(page.getByRole('link', { name: '계획하러 가기' })).toBeVisible();
 });
 
 async function settleAndOpenLoanReturn(page: Page): Promise<void> {
