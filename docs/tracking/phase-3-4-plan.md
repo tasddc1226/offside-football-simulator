@@ -146,4 +146,4 @@
 | 시즌 중 이적(step 7 완전 이적) | Phase 3 제외(D-43), Phase 8 등록 창과 함께 재검토 | 오케스트레이터 |
 | 부상 부위·심각도 확률, 감독 교체 확률, 협상 성공률 등 밸런스 수치 | 전부 룰셋 데이터, 초기값은 브리프 표로 제시하고 LINE TEST 기준선 뒤 조정 | 오케스트레이터 |
 | 주장 임명 규칙(LOCKER-LEADER 입력) | 결산에서 `captain ≥ 70`·프로 시즌 ≥ 3·STARTER면 부주장 → 주장 승격, T-4-003에 포함 | 오케스트레이터 |
-| 결산 뒤 다이어리 step 요약 유실(PR #45 후속) | T-3-001 또는 T-4-001의 타입 슬라이스에 `SeasonResult.stepSummaries[]` 추가(작은 additive 필드) | 오케스트레이터 |
+| 결산 뒤 다이어리 step 요약 유실(PR #45 후속) | **T-3-001에서 추가(PR #48)**: `SeasonResult.stepSummaries[]`(결산 step 제외 11개, `season.steps[].summary`와 동일 값) | 완료 |
