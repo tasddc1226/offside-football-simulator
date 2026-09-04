@@ -110,6 +110,12 @@ describe('buildCompareRows(PROMISE)', () => {
 });
 
 describe('buildCompareRows(PREVIOUS_SEASON)', () => {
+  it('지난 시즌도 0분 경기를 제외한 동일한 출전 기준으로 비교한다', () => {
+    const previous = seasonResult();
+    previous.playerStats.appearances = { total: 26, started: 18, sub: 4, zeroMinute: 6, out: 4 };
+    const rows = buildCompareRows(view({ previousResult: previous }), 'PREVIOUS_SEASON');
+    expect(rows[0]).toMatchObject({ baselineText: '20', comparisonText: '20', same: true });
+  });
   it('지난 시즌이 없으면 빈 배열이다', () => {
     expect(buildCompareRows(view({ previousResult: null }), 'PREVIOUS_SEASON')).toEqual([]);
   });

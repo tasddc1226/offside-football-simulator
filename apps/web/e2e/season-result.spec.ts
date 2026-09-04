@@ -37,8 +37,19 @@ async function settleOneSeason(page: Page): Promise<void> {
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
+  // 결산 전 일정의 실제 분 수를 독립 기준으로 삼는다. 저장 집계의 잘못된 total을
+  // 기대값으로 재사용하면 같은 오류를 화면과 테스트가 함께 통과시킬 수 있다.
+  const scheduleTexts = await page.locator('span.os-num').allTextContents();
+  const matches = scheduleTexts.flatMap((text) => {
+    const match = /^\d+:\d+ · (.+) · (\d+)분 · /.exec(text);
+    return match === null ? [] : [{ appearance: match[1], minutes: Number(match[2]) }];
+  });
+  expect(matches.length).toBeGreaterThan(0);
   await page.getByRole('button', { name: '결산하기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  expect(await countUpValue(page, '출전')).toBe(matches.filter((match) => match.minutes > 0).length);
+  expect(await statValue(page, '교체')).toBe(matches.filter((match) => match.appearance === '교체' && match.minutes > 0).length);
+  expect(await statValue(page, '0분')).toBe(matches.filter((match) => match.minutes === 0).length);
 }
 
 test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보여주고 헤더 OVR과 일치한다', async ({ page }) => {
@@ -62,10 +73,7 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   await expect(minutesValueEl).toHaveText(minutesDataValue ?? '');
   await expect(minutesDd.getByRole('button', { name: '건너뛰기' })).toHaveCount(0);
 
-  // 공통 지표 합 불변식: 선발+교체+결장 = 출전(세 항목은 서로 배타적이다). "0분"은 이 셋과 별개로
-  // "그중 실제 출전 시간이 0분이었던 경기 수"를 세는 교차 집계라(packages/domain/src/season-stats.ts
-  // addStatsToTotals, PR 본문 기록) 네 항목을 그대로 더하면 출전과 같지 않다 — 그래서 0분은
-  // 출전을 넘지 않는지만 확인한다.
+  // #60: 실제 출전 = 선발 + 실제 교체. 결장·미사용 교체(0분)는 출전에서 제외한다.
   const [started, sub, zeroMinute, out, total] = await Promise.all([
     statValue(page, '선발'),
     statValue(page, '교체'),
@@ -73,8 +81,8 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
     statValue(page, '결장'),
     countUpValue(page, '출전'),
   ]);
-  expect(started + sub + out).toBe(total);
-  expect(zeroMinute).toBeLessThanOrEqual(total);
+  expect(started + sub).toBe(total);
+  expect(out).toBeLessThanOrEqual(zeroMinute);
 
   // 평균 평점: 미집계(ratedMatches 0)면 "—", 아니면 소수 1자리. CountUp이 애니메이션 중이면
   // "건너뛰기" 버튼이 dd 안에 같이 있어 dd 전체 textContent에는 버튼 라벨까지 섞인다 — 값

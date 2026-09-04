@@ -5,6 +5,7 @@ import type { CareerState } from '@offside/domain';
 import type { ContentPack } from '@offside/content';
 import { formatEffectSummary } from './effect-summary.js';
 import { OUTCOME_KIND_LABEL_KO } from './labels.js';
+import { eventOutcomeTitle } from './legacy-event-copy.js';
 
 export type EventResultView = {
   kind: 'SUCCESS' | 'NEUTRAL' | 'FAIL' | 'FIXED';
@@ -30,7 +31,7 @@ export function resolveEventResultView(state: CareerState, pack: ContentPack, re
   return {
     kind: outcome.kind,
     kindLabel: OUTCOME_KIND_LABEL_KO[outcome.kind],
-    title: outcome.title,
+    title: eventOutcomeTitle(definition, outcome),
     body: choice.label,
     effects: outcome.effects.map(formatEffectSummary),
     tags: outcome.addTags ?? [],
