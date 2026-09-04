@@ -112,10 +112,13 @@ describe('오류 코드 표', () => {
     VERIFICATION_FAILED: { httpStatus: 422, retryable: false },
     RATE_LIMITED: { httpStatus: 429, retryable: true },
     SERVICE_UNAVAILABLE: { httpStatus: 503, retryable: true },
+    // T-2-012 D-54: 서비스 시즌 포인터·커리어 생성 검증이 쓴다(07 문서에는 없다 — 이 브리프로 추가).
+    SERVICE_SEASON_UNAVAILABLE: { httpStatus: 503, retryable: true },
+    SERVICE_SEASON_CLOSED: { httpStatus: 409, retryable: false },
   };
 
-  it('16개 모두 있다', () => {
-    expect(ERROR_CODES.length).toBe(16);
+  it('18개 모두 있다', () => {
+    expect(ERROR_CODES.length).toBe(18);
   });
 
   it.each(ERROR_CODES)('%s가 HTTP_STATUS_BY_CODE·RETRYABLE_BY_CODE와 표에 모두 있고 값이 같다', (code) => {
