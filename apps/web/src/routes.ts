@@ -12,7 +12,10 @@ export const SCREEN_ROUTES = {
   'SCR-013': '/career/$careerId/event',
   'SCR-014': '/career/$careerId/event/result',
   'SCR-009': '/career/$careerId/offers',
+  // T-3-005 market comparison reuses the existing offers URL while keeping its own screen id.
+  'SCR-017': '/career/$careerId/offers',
   'SCR-010': '/career/$careerId/contract',
+  'SCR-020': '/career/$careerId/transfer-result',
   'SCR-029': '/career/$careerId',
   // T-2-007: SCR-031·015은 자리표시(T-2-008·009가 채운다).
   'SCR-005': '/career/$careerId/preseason',

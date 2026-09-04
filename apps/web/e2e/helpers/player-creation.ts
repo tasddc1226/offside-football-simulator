@@ -82,17 +82,44 @@ export async function advanceUntilOffers(page: Page): Promise<void> {
   throw new Error('offers 화면에 도달하지 못했다(최대 10회 시도)');
 }
 
-/** SCR-009(제안 비교)에서 첫 제안을 골라 SCR-010(계약)에서 사인한다. 대시보드(SCR-029)로
- * 돌아온다(T-2-007: first-contract.spec.ts 원래 정의에서 뽑았다, season.spec.ts와 공유). */
-export async function signFirstOffer(page: Page): Promise<void> {
-  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
-  await page.getByRole('link', { name: '이 제안 보기' }).first().click();
+/**
+ * SCR-009 첫 계약이면 기존 `제안 비교`·`이 제안 보기`·`사인` 퍼널을 그대로 타고, Phase 3
+ * 시장 제안이면 `이적시장 제안 비교`·`제안 상세·결정`·`이 조건 수락`·SCR-020을 탄다. 두
+ * 화면을 heading/link로 먼저 구분해야 PRE_NEGOTIATION의 새 UI가 기존 시즌 진행 헬퍼에서
+ * FIRST_CONTRACT로 오인되지 않는다.
+ */
+export async function signFirstOffer(page: Page, options: { preferredMinLengthSeasons?: number } = {}): Promise<void> {
+  const firstContractHeading = page.getByRole('heading', { level: 1, name: '제안 비교' });
+  const marketHeading = page.getByRole('heading', { level: 1, name: '이적시장 제안 비교' });
+  await firstContractHeading.or(marketHeading).first().waitFor({ state: 'visible', timeout: 60_000 });
+  if (await firstContractHeading.isVisible()) {
+    const offerLinks = page.getByRole('link', { name: '이 제안 보기' });
+    const offerCards = page.locator('[data-compare-layout="stacked"] > div');
+    let targetOffer = offerLinks.first();
+    if ((await offerCards.count()) > 1 && options.preferredMinLengthSeasons !== undefined) {
+      // 기존 helper의 기본값은 첫 제안 수락으로 보존한다. 특정 E2E만 원하는 계약 기간을 명시한다.
+      const preferredLength = options.preferredMinLengthSeasons;
+      const preferredCard = offerCards.filter({ hasText: new RegExp(`[${preferredLength}-9]시즌`) }).first();
+      await expect(preferredCard).toHaveCount(1);
+      targetOffer = preferredCard.getByRole('link', { name: '이 제안 보기' });
+    }
+    await targetOffer.click();
 
+    await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+    await page.getByRole('button', { name: '사인' }).click();
+
+    await expect(page).toHaveURL(/\/career\/[^/]+$/);
+    await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
+    return;
+  }
+
+  await expect(marketHeading).toBeVisible();
+  await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
   await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
-  await page.getByRole('button', { name: '사인' }).click();
-
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
-  await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
+  await page.getByRole('button', { name: '이 조건 수락' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/transfer-result\?rev=\d+$/);
+  await page.getByRole('link', { name: /^(대시보드로|새 시즌 준비)$/ }).click();
+  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/preseason)?$/);
 }
 
 /** 온보딩부터 첫 프로 계약 체결까지(대시보드 도착) 전 구간. first-contract.spec.ts·season.spec.ts가
@@ -109,6 +136,12 @@ export async function completeOnboardingThroughContract(page: Page): Promise<voi
 export async function planPreseason(page: Page, mode: 'FAST' | 'CHAPTER', modeLabel: string, focusLabel: string): Promise<void> {
   await page.getByRole('link', { name: '계획하러 가기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
+  await fillPreseasonPlan(page, mode, modeLabel, focusLabel);
+}
+
+/** 이미 SCR-005 프리시즌 화면에 있는 경우의 입력 경로. 결과 화면 CTA가 프리시즌으로 이동한
+ * 뒤에는 `계획하러 가기`가 없으므로 planPreseason과 분리해 같은 저장·진행 검증을 재사용한다. */
+export async function fillPreseasonPlan(page: Page, mode: 'FAST' | 'CHAPTER', modeLabel: string, focusLabel: string): Promise<void> {
   await expect(page.getByRole('heading', { level: 1, name: '프리시즌 계획' })).toBeVisible();
 
   await page.getByRole('radio', { name: new RegExp(`^${modeLabel}`) }).click();

@@ -5,7 +5,9 @@ import { currentTeamName } from './current-team.js';
 
 const TOKEN_PATTERN = /\{([a-zA-Z]+)(?::([^}]*))?\}/g;
 
-const STATIC_TOKEN_KEYS = ['name', 'club', 'team', 'manager', 'rival', 'captain'] as const;
+// `agent`는 content 0.2.0에서 추가된 공개 토큰이다. 활성 팩은 0.1.0을 유지하지만, import/replay
+// 화면이 새 팩을 명시적으로 읽을 때도 동일한 렌더러가 동작해야 한다.
+const STATIC_TOKEN_KEYS = ['name', 'club', 'team', 'manager', 'rival', 'captain', 'agent'] as const;
 type StaticTokenKey = (typeof STATIC_TOKEN_KEYS)[number];
 
 function isStaticTokenKey(name: string): name is StaticTokenKey {
@@ -37,7 +39,7 @@ function formatDelta(delta: number): string {
 }
 
 /**
- * `{name}`·`{club}`·`{manager}`·`{rival}`·`{captain}`·`{team}`·`{delta:formatted}`와 조사 접미
+ * `{name}`·`{club}`·`{manager}`·`{rival}`·`{captain}`·`{team}`·`{agent}`·`{delta:formatted}`와 조사 접미
  * (`{name:이/가}` 등)를 치환한다. 사전에 없는 token·잘못된 조사 쌍은 content 스키마
  * (`findNarrativeTokenIssues`)가 배포 전에 막으므로, 여기서는 매칭 실패 시 원문을 그대로 남긴다
  * (방어적 동작으로 실제 콘텐츠에서는 도달하지 않는다).
@@ -69,5 +71,6 @@ export function buildNarrativeTokens(state: CareerState, pack: ContentPack, rule
     manager: pack.narrativeTokens.manager[0] ?? '',
     rival: pack.narrativeTokens.rival[0] ?? '',
     captain: pack.narrativeTokens.captain[0] ?? '',
+    agent: pack.narrativeTokens.agent[0] ?? '',
   };
 }

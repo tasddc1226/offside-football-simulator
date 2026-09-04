@@ -37,7 +37,6 @@ import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
 import {
   CUP_ROUND_LABEL_KO,
-  LEAGUE_TIER_LABEL_KO,
   positionHeaderField,
   POSITION_LABELS,
   ROLE_DECISION_LABEL_KO,
@@ -49,12 +48,12 @@ import {
 } from '../shared/labels.js';
 import { markStatsRevealed, readRevealedStats } from '../shared/revealed-stats.js';
 import { proStatusStripItems, u18StatusStripItems } from '../shared/status-strip.js';
-import { formatKrw } from '../shared/format.js';
 import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { SeasonTimeline } from '../shared/season-timeline.js';
 import { buildScheduleRows } from '../shared/season-schedule.js';
 import { familiarityPercentLabel, SelectionRankingList } from '../shared/tactical-room.js';
+import { buildCurrentContractSummary } from '../shared/transfer-view.js';
 
 type DashboardSearch = { signed?: boolean };
 
@@ -347,6 +346,32 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
     );
   }
 
+  if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
+    return (
+      <Card className="flex flex-wrap items-center justify-between gap-os-3">
+        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          재계약 제안 {pending.offers.length}건
+        </p>
+        <Link to="/career/$careerId/offers" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
+          제안 비교
+        </Link>
+      </Card>
+    );
+  }
+
+  if (pending !== null && pending.kind === 'LOAN_RETURN') {
+    return (
+      <Card className="flex flex-wrap items-center justify-between gap-os-3">
+        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          임대 복귀 결정
+        </p>
+        <Link to="/career/$careerId/transfer-result" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
+          복귀 조건 보기
+        </Link>
+      </Card>
+    );
+  }
+
   if (pending !== null && pending.kind === 'ROLE_PROPOSAL') {
     return (
       <Card className="flex flex-wrap items-center justify-between gap-os-3">
@@ -625,22 +650,12 @@ function CareerDashboard() {
           <DashboardSection title="휴대폰" description="계약 상태를 확인합니다." locked={!hasContract} lockReason="첫 프로 계약 후 열림">
             {hasContract && state.contract ? (
               <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
-                <div>
-                  <dt>팀</dt>
-                  <dd className="text-os-text">{state.contract.teamName}</dd>
-                </div>
-                <div>
-                  <dt>리그</dt>
-                  <dd className="text-os-text">{LEAGUE_TIER_LABEL_KO[state.contract.leagueTier]}</dd>
-                </div>
-                <div>
-                  <dt>기간</dt>
-                  <dd className="os-num text-os-text">{state.contract.lengthSeasons}시즌</dd>
-                </div>
-                <div>
-                  <dt>주급</dt>
-                  <dd className="os-num text-os-text">{formatKrw(state.contract.wageMinorPerWeek)}</dd>
-                </div>
+                {buildCurrentContractSummary(state).map((item) => (
+                  <div key={item.label}>
+                    <dt>{item.label}</dt>
+                    <dd className="text-os-text">{item.value}</dd>
+                  </div>
+                ))}
               </dl>
             ) : null}
           </DashboardSection>

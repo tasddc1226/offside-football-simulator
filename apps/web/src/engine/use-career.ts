@@ -1,6 +1,6 @@
 // React 훅(TanStack Query). 쿼리 키는 ['careers'] · ['career', careerId]다.
 import { queryOptions, useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
-import type { CareerState, PlayerDraft, SimulationMode } from '@offside/domain';
+import type { CareerState, NegotiationAsk, PlayerDraft, SimulationMode } from '@offside/domain';
 import type { LocalCareerRecord } from '@offside/engine-client';
 import type { StartSeasonChoice } from './career-actions.js';
 import {
@@ -9,8 +9,11 @@ import {
   confirmPlayer,
   createCareer,
   deleteCareer,
+  negotiateOffer,
+  rejectOffer,
   resolveChapter,
   resolveEvent,
+  resolveLoanReturn,
   resolveRole,
   settleSeason,
   startSeason,
@@ -72,6 +75,9 @@ export type CareerMutationKind =
   | 'delete'
   | 'resolveEvent'
   | 'acceptOffer'
+  | 'negotiateOffer'
+  | 'rejectOffer'
+  | 'resolveLoanReturn'
   | 'startSeason'
   | 'resolveRole'
   | 'settleSeason'
@@ -82,6 +88,9 @@ type UpdateDraftVariables = { careerId: string; draft: Partial<PlayerDraft> };
 type CareerIdVariables = { careerId: string };
 type ResolveEventVariables = { careerId: string; choiceId: string };
 type AcceptOfferVariables = { careerId: string; offerId: string };
+type NegotiateOfferVariables = { careerId: string; offerId: string; ask: NegotiationAsk };
+type RejectOfferVariables = { careerId: string; offerId: string | null };
+type ResolveLoanReturnVariables = { careerId: string; decision: 'RETURN' | 'PERMANENT' };
 type StartSeasonVariables = { careerId: string; choice: StartSeasonChoice };
 type ResolveRoleVariables = { careerId: string; decision: 'ACCEPT' | 'DECLINE' };
 type ResolveChapterVariables = { careerId: string; decisionId: string; optionId: string };
@@ -109,6 +118,18 @@ async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
     case 'acceptOffer': {
       const { careerId, offerId } = variables as AcceptOfferVariables;
       return acceptOffer(engine, careerId, offerId);
+    }
+    case 'negotiateOffer': {
+      const { careerId, offerId, ask } = variables as NegotiateOfferVariables;
+      return negotiateOffer(engine, careerId, offerId, ask);
+    }
+    case 'rejectOffer': {
+      const { careerId, offerId } = variables as RejectOfferVariables;
+      return rejectOffer(engine, careerId, offerId);
+    }
+    case 'resolveLoanReturn': {
+      const { careerId, decision } = variables as ResolveLoanReturnVariables;
+      return resolveLoanReturn(engine, careerId, decision);
     }
     case 'startSeason': {
       const { careerId, choice } = variables as StartSeasonVariables;
@@ -140,6 +161,9 @@ type MutationDataFor<K extends CareerMutationKind> = K extends 'create'
           | 'advance'
           | 'resolveEvent'
           | 'acceptOffer'
+          | 'negotiateOffer'
+          | 'rejectOffer'
+          | 'resolveLoanReturn'
           | 'startSeason'
           | 'resolveRole'
           | 'settleSeason'
@@ -155,13 +179,19 @@ type MutationVariablesFor<K extends CareerMutationKind> = K extends 'create'
       ? ResolveEventVariables
       : K extends 'acceptOffer'
         ? AcceptOfferVariables
-        : K extends 'startSeason'
-          ? StartSeasonVariables
-          : K extends 'resolveRole'
-            ? ResolveRoleVariables
-            : K extends 'resolveChapter'
-              ? ResolveChapterVariables
-              : CareerIdVariables;
+        : K extends 'negotiateOffer'
+          ? NegotiateOfferVariables
+          : K extends 'rejectOffer'
+            ? RejectOfferVariables
+            : K extends 'resolveLoanReturn'
+              ? ResolveLoanReturnVariables
+              : K extends 'startSeason'
+                ? StartSeasonVariables
+                : K extends 'resolveRole'
+                  ? ResolveRoleVariables
+                  : K extends 'resolveChapter'
+                    ? ResolveChapterVariables
+                    : CareerIdVariables;
 
 /**
  * 액션 실행 후 ['careers']와(있다면) ['career', careerId] 쿼리를 무효화한다. 'delete'는
