@@ -8,7 +8,7 @@
 
 **T-3-003 브리프(13:20)**: PR #50 머지 뒤 투입. 설계 결정 — `CareerState.parentContract`(임대 중 원소속 계약 보관, 기존 골든 9종 stateHash만 갱신), 룰셋 `contractRules.imposedPositionProficiency`·`leagues[].promotionSlots`, NEGOTIATE roll 1회(성공 bp = successBp + reputation 보정, 시장가치 보정은 룰셋 상수가 없어 보류), 재계약은 새 stint 없이 열린 stint의 contractId만 교체(`RENEWED` 예약 유지), 결산 순서 D-47 → 임대 분기 → 시장 개설, step 7 제안 자동 만료 임시 규칙 제거(응답 필수), 태그 평가기 5종 조건을 표로 고정, 웹은 SCR-009 재사용 라우팅·e2e 헬퍼만(첫 계약 1시즌이 가능해 step 7·결산 뒤 시장이 e2e에서 실제로 열린다).
 
-**후속**: staging 배포(5462dc7) 뒤 재예행(온보딩 안내·20건 배치 202) → line-test-plan 3절 #2·#3, 7절 2행 갱신. 동시 워커 2개(T-4-001·T-3-002), 슬롯 1개 비어 있으나 T-3-003은 PR #50 선행이라 대기.
+**재예행(13:32, 5462dc7 staging)**: 온보딩→계약→FAST·CHAPTER 시즌 40초 통과, 분석 POST 4건 202, 20건·50건 배치 curl 202(Origin 헤더 필요, 수정 전 503), `/onboarding` 첫 슬라이드 LINE TEST 안내 확인. line-test-plan 3절 #2·#3 ✅, 7절 2행은 D1 건수 확인(U-016)만 남음. **후속**: 동시 워커 2개(T-4-001·T-3-002), 슬롯 1개 비어 있으나 T-3-003은 PR #50 선행이라 대기.
 
 ## 2026-09-04 (오후, PR #51 머지 — 팩 0.2.0·팀 12, PR #50 수정 요청, T-2-015 투입)
 
