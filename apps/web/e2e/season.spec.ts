@@ -1,13 +1,15 @@
 // T-2-007: SCR-005(프리시즌 계획) → SCR-011(시즌 준비) → SCR-012(역할 제안) → SCR-029(시즌 진행,
 // 반복) → 시즌 결산 → SCR-015(자리표시) → 대시보드가 다시 "프리시즌 계획"을 보여준다(시즌 2).
-// FAST 모드는 역할 결정 뒤 EVENT 슬롯을 열지 않는다(CHAPTER·CONTRACT만 자동 통과) — 그래도 만약을
-// 대비해 이벤트 화면이 뜨면 첫 선택지로 넘기도록 대비한다(first-contract.spec.ts와 같은 관례).
+// FAST 모드는 역할 결정 뒤 EVENT 슬롯을 열지 않는다(CHAPTER만 자동 통과, T-3-003 §5: CONTRACT는
+// 제안이 있으면 더 이상 자동 통과하지 않는다) — 그래도 만약을 대비해 이벤트 화면이 뜨면 첫 선택지로
+// 넘기도록 대비한다(first-contract.spec.ts와 같은 관례).
 import { expect, test } from '@playwright/test';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
   planPreseason,
   resolveRoleProposal,
+  signFirstOffer,
 } from './helpers/player-creation.js';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
@@ -63,7 +65,17 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
 
   await page.getByRole('link', { name: '대시보드' }).click();
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
-  await expect(page.getByRole('link', { name: '계획하러 가기' })).toBeVisible();
+
+  // T-3-003 §5: 결산 뒤 계약이 만료·관심 조건에 걸리면 시장이 자동으로 열려, "프리시즌 계획" 대신
+  // 제안 카드가 먼저 뜰 수 있다 — 그러면 안전 잔류(첫 제안)를 수락하고 진짜 "프리시즌 계획"으로 간다.
+  const planCta = page.getByRole('link', { name: '계획하러 가기' });
+  const offersCta = page.getByRole('link', { name: '제안 보기' });
+  await expect(planCta.or(offersCta)).toBeVisible();
+  if (await offersCta.isVisible()) {
+    await offersCta.click();
+    await signFirstOffer(page);
+  }
+  await expect(planCta).toBeVisible();
 
   const elapsedMs = Date.now() - startedAt;
   console.log(`[season] 계약 뒤 시즌 1 전체(프리시즌 계획→결산)→시즌 2 프리시즌 계획 소요 시간: ${elapsedMs}ms`);

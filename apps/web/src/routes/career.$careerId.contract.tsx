@@ -21,7 +21,9 @@ export const Route = createFileRoute('/career/$careerId/contract')({
   loaderDeps: ({ search }) => ({ offerId: search.offerId }),
   loader: async ({ params, deps }) => {
     const { state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
-    const offer = state.pending?.kind === 'OFFERS' ? state.pending.offers.find((candidate) => candidate.id === deps.offerId) : undefined;
+    const pending = state.pending;
+    const offer =
+      pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT' ? pending.offers.find((candidate) => candidate.id === deps.offerId) : undefined;
     if (offer === undefined) {
       const target = screenForCareer(state);
       throw redirect({ to: SCREEN_ROUTES[target.screenId], params: target.params });
@@ -51,7 +53,8 @@ function ContractScreen() {
   if (query.data === undefined) return null;
 
   const { state } = query.data;
-  const offer = state.pending?.kind === 'OFFERS' ? state.pending.offers.find((candidate) => candidate.id === offerId) : undefined;
+  const pending = state.pending;
+  const offer = pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT' ? pending.offers.find((candidate) => candidate.id === offerId) : undefined;
   if (offer === undefined) {
     // 라우트 loader가 이미 screenForCareer로 redirect했어야 한다. 방어적 fallback.
     return null;

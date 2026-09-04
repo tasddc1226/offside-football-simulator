@@ -84,7 +84,8 @@ function OffersScreen() {
 
   const { state } = query.data;
   const pending = state.pending;
-  if (pending === null || pending.kind !== 'OFFERS') return null;
+  // T-3-003 §9: step 7 재계약 사전 협상(CONTRACT, 제안 있음)도 OFFERS와 같은 화면을 재사용한다.
+  if (pending === null || (pending.kind !== 'OFFERS' && pending.kind !== 'CONTRACT')) return null;
 
   const offers = pending.offers;
 
