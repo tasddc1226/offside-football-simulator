@@ -68,6 +68,7 @@ function seasonResult(overrides: Partial<SeasonResult> = {}): SeasonResult {
         ratingDeltaTenths: 5,
       },
     ],
+    stepSummaries: [],
     hash: 'hash-season-1',
     ...overrides,
   };
@@ -122,6 +123,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     },
     pending: null,
     contract: null,
+    clubHistory: [],
     timeline: [],
     season: null,
     seasonHistory: [],

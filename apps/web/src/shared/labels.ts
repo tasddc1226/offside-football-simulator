@@ -155,6 +155,22 @@ export const TIMELINE_KIND_LABEL_KO: Record<TimelineEntry['kind'], string> = {
   CHAPTER_RESOLVED: '챕터 판단',
   // T-2-014 D-42: exhaustive Record가 typecheck에서 깨져 최소 수정(PR 본문 참고).
   CAREER_TAG_GRANTED: '커리어 태그 획득',
+  // T-3-001: exhaustive Record가 typecheck에서 깨져 최소 수정(PR 본문 참고).
+  CONTRACT_RENEWED: '계약 갱신',
+  TRANSFERRED: '완전 이적',
+  LOANED: '임대 이적',
+  LOAN_RETURNED: '임대 복귀',
+  OFFER_REJECTED: '제안 거절',
+  OFFER_EXPIRED: '제안 만료',
+  NEGOTIATED: '조건 협상',
+  INJURED: '부상',
+  REHAB_CHOSEN: '재활 선택',
+  RECOVERED: '부상 회복',
+  INJURY_RECURRED: '부상 재발',
+  MANAGER_CHANGED: '감독 교체',
+  NATIONAL_TEAM_CALLED: '국가대표 소집',
+  NATIONAL_TEAM_DECLINED: '국가대표 소집 거절',
+  CAPTAIN_APPOINTED: '주장 임명',
 };
 
 /**
@@ -305,4 +321,20 @@ export const TIMELINE_KIND_LABELS: Record<TimelineEntry['kind'], string> = {
   CHAPTER_RESOLVED: '챕터 판단',
   // T-2-014 D-42: exhaustive Record가 typecheck에서 깨져 최소 수정(PR 본문 참고).
   CAREER_TAG_GRANTED: '커리어 태그 획득',
+  // T-3-001: exhaustive Record가 typecheck에서 깨져 최소 수정(PR 본문 참고).
+  CONTRACT_RENEWED: '계약 갱신',
+  TRANSFERRED: '완전 이적',
+  LOANED: '임대 이적',
+  LOAN_RETURNED: '임대 복귀',
+  OFFER_REJECTED: '제안 거절',
+  OFFER_EXPIRED: '제안 만료',
+  NEGOTIATED: '조건 협상',
+  INJURED: '부상',
+  REHAB_CHOSEN: '재활 선택',
+  RECOVERED: '부상 회복',
+  INJURY_RECURRED: '부상 재발',
+  MANAGER_CHANGED: '감독 교체',
+  NATIONAL_TEAM_CALLED: '국가대표 소집',
+  NATIONAL_TEAM_DECLINED: '국가대표 소집 거절',
+  CAPTAIN_APPOINTED: '주장 임명',
 };

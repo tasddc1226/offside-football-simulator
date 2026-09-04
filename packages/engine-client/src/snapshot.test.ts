@@ -41,6 +41,7 @@ function buildValidDomainSnapshot(): DomainSnapshot {
     },
     pending: null,
     contract: null,
+    clubHistory: [],
     timeline: [],
     season: null,
     seasonHistory: [],

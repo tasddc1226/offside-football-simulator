@@ -94,6 +94,37 @@ function timelineSentence(entry: TimelineEntry, state: CareerState): string {
     // T-2-014 D-42: exhaustive switch가 typecheck에서 깨져 최소 수정(PR 본문 참고).
     case 'CAREER_TAG_GRANTED':
       return '커리어 태그 획득';
+    // T-3-001: exhaustive switch가 typecheck에서 깨져 최소 수정(PR 본문 참고).
+    case 'CONTRACT_RENEWED':
+      return '계약 갱신';
+    case 'TRANSFERRED':
+      return '완전 이적';
+    case 'LOANED':
+      return '임대 이적';
+    case 'LOAN_RETURNED':
+      return '임대 복귀';
+    case 'OFFER_REJECTED':
+      return '제안 거절';
+    case 'OFFER_EXPIRED':
+      return '제안 만료';
+    case 'NEGOTIATED':
+      return '조건 협상';
+    case 'INJURED':
+      return '부상';
+    case 'REHAB_CHOSEN':
+      return '재활 선택';
+    case 'RECOVERED':
+      return '부상 회복';
+    case 'INJURY_RECURRED':
+      return '부상 재발';
+    case 'MANAGER_CHANGED':
+      return '감독 교체';
+    case 'NATIONAL_TEAM_CALLED':
+      return '국가대표 소집';
+    case 'NATIONAL_TEAM_DECLINED':
+      return '국가대표 소집 거절';
+    case 'CAPTAIN_APPOINTED':
+      return '주장 임명';
   }
 }
 

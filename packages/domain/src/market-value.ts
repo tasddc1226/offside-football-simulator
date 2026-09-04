@@ -1,6 +1,6 @@
 import { clamp } from './clamp.js';
 import type { MarketValueRules, Ruleset } from './ruleset.js';
-import type { CareerState } from './types.js';
+import type { CareerState, TimelineEntry } from './types.js';
 
 export type MarketValueComponent = 'BASE_OVR' | 'SCOUTED_POTENTIAL_MID' | 'AGE_CURVE' | 'CONTRACT' | 'LEAGUE' | 'FORM' | 'POPULARITY';
 
@@ -88,12 +88,26 @@ export function computeMarketValueIndex(input: MarketValueInput, rules: MarketVa
 }
 
 /**
+ * ADR-010 D-41 유도식: `lengthSeasons − 서명 이후 SEASON_STARTED 횟수`. "서명 이후"는 `timeline`에서
+ * 이 계약 서명(`signedAtRevision`) 이후 `SEASON_STARTED`가 몇 번 있었는지로 센다(별도 저장 필드 없이
+ * 기존 timeline에서 유도). T-3-001 조건 DSL `contract.seasonsRemaining`이 이 식을 그대로 복제해
+ * 쓴다(content는 domain 런타임을 import할 수 없다 — ADR-005, `resolvePositionGroup`과 같은 패턴).
+ */
+export function computeContractSeasonsRemaining(
+  lengthSeasons: number,
+  signedAtRevision: number,
+  timeline: readonly TimelineEntry[],
+): number {
+  const seasonsServed = timeline.filter(
+    (entry) => entry.kind === 'SEASON_STARTED' && entry.revision > signedAtRevision,
+  ).length;
+  return Math.max(0, lengthSeasons - seasonsServed);
+}
+
+/**
  * D-41: Phase 3가 그대로 쓰는 어댑터. `state.contract`·`state.player.profile`이 있어야 한다(계약·
- * 선수 확정 전에는 시장가치를 계산할 이유가 없다). `contractSeasonsRemaining`은
- * `contract.lengthSeasons − 소속 시즌 수`이고, "소속 시즌 수"는 `timeline`에서 이 계약 서명
- * (`signedAtRevision`) 이후 `SEASON_STARTED`가 몇 번 있었는지로 센다(별도 저장 필드 없이 기존
- * timeline에서 유도 — 브리프가 이 유도식을 명시하지 않아 이 브리프가 정한다, PR 본문 참고).
- * `popularityCenti`는 Phase 4 평판이 생기기 전까지 5000 고정(D-41).
+ * 선수 확정 전에는 시장가치를 계산할 이유가 없다). `popularityCenti`는 Phase 4 평판이 생기기 전까지
+ * 5000 고정(D-41).
  */
 // `ruleset` 인자는 시그니처를 D-41("buildMarketValueInput(state, ruleset)")대로 유지한다 — 현재
 // 입력 항목(baseOvr·scoutedPotentialMid·age·contractSeasonsRemaining·leagueTier·form)은 모두
@@ -109,10 +123,11 @@ export function buildMarketValueInput(state: CareerState, _ruleset: Ruleset): Ma
     throw new RangeError('buildMarketValueInput: contract가 null이다.');
   }
 
-  const seasonsServed = state.timeline.filter(
-    (entry) => entry.kind === 'SEASON_STARTED' && entry.revision > contract.signedAtRevision,
-  ).length;
-  const contractSeasonsRemaining = Math.max(0, contract.lengthSeasons - seasonsServed);
+  const contractSeasonsRemaining = computeContractSeasonsRemaining(
+    contract.lengthSeasons,
+    contract.signedAtRevision,
+    state.timeline,
+  );
 
   return {
     baseOvr: profile.baseOvr,

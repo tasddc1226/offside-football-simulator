@@ -20,9 +20,12 @@ export {
   type ChapterRecord,
   type ChapterTrigger,
   type CheckpointType,
+  type ClubStint,
+  type ClubStintEndReason,
   type CompetitionRecord,
   type Competitor,
   type Contract,
+  type ContractKind,
   type DecisionSlot,
   type DomainSnapshot,
   type Effect,
@@ -31,9 +34,13 @@ export {
   type EffectStackingRule,
   type FootballSeason,
   type GrowthCause,
+  type MarketSummary,
   type MatchAppearance,
   type MatchRecord,
+  type NegotiationAsk,
+  type NegotiationState,
   type Offer,
+  type OfferKind,
   type OutReason,
   type Pending,
   type PlayerDraft,
@@ -109,11 +116,13 @@ export {
 } from './career-tags.js';
 export {
   buildMarketValueInput,
+  computeContractSeasonsRemaining,
   computeMarketValueIndex,
   type MarketValueComponent,
   type MarketValueInput,
   type MarketValueResult,
 } from './market-value.js';
+export { canNegotiate, expireOffers, isOfferExpired, type ExpireOffersResult } from './negotiation.js';
 export { attributeGroupOf, computeGrowth, type GrowthAttributeDelta, type GrowthInput, type GrowthResult } from './growth.js';
 export { applyCondition, type ConditionState } from './condition.js';
 export {
