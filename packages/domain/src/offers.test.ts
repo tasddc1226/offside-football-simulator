@@ -37,12 +37,12 @@ describe('generateOffers — 개수 수식', () => {
   const baseTags = ['진로_입단테스트', '테스트_성공'];
 
   it('보너스 태그 0개면 1건', () => {
-    const generated = generateOffers(RULESET, noBonusBranch, baseTags, 50, 1, seedRng('s0'));
+    const generated = generateOffers(RULESET, noBonusBranch, baseTags, 50, 'ST', 1, seedRng('s0'));
     expect(generated.offers).toHaveLength(1);
   });
 
   it('보너스 태그 1개면 2건', () => {
-    const generated = generateOffers(RULESET, noBonusBranch, [...baseTags, '에이전트_계약'], 50, 1, seedRng('s1'));
+    const generated = generateOffers(RULESET, noBonusBranch, [...baseTags, '에이전트_계약'], 50, 'ST', 1, seedRng('s1'));
     expect(generated.offers).toHaveLength(2);
   });
 
@@ -52,7 +52,7 @@ describe('generateOffers — 개수 수식', () => {
       noBonusBranch,
       [...baseTags, '에이전트_계약', '주목받는_유망주'],
       50,
-      1,
+      'ST', 1,
       seedRng('s2'),
     );
     expect(generated.offers).toHaveLength(3);
@@ -65,7 +65,7 @@ describe('generateOffers — 개수 수식', () => {
       noBonusBranch,
       [...baseTags, '에이전트_계약', '주목받는_유망주'],
       50,
-      1,
+      'ST', 1,
       seedRng('s3'),
     );
     // 풀은 3팀(tier1~3)이라 여유가 있지만 maxOffers=2로 클램프된다.
@@ -78,7 +78,7 @@ describe('generateOffers — 개수 수식', () => {
       branch('tryout-fail'),
       ['진로_입단테스트', '테스트_실패', '에이전트_계약', '주목받는_유망주'],
       50,
-      1,
+      'ST', 1,
       seedRng('s4'),
     );
     expect(generated.offers).toHaveLength(1);
@@ -92,7 +92,7 @@ describe('generateOffers — 팀 풀', () => {
       branch('lower-league'),
       ['진로_하부리그', '입단테스트_완료', '에이전트_계약', '주목받는_유망주'],
       50,
-      1,
+      'ST', 1,
       seedRng('pool-seed'),
     );
     const teamIds = generated.offers.map((offer) => offer.teamId);
@@ -106,7 +106,7 @@ describe('generateOffers — 팀 풀', () => {
       branch('lower-league'),
       ['진로_하부리그', '입단테스트_완료', '에이전트_계약', '주목받는_유망주'],
       50,
-      1,
+      'ST', 1,
       seedRng('shrink-seed'),
     );
     expect(generated.offers).toHaveLength(2);
@@ -118,7 +118,7 @@ describe('generateOffers — 팀 풀', () => {
       branch('academy'),
       ['진로_아카데미', '에이전트_계약', '주목받는_유망주'],
       50,
-      1,
+      'ST', 1,
       seedRng('academy-seed'),
     );
     expect(generated.offers).toHaveLength(1);
@@ -129,14 +129,14 @@ describe('generateOffers — 팀 풀', () => {
 describe('generateOffers — rng 소비 횟수', () => {
   it('고정 팀(fixedTeamId)은 제안 1건당 4회 소비한다', () => {
     const rng = seedRng('rng-fixed');
-    const generated = generateOffers(RULESET, branch('academy'), ['진로_아카데미'], 50, 1, rng);
+    const generated = generateOffers(RULESET, branch('academy'), ['진로_아카데미'], 50, 'ST', 1, rng);
     expect(generated.offers).toHaveLength(1);
     expect(generated.rngState.draws).toBe(rng.draws + 4);
   });
 
   it('팀을 추출하는 분기는 제안 1건당 5회 소비한다', () => {
     const rng = seedRng('rng-extract');
-    const generated = generateOffers(RULESET, branch('tryout-fail'), ['진로_입단테스트', '테스트_실패'], 50, 1, rng);
+    const generated = generateOffers(RULESET, branch('tryout-fail'), ['진로_입단테스트', '테스트_실패'], 50, 'ST', 1, rng);
     expect(generated.offers).toHaveLength(1);
     expect(generated.rngState.draws).toBe(rng.draws + 5);
   });
@@ -148,7 +148,7 @@ describe('generateOffers — rng 소비 횟수', () => {
       branch('lower-league'),
       ['진로_하부리그', '입단테스트_완료', '에이전트_계약'],
       50,
-      1,
+      'ST', 1,
       rng,
     );
     expect(generated.offers).toHaveLength(2);
@@ -163,24 +163,24 @@ describe('generateOffers — 주급·계약금 ovrBand 경계', () => {
   const tags = ['진로_입단테스트', '테스트_실패'];
 
   it('baseOvr 54는 low band', () => {
-    const generated = generateOffers(RULESET, tier3Branch, tags, 54, 1, seedRng('band-54'));
+    const generated = generateOffers(RULESET, tier3Branch, tags, 54, 'ST', 1, seedRng('band-54'));
     expect(generated.offers[0]!.wageMinorPerWeek).toBe(RULESET.contractRules.wageBands.tier3!.low);
     expect(generated.offers[0]!.signingBonusMinor).toBe(RULESET.contractRules.signingBonus.tier3!.low);
   });
 
   it('baseOvr 55는 mid band', () => {
-    const generated = generateOffers(RULESET, tier3Branch, tags, 55, 1, seedRng('band-55'));
+    const generated = generateOffers(RULESET, tier3Branch, tags, 55, 'ST', 1, seedRng('band-55'));
     expect(generated.offers[0]!.wageMinorPerWeek).toBe(RULESET.contractRules.wageBands.tier3!.mid);
     expect(generated.offers[0]!.signingBonusMinor).toBe(RULESET.contractRules.signingBonus.tier3!.mid);
   });
 
   it('baseOvr 64는 여전히 mid band', () => {
-    const generated = generateOffers(RULESET, tier3Branch, tags, 64, 1, seedRng('band-64'));
+    const generated = generateOffers(RULESET, tier3Branch, tags, 64, 'ST', 1, seedRng('band-64'));
     expect(generated.offers[0]!.wageMinorPerWeek).toBe(RULESET.contractRules.wageBands.tier3!.mid);
   });
 
   it('baseOvr 65는 high band', () => {
-    const generated = generateOffers(RULESET, tier3Branch, tags, 65, 1, seedRng('band-65'));
+    const generated = generateOffers(RULESET, tier3Branch, tags, 65, 'ST', 1, seedRng('band-65'));
     expect(generated.offers[0]!.wageMinorPerWeek).toBe(RULESET.contractRules.wageBands.tier3!.high);
     expect(generated.offers[0]!.signingBonusMinor).toBe(RULESET.contractRules.signingBonus.tier3!.high);
   });
@@ -194,14 +194,14 @@ describe('generateOffers — topTierMinOvr 경계(59/60)', () => {
 
   it('baseOvr 60(경계 포함)이면 첫 제안은 항상 tier1 팀(seoul-tier1)에서만 뽑힌다', () => {
     for (const seed of ['top-a', 'top-b', 'top-c', 'top-d']) {
-      const generated = generateOffers(RULESET, successBranch, tags, 60, 1, seedRng(seed));
+      const generated = generateOffers(RULESET, successBranch, tags, 60, 'ST', 1, seedRng(seed));
       expect(generated.offers[0]!.teamId).toBe('seoul-tier1');
     }
   });
 
   it('baseOvr 59면 tier1 강제가 없다 — 전체 풀에서 roll 결과 그대로 뽑힌다', () => {
     const rng = seedRng('boundary-59-seed');
-    const generated = generateOffers(RULESET, successBranch, tags, 59, 1, rng);
+    const generated = generateOffers(RULESET, successBranch, tags, 59, 'ST', 1, rng);
     const predicted = rollInt(rng, sortedPool.length);
     expect(generated.offers[0]!.teamId).toBe(sortedPool[predicted.value]);
   });

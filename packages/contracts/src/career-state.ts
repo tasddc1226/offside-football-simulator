@@ -15,34 +15,91 @@ export const SimulationModeSchema = z.enum(['FAST', 'CHAPTER']);
 // D-9: 팀 리그 등급. 유스는 'YOUTH', 그 외는 1~3부 숫자 리터럴이다(domain `LeagueTier`와 같은 값).
 export const LeagueTierSchema = z.union([z.literal('YOUTH'), z.literal(1), z.literal(2), z.literal(3)]);
 
-// D-9: 제안. offerRules 데이터는 T-1-005가 소비하고, 이 스키마는 결과 형태만 검증한다.
-export const OfferSchema = z.strictObject({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
-  teamName: z.string().min(1),
-  leagueTier: LeagueTierSchema,
-  lengthSeasons: z.number().int().positive(),
-  wageMinorPerWeek: z.number().int().nonnegative(),
-  signingBonusMinor: z.number().int().nonnegative(),
-  rolePromise: SquadRoleSchema,
-  shirtNumber: z.number().int().positive(),
-  tacticalFitEstimate: z.number().int(),
+// T-3-001 D-44: domain `OfferKind`·`NegotiationAsk`·`NegotiationState`와 동일.
+export const OfferKindSchema = z.enum(['RENEWAL', 'TRANSFER', 'LOAN', 'FREE_AGENT']);
+export const NegotiationAskSchema = z.enum(['WAGE', 'ROLE', 'LENGTH']);
+export const NegotiationStateSchema = z.enum(['OPEN', 'COUNTERED', 'WITHDRAWN']);
+
+// T-3-001 D-44/D-46: domain `Offer['loan']`과 동일(kind LOAN 제안·계약에서만 non-null).
+export const OfferLoanSchema = z.strictObject({
+  parentTeamId: z.string().min(1),
+  seasons: z.literal(1),
+  wageShareBp: z.number().int().min(0).max(10000),
+  buyOptionMinor: z.number().int().nonnegative().nullable(),
 });
 
-// D-9: 계약. `signatureType`은 Phase 1에서 항상 'AUTO'.
+// D-9, T-3-001 D-44 확장: 제안. offerRules 데이터는 T-1-005·T-3-002가 소비하고, 이 스키마는 결과
+// 형태만 검증한다.
+export const OfferSchema = z.strictObject({
+  id: z.string().min(1),
+  kind: OfferKindSchema,
+  teamId: z.string().min(1),
+  teamName: z.string().min(1),
+  fromTeamId: z.string().min(1).nullable(),
+  leagueTier: LeagueTierSchema,
+  lengthSeasons: z.number().int().min(1).max(5),
+  wageMinorPerWeek: z.number().int().nonnegative(),
+  signingBonusMinor: z.number().int().nonnegative(),
+  transferFeeMinor: z.number().int().nonnegative().nullable(),
+  rolePromise: SquadRoleSchema,
+  appearancePromise: z.strictObject({ minutesShareBp: z.number().int().min(0).max(10000) }),
+  positionPlan: PositionSchema,
+  shirtNumber: z.number().int().positive(),
+  tacticalFitEstimate: z.number().int(),
+  competitorSummary: z.strictObject({ rank: z.number().int().positive(), ovrGap: z.number().int() }).nullable(),
+  validUntilRevision: z.number().int().positive().nullable(),
+  negotiable: z.strictObject({ wage: z.boolean(), role: z.boolean(), length: z.boolean() }),
+  negotiationState: NegotiationStateSchema,
+  negotiatedAsk: NegotiationAskSchema.nullable(),
+  loan: OfferLoanSchema.nullable(),
+});
+
+// T-3-001 D-44/D-46: Phase 1은 항상 'PERMANENT'. domain `ContractKind`와 동일.
+export const ContractKindSchema = z.enum(['PERMANENT', 'LOAN']);
+
+// D-9, T-3-001 D-44 확장: 계약. `signatureType`은 Phase 1에서 항상 'AUTO'.
 export const ContractSchema = z.strictObject({
   id: z.string().min(1),
   offerId: z.string().min(1),
   teamId: z.string().min(1),
   teamName: z.string().min(1),
   leagueTier: LeagueTierSchema,
-  lengthSeasons: z.number().int().positive(),
+  lengthSeasons: z.number().int().min(1).max(5),
   wageMinorPerWeek: z.number().int().nonnegative(),
   signingBonusMinor: z.number().int().nonnegative(),
   rolePromise: SquadRoleSchema,
   shirtNumber: z.number().int().positive(),
   signatureType: z.literal('AUTO'),
   signedAtRevision: z.number().int().positive(),
+  kind: ContractKindSchema,
+  appearancePromise: z.strictObject({ minutesShareBp: z.number().int().min(0).max(10000) }),
+  positionPlan: PositionSchema,
+  suspended: z.boolean(),
+  loan: OfferLoanSchema.nullable(),
+  promiseBreaches: z.number().int().nonnegative(),
+  signedSeasonIndex: z.number().int().positive(),
+});
+
+// T-3-001 D-45: domain `ClubStintEndReason`·`ClubStint`와 동일. `toSeasonIndex: null`이면 현재 소속.
+export const ClubStintEndReasonSchema = z.enum(['EXPIRED', 'TRANSFERRED', 'LOANED', 'RETURNED', 'RENEWED']);
+
+export const ClubStintSchema = z.strictObject({
+  teamId: z.string().min(1),
+  teamName: z.string().min(1),
+  leagueTier: LeagueTierSchema,
+  kind: ContractKindSchema,
+  fromSeasonIndex: z.number().int().positive(),
+  toSeasonIndex: z.number().int().positive().nullable(),
+  endReason: ClubStintEndReasonSchema.nullable(),
+  contractId: z.string().min(1),
+});
+
+// T-3-001 D-43: domain `MarketSummary`와 동일 — 시장가치는 상태에 저장하지 않는다(ADR-010).
+export const MarketSummarySchema = z.strictObject({
+  openedAtRevision: z.number().int().positive(),
+  seasonIndex: z.number().int().nonnegative(),
+  reason: z.enum(['FIRST_CONTRACT', 'EXPIRED', 'INTEREST', 'LOAN_END', 'PRE_NEGOTIATION']),
+  safeOfferId: z.string().min(1).nullable(),
 });
 
 // T-2-001 RULE-TIME-002: step 안 결정 슬롯 종류. domain `DecisionSlot.kind`와 동일.
@@ -126,7 +183,8 @@ export const RoleProposalSchema = z.discriminatedUnion('type', [
 export const PendingSchema = z
   .discriminatedUnion('kind', [
     z.strictObject({ kind: z.literal('EVENT'), eventId: z.string().min(1), version: z.number().int().positive() }),
-    z.strictObject({ kind: z.literal('OFFERS'), offers: z.array(OfferSchema) }),
+    // T-3-001 D-43/D-44: Phase 1 `generateOffers` 경로가 `market.reason: 'FIRST_CONTRACT'`를 채운다.
+    z.strictObject({ kind: z.literal('OFFERS'), offers: z.array(OfferSchema), market: MarketSummarySchema }),
     z.strictObject({
       kind: z.literal('CHAPTER'),
       step: z.number().int().min(1).max(12),
@@ -139,10 +197,35 @@ export const PendingSchema = z
       trigger: ChapterTriggerKindSchema,
       resolved: z.array(ResolvedChapterDecisionSchema),
     }),
-    z.strictObject({ kind: z.literal('CONTRACT'), step: z.number().int().min(1).max(12) }),
+    // T-3-001 D-43 (a): step 7 재계약 사전 협상. offers.length === 0이면 자동 통과, 1건 이상이면 정지.
+    z.strictObject({
+      kind: z.literal('CONTRACT'),
+      step: z.number().int().min(1).max(12),
+      offers: z.array(OfferSchema),
+      market: MarketSummarySchema,
+    }),
     z.strictObject({ kind: z.literal('ROLE_PROPOSAL'), step: z.number().int().min(1).max(12), proposal: RoleProposalSchema }),
-    z.strictObject({ kind: z.literal('INJURY'), step: z.number().int().min(1).max(12) }),
-    z.strictObject({ kind: z.literal('NATIONAL_TEAM'), step: z.number().int().min(1).max(12) }),
+    // T-3-001 D-52 예약(값은 T-4-002가 채운다, 생성기가 없는 지금은 형태만).
+    z.strictObject({
+      kind: z.literal('INJURY'),
+      step: z.number().int().min(1).max(12),
+      episodeId: z.string(),
+      eventId: z.string(),
+      version: z.number().int().nonnegative(),
+    }),
+    // T-3-001 D-51 예약(값은 T-4-004가 채운다, 생성기가 없는 지금은 형태만).
+    z.strictObject({
+      kind: z.literal('NATIONAL_TEAM'),
+      step: z.number().int().min(1).max(12),
+      eventId: z.string(),
+      version: z.number().int().nonnegative(),
+    }),
+    // T-3-001 D-46: 임대 시즌 결산 뒤 원소속 복귀·완전 이적 선택(생성기는 T-3-003).
+    z.strictObject({
+      kind: z.literal('LOAN_RETURN'),
+      options: z.array(z.enum(['RETURN', 'PERMANENT'])),
+      buyOptionMinor: z.number().int().nonnegative().nullable(),
+    }),
     z.strictObject({ kind: z.literal('SETTLEMENT'), step: z.number().int().min(1).max(12) }),
   ])
   .nullable();
@@ -163,6 +246,23 @@ export const TimelineEntrySchema = z.strictObject({
     'CHAPTER_RESOLVED',
     // T-2-014 D-42: 커리어 태그가 하나 부여될 때마다 1건(refId는 tagId).
     'CAREER_TAG_GRANTED',
+    // T-3-001 D-53: 트랙 A(계약·이적, T-3-002·T-3-003이 실제로 남긴다).
+    'CONTRACT_RENEWED',
+    'TRANSFERRED',
+    'LOANED',
+    'LOAN_RETURNED',
+    'OFFER_REJECTED',
+    'OFFER_EXPIRED',
+    'NEGOTIATED',
+    // T-3-001 D-53: 트랙 B(부상·인간관계·평판, T-4-00x가 실제로 남긴다).
+    'INJURED',
+    'REHAB_CHOSEN',
+    'RECOVERED',
+    'INJURY_RECURRED',
+    'MANAGER_CHANGED',
+    'NATIONAL_TEAM_CALLED',
+    'NATIONAL_TEAM_DECLINED',
+    'CAPTAIN_APPOINTED',
   ]),
   refId: z.string().nullable(),
   age: z.number().int(),
@@ -553,6 +653,16 @@ export const SeasonResultSchema = z.strictObject({
     managerTrust: z.strictObject({ before: z.number().int(), after: z.number().int() }),
   }),
   chapters: z.array(ChapterRecordSchema),
+  // T-3-001(PR #45 후속): 결산 뒤 `season`이 null이 되며 사라지던 다이어리 step 요약을 보존한다.
+  stepSummaries: z.array(
+    z.strictObject({
+      step: z.number().int().min(1).max(12),
+      phase: SeasonPhaseSchema,
+      matchesPlayed: z.number().int().nonnegative(),
+      decisionsOpened: z.number().int().nonnegative(),
+      passedAtRevision: z.number().int().positive(),
+    }),
+  ),
   hash: z.string().min(1),
 });
 
@@ -687,6 +797,8 @@ export const CareerStateSchema = z.strictObject({
   }),
   pending: PendingSchema,
   contract: ContractSchema.nullable(),
+  // T-3-001 D-45: 소속 이력. `acceptOffer`가 매 계약마다 항목을 추가한다(현재 소속은 toSeasonIndex: null).
+  clubHistory: z.array(ClubStintSchema),
   timeline: z.array(TimelineEntrySchema),
   season: FootballSeasonSchema.nullable(),
   seasonHistory: z.array(SeasonSummarySchema),

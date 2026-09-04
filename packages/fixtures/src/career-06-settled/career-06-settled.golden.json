@@ -1,6 +1,6 @@
 {
   "revision": 15,
-  "stateHash": "be58ecb22c3f4c3c03312be50477b4bd3d4e0e5c5d846664c8c4c4681aeb076d",
+  "stateHash": "8bc71110357152a45cc3f9f71e644e92e44cd53b102e8e326990f174c9176368",
   "rngStateDraws": 398,
   "age": 18,
   "seasonHistory": [
@@ -498,7 +498,86 @@
           }
         },
         "chapters": [],
-        "hash": "eab77259e1f68f13f6deb7ecb908504e7014d4844c9d5a6fc3754e4a68e56e54"
+        "stepSummaries": [
+          {
+            "step": 1,
+            "phase": "PRESEASON",
+            "matchesPlayed": 0,
+            "decisionsOpened": 1,
+            "passedAtRevision": 13
+          },
+          {
+            "step": 2,
+            "phase": "PRESEASON",
+            "matchesPlayed": 0,
+            "decisionsOpened": 0,
+            "passedAtRevision": 13
+          },
+          {
+            "step": 3,
+            "phase": "LEAGUE",
+            "matchesPlayed": 3,
+            "decisionsOpened": 0,
+            "passedAtRevision": 13
+          },
+          {
+            "step": 4,
+            "phase": "LEAGUE",
+            "matchesPlayed": 2,
+            "decisionsOpened": 0,
+            "passedAtRevision": 13
+          },
+          {
+            "step": 5,
+            "phase": "LEAGUE",
+            "matchesPlayed": 4,
+            "decisionsOpened": 0,
+            "passedAtRevision": 13
+          },
+          {
+            "step": 6,
+            "phase": "LEAGUE",
+            "matchesPlayed": 2,
+            "decisionsOpened": 0,
+            "passedAtRevision": 13
+          },
+          {
+            "step": 7,
+            "phase": "LEAGUE",
+            "matchesPlayed": 4,
+            "decisionsOpened": 1,
+            "passedAtRevision": 14
+          },
+          {
+            "step": 8,
+            "phase": "LEAGUE",
+            "matchesPlayed": 2,
+            "decisionsOpened": 0,
+            "passedAtRevision": 14
+          },
+          {
+            "step": 9,
+            "phase": "LEAGUE",
+            "matchesPlayed": 4,
+            "decisionsOpened": 0,
+            "passedAtRevision": 14
+          },
+          {
+            "step": 10,
+            "phase": "LEAGUE",
+            "matchesPlayed": 2,
+            "decisionsOpened": 0,
+            "passedAtRevision": 14
+          },
+          {
+            "step": 11,
+            "phase": "LEAGUE",
+            "matchesPlayed": 3,
+            "decisionsOpened": 0,
+            "passedAtRevision": 14
+          }
+        ],
+        "hash": "7f921ba513d59d7e3065c387bfd7ef84a308bce97062793ce4257d3bda04651c"
       }
     }
   ],

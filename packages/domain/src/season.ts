@@ -3,7 +3,7 @@ import { rollRange } from './roll-range.js';
 import type { RngState } from './rng.js';
 import type { League, LeagueCalendar, LeagueCalendarSlot } from './ruleset.js';
 import { computeRoleProposal, type RoleProposalContext } from './selection.js';
-import type { CompetitionRecord, DecisionSlot, MatchRecord, Pending, SeasonStep, SimulationMode, StepMatchResult } from './types.js';
+import type { CompetitionRecord, DecisionSlot, MarketSummary, MatchRecord, Pending, SeasonStep, SimulationMode, StepMatchResult } from './types.js';
 
 /** RULE-TIME-004: 시즌당 핵심 경기 챕터 상한(모드 공통). */
 const CHAPTER_BUDGET_CAP = 4;
@@ -175,6 +175,10 @@ export function selectOpenSlot(
   rngState: RngState,
   roleContext: RoleProposalContext | null,
   chapterOpen: ChapterOpenResult | null,
+  // T-3-001 D-43: CONTRACT pending의 `market.openedAtRevision`·`seasonIndex`를 채우는 데만 쓴다
+  // (roll을 소비하지 않는다).
+  revision: number,
+  seasonIndex: number,
 ): SlotOpenResult {
   const candidates = step.decisionSlots
     .filter((slot) => !slot.skippedByBudget)
@@ -239,7 +243,23 @@ export function selectOpenSlot(
       return { opened: true, pending: { kind: 'ROLE_PROPOSAL', step: step.index, proposal }, rngState };
     }
 
-    return { opened: true, pending: { kind: slot.kind, step: step.index }, rngState };
+    if (slot.kind === 'CONTRACT') {
+      // T-3-001 D-43 (a): 재계약 사전 협상 생성기는 T-3-002 몫이라 지금은 항상 offers: []로 연다
+      // (isAutoPassablePending이 자동 통과시킨다). reason 'PRE_NEGOTIATION'은 이 슬롯의 용도(step 7
+      // 사전 협상)를 그대로 담는다.
+      const market: MarketSummary = { openedAtRevision: revision, seasonIndex, reason: 'PRE_NEGOTIATION', safeOfferId: null };
+      return { opened: true, pending: { kind: 'CONTRACT', step: step.index, offers: [], market }, rngState };
+    }
+
+    if (slot.kind === 'INJURY') {
+      // T-3-001 D-52 예약: 생성기(T-4-002)가 없는 지금은 값 없이 형태만 채운다(현재 룰셋에 INJURY
+      // 슬롯이 없어 이 분기는 실제로 도달하지 않는다).
+      return { opened: true, pending: { kind: 'INJURY', step: step.index, episodeId: '', eventId: '', version: 0 }, rngState };
+    }
+
+    // slot.kind === 'NATIONAL_TEAM'. T-3-001 D-51 예약: 생성기(T-4-004)가 없는 지금은 형태만
+    // 채운다(현재 룰셋에 NATIONAL_TEAM 슬롯이 없어 이 분기는 실제로 도달하지 않는다).
+    return { opened: true, pending: { kind: 'NATIONAL_TEAM', step: step.index, eventId: '', version: 0 }, rngState };
   }
 
   return { opened: false };
@@ -327,7 +347,9 @@ export function walkToNextDecision(
       league: chapterContext.league,
     });
     matchesSoFar = [...matchesSoFar, ...matchResult.records];
-    const opened = selectOpenSlot(step, mode, eligibleEvents, nextRngState, roleContext, chapterOpen);
+    // T-3-001: MarketSummary.seasonIndex는 "시장이 열린 시점의 seasonHistory.length"(D-43) — season.index
+    // (1부터 시작)가 아니라 그보다 1 작은 값이다.
+    const opened = selectOpenSlot(step, mode, eligibleEvents, nextRngState, roleContext, chapterOpen, revision, chapterContext.seasonIndex - 1);
     if (opened.opened) {
       pending = opened.pending;
       nextRngState = opened.rngState;
@@ -349,13 +371,14 @@ export function walkToNextDecision(
  * ADVANCE가 CONTRACT·INJURY·NATIONAL_TEAM pending을 "자동 통과"로 닫을 수 있는지. T-2-002 D-34:
  * ROLE은 더 이상 자동 통과 대상이 아니다 — `selectOpenSlot`이 ROLE 슬롯을 `ROLE_PROPOSAL` pending으로
  * 열고, `RESOLVE_ROLE` 명령으로만 닫힌다. T-2-004 D-38: CHAPTER도 같은 이유로 자동 통과 대상에서
- * 뺐다 — `RESOLVE_CHAPTER`로만 닫힌다(판단 1~3개가 각각 roll 1회를 쓴다).
+ * 뺐다 — `RESOLVE_CHAPTER`로만 닫힌다(판단 1~3개가 각각 roll 1회를 쓴다). T-3-001 D-43: CONTRACT는
+ * `offers.length === 0`일 때만 자동 통과한다(제안이 있으면 사용자 결정이 필요하다 — 지금은 생성기가
+ * 없어 항상 0이다).
  */
 export function isAutoPassablePending(pending: Pending): boolean {
-  return (
-    pending !== null &&
-    (pending.kind === 'CONTRACT' || pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM')
-  );
+  if (pending === null) return false;
+  if (pending.kind === 'CONTRACT') return pending.offers.length === 0;
+  return pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM';
 }
 
 export function markStepPassed(

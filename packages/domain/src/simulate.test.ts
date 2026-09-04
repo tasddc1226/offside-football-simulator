@@ -698,6 +698,13 @@ describe('verifySnapshot', () => {
           shirtNumber: 9,
           signatureType: 'AUTO',
           signedAtRevision: offered.snapshot.revision,
+          kind: 'PERMANENT',
+          appearancePromise: { minutesShareBp: 0 },
+          positionPlan: 'ST',
+          suspended: false,
+          loan: null,
+          promiseBreaches: 0,
+          signedSeasonIndex: 1,
         },
       },
     };
@@ -885,6 +892,7 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
     expect(result.snapshot.state.pending).toEqual({
       kind: 'OFFERS',
       offers: [expect.objectContaining({ teamId: 'hangang-u18', leagueTier: 'YOUTH' })],
+      market: { openedAtRevision: result.snapshot.revision, seasonIndex: 0, reason: 'FIRST_CONTRACT', safeOfferId: null },
     });
     expect(result.snapshot.checkpoint).toBe('CHAPTER_DECISION');
     expect(result.nextAction).toBe('DECISION');
@@ -912,6 +920,7 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
     expect(result.snapshot.state.pending).toEqual({
       kind: 'OFFERS',
       offers: [expect.objectContaining({ teamId: 'daejeon-tier3', leagueTier: 3 })],
+      market: { openedAtRevision: result.snapshot.revision, seasonIndex: 0, reason: 'FIRST_CONTRACT', safeOfferId: null },
     });
     expect(result.snapshot.state.rngState.draws).toBe(active.state.rngState.draws + 5);
   });
@@ -948,6 +957,7 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
     expect(result.snapshot.state.pending).toEqual({
       kind: 'OFFERS',
       offers: [expect.objectContaining({ teamId: 'daejeon-tier3', leagueTier: 3 })],
+      market: { openedAtRevision: result.snapshot.revision, seasonIndex: 0, reason: 'FIRST_CONTRACT', safeOfferId: null },
     });
   });
 
@@ -958,6 +968,7 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
     expect(result.snapshot.state.pending).toEqual({
       kind: 'OFFERS',
       offers: [expect.objectContaining({ teamId: 'daejeon-tier3', leagueTier: 3 })],
+      market: { openedAtRevision: result.snapshot.revision, seasonIndex: 0, reason: 'FIRST_CONTRACT', safeOfferId: null },
     });
   });
 
@@ -1034,7 +1045,26 @@ describe('simulate — ACCEPT_OFFER', () => {
       shirtNumber: offer.shirtNumber,
       signatureType: 'AUTO',
       signedAtRevision: result.snapshot.revision,
+      kind: 'PERMANENT',
+      appearancePromise: offer.appearancePromise,
+      positionPlan: offer.positionPlan,
+      suspended: false,
+      loan: null,
+      promiseBreaches: 0,
+      signedSeasonIndex: 1,
     });
+    expect(result.snapshot.state.clubHistory).toEqual([
+      {
+        teamId: offer.teamId,
+        teamName: offer.teamName,
+        leagueTier: offer.leagueTier,
+        kind: 'PERMANENT',
+        fromSeasonIndex: 1,
+        toSeasonIndex: null,
+        endReason: null,
+        contractId: result.snapshot.state.contract!.id,
+      },
+    ]);
     expect(result.snapshot.state.pending).toBeNull();
     expect(result.snapshot.checkpoint).toBe('CONTRACT_CONFIRMED');
     expect(result.nextAction).toBe('SETTLEMENT');
@@ -1567,7 +1597,7 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
 });
 
 describe('Command 타입', () => {
-  it('type은 10개 명령으로 고정된다', () => {
+  it('type은 13개 명령으로 고정된다', () => {
     expectTypeOf<Command['type']>().toEqualTypeOf<
       | 'CREATE_CAREER'
       | 'UPDATE_PLAYER_DRAFT'
@@ -1579,6 +1609,64 @@ describe('Command 타입', () => {
       | 'RESOLVE_EVENT'
       | 'RESOLVE_CHAPTER'
       | 'ACCEPT_OFFER'
+      | 'NEGOTIATE'
+      | 'REJECT_OFFER'
+      | 'LOAN_RETURN'
     >();
+  });
+});
+
+// T-3-001: NEGOTIATE·REJECT_OFFER·LOAN_RETURN은 T-3-003 전까지 처리기가 없다 — throw 없이
+// VALIDATION_FAILED를 돌려주는 것으로 고정한다(브리프 "명령" 인수 조건).
+describe('simulate — NEGOTIATE/REJECT_OFFER/LOAN_RETURN(T-3-003 전까지 미구현)', () => {
+  it('NEGOTIATE는 throw 없이 VALIDATION_FAILED다', () => {
+    const active = confirmedActiveSnapshot();
+    const result = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: {
+        type: 'NEGOTIATE',
+        commandId: 'cmd-negotiate-1',
+        expectedRevision: active.revision,
+        payload: { offerId: 'OFR-x-0', ask: 'WAGE' },
+      },
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('VALIDATION_FAILED');
+  });
+
+  it('REJECT_OFFER는 throw 없이 VALIDATION_FAILED다', () => {
+    const active = confirmedActiveSnapshot();
+    const result = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: {
+        type: 'REJECT_OFFER',
+        commandId: 'cmd-reject-1',
+        expectedRevision: active.revision,
+        payload: { offerId: null },
+      },
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('VALIDATION_FAILED');
+  });
+
+  it('LOAN_RETURN은 throw 없이 VALIDATION_FAILED다', () => {
+    const active = confirmedActiveSnapshot();
+    const result = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: {
+        type: 'LOAN_RETURN',
+        commandId: 'cmd-loan-return-1',
+        expectedRevision: active.revision,
+        payload: { decision: 'RETURN' },
+      },
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('VALIDATION_FAILED');
   });
 });

@@ -83,6 +83,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     },
     pending: null,
     contract: null,
+    clubHistory: [],
     timeline: [],
     season: null,
     seasonHistory: [],
@@ -113,6 +114,13 @@ describe('buildNarrativeTokens', () => {
         shirtNumber: 10,
         signatureType: 'AUTO',
         signedAtRevision: 5,
+        kind: 'PERMANENT',
+        appearancePromise: { minutesShareBp: 4000 },
+        positionPlan: 'W',
+        suspended: false,
+        loan: null,
+        promiseBreaches: 0,
+        signedSeasonIndex: 1,
       },
     });
     const tokens = buildNarrativeTokens(state, activeContentPack, activeRuleset);

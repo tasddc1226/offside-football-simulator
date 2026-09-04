@@ -52,6 +52,27 @@ describe('ConditionSchema', () => {
     expect(() => ConditionSchema.parse({ eq: ['career.stage', 'RETIRED'] })).toThrow();
   });
 
+  // T-3-001 D-53: 트랙 A·B 조건 DSL 화이트리스트 예약(12행/15경로).
+  it.each<[string, Condition]>([
+    ['contract.kind', { eq: ['contract.kind', 'PERMANENT'] }],
+    ['contract.seasonsRemaining', { gte: ['contract.seasonsRemaining', 1] }],
+    ['contract.isLastSeason', { eq: ['contract.isLastSeason', 1] }],
+    ['contract.promiseBreaches', { eq: ['contract.promiseBreaches', 0] }],
+    ['contract.onLoan', { eq: ['contract.onLoan', 0] }],
+    ['contract.leagueTier', { eq: ['contract.leagueTier', '1'] }],
+    ['career.permanentTransfers', { gte: ['career.permanentTransfers', 0] }],
+    ['career.clubsCount', { gte: ['career.clubsCount', 1] }],
+    ['health.activeSeverity', { eq: ['health.activeSeverity', ''] }],
+    ['health.recurrenceRiskBp', { eq: ['health.recurrenceRiskBp', 0] }],
+    ['health.majorInjuries', { eq: ['health.majorInjuries', 0] }],
+    ['reputation.popularityCenti', { eq: ['reputation.popularityCenti', 0] }],
+    ['season.manager.tenureSeasons', { eq: ['season.manager.tenureSeasons', 0] }],
+    ['season.manager.id', { eq: ['season.manager.id', ''] }],
+    ['season.stats.recentFormAvg', { eq: ['season.stats.recentFormAvg', 0] }],
+  ])('accepts new whitelist path: %s', (_label, condition) => {
+    expect(() => ConditionSchema.parse(condition)).not.toThrow();
+  });
+
   it('resolves parameterized whitelist paths', () => {
     expect(resolveConditionField('player.attributes.shooting')).toEqual({
       path: 'player.attributes.shooting',

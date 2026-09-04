@@ -400,6 +400,7 @@ function makeState(overrides: Partial<CareerState> = {}): CareerState {
     },
     pending: makePendingChapter(),
     contract: null,
+    clubHistory: [],
     timeline: [],
     season: makeSeason(),
     seasonHistory: [],
@@ -478,7 +479,14 @@ describe('resolveChapter', () => {
   });
 
   it('NO_PENDING_CHAPTER: pending이 CHAPTER가 아니면 거부한다', () => {
-    const state = makeState({ pending: { kind: 'CONTRACT', step: 3 } });
+    const state = makeState({
+      pending: {
+        kind: 'CONTRACT',
+        step: 3,
+        offers: [],
+        market: { openedAtRevision: 1, seasonIndex: 0, reason: 'PRE_NEGOTIATION', safeOfferId: null },
+      },
+    });
     const result = resolveChapter({
       state,
       ruleset: rulesetProto,

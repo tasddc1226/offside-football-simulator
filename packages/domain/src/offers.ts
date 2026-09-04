@@ -3,7 +3,7 @@ import { compareCodePoints } from './canonical.js';
 import { rollInt, type RngState } from './rng.js';
 import { rollRange } from './roll-range.js';
 import type { ContractRules, OfferBranch, OfferRules, Ruleset, Team } from './ruleset.js';
-import type { Offer, SquadRole } from './types.js';
+import type { Offer, Position, SquadRole } from './types.js';
 
 /**
  * D-9: `branches` 배열 순서대로 첫 일치 분기를 고른다. `requireTags`는 전부 있어야 하고
@@ -63,13 +63,19 @@ export type GeneratedOffers = { offers: Offer[]; rngState: RngState };
  * D-9: 제안 1개당 rng 소비 순서(고정) — 팀 추출(고정 팀이면 생략) → lengthSeasons → rolePromise
  * → shirtNumber → tacticalFitEstimate. 주급·계약금은 rng 없이 `contractRules.ovrBands`(baseOvr
  * 구간)와 `wageBands[team.wageBandId]`에서 읽는다. 풀이 desiredCount보다 작으면 풀 크기만큼만
- * 만든다.
+ * 만든다. T-3-001 D-44: 이 함수는 Phase 1 첫 계약(무소속) 경로 전용이라 v2 필드는 전부 고정값이다 —
+ * `kind: 'FREE_AGENT'`·`fromTeamId: null`·`transferFeeMinor: null`·`competitorSummary: null`·
+ * `validUntilRevision: null`(만료 없음)·`negotiable`은 전부 false·`negotiationState: 'OPEN'`·
+ * `negotiatedAsk: null`·`loan: null`. `appearancePromise.minutesShareBp`는
+ * `contractRules.promiseMinutesShareBp[rolePromise]`, `positionPlan`은 `primaryPosition` 그대로다
+ * (rng를 새로 소비하지 않는다).
  */
 export function generateOffers(
   ruleset: Ruleset,
   branch: OfferBranch,
   tags: readonly string[],
   baseOvr: number,
+  primaryPosition: Position,
   revision: number,
   rng: RngState,
 ): GeneratedOffers {
@@ -121,15 +127,26 @@ export function generateOffers(
 
     offers.push({
       id: `OFR-${revision}-${index}`,
+      kind: 'FREE_AGENT',
       teamId: team.id,
       teamName: team.name,
+      fromTeamId: null,
       leagueTier: team.leagueTier,
       lengthSeasons: lengthRoll.value,
       wageMinorPerWeek: wage,
       signingBonusMinor: signingBonus,
+      transferFeeMinor: null,
       rolePromise,
+      appearancePromise: { minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[rolePromise] },
+      positionPlan: primaryPosition,
       shirtNumber: shirtRoll.value,
       tacticalFitEstimate: fitRoll.value,
+      competitorSummary: null,
+      validUntilRevision: null,
+      negotiable: { wage: false, role: false, length: false },
+      negotiationState: 'OPEN',
+      negotiatedAsk: null,
+      loan: null,
     });
   }
 

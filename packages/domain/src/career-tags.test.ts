@@ -90,6 +90,7 @@ function baseCareerTagState(): CareerState {
     },
     pending: null,
     contract: null,
+    clubHistory: [],
     timeline: [],
     season: null,
     seasonHistory: [],
@@ -149,6 +150,7 @@ const DUMMY_SEASON_RESULT_BASE: Omit<SeasonResult, 'chapters' | 'index'> = {
     morale: { before: 60, after: 60 },
     managerTrust: { before: 50, after: 50 },
   },
+  stepSummaries: [],
   hash: 'dummy-hash',
 };
 
@@ -324,6 +326,8 @@ describe('settleSeason의 커리어 태그 결산 훅', () => {
         id: 'CTR-1', offerId: 'OFR-1', teamId: 'team-1', teamName: '테스트 FC', leagueTier: 1,
         lengthSeasons: 3, wageMinorPerWeek: 1000000, signingBonusMinor: 0, rolePromise: 'STARTER',
         shirtNumber: 9, signatureType: 'AUTO', signedAtRevision: 1,
+        kind: 'PERMANENT', appearancePromise: { minutesShareBp: 8000 }, positionPlan: 'ST',
+        suspended: false, loan: null, promiseBreaches: 0, signedSeasonIndex: 1,
       },
     };
   }

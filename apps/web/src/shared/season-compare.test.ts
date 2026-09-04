@@ -34,6 +34,7 @@ function seasonResult(overrides: Partial<SeasonResult> = {}): SeasonResult {
       managerTrust: { before: 40, after: 40 },
     },
     chapters: [],
+    stepSummaries: [],
     hash: 'hash-a',
     ...overrides,
   };
