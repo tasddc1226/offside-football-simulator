@@ -149,7 +149,9 @@ export const authAttempts = sqliteTable(
   'auth_attempts',
   {
     id: text('id').primaryKey(),
-    kind: text('kind', { enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START'] }).notNull(),
+    // T-2-012: ANALYTICS_EVENTS(분당 60회/clientId, D-55)가 추가한 kind. text 컬럼이라 마이그레이션은
+    // 필요 없다(SQLite는 이 enum을 CHECK 제약으로 만들지 않는다 — TS 타입에서만 강제).
+    kind: text('kind', { enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START', 'ANALYTICS_EVENTS'] }).notNull(),
     subject: text('subject').notNull(),
     windowStart: text('window_start').notNull(),
     count: integer('count').notNull(),
@@ -172,7 +174,7 @@ export const auditLog = sqliteTable(
   (table) => [index('audit_log_profile_id_idx').on(table.profileId)],
 );
 
-/** 02 DATA-SVC-001. */
+/** 02 DATA-SVC-001. T-2-012 D-54: `isTest`가 붙었다. */
 export const serviceSeasons = sqliteTable(
   'service_seasons',
   {
@@ -184,6 +186,23 @@ export const serviceSeasons = sqliteTable(
     rulesetVersion: text('ruleset_version').notNull(),
     contentPackVersion: text('content_pack_version').notNull(),
     challengeSetId: text('challenge_set_id').notNull(),
+    /** T-2-012 D-54: Phase 6 도전·앨범 집계는 isTest = 0만 읽는다(지금은 필드·주석·테스트만). */
+    isTest: integer('is_test').notNull().default(0),
   },
   (table) => [index('service_seasons_status_idx').on(table.status)],
+);
+
+/** T-2-012 D-55. `propsJson`은 `AnalyticsEventInput['props']`를 그대로 담는다(화이트리스트 검증은 라우트가 한다). */
+export const analyticsEvents = sqliteTable(
+  'analytics_events',
+  {
+    id: text('id').primaryKey(),
+    clientId: text('client_id').notNull(),
+    profileId: text('profile_id'),
+    name: text('name').notNull(),
+    propsJson: text('props_json').notNull(),
+    clientTs: integer('client_ts').notNull(),
+    receivedAt: text('received_at').notNull(),
+  },
+  (table) => [index('analytics_events_client_id_idx').on(table.clientId)],
 );

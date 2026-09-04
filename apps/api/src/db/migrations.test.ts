@@ -85,7 +85,9 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'ruleset_version',
     'content_pack_version',
     'challenge_set_id',
+    'is_test',
   ],
+  analytics_events: ['id', 'client_id', 'profile_id', 'name', 'props_json', 'client_ts', 'received_at'],
 };
 
 describe('migrations', () => {
@@ -99,7 +101,7 @@ describe('migrations', () => {
     await ctx.dispose();
   });
 
-  it('creates the 9 tables with the expected columns', async () => {
+  it('creates the 10 tables with the expected columns', async () => {
     for (const [table, expectedColumns] of Object.entries(EXPECTED_COLUMNS)) {
       const result = await ctx.db.$client.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>();
       const columns = result.results.map((row) => row.name).sort();
