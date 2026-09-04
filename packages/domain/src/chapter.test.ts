@@ -243,8 +243,12 @@ describe('selectChapter', () => {
 
     const sameSeedRngState = seedRng('chapter-fast-vs-chapter-same-seed');
 
-    const chapterWalk = walkToNextDecision(steps, 6, 'CHAPTER', [], sameSeedRngState, 1, null, playStepMatches, [], chapterContext);
-    const fastWalk = walkToNextDecision(steps, 6, 'FAST', [], sameSeedRngState, 1, null, playStepMatches, [], chapterContext);
+    const chapterWalk = walkToNextDecision(
+      steps, 6, 'CHAPTER', [], sameSeedRngState, 1, null, playStepMatches, [], chapterContext, makeState(), rulesetProto,
+    );
+    const fastWalk = walkToNextDecision(
+      steps, 6, 'FAST', [], sameSeedRngState, 1, null, playStepMatches, [], chapterContext, makeState(), rulesetProto,
+    );
 
     // 같은 seed·같은 playStepMatches이므로 두 모드의 경기 결과 자체는 동일하다(챕터 개폐만 갈린다).
     expect(chapterWalk.pending).toMatchObject({ kind: 'CHAPTER', chapterId: 'CHP-MATCH-002', matchId: 'm-derby', step: 6 });

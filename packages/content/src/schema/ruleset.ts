@@ -369,6 +369,65 @@ export const OfferRulesSchema = z.strictObject({
 });
 export type OfferRules = z.infer<typeof OfferRulesSchema>;
 
+// T-3-002 D-43/D-44: 결산 뒤 이적시장·step 7 재계약 상수.
+const TierSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
+const RoleKindWeightSchema = z.strictObject({ TRANSFER: z.number().int().min(0).max(100), LOAN: z.number().int().min(0).max(100) });
+const NegotiationAxisBpSchema = z.strictObject({
+  WAGE: z.number().int().min(0).max(10000),
+  ROLE: z.number().int().min(0).max(10000),
+  LENGTH: z.number().int().min(0).max(10000),
+});
+
+export const TransferRulesSchema = z.strictObject({
+  offerValidityRevisions: z.number().int().positive(),
+  demandBands: z.array(z.strictObject({ maxIndexCenti: z.number().int().min(0), tiers: z.array(TierSchema).min(1) })).min(1),
+  interest: z.strictObject({ minRatingTenths: z.number().int(), minIndexCenti: z.number().int() }),
+  kindWeightsByRole: z.strictObject({
+    STARTER: RoleKindWeightSchema,
+    ROTATION: RoleKindWeightSchema,
+    BENCH: RoleKindWeightSchema,
+    RESERVE: RoleKindWeightSchema,
+  }),
+  loan: z.strictObject({
+    seasons: z.literal(1),
+    wageShareBp: z.number().int().min(0).max(10000),
+    buyOptionChanceBp: z.number().int().min(0).max(10000),
+    buyMinShareBp: z.number().int().min(0).max(10000),
+  }),
+  feeByIndexBand: z.array(z.strictObject({ maxIndexCenti: z.number().int().min(0), feeMinor: z.number().int().nonnegative() })).min(1),
+  safeRenewal: z.strictObject({ lengthSeasons: z.number().int().positive(), wageBp: z.number().int().min(0).max(10000) }),
+  // wageBpByRole은 "현재 급여 대비 배율"(bp)이라 재계약 인상분을 반영해 10000(100%)을 넘을 수 있다.
+  renewal: z.strictObject({
+    lengthSeasons: z.number().int().positive(),
+    wageBpByRole: z.strictObject({
+      STARTER: z.number().int().nonnegative(),
+      ROTATION: z.number().int().nonnegative(),
+      BENCH: z.number().int().nonnegative(),
+      RESERVE: z.number().int().nonnegative(),
+    }),
+  }),
+  negotiation: z.strictObject({
+    successBp: z.strictObject({
+      TRANSFER: NegotiationAxisBpSchema,
+      FREE_AGENT: NegotiationAxisBpSchema,
+      LOAN: NegotiationAxisBpSchema,
+      RENEWAL: NegotiationAxisBpSchema,
+    }),
+    reputationAdjustBpPerPoint: z.number().int(),
+    // wageBp도 renewal.wageBpByRole과 같은 "현재 급여 대비 배율"이라 10000을 넘을 수 있다.
+    counter: z.strictObject({ wageBp: z.number().int().nonnegative(), lengthDelta: z.number().int() }),
+  }),
+  relationshipCarry: z.strictObject({
+    newManagerTrustBase: z.number().int(),
+    fansCarryBp: z.number().int().min(0).max(10000),
+    rivalMoveFansDelta: z.number().int(),
+    promiseBreachMoveFansDelta: z.number().int(),
+    managerTrustPromiseBreach: z.number().int(),
+  }),
+  rivalPairs: z.array(z.tuple([z.string().min(1), z.string().min(1)])),
+});
+export type TransferRules = z.infer<typeof TransferRulesSchema>;
+
 const WageBandRow = z.strictObject({ low: z.number().int().nonnegative(), mid: z.number().int().nonnegative(), high: z.number().int().nonnegative() });
 const WageBandsSchema = z.strictObject({ tier1: WageBandRow, tier2: WageBandRow, tier3: WageBandRow, youth: WageBandRow });
 
@@ -769,6 +828,8 @@ export const RulesetSchema = z
     scoutRange: ScoutRangeSchema,
     teams: z.array(TeamSchema).min(1),
     offerRules: OfferRulesSchema,
+    // T-3-002 D-43/D-44.
+    transferRules: TransferRulesSchema,
     contractRules: ContractRulesSchema,
     leagueCalendar: LeagueCalendarSchema,
     seasonBoundaryReset: SeasonBoundaryResetSchema,
@@ -912,6 +973,61 @@ export const RulesetSchema = z
         code: 'custom',
         message: `competitorNames 길이는 ${minCompetitorNames} 이상이어야 한다: ${ruleset.competitorNames.length}`,
         path: ['competitorNames'],
+      });
+    }
+
+    // T-3-002 D-43/D-44: transferRules 정합성.
+    for (const role of ['STARTER', 'ROTATION', 'BENCH', 'RESERVE'] as const) {
+      const weight = ruleset.transferRules.kindWeightsByRole[role];
+      if (weight.TRANSFER + weight.LOAN !== 100) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `transferRules.kindWeightsByRole.${role}의 TRANSFER+LOAN 합은 100이어야 한다: ${weight.TRANSFER + weight.LOAN}`,
+          path: ['transferRules', 'kindWeightsByRole', role],
+        });
+      }
+    }
+
+    for (const [key, bands] of [
+      ['demandBands', ruleset.transferRules.demandBands] as const,
+      ['feeByIndexBand', ruleset.transferRules.feeByIndexBand] as const,
+    ]) {
+      for (let i = 1; i < bands.length; i++) {
+        if (bands[i]!.maxIndexCenti <= bands[i - 1]!.maxIndexCenti) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `transferRules.${key}는 maxIndexCenti 오름차순이어야 한다(index ${i}).`,
+            path: ['transferRules', key, i, 'maxIndexCenti'],
+          });
+        }
+      }
+      const last = bands[bands.length - 1];
+      if (last !== undefined && last.maxIndexCenti !== 10000) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `transferRules.${key}의 마지막 구간은 maxIndexCenti 10000이어야 한다: ${last.maxIndexCenti}`,
+          path: ['transferRules', key, bands.length - 1, 'maxIndexCenti'],
+        });
+      }
+    }
+
+    for (const [index, pair] of ruleset.transferRules.rivalPairs.entries()) {
+      for (const teamId of pair) {
+        if (!teamIds.has(teamId)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `transferRules.rivalPairs[${index}]의 팀이 teams에 없다: ${teamId}`,
+            path: ['transferRules', 'rivalPairs', index],
+          });
+        }
+      }
+    }
+
+    if (ruleset.transferRules.relationshipCarry.newManagerTrustBase !== ruleset.contractRules.newClubManagerTrust) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `transferRules.relationshipCarry.newManagerTrustBase(${ruleset.transferRules.relationshipCarry.newManagerTrustBase})는 contractRules.newClubManagerTrust(${ruleset.contractRules.newClubManagerTrust})와 같아야 한다.`,
+        path: ['transferRules', 'relationshipCarry', 'newManagerTrustBase'],
       });
     }
   }) satisfies z.ZodType<DomainRuleset>;
