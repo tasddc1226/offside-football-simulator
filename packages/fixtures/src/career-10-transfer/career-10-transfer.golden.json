@@ -1,6 +1,6 @@
 {
   "revision": 24,
-  "stateHash": "7778ce1316041d836dd953257645ad5d243d639b8cfc6ea33bf4308933f3619b",
+  "stateHash": "3f19fef50478c07403b3124e2193f5c2a3eb6c462c0cc3d701419aa3ad974a96",
   "checkpoint": "SEASON_START",
   "rngStateDraws": 1140,
   "age": 19,
@@ -13,8 +13,25 @@
     "lengthSeasons": 3
   },
   "clubHistory": [
-    { "teamId": "seoul-tier1", "kind": "PERMANENT", "fromSeasonIndex": 1, "toSeasonIndex": 1, "endReason": "EXPIRED" },
-    { "teamId": "busan-tier2", "kind": "PERMANENT", "fromSeasonIndex": 2, "toSeasonIndex": null, "endReason": null }
+    {
+      "teamId": "seoul-tier1",
+      "kind": "PERMANENT",
+      "fromSeasonIndex": 1,
+      "toSeasonIndex": 1,
+      "endReason": "EXPIRED"
+    },
+    {
+      "teamId": "busan-tier2",
+      "kind": "PERMANENT",
+      "fromSeasonIndex": 2,
+      "toSeasonIndex": null,
+      "endReason": null
+    }
   ],
-  "tags": ["약속_위반", "입단테스트_완료", "진로_입단테스트", "테스트_성공"]
+  "tags": [
+    "약속_위반",
+    "입단테스트_완료",
+    "진로_입단테스트",
+    "테스트_성공"
+  ]
 }

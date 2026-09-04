@@ -1867,8 +1867,16 @@ describe('simulate — START_SEASON은 season.manager·injuryCount를 채운다(
   });
 
   it('같은 팀 2번째 시즌: season.manager.tenureSeasons는 2다(managerTenureSeasons 배선)', () => {
-    const settled = runSettledFixture().snapshot;
+    let settled = runSettledFixture().snapshot;
     const teamId = settled.state.contract!.teamId;
+    // T-3-003 §5: 결산 뒤 계약이 관심 조건에 걸리면 시장이 자동으로 열릴 수 있다 — 그러면 안전
+    // 잔류(첫 제안)를 수락하고 START_SEASON을 이어간다(pending이 남아 있으면 MARKET_OPEN으로 막힌다).
+    if (settled.state.pending?.kind === 'OFFERS') {
+      const offerId = settled.state.pending.offers[0]!.id;
+      const accepted = simulate({ ...baseInput(), snapshot: settled, command: acceptOfferCommand(settled.revision, offerId) });
+      if (!accepted.ok) throw new Error('setup: 결산 후 시장 ACCEPT_OFFER 실패');
+      settled = accepted.snapshot;
+    }
     expect(settled.state.pending).toBeNull();
 
     const nextSeason = simulate({
