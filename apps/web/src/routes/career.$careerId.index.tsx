@@ -30,6 +30,7 @@ import {
   type CareerTimelineItem,
 } from '@offside/ui';
 import { activeContentPack, activeRuleset } from '../engine/content.js';
+import { recordSeasonSettled, sumStepSummaries, trackStepPassed } from '../engine/funnel.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { useEngine } from '../engine/use-engine.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -237,7 +238,11 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
     try {
       const result = await advanceMutation.mutateAsync({ careerId });
       if (result.ok) {
-        const target = screenForCareer(result.domainSnapshot.state);
+        const nextState = result.domainSnapshot.state;
+        if (nextState.currentStep > state.currentStep && nextState.season !== null) {
+          trackStepPassed(nextState.season);
+        }
+        const target = screenForCareer(nextState);
         void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
         return;
       }
@@ -259,11 +264,22 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
     if (submittingRef.current) return;
     submittingRef.current = true;
     setErrorMessage(null);
+    // 결산 뒤에는 state.season이 null이 된다 — 정산 대상 시즌은 요청 전에 미리 잡아 둔다.
+    const preSettleSeason = state.season;
     try {
       const result = await settleSeasonMutation.mutateAsync({ careerId });
       if (!result.ok) {
         setErrorMessage('시즌을 결산하지 못했습니다. 다시 시도해 주세요.');
         return;
+      }
+      if (preSettleSeason !== null) {
+        const { decisionsOpened, matchesPlayed } = sumStepSummaries(preSettleSeason);
+        await recordSeasonSettled(careerId, {
+          seasonIndex: preSettleSeason.index,
+          simulationMode: preSettleSeason.simulationMode,
+          decisionsOpened,
+          matchesPlayed,
+        });
       }
       void navigate({ to: SCREEN_ROUTES['SCR-015'], params: { careerId } });
     } catch {
