@@ -178,6 +178,58 @@ describe('T-3-005 current contract summary', () => {
     } as unknown as CareerState;
     expect(buildCurrentContractSummary(state).find((item) => item.label === '출전 약속 이행/위반')?.value).toBe('이행 1회 · 위반 0회');
   });
+
+  it.each(['contract.id', 'contract.signedSeasonIndex', 'state.clubHistory'] as const)(
+    '구형/부분 snapshot에서 %s가 없으면 예외나 거짓 0회 대신 missing value를 표시한다',
+    (missingField) => {
+      const legacyState: Record<string, unknown> = {
+        contract: {
+          id: 'CTR-LEGACY',
+          lengthSeasons: 1,
+          signedAtRevision: 1,
+          signedSeasonIndex: 1,
+          rolePromise: 'STARTER',
+          teamId: 'team-current',
+          teamName: '현재 팀',
+          leagueTier: 1,
+          wageMinorPerWeek: 1000,
+          promiseBreaches: 0,
+        },
+        clubHistory: [
+          {
+            teamId: 'team-current',
+            teamName: '현재 팀',
+            leagueTier: 1,
+            kind: 'PERMANENT',
+            fromSeasonIndex: 1,
+            toSeasonIndex: null,
+            endReason: null,
+            contractId: 'CTR-LEGACY',
+          },
+        ],
+        seasonHistory: [{ index: 1, teamId: 'team-current', result: { promiseFulfilment: { fulfilled: true } } }],
+        timeline: [{ revision: 2, kind: 'SEASON_STARTED' }],
+      };
+
+      if (missingField === 'state.clubHistory') {
+        delete legacyState.clubHistory;
+      } else {
+        const legacyContract = legacyState.contract;
+        if (typeof legacyContract !== 'object' || legacyContract === null || Array.isArray(legacyContract)) {
+          throw new Error('legacy test fixture contract must be an object');
+        }
+        const legacyContractRecord = legacyContract as Record<string, unknown>;
+        delete legacyContractRecord[missingField === 'contract.id' ? 'id' : 'signedSeasonIndex'];
+      }
+
+      // decodeSnapshot은 envelope만 검사하므로, legacy/partial state를 의도적으로 unknown으로 전달한다.
+      const state = legacyState as unknown as CareerState;
+      const fulfilmentValue = () =>
+        buildCurrentContractSummary(state).find((item) => item.label === '출전 약속 이행/위반')?.value;
+      expect(fulfilmentValue).not.toThrow();
+      expect(fulfilmentValue()).toBe('이행 — · 위반 0회');
+    },
+  );
 });
 
 describe('T-3-005 loan display projection', () => {

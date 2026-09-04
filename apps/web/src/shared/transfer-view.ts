@@ -31,24 +31,84 @@ export const MARKET_REASON_LABEL_KO: Record<
 
 export type CurrentContractSummary = { label: string; value: string };
 
+type ContractStintRange = Pick<CareerState['clubHistory'][number], 'contractId' | 'fromSeasonIndex' | 'toSeasonIndex'>;
+
+function isRecordValue(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isPositiveSeasonIndex(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+}
+
+function isContractStintRange(value: unknown): value is ContractStintRange {
+  if (!isRecordValue(value) || typeof value.contractId !== 'string' || value.contractId.length === 0) return false;
+  if (!isPositiveSeasonIndex(value.fromSeasonIndex)) return false;
+  return value.toSeasonIndex === null || isPositiveSeasonIndex(value.toSeasonIndex);
+}
+
 /** 현재 계약 ID와 시즌 구간이 모두 일치하는 결산만 현재 계약의 이행으로 센다. */
-function isSeasonInCurrentContract(state: CareerState, contract: NonNullable<CareerState['contract']>, seasonIndex: number): boolean {
+function isSeasonInCurrentContract(
+  state: CareerState,
+  contract: NonNullable<CareerState['contract']>,
+  seasonIndex: number,
+): boolean | null {
+  // decodeSnapshot은 state envelope만 검사하므로 구형/부분 snapshot이 런타임에 들어올 수 있다.
+  // 귀속 메타가 없으면 전체 seasonHistory를 현재 계약으로 간주하지 않고 닫힌 값으로 처리한다.
+  if (typeof contract.id !== 'string' || contract.id.length === 0 || !isPositiveSeasonIndex(contract.signedSeasonIndex)) {
+    return null;
+  }
+  if (!isPositiveSeasonIndex(seasonIndex)) return null;
+
+  const rawClubHistory: unknown = (state as unknown as { clubHistory?: unknown }).clubHistory;
+  if (!Array.isArray(rawClubHistory)) return null;
+
+  const contractStints = rawClubHistory.filter(
+    (stint): stint is ContractStintRange => isContractStintRange(stint) && stint.contractId === contract.id,
+  );
+  const hasMalformedMatchingStint = rawClubHistory.some(
+    (stint) => isRecordValue(stint) && stint.contractId === contract.id && !isContractStintRange(stint),
+  );
+  if (contractStints.length === 0 || hasMalformedMatchingStint) return null;
+
   // 갱신은 기존 열린 stint의 contractId만 새 계약 ID로 바꾸므로, stint의 시작보다
   // 늦은 signedSeasonIndex를 함께 적용해야 갱신 전 시즌을 새 계약에 섞지 않는다.
   if (seasonIndex < contract.signedSeasonIndex) return false;
-  const contractStints = state.clubHistory.filter((stint) => stint.contractId === contract.id);
   return contractStints.some(
     (stint) => seasonIndex >= stint.fromSeasonIndex && (stint.toSeasonIndex === null || seasonIndex <= stint.toSeasonIndex),
   );
 }
 
+function fulfilledPromisesForCurrentContract(
+  state: CareerState,
+  contract: NonNullable<CareerState['contract']>,
+): number | null {
+  const rawSeasonHistory: unknown = (state as unknown as { seasonHistory?: unknown }).seasonHistory;
+  if (!Array.isArray(rawSeasonHistory)) return null;
+
+  let fulfilledPromises = 0;
+  for (const rawSummary of rawSeasonHistory) {
+    if (!isRecordValue(rawSummary) || !isPositiveSeasonIndex(rawSummary.index)) return null;
+    if (!isRecordValue(rawSummary.result) || !isRecordValue(rawSummary.result.promiseFulfilment)) return null;
+    if (typeof rawSummary.result.promiseFulfilment.fulfilled !== 'boolean') return null;
+
+    const belongsToCurrentContract = isSeasonInCurrentContract(state, contract, rawSummary.index);
+    if (belongsToCurrentContract === null) return null;
+    if (belongsToCurrentContract && rawSummary.result.promiseFulfilment.fulfilled) fulfilledPromises += 1;
+  }
+  return fulfilledPromises;
+}
+
+function formatPromiseBreaches(contract: NonNullable<CareerState['contract']>): string {
+  return Number.isInteger(contract.promiseBreaches) && contract.promiseBreaches >= 0 ? `${contract.promiseBreaches}회` : '—';
+}
+
 /** SCR-017 상단·SCR-029 휴대폰이 공유하는 현재 계약 공개 요약. */
 export function buildCurrentContractSummary(state: CareerState): CurrentContractSummary[] {
   const contract = state.contract;
-  if (contract === null) return [];
-  const fulfilledPromises = state.seasonHistory.filter(
-    (summary) => isSeasonInCurrentContract(state, contract, summary.index) && summary.result.promiseFulfilment.fulfilled,
-  ).length;
+  if (contract === null || contract === undefined) return [];
+  const fulfilledPromises = fulfilledPromisesForCurrentContract(state, contract);
+  const fulfilmentValue = fulfilledPromises === null ? '이행 —' : `이행 ${fulfilledPromises}회`;
   return [
     // SCR-029 휴대폰의 기존 "팀"·"기간" 문구를 유지한다. SCR-017은 값의 의미로 현재
     // 계약을 설명하므로 별도 raw enum/내부 id 없이 같은 view-model을 재사용한다.
@@ -61,7 +121,7 @@ export function buildCurrentContractSummary(state: CareerState): CurrentContract
       value: `${computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline)}시즌`,
     },
     { label: '현재 주급', value: formatKrw(contract.wageMinorPerWeek) },
-    { label: '출전 약속 이행/위반', value: `이행 ${fulfilledPromises}회 · 위반 ${contract.promiseBreaches}회` },
+    { label: '출전 약속 이행/위반', value: `${fulfilmentValue} · 위반 ${formatPromiseBreaches(contract)}` },
   ];
 }
 
