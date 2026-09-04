@@ -13,10 +13,16 @@ import {
   DialogTrigger,
   RadioGroup,
   RadioGroupItem,
+  ScreenIntro,
   Toast,
 } from '@offside/ui';
 import { ENGINE_CLIENT_VERSION } from '@offside/engine-client';
-import { RecoveryConflictDetailsSchema, type ErrorCode, type MergeChoice, type Profile } from '@offside/contracts';
+import {
+  RecoveryConflictDetailsSchema,
+  type ErrorCode,
+  type MergeChoice,
+  type Profile,
+} from '@offside/contracts';
 import type { SimulationMode } from '@offside/domain';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import {
@@ -52,7 +58,12 @@ import {
 
 /** `GET /v1/auth/google/callback`이 `/settings`로 되돌려줄 때 붙이는 쿼리(ADR-008). */
 type GoogleQueryResult = 'linked' | 'switched' | 'merge_required' | 'error';
-const GOOGLE_QUERY_RESULTS: readonly GoogleQueryResult[] = ['linked', 'switched', 'merge_required', 'error'];
+const GOOGLE_QUERY_RESULTS: readonly GoogleQueryResult[] = [
+  'linked',
+  'switched',
+  'merge_required',
+  'error',
+];
 
 function isGoogleQueryResult(value: unknown): value is GoogleQueryResult {
   return typeof value === 'string' && (GOOGLE_QUERY_RESULTS as readonly string[]).includes(value);
@@ -68,9 +79,11 @@ export const Route = createFileRoute('/settings')({
   component: SettingsScreen,
 });
 
-const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
 
 /**
  * 되돌릴 수 없는 삭제 버튼 색. packages/ui의 Button은 danger variant가 없고 이 작업은 packages/ui를
@@ -117,7 +130,10 @@ const GOOGLE_ERROR_REASON_MESSAGE: Record<string, string> = {
 };
 
 function googleErrorMessage(reason: string | undefined): string {
-  return (reason !== undefined ? GOOGLE_ERROR_REASON_MESSAGE[reason] : undefined) ?? 'Google 연결에 실패했습니다. 다시 시도해 주세요.';
+  return (
+    (reason !== undefined ? GOOGLE_ERROR_REASON_MESSAGE[reason] : undefined) ??
+    'Google 연결에 실패했습니다. 다시 시도해 주세요.'
+  );
 }
 
 function SyncStatusRow() {
@@ -167,10 +183,14 @@ function SyncStatusRow() {
       {summary.kind === 'LOCAL_ONLY' ? (
         <div className="flex flex-col gap-os-2">
           <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-            이 브라우저에서는 서버 저장을 할 수 없습니다. 쿠키가 차단됐거나 세션이 없습니다. 복구 코드
-            없이 브라우저 데이터를 지우면 되돌릴 수 없습니다.
+            이 브라우저에서는 서버 저장을 할 수 없습니다. 쿠키가 차단됐거나 세션이 없습니다. 복구
+            코드 없이 브라우저 데이터를 지우면 되돌릴 수 없습니다.
           </p>
-          <Button variant="secondary" onClick={() => void handleReconnect()} disabled={reconnecting}>
+          <Button
+            variant="secondary"
+            onClick={() => void handleReconnect()}
+            disabled={reconnecting}
+          >
             다시 연결
           </Button>
         </div>
@@ -178,7 +198,8 @@ function SyncStatusRow() {
 
       {summary.kind === 'FAILED' ? (
         <p className="font-os text-os-danger" style={CAPTION_STYLE}>
-          {FAILED_CODE_MESSAGE[summary.error.code] ?? `서버가 저장을 거부했습니다(${summary.error.code})`}
+          {FAILED_CODE_MESSAGE[summary.error.code] ??
+            `서버가 저장을 거부했습니다(${summary.error.code})`}
         </p>
       ) : null}
     </Card>
@@ -346,7 +367,9 @@ function RecoveryCodeRow() {
         </DialogContent>
       </Dialog>
 
-      {copied ? <Toast variant="success" message="복사했습니다" onDismiss={() => setCopied(false)} /> : null}
+      {copied ? (
+        <Toast variant="success" message="복사했습니다" onDismiss={() => setCopied(false)} />
+      ) : null}
     </Card>
   );
 }
@@ -359,7 +382,9 @@ function ProfileRecoverRow() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
-  const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(null);
+  const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(
+    null,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const conflictCancelRef = useRef<HTMLButtonElement>(null);
 
@@ -368,12 +393,16 @@ function ProfileRecoverRow() {
     setError(null);
     try {
       const result = await recoverProfile(
-        mergeChoice !== undefined ? { code: normalizedCode, mergeChoice } : { code: normalizedCode },
+        mergeChoice !== undefined
+          ? { code: normalizedCode, mergeChoice }
+          : { code: normalizedCode },
       );
       if (result.ok) {
         setConflict(null);
         const engine = await getAppEngine();
-        await engine.store.transaction('readwrite', (tx) => tx.kv.put(PROFILE_ID_KV_KEY, result.data.profileId));
+        await engine.store.transaction('readwrite', (tx) =>
+          tx.kv.put(PROFILE_ID_KV_KEY, result.data.profileId),
+        );
         const reconciled = await reconcileAfterRecovery(mergeChoice ?? 'NONE', queryClient);
         // reconcileAfterRecovery도 실패 경로에서 invalidateQueries를 부르지만, 이 시점엔 세션이 이미
         // 새 프로필로 바뀌어 있으니 ['profile']만은 결과와 무관하게 한 번 더 확실히 갱신해 둔다.
@@ -382,13 +411,17 @@ function ProfileRecoverRow() {
         setCode('');
         setToast(
           reconciled.ok
-            ? { variant: 'success', message: `프로필을 복구했습니다. 커리어 ${result.data.careerCount}개` }
+            ? {
+                variant: 'success',
+                message: `프로필을 복구했습니다. 커리어 ${result.data.careerCount}개`,
+              }
             : {
                 // packages/ui의 Toast는 success·error 2종뿐이라(warning 없음, packages/ui는 수정 범위
                 // 밖) error 변형을 대신 쓴다 — 계정 전환 자체는 됐지만 커리어 목록을 마저 못 받아온
                 // 상태임을 알린다.
                 variant: 'error',
-                message: '프로필은 복구했지만 커리어 목록을 불러오지 못했습니다. 설정의 다시 연결로 다시 시도하세요.',
+                message:
+                  '프로필은 복구했지만 커리어 목록을 불러오지 못했습니다. 설정의 다시 연결로 다시 시도하세요.',
               },
         );
         return;
@@ -431,7 +464,11 @@ function ProfileRecoverRow() {
     <Card className="flex flex-col gap-os-3">
       <span className="font-os text-os-text">프로필 복구</span>
       <form onSubmit={handleSubmit} className="flex flex-col gap-os-2">
-        <label htmlFor="recover-code-input" className="font-os text-os-text-2" style={CAPTION_STYLE}>
+        <label
+          htmlFor="recover-code-input"
+          className="font-os text-os-text-2"
+          style={CAPTION_STYLE}
+        >
           다른 기기에서 발급받은 복구 코드
         </label>
         <input
@@ -498,7 +535,8 @@ function ProfileRecoverRow() {
                 onClick={() => void attemptRecover(conflict.code, 'KEEP_LINKED_ONLY')}
                 disabled={busy}
               >
-                복구할 프로필(커리어 {conflict.targetCareerCount}개)만 사용하고 이 기기의 커리어는 지우기
+                복구할 프로필(커리어 {conflict.targetCareerCount}개)만 사용하고 이 기기의 커리어는
+                지우기
               </Button>
               <button
                 ref={conflictCancelRef}
@@ -543,7 +581,9 @@ function GoogleRow() {
   const [mergeDismissed, setMergeDismissed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(null);
+  const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(
+    null,
+  );
   const unlinkCancelRef = useRef<HTMLButtonElement>(null);
   const mergeCancelRef = useRef<HTMLButtonElement>(null);
 
@@ -580,7 +620,8 @@ function GoogleRow() {
             ? { variant: 'success', message: 'Google에 연결된 프로필로 바꿨습니다' }
             : {
                 variant: 'error',
-                message: '프로필은 바꿨지만 커리어 목록을 불러오지 못했습니다. 설정의 다시 연결로 다시 시도하세요.',
+                message:
+                  '프로필은 바꿨지만 커리어 목록을 불러오지 못했습니다. 설정의 다시 연결로 다시 시도하세요.',
               },
         );
       })();
@@ -627,16 +668,22 @@ function GoogleRow() {
       const result = await submitGoogleMerge(choice);
       if (result.ok) {
         const engine = await getAppEngine();
-        await engine.store.transaction('readwrite', (tx) => tx.kv.put(PROFILE_ID_KV_KEY, result.data.profileId));
+        await engine.store.transaction('readwrite', (tx) =>
+          tx.kv.put(PROFILE_ID_KV_KEY, result.data.profileId),
+        );
         const reconciled = await reconcileAfterRecovery(choice, queryClient);
         await queryClient.invalidateQueries({ queryKey: ['profile'] });
         platform.analytics.track('google_merge_resolved', { mergeChoice: choice });
         setToast(
           reconciled.ok
-            ? { variant: 'success', message: `Google 프로필과 합쳤습니다. 커리어 ${result.data.careerCount}개` }
+            ? {
+                variant: 'success',
+                message: `Google 프로필과 합쳤습니다. 커리어 ${result.data.careerCount}개`,
+              }
             : {
                 variant: 'error',
-                message: '연결은 됐지만 커리어 목록을 불러오지 못했습니다. 설정의 다시 연결로 다시 시도하세요.',
+                message:
+                  '연결은 됐지만 커리어 목록을 불러오지 못했습니다. 설정의 다시 연결로 다시 시도하세요.',
               },
         );
         return;
@@ -725,7 +772,12 @@ function GoogleRow() {
                   >
                     취소
                   </button>
-                  <Button variant="secondary" style={DANGER_STYLE} onClick={() => void handleUnlink()} disabled={busy}>
+                  <Button
+                    variant="secondary"
+                    style={DANGER_STYLE}
+                    onClick={() => void handleUnlink()}
+                    disabled={busy}
+                  >
                     연결 해제
                   </Button>
                 </div>
@@ -771,7 +823,11 @@ function GoogleRow() {
                   {error}
                 </p>
               ) : null}
-              <Button variant="secondary" onClick={() => void handleMergeChoice('MOVE_TO_LINKED')} disabled={busy}>
+              <Button
+                variant="secondary"
+                onClick={() => void handleMergeChoice('MOVE_TO_LINKED')}
+                disabled={busy}
+              >
                 이 기기의 커리어 {localCareerCount}개를 Google 프로필로 옮기기
               </Button>
               <Button
@@ -780,7 +836,8 @@ function GoogleRow() {
                 onClick={() => void handleMergeChoice('KEEP_LINKED_ONLY')}
                 disabled={busy}
               >
-                Google 프로필(커리어 {pendingMerge.targetCareerCount}개)만 사용하고 이 기기의 커리어는 지우기
+                Google 프로필(커리어 {pendingMerge.targetCareerCount}개)만 사용하고 이 기기의
+                커리어는 지우기
               </Button>
               <button
                 ref={mergeCancelRef}
@@ -883,7 +940,12 @@ function LogoutRow() {
                 >
                   취소
                 </button>
-                <Button variant="secondary" style={DANGER_STYLE} onClick={() => void handleConfirm()} disabled={busy}>
+                <Button
+                  variant="secondary"
+                  style={DANGER_STYLE}
+                  onClick={() => void handleConfirm()}
+                  disabled={busy}
+                >
                   로그아웃
                 </Button>
               </div>
@@ -892,9 +954,12 @@ function LogoutRow() {
         </Dialog>
       </div>
       <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-        Google을 연결한 프로필에서만 쓸 수 있습니다. 지금 로그아웃하면 이 프로필을 되찾을 수 없습니다.
+        Google을 연결한 프로필에서만 쓸 수 있습니다. 지금 로그아웃하면 이 프로필을 되찾을 수
+        없습니다.
       </p>
-      {toast !== null ? <Toast variant="success" message={toast} onDismiss={() => setToast(null)} /> : null}
+      {toast !== null ? (
+        <Toast variant="success" message={toast} onDismiss={() => setToast(null)} />
+      ) : null}
     </Card>
   );
 }
@@ -954,7 +1019,9 @@ function DeleteProfileRow() {
       setConfirmToken(null);
       setExpiresAt(null);
       setError(
-        result.error.code === 'VALIDATION_FAILED' ? '확인 시간이 지났습니다. 다시 시작해 주세요.' : result.error.message,
+        result.error.code === 'VALIDATION_FAILED'
+          ? '확인 시간이 지났습니다. 다시 시작해 주세요.'
+          : result.error.message,
       );
     } finally {
       setBusy(false);
@@ -972,7 +1039,12 @@ function DeleteProfileRow() {
     <Card className="flex flex-col gap-os-2">
       <div className="flex items-center justify-between gap-os-3">
         <span className="font-os text-os-text">프로필 삭제</span>
-        <Button variant="secondary" style={DANGER_STYLE} onClick={() => void handleStart()} disabled={busy}>
+        <Button
+          variant="secondary"
+          style={DANGER_STYLE}
+          onClick={() => void handleStart()}
+          disabled={busy}
+        >
           삭제
         </Button>
       </div>
@@ -1011,7 +1083,8 @@ function DeleteProfileRow() {
             </p>
             {expiresAt !== null ? (
               <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                이 확인은 <time dateTime={expiresAt}>{formatLocalDateTime(expiresAt)}</time>까지 유효합니다.
+                이 확인은 <time dateTime={expiresAt}>{formatLocalDateTime(expiresAt)}</time>까지
+                유효합니다.
               </p>
             ) : null}
             <div className="flex gap-os-3">
@@ -1025,7 +1098,12 @@ function DeleteProfileRow() {
               >
                 취소
               </button>
-              <Button variant="secondary" style={DANGER_STYLE} onClick={() => void handleConfirm()} disabled={busy}>
+              <Button
+                variant="secondary"
+                style={DANGER_STYLE}
+                onClick={() => void handleConfirm()}
+                disabled={busy}
+              >
                 삭제
               </Button>
             </div>
@@ -1044,7 +1122,9 @@ function DeleteDeviceDataRow() {
   const [error, setError] = useState<string | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
-  const unsentCount = (careerQuery.data ?? []).filter((career) => career.record.revision > career.record.lastSyncedRevision).length;
+  const unsentCount = (careerQuery.data ?? []).filter(
+    (career) => career.record.revision > career.record.lastSyncedRevision,
+  ).length;
   const noRecoveryCode = (profileQuery.data?.recoveryCodeIssuedAt ?? null) === null;
 
   async function handleConfirm() {
@@ -1053,7 +1133,11 @@ function DeleteDeviceDataRow() {
     try {
       await clearThisDeviceAndGoToOnboarding();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : '데이터를 지우지 못했습니다. 다시 시도해 주세요.');
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : '데이터를 지우지 못했습니다. 다시 시도해 주세요.',
+      );
       setBusy(false);
     }
   }
@@ -1097,7 +1181,8 @@ function DeleteDeviceDataRow() {
             </p>
             {unsentCount > 0 ? (
               <p className="font-os text-os-danger" style={CAPTION_STYLE}>
-                아직 서버에 저장하지 못한 커리어가 {unsentCount}개 있습니다. 지우면 그 진행은 사라집니다.
+                아직 서버에 저장하지 못한 커리어가 {unsentCount}개 있습니다. 지우면 그 진행은
+                사라집니다.
               </p>
             ) : null}
             {noRecoveryCode ? (
@@ -1121,7 +1206,12 @@ function DeleteDeviceDataRow() {
               >
                 취소
               </button>
-              <Button variant="secondary" style={DANGER_STYLE} onClick={() => void handleConfirm()} disabled={busy}>
+              <Button
+                variant="secondary"
+                style={DANGER_STYLE}
+                onClick={() => void handleConfirm()}
+                disabled={busy}
+              >
                 삭제
               </Button>
             </div>
@@ -1147,16 +1237,23 @@ function SettingsScreen() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-os-6">
-      <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-        설정
-      </h1>
+    <div className="os-screen os-settings">
+      <ScreenIntro
+        eyebrow="MY GAME"
+        title="설정"
+        description="나에게 편한 플레이 환경과 저장 상태를 확인해요."
+      />
 
       <section className="flex flex-col gap-os-3">
         <h2 id="settings-theme" className="font-os font-semibold text-os-text" style={H2_STYLE}>
           테마
         </h2>
-        <RadioGroup aria-labelledby="settings-theme" value={theme} onValueChange={(value) => setTheme(value as ThemePreference)}>
+        <RadioGroup
+          className="os-segmented"
+          aria-labelledby="settings-theme"
+          value={theme}
+          onValueChange={(value) => setTheme(value as ThemePreference)}
+        >
           {THEME_OPTIONS.map((option) => (
             <RadioGroupItem key={option.value} value={option.value}>
               {option.label}
@@ -1166,10 +1263,15 @@ function SettingsScreen() {
       </section>
 
       <section className="flex flex-col gap-os-3">
-        <h2 id="settings-reduced-motion" className="font-os font-semibold text-os-text" style={H2_STYLE}>
+        <h2
+          id="settings-reduced-motion"
+          className="font-os font-semibold text-os-text"
+          style={H2_STYLE}
+        >
           모션 감소
         </h2>
         <RadioGroup
+          className="os-segmented"
           aria-labelledby="settings-reduced-motion"
           value={reducedMotion}
           onValueChange={(value) => setReducedMotion(value as ReducedMotionPreference)}
@@ -1183,10 +1285,15 @@ function SettingsScreen() {
       </section>
 
       <section className="flex flex-col gap-os-3">
-        <h2 id="settings-text-scale" className="font-os font-semibold text-os-text" style={H2_STYLE}>
+        <h2
+          id="settings-text-scale"
+          className="font-os font-semibold text-os-text"
+          style={H2_STYLE}
+        >
           텍스트 크기
         </h2>
         <RadioGroup
+          className="os-segmented"
           aria-labelledby="settings-text-scale"
           value={String(textScale)}
           onValueChange={(value) => setTextScale(Number(value) as TextScale)}
@@ -1200,10 +1307,15 @@ function SettingsScreen() {
       </section>
 
       <section className="flex flex-col gap-os-3">
-        <h2 id="settings-simulation-mode" className="font-os font-semibold text-os-text" style={H2_STYLE}>
+        <h2
+          id="settings-simulation-mode"
+          className="font-os font-semibold text-os-text"
+          style={H2_STYLE}
+        >
           시뮬레이션 기본 모드
         </h2>
         <RadioGroup
+          className="os-segmented os-segmented-two"
           aria-labelledby="settings-simulation-mode"
           value={defaultSimulationMode}
           onValueChange={(value) => setDefaultSimulationMode(value as SimulationMode)}
@@ -1229,7 +1341,11 @@ function SettingsScreen() {
         <h2 id="settings-version" className="font-os font-semibold text-os-text" style={H2_STYLE}>
           버전
         </h2>
-        <dl className="os-num flex flex-col gap-os-1 font-os text-os-text-2" style={CAPTION_STYLE} aria-labelledby="settings-version">
+        <dl
+          className="os-num flex flex-col gap-os-1 font-os text-os-text-2"
+          style={CAPTION_STYLE}
+          aria-labelledby="settings-version"
+        >
           <div className="flex justify-between gap-os-2">
             <dt>룰셋</dt>
             <dd>{ACTIVE_RULESET_VERSION}</dd>

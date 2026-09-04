@@ -54,7 +54,7 @@ describe('ChoiceCard', () => {
     expect(other).toHaveAttribute('data-state', 'unchecked');
 
     const badge = within(selected).getByText('선택됨');
-    expect(badge.className).toContain('group-data-[state=checked]:inline-flex');
+    expect(badge.className).toContain('os-choice-selected');
   });
 
   it('moves focus between enabled cards with arrow keys and selects with Space', async () => {
@@ -66,8 +66,14 @@ describe('ChoiceCard', () => {
     expect(screen.getByRole('radio', { name: /입단 테스트/ })).toHaveFocus();
 
     await user.keyboard(' ');
-    expect(screen.getByRole('radio', { name: /입단 테스트/ })).toHaveAttribute('data-state', 'checked');
-    expect(screen.getByRole('radio', { name: /아카데미 잔류/ })).toHaveAttribute('data-state', 'unchecked');
+    expect(screen.getByRole('radio', { name: /입단 테스트/ })).toHaveAttribute(
+      'data-state',
+      'checked',
+    );
+    expect(screen.getByRole('radio', { name: /아카데미 잔류/ })).toHaveAttribute(
+      'data-state',
+      'unchecked',
+    );
   });
 
   it('cannot select a locked card and shows the lock reason', async () => {

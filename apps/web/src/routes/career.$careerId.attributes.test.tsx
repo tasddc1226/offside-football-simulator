@@ -1,6 +1,6 @@
 // SCR-033 능력치 상세 인수 조건: "표시된 능력 × 가중치 = Base OVR"이 실제로 같아야 하고, 진짜
 // 잠재력(truePotential)은 어디에도 노출되지 않아야 한다(단위 테스트).
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
 import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
@@ -41,7 +41,10 @@ function setTestEngine(): AppEngine {
 
 function renderAt(path: string) {
   cleanup();
-  const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: [path] }) });
+  const router = createRouter({
+    routeTree,
+    history: createMemoryHistory({ initialEntries: [path] }),
+  });
   render(<RouterProvider router={router} />);
   return router;
 }
@@ -51,8 +54,17 @@ async function confirmedCareerId(engine: AppEngine): Promise<string> {
   const created = await createCareer(engine, { simulationMode: 'FAST' });
   if (!created.ok) throw new Error('createCareer 실패');
   const careerId = created.snapshot.careerId;
-  await updateDraft(engine, careerId, { name: '김서준', gender: 'UNSPECIFIED', nationalityCode: 'KR', preferredFoot: 'LEFT' });
-  const confirmed = await updateDraft(engine, careerId, { position: 'W', archetypeId: 'inside-forward', backgroundId: 'club-academy' });
+  await updateDraft(engine, careerId, {
+    name: '김서준',
+    gender: 'UNSPECIFIED',
+    nationalityCode: 'KR',
+    preferredFoot: 'LEFT',
+  });
+  const confirmed = await updateDraft(engine, careerId, {
+    position: 'W',
+    archetypeId: 'inside-forward',
+    backgroundId: 'club-academy',
+  });
   if (!confirmed.ok) throw new Error('updateDraft 실패');
   const result = await confirmPlayer(engine, careerId);
   if (!result.ok) throw new Error('confirmPlayer 실패');
@@ -62,14 +74,47 @@ async function confirmedCareerId(engine: AppEngine): Promise<string> {
 beforeEach(() => {
   setTestEngine();
   queryClient.clear();
-  useUiStore.setState({ theme: 'SYSTEM', reducedMotion: 'SYSTEM', textScale: 100, defaultSimulationMode: 'FAST', onboardingSeen: true });
+  useUiStore.setState({
+    theme: 'SYSTEM',
+    reducedMotion: 'SYSTEM',
+    textScale: 100,
+    defaultSimulationMode: 'FAST',
+    onboardingSeen: true,
+  });
 });
 
 afterEach(() => {
-  useUiStore.setState({ theme: 'SYSTEM', reducedMotion: 'SYSTEM', textScale: 100, defaultSimulationMode: 'FAST', onboardingSeen: false });
+  useUiStore.setState({
+    theme: 'SYSTEM',
+    reducedMotion: 'SYSTEM',
+    textScale: 100,
+    defaultSimulationMode: 'FAST',
+    onboardingSeen: false,
+  });
 });
 
 describe('SCR-033 능력치 상세', () => {
+  it('모바일 카드에서도 기술·신체·정신 능력과 시즌 변화 정보를 모두 유지한다', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine);
+
+    renderAt(`/career/${careerId}/attributes`);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '능력치 상세' }),
+    ).toBeInTheDocument();
+
+    for (const [name, count] of [
+      ['기술', 7],
+      ['신체', 7],
+      ['정신', 6],
+    ] as const) {
+      const group = screen.getByRole('region', { name });
+      expect(within(group).getAllByRole('term')).toHaveLength(count);
+      expect(within(group).getAllByText(/^시즌 변화 /)).toHaveLength(count);
+    }
+    expect(screen.getByRole('button', { name: '이전' })).toBeInTheDocument();
+  });
+
   it('"표시된 능력 × 가중치" 계산값이 헤더의 Base OVR과 같다(SCR-033 인수 조건)', async () => {
     const engine = setTestEngine();
     const careerId = await confirmedCareerId(engine);
@@ -103,7 +148,10 @@ describe('SCR-033 능력치 상세', () => {
     act(() => {
       queryClient.setQueryData(options.queryKey, {
         ...current,
-        state: { ...current.state, player: { ...current.state.player, profile: { ...profile, truePotential: 999999 } } },
+        state: {
+          ...current.state,
+          player: { ...current.state.player, profile: { ...profile, truePotential: 999999 } },
+        },
       });
     });
 

@@ -20,7 +20,10 @@ export const Route = createFileRoute('/career/$careerId/path')({
   component: PathScreen,
 });
 
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
 
 /** EVT-CON-002 전용 데이터: previewEffects는 A·B는 "성장→출전" 순서지만 C는 순서가 다르고
  * "성장 기대" 줄이 아예 없다(콘텐츠 확인 사항, PR 본문에 기록). 제안 범위는 previewEffects에
@@ -72,15 +75,25 @@ function renderAbove({ state, definition }: EventDecisionContext) {
     profile === null ? '—' : `${profile.scoutedPotentialMin}~${profile.scoutedPotentialMax}`;
 
   return (
-    <div className="flex flex-col gap-os-4">
-      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-        정찰 범위 {scoutRange}
-      </p>
-      <CompareCards
-        cards={definition.choices.map((choice) => ({ id: choice.id, title: choice.label }))}
-        rows={buildCompareRows(definition)}
-      />
-    </div>
+    <section className="os-panel flex flex-col gap-os-4" aria-label="진로 선택 참고">
+      <div className="flex items-center justify-between gap-os-3">
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          정찰 범위 {scoutRange}
+        </p>
+        <span className="os-eyebrow">스카우트 리포트</span>
+      </div>
+      <details>
+        <summary className="cursor-pointer font-os font-semibold text-os-text">
+          진로별 조건 비교
+        </summary>
+        <div className="mt-os-4">
+          <CompareCards
+            cards={definition.choices.map((choice) => ({ id: choice.id, title: choice.label }))}
+            rows={buildCompareRows(definition)}
+          />
+        </div>
+      </details>
+    </section>
   );
 }
 

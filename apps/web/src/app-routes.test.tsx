@@ -78,7 +78,10 @@ describe('SCR-001 허브 → SCR-034 온보딩 리다이렉트', () => {
       expect(router.state.location.pathname).toBe('/onboarding');
     });
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'OVR 하나가 아니라 여러 수치로 성장합니다' }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'OVR 하나가 아니라 여러 수치로 성장합니다',
+      }),
     ).toBeInTheDocument();
   });
 
@@ -86,7 +89,10 @@ describe('SCR-001 허브 → SCR-034 온보딩 리다이렉트', () => {
     useUiStore.setState({ onboardingSeen: true });
     const router = renderAt('/');
 
-    expect(await screen.findByRole('heading', { level: 1, name: '아직 만든 커리어가 없습니다' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('button', { name: '커리어 시작' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
   });
@@ -95,20 +101,30 @@ describe('SCR-001 허브 → SCR-034 온보딩 리다이렉트', () => {
 describe('SCR-034 온보딩', () => {
   it('"다음"으로 3장을 모두 이동하고 마지막 장에서 KICKOFF 버튼과 복구 코드 문구를 보여준다', async () => {
     renderAt('/onboarding');
-    await screen.findByRole('heading', { level: 1, name: 'OVR 하나가 아니라 여러 수치로 성장합니다' });
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'OVR 하나가 아니라 여러 수치로 성장합니다',
+    });
 
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
-    expect(await screen.findByRole('heading', { level: 1, name: '선택은 되돌릴 수 없습니다' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '선택은 되돌릴 수 없습니다' }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
-    expect(await screen.findByRole('heading', { level: 1, name: '복구 코드가 유일한 열쇠입니다' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '복구 코드가 유일한 열쇠입니다' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('커리어에는 VAR이 없다')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'KICKOFF' })).toBeInTheDocument();
   });
 
   it('"건너뛰기"는 onboardingSeen을 저장하고 허브로 이동한다', async () => {
     const router = renderAt('/onboarding');
-    await screen.findByRole('heading', { level: 1, name: 'OVR 하나가 아니라 여러 수치로 성장합니다' });
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'OVR 하나가 아니라 여러 수치로 성장합니다',
+    });
 
     fireEvent.click(screen.getByRole('button', { name: '건너뛰기' }));
 
@@ -120,7 +136,10 @@ describe('SCR-034 온보딩', () => {
 
   it('마지막 장의 KICKOFF는 커리어를 만들고 SCR-002 자리표시로 이동한다', async () => {
     const router = renderAt('/onboarding');
-    await screen.findByRole('heading', { level: 1, name: 'OVR 하나가 아니라 여러 수치로 성장합니다' });
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'OVR 하나가 아니라 여러 수치로 성장합니다',
+    });
 
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
@@ -130,7 +149,9 @@ describe('SCR-034 온보딩', () => {
       expect(router.state.location.pathname).toMatch(/^\/career\/.+\/create$/);
     });
     expect(useUiStore.getState().onboardingSeen).toBe(true);
-    expect(await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -173,7 +194,9 @@ describe('SCR-001 허브 - 카드', () => {
     await seedDraftCareer();
     const router = renderAt('/');
 
-    expect(await screen.findByRole('heading', { level: 2, name: '이름 없는 선수' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '이름 없는 선수' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('만드는 중')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '이어하기' }));
@@ -190,17 +213,25 @@ describe('SCR-001 허브 - 카드', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '삭제' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('이름 없는 선수의 커리어를 삭제하시겠습니까?')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('이름 없는 선수의 커리어를 삭제하시겠습니까?'),
+    ).toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole('button', { name: '다음' }));
-    expect(await within(dialog).findByText('되돌릴 수 없습니다. 정말 삭제할까요?')).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText('되돌릴 수 없습니다. 정말 삭제할까요?'),
+    ).toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole('button', { name: '삭제 확정' }));
 
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { level: 2, name: '이름 없는 선수' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', { level: 2, name: '이름 없는 선수' }),
+      ).not.toBeInTheDocument();
     });
-    expect(await screen.findByRole('status')).toHaveTextContent('이름 없는 선수의 커리어를 삭제했습니다');
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '이름 없는 선수의 커리어를 삭제했습니다',
+    );
   });
 
   it('삭제된 커리어를 딥링크로 다시 열면 캐시된 화면 대신 not-found를 보여준다', async () => {
@@ -221,14 +252,20 @@ describe('SCR-001 허브 - 카드', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: '다음' }));
     fireEvent.click(within(dialog).getByRole('button', { name: '삭제 확정' }));
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { level: 2, name: '이름 없는 선수' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', { level: 2, name: '이름 없는 선수' }),
+      ).not.toBeInTheDocument();
     });
 
     // queryClient의 전역 retry:1이 실패한 fetch를 한 번 더 시도(기본 backoff 1s)한 뒤에야
     // reject하므로 기본 waitFor 타임아웃(1s)보다 넉넉하게 잡는다.
     renderAt(`/career/${careerId}/create`);
     expect(
-      await screen.findByRole('heading', { level: 1, name: '찾을 수 없는 화면입니다' }, { timeout: 3000 }),
+      await screen.findByRole(
+        'heading',
+        { level: 1, name: '찾을 수 없는 화면입니다' },
+        { timeout: 3000 },
+      ),
     ).toBeInTheDocument();
   });
 
@@ -252,7 +289,9 @@ describe('SCR-001 허브 - 카드', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: '다음' }));
     fireEvent.click(within(dialog).getByRole('button', { name: '삭제 확정' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('이름 없는 선수의 커리어를 삭제하지 못했습니다');
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '이름 없는 선수의 커리어를 삭제하지 못했습니다',
+    );
     expect(screen.getByRole('heading', { level: 2, name: '이름 없는 선수' })).toBeInTheDocument();
   });
 
@@ -311,7 +350,9 @@ describe('법적 문서 라우트', () => {
   it('/legal/privacy를 렌더한다', async () => {
     renderAt('/legal/privacy');
 
-    expect(await screen.findByRole('heading', { level: 1, name: '개인정보 처리방침' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '개인정보 처리방침' }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -319,7 +360,9 @@ describe('존재하지 않는 경로', () => {
   it('not-found 안내를 렌더하고 허브로 돌아가는 링크를 제공한다', async () => {
     renderAt('/no-such-route');
 
-    expect(await screen.findByRole('heading', { level: 1, name: '찾을 수 없는 화면입니다' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '찾을 수 없는 화면입니다' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '허브로 돌아가기' })).toBeInTheDocument();
   });
 });

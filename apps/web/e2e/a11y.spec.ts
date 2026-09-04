@@ -12,7 +12,11 @@ import {
   resolveRoleProposal,
 } from './helpers/player-creation.js';
 import { E2E_META, fulfillJson, triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
-import { advanceToChapter, planPreseasonChapterMode, seedDeterministicChapterRun } from './helpers/chapter.js';
+import {
+  advanceToChapter,
+  planPreseasonChapterMode,
+  seedDeterministicChapterRun,
+} from './helpers/chapter.js';
 
 const PROFILE_WITH_CODE = {
   id: 'prf_e2e',
@@ -29,7 +33,12 @@ const PROFILE_WITH_CODE = {
 
 const PROFILE_GOOGLE_LINKED = {
   id: 'prf_e2e_google',
-  settings: { reducedMotion: 'SYSTEM' as const, textScale: 100 as const, theme: 'SYSTEM' as const, defaultSimulationMode: 'FAST' as const },
+  settings: {
+    reducedMotion: 'SYSTEM' as const,
+    textScale: 100 as const,
+    theme: 'SYSTEM' as const,
+    defaultSimulationMode: 'FAST' as const,
+  },
   linked: { google: true, toss: false },
   recoveryCodeIssuedAt: null,
   createdAt: '2026-08-01T00:00:00Z',
@@ -79,7 +88,7 @@ test('빈 허브(첫 방문, 온보딩 건너뛴 뒤) 화면에 axe serious·cri
   await page.getByRole('button', { name: '건너뛰기' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(
-    page.getByRole('heading', { level: 1, name: '아직 만든 커리어가 없습니다' }),
+    page.getByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),
   ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, '/ (빈 허브)');
@@ -387,7 +396,7 @@ test('텍스트 크기 150% + 360px에서 가로 스크롤이 생기지 않는�
   await page.getByRole('button', { name: '건너뛰기' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(
-    page.getByRole('heading', { level: 1, name: '아직 만든 커리어가 없습니다' }),
+    page.getByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),
   ).toBeVisible();
 
   const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -504,11 +513,15 @@ test('결과 확정 시 aria-live 영역이 정확히 한 번 갱신된다(08 �
   const liveMutations = await page.evaluate(
     () => (window as unknown as { __liveMutations: number }).__liveMutations,
   );
-  console.log(`[a11y] 결과 확정 시 aria-live/status/alert 영역 갱신 횟수: ${liveMutations}건(기대: 1건)`);
+  console.log(
+    `[a11y] 결과 확정 시 aria-live/status/alert 영역 갱신 횟수: ${liveMutations}건(기대: 1건)`,
+  );
   expect(liveMutations).toBe(1);
 });
 
-test('T-1-013 설정: Google 연결 해제 확인 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
+test('T-1-013 설정: Google 연결 해제 확인 대화상자에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
   await page.route('**/v1/profile', async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();
@@ -524,7 +537,9 @@ test('T-1-013 설정: Google 연결 해제 확인 대화상자에 axe serious·c
   await expectNoSeriousOrCriticalViolations(page, 'T-1-013 설정: Google 연결 해제 확인');
 });
 
-test('T-1-013 설정: Google 병합 선택 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
+test('T-1-013 설정: Google 병합 선택 대화상자에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
   await page.route('**/v1/profile', async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();
@@ -533,7 +548,12 @@ test('T-1-013 설정: Google 병합 선택 대화상자에 axe serious·critical
     await fulfillJson(route, 200, {
       data: {
         id: 'prf_e2e_pending',
-        settings: { reducedMotion: 'SYSTEM', textScale: 100, theme: 'SYSTEM', defaultSimulationMode: 'FAST' },
+        settings: {
+          reducedMotion: 'SYSTEM',
+          textScale: 100,
+          theme: 'SYSTEM',
+          defaultSimulationMode: 'FAST',
+        },
         linked: { google: false, toss: false },
         recoveryCodeIssuedAt: null,
         createdAt: '2026-08-01T00:00:00Z',
@@ -545,12 +565,16 @@ test('T-1-013 설정: Google 병합 선택 대화상자에 axe serious·critical
   });
 
   await page.goto('/settings');
-  await expect(page.getByRole('heading', { level: 2, name: 'Google에 연결된 프로필이 있습니다' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Google에 연결된 프로필이 있습니다' }),
+  ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'T-1-013 설정: Google 병합 선택');
 });
 
-test('T-1-013 설정: 로그아웃 확인 대화상자에 axe serious·critical 위반이 없다', async ({ page }) => {
+test('T-1-013 설정: 로그아웃 확인 대화상자에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
   await page.route('**/v1/profile', async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();

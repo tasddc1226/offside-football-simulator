@@ -6,7 +6,16 @@ import { useNavigate } from '@tanstack/react-router';
 import type { CareerState } from '@offside/domain';
 import type { EventDefinition } from '@offside/content';
 import type { ExecuteSuccess } from '@offside/engine-client';
-import { Button, ChoiceCard, ErrorState, PlayerHeader, RadioGroup, Skeleton, StatusStrip } from '@offside/ui';
+import {
+  Button,
+  ChoiceCard,
+  ErrorState,
+  PlayerHeader,
+  RadioGroup,
+  ScreenIntro,
+  Skeleton,
+  StatusStrip,
+} from '@offside/ui';
 import { activeContentPack, activeRuleset } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
@@ -23,6 +32,12 @@ const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-bod
 
 export type EventScreenId = 'SCR-007' | 'SCR-008' | 'SCR-013';
 
+const EVENT_INTRO: Record<EventScreenId, { eyebrow: string; title: string }> = {
+  'SCR-007': { eyebrow: '다음 무대', title: '어떤 길을 걸어갈까요?' },
+  'SCR-008': { eyebrow: '기회를 잡을 시간', title: '입단 테스트' },
+  'SCR-013': { eyebrow: '나의 축구 인생', title: '커리어의 갈림길' },
+};
+
 export interface EventDecisionContext {
   state: CareerState;
   definition: EventDefinition;
@@ -38,7 +53,12 @@ export interface EventDecisionScreenProps {
   onResolved?: (result: ExecuteSuccess, navigateToResult: () => void) => void;
 }
 
-export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolved }: EventDecisionScreenProps) {
+export function EventDecisionScreen({
+  careerId,
+  screenId,
+  renderAbove,
+  onResolved,
+}: EventDecisionScreenProps) {
   const query = useCareer(careerId);
   const resolveMutation = useCareerMutation('resolveEvent');
   const navigate = useNavigate();
@@ -49,7 +69,10 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
   useCommittingExitGuard(resolveMutation.isPending);
 
   useEffect(() => {
-    platform.analytics.track('screen_viewed', { screenId, careerPhase: query.data?.state.seasonPhase ?? 'NONE' });
+    platform.analytics.track('screen_viewed', {
+      screenId,
+      careerPhase: query.data?.state.seasonPhase ?? 'NONE',
+    });
     // 마운트 시 1회만(로더가 이미 캐시를 채웠다).
   }, []);
 
@@ -64,7 +87,9 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
   if (query.isError) {
     return (
       <ErrorState
-        message={query.error instanceof Error ? query.error.message : '커리어를 불러오지 못했습니다'}
+        message={
+          query.error instanceof Error ? query.error.message : '커리어를 불러오지 못했습니다'
+        }
         onRetry={() => void query.refetch()}
       />
     );
@@ -86,7 +111,10 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
   const profile = state.player.profile;
   const positionField = profile
     ? positionHeaderField(profile.primaryPosition, profile.preferredPosition)
-    : { label: '포지션', value: state.player.draft.position ? POSITION_LABELS[state.player.draft.position] : '—' };
+    : {
+        label: '포지션',
+        value: state.player.draft.position ? POSITION_LABELS[state.player.draft.position] : '—',
+      };
 
   function handleSelect(choiceId: string) {
     setSelectedChoiceId(choiceId);
@@ -104,7 +132,11 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
     // 클로저까지 그 좁힘을 전파하지 않는다.
     const choice = definition!.choices.find((candidate) => candidate.id === selectedChoiceId);
     if (choice !== undefined) {
-      platform.analytics.track('choice_selected', { eventId: definition!.id, choiceId: choice.id, riskLabel: choice.riskLabel });
+      platform.analytics.track('choice_selected', {
+        eventId: definition!.id,
+        choiceId: choice.id,
+        riskLabel: choice.riskLabel,
+      });
     }
     try {
       const result = await resolveMutation.mutateAsync({ careerId, choiceId: selectedChoiceId });
@@ -132,51 +164,86 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
   }
 
   return (
-    <div className="flex flex-col gap-os-6">
-      <PlayerHeader
-        name={tokens.name}
-        team={tokens.team}
-        position={positionField}
-        archetype={{ label: '아키타입', value: archetypeName(activeRuleset, profile?.archetypeId ?? state.player.draft.archetypeId) }}
-        shirtNumber={{ label: '등번호', value: state.contract ? String(state.contract.shirtNumber) : '—' }}
-      />
-      <StatusStrip items={u18StatusStripItems(state)} />
+    <div className="os-screen">
+      <ScreenIntro {...EVENT_INTRO[screenId]} />
+
+      <section className="os-story-card" aria-label="현재 상황">
+        <p className="os-eyebrow">
+          {tokens.name} · {tokens.team}
+        </p>
+        <p className="font-os text-os-text" style={BODY_STYLE}>
+          {renderNarrative(eventSituation(definition), tokens)}
+        </p>
+      </section>
+
+      <details className="os-panel">
+        <summary className="cursor-pointer font-os font-semibold text-os-text">
+          선수 상태 보기
+        </summary>
+        <div className="mt-os-4 flex flex-col gap-os-3">
+          <PlayerHeader
+            name={tokens.name}
+            team={tokens.team}
+            position={positionField}
+            archetype={{
+              label: '아키타입',
+              value: archetypeName(
+                activeRuleset,
+                profile?.archetypeId ?? state.player.draft.archetypeId,
+              ),
+            }}
+            shirtNumber={{
+              label: '등번호',
+              value: state.contract ? String(state.contract.shirtNumber) : '—',
+            }}
+          />
+          <StatusStrip items={u18StatusStripItems(state)} />
+        </div>
+      </details>
 
       {renderAbove?.({ state, definition, tokens })}
 
-      <p className="font-os text-os-text" style={BODY_STYLE}>
-        {renderNarrative(eventSituation(definition), tokens)}
-      </p>
-
-      <RadioGroup
-        aria-label="선택지"
-        value={selectedChoiceId}
-        onValueChange={handleSelect}
-        className="flex flex-col gap-os-3"
-      >
-        {definition.choices.map((choice) => (
-          <ChoiceCard
-            key={choice.id}
-            value={choice.id}
-            label={choice.label}
-            riskLevel={choice.riskLabel}
-            riskLabel={RISK_LABEL_KO[choice.riskLabel]}
-            effects={choice.previewEffects.map((preview) => preview.label)}
-            selectedLabel="선택됨"
-            disabled={resolveMutation.isPending}
-          />
-        ))}
-      </RadioGroup>
+      <section className="flex flex-col gap-os-3" aria-labelledby="event-choice-heading">
+        <div className="flex items-center justify-between gap-os-3">
+          <h2 id="event-choice-heading" className="os-section-title">
+            어떻게 행동할까요?
+          </h2>
+          <span className="os-muted" style={{ fontSize: 'var(--os-fs-caption)' }}>
+            하나를 선택하세요
+          </span>
+        </div>
+        <RadioGroup
+          aria-label="선택지"
+          value={selectedChoiceId}
+          onValueChange={handleSelect}
+          className="flex flex-col gap-os-3"
+        >
+          {definition.choices.map((choice) => (
+            <ChoiceCard
+              key={choice.id}
+              value={choice.id}
+              label={choice.label}
+              riskLevel={choice.riskLabel}
+              riskLabel={RISK_LABEL_KO[choice.riskLabel]}
+              effects={choice.previewEffects.map((preview) => preview.label)}
+              selectedLabel="선택됨"
+              disabled={resolveMutation.isPending}
+            />
+          ))}
+        </RadioGroup>
+      </section>
 
       {errorMessage ? <ErrorState message={errorMessage} onRetry={handleConfirm} /> : null}
 
-      <Button
-        variant="primary"
-        onClick={handleConfirm}
-        disabled={selectedChoiceId === null || resolveMutation.isPending}
-      >
-        확정
-      </Button>
+      <div className="os-action-dock">
+        <Button
+          variant="primary"
+          onClick={handleConfirm}
+          disabled={selectedChoiceId === null || resolveMutation.isPending}
+        >
+          확정
+        </Button>
+      </div>
     </div>
   );
 }

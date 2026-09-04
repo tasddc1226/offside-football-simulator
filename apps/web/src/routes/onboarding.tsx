@@ -1,7 +1,7 @@
 // SCR-034 온보딩. 3장 이내, 대표 문장 하나와 두 문장 이내 설명. 건너뛰기·KICKOFF 모두
 // onboardingSeen = true를 저장한다. 이 라우트는 언제든 열린다(설정의 "온보딩 다시 보기").
 import { useEffect, useRef, useState } from 'react';
-import { Button, Stepper, Toast } from '@offside/ui';
+import { Button, ScreenIntro, Stepper, Toast } from '@offside/ui';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { markOnboardingPending } from '../engine/funnel.js';
 import { useServiceSeason } from '../engine/service-season.js';
@@ -35,11 +35,15 @@ const SLIDES: Slide[] = [
   },
 ];
 
-const STEPPER_STEPS = SLIDES.map((slide, index) => ({ id: slide.id, label: `${index + 1}/${SLIDES.length}` }));
+const STEPPER_STEPS = SLIDES.map((slide, index) => ({
+  id: slide.id,
+  label: `${index + 1}/${SLIDES.length}`,
+}));
 
-const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
-const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
 
 function OnboardingScreen() {
   const [stepIndex, setStepIndex] = useState(0);
@@ -73,7 +77,10 @@ function OnboardingScreen() {
     try {
       const result = await createMutation.mutateAsync({ simulationMode: defaultSimulationMode });
       if (result.ok) {
-        void navigate({ to: '/career/$careerId/create', params: { careerId: result.snapshot.careerId } });
+        void navigate({
+          to: '/career/$careerId/create',
+          params: { careerId: result.snapshot.careerId },
+        });
       } else {
         setToast('커리어를 시작하지 못했습니다. 다시 시도해 주세요.');
       }
@@ -87,59 +94,93 @@ function OnboardingScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-os-6">
+    <div className="os-screen">
       <Stepper steps={STEPPER_STEPS} currentStepId={slide.id} />
 
-      <div className="flex flex-col gap-os-3">
-        <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-          {slide.headline}
-        </h1>
-        <p className="font-os text-os-text-2" style={BODY_STYLE}>
-          {slide.body}
-        </p>
+      <ScreenIntro
+        eyebrow={`OFFSIDE · 플레이 가이드 ${stepIndex + 1}`}
+        title={slide.headline}
+        description={slide.body}
+      />
+
+      <div className="os-panel flex flex-col gap-os-4">
+        <p className="os-eyebrow">시작하기 전에</p>
+        <ol className="flex flex-col gap-os-4" aria-label="오프사이드 플레이 원칙">
+          {[
+            { title: '나만의 선수', detail: '이름과 선호 포지션을 정하고 출발해요.' },
+            { title: '선택으로 쌓는 커리어', detail: '매 순간의 결정이 다음 기회를 바꿔요.' },
+            { title: '이어지는 축구 인생', detail: '플레이 기록을 저장하고 다시 이어가요.' },
+          ].map((item, index) => (
+            <li key={item.title} className="flex items-start gap-os-3">
+              <span
+                aria-hidden="true"
+                className="os-num rounded-os-m bg-os-surface-2 px-os-3 py-os-2 font-semibold text-os-accent"
+              >
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <div className="min-w-0">
+                <p className="font-os font-semibold text-os-text">{item.title}</p>
+                <p className="os-muted" style={CAPTION_STYLE}>
+                  {item.detail}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
         {slide.note ? (
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          <p
+            className="border-t border-os-border pt-os-4 font-os font-semibold text-os-text"
+            style={CAPTION_STYLE}
+          >
             {slide.note}
           </p>
         ) : null}
         {stepIndex === 0 && serviceSeason.data?.notice === 'LINE_TEST' ? (
-          <p data-testid="onboarding-service-season-notice" className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          <p
+            data-testid="onboarding-service-season-notice"
+            className="font-os text-os-text-2"
+            style={CAPTION_STYLE}
+          >
             {SERVICE_SEASON_NOTICE_KO.LINE_TEST}
           </p>
         ) : null}
       </div>
 
-      <div className="flex justify-between gap-os-3">
+      <div className="os-action-dock os-action-row">
         <Button variant="ghost" onClick={handleSkip}>
           건너뛰기
         </Button>
         {isLast ? (
-          <div className="flex flex-col items-end gap-os-1">
-            {/* DSN-BRD-001: 브랜드 어휘(KICKOFF)는 display 토큰으로만 표기하고 바로 아래 caption을 둔다. */}
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-os-2">
+            {/* 짧은 킥오프 버튼에도 동작을 설명하는 caption을 함께 제공한다. */}
             <Button
               variant="primary"
               onClick={handleKickoff}
               disabled={createMutation.isPending}
-              className="os-num font-bold uppercase"
+              className="os-num w-full font-bold uppercase"
               style={{
-                fontSize: 'var(--os-fs-display)',
-                lineHeight: 'var(--os-lh-display)',
+                fontSize: 'var(--os-fs-h2)',
+                lineHeight: 'var(--os-lh-h2)',
                 letterSpacing: 'var(--os-tracking-display)',
               }}
             >
               KICKOFF
             </Button>
-            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            <p className="text-center font-os text-os-text-2" style={CAPTION_STYLE}>
               첫 커리어를 시작할 준비가 됐습니다
             </p>
           </div>
         ) : (
-          <Button variant="primary" onClick={() => setStepIndex((index) => index + 1)}>
+          <Button
+            variant="primary"
+            className="flex-1"
+            onClick={() => setStepIndex((index) => index + 1)}
+          >
             다음
           </Button>
         )}
       </div>
-      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+      <p className="text-center font-os text-os-text-2" style={CAPTION_STYLE}>
         건너뛰어도 각 수치는 처음 열리는 순간 한 줄 설명을 보여줍니다.
       </p>
 

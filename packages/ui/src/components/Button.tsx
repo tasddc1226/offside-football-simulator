@@ -13,7 +13,7 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
 };
 
 const BASE_CLASS =
-  'inline-flex items-center justify-center gap-os-2 rounded-os-m px-os-4 font-os font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-os-focus';
+  'os-button inline-flex items-center justify-center gap-os-2 rounded-os-m px-os-4 py-os-2 font-os font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-os-focus';
 
 export const buttonStyle: CSSProperties = {
   fontSize: 'var(--os-fs-body)',
@@ -30,7 +30,13 @@ export function buttonClassName(variant: ButtonVariant = 'primary', className?: 
   return [BASE_CLASS, VARIANT_CLASS[variant], className].filter(Boolean).join(' ');
 }
 
-export function Button({ variant = 'primary', className, style, type = 'button', ...props }: ButtonProps) {
+export function Button({
+  variant = 'primary',
+  className,
+  style,
+  type = 'button',
+  ...props
+}: ButtonProps) {
   return (
     <button
       type={type}

@@ -2,7 +2,17 @@
 // pending 계산)를 순서대로 실행한다. 확정 직후 DSN-LINE-001의 세 허용 순간 중 하나(오프사이드 라인 +
 // KICKOFF)를 보여준다. 복구 코드 단계는 같은 라우트의 ?step=recovery로 남아 새로고침해도 유지된다.
 import { useEffect, useState } from 'react';
-import { Button, DisplayWord, ErrorState, OffsideLine, PlayerHeader, Skeleton, Toast } from '@offside/ui';
+import {
+  Button,
+  DisplayWord,
+  ErrorState,
+  OffsideLine,
+  PlayerHeader,
+  ScreenIntro,
+  Skeleton,
+  Stepper,
+  Toast,
+} from '@offside/ui';
 import { RETRYABLE_BY_CODE } from '@offside/contracts';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { getProfile, issueRecoveryCode } from '../api/client.js';
@@ -12,7 +22,12 @@ import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { ACTIVE_CONTENT_PACK_VERSION } from '../engine/versions.js';
 import { platform } from '../platform/index.js';
 import { GENDER_LABELS, POSITION_LABELS, PREFERRED_FOOT_LABELS } from '../shared/labels.js';
-import { attributeLabelList, PLAYER_CREATION_CAREER_PHASE, topAttributeKeys } from '../shared/player-draft.js';
+import {
+  attributeLabelList,
+  PLAYER_CREATION_CAREER_PHASE,
+  PLAYER_CREATION_STEPS,
+  topAttributeKeys,
+} from '../shared/player-draft.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { useScreenState } from '../shared/screen-state.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
@@ -25,10 +40,13 @@ export const Route = createFileRoute('/career/$careerId/confirm')({
   component: ConfirmScreen,
 });
 
-const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
 
-type RecoveryPhase = { kind: 'CHECKING' } | { kind: 'ISSUED'; code: string } | { kind: 'UNAVAILABLE' };
+type RecoveryPhase =
+  { kind: 'CHECKING' } | { kind: 'ISSUED'; code: string } | { kind: 'UNAVAILABLE' };
 
 function ConfirmScreen() {
   const { careerId } = Route.useParams();
@@ -53,11 +71,20 @@ function ConfirmScreen() {
   useCommittingExitGuard(screenState.kind === 'COMMITTING');
 
   useEffect(() => {
-    platform.analytics.track('screen_viewed', { screenId: 'SCR-004', careerPhase: PLAYER_CREATION_CAREER_PHASE });
+    platform.analytics.track('screen_viewed', {
+      screenId: 'SCR-004',
+      careerPhase: PLAYER_CREATION_CAREER_PHASE,
+    });
   }, []);
 
   useEffect(() => {
-    if (blocked || showRecoveryStep || query.data === undefined || screenState.kind === 'COMMITTING') return;
+    if (
+      blocked ||
+      showRecoveryStep ||
+      query.data === undefined ||
+      screenState.kind === 'COMMITTING'
+    )
+      return;
     toDraft({});
   }, [blocked, showRecoveryStep, query.data, screenState.kind, toDraft]);
 
@@ -149,7 +176,11 @@ function ConfirmScreen() {
         replace: true,
       });
     } catch {
-      toError({ code: 'UNKNOWN', message: '확정하지 못했습니다. 다시 시도해 주세요.', retryable: true });
+      toError({
+        code: 'UNKNOWN',
+        message: '확정하지 못했습니다. 다시 시도해 주세요.',
+        retryable: true,
+      });
       setPostConfirmInFlight(false);
     }
   }
@@ -165,48 +196,61 @@ function ConfirmScreen() {
 
   if (showRecoveryStep) {
     return (
-      <div className="flex flex-col items-center gap-os-6 text-center">
-        <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-          복구 코드를 저장하세요
-        </h1>
+      <div className="os-screen">
+        <ScreenIntro
+          eyebrow="커리어를 안전하게"
+          title="복구 코드를 저장하세요"
+          description="기기가 바뀌어도 나의 선수와 다시 만날 수 있도록, 코드를 안전한 곳에 보관해 주세요."
+        />
 
-        {recoveryPhase.kind === 'CHECKING' ? (
-          <Skeleton className="h-os-8 w-full" />
-        ) : recoveryPhase.kind === 'ISSUED' ? (
-          <>
-            <p className="font-mono font-bold text-os-text" style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)', letterSpacing: '0.05em' }}>
-              {recoveryPhase.code}
-            </p>
-            <Button variant="secondary" onClick={() => void handleCopyCode(recoveryPhase.code)}>
-              코드 복사
-            </Button>
-            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-              이 코드가 없으면 다른 기기에서 복구할 수 없습니다.
-            </p>
-            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-              설정에서 다시 발급할 수 있습니다.
-            </p>
-            <div className="flex gap-os-3">
+        <div className="os-panel flex flex-col items-center gap-os-4 text-center">
+          {recoveryPhase.kind === 'CHECKING' ? (
+            <Skeleton className="h-os-8 w-full" />
+          ) : recoveryPhase.kind === 'ISSUED' ? (
+            <>
+              <p
+                className="w-full break-all rounded-os-m bg-os-surface-2 p-os-4 font-mono font-bold text-os-text"
+                style={{
+                  fontSize: 'var(--os-fs-h2)',
+                  lineHeight: 'var(--os-lh-h2)',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {recoveryPhase.code}
+              </p>
+              <Button variant="secondary" onClick={() => void handleCopyCode(recoveryPhase.code)}>
+                코드 복사
+              </Button>
+              <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                이 코드가 없으면 다른 기기에서 복구할 수 없습니다.
+              </p>
+              <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                설정에서 다시 발급할 수 있습니다.
+              </p>
+              <div className="flex w-full gap-os-3">
+                <Button variant="primary" onClick={handleContinueToNext}>
+                  저장했어요
+                </Button>
+                <Button variant="ghost" onClick={handleContinueToNext}>
+                  건너뛰기
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.
+              </p>
               <Button variant="primary" onClick={handleContinueToNext}>
-                저장했어요
+                계속
               </Button>
-              <Button variant="ghost" onClick={handleContinueToNext}>
-                건너뛰기
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-              지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.
-            </p>
-            <Button variant="primary" onClick={handleContinueToNext}>
-              계속
-            </Button>
-          </>
-        )}
+            </>
+          )}
+        </div>
 
-        {copyToast !== null ? <Toast variant="success" message={copyToast} onDismiss={() => setCopyToast(null)} /> : null}
+        {copyToast !== null ? (
+          <Toast variant="success" message={copyToast} onDismiss={() => setCopyToast(null)} />
+        ) : null}
       </div>
     );
   }
@@ -259,7 +303,9 @@ function ConfirmScreen() {
   const draft = state.player.draft;
   const archetype = ruleset.archetypes.find((candidate) => candidate.id === draft.archetypeId);
   const background = ruleset.backgrounds.find((candidate) => candidate.id === draft.backgroundId);
-  const startTeam = background ? ruleset.teams.find((team) => team.id === background.startTeamId) : undefined;
+  const startTeam = background
+    ? ruleset.teams.find((team) => team.id === background.startTeamId)
+    : undefined;
 
   if (
     draft.name === null ||
@@ -273,45 +319,68 @@ function ConfirmScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-os-6">
-      <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-        확정 전 정보를 확인하세요
-      </h1>
-
-      <PlayerHeader
-        name={draft.name}
-        team={startTeam?.name ?? background.startTeamId}
-        position={{ label: '선호 포지션', value: POSITION_LABELS[draft.position] }}
-        archetype={{ label: '아키타입', value: archetype.name }}
-        shirtNumber={{ label: '등번호', value: '-' }}
+    <div className="os-screen">
+      <Stepper steps={PLAYER_CREATION_STEPS} currentStepId="confirm" />
+      <ScreenIntro
+        eyebrow="준비 완료"
+        title="확정 전 정보를 확인하세요"
+        description="이 선수를 만나게 될 다음 무대. 킥오프를 누르면 첫 이야기가 시작됩니다."
       />
 
-      <dl className="flex flex-col gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
-        <div className="flex justify-between gap-os-2">
-          <dt>성별</dt>
-          <dd className="text-os-text">{GENDER_LABELS[draft.gender]}</dd>
-        </div>
-        <div className="flex justify-between gap-os-2">
-          <dt>주발</dt>
-          <dd className="text-os-text">{PREFERRED_FOOT_LABELS[draft.preferredFoot]}</dd>
-        </div>
-        <div className="flex justify-between gap-os-2">
-          <dt>배경</dt>
-          <dd className="text-os-text">{background.name}</dd>
-        </div>
-        <div className="flex justify-between gap-os-2">
-          <dt>예상 강점</dt>
-          <dd className="text-os-text">{attributeLabelList(topAttributeKeys(archetype, 3))}</dd>
-        </div>
-        <div className="flex justify-between gap-os-2">
-          <dt>룰셋 · 콘텐츠 팩</dt>
-          <dd className="os-num text-os-text">
-            {ruleset.version} / {ACTIVE_CONTENT_PACK_VERSION}
-          </dd>
-        </div>
-      </dl>
+      <div className="os-panel flex flex-col gap-os-4">
+        <PlayerHeader
+          name={draft.name}
+          team={startTeam?.name ?? background.startTeamId}
+          position={{ label: '선호 포지션', value: POSITION_LABELS[draft.position] }}
+          archetype={{ label: '아키타입', value: archetype.name }}
+          shirtNumber={{ label: '등번호', value: '-' }}
+        />
 
-      <div className="flex justify-between gap-os-3">
+        <dl
+          className="flex flex-col gap-os-4 border-t border-os-border pt-os-4 font-os text-os-text-2"
+          style={CAPTION_STYLE}
+        >
+          <div className="flex justify-between gap-os-4">
+            <dt>성별</dt>
+            <dd className="text-os-text">{GENDER_LABELS[draft.gender]}</dd>
+          </div>
+          <div className="flex justify-between gap-os-4">
+            <dt>국적</dt>
+            <dd className="text-os-text">
+              {ruleset.nationalities.find(
+                (nationality) => nationality.code === draft.nationalityCode,
+              )?.name ??
+                draft.nationalityCode ??
+                '—'}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-os-4">
+            <dt>주발</dt>
+            <dd className="text-os-text">{PREFERRED_FOOT_LABELS[draft.preferredFoot]}</dd>
+          </div>
+          <div className="flex justify-between gap-os-4">
+            <dt>배경</dt>
+            <dd className="text-os-text">{background.name}</dd>
+          </div>
+          <div className="flex justify-between gap-os-4">
+            <dt>예상 강점</dt>
+            <dd className="text-right text-os-text">
+              {attributeLabelList(topAttributeKeys(archetype, 3))}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-os-2">
+            <dt>룰셋 · 콘텐츠 팩</dt>
+            <dd className="os-num text-os-text">
+              {ruleset.version} / {ACTIVE_CONTENT_PACK_VERSION}
+            </dd>
+          </div>
+        </dl>
+      </div>
+      <p className="os-muted text-center" style={CAPTION_STYLE}>
+        시작한 뒤에는 선수 정보를 되돌릴 수 없습니다.
+      </p>
+
+      <div className="os-action-dock os-action-row">
         <Button
           variant="secondary"
           onClick={() => void navigate({ to: '/career/$careerId/create', params: { careerId } })}

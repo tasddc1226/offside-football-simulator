@@ -12,15 +12,34 @@ import {
   type PositionStats,
   type SelectionRanking,
 } from '@offside/domain';
-import { Button, ChoiceCard, ErrorState, PlayerHeader, RadioGroup, ResultCard, Skeleton, StatusStrip } from '@offside/ui';
+import {
+  Button,
+  ChoiceCard,
+  ErrorState,
+  PlayerHeader,
+  RadioGroup,
+  ResultCard,
+  ScreenIntro,
+  Skeleton,
+  StatusStrip,
+} from '@offside/ui';
 import type { ChapterDefinition } from '@offside/content';
 import { activeContentPack, activeRuleset } from '../engine/content.js';
 import { opponentDisplayName } from '../shared/competition-labels.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
-import { deriveChapterView, type ChapterView, type ResolvedChapterDecision } from '../shared/chapter-state.js';
-import { ChapterScoreboard, decisionMinute, decisionTimeLabel, scoreAtDecision } from '../shared/chapter-scoreboard.js';
+import {
+  deriveChapterView,
+  type ChapterView,
+  type ResolvedChapterDecision,
+} from '../shared/chapter-state.js';
+import {
+  ChapterScoreboard,
+  decisionMinute,
+  decisionTimeLabel,
+  scoreAtDecision,
+} from '../shared/chapter-scoreboard.js';
 import { formatEffectSummary } from '../shared/effect-summary.js';
 import { buildNarrativeTokens, renderNarrative } from '../shared/narrative.js';
 import {
@@ -67,8 +86,11 @@ export const Route = createFileRoute('/career/$careerId/chapter')({
 
 const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
-const NUM_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
+const NUM_STYLE = { fontSize: 'var(--os-fs-num-xl)', lineHeight: 'var(--os-lh-num-xl)' } as const;
 
 const APPEARANCE_CONTEXT_LABEL: Record<MatchAppearance, string> = {
   START: '선발 출전',
@@ -104,7 +126,9 @@ function formatStatValue(key: string, value: number | boolean): string {
   return String(value);
 }
 
-function positionStatEntries(stats: PositionStats): Array<{ key: string; label: string; value: string }> {
+function positionStatEntries(
+  stats: PositionStats,
+): Array<{ key: string; label: string; value: string }> {
   return Object.entries(stats)
     .filter(([key]) => key !== 'group')
     .map(([key, value]) => ({
@@ -132,7 +156,9 @@ function formatSignedTenths(tenths: number): string {
   return `${sign}${(tenths / 10).toFixed(1)}`;
 }
 
-function aggregateEffectDeltas(resolved: ResolvedChapterDecision[]): Array<{ target: string; delta: number }> {
+function aggregateEffectDeltas(
+  resolved: ResolvedChapterDecision[],
+): Array<{ target: string; delta: number }> {
   const totals = new Map<string, number>();
   for (const { outcome } of resolved) {
     for (const effect of outcome.effects) {
@@ -162,13 +188,23 @@ function DecisionInput({ decision, submitting, errorMessage, onConfirm }: Decisi
 
   return (
     <div className="flex flex-col gap-os-4">
-      <p className="font-os text-os-text" style={BODY_STYLE}>
-        {decision.prompt}
-      </p>
-      <RadioGroup aria-label="판단 선택지" value={selectedOptionId} onValueChange={setSelectedOptionId} className="flex flex-col gap-os-3">
+      <div className="os-story-card flex flex-col gap-os-3">
+        <p className="os-eyebrow">당신의 판단</p>
+        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          {decision.prompt}
+        </p>
+      </div>
+      <RadioGroup
+        aria-label="판단 선택지"
+        value={selectedOptionId}
+        onValueChange={setSelectedOptionId}
+        className="flex flex-col gap-os-3"
+      >
         {decision.options.map((option) => {
           const effects = [
-            ...(option.priorProbability !== null ? [`성공 확률 약 ${Math.round(option.priorProbability.successBp / 100)}%`] : []),
+            ...(option.priorProbability !== null
+              ? [`성공 확률 약 ${Math.round(option.priorProbability.successBp / 100)}%`]
+              : []),
             ...option.previewEffects.map((preview) => preview.label),
           ];
           return (
@@ -186,9 +222,15 @@ function DecisionInput({ decision, submitting, errorMessage, onConfirm }: Decisi
         })}
       </RadioGroup>
       {errorMessage ? <ErrorState message={errorMessage} onRetry={confirmSelected} /> : null}
-      <Button variant="primary" disabled={selectedOptionId === null || submitting} onClick={confirmSelected}>
-        확정
-      </Button>
+      <div className="os-action-dock">
+        <Button
+          variant="primary"
+          disabled={selectedOptionId === null || submitting}
+          onClick={confirmSelected}
+        >
+          확정
+        </Button>
+      </div>
     </div>
   );
 }
@@ -198,7 +240,10 @@ interface DecisionResultProps {
   tokens: ReturnType<typeof buildNarrativeTokens>;
 }
 
-function decisionResultCardProps(resolved: DecisionResultProps['resolved'], tokens: DecisionResultProps['tokens']) {
+function decisionResultCardProps(
+  resolved: DecisionResultProps['resolved'],
+  tokens: DecisionResultProps['tokens'],
+) {
   const { option, outcome } = resolved;
   return {
     kind: outcome.kind,
@@ -212,7 +257,11 @@ function decisionResultCardProps(resolved: DecisionResultProps['resolved'], toke
 
 /** 확정 직후(아직 "다음 판단"을 누르지 않은) 판단은 항상 펼쳐진 상태로, 그 이전 판단들은 접힌
  * 요약 한 줄 + 펼치기 토글로 보여준다(브리프 "재생"). */
-function CollapsibleDecisionResult({ index, resolved, tokens }: DecisionResultProps & { index: number }) {
+function CollapsibleDecisionResult({
+  index,
+  resolved,
+  tokens,
+}: DecisionResultProps & { index: number }) {
   const [expanded, setExpanded] = useState(false);
   const { option, outcome } = resolved;
 
@@ -221,14 +270,16 @@ function CollapsibleDecisionResult({ index, resolved, tokens }: DecisionResultPr
       <button
         type="button"
         onClick={() => setExpanded(true)}
-        className="flex w-full items-center justify-between gap-os-2 rounded-os-s border border-os-border bg-os-surface-2 px-os-3 py-os-2 text-left font-os text-os-text-2"
-        style={CAPTION_STYLE}
+        className="flex w-full items-center justify-between gap-os-2 rounded-os-m border border-os-border bg-os-surface-2 px-os-3 py-os-3 text-left font-os text-os-text-2"
+        style={{ ...CAPTION_STYLE, minHeight: 'var(--os-touch-min)' }}
         aria-expanded={false}
       >
         <span>
           {decisionTimeLabel(index + 1)} · {option.label} → {outcome.title}
         </span>
-        <span aria-hidden="true">펼치기</span>
+        <span className="shrink-0" aria-hidden="true">
+          펼치기 +
+        </span>
       </button>
     );
   }
@@ -240,7 +291,7 @@ function CollapsibleDecisionResult({ index, resolved, tokens }: DecisionResultPr
         type="button"
         onClick={() => setExpanded(false)}
         className="self-start font-os text-os-text-2 underline"
-        style={CAPTION_STYLE}
+        style={{ ...CAPTION_STYLE, minHeight: 'var(--os-touch-min)' }}
         aria-expanded={true}
       >
         접기 · {decisionTimeLabel(index + 1)}
@@ -268,7 +319,10 @@ function ChapterScreen() {
   useCommittingExitGuard(resolveMutation.isPending);
 
   useEffect(() => {
-    platform.analytics.track('screen_viewed', { screenId: 'SCR-031', careerPhase: query.data?.state.seasonPhase ?? 'NONE' });
+    platform.analytics.track('screen_viewed', {
+      screenId: 'SCR-031',
+      careerPhase: query.data?.state.seasonPhase ?? 'NONE',
+    });
     // 마운트 시 1회만(로더가 이미 캐시를 채웠다).
   }, []);
 
@@ -283,7 +337,9 @@ function ChapterScreen() {
   if (query.isError) {
     return (
       <ErrorState
-        message={query.error instanceof Error ? query.error.message : '커리어를 불러오지 못했습니다'}
+        message={
+          query.error instanceof Error ? query.error.message : '커리어를 불러오지 못했습니다'
+        }
         onRetry={() => void query.refetch()}
       />
     );
@@ -322,7 +378,11 @@ function ChapterScreen() {
         optionId,
         outcomeKind: outcome?.kind ?? '',
       });
-      setAnnouncement(outcome !== undefined ? `${OUTCOME_KIND_LABEL_KO[outcome.kind]}: ${outcome.title}` : '판단 결과가 확정되었습니다');
+      setAnnouncement(
+        outcome !== undefined
+          ? `${OUTCOME_KIND_LABEL_KO[outcome.kind]}: ${outcome.title}`
+          : '판단 결과가 확정되었습니다',
+      );
     } catch {
       setErrorMessage('판단을 확정하지 못했습니다. 다시 시도해 주세요.');
     } finally {
@@ -340,26 +400,34 @@ function ChapterScreen() {
   const positionField = positionHeaderField(profile.primaryPosition, profile.preferredPosition);
 
   return (
-    <div className="flex flex-col gap-os-6">
+    <div className="os-screen">
       <p className="sr-only" aria-live="polite" data-testid="chapter-announcement">
         {announcement}
       </p>
+
+      <ScreenIntro
+        eyebrow="MATCH DAY"
+        title={chapterTriggerLabel(view.definition.trigger)}
+        description="중요한 순간, 당신의 플레이를 선택해요."
+      />
 
       <PlayerHeader
         name={profile.name}
         team={currentTeamName(state, activeRuleset)}
         position={positionField}
         archetype={{ label: '아키타입', value: archetypeName(activeRuleset, profile.archetypeId) }}
-        shirtNumber={{ label: '등번호', value: state.contract ? String(state.contract.shirtNumber) : '—' }}
+        shirtNumber={{
+          label: '등번호',
+          value: state.contract ? String(state.contract.shirtNumber) : '—',
+        }}
       />
       <StatusStrip items={proStatusStripItems(state)} />
 
-      <section className="flex flex-col gap-os-2" aria-label="경기 맥락">
-        <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-          {chapterTriggerLabel(view.definition.trigger)}
-        </h1>
-        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-          {chapterCompetitionLabel(view.match)} · {view.match.home ? '홈' : '원정'} · {opponentDisplayName(view.match.opponent, activeRuleset)}
+      <section className="os-panel flex flex-col gap-os-2" aria-label="경기 맥락">
+        <p className="os-eyebrow">오늘의 경기</p>
+        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          {chapterCompetitionLabel(view.match)} · {view.match.home ? '홈' : '원정'} ·{' '}
+          {opponentDisplayName(view.match.opponent, activeRuleset)}
         </p>
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           {APPEARANCE_CONTEXT_LABEL[view.match.appearance]}
@@ -373,32 +441,43 @@ function ChapterScreen() {
       </section>
 
       {cursor < decisionsTotal ? (
-        <ChapterScoreboard
-          timeLabel={decisionTimeLabel(displayDecisionNumber)}
-          score={score}
-          fitness={state.state.fitness}
-          tacticalInstruction={room !== null ? room.styleName : '—'}
-        />
+        <div className="os-panel">
+          <ChapterScoreboard
+            timeLabel={decisionTimeLabel(displayDecisionNumber)}
+            score={score}
+            fitness={state.state.fitness}
+            tacticalInstruction={room !== null ? room.styleName : '—'}
+          />
+        </div>
       ) : null}
 
       {view.resolved.slice(0, cursor).map((resolved, index) => (
-        <CollapsibleDecisionResult key={resolved.entry.decisionId} index={index} resolved={resolved} tokens={tokens} />
+        <CollapsibleDecisionResult
+          key={resolved.entry.decisionId}
+          index={index}
+          resolved={resolved}
+          tokens={tokens}
+        />
       ))}
 
       {cursor < decisionsTotal ? (
         view.resolved.length > cursor ? (
           <div className="flex flex-col gap-os-3">
             <ResultCard {...decisionResultCardProps(view.resolved[cursor]!, tokens)} />
-            <Button variant="primary" onClick={() => setCursor((current) => current + 1)}>
-              {cursor + 1 < decisionsTotal ? '다음 판단' : '경기 결과'}
-            </Button>
+            <div className="os-action-dock">
+              <Button variant="primary" onClick={() => setCursor((current) => current + 1)}>
+                {cursor + 1 < decisionsTotal ? '다음 판단' : '경기 결과'}
+              </Button>
+            </div>
           </div>
         ) : (
           <DecisionInput
             decision={view.definition.decisions[cursor]!}
             submitting={resolveMutation.isPending}
             errorMessage={errorMessage}
-            onConfirm={(optionId) => void handleConfirm(view.definition.decisions[cursor]!.id, optionId)}
+            onConfirm={(optionId) =>
+              void handleConfirm(view.definition.decisions[cursor]!.id, optionId)
+            }
           />
         )
       ) : (
@@ -406,9 +485,11 @@ function ChapterScreen() {
       )}
 
       {cursor >= decisionsTotal ? (
-        <Button variant="primary" onClick={handleNext}>
-          다음
-        </Button>
+        <div className="os-action-dock">
+          <Button variant="primary" onClick={handleNext}>
+            다음
+          </Button>
+        </div>
       ) : null}
     </div>
   );
@@ -425,15 +506,25 @@ function ChapterResultSection({ view }: { view: ChapterView }) {
   const addedTags = collectedAddedTags(view.resolved);
 
   return (
-    <div className="flex flex-col gap-os-4">
+    <div className="os-panel flex flex-col gap-os-4">
       <h2 className="font-os font-bold text-os-text" style={H1_STYLE}>
         경기 결과
       </h2>
-      <p className="os-num font-os font-bold text-os-text" style={NUM_STYLE} aria-label={`최종 스코어 ${match.result.goalsFor} 대 ${match.result.goalsAgainst}`}>
-        {match.result.goalsFor}:{match.result.goalsAgainst}
-      </p>
+      <div className="flex flex-col items-center gap-os-2 rounded-os-m bg-os-surface-2 py-os-4">
+        <p className="os-eyebrow">FULL TIME</p>
+        <p
+          className="os-num font-os font-bold text-os-accent"
+          style={NUM_STYLE}
+          aria-label={`최종 스코어 ${match.result.goalsFor} 대 ${match.result.goalsAgainst}`}
+        >
+          {match.result.goalsFor}:{match.result.goalsAgainst}
+        </p>
+      </div>
 
-      <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 sm:grid-cols-3" style={CAPTION_STYLE}>
+      <dl
+        className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
+        style={CAPTION_STYLE}
+      >
         <div>
           <dt>출전</dt>
           <dd className="text-os-text">
@@ -479,7 +570,11 @@ function ChapterResultSection({ view }: { view: ChapterView }) {
       {addedTags.length > 0 ? (
         <ul className="flex flex-wrap gap-os-1">
           {addedTags.map((tag) => (
-            <li key={tag} className="rounded-os-s bg-os-surface-2 px-os-2 py-os-1 font-os text-os-text-2" style={CAPTION_STYLE}>
+            <li
+              key={tag}
+              className="rounded-os-s bg-os-surface-2 px-os-2 py-os-1 font-os text-os-text-2"
+              style={CAPTION_STYLE}
+            >
               {tag}
             </li>
           ))}

@@ -3,7 +3,7 @@
 // 어디에도 쓰지 않는다.
 import { useEffect } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@offside/ui';
+import { Button, ScreenIntro, Tabs, TabsContent, TabsList, TabsTrigger } from '@offside/ui';
 import { computeBaseOvr } from '@offside/domain';
 import { activeRuleset } from '../engine/content.js';
 import { careerQueryOptions, useCareer } from '../engine/use-career.js';
@@ -32,11 +32,16 @@ export const Route = createFileRoute('/career/$careerId/attributes')({
   component: AttributesScreen,
 });
 
-const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
-const NUM_LG_STYLE = { fontSize: 'var(--os-fs-num-lg)', lineHeight: 'var(--os-lh-num-lg)' } as const;
+const NUM_LG_STYLE = {
+  fontSize: 'var(--os-fs-num-lg)',
+  lineHeight: 'var(--os-lh-num-lg)',
+} as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
 
 function AttributesScreen() {
   const { careerId } = Route.useParams();
@@ -44,7 +49,10 @@ function AttributesScreen() {
   const query = useCareer(careerId);
 
   useEffect(() => {
-    platform.analytics.track('screen_viewed', { screenId: 'SCR-033', careerPhase: query.data?.state.seasonPhase ?? 'NONE' });
+    platform.analytics.track('screen_viewed', {
+      screenId: 'SCR-033',
+      careerPhase: query.data?.state.seasonPhase ?? 'NONE',
+    });
     // 마운트 시 1회만(로더가 이미 캐시를 채웠다).
   }, []);
 
@@ -53,13 +61,17 @@ function AttributesScreen() {
   const profile = state.player.profile;
   if (profile === null) return null; // 라우트 loader가 ACTIVE를 보장하지만(=profile 존재), 방어적 fallback.
 
-  const currentArchetype = activeRuleset.archetypes.find((candidate) => candidate.id === profile.archetypeId);
+  const currentArchetype = activeRuleset.archetypes.find(
+    (candidate) => candidate.id === profile.archetypeId,
+  );
   if (currentArchetype === undefined) return null;
 
   const computedBaseOvr = computeBaseOvr(state.attributes, currentArchetype.roleWeights);
   const roleWeightPercents = roleWeightPercentEntries(currentArchetype.roleWeights);
   const previewCandidates = archetypesSharingPosition(activeRuleset, profile.primaryPosition);
-  const defaultPreviewId = previewCandidates.some((candidate) => candidate.id === profile.archetypeId)
+  const defaultPreviewId = previewCandidates.some(
+    (candidate) => candidate.id === profile.archetypeId,
+  )
     ? profile.archetypeId
     : (previewCandidates[0]?.id ?? profile.archetypeId);
 
@@ -83,35 +95,54 @@ function AttributesScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-os-6">
-      <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-        능력치 상세
-      </h1>
+    <div className="os-screen">
+      <ScreenIntro
+        eyebrow="PLAYER REPORT"
+        title="능력치 상세"
+        description={`${profile.name}의 현재 실력과 성장 기록을 살펴보세요.`}
+      />
 
-      <section className="flex flex-col gap-os-1">
-        <p className="os-num font-os font-bold text-os-text" style={NUM_LG_STYLE}>
+      <section className="os-panel flex flex-col gap-os-2">
+        <p className="os-eyebrow">
+          {currentArchetype.name} · {POSITION_LABELS[profile.primaryPosition]}
+        </p>
+        <p className="os-num font-os font-bold text-os-accent" style={NUM_LG_STYLE}>
           Base OVR {profile.baseOvr}
         </p>
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           표시된 능력 × 가중치 = {computedBaseOvr}
         </p>
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          현재 역할에 필요한 능력의 비중을 반영한 종합 실력입니다.
+        </p>
       </section>
 
       {attributeGroups().map((group) => (
-        <section key={group.id} className="flex flex-col gap-os-2">
-          <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
+        <section
+          key={group.id}
+          className="os-panel flex flex-col gap-os-4"
+          aria-labelledby={`attribute-group-${group.id}`}
+        >
+          <h2
+            id={`attribute-group-${group.id}`}
+            className="font-os font-semibold text-os-text"
+            style={H2_STYLE}
+          >
             {ATTRIBUTE_GROUP_LABEL_KO[group.id]}
           </h2>
-          <dl className="grid grid-cols-2 gap-os-2 sm:grid-cols-3">
+          <dl className="grid grid-cols-2 gap-os-2">
             {group.keys.map((key) => {
               const weightEntry = roleWeightPercents.find((entry) => entry.key === key);
               return (
-                <div key={key} className="flex flex-col">
+                <div
+                  key={key}
+                  className="flex min-w-0 flex-col gap-os-1 rounded-os-m bg-os-surface-2 p-os-3"
+                >
                   <dt className="font-os text-os-text-2" style={CAPTION_STYLE}>
                     {ATTRIBUTE_LABELS[key]}
                     {weightEntry ? ` · 가중치 ${weightEntry.percent}%` : ''}
                   </dt>
-                  <dd className="os-num font-os text-os-text" style={BODY_STYLE}>
+                  <dd className="os-num font-os font-semibold text-os-text" style={NUM_LG_STYLE}>
                     {state.attributes[key]}
                   </dd>
                   <dd className="font-os text-os-text-2" style={CAPTION_STYLE}>
@@ -125,7 +156,7 @@ function AttributesScreen() {
       ))}
 
       {previewCandidates.length > 0 ? (
-        <section className="flex flex-col gap-os-2">
+        <section className="os-panel flex flex-col gap-os-3">
           <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
             역할별 OVR 미리보기
           </h2>
@@ -153,18 +184,21 @@ function AttributesScreen() {
         </section>
       ) : null}
 
-      <section className="flex flex-col gap-os-1">
+      <section className="os-panel flex flex-col gap-os-2">
         <p className="font-os text-os-text" style={BODY_STYLE}>
-          포지션({POSITION_LABELS[profile.primaryPosition]}) 숙련도: {state.context.positionProficiency}
+          포지션({POSITION_LABELS[profile.primaryPosition]}) 숙련도:{' '}
+          {state.context.positionProficiency}
         </p>
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           정찰 범위: {profile.scoutedPotentialMin}~{profile.scoutedPotentialMax}
         </p>
       </section>
 
-      <Button variant="secondary" onClick={handleBack}>
-        이전
-      </Button>
+      <div className="os-action-dock">
+        <Button variant="secondary" onClick={handleBack}>
+          이전
+        </Button>
+      </div>
     </div>
   );
 }

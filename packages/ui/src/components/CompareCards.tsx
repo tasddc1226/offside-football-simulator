@@ -33,11 +33,14 @@ export interface CompareCardsProps {
 
 export function CompareCards({ cards, rows }: CompareCardsProps) {
   return (
-    <div>
-      <div className="flex flex-col gap-os-4 lg:hidden" data-compare-layout="stacked">
+    <div className="os-compare">
+      <div className="os-compare-stacked flex flex-col gap-os-4" data-compare-layout="stacked">
         {cards.map((card, cardIndex) => (
-          <div key={card.id} className="flex flex-col gap-os-3 rounded-os-m border border-os-border bg-os-surface p-os-4">
-            <h3 className="font-os font-semibold text-os-text" style={{ fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' }}>
+          <div key={card.id} className="os-panel flex flex-col gap-os-3">
+            <h3
+              className="font-os font-semibold text-os-text"
+              style={{ fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' }}
+            >
               {card.title}
             </h3>
             <dl className="flex flex-col gap-os-2">
@@ -45,13 +48,21 @@ export function CompareCards({ cards, rows }: CompareCardsProps) {
                 const cell = row.cells[cardIndex];
                 return (
                   <div key={row.id} className="flex items-baseline justify-between gap-os-2">
-                    <dt className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+                    <dt
+                      className="font-os text-os-text-2"
+                      style={{
+                        fontSize: 'var(--os-fs-caption)',
+                        lineHeight: 'var(--os-lh-caption)',
+                      }}
+                    >
                       {row.label}
                     </dt>
                     <dd
                       className={[
                         'os-num font-os',
-                        cell?.highlighted ? 'rounded-os-s bg-os-surface-2 px-os-2 font-semibold text-os-text' : 'text-os-text',
+                        cell?.highlighted
+                          ? 'rounded-os-s bg-os-surface-2 px-os-2 font-semibold text-os-text'
+                          : 'text-os-text',
                       ].join(' ')}
                       style={{ fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' }}
                     >
@@ -67,7 +78,7 @@ export function CompareCards({ cards, rows }: CompareCardsProps) {
       </div>
 
       <div
-        className="hidden gap-os-3 lg:grid"
+        className="os-compare-grid gap-os-3"
         style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${cards.length}, 2fr)` }}
         data-compare-layout="grid"
       >
@@ -83,13 +94,22 @@ export function CompareCards({ cards, rows }: CompareCardsProps) {
         ))}
 
         {rows.flatMap((row) => [
-          <div key={`${row.id}-label`} className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+          <div
+            key={`${row.id}-label`}
+            className="font-os text-os-text-2"
+            style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+          >
             {row.label}
           </div>,
           ...row.cells.map((cell, cellIndex) => (
             <div
               key={`${row.id}-${cards[cellIndex]?.id ?? cellIndex}`}
-              className={['os-num font-os', cell.highlighted ? 'rounded-os-s bg-os-surface-2 px-os-2 font-semibold text-os-text' : 'text-os-text'].join(' ')}
+              className={[
+                'os-num font-os',
+                cell.highlighted
+                  ? 'rounded-os-s bg-os-surface-2 px-os-2 font-semibold text-os-text'
+                  : 'text-os-text',
+              ].join(' ')}
               style={{ fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' }}
             >
               {cell.value}

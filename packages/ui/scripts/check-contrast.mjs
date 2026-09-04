@@ -45,7 +45,13 @@ function parseVars(block) {
 /** @param {string} hex */
 function hexToRgb(hex) {
   const h = hex.replace('#', '');
-  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const full =
+    h.length === 3
+      ? h
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : h;
   const int = Number.parseInt(full, 16);
   return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 };
 }
@@ -76,7 +82,7 @@ function contrastRatio(hexA, hexB) {
 const lightBlock = extractBlock(css, /:root\s*\{/);
 const darkBlock = extractBlock(css, /:root\[data-theme=['"]dark['"]\]\s*\{/);
 const light = parseVars(lightBlock);
-const dark = parseVars(darkBlock);
+const dark = { ...light, ...parseVars(darkBlock) };
 
 // 텍스트: 4.5:1. [전경, 배경]
 const TEXT_PAIRS = [
@@ -87,6 +93,9 @@ const TEXT_PAIRS = [
   ['text-2', 'surface'],
   ['text-2', 'surface-2'],
   ['on-accent', 'accent'],
+  ['on-hero', 'hero'],
+  ['hero-muted', 'hero'],
+  ['accent', 'surface'],
 ];
 // 비텍스트 그래픽(라인·게이지·아이콘): 3:1.
 const NON_TEXT_PAIRS = [
@@ -126,7 +135,9 @@ for (const row of rows) {
 }
 
 if (!allPass) {
-  console.error('\n대비 미달 토큰이 있다. tokens.css 값을 고치지 말고 PR 본문 "범위 밖 발견 사항"에 적는다.');
+  console.error(
+    '\n대비 미달 토큰이 있다. tokens.css 값을 고치지 말고 PR 본문 "범위 밖 발견 사항"에 적는다.',
+  );
   process.exit(1);
 }
 
