@@ -7,7 +7,7 @@ import { buildMarketValueInput, computeMarketValueIndex } from './market-value.j
 import { buildRenewalOffer, generateMarket, judgeMarketReason, openMarketAfterSettlement } from './market.js';
 import { seedRng } from './rng.js';
 import { selectOpenSlot } from './season.js';
-import type { CareerState, SeasonStep } from './types.js';
+import type { CareerState, SeasonStep, SquadRole } from './types.js';
 
 // T-3-002: market.ts는 ADR-005(도메인은 어떤 패키지에도 의존하지 않는다) 때문에 실제 1.0.0 콘텐츠
 // 룰셋을 쓸 수 없다 — 브리프는 "실제 1.0.0 룰셋"을 요구하지만(PR 본문 "결정 필요" 참고), 이 테스트는
@@ -87,6 +87,74 @@ describe('judgeMarketReason', () => {
 
   it('rng를 전혀 소비하지 않는다(함수 시그니처에 rng 인자·반환이 없다)', () => {
     expect(judgeMarketReason.length).toBe(2);
+  });
+});
+
+// 오케스트레이터 리뷰(PR #50): season === null(결산 뒤)이면 STARTER·평점 조건을 아예 건너뛰던 버그를
+// 고쳤다 — 이제 그 조건은 `seasonHistory.at(-1)`의 `squadRoleAtEnd`·`playerStats`로 판정한다.
+describe('judgeMarketReason·generateMarket — 결산 뒤 상태(season null)에서도 STARTER·평점 조건에 도달한다', () => {
+  const { snapshot } = runSettledFixture();
+  // 지수발 INTEREST를 걷어내(judgeMarketReason describe 블록의 lowIndexBase와 같은 방식) STARTER·평점
+  // 신호만 남긴다.
+  const settledLowIndex: CareerState = {
+    ...snapshot.state,
+    player: { ...snapshot.state.player, profile: { ...snapshot.state.player.profile!, baseOvr: 35, scoutedPotentialMin: 30, scoutedPotentialMax: 45 } },
+  };
+
+  function withLastSeasonSquadRole(state: CareerState, squadRole: SquadRole, ratingSumTenths: number, ratedMatches: number): CareerState {
+    const lastIndex = state.seasonHistory.length - 1;
+    const seasonHistory = state.seasonHistory.map((summary, index) =>
+      index === lastIndex
+        ? {
+            ...summary,
+            result: {
+              ...summary.result,
+              playerStats: { ...summary.result.playerStats, ratingSumTenths, ratedMatches },
+              selectionSummary: { ...summary.result.selectionSummary, squadRoleAtEnd: squadRole },
+            },
+          }
+        : summary,
+    );
+    return { ...state, seasonHistory };
+  }
+
+  it('(a) squadRoleAtEnd가 STARTER·평균 평점 ≥ 임계값이면 INTEREST다 — rng 소비 0', () => {
+    const state = withLastSeasonSquadRole(settledLowIndex, 'STARTER', 700, 10);
+    expect(state.season).toBeNull();
+    const before = state.rngState.draws;
+    expect(judgeMarketReason(state, rulesetProto)).toBe('INTEREST');
+    expect(state.rngState.draws).toBe(before);
+  });
+
+  it('(a) 대조군: 같은 평점이어도 squadRoleAtEnd가 RESERVE면 STARTER 조건에 걸리지 않아 null이다', () => {
+    const state = withLastSeasonSquadRole(settledLowIndex, 'RESERVE', 700, 10);
+    expect(judgeMarketReason(state, rulesetProto)).toBeNull();
+  });
+
+  it('(b) generateMarket의 kind 추첨이 squadRoleAtEnd 기준 kindWeightsByRole을 쓴다 — STARTER(TRANSFER 80)와 RESERVE(TRANSFER 20)는 같은 rng에서도 kind 분포가 다르다', () => {
+    const starterState = withLastSeasonSquadRole(settledLowIndex, 'STARTER', 700, 10);
+    const reserveState = withLastSeasonSquadRole(settledLowIndex, 'RESERVE', 700, 10);
+    expect(starterState.rngState).toEqual(reserveState.rngState);
+
+    const starterResult = generateMarket({
+      state: { ...starterState, tags: ['이적_희망'] },
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 50,
+      rng: starterState.rngState,
+    });
+    const reserveResult = generateMarket({
+      state: { ...reserveState, tags: ['이적_희망'] },
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 50,
+      rng: reserveState.rngState,
+    });
+
+    const starterKinds = starterResult.pending.offers.slice(1).map((offer) => offer.kind);
+    const reserveKinds = reserveResult.pending.offers.slice(1).map((offer) => offer.kind);
+    expect(starterKinds).toEqual(['LOAN', 'TRANSFER', 'TRANSFER']);
+    expect(reserveKinds).toEqual(['LOAN', 'LOAN', 'LOAN']);
   });
 });
 

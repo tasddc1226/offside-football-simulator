@@ -6,13 +6,35 @@ import { findOvrBand, lookupBandAmount } from './offers.js';
 import { rollInt, seedRng, type RngState } from './rng.js';
 import { rollRange } from './roll-range.js';
 import type { Ruleset, Team, TransferRules } from './ruleset.js';
-import type { CareerState, Contract, Offer, OfferKind, Pending, Position, SquadRole } from './types.js';
+import type { CareerState, Contract, Offer, OfferKind, Pending, Position, SeasonPlayerStats, SquadRole } from './types.js';
+
+type SquadPerformanceSnapshot = { squadRole: SquadRole; playerStats: SeasonPlayerStats | null };
 
 /**
- * T-3-002 D-43: 결산 직전 상태(`state.season !== null`, step 12, `SETTLE_SEASON` 처리 중)를 입력으로
- * 받는다. `season`이 없으면(결산 뒤 상태 등) STARTER·평점 조건만 건너뛰고 나머지(만료·태그·시장가치
- * 지수)는 그대로 판정한다 — `openMarketAfterSettlement`가 결산 뒤 상태로 재사용할 수 있게 하는
- * 경계(season 유무)다. rng를 전혀 소비하지 않는다.
+ * D-43/오케스트레이터 리뷰(PR #50): "현재 스쿼드 성적"의 원천. 진행 중 시즌이 있으면 그 실측값
+ * (`season.squadRole`·`season.playerStats`)을 쓴다. 없으면(결산 뒤 상태 — `openMarketAfterSettlement`가
+ * 이 경로다) 방금 끝난 시즌의 결산값(`seasonHistory.at(-1)`의 `selectionSummary.squadRoleAtEnd`·
+ * `playerStats`)으로 떨어진다. 시즌 이력 자체가 없으면(이론상 도달하지 않지만 방어적으로) 계약의 약속
+ * 역할과 평점 0(`playerStats: null`)으로 떨어진다.
+ */
+function currentSquadPerformance(state: CareerState, contract: Contract): SquadPerformanceSnapshot {
+  if (state.season !== null) {
+    return { squadRole: state.season.squadRole, playerStats: state.season.playerStats };
+  }
+  const lastSeason = state.seasonHistory.at(-1);
+  if (lastSeason !== undefined) {
+    return { squadRole: lastSeason.result.selectionSummary.squadRoleAtEnd, playerStats: lastSeason.result.playerStats };
+  }
+  return { squadRole: contract.rolePromise, playerStats: null };
+}
+
+/**
+ * T-3-002 D-43: 결산 직전 상태(`state.season !== null`, step 12, `SETTLE_SEASON` 처리 중) 또는 결산
+ * 뒤 상태(`state.season === null`, `openMarketAfterSettlement`가 넘기는 상태)를 입력으로 받는다.
+ * STARTER·평점 판정은 `currentSquadPerformance`가 고른 스쿼드 성적 원천(진행 중 시즌 → 방금 끝난
+ * 시즌 결산값 → 계약의 약속 역할+평점 0 순)을 그대로 쓴다 — season 유무와 무관하게 항상 판정한다
+ * (오케스트레이터 리뷰 PR #50: 종전에는 season이 없으면 이 조건 전체를 건너뛰어 결산 뒤 STARTER 관심
+ * 경로가 영영 도달 불가였다). rng를 전혀 소비하지 않는다.
  */
 export function judgeMarketReason(state: CareerState, ruleset: Ruleset): 'EXPIRED' | 'INTEREST' | null {
   const contract = state.contract;
@@ -26,10 +48,10 @@ export function judgeMarketReason(state: CareerState, ruleset: Ruleset): 'EXPIRE
   if (state.tags.includes('잔류_선언')) return null;
   if (state.tags.includes('이적_희망')) return 'INTEREST';
 
-  const season = state.season;
-  if (season !== null && season.squadRole === 'STARTER') {
-    const stats = season.playerStats;
-    const avgRatingTenths = stats.ratedMatches > 0 ? Math.round(stats.ratingSumTenths / stats.ratedMatches) : 0;
+  const performance = currentSquadPerformance(state, contract);
+  if (performance.squadRole === 'STARTER') {
+    const stats = performance.playerStats;
+    const avgRatingTenths = stats !== null && stats.ratedMatches > 0 ? Math.round(stats.ratingSumTenths / stats.ratedMatches) : 0;
     if (avgRatingTenths >= ruleset.transferRules.interest.minRatingTenths) return 'INTEREST';
   }
 
@@ -46,9 +68,9 @@ const ROLE_DEGRADE: Record<SquadRole, SquadRole> = {
   RESERVE: 'RESERVE',
 };
 
-/** 현재 "squadRole"의 원천. 시즌이 있으면 실제 시즌 성적(`season.squadRole`), 없으면(결산 뒤) 계약의 약속 역할. */
+/** 현재 "squadRole". `currentSquadPerformance` 참고 — 시즌 유무에 따라 실측/결산/계약 순으로 떨어진다. */
 function currentSquadRole(state: CareerState, contract: Contract): SquadRole {
-  return state.season?.squadRole ?? contract.rolePromise;
+  return currentSquadPerformance(state, contract).squadRole;
 }
 
 function findTeamById(ruleset: Ruleset, teamId: string): Team {
