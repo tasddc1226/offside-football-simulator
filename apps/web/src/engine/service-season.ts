@@ -27,6 +27,9 @@ export const serviceSeasonQueryOptions = queryOptions({
   queryKey: ['service-season', 'current'] as const,
   queryFn: fetchServiceSeason,
   staleTime: STALE_TIME_MS,
+  // resolveServiceSeasonId 자체가 kv-store·상수로 이어지는 폴백 체인이다 — 여기서 재시도하면
+  // (전역 retry:1 기본 backoff 1s) 커리어 생성 같은 사용자 조작이 오프라인일 때마다 1초+ 멎는다.
+  retry: false,
 });
 
 /** SCR-001 허브가 배너·배지·"새 선수" 버튼 비활성화를 그리는 데 쓴다. */
