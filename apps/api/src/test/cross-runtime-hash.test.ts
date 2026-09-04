@@ -31,6 +31,10 @@ import {
   career08MfEngineCommands,
   career09Fw,
   career09FwEngineCommands,
+  career10Transfer,
+  career10TransferEngineCommands,
+  career11Loan,
+  career11LoanEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -163,6 +167,26 @@ function runCareer09FwOnNode(): DomainSnapshot {
   return snapshot;
 }
 
+function runCareer10TransferOnNode(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career10TransferEngineCommands(() => `node-c10-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career10Transfer);
+  }
+  if (snapshot === null) throw new Error('career10Transfer 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
+function runCareer11LoanOnNode(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career11LoanEngineCommands(() => `node-c11-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career11Loan);
+  }
+  if (snapshot === null) throw new Error('career11Loan 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
 const BOUNDARY_INPUTS: Array<{ label: string; value: string }> = [
   { label: 'empty', value: '' },
   { label: 'abc', value: 'abc' },
@@ -283,6 +307,18 @@ describe('런타임 간 state hash 일치(Node ↔ workerd)', { timeout: 15000 }
       runOnNode: runCareer09FwOnNode,
       probeRequest: { kind: 'replayFw' as const },
       golden: career09Fw.golden,
+    },
+    {
+      label: 'career-10-transfer',
+      runOnNode: runCareer10TransferOnNode,
+      probeRequest: { kind: 'replayTransfer' as const },
+      golden: career10Transfer.golden,
+    },
+    {
+      label: 'career-11-loan',
+      runOnNode: runCareer11LoanOnNode,
+      probeRequest: { kind: 'replayLoan' as const },
+      golden: career11Loan.golden,
     },
   ])('$label 재생의 revision·stateHash·rngState.draws가 Node·workerd·golden에서 모두 같다', async ({ runOnNode, probeRequest, golden }) => {
     const typedGolden = golden as ReplayGolden;

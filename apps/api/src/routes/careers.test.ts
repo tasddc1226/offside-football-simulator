@@ -65,8 +65,16 @@ function buildState(input: {
   draws?: number | undefined;
   rulesetVersion?: string;
   contentPackVersion?: string;
+  stateOverrides?: Record<string, unknown>;
 }): string {
-  const { careerId, status = 'ACTIVE', draws = 0, rulesetVersion = '1.0.0', contentPackVersion = '0.1.0' } = input;
+  const {
+    careerId,
+    status = 'ACTIVE',
+    draws = 0,
+    rulesetVersion = '1.0.0',
+    contentPackVersion = '0.1.0',
+    stateOverrides = {},
+  } = input;
   return canonicalize({
     schemaVersion: 1,
     careerId,
@@ -74,6 +82,7 @@ function buildState(input: {
     rngState: { s: [1, 2, 3, 4], draws },
     rulesetVersion,
     contentPackVersion,
+    ...stateOverrides,
   });
 }
 
@@ -85,6 +94,7 @@ async function makeSnapshot(input: {
   draws?: number | undefined;
   rulesetVersion?: string;
   contentPackVersion?: string;
+  stateOverrides?: Record<string, unknown>;
 }) {
   const {
     careerId,
@@ -94,8 +104,16 @@ async function makeSnapshot(input: {
     draws = revision,
     rulesetVersion = '1.0.0',
     contentPackVersion = '0.1.0',
+    stateOverrides,
   } = input;
-  const state = buildState({ careerId, status, draws, rulesetVersion, contentPackVersion });
+  const state = buildState({
+    careerId,
+    status,
+    draws,
+    rulesetVersion,
+    contentPackVersion,
+    ...(stateOverrides === undefined ? {} : { stateOverrides }),
+  });
   const stateHash = await sha256Hex(state);
   return {
     revision,
@@ -135,6 +153,7 @@ async function putCareerBody(input: {
   rulesetVersion?: string;
   contentPackVersion?: string;
   createdServiceSeasonId?: string;
+  stateOverrides?: Record<string, unknown>;
 }) {
   const {
     careerId,
@@ -146,6 +165,7 @@ async function putCareerBody(input: {
     rulesetVersion = '1.0.0',
     contentPackVersion = '0.1.0',
     createdServiceSeasonId = SERVICE_SEASON_ID,
+    stateOverrides,
   } = input;
   const snapshot = await makeSnapshot({
     careerId,
@@ -154,6 +174,7 @@ async function putCareerBody(input: {
     draws,
     rulesetVersion,
     contentPackVersion,
+    ...(stateOverrides === undefined ? {} : { stateOverrides }),
   });
   const commands = commandRevisions.map((revision, index) =>
     makeCommand({
@@ -462,6 +483,47 @@ describe('careers routes', () => {
       expect(res.status).toBe(400);
       expect((ErrorEnvelopeSchema.parse(await res.json()).error.details as { reason?: string }).reason).toBe(
         'CAREER_ID_MISMATCH',
+      );
+    });
+
+    it.each([
+      {
+        label: 'LOAN인데 parentContract가 null',
+        stateOverrides: {
+          contract: { id: 'CTR-loan', teamId: 'loan-team', kind: 'LOAN', loan: { parentTeamId: 'source-team' } },
+          parentContract: null,
+          clubHistory: [{ contractId: 'CTR-loan', teamId: 'loan-team', kind: 'LOAN', toSeasonIndex: null }],
+        },
+      },
+      {
+        label: 'parentContract가 loan 원소속과 다름',
+        stateOverrides: {
+          contract: { id: 'CTR-loan', teamId: 'loan-team', kind: 'LOAN', loan: { parentTeamId: 'source-team' } },
+          parentContract: { id: 'CTR-parent', teamId: 'wrong-source-team', kind: 'PERMANENT', suspended: true },
+          clubHistory: [{ contractId: 'CTR-loan', teamId: 'loan-team', kind: 'LOAN', toSeasonIndex: null }],
+        },
+      },
+      {
+        label: '열린 stint가 둘',
+        stateOverrides: {
+          contract: { id: 'CTR-current', teamId: 'current-team', kind: 'PERMANENT' },
+          parentContract: null,
+          clubHistory: [
+            { contractId: 'CTR-current', teamId: 'current-team', kind: 'PERMANENT', toSeasonIndex: null },
+            { contractId: 'CTR-other', teamId: 'other-team', kind: 'PERMANENT', toSeasonIndex: null },
+          ],
+        },
+      },
+    ])('$label 조작 Snapshot은 저장 전에 STATE_INVARIANT_VIOLATION으로 거부한다', async ({ stateOverrides }) => {
+      const { cookie } = await issueCookie(ctx);
+      const app = createApp();
+      const careerId = 'car_integrity_contract';
+      const body = await putCareerBody({ careerId, baseRevision: 0, commandRevisions: [1], snapshotRevision: 1, stateOverrides });
+
+      const res = await app.request(`/v1/careers/${careerId}`, putInit({ body, ifMatch: '0', cookie }), ctx.env);
+      expect(res.status).toBe(400);
+      expect((ErrorEnvelopeSchema.parse(await res.json()).error.details as { reason?: string }).reason).toBe(
+        'STATE_INVARIANT_VIOLATION',
       );
     });
 

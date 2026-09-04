@@ -53,6 +53,16 @@ function baseState(overrides: Partial<CareerState>): CareerState {
 }
 
 describe('resolveEventResultView', () => {
+  it.each([['A', 'A1', '프로 입단 테스트에 도전한다'], ['C', 'C1', '하부리그에서 첫 기회를 찾는다']])(
+    '구판 진로 %s의 결과는 재조회해도 내부 ID 대신 서사를 표시한다', (choice, outcome, title) => {
+      const state = baseState({
+        timeline: [{ revision: 4, kind: 'EVENT_RESOLVED', refId: `EVT-CON-002:${choice}:${outcome}`, age: 17, step: 12 }],
+      });
+      const first = resolveEventResultView(state, activeContentPack, 4);
+      expect(first?.title).toBe(title);
+      expect(resolveEventResultView(state, activeContentPack, 4)).toEqual(first);
+    },
+  );
   it('EVENT_RESOLVED 항목을 refId로 풀어 outcome 정의로 결과를 만든다(EVT-CON-003 A A1: SUCCESS)', () => {
     const state = baseState({
       timeline: [{ revision: 4, kind: 'EVENT_RESOLVED', refId: 'EVT-CON-003:A:A1', age: 17, step: 12 }],

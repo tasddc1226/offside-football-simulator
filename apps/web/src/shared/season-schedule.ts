@@ -11,6 +11,7 @@ import {
   type ScheduleEntry,
 } from '@offside/domain';
 import { CUP_ROUND_LABEL_KO, MATCH_APPEARANCE_LABEL_KO, OUT_REASON_LABEL_KO } from './labels.js';
+import { opponentDisplayName } from './competition-labels.js';
 
 export type ScheduleRowMatch = {
   scoreText: string;
@@ -36,6 +37,7 @@ function findMatch(matches: readonly MatchRecord[], entry: ScheduleEntry): Match
 }
 
 function appearanceLabel(appearance: MatchAppearance, outReason: MatchRecord['outReason']): string {
+  if (outReason === 'UNUSED_SUB') return OUT_REASON_LABEL_KO.UNUSED_SUB;
   if (appearance !== 'OUT' || outReason === null) return MATCH_APPEARANCE_LABEL_KO[appearance];
   return OUT_REASON_LABEL_KO[outReason];
 }
@@ -72,7 +74,7 @@ export function buildScheduleRows(season: FootballSeason, ruleset: Ruleset): Sch
       step: entry.step,
       order: entry.order,
       competitionLabel: label,
-      opponentName: opponent.name,
+      opponentName: opponentDisplayName(opponent, ruleset),
       home: entry.home,
       eliminated: false,
       match:

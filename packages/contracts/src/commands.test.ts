@@ -244,6 +244,69 @@ describe('LoanReturnPayloadSchema', () => {
   });
 });
 
+describe('T-3-004 계약 명령 strict payload 회귀', () => {
+  const cases = [
+    {
+      type: 'NEGOTIATE' as const,
+      schema: NegotiatePayloadSchema,
+      valid: { offerId: 'OFR-16-1', ask: 'WAGE' as const },
+      invalid: [
+        { offerId: 'OFR-16-1', ask: 'BONUS' },
+        { offerId: '', ask: 'WAGE' },
+        { offerId: 'OFR-16-1', ask: 'WAGE', extra: true },
+      ],
+    },
+    {
+      type: 'ACCEPT_OFFER' as const,
+      schema: AcceptOfferPayloadSchema,
+      valid: { offerId: 'OFR-16-1' },
+      invalid: [{ offerId: '' }, { offerId: null }, { offerId: 'OFR-16-1', extra: true }],
+    },
+    {
+      type: 'REJECT_OFFER' as const,
+      schema: RejectOfferPayloadSchema,
+      valid: { offerId: null },
+      invalid: [{ offerId: '' }, { offerId: 123 }, { offerId: null, extra: true }],
+    },
+    {
+      type: 'LOAN_RETURN' as const,
+      schema: LoanReturnPayloadSchema,
+      valid: { decision: 'RETURN' as const },
+      invalid: [{ decision: 'EXTEND' }, { decision: null }, { decision: 'RETURN', extra: true }],
+    },
+  ] as const;
+
+  it.each(cases)('$type의 직접 payload 스키마가 유효한 값만 받는다', ({ schema, valid, invalid }) => {
+    expect(schema.safeParse(valid).success).toBe(true);
+    for (const value of invalid) {
+      expect(schema.safeParse(value).success).toBe(false);
+    }
+  });
+
+  it.each(cases)('$type의 CommandRequestSchema가 payload drift를 거부한다', ({ type, valid, invalid }) => {
+    const base = { commandId: `cmd-${type.toLowerCase()}`, expectedRevision: 17, type };
+    expect(CommandRequestSchema.safeParse({ ...base, payload: valid }).success).toBe(true);
+    for (const value of invalid) {
+      expect(CommandRequestSchema.safeParse({ ...base, payload: value }).success).toBe(false);
+    }
+  });
+
+  it.each(cases)('$type의 CommandLogEntrySchema가 payload drift를 거부한다', ({ type, valid, invalid }) => {
+    const base = {
+      careerId: 'car_contract_sync',
+      revision: 17,
+      commandId: `cmd-log-${type.toLowerCase()}`,
+      resultHash: 'a'.repeat(64),
+      createdAt: '2026-09-04T00:00:00Z',
+      commandType: type,
+    };
+    expect(CommandLogEntrySchema.safeParse({ ...base, payload: valid }).success).toBe(true);
+    for (const value of invalid) {
+      expect(CommandLogEntrySchema.safeParse({ ...base, payload: value }).success).toBe(false);
+    }
+  });
+});
+
 describe('CommandRequestSchema', () => {
   it('알 수 없는 type은 거부한다', () => {
     const result = CommandRequestSchema.safeParse({

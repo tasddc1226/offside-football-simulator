@@ -126,13 +126,13 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-3-001 | A | domain + contracts + content | 계약·제안 v2 타입, clubHistory, 제안 상태기계, 타임라인 kind 예약(양 트랙), DSL contract.*, CON payload 스키마 | U-012 | done | PR #48 b756999(2026-09-04 11:43), [브리프](briefs/T-3-001.md). 리뷰 수정 1건(`contract.isLastSeason` 의미), 골든 9종 재기록(draws 불변) |
 | T-3-002 | A | domain + content | 결산 뒤 이적시장 생성(D-43·D-44), 안전 잔류 제안, step 7 사전 협상, offerRulesV2·transferRules | T-3-001 | done | PR #50 408a765(2026-09-04 13:33), [브리프](briefs/T-3-002.md). 리뷰 수정 1건(결산 뒤 STARTER·평점 INTEREST 분기 도달 불가 → `currentSquadPerformance` 폴백). 워커 결정 3건 수용. 결산 배선·명령은 T-3-003 |
 | T-3-003 | A | domain + 룰셋 필드 + web 최소 배선 | NEGOTIATE·ACCEPT_OFFER v2·REJECT_OFFER·LOAN_RETURN, 원자 전환(D-45), 임대(D-46), 약속 위반(D-47), 태그 5종(D-48), 결산 배선, golden career-10·11 | T-3-002 | done | PR #54 `e1ae3de`(2026-09-04 16:47), [브리프](briefs/T-3-003.md). 최초 구현 `cafb870` → Luna Max 리뷰 P1 3건 → 수정 `7d31f07`. Quality·Browser·PR preview와 전체 테스트 녹색. |
-| T-3-004 | A | contracts + api + engine-client | payload·상태 strict 검증, 동기화 회귀, Snapshot 크기 | T-3-003 | todo | [브리프](briefs/T-3-004.md). career-10·11 strict/runtime/PUT 3경로/replay·fork·import/크기·Worker hash 검증 |
-| T-3-005 | A | web | SCR-017 계약 상태·제안 비교·협상, SCR-019 루머, SCR-020 이적·임대 결과, TEST-E2E-003 | T-3-003, T-3-004 | todo | |
+| T-3-004 | A | contracts + api + engine-client | payload·상태 strict 검증, 동기화 회귀, Snapshot 크기 | T-3-003 | in-progress | [브리프](briefs/T-3-004.md). 2026-09-04 17:04 Luna Max 투입. career-10·11 strict/runtime/PUT 3경로/replay·fork·import/크기·Worker hash 검증 |
+| T-3-005 | A | web | SCR-017 계약 상태·제안 비교·협상, SCR-019 루머, SCR-020 이적·임대 결과, TEST-E2E-003 | T-3-003, T-3-004 | todo | [브리프](briefs/T-3-005.md). 시작 전 RUMOUR 전용 생성 경로 도달성 감사·결정 게이트 포함 |
 | T-3-006 | A | content | 루머·잔류·에이전트 이벤트, 협상·이적 문구, 팀 풀 확장(열린 질문) | T-3-001 | done | PR #51 31e321d(2026-09-04 13:01), [브리프](briefs/T-3-006.md). 팩 0.2.0 등록(활성 0.1.0 유지)·PRO 이벤트 5종 PROTOTYPE·팀 12·authoring 스키마·agent 토큰. 리뷰 수정 0건. 후속: web narrative.ts에 `agent` 토큰(T-3-005) |
 | T-4-001 | B | domain + contracts + content | 관계 로그·감독·부상·평판 타입, HEALTH Effect(ADR-010 표 갱신), RESOLVE_EVENT의 INJURY·NATIONAL_TEAM 수용(D-52), 훅 골격 | U-012, T-3-001 | done | PR #53 aba154a(2026-09-04 13:57), [브리프](briefs/T-4-001.md). 리뷰 수정 0건. main 재머지 2회(PR #50 충돌 해결), 재기록 골든 미커밋(PLACEHOLDER)을 오케스트레이터 체인이 잡아 추가 커밋. 후속: T-4-002(부상)·T-4-003(관계) 브리프 |
-| T-4-002 | B | domain + content | 부상 모델(D-49): 심각도·부위·진단 범위·재활 선택·재발·후유증, 강제 사건 상한, career-12-injury | T-4-001 | todo | [브리프](briefs/T-4-002.md). match RNG/forced pending/재활·재발 상태기계·후유증 확정 |
-| T-4-003 | B | domain + content | 감독 교체·라커룸·슬럼프·윤리·SNS 이벤트 pool, popularityCenti, 관계 로그, 안전장치, 태그 5종(D-50) | T-4-001 | todo | [브리프](briefs/T-4-003.md). T-4-002와 병행, 먼저 머지된 공용 타입 보존 |
-| T-4-004 | B | domain + content | 대표팀 차출 기본 모듈(D-51), NATIONAL_DEBUT 챕터 | T-4-002, T-4-003 | todo | |
+| T-4-002 | B | domain + content | 부상 모델(D-49): 심각도·부위·진단 범위·재활 선택·재발·후유증, 강제 사건 상한, career-12-injury | T-4-001 | in-progress | [브리프](briefs/T-4-002.md). 2026-09-04 17:04 Luna Max 투입. match RNG/forced pending/재활·재발 상태기계·후유증 확정 |
+| T-4-003 | B | domain + content | 감독 교체·라커룸·슬럼프·윤리·SNS 이벤트 pool, popularityCenti, 관계 로그, 안전장치, 태그 5종(D-50) | T-4-001 | in-progress | [브리프](briefs/T-4-003.md). 2026-09-04 17:04 Luna Max 투입. T-4-002와 병행, 먼저 머지된 공용 타입 보존 |
+| T-4-004 | B | domain + content | 대표팀 차출 기본 모듈(D-51), NATIONAL_DEBUT 챕터 | T-4-002, T-4-003 | todo | [브리프](briefs/T-4-004.md). step 8 자격·부상 자동 사양·P4-7·데뷔 MAJOR 1회 |
 | T-4-005 | B | web | SCR-016·018·021·022·024·032, 라커룸·휴대폰 관계 수치 점진 공개, SCR-023 경기 판단 변형, TEST-E2E-004 | T-4-004 | todo | |
 | T-4-006 | A+B | domain + web(e2e) | 트랙 통합 검증: 3시즌 fixture, OVR 불변 property, 결정 예산·세션 길이, e2e 3회, 완료 조건 표 | T-3-005, T-4-005 | todo | |
 
@@ -153,7 +153,9 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| - | - | - | 다음 Wave 브리프·배치 준비 중 |
+| T-3-004 | Luna Max · Orca worktree `T-3-004-contract-sync-validation` | 2026-09-04 17:04 | 계약·API·engine-client strict/sync 회귀 검증 진행 중 |
+| T-4-002 | Luna Max · Orca worktree `T-4-002-injury-model` | 2026-09-04 17:04 | 부상·재활·재발 상태기계 구현 진행 중 |
+| T-4-003 | Luna Max · Orca worktree `T-4-003-relationships-manager` | 2026-09-04 17:04 | 관계·감독·평판 모델 구현 진행 중 |
 
 ## 완료
 
