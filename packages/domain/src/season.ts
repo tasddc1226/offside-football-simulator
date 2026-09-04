@@ -298,6 +298,10 @@ export type PlayStepMatches = (stepIndex: number) => {
   results: StepMatchResult[];
   records: MatchRecord[];
   competitions: readonly CompetitionRecord[];
+  /** 경기 직후 강제로 열어야 하는 중등도 이상 부상 재활 판단. */
+  forcedPending: Extract<Pending, { kind: 'INJURY' }> | null;
+  /** 첫 회복 후 첫 실제 출전의 챕터 trigger를 위한 match id. */
+  injuryReturnMatchId: string | null;
 };
 
 /** T-2-004 D-38: `walkToNextDecision`이 매 step마다 `selectChapter`에 넘기는, step에 안 걸리는 맥락. */
@@ -348,6 +352,13 @@ export function walkToNextDecision(
   while (currentStepIndex < 12) {
     const step = findSeasonStep(nextSteps, currentStepIndex);
     const matchResult = playStepMatches(currentStepIndex);
+
+    // MODERATE/MAJOR forced injury decision은 모든 일반 EVENT/CHAPTER/CONTRACT보다 우선한다.
+    if (matchResult.forcedPending !== null) {
+      pending = matchResult.forcedPending;
+      break;
+    }
+
     const chapterOpen = selectChapter({
       step,
       steps: nextSteps,
@@ -361,6 +372,7 @@ export function walkToNextDecision(
       resolvedChapterIds: chapterContext.resolvedChapterIds,
       existingChapterIds: chapterContext.existingChapterIds,
       league: chapterContext.league,
+      injuryReturnMatchId: matchResult.injuryReturnMatchId,
     });
     matchesSoFar = [...matchesSoFar, ...matchResult.records];
     // T-3-001: MarketSummary.seasonIndex는 "시장이 열린 시점의 seasonHistory.length"(D-43) — season.index

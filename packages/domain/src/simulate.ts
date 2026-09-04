@@ -7,7 +7,14 @@ import { applyEffects, expireAtSeasonEnd, expireEffects, resolveDeferredEffects 
 import { evaluateCareerTags, grantCareerTag } from './career-tags.js';
 import { computeGrowth } from './growth.js';
 import { hashState } from './hash.js';
-import { applyRehabPlan, onMatchInjury } from './injury.js';
+import {
+  applyRehabPlan,
+  onInjuryRecovered,
+  onMatchInjury,
+  onMatchRecurrence,
+  onRecurrenceCheckFailed,
+  rehabDurationRange,
+} from './injury.js';
 import { generateMarket, openMarketAfterSettlement } from './market.js';
 import { computeContractSeasonsRemaining } from './market-value.js';
 import { buildDefaultManager } from './manager.js';
@@ -571,10 +578,13 @@ type StepMatchWiring = {
   getMatchRngState: () => RngState;
   /** T-2-005 D-39: 매 step 경기 뒤 `applyCondition`이 갱신한 선수 본인 폼·체력·사기. */
   getPlayerCondition: () => ConditionState;
-  /** T-4-001 D-49: `onMatchInjury` 훅이 갱신한 부상 이력. */
+  /** T-4-002 D-49: 경기 부상 상태기계 훅이 갱신한 부상 이력. */
   getHealth: () => CareerState['health'];
-  /** T-4-001 D-49: `onMatchInjury` 훅이 남긴 타임라인 항목(지금은 항상 빈 배열 — 훅이 항등이라). */
+  /** T-4-002: 경기 훅이 남긴 타임라인 항목. */
   getInjuryTimeline: () => TimelineEntry[];
+  getAttributes: () => CareerState['attributes'];
+  getPlayerProfile: () => PlayerProfile;
+  getInjuryCount: () => number;
 };
 
 type StepMatchWiringInitial = SeasonMatchBooks & {
@@ -586,7 +596,7 @@ type StepMatchWiringInitial = SeasonMatchBooks & {
   yellowSuspensionCount: number;
   squadStatus: number;
   matchRngState: RngState;
-  /** T-4-001 D-49: `onMatchInjury` 훅 입력용, 이 시즌에 이미 만든 INJURY pending 수(증가는 T-4-002). */
+  /** T-4-002 D-49: 이 시즌에 이미 만든 forced INJURY pending 수. */
   injuryCount: number;
 };
 
@@ -614,9 +624,9 @@ function createStepMatchWiring(
   tacticalFit: number,
   positionProficiency: number,
   seasonIndex: number,
-  // T-4-001 D-49: `onMatchInjury` 훅에 넘길 CareerState 스냅샷(`.health`만 실제로 쓴다 — 나머지
-  // 필드는 훅이 지금은 항등이라 읽지 않는다). walk 도중 갱신되는 값은 이 참조가 아니라 아래 `health`
-  // closure 변수로 추적한다.
+  timelineRevision: number,
+  // T-4-002: injury 훅은 health·attributes·profile·season.injuryCount를 읽고 갱신한다. walk 도중
+  // 갱신되는 값은 이 참조가 아니라 아래 closure 변수로 추적한다.
   careerState: CareerState,
   initial: StepMatchWiringInitial,
 ): StepMatchWiring {
@@ -634,12 +644,28 @@ function createStepMatchWiring(
   let matchRngState = initial.matchRngState;
   let playerCondition = initialCondition;
   let health = careerState.health;
+  let attributes = careerState.attributes;
+  let playerProfile = profile;
+  let injuryCount = initial.injuryCount;
+  let forcedPending: Extract<Pending, { kind: 'INJURY' }> | null = null;
   let injuryTimeline: TimelineEntry[] = [];
 
   const playStepMatches: PlayStepMatches = (stepIndex) => {
+    let injuryReturnMatchId: string | null = null;
     const entries = schedule.filter((entry) => entry.step === stepIndex && entry.skipped === undefined);
     for (const entry of entries) {
       const matchIndex = matches.length;
+      const recurrenceEpisode = [...health.episodes]
+        .reverse()
+        .find(
+          (episode) =>
+            episode.status === 'RECOVERED' && episode.recurrenceChecksRemaining > 0,
+        );
+      const recurrenceCheck =
+        recurrenceEpisode === undefined
+          ? undefined
+          : { episodeId: recurrenceEpisode.id, riskBp: recurrenceEpisode.recurrenceRiskBp };
+      const availabilityBefore = availability;
       const result = playMatch({
         ruleset,
         rngState: matchRngState,
@@ -649,9 +675,9 @@ function createStepMatchWiring(
         team,
         league,
         styleId,
-        playerName: profile.name,
-        primaryPosition: profile.primaryPosition,
-        baseOvr: profile.baseOvr,
+        playerName: playerProfile.name,
+        primaryPosition: playerProfile.primaryPosition,
+        baseOvr: playerProfile.baseOvr,
         tacticalFit,
         managerTrust,
         form: playerCondition.form,
@@ -664,6 +690,7 @@ function createStepMatchWiring(
         availability,
         seasonYellowCount: yellowSuspensionCount,
         lastRatingTenths,
+        ...(recurrenceCheck === undefined ? {} : { recurrenceCheck }),
       });
       matchRngState = result.rngState;
       const books = applyPlayedMatch(ruleset, team, league, calendar, { matches, competitions, playerStats, schedule }, result.match);
@@ -679,23 +706,90 @@ function createStepMatchWiring(
       yellowSuspensionCount = result.nextSeasonYellowCount;
       squadStatus = result.nextSquadStatus;
 
-      // T-4-001 D-49: 부상 이탈 경기마다 onMatchInjury 훅을 부른다(지금은 항등 골격 — 실제 심각도·
-      // 부위 roll·availability 설정은 T-4-002가 채운다). matchRng를 넘겨 그 작업이 rng 소비 순서를
-      // 이 지점에 이어 붙일 수 있게 한다.
-      if (result.match.injuredOff) {
+      const hookState = (): CareerState => ({
+        ...careerState,
+        attributes,
+        state: { ...careerState.state, ...playerCondition },
+        health,
+        player: { ...careerState.player, profile: playerProfile },
+        season: careerState.season === null ? null : { ...careerState.season, injuryCount },
+      });
+
+      // 마지막 이탈 경기 직후에는 먼저 기존 REHAB 에피소드를 회복시킨다. 이 단계는 RNG를 소비하지
+      // 않으며, 이후 실제 출전부터 recurrenceCheck가 match RNG를 정확히 1회 소비한다.
+      if (availabilityBefore?.kind === 'INJURY' && availability === null) {
+        const recovery = onInjuryRecovered({
+          state: hookState(),
+          availability: availabilityBefore,
+          match: result.match,
+          ruleset,
+          step: stepIndex,
+          revision: timelineRevision,
+          rng: matchRngState,
+        });
+        health = recovery.health;
+        availability = recovery.availability;
+        attributes = recovery.attributes;
+        playerProfile = recovery.profile ?? playerProfile;
+        matchRngState = recovery.rng;
+        if (recovery.timeline.length > 0) injuryTimeline = [...injuryTimeline, ...recovery.timeline];
+      }
+
+      const isFirstRecurrenceReturn =
+        recurrenceEpisode !== undefined &&
+        result.match.minutes > 0 &&
+        recurrenceEpisode.recurrenceChecksRemaining === ruleset.injuryRules.recurrenceWindowMatches;
+      // INJURY_RETURN은 재발 검사의 성공 여부가 아니라 회복 뒤 첫 실제 출전 자체를 가리킨다.
+      // 따라서 같은 경기에서 재발해도 먼저 기록해 chapter 후보에 전달한다.
+      if (isFirstRecurrenceReturn) injuryReturnMatchId = result.match.id;
+
+      if (recurrenceEpisode !== undefined && result.match.minutes > 0) {
+        if (result.recurrenceTriggered) {
+          const recurrence = onMatchRecurrence({
+            state: hookState(),
+            seasonIndex,
+            step: stepIndex,
+            match: result.match,
+            episodeId: recurrenceEpisode.id,
+            injuryCount,
+            ruleset,
+            rng: matchRngState,
+            revision: timelineRevision,
+            allowForcedPending: forcedPending === null,
+          });
+          health = recurrence.health;
+          availability = recurrence.availability;
+          injuryCount = recurrence.injuryCount;
+          attributes = recurrence.attributes;
+          playerProfile = recurrence.profile ?? playerProfile;
+          matchRngState = recurrence.rng;
+          forcedPending = recurrence.forcedPending ?? forcedPending;
+          if (recurrence.timeline.length > 0) injuryTimeline = [...injuryTimeline, ...recurrence.timeline];
+        } else {
+          health = onRecurrenceCheckFailed(hookState(), recurrenceEpisode.id);
+        }
+      }
+
+      if (result.match.injuredOff && !result.recurrenceTriggered) {
         const hookResult = onMatchInjury({
-          state: { ...careerState, health },
+          state: hookState(),
           seasonIndex,
           step: stepIndex,
           match: result.match,
           availability,
-          injuryCount: initial.injuryCount,
+          injuryCount,
           ruleset,
           rng: matchRngState,
+          revision: timelineRevision,
+          allowForcedPending: forcedPending === null,
         });
         health = hookResult.health;
         availability = hookResult.availability;
+        injuryCount = hookResult.injuryCount;
+        attributes = hookResult.attributes;
+        playerProfile = hookResult.profile ?? playerProfile;
         matchRngState = hookResult.rng;
+        forcedPending = hookResult.forcedPending ?? forcedPending;
         if (hookResult.timeline.length > 0) injuryTimeline = [...injuryTimeline, ...hookResult.timeline];
       }
     }
@@ -705,6 +799,8 @@ function createStepMatchWiring(
       results: stepMatchResultsFor(matches, stepIndex),
       records: stepRecords,
       competitions,
+      forcedPending,
+      injuryReturnMatchId,
     };
   };
 
@@ -725,6 +821,9 @@ function createStepMatchWiring(
     getPlayerCondition: () => playerCondition,
     getHealth: () => health,
     getInjuryTimeline: () => injuryTimeline,
+    getAttributes: () => attributes,
+    getPlayerProfile: () => playerProfile,
+    getInjuryCount: () => injuryCount,
   };
 }
 
@@ -881,6 +980,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     tacticalFit,
     state.context.positionProficiency,
     state.seasonHistory.length + 1,
+    nextRevision,
     stateBeforeWalk,
     {
       matches: [],
@@ -948,6 +1048,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     chapters: [],
     // R2-1: walk 중 resolveDeferredEffects가 지운 뒤 남은 목록(원칙적으로 12 step을 다 걸었으니 0개).
     scheduledEffects: expiredState.season.scheduledEffects,
+    injuryCount: wiring.getInjuryCount(),
   };
 
   const nextState: CareerState = {
@@ -957,7 +1058,9 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     seasonPhase: season.phase,
     simulationMode: season.simulationMode,
     context: { ...expiredState.context, squadStatus: wiring.getSquadStatus() },
+    attributes: wiring.getAttributes(),
     state: wiring.getPlayerCondition(),
+    player: { ...expiredState.player, profile: wiring.getPlayerProfile() },
     health: wiring.getHealth(),
     rngState: walked.rngState,
     pending: walked.pending,
@@ -1063,7 +1166,12 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
   // "이 step에 결정이 열렸었다"를 뜻한다(walkToNextDecision 불변식: 열리지 않은 step은 같은 호출
   // 안에서 즉시 닫히므로, summary === null인 step은 항상 결정이 열렸던 step이다).
   const currentStep = findSeasonStep(steps, currentStepIndex);
-  if (currentStep.summary === null) {
+  const lastTimelineEntry = state.timeline[state.timeline.length - 1];
+  const resumesInjuryStep =
+    currentStep.summary === null &&
+    lastTimelineEntry?.kind === 'REHAB_CHOSEN' &&
+    lastTimelineEntry.step === currentStepIndex;
+  if (currentStep.summary === null && !resumesInjuryStep) {
     steps = markStepPassed(steps, currentStepIndex, nextRevision, 1, stepMatchResultsFor(season.matches, currentStepIndex));
     timeline = [
       ...timeline,
@@ -1090,6 +1198,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     state.context.tacticalFit,
     state.context.positionProficiency,
     season.index,
+    nextRevision,
     state,
     {
       matches: season.matches,
@@ -1108,6 +1217,25 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     },
   );
 
+  // 강제 부상 pending을 먼저 닫은 뒤에는 같은 step의 일반 슬롯을 이어서 연다. 경기 자체는 이미
+  // 기록됐으므로 이 재개 호출에서 다시 재생하지 않고, 기존 step 결과만 챕터 판정에 제공한다.
+  const playStepMatchesForWalk: PlayStepMatches =
+    resumesInjuryStep
+      ? (stepIndex) =>
+          stepIndex === season.currentStep
+            ? {
+                results: stepMatchResultsFor(season.matches, stepIndex),
+                records: season.matches.filter((match) => match.step === stepIndex),
+                competitions: season.competitions,
+                forcedPending: null,
+                injuryReturnMatchId: null,
+              }
+            : wiring.playStepMatches(stepIndex)
+      : wiring.playStepMatches;
+  const matchesBeforeWalk = resumesInjuryStep
+    ? season.matches.filter((match) => match.step !== season.currentStep)
+    : season.matches;
+
   const chapterContext: ChapterWalkContext = {
     chapterCandidates: command.payload.chapterCandidates ?? [],
     tags: state.tags,
@@ -1124,8 +1252,8 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     state.rngState,
     nextRevision,
     roleContext,
-    wiring.playStepMatches,
-    season.matches,
+    playStepMatchesForWalk,
+    matchesBeforeWalk,
     chapterContext,
     state,
     ruleset,
@@ -1162,6 +1290,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     lastRatingTenths: wiring.getLastRatingTenths(),
     yellowSuspensionCount: wiring.getYellowSuspensionCount(),
     matchRngState: wiring.getMatchRngState(),
+    injuryCount: wiring.getInjuryCount(),
     // T-2-005 D-39 오케스트레이터 리뷰 2차(R2-1): walk 중 resolveDeferredEffects가 이 시즌의
     // scheduledEffects에서 이번에 해석된 항목을 지운다 — season(위 ...season)은 walk 이전 값이라
     // 그대로 두면 지워진 항목이 되살아난다. expiredState.season의 값으로 덮어써야 한다.
@@ -1174,7 +1303,9 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     currentStep: nextSeason.currentStep,
     seasonPhase: nextSeason.phase,
     context: { ...expiredState.context, squadStatus: wiring.getSquadStatus() },
+    attributes: wiring.getAttributes(),
     state: wiring.getPlayerCondition(),
+    player: { ...expiredState.player, profile: wiring.getPlayerProfile() },
     health: wiring.getHealth(),
     rngState: walked.rngState,
     pending: walked.pending,
@@ -1398,11 +1529,26 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   // T-4-001 D-52: INJURY는 재활 계획을 에피소드에 적용하고 REHAB_CHOSEN을, NATIONAL_TEAM은 응답에
   // 따라 NATIONAL_TEAM_CALLED/DECLINED를 추가 타임라인으로 남긴다(둘 다 EVENT_RESOLVED 다음).
   let health = effectResult.state.health;
+  let season = effectResult.state.season;
   const extraTimeline: TimelineEntry[] = [];
   if (pending.kind === 'INJURY') {
     const episode = health.episodes[episodeIndex]!;
     const updated = applyRehabPlan(episode, rehabPlan as RehabPlan, input.ruleset.injuryRules);
     health = { episodes: health.episodes.map((candidate, i) => (i === episodeIndex ? updated : candidate)) };
+    const shiftedRange = rehabDurationRange(updated, rehabPlan as RehabPlan, input.ruleset.injuryRules);
+    const returnMatches =
+      updated.rehab === 'EARLY'
+        ? shiftedRange.minMatches
+        : updated.rehab === 'CONSERVATIVE'
+          ? shiftedRange.maxMatches
+          : Math.floor((shiftedRange.minMatches + shiftedRange.maxMatches) / 2);
+    if (season !== null) {
+      const sinceMatchId = season.availability?.kind === 'INJURY' ? season.availability.sinceMatchId : updated.occurredAt.matchId;
+      season = {
+        ...season,
+        availability: { kind: 'INJURY', matchesRemaining: returnMatches, sinceMatchId },
+      };
+    }
     extraTimeline.push({ revision: nextRevision, kind: 'REHAB_CHOSEN', refId: pending.episodeId, age: state.age, step: state.currentStep });
   } else if (pending.kind === 'NATIONAL_TEAM') {
     const kind = callUp === 'DECLINE' ? 'NATIONAL_TEAM_DECLINED' : 'NATIONAL_TEAM_CALLED';
@@ -1411,6 +1557,7 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 
   const nextState: CareerState = {
     ...effectResult.state,
+    season,
     tags,
     health,
     resolvedEventIds: [...state.resolvedEventIds, command.payload.eventId],

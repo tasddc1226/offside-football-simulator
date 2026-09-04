@@ -46,6 +46,11 @@ function isAlreadyResolvedThisSeason(chapter: ChapterDefinition, state: CareerSt
   return state.resolvedChapterIds.includes(`${chapter.id}@${seasonIndex}`);
 }
 
+function passesInjuryReturnFilter(chapter: ChapterDefinition, state: CareerState): boolean {
+  if (chapter.trigger.kind !== 'INJURY_RETURN') return true;
+  return state.health.episodes.some((episode) => episode.status === 'RECOVERED' && episode.recurrenceChecksRemaining > 0);
+}
+
 function compareChapterId(a: ChapterCandidate, b: ChapterCandidate): number {
   if (a.chapterId < b.chapterId) return -1;
   if (a.chapterId > b.chapterId) return 1;
@@ -63,6 +68,7 @@ export function selectChapterCandidates(pack: ContentPack, state: CareerState): 
 
   return pack.chapters
     .filter((chapter) => passesPositionGroupFilter(chapter, state))
+    .filter((chapter) => passesInjuryReturnFilter(chapter, state))
     .filter((chapter) => !isAlreadyResolvedThisSeason(chapter, state))
     .map((chapter) => ({
       chapterId: chapter.id,

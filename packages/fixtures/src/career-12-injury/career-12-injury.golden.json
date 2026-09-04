@@ -1,0 +1,33 @@
+{
+  "revision": 20,
+  "stateHash": "63bb7f9b5a22f49296fde18971c8b9d45ea86eb66ea6f178270d631716c631ca",
+  "rngStateDraws": 406,
+  "age": 18,
+  "seasonHistoryLength": 1,
+  "episodes": [
+    {
+      "id": "INJ-1-3-1",
+      "severity": "MODERATE",
+      "bodyPart": "SHOULDER",
+      "occurredAt": { "seasonIndex": 1, "step": 3, "matchId": "1-3-0" },
+      "diagnosisRange": { "minMatches": 3, "maxMatches": 6 },
+      "recurrenceRiskBp": 1500,
+      "status": "RECURRED",
+      "rehab": "STANDARD",
+      "recurrenceChecksRemaining": 0,
+      "permanentDelta": []
+    },
+    {
+      "id": "INJ-1-7-2",
+      "severity": "MAJOR",
+      "bodyPart": "SHOULDER",
+      "occurredAt": { "seasonIndex": 1, "step": 7, "matchId": "1-7-0" },
+      "diagnosisRange": { "minMatches": 7, "maxMatches": 14 },
+      "recurrenceRiskBp": 1500,
+      "status": "RECOVERED",
+      "rehab": "STANDARD",
+      "recurrenceChecksRemaining": 6,
+      "permanentDelta": [{ "key": "durability", "delta": -2 }]
+    }
+  ]
+}

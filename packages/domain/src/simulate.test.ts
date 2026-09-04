@@ -658,6 +658,7 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
     diagnosisRange: { minMatches: 3, maxMatches: 6 },
     rehab: null,
     recurrenceRiskBp: 3000,
+    recurrenceChecksRemaining: 0,
     status: 'ACTIVE',
     permanentDelta: null,
   };
@@ -690,7 +691,7 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
     expect(episode.status).toBe('REHAB');
     expect(episode.rehab).toBe('EARLY');
     // EARLY: returnShiftMatches -2, recurrenceAddBp +1500(rulesetProto.injuryRules.rehab.EARLY).
-    expect(episode.diagnosisRange).toEqual({ minMatches: 1, maxMatches: 4 });
+    expect(episode.diagnosisRange).toEqual({ minMatches: 3, maxMatches: 6 });
     expect(episode.recurrenceRiskBp).toBe(4500);
     const lastEntry = result.snapshot.state.timeline.at(-1);
     expect(lastEntry?.kind).toBe('REHAB_CHOSEN');
@@ -1685,6 +1686,21 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
       if (pending?.kind === 'SETTLEMENT') return current;
       const command: EngineCommand =
         pending?.kind === 'ROLE_PROPOSAL' ? resolveRoleCommand(current.revision, 'ACCEPT') : advanceCommand(current.revision, []);
+      if (pending?.kind === 'INJURY') {
+        const result = simulate({
+          ...baseInput(),
+          snapshot: current,
+          command: resolveEventCommand(current.revision, {
+            eventId: pending.eventId,
+            definitionVersion: pending.version,
+            rehabPlan: 'STANDARD',
+            outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+          }),
+        });
+        if (!result.ok) throw new Error(`driveToSettlement: RESOLVE_EVENT 실패: ${result.error.code} ${result.error.message}`);
+        current = result.snapshot;
+        continue;
+      }
       const result = simulate({ ...baseInput(), snapshot: current, command });
       if (!result.ok) throw new Error(`driveToSettlement: ${command.type} 실패: ${result.error.code} ${result.error.message}`);
       current = result.snapshot;
@@ -1901,15 +1917,24 @@ describe('simulate — START_SEASON은 season.manager·injuryCount를 채운다(
 describe('simulate — onMatchInjury 훅 호출 지점(T-4-001 D-49)', () => {
   it('injuredOff:true 경기가 있는 시즌(career-04-gk)에서 playStepMatches가 onMatchInjury를 호출한다', () => {
     const spy = vi.spyOn(injuryModule, 'onMatchInjury');
+    const recurrenceSpy = vi.spyOn(injuryModule, 'onMatchRecurrence');
     try {
       const { beforeSettlement } = runGkFixture();
       // season-stats.ts의 injuries 카운터는 정확히 match.injuredOff===true일 때만 증가한다 —
-      // playStepMatches의 훅 호출 가드(if (result.match.injuredOff))와 같은 조건이므로 호출 횟수가
-      // 이 카운터와 정확히 같아야 한다.
+      // playStepMatches는 신규 발생이면 onMatchInjury, 복귀 창 재발이면 onMatchRecurrence를 호출한다.
       expect(beforeSettlement.playerStats.injuries).toBeGreaterThan(0);
-      expect(spy.mock.calls.length).toBe(beforeSettlement.playerStats.injuries);
+      expect(spy.mock.calls.length + recurrenceSpy.mock.calls.length).toBe(beforeSettlement.playerStats.injuries);
     } finally {
       spy.mockRestore();
+      recurrenceSpy.mockRestore();
     }
+  });
+
+  it('career-04의 두 forced injury가 closure에 누적되고 각각 RESOLVE_EVENT 뒤 health 이력에 남는다', () => {
+    const { snapshot, beforeSettlement } = runGkFixture();
+    expect(beforeSettlement.playerStats.injuries).toBe(2);
+    expect(snapshot.state.health.episodes).toHaveLength(2);
+    expect(snapshot.state.health.episodes.map((episode) => episode.id)).toEqual(['INJ-1-7-1', 'INJ-1-10-2']);
+    expect(snapshot.state.health.episodes.every((episode) => episode.rehab === 'STANDARD')).toBe(true);
   });
 });

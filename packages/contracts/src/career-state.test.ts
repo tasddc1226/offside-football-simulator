@@ -40,6 +40,8 @@ import {
   career10TransferEngineCommands,
   career11Loan,
   career11LoanEngineCommands,
+  career12Injury,
+  career12InjuryEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -393,6 +395,7 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     'career-09-fw.golden.json',
     'career-10-transfer.golden.json',
     'career-11-loan.golden.json',
+    'career-12-injury.golden.json',
   ];
 
   it('packages/fixtures/src/*/의 *.golden.json 목록이 이 테스트가 재생하는 목록과 같다', () => {
@@ -614,5 +617,20 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     expect(snapshot.stateHash).toBe(career11Loan.golden.stateHash);
     expect(snapshot.state.parentContract).toBeNull();
     expect(snapshot.state.clubHistory).toHaveLength(3);
+  });
+
+  it('career-12-injury: 매 명령 뒤 상태가 스키마를 통과하고 중증 재발 golden과 같다', () => {
+    let counter = 0;
+    const commands = career12InjuryEngineCommands(() => `golden-c12-${counter++}`);
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career12Injury);
+      assertStateRoundTrips(snapshot, `career12Injury revision ${snapshot.revision}`);
+    }
+    if (snapshot === null) throw new Error('career12Injury 명령 목록이 비어 있다.');
+    expect(snapshot.revision).toBe(career12Injury.golden.revision);
+    expect(snapshot.stateHash).toBe(career12Injury.golden.stateHash);
+    expect(snapshot.state.rngState.draws).toBe(career12Injury.golden.rngStateDraws);
+    expect(snapshot.state.health.episodes).toHaveLength(career12Injury.golden.episodes.length);
   });
 });

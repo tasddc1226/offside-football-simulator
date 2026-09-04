@@ -17,9 +17,53 @@
       }
     },
     {
+      "type": "RESOLVE_EVENT",
+      "payload": {
+        "eventId": "EVT-INJ-001",
+        "definitionVersion": 1,
+        "choiceId": "A",
+        "rehabPlan": "STANDARD",
+        "outcomes": [
+          {
+            "id": "A1",
+            "weight": 100,
+            "effects": []
+          }
+        ]
+      }
+    },
+    {
+      "type": "ADVANCE",
+      "payload": {
+        "eligibleEvents": []
+      }
+    },
+    {
       "type": "REJECT_OFFER",
       "payload": {
         "offerId": null
+      }
+    },
+    {
+      "type": "ADVANCE",
+      "payload": {
+        "eligibleEvents": []
+      }
+    },
+    {
+      "type": "RESOLVE_EVENT",
+      "payload": {
+        "eventId": "EVT-INJ-001",
+        "definitionVersion": 1,
+        "choiceId": "A",
+        "rehabPlan": "STANDARD",
+        "outcomes": [
+          {
+            "id": "A1",
+            "weight": 100,
+            "effects": []
+          }
+        ]
       }
     },
     {

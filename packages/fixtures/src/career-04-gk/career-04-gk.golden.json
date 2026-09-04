@@ -1,7 +1,7 @@
 {
-  "revision": 16,
-  "stateHash": "fc0dec702c7ab48ecc0c8d5381490fa825f52dfa90107ccb72fd16fe1c5210e2",
-  "rngStateDraws": 403,
+  "revision": 20,
+  "stateHash": "159f84cd99b77363cf947107f740352d8db312810434a9f476ab29cd5f9120da",
+  "rngStateDraws": 405,
   "age": 18,
   "seasonHistory": [
     {
@@ -13,28 +13,28 @@
           "competitionId": "LEAGUE",
           "kind": "LEAGUE",
           "played": 22,
-          "won": 7,
-          "drawn": 9,
-          "lost": 6,
-          "goalsFor": 30,
-          "goalsAgainst": 27,
-          "position": 5,
+          "won": 10,
+          "drawn": 7,
+          "lost": 5,
+          "goalsFor": 31,
+          "goalsAgainst": 28,
+          "position": 2,
           "cupRound": null
         },
         {
           "competitionId": "CUP",
           "kind": "CUP",
-          "played": 3,
-          "won": 1,
+          "played": 2,
+          "won": 0,
           "drawn": 1,
           "lost": 1,
-          "goalsFor": 5,
-          "goalsAgainst": 5,
+          "goalsFor": 3,
+          "goalsAgainst": 4,
           "position": null,
-          "cupRound": "OUT_SEMI"
+          "cupRound": "OUT_R2"
         }
       ],
-      "settledAtRevision": 16,
+      "settledAtRevision": 20,
       "result": {
         "index": 1,
         "simulationMode": "FAST",
@@ -44,60 +44,60 @@
             "competitionId": "LEAGUE",
             "kind": "LEAGUE",
             "played": 22,
-            "won": 7,
-            "drawn": 9,
-            "lost": 6,
-            "goalsFor": 30,
-            "goalsAgainst": 27,
-            "position": 5,
+            "won": 10,
+            "drawn": 7,
+            "lost": 5,
+            "goalsFor": 31,
+            "goalsAgainst": 28,
+            "position": 2,
             "cupRound": null
           },
           {
             "competitionId": "CUP",
             "kind": "CUP",
-            "played": 3,
-            "won": 1,
+            "played": 2,
+            "won": 0,
             "drawn": 1,
             "lost": 1,
-            "goalsFor": 5,
-            "goalsAgainst": 5,
+            "goalsFor": 3,
+            "goalsAgainst": 4,
             "position": null,
-            "cupRound": "OUT_SEMI"
+            "cupRound": "OUT_R2"
           }
         ],
         "playerStats": {
           "group": "GK",
           "appearances": {
-            "total": 25,
-            "started": 21,
+            "total": 24,
+            "started": 15,
             "sub": 0,
-            "zeroMinute": 4,
-            "out": 4
+            "zeroMinute": 9,
+            "out": 9
           },
-          "minutes": 1700,
-          "ratingSumTenths": 1447,
-          "ratedMatches": 21,
+          "minutes": 1290,
+          "ratingSumTenths": 1065,
+          "ratedMatches": 15,
           "yellow": 0,
           "red": 0,
           "injuries": 2,
           "totals": {
             "group": "GK",
-            "saves": 57,
-            "psxgMinusGoalsCenti": 60,
-            "cleanSheet": 6,
-            "crossesClaimed": 32,
-            "buildUpPasses": 414
+            "saves": 43,
+            "psxgMinusGoalsCenti": 100,
+            "cleanSheet": 5,
+            "crossesClaimed": 28,
+            "buildUpPasses": 313
           }
         },
         "selectionSummary": {
           "squadRoleAtStart": "STARTER",
           "squadRoleAtEnd": "RESERVE",
-          "started": 21,
+          "started": 15,
           "sub": 0,
-          "zeroMinute": 4,
-          "out": 4,
-          "minutes": 1700,
-          "possibleMinutes": 2250,
+          "zeroMinute": 9,
+          "out": 9,
+          "minutes": 1290,
+          "possibleMinutes": 2160,
           "finalRank": 3
         },
         "roleChanges": [
@@ -109,9 +109,9 @@
         ],
         "promiseFulfilment": {
           "promised": "BENCH",
-          "delivered": "STARTER",
+          "delivered": "ROTATION",
           "fulfilled": true,
-          "minutesShareBp": 7556
+          "minutesShareBp": 5972
         },
         "attributeDeltas": [
           {
@@ -124,11 +124,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -2
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 7
               }
             ]
           },
@@ -142,11 +142,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -2
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 7
               }
             ]
           },
@@ -160,11 +160,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -2
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 7
               }
             ]
           },
@@ -178,11 +178,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -2
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 7
               }
             ]
           },
@@ -196,11 +196,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -2
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 7
               }
             ]
           },
@@ -214,11 +214,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -2
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 10
+                "centi": 7
               }
             ]
           },
@@ -232,11 +232,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -7
+                "centi": -12
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 67
+                "centi": 48
               }
             ]
           },
@@ -254,7 +254,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 9
               }
             ]
           },
@@ -272,13 +272,13 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 9
               }
             ]
           },
           {
             "key": "agility",
-            "delta": 1,
+            "delta": 0,
             "causes": [
               {
                 "cause": "TRAINING",
@@ -286,11 +286,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -9
+                "centi": -14
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 84
+                "centi": 60
               }
             ]
           },
@@ -304,11 +304,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -5
+                "centi": -8
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 46
+                "centi": 33
               }
             ]
           },
@@ -326,7 +326,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 9
               }
             ]
           },
@@ -344,7 +344,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 9
               }
             ]
           },
@@ -362,7 +362,7 @@
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 12
+                "centi": 9
               }
             ]
           },
@@ -376,11 +376,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -4
+                "centi": -6
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 32
+                "centi": 23
               }
             ]
           },
@@ -394,11 +394,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -6
+                "centi": -9
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 55
+                "centi": 39
               }
             ]
           },
@@ -412,11 +412,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -5
+                "centi": -8
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 46
+                "centi": 33
               }
             ]
           },
@@ -430,11 +430,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -7
+                "centi": -10
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 58
+                "centi": 42
               }
             ]
           },
@@ -448,11 +448,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -2
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 8
+                "centi": 6
               }
             ]
           },
@@ -466,11 +466,11 @@
               },
               {
                 "cause": "MINUTES",
-                "centi": -1
+                "centi": -2
               },
               {
                 "cause": "EXPERIENCE",
-                "centi": 8
+                "centi": 6
               }
             ]
           }
@@ -481,11 +481,11 @@
         },
         "stateDeltas": {
           "form": {
-            "before": 54,
+            "before": 50,
             "after": 50
           },
           "fitness": {
-            "before": 50,
+            "before": 62,
             "after": 80
           },
           "morale": {
@@ -546,92 +546,92 @@
             "phase": "LEAGUE",
             "matchesPlayed": 4,
             "decisionsOpened": 1,
-            "passedAtRevision": 15
+            "passedAtRevision": 17
           },
           {
             "step": 8,
             "phase": "LEAGUE",
             "matchesPlayed": 2,
             "decisionsOpened": 0,
-            "passedAtRevision": 15
+            "passedAtRevision": 17
           },
           {
             "step": 9,
             "phase": "LEAGUE",
-            "matchesPlayed": 4,
+            "matchesPlayed": 3,
             "decisionsOpened": 0,
-            "passedAtRevision": 15
+            "passedAtRevision": 17
           },
           {
             "step": 10,
             "phase": "LEAGUE",
             "matchesPlayed": 2,
             "decisionsOpened": 0,
-            "passedAtRevision": 15
+            "passedAtRevision": 19
           },
           {
             "step": 11,
             "phase": "LEAGUE",
             "matchesPlayed": 2,
             "decisionsOpened": 0,
-            "passedAtRevision": 15
+            "passedAtRevision": 19
           }
         ],
-        "hash": "31c6eb8bcca6a4c7aaf26a2bb7468ecc65d74a7b18299009765604fc3b401f5c"
+        "hash": "87be8be553510a48f425089e7d3a2c39908d239d28bddae440b3381592b14af4"
       }
     }
   ],
   "beforeSettlement": {
-    "matchesPlayed": 25,
+    "matchesPlayed": 24,
     "playerStats": {
       "group": "GK",
       "appearances": {
-        "total": 25,
-        "started": 21,
+        "total": 24,
+        "started": 15,
         "sub": 0,
-        "zeroMinute": 4,
-        "out": 4
+        "zeroMinute": 9,
+        "out": 9
       },
-      "minutes": 1700,
-      "ratingSumTenths": 1447,
-      "ratedMatches": 21,
+      "minutes": 1290,
+      "ratingSumTenths": 1065,
+      "ratedMatches": 15,
       "yellow": 0,
       "red": 0,
       "injuries": 2,
       "totals": {
         "group": "GK",
-        "saves": 57,
-        "psxgMinusGoalsCenti": 60,
-        "cleanSheet": 6,
-        "crossesClaimed": 32,
-        "buildUpPasses": 414
+        "saves": 43,
+        "psxgMinusGoalsCenti": 100,
+        "cleanSheet": 5,
+        "crossesClaimed": 28,
+        "buildUpPasses": 313
       }
     },
-    "averageRatingTenths": 69,
+    "averageRatingTenths": 71,
     "competitions": [
       {
         "competitionId": "LEAGUE",
         "kind": "LEAGUE",
         "played": 22,
-        "won": 7,
-        "drawn": 9,
-        "lost": 6,
-        "goalsFor": 30,
-        "goalsAgainst": 27,
-        "position": 5,
+        "won": 10,
+        "drawn": 7,
+        "lost": 5,
+        "goalsFor": 31,
+        "goalsAgainst": 28,
+        "position": 2,
         "cupRound": null
       },
       {
         "competitionId": "CUP",
         "kind": "CUP",
-        "played": 3,
-        "won": 1,
+        "played": 2,
+        "won": 0,
         "drawn": 1,
         "lost": 1,
-        "goalsFor": 5,
-        "goalsAgainst": 5,
+        "goalsFor": 3,
+        "goalsAgainst": 4,
         "position": null,
-        "cupRound": "OUT_SEMI"
+        "cupRound": "OUT_R2"
       }
     ]
   }

@@ -182,7 +182,15 @@ export {
   type TacticalRoomView,
 } from './selection.js';
 export { generateCompetitors, type GeneratedCompetitors } from './competitors.js';
-export { applyRehabPlan, onMatchInjury } from './injury.js';
+export {
+  adjustedSeverityWeights,
+  applyRehabPlan,
+  onInjuryRecovered,
+  onMatchInjury,
+  onMatchRecurrence,
+  onRecurrenceCheckFailed,
+  rehabDurationRange,
+} from './injury.js';
 export { buildDefaultManager, managerTenureSeasons } from './manager.js';
 export { onSettlementRelations } from './relationships.js';
 export {

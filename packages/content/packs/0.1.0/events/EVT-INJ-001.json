@@ -7,199 +7,46 @@
   "cooldown": { "steps": 4 },
   "weight": 100,
   "safety": { "minorSafe": true },
+  "presentation": "INJURY",
   "choices": [
     {
       "id": "A",
-      "label": "표준 재활, 1 step 결장",
-      "riskLabel": "LOW",
-      "previewEffects": [{ "label": "체력 회복" }, { "label": "기회 1회 상실" }],
-      "outcomes": [
-        {
-          "id": "A1",
-          "kind": "FIXED",
-          "weight": 100,
-          "title": "예정대로 복귀",
-          "cause": "결장",
-          "effects": [
-            {
-              "kind": "CURRENT",
-              "sourceId": "EVT-INJ-001.A.A1.0",
-              "target": "fitness",
-              "delta": -5,
-              "clamp": { "min": 0, "max": 100 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": { "kind": "AT_STEP", "step": 7 },
-              "stackingRule": "ONCE_PER_SOURCE"
-            },
-            {
-              "kind": "CONTEXT",
-              "sourceId": "EVT-INJ-001.A.A1.1",
-              "target": "squadStatus",
-              "delta": -3,
-              "clamp": { "min": 0, "max": 100 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": null,
-              "stackingRule": "ONCE_PER_SOURCE"
-            }
-          ]
-        }
-      ]
+      "label": "표준 재활",
+      "riskLabel": "MEDIUM",
+      "rehabPlan": "STANDARD",
+      "previewEffects": [
+        { "label": "복귀: 진단 범위 중간값" },
+        { "label": "재발 위험: 변화 없음" },
+        { "label": "출전 기회: 중간 수준 상실" }
+      ],
+      "outcomes": [{ "id": "A1", "kind": "FIXED", "weight": 100, "title": "예정대로 복귀", "cause": "표준 재활", "effects": [] }]
     },
     {
       "id": "B",
-      "label": "진통 후 출전",
+      "label": "조기 복귀",
       "riskLabel": "HIGH",
-      "previewEffects": [{ "label": "선발 기회 확보" }, { "label": "재발 위험" }],
-      "outcomes": [
-        {
-          "id": "B1",
-          "kind": "SUCCESS",
-          "weight": 55,
-          "title": "선발 출전, 무사히 소화",
-          "effects": [
-            {
-              "kind": "CONTEXT",
-              "sourceId": "EVT-INJ-001.B.B1.0",
-              "target": "squadStatus",
-              "delta": 10,
-              "clamp": { "min": 0, "max": 100 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": null,
-              "stackingRule": "ONCE_PER_SOURCE"
-            },
-            {
-              "kind": "RELATION",
-              "sourceId": "EVT-INJ-001.B.B1.1",
-              "target": "managerTrust",
-              "delta": 6,
-              "clamp": { "min": 0, "max": 100 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": null,
-              "stackingRule": "ONCE_PER_SOURCE"
-            },
-            {
-              "kind": "CURRENT",
-              "sourceId": "EVT-INJ-001.B.B1.2",
-              "target": "fitness",
-              "delta": -12,
-              "clamp": { "min": 0, "max": 100 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
-              "stackingRule": "ONCE_PER_SOURCE"
-            }
-          ],
-          "addTags": ["투혼"]
-        },
-        {
-          "id": "B2",
-          "kind": "NEUTRAL",
-          "weight": 30,
-          "title": "뛰었지만 평점 6.0, 통증 지속",
-          "cause": "완치 전 출전",
-          "effects": [
-            {
-              "kind": "CURRENT",
-              "sourceId": "EVT-INJ-001.B.B2.0",
-              "target": "fitness",
-              "delta": -15,
-              "clamp": { "min": 0, "max": 100 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
-              "stackingRule": "ONCE_PER_SOURCE"
-            },
-            {
-              "kind": "CURRENT",
-              "sourceId": "EVT-INJ-001.B.B2.1",
-              "target": "form",
-              "delta": -4,
-              "clamp": { "min": 0, "max": 100 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
-              "stackingRule": "ONCE_PER_SOURCE"
-            }
-          ],
-          "addTags": ["발목_불안"]
-        },
-        {
-          "id": "B3",
-          "kind": "FAIL",
-          "weight": 15,
-          "title": "재발, 4 step 결장",
-          "effects": [
-            {
-              "kind": "CURRENT",
-              "sourceId": "EVT-INJ-001.B.B3.0",
-              "target": "fitness",
-              "delta": -25,
-              "clamp": { "min": 0, "max": 100 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
-              "stackingRule": "ONCE_PER_SOURCE"
-            },
-            {
-              "kind": "PERMANENT",
-              "sourceId": "EVT-INJ-001.B.B3.1",
-              "target": "durability",
-              "delta": -1,
-              "clamp": { "min": 0, "max": 99 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": null,
-              "stackingRule": "ONCE_PER_SOURCE"
-            },
-            {
-              "kind": "CONTEXT",
-              "sourceId": "EVT-INJ-001.B.B3.2",
-              "target": "squadStatus",
-              "delta": -15,
-              "clamp": { "min": 0, "max": 100 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": null,
-              "stackingRule": "ONCE_PER_SOURCE"
-            }
-          ],
-          "addTags": ["발목_불안"]
-        }
-      ]
+      "rehabPlan": "EARLY",
+      "previewEffects": [
+        { "label": "복귀: 가장 빠른 시점" },
+        { "label": "재발 위험: 상승" },
+        { "label": "출전 기회: 가장 적게 상실" }
+      ],
+      "outcomes": [{ "id": "B1", "kind": "FIXED", "weight": 100, "title": "빠르게 복귀", "cause": "조기 재활", "effects": [] }]
     },
     {
       "id": "C",
-      "label": "보수적 재활, 2 step 결장",
+      "label": "보수 재활",
       "riskLabel": "LOW",
-      "previewEffects": [{ "label": "내구성 보호" }, { "label": "폼 하락" }],
-      "outcomes": [
-        {
-          "id": "C1",
-          "kind": "FIXED",
-          "weight": 100,
-          "title": "완전 회복",
-          "cause": "충분한 회복",
-          "effects": [
-            {
-              "kind": "CURRENT",
-              "sourceId": "EVT-INJ-001.C.C1.0",
-              "target": "form",
-              "delta": -6,
-              "clamp": { "min": 0, "max": 100 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
-              "stackingRule": "ONCE_PER_SOURCE"
-            },
-            {
-              "kind": "PERMANENT",
-              "sourceId": "EVT-INJ-001.C.C1.1",
-              "target": "durability",
-              "delta": 1,
-              "clamp": { "min": 0, "max": 99 },
-              "appliesAt": { "kind": "IMMEDIATE" },
-              "expiresAt": null,
-              "stackingRule": "ONCE_PER_SOURCE"
-            }
-          ]
-        }
-      ]
+      "rehabPlan": "CONSERVATIVE",
+      "previewEffects": [
+        { "label": "복귀: 가장 늦은 시점" },
+        { "label": "재발 위험: 하락" },
+        { "label": "출전 기회: 가장 많이 상실" }
+      ],
+      "outcomes": [{ "id": "C1", "kind": "FIXED", "weight": 100, "title": "완전히 회복", "cause": "보수 재활", "effects": [] }]
     }
   ],
   "narrative": {
-    "situation": "훈련 중 발목을 접질렸다. 진단은 경미한 염좌, 예상 결장 1~2 step. 다음 주 리그 경기는 박준서가 결장이라 당신의 첫 선발 기회다."
+    "situation": "경기 중 부상을 당했다. 진단 범위와 재발 위험을 확인하고 재활 계획을 선택해야 한다."
   }
 }

@@ -1,7 +1,7 @@
 {
   "startSeason": {
     "simulationMode": "FAST",
-    "serviceSeasonId": "svc-gk-fast"
+    "serviceSeasonId": "svc-injury-12"
   },
   "commands": [
     {
@@ -39,18 +39,6 @@
       }
     },
     {
-      "type": "REJECT_OFFER",
-      "payload": {
-        "offerId": null
-      }
-    },
-    {
-      "type": "ADVANCE",
-      "payload": {
-        "eligibleEvents": []
-      }
-    },
-    {
       "type": "RESOLVE_EVENT",
       "payload": {
         "eventId": "EVT-INJ-001",
@@ -64,6 +52,18 @@
             "effects": []
           }
         ]
+      }
+    },
+    {
+      "type": "ADVANCE",
+      "payload": {
+        "eligibleEvents": []
+      }
+    },
+    {
+      "type": "REJECT_OFFER",
+      "payload": {
+        "offerId": null
       }
     },
     {

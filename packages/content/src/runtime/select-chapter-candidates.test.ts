@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Command, DomainSnapshot, Effect, FootballSeason, SimulationResult } from '@offside/domain';
+import type { Command, DomainSnapshot, Effect, FootballSeason, InjuryEpisode, SimulationResult } from '@offside/domain';
 import { simulate } from '@offside/domain';
 import { selectChapterCandidates } from './select-chapter-candidates.ts';
 import { selectEligibleEvents } from './select-eligible-events.ts';
@@ -61,6 +61,22 @@ function makeContentPack(chapters: ChapterDefinition[]): ContentPack {
   };
 }
 
+function makeInjuryEpisode(overrides: Partial<InjuryEpisode> = {}): InjuryEpisode {
+  return {
+    id: 'INJ-1-3-1',
+    severity: 'MODERATE',
+    bodyPart: 'HAMSTRING',
+    occurredAt: { seasonIndex: 1, step: 3, matchId: 'm-injury' },
+    diagnosisRange: { minMatches: 3, maxMatches: 6 },
+    rehab: 'STANDARD',
+    recurrenceRiskBp: 3000,
+    recurrenceChecksRemaining: 0,
+    status: 'RECOVERED',
+    permanentDelta: null,
+    ...overrides,
+  };
+}
+
 describe('selectChapterCandidates: 필터·정렬', () => {
   it('status가 ACTIVE가 아니면 빈 배열이다', () => {
     const pack = makeContentPack([makeChapter({ id: 'CHP-MATCH-001' })]);
@@ -110,6 +126,20 @@ describe('selectChapterCandidates: 필터·정렬', () => {
   it('결과는 chapterId 오름차순이다', () => {
     const pack = makeContentPack([makeChapter({ id: 'CHP-MATCH-004' }), makeChapter({ id: 'CHP-MATCH-001' })]);
     expect(selectChapterCandidates(pack, buildTestState()).map((c) => c.chapterId)).toEqual(['CHP-MATCH-001', 'CHP-MATCH-004']);
+  });
+
+  it('INJURY_RETURN 후보는 RECOVERED 재발 창이 남아 있을 때만 포함된다', () => {
+    const pack = makeContentPack([
+      makeChapter({ id: 'CHP-MATCH-012', importance: 'MINOR', trigger: { kind: 'INJURY_RETURN' } }),
+    ]);
+    const recovered = buildTestState({ health: { episodes: [makeInjuryEpisode({ recurrenceChecksRemaining: 1 })] } });
+    expect(selectChapterCandidates(pack, recovered)).toHaveLength(1);
+
+    const expired = buildTestState({ health: { episodes: [makeInjuryEpisode({ recurrenceChecksRemaining: 0 })] } });
+    expect(selectChapterCandidates(pack, expired)).toEqual([]);
+
+    const recurred = buildTestState({ health: { episodes: [makeInjuryEpisode({ status: 'RECURRED', recurrenceChecksRemaining: 6 })] } });
+    expect(selectChapterCandidates(pack, recurred)).toEqual([]);
   });
 });
 

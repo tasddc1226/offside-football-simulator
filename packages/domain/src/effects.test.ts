@@ -565,6 +565,7 @@ describe('HEALTH Effect (T-4-001 D-49)', () => {
       diagnosisRange: { minMatches: 3, maxMatches: 6 },
       rehab: null,
       recurrenceRiskBp: 3000,
+      recurrenceChecksRemaining: 0,
       status: 'ACTIVE',
       permanentDelta: null,
       ...overrides,
