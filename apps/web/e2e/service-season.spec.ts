@@ -72,6 +72,17 @@ test('테스트 시즌이면 허브 배너·카드 배지가 뜨고 커리어 �
   expect(seriousOrCritical).toEqual([]);
 });
 
+test('테스트 시즌이면 온보딩 첫 슬라이드에도 안내 문구가 보인다(axe 위반 없음)', async ({ page }) => {
+  await page.route('**/v1/service-seasons/current', (route) => fulfillJson(route, 200, { data: TEST_SEASON, meta: E2E_META }));
+
+  await page.goto('/onboarding');
+  await expect(page.getByTestId('onboarding-service-season-notice')).toContainText('LINE TEST 시즌입니다');
+
+  const results = await new AxeBuilder({ page }).analyze();
+  const seriousOrCritical = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  expect(seriousOrCritical).toEqual([]);
+});
+
 test('시즌이 LOCKED면 커리어 시작 버튼이 비활성화되고 안내 문구가 보인다', async ({ page }) => {
   await page.route('**/v1/service-seasons/current', (route) => fulfillJson(route, 200, { data: LOCKED_SEASON, meta: E2E_META }));
 
