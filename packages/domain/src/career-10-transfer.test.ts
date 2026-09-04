@@ -6,8 +6,8 @@ import { verifySnapshot } from './simulate.js';
 /**
  * T-3-003 §8 골든 1(career-10-transfer): 첫 계약 1시즌(min) → 시즌1 완주(step 7 RENEWAL은
  * REJECT_OFFER(null)로 이어간다) → 결산(계약 잔여 0 → EXPIRED 시장) → 안전 잔류가 아닌 제안에
- * NEGOTIATE(WAGE, 이 seed는 COUNTERED) → ACCEPT_OFFER(FREE_AGENT, §4 TRANSFER·FREE_AGENT 분기) →
- * 새 구단에서 시즌2 완주·결산 → 시즌3 시작까지. NEGOTIATE가 rng를 정확히 1회 소비하는지, ACCEPT_OFFER가
+ * NEGOTIATE(LENGTH, 이 seed는 COUNTERED) → ACCEPT_OFFER(FREE_AGENT, §4 TRANSFER·FREE_AGENT 분기) →
+ * 새 구단에서 시즌2 완주·결산(새 평판으로 관심 시장을 열지 않음) → 시즌3 시작까지. NEGOTIATE가 rng를 정확히 1회 소비하는지, ACCEPT_OFFER가
  * clubHistory·타임라인·태그를 §4대로 바꾸는지 골든으로 고정한다.
  */
 describe('career-10-transfer fixture — EXPIRED 시장 NEGOTIATE·ACCEPT_OFFER(FREE_AGENT) 골든', () => {
@@ -48,6 +48,7 @@ describe('career-10-transfer fixture — EXPIRED 시장 NEGOTIATE·ACCEPT_OFFER(
     expect(snapshot.state.tags).toEqual(golden.tags);
     expect(snapshot.state.tags).not.toContain('이적_희망');
     expect(snapshot.state.tags).not.toContain('잔류_선언');
+    expect(snapshot.state.season?.manager?.id.startsWith(`${snapshot.state.contract?.teamId}-mgr-`)).toBe(true);
 
     const kinds = snapshot.state.timeline.map((entry) => entry.kind);
     const negotiateIndex = kinds.indexOf('NEGOTIATED');
@@ -56,7 +57,7 @@ describe('career-10-transfer fixture — EXPIRED 시장 NEGOTIATE·ACCEPT_OFFER(
     expect(signIndex).toBeGreaterThan(negotiateIndex);
 
     const negotiated = snapshot.state.timeline[negotiateIndex]!;
-    expect(negotiated.refId).toBe('OFR-16-1:WAGE:COUNTERED');
+    expect(negotiated.refId).toBe('OFR-16-1:LENGTH:COUNTERED');
   });
 
   it('NEGOTIATE는 rng를 정확히 1회 소비하고, 나머지(REJECT_OFFER·ACCEPT_OFFER)는 소비하지 않는다', () => {

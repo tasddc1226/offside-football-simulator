@@ -627,6 +627,9 @@ export const SeasonResultSchema = z.strictObject({
   index: z.number().int().positive(),
   simulationMode: SimulationModeSchema,
   teamId: z.string().min(1),
+  // T-4-003: 실제 지휘 감독과 시즌 종료 시 주장단 상태.
+  managerId: z.string().min(1),
+  captaincyAtEnd: z.enum(['NONE', 'VICE', 'CAPTAIN']),
   competitions: z.array(CompetitionRecordSchema),
   playerStats: SeasonPlayerStatsSchema,
   selectionSummary: z.strictObject({
@@ -796,7 +799,9 @@ export const RelationshipLogEntrySchema = z.strictObject({
   delta: z.number().int(),
   sourceId: z.string().min(1),
   reasonTag: z.string().min(1).nullable(),
-  seasonIndex: z.number().int().positive(),
+  // 확정 전 유스 이벤트도 관계 로그를 남길 수 있어 `state.season === null`이면
+  // `state.seasonHistory.length`인 0을 기록한다(T-4-003). 실제 시즌 로그는 1부터 시작한다.
+  seasonIndex: z.number().int().nonnegative(),
   step: z.number().int().min(1).max(12),
 });
 
@@ -867,6 +872,11 @@ export const CareerStateSchema = z.strictObject({
   timeline: z.array(TimelineEntrySchema),
   season: FootballSeasonSchema.nullable(),
   seasonHistory: z.array(SeasonSummarySchema),
+  // T-4-003: 다음 시즌 감독 예약·주장단·윤리/미디어 FAIL 누계.
+  nextManager: SeasonManagerSchema.nullable(),
+  captaincy: z.enum(['NONE', 'VICE', 'CAPTAIN']),
+  captaincySeasons: z.number().int().nonnegative(),
+  controversyFailures: z.number().int().nonnegative(),
   // T-4-001 D-49: 부상 에피소드 이력.
   health: z.strictObject({ episodes: z.array(InjuryEpisodeSchema) }),
   // T-4-001 D-50: 관계 변화 감사 로그(최대 길이는 룰셋 relationshipRules.logMax).

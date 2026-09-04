@@ -65,10 +65,9 @@ function isBlockedByResolution(event: EventDefinition, state: CareerState): bool
 
 /** 단계·나이·제외 태그·해소 여부. followUp 후보와 일반 후보가 공통으로 통과해야 하는 조건이다. */
 function passesBaseConditions(event: EventDefinition, state: CareerState, phase: CareerPhase): boolean {
-  // T-3-001 D-52(PR #48 리뷰로 확정): presentation이 있는 정의는 일반 EVENT 슬롯 후보에서 빠진다 —
-  // 트리거·followUp 양쪽 다다. presentation 이벤트는 해당 pending 생성기(T-3-002·T-4-002·T-4-004)만
-  // 열 수 있다 — followUp 체인으로 열려면 그 생성기 경로를 새로 타야 한다(공유 함수 예외 두지 않는다).
-  if (event.presentation !== undefined) return false;
+  // T-4-003 D-52 정정: 전용 pending 생성기가 있는 presentation만 일반 슬롯에서 제외한다.
+  // SLUMP·LOCKER_ROOM·ETHICS·MEDIA는 일반 EVENT와 같은 trigger/cooldown/followUp 경로를 탄다.
+  if (event.presentation === 'INJURY' || event.presentation === 'NATIONAL_TEAM' || event.presentation === 'RUMOUR') return false;
   if (!event.phases.includes(phase)) return false;
   if (event.minAge !== undefined && state.age < event.minAge) return false;
   if (event.maxAge !== undefined && state.age > event.maxAge) return false;

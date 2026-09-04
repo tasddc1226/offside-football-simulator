@@ -168,6 +168,7 @@ export async function deleteCareer(engine: AppEngine, careerId: string): Promise
 
 type ResolveEventOutcomePayload = {
   id: string;
+  kind?: EventDefinition['choices'][number]['outcomes'][number]['kind'];
   weight: number;
   effects: Effect[];
   addTags?: string[];
@@ -186,6 +187,7 @@ export function toResolveEventOutcomes(
   return outcomes.map((outcome) => {
     const payload: ResolveEventOutcomePayload = {
       id: outcome.id,
+      kind: outcome.kind,
       weight: outcome.weight,
       effects: outcome.effects,
     };

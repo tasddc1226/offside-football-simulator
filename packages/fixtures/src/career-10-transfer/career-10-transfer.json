@@ -69,7 +69,7 @@
     { "type": "REJECT_OFFER", "payload": { "offerId": null } },
     { "type": "ADVANCE", "payload": { "eligibleEvents": [] } },
     { "type": "SETTLE_SEASON", "payload": {} },
-    { "type": "NEGOTIATE", "payload": { "offerId": "OFR-16-1", "ask": "WAGE" } },
+    { "type": "NEGOTIATE", "payload": { "offerId": "OFR-16-1", "ask": "LENGTH" } },
     { "type": "ACCEPT_OFFER", "payload": { "offerId": "OFR-16-1" } },
     { "type": "START_SEASON", "payload": { "simulationMode": "FAST", "serviceSeasonId": "svc-10-s2" } },
     { "type": "RESOLVE_ROLE", "payload": { "decision": "ACCEPT" } },

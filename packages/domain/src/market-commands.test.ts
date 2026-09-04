@@ -9,7 +9,11 @@ import type { CareerState, DomainSnapshot, Offer } from './types.js';
 
 type EngineCommand = Command & { commandId: string; expectedRevision: number };
 
-function runCommand(snapshot: DomainSnapshot, command: EngineCommand, ruleset = rulesetProto): DomainSnapshot {
+function runCommand(
+  snapshot: DomainSnapshot,
+  command: EngineCommand,
+  ruleset = rulesetProto,
+): DomainSnapshot {
   const result: SimulationResult = simulate({
     snapshot,
     command,
@@ -36,13 +40,21 @@ function withOffers(
     pending: {
       kind: 'OFFERS',
       offers,
-      market: { openedAtRevision: snapshot.revision, seasonIndex: snapshot.state.seasonHistory.length, reason, safeOfferId },
+      market: {
+        openedAtRevision: snapshot.revision,
+        seasonIndex: snapshot.state.seasonHistory.length,
+        reason,
+        safeOfferId,
+      },
     },
   };
   return rehashSnapshot(snapshot, state);
 }
 
-function withPendingLoanReturn(snapshot: DomainSnapshot, options: Array<'RETURN' | 'PERMANENT'>): DomainSnapshot {
+function withPendingLoanReturn(
+  snapshot: DomainSnapshot,
+  options: Array<'RETURN' | 'PERMANENT'>,
+): DomainSnapshot {
   return rehashSnapshot(snapshot, {
     ...snapshot.state,
     pending: { kind: 'LOAN_RETURN', options, buyOptionMinor: 120_000_000 },
@@ -55,7 +67,8 @@ function makeOffer(
 ): Offer {
   const contract = state.contract;
   const profile = state.player.profile;
-  if (contract === null || profile === null) throw new Error('offer fixture requires contract and profile');
+  if (contract === null || profile === null)
+    throw new Error('offer fixture requires contract and profile');
   const { id, kind, teamId, ...rest } = overrides;
   const team = rulesetProto.teams.find((candidate) => candidate.id === teamId);
   return {
@@ -70,13 +83,18 @@ function makeOffer(
     signingBonusMinor: 2_000_000,
     transferFeeMinor: kind === 'TRANSFER' ? 50_000_000 : null,
     rolePromise: 'ROTATION',
-    appearancePromise: { minutesShareBp: rulesetProto.contractRules.promiseMinutesShareBp.ROTATION },
+    appearancePromise: {
+      minutesShareBp: rulesetProto.contractRules.promiseMinutesShareBp.ROTATION,
+    },
     positionPlan: profile.primaryPosition,
     shirtNumber: 17,
     tacticalFitEstimate: 73,
     competitorSummary: null,
     validUntilRevision: null,
-    negotiable: kind === 'LOAN' ? { wage: false, role: true, length: false } : { wage: true, role: true, length: true },
+    negotiable:
+      kind === 'LOAN'
+        ? { wage: false, role: true, length: false }
+        : { wage: true, role: true, length: true },
     negotiationState: 'OPEN',
     negotiatedAsk: null,
     loan:
@@ -89,7 +107,9 @@ function makeOffer(
 
 function otherTeamId(state: CareerState): string {
   const currentTeamId = state.contract?.teamId;
-  const team = rulesetProto.teams.find((candidate) => candidate.id !== currentTeamId && candidate.leagueTier !== 'YOUTH');
+  const team = rulesetProto.teams.find(
+    (candidate) => candidate.id !== currentTeamId && candidate.leagueTier !== 'YOUTH',
+  );
   if (team === undefined) throw new Error('offer fixture requires another professional team');
   return team.id;
 }
@@ -103,7 +123,11 @@ function acceptCommand(snapshot: DomainSnapshot, offerId: string): EngineCommand
   };
 }
 
-function negotiateCommand(snapshot: DomainSnapshot, offerId: string, ask: 'WAGE' | 'ROLE' | 'LENGTH'): EngineCommand {
+function negotiateCommand(
+  snapshot: DomainSnapshot,
+  offerId: string,
+  ask: 'WAGE' | 'ROLE' | 'LENGTH',
+): EngineCommand {
   return {
     type: 'NEGOTIATE',
     commandId: `negotiate-${snapshot.revision}-${offerId}`,
@@ -112,7 +136,10 @@ function negotiateCommand(snapshot: DomainSnapshot, offerId: string, ask: 'WAGE'
   };
 }
 
-function loanReturnCommand(snapshot: DomainSnapshot, decision: 'RETURN' | 'PERMANENT'): EngineCommand {
+function loanReturnCommand(
+  snapshot: DomainSnapshot,
+  decision: 'RETURN' | 'PERMANENT',
+): EngineCommand {
   return {
     type: 'LOAN_RETURN',
     commandId: `loan-return-${snapshot.revision}-${decision}`,
@@ -155,7 +182,11 @@ function runLoanPrefix(commandCount: number): DomainSnapshot {
   return snapshot;
 }
 
-function runLoanFixtureCommands(snapshot: DomainSnapshot, startIndex: number, endIndex: number): DomainSnapshot {
+function runLoanFixtureCommands(
+  snapshot: DomainSnapshot,
+  startIndex: number,
+  endIndex: number,
+): DomainSnapshot {
   let next = snapshot;
   for (let index = startIndex; index < endIndex; index++) {
     const raw = careerLoanFixture.commands[index];
@@ -179,7 +210,11 @@ describe('T-3-003 P1 market command regressions', () => {
       contract: { ...settled.state.contract!, promiseBreaches: 0 },
     };
     const source = rehashSnapshot(settled, sourceState);
-    const movingOffer = makeOffer(source.state, { id: 'OFR-declaration-transfer', kind: 'TRANSFER', teamId: otherTeamId(source.state) });
+    const movingOffer = makeOffer(source.state, {
+      id: 'OFR-declaration-transfer',
+      kind: 'TRANSFER',
+      teamId: otherTeamId(source.state),
+    });
     const offered = withOffers(source, [movingOffer], 'EXPIRED', 'OFR-safe-not-selected');
 
     const result = simulate({
@@ -193,7 +228,11 @@ describe('T-3-003 P1 market command regressions', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.snapshot.state.relationships.fans).toBe(
-      Math.max(0, Math.floor((100 * rulesetProto.transferRules.relationshipCarry.fansCarryBp) / 10000) + rulesetProto.transferRules.relationshipCarry.rivalMoveFansDelta),
+      Math.max(
+        0,
+        Math.floor((100 * rulesetProto.transferRules.relationshipCarry.fansCarryBp) / 10000) +
+          rulesetProto.transferRules.relationshipCarry.rivalMoveFansDelta,
+      ),
     );
     expect(result.snapshot.state.tags).toContain('배신_이적');
     expect(result.snapshot.state.tags).not.toContain('잔류_선언');
@@ -210,7 +249,11 @@ describe('T-3-003 P1 market command regressions', () => {
       contract: { ...settled.state.contract!, promiseBreaches: 1 },
     };
     const source = rehashSnapshot(settled, sourceState);
-    const loanOffer = makeOffer(source.state, { id: 'OFR-promise-loan', kind: 'LOAN', teamId: otherTeamId(source.state) });
+    const loanOffer = makeOffer(source.state, {
+      id: 'OFR-promise-loan',
+      kind: 'LOAN',
+      teamId: otherTeamId(source.state),
+    });
     const offered = withOffers(source, [loanOffer], 'INTEREST', 'OFR-safe-not-selected');
     const attributesBefore = { ...offered.state.attributes };
     const baseOvrBefore = offered.state.player.profile!.baseOvr;
@@ -230,7 +273,9 @@ describe('T-3-003 P1 market command regressions', () => {
     );
     expect(result.snapshot.state.tags).not.toContain('배신_이적');
     expect(result.snapshot.state.tags).not.toContain('잔류_선언');
-    expect(result.snapshot.state.parentContract).toEqual(expect.objectContaining({ promiseBreaches: 1, suspended: true }));
+    expect(result.snapshot.state.parentContract).toEqual(
+      expect.objectContaining({ promiseBreaches: 1, suspended: true }),
+    );
     expect(result.snapshot.state.contract?.kind).toBe('LOAN');
     expect(result.snapshot.state.player.profile?.baseOvr).toBe(baseOvrBefore);
     expect(result.snapshot.state.attributes).toEqual(attributesBefore);
@@ -241,48 +286,70 @@ describe('T-3-003 P1 market command regressions', () => {
     { kind: 'TRANSFER' as const, expectedTimeline: 'TRANSFERRED' as const },
     { kind: 'FREE_AGENT' as const, expectedTimeline: 'CONTRACT_SIGNED' as const },
     { kind: 'LOAN' as const, expectedTimeline: 'LOANED' as const },
-  ])('ACCEPT_OFFER $kind는 계약·stint·pending을 한 원자 전환으로 갱신한다', ({ kind, expectedTimeline }) => {
-    const settled = runSettledFixture().snapshot;
-    const state = settled.state;
-    const teamId = kind === 'RENEWAL' ? state.contract!.teamId : otherTeamId(state);
-    const offer = makeOffer(state, { id: `OFR-atomic-${kind}`, kind, teamId });
-    const offered = withOffers(settled, [offer], 'EXPIRED', offer.id);
-    const attributesBefore = { ...offered.state.attributes };
-    const baseOvrBefore = offered.state.player.profile!.baseOvr;
+  ])(
+    'ACCEPT_OFFER $kind는 계약·stint·pending을 한 원자 전환으로 갱신한다',
+    ({ kind, expectedTimeline }) => {
+      const settled = runSettledFixture().snapshot;
+      const state = {
+        ...settled.state,
+        captaincy: 'CAPTAIN' as const,
+        captaincySeasons: 4,
+      };
+      const source = rehashSnapshot(settled, state);
+      const teamId = kind === 'RENEWAL' ? state.contract!.teamId : otherTeamId(state);
+      const offer = makeOffer(state, { id: `OFR-atomic-${kind}`, kind, teamId });
+      const offered = withOffers(source, [offer], 'EXPIRED', offer.id);
+      const attributesBefore = { ...offered.state.attributes };
+      const baseOvrBefore = offered.state.player.profile!.baseOvr;
 
-    const result = simulate({
-      snapshot: offered,
-      command: acceptCommand(offered, offer.id),
-      ruleset: rulesetProto,
-      rulesetVersion: '1.0.0',
-      contentPackVersion: '0.1.0',
-    });
+      const result = simulate({
+        snapshot: offered,
+        command: acceptCommand(offered, offer.id),
+        ruleset: rulesetProto,
+        rulesetVersion: '1.0.0',
+        contentPackVersion: '0.1.0',
+      });
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.snapshot.revision).toBe(offered.revision + 1);
-    expect(result.snapshot.state.pending).toBeNull();
-    expect(result.snapshot.state.timeline.at(-1)?.kind).toBe(expectedTimeline);
-    expect(result.snapshot.state.player.profile?.baseOvr).toBe(baseOvrBefore);
-    expect(result.snapshot.state.attributes).toEqual(attributesBefore);
-    if (kind === 'RENEWAL') {
-      expect(result.snapshot.state.contract?.teamId).toBe(state.contract?.teamId);
-      expect(result.snapshot.state.clubHistory).toHaveLength(state.clubHistory.length);
-    } else if (kind === 'LOAN') {
-      expect(result.snapshot.state.contract?.kind).toBe('LOAN');
-      expect(result.snapshot.state.parentContract).toEqual(expect.objectContaining({ suspended: true }));
-      expect(result.snapshot.state.clubHistory).toHaveLength(state.clubHistory.length + 1);
-    } else {
-      expect(result.snapshot.state.contract?.kind).toBe('PERMANENT');
-      expect(result.snapshot.state.contract?.teamId).toBe(teamId);
-      expect(result.snapshot.state.parentContract).toBeNull();
-      expect(result.snapshot.state.clubHistory).toHaveLength(state.clubHistory.length + 1);
-    }
-  });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.snapshot.revision).toBe(offered.revision + 1);
+      expect(result.snapshot.state.pending).toBeNull();
+      expect(result.snapshot.state.timeline.at(-1)?.kind).toBe(expectedTimeline);
+      expect(result.snapshot.state.player.profile?.baseOvr).toBe(baseOvrBefore);
+      expect(result.snapshot.state.attributes).toEqual(attributesBefore);
+      if (kind === 'RENEWAL') {
+        expect(result.snapshot.state.contract?.teamId).toBe(state.contract?.teamId);
+        expect(result.snapshot.state.clubHistory).toHaveLength(state.clubHistory.length);
+        expect(result.snapshot.state.captaincy).toBe('CAPTAIN');
+        expect(result.snapshot.state.captaincySeasons).toBe(4);
+      } else if (kind === 'LOAN') {
+        expect(result.snapshot.state.contract?.kind).toBe('LOAN');
+        expect(result.snapshot.state.parentContract).toEqual(
+          expect.objectContaining({ suspended: true }),
+        );
+        expect(result.snapshot.state.clubHistory).toHaveLength(state.clubHistory.length + 1);
+        expect(result.snapshot.state.captaincy).toBe('NONE');
+        expect(result.snapshot.state.captaincySeasons).toBe(0);
+        expect(result.snapshot.state.nextManager).toBeNull();
+      } else {
+        expect(result.snapshot.state.contract?.kind).toBe('PERMANENT');
+        expect(result.snapshot.state.contract?.teamId).toBe(teamId);
+        expect(result.snapshot.state.parentContract).toBeNull();
+        expect(result.snapshot.state.clubHistory).toHaveLength(state.clubHistory.length + 1);
+        expect(result.snapshot.state.captaincy).toBe('NONE');
+        expect(result.snapshot.state.captaincySeasons).toBe(0);
+        expect(result.snapshot.state.nextManager).toBeNull();
+      }
+    },
+  );
 
   it('같은 ACCEPT_OFFER를 stale revision으로 다시 보내면 revision 충돌이고 계약/stint는 하나만 추가된다', () => {
     const settled = runSettledFixture().snapshot;
-    const offer = makeOffer(settled.state, { id: 'OFR-duplicate-transfer', kind: 'TRANSFER', teamId: otherTeamId(settled.state) });
+    const offer = makeOffer(settled.state, {
+      id: 'OFR-duplicate-transfer',
+      kind: 'TRANSFER',
+      teamId: otherTeamId(settled.state),
+    });
     const offered = withOffers(settled, [offer], 'EXPIRED', offer.id);
     const command = acceptCommand(offered, offer.id);
     const accepted = simulate({
@@ -303,7 +370,9 @@ describe('T-3-003 P1 market command regressions', () => {
       contentPackVersion: '0.1.0',
     });
     expect(duplicate).toMatchObject({ ok: false, error: { code: 'CAREER_REVISION_CONFLICT' } });
-    expect(accepted.snapshot.state.clubHistory.filter((stint) => stint.toSeasonIndex === null)).toHaveLength(1);
+    expect(
+      accepted.snapshot.state.clubHistory.filter((stint) => stint.toSeasonIndex === null),
+    ).toHaveLength(1);
     expect(accepted.snapshot.state.clubHistory).toHaveLength(offered.state.clubHistory.length + 1);
   });
 
@@ -323,7 +392,10 @@ describe('T-3-003 P1 market command regressions', () => {
       rulesetVersion: '1.0.0',
       contentPackVersion: '0.1.0',
     });
-    expect(result).toMatchObject({ ok: false, error: { code: 'VALIDATION_FAILED', details: { reason: 'OFFER_EXPIRED' } } });
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', details: { reason: 'OFFER_EXPIRED' } },
+    });
     expect(offered.revision).toBe(settled.revision);
     expect(offered.stateHash).toBe(hashState(offered.state));
   });
@@ -344,7 +416,7 @@ describe('T-3-003 P1 market command regressions', () => {
       for (let index = 0; index < 1000; index++) {
         const seed = `market-negotiate-${success ? 'success' : 'failure'}-${index}`;
         const roll = rollInt(seedRng(seed), 10000).value;
-        if ((roll < successBp) === success) return seed;
+        if (roll < successBp === success) return seed;
       }
       throw new Error(`could not find ${success ? 'success' : 'failure'} negotiation seed`);
     };
@@ -373,12 +445,19 @@ describe('T-3-003 P1 market command regressions', () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       expect(result.snapshot.state.rngState.draws).toBe(beforeDraws + 1);
-      expect(result.snapshot.state.timeline.at(-1)?.refId).toContain(success ? 'COUNTERED' : 'WITHDRAWN');
+      expect(result.snapshot.state.timeline.at(-1)?.refId).toContain(
+        success ? 'COUNTERED' : 'WITHDRAWN',
+      );
       if (success) {
         expect(result.snapshot.state.pending?.kind).toBe('OFFERS');
-        expect(result.snapshot.state.pending?.kind === 'OFFERS' && result.snapshot.state.pending.offers[0]?.negotiationState).toBe('COUNTERED');
+        expect(
+          result.snapshot.state.pending?.kind === 'OFFERS' &&
+            result.snapshot.state.pending.offers[0]?.negotiationState,
+        ).toBe('COUNTERED');
       } else {
-        expect(result.snapshot.state.pending?.kind === 'OFFERS' && result.snapshot.state.pending.offers).toHaveLength(0);
+        expect(
+          result.snapshot.state.pending?.kind === 'OFFERS' && result.snapshot.state.pending.offers,
+        ).toHaveLength(0);
       }
     };
 
@@ -395,7 +474,10 @@ describe('T-3-003 P1 market command regressions', () => {
       snapshot: noPending,
       command: negotiateCommand(noPending, 'OFR-none', 'WAGE'),
     });
-    expect(negotiate).toMatchObject({ ok: false, error: { details: { reason: 'NO_PENDING_OFFERS' } } });
+    expect(negotiate).toMatchObject({
+      ok: false,
+      error: { details: { reason: 'NO_PENDING_OFFERS' } },
+    });
 
     const reject = simulate({
       ...common,
@@ -407,10 +489,20 @@ describe('T-3-003 P1 market command regressions', () => {
         payload: { offerId: null },
       },
     });
-    expect(reject).toMatchObject({ ok: false, error: { details: { reason: 'NO_PENDING_OFFERS' } } });
+    expect(reject).toMatchObject({
+      ok: false,
+      error: { details: { reason: 'NO_PENDING_OFFERS' } },
+    });
 
-    const loanReturn = simulate({ ...common, snapshot: noPending, command: loanReturnCommand(noPending, 'RETURN') });
-    expect(loanReturn).toMatchObject({ ok: false, error: { details: { reason: 'NO_PENDING_LOAN_RETURN' } } });
+    const loanReturn = simulate({
+      ...common,
+      snapshot: noPending,
+      command: loanReturnCommand(noPending, 'RETURN'),
+    });
+    expect(loanReturn).toMatchObject({
+      ok: false,
+      error: { details: { reason: 'NO_PENDING_LOAN_RETURN' } },
+    });
 
     const nonNegotiableOffer = makeOffer(settled.state, {
       id: 'OFR-not-negotiable',
@@ -418,13 +510,21 @@ describe('T-3-003 P1 market command regressions', () => {
       teamId: otherTeamId(settled.state),
       negotiable: { wage: false, role: false, length: false },
     });
-    const nonNegotiablePending = withOffers(settled, [nonNegotiableOffer], 'EXPIRED', nonNegotiableOffer.id);
+    const nonNegotiablePending = withOffers(
+      settled,
+      [nonNegotiableOffer],
+      'EXPIRED',
+      nonNegotiableOffer.id,
+    );
     const notNegotiable = simulate({
       ...common,
       snapshot: nonNegotiablePending,
       command: negotiateCommand(nonNegotiablePending, nonNegotiableOffer.id, 'WAGE'),
     });
-    expect(notNegotiable).toMatchObject({ ok: false, error: { details: { reason: 'NOT_NEGOTIABLE' } } });
+    expect(notNegotiable).toMatchObject({
+      ok: false,
+      error: { details: { reason: 'NOT_NEGOTIABLE' } },
+    });
 
     const safeReject = simulate({
       ...common,
@@ -448,19 +548,35 @@ describe('T-3-003 P1 market command regressions', () => {
         payload: { offerId: 'OFR-missing' },
       },
     });
-    expect(missingReject).toMatchObject({ ok: false, error: { details: { reason: 'OFFER_NOT_FOUND' } } });
+    expect(missingReject).toMatchObject({
+      ok: false,
+      error: { details: { reason: 'OFFER_NOT_FOUND' } },
+    });
 
     const loaned = runLoanPrefix(15);
     const returnPending = withPendingLoanReturn(loaned, ['RETURN']);
-    const unavailableReturn = simulate({ ...common, snapshot: returnPending, command: loanReturnCommand(returnPending, 'PERMANENT') });
-    expect(unavailableReturn).toMatchObject({ ok: false, error: { details: { reason: 'OPTION_NOT_AVAILABLE' } } });
+    const unavailableReturn = simulate({
+      ...common,
+      snapshot: returnPending,
+      command: loanReturnCommand(returnPending, 'PERMANENT'),
+    });
+    expect(unavailableReturn).toMatchObject({
+      ok: false,
+      error: { details: { reason: 'OPTION_NOT_AVAILABLE' } },
+    });
   });
 
   it('LOAN_RETURN의 RETURN·PERMANENT 분기와 parentRemaining 0 자동 FA 분기를 모두 처리한다', () => {
     const loaned = runLoanPrefix(15);
+    const captainLoaned = rehashSnapshot(loaned, {
+      ...loaned.state,
+      captaincy: 'CAPTAIN',
+      captaincySeasons: 4,
+    });
+    const captainReturnPending = withPendingLoanReturn(captainLoaned, ['RETURN']);
     const returned = simulate({
-      snapshot: withPendingLoanReturn(loaned, ['RETURN']),
-      command: loanReturnCommand(withPendingLoanReturn(loaned, ['RETURN']), 'RETURN'),
+      snapshot: captainReturnPending,
+      command: loanReturnCommand(captainReturnPending, 'RETURN'),
       ruleset: rulesetProto,
       rulesetVersion: '1.0.0',
       contentPackVersion: '0.1.0',
@@ -470,8 +586,11 @@ describe('T-3-003 P1 market command regressions', () => {
     expect(returned.snapshot.state.contract?.kind).toBe('PERMANENT');
     expect(returned.snapshot.state.parentContract).toBeNull();
     expect(returned.snapshot.state.timeline.at(-1)?.refId).toBe('RETURN');
+    expect(returned.snapshot.state.captaincy).toBe('NONE');
+    expect(returned.snapshot.state.captaincySeasons).toBe(0);
+    expect(returned.snapshot.state.nextManager).toBeNull();
 
-    const permanentPending = withPendingLoanReturn(loaned, ['RETURN', 'PERMANENT']);
+    const permanentPending = withPendingLoanReturn(captainLoaned, ['RETURN', 'PERMANENT']);
     const permanent = simulate({
       snapshot: permanentPending,
       command: loanReturnCommand(permanentPending, 'PERMANENT'),
@@ -485,21 +604,36 @@ describe('T-3-003 P1 market command regressions', () => {
     expect(permanent.snapshot.state.contract?.teamId).toBe(loaned.state.contract?.teamId);
     expect(permanent.snapshot.state.parentContract).toBeNull();
     expect(permanent.snapshot.state.timeline.at(-2)?.refId).toBe('PERMANENT');
+    expect(permanent.snapshot.state.captaincy).toBe('NONE');
+    expect(permanent.snapshot.state.captaincySeasons).toBe(0);
+    expect(permanent.snapshot.state.nextManager).toBeNull();
 
     const loanState: CareerState = {
       ...loaned.state,
       parentContract: { ...loaned.state.parentContract!, lengthSeasons: 1 },
       context: { tacticalFit: 99, squadStatus: 7, positionProficiency: 66 },
-      relationships: { ...loaned.state.relationships, managerTrust: 12, captain: 34, rival: 56, fans: 100 },
+      relationships: {
+        ...loaned.state.relationships,
+        managerTrust: 12,
+        captain: 34,
+        rival: 56,
+        fans: 100,
+      },
     };
     const autoFaStart = rehashSnapshot(loaned, loanState);
     const autoFaSettled = runLoanFixtureCommands(autoFaStart, 15, 20);
     expect(autoFaSettled.state.pending?.kind).toBe('OFFERS');
-    expect(autoFaSettled.state.pending?.kind === 'OFFERS' && autoFaSettled.state.pending.market.reason).toBe('EXPIRED');
+    expect(
+      autoFaSettled.state.pending?.kind === 'OFFERS' && autoFaSettled.state.pending.market.reason,
+    ).toBe('EXPIRED');
     expect(autoFaSettled.state.timeline.at(-1)?.refId).toBe('RETURN');
+    expect(autoFaSettled.state.captaincy).toBe('NONE');
+    expect(autoFaSettled.state.captaincySeasons).toBe(0);
+    expect(autoFaSettled.state.nextManager).toBeNull();
     expect(autoFaSettled.state.context).toEqual({
       tacticalFit: rulesetProto.offerRules.tacticalFitEstimate.min,
-      squadStatus: rulesetProto.contractRules.squadStatusByRole[loanState.parentContract!.rolePromise],
+      squadStatus:
+        rulesetProto.contractRules.squadStatusByRole[loanState.parentContract!.rolePromise],
       positionProficiency: 66,
     });
     expect(autoFaSettled.state.relationships).toEqual({
@@ -510,7 +644,10 @@ describe('T-3-003 P1 market command regressions', () => {
       agent: loanState.relationships.agent,
     });
 
-    const safeOffer = autoFaSettled.state.pending?.kind === 'OFFERS' ? autoFaSettled.state.pending.offers[0]! : null;
+    const safeOffer =
+      autoFaSettled.state.pending?.kind === 'OFFERS'
+        ? autoFaSettled.state.pending.offers[0]!
+        : null;
     if (safeOffer === null) throw new Error('automatic FA market did not contain a safe offer');
     const afterSafeRenewal = runCommand(autoFaSettled, acceptCommand(autoFaSettled, safeOffer.id));
     expect(afterSafeRenewal.state.contract?.teamId).toBe(loanState.parentContract!.teamId);

@@ -96,6 +96,10 @@ function baseCareerTagState(): CareerState {
     timeline: [],
     season: null,
     seasonHistory: [],
+    nextManager: null,
+    captaincy: 'NONE',
+    captaincySeasons: 0,
+    controversyFailures: 0,
     health: { episodes: [] },
     relationshipLog: [],
     memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
@@ -123,6 +127,8 @@ function chapterRecord(overrides: Partial<ChapterRecord> & { decisions: ChapterR
 const DUMMY_SEASON_RESULT_BASE: Omit<SeasonResult, 'chapters' | 'index'> = {
   simulationMode: 'FAST',
   teamId: 'team-1',
+  managerId: 'team-1-mgr-1',
+  captaincyAtEnd: 'NONE',
   competitions: [],
   playerStats: {
     group: 'FW',

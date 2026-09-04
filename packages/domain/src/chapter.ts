@@ -243,7 +243,7 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
     return { ok: false, message: 'outcomes가 비어 있다.' };
   }
 
-  const effectResult = applyEffects(state, chosen.effects, { step: state.currentStep });
+  const effectResult = applyEffects(state, chosen.effects, { step: state.currentStep }, input.ruleset.relationshipRules);
 
   let tags = effectResult.state.tags;
   if (chosen.addTags && chosen.addTags.length > 0) tags = [...tags, ...chosen.addTags];

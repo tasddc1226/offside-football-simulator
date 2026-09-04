@@ -656,6 +656,10 @@ export type SeasonResult = {
   index: number;
   simulationMode: SimulationMode;
   teamId: string;
+  /** T-4-003: 이 결산 시즌을 실제로 지휘한 감독의 id. */
+  managerId: string;
+  /** T-4-003: 시즌을 마친 시점의 주장단 상태(결산 승격 전 값). */
+  captaincyAtEnd: 'NONE' | 'VICE' | 'CAPTAIN';
   competitions: CompetitionRecord[];
   playerStats: SeasonPlayerStats;
   selectionSummary: {
@@ -785,6 +789,13 @@ export type CareerState = {
   timeline: TimelineEntry[];
   season: FootballSeason | null;
   seasonHistory: SeasonSummary[];
+  /** T-4-003: 다음 시즌 시작 시 소비할 감독 예약. */
+  nextManager: SeasonManager | null;
+  /** T-4-003: 주장단 상태와 해당 상태로 마친 시즌 수. */
+  captaincy: 'NONE' | 'VICE' | 'CAPTAIN';
+  captaincySeasons: number;
+  /** T-4-003: 윤리·미디어 FAIL outcome 누계. */
+  controversyFailures: number;
   // T-4-001 D-49: 부상 에피소드 이력. 기본 `{ episodes: [] }`. 발생 roll은 T-4-002.
   health: { episodes: InjuryEpisode[] };
   // T-4-001 D-50: 관계 변화 감사 로그. 기본 `[]`, 최대 길이는 룰셋 `relationshipRules.logMax`. 실제로

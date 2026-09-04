@@ -3133,7 +3133,17 @@
   "relationshipRules": {
     "logMax": 40,
     "memoryTagsMax": 3,
-    "captainAppointment": { "minCaptain": 75, "minSeasons": 2 }
+    "captainAppointment": { "minCaptain": 70, "minSeasons": 3 },
+    "tagThresholds": {
+      "glassPotential": 85,
+      "glassMajorEpisodes": 3,
+      "managerTrust": 80,
+      "managerSeasons": 3,
+      "lockerRelation": 75,
+      "lockerSeasons": 3,
+      "comebackRole": "STARTER",
+      "controversialFailures": 3
+    }
   },
   "reputationRules": {
     "initialPopularityCenti": 5000,

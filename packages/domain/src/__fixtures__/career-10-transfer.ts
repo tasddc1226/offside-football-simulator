@@ -42,9 +42,9 @@ export type TransferFixtureRun = { snapshot: DomainSnapshot };
 /**
  * T-3-003 §8: 첫 계약 1시즌(`offerRules.lengthSeasons` min) → 시즌 1 완주(step 7 RENEWAL 제안은
  * `REJECT_OFFER(null)`로 그대로 이어간다) → 결산(EXPIRED 시장, 계약 잔여 0) → 안전 잔류가 아닌
- * 제안(FREE_AGENT)에 `NEGOTIATE(WAGE)`(성공 COUNTERED, 이 시드가 주는 대로) → `ACCEPT_OFFER`(FREE_AGENT,
- * §4 TRANSFER·FREE_AGENT 분기) → 새 구단에서 시즌 2 완주·결산(시드 특성상 결산 뒤 시장은 열리지 않는다)
- * → 시즌 3 시작까지(seed `t10-search-1`, 탐색 근거: `career-10-transfer.json`과 같은 첫 계약 이벤트
+ * 제안(FREE_AGENT)에 `NEGOTIATE(LENGTH)`(성공 COUNTERED, 결산 감독 roll 이후에도 이적 의도를 보존) → `ACCEPT_OFFER`(FREE_AGENT,
+ * §4 TRANSFER·FREE_AGENT 분기) → 새 구단에서 시즌 2 완주·결산(새 평판으로 관심 시장을 열지 않음) → 시즌 3 시작까지(seed `t10-search-1`,
+ * 탐색 근거: `career-10-transfer.json`과 같은 첫 계약 이벤트
  * 템플릿을 고정하고 seed 접미사만 1부터 순차 탐색해 첫 시도에서 조건을 모두 만족했다).
  */
 export function runTransferFixture(): TransferFixtureRun {

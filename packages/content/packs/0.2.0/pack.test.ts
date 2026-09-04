@@ -9,14 +9,14 @@ import { PERMANENT_TARGETS, CURRENT_TARGETS, CONTEXT_TARGETS, RELATION_TARGETS }
 const PACK_DIR = dirname(fileURLToPath(import.meta.url));
 
 describe('packs/0.2.0', () => {
-  it('has exactly 15 events and 3 chapters that load and validate without errors', () => {
+  it('has exactly 19 events and 3 chapters that load and validate without errors', () => {
     const loaded = loadPack(PACK_DIR);
-    expect(loaded.events).toHaveLength(15);
+    expect(loaded.events).toHaveLength(19);
     expect(loaded.chapters).toHaveLength(3);
 
     const result = validatePack(loaded, { writeChecksum: false });
     expect(result.errors).toEqual([]);
-    expect(result.eventCount).toBe(15);
+    expect(result.eventCount).toBe(19);
     expect(result.chapterCount).toBe(3);
   });
 
@@ -86,11 +86,21 @@ describe('packs/0.2.0', () => {
     expect(result.errors.filter((e) => e.includes('checksum'))).toEqual([]);
   });
 
-  // T-3-006: 0.2.0의 새 이벤트 5개는 전부 PROTOTYPE 표시, 0.1.0에서 넘어온 10개는 표시가 없다
+  // T-3-006/T-4-003: 0.2.0의 신규 이벤트는 전부 PROTOTYPE 표시, 0.1.0에서 넘어온 10개는 표시가 없다
   // (0.1.0 정의는 바이트 동일 — U-013 (A)는 워커 신규 저작분만 PROTOTYPE으로 표시한다).
   it('새 이벤트 5개는 authoring이 PROTOTYPE이고 0.1.0 유래 10개는 authoring이 없다', () => {
     const loaded = loadPack(PACK_DIR);
-    const newIds = new Set(['EVT-CON-010', 'EVT-CON-011', 'EVT-CON-012', 'EVT-CON-013', 'EVT-MEDIA-006']);
+    const newIds = new Set([
+      'EVT-CON-010',
+      'EVT-CON-011',
+      'EVT-CON-012',
+      'EVT-CON-013',
+      'EVT-MEDIA-006',
+      'EVT-SLUMP-010',
+      'EVT-REL-010',
+      'EVT-ETH-010',
+      'EVT-MEDIA-010',
+    ]);
     for (const { raw } of loaded.events) {
       const event = EventDefinitionSchema.parse(raw);
       if (newIds.has(event.id)) {

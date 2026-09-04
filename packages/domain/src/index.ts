@@ -183,8 +183,15 @@ export {
 } from './selection.js';
 export { generateCompetitors, type GeneratedCompetitors } from './competitors.js';
 export { applyRehabPlan, onMatchInjury } from './injury.js';
-export { buildDefaultManager, managerTenureSeasons } from './manager.js';
+export { buildDefaultManager, buildReplacementManager, codePointSum, managerTenureSeasons } from './manager.js';
 export { onSettlementRelations } from './relationships.js';
+export { appendRelationshipLog } from './effects.js';
+export {
+  applySettlementReputation,
+  computePopularityDelta,
+  computeSettlementPopularityDelta,
+  seasonWonTitle,
+} from './reputation.js';
 export {
   simulate,
   verifySnapshot,

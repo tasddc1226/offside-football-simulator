@@ -26,11 +26,11 @@ describe('loadContentPack', () => {
   });
 });
 
-// T-3-006: 팩 0.2.0은 0.1.0의 정의 10개·챕터 3개를 바이트 동일로 품고 PRO 이벤트 5개를 더한다.
+// T-3-006/T-4-003: 팩 0.2.0은 0.1.0의 정의 10개·챕터 3개를 바이트 동일로 품고 이벤트를 더한다.
 describe('loadContentPack: 0.2.0', () => {
-  it('0.2.0의 이벤트 개수가 15개이고 manifest.files의 events 목록과 id가 일치한다', () => {
+  it('0.2.0의 이벤트 개수가 19개이고 manifest.files의 events 목록과 id가 일치한다', () => {
     const pack = loadContentPack('0.2.0');
-    expect(pack.events).toHaveLength(15);
+    expect(pack.events).toHaveLength(19);
 
     const idsFromManifest = pack.manifest.files
       .filter((file) => file.startsWith('events/'))

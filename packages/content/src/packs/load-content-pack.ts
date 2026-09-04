@@ -35,6 +35,10 @@ import eventMedia006 from '../../packs/0.2.0/events/EVT-MEDIA-006.json' with { t
 import eventMgr001v020 from '../../packs/0.2.0/events/EVT-MGR-001.json' with { type: 'json' };
 import eventRel001v020 from '../../packs/0.2.0/events/EVT-REL-001.json' with { type: 'json' };
 import eventRel002v020 from '../../packs/0.2.0/events/EVT-REL-002.json' with { type: 'json' };
+import eventRel010 from '../../packs/0.2.0/events/EVT-REL-010.json' with { type: 'json' };
+import eventEth010 from '../../packs/0.2.0/events/EVT-ETH-010.json' with { type: 'json' };
+import eventMedia010 from '../../packs/0.2.0/events/EVT-MEDIA-010.json' with { type: 'json' };
+import eventSlump010 from '../../packs/0.2.0/events/EVT-SLUMP-010.json' with { type: 'json' };
 import chapterMatch001v020 from '../../packs/0.2.0/chapters/CHP-MATCH-001.json' with { type: 'json' };
 import chapterMatch002v020 from '../../packs/0.2.0/chapters/CHP-MATCH-002.json' with { type: 'json' };
 import chapterMatch004v020 from '../../packs/0.2.0/chapters/CHP-MATCH-004.json' with { type: 'json' };
@@ -90,6 +94,10 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       eventMgr001v020,
       eventRel001v020,
       eventRel002v020,
+      eventRel010,
+      eventEth010,
+      eventMedia010,
+      eventSlump010,
     ],
     chapters: [chapterMatch001v020, chapterMatch002v020, chapterMatch004v020],
     narrativeTokens: narrativeTokens020,
