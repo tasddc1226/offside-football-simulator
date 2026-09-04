@@ -926,11 +926,13 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
         issues.push({ path: ['clubHistory'], message: '계약이 있으면 열린 stint가 있어야 한다.' });
       } else if (openStints.length === 1) {
         const currentStint = openStints[0]!;
-        for (const key of ['contractId', 'teamId', 'kind'] as const) {
-          if (hasOwn(contract, key) && hasOwn(currentStint, key) && contract[key] !== currentStint[key]) {
-            issues.push({ path: ['clubHistory'], message: '열린 stint가 현재 계약과 일치해야 한다.' });
-            break;
-          }
+        const contractIdMismatch =
+          hasOwn(contract, 'id') && hasOwn(currentStint, 'contractId') && contract.id !== currentStint.contractId;
+        const teamIdMismatch =
+          hasOwn(contract, 'teamId') && hasOwn(currentStint, 'teamId') && contract.teamId !== currentStint.teamId;
+        const kindMismatch = hasOwn(contract, 'kind') && hasOwn(currentStint, 'kind') && contract.kind !== currentStint.kind;
+        if (contractIdMismatch || teamIdMismatch || kindMismatch) {
+          issues.push({ path: ['clubHistory'], message: '열린 stint가 현재 계약과 일치해야 한다.' });
         }
       }
     }

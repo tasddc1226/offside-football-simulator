@@ -88,6 +88,14 @@ describe('verifyIncomingSnapshot 계약·소속 교차 불변식', () => {
       },
     },
     {
+      label: 'contractId-only mismatch',
+      state: {
+        contract: loanContract,
+        parentContract: { id: 'CTR-parent', teamId: 'source-team', kind: 'PERMANENT', suspended: true },
+        clubHistory: [{ ...loanStint, contractId: 'CTR-other' }],
+      },
+    },
+    {
       label: 'overlapping open stints',
       state: {
         contract: { id: 'CTR-current', teamId: 'current-team', kind: 'PERMANENT' },

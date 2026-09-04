@@ -414,6 +414,24 @@ describe('CareerStateSchema', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('열린 club stint의 contractId가 현재 contract.id와 다르면 거부한다', () => {
+    const contract = { ...VALID_CONTRACT, id: 'CTR-current' };
+    const currentStint = {
+      teamId: contract.teamId,
+      teamName: contract.teamName,
+      leagueTier: contract.leagueTier,
+      kind: contract.kind,
+      fromSeasonIndex: 1,
+      toSeasonIndex: null,
+      endReason: null,
+      contractId: 'CTR-other',
+    };
+
+    expect(CareerStateSchema.safeParse({ ...confirmedStateLiteral(), contract, clubHistory: [currentStint] }).success).toBe(
+      false,
+    );
+  });
 });
 
 /**

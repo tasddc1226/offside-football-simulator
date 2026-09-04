@@ -63,9 +63,10 @@ function stateBytes(snapshot: DomainSnapshot): number {
 type Step = { snapshot: DomainSnapshot; command: EngineCommand };
 
 /** 스냅샷 하나 + 실제 명령 로그(revision `from+1`..`to`, 실제 commandType·payload)로 이뤄진 PUT 본문의 바이트 수. */
-function putBodyBytes(steps: readonly Step[], from: number): number {
+function buildPutBody(steps: readonly Step[], from: number, target?: Step) {
+  const last = (target ?? steps[steps.length - 1]!).snapshot;
   const commandsPart = steps
-    .filter((step) => step.snapshot.revision > from)
+    .filter((step) => step.snapshot.revision > from && step.snapshot.revision <= last.revision)
     .map(
       (step): Pick<CommandLogEntry, 'revision' | 'commandId' | 'commandType' | 'payload' | 'resultHash'> => ({
         revision: step.snapshot.revision,
@@ -75,8 +76,7 @@ function putBodyBytes(steps: readonly Step[], from: number): number {
         resultHash: step.snapshot.stateHash,
       }),
     );
-  const last = steps[steps.length - 1]!.snapshot;
-  const body = {
+  return {
     baseRevision: from,
     snapshot: {
       revision: last.revision,
@@ -92,7 +92,10 @@ function putBodyBytes(steps: readonly Step[], from: number): number {
     rulesetVersion: last.rulesetVersion,
     contentPackVersion: last.contentPackVersion,
   };
-  return byteLength(JSON.stringify(body));
+}
+
+function putBodyBytes(steps: readonly Step[], from: number, target?: Step): number {
+  return byteLength(JSON.stringify(buildPutBody(steps, from, target)));
 }
 
 function replayIndependentFixture(
@@ -386,25 +389,38 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
         ? findStep((step) => step.snapshot.state.contract?.kind === 'LOAN', '임대 중(parentContract 포함)')
         : undefined;
     const final = steps[steps.length - 1]!;
+    const offerCount = market.snapshot.state.pending?.kind === 'OFFERS' ? market.snapshot.state.pending.offers.length : 0;
+    expect(offerCount, `${label} 3-offer size probe`).toBeGreaterThanOrEqual(3);
+    const marketBody = buildPutBody(steps, 0, market);
+    const marketBodyState = JSON.parse(marketBody.snapshot.state) as {
+      pending?: { kind?: string; offers?: unknown[] };
+    };
+    const marketBodyOfferCount =
+      marketBodyState.pending?.kind === 'OFFERS' && Array.isArray(marketBodyState.pending.offers)
+        ? marketBodyState.pending.offers.length
+        : 0;
+    expect(marketBodyOfferCount, `${label} 3-offer PUT body`).toBe(offerCount);
+    expect(putBodyBytes(steps, 0, market), `${label} 3-offer PUT body`).toBeGreaterThan(
+      putBodyBytes(steps, 0, fixtureMarket),
+    );
     const measured = [
       {
         checkpoint: 'market-3-offers-size-probe',
-        snapshot: market.snapshot,
-        offerCount: market.snapshot.state.pending?.kind === 'OFFERS' ? market.snapshot.state.pending.offers.length : 0,
+        step: market,
+        offerCount,
       },
-      ...(negotiated === undefined ? [] : [{ checkpoint: 'after-negotiate', snapshot: negotiated.snapshot }]),
-      ...(transfer === undefined ? [] : [{ checkpoint: 'after-transfer', snapshot: transfer.snapshot }]),
-      ...(loan === undefined ? [] : [{ checkpoint: 'during-loan', snapshot: loan.snapshot }]),
-      { checkpoint: 'final-3-season', snapshot: final.snapshot },
-    ].map(({ checkpoint, snapshot, offerCount }) => ({
+      ...(negotiated === undefined ? [] : [{ checkpoint: 'after-negotiate', step: negotiated }]),
+      ...(transfer === undefined ? [] : [{ checkpoint: 'after-transfer', step: transfer }]),
+      ...(loan === undefined ? [] : [{ checkpoint: 'during-loan', step: loan }]),
+      { checkpoint: 'final-3-season', step: final },
+    ].map(({ checkpoint, step, offerCount }) => ({
       checkpoint,
-      revision: snapshot.revision,
-      stateBytes: stateBytes(snapshot),
+      revision: step.snapshot.revision,
+      stateBytes: stateBytes(step.snapshot),
+      bodyBytes: putBodyBytes(steps, 0, step),
       ...(offerCount === undefined ? {} : { offerCount }),
     }));
     const bodyBytes = putBodyBytes(steps, 0);
-    const offerCount = market.snapshot.state.pending?.kind === 'OFFERS' ? market.snapshot.state.pending.offers.length : 0;
-    expect(offerCount, `${label} 3-offer size probe`).toBeGreaterThanOrEqual(3);
 
     console.log(
       JSON.stringify({
@@ -418,6 +434,7 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
 
     for (const point of measured) {
       expect(point.stateBytes, `${label} ${point.checkpoint}`).toBeLessThan(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+      expect(point.bodyBytes, `${label} ${point.checkpoint} PUT`).toBeLessThan(REQUEST_BODY_MAX_BYTES);
     }
     expect(bodyBytes, `${label} full PUT`).toBeLessThan(REQUEST_BODY_MAX_BYTES);
   });
