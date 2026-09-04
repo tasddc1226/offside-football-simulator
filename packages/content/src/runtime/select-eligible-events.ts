@@ -65,6 +65,9 @@ function isBlockedByResolution(event: EventDefinition, state: CareerState): bool
 
 /** 단계·나이·제외 태그·해소 여부. followUp 후보와 일반 후보가 공통으로 통과해야 하는 조건이다. */
 function passesBaseConditions(event: EventDefinition, state: CareerState, phase: CareerPhase): boolean {
+  // T-3-001 D-52: presentation이 있는 정의는 일반 EVENT 슬롯 후보에서 빠진다 — 해당 pending
+  // 생성기(T-3-002·T-4-002·T-4-004)만 고른다.
+  if (event.presentation !== undefined) return false;
   if (!event.phases.includes(phase)) return false;
   if (event.minAge !== undefined && state.age < event.minAge) return false;
   if (event.maxAge !== undefined && state.age > event.maxAge) return false;

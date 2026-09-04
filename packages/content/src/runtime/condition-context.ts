@@ -1,4 +1,4 @@
-import type { CareerState, Position } from '@offside/domain';
+import type { CareerState, Contract, Position, TimelineEntry } from '@offside/domain';
 import type { ConditionContext } from '../schema/condition.ts';
 import { SEASON_STATS } from '../schema/condition.ts';
 import { ATTRIBUTE_KEYS } from '../schema/ruleset.ts';
@@ -33,9 +33,23 @@ const NOT_MODELED_STRING = '';
 // 걸리지 않도록 최댓값(roll100 상한)을 기본값으로 둔다. 실제 롤이 생기면 이 필드를 채운다.
 const NO_INJURY_ROLL = 100;
 
+/**
+ * ADR-010 유도식(`lengthSeasons − 서명 이후 SEASON_STARTED 횟수`)을 그대로 복제한다.
+ * content는 domain 런타임 함수를 import할 수 없으므로(ADR-005, 타입만 import) domain의
+ * `computeContractSeasonsRemaining`과 동일한 계산을 여기서도 순수 함수로 둔다.
+ */
+function computeSeasonsRemaining(contract: Contract, timeline: readonly TimelineEntry[]): number {
+  const seasonsServed = timeline.filter(
+    (entry) => entry.kind === 'SEASON_STARTED' && entry.revision > contract.signedAtRevision,
+  ).length;
+  return Math.max(0, contract.lengthSeasons - seasonsServed);
+}
+
 /** `CareerState`를 04 이벤트 엔진 조건 DSL(`ConditionContext`)로 매핑한다. */
 export function buildConditionContext(state: CareerState): ConditionContext {
   const profile = state.player.profile;
+  const contract = state.contract;
+  const seasonsRemaining = contract ? computeSeasonsRemaining(contract, state.timeline) : NOT_MODELED_INT;
 
   const context: ConditionContext = {
     'career.age': state.age,
@@ -78,6 +92,27 @@ export function buildConditionContext(state: CareerState): ConditionContext {
     'health.recurrenceRisk': NOT_MODELED_INT,
 
     'rng.injuryRoll': NO_INJURY_ROLL,
+
+    // T-3-001 D-53: 트랙 A(계약·이적) 조건 화이트리스트.
+    'contract.kind': contract?.kind ?? NOT_MODELED_STRING,
+    'contract.seasonsRemaining': seasonsRemaining,
+    'contract.isLastSeason': contract !== null && seasonsRemaining <= 1 ? 1 : 0,
+    'contract.promiseBreaches': contract?.promiseBreaches ?? NOT_MODELED_INT,
+    'contract.onLoan': contract?.kind === 'LOAN' ? 1 : 0,
+    'contract.leagueTier': contract ? String(contract.leagueTier) : NOT_MODELED_STRING,
+    'career.permanentTransfers': state.clubHistory.filter((stint) => stint.endReason === 'TRANSFERRED').length,
+    'career.clubsCount': new Set(state.clubHistory.map((stint) => stint.teamId)).size,
+
+    // T-3-001 D-53: 트랙 B(부상·인간관계·평판) 예약 — 생성기가 없어 NOT_MODELED_* 값만 낸다.
+    // 소유: health.*는 T-4-001·T-4-002, reputation.popularityCenti는 T-4-001·T-4-003,
+    // season.manager.*는 T-4-001·T-4-003, season.stats.recentFormAvg는 T-4-003.
+    'health.activeSeverity': NOT_MODELED_STRING,
+    'health.recurrenceRiskBp': NOT_MODELED_INT,
+    'health.majorInjuries': NOT_MODELED_INT,
+    'reputation.popularityCenti': NOT_MODELED_INT,
+    'season.manager.tenureSeasons': NOT_MODELED_INT,
+    'season.manager.id': NOT_MODELED_STRING,
+    'season.stats.recentFormAvg': NOT_MODELED_INT,
   };
 
   for (const key of ATTRIBUTE_KEYS) {

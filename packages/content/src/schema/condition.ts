@@ -115,6 +115,26 @@ export const CONDITION_FIELDS: readonly ConditionFieldSpec[] = [
   { path: 'health.injuryEpisode', type: 'string' },
   { path: 'health.recurrenceRisk', type: 'int' },
   { path: 'rng.injuryRoll', type: 'int' },
+  // T-3-001 D-53: 트랙 A(계약·이적) 조건 화이트리스트. contract.rolePromise와 같은 방식으로
+  // 계약이 없으면 빈 문자열/0을 낸다(NOT_MODELED_* 관례가 아니라 "값 없음"의 정상 표현).
+  { path: 'contract.kind', type: 'string' },
+  { path: 'contract.seasonsRemaining', type: 'int' },
+  { path: 'contract.isLastSeason', type: 'int' },
+  { path: 'contract.promiseBreaches', type: 'int' },
+  { path: 'contract.onLoan', type: 'int' },
+  { path: 'contract.leagueTier', type: 'string' },
+  { path: 'career.permanentTransfers', type: 'int' },
+  { path: 'career.clubsCount', type: 'int' },
+  // T-3-001 D-53: 트랙 B(부상·인간관계·평판) 예약 — 생성기가 없어 NOT_MODELED_* 값만 낸다.
+  // 소유: health.*는 T-4-001·T-4-002, reputation.popularityCenti는 T-4-001·T-4-003,
+  // season.manager.*는 T-4-001·T-4-003, season.stats.recentFormAvg는 T-4-003.
+  { path: 'health.activeSeverity', type: 'string' },
+  { path: 'health.recurrenceRiskBp', type: 'int' },
+  { path: 'health.majorInjuries', type: 'int' },
+  { path: 'reputation.popularityCenti', type: 'int' },
+  { path: 'season.manager.tenureSeasons', type: 'int' },
+  { path: 'season.manager.id', type: 'string' },
+  { path: 'season.stats.recentFormAvg', type: 'int' },
 ] as const;
 
 const CONDITION_FIELD_MAP = new Map(CONDITION_FIELDS.map((field) => [field.path, field]));
