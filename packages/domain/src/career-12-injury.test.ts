@@ -36,6 +36,12 @@ describe('career-12-injury fixture — 실제 중증→재활→회복→재발 
     expect(snapshot.state.rngState.draws).toBe(golden.rngStateDraws);
     expect(snapshot.state.age).toBe(golden.age);
     expect(snapshot.state.seasonHistory).toHaveLength(golden.seasonHistoryLength);
+    // Step 5 is the production fixture's forced INJURY-only step: its RESOLVE_EVENT decision must
+    // survive same-step resumption and be reflected in the eventual SeasonResult exactly once.
+    expect(snapshot.state.seasonHistory[0]?.result.stepSummaries.find((summary) => summary.step === 5)?.decisionsOpened).toBe(1);
+    // Step 7 has the second forced injury followed by a normal market decision, so the aggregate is
+    // forced(1) + normal(1), without counting either side twice.
+    expect(snapshot.state.seasonHistory[0]?.result.stepSummaries.find((summary) => summary.step === 7)?.decisionsOpened).toBe(2);
     expect(verifySnapshot(snapshot)).toEqual({ ok: true });
   });
 
@@ -103,6 +109,7 @@ describe('career-12-injury fixture — 실제 중증→재활→회복→재발 
     expect(resumedSeason.matches.find((match) => match.id === stepMatches[0]!.id)).toEqual(firstMatchBeforeResume);
     expect(resumed.revision).toBe(resolved.revision + 1);
     expect(resumed.state.rngState.draws).toBe(resolved.state.rngState.draws);
+    expect(resumedSeason.steps.find((step) => step.index === pending.step)?.summary?.decisionsOpened).toBe(1);
   });
 
   it('복수 경기 step의 재개는 duration·condition·match RNG를 이어서 적용하고 일반 slot은 그 뒤에 연다', () => {
@@ -233,7 +240,7 @@ describe('career-12-injury fixture — 실제 중증→재활→회복→재발 
       },
     }, timingRuleset);
     const afterStepClose = runCommand(afterEvent, { type: 'ADVANCE', payload: { eligibleEvents: [] } }, timingRuleset);
-    expect(afterStepClose.state.season!.steps.find((step) => step.index === firstStep)?.summary).not.toBeNull();
+    expect(afterStepClose.state.season!.steps.find((step) => step.index === firstStep)?.summary?.decisionsOpened).toBe(2);
   });
 
   it('시즌 경계 active injury는 remainingMatches를 carry해 두 경기 후 회복·재발 창을 연다', () => {

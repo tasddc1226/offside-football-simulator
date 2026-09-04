@@ -1191,8 +1191,26 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     currentStep.summary === null &&
     lastTimelineEntry?.kind === 'REHAB_CHOSEN' &&
     lastTimelineEntry.step === currentStepIndex;
+  // REHAB_CHOSEN은 RESOLVE_EVENT로 닫힌 forced INJURY 결정 1건을 뜻한다. 현재 시즌 시작 뒤의
+  // 타임라인만 세어 이전 시즌 같은 step의 부상을 섞지 않고, 재개 후 일반 슬롯이 없을 때도
+  // decision count를 0으로 잃지 않게 한다.
+  const currentSeasonStartRevision = [...state.timeline].reverse().find((entry) => entry.kind === 'SEASON_STARTED')?.revision;
+  const resolvedForcedInjuryDecisions =
+    currentSeasonStartRevision === undefined
+      ? 0
+      : state.timeline.filter(
+          (entry) => entry.kind === 'REHAB_CHOSEN' && entry.step === currentStepIndex && entry.revision > currentSeasonStartRevision,
+        ).length;
   if (currentStep.summary === null && !resumesInjuryStep) {
-    steps = markStepPassed(steps, currentStepIndex, nextRevision, 1, stepMatchResultsFor(season.matches, currentStepIndex));
+    // A normal slot resolved after one or more forced injuries contributes exactly one additional
+    // decision; the REHAB_CHOSEN entries above account for the forced decisions already opened.
+    steps = markStepPassed(
+      steps,
+      currentStepIndex,
+      nextRevision,
+      1 + resolvedForcedInjuryDecisions,
+      stepMatchResultsFor(season.matches, currentStepIndex),
+    );
     timeline = [
       ...timeline,
       { revision: nextRevision, kind: 'STEP_PASSED', refId: null, age: state.age, step: currentStepIndex },
@@ -1276,6 +1294,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     chapterContext,
     state,
     ruleset,
+    resumesInjuryStep ? resolvedForcedInjuryDecisions : 0,
   );
   const expiredState = advanceEffectsThroughWalk(state, walked);
   if (expiredState.season === null) {

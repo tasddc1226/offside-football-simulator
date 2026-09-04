@@ -10,7 +10,7 @@ import {
   rehabDurationRange,
 } from './injury.js';
 import { rulesetProto } from './__fixtures__/career-01.js';
-import { rollInt, seedRng } from './rng.js';
+import { seedRng } from './rng.js';
 import { computeBaseOvr } from './player.js';
 import { canonicalize, type JsonValue } from './canonical.js';
 import { sha256Hex } from './hash.js';
@@ -102,18 +102,23 @@ describe('onMatchInjury', () => {
     });
   }
 
-  function findSeed(predicate: (result: ReturnType<typeof onMatchInjury>, seed: string) => boolean, prefix: string): string {
-    for (let i = 0; i < 100_000; i += 1) {
-      const seed = `${prefix}-${i}`;
-      if (predicate(resultFor(seed), seed)) return seed;
-    }
-    throw new Error(`seed 탐색 실패: ${prefix}`);
-  }
-
-  function secondRoll(seed: string): number {
-    const severityRoll = rollInt(seedRng(seed), 10000);
-    return rollInt(severityRoll.state, 100).value;
-  }
+  // These vectors were selected once from the deterministic 1.0.0 rule stream. Keeping the
+  // winning seeds explicit makes the test exercise the production roll order without any runtime
+  // search (minor/severe cover automatic/forced handling, bodyPart seeds cover every cumulative
+  // range, and the forced pair plus post-cap seed cover the season cap transition).
+  const fixedSeeds = {
+    minor: 'minor-1',
+    severe: 'severe-0',
+    bodyPart: {
+      KNEE: 'body-part-KNEE-10',
+      ANKLE: 'body-part-ANKLE-3',
+      HAMSTRING: 'body-part-HAMSTRING-5',
+      SHOULDER: 'body-part-SHOULDER-9',
+      HEAD: 'body-part-HEAD-44',
+    },
+    forced: ['forced-0-2', 'forced-1-0'] as const,
+    afterForcedCap: 'forced-after-cap-0',
+  } as const;
 
   it('ACTIVE/REHAB episode에 remainingMatches가 없으면 다음 시즌 carry를 거부한다', () => {
     const incomplete = { ...baseEpisode() };
@@ -142,21 +147,11 @@ describe('onMatchInjury', () => {
   });
 
   it('MINOR는 STANDARD 재활로 자동 진행하고 severe는 cap 전 forced pending을 연다', () => {
-    let minor: ReturnType<typeof onMatchInjury> | undefined;
-    for (let i = 0; i < 100 && minor === undefined; i++) {
-      const candidate = onMatchInjury({ state: state(`minor-${i}`), seasonIndex: 1, step: 3, match: match(), availability: null, injuryCount: 0, ruleset: rulesetProto, rng: seedRng(`minor-${i}`) });
-      if (candidate.health.episodes[0]?.severity === 'MINOR') minor = candidate;
-    }
-    expect(minor).toBeDefined();
-    expect(minor!.health.episodes[0]).toMatchObject({ rehab: 'STANDARD', status: 'REHAB' });
-    let severe: ReturnType<typeof onMatchInjury> | undefined;
-    for (let i = 0; i < 100 && severe === undefined; i++) {
-      const candidate = onMatchInjury({ state: state(`severe-${i}`), seasonIndex: 1, step: 3, match: match(), availability: null, injuryCount: 0, ruleset: rulesetProto, rng: seedRng(`severe-${i}`) });
-      if (candidate.health.episodes[0]?.severity !== 'MINOR') severe = candidate;
-    }
-    expect(severe).toBeDefined();
-    expect(severe!.forcedPending).toMatchObject({ kind: 'INJURY', eventId: 'EVT-INJ-001', version: 1 });
-    expect(severe!.injuryCount).toBe(1);
+    const minor = resultFor(fixedSeeds.minor);
+    expect(minor.health.episodes[0]).toMatchObject({ rehab: 'STANDARD', status: 'REHAB' });
+    const severe = resultFor(fixedSeeds.severe);
+    expect(severe.forcedPending).toMatchObject({ kind: 'INJURY', eventId: 'EVT-INJ-001', version: 1 });
+    expect(severe.injuryCount).toBe(1);
   });
 
   it('위험 보정은 경계값을 지키고 심각도 가중치 합을 항상 10000으로 유지한다', () => {
@@ -203,14 +198,7 @@ describe('onMatchInjury', () => {
     ] as const;
     expect(rulesetProto.injuryRules.bodyParts.map((bodyPart) => bodyPart.id)).toEqual(expected.map((bodyPart) => bodyPart.id));
     for (const bodyPart of expected) {
-      const seed = findSeed(
-        (_result, candidateSeed) => {
-          const value = secondRoll(candidateSeed);
-          return value >= bodyPart.min && value < bodyPart.max;
-        },
-        `body-part-${bodyPart.id}`,
-      );
-      expect(resultFor(seed).health.episodes[0]?.bodyPart).toBe(bodyPart.id);
+      expect(resultFor(fixedSeeds.bodyPart[bodyPart.id]).health.episodes[0]?.bodyPart).toBe(bodyPart.id);
     }
   });
 
@@ -218,10 +206,7 @@ describe('onMatchInjury', () => {
     let current = state('forced-cap-0');
     let injuryCount = 0;
     for (let index = 0; index < rulesetProto.injuryRules.maxForcedPerSeason; index += 1) {
-      const seed = findSeed(
-        (result) => result.health.episodes.at(-1)?.severity !== 'MINOR',
-        `forced-${index}`,
-      );
+      const seed = fixedSeeds.forced[index]!;
       const result = onMatchInjury({
         state: current,
         seasonIndex: 1,
@@ -244,10 +229,6 @@ describe('onMatchInjury', () => {
     }
     expect(injuryCount).toBe(2);
 
-    const seed = findSeed(
-      (result) => result.health.episodes.at(-1)?.severity !== 'MINOR',
-      'forced-after-cap',
-    );
     const afterCap = onMatchInjury({
       state: current,
       seasonIndex: 1,
@@ -256,7 +237,7 @@ describe('onMatchInjury', () => {
       availability: null,
       injuryCount,
       ruleset: rulesetProto,
-      rng: seedRng(seed),
+      rng: seedRng(fixedSeeds.afterForcedCap),
     });
     expect(afterCap.health.episodes.at(-1)).toMatchObject({ status: 'REHAB', rehab: 'STANDARD' });
     expect(afterCap.forcedPending).toBeNull();

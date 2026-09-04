@@ -283,7 +283,7 @@ export type SeasonWalkResult = {
   currentStepIndex: number;
   pending: Pending;
   rngState: RngState;
-  /** 이번 걷기에서 결정 없이 지나간(decisionsOpened: 0) step 번호들, 순서대로. */
+  /** 이번 걷기에서 닫힌 step 번호들, 순서대로(강제 부상만 있었던 재개 step은 1 이상일 수 있다). */
   passedStepIndexes: number[];
 };
 
@@ -317,8 +317,9 @@ export type ChapterWalkContext = {
 
 /**
  * RULE-TIME-002: `startStepIndex`부터 다음 결정이 열리는 step 또는 step 12(SETTLEMENT)까지 걷는다.
- * 열리지 않는 step은 같은 호출 안에서 즉시 decisionsOpened: 0으로 닫는다(그래서 이 함수가 반환한
- * 뒤에는 항상 "pending이 가리키는 step만 summary가 비어 있다"가 성립한다 — startSeason·
+ * 열리지 않는 step은 같은 호출 안에서 즉시 decisionsOpened: 0으로 닫는다(강제 INJURY를 해소한
+ * 뒤 재개한 시작 step은 호출자가 이미 센 강제 결정 수를 넘겨 그 수로 닫는다). 그래서 이 함수가
+ * 반환한 뒤에는 항상 "pending이 가리키는 step만 summary가 비어 있다"가 성립한다 — startSeason·
  * advanceInSeason이 공유하는 이 불변식 덕분에, EVENT처럼 RESOLVE_EVENT로 별도 해소되는 pending도
  * "다음에 이 step을 다시 보면 summary가 비어 있으니 결정이 열렸던 step이다"로 정확히 닫힌다).
  * T-2-003 D-35: 각 step의 결정 슬롯을 확인하기 전에 `playStepMatches`로 그 step의 예정 경기를
@@ -342,6 +343,8 @@ export function walkToNextDecision(
   // T-3-002 D-43 (a): `selectOpenSlot`의 CONTRACT 분기(`buildRenewalOffer`)에 그대로 넘긴다(roll 없음).
   state: CareerState,
   ruleset: Ruleset,
+  /** RESOLVE_EVENT 뒤 재개한 시작 step에서 이미 해소한 강제 INJURY 결정 수. */
+  decisionsAlreadyOpenedForStartStep = 0,
 ): SeasonWalkResult {
   let currentStepIndex = startStepIndex;
   let pending: Pending = null;
@@ -384,7 +387,8 @@ export function walkToNextDecision(
       nextRngState = opened.rngState;
       break;
     }
-    nextSteps = markStepPassed(nextSteps, currentStepIndex, revision, 0, matchResult.results);
+    const decisionsOpened = currentStepIndex === startStepIndex ? decisionsAlreadyOpenedForStartStep : 0;
+    nextSteps = markStepPassed(nextSteps, currentStepIndex, revision, decisionsOpened, matchResult.results);
     passedStepIndexes.push(currentStepIndex);
     currentStepIndex += 1;
   }
