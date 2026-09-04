@@ -2,6 +2,20 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-04 (오후, PR #53 머지 — 트랙 B 타입 슬라이스)
+
+**결과**: PR #53(T-4-001, `7188327` → squash `aba154a`, 13:57). 리뷰 수정 0건 — HEALTH Effect 규칙(SUM·즉시·만료 없음, activeEffects 미저장), 기본 감독 rng 0, 훅 골격 3개의 실제 호출 지점 배선(spy 테스트), INJURY·NATIONAL_TEAM의 RESOLVE_EVENT 전용 닫힘, 골든 draws 불변을 확인했다. 사건 2건: (1) PR #50이 먼저 들어가 CONFLICTING → 재머지 지시(양쪽 규칙 보존·체크섬 재계산·골든 재기록). (2) 재기록 골든 4개를 커밋하지 않고 push → 오케스트레이터 체인이 contracts 골든 순회 실패로 잡음 → 추가 커밋 뒤 체인 녹색(e2e 72). 워커 워크트리 `git status`를 DONE 직후 확인하는 절차를 메모리에 추가.
+
+**U-016 완료(14:56)**: 사용자가 wrangler 로그인. staging D1 조회로 재예행 이벤트 확인 — funnel 5단계 각 1건, season_settled FAST/CHAPTER 각 1건, 배치 curl 70건은 D1 도달 확인 뒤 삭제. LINE TEST 준비 체크리스트는 U-014·U-015(사용자)만 남았다.
+
+**후속**: T-4-002(부상 모델)·T-4-003(관계·감독·평판) 브리프. DEFERRED 타깃 접두사 불일치(워커 발견, 기존 버그)는 T-4-002에 정리 항목으로. 동시 워커 1개(T-3-003) — 7일 사용량 97%라 추가 투입은 9/5 21:00 리셋 뒤.
+
+## 2026-09-04 (오후, PR #50 머지 — 이적시장 생성기, T-3-003 투입)
+
+**결과**: PR #50(T-3-002, `0674ee4` → squash `408a765`, 13:33). 리뷰 수정 1건(결산 뒤 상태에서 STARTER·평점 INTEREST 분기 도달 불가 → `currentSquadPerformance` 폴백 헬퍼, 시장 골든 값·rng 소비 불변, 테스트 3건)을 워커가 반영했고 PR #51과의 manifest 체크섬 충돌도 origin/main 머지 뒤 재계산으로 스스로 해결해 준비해 둔 후속 지시(review-2)는 보내지 않았다. 체인(origin/main + 0674ee4) 녹색(e2e 72). Phase 3 완료 조건 1·2·5의 생성기 쪽 근거 확보, 배선은 T-3-003.
+
+**T-3-003 투입(13:34)**: 브리프(13:20)대로. 동시 워커 2개(T-4-001·T-3-003). T-4-001과 `simulate.ts`·`types.ts`가 겹치므로 먼저 머지되는 쪽 뒤에 다른 쪽이 origin/main을 머지한다(브리프에 명시).
+
 ## 2026-09-04 (오후, PR #52 머지 — LINE TEST 결함 3건 수정, T-3-003 브리프)
 
 **결과**: PR #52(T-2-015, `ff45412` → squash `5462dc7`, 13:21) 리뷰 수정 0건. 워커는 PR 게이트 폴백대로 push → `PR_BODY.md` → `DONE`으로 멈췄고 오케스트레이터가 REST(curl)로 PR을 열었다. 체인 녹색(mock e2e 72, 실 api e2e recovery-api·google-link·service-season 8). 워커가 로컬 D1로 20건 curl 202도 확인했다. 변경: `insertAnalyticsEvents` 14행 청크 순차 insert(spy 테스트 50 → 14·14·14·8, 로컬 Miniflare가 상한을 재현하지 않아 재현 시도 안 함), `toErrorEnvelope` unknown error 고정 문구(원문은 logger `errorMessage` 500자), 온보딩 첫 슬라이드 `onboarding-service-season-notice`. 투입 13:02 → 머지 13:21(19분).

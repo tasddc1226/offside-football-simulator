@@ -7,12 +7,15 @@ import { applyEffects, expireAtSeasonEnd, expireEffects, resolveDeferredEffects 
 import { evaluateCareerTags, grantCareerTag } from './career-tags.js';
 import { computeGrowth } from './growth.js';
 import { hashState } from './hash.js';
+import { applyRehabPlan, onMatchInjury } from './injury.js';
 import { generateMarket, openMarketAfterSettlement } from './market.js';
 import { computeContractSeasonsRemaining } from './market-value.js';
+import { buildDefaultManager } from './manager.js';
 import { canNegotiate, expireOffers } from './negotiation.js';
 import { findMatchingOfferBranch, findOvrBand, generateOffers, lookupBandAmount } from './offers.js';
 import { playMatch } from './match.js';
 import { generatePlayerProfile, type ConfirmedPlayerDraft } from './player.js';
+import { onSettlementRelations } from './relationships.js';
 import { rollInt, seedRng, type RngState } from './rng.js';
 import { rollRange } from './roll-range.js';
 import type { League, LeagueCalendar, Ruleset, Team } from './ruleset.js';
@@ -56,6 +59,7 @@ import {
   type Effect,
   type FootballSeason,
   type MatchRecord,
+  type NationalTeamCallUp,
   type NegotiationAsk,
   type Offer,
   type Pending,
@@ -64,6 +68,7 @@ import {
   type PlayerProfile,
   type Position,
   type PreferredFoot,
+  type RehabPlan,
   type SelectionRanking,
   type SeasonResult,
   type SeasonSummary,
@@ -113,6 +118,10 @@ export type Command =
         definitionVersion: number;
         choiceId: string;
         outcomes: Array<{ id: string; weight: number; effects: Effect[]; addTags?: string[]; removeTags?: string[] }>;
+        // T-4-001 D-52: pending.kind가 INJURY면 필수, NATIONAL_TEAM이면 아래 callUp이 필수. EVENT
+        // pending에 둘 중 하나라도 오면 PAYLOAD_KIND_MISMATCH.
+        rehabPlan?: RehabPlan;
+        callUp?: NationalTeamCallUp;
       };
     }
   // T-2-004 D-38 CMD-SIM-005: CHAPTER pending의 판단 하나를 닫는다. T-2-014 D-42: outcomes[].kind는
@@ -277,6 +286,13 @@ function createCareer(input: SimulationInput): SimulationResult {
     timeline: [],
     season: null,
     seasonHistory: [],
+    health: { episodes: [] },
+    relationshipLog: [],
+    memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
+    reputation: {
+      popularityCenti: input.ruleset.reputationRules.initialPopularityCenti,
+      mediaCenti: input.ruleset.reputationRules.initialMediaCenti,
+    },
   };
 
   return {
@@ -555,6 +571,10 @@ type StepMatchWiring = {
   getMatchRngState: () => RngState;
   /** T-2-005 D-39: 매 step 경기 뒤 `applyCondition`이 갱신한 선수 본인 폼·체력·사기. */
   getPlayerCondition: () => ConditionState;
+  /** T-4-001 D-49: `onMatchInjury` 훅이 갱신한 부상 이력. */
+  getHealth: () => CareerState['health'];
+  /** T-4-001 D-49: `onMatchInjury` 훅이 남긴 타임라인 항목(지금은 항상 빈 배열 — 훅이 항등이라). */
+  getInjuryTimeline: () => TimelineEntry[];
 };
 
 type StepMatchWiringInitial = SeasonMatchBooks & {
@@ -566,6 +586,8 @@ type StepMatchWiringInitial = SeasonMatchBooks & {
   yellowSuspensionCount: number;
   squadStatus: number;
   matchRngState: RngState;
+  /** T-4-001 D-49: `onMatchInjury` 훅 입력용, 이 시즌에 이미 만든 INJURY pending 수(증가는 T-4-002). */
+  injuryCount: number;
 };
 
 /**
@@ -592,6 +614,10 @@ function createStepMatchWiring(
   tacticalFit: number,
   positionProficiency: number,
   seasonIndex: number,
+  // T-4-001 D-49: `onMatchInjury` 훅에 넘길 CareerState 스냅샷(`.health`만 실제로 쓴다 — 나머지
+  // 필드는 훅이 지금은 항등이라 읽지 않는다). walk 도중 갱신되는 값은 이 참조가 아니라 아래 `health`
+  // closure 변수로 추적한다.
+  careerState: CareerState,
   initial: StepMatchWiringInitial,
 ): StepMatchWiring {
   let matches = initial.matches;
@@ -607,6 +633,8 @@ function createStepMatchWiring(
   let squadStatus = initial.squadStatus;
   let matchRngState = initial.matchRngState;
   let playerCondition = initialCondition;
+  let health = careerState.health;
+  let injuryTimeline: TimelineEntry[] = [];
 
   const playStepMatches: PlayStepMatches = (stepIndex) => {
     const entries = schedule.filter((entry) => entry.step === stepIndex && entry.skipped === undefined);
@@ -650,6 +678,26 @@ function createStepMatchWiring(
       lastRatingTenths = result.nextLastRatingTenths;
       yellowSuspensionCount = result.nextSeasonYellowCount;
       squadStatus = result.nextSquadStatus;
+
+      // T-4-001 D-49: 부상 이탈 경기마다 onMatchInjury 훅을 부른다(지금은 항등 골격 — 실제 심각도·
+      // 부위 roll·availability 설정은 T-4-002가 채운다). matchRng를 넘겨 그 작업이 rng 소비 순서를
+      // 이 지점에 이어 붙일 수 있게 한다.
+      if (result.match.injuredOff) {
+        const hookResult = onMatchInjury({
+          state: { ...careerState, health },
+          seasonIndex,
+          step: stepIndex,
+          match: result.match,
+          availability,
+          injuryCount: initial.injuryCount,
+          ruleset,
+          rng: matchRngState,
+        });
+        health = hookResult.health;
+        availability = hookResult.availability;
+        matchRngState = hookResult.rng;
+        if (hookResult.timeline.length > 0) injuryTimeline = [...injuryTimeline, ...hookResult.timeline];
+      }
     }
     const stepRecords = matches.filter((match) => match.step === stepIndex);
     playerCondition = applyCondition(playerCondition, stepRecords, ruleset.conditionRules, ruleset.seasonBoundaryReset.form);
@@ -675,6 +723,8 @@ function createStepMatchWiring(
     getSquadStatus: () => squadStatus,
     getMatchRngState: () => matchRngState,
     getPlayerCondition: () => playerCondition,
+    getHealth: () => health,
+    getInjuryTimeline: () => injuryTimeline,
   };
 }
 
@@ -771,6 +821,15 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   // 그대로 같아야 하는 T-2-006 테스트가 있다).
   const initialMatchRngState = seedRng(`match:${state.seasonHistory.length + 1}:${stateAfterSelection.rngState.s.join(',')}`);
 
+  // T-4-001 D-50: rng 없이 만드는 기본 감독(manager.ts buildDefaultManager). 교체 판정은 T-4-003.
+  const manager = buildDefaultManager({
+    teamId: state.contract.teamId,
+    tacticalStyleId: team.tacticalStyleId,
+    primaryPosition: profile.primaryPosition,
+    seasonHistory: state.seasonHistory,
+    ruleset,
+  });
+
   // T-2-005 D-39 오케스트레이터 리뷰 2차(R2-1): DEFERRED 효과는 시즌 step 번호로만 해석할 수 있으니
   // season이 배정된 뒤에만 풀 수 있다 — season 없이 미룬 효과(유스 구간 등)는 `state.deferredEffects`에
   // 쌓여 있다가 여기서 이번 시즌 `scheduledEffects`로 옮겨진다. 옮긴 뒤의 `deferredEffects`는 이번
@@ -804,6 +863,8 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     matchRngState: initialMatchRngState,
     scheduledEffects: state.deferredEffects,
     chapters: [],
+    manager,
+    injuryCount: 0,
   };
   const stateBeforeWalk: CareerState = { ...stateAfterSelection, deferredEffects: [], season: initialSeason };
 
@@ -820,6 +881,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     tacticalFit,
     state.context.positionProficiency,
     state.seasonHistory.length + 1,
+    stateBeforeWalk,
     {
       matches: [],
       competitions: initialCompetitions,
@@ -833,6 +895,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
       yellowSuspensionCount: 0,
       squadStatus,
       matchRngState: initialMatchRngState,
+      injuryCount: 0,
     },
   );
 
@@ -895,6 +958,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     simulationMode: season.simulationMode,
     context: { ...expiredState.context, squadStatus: wiring.getSquadStatus() },
     state: wiring.getPlayerCondition(),
+    health: wiring.getHealth(),
     rngState: walked.rngState,
     pending: walked.pending,
     timeline: [
@@ -907,6 +971,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
         age: state.age,
         step: stepIndex,
       })),
+      ...wiring.getInjuryTimeline(),
     ],
   };
 
@@ -936,24 +1001,24 @@ function nextActionForPending(pending: Pending): 'DECISION' | 'ADVANCE' | 'SETTL
     case 'ROLE_PROPOSAL':
     case 'CHAPTER':
     case 'LOAN_RETURN': // T-3-001 D-46: 임대 시즌 결산 뒤 복귀/완전 이적 결정도 사용자 결정이 필요하다(생성기는 T-3-003).
+    case 'INJURY': // T-4-001 D-52: INJURY·NATIONAL_TEAM도 RESOLVE_EVENT로만 닫힌다(더 이상 자동 통과 대상이 아니다).
+    case 'NATIONAL_TEAM':
       return 'DECISION';
     case 'SETTLEMENT':
       return 'SETTLEMENT';
     case 'CONTRACT':
       // T-3-003: 재계약 제안이 있으면(step 7 사전 협상) 응답이 필요하다. 없으면(잔여 계약) 자동 통과.
       return pending.offers.length > 0 ? 'DECISION' : 'ADVANCE';
-    case 'INJURY':
-    case 'NATIONAL_TEAM':
-      return 'ADVANCE';
   }
 }
 
 /**
- * T-2-001 D-25: 시즌이 있을 때 ADVANCE. `state.pending`이 자동 통과 대상(CHAPTER·CONTRACT·INJURY·
- * NATIONAL_TEAM)이면 그 step을 지나간 것으로 표시하고 다음 step으로 넘어간 뒤, 다음 결정이 열리는
- * step 또는 step 12(SETTLEMENT)까지 한 번에 걷는다. 지나간 step마다 STEP_PASSED를 남긴다. T-2-002:
- * ROLE 슬롯은 더 이상 자동 통과 대상이 아니라 `walkToNextDecision`에 `roleContext`를 넘겨 실제
- * ROLE_PROPOSAL을 연다(RESOLVE_ROLE로만 닫힌다).
+ * T-2-001 D-25: 시즌이 있을 때 ADVANCE. `state.pending`이 자동 통과 대상(CHAPTER·CONTRACT)이면 그
+ * step을 지나간 것으로 표시하고 다음 step으로 넘어간 뒤, 다음 결정이 열리는 step 또는 step
+ * 12(SETTLEMENT)까지 한 번에 걷는다. 지나간 step마다 STEP_PASSED를 남긴다. T-2-002: ROLE 슬롯은 더
+ * 이상 자동 통과 대상이 아니라 `walkToNextDecision`에 `roleContext`를 넘겨 실제 ROLE_PROPOSAL을
+ * 연다(RESOLVE_ROLE로만 닫힌다). T-4-001 D-52: INJURY·NATIONAL_TEAM도 마찬가지로 자동 통과 대상에서
+ * 빠졌다 — RESOLVE_EVENT로만 닫힌다.
  */
 function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, season: FootballSeason): SimulationResult {
   const command = input.command;
@@ -1025,6 +1090,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     state.context.tacticalFit,
     state.context.positionProficiency,
     season.index,
+    state,
     {
       matches: season.matches,
       competitions: season.competitions,
@@ -1038,6 +1104,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
       yellowSuspensionCount: season.yellowSuspensionCount,
       squadStatus: state.context.squadStatus,
       matchRngState: season.matchRngState,
+      injuryCount: season.injuryCount,
     },
   );
 
@@ -1076,6 +1143,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
       age: state.age,
       step: stepIndex,
     })),
+    ...wiring.getInjuryTimeline(),
   ];
 
   const nextSeason: FootballSeason = {
@@ -1107,6 +1175,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     seasonPhase: nextSeason.phase,
     context: { ...expiredState.context, squadStatus: wiring.getSquadStatus() },
     state: wiring.getPlayerCondition(),
+    health: wiring.getHealth(),
     rngState: walked.rngState,
     pending: walked.pending,
     timeline,
@@ -1259,11 +1328,35 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   }
 
   const pending = state.pending;
-  if (pending === null || pending.kind !== 'EVENT') {
+  // T-4-001 D-52: EVENT 외에 INJURY·NATIONAL_TEAM pending도 이 명령으로 닫는다(eventId·version 일치
+  // 검사는 셋 다 같다 — 세 kind 모두 eventId·version 필드를 갖는다).
+  if (pending === null || (pending.kind !== 'EVENT' && pending.kind !== 'INJURY' && pending.kind !== 'NATIONAL_TEAM')) {
     return fail('VALIDATION_FAILED', '해소할 pending 이벤트가 없다.', { reason: 'NO_PENDING_EVENT' });
   }
   if (pending.eventId !== command.payload.eventId || pending.version !== command.payload.definitionVersion) {
     return fail('VALIDATION_FAILED', 'pending 이벤트와 요청이 다르다.', { reason: 'PENDING_EVENT_MISMATCH' });
+  }
+
+  const rehabPlan = command.payload.rehabPlan;
+  const callUp = command.payload.callUp;
+  if (pending.kind === 'EVENT' && (rehabPlan !== undefined || callUp !== undefined)) {
+    return fail('VALIDATION_FAILED', 'EVENT pending에는 rehabPlan·callUp을 보낼 수 없다.', {
+      reason: 'PAYLOAD_KIND_MISMATCH',
+    });
+  }
+  if (pending.kind === 'INJURY' && rehabPlan === undefined) {
+    return fail('VALIDATION_FAILED', 'INJURY pending은 rehabPlan이 필요하다.', { reason: 'REHAB_PLAN_REQUIRED' });
+  }
+  if (pending.kind === 'NATIONAL_TEAM' && callUp === undefined) {
+    return fail('VALIDATION_FAILED', 'NATIONAL_TEAM pending은 callUp이 필요하다.', { reason: 'CALL_UP_REQUIRED' });
+  }
+
+  let episodeIndex = -1;
+  if (pending.kind === 'INJURY') {
+    episodeIndex = state.health.episodes.findIndex((episode) => episode.id === pending.episodeId);
+    if (episodeIndex === -1) {
+      return fail('VALIDATION_FAILED', 'pending.episodeId의 부상 기록을 찾지 못했다.', { reason: 'EPISODE_NOT_FOUND' });
+    }
   }
 
   const outcomes = command.payload.outcomes;
@@ -1301,9 +1394,25 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   tags = sortUniqueTags(tags);
 
   const nextRevision = snapshot.revision + 1;
+
+  // T-4-001 D-52: INJURY는 재활 계획을 에피소드에 적용하고 REHAB_CHOSEN을, NATIONAL_TEAM은 응답에
+  // 따라 NATIONAL_TEAM_CALLED/DECLINED를 추가 타임라인으로 남긴다(둘 다 EVENT_RESOLVED 다음).
+  let health = effectResult.state.health;
+  const extraTimeline: TimelineEntry[] = [];
+  if (pending.kind === 'INJURY') {
+    const episode = health.episodes[episodeIndex]!;
+    const updated = applyRehabPlan(episode, rehabPlan as RehabPlan, input.ruleset.injuryRules);
+    health = { episodes: health.episodes.map((candidate, i) => (i === episodeIndex ? updated : candidate)) };
+    extraTimeline.push({ revision: nextRevision, kind: 'REHAB_CHOSEN', refId: pending.episodeId, age: state.age, step: state.currentStep });
+  } else if (pending.kind === 'NATIONAL_TEAM') {
+    const kind = callUp === 'DECLINE' ? 'NATIONAL_TEAM_DECLINED' : 'NATIONAL_TEAM_CALLED';
+    extraTimeline.push({ revision: nextRevision, kind, refId: command.payload.eventId, age: state.age, step: state.currentStep });
+  }
+
   const nextState: CareerState = {
     ...effectResult.state,
     tags,
+    health,
     resolvedEventIds: [...state.resolvedEventIds, command.payload.eventId],
     rngState: rolled.state,
     pending: null,
@@ -1316,6 +1425,7 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
         age: state.age,
         step: state.currentStep,
       },
+      ...extraTimeline,
     ],
   };
 
@@ -2279,9 +2389,20 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     ],
   };
 
+  // T-4-001 D-50: onSettlementRelations 훅(지금은 항등)은 settledState를 만든 직후, evaluateCareerTags
+  // 전에 부른다 — 감독 교체·주장 임명·평판 갱신은 T-4-003이 이 자리를 채운다.
+  const relationsResult = onSettlementRelations({
+    state: settledState,
+    season,
+    result,
+    ruleset: input.ruleset,
+    rng: settledState.rngState,
+  });
+  const stateAfterRelations: CareerState = { ...relationsResult.state, rngState: relationsResult.rng };
+
   // D-42: `seasonHistory`에 이번 시즌 result가 들어간 뒤에 평가한다(커리어 누적 챕터 집계가 이번
   // 시즌 몫까지 포함하도록).
-  const grantedTagIds = evaluateCareerTags(settledState, result, input.ruleset);
+  const grantedTagIds = evaluateCareerTags(stateAfterRelations, result, input.ruleset);
   const nextState = grantedTagIds.reduce((acc, tagId) => {
     const granted = grantCareerTag(acc, tagId, {
       seasonIndex: season.index,
@@ -2295,7 +2416,7 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
         { revision: nextRevision, kind: 'CAREER_TAG_GRANTED' as const, refId: tagId, age: nextAge, step: 12 },
       ],
     };
-  }, settledState);
+  }, stateAfterRelations);
 
   // T-3-003 D-47/D-46/D-43: 태그 부여 뒤 순서대로 — (a) 약속 위반 판정 → (b) 임대면 LOAN_RETURN 분기
   // → (c) 아니면 결산 뒤 시장 개방.

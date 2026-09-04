@@ -328,6 +328,10 @@ function confirmedStateLiteral() {
     timeline: [{ revision: 2, kind: 'CAREER_CONFIRMED' as const, refId: null, age: 17, step: 12 }],
     season: null,
     seasonHistory: [],
+    health: { episodes: [] },
+    relationshipLog: [],
+    memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
+    reputation: { popularityCenti: 5000, mediaCenti: 5000 },
   };
 }
 

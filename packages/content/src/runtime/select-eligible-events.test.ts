@@ -164,8 +164,32 @@ describe('selectEligibleEvents: 필터(합성 이벤트)', () => {
   });
 
   // T-3-001 D-52: presentation이 있는 정의는 일반 EVENT 후보에서 빠진다(해당 pending 생성기만 고른다).
+  // T-4-001 D-52: presentation이 INJURY면 모든 choice에 rehabPlan이 필요하다(event.ts superRefine).
   it('presentation이 있는 정의는 트리거를 통과해도 일반 EVENT 후보에서 빠진다', () => {
-    const pack = makeContentPack([makeEvent({ id: 'EVT-DEV-905', presentation: 'INJURY' })]);
+    const pack = makeContentPack([
+      makeEvent({
+        id: 'EVT-DEV-905',
+        presentation: 'INJURY',
+        choices: [
+          {
+            id: 'A',
+            label: '선택 A',
+            riskLabel: 'LOW',
+            previewEffects: [{ label: '효과' }],
+            outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, title: '결과', effects: [] }],
+            rehabPlan: 'STANDARD',
+          },
+          {
+            id: 'B',
+            label: '선택 B',
+            riskLabel: 'LOW',
+            previewEffects: [{ label: '효과' }],
+            outcomes: [{ id: 'B1', kind: 'FIXED', weight: 100, title: '결과', effects: [] }],
+            rehabPlan: 'EARLY',
+          },
+        ],
+      }),
+    ]);
     expect(selectEligibleEvents(pack, buildTestState())).toEqual([]);
   });
 

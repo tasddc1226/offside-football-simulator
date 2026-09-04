@@ -95,7 +95,8 @@ export type CareerTagId = (typeof CAREER_TAG_IDS)[number];
 // T-2-014 D-42: 태그 하나가 부여된 기록.
 export type CareerTagGrant = { tagId: CareerTagId; seasonIndex: number; atRevision: number; sourceRefId: string };
 
-export type EffectKind = 'PERMANENT' | 'CURRENT' | 'CONTEXT' | 'RELATION' | 'DEFERRED';
+// T-4-001 D-49: HEALTH는 activeEffects에 저장되지 않는 즉발 효과 kind다(applyEffects 참고).
+export type EffectKind = 'PERMANENT' | 'CURRENT' | 'CONTEXT' | 'RELATION' | 'DEFERRED' | 'HEALTH';
 
 // D-40 규칙 2: `ONCE_PER_SOURCE`는 커리어 전체 1회, 신규 `ONCE_PER_SEASON`은 시즌마다 1회
 // (`appliedSourceIds`에 `season:<index>:<sourceId>`로 기록 — effects.ts 참고).
@@ -620,6 +621,10 @@ export type FootballSeason = {
    * 지운다 — `state.deferredEffects`가 아니라 이 필드를 읽고 쓴다(예전엔 `state.deferredEffects`를
    * `START_SEASON`이 곧바로 비웠기 때문에 실제로는 한 번도 적용되지 않는 버그였다). */
   scheduledEffects: Effect[];
+  /** T-4-001 D-50: 이 시즌 감독(형태는 위 `SeasonManager` 참고). */
+  manager: SeasonManager | null;
+  /** T-4-001 D-49: 이 시즌에 만든 INJURY pending 수(RULE-TIME-004 상한 2). 증가는 T-4-002. */
+  injuryCount: number;
 };
 
 // T-2-004 D-38: 챕터 하나가 판단을 모두 확정하면 남기는 기록. `ratingDeltaTenths`는 이 챕터가 경기
@@ -691,6 +696,51 @@ export type SeasonSummary = {
   result: SeasonResult;
 };
 
+// T-4-001 D-49: 부상 심각도·부위·재활 계획. "활성 에피소드" = status가 ACTIVE 또는 REHAB인 것 중
+// episodes 배열의 마지막 항목(effects.ts의 HEALTH 적용·조건 DSL `health.*`가 같은 규칙을 쓴다).
+// 발생 roll(id 생성·severity/bodyPart 판정)은 T-4-002 몫 — 이 작업은 형태·기본값·재활 적용
+// (`applyRehabPlan`, injury.ts)만 만든다.
+export type InjurySeverity = 'MINOR' | 'MODERATE' | 'MAJOR';
+export type InjuryBodyPart = 'KNEE' | 'ANKLE' | 'HAMSTRING' | 'SHOULDER' | 'HEAD';
+export type RehabPlan = 'EARLY' | 'STANDARD' | 'CONSERVATIVE';
+
+export type InjuryEpisode = {
+  id: string; // 형식 INJ-${seasonIndex}-${step}-${n}(생성기는 T-4-002)
+  severity: InjurySeverity;
+  bodyPart: InjuryBodyPart;
+  occurredAt: { seasonIndex: number; step: number; matchId: string };
+  diagnosisRange: { minMatches: number; maxMatches: number };
+  rehab: RehabPlan | null;
+  recurrenceRiskBp: number;
+  status: 'ACTIVE' | 'REHAB' | 'RECOVERED' | 'RECURRED';
+  permanentDelta: Array<{ key: AttributeKey; delta: number }> | null;
+};
+
+// T-4-001 D-50: 관계 로그·기억 태그가 다루는 대상 축 5개(`CareerState.relationships`와 같은 키).
+export type RelationTarget = 'managerTrust' | 'captain' | 'rival' | 'fans' | 'agent';
+
+export type RelationshipLogEntry = {
+  target: RelationTarget;
+  delta: number;
+  sourceId: string;
+  reasonTag: string | null;
+  seasonIndex: number;
+  step: number;
+};
+
+// T-4-001 D-51: RESOLVE_EVENT가 NATIONAL_TEAM pending을 닫을 때 받는 선택.
+export type NationalTeamCallUp = 'ACCEPT' | 'DECLINE' | 'CONDITIONAL';
+
+// T-4-001 D-50: 시즌 감독. `START_SEASON`이 rng 없이 기본값을 만든다(manager.ts `buildDefaultManager`).
+// 교체 판정·새 감독 생성·`managerTrust` 재평가는 T-4-003.
+export type SeasonManager = {
+  id: string;
+  name: string;
+  preferredArchetypeIds: string[];
+  tenureSeasons: number;
+  trustBase: number;
+};
+
 export type CareerState = {
   schemaVersion: 1;
   careerId: string;
@@ -735,6 +785,16 @@ export type CareerState = {
   timeline: TimelineEntry[];
   season: FootballSeason | null;
   seasonHistory: SeasonSummary[];
+  // T-4-001 D-49: 부상 에피소드 이력. 기본 `{ episodes: [] }`. 발생 roll은 T-4-002.
+  health: { episodes: InjuryEpisode[] };
+  // T-4-001 D-50: 관계 변화 감사 로그. 기본 `[]`, 최대 길이는 룰셋 `relationshipRules.logMax`. 실제로
+  // 항목을 채우는 로직은 T-4-003.
+  relationshipLog: RelationshipLogEntry[];
+  // T-4-001 D-50: 대상별 기억 태그(축당 최대 `relationshipRules.memoryTagsMax`). 기본 5축 전부 `[]`.
+  memoryTags: Record<RelationTarget, string[]>;
+  // T-4-001 D-49: 인기·미디어 평판(0~10000). `CREATE_CAREER`가 룰셋 `reputationRules.initialPopularityCenti`·
+  // `initialMediaCenti`로 채운다(기본 5000/5000).
+  reputation: { popularityCenti: number; mediaCenti: number };
 };
 
 export type DomainSnapshot = {

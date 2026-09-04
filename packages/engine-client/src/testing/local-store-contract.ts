@@ -63,6 +63,10 @@ function makeDomainSnapshot(overrides: Partial<DomainSnapshot> = {}): DomainSnap
     timeline: [],
     season: null,
     seasonHistory: [],
+    health: { episodes: [] },
+    relationshipLog: [],
+    memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
+    reputation: { popularityCenti: 5000, mediaCenti: 5000 },
   };
   return {
     revision: 1,

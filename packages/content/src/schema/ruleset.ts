@@ -510,6 +510,131 @@ export const GrowthRulesSchema = z.strictObject({
   });
 export type GrowthRules = z.infer<typeof GrowthRulesSchema>;
 
+// T-4-001 D-49: 부상 규칙(소유 T-4-002). severityWeights·bodyParts[].weight는 합이 100이어야 한다.
+// `sequelaKeys`는 AttributeKey만 허용한다.
+export const INJURY_SEVERITIES = ['MINOR', 'MODERATE', 'MAJOR'] as const;
+export const INJURY_BODY_PARTS = ['KNEE', 'ANKLE', 'HAMSTRING', 'SHOULDER', 'HEAD'] as const;
+export const REHAB_PLANS = ['EARLY', 'STANDARD', 'CONSERVATIVE'] as const;
+const InjuryBodyPartSchema = z.enum(INJURY_BODY_PARTS);
+export const RehabPlanSchema = z.enum(REHAB_PLANS);
+
+const MatchesOutRangeSchema = z
+  .strictObject({ min: z.number().int().positive(), max: z.number().int().positive() })
+  .refine((range) => range.min <= range.max, { message: 'min은 max 이하여야 한다.' });
+
+const RehabPlanRuleSchema = z.strictObject({ returnShiftMatches: z.number().int(), recurrenceAddBp: z.number().int() });
+
+export const InjuryRulesSchema = z
+  .strictObject({
+    severityWeights: z.strictObject({
+      MINOR: z.number().int().nonnegative(),
+      MODERATE: z.number().int().nonnegative(),
+      MAJOR: z.number().int().nonnegative(),
+    }),
+    matchesOut: z.strictObject({ MINOR: MatchesOutRangeSchema, MODERATE: MatchesOutRangeSchema, MAJOR: MatchesOutRangeSchema }),
+    bodyParts: z
+      .array(
+        z.strictObject({
+          id: InjuryBodyPartSchema,
+          weight: z.number().int().nonnegative(),
+          recurrenceBaseBp: z.number().int().min(0).max(10000),
+          sequelaKeys: z.array(AttributeKeySchema),
+        }),
+      )
+      .min(1),
+    recurrenceWindowMatches: z.number().int().positive(),
+    rehab: z.strictObject({ EARLY: RehabPlanRuleSchema, STANDARD: RehabPlanRuleSchema, CONSERVATIVE: RehabPlanRuleSchema }),
+    maxForcedPerSeason: z.number().int().nonnegative(),
+    durabilityPivot: z.number().int(),
+    severityShiftBpPerDurabilityPoint: z.number().int(),
+    fitnessBelow: z.number().int().min(0).max(100),
+    fitnessAddBp: z.number().int(),
+    ageFrom: z.number().int().nonnegative(),
+    ageAddBpPerYear: z.number().int(),
+  })
+  .superRefine((rules, ctx) => {
+    const severitySum = rules.severityWeights.MINOR + rules.severityWeights.MODERATE + rules.severityWeights.MAJOR;
+    if (severitySum !== 100) {
+      ctx.addIssue({ code: 'custom', message: `injuryRules.severityWeights 합은 100이어야 한다: ${severitySum}`, path: ['severityWeights'] });
+    }
+    const bodyPartWeightSum = rules.bodyParts.reduce((sum, part) => sum + part.weight, 0);
+    if (bodyPartWeightSum !== 100) {
+      ctx.addIssue({ code: 'custom', message: `injuryRules.bodyParts weight 합은 100이어야 한다: ${bodyPartWeightSum}`, path: ['bodyParts'] });
+    }
+  });
+export type InjuryRules = z.infer<typeof InjuryRulesSchema>;
+
+// T-4-001 D-50: 감독 규칙(소유 T-4-003). `names`는 `buildDefaultManager`가 코드포인트 합 % length로
+// 고른다 — 중복이 있으면 안 된다(RulesetSchema superRefine이 competitorNames·narrative manager
+// 사전과의 중복도 함께 검사한다).
+export const ManagerRulesSchema = z
+  .strictObject({
+    trustBase: z.number().int().min(0).max(100),
+    changeProbability: z.strictObject({
+      baseBp: z.number().int().min(0).max(10000),
+      perRankGapBp: z.number().int().min(0).max(10000),
+      maxBp: z.number().int().min(0).max(10000),
+      minTenureSeasons: z.number().int().nonnegative(),
+    }),
+    preferredArchetypeCount: z.number().int().positive(),
+    names: z.array(z.string().min(1)).min(12),
+  })
+  .superRefine((rules, ctx) => {
+    if (new Set(rules.names).size !== rules.names.length) {
+      ctx.addIssue({ code: 'custom', message: 'managerRules.names에 중복된 이름이 있다.', path: ['names'] });
+    }
+  });
+export type ManagerRules = z.infer<typeof ManagerRulesSchema>;
+
+// T-4-001 D-50: 관계 로그·기억 태그·주장 임명 규칙(소유 T-4-003).
+export const RelationshipRulesSchema = z.strictObject({
+  logMax: z.number().int().positive(),
+  memoryTagsMax: z.number().int().positive(),
+  captainAppointment: z.strictObject({ minCaptain: z.number().int().min(0).max(100), minSeasons: z.number().int().nonnegative() }),
+});
+export type RelationshipRules = z.infer<typeof RelationshipRulesSchema>;
+
+// T-4-001 D-49/D-50: 평판 규칙(소유 T-4-003). `initialPopularityCenti`·`initialMediaCenti`는
+// `CREATE_CAREER`가 읽는다(`simulate.ts`).
+export const ReputationRulesSchema = z.strictObject({
+  initialPopularityCenti: z.number().int().min(0).max(10000),
+  initialMediaCenti: z.number().int().min(0).max(10000),
+  clampMax: z.number().int().min(0).max(10000),
+  settlement: z.strictObject({
+    starterSeasonCenti: z.number().int(),
+    ratingAbove70Centi: z.number().int(),
+    titleCenti: z.number().int(),
+    decayCenti: z.number().int(),
+  }),
+});
+export type ReputationRules = z.infer<typeof ReputationRulesSchema>;
+
+// T-4-001 D-51: 대표팀 차출 규칙(소유 T-4-004). `opponents`는 실제 국가명을 쓰지 않는다.
+const NationalTeamRelationDeltaSchema = z.strictObject({ fans: z.number().int(), agent: z.number().int() });
+
+export const NationalTeamRulesSchema = z.strictObject({
+  callUpStep: z.number().int().min(1).max(12),
+  minOvrByTier: z.strictObject({
+    YOUTH: z.number().int().min(0).max(99),
+    '1': z.number().int().min(0).max(99),
+    '2': z.number().int().min(0).max(99),
+    '3': z.number().int().min(0).max(99),
+  }),
+  minPopularityCenti: z.number().int().min(0).max(10000),
+  fitnessCost: z.strictObject({
+    ACCEPT: z.number().int().nonnegative(),
+    CONDITIONAL: z.number().int().nonnegative(),
+    DECLINE: z.number().int().nonnegative(),
+  }),
+  relationDelta: z.strictObject({
+    ACCEPT: NationalTeamRelationDeltaSchema,
+    CONDITIONAL: NationalTeamRelationDeltaSchema,
+    DECLINE: NationalTeamRelationDeltaSchema,
+  }),
+  opponents: z.array(z.string().min(1)).min(1),
+});
+export type NationalTeamRules = z.infer<typeof NationalTeamRulesSchema>;
+
 // T-2-005 D-39: 시즌 중 매 step 경기 뒤 폼·체력·사기 갱신 상수(`condition.ts`가 소비).
 export const ConditionRulesSchema = z.strictObject({
   formPivotTenths: z.number().int(),
@@ -855,6 +980,12 @@ export const RulesetSchema = z
     matchRules: MatchRulesSchema,
     // T-2-005 D-39.
     growthRules: GrowthRulesSchema,
+    // T-4-001 D-49~D-51.
+    injuryRules: InjuryRulesSchema,
+    managerRules: ManagerRulesSchema,
+    relationshipRules: RelationshipRulesSchema,
+    reputationRules: ReputationRulesSchema,
+    nationalTeamRules: NationalTeamRulesSchema,
     conditionRules: ConditionRulesSchema,
     // T-2-014 D-41.
     marketValueRules: MarketValueRulesSchema,
@@ -986,6 +1117,15 @@ export const RulesetSchema = z
         message: `competitorNames 길이는 ${minCompetitorNames} 이상이어야 한다: ${ruleset.competitorNames.length}`,
         path: ['competitorNames'],
       });
+    }
+
+    // T-4-001 D-50: managerRules.names는 competitorNames(선수 이름 풀)와 겹치면 안 된다(둘 다 rng
+    // 없이 결정론적으로 이름을 고르는 풀이라 겹치면 어느 풀에서 왔는지 흐려진다). narrative manager
+    // 사전(콘텐츠 팩 별도 파일)과의 중복은 스키마가 볼 수 없어 데이터 저작 시점에 수동으로 피한다.
+    for (const name of ruleset.managerRules.names) {
+      if (uniqueCompetitorNames.has(name)) {
+        ctx.addIssue({ code: 'custom', message: `managerRules.names가 competitorNames와 겹친다: ${name}`, path: ['managerRules', 'names'] });
+      }
     }
 
     // T-3-002 D-43/D-44: transferRules 정합성.

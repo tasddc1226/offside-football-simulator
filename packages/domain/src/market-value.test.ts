@@ -189,11 +189,15 @@ describe('buildMarketValueInput', () => {
       timeline: [],
       season: null,
       seasonHistory: [],
+      health: { episodes: [] },
+      relationshipLog: [],
+      memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
+      reputation: { popularityCenti: 5000, mediaCenti: 5000 },
       ...overrides,
     };
   }
 
-  it('scoutedPotentialMid는 정찰 범위 중간값이고, popularityCenti는 5000 고정이다', () => {
+  it('scoutedPotentialMid는 정찰 범위 중간값이고, popularityCenti는 state.reputation.popularityCenti를 그대로 낸다', () => {
     const input = buildMarketValueInput(stateWithContract(), rulesetProto);
     expect(input.scoutedPotentialMid).toBe(Math.round((70 + 84) / 2));
     expect(input.popularityCenti).toBe(5000);
@@ -201,6 +205,16 @@ describe('buildMarketValueInput', () => {
     expect(input.age).toBe(24);
     expect(input.leagueTier).toBe(2);
     expect(input.form).toBe(55);
+  });
+
+  // T-4-001 D-49: popularityCenti가 더 이상 고정값이 아니라 state.reputation.popularityCenti를
+  // 그대로 옮긴다는 것을 확인한다(RELATION popularity 효과가 여기 반영된다).
+  it('popularityCenti는 state.reputation.popularityCenti를 따른다(고정값 아님)', () => {
+    const input = buildMarketValueInput(
+      stateWithContract({ reputation: { popularityCenti: 7200, mediaCenti: 3100 } }),
+      rulesetProto,
+    );
+    expect(input.popularityCenti).toBe(7200);
   });
 
   it('contractSeasonsRemaining은 계약 서명 이후 SEASON_STARTED 횟수를 lengthSeasons에서 뺀 값이다', () => {

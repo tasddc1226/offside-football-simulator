@@ -106,8 +106,8 @@ export function computeContractSeasonsRemaining(
 
 /**
  * D-41: Phase 3가 그대로 쓰는 어댑터. `state.contract`·`state.player.profile`이 있어야 한다(계약·
- * 선수 확정 전에는 시장가치를 계산할 이유가 없다). `popularityCenti`는 Phase 4 평판이 생기기 전까지
- * 5000 고정(D-41).
+ * 선수 확정 전에는 시장가치를 계산할 이유가 없다). `popularityCenti`는 T-4-001부터 `state.reputation`을
+ * 읽는다(기본값 5000은 `reputationRules.initialPopularityCenti`와 같아 지수 결과가 이전과 같다).
  */
 // `ruleset` 인자는 시그니처를 D-41("buildMarketValueInput(state, ruleset)")대로 유지한다 — 현재
 // 입력 항목(baseOvr·scoutedPotentialMid·age·contractSeasonsRemaining·leagueTier·form)은 모두
@@ -136,6 +136,6 @@ export function buildMarketValueInput(state: CareerState, _ruleset: Ruleset): Ma
     contractSeasonsRemaining,
     leagueTier: contract.leagueTier,
     form: state.state.form,
-    popularityCenti: 5000,
+    popularityCenti: state.reputation.popularityCenti,
   };
 }

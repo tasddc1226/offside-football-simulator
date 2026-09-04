@@ -204,6 +204,59 @@ describe('RulesetSchema', () => {
     expect(() => RulesetSchema.parse(ruleset)).toThrowError(/competitorNames에 중복된 이름이 있다/);
   });
 
+  // T-4-001 D-49: 트랙 B 룰셋 섹션(injuryRules·managerRules·relationshipRules·reputationRules·nationalTeamRules).
+  it('rejects an injuryRules.bodyParts entry whose sequelaKeys has a non-AttributeKey value', () => {
+    const ruleset = cloneRuleset();
+    const bodyPart = ruleset.injuryRules.bodyParts[0];
+    if (!bodyPart) throw new Error('fixture missing injuryRules.bodyParts');
+    (bodyPart as { sequelaKeys: string[] }).sequelaKeys = ['not-an-attribute-key'];
+    expect(() => RulesetSchema.parse(ruleset)).toThrow();
+  });
+
+  it('rejects injuryRules.severityWeights that do not sum to 100', () => {
+    const ruleset = cloneRuleset();
+    ruleset.injuryRules.severityWeights.MINOR += 1;
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/injuryRules\.severityWeights 합은 100이어야 한다/);
+  });
+
+  it('rejects injuryRules.bodyParts whose weights do not sum to 100', () => {
+    const ruleset = cloneRuleset();
+    const bodyPart = ruleset.injuryRules.bodyParts[0];
+    if (!bodyPart) throw new Error('fixture missing injuryRules.bodyParts');
+    bodyPart.weight += 1;
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/injuryRules\.bodyParts weight 합은 100이어야 한다/);
+  });
+
+  it('rejects a recurrenceBaseBp out of the 0~10000 range', () => {
+    const ruleset = cloneRuleset();
+    const bodyPart = ruleset.injuryRules.bodyParts[0];
+    if (!bodyPart) throw new Error('fixture missing injuryRules.bodyParts');
+    (bodyPart as { recurrenceBaseBp: number }).recurrenceBaseBp = 10001;
+    expect(() => RulesetSchema.parse(ruleset)).toThrow();
+  });
+
+  it('rejects duplicate managerRules.names', () => {
+    const ruleset = cloneRuleset();
+    const [first] = ruleset.managerRules.names;
+    if (!first) throw new Error('fixture missing managerRules.names');
+    ruleset.managerRules.names = [...ruleset.managerRules.names, first];
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/managerRules\.names에 중복된 이름이 있다/);
+  });
+
+  it('rejects managerRules.names that overlaps competitorNames', () => {
+    const ruleset = cloneRuleset();
+    const [competitorName] = ruleset.competitorNames;
+    if (!competitorName) throw new Error('fixture missing competitorNames');
+    ruleset.managerRules.names = [...ruleset.managerRules.names, competitorName];
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/managerRules\.names가 competitorNames와 겹친다/);
+  });
+
+  it('rejects nationalTeamRules.opponents when empty', () => {
+    const ruleset = cloneRuleset();
+    ruleset.nationalTeamRules.opponents = [];
+    expect(() => RulesetSchema.parse(ruleset)).toThrow();
+  });
+
   // T-3-002 D-43/D-44: transferRules 정합성 4가지.
   describe('transferRules', () => {
     it('rejects a kindWeightsByRole whose TRANSFER+LOAN does not sum to 100', () => {

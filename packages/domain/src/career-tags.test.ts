@@ -96,6 +96,10 @@ function baseCareerTagState(): CareerState {
     timeline: [],
     season: null,
     seasonHistory: [],
+    health: { episodes: [] },
+    relationshipLog: [],
+    memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
+    reputation: { popularityCenti: 5000, mediaCenti: 5000 },
   };
 }
 
@@ -431,6 +435,8 @@ describe('settleSeason의 커리어 태그 결산 훅', () => {
       matchRngState: seedRng('career-tags-settle-match'),
       scheduledEffects: [],
       chapters: [],
+      manager: null,
+      injuryCount: 0,
     };
   }
 
