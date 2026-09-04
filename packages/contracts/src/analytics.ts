@@ -24,7 +24,11 @@ export const AnalyticsEventNameSchema = z.enum(ANALYTICS_EVENT_NAMES);
 export type AnalyticsEventName = z.infer<typeof AnalyticsEventNameSchema>;
 
 const ScreenIdSchema = z.string().regex(/^SCR-\d{3}$/, 'SCR-000 형식이어야 한다.');
-const CareerPhaseSchema = z.enum(['NONE', 'PRESEASON', 'LEAGUE', 'CUP', 'TRANSFER_WINDOW', 'SETTLEMENT']);
+/** `screen_viewed.careerPhase`: 커리어 없음('NONE')·선수 생성 중(`PLAYER_CREATION_CAREER_PHASE`='YOUTH')·
+ * 아니면 `state.seasonPhase`(도메인 `SeasonPhase`) 그대로다(apps/web의 기존 30여 호출부 기준). */
+const CareerPhaseSchema = z.enum(['NONE', 'YOUTH', 'PRESEASON', 'LEAGUE', 'CUP', 'TRANSFER_WINDOW', 'SETTLEMENT']);
+/** `career_abandoned_hint.seasonPhase`: 도메인 `SeasonPhase` 그대로(커리어에는 항상 값이 있다, NONE 없음). */
+const SeasonPhaseSchema = z.enum(['PRESEASON', 'LEAGUE', 'CUP', 'TRANSFER_WINDOW', 'SETTLEMENT']);
 const RiskLabelSchema = z.enum(['HIGH', 'MEDIUM', 'LOW']);
 const RoleProposalTypeSchema = z.enum(['KEEP', 'POSITION_CHANGE', 'ROLE_CHANGE']);
 const RoleDecisionSchema = z.enum(['ACCEPT', 'DECLINE']);
@@ -75,7 +79,7 @@ export const ANALYTICS_EVENT_PROPS_SCHEMAS = {
   career_abandoned_hint: z.strictObject({
     seasonIndex: SeasonIndexSchema,
     step: StepSchema,
-    seasonPhase: CareerPhaseSchema,
+    seasonPhase: SeasonPhaseSchema,
   }),
 } as const satisfies Record<AnalyticsEventName, z.ZodTypeAny>;
 
