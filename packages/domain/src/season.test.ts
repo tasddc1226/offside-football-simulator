@@ -12,7 +12,33 @@ import {
   selectOpenSlot,
 } from './season.js';
 import { simulate, type Command, type SimulationInput } from './simulate.js';
-import type { DomainSnapshot, SeasonStep } from './types.js';
+import type { DomainSnapshot, Offer, SeasonStep } from './types.js';
+
+function buildTestOffer(): Offer {
+  return {
+    id: 'OFR-TEST-1',
+    kind: 'RENEWAL',
+    teamId: 'seoul-tier1',
+    teamName: 'Seoul',
+    fromTeamId: 'seoul-tier1',
+    leagueTier: 1,
+    lengthSeasons: 2,
+    wageMinorPerWeek: 1000,
+    signingBonusMinor: 0,
+    transferFeeMinor: null,
+    rolePromise: 'BENCH',
+    appearancePromise: { minutesShareBp: 2000 },
+    positionPlan: 'ST',
+    shirtNumber: 9,
+    tacticalFitEstimate: 50,
+    competitorSummary: null,
+    validUntilRevision: null,
+    negotiable: { wage: false, role: false, length: false },
+    negotiationState: 'OPEN',
+    negotiatedAsk: null,
+    loan: null,
+  };
+}
 
 const RULESET_VERSION = '1.0.0';
 const CONTENT_PACK = '0.1.0';
@@ -164,7 +190,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       ],
       summary: null,
     };
-    const result = selectOpenSlot(step, 'CHAPTER', [{ eventId: 'EVT-X', version: 1, weight: 1 }], rng, null, null);
+    const result = selectOpenSlot(step, 'CHAPTER', [{ eventId: 'EVT-X', version: 1, weight: 1 }], rng, null, null, 1, 0);
     expect(result.opened).toBe(true);
     if (result.opened) expect(result.pending?.kind).toBe('CONTRACT');
   });
@@ -177,7 +203,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'EVENT', required: false }],
       summary: null,
     };
-    const result = selectOpenSlot(step, 'CHAPTER', [], rng, null, null);
+    const result = selectOpenSlot(step, 'CHAPTER', [], rng, null, null, 1, 0);
     expect(result).toEqual({ opened: false });
   });
 
@@ -200,7 +226,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionsTotal: 1,
       trigger: 'DEBUT' as const,
     };
-    expect(selectOpenSlot(minorStep, 'FAST', [], rng, null, chapterOpen)).toEqual({ opened: false });
+    expect(selectOpenSlot(minorStep, 'FAST', [], rng, null, chapterOpen, 1, 0)).toEqual({ opened: false });
 
     const majorStep: SeasonStep = {
       index: 3,
@@ -209,8 +235,8 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }],
       summary: null,
     };
-    expect(selectOpenSlot(majorStep, 'FAST', [], rng, null, null)).toEqual({ opened: false });
-    const result = selectOpenSlot(majorStep, 'FAST', [], rng, null, chapterOpen);
+    expect(selectOpenSlot(majorStep, 'FAST', [], rng, null, null, 1, 0)).toEqual({ opened: false });
+    const result = selectOpenSlot(majorStep, 'FAST', [], rng, null, chapterOpen, 1, 0);
     expect(result.opened).toBe(true);
     if (result.opened) expect(result.pending).toEqual({ kind: 'CHAPTER', step: 3, resolved: [], ...chapterOpen });
   });
@@ -223,19 +249,28 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'CONTRACT', required: false, skippedByBudget: true }],
       summary: null,
     };
-    expect(selectOpenSlot(step, 'CHAPTER', [], rng, null, null)).toEqual({ opened: false });
+    expect(selectOpenSlot(step, 'CHAPTER', [], rng, null, null, 1, 0)).toEqual({ opened: false });
   });
 });
 
+const EMPTY_MARKET = { openedAtRevision: 1, seasonIndex: 0, reason: 'PRE_NEGOTIATION' as const, safeOfferId: null };
+const EMPTY_MARKET_SUMMARY = { openedAtRevision: 1, seasonIndex: 0, reason: 'FIRST_CONTRACT' as const, safeOfferId: null };
+
 describe('isAutoPassablePending', () => {
-  it('CONTRACT·INJURY·NATIONAL_TEAM만 자동 통과 대상이다', () => {
-    expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7 })).toBe(true);
-    expect(isAutoPassablePending({ kind: 'INJURY', step: 5 })).toBe(true);
-    expect(isAutoPassablePending({ kind: 'NATIONAL_TEAM', step: 8 })).toBe(true);
+  it('CONTRACT(offers 없음)·INJURY·NATIONAL_TEAM만 자동 통과 대상이다', () => {
+    expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7, offers: [], market: EMPTY_MARKET })).toBe(true);
+    expect(isAutoPassablePending({ kind: 'INJURY', step: 5, episodeId: '', eventId: '', version: 0 })).toBe(true);
+    expect(isAutoPassablePending({ kind: 'NATIONAL_TEAM', step: 8, eventId: '', version: 0 })).toBe(true);
     expect(isAutoPassablePending({ kind: 'EVENT', eventId: 'x', version: 1 })).toBe(false);
-    expect(isAutoPassablePending({ kind: 'OFFERS', offers: [] })).toBe(false);
+    expect(isAutoPassablePending({ kind: 'OFFERS', offers: [], market: EMPTY_MARKET_SUMMARY })).toBe(false);
     expect(isAutoPassablePending({ kind: 'SETTLEMENT', step: 12 })).toBe(false);
     expect(isAutoPassablePending(null)).toBe(false);
+  });
+
+  // T-3-001 D-43: CONTRACT pending에 제안이 1건 이상 있으면 자동 통과하지 않는다(테스트로 고정).
+  it('CONTRACT는 offers.length > 0이면 자동 통과하지 않는다', () => {
+    const offer = buildTestOffer();
+    expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7, offers: [offer], market: EMPTY_MARKET })).toBe(false);
   });
 
   // T-2-002 D-34: ROLE은 더 이상 자동 통과 대상이 아니다 — RESOLVE_ROLE로만 닫힌다.
@@ -423,7 +458,13 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
     if (!advanced.ok) throw new Error(`실패: ${advanced.error.code} ${advanced.error.message}`);
     const state = advanced.snapshot.state;
     expect(state.season?.currentStep).toBe(7);
-    expect(state.pending).toEqual({ kind: 'CONTRACT', step: 7 });
+    // T-3-001 D-43 (a): 생성기가 없는 지금은 항상 offers: []로 열린다(자동 통과 대상).
+    expect(state.pending).toEqual({
+      kind: 'CONTRACT',
+      step: 7,
+      offers: [],
+      market: { openedAtRevision: advanced.snapshot.revision, seasonIndex: 0, reason: 'PRE_NEGOTIATION', safeOfferId: null },
+    });
     expect(findSeasonStep(state.season!.steps, 1).summary?.decisionsOpened).toBe(1);
     expect(findSeasonStep(state.season!.steps, 2).summary?.decisionsOpened).toBe(0);
     expect(findSeasonStep(state.season!.steps, 3).summary?.decisionsOpened).toBe(0);

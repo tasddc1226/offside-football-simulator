@@ -3,7 +3,7 @@ import seasonRaw from './career-06-settled-season.json';
 import { runCareerFixture, rulesetProto, type CareerFixture } from './career-01.js';
 import type { Command, SimulationResult } from '../simulate.js';
 import { simulate } from '../simulate.js';
-import type { CompetitionRecord, DomainSnapshot, SeasonPlayerStats } from '../types.js';
+import type { CompetitionRecord, DomainSnapshot, SeasonPhase, SeasonPlayerStats, StepSummary } from '../types.js';
 
 export const careerSettledFixture = careerRaw as CareerFixture;
 
@@ -39,6 +39,9 @@ function runOrThrow(snapshot: DomainSnapshot, command: Command & { commandId: st
 
 export type SettledFixtureRun = {
   snapshot: DomainSnapshot;
+  /** SETTLE_SEASON 직전(season이 null이 되기 전) 각 step의 index·phase·summary. T-3-001:
+   * `SeasonResult.stepSummaries`가 이 값을 그대로 옮겼는지 확인하는 데 쓴다. */
+  stepSummaries: Array<{ index: number; phase: SeasonPhase; summary: StepSummary | null }>;
   /** SETTLE_SEASON 직전(season이 null이 되기 전) 경기·시즌 통계·대회 기록 스냅샷. */
   beforeSettlement: {
     matchesPlayed: number;
@@ -62,11 +65,13 @@ export function runSettledFixture(): SettledFixtureRun {
     buildCommand('START_SEASON', 'settled-season-start', snapshot.revision, seasonCommandLog.startSeason),
   );
 
+  let stepSummaries: SettledFixtureRun['stepSummaries'] = [];
   let beforeSettlement: SettledFixtureRun['beforeSettlement'] | null = null;
 
   seasonCommandLog.commands.forEach((rawCommand, index) => {
     if (rawCommand.type === 'SETTLE_SEASON') {
       const season = snapshot.state.season!;
+      stepSummaries = season.steps.map((step) => ({ index: step.index, phase: step.phase, summary: step.summary }));
       beforeSettlement = {
         matchesPlayed: season.matches.length,
         playerStats: season.playerStats,
@@ -81,5 +86,5 @@ export function runSettledFixture(): SettledFixtureRun {
     snapshot = runOrThrow(snapshot, command);
   });
 
-  return { snapshot, beforeSettlement: beforeSettlement! };
+  return { snapshot, stepSummaries, beforeSettlement: beforeSettlement! };
 }
