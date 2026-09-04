@@ -1,4 +1,4 @@
-import { canonicalize, simulate, type DomainSnapshot, type JsonValue } from '@offside/domain';
+import { canonicalize, hashState, simulate, type DomainSnapshot, type JsonValue } from '@offside/domain';
 import {
   career01,
   career02Season,
@@ -109,6 +109,29 @@ function replayIndependentFixture(
   }
   if (snapshot === null) throw new Error(`${prefix} 명령 목록이 비어 있다.`);
   return steps;
+}
+
+/**
+ * T-3-004의 "제안 3개 이상" 크기 지점은 정본 fixture에 현재 최대 2개 제안만 있어 합성한다.
+ * fixture/golden 본문은 읽기 전용으로 유지하고, 실제 replay 결과의 첫 offer를 복제한 불투명 payload를
+ * 하나 추가해 Snapshot 직렬화 예산만 계측한다. 이 합성 Snapshot을 replay·hash golden 검증에 사용하지 않는다.
+ */
+function withAtLeastThreeOffersForSize(step: Step): Step {
+  const pending = step.snapshot.state.pending;
+  if (pending?.kind !== 'OFFERS' || pending.offers.length >= 3) return step;
+  const template = pending.offers[0];
+  if (template === undefined) throw new Error('제안 시장이 비어 있어 3개 제안 크기를 합성할 수 없다.');
+  const syntheticState = {
+    ...step.snapshot.state,
+    pending: {
+      ...pending,
+      offers: [...pending.offers, { ...template, id: `${template.id}-size-probe-3` }],
+    },
+  };
+  return {
+    ...step,
+    snapshot: { ...step.snapshot, state: syntheticState, stateHash: hashState(syntheticState) },
+  };
 }
 
 describe('Snapshot·PUT 본문 크기(D-33)', () => {
@@ -338,7 +361,7 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
       return step;
     };
     const offersSteps = steps.filter((step) => step.snapshot.state.pending?.kind === 'OFFERS');
-    const market = offersSteps.reduce<Step | undefined>(
+    const fixtureMarket = offersSteps.reduce<Step | undefined>(
       (largest, step) =>
         largest === undefined ||
         (step.snapshot.state.pending?.kind === 'OFFERS' &&
@@ -348,7 +371,8 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
           : largest,
       undefined,
     );
-    if (market === undefined) throw new Error(`${label} 제안 시장 지점을 찾지 못했다.`);
+    if (fixtureMarket === undefined) throw new Error(`${label} 제안 시장 지점을 찾지 못했다.`);
+    const market = withAtLeastThreeOffersForSize(fixtureMarket);
     const negotiated = label === 'career-10-transfer' ? findStep((step) => step.command.type === 'NEGOTIATE', '협상 직후') : undefined;
     const transfer =
       label === 'career-10-transfer'
@@ -364,7 +388,7 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
     const final = steps[steps.length - 1]!;
     const measured = [
       {
-        checkpoint: 'market-largest-offers',
+        checkpoint: 'market-3-offers-size-probe',
         snapshot: market.snapshot,
         offerCount: market.snapshot.state.pending?.kind === 'OFFERS' ? market.snapshot.state.pending.offers.length : 0,
       },
@@ -372,8 +396,15 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
       ...(transfer === undefined ? [] : [{ checkpoint: 'after-transfer', snapshot: transfer.snapshot }]),
       ...(loan === undefined ? [] : [{ checkpoint: 'during-loan', snapshot: loan.snapshot }]),
       { checkpoint: 'final-3-season', snapshot: final.snapshot },
-    ].map(({ checkpoint, snapshot }) => ({ checkpoint, revision: snapshot.revision, stateBytes: stateBytes(snapshot) }));
+    ].map(({ checkpoint, snapshot, offerCount }) => ({
+      checkpoint,
+      revision: snapshot.revision,
+      stateBytes: stateBytes(snapshot),
+      ...(offerCount === undefined ? {} : { offerCount }),
+    }));
     const bodyBytes = putBodyBytes(steps, 0);
+    const offerCount = market.snapshot.state.pending?.kind === 'OFFERS' ? market.snapshot.state.pending.offers.length : 0;
+    expect(offerCount, `${label} 3-offer size probe`).toBeGreaterThanOrEqual(3);
 
     console.log(
       JSON.stringify({
