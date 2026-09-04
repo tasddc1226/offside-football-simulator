@@ -34,8 +34,8 @@
 | # | 항목 | 담당 | 상태 |
 |---|---|---|---|
 | 1 | staging `GET /v1/service-seasons/current`가 `svc_line_test`·`isTest: true`를 돌려준다 | 오케스트레이터 | ✅ 2026-09-04 12:34(run `2270e81`): PRESEASON·isTest·notice LINE_TEST |
-| 2 | 허브에 LINE TEST 배너·"테스트 시즌" 배지가 보이고 커리어 생성 PUT 본문에 `svc_line_test`가 실린다 | 오케스트레이터 | ✅ 12:56 예행(Playwright, staging)에서 배너·배지 확인. 빈 기기는 온보딩으로 가서 안내를 못 본다 → T-2-015 #3(PR #52 5462dc7 머지, 재예행에서 확인) |
-| 3 | FAST·CHAPTER 각 한 시즌 완주 → `analytics_events`에 `funnel_reached` 5단계·`season_settled`가 쌓인다 | 오케스트레이터 | ⚠ 12:56 예행: 완주 통과, 소배치 202. **20건 배치는 503**(D1 문장당 변수 100개 상한, 7열×20행) → T-2-015 #1(PR #52 5462dc7, 13:21 머지) → 배포 뒤 재예행·20건 curl 202 확인 예정. D1 건수 확인은 U-016(wrangler 로그인) 뒤 |
+| 2 | 허브에 LINE TEST 배너·"테스트 시즌" 배지가 보이고 커리어 생성 PUT 본문에 `svc_line_test`가 실린다 | 오케스트레이터 | ✅ 12:56 예행(Playwright, staging)에서 배너·배지 확인. 빈 기기는 온보딩으로 가서 안내를 못 본다 → T-2-015 #3(PR #52 5462dc7). ✅ 13:32 재예행: `/onboarding` 첫 슬라이드에 안내 문구 확인 |
+| 3 | FAST·CHAPTER 각 한 시즌 완주 → `analytics_events`에 `funnel_reached` 5단계·`season_settled`가 쌓인다 | 오케스트레이터 | ⚠ 12:56 예행: 완주 통과, 소배치 202. **20건 배치는 503**(D1 문장당 변수 100개 상한, 7열×20행) → T-2-015 #1(PR #52 5462dc7, 13:21 머지) → ✅ 13:32 재예행(5462dc7 staging): 완주 40초, 분석 POST 4건 모두 202, 20건·50건 배치 curl 202(수정 전 503). D1 건수 확인은 U-016(wrangler 로그인) 뒤 |
 | 4 | U-014 Workers Paid 플랜 전환(무료 한도: 일 10만 요청·D1 5M 행 읽기 — 30명 규모면 넘지 않지만 rate limit·큐 flush 폭주 대비) | 사용자 | 공개 직전 |
 | 5 | U-010 약관·개인정보 문안: 연락처가 "준비 중"이면 안내문에 문의 채널을 따로 적는다 | 사용자 | 출시 전 필수, LINE TEST는 안내문으로 보완 |
 | 6 | 테스터 안내문(4절) 발송, 피드백 채널 결정 | 사용자 | |
@@ -147,7 +147,7 @@ SELECT status, COUNT(*) FROM careers WHERE created_service_season_id='svc_line_t
 | # | 항목 | 상태 | 근거 |
 |---|---|---|---|
 | 1 | staging이 `svc_line_test`·`isTest: true`를 돌려주고 허브 배너·배지가 보인다 | ⏳ | 3절 #1·#2 |
-| 2 | 오케스트레이터 예행: FAST·CHAPTER 각 1시즌 완주 이벤트가 D1에 있다 | ⏳ | 3절 #3 — 흐름은 통과(12:56), 이벤트 유실 결함 T-2-015 머지 뒤 재예행 + U-016 |
+| 2 | 오케스트레이터 예행: FAST·CHAPTER 각 1시즌 완주 이벤트가 D1에 있다 | ⚠ | 3절 #3 — 흐름·전송 통과(13:32 재예행, 배치 202). D1 건수 확인만 U-016(wrangler 로그인) 뒤 |
 | 3 | 외부 테스터 10명 이상이 첫 커리어를 만들었다 | ⏳ | 5-1 ONBOARDING_STARTED |
 | 4 | 기준선 3지표·세션 길이·결정 수·이탈·선택 분포가 6절 양식으로 기록됐다 | ⏳ | `line-test-baseline.md` |
 | 5 | 테스트 중 발견한 결함이 닫혔거나 작업 ID로 배정됐다 | ⏳ | 보드 |

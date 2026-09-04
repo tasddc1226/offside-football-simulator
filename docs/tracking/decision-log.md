@@ -2,13 +2,19 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-04 (오후, PR #50 머지 — 이적시장 생성기, T-3-003 투입)
+
+**결과**: PR #50(T-3-002, `0674ee4` → squash `408a765`, 13:33). 리뷰 수정 1건(결산 뒤 상태에서 STARTER·평점 INTEREST 분기 도달 불가 → `currentSquadPerformance` 폴백 헬퍼, 시장 골든 값·rng 소비 불변, 테스트 3건)을 워커가 반영했고 PR #51과의 manifest 체크섬 충돌도 origin/main 머지 뒤 재계산으로 스스로 해결해 준비해 둔 후속 지시(review-2)는 보내지 않았다. 체인(origin/main + 0674ee4) 녹색(e2e 72). Phase 3 완료 조건 1·2·5의 생성기 쪽 근거 확보, 배선은 T-3-003.
+
+**T-3-003 투입(13:34)**: 브리프(13:20)대로. 동시 워커 2개(T-4-001·T-3-003). T-4-001과 `simulate.ts`·`types.ts`가 겹치므로 먼저 머지되는 쪽 뒤에 다른 쪽이 origin/main을 머지한다(브리프에 명시).
+
 ## 2026-09-04 (오후, PR #52 머지 — LINE TEST 결함 3건 수정, T-3-003 브리프)
 
 **결과**: PR #52(T-2-015, `ff45412` → squash `5462dc7`, 13:21) 리뷰 수정 0건. 워커는 PR 게이트 폴백대로 push → `PR_BODY.md` → `DONE`으로 멈췄고 오케스트레이터가 REST(curl)로 PR을 열었다. 체인 녹색(mock e2e 72, 실 api e2e recovery-api·google-link·service-season 8). 워커가 로컬 D1로 20건 curl 202도 확인했다. 변경: `insertAnalyticsEvents` 14행 청크 순차 insert(spy 테스트 50 → 14·14·14·8, 로컬 Miniflare가 상한을 재현하지 않아 재현 시도 안 함), `toErrorEnvelope` unknown error 고정 문구(원문은 logger `errorMessage` 500자), 온보딩 첫 슬라이드 `onboarding-service-season-notice`. 투입 13:02 → 머지 13:21(19분).
 
 **T-3-003 브리프(13:20)**: PR #50 머지 뒤 투입. 설계 결정 — `CareerState.parentContract`(임대 중 원소속 계약 보관, 기존 골든 9종 stateHash만 갱신), 룰셋 `contractRules.imposedPositionProficiency`·`leagues[].promotionSlots`, NEGOTIATE roll 1회(성공 bp = successBp + reputation 보정, 시장가치 보정은 룰셋 상수가 없어 보류), 재계약은 새 stint 없이 열린 stint의 contractId만 교체(`RENEWED` 예약 유지), 결산 순서 D-47 → 임대 분기 → 시장 개설, step 7 제안 자동 만료 임시 규칙 제거(응답 필수), 태그 평가기 5종 조건을 표로 고정, 웹은 SCR-009 재사용 라우팅·e2e 헬퍼만(첫 계약 1시즌이 가능해 step 7·결산 뒤 시장이 e2e에서 실제로 열린다).
 
-**후속**: staging 배포(5462dc7) 뒤 재예행(온보딩 안내·20건 배치 202) → line-test-plan 3절 #2·#3, 7절 2행 갱신. 동시 워커 2개(T-4-001·T-3-002), 슬롯 1개 비어 있으나 T-3-003은 PR #50 선행이라 대기.
+**재예행(13:32, 5462dc7 staging)**: 온보딩→계약→FAST·CHAPTER 시즌 40초 통과, 분석 POST 4건 202, 20건·50건 배치 curl 202(Origin 헤더 필요, 수정 전 503), `/onboarding` 첫 슬라이드 LINE TEST 안내 확인. line-test-plan 3절 #2·#3 ✅, 7절 2행은 D1 건수 확인(U-016)만 남음. **후속**: 동시 워커 2개(T-4-001·T-3-002), 슬롯 1개 비어 있으나 T-3-003은 PR #50 선행이라 대기.
 
 ## 2026-09-04 (오후, PR #51 머지 — 팩 0.2.0·팀 12, PR #50 수정 요청, T-2-015 투입)
 

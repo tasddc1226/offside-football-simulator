@@ -908,6 +908,8 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     wiring.playStepMatches,
     [],
     chapterContext,
+    stateBeforeWalk,
+    ruleset,
   );
   const expiredState = advanceEffectsThroughWalk(stateBeforeWalk, walked);
   if (expiredState.season === null) {
@@ -1053,6 +1055,17 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     timeline = [
       ...timeline,
       { revision: nextRevision, kind: 'STEP_PASSED', refId: null, age: state.age, step: currentStepIndex },
+      // T-3-002 D-43 (a)(임시 규칙, T-3-003이 "응답 필수"로 바꾼다): step 7 CONTRACT pending이
+      // 재계약 제안을 들고 있었는데 응답 없이 자동 통과되면, 제안마다 OFFER_EXPIRED를 남긴다.
+      ...(state.pending?.kind === 'CONTRACT'
+        ? state.pending.offers.map((offer) => ({
+            revision: nextRevision,
+            kind: 'OFFER_EXPIRED' as const,
+            refId: offer.id,
+            age: state.age,
+            step: currentStepIndex,
+          }))
+        : []),
     ];
     currentStepIndex += 1;
   }
@@ -1112,6 +1125,8 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     wiring.playStepMatches,
     season.matches,
     chapterContext,
+    state,
+    ruleset,
   );
   const expiredState = advanceEffectsThroughWalk(state, walked);
   if (expiredState.season === null) {

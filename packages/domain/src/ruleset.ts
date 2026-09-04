@@ -304,6 +304,33 @@ export type NationalTeamRules = {
   opponents: string[];
 };
 
+// T-3-002 D-43/D-44: 결산 뒤 이적시장 생성·step 7 재계약 사전 협상이 쓰는 상수 묶음(`market.ts`가
+// 소비). `negotiation`·`relationshipCarry`·`rivalPairs`는 T-3-003이 소비한다(이 작업은 스키마·데이터만
+// 둔다).
+export type TransferRules = {
+  offerValidityRevisions: number;
+  demandBands: Array<{ maxIndexCenti: number; tiers: Array<1 | 2 | 3> }>;
+  interest: { minRatingTenths: number; minIndexCenti: number };
+  kindWeightsByRole: Record<SquadRole, { TRANSFER: number; LOAN: number }>;
+  loan: { seasons: 1; wageShareBp: number; buyOptionChanceBp: number; buyMinShareBp: number };
+  feeByIndexBand: Array<{ maxIndexCenti: number; feeMinor: number }>;
+  safeRenewal: { lengthSeasons: number; wageBp: number };
+  renewal: { lengthSeasons: number; wageBpByRole: Record<SquadRole, number> };
+  negotiation: {
+    successBp: Record<'TRANSFER' | 'FREE_AGENT' | 'LOAN' | 'RENEWAL', Record<'WAGE' | 'ROLE' | 'LENGTH', number>>;
+    reputationAdjustBpPerPoint: number;
+    counter: { wageBp: number; lengthDelta: number };
+  };
+  relationshipCarry: {
+    newManagerTrustBase: number;
+    fansCarryBp: number;
+    rivalMoveFansDelta: number;
+    promiseBreachMoveFansDelta: number;
+    managerTrustPromiseBreach: number;
+  };
+  rivalPairs: Array<[string, string]>;
+};
+
 // T-2-001 D-33: 룰셋 slot 정의(step 안의 결정 슬롯 후보). `FootballSeason.steps[].decisionSlots`는
 // 시즌 시작 시 이 목록에서 결정 예산(RULE-TIME-004)을 적용해 만든다.
 export type LeagueCalendarSlot = Pick<DecisionSlot, 'kind' | 'required' | 'importance'>;
@@ -334,6 +361,8 @@ export type Ruleset = {
   scoutRange: { minBelow: { min: number; max: number }; maxAbove: { min: number; max: number } };
   teams: Team[];
   offerRules: OfferRules;
+  /** T-3-002 D-43/D-44: 결산 뒤 이적시장·step 7 재계약 상수. */
+  transferRules: TransferRules;
   contractRules: ContractRules;
   leagueCalendar: LeagueCalendar;
   /** T-2-001 D-25 SETTLE_SEASON: 시즌 경계에서 폼·체력·사기가 회귀하는 상수(11 "나이·시즌 경계"). */

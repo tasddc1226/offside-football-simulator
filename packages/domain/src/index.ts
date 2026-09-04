@@ -103,6 +103,7 @@ export type {
   SelectionRules,
   TacticalStyle,
   Team,
+  TransferRules,
 } from './ruleset.js';
 export {
   applyEffects,
@@ -136,6 +137,15 @@ export {
   type MarketValueResult,
 } from './market-value.js';
 export { canNegotiate, expireOffers, isOfferExpired, type ExpireOffersResult } from './negotiation.js';
+export {
+  buildRenewalOffer,
+  generateMarket,
+  judgeMarketReason,
+  openMarketAfterSettlement,
+  type GenerateMarketArgs,
+  type GeneratedMarket,
+  type OpenMarketResult,
+} from './market.js';
 export { attributeGroupOf, computeGrowth, type GrowthAttributeDelta, type GrowthInput, type GrowthResult } from './growth.js';
 export { applyCondition, type ConditionState } from './condition.js';
 export {

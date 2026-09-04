@@ -41,7 +41,8 @@ function buildTeamPool(ruleset: Ruleset, branch: OfferBranch): { pool: Team[]; f
   return { pool, fixed: false };
 }
 
-function findOvrBand(rules: ContractRules, baseOvr: number): { id: string; maxOvr: number } {
+// T-3-002: market.ts가 안전 잔류·재계약·시장 제안의 급여·계약금 조회에 재사용한다(동작 불변, export만 추가).
+export function findOvrBand(rules: ContractRules, baseOvr: number): { id: string; maxOvr: number } {
   const band = rules.ovrBands.find((candidate) => baseOvr <= candidate.maxOvr);
   if (band === undefined) {
     throw new RangeError(`findOvrBand: baseOvr ${baseOvr}에 맞는 ovrBand가 없다.`);
@@ -49,7 +50,7 @@ function findOvrBand(rules: ContractRules, baseOvr: number): { id: string; maxOv
   return band;
 }
 
-function lookupBandAmount(table: Record<string, Record<string, number>>, wageBandId: string, bandId: string, label: string): number {
+export function lookupBandAmount(table: Record<string, Record<string, number>>, wageBandId: string, bandId: string, label: string): number {
   const amount = table[wageBandId]?.[bandId];
   if (amount === undefined) {
     throw new RangeError(`lookupBandAmount: ${label}에 wageBandId '${wageBandId}'·band '${bandId}' 조합이 없다.`);

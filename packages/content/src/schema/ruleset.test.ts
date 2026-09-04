@@ -256,4 +256,39 @@ describe('RulesetSchema', () => {
     ruleset.nationalTeamRules.opponents = [];
     expect(() => RulesetSchema.parse(ruleset)).toThrow();
   });
+
+  // T-3-002 D-43/D-44: transferRules 정합성 4가지.
+  describe('transferRules', () => {
+    it('rejects a kindWeightsByRole whose TRANSFER+LOAN does not sum to 100', () => {
+      const ruleset = cloneRuleset();
+      ruleset.transferRules.kindWeightsByRole.STARTER.TRANSFER += 1;
+      expect(() => RulesetSchema.parse(ruleset)).toThrowError(/TRANSFER\+LOAN 합은 100이어야 한다/);
+    });
+
+    it('rejects demandBands that are not ascending by maxIndexCenti', () => {
+      const ruleset = cloneRuleset();
+      const bands = ruleset.transferRules.demandBands;
+      [bands[0]!.maxIndexCenti, bands[1]!.maxIndexCenti] = [bands[1]!.maxIndexCenti, bands[0]!.maxIndexCenti];
+      expect(() => RulesetSchema.parse(ruleset)).toThrowError(/maxIndexCenti 오름차순이어야 한다/);
+    });
+
+    it('rejects feeByIndexBand whose last band is not maxIndexCenti 10000', () => {
+      const ruleset = cloneRuleset();
+      const bands = ruleset.transferRules.feeByIndexBand;
+      bands[bands.length - 1]!.maxIndexCenti = 9999;
+      expect(() => RulesetSchema.parse(ruleset)).toThrowError(/마지막 구간은 maxIndexCenti 10000이어야 한다/);
+    });
+
+    it('rejects a rivalPairs team id that does not exist in teams', () => {
+      const ruleset = cloneRuleset();
+      ruleset.transferRules.rivalPairs = [...ruleset.transferRules.rivalPairs, ['not-a-real-team', 'seorabeol-united']];
+      expect(() => RulesetSchema.parse(ruleset)).toThrowError(/rivalPairs\[\d+\]의 팀이 teams에 없다/);
+    });
+
+    it('rejects relationshipCarry.newManagerTrustBase !== contractRules.newClubManagerTrust', () => {
+      const ruleset = cloneRuleset();
+      ruleset.transferRules.relationshipCarry.newManagerTrustBase += 1;
+      expect(() => RulesetSchema.parse(ruleset)).toThrowError(/newManagerTrustBase\(\d+\)는 contractRules\.newClubManagerTrust\(\d+\)와 같아야 한다/);
+    });
+  });
 });

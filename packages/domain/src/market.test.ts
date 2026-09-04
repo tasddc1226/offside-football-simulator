@@ -1,0 +1,469 @@
+import { describe, expect, it } from 'vitest';
+import { rulesetProto, runCareerFixture } from './__fixtures__/career-01.js';
+import { runGkFixture } from './__fixtures__/career-04-gk.js';
+import { runSettledFixture } from './__fixtures__/career-06-settled.js';
+import { marketFixtureRuleset } from './__fixtures__/market-fixture-ruleset.js';
+import { buildMarketValueInput, computeMarketValueIndex } from './market-value.js';
+import { buildRenewalOffer, generateMarket, judgeMarketReason, openMarketAfterSettlement } from './market.js';
+import { seedRng } from './rng.js';
+import { selectOpenSlot } from './season.js';
+import type { CareerState, SeasonStep, SquadRole } from './types.js';
+
+// T-3-002: market.ts는 ADR-005(도메인은 어떤 패키지에도 의존하지 않는다) 때문에 실제 1.0.0 콘텐츠
+// 룰셋을 쓸 수 없다 — 브리프는 "실제 1.0.0 룰셋"을 요구하지만(PR 본문 "결정 필요" 참고), 이 테스트는
+// domain 내부 fixture(`rulesetProto`·`marketFixtureRuleset`)로 같은 조건을 재현한다.
+
+function contractOf(state: CareerState) {
+  const contract = state.contract;
+  if (contract === null) throw new RangeError('fixture contract가 null이다.');
+  return contract;
+}
+
+describe('judgeMarketReason', () => {
+  // career-06-settled의 SETTLE_SEASON 직전 상태(`season !== null`, step 12) — 브리프가 요구하는 입력
+  // 형태 그대로다. 계약 lengthSeasons 3·잔여 2, season.squadRole ROTATION, 평균 평점 64(<70),
+  // 시장가치 지수 7235(≥7000)라 override 없이 그대로 쓰면 index발 INTEREST가 나온다.
+  const { beforeSettlementState: base } = runSettledFixture();
+
+  it('계약 잔여 0이면 EXPIRED — 다른 조건과 무관하게 우선한다', () => {
+    const state: CareerState = { ...base, contract: { ...contractOf(base), lengthSeasons: 1 } };
+    expect(judgeMarketReason(state, rulesetProto)).toBe('EXPIRED');
+  });
+
+  it('시장가치 지수가 임계값 이상이면 INTEREST(태그·평점 신호 없이도)', () => {
+    // base 자체가 index 7235 ≥ interest.minIndexCenti(7000), squadRole ROTATION(평점 조건 미해당),
+    // 태그 없음 — 순수 지수발 INTEREST다.
+    expect(base.tags).not.toContain('이적_희망');
+    expect(base.season?.squadRole).not.toBe('STARTER');
+    const index = computeMarketValueIndex(buildMarketValueInput(base, rulesetProto), rulesetProto.marketValueRules).indexCenti;
+    expect(index).toBeGreaterThanOrEqual(rulesetProto.transferRules.interest.minIndexCenti);
+    expect(judgeMarketReason(base, rulesetProto)).toBe('INTEREST');
+  });
+
+  // 지수발 INTEREST를 걷어내려고 baseOvr·scoutedPotential을 낮춘 공통 베이스(index 5535 < 7000).
+  const lowIndexBase: CareerState = {
+    ...base,
+    player: { ...base.player, profile: { ...base.player.profile!, baseOvr: 35, scoutedPotentialMin: 30, scoutedPotentialMax: 45 } },
+  };
+
+  it('이적_희망 태그가 있으면 INTEREST(지수·평점과 무관)', () => {
+    const state: CareerState = { ...lowIndexBase, tags: [...lowIndexBase.tags, '이적_희망'] };
+    expect(judgeMarketReason(state, rulesetProto)).toBe('INTEREST');
+  });
+
+  it('STARTER이고 시즌 평균 평점이 임계값 이상이면 INTEREST', () => {
+    const state: CareerState = {
+      ...lowIndexBase,
+      season: { ...lowIndexBase.season!, squadRole: 'STARTER', playerStats: { ...lowIndexBase.season!.playerStats, ratingSumTenths: 700, ratedMatches: 10 } },
+    };
+    expect(judgeMarketReason(state, rulesetProto)).toBe('INTEREST');
+  });
+
+  it('STARTER여도 평균 평점이 임계값 미만이면 INTEREST가 아니다', () => {
+    const state: CareerState = {
+      ...lowIndexBase,
+      season: { ...lowIndexBase.season!, squadRole: 'STARTER', playerStats: { ...lowIndexBase.season!.playerStats, ratingSumTenths: 650, ratedMatches: 10 } },
+    };
+    expect(judgeMarketReason(state, rulesetProto)).toBeNull();
+  });
+
+  it('잔류_선언 태그가 있으면 지수·태그 신호와 무관하게 null이다(계약 잔여가 0이 아닐 때)', () => {
+    const state: CareerState = { ...base, tags: [...base.tags, '이적_희망', '잔류_선언'] };
+    expect(judgeMarketReason(state, rulesetProto)).toBeNull();
+  });
+
+  it('아무 신호도 없으면 null이다', () => {
+    expect(judgeMarketReason(lowIndexBase, rulesetProto)).toBeNull();
+  });
+
+  it('임대 계약(LOAN)은 항상 null이다(결산은 LOAN_RETURN 경로, T-3-003)', () => {
+    const state: CareerState = { ...base, contract: { ...contractOf(base), kind: 'LOAN' } };
+    expect(judgeMarketReason(state, rulesetProto)).toBeNull();
+  });
+
+  it('contract가 null이면 null이다(첫 계약 경로)', () => {
+    expect(judgeMarketReason({ ...base, contract: null }, rulesetProto)).toBeNull();
+  });
+
+  it('rng를 전혀 소비하지 않는다(함수 시그니처에 rng 인자·반환이 없다)', () => {
+    expect(judgeMarketReason.length).toBe(2);
+  });
+});
+
+// 오케스트레이터 리뷰(PR #50): season === null(결산 뒤)이면 STARTER·평점 조건을 아예 건너뛰던 버그를
+// 고쳤다 — 이제 그 조건은 `seasonHistory.at(-1)`의 `squadRoleAtEnd`·`playerStats`로 판정한다.
+describe('judgeMarketReason·generateMarket — 결산 뒤 상태(season null)에서도 STARTER·평점 조건에 도달한다', () => {
+  const { snapshot } = runSettledFixture();
+  // 지수발 INTEREST를 걷어내(judgeMarketReason describe 블록의 lowIndexBase와 같은 방식) STARTER·평점
+  // 신호만 남긴다.
+  const settledLowIndex: CareerState = {
+    ...snapshot.state,
+    player: { ...snapshot.state.player, profile: { ...snapshot.state.player.profile!, baseOvr: 35, scoutedPotentialMin: 30, scoutedPotentialMax: 45 } },
+  };
+
+  function withLastSeasonSquadRole(state: CareerState, squadRole: SquadRole, ratingSumTenths: number, ratedMatches: number): CareerState {
+    const lastIndex = state.seasonHistory.length - 1;
+    const seasonHistory = state.seasonHistory.map((summary, index) =>
+      index === lastIndex
+        ? {
+            ...summary,
+            result: {
+              ...summary.result,
+              playerStats: { ...summary.result.playerStats, ratingSumTenths, ratedMatches },
+              selectionSummary: { ...summary.result.selectionSummary, squadRoleAtEnd: squadRole },
+            },
+          }
+        : summary,
+    );
+    return { ...state, seasonHistory };
+  }
+
+  it('(a) squadRoleAtEnd가 STARTER·평균 평점 ≥ 임계값이면 INTEREST다 — rng 소비 0', () => {
+    const state = withLastSeasonSquadRole(settledLowIndex, 'STARTER', 700, 10);
+    expect(state.season).toBeNull();
+    const before = state.rngState.draws;
+    expect(judgeMarketReason(state, rulesetProto)).toBe('INTEREST');
+    expect(state.rngState.draws).toBe(before);
+  });
+
+  it('(a) 대조군: 같은 평점이어도 squadRoleAtEnd가 RESERVE면 STARTER 조건에 걸리지 않아 null이다', () => {
+    const state = withLastSeasonSquadRole(settledLowIndex, 'RESERVE', 700, 10);
+    expect(judgeMarketReason(state, rulesetProto)).toBeNull();
+  });
+
+  it('(b) generateMarket의 kind 추첨이 squadRoleAtEnd 기준 kindWeightsByRole을 쓴다 — STARTER(TRANSFER 80)와 RESERVE(TRANSFER 20)는 같은 rng에서도 kind 분포가 다르다', () => {
+    const starterState = withLastSeasonSquadRole(settledLowIndex, 'STARTER', 700, 10);
+    const reserveState = withLastSeasonSquadRole(settledLowIndex, 'RESERVE', 700, 10);
+    expect(starterState.rngState).toEqual(reserveState.rngState);
+
+    const starterResult = generateMarket({
+      state: { ...starterState, tags: ['이적_희망'] },
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 50,
+      rng: starterState.rngState,
+    });
+    const reserveResult = generateMarket({
+      state: { ...reserveState, tags: ['이적_희망'] },
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 50,
+      rng: reserveState.rngState,
+    });
+
+    const starterKinds = starterResult.pending.offers.slice(1).map((offer) => offer.kind);
+    const reserveKinds = reserveResult.pending.offers.slice(1).map((offer) => offer.kind);
+    expect(starterKinds).toEqual(['LOAN', 'TRANSFER', 'TRANSFER']);
+    expect(reserveKinds).toEqual(['LOAN', 'LOAN', 'LOAN']);
+  });
+});
+
+describe('generateMarket', () => {
+  const { snapshot } = runSettledFixture();
+  const settled = snapshot.state; // season === null(결산 뒤) — 골든 3종과 같은 베이스.
+
+  it('(a) 안전 잔류 제안은 항상 index 0이고 validUntilRevision null·negotiable 전부 false, market.safeOfferId와 id가 같다', () => {
+    const expiredState: CareerState = { ...settled, tags: [], contract: { ...contractOf(settled), lengthSeasons: 1 } };
+    const expired = generateMarket({ state: expiredState, ruleset: marketFixtureRuleset, reason: 'EXPIRED', revision: 30, rng: expiredState.rngState });
+    const interestState: CareerState = { ...settled, tags: ['이적_희망'] };
+    const interest = generateMarket({ state: interestState, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 30, rng: interestState.rngState });
+
+    for (const generated of [expired, interest]) {
+      const safeOffer = generated.pending.offers[0]!;
+      expect(safeOffer.id).toBe('OFR-30-0');
+      expect(generated.pending.market.safeOfferId).toBe(safeOffer.id);
+      expect(safeOffer.kind).toBe('RENEWAL');
+      expect(safeOffer.validUntilRevision).toBeNull();
+      expect(safeOffer.negotiable).toEqual({ wage: false, role: false, length: false });
+      expect(safeOffer.competitorSummary).toBeNull();
+      expect(safeOffer.transferFeeMinor).toBeNull();
+      expect(safeOffer.loan).toBeNull();
+    }
+  });
+
+  it('(b) 제안 수 = clamp(1 + interest + agent, 1, 4) — 후보가 충분하면 그대로 나온다', () => {
+    // EXPIRED·태그 없음: interest=0(reason이 INTEREST가 아니다)·agent=0 → 1.
+    const none: CareerState = { ...settled, tags: [], contract: { ...contractOf(settled), lengthSeasons: 1 } };
+    const noneResult = generateMarket({ state: none, ruleset: marketFixtureRuleset, reason: 'EXPIRED', revision: 40, rng: none.rngState });
+    expect(noneResult.pending.offers).toHaveLength(1 + 1);
+
+    // INTEREST·태그 없음: interest=1(reason만으로)·agent=0 → 2.
+    const reasonOnly: CareerState = { ...settled, tags: [] };
+    const reasonOnlyResult = generateMarket({ state: reasonOnly, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 40, rng: reasonOnly.rngState });
+    expect(reasonOnlyResult.pending.offers).toHaveLength(2 + 1);
+
+    // 이적_희망: interest=2·agent=0 → 3.
+    const wantsMove: CareerState = { ...settled, tags: ['이적_희망'] };
+    const wantsMoveResult = generateMarket({ state: wantsMove, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 40, rng: wantsMove.rngState });
+    expect(wantsMoveResult.pending.offers).toHaveLength(3 + 1);
+
+    // 이적_희망 + 에이전트_계약: interest=2·agent=1 → 4(상한).
+    const both: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'] };
+    const bothResult = generateMarket({ state: both, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 40, rng: both.rngState });
+    expect(bothResult.pending.offers).toHaveLength(4 + 1);
+  });
+
+  it('(b) 후보가 모자라면 desiredCount 대신 후보 수만큼만 나온다', () => {
+    // rulesetProto(도메인 골든 9종이 공유하는 3팀짜리 룰셋)로 계산한 지수(7270)는 밴드
+    // "<=7499"(tiers [1,2])에 속한다 — 현 구단(seoul-tier1, tier1) 제외하면 이 밴드에 맞는 팀은
+    // busan-tier2(tier2) 1개뿐(daejeon-tier3은 tier3라 밴드 밖). desiredCount 4를 요청해도 1로
+    // 줄어든다.
+    const both: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'] };
+    const result = generateMarket({ state: both, ruleset: rulesetProto, reason: 'INTEREST', revision: 40, rng: both.rngState });
+    expect(result.pending.offers).toHaveLength(1 + 1);
+    expect(result.pending.offers[1]!.teamId).toBe('busan-tier2');
+  });
+
+  it('(c) 후보 구단은 현 구단·YOUTH를 제외하고 demandBands 4개 각각 적어도 1팀에 도달한다(8팀 풀)', () => {
+    const bandScenarios: Array<{ label: string; baseOvr: number; scoutedMin: number; scoutedMax: number; form: number; leagueTier: 1 | 2 | 3; expectedTiers: number[] }> = [
+      { label: 'band1(<=3499)→tier3만', baseOvr: 10, scoutedMin: 5, scoutedMax: 15, form: 0, leagueTier: 3, expectedTiers: [3] },
+      { label: 'band2(3500-5499)→tier2·3', baseOvr: 10, scoutedMin: 5, scoutedMax: 20, form: 50, leagueTier: 1, expectedTiers: [2, 3] },
+      { label: 'band3(5500-7499)→tier1·2', baseOvr: 35, scoutedMin: 30, scoutedMax: 45, form: 50, leagueTier: 1, expectedTiers: [1, 2] },
+      { label: 'band4(7500-10000)→tier1·2', baseOvr: 75, scoutedMin: 70, scoutedMax: 85, form: 50, leagueTier: 1, expectedTiers: [1, 2] },
+    ];
+
+    for (const scenario of bandScenarios) {
+      const state: CareerState = {
+        ...settled,
+        tags: ['이적_희망', '에이전트_계약'],
+        state: { ...settled.state, form: scenario.form },
+        player: {
+          ...settled.player,
+          profile: { ...settled.player.profile!, baseOvr: scenario.baseOvr, scoutedPotentialMin: scenario.scoutedMin, scoutedPotentialMax: scenario.scoutedMax },
+        },
+        contract: { ...contractOf(settled), leagueTier: scenario.leagueTier },
+      };
+      const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 50, rng: state.rngState });
+      const drawnTeamIds = result.pending.offers.slice(1).map((offer) => offer.teamId);
+      expect(drawnTeamIds.length).toBeGreaterThan(0);
+      expect(drawnTeamIds).not.toContain(state.contract!.teamId);
+      for (const offer of result.pending.offers.slice(1)) {
+        expect(offer.leagueTier).not.toBe('YOUTH');
+        expect(scenario.expectedTiers).toContain(offer.leagueTier);
+      }
+    }
+  });
+
+  it('(d) EXPIRED면 전부 FREE_AGENT다', () => {
+    const state: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'], contract: { ...contractOf(settled), lengthSeasons: 1 } };
+    const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'EXPIRED', revision: 60, rng: state.rngState });
+    for (const offer of result.pending.offers.slice(1)) {
+      expect(offer.kind).toBe('FREE_AGENT');
+    }
+  });
+
+  it('(d) INTEREST면 역할별 TRANSFER/LOAN 가중이 결정론적으로 갈리고(같은 시드 반복), 다른 시드에서는 두 종류가 다 나온다', () => {
+    const state: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'], contract: { ...contractOf(settled), rolePromise: 'STARTER' } };
+    const first = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 70, rng: state.rngState });
+    const second = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 70, rng: state.rngState });
+    expect(second.pending.offers).toEqual(first.pending.offers);
+
+    const kinds = new Set<string>();
+    for (let seed = 0; seed < 10; seed++) {
+      const seeded: CareerState = { ...state, rngState: seedRng(`market-kind-distribution-${seed}`) };
+      const result = generateMarket({ state: seeded, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 70, rng: seeded.rngState });
+      for (const offer of result.pending.offers.slice(1)) kinds.add(offer.kind);
+    }
+    expect(kinds.has('TRANSFER')).toBe(true);
+    expect(kinds.has('LOAN')).toBe(true);
+  });
+
+  it('(e) LOAN 제안은 loan·lengthSeasons 1을 갖고, TRANSFER 제안은 지수 밴드의 feeMinor를 담는다', () => {
+    const state: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'], contract: { ...contractOf(settled), rolePromise: 'BENCH' } };
+    const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 80, rng: state.rngState });
+    const drawn = result.pending.offers.slice(1);
+    expect(drawn.some((offer) => offer.kind === 'LOAN')).toBe(true);
+    for (const offer of drawn) {
+      if (offer.kind === 'LOAN') {
+        expect(offer.lengthSeasons).toBe(1);
+        expect(offer.loan).toEqual({
+          parentTeamId: state.contract!.teamId,
+          seasons: 1,
+          wageShareBp: marketFixtureRuleset.transferRules.loan.wageShareBp,
+          buyOptionMinor: offer.loan!.buyOptionMinor,
+        });
+        expect(offer.transferFeeMinor).toBeNull();
+      }
+      if (offer.kind === 'TRANSFER') {
+        expect(offer.loan).toBeNull();
+        const indexCenti = computeMarketValueIndex(buildMarketValueInput(state, marketFixtureRuleset), marketFixtureRuleset.marketValueRules).indexCenti;
+        const band = marketFixtureRuleset.transferRules.feeByIndexBand.find((candidate) => indexCenti <= candidate.maxIndexCenti)!;
+        expect(offer.transferFeeMinor).toBe(band.feeMinor);
+      }
+    }
+  });
+
+  it('(f) 추첨 제안의 validUntilRevision = revision + offerValidityRevisions', () => {
+    const state: CareerState = { ...settled, tags: ['이적_희망'] };
+    const revision = 123;
+    const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision, rng: state.rngState });
+    for (const offer of result.pending.offers.slice(1)) {
+      expect(offer.validUntilRevision).toBe(revision + marketFixtureRuleset.transferRules.offerValidityRevisions);
+    }
+  });
+
+  it('(g) competitorSummary는 파생 시드로 계산되어 결정 스트림 draws를 늘리지 않는다', () => {
+    // FREE_AGENT(EXPIRED)는 제안당 정확히 5draws(팀·기간·역할·등번호·적합도, 종류 roll 없음)를 쓴다 —
+    // competitorSummary가 이 스트림을 썼다면 이보다 늘어난다.
+    const state: CareerState = { ...settled, tags: [], contract: { ...contractOf(settled), lengthSeasons: 1 } };
+    const before = state.rngState.draws;
+    const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'EXPIRED', revision: 90, rng: state.rngState });
+    const drawnCount = result.pending.offers.length - 1;
+    expect(result.rngState.draws - before).toBe(drawnCount * 5);
+    expect(result.pending.offers.slice(1).every((offer) => offer.competitorSummary !== null)).toBe(true);
+  });
+
+  it('(h) rng 소비 순서: 제안당 draws 증가량 — EXPIRED(FREE_AGENT) 5, TRANSFER 6, LOAN 6', () => {
+    // 팀(1) → 종류(1, EXPIRED면 생략) → (LOAN이면 바이아웃 1) → 기간(1, LOAN이면 생략) → 역할(1) →
+    // 등번호(1) → 적합도(1). EXPIRED: 5(팀·기간·역할·등번호·적합도). TRANSFER: 6(+종류). LOAN: 6(종류
+    // 대신 바이아웃, 기간 생략 — 순증감 0).
+    const expiredState: CareerState = { ...settled, tags: [], contract: { ...contractOf(settled), lengthSeasons: 1 } };
+    const expired = generateMarket({ state: expiredState, ruleset: marketFixtureRuleset, reason: 'EXPIRED', revision: 100, rng: expiredState.rngState });
+    expect(expired.rngState.draws - expiredState.rngState.draws).toBe((expired.pending.offers.length - 1) * 5);
+
+    const interestState: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'] };
+    const interest = generateMarket({ state: interestState, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 100, rng: interestState.rngState });
+    expect(interest.rngState.draws - interestState.rngState.draws).toBe((interest.pending.offers.length - 1) * 6);
+  });
+
+  it('market.openedAtRevision·seasonIndex·reason·safeOfferId이 정확하다', () => {
+    const state: CareerState = { ...settled, tags: ['이적_희망'] };
+    const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 111, rng: state.rngState });
+    expect(result.pending.market).toEqual({
+      openedAtRevision: 111,
+      seasonIndex: state.seasonHistory.length,
+      reason: 'INTEREST',
+      safeOfferId: result.pending.offers[0]!.id,
+    });
+  });
+});
+
+describe('buildRenewalOffer', () => {
+  const { beforeSettlementState: base } = runSettledFixture();
+
+  it('현 구단 RENEWAL을 rng 없이 만든다 — 급여·보너스·기간·역할·유효기간·negotiable', () => {
+    const offer = buildRenewalOffer(base, rulesetProto, 20);
+    const contract = contractOf(base);
+    expect(offer.id).toBe('OFR-20-0');
+    expect(offer.kind).toBe('RENEWAL');
+    expect(offer.teamId).toBe(contract.teamId);
+    expect(offer.fromTeamId).toBe(contract.teamId);
+    expect(offer.lengthSeasons).toBe(rulesetProto.transferRules.renewal.lengthSeasons);
+    expect(offer.rolePromise).toBe(base.season!.squadRole);
+    expect(offer.appearancePromise).toEqual({ minutesShareBp: rulesetProto.contractRules.promiseMinutesShareBp[base.season!.squadRole] });
+    expect(offer.positionPlan).toBe(contract.positionPlan);
+    expect(offer.shirtNumber).toBe(contract.shirtNumber);
+    expect(offer.tacticalFitEstimate).toBe(base.context.tacticalFit);
+    expect(offer.competitorSummary).toBeNull();
+    expect(offer.transferFeeMinor).toBeNull();
+    expect(offer.loan).toBeNull();
+    expect(offer.validUntilRevision).toBe(20 + rulesetProto.transferRules.offerValidityRevisions);
+    expect(offer.negotiable).toEqual({ wage: true, role: false, length: true });
+    expect(offer.negotiationState).toBe('OPEN');
+    expect(offer.negotiatedAsk).toBeNull();
+  });
+
+  it('같은 입력이면 항상 같은 결과다(rng 소비 없음 — 시그니처에 rng가 없다)', () => {
+    expect(buildRenewalOffer.length).toBe(3);
+    const a = buildRenewalOffer(base, rulesetProto, 20);
+    const b = buildRenewalOffer(base, rulesetProto, 20);
+    expect(a).toEqual(b);
+  });
+
+  it('season이 없으면 throw한다(step 7은 시즌 진행 중에만 연다)', () => {
+    expect(() => buildRenewalOffer({ ...base, season: null }, rulesetProto, 20)).toThrow(RangeError);
+  });
+
+  it('contract가 없으면 throw한다', () => {
+    expect(() => buildRenewalOffer({ ...base, contract: null }, rulesetProto, 20)).toThrow(RangeError);
+  });
+});
+
+describe('step 7 CONTRACT 슬롯(season.ts의 selectOpenSlot) 통합', () => {
+  const { beforeSettlementState: base } = runSettledFixture();
+  const contractStep: SeasonStep = { index: 7, phase: 'LEAGUE', windowOpen: true, decisionSlots: [{ kind: 'CONTRACT', required: false }], summary: null };
+  const rng = seedRng('market-test-select-open-slot-contract');
+
+  it('계약 마지막 시즌이면 RENEWAL 제안 1건을 연다', () => {
+    const lastSeason: CareerState = { ...base, contract: { ...contractOf(base), lengthSeasons: 1 } };
+    const result = selectOpenSlot(contractStep, 'FAST', [], rng, null, null, 20, 1, lastSeason, rulesetProto);
+    expect(result.opened).toBe(true);
+    if (result.opened && result.pending?.kind === 'CONTRACT') {
+      expect(result.pending.offers).toHaveLength(1);
+      expect(result.pending.offers[0]!.kind).toBe('RENEWAL');
+      expect(result.pending.market.reason).toBe('PRE_NEGOTIATION');
+    } else {
+      throw new Error('CONTRACT pending이 아니다.');
+    }
+  });
+
+  it('계약 잔여 시즌이 있으면 offers: []로 자동 통과 대상만 연다', () => {
+    const result = selectOpenSlot(contractStep, 'FAST', [], rng, null, null, 20, 1, base, rulesetProto);
+    expect(result.opened).toBe(true);
+    if (result.opened && result.pending?.kind === 'CONTRACT') {
+      expect(result.pending.offers).toEqual([]);
+    } else {
+      throw new Error('CONTRACT pending이 아니다.');
+    }
+  });
+
+  it('임대 계약이면 마지막 시즌이어도 RENEWAL을 열지 않는다', () => {
+    const loanLastSeason: CareerState = { ...base, contract: { ...contractOf(base), kind: 'LOAN', lengthSeasons: 1 } };
+    const result = selectOpenSlot(contractStep, 'FAST', [], rng, null, null, 20, 1, loanLastSeason, rulesetProto);
+    expect(result.opened).toBe(true);
+    if (result.opened && result.pending?.kind === 'CONTRACT') {
+      expect(result.pending.offers).toEqual([]);
+    } else {
+      throw new Error('CONTRACT pending이 아니다.');
+    }
+  });
+});
+
+describe('step 7 미응답 만료 통합(simulate.ts의 ADVANCE) — career-04-gk 골든', () => {
+  it('마지막 시즌 계약의 step 7 RENEWAL 제안이 자동 통과되며 OFFER_EXPIRED 타임라인을 남긴다', () => {
+    // career-04-gk는 lengthSeasons 1(계약이 시즌 1의 마지막 시즌)이라 실제 전체 시즌 재생에서
+    // 이 경로를 그대로 지난다(이 fixture의 golden hash가 이 PR에서 바뀐 이유이기도 하다).
+    const { snapshot } = runGkFixture();
+    const expiredEntries = snapshot.state.timeline.filter((entry) => entry.kind === 'OFFER_EXPIRED');
+    expect(expiredEntries.length).toBeGreaterThan(0);
+    for (const entry of expiredEntries) {
+      expect(entry.refId).toMatch(/^OFR-/);
+      expect(entry.step).toBe(7);
+    }
+    expect(snapshot.state.pending).toBeNull();
+  });
+
+  it('계약 잔여 시즌이 있으면(career-01) step 7에서 OFFER_EXPIRED가 없다', () => {
+    const snapshot = runCareerFixture();
+    expect(snapshot.state.contract!.lengthSeasons).toBeGreaterThan(1);
+    const expiredEntries = snapshot.state.timeline.filter((entry) => entry.kind === 'OFFER_EXPIRED');
+    expect(expiredEntries).toHaveLength(0);
+  });
+});
+
+describe('openMarketAfterSettlement', () => {
+  it('사유가 null이면 상태·rng가 그대로다', () => {
+    const { snapshot } = runSettledFixture();
+    const state: CareerState = {
+      ...snapshot.state,
+      tags: [],
+      player: { ...snapshot.state.player, profile: { ...snapshot.state.player.profile!, baseOvr: 35, scoutedPotentialMin: 30, scoutedPotentialMax: 45 } },
+    };
+    expect(judgeMarketReason(state, rulesetProto)).toBeNull();
+    const result = openMarketAfterSettlement(state, rulesetProto, 20);
+    expect(result.opened).toBe(false);
+    expect(result.state).toBe(state);
+  });
+
+  // 결산 뒤 상태(season === null)를 그대로 받는다 — judgeMarketReason의 STARTER·평점 분기는
+  // season이 없어 건너뛰지만, 태그·계약 잔여·시장가치 지수 판정은 그대로 동작한다.
+  it('사유가 있으면 pending.kind === "OFFERS"다(nextActionForPending 기준 DECISION)', () => {
+    const { snapshot } = runSettledFixture();
+    expect(snapshot.state.season).toBeNull();
+    const state: CareerState = { ...snapshot.state, tags: ['이적_희망'] };
+    const result = openMarketAfterSettlement(state, rulesetProto, 20);
+    expect(result.opened).toBe(true);
+    expect(result.state.pending?.kind).toBe('OFFERS');
+    expect(result.state.rngState.draws).toBeGreaterThan(state.rngState.draws);
+  });
+});

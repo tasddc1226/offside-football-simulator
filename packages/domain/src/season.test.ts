@@ -177,6 +177,10 @@ describe('buildInitialCompetitions', () => {
 
 describe('selectOpenSlot: RULE-TIME-002/003', () => {
   const rng = seedRng('select-open-slot-test');
+  // T-3-002 D-43 (a): CONTRACT 분기가 `state.contract`·`ruleset`을 쓴다. career-01 fixture의 계약은
+  // lengthSeasons 3·이제 막 서명(SEASON_STARTED 0회)이라 잔여 3시즌 — 마지막 시즌이 아니므로 이
+  // 블록의 기존 기대값(offers: [])에 영향을 주지 않는다.
+  const testState = runCareerFixture().state;
 
   it('같은 step에 CONTRACT·EVENT·CHAPTER가 있으면 CONTRACT가 먼저 열린다', () => {
     const step: SeasonStep = {
@@ -190,7 +194,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       ],
       summary: null,
     };
-    const result = selectOpenSlot(step, 'CHAPTER', [{ eventId: 'EVT-X', version: 1, weight: 1 }], rng, null, null, 1, 0);
+    const result = selectOpenSlot(step, 'CHAPTER', [{ eventId: 'EVT-X', version: 1, weight: 1 }], rng, null, null, 1, 0, testState, rulesetProto);
     expect(result.opened).toBe(true);
     if (result.opened) expect(result.pending?.kind).toBe('CONTRACT');
   });
@@ -203,7 +207,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'EVENT', required: false }],
       summary: null,
     };
-    const result = selectOpenSlot(step, 'CHAPTER', [], rng, null, null, 1, 0);
+    const result = selectOpenSlot(step, 'CHAPTER', [], rng, null, null, 1, 0, testState, rulesetProto);
     expect(result).toEqual({ opened: false });
   });
 
@@ -226,7 +230,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionsTotal: 1,
       trigger: 'DEBUT' as const,
     };
-    expect(selectOpenSlot(minorStep, 'FAST', [], rng, null, chapterOpen, 1, 0)).toEqual({ opened: false });
+    expect(selectOpenSlot(minorStep, 'FAST', [], rng, null, chapterOpen, 1, 0, testState, rulesetProto)).toEqual({ opened: false });
 
     const majorStep: SeasonStep = {
       index: 3,
@@ -235,8 +239,8 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'CHAPTER', required: false, importance: 'MAJOR' }],
       summary: null,
     };
-    expect(selectOpenSlot(majorStep, 'FAST', [], rng, null, null, 1, 0)).toEqual({ opened: false });
-    const result = selectOpenSlot(majorStep, 'FAST', [], rng, null, chapterOpen, 1, 0);
+    expect(selectOpenSlot(majorStep, 'FAST', [], rng, null, null, 1, 0, testState, rulesetProto)).toEqual({ opened: false });
+    const result = selectOpenSlot(majorStep, 'FAST', [], rng, null, chapterOpen, 1, 0, testState, rulesetProto);
     expect(result.opened).toBe(true);
     if (result.opened) expect(result.pending).toEqual({ kind: 'CHAPTER', step: 3, resolved: [], ...chapterOpen });
   });
@@ -249,7 +253,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       decisionSlots: [{ kind: 'CONTRACT', required: false, skippedByBudget: true }],
       summary: null,
     };
-    expect(selectOpenSlot(step, 'CHAPTER', [], rng, null, null, 1, 0)).toEqual({ opened: false });
+    expect(selectOpenSlot(step, 'CHAPTER', [], rng, null, null, 1, 0, testState, rulesetProto)).toEqual({ opened: false });
   });
 });
 
@@ -257,9 +261,10 @@ const EMPTY_MARKET = { openedAtRevision: 1, seasonIndex: 0, reason: 'PRE_NEGOTIA
 const EMPTY_MARKET_SUMMARY = { openedAtRevision: 1, seasonIndex: 0, reason: 'FIRST_CONTRACT' as const, safeOfferId: null };
 
 describe('isAutoPassablePending', () => {
-  // T-4-001 D-52: INJURY·NATIONAL_TEAM은 더 이상 자동 통과 대상이 아니다(DECISION으로 바뀌어
-  // RESOLVE_EVENT의 rehabPlan·callUp을 사용자가 직접 골라야 닫힌다). CONTRACT(offers 없음)만 남는다.
-  it('CONTRACT(offers 없음)만 자동 통과 대상이다', () => {
+  // T-4-001 D-52: INJURY·NATIONAL_TEAM은 자동 통과 대상이 아니다(DECISION으로 바뀌어 RESOLVE_EVENT의
+  // rehabPlan·callUp을 사용자가 직접 골라야 닫힌다). CONTRACT(offers 없음)는 T-3-002 D-43 (a) 임시
+  // 규칙으로 여전히 자동 통과한다(offers가 있어도 자동 통과함은 아래 별도 테스트가 확인한다).
+  it('CONTRACT(offers 없음)는 자동 통과, INJURY·NATIONAL_TEAM은 아니다', () => {
     expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7, offers: [], market: EMPTY_MARKET })).toBe(true);
     expect(isAutoPassablePending({ kind: 'INJURY', step: 5, episodeId: '', eventId: '', version: 0 })).toBe(false);
     expect(isAutoPassablePending({ kind: 'NATIONAL_TEAM', step: 8, eventId: '', version: 0 })).toBe(false);
@@ -269,10 +274,12 @@ describe('isAutoPassablePending', () => {
     expect(isAutoPassablePending(null)).toBe(false);
   });
 
-  // T-3-001 D-43: CONTRACT pending에 제안이 1건 이상 있으면 자동 통과하지 않는다(테스트로 고정).
-  it('CONTRACT는 offers.length > 0이면 자동 통과하지 않는다', () => {
+  // T-3-002 D-43: NEGOTIATE/ACCEPT_OFFER v2가 아직 없어(T-3-003) CONTRACT의 제안을 사람이 처리할
+  // 방법이 없다 — offers.length와 무관하게 자동 통과시키고 만료 처리한다(simulate.ts의 OFFER_EXPIRED
+  // 타임라인 기록과 짝을 이루는 임시 규칙, T-3-003이 뒤집는다).
+  it('CONTRACT는 offers.length > 0이어도 자동 통과한다(임시 규칙)', () => {
     const offer = buildTestOffer();
-    expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7, offers: [offer], market: EMPTY_MARKET })).toBe(false);
+    expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7, offers: [offer], market: EMPTY_MARKET })).toBe(true);
   });
 
   // T-2-002 D-34: ROLE은 더 이상 자동 통과 대상이 아니다 — RESOLVE_ROLE로만 닫힌다.
