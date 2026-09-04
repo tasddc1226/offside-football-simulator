@@ -11,6 +11,7 @@ import {
   advance,
   confirmPlayer,
   createCareer,
+  execute,
   resolveChapter,
   resolveEvent,
   resolveRole,
@@ -147,6 +148,20 @@ async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
       if (!decision) throw new Error('이미 모든 판단이 끝났다');
       const resolved = await resolveChapter(engine, careerId, decision.id, decision.options[0]!.id);
       if (!resolved.ok) throw new Error(`resolveChapter 실패: ${resolved.error.message}`);
+      continue;
+    }
+    if (pending?.kind === 'INJURY') {
+      const resolved = await execute(engine, careerId, {
+        type: 'RESOLVE_EVENT',
+        payload: {
+          eventId: pending.eventId,
+          definitionVersion: pending.version,
+          choiceId: 'STANDARD',
+          outcomes: [{ id: 'STANDARD', weight: 1, effects: [] }],
+          rehabPlan: 'STANDARD',
+        },
+      });
+      if (!resolved.ok) throw new Error(`resolve injury 실패: ${resolved.error.message}`);
       continue;
     }
     if (pending?.kind === 'CONTRACT' && pending.offers.length > 0) {
