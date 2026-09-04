@@ -3050,11 +3050,7 @@
     "injury": {
       "perMatchPercent": 3,
       "lowFitnessBelow": 60,
-      "lowFitnessExtraPercent": 4,
-      "outMatches": {
-        "min": 1,
-        "max": 4
-      }
+      "lowFitnessExtraPercent": 4
     },
     "ratingWeights": {
       "stats": {
@@ -3209,7 +3205,8 @@
     }
   },
   "injuryRules": {
-    "severityWeights": { "MINOR": 60, "MODERATE": 30, "MAJOR": 10 },
+    "event": { "id": "EVT-INJ-001", "version": 1 },
+    "severityWeights": { "MINOR": 6000, "MODERATE": 3000, "MAJOR": 1000 },
     "matchesOut": {
       "MINOR": { "min": 1, "max": 2 },
       "MODERATE": { "min": 3, "max": 6 },

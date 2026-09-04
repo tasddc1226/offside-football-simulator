@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Command, DomainSnapshot, Effect, FootballSeason, SimulationResult } from '@offside/domain';
+import type { Command, DomainSnapshot, Effect, FootballSeason, InjuryEpisode, SimulationResult } from '@offside/domain';
 import { simulate } from '@offside/domain';
 import { selectChapterCandidates } from './select-chapter-candidates.ts';
 import { selectEligibleEvents } from './select-eligible-events.ts';
@@ -61,6 +61,23 @@ function makeContentPack(chapters: ChapterDefinition[]): ContentPack {
   };
 }
 
+function makeInjuryEpisode(overrides: Partial<InjuryEpisode> = {}): InjuryEpisode {
+  return {
+    id: 'INJ-1-3-1',
+    severity: 'MODERATE',
+    bodyPart: 'HAMSTRING',
+    occurredAt: { seasonIndex: 1, step: 3, matchId: 'm-injury' },
+    diagnosisRange: { minMatches: 3, maxMatches: 6 },
+    rehab: 'STANDARD',
+    recurrenceRiskBp: 3000,
+    recurrenceChecksRemaining: 0,
+    status: 'RECOVERED',
+    permanentDelta: null,
+    remainingMatches: 0,
+    ...overrides,
+  };
+}
+
 describe('selectChapterCandidates: 필터·정렬', () => {
   it('status가 ACTIVE가 아니면 빈 배열이다', () => {
     const pack = makeContentPack([makeChapter({ id: 'CHP-MATCH-001' })]);
@@ -110,6 +127,74 @@ describe('selectChapterCandidates: 필터·정렬', () => {
   it('결과는 chapterId 오름차순이다', () => {
     const pack = makeContentPack([makeChapter({ id: 'CHP-MATCH-004' }), makeChapter({ id: 'CHP-MATCH-001' })]);
     expect(selectChapterCandidates(pack, buildTestState()).map((c) => c.chapterId)).toEqual(['CHP-MATCH-001', 'CHP-MATCH-004']);
+  });
+
+  it('INJURY_RETURN 후보 readiness는 domain에 위임해 REHAB·RECOVERED·window 만료 상태 모두 전달한다', () => {
+    const pack = makeContentPack([
+      makeChapter({ id: 'CHP-MATCH-012', importance: 'MINOR', trigger: { kind: 'INJURY_RETURN' } }),
+    ]);
+    const recovered = buildTestState({ health: { episodes: [makeInjuryEpisode({ recurrenceChecksRemaining: 1 })] } });
+    expect(selectChapterCandidates(pack, recovered)).toHaveLength(1);
+
+    const expired = buildTestState({ health: { episodes: [makeInjuryEpisode({ recurrenceChecksRemaining: 0 })] } });
+    expect(selectChapterCandidates(pack, expired)).toHaveLength(1);
+
+    const recurred = buildTestState({ health: { episodes: [makeInjuryEpisode({ status: 'RECURRED', recurrenceChecksRemaining: 6 })] } });
+    expect(selectChapterCandidates(pack, recurred)).toHaveLength(1);
+
+    const rehab = buildTestState({ health: { episodes: [makeInjuryEpisode({ status: 'REHAB', recurrenceChecksRemaining: 0 })] } });
+    expect(selectChapterCandidates(pack, rehab)).toHaveLength(1);
+  });
+
+  it.each(['RECOVERED', 'RECURRED'] as const)('같은 시즌 forced 신규 injury 뒤에도 첫 복귀 후보를 복원한다(%s prior episode)', (priorStatus) => {
+    const prior = makeInjuryEpisode({ id: 'INJ-1-2-1', status: priorStatus, occurredAt: { seasonIndex: 1, step: 2, matchId: 'old-match' } });
+    const pending = makeInjuryEpisode({
+      id: 'INJ-1-3-2',
+      status: 'REHAB',
+      occurredAt: { seasonIndex: 1, step: 3, matchId: 'return-match' },
+      remainingMatches: 4,
+    });
+    const state = buildTestState({
+      season: { ...buildSeasonStub(), currentStep: 3, matches: [
+        { id: 'old-match', minutes: 45, outReason: null } as never,
+        { id: 'absence-1', minutes: 0, outReason: 'INJURY' } as never,
+        { id: 'return-match', minutes: 45, outReason: null } as never,
+      ] },
+      health: { episodes: [prior, pending] },
+      timeline: [{ revision: 20, kind: 'REHAB_CHOSEN', refId: pending.id, age: 18, step: 3 }],
+    });
+    const pack = makeContentPack([makeChapter({ id: 'CHP-MATCH-012', importance: 'MINOR', trigger: { kind: 'INJURY_RETURN' } })]);
+    expect(selectChapterCandidates(pack, state)).toHaveLength(1);
+  });
+
+  it('cross-season carry는 선두 INJURY 결장이 있을 때만 첫 복귀 후보를 복원한다', () => {
+    const prior = makeInjuryEpisode({ occurredAt: { seasonIndex: 1, step: 11, matchId: 'season-1-match' } });
+    const pending = makeInjuryEpisode({
+      id: 'INJ-2-2-1',
+      status: 'REHAB',
+      occurredAt: { seasonIndex: 2, step: 2, matchId: 'season-2-return' },
+      remainingMatches: 4,
+    });
+    const pack = makeContentPack([makeChapter({ id: 'CHP-MATCH-012', importance: 'MINOR', trigger: { kind: 'INJURY_RETURN' } })]);
+    const carried = buildTestState({
+      season: { ...buildSeasonStub(), index: 2, currentStep: 2, matches: [
+        { id: 'season-2-1-0', minutes: 0, outReason: 'INJURY' } as never,
+        { id: 'season-2-1-1', minutes: 0, outReason: 'INJURY' } as never,
+        { id: 'season-2-return', minutes: 45, outReason: null } as never,
+      ] },
+      health: { episodes: [prior, pending] },
+      timeline: [{ revision: 20, kind: 'REHAB_CHOSEN', refId: pending.id, age: 18, step: 2 }],
+    });
+    expect(selectChapterCandidates(pack, carried)).toHaveLength(1);
+
+    const unrelated = buildTestState({
+      season: { ...carried.season!, matches: [{ id: 'season-2-first', minutes: 45, outReason: null } as never], currentStep: 1 },
+      health: { episodes: [prior, { ...pending, id: 'INJ-2-1-1', occurredAt: { ...pending.occurredAt, step: 1, matchId: 'season-2-first' } }] },
+      timeline: [{ revision: 20, kind: 'REHAB_CHOSEN', refId: 'INJ-2-1-1', age: 18, step: 1 }],
+    });
+    // 후보 payload는 readiness를 선제 제거하지 않는다. 실제 첫 복귀 여부는 domain
+    // selectChapter의 marker가 판정하므로, marker가 없는 경기에서 열리지 않는 회귀는 domain에 둔다.
+    expect(selectChapterCandidates(pack, unrelated)).toHaveLength(1);
   });
 });
 

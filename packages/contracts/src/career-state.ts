@@ -113,12 +113,13 @@ export const ChapterTriggerSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('DERBY') }),
   z.strictObject({ kind: z.literal('CUP_FINAL') }),
   z.strictObject({ kind: z.literal('DECIDER'), maxRankGap: z.number().int() }),
+  z.strictObject({ kind: z.literal('INJURY_RETURN') }),
   z.strictObject({ kind: z.literal('TAG'), tag: z.string().min(1) }),
 ]) satisfies z.ZodType<ChapterTrigger>;
 
 // T-2-014 D-42: `ChapterTrigger['kind']` 리터럴만 뽑은 스키마. `ChapterRecord.trigger`·
 // `Pending`(CHAPTER).trigger가 판별 유니온 전체가 아니라 kind 하나만 저장하므로 따로 둔다.
-export const ChapterTriggerKindSchema = z.enum(['DEBUT', 'DERBY', 'CUP_FINAL', 'DECIDER', 'TAG']) satisfies z.ZodType<
+export const ChapterTriggerKindSchema = z.enum(['DEBUT', 'DERBY', 'CUP_FINAL', 'DECIDER', 'INJURY_RETURN', 'TAG']) satisfies z.ZodType<
   ChapterTrigger['kind']
 >;
 
@@ -205,7 +206,7 @@ export const PendingSchema = z
       market: MarketSummarySchema,
     }),
     z.strictObject({ kind: z.literal('ROLE_PROPOSAL'), step: z.number().int().min(1).max(12), proposal: RoleProposalSchema }),
-    // T-3-001 D-52 예약(값은 T-4-002가 채운다, 생성기가 없는 지금은 형태만).
+    // T-4-002 D-49: 중증 부상은 이 pending으로 RESOLVE_EVENT를 요구한다.
     z.strictObject({
       kind: z.literal('INJURY'),
       step: z.number().int().min(1).max(12),
@@ -761,33 +762,46 @@ const attributesShape = Object.fromEntries(
 /** 20개 능력 키 전부 필수 정수. */
 export const AttributesSchema = z.strictObject(attributesShape);
 
-// T-4-001 D-49: domain `InjurySeverity`·`InjuryBodyPart`·`RehabPlan`과 동일.
+// T-4-002 D-49: domain `InjurySeverity`·`InjuryBodyPart`·`RehabPlan`과 동일.
 export const InjurySeveritySchema = z.enum(['MINOR', 'MODERATE', 'MAJOR']);
 export const InjuryBodyPartSchema = z.enum(['KNEE', 'ANKLE', 'HAMSTRING', 'SHOULDER', 'HEAD']);
 export const RehabPlanSchema = z.enum(['EARLY', 'STANDARD', 'CONSERVATIVE']);
 
-// T-4-001 D-49: 부상 에피소드 하나. "활성 에피소드" 판정(status ACTIVE|REHAB, 배열 마지막 항목)은
+// T-4-002 D-49: 부상 에피소드 하나. "활성 에피소드" 판정(status ACTIVE|REHAB, 배열 마지막 항목)은
 // domain effects.ts `findActiveEpisodeIndex`가 정본이다.
-export const InjuryEpisodeSchema = z.strictObject({
-  id: z.string().min(1),
-  severity: InjurySeveritySchema,
-  bodyPart: InjuryBodyPartSchema,
-  occurredAt: z.strictObject({
-    seasonIndex: z.number().int().positive(),
-    step: z.number().int().min(1).max(12),
-    matchId: z.string().min(1),
-  }),
-  diagnosisRange: z.strictObject({
-    minMatches: z.number().int().positive(),
-    maxMatches: z.number().int().positive(),
-  }),
-  rehab: RehabPlanSchema.nullable(),
-  recurrenceRiskBp: z.number().int().min(0).max(10000),
-  status: z.enum(['ACTIVE', 'REHAB', 'RECOVERED', 'RECURRED']),
-  permanentDelta: z
-    .array(z.strictObject({ key: z.enum(CAREER_STATE_ATTRIBUTE_KEYS), delta: z.number().int() }))
-    .nullable(),
-});
+export const InjuryEpisodeSchema = z
+  .strictObject({
+    id: z.string().min(1),
+    severity: InjurySeveritySchema,
+    bodyPart: InjuryBodyPartSchema,
+    occurredAt: z.strictObject({
+      seasonIndex: z.number().int().positive(),
+      step: z.number().int().min(1).max(12),
+      matchId: z.string().min(1),
+    }),
+    diagnosisRange: z.strictObject({
+      minMatches: z.number().int().positive(),
+      maxMatches: z.number().int().positive(),
+    }),
+    rehab: RehabPlanSchema.nullable(),
+    recurrenceRiskBp: z.number().int().min(0).max(10000),
+    recurrenceChecksRemaining: z.number().int().nonnegative(),
+    status: z.enum(['ACTIVE', 'REHAB', 'RECOVERED', 'RECURRED']),
+    permanentDelta: z
+      .array(z.strictObject({ key: z.enum(CAREER_STATE_ATTRIBUTE_KEYS), delta: z.number().int() }))
+      .nullable(),
+    // 시즌 결산으로 FootballSeason.availability가 폐기되어도 활성 부상의 정확한 잔여 결장을 보존한다.
+    remainingMatches: z.number().int().nonnegative().exactOptional(),
+  })
+  .superRefine((episode, ctx) => {
+    if ((episode.status === 'ACTIVE' || episode.status === 'REHAB') && episode.remainingMatches === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['remainingMatches'],
+        message: 'ACTIVE/REHAB 부상에는 remainingMatches가 필요하다.',
+      });
+    }
+  });
 
 // T-4-001 D-50: 관계 로그·기억 태그가 다루는 대상 축 5개. domain `RelationTarget`과 동일(순서는
 // `relationships` 필드와 같은 순서를 유지한다).

@@ -37,6 +37,7 @@ export type ChapterTrigger =
   | { kind: 'DERBY' }
   | { kind: 'CUP_FINAL' }
   | { kind: 'DECIDER'; maxRankGap: number }
+  | { kind: 'INJURY_RETURN' }
   | { kind: 'TAG'; tag: string };
 
 // T-2-014 D-42: RESOLVE_CHAPTER outcome·ChapterRecord.decisions[]가 남기는 결과 종류(content
@@ -700,24 +701,27 @@ export type SeasonSummary = {
   result: SeasonResult;
 };
 
-// T-4-001 D-49: 부상 심각도·부위·재활 계획. "활성 에피소드" = status가 ACTIVE 또는 REHAB인 것 중
+// T-4-002 D-49: 부상 심각도·부위·재활 계획. "활성 에피소드" = status가 ACTIVE 또는 REHAB인 것 중
 // episodes 배열의 마지막 항목(effects.ts의 HEALTH 적용·조건 DSL `health.*`가 같은 규칙을 쓴다).
-// 발생 roll(id 생성·severity/bodyPart 판정)은 T-4-002 몫 — 이 작업은 형태·기본값·재활 적용
-// (`applyRehabPlan`, injury.ts)만 만든다.
+// 발생·재발 roll, 재활 적용, 회복 창, 후유증 갱신은 injury.ts 상태기계가 담당한다.
 export type InjurySeverity = 'MINOR' | 'MODERATE' | 'MAJOR';
 export type InjuryBodyPart = 'KNEE' | 'ANKLE' | 'HAMSTRING' | 'SHOULDER' | 'HEAD';
 export type RehabPlan = 'EARLY' | 'STANDARD' | 'CONSERVATIVE';
 
 export type InjuryEpisode = {
-  id: string; // 형식 INJ-${seasonIndex}-${step}-${n}(생성기는 T-4-002)
+  id: string; // 형식 INJ-${seasonIndex}-${step}-${n}
   severity: InjurySeverity;
   bodyPart: InjuryBodyPart;
   occurredAt: { seasonIndex: number; step: number; matchId: string };
   diagnosisRange: { minMatches: number; maxMatches: number };
   rehab: RehabPlan | null;
   recurrenceRiskBp: number;
+  /** 회복 뒤 실제 출전에서 소비할 재발 판정 횟수. 발생·재활 시 0, 회복 시 window 값. */
+  recurrenceChecksRemaining: number;
   status: 'ACTIVE' | 'REHAB' | 'RECOVERED' | 'RECURRED';
   permanentDelta: Array<{ key: AttributeKey; delta: number }> | null;
+  /** 활성/재활 중인 부상의 잔여 결장 경기 수. 회복 시 필드를 제거해 기존 회복 이력의 shape을 보존한다. */
+  remainingMatches?: number;
 };
 
 // T-4-001 D-50: 관계 로그·기억 태그가 다루는 대상 축 5개(`CareerState.relationships`와 같은 키).
@@ -796,7 +800,7 @@ export type CareerState = {
   captaincySeasons: number;
   /** T-4-003: 윤리·미디어 FAIL outcome 누계. */
   controversyFailures: number;
-  // T-4-001 D-49: 부상 에피소드 이력. 기본 `{ episodes: [] }`. 발생 roll은 T-4-002.
+  // T-4-002 D-49: 부상 에피소드 이력. 기본 `{ episodes: [] }`.
   health: { episodes: InjuryEpisode[] };
   // T-4-001 D-50: 관계 변화 감사 로그. 기본 `[]`, 최대 길이는 룰셋 `relationshipRules.logMax`. 실제로
   // 항목을 채우는 로직은 T-4-003.

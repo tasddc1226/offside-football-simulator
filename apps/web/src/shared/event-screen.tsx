@@ -72,7 +72,7 @@ export function EventDecisionScreen({ careerId, screenId, renderAbove, onResolve
 
   const { state } = query.data;
   const pending = state.pending;
-  if (pending === null || pending.kind !== 'EVENT') {
+  if (pending === null || (pending.kind !== 'EVENT' && pending.kind !== 'INJURY')) {
     // 라우트 loader가 이미 screenForCareer로 redirect했어야 한다. 방어적 fallback.
     return null;
   }

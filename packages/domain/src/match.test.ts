@@ -137,11 +137,11 @@ describe('playMatch — RNG 소비 순서(브리프 D-27·D-35, draw 카운트�
     expect(result.rngState.draws - input.rngState.draws).toBe(13);
   });
 
-  it('부상 이탈은 추가로 이탈 경기 수 roll을 1회 더 써서 13회다', () => {
+  it('부상 이탈은 duration roll을 match RNG에서 소비하지 않아 12회다', () => {
     const input = baseStartInput('injury-search-81');
     const result = playMatch(input);
     expect(result.match.injuredOff).toBe(true);
-    expect(result.rngState.draws - input.rngState.draws).toBe(13);
+    expect(result.rngState.draws - input.rngState.draws).toBe(12);
   });
 
   it('포지션군별 통계 roll 수는 고정 키 순서(FW 5·MF 6·DF 4·GK 4)에 맞는 draws 차이를 만든다', () => {
@@ -274,17 +274,12 @@ describe('playMatch — 필수 테스트 벡터: 0분·교체 출전·퇴장·�
     expect(result.nextAvailability).toEqual({ kind: 'SUSPENSION', matchesRemaining: 2, sinceMatchId: result.match.id });
   });
 
-  it('4) 부상 이탈이 injuredOff·availability(INJURY)에 정확히 집계된다', () => {
+  it('4) 부상 이탈은 injuredOff에 기록되고 이탈 기간은 injury hook이 결정한다', () => {
     const input = baseStartInput('injury-search-81');
     const result = playMatch(input);
     expect(result.match.injuredOff).toBe(true);
-    expect(result.nextAvailability).toEqual({
-      kind: 'INJURY',
-      matchesRemaining: expect.any(Number),
-      sinceMatchId: result.match.id,
-    });
-    expect(result.nextAvailability!.matchesRemaining).toBeGreaterThanOrEqual(rulesetProto.matchRules.injury.outMatches.min);
-    expect(result.nextAvailability!.matchesRemaining).toBeLessThanOrEqual(rulesetProto.matchRules.injury.outMatches.max);
+    expect(result.nextAvailability).not.toEqual(expect.objectContaining({ kind: 'INJURY' }));
+    expect(result.recurrenceTriggered).toBe(false);
   });
 });
 

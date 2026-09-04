@@ -308,7 +308,18 @@ describe('onSettlementRelations', () => {
       timelineRevision: 10,
     });
 
-    expect(result.rng.draws).toBe(state.rngState.draws + 1);
+    // manager 판정은 기존 T-3 결정 순서를 이동시키지 않는 전용 substream에서 정확히 1회 소비한다.
+    expect(result.rng).toEqual(state.rngState);
+    expect(result.managerDecisionRng?.draws).toBe(1);
+    const replay = onSettlementRelations({
+      state,
+      season: makeSeason(makeManager({ tenureSeasons: 3 })),
+      result: makeResult(),
+      ruleset,
+      rng: state.rngState,
+      timelineRevision: 10,
+    });
+    expect(replay.managerDecisionRng).toEqual(result.managerDecisionRng);
     expect(result.state.nextManager?.id).toBe('seoul-tier1-mgr-2');
     expect(result.state.timeline.at(-1)?.kind).toBe('MANAGER_CHANGED');
     expect(result.state.timeline.at(-1)?.revision).toBe(10);

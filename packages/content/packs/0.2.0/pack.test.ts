@@ -86,9 +86,9 @@ describe('packs/0.2.0', () => {
     expect(result.errors.filter((e) => e.includes('checksum'))).toEqual([]);
   });
 
-  // T-3-006/T-4-003: 0.2.0의 신규 이벤트는 전부 PROTOTYPE 표시, 0.1.0에서 넘어온 10개는 표시가 없다
-  // (0.1.0 정의는 바이트 동일 — U-013 (A)는 워커 신규 저작분만 PROTOTYPE으로 표시한다).
-  it('새 이벤트 5개는 authoring이 PROTOTYPE이고 0.1.0 유래 10개는 authoring이 없다', () => {
+  // T-3-006/T-4-002/T-4-003: 신규 이벤트와 문구가 바뀐 EVT-INJ-001은 PROTOTYPE으로 표시한다.
+  // 나머지 0.1.0 유래 이벤트는 authoring이 없다.
+  it('신규 이벤트와 문구가 바뀐 EVT-INJ-001은 authoring이 PROTOTYPE이다', () => {
     const loaded = loadPack(PACK_DIR);
     const newIds = new Set([
       'EVT-CON-010',
@@ -101,9 +101,10 @@ describe('packs/0.2.0', () => {
       'EVT-ETH-010',
       'EVT-MEDIA-010',
     ]);
+    const changedIds = new Set([...newIds, 'EVT-INJ-001']);
     for (const { raw } of loaded.events) {
       const event = EventDefinitionSchema.parse(raw);
-      if (newIds.has(event.id)) {
+      if (changedIds.has(event.id)) {
         expect(event.authoring, event.id).toBe('PROTOTYPE');
       } else {
         expect(event.authoring, event.id).toBeUndefined();

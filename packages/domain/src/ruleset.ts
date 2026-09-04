@@ -125,7 +125,6 @@ export type MatchInjuryRules = {
   perMatchPercent: number;
   lowFitnessBelow: number;
   lowFitnessExtraPercent: number;
-  outMatches: { min: number; max: number };
 };
 
 // T-2-003 8번 규칙: `ratingTenths = clamp(60 + Σ 항목별 가중치 + 결과 보정 − 카드 보정, 40, 100)`.
@@ -252,9 +251,10 @@ export type MarketValueRules = {
   leagueTierValueCenti: Record<'1' | '2' | '3' | 'YOUTH', number>;
 };
 
-// T-4-001 D-49: 부상 규칙(`packages/content` 소유, `injury.ts`가 소비). 값은 자리표시자이며 실제
-// 발생 roll·재발·후유증 로직은 T-4-002가 채운다 — 이 작업은 `applyRehabPlan`(재활 계획 적용)만 쓴다.
+// T-4-002 D-49: 부상 상태기계 규칙(`packages/content` 소유, `injury.ts`가 소비). 발생·재발 roll,
+// forced pending, 재활 이동, 재발 창·후유증 계산은 이 규칙셋을 유일한 정본으로 사용한다.
 export type InjuryRules = {
+  event: { id: string; version: number };
   severityWeights: { MINOR: number; MODERATE: number; MAJOR: number };
   matchesOut: { MINOR: { min: number; max: number }; MODERATE: { min: number; max: number }; MAJOR: { min: number; max: number } };
   bodyParts: Array<{ id: InjuryBodyPart; weight: number; recurrenceBaseBp: number; sequelaKeys: AttributeKey[] }>;

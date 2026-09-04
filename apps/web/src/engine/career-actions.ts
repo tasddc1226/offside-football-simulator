@@ -198,9 +198,10 @@ export function toResolveEventOutcomes(
 }
 
 /**
- * `state.pending.kind === 'EVENT'`의 `eventId`로 `engine.pack.eventsById`에서 정의를 찾아
- * RESOLVE_EVENT를 보낸다. pending이 없거나 팩에 정의·선택지가 없으면(딥링크 오용 등) 커밋 없이
- * VALIDATION_FAILED를 돌려준다.
+ * `state.pending.kind === 'EVENT' | 'INJURY'`의 `eventId`로 `engine.pack.eventsById`에서 정의를
+ * 찾아 RESOLVE_EVENT를 보낸다. INJURY는 presentation이 INJURY인 정의와 choice의 rehabPlan을
+ * 함께 요구한다(전용 SCR-022가 생기기 전까지 SCR-013의 최소 호환 경로). pending이 없거나 팩에
+ * 정의·선택지가 없으면(딥링크 오용 등) 커밋 없이 VALIDATION_FAILED를 돌려준다.
  */
 export async function resolveEvent(engine: AppEngine, careerId: string, choiceId: string): Promise<ExecuteResult> {
   const load: LoadResult = await engine.client.loadCareer(careerId);
@@ -209,7 +210,7 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
   }
 
   const pending = load.snapshot.state.pending;
-  if (pending === null || pending.kind !== 'EVENT') {
+  if (pending === null || (pending.kind !== 'EVENT' && pending.kind !== 'INJURY')) {
     return { ok: false, error: { code: 'VALIDATION_FAILED', message: 'resolveEvent: 해소할 pending 이벤트가 없다.' } };
   }
 
@@ -221,11 +222,32 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
     };
   }
 
+  if (pending.kind === 'INJURY' && definition.presentation !== 'INJURY') {
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: `resolveEvent: INJURY pending에 맞는 이벤트 정의가 아니다: ${pending.eventId}` },
+    };
+  }
+  if (pending.kind === 'EVENT' && definition.presentation === 'INJURY') {
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: `resolveEvent: INJURY 이벤트는 INJURY pending에서만 해소할 수 있다: ${pending.eventId}` },
+    };
+  }
+
   const choice = definition.choices.find((candidate) => candidate.id === choiceId);
   if (choice === undefined) {
     return {
       ok: false,
       error: { code: 'VALIDATION_FAILED', message: `resolveEvent: 정의에 없는 choiceId: ${choiceId}` },
+    };
+  }
+
+  const rehabPlan = pending.kind === 'INJURY' ? choice.rehabPlan : undefined;
+  if (pending.kind === 'INJURY' && rehabPlan === undefined) {
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: `resolveEvent: 재활 계획이 없는 INJURY choice다: ${choiceId}` },
     };
   }
 
@@ -236,6 +258,7 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
       definitionVersion: definition.version,
       choiceId,
       outcomes: toResolveEventOutcomes(choice.outcomes),
+      ...(rehabPlan === undefined ? {} : { rehabPlan }),
     },
   };
 
