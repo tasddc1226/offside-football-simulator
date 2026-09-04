@@ -3113,6 +3113,63 @@
       }
     }
   },
+  "injuryRules": {
+    "severityWeights": { "MINOR": 60, "MODERATE": 30, "MAJOR": 10 },
+    "matchesOut": {
+      "MINOR": { "min": 1, "max": 2 },
+      "MODERATE": { "min": 3, "max": 6 },
+      "MAJOR": { "min": 7, "max": 14 }
+    },
+    "bodyParts": [
+      { "id": "KNEE", "weight": 20, "recurrenceBaseBp": 2500, "sequelaKeys": ["durability"] },
+      { "id": "ANKLE", "weight": 25, "recurrenceBaseBp": 2000, "sequelaKeys": ["durability"] },
+      { "id": "HAMSTRING", "weight": 30, "recurrenceBaseBp": 3000, "sequelaKeys": ["durability"] },
+      { "id": "SHOULDER", "weight": 15, "recurrenceBaseBp": 1500, "sequelaKeys": ["durability"] },
+      { "id": "HEAD", "weight": 10, "recurrenceBaseBp": 1000, "sequelaKeys": [] }
+    ],
+    "recurrenceWindowMatches": 6,
+    "rehab": {
+      "EARLY": { "returnShiftMatches": -2, "recurrenceAddBp": 1500 },
+      "STANDARD": { "returnShiftMatches": 0, "recurrenceAddBp": 0 },
+      "CONSERVATIVE": { "returnShiftMatches": 2, "recurrenceAddBp": -1000 }
+    },
+    "maxForcedPerSeason": 2,
+    "durabilityPivot": 50,
+    "severityShiftBpPerDurabilityPoint": 40,
+    "fitnessBelow": 50,
+    "fitnessAddBp": 1000,
+    "ageFrom": 30,
+    "ageAddBpPerYear": 200
+  },
+  "managerRules": {
+    "trustBase": 50,
+    "changeProbability": { "baseBp": 1500, "perRankGapBp": 500, "maxBp": 6000, "minTenureSeasons": 1 },
+    "preferredArchetypeCount": 2,
+    "names": ["박태식", "최영도", "한상철", "강민호", "윤재국", "서동현", "조광수", "노준혁", "임성진", "오현석", "문정수", "배기환"]
+  },
+  "relationshipRules": {
+    "logMax": 40,
+    "memoryTagsMax": 3,
+    "captainAppointment": { "minCaptain": 75, "minSeasons": 2 }
+  },
+  "reputationRules": {
+    "initialPopularityCenti": 5000,
+    "initialMediaCenti": 5000,
+    "clampMax": 10000,
+    "settlement": { "starterSeasonCenti": 300, "ratingAbove70Centi": 200, "titleCenti": 500, "decayCenti": 100 }
+  },
+  "nationalTeamRules": {
+    "callUpStep": 8,
+    "minOvrByTier": { "YOUTH": 70, "1": 68, "2": 74, "3": 78 },
+    "minPopularityCenti": 6000,
+    "fitnessCost": { "ACCEPT": 15, "CONDITIONAL": 8, "DECLINE": 0 },
+    "relationDelta": {
+      "ACCEPT": { "fans": 4, "agent": 4 },
+      "CONDITIONAL": { "fans": 2, "agent": 2 },
+      "DECLINE": { "fans": -4, "agent": -6 }
+    },
+    "opponents": ["노르카니아", "메리디안 연합", "발디스탄", "칼레도니아"]
+  },
   "conditionRules": {
     "formPivotTenths": 65,
     "formDivisorTenths": 8,
