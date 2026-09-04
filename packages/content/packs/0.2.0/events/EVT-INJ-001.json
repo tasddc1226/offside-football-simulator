@@ -8,7 +8,6 @@
   "weight": 100,
   "safety": { "minorSafe": true },
   "presentation": "INJURY",
-  "authoring": "PROTOTYPE",
   "choices": [
     {
       "id": "A",
