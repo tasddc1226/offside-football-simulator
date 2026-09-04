@@ -257,10 +257,12 @@ const EMPTY_MARKET = { openedAtRevision: 1, seasonIndex: 0, reason: 'PRE_NEGOTIA
 const EMPTY_MARKET_SUMMARY = { openedAtRevision: 1, seasonIndex: 0, reason: 'FIRST_CONTRACT' as const, safeOfferId: null };
 
 describe('isAutoPassablePending', () => {
-  it('CONTRACT(offers 없음)·INJURY·NATIONAL_TEAM만 자동 통과 대상이다', () => {
+  // T-4-001 D-52: INJURY·NATIONAL_TEAM은 더 이상 자동 통과 대상이 아니다(DECISION으로 바뀌어
+  // RESOLVE_EVENT의 rehabPlan·callUp을 사용자가 직접 골라야 닫힌다). CONTRACT(offers 없음)만 남는다.
+  it('CONTRACT(offers 없음)만 자동 통과 대상이다', () => {
     expect(isAutoPassablePending({ kind: 'CONTRACT', step: 7, offers: [], market: EMPTY_MARKET })).toBe(true);
-    expect(isAutoPassablePending({ kind: 'INJURY', step: 5, episodeId: '', eventId: '', version: 0 })).toBe(true);
-    expect(isAutoPassablePending({ kind: 'NATIONAL_TEAM', step: 8, eventId: '', version: 0 })).toBe(true);
+    expect(isAutoPassablePending({ kind: 'INJURY', step: 5, episodeId: '', eventId: '', version: 0 })).toBe(false);
+    expect(isAutoPassablePending({ kind: 'NATIONAL_TEAM', step: 8, eventId: '', version: 0 })).toBe(false);
     expect(isAutoPassablePending({ kind: 'EVENT', eventId: 'x', version: 1 })).toBe(false);
     expect(isAutoPassablePending({ kind: 'OFFERS', offers: [], market: EMPTY_MARKET_SUMMARY })).toBe(false);
     expect(isAutoPassablePending({ kind: 'SETTLEMENT', step: 12 })).toBe(false);
