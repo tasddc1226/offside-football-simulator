@@ -14,6 +14,8 @@
 
 **다음 Wave 브리프**: [T-3-004](briefs/T-3-004.md)·[T-4-002](briefs/T-4-002.md)·[T-4-003](briefs/T-4-003.md)를 병렬 슬롯 3개로 확정했다. T-3-004는 Phase 3 상태를 바꾸지 않고 strict/runtime/sync 증거만 만든다. T-4-002는 부상 발생 뒤 강제 pending을 일반 슬롯보다 우선하고 재발 창을 additive episode counter로 추적한다. T-4-003은 시즌 사이 감독 예약(`nextManager`)·주장단 상태·실패 누계를 additive 상태로 두며, D-52 원문에 맞춰 전용 생성기 대상(INJURY/NATIONAL_TEAM/RUMOUR)만 일반 이벤트 후보에서 제외한다. 두 B 트랙 PR은 먼저 머지된 쪽의 공용 타입을 다른 쪽이 main merge로 보존한다.
 
+**후속 브리프 선작성(17:11)**: [T-3-005](briefs/T-3-005.md)와 [T-4-004](briefs/T-4-004.md)를 작성했다. T-3-005 사전 감사에서 현재 main의 step 7은 CONTRACT 슬롯만 갖고 `selectEligibleEvents`는 RUMOUR을 제외하므로, 0.2.0 활성화만으로 `EVT-CON-010`이 도달하지 않는 계획-구현 간격을 확인했다. 웹 워커가 가짜 pending이나 조용한 domain 변경으로 덮지 않고 최소 `RESOLVE_EVENT` 재사용 전이를 결정 게이트로 올리게 했다. T-4-004는 skeleton에 없는 평점 대안 기준(`minRatingTenths:70`)과 이벤트 참조를 룰셋 데이터로 추가하고, 부상 자동 사양·managerTrust 불변·NATIONAL_DEBUT 1회 예약을 검증하도록 고정했다.
+
 ## 2026-09-04 (오후, PR #53 머지 — 트랙 B 타입 슬라이스)
 
 **결과**: PR #53(T-4-001, `7188327` → squash `aba154a`, 13:57). 리뷰 수정 0건 — HEALTH Effect 규칙(SUM·즉시·만료 없음, activeEffects 미저장), 기본 감독 rng 0, 훅 골격 3개의 실제 호출 지점 배선(spy 테스트), INJURY·NATIONAL_TEAM의 RESOLVE_EVENT 전용 닫힘, 골든 draws 불변을 확인했다. 사건 2건: (1) PR #50이 먼저 들어가 CONFLICTING → 재머지 지시(양쪽 규칙 보존·체크섬 재계산·골든 재기록). (2) 재기록 골든 4개를 커밋하지 않고 push → 오케스트레이터 체인이 contracts 골든 순회 실패로 잡음 → 추가 커밋 뒤 체인 녹색(e2e 72). 워커 워크트리 `git status`를 DONE 직후 확인하는 절차를 메모리에 추가.
