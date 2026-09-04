@@ -131,7 +131,8 @@ ETA = [
     ("9/4 03:41", "Phase 2 완료 조건 검증(T-2-011) 머지(PR #47): 완료 조건 9행 전부 자동 검증(fixture 3종·결정론·집계·B > A·세션 측정·e2e 68건 3회 무결점), 후속 a·b·d 정리. Phase 2 코드 작업 종료 — 잔여 T-2-010(U-005)·T-2-012(U-002)는 사용자 게이트. 리뷰 수정 0건"),
     ("9/4 03:46", "T-3-001(계약·제안 v2 타입 슬라이스) 브리프 선작성 — Offer/Contract v2·clubHistory·제안 상태기계 함수·타임라인/pending 예약·DSL contract.*·CMD-CON payload 스키마"),
     ("9/4 10:07", "사용자 결정 4건: PR #46(Cloudflare 배포 파이프라인, T-0-010) 머지 승인 → abf9bfa, ADR-010 설계 승인(U-012), 이벤트 문구 PROTOTYPE 허용(U-013 A), 가상 구단 12개. T-2-012(LINE TEST 준비)·T-3-001(Phase 3·4 타입 슬라이스) 나란히 투입"),
-    ("9/4~", "T-0-010: staging 자동 배포·smoke 확인 뒤 completed. T-3-001 머지 뒤 T-4-001·T-3-002·T-3-006 투입. U-005 플레이테스트 뒤 T-2-010"),
+    ("9/4 10:40", "T-0-010 completed: main 푸시 staging 자동 배포 성공(Quality·Browser·Deploy staging), api health·web 200. Phase 0 전 항목 종료. 후속: docs/** paths-ignore"),
+    ("9/4~", "T-3-001 머지 뒤 T-4-001·T-3-002·T-3-006 투입. U-005 플레이테스트 뒤 T-2-010"),
 ]
 DECISIONS = [
     ("ADR-010 승인·LINE TEST 준비(U-012·U-013, D-54·D-55)", "사용자가 ADR-010 설계를 승인하고 이벤트 문구 PROTOTYPE 작성(A)·가상 구단 12개를 결정. 서비스 시즌 포인터는 API 환경 변수, 테스트 시즌은 is_test, 분석 이벤트는 platform 큐 → D1 화이트리스트."),
