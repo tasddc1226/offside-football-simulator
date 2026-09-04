@@ -16,8 +16,9 @@
 | `PERMANENT` | `attributes.*` | 성장(시즌 결산)과 명시적 이벤트/챕터 outcome만. 단일 이벤트 ±1, 중대 이벤트 ±2 이내(다른 규칙 위반 금지) |
 | `CURRENT` | `state.form` / `state.fitness` / `state.morale` | 경기·이벤트·챕터, Phase 4 부상 |
 | `CONTEXT` | `context.tacticalFit` / `context.squadStatus` / `context.positionProficiency` | T-2-002 역할 제안, Phase 3 이적/임대, 이벤트 |
-| `RELATION` | `relationships.managerTrust` / `captain` / `rival` / `fans` / `agent` | 이벤트·챕터, Phase 4 |
-| `DEFERRED` | 위 넷 중 하나(예약만, 즉시 적용 없음) | 모든 Phase — `appliesAt.NEXT_SEASON_STEP{step}`으로만 |
+| `RELATION` | `relationships.managerTrust` / `captain` / `rival` / `fans` / `agent`, `reputation.popularityCenti` / `mediaCenti`(타깃 이름은 `popularity`/`media`, T-4-001 D-49) | 이벤트·챕터, Phase 4 미디어·SNS 이벤트·결산 |
+| `HEALTH`(신규, T-4-001 D-49) | `availability.matchesRemaining` / `health.recurrenceRiskBp`만 | Phase 4 부상 재활·재발(T-4-002)만. `stackingRule: SUM`·`appliesAt: IMMEDIATE`·`expiresAt: null`만 허용(위반 시 `HEALTH_RULE`로 reject). `matchesRemaining`은 `season.availability.kind === 'INJURY'`일 때만 적용(아니면 `NO_ACTIVE_INJURY`), `recurrenceRiskBp`는 활성(ACTIVE/REHAB) 에피소드가 있을 때만 적용(아니면 `NO_ACTIVE_EPISODE`). 다른 kind와 달리 `activeEffects`에 저장하지 않는다(적용 즉시 소멸, 만료 개념이 없다) |
+| `DEFERRED` | 위 다섯 중 하나(예약만, 즉시 적용 없음) | 모든 Phase — `appliesAt.NEXT_SEASON_STEP{step}`으로만. `resolveDeferredKind`는 `reputation.` 접두도 `RELATION`으로 푼다(T-4-001 D-49) |
 
 두 Phase가 같은 타깃을 동시에 `REPLACE`로 직접 덮어쓰지 않는다(예: Phase 3과 Phase 4가 둘 다 `context.tacticalFit`을 REPLACE하지 않는다). `SUM`은 여러 Phase가 공유해도 안전하다(클램프만 하고 서로 상쇄되지 않는다).
 

@@ -384,19 +384,20 @@ export function walkToNextDecision(
 }
 
 /**
- * ADVANCE가 CONTRACT·INJURY·NATIONAL_TEAM pending을 "자동 통과"로 닫을 수 있는지. T-2-002 D-34:
- * ROLE은 더 이상 자동 통과 대상이 아니다 — `selectOpenSlot`이 ROLE 슬롯을 `ROLE_PROPOSAL` pending으로
- * 열고, `RESOLVE_ROLE` 명령으로만 닫힌다. T-2-004 D-38: CHAPTER도 같은 이유로 자동 통과 대상에서
- * 뺐다 — `RESOLVE_CHAPTER`로만 닫힌다(판단 1~3개가 각각 roll 1회를 쓴다). T-3-002 D-43 (a)(이 PR의
- * 임시 규칙, T-3-003이 "응답 필수"로 바꾼다): CONTRACT는 `offers.length > 0`(재계약 제안 1건)이어도
- * 자동 통과한다 — 명령 처리기(NEGOTIATE·REJECT_OFFER 등)가 아직 없어 응답할 방법이 없으므로, 대신
- * `advance`가 통과 시 제안마다 타임라인 `OFFER_EXPIRED`를 남긴다(T-3-001은 `offers.length === 0`일
- * 때만 자동 통과했다).
+ * ADVANCE가 CONTRACT pending을 "자동 통과"로 닫을 수 있는지. T-2-002 D-34: ROLE은 더 이상 자동 통과
+ * 대상이 아니다 — `selectOpenSlot`이 ROLE 슬롯을 `ROLE_PROPOSAL` pending으로 열고, `RESOLVE_ROLE`
+ * 명령으로만 닫힌다. T-2-004 D-38: CHAPTER도 같은 이유로 자동 통과 대상에서 뺐다 —
+ * `RESOLVE_CHAPTER`로만 닫힌다(판단 1~3개가 각각 roll 1회를 쓴다). T-3-002 D-43 (a)(이 PR의 임시
+ * 규칙, T-3-003이 "응답 필수"로 바꾼다): CONTRACT는 `offers.length > 0`(재계약 제안 1건)이어도 자동
+ * 통과한다 — 명령 처리기(NEGOTIATE·REJECT_OFFER 등)가 아직 없어 응답할 방법이 없으므로, 대신
+ * `advance`가 통과 시 제안마다 타임라인 `OFFER_EXPIRED`를 남긴다. T-4-001 D-52: INJURY·NATIONAL_TEAM은
+ * 자동 통과 대상이 아니다 — `RESOLVE_EVENT`로만 닫힌다(생성기가 없는 지금은 이 두 kind의 pending
+ * 자체가 생기지 않아 골든에 영향이 없다).
  */
 export function isAutoPassablePending(pending: Pending): boolean {
   if (pending === null) return false;
   if (pending.kind === 'CONTRACT') return true;
-  return pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM';
+  return false;
 }
 
 export function markStepPassed(

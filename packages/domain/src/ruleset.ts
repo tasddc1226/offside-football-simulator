@@ -1,4 +1,4 @@
-import type { AttributeKey, DecisionSlot, Position, SeasonPhase, SquadRole, StatGroup } from './types.js';
+import type { AttributeKey, DecisionSlot, InjuryBodyPart, Position, RehabPlan, SeasonPhase, SquadRole, StatGroup } from './types.js';
 
 // D-2: 아키타입 카탈로그. roleWeights 합은 1(±1e-9), template은 20키 전부.
 export type Archetype = {
@@ -247,6 +247,63 @@ export type MarketValueRules = {
   leagueTierValueCenti: Record<'1' | '2' | '3' | 'YOUTH', number>;
 };
 
+// T-4-001 D-49: 부상 규칙(`packages/content` 소유, `injury.ts`가 소비). 값은 자리표시자이며 실제
+// 발생 roll·재발·후유증 로직은 T-4-002가 채운다 — 이 작업은 `applyRehabPlan`(재활 계획 적용)만 쓴다.
+export type InjuryRules = {
+  severityWeights: { MINOR: number; MODERATE: number; MAJOR: number };
+  matchesOut: { MINOR: { min: number; max: number }; MODERATE: { min: number; max: number }; MAJOR: { min: number; max: number } };
+  bodyParts: Array<{ id: InjuryBodyPart; weight: number; recurrenceBaseBp: number; sequelaKeys: AttributeKey[] }>;
+  recurrenceWindowMatches: number;
+  rehab: Record<RehabPlan, { returnShiftMatches: number; recurrenceAddBp: number }>;
+  maxForcedPerSeason: number;
+  durabilityPivot: number;
+  severityShiftBpPerDurabilityPoint: number;
+  fitnessBelow: number;
+  fitnessAddBp: number;
+  ageFrom: number;
+  ageAddBpPerYear: number;
+};
+
+// T-4-001 D-50: 감독 규칙(`packages/content` 소유). `buildDefaultManager`(manager.ts)가 `trustBase`·
+// `names`를 쓴다. 교체 판정(`changeProbability`)·선호 아키타입 수(`preferredArchetypeCount`)는 T-4-003.
+export type ManagerRules = {
+  trustBase: number;
+  changeProbability: { baseBp: number; perRankGapBp: number; maxBp: number; minTenureSeasons: number };
+  preferredArchetypeCount: number;
+  names: string[];
+};
+
+// T-4-001 D-50: 관계 로그·기억 태그·주장 임명 규칙(`packages/content` 소유). 실제로 쓰는 로직은
+// T-4-003.
+export type RelationshipRules = {
+  logMax: number;
+  memoryTagsMax: number;
+  captainAppointment: { minCaptain: number; minSeasons: number };
+};
+
+// T-4-001 D-49/D-50: 평판 규칙(`packages/content` 소유). `CREATE_CAREER`가 `initialPopularityCenti`·
+// `initialMediaCenti`를 읽는다(`simulate.ts`). 결산 갱신(`settlement`)은 T-4-003.
+export type ReputationRules = {
+  initialPopularityCenti: number;
+  initialMediaCenti: number;
+  clampMax: number;
+  settlement: { starterSeasonCenti: number; ratingAbove70Centi: number; titleCenti: number; decayCenti: number };
+};
+
+// T-4-001 D-51: 대표팀 차출 규칙(`packages/content` 소유). 자격 판정·pending 생성은 T-4-004.
+export type NationalTeamRules = {
+  callUpStep: number;
+  minOvrByTier: Record<'YOUTH' | '1' | '2' | '3', number>;
+  minPopularityCenti: number;
+  fitnessCost: { ACCEPT: number; CONDITIONAL: number; DECLINE: number };
+  relationDelta: {
+    ACCEPT: { fans: number; agent: number };
+    CONDITIONAL: { fans: number; agent: number };
+    DECLINE: { fans: number; agent: number };
+  };
+  opponents: string[];
+};
+
 // T-3-002 D-43/D-44: 결산 뒤 이적시장 생성·step 7 재계약 사전 협상이 쓰는 상수 묶음(`market.ts`가
 // 소비). `negotiation`·`relationshipCarry`·`rivalPairs`는 T-3-003이 소비한다(이 작업은 스키마·데이터만
 // 둔다).
@@ -321,6 +378,16 @@ export type Ruleset = {
   matchRules: MatchRules;
   /** T-2-005 D-39: 결산 성장식 상수. */
   growthRules: GrowthRules;
+  /** T-4-001 D-49: 부상 규칙(소유 T-4-002). */
+  injuryRules: InjuryRules;
+  /** T-4-001 D-50: 감독 규칙(소유 T-4-003). */
+  managerRules: ManagerRules;
+  /** T-4-001 D-50: 관계 로그·기억 태그·주장 임명 규칙(소유 T-4-003). */
+  relationshipRules: RelationshipRules;
+  /** T-4-001 D-49/D-50: 평판 규칙(소유 T-4-003). */
+  reputationRules: ReputationRules;
+  /** T-4-001 D-51: 대표팀 차출 규칙(소유 T-4-004). */
+  nationalTeamRules: NationalTeamRules;
   /** T-2-005 D-39: 시즌 중 폼·체력·사기 갱신 상수. */
   conditionRules: ConditionRules;
   /** T-2-014 D-41: 시장가치 지수 상수. */

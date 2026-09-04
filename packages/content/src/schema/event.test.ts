@@ -95,3 +95,37 @@ describe('EventDefinitionSchema', () => {
     expect(() => EventDefinitionSchema.parse(event)).toThrow();
   });
 });
+
+// T-4-001 D-52: presentation이 INJURY/NATIONAL_TEAM인 이벤트는 choices마다 rehabPlan/callUp이 정확히
+// 그 짝일 때만 통과한다(4가지 부정 케이스).
+describe('EventDefinitionSchema — presentation과 rehabPlan/callUp 짝(T-4-001 D-52)', () => {
+  it('presentation이 INJURY인데 choice에 rehabPlan이 없으면 거부한다', () => {
+    const event = baseEvent({ presentation: 'INJURY' });
+    expect(() => EventDefinitionSchema.parse(event)).toThrow(/rehabPlan이 필요하다/);
+  });
+
+  it('presentation이 INJURY인데 choice에 callUp이 있으면 거부한다', () => {
+    const event = baseEvent();
+    const choices = (event as { choices: Record<string, unknown>[] }).choices;
+    choices[0]!.rehabPlan = 'STANDARD';
+    choices[0]!.callUp = 'ACCEPT';
+    choices[1]!.rehabPlan = 'STANDARD';
+    (event as Record<string, unknown>).presentation = 'INJURY';
+    expect(() => EventDefinitionSchema.parse(event)).toThrow(/callUp을 쓸 수 없다/);
+  });
+
+  it('presentation이 NATIONAL_TEAM인데 choice에 callUp이 없으면 거부한다', () => {
+    const event = baseEvent({ presentation: 'NATIONAL_TEAM' });
+    expect(() => EventDefinitionSchema.parse(event)).toThrow(/callUp이 필요하다/);
+  });
+
+  it('presentation이 NATIONAL_TEAM인데 choice에 rehabPlan이 있으면 거부한다', () => {
+    const event = baseEvent();
+    const choices = (event as { choices: Record<string, unknown>[] }).choices;
+    choices[0]!.callUp = 'ACCEPT';
+    choices[0]!.rehabPlan = 'STANDARD';
+    choices[1]!.callUp = 'ACCEPT';
+    (event as Record<string, unknown>).presentation = 'NATIONAL_TEAM';
+    expect(() => EventDefinitionSchema.parse(event)).toThrow(/rehabPlan을 쓸 수 없다/);
+  });
+});

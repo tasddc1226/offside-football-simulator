@@ -45,6 +45,7 @@ export {
   AdvancePayloadSchema,
   ResolveEventPayloadSchema,
   AcceptOfferPayloadSchema,
+  NationalTeamCallUpSchema,
   COMMAND_PAYLOAD_SCHEMAS,
   type CommandType,
   type CommandRequest,
@@ -79,6 +80,14 @@ export {
   CAREER_STATE_ATTRIBUTE_KEYS,
   AttributesSchema,
   CareerStateSchema,
+  SeasonManagerSchema,
+  InjurySeveritySchema,
+  InjuryBodyPartSchema,
+  RehabPlanSchema,
+  InjuryEpisodeSchema,
+  RelationTargetSchema,
+  RelationshipLogEntrySchema,
+  ReputationSchema,
   type CareerState,
 } from './career-state.js';
 

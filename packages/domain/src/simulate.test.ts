@@ -1,11 +1,23 @@
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { rulesetProto } from './__fixtures__/career-01.js';
+import { runGkFixture } from './__fixtures__/career-04-gk.js';
+import { runSettledFixture } from './__fixtures__/career-06-settled.js';
 import { compareCodePoints } from './canonical.js';
 import { hashState } from './hash.js';
+import * as injuryModule from './injury.js';
 import { rollRange } from './roll-range.js';
 import { computeSquadStatus, familiarityOf, rankPositionForPlayer, squadRoleFromSelection } from './selection.js';
 import { simulate, verifySnapshot, type Command, type SimulationInput } from './simulate.js';
-import type { DomainSnapshot, Effect, PlayerProfile, Position, TimelineEntry } from './types.js';
+import type {
+  DomainSnapshot,
+  Effect,
+  InjuryEpisode,
+  NationalTeamCallUp,
+  PlayerProfile,
+  Position,
+  RehabPlan,
+  TimelineEntry,
+} from './types.js';
 
 const RULESET_VERSION = '1.0.0';
 const CONTENT_PACK = '0.1.0';
@@ -101,7 +113,14 @@ function advanceCommand(
 
 function resolveEventCommand(
   expectedRevision: number,
-  overrides?: Partial<{ eventId: string; definitionVersion: number; choiceId: string; outcomes: Array<{ id: string; weight: number; effects: Effect[]; addTags?: string[] }> }>,
+  overrides?: Partial<{
+    eventId: string;
+    definitionVersion: number;
+    choiceId: string;
+    outcomes: Array<{ id: string; weight: number; effects: Effect[]; addTags?: string[] }>;
+    rehabPlan: RehabPlan;
+    callUp: NationalTeamCallUp;
+  }>,
 ): EngineCommand {
   const outcomes = overrides?.outcomes ?? [
     {
@@ -147,6 +166,8 @@ function resolveEventCommand(
       definitionVersion: overrides?.definitionVersion ?? 1,
       choiceId: overrides?.choiceId ?? 'A',
       outcomes,
+      ...(overrides?.rehabPlan !== undefined ? { rehabPlan: overrides.rehabPlan } : {}),
+      ...(overrides?.callUp !== undefined ? { callUp: overrides.callUp } : {}),
     },
   };
 }
@@ -622,6 +643,152 @@ describe('simulate — RESOLVE_EVENT', () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe('VALIDATION_FAILED');
+  });
+});
+
+// T-4-001 D-52: RESOLVE_EVENT가 INJURY·NATIONAL_TEAM pending도 닫는다. 생성기(T-4-002·T-4-004)가
+// 아직 없어 정상 경로로는 이 pending이 열리지 않으므로, 테스트가 직접 snapshot에 주입한다(다른
+// describe들의 `withRoleProposal`/tampered-snapshot 패턴과 같다).
+describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () => {
+  const TEST_EPISODE: InjuryEpisode = {
+    id: 'INJ-1-3-1',
+    severity: 'MODERATE',
+    bodyPart: 'HAMSTRING',
+    occurredAt: { seasonIndex: 1, step: 3, matchId: 'm1' },
+    diagnosisRange: { minMatches: 3, maxMatches: 6 },
+    rehab: null,
+    recurrenceRiskBp: 3000,
+    status: 'ACTIVE',
+    permanentDelta: null,
+  };
+
+  function withPendingInjury(active: DomainSnapshot, episode: InjuryEpisode = TEST_EPISODE): DomainSnapshot {
+    const state: DomainSnapshot['state'] = {
+      ...active.state,
+      health: { episodes: [episode] },
+      pending: { kind: 'INJURY', step: active.state.currentStep, episodeId: episode.id, eventId: 'EVT-INJ-001', version: 1 },
+    };
+    return { ...active, state, stateHash: hashState(state) };
+  }
+
+  function withPendingNationalTeam(active: DomainSnapshot): DomainSnapshot {
+    const state: DomainSnapshot['state'] = {
+      ...active.state,
+      pending: { kind: 'NATIONAL_TEAM', step: active.state.currentStep, eventId: 'EVT-NAT-001', version: 1 },
+    };
+    return { ...active, state, stateHash: hashState(state) };
+  }
+
+  it('INJURY pending: rehabPlan을 적용하고 REHAB_CHOSEN 타임라인을 남기며 pending을 비운다', () => {
+    const pending = withPendingInjury(confirmedActiveSnapshot());
+    const command = resolveEventCommand(pending.revision, { eventId: 'EVT-INJ-001', rehabPlan: 'EARLY' });
+    const result = simulate({ ...baseInput(), snapshot: pending, command });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.pending).toBeNull();
+    const episode = result.snapshot.state.health.episodes[0]!;
+    expect(episode.status).toBe('REHAB');
+    expect(episode.rehab).toBe('EARLY');
+    // EARLY: returnShiftMatches -2, recurrenceAddBp +1500(rulesetProto.injuryRules.rehab.EARLY).
+    expect(episode.diagnosisRange).toEqual({ minMatches: 1, maxMatches: 4 });
+    expect(episode.recurrenceRiskBp).toBe(4500);
+    const lastEntry = result.snapshot.state.timeline.at(-1);
+    expect(lastEntry?.kind).toBe('REHAB_CHOSEN');
+    expect(lastEntry?.refId).toBe('INJ-1-3-1');
+  });
+
+  it('INJURY pending: rehabPlan이 없으면 REHAB_PLAN_REQUIRED다', () => {
+    const pending = withPendingInjury(confirmedActiveSnapshot());
+    const result = simulate({
+      ...baseInput(),
+      snapshot: pending,
+      command: resolveEventCommand(pending.revision, { eventId: 'EVT-INJ-001' }),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'REHAB_PLAN_REQUIRED' });
+  });
+
+  it('INJURY pending: pending.episodeId가 health.episodes에 없으면 EPISODE_NOT_FOUND다', () => {
+    const active = confirmedActiveSnapshot();
+    const state: DomainSnapshot['state'] = {
+      ...active.state,
+      health: { episodes: [] },
+      pending: { kind: 'INJURY', step: active.state.currentStep, episodeId: 'INJ-missing', eventId: 'EVT-INJ-001', version: 1 },
+    };
+    const pending: DomainSnapshot = { ...active, state, stateHash: hashState(state) };
+    const result = simulate({
+      ...baseInput(),
+      snapshot: pending,
+      command: resolveEventCommand(pending.revision, { eventId: 'EVT-INJ-001', rehabPlan: 'STANDARD' }),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'EPISODE_NOT_FOUND' });
+  });
+
+  it('EVENT pending에 rehabPlan을 보내면 PAYLOAD_KIND_MISMATCH다', () => {
+    const pending = withPendingEvent(confirmedActiveSnapshot());
+    const result = simulate({
+      ...baseInput(),
+      snapshot: pending,
+      command: resolveEventCommand(pending.revision, { rehabPlan: 'STANDARD' }),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'PAYLOAD_KIND_MISMATCH' });
+  });
+
+  it('EVENT pending에 callUp을 보내면 PAYLOAD_KIND_MISMATCH다', () => {
+    const pending = withPendingEvent(confirmedActiveSnapshot());
+    const result = simulate({
+      ...baseInput(),
+      snapshot: pending,
+      command: resolveEventCommand(pending.revision, { callUp: 'ACCEPT' }),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'PAYLOAD_KIND_MISMATCH' });
+  });
+
+  it('NATIONAL_TEAM pending: callUp이 없으면 CALL_UP_REQUIRED다', () => {
+    const pending = withPendingNationalTeam(confirmedActiveSnapshot());
+    const result = simulate({
+      ...baseInput(),
+      snapshot: pending,
+      command: resolveEventCommand(pending.revision, { eventId: 'EVT-NAT-001' }),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'CALL_UP_REQUIRED' });
+  });
+
+  it.each(['ACCEPT', 'CONDITIONAL'] as const)('NATIONAL_TEAM pending: callUp=%s는 NATIONAL_TEAM_CALLED를 남긴다', (callUp) => {
+    const pending = withPendingNationalTeam(confirmedActiveSnapshot());
+    const result = simulate({
+      ...baseInput(),
+      snapshot: pending,
+      command: resolveEventCommand(pending.revision, { eventId: 'EVT-NAT-001', callUp }),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.pending).toBeNull();
+    const lastEntry = result.snapshot.state.timeline.at(-1);
+    expect(lastEntry?.kind).toBe('NATIONAL_TEAM_CALLED');
+    expect(lastEntry?.refId).toBe('EVT-NAT-001');
+  });
+
+  it('NATIONAL_TEAM pending: callUp=DECLINE은 NATIONAL_TEAM_DECLINED를 남긴다', () => {
+    const pending = withPendingNationalTeam(confirmedActiveSnapshot());
+    const result = simulate({
+      ...baseInput(),
+      snapshot: pending,
+      command: resolveEventCommand(pending.revision, { eventId: 'EVT-NAT-001', callUp: 'DECLINE' }),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const lastEntry = result.snapshot.state.timeline.at(-1);
+    expect(lastEntry?.kind).toBe('NATIONAL_TEAM_DECLINED');
   });
 });
 
@@ -1668,5 +1835,73 @@ describe('simulate — NEGOTIATE/REJECT_OFFER/LOAN_RETURN(T-3-003 전까지 미�
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe('VALIDATION_FAILED');
+  });
+});
+
+// T-4-001 D-50: START_SEASON이 buildDefaultManager로 season.manager를 채우고 injuryCount를 0으로
+// 시작하는지 배선 수준에서 확인한다(buildDefaultManager 자체의 단위 테스트는 manager.test.ts).
+describe('simulate — START_SEASON은 season.manager·injuryCount를 채운다(T-4-001 D-50)', () => {
+  it('첫 시즌: season.manager는 룰셋 managerRules 기반 기본값이고 injuryCount는 0이다', () => {
+    const active = confirmedActiveSnapshotWithBackground('club-academy');
+    const offered = simulate({ ...baseInput(), snapshot: withTags(active, ['진로_아카데미']), command: advanceCommand(active.revision, []) });
+    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('setup: OFFERS 실패');
+    const offer = offered.snapshot.state.pending.offers[0]!;
+    const accepted = simulate({ ...baseInput(), snapshot: offered.snapshot, command: acceptOfferCommand(offered.snapshot.revision, offer.id) });
+    if (!accepted.ok) throw new Error('setup: ACCEPT_OFFER 실패');
+    const started = simulate({
+      ...baseInput(),
+      snapshot: accepted.snapshot,
+      command: { type: 'START_SEASON', commandId: 'cmd-start-mgr', expectedRevision: accepted.snapshot.revision, payload: { simulationMode: 'FAST', serviceSeasonId: 'svc-mgr-test' } },
+    });
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+    const season = started.snapshot.state.season;
+    expect(season).not.toBeNull();
+    expect(season?.manager).not.toBeNull();
+    expect(season?.manager?.id).toBe(`${season?.teamId}-mgr-1`);
+    expect(RULESET.managerRules.names).toContain(season?.manager?.name);
+    expect(season?.manager?.trustBase).toBe(RULESET.managerRules.trustBase);
+    // seasonHistory가 비어있는 첫 시즌이라 tenureSeasons는 1이다.
+    expect(season?.manager?.tenureSeasons).toBe(1);
+    expect(season?.injuryCount).toBe(0);
+  });
+
+  it('같은 팀 2번째 시즌: season.manager.tenureSeasons는 2다(managerTenureSeasons 배선)', () => {
+    const settled = runSettledFixture().snapshot;
+    const teamId = settled.state.contract!.teamId;
+    expect(settled.state.pending).toBeNull();
+
+    const nextSeason = simulate({
+      ...baseInput(),
+      snapshot: settled,
+      command: {
+        type: 'START_SEASON',
+        commandId: 'cmd-start-season-2',
+        expectedRevision: settled.revision,
+        payload: { simulationMode: 'FAST', serviceSeasonId: 'svc-season-2' },
+      },
+    });
+    expect(nextSeason.ok).toBe(true);
+    if (!nextSeason.ok) return;
+    const season = nextSeason.snapshot.state.season;
+    expect(season?.teamId).toBe(teamId);
+    expect(season?.manager?.id).toBe(`${teamId}-mgr-1`);
+    expect(season?.manager?.tenureSeasons).toBe(2);
+  });
+});
+
+describe('simulate — onMatchInjury 훅 호출 지점(T-4-001 D-49)', () => {
+  it('injuredOff:true 경기가 있는 시즌(career-04-gk)에서 playStepMatches가 onMatchInjury를 호출한다', () => {
+    const spy = vi.spyOn(injuryModule, 'onMatchInjury');
+    try {
+      const { beforeSettlement } = runGkFixture();
+      // season-stats.ts의 injuries 카운터는 정확히 match.injuredOff===true일 때만 증가한다 —
+      // playStepMatches의 훅 호출 가드(if (result.match.injuredOff))와 같은 조건이므로 호출 횟수가
+      // 이 카운터와 정확히 같아야 한다.
+      expect(beforeSettlement.playerStats.injuries).toBeGreaterThan(0);
+      expect(spy.mock.calls.length).toBe(beforeSettlement.playerStats.injuries);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyEffects, expireAtSeasonEnd, expireEffects, resolveDeferredEffects, resolveDeferredKind } from './effects.js';
 import { seedRng } from './rng.js';
 import { initialSeasonPlayerStats } from './season-stats.js';
-import { statGroupOf, type CareerState, type Effect, type FootballSeason } from './types.js';
+import { statGroupOf, type CareerState, type Effect, type FootballSeason, type InjuryEpisode } from './types.js';
 
 function baseState(): CareerState {
   return {
@@ -82,6 +82,10 @@ function baseState(): CareerState {
     timeline: [],
     season: null,
     seasonHistory: [],
+    health: { episodes: [] },
+    relationshipLog: [],
+    memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
+    reputation: { popularityCenti: 5000, mediaCenti: 5000 },
   };
 }
 
@@ -232,6 +236,12 @@ describe('resolveDeferredKind', () => {
     expect(resolveDeferredKind('context.tacticalFit')).toEqual({ kind: 'CONTEXT', target: 'tacticalFit' });
     expect(resolveDeferredKind('shooting')).toEqual({ kind: 'PERMANENT', target: 'shooting' });
   });
+
+  // T-4-001 D-49: reputation.*(popularity/media)도 relationships.*와 같은 RELATION으로 풀린다.
+  it('reputation.* → RELATION(접두사만 벗긴 target)', () => {
+    expect(resolveDeferredKind('reputation.popularity')).toEqual({ kind: 'RELATION', target: 'popularity' });
+    expect(resolveDeferredKind('reputation.media')).toEqual({ kind: 'RELATION', target: 'media' });
+  });
 });
 
 describe('resolveDeferredEffects', () => {
@@ -278,6 +288,8 @@ describe('resolveDeferredEffects', () => {
       matchRngState: seedRng('effects-test-season'),
       scheduledEffects,
       chapters: [],
+      manager: null,
+      injuryCount: 0,
     };
   }
 
@@ -337,6 +349,8 @@ function seasonWithIndex(index: number): FootballSeason {
     matchRngState: seedRng('effects-test-season-index'),
     scheduledEffects: [],
     chapters: [],
+    manager: null,
+    injuryCount: 0,
   };
 }
 
@@ -488,5 +502,191 @@ describe('reasonTag', () => {
     const result = applyEffects(state, [effect], { step: 1 });
     expect(result.applied[0]?.reasonTag).toBe('EVT-MORALE.win');
     expect(result.state.activeEffects[0]?.reasonTag).toBe('EVT-MORALE.win');
+  });
+});
+
+// T-4-001 D-49: RELATION의 두 번째 bag — reputation(popularity/media). 5000에서 0~10000으로 clamp된다.
+describe('RELATION — reputation(popularity/media, T-4-001 D-49)', () => {
+  it('popularity/media는 reputation.popularityCenti/mediaCenti에 SUM되고 0~10000으로 clamp된다', () => {
+    const state = baseState();
+    const popularityUp = makeEffect({
+      kind: 'RELATION',
+      target: 'popularity',
+      delta: 8000,
+      clamp: { min: 0, max: 10000 },
+      stackingRule: 'SUM',
+      sourceId: 'EVT-REP.a.1',
+    });
+    const mediaDown = makeEffect({
+      kind: 'RELATION',
+      target: 'media',
+      delta: -8000,
+      clamp: { min: 0, max: 10000 },
+      stackingRule: 'SUM',
+      sourceId: 'EVT-REP.a.2',
+    });
+    const result = applyEffects(state, [popularityUp, mediaDown], { step: 1 });
+    expect(result.state.reputation.popularityCenti).toBe(10000);
+    expect(result.state.reputation.mediaCenti).toBe(0);
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('reputation은 relationships(5축)와 분리된 bag이다 — popularity를 바꿔도 relationships는 그대로다', () => {
+    const state = baseState();
+    const effect = makeEffect({ kind: 'RELATION', target: 'popularity', delta: 500, clamp: { min: 0, max: 10000 }, stackingRule: 'SUM' });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.state.reputation.popularityCenti).toBe(5500);
+    expect(result.state.relationships).toEqual(state.relationships);
+  });
+});
+
+// T-4-001 D-49: HEALTH kind — SUM·IMMEDIATE·만료 없음만 허용, 성공해도 activeEffects에 남지 않는다.
+describe('HEALTH Effect (T-4-001 D-49)', () => {
+  function healthEffect(overrides: Partial<Effect> = {}): Effect {
+    return makeEffect({
+      kind: 'HEALTH',
+      target: 'availability.matchesRemaining',
+      delta: -1,
+      clamp: { min: 0, max: 10 },
+      stackingRule: 'SUM',
+      appliesAt: { kind: 'IMMEDIATE' },
+      expiresAt: null,
+      ...overrides,
+    });
+  }
+
+  function episode(overrides: Partial<InjuryEpisode> = {}): InjuryEpisode {
+    return {
+      id: 'INJ-1-1-1',
+      severity: 'MODERATE',
+      bodyPart: 'HAMSTRING',
+      occurredAt: { seasonIndex: 1, step: 1, matchId: 'm1' },
+      diagnosisRange: { minMatches: 3, maxMatches: 6 },
+      rehab: null,
+      recurrenceRiskBp: 3000,
+      status: 'ACTIVE',
+      permanentDelta: null,
+      ...overrides,
+    };
+  }
+
+  it('(a) INJURY availability가 있으면 matchesRemaining이 delta만큼 증감한다', () => {
+    const state = {
+      ...baseState(),
+      season: { ...seasonWithIndex(1), availability: { kind: 'INJURY' as const, matchesRemaining: 2, sinceMatchId: 'm1' } },
+    };
+    const effect = healthEffect({ delta: -1 });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.state.season?.availability).toEqual({ kind: 'INJURY', matchesRemaining: 1, sinceMatchId: 'm1' });
+    expect(result.applied).toEqual([effect]);
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('(a) matchesRemaining은 clamp된다(하한 0)', () => {
+    const state = {
+      ...baseState(),
+      season: { ...seasonWithIndex(1), availability: { kind: 'INJURY' as const, matchesRemaining: 1, sinceMatchId: 'm1' } },
+    };
+    const effect = healthEffect({ delta: -5, clamp: { min: 0, max: 10 } });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.state.season?.availability?.matchesRemaining).toBe(0);
+  });
+
+  it('(b) availability가 없으면(활성 부상 아님) NO_ACTIVE_INJURY로 reject된다', () => {
+    const state = { ...baseState(), season: seasonWithIndex(1) };
+    const effect = healthEffect();
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.rejected).toEqual([{ effect, reason: 'NO_ACTIVE_INJURY' }]);
+    expect(result.state.season?.availability).toBeNull();
+  });
+
+  it('(b) availability.kind가 SUSPENSION이면(INJURY 아님) NO_ACTIVE_INJURY로 reject된다', () => {
+    const state = {
+      ...baseState(),
+      season: { ...seasonWithIndex(1), availability: { kind: 'SUSPENSION' as const, matchesRemaining: 2, sinceMatchId: 'm1' } },
+    };
+    const effect = healthEffect();
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.rejected).toEqual([{ effect, reason: 'NO_ACTIVE_INJURY' }]);
+  });
+
+  it('(c) 활성(ACTIVE/REHAB) 에피소드가 있으면 recurrenceRiskBp가 SUM된다', () => {
+    const state = { ...baseState(), health: { episodes: [episode({ recurrenceRiskBp: 3000 })] } };
+    const effect = healthEffect({ target: 'health.recurrenceRiskBp', delta: 1500, clamp: { min: 0, max: 10000 } });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.state.health.episodes[0]?.recurrenceRiskBp).toBe(4500);
+    expect(result.applied).toEqual([effect]);
+  });
+
+  it('(c) recurrenceRiskBp는 0~10000으로 clamp된다', () => {
+    const state = { ...baseState(), health: { episodes: [episode({ recurrenceRiskBp: 9500 })] } };
+    const effect = healthEffect({ target: 'health.recurrenceRiskBp', delta: 2000, clamp: { min: 0, max: 10000 } });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.state.health.episodes[0]?.recurrenceRiskBp).toBe(10000);
+  });
+
+  it('(c) 에피소드가 여러 개면 가장 최근 활성 에피소드만 바뀐다', () => {
+    const recovered = episode({ id: 'INJ-old', status: 'RECOVERED', recurrenceRiskBp: 1000 });
+    const active = episode({ id: 'INJ-new', status: 'REHAB', recurrenceRiskBp: 2000 });
+    const state = { ...baseState(), health: { episodes: [recovered, active] } };
+    const effect = healthEffect({ target: 'health.recurrenceRiskBp', delta: 500, clamp: { min: 0, max: 10000 } });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.state.health.episodes[0]?.recurrenceRiskBp).toBe(1000);
+    expect(result.state.health.episodes[1]?.recurrenceRiskBp).toBe(2500);
+  });
+
+  it('(c) 활성 에피소드가 없으면(전부 RECOVERED) NO_ACTIVE_EPISODE로 reject된다', () => {
+    const state = { ...baseState(), health: { episodes: [episode({ status: 'RECOVERED' })] } };
+    const effect = healthEffect({ target: 'health.recurrenceRiskBp' });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.rejected).toEqual([{ effect, reason: 'NO_ACTIVE_EPISODE' }]);
+  });
+
+  it('(c) episodes가 비어 있어도 NO_ACTIVE_EPISODE로 reject된다', () => {
+    const state = baseState();
+    const effect = healthEffect({ target: 'health.recurrenceRiskBp' });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.rejected).toEqual([{ effect, reason: 'NO_ACTIVE_EPISODE' }]);
+  });
+
+  it('(d) stackingRule이 SUM이 아니면 HEALTH_RULE로 reject된다(availability가 있어도)', () => {
+    const state = {
+      ...baseState(),
+      season: { ...seasonWithIndex(1), availability: { kind: 'INJURY' as const, matchesRemaining: 2, sinceMatchId: 'm1' } },
+    };
+    const effect = healthEffect({ stackingRule: 'REPLACE' });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.rejected).toEqual([{ effect, reason: 'HEALTH_RULE' }]);
+    expect(result.state.season?.availability?.matchesRemaining).toBe(2);
+  });
+
+  it('(d) appliesAt이 IMMEDIATE가 아니면 HEALTH_RULE로 reject된다', () => {
+    const state = baseState();
+    const effect = healthEffect({ appliesAt: { kind: 'NEXT_SEASON_STEP', step: 1 } });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.rejected).toEqual([{ effect, reason: 'HEALTH_RULE' }]);
+  });
+
+  it('(d) expiresAt이 null이 아니면 HEALTH_RULE로 reject된다', () => {
+    const state = baseState();
+    const effect = healthEffect({ expiresAt: { kind: 'AT_SEASON_END' } });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.rejected).toEqual([{ effect, reason: 'HEALTH_RULE' }]);
+  });
+
+  it('(e) 성공한 HEALTH 효과는 activeEffects에 남지 않는다', () => {
+    const state = {
+      ...baseState(),
+      season: { ...seasonWithIndex(1), availability: { kind: 'INJURY' as const, matchesRemaining: 2, sinceMatchId: 'm1' } },
+    };
+    const result = applyEffects(state, [healthEffect()], { step: 1 });
+    expect(result.state.activeEffects).toEqual([]);
+  });
+
+  it('그 외 target은 INVALID_TARGET_FOR_KIND로 reject된다', () => {
+    const state = baseState();
+    const effect = healthEffect({ target: 'health.unknown' });
+    const result = applyEffects(state, [effect], { step: 1 });
+    expect(result.rejected).toEqual([{ effect, reason: 'INVALID_TARGET_FOR_KIND:HEALTH:health.unknown' }]);
   });
 });

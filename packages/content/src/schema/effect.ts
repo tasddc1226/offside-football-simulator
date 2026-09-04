@@ -32,7 +32,11 @@ export const PERMANENT_TARGETS = Object.keys(ATTRIBUTE_TARGET_SET) as AttributeK
 
 export const CURRENT_TARGETS = ['form', 'fitness', 'morale'] as const;
 export const CONTEXT_TARGETS = ['tacticalFit', 'squadStatus', 'positionProficiency'] as const;
-export const RELATION_TARGETS = ['managerTrust', 'captain', 'rival', 'fans', 'agent'] as const;
+// T-4-001 D-49: popularity/media는 state.reputation.popularityCenti/mediaCenti에 SUM된다(타깃 이름과
+// 실제 필드 이름이 다르다 — domain effects.ts REPUTATION_FIELD 참고).
+export const RELATION_TARGETS = ['managerTrust', 'captain', 'rival', 'fans', 'agent', 'popularity', 'media'] as const;
+// T-4-001 D-49: HEALTH 전용 타깃 2개(season.availability·health.episodes를 갱신, 4bag 밖의 별도 경로).
+export const HEALTH_TARGETS = ['availability.matchesRemaining', 'health.recurrenceRiskBp'] as const;
 
 const DEFERRED_TARGETS = new Set<string>([...PERMANENT_TARGETS, ...CURRENT_TARGETS, ...CONTEXT_TARGETS, ...RELATION_TARGETS]);
 
@@ -42,6 +46,7 @@ const EFFECT_KIND_SET: Record<EffectKind, true> = {
   CONTEXT: true,
   RELATION: true,
   DEFERRED: true,
+  HEALTH: true,
 };
 export const EFFECT_KINDS = Object.keys(EFFECT_KIND_SET) as EffectKind[];
 
@@ -103,6 +108,21 @@ export const EffectSchema = z
         path: ['expiresAt'],
       });
     }
+
+    // T-4-001 D-49: HEALTH는 activeEffects에 저장되지 않는 즉발 효과라 stackingRule: 'SUM',
+    // appliesAt: IMMEDIATE, expiresAt: null만 허용한다(domain effects.ts가 그 외 조합을 reason
+    // HEALTH_RULE로 reject하는 것과 짝).
+    if (effect.kind === 'HEALTH') {
+      if (effect.stackingRule !== 'SUM') {
+        ctx.addIssue({ code: 'custom', message: "HEALTH 효과는 stackingRule이 'SUM'이어야 한다.", path: ['stackingRule'] });
+      }
+      if (effect.appliesAt.kind !== 'IMMEDIATE') {
+        ctx.addIssue({ code: 'custom', message: "HEALTH 효과는 appliesAt.kind가 'IMMEDIATE'여야 한다.", path: ['appliesAt'] });
+      }
+      if (effect.expiresAt !== null) {
+        ctx.addIssue({ code: 'custom', message: 'HEALTH 효과는 expiresAt이 null이어야 한다.', path: ['expiresAt'] });
+      }
+    }
   }) satisfies z.ZodType<Effect>;
 
 function validateEffectTarget(effect: z.infer<typeof EffectSchema>, ctx: z.RefinementCtx): void {
@@ -148,7 +168,16 @@ function validateEffectTarget(effect: z.infer<typeof EffectSchema>, ctx: z.Refin
       if (!(RELATION_TARGETS as readonly string[]).includes(effect.target)) {
         ctx.addIssue({
           code: 'custom',
-          message: `RELATION 효과의 target은 managerTrust|captain|rival|fans|agent 중 하나여야 한다: ${effect.target}`,
+          message: `RELATION 효과의 target은 managerTrust|captain|rival|fans|agent|popularity|media 중 하나여야 한다: ${effect.target}`,
+          path: ['target'],
+        });
+      }
+      return;
+    case 'HEALTH':
+      if (!(HEALTH_TARGETS as readonly string[]).includes(effect.target)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `HEALTH 효과의 target은 availability.matchesRemaining|health.recurrenceRiskBp 중 하나여야 한다: ${effect.target}`,
           path: ['target'],
         });
       }
@@ -198,5 +227,13 @@ export const EFFECT_DEFAULTS: Record<EffectKind, EffectDefaults> = {
     appliesAt: { kind: 'NEXT_SEASON_STEP', step: 1 },
     expiresAt: null,
     stackingRule: 'ONCE_PER_SOURCE',
+  },
+  // T-4-001 D-49: 유일하게 허용되는 조합(SUM·IMMEDIATE·만료 없음). clamp는 두 타깃 중 값 범위가 더
+  // 넓은 recurrenceRiskBp(0~10000) 기준 — matchesRemaining을 쓰는 효과는 저작 시 좁혀서 쓴다.
+  HEALTH: {
+    clamp: { min: 0, max: 10000 },
+    appliesAt: { kind: 'IMMEDIATE' },
+    expiresAt: null,
+    stackingRule: 'SUM',
   },
 };
