@@ -45,11 +45,25 @@ function computeSeasonsRemaining(contract: Contract, timeline: readonly Timeline
   return Math.max(0, contract.lengthSeasons - seasonsServed);
 }
 
+/**
+ * T-4-001 D-49: domain effects.ts `findActiveEpisodeIndex`와 같은 규칙("활성 에피소드" = status가
+ * ACTIVE 또는 REHAB인 것 중 배열 마지막 항목)을 content가 domain 런타임을 import할 수 없어(ADR-005)
+ * 여기서 다시 복제한다.
+ */
+function findActiveEpisode(episodes: CareerState['health']['episodes']): CareerState['health']['episodes'][number] | null {
+  for (let i = episodes.length - 1; i >= 0; i--) {
+    const episode = episodes[i]!;
+    if (episode.status === 'ACTIVE' || episode.status === 'REHAB') return episode;
+  }
+  return null;
+}
+
 /** `CareerState`를 04 이벤트 엔진 조건 DSL(`ConditionContext`)로 매핑한다. */
 export function buildConditionContext(state: CareerState): ConditionContext {
   const profile = state.player.profile;
   const contract = state.contract;
   const seasonsRemaining = contract ? computeSeasonsRemaining(contract, state.timeline) : NOT_MODELED_INT;
+  const activeEpisode = findActiveEpisode(state.health.episodes);
 
   const context: ConditionContext = {
     'career.age': state.age,
@@ -88,8 +102,10 @@ export function buildConditionContext(state: CareerState): ConditionContext {
     'contract.rolePromise': state.contract?.rolePromise ?? NOT_MODELED_STRING,
     'contract.wageBand': NOT_MODELED_STRING,
 
-    'health.injuryEpisode': NOT_MODELED_STRING,
-    'health.recurrenceRisk': NOT_MODELED_INT,
+    // T-4-001: Phase 1 경로 두 개. health.injuryEpisode는 스키마 type이 'string'이라(condition.ts,
+    // T-4-001 이전부터 예약된 값) 1/0을 문자열로 낸다.
+    'health.injuryEpisode': activeEpisode !== null ? '1' : '0',
+    'health.recurrenceRisk': Math.floor((activeEpisode?.recurrenceRiskBp ?? 0) / 100),
 
     'rng.injuryRoll': NO_INJURY_ROLL,
 
@@ -106,15 +122,14 @@ export function buildConditionContext(state: CareerState): ConditionContext {
     'career.permanentTransfers': state.clubHistory.filter((stint) => stint.endReason === 'TRANSFERRED').length,
     'career.clubsCount': new Set(state.clubHistory.map((stint) => stint.teamId)).size,
 
-    // T-3-001 D-53: 트랙 B(부상·인간관계·평판) 예약 — 생성기가 없어 NOT_MODELED_* 값만 낸다.
-    // 소유: health.*는 T-4-001·T-4-002, reputation.popularityCenti는 T-4-001·T-4-003,
-    // season.manager.*는 T-4-001·T-4-003, season.stats.recentFormAvg는 T-4-003.
-    'health.activeSeverity': NOT_MODELED_STRING,
-    'health.recurrenceRiskBp': NOT_MODELED_INT,
-    'health.majorInjuries': NOT_MODELED_INT,
-    'reputation.popularityCenti': NOT_MODELED_INT,
-    'season.manager.tenureSeasons': NOT_MODELED_INT,
-    'season.manager.id': NOT_MODELED_STRING,
+    // T-3-001 D-53 예약, T-4-001이 값을 채운다(생성기가 없는 발생 roll·감독 교체 자체는 여전히
+    // T-4-002·T-4-003 몫이라 season.stats.recentFormAvg만 NOT_MODELED로 남는다, 소유 T-4-003).
+    'health.activeSeverity': activeEpisode?.severity ?? NOT_MODELED_STRING,
+    'health.recurrenceRiskBp': activeEpisode?.recurrenceRiskBp ?? NOT_MODELED_INT,
+    'health.majorInjuries': state.health.episodes.filter((episode) => episode.severity === 'MAJOR').length,
+    'reputation.popularityCenti': state.reputation.popularityCenti,
+    'season.manager.tenureSeasons': state.season?.manager?.tenureSeasons ?? NOT_MODELED_INT,
+    'season.manager.id': state.season?.manager?.id ?? NOT_MODELED_STRING,
     'season.stats.recentFormAvg': NOT_MODELED_INT,
   };
 

@@ -51,12 +51,21 @@ export const OutcomeSchema = z.strictObject({
 
 export const RISK_LABELS = ['LOW', 'MEDIUM', 'HIGH'] as const;
 
+// T-4-001 D-52: presentation이 INJURY/NATIONAL_TEAM인 이벤트의 choice가 클라이언트에 알려주는, 이
+// choice를 고르면 RESOLVE_EVENT payload에 실어 보낼 값(실제로 payload에 옮기는 것은 T-4-005).
+export const REHAB_PLANS = ['EARLY', 'STANDARD', 'CONSERVATIVE'] as const;
+export const RehabPlanSchema = z.enum(REHAB_PLANS);
+export const NATIONAL_TEAM_CALL_UPS = ['ACCEPT', 'DECLINE', 'CONDITIONAL'] as const;
+export const NationalTeamCallUpSchema = z.enum(NATIONAL_TEAM_CALL_UPS);
+
 export const ChoiceSchema = z.strictObject({
   id: ChoiceIdSchema,
   label: z.string().min(1),
   riskLabel: z.enum(RISK_LABELS),
   previewEffects: z.array(EffectPreviewSchema).min(1),
   outcomes: z.array(OutcomeSchema).min(1),
+  rehabPlan: RehabPlanSchema.optional(),
+  callUp: NationalTeamCallUpSchema.optional(),
 });
 
 export const NarrativeSchema = z.strictObject({ situation: z.string().min(1) });
@@ -96,6 +105,33 @@ export const EventDefinitionSchema = z
         ctx.addIssue({ code: 'custom', message: issue.message, path: textPath });
       }
     }
+
+    // T-4-001 D-52: presentation === INJURY면 모든 choice에 rehabPlan 필수(callUp 금지),
+    // NATIONAL_TEAM이면 모든 choice에 callUp 필수(rehabPlan 금지), 그 외(또는 없음)는 둘 다 금지.
+    event.choices.forEach((choice, index) => {
+      if (event.presentation === 'INJURY') {
+        if (choice.rehabPlan === undefined) {
+          ctx.addIssue({ code: 'custom', message: 'presentation이 INJURY인 이벤트의 choice는 rehabPlan이 필요하다.', path: ['choices', index, 'rehabPlan'] });
+        }
+        if (choice.callUp !== undefined) {
+          ctx.addIssue({ code: 'custom', message: 'presentation이 INJURY인 이벤트의 choice에는 callUp을 쓸 수 없다.', path: ['choices', index, 'callUp'] });
+        }
+      } else if (event.presentation === 'NATIONAL_TEAM') {
+        if (choice.callUp === undefined) {
+          ctx.addIssue({ code: 'custom', message: 'presentation이 NATIONAL_TEAM인 이벤트의 choice는 callUp이 필요하다.', path: ['choices', index, 'callUp'] });
+        }
+        if (choice.rehabPlan !== undefined) {
+          ctx.addIssue({ code: 'custom', message: 'presentation이 NATIONAL_TEAM인 이벤트의 choice에는 rehabPlan을 쓸 수 없다.', path: ['choices', index, 'rehabPlan'] });
+        }
+      } else {
+        if (choice.rehabPlan !== undefined) {
+          ctx.addIssue({ code: 'custom', message: 'rehabPlan은 presentation이 INJURY인 choice에만 쓸 수 있다.', path: ['choices', index, 'rehabPlan'] });
+        }
+        if (choice.callUp !== undefined) {
+          ctx.addIssue({ code: 'custom', message: 'callUp은 presentation이 NATIONAL_TEAM인 choice에만 쓸 수 있다.', path: ['choices', index, 'callUp'] });
+        }
+      }
+    });
   });
 
 export type EventDefinition = z.infer<typeof EventDefinitionSchema>;

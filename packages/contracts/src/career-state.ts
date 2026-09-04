@@ -535,7 +535,9 @@ export const TrainingFocusSchema = z.enum(['ROLE', 'TECHNICAL', 'PHYSICAL', 'MEN
 // domain `Effect`와 동일한 형태(kind·sourceId·target·delta·clamp·appliesAt·expiresAt·stackingRule).
 // FootballSeasonSchema.scheduledEffects가 참조하므로 그 앞에 둔다.
 export const EffectSchema = z.strictObject({
-  kind: z.enum(['PERMANENT', 'CURRENT', 'CONTEXT', 'RELATION', 'DEFERRED']),
+  // T-4-001 D-49: HEALTH는 activeEffects에 저장되지 않는 즉발 효과(availability.matchesRemaining·
+  // health.recurrenceRiskBp 전용, domain effects.ts 참고).
+  kind: z.enum(['PERMANENT', 'CURRENT', 'CONTEXT', 'RELATION', 'DEFERRED', 'HEALTH']),
   sourceId: z.string(),
   target: z.string(),
   delta: z.number().int(),
@@ -562,6 +564,15 @@ export const EffectSchema = z.strictObject({
   // T-2-014 D-40 규칙 4: REPLACE + expiresAt 조합이 `activeEffects`에 저장될 때 `applyEffects`가
   // 채우는 적용 전 원래 값(만료 시 이 값으로 복원한다).
   restoreTo: z.number().exactOptional(),
+});
+
+// T-4-001 D-50: 시즌 감독. domain `SeasonManager`와 동일(START_SEASON이 rng 없이 기본값을 만든다).
+export const SeasonManagerSchema = z.strictObject({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  preferredArchetypeIds: z.array(z.string()),
+  tenureSeasons: z.number().int().positive(),
+  trustBase: z.number().int(),
 });
 
 export const FootballSeasonSchema = z.strictObject({
@@ -599,6 +610,10 @@ export const FootballSeasonSchema = z.strictObject({
   scheduledEffects: z.array(EffectSchema),
   // T-2-004 D-38: 이 시즌에 판단이 모두 끝난 핵심 경기 챕터(step·확정 순).
   chapters: z.array(ChapterRecordSchema),
+  // T-4-001 D-50: 이 시즌 감독.
+  manager: SeasonManagerSchema.nullable(),
+  // T-4-001 D-49: 이 시즌에 만든 INJURY pending 수(RULE-TIME-004 상한 2).
+  injuryCount: z.number().int().nonnegative(),
 });
 
 // T-2-005 D-39: domain `GrowthCause`와 동일.
@@ -743,6 +758,54 @@ const attributesShape = Object.fromEntries(
 /** 20개 능력 키 전부 필수 정수. */
 export const AttributesSchema = z.strictObject(attributesShape);
 
+// T-4-001 D-49: domain `InjurySeverity`·`InjuryBodyPart`·`RehabPlan`과 동일.
+export const InjurySeveritySchema = z.enum(['MINOR', 'MODERATE', 'MAJOR']);
+export const InjuryBodyPartSchema = z.enum(['KNEE', 'ANKLE', 'HAMSTRING', 'SHOULDER', 'HEAD']);
+export const RehabPlanSchema = z.enum(['EARLY', 'STANDARD', 'CONSERVATIVE']);
+
+// T-4-001 D-49: 부상 에피소드 하나. "활성 에피소드" 판정(status ACTIVE|REHAB, 배열 마지막 항목)은
+// domain effects.ts `findActiveEpisodeIndex`가 정본이다.
+export const InjuryEpisodeSchema = z.strictObject({
+  id: z.string().min(1),
+  severity: InjurySeveritySchema,
+  bodyPart: InjuryBodyPartSchema,
+  occurredAt: z.strictObject({
+    seasonIndex: z.number().int().positive(),
+    step: z.number().int().min(1).max(12),
+    matchId: z.string().min(1),
+  }),
+  diagnosisRange: z.strictObject({
+    minMatches: z.number().int().positive(),
+    maxMatches: z.number().int().positive(),
+  }),
+  rehab: RehabPlanSchema.nullable(),
+  recurrenceRiskBp: z.number().int().min(0).max(10000),
+  status: z.enum(['ACTIVE', 'REHAB', 'RECOVERED', 'RECURRED']),
+  permanentDelta: z
+    .array(z.strictObject({ key: z.enum(CAREER_STATE_ATTRIBUTE_KEYS), delta: z.number().int() }))
+    .nullable(),
+});
+
+// T-4-001 D-50: 관계 로그·기억 태그가 다루는 대상 축 5개. domain `RelationTarget`과 동일(순서는
+// `relationships` 필드와 같은 순서를 유지한다).
+export const RelationTargetSchema = z.enum(['managerTrust', 'captain', 'rival', 'fans', 'agent']);
+
+// T-4-001 D-50: 관계 변화 감사 로그 항목 하나. domain `RelationshipLogEntry`와 동일.
+export const RelationshipLogEntrySchema = z.strictObject({
+  target: RelationTargetSchema,
+  delta: z.number().int(),
+  sourceId: z.string().min(1),
+  reasonTag: z.string().min(1).nullable(),
+  seasonIndex: z.number().int().positive(),
+  step: z.number().int().min(1).max(12),
+});
+
+// T-4-001 D-49: 인기·미디어 평판(0~10000). domain `CareerState['reputation']`과 동일.
+export const ReputationSchema = z.strictObject({
+  popularityCenti: z.number().int().min(0).max(10000),
+  mediaCenti: z.number().int().min(0).max(10000),
+});
+
 /**
  * D-13: Phase 1 `CareerState` 전체(domain `CareerState`와 동일). 04(Snapshot `state` 내부) 검증용
  * 엄격 스키마다 — 아래 `SnapshotStateEnvelopeSchema`(snapshot.ts)는 여러 schemaVersion·미래 필드를
@@ -802,6 +865,20 @@ export const CareerStateSchema = z.strictObject({
   timeline: z.array(TimelineEntrySchema),
   season: FootballSeasonSchema.nullable(),
   seasonHistory: z.array(SeasonSummarySchema),
+  // T-4-001 D-49: 부상 에피소드 이력.
+  health: z.strictObject({ episodes: z.array(InjuryEpisodeSchema) }),
+  // T-4-001 D-50: 관계 변화 감사 로그(최대 길이는 룰셋 relationshipRules.logMax).
+  relationshipLog: z.array(RelationshipLogEntrySchema),
+  // T-4-001 D-50: 대상별 기억 태그(축당 최대 relationshipRules.memoryTagsMax).
+  memoryTags: z.strictObject({
+    managerTrust: z.array(z.string()),
+    captain: z.array(z.string()),
+    rival: z.array(z.string()),
+    fans: z.array(z.string()),
+    agent: z.array(z.string()),
+  }),
+  // T-4-001 D-49: 인기·미디어 평판.
+  reputation: ReputationSchema,
 });
 
 export type CareerState = z.infer<typeof CareerStateSchema>;

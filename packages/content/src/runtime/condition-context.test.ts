@@ -193,15 +193,80 @@ describe('buildConditionContext: T-3-001 신규 필드', () => {
     expect(context['career.clubsCount']).toBe(2);
   });
 
-  it('트랙 B 예약 필드는 전부 NOT_MODELED 기본값이다', () => {
+  // T-4-001: health.*·season.manager.*는 이제 실제 값을 낸다(활성 에피소드·manager 없음 →
+  // NOT_MODELED와 같은 형태의 기본값). reputation.popularityCenti는 CareerState 기본값(5000)을
+  // 그대로 낸다 — 더 이상 NOT_MODELED가 아니다. season.stats.recentFormAvg만 T-4-003 몫으로 남는다.
+  it('트랙 B 필드는 에피소드·manager가 없으면 기본값이다(reputation 제외)', () => {
     const context = buildConditionContext(buildTestState());
     expect(context['health.activeSeverity']).toBe('');
     expect(context['health.recurrenceRiskBp']).toBe(0);
     expect(context['health.majorInjuries']).toBe(0);
-    expect(context['reputation.popularityCenti']).toBe(0);
+    expect(context['reputation.popularityCenti']).toBe(5000);
     expect(context['season.manager.tenureSeasons']).toBe(0);
     expect(context['season.manager.id']).toBe('');
     expect(context['season.stats.recentFormAvg']).toBe(0);
+  });
+
+  it('health.*는 활성(ACTIVE) 에피소드가 있으면 그 값을 낸다', () => {
+    const context = buildConditionContext(
+      buildTestState({
+        health: {
+          episodes: [
+            {
+              id: 'INJ-1',
+              severity: 'MAJOR',
+              bodyPart: 'KNEE',
+              occurredAt: { seasonIndex: 1, step: 3, matchId: 'M-1' },
+              diagnosisRange: { minMatches: 4, maxMatches: 8 },
+              rehab: null,
+              recurrenceRiskBp: 1200,
+              status: 'ACTIVE',
+              permanentDelta: null,
+            },
+          ],
+        },
+      }),
+    );
+    expect(context['health.activeSeverity']).toBe('MAJOR');
+    expect(context['health.recurrenceRiskBp']).toBe(1200);
+    expect(context['health.majorInjuries']).toBe(1);
+    expect(context['health.injuryEpisode']).toBe('1');
+    expect(context['health.recurrenceRisk']).toBe(12);
+  });
+
+  it('health.activeSeverity는 RECOVERED 에피소드는 무시한다(활성 아님)', () => {
+    const context = buildConditionContext(
+      buildTestState({
+        health: {
+          episodes: [
+            {
+              id: 'INJ-1',
+              severity: 'MINOR',
+              bodyPart: 'ANKLE',
+              occurredAt: { seasonIndex: 1, step: 1, matchId: 'M-0' },
+              diagnosisRange: { minMatches: 1, maxMatches: 2 },
+              rehab: 'STANDARD',
+              recurrenceRiskBp: 300,
+              status: 'RECOVERED',
+              permanentDelta: null,
+            },
+          ],
+        },
+      }),
+    );
+    expect(context['health.activeSeverity']).toBe('');
+    expect(context['health.injuryEpisode']).toBe('0');
+    expect(context['health.majorInjuries']).toBe(0);
+  });
+
+  it('season.manager.*는 season.manager가 있으면 그 값을 낸다', () => {
+    const context = buildConditionContext(
+      buildTestState({
+        season: { ...buildSeasonStub(), manager: { id: 'team-1-mgr-1', name: '박태식', preferredArchetypeIds: [], tenureSeasons: 2, trustBase: 50 } },
+      }),
+    );
+    expect(context['season.manager.id']).toBe('team-1-mgr-1');
+    expect(context['season.manager.tenureSeasons']).toBe(2);
   });
 });
 
@@ -244,5 +309,7 @@ function buildSeasonStub(): FootballSeason {
     matchRngState: { s: [1, 2, 3, 4], draws: 0 },
     scheduledEffects: [],
     chapters: [],
+    manager: null,
+    injuryCount: 0,
   };
 }

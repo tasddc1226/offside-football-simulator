@@ -4,6 +4,7 @@ import {
   ChapterTriggerSchema,
   EffectSchema,
   NegotiationAskSchema,
+  RehabPlanSchema,
   SlotImportanceSchema,
   TrainingFocusSchema,
 } from './career-state.js';
@@ -114,12 +115,20 @@ const ResolveEventOutcomeSchema = z.strictObject({
   removeTags: z.array(z.string()).optional(),
 });
 
+// T-4-001 D-52: RESOLVE_EVENT가 NATIONAL_TEAM pending을 닫을 때 받는 선택. domain
+// `NationalTeamCallUp`과 동일.
+export const NationalTeamCallUpSchema = z.enum(['ACCEPT', 'DECLINE', 'CONDITIONAL']);
+
 // D-10: RESOLVE_EVENT payload.
+// T-4-001 D-52: rehabPlan은 INJURY pending, callUp은 NATIONAL_TEAM pending을 닫을 때만 쓴다(그 외
+// 조합은 domain simulate.ts resolveEvent가 PAYLOAD_KIND_MISMATCH로 reject).
 export const ResolveEventPayloadSchema = z.strictObject({
   eventId: z.string().min(1),
   definitionVersion: z.number().int().min(1),
   choiceId: z.string().min(1),
   outcomes: z.array(ResolveEventOutcomeSchema).min(1),
+  rehabPlan: RehabPlanSchema.exactOptional(),
+  callUp: NationalTeamCallUpSchema.exactOptional(),
 });
 
 // T-2-004 D-38 CMD-SIM-005: RESOLVE_CHAPTER payload의 outcome 하나. ResolveEventOutcomeSchema와
