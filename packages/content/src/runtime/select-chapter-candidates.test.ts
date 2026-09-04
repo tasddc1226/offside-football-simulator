@@ -151,6 +151,8 @@ function buildSeasonStub(): FootballSeason {
     matchRngState: { s: [1, 2, 3, 4] as [number, number, number, number], draws: 0 },
     scheduledEffects: [],
     chapters: [],
+    manager: null,
+    injuryCount: 0,
   };
 }
 

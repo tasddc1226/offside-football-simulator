@@ -322,6 +322,8 @@ function makeSeason(overrides: Partial<FootballSeason> = {}): FootballSeason {
     matchRngState: seedRng('chapter-test-match-rng'),
     scheduledEffects: [],
     chapters: [],
+    manager: null,
+    injuryCount: 0,
     ...overrides,
   };
 }
@@ -404,6 +406,10 @@ function makeState(overrides: Partial<CareerState> = {}): CareerState {
     timeline: [],
     season: makeSeason(),
     seasonHistory: [],
+    health: { episodes: [] },
+    relationshipLog: [],
+    memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
+    reputation: { popularityCenti: 5000, mediaCenti: 5000 },
     ...overrides,
   };
 }
