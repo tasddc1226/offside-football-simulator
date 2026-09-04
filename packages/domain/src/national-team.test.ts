@@ -277,8 +277,9 @@ describe('T-4-004 qualification', () => {
     expect(qualifyNationalTeam(lowPopularity, rulesetProto).eligible).toBe(false);
   });
 
-  it('rejects non-pro, wrong-step, no-contract, and already-called-up states without consuming RNG', () => {
-    const cases: Array<[string, CareerState, 'NOT_PRO' | 'WRONG_STEP' | 'NO_CONTRACT' | 'ALREADY_CALLED_UP']> = [
+  it('rejects inactive, non-pro, wrong-step, no-contract, and already-called-up states without consuming RNG', () => {
+    const cases: Array<[string, CareerState, 'NOT_ACTIVE' | 'NOT_PRO' | 'WRONG_STEP' | 'NO_CONTRACT' | 'ALREADY_CALLED_UP']> = [
+      ['inactive', makeEligibleState({ status: 'RETIRED' }), 'NOT_ACTIVE'],
       ['non-pro', makeEligibleState({ stage: 'YOUTH' }), 'NOT_PRO'],
       ['wrong step', makeEligibleState({ step: 7 }), 'WRONG_STEP'],
       ['no contract', { ...makeEligibleState(), contract: null }, 'NO_CONTRACT'],
@@ -420,6 +421,123 @@ describe('T-4-004 step 8 generation and injury priority', () => {
     expect(result.nationalTeamTimeline).toEqual([]);
     expect(result.rngState).toEqual(rng);
   });
+
+  it('keeps the same-step optional EVENT open after a user national-team resolve', () => {
+    const ruleset = nationalScenarioRuleset({ nationalTeamStep: 8, chapterStep: null });
+    ruleset.leagueCalendar = {
+      ...ruleset.leagueCalendar,
+      steps: ruleset.leagueCalendar.steps.map((step) =>
+        step.index === 8
+          ? {
+              ...step,
+              slots: [
+                { kind: 'EVENT' as const, required: false },
+                { kind: 'NATIONAL_TEAM' as const, required: true },
+              ],
+            }
+          : step,
+      ),
+    };
+    const initialState = { ...makeEligibleState({ tier: 1, baseOvr: 68 }), rngState: seedRng('national-same-step-event') };
+    const initialSnapshot: DomainSnapshot = {
+      revision: 200,
+      checkpoint: 'CONTRACT_CONFIRMED',
+      state: initialState,
+      stateHash: hashState(initialState),
+      rulesetVersion: ruleset.version,
+      contentPackVersion: '0.1.0',
+    };
+
+    const started = runNationalScenario(initialSnapshot, ruleset, {
+      type: 'START_SEASON',
+      commandId: 'national-same-step-start',
+      expectedRevision: initialSnapshot.revision,
+      payload: { simulationMode: 'CHAPTER', serviceSeasonId: 'svc-national-same-step' },
+    });
+    const afterRole = runNationalScenario(started, ruleset, {
+      type: 'RESOLVE_ROLE',
+      commandId: 'national-same-step-role',
+      expectedRevision: started.revision,
+      payload: { decision: 'ACCEPT' },
+    });
+    const called = runNationalScenario(afterRole, ruleset, {
+      type: 'ADVANCE',
+      commandId: 'national-same-step-call-up',
+      expectedRevision: afterRole.revision,
+      payload: { eligibleEvents: [{ eventId: 'EVT-OTHER-001', version: 1, weight: 1 }] },
+    });
+    expect(called.state.pending).toEqual({
+      kind: 'NATIONAL_TEAM',
+      step: 8,
+      eventId: EVENT_ID,
+      version: EVENT_VERSION,
+    });
+
+    const accepted = runNationalScenario(called, ruleset, {
+      type: 'RESOLVE_EVENT',
+      commandId: 'national-same-step-accept',
+      expectedRevision: called.revision,
+      payload: {
+        eventId: EVENT_ID,
+        definitionVersion: EVENT_VERSION,
+        choiceId: 'A',
+        callUp: 'ACCEPT',
+        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 1, effects: [] }],
+      },
+    });
+    const acceptedBeforeReservedAdvance = clone(accepted.state);
+    const reservedAdvance = simulate({
+      snapshot: accepted,
+      command: {
+        type: 'ADVANCE',
+        commandId: 'national-same-step-forged-advance',
+        expectedRevision: accepted.revision,
+        payload: { eligibleEvents: [{ eventId: EVENT_ID, version: EVENT_VERSION + 99, weight: 1 }] },
+      },
+      ruleset,
+      rulesetVersion: ruleset.version,
+      contentPackVersion: '0.1.0',
+    });
+    expect(reservedAdvance.ok).toBe(false);
+    if (!reservedAdvance.ok) expect(reservedAdvance.error.details).toEqual({ reason: 'RESERVED_NATIONAL_TEAM_EVENT' });
+    expect(accepted.state).toEqual(acceptedBeforeReservedAdvance);
+    expect(accepted.state.relationships.managerTrust).toBe(acceptedBeforeReservedAdvance.relationships.managerTrust);
+    expect(accepted.state.rngState).toEqual(acceptedBeforeReservedAdvance.rngState);
+    expect(accepted.state.pending).toBeNull();
+    const matchesBeforeResume = clone(accepted.state.season?.matches ?? []);
+    const rngBeforeResume = clone(accepted.state.rngState);
+
+    const resumed = runNationalScenario(accepted, ruleset, {
+      type: 'ADVANCE',
+      commandId: 'national-same-step-resume-event',
+      expectedRevision: accepted.revision,
+      payload: { eligibleEvents: [{ eventId: 'EVT-OTHER-001', version: 1, weight: 1 }] },
+    });
+    expect(resumed.state.pending).toEqual({ kind: 'EVENT', eventId: 'EVT-OTHER-001', version: 1 });
+    expect(resumed.state.currentStep).toBe(8);
+    expect(resumed.state.season?.steps.find((step) => step.index === 8)?.summary).toBeNull();
+    expect(resumed.state.season?.matches).toEqual(matchesBeforeResume);
+    expect(resumed.state.rngState).toEqual(rngBeforeResume);
+
+    const eventResolved = runNationalScenario(resumed, ruleset, {
+      type: 'RESOLVE_EVENT',
+      commandId: 'national-same-step-event-resolve',
+      expectedRevision: resumed.revision,
+      payload: {
+        eventId: 'EVT-OTHER-001',
+        definitionVersion: 1,
+        choiceId: 'A',
+        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 1, effects: [] }],
+      },
+    });
+    const continued = runNationalScenario(eventResolved, ruleset, {
+      type: 'ADVANCE',
+      commandId: 'national-same-step-complete',
+      expectedRevision: eventResolved.revision,
+      payload: { eligibleEvents: [] },
+    });
+    expect(continued.state.season?.steps.find((step) => step.index === 8)?.summary?.decisionsOpened).toBe(2);
+  });
 });
 
 describe('T-4-004 call-up choices and replay contract', () => {
@@ -500,6 +618,19 @@ describe('T-4-004 call-up choices and replay contract', () => {
     expect(mismatchResult.ok).toBe(false);
     if (!mismatchResult.ok) expect(mismatchResult.error.details).toEqual({ reason: 'CALL_UP_MISMATCH' });
 
+    const wrongEventResult = simulate({
+      snapshot,
+      command: {
+        ...baseCommand,
+        payload: { ...baseCommand.payload, eventId: 'EVT-NAT-WRONG' },
+      },
+      ruleset: rulesetProto,
+      rulesetVersion: rulesetProto.version,
+      contentPackVersion: '0.1.0',
+    });
+    expect(wrongEventResult.ok).toBe(false);
+    if (!wrongEventResult.ok) expect(wrongEventResult.error.details).toEqual({ reason: 'PENDING_EVENT_MISMATCH' });
+
     const wrongRefState = {
       ...snapshot.state,
       pending: { kind: 'NATIONAL_TEAM' as const, step: 8, eventId: EVENT_ID, version: EVENT_VERSION + 1 },
@@ -525,6 +656,86 @@ describe('T-4-004 call-up choices and replay contract', () => {
       expect(wrongRefResult.error.details).toEqual({ reason: 'RULE_EVENT_VERSION_MISMATCH' });
     }
     expect(snapshot.state.rngState.draws).toBe(0);
+  });
+
+  it('rejects the reserved national-team event id through generic ADVANCE and RESOLVE_EVENT', () => {
+    const noSeasonState = makeEligibleState();
+    const noSeasonSnapshot: DomainSnapshot = {
+      revision: 30,
+      checkpoint: 'CONTRACT_CONFIRMED',
+      state: noSeasonState,
+      stateHash: hashState(noSeasonState),
+      rulesetVersion: rulesetProto.version,
+      contentPackVersion: '0.1.0',
+    };
+    const noSeasonBefore = clone(noSeasonSnapshot.state);
+    const noSeasonResult = simulate({
+      snapshot: noSeasonSnapshot,
+      command: {
+        type: 'ADVANCE',
+        commandId: 'national-forged-generic-advance',
+        expectedRevision: noSeasonSnapshot.revision,
+        payload: { eligibleEvents: [{ eventId: EVENT_ID, version: EVENT_VERSION + 99, weight: 1 }] },
+      },
+      ruleset: rulesetProto,
+      rulesetVersion: rulesetProto.version,
+      contentPackVersion: '0.1.0',
+    });
+    expect(noSeasonResult.ok).toBe(false);
+    if (!noSeasonResult.ok) expect(noSeasonResult.error.details).toEqual({ reason: 'RESERVED_NATIONAL_TEAM_EVENT' });
+    expect(noSeasonSnapshot.state).toEqual(noSeasonBefore);
+
+    const national = nationalSnapshot();
+    const forgedState: CareerState = {
+      ...national.state,
+      pending: { kind: 'EVENT', eventId: EVENT_ID, version: EVENT_VERSION + 99 },
+    };
+    const forgedSnapshot: DomainSnapshot = {
+      ...national,
+      state: forgedState,
+      stateHash: hashState(forgedState),
+    };
+    const forgedBefore = clone(forgedSnapshot.state);
+    const forgedResult = simulate({
+      snapshot: forgedSnapshot,
+      command: {
+        type: 'RESOLVE_EVENT',
+        commandId: 'national-forged-generic-resolve',
+        expectedRevision: forgedSnapshot.revision,
+        payload: {
+          eventId: EVENT_ID,
+          definitionVersion: EVENT_VERSION + 99,
+          choiceId: 'A',
+          outcomes: [
+            {
+              id: 'FORGED',
+              kind: 'FIXED',
+              weight: 1,
+              effects: [
+                {
+                  kind: 'RELATION',
+                  sourceId: 'FORGED-MANAGER-TRUST',
+                  target: 'managerTrust',
+                  delta: 99,
+                  clamp: { min: 0, max: 100 },
+                  appliesAt: { kind: 'IMMEDIATE' },
+                  expiresAt: null,
+                  stackingRule: 'SUM',
+                },
+              ],
+            },
+          ],
+        },
+      },
+      ruleset: rulesetProto,
+      rulesetVersion: rulesetProto.version,
+      contentPackVersion: '0.1.0',
+    });
+    expect(forgedResult.ok).toBe(false);
+    if (!forgedResult.ok) expect(forgedResult.error.details).toEqual({ reason: 'RESERVED_NATIONAL_TEAM_EVENT' });
+    expect(forgedSnapshot.state).toEqual(forgedBefore);
+    expect(forgedSnapshot.state.relationships.managerTrust).toBe(national.state.relationships.managerTrust);
+    expect(forgedSnapshot.state.rngState).toEqual(national.state.rngState);
   });
 
   it('rejects a duplicate resolve after pending closes and gives the same canonical hash on replay', () => {
@@ -668,6 +879,13 @@ describe('T-4-004 NATIONAL_DEBUT reservation', () => {
       nationalTeam: { ...emptyNationalTeam(), pendingDebut: reserved.pendingDebut },
       season: { ...clone(season), currentStep: existingMatch.step },
     };
+    const stateSeason = state.season;
+    if (stateSeason === null) throw new Error('chapter state must have a season');
+    const matchesBeforeResolve = clone(stateSeason.matches);
+    const playerStatsBeforeResolve = clone(stateSeason.playerStats);
+    const scheduleBeforeResolve = clone(stateSeason.schedule);
+    const lastRatingBeforeResolve = stateSeason.lastRatingTenths;
+    const moraleBeforeResolve = state.state.morale;
     const resolved = resolveChapter({
       state,
       ruleset: rulesetProto,
@@ -675,7 +893,26 @@ describe('T-4-004 NATIONAL_DEBUT reservation', () => {
       definitionVersion: 1,
       decisionId: 'D1',
       optionId: 'A',
-      outcomes: [{ id: 'A1', kind: 'FIXED', weight: 1, effects: [], ratingDeltaTenths: 0 }],
+      outcomes: [
+        {
+          id: 'A1',
+          kind: 'FIXED',
+          weight: 1,
+          effects: [
+            {
+              kind: 'CURRENT',
+              sourceId: 'NATIONAL-DEBUT-MORALE',
+              target: 'morale',
+              delta: 3,
+              clamp: { min: 0, max: 100 },
+              appliesAt: { kind: 'IMMEDIATE' },
+              expiresAt: null,
+              stackingRule: 'SUM',
+            },
+          ],
+          ratingDeltaTenths: 7,
+        },
+      ],
     });
     expect(resolved.ok).toBe(true);
     if (!resolved.ok) return;
@@ -687,8 +924,20 @@ describe('T-4-004 NATIONAL_DEBUT reservation', () => {
     expect(resolved.state.season?.chapters.at(-1)).toMatchObject({
       chapterId: 'CHP-NAT-001',
       trigger: 'NATIONAL_DEBUT',
+      matchId: existingMatch.id,
+      ratingDeltaTenths: 0,
       virtualOpponent: reserved.pendingDebut,
     });
+    expect(resolved.state.season?.matches).toEqual(matchesBeforeResolve);
+    expect(resolved.state.season?.playerStats).toEqual(playerStatsBeforeResolve);
+    expect(resolved.state.season?.playerStats.ratingSumTenths).toBe(playerStatsBeforeResolve.ratingSumTenths);
+    expect(resolved.state.season?.playerStats.ratedMatches).toBe(playerStatsBeforeResolve.ratedMatches);
+    expect(resolved.state.season?.schedule).toEqual(scheduleBeforeResolve);
+    expect(resolved.state.season?.lastRatingTenths).toBe(lastRatingBeforeResolve);
+    expect(resolved.state.state.morale).toBe(moraleBeforeResolve + 3);
+    expect(JSON.stringify(resolved.state.season?.matches)).toBe(JSON.stringify(matchesBeforeResolve));
+    expect(JSON.stringify(resolved.state.season?.playerStats)).toBe(JSON.stringify(playerStatsBeforeResolve));
+    expect(JSON.stringify(resolved.state.season?.schedule)).toBe(JSON.stringify(scheduleBeforeResolve));
 
     const debuted = reserveNationalDebut({ ...reserved, debuted: true, pendingDebut: null }, rulesetProto);
     expect(debuted.pendingDebut).toBeNull();
@@ -794,7 +1043,7 @@ describe('T-4-004 NATIONAL_DEBUT reservation', () => {
     const debutMatch = nextChapter.state.season?.matches.find((match) => match.id === pending.matchId);
     expect(debutMatch).toBeDefined();
     expect(debutMatch?.minutes ?? 0).toBeGreaterThan(0);
-    expect(debutMatch?.chapterId).toBe('CHP-NAT-001');
+    expect(debutMatch?.chapterId).toBeNull();
     expect(nextChapter.state.nationalTeam.pendingDebut).toEqual(reservation);
   });
 
@@ -976,7 +1225,7 @@ describe('T-4-004 NATIONAL_DEBUT reservation', () => {
 
   it('canonicalization is independent of national-state property insertion order', () => {
     const state = makeEligibleState();
-    const reordered = {
+    const reordered: CareerState = {
       ...state,
       nationalityRuleState: { exceptions: [], moduleId: 'DEFAULT' },
       nationalTeam: { pendingDebut: null, debuted: false, callUps: [] },

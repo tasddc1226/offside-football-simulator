@@ -603,7 +603,7 @@ function advanceEffectsThroughWalk(
  * `matchId`와 같은 레코드 하나를 바꾼다.
  */
 function patchOpenedChapterMatch(matches: readonly MatchRecord[], pending: Pending): MatchRecord[] {
-  if (pending === null || pending.kind !== 'CHAPTER') return [...matches];
+  if (pending === null || pending.kind !== 'CHAPTER' || pending.trigger === 'NATIONAL_DEBUT') return [...matches];
   const matchId = pending.matchId;
   const chapterId = pending.chapterId;
   return matches.map((match) => (match.id === matchId ? { ...match, chapterId } : match));
@@ -720,6 +720,8 @@ function createStepMatchWiring(
   // 갱신되는 값은 이 참조가 아니라 아래 closure 변수로 추적한다.
   careerState: CareerState,
   initial: StepMatchWiringInitial,
+  /** 이미 완료된 동일-step 조건 갱신을 재개 walk에서 다시 적용하지 않는다. */
+  conditionAlreadyAppliedSteps: readonly number[] = [],
 ): StepMatchWiring {
   let matches = initial.matches;
   let competitions = initial.competitions;
@@ -738,6 +740,7 @@ function createStepMatchWiring(
   let attributes = careerState.attributes;
   let playerProfile = profile;
   let injuryCount = initial.injuryCount;
+  const conditionAppliedSteps = new Set(conditionAlreadyAppliedSteps);
   let forcedPending: Extract<Pending, { kind: 'INJURY' }> | null = null;
   let injuryTimeline: TimelineEntry[] = [];
 
@@ -905,8 +908,9 @@ function createStepMatchWiring(
     const stepRecords = matches.filter((match) => match.step === stepIndex);
     // pending이 열려 있는 동안에는 step을 닫지 않는다. 다음 ADVANCE가 남은 경기까지 처리한 뒤 한 번만
     // applyCondition을 호출해야, 중단된 경기 묶음이 재활 해소 후 중복 적용되지 않는다.
-    if (forcedPending === null) {
+    if (forcedPending === null && !conditionAppliedSteps.has(stepIndex)) {
       playerCondition = applyCondition(playerCondition, stepRecords, ruleset.conditionRules, ruleset.seasonBoundaryReset.form);
+      conditionAppliedSteps.add(stepIndex);
     }
     return {
       results: stepMatchResultsFor(matches, stepIndex),
@@ -1263,6 +1267,13 @@ function isEligibleEventsSorted(events: ReadonlyArray<{ eventId: string }>): boo
   return true;
 }
 
+function hasReservedNationalTeamEvent(
+  events: readonly EligibleEvent[],
+  ruleset: Ruleset,
+): boolean {
+  return events.some((event) => event.eventId === ruleset.nationalTeamRules.event.id);
+}
+
 /** T-2-001 RULE-TIME-002: pending 종류에 따라 다음에 클라이언트가 보낼 명령을 알려준다. */
 function nextActionForPending(pending: Pending): 'DECISION' | 'ADVANCE' | 'SETTLEMENT' {
   if (pending === null) {
@@ -1329,6 +1340,11 @@ function advanceInSeason(
         });
       }
     }
+    if (hasReservedNationalTeamEvent(eligibleEvents, input.ruleset)) {
+      return fail('VALIDATION_FAILED', '대표팀 예약 event id는 generic EVENT로 열 수 없다.', {
+        reason: 'RESERVED_NATIONAL_TEAM_EVENT',
+      });
+    }
   }
 
   const nextRevision = snapshot.revision + 1;
@@ -1336,11 +1352,9 @@ function advanceInSeason(
   let timeline = state.timeline;
   let currentStepIndex = season.currentStep;
 
-  // 현재 step이 아직 닫히지 않았으면(summary === null) decisionsOpened: 1로 닫는다. state.pending이
-  // 자동 통과 대상(CHAPTER·CONTRACT·ROLE·INJURY·NATIONAL_TEAM)이면 이번 ADVANCE가 직접 닫는
-  // 경우이고, pending이 이미 null이면 그 사이 RESOLVE_EVENT로 EVENT가 해소된 경우다 — 두 경우 모두
-  // "이 step에 결정이 열렸었다"를 뜻한다(walkToNextDecision 불변식: 열리지 않은 step은 같은 호출
-  // 안에서 즉시 닫히므로, summary === null인 step은 항상 결정이 열렸던 step이다).
+  // 현재 step이 아직 닫히지 않았으면(summary === null) 보통 마지막 결정을 닫고 다음 step으로 간다.
+  // 다만 forced INJURY 또는 NATIONAL_TEAM을 RESOLVE_EVENT로 닫은 직후에는 같은 step의 남은 후보를
+  // 먼저 재개한다. walkToNextDecision 불변식상 그 resume만 경기 재실행 없이 현재 step을 다시 본다.
   const currentStep = findSeasonStep(steps, currentStepIndex);
   const lastTimelineEntry = state.timeline[state.timeline.length - 1];
   const resumesInjuryStep =
@@ -1348,9 +1362,14 @@ function advanceInSeason(
     currentStep.summary === null &&
     lastTimelineEntry?.kind === 'REHAB_CHOSEN' &&
     lastTimelineEntry.step === currentStepIndex;
-  // REHAB_CHOSEN은 RESOLVE_EVENT로 닫힌 forced INJURY 결정 1건을 뜻한다. 현재 시즌 시작 뒤의
-  // 타임라인만 세어 이전 시즌 같은 step의 부상을 섞지 않고, 재개 후 일반 슬롯이 없을 때도
-  // decision count를 0으로 잃지 않게 한다.
+  const resumesNationalTeamStep =
+    state.pending === null &&
+    currentStep.summary === null &&
+    (lastTimelineEntry?.kind === 'NATIONAL_TEAM_CALLED' || lastTimelineEntry?.kind === 'NATIONAL_TEAM_DECLINED') &&
+    lastTimelineEntry.step === currentStepIndex;
+  const resumesSameStep = resumesInjuryStep || resumesNationalTeamStep;
+  // 현재 시즌 시작 뒤의 타임라인만 세어 이전 시즌 같은 step의 결정을 섞지 않는다. REHAB_CHOSEN과
+  // NATIONAL_TEAM_CALLED/DECLINED는 이미 열린 결정 수를 보존해 resume 뒤 summary에 반영한다.
   const currentSeasonStartRevision = [...state.timeline].reverse().find((entry) => entry.kind === 'SEASON_STARTED')?.revision;
   const resolvedForcedInjuryDecisions =
     currentSeasonStartRevision === undefined
@@ -1358,24 +1377,23 @@ function advanceInSeason(
       : state.timeline.filter(
           (entry) => entry.kind === 'REHAB_CHOSEN' && entry.step === currentStepIndex && entry.revision > currentSeasonStartRevision,
         ).length;
-  const resolvedAutoNationalTeamDecisions =
+  const resolvedNationalTeamDecisions =
     currentSeasonStartRevision === undefined
       ? 0
       : state.timeline.filter(
           (entry) =>
-            entry.kind === 'NATIONAL_TEAM_DECLINED' &&
-            entry.refId === 'INJURY' &&
+            (entry.kind === 'NATIONAL_TEAM_CALLED' || entry.kind === 'NATIONAL_TEAM_DECLINED') &&
             entry.step === currentStepIndex &&
             entry.revision > currentSeasonStartRevision,
         ).length;
-  if (currentStep.summary === null && !resumesInjuryStep) {
-    // A normal slot resolved after one or more forced injuries contributes exactly one additional
-    // decision; the entries above account for the forced and automatic decisions already opened.
+  if (currentStep.summary === null && !resumesSameStep) {
+    // A normal slot resolved after one or more forced injuries or a national-team decision contributes
+    // exactly one additional decision; the entries above account for decisions already opened.
     steps = markStepPassed(
       steps,
       currentStepIndex,
       nextRevision,
-      1 + resolvedForcedInjuryDecisions + resolvedAutoNationalTeamDecisions,
+      1 + resolvedForcedInjuryDecisions + resolvedNationalTeamDecisions,
       stepMatchResultsFor(season.matches, currentStepIndex),
     );
     timeline = [
@@ -1432,6 +1450,7 @@ function advanceInSeason(
       matchRngState: season.matchRngState,
       injuryCount: season.injuryCount,
     },
+    resumesNationalTeamStep ? [season.currentStep] : [],
   );
 
   // 강제 부상 pending을 먼저 닫은 뒤에는 같은 step의 일반 슬롯을 이어서 연다. wiring은 이미 기록된
@@ -1448,7 +1467,7 @@ function advanceInSeason(
           };
         }
       : wiring.playStepMatches;
-  const matchesBeforeWalk = resumesInjuryStep
+  const matchesBeforeWalk = resumesSameStep
     ? season.matches.filter((match) => match.step !== season.currentStep)
     : season.matches;
 
@@ -1473,7 +1492,11 @@ function advanceInSeason(
     chapterContext,
     state,
     ruleset,
-    resumesInjuryStep ? resolvedForcedInjuryDecisions : 0,
+    resumesInjuryStep
+      ? resolvedForcedInjuryDecisions
+      : resumesNationalTeamStep
+        ? resolvedForcedInjuryDecisions + resolvedNationalTeamDecisions
+        : 0,
   );
   const expiredState = advanceEffectsThroughWalk(state, walked, ruleset.relationshipRules);
   if (expiredState.season === null) {
@@ -1585,6 +1608,11 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
           reason: 'INVALID_WEIGHT',
         });
       }
+    }
+    if (hasReservedNationalTeamEvent(eligibleEvents, input.ruleset)) {
+      return fail('VALIDATION_FAILED', '대표팀 예약 event id는 generic EVENT로 열 수 없다.', {
+        reason: 'RESERVED_NATIONAL_TEAM_EVENT',
+      });
     }
 
     let chosen = eligibleEvents[0]!;
@@ -1702,6 +1730,11 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   ) {
     return fail('VALIDATION_FAILED', '해소할 pending 이벤트가 없다.', {
       reason: 'NO_PENDING_EVENT',
+    });
+  }
+  if (pending.kind === 'EVENT' && pending.eventId === input.ruleset.nationalTeamRules.event.id) {
+    return fail('VALIDATION_FAILED', '대표팀 예약 event id는 generic EVENT로 해소할 수 없다.', {
+      reason: 'RESERVED_NATIONAL_TEAM_EVENT',
     });
   }
   if (

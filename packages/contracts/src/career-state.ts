@@ -843,8 +843,8 @@ export const ReputationSchema = z.strictObject({
 
 // T-4-004: nationalityRuleState는 기본 모듈과 예외 목록만 저장한다. 병역·귀화·이중국적 필드는 없다.
 export const NationalityRuleStateSchema = z.strictObject({
-  moduleId: z.string().min(1),
-  exceptions: z.array(z.string()),
+  moduleId: z.literal('DEFAULT'),
+  exceptions: z.tuple([]),
 }) satisfies z.ZodType<NationalityRuleState>;
 
 export const NationalTeamCallUpRecordSchema = z.strictObject({

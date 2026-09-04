@@ -746,8 +746,8 @@ export type NationalTeamCallUp = 'ACCEPT' | 'DECLINE' | 'CONDITIONAL';
 
 /** T-4-004: nationality module은 기본 모듈 id와 예외 목록만 보존한다. 특례 의미는 이 티켓에서 모델링하지 않는다. */
 export type NationalityRuleState = {
-  moduleId: string;
-  exceptions: string[];
+  moduleId: 'DEFAULT';
+  exceptions: [];
 };
 
 export type NationalTeamCallUpRecord = {

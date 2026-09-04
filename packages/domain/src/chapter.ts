@@ -293,17 +293,25 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
   }
   const match = season.matches[matchIndex]!;
   const beforeRating = match.ratingTenths;
-  const afterRating = beforeRating === null ? null : clamp(beforeRating + chosen.ratingDeltaTenths, 40, 100);
+  const isNationalDebut = pending.trigger === 'NATIONAL_DEBUT';
+  const afterRating =
+    isNationalDebut || beforeRating === null ? beforeRating : clamp(beforeRating + chosen.ratingDeltaTenths, 40, 100);
 
-  const matches = season.matches.map((candidate, index) =>
-    index === matchIndex ? { ...candidate, ratingTenths: afterRating } : candidate,
-  );
+  const matches = isNationalDebut
+    ? season.matches
+    : season.matches.map((candidate, index) => (index === matchIndex ? { ...candidate, ratingTenths: afterRating } : candidate));
 
   const isLastMatchInSeason = matchIndex === season.matches.length - 1;
-  const lastRatingTenths = isLastMatchInSeason && afterRating !== null ? afterRating : season.lastRatingTenths;
+  const lastRatingTenths = isNationalDebut
+    ? season.lastRatingTenths
+    : isLastMatchInSeason && afterRating !== null
+      ? afterRating
+      : season.lastRatingTenths;
 
-  const ratingSumDelta = beforeRating === null || afterRating === null ? 0 : afterRating - beforeRating;
-  const playerStats = { ...season.playerStats, ratingSumTenths: season.playerStats.ratingSumTenths + ratingSumDelta };
+  const ratingSumDelta = isNationalDebut || beforeRating === null || afterRating === null ? 0 : afterRating - beforeRating;
+  const playerStats = isNationalDebut
+    ? season.playerStats
+    : { ...season.playerStats, ratingSumTenths: season.playerStats.ratingSumTenths + ratingSumDelta };
 
   const resolvedEntry = {
     decisionId: input.decisionId,
@@ -325,7 +333,8 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
     // 않는 값이라 순수 함수로 재도출할 수 있다)과 최종 평점의 차이다.
     const originalRating =
       match.minutes > 0 ? computeRatingTenths(match.stats.group, match.stats, match.result.outcome, match.cards, input.ruleset) : null;
-    const chapterRatingDeltaTenths = originalRating === null || afterRating === null ? 0 : afterRating - originalRating;
+    const chapterRatingDeltaTenths =
+      isNationalDebut || originalRating === null || afterRating === null ? 0 : afterRating - originalRating;
 
     const chapterRecord: ChapterRecord = {
       chapterId: pending.chapterId,

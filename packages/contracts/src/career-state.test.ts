@@ -13,6 +13,7 @@ import {
   type Effect as DomainEffect,
   type FootballSeason as DomainFootballSeason,
   type JsonValue,
+  type NationalityRuleState as DomainNationalityRuleState,
   type Offer as DomainOffer,
   type Pending as DomainPending,
   type SeasonSummary as DomainSeasonSummary,
@@ -58,6 +59,7 @@ import {
   EffectSchema,
   FootballSeasonSchema,
   InjuryEpisodeSchema,
+  NationalityRuleStateSchema,
   OfferSchema,
   PendingSchema,
   SeasonSummarySchema,
@@ -96,6 +98,10 @@ describe('domain 타입 동일성', () => {
 
   it('CareerState', () => {
     expectTypeOf<z.infer<typeof CareerStateSchema>>().toEqualTypeOf<DomainCareerState>();
+  });
+
+  it('NationalityRuleState', () => {
+    expectTypeOf<z.infer<typeof NationalityRuleStateSchema>>().toEqualTypeOf<DomainNationalityRuleState>();
   });
 
   // T-2-006: T-2-001/002가 CareerState에 넣은 시즌 필드도 개별적으로 domain과 고정한다(CareerState
@@ -374,6 +380,13 @@ describe('CareerStateSchema', () => {
       nationalityRuleState: { ...state.nationalityRuleState, naturalization: true },
     };
     expect(CareerStateSchema.safeParse(specialNationalityField).success).toBe(false);
+  });
+
+  it('기본 국적 모듈은 DEFAULT와 빈 exceptions만 허용한다', () => {
+    expect(NationalityRuleStateSchema.safeParse({ moduleId: 'DEFAULT', exceptions: [] }).success).toBe(true);
+    expect(NationalityRuleStateSchema.safeParse({ moduleId: 'OTHER', exceptions: [] }).success).toBe(false);
+    expect(NationalityRuleStateSchema.safeParse({ moduleId: 'DEFAULT', exceptions: ['EXCEPTION'] }).success).toBe(false);
+    expect(NationalityRuleStateSchema.safeParse({ moduleId: 'DEFAULT', exceptions: [], extra: true }).success).toBe(false);
   });
 
   it('알 수 없는 최상위 키는 거부한다', () => {

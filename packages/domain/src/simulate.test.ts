@@ -291,6 +291,7 @@ describe('simulate — CREATE_CAREER', () => {
     });
     expect(result.snapshot.state.pending).toBeNull();
     expect(result.snapshot.state.contract).toBeNull();
+    expect(result.snapshot.state.nationalityRuleState).toEqual({ moduleId: 'DEFAULT', exceptions: [] });
     expect(result.snapshot.state.timeline).toEqual([]);
     expect(result.snapshot.state.rngState.draws).toBe(0);
     expect(Object.values(result.snapshot.state.attributes).every((v) => v === 0)).toBe(true);
