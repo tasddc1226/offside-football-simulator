@@ -36,8 +36,6 @@ import { useEngine } from '../engine/use-engine.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
 import {
-  CUP_ROUND_LABEL_KO,
-  LEAGUE_TIER_LABEL_KO,
   positionHeaderField,
   POSITION_LABELS,
   ROLE_DECISION_LABEL_KO,
