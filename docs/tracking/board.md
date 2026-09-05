@@ -55,7 +55,7 @@ WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. �
 | U-014 | Workers Paid 플랜으로 전환 | todo | LINE TEST 공개 직전(T-2-012 코드는 2026-09-04 머지됨). 개발·PR preview·내부 staging은 Free 유지 |
 | U-015 | LINE TEST 테스터 모집(10~30명)·안내문 발송·피드백 채널 결정 | todo | [line-test-plan.md](line-test-plan.md) 2·4절. 일정 제안 2026-09-08 시작, 2주. 오케스트레이터가 staging 예행(FAST·CHAPTER 1시즌)을 먼저 끝낸다 |
 | U-016 | 오케스트레이터 기기 wrangler 로그인(LINE TEST 기준선 D1 조회용) | done | 2026-09-04 14:56 사용자가 `! pnpm --filter @offside/api exec wrangler login` 실행(OAuth 성공). 5절 쿼리 실행 확인, line-test-plan 준비 체크리스트 #3·#7 ✅ |
-| U-017 | GitHub Actions 결제·지출 한도 해결(한도 상향 또는 저장소 공개) | todo | 2026-09-05 20:21부터 main CI 잡이 "recent account payments have failed or your spending limit needs to be increased"로 시작조차 안 됨(run 33962595554 Deploy staging, 33963157095 Quality·Browser gates). 비공개 저장소라 Actions 분수가 과금 대상. 해결 전까지 staging 배포·PR CI 없음, 머지 게이트는 로컬 체인 EXIT 0만. 브랜치 보호 없음(Free 플랜) |
+| U-017 | GitHub Actions 결제·지출 한도 해결 → 사용자가 PR #96(21:33 머지)으로 CI·배포를 Mac self-hosted runner(`self-hosted, macOS, ARM64, offside`)로 전환 | in-progress | 2026-09-05 20:21부터 main CI 잡이 "recent account payments have failed or your spending limit needs to be increased"로 시작조차 안 됨(run 33962595554 Deploy staging, 33963157095 Quality·Browser gates). 비공개 저장소라 Actions 분수가 과금 대상. 해결 전까지 staging 배포·PR CI 없음, 머지 게이트는 로컬 체인 EXIT 0만. 브랜치 보호 없음(Free 플랜) |
 
 ## Phase 0 백로그 (착수 순서)
 
@@ -176,7 +176,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-019 | — | web(e2e) | [핫픽스] main 회귀: `signFirstOffer` 헬퍼 정규식(PR #74)이 STAY 결과 URL `&interested=N`(PR #76)을 거부해 season.spec:121 결정적 실패 | T-4-010, T-4-011 | done | [브리프](briefs/T-4-019.md). 17:01 투입 → 17:10 BLOCKED(헬퍼 수정 커밋 `a6e8136`, season.spec:143 단언이 #76 프리시즌 경로와 불일치) → 17:12 단언 완화 허용해 재투입 → 17:22 완료 **PR #81 `689aaa0`**(워커 체인 전부 그린, e2e 98). 검증 큐 #81→#80→#78→#79(앞 PR 머지 대기 게이트 추가) |
 | T-4-020 | — | web(e2e) | [핫픽스] injury.spec `reachForcedInjury` poll의 타임아웃 없는 `textContent()`가 `/event` 전환 순간 무한 대기 → 반복 60초 타임아웃(trace로 확정) | T-4-010 | done | [브리프](briefs/T-4-020.md). 17:05 투입 → 17:15 워커 완료 **PR #80 `67835d8`**(오케스트레이터 REST 개설, 훅 차단). `--repeat-each=3` 3/3, 체인 통과(season.spec:121은 T-4-019 대상). 오케스트레이터 체인 CHAIN EXIT 0(e2e 98) → **머지 `01be661`**(17:28) |
 | T-4-021 | — | web(e2e) | [핫픽스] season.spec:17(랜덤 seed)에서 STAY 수락 뒤 `/preseason` 도착 시 "계획하러 가기" 기대가 실패(PR #76 경로, #81 1차 수정의 잔여) | T-4-019 | done | [브리프](briefs/T-4-021.md). 17:35 투입 → 17:43 완료 **PR #83 `1aee5e7`**(워커 체인 그린, `--repeat-each=4` 12 passed). 검증 큐 재시작 #83→#82→#78→#79 → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. 원 PR #83 MERGED |
-| T-4-023 | — | web(e2e)·qa | SCR-032 대표팀 소집 자연 플레이 도달 seed 탐색(0.3.0/0.2.0, 200 seed×30시즌)·360px 캡처 2장·phase4-seeds 갱신 (D-62 출시 QA 잔여) | T-4-022 | in-progress | [브리프](briefs/T-4-023.md). 2026-09-05 20:15 Sonnet 5 워크플로 투입 |
+| T-4-023 | — | web(e2e)·qa | SCR-032 대표팀 소집 자연 플레이 도달 seed 탐색(0.3.0/0.2.0, 200 seed×30시즌)·360px 캡처 2장·phase4-seeds 갱신 (D-62 출시 QA 잔여) | T-4-022 | done | [브리프](briefs/T-4-023.md). Sonnet 5 워커(턴 종료 뒤 마무리 워커) PR #100 `6ffc1c4` → 오케스트레이터 체인 EXIT 0(e2e 98 passed) → 2026-09-05 21:55 squash 머지 `42046ef`. 0.3.0 seed `offside-nat-search-0` 시즌 20 step 8 EVT-NAT-001(RATING_AND_POPULARITY: baseOvr 73<78, popularity 100%≥60%), 0.2.0은 시즌 19. `phase4-seeds.ts` NATIONAL_TEAM·reachability 항목(53.9s)·`find-seed.ts` 출력 필드, 캡처 `docs/qa/phase34/national-team*.png` |
 | T-4-024 | — | web·api | 실사용자 플레이 시간 측정 준비: `season_settled`·`step_passed`에 초 단위 `elapsedSec` 추가, 측정 쿼리·프로토콜 문서(오케스트레이터) | T-2-012 | done | [브리프](briefs/T-4-024.md). Sonnet 5 워커 PR #94 `adfa212` → 리뷰 후속 3건 `30ad35c` → 오케스트레이터 체인 EXIT 0(e2e 98 passed) → 2026-09-05 20:40 squash 머지 `232bc83`. `season_settled`·`step_passed`에 `elapsedSec`(정수 초, 상한 7200, optional), 호출부 careerId 배선. 측정 프로토콜 [play-time-measurement.md](../qa/play-time-measurement.md). staging 반영은 U-017 뒤 |
 | T-4-028 | — | web(문구) | 대표팀 `agent` 축 문구 정합: SCR-032 안내·SCR-014 결과 맥락 2줄 (P4-7 문구 게이트, T-4-023 캡처에서 확인) | T-4-023 | done | [브리프](briefs/T-4-028.md). Sonnet 5 워커 PR #98 `d816420` → 오케스트레이터 체인 EXIT 0(e2e 98 passed) → 2026-09-05 21:47 squash 머지 `452d32d`. SCR-032 안내·SCR-014 결과 맥락에 "에이전트 관계(협회 관계의 대리값)" 명시(D-66) |
 
@@ -195,14 +195,13 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 ## 진행 중
 
-| ID | 워커 | 시작 | 상태 |
-|---|---|---|---|
-| T-4-023 | Sonnet 5 · Workflow `wf_3a416e2c-9a9` → 마무리 워커 | 2026-09-05 20:15 | 21:40 워커 턴 강제 종료(BLOCKED, 미커밋: 코드 3파일·PNG 2장·PR 본문, 백그라운드 체인은 종료 신호로 중단). 21:45 같은 워크트리에서 마무리 워커 투입(체인→커밋→push→PR) |
+진행 중 워커 없음 (2026-09-05 21:55 — D-65 출시 게이트 3건 모두 main 반영, Phase 3·4 게이트 종결. 남은 것은 사용자 항목 U-017 runner 운영·U-014·U-015·U-005와 Phase 5 PR #77 재개)
 
 ## 완료
 
 | ID | 내용 | 커밋 |
 |---|---|---|
+| T-4-023 | PR #100 `42046ef` | 2026-09-05 21:55 | 대표팀 seed·reachability·캡처 2장(e2e helpers·web test·docs/qa) |
 | T-4-028 | PR #98 `452d32d` | 2026-09-05 21:47 | 대표팀 agent 축 문구 2줄(web) |
 | T-4-024 | PR #94 `232bc83` | 2026-09-05 20:40 | season_settled·step_passed elapsedSec(web funnel·route, contracts) |
 | T-4-017 | PR #90 `84709ec` | 2026-09-05 20:10 | 해시 probe career-12·13, api 테스트 2파일 |

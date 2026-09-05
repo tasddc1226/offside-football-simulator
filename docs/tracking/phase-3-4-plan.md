@@ -194,8 +194,18 @@
 | P4-4 부상 재발 fixture가 결정론적으로 재현 | T-4-002 career-12-injury 골든 |
 | P4-5 관계·평판이 Base OVR을 직접 바꾸지 않음 | T-4-001 Effect 타깃 스키마, T-4-006 property |
 | P4-6 단일 실패 이벤트가 강제 커리어 종료를 만들지 않음 | T-4-003 outcome 검증기(FAIL 회복 경로) |
-| P4-7 대표팀 사양이 감독 신뢰가 아니라 협회·팬 관계에만 작용 | T-4-004 테스트 |
-| 공통: 세션 길이·결정 예산 | T-4-006 측정(FAST 6분·CHAPTER 12분, 시즌당 결정 수 상한) |
+| P4-7 대표팀 사양이 감독 신뢰가 아니라 협회·팬 관계에만 작용 | T-4-004 테스트 + T-4-023 자연 플레이 캡처(PR #100, `docs/qa/phase34/national-team*.png`) + T-4-028 문구 정합(PR #98, D-66) |
+| 공통: 세션 길이·결정 예산 | T-4-006 측정(결정 예산·Snapshot 크기) + T-4-024 `elapsedSec`(PR #94) + [play-time-measurement.md](../qa/play-time-measurement.md) — 실사용자 판정은 LINE TEST 뒤(D-62) |
+
+### 4.1 출시 게이트 종결 (2026-09-05 21:55, D-65 범위)
+
+| 게이트 | 결과 |
+|---|---|
+| T-4-017 Node/workerd 해시 probe career-12·13 | PR #90 `84709ec` — Node·workerd·golden 일치 |
+| 실사용자 플레이 시간 측정 준비 | PR #94 `232bc83`(`season_settled`·`step_passed` `elapsedSec`) + 측정 프로토콜 문서. 실제 판정은 staging 배포·LINE TEST 뒤 |
+| SCR-032 대표팀 자연 플레이 캡처 | PR #100 `42046ef` — 0.3.0 seed 시즌 20 도달, 캡처 2장, reachability 항목. P4-7 문구 게이트는 PR #98(D-66) |
+| 기본 팩 | 0.1.0 유지(D-56·D-65) |
+| Phase 5 PR #77 | 보류(D-65), 사용자 재개 요청 뒤 |
 
 ## 5. 열린 질문 (트랙 투입 전에 닫는다)
 

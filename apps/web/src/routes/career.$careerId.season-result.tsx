@@ -12,7 +12,7 @@ import {
   buttonClassName,
   buttonStyle,
 } from '@offside/ui';
-import { rulesetForCareer } from '../engine/content.js';
+import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
@@ -35,12 +35,20 @@ import {
   ROLE_DECISION_LABEL_KO,
   ROLE_PROPOSAL_TYPE_LABEL_KO,
   SQUAD_ROLE_LABELS,
+  chapterTriggerLabel,
 } from '../shared/labels.js';
 
 type SeasonResultSearch = { season?: number };
 
 function parseSeason(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : undefined;
+}
+
+function chapterTitle(state: { contentPackVersion: string }, chapterId: string): string {
+  const chapter = contentForCareer(state).chaptersById.get(chapterId);
+  if (chapter === undefined) return '핵심 경기';
+  // 챕터 화면도 이 trigger label을 제목으로 사용한다. 챕터 정의에는 별도 title 필드가 없다.
+  return chapterTriggerLabel(chapter.trigger);
 }
 
 export const Route = createFileRoute('/career/$careerId/season-result')({
@@ -421,7 +429,7 @@ function SeasonResultScreen() {
           <ul className="flex flex-col gap-os-1 font-os text-os-text-2" style={CAPTION_STYLE}>
             {view.chapters.map((chapter) => (
               <li key={chapter.chapterId}>
-                {chapter.chapterId} · 판단 {chapter.decisions.length}건
+                {chapterTitle(state, chapter.chapterId)} · 판단 {chapter.decisions.length}건
               </li>
             ))}
           </ul>

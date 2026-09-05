@@ -23,6 +23,7 @@ import {
   buildNegotiationResultView,
   canAcceptOffer,
   canNegotiateOffer,
+  MARKET_REASON_LABEL_KO,
   offerDetailRows,
   offerStatus,
   type NegotiationResultView,
@@ -490,7 +491,7 @@ function ContractScreen() {
       </p>
 
       <ScreenIntro
-        eyebrow="계약 만료·FA"
+        eyebrow={MARKET_REASON_LABEL_KO[pending.market.reason]}
         title={`${offer.teamName} 제안 상세`}
         description="비교한 조건을 협상하거나 결정하세요."
       />

@@ -139,6 +139,11 @@ function CreatePlayerScreen() {
   }, [blocked, query.data, toDraft]);
 
   const committing = screenState.kind === 'COMMITTING';
+  const savedDraft = query.data?.state.player.draft;
+  const hasUnsavedChanges = savedDraft !== undefined &&
+    (Object.keys(EMPTY_FORM) as Array<keyof FormFields>).some(
+      (key) => form[key] !== (savedDraft[key] ?? ''),
+    );
 
   function updateField<K extends keyof FormFields>(key: K, value: FormFields[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -515,9 +520,17 @@ function CreatePlayerScreen() {
           onClick={() => void handleNext()}
           disabled={committing}
           className="w-full"
+          aria-describedby="draft-save-notice"
         >
           {committing ? '저장하는 중' : '다음'}
         </Button>
+        <p id="draft-save-notice" role="status" className="os-muted text-center" style={CAPTION_STYLE}>
+          {committing
+            ? '입력 정보를 저장하고 있어요.'
+            : hasUnsavedChanges
+              ? '아직 저장하지 않은 변경사항이 있어요. 다음을 눌러 저장하세요.'
+              : '다음을 누르면 입력 정보가 저장돼요.'}
+        </p>
       </div>
     </div>
   );

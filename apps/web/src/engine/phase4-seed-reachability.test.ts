@@ -42,6 +42,10 @@ const TARGETS: Target[] = [
   { presentation: 'ETHICS', packVersion: '0.2.0', seed: 'offside-seed-search-2', seasonIndex: 2, step: 9, eventId: 'EVT-ETH-010' },
   { presentation: 'MEDIA', packVersion: '0.2.0', seed: 'offside-seed-search-0', seasonIndex: 1, step: 4, eventId: 'EVT-MEDIA-010' },
   { presentation: 'RUMOUR', packVersion: '0.2.0', seed: 'offside-seed-search-0', seasonIndex: 2, step: 7, eventId: 'EVT-CON-010' },
+  // T-4-023: phase4-seeds.ts NATIONAL_TEAM과 동기화(find-seed.ts --pack 0.3.0 --max-seasons 30
+  // --seed-count 200 --seed-prefix offside-nat-search --presentation NATIONAL_TEAM 탐색의 가장
+  // 이른 hit).
+  { presentation: 'NATIONAL_TEAM', packVersion: '0.3.0', seed: 'offside-nat-search-0', seasonIndex: 20, step: 8, eventId: 'EVT-NAT-001' },
 ];
 
 function makeIdGenerator(prefix: string): () => string {
@@ -244,5 +248,8 @@ describe('T-4-009 §3: phase4-seeds.ts가 실제 engine 경로(career-actions.ts
       const step = pending.kind === 'EVENT' ? state.currentStep : pending.step;
       expect(step).toBe(target.step);
     },
+    // T-4-023: NATIONAL_TEAM(season 20)은 다른 항목보다 훨씬 많은 스텝을 재생해야 해 기본 5s
+    // 테스트 타임아웃을 넘길 수 있다(공유 머신 부하 시 특히) — 넉넉히 늘린다.
+    120_000,
   );
 });

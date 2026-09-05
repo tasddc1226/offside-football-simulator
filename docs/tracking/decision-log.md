@@ -2,6 +2,17 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (21:55, PR #100 T-4-023 머지 — Phase 3·4 출시 게이트 종결)
+
+- **T-4-023 PR #100 `6ffc1c4` squash 머지 `42046ef`.** 변경: `find-seed.ts`(NATIONAL_TEAM hit에 사유·수치 출력 필드), `phase4-seeds.ts`(NATIONAL_TEAM: 0.3.0 `offside-nat-search-0` 시즌 20 step 8 EVT-NAT-001), `phase4-seed-reachability.test.ts`(항목 추가, 120s 타임아웃, 실측 53.9s), 캡처 2장. 오케스트레이터 체인 EXIT 0(web test는 turbo 캐시 재생, e2e 98 passed 실측). 탐색 결과: 0.3.0·0.2.0 모두 seed 인덱스 0에서 곧바로 도달(RATING_AND_POPULARITY 경로 — 3부 리그 base OVR 임계 78 미달이라 평점·인기 경로), 룰셋 조정 없음(D-62).
+- **Phase 3·4 출시 게이트 종결(D-65 범위).** (1) T-4-017 해시 probe career-12·13 — PR #90 `84709ec`, Node·workerd·golden 일치. (2) 실사용자 플레이 시간 측정 준비 — PR #94 `232bc83` `elapsedSec` + [play-time-measurement.md](../qa/play-time-measurement.md); 실제 측정은 staging 배포(self-hosted runner, U-017)와 LINE TEST(U-015) 뒤 §6 절차. (3) SCR-032 대표팀 자연 플레이 캡처 — PR #100, 인수표 P4-7 문구 게이트는 D-66·T-4-028 PR #98 `452d32d`로 처리. 기본 팩 0.1.0 유지(D-56·D-65), Phase 5 PR #77 보류(D-65). 기록: [phase34-completion.md](../qa/phase34-completion.md) "출시 게이트 종결 기록", [phase-3-4-plan.md](phase-3-4-plan.md) §4.1.
+- 정리: 검증 큐 러너 종료, 워커 워크트리 `wf_3a416e2c-9a9-1`·검증 워크트리 제거. 참조용 `wf_6ba9548e-839-1`(중단된 T-4-012 커밋 3개)은 사용자 결정 전까지 유지.
+
+## 2026-09-05 (21:50, 사용자 세션 병행 반영 — PR #95·#96 머지, U-017 자체 해결 중)
+
+- 사용자 세션이 21:33 PR #96(ci: Mac self-hosted runner로 검사·스테이징 배포 전환)과 21:42 PR #95(T-4-027 Phase 3+4 expanded QA staging 격리)를 머지했다. U-017(Actions 결제 한도)은 한도 상향·공개 대신 **self-hosted runner**로 푸는 방향 — 21:50 확인: repository runner `offside-mac-arm64`(ID 21) online·busy로 main 실행(`36cc9c5`)을 처리 중. runner 운영은 사용자 몫이라 이 세션은 건드리지 않으며, 같은 기기 부하를 나누므로 이 세션의 로컬 체인은 큐 러너의 부하 게이트(1분 평균 40 미만)를 유지한다. 사용자 PR #91·#92·#99·#77은 그대로 둔다.
+- 이 세션의 문서 push가 그 사이 main 실행 4건을 cancelled로 만들었다(자기 대체). self-hosted 전환 뒤에는 실행 시간이 이 기기 부하가 되므로, 문서 push는 머지 직후 한 번으로 묶는다.
+
 ## 2026-09-05 (21:47, PR #98 T-4-028 머지 — P4-7 문구 게이트)
 
 - **T-4-028 PR #98 `d816420` squash 머지 `452d32d`.** `national-team.tsx` 안내 문단·`career.$careerId.event_.result.tsx` NATIONAL_TEAM 맥락 문장 2줄만 변경, 테스트 변경 없음. 오케스트레이터 체인 EXIT 0(e2e 98 passed). 사용자 PR #91·#92는 이 두 파일을 건드리지 않아 충돌 없음.

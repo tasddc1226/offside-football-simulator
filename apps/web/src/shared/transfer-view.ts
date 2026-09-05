@@ -187,10 +187,11 @@ function formatMinutesShare(bp: number): string {
 function formatOfferValidity(offer: Offer, recordRevision: number, actionRevision: number): string {
   if (offer.validUntilRevision === null) return '제한 없음';
   if (recordRevision <= offer.validUntilRevision && actionRevision > offer.validUntilRevision) {
-    return `현재 revision ${recordRevision}까지 유효 · 다음 결정에서 만료`;
+    return '다음 결정에서 만료됩니다 · 지금 처리할 수 없습니다';
   }
   if (recordRevision > offer.validUntilRevision) return '만료됨';
-  return `revision ${offer.validUntilRevision}까지`;
+  const remainingDecisions = offer.validUntilRevision - recordRevision;
+  return `앞으로 ${remainingDecisions}번의 결정 안에 처리해야 합니다 · 협상·거절 등 결정을 확정할 때 줄어듭니다. 화면을 보는 것만으로는 줄지 않습니다`;
 }
 
 type NegotiationOutcome = 'COUNTERED' | 'WITHDRAWN';

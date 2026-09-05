@@ -81,7 +81,14 @@ describe('T-3-005 revision-based offer state', () => {
     for (const ask of ['WAGE', 'ROLE', 'LENGTH'] as const) expect(canNegotiateOffer(candidate, 10, ask)).toBe(false);
     const rows = buildOfferRows([candidate], 10, null);
     expect(rows.find((row) => row.id === 'status')?.cells[0]?.value).toBe('만료됨');
-    expect(rows.find((row) => row.id === 'validity')?.cells[0]?.value).toContain('다음 결정에서 만료');
+    expect(rows.find((row) => row.id === 'validity')?.cells[0]?.value).toBe('다음 결정에서 만료됩니다 · 지금 처리할 수 없습니다');
+  });
+
+  it('유효 기간은 협상 횟수가 아니라 확정 결정을 기준으로 안내한다', () => {
+    const rows = buildOfferRows([offer({ validUntilRevision: 10 })], 9, null);
+    const validity = rows.find((row) => row.id === 'validity')?.cells[0]?.value;
+    expect(validity).toContain('앞으로 1번의 결정 안에 처리해야 합니다');
+    expect(validity).toContain('화면을 보는 것만으로는 줄지 않습니다');
   });
 });
 
