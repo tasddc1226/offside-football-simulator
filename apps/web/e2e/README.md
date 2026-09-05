@@ -39,21 +39,34 @@ pnpm --filter @offside/web e2e:staging   # 실 staging 리허설 — 아래 "sta
 
 `staging-rehearsal.spec.ts`는 `playwright.staging.config.ts`(`e2e:staging` 스크립트)로만 실행되며 기본
 `pnpm e2e`·CI에는 포함되지 않는다(기본 config는 이 파일을 `testIgnore`로 제외한다). `webServer`가 없고
-`baseURL`은 기본값 `https://offside-web-staging.tasddc1569.workers.dev`(`E2E_STAGING_URL`로 오버라이드
-가능)이다. 스텁 없이 실 api에 붙는다 — `helpers/recovery.ts`의 실 api 전용 헬퍼(`createCareerAndIssueRecoveryCode`)와
+기본 profile은 일반 staging의 `https://offside-web-staging.tasddc1569.workers.dev`다. `E2E_STAGING_PROFILE=expanded`를
+명시하면 expanded Worker가 기본 URL이 되고 `E2E_STAGING_URL`·`E2E_STAGING_API_URL`로 각각 덮어쓸 수
+있다. 스텁 없이 실 api에 붙는다 — `helpers/recovery.ts`의 실 api 전용 헬퍼(`createCareerAndIssueRecoveryCode`)와
 `helpers/player-creation.ts`의 스텁 없는 헬퍼만 쓴다(`page.route`로 온보딩 확정을 우회하는
 `completeOnboardingAndConfirm`류는 쓰지 않는다 — staging에서 실제 응답을 왜곡한다). 실제 서비스에
 붙으므로 `workers: 1`·`retries: 0`이다.
 
 ```bash
+# 일반 staging: LINE TEST/0.1.0, FAST 한 시즌
+pnpm --filter @offside/web e2e:staging
+
+# expanded QA: PHASE 3+4 QA/0.3.0, FAST와 CHAPTER를 각 한 시즌
+E2E_STAGING_PROFILE=expanded \
+E2E_STAGING_SEASON_NAME='PHASE 3+4 QA' \
+E2E_STAGING_URL=https://offside-web-expanded.tasddc1569.workers.dev \
+E2E_STAGING_API_URL=https://offside-api-expanded.tasddc1569.workers.dev \
 pnpm --filter @offside/web e2e:staging
 ```
 
-**staging에 실제 데이터가 생긴다.** 이 스펙은 (1) 새 커리어를 하나 만들어 복구 코드를 발급하고, (2)
-첫 계약을 체결하며, (3) FAST 시즌 하나를 결산까지 완주하고, (4) 그 과정에서 분석 이벤트를 실제
-`analytics_events` 테이블에 적재한다 — 전부 `svc_line_test`(테스트 시즌, `is_test=1`) 아래에 남는다.
-실행마다 새 커리어가 생기므로 **반복 실행하지 않는다**(브리프 기준 1회). 실행 결과 콘솔·Playwright
-attachment(`rehearsal-ids`)에 찍힌 `careerId`·`recoveryCode`·`deviceId`(분석 `clientId`, 확보되면)를
+`E2E_STAGING_SEASON_NAME` 기본값은 일반 profile에서 `LINE TEST`, expanded profile에서 `PHASE 3+4 QA`다.
+리허설은 current service season의 id·이름·ruleset·content pack·CORS를 먼저 검사한다. expanded는
+FAST·CHAPTER 두 커리어를 만들고, 시즌 진행 중 만난 범용·부상·관계 이벤트를 같은 공통 헬퍼로
+해소한 뒤 화면 제목을 결과 attachment에 남긴다. 무작위로 나타나지 않은 이벤트는 도달했다고 주장하지
+않는다.
+
+**staging에 실제 데이터가 생긴다.** 실행마다 profile별 모드 수만큼 새 커리어·복구 코드·분석 이벤트가
+생기므로 **반복 실행하지 않는다**. 복구 코드 원문은 비밀값이라 콘솔과 attachment에 남기지 않는다.
+attachment(`rehearsal-ids`)에 찍힌 `careerId`·`mode`·`deviceId`(분석 `clientId`, 확보되면)를
 오케스트레이터가 기록해 뒀다가 `wrangler d1 execute offside-staging --remote --env staging`으로 해당
 `careers`·`analytics_events` 행을 정리한다(정리 SQL은 `docs/tracking/line-test-plan.md` 5절 쿼리 형태를
 참고해 `id`/`client_id`로 좁힌다). 실패 시 `trace: retain-on-failure`로 trace가 `test-results/`에 남는다.

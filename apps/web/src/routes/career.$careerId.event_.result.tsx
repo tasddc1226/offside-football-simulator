@@ -165,7 +165,7 @@ function EventResultScreen() {
           {eventDefinition?.presentation === 'INJURY' && details.episode ? (
             <p className="font-os text-os-text-2">{INJURY_BODY_PART_LABELS[details.episode.bodyPart]} · {INJURY_SEVERITY_LABELS[details.episode.severity]} · {details.episode.diagnosisRange.minMatches}~{details.episode.diagnosisRange.maxMatches}경기 · {details.episode.rehab ? REHAB_PLAN_LABELS[details.episode.rehab] : '진단 대기'}</p>
           ) : null}
-          {eventDefinition?.presentation === 'NATIONAL_TEAM' ? <p className="font-os text-os-text-2">대표팀 결과 · 감독 신뢰는 변하지 않습니다</p> : null}
+          {eventDefinition?.presentation === 'NATIONAL_TEAM' ? <p className="font-os text-os-text-2">대표팀 결과 · 감독 신뢰는 변하지 않습니다 · 에이전트 관계는 협회 관계의 대리값입니다</p> : null}
           {details.nextKind !== null ? <p className="font-os text-os-text-2">이 선택에 이어진 이야기: {details.nextKind === 'EVENT' ? '새 이벤트 선택' : details.nextKind === 'NATIONAL_TEAM' ? '대표팀 선택' : details.nextKind === 'INJURY' ? '재활 계획 선택' : '다음 결정'}</p> : null}
         </section>
       ) : null}

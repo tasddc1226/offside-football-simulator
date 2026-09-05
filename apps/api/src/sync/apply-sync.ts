@@ -63,7 +63,12 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
       throw new AppError({ code: 'CAREER_NOT_FOUND', message: '커리어를 찾을 수 없습니다.' });
     }
     const [season] = await db
-      .select({ id: serviceSeasons.id, status: serviceSeasons.status })
+      .select({
+        id: serviceSeasons.id,
+        status: serviceSeasons.status,
+        rulesetVersion: serviceSeasons.rulesetVersion,
+        contentPackVersion: serviceSeasons.contentPackVersion,
+      })
       .from(serviceSeasons)
       .where(eq(serviceSeasons.id, body.createdServiceSeasonId))
       .limit(1);
@@ -77,6 +82,22 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
     // T-2-012 D-54: 신규 생성만 검사한다 — 시즌이 닫혀도 기존 커리어의 후속 PUT은 계속된다.
     if (season.status !== 'PRESEASON' && season.status !== 'ACTIVE') {
       throw new AppError({ code: 'SERVICE_SEASON_CLOSED', message: '서비스 시즌이 닫혔습니다.' });
+    }
+    // 신규 커리어만 생성 대상 서비스 시즌의 manifest와 맞아야 한다. 기존 커리어는 생성 당시 버전에
+    // 고정되므로 시즌 포인터나 manifest가 바뀐 뒤에도 replay·후속 PUT을 계속 허용한다.
+    if (
+      season.rulesetVersion !== body.rulesetVersion ||
+      season.contentPackVersion !== body.contentPackVersion
+    ) {
+      throw new AppError({
+        code: 'VERSION_MISMATCH',
+        message: '서비스 시즌과 커리어 버전이 다릅니다.',
+        details: {
+          reason: 'SERVICE_SEASON_VERSION_MISMATCH',
+          expectedRulesetVersion: season.rulesetVersion,
+          expectedContentPackVersion: season.contentPackVersion,
+        },
+      });
     }
   } else {
     if (existing.ownerProfileId !== profileId) {

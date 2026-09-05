@@ -71,3 +71,13 @@ UI와 엔진 분기·선택 결과 검증은 구분한다. 캡처에 보이는 �
 2. PROTOTYPE 문구의 SHIPPABLE 승격·실제 사용자 플레이 테스트·이벤트 빈도/대표팀 도달 난이도 검토. 룰셋 수치를 이번 작업에서 임의 조정하지 않는다.
 3. Node/workerd 전용 해시 probe 확장(T-4-017), 실기기 성능·실계정 복구 및 실제 플레이 시간 검증은 별도 출시 QA 항목. 자동화 수초를 FAST 4~6분·CHAPTER 8~12분 달성으로 간주하지 않는다.
 4. Phase 5 PR #77과 승인받은 밸런스 재설계는 사용자 재개 요청 뒤 최신 main에서 이어간다.
+
+## 출시 게이트 종결 기록 (2026-09-05 21:55, 오케스트레이터 · D-65)
+
+위 "남은 출시 게이트" 4항 가운데 이 세션 범위(D-65)의 처리 결과다.
+
+1. 기본 팩 **0.1.0 유지** — 변경 없음(D-56·D-65). Phase 4 팩 기본 활성화는 LINE TEST 기준선 뒤 사용자 결정.
+2. 대표팀 도달 — [T-4-023](../tracking/briefs/T-4-023.md) PR #100 `42046ef`: `find-seed.ts --pack 0.3.0 --max-seasons 30 --seed-count 200 --presentation NATIONAL_TEAM`으로 seed `offside-nat-search-0`이 시즌 20 step 8에서 EVT-NAT-001 소집(RATING_AND_POPULARITY 경로; 3부 base OVR 73 < 임계 78, 인기 100% ≥ 60%). 0.2.0은 같은 seed 시즌 19. `phase4-seeds.ts` NATIONAL_TEAM 항목과 `phase4-seed-reachability.test.ts`가 `career-actions.ts` 경로로 독립 재생(53.9s). 캡처: [national-team.png](phase34/national-team.png)(SCR-032), [national-team-result.png](phase34/national-team-result.png)(SCR-014, 체력 -15·에이전트 관계 +4·팬 관계 +4·감독 신뢰 불변). 인수표 P4-7 문구 게이트: SCR-032 미리보기는 팩 라벨 "협회 관계", SCR-014는 공용 라벨 "에이전트 관계"로 어긋나 D-66([T-4-028](../tracking/briefs/T-4-028.md) PR #98 `452d32d`)으로 두 화면에 "에이전트 관계(협회 관계의 대리값)"를 명시했다. 룰셋·이벤트 빈도는 조정하지 않았다(D-62). PROTOTYPE 문구 승격·실사용자 플레이 테스트는 그대로 사용자 게이트.
+3. 해시 probe — [T-4-017](../tracking/briefs/T-4-017.md) PR #90 `84709ec`: `cross-runtime-hash.test.ts`·`hash-probe.worker.ts`에 career-12-injury(rev 20)·career-13-integration(rev 45) 추가, Node·workerd·golden 일치. 실사용자 플레이 시간 — [T-4-024](../tracking/briefs/T-4-024.md) PR #94 `232bc83`: `season_settled`·`step_passed`에 정수 초 `elapsedSec`(상한 7200, 계약 optional), 측정 프로토콜·D1 쿼리·절단 규칙·판정은 [play-time-measurement.md](play-time-measurement.md). 자동화 시간은 여전히 플레이 시간으로 보지 않는다. 실측은 staging 배포(사용자 self-hosted runner 전환, U-017)와 LINE TEST(U-015) 뒤.
+4. Phase 5 PR #77 — 보류 유지(D-65).
+
