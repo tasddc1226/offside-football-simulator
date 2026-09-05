@@ -1,0 +1,50 @@
+{
+  "revision": 45,
+  "stateHash": "49d609069e1bce02ffcd66860ffca430e2e502bf7d8a5fbdf60da335a88e6a9e",
+  "checkpoint": "SEASON_SETTLED",
+  "rngStateDraws": 1155,
+  "seasonHistoryLength": 3,
+  "seasonResultHashes": [
+    "67986c824c2a6f770363865179832d4dbf079e1ddba739e93f75731e0ed29f6a",
+    "00530672c0304dcfc0414640976861b399d4a466325f85b97570a371aa80e4e8",
+    "5f26354640e905787e19186b75294037958bc7ee35d244e18af8886c1e1067a5"
+  ],
+  "clubHistory": [
+    {
+      "teamId": "seoul-tier1",
+      "teamName": "서울 유나이티드",
+      "leagueTier": 1,
+      "kind": "PERMANENT",
+      "fromSeasonIndex": 1,
+      "toSeasonIndex": 1,
+      "endReason": "TRANSFERRED",
+      "contractId": "CTR-10"
+    },
+    {
+      "teamId": "busan-tier2",
+      "teamName": "부산 시티",
+      "leagueTier": 2,
+      "kind": "PERMANENT",
+      "fromSeasonIndex": 2,
+      "toSeasonIndex": null,
+      "endReason": null,
+      "contractId": "CTR-18"
+    }
+  ],
+  "clubHistoryLength": 2,
+  "healthEpisodesCount": 5,
+  "careerTags": [],
+  "contract": {
+    "id": "CTR-18",
+    "teamId": "busan-tier2",
+    "leagueTier": 2,
+    "kind": "PERMANENT",
+    "lengthSeasons": 2,
+    "rolePromise": "ROTATION"
+  },
+  "nationalTeam": {
+    "callUps": [],
+    "debuted": false,
+    "pendingDebut": null
+  }
+}
