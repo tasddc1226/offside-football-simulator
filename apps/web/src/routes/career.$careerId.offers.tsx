@@ -9,12 +9,9 @@ import {
   buttonClassName,
   buttonStyle,
   Card,
-  CompareCards,
   EmptyState,
   ErrorState,
   ScreenIntro,
-  type CompareCardItem,
-  type CompareRow,
 } from '@offside/ui';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -23,14 +20,9 @@ import { SCREEN_ROUTES } from '../routes.js';
 import { committedTransferRevision } from '../shared/transfer-result.js';
 import { platform } from '../platform/index.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
-import {
-  buildOfferRows as buildMarketOfferRows,
-  OFFER_KIND_LABEL_KO,
-  MARKET_REASON_LABEL_KO,
-} from '../shared/transfer-view.js';
-import { LEAGUE_TIER_LABEL_KO, SQUAD_ROLE_LABELS } from '../shared/labels.js';
-import { formatKrw } from '../shared/format.js';
+import { MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
 import { buildCurrentContractSummary } from '../shared/transfer-view.js';
+import { CompactOfferCard } from '../shared/contract-presentation.js';
 
 type OffersTarget = 'SCR-009' | 'SCR-017';
 
@@ -56,21 +48,6 @@ export const Route = createFileRoute('/career/$careerId/offers')({
 
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
 const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
-
-function ViewOfferLink({ careerId, offerId, layout, label = '이 제안 보기' }: { careerId: string; offerId: string; layout: string; label?: string }) {
-  return (
-    <Link
-      key={`${offerId}-${layout}`}
-      to="/career/$careerId/contract"
-      params={{ careerId }}
-      search={{ offerId }}
-      className={buttonClassName('primary', 'w-full justify-center')}
-      style={buttonStyle}
-    >
-      {label}
-    </Link>
-  );
-}
 
 function MarketSummary({ state, offers }: { state: CareerState; offers: readonly Offer[] }) {
   const pending = state.pending;
@@ -165,36 +142,15 @@ function RejectAllButton({ careerId, kind }: { careerId: string; kind: 'OFFERS' 
 
 function FirstContractOffers({
   careerId,
+  state,
+  revision,
   offers,
 }: {
   careerId: string;
+  state: CareerState;
+  revision: number;
   offers: readonly Offer[];
 }) {
-  function computeBadges(offer: Offer): string {
-    const badges: string[] = [];
-    const leagueRank = (tier: Offer['leagueTier']) => (tier === 'YOUTH' ? 4 : tier);
-    const bestLeagueRank = Math.min(...offers.map((candidate) => leagueRank(candidate.leagueTier)));
-    if (leagueRank(offer.leagueTier) === bestLeagueRank) badges.push('가장 높은 리그');
-    const roleRank: Record<Offer['rolePromise'], number> = { STARTER: 0, ROTATION: 1, BENCH: 2, RESERVE: 3 };
-    const bestRoleRank = Math.min(...offers.map((candidate) => roleRank[candidate.rolePromise]));
-    if (roleRank[offer.rolePromise] === bestRoleRank) badges.push('출전 기회 높음');
-    return badges.length > 0 ? badges.join(' · ') : '—';
-  }
-
-  function buildFirstContractRows(): CompareRow[] {
-    return [
-      { id: 'badge', label: '특징', cells: offers.map((offer) => ({ value: computeBadges(offer), highlighted: computeBadges(offer) !== '—' })) },
-      { id: 'team', label: '팀', cells: offers.map((offer) => ({ value: offer.teamName })) },
-      { id: 'league', label: '리그', cells: offers.map((offer) => ({ value: LEAGUE_TIER_LABEL_KO[offer.leagueTier] })) },
-      { id: 'length', label: '기간', cells: offers.map((offer) => ({ value: `${offer.lengthSeasons}시즌` })) },
-      { id: 'wage', label: '주급', cells: offers.map((offer) => ({ value: formatKrw(offer.wageMinorPerWeek) })) },
-      { id: 'bonus', label: '계약금', cells: offers.map((offer) => ({ value: formatKrw(offer.signingBonusMinor) })) },
-      { id: 'role', label: '역할 약속', cells: offers.map((offer) => ({ value: SQUAD_ROLE_LABELS[offer.rolePromise] })) },
-      { id: 'shirt', label: '등번호', cells: offers.map((offer) => ({ value: String(offer.shirtNumber) })) },
-      { id: 'fit', label: '전술 적합도', cells: offers.map((offer) => ({ value: String(offer.tacticalFitEstimate) })) },
-    ];
-  }
-
   if (offers.length === 0) {
     return (
       <EmptyState
@@ -209,38 +165,10 @@ function FirstContractOffers({
     );
   }
 
-  if (offers.length === 1) {
-    const offer = offers[0]!;
-    return (
-      <Card className="flex flex-col gap-os-3">
-        <h2 className="font-os font-bold text-os-text" style={{ fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' }}>
-          {offer.teamName}
-        </h2>
-        <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
-          <div><dt>리그</dt><dd className="text-os-text">{LEAGUE_TIER_LABEL_KO[offer.leagueTier]}</dd></div>
-          <div><dt>기간</dt><dd className="os-num text-os-text">{offer.lengthSeasons}시즌</dd></div>
-          <div><dt>주급</dt><dd className="os-num text-os-text">{formatKrw(offer.wageMinorPerWeek)}</dd></div>
-          <div><dt>계약금</dt><dd className="os-num text-os-text">{formatKrw(offer.signingBonusMinor)}</dd></div>
-          <div><dt>역할 약속</dt><dd className="text-os-text">{SQUAD_ROLE_LABELS[offer.rolePromise]}</dd></div>
-          <div><dt>등번호</dt><dd className="os-num text-os-text">{offer.shirtNumber}</dd></div>
-          <div><dt>전술 적합도</dt><dd className="os-num text-os-text">{offer.tacticalFitEstimate}</dd></div>
-        </dl>
-        <Link to="/career/$careerId/contract" params={{ careerId }} search={{ offerId: offer.id }} className={buttonClassName('primary')} style={buttonStyle}>
-          이 제안 보기
-        </Link>
-      </Card>
-    );
-  }
-
   return (
-    <CompareCards
-      cards={offers.map((offer): CompareCardItem => ({
-        id: offer.id,
-        title: offer.teamName,
-        renderAction: (layout) => <ViewOfferLink careerId={careerId} offerId={offer.id} layout={layout} />,
-      }))}
-      rows={buildFirstContractRows()}
-    />
+    <div className="grid grid-cols-1 gap-os-3 md:grid-cols-2">
+      {offers.map((offer) => <CompactOfferCard key={offer.id} careerId={careerId} offer={offer} state={state} recordRevision={revision} safeOfferId={null} parentTeamName={null} />)}
+    </div>
   );
 }
 
@@ -278,14 +206,9 @@ function MarketOffers({
           }
         />
       ) : (
-        <CompareCards
-          cards={offers.map((offer): CompareCardItem => ({
-            id: offer.id,
-            title: `${offer.teamName} · ${OFFER_KIND_LABEL_KO[offer.kind]}`,
-            renderAction: (layout) => <ViewOfferLink careerId={careerId} offerId={offer.id} layout={layout} label="제안 상세·결정" />,
-          }))}
-          rows={buildMarketOfferRows(offers, revision, safeOfferId, parentTeamName)}
-        />
+        <div className="grid grid-cols-1 gap-os-3 md:grid-cols-2">
+          {offers.map((offer) => <CompactOfferCard key={offer.id} careerId={careerId} offer={offer} state={state} recordRevision={revision} safeOfferId={safeOfferId} parentTeamName={parentTeamName} />)}
+        </div>
       )}
       {offers.length > 0 ? <RejectAllButton careerId={careerId} kind={rejectAllKind} /> : null}
     </>
@@ -326,7 +249,7 @@ function OffersScreen() {
         />
       )}
       {firstContract ? (
-        <FirstContractOffers careerId={careerId} offers={offers} />
+        <FirstContractOffers careerId={careerId} state={state} revision={record.revision} offers={offers} />
       ) : (
         <MarketOffers careerId={careerId} state={state} revision={record.revision} offers={offers} />
       )}

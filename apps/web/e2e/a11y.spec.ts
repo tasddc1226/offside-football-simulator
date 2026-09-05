@@ -308,12 +308,15 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
 }) => {
   await completeOnboardingAndConfirm(page);
   await advanceUntilOffers(page);
-  await page.getByRole('link', { name: '이 제안 보기' }).first().click();
+  await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
   await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-010');
 
   await page.getByRole('button', { name: '사인' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-010 계약 완료');
+  await page.getByRole('button', { name: '커리어 시작' }).click();
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
   const signedToast = page.getByText('계약을 맺었습니다');
   await expect(signedToast).toBeVisible();

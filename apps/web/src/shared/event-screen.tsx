@@ -26,6 +26,7 @@ import { buildNarrativeTokens, renderNarrative, type NarrativeTokenValues } from
 import { eventSituation } from './legacy-event-copy.js';
 import { u18StatusStripItems } from './status-strip.js';
 import { useCommittingExitGuard } from './use-committing-exit-guard.js';
+import { GamePending } from './game-presentation.js';
 
 const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
@@ -245,13 +246,20 @@ export function EventDecisionScreen({
 
       {errorMessage ? <ErrorState message={errorMessage} onRetry={handleConfirm} /> : null}
 
+      {resolveMutation.isPending ? (
+        <GamePending
+          title="선택을 확정하고 있습니다"
+          detail="결과가 저장되면 실제 변화와 함께 공개됩니다."
+        />
+      ) : null}
+
       <div className="os-action-dock">
         <Button
           variant="primary"
           onClick={handleConfirm}
           disabled={selectedChoiceId === null || resolveMutation.isPending}
         >
-          확정
+          {resolveMutation.isPending ? '확정 중' : '확정'}
         </Button>
       </div>
     </div>

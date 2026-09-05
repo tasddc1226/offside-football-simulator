@@ -64,6 +64,7 @@ import { familiarityPercentLabel, SelectionRankingList } from '../shared/tactica
 import { useReducedMotion } from '../shared/ui-store.js';
 import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 import { buildCurrentContractSummary, MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
+import { GamePending } from '../shared/game-presentation.js';
 
 type DashboardSearch = { signed?: boolean };
 type ChapterPending = Extract<CareerState['pending'], { kind: 'CHAPTER' }>;
@@ -340,6 +341,8 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   const submittingRef = useRef(false);
 
   const pending = state.pending;
+  const advancing = advanceMutation.isPending;
+  const settling = settleSeasonMutation.isPending;
 
   const handleAdvance = async () => {
     if (submittingRef.current) return;
@@ -496,8 +499,14 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
             disabled={settleSeasonMutation.isPending}
             onClick={() => void handleSettle()}
           >
-            결산하기
+            {settling ? '결산 중' : '결산하기'}
           </Button>
+          {settling ? (
+            <GamePending
+              title={`시즌 ${state.season?.index ?? ''} 기록을 정리하고 있습니다`}
+              detail="경기 기록과 성장 결과를 저장한 뒤 시즌 리뷰를 엽니다."
+            />
+          ) : null}
         </div>
         {errorMessage ? (
           <ErrorState message={errorMessage} onRetry={() => void handleSettle()} />
@@ -550,8 +559,16 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
         onClick={() => void handleAdvance()}
         disabled={nothingToAdvance || advanceMutation.isPending}
       >
-        진행
+        {advancing ? '진행 중' : '진행'}
       </Button>
+      {advancing ? (
+        <GamePending
+          title="시즌을 진행하고 있습니다"
+          detail={state.season === null
+            ? '다음 일정을 준비하고 있습니다.'
+            : `시즌 ${state.season.index} · step ${state.currentStep} 이후 일정을 처리하고 있습니다.`}
+        />
+      ) : null}
       {nothingToAdvance ? (
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           다음 시즌은 곧 열립니다

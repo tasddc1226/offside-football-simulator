@@ -71,6 +71,7 @@ const UNISSUED_PROFILE: Profile = {
 };
 
 beforeEach(() => {
+  sessionStorage.clear();
   setTestEngine();
   queryClient.clear();
   useUiStore.setState({
@@ -110,10 +111,12 @@ describe('SCR-002 선수 정보', () => {
     await user.click(screen.getByRole('radio', { name: '남성' }));
     await user.selectOptions(screen.getByLabelText('국적'), 'KR');
     await user.click(screen.getByRole('radio', { name: '왼발' }));
+    await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('tab', { name: '공격수' }));
     await user.click(screen.getByRole('radio', { name: /스트라이커/ }));
-    await user.click(screen.getByRole('radio', { name: /클럽 아카데미/ }));
     await user.click(screen.getByRole('button', { name: '다음' }));
+    await user.click(screen.getByRole('radio', { name: /클럽 아카데미/ }));
+    await user.click(screen.getByRole('button', { name: '플레이 스타일 고르기' }));
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/career/${careerId}/style`);
@@ -133,6 +136,30 @@ describe('SCR-002 선수 정보', () => {
     expect(screen.getByLabelText('이름')).toHaveFocus();
   });
 
+  it('형식은 JSON이지만 값이 잘못된 scratch는 무시하고 저장된 draft로 복구한다', async () => {
+    const engine = setTestEngine();
+    const careerId = await createDraftCareer(engine);
+    sessionStorage.setItem(
+      `offside:player-creation:${careerId}`,
+      JSON.stringify({
+        form: {
+          name: '김서준',
+          gender: 'MALE',
+          nationalityCode: 'KR',
+          preferredFoot: 'LEFT',
+          position: 'BAD',
+          backgroundId: 'club-academy',
+        },
+        panel: 1,
+      }),
+    );
+
+    renderAt(`/career/${careerId}/create`);
+
+    expect(await screen.findByRole('heading', { level: 2, name: '나를 소개하세요' })).toBeInTheDocument();
+    expect(screen.getByLabelText('이름')).toHaveValue('');
+  });
+
   it('저장 실패 → 입력으로 돌아가기 → 폼(이름 입력)이 다시 보인다', async () => {
     const engine = setTestEngine();
     const careerId = await createDraftCareer(engine);
@@ -148,10 +175,12 @@ describe('SCR-002 선수 정보', () => {
     await user.click(screen.getByRole('radio', { name: '남성' }));
     await user.selectOptions(screen.getByLabelText('국적'), 'KR');
     await user.click(screen.getByRole('radio', { name: '왼발' }));
+    await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('tab', { name: '공격수' }));
     await user.click(screen.getByRole('radio', { name: /스트라이커/ }));
-    await user.click(screen.getByRole('radio', { name: /클럽 아카데미/ }));
     await user.click(screen.getByRole('button', { name: '다음' }));
+    await user.click(screen.getByRole('radio', { name: /클럽 아카데미/ }));
+    await user.click(screen.getByRole('button', { name: '플레이 스타일 고르기' }));
 
     await screen.findByText('저장하지 못했습니다.');
     await user.click(screen.getByRole('button', { name: '입력으로 돌아가기' }));
@@ -270,9 +299,11 @@ describe('SCR-002→003: 포지션 변경 시 기존 아키타입을 자동 확�
     renderAt(`/career/${careerId}/create`);
     await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
 
+    await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('tab', { name: '공격수' }));
     await user.click(screen.getByRole('radio', { name: /스트라이커/ }));
     await user.click(screen.getByRole('button', { name: '다음' }));
+    await user.click(screen.getByRole('button', { name: '플레이 스타일 고르기' }));
 
     await screen.findByRole('heading', { level: 1, name: '플레이 스타일을 고르세요' });
     expect(screen.queryByText('선택됨')).not.toBeInTheDocument();

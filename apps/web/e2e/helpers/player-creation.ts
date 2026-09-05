@@ -20,12 +20,14 @@ export async function startNewCareer(page: Page): Promise<void> {
 
 /** SCR-002의 6개 필드(성별·선호 포지션 포함, PR #32/T-1-016)를 채운다. */
 export async function fillPlayerInfo(page: Page, name = '김서준'): Promise<void> {
-  await page.getByLabel('이름').fill(name);
+  await page.getByRole('textbox', { name: '이름', exact: true }).fill(name);
   await page.getByRole('radio', { name: '남성' }).click();
   await page.getByLabel('국적').selectOption('KR');
   await page.getByRole('radio', { name: '왼발' }).click();
+  await page.getByRole('button', { name: '다음', exact: true }).click();
   await page.getByRole('tab', { name: '공격수' }).click();
   await page.getByRole('radio', { name: /윙어/ }).click();
+  await page.getByRole('button', { name: '다음', exact: true }).click();
   await page.getByRole('radio', { name: /클럽 아카데미/ }).click();
 }
 
@@ -33,7 +35,7 @@ export async function fillPlayerInfo(page: Page, name = '김서준'): Promise<vo
 export async function goToConfirm(page: Page): Promise<void> {
   await startNewCareer(page);
   await fillPlayerInfo(page);
-  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/style$/);
 
   await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
@@ -89,7 +91,7 @@ export async function advanceUntilOffers(page: Page): Promise<void> {
 }
 
 /**
- * SCR-009 첫 계약이면 기존 `제안 비교`·`이 제안 보기`·`사인` 퍼널을 그대로 타고, Phase 3
+ * SCR-009 첫 계약이면 `제안 비교`·`제안 상세·결정`·`사인` 퍼널을 타고, Phase 3
  * 시장 제안이면 `이적시장 제안 비교`·`제안 상세·결정`·`이 조건 수락`·SCR-020을 탄다. 두
  * 화면을 heading/link로 먼저 구분해야 PRE_NEGOTIATION의 새 UI가 기존 시즌 진행 헬퍼에서
  * FIRST_CONTRACT로 오인되지 않는다.
@@ -99,7 +101,7 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
   const marketHeading = page.getByRole('heading', { level: 1, name: '이적시장 제안 비교', exact: true });
   await firstContractHeading.or(marketHeading).first().waitFor({ state: 'visible', timeout: 60_000 });
   if (await firstContractHeading.isVisible()) {
-    const offerLinks = page.getByRole('link', { name: '이 제안 보기' });
+    const offerLinks = page.getByRole('link', { name: '제안 상세·결정' });
     const offerCards = page.locator('[data-compare-layout="stacked"] > div');
     let targetOffer = offerLinks.first();
     if ((await offerCards.count()) > 1 && options.preferredMinLengthSeasons !== undefined) {
@@ -107,12 +109,15 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
       const preferredLength = options.preferredMinLengthSeasons;
       const preferredCard = offerCards.filter({ hasText: new RegExp(`[${preferredLength}-9]시즌`) }).first();
       await expect(preferredCard).toHaveCount(1);
-      targetOffer = preferredCard.getByRole('link', { name: '이 제안 보기' });
+      targetOffer = preferredCard.getByRole('link', { name: '제안 상세·결정' });
     }
     await targetOffer.click();
 
     await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
     await page.getByRole('button', { name: '사인' }).click();
+
+    await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
+    await page.getByRole('button', { name: '커리어 시작' }).click();
 
     await expect(page).toHaveURL(/\/career\/[^/]+$/);
     await expect(page.getByText('계약을 맺었습니다')).toBeVisible();

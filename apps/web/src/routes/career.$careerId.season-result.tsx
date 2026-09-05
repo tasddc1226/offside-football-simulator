@@ -37,6 +37,7 @@ import {
   SQUAD_ROLE_LABELS,
   chapterTriggerLabel,
 } from '../shared/labels.js';
+import { GameResultReveal } from '../shared/game-presentation.js';
 
 type SeasonResultSearch = { season?: number };
 
@@ -240,6 +241,7 @@ function SeasonResultScreen() {
       : Math.round((selection.minutes / selection.possibleMinutes) * 100);
   const stateDeltaRows = buildStateDeltaRows(view);
   const nextTarget = canPlanNextSeason(state) ? 'SCR-005' : screenForCareer(state).screenId;
+  const headlineTeamResult = view.teamRecords[0];
 
   return (
     <div className="os-screen" data-testid="season-result" data-result-hash={view.hash}>
@@ -248,6 +250,25 @@ function SeasonResultScreen() {
         title={view.isYouth ? '유소년 시즌 결과' : '프로 시즌 결과'}
         description={`시즌 ${view.seasonNumber}`}
       />
+
+      <GameResultReveal
+        fast={state.simulationMode === 'FAST'}
+        announcement={`시즌 ${view.seasonNumber} 결과, 평균 평점 ${ratingText(common.avgRatingTenths)}`}
+        skippable={false}
+      >
+        <section className="os-story-card flex flex-col gap-os-3" aria-label="시즌 한눈에 보기">
+          <p className="os-eyebrow">시즌 {view.seasonNumber} · 최종 기록</p>
+          <p className="font-os font-semibold text-os-text" style={H2_STYLE}>
+            {common.total}경기 · {common.minutes}분 · 평균 평점 {ratingText(common.avgRatingTenths)}
+          </p>
+          <p className="font-os text-os-text-2" style={BODY_STYLE}>
+            {headlineTeamResult
+              ? `${headlineTeamResult.label} ${headlineTeamResult.standingText}`
+              : `${SQUAD_ROLE_LABELS[selection.roleAtStart]}에서 ${SQUAD_ROLE_LABELS[selection.roleAtEnd]}로 시즌을 마쳤습니다.`}
+            {' · '}Base OVR {view.baseOvr.before} → {view.baseOvr.after}
+          </p>
+        </section>
+      </GameResultReveal>
 
       <section className="os-panel flex flex-col gap-os-4">
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>

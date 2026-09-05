@@ -25,6 +25,7 @@ import {
   type TrainingFocus,
 } from '../shared/start-season.js';
 import { platform } from '../platform/index.js';
+import { GamePending } from '../shared/game-presentation.js';
 
 type SeasonPrepSearch = { mode?: SimulationMode; focus?: TrainingFocus };
 
@@ -199,6 +200,13 @@ function SeasonPrepScreen() {
       </section>
 
       {errorMessage ? <ErrorState message={errorMessage} onRetry={handleStart} /> : null}
+
+      {committing ? (
+        <GamePending
+          title={`${SIMULATION_MODE_LABEL_KO[mode]} 모드로 시즌을 시작하고 있습니다`}
+          detail={`${TRAINING_FOCUS_LABEL_KO[focus]} 계획과 시즌 일정을 저장하고 있습니다.`}
+        />
+      ) : null}
 
       <div className="os-action-dock">
         <div className="grid grid-cols-3 gap-os-2">

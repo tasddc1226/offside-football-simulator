@@ -58,6 +58,7 @@ import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { platform } from '../platform/index.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
+import { GamePending, GameResultReveal } from '../shared/game-presentation.js';
 
 type ChapterSearch = { d: number };
 
@@ -489,17 +490,32 @@ function ChapterScreen() {
             </div>
           </div>
         ) : (
-          <DecisionInput
-            decision={view.definition.decisions[cursor]!}
-            submitting={resolveMutation.isPending}
-            errorMessage={errorMessage}
-            onConfirm={(optionId) =>
-              void handleConfirm(view.definition.decisions[cursor]!.id, optionId)
-            }
-          />
+          <>
+            <DecisionInput
+              decision={view.definition.decisions[cursor]!}
+              submitting={resolveMutation.isPending}
+              errorMessage={errorMessage}
+              onConfirm={(optionId) =>
+                void handleConfirm(view.definition.decisions[cursor]!.id, optionId)
+              }
+            />
+            {resolveMutation.isPending ? (
+              <GamePending
+                title={`${decisionTimeLabel(displayDecisionNumber)} 판단을 확정하고 있습니다`}
+                detail="경기 결과에 반영될 실제 판정을 저장하고 있습니다."
+              />
+            ) : null}
+          </>
         )
       ) : (
-        <ChapterResultSection view={view} />
+        <GameResultReveal
+          fast={state.simulationMode === 'FAST'}
+          announcement={isNationalTeam
+            ? '대표팀 데뷔 결과가 확정되었습니다'
+            : `경기 결과 ${view.match.result.goalsFor} 대 ${view.match.result.goalsAgainst}, 평점 ${ratingText(view.match.ratingTenths)}`}
+        >
+          <ChapterResultSection view={view} />
+        </GameResultReveal>
       )}
 
       {cursor >= decisionsTotal ? (

@@ -16,6 +16,7 @@ import { INJURY_BODY_PART_LABELS, INJURY_SEVERITY_LABELS, REHAB_PLAN_LABELS } fr
 import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
+import { GameResultReveal } from '../shared/game-presentation.js';
 
 type EventResultSearch = { rev: number };
 
@@ -57,7 +58,6 @@ function EventResultScreen() {
   const navigate = useNavigate();
   const submittingRef = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [announcement, setAnnouncement] = useState('');
 
   const view =
     query.data === undefined
@@ -71,15 +71,6 @@ function EventResultScreen() {
     });
     // 마운트 시 1회만(로더가 이미 캐시를 채웠다).
   }, []);
-
-  // 08 접근성 체크리스트: 결과 변화를 aria-live로 한 번만 낭독한다. `ScreenStateView`의 영역은
-  // LOADING·COMMITTING 단계 문구 전용이라 재사용하지 않고, 이 화면 전용 영역을 둔다 — 처음엔 빈
-  // 문자열로 마운트해 뒀다가 결과가 정해지면 텍스트만 한 번 바꾼다(이미 채워진 채로 새로 마운트되면
-  // 스크린리더가 놓칠 수 있다).
-  useEffect(() => {
-    if (view === null) return;
-    setAnnouncement(`${view.kindLabel}: ${view.title}`);
-  }, [rev, view?.kindLabel, view?.title]);
 
   if (query.isPending) {
     return (
@@ -140,22 +131,25 @@ function EventResultScreen() {
 
   return (
     <div className="os-screen">
-      <p className="sr-only" aria-live="polite" data-testid="event-result-announcement">
-        {announcement}
-      </p>
       <ScreenIntro
         eyebrow="이어지는 이야기"
         title="선택의 결과"
         description="당신의 결정이 커리어에 남긴 변화를 확인하세요."
       />
-      <ResultCard
-        kind={view.kind}
-        kindLabel={view.kindLabel}
-        title={view.title}
-        body={view.body}
-        effects={details.actualEffects ?? view.effects}
-        tags={view.tags}
-      />
+      <GameResultReveal
+        fast={state.simulationMode === 'FAST'}
+        announcement={`${view.kindLabel}: ${view.title}`}
+        announcementTestId="event-result-announcement"
+      >
+        <ResultCard
+          kind={view.kind}
+          kindLabel={view.kindLabel}
+          title={view.title}
+          body={view.body}
+          effects={details.actualEffects ?? view.effects}
+          tags={view.tags}
+        />
+      </GameResultReveal>
       <p className="os-muted">{details.actualEffects === null
         ? '이 기기에는 당시의 상세 저장 기록이 없어 선택의 기본 효과를 표시합니다. 상한과 중복 적용에 따라 실제 변화는 달라질 수 있습니다.'
         : '선택 직전과 직후의 저장값을 비교한 실제 변화입니다. 이후 적용될 효과는 선택 안내를 참고하세요.'}</p>

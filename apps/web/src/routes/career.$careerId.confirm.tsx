@@ -1,13 +1,12 @@
 // SCR-004 생성 완료 확인 + 복구 코드 발급 단계. KICKOFF는 로컬 CONFIRM_PLAYER → ADVANCE(EVT-CON-002
 // pending 계산)를 순서대로 실행한다. 확정 직후 DSN-LINE-001의 세 허용 순간 중 하나(오프사이드 라인 +
 // KICKOFF)를 보여준다. 복구 코드 단계는 같은 라우트의 ?step=recovery로 남아 새로고침해도 유지된다.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Button,
   DisplayWord,
   ErrorState,
   OffsideLine,
-  PlayerHeader,
   ScreenIntro,
   Skeleton,
   Stepper,
@@ -31,6 +30,8 @@ import { screenForCareer } from '../shared/career-route.js';
 import { useScreenState } from '../shared/screen-state.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
+import { useReducedMotion } from '../shared/ui-store.js';
+import { CreationCard } from '../shared/player-creation-ui.js';
 import { SCREEN_ROUTES } from '../routes.js';
 
 export const Route = createFileRoute('/career/$careerId/confirm')({
@@ -54,6 +55,11 @@ function ConfirmScreen() {
   const query = useCareer(careerId);
 
   const [postConfirmInFlight, setPostConfirmInFlight] = useState(false);
+  const [ceremonyReady, setCeremonyReady] = useState(false);
+  const kickoffInFlightRef = useRef(false);
+  const confirmCompletedRef = useRef(false);
+  const advanceCompletedRef = useRef(false);
+  const reducedMotion = useReducedMotion();
   const isActive = query.data !== undefined && query.data.state.status !== 'DRAFT';
   const recoveryStepActive = search.step === 'recovery' || postConfirmInFlight;
   const blocked = useCareerStepGuard(query.data?.state, 'SCR-004', { recoveryStepActive });
@@ -138,51 +144,76 @@ function ConfirmScreen() {
     }
   }
 
-  async function handleKickoff() {
+  async function handleKickoff(skipCeremony = false) {
+    if (kickoffInFlightRef.current) return;
+    kickoffInFlightRef.current = true;
     setPostConfirmInFlight(true);
     const commandId = crypto.randomUUID();
     toCommitting(commandId);
 
     try {
-      const confirmed = await confirmMutation.mutateAsync({ careerId });
-      if (!confirmed.ok) {
-        toError({
-          code: confirmed.error.code,
-          message: confirmed.error.message,
-          retryable: RETRYABLE_BY_CODE[confirmed.error.code],
-        });
-        setPostConfirmInFlight(false);
-        return;
-      }
-      await recordFunnelReached(careerId, 'PLAYER_CONFIRMED');
-
-      const advanced = await advanceMutation.mutateAsync({ careerId });
-      if (!advanced.ok) {
-        // 확정은 성공했지만 다음 결정 계산이 실패했다. 되돌릴 수 없으므로(확정은 이미 반영됨) 오류를
-        // 보여주고, postConfirmInFlight를 유지해 가드가 이 화면 밖으로 보내지 않게 한다.
-        toError({
-          code: advanced.error.code,
-          message: advanced.error.message,
-          retryable: RETRYABLE_BY_CODE[advanced.error.code],
-        });
-        return;
+      if (!confirmCompletedRef.current) {
+        const confirmed = await confirmMutation.mutateAsync({ careerId });
+        if (!confirmed.ok) {
+          toError({
+            code: confirmed.error.code,
+            message: confirmed.error.message,
+            retryable: RETRYABLE_BY_CODE[confirmed.error.code],
+          });
+          setPostConfirmInFlight(false);
+          kickoffInFlightRef.current = false;
+          return;
+        }
+        confirmCompletedRef.current = true;
+        await recordFunnelReached(careerId, 'PLAYER_CONFIRMED');
       }
 
-      await navigate({
-        to: '/career/$careerId/confirm',
-        params: { careerId },
-        search: { step: 'recovery' },
-        replace: true,
-      });
+      if (!advanceCompletedRef.current) {
+        const advanced = await advanceMutation.mutateAsync({ careerId });
+        if (!advanced.ok) {
+          // 확정은 성공했지만 다음 결정 계산이 실패했다. 재시도는 확정 명령을 반복하지 않고
+          // ADVANCE부터 이어 간다.
+          toError({
+            code: advanced.error.code,
+            message: advanced.error.message,
+            retryable: RETRYABLE_BY_CODE[advanced.error.code],
+          });
+          kickoffInFlightRef.current = false;
+          return;
+        }
+        advanceCompletedRef.current = true;
+      }
+
+      if (reducedMotion || skipCeremony) {
+        await continueAfterCeremony();
+      } else {
+        setCeremonyReady(true);
+      }
     } catch {
       toError({
         code: 'UNKNOWN',
         message: '확정하지 못했습니다. 다시 시도해 주세요.',
         retryable: true,
       });
-      setPostConfirmInFlight(false);
+      if (!confirmCompletedRef.current) setPostConfirmInFlight(false);
+      kickoffInFlightRef.current = false;
     }
   }
+
+  async function continueAfterCeremony() {
+    await navigate({
+      to: '/career/$careerId/confirm',
+      params: { careerId },
+      search: { step: 'recovery' },
+      replace: true,
+    });
+  }
+
+  useEffect(() => {
+    if (!ceremonyReady) return;
+    const timer = window.setTimeout(() => void continueAfterCeremony(), 500);
+    return () => window.clearTimeout(timer);
+  }, [ceremonyReady]);
 
   if (blocked) {
     return (
@@ -256,9 +287,13 @@ function ConfirmScreen() {
 
   if (screenState.kind === 'COMMITTING') {
     return (
-      <div className="flex flex-col items-center gap-os-6 text-center">
+      <div className="os-creation-kickoff flex flex-col items-center gap-os-6 text-center" role="status" aria-live="polite">
         <OffsideLine />
-        <DisplayWord word="KICKOFF" caption="커리어를 확정하는 중입니다" />
+        <DisplayWord word="KICKOFF" caption={ceremonyReady ? '선수가 피치에 들어섭니다' : '선수 카드를 등록하고 있습니다'} />
+        <p className="os-creation-kickoff-status">
+          {ceremonyReady ? '모든 준비가 끝났습니다. 첫 번째 이야기를 시작합니다.' : '중복 없이 한 번만 확정하고 있어요. 잠시만 기다려 주세요.'}
+        </p>
+        {ceremonyReady ? <Button variant="ghost" onClick={() => void continueAfterCeremony()}>연출 건너뛰기</Button> : null}
       </div>
     );
   }
@@ -320,64 +355,36 @@ function ConfirmScreen() {
   return (
     <div className="os-screen">
       <Stepper steps={PLAYER_CREATION_STEPS} currentStepId="confirm" />
-      <ScreenIntro
-        eyebrow="준비 완료"
-        title="확정 전 정보를 확인하세요"
-        description="이 선수를 만나게 될 다음 무대. 킥오프를 누르면 첫 이야기가 시작됩니다."
-      />
+      <ScreenIntro eyebrow="새 커리어 · 3/3" title="확정 전 정보를 확인하세요" description="당신이 만든 선수 카드입니다. 준비가 됐다면 첫 휘슬을 울리세요." />
 
-      <div className="os-panel flex flex-col gap-os-4">
-        <PlayerHeader
-          name={draft.name}
-          team={startTeam?.name ?? background.startTeamId}
-          position={{ label: '선호 포지션', value: POSITION_LABELS[draft.position] }}
-          archetype={{ label: '아키타입', value: archetype.name }}
-          shirtNumber={{ label: '등번호', value: '-' }}
-        />
-
-        <dl
-          className="flex flex-col gap-os-4 border-t border-os-border pt-os-4 font-os text-os-text-2"
-          style={CAPTION_STYLE}
-        >
+      <CreationCard
+        name={draft.name}
+        team={startTeam?.name ?? background.startTeamId}
+        position={POSITION_LABELS[draft.position]}
+        archetype={archetype.name}
+        foot={PREFERRED_FOOT_LABELS[draft.preferredFoot]}
+        nationality={ruleset.nationalities.find((item) => item.code === draft.nationalityCode)?.name ?? draft.nationalityCode ?? '—'}
+      >
+        <dl className="os-creation-card-details">
           <div className="flex justify-between gap-os-4">
             <dt>성별</dt>
-            <dd className="text-os-text">{GENDER_LABELS[draft.gender]}</dd>
+            <dd>{GENDER_LABELS[draft.gender]}</dd>
           </div>
           <div className="flex justify-between gap-os-4">
-            <dt>국적</dt>
-            <dd className="text-os-text">
-              {ruleset.nationalities.find(
-                (nationality) => nationality.code === draft.nationalityCode,
-              )?.name ??
-                draft.nationalityCode ??
-                '—'}
-            </dd>
+            <dt>출발 배경</dt>
+            <dd>{background.name}</dd>
           </div>
           <div className="flex justify-between gap-os-4">
-            <dt>주발</dt>
-            <dd className="text-os-text">{PREFERRED_FOOT_LABELS[draft.preferredFoot]}</dd>
-          </div>
-          <div className="flex justify-between gap-os-4">
-            <dt>배경</dt>
-            <dd className="text-os-text">{background.name}</dd>
-          </div>
-          <div className="flex justify-between gap-os-4">
-            <dt>예상 강점</dt>
-            <dd className="text-right text-os-text">
-              {attributeLabelList(topAttributeKeys(archetype, 3))}
-            </dd>
+            <dt>스타일의 주요 무기</dt>
+            <dd>{attributeLabelList(topAttributeKeys(archetype, 3))}</dd>
           </div>
           <div className="flex justify-between gap-os-2">
             <dt>룰셋 · 콘텐츠 팩</dt>
-            <dd className="os-num text-os-text">
-              {ruleset.version} / {activeContentPack.manifest.contentPackVersion}
-            </dd>
+            <dd className="os-num">{ruleset.version} / {activeContentPack.manifest.contentPackVersion}</dd>
           </div>
         </dl>
-      </div>
-      <p className="os-muted text-center" style={CAPTION_STYLE}>
-        시작한 뒤에는 선수 정보를 되돌릴 수 없습니다.
-      </p>
+      </CreationCard>
+      <p className="os-creation-note">선호 포지션과 플레이 스타일은 고정된 출전 역할이나 결과를 보장하지 않습니다. 시작한 뒤에는 이 선수 정보를 되돌릴 수 없어요.</p>
 
       <div className="os-action-dock os-action-row">
         <Button
@@ -386,8 +393,13 @@ function ConfirmScreen() {
         >
           수정
         </Button>
-        <Button variant="primary" onClick={() => void handleKickoff()}>
-          KICKOFF
+        <Button
+          aria-label="KICKOFF"
+          variant="primary"
+          onClick={(event) => void handleKickoff(event.detail === 0)}
+          disabled={postConfirmInFlight}
+        >
+          {postConfirmInFlight ? '확정하는 중' : 'KICKOFF · 커리어 시작'}
         </Button>
       </div>
     </div>
