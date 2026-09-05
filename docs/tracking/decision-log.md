@@ -2,6 +2,26 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (낮, 병렬 상한 해제 D-59·2차 웨이브 투입·Phase 3·4 감사 워크플로)
+
+**사용자 지시**: "병렬 진행을 최대로할 순 없나?" (Ultracode 켜짐). → **D-59**([phase-3-4-plan.md](phase-3-4-plan.md)): 동시 워커 상한 3개를 없애고 파일 소유권(D-53)으로만 병렬을 제한한다. 같은 파일을 만지는 작업은 순서를 정해 뒤 작업이 `origin/main`을 merge한다. [README](README.md) 위임 워크플로 문단 갱신.
+
+**소유권 분할과 투입(11:48)**: 진행 중인 T-4-007(라우트·`packages/ui`·디자인 문서) ‖ T-4-006 domain(domain·contracts 테스트)에 더해 세 작업을 새로 브리프하고 Sonnet 5 워크플로(격리 worktree, `effort: xhigh`)로 투입했다.
+- [T-4-008](briefs/T-4-008.md) 콘텐츠 팩 **0.3.0** 신규(`packages/content`만): 0.2.0 전체 복사 + 카탈로그 후보 승격(INJ-003·004, REL-003·005·008, MGR-003·004, SLUMP-011, ETH-011, MEDIA 2종, NAT-002)과 포지션 전용 MATCH 챕터 3종(`positionGroups`). 0.1.0·0.2.0은 바이트 무변경(활성 팩 기준선과 T-4-006 fixture 보호). 전용 생성기 전용 presentation(INJURY·NATIONAL_TEAM·RUMOUR)에는 두 번째 이벤트를 만들지 않는다(도달 불가). 도달성은 seed 500×2시즌 표로 증명.
+- [T-4-009](briefs/T-4-009.md) Phase 4 화면 준비(`apps/web/src/engine`·`shared/labels.ts`·e2e helper 신규, 라우트 파일 금지): D-56 `resolveActiveContentPackVersion()`(엔진·싱글턴·Worker 동일 값, 기존 커리어 팩 보존, 프로덕션 dead code 확인), D-57 라벨 함수, `find-seed.ts` seed 탐색 도구(e2e helper 명령 순서 재현, FNV-1a seed 동일)와 `phase4-seeds.ts` 상수, presentation 7종 도달성 보고. T-4-005 브리프에 선행 2로 연결.
+- [T-2-016](briefs/T-2-016.md) staging 리허설 자동화: 오케스트레이터 임시 worktree의 `playwright.staging.config.ts`·`staging-rehearsal.spec.ts`를 저장소로 이관, `e2e:staging` 스크립트, 기본 e2e·CI 미포함, 1회 실행 증거.
+- 그 뒤 T-4-005는 T-4-007·T-4-009 머지 뒤 화면 묶음 3개로 병행(D-59 본문). T-4-006 e2e는 T-4-005 뒤.
+
+**Phase 3·4 코드 감사 워크플로** `wf_de6c9e2d-1a5`(읽기 전용, 파일 수정 없음): 커밋 범위 `b756999^..29e1a08`를 관점 7개(결정론·RNG, ADR-010 Effect 소유권·OVR 불변, 명령·전이 안전성, 콘텐츠 DSL·presentation, 웹 인수 조건, API 동기화·크기, 완료 조건 표 테스트 공백)로 찾고 finding마다 3렌즈(정확성·명세·재현) 반박 검증(2/3 생존)한 뒤 소유권별 수정 묶음(T-4-01x 후보)을 제안한다. 확인된 finding은 브리프로 만들어 병렬 워커로 고친다.
+
+**CI 관찰**: main `29e1a08`(PR #68 머지) Browser gates가 `season.spec` 시즌 전체 흐름의 `signFirstOffer` 링크 클릭에서 1건 실패(77 통과, 6 skip), 직후 `1b85a7f` 녹색. 간헐 실패 후보로 기록하고 T-4-006 e2e 3회 반복에서 재현 여부를 본다.
+
+## 2026-09-05 (오전, PR #68 T-4-004 머지 확인·첫 Sonnet 5 워크플로 투입)
+
+**결과**: Codex 세션이 PR #68을 `29e1a08`로 squash 머지(2026-09-05 11:07)하고 일시중지했다(Luna 최종 리뷰 → 정리 커밋 `44b04f8`: T-4-004와 무관한 e2e 변경 복원, 웹 라우팅·챕터 맥락·CHP-NAT-001 수정). Phase 4 domain·content 슬라이스(T-4-001~004)가 전부 main에 있다. 웹에서 NATIONAL_TEAM pending은 SCR-013 공용 화면으로 열리며 전용 SCR-032는 T-4-005 범위다.
+
+**투입**: 11:07 Claude Code `Workflow` 실행 `wf_0b8d9171-68c`(격리 worktree `.claude/worktrees/wf_0b8d9171-68c-1·2`, `model: sonnet`, `effort: xhigh`)으로 T-4-007(디자인 PR #66 재통합, 브랜치 `design/tds-game-screens` 재사용, 새 PR 없음)과 T-4-006 domain 부분(브랜치 `T-4-006-domain`, 브리프 1~4·6절)을 병렬 투입했다. 결과는 오케스트레이터가 검증 체인(origin/main + head)과 리뷰, T-4-007은 PR preview를 ego-browser로 열어 확인한 뒤 머지한다.
+
 ## 2026-09-05 (오전, 오케스트레이션 Claude 복귀·Sonnet 5 워크플로 전환·다음 웨이브 브리프)
 
 **사용자 지시(10:20~10:40)**: "다시 클로드 세션이 오케스트레이션 맡아. 코덱스 세션은 내가 정리할게" → "다이나믹 워크플로 활용할 수 있도록 하고, 코드 작업은 sonnet 5 에이전트에게 전담하고 너는 검증과 리뷰 역할을 하는거야. 검증할 땐 ego-browser 스킬을 활용할 수 있다면 활용하여 검증해" → "코덱스 세션에서는 T-4-004 작업까지만 마무리하라고 전달한 상태임". 결과: 기술 오케스트레이터는 Claude 세션(`ec0b55e0-72c5-48f4-81e0-e287cece7700`)으로 복귀. 코드 작업은 Claude Code `Workflow`로 띄우는 Sonnet 5 에이전트(격리 worktree)가 전담하고, Claude는 브리프·검증 체인·리뷰·머지·화면 검증(ego-browser)을 맡는다. README 역할·워크플로 절을 바꿨고 Orca 터미널 Sonnet 흐름과 Codex+Luna 흐름은 legacy로 남겼다. PR #68(T-4-004)은 Codex 세션이 Luna 최종 리뷰 뒤 머지·정리하고 일시중지하며, Claude는 그때까지 #68을 건드리지 않는다.
