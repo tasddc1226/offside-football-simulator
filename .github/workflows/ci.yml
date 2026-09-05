@@ -25,11 +25,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.tool_cache }}/offside-pnpm
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
       - run: pnpm lint
       - run: pnpm lint:deps
       - run: pnpm typecheck
@@ -52,11 +54,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.tool_cache }}/offside-pnpm
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
       - run: pnpm --filter @offside/web exec playwright install chromium
       - run: pnpm --filter @offside/web exec playwright test --workers=1
         env:
@@ -87,11 +91,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.tool_cache }}/offside-pnpm
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
       - name: Migrate and seed preview D1
         run: |
           pnpm --filter @offside/api db:migrate:preview
@@ -140,11 +146,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.tool_cache }}/offside-pnpm
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
       - name: Migrate and seed staging D1
         run: |
           pnpm --filter @offside/api db:migrate:staging

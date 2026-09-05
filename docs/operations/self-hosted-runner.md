@@ -31,6 +31,8 @@ LaunchAgent는 로그인 세션에서 동작한다. Mac이 꺼지거나 로그�
 - `pull_request_target`는 도입하지 않는다. `GITHUB_TOKEN` 권한은 기존 `contents: read`를 유지하고 checkout credentials를 남기지 않는다.
 - cleanup은 닫힌 PR의 코드를 실행하지 않고 repository default branch를 checkout한다.
 - macOS에서는 Playwright Chromium만 설치하며 Linux의 `--with-deps`/apt를 사용하지 않는다.
+- pnpm 실행 파일과 store는 `runner.tool_cache` 하위 `offside-pnpm`/`offside-pnpm-store`로 제한한다.
+  사용자 전역 pnpm 설정은 수정하지 않는다. 지속형 로컬 store를 사용하므로 setup-node의 GitHub 원격 캐시는 비활성화한다.
 - E2E는 worker 1개, 포트 `5274`로 개발 세션과 충돌 가능성을 줄인다. 포트가 사용 중이면 다른 프로세스를 임의 종료하지 않는다.
 - `workflow_dispatch`는 Quality/Browser 검사만 수동 실행한다. 기존 PR preview 및 main push staging 배포 조건은 유지한다.
 - GitHub artifact/cache 저장소 제한은 로컬 러너와 별개다. 그러한 오류가 생겨도 성공으로 숨기지 않는다.
@@ -73,3 +75,10 @@ Phase 5 후보/미완료 밸런스를 이 인프라 전환만으로 승인하지
 - [저장소 runner 설정](https://github.com/tasddc1226/offside-football-simulator/settings/actions/runners)
 
 실제 CI·배포 결과는 전환 PR 및 Actions run에 추가 기록한다.
+
+첫 실행 `33964142024`는 실제 Mac에서 브라우저 98 passed / 6 skipped를 확인했다.
+그 뒤 setup-node 원격 cache 저장 단계에서 runner 전용 경로 보완을 위해 의도적으로 취소했다.
+로그상 초기 store는 action 기본값인 사용자 홈의 `setup-pnpm` 아래였으며 개인 `Library/pnpm` store를
+업로드했다고 주장하지 않는다. 이 취소 실행을 전체 CI 합격으로 기록하지 않고 보완한 head로 다시 검증한다.
+PR #91에서 이미 반복 검증한 첫 시즌 결과 테스트의 고정 시드도 함께 반영한다. 무작위 INTEREST 시장
+개방 여부로 `/preseason` 경로 검사가 흔들리지 않게 하며, 게임 코드나 assertion을 완화하지 않는다.
