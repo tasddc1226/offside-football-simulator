@@ -22,15 +22,9 @@ jobs:
         with:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          dest: ${{ runner.tool_cache }}/offside-pnpm
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           package-manager-cache: false
-      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
       - name: Delete preview Workers
-        run: |
-          pnpm --filter @offside/api exec wrangler delete --name "offside-api-pr-${PR_NUMBER}" --force || true
-          pnpm --filter @offside/web exec wrangler delete --name "offside-web-pr-${PR_NUMBER}" --force || true
+        run: node .github/scripts/cleanup-preview.mjs
