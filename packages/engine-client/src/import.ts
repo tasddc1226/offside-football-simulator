@@ -4,7 +4,7 @@ import type { EngineError, LocalCareerRecord } from './types.js';
 import type { LocalStore } from './ports/local-store.js';
 import { ArchiveError, canonicalize, createCareerArchiveCore, createLegacyResult, type CareerArchiveCore, type LegacyResult, type JsonValue } from '@offside/domain';
 import { CareerStateSchema } from '@offside/contracts';
-import { legacyResultKey, retirementArchiveKey, type RetirementArtifactsResolver } from './retirement-archive.js';
+import { legacyPopulationForResult, legacyResultKey, retirementArchiveKey, type RetirementArtifactsResolver } from './retirement-archive.js';
 
 export type ImportCareerResult = { ok: true; revision: number } | { ok: false; error: EngineError };
 
@@ -39,8 +39,9 @@ export async function importCareerFromServer(
       const artifacts = meta.retirementArtifacts(binding);
       const context = { binding, artifacts };
       const archive = createCareerArchiveCore(decoded.snapshot, context);
-      const legacy = createLegacyResult(archive, context, artifacts.legacyReferencePopulation);
-      if (canonicalize(JSON.parse(response.retirementArchive.archive) as JsonValue) !== canonicalize(archive as unknown as JsonValue) || canonicalize(JSON.parse(response.retirementArchive.legacy) as JsonValue) !== canonicalize(legacy as unknown as JsonValue)) throw new ArchiveError('ARCHIVE_MISMATCH');
+      const suppliedLegacy = JSON.parse(response.retirementArchive.legacy) as LegacyResult;
+      const legacy = createLegacyResult(archive, context, legacyPopulationForResult(suppliedLegacy, artifacts));
+      if (canonicalize(JSON.parse(response.retirementArchive.archive) as JsonValue) !== canonicalize(archive as unknown as JsonValue) || canonicalize(suppliedLegacy as unknown as JsonValue) !== canonicalize(legacy as unknown as JsonValue)) throw new ArchiveError('ARCHIVE_MISMATCH');
       retirement = { archive, legacy };
     } catch {
       return { ok: false, error: { code: 'VERIFICATION_FAILED', message: '서버 은퇴 보관 기록을 검증할 수 없다.' } };
@@ -60,6 +61,10 @@ export async function importCareerFromServer(
     const existingArchive = await tx.kv.get<CareerArchiveCore>(retirementArchiveKey(careerId));
     if (existingArchive !== undefined && (retirement === null || canonicalize(existingArchive as unknown as JsonValue) !== canonicalize(retirement.archive as unknown as JsonValue))) {
       return { ok: false, error: { code: 'VERIFICATION_FAILED', message: '기존 불변 은퇴 기록과 달라 덮어쓰지 않았다.' } };
+    }
+    const existingLegacy = await tx.kv.get<LegacyResult>(legacyResultKey(careerId));
+    if (existingLegacy !== undefined && retirement !== null && canonicalize(existingLegacy as unknown as JsonValue) !== canonicalize(retirement.legacy as unknown as JsonValue)) {
+      return { ok: false, error: { code: 'VERIFICATION_FAILED', message: '기존 불변 Legacy 기록과 달라 덮어쓰지 않았다.' } };
     }
 
     await tx.snapshots.deleteByCareer(careerId);

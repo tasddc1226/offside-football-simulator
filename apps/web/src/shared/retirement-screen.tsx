@@ -288,7 +288,16 @@ export function RetirementScreen({
           state.season === null &&
           state.pending === null &&
           onCommand ? (
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog
+              open={open}
+              onOpenChange={(nextOpen) => {
+                // An irreversible retirement request owns the dialog until it settles. This
+                // covers Escape, the overlay, and the close button without changing Dialog's
+                // shared dismissal behavior elsewhere.
+                if (pending && !nextOpen) return;
+                setOpen(nextOpen);
+              }}
+            >
               <DialogTrigger asChild>
                 <Button variant="secondary" disabled={pending}>
                   선수 생활 마무리

@@ -25,6 +25,26 @@ export type RetirementArtifactsResolver = (versions: {
   contentPackVersion: string;
 }) => RetirementRuntimeArtifacts;
 
+/** Select the immutable reference artifact used by an already-persisted Legacy result. */
+export function legacyPopulationForResult(
+  stored: LegacyResult | null | undefined,
+  artifacts: RetirementRuntimeArtifacts,
+): LegacyReferencePopulation | undefined {
+  if (stored === undefined || stored === null) return artifacts.legacyReferencePopulation;
+  if (!Object.hasOwn(stored, 'referencePopulationId'))
+    throw new ArchiveError('INVALID_BINDING');
+  const referencePopulationId = stored.referencePopulationId;
+  if (referencePopulationId === null) return undefined;
+  if (typeof referencePopulationId !== 'string' || referencePopulationId.length === 0)
+    throw new ArchiveError('INVALID_BINDING');
+  if (
+    artifacts.legacyReferencePopulation === undefined ||
+    artifacts.legacyReferencePopulation.id !== referencePopulationId
+  )
+    throw new ArchiveError('VERSION_MISMATCH');
+  return artifacts.legacyReferencePopulation;
+}
+
 export function retirementArchiveKey(careerId: string): string {
   return `phase5:archive:v1:${careerId}`;
 }
@@ -59,8 +79,12 @@ export async function persistRetirementArchive(
   const key = retirementArchiveKey(career.id);
   const existing = await tx.kv.get<CareerArchiveCore>(key);
   const plan = planCareerArchiveWrite(existing ?? null, candidate, context);
-  const legacy = createLegacyResult(plan.archive, context, artifacts.legacyReferencePopulation);
   const existingLegacy = await tx.kv.get<LegacyResult>(legacyResultKey(career.id));
+  const legacy = createLegacyResult(
+    plan.archive,
+    context,
+    legacyPopulationForResult(existingLegacy, artifacts),
+  );
   if (
     existingLegacy !== undefined &&
     canonicalize(existingLegacy as unknown as JsonValue) !==
@@ -81,13 +105,13 @@ export async function loadLocalLegacyResult(
   const archive = await loadLocalCareerArchive(store, careerId, ownerProfileId, resolveArtifacts);
   if (archive === null) return null;
   const artifacts = resolveArtifacts(archive.binding);
-  const result = createLegacyResult(archive, {
-    binding: archive.binding,
-    artifacts,
-  }, artifacts.legacyReferencePopulation);
   const stored = await store.transaction('readonly', (tx) =>
     tx.kv.get<LegacyResult>(legacyResultKey(careerId)),
   );
+  const result = createLegacyResult(archive, {
+    binding: archive.binding,
+    artifacts,
+  }, legacyPopulationForResult(stored, artifacts));
   if (
     stored !== undefined &&
     canonicalize(stored as unknown as JsonValue) !== canonicalize(result as unknown as JsonValue)

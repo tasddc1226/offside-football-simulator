@@ -45,6 +45,27 @@ describe('RetirementScreen active confirmation', () => {
     await waitFor(() => expect(screen.queryByRole('heading', { name: '마지막 휘슬을 불까요?' })).not.toBeInTheDocument());
   });
 
+  it('keeps the confirmation open while an irreversible request is pending', async () => {
+    const user = userEvent.setup();
+    let resolve!: () => void;
+    const onCommand = vi.fn<(command: Command) => Promise<void>>(() => new Promise<void>((done) => { resolve = done; }));
+    render(<RetirementScreen state={activeState} onCommand={onCommand} />);
+
+    await user.click(screen.getByRole('button', { name: '선수 생활 마무리' }));
+    await user.click(screen.getByRole('button', { name: '은퇴 확정' }));
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('heading', { name: '마지막 휘슬을 불까요?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '취소' }));
+    expect(screen.getByRole('heading', { name: '마지막 휘슬을 불까요?' })).toBeInTheDocument();
+    const overlay = document.querySelector('.os-dialog-overlay');
+    expect(overlay).not.toBeNull();
+    await user.click(overlay!);
+    expect(screen.getByRole('heading', { name: '마지막 휘슬을 불까요?' })).toBeInTheDocument();
+
+    resolve();
+    await waitFor(() => expect(screen.queryByRole('heading', { name: '마지막 휘슬을 불까요?' })).not.toBeInTheDocument());
+  });
+
   it('cancels without a command and surfaces a failed confirmation', async () => {
     const user = userEvent.setup();
     const onCommand = vi.fn<(command: Command) => Promise<void>>().mockRejectedValue(new Error('저장 실패'));
@@ -58,6 +79,7 @@ describe('RetirementScreen active confirmation', () => {
     await user.click(screen.getByRole('button', { name: '선수 생활 마무리' }));
     await user.click(screen.getByRole('button', { name: '지도자 에필로그로 마무리' }));
     await waitFor(() => expect(screen.getByRole('alert', { hidden: true })).toHaveTextContent('저장 실패'));
+    expect(screen.getByRole('button', { name: '은퇴 확정' })).not.toBeDisabled();
     expect(onCommand).toHaveBeenCalledWith({ type: 'RETIRE', payload: { choice: 'COACH_EPILOGUE' } });
   });
 });
