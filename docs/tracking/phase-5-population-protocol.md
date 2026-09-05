@@ -33,9 +33,19 @@ The current generator is v3: `phase5-population-3-ui-choices`, choice policy
 `ui-action-strata-v1`. KEEP always accepts, other role choices preserve the previous
 policy. It accepts `--legacy-version 1.0.0|1.1.0` (default 1.0.0) and pins the
 selected definition checksum. Version 1.1.0 is an unactivated candidate, not an
-accepted scoring release. Population IDs include Legacy/ruleset/content versions.
+accepted scoring release. The original v3 population ID is retained for compatibility.
 Rows also retain the five components, minutes, possible minutes, peak OVR,
 trophies and eligible endings for diagnosis. Final balance acceptance remains open.
+
+Ruleset 1.1 or informed-strategy runs now use the candidate protocol
+`phase5-population-5-policy-isolation`. Their IDs include the choice policy and
+canonical SHA-256 of the complete provenance: generator, artifact checksums,
+versions, choice/seed/length policies, requested count and scoring policy. Random,
+opportunity and mixed reports therefore cannot alias one another or a report from
+a different source bundle. This is identity isolation, not registration of a new
+reference policy. Existing publisher/runtime validation still rejects v5 until a
+separate balance acceptance and release change registers it. Old checkpoints and
+diagnostic rows are not relabelled or resumed as v5.
 
 The earlier v1 runner used fixed fixture outcomes and content pack `0.1.0`. That
 run is retired. Its timings and outputs are not official evidence and must not be

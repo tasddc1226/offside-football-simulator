@@ -3,12 +3,24 @@
 상태: 실험·설계 중 (2026-09-05). 사용자가 밸런스 후속 분리 대신 이번 Phase 5에 포함하기로 결정했다.
 PR #77은 검증이 끝나기 전까지 Draft로 유지하며 main에 병합하지 않는다.
 
-## 통합 차단 사항 — 2026-09-05
+## 재개 현황 — 2026-09-05
+
+PR #96으로 Mac self-hosted runner가 main `93cfcf2`에 반영됐고 실제 main CI와 staging 배포가
+성공했다. 계정 결제 상태를 변경한 것은 아니지만 실행 차단은 해소됐다. #91/#92/#95의 최신
+통합 head는 새 runner에서 검증 중이며, Phase 5는 여전히 별도 인수 후에만 병합한다.
+
+1.1 후보 표본은 `phase5-population-5-policy-isolation`로 구분한다. population ID에 선택 정책과
+전체 provenance의 canonical SHA-256을 포함해 random/opportunity/mixed, 생성기·checksum·표본 수가
+다른 실행이 같은 ID를 쓰지 않도록 한다. 기존 1.0 ruleset/v3 프로토콜의 ID는 보존한다.
+이 변경은 식별 충돌 방지이지 선택 정책의 채택이나 분포 인수가 아니다. v5는 아직 등록·발행 대상이
+아니며 기존 publisher/runtime validator의 등록 프로토콜 제한을 풀지 않는다.
+
+## 이전 통합 차단 기록 — 2026-09-05
 
 GitHub Actions 실행 `33963258035`(PR #91)와 `33963265827`(PR #92)는 코드 실행 전에
 계정 결제 실패 또는 지출 한도 오류로 runner가 시작되지 않았다. 검사 단계가 없는 외부 차단이며,
 코드 검사 성공이나 코드 회귀로 해석하지 않는다. 유료 설정 변경·검사 우회 병합·직접 배포는 하지 않는다.
-계정 소유자가 Billing 상태를 해결한 뒤 같은 head로 CI를 다시 실행해야 한다.
+현재는 self-hosted workflow가 포함된 새 head로 재실행한다. 과거 ubuntu workflow의 단순 재시도는 하지 않는다.
 
 재개 순서는 #91(이슈 #86–89) → #92(base를 main으로 변경, #56/#62) → 확장 QA staging →
 Phase 5다. #61은 기존 임대 수락·완주·복귀 경로의 로컬 UI/도메인 검증 근거로 닫았다.

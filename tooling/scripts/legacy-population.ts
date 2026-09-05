@@ -14,6 +14,7 @@ import {
 import { retirementDecisionRequired } from '../../packages/domain/src/legacy/career-retirement.ts';
 import { sha256Hex } from '../../packages/domain/src/hash.ts';
 import { careerEventChoices } from '../../packages/domain/src/legacy/career-event.ts';
+import { legacyPopulationId } from './legacy-population-identity.ts';
 import {
   advancePayload,
   commandForPending,
@@ -34,8 +35,8 @@ const POSITIONS = ['GK', 'DF', 'MF', 'FW'] as const satisfies readonly StatGroup
 const STRATEGY = arg(process.argv.slice(2), '--strategy') ?? 'random';
 if (!['random', 'opportunity', 'mixed'].includes(STRATEGY))
   throw new Error('--strategy must be random, opportunity, or mixed');
-const PROTOCOL_VERSION = STRATEGY === 'random'
-  ? 'phase5-population-3-ui-choices' : 'phase5-population-4-informed-choices';
+const PROTOCOL_VERSION = STRATEGY === 'random' && RULESET_VERSION === '1.0.0'
+  ? 'phase5-population-3-ui-choices' : 'phase5-population-5-policy-isolation';
 const CHOICE_POLICY = STRATEGY === 'random' ? 'ui-action-strata-v1' : `ui-${STRATEGY}-v1`;
 type Position = (typeof POSITIONS)[number];
 type PopulationRow = Readonly<{
@@ -499,12 +500,6 @@ async function writePopulation(
       checkpoint.groups[position]!.rows.map((row) => row.score).sort((a, b) => a - b),
     ]),
   ) as Record<Position, number[]>;
-  const population = {
-    id: `phase5-reference-${legacyVersion}-${RULESET_VERSION}-${CONTENT_PACK_VERSION}`,
-    legacyVersion,
-    rulesetVersion: RULESET_VERSION,
-    scores,
-  };
   const provenance = {
     protocolVersion: PROTOCOL_VERSION,
     generatorCodeHash: process.env.LEGACY_POPULATION_BUNDLE_HASH ?? 'UNHASHED_WORKTREE',
@@ -518,6 +513,12 @@ async function writePopulation(
     legacyVersion,
     countPerPosition: count,
     maxSeasons: seasons,
+  };
+  const population = {
+    id: legacyPopulationId(provenance),
+    legacyVersion,
+    rulesetVersion: RULESET_VERSION,
+    scores,
   };
   const payload = { population, provenance, groups };
   await mkdir(dirname(path), { recursive: true });
