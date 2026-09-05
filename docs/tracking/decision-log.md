@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (16:30, PR #72 머지·T-4-012 투입)
+
+**PR #72(T-4-006 domain) `518db98` squash 머지.** 체인: 1차는 load 100~270에서 시간 예산 테스트(career-01 1,000회 10초·career-02 1,000회 90초)와 web 5초 라우트 테스트가 타임아웃 → 격리 재실행에서 web 42/42, domain은 두 파일만 다시 load 40 미만 게이트 뒤 단독 실행해 21/21 통과, build·check:bundle·check:contrast·e2e 96 passed(`CHAIN EXIT 0`). PR #73(T-4-013)은 같은 게이트로 api `careers.test.ts` 단독 재실행 대기 중 — 1차 격리 재실행에서는 100회 병렬 멱등 테스트가 부하로 세션 조회 D1 쿼리 17초 실패(503 `SERVICE_UNAVAILABLE` 12건)를 냈다. 테스트 DB 부하 현상이며 PR 변경(타임아웃 2줄)과 무관, GitHub CI는 녹색.
+
+**T-4-012 투입**(`wf_6ba9548e-839`, 16:31): D-60 정정 구현 10건, D-61에 따라 새 테스트 없이 기존 골든 재기록만. T-4-006 워커 worktree·브랜치 정리, 오래된 `wf_0b8d9171-68c-1` worktree 정리.
+
+**staging 360px 확인(T-4-007 후속)**: ego-browser로 허브·커리어 생성 1단계까지 새 디자인 렌더와 가로 오버플로 0을 확인했다(스크린샷 3장). 이후 단계는 커리어 진행이 필요해 T-4-005 PR preview에서 seed로 확인한다. ego-browser `wait()`·`click(ref)`는 부하에서 타임아웃하므로 in-page JS로 조작한다.
+
 ## 2026-09-05 (16:10, T-4-005 분할 브리프 a·b·c, PR #72 검증 재실행)
 
 **T-4-005 분할(D-59)**: [T-4-005a](briefs/T-4-005a.md)가 화면 분기(`career-route.ts`)·결정 화면 디스패처(`event.tsx`)·`routes/-phase4/bodies.ts` 레지스트리·SCR-022·SCR-032를 만들고, [T-4-005b](briefs/T-4-005b.md)는 (a) 머지 뒤 레지스트리에 SCR-021·018·016·024 본문 4개만 추가하며, [T-4-005c](briefs/T-4-005c.md)는 대시보드(`index.tsx`)·결과 카드(`event_.result.tsx`)·챕터 헤더(`chapter.tsx`)·`labels.ts` 추가만 맡아 (a)와 나란히 간다(T-4-014 머지 뒤). 세 묶음 모두 D-61로 새 테스트 없이 기존 체인 통과 + 360px 스크린샷(일회성 스크립트)을 증거로 한다.
