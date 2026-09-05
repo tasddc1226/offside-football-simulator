@@ -51,3 +51,4 @@ export {
   type SyncPolicy,
   type SyncTransportResponse,
 } from './sync/index.js';
+export { loadLocalLegacyResult, legacyResultKey } from './retirement-archive.js';

@@ -5,6 +5,23 @@
 
 정본: [Phase 5 범위](../phases/phase-05-retirement-and-legacy.md), [Legacy·엔딩](../development/14-legacy-score-and-endings.md), [고도화 실행 계획](../development/16-advancement-execution-plan.md).
 
+## 현재 통합 상태 — 2026-09-05 후속
+
+사용자가 한국 모듈 포함 및 main 반영을 승인했다. [런타임 통합 명세](../development/19-phase5-runtime-integration.md)에
+실제 정책과 데이터 호환 경계를 기록한다. 아래의 초기 격리/대기 문구는 당시 작업 이력이며 현재 상태를 뜻하지 않는다.
+
+| 작업 | 이번 후속 구현 | 완료 판단 |
+| --- | --- | --- |
+| T-5-002 | 로컬 Archive+Legacy 원자 저장, D1 저장·owner GET·복구·삭제 | 통합 검증 중 |
+| T-5-003 | 실제 압력 입력, 1회 마지막 1시즌 계약, RETIRE 및 terminal 명령 거부, 연령 golden | 회귀 검증 중 |
+| T-5-004 | 원본→5축 정규화·정의 checksum·source 연결·동일 품질 4포지션 | 모집단 검증 별도 대기 |
+| T-5-005 | 14종 eligibility, 은퇴 태그, 실제 source의 최고 순간과 미선택 에필로그 | Phase 3·4 태그 생성 경로와 구분 |
+| T-5-006 | FULL TIME/Legacy/연대기/최종 프로필/보관함 이동, 연령 하락 안내 | 모바일 브라우저 검증 중 |
+| T-5-007 | 20시즌 4포지션, 동일 은퇴 100회, 복구·변조·삭제 회귀 | 40,000개 모집단 및 CI 게이트 대기 |
+| T-5-008 | 한국 복무/휴식/U23/특례/멘토링과 실제 다년 Archive 검증 | 이번 범위에 포함, 필수 |
+
+Phase 5 전체 완료는 위 검증과 정본의 미충족 조건을 모두 닫은 뒤에만 선언한다.
+
 ## 1. 충돌 회피 계약
 
 **2026-09-05 후속 통합:** 사용자가 Luna 위임과 Phase 5 마무리를 요청한 뒤,

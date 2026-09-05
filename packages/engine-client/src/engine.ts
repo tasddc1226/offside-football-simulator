@@ -1,6 +1,6 @@
 import type { CareerSnapshot, CommandLogEntry, PutCareerBody } from '@offside/contracts';
-import { ArchiveError, canonicalize, sha256Hex, type ArchiveArtifacts, type JsonValue, type DomainSnapshot, type Ruleset } from '@offside/domain';
-import { persistRetirementArchive, retirementArchiveKey, type RetirementArtifactsResolver } from './retirement-archive.js';
+import { ArchiveError, canonicalize, sha256Hex, type JsonValue, type DomainSnapshot, type Ruleset } from '@offside/domain';
+import { persistRetirementArchive, retirementArchiveKey, legacyResultKey, type RetirementArtifactsResolver, type RetirementRuntimeArtifacts } from './retirement-archive.js';
 import { decodeSnapshot, encodeSnapshot } from './snapshot.js';
 import { replayCommandLog } from './replay.js';
 import type { Simulator } from './simulator/index.js';
@@ -239,8 +239,8 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       return { ok: false, error: simResult.error };
     }
 
-    let retirementArtifacts: ArchiveArtifacts | null = null;
-    if (command.type === 'RETIRE') {
+    let retirementArtifacts: RetirementRuntimeArtifacts | null = null;
+    if (command.type === 'RETIRE' && simResult.snapshot.state.status === 'RETIRED') {
       if (deps.retirementArtifacts === undefined) {
         return { ok: false, error: { code: 'VERSION_MISMATCH', message: '은퇴 보관용 artifact registry가 필요하다.' } };
       }
@@ -438,6 +438,7 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       await tx.commandLog.deleteByCareer(careerId);
       await tx.idempotency.deleteByCareer(careerId);
       await tx.kv.delete(retirementArchiveKey(careerId));
+      await tx.kv.delete(legacyResultKey(careerId));
     });
   }
 

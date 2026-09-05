@@ -1,5 +1,10 @@
 # Phase 5 인수 감사 — 은퇴·Legacy·Archive
 
+후속 구현은 [현재 실행 상태](phase-5-plan.md)와 [런타임 통합 명세](../development/19-phase5-runtime-integration.md)를
+참조한다. 아래 미구현 표는 `99d1121` 시점 감사 원본으로 보존한다. 현재의 실제 RETIRE·서버 보관·
+결과 화면·한국 모듈 구현을 이 과거 표만 보고 미구현이라고 판단하지 않는다. 반대로 모집단과
+모든 실제 엔딩 경로를 검증하기 전에는 Phase 5 전체를 완료 처리하지 않는다.
+
 기준 문서: `phase-05-retirement-and-legacy.md`, `14-legacy-score-and-endings.md`,
 `17-phase5-archive-contract.md`, `18-retirement-pressure-and-last-choice.md`.
 기준 커밋: `99d1121` (`T-5-003` 독립 은퇴 압력·마지막 선택 코어).

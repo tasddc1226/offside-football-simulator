@@ -129,8 +129,9 @@ describe('오류 코드 표', () => {
 });
 
 describe('CommandTypeSchema', () => {
-  it('14개다', () => {
-    expect(COMMAND_TYPES.length).toBe(14);
+  it('15개다', () => {
+    expect(COMMAND_TYPES.length).toBe(15);
+    expect(COMMAND_TYPES).toContain('CAREER_EVENT');
   });
 
   it.each(COMMAND_TYPES)('%s를 허용한다', (type) => {

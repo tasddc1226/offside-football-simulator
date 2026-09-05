@@ -24,4 +24,8 @@ export const SCREEN_ROUTES = {
   'SCR-033': '/career/$careerId/attributes',
   'SCR-031': '/career/$careerId/chapter',
   'SCR-015': '/career/$careerId/season-result',
+  'SCR-025': '/career/$careerId/retirement',
+  'SCR-026': '/career/$careerId/legacy',
+  'SCR-027': '/career/$careerId/timeline',
+  'SCR-028': '/career/$careerId/final-profile',
 } as const;

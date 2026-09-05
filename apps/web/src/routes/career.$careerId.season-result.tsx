@@ -428,6 +428,7 @@ function SeasonResultScreen() {
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
           {view.isYouth ? '성장 기록' : 'OVR 변화'}
         </h2>
+        {view.attributeDeltaGroups.some((group) => group.entries.some((entry) => entry.causes.some((cause) => cause.cause === 'AGE_DECLINE' && cause.centi < 0))) ? <aside className="rounded-os-m bg-os-surface-2 p-os-4"><h3 className="font-semibold">몸의 변화, 다음 시즌의 선택</h3><p>연령에 따른 하락이 기록됐어요. 아래 포지션별 능력 추세를 살펴보고 다음 시즌의 훈련 초점과 역할을 선택해 보세요. OVR 하락만으로 은퇴가 결정되지는 않습니다.</p></aside> : null}
         {view.topCause !== null ? (
           <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
             가장 큰 원인: {ATTRIBUTE_CHANGE_CAUSE_LABEL_KO[view.topCause]}
@@ -509,6 +510,7 @@ function SeasonResultScreen() {
       </section>
 
       <div className="os-action-dock">
+        <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>커리어의 다음 선택</Link>
         <div className="grid grid-cols-2 gap-os-2">
           <Link
             to="/career/$careerId"

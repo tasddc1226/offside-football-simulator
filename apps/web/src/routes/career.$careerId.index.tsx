@@ -89,6 +89,10 @@ function chapterCardLabel(state: CareerState, pending: ChapterPending): string {
 
 function timelineSentence(entry: TimelineEntry, state: CareerState): string {
   switch (entry.kind) {
+    case 'SERVICE_STARTED': return '복무 경로를 선택하다';
+    case 'SERVICE_COMPLETED': return '복무를 마치고 다음 시즌을 준비하다';
+    case 'INTERNATIONAL_TOURNAMENT': return 'U23 국제대회를 마치다';
+    case 'MENTORED': return '후배와 경험을 나누다';
     case 'RETIRED':
       return entry.refId === 'COACH_EPILOGUE' ? '선수 생활을 마치고 지도자로 새 출발' : '선수 생활을 마치다';
     case 'CAREER_CONFIRMED':
@@ -633,6 +637,12 @@ function CareerDashboard() {
           </p>
         </div>
         <NextDecisionCard careerId={careerId} state={state} />
+        {state.status === 'ACTIVE' && state.season === null && state.seasonHistory.length > 0 ? (
+          <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>커리어의 다음 선택</Link>
+        ) : null}
+        {state.status === 'RETIRED' || state.status === 'ARCHIVED' ? (
+          <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>통산 기록 보기</Link>
+        ) : null}
       </section>
 
       <Tabs value={tab} onValueChange={changeTab}>

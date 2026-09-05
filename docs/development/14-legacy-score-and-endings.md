@@ -2,6 +2,10 @@
 
 ## 목적
 
+2026-09-05 구현 연결: [Legacy 1.0.0 런타임 통합 명세](19-phase5-runtime-integration.md)에
+실제 정규화 상한표, 원본 증거, 과거 기록의 coverage, 한국 모듈과 은퇴 저장 계약을 명시했다.
+이 문서의 모집단/밴드 밸런스 조건은 유지하며 작은 테스트 통과로 완료 처리하지 않는다.
+
 은퇴한 커리어를 하나의 완결된 축구 인생으로 회수한다. Legacy Score는 능력치가 아니라 결과의 집계이며, 어떤 커리어도 빈 엔딩이나 굴욕적인 순위 표현을 받지 않는다. RULE-LEG-001(엔딩은 세계 정상 하나가 아닌 복수 가치 인정)을 계산 규칙과 표현 규칙으로 구체화한다.
 
 ## 원칙
@@ -113,7 +117,7 @@ Legacy Score = round(
 | END-IRONMAN | 철인 | 철인 태그 | TAG-IRONMAN | 42 | 라인업에서 그의 이름을 지운 감독은 없었다 |
 | END-PLAYER-COACH | 선수 겸 코치 | 은퇴 직전 마지막 선택에서 코치 전환 | 없음 | 45 | 마지막 시즌은 벤치 옆에서 시작됐다 |
 | END-MENTOR | 유망주 멘토 | 멘토 태그와 30세 이후 3시즌 활동 | TAG-MENTOR | 50 | 그가 키운 선수들이 그의 기록을 넘었다 |
-| END-LATE-BLOOMER | 대기만성 | 대기만성 태그와 최고 OVR 밴드 BAND-REMEMBERED 이상 | TAG-LATE-BLOOMER | 55 | 남들보다 늦게 라인을 넘었지만 가장 멀리 갔다 |
+| END-LATE-BLOOMER | 대기만성 | 대기만성 태그와 최고 Base OVR 70 이상(OVR/Legacy 밴드 혼용 정정) | TAG-LATE-BLOOMER | 55 | 남들보다 늦게 라인을 넘었지만 가장 멀리 갔다 |
 | END-JOURNEYMAN | 저니맨 | 저니맨 태그와 8시즌 이상 | TAG-JOURNEYMAN | 60 | 여섯 개의 도시가 그를 기억한다 |
 | END-CONTROVERSIAL-STAR | 논쟁적 스타 | 배신자 또는 논란의 인물 태그와 성취 60 이상 | TAG-TRAITOR 또는 TAG-CONTROVERSIAL | 65 | 사랑받지는 못했지만 잊히지도 않았다 |
 | END-COMPLETE-SHORT | 짧았지만 완결된 커리어 | 폴백. 다른 조건이 없을 때 항상 충족 | 없음 | 999 | 라인을 넘지 못한 날도 그의 축구였다 |

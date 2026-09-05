@@ -81,6 +81,8 @@ export type CareerSummaryList = z.infer<typeof CareerSummaryListSchema>;
 export const GetCareerResponseSchema = z.strictObject({
   snapshot: CareerSnapshotSchema,
   commands: z.array(CommandLogEntrySchema),
+  /** Owner-only evidence JSON. Consumers must verify it against the pinned snapshot and registry. */
+  retirementArchive: z.strictObject({ archive: z.string().min(1), legacy: z.string().min(1) }).exactOptional(),
 });
 
 export type GetCareerResponse = z.infer<typeof GetCareerResponseSchema>;

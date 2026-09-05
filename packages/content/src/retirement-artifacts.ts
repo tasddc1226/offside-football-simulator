@@ -2,12 +2,14 @@ import ruleset100Manifest from '../rulesets/1.0.0/manifest.json' with { type: 'j
 import { loadContentPack } from './packs/load-content-pack.ts';
 import { loadRuleset } from './rulesets/load-ruleset.ts';
 import { RulesetManifestSchema } from './schema/ruleset-manifest.ts';
+import type { LegacyReferencePopulation } from '@offside/domain';
 
 export type RetirementArtifacts = Readonly<{
   rulesetVersion: string;
   rulesetChecksum: string;
   contentPackVersion: string;
   contentPackChecksum: string;
+  legacyReferencePopulation?: LegacyReferencePopulation;
 }>;
 
 const RULESET_MANIFESTS: Readonly<Record<string, unknown>> = Object.freeze({

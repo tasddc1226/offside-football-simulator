@@ -280,6 +280,7 @@ export const TimelineEntrySchema = z.strictObject({
     'NATIONAL_TEAM_CALLED',
     'NATIONAL_TEAM_DECLINED',
     'RETIRED',
+    'SERVICE_STARTED', 'SERVICE_COMPLETED', 'INTERNATIONAL_TOURNAMENT', 'MENTORED',
     'CAPTAIN_APPOINTED',
   ]),
   refId: z.string().nullable(),
@@ -337,7 +338,7 @@ export const CompetitionRecordSchema = z.strictObject({
 });
 
 // T-2-003 D-35: domain `OutReason`과 동일.
-export const OutReasonSchema = z.enum(['NOT_SELECTED', 'UNUSED_SUB', 'INJURY', 'SUSPENSION']).nullable();
+export const OutReasonSchema = z.enum(['NOT_SELECTED', 'UNUSED_SUB', 'INJURY', 'SUSPENSION', 'SERVICE']).nullable();
 
 // T-2-003 D-35: domain `PositionStats`(브리프 "포지션별 결과" 표)와 동일한 판별 유니온.
 export const PositionStatsSchema = z.discriminatedUnion('group', [
@@ -474,7 +475,7 @@ export const SeasonPlayerStatsSchema = z.strictObject({
 // T-2-003 D-35: 부상·정지만 표현한다(능력치·재활은 Phase 4). domain `Availability`와 동일.
 export const AvailabilitySchema = z
   .strictObject({
-    kind: z.enum(['INJURY', 'SUSPENSION']),
+    kind: z.enum(['INJURY', 'SUSPENSION', 'SERVICE']),
     matchesRemaining: z.number().int().positive(),
     sinceMatchId: z.string().min(1),
   })
@@ -521,7 +522,7 @@ export const SelectionCandidateSchema = z.strictObject({
   expectedPerformance: z.number().int(),
   squadStatus: z.number().int(),
   score: z.number().int(),
-  excluded: z.enum(['INJURY', 'SUSPENSION', 'NATIONAL_TEAM']).nullable(),
+  excluded: z.enum(['INJURY', 'SUSPENSION', 'NATIONAL_TEAM', 'SERVICE']).nullable(),
 });
 
 // domain `SelectionRanking['candidates']`은 `SelectionCandidate & { rank; appearance }`(교차 타입)이다.
@@ -594,6 +595,9 @@ export const SeasonManagerSchema = z.strictObject({
 });
 
 export const FootballSeasonSchema = z.strictObject({
+  legacyContext: z.strictObject({
+    policyVersion: z.literal('1.0.0'), wageMinorPerWeek: z.number().int().nonnegative(), signingBonusMinor: z.number().int().nonnegative(), contractId: z.string().min(1),
+  }).exactOptional(),
   index: z.number().int().positive(),
   serviceSeasonId: z.string().min(1),
   simulationMode: SimulationModeSchema,
@@ -642,6 +646,11 @@ const RoleProposalTypeSchema = z.enum(['KEEP', 'POSITION_CHANGE', 'ROLE_CHANGE']
 
 // T-2-005 D-39: SETTLE_SEASON이 만드는 시즌 결산 결과. domain `SeasonResult`와 동일.
 export const SeasonResultSchema = z.strictObject({
+  legacy: z.strictObject({
+    policyVersion: z.literal('1.0.0'), incomeMinor: z.number().int().nonnegative(), contractId: z.string().min(1),
+    relationships: z.strictObject({ managerTrust: z.number().int().min(0).max(100), captain: z.number().int().min(0).max(100), rival: z.number().int().min(0).max(100), fans: z.number().int().min(0).max(100), agent: z.number().int().min(0).max(100) }),
+    promotion: z.boolean(), ageAtStart: z.number().int().min(0).max(120), injuryMissedMatches: z.number().int().nonnegative().exactOptional(),
+  }).exactOptional(),
   index: z.number().int().positive(),
   simulationMode: SimulationModeSchema,
   teamId: z.string().min(1),
@@ -843,10 +852,15 @@ export const ReputationSchema = z.strictObject({
 });
 
 // T-4-004: nationalityRuleState는 기본 모듈과 예외 목록만 저장한다. 병역·귀화·이중국적 필드는 없다.
-export const NationalityRuleStateSchema = z.strictObject({
+export const NationalityRuleStateSchema = z.union([z.strictObject({
   moduleId: z.literal('DEFAULT'),
   exceptions: z.tuple([]),
-}) satisfies z.ZodType<NationalityRuleState>;
+}), z.strictObject({
+  moduleId: z.enum(['DEFAULT', 'KOREA']), exceptions: z.array(z.string().min(1)).readonly(),
+  serviceStatus: z.enum(['NOT_APPLICABLE', 'PENDING', 'SERVING', 'COMPLETED', 'SPECIAL_SERVICE']),
+  route: z.enum(['MILITARY_CLUB', 'CAREER_BREAK', 'SPORTS_SERVICE']).nullable(),
+  startSeasonIndex: z.number().int().nonnegative().nullable(), completedSeasonIndex: z.number().int().nonnegative().nullable(),
+}).readonly()]) satisfies z.ZodType<NationalityRuleState>;
 
 export const NationalTeamCallUpRecordSchema = z.strictObject({
   seasonIndex: z.number().int().positive(),
@@ -936,6 +950,15 @@ const CareerStateShapeSchema = z.strictObject({
   controversyFailures: z.number().int().nonnegative(),
   // T-4-004: strict additive national-team state.
   nationalityRuleState: NationalityRuleStateSchema,
+  retirement: z.strictObject({ policyVersion: z.literal('1.0.0'), marketOffers: z.number().int().nonnegative().nullable(), lastChanceConsumed: z.boolean(), lastChanceSeasonIndex: z.number().int().positive().nullable() }).exactOptional(),
+  legacyEvents: z.strictObject({
+    policyVersion: z.literal('1.0.0'), mentoredSeasonIndices: z.array(z.number().int().positive()),
+    tournaments: z.array(z.strictObject({
+      sourceId: z.string().min(1), seasonIndex: z.number().int().positive(), age: z.number().int().min(18).max(23),
+      tournament: z.enum(['ASIAN_GAMES', 'OLYMPICS']), medal: z.enum(['GOLD', 'SILVER', 'BRONZE']).nullable(),
+      matches: z.array(z.strictObject({ index: z.number().int().min(1).max(6), roll: z.number().int().min(1).max(100), won: z.boolean(), minutes: z.number().int().min(0).max(90) })).length(6),
+    })),
+  }).exactOptional(),
   nationalTeam: NationalTeamStateSchema,
   // T-4-001 D-49: 부상 에피소드 이력.
   health: z.strictObject({ episodes: z.array(InjuryEpisodeSchema) }),

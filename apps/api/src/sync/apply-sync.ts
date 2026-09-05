@@ -4,7 +4,8 @@ import type { Db } from '../db/client.js';
 import { runBatch } from '../db/repos/batch.js';
 import { getCareer } from '../db/repos/careers.js';
 import { getSnapshotByRevision, pruneSnapshots } from '../db/repos/snapshots.js';
-import { careers, commandLog, serviceSeasons, snapshots } from '../db/schema.js';
+import { careerArchives, careers, commandLog, serviceSeasons, snapshots } from '../db/schema.js';
+import { buildRetirementRows } from './retirement.js';
 import { AppError } from '../errors.js';
 import { verifyIncomingSnapshot } from './verify-snapshot.js';
 
@@ -85,6 +86,12 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
     if (existing.status === 'ARCHIVED') {
       throw new AppError({ code: 'CAREER_ARCHIVED', message: '이미 보관된 커리어입니다.' });
     }
+    if (existing.status === 'RETIRED') {
+      if (await checkAlreadyApplied(db, careerId, body.snapshot.revision, body.snapshot.stateHash, existing.revision)) {
+        return { revision: existing.revision, syncedAt: now, verificationStatus: existing.verificationStatus };
+      }
+      throw new AppError({ code: 'CAREER_ARCHIVED', message: '은퇴한 커리어는 다시 진행할 수 없습니다.' });
+    }
     if (existing.rulesetVersion !== body.rulesetVersion || existing.contentPackVersion !== body.contentPackVersion) {
       throw new AppError({ code: 'VERSION_MISMATCH', message: '버전이 서버와 다릅니다.' });
     }
@@ -113,6 +120,9 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
   }
 
   warnIfStateOversized(careerId, body.snapshot.revision, body.snapshot.state);
+  const retirementRow = verified.status === 'RETIRED'
+    ? buildRetirementRows(careerId, existing?.createdServiceSeasonId ?? body.createdServiceSeasonId, body, now)
+    : null;
 
   const snapshotRow = {
     id: `${careerId}:${body.snapshot.revision}`,
@@ -160,6 +170,7 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
         createdAt: now,
       }),
     ),
+    ...(retirementRow === null ? [] : [db.insert(careerArchives).values(retirementRow)]),
   ];
 
   let updateMatched = true;

@@ -15,6 +15,8 @@ import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
+import { eq } from 'drizzle-orm';
+import { careerArchives } from '../db/schema.js';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -79,9 +81,11 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
 
     const since = parseSince(c.req.query('since'));
     const commands = await listCommandsSince(db, careerId, since);
+    const [archive] = await db.select().from(careerArchives).where(eq(careerArchives.careerId, careerId)).limit(1);
 
     const body = successEnvelope(GetCareerResponseSchema).parse({
       data: {
+        ...(archive === undefined ? {} : { retirementArchive: { archive: archive.archiveJson, legacy: archive.legacyJson } }),
         snapshot: {
           id: snapshot.id,
           careerId: snapshot.careerId,

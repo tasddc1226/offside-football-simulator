@@ -143,6 +143,7 @@ export const SEASON_PHASE_LABEL_KO: Record<SeasonPhase, string> = {
 
 /** SCR-029 다이어리(CareerTimeline) 항목의 구분 라벨. */
 export const TIMELINE_KIND_LABEL_KO: Record<TimelineEntry['kind'], string> = {
+  SERVICE_STARTED: '복무 시작', SERVICE_COMPLETED: '복무 완료', INTERNATIONAL_TOURNAMENT: 'U23 국제대회', MENTORED: '후배 멘토링',
   RETIRED: '은퇴',
   CAREER_CONFIRMED: '데뷔',
   EVENT_RESOLVED: '이벤트',
@@ -222,6 +223,7 @@ export const MATCH_APPEARANCE_LABEL_KO: Record<MatchAppearance, string> = {
 
 /** T-2-007 SCR-029 일정표: 결장·미사용 교체 사유 라벨. */
 export const OUT_REASON_LABEL_KO: Record<NonNullable<OutReason>, string> = {
+  SERVICE: '복무로 휴식',
   NOT_SELECTED: '미선발',
   UNUSED_SUB: '벤치 대기',
   INJURY: '부상',
@@ -230,6 +232,7 @@ export const OUT_REASON_LABEL_KO: Record<NonNullable<OutReason>, string> = {
 
 /** T-2-007 SCR-029 전술실: 선발 제외 사유 라벨. */
 export const SELECTION_EXCLUDED_LABEL_KO: Record<NonNullable<SelectionCandidate['excluded']>, string> = {
+  SERVICE: '복무로 휴식',
   INJURY: '부상',
   SUSPENSION: '정지',
   NATIONAL_TEAM: '대표팀 차출',
@@ -320,6 +323,7 @@ export const SERVICE_SEASON_NOTICE_KO: Record<'LINE_TEST', string> = {
 
 /** 충돌 대화상자 비교 카드의 "마지막 기록" 행. */
 export const TIMELINE_KIND_LABELS: Record<TimelineEntry['kind'], string> = {
+  SERVICE_STARTED: '복무 시작', SERVICE_COMPLETED: '복무 완료', INTERNATIONAL_TOURNAMENT: 'U23 국제대회', MENTORED: '후배 멘토링',
   RETIRED: '은퇴 확정',
   CAREER_CONFIRMED: '커리어 확정',
   EVENT_RESOLVED: '이벤트 해결',

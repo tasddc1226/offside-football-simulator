@@ -1,4 +1,4 @@
-/** RULE-LEG-002. These inputs are already normalized; raw-record normalization is a later slice. */
+/** RULE-LEG-002. Inputs are normalized by the separate raw-record adapter in result.ts. */
 export type LegacyComponentScores = {
   achievement: number;
   contribution: number;

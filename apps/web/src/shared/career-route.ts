@@ -27,7 +27,7 @@ const DRAFT_FIELDS_WITHOUT_ARCHETYPE = [
  * 그 외 SCR-004. ACTIVE: pending.kind === 'EVENT'면 이벤트별 화면(기본 SCR-013), 'INJURY'면 SCR-013, 'OFFERS'면
  * SCR-009/017, 'ROLE_PROPOSAL'이면 SCR-012, 'CHAPTER'면 SCR-031(자리표시), LOAN_RETURN은 대시보드의
  * 전용 SCR-020 CTA가 열고, 그 외(SETTLEMENT·CONTRACT·NATIONAL_TEAM)와 pending 없음은 SCR-029.
- * RETIRED·ARCHIVED는 SCR-029(phase-1-plan.md D-13 화면 해석 규칙).
+ * RETIRED·ARCHIVED는 SCR-025 FULL TIME retirement 화면으로 보낸다.
  */
 export function screenForCareer(state: CareerState): ScreenTarget {
   const params = { careerId: state.careerId };
@@ -66,7 +66,7 @@ export function screenForCareer(state: CareerState): ScreenTarget {
   }
 
   // RETIRED · ARCHIVED
-  return { screenId: 'SCR-029', params };
+  return { screenId: 'SCR-025', params };
 }
 
 export type PlayerCreationScreenId = 'SCR-002' | 'SCR-003' | 'SCR-004';

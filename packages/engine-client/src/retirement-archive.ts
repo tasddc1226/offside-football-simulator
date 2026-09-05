@@ -6,21 +6,34 @@ import {
   type ArchiveContext,
   type CareerArchiveCore,
   type DomainSnapshot,
+  createLegacyResult,
+  type LegacyResult,
+  canonicalize,
+  type JsonValue,
+  type LegacyReferencePopulation,
 } from '@offside/domain';
 import type { LocalStore, LocalStoreTx } from './ports/local-store.js';
 import type { LocalCareerRecord } from './types.js';
 import { CareerStateSchema } from '@offside/contracts';
 
+export type RetirementRuntimeArtifacts = ArchiveArtifacts & {
+  legacyReferencePopulation?: LegacyReferencePopulation;
+};
+
 export type RetirementArtifactsResolver = (versions: {
   rulesetVersion: string;
   contentPackVersion: string;
-}) => ArchiveArtifacts;
+}) => RetirementRuntimeArtifacts;
 
 export function retirementArchiveKey(careerId: string): string {
   return `phase5:archive:v1:${careerId}`;
 }
 
-function contextFor(career: LocalCareerRecord, artifacts: ArchiveArtifacts): ArchiveContext {
+export function legacyResultKey(careerId: string): string {
+  return `phase5:legacy:1.0.0:${careerId}`;
+}
+
+function contextFor(career: LocalCareerRecord, artifacts: RetirementRuntimeArtifacts): ArchiveContext {
   return {
     binding: {
       careerId: career.id,
@@ -37,7 +50,7 @@ export async function persistRetirementArchive(
   tx: LocalStoreTx,
   career: LocalCareerRecord,
   snapshot: DomainSnapshot,
-  artifacts: ArchiveArtifacts,
+  artifacts: RetirementRuntimeArtifacts,
 ): Promise<void> {
   if (!CareerStateSchema.safeParse(snapshot.state).success)
     throw new ArchiveError('INVALID_SNAPSHOT');
@@ -46,7 +59,41 @@ export async function persistRetirementArchive(
   const key = retirementArchiveKey(career.id);
   const existing = await tx.kv.get<CareerArchiveCore>(key);
   const plan = planCareerArchiveWrite(existing ?? null, candidate, context);
+  const legacy = createLegacyResult(plan.archive, context, artifacts.legacyReferencePopulation);
+  const existingLegacy = await tx.kv.get<LegacyResult>(legacyResultKey(career.id));
+  if (
+    existingLegacy !== undefined &&
+    canonicalize(existingLegacy as unknown as JsonValue) !==
+      canonicalize(legacy as unknown as JsonValue)
+  )
+    throw new ArchiveError('LEGACY_DEFINITION_CONFLICT');
   if (plan.kind === 'INSERT') await tx.kv.put(key, plan.archive);
+  if (existingLegacy === undefined) await tx.kv.put(legacyResultKey(career.id), legacy);
+}
+
+/** Derived display projection remains reproducible even for an older core-only local archive. */
+export async function loadLocalLegacyResult(
+  store: LocalStore,
+  careerId: string,
+  ownerProfileId: string | null,
+  resolveArtifacts: RetirementArtifactsResolver,
+): Promise<LegacyResult | null> {
+  const archive = await loadLocalCareerArchive(store, careerId, ownerProfileId, resolveArtifacts);
+  if (archive === null) return null;
+  const artifacts = resolveArtifacts(archive.binding);
+  const result = createLegacyResult(archive, {
+    binding: archive.binding,
+    artifacts,
+  }, artifacts.legacyReferencePopulation);
+  const stored = await store.transaction('readonly', (tx) =>
+    tx.kv.get<LegacyResult>(legacyResultKey(careerId)),
+  );
+  if (
+    stored !== undefined &&
+    canonicalize(stored as unknown as JsonValue) !== canonicalize(result as unknown as JsonValue)
+  )
+    throw new ArchiveError('LEGACY_DEFINITION_CONFLICT');
+  return result;
 }
 
 /** Private local evidence, not a public DTO or server authorization substitute. */

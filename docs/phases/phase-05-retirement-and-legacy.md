@@ -13,7 +13,7 @@
 - Legacy Score의 구성 요소와 설명.
 - CareerTimeline, CareerTag, 최종 프로필, 선수 보관함.
 - 원클럽 레전드, 무관의 제왕, 승격 주장, 대표팀 영웅, 부상 복귀, 저니맨 등 복수 엔딩.
-- 국적 규칙 모듈(SHOULD): `nationalityRuleState`를 소유하는 모듈 인터페이스와 한국 모듈. 한국 모듈은 병역 상태, U23·아시안게임·올림픽 특례, 복무 경로 선택을 제공한다. 모듈이 없는 국적은 기본 모듈로 동작한다.
+- 국적 규칙 모듈(MUST, 2026-09-05 사용자 포함 승인): `nationalityRuleState`를 소유하는 모듈 인터페이스와 한국 모듈. 한국 모듈은 병역 상태, U23·아시안게임·올림픽 특례, 복무 경로 선택을 제공한다. 모듈이 없는 국적은 기본 모듈로 동작한다. 실제 병역 판정이 아닌 게임용 단순화 범위는 [런타임 통합 명세](../development/19-phase5-runtime-integration.md)를 따른다.
 - SCR-023 성장 이슈 변형: 노쇠 곡선과 연결된 포지션 고유 능력 추세 대응.
 
 ## 화면
@@ -49,6 +49,10 @@ Retirement Pressure = age curve + injury burden + low market demand
 
 ## 완료 조건
 
+구현 및 검증 증거는 [후속 통합 상태](../tracking/phase-5-plan.md)와
+[런타임 통합 명세](../development/19-phase5-runtime-integration.md)를 함께 읽는다.
+단위 eligibility 통과를 실제 모든 엔딩 경로 또는 대규모 모집단 통과로 대체하지 않는다.
+
 - [ ] 20년 범위 fixture를 제한 시간 안에 완주한다.
 - [ ] 포지션별 성장·노쇠 경계가 golden curve와 일치한다.
 - [ ] 은퇴 후 일반 진행 명령이 거부된다.
@@ -62,4 +66,3 @@ Retirement Pressure = age curve + injury burden + low market demand
 ## 제외
 
 은퇴 후 감독 커리어 전체 시뮬레이션, 온라인 명예의 전당, 공유 이미지 자동 생성.
-

@@ -13,6 +13,9 @@ import { evaluateCareerTags, grantCareerTag } from './career-tags.js';
 import { computeGrowth } from './growth.js';
 import { hashState } from './hash.js';
 import { aggregateCareerRecords } from './legacy/career-records.js';
+import { resolveCareerEvent, settleNationality, nationalityForCareer, type CareerEventChoice } from './legacy/career-event.js';
+import { deriveRetirementTags } from './legacy/result.js';
+import { retirementContinuationOptions, retirementDecisionRequired } from './legacy/career-retirement.js';
 import {
   applyRehabPlan,
   injuryAvailabilityFromHealth,
@@ -132,6 +135,7 @@ export type Command =
         simulationMode: SimulationMode;
         serviceSeasonId: string;
         trainingFocus?: TrainingFocus;
+        legacyLedger?: boolean;
       };
     }
   | {
@@ -192,7 +196,8 @@ export type Command =
   | { type: 'NEGOTIATE'; payload: { offerId: string; ask: NegotiationAsk } }
   | { type: 'REJECT_OFFER'; payload: { offerId: string | null } } // null = 전부 거절 → 잔류
   | { type: 'LOAN_RETURN'; payload: { decision: 'RETURN' | 'PERMANENT' } }
-  | { type: 'RETIRE'; payload: { choice: 'RETIRE' | 'COACH_EPILOGUE' } };
+  | { type: 'RETIRE'; payload: { choice: 'RETIRE' | 'COACH_EPILOGUE' } | { choice: 'LAST_CONTRACT' | 'LOWER_LEAGUE'; offerId: string } }
+  | { type: 'CAREER_EVENT'; payload: { choice: CareerEventChoice } };
 
 export type SimulationInput = {
   snapshot: DomainSnapshot | null;
@@ -768,6 +773,10 @@ function createStepMatchWiring(
           ? undefined
           : { episodeId: recurrenceEpisode.id, riskBp: recurrenceEpisode.recurrenceRiskBp };
       const availabilityBefore = availability;
+      const nationality = nationalityForCareer(careerState);
+      if (nationality.serviceStatus === 'SERVING' && nationality.route === 'CAREER_BREAK') {
+        availability = { kind: 'SERVICE', matchesRemaining: 1, sinceMatchId: `service:${seasonIndex}` };
+      }
       const result = playMatch({
         ruleset,
         rngState: matchRngState,
@@ -971,6 +980,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
       },
     );
   }
+  if (retirementDecisionRequired(state)) return fail('VALIDATION_FAILED', '마지막 커리어 선택을 먼저 확인해야 한다.', { reason: 'RETIREMENT_DECISION_REQUIRED' });
   if (state.season !== null) {
     return fail('VALIDATION_FAILED', '이미 활성 시즌이 있다.', { reason: 'SEASON_ALREADY_ACTIVE' });
   }
@@ -1000,6 +1010,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
 
   const ruleset = input.ruleset;
   const team = findTeam(ruleset, state.contract.teamId);
+  if (command.payload.legacyLedger === true && !Number.isSafeInteger(state.contract.wageMinorPerWeek * 52 + state.contract.signingBonusMinor)) return fail('VALIDATION_FAILED', '시즌 수입을 안전한 정수 범위로 계산할 수 없다.');
   const rules = ruleset.selectionRules;
   const profile = state.player.profile;
 
@@ -1103,6 +1114,12 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   // 넘기고(`resolveDeferredEffects`가 walk 도중 이 예비 season의 scheduledEffects를 읽고 지운다),
   // walk가 끝난 뒤 wiring getter 값 + 갱신된 scheduledEffects로 다시 채운다.
   const initialSeason: FootballSeason = {
+    ...(command.payload.legacyLedger === true ? { legacyContext: {
+      policyVersion: '1.0.0' as const,
+      wageMinorPerWeek: state.contract.wageMinorPerWeek,
+      signingBonusMinor: state.contract.signedSeasonIndex === state.seasonHistory.length + 1 ? state.contract.signingBonusMinor : 0,
+      contractId: state.contract.id,
+    } } : {}),
     index: state.seasonHistory.length + 1,
     serviceSeasonId: command.payload.serviceSeasonId,
     simulationMode: mode,
@@ -1133,6 +1150,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   };
   const stateBeforeWalk: CareerState = {
     ...stateAfterSelection,
+    ...(command.payload.legacyLedger === true ? { retirement: state.retirement ?? { policyVersion: '1.0.0' as const, marketOffers: null, lastChanceConsumed: false, lastChanceSeasonIndex: null } } : {}),
     deferredEffects: [],
     season: initialSeason,
   };
@@ -3372,6 +3390,7 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   // 시즌 summary만 교체해야 누적 태그 평가와 snapshot이 같은 결산 값을 읽는다.
   const finalizedResultWithoutHash: Omit<SeasonResult, 'hash'> = {
     ...result,
+    ...(result.legacy === undefined ? {} : { legacy: { ...result.legacy, relationships: { ...promiseBreachState.relationships } } }),
     stateDeltas: {
       ...result.stateDeltas,
       managerTrust: {
@@ -3421,10 +3440,11 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     nextState.contract !== null && nextState.contract.kind === 'LOAN'
       ? settleLoanSeason(nextState, input.ruleset, finalizedResult, nextRevision)
       : openMarketAfterSettlement(nextState, input.ruleset, nextRevision).state;
+  const assessedState: CareerState = finalState.retirement === undefined ? finalState : { ...finalState, retirement: { ...finalState.retirement, marketOffers: finalState.pending?.kind === 'OFFERS' ? finalState.pending.offers.filter((offer) => offer.negotiationState !== 'WITHDRAWN').length : finalState.pending?.kind === 'LOAN_RETURN' ? null : 0 } };
 
   return {
     ok: true,
-    snapshot: buildSnapshot(finalState, nextRevision, 'SEASON_SETTLED'),
+    snapshot: buildSnapshot(settleNationality(assessedState, nextRevision), nextRevision, 'SEASON_SETTLED'),
     appliedEffects: [],
     // 결산 다음은 새 시즌을 열지 말지 결정하는 화면(START_SEASON, SCR-005)이거나 시장·임대 복귀
     // 결정이라 'ADVANCE'가 아니라 'DECISION'이다 — season이 null인 채로 'ADVANCE'를 보내면 seasonPhase가
@@ -3604,6 +3624,15 @@ export function simulate(input: SimulationInput): SimulationResult {
   }
 
   switch (command.type) {
+    case 'CAREER_EVENT': {
+      try {
+        const revision = snapshot.revision + 1;
+        const state = resolveCareerEvent(snapshot.state, command.payload.choice, revision);
+        return { ok: true, snapshot: buildSnapshot(state, revision, 'EVENT_RESOLVED'), appliedEffects: [], nextAction: 'DECISION' };
+      } catch {
+        return fail('VALIDATION_FAILED', '현재 선택할 수 없는 커리어 이벤트다.');
+      }
+    }
     case 'RETIRE':
       return retireCareer(input, snapshot);
     case 'UPDATE_PLAYER_DRAFT':
@@ -3638,6 +3667,14 @@ function retireCareer(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   const { command } = input;
   if (command.type !== 'RETIRE') return fail('VALIDATION_FAILED', 'RETIRE 명령이 필요하다.');
   const { state } = snapshot;
+  if (command.payload.choice === 'LAST_CONTRACT' || command.payload.choice === 'LOWER_LEAGUE') {
+    const choice = command.payload;
+    if (!retirementContinuationOptions(state).some((option) => option.choice === choice.choice && option.offerId === choice.offerId)) return fail('VALIDATION_FAILED', '사용할 수 없는 마지막 계약 제안이다.');
+    const accepted = acceptOffer({ ...input, command: { ...command, type: 'ACCEPT_OFFER', payload: { offerId: choice.offerId } } }, snapshot);
+    if (!accepted.ok) return accepted;
+    const continued: CareerState = { ...accepted.snapshot.state, retirement: { policyVersion: '1.0.0', marketOffers: state.retirement?.marketOffers ?? null, lastChanceConsumed: true, lastChanceSeasonIndex: state.seasonHistory.length + 1 } };
+    return { ...accepted, snapshot: buildSnapshot(continued, accepted.snapshot.revision, accepted.snapshot.checkpoint) };
+  }
   if (command.payload.choice !== 'RETIRE' && command.payload.choice !== 'COACH_EPILOGUE') {
     return fail('VALIDATION_FAILED', '은퇴 또는 지도자 에필로그를 명시적으로 선택해야 한다.');
   }
@@ -3661,10 +3698,11 @@ function retireCareer(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     return fail('VALIDATION_FAILED', '확정 시즌 기록을 검증할 수 없다.');
   }
   const revision = snapshot.revision + 1;
+  const tagged = deriveRetirementTags(state).reduce((acc, tagId) => grantCareerTag(acc, tagId, { seasonIndex: state.seasonHistory.length, revision, refId: 'RETIRE' }), state);
   const retired: CareerState = {
-    ...state,
+    ...tagged,
     status: 'RETIRED',
-    timeline: [...state.timeline, {
+    timeline: [...state.timeline, ...tagged.careerTags.filter((tag) => !state.careerTags.includes(tag)).map((tag) => ({ revision, kind: 'CAREER_TAG_GRANTED' as const, refId: tag, age: state.age, step: state.currentStep })), {
       revision, kind: 'RETIRED', refId: command.payload.choice,
       age: state.age, step: state.currentStep,
     }],

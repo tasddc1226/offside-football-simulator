@@ -381,7 +381,11 @@ export type TimelineEntry = {
     | 'NATIONAL_TEAM_CALLED'
     | 'NATIONAL_TEAM_DECLINED'
     | 'CAPTAIN_APPOINTED'
-    | 'RETIRED';
+    | 'RETIRED'
+    | 'SERVICE_STARTED'
+    | 'SERVICE_COMPLETED'
+    | 'INTERNATIONAL_TOURNAMENT'
+    | 'MENTORED';
   refId: string | null;
   age: number;
   step: number;
@@ -401,7 +405,7 @@ export type DecisionSlot = {
 // 않는다(02 "구분 유지").
 export type MatchAppearance = 'START' | 'SUB' | 'OUT';
 
-export type OutReason = null | 'NOT_SELECTED' | 'UNUSED_SUB' | 'INJURY' | 'SUSPENSION';
+export type OutReason = null | 'NOT_SELECTED' | 'UNUSED_SUB' | 'INJURY' | 'SUSPENSION' | 'SERVICE';
 
 // T-2-003 D-35 데이터 계약: 포지션군별 필수 통계(03 "포지션별 결과"). 전환율(FW)은 goals/shots
 // 파생값이라 저장하지 않는다.
@@ -528,7 +532,7 @@ export type SeasonPlayerStats = {
 
 // T-2-003 D-35: 부상·정지만 표현한다(능력치·재활은 Phase 4). `excluded`(SelectionCandidate)와 같은
 // 문자열('INJURY' | 'SUSPENSION')을 쓴다.
-export type Availability = null | { kind: 'INJURY' | 'SUSPENSION'; matchesRemaining: number; sinceMatchId: string };
+export type Availability = null | { kind: 'INJURY' | 'SUSPENSION' | 'SERVICE'; matchesRemaining: number; sinceMatchId: string };
 
 // T-2-002 D-26/D-34: 시즌 시작 시 포지션마다 생성하는 주전 경쟁자. `expectedPerformance`·`score`는
 // 저장하지 않고 판정마다 `selection.ts`가 다시 계산한다(RULE-SEL-001은 "매 판정마다").
@@ -559,7 +563,7 @@ export type SelectionCandidate = {
   expectedPerformance: number;
   squadStatus: number;
   score: number;
-  excluded: null | 'INJURY' | 'SUSPENSION' | 'NATIONAL_TEAM';
+  excluded: null | 'INJURY' | 'SUSPENSION' | 'NATIONAL_TEAM' | 'SERVICE';
 };
 
 export type SelectionAppearance = 'START' | 'SUB' | 'OUT';
@@ -581,6 +585,8 @@ export type SelectionRanking = {
 // `selection`은 선수 현재 포지션의 최신 순위(START_SEASON·역할 결정 시 재계산). `styleId`는
 // `teamId`가 속한 팀의 `tacticalStyleId` 스냅샷이다.
 export type FootballSeason = {
+  /** Phase 5 opt-in ledger; absent in historical command logs (do not synthesize old income). */
+  legacyContext?: { policyVersion: '1.0.0'; wageMinorPerWeek: number; signingBonusMinor: number; contractId: string };
   index: number;
   serviceSeasonId: string;
   simulationMode: SimulationMode;
@@ -660,6 +666,7 @@ export type TrainingFocus = 'ROLE' | 'TECHNICAL' | 'PHYSICAL' | 'MENTAL';
 // 적었지만 이 브리프(D-39)가 "결산은 항상 result를 만든다"로 확정해 필수 필드로 둔다. T-2-004 머지로
 // `chapters`는 이제 실제 `ChapterRecord`(placeholder `{id, step}`이 아니다).
 export type SeasonResult = {
+  legacy?: { policyVersion: '1.0.0'; incomeMinor: number; contractId: string; relationships: CareerState['relationships']; promotion: boolean; ageAtStart: number; injuryMissedMatches?: number };
   index: number;
   simulationMode: SimulationMode;
   teamId: string;
@@ -749,6 +756,12 @@ export type NationalTeamCallUp = 'ACCEPT' | 'DECLINE' | 'CONDITIONAL';
 export type NationalityRuleState = {
   moduleId: 'DEFAULT';
   exceptions: [];
+} | import('./legacy/nationality.js').NationalityState;
+
+export type CareerTournament = {
+  sourceId: string; seasonIndex: number; age: number;
+  tournament: 'ASIAN_GAMES' | 'OLYMPICS'; medal: 'GOLD' | 'SILVER' | 'BRONZE' | null;
+  matches: Array<{ index: number; roll: number; won: boolean; minutes: number }>;
 };
 
 export type NationalTeamCallUpRecord = {
@@ -783,6 +796,9 @@ export type SeasonManager = {
 };
 
 export type CareerState = {
+  /** Optional to preserve pre-Phase-5 snapshots and their command-log hashes. */
+  legacyEvents?: { policyVersion: '1.0.0'; tournaments: CareerTournament[]; mentoredSeasonIndices: number[] };
+  retirement?: { policyVersion: '1.0.0'; marketOffers: number | null; lastChanceConsumed: boolean; lastChanceSeasonIndex: number | null };
   schemaVersion: 1;
   careerId: string;
   status: CareerStatus;
