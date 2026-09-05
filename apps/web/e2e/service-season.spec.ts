@@ -64,7 +64,7 @@ test('테스트 시즌이면 허브 배너·카드 배지가 뜨고 커리어 �
   await expect.poll(() => putBody?.createdServiceSeasonId).toBe(TEST_SEASON.id);
 
   await page.goto('/');
-  await expect(page.getByTestId('service-season-banner')).toContainText('LINE TEST 시즌입니다');
+  await expect(page.getByTestId('service-season-banner')).toContainText(/테스트 보관함에 남고.*정식 시즌 도전에는 집계되지 않습니다/);
   await expect(page.getByTestId('career-card-test-badge')).toBeVisible();
 
   const results = await new AxeBuilder({ page }).analyze();
@@ -76,7 +76,7 @@ test('테스트 시즌이면 온보딩 첫 슬라이드에도 안내 문구가 �
   await page.route('**/v1/service-seasons/current', (route) => fulfillJson(route, 200, { data: TEST_SEASON, meta: E2E_META }));
 
   await page.goto('/onboarding');
-  await expect(page.getByTestId('onboarding-service-season-notice')).toContainText('LINE TEST 시즌입니다');
+  await expect(page.getByTestId('onboarding-service-season-notice')).toContainText(/테스트 보관함에 남고.*정식 시즌 도전에는 집계되지 않습니다/);
 
   const results = await new AxeBuilder({ page }).analyze();
   const seriousOrCritical = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
