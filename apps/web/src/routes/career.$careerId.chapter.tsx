@@ -306,9 +306,10 @@ function ChapterScreen() {
   const decisionsTotal = view.decisionsTotal;
   const displayDecisionNumber = Math.min(cursor + 1, decisionsTotal);
   const minute = decisionMinute(displayDecisionNumber, decisionsTotal);
+  const isNationalTeam = view.context.kind === 'NATIONAL_TEAM';
   const score = scoreAtDecision(view.match.result.goalsFor, view.match.result.goalsAgainst, minute);
   const tokens = buildNarrativeTokens(state, activeContentPack, activeRuleset);
-  const room = deriveTacticalRoom(state, activeRuleset);
+  const room = isNationalTeam ? null : deriveTacticalRoom(state, activeRuleset);
   const reasonText = playerReasonText(season.selection.playerReason);
 
   async function handleConfirm(decisionId: string, optionId: string) {
@@ -369,10 +370,12 @@ function ChapterScreen() {
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           {chapterContextLabel(view)}
         </p>
+        {!isNationalTeam && (
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           {APPEARANCE_CONTEXT_LABEL[view.match.appearance]}
           {reasonText !== null ? ` · ${reasonText}` : ''}
         </p>
+        )}
         {room !== null ? (
           <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
             감독 지시: {room.styleName} · {room.formation}
@@ -380,7 +383,7 @@ function ChapterScreen() {
         ) : null}
       </section>
 
-      {cursor < decisionsTotal ? (
+      {!isNationalTeam && cursor < decisionsTotal ? (
         <ChapterScoreboard
           timeLabel={decisionTimeLabel(displayDecisionNumber)}
           score={score}
@@ -424,6 +427,7 @@ function ChapterScreen() {
 
 function ChapterResultSection({ view }: { view: ChapterView }) {
   const match = view.match;
+  const isNationalTeam = view.context.kind === 'NATIONAL_TEAM';
   const stats = positionStatEntries(match.stats);
   const changeLines = aggregateEffectDeltas(view.resolved).map(({ target, delta }) => {
     const label = (EFFECT_TARGET_LABEL_KO as Record<string, string | undefined>)[target] ?? target;
@@ -437,10 +441,14 @@ function ChapterResultSection({ view }: { view: ChapterView }) {
       <h2 className="font-os font-bold text-os-text" style={H1_STYLE}>
         경기 결과
       </h2>
+      {!isNationalTeam && (
       <p className="os-num font-os font-bold text-os-text" style={NUM_STYLE} aria-label={`최종 스코어 ${match.result.goalsFor} 대 ${match.result.goalsAgainst}`}>
         {match.result.goalsFor}:{match.result.goalsAgainst}
       </p>
 
+      )}
+
+      {!isNationalTeam && (
       <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 sm:grid-cols-3" style={CAPTION_STYLE}>
         <div>
           <dt>출전</dt>
@@ -469,8 +477,9 @@ function ChapterResultSection({ view }: { view: ChapterView }) {
           </div>
         ))}
       </dl>
+      )}
 
-      {view.chapterRecord !== null ? (
+      {!isNationalTeam && view.chapterRecord !== null ? (
         <p className="font-os text-os-text" style={BODY_STYLE}>
           챕터로 인한 평점 변화 {formatSignedTenths(view.chapterRecord.ratingDeltaTenths)}
         </p>

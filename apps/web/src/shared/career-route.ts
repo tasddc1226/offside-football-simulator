@@ -42,7 +42,7 @@ export function screenForCareer(state: CareerState): ScreenTarget {
 
   if (state.status === 'ACTIVE') {
     const pending = state.pending;
-    if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY')) {
+    if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM')) {
       const screenId = pending.kind === 'EVENT' ? EVENT_SCREEN_OVERRIDES[pending.eventId] ?? 'SCR-013' : 'SCR-013';
       return { screenId, params };
     }
