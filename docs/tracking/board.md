@@ -159,7 +159,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-017 | A | api(test) | Node/workerd 해시 probe에 career-12·career-13 fixture 추가(T-4-006 §1(d) 잔여) | T-4-006(domain) | deferred | [브리프](briefs/T-4-017.md). **보류(D-61, 새 테스트 작성 금지)**. 테스트 작업 재개 시 투입 |
 | T-4-018 | B | web | SCR-017 offers 화면 eyebrow를 시장 사유별로(INTEREST/LOAN_END/PRE_NEGOTIATION에서 "계약 만료·FA" 고정 노출 수정; PR #78 스크린샷 발견) | T-4-014 | todo | [브리프](briefs/T-4-018.md). PR #78 머지 뒤 투입(`offers.tsx` 소유권) |
 | T-4-019 | — | web(e2e) | [핫픽스] main 회귀: `signFirstOffer` 헬퍼 정규식(PR #74)이 STAY 결과 URL `&interested=N`(PR #76)을 거부해 season.spec:121 결정적 실패 | T-4-010, T-4-011 | done | [브리프](briefs/T-4-019.md). 17:01 투입 → 17:10 BLOCKED(헬퍼 수정 커밋 `a6e8136`, season.spec:143 단언이 #76 프리시즌 경로와 불일치) → 17:12 단언 완화 허용해 재투입 → 17:22 완료 **PR #81 `689aaa0`**(워커 체인 전부 그린, e2e 98). 검증 큐 #81→#80→#78→#79(앞 PR 머지 대기 게이트 추가) |
-| T-4-020 | — | web(e2e) | [핫픽스] injury.spec `reachForcedInjury` poll의 타임아웃 없는 `textContent()`가 `/event` 전환 순간 무한 대기 → 반복 60초 타임아웃(trace로 확정) | T-4-010 | in-progress | [브리프](briefs/T-4-020.md). 17:05 투입 → 17:15 워커 완료 **PR #80 `67835d8`**(오케스트레이터 REST 개설, 훅 차단). `--repeat-each=3` 3/3, 체인 통과(season.spec:121은 T-4-019 대상). T-4-019 머지 뒤 검증 큐 |
+| T-4-020 | — | web(e2e) | [핫픽스] injury.spec `reachForcedInjury` poll의 타임아웃 없는 `textContent()`가 `/event` 전환 순간 무한 대기 → 반복 60초 타임아웃(trace로 확정) | T-4-010 | done | [브리프](briefs/T-4-020.md). 17:05 투입 → 17:15 워커 완료 **PR #80 `67835d8`**(오케스트레이터 REST 개설, 훅 차단). `--repeat-each=3` 3/3, 체인 통과(season.spec:121은 T-4-019 대상). 오케스트레이터 체인 CHAIN EXIT 0(e2e 98) → **머지 `01be661`**(17:28) |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
@@ -182,13 +182,13 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-015 | Sonnet 5 · Workflow `wf_a2cc4721-227` | 2026-09-05 16:46 | content 감사 묶음(F1·F2·F4) 구현 중, D-61 |
 | T-4-009 | Sonnet 5 · Workflow `wf_4498dfc0-665`(재개) | 2026-09-05 15:22 | WIP 1efbb5d 이어받아 seed 탐색·phase4-seeds·도달성 보고 마무리 중 |
 | T-4-016 | Sonnet 5 · Workflow `wf_93182b9d-f34` | 2026-09-05 16:51 | 워커 완료, PR #79 — T-4-019 머지 뒤 검증 큐 |
-| T-4-020 | Sonnet 5 · Workflow `wf_fc69e756-66b` | 2026-09-05 17:05 | 워커 완료, PR #80 — T-4-019 머지 뒤 검증 큐 |
 | T-4-014 | Sonnet 5 · Workflow `wf_b145e191-8e7` | 2026-09-05 15:30 | 워커 완료, PR #78 검증 큐 실행 중 |
 
 ## 완료
 
 | ID | 내용 | 커밋 |
 |---|---|---|
+| T-4-020 | PR #80 `01be661` | 2026-09-05 | 핫픽스: injury.spec poll `textContent` 타임아웃(반복 60초 타임아웃의 실제 원인). 체인 e2e 98 passed |
 | T-4-019 | PR #81 `9bf89fc` | 2026-09-05 | 핫픽스: e2e 헬퍼 `&interested=` 허용·season.spec:121 프리시즌 경로. main 회귀(#74×#76) 해소, 체인 e2e 98 passed |
 | T-4-011 | PR #76 `25544b3` | 2026-09-05 | Sonnet 5 구현 + 오케스트레이터 커밋·개설. 체인 CHAIN EXIT 0(e2e 97, STAY 카드 a11y 0) |
 | T-4-010 | PR #74 `552481c` | 2026-09-05 | Sonnet 5 두 세션(한도 중단·WIP 이어받기). 체인 재실행 CHAIN EXIT 0(e2e 97) |
