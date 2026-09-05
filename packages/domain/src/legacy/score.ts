@@ -1,0 +1,61 @@
+/** RULE-LEG-002. These inputs are already normalized; raw-record normalization is a later slice. */
+export type LegacyComponentScores = {
+  achievement: number;
+  contribution: number;
+  longevity: number;
+  relationship: number;
+  narrative: number;
+};
+
+export const LEGACY_COMPONENT_WEIGHTS = Object.freeze({
+  achievement: 30,
+  contribution: 25,
+  longevity: 15,
+  relationship: 15,
+  narrative: 15,
+} satisfies LegacyComponentScores);
+
+export type LegacyBandId =
+  'BAND-LEGEND' | 'BAND-ICON' | 'BAND-REMEMBERED' | 'BAND-SOLID' | 'BAND-COMPLETE';
+
+export type LegacyScoreSummary = {
+  componentScores: LegacyComponentScores;
+  totalScore: number;
+  bandId: LegacyBandId;
+};
+
+function requireScore(value: number): void {
+  if (!Number.isSafeInteger(value) || value < 0 || value > 100) {
+    throw new RangeError('Legacy scores must be integers between 0 and 100.');
+  }
+}
+
+export function legacyBandForScore(totalScore: number): LegacyBandId {
+  requireScore(totalScore);
+  if (totalScore >= 90) return 'BAND-LEGEND';
+  if (totalScore >= 75) return 'BAND-ICON';
+  if (totalScore >= 50) return 'BAND-REMEMBERED';
+  if (totalScore >= 25) return 'BAND-SOLID';
+  return 'BAND-COMPLETE';
+}
+
+/** No OVR, identity, clock, reference population or RNG input. Does not produce a full LegacyResult. */
+export function calculateLegacyScore(scores: Readonly<LegacyComponentScores>): LegacyScoreSummary {
+  let weightedTotal = 0;
+  const componentScores: LegacyComponentScores = {
+    achievement: scores.achievement,
+    contribution: scores.contribution,
+    longevity: scores.longevity,
+    relationship: scores.relationship,
+    narrative: scores.narrative,
+  };
+  for (const component of Object.keys(LEGACY_COMPONENT_WEIGHTS) as Array<
+    keyof LegacyComponentScores
+  >) {
+    requireScore(componentScores[component]);
+    weightedTotal += componentScores[component] * LEGACY_COMPONENT_WEIGHTS[component];
+  }
+  // Keep the numerator integral; round once after summing, not once per component.
+  const totalScore = Math.floor((weightedTotal + 50) / 100);
+  return { componentScores, totalScore, bandId: legacyBandForScore(totalScore) };
+}
