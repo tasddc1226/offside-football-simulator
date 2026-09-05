@@ -144,16 +144,19 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-002 | B | domain + content | 부상 모델(D-49): 심각도·부위·진단 범위·재활 선택·재발·후유증, 강제 사건 상한, career-12-injury | T-4-001 | done | PR #64 27292d4(2026-09-05 01:36), [브리프](briefs/T-4-002.md). MODERATE/MAJOR 부상은 일반 이벤트보다 우선하는 INJURY pending, MINOR는 STANDARD 자동, 재활·복귀·재발·후유증 상태기계, career-12-injury 골든 |
 | T-4-003 | B | domain + content | 감독 교체·라커룸·슬럼프·윤리·SNS 이벤트 pool, popularityCenti, 관계 로그, 안전장치, 태그 5종(D-50) | T-4-001 | done | PR #67 b180536(2026-09-05 04:17), [브리프](briefs/T-4-003.md). 관계 5축 clamp delta 감사 로그·memory tag LRU, 결산 평판·주장단 승격·감독 교체 예약·인계, Phase 4 태그 5종 평가기, SLUMP/LOCKER_ROOM/ETHICS/MEDIA 이벤트·스키마 |
 | T-4-004 | B | domain + content | 대표팀 차출 기본 모듈(D-51), NATIONAL_DEBUT 챕터 | T-4-002, T-4-003 | done | PR #68 `29e1a08`(2026-09-05 11:07, Luna Max 구현·리뷰, Codex 머지), [브리프](briefs/T-4-004.md). step 8 자격 판정·NATIONAL_TEAM pending·callUp 3종·부상 자동 사양·CHP-NAT-001 데뷔 예약, 웹은 NATIONAL_TEAM을 SCR-013으로 라우팅·데뷔 챕터 맥락(전용 SCR-032는 T-4-005). 최종 수정 `44b04f8`로 불필요한 e2e 변경 정리 |
-| T-4-005 | B | web | SCR-016·018·021·022·024·032, 라커룸·휴대폰 관계 수치 점진 공개(D-57), SCR-023 경기 판단 변형, TEST-E2E-004, DEV 팩 오버라이드(D-56) | T-4-004, T-4-007, T-4-009 | todo | [브리프](briefs/T-4-005.md). T-4-007·T-4-009 머지 뒤 화면 묶음 3개(SCR-022·032 / SCR-016·018·021·024 / 대시보드 점진 공개·SCR-023·014)로 쪼개 Sonnet 5 워크플로 병행 투입(D-59) |
-| T-4-006 | A+B | domain + web(e2e) | 트랙 통합 검증: 3시즌 fixture `career-13-integration`, OVR 불변 property, 결정 예산·세션 길이, Snapshot 크기, e2e 3회, 완료 조건 표(테스트 전용) | T-4-004(domain 부분), T-4-005(e2e 부분) | in-progress | [브리프](briefs/T-4-006.md). domain 부분(1~4·6절) Sonnet 5 워크플로 `wf_0b8d9171-68c` 투입(2026-09-05 11:07), 브랜치 `T-4-006-domain`. e2e 부분(5절)은 T-4-005 뒤. 15:20 세션 한도로 중단 → `wf_4498dfc0-665`로 재개(WIP 3eb0124 이어받기) |
+| T-4-005 | B | web | SCR-016·018·021·022·024·032, 라커룸·휴대폰 관계 수치 점진 공개(D-57), SCR-023 경기 판단 변형, TEST-E2E-004, DEV 팩 오버라이드(D-56) | T-4-004, T-4-007, T-4-009 | todo | [브리프](briefs/T-4-005.md) → 분할 브리프 [T-4-005a](briefs/T-4-005a.md)(분기·디스패처·SCR-022·032, T-4-009 뒤) · [T-4-005b](briefs/T-4-005b.md)(SCR-021·018·016·024, (a) 뒤) · [T-4-005c](briefs/T-4-005c.md)(대시보드 점진 공개·SCR-014 확장·SCR-023, T-4-009·T-4-014 뒤). D-61로 TEST-E2E-004·단위 테스트 보류 |
+| T-4-006 | A+B | domain + web(e2e) | 트랙 통합 검증: 3시즌 fixture `career-13-integration`, OVR 불변 property, 결정 예산·세션 길이, Snapshot 크기, e2e 3회, 완료 조건 표(테스트 전용) | T-4-004(domain 부분), T-4-005(e2e 부분) | in-progress | [브리프](briefs/T-4-006.md). domain 부분(1~4·6절) Sonnet 5 워크플로 `wf_0b8d9171-68c` 투입(2026-09-05 11:07), 브랜치 `T-4-006-domain`. e2e 부분(5절)은 **D-61로 보류**. 15:20 세션 한도로 중단 → `wf_4498dfc0-665`로 재개(WIP 3eb0124 이어받기) → **PR #72**(`00f9270`, 15:51) 검증 체인 중. §1(d) Node/workerd probe는 T-4-017로 분리 |
 | T-4-007 | B | web + ui | 디자인 PR #66 재통합(D-58): 최신 main merge·충돌 해결·T-3-005/T-4-004 화면 디자인 정합 | T-4-004 | done | PR #66 `7bd3d84`(사용자 머지 2026-09-05 14:59, 워커 커밋 5bb89e6·07f2ce4), [브리프](briefs/T-4-007.md). 오케스트레이터 체인 통과(타임아웃 3건 단독 재실행 통과) |
 | T-4-008 | A | content | 콘텐츠 팩 0.3.0(0.2.0 복사 + 부상·관계·감독·슬럼프·윤리·미디어·대표팀 이벤트 승격, 포지션 전용 챕터 3종), 0.1.0·0.2.0 무변경, 도달성 표 | T-4-004 | in-progress | [브리프](briefs/T-4-008.md). Sonnet 5 워크플로 투입(2026-09-05 11:48), 브랜치 `T-4-008-content-0.3.0`. 15:20 세션 한도로 중단 → `wf_4498dfc0-665`로 재개(WIP 903eed3) |
 | T-4-009 | B | web(engine·labels·e2e helper) | Phase 4 화면 준비: D-56 DEV 팩 오버라이드 `resolveActiveContentPackVersion`, D-57 라벨 함수, presentation 도달 seed 탐색 도구·`phase4-seeds.ts`, 도달성 보고 | T-4-004 | in-progress | [브리프](briefs/T-4-009.md). Sonnet 5 워크플로 투입(2026-09-05 11:48), 브랜치 `T-4-009-phase4-prep`. 라우트·`packages/ui` 금지(T-4-007과 소유권 분리). 15:20 세션 한도로 중단 → `wf_4498dfc0-665`로 재개(WIP 1efbb5d) |
 | T-4-010 | B | web(e2e) + ci | e2e 간헐 실패 안정화: season-result 카운트업 건너뛰기 경쟁, signFirstOffer 잔류 경로 허용, INTEREST 고정 seed 케이스, CI 실패 아티팩트 업로드 | T-3-005 | in-progress | [브리프](briefs/T-4-010.md). 조사 `wf_77670be2-155` 결과. Sonnet 5 워크플로 투입(2026-09-05), 브랜치 `T-4-010-e2e-stabilize`. 15:20 세션 한도로 중단 → `wf_4498dfc0-665`로 재개(WIP 2a737de) |
 | T-4-011 | B | web | SCR-020 잔류 결과(STAY): INTEREST 시장 안전 잔류 수락 시 결과 카드 렌더·loader redirect 튕김 제거 | T-4-007 | in-progress | [브리프](briefs/T-4-011.md). `wf_4498dfc0-665` 투입(2026-09-05 15:22), 브랜치 `T-4-011-stay-result` |
-| T-4-012 | A | domain | 감사 확인 finding domain 묶음: 감독 교체 roll RNG(C1), walk 중 stale 부상 상태 대표팀 자동 사양(C2), 시장 파생 시드 careerId(C3), EXPIRED 전부 거절 안전 잔류 미체결(C4·C10), 임대→FA 이적 유령 stint(C5), FIRST_CONTRACT 전부 거절(C6), step 7 빈 제안 nextAction(C7), 테스트 공백 P3-2·P4-2(C12·C13) | T-4-006(domain) | todo | 재검증 11건 결과 반영 뒤 브리프·투입 |
-| T-4-013 | A | api(test) | careers.test.ts 100회 병렬 테스트 2건 타임아웃 60초(러너·부하 flake) | — | in-progress | [브리프](briefs/T-4-013.md). 투입 2026-09-05 15:30 |
+| T-4-012 | A | domain | 감사 확인 finding domain 묶음: 감독 교체 roll RNG(C1), walk 중 stale 부상 상태 대표팀 자동 사양(C2), 시장 파생 시드 careerId(C3), EXPIRED 전부 거절 안전 잔류 미체결(C4·C10), 임대→FA 이적 유령 stint(C5), FIRST_CONTRACT 전부 거절(C6), step 7 빈 제안 nextAction(C7), 재검증 확정 F6~F8·F10·F11(step 7 재계약 계약 교체 시점·결산 시장 생략·임대 복귀 감독 이력) | T-4-006(domain) | todo | [브리프](briefs/T-4-012.md) 작성(D-60 정정). PR #72 머지 직후 투입. C12·C13(테스트 공백)은 D-61로 보류 |
+| T-4-013 | A | api(test) | careers.test.ts 100회 병렬 테스트 2건 타임아웃 60초(러너·부하 flake) | — | in-progress | [브리프](briefs/T-4-013.md). 투입 2026-09-05 15:30 → **PR #73**(`089716d`, 15:52) 검증 체인 중 |
 | T-4-014 | B | web | 감사 web 묶음: step 7 사전 협상 '전부 거절' 문구·안내(C9), 휴대폰 탭 시장 사유·제안 수(C11) | T-4-007 | in-progress | [브리프](briefs/T-4-014.md). 투입 2026-09-05 15:30. C8(SCR-020 RETURN 문구)은 T-4-011 머지 뒤 |
+| T-4-015 | B | content | 감사 content 묶음: season.stats 8필드 playerStats 파생(F2), 슬럼프 게이트 `recentRatedMatches`·sentinel(F1), EVT-CON-010 phase 정합(F2), INJURY previewEffects 룰셋 대조 검증기(F4; C14 테스트는 D-61 보류) | T-4-008 | todo | [브리프](briefs/T-4-015.md). T-4-008 머지 직후 투입 |
+| T-4-016 | B | web | 감사 web 소수정: SCR-020 RETURN 관계 문구(C8), `{manager}` 서사 토큰을 `season.manager.name` 우선으로(F5) | T-4-011 | todo | [브리프](briefs/T-4-016.md). T-4-011 머지 직후 투입 |
+| T-4-017 | A | api(test) | Node/workerd 해시 probe에 career-12·career-13 fixture 추가(T-4-006 §1(d) 잔여) | T-4-006(domain) | deferred | [브리프](briefs/T-4-017.md). **보류(D-61, 새 테스트 작성 금지)**. 테스트 작업 재개 시 투입 |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
@@ -172,14 +175,13 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-4-006(domain) | Sonnet 5 · Workflow `wf_4498dfc0-665`(재개) | 2026-09-05 15:22 | WIP 3eb0124 이어받아 career-13 fixture·불변 property·결정 예산·Snapshot 크기 마무리 중 |
+| T-4-006(domain) | Sonnet 5 · Workflow `wf_4498dfc0-665`(재개) | 2026-09-05 15:22 | PR #72 `00f9270`(15:51) — 오케스트레이터 검증 체인(`verify-72`, E2E 5301) 진행 중 |
 | T-4-008 | Sonnet 5 · Workflow `wf_4498dfc0-665`(재개) | 2026-09-05 15:22 | WIP 903eed3(팩 0.3.0 이벤트 44파일) 이어받아 챕터·도달성·테스트 마무리 중 |
 | T-4-009 | Sonnet 5 · Workflow `wf_4498dfc0-665`(재개) | 2026-09-05 15:22 | WIP 1efbb5d 이어받아 seed 탐색·phase4-seeds·도달성 보고 마무리 중 |
 | T-4-010 | Sonnet 5 · Workflow `wf_4498dfc0-665`(재개) | 2026-09-05 15:22 | WIP 2a737de 이어받아 INTEREST 고정 seed·repeat-each 5 검증 중 |
 | T-4-011 | Sonnet 5 · Workflow `wf_4498dfc0-665` | 2026-09-05 15:22 | SCR-020 잔류(STAY) 결과 카드·contract.tsx redirect 제거 중 |
-| T-4-013 | Sonnet 5 · Workflow | 2026-09-05 15:30 | api 100회 병렬 테스트 타임아웃 조정 중 |
-| T-4-014 | Sonnet 5 · Workflow | 2026-09-05 15:30 | step 7 전부 거절 문구·휴대폰 탭 시장 사유 표시 중 |
-| Phase 3·4 감사 재검증 | 읽기 전용 Workflow | 2026-09-05 15:30 | 한도로 검증 못 한 finding 11건(effects-ownership 6·content-dsl 5) 3렌즈 재검증 중 |
+| T-4-013 | Sonnet 5 · Workflow `wf_b145e191-8e7` | 2026-09-05 15:30 | PR #73 `089716d`(15:52) — 오케스트레이터 검증 체인(`verify-73`, E2E 5302) 진행 중 |
+| T-4-014 | Sonnet 5 · Workflow `wf_b145e191-8e7` | 2026-09-05 15:30 | step 7 전부 거절 문구·휴대폰 탭 시장 사유 표시 중 |
 
 ## 완료
 

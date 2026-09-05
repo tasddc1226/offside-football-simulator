@@ -138,6 +138,20 @@
 - Phase 4 남은 작업을 소유권으로 쪼갠다: T-4-007(라우트·`packages/ui`·디자인 문서) ‖ T-4-006 domain(domain·contracts 테스트·fixture) ‖ T-4-008(`packages/content` 팩 0.3.0 신규 — 0.1.0·0.2.0 무변경으로 병행 fixture 보호) ‖ T-4-009(`apps/web/src/engine`·`shared/labels.ts`·e2e helper 신규) ‖ T-2-016(staging 리허설 config·spec). T-4-007·T-4-009 머지 뒤 T-4-005는 화면 묶음 3개로 다시 쪼개 병행한다: (a) SCR-022 부상·SCR-032 대표팀(pending INJURY·NATIONAL_TEAM), (b) SCR-016·018·021·024(EVENT presentation), (c) 대시보드 점진 공개·SCR-023 변형·SCR-014 결과 카드 — 공유 파일(`career-route.ts` 분기 맵)은 (a)가 먼저 등록하고 (b)·(c)는 그 뒤 merge한다.
 - 감사·리뷰는 읽기 전용 워크플로(관점별 finder → 반박 검증)로 코드 작업과 병행한다.
 
+### D-60 감사 정정: 감독 교체 roll·시장 파생 시드·재계약 시점 (2026-09-05, Phase 3·4 코드 감사)
+
+- **D-50 정정(감독 교체 roll)**: "결정 스트림 roll 1회" 대신 `startSeason`의 match 스트림 선례처럼 **독립 파생 시드** `seedRng('manager:<seasonIndex>:<결정 스트림 상태>')`로 1회 roll한다. 메인 결정 스트림은 소비하지 않아 기존 골든의 `draws`·hash가 유지되고, 결정 스트림 상태 word를 복사해 재사용하는 방식(PR #67)은 금지한다 — 감독 교체 여부와 시장 첫 팀 추첨이 같은 word에서 나오는 상관을 없앤다(감사 C1).
+- **T-3-002 §2 정정(시장 경쟁자 요약 시드)**: `market:${careerId}:${revision}:${teamId}`에서 careerId를 뺀다(결정 스트림 상태 기반). T-2-006 fork-by-replay 불변식("careerId만 다르다")을 시장 골든에도 적용하고 fork 골든 순회에 career-10을 넣는다(감사 C3). 시장 골든은 재기록.
+- **D-43 (a) 구현 규칙**: step 7 재계약 수락은 다음 시즌 계약(`nextContract`)으로 보관했다가 결산의 약속 판정(D-47)이 기존 계약으로 끝난 뒤 교체하고, 재계약한 시즌의 결산은 시장을 열지 않는다(감사 F7·F8). EXPIRED 시장의 전부 거절은 안전 잔류 제안 체결과 같은 결과이고, FIRST_CONTRACT 시장은 전부 거절을 거부한다(감사 C4·C10·F6·C6). 빈 CONTRACT pending은 nextAction `'ADVANCE'`로 닫힌다(C7·F11).
+- **D-45·D-46 보강**: 임대 뒤 원소속 만료 FA 경로는 원소속 stint를 다시 열지 않고 팬 이월은 1회만, `clubHistory` 불변식 `toSeasonIndex >= fromSeasonIndex`를 contracts에 추가한다(C5). 임대 복귀 시 원소속 감독 이력을 보존한다(F10).
+- 작업: [T-4-012](briefs/T-4-012.md)(domain). 웹 문구(C8 RETURN 관계 문구)와 content(F1·F2·F4·C14)는 각 소유권 묶음에서 처리한다.
+
+### D-61 테스트 코드 신규 작성 보류 (2026-09-05 16:02, 사용자 지시)
+
+- 사용자 지시 "테스트 코드는 앞으로 작성하지마, 나중에 추가하면되니까". 이후 브리프는 새 단위·e2e·fixture·골든 추가를 요구하지 않고, 인수 조건은 기존 체인 통과로 둔다. 동작 변경으로 깨지는 기존 테스트·골든의 갱신만 허용한다.
+- 보류 항목(테스트 작업 재개 시 그대로 투입): T-4-006 §5(e2e 3회·세션 길이), T-4-017(api 해시 probe), 감사 C12·C13(P3-2·P4-2 fixture)·C14(previewEffects 테스트), T-4-012 §4. 아래 4절 완료 조건 표의 "증거"는 기존 테스트로 충분한 항목만 닫고, 나머지는 보류 표시.
+- 이미 올라온 테스트 전용 PR #72(T-4-006 domain)는 지시 이전 산출물이므로 그대로 머지한다.
+
 ## 4. 완료 조건 → 작업
 
 | 조건(phase 문서) | 검증 작업 |
