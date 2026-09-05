@@ -53,7 +53,9 @@ async function settleOneSeason(page: Page): Promise<void> {
 }
 
 test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보여주고 헤더 OVR과 일치한다', async ({ page }) => {
-  await page.addInitScript((seed) => window.localStorage.setItem('offside:e2e-seed', seed), E2E_SEASON_RESULT_SEED);
+  await page.addInitScript((seed) => {
+    window.localStorage.setItem('offside:e2e-seed', seed);
+  }, E2E_SEASON_RESULT_SEED);
   await completeOnboardingThroughContract(page);
   await settleOneSeason(page);
 
