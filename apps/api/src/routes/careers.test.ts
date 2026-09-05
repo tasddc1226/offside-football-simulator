@@ -566,6 +566,122 @@ describe('careers routes', () => {
       expect(res.status).toBe(200);
     });
 
+    it('신규 커리어 버전이 서비스 시즌 manifest와 다르면 422 VERSION_MISMATCH', async () => {
+      const { cookie } = await issueCookie(ctx);
+      const app = createApp();
+      const careerId = 'car_integrity_season_version_mismatch';
+      const expandedSeason = await upsertServiceSeason(ctx.db, {
+        id: 'svc_phase34_qa',
+        name: 'PHASE 3+4 QA',
+        status: 'PRESEASON',
+        startsAt: '2026-09-05T00:00:00Z',
+        endsAt: '2026-10-31T23:59:59Z',
+        rulesetVersion: '1.0.0',
+        contentPackVersion: '0.3.0',
+        challengeSetId: 'cs_phase34_qa',
+        isTest: true,
+      });
+      const body = await putCareerBody({
+        careerId,
+        baseRevision: 0,
+        commandRevisions: [1],
+        snapshotRevision: 1,
+        createdServiceSeasonId: expandedSeason.id,
+        contentPackVersion: '0.1.0',
+      });
+
+      const res = await app.request(
+        `/v1/careers/${careerId}`,
+        putInit({ body, ifMatch: '0', cookie, idempotencyKey: 'idem-season-version-mismatch' }),
+        ctx.env,
+      );
+      expect(res.status).toBe(422);
+      const error = ErrorEnvelopeSchema.parse(await res.json()).error;
+      expect(error.code).toBe('VERSION_MISMATCH');
+      expect(error.details).toEqual({
+        reason: 'SERVICE_SEASON_VERSION_MISMATCH',
+        expectedRulesetVersion: '1.0.0',
+        expectedContentPackVersion: '0.3.0',
+      });
+    });
+
+    it('서비스 시즌 manifest와 일치하는 0.3.0 신규 커리어는 허용한다', async () => {
+      const { cookie } = await issueCookie(ctx);
+      const app = createApp();
+      const careerId = 'car_integrity_expanded_season';
+      const expandedSeason = await upsertServiceSeason(ctx.db, {
+        id: 'svc_phase34_qa',
+        name: 'PHASE 3+4 QA',
+        status: 'PRESEASON',
+        startsAt: '2026-09-05T00:00:00Z',
+        endsAt: '2026-10-31T23:59:59Z',
+        rulesetVersion: '1.0.0',
+        contentPackVersion: '0.3.0',
+        challengeSetId: 'cs_phase34_qa',
+        isTest: true,
+      });
+      const body = await putCareerBody({
+        careerId,
+        baseRevision: 0,
+        commandRevisions: [1],
+        snapshotRevision: 1,
+        createdServiceSeasonId: expandedSeason.id,
+        contentPackVersion: '0.3.0',
+      });
+
+      const res = await app.request(
+        `/v1/careers/${careerId}`,
+        putInit({ body, ifMatch: '0', cookie, idempotencyKey: 'idem-expanded-season' }),
+        ctx.env,
+      );
+      expect(res.status).toBe(200);
+      const [saved] = await ctx.db.select().from(careers).where(eq(careers.id, careerId));
+      expect(saved).toMatchObject({
+        createdServiceSeasonId: 'svc_phase34_qa',
+        rulesetVersion: '1.0.0',
+        contentPackVersion: '0.3.0',
+      });
+    });
+
+    it('기존 커리어는 서비스 시즌 manifest 변경 뒤에도 생성 버전으로 후속 PUT을 허용한다', async () => {
+      const { cookie } = await issueCookie(ctx);
+      const app = createApp();
+      const careerId = 'car_integrity_pinned_manifest';
+      const firstBody = await putCareerBody({
+        careerId,
+        baseRevision: 0,
+        commandRevisions: [1],
+        snapshotRevision: 1,
+      });
+      const firstRes = await app.request(
+        `/v1/careers/${careerId}`,
+        putInit({ body: firstBody, ifMatch: '0', cookie, idempotencyKey: 'idem-pinned-first' }),
+        ctx.env,
+      );
+      expect(firstRes.status).toBe(200);
+
+      await ctx.db
+        .update(serviceSeasons)
+        .set({ contentPackVersion: '0.3.0' })
+        .where(eq(serviceSeasons.id, SERVICE_SEASON_ID));
+      const nextBody = await putCareerBody({
+        careerId,
+        baseRevision: 1,
+        commandRevisions: [2],
+        snapshotRevision: 2,
+        contentPackVersion: '0.1.0',
+      });
+      const nextRes = await app.request(
+        `/v1/careers/${careerId}`,
+        putInit({ body: nextBody, ifMatch: '1', cookie, idempotencyKey: 'idem-pinned-next' }),
+        ctx.env,
+      );
+
+      expect(nextRes.status).toBe(200);
+      const [saved] = await ctx.db.select().from(careers).where(eq(careers.id, careerId));
+      expect(saved).toMatchObject({ revision: 2, contentPackVersion: '0.1.0' });
+    });
+
     it('createdServiceSeasonId가 없으면 400 SERVICE_SEASON_UNKNOWN', async () => {
       const { cookie } = await issueCookie(ctx);
       const app = createApp();

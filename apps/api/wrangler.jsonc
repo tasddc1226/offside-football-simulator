@@ -63,6 +63,26 @@
         "ACTIVE_SERVICE_SEASON_ID": "svc_line_test",
       },
     },
+    "expanded": {
+      "name": "offside-api-expanded",
+      // 일반 staging Worker와 D1만 공유한다. origin·서비스 시즌 포인터는 expanded 전용이다.
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "offside-staging",
+          "database_id": "37688e3f-b905-4240-abdb-e23e778dfad9",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "vars": {
+        "ENVIRONMENT": "expanded",
+        "ALLOWED_ORIGINS": "https://offside-web-expanded.tasddc1569.workers.dev",
+        "WEB_APP_URL": "https://offside-web-expanded.tasddc1569.workers.dev",
+        "GOOGLE_REDIRECT_URI": "https://offside-api-expanded.tasddc1569.workers.dev/v1/auth/google/callback",
+        "GOOGLE_FAKE": "0",
+        "ACTIVE_SERVICE_SEASON_ID": "svc_phase34_qa",
+      },
+    },
     "production": {
       "name": "offside-api",
       "d1_databases": [
