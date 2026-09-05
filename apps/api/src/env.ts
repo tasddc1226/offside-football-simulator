@@ -4,7 +4,7 @@ import type { SessionChannel } from './db/repos/sessions.js';
 
 export type Bindings = {
   DB: D1Database;
-  /** local|preview|staging|production. */
+  /** local|preview|staging|expanded|production. */
   ENVIRONMENT: string;
   /** 쉼표 구분 origin 목록. */
   ALLOWED_ORIGINS: string;

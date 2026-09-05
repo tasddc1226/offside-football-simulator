@@ -1,0 +1,100 @@
+name: Deploy Expanded QA Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type DEPLOY_EXPANDED_QA to deploy the isolated 0.3.0 QA Workers'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  # The Workers are separate, but migrations and the QA seed use offside-staging D1.
+  # Sharing this group with ci.yml prevents the ordinary staging deploy from writing concurrently.
+  group: cloudflare-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy-expanded:
+    name: Deploy isolated 0.3.0 QA Workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: expanded-staging
+      url: https://offside-web-expanded.tasddc1569.workers.dev
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      EXPANDED_API_URL: https://offside-api-expanded.tasddc1569.workers.dev
+      EXPANDED_WEB_URL: https://offside-web-expanded.tasddc1569.workers.dev
+    steps:
+      - name: Require main and explicit confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "Expanded QA deploys must run from main." >&2
+            exit 1
+          fi
+          if [ "$CONFIRMATION" != "DEPLOY_EXPANDED_QA" ]; then
+            echo "Confirmation did not match DEPLOY_EXPANDED_QA." >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify expanded pack and version boundary
+        run: |
+          pnpm --filter @offside/content exec vitest run packs/0.3.0/pack.test.ts src/packs/load-content-pack.test.ts
+          pnpm --filter @offside/web exec vitest run src/engine/versions.test.ts src/engine/engine.test.ts
+          pnpm --filter @offside/api exec vitest run src/routes/careers.test.ts --testNamePattern "서비스 시즌 manifest"
+          pnpm --filter @offside/content typecheck
+          pnpm --filter @offside/web typecheck
+          pnpm --filter @offside/api typecheck
+
+      - name: Build expanded web before remote writes
+        run: VITE_API_BASE_URL="$EXPANDED_API_URL" pnpm --filter @offside/web build:expanded
+
+      - name: Migrate and seed shared staging D1
+        run: |
+          pnpm --filter @offside/api db:migrate:expanded
+          pnpm --filter @offside/api db:seed:expanded
+
+      - name: Deploy expanded API
+        run: pnpm --filter @offside/api deploy:expanded
+
+      - name: Deploy expanded web
+        run: pnpm --filter @offside/web deploy:expanded
+
+      - name: Smoke test expanded isolation
+        run: |
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            "$EXPANDED_API_URL/v1/health" >/dev/null
+          SERVICE_SEASON_JSON="$(curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            -H "Origin: $EXPANDED_WEB_URL" "$EXPANDED_API_URL/v1/service-seasons/current")"
+          SERVICE_SEASON_JSON="$SERVICE_SEASON_JSON" node -e '
+            const body = JSON.parse(process.env.SERVICE_SEASON_JSON ?? "{}");
+            const value = body.data;
+            if (value?.id !== "svc_phase34_qa" || value?.rulesetVersion !== "1.0.0" || value?.contentPackVersion !== "0.3.0" || value?.isTest !== true) {
+              throw new Error("Unexpected expanded service season: " + JSON.stringify(value));
+            }
+          '
+          ALLOWED_ORIGIN="$(curl --fail --silent --show-error -D - -o /dev/null \
+            -H "Origin: $EXPANDED_WEB_URL" "$EXPANDED_API_URL/v1/service-seasons/current" \
+            | tr -d '\r' | awk -F ': ' 'tolower($1) == "access-control-allow-origin" { print $2 }')"
+          test "$ALLOWED_ORIGIN" = "$EXPANDED_WEB_URL"
+          STANDARD_STAGING_ORIGIN="$(curl --fail --silent --show-error -D - -o /dev/null \
+            -H "Origin: https://offside-web-staging.tasddc1569.workers.dev" "$EXPANDED_API_URL/v1/service-seasons/current" \
+            | tr -d '\r' | awk -F ': ' 'tolower($1) == "access-control-allow-origin" { print $2 }')"
+          test -z "$STANDARD_STAGING_ORIGIN"
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            "$EXPANDED_WEB_URL/" >/dev/null

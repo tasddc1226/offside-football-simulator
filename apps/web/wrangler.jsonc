@@ -13,6 +13,9 @@
     "staging": {
       "name": "offside-web-staging",
     },
+    "expanded": {
+      "name": "offside-web-expanded",
+    },
     "production": {
       "name": "offside-web",
     },
