@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (오전, PR #68 T-4-004 머지 확인·첫 Sonnet 5 워크플로 투입)
+
+**결과**: Codex 세션이 PR #68을 `29e1a08`로 squash 머지(2026-09-05 11:07)하고 일시중지했다(Luna 최종 리뷰 → 정리 커밋 `44b04f8`: T-4-004와 무관한 e2e 변경 복원, 웹 라우팅·챕터 맥락·CHP-NAT-001 수정). Phase 4 domain·content 슬라이스(T-4-001~004)가 전부 main에 있다. 웹에서 NATIONAL_TEAM pending은 SCR-013 공용 화면으로 열리며 전용 SCR-032는 T-4-005 범위다.
+
+**투입**: 11:07 Claude Code `Workflow` 실행 `wf_0b8d9171-68c`(격리 worktree `.claude/worktrees/wf_0b8d9171-68c-1·2`, `model: sonnet`, `effort: xhigh`)으로 T-4-007(디자인 PR #66 재통합, 브랜치 `design/tds-game-screens` 재사용, 새 PR 없음)과 T-4-006 domain 부분(브랜치 `T-4-006-domain`, 브리프 1~4·6절)을 병렬 투입했다. 결과는 오케스트레이터가 검증 체인(origin/main + head)과 리뷰, T-4-007은 PR preview를 ego-browser로 열어 확인한 뒤 머지한다.
+
 ## 2026-09-05 (오전, 오케스트레이션 Claude 복귀·Sonnet 5 워크플로 전환·다음 웨이브 브리프)
 
 **사용자 지시(10:20~10:40)**: "다시 클로드 세션이 오케스트레이션 맡아. 코덱스 세션은 내가 정리할게" → "다이나믹 워크플로 활용할 수 있도록 하고, 코드 작업은 sonnet 5 에이전트에게 전담하고 너는 검증과 리뷰 역할을 하는거야. 검증할 땐 ego-browser 스킬을 활용할 수 있다면 활용하여 검증해" → "코덱스 세션에서는 T-4-004 작업까지만 마무리하라고 전달한 상태임". 결과: 기술 오케스트레이터는 Claude 세션(`ec0b55e0-72c5-48f4-81e0-e287cece7700`)으로 복귀. 코드 작업은 Claude Code `Workflow`로 띄우는 Sonnet 5 에이전트(격리 worktree)가 전담하고, Claude는 브리프·검증 체인·리뷰·머지·화면 검증(ego-browser)을 맡는다. README 역할·워크플로 절을 바꿨고 Orca 터미널 Sonnet 흐름과 Codex+Luna 흐름은 legacy로 남겼다. PR #68(T-4-004)은 Codex 세션이 Luna 최종 리뷰 뒤 머지·정리하고 일시중지하며, Claude는 그때까지 #68을 건드리지 않는다.

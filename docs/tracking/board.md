@@ -12,6 +12,8 @@
 
 **오케스트레이션 Claude 복귀·Sonnet 5 워크플로 전환(2026-09-05 10:50).** 사용자 지시로 기술 오케스트레이션은 다시 Claude 세션이 맡는다. Codex 세션은 T-4-004(PR #68)까지만 마무리하고 사용자가 정리한다. 이후 코드 작업은 Claude Code `Workflow`(다이나믹 워크플로)로 띄우는 **Sonnet 5 에이전트가 전담**하고, Claude는 브리프·검증 체인·리뷰·머지와 화면 검증(ego-browser)을 맡는다([README](README.md) 갱신). 다음 웨이브 브리프 T-4-007(디자인 PR #66 재통합)·T-4-005·T-4-006을 작성했고 결정 D-56~D-58을 [phase-3-4-plan.md](phase-3-4-plan.md)에 추가했다. 투입은 #68 머지 직후 T-4-007 ‖ T-4-006(domain) → T-4-005 → T-4-006(e2e).
 
+**T-4-004 완료(PR #68 `29e1a08`, 2026-09-05 11:07).** Codex 세션이 Luna 최종 리뷰·정리 커밋(`44b04f8`) 뒤 머지하고 일시중지했다. Phase 4 domain·content는 끝났고 남은 것은 T-4-007(디자인 재통합)·T-4-005(화면)·T-4-006(통합 검증)이다. 11:07에 T-4-007과 T-4-006(domain)을 Sonnet 5 워크플로로 투입했다.
+
 WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. 현재 Phase 1~7의 국내 MVP 순서를 바꾸지 않으며, Phase 3~5와 Phase 7 완료 후 새 ruleset의 신규 Career에 해외 이적·가상 해외 리그·대륙대회를 연다. 정본은 [WORLD STAGE 개발 명세](../development/15-world-stage-expansion.md)와 [Phase 8](../phases/phase-08-world-stage.md)이다.
 
 ## 사용자 액션
@@ -136,10 +138,10 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-001 | B | domain + contracts + content | 관계 로그·감독·부상·평판 타입, HEALTH Effect(ADR-010 표 갱신), RESOLVE_EVENT의 INJURY·NATIONAL_TEAM 수용(D-52), 훅 골격 | U-012, T-3-001 | done | PR #53 aba154a(2026-09-04 13:57), [브리프](briefs/T-4-001.md). 리뷰 수정 0건. main 재머지 2회(PR #50 충돌 해결), 재기록 골든 미커밋(PLACEHOLDER)을 오케스트레이터 체인이 잡아 추가 커밋. 후속: T-4-002(부상)·T-4-003(관계) 브리프 |
 | T-4-002 | B | domain + content | 부상 모델(D-49): 심각도·부위·진단 범위·재활 선택·재발·후유증, 강제 사건 상한, career-12-injury | T-4-001 | done | PR #64 27292d4(2026-09-05 01:36), [브리프](briefs/T-4-002.md). MODERATE/MAJOR 부상은 일반 이벤트보다 우선하는 INJURY pending, MINOR는 STANDARD 자동, 재활·복귀·재발·후유증 상태기계, career-12-injury 골든 |
 | T-4-003 | B | domain + content | 감독 교체·라커룸·슬럼프·윤리·SNS 이벤트 pool, popularityCenti, 관계 로그, 안전장치, 태그 5종(D-50) | T-4-001 | done | PR #67 b180536(2026-09-05 04:17), [브리프](briefs/T-4-003.md). 관계 5축 clamp delta 감사 로그·memory tag LRU, 결산 평판·주장단 승격·감독 교체 예약·인계, Phase 4 태그 5종 평가기, SLUMP/LOCKER_ROOM/ETHICS/MEDIA 이벤트·스키마 |
-| T-4-004 | B | domain + content | 대표팀 차출 기본 모듈(D-51), NATIONAL_DEBUT 챕터 | T-4-002, T-4-003 | in-progress | [브리프](briefs/T-4-004.md). Luna Max 워커 `T-4-004-national-team`. PR #68(5d9ffc5, 2026-09-05 09:07, CI 녹색) 리뷰 지적 2건(웹 라우팅·이벤트 화면·데뷔 챕터 렌더링) 수정 중 |
-| T-4-005 | B | web | SCR-016·018·021·022·024·032, 라커룸·휴대폰 관계 수치 점진 공개(D-57), SCR-023 경기 판단 변형, TEST-E2E-004, DEV 팩 오버라이드(D-56) | T-4-004, T-4-007 | todo | [브리프](briefs/T-4-005.md) 작성 완료(2026-09-05 10:50). T-4-007 머지 뒤 Sonnet 5 워크플로 투입 |
-| T-4-006 | A+B | domain + web(e2e) | 트랙 통합 검증: 3시즌 fixture `career-13-integration`, OVR 불변 property, 결정 예산·세션 길이, Snapshot 크기, e2e 3회, 완료 조건 표(테스트 전용) | T-4-004(domain 부분), T-4-005(e2e 부분) | todo | [브리프](briefs/T-4-006.md) 작성 완료(2026-09-05 10:50). domain 부분은 #68 뒤 T-4-007과 병행 가능 |
-| T-4-007 | B | web + ui | 디자인 PR #66 재통합(D-58): 최신 main merge·충돌 해결·T-3-005/T-4-004 화면 디자인 정합 | T-4-004 | todo | [브리프](briefs/T-4-007.md) 작성 완료(2026-09-05 10:50). PR #68 머지 직후 첫 투입 |
+| T-4-004 | B | domain + content | 대표팀 차출 기본 모듈(D-51), NATIONAL_DEBUT 챕터 | T-4-002, T-4-003 | done | PR #68 `29e1a08`(2026-09-05 11:07, Luna Max 구현·리뷰, Codex 머지), [브리프](briefs/T-4-004.md). step 8 자격 판정·NATIONAL_TEAM pending·callUp 3종·부상 자동 사양·CHP-NAT-001 데뷔 예약, 웹은 NATIONAL_TEAM을 SCR-013으로 라우팅·데뷔 챕터 맥락(전용 SCR-032는 T-4-005). 최종 수정 `44b04f8`로 불필요한 e2e 변경 정리 |
+| T-4-005 | B | web | SCR-016·018·021·022·024·032, 라커룸·휴대폰 관계 수치 점진 공개(D-57), SCR-023 경기 판단 변형, TEST-E2E-004, DEV 팩 오버라이드(D-56) | T-4-004, T-4-007 | todo | [브리프](briefs/T-4-005.md). T-4-007 머지 뒤 Sonnet 5 워크플로 투입 |
+| T-4-006 | A+B | domain + web(e2e) | 트랙 통합 검증: 3시즌 fixture `career-13-integration`, OVR 불변 property, 결정 예산·세션 길이, Snapshot 크기, e2e 3회, 완료 조건 표(테스트 전용) | T-4-004(domain 부분), T-4-005(e2e 부분) | in-progress | [브리프](briefs/T-4-006.md). domain 부분(1~4·6절) Sonnet 5 워크플로 `wf_0b8d9171-68c` 투입(2026-09-05 11:07), 브랜치 `T-4-006-domain`. e2e 부분(5절)은 T-4-005 뒤 |
+| T-4-007 | B | web + ui | 디자인 PR #66 재통합(D-58): 최신 main merge·충돌 해결·T-3-005/T-4-004 화면 디자인 정합 | T-4-004 | in-progress | [브리프](briefs/T-4-007.md). Sonnet 5 워크플로 `wf_0b8d9171-68c` 투입(2026-09-05 11:07), 브랜치 `design/tds-game-screens`(PR #66 재사용) |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
@@ -158,7 +160,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-4-004 | Luna Max · Orca worktree `T-4-004-national-team` | 2026-09-05 | 대표팀 차출·데뷔 예약(PR #68) 리뷰 지적 2건 수정·집중 테스트 중 |
+| T-4-007 | Sonnet 5 · Workflow `wf_0b8d9171-68c` worktree `.claude/worktrees/wf_0b8d9171-68c-*` | 2026-09-05 11:07 | 디자인 PR #66에 최신 main(29e1a08) merge·충돌 해결·새 화면 디자인 정합 중 |
+| T-4-006(domain) | Sonnet 5 · Workflow `wf_0b8d9171-68c` | 2026-09-05 11:07 | career-13 3시즌 fixture·불변 property·결정 예산 측정·Snapshot 크기(테스트 전용) 중 |
 
 ## 완료
 
@@ -224,3 +227,4 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-3-005 | 계약·협상·이적 UI: PRE_NEGOTIATION 제안 비교·협상·거절·수락, LOAN_RETURN 결정, SCR-020 결과 복구. Phase 3 코드 종료 | 3032bdd |
 | T-4-003 | 관계 감사 로그·memory tag LRU, 결산 평판·주장단·감독 교체 예약, Phase 4 태그 5종, SLUMP/LOCKER_ROOM/ETHICS/MEDIA 이벤트 | b180536 |
 | T-3-003 | 이적시장 명령 4종·결산 배선·임대·약속 위반·Phase 3 태그 5종·golden career-10/11. Luna Max 사후 리뷰로 태그 판정 순서·LOAN 팬 페널티·임대 만료 자동 FA 복원 P1 3건 수정, 처리기 행렬 회귀 테스트 11건 추가. 새 head CI·전체 테스트 통과 | e1ae3de |
+| T-4-004 | PR #68 `29e1a08` | 2026-09-05 | 대표팀 차출·데뷔 예약. Luna Max 구현·독립 리뷰 2회, 정리 커밋 44b04f8, Codex 머지 |
