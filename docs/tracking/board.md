@@ -196,8 +196,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-4-023 | Sonnet 5 · Workflow | 2026-09-05 20:15 | 대표팀 seed 탐색·캡처 |
-| T-4-024 | Sonnet 5 · Workflow | 2026-09-05 20:15 | season_settled/step_passed elapsedSec |
+| T-4-023 | Sonnet 5 · Workflow `wf_3a416e2c-9a9` | 2026-09-05 20:15 | seed 탐색 완료 추정, 360px 캡처·체인 진행 중(20:30 관찰) |
+| T-4-024 | Sonnet 5 · Workflow `wf_5f60ace4-d50`(후속) | 2026-09-05 20:15 | PR #94 `adfa212` 20:25 → 리뷰 후속 3건(호출부 careerId 배선·optional·catch) 20:28 투입 → 후속 DONE 20:37 `30ad35c`, 오케스트레이터 체인 검증 중(port 5249) |
 
 ## 완료
 
