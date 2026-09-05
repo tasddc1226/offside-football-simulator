@@ -60,6 +60,24 @@ describe('T-3-005 negotiation ask mapping', () => {
 });
 
 describe('T-3-005 revision-based offer state', () => {
+  it('경쟁자 OVR 값을 내 선수 기준 차이로 표시하고 부호를 보존한다', () => {
+    const rows = buildOfferRows(
+      [
+        offer({ competitorSummary: { rank: 3, ovrGap: 0 } }),
+        offer({ id: 'OFR-2', competitorSummary: { rank: 1, ovrGap: 2 } }),
+        offer({ id: 'OFR-3', competitorSummary: { rank: 4, ovrGap: -3 } }),
+      ],
+      5,
+      null,
+    );
+
+    expect(rows.find((row) => row.id === 'competitor')?.cells.map((cell) => cell.value)).toEqual([
+      '3위 · OVR 차이 0 (내 선수 기준)',
+      '1위 · OVR 차이 +2 (내 선수 기준)',
+      '4위 · OVR 차이 -3 (내 선수 기준)',
+    ]);
+  });
+
   it('validUntilRevision은 currentStep가 아니라 snapshot revision으로 만료를 판정한다', () => {
     const candidate = offer({ validUntilRevision: 10 });
     expect(offerStatus(candidate, 9)).toBe('OPEN');

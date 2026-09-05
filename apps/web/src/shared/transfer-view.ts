@@ -283,7 +283,7 @@ export function buildNegotiationResultView(
 function formatCompetitorSummary(offer: Offer): string {
   if (offer.competitorSummary === null) return '—';
   const gap = offer.competitorSummary.ovrGap > 0 ? `+${offer.competitorSummary.ovrGap}` : String(offer.competitorSummary.ovrGap);
-  return `${offer.competitorSummary.rank}위 · OVR ${gap}`;
+  return `${offer.competitorSummary.rank}위 · OVR 차이 ${gap} (내 선수 기준)`;
 }
 
 function formatLoan(offer: Offer, parentTeamName: string | null): string {
