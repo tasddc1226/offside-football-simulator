@@ -35,6 +35,10 @@ import {
   career10TransferEngineCommands,
   career11Loan,
   career11LoanEngineCommands,
+  career12Injury,
+  career12InjuryEngineCommands,
+  career13Integration,
+  career13IntegrationEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -187,6 +191,30 @@ function runCareer11LoanOnNode(): DomainSnapshot {
   return snapshot;
 }
 
+/** T-4-002: career12Injury(자체 CREATE_CAREER·START_SEASON·부상 이벤트 포함)를 Node에서 재생한다.
+ * `hash-probe.worker.ts`의 `runCareer12Injury`와 같은 로직. */
+function runCareer12InjuryOnNode(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career12InjuryEngineCommands(() => `node-c12-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career12Injury);
+  }
+  if (snapshot === null) throw new Error('career12Injury 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
+/** T-4-006: career13Integration(3시즌 통합 시나리오)을 Node에서 재생한다. `hash-probe.worker.ts`의
+ * `runCareer13Integration`과 같은 로직. */
+function runCareer13IntegrationOnNode(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career13IntegrationEngineCommands(() => `node-c13-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career13Integration);
+  }
+  if (snapshot === null) throw new Error('career13Integration 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
 const BOUNDARY_INPUTS: Array<{ label: string; value: string }> = [
   { label: 'empty', value: '' },
   { label: 'abc', value: 'abc' },
@@ -319,6 +347,18 @@ describe('런타임 간 state hash 일치(Node ↔ workerd)', { timeout: 15000 }
       runOnNode: runCareer11LoanOnNode,
       probeRequest: { kind: 'replayLoan' as const },
       golden: career11Loan.golden,
+    },
+    {
+      label: 'career-12-injury',
+      runOnNode: runCareer12InjuryOnNode,
+      probeRequest: { kind: 'replayInjury' as const },
+      golden: career12Injury.golden,
+    },
+    {
+      label: 'career-13-integration',
+      runOnNode: runCareer13IntegrationOnNode,
+      probeRequest: { kind: 'replayIntegration' as const },
+      golden: career13Integration.golden,
     },
   ])('$label 재생의 revision·stateHash·rngState.draws가 Node·workerd·golden에서 모두 같다', async ({ runOnNode, probeRequest, golden }) => {
     const typedGolden = golden as ReplayGolden;
