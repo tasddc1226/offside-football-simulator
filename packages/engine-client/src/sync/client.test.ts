@@ -368,7 +368,7 @@ describe('createSyncClient', () => {
     h.queue.push(() =>
       makeResponse(409, errorData('CAREER_REVISION_CONFLICT', false, { serverRevision: 5, serverSnapshotUrl: `/v1/careers/${h.careerId}` })),
     );
-    h.queue.push(() => makeResponse(200, successData({ snapshot: serverSnapshotAt5, commands: [] })));
+    h.queue.push(() => makeResponse(200, successData({ createdServiceSeasonId: 'season-1', snapshot: serverSnapshotAt5, commands: [] })));
     h.queue.push(() => makeResponse(200, successData({ revision: 8, syncedAt: '2026-01-01T00:00:05.000Z' })));
 
     await h.sync.flush(h.careerId);
@@ -412,7 +412,7 @@ describe('createSyncClient', () => {
     h.queue.push(() =>
       makeResponse(409, errorData('CAREER_REVISION_CONFLICT', false, { serverRevision: 2, serverSnapshotUrl: `/v1/careers/${h.careerId}` })),
     );
-    h.queue.push(() => makeResponse(200, successData({ snapshot: serverSnapshotAt2, commands: [] })));
+    h.queue.push(() => makeResponse(200, successData({ createdServiceSeasonId: 'season-1', snapshot: serverSnapshotAt2, commands: [] })));
 
     await h.sync.flush(h.careerId);
 
@@ -463,11 +463,11 @@ describe('createSyncClient', () => {
     h.queue.push(() =>
       makeResponse(409, errorData('CAREER_REVISION_CONFLICT', false, { serverRevision: 5, serverSnapshotUrl: `/v1/careers/${h.careerId}` })),
     );
-    h.queue.push(() => makeResponse(200, successData({ snapshot: serverSnapshotAt5, commands: [] })));
+    h.queue.push(() => makeResponse(200, successData({ createdServiceSeasonId: 'season-1', snapshot: serverSnapshotAt5, commands: [] })));
     h.queue.push(() =>
       makeResponse(409, errorData('CAREER_REVISION_CONFLICT', false, { serverRevision: 5, serverSnapshotUrl: `/v1/careers/${h.careerId}` })),
     );
-    h.queue.push(() => makeResponse(200, successData({ snapshot: serverSnapshotAt5, commands: [] })));
+    h.queue.push(() => makeResponse(200, successData({ createdServiceSeasonId: 'season-1', snapshot: serverSnapshotAt5, commands: [] })));
 
     await h.sync.flush(h.careerId);
 
@@ -591,7 +591,7 @@ describe('createSyncClient', () => {
     h.queue.push(() =>
       makeResponse(409, errorData('CAREER_REVISION_CONFLICT', false, { serverRevision: 5, serverSnapshotUrl: `/v1/careers/${h.careerId}` })),
     );
-    h.queue.push(() => makeResponse(200, successData({ snapshot: serverSnapshotAt5, commands: [] })));
+    h.queue.push(() => makeResponse(200, successData({ createdServiceSeasonId: 'season-1', snapshot: serverSnapshotAt5, commands: [] })));
     h.queue.push(() => makeResponse(200, successData({ revision: 8, syncedAt: '2026-01-01T00:00:05.000Z' })));
 
     await vi.advanceTimersByTimeAsync(retrying.nextAt - Date.now());
