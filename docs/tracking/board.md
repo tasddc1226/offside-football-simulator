@@ -55,6 +55,7 @@ WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. �
 | U-014 | Workers Paid 플랜으로 전환 | todo | LINE TEST 공개 직전(T-2-012 코드는 2026-09-04 머지됨). 개발·PR preview·내부 staging은 Free 유지 |
 | U-015 | LINE TEST 테스터 모집(10~30명)·안내문 발송·피드백 채널 결정 | todo | [line-test-plan.md](line-test-plan.md) 2·4절. 일정 제안 2026-09-08 시작, 2주. 오케스트레이터가 staging 예행(FAST·CHAPTER 1시즌)을 먼저 끝낸다 |
 | U-016 | 오케스트레이터 기기 wrangler 로그인(LINE TEST 기준선 D1 조회용) | done | 2026-09-04 14:56 사용자가 `! pnpm --filter @offside/api exec wrangler login` 실행(OAuth 성공). 5절 쿼리 실행 확인, line-test-plan 준비 체크리스트 #3·#7 ✅ |
+| U-017 | GitHub Actions 결제·지출 한도 해결(한도 상향 또는 저장소 공개) | todo | 2026-09-05 20:21부터 main CI 잡이 "recent account payments have failed or your spending limit needs to be increased"로 시작조차 안 됨(run 33962595554 Deploy staging, 33963157095 Quality·Browser gates). 비공개 저장소라 Actions 분수가 과금 대상. 해결 전까지 staging 배포·PR CI 없음, 머지 게이트는 로컬 체인 EXIT 0만. 브랜치 보호 없음(Free 플랜) |
 
 ## Phase 0 백로그 (착수 순서)
 

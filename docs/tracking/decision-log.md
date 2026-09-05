@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (20:25, GitHub Actions 결제 한도 — main CI·staging 배포 중단, U-017)
+
+- **현상.** PR #90 머지 커밋 `84709ec`의 main 실행(run 33962595554)은 Quality·Browser gates 성공, Deploy staging 잡이 단계 0개·2초 만에 failure. 이어진 문서 push `923b30d`(run 33963157095)는 Quality·Browser gates까지 같은 방식으로 failure. 잡 annotation: "The job was not started because recent account payments have failed or your spending limit needs to be increased." 저장소는 private이라 Actions 분수가 과금 대상이며, 오늘 워커 PR 다수의 CI로 무료 분수를 소진한 것으로 본다(계정 결제 API는 `user` scope가 없어 확인 불가).
+- **영향.** staging은 `050cf86` 실행분(코드 = T-4-022 `a2354a5`)이 마지막 배포. T-4-017은 테스트 전용이라 배포 불필요. T-4-024(elapsedSec)·T-4-023은 머지해도 staging에 오르지 않으므로 LINE TEST 측정(play-time-measurement.md §6-1)은 U-017 해결 뒤에야 가능하다. PR CI 체크도 돌지 않는다.
+- **결정(오케스트레이터).** 머지 게이트는 종전대로 로컬 체인 EXIT 0(브랜치 보호 없음, Free 플랜). 워커·로컬 검증은 영향 없어 계속 진행. 결제·공개 여부는 사용자 결정으로 U-017을 연다 — 선택지: (a) Billing & plans에서 지출 한도 상향/결제 수단 갱신, (b) 저장소 공개(공개 저장소는 Actions 무료·브랜치 보호 가능, 열린 질문 "저장소 공개 여부"와 같은 항목), (c) 다음 청구 주기까지 대기. 해결되면 실패한 두 실행을 `gh run rerun`으로 재실행해 staging을 최신 main으로 올린다.
+
 ## 2026-09-05 (20:10, PR #90 T-4-017 머지 — 출시 게이트 1/3)
 
 - **T-4-017 해시 probe PR #90 `ce4eac3` squash 머지 `84709ec`.** 변경은 `apps/api/src/test/cross-runtime-hash.test.ts`·`hash-probe.worker.ts` 두 파일(career-12-injury·career-13-integration 항목, `replayInjury`/`replayIntegration` kind). `packages/fixtures/src/index.ts`는 이미 export 중이라 무변경. 오케스트레이터 체인 EXIT 0(turbo 캐시 재생 — 워커가 같은 sha로 2회 통과한 입력 해시, e2e는 실측 98 passed/6 skipped 2.5분). 큐 러너를 bash로 띄워 한 번 죽은 것(zsh 전용 `${=line}`)은 zsh로 재시작해 해결.
