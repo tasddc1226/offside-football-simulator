@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (17:18, PR #81 머지 — main 회귀 해소, 검증 큐에 "앞 PR 머지 대기" 게이트)
+
+**PR #81(T-4-019 핫픽스) `9bf89fc` squash 머지.** 1차 워커는 헬퍼 정규식만 고치고 BLOCKED — 두 번째 원인이 `season.spec.ts:143`의 대시보드 URL 단언이었다(#76의 `ctaToPreseason`: 시즌 1 결산 직후 `state.season === null`이면 STAY 카드 CTA가 "새 시즌 준비"→`/preseason`, 의도된 라우팅). 기존 테스트 갱신 범위(D-61 허용)로 판단해 단언 완화·제목·주석 수정을 허용하고 같은 브랜치에서 재투입, 워커 체인 전부 그린(e2e 98, injury.spec도 1차 통과). 오케스트레이터 체인 `CHAIN EXIT 0`. **T-4-020(PR #80, injury.spec 레이스)도 워커 완료** — 훅에 막혀 REST로 개설.
+
+**검증 큐 개선**: `verify-queue.sh`가 다음 항목을 시작하기 전에 직전 항목의 PR이 MERGED/CLOSED가 될 때까지 기다린다(최대 40분). 각 체인이 "앞 PR을 포함한 main" 위에서 돌게 해 #74×#76 같은 미검증 조합을 막는다. 큐: #81(완료) → #80 → #78 → #79. 끝난 워커 워크트리 4개 정리.
+
 ## 2026-09-05 (17:05, injury.spec 반복 타임아웃 원인 확정 → T-4-020 핫픽스)
 
 PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)에서도 재현해 Playwright trace를 분석했다. 원인은 부하가 아니라 **테스트 헬퍼의 레이스**: `reachForcedInjury`의 `expect.poll` 콜백이 `page.url()`(아직 대시보드) 확인 뒤 `stepCaption.textContent()`를 부르는데, 그 사이 엔진이 forced INJURY로 `/event`로 이동하면 캡션 요소가 사라져 타임아웃 없는 `textContent()`가 테스트 끝까지 대기한다(trace: 9.6초 poll 시작 → 69.6초 타임아웃, 70.1초 `locator.textContent: Test ended`; 실패 스냅샷은 이미 부상 이벤트 화면). 그동안 "부하 플레이크"로 분류해 격리 재실행으로 갈음해 온 PR #75·#78 체인, T-4-014·T-4-016 워커의 실패가 모두 이 레이스다(부하가 커지면 전환 타이밍이 그 창에 들어갈 확률이 높아질 뿐). **조치**: 핫픽스 T-4-020(`injury.spec.ts`만, `textContent({ timeout })`) 투입 — T-4-019와 파일이 겹치지 않아 병행. 두 핫픽스 머지 뒤 PR #78·#79 검증 큐 재개.
