@@ -96,7 +96,7 @@ function MarketSummary({ state, offers }: { state: CareerState; offers: readonly
   );
 }
 
-function RejectAllButton({ careerId }: { careerId: string }) {
+function RejectAllButton({ careerId, kind }: { careerId: string; kind: 'OFFERS' | 'CONTRACT' }) {
   const navigate = useNavigate();
   const query = useCareer(careerId);
   const mutation = useCareerMutation('rejectOffer');
@@ -141,11 +141,23 @@ function RejectAllButton({ careerId }: { careerId: string }) {
     }
   }
 
+  // C9: step 7 PRE_NEGOTIATION(CONTRACT pending)의 전부 거절은 "잔류"가 아니라 계약 만료로
+  // 이어진다(도메인 REJECT_OFFER(null) CONTRACT 분기는 pending만 닫고 계약 잔여는 그대로 0이라,
+  // 결산 시 market.ts가 EXPIRED를 판정해 강제 이적시장을 연다). OFFERS 시장(INTEREST/EXPIRED)의
+  // 전부 거절 문구·동작은 그대로 둔다.
+  const buttonLabel =
+    kind === 'CONTRACT' ? '재계약 제안 거절 — 시즌 뒤 이적시장에서 결정' : '제안 모두 거절하고 잔류';
+
   return (
     <div className="flex flex-col gap-os-2">
       <Button variant="secondary" onClick={() => void handleRejectAll()} disabled={mutation.isPending}>
-        제안 모두 거절하고 잔류
+        {buttonLabel}
       </Button>
+      {kind === 'CONTRACT' ? (
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          거절하면 계약이 만료돼 시즌 결산 뒤 이적시장이 열립니다. 잔류 제안은 그때 다시 나옵니다.
+        </p>
+      ) : null}
       {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void refreshAfterResponseLoss()} retryLabel="저장 상태 다시 확인" /> : null}
     </div>
   );
@@ -245,6 +257,7 @@ function MarketOffers({
 }) {
   const pending = state.pending;
   const safeOfferId = pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT' ? pending.market.safeOfferId : null;
+  const rejectAllKind: 'OFFERS' | 'CONTRACT' = pending?.kind === 'CONTRACT' ? 'CONTRACT' : 'OFFERS';
   const parentTeamName = state.contract?.teamName ?? state.clubHistory.at(-1)?.teamName ?? null;
   return (
     <>
@@ -274,7 +287,7 @@ function MarketOffers({
           rows={buildMarketOfferRows(offers, revision, safeOfferId, parentTeamName)}
         />
       )}
-      {offers.length > 0 ? <RejectAllButton careerId={careerId} /> : null}
+      {offers.length > 0 ? <RejectAllButton careerId={careerId} kind={rejectAllKind} /> : null}
     </>
   );
 }

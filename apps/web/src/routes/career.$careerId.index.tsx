@@ -59,7 +59,7 @@ import { eventOutcomeTitle } from '../shared/legacy-event-copy.js';
 import { familiarityPercentLabel, SelectionRankingList } from '../shared/tactical-room.js';
 import { useReducedMotion } from '../shared/ui-store.js';
 import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
-import { buildCurrentContractSummary } from '../shared/transfer-view.js';
+import { buildCurrentContractSummary, MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
 
 type DashboardSearch = { signed?: boolean };
 type ChapterPending = Extract<CareerState['pending'], { kind: 'CHAPTER' }>;
@@ -597,6 +597,12 @@ function CareerDashboard() {
   const room = deriveTacticalRoom(state, activeRuleset);
   const seasonChronicleItems = buildSeasonChronicleItems(state);
   const pastSeasonLinks = buildPastSeasonLinks(state);
+  // C11: SCR-017 상단(MarketSummary)에만 있던 시장 사유·제안 수를 휴대폰 탭에도 조건부로 보여준다
+  // (T-3-005 브리프 §1). 대시보드에서는 결정을 확정하지 않으므로 결정 화면으로 가는 링크만 둔다.
+  const marketPending =
+    state.pending !== null && (state.pending.kind === 'OFFERS' || state.pending.kind === 'CONTRACT')
+      ? state.pending
+      : null;
 
   return (
     <div className="os-screen">
@@ -826,17 +832,34 @@ function CareerDashboard() {
                 lockReason="첫 프로 계약 후 열림"
               >
                 {hasContract && state.contract ? (
-                  <dl
-                    className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
-                    style={CAPTION_STYLE}
-                  >
-                    {buildCurrentContractSummary(state).map((item) => (
-                      <div key={item.label}>
-                        <dt>{item.label}</dt>
-                        <dd className="text-os-text">{item.value}</dd>
+                  <div className="flex flex-col gap-os-3">
+                    {marketPending !== null ? (
+                      <div className="flex flex-col gap-os-2 rounded-os-m bg-os-surface-2 p-os-3">
+                        <p className="font-os text-os-text" style={BODY_STYLE}>
+                          {`${MARKET_REASON_LABEL_KO[marketPending.market.reason]} · 제안 ${marketPending.offers.length}건`}
+                        </p>
+                        <Link
+                          to="/career/$careerId/offers"
+                          params={{ careerId }}
+                          className={buttonClassName('secondary')}
+                          style={buttonStyle}
+                        >
+                          이적시장에서 확인
+                        </Link>
                       </div>
-                    ))}
-                  </dl>
+                    ) : null}
+                    <dl
+                      className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
+                      style={CAPTION_STYLE}
+                    >
+                      {buildCurrentContractSummary(state).map((item) => (
+                        <div key={item.label}>
+                          <dt>{item.label}</dt>
+                          <dd className="text-os-text">{item.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
                 ) : null}
               </DashboardSection>
             </TabsContent>
