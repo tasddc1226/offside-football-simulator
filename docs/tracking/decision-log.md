@@ -2,6 +2,23 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (20:25, GitHub Actions 결제 한도 — main CI·staging 배포 중단, U-017)
+
+- **현상.** PR #90 머지 커밋 `84709ec`의 main 실행(run 33962595554)은 Quality·Browser gates 성공, Deploy staging 잡이 단계 0개·2초 만에 failure. 이어진 문서 push `923b30d`(run 33963157095)는 Quality·Browser gates까지 같은 방식으로 failure. 잡 annotation: "The job was not started because recent account payments have failed or your spending limit needs to be increased." 저장소는 private이라 Actions 분수가 과금 대상이며, 오늘 워커 PR 다수의 CI로 무료 분수를 소진한 것으로 본다(계정 결제 API는 `user` scope가 없어 확인 불가).
+- **영향.** staging은 `050cf86` 실행분(코드 = T-4-022 `a2354a5`)이 마지막 배포. T-4-017은 테스트 전용이라 배포 불필요. T-4-024(elapsedSec)·T-4-023은 머지해도 staging에 오르지 않으므로 LINE TEST 측정(play-time-measurement.md §6-1)은 U-017 해결 뒤에야 가능하다. PR CI 체크도 돌지 않는다.
+- **결정(오케스트레이터).** 머지 게이트는 종전대로 로컬 체인 EXIT 0(브랜치 보호 없음, Free 플랜). 워커·로컬 검증은 영향 없어 계속 진행. 결제·공개 여부는 사용자 결정으로 U-017을 연다 — 선택지: (a) Billing & plans에서 지출 한도 상향/결제 수단 갱신, (b) 저장소 공개(공개 저장소는 Actions 무료·브랜치 보호 가능, 열린 질문 "저장소 공개 여부"와 같은 항목), (c) 다음 청구 주기까지 대기. 해결되면 실패한 두 실행을 `gh run rerun`으로 재실행해 staging을 최신 main으로 올린다.
+
+## 2026-09-05 (20:10, PR #90 T-4-017 머지 — 출시 게이트 1/3)
+
+- **T-4-017 해시 probe PR #90 `ce4eac3` squash 머지 `84709ec`.** 변경은 `apps/api/src/test/cross-runtime-hash.test.ts`·`hash-probe.worker.ts` 두 파일(career-12-injury·career-13-integration 항목, `replayInjury`/`replayIntegration` kind). `packages/fixtures/src/index.ts`는 이미 export 중이라 무변경. 오케스트레이터 체인 EXIT 0(turbo 캐시 재생 — 워커가 같은 sha로 2회 통과한 입력 해시, e2e는 실측 98 passed/6 skipped 2.5분). 큐 러너를 bash로 띄워 한 번 죽은 것(zsh 전용 `${=line}`)은 zsh로 재시작해 해결.
+- 남은 출시 게이트: T-4-023(SCR-032 캡처)·T-4-024(elapsedSec) 진행 중.
+
+## 2026-09-05 (20:15, D-65 출시 게이트 워커 3명 투입)
+
+- **T-4-017(api 해시 probe) 20:08, T-4-023(SCR-032 대표팀 자연 플레이 캡처)·T-4-024(실사용자 플레이 시간 측정 준비) 20:15 Sonnet 5 워크플로 투입.** 브리프 [T-4-023](briefs/T-4-023.md)·[T-4-024](briefs/T-4-024.md). 파일 소유권: T-4-017 `apps/api/src/test/*`·`packages/fixtures/src/index.ts`, T-4-023 `apps/web/e2e/helpers/*`·`phase4-seed-reachability.test.ts`·`docs/qa/phase34/national-team*.png`, T-4-024 `apps/web/src/engine/funnel.ts`·`packages/contracts/src/analytics.ts`(props가 `strictObject` 화이트리스트라 스키마 갱신 필수). 근거: D-65 사용자 결정, D-62 최소 검증(새 테스트 파일 없이 기존 구조만 갱신, 룰셋 조정 금지).
+- **T-4-023 탐색 상한은 0.3.0·0.2.0 각 200 seed×30시즌·60분.** 미도달이면 조정 없이 BLOCKED + 궤적 표(baseOvr·popularityCenti·평점·tier)로 보고해 밸런스는 사용자가 결정한다.
+- **T-4-024는 코드(초 단위 `elapsedSec` 추가)만 워커, 측정 프로토콜·D1 쿼리는 오케스트레이터가 `docs/qa/play-time-measurement.md`로 붙인다.** 자동화 시간(`session-length.spec`)은 플레이 시간으로 보고하지 않는다(D-62).
+
 ## 2026-09-05 (20:00, 재개 — D-65 사용자 결정 3건)
 
 사용자 답: (1) 출시 게이트(T-4-017 해시 probe·SCR-032 대표팀 캡처·실사용자 플레이 측정 준비)는 이 세션이 진행, (2) 기본 팩 0.1.0 유지, (3) Phase 5 PR #77 계속 보류. → [D-65](phase-3-4-plan.md). T-4-017 브리프를 D-62 기준으로 갱신하고 T-4-023(SCR-032 캡처)·T-4-024(플레이 시간 측정 준비) 브리프를 새로 쓴다.
