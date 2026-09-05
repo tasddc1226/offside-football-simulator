@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { grantCareerTag } from '../career-tags.js';
 import { hashState } from '../hash.js';
 import { hashSeasonResult } from '../settlement.js';
-import type { CareerState, CareerTagId, ChapterRecord } from '../types.js';
+import type { CareerState, CareerTagId, ChapterRecord, StatGroup } from '../types.js';
 import { archiveFixture, copy } from './__fixtures__/archive.js';
 import { createCareerArchiveCore, verifyCareerArchiveCore } from './archive.js';
 import { createLegacyResult } from './result.js';
@@ -128,6 +128,59 @@ function excellentSeasons(state: CareerState) {
       injuryMissedMatches: 0,
     };
   }
+}
+
+function sustainedUntitledSeasons(state: CareerState, group: StatGroup) {
+  state.relationships = { managerTrust: 75, captain: 75, rival: 50, fans: 75, agent: 75 };
+  tag(state, 'TAG-ONE-CLUB', 10);
+  tag(state, 'TAG-MANAGER-FAVOURITE', 12);
+  for (const season of state.seasonHistory) {
+    const totals =
+      group === 'GK'
+        ? { group, saves: 60, psxgMinusGoalsCenti: 0, cleanSheet: 0, crossesClaimed: 0, buildUpPasses: 0 }
+        : group === 'DF'
+          ? { group, tackles: 80, interceptions: 40, aerialsWon: 40, goalsConcededInvolved: 0, cleanSheet: 0 }
+          : group === 'MF'
+            ? { group, assists: 0, chancesCreated: 60, progressivePasses: 120, passesAttempted: 0, passesCompleted: 0, ballRecoveries: 60 }
+            : { group, goals: 10, assists: 4, xgCenti: 0, shots: 0, offsides: 0 };
+    season.result.playerStats = {
+      group,
+      appearances: { total: 20, started: 20, sub: 0, zeroMinute: 0, out: 0 },
+      minutes: 1800,
+      ratedMatches: 20,
+      ratingSumTenths: 1400,
+      yellow: 0,
+      red: 0,
+      injuries: 0,
+      totals,
+    };
+    season.result.selectionSummary = {
+      ...season.result.selectionSummary,
+      started: 20,
+      sub: 0,
+      out: 0,
+      zeroMinute: 0,
+      minutes: 1800,
+      possibleMinutes: 1800,
+      squadRoleAtEnd: 'STARTER',
+    };
+    season.result.promiseFulfilment = {
+      ...season.result.promiseFulfilment,
+      fulfilled: true,
+      minutesShareBp: 10000,
+    };
+    season.result.legacy = {
+      policyVersion: '1.0.0',
+      incomeMinor: 0,
+      contractId: state.contract!.id,
+      relationships: { ...state.relationships },
+      promotion: false,
+      ageAtStart: 17 + season.index,
+      injuryMissedMatches: 0,
+    };
+  }
+  state.seasonHistory[4]!.result.chapters = [chapter('untitled-decider-5', 'DECIDER')];
+  state.seasonHistory[14]!.result.chapters = [chapter('untitled-decider-15', 'DECIDER')];
 }
 
 type Case = { ending: LegacyEndingId; seasons: number; prepare: (state: CareerState) => void };
@@ -303,5 +356,27 @@ describe('RAW_EVIDENCE: all 14 Archive-to-ending projections (not command replay
     expect(result.endingId).toBe(ending);
     expect(result.sources.some((source) => source.sourceId === result.bestMomentRef)).toBe(true);
     if (ending === 'END-UNCROWNED-KING') expect(result.totalScore).toBeGreaterThanOrEqual(80);
+  });
+
+  it('can derive an 80±5 untitled contribution path from comparable raw evidence in every position', () => {
+    const results = (['GK', 'DF', 'MF', 'FW'] as const).map((group) => {
+      const { snapshot, context } = rawCareer(20);
+      sustainedUntitledSeasons(snapshot.state, group);
+      for (const season of snapshot.state.seasonHistory) {
+        season.competitions = [];
+        season.result.competitions = [];
+        season.result.hash = hashSeasonResult(season.result);
+      }
+      snapshot.stateHash = hashState(snapshot.state);
+      const archive = createCareerArchiveCore(snapshot, context);
+      expect(verifyCareerArchiveCore(archive, context)).toEqual({ ok: true });
+      const result = createLegacyResult(archive, context, undefined, '1.1.0');
+      expect(result.sources.some((source) => source.sourceId === 'tag:TAG-UNCROWNED')).toBe(true);
+      expect(result.sources.filter((source) => source.kind === 'CHAPTER')).toHaveLength(2);
+      expect(result.totalScore).toBeGreaterThanOrEqual(75);
+      expect(result.totalScore).toBeLessThanOrEqual(85);
+      return result;
+    });
+    expect(results.map((result) => result.totalScore)).toEqual([81, 81, 81, 81]);
   });
 });
