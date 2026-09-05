@@ -2,6 +2,16 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (16:38, PR #73 머지, PR #74·#75·#76 개설, 검증 큐)
+
+**PR #73(T-4-013) `add9f53` squash 머지**(api 파일 단독 25/25, e2e 96 passed). 워커 worktree·브랜치 정리.
+
+**워커 결과 처리**: T-4-010 → PR #74(`56f8f2c`, 워커가 `/review:pr` 로컬 모드로 게이트 통과). T-4-008 → 워커가 PR 게이트(`simplify-gate`, 브리프가 리뷰 에이전트를 금지해 우회 안 함)에 막혀 push+PR_BODY로 멈춤 → 오케스트레이터가 2026-09-04 선례대로 GitHub REST(`gh api …/pulls`)로 **PR #75** 개설. T-4-011 → 워커가 구현·자체 검증(단위 10/10·transfer.spec 3/3) 뒤 구조화 출력 강제 종료로 커밋 전에 멈춤 → 오케스트레이터가 worktree의 5파일을 `T-4-011:` 커밋으로 올리고 **PR #76**(`38ac62b`) 개설(재투입 워커 없이 마무리). 세 PR의 테스트 코드(INTEREST 고정 seed e2e, 0.3.0 pack/reachability 테스트, STAY 단위·e2e)는 D-61 이전 브리프 요구분이라 유지한다(T-4-010 워커 질문 답).
+
+**검증 큐**: 공유 머신 부하(load 60~270, 워커 5명 체인 동시 실행)로 전체 체인을 병렬로 돌리면 시간 예산 테스트가 반복 실패하므로, 오케스트레이터 검증은 1분 load 40 미만 게이트를 두고 **순차 큐**(#74 → #75 → #76)로 돌린다(`verify-queue.sh`). 실패한 파일은 단독 재실행으로 확인. T-4-010 워커의 "병렬 투입 규모 조정" 질문에는 D-59 유지·검증만 직렬화로 답한다.
+
+**T-4-008 워커 질문**: EVT-NAT-002 트리거의 `대표팀_소집` 태그가 코드에 없어 `reputation.popularityCenti ≥ 5200`으로 대체(500 seed에서 eligible 695·chosen 35) — 잠정 수용, 소집 이력 DSL 필드(`nationalTeam.callUps` 등)는 T-4-015 뒤 content 후속으로 잡는다. player-creation.test.tsx 3건은 부하 flake(격리 13/13)로 본다.
+
 ## 2026-09-05 (16:30, PR #72 머지·T-4-012 투입)
 
 **PR #72(T-4-006 domain) `518db98` squash 머지.** 체인: 1차는 load 100~270에서 시간 예산 테스트(career-01 1,000회 10초·career-02 1,000회 90초)와 web 5초 라우트 테스트가 타임아웃 → 격리 재실행에서 web 42/42, domain은 두 파일만 다시 load 40 미만 게이트 뒤 단독 실행해 21/21 통과, build·check:bundle·check:contrast·e2e 96 passed(`CHAIN EXIT 0`). PR #73(T-4-013)은 같은 게이트로 api `careers.test.ts` 단독 재실행 대기 중 — 1차 격리 재실행에서는 100회 병렬 멱등 테스트가 부하로 세션 조회 D1 쿼리 17초 실패(503 `SERVICE_UNAVAILABLE` 12건)를 냈다. 테스트 DB 부하 현상이며 PR 변경(타임아웃 2줄)과 무관, GitHub CI는 녹색.
