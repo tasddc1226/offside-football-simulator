@@ -1,0 +1,192 @@
+{
+  "id": "EVT-DEV-002",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": { "all": [{ "lt": ["state.form", 45] }, { "gte": ["season.step", 5] }] },
+  "exclusionTags": [],
+  "cooldown": { "steps": 5 },
+  "weight": 100,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "개인 마무리 훈련 추가",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "결정력 성장 가능", "target": "shooting", "direction": "UP" },
+        { "label": "체력 소모" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 50,
+          "title": "훈련장에서 감이 돌아왔다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-002.A.A1.0",
+              "target": "form",
+              "delta": 12,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-DEV-002.A.A1.1",
+              "target": "shooting",
+              "delta": 1,
+              "clamp": { "min": 0, "max": 99 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-002.A.A1.2",
+              "target": "fitness",
+              "delta": -8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "NEUTRAL",
+          "weight": 50,
+          "title": "몸만 무겁다",
+          "cause": "피로 누적",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-002.A.A2.0",
+              "target": "fitness",
+              "delta": -10,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-002.A.A2.1",
+              "target": "form",
+              "delta": 2,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "한 경기 휴식 요청",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "폼 회복", "target": "form", "direction": "UP" },
+        { "label": "스쿼드 순위 하락", "target": "squadStatus", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "한 주 쉬고 머리를 비웠다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-002.B.B1.0",
+              "target": "form",
+              "delta": 8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-002.B.B1.1",
+              "target": "morale",
+              "delta": 5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-DEV-002.B.B1.2",
+              "target": "squadStatus",
+              "delta": -5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "역할 단순화 요청",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "적합도 상승", "target": "tacticalFit", "direction": "UP" },
+        { "label": "개인 하이라이트 감소" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "감독이 \"그렇게 하자\"고 한다",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-DEV-002.C.C1.0",
+              "target": "tacticalFit",
+              "delta": 5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-002.C.C1.1",
+              "target": "form",
+              "delta": 4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-DEV-002.C.C1.2",
+              "target": "managerTrust",
+              "delta": 3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["팀_우선"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "최근 4경기 무득점 무도움, 감독의 표정이 굳어 있다. 컵 16강을 앞두고 코치가 묻는다. \"뭐가 필요하냐.\""
+  }
+}
