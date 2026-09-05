@@ -2530,6 +2530,7 @@
       "rollMin": -15,
       "rollMax": 15
     },
+    "statExposureFullMinutes": 90,
     "statTables": {
       "FW": {
         "goals": [

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { canonicalize, type JsonValue } from './canonical.js';
 import { rulesetProto } from './__fixtures__/career-01.js';
 import { buildSchedule, findLeague } from './schedule.js';
-import { playMatch, type PlayMatchInput } from './match.js';
+import { playMatch, scaleAdditiveStatForMinutes, type PlayMatchInput } from './match.js';
 import { seedRng } from './rng.js';
 import type { Availability, Competitor, Position } from './types.js';
 
@@ -169,6 +169,42 @@ describe('playMatch — RNG 소비 순서(브리프 D-27·D-35, draw 카운트�
         }
       }
       expect(found).toBe(true);
+    }
+  });
+});
+
+describe('1.1 개인 기록 출전 시간 노출 보정', () => {
+  it('1.0 경로는 값과 RNG 상태를 그대로 보존한다', () => {
+    const state = seedRng('legacy-stat');
+    expect(scaleAdditiveStatForMinutes(state, 6, 15)).toEqual({ value: 6, state });
+  });
+
+  it('양수 fractional 기록의 0/1 두 반올림 분기와 결정론을 고정한다', () => {
+    expect(scaleAdditiveStatForMinutes(seedRng('scale-boundary-0'), 1, 15, 90).value).toBe(0);
+    expect(scaleAdditiveStatForMinutes(seedRng('scale-boundary-9'), 1, 15, 90).value).toBe(1);
+    expect(scaleAdditiveStatForMinutes(seedRng('scale-boundary-9'), 1, 15, 90)).toEqual(
+      scaleAdditiveStatForMinutes(seedRng('scale-boundary-9'), 1, 15, 90),
+    );
+  });
+
+  it('GK의 음수 centi는 부호를 보존하고 90분·0분 경계는 정확하다', () => {
+    expect(scaleAdditiveStatForMinutes(seedRng('scale-boundary-9'), -1, 15, 90).value).toBe(-1);
+    expect(scaleAdditiveStatForMinutes(seedRng('full-match'), -37, 90, 90).value).toBe(-37);
+    expect(scaleAdditiveStatForMinutes(seedRng('zero-minute'), -37, 0, 90).value).toBe(0);
+  });
+
+  it('1.1 노출 보정 뒤에도 FW 골·도움은 팀 득점 상한을 넘지 않는다', () => {
+    const ruleset11 = {
+      ...rulesetProto,
+      matchRules: { ...rulesetProto.matchRules, statExposureFullMinutes: 90 },
+    };
+    for (let i = 0; i < 2; i += 1) {
+      const result = playMatch(baseStartInput(`scaled-fw-${i}`, { ruleset: ruleset11 }));
+      if (result.match.stats.group !== 'FW') throw new Error('FW fixture 필요');
+      expect(result.match.stats.goals).toBeLessThanOrEqual(result.match.result.goalsFor);
+      expect(result.match.stats.assists).toBeLessThanOrEqual(
+        result.match.result.goalsFor - result.match.stats.goals,
+      );
     }
   });
 });

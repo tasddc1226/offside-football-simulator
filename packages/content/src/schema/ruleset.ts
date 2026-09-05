@@ -909,6 +909,7 @@ export const MatchRulesSchema = z
     minutesTable: MatchMinutesTableSchema,
     involvement: InvolvementRulesSchema,
     statTables: StatTablesSchema,
+    statExposureFullMinutes: z.number().int().positive().max(120).exactOptional(),
     disciplineTable: DisciplineTableSchema,
     yellowSuspensionAt: z.number().int().positive(),
     redSuspension: z.strictObject({ min: z.number().int().positive(), max: z.number().int().positive() }),

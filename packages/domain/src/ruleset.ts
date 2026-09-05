@@ -153,6 +153,8 @@ export type MatchRules = {
   minutesTable: MatchMinutesTable;
   involvement: { performanceWeight: number; opponentStrengthWeight: number; rollMin: number; rollMax: number };
   statTables: Record<StatGroup, Record<string, StatDistributionTable>>;
+  /** 있으면 raw 개인 기록을 이 분 수치 기준으로 출전 시간에 비례시켜 확률 반올림한다. 1.0은 생략. */
+  statExposureFullMinutes?: number;
   disciplineTable: DisciplineTable;
   yellowSuspensionAt: number;
   redSuspension: { min: number; max: number };
