@@ -68,6 +68,8 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
 
   // T-3-003 §5: 결산 뒤 계약이 만료·관심 조건에 걸리면 시장이 자동으로 열려, "프리시즌 계획" 대신
   // 제안 카드가 먼저 뜰 수 있다 — 그러면 안전 잔류(첫 제안)를 수락하고 진짜 "프리시즌 계획"으로 간다.
+  // STAY(안전 잔류) 수락 뒤에는 결과 카드의 "새 시즌 준비" CTA가 대시보드를 거치지 않고 바로
+  // /preseason(SCR-005 프리시즌 계획)에 도착시킬 수 있다(PR #81, signFirstOffer 참고).
   const planCta = page.getByRole('link', { name: '계획하러 가기' });
   const offersCta = page.getByRole('link', { name: '제안 보기' });
   await expect(planCta.or(offersCta)).toBeVisible();
@@ -75,7 +77,9 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
     await offersCta.click();
     await signFirstOffer(page);
   }
-  await expect(planCta).toBeVisible();
+  if (!/\/preseason$/.test(page.url())) {
+    await expect(planCta).toBeVisible();
+  }
 
   const elapsedMs = Date.now() - startedAt;
   console.log(`[season] 계약 뒤 시즌 1 전체(프리시즌 계획→결산)→시즌 2 프리시즌 계획 소요 시간: ${elapsedMs}ms`);
