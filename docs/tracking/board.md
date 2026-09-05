@@ -175,6 +175,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-019 | — | web(e2e) | [핫픽스] main 회귀: `signFirstOffer` 헬퍼 정규식(PR #74)이 STAY 결과 URL `&interested=N`(PR #76)을 거부해 season.spec:121 결정적 실패 | T-4-010, T-4-011 | done | [브리프](briefs/T-4-019.md). 17:01 투입 → 17:10 BLOCKED(헬퍼 수정 커밋 `a6e8136`, season.spec:143 단언이 #76 프리시즌 경로와 불일치) → 17:12 단언 완화 허용해 재투입 → 17:22 완료 **PR #81 `689aaa0`**(워커 체인 전부 그린, e2e 98). 검증 큐 #81→#80→#78→#79(앞 PR 머지 대기 게이트 추가) |
 | T-4-020 | — | web(e2e) | [핫픽스] injury.spec `reachForcedInjury` poll의 타임아웃 없는 `textContent()`가 `/event` 전환 순간 무한 대기 → 반복 60초 타임아웃(trace로 확정) | T-4-010 | done | [브리프](briefs/T-4-020.md). 17:05 투입 → 17:15 워커 완료 **PR #80 `67835d8`**(오케스트레이터 REST 개설, 훅 차단). `--repeat-each=3` 3/3, 체인 통과(season.spec:121은 T-4-019 대상). 오케스트레이터 체인 CHAIN EXIT 0(e2e 98) → **머지 `01be661`**(17:28) |
 | T-4-021 | — | web(e2e) | [핫픽스] season.spec:17(랜덤 seed)에서 STAY 수락 뒤 `/preseason` 도착 시 "계획하러 가기" 기대가 실패(PR #76 경로, #81 1차 수정의 잔여) | T-4-019 | done | [브리프](briefs/T-4-021.md). 17:35 투입 → 17:43 완료 **PR #83 `1aee5e7`**(워커 체인 그린, `--repeat-each=4` 12 passed). 검증 큐 재시작 #83→#82→#78→#79 → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. 원 PR #83 MERGED |
+| T-4-023 | — | web(e2e)·qa | SCR-032 대표팀 소집 자연 플레이 도달 seed 탐색(0.3.0/0.2.0, 200 seed×30시즌)·360px 캡처 2장·phase4-seeds 갱신 (D-62 출시 QA 잔여) | T-4-022 | in-progress | [브리프](briefs/T-4-023.md). 2026-09-05 20:15 Sonnet 5 워크플로 투입 |
+| T-4-024 | — | web·api | 실사용자 플레이 시간 측정 준비: `season_settled`·`step_passed`에 초 단위 `elapsedSec` 추가, 측정 쿼리·프로토콜 문서(오케스트레이터) | T-2-012 | in-progress | [브리프](briefs/T-4-024.md). 2026-09-05 20:15 Sonnet 5 워크플로 투입 |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
@@ -193,7 +195,9 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| — | — | — | 2026-09-05 19:50 기준 진행 중 워커 없음(사용자 지시로 일시 중지, T-4-012 워커 중단) |
+| T-4-017 | Sonnet 5 · Workflow `wf_92460c27-98b` | 2026-09-05 20:08 | 해시 probe career-12·13 추가 중 |
+| T-4-023 | Sonnet 5 · Workflow | 2026-09-05 20:15 | 대표팀 seed 탐색·캡처 |
+| T-4-024 | Sonnet 5 · Workflow | 2026-09-05 20:15 | season_settled/step_passed elapsedSec |
 
 ## 완료
 
