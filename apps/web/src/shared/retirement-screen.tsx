@@ -11,6 +11,7 @@ import {
   careerEventChoices,
   nationalityForCareer,
   retirementContinuationOptions,
+  legacyEndingPresentation,
   type CareerState,
   type Command,
   type CareerArchiveCore,
@@ -171,6 +172,7 @@ export function RetirementScreen({
   const pending = busy || localBusy;
   const terminal = state.status === 'RETIRED' || state.status === 'ARCHIVED';
   const profile = state.player.profile === null ? null : toPlayerPublic(state.player.profile);
+  const ending = result === undefined ? null : legacyEndingPresentation(result.endingId);
   const assessment = assessCareerRetirement(state);
   const nationality = nationalityForCareer(state);
   const careerId = state.careerId;
@@ -460,6 +462,13 @@ export function RetirementScreen({
             {POSITION_LABELS[profile.primaryPosition]}
           </p>
           <p>최종 OVR {profile.baseOvr}</p>
+          {ending ? (
+            <>
+              <h3>커리어 엔딩</h3>
+              <p>{ending.title}</p>
+              <p>{ending.sentence}</p>
+            </>
+          ) : null}
           <h3>커리어 태그</h3>
           {result.tags.length ? (
             <ul>

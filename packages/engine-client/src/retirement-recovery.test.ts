@@ -12,7 +12,7 @@ const POPULATION: LegacyReferencePopulation = { id: 'test-population-10k', legac
 const POPULATED_ARTIFACTS = { ...ARTIFACTS, legacyReferencePopulation: POPULATION } as const;
 const MISMATCHED_ARTIFACTS = { ...ARTIFACTS, legacyReferencePopulation: { ...POPULATION, id: 'different-population-10k' } } as const;
 
-async function responseFixture(runtimeArtifacts: RetirementRuntimeArtifacts = ARTIFACTS): Promise<{ response: GetCareerResponse; archive: ReturnType<typeof createCareerArchiveCore>; legacy: ReturnType<typeof createLegacyResult> }> {
+async function responseFixture(runtimeArtifacts: RetirementRuntimeArtifacts = ARTIFACTS): Promise<{ response: GetCareerResponse; archive: ReturnType<typeof createCareerArchiveCore>; legacy: ReturnType<typeof createLegacyResult>; store: MemoryLocalStore; engine: ReturnType<typeof createEngineClient> }> {
   const sourceStore = new MemoryLocalStore();
   const sourceEngine = createEngineClient({ store: sourceStore, simulator: inlineSimulator, ruleset: rulesetProto, retirementArtifacts: () => runtimeArtifacts });
   const ids = (() => { let n = 0; return () => `recovery-${n++}`; })();
@@ -34,7 +34,7 @@ async function responseFixture(runtimeArtifacts: RetirementRuntimeArtifacts = AR
   const context = { binding: { careerId, createdServiceSeasonId: 'svc_recovery', rulesetVersion: snapshot.rulesetVersion, contentPackVersion: snapshot.contentPackVersion }, artifacts: runtimeArtifacts };
   const archive = createCareerArchiveCore(snapshot, context);
   const legacy = createLegacyResult(archive, context, runtimeArtifacts.legacyReferencePopulation);
-  return { response: { snapshot: stored, commands: [], retirementArchive: { archive: JSON.stringify(archive), legacy: JSON.stringify(legacy) } }, archive, legacy };
+  return { response: { snapshot: stored, commands: [], retirementArchive: { archive: JSON.stringify(archive), legacy: JSON.stringify(legacy) } }, archive, legacy, store: sourceStore, engine: sourceEngine };
 }
 
 describe('retirement recovery roundtrip', () => {
@@ -119,5 +119,39 @@ describe('retirement recovery roundtrip', () => {
     expect(second.ok).toBe(false);
     const stored = await store.transaction('readonly', (tx) => tx.kv.get(legacyResultKey(hidden.archive.binding.careerId)));
     expect(stored).toEqual(hidden.legacy);
+  });
+
+  it('pins the stored population for retired sync and omits it for active sync', async () => {
+    const hidden = await responseFixture();
+    const hiddenBody = await hidden.engine.buildSyncBody(hidden.archive.binding.careerId);
+    expect(hiddenBody).toMatchObject({ retirementReferencePopulationId: null });
+    expect(hiddenBody?.snapshot.stateHash).toBe(hidden.response.snapshot.stateHash);
+
+    const populated = await responseFixture(POPULATED_ARTIFACTS);
+    const populatedBody = await populated.engine.buildSyncBody(populated.archive.binding.careerId);
+    expect(populatedBody).toMatchObject({ retirementReferencePopulationId: POPULATION.id });
+    expect(populatedBody?.snapshot.stateHash).toBe(populated.response.snapshot.stateHash);
+
+    await populated.store.transaction('readwrite', async (tx) => {
+      const career = await tx.careers.get(populated.archive.binding.careerId);
+      if (career === undefined) throw new Error('career missing');
+      await tx.careers.put({ ...career, status: 'ACTIVE' });
+    });
+    const activeBody = await populated.engine.buildSyncBody(populated.archive.binding.careerId);
+    expect(activeBody).not.toBeNull();
+    expect(activeBody).not.toHaveProperty('retirementReferencePopulationId');
+  });
+
+  it('rejects a retired sync body when the stored population pin is malformed', async () => {
+    const source = await responseFixture();
+    await source.store.transaction('readwrite', (tx) =>
+      tx.kv.put(legacyResultKey(source.archive.binding.careerId), {
+        ...source.legacy,
+        referencePopulationId: '   ',
+      }),
+    );
+    await expect(source.engine.buildSyncBody(source.archive.binding.careerId)).rejects.toThrow(
+      'referencePopulationId가 유효하지 않다',
+    );
   });
 });

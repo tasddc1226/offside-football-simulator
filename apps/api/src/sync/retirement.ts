@@ -5,8 +5,20 @@ import {
   createLegacyResult,
   type CareerState,
   type DomainSnapshot,
+  type LegacyReferencePopulation,
 } from '@offside/domain';
 import { AppError } from '../errors.js';
+
+/** Old/offline clients must not silently acquire a newer percentile when first synchronized. */
+export function selectRetirementReferencePopulation(
+  requestedId: PutCareerBody['retirementReferencePopulationId'],
+  available: LegacyReferencePopulation | undefined,
+): LegacyReferencePopulation | undefined {
+  if (requestedId === undefined || requestedId === null) return undefined;
+  if (available === undefined || available.id !== requestedId)
+    throw new Error('Unknown retirement reference population');
+  return available;
+}
 
 /** Pure archive validation/scoring, NOT per-command server simulation or an anti-cheat verdict. */
 export function buildRetirementRows(
@@ -32,7 +44,11 @@ export function buildRetirementRows(
       artifacts,
     };
     const archive = createCareerArchiveCore(snapshot, context);
-    const legacy = createLegacyResult(archive, context, artifacts.legacyReferencePopulation);
+    const population = selectRetirementReferencePopulation(
+      body.retirementReferencePopulationId,
+      artifacts.legacyReferencePopulation,
+    );
+    const legacy = createLegacyResult(archive, context, population);
     return {
       careerId,
       retirementRevision: snapshot.revision,

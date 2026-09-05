@@ -86,7 +86,7 @@ export function LegacyScoreCard({ result, onSourceClick }: LegacyScoreCardProps)
             return (
               <li key={factor.component} className="flex flex-col gap-os-1">
                 <span>
-                  {reasonLabel(factor.reasonTag, factor.component)} · {factor.value}점
+                  {reasonLabel(factor.reasonTag, factor.component)} · 축 점수 {factor.value}/100
                 </span>
                 {sourceId !== undefined ? (
                   <SourceAction
@@ -127,12 +127,14 @@ export function LegacyScoreCard({ result, onSourceClick }: LegacyScoreCardProps)
 
       <details>
         <summary className="cursor-pointer font-medium">5축 점수 자세히 보기</summary>
-        <p className="text-os-caption text-os-text-2">자동 시뮬레이션 참조집단 기준</p>
-        <p className="text-os-caption text-os-text-2">실제 이용자 순위가 아닙니다.</p>
         {result.percentileHidden === false && result.percentile !== undefined ? (
-          <p className="text-os-caption text-os-text-2">
-            참조집단의 {result.percentile}%보다 앞섰다
-          </p>
+          <>
+            <p className="text-os-caption text-os-text-2">자동 시뮬레이션 참조집단 기준</p>
+            <p className="text-os-caption text-os-text-2">실제 이용자 순위가 아닙니다.</p>
+            <p className="text-os-caption text-os-text-2">
+              참조집단의 {result.percentile}%보다 앞섰다
+            </p>
+          </>
         ) : null}
         <dl className="mt-os-2 grid grid-cols-2 gap-os-2 text-os-text-2">
           {(Object.keys(COMPONENT_LABELS) as Array<keyof LegacyResult['componentScores']>).map(

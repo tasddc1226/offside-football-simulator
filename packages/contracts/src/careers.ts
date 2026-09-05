@@ -1,13 +1,22 @@
 import { z } from 'zod';
-import { checkCommandTypePayload, CommandLogEntrySchema, CommandLogEntryShapeSchema } from './commands.js';
+import {
+  checkCommandTypePayload,
+  CommandLogEntrySchema,
+  CommandLogEntryShapeSchema,
+} from './commands.js';
 import { ClientIdSchema, IsoUtcSchema } from './primitives.js';
 import { CareerSnapshotSchema } from './snapshot.js';
 import { SemverSchema } from './versions.js';
 
-const PutCareerSnapshotSchema = CareerSnapshotSchema.omit({ id: true, careerId: true, createdAt: true });
-const PutCareerCommandSchema = CommandLogEntryShapeSchema.omit({ careerId: true, createdAt: true }).superRefine(
-  checkCommandTypePayload,
-);
+const PutCareerSnapshotSchema = CareerSnapshotSchema.omit({
+  id: true,
+  careerId: true,
+  createdAt: true,
+});
+const PutCareerCommandSchema = CommandLogEntryShapeSchema.omit({
+  careerId: true,
+  createdAt: true,
+}).superRefine(checkCommandTypePayload);
 
 /** 07 `PUT /careers/{id}` 본문. */
 export const PutCareerBodySchema = z
@@ -18,6 +27,8 @@ export const PutCareerBodySchema = z
     createdServiceSeasonId: z.string().min(1),
     rulesetVersion: SemverSchema,
     contentPackVersion: SemverSchema,
+    /** Pin the locally persisted retirement result. Missing/null means a pre-population result. */
+    retirementReferencePopulationId: z.string().min(1).max(128).nullable().optional(),
   })
   .superRefine((body, ctx) => {
     let expectedRevision = body.baseRevision + 1;
@@ -37,7 +48,9 @@ export const PutCareerBodySchema = z
     // snapshot.revision은 마지막으로 적용된 revision과 같아야 한다: commands가 있으면 그 마지막 항목,
     // 없으면(재확인용 PUT) baseRevision.
     const expectedSnapshotRevision =
-      body.commands.length > 0 ? body.commands[body.commands.length - 1]!.revision : body.baseRevision;
+      body.commands.length > 0
+        ? body.commands[body.commands.length - 1]!.revision
+        : body.baseRevision;
     if (body.snapshot.revision !== expectedSnapshotRevision) {
       ctx.addIssue({
         code: 'custom',
@@ -82,7 +95,9 @@ export const GetCareerResponseSchema = z.strictObject({
   snapshot: CareerSnapshotSchema,
   commands: z.array(CommandLogEntrySchema),
   /** Owner-only evidence JSON. Consumers must verify it against the pinned snapshot and registry. */
-  retirementArchive: z.strictObject({ archive: z.string().min(1), legacy: z.string().min(1) }).exactOptional(),
+  retirementArchive: z
+    .strictObject({ archive: z.string().min(1), legacy: z.string().min(1) })
+    .exactOptional(),
 });
 
 export type GetCareerResponse = z.infer<typeof GetCareerResponseSchema>;

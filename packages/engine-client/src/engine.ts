@@ -1,5 +1,5 @@
 import type { CareerSnapshot, CommandLogEntry, PutCareerBody } from '@offside/contracts';
-import { ArchiveError, canonicalize, sha256Hex, type JsonValue, type DomainSnapshot, type Ruleset } from '@offside/domain';
+import { ArchiveError, canonicalize, sha256Hex, type JsonValue, type DomainSnapshot, type LegacyResult, type Ruleset } from '@offside/domain';
 import { persistRetirementArchive, retirementArchiveKey, legacyResultKey, type RetirementArtifactsResolver, type RetirementRuntimeArtifacts } from './retirement-archive.js';
 import { decodeSnapshot, encodeSnapshot } from './snapshot.js';
 import { replayCommandLog } from './replay.js';
@@ -459,6 +459,15 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
         throw new Error(`buildSyncBody: career ${careerId}의 최신 Snapshot이 없다.`);
       }
 
+      const legacy = career.status === 'RETIRED'
+        ? await tx.kv.get<LegacyResult>(legacyResultKey(careerId))
+        : undefined;
+      const referencePopulationId = legacy?.referencePopulationId ?? null;
+      if (career.status === 'RETIRED' && referencePopulationId !== null &&
+        (typeof referencePopulationId !== 'string' || referencePopulationId.trim().length === 0)) {
+        throw new Error(`buildSyncBody: career ${careerId}의 referencePopulationId가 유효하지 않다.`);
+      }
+
       return {
         baseRevision: career.lastSyncedRevision,
         snapshot: {
@@ -480,6 +489,7 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
         createdServiceSeasonId: career.createdServiceSeasonId,
         rulesetVersion: career.rulesetVersion,
         contentPackVersion: career.contentPackVersion,
+        ...(career.status === 'RETIRED' ? { retirementReferencePopulationId: referencePopulationId } : {}),
       };
     });
   }

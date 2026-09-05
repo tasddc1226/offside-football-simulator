@@ -7,13 +7,39 @@ const result = {
   endingId: 'END-ONE-CLUB-LEGEND',
   totalScore: 88,
   bandId: 'BAND-ICON',
-  componentScores: { achievement: 70, contribution: 88, longevity: 91, relationship: 82, narrative: 75 },
+  componentScores: {
+    achievement: 70,
+    contribution: 88,
+    longevity: 91,
+    relationship: 82,
+    narrative: 75,
+  },
   topFactors: [
-    { component: 'contribution', sourceIds: ['season:7:performance'], reasonTag: 'LEGACY_CONTRIBUTION', value: 88 },
-    { component: 'longevity', sourceIds: ['season:7:duration'], reasonTag: 'LEGACY_LONGEVITY', value: 91 },
-    { component: 'relationship', sourceIds: ['season:7:relationships'], reasonTag: 'LEGACY_RELATIONSHIP', value: 82 },
+    {
+      component: 'contribution',
+      sourceIds: ['season:7:performance'],
+      reasonTag: 'LEGACY_CONTRIBUTION',
+      value: 88,
+    },
+    {
+      component: 'longevity',
+      sourceIds: ['season:7:duration'],
+      reasonTag: 'LEGACY_LONGEVITY',
+      value: 91,
+    },
+    {
+      component: 'relationship',
+      sourceIds: ['season:7:relationships'],
+      reasonTag: 'LEGACY_RELATIONSHIP',
+      value: 82,
+    },
   ],
-  missedOpportunity: { component: 'achievement', sourceIds: [], reasonTag: 'LEGACY_ACHIEVEMENT', value: 70 },
+  missedOpportunity: {
+    component: 'achievement',
+    sourceIds: [],
+    reasonTag: 'LEGACY_ACHIEVEMENT',
+    value: 70,
+  },
   bestMomentRef: 'season:7:performance',
   percentileHidden: false,
   percentile: 84,
@@ -29,6 +55,9 @@ describe('LegacyScoreCard', () => {
     expect(screen.getByText('실제 이용자 순위가 아닙니다.')).toBeInTheDocument();
     expect(screen.getByText('참조집단의 84%보다 앞섰다')).toBeInTheDocument();
     expect(screen.getByText('상위 기여 요인')).toBeInTheDocument();
+    expect(
+      screen.getByText('포지션에 맞는 기록과 출전·약속 이행 · 축 점수 88/100'),
+    ).toBeInTheDocument();
     expect(screen.getByText('아쉬운 기회')).toBeInTheDocument();
     expect(screen.getByText('최고의 순간')).toBeInTheDocument();
     fireEvent.click(screen.getByText('5축 점수 자세히 보기'));
@@ -50,6 +79,8 @@ describe('LegacyScoreCard', () => {
   it('omits percentile DOM when percentileHidden is true and does not invent missing sources', () => {
     const hidden = { ...result, percentileHidden: true, percentile: 99 } as unknown as LegacyResult;
     render(<LegacyScoreCard result={hidden} />);
+    expect(screen.queryByText('자동 시뮬레이션 참조집단 기준')).not.toBeInTheDocument();
+    expect(screen.queryByText('실제 이용자 순위가 아닙니다.')).not.toBeInTheDocument();
     expect(screen.queryByText(/참조집단의/)).not.toBeInTheDocument();
     expect(screen.queryAllByText('근거 보기')).toHaveLength(3);
   });

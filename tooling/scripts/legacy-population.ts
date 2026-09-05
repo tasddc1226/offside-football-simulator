@@ -452,6 +452,10 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   );
   const outputPath = resolve(arg(argv, '--out') ?? 'artifacts/legacy-population.json');
   const smoke = argv.includes('--smoke');
+  if (!smoke && !/^[a-f0-9]{64}$/.test(GENERATOR_CODE_HASH))
+    throw new Error(
+      'A publishable run requires a hashed frozen bundle; use legacy-population-node.mjs',
+    );
   const artifacts = sourceArtifacts();
   const positionArg = arg(argv, '--position');
   const positions =

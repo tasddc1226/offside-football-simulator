@@ -4,7 +4,13 @@ import { z } from 'zod';
 import { CareerSummarySchema, PutCareerBodySchema } from './careers.js';
 import { COMMAND_TYPES, CommandTypeSchema } from './commands.js';
 import { envelope, ErrorEnvelopeSchema, successEnvelope } from './envelope.js';
-import { ERROR_CODES, ErrorCodeSchema, HTTP_STATUS_BY_CODE, RETRYABLE_BY_CODE, type ErrorCode } from './errors.js';
+import {
+  ERROR_CODES,
+  ErrorCodeSchema,
+  HTTP_STATUS_BY_CODE,
+  RETRYABLE_BY_CODE,
+  type ErrorCode,
+} from './errors.js';
 import { HealthDataSchema } from './health.js';
 import { CONTRACTS_VERSION } from './index.js';
 import { ClientIdSchema } from './primitives.js';
@@ -121,11 +127,14 @@ describe('오류 코드 표', () => {
     expect(ERROR_CODES.length).toBe(18);
   });
 
-  it.each(ERROR_CODES)('%s가 HTTP_STATUS_BY_CODE·RETRYABLE_BY_CODE와 표에 모두 있고 값이 같다', (code) => {
-    expect(ErrorCodeSchema.safeParse(code).success).toBe(true);
-    expect(HTTP_STATUS_BY_CODE[code]).toBe(TABLE[code].httpStatus);
-    expect(RETRYABLE_BY_CODE[code]).toBe(TABLE[code].retryable);
-  });
+  it.each(ERROR_CODES)(
+    '%s가 HTTP_STATUS_BY_CODE·RETRYABLE_BY_CODE와 표에 모두 있고 값이 같다',
+    (code) => {
+      expect(ErrorCodeSchema.safeParse(code).success).toBe(true);
+      expect(HTTP_STATUS_BY_CODE[code]).toBe(TABLE[code].httpStatus);
+      expect(RETRYABLE_BY_CODE[code]).toBe(TABLE[code].retryable);
+    },
+  );
 });
 
 describe('CommandTypeSchema', () => {
@@ -166,6 +175,21 @@ describe('PutCareerBodySchema', () => {
     contentPackVersion: '0.1.0',
   };
 
+  it('retirement reference pin is optional, nullable and bounded', () => {
+    const body = { ...baseBody, snapshot: { ...baseSnapshotFields, revision: 12 }, commands: [] };
+    expect(PutCareerBodySchema.parse(body)).not.toHaveProperty('retirementReferencePopulationId');
+    for (const pin of [null, 'phase5-reference-1.0.0-0.3.0']) {
+      expect(
+        PutCareerBodySchema.parse({ ...body, retirementReferencePopulationId: pin }),
+      ).toHaveProperty('retirementReferencePopulationId', pin);
+    }
+    for (const pin of ['', 'x'.repeat(129), 123, {}]) {
+      expect(
+        PutCareerBodySchema.safeParse({ ...body, retirementReferencePopulationId: pin }).success,
+      ).toBe(false);
+    }
+  });
+
   it('commands revision이 baseRevision + 1부터 연속이 아니면 실패한다', () => {
     const result = PutCareerBodySchema.safeParse({
       ...baseBody,
@@ -192,7 +216,12 @@ describe('PutCareerBodySchema', () => {
           revision: 13,
           commandId: 'cmd_1',
           commandType: 'RESOLVE_EVENT',
-          payload: { eventId: 'EVT-CON-002', definitionVersion: 1, choiceId: 'a', outcomes: [{ id: 'o1', kind: 'FIXED', weight: 1, effects: [] }] },
+          payload: {
+            eventId: 'EVT-CON-002',
+            definitionVersion: 1,
+            choiceId: 'a',
+            outcomes: [{ id: 'o1', kind: 'FIXED', weight: 1, effects: [] }],
+          },
           resultHash: 'b'.repeat(64),
         },
         {
@@ -286,7 +315,9 @@ describe('ProfileSettingsSchema', () => {
 describe('envelope', () => {
   it('성공·오류 봉투 양쪽을 받아들인다', () => {
     const schema = envelope(HealthDataSchema);
-    expect(schema.safeParse({ data: { ok: true }, meta: { requestId: 'req_1' } }).success).toBe(true);
+    expect(schema.safeParse({ data: { ok: true }, meta: { requestId: 'req_1' } }).success).toBe(
+      true,
+    );
     expect(
       schema.safeParse({
         error: { code: 'SERVICE_UNAVAILABLE', message: 'x', retryable: true },

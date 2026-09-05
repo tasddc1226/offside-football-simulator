@@ -51,15 +51,8 @@ declared synthetic policy, not an actual-user or real-world player distribution.
 
 ## Commands
 
-```sh
-node_modules/.pnpm/node_modules/.bin/tsx tooling/scripts/legacy-population.ts \
-  --count 10000 --seasons 20 \
-  --checkpoint artifacts/legacy-population.checkpoint.json \
-  --out artifacts/legacy-population.json
-```
-
-The accelerated runner keeps its bundle and four position checkpoints in a
-persistent work directory:
+For a publishable full run, the accelerated launcher hashes and retains its exact
+bundle and four position checkpoints in a persistent work directory:
 
 ```sh
 node tooling/scripts/legacy-population-node.mjs \
@@ -71,6 +64,8 @@ node tooling/scripts/legacy-population-node.mjs \
 Use `--count 20 --seasons 20 --smoke` for a non-publishing smoke report. Counts
 below 10,000 are rejected for normal publication and are written only as an
 explicitly marked `SMOKE_REPORT`.
+Direct `tsx tooling/scripts/legacy-population.ts` execution is for smoke/development
+verification only: an unhashed worktree cannot be published as a pinned generator.
 
 ## Artifacts, checkpoints, and publication
 

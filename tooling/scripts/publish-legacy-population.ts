@@ -4,6 +4,9 @@ import { gzipSync } from 'node:zlib';
 import { resolve, dirname } from 'node:path';
 import { canonicalize, type JsonValue } from '../../packages/domain/src/canonical.ts';
 import { LEGACY_POLICY } from '../../packages/domain/src/legacy/result.ts';
+import { validateLegacyPopulation } from '../../packages/content/src/legacy/validate-population.ts';
+import rulesetManifest from '../../packages/content/rulesets/1.0.0/manifest.json' with { type: 'json' };
+import packManifest from '../../packages/content/packs/0.3.0/manifest.json' with { type: 'json' };
 
 // Offline release tool: does not simulate, change scores, or publish to a remote service.
 const input = process.argv[2];
@@ -81,6 +84,11 @@ const manifest = {
     hash: group.hash,
   })),
 };
+// The final compact runtime schema pins the actual registry, not just self-reported evidence.
+validateLegacyPopulation(population, manifest, {
+  rulesetChecksum: rulesetManifest.checksum,
+  contentPackChecksum: packManifest.checksum,
+});
 async function immutableWrite(path: string, bytes: Uint8Array | string) {
   try {
     const existing = await readFile(path);
