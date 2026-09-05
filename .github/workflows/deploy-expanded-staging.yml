@@ -88,7 +88,7 @@ jobs:
           SERVICE_SEASON_JSON="$SERVICE_SEASON_JSON" node -e '
             const body = JSON.parse(process.env.SERVICE_SEASON_JSON ?? "{}");
             const value = body.data;
-            if (value?.id !== "svc_phase34_qa" || value?.rulesetVersion !== "1.0.0" || value?.contentPackVersion !== "0.3.0" || value?.isTest !== true) {
+            if (value?.id !== "svc_phase5_qa" || value?.rulesetVersion !== "1.1.0" || value?.contentPackVersion !== "0.3.0" || value?.status !== "PRESEASON" || value?.isTest !== true) {
               throw new Error("Unexpected expanded service season: " + JSON.stringify(value));
             }
           '

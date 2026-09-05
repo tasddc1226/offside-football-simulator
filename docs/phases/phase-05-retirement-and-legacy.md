@@ -53,6 +53,11 @@ Retirement Pressure = age curve + injury burden + low market demand
 [런타임 통합 명세](../development/19-phase5-runtime-integration.md)를 함께 읽는다.
 단위 eligibility 통과를 실제 모든 엔딩 경로 또는 대규모 모집단 통과로 대체하지 않는다.
 
+2026-09-06 사용자 결정: 합성 참조집단의 밴드 구성 비율은 관찰 목표이며 단독 병합 차단선이 아니다.
+실제 사용자 분포라고 부르지 않고 편차를 계속 보고한다. 저장 호환성, 동일 품질 포지션 공정성,
+저장된 근거를 사용하는 고득점 도달 가능성, 참조집단 provenance·표본 수·seed 무결성은 아래
+완료 조건과 함께 필수로 유지한다.
+
 - [ ] 20년 범위 fixture를 제한 시간 안에 완주한다.
 - [ ] 포지션별 성장·노쇠 경계가 golden curve와 일치한다.
 - [ ] 은퇴 후 일반 진행 명령이 거부된다.
@@ -61,6 +66,7 @@ Retirement Pressure = age curve + injury burden + low market demand
 - [ ] 세계 최고가 아니어도 의미 있는 엔딩을 최소 12종 제공하고 폴백 엔딩이 있다.
 - [ ] Archive는 생성 후 변경되지 않는다.
 - [ ] GK/DF/MF/FW 동일 품질 fixture의 Legacy 총점 차이가 ±5 이내다.
+- [ ] 저장된 경기 근거로 고득점 Legacy에 도달 가능한 플레이 경로가 있다.
 - [ ] 한국 국적 fixture에서 병역 경로 선택이 커리어 연대기와 통산 기록에 반영된다.
 
 ## 제외

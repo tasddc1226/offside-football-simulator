@@ -80,7 +80,7 @@
         "WEB_APP_URL": "https://offside-web-expanded.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api-expanded.tasddc1569.workers.dev/v1/auth/google/callback",
         "GOOGLE_FAKE": "0",
-        "ACTIVE_SERVICE_SEASON_ID": "svc_phase34_qa",
+        "ACTIVE_SERVICE_SEASON_ID": "svc_phase5_qa",
       },
     },
     "production": {

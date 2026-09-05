@@ -3,6 +3,15 @@
 검증일: 2026-09-05. PR: [#77](https://github.com/tasddc1226/offside-football-simulator/pull/77).
 **현재 판정: 최종 검증 중. 기능 구현과 밸런스 목표 달성을 같은 의미로 취급하지 않는다.**
 
+### 2026-09-06 인수 기준 변경
+
+사용자는 합성 참조집단의 밴드 비율을 실제 사용자 분포나 병합 차단선이 아닌 관찰 목표로 승인했다.
+LEGEND 약 2%, ICON 약 8%, REMEMBERED 약 30%와 80점 이상 비율은 계속 기록하고 회귀를 설명하지만,
+그 비율만으로 병합을 승인하거나 거부하지 않는다. 저장된 Archive·Legacy의 byte/hash 호환성,
+동일 품질 GK/DF/MF/FW 공정성, 실제 플레이로 도달 가능한 고득점 경로는 필수 조건이다. 이 변경은
+참조집단 provenance·표본 수·seed 무결성 gate를 완화하지 않으며, 아래 과거 실행의 미달 수치를
+소급해 통과로 바꾸지 않는다.
+
 ## 인수 조건과 증거 종류
 
 | 조건              | 구현·검증 근거                                                                                  | 증거의 한계                                                                    |
@@ -66,10 +75,11 @@ MF는 11회 팀 우승, 출전 24,275/36,360분, 최고 OVR 77이었다. DF는 1
   [보존 manifest](evidence/phase5-baseline-v2/manifest.json), [프로토콜](phase-5-population-protocol.md).
   GK 최고 72 / DF 75 / MF 75 / FW 73, ICON 2/40,000(0.005%), LEGEND 0,
   REMEMBERED 7,687/40,000(19.22%). 압축 원본과 동결 생성기 checksum을 함께 보존했다.
-- 밴드 목표: LEGEND 약 2%, ICON 약 8%, REMEMBERED 약 30%. 변경하지 않는다.
+- 밴드 관찰 목표: LEGEND 약 2%, ICON 약 8%, REMEMBERED 약 30%. 2026-09-06 결정 이후에는
+  단독 병합 차단선이 아니며, 실제 결과와 편차를 숨기지 않고 보고한다.
 - `TEST-LEG-006`: 무관 RAW_EVIDENCE 80점 검증과 실제 참조 분포 목표는 별도다.
   표본 크기·checksum 통과만으로 밸런스까지 통과 처리하지 않는다.
-- PR 최종 Quality/Browser/Preview 게이트: 대기.
+- 저장 호환성·포지션 공정성·고득점 도달성 및 PR 최종 Quality/Browser/Preview 게이트: 대기.
 - main 병합·staging 배포: 대기. Production 출시로 표현하지 않는다.
 
 중간 CI `33954575560` (`5b37729`)은 Quality 통과, 새 은퇴 E2E 18.6초 통과였다.

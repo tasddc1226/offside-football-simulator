@@ -5,6 +5,15 @@
 결과 화면·한국 모듈 구현을 이 과거 표만 보고 미구현이라고 판단하지 않는다. 반대로 모집단과
 모든 실제 엔딩 경로를 검증하기 전에는 Phase 5 전체를 완료 처리하지 않는다.
 
+## 2026-09-06 후속 인수 결정
+
+이 감사의 과거 미구현 판정과 분포 결과는 당시 증거로 보존한다. 사용자는 합성 모집단의 밴드 비율을
+관찰 목표로 승인했으며, 목표 범위 이탈만으로 병합을 중단하지 않는다. 대신 다음 세 조건은 계속
+필수다: (1) 기존 Archive·Legacy 결과와 null reference binding의 byte/hash 호환성, (2) 동일 품질
+GK/DF/MF/FW의 점수 공정성, (3) 저장된 경기 근거를 사용하는 고득점 경로의 실제 도달 가능성,
+(4) 참조집단 provenance·표본 수·seed 무결성.
+새 후보의 런타임 생성·보관·재로드·복구 증거가 준비되기 전에는 전체 완료로 표시하지 않는다.
+
 기준 문서: `phase-05-retirement-and-legacy.md`, `14-legacy-score-and-endings.md`,
 `17-phase5-archive-contract.md`, `18-retirement-pressure-and-last-choice.md`.
 기준 커밋: `99d1121` (`T-5-003` 독립 은퇴 압력·마지막 선택 코어).
@@ -33,7 +42,7 @@ LegacyResult, 다년 엔진, 화면, 한국 국적 모듈의 인수 증거가 �
 | 같은 Career의 Legacy 결과 재현                | 점수 요약은 동일 입력 가중합, Archive hash/legacy binding은 결정론적                   | 완전한 `LegacyResult`(절대 상한표, topFactors, missedOpportunity, bestMomentRef, percentile)와 `legacyVersion` manifest/registry가 없음 | 같은 Archive/version 100회 hash 동일, 정의 checksum drift 거부, 참조분포 교체 시 total/ending 불변 테스트 |
 | 의미 있는 엔딩 최소 12종과 폴백 제공          | 14개 ID와 우선순위 해소 함수, 폴백 ID가 등록됨                                         | ID 등록은 달성 가능성을 증명하지 않음. 실제 태그·업적 생성/eligibility evaluator와 14개 달성 fixture가 없음                             | 각 14종 최소 1 fixture, 복수 충족 후보 정렬, 폴백·1시즌 무출전, 미확인 ID 거부 테스트                     |
 | Archive 생성 후 변경 불가                     | 깊은 freeze, canonical hash, INSERT/REUSE/conflict 순수 정책 테스트                    | DB 원자 insert-if-absent, 소유권/CAS, 응답 유실·동시성·ARCHIVED 상태 원자 저장이 없음                                                   | 동일 요청 100회 경쟁, 다른 내용 conflict, 중간 write 실패 복구, 다른 소유자 접근/PUT 거부 테스트          |
-| 동일 품질 GK/DF/MF/FW 점수 차이 ±5 이내       | 현재 `calculateLegacyScore`는 이미 정규화된 5개 점수만 받음                            | 포지션별 기대 출전·기록 상한표와 4포지션 동일 품질 실제 기록 fixture, 참조분포가 없음                                                   | 포지션별 최소 fixture와 4×10,000 합성 참조분포 밸런스 리포트; ±5 초과 시 출시 중단                        |
+| 동일 품질 GK/DF/MF/FW 점수 차이 ±5 이내       | 현재 `calculateLegacyScore`는 이미 정규화된 5개 점수만 받음                            | 포지션별 기대 출전·기록 상한표와 4포지션 동일 품질 실제 기록 fixture, 참조분포가 없음                                                   | 포지션별 최소 fixture와 합성 분포 진단; ±5 공정성 초과 시 출시 중단. 밴드 비율 편차만으로는 중단하지 않음 |
 | 한국 국적 병역 경로가 연대기·통산에 반영      | 현재 기본 `nationalityRuleState`만 생성되며 관련 규칙 모듈 없음                        | 한국 모듈 인터페이스, 병역/U23·아시안게임·올림픽 특례, 복무 경로 이벤트와 Archive 반영이 전부 미구현                                    | 한국 fixture의 각 경로/거절/예외, timeline·season summary·Archive sourceId 일치 및 기본 국적 회귀         |
 
 ## 계약별 미충족 구현·데이터
