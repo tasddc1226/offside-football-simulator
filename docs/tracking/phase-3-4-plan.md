@@ -2,7 +2,7 @@
 
 정본: [`docs/phases/phase-03-contract-and-transfer.md`](../phases/phase-03-contract-and-transfer.md), [`docs/phases/phase-04-injury-and-relationships.md`](../phases/phase-04-injury-and-relationships.md), [ADR-010 공유 계약](../adr/ADR-010-shared-contracts.md), [로드맵 "Phase 3 이후 병렬화"](../development/00-development-roadmap.md#phase-3-이후-병렬화). 이 문서는 두 Phase를 워커 작업(T-3-xxx·T-4-xxx)으로 쪼개고, 설계 문서에 비어 있던 항목을 오케스트레이터 결정(D-43~D-53)으로 채운다. Phase 2 계획([phase-2-plan.md](phase-2-plan.md))과 같은 방식이다. 결정을 바꾸려면 결정 로그에 사유를 남긴다.
 
-투입 규칙: Phase 2 보드가 모두 done(또는 U-00x 대기 blocked)이고 **U-012(ADR-010 승인)가 닫힌 뒤** 트랙 A·B를 나란히 띄운다(D-32). 동시 워커 최대 3개. 두 트랙은 서로 다른 상태 필드에만 쓰고, 공유 필드(Effect 규칙·시장가치 입력·CareerTag)는 ADR-010을 통해서만 바꾼다(D-53). 밸런스 수치는 LINE TEST 기준선 뒤로 조정할 수 있게 전부 룰셋 데이터로 둔다(로드맵 4번). 브리프는 웨이브가 열리기 전에 미리 쓴다.
+투입 규칙: Phase 2 보드가 모두 done(또는 U-00x 대기 blocked)이고 **U-012(ADR-010 승인)가 닫힌 뒤** 트랙 A·B를 나란히 띄운다(D-32). 동시 워커 최대 3개(2026-09-05 D-59로 상한 해제 — 파일 소유권으로만 제한). 두 트랙은 서로 다른 상태 필드에만 쓰고, 공유 필드(Effect 규칙·시장가치 입력·CareerTag)는 ADR-010을 통해서만 바꾼다(D-53). 밸런스 수치는 LINE TEST 기준선 뒤로 조정할 수 있게 전부 룰셋 데이터로 둔다(로드맵 4번). 브리프는 웨이브가 열리기 전에 미리 쓴다.
 
 ## 1. 끝나면 보이는 것
 
@@ -131,6 +131,12 @@
 
 - 사용자의 디자인 PR #66(`design/tds-game-screens`, 19개 화면 480px 모바일 개편·앱형 모션, 기준 main `27292d4`)은 T-4-004(PR #68) 머지 뒤 **T-4-007**로 재통합한다: 같은 head 브랜치에 `origin/main`을 merge 커밋으로 합치고(rebase·force 금지, 사용자 커밋 SHA 보존) 충돌은 "기능은 main, 시각 구조는 design"으로 푼다. main에만 있는 T-3-005·T-4-004 화면은 새 디자인 계약으로 맞춘다. 워커는 PR 본문을 `PR_BODY.md`로 남기고 오케스트레이터가 PR #66 본문에 옮긴 뒤 squash 머지한다.
 - 순서: T-4-007 → T-4-005(새 화면은 개편 디자인 위에서) → T-4-006. T-4-006의 domain·contracts 부분(1~4절)은 #68 뒤 T-4-007과 병행할 수 있고 web e2e 부분(5절)은 T-4-005 뒤에만 한다.
+
+### D-59 병렬 투입 상한 해제와 파일 소유권 분할 (2026-09-05, 사용자 지시)
+
+- 사용자 지시 "병렬 진행을 최대로"에 따라 동시 워커 수 상한(3개)을 없앤다. 병렬 조건은 파일 소유권뿐이다: 같은 파일을 만지는 작업은 순서를 정하고 뒤 작업이 `origin/main`을 merge한다.
+- Phase 4 남은 작업을 소유권으로 쪼갠다: T-4-007(라우트·`packages/ui`·디자인 문서) ‖ T-4-006 domain(domain·contracts 테스트·fixture) ‖ T-4-008(`packages/content` 팩 0.3.0 신규 — 0.1.0·0.2.0 무변경으로 병행 fixture 보호) ‖ T-4-009(`apps/web/src/engine`·`shared/labels.ts`·e2e helper 신규) ‖ T-2-016(staging 리허설 config·spec). T-4-007·T-4-009 머지 뒤 T-4-005는 화면 묶음 3개로 다시 쪼개 병행한다: (a) SCR-022 부상·SCR-032 대표팀(pending INJURY·NATIONAL_TEAM), (b) SCR-016·018·021·024(EVENT presentation), (c) 대시보드 점진 공개·SCR-023 변형·SCR-014 결과 카드 — 공유 파일(`career-route.ts` 분기 맵)은 (a)가 먼저 등록하고 (b)·(c)는 그 뒤 merge한다.
+- 감사·리뷰는 읽기 전용 워크플로(관점별 finder → 반박 검증)로 코드 작업과 병행한다.
 
 ## 4. 완료 조건 → 작업
 
