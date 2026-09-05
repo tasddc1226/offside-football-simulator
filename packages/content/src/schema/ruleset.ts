@@ -622,10 +622,22 @@ export type ReputationRules = z.infer<typeof ReputationRulesSchema>;
 
 // T-4-001 D-51: 대표팀 차출 규칙(소유 T-4-004). `opponents`는 실제 국가명을 쓰지 않는다.
 const NationalTeamRelationDeltaSchema = z.strictObject({ fans: z.number().int(), agent: z.number().int() });
+const NationalTeamOutcomeIdentitySchema = z.strictObject({
+  callUp: z.enum(['ACCEPT', 'CONDITIONAL', 'DECLINE']),
+  id: z.string().min(1),
+  kind: z.enum(['SUCCESS', 'NEUTRAL', 'FAIL', 'FIXED']),
+  weight: z.number().int().positive(),
+});
 
 export const NationalTeamRulesSchema = z.strictObject({
   // T-4-004: 실제 생성/해소 경로가 반드시 이 event ref를 사용한다. placeholder 호환성은 domain에만 둔다.
   event: z.strictObject({ id: z.string().min(1), version: z.number().int().positive() }),
+  // T-4-004: domain은 client가 보낸 outcome identity를 이 canonical map과 대조하고, effects는 계산하지 않는다.
+  outcomeByChoice: z.strictObject({
+    A: NationalTeamOutcomeIdentitySchema,
+    B: NationalTeamOutcomeIdentitySchema,
+    C: NationalTeamOutcomeIdentitySchema,
+  }),
   callUpStep: z.number().int().min(1).max(12),
   minOvrByTier: z.strictObject({
     YOUTH: z.number().int().min(0).max(99),

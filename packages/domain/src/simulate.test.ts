@@ -982,6 +982,14 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
           eventId: 'EVT-NAT-001',
           choiceId: callUp === 'ACCEPT' ? 'A' : 'B',
           callUp,
+          outcomes: [
+            {
+              id: callUp === 'ACCEPT' ? 'A1' : 'B1',
+              kind: 'FIXED',
+              weight: 100,
+              effects: [],
+            },
+          ],
         }),
       });
       expect(result.ok).toBe(true);
@@ -1004,6 +1012,7 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
         eventId: 'EVT-NAT-001',
         choiceId: 'C',
         callUp: 'DECLINE',
+        outcomes: [{ id: 'C1', kind: 'FIXED', weight: 100, effects: [] }],
       }),
     });
     expect(result.ok).toBe(true);

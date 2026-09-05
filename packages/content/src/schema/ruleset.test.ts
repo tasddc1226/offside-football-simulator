@@ -257,14 +257,27 @@ describe('RulesetSchema', () => {
     expect(() => RulesetSchema.parse(ruleset)).toThrow();
   });
 
-  it('requires the strict national-team event ref and minRatingTenths additive fields', () => {
+  it('requires the strict national-team event ref, canonical outcome identities, and minRatingTenths additive fields', () => {
     const parsed = RulesetSchema.parse(ruleset100);
     expect(parsed.nationalTeamRules.event).toEqual({ id: 'EVT-NAT-001', version: 1 });
+    expect(parsed.nationalTeamRules.outcomeByChoice).toEqual({
+      A: { callUp: 'ACCEPT', id: 'A1', kind: 'FIXED', weight: 100 },
+      B: { callUp: 'CONDITIONAL', id: 'B1', kind: 'FIXED', weight: 100 },
+      C: { callUp: 'DECLINE', id: 'C1', kind: 'FIXED', weight: 100 },
+    });
     expect(parsed.nationalTeamRules.minRatingTenths).toBe(70);
 
     const missingEvent = cloneRuleset();
     delete (missingEvent.nationalTeamRules as Record<string, unknown>).event;
     expect(() => RulesetSchema.parse(missingEvent)).toThrow();
+
+    const missingOutcomeMap = cloneRuleset();
+    delete (missingOutcomeMap.nationalTeamRules as Record<string, unknown>).outcomeByChoice;
+    expect(() => RulesetSchema.parse(missingOutcomeMap)).toThrow();
+
+    const extraOutcomeIdentityField = cloneRuleset();
+    (extraOutcomeIdentityField.nationalTeamRules.outcomeByChoice.A as Record<string, unknown>).effects = [];
+    expect(() => RulesetSchema.parse(extraOutcomeIdentityField)).toThrow();
 
     const extraField = cloneRuleset();
     (extraField.nationalTeamRules as Record<string, unknown>).naturalization = true;

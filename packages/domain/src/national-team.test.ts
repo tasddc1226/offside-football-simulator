@@ -130,7 +130,8 @@ function nationalSnapshot(): DomainSnapshot {
   };
 }
 
-function nationalResolveCommand(snapshot: DomainSnapshot, choiceId: string, callUp: NationalTeamCallUp) {
+function nationalResolveCommand(snapshot: DomainSnapshot, choiceId: 'A' | 'B' | 'C', callUp: NationalTeamCallUp) {
+  const canonicalOutcome = rulesetProto.nationalTeamRules.outcomeByChoice[choiceId];
   return {
     type: 'RESOLVE_EVENT' as const,
     commandId: `national-${choiceId}`,
@@ -143,9 +144,9 @@ function nationalResolveCommand(snapshot: DomainSnapshot, choiceId: string, call
       // Domain must ignore these client-supplied effects for NATIONAL_TEAM.
       outcomes: [
         {
-          id: 'CLIENT-OUTCOME',
-          kind: 'FIXED' as const,
-          weight: 1,
+          id: canonicalOutcome.id,
+          kind: canonicalOutcome.kind,
+          weight: canonicalOutcome.weight,
           effects: [
             {
               kind: 'RELATION' as const,
@@ -482,7 +483,7 @@ describe('T-4-004 step 8 generation and injury priority', () => {
         definitionVersion: EVENT_VERSION,
         choiceId: 'A',
         callUp: 'ACCEPT',
-        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 1, effects: [] }],
+        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
       },
     });
     const acceptedBeforeReservedAdvance = clone(accepted.state);
@@ -590,6 +591,52 @@ describe('T-4-004 call-up choices and replay contract', () => {
     );
     expect(result.appliedEffects.every((effect) => effect.target !== 'managerTrust')).toBe(true);
     expect(result.snapshot.stateHash).toBe(hashState(result.snapshot.state));
+  });
+
+  it.each([
+    ['forged outcome id', (command: ReturnType<typeof nationalResolveCommand>) => {
+      command.payload.outcomes[0]!.id = 'CLIENT-OUTCOME';
+    }],
+    ['missing outcome', (command: ReturnType<typeof nationalResolveCommand>) => {
+      command.payload.outcomes = [];
+    }],
+    ['missing outcome payload', (command: ReturnType<typeof nationalResolveCommand>) => {
+      delete (command.payload as unknown as { outcomes?: unknown }).outcomes;
+    }],
+    ['extra outcome', (command: ReturnType<typeof nationalResolveCommand>) => {
+      command.payload.outcomes.push({ ...command.payload.outcomes[0]!, id: 'B1' });
+    }],
+    ['choice/outcome mismatch', (command: ReturnType<typeof nationalResolveCommand>) => {
+      command.payload.choiceId = 'B';
+      command.payload.callUp = 'CONDITIONAL';
+    }],
+    ['canonical kind mismatch', (command: ReturnType<typeof nationalResolveCommand>) => {
+      command.payload.outcomes[0]!.kind = 'SUCCESS';
+    }],
+    ['canonical weight mismatch', (command: ReturnType<typeof nationalResolveCommand>) => {
+      command.payload.outcomes[0]!.weight = 99;
+    }],
+  ] as const)('%s is rejected atomically before changing the snapshot', (_label, mutate) => {
+    const snapshot = nationalSnapshot();
+    const before = clone(snapshot);
+    const command = nationalResolveCommand(snapshot, 'A', 'ACCEPT');
+    mutate(command);
+
+    const result = simulate({
+      snapshot,
+      command,
+      ruleset: rulesetProto,
+      rulesetVersion: rulesetProto.version,
+      contentPackVersion: '0.1.0',
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.details).toEqual({ reason: 'OUTCOME_MISMATCH' });
+    expect(snapshot).toEqual(before);
+    expect(snapshot.stateHash).toBe(before.stateHash);
+    expect(snapshot.revision).toBe(before.revision);
+    expect(snapshot.state.rngState).toEqual(before.state.rngState);
+    expect(verifySnapshot(snapshot)).toEqual({ ok: true });
   });
 
   it('rejects missing/mismatched call-up input and strict event version before any RNG draw', () => {
@@ -988,7 +1035,7 @@ describe('T-4-004 NATIONAL_DEBUT reservation', () => {
         definitionVersion: EVENT_VERSION,
         choiceId: 'A',
         callUp: 'ACCEPT',
-        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 1, effects: [] }],
+        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
       },
     });
     const reservation = accepted.state.nationalTeam.pendingDebut;
@@ -1151,7 +1198,7 @@ describe('T-4-004 NATIONAL_DEBUT reservation', () => {
           definitionVersion: EVENT_VERSION,
           choiceId: 'A',
           callUp: 'ACCEPT',
-          outcomes: [{ id: 'A1', kind: 'FIXED', weight: 1, effects: [] }],
+          outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
         },
       });
       const debut = runNationalScenario(accepted, integrationRuleset, {

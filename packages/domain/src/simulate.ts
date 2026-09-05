@@ -1790,18 +1790,29 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   // ACCEPT/CONDITIONAL/DECLINE의 고정 매핑만 인정하고, 룰셋 effect를 새로 계산한다. 이 경로는
   // decision RNG를 소비하지 않으며, 결과의 roll은 감사상 0으로 고정한다.
   if (pending.kind === 'NATIONAL_TEAM') {
-    const expectedCallUpByChoice: Record<string, NationalTeamCallUp> = {
-      A: 'ACCEPT',
-      B: 'CONDITIONAL',
-      C: 'DECLINE',
-    };
-    const expectedCallUp = expectedCallUpByChoice[command.payload.choiceId];
+    const canonicalOutcome =
+      command.payload.choiceId === 'A'
+        ? input.ruleset.nationalTeamRules.outcomeByChoice.A
+        : command.payload.choiceId === 'B'
+          ? input.ruleset.nationalTeamRules.outcomeByChoice.B
+          : command.payload.choiceId === 'C'
+            ? input.ruleset.nationalTeamRules.outcomeByChoice.C
+            : undefined;
+    const expectedCallUp = canonicalOutcome?.callUp;
     if (expectedCallUp === undefined || expectedCallUp !== callUp) {
       return fail('VALIDATION_FAILED', 'NATIONAL_TEAM choiceId와 callUp이 일치하지 않는다.', {
         reason: 'CALL_UP_MISMATCH',
       });
     }
     const outcomes = command.payload.outcomes;
+    // NATIONAL_TEAM은 content가 보낸 단일 FIXED outcome의 identity만 감사 로그에 남긴다. effects는
+    // 아래의 nationalTeamEffects로 대체되므로 client payload를 신뢰하지 않지만, id·kind·weight와
+    // cardinality는 canonical EVT-NAT-001 choice와 일치해야 한다.
+    if (!Array.isArray(outcomes) || outcomes.length !== 1 || outcomes[0]?.id !== canonicalOutcome?.id) {
+      return fail('VALIDATION_FAILED', 'NATIONAL_TEAM outcome가 선택한 canonical choice와 일치하지 않는다.', {
+        reason: 'OUTCOME_MISMATCH',
+      });
+    }
     if (outcomes.some((outcome) => !isChapterOutcomeKind(outcome.kind))) {
       return fail('VALIDATION_FAILED', 'RESOLVE_EVENT outcome에는 kind이 필요하다.', {
         reason: 'OUTCOME_KIND_REQUIRED',
@@ -1815,6 +1826,17 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     const weightSum = outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
     if (!Number.isInteger(weightSum) || weightSum <= 0 || weightSum > 0xffffffff) {
       return fail('VALIDATION_FAILED', 'outcome 가중치 합은 1 이상 2^32 이하의 정수여야 한다.');
+    }
+    const selectedOutcome = outcomes[0];
+    if (
+      canonicalOutcome === undefined ||
+      selectedOutcome === undefined ||
+      selectedOutcome.kind !== canonicalOutcome.kind ||
+      selectedOutcome.weight !== canonicalOutcome.weight
+    ) {
+      return fail('VALIDATION_FAILED', 'NATIONAL_TEAM outcome가 선택한 canonical choice와 일치하지 않는다.', {
+        reason: 'OUTCOME_MISMATCH',
+      });
     }
 
     const effects = nationalTeamEffects(input.ruleset, pending.eventId, callUp);

@@ -3154,6 +3154,11 @@
   },
   "nationalTeamRules": {
     "event": { "id": "EVT-NAT-001", "version": 1 },
+    "outcomeByChoice": {
+      "A": { "callUp": "ACCEPT", "id": "A1", "kind": "FIXED", "weight": 100 },
+      "B": { "callUp": "CONDITIONAL", "id": "B1", "kind": "FIXED", "weight": 100 },
+      "C": { "callUp": "DECLINE", "id": "C1", "kind": "FIXED", "weight": 100 }
+    },
     "callUpStep": 8,
     "minOvrByTier": { "YOUTH": 70, "1": 68, "2": 74, "3": 78 },
     "minRatingTenths": 70,

@@ -4,6 +4,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
+import type { ChapterRecord } from '@offside/domain';
 import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -353,6 +354,126 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/career/${careerId}/chapter`);
     });
+  });
+
+  it('pending NATIONAL_DEBUT이면 club fixture 조회 없이 결정론적 대표팀 상대와 CTA 맥락을 보여준다', async () => {
+    const engine = setTestEngine();
+    const careerId = await seasonActiveNoPendingCareerId(engine);
+
+    renderAt(`/career/${careerId}`);
+    await screen.findByRole('button', { name: '진행' });
+
+    const options = careerQueryOptions(careerId);
+    const current = queryClient.getQueryData(options.queryKey);
+    if (current === undefined) throw new Error('캐시된 커리어가 있어야 한다');
+    act(() => {
+      queryClient.setQueryData(options.queryKey, {
+        ...current,
+        state: {
+          ...current.state,
+          pending: {
+            kind: 'CHAPTER',
+            step: current.state.currentStep,
+            chapterId: 'CHP-NAT-001',
+            version: 1,
+            importance: 'MAJOR',
+            matchId: 'missing-club-fixture',
+            decisionsTotal: 1,
+            trigger: 'NATIONAL_DEBUT',
+            resolved: [],
+            virtualOpponent: { opponentId: 'NATIONAL_OPPONENT_001', opponentName: '노르카니아' },
+          } satisfies typeof current.state.pending,
+        },
+      });
+    });
+
+    expect(await screen.findByText('대표팀 데뷔전 — 노르카니아')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '경기 보기' })).toBeInTheDocument();
+  });
+
+  it('SCR-031은 pending과 직전 완료 NATIONAL_DEBUT 모두 대표팀 상대·competition 맥락으로 렌더링한다', async () => {
+    const engine = setTestEngine();
+    const careerId = await settlementPendingCareerId(engine);
+    const load = await engine.client.loadCareer(careerId);
+    if (!load.ok) throw new Error('저장된 커리어가 있어야 한다');
+    const state = load.snapshot.state;
+    if (state.season === null) throw new Error('시즌이 있어야 한다');
+
+    const options = careerQueryOptions(careerId);
+    const current = { record: load.career, state };
+    const season = state.season;
+    const match = season.matches[0];
+    if (match === undefined) throw new Error('챕터를 붙일 실제 클럽 경기 기록이 있어야 한다');
+    const definition = engine.pack.chaptersById.get('CHP-NAT-001');
+    if (definition === undefined) throw new Error('대표팀 데뷔 챕터 정의가 있어야 한다');
+    const virtualOpponent = { opponentId: 'NATIONAL_OPPONENT_001', opponentName: '노르카니아' };
+
+    act(() => {
+      queryClient.setQueryData(options.queryKey, {
+        ...current,
+        state: {
+          ...current.state,
+          pending: {
+            kind: 'CHAPTER',
+            step: current.state.currentStep,
+            chapterId: definition.id,
+            version: definition.version,
+            importance: definition.importance,
+            matchId: match.id,
+            decisionsTotal: definition.decisions.length,
+            trigger: 'NATIONAL_DEBUT',
+            resolved: [],
+            virtualOpponent,
+          } satisfies typeof current.state.pending,
+        },
+      });
+    });
+
+    renderAt(`/career/${careerId}/chapter?d=0`);
+    expect(await screen.findByText('대표팀 · 노르카니아')).toBeInTheDocument();
+    expect(screen.queryByText(/리그 · 홈/)).not.toBeInTheDocument();
+
+    const decision = definition.decisions[0]!;
+    const option = decision.options[0]!;
+    const outcome = option.outcomes[0]!;
+    const chapterRecord = {
+      chapterId: definition.id,
+      version: definition.version,
+      step: current.state.currentStep,
+      matchId: match.id,
+      importance: definition.importance,
+      trigger: 'NATIONAL_DEBUT',
+      decisions: [{ decisionId: decision.id, optionId: option.id, outcomeId: outcome.id, outcomeKind: outcome.kind }],
+      ratingDeltaTenths: 0,
+      virtualOpponent,
+    } satisfies ChapterRecord;
+    const resolvedRevision = (current.state.timeline.at(-1)?.revision ?? 0) + 1;
+
+    act(() => {
+      queryClient.setQueryData(options.queryKey, {
+        ...current,
+        state: {
+          ...current.state,
+          pending: null,
+          season: { ...season, chapters: [...season.chapters, chapterRecord] },
+          timeline: [
+            ...current.state.timeline,
+            {
+              revision: resolvedRevision,
+              kind: 'CHAPTER_RESOLVED' as const,
+              refId: `${definition.id}:${decision.id}:${option.id}:${outcome.id}`,
+              age: current.state.age,
+              step: current.state.currentStep,
+            },
+          ],
+        },
+      });
+    });
+
+    renderAt(`/career/${careerId}/chapter?d=1`);
+    expect(await screen.findByText('대표팀 · 노르카니아')).toBeInTheDocument();
+    expect(await screen.findByText('경기 결과')).toBeInTheDocument();
+    expect(screen.queryByText(/리그 · 홈/)).not.toBeInTheDocument();
   });
 
   it('advance가 NOTHING_TO_ADVANCE로 실패하면 버튼이 비활성화되고 안내 문구를 보여준다', async () => {

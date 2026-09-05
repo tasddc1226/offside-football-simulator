@@ -8,7 +8,6 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import {
   deriveTacticalRoom,
   type MatchAppearance,
-  type MatchRecord,
   type PositionStats,
   type SelectionRanking,
 } from '@offside/domain';
@@ -114,11 +113,20 @@ function positionStatEntries(stats: PositionStats): Array<{ key: string; label: 
     }));
 }
 
-function chapterCompetitionLabel(match: MatchRecord): string {
+function chapterCompetitionLabel(view: ChapterView): string {
+  if (view.context.kind === 'NATIONAL_TEAM') return '대표팀';
+  const match = view.match;
   if (match.kind === 'LEAGUE') return '리그';
   if (match.round === null) return '컵';
   const label = (CUP_ROUND_LABEL_KO as Record<string, string | undefined>)[match.round];
   return label === undefined ? '컵' : `컵 · ${label}`;
+}
+
+function chapterContextLabel(view: ChapterView): string {
+  if (view.context.kind === 'NATIONAL_TEAM') {
+    return `${chapterCompetitionLabel(view)} · ${view.context.opponent.opponentName}`;
+  }
+  return `${chapterCompetitionLabel(view)} · ${view.context.home ? '홈' : '원정'} · ${opponentDisplayName(view.context.opponent, activeRuleset)}`;
 }
 
 function playerReasonText(reason: SelectionRanking['playerReason']): string | null {
@@ -359,7 +367,7 @@ function ChapterScreen() {
           {chapterTriggerLabel(view.definition.trigger)}
         </h1>
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-          {chapterCompetitionLabel(view.match)} · {view.match.home ? '홈' : '원정'} · {opponentDisplayName(view.match.opponent, activeRuleset)}
+          {chapterContextLabel(view)}
         </p>
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           {APPEARANCE_CONTEXT_LABEL[view.match.appearance]}
