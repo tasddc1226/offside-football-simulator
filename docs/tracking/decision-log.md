@@ -2,6 +2,15 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (17:40, T-4-015 워커 완료 PR #82 — 워커 질문 답)
+
+**T-4-015 DONE — PR #82 `db29402`**(훅 차단으로 REST 개설). F2-A `season.stats.*`를 `playerStats`에서 파생(rating은 `ratingSumTenths/ratedMatches` 내림·×10 스케일), F1 `recentFormAvg` sentinel(100) + DSL 필드 `season.stats.recentRatedMatches`로 EVT-SLUMP-010/011 게이트, F2-B EVT-CON-010 phase 매핑(windowOpen), F2-C 상수 필드 트리거 경고·F4 `checkInjuryPreview` 검증기. 기존 단언 2건만 갱신(D-61), 0.1.0 byte 불변, 워커 체인 그린.
+
+워커 질문에 대한 결정:
+- **EVT-SLUMP-011 임계 45 → 60 통일 수용.** 도메인 평점 클램프 [40,100]에서 `recentRatedMatches >= 3` 게이트를 더하면 45는 실질 미도달이라 500-seed 도달성 요건을 만족하지 못한다. 두 슬럼프 이벤트는 당분간 cooldown·weight로만 구분한다. 서사 강도 구분은 Phase 7(운영·밸런스)에서 도달 가능한 다른 지표(연속 미출전 등)로 재설계한다.
+- **EVT-CON-010(presentation RUMOUR) 미도달은 기지 공백 유지.** `passesBaseConditions`가 RUMOUR/INJURY/NATIONAL_TEAM presentation을 의도적으로 제외(T-4-003 D-52)하고 RUMOUR pending 생성기가 없다(T-3-005가 남긴 공백). 이번 phase 수정은 유효하되, RUMOUR 생성기는 Phase 4 완료 조건에 없으므로 백로그(Phase 5+ 또는 운영)로 넘긴다. 보드 T-4-015 행에 기록.
+- `docs/development/04-event-engine.md` 미수정은 적절(`season.stats.*` 와일드카드 행이 이미 포함).
+
 ## 2026-09-05 (17:35, PR #78 2차 체인 실패 → T-4-021 핫픽스, 큐 일시 정지)
 
 PR #78 2차 체인(01be661 기준) e2e 1건 실패: `season.spec.ts:17`(매 실행 새 seed). 시즌 1 결산 뒤 INTEREST 시장이 열린 seed에서 `signFirstOffer`(STAY)가 #76 경로대로 `/preseason`에 도착했는데 테스트는 대시보드의 "계획하러 가기" 링크를 기대한다(스냅샷 heading "프리시즌 계획"). T-4-019가 같은 원인의 121행 테스트만 고치고 17행 테스트의 seed 의존 분기를 놓친 잔여다. PR #78과 무관. **조치**: 핫픽스 T-4-021(season.spec 69~78행만) 투입, 검증 큐 정지(정지하지 않으면 #79가 미머지 #78을 40분 기다린 뒤 진행). T-4-021 머지 뒤 큐를 #78 → #79로 다시 채운다. 다른 `signFirstOffer` 호출부는 첫 계약·시즌 중 재계약 경로라 영향 없음(워커가 재확인).
