@@ -2,6 +2,11 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (21:50, 사용자 세션 병행 반영 — PR #95·#96 머지, U-017 자체 해결 중)
+
+- 사용자 세션이 21:33 PR #96(ci: Mac self-hosted runner로 검사·스테이징 배포 전환)과 21:42 PR #95(T-4-027 Phase 3+4 expanded QA staging 격리)를 머지했다. U-017(Actions 결제 한도)은 한도 상향·공개 대신 **self-hosted runner**로 푸는 방향 — 21:50 확인: repository runner `offside-mac-arm64`(ID 21) online·busy로 main 실행(`36cc9c5`)을 처리 중. runner 운영은 사용자 몫이라 이 세션은 건드리지 않으며, 같은 기기 부하를 나누므로 이 세션의 로컬 체인은 큐 러너의 부하 게이트(1분 평균 40 미만)를 유지한다. 사용자 PR #91·#92·#99·#77은 그대로 둔다.
+- 이 세션의 문서 push가 그 사이 main 실행 4건을 cancelled로 만들었다(자기 대체). self-hosted 전환 뒤에는 실행 시간이 이 기기 부하가 되므로, 문서 push는 머지 직후 한 번으로 묶는다.
+
 ## 2026-09-05 (21:47, PR #98 T-4-028 머지 — P4-7 문구 게이트)
 
 - **T-4-028 PR #98 `d816420` squash 머지 `452d32d`.** `national-team.tsx` 안내 문단·`career.$careerId.event_.result.tsx` NATIONAL_TEAM 맥락 문장 2줄만 변경, 테스트 변경 없음. 오케스트레이터 체인 EXIT 0(e2e 98 passed). 사용자 PR #91·#92는 이 두 파일을 건드리지 않아 충돌 없음.
