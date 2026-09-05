@@ -2,6 +2,28 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (17:05, injury.spec 반복 타임아웃 원인 확정 → T-4-020 핫픽스)
+
+PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)에서도 재현해 Playwright trace를 분석했다. 원인은 부하가 아니라 **테스트 헬퍼의 레이스**: `reachForcedInjury`의 `expect.poll` 콜백이 `page.url()`(아직 대시보드) 확인 뒤 `stepCaption.textContent()`를 부르는데, 그 사이 엔진이 forced INJURY로 `/event`로 이동하면 캡션 요소가 사라져 타임아웃 없는 `textContent()`가 테스트 끝까지 대기한다(trace: 9.6초 poll 시작 → 69.6초 타임아웃, 70.1초 `locator.textContent: Test ended`; 실패 스냅샷은 이미 부상 이벤트 화면). 그동안 "부하 플레이크"로 분류해 격리 재실행으로 갈음해 온 PR #75·#78 체인, T-4-014·T-4-016 워커의 실패가 모두 이 레이스다(부하가 커지면 전환 타이밍이 그 창에 들어갈 확률이 높아질 뿐). **조치**: 핫픽스 T-4-020(`injury.spec.ts`만, `textContent({ timeout })`) 투입 — T-4-019와 파일이 겹치지 않아 병행. 두 핫픽스 머지 뒤 PR #78·#79 검증 큐 재개.
+
+## 2026-09-05 (17:00, main 통합 회귀 발견 → T-4-019 핫픽스, T-4-016 완료 PR #79)
+
+**PR #78 검증 체인 실패(16:56) 분류.** e2e 2건 실패: (1) `injury.spec.ts:134` career-12 부상 seed 60초 타임아웃 — 알려진 부하 플레이크(격리 재실행으로 확인 중). (2) `season.spec.ts:121` — `signFirstOffer` 헬퍼(PR #74, T-4-010)가 `/transfer-result?rev=N`이 URL 끝이라고 가정하는데, PR #76(T-4-011)이 STAY 수락을 `?rev=N&interested=K`로 바꿔 **origin/main 자체에서 결정적으로 실패**(T-4-016 워커도 `--workers=1`·origin/main 그대로 재현). 원인: #74와 #76이 각각 origin/main 기준으로 검증돼 둘이 합쳐진 상태는 검증된 적이 없다(#76 체인 시작 16:46 → #74 머지 16:48). **조치**: 핫픽스 T-4-019(헬퍼 정규식만, D-61 갱신 허용 범위) 즉시 투입, 머지 전까지 PR #78·#79 검증 큐 보류. **교훈**: 큐가 연속 머지할 때는 앞 PR 머지 뒤 시작한 체인만 유효하다 — `verify-chain.sh`는 시작 시점의 origin/main을 쓰므로, 앞 PR이 머지되면 뒤 PR 체인은 자동으로 최신 main 기준이 된다(#76은 #74 머지 2분 전에 시작해 빠졌다). 앞으로 큐는 START 직전 `git fetch`로 origin/main을 갱신하되, 머지 직후 다음 항목이 이미 시작했으면 재큐한다.
+
+**T-4-016 워커 DONE — PR #79 `193e3e3`** (C8 RETURN 관계 문구, F5 `{manager}` 토큰 도메인 값 우선). 변경 파일 2개(허용 목록 그대로), 새 테스트 없음(D-61).
+
+## 2026-09-05 (16:56, T-4-014 워커 완료 PR #78·후속 T-4-018 브리프)
+
+**T-4-014 워커 DONE — PR #78 `384a37e`** (C9 step 7 전부 거절 문구·캡션, C11 휴대폰 탭 시장 사유·제안 수·링크). 워커가 D-61 이전 투입 브리프대로 단위 테스트 3건을 넣었고 그대로 둔다(기존 결정: 진행 중이던 워커 산출물은 유지). 워커의 360px light 스크린샷 2장(offers 화면·대시보드 휴대폰 탭)을 검토 — 가로 넘침 없음, C11 블록이 계약 요약 위에 정상. 검증 큐에 투입(port 5303). **후속 발견 → T-4-018**: offers 화면 `ScreenIntro` eyebrow가 시장 사유와 무관하게 "계약 만료·FA" 고정이라 INTEREST 시장에서 바로 아래 "시장 이유: 타 구단 관심"과 모순. 브리프 작성, PR #78 머지 뒤 투입(같은 파일 소유권).
+
+## 2026-09-05 (16:51, PR #76 머지·T-4-016 투입 — 검증 큐 3건 모두 종료)
+
+**PR #76(T-4-011 SCR-020 STAY) `25544b3` squash 머지.** 체인 web 42/42·build·bundle·contrast·e2e 97 passed(STAY 카드 케이스·a11y serious/critical 0, `CHAIN EXIT 0`). 360px 시각 확인은 PR preview가 프로덕션 빌드라 DEV seed 훅으로 INTEREST 시장에 닿을 수 없어 e2e(chromium)로 갈음하고, T-4-005c 대시보드 검증 때 같은 결과 카드 컴포넌트를 함께 본다. 직후 **T-4-016**(C8·F5 web 문구, `wf_93182b9d-f34`) 투입. 오늘 오후 머지: #72·#73·#75·#74·#76(5건). 남은 워커: T-4-009(seed 탐색)·T-4-014·T-4-012·T-4-015·T-4-016.
+
+## 2026-09-05 (16:48, PR #74 머지)
+
+**PR #74(T-4-010 e2e 안정화) `552481c` squash 머지.** 큐 재실행에서 domain 55/55·api 27/27·web 42/42·e2e 97 passed(`CHAIN EXIT 0`). 이제 CI Browser gates 실패 시 Playwright test-results가 아티팩트로 남는다. 큐는 #76(T-4-011) 실행 중.
+
 ## 2026-09-05 (16:46, PR #75 머지·T-4-015 투입)
 
 **PR #75(T-4-008 팩 0.3.0) `13eeaaf` squash 머지.** 부하 게이트 큐에서 체인 한 번에 통과(lint·typecheck는 turbo 캐시 재생, content 22/22 실행, api 27/27, build·bundle·contrast·e2e 96, `CHAIN EXIT 0`). 직후 **T-4-015**(content 감사 묶음 F1·F2·F4, `wf_a2cc4721-227`) 투입. 큐는 #74(재실행, 자동 격리 재시험 단계 포함) → #76 순.
