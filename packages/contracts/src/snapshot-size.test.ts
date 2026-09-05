@@ -20,6 +20,8 @@ import {
   career10TransferEngineCommands,
   career11Loan,
   career11LoanEngineCommands,
+  career13Integration,
+  career13IntegrationEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -443,5 +445,73 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
       expect(point.bodyBytes, `${label} ${point.checkpoint} PUT`).toBeLessThan(REQUEST_BODY_MAX_BYTES);
     }
     expect(bodyBytes, `${label} full PUT`).toBeLessThan(REQUEST_BODY_MAX_BYTES);
+  });
+
+  // T-4-006 §4: Phase 3·4 통합 3시즌 fixture. 시즌별 결산 직후(SETTLE_SEASON) 상태 크기·PUT 본문
+  // 크기와, timeline·relationshipLog·health.episodes가 시즌마다 얼마나 느는지(바이트/시즌)를 잰다.
+  it('career-13-integration: 시즌별 결산 상태·PUT 본문 크기와 timeline/relationshipLog/health.episodes 시즌당 증가량', () => {
+    const steps = replayIndependentFixture(career13IntegrationEngineCommands, career13Integration, 'size-c13');
+    const settleSteps = steps.filter((step) => step.command.type === 'SETTLE_SEASON');
+    expect(settleSteps, 'career-13-integration SETTLE_SEASON 3회').toHaveLength(3);
+
+    function fieldBytes(state: DomainSnapshot['state'], field: 'timeline' | 'relationshipLog' | 'health'): number {
+      const value = field === 'health' ? state.health.episodes : state[field];
+      return byteLength(canonicalize(value as unknown as JsonValue));
+    }
+
+    const perSeason = settleSteps.map((step, index) => {
+      const state = step.snapshot.state;
+      return {
+        seasonIndex: index + 1,
+        revision: step.snapshot.revision,
+        stateBytes: stateBytes(step.snapshot),
+        bodyBytes: putBodyBytes(steps, 0, step),
+        timelineBytes: fieldBytes(state, 'timeline'),
+        relationshipLogBytes: fieldBytes(state, 'relationshipLog'),
+        healthEpisodesBytes: fieldBytes(state, 'health'),
+      };
+    });
+
+    const growth = perSeason.slice(1).map((current, index) => {
+      const previous = perSeason[index]!;
+      return {
+        fromSeason: previous.seasonIndex,
+        toSeason: current.seasonIndex,
+        timelineBytesPerSeason: current.timelineBytes - previous.timelineBytes,
+        relationshipLogBytesPerSeason: current.relationshipLogBytes - previous.relationshipLogBytes,
+        healthEpisodesBytesPerSeason: current.healthEpisodesBytes - previous.healthEpisodesBytes,
+        stateBytesPerSeason: current.stateBytes - previous.stateBytes,
+      };
+    });
+
+    const final = steps[steps.length - 1]!;
+    const bodyBytesFull = putBodyBytes(steps, 0);
+
+    console.log(
+      JSON.stringify(
+        {
+          fixture: 'career-13-integration',
+          perSeason,
+          growthPerSeason: growth,
+          finalRevision: final.snapshot.revision,
+          finalStateBytes: stateBytes(final.snapshot),
+          bodyBytesFull,
+          stateBudgetBytes: SNAPSHOT_STATE_RECOMMENDED_BYTES,
+          requestBudgetBytes: REQUEST_BODY_MAX_BYTES,
+        },
+        null,
+        2,
+      ),
+    );
+
+    for (const season of perSeason) {
+      // 256KB 상한: 넘으면 실패. 128KB 초과는 경고 로그 + PR 본문 기록(브리프 §4).
+      expect(season.stateBytes, `career-13-integration season${season.seasonIndex} state`).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+      if (season.stateBytes > SNAPSHOT_STATE_RECOMMENDED_BYTES / 2) {
+        console.warn(`career-13-integration season${season.seasonIndex} state가 128KB(경고 기준)를 넘었다: ${season.stateBytes} bytes`);
+      }
+      expect(season.bodyBytes, `career-13-integration season${season.seasonIndex} PUT`).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+    }
+    expect(bodyBytesFull, 'career-13-integration full PUT').toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
   });
 });

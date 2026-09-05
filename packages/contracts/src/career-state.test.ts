@@ -46,6 +46,8 @@ import {
   career11LoanEngineCommands,
   career12Injury,
   career12InjuryEngineCommands,
+  career13Integration,
+  career13IntegrationEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -523,6 +525,7 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     'career-10-transfer.golden.json',
     'career-11-loan.golden.json',
     'career-12-injury.golden.json',
+    'career-13-integration.golden.json',
   ];
 
   it('packages/fixtures/src/*/의 *.golden.json 목록이 이 테스트가 재생하는 목록과 같다', () => {
@@ -793,5 +796,26 @@ describe('golden 순회: fixture를 처음부터 재생한 모든 상태가 Care
     expect(snapshot.stateHash).toBe(career12Injury.golden.stateHash);
     expect(snapshot.state.rngState.draws).toBe(career12Injury.golden.rngStateDraws);
     expect(snapshot.state.health.episodes).toHaveLength(career12Injury.golden.episodes.length);
+  });
+
+  // T-4-006 §1/§4: Phase 3·4 통합 검증 3시즌 fixture. career-10/11과 같은 독립 실행 형태다
+  // (career13IntegrationEngineCommands가 CREATE_CAREER부터 자체적으로 만든다). 매 명령 뒤
+  // strict CareerStateSchema 순회를 통과하고, 최종 hash·시즌별 result.hash가 golden과 같은지 본다.
+  it('career-13-integration: 매 명령 뒤 상태가 스키마를 통과하고 3시즌 결산 hash가 golden과 같다', () => {
+    let counter = 0;
+    const commands = career13IntegrationEngineCommands(() => `golden-c13-${counter++}`);
+    let snapshot: DomainSnapshot | null = null;
+    for (const command of commands) {
+      snapshot = runOrThrow(snapshot, command, career13Integration);
+      assertStateRoundTrips(snapshot, `career13Integration revision ${snapshot.revision}`);
+    }
+    if (snapshot === null) throw new Error('career13Integration 명령 목록이 비어 있다.');
+    expect(snapshot.revision).toBe(career13Integration.golden.revision);
+    expect(snapshot.stateHash).toBe(career13Integration.golden.stateHash);
+    expect(snapshot.state.rngState.draws).toBe(career13Integration.golden.rngStateDraws);
+    expect(snapshot.state.seasonHistory).toHaveLength(career13Integration.golden.seasonHistoryLength);
+    expect(snapshot.state.seasonHistory.map((s) => s.result.hash)).toEqual(career13Integration.golden.seasonResultHashes);
+    expect(snapshot.state.clubHistory).toHaveLength(career13Integration.golden.clubHistoryLength);
+    expect(snapshot.state.health.episodes).toHaveLength(career13Integration.golden.healthEpisodesCount);
   });
 });

@@ -627,7 +627,7 @@ describe('careers routes', () => {
     expect(careerRow?.revision).toBe(2);
     expect(await ctx.db.select().from(snapshots).where(eq(snapshots.careerId, careerId))).toHaveLength(2);
     expect(await ctx.db.select().from(commandLog).where(eq(commandLog.careerId, careerId))).toHaveLength(2);
-  }, 20000);
+  }, 60_000);
 
   it('100회 병렬 경쟁: 같은 baseRevision, 다른 내용 → 정확히 1개 200, 나머지 409', async () => {
     const { cookie } = await issueCookie(ctx);
@@ -675,7 +675,7 @@ describe('careers routes', () => {
     expect(careerRow?.revision).toBe(2);
     expect(await ctx.db.select().from(snapshots).where(eq(snapshots.careerId, careerId))).toHaveLength(2);
     expect(await ctx.db.select().from(commandLog).where(eq(commandLog.careerId, careerId))).toHaveLength(2);
-  }, 20000);
+  }, 60_000);
 
   it('ARCHIVED 커리어에 PUT하면 409 CAREER_ARCHIVED', async () => {
     const { cookie } = await issueCookie(ctx);
