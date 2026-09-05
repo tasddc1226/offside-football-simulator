@@ -8,6 +8,8 @@
 
 **T-3-003 완료·오케스트레이터 인계(2026-09-04 16:47).** PR #54는 Luna Max 독립 리뷰에서 태그 판정 순서·LOAN 팬 페널티·임대 만료 자동 FA 복원 P1 세 건을 고쳐 `e1ae3de`로 squash 머지했다. 새 head의 Quality·Browser·PR preview와 Node 22 전체 테스트(domain 535·web 308·api 169)가 통과했다. 기존 Claude 세션 `ec0b55e0-72c5-48f4-81e0-e287cece7700`은 이 경계에서 정지했다. 이후 Codex가 기술 오케스트레이터를 맡고, 구현·테스트 코드는 Orca `gpt-5.6-luna` reasoning `max` 워커에게만 위임한다(동시 최대 3개).
 
+**Phase 3 코드 작업 종료(2026-09-05 02:25, PR #65).** 밤사이 T-3-004(PR #55)·T-4-002(PR #64)·T-3-005(PR #65)·T-4-003(PR #67)과 로컬 QA 표시 수정(PR #63)이 머지됐다. Phase 4는 T-4-001~003 완료, T-4-004는 PR #68 마감 중, T-4-005(화면)·T-4-006(통합 검증)은 미착수. 디자인 PR #66(19개 화면 모바일 개편, 사용자 작업)은 최신 main 재통합 대기(DIRTY). 이 문단과 현황판은 2026-09-05 오전 사용자 요청으로 Claude 세션이 갱신했다(오케스트레이션은 Codex 유지).
+
 WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. 현재 Phase 1~7의 국내 MVP 순서를 바꾸지 않으며, Phase 3~5와 Phase 7 완료 후 새 ruleset의 신규 Career에 해외 이적·가상 해외 리그·대륙대회를 연다. 정본은 [WORLD STAGE 개발 명세](../development/15-world-stage-expansion.md)와 [Phase 8](../phases/phase-08-world-stage.md)이다.
 
 ## 사용자 액션
@@ -126,13 +128,13 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-3-001 | A | domain + contracts + content | 계약·제안 v2 타입, clubHistory, 제안 상태기계, 타임라인 kind 예약(양 트랙), DSL contract.*, CON payload 스키마 | U-012 | done | PR #48 b756999(2026-09-04 11:43), [브리프](briefs/T-3-001.md). 리뷰 수정 1건(`contract.isLastSeason` 의미), 골든 9종 재기록(draws 불변) |
 | T-3-002 | A | domain + content | 결산 뒤 이적시장 생성(D-43·D-44), 안전 잔류 제안, step 7 사전 협상, offerRulesV2·transferRules | T-3-001 | done | PR #50 408a765(2026-09-04 13:33), [브리프](briefs/T-3-002.md). 리뷰 수정 1건(결산 뒤 STARTER·평점 INTEREST 분기 도달 불가 → `currentSquadPerformance` 폴백). 워커 결정 3건 수용. 결산 배선·명령은 T-3-003 |
 | T-3-003 | A | domain + 룰셋 필드 + web 최소 배선 | NEGOTIATE·ACCEPT_OFFER v2·REJECT_OFFER·LOAN_RETURN, 원자 전환(D-45), 임대(D-46), 약속 위반(D-47), 태그 5종(D-48), 결산 배선, golden career-10·11 | T-3-002 | done | PR #54 `e1ae3de`(2026-09-04 16:47), [브리프](briefs/T-3-003.md). 최초 구현 `cafb870` → Luna Max 리뷰 P1 3건 → 수정 `7d31f07`. Quality·Browser·PR preview와 전체 테스트 녹색. |
-| T-3-004 | A | contracts + api + engine-client | payload·상태 strict 검증, 동기화 회귀, Snapshot 크기 | T-3-003 | in-progress | [브리프](briefs/T-3-004.md). 2026-09-04 17:04 Luna Max 투입. career-10·11 strict/runtime/PUT 3경로/replay·fork·import/크기·Worker hash 검증 |
-| T-3-005 | A | web | SCR-017 계약 상태·제안 비교·협상, SCR-019 루머, SCR-020 이적·임대 결과, TEST-E2E-003 | T-3-003, T-3-004 | todo | [브리프](briefs/T-3-005.md). 시작 전 RUMOUR 전용 생성 경로 도달성 감사·결정 게이트 포함 |
+| T-3-004 | A | contracts + api + engine-client | payload·상태 strict 검증, 동기화 회귀, Snapshot 크기 | T-3-003 | done | PR #55 dc2cbaa(2026-09-04 21:42, Luna Max·Codex 리뷰), [브리프](briefs/T-3-004.md). career-10·11 strict 명령·snapshot 불변, API PUT 3경로·멱등, 크기 probe, engine replay/fork/import, Worker hash probe. 제품 동작 변경 없음 |
+| T-3-005 | A | web | SCR-017 계약 상태·제안 비교·협상, SCR-019 루머, SCR-020 이적·임대 결과, TEST-E2E-003 | T-3-003, T-3-004 | done | PR #65 3032bdd(2026-09-05 02:25), [브리프](briefs/T-3-005.md). PRE_NEGOTIATION 제안 비교·상세·협상·거절·수락, LOAN_RETURN 결정, SCR-020 결과 복구, FIRST_CONTRACT SCR-009/010 보존. 0.2.0 미활성(RUMOUR 도달성은 별도 결정 게이트). **Phase 3 코드 종료** |
 | T-3-006 | A | content | 루머·잔류·에이전트 이벤트, 협상·이적 문구, 팀 풀 확장(열린 질문) | T-3-001 | done | PR #51 31e321d(2026-09-04 13:01), [브리프](briefs/T-3-006.md). 팩 0.2.0 등록(활성 0.1.0 유지)·PRO 이벤트 5종 PROTOTYPE·팀 12·authoring 스키마·agent 토큰. 리뷰 수정 0건. 후속: web narrative.ts에 `agent` 토큰(T-3-005) |
 | T-4-001 | B | domain + contracts + content | 관계 로그·감독·부상·평판 타입, HEALTH Effect(ADR-010 표 갱신), RESOLVE_EVENT의 INJURY·NATIONAL_TEAM 수용(D-52), 훅 골격 | U-012, T-3-001 | done | PR #53 aba154a(2026-09-04 13:57), [브리프](briefs/T-4-001.md). 리뷰 수정 0건. main 재머지 2회(PR #50 충돌 해결), 재기록 골든 미커밋(PLACEHOLDER)을 오케스트레이터 체인이 잡아 추가 커밋. 후속: T-4-002(부상)·T-4-003(관계) 브리프 |
-| T-4-002 | B | domain + content | 부상 모델(D-49): 심각도·부위·진단 범위·재활 선택·재발·후유증, 강제 사건 상한, career-12-injury | T-4-001 | in-progress | [브리프](briefs/T-4-002.md). 2026-09-04 17:04 Luna Max 투입. match RNG/forced pending/재활·재발 상태기계·후유증 확정 |
-| T-4-003 | B | domain + content | 감독 교체·라커룸·슬럼프·윤리·SNS 이벤트 pool, popularityCenti, 관계 로그, 안전장치, 태그 5종(D-50) | T-4-001 | in-progress | [브리프](briefs/T-4-003.md). 2026-09-04 17:04 Luna Max 투입. T-4-002와 병행, 먼저 머지된 공용 타입 보존 |
-| T-4-004 | B | domain + content | 대표팀 차출 기본 모듈(D-51), NATIONAL_DEBUT 챕터 | T-4-002, T-4-003 | todo | [브리프](briefs/T-4-004.md). step 8 자격·부상 자동 사양·P4-7·데뷔 MAJOR 1회 |
+| T-4-002 | B | domain + content | 부상 모델(D-49): 심각도·부위·진단 범위·재활 선택·재발·후유증, 강제 사건 상한, career-12-injury | T-4-001 | done | PR #64 27292d4(2026-09-05 01:36), [브리프](briefs/T-4-002.md). MODERATE/MAJOR 부상은 일반 이벤트보다 우선하는 INJURY pending, MINOR는 STANDARD 자동, 재활·복귀·재발·후유증 상태기계, career-12-injury 골든 |
+| T-4-003 | B | domain + content | 감독 교체·라커룸·슬럼프·윤리·SNS 이벤트 pool, popularityCenti, 관계 로그, 안전장치, 태그 5종(D-50) | T-4-001 | done | PR #67 b180536(2026-09-05 04:17), [브리프](briefs/T-4-003.md). 관계 5축 clamp delta 감사 로그·memory tag LRU, 결산 평판·주장단 승격·감독 교체 예약·인계, Phase 4 태그 5종 평가기, SLUMP/LOCKER_ROOM/ETHICS/MEDIA 이벤트·스키마 |
+| T-4-004 | B | domain + content | 대표팀 차출 기본 모듈(D-51), NATIONAL_DEBUT 챕터 | T-4-002, T-4-003 | in-progress | [브리프](briefs/T-4-004.md). Luna Max 워커 `T-4-004-national-team`. PR #68(5d9ffc5, 2026-09-05 09:07, CI 녹색) 리뷰 지적 2건(웹 라우팅·이벤트 화면·데뷔 챕터 렌더링) 수정 중 |
 | T-4-005 | B | web | SCR-016·018·021·022·024·032, 라커룸·휴대폰 관계 수치 점진 공개, SCR-023 경기 판단 변형, TEST-E2E-004 | T-4-004 | todo | |
 | T-4-006 | A+B | domain + web(e2e) | 트랙 통합 검증: 3시즌 fixture, OVR 불변 property, 결정 예산·세션 길이, e2e 3회, 완료 조건 표 | T-3-005, T-4-005 | todo | |
 
@@ -153,9 +155,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-3-004 | Luna Max · Orca worktree `T-3-004-contract-sync-validation` | 2026-09-04 17:04 | 계약·API·engine-client strict/sync 회귀 검증 진행 중 |
-| T-4-002 | Luna Max · Orca worktree `T-4-002-injury-model` | 2026-09-04 17:04 | 부상·재활·재발 상태기계 구현 진행 중 |
-| T-4-003 | Luna Max · Orca worktree `T-4-003-relationships-manager` | 2026-09-04 17:04 | 관계·감독·평판 모델 구현 진행 중 |
+| T-4-004 | Luna Max · Orca worktree `T-4-004-national-team` | 2026-09-05 | 대표팀 차출·데뷔 예약(PR #68) 리뷰 지적 2건 수정·집중 테스트 중 |
 
 ## 완료
 
@@ -215,4 +215,9 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-3-002 | 이적시장 생성기: `judgeMarketReason`(만료·태그·STARTER 평점·시장가치 지수, rng 0)·`generateMarket`(구단 후보·kind 가중 추첨·제안 3~5 + 안전 잔류)·`buildRenewalOffer`(step 7 사전 협상, 미응답 자동 만료는 T-3-003까지 임시)·`openMarketAfterSettlement`·negotiation.ts, offerRulesV2·transferRules 룰셋 1.0.0/proto, 시장 골든 3종, career-04·07 stateHash만 변경. 리뷰 수정 1건(결산 뒤 상태 도달 불가 분기 → `currentSquadPerformance` 폴백, 테스트 3건) | 408a765 |
 | T-2-015 | 분석 이벤트 INSERT를 D1 변수 상한(문장당 100개)에 맞춰 14행씩 순차 청크(`ANALYTICS_INSERT_CHUNK_ROWS`, spy 테스트 50→14·14·14·8), unknown error 응답을 고정 문구로(원문은 logger `errorMessage` 500자), 온보딩 첫 슬라이드 LINE TEST 안내 + e2e 스텁. 리뷰 수정 0건 | 5462dc7 |
 | T-3-006 | 콘텐츠 팩 0.2.0 등록(활성 0.1.0 유지): 0.1.0 복제 + PRO 이벤트 5종(EVT-CON-010 루머 RUMOUR·011 에이전트·012 약속 위반·013 재계약 압박·EVT-MEDIA-006 친정팀 원정) `authoring: PROTOTYPE`, RELATION delta ≤ 8, `EventDefinitionSchema.authoring`, 내러티브 토큰 `agent`, 룰셋 1.0.0 팀 12개(tier 3·4·4·YOUTH 1), 이벤트 카탈로그 10절. 골든 재기록 불필요(domain ruleset-proto 사용). 리뷰 수정 0건 | 31e321d |
+| T-3-004 | career-10·11 strict 명령·snapshot 불변 검증, API PUT 3경로·멱등·크기 probe, engine replay/fork/import, 브라우저 Worker hash probe, CompareCards e2e 시드 고정. 제품 동작 변경 없음 | dc2cbaa |
+| (fix) | 로컬 QA 화면 표시 오류 4건(#57 컵 코드 한국어, #60 0분 출전·미사용 교체 제외, #58 진로 서사 고정 문구, #59 입단 테스트 내부 ID 노출) | 0b9fb69 |
+| T-4-002 | 결정론적 부상·재활·재발·후유증 모델, INJURY forced pending 우선, career-12-injury 골든 | 27292d4 |
+| T-3-005 | 계약·협상·이적 UI: PRE_NEGOTIATION 제안 비교·협상·거절·수락, LOAN_RETURN 결정, SCR-020 결과 복구. Phase 3 코드 종료 | 3032bdd |
+| T-4-003 | 관계 감사 로그·memory tag LRU, 결산 평판·주장단·감독 교체 예약, Phase 4 태그 5종, SLUMP/LOCKER_ROOM/ETHICS/MEDIA 이벤트 | b180536 |
 | T-3-003 | 이적시장 명령 4종·결산 배선·임대·약속 위반·Phase 3 태그 5종·golden career-10/11. Luna Max 사후 리뷰로 태그 판정 순서·LOAN 팬 페널티·임대 만료 자동 FA 복원 P1 3건 수정, 처리기 행렬 회귀 테스트 11건 추가. 새 head CI·전체 테스트 통과 | e1ae3de |
