@@ -228,7 +228,7 @@ function transitionReason(kind: TransferResultKind, state: CareerState, competit
     kind === 'RENEWAL'
       ? '관계 변화 없이 기존 소속을 유지했습니다.'
       : kind === 'RETURN'
-        ? '저장된 원소속 계약과 관계 상태를 복원했습니다.'
+        ? '감독 신뢰·주장·라이벌 관계는 원소속 기준으로 재설정되고 팬 관계는 일부만 이월됩니다.'
         : '새 소속 전환에 따른 현재 관계 상태를 저장했습니다.';
   const evidence = `전술 적합도 ${state.context.tacticalFit} · 경쟁 상태: ${competition}`;
   const suffix = `${evidence}. ${relationshipReason}`;

@@ -60,7 +60,9 @@ export function renderNarrative(text: string, tokens: NarrativeTokenValues): str
 
 /**
  * `name`은 선수 이름, `team`·`club`은 현재 팀(계약이 있으면 `contract.teamName`, 없으면 배경 시작
- * 팀 이름), 나머지(`manager`·`rival`·`captain`)는 팩 `narrativeTokens`의 첫 값이다.
+ * 팀 이름), `manager`는 도메인 값(`season.manager.name`, 없으면 `nextManager.name`)을 우선하고
+ * 둘 다 없을 때만 팩 사전 첫 값으로 대체한다. 나머지(`rival`·`captain`)는 팩 `narrativeTokens`의
+ * 첫 값이다.
  */
 export function buildNarrativeTokens(state: CareerState, pack: ContentPack, ruleset: Ruleset): NarrativeTokenValues {
   const team = currentTeamName(state, ruleset);
@@ -68,7 +70,7 @@ export function buildNarrativeTokens(state: CareerState, pack: ContentPack, rule
     name: state.player.profile?.name ?? state.player.draft.name ?? '',
     club: team,
     team,
-    manager: pack.narrativeTokens.manager[0] ?? '',
+    manager: state.season?.manager?.name ?? state.nextManager?.name ?? pack.narrativeTokens.manager[0] ?? '',
     rival: pack.narrativeTokens.rival[0] ?? '',
     captain: pack.narrativeTokens.captain[0] ?? '',
     agent: pack.narrativeTokens.agent[0] ?? '',
