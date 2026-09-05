@@ -2,6 +2,12 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (20:15, D-65 출시 게이트 워커 3명 투입)
+
+- **T-4-017(api 해시 probe) 20:08, T-4-023(SCR-032 대표팀 자연 플레이 캡처)·T-4-024(실사용자 플레이 시간 측정 준비) 20:15 Sonnet 5 워크플로 투입.** 브리프 [T-4-023](briefs/T-4-023.md)·[T-4-024](briefs/T-4-024.md). 파일 소유권: T-4-017 `apps/api/src/test/*`·`packages/fixtures/src/index.ts`, T-4-023 `apps/web/e2e/helpers/*`·`phase4-seed-reachability.test.ts`·`docs/qa/phase34/national-team*.png`, T-4-024 `apps/web/src/engine/funnel.ts`·`packages/contracts/src/analytics.ts`(props가 `strictObject` 화이트리스트라 스키마 갱신 필수). 근거: D-65 사용자 결정, D-62 최소 검증(새 테스트 파일 없이 기존 구조만 갱신, 룰셋 조정 금지).
+- **T-4-023 탐색 상한은 0.3.0·0.2.0 각 200 seed×30시즌·60분.** 미도달이면 조정 없이 BLOCKED + 궤적 표(baseOvr·popularityCenti·평점·tier)로 보고해 밸런스는 사용자가 결정한다.
+- **T-4-024는 코드(초 단위 `elapsedSec` 추가)만 워커, 측정 프로토콜·D1 쿼리는 오케스트레이터가 `docs/qa/play-time-measurement.md`로 붙인다.** 자동화 시간(`session-length.spec`)은 플레이 시간으로 보고하지 않는다(D-62).
+
 ## 2026-09-05 (20:00, 재개 — D-65 사용자 결정 3건)
 
 사용자 답: (1) 출시 게이트(T-4-017 해시 probe·SCR-032 대표팀 캡처·실사용자 플레이 측정 준비)는 이 세션이 진행, (2) 기본 팩 0.1.0 유지, (3) Phase 5 PR #77 계속 보류. → [D-65](phase-3-4-plan.md). T-4-017 브리프를 D-62 기준으로 갱신하고 T-4-023(SCR-032 캡처)·T-4-024(플레이 시간 측정 준비) 브리프를 새로 쓴다.
