@@ -9,6 +9,7 @@ import {
   canNegotiateOffer,
   negotiationKey,
   offerStatus,
+  offerProjectionNotice,
 } from './transfer-view.js';
 
 function offer(overrides: Partial<Offer> = {}): Offer {
@@ -60,6 +61,13 @@ describe('T-3-005 negotiation ask mapping', () => {
 });
 
 describe('T-3-005 revision-based offer state', () => {
+  it('1.1 제안은 계약 약속과 예상치를 구분하고 사전 재계약은 다음 시즌 순위를 약속하지 않는다', () => {
+    expect(offerProjectionNotice('1.1.0', 'INTEREST')).toContain('시즌 시작 시점의 예상');
+    expect(offerProjectionNotice('1.1.0', 'INTEREST')).toContain('조건이 바뀌면 달라질 수');
+    expect(offerProjectionNotice('1.1.0', 'PRE_NEGOTIATION')).toContain('다음 시즌 경쟁 순위를 예측하지 않습니다');
+    expect(offerProjectionNotice('1.0.0', 'INTEREST')).toBeNull();
+  });
+
   it('경쟁자 OVR 값을 내 선수 기준 차이로 표시하고 부호를 보존한다', () => {
     const rows = buildOfferRows(
       [

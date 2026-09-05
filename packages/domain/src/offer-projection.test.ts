@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildDefaultManager } from './manager.js';
 import { generateCompetitors } from './competitors.js';
 import { runSettledFixture } from './__fixtures__/career-06-settled.js';
-import { rulesetProto } from './__fixtures__/career-01.js';
+import { careerFixture, rulesetProto, runCareerFixture } from './__fixtures__/career-01.js';
 import { projectOfferSelection, seasonSquadSeed } from './offer-projection.js';
 import { seedRng } from './rng.js';
 import { hashState } from './hash.js';
@@ -109,6 +109,79 @@ describe('Legacy 1.1 offer projection', () => {
     const player = started.snapshot.state.season!.selection.candidates.find((candidate) => candidate.id === 'PLAYER')!;
     expect(started.snapshot.state.context.tacticalFit).toBe(preview.tacticalFit);
     expect(player.rank).toBe(preview.rank);
+  });
+
+  it.each([
+    {
+      label: 'first contract',
+      prepare: () => {
+        const snapshot = runCareerFixture(
+          {
+            ...careerFixture,
+            rulesetVersion: '1.1.0',
+            commands: careerFixture.commands.slice(0, -1),
+          },
+          ruleset110,
+        );
+        const pending = snapshot.state.pending;
+        if (pending === null || pending.kind !== 'OFFERS') throw new Error('first-contract offers are missing');
+        return { snapshot, offer: pending.offers[0]! };
+      },
+    },
+    {
+      label: 'safe stay',
+      prepare: () => {
+        const settled = runSettledFixture().snapshot;
+        const state = { ...settled.state, rulesetVersion: '1.1.0' };
+        const generated = generateMarket({
+          state,
+          ruleset: ruleset110,
+          reason: 'INTEREST',
+          revision: settled.revision,
+          rng: state.rngState,
+        });
+        const snapshot = {
+          ...settled,
+          rulesetVersion: '1.1.0',
+          state: { ...state, pending: generated.pending, rngState: generated.rngState },
+        };
+        snapshot.stateHash = hashState(snapshot.state);
+        return { snapshot, offer: generated.pending.offers[0]! };
+      },
+    },
+  ])('matches $label preview to the initial START_SEASON selection', ({ label, prepare }) => {
+    const prepared = prepare();
+    const preview = prepared.offer.competitorSummary;
+    if (preview === null) throw new Error(`${label} offer has no 1.1 projection`);
+    const accepted = simulate({
+      snapshot: prepared.snapshot,
+      command: {
+        type: 'ACCEPT_OFFER',
+        payload: { offerId: prepared.offer.id },
+        commandId: `projection-${label}-accept`,
+        expectedRevision: prepared.snapshot.revision,
+      },
+      ruleset: ruleset110,
+      rulesetVersion: '1.1.0',
+      contentPackVersion: prepared.snapshot.contentPackVersion,
+    });
+    if (!accepted.ok) throw new Error(`${label} acceptance failed: ${accepted.error.message}`);
+    const started = simulate({
+      snapshot: accepted.snapshot,
+      command: {
+        type: 'START_SEASON',
+        payload: { simulationMode: 'FAST', serviceSeasonId: `projection-${label}-season` },
+        commandId: `projection-${label}-start`,
+        expectedRevision: accepted.snapshot.revision,
+      },
+      ruleset: ruleset110,
+      rulesetVersion: '1.1.0',
+      contentPackVersion: accepted.snapshot.contentPackVersion,
+    });
+    if (!started.ok) throw new Error(`${label} start failed: ${started.error.message}`);
+    const player = started.snapshot.state.season!.selection.candidates.find((candidate) => candidate.id === 'PLAYER');
+    expect(started.snapshot.state.context.tacticalFit).toBe(prepared.offer.tacticalFitEstimate);
+    expect(player?.rank).toBe(preview.rank);
   });
 
   it('refreshes 1.1 tactical fit and competitor preview after a successful ROLE counter', () => {

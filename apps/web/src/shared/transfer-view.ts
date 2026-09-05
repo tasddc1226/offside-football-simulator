@@ -286,6 +286,17 @@ function formatCompetitorSummary(offer: Offer): string {
   return `${offer.competitorSummary.rank}위 · OVR 차이 ${gap} (내 선수 기준)`;
 }
 
+export function offerProjectionNotice(
+  rulesetVersion: string,
+  marketReason: 'FIRST_CONTRACT' | 'PRE_NEGOTIATION' | 'EXPIRED' | 'INTEREST' | 'LOAN_END',
+): string | null {
+  if (rulesetVersion === '1.0.0') return null;
+  if (marketReason === 'PRE_NEGOTIATION') {
+    return '역할과 출전 시간은 계약 약속입니다. 전술 적합도는 현재 시즌 참고값이며 다음 시즌 경쟁 순위를 예측하지 않습니다.';
+  }
+  return '역할과 출전 시간은 계약 약속입니다. 전술 적합도와 경쟁 순위는 시즌 시작 시점의 예상이며, 제안 뒤 선수나 감독 조건이 바뀌면 달라질 수 있습니다.';
+}
+
 function formatLoan(offer: Offer, parentTeamName: string | null): string {
   if (offer.loan === null) return '—';
   const buy = offer.loan.buyOptionMinor === null ? '매입 옵션 없음' : `매입 ${formatKrw(offer.loan.buyOptionMinor)}`;

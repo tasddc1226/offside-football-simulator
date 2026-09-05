@@ -3,7 +3,7 @@ import { buttonClassName, buttonStyle } from '@offside/ui';
 import { Link } from '@tanstack/react-router';
 import { formatKrw } from './format.js';
 import { LEAGUE_TIER_LABEL_KO, SQUAD_ROLE_LABELS } from './labels.js';
-import { actionableRevision, OFFER_KIND_LABEL_KO, offerDetailRows, offerStatusLabel } from './transfer-view.js';
+import { actionableRevision, OFFER_KIND_LABEL_KO, offerDetailRows, offerProjectionNotice, offerStatusLabel } from './transfer-view.js';
 
 function signedDelta(value: number, current: number): string {
   const delta = value - current;
@@ -61,6 +61,11 @@ export function CompactOfferCard({
   const details = offerDetailRows(offer, recordRevision, safeOfferId, parentTeamName).filter(
     (row) => !headlineLabels.has(row.label) && row.label !== '제안 종류' && row.label !== '상태' && row.label !== '유효 기간',
   );
+  const pending = state.pending;
+  const projectionNotice =
+    pending !== null && (pending.kind === 'OFFERS' || pending.kind === 'CONTRACT')
+      ? offerProjectionNotice(state.rulesetVersion, pending.market.reason)
+      : null;
   return (
     <article className="os-panel flex flex-col gap-os-4" aria-labelledby={`offer-${offer.id}`}>
       <div>
@@ -82,6 +87,7 @@ export function CompactOfferCard({
           {details.map((row) => <div key={row.label}><dt>{row.label}</dt><dd className="text-os-text">{row.value}</dd></div>)}
         </dl>
       </details>
+      {projectionNotice ? <p className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>{projectionNotice}</p> : null}
       <Link to="/career/$careerId/contract" params={{ careerId }} search={{ offerId: offer.id }} className={buttonClassName('primary', 'w-full justify-center')} style={buttonStyle}>
         제안 상세·결정
       </Link>

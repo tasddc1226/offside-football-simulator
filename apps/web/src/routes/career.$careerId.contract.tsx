@@ -25,6 +25,7 @@ import {
   canNegotiateOffer,
   MARKET_REASON_LABEL_KO,
   offerDetailRows,
+  offerProjectionNotice,
   offerStatus,
   type NegotiationResultView,
 } from '../shared/transfer-view.js';
@@ -215,6 +216,7 @@ function ContractScreen() {
   // TS가 pending의 null 좁힘을 유지하지 않으므로 여기서(narrowing이 되는 최상위 스코프) 미리 센다.
   const marketOfferCount = pending.offers.length;
   const firstContract = pending.market.reason === 'FIRST_CONTRACT';
+  const projectionNotice = offerProjectionNotice(state.rulesetVersion, pending.market.reason);
   const parentTeamName = state.contract?.teamName ?? state.clubHistory.at(-1)?.teamName ?? null;
   const actionRevision = actionableRevision(record.revision);
   const status = offerStatus(offer, actionRevision);
@@ -495,6 +497,7 @@ function ContractScreen() {
           <p className="font-os text-os-text" style={BODY_STYLE}>
             {ROLE_PROMISE_SENTENCE[offer.rolePromise]}
           </p>
+          {projectionNotice ? <p className="mt-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>{projectionNotice}</p> : null}
         </section>
 
         <details className="os-panel">
@@ -582,6 +585,7 @@ function ContractScreen() {
         <p className="font-os text-os-text" style={BODY_STYLE}>
           {ROLE_PROMISE_SENTENCE[offer.rolePromise]}
         </p>
+        {projectionNotice ? <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{projectionNotice}</p> : null}
       </Card>
 
       <Card className="flex flex-col gap-os-3">
