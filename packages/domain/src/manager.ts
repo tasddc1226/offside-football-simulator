@@ -39,13 +39,21 @@ export function buildDefaultManager(input: {
   primaryPosition: Position;
   seasonHistory: readonly SeasonSummary[];
   ruleset: Ruleset;
+  timeline?: readonly TimelineEntry[];
 }): SeasonManager {
   const style = findTacticalStyle(input.ruleset, input.tacticalStyleId);
   const names = input.ruleset.managerRules.names;
   // 기존 첫 감독 생성 규칙은 팀 id 해시를 유지한다. 교체 감독만 감독 id 해시를 쓴다.
-  const name = managerName(input.teamId, names);
+  const generation =
+    (input.timeline?.filter(
+      (entry) => entry.kind === 'MANAGER_CHANGED' && entry.refId?.startsWith(`${input.teamId}-mgr-`),
+    ).length ?? 0) + 1;
+  const id = `${input.teamId}-mgr-${generation}`;
+  // Preserve the historical first-manager name seed; only replacement
+  // generations derive their name from the generation-specific id.
+  const name = managerName(generation === 1 ? input.teamId : id, names);
   return {
-    id: `${input.teamId}-mgr-1`,
+    id,
     name,
     preferredArchetypeIds: style.preferredArchetypeIds[input.primaryPosition] ?? [],
     tenureSeasons: managerTenureSeasons(input.seasonHistory, input.teamId),

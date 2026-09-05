@@ -2,7 +2,7 @@
 // contract만 읽으므로 그 두 필드만 채운 최소 CareerState로 검증한다.
 import type { CareerState, SimulationMode } from '@offside/domain';
 import { describe, expect, it } from 'vitest';
-import { defaultSimulationMode } from './start-season.js';
+import { canPlanNextSeason, defaultSimulationMode } from './start-season.js';
 
 function stateWith(seasonHistory: CareerState['seasonHistory'], contractTeamId: string | null): CareerState {
   return {
@@ -12,6 +12,12 @@ function stateWith(seasonHistory: CareerState['seasonHistory'], contractTeamId: 
 }
 
 describe('defaultSimulationMode', () => {
+  it('계약·임대 복귀 결정이 남아 있으면 다음 시즌 계획에 진입하지 않는다', () => {
+    const state = { ...stateWith([], 'team-a'), status: 'ACTIVE', season: null, pending: null } as CareerState;
+    expect(canPlanNextSeason(state)).toBe(true);
+    expect(canPlanNextSeason({ ...state, pending: { kind: 'LOAN_RETURN', options: ['RETURN'], buyOptionMinor: null } })).toBe(false);
+    expect(canPlanNextSeason({ ...state, contract: null })).toBe(false);
+  });
   it('첫 프로 시즌(seasonHistory 비어있음)이면 CHAPTER다', () => {
     expect(defaultSimulationMode(stateWith([], 'team-a'), 'FAST')).toBe('CHAPTER');
   });

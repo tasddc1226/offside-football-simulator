@@ -11,7 +11,7 @@
 // TARGETS는 `apps/web/e2e/helpers/phase4-seeds.ts`와 값을 동기화한다(import 불가라 손으로 복사 —
 // 어긋나면 이 테스트가 실패해 알려준다).
 import { describe, expect, it } from 'vitest';
-import { advance, confirmPlayer, execute, resolveEvent, resolveChapter, resolveRole, acceptOffer, rejectOffer, settleSeason, updateDraft } from './career-actions.js';
+import { advance, confirmPlayer, execute, resolveEvent, resolveChapter, resolveRole, acceptOffer, settleSeason, updateDraft } from './career-actions.js';
 import { createAppEngine, type AppEngine } from './engine.js';
 import { FALLBACK_SERVICE_SEASON_ID } from './versions.js';
 import { loadContentPack, loadRuleset } from '@offside/content';
@@ -37,11 +37,11 @@ type Target = {
 // RUMOUR는 phase4-seeds.ts에 값이 없으므로(0.2.0·0.3.0 둘 다 미도달) 여기에도 없다.
 const TARGETS: Target[] = [
   { presentation: 'INJURY', packVersion: '0.2.0', seed: 'offside-seed-search-2', seasonIndex: 1, step: 6, eventId: 'EVT-INJ-001' },
-  { presentation: 'SLUMP', packVersion: '0.2.0', seed: 'offside-seed-search-6', seasonIndex: 1, step: 9, eventId: 'EVT-SLUMP-010' },
-  { presentation: 'LOCKER_ROOM', packVersion: '0.2.0', seed: 'offside-seed-search-1', seasonIndex: 2, step: 9, eventId: 'EVT-REL-010' },
-  { presentation: 'ETHICS', packVersion: '0.2.0', seed: 'offside-seed-search-0', seasonIndex: 2, step: 9, eventId: 'EVT-ETH-010' },
+  { presentation: 'SLUMP', packVersion: '0.2.0', seed: 'offside-seed-search-17', seasonIndex: 1, step: 5, eventId: 'EVT-SLUMP-010' },
+  { presentation: 'LOCKER_ROOM', packVersion: '0.2.0', seed: 'offside-seed-search-70', seasonIndex: 1, step: 8, eventId: 'EVT-REL-010' },
+  { presentation: 'ETHICS', packVersion: '0.2.0', seed: 'offside-seed-search-2', seasonIndex: 2, step: 9, eventId: 'EVT-ETH-010' },
   { presentation: 'MEDIA', packVersion: '0.2.0', seed: 'offside-seed-search-0', seasonIndex: 1, step: 4, eventId: 'EVT-MEDIA-010' },
-  { presentation: 'NATIONAL_TEAM', packVersion: '0.3.0', seed: 'offside-seed-search-v3-1422', seasonIndex: 2, step: 8, eventId: 'EVT-NAT-001' },
+  { presentation: 'RUMOUR', packVersion: '0.2.0', seed: 'offside-seed-search-0', seasonIndex: 2, step: 7, eventId: 'EVT-CON-010' },
 ];
 
 function makeIdGenerator(prefix: string): () => string {
@@ -141,6 +141,8 @@ async function stepOnceTowards(engine: AppEngine, careerId: string, targetEventI
       if (!result.ok) return { matched: false, blocked: `START_SEASON: ${result.error.code} ${result.error.message}` };
       return { matched: false };
     }
+    // career-actions.advance는 실제 UI와 동일하게 최신 snapshot에서
+    // eligibleEvents/chapterCandidates를 계산해 payload에 넣는다.
     const result = await advance(engine, careerId);
     if (!result.ok) return { matched: false, blocked: `ADVANCE: ${result.error.code} ${result.error.message}` };
     return { matched: false };
@@ -172,8 +174,8 @@ async function stepOnceTowards(engine: AppEngine, careerId: string, targetEventI
   if (pending.kind === 'OFFERS' || pending.kind === 'CONTRACT') {
     const offer = pending.offers[0];
     if (offer === undefined) {
-      const result = await rejectOffer(engine, careerId, null);
-      if (!result.ok) return { matched: false, blocked: `REJECT_OFFER: ${result.error.code} ${result.error.message}` };
+      const result = await advance(engine, careerId);
+      if (!result.ok) return { matched: false, blocked: `ADVANCE(CONTRACT checkpoint): ${result.error.code} ${result.error.message}` };
       return { matched: false };
     }
     const result = await acceptOffer(engine, careerId, offer.id);
@@ -184,6 +186,13 @@ async function stepOnceTowards(engine: AppEngine, careerId: string, targetEventI
   if (pending.kind === 'ROLE_PROPOSAL') {
     const result = await resolveRole(engine, careerId, 'ACCEPT');
     if (!result.ok) return { matched: false, blocked: `RESOLVE_ROLE: ${result.error.code} ${result.error.message}` };
+    return { matched: false };
+  }
+
+  if (pending.kind === 'LOAN_RETURN') {
+    const decision = pending.options[0] ?? 'RETURN';
+    const result = await execute(engine, careerId, { type: 'LOAN_RETURN', payload: { decision } });
+    if (!result.ok) return { matched: false, blocked: `LOAN_RETURN: ${result.error.code} ${result.error.message}` };
     return { matched: false };
   }
 

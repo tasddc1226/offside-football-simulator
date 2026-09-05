@@ -186,7 +186,7 @@ export const TIMELINE_KIND_LABEL_KO: Record<TimelineEntry['kind'], string> = {
  * 그대로 재사용하고(중복 정의 금지), 나머지(state·context·relationships) 대상만 여기서 더한다.
  */
 export const EFFECT_TARGET_LABEL_KO: Record<
-  AttributeKey | 'form' | 'fitness' | 'morale' | 'tacticalFit' | 'squadStatus' | 'positionProficiency' | 'managerTrust' | 'captain' | 'rival' | 'fans' | 'agent',
+  AttributeKey | 'form' | 'fitness' | 'morale' | 'tacticalFit' | 'squadStatus' | 'positionProficiency' | 'managerTrust' | 'captain' | 'rival' | 'fans' | 'agent' | 'popularity' | 'media' | 'matchesRemaining' | 'recurrenceRiskBp',
   string
 > = {
   ...ATTRIBUTE_LABELS,
@@ -201,6 +201,10 @@ export const EFFECT_TARGET_LABEL_KO: Record<
   rival: '라이벌 관계',
   fans: '팬 관계',
   agent: '에이전트 관계',
+  popularity: '인기',
+  media: '미디어 평판',
+  matchesRemaining: '결장 잔여 경기',
+  recurrenceRiskBp: '재발 위험(bp)',
 };
 
 /** 충돌 대화상자 비교 카드의 "단계" 행. */

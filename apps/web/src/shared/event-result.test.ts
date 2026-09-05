@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CareerState } from '@offside/domain';
 import { activeContentPack } from '../engine/content.js';
-import { resolveEventResultView } from './event-result.js';
+import { actualEventEffects, resolveEventResultView } from './event-result.js';
 
 function baseState(overrides: Partial<CareerState>): CareerState {
   return {
@@ -55,6 +55,12 @@ function baseState(overrides: Partial<CareerState>): CareerState {
 }
 
 describe('resolveEventResultView', () => {
+  it('결과 상세는 상한 적용 뒤 저장값 차이와 평판 단위를 표시한다', () => {
+    const before = baseState({ relationships: { managerTrust: 98, captain: 0, rival: 0, fans: 0, agent: 0 } });
+    const after = { ...before, relationships: { ...before.relationships, managerTrust: 100 }, reputation: { ...before.reputation, popularityCenti: 5125 } };
+    expect(actualEventEffects(before, after)).toEqual(['감독 신뢰 +2', '인기 +1.25']);
+    expect(actualEventEffects(after, after)).toEqual([]);
+  });
   it.each([['A', 'A1', '프로 입단 테스트에 도전한다'], ['C', 'C1', '하부리그에서 첫 기회를 찾는다']])(
     '구판 진로 %s의 결과는 재조회해도 내부 ID 대신 서사를 표시한다', (choice, outcome, title) => {
       const state = baseState({

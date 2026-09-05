@@ -320,7 +320,7 @@ function OffersScreen() {
         />
       ) : (
         <ScreenIntro
-          eyebrow="계약 만료·FA"
+          eyebrow={MARKET_REASON_LABEL_KO[pending.market.reason]}
           title="이적시장 제안 비교"
           description="현재 계약과 시장 상황을 비교해 다음 소속을 결정하세요."
         />

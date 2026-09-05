@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import {
   deriveTacticalRoom,
+  positionGroupOf,
   type MatchAppearance,
   type PositionStats,
   type SelectionRanking,
@@ -23,7 +24,7 @@ import {
   StatusStrip,
 } from '@offside/ui';
 import type { ChapterDefinition } from '@offside/content';
-import { activeContentPack, activeRuleset } from '../engine/content.js';
+import { activeRuleset, contentForCareer } from '../engine/content.js';
 import { opponentDisplayName } from '../shared/competition-labels.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -47,6 +48,7 @@ import {
   EFFECT_TARGET_LABEL_KO,
   OUTCOME_KIND_LABEL_KO,
   positionHeaderField,
+  POSITION_GROUP_LABELS,
   RISK_LABEL_KO,
   SELECTION_REASON_LABEL_KO,
 } from '../shared/labels.js';
@@ -64,7 +66,7 @@ export const Route = createFileRoute('/career/$careerId/chapter')({
   loaderDeps: ({ search }) => ({ d: search.d }),
   loader: async ({ params, deps }) => {
     const { state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
-    const view = deriveChapterView(state, activeContentPack);
+    const view = deriveChapterView(state, contentForCareer(state));
     if (view === null) {
       const target = screenForCareer(state);
       throw redirect({ to: SCREEN_ROUTES[target.screenId], params: target.params });
@@ -321,7 +323,7 @@ function ChapterScreen() {
   // 초기화하고(로더가 이미 최신 상태를 캐시에 채웠다), 새로고침하면 다시 서버 값으로 시작한다.
   const [cursor, setCursor] = useState<number>(() => {
     if (query.data === undefined) return 0;
-    return deriveChapterView(query.data.state, activeContentPack)?.currentDecisionIndex ?? 0;
+    return deriveChapterView(query.data.state, contentForCareer(query.data.state))?.currentDecisionIndex ?? 0;
   });
 
   useCommittingExitGuard(resolveMutation.isPending);
@@ -354,7 +356,8 @@ function ChapterScreen() {
   }
 
   const { state } = query.data;
-  const view: ChapterView | null = deriveChapterView(state, activeContentPack);
+  const contentPack = contentForCareer(state);
+  const view: ChapterView | null = deriveChapterView(state, contentPack);
   const season = state.season;
   const profile = state.player.profile;
   if (view === null || season === null || profile === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
@@ -364,7 +367,7 @@ function ChapterScreen() {
   const minute = decisionMinute(displayDecisionNumber, decisionsTotal);
   const isNationalTeam = view.context.kind === 'NATIONAL_TEAM';
   const score = scoreAtDecision(view.match.result.goalsFor, view.match.result.goalsAgainst, minute);
-  const tokens = buildNarrativeTokens(state, activeContentPack, activeRuleset);
+  const tokens = buildNarrativeTokens(state, contentPack, activeRuleset);
   const room = isNationalTeam ? null : deriveTacticalRoom(state, activeRuleset);
   const reasonText = playerReasonText(season.selection.playerReason);
 
@@ -419,6 +422,11 @@ function ChapterScreen() {
         title={chapterTriggerLabel(view.definition.trigger)}
         description="중요한 순간, 당신의 플레이를 선택해요."
       />
+      {view.definition.positionGroups && view.definition.positionGroups.length > 0 ? (
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          포지션 맥락 · {view.definition.positionGroups.map((group) => ({ GK: '골키퍼', DF: '수비수', MF: '미드필더', FW: '공격수' })[group]).join(' · ')} 판단 · 현재 {POSITION_GROUP_LABELS[positionGroupOf(profile.primaryPosition)]}
+        </p>
+      ) : null}
 
       <PlayerHeader
         name={profile.name}

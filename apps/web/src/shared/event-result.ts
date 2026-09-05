@@ -4,7 +4,7 @@
 import type { CareerState } from '@offside/domain';
 import type { ContentPack } from '@offside/content';
 import { formatEffectSummary } from './effect-summary.js';
-import { OUTCOME_KIND_LABEL_KO } from './labels.js';
+import { EFFECT_TARGET_LABEL_KO, OUTCOME_KIND_LABEL_KO } from './labels.js';
 import { eventOutcomeTitle } from './legacy-event-copy.js';
 
 export type EventResultView = {
@@ -15,6 +15,23 @@ export type EventResultView = {
   effects: string[];
   tags: string[];
 };
+
+/** 결과 직전/직후 저장값의 차이. 상한·중복 적용과 대표팀 자동 효과까지 포함한다. */
+export function actualEventEffects(before: CareerState, after: CareerState): string[] {
+  const changes: string[] = [];
+  for (const bag of ['attributes', 'state', 'context', 'relationships', 'reputation'] as const) {
+    const previous = before[bag] as Record<string, number>;
+    for (const [key, value] of Object.entries(after[bag])) {
+      const delta = value - (previous[key] ?? value);
+      if (delta === 0) continue;
+      const target = key === 'popularityCenti' ? 'popularity' : key === 'mediaCenti' ? 'media' : key;
+      const label = EFFECT_TARGET_LABEL_KO[target as keyof typeof EFFECT_TARGET_LABEL_KO] ?? target;
+      const amount = bag === 'reputation' ? delta / 100 : delta;
+      changes.push(`${label} ${amount > 0 ? '+' : ''}${amount}`);
+    }
+  }
+  return changes;
+}
 
 export function resolveEventResultView(state: CareerState, pack: ContentPack, rev: number): EventResultView | null {
   const entry = state.timeline.find((candidate) => candidate.revision === rev && candidate.kind === 'EVENT_RESOLVED');

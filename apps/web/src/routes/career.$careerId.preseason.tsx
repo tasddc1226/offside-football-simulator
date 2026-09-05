@@ -22,6 +22,7 @@ import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import {
   defaultSimulationMode,
+  canPlanNextSeason,
   SIMULATION_MODE_LABEL_KO,
   SIMULATION_MODE_SUMMARY_KO,
   TRAINING_FOCUS_IMPACT_KO,
@@ -37,7 +38,7 @@ import { platform } from '../platform/index.js';
 export const Route = createFileRoute('/career/$careerId/preseason')({
   loader: async ({ params }) => {
     const { state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
-    const allowed = state.status === 'ACTIVE' && state.contract !== null && state.season === null;
+    const allowed = canPlanNextSeason(state);
     if (!allowed) {
       const target = screenForCareer(state);
       throw redirect({ to: SCREEN_ROUTES[target.screenId], params: target.params });

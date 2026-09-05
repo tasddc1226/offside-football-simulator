@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { CareerState, Offer } from '@offside/domain';
 import { EventDefinitionSchema, type EventDefinition } from '../schema/event.ts';
 import type { PackManifest } from '../schema/pack.ts';
 import type { NarrativeDictionary } from '../schema/narrative.ts';
@@ -281,7 +282,6 @@ describe('selectEligibleEvents: 필터(합성 이벤트)', () => {
   it.each([
     { presentation: 'INJURY' as const, id: 'EVT-DEV-905' },
     { presentation: 'NATIONAL_TEAM' as const, id: 'EVT-DEV-906' },
-    { presentation: 'RUMOUR' as const, id: 'EVT-DEV-907' },
   ])('전용 presentation %s는 trigger를 통과해도 일반 후보에서 제외한다', ({ presentation, id }) => {
     const pack = makeContentPack([makePresentationEvent(id, presentation)]);
     expect(selectEligibleEvents(pack, buildTestState())).toEqual([]);
@@ -290,7 +290,6 @@ describe('selectEligibleEvents: 필터(합성 이벤트)', () => {
   it.each([
     { presentation: 'INJURY' as const, candidateId: 'EVT-DEV-908' },
     { presentation: 'NATIONAL_TEAM' as const, candidateId: 'EVT-DEV-909' },
-    { presentation: 'RUMOUR' as const, candidateId: 'EVT-DEV-910' },
   ])('전용 presentation %s는 followUp 후보에서도 제외한다', ({ presentation, candidateId }) => {
     const source = makeFollowUpSource('EVT-DEV-911', candidateId);
     const candidate = makePresentationEvent(candidateId, presentation);
@@ -300,6 +299,39 @@ describe('selectEligibleEvents: 필터(합성 이벤트)', () => {
     });
 
     expect(selectEligibleEvents(makeContentPack([source, candidate]), state)).toEqual([]);
+  });
+
+  it('RUMOUR는 step 7 window의 빈 CONTRACT 체크포인트에서만 기존 trigger 평가를 통과한다', () => {
+    const event = EventDefinitionSchema.parse({
+      ...makePresentationEvent('EVT-DEV-907', 'RUMOUR'),
+      phases: ['TRANSFER_WINDOW'],
+      triggers: { eq: ['career.stage', 'PRO'] },
+    });
+    const checkpoint = buildTestState({
+      stage: 'PRO',
+      season: { currentStep: 7, steps: [{ index: 7, windowOpen: true }], matches: [] } as unknown as CareerState['season'],
+      pending: {
+        kind: 'CONTRACT',
+        step: 7,
+        offers: [],
+        market: { openedAtRevision: 1, seasonIndex: 1, reason: 'PRE_NEGOTIATION', safeOfferId: null },
+      },
+    });
+    expect(selectEligibleEvents(makeContentPack([event]), checkpoint)).toEqual([
+      { eventId: event.id, version: 1, weight: 10, slot: 'TRANSFER_WINDOW' },
+    ]);
+    expect(
+      selectEligibleEvents(makeContentPack([event]), {
+        ...checkpoint,
+        pending: {
+          kind: 'CONTRACT',
+          step: 7,
+          offers: [{ id: 'offer' } as Offer],
+          market: { openedAtRevision: 1, seasonIndex: 1, reason: 'PRE_NEGOTIATION', safeOfferId: null },
+        } as unknown as CareerState['pending'],
+      }),
+    ).toEqual([]);
+    expect(selectEligibleEvents(makeContentPack([event]), { ...checkpoint, pending: { kind: 'EVENT', eventId: event.id, version: 1 } })).toEqual([]);
   });
 
   it.each(['SLUMP', 'LOCKER_ROOM', 'ETHICS', 'MEDIA'] as const)(

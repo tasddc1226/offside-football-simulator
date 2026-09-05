@@ -140,7 +140,7 @@ test('시즌 1 결산 뒤 INTEREST 시장이 열리면 안전 잔류 제안을 �
   const offersCta = page.getByRole('link', { name: '제안 보기' });
   await expect(offersCta).toBeVisible();
   await offersCta.click();
-  await expect(page.getByText('타 구단 관심')).toBeVisible();
+  await expect(page.getByRole('definition').filter({ hasText: '타 구단 관심' })).toBeVisible();
   // signFirstOffer는 offers[0](안전 잔류)을 수락한다 — STAY 결과 카드에 도착해 "새 시즌 준비"로
   // 프리시즌에 닿는다(state.season === null이면 ctaToPreseason이 그리로 보낸다, PR #76).
   await signFirstOffer(page);

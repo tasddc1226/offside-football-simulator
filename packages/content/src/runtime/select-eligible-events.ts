@@ -4,7 +4,7 @@ import type { EventDefinition } from '../schema/event.ts';
 import type { ContentPack } from '../packs/load-content-pack.ts';
 import { buildConditionContext } from './condition-context.ts';
 
-export type EligibleEvent = { eventId: string; version: number; weight: number };
+export type EligibleEvent = { eventId: string; version: number; weight: number; slot?: 'TRANSFER_WINDOW' };
 
 const STEPS_PER_SEASON = 12;
 
@@ -36,6 +36,18 @@ function currentCareerPhase(state: CareerState): CareerPhase {
     case 'SETTLEMENT':
       return 'SETTLEMENT';
   }
+}
+
+/**
+ * RUMOUR는 전용 pending 생성기가 아니라 step 7의 빈 재계약 pending을 결정 체크포인트로
+ * 소비한다. 제안이 남은 CONTRACT나 다른 pending에서는 일반 이벤트 후보를 절대 열지 않는다.
+ */
+function isRumourCheckpoint(state: CareerState, phase: CareerPhase): boolean {
+  return (
+    phase === 'TRANSFER_WINDOW' &&
+    state.pending?.kind === 'CONTRACT' &&
+    state.pending.offers.length === 0
+  );
 }
 
 function isWithinCooldown(event: EventDefinition, state: CareerState): boolean {
@@ -90,7 +102,9 @@ function isBlockedByResolution(event: EventDefinition, state: CareerState): bool
 function passesBaseConditions(event: EventDefinition, state: CareerState, phase: CareerPhase): boolean {
   // T-4-003 D-52 정정: 전용 pending 생성기가 있는 presentation만 일반 슬롯에서 제외한다.
   // SLUMP·LOCKER_ROOM·ETHICS·MEDIA는 일반 EVENT와 같은 trigger/cooldown/followUp 경로를 탄다.
-  if (event.presentation === 'INJURY' || event.presentation === 'NATIONAL_TEAM' || event.presentation === 'RUMOUR') return false;
+  // RUMOUR는 빈 CONTRACT 체크포인트에서만 같은 경로를 탄다.
+  if (event.presentation === 'INJURY' || event.presentation === 'NATIONAL_TEAM') return false;
+  if (event.presentation === 'RUMOUR' && !isRumourCheckpoint(state, phase)) return false;
   if (!event.phases.includes(phase)) return false;
   if (event.minAge !== undefined && state.age < event.minAge) return false;
   if (event.maxAge !== undefined && state.age > event.maxAge) return false;
@@ -147,14 +161,16 @@ function compareEventId(a: EligibleEvent, b: EligibleEvent): number {
  * 도메인의 `ADVANCE`가 이 목록에서 가중 선택으로 하나를 고른다(선택은 도메인의 몫).
  */
 export function selectEligibleEvents(pack: ContentPack, state: CareerState): EligibleEvent[] {
-  if (state.status !== 'ACTIVE' || state.pending !== null) return [];
-
   const phase = currentCareerPhase(state);
+  const rumourCheckpoint = isRumourCheckpoint(state, phase);
+  if (state.status !== 'ACTIVE' || (state.pending !== null && !rumourCheckpoint)) return [];
 
   const followUpCandidates = resolveFollowUpCandidates(state, pack.eventsById, phase);
   const pool = followUpCandidates.length > 0 ? followUpCandidates : selectByTrigger(pack.events, state, phase);
 
   return pool
-    .map((event) => ({ eventId: event.id, version: event.version, weight: event.weight }))
+    .map((event) => ({ eventId: event.id, version: event.version, weight: event.weight,
+      ...(event.presentation === 'RUMOUR' ? { slot: 'TRANSFER_WINDOW' as const } : {}),
+    }))
     .sort(compareEventId);
 }

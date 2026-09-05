@@ -370,9 +370,12 @@ class SeedRun {
     if (pending.kind === 'OFFERS' || pending.kind === 'CONTRACT') {
       const offer = pending.offers[0];
       if (offer === undefined) {
-        // T-3-002 D-43(a): 계약 잔여 있는 CONTRACT 슬롯은 offers:[]로 연다 — 안전 잔류로 닫는다.
-        const result = await this.commit({ type: 'REJECT_OFFER', payload: { offerId: null } });
-        if (!result.ok) return { kind: 'BLOCKED', reason: `REJECT_OFFER: ${result.error.code} ${result.error.message}` };
+        // 실제 웹 경로와 동일하게 빈 CONTRACT 체크포인트는 ADVANCE로 보낸다.
+        // 이 시점에 content selector가 RUMOUR 후보를 계산할 수 있다.
+        const eligibleEvents = this.deps.selectEligibleEvents(this.pack, state);
+        const chapterCandidates = this.deps.selectChapterCandidates(this.pack, state);
+        const result = await this.commit({ type: 'ADVANCE', payload: { eligibleEvents, chapterCandidates } });
+        if (!result.ok) return { kind: 'BLOCKED', reason: `ADVANCE(CONTRACT checkpoint): ${result.error.code} ${result.error.message}` };
         return { kind: 'CONTINUE' };
       }
       const result = await this.commit({ type: 'ACCEPT_OFFER', payload: { offerId: offer.id } });

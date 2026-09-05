@@ -6,6 +6,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useIsMutating } from '@tanstack/react-query';
 import {
   deriveTacticalRoom,
+  type RelationTarget,
   type CareerState,
   type CompetitionRecord,
   type FootballSeason,
@@ -32,7 +33,7 @@ import {
   Toast,
   type CareerTimelineItem,
 } from '@offside/ui';
-import { activeContentPack, activeRuleset } from '../engine/content.js';
+import { activeRuleset, contentForCareer } from '../engine/content.js';
 import { recordSeasonSettled, sumStepSummaries, trackStepPassed } from '../engine/funnel.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { useEngine } from '../engine/use-engine.js';
@@ -44,6 +45,9 @@ import {
   ROLE_DECISION_LABEL_KO,
   ROLE_PROMISE_SENTENCE,
   ROLE_PROPOSAL_TYPE_LABEL_KO,
+  popularityTierLabel,
+  relationTierLabel,
+  relationshipDirectionArrow,
   SEASON_PHASE_LABEL_KO,
   SQUAD_ROLE_LABELS,
   TIMELINE_KIND_LABEL_KO,
@@ -76,6 +80,24 @@ const CAPTION_STYLE = {
   lineHeight: 'var(--os-lh-caption)',
 } as const;
 
+const RELATION_LABELS: Record<RelationTarget, string> = {
+  managerTrust: '감독',
+  captain: '주장단',
+  rival: '경쟁자',
+  fans: '팬',
+  agent: '에이전트',
+};
+
+function relationshipRows(state: CareerState, revealNumbers: boolean) {
+  return (Object.keys(RELATION_LABELS) as RelationTarget[]).map((target) => ({
+    target,
+    label: RELATION_LABELS[target],
+    value: state.relationships[target],
+    direction: relationshipDirectionArrow(state.relationshipLog, target),
+    display: revealNumbers ? `${state.relationships[target]}` : relationTierLabel(state.relationships[target]),
+  }));
+}
+
 function chapterCardLabel(state: CareerState, pending: ChapterPending): string {
   if (pending.trigger === 'NATIONAL_DEBUT') {
     const opponentName = pending.virtualOpponent?.opponentName;
@@ -105,7 +127,7 @@ function timelineSentence(entry: TimelineEntry, state: CareerState): string {
       if (entry.refId === null) return '이벤트';
       const [eventId, choiceId, outcomeId] = entry.refId.split(':');
       const definition =
-        eventId === undefined ? undefined : activeContentPack.eventsById.get(eventId);
+        eventId === undefined ? undefined : contentForCareer(state).eventsById.get(eventId);
       const choice = definition?.choices.find((candidate) => candidate.id === choiceId);
       const outcome = choice?.outcomes.find((candidate) => candidate.id === outcomeId);
       return definition === undefined || choice === undefined || outcome === undefined
@@ -679,6 +701,28 @@ function CareerDashboard() {
                 ) : (
                   <div className="flex flex-col gap-os-4">
                     <SeasonTimeline steps={season.steps} currentStep={season.currentStep} />
+                    {season.availability?.kind === 'INJURY' ? (
+                      <dl className="grid grid-cols-2 gap-os-3 rounded-os-m bg-os-surface-2 p-os-3" aria-label="부상 상태">
+                        <div>
+                          <dt className="text-os-text-2">결장 잔여</dt>
+                          <dd className="os-num font-semibold text-os-text">{season.availability.matchesRemaining}경기</dd>
+                        </div>
+                        <div>
+                          <dt className="text-os-text-2">부상 상태</dt>
+                          <dd className="font-semibold text-os-text">회복 중</dd>
+                        </div>
+                      </dl>
+                    ) : null}
+                    {state.health.episodes.filter((episode) => episode.status === 'RECOVERED' && episode.recurrenceChecksRemaining > 0).map((episode) => (
+                      <p key={episode.id} className="rounded-os-m bg-os-surface-2 p-os-3 text-os-text-2" aria-label="부상 재발 판정 잔여">
+                        회복한 부상의 재발 판정이 {episode.recurrenceChecksRemaining}경기 남아 있습니다.
+                      </p>
+                    ))}
+                    {state.nationalTeam.callUps.some((entry) => entry.seasonIndex === season.index && entry.reason === 'INJURY') ? (
+                      <p className="rounded-os-m bg-os-surface-2 p-os-3 text-os-text-2" aria-label="대표팀 자동 사양 사유">
+                        부상으로 대표팀 소집을 자동 사양했습니다.
+                      </p>
+                    ) : null}
                     {hasContract && state.contract ? (
                       <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
                         시즌 목표: {ROLE_PROMISE_SENTENCE[state.contract.rolePromise]}
@@ -743,6 +787,36 @@ function CareerDashboard() {
                     ))}
                   </ul>
                 )}
+                {hasContract ? (
+                  <div className="flex flex-col gap-os-3">
+                    <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                      {state.seasonHistory.length === 0
+                        ? '관계의 방향과 기억이 조금씩 열립니다.'
+                        : '관계 수치는 시즌 결산 뒤 공개됩니다.'}
+                    </p>
+                    <dl
+                      className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
+                      style={CAPTION_STYLE}
+                    >
+                      {relationshipRows(state, state.seasonHistory.length > 0).map((row) => (
+                        <div key={row.target}>
+                          <dt>{row.label} {row.direction}</dt>
+                          <dd className="text-os-text">{row.display}</dd>
+                          <dd>{state.memoryTags[row.target].join(' · ') || '아직 쌓인 기억이 없습니다'}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {state.relationshipLog.length > 0 ? (
+                      <ul className="flex flex-col gap-os-1 font-os text-os-text-2" style={CAPTION_STYLE}>
+                        {state.relationshipLog.slice(-3).reverse().map((entry, index) => (
+                          <li key={`${entry.sourceId}-${entry.seasonIndex}-${entry.step}-${index}`}>
+                            {RELATION_LABELS[entry.target]} {entry.delta > 0 ? '↑' : entry.delta < 0 ? '↓' : '→'} · {entry.reasonTag ?? '최근 변화'}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
               </DashboardSection>
             </TabsContent>
 
@@ -858,6 +932,28 @@ function CareerDashboard() {
                           <dd className="text-os-text">{item.value}</dd>
                         </div>
                       ))}
+                      <div>
+                        <dt>인기</dt>
+                        <dd className="text-os-text">
+                          {state.seasonHistory.length > 0
+                            ? Math.round(state.reputation.popularityCenti / 100)
+                            : popularityTierLabel(state.reputation.popularityCenti)}
+                        </dd>
+                      </div>
+                      {season?.manager ? (
+                        <div>
+                          <dt>감독</dt>
+                          <dd className="text-os-text">
+                            {season.manager.name} · {season.manager.tenureSeasons}시즌
+                          </dd>
+                        </div>
+                      ) : null}
+                      {state.seasonHistory.length > 0 ? (
+                        <div>
+                          <dt>주장단</dt>
+                          <dd className="text-os-text">{state.captaincy === 'CAPTAIN' ? '주장' : state.captaincy === 'VICE' ? '부주장' : '없음'}</dd>
+                        </div>
+                      ) : null}
                     </dl>
                   </div>
                 ) : null}

@@ -19,6 +19,7 @@ import { SCREEN_ROUTES } from '../routes.js';
 import { SeasonTimeline } from '../shared/season-timeline.js';
 import {
   SIMULATION_MODE_LABEL_KO,
+  canPlanNextSeason,
   TRAINING_FOCUS_LABEL_KO,
   TRAINING_FOCUS_OPTIONS,
   type TrainingFocus,
@@ -46,8 +47,7 @@ export const Route = createFileRoute('/career/$careerId/season-prep')({
   loaderDeps: ({ search }) => ({ mode: search.mode, focus: search.focus }),
   loader: async ({ params, deps }) => {
     const { state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
-    const seasonNotStarted =
-      state.status === 'ACTIVE' && state.contract !== null && state.season === null;
+    const seasonNotStarted = canPlanNextSeason(state);
     if (!seasonNotStarted) {
       const target = screenForCareer(state);
       throw redirect({ to: SCREEN_ROUTES[target.screenId], params: target.params });

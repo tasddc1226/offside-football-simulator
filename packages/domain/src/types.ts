@@ -816,6 +816,8 @@ export type CareerState = {
   player: { draft: PlayerDraft; profile: PlayerProfile | null };
   pending: Pending;
   contract: Contract | null;
+  /** Step 7 renewal held until the current season is settled (legacy snapshots may omit it). */
+  nextContract?: Contract | null;
   // T-3-003 D-46: 임대 중 원소속 계약(`suspended: true`). Phase 1·비임대 상태는 항상 null.
   // `state.contract`는 항상 "지금 뛰는 계약"(임대면 kind LOAN)이고, 원소속 계약은 이 필드로 보관한다.
   parentContract: Contract | null;

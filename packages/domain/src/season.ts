@@ -172,7 +172,7 @@ function slotPriority(kind: DecisionSlot['kind']): number {
   }
 }
 
-export type EligibleEvent = { eventId: string; version: number; weight: number };
+export type EligibleEvent = { eventId: string; version: number; weight: number; slot?: 'TRANSFER_WINDOW' };
 
 export type SlotOpenResult =
   | { opened: false; nationalTeamAutoDecline?: NationalTeamCallUpRecord }
@@ -212,15 +212,16 @@ export function selectOpenSlot(
 
   for (const slot of candidates) {
     if (slot.kind === 'EVENT') {
-      if (eligibleEvents.length === 0) continue;
-      let chosen = eligibleEvents[0]!;
+      const ordinaryEvents = eligibleEvents.filter((event) => event.slot === undefined);
+      if (ordinaryEvents.length === 0) continue;
+      let chosen = ordinaryEvents[0]!;
       let nextRngState = rngState;
-      if (eligibleEvents.length >= 2) {
-        const weightSum = eligibleEvents.reduce((sum, event) => sum + event.weight, 0);
+      if (ordinaryEvents.length >= 2) {
+        const weightSum = ordinaryEvents.reduce((sum, event) => sum + event.weight, 0);
         const rolled = rollRange(rngState, 1, weightSum);
         nextRngState = rolled.state;
         let cumulative = 0;
-        for (const event of eligibleEvents) {
+        for (const event of ordinaryEvents) {
           cumulative += event.weight;
           if (rolled.value <= cumulative) {
             chosen = event;
@@ -294,9 +295,10 @@ export function selectOpenSlot(
     const qualification = qualifyNationalTeam(state, ruleset, step.index);
     if (!qualification.eligible) continue;
 
-    const activeInjury = state.health.episodes.some((episode) => episode.status === 'ACTIVE' || episode.status === 'REHAB');
+    // `injuryUnavailable` is produced by the current step's match wiring. The
+    // season value here is the live slot state, never the walk-start snapshot.
     const seasonInjury = state.season?.availability?.kind === 'INJURY';
-    if (injuryUnavailable || activeInjury || seasonInjury) {
+    if (injuryUnavailable || seasonInjury) {
       return {
         opened: false,
         nationalTeamAutoDecline: buildNationalTeamCallUpRecord(
@@ -354,6 +356,11 @@ export type PlayStepMatches = (stepIndex: number) => {
   injuryReturnMatchId: string | null;
   /** walk 중 새로 갱신된 health/availability까지 포함한 출전 불가 상태. */
   injuryUnavailable?: boolean;
+  /** Live selection/availability snapshot for slots opened after this step. */
+  squadRole?: import('./types.js').SquadRole;
+  playerStats?: import('./types.js').SeasonPlayerStats;
+  availability?: import('./types.js').Availability;
+  playerProfile?: import('./types.js').PlayerProfile;
 };
 
 /** T-2-004 D-38: `walkToNextDecision`이 매 step마다 `selectChapter`에 넘기는, step에 안 걸리는 맥락. */
@@ -418,10 +425,7 @@ export function walkToNextDecision(
     }
 
     const injuryUnavailable =
-      matchResult.injuryUnavailable === true ||
-      matchResult.records.some((match) => match.injuredOff) ||
-      state.season?.availability?.kind === 'INJURY' ||
-      state.health.episodes.some((episode) => episode.status === 'ACTIVE' || episode.status === 'REHAB');
+      matchResult.injuryUnavailable ?? matchResult.records.some((match) => match.injuredOff);
 
     const chapterOpen = selectChapter({
       step,
@@ -444,6 +448,21 @@ export function walkToNextDecision(
     matchesSoFar = [...matchesSoFar, ...matchResult.records];
     // T-3-001: MarketSummary.seasonIndex는 "시장이 열린 시점의 seasonHistory.length"(D-43) — season.index
     // (1부터 시작)가 아니라 그보다 1 작은 값이다.
+    const slotState = () => matchResult.squadRole === undefined || state.season === null
+      ? { ...state, nationalTeam: nationalTeamState }
+      : {
+          ...state,
+          nationalTeam: nationalTeamState,
+          player: matchResult.playerProfile === undefined
+            ? state.player
+            : { ...state.player, profile: matchResult.playerProfile },
+          season: {
+            ...state.season,
+            squadRole: matchResult.squadRole,
+            playerStats: matchResult.playerStats === undefined ? state.season.playerStats : matchResult.playerStats,
+            availability: matchResult.availability === undefined ? state.season.availability : matchResult.availability,
+          },
+        };
     let opened = selectOpenSlot(
       step,
       mode,
@@ -453,7 +472,7 @@ export function walkToNextDecision(
       chapterOpen,
       revision,
       chapterContext.seasonIndex - 1,
-      { ...state, nationalTeam: nationalTeamState },
+      slotState(),
       ruleset,
       injuryUnavailable,
     );
@@ -477,7 +496,7 @@ export function walkToNextDecision(
         chapterOpen,
         revision,
         chapterContext.seasonIndex - 1,
-        { ...state, nationalTeam: nationalTeamState },
+        slotState(),
         ruleset,
         injuryUnavailable,
       );
