@@ -16,7 +16,7 @@ import {
   Skeleton,
   StatusStrip,
 } from '@offside/ui';
-import { activeRuleset, contentForCareer } from '../engine/content.js';
+import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
@@ -110,12 +110,13 @@ export function EventDecisionScreen({
   }
 
   const pack = contentForCareer(state);
+  const ruleset = rulesetForCareer(state);
   const definition = pack.eventsById.get(pending.eventId);
   if (definition === undefined) {
     return <ErrorState message={`이벤트 정의를 찾을 수 없습니다: ${pending.eventId}`} />;
   }
 
-  const tokens = buildNarrativeTokens(state, pack, activeRuleset);
+  const tokens = buildNarrativeTokens(state, pack, ruleset);
   const profile = state.player.profile;
   const positionField = profile
     ? positionHeaderField(profile.primaryPosition, profile.preferredPosition)
@@ -196,7 +197,7 @@ export function EventDecisionScreen({
             archetype={{
               label: '아키타입',
               value: archetypeName(
-                activeRuleset,
+                ruleset,
                 profile?.archetypeId ?? state.player.draft.archetypeId,
               ),
             }}

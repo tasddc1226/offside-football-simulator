@@ -8,6 +8,7 @@ export {
 export { clamp } from './clamp.js';
 export { canonicalize, compareCodePoints, utf8Encode, type JsonValue } from './canonical.js';
 export { sha256Hex, hashState } from './hash.js';
+export { projectOfferSelection, seasonSquadSeed, type OfferProjection } from './offer-projection.js';
 export { seedRng, nextUint32, rollInt, roll100, type RngState } from './rng.js';
 export { rollRange } from './roll-range.js';
 export {

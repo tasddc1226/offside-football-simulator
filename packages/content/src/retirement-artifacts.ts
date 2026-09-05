@@ -1,4 +1,5 @@
 import ruleset100Manifest from '../rulesets/1.0.0/manifest.json' with { type: 'json' };
+import ruleset110Manifest from '../rulesets/1.1.0/manifest.json' with { type: 'json' };
 import { loadContentPack } from './packs/load-content-pack.ts';
 import { loadRuleset } from './rulesets/load-ruleset.ts';
 import { RulesetManifestSchema } from './schema/ruleset-manifest.ts';
@@ -16,6 +17,7 @@ export type RetirementArtifacts = Readonly<{
 
 const RULESET_MANIFESTS: Readonly<Record<string, unknown>> = Object.freeze({
   '1.0.0': ruleset100Manifest,
+  '1.1.0': ruleset110Manifest,
 });
 
 /** Return existing registry checksums, not a second hash dialect of parsed objects.

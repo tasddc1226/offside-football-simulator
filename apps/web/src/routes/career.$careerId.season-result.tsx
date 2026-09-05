@@ -12,7 +12,7 @@ import {
   buttonClassName,
   buttonStyle,
 } from '@offside/ui';
-import { activeRuleset } from '../engine/content.js';
+import { rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
@@ -52,7 +52,7 @@ export const Route = createFileRoute('/career/$careerId/season-result')({
   loader: async ({ params, deps }) => {
     const { state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
     const index = deps.season ?? state.seasonHistory.length - 1;
-    const view = deriveSeasonResultView(state, index, activeRuleset);
+    const view = deriveSeasonResultView(state, index, rulesetForCareer(state));
     if (view === null) {
       throw redirect({ to: SCREEN_ROUTES['SCR-029'], params: { careerId: params.careerId } });
     }
@@ -165,8 +165,8 @@ type StateDeltaRow = {
   boundaryReset: boolean;
 };
 
-function buildStateDeltaRows(view: SeasonResultView): StateDeltaRow[] {
-  const reset = activeRuleset.seasonBoundaryReset;
+function buildStateDeltaRows(view: SeasonResultView, ruleset: Parameters<typeof deriveSeasonResultView>[2]): StateDeltaRow[] {
+  const reset = ruleset.seasonBoundaryReset;
   return [
     {
       id: 'form',
@@ -211,7 +211,7 @@ function SeasonResultScreen() {
   useEffect(() => {
     if (query.data === undefined) return;
     const index = season ?? query.data.state.seasonHistory.length - 1;
-    const initialView = deriveSeasonResultView(query.data.state, index, activeRuleset);
+    const initialView = deriveSeasonResultView(query.data.state, index, rulesetForCareer(query.data.state));
     platform.analytics.track('screen_viewed', {
       screenId: initialView?.isYouth === true ? 'SCR-006' : 'SCR-015',
       careerPhase: query.data.state.seasonPhase,
@@ -221,8 +221,9 @@ function SeasonResultScreen() {
 
   if (query.data === undefined) return null;
   const { state } = query.data;
+  const ruleset = rulesetForCareer(state);
   const index = season ?? state.seasonHistory.length - 1;
-  const view = deriveSeasonResultView(state, index, activeRuleset);
+  const view = deriveSeasonResultView(state, index, ruleset);
   if (view === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
 
   const { common, positionCard, promise, selection } = view;
@@ -230,7 +231,7 @@ function SeasonResultScreen() {
     selection.possibleMinutes === 0
       ? null
       : Math.round((selection.minutes / selection.possibleMinutes) * 100);
-  const stateDeltaRows = buildStateDeltaRows(view);
+  const stateDeltaRows = buildStateDeltaRows(view, ruleset);
   const nextTarget = canPlanNextSeason(state) ? 'SCR-005' : screenForCareer(state).screenId;
 
   return (

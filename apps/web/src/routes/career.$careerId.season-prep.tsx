@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Button, ErrorState, ScreenIntro } from '@offside/ui';
 import { buildSeasonSteps, type SimulationMode } from '@offside/domain';
-import { activeRuleset } from '../engine/content.js';
+import { rulesetForCareer } from '../engine/content.js';
 import { recordFunnelReached, recordSeasonStart } from '../engine/funnel.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -87,17 +87,18 @@ function SeasonPrepScreen() {
   const { state } = query.data;
   const contract = state.contract;
   if (contract === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
+  const ruleset = rulesetForCareer(state);
 
-  const team = activeRuleset.teams.find((candidate) => candidate.id === contract.teamId);
+  const team = ruleset.teams.find((candidate) => candidate.id === contract.teamId);
   const league =
     team === undefined
       ? undefined
-      : activeRuleset.leagues.find((candidate) => candidate.id === team.leagueId);
+      : ruleset.leagues.find((candidate) => candidate.id === team.leagueId);
   const style =
     team === undefined
       ? undefined
-      : activeRuleset.tacticalStyles.find((candidate) => candidate.id === team.tacticalStyleId);
-  const previewSteps = buildSeasonSteps(activeRuleset.leagueCalendar, mode);
+      : ruleset.tacticalStyles.find((candidate) => candidate.id === team.tacticalStyleId);
+  const previewSteps = buildSeasonSteps(ruleset.leagueCalendar, mode);
 
   async function handleStart() {
     if (submittingRef.current || mode === undefined || focus === undefined) return;
@@ -167,7 +168,7 @@ function SeasonPrepScreen() {
         <SeasonTimeline steps={previewSteps} currentStep={0} />
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           컵 일정:{' '}
-          {activeRuleset.leagueCalendar.cupRounds
+          {ruleset.leagueCalendar.cupRounds
             .map((round) => `${CUP_ROUND_LABEL_KO[round.round]} step ${round.step}`)
             .join(' · ')}
         </p>

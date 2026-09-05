@@ -16,11 +16,10 @@ import type { LocalStore } from './ports/local-store.js';
 export type EngineClientDeps = {
   store: LocalStore;
   simulator: Simulator;
-  /**
-   * simulate()에 그대로 전달하는 룰셋. 버전별 선택·content 연동은 T-1-007·T-1-015에서 배선한다.
-   * 이 단계에서는 이 EngineClient 인스턴스의 모든 simulate 호출에 같은 룰셋을 쓴다.
-   */
+  /** 새 커리어의 기본 룰셋. 기존 커리어는 자신에게 고정된 버전을 사용한다. */
   ruleset: Ruleset;
+  /** 다른 저장 버전의 실행·복구용 immutable registry. 미지원 버전은 기본값으로 대체하지 않는다. */
+  rulesetForVersion?: (version: string) => Ruleset;
   now?: () => string;
   newId?: () => string;
   ownerProfileId?: () => string | null;
@@ -107,9 +106,20 @@ type ReadOutcome =
 export function createEngineClient(deps: EngineClientDeps): EngineClient {
   const store = deps.store;
   const simulator = deps.simulator;
-  const ruleset = deps.ruleset;
   const now = deps.now ?? (() => new Date().toISOString());
   const ownerProfileId = deps.ownerProfileId ?? (() => null);
+
+  function resolveRuleset(version: string): Ruleset | null {
+    try {
+      const candidate = deps.ruleset.version === version ? deps.ruleset : deps.rulesetForVersion?.(version);
+      return candidate?.version === version ? candidate : null;
+    } catch {
+      return null;
+    }
+  }
+  const missingRulesetError: EngineError = {
+    code: 'VERSION_MISMATCH', message: '이 커리어에 고정된 룰셋을 찾을 수 없다.',
+  };
 
   const queues = new Map<string, Promise<unknown>>();
 
@@ -210,6 +220,8 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
 
     let baseSnapshot: DomainSnapshot | null;
     const versions = readOutcome.versions;
+    const ruleset = resolveRuleset(versions.rulesetVersion);
+    if (ruleset === null) return { ok: false, error: missingRulesetError };
 
     if (readOutcome.kind === 'ready') {
       baseSnapshot = readOutcome.snapshot;
@@ -394,6 +406,8 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       rulesetVersion: readOutcome.career.rulesetVersion,
       contentPackVersion: readOutcome.career.contentPackVersion,
     };
+    const ruleset = resolveRuleset(versions.rulesetVersion);
+    if (ruleset === null) return { ok: false, error: missingRulesetError };
     const recovery = await recoverLatestSnapshot(
       simulator,
       readOutcome.priorSnapshots,

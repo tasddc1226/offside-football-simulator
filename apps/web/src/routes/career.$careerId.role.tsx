@@ -12,7 +12,7 @@ import {
   type CompareRow,
 } from '@offside/ui';
 import { deriveTacticalRoom } from '@offside/domain';
-import { activeRuleset } from '../engine/content.js';
+import { rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { POSITION_LABELS, ROLE_PROMISE_SENTENCE, SQUAD_ROLE_LABELS } from '../shared/labels.js';
@@ -57,9 +57,10 @@ function RoleProposalScreen() {
   const { state } = query.data;
   const pending = state.pending;
   if (pending === null || pending.kind !== 'ROLE_PROPOSAL') return null; // 라우트 loader가 보장한다. 방어적 fallback.
+  const ruleset = rulesetForCareer(state);
 
   const proposal = pending.proposal;
-  const room = deriveTacticalRoom(state, activeRuleset);
+  const room = deriveTacticalRoom(state, ruleset);
   const playerRank =
     room?.ranking.candidates.find((candidate) => candidate.id === 'PLAYER')?.rank ?? null;
 

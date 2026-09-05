@@ -11,7 +11,7 @@ import {
   type Simulator,
 } from '@offside/engine-client';
 import { platform } from '../platform/index.js';
-import { ACTIVE_RULESET_VERSION, resolveActiveContentPackVersion } from './versions.js';
+import { resolveActiveRulesetVersion, resolveActiveContentPackVersion } from './versions.js';
 
 export type AppEngine = {
   client: EngineClient;
@@ -30,11 +30,7 @@ export type AppEngineDeps = {
   newId?: () => string;
 };
 
-/**
- * `EngineClient`는 인스턴스당 룰셋 하나만 받는다(engine-client/src/engine.ts). Phase 1은 활성
- * 버전이 하나뿐이라 문제가 없고, 커리어별 룰셋 버전 선택은 Phase 6(서버가 현재 서비스 시즌을 줄 때)
- * 항목이다.
- */
+/** 생성 기본값과 별개로 기존 커리어 실행·복구는 저장된 룰셋 버전을 선택한다. */
 export function createAppEngine(deps: AppEngineDeps): AppEngine {
   const { store, simulator, ruleset, pack } = deps;
   const newId = deps.newId ?? (() => crypto.randomUUID());
@@ -46,6 +42,7 @@ export function createAppEngine(deps: AppEngineDeps): AppEngine {
   }
 
   const client = createEngineClient({ store, simulator, ruleset, newId,
+    rulesetForVersion: loadRuleset,
     retirementArtifacts: ({ rulesetVersion, contentPackVersion }) =>
       loadRetirementArtifacts(rulesetVersion, contentPackVersion),
   });
@@ -66,7 +63,7 @@ async function createDefaultAppEngine(): Promise<AppEngine> {
   const store = await platform.createLocalStore();
   const worker = new Worker(new URL('@offside/engine-client/worker', import.meta.url), { type: 'module' });
   const simulator = createWorkerSimulator(worker as unknown as Parameters<typeof createWorkerSimulator>[0]);
-  const ruleset = loadRuleset(ACTIVE_RULESET_VERSION);
+  const ruleset = loadRuleset(resolveActiveRulesetVersion());
   const pack = loadContentPack(resolveActiveContentPackVersion());
 
   return createAppEngine({ store, simulator, ruleset, pack });

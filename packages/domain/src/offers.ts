@@ -120,8 +120,11 @@ export function generateOffers(
     const shirtRoll = rollRange(state, rules.shirtNumber.min, rules.shirtNumber.max);
     state = shirtRoll.state;
 
-    const fitRoll = rollRange(state, rules.tacticalFitEstimate.min, rules.tacticalFitEstimate.max);
-    state = fitRoll.state;
+    const fitRoll =
+      ruleset.offerProjection === undefined
+        ? rollRange(state, rules.tacticalFitEstimate.min, rules.tacticalFitEstimate.max)
+        : null;
+    if (fitRoll !== null) state = fitRoll.state;
 
     const wage = lookupBandAmount(ruleset.contractRules.wageBands, team.wageBandId, band.id, 'wageBands');
     const signingBonus = lookupBandAmount(ruleset.contractRules.signingBonus, team.wageBandId, band.id, 'signingBonus');
@@ -141,7 +144,7 @@ export function generateOffers(
       appearancePromise: { minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[rolePromise] },
       positionPlan: primaryPosition,
       shirtNumber: shirtRoll.value,
-      tacticalFitEstimate: fitRoll.value,
+      tacticalFitEstimate: fitRoll?.value ?? rules.tacticalFitEstimate.min,
       competitorSummary: null,
       validUntilRevision: null,
       negotiable: { wage: false, role: false, length: false },

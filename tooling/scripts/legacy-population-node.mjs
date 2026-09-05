@@ -178,11 +178,15 @@ async function runPartitioned(command, baseArgs, directory, bundleHash) {
   return { merged: output, elapsedMs: performance.now() - started };
 }
 
-async function verify() {
+async function verify(args) {
   const directory = await mkdtemp(join(tmpdir(), 'offside-population-verify-'));
   const normal = join(directory, 'normal.json');
   const acceleratedOutput = join(directory, 'accelerated.json');
   const base = ['--count', '20', '--seasons', '20', '--smoke'];
+  for (const name of ['--ruleset-version', '--legacy-version', '--strategy']) {
+    const selected = value(args, name, undefined);
+    if (selected !== undefined) base.push(name, selected);
+  }
   const normalStarted = performance.now();
   await run(tsx, [
     script,
@@ -280,7 +284,7 @@ async function verify() {
 
 const args = process.argv.slice(2);
 if (args.includes('--verify')) {
-  await verify();
+  await verify(args);
 } else if (args.includes('--normal')) {
   await run(tsx, [script, ...args.filter((arg) => arg !== '--normal')]);
 } else {

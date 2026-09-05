@@ -16,7 +16,7 @@ import type { CompareCardItem, CompareRow } from '@offside/ui';
 import { RETRYABLE_BY_CODE } from '@offside/contracts';
 import type { Position } from '@offside/domain';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { activeRuleset as ruleset } from '../engine/content.js';
+import { rulesetForCareer } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { POSITION_LABELS } from '../shared/labels.js';
@@ -41,7 +41,7 @@ const CAPTION_STYLE = {
   lineHeight: 'var(--os-lh-caption)',
 } as const;
 
-function buildCompareData(position: Position): { cards: CompareCardItem[]; rows: CompareRow[] } {
+function buildCompareData(ruleset: ReturnType<typeof rulesetForCareer>, position: Position): { cards: CompareCardItem[]; rows: CompareRow[] } {
   const archetypes = archetypesForPosition(ruleset, position);
   const cards: CompareCardItem[] = archetypes.map((archetype) => ({
     id: archetype.id,
@@ -101,6 +101,7 @@ function StyleScreen() {
 
   const committing = screenState.kind === 'COMMITTING';
   const position = query.data?.state.player.draft.position;
+  const ruleset = query.data === undefined ? null : rulesetForCareer(query.data.state);
 
   async function handleNext() {
     if (archetypeId === '') {
@@ -157,7 +158,8 @@ function StyleScreen() {
     );
   }
 
-  const { cards, rows } = buildCompareData(position);
+  if (ruleset === null) return null;
+  const { cards, rows } = buildCompareData(ruleset, position);
 
   return (
     <div className="os-screen">

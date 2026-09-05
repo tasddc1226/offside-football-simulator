@@ -33,7 +33,7 @@ import {
   Toast,
   type CareerTimelineItem,
 } from '@offside/ui';
-import { activeRuleset, contentForCareer } from '../engine/content.js';
+import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { recordSeasonSettled, sumStepSummaries, trackStepPassed } from '../engine/funnel.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { useEngine } from '../engine/use-engine.js';
@@ -98,14 +98,14 @@ function relationshipRows(state: CareerState, revealNumbers: boolean) {
   }));
 }
 
-function chapterCardLabel(state: CareerState, pending: ChapterPending): string {
+function chapterCardLabel(state: CareerState, pending: ChapterPending, ruleset: Ruleset): string {
   if (pending.trigger === 'NATIONAL_DEBUT') {
     const opponentName = pending.virtualOpponent?.opponentName;
     return opponentName === undefined ? '대표팀 데뷔전' : `대표팀 데뷔전 — ${opponentName}`;
   }
 
   const opponent = state.season?.matches.find((candidate) => candidate.id === pending.matchId)?.opponent;
-  const opponentName = opponent === undefined ? undefined : opponentDisplayName(opponent, activeRuleset);
+  const opponentName = opponent === undefined ? undefined : opponentDisplayName(opponent, ruleset);
   return opponentName === undefined ? '핵심 경기' : `핵심 경기 — ${opponentName}`;
 }
 
@@ -516,7 +516,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
     return (
       <Card className="flex flex-col gap-os-4">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          {chapterCardLabel(state, pending)}
+          {chapterCardLabel(state, pending, rulesetForCareer(state))}
         </p>
         <Link
           to="/career/$careerId/chapter"
@@ -622,7 +622,8 @@ function CareerDashboard() {
     : { label: '포지션', value: draft.position ? POSITION_LABELS[draft.position] : '—' };
   const hasContract = state.contract !== null;
   const season = state.season;
-  const room = deriveTacticalRoom(state, activeRuleset);
+  const ruleset = rulesetForCareer(state);
+  const room = deriveTacticalRoom(state, ruleset);
   const seasonChronicleItems = buildSeasonChronicleItems(state);
   const pastSeasonLinks = buildPastSeasonLinks(state);
   // C11: SCR-017 상단(MarketSummary)에만 있던 시장 사유·제안 수를 휴대폰 탭에도 조건부로 보여준다
@@ -641,11 +642,11 @@ function CareerDashboard() {
       />
       <PlayerHeader
         name={name}
-        team={currentTeamName(state, activeRuleset)}
+        team={currentTeamName(state, ruleset)}
         position={positionField}
         archetype={{
           label: '아키타입',
-          value: archetypeName(activeRuleset, profile?.archetypeId ?? draft.archetypeId),
+          value: archetypeName(ruleset, profile?.archetypeId ?? draft.archetypeId),
         }}
         shirtNumber={{
           label: '등번호',
@@ -747,12 +748,12 @@ function CareerDashboard() {
                           className="os-num font-os text-os-text-2"
                           style={CAPTION_STYLE}
                         >
-                          {competitionSummaryLine(record, season, activeRuleset)}
+                          {competitionSummaryLine(record, season, ruleset)}
                         </p>
                       ))}
                     </div>
                     <div className="flex flex-col gap-os-2">
-                      {buildScheduleRows(season, activeRuleset).map((row) => (
+                      {buildScheduleRows(season, ruleset).map((row) => (
                         <div
                           key={`${row.step}-${row.order}`}
                           className="flex min-w-0 flex-col gap-os-1 rounded-os-m border border-os-border px-os-3 py-os-3 font-os text-os-text-2"

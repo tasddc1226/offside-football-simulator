@@ -25,13 +25,18 @@ import {
   type DomainSnapshot,
   type SimulationMode,
   type StatGroup,
+  type Offer,
 } from '../../packages/domain/src/types.ts';
 
-const RULESET_VERSION = '1.0.0';
+const RULESET_VERSION = arg(process.argv.slice(2), '--ruleset-version') ?? '1.0.0';
 const CONTENT_PACK_VERSION = '0.3.0';
 const POSITIONS = ['GK', 'DF', 'MF', 'FW'] as const satisfies readonly StatGroup[];
-const PROTOCOL_VERSION = 'phase5-population-3-ui-choices';
-const CHOICE_POLICY = 'ui-action-strata-v1';
+const STRATEGY = arg(process.argv.slice(2), '--strategy') ?? 'random';
+if (!['random', 'opportunity', 'mixed'].includes(STRATEGY))
+  throw new Error('--strategy must be random, opportunity, or mixed');
+const PROTOCOL_VERSION = STRATEGY === 'random'
+  ? 'phase5-population-3-ui-choices' : 'phase5-population-4-informed-choices';
+const CHOICE_POLICY = STRATEGY === 'random' ? 'ui-action-strata-v1' : `ui-${STRATEGY}-v1`;
 type Position = (typeof POSITIONS)[number];
 type PopulationRow = Readonly<{
   position: Position;
@@ -56,6 +61,7 @@ type PopulationRow = Readonly<{
   peakOvr: number;
   trophies: number;
   endingCandidates: readonly string[];
+  strategy: string;
 }>;
 type Group = Readonly<{ position: Position; rows: readonly PopulationRow[]; hash: string }>;
 type Checkpoint = {
@@ -67,6 +73,7 @@ type Checkpoint = {
   countPerPosition: number;
   maxSeasons: number;
   legacyVersion: LegacyVersion;
+  choicePolicy: string;
   range?: { start: number; end: number };
   artifacts: ReturnType<typeof sourceArtifacts>;
   groups: Partial<Record<Position, Group>>;
@@ -112,6 +119,26 @@ function command(
   return result.snapshot;
 }
 
+/** Synthetic strategy, fixed before replay. Only public offer/role/age information is used. */
+function informedStrategy(careerId: string): boolean {
+  return STRATEGY === 'opportunity' ||
+    (STRATEGY === 'mixed' && chooseDeterministicIndex(careerId, 'career-strategy', 2) === 0);
+}
+
+function opportunityOffer(offers: readonly Offer[], currentTeamId: string | undefined): Offer | undefined {
+  const ranked = offers.toSorted((a, b) =>
+    (a.competitorSummary?.rank ?? 99) - (b.competitorSummary?.rank ?? 99) ||
+    b.tacticalFitEstimate - a.tacticalFitEstimate ||
+    Number(b.teamId === currentTeamId) - Number(a.teamId === currentTeamId),
+  );
+  const best = ranked[0];
+  const stay = offers.find((offer) => offer.teamId === currentTeamId);
+  // Avoid a move for a negligible fit advantage when the projected competition rank is equal.
+  if (best && stay && best.competitorSummary?.rank === stay.competitorSummary?.rank &&
+    best.tacticalFitEstimate - stay.tacticalFitEstimate < 10) return stay;
+  return best;
+}
+
 function closePending(snapshot: DomainSnapshot, id: string): DomainSnapshot {
   const pending = snapshot.state.pending;
   const seed = snapshot.state.careerId;
@@ -128,7 +155,9 @@ function closePending(snapshot: DomainSnapshot, id: string): DomainSnapshot {
       `market:${snapshot.state.seasonHistory.length}:${snapshot.state.currentStep}`,
       offers.length + 1,
     );
-    const offer = offers[index] ?? (snapshot.state.contract === null ? offers[0] : undefined);
+    const offer = informedStrategy(seed)
+      ? opportunityOffer(offers, snapshot.state.contract?.teamId)
+      : offers[index] ?? (snapshot.state.contract === null ? offers[0] : undefined);
     return offer === undefined
       ? command(snapshot, 'REJECT_OFFER', { offerId: null }, id)
       : command(snapshot, 'ACCEPT_OFFER', { offerId: offer.id }, id);
@@ -141,7 +170,7 @@ function closePending(snapshot: DomainSnapshot, id: string): DomainSnapshot {
         statGroupOf(snapshot.state.player.profile!.primaryPosition);
     const accept =
       pending.proposal.type === 'KEEP' ||
-      (!crossesGroup && chooseDeterministicIndex(seed, `role:${snapshot.revision}`, 2) === 0);
+      (!crossesGroup && (informedStrategy(seed) || chooseDeterministicIndex(seed, `role:${snapshot.revision}`, 2) === 0));
     return command(snapshot, 'RESOLVE_ROLE', { decision: accept ? 'ACCEPT' : 'DECLINE' }, id);
   }
   if (pending?.kind === 'LOAN_RETURN') {
@@ -250,7 +279,9 @@ function runCareer(
       'START_SEASON',
       {
         simulationMode,
-        trainingFocus: ['ROLE', 'TECHNICAL', 'PHYSICAL', 'MENTAL'][
+        trainingFocus: informedStrategy(snapshot.state.careerId)
+          ? snapshot.state.age < 30 ? 'ROLE' : 'MENTAL'
+          : ['ROLE', 'TECHNICAL', 'PHYSICAL', 'MENTAL'][
           chooseDeterministicIndex(seed, `training:${seasons}`, 4)
         ],
         serviceSeasonId: `population-${position}-${seedIndex}-${seasonIndex}`,
@@ -335,6 +366,7 @@ function runCareer(
     ),
     trophies: evidence.trophies,
     endingCandidates: result.endingCandidates,
+    strategy: informedStrategy(snapshot.state.careerId) ? 'opportunity' : 'random',
   };
 }
 
@@ -380,6 +412,7 @@ async function readCheckpoint(
       checkpoint.countPerPosition !== count ||
       checkpoint.maxSeasons !== maxSeasons ||
       checkpoint.legacyVersion !== expectedLegacyVersion ||
+      checkpoint.choicePolicy !== CHOICE_POLICY ||
       (expectedRange !== undefined &&
         (checkpoint.range?.start !== expectedRange.start ||
           checkpoint.range?.end !== expectedRange.end)) ||
@@ -429,6 +462,7 @@ async function readCheckpoint(
         countPerPosition: count,
         maxSeasons,
         legacyVersion: expectedLegacyVersion,
+        choicePolicy: CHOICE_POLICY,
         ...(expectedRange === undefined ? {} : { range: expectedRange }),
         artifacts,
         groups: {},
@@ -549,6 +583,7 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
       countPerPosition: count,
       maxSeasons: seasons,
       legacyVersion,
+      choicePolicy: CHOICE_POLICY,
       artifacts,
       groups: {},
     };

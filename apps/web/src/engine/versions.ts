@@ -1,6 +1,6 @@
 // 커리어별 룰셋·팩 버전 선택은 Phase 6(서버가 현재 서비스 시즌을 알려줄 때) 항목이다. Phase 1은
 // 앱 전체가 이 상수 하나만 쓴다.
-import { PACK_VERSIONS } from '@offside/content';
+import { PACK_VERSIONS, RULESET_VERSIONS } from '@offside/content';
 
 export const ACTIVE_RULESET_VERSION = '1.0.0';
 export const ACTIVE_CONTENT_PACK_VERSION = '0.1.0';
@@ -21,6 +21,17 @@ export const FALLBACK_SERVICE_SEASON_ID = 'svc_kickoff';
  * 읽는 싱글턴)가 이 함수 하나만 써야 두 값이 어긋나지 않는다(PR 본문 "팩 선택 지점" 표 참고).
  */
 export const E2E_CONTENT_PACK_STORAGE_KEY = 'offside:e2e-content-pack';
+export const E2E_RULESET_STORAGE_KEY = 'offside:e2e-ruleset';
+
+/** 신규 규칙 검증은 명시적 QA에서만 허용한다. 저장된 커리어의 버전은 바꾸지 않는다. */
+export function resolveActiveRulesetVersion(): string {
+  const expanded = import.meta.env.MODE === 'expanded' ? import.meta.env.VITE_RULESET_VERSION : undefined;
+  const dev = import.meta.env.DEV && typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function'
+    ? localStorage.getItem(E2E_RULESET_STORAGE_KEY) : undefined;
+  const candidate = expanded ?? dev;
+  return candidate && (RULESET_VERSIONS as readonly string[]).includes(candidate)
+    ? candidate : ACTIVE_RULESET_VERSION;
+}
 
 export function resolveActiveContentPackVersion(): string {
   if (import.meta.env.DEV && typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {

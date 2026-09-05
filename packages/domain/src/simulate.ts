@@ -29,6 +29,7 @@ import { findInjuryReturnMatchId } from './injury-return.js';
 import { generateMarket, openMarketAfterSettlement } from './market.js';
 import { computeContractSeasonsRemaining } from './market-value.js';
 import { buildDefaultManager } from './manager.js';
+import { projectOfferSelection, seasonSquadSeed } from './offer-projection.js';
 import {
   applyNationalTeamCallUp,
   buildNationalTeamCallUpRecord,
@@ -1044,7 +1045,13 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     (reservedManager?.id !== previousManagerId || previousTeamId !== state.contract.teamId);
   const managerTrust = managerChanged ? manager.trustBase : state.relationships.managerTrust;
 
-  const generatedCompetitors = generateCompetitors(ruleset, team, state.rngState);
+  const generatedCompetitors = generateCompetitors(
+    ruleset,
+    team,
+    ruleset.offerProjection === undefined
+      ? state.rngState
+      : seedRng(seasonSquadSeed(team.id, state.seasonHistory.length + 1)),
+  );
 
   const tacticalFit = computeTacticalFit(
     state.attributes,
@@ -1082,7 +1089,9 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     nextManager: null,
     context: { ...state.context, tacticalFit, squadStatus },
     relationships: { ...state.relationships, managerTrust },
-    rngState: generatedCompetitors.rngState,
+    // 1.1's squad roster is an independent shared-world stream. The decision RNG
+    // remains untouched so previews cannot perturb events, contracts, or matches.
+    rngState: ruleset.offerProjection === undefined ? generatedCompetitors.rngState : state.rngState,
   };
 
   const calendar = ruleset.leagueCalendar;
@@ -1717,12 +1726,37 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
         nextRevision,
         state.rngState,
       );
+      const projectedOffers =
+        input.ruleset.offerProjection === undefined
+          ? generated.offers
+          : generated.offers.map((offer) => {
+              const team = findTeam(input.ruleset, offer.teamId);
+              const background = input.ruleset.backgrounds.find(
+                (candidate) => candidate.id === state.player.profile!.backgroundId,
+              );
+              const projection = projectOfferSelection({
+                state,
+                ruleset: input.ruleset,
+                team,
+                rolePromise: offer.rolePromise,
+                seasonIndex: state.seasonHistory.length + 1,
+                managerTrust:
+                  background?.startTeamId === team.id
+                    ? state.relationships.managerTrust
+                    : input.ruleset.contractRules.newClubManagerTrust,
+              });
+              return {
+                ...offer,
+                tacticalFitEstimate: projection.tacticalFit,
+                competitorSummary: projection.competitorSummary,
+              };
+            });
       const nextState: CareerState = {
         ...state,
         rngState: generated.rngState,
         pending: {
           kind: 'OFFERS',
-          offers: generated.offers,
+          offers: projectedOffers,
           // T-3-001 D-43: Phase 1 첫 계약 시장. 안전 잔류 제안 생성기는 T-3-002 몫이라 지금은 null.
           market: {
             openedAtRevision: nextRevision,

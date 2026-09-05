@@ -13,7 +13,7 @@ import {
   buttonStyle,
 } from '@offside/ui';
 import type { SimulationMode } from '@offside/domain';
-import { activeRuleset } from '../engine/content.js';
+import { rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
@@ -80,12 +80,13 @@ function PreseasonScreen() {
   const profile = state.player.profile;
   const contract = state.contract;
   if (profile === null || contract === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
+  const ruleset = rulesetForCareer(state);
 
-  const team = activeRuleset.teams.find((candidate) => candidate.id === contract.teamId);
+  const team = ruleset.teams.find((candidate) => candidate.id === contract.teamId);
   const style =
     team === undefined
       ? undefined
-      : activeRuleset.tacticalStyles.find((candidate) => candidate.id === team.tacticalStyleId);
+      : ruleset.tacticalStyles.find((candidate) => candidate.id === team.tacticalStyleId);
 
   return (
     <div className="os-screen">
@@ -96,9 +97,9 @@ function PreseasonScreen() {
       />
       <PlayerHeader
         name={profile.name}
-        team={currentTeamName(state, activeRuleset)}
+        team={currentTeamName(state, ruleset)}
         position={positionHeaderField(profile.primaryPosition, profile.preferredPosition)}
-        archetype={{ label: '아키타입', value: archetypeName(activeRuleset, profile.archetypeId) }}
+        archetype={{ label: '아키타입', value: archetypeName(ruleset, profile.archetypeId) }}
         shirtNumber={{ label: '등번호', value: String(contract.shirtNumber) }}
       />
       <StatusStrip items={u18StatusStripItems(state)} />

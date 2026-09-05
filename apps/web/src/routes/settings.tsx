@@ -37,14 +37,13 @@ import {
   unlinkGoogle,
 } from '../api/client.js';
 import { ensureProfile } from '../api/profile.js';
-import { activeContentPack } from '../engine/content.js';
+import { activeContentPack, activeRuleset } from '../engine/content.js';
 import { getAppEngine } from '../engine/engine.js';
 import { retryPendingDeletes } from '../engine/pending-delete.js';
 import { reconcileAfterRecovery } from '../engine/reconcile.js';
 import { getSyncClient, requeueAllUnsynced } from '../engine/sync.js';
 import { useCareerList } from '../engine/use-career.js';
 import { useSyncSummary } from '../engine/use-sync.js';
-import { ACTIVE_RULESET_VERSION } from '../engine/versions.js';
 import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
 import { formatLocalDate, formatLocalDateTime } from '../shared/format.js';
@@ -1349,7 +1348,7 @@ function SettingsScreen() {
         >
           <div className="flex justify-between gap-os-2">
             <dt>룰셋</dt>
-            <dd>{ACTIVE_RULESET_VERSION}</dd>
+            <dd>{activeRuleset.version}</dd>
           </div>
           <div className="flex justify-between gap-os-2">
             <dt>콘텐츠 팩</dt>
