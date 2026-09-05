@@ -111,3 +111,34 @@ test('SCR-011에서 시즌을 시작한 뒤 뒤로 가기로 재진입해도 시
   // 뒤로 가기로 재진입해도 로더가 즉시 돌려보내 새 명령이 나가지 않는다 — revisionAfterStart와 같아야 한다.
   expect(revisionFinal).toBe(revisionAfterStart);
 });
+
+/** T-4-010: 시즌 1 결산 뒤 시장 사유가 INTEREST("타 구단 관심")로 열리는 결정론적 seed. DEV
+ * 훅(`offside:e2e-seed`)으로 20개 후보 중 `e2e/_seed-search.spec.ts`(PR에는 남기지 않은 탐색용
+ * 스펙)로 찾았다 — 매번 새 무작위 seed를 쓰면 이 경로(타이밍이 아니라 seed 의존 상태 분기, 원인 2)가
+ * 우연히만 재현돼 회귀를 잡지 못한다. */
+const E2E_INTEREST_MARKET_SEED = 't4010-interest-search-11';
+
+test('시즌 1 결산 뒤 INTEREST 시장이 열리면 안전 잔류 제안을 수락하고 대시보드로 돌아온다', async ({ page }) => {
+  await page.addInitScript((seed) => window.localStorage.setItem('offside:e2e-seed', seed), E2E_INTEREST_MARKET_SEED);
+  await completeOnboardingThroughContract(page);
+
+  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await resolveRoleProposal(page);
+  await advanceThroughSeasonToSettlement(page);
+
+  await page.getByRole('button', { name: '결산하기' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+
+  await page.getByRole('link', { name: '대시보드' }).click();
+  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+
+  const offersCta = page.getByRole('link', { name: '제안 보기' });
+  await expect(offersCta).toBeVisible();
+  await offersCta.click();
+  await expect(page.getByText('타 구단 관심')).toBeVisible();
+  // signFirstOffer는 offers[0](안전 잔류)을 수락한다 — 이 분기는 transfer-result를 거치지 않고
+  // 대시보드로 바로 돌아온다(helper 주석 참고).
+  await signFirstOffer(page);
+  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+});

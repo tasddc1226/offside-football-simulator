@@ -54,6 +54,12 @@ jobs:
       - run: pnpm --filter @offside/web e2e
         env:
           CI: 'true'
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: apps/web/test-results
+          retention-days: 7
 
   deploy-preview:
     name: Deploy PR preview
