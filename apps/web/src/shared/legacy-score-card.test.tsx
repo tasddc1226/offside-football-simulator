@@ -25,6 +25,8 @@ describe('LegacyScoreCard', () => {
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('원클럽 레전드');
     expect(screen.getByText('88')).toBeInTheDocument();
     expect(screen.getByText('레전드')).toBeInTheDocument();
+    expect(screen.getByText('자동 시뮬레이션 참조집단 기준')).toBeInTheDocument();
+    expect(screen.getByText('실제 이용자 순위가 아닙니다.')).toBeInTheDocument();
     expect(screen.getByText('참조집단의 84%보다 앞섰다')).toBeInTheDocument();
     expect(screen.getByText('상위 기여 요인')).toBeInTheDocument();
     expect(screen.getByText('아쉬운 기회')).toBeInTheDocument();

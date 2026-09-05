@@ -46,7 +46,7 @@ type Checkpoint = {
   policyChecksum: string;
   countPerPosition: number;
   maxSeasons: number;
-  artifacts: ReturnType<typeof loadRetirementArtifacts>;
+  artifacts: ReturnType<typeof sourceArtifacts>;
   groups: Partial<Record<Position, Group>>;
 };
 const GENERATOR_CODE_HASH = process.env.LEGACY_POPULATION_BUNDLE_HASH ?? 'UNHASHED_WORKTREE';
@@ -55,6 +55,12 @@ function canonicalAny(value: unknown): string {
 }
 const runtimeRuleset = loadRuleset(RULESET_VERSION);
 const POLICY_CHECKSUM = sha256Hex(canonicalAny(LEGACY_POLICY));
+// A published reference population must never become an input to its own generation.
+function sourceArtifacts() {
+  const { rulesetVersion, rulesetChecksum, contentPackVersion, contentPackChecksum } =
+    loadRetirementArtifacts(RULESET_VERSION, CONTENT_PACK_VERSION);
+  return { rulesetVersion, rulesetChecksum, contentPackVersion, contentPackChecksum };
+}
 
 const seasonLog = (seasonRaw as { commands: Record<SimulationMode, SeasonLog['commands']> })
   .commands.FAST;
@@ -190,7 +196,7 @@ function runCareer(
   snapshot = command(snapshot, 'RETIRE', { choice: 'RETIRE' }, `${position}-${seedIndex}-retire`);
   if (snapshot.state.status !== 'RETIRED')
     throw new Error(`retirement did not settle for ${position}/${seedIndex}`);
-  const artifacts = loadRetirementArtifacts(RULESET_VERSION, CONTENT_PACK_VERSION);
+  const artifacts = sourceArtifacts();
   const context = {
     binding: {
       careerId: snapshot.state.careerId,
@@ -363,7 +369,7 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   );
   const outputPath = resolve(arg(argv, '--out') ?? 'artifacts/legacy-population.json');
   const smoke = argv.includes('--smoke');
-  const artifacts = loadRetirementArtifacts(RULESET_VERSION, CONTENT_PACK_VERSION);
+  const artifacts = sourceArtifacts();
   const positionArg = arg(argv, '--position');
   const positions =
     positionArg === undefined
