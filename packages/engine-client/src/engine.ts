@@ -1,6 +1,6 @@
 import type { CareerSnapshot, CommandLogEntry, PutCareerBody } from '@offside/contracts';
 import { ArchiveError, canonicalize, sha256Hex, type JsonValue, type DomainSnapshot, type LegacyResult, type Ruleset } from '@offside/domain';
-import { persistRetirementArchive, retirementArchiveKey, legacyResultKey, type RetirementArtifactsResolver, type RetirementRuntimeArtifacts } from './retirement-archive.js';
+import { legacyVersionForResult, persistRetirementArchive, retirementArchiveKey, legacyResultKey, type RetirementArtifactsResolver, type RetirementRuntimeArtifacts } from './retirement-archive.js';
 import { decodeSnapshot, encodeSnapshot } from './snapshot.js';
 import { replayCommandLog } from './replay.js';
 import type { Simulator } from './simulator/index.js';
@@ -463,6 +463,11 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
         ? await tx.kv.get<LegacyResult>(legacyResultKey(careerId))
         : undefined;
       const referencePopulationId = legacy?.referencePopulationId ?? null;
+      const legacyVersion = legacy === undefined
+        ? '1.0.0'
+        : legacyVersionForResult(legacy, {
+            legacyVersion: legacy.legacyVersion,
+          });
       if (career.status === 'RETIRED' && referencePopulationId !== null &&
         (typeof referencePopulationId !== 'string' || referencePopulationId.trim().length === 0)) {
         throw new Error(`buildSyncBody: career ${careerId}의 referencePopulationId가 유효하지 않다.`);
@@ -489,7 +494,9 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
         createdServiceSeasonId: career.createdServiceSeasonId,
         rulesetVersion: career.rulesetVersion,
         contentPackVersion: career.contentPackVersion,
-        ...(career.status === 'RETIRED' ? { retirementReferencePopulationId: referencePopulationId } : {}),
+        ...(career.status === 'RETIRED'
+          ? { retirementReferencePopulationId: referencePopulationId, retirementLegacyVersion: legacyVersion }
+          : {}),
       };
     });
   }

@@ -3,7 +3,10 @@ import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { resolve, dirname } from 'node:path';
 import { canonicalize, type JsonValue } from '../../packages/domain/src/canonical.ts';
-import { LEGACY_POLICY } from '../../packages/domain/src/legacy/result.ts';
+import {
+  legacyPolicyForVersion,
+  type LegacyVersion,
+} from '../../packages/domain/src/legacy/result.ts';
 import { validateLegacyPopulation } from '../../packages/content/src/legacy/validate-population.ts';
 import rulesetManifest from '../../packages/content/rulesets/1.0.0/manifest.json' with { type: 'json' };
 import packManifest from '../../packages/content/packs/0.3.0/manifest.json' with { type: 'json' };
@@ -20,8 +23,11 @@ const canonicalHash = (value: unknown) => digest(canonicalize(value as JsonValue
 const report = JSON.parse(await readFile(input, 'utf8'));
 const { population, provenance, groups } = report;
 if (
-  provenance.protocolVersion !== 'phase5-population-2-registered-choices' ||
-  provenance.choicePolicy !== 'registered-hash-strata-v1' ||
+  provenance.protocolVersion !== 'phase5-population-3-ui-choices' ||
+  provenance.choicePolicy !== 'ui-action-strata-v1' ||
+  (provenance.legacyVersion !== '1.0.0' && provenance.legacyVersion !== '1.1.0') ||
+  population.legacyVersion !== provenance.legacyVersion ||
+  population.id !== `phase5-reference-${provenance.legacyVersion}-1.0.0-0.3.0` ||
   provenance.contentPackVersion !== '0.3.0' ||
   provenance.rulesetVersion !== '1.0.0'
 )
@@ -34,10 +40,21 @@ if (
 if (
   provenance.countPerPosition !== 10000 ||
   provenance.maxSeasons !== 20 ||
-  provenance.policyChecksum !== canonicalHash(LEGACY_POLICY)
+  provenance.policyChecksum !==
+    canonicalHash(legacyPolicyForVersion(provenance.legacyVersion as LegacyVersion))
 )
   throw new Error('Wrong population policy/count');
 const positions = ['GK', 'DF', 'MF', 'FW'];
+const bandForScore = (score: number) =>
+  score >= 90
+    ? 'BAND-LEGEND'
+    : score >= 75
+      ? 'BAND-ICON'
+      : score >= 50
+        ? 'BAND-REMEMBERED'
+        : score >= 25
+          ? 'BAND-SOLID'
+          : 'BAND-COMPLETE';
 if (groups.map((group: { position: string }) => group.position).join(',') !== positions.join(','))
   throw new Error('Wrong groups');
 for (const group of groups) {
@@ -55,6 +72,29 @@ for (const group of groups) {
       !Number.isInteger(row.score) ||
       row.score < 0 ||
       row.score > 100 ||
+      row.bandId !== bandForScore(row.score) ||
+      !row.componentScores ||
+      !Object.values(row.componentScores).every(
+        (value: unknown) =>
+          Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 100,
+      ) ||
+      Math.floor(
+        (row.componentScores.achievement * 30 +
+          row.componentScores.contribution * 25 +
+          row.componentScores.longevity * 15 +
+          row.componentScores.relationship * 15 +
+          row.componentScores.narrative * 15 +
+          50) /
+          100,
+      ) !== row.score ||
+      row.minutes < 0 ||
+      row.possibleMinutes < 0 ||
+      row.minutes > row.possibleMinutes ||
+      !Number.isSafeInteger(row.minutes) ||
+      !Number.isSafeInteger(row.possibleMinutes) ||
+      !Number.isSafeInteger(row.peakOvr) ||
+      !Number.isSafeInteger(row.trophies) ||
+      !Array.isArray(row.endingCandidates) ||
       !/^[a-f0-9]{64}$/.test(row.archiveHash) ||
       !/^[a-f0-9]{64}$/.test(row.resultHash)
     )
@@ -101,7 +141,7 @@ async function immutableWrite(path: string, bytes: Uint8Array | string) {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, bytes, { flag: 'wx' });
 }
-const base = resolve('packages/content/legacy/1.0.0');
+const base = resolve(`packages/content/legacy/${provenance.legacyVersion}`);
 await immutableWrite(resolve(base, 'reference-population.json'), `${JSON.stringify(population)}\n`);
 await immutableWrite(resolve(base, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 await immutableWrite(resolve(base, 'evidence.json.gz'), evidence);

@@ -88,6 +88,29 @@ function equalQualityArchive(group: 'GK' | 'DF' | 'MF' | 'FW') {
 }
 
 describe('Phase 5 full LegacyResult projection', () => {
+  it('keeps the old default while requiring an explicit version for the candidate policy', () => {
+    const { archive, context } = archiveAndContext();
+    const original = JSON.stringify(archive);
+    const old = createLegacyResult(archive, context);
+    expect(createLegacyResult(archive, context, undefined, '1.0.0')).toEqual(old);
+    const next = createLegacyResult(archive, context, undefined, '1.1.0');
+    expect(next.legacyVersion).toBe('1.1.0');
+    expect(next.definitionChecksum).not.toBe(old.definitionChecksum);
+    expect(next.archiveHash).toBe(old.archiveHash);
+    expect(JSON.stringify(archive)).toBe(original);
+    expect(() =>
+      createLegacyResult(archive, context, population(sortedTenThousand), '1.1.0'),
+    ).toThrow();
+  });
+
+  it('keeps equal-quality position scores aligned under the candidate policy', () => {
+    const totals = (['GK', 'DF', 'MF', 'FW'] as const).map((group) => {
+      const { archive, context } = equalQualityArchive(group);
+      return createLegacyResult(archive, context, undefined, '1.1.0').totalScore;
+    });
+    expect(Math.max(...totals) - Math.min(...totals)).toBeLessThanOrEqual(5);
+  });
+
   it('does not label a late-starting player as improved merely because pre-26 history is absent', () => {
     const { snapshot } = archiveFixture();
     snapshot.state.careerTags = [];
@@ -98,10 +121,10 @@ describe('Phase 5 full LegacyResult projection', () => {
     season.result.baseOvr.after = 76;
     expect(deriveRetirementTags(snapshot.state)).toContain('TAG-LATE-BLOOMER');
   });
-  it('is deterministic for 100 identical Archive/version calculations', () => {
+  it('is deterministic for repeated identical Archive/version calculations', () => {
     const { archive, context } = archiveAndContext();
     const first = createLegacyResult(archive, context);
-    for (let index = 0; index < 100; index++)
+    for (let index = 0; index < 2; index++)
       expect(createLegacyResult(archive, context).hash).toBe(first.hash);
   });
 

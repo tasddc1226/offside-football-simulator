@@ -5,7 +5,12 @@ import { loadRuleset } from '../../packages/content/src/rulesets/load-ruleset.ts
 import { loadContentPack } from '../../packages/content/src/packs/load-content-pack.ts';
 import { canonicalize, type JsonValue } from '../../packages/domain/src/canonical.ts';
 import { createCareerArchiveCore } from '../../packages/domain/src/legacy/archive.ts';
-import { createLegacyResult, LEGACY_POLICY } from '../../packages/domain/src/legacy/result.ts';
+import {
+  createLegacyResult,
+  deriveLegacyEvidence,
+  legacyPolicyForVersion,
+  type LegacyVersion,
+} from '../../packages/domain/src/legacy/result.ts';
 import { retirementDecisionRequired } from '../../packages/domain/src/legacy/career-retirement.ts';
 import { sha256Hex } from '../../packages/domain/src/hash.ts';
 import { careerEventChoices } from '../../packages/domain/src/legacy/career-event.ts';
@@ -25,7 +30,8 @@ import {
 const RULESET_VERSION = '1.0.0';
 const CONTENT_PACK_VERSION = '0.3.0';
 const POSITIONS = ['GK', 'DF', 'MF', 'FW'] as const satisfies readonly StatGroup[];
-const PROTOCOL_VERSION = 'phase5-population-2-registered-choices';
+const PROTOCOL_VERSION = 'phase5-population-3-ui-choices';
+const CHOICE_POLICY = 'ui-action-strata-v1';
 type Position = (typeof POSITIONS)[number];
 type PopulationRow = Readonly<{
   position: Position;
@@ -42,6 +48,14 @@ type PopulationRow = Readonly<{
   backgroundId: string;
   simulationMode: SimulationMode;
   finalChoice: string;
+  componentScores: Readonly<
+    Record<'achievement' | 'contribution' | 'longevity' | 'relationship' | 'narrative', number>
+  >;
+  minutes: number;
+  possibleMinutes: number;
+  peakOvr: number;
+  trophies: number;
+  endingCandidates: readonly string[];
 }>;
 type Group = Readonly<{ position: Position; rows: readonly PopulationRow[]; hash: string }>;
 type Checkpoint = {
@@ -52,6 +66,8 @@ type Checkpoint = {
   policyChecksum: string;
   countPerPosition: number;
   maxSeasons: number;
+  legacyVersion: LegacyVersion;
+  range?: { start: number; end: number };
   artifacts: ReturnType<typeof sourceArtifacts>;
   groups: Partial<Record<Position, Group>>;
 };
@@ -61,7 +77,9 @@ function canonicalAny(value: unknown): string {
 }
 const runtimeRuleset = loadRuleset(RULESET_VERSION);
 const runtimePack = loadContentPack(CONTENT_PACK_VERSION);
-const POLICY_CHECKSUM = sha256Hex(canonicalAny(LEGACY_POLICY));
+function policyChecksum(version: LegacyVersion): string {
+  return sha256Hex(canonicalAny(legacyPolicyForVersion(version)));
+}
 // A published reference population must never become an input to its own generation.
 function sourceArtifacts() {
   const { rulesetVersion, rulesetChecksum, contentPackVersion, contentPackChecksum } =
@@ -122,7 +140,8 @@ function closePending(snapshot: DomainSnapshot, id: string): DomainSnapshot {
       statGroupOf(pending.proposal.to) !==
         statGroupOf(snapshot.state.player.profile!.primaryPosition);
     const accept =
-      !crossesGroup && chooseDeterministicIndex(seed, `role:${snapshot.revision}`, 2) === 0;
+      pending.proposal.type === 'KEEP' ||
+      (!crossesGroup && chooseDeterministicIndex(seed, `role:${snapshot.revision}`, 2) === 0);
     return command(snapshot, 'RESOLVE_ROLE', { decision: accept ? 'ACCEPT' : 'DECLINE' }, id);
   }
   if (pending?.kind === 'LOAN_RETURN') {
@@ -143,7 +162,12 @@ function closePending(snapshot: DomainSnapshot, id: string): DomainSnapshot {
   return snapshot;
 }
 
-function runCareer(position: Position, seedIndex: number, requestedSeasons: number): PopulationRow {
+function runCareer(
+  position: Position,
+  seedIndex: number,
+  requestedSeasons: number,
+  legacyVersion: LegacyVersion,
+): PopulationRow {
   const seed = `phase5-population:${position}:${seedIndex}`;
   const archetypes = runtimeRuleset.archetypes.filter((a) => statGroupOf(a.position) === position);
   const archetype = archetypes[chooseDeterministicIndex(seed, 'archetype', archetypes.length)]!;
@@ -285,7 +309,8 @@ function runCareer(position: Position, seedIndex: number, requestedSeasons: numb
     artifacts,
   };
   const archive = createCareerArchiveCore(snapshot, context);
-  const result = createLegacyResult(archive, context);
+  const evidence = deriveLegacyEvidence(archive, legacyVersion);
+  const result = createLegacyResult(archive, context, undefined, legacyVersion);
   return {
     position,
     seedIndex,
@@ -301,6 +326,15 @@ function runCareer(position: Position, seedIndex: number, requestedSeasons: numb
     backgroundId: background.id,
     simulationMode,
     finalChoice,
+    componentScores: result.componentScores,
+    minutes: archive.records.totals.minutes,
+    possibleMinutes: archive.records.totals.possibleMinutes,
+    peakOvr: Math.max(
+      0,
+      ...snapshot.state.seasonHistory.map((season) => season.result.baseOvr.after),
+    ),
+    trophies: evidence.trophies,
+    endingCandidates: result.endingCandidates,
   };
 }
 
@@ -320,12 +354,20 @@ function arg(args: string[], name: string): string | undefined {
   const index = args.indexOf(name);
   return index < 0 ? undefined : args[index + 1];
 }
+function legacyVersionArg(args: string[]): LegacyVersion {
+  const value = arg(args, '--legacy-version') ?? '1.0.0';
+  if (value !== '1.0.0' && value !== '1.1.0')
+    throw new Error('--legacy-version must be 1.0.0 or 1.1.0');
+  return value;
+}
 
 async function readCheckpoint(
   path: string,
   artifacts: Checkpoint['artifacts'],
   count: number,
   maxSeasons: number,
+  expectedLegacyVersion: LegacyVersion,
+  expectedRange?: { start: number; end: number },
 ): Promise<Checkpoint> {
   try {
     const checkpoint = JSON.parse(await readFile(path, 'utf8')) as Checkpoint;
@@ -334,9 +376,13 @@ async function readCheckpoint(
       checkpoint.generatorCodeHash !== GENERATOR_CODE_HASH ||
       checkpoint.rulesetVersion !== RULESET_VERSION ||
       checkpoint.contentPackVersion !== CONTENT_PACK_VERSION ||
-      checkpoint.policyChecksum !== POLICY_CHECKSUM ||
+      checkpoint.policyChecksum !== policyChecksum(expectedLegacyVersion) ||
       checkpoint.countPerPosition !== count ||
       checkpoint.maxSeasons !== maxSeasons ||
+      checkpoint.legacyVersion !== expectedLegacyVersion ||
+      (expectedRange !== undefined &&
+        (checkpoint.range?.start !== expectedRange.start ||
+          checkpoint.range?.end !== expectedRange.end)) ||
       JSON.stringify(checkpoint.artifacts) !== JSON.stringify(artifacts)
     )
       throw new Error('checkpoint protocol/code/version/policy/count/artifact mismatch');
@@ -349,7 +395,16 @@ async function readCheckpoint(
           group.rows.length > count
         )
           throw new Error(`checkpoint group ${position} hash/count mismatch`);
-        group.rows.forEach((row, index) => {
+        const groupRange = checkpoint.range ?? { start: 0, end: count };
+        if (
+          groupRange.start < 0 ||
+          groupRange.end > count ||
+          groupRange.end <= groupRange.start ||
+          group.rows.length > groupRange.end - groupRange.start
+        )
+          throw new Error(`checkpoint group ${position} range mismatch`);
+        group.rows.forEach((row, offset) => {
+          const index = groupRange.start + offset;
           const requestedSeasons = (index % maxSeasons) + 1;
           if (
             row.seedIndex !== index ||
@@ -370,9 +425,11 @@ async function readCheckpoint(
         generatorCodeHash: GENERATOR_CODE_HASH,
         rulesetVersion: RULESET_VERSION,
         contentPackVersion: CONTENT_PACK_VERSION,
-        policyChecksum: POLICY_CHECKSUM,
+        policyChecksum: policyChecksum(expectedLegacyVersion),
         countPerPosition: count,
         maxSeasons,
+        legacyVersion: expectedLegacyVersion,
+        ...(expectedRange === undefined ? {} : { range: expectedRange }),
         artifacts,
         groups: {},
       };
@@ -393,6 +450,7 @@ async function writePopulation(
   count: number,
   seasons: number,
   smoke: boolean,
+  legacyVersion: LegacyVersion,
 ): Promise<void> {
   const groups = POSITIONS.map((position) => checkpoint.groups[position]);
   if (groups.some((group) => group === undefined || group.rows.length !== count))
@@ -408,21 +466,22 @@ async function writePopulation(
     ]),
   ) as Record<Position, number[]>;
   const population = {
-    id: `phase5-reference-${RULESET_VERSION}-${CONTENT_PACK_VERSION}`,
-    legacyVersion: '1.0.0',
+    id: `phase5-reference-${legacyVersion}-${RULESET_VERSION}-${CONTENT_PACK_VERSION}`,
+    legacyVersion,
     rulesetVersion: RULESET_VERSION,
     scores,
   };
   const provenance = {
     protocolVersion: PROTOCOL_VERSION,
     generatorCodeHash: process.env.LEGACY_POPULATION_BUNDLE_HASH ?? 'UNHASHED_WORKTREE',
-    choicePolicy: 'registered-hash-strata-v1',
+    choicePolicy: CHOICE_POLICY,
     seedPolicy: 'phase5-population:<position>:<zero-based-index>',
     requestedSeasonPolicy: '1 + (seedIndex mod --seasons)',
     rulesetVersion: RULESET_VERSION,
     contentPackVersion: CONTENT_PACK_VERSION,
     artifacts: checkpoint.artifacts,
-    policyChecksum: POLICY_CHECKSUM,
+    policyChecksum: policyChecksum(legacyVersion),
+    legacyVersion,
     countPerPosition: count,
     maxSeasons: seasons,
   };
@@ -446,12 +505,28 @@ async function writePopulation(
 export async function main(argv = process.argv.slice(2)): Promise<void> {
   const count = parseIntArg(argv, '--count', 10000);
   const seasons = parseIntArg(argv, '--seasons', 20);
+  const legacyVersion = legacyVersionArg(argv);
   if (seasons > 20) throw new Error('--seasons must be between 1 and 20');
   const checkpointPath = resolve(
     arg(argv, '--checkpoint') ?? 'artifacts/legacy-population.checkpoint.json',
   );
   const outputPath = resolve(arg(argv, '--out') ?? 'artifacts/legacy-population.json');
   const smoke = argv.includes('--smoke');
+  const seedStartArg = arg(argv, '--seed-start');
+  const seedEndArg = arg(argv, '--seed-end');
+  if ((seedStartArg === undefined) !== (seedEndArg === undefined))
+    throw new Error('--seed-start and --seed-end must be supplied together');
+  const seedStart = seedStartArg === undefined ? 0 : Number(seedStartArg);
+  const seedEnd = seedEndArg === undefined ? count : Number(seedEndArg);
+  if (
+    !Number.isInteger(seedStart) ||
+    !Number.isInteger(seedEnd) ||
+    seedStart < 0 ||
+    seedEnd <= seedStart ||
+    seedEnd > count
+  )
+    throw new Error('--seed-start/--seed-end must describe a non-empty range within --count');
+  const range = { start: seedStart, end: seedEnd };
   if (!smoke && !/^[a-f0-9]{64}$/.test(GENERATOR_CODE_HASH))
     throw new Error(
       'A publishable run requires a hashed frozen bundle; use legacy-population-node.mjs',
@@ -470,44 +545,72 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
       generatorCodeHash: GENERATOR_CODE_HASH,
       rulesetVersion: RULESET_VERSION,
       contentPackVersion: CONTENT_PACK_VERSION,
-      policyChecksum: POLICY_CHECKSUM,
+      policyChecksum: policyChecksum(legacyVersion),
       countPerPosition: count,
       maxSeasons: seasons,
+      legacyVersion,
       artifacts,
       groups: {},
     };
+    const ranges = new Map<
+      Position,
+      Array<{ start: number; end: number; rows: readonly PopulationRow[] }>
+    >();
     for (const path of mergeArg.split(',').filter(Boolean)) {
-      const part = await readCheckpoint(resolve(path), artifacts, count, seasons);
+      const part = await readCheckpoint(resolve(path), artifacts, count, seasons, legacyVersion);
       for (const position of POSITIONS) {
         const group = part.groups[position];
         if (group !== undefined) {
-          if (merged.groups[position] !== undefined)
-            throw new Error(`duplicate checkpoint group ${position}`);
-          merged.groups[position] = group;
+          const partRange = part.range ?? { start: 0, end: count };
+          const list = ranges.get(position) ?? [];
+          list.push({ start: partRange.start, end: partRange.end, rows: group.rows });
+          ranges.set(position, list);
         }
       }
     }
-    await writePopulation(outputPath, merged, count, seasons, smoke);
+    for (const position of POSITIONS) {
+      const parts = (ranges.get(position) ?? []).sort((a, b) => a.start - b.start);
+      let cursor = 0;
+      const rows: PopulationRow[] = [];
+      for (const part of parts) {
+        if (part.start !== cursor || part.end - part.start !== part.rows.length)
+          throw new Error(`checkpoint ${position} has missing/overlapping range`);
+        rows.push(...part.rows);
+        cursor = part.end;
+      }
+      if (cursor !== count) throw new Error(`checkpoint ${position} does not cover 0..${count}`);
+      merged.groups[position] = { position, rows, hash: hashRows(rows) };
+    }
+    await writePopulation(outputPath, merged, count, seasons, smoke, legacyVersion);
     return;
   }
-  const checkpoint = await readCheckpoint(checkpointPath, artifacts, count, seasons);
+  const checkpoint = await readCheckpoint(
+    checkpointPath,
+    artifacts,
+    count,
+    seasons,
+    legacyVersion,
+    seedStartArg === undefined ? undefined : range,
+  );
   for (const position of positions) {
     const existing = checkpoint.groups[position];
     const rows = [...(existing?.rows ?? [])];
-    for (let index = rows.length; index < count; index += 1) {
+    for (let index = seedStart + rows.length; index < seedEnd; index += 1) {
       const requestedSeasons = (index % seasons) + 1;
-      rows.push(runCareer(position, index, requestedSeasons));
+      rows.push(runCareer(position, index, requestedSeasons, legacyVersion));
       if (rows.length % 100 === 0 || rows.length === count) {
         checkpoint.groups[position] = { position, rows, hash: hashRows(rows) };
+        checkpoint.range = range;
         await writeCheckpoint(checkpointPath, checkpoint);
         console.log(`${position}: ${rows.length}/${count} careers verified`);
       }
     }
     checkpoint.groups[position] = { position, rows, hash: hashRows(rows) };
+    checkpoint.range = range;
     await writeCheckpoint(checkpointPath, checkpoint);
   }
   if (positionArg !== undefined) return;
-  await writePopulation(outputPath, checkpoint, count, seasons, smoke);
+  await writePopulation(outputPath, checkpoint, count, seasons, smoke, legacyVersion);
 }
 
 if (

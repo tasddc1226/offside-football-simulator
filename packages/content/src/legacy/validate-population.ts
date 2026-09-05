@@ -2,9 +2,10 @@ import { z } from 'zod';
 import {
   canonicalize,
   sha256Hex,
-  LEGACY_POLICY,
+  legacyPolicyForVersion,
   type JsonValue,
   type LegacyReferencePopulation,
+  type LegacyVersion,
 } from '@offside/domain';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -17,8 +18,8 @@ const scores = z
   );
 const PopulationSchema = z
   .object({
-    id: z.literal('phase5-reference-1.0.0-0.3.0'),
-    legacyVersion: z.literal('1.0.0'),
+    id: z.string().min(1),
+    legacyVersion: z.enum(['1.0.0', '1.1.0']),
     rulesetVersion: z.literal('1.0.0'),
     scores: z.object({ GK: scores, DF: scores, MF: scores, FW: scores }).strict(),
   })
@@ -33,11 +34,12 @@ export const PopulationManifestSchema = z
     generatorBundleGzipChecksum: hash,
     provenance: z
       .object({
-        protocolVersion: z.literal('phase5-population-2-registered-choices'),
+        protocolVersion: z.literal('phase5-population-3-ui-choices'),
         generatorCodeHash: hash,
         seedPolicy: z.literal('phase5-population:<position>:<zero-based-index>'),
         requestedSeasonPolicy: z.literal('1 + (seedIndex mod --seasons)'),
-        choicePolicy: z.literal('registered-hash-strata-v1'),
+        choicePolicy: z.literal('ui-action-strata-v1'),
+        legacyVersion: z.enum(['1.0.0', '1.1.0']),
         rulesetVersion: z.literal('1.0.0'),
         contentPackVersion: z.literal('0.3.0'),
         artifacts: z
@@ -81,8 +83,11 @@ export function validateLegacyPopulation(
   const manifest = PopulationManifestSchema.parse(rawManifest);
   const population = PopulationSchema.parse(raw);
   if (
+    manifest.provenance.legacyVersion !== population.legacyVersion ||
+    population.id !== `phase5-reference-${population.legacyVersion}-1.0.0-0.3.0` ||
     manifest.populationChecksum !== populationChecksum(population) ||
-    manifest.provenance.policyChecksum !== populationChecksum(LEGACY_POLICY) ||
+    manifest.provenance.policyChecksum !==
+      populationChecksum(legacyPolicyForVersion(population.legacyVersion as LegacyVersion)) ||
     manifest.provenance.artifacts.rulesetChecksum !== registered.rulesetChecksum ||
     manifest.provenance.artifacts.contentPackChecksum !== registered.contentPackChecksum ||
     manifest.groups

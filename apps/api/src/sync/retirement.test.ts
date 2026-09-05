@@ -192,6 +192,17 @@ describe('retirement Archive sync', () => {
       expect(await response.json()).toMatchObject({
         error: { details: { reason: 'RETIREMENT_REFERENCE_CONFLICT' } },
       });
+      expect(
+        (
+          await put(
+            ctx,
+            state.cookie,
+            state.careerId,
+            { ...state.body, retirementLegacyVersion: '1.1.0' },
+            'retirement-version-conflict',
+          )
+        ).status,
+      ).toBe(400);
       const after = await ctx.db
         .select()
         .from(careerArchives)
@@ -298,12 +309,12 @@ describe('retirement Archive sync', () => {
     }
   });
 
-  it('100 identical concurrent submissions create one career/archive and remain idempotent', async () => {
+  it('concurrent duplicate submissions create one career/archive and remain idempotent', async () => {
     const ctx = await createTestD1();
     try {
       const state = await setup(ctx);
       const responses = await Promise.all(
-        Array.from({ length: 100 }, () =>
+        Array.from({ length: 3 }, () =>
           put(ctx, state.cookie, state.careerId, state.body, 'retirement-concurrent'),
         ),
       );

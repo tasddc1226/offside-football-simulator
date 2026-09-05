@@ -11,6 +11,7 @@ import {
   canonicalize,
   type JsonValue,
   type LegacyReferencePopulation,
+  type LegacyVersion,
 } from '@offside/domain';
 import type { LocalStore, LocalStoreTx } from './ports/local-store.js';
 import type { LocalCareerRecord } from './types.js';
@@ -18,6 +19,7 @@ import { CareerStateSchema } from '@offside/contracts';
 
 export type RetirementRuntimeArtifacts = ArchiveArtifacts & {
   legacyReferencePopulation?: LegacyReferencePopulation;
+  legacyVersion?: LegacyVersion;
 };
 
 export type RetirementArtifactsResolver = (versions: {
@@ -43,6 +45,23 @@ export function legacyPopulationForResult(
   )
     throw new ArchiveError('VERSION_MISMATCH');
   return artifacts.legacyReferencePopulation;
+}
+
+/** Select and verify the immutable policy used by a persisted Legacy result. */
+export function legacyVersionForResult(
+  stored: LegacyResult | null | undefined,
+  artifacts: Pick<RetirementRuntimeArtifacts, 'legacyVersion'>,
+): LegacyVersion {
+  const available = artifacts.legacyVersion ?? '1.0.0';
+  if (stored === undefined || stored === null) return available;
+  if (!Object.hasOwn(stored, 'legacyVersion')) throw new ArchiveError('INVALID_BINDING');
+  if (stored.legacyVersion !== '1.0.0' && stored.legacyVersion !== '1.1.0')
+    throw new ArchiveError('INVALID_BINDING');
+  // A newer stored policy cannot be recomputed by an older resolver. Older 1.0 results
+  // remain readable when the resolver has moved forward.
+  if (stored.legacyVersion === '1.1.0' && available !== '1.1.0')
+    throw new ArchiveError('VERSION_MISMATCH');
+  return stored.legacyVersion;
 }
 
 export function retirementArchiveKey(careerId: string): string {
@@ -84,6 +103,7 @@ export async function persistRetirementArchive(
     plan.archive,
     context,
     legacyPopulationForResult(existingLegacy, artifacts),
+    legacyVersionForResult(existingLegacy, artifacts),
   );
   if (
     existingLegacy !== undefined &&
@@ -111,7 +131,7 @@ export async function loadLocalLegacyResult(
   const result = createLegacyResult(archive, {
     binding: archive.binding,
     artifacts,
-  }, legacyPopulationForResult(stored, artifacts));
+  }, legacyPopulationForResult(stored, artifacts), legacyVersionForResult(stored, artifacts));
   if (
     stored !== undefined &&
     canonicalize(stored as unknown as JsonValue) !== canonicalize(result as unknown as JsonValue)

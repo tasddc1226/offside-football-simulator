@@ -227,17 +227,17 @@ type LegacyFactor = {
 
 ## 테스트
 
-| ID           | 검증                                                                               |
-| ------------ | ---------------------------------------------------------------------------------- |
-| TEST-LEG-001 | 같은 Archive와 `legacyVersion`으로 100회 계산한 결과 hash가 동일하다               |
-| TEST-LEG-002 | GK·DF·MF·FW 동일 품질 fixture의 총점 차이가 ±5 이내다                              |
-| TEST-LEG-003 | 결승 결승골 fixture에서 같은 `sourceId`가 두 요소에 가산되지 않는다                |
-| TEST-LEG-004 | 1시즌 무출전 은퇴 fixture도 `endingId`, `bandId`, `bestMomentRef`를 가진다         |
-| TEST-LEG-005 | 참조 분포만 교체했을 때 백분위는 바뀌고 `totalScore`와 `endingId`는 불변이다       |
-| TEST-LEG-006 | 무관 fixture가 총점 80 이상에 도달하고 참조 분포 상위 비율이 목표 범위 안이다      |
-| TEST-LEG-007 | 주 카드 렌더 결과에 백분위 문자열이 없고 하위 표현 문구가 콘텐츠 검사에서 차단된다 |
-| TEST-LEG-008 | 복수 엔딩 충족 fixture에서 우선순위 최솟값이 선택되고 후보 순서가 안정적이다       |
-| TEST-LEG-009 | `displayEndingId` 변경이 `endingId`와 `totalScore`를 바꾸지 않는다                 |
+| ID           | 검증                                                                                                |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| TEST-LEG-001 | 같은 Archive와 `legacyVersion`을 반복 계산한 결과 hash가 동일하다. 상시 CI는 소수 반복으로 확인한다 |
+| TEST-LEG-002 | GK·DF·MF·FW 동일 품질 fixture의 총점 차이가 ±5 이내다                                               |
+| TEST-LEG-003 | 결승 결승골 fixture에서 같은 `sourceId`가 두 요소에 가산되지 않는다                                 |
+| TEST-LEG-004 | 1시즌 무출전 은퇴 fixture도 `endingId`, `bandId`, `bestMomentRef`를 가진다                          |
+| TEST-LEG-005 | 참조 분포만 교체했을 때 백분위는 바뀌고 `totalScore`와 `endingId`는 불변이다                        |
+| TEST-LEG-006 | 무관 fixture가 총점 80 이상에 도달하고 참조 분포 상위 비율이 목표 범위 안이다                       |
+| TEST-LEG-007 | 주 카드 렌더 결과에 백분위 문자열이 없고 하위 표현 문구가 콘텐츠 검사에서 차단된다                  |
+| TEST-LEG-008 | 복수 엔딩 충족 fixture에서 우선순위 최솟값이 선택되고 후보 순서가 안정적이다                        |
+| TEST-LEG-009 | `displayEndingId` 변경이 `endingId`와 `totalScore`를 바꾸지 않는다                                  |
 
 ## 브랜드 어휘와 화면
 

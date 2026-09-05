@@ -6,6 +6,7 @@ import {
   type CareerState,
   type DomainSnapshot,
   type LegacyReferencePopulation,
+  type LegacyVersion,
 } from '@offside/domain';
 import { AppError } from '../errors.js';
 
@@ -48,7 +49,13 @@ export function buildRetirementRows(
       body.retirementReferencePopulationId,
       artifacts.legacyReferencePopulation,
     );
-    const legacy = createLegacyResult(archive, context, population);
+    const legacyVersion: LegacyVersion = body.retirementLegacyVersion ?? '1.0.0';
+    const availableLegacyVersion = artifacts.legacyVersion ?? '1.0.0';
+    // 1.0.0 remains importable for historical clients; a candidate 1.1.0 result requires
+    // an explicitly activated artifact registry entry and must fail closed otherwise.
+    if (legacyVersion === '1.1.0' && availableLegacyVersion !== '1.1.0')
+      throw new Error('Requested Legacy version is not active');
+    const legacy = createLegacyResult(archive, context, population, legacyVersion);
     return {
       careerId,
       retirementRevision: snapshot.revision,

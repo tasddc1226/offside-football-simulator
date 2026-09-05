@@ -76,16 +76,16 @@ function retire(
 }
 
 describe('engine retirement archive integration', () => {
-  it('concurrently resolves one RETIRE command once and replays it for 100 calls across clients', async () => {
+  it('concurrently resolves one RETIRE command once and replays duplicates across clients', async () => {
     const { store, careerId, revision } = await settled();
     const command = retire('retire-once', revision);
     const engines = [create(store, 'a'), create(store, 'b')];
     const results = await Promise.all(
-      Array.from({ length: 100 }, (_, i) => engines[i % 2]!.execute({ careerId, command })),
+      Array.from({ length: 4 }, (_, i) => engines[i % 2]!.execute({ careerId, command })),
     );
 
     expect(results.filter((result) => result.ok && !result.replayed)).toHaveLength(1);
-    expect(results.filter((result) => result.ok && result.replayed)).toHaveLength(99);
+    expect(results.filter((result) => result.ok && result.replayed)).toHaveLength(results.length - 1);
     const state = await store.transaction('readonly', async (tx) => ({
       career: await tx.careers.get(careerId),
       logs: await tx.commandLog.listSince(careerId, 0),

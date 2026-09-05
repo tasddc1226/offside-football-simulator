@@ -47,10 +47,10 @@ test('deterministic settled career can retire, reload its Legacy views, and retu
   await expect(page.getByRole('button', { name: '선수 생활 마무리' })).toBeVisible();
 
   await page.getByRole('button', { name: '선수 생활 마무리' }).click();
-  await expect(page.getByRole('heading', { name: '마지막 휘슬을 불까요?' })).toBeVisible();
+  await expect(page.getByRole('dialog')).toBeVisible();
   await expectNoSeriousOrCriticalViolations(page, '은퇴 확인 Dialog');
   await page.getByRole('button', { name: '취소' }).click();
-  await expect(page.getByRole('heading', { name: '마지막 휘슬을 불까요?' })).not.toBeVisible();
+  await expect(page.getByRole('dialog')).not.toBeVisible();
 
   await page.getByRole('button', { name: '선수 생활 마무리' }).click();
   await page.getByRole('button', { name: '은퇴 확정' }).click();

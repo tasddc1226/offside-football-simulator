@@ -11,7 +11,7 @@
 | 성장·노쇠         | `aging-curve.test.ts`: 포지션별 연령 경계, centi 값, 하락 계수 중복 적용 방지                   | 새로운 성장식으로 기존 ruleset을 교체하지 않음                                 |
 | 은퇴 후 진행 금지 | `retire-command.test.ts`, `career-retirement.test.ts`: terminal 명령 거부·마지막 계약 1회       | 자동 나이 컷이 아니라 여러 요인의 검토와 명시적인 최종 선택                    |
 | 통산 정합성       | `career-records.test.ts`, `season-ledger.test.ts`, `archive.test.ts`                            | 구버전 미기록 수입을 추정하지 않고 coverage로 구분                             |
-| Legacy 재현       | `result.test.ts`: 같은 원본/버전 100회, source 중복 가산 금지, 공개 정보 검증                   | 참조집단 변경은 절대 점수·계산된 엔딩을 바꾸지 않음                            |
+| Legacy 재현       | `result.test.ts`: 같은 원본/버전 반복 계산, source 중복 가산 금지, 공개 정보 검증               | 참조집단 변경은 절대 점수·계산된 엔딩을 바꾸지 않음                            |
 | 14종 엔딩·폴백    | `eligibility.test.ts`, `ending-evidence.test.ts`, `endings.test.ts`                             | 14종 RAW_EVIDENCE fixture. 모든 종류를 자연 플레이로 달성했다는 주장이 아님    |
 | 불변 저장         | 로컬 retirement·recovery 테스트, API `sync/retirement.test.ts`                                  | CAS/소유권/원자성 검증이며 서버 전체 명령 재생·부정행위 방지 체계는 아님       |
 | 포지션 공정성     | `result.test.ts`: 동일 품질 GK/DF/MF/FW ±5                                                      | 실제 집단의 밴드 목표 충족과 별도                                              |
@@ -72,6 +72,11 @@ MF는 11회 팀 우승, 출전 24,275/36,360분, 최고 OVR 77이었다. DF는 1
 Browser 전체는 98 통과·1 실패·6 조건부 제외였고, 실패는 기존 이적 헬퍼의
 `&interested=` URL 단언이었다. 다른 작업이 main PR #81에서 수정했으며 최신 main 통합 후
 전체를 재검증한다. 이 중간 결과를 최종 head 통과로 인용하지 않는다.
+
+이후 `82c8efa`의 CI `33955209905`는 Quality, Browser, PR preview 배포 모두 통과했다.
+이는 밸런스 재설계 전 기능 통합 head의 결과다. 이후 후보 정책·버전 호환 변경까지
+최종 검증되었다는 의미는 아니다. 사용자 승인으로 [밸런스 재설계](phase-5-balance-redesign.md)를
+이번 범위에 포함했으며, 아직 main 병합·Phase 5 완료는 보류한다.
 
 ## 독립 리뷰 처리
 

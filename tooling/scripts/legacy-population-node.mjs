@@ -30,6 +30,39 @@ function run(command, args, envExtra = {}) {
   });
 }
 
+function runParallel(command, jobs, envExtra = {}) {
+  const children = [];
+  let failed = false;
+  return Promise.all(
+    jobs.map(
+      (args) =>
+        new Promise((resolvePromise, reject) => {
+          const child = spawn(command, args, {
+            cwd: root,
+            stdio: 'inherit',
+            env: { ...process.env, ...envExtra },
+          });
+          children.push(child);
+          child.once('error', (error) => {
+            if (!failed) {
+              failed = true;
+              for (const sibling of children) if (sibling !== child) sibling.kill('SIGTERM');
+            }
+            reject(error);
+          });
+          child.once('exit', (code, signal) => {
+            if (code === 0) return resolvePromise();
+            if (!failed) {
+              failed = true;
+              for (const sibling of children) if (sibling !== child) sibling.kill('SIGTERM');
+            }
+            reject(new Error(`${command} exited with ${code ?? signal}`));
+          });
+        }),
+    ),
+  );
+}
+
 async function buildAccelerated(persistentDirectory) {
   const require = createRequire(new URL('../../apps/api/package.json', import.meta.url));
   const { build } = require('esbuild');
@@ -44,7 +77,7 @@ async function buildAccelerated(persistentDirectory) {
       .update(await readFile(output))
       .digest('hex');
     if (manifest.hash !== hash) throw new Error('Saved population bundle checksum mismatch');
-    return { path: output, hash };
+    return { path: output, hash, supportsShards: manifest.supportsShards === true };
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
@@ -77,44 +110,66 @@ async function buildAccelerated(persistentDirectory) {
   const bundleHash = createHash('sha256')
     .update(await readFile(output))
     .digest('hex');
-  await writeFile(manifestPath, JSON.stringify({ hash: bundleHash, nodeVersion: process.version }));
-  return { path: output, hash: bundleHash };
+  await writeFile(
+    manifestPath,
+    JSON.stringify({ hash: bundleHash, nodeVersion: process.version, supportsShards: true }),
+  );
+  return { path: output, hash: bundleHash, supportsShards: true };
 }
 
 async function runPartitioned(command, baseArgs, directory, bundleHash) {
   const started = performance.now();
   const output = value(baseArgs, '--out', 'artifacts/legacy-population.json');
+  const count = Number(value(baseArgs, '--count', '10000'));
+  const shardsPerPosition = Number(value(baseArgs, '--shards-per-position', '1'));
+  if (!Number.isInteger(shardsPerPosition) || shardsPerPosition < 1)
+    throw new Error('--shards-per-position must be a positive integer');
+  if (!Number.isInteger(count) || count < 1) throw new Error('--count must be a positive integer');
+  if (shardsPerPosition > count) throw new Error('--shards-per-position cannot exceed --count');
   const cleanArgs = baseArgs.filter(
     (arg, index) =>
       arg !== '--checkpoint' &&
       arg !== '--out' &&
+      arg !== '--shards-per-position' &&
       baseArgs[index - 1] !== '--checkpoint' &&
-      baseArgs[index - 1] !== '--out',
+      baseArgs[index - 1] !== '--out' &&
+      baseArgs[index - 1] !== '--shards-per-position',
   );
   const env = bundleHash === undefined ? {} : { LEGACY_POPULATION_BUNDLE_HASH: bundleHash };
-  await Promise.all(
-    positions.map((position) =>
-      run(
-        command,
-        [
-          ...cleanArgs,
-          '--__population-run',
-          '--position',
-          position,
-          '--checkpoint',
-          join(directory, `${position}.checkpoint.json`),
-        ],
-        env,
-      ),
-    ),
-  );
+  const jobs = [];
+  const checkpointPaths = [];
+  for (const position of positions) {
+    for (let shard = 0; shard < shardsPerPosition; shard += 1) {
+      const start = Math.floor((count * shard) / shardsPerPosition);
+      const end = Math.floor((count * (shard + 1)) / shardsPerPosition);
+      const checkpoint = join(
+        directory,
+        shardsPerPosition === 1
+          ? `${position}.checkpoint.json`
+          : `${position}.${shard}.checkpoint.json`,
+      );
+      checkpointPaths.push(checkpoint);
+      jobs.push([
+        ...cleanArgs,
+        '--__population-run',
+        '--position',
+        position,
+        ...(shardsPerPosition === 1
+          ? []
+          : ['--seed-start', String(start), '--seed-end', String(end)]),
+        '--checkpoint',
+        checkpoint,
+      ]);
+    }
+  }
+  await runParallel(command, jobs, env);
   await run(
     command,
     [
       ...cleanArgs,
       '--__population-run',
       '--merge-checkpoints',
-      positions.map((position) => join(directory, `${position}.checkpoint.json`)).join(','),
+      checkpointPaths.join(','),
       '--out',
       output,
     ],
@@ -233,11 +288,16 @@ if (args.includes('--verify')) {
     value(args, '--work-dir', await mkdtemp(join(tmpdir(), 'offside-population-run-'))),
   );
   const acceleratedBundle = await buildAccelerated(directory);
+  const shardsPerPosition = Number(value(args, '--shards-per-position', '1'));
+  if (shardsPerPosition > 1 && !acceleratedBundle.supportsShards)
+    throw new Error(
+      'This saved bundle predates sharding; resume with one shard or use a new work directory',
+    );
   console.log(
     JSON.stringify({
       workDirectory: directory,
       bundleHash: acceleratedBundle.hash,
-      concurrency: 4,
+      concurrency: 4 * shardsPerPosition,
     }),
   );
   const { merged, elapsedMs } = await runPartitioned(
@@ -252,7 +312,7 @@ if (args.includes('--verify')) {
         merged,
         acceleratedBundleHash: acceleratedBundle.hash,
         elapsedMs,
-        concurrency: 4,
+        concurrency: 4 * shardsPerPosition,
         hashMode: 'node-crypto-equivalent',
       },
       null,

@@ -10,6 +10,7 @@ import { inlineSimulator } from './simulator/index.js';
 const ARTIFACTS = { rulesetVersion: '1.0.0', rulesetChecksum: 'a'.repeat(64), contentPackVersion: '0.1.0', contentPackChecksum: 'b'.repeat(64) } as const;
 const POPULATION: LegacyReferencePopulation = { id: 'test-population-10k', legacyVersion: '1.0.0', rulesetVersion: '1.0.0', scores: { GK: Array(10_000).fill(50), DF: Array(10_000).fill(50), MF: Array(10_000).fill(50), FW: Array(10_000).fill(50) } };
 const POPULATED_ARTIFACTS = { ...ARTIFACTS, legacyReferencePopulation: POPULATION } as const;
+const VERSIONED_ARTIFACTS = { ...ARTIFACTS, legacyVersion: '1.1.0' as const };
 const MISMATCHED_ARTIFACTS = { ...ARTIFACTS, legacyReferencePopulation: { ...POPULATION, id: 'different-population-10k' } } as const;
 
 async function responseFixture(runtimeArtifacts: RetirementRuntimeArtifacts = ARTIFACTS): Promise<{ response: GetCareerResponse; archive: ReturnType<typeof createCareerArchiveCore>; legacy: ReturnType<typeof createLegacyResult>; store: MemoryLocalStore; engine: ReturnType<typeof createEngineClient> }> {
@@ -33,7 +34,12 @@ async function responseFixture(runtimeArtifacts: RetirementRuntimeArtifacts = AR
   const snapshot = { id: stored.id, careerId: stored.careerId, revision: stored.revision, checkpoint: stored.checkpoint, state: JSON.parse(stored.state), stateHash: stored.stateHash, rulesetVersion: stored.rulesetVersion, contentPackVersion: stored.contentPackVersion, rngState: stored.rngState, createdAt: stored.createdAt } as Parameters<typeof createCareerArchiveCore>[0];
   const context = { binding: { careerId, createdServiceSeasonId: 'svc_recovery', rulesetVersion: snapshot.rulesetVersion, contentPackVersion: snapshot.contentPackVersion }, artifacts: runtimeArtifacts };
   const archive = createCareerArchiveCore(snapshot, context);
-  const legacy = createLegacyResult(archive, context, runtimeArtifacts.legacyReferencePopulation);
+  const legacy = createLegacyResult(
+    archive,
+    context,
+    runtimeArtifacts.legacyReferencePopulation,
+    runtimeArtifacts.legacyVersion ?? '1.0.0',
+  );
   return { response: { snapshot: stored, commands: [], retirementArchive: { archive: JSON.stringify(archive), legacy: JSON.stringify(legacy) } }, archive, legacy, store: sourceStore, engine: sourceEngine };
 }
 
@@ -85,12 +91,13 @@ describe('retirement recovery roundtrip', () => {
     expect(legacy?.percentileHidden).toBe(false);
   });
 
-  it('preserves an older hidden Legacy when a newer resolver has a population', async () => {
+  it('preserves an older hidden Legacy when the resolver advances policy and population', async () => {
     const source = await responseFixture();
     const store = new MemoryLocalStore();
-    const result = await importCareerFromServer(store, source.response, { createdServiceSeasonId: source.archive.binding.createdServiceSeasonId, now: '2026-09-05T00:00:00.000Z', retirementArtifacts: () => POPULATED_ARTIFACTS });
+    const advancedArtifacts = { ...VERSIONED_ARTIFACTS, legacyReferencePopulation: { ...POPULATION, legacyVersion: '1.1.0' } };
+    const result = await importCareerFromServer(store, source.response, { createdServiceSeasonId: source.archive.binding.createdServiceSeasonId, now: '2026-09-05T00:00:00.000Z', retirementArtifacts: () => advancedArtifacts });
     expect(result.ok).toBe(true);
-    const loaded = await loadLocalLegacyResult(store, source.archive.binding.careerId, null, () => POPULATED_ARTIFACTS);
+    const loaded = await loadLocalLegacyResult(store, source.archive.binding.careerId, null, () => advancedArtifacts);
     expect(loaded?.referencePopulationId).toBeNull();
     expect(loaded?.percentileHidden).toBe(true);
     expect(loaded?.hash).toBe(source.legacy.hash);
@@ -153,5 +160,12 @@ describe('retirement recovery roundtrip', () => {
     await expect(source.engine.buildSyncBody(source.archive.binding.careerId)).rejects.toThrow(
       'referencePopulationId가 유효하지 않다',
     );
+  });
+
+  it('preserves an explicit 1.1.0 Legacy version in the sync body', async () => {
+    const source = await responseFixture(VERSIONED_ARTIFACTS);
+    expect(source.legacy.legacyVersion).toBe('1.1.0');
+    const body = await source.engine.buildSyncBody(source.archive.binding.careerId);
+    expect(body).toMatchObject({ retirementLegacyVersion: '1.1.0' });
   });
 });

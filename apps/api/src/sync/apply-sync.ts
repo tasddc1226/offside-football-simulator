@@ -120,9 +120,15 @@ export async function applySync(
             validObject && 'referencePopulationId' in storedLegacy
               ? storedLegacy.referencePopulationId
               : undefined;
+          const storedVersion =
+            validObject && 'legacyVersion' in storedLegacy &&
+            (storedLegacy.legacyVersion === '1.0.0' || storedLegacy.legacyVersion === '1.1.0')
+              ? storedLegacy.legacyVersion
+              : undefined;
           if (
             storedPin === undefined ||
-            storedPin !== (body.retirementReferencePopulationId ?? null)
+            storedPin !== (body.retirementReferencePopulationId ?? null) ||
+            storedVersion !== (body.retirementLegacyVersion ?? '1.0.0')
           ) {
             throw new AppError({
               code: 'VALIDATION_FAILED',

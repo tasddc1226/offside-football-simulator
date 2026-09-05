@@ -4,7 +4,7 @@ import type { EngineError, LocalCareerRecord } from './types.js';
 import type { LocalStore } from './ports/local-store.js';
 import { ArchiveError, canonicalize, createCareerArchiveCore, createLegacyResult, type CareerArchiveCore, type LegacyResult, type JsonValue } from '@offside/domain';
 import { CareerStateSchema } from '@offside/contracts';
-import { legacyPopulationForResult, legacyResultKey, retirementArchiveKey, type RetirementArtifactsResolver } from './retirement-archive.js';
+import { legacyPopulationForResult, legacyResultKey, legacyVersionForResult, retirementArchiveKey, type RetirementArtifactsResolver } from './retirement-archive.js';
 
 export type ImportCareerResult = { ok: true; revision: number } | { ok: false; error: EngineError };
 
@@ -40,7 +40,12 @@ export async function importCareerFromServer(
       const context = { binding, artifacts };
       const archive = createCareerArchiveCore(decoded.snapshot, context);
       const suppliedLegacy = JSON.parse(response.retirementArchive.legacy) as LegacyResult;
-      const legacy = createLegacyResult(archive, context, legacyPopulationForResult(suppliedLegacy, artifacts));
+      const legacy = createLegacyResult(
+        archive,
+        context,
+        legacyPopulationForResult(suppliedLegacy, artifacts),
+        legacyVersionForResult(suppliedLegacy, artifacts),
+      );
       if (canonicalize(JSON.parse(response.retirementArchive.archive) as JsonValue) !== canonicalize(archive as unknown as JsonValue) || canonicalize(suppliedLegacy as unknown as JsonValue) !== canonicalize(legacy as unknown as JsonValue)) throw new ArchiveError('ARCHIVE_MISMATCH');
       retirement = { archive, legacy };
     } catch {

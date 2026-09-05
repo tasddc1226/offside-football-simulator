@@ -11,14 +11,25 @@ The eventual publish target is 10,000 independently seeded careers in each of
 1 through 20 seasons: row `i` requests `1 + (i mod --seasons)` seasons. Realized
 seasons may be shorter when the engine requires retirement.
 
-The current protocol is v2: ruleset `1.0.0`, registered content pack `0.3.0`,
+The retained baseline protocol is v2: ruleset `1.0.0`, registered content pack `0.3.0`,
 protocol `phase5-population-2-registered-choices`, choice policy
 `registered-hash-strata-v1`, and seed
 `phase5-population:<position>:<zero-based-index>`.
 
-The 40,000-career run is still in progress. It has not passed the publication gate,
-and no official reference population has been published. The original band goals
-remain unchanged; interim smoke or parity output is not a balance pass.
+The v2 40,000-career run is retained as engine stress/before-change evidence, **not
+as a publishable player reference**. A later UI audit found that it sometimes
+declines a KEEP proposal, while the actual screen only offers ACCEPT/confirmation.
+Its commands are engine-valid, but this is an important player-policy mismatch.
+No official reference population has been published. Original band goals remain
+unchanged; interim smoke or parity output is not a balance pass.
+
+The current generator is v3: `phase5-population-3-ui-choices`, choice policy
+`ui-action-strata-v1`. KEEP always accepts, other role choices preserve the previous
+policy. It accepts `--legacy-version 1.0.0|1.1.0` (default 1.0.0) and pins the
+selected definition checksum. Version 1.1.0 is an unactivated candidate, not an
+accepted scoring release. Population IDs include Legacy/ruleset/content versions.
+Rows also retain the five components, minutes, possible minutes, peak OVR,
+trophies and eligible endings for diagnosis. Final balance acceptance remains open.
 
 The earlier v1 runner used fixed fixture outcomes and content pack `0.1.0`. That
 run is retired. Its timings and outputs are not official evidence and must not be
@@ -66,6 +77,16 @@ below 10,000 are rejected for normal publication and are written only as an
 explicitly marked `SMOKE_REPORT`.
 Direct `tsx tooling/scripts/legacy-population.ts` execution is for smoke/development
 verification only: an unhashed worktree cannot be published as a pinned generator.
+
+The optional `--shards-per-position 2` uses eight isolated jobs. Default is one
+shard per position (four jobs); more workers are not assumed to be faster on a
+busy machine. Shards must cover each seed exactly once. A failed child terminates
+its sibling jobs. Old frozen bundles may only resume in their original unsharded
+mode; never reuse a v2 work directory for a v3 run.
+
+These are offline release-analysis tools, not a 40,000-career test run on every PR.
+Publication validates the complete evidence once; CI keeps focused regression and
+compact artifact integrity checks. Individual seed scores are not golden snapshots.
 
 ## Artifacts, checkpoints, and publication
 

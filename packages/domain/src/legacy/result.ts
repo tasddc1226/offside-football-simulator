@@ -61,6 +61,32 @@ export const LEGACY_POLICY = Object.freeze({
   narrative: Object.freeze({ COMMON: 5, RARE: 12, EPIC: 25 }),
 });
 
+export type LegacyVersion = '1.0.0' | '1.1.0';
+
+/** Experimental next policy; runtime activation requires the separate population acceptance gate.
+ * The 1.0.0 definition above and its persisted results must never be rewritten. */
+export const LEGACY_POLICY_110 = Object.freeze({
+  version: '1.1.0',
+  basePolicyChecksum: sha256Hex(canonicalize(LEGACY_POLICY as unknown as JsonValue)),
+  contribution: Object.freeze({ careerPercent: 50, primePercent: 50, primeSeasons: 5 }),
+  longevity: Object.freeze({ fullActiveMinutesBp: 6000, pointsPerActiveSeason: 5 }),
+  relationship: Object.freeze({
+    strongestBonds: 2,
+    careerPercent: 70,
+    careerAnchor: 70,
+    primePercent: 30,
+    primeAnchor: 80,
+    primeSeasons: 3,
+  }),
+  narrative: Object.freeze({ COMMON: 8, RARE: 20, EPIC: 35 }),
+});
+
+export function legacyPolicyForVersion(version: LegacyVersion) {
+  if (version === '1.0.0') return LEGACY_POLICY;
+  if (version === '1.1.0') return LEGACY_POLICY_110;
+  throw new ArchiveError('VERSION_MISMATCH');
+}
+
 export type LegacySource = Readonly<{
   sourceId: string;
   revision: number;
@@ -164,7 +190,8 @@ export function deriveRetirementTags(state: CareerState): CareerTagId[] {
   return [...tags].sort(compareCodePoints);
 }
 
-export function deriveLegacyEvidence(archive: CareerArchiveCore) {
+export function deriveLegacyEvidence(archive: CareerArchiveCore, version: LegacyVersion = '1.0.0') {
+  legacyPolicyForVersion(version);
   const state = JSON.parse(archive.source.state) as CareerState;
   const history = state.seasonHistory;
   const tags = deriveRetirementTags(state);
@@ -332,6 +359,61 @@ export function deriveLegacyEvidence(archive: CareerArchiveCore) {
       tags.reduce((sum, tag) => sum + LEGACY_POLICY.narrative[CAREER_TAGS[tag].rarity], 0),
     ),
   };
+  if (version === '1.1.0') {
+    const policy = LEGACY_POLICY_110;
+    const top = (values: number[], count: number) =>
+      values.toSorted((a, b) => b - a).slice(0, count);
+    const contributions = history.map((season) => {
+      const r = season.result;
+      return (
+        LEGACY_POLICY.contribution.minutes *
+          ratio(r.playerStats.minutes, r.selectionSummary.possibleMinutes) +
+        (LEGACY_POLICY.contribution.performancePercent / 100) * performance(season) +
+        (r.promiseFulfilment.fulfilled ? LEGACY_POLICY.contribution.promise : 0)
+      );
+    });
+    components.contribution = score(
+      (policy.contribution.careerPercent / 100) * mean(contributions) +
+        (policy.contribution.primePercent / 100) *
+          mean(top(contributions, policy.contribution.primeSeasons)),
+    );
+    components.longevity = score(
+      history.reduce(
+        (sum, { result: r }) =>
+          sum +
+          Math.min(
+            1,
+            ratio(r.playerStats.minutes, r.selectionSummary.possibleMinutes) /
+              (policy.longevity.fullActiveMinutesBp / 10000),
+          ),
+        0,
+      ) * policy.longevity.pointsPerActiveSeason,
+    );
+    // Rivalry is competitive tension, not a positive bond. Captain relationship is not captaincy.
+    const bonds = history.map(({ result: r }) =>
+      r.legacy === undefined
+        ? r.stateDeltas.managerTrust.after
+        : mean(
+            top(
+              [
+                r.legacy.relationships.managerTrust,
+                r.legacy.relationships.captain,
+                r.legacy.relationships.fans,
+                r.legacy.relationships.agent,
+              ],
+              policy.relationship.strongestBonds,
+            ),
+          ),
+    );
+    components.relationship = score(
+      (policy.relationship.careerPercent * mean(bonds)) / policy.relationship.careerAnchor +
+        (policy.relationship.primePercent * mean(top(bonds, policy.relationship.primeSeasons))) /
+          policy.relationship.primeAnchor,
+    );
+    components.narrative = score(
+      tags.reduce((sum, tag) => sum + policy.narrative[CAREER_TAGS[tag].rarity], 0),
+    );
+  }
   const grantSeason = (id: CareerTagId) =>
     state.careerTagGrants.find((g) => g.tagId === id)?.seasonIndex;
   const after = (id: CareerTagId, starter: boolean) => {
@@ -387,12 +469,13 @@ function percentile(
   rulesetVersion: string,
   group: StatGroup,
   total: number,
+  version: LegacyVersion,
 ) {
   if (population === undefined)
     return { referencePopulationId: null, percentileHidden: true as const };
   if (
     !population.id ||
-    population.legacyVersion !== LEGACY_POLICY.version ||
+    population.legacyVersion !== version ||
     population.rulesetVersion !== rulesetVersion
   )
     throw new ArchiveError('VERSION_MISMATCH');
@@ -425,10 +508,12 @@ export function createLegacyResult(
   archive: CareerArchiveCore,
   context: ArchiveContext,
   population?: LegacyReferencePopulation,
+  version: LegacyVersion = '1.0.0',
 ) {
+  const policy = legacyPolicyForVersion(version);
   const verified = verifyCareerArchiveCore(archive, context);
   if (!verified.ok) throw new ArchiveError(verified.code);
-  const evidence = deriveLegacyEvidence(archive);
+  const evidence = deriveLegacyEvidence(archive, version);
   const summary = calculateLegacyScore(evidence.components);
   const ending = evaluateLegacyEndings(evidence.facts);
   const ordered = (
@@ -476,14 +561,20 @@ export function createLegacyResult(
       (a, b) => b.totals.minutes - a.totals.minutes || compareCodePoints(a.group, b.group),
     )[0]?.group ?? 'FW';
   const body = {
-    legacyVersion: LEGACY_POLICY.version,
-    definitionChecksum: sha256Hex(canonical(LEGACY_POLICY)),
+    legacyVersion: version,
+    definitionChecksum: sha256Hex(canonical(policy)),
     rulesetVersion: archive.binding.rulesetVersion,
     archiveId: archive.archiveId,
     archiveHash: archive.hash,
     ...summary,
     ...ending,
-    ...percentile(population, archive.binding.rulesetVersion, primaryGroup, summary.totalScore),
+    ...percentile(
+      population,
+      archive.binding.rulesetVersion,
+      primaryGroup,
+      summary.totalScore,
+      version,
+    ),
     topFactors: factors.slice(0, 3),
     missedOpportunity: missed,
     bestMomentRef: bestMoment.sourceId,

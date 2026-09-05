@@ -29,6 +29,8 @@ export const PutCareerBodySchema = z
     contentPackVersion: SemverSchema,
     /** Pin the locally persisted retirement result. Missing/null means a pre-population result. */
     retirementReferencePopulationId: z.string().min(1).max(128).nullable().optional(),
+    /** Pin the Legacy policy used for an immutable retirement result. Omitted means 1.0.0. */
+    retirementLegacyVersion: z.enum(['1.0.0', '1.1.0']).optional(),
   })
   .superRefine((body, ctx) => {
     let expectedRevision = body.baseRevision + 1;

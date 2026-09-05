@@ -2,7 +2,7 @@ import ruleset100Manifest from '../rulesets/1.0.0/manifest.json' with { type: 'j
 import { loadContentPack } from './packs/load-content-pack.ts';
 import { loadRuleset } from './rulesets/load-ruleset.ts';
 import { RulesetManifestSchema } from './schema/ruleset-manifest.ts';
-import type { LegacyReferencePopulation } from '@offside/domain';
+import type { LegacyReferencePopulation, LegacyVersion } from '@offside/domain';
 
 export type RetirementArtifacts = Readonly<{
   rulesetVersion: string;
@@ -10,6 +10,8 @@ export type RetirementArtifacts = Readonly<{
   contentPackVersion: string;
   contentPackChecksum: string;
   legacyReferencePopulation?: LegacyReferencePopulation;
+  /** Absent means the original policy. Activate a new version only after balance acceptance. */
+  legacyVersion?: LegacyVersion;
 }>;
 
 const RULESET_MANIFESTS: Readonly<Record<string, unknown>> = Object.freeze({
