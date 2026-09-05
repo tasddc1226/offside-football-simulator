@@ -2,8 +2,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { CareerState, Command, LegacyResult } from '@offside/domain';
-import { RetirementScreen } from './retirement-screen.js';
+import { RetirementPage, RetirementScreen } from './retirement-screen.js';
+
+const { navigateMock, getAppEngineMock } = vi.hoisted(() => ({
+  navigateMock: vi.fn(),
+  getAppEngineMock: vi.fn(),
+}));
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, ...props }: { children: ReactNode; [key: string]: unknown }) => (
@@ -11,7 +17,10 @@ vi.mock('@tanstack/react-router', () => ({
       {children}
     </a>
   ),
+  useNavigate: () => navigateMock,
 }));
+
+vi.mock('../engine/engine.js', () => ({ getAppEngine: getAppEngineMock }));
 
 const state = {
   careerId: 'career-test',
@@ -94,7 +103,7 @@ describe('RetirementScreen terminal public views', () => {
     render(<RetirementScreen state={state} result={result} mode="final-profile" />);
     expect(screen.queryByRole('button', { name: /은퇴/ })).not.toBeInTheDocument();
     expect(screen.getByText('공개 선수')).toBeInTheDocument();
-    expect(screen.getByText(/선호 포지션 스트라이커/)).toBeInTheDocument();
+    expect(screen.getByText(/최종 포지션 스트라이커 · 선호 스트라이커/)).toBeInTheDocument();
     expect(screen.getByText('짧았지만 완결된 커리어')).toBeInTheDocument();
     expect(screen.getByText('라인을 넘지 못한 날도 그의 축구였다')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Legacy Score' })).toBeInTheDocument();
@@ -106,6 +115,18 @@ describe('RetirementScreen terminal public views', () => {
 });
 
 describe('RetirementScreen active confirmation', () => {
+  it('does not expose retirement from a DRAFT career with no settled season', () => {
+    render(
+      <RetirementScreen
+        state={{ ...activeState, status: 'DRAFT', seasonHistory: [] } as unknown as CareerState}
+        onCommand={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: '선수 생활 마무리' })).not.toBeInTheDocument();
+    expect(screen.getByText('진행 중인 시즌과 계약 선택을 마친 뒤 은퇴할 수 있어요.')).toBeInTheDocument();
+  });
+
   it('confirms RETIRE, allows cancellation, and prevents duplicate commits while busy', async () => {
     const user = userEvent.setup();
     let resolve!: () => void;
@@ -188,4 +209,53 @@ describe('RetirementScreen active confirmation', () => {
       payload: { choice: 'COACH_EPILOGUE' },
     });
   });
+});
+
+describe('RetirementPage route guard', () => {
+  it.each(['retirement', 'legacy', 'timeline', 'final-profile'] as const)(
+    'redirects a DRAFT career away from the %s route',
+    async (mode) => {
+      navigateMock.mockClear();
+      const draftState = {
+        ...activeState,
+        status: 'DRAFT',
+        player: {
+          ...activeState.player,
+          draft: {
+            name: null,
+            gender: null,
+            nationalityCode: null,
+            preferredFoot: null,
+            position: null,
+            archetypeId: null,
+            backgroundId: null,
+          },
+        },
+      } as unknown as CareerState;
+      getAppEngineMock.mockResolvedValue({
+        client: {
+          loadCareer: vi.fn().mockResolvedValue({
+            ok: true,
+            snapshot: { state: draftState },
+            career: { ownerProfileId: 'profile-test' },
+          }),
+        },
+      });
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+      render(
+        <QueryClientProvider client={client}>
+          <RetirementPage careerId="career-test" mode={mode} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() =>
+        expect(navigateMock).toHaveBeenCalledWith({
+          to: '/career/$careerId/create',
+          params: { careerId: 'career-test' },
+          replace: true,
+        }),
+      );
+    },
+  );
 });

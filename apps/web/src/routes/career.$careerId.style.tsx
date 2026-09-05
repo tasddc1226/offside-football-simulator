@@ -23,7 +23,7 @@ import {
   PLAYER_CREATION_CAREER_PHASE,
   PLAYER_CREATION_STEPS,
   topAttributeKeys,
-  weakestAttributeKeys,
+  relativeWeaknessAttributeKeys,
 } from '../shared/player-draft.js';
 import { useScreenState } from '../shared/screen-state.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
@@ -181,7 +181,7 @@ function StyleScreen() {
               <p>{archetype.summary}</p>
               <span className="os-creation-tradeoffs">
                 <span className="os-creation-tradeoff"><span>주요 무기</span>{attributeLabelList(topAttributeKeys(archetype, 3))}</span>
-                <span className="os-creation-tradeoff"><span>보완할 점</span>{attributeLabelList(weakestAttributeKeys(archetype, 2))}</span>
+                <span className="os-creation-tradeoff"><span>상대적 약점</span>{attributeLabelList(relativeWeaknessAttributeKeys(ruleset, archetype, 2))}</span>
               </span>
             </RadioGroupItem>
           ))}

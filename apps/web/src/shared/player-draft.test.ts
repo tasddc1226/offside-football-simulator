@@ -6,6 +6,7 @@ import {
   backgroundEffectLines,
   backgroundRiskLevel,
   positionsByGroup,
+  relativeWeaknessAttributeKeys,
   shouldResetArchetype,
   topAttributeKeys,
   validateDraftName,
@@ -66,6 +67,26 @@ describe('topAttributeKeys · weakestAttributeKeys', () => {
     expect(weak).toHaveLength(2);
     const values = weak.map((key) => archetype.template[key] ?? 0);
     expect([...values]).toEqual([...values].sort((a, b) => a - b));
+  });
+});
+
+describe('relativeWeaknessAttributeKeys', () => {
+  it('같은 포지션의 역할 능력만 비교해 필드 선수에게 골키핑을 약점으로 제시하지 않는다', () => {
+    const archetype = ruleset.archetypes.find((candidate) => candidate.id === 'inside-forward');
+    if (archetype === undefined) throw new Error('fixture archetype missing');
+
+    const weak = relativeWeaknessAttributeKeys(ruleset, archetype, 2);
+
+    expect(weak).not.toContain('goalkeeping');
+    expect(weak).not.toContain('tackling');
+    expect(weak.length).toBeGreaterThan(0);
+    expect(
+      weak.every((key) =>
+        ruleset.archetypes
+          .filter((candidate) => candidate.position === archetype.position)
+          .some((candidate) => (candidate.roleWeights[key] ?? 0) > 0),
+      ),
+    ).toBe(true);
   });
 });
 

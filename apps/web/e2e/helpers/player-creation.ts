@@ -175,10 +175,12 @@ export async function fillPreseasonPlan(page: Page, mode: 'FAST' | 'CHAPTER', mo
   await expect(page.getByText('(시즌 결산 때 능력에 반영, 다음 시즌부터 체감)')).toBeVisible();
 }
 
-/** SCR-012: proposal.type이 KEEP("확인")이든 POSITION_CHANGE·ROLE_CHANGE("수락")든 승낙한다
- * (RULE-TIME-002: 시즌 step 1은 항상 ROLE_PROPOSAL). */
+/** SCR-012의 POSITION_CHANGE·ROLE_CHANGE를 승낙한다. 현재 역할과 완전히 같은 KEEP은 시즌 준비
+ * 화면이 원자적으로 수락하고 대시보드로 바로 이동하므로, 그 경로에서는 할 일이 없다. KEEP 자동
+ * 수락의 두 번째 명령이 실패한 경우에는 복구용 /role이 남아 이 함수가 "확인"으로 마무리한다. */
 export async function resolveRoleProposal(page: Page): Promise<void> {
-  await expect(page).toHaveURL(/\/career\/.+\/role$/);
+  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/role)?$/);
+  if (!page.url().endsWith('/role')) return;
   // KEEP은 "확인" 하나, POSITION_CHANGE·ROLE_CHANGE는 "거절"·"수락" 둘을 보여준다 — 어느 쪽이든
   // 받아들이는 버튼을 하나의 locator로 묶어 렌더 경합 없이 기다린다(count() 스냅샷은 로더 직후
   // 첫 렌더 전에 0을 읽을 수 있다).

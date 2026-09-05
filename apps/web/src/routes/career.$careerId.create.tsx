@@ -10,7 +10,6 @@ import {
   RadioGroupItem,
   ScreenIntro,
   Skeleton,
-  Stepper,
   Tabs,
   TabsContent,
   TabsList,
@@ -40,7 +39,6 @@ import {
   backgroundEffectLines,
   backgroundRiskLevel,
   PLAYER_CREATION_CAREER_PHASE,
-  PLAYER_CREATION_STEPS,
   positionsByGroup,
   RISK_LABELS,
   shouldResetArchetype,
@@ -315,7 +313,6 @@ function CreatePlayerScreen() {
 
   return (
     <div className="os-screen">
-      <Stepper steps={PLAYER_CREATION_STEPS} currentStepId="info" />
       <ScreenIntro
         eyebrow="새 커리어 · 1/3"
         title="선수 정보를 입력하세요"
