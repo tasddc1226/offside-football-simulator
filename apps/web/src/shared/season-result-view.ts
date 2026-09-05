@@ -80,6 +80,8 @@ export type SeasonResultView = {
     possibleMinutes: number;
   };
   promise: SeasonResult['promiseFulfilment'];
+  /** 미이행 시 결산 규칙이 선언한 기본 조정값. 하한 clamp 전 정책값이며 실제 감소량과 다를 수 있다. */
+  promiseBreachTrustRuleDelta?: number | null;
   /** `contractRules.promiseMinutesShareBp[promised]` — CompareCards "계약 약속" 세그먼트의 목표치. */
   promiseThresholdBp: number;
   roleChanges: SeasonResult['roleChanges'];
@@ -210,6 +212,9 @@ export function deriveSeasonResultView(state: CareerState, index: number, rulese
       possibleMinutes: result.selectionSummary.possibleMinutes,
     },
     promise: result.promiseFulfilment,
+    promiseBreachTrustRuleDelta: result.promiseFulfilment.fulfilled
+      ? null
+      : ruleset.transferRules.relationshipCarry.managerTrustPromiseBreach,
     promiseThresholdBp: ruleset.contractRules.promiseMinutesShareBp[result.promiseFulfilment.promised],
     roleChanges: result.roleChanges,
     chapters: result.chapters,

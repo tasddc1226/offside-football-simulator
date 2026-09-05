@@ -109,6 +109,21 @@ function SeasonPrepScreen() {
         choice: { simulationMode: mode, trainingFocus: focus },
       });
       if (!result.ok) {
+        const details = result.error.details;
+        const marketIsOpen =
+          result.error.code === 'VALIDATION_FAILED' &&
+          typeof details === 'object' &&
+          details !== null &&
+          'reason' in details &&
+          details.reason === 'MARKET_OPEN';
+        if (marketIsOpen) {
+          // 다른 탭/요청이 먼저 시장을 연 경합이면 stale 화면을 재시도하지 않고,
+          // 최신 저장 상태가 가리키는 시장 화면으로 보낸다.
+          const latest = await queryClient.fetchQuery({ ...careerQueryOptions(careerId), staleTime: 0 });
+          const target = screenForCareer(latest.state);
+          void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params, replace: true });
+          return;
+        }
         setErrorMessage('시즌을 시작하지 못했습니다. 다시 시도해 주세요.');
         return;
       }

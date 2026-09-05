@@ -402,6 +402,12 @@ function SeasonResultScreen() {
           {SQUAD_ROLE_LABELS[promise.promised]} 약속 → {SQUAD_ROLE_LABELS[promise.delivered]} 실제 ·{' '}
           {promise.fulfilled ? '이행' : '미이행'}
         </p>
+        {typeof view.promiseBreachTrustRuleDelta === 'number' ? (
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            출전 약속 미이행: 감독 신뢰 기본 조정 {view.promiseBreachTrustRuleDelta >= 0 ? '+' : ''}
+            {view.promiseBreachTrustRuleDelta}점. 전체 시즌 변화에 포함되며, 신뢰 하한에 따라 실제 감소 폭은 달라질 수 있습니다.
+          </p>
+        ) : null}
       </section>
 
       {view.roleChanges.length > 0 ? (
