@@ -134,10 +134,8 @@ test('시즌 1 결산 뒤 INTEREST 시장이 열리면 안전 잔류 제안을 �
   await page.getByRole('button', { name: '결산하기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
 
-  await page.getByRole('link', { name: '대시보드' }).click();
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
-
-  const offersCta = page.getByRole('link', { name: '제안 보기' });
+  // 결산 화면의 다음 시즌 CTA가 최신 pending 시장 상태를 직접 가리킨다.
+  const offersCta = page.getByRole('link', { name: '다음 시즌' });
   await expect(offersCta).toBeVisible();
   await offersCta.click();
   await expect(page.getByRole('definition').filter({ hasText: '타 구단 관심' })).toBeVisible();

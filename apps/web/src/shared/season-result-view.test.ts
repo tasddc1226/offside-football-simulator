@@ -165,6 +165,16 @@ describe('deriveSeasonResultView', () => {
     expect(deriveSeasonResultView(baseState({ seasonHistory: [] }), 0, ruleset)).toBeNull();
   });
 
+  it('출전 약속 미이행의 실제 규칙 벌점과 전체 신뢰 변화를 구분한다', () => {
+    const result = seasonResult({
+      promiseFulfilment: { promised: 'STARTER', delivered: 'BENCH', fulfilled: false, minutesShareBp: 2000 },
+      stateDeltas: { managerTrust: { before: 40, after: 25 }, form: { before: 55, after: 50 }, fitness: { before: 70, after: 80 }, morale: { before: 60, after: 60 } },
+    });
+    const view = deriveSeasonResultView(baseState({ seasonHistory: [summary(result)] }), 0, ruleset);
+    expect(view?.promiseBreachTrustRuleDelta).toBe(ruleset.transferRules.relationshipCarry.managerTrustPromiseBreach);
+    expect(result.stateDeltas.managerTrust.after - result.stateDeltas.managerTrust.before).toBe(-15);
+  });
+
   it('profile이 없으면(아직 확정 전) null이다', () => {
     const state = baseState({ seasonHistory: [summary(seasonResult())], player: { draft: baseState({}).player.draft, profile: null } });
     expect(deriveSeasonResultView(state, 0, ruleset)).toBeNull();
