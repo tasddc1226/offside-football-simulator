@@ -8,8 +8,8 @@ import { selectEligibleEvents } from '../../src/runtime/select-eligible-events.t
 import { selectChapterCandidates } from '../../src/runtime/select-chapter-candidates.ts';
 
 // T-4-008 2절: seed 500개 x 2시즌(청소년 시즌 진입 전 온보딩 포함) 실제 CHAPTER 모드 재생으로
-// 이번 작업이 새로 더한 이벤트 12개·챕터 3개가 실제 selectEligibleEvents/selectChapterCandidates
-// + domain simulate 조합에서 최소 1회 "선택"(pending으로 실제 제시)되는지 센다. 팩·룰셋만 실행하고
+// 새 이벤트 12개·챕터 3개의 조건 도달(eligible)과, presentation별 실제 pending 선택을 분리해 센다.
+// 팩·룰셋만 실행하고
 // 선택은 매 pending마다 시드 기반 의사난수로 다양화한다(항상 같은 choice만 고르면 특정 trigger가
 // 우연히도 계속 만족되거나 계속 실패할 수 있어 표본이 편향된다).
 
@@ -116,7 +116,12 @@ function runOrThrow(snapshot: DomainSnapshot | null, command: CommandInput, rule
   return result.snapshot;
 }
 
-type Tally = { eligible: Record<string, number>; chosen: Record<string, number>; chaptersChosen: Record<string, number> };
+type Tally = {
+  eligible: Record<string, number>;
+  chosen: Record<string, number>;
+  chosenPresentations: Record<string, number>;
+  chaptersChosen: Record<string, number>;
+};
 
 function makeTally(): Tally {
   const eligible: Record<string, number> = {};
@@ -129,7 +134,7 @@ function makeTally(): Tally {
   for (const id of NEW_CHAPTER_IDS) {
     chaptersChosen[id] = 0;
   }
-  return { eligible, chosen, chaptersChosen };
+  return { eligible, chosen, chosenPresentations: {}, chaptersChosen };
 }
 
 /**
@@ -211,6 +216,9 @@ function playSeeded(seedLabel: string, pack: ContentPack, ruleset: ReturnType<ty
       if (pending.eventId in tally.chosen) tally.chosen[pending.eventId] = (tally.chosen[pending.eventId] ?? 0) + 1;
       const definition = pack.eventsById.get(pending.eventId);
       if (definition === undefined) throw new Error(`팩에 이벤트 정의가 없다: ${pending.eventId}`);
+      if (pending.eventId in tally.chosen && definition.presentation !== undefined) {
+        tally.chosenPresentations[definition.presentation] = (tally.chosenPresentations[definition.presentation] ?? 0) + 1;
+      }
       const choice = pickEventChoice(definition, guard);
       snapshot = runOrThrow(snapshot, withMeta({ type: 'RESOLVE_EVENT', payload: { eventId: definition.id, definitionVersion: definition.version, choiceId: choice.id, outcomes: toResolveEventOutcomes(choice.outcomes) } }), ruleset);
       continue;
@@ -272,9 +280,9 @@ function playSeeded(seedLabel: string, pack: ContentPack, ruleset: ReturnType<ty
   }
 }
 
-describe('packs/0.3.0 도달성: seed 500개 x 2시즌', () => {
+describe('packs/0.3.0 조건 도달성과 presentation별 실제 선택: seed 500개 x 2시즌', () => {
   it(
-    '새 이벤트 12개·새 챕터 3개가 실제 CHAPTER 모드 재생에서 최소 1회 이상 선택된다',
+    '새 이벤트 12개·새 챕터 3개의 조건 도달과 presentation별 실제 선택을 확인한다',
     () => {
       const pack = loadContentPack(CONTENT_PACK_VERSION);
       const ruleset = loadRuleset(RULESET_VERSION);
@@ -293,7 +301,7 @@ describe('packs/0.3.0 도달성: seed 500개 x 2시즌', () => {
       // 표본 재생 자체가 예외 없이 끝나야 아래 카운트를 신뢰할 수 있다.
       expect(failures.slice(0, 5)).toEqual([]);
 
-      console.log('T-4-008 도달성 표(이벤트, eligible 횟수, chosen 횟수):');
+      console.log('T-4-008 도달성 표(이벤트, eligible 횟수, 실제 chosen 횟수):');
       for (const id of NEW_EVENT_IDS) {
         console.log(`  ${id}: eligible=${tally.eligible[id]} chosen=${tally.chosen[id]}`);
       }
@@ -303,7 +311,13 @@ describe('packs/0.3.0 도달성: seed 500개 x 2시즌', () => {
       }
 
       for (const id of NEW_EVENT_IDS) {
-        expect(tally.chosen[id], `${id}이(가) 0회 선택됐다(eligible=${tally.eligible[id]})`).toBeGreaterThan(0);
+        expect(tally.eligible[id], `${id} 조건이 한 번도 충족되지 않았다`).toBeGreaterThan(0);
+      }
+      const newPresentations = new Set(
+        NEW_EVENT_IDS.map((id) => pack.eventsById.get(id)?.presentation).filter((value) => value !== undefined),
+      );
+      for (const presentation of newPresentations) {
+        expect(tally.chosenPresentations[presentation], `${presentation} presentation이 실제 pending으로 선택되지 않았다`).toBeGreaterThan(0);
       }
       for (const id of NEW_CHAPTER_IDS) {
         expect(tally.chaptersChosen[id], `${id}이(가) 0회 선택됐다`).toBeGreaterThan(0);

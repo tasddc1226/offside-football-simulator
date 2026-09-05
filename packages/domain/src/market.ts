@@ -41,6 +41,13 @@ export function judgeMarketReason(state: CareerState, ruleset: Ruleset): 'EXPIRE
   if (contract === null) return null;
   // 임대 계약의 결산은 LOAN_RETURN 경로(T-3-003)다 — 호출자가 먼저 갈라야 하지만, 방어적으로도 null.
   if (contract.kind === 'LOAN') return null;
+  // A step-7 renewal already resolves the next contract; do not immediately
+  // reopen the post-settlement market for the same career season.
+  const lastSeasonStart = state.timeline.reduce(
+    (max, entry) => (entry.kind === 'SEASON_STARTED' ? Math.max(max, entry.revision) : max),
+    -1,
+  );
+  if (state.timeline.some((entry) => entry.kind === 'CONTRACT_RENEWED' && entry.revision > lastSeasonStart)) return null;
 
   const remaining = computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline);
   if (remaining === 0) return 'EXPIRED';
@@ -300,7 +307,7 @@ export function generateMarket(args: GenerateMarketArgs): GeneratedMarket {
       team,
       profile.primaryPosition,
       profile.baseOvr,
-      `market:${state.careerId}:${revision}:${team.id}`,
+      `market:${revision}:${team.id}:${rng.s.join(',')}`,
     );
 
     drawnOffers.push({

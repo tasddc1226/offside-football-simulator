@@ -10,6 +10,13 @@ export const SCREEN_ROUTES = {
   'SCR-007': '/career/$careerId/path',
   'SCR-008': '/career/$careerId/tryout',
   'SCR-013': '/career/$careerId/event',
+  'SCR-016': '/career/$careerId/event',
+  'SCR-018': '/career/$careerId/event',
+  'SCR-019': '/career/$careerId/event',
+  'SCR-021': '/career/$careerId/event',
+  'SCR-022': '/career/$careerId/event',
+  'SCR-024': '/career/$careerId/event',
+  'SCR-032': '/career/$careerId/event',
   'SCR-014': '/career/$careerId/event/result',
   'SCR-009': '/career/$careerId/offers',
   // T-3-005 market comparison reuses the existing offers URL while keeping its own screen id.

@@ -349,6 +349,31 @@ describe('T-3-003 P1 market command regressions', () => {
     },
   );
 
+  it('PRE_NEGOTIATION 재계약은 현재 계약을 유지하고 새 조건을 nextContract로 보관한다', () => {
+    const active = runLoanPrefix(10);
+    if (active.state.season === null || active.state.contract === null) throw new Error(`활성 시즌 prefix가 없다: season=${active.state.season !== null} contract=${active.state.contract !== null}`);
+    const renewal = makeOffer(active.state, {
+      id: 'OFR-pre-renewal',
+      kind: 'RENEWAL',
+      teamId: active.state.contract.teamId,
+      rolePromise: active.state.contract.rolePromise === 'STARTER' ? 'ROTATION' : 'STARTER',
+    });
+    const offered = rehashSnapshot(active, {
+      ...active.state,
+      pending: {
+        kind: 'CONTRACT',
+        step: active.state.season.currentStep,
+        offers: [renewal],
+        market: { openedAtRevision: active.revision, seasonIndex: active.state.seasonHistory.length, reason: 'PRE_NEGOTIATION', safeOfferId: null },
+      },
+    });
+    const result = runCommand(offered, acceptCommand(offered, renewal.id));
+    expect(result.state.contract?.id).toBe(active.state.contract.id);
+    expect(result.state.contract?.rolePromise).toBe(active.state.contract.rolePromise);
+    expect(result.state.nextContract?.rolePromise).toBe(renewal.rolePromise);
+    expect(result.state.pending).toBeNull();
+  });
+
   it('같은 ACCEPT_OFFER를 stale revision으로 다시 보내면 revision 충돌이고 계약/stint는 하나만 추가된다', () => {
     const settled = runSettledFixture().snapshot;
     const offer = makeOffer(settled.state, {
@@ -451,7 +476,7 @@ describe('T-3-003 P1 market command regressions', () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       expect(result.snapshot.state.rngState.draws).toBe(beforeDraws + 1);
-      expect(result.snapshot.state.timeline.at(-1)?.refId).toContain(
+      expect(result.snapshot.state.timeline.findLast((entry) => entry.kind === 'NEGOTIATED')?.refId).toContain(
         success ? 'COUNTERED' : 'WITHDRAWN',
       );
       if (success) {
@@ -461,9 +486,8 @@ describe('T-3-003 P1 market command regressions', () => {
             result.snapshot.state.pending.offers[0]?.negotiationState,
         ).toBe('COUNTERED');
       } else {
-        expect(
-          result.snapshot.state.pending?.kind === 'OFFERS' && result.snapshot.state.pending.offers,
-        ).toHaveLength(0);
+        expect(result.snapshot.state.pending).toBeNull();
+        expect(result.nextAction).toBe('ADVANCE');
       }
     };
 
@@ -646,7 +670,9 @@ describe('T-3-003 P1 market command regressions', () => {
       managerTrust: rulesetProto.transferRules.relationshipCarry.newManagerTrustBase,
       captain: 0,
       rival: 0,
-      fans: Math.floor((100 * rulesetProto.transferRules.relationshipCarry.fansCarryBp) / 10000),
+      // Parent-contract expiry opens FA without applying the return fan carry;
+      // the carry is applied exactly once when a new club is accepted.
+      fans: loanState.relationships.fans,
       agent: loanState.relationships.agent,
     });
 
@@ -659,6 +685,18 @@ describe('T-3-003 P1 market command regressions', () => {
     expect(afterSafeRenewal.state.contract?.teamId).toBe(loanState.parentContract!.teamId);
     expect(afterSafeRenewal.state.context).toEqual(autoFaSettled.state.context);
     expect(afterSafeRenewal.state.relationships).toEqual(autoFaSettled.state.relationships);
+    const freeAgent =
+      autoFaSettled.state.pending?.kind === 'OFFERS'
+        ? autoFaSettled.state.pending.offers.find((offer) => offer.kind === 'FREE_AGENT')
+        : undefined;
+    if (freeAgent === undefined) throw new Error('automatic FA market did not contain a FREE_AGENT offer');
+    const afterFreeAgent = runCommand(autoFaSettled, acceptCommand(autoFaSettled, freeAgent.id));
+    expect(afterFreeAgent.state.clubHistory.at(-2)?.toSeasonIndex).toBeGreaterThanOrEqual(
+      afterFreeAgent.state.clubHistory.at(-2)?.fromSeasonIndex ?? 0,
+    );
+    expect(afterFreeAgent.state.relationships.fans).toBe(
+      Math.floor((autoFaSettled.state.relationships.fans * rulesetProto.transferRules.relationshipCarry.fansCarryBp) / 10000),
+    );
   });
 
   it('강제 감독 교체가 예약된 임대 결산→PERMANENT→START_SEASON에서 감독·신뢰·전술·선발·주장단을 보존한다', () => {

@@ -6,12 +6,20 @@ import type {
   CareerStatus,
   ChapterTrigger,
   DecisionSlot,
+  EffectExpiresAt,
+  InjuryBodyPart,
+  InjuryEpisode,
+  InjurySeverity,
   MatchAppearance,
+  NationalTeamCallUp,
   OutReason,
   PlayerGender,
   Position,
   PositionGroup,
   PreferredFoot,
+  RehabPlan,
+  RelationTarget,
+  RelationshipLogEntry,
   RoleProposal,
   SeasonPhase,
   SelectionCandidate,
@@ -178,7 +186,7 @@ export const TIMELINE_KIND_LABEL_KO: Record<TimelineEntry['kind'], string> = {
  * 그대로 재사용하고(중복 정의 금지), 나머지(state·context·relationships) 대상만 여기서 더한다.
  */
 export const EFFECT_TARGET_LABEL_KO: Record<
-  AttributeKey | 'form' | 'fitness' | 'morale' | 'tacticalFit' | 'squadStatus' | 'positionProficiency' | 'managerTrust' | 'captain' | 'rival' | 'fans' | 'agent',
+  AttributeKey | 'form' | 'fitness' | 'morale' | 'tacticalFit' | 'squadStatus' | 'positionProficiency' | 'managerTrust' | 'captain' | 'rival' | 'fans' | 'agent' | 'popularity' | 'media' | 'matchesRemaining' | 'recurrenceRiskBp',
   string
 > = {
   ...ATTRIBUTE_LABELS,
@@ -193,6 +201,10 @@ export const EFFECT_TARGET_LABEL_KO: Record<
   rival: '라이벌 관계',
   fans: '팬 관계',
   agent: '에이전트 관계',
+  popularity: '인기',
+  media: '미디어 평판',
+  matchesRemaining: '결장 잔여 경기',
+  recurrenceRiskBp: '재발 위험(bp)',
 };
 
 /** 충돌 대화상자 비교 카드의 "단계" 행. */
@@ -348,3 +360,145 @@ export const TIMELINE_KIND_LABELS: Record<TimelineEntry['kind'], string> = {
   NATIONAL_TEAM_DECLINED: '국가대표 소집 거절',
   CAPTAIN_APPOINTED: '주장 임명',
 };
+
+// ---------------------------------------------------------------------------
+// T-4-009 D-57: Phase 4 화면(SCR-018 라커룸·SCR-022 부상·SCR-032 대표팀 차출 등)이 쓸 라벨. 화면이
+// 아직 없어(T-4-005 선행 작업) 여기서는 순수 함수·상수만 두고 렌더링은 하지 않는다. 룰셋에 이
+// 경계·문구를 위한 새 상수를 추가하지 않는다(브리프 제약) — 전부 이 파일 안의 상수다.
+// ---------------------------------------------------------------------------
+
+/** 0~100(관계 5축) 5단계 공용 라벨. 인기·미디어(0~10000)는 같은 5단계를 스케일만 다르게 나눈다
+ * (REPUTATION_TIER_BOUNDARIES). 정확한 문구는 화면 통합 시 디자인 리뷰에서 조정될 수 있다. */
+const TIER_LABELS_5 = ['매우 낮음', '낮음', '보통', '높음', '매우 높음'] as const;
+
+function tierIndex(value: number, boundaries: readonly number[]): number {
+  let index = 0;
+  for (const boundary of boundaries) {
+    if (value >= boundary) index += 1;
+  }
+  return index;
+}
+
+/** 관계 5축(managerTrust·captain·rival·fans·agent, `CareerState.relationships`) 0~100 경계.
+ * [20, 40, 60, 80] 미만 구간이 각각 매우 낮음~매우 높음의 5단계를 이룬다. */
+export const RELATION_TIER_BOUNDARIES = [20, 40, 60, 80] as const;
+
+/** SCR-018 라커룸·SCR-029 전술실: 관계 축 하나의 현재값(0~100)을 5단계 라벨로 바꾼다. */
+export function relationTierLabel(value: number): string {
+  return TIER_LABELS_5[tierIndex(value, RELATION_TIER_BOUNDARIES)]!;
+}
+
+/** SCR-029 전술실 "감독 신뢰" 카드 전용 진입점(브리프 "감독 신뢰 단계"). managerTrust도 관계 5축의
+ * 하나라 같은 경계·문구를 그대로 쓴다(관계 라벨과 다른 룰셋 상수를 새로 만들지 않는다). */
+export function managerTrustTierLabel(managerTrust: number): string {
+  return relationTierLabel(managerTrust);
+}
+
+export type RelationDirection = 'UP' | 'FLAT' | 'DOWN';
+
+/** SCR-018·SCR-029 D-57 stage 2: 방향 화살표. */
+export const RELATION_DIRECTION_ARROW: Record<RelationDirection, string> = {
+  UP: '↑',
+  FLAT: '→',
+  DOWN: '↓',
+};
+
+/**
+ * `state.relationshipLog`(D-50: 룰셋 `relationshipRules.logMax` 길이로 이미 "최근"만 남긴 링버퍼)
+ * 에서 한 축의 delta 합 부호로 방향을 고른다. 합이 정확히 0이거나 그 축의 기록이 없으면 FLAT.
+ */
+export function relationshipDirection(log: readonly RelationshipLogEntry[], target: RelationTarget): RelationDirection {
+  const sum = log.reduce((total, entry) => (entry.target === target ? total + entry.delta : total), 0);
+  if (sum > 0) return 'UP';
+  if (sum < 0) return 'DOWN';
+  return 'FLAT';
+}
+
+/** relationshipDirection의 화살표 문자열 버전(화면이 바로 문자열로 쓸 수 있게). */
+export function relationshipDirectionArrow(log: readonly RelationshipLogEntry[], target: RelationTarget): string {
+  return RELATION_DIRECTION_ARROW[relationshipDirection(log, target)];
+}
+
+/** `CareerState.reputation`(popularityCenti·mediaCenti, 0~10000) 5단계 경계. RELATION_TIER_BOUNDARIES와
+ * 같은 비율(100배)이라 같은 TIER_LABELS_5를 쓴다. */
+export const REPUTATION_TIER_BOUNDARIES = [2000, 4000, 6000, 8000] as const;
+
+/** SCR-024 SNS·평판, SCR-029 휴대폰 D-57 stage 2: 인기 단계(계약 전·첫 결산 전에는 숫자 대신 이
+ * 라벨만 보여준다 — 실제 정수는 stage 3부터 `popularityCenti/100`으로 공개). */
+export function popularityTierLabel(popularityCenti: number): string {
+  return TIER_LABELS_5[tierIndex(popularityCenti, REPUTATION_TIER_BOUNDARIES)]!;
+}
+
+/** SCR-024 미디어 반응 단계. popularityTierLabel과 같은 경계를 쓴다(별도 미디어 전용 경계 없음). */
+export function mediaTierLabel(mediaCenti: number): string {
+  return TIER_LABELS_5[tierIndex(mediaCenti, REPUTATION_TIER_BOUNDARIES)]!;
+}
+
+/** T-4-002 D-49 SCR-022 부상 진단: 부위. */
+export const INJURY_BODY_PART_LABELS: Record<InjuryBodyPart, string> = {
+  KNEE: '무릎',
+  ANKLE: '발목',
+  HAMSTRING: '햄스트링',
+  SHOULDER: '어깨',
+  HEAD: '머리',
+};
+
+/** SCR-022 부상 진단: 심각도. */
+export const INJURY_SEVERITY_LABELS: Record<InjurySeverity, string> = {
+  MINOR: '경미',
+  MODERATE: '보통',
+  MAJOR: '중상',
+};
+
+/** SCR-022 재활 계획 선택지(choice.rehabPlan). */
+export const REHAB_PLAN_LABELS: Record<RehabPlan, string> = {
+  EARLY: '조기 복귀',
+  STANDARD: '표준 재활',
+  CONSERVATIVE: '보수적 재활',
+};
+
+/** SCR-022·SCR-029 부상 카드: `InjuryEpisode.status`(회복 상태). */
+export const INJURY_EPISODE_STATUS_LABELS: Record<InjuryEpisode['status'], string> = {
+  ACTIVE: '치료 중',
+  REHAB: '재활 중',
+  RECOVERED: '회복 완료',
+  RECURRED: '재발',
+};
+
+/** SCR-032 대표팀 차출: RESOLVE_EVENT choice.callUp 결정. */
+export const NATIONAL_TEAM_CALL_UP_LABELS: Record<NationalTeamCallUp, string> = {
+  ACCEPT: '소집 수락',
+  DECLINE: '소집 거절',
+  CONDITIONAL: '조건부 참가',
+};
+
+/**
+ * SCR-029 전술실·다이어리: 저장된(=이미 STEPS_AFTER/SEASONS_AFTER가 AT_STEP/AT_SEASON_INDEX로
+ * 치환된, D-40 규칙 3) Effect의 만료 시점을 "지금부터 몇 스텝/시즌 뒤"로 바꾼다. content가 직접
+ * 쓰는 원본 형태(STEPS_AFTER·SEASONS_AFTER)도 방어적으로 처리하되(exhaustive switch), 실제
+ * state.activeEffects·deferredEffects에는 나타나지 않는다(SCR-014 결과 카드는 outcome 정의 자체를
+ * `shared/effect-summary.ts`의 formatEffectSummary로 이미 이 두 형태로 보여준다 — 중복 함수 아님,
+ * 입력이 다르다: 여긴 "저장된 state의 지금 시점 기준" 상대 문구다).
+ */
+export function effectExpiresAtLabel(
+  expiresAt: EffectExpiresAt,
+  context: { currentStep: number; seasonIndex: number },
+): string {
+  if (expiresAt === null) return '만료 없음';
+  switch (expiresAt.kind) {
+    case 'STEPS_AFTER':
+      return `${expiresAt.steps}스텝 뒤 만료`;
+    case 'AT_STEP': {
+      const remaining = expiresAt.step - context.currentStep;
+      return remaining <= 0 ? '이번 스텝에 만료' : `${remaining}스텝 뒤 만료`;
+    }
+    case 'AT_SEASON_END':
+      return '이번 시즌 결산 때 만료';
+    case 'SEASONS_AFTER':
+      return `${expiresAt.seasons}시즌 뒤 만료`;
+    case 'AT_SEASON_INDEX': {
+      const remaining = expiresAt.index - context.seasonIndex;
+      return remaining <= 0 ? '다음 시즌 시작 전 만료' : `${remaining}시즌 뒤 만료`;
+    }
+  }
+}

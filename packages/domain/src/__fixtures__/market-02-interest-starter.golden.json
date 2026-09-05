@@ -20,11 +20,17 @@
         "signingBonusMinor": 0,
         "transferFeeMinor": null,
         "rolePromise": "STARTER",
-        "appearancePromise": { "minutesShareBp": 1500 },
+        "appearancePromise": {
+          "minutesShareBp": 1500
+        },
         "tacticalFitEstimate": 37,
         "competitorSummary": null,
         "validUntilRevision": null,
-        "negotiable": { "wage": false, "role": false, "length": false },
+        "negotiable": {
+          "wage": false,
+          "role": false,
+          "length": false
+        },
         "negotiationState": "OPEN",
         "negotiatedAsk": null,
         "loan": null
@@ -41,16 +47,30 @@
         "signingBonusMinor": 30000000,
         "transferFeeMinor": null,
         "rolePromise": "BENCH",
-        "appearancePromise": { "minutesShareBp": 1500 },
+        "appearancePromise": {
+          "minutesShareBp": 1500
+        },
         "positionPlan": "W",
         "shirtNumber": 24,
         "tacticalFitEstimate": 45,
-        "competitorSummary": { "rank": 3, "ovrGap": -18 },
+        "competitorSummary": {
+          "rank": 3,
+          "ovrGap": -18
+        },
         "validUntilRevision": 18,
-        "negotiable": { "wage": false, "role": true, "length": false },
+        "negotiable": {
+          "wage": false,
+          "role": true,
+          "length": false
+        },
         "negotiationState": "OPEN",
         "negotiatedAsk": null,
-        "loan": { "parentTeamId": "seoul-tier1", "seasons": 1, "wageShareBp": 5000, "buyOptionMinor": 120000000 }
+        "loan": {
+          "parentTeamId": "seoul-tier1",
+          "seasons": 1,
+          "wageShareBp": 5000,
+          "buyOptionMinor": 120000000
+        }
       },
       {
         "id": "OFR-15-2",
@@ -64,13 +84,22 @@
         "signingBonusMinor": 8000000,
         "transferFeeMinor": 120000000,
         "rolePromise": "ROTATION",
-        "appearancePromise": { "minutesShareBp": 4000 },
+        "appearancePromise": {
+          "minutesShareBp": 4000
+        },
         "positionPlan": "W",
         "shirtNumber": 13,
         "tacticalFitEstimate": 52,
-        "competitorSummary": { "rank": 2, "ovrGap": -1 },
+        "competitorSummary": {
+          "rank": 1,
+          "ovrGap": 0
+        },
         "validUntilRevision": 18,
-        "negotiable": { "wage": true, "role": true, "length": true },
+        "negotiable": {
+          "wage": true,
+          "role": true,
+          "length": true
+        },
         "negotiationState": "OPEN",
         "negotiatedAsk": null,
         "loan": null
@@ -87,13 +116,22 @@
         "signingBonusMinor": 8000000,
         "transferFeeMinor": 120000000,
         "rolePromise": "BENCH",
-        "appearancePromise": { "minutesShareBp": 1500 },
+        "appearancePromise": {
+          "minutesShareBp": 1500
+        },
         "positionPlan": "W",
         "shirtNumber": 4,
         "tacticalFitEstimate": 73,
-        "competitorSummary": { "rank": 3, "ovrGap": -2 },
+        "competitorSummary": {
+          "rank": 3,
+          "ovrGap": -3
+        },
         "validUntilRevision": 18,
-        "negotiable": { "wage": true, "role": true, "length": true },
+        "negotiable": {
+          "wage": true,
+          "role": true,
+          "length": true
+        },
         "negotiationState": "OPEN",
         "negotiatedAsk": null,
         "loan": null
@@ -110,13 +148,22 @@
         "signingBonusMinor": 8000000,
         "transferFeeMinor": 120000000,
         "rolePromise": "BENCH",
-        "appearancePromise": { "minutesShareBp": 1500 },
+        "appearancePromise": {
+          "minutesShareBp": 1500
+        },
         "positionPlan": "W",
         "shirtNumber": 13,
         "tacticalFitEstimate": 55,
-        "competitorSummary": { "rank": 1, "ovrGap": 1 },
+        "competitorSummary": {
+          "rank": 1,
+          "ovrGap": 2
+        },
         "validUntilRevision": 18,
-        "negotiable": { "wage": true, "role": true, "length": true },
+        "negotiable": {
+          "wage": true,
+          "role": true,
+          "length": true
+        },
         "negotiationState": "OPEN",
         "negotiatedAsk": null,
         "loan": null

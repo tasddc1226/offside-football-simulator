@@ -921,6 +921,8 @@ const CareerStateShapeSchema = z.strictObject({
   }),
   pending: PendingSchema,
   contract: ContractSchema.nullable(),
+  // T-4-012 F7: optional for backwards-compatible snapshots; applies after settlement.
+  nextContract: ContractSchema.nullable().optional(),
   // T-3-003 D-46: 임대 중 원소속 계약(`suspended: true`). Phase 1·비임대 상태는 항상 null.
   parentContract: ContractSchema.nullable(),
   // T-3-001 D-45: 소속 이력. `acceptOffer`가 매 계약마다 항목을 추가한다(현재 소속은 toSeasonIndex: null).
@@ -988,10 +990,22 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
   if (Array.isArray(clubHistory) && openStints.length > 1) {
     issues.push({ path: ['clubHistory'], message: 'clubHistory에는 열린 stint가 하나만 있어야 한다.' });
   }
+  if (Array.isArray(clubHistory)) {
+    for (const [index, stint] of clubHistory.entries()) {
+      if (!isRecord(stint)) continue;
+      const from = stint.fromSeasonIndex;
+      const to = stint.toSeasonIndex;
+      if (typeof from === 'number' && typeof to === 'number' && to < from) {
+        issues.push({ path: ['clubHistory', index, 'toSeasonIndex'], message: 'stint 종료 시즌은 시작 시즌보다 작을 수 없다.' });
+      }
+    }
+  }
 
   if (hasContract && isRecord(contract)) {
     if (hasClubHistory && Array.isArray(clubHistory)) {
-      if (openStints.length === 0) {
+      const expiredMarketPending =
+        isRecord(value.pending) && value.pending.kind === 'OFFERS' && isRecord(value.pending.market) && value.pending.market.reason === 'EXPIRED';
+      if (openStints.length === 0 && !expiredMarketPending) {
         issues.push({ path: ['clubHistory'], message: '계약이 있으면 열린 stint가 있어야 한다.' });
       } else if (openStints.length === 1) {
         const currentStint = openStints[0]!;
@@ -1037,6 +1051,10 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
 
   if (hasContract && contract === null && hasClubHistory && openStints.length > 0) {
     issues.push({ path: ['clubHistory'], message: '계약이 없으면 열린 stint가 없어야 한다.' });
+  }
+
+  if (hasOwn(value, 'nextContract') && value.nextContract !== null && value.nextContract !== undefined && !isRecord(value.nextContract)) {
+    issues.push({ path: ['nextContract'], message: 'nextContract는 계약 객체 또는 null이어야 한다.' });
   }
 
   return issues;

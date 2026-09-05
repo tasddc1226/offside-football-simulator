@@ -16,7 +16,7 @@ import {
   Skeleton,
   StatusStrip,
 } from '@offside/ui';
-import { activeContentPack, activeRuleset } from '../engine/content.js';
+import { activeRuleset, contentForCareer } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
@@ -30,12 +30,19 @@ import { useCommittingExitGuard } from './use-committing-exit-guard.js';
 const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
 
-export type EventScreenId = 'SCR-007' | 'SCR-008' | 'SCR-013';
+export type EventScreenId = 'SCR-007' | 'SCR-008' | 'SCR-013' | 'SCR-016' | 'SCR-018' | 'SCR-019' | 'SCR-021' | 'SCR-022' | 'SCR-024' | 'SCR-032';
 
 const EVENT_INTRO: Record<EventScreenId, { eyebrow: string; title: string }> = {
   'SCR-007': { eyebrow: '다음 무대', title: '어떤 길을 걸어갈까요?' },
   'SCR-008': { eyebrow: '기회를 잡을 시간', title: '입단 테스트' },
   'SCR-013': { eyebrow: '나의 축구 인생', title: '커리어의 갈림길' },
+  'SCR-016': { eyebrow: '흔들리는 순간', title: '나의 원칙을 지킬 시간' },
+  'SCR-018': { eyebrow: '함께 뛰는 사람들', title: '라커룸의 온도' },
+  'SCR-019': { eyebrow: '다음 무대의 관심', title: '이적 이야기가 들려옵니다' },
+  'SCR-021': { eyebrow: '다시 나의 리듬으로', title: '슬럼프를 마주하다' },
+  'SCR-022': { eyebrow: '복귀를 준비하며', title: '지금은 회복할 시간' },
+  'SCR-024': { eyebrow: '그라운드 밖의 목소리', title: '어떤 말을 남길까요?' },
+  'SCR-032': { eyebrow: '더 큰 무대의 부름', title: '대표팀 소집 통보' },
 };
 
 export interface EventDecisionContext {
@@ -102,12 +109,13 @@ export function EventDecisionScreen({
     return null;
   }
 
-  const definition = activeContentPack.eventsById.get(pending.eventId);
+  const pack = contentForCareer(state);
+  const definition = pack.eventsById.get(pending.eventId);
   if (definition === undefined) {
     return <ErrorState message={`이벤트 정의를 찾을 수 없습니다: ${pending.eventId}`} />;
   }
 
-  const tokens = buildNarrativeTokens(state, activeContentPack, activeRuleset);
+  const tokens = buildNarrativeTokens(state, pack, activeRuleset);
   const profile = state.player.profile;
   const positionField = profile
     ? positionHeaderField(profile.primaryPosition, profile.preferredPosition)
@@ -225,7 +233,9 @@ export function EventDecisionScreen({
               label={choice.label}
               riskLevel={choice.riskLabel}
               riskLabel={RISK_LABEL_KO[choice.riskLabel]}
-              effects={choice.previewEffects.map((preview) => preview.label)}
+              effects={choice.previewEffects
+                .filter((preview) => pending.kind !== 'NATIONAL_TEAM' || !preview.label.startsWith('특례 규칙:'))
+                .map((preview) => preview.label)}
               selectedLabel="선택됨"
               disabled={resolveMutation.isPending}
             />
