@@ -291,6 +291,7 @@ describe('simulate — CREATE_CAREER', () => {
     });
     expect(result.snapshot.state.pending).toBeNull();
     expect(result.snapshot.state.contract).toBeNull();
+    expect(result.snapshot.state.nationalityRuleState).toEqual({ moduleId: 'DEFAULT', exceptions: [] });
     expect(result.snapshot.state.timeline).toEqual([]);
     expect(result.snapshot.state.rngState.draws).toBe(0);
     expect(Object.values(result.snapshot.state.attributes).every((v) => v === 0)).toBe(true);
@@ -977,7 +978,19 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
       const result = simulate({
         ...baseInput(),
         snapshot: pending,
-        command: resolveEventCommand(pending.revision, { eventId: 'EVT-NAT-001', callUp }),
+        command: resolveEventCommand(pending.revision, {
+          eventId: 'EVT-NAT-001',
+          choiceId: callUp === 'ACCEPT' ? 'A' : 'B',
+          callUp,
+          outcomes: [
+            {
+              id: callUp === 'ACCEPT' ? 'A1' : 'B1',
+              kind: 'FIXED',
+              weight: 100,
+              effects: [],
+            },
+          ],
+        }),
       });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
@@ -985,6 +998,8 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
       const lastEntry = result.snapshot.state.timeline.at(-1);
       expect(lastEntry?.kind).toBe('NATIONAL_TEAM_CALLED');
       expect(lastEntry?.refId).toBe('EVT-NAT-001');
+      expect(result.snapshot.state.tags).toContain('대표팀_소집');
+      expect(result.snapshot.state.tags).not.toContain('NATIONAL_TEAM_CALLED');
     },
   );
 
@@ -993,12 +1008,19 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
     const result = simulate({
       ...baseInput(),
       snapshot: pending,
-      command: resolveEventCommand(pending.revision, { eventId: 'EVT-NAT-001', callUp: 'DECLINE' }),
+      command: resolveEventCommand(pending.revision, {
+        eventId: 'EVT-NAT-001',
+        choiceId: 'C',
+        callUp: 'DECLINE',
+        outcomes: [{ id: 'C1', kind: 'FIXED', weight: 100, effects: [] }],
+      }),
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const lastEntry = result.snapshot.state.timeline.at(-1);
     expect(lastEntry?.kind).toBe('NATIONAL_TEAM_DECLINED');
+    expect(result.snapshot.state.tags).not.toContain('대표팀_소집');
+    expect(result.snapshot.state.tags).not.toContain('NATIONAL_TEAM_DECLINED');
   });
 });
 

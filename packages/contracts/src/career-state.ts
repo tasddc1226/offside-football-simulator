@@ -1,4 +1,12 @@
-import type { AttributeKey, CareerTagId, ChapterTrigger } from '@offside/domain';
+import type {
+  AttributeKey,
+  CareerTagId,
+  ChapterTrigger,
+  NationalDebutReservation,
+  NationalityRuleState,
+  NationalTeamCallUpRecord,
+  NationalTeamState,
+} from '@offside/domain';
 import { z } from 'zod';
 import { PlayerDraftSchema, PlayerProfileSchema, PositionSchema } from './player.js';
 import { RngStateSchema } from './snapshot.js';
@@ -114,12 +122,13 @@ export const ChapterTriggerSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('CUP_FINAL') }),
   z.strictObject({ kind: z.literal('DECIDER'), maxRankGap: z.number().int() }),
   z.strictObject({ kind: z.literal('INJURY_RETURN') }),
+  z.strictObject({ kind: z.literal('NATIONAL_DEBUT') }),
   z.strictObject({ kind: z.literal('TAG'), tag: z.string().min(1) }),
 ]) satisfies z.ZodType<ChapterTrigger>;
 
 // T-2-014 D-42: `ChapterTrigger['kind']` 리터럴만 뽑은 스키마. `ChapterRecord.trigger`·
 // `Pending`(CHAPTER).trigger가 판별 유니온 전체가 아니라 kind 하나만 저장하므로 따로 둔다.
-export const ChapterTriggerKindSchema = z.enum(['DEBUT', 'DERBY', 'CUP_FINAL', 'DECIDER', 'INJURY_RETURN', 'TAG']) satisfies z.ZodType<
+export const ChapterTriggerKindSchema = z.enum(['DEBUT', 'DERBY', 'CUP_FINAL', 'DECIDER', 'INJURY_RETURN', 'NATIONAL_DEBUT', 'TAG']) satisfies z.ZodType<
   ChapterTrigger['kind']
 >;
 
@@ -147,7 +156,7 @@ export const ChapterRecordSchema = z.strictObject({
   matchId: z.string().min(1),
   importance: SlotImportanceSchema,
   // T-2-014 D-42: 어떤 트리거로 열렸는지(`CAREER_TAG_EVALUATORS`의 TAG-DERBY-HERO 등이 참조). domain
-  // `ChapterTrigger['kind']`와 동일한 리터럴 5개(위 `ChapterTriggerSchema`의 kind와 같은 목록).
+  // `ChapterTrigger['kind']`와 동일한 리터럴 7개(위 `ChapterTriggerSchema`의 kind와 같은 목록).
   trigger: ChapterTriggerKindSchema,
   decisions: z.array(
     z.strictObject({
@@ -159,6 +168,9 @@ export const ChapterRecordSchema = z.strictObject({
     }),
   ),
   ratingDeltaTenths: z.number().int(),
+  virtualOpponent: z
+    .strictObject({ opponentId: z.string().min(1), opponentName: z.string().min(1) })
+    .exactOptional(),
 });
 
 // T-2-002 D-34: 감독 역할 제안. `POSITION_CHANGE`는 인접 포지션 전환 제안, `ROLE_CHANGE`는
@@ -197,6 +209,10 @@ export const PendingSchema = z
       // T-2-014 D-42.
       trigger: ChapterTriggerKindSchema,
       resolved: z.array(ResolvedChapterDecisionSchema),
+      // T-4-004: NATIONAL_DEBUT consumes this deterministic virtual opponent; no club fixture is created.
+      virtualOpponent: z
+        .strictObject({ opponentId: z.string().min(1), opponentName: z.string().min(1) })
+        .exactOptional(),
     }),
     // T-3-001 D-43 (a): step 7 재계약 사전 협상. offers.length === 0이면 자동 통과, 1건 이상이면 정지.
     z.strictObject({
@@ -825,6 +841,32 @@ export const ReputationSchema = z.strictObject({
   mediaCenti: z.number().int().min(0).max(10000),
 });
 
+// T-4-004: nationalityRuleState는 기본 모듈과 예외 목록만 저장한다. 병역·귀화·이중국적 필드는 없다.
+export const NationalityRuleStateSchema = z.strictObject({
+  moduleId: z.literal('DEFAULT'),
+  exceptions: z.tuple([]),
+}) satisfies z.ZodType<NationalityRuleState>;
+
+export const NationalTeamCallUpRecordSchema = z.strictObject({
+  seasonIndex: z.number().int().positive(),
+  step: z.number().int().min(1).max(12),
+  eventId: z.string().min(1),
+  version: z.number().int().positive(),
+  decision: z.enum(['ACCEPT', 'DECLINE', 'CONDITIONAL']),
+  reason: z.literal('INJURY').nullable(),
+}) satisfies z.ZodType<NationalTeamCallUpRecord>;
+
+export const NationalDebutReservationSchema = z.strictObject({
+  opponentId: z.string().min(1),
+  opponentName: z.string().min(1),
+}) satisfies z.ZodType<NationalDebutReservation>;
+
+export const NationalTeamStateSchema = z.strictObject({
+  callUps: z.array(NationalTeamCallUpRecordSchema),
+  debuted: z.boolean(),
+  pendingDebut: NationalDebutReservationSchema.nullable(),
+}) satisfies z.ZodType<NationalTeamState>;
+
 /**
  * D-13: Phase 1 `CareerState` 전체(domain `CareerState`와 동일). 04(Snapshot `state` 내부) 검증용
  * 엄격 스키마다 — 아래 `SnapshotStateEnvelopeSchema`(snapshot.ts)는 여러 schemaVersion·미래 필드를
@@ -891,6 +933,9 @@ const CareerStateShapeSchema = z.strictObject({
   captaincy: z.enum(['NONE', 'VICE', 'CAPTAIN']),
   captaincySeasons: z.number().int().nonnegative(),
   controversyFailures: z.number().int().nonnegative(),
+  // T-4-004: strict additive national-team state.
+  nationalityRuleState: NationalityRuleStateSchema,
+  nationalTeam: NationalTeamStateSchema,
   // T-4-001 D-49: 부상 에피소드 이력.
   health: z.strictObject({ episodes: z.array(InjuryEpisodeSchema) }),
   // T-4-001 D-50: 관계 변화 감사 로그(최대 길이는 룰셋 relationshipRules.logMax).

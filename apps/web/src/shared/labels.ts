@@ -295,6 +295,8 @@ export function chapterTriggerLabel(trigger: ChapterTrigger): string {
       return '결정전';
     case 'INJURY_RETURN':
       return '부상 복귀전';
+    case 'NATIONAL_DEBUT':
+      return '대표팀 데뷔전';
     case 'TAG':
       return trigger.tag;
   }

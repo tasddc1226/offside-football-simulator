@@ -44,6 +44,8 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     captaincy: 'NONE',
     captaincySeasons: 0,
     controversyFailures: 0,
+    nationalityRuleState: { moduleId: 'DEFAULT', exceptions: [] },
+    nationalTeam: { callUps: [], debuted: false, pendingDebut: null },
     health: { episodes: [] },
     relationshipLog: [],
     memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },

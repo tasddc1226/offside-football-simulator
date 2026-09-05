@@ -40,7 +40,11 @@ export {
   type MarketSummary,
   type MatchAppearance,
   type MatchRecord,
+  type NationalDebutReservation,
   type NationalTeamCallUp,
+  type NationalTeamCallUpRecord,
+  type NationalTeamState,
+  type NationalityRuleState,
   type NegotiationAsk,
   type NegotiationState,
   type Offer,
@@ -78,6 +82,16 @@ export {
   type TimelineEntry,
   type TrainingFocus,
 } from './types.js';
+export {
+  applyNationalTeamCallUp,
+  buildNationalTeamCallUpRecord,
+  chooseNationalOpponent,
+  nationalTeamEffects,
+  qualifyNationalTeam,
+  reserveNationalDebut,
+  type NationalTeamQualification,
+  type NationalTeamQualificationReason,
+} from './national-team.js';
 export type {
   Archetype,
   Background,

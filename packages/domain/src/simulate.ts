@@ -25,6 +25,12 @@ import { findInjuryReturnMatchId } from './injury-return.js';
 import { generateMarket, openMarketAfterSettlement } from './market.js';
 import { computeContractSeasonsRemaining } from './market-value.js';
 import { buildDefaultManager } from './manager.js';
+import {
+  applyNationalTeamCallUp,
+  buildNationalTeamCallUpRecord,
+  nationalTeamEffects,
+  reserveNationalDebut,
+} from './national-team.js';
 import { canNegotiate, expireOffers } from './negotiation.js';
 import {
   findMatchingOfferBranch,
@@ -339,6 +345,8 @@ function createCareer(input: SimulationInput): SimulationResult {
     captaincy: 'NONE',
     captaincySeasons: 0,
     controversyFailures: 0,
+    nationalityRuleState: { moduleId: 'DEFAULT', exceptions: [] },
+    nationalTeam: { callUps: [], debuted: false, pendingDebut: null },
     health: { episodes: [] },
     relationshipLog: [],
     memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
@@ -595,7 +603,7 @@ function advanceEffectsThroughWalk(
  * `matchId`와 같은 레코드 하나를 바꾼다.
  */
 function patchOpenedChapterMatch(matches: readonly MatchRecord[], pending: Pending): MatchRecord[] {
-  if (pending === null || pending.kind !== 'CHAPTER') return [...matches];
+  if (pending === null || pending.kind !== 'CHAPTER' || pending.trigger === 'NATIONAL_DEBUT') return [...matches];
   const matchId = pending.matchId;
   const chapterId = pending.chapterId;
   return matches.map((match) => (match.id === matchId ? { ...match, chapterId } : match));
@@ -712,6 +720,8 @@ function createStepMatchWiring(
   // 갱신되는 값은 이 참조가 아니라 아래 closure 변수로 추적한다.
   careerState: CareerState,
   initial: StepMatchWiringInitial,
+  /** 이미 완료된 동일-step 조건 갱신을 재개 walk에서 다시 적용하지 않는다. */
+  conditionAlreadyAppliedSteps: readonly number[] = [],
 ): StepMatchWiring {
   let matches = initial.matches;
   let competitions = initial.competitions;
@@ -730,6 +740,7 @@ function createStepMatchWiring(
   let attributes = careerState.attributes;
   let playerProfile = profile;
   let injuryCount = initial.injuryCount;
+  const conditionAppliedSteps = new Set(conditionAlreadyAppliedSteps);
   let forcedPending: Extract<Pending, { kind: 'INJURY' }> | null = null;
   let injuryTimeline: TimelineEntry[] = [];
 
@@ -897,8 +908,9 @@ function createStepMatchWiring(
     const stepRecords = matches.filter((match) => match.step === stepIndex);
     // pending이 열려 있는 동안에는 step을 닫지 않는다. 다음 ADVANCE가 남은 경기까지 처리한 뒤 한 번만
     // applyCondition을 호출해야, 중단된 경기 묶음이 재활 해소 후 중복 적용되지 않는다.
-    if (forcedPending === null) {
+    if (forcedPending === null && !conditionAppliedSteps.has(stepIndex)) {
       playerCondition = applyCondition(playerCondition, stepRecords, ruleset.conditionRules, ruleset.seasonBoundaryReset.form);
+      conditionAppliedSteps.add(stepIndex);
     }
     return {
       results: stepMatchResultsFor(matches, stepIndex),
@@ -906,6 +918,7 @@ function createStepMatchWiring(
       competitions,
       forcedPending,
       injuryReturnMatchId,
+      injuryUnavailable: availability?.kind === 'INJURY' || health.episodes.some((episode) => episode.status === 'ACTIVE' || episode.status === 'REHAB'),
     };
   };
 
@@ -1221,6 +1234,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     state: wiring.getPlayerCondition(),
     player: { ...expiredState.player, profile: wiring.getPlayerProfile() },
     health: wiring.getHealth(),
+    nationalTeam: walked.nationalTeamState,
     rngState: walked.rngState,
     pending: walked.pending,
     timeline: [
@@ -1234,6 +1248,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
         step: stepIndex,
       })),
       ...wiring.getInjuryTimeline(),
+      ...walked.nationalTeamTimeline,
     ],
   };
 
@@ -1250,6 +1265,13 @@ function isEligibleEventsSorted(events: ReadonlyArray<{ eventId: string }>): boo
     if (compareCodePoints(events[i - 1]!.eventId, events[i]!.eventId) > 0) return false;
   }
   return true;
+}
+
+function hasReservedNationalTeamEvent(
+  events: readonly EligibleEvent[],
+  ruleset: Ruleset,
+): boolean {
+  return events.some((event) => event.eventId === ruleset.nationalTeamRules.event.id);
 }
 
 /** T-2-001 RULE-TIME-002: pending 종류에 따라 다음에 클라이언트가 보낼 명령을 알려준다. */
@@ -1318,6 +1340,11 @@ function advanceInSeason(
         });
       }
     }
+    if (hasReservedNationalTeamEvent(eligibleEvents, input.ruleset)) {
+      return fail('VALIDATION_FAILED', '대표팀 예약 event id는 generic EVENT로 열 수 없다.', {
+        reason: 'RESERVED_NATIONAL_TEAM_EVENT',
+      });
+    }
   }
 
   const nextRevision = snapshot.revision + 1;
@@ -1325,11 +1352,9 @@ function advanceInSeason(
   let timeline = state.timeline;
   let currentStepIndex = season.currentStep;
 
-  // 현재 step이 아직 닫히지 않았으면(summary === null) decisionsOpened: 1로 닫는다. state.pending이
-  // 자동 통과 대상(CHAPTER·CONTRACT·ROLE·INJURY·NATIONAL_TEAM)이면 이번 ADVANCE가 직접 닫는
-  // 경우이고, pending이 이미 null이면 그 사이 RESOLVE_EVENT로 EVENT가 해소된 경우다 — 두 경우 모두
-  // "이 step에 결정이 열렸었다"를 뜻한다(walkToNextDecision 불변식: 열리지 않은 step은 같은 호출
-  // 안에서 즉시 닫히므로, summary === null인 step은 항상 결정이 열렸던 step이다).
+  // 현재 step이 아직 닫히지 않았으면(summary === null) 보통 마지막 결정을 닫고 다음 step으로 간다.
+  // 다만 forced INJURY 또는 NATIONAL_TEAM을 RESOLVE_EVENT로 닫은 직후에는 같은 step의 남은 후보를
+  // 먼저 재개한다. walkToNextDecision 불변식상 그 resume만 경기 재실행 없이 현재 step을 다시 본다.
   const currentStep = findSeasonStep(steps, currentStepIndex);
   const lastTimelineEntry = state.timeline[state.timeline.length - 1];
   const resumesInjuryStep =
@@ -1337,9 +1362,14 @@ function advanceInSeason(
     currentStep.summary === null &&
     lastTimelineEntry?.kind === 'REHAB_CHOSEN' &&
     lastTimelineEntry.step === currentStepIndex;
-  // REHAB_CHOSEN은 RESOLVE_EVENT로 닫힌 forced INJURY 결정 1건을 뜻한다. 현재 시즌 시작 뒤의
-  // 타임라인만 세어 이전 시즌 같은 step의 부상을 섞지 않고, 재개 후 일반 슬롯이 없을 때도
-  // decision count를 0으로 잃지 않게 한다.
+  const resumesNationalTeamStep =
+    state.pending === null &&
+    currentStep.summary === null &&
+    (lastTimelineEntry?.kind === 'NATIONAL_TEAM_CALLED' || lastTimelineEntry?.kind === 'NATIONAL_TEAM_DECLINED') &&
+    lastTimelineEntry.step === currentStepIndex;
+  const resumesSameStep = resumesInjuryStep || resumesNationalTeamStep;
+  // 현재 시즌 시작 뒤의 타임라인만 세어 이전 시즌 같은 step의 결정을 섞지 않는다. REHAB_CHOSEN과
+  // NATIONAL_TEAM_CALLED/DECLINED는 이미 열린 결정 수를 보존해 resume 뒤 summary에 반영한다.
   const currentSeasonStartRevision = [...state.timeline].reverse().find((entry) => entry.kind === 'SEASON_STARTED')?.revision;
   const resolvedForcedInjuryDecisions =
     currentSeasonStartRevision === undefined
@@ -1347,14 +1377,23 @@ function advanceInSeason(
       : state.timeline.filter(
           (entry) => entry.kind === 'REHAB_CHOSEN' && entry.step === currentStepIndex && entry.revision > currentSeasonStartRevision,
         ).length;
-  if (currentStep.summary === null && !resumesInjuryStep) {
-    // A normal slot resolved after one or more forced injuries contributes exactly one additional
-    // decision; the REHAB_CHOSEN entries above account for the forced decisions already opened.
+  const resolvedNationalTeamDecisions =
+    currentSeasonStartRevision === undefined
+      ? 0
+      : state.timeline.filter(
+          (entry) =>
+            (entry.kind === 'NATIONAL_TEAM_CALLED' || entry.kind === 'NATIONAL_TEAM_DECLINED') &&
+            entry.step === currentStepIndex &&
+            entry.revision > currentSeasonStartRevision,
+        ).length;
+  if (currentStep.summary === null && !resumesSameStep) {
+    // A normal slot resolved after one or more forced injuries or a national-team decision contributes
+    // exactly one additional decision; the entries above account for decisions already opened.
     steps = markStepPassed(
       steps,
       currentStepIndex,
       nextRevision,
-      1 + resolvedForcedInjuryDecisions,
+      1 + resolvedForcedInjuryDecisions + resolvedNationalTeamDecisions,
       stepMatchResultsFor(season.matches, currentStepIndex),
     );
     timeline = [
@@ -1411,6 +1450,7 @@ function advanceInSeason(
       matchRngState: season.matchRngState,
       injuryCount: season.injuryCount,
     },
+    resumesNationalTeamStep ? [season.currentStep] : [],
   );
 
   // 강제 부상 pending을 먼저 닫은 뒤에는 같은 step의 일반 슬롯을 이어서 연다. wiring은 이미 기록된
@@ -1427,7 +1467,7 @@ function advanceInSeason(
           };
         }
       : wiring.playStepMatches;
-  const matchesBeforeWalk = resumesInjuryStep
+  const matchesBeforeWalk = resumesSameStep
     ? season.matches.filter((match) => match.step !== season.currentStep)
     : season.matches;
 
@@ -1452,7 +1492,11 @@ function advanceInSeason(
     chapterContext,
     state,
     ruleset,
-    resumesInjuryStep ? resolvedForcedInjuryDecisions : 0,
+    resumesInjuryStep
+      ? resolvedForcedInjuryDecisions
+      : resumesNationalTeamStep
+        ? resolvedForcedInjuryDecisions + resolvedNationalTeamDecisions
+        : 0,
   );
   const expiredState = advanceEffectsThroughWalk(state, walked, ruleset.relationshipRules);
   if (expiredState.season === null) {
@@ -1503,9 +1547,10 @@ function advanceInSeason(
     state: wiring.getPlayerCondition(),
     player: { ...expiredState.player, profile: wiring.getPlayerProfile() },
     health: wiring.getHealth(),
+    nationalTeam: walked.nationalTeamState,
     rngState: walked.rngState,
     pending: walked.pending,
-    timeline,
+    timeline: [...timeline, ...walked.nationalTeamTimeline],
   };
 
   return {
@@ -1563,6 +1608,11 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
           reason: 'INVALID_WEIGHT',
         });
       }
+    }
+    if (hasReservedNationalTeamEvent(eligibleEvents, input.ruleset)) {
+      return fail('VALIDATION_FAILED', '대표팀 예약 event id는 generic EVENT로 열 수 없다.', {
+        reason: 'RESERVED_NATIONAL_TEAM_EVENT',
+      });
     }
 
     let chosen = eligibleEvents[0]!;
@@ -1682,12 +1732,34 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
       reason: 'NO_PENDING_EVENT',
     });
   }
+  if (pending.kind === 'EVENT' && pending.eventId === input.ruleset.nationalTeamRules.event.id) {
+    return fail('VALIDATION_FAILED', '대표팀 예약 event id는 generic EVENT로 해소할 수 없다.', {
+      reason: 'RESERVED_NATIONAL_TEAM_EVENT',
+    });
+  }
   if (
     pending.eventId !== command.payload.eventId ||
     pending.version !== command.payload.definitionVersion
   ) {
     return fail('VALIDATION_FAILED', 'pending 이벤트와 요청이 다르다.', {
       reason: 'PENDING_EVENT_MISMATCH',
+    });
+  }
+
+  if (
+    pending.kind === 'INJURY' &&
+    (pending.eventId !== input.ruleset.injuryRules.event.id || pending.version !== input.ruleset.injuryRules.event.version)
+  ) {
+    return fail('VERSION_MISMATCH', 'INJURY pending가 룰셋 event ref와 다르다.', {
+      reason: 'RULE_EVENT_VERSION_MISMATCH',
+    });
+  }
+  if (
+    pending.kind === 'NATIONAL_TEAM' &&
+    (pending.eventId !== input.ruleset.nationalTeamRules.event.id || pending.version !== input.ruleset.nationalTeamRules.event.version)
+  ) {
+    return fail('VERSION_MISMATCH', 'NATIONAL_TEAM pending가 룰셋 event ref와 다르다.', {
+      reason: 'RULE_EVENT_VERSION_MISMATCH',
     });
   }
 
@@ -1707,6 +1779,123 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     return fail('VALIDATION_FAILED', 'NATIONAL_TEAM pending은 callUp이 필요하다.', {
       reason: 'CALL_UP_REQUIRED',
     });
+  }
+  if (pending.kind === 'NATIONAL_TEAM' && rehabPlan !== undefined) {
+    return fail('VALIDATION_FAILED', 'NATIONAL_TEAM pending에는 rehabPlan을 보낼 수 없다.', {
+      reason: 'PAYLOAD_KIND_MISMATCH',
+    });
+  }
+
+  // T-4-004 D-51: 대표팀 선택은 content가 보낸 arbitrary effects/outcome를 적용하지 않는다. A/B/C와
+  // ACCEPT/CONDITIONAL/DECLINE의 고정 매핑만 인정하고, 룰셋 effect를 새로 계산한다. 이 경로는
+  // decision RNG를 소비하지 않으며, 결과의 roll은 감사상 0으로 고정한다.
+  if (pending.kind === 'NATIONAL_TEAM') {
+    const canonicalOutcome =
+      command.payload.choiceId === 'A'
+        ? input.ruleset.nationalTeamRules.outcomeByChoice.A
+        : command.payload.choiceId === 'B'
+          ? input.ruleset.nationalTeamRules.outcomeByChoice.B
+          : command.payload.choiceId === 'C'
+            ? input.ruleset.nationalTeamRules.outcomeByChoice.C
+            : undefined;
+    const expectedCallUp = canonicalOutcome?.callUp;
+    if (expectedCallUp === undefined || expectedCallUp !== callUp) {
+      return fail('VALIDATION_FAILED', 'NATIONAL_TEAM choiceId와 callUp이 일치하지 않는다.', {
+        reason: 'CALL_UP_MISMATCH',
+      });
+    }
+    const outcomes = command.payload.outcomes;
+    // NATIONAL_TEAM은 content가 보낸 단일 FIXED outcome의 identity만 감사 로그에 남긴다. effects는
+    // 아래의 nationalTeamEffects로 대체되므로 client payload를 신뢰하지 않지만, id·kind·weight와
+    // cardinality는 canonical EVT-NAT-001 choice와 일치해야 한다.
+    if (!Array.isArray(outcomes) || outcomes.length !== 1 || outcomes[0]?.id !== canonicalOutcome?.id) {
+      return fail('VALIDATION_FAILED', 'NATIONAL_TEAM outcome가 선택한 canonical choice와 일치하지 않는다.', {
+        reason: 'OUTCOME_MISMATCH',
+      });
+    }
+    if (outcomes.some((outcome) => !isChapterOutcomeKind(outcome.kind))) {
+      return fail('VALIDATION_FAILED', 'RESOLVE_EVENT outcome에는 kind이 필요하다.', {
+        reason: 'OUTCOME_KIND_REQUIRED',
+      });
+    }
+    if (outcomes.some((outcome) => !Number.isInteger(outcome.weight) || outcome.weight <= 0)) {
+      return fail('VALIDATION_FAILED', 'outcome weight는 양의 정수여야 한다.', {
+        reason: 'INVALID_WEIGHT',
+      });
+    }
+    const weightSum = outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
+    if (!Number.isInteger(weightSum) || weightSum <= 0 || weightSum > 0xffffffff) {
+      return fail('VALIDATION_FAILED', 'outcome 가중치 합은 1 이상 2^32 이하의 정수여야 한다.');
+    }
+    const selectedOutcome = outcomes[0];
+    if (
+      canonicalOutcome === undefined ||
+      selectedOutcome === undefined ||
+      selectedOutcome.kind !== canonicalOutcome.kind ||
+      selectedOutcome.weight !== canonicalOutcome.weight
+    ) {
+      return fail('VALIDATION_FAILED', 'NATIONAL_TEAM outcome가 선택한 canonical choice와 일치하지 않는다.', {
+        reason: 'OUTCOME_MISMATCH',
+      });
+    }
+
+    const effects = nationalTeamEffects(input.ruleset, pending.eventId, callUp);
+    const effectResult = applyEffects(
+      state,
+      effects,
+      { step: pending.step },
+      input.ruleset.relationshipRules,
+    );
+    const record = buildNationalTeamCallUpRecord(
+      state,
+      pending.eventId,
+      pending.version,
+      callUp,
+      null,
+      pending.step,
+    );
+    let nationalTeam = applyNationalTeamCallUp(state.nationalTeam, record);
+    if (callUp !== 'DECLINE') nationalTeam = reserveNationalDebut(nationalTeam, input.ruleset);
+    // `NATIONAL_TEAM_CALLED/DECLINED`는 timeline kind이지 저장 tag가 아니다. D-51의 저장 tag는
+    // ACCEPT·CONDITIONAL의 `대표팀_소집` 하나만 남긴다.
+    const nationalTags = callUp === 'DECLINE' ? [] : ['대표팀_소집'];
+    const tags = sortUniqueTags([...effectResult.state.tags, ...nationalTags]);
+    const nextRevision = snapshot.revision + 1;
+    const outcomeId = outcomes[0]!.id;
+    const extraTimeline: TimelineEntry = {
+      revision: nextRevision,
+      kind: callUp === 'DECLINE' ? 'NATIONAL_TEAM_DECLINED' : 'NATIONAL_TEAM_CALLED',
+      refId: pending.eventId,
+      age: state.age,
+      step: pending.step,
+    };
+    const nextState: CareerState = {
+      ...effectResult.state,
+      tags,
+      nationalTeam,
+      pending: null,
+      resolvedEventIds: [...state.resolvedEventIds, pending.eventId],
+      rngState: state.rngState,
+      timeline: [
+        ...state.timeline,
+        {
+          revision: nextRevision,
+          kind: 'EVENT_RESOLVED',
+          refId: `${pending.eventId}:${command.payload.choiceId}:${outcomeId}`,
+          age: state.age,
+          step: pending.step,
+        },
+        extraTimeline,
+      ],
+    };
+    return {
+      ok: true,
+      snapshot: buildSnapshot(nextState, nextRevision, 'EVENT_RESOLVED'),
+      roll: 0,
+      outcomeId,
+      appliedEffects: effectResult.applied,
+      nextAction: 'ADVANCE',
+    };
   }
 
   let episodeIndex = -1;
@@ -1767,8 +1956,8 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 
   const nextRevision = snapshot.revision + 1;
 
-  // T-4-001 D-52: INJURY는 재활 계획을 에피소드에 적용하고 REHAB_CHOSEN을, NATIONAL_TEAM은 응답에
-  // 따라 NATIONAL_TEAM_CALLED/DECLINED를 추가 타임라인으로 남긴다(둘 다 EVENT_RESOLVED 다음).
+  // T-4-002 D-49: INJURY는 재활 계획을 에피소드에 적용하고 EVENT_RESOLVED 다음에 REHAB_CHOSEN을
+  // 남긴다. NATIONAL_TEAM은 위의 전용 분기에서 같은 timeline 순서를 처리한다.
   let health = effectResult.state.health;
   let season = effectResult.state.season;
   const extraTimeline: TimelineEntry[] = [];
@@ -1793,15 +1982,6 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
       revision: nextRevision,
       kind: 'REHAB_CHOSEN',
       refId: pending.episodeId,
-      age: state.age,
-      step: state.currentStep,
-    });
-  } else if (pending.kind === 'NATIONAL_TEAM') {
-    const kind = callUp === 'DECLINE' ? 'NATIONAL_TEAM_DECLINED' : 'NATIONAL_TEAM_CALLED';
-    extraTimeline.push({
-      revision: nextRevision,
-      kind,
-      refId: command.payload.eventId,
       age: state.age,
       step: state.currentStep,
     });

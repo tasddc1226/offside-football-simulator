@@ -38,6 +38,7 @@ export type ChapterTrigger =
   | { kind: 'CUP_FINAL' }
   | { kind: 'DECIDER'; maxRankGap: number }
   | { kind: 'INJURY_RETURN' }
+  | { kind: 'NATIONAL_DEBUT' }
   | { kind: 'TAG'; tag: string };
 
 // T-2-014 D-42: RESOLVE_CHAPTER outcome·ChapterRecord.decisions[]가 남기는 결과 종류(content
@@ -333,6 +334,8 @@ export type Pending =
       // ChapterRecord.trigger와 TAG-DERBY-HERO 같은 평가기가 이 값으로 필터한다).
       trigger: ChapterTrigger['kind'];
       resolved: Array<{ decisionId: string; optionId: string; outcomeId: string; roll: number; outcomeKind: ChapterOutcomeKind }>;
+      /** NATIONAL_DEBUT이면 가상 상대 메타데이터를 남긴다. 실제 클럽 경기/일정은 만들지 않는다. */
+      virtualOpponent?: NationalDebutReservation;
     }
   // T-3-001 D-43 (a): step 7 재계약 사전 협상. `offers.length === 0`이면 자동 통과(지금은 생성기가
   // 없어 항상 이 상태), 1건 이상이면 정지한다(T-3-002가 채운다).
@@ -643,6 +646,8 @@ export type ChapterRecord = {
   trigger: ChapterTrigger['kind'];
   decisions: Array<{ decisionId: string; optionId: string; outcomeId: string; outcomeKind: ChapterOutcomeKind }>;
   ratingDeltaTenths: number;
+  /** NATIONAL_DEBUT이면 예약에서 소비한 가상 상대를 기록한다. */
+  virtualOpponent?: NationalDebutReservation;
 };
 
 // T-2-005 D-39: 결산 성장 원인 태그와 훈련 초점(ROLE = 아키타입 roleWeights 그대로).
@@ -739,6 +744,33 @@ export type RelationshipLogEntry = {
 // T-4-001 D-51: RESOLVE_EVENT가 NATIONAL_TEAM pending을 닫을 때 받는 선택.
 export type NationalTeamCallUp = 'ACCEPT' | 'DECLINE' | 'CONDITIONAL';
 
+/** T-4-004: nationality module은 기본 모듈 id와 예외 목록만 보존한다. 특례 의미는 이 티켓에서 모델링하지 않는다. */
+export type NationalityRuleState = {
+  moduleId: 'DEFAULT';
+  exceptions: [];
+};
+
+export type NationalTeamCallUpRecord = {
+  seasonIndex: number;
+  step: number;
+  eventId: string;
+  version: number;
+  decision: NationalTeamCallUp;
+  reason: 'INJURY' | null;
+};
+
+/** 실제 국가/협회 대신 룰셋의 결정론적 가상 상대 label만 저장한다. */
+export type NationalDebutReservation = {
+  opponentId: string;
+  opponentName: string;
+};
+
+export type NationalTeamState = {
+  callUps: NationalTeamCallUpRecord[];
+  debuted: boolean;
+  pendingDebut: NationalDebutReservation | null;
+};
+
 // T-4-001 D-50: 시즌 감독. `START_SEASON`이 rng 없이 기본값을 만든다(manager.ts `buildDefaultManager`).
 // 교체 판정·새 감독 생성·`managerTrust` 재평가는 T-4-003.
 export type SeasonManager = {
@@ -800,6 +832,10 @@ export type CareerState = {
   captaincySeasons: number;
   /** T-4-003: 윤리·미디어 FAIL outcome 누계. */
   controversyFailures: number;
+  /** T-4-004: strict additive 기본값은 정확히 { moduleId: 'DEFAULT', exceptions: [] }. */
+  nationalityRuleState: NationalityRuleState;
+  /** T-4-004: 대표팀 차출 이력과 최초 수락 뒤 데뷔 예약. */
+  nationalTeam: NationalTeamState;
   // T-4-002 D-49: 부상 에피소드 이력. 기본 `{ episodes: [] }`.
   health: { episodes: InjuryEpisode[] };
   // T-4-001 D-50: 관계 변화 감사 로그. 기본 `[]`, 최대 길이는 룰셋 `relationshipRules.logMax`. 실제로

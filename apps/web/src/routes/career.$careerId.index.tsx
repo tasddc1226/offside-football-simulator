@@ -57,6 +57,7 @@ import { familiarityPercentLabel, SelectionRankingList } from '../shared/tactica
 import { buildCurrentContractSummary } from '../shared/transfer-view.js';
 
 type DashboardSearch = { signed?: boolean };
+type ChapterPending = Extract<CareerState['pending'], { kind: 'CHAPTER' }>;
 
 export const Route = createFileRoute('/career/$careerId/')({
   validateSearch: (search: Record<string, unknown>): DashboardSearch => (search.signed === true ? { signed: true } : {}),
@@ -65,6 +66,17 @@ export const Route = createFileRoute('/career/$careerId/')({
 
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
 const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+
+function chapterCardLabel(state: CareerState, pending: ChapterPending): string {
+  if (pending.trigger === 'NATIONAL_DEBUT') {
+    const opponentName = pending.virtualOpponent?.opponentName;
+    return opponentName === undefined ? '대표팀 데뷔전' : `대표팀 데뷔전 — ${opponentName}`;
+  }
+
+  const opponent = state.season?.matches.find((candidate) => candidate.id === pending.matchId)?.opponent;
+  const opponentName = opponent === undefined ? undefined : opponentDisplayName(opponent, activeRuleset);
+  return opponentName === undefined ? '핵심 경기' : `핵심 경기 — ${opponentName}`;
+}
 
 function timelineSentence(entry: TimelineEntry, state: CareerState): string {
   switch (entry.kind) {
@@ -320,7 +332,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
     }
   };
 
-  if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY')) {
+  if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM')) {
     const target = screenForCareer(state);
     return (
       <Card className="flex flex-wrap items-center justify-between gap-os-3">
@@ -403,14 +415,10 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   }
 
   if (pending !== null && pending.kind === 'CHAPTER') {
-    // 상대 이름은 season.matches에서 찾아 덧붙인다 — 기존 단위 테스트가 matchId 없이 CHAPTER
-    // pending을 주입하므로(match 조회 실패), 그때는 상대 이름 없이 "핵심 경기"로만 낮춘다.
-    const opponent = state.season?.matches.find((candidate) => candidate.id === pending.matchId)?.opponent;
-    const opponentName = opponent === undefined ? undefined : opponentDisplayName(opponent, activeRuleset);
     return (
       <Card className="flex flex-wrap items-center justify-between gap-os-3">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          {opponentName === undefined ? '핵심 경기' : `핵심 경기 — ${opponentName}`}
+          {chapterCardLabel(state, pending)}
         </p>
         <Link
           to="/career/$careerId/chapter"

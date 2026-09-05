@@ -1,7 +1,7 @@
 {
   "FAST": {
     "revision": 15,
-    "stateHash": "4cd9da0e89ce26a9e89e8c274bdff2ff51151bfe0fb48e46367102e623b1b0e5",
+    "stateHash": "6d7f8c595a4e6a045b7adec923978b46a08871aa36e2ea9f86c1ed95f85c7d78",
     "rngStateDraws": 404,
     "age": 18,
     "seasonHistory": [
@@ -984,7 +984,7 @@
   },
   "CHAPTER": {
     "revision": 25,
-    "stateHash": "e3742854e3d0d2db99a2d13f7e925d5a838fdcd8b86280fa12173a2b9f33e0c8",
+    "stateHash": "859c69475272a1915675240534ee3ec7b207b17078f18e9a0ff8aa7d36d8189e",
     "rngStateDraws": 409,
     "age": 18,
     "seasonHistory": [

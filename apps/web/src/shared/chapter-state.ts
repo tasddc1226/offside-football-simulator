@@ -1,7 +1,7 @@
 // SCR-031 핵심 경기 챕터: pending CHAPTER(진행 중) 또는 방금 끝난 챕터(결과 화면)의 화면 상태를
 // state만으로 판정한다. appliedEffects(휘발성 mutation 응답)가 아니라 정의·기록에서 다시 읽으므로
 // 새로고침·뒤로 가기가 같은 값을 낸다(event-result.ts resolveEventResultView와 같은 관례).
-import type { CareerState, ChapterRecord, MatchRecord } from '@offside/domain';
+import type { CareerState, ChapterRecord, MatchRecord, NationalDebutReservation } from '@offside/domain';
 import type { ChapterDefinition, ContentPack } from '@offside/content';
 
 export type ChapterDecisionEntry = { decisionId: string; optionId: string; outcomeId: string };
@@ -13,9 +13,18 @@ export type ResolvedChapterDecision = {
   outcome: ChapterDefinition['decisions'][number]['options'][number]['outcomes'][number];
 };
 
+/**
+ * SCR-031의 경기 맥락. NATIONAL_DEBUT은 실제 클럽 MatchRecord를 국가대표 경기로 위장하지 않고,
+ * 도메인이 저장한 가상 상대를 별도 typed branch로 노출한다.
+ */
+export type ChapterContext =
+  | { kind: 'CLUB'; competition: MatchRecord['kind']; opponent: MatchRecord['opponent']; home: boolean }
+  | { kind: 'NATIONAL_TEAM'; competition: 'NATIONAL_TEAM'; opponent: NationalDebutReservation };
+
 export type ChapterView = {
   definition: ChapterDefinition;
   match: MatchRecord;
+  context: ChapterContext;
   decisionsTotal: number;
   /** 확정된 판단 수(= 다음에 열려야 할 판단의 0-based 인덱스). completed면 decisionsTotal과 같다. */
   currentDecisionIndex: number;
@@ -44,6 +53,18 @@ function resolveAllEntries(definition: ChapterDefinition, entries: readonly Chap
   return resolved;
 }
 
+function buildChapterContext(
+  match: MatchRecord,
+  trigger: ChapterDefinition['trigger']['kind'],
+  virtualOpponent: NationalDebutReservation | undefined,
+): ChapterContext | null {
+  if (trigger === 'NATIONAL_DEBUT') {
+    if (virtualOpponent === undefined) return null;
+    return { kind: 'NATIONAL_TEAM', competition: 'NATIONAL_TEAM', opponent: virtualOpponent };
+  }
+  return { kind: 'CLUB', competition: match.kind, opponent: match.opponent, home: match.home };
+}
+
 /**
  * 라우트 가드와 화면 렌더가 함께 쓰는 판정. pending.kind === 'CHAPTER'면 진행 중(판단 입력 가능),
  * 그게 아니면서 직전 timeline 항목이 CHAPTER_RESOLVED면 방금 끝난 챕터의 결과 화면
@@ -58,12 +79,14 @@ export function deriveChapterView(state: CareerState, pack: ContentPack): Chapte
     if (season === null) return null;
     const definition = pack.chaptersById.get(pending.chapterId);
     const match = season.matches.find((candidate) => candidate.id === pending.matchId);
-    if (definition === undefined || match === undefined) return null;
+    const context = match === undefined ? null : buildChapterContext(match, pending.trigger, pending.virtualOpponent);
+    if (definition === undefined || match === undefined || context === null) return null;
     const resolved = resolveAllEntries(definition, pending.resolved);
     if (resolved === null) return null;
     return {
       definition,
       match,
+      context,
       decisionsTotal: pending.decisionsTotal,
       currentDecisionIndex: pending.resolved.length,
       resolved,
@@ -78,12 +101,14 @@ export function deriveChapterView(state: CareerState, pack: ContentPack): Chapte
     if (chapterRecord === undefined) return null;
     const definition = pack.chaptersById.get(chapterRecord.chapterId);
     const match = season.matches.find((candidate) => candidate.id === chapterRecord.matchId);
-    if (definition === undefined || match === undefined) return null;
+    const context = match === undefined ? null : buildChapterContext(match, chapterRecord.trigger, chapterRecord.virtualOpponent);
+    if (definition === undefined || match === undefined || context === null) return null;
     const resolved = resolveAllEntries(definition, chapterRecord.decisions);
     if (resolved === null) return null;
     return {
       definition,
       match,
+      context,
       decisionsTotal: definition.decisions.length,
       currentDecisionIndex: definition.decisions.length,
       resolved,
