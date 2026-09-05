@@ -28,6 +28,10 @@ import {
   career10TransferEngineCommands,
   career11Loan,
   career11LoanEngineCommands,
+  career12Injury,
+  career12InjuryEngineCommands,
+  career13Integration,
+  career13IntegrationEngineCommands,
   rulesetProto,
   type EngineCommand,
 } from '@offside/fixtures';
@@ -165,6 +169,28 @@ function runCareer11Loan(): DomainSnapshot {
   return snapshot;
 }
 
+/** T-4-002: career12Injury(자체 CREATE_CAREER·START_SEASON·부상 이벤트 포함)를 재생한다. */
+function runCareer12Injury(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career12InjuryEngineCommands(() => `probe-c12-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career12Injury);
+  }
+  if (snapshot === null) throw new Error('career12Injury 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
+/** T-4-006: career13Integration(3시즌 통합 시나리오)을 재생한다. */
+function runCareer13Integration(): DomainSnapshot {
+  let counter = 0;
+  let snapshot: DomainSnapshot | null = null;
+  for (const command of career13IntegrationEngineCommands(() => `probe-c13-${counter++}`)) {
+    snapshot = runOrThrow(snapshot, command, career13Integration);
+  }
+  if (snapshot === null) throw new Error('career13Integration 명령 목록이 비어 있다.');
+  return snapshot;
+}
+
 type ProbeRequest =
   | { kind: 'replay' }
   | { kind: 'replaySeason'; mode: SimulationMode }
@@ -176,6 +202,8 @@ type ProbeRequest =
   | { kind: 'replayFw' }
   | { kind: 'replayTransfer' }
   | { kind: 'replayLoan' }
+  | { kind: 'replayInjury' }
+  | { kind: 'replayIntegration' }
   | { kind: 'sha256'; inputs: string[] }
   | { kind: 'canonical'; value: JsonValue };
 
@@ -234,6 +262,14 @@ export default {
 
     if (body.kind === 'replayLoan') {
       return snapshotResponse(runCareer11Loan());
+    }
+
+    if (body.kind === 'replayInjury') {
+      return snapshotResponse(runCareer12Injury());
+    }
+
+    if (body.kind === 'replayIntegration') {
+      return snapshotResponse(runCareer13Integration());
     }
 
     if (body.kind === 'sha256') {
