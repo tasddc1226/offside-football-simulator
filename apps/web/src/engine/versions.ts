@@ -1,6 +1,7 @@
-// 커리어별 룰셋·팩 버전 선택은 Phase 6(서버가 현재 서비스 시즌을 알려줄 때) 항목이다. Phase 1은
-// 앱 전체가 이 상수 하나만 쓴다.
+// 새 커리어는 서버의 현재 서비스 시즌이 지정한 룰셋·팩을 한 레코드에서 함께 고정한다.
+// 아래 ACTIVE 상수는 네트워크와 로컬 캐시가 모두 없을 때의 안전한 kickoff 폴백과 진단용 기본값이다.
 import { PACK_VERSIONS, RULESET_VERSIONS } from '@offside/content';
+import type { ServiceSeasonCurrent } from '@offside/contracts';
 
 export const ACTIVE_RULESET_VERSION = '1.0.0';
 export const ACTIVE_CONTENT_PACK_VERSION = '0.1.0';
@@ -16,6 +17,17 @@ export const EXPANDED_QA_CONTENT_PACK_VERSION = '0.3.0';
  * 오류)하고 kv-store 캐시도 없을 때만 쓰는 최후 폴백이다. apps/api/seeds/local.sql의 svc_kickoff와 같다.
  */
 export const FALLBACK_SERVICE_SEASON_ID = 'svc_kickoff';
+export const FALLBACK_SERVICE_SEASON: ServiceSeasonCurrent = {
+  id: FALLBACK_SERVICE_SEASON_ID,
+  name: 'Kickoff',
+  status: 'ACTIVE',
+  isTest: false,
+  startsAt: '2026-09-01T00:00:00Z',
+  endsAt: '2026-12-31T23:59:59Z',
+  rulesetVersion: ACTIVE_RULESET_VERSION,
+  contentPackVersion: ACTIVE_CONTENT_PACK_VERSION,
+  notice: null,
+};
 
 /**
  * T-4-009 D-56: DEV 서버 전용 콘텐츠 팩 오버라이드. `import.meta.env.DEV`는 프로덕션 빌드에서 상수

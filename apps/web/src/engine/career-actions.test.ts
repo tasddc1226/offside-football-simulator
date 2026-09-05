@@ -1,4 +1,5 @@
 import { EFFECT_DEFAULTS, loadContentPack } from '@offside/content';
+import type { ServiceSeasonCurrent } from '@offside/contracts';
 import { hashState } from '@offside/domain';
 import { career01, career01EngineCommands, career05Chapter, career05ChapterEngineCommands, rulesetProto } from '@offside/fixtures';
 import { encodeSnapshot, MemoryLocalStore, inlineSimulator, type ExecuteResult } from '@offside/engine-client';
@@ -21,7 +22,7 @@ import {
   updateDraft,
 } from './career-actions.js';
 import { createAppEngine, type AppEngine } from './engine.js';
-import { FALLBACK_SERVICE_SEASON_ID } from './versions.js';
+import { FALLBACK_SERVICE_SEASON, FALLBACK_SERVICE_SEASON_ID } from './versions.js';
 
 const syncHolder = vi.hoisted(() => ({ notifyCommitted: vi.fn() }));
 vi.mock('./sync.js', () => ({
@@ -38,7 +39,9 @@ vi.mock('./sync.js', () => ({
 
 // service-season.ts는 네트워크(TanStack Query)를 거친다 — 이 테스트는 시즌 id 주입 자체가 아니라
 // createCareer·startSeason의 명령 조립·재생을 본다(폴백 순서는 service-season.test.ts가 본다).
+const serviceSeasonHolder = vi.hoisted(() => ({ current: undefined as undefined | ServiceSeasonCurrent }));
 vi.mock('./service-season.js', () => ({
+  resolveServiceSeason: () => Promise.resolve(serviceSeasonHolder.current ?? FALLBACK_SERVICE_SEASON),
   resolveServiceSeasonId: () => Promise.resolve(FALLBACK_SERVICE_SEASON_ID),
 }));
 
@@ -86,6 +89,31 @@ describe('createCareer', () => {
     expect(first.ok && second.ok).toBe(true);
     if (!first.ok || !second.ok) throw new Error('unreachable');
     expect(first.snapshot.careerId).not.toBe(second.snapshot.careerId);
+  });
+
+  it('현재 서비스 시즌의 id·룰셋·팩을 한 묶음으로 새 커리어에 고정한다', async () => {
+    serviceSeasonHolder.current = {
+      ...FALLBACK_SERVICE_SEASON,
+      id: 'svc_phase5_qa',
+      name: 'PHASE 5 QA',
+      status: 'PRESEASON',
+      isTest: true,
+      rulesetVersion: '1.1.0',
+      contentPackVersion: '0.3.0',
+      notice: 'LINE_TEST',
+    };
+    try {
+      const engine = makeTestEngine();
+      const result = await createCareer(engine, { simulationMode: 'FAST' });
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error('unreachable');
+      expect(result.domainSnapshot.state.rulesetVersion).toBe('1.1.0');
+      expect(result.domainSnapshot.state.contentPackVersion).toBe('0.3.0');
+      const [record] = await engine.client.listCareers();
+      expect(record?.createdServiceSeasonId).toBe('svc_phase5_qa');
+    } finally {
+      serviceSeasonHolder.current = undefined;
+    }
   });
 });
 

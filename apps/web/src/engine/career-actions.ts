@@ -1,7 +1,7 @@
 // EngineClient 위의 순수 함수(React 없음). 06 "분석 이벤트": 실행마다 command_submitted ·
 // command_resolved(outcomeClass = nextAction) · command_failed를 보낸다.
 import type { ChapterOutcomeKind, Command, Effect, NegotiationAsk, PlayerDraft, SimulationMode } from '@offside/domain';
-import { selectChapterCandidates, selectEligibleEvents, type ChapterDefinition, type EventDefinition } from '@offside/content';
+import { loadContentPack, loadRuleset, selectChapterCandidates, selectEligibleEvents, type ChapterDefinition, type EventDefinition } from '@offside/content';
 import type { EngineCommand, ExecuteResult, LoadResult } from '@offside/engine-client';
 import { deleteCareerOnServer } from '../api/client.js';
 import { platform } from '../platform/index.js';
@@ -9,7 +9,7 @@ import type { TrainingFocus } from '../shared/start-season.js';
 import type { AppEngine } from './engine.js';
 import { startCareerFunnel } from './funnel.js';
 import { classifyDeleteResult, queuePendingDelete } from './pending-delete.js';
-import { resolveServiceSeasonId } from './service-season.js';
+import { resolveServiceSeason, resolveServiceSeasonId } from './service-season.js';
 import { getSyncClient } from './sync.js';
 import { contentForCareer } from './content.js';
 
@@ -97,18 +97,23 @@ export async function createCareer(
   const careerId = engine.newId();
   const seed = newCareerSeed();
 
+  const serviceSeason = await resolveServiceSeason();
+  const ruleset = loadRuleset(serviceSeason.rulesetVersion);
+  const pack = loadContentPack(serviceSeason.contentPackVersion);
+  if (!pack.manifest.compatibleRulesetVersions.includes(ruleset.version)) {
+    throw new Error(`서비스 시즌의 콘텐츠 팩 ${pack.manifest.contentPackVersion}과 룰셋 ${ruleset.version}이 호환되지 않습니다.`);
+  }
+
   const command: Command = {
     type: 'CREATE_CAREER',
     payload: {
       careerId,
       seed,
       simulationMode: options.simulationMode,
-      rulesetVersion: engine.versions.rulesetVersion,
-      contentPackVersion: engine.versions.contentPackVersion,
+      rulesetVersion: serviceSeason.rulesetVersion,
+      contentPackVersion: serviceSeason.contentPackVersion,
     },
   };
-
-  const serviceSeasonId = await resolveServiceSeasonId();
 
   const startedAt = Date.now();
   trackSubmitted(command.type);
@@ -117,7 +122,7 @@ export async function createCareer(
   const result = await engine.client.execute({
     careerId,
     command: engineCommand,
-    createdServiceSeasonId: serviceSeasonId,
+    createdServiceSeasonId: serviceSeason.id,
   });
 
   trackResult(command.type, startedAt, result);
@@ -316,8 +321,8 @@ export type StartSeasonChoice = { simulationMode: SimulationMode; trainingFocus?
 
 /**
  * T-2-005 접점(PR #40, origin/main 머지 확인): domain `Command['START_SEASON']['payload']`에
- * `trainingFocus`가 붙었다 — SCR-005의 선택을 그대로 실어 보낸다. `serviceSeasonId`는 호출하는 쪽이
- * `resolveServiceSeasonId()`(T-2-012 D-54)로 구해 넘긴다 — 이 함수는 순수 함수로 남긴다.
+ * `trainingFocus`가 붙었다 — SCR-005의 선택을 그대로 실어 보낸다. 새 축구 시즌의 참여 코호트만
+ * 현재 `serviceSeasonId`로 기록하며, 이미 생성된 커리어의 룰셋·팩 버전은 바꾸지 않는다.
  */
 export function toStartSeasonPayload(choice: StartSeasonChoice, serviceSeasonId: string): Command {
   return {

@@ -320,7 +320,7 @@ describe('시즌 명령을 포함한 golden: sync 클라이언트·replay·fork�
     const targetStore = new MemoryLocalStore();
     const importResult = await importCareerFromServer(
       targetStore,
-      { snapshot, commands: commandEntries },
+      { createdServiceSeasonId: 'season-2025-26', snapshot, commands: commandEntries },
       { createdServiceSeasonId: 'season-2025-26', now: '2026-01-01T00:00:00.000Z' },
     );
 
@@ -366,7 +366,7 @@ async function buildGetCareerResponse(store: MemoryLocalStore, careerId: string)
     const snapshot = await tx.snapshots.getLatest(careerId);
     if (snapshot === undefined) throw new Error(`${careerId} snapshot 없음`);
     const commands = await tx.commandLog.listSince(careerId, 0);
-    return { snapshot, commands: commands.slice().sort((a, b) => a.revision - b.revision) };
+    return { createdServiceSeasonId: 'season-2025-26', snapshot, commands: commands.slice().sort((a, b) => a.revision - b.revision) };
   });
 }
 

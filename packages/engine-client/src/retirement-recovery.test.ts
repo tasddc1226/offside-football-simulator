@@ -40,7 +40,7 @@ async function responseFixture(runtimeArtifacts: RetirementRuntimeArtifacts = AR
     runtimeArtifacts.legacyReferencePopulation,
     runtimeArtifacts.legacyVersion ?? '1.0.0',
   );
-  return { response: { snapshot: stored, commands: [], retirementArchive: { archive: JSON.stringify(archive), legacy: JSON.stringify(legacy) } }, archive, legacy, store: sourceStore, engine: sourceEngine };
+  return { response: { createdServiceSeasonId: 'svc_recovery', snapshot: stored, commands: [], retirementArchive: { archive: JSON.stringify(archive), legacy: JSON.stringify(legacy) } }, archive, legacy, store: sourceStore, engine: sourceEngine };
 }
 
 describe('retirement recovery roundtrip', () => {

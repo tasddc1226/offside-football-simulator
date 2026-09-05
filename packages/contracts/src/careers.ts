@@ -94,6 +94,8 @@ export type CareerSummaryList = z.infer<typeof CareerSummaryListSchema>;
 
 /** API-CAR-002. */
 export const GetCareerResponseSchema = z.strictObject({
+  /** Immutable creation cohort. Recovery must never substitute the current service-season pointer. */
+  createdServiceSeasonId: z.string().min(1),
   snapshot: CareerSnapshotSchema,
   commands: z.array(CommandLogEntrySchema),
   /** Owner-only evidence JSON. Consumers must verify it against the pinned snapshot and registry. */

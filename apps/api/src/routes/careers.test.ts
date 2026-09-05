@@ -263,6 +263,7 @@ describe('careers routes', () => {
     const getRes = await app.request(`/v1/careers/${careerId}?since=1`, getInit(cookie), ctx.env);
     expect(getRes.status).toBe(200);
     const getParsed = successEnvelope(GetCareerResponseSchema).parse(await getRes.json());
+    expect(getParsed.data.createdServiceSeasonId).toBe(SERVICE_SEASON_ID);
     expect(getParsed.data.snapshot.revision).toBe(3);
     expect(getParsed.data.commands.map((command) => command.revision)).toEqual([2, 3]);
     expect(getParsed.meta.careerRevision).toBe(3);

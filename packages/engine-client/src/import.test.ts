@@ -39,7 +39,7 @@ async function buildGetCareerResponse(store: MemoryLocalStore, careerId: string)
     const snapshot = await tx.snapshots.getLatest(careerId);
     if (snapshot === undefined) throw new Error('snapshot 없음');
     const commands = await tx.commandLog.listSince(careerId, 0);
-    return { snapshot, commands: commands.slice().sort((a, b) => a.revision - b.revision) };
+    return { createdServiceSeasonId: 'svc_kickoff', snapshot, commands: commands.slice().sort((a, b) => a.revision - b.revision) };
   });
 }
 
@@ -54,7 +54,7 @@ describe('importCareerFromServer', () => {
 
     const destStore = new MemoryLocalStore();
     const result = await importCareerFromServer(destStore, response, {
-      createdServiceSeasonId: 'svc_kickoff',
+      createdServiceSeasonId: 'svc_current_pointer_must_be_ignored',
       now: NOW,
     });
 

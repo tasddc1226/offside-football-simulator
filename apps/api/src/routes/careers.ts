@@ -85,6 +85,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
 
     const body = successEnvelope(GetCareerResponseSchema).parse({
       data: {
+        createdServiceSeasonId: career.createdServiceSeasonId,
         ...(archive === undefined ? {} : { retirementArchive: { archive: archive.archiveJson, legacy: archive.legacyJson } }),
         snapshot: {
           id: snapshot.id,

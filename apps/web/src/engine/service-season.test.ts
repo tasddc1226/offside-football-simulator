@@ -52,6 +52,13 @@ describe('service-season 폴백 순서(네트워크 실패 → kv-store → 상�
     expect(cached).toEqual(SERVICE_SEASON);
   });
 
+  it('커리어 생성용 조회는 id와 두 버전을 같은 응답에서 돌려준다', async () => {
+    getServiceSeasonCurrentMock.mockResolvedValue({ ok: true, data: SERVICE_SEASON });
+    const { resolveServiceSeason } = await import('./service-season.js');
+
+    await expect(resolveServiceSeason()).resolves.toEqual(SERVICE_SEASON);
+  });
+
   it('네트워크 실패면 kv-store에 저장된 마지막 성공 값을 쓴다', async () => {
     await engineHolder.current!.store.transaction('readwrite', (tx) => tx.kv.put('service-season:current', SERVICE_SEASON));
     getServiceSeasonCurrentMock.mockResolvedValue({

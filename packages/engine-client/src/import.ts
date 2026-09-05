@@ -15,7 +15,12 @@ export type ImportCareerResult = { ok: true; revision: number } | { ok: false; e
 export async function importCareerFromServer(
   store: LocalStore,
   response: GetCareerResponse,
-  meta: { createdServiceSeasonId: string; now: string; retirementArtifacts?: RetirementArtifactsResolver },
+  meta: {
+    now: string;
+    retirementArtifacts?: RetirementArtifactsResolver;
+    /** @deprecated Recovery uses the server-owned response field. */
+    createdServiceSeasonId?: string;
+  },
 ): Promise<ImportCareerResult> {
   const decoded = decodeSnapshot(response.snapshot);
   if (!decoded.ok) {
@@ -35,7 +40,7 @@ export async function importCareerFromServer(
   if (decoded.snapshot.state.status === 'RETIRED' || decoded.snapshot.state.status === 'ARCHIVED') {
     try {
       if (meta.retirementArtifacts === undefined || response.retirementArchive === undefined || !CareerStateSchema.safeParse(decoded.snapshot.state).success) throw new ArchiveError('INVALID_SNAPSHOT');
-      const binding = { careerId, createdServiceSeasonId: meta.createdServiceSeasonId, rulesetVersion: response.snapshot.rulesetVersion, contentPackVersion: response.snapshot.contentPackVersion };
+      const binding = { careerId, createdServiceSeasonId: response.createdServiceSeasonId, rulesetVersion: response.snapshot.rulesetVersion, contentPackVersion: response.snapshot.contentPackVersion };
       const artifacts = meta.retirementArtifacts(binding);
       const context = { binding, artifacts };
       const archive = createCareerArchiveCore(decoded.snapshot, context);
@@ -87,7 +92,7 @@ export async function importCareerFromServer(
       status: decoded.snapshot.state.status,
       revision,
       lastSyncedRevision: revision,
-      createdServiceSeasonId: meta.createdServiceSeasonId,
+      createdServiceSeasonId: response.createdServiceSeasonId,
       rulesetVersion: response.snapshot.rulesetVersion,
       contentPackVersion: response.snapshot.contentPackVersion,
       createdAt: existing?.createdAt ?? meta.now,
