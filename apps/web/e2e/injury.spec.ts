@@ -98,7 +98,7 @@ async function reachForcedInjury(page: Page): Promise<void> {
       continue;
     }
 
-    const before = await stepCaption.textContent();
+    const before = await stepCaption.textContent({ timeout: 15_000 }).catch(() => null);
     // RESOLVE_ROLE 직후 엔진이 이미 첫 ADVANCE를 처리 중일 수 있다. 그 결과가 챕터로
     // 전환되는 동안 대시보드 locator만 기다리면 정상 화면을 놓치고 60초를 소비하므로,
     // 경로 전환과 진행 버튼 활성화를 함께 기다린다.
@@ -114,7 +114,7 @@ async function reachForcedInjury(page: Page): Promise<void> {
       .poll(
         async () => {
           if (new URL(page.url()).pathname !== pathname) return true;
-          return (await stepCaption.textContent().catch(() => null)) !== before;
+          return (await stepCaption.textContent({ timeout: 1_000 }).catch(() => null)) !== before;
         },
         { timeout: 60_000 },
       )
