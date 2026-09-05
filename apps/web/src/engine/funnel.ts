@@ -39,7 +39,10 @@ export function elapsedSecBucket(elapsedMs: number): ElapsedSecBucket {
 const MAX_ELAPSED_SEC = 7200;
 
 function clampElapsedSec(elapsedMs: number): number {
-  return Math.min(Math.round(elapsedMs / 1000), MAX_ELAPSED_SEC);
+  // 상한 7200(2시간)뿐 아니라 하한 0도 강제한다 — 기기 시계가 세션 중 과거로 보정되면(NTP 등)
+  // elapsedMs가 음수가 될 수 있는데, 그 값을 그대로 보내면 서버 스키마(nonnegative)가 season_settled
+  // 이벤트 전체(strictObject라 다른 정상 필드까지)를 버린다.
+  return Math.max(0, Math.min(Math.round(elapsedMs / 1000), MAX_ELAPSED_SEC));
 }
 
 /** 온보딩(SCR-034) 마운트 시 호출 — 아직 careerId가 없으니 기기 단위로 "대기 중" 시각만 남긴다. */
