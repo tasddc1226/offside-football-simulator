@@ -2,6 +2,16 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (20:40, PR #94 T-4-024 머지 — 출시 게이트 2/3)
+
+- **T-4-024 PR #94 `30ad35c` squash 머지 `232bc83`.** 변경 4파일: `apps/web/src/engine/funnel.ts`(`clampElapsedSec` 0~7200, `season_settled.elapsedSec`, `trackStepPassed(season, careerId?)` + 조회 실패 시 baseProps fallback), `apps/web/src/routes/career.$careerId.index.tsx`(careerId 배선 1줄), `packages/contracts/src/analytics.ts`(`ElapsedSecSchema` int·nonnegative·max 7200, 두 이벤트 모두 optional), `funnel.test.ts`(기대값 1줄). 오케스트레이터 체인 EXIT 0(web·contracts 테스트 실행, e2e 98 passed 1.4분). 워커 실측: FAST 시즌 step_passed elapsedSec 1·1·2초, season_settled elapsedSec 1초(자동 진행이라 플레이 시간 아님).
+- **측정은 staging 배포가 전제.** U-017(Actions 결제) 해결 → main 재실행 → staging 배포 뒤 [play-time-measurement.md](../qa/play-time-measurement.md) §6 절차. 남은 출시 게이트: T-4-023(SCR-032 캡처)뿐.
+
+## 2026-09-05 (20:27, PR #94 T-4-024 리뷰 — 후속 3건 같은 브랜치)
+
+- **PR #94 `adfa212`(funnel.ts·analytics.ts·funnel.test.ts) 리뷰 결과 머지 보류, 후속 워커 투입.** (1) 브리프가 `career-actions.ts`를 호출부로 잘못 지목해 워커가 `trackStepPassed(season, careerId?)` 시그니처만 넓히고 실제 호출부 `routes/career.$careerId.index.tsx:354`는 못 건드렸다 → `step_passed.elapsedSec`이 실제로는 안 나가는 상태. 라우트 파일을 변경 허용에 추가해 배선한다. (2) 계약 `season_settled.elapsedSec`을 required로 넣으면 배포 직후 옛 번들 클라이언트의 이벤트가 strictObject에서 통째로 버려진다 → optional. (3) `trackStepPassed`의 fire-and-forget 비동기 조회에 `.catch`가 없어 조회 실패 시 이벤트 유실 → baseProps로 fallback. 워커 구현 중 좋은 판단: `clampElapsedSec`에 하한 0(기기 시계 역행 시 nonnegative 스키마 거부 방지).
+- 큐에 넣었던 `adfa212` 체인은 곧 대체될 sha라 중단·큐 초기화(러너 재시작 예정).
+
 ## 2026-09-05 (20:25, GitHub Actions 결제 한도 — main CI·staging 배포 중단, U-017)
 
 - **현상.** PR #90 머지 커밋 `84709ec`의 main 실행(run 33962595554)은 Quality·Browser gates 성공, Deploy staging 잡이 단계 0개·2초 만에 failure. 이어진 문서 push `923b30d`(run 33963157095)는 Quality·Browser gates까지 같은 방식으로 failure. 잡 annotation: "The job was not started because recent account payments have failed or your spending limit needs to be increased." 저장소는 private이라 Actions 분수가 과금 대상이며, 오늘 워커 PR 다수의 CI로 무료 분수를 소진한 것으로 본다(계정 결제 API는 `user` scope가 없어 확인 불가).
