@@ -70,6 +70,8 @@ test('SCR-002: 이름 길이 오류는 입력값을 보존하고 포커스를 �
 test('SCR-002: 저장한 뒤 새로고침해도 draft가 그대로 보인다', async ({ page }) => {
   await startNewCareer(page);
   await fillPlayerInfo(page);
+  await expect(page.getByRole('status')).toContainText('아직 저장하지 않은 변경사항');
+  await expect(page.getByText('저장한 기록', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '다음' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/style$/);
 
@@ -78,6 +80,7 @@ test('SCR-002: 저장한 뒤 새로고침해도 draft가 그대로 보인다', a
 
   await page.reload();
 
+  await expect(page.getByRole('status')).not.toContainText('아직 저장하지 않은 변경사항');
   await expect(page.getByLabel('이름')).toHaveValue('김서준');
   await expect(page.getByLabel('국적')).toHaveValue('KR');
   await expect(page.getByRole('radio', { name: '왼발' })).toHaveAttribute('aria-checked', 'true');

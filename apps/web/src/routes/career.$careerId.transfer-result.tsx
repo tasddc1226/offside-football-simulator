@@ -181,10 +181,6 @@ function ContractResult({ view, careerId, state }: { view: TransferResultView; c
             <dd className="text-os-text">{view.newTeam}</dd>
           </div>
           <div>
-            <dt>결정 revision</dt>
-            <dd className="os-num text-os-text">{view.revision}</dd>
-          </div>
-          <div>
             <dt>Base OVR</dt>
             <dd className="os-num text-os-text">{view.baseOvr.before} → {view.baseOvr.after}</dd>
           </div>
