@@ -31,4 +31,10 @@ export const PHASE4_SEEDS: Partial<Record<Phase4Presentation, Phase4SeedHit>> = 
   ETHICS: { packVersion: '0.2.0', seed: 'offside-seed-search-2', seasonIndex: 2, step: 9, eventId: 'EVT-ETH-010' },
   MEDIA: { packVersion: '0.2.0', seed: 'offside-seed-search-0', seasonIndex: 1, step: 4, eventId: 'EVT-MEDIA-010' },
   RUMOUR: { packVersion: '0.2.0', seed: 'offside-seed-search-0', seasonIndex: 2, step: 7, eventId: 'EVT-CON-010' },
+  // T-4-023: find-seed.ts --pack 0.3.0 --max-seasons 30 --seed-count 200
+  // --seed-prefix offside-nat-search --presentation NATIONAL_TEAM 탐색의 가장 이른 hit(seed
+  // 인덱스 0, 200개 중 1개만 스캔하고 멈췄다). RATING_AND_POPULARITY 경로(그 시점 baseOvr 73 <
+  // 3부 리그 임계 78, popularityCenti 10000 = 100.00% ≥ 임계 6000)로 열렸다. 0.2.0도 같은 조건으로
+  // 돌리면 같은 seed가 seasonIndex 19에서 열린다(PR 본문 탐색 표).
+  NATIONAL_TEAM: { packVersion: '0.3.0', seed: 'offside-nat-search-0', seasonIndex: 20, step: 8, eventId: 'EVT-NAT-001' },
 };
