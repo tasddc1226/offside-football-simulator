@@ -2,6 +2,11 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (21:36, D-66 대표팀 `agent` 축 문구 — T-4-025)
+
+- **D-66.** T-4-023 캡처로 P4-7 문구 게이트 확인: SCR-032는 "팬·협회 관계", 소집 수락 결과 SCR-014는 전역 라벨 "에이전트 관계 +4". 전역 라벨(`labels.ts` `agent`)은 윤리·관계 화면이 공유하므로 유지하고, 대표팀 두 화면의 문구만 "에이전트 관계(협회 관계의 대리값)"로 맞춘다(문구 2줄, [T-4-025](briefs/T-4-025.md), port 5251). 도메인의 `agent` 축 의미 변경·새 축 추가는 하지 않는다(D-62).
+- T-4-023 상태: 워커가 0.3.0 seed로 시즌 20에서 NATIONAL_TEAM 소집에 도달해 360×780 캡처 2장을 만들었고 PR 준비 중(21:31). 캡처 육안 확인: SCR-032 헤더·컨텍스트 카드(선택지는 뷰포트 아래), SCR-014 "소집을 수락했다 · 체력 -15 · 에이전트 관계 +4 · 팬 관계 +4 · 대표팀 결과·감독 신뢰는 변하지 않습니다".
+
 ## 2026-09-05 (20:40, PR #94 T-4-024 머지 — 출시 게이트 2/3)
 
 - **T-4-024 PR #94 `30ad35c` squash 머지 `232bc83`.** 변경 4파일: `apps/web/src/engine/funnel.ts`(`clampElapsedSec` 0~7200, `season_settled.elapsedSec`, `trackStepPassed(season, careerId?)` + 조회 실패 시 baseProps fallback), `apps/web/src/routes/career.$careerId.index.tsx`(careerId 배선 1줄), `packages/contracts/src/analytics.ts`(`ElapsedSecSchema` int·nonnegative·max 7200, 두 이벤트 모두 optional), `funnel.test.ts`(기대값 1줄). 오케스트레이터 체인 EXIT 0(web·contracts 테스트 실행, e2e 98 passed 1.4분). 워커 실측: FAST 시즌 step_passed elapsedSec 1·1·2초, season_settled elapsedSec 1초(자동 진행이라 플레이 시간 아님).
