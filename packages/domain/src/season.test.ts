@@ -577,7 +577,7 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
         eventId: 'EVT-SEASON-TEST',
         definitionVersion: 1,
         choiceId: 'A',
-        outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
       },
     });
     if (!resolved.ok) throw new Error(`실패: ${resolved.error.code} ${resolved.error.message}`);
@@ -631,6 +631,7 @@ describe('ADVANCE(시즌 중): RULE-TIME-002', () => {
         outcomes: [
           {
             id: 'A1',
+            kind: 'SUCCESS',
             weight: 100,
             effects: [
               {

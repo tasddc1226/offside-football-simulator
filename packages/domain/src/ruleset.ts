@@ -1,4 +1,15 @@
-import type { AttributeKey, DecisionSlot, InjuryBodyPart, Position, RehabPlan, SeasonPhase, SquadRole, StatGroup } from './types.js';
+import type {
+  AttributeKey,
+  ChapterOutcomeKind,
+  DecisionSlot,
+  InjuryBodyPart,
+  NationalTeamCallUp,
+  Position,
+  RehabPlan,
+  SeasonPhase,
+  SquadRole,
+  StatGroup,
+} from './types.js';
 
 // D-2: 아키타입 카탈로그. roleWeights 합은 1(±1e-9), template은 20키 전부.
 export type Archetype = {
@@ -284,6 +295,17 @@ export type RelationshipRules = {
   logMax: number;
   memoryTagsMax: number;
   captainAppointment: { minCaptain: number; minSeasons: number };
+  /** T-4-003 Phase 4 커리어 태그 판정 기준. */
+  tagThresholds: {
+    glassPotential: number;
+    glassMajorEpisodes: number;
+    managerTrust: number;
+    managerSeasons: number;
+    lockerRelation: number;
+    lockerSeasons: number;
+    comebackRole: SquadRole;
+    controversialFailures: number;
+  };
 };
 
 // T-4-001 D-49/D-50: 평판 규칙(`packages/content` 소유). `CREATE_CAREER`가 `initialPopularityCenti`·
@@ -297,8 +319,12 @@ export type ReputationRules = {
 
 // T-4-001 D-51: 대표팀 차출 규칙(`packages/content` 소유). 자격 판정·pending 생성은 T-4-004.
 export type NationalTeamRules = {
+  event: { id: string; version: number };
+  /** EVT-NAT-001의 choice별 canonical outcome identity. 효과는 content가 아니라 domain 규칙이 결정한다. */
+  outcomeByChoice: Record<'A' | 'B' | 'C', { callUp: NationalTeamCallUp; id: string; kind: ChapterOutcomeKind; weight: number }>;
   callUpStep: number;
   minOvrByTier: Record<'YOUTH' | '1' | '2' | '3', number>;
+  minRatingTenths: number;
   minPopularityCenti: number;
   fitnessCost: { ACCEPT: number; CONDITIONAL: number; DECLINE: number };
   relationDelta: {

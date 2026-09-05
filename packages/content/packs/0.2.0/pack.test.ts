@@ -3,21 +3,22 @@ import { dirname } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { loadPack } from '../../src/cli/load-pack.ts';
 import { validatePack } from '../../src/cli/validate-pack.ts';
+import { ChapterDefinitionSchema } from '../../src/schema/chapter.ts';
 import { EventDefinitionSchema } from '../../src/schema/event.ts';
 import { PERMANENT_TARGETS, CURRENT_TARGETS, CONTEXT_TARGETS, RELATION_TARGETS } from '../../src/schema/effect.ts';
 
 const PACK_DIR = dirname(fileURLToPath(import.meta.url));
 
 describe('packs/0.2.0', () => {
-  it('has exactly 15 events and 3 chapters that load and validate without errors', () => {
+  it('has exactly 20 events and 4 chapters that load and validate without errors', () => {
     const loaded = loadPack(PACK_DIR);
-    expect(loaded.events).toHaveLength(15);
-    expect(loaded.chapters).toHaveLength(3);
+    expect(loaded.events).toHaveLength(20);
+    expect(loaded.chapters).toHaveLength(4);
 
     const result = validatePack(loaded, { writeChecksum: false });
     expect(result.errors).toEqual([]);
-    expect(result.eventCount).toBe(15);
-    expect(result.chapterCount).toBe(3);
+    expect(result.eventCount).toBe(20);
+    expect(result.chapterCount).toBe(4);
   });
 
   it('every chapter id is unique', () => {
@@ -80,17 +81,46 @@ describe('packs/0.2.0', () => {
     }
   });
 
+  it('NATIONAL_DEBUT keeps the PROTOTYPE/no-rating preview contract', () => {
+    const loaded = loadPack(PACK_DIR);
+    const chapter = loaded.chapters.find(({ raw }) => (raw as { id: string }).id === 'CHP-NAT-001');
+    if (chapter === undefined) throw new Error('CHP-NAT-001 is missing');
+    const definition = ChapterDefinitionSchema.parse(chapter.raw);
+    expect((chapter.raw as Record<string, unknown>).authoring).toBe('PROTOTYPE');
+    expect(loaded.manifestRaw).toMatchObject({ playtested: false });
+    for (const option of definition.decisions.flatMap((decision) => decision.options)) {
+      expect(option.outcomes.every((outcome) => outcome.ratingDeltaTenths === 0)).toBe(true);
+    }
+    const event = loaded.events.find(({ raw }) => (raw as { id: string }).id === 'EVT-NAT-001');
+    if (event === undefined) throw new Error('EVT-NAT-001 is missing');
+    const eventDefinition = EventDefinitionSchema.parse(event.raw);
+    for (const choice of eventDefinition.choices) {
+      expect(choice.previewEffects.some((preview) => preview.label === '특례 규칙: 적용 없음')).toBe(true);
+    }
+  });
+
   it('checksum matches without --write-checksum', () => {
     const loaded = loadPack(PACK_DIR);
     const result = validatePack(loaded, { writeChecksum: false });
     expect(result.errors.filter((e) => e.includes('checksum'))).toEqual([]);
   });
 
-  // T-3-006/T-4-002: 새 이벤트 5개와 문구가 바뀐 EVT-INJ-001은 PROTOTYPE으로 표시한다.
-  // 나머지 0.1.0 유래 9개는 authoring이 없다.
-  it('새 이벤트와 문구가 바뀐 EVT-INJ-001은 authoring이 PROTOTYPE이다', () => {
+  // T-3-006/T-4-002/T-4-003/T-4-004: 신규 이벤트와 문구가 바뀐 EVT-INJ-001은 PROTOTYPE으로 표시한다.
+  // 나머지 0.1.0 유래 이벤트는 authoring이 없다.
+  it('신규 이벤트와 문구가 바뀐 EVT-INJ-001은 authoring이 PROTOTYPE이다', () => {
     const loaded = loadPack(PACK_DIR);
-    const newIds = new Set(['EVT-CON-010', 'EVT-CON-011', 'EVT-CON-012', 'EVT-CON-013', 'EVT-MEDIA-006']);
+    const newIds = new Set([
+      'EVT-CON-010',
+      'EVT-CON-011',
+      'EVT-CON-012',
+      'EVT-CON-013',
+      'EVT-MEDIA-006',
+      'EVT-SLUMP-010',
+      'EVT-REL-010',
+      'EVT-ETH-010',
+      'EVT-MEDIA-010',
+      'EVT-NAT-001',
+    ]);
     const changedIds = new Set([...newIds, 'EVT-INJ-001']);
     for (const { raw } of loaded.events) {
       const event = EventDefinitionSchema.parse(raw);

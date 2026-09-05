@@ -28,8 +28,9 @@
 | T-4-004 | B | domain + content | 대표팀 차출 기본 모듈(D-51): step 8 자격 판정, NATIONAL_TEAM pending → EVT-NAT 이벤트(참가/사양/조건부), 부상 중 자동 사양, 체력 비용·협회(`agent`)·팬 관계·태그, 대표팀 데뷔 챕터 트리거 `NATIONAL_DEBUT`(MAJOR) 예약, `nationalityRuleState` 기본값(특례 없음) | T-4-002, T-4-003 | B3 |
 | T-4-005 | B | web | SCR-022 부상·재활, SCR-021 슬럼프, SCR-018 라커룸(관계 방향·기억 태그·맥락 효과), SCR-016 윤리·위기, SCR-024 SNS·평판(외부 전송 없음), SCR-032 대표팀, 대시보드 라커룸·휴대폰 관계 수치 점진 공개 3단계, SCR-023 경기 판단 변형(챕터 옵션의 포지션군 표시), e2e TEST-E2E-004·axe | T-4-004 | B4 |
 | T-4-006 | A+B | domain + web(e2e) | 트랙 통합 검증: 3시즌 fixture(이적 + 부상 + 감독 교체 + 대표팀) 결정론·hash, 리그 이동 전후 Base OVR 불변, 관계·평판이 OVR을 직접 바꾸지 않음(property), 시즌당 결정 수 예산(RULE-TIME-004) 측정, FAST/CHAPTER 세션 길이 재측정, Snapshot 크기, e2e 3회 무결점, Phase 3·4 완료 조건 표 | T-3-005, T-4-005 | 종료 |
+| T-4-007 | B | web + ui | 디자인 PR #66 재통합(D-58): `design/tds-game-screens`에 최신 main merge, 충돌 3+파일 해결, T-3-005·T-4-004 화면의 새 디자인 정합, `check:contrast`·양쪽 e2e 통과 | T-4-004 | B4 앞(T-4-005 선행) |
 
-투입 순서: T-3-001 → (T-4-001 리베이스, T-3-002, T-3-006) → (T-3-003, T-4-002, T-4-003) → (T-3-004 → T-3-005, T-4-004) → (T-4-005) → T-4-006. 동시 3개를 넘지 않게 트랙 A의 A3·A4가 먼저 흐르고 트랙 B의 B2가 그 뒤 슬롯을 채운다. `packages/domain`의 `simulate.ts`·`types.ts`·`packages/contracts/career-state.ts`는 두 트랙이 다 만지므로 **타입 슬라이스(T-3-001, T-4-001)는 순차**로, 그 뒤 작업은 트랙별 새 파일(`transfer.ts`·`negotiation.ts` / `injury.ts`·`relationships.ts`·`manager.ts`·`national-team.ts`)에 두고 `simulate.ts`에는 훅 호출 한 줄씩만 추가한다.
+투입 순서: T-3-001 → (T-4-001 리베이스, T-3-002, T-3-006) → (T-3-003, T-4-002, T-4-003) → (T-3-004 → T-3-005, T-4-004) → (T-4-007 ‖ T-4-006 domain) → (T-4-005) → T-4-006 e2e(D-58, 2026-09-05 갱신). 동시 3개를 넘지 않게 트랙 A의 A3·A4가 먼저 흐르고 트랙 B의 B2가 그 뒤 슬롯을 채운다. `packages/domain`의 `simulate.ts`·`types.ts`·`packages/contracts/career-state.ts`는 두 트랙이 다 만지므로 **타입 슬라이스(T-3-001, T-4-001)는 순차**로, 그 뒤 작업은 트랙별 새 파일(`transfer.ts`·`negotiation.ts` / `injury.ts`·`relationships.ts`·`manager.ts`·`national-team.ts`)에 두고 `simulate.ts`에는 훅 호출 한 줄씩만 추가한다.
 
 ## 3. 설계 결정 (초안 — 각 웨이브 투입 전 확정)
 
@@ -116,6 +117,20 @@
 - T-3-001이 두 트랙의 타임라인 kind·pending 필드·화이트리스트 항목을 **한 번에** 예약해 T-4-001이 타입 충돌 없이 리베이스한다. 이후 공용 파일 수정은 PR마다 `git merge origin/main` 뒤 전체 체인으로 확인한다(T-2-009 선례).
 - 새 Effect 타깃(`reputation.popularityCenti`, `availability.matchesRemaining`, `health.recurrenceRiskBp`)은 트랙 B가 ADR-010 소유권 표를 갱신하는 커밋과 함께만 추가한다.
 - `schemaVersion`은 1 유지(공개 출시 전, D-11·Phase 1 관례) — 새 필드는 전부 기본값이 있는 additive 필드로 두고 골든은 hash·신규 필드만 바뀌게 한다. 저장 상태는 정수만(D-36).
+
+### D-56 DEV 전용 콘텐츠 팩 오버라이드 (2026-09-05, T-4-005)
+
+- 활성 팩은 `0.1.0`(`apps/web/src/engine/versions.ts`)으로 유지한다 — LINE TEST(9/8~) 기준선이며 골든·밸런스를 바꾸지 않는다. Phase 4 이벤트(`SLUMP`·`LOCKER_ROOM`·`ETHICS`·`MEDIA`)와 `RUMOUR`는 0.2.0에만 있으므로, 화면 도달성은 **DEV 서버 전용** 오버라이드 `localStorage['offside:e2e-content-pack']`(`PACK_VERSIONS`에 있는 값만, `import.meta.env.DEV` 밖에서는 죽은 코드)로 만든다. 엔진 팩 로딩과 읽기 전용 팩 싱글턴은 같은 함수로 팩을 고른다. 오버라이드로 만든 커리어는 `contentPackVersion: '0.2.0'`을 저장하고 기존 0.1.0 커리어는 자기 팩으로 replay된다.
+- 0.2.0의 실제 활성화(새 커리어 기본값)는 LINE TEST 기준선 확보 뒤 별도 결정으로 남긴다(T-3-005 보드 메모의 "RUMOUR 도달성 게이트"와 같은 항목).
+
+### D-57 대시보드 관계·평판 점진 공개 3단계 (2026-09-05, T-4-005)
+
+상태에서 파생하며 새 저장 필드는 없다. (1) 계약 전(`contract === null`): 라커룸은 기억 태그만, 휴대폰 잠김. (2) 첫 프로 계약 후 첫 결산 전(`seasonHistory.length === 0`): 관계 5축을 방향(↑/→/↓)·단계 라벨로만, 축별 `memoryTags`, 최근 관계 변화 3건, 휴대폰에 계약 요약·평판 단계. (3) 첫 결산 후(`seasonHistory.length >= 1`): 관계 0~100 정수와 인기(`popularityCenti/100`) 숫자 공개, 감독·재직 시즌·주장단 상태. 라벨 함수는 화면 한 곳(`shared/labels.ts`)에 두고 룰셋 상수로 만들지 않는다.
+
+### D-58 디자인 PR #66 재통합 순서와 방식 (2026-09-05, T-4-007)
+
+- 사용자의 디자인 PR #66(`design/tds-game-screens`, 19개 화면 480px 모바일 개편·앱형 모션, 기준 main `27292d4`)은 T-4-004(PR #68) 머지 뒤 **T-4-007**로 재통합한다: 같은 head 브랜치에 `origin/main`을 merge 커밋으로 합치고(rebase·force 금지, 사용자 커밋 SHA 보존) 충돌은 "기능은 main, 시각 구조는 design"으로 푼다. main에만 있는 T-3-005·T-4-004 화면은 새 디자인 계약으로 맞춘다. 워커는 PR 본문을 `PR_BODY.md`로 남기고 오케스트레이터가 PR #66 본문에 옮긴 뒤 squash 머지한다.
+- 순서: T-4-007 → T-4-005(새 화면은 개편 디자인 위에서) → T-4-006. T-4-006의 domain·contracts 부분(1~4절)은 #68 뒤 T-4-007과 병행할 수 있고 web e2e 부분(5절)은 T-4-005 뒤에만 한다.
 
 ## 4. 완료 조건 → 작업
 

@@ -10,6 +10,8 @@ function seasonResult(overrides: Partial<SeasonResult> = {}): SeasonResult {
     index: 1,
     simulationMode: 'FAST',
     teamId: 'seorabeol-united',
+    managerId: 'seorabeol-united-mgr-1',
+    captaincyAtEnd: 'NONE',
     competitions: [],
     playerStats: {
       group: 'FW',

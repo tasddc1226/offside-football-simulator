@@ -3,7 +3,12 @@ import { clamp } from './clamp.js';
 import { resolveChapter, type ChapterCandidateInput } from './chapter.js';
 import { applyCondition, type ConditionState } from './condition.js';
 import { generateCompetitors } from './competitors.js';
-import { applyEffects, expireAtSeasonEnd, expireEffects, resolveDeferredEffects } from './effects.js';
+import {
+  applyEffects,
+  expireAtSeasonEnd,
+  expireEffects,
+  resolveDeferredEffects,
+} from './effects.js';
 import { evaluateCareerTags, grantCareerTag } from './career-tags.js';
 import { computeGrowth } from './growth.js';
 import { hashState } from './hash.js';
@@ -20,8 +25,19 @@ import { findInjuryReturnMatchId } from './injury-return.js';
 import { generateMarket, openMarketAfterSettlement } from './market.js';
 import { computeContractSeasonsRemaining } from './market-value.js';
 import { buildDefaultManager } from './manager.js';
+import {
+  applyNationalTeamCallUp,
+  buildNationalTeamCallUpRecord,
+  nationalTeamEffects,
+  reserveNationalDebut,
+} from './national-team.js';
 import { canNegotiate, expireOffers } from './negotiation.js';
-import { findMatchingOfferBranch, findOvrBand, generateOffers, lookupBandAmount } from './offers.js';
+import {
+  findMatchingOfferBranch,
+  findOvrBand,
+  generateOffers,
+  lookupBandAmount,
+} from './offers.js';
 import { playMatch } from './match.js';
 import { generatePlayerProfile, type ConfirmedPlayerDraft } from './player.js';
 import { onSettlementRelations } from './relationships.js';
@@ -41,7 +57,12 @@ import {
   type PlayStepMatches,
   type SeasonWalkResult,
 } from './season.js';
-import { applyPlayedMatch, initialSeasonPlayerStats, stepMatchResultsFor, type SeasonMatchBooks } from './season-stats.js';
+import {
+  applyPlayedMatch,
+  initialSeasonPlayerStats,
+  stepMatchResultsFor,
+  type SeasonMatchBooks,
+} from './season-stats.js';
 import { buildSeasonResult, hashSeasonResult } from './settlement.js';
 import {
   computeSquadStatus,
@@ -106,7 +127,11 @@ export type Command =
       // 데이터 계약)는 domain CareerState 어디에도 없다(engine-client Career 래퍼 필드라 T-2-001
       // 범위 밖). CREATE_CAREER처럼 payload로 받는다(PR 본문에 기록).
       // T-2-005 D-39: trainingFocus는 없으면 'ROLE'(기존 골든 호환).
-      payload: { simulationMode: SimulationMode; serviceSeasonId: string; trainingFocus?: TrainingFocus };
+      payload: {
+        simulationMode: SimulationMode;
+        serviceSeasonId: string;
+        trainingFocus?: TrainingFocus;
+      };
     }
   | {
       type: 'ADVANCE';
@@ -126,7 +151,14 @@ export type Command =
         eventId: string;
         definitionVersion: number;
         choiceId: string;
-        outcomes: Array<{ id: string; weight: number; effects: Effect[]; addTags?: string[]; removeTags?: string[] }>;
+        outcomes: Array<{
+          id: string;
+          kind: ChapterOutcomeKind;
+          weight: number;
+          effects: Effect[];
+          addTags?: string[];
+          removeTags?: string[];
+        }>;
         // T-4-001 D-52: pending.kind가 INJURY면 필수, NATIONAL_TEAM이면 아래 callUp이 필수. EVENT
         // pending에 둘 중 하나라도 오면 PAYLOAD_KIND_MISMATCH.
         rehabPlan?: RehabPlan;
@@ -183,18 +215,32 @@ export type SimulationResult =
   | {
       ok: false;
       error: {
-        code: 'VALIDATION_FAILED' | 'CAREER_REVISION_CONFLICT' | 'COMMAND_ALREADY_RESOLVED' | 'VERSION_MISMATCH';
+        code:
+          | 'VALIDATION_FAILED'
+          | 'CAREER_REVISION_CONFLICT'
+          | 'COMMAND_ALREADY_RESOLVED'
+          | 'VERSION_MISMATCH';
         message: string;
         details?: JsonValue;
       };
     };
 
 function fail(
-  code: 'VALIDATION_FAILED' | 'CAREER_REVISION_CONFLICT' | 'COMMAND_ALREADY_RESOLVED' | 'VERSION_MISMATCH',
+  code:
+    | 'VALIDATION_FAILED'
+    | 'CAREER_REVISION_CONFLICT'
+    | 'COMMAND_ALREADY_RESOLVED'
+    | 'VERSION_MISMATCH',
   message: string,
   details?: JsonValue,
 ): SimulationResult {
-  return details === undefined ? { ok: false, error: { code, message } } : { ok: false, error: { code, message, details } };
+  return details === undefined
+    ? { ok: false, error: { code, message } }
+    : { ok: false, error: { code, message, details } };
+}
+
+function isChapterOutcomeKind(value: unknown): value is ChapterOutcomeKind {
+  return value === 'SUCCESS' || value === 'NEUTRAL' || value === 'FAIL' || value === 'FIXED';
 }
 
 function sortUniqueTags(tags: string[]): string[] {
@@ -295,6 +341,12 @@ function createCareer(input: SimulationInput): SimulationResult {
     timeline: [],
     season: null,
     seasonHistory: [],
+    nextManager: null,
+    captaincy: 'NONE',
+    captaincySeasons: 0,
+    controversyFailures: 0,
+    nationalityRuleState: { moduleId: 'DEFAULT', exceptions: [] },
+    nationalTeam: { callUps: [], debuted: false, pendingDebut: null },
     health: { episodes: [] },
     relationshipLog: [],
     memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
@@ -335,7 +387,9 @@ function updatePlayerDraft(input: SimulationInput, snapshot: DomainSnapshot): Si
   }
   const state = snapshot.state;
   if (state.status !== 'DRAFT') {
-    return fail('VALIDATION_FAILED', 'DRAFT 상태에서만 UPDATE_PLAYER_DRAFT를 받을 수 있다.', { reason: 'NOT_DRAFT' });
+    return fail('VALIDATION_FAILED', 'DRAFT 상태에서만 UPDATE_PLAYER_DRAFT를 받을 수 있다.', {
+      reason: 'NOT_DRAFT',
+    });
   }
 
   const patch = command.payload.draft;
@@ -368,7 +422,10 @@ function updatePlayerDraft(input: SimulationInput, snapshot: DomainSnapshot): Si
   if (has(patch, 'gender')) {
     const raw = patch.gender as PlayerGender | null;
     if (raw !== null && !GENDERS.includes(raw)) {
-      return fail('VALIDATION_FAILED', `알 수 없는 성별: ${raw}`, { field: 'gender', reason: 'UNKNOWN' });
+      return fail('VALIDATION_FAILED', `알 수 없는 성별: ${raw}`, {
+        field: 'gender',
+        reason: 'UNKNOWN',
+      });
     }
     merged.gender = raw;
   }
@@ -376,7 +433,10 @@ function updatePlayerDraft(input: SimulationInput, snapshot: DomainSnapshot): Si
   if (has(patch, 'nationalityCode')) {
     const raw = patch.nationalityCode as string | null;
     if (raw !== null && !ruleset.nationalities.some((nationality) => nationality.code === raw)) {
-      return fail('VALIDATION_FAILED', `알 수 없는 국적 코드: ${raw}`, { field: 'nationalityCode', reason: 'UNKNOWN' });
+      return fail('VALIDATION_FAILED', `알 수 없는 국적 코드: ${raw}`, {
+        field: 'nationalityCode',
+        reason: 'UNKNOWN',
+      });
     }
     merged.nationalityCode = raw;
   }
@@ -384,7 +444,10 @@ function updatePlayerDraft(input: SimulationInput, snapshot: DomainSnapshot): Si
   if (has(patch, 'preferredFoot')) {
     const raw = patch.preferredFoot as PreferredFoot | null;
     if (raw !== null && !PREFERRED_FEET.includes(raw)) {
-      return fail('VALIDATION_FAILED', `알 수 없는 주발: ${raw}`, { field: 'preferredFoot', reason: 'UNKNOWN' });
+      return fail('VALIDATION_FAILED', `알 수 없는 주발: ${raw}`, {
+        field: 'preferredFoot',
+        reason: 'UNKNOWN',
+      });
     }
     merged.preferredFoot = raw;
   }
@@ -392,7 +455,10 @@ function updatePlayerDraft(input: SimulationInput, snapshot: DomainSnapshot): Si
   if (has(patch, 'position')) {
     const raw = patch.position as Position | null;
     if (raw !== null && !POSITIONS.includes(raw)) {
-      return fail('VALIDATION_FAILED', `알 수 없는 포지션: ${raw}`, { field: 'position', reason: 'UNKNOWN' });
+      return fail('VALIDATION_FAILED', `알 수 없는 포지션: ${raw}`, {
+        field: 'position',
+        reason: 'UNKNOWN',
+      });
     }
     merged.position = raw;
   }
@@ -400,7 +466,10 @@ function updatePlayerDraft(input: SimulationInput, snapshot: DomainSnapshot): Si
   if (has(patch, 'archetypeId')) {
     const raw = patch.archetypeId as string | null;
     if (raw !== null && !ruleset.archetypes.some((archetype) => archetype.id === raw)) {
-      return fail('VALIDATION_FAILED', `알 수 없는 아키타입: ${raw}`, { field: 'archetypeId', reason: 'UNKNOWN' });
+      return fail('VALIDATION_FAILED', `알 수 없는 아키타입: ${raw}`, {
+        field: 'archetypeId',
+        reason: 'UNKNOWN',
+      });
     }
     merged.archetypeId = raw;
   }
@@ -408,7 +477,10 @@ function updatePlayerDraft(input: SimulationInput, snapshot: DomainSnapshot): Si
   if (has(patch, 'backgroundId')) {
     const raw = patch.backgroundId as string | null;
     if (raw !== null && !ruleset.backgrounds.some((background) => background.id === raw)) {
-      return fail('VALIDATION_FAILED', `알 수 없는 배경: ${raw}`, { field: 'backgroundId', reason: 'UNKNOWN' });
+      return fail('VALIDATION_FAILED', `알 수 없는 배경: ${raw}`, {
+        field: 'backgroundId',
+        reason: 'UNKNOWN',
+      });
     }
     merged.backgroundId = raw;
   }
@@ -449,7 +521,9 @@ function confirmPlayer(input: SimulationInput, snapshot: DomainSnapshot): Simula
   }
   const state = snapshot.state;
   if (state.status !== 'DRAFT') {
-    return fail('VALIDATION_FAILED', 'DRAFT 상태에서만 CONFIRM_PLAYER를 받을 수 있다.', { reason: 'NOT_DRAFT' });
+    return fail('VALIDATION_FAILED', 'DRAFT 상태에서만 CONFIRM_PLAYER를 받을 수 있다.', {
+      reason: 'NOT_DRAFT',
+    });
   }
 
   const draft = state.player.draft;
@@ -485,7 +559,13 @@ function confirmPlayer(input: SimulationInput, snapshot: DomainSnapshot): Simula
     player: { draft: state.player.draft, profile: generated.profile },
     timeline: [
       ...state.timeline,
-      { revision: nextRevision, kind: 'CAREER_CONFIRMED', refId: null, age: state.age, step: nextStep },
+      {
+        revision: nextRevision,
+        kind: 'CAREER_CONFIRMED',
+        refId: null,
+        age: state.age,
+        step: nextStep,
+      },
     ],
   };
 
@@ -505,9 +585,16 @@ function confirmPlayer(input: SimulationInput, snapshot: DomainSnapshot): Simula
  * step마다 "DEFERRED 해석(`resolveDeferredEffects`) → AT_STEP 만료(`expireEffects`)" 순서로 접는다
  * (DEFERRED가 새로 activeEffects를 등록할 수 있으니 만료보다 먼저 온다).
  */
-function advanceEffectsThroughWalk(state: CareerState, walked: SeasonWalkResult): CareerState {
+function advanceEffectsThroughWalk(
+  state: CareerState,
+  walked: SeasonWalkResult,
+  relationshipRules: Ruleset['relationshipRules'],
+): CareerState {
   const crossedSteps = [...walked.passedStepIndexes, walked.currentStepIndex];
-  return crossedSteps.reduce((acc, step) => expireEffects(resolveDeferredEffects(acc, step), step), state);
+  return crossedSteps.reduce(
+    (acc, step) => expireEffects(resolveDeferredEffects(acc, step, relationshipRules), step),
+    state,
+  );
 }
 
 /**
@@ -516,7 +603,7 @@ function advanceEffectsThroughWalk(state: CareerState, walked: SeasonWalkResult)
  * `matchId`와 같은 레코드 하나를 바꾼다.
  */
 function patchOpenedChapterMatch(matches: readonly MatchRecord[], pending: Pending): MatchRecord[] {
-  if (pending === null || pending.kind !== 'CHAPTER') return [...matches];
+  if (pending === null || pending.kind !== 'CHAPTER' || pending.trigger === 'NATIONAL_DEBUT') return [...matches];
   const matchId = pending.matchId;
   const chapterId = pending.chapterId;
   return matches.map((match) => (match.id === matchId ? { ...match, chapterId } : match));
@@ -633,6 +720,8 @@ function createStepMatchWiring(
   // 갱신되는 값은 이 참조가 아니라 아래 closure 변수로 추적한다.
   careerState: CareerState,
   initial: StepMatchWiringInitial,
+  /** 이미 완료된 동일-step 조건 갱신을 재개 walk에서 다시 적용하지 않는다. */
+  conditionAlreadyAppliedSteps: readonly number[] = [],
 ): StepMatchWiring {
   let matches = initial.matches;
   let competitions = initial.competitions;
@@ -651,6 +740,7 @@ function createStepMatchWiring(
   let attributes = careerState.attributes;
   let playerProfile = profile;
   let injuryCount = initial.injuryCount;
+  const conditionAppliedSteps = new Set(conditionAlreadyAppliedSteps);
   let forcedPending: Extract<Pending, { kind: 'INJURY' }> | null = null;
   let injuryTimeline: TimelineEntry[] = [];
 
@@ -703,7 +793,14 @@ function createStepMatchWiring(
         ...(recurrenceCheck === undefined ? {} : { recurrenceCheck }),
       });
       matchRngState = result.rngState;
-      const books = applyPlayedMatch(ruleset, team, league, calendar, { matches, competitions, playerStats, schedule }, result.match);
+      const books = applyPlayedMatch(
+        ruleset,
+        team,
+        league,
+        calendar,
+        { matches, competitions, playerStats, schedule },
+        result.match,
+      );
       matches = books.matches;
       competitions = books.competitions;
       playerStats = books.playerStats;
@@ -811,8 +908,9 @@ function createStepMatchWiring(
     const stepRecords = matches.filter((match) => match.step === stepIndex);
     // pending이 열려 있는 동안에는 step을 닫지 않는다. 다음 ADVANCE가 남은 경기까지 처리한 뒤 한 번만
     // applyCondition을 호출해야, 중단된 경기 묶음이 재활 해소 후 중복 적용되지 않는다.
-    if (forcedPending === null) {
+    if (forcedPending === null && !conditionAppliedSteps.has(stepIndex)) {
       playerCondition = applyCondition(playerCondition, stepRecords, ruleset.conditionRules, ruleset.seasonBoundaryReset.form);
+      conditionAppliedSteps.add(stepIndex);
     }
     return {
       results: stepMatchResultsFor(matches, stepIndex),
@@ -820,6 +918,7 @@ function createStepMatchWiring(
       competitions,
       forcedPending,
       injuryReturnMatchId,
+      injuryUnavailable: availability?.kind === 'INJURY' || health.episodes.some((episode) => episode.status === 'ACTIVE' || episode.status === 'REHAB'),
     };
   };
 
@@ -862,24 +961,36 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   }
   const state = snapshot.state;
   if (state.status !== 'ACTIVE') {
-    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 START_SEASON을 받을 수 없다.`, {
-      reason: 'NOT_ACTIVE',
-    });
+    return fail(
+      'VALIDATION_FAILED',
+      `status가 ${state.status}일 때는 START_SEASON을 받을 수 없다.`,
+      {
+        reason: 'NOT_ACTIVE',
+      },
+    );
   }
   if (state.season !== null) {
     return fail('VALIDATION_FAILED', '이미 활성 시즌이 있다.', { reason: 'SEASON_ALREADY_ACTIVE' });
   }
   if (state.contract === null) {
-    return fail('VALIDATION_FAILED', '계약이 없으면 시즌을 시작할 수 없다.', { reason: 'NO_CONTRACT' });
+    return fail('VALIDATION_FAILED', '계약이 없으면 시즌을 시작할 수 없다.', {
+      reason: 'NO_CONTRACT',
+    });
   }
   if (state.pending !== null) {
     // T-3-003 §1: 이적시장 pending은 응답이 필수라 MARKET_OPEN으로 실패한다(advance()와 같은 규칙).
     if (state.pending.kind === 'OFFERS' || state.pending.kind === 'CONTRACT') {
-      return fail('VALIDATION_FAILED', '이적시장이 열려 있다. NEGOTIATE·ACCEPT_OFFER·REJECT_OFFER로 응답해야 한다.', {
-        reason: 'MARKET_OPEN',
-      });
+      return fail(
+        'VALIDATION_FAILED',
+        '이적시장이 열려 있다. NEGOTIATE·ACCEPT_OFFER·REJECT_OFFER로 응답해야 한다.',
+        {
+          reason: 'MARKET_OPEN',
+        },
+      );
     }
-    return fail('VALIDATION_FAILED', '이미 결정 대기 중인 pending이 있다.', { reason: 'PENDING_DECISION' });
+    return fail('VALIDATION_FAILED', '이미 결정 대기 중인 pending이 있다.', {
+      reason: 'PENDING_DECISION',
+    });
   }
   if (state.player.profile === null) {
     throw new RangeError('startSeason: ACTIVE 상태인데 player.profile이 null이다.');
@@ -890,11 +1001,43 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   const rules = ruleset.selectionRules;
   const profile = state.player.profile;
 
+  // T-4-003: 결산에서 예약한 감독은 첫 시즌 시작 시 소비하고, 감독 교체 시즌에는 새 감독의
+  // trustBase를 관계 축의 시작값으로 쓴다. 예약이 없으면 기존 결정론적 기본 감독을 만든다.
+  const reservedManager = state.nextManager;
+  // 팀 전환 경계에서 이미 제거했어야 하지만, 오래 저장된 상태나 외부 입력이 이전 팀 예약을 남길 수
+  // 있다. manager id의 팀 접두사를 검증해 stale 예약은 버리고 현재 계약 팀의 기본 감독을 만든다.
+  const reservedManagerBelongsToTeam =
+    reservedManager !== null && reservedManager.id.startsWith(`${state.contract.teamId}-mgr-`);
+  const manager = reservedManagerBelongsToTeam
+    ? reservedManager
+    : buildDefaultManager({
+        teamId: state.contract.teamId,
+        tacticalStyleId: team.tacticalStyleId,
+        primaryPosition: profile.primaryPosition,
+        seasonHistory: state.seasonHistory,
+        ruleset,
+      });
+  // 결산은 교체·유지 모두 `nextManager`를 예약한다. 직전 SeasonResult의 id와 비교해야 유지 예약은
+  // 기존 신뢰를 보존하고, 새 감독 예약만 trustBase로 초기화한다.
+  const previousManagerId = state.seasonHistory.at(-1)?.result.managerId;
+  const previousTeamId = state.seasonHistory.at(-1)?.teamId;
+  const managerChanged =
+    reservedManagerBelongsToTeam &&
+    (reservedManager?.id !== previousManagerId || previousTeamId !== state.contract.teamId);
+  const managerTrust = managerChanged ? manager.trustBase : state.relationships.managerTrust;
+
   const generatedCompetitors = generateCompetitors(ruleset, team, state.rngState);
 
-  const tacticalFit = computeTacticalFit(state.attributes, profile.archetypeId, profile.primaryPosition, findTacticalStyle(ruleset, team.tacticalStyleId), rules);
+  const tacticalFit = computeTacticalFit(
+    state.attributes,
+    profile.archetypeId,
+    profile.primaryPosition,
+    findTacticalStyle(ruleset, team.tacticalStyleId),
+    rules,
+    manager.preferredArchetypeIds,
+  );
   const squadStatus = computeSquadStatus(
-    { rolePromise: state.contract.rolePromise, captaincy: 'NONE', lastRating: null },
+    { rolePromise: state.contract.rolePromise, captaincy: state.captaincy, lastRating: null },
     rules,
     ruleset.contractRules.squadStatusByRole,
   );
@@ -906,7 +1049,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     playerName: profile.name,
     baseOvr: profile.baseOvr,
     tacticalFit,
-    managerTrust: state.relationships.managerTrust,
+    managerTrust,
     form: state.state.form,
     fitness: state.state.fitness,
     morale: state.state.morale,
@@ -918,7 +1061,9 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
 
   const stateAfterSelection: CareerState = {
     ...state,
+    nextManager: null,
     context: { ...state.context, tacticalFit, squadStatus },
+    relationships: { ...state.relationships, managerTrust },
     rngState: generatedCompetitors.rngState,
   };
 
@@ -926,7 +1071,13 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   const mode = command.payload.simulationMode;
   const initialSteps = buildSeasonSteps(calendar, mode);
   const nextRevision = snapshot.revision + 1;
-  const roleContext = buildRoleContext(stateAfterSelection, ruleset, team.tacticalStyleId, selection, generatedCompetitors.competitors);
+  const roleContext = buildRoleContext(
+    stateAfterSelection,
+    ruleset,
+    team.tacticalStyleId,
+    selection,
+    generatedCompetitors.competitors,
+  );
 
   const league = findLeague(ruleset, team.leagueId);
   const schedule = buildSchedule(ruleset, team);
@@ -938,16 +1089,9 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   // 다음에 뽑을 값과 원소 단위로 같아져(같은 xoshiro 상태 출발) 경기 결과와 이벤트 roll이 숨은
   // 상관을 갖는다. 해시 파생 시드로 완전히 떼어낸다(careerId는 안 쓴다 — fork-by-replay 뒤 시즌이
   // 그대로 같아야 하는 T-2-006 테스트가 있다).
-  const initialMatchRngState = seedRng(`match:${state.seasonHistory.length + 1}:${stateAfterSelection.rngState.s.join(',')}`);
-
-  // T-4-001 D-50: rng 없이 만드는 기본 감독(manager.ts buildDefaultManager). 교체 판정은 T-4-003.
-  const manager = buildDefaultManager({
-    teamId: state.contract.teamId,
-    tacticalStyleId: team.tacticalStyleId,
-    primaryPosition: profile.primaryPosition,
-    seasonHistory: state.seasonHistory,
-    ruleset,
-  });
+  const initialMatchRngState = seedRng(
+    `match:${state.seasonHistory.length + 1}:${stateAfterSelection.rngState.s.join(',')}`,
+  );
 
   // T-2-005 D-39 오케스트레이터 리뷰 2차(R2-1): DEFERRED 효과는 시즌 step 번호로만 해석할 수 있으니
   // season이 배정된 뒤에만 풀 수 있다 — season 없이 미룬 효과(유스 구간 등)는 `state.deferredEffects`에
@@ -985,7 +1129,11 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     manager,
     injuryCount: 0,
   };
-  const stateBeforeWalk: CareerState = { ...stateAfterSelection, deferredEffects: [], season: initialSeason };
+  const stateBeforeWalk: CareerState = {
+    ...stateAfterSelection,
+    deferredEffects: [],
+    season: initialSeason,
+  };
 
   const wiring = createStepMatchWiring(
     ruleset,
@@ -995,7 +1143,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     team.tacticalStyleId,
     profile,
     state.contract.rolePromise,
-    state.relationships.managerTrust,
+    managerTrust,
     state.state,
     tacticalFit,
     state.context.positionProficiency,
@@ -1043,7 +1191,11 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     stateBeforeWalk,
     ruleset,
   );
-  const expiredState = advanceEffectsThroughWalk(stateBeforeWalk, walked);
+  const expiredState = advanceEffectsThroughWalk(
+    stateBeforeWalk,
+    walked,
+    ruleset.relationshipRules,
+  );
   if (expiredState.season === null) {
     throw new RangeError('startSeason: walk 이후 season이 null이다(있을 수 없는 상태).');
   }
@@ -1082,6 +1234,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     state: wiring.getPlayerCondition(),
     player: { ...expiredState.player, profile: wiring.getPlayerProfile() },
     health: wiring.getHealth(),
+    nationalTeam: walked.nationalTeamState,
     rngState: walked.rngState,
     pending: walked.pending,
     timeline: [
@@ -1095,6 +1248,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
         step: stepIndex,
       })),
       ...wiring.getInjuryTimeline(),
+      ...walked.nationalTeamTimeline,
     ],
   };
 
@@ -1111,6 +1265,13 @@ function isEligibleEventsSorted(events: ReadonlyArray<{ eventId: string }>): boo
     if (compareCodePoints(events[i - 1]!.eventId, events[i]!.eventId) > 0) return false;
   }
   return true;
+}
+
+function hasReservedNationalTeamEvent(
+  events: readonly EligibleEvent[],
+  ruleset: Ruleset,
+): boolean {
+  return events.some((event) => event.eventId === ruleset.nationalTeamRules.event.id);
 }
 
 /** T-2-001 RULE-TIME-002: pending 종류에 따라 다음에 클라이언트가 보낼 명령을 알려준다. */
@@ -1143,7 +1304,11 @@ function nextActionForPending(pending: Pending): 'DECISION' | 'ADVANCE' | 'SETTL
  * 연다(RESOLVE_ROLE로만 닫힌다). T-4-001 D-52: INJURY·NATIONAL_TEAM도 마찬가지로 자동 통과 대상에서
  * 빠졌다 — RESOLVE_EVENT로만 닫힌다.
  */
-function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, season: FootballSeason): SimulationResult {
+function advanceInSeason(
+  input: SimulationInput,
+  snapshot: DomainSnapshot,
+  season: FootballSeason,
+): SimulationResult {
   const command = input.command;
   if (command.type !== 'ADVANCE') {
     return fail('VALIDATION_FAILED', 'ADVANCE 처리기에 다른 명령이 전달되었다.');
@@ -1170,8 +1335,15 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     if (eligibleEvents.length >= 2) {
       const weightSum = eligibleEvents.reduce((sum, event) => sum + event.weight, 0);
       if (weightSum > 0xffffffff) {
-        return fail('VALIDATION_FAILED', 'eligibleEvents weight 합이 2^32를 넘는다.', { reason: 'INVALID_WEIGHT' });
+        return fail('VALIDATION_FAILED', 'eligibleEvents weight 합이 2^32를 넘는다.', {
+          reason: 'INVALID_WEIGHT',
+        });
       }
+    }
+    if (hasReservedNationalTeamEvent(eligibleEvents, input.ruleset)) {
+      return fail('VALIDATION_FAILED', '대표팀 예약 event id는 generic EVENT로 열 수 없다.', {
+        reason: 'RESERVED_NATIONAL_TEAM_EVENT',
+      });
     }
   }
 
@@ -1180,11 +1352,9 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
   let timeline = state.timeline;
   let currentStepIndex = season.currentStep;
 
-  // 현재 step이 아직 닫히지 않았으면(summary === null) decisionsOpened: 1로 닫는다. state.pending이
-  // 자동 통과 대상(CHAPTER·CONTRACT·ROLE·INJURY·NATIONAL_TEAM)이면 이번 ADVANCE가 직접 닫는
-  // 경우이고, pending이 이미 null이면 그 사이 RESOLVE_EVENT로 EVENT가 해소된 경우다 — 두 경우 모두
-  // "이 step에 결정이 열렸었다"를 뜻한다(walkToNextDecision 불변식: 열리지 않은 step은 같은 호출
-  // 안에서 즉시 닫히므로, summary === null인 step은 항상 결정이 열렸던 step이다).
+  // 현재 step이 아직 닫히지 않았으면(summary === null) 보통 마지막 결정을 닫고 다음 step으로 간다.
+  // 다만 forced INJURY 또는 NATIONAL_TEAM을 RESOLVE_EVENT로 닫은 직후에는 같은 step의 남은 후보를
+  // 먼저 재개한다. walkToNextDecision 불변식상 그 resume만 경기 재실행 없이 현재 step을 다시 본다.
   const currentStep = findSeasonStep(steps, currentStepIndex);
   const lastTimelineEntry = state.timeline[state.timeline.length - 1];
   const resumesInjuryStep =
@@ -1192,9 +1362,14 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     currentStep.summary === null &&
     lastTimelineEntry?.kind === 'REHAB_CHOSEN' &&
     lastTimelineEntry.step === currentStepIndex;
-  // REHAB_CHOSEN은 RESOLVE_EVENT로 닫힌 forced INJURY 결정 1건을 뜻한다. 현재 시즌 시작 뒤의
-  // 타임라인만 세어 이전 시즌 같은 step의 부상을 섞지 않고, 재개 후 일반 슬롯이 없을 때도
-  // decision count를 0으로 잃지 않게 한다.
+  const resumesNationalTeamStep =
+    state.pending === null &&
+    currentStep.summary === null &&
+    (lastTimelineEntry?.kind === 'NATIONAL_TEAM_CALLED' || lastTimelineEntry?.kind === 'NATIONAL_TEAM_DECLINED') &&
+    lastTimelineEntry.step === currentStepIndex;
+  const resumesSameStep = resumesInjuryStep || resumesNationalTeamStep;
+  // 현재 시즌 시작 뒤의 타임라인만 세어 이전 시즌 같은 step의 결정을 섞지 않는다. REHAB_CHOSEN과
+  // NATIONAL_TEAM_CALLED/DECLINED는 이미 열린 결정 수를 보존해 resume 뒤 summary에 반영한다.
   const currentSeasonStartRevision = [...state.timeline].reverse().find((entry) => entry.kind === 'SEASON_STARTED')?.revision;
   const resolvedForcedInjuryDecisions =
     currentSeasonStartRevision === undefined
@@ -1202,24 +1377,45 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
       : state.timeline.filter(
           (entry) => entry.kind === 'REHAB_CHOSEN' && entry.step === currentStepIndex && entry.revision > currentSeasonStartRevision,
         ).length;
-  if (currentStep.summary === null && !resumesInjuryStep) {
-    // A normal slot resolved after one or more forced injuries contributes exactly one additional
-    // decision; the REHAB_CHOSEN entries above account for the forced decisions already opened.
+  const resolvedNationalTeamDecisions =
+    currentSeasonStartRevision === undefined
+      ? 0
+      : state.timeline.filter(
+          (entry) =>
+            (entry.kind === 'NATIONAL_TEAM_CALLED' || entry.kind === 'NATIONAL_TEAM_DECLINED') &&
+            entry.step === currentStepIndex &&
+            entry.revision > currentSeasonStartRevision,
+        ).length;
+  if (currentStep.summary === null && !resumesSameStep) {
+    // A normal slot resolved after one or more forced injuries or a national-team decision contributes
+    // exactly one additional decision; the entries above account for decisions already opened.
     steps = markStepPassed(
       steps,
       currentStepIndex,
       nextRevision,
-      1 + resolvedForcedInjuryDecisions,
+      1 + resolvedForcedInjuryDecisions + resolvedNationalTeamDecisions,
       stepMatchResultsFor(season.matches, currentStepIndex),
     );
     timeline = [
       ...timeline,
-      { revision: nextRevision, kind: 'STEP_PASSED', refId: null, age: state.age, step: currentStepIndex },
+      {
+        revision: nextRevision,
+        kind: 'STEP_PASSED',
+        refId: null,
+        age: state.age,
+        step: currentStepIndex,
+      },
     ];
     currentStepIndex += 1;
   }
 
-  const roleContext = buildRoleContext(state, input.ruleset, season.styleId, season.selection, season.squad.competitors);
+  const roleContext = buildRoleContext(
+    state,
+    input.ruleset,
+    season.styleId,
+    season.selection,
+    season.squad.competitors,
+  );
 
   const ruleset = input.ruleset;
   const team = findTeam(ruleset, season.teamId);
@@ -1254,6 +1450,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
       matchRngState: season.matchRngState,
       injuryCount: season.injuryCount,
     },
+    resumesNationalTeamStep ? [season.currentStep] : [],
   );
 
   // 강제 부상 pending을 먼저 닫은 뒤에는 같은 step의 일반 슬롯을 이어서 연다. wiring은 이미 기록된
@@ -1270,7 +1467,7 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
           };
         }
       : wiring.playStepMatches;
-  const matchesBeforeWalk = resumesInjuryStep
+  const matchesBeforeWalk = resumesSameStep
     ? season.matches.filter((match) => match.step !== season.currentStep)
     : season.matches;
 
@@ -1295,9 +1492,13 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     chapterContext,
     state,
     ruleset,
-    resumesInjuryStep ? resolvedForcedInjuryDecisions : 0,
+    resumesInjuryStep
+      ? resolvedForcedInjuryDecisions
+      : resumesNationalTeamStep
+        ? resolvedForcedInjuryDecisions + resolvedNationalTeamDecisions
+        : 0,
   );
-  const expiredState = advanceEffectsThroughWalk(state, walked);
+  const expiredState = advanceEffectsThroughWalk(state, walked, ruleset.relationshipRules);
   if (expiredState.season === null) {
     throw new RangeError('advanceInSeason: walk 이후 season이 null이다(있을 수 없는 상태).');
   }
@@ -1346,9 +1547,10 @@ function advanceInSeason(input: SimulationInput, snapshot: DomainSnapshot, seaso
     state: wiring.getPlayerCondition(),
     player: { ...expiredState.player, profile: wiring.getPlayerProfile() },
     health: wiring.getHealth(),
+    nationalTeam: walked.nationalTeamState,
     rngState: walked.rngState,
     pending: walked.pending,
-    timeline,
+    timeline: [...timeline, ...walked.nationalTeamTimeline],
   };
 
   return {
@@ -1375,11 +1577,17 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
     // T-3-003 §1: 이적시장 pending(OFFERS·제안 있는 CONTRACT)은 응답이 필수라 일반 PENDING_DECISION이
     // 아니라 더 구체적인 MARKET_OPEN으로 실패한다(웹이 NEGOTIATE·ACCEPT_OFFER·REJECT_OFFER로 안내).
     if (state.pending.kind === 'OFFERS' || state.pending.kind === 'CONTRACT') {
-      return fail('VALIDATION_FAILED', '이적시장이 열려 있다. NEGOTIATE·ACCEPT_OFFER·REJECT_OFFER로 응답해야 한다.', {
-        reason: 'MARKET_OPEN',
-      });
+      return fail(
+        'VALIDATION_FAILED',
+        '이적시장이 열려 있다. NEGOTIATE·ACCEPT_OFFER·REJECT_OFFER로 응답해야 한다.',
+        {
+          reason: 'MARKET_OPEN',
+        },
+      );
     }
-    return fail('VALIDATION_FAILED', '이미 결정 대기 중인 pending이 있다.', { reason: 'PENDING_DECISION' });
+    return fail('VALIDATION_FAILED', '이미 결정 대기 중인 pending이 있다.', {
+      reason: 'PENDING_DECISION',
+    });
   }
 
   if (state.season !== null) {
@@ -1401,13 +1609,20 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
         });
       }
     }
+    if (hasReservedNationalTeamEvent(eligibleEvents, input.ruleset)) {
+      return fail('VALIDATION_FAILED', '대표팀 예약 event id는 generic EVENT로 열 수 없다.', {
+        reason: 'RESERVED_NATIONAL_TEAM_EVENT',
+      });
+    }
 
     let chosen = eligibleEvents[0]!;
     let nextRngState = state.rngState;
     if (eligibleEvents.length >= 2) {
       const weightSum = eligibleEvents.reduce((sum, event) => sum + event.weight, 0);
       if (weightSum > 0xffffffff) {
-        return fail('VALIDATION_FAILED', 'eligibleEvents weight 합이 2^32를 넘는다.', { reason: 'INVALID_WEIGHT' });
+        return fail('VALIDATION_FAILED', 'eligibleEvents weight 합이 2^32를 넘는다.', {
+          reason: 'INVALID_WEIGHT',
+        });
       }
       const rolled = rollRange(state.rngState, 1, weightSum);
       nextRngState = rolled.state;
@@ -1457,7 +1672,12 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
           kind: 'OFFERS',
           offers: generated.offers,
           // T-3-001 D-43: Phase 1 첫 계약 시장. 안전 잔류 제안 생성기는 T-3-002 몫이라 지금은 null.
-          market: { openedAtRevision: nextRevision, seasonIndex: state.seasonHistory.length, reason: 'FIRST_CONTRACT', safeOfferId: null },
+          market: {
+            openedAtRevision: nextRevision,
+            seasonIndex: state.seasonHistory.length,
+            reason: 'FIRST_CONTRACT',
+            safeOfferId: null,
+          },
         },
       };
       return {
@@ -1492,19 +1712,55 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 
   const state = snapshot.state;
   if (state.status !== 'ACTIVE') {
-    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 RESOLVE_EVENT를 받을 수 없다.`, {
-      reason: 'NOT_ACTIVE',
-    });
+    return fail(
+      'VALIDATION_FAILED',
+      `status가 ${state.status}일 때는 RESOLVE_EVENT를 받을 수 없다.`,
+      {
+        reason: 'NOT_ACTIVE',
+      },
+    );
   }
 
   const pending = state.pending;
   // T-4-001 D-52: EVENT 외에 INJURY·NATIONAL_TEAM pending도 이 명령으로 닫는다(eventId·version 일치
   // 검사는 셋 다 같다 — 세 kind 모두 eventId·version 필드를 갖는다).
-  if (pending === null || (pending.kind !== 'EVENT' && pending.kind !== 'INJURY' && pending.kind !== 'NATIONAL_TEAM')) {
-    return fail('VALIDATION_FAILED', '해소할 pending 이벤트가 없다.', { reason: 'NO_PENDING_EVENT' });
+  if (
+    pending === null ||
+    (pending.kind !== 'EVENT' && pending.kind !== 'INJURY' && pending.kind !== 'NATIONAL_TEAM')
+  ) {
+    return fail('VALIDATION_FAILED', '해소할 pending 이벤트가 없다.', {
+      reason: 'NO_PENDING_EVENT',
+    });
   }
-  if (pending.eventId !== command.payload.eventId || pending.version !== command.payload.definitionVersion) {
-    return fail('VALIDATION_FAILED', 'pending 이벤트와 요청이 다르다.', { reason: 'PENDING_EVENT_MISMATCH' });
+  if (pending.kind === 'EVENT' && pending.eventId === input.ruleset.nationalTeamRules.event.id) {
+    return fail('VALIDATION_FAILED', '대표팀 예약 event id는 generic EVENT로 해소할 수 없다.', {
+      reason: 'RESERVED_NATIONAL_TEAM_EVENT',
+    });
+  }
+  if (
+    pending.eventId !== command.payload.eventId ||
+    pending.version !== command.payload.definitionVersion
+  ) {
+    return fail('VALIDATION_FAILED', 'pending 이벤트와 요청이 다르다.', {
+      reason: 'PENDING_EVENT_MISMATCH',
+    });
+  }
+
+  if (
+    pending.kind === 'INJURY' &&
+    (pending.eventId !== input.ruleset.injuryRules.event.id || pending.version !== input.ruleset.injuryRules.event.version)
+  ) {
+    return fail('VERSION_MISMATCH', 'INJURY pending가 룰셋 event ref와 다르다.', {
+      reason: 'RULE_EVENT_VERSION_MISMATCH',
+    });
+  }
+  if (
+    pending.kind === 'NATIONAL_TEAM' &&
+    (pending.eventId !== input.ruleset.nationalTeamRules.event.id || pending.version !== input.ruleset.nationalTeamRules.event.version)
+  ) {
+    return fail('VERSION_MISMATCH', 'NATIONAL_TEAM pending가 룰셋 event ref와 다르다.', {
+      reason: 'RULE_EVENT_VERSION_MISMATCH',
+    });
   }
 
   const rehabPlan = command.payload.rehabPlan;
@@ -1515,21 +1771,151 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     });
   }
   if (pending.kind === 'INJURY' && rehabPlan === undefined) {
-    return fail('VALIDATION_FAILED', 'INJURY pending은 rehabPlan이 필요하다.', { reason: 'REHAB_PLAN_REQUIRED' });
+    return fail('VALIDATION_FAILED', 'INJURY pending은 rehabPlan이 필요하다.', {
+      reason: 'REHAB_PLAN_REQUIRED',
+    });
   }
   if (pending.kind === 'NATIONAL_TEAM' && callUp === undefined) {
-    return fail('VALIDATION_FAILED', 'NATIONAL_TEAM pending은 callUp이 필요하다.', { reason: 'CALL_UP_REQUIRED' });
+    return fail('VALIDATION_FAILED', 'NATIONAL_TEAM pending은 callUp이 필요하다.', {
+      reason: 'CALL_UP_REQUIRED',
+    });
+  }
+  if (pending.kind === 'NATIONAL_TEAM' && rehabPlan !== undefined) {
+    return fail('VALIDATION_FAILED', 'NATIONAL_TEAM pending에는 rehabPlan을 보낼 수 없다.', {
+      reason: 'PAYLOAD_KIND_MISMATCH',
+    });
+  }
+
+  // T-4-004 D-51: 대표팀 선택은 content가 보낸 arbitrary effects/outcome를 적용하지 않는다. A/B/C와
+  // ACCEPT/CONDITIONAL/DECLINE의 고정 매핑만 인정하고, 룰셋 effect를 새로 계산한다. 이 경로는
+  // decision RNG를 소비하지 않으며, 결과의 roll은 감사상 0으로 고정한다.
+  if (pending.kind === 'NATIONAL_TEAM') {
+    const canonicalOutcome =
+      command.payload.choiceId === 'A'
+        ? input.ruleset.nationalTeamRules.outcomeByChoice.A
+        : command.payload.choiceId === 'B'
+          ? input.ruleset.nationalTeamRules.outcomeByChoice.B
+          : command.payload.choiceId === 'C'
+            ? input.ruleset.nationalTeamRules.outcomeByChoice.C
+            : undefined;
+    const expectedCallUp = canonicalOutcome?.callUp;
+    if (expectedCallUp === undefined || expectedCallUp !== callUp) {
+      return fail('VALIDATION_FAILED', 'NATIONAL_TEAM choiceId와 callUp이 일치하지 않는다.', {
+        reason: 'CALL_UP_MISMATCH',
+      });
+    }
+    const outcomes = command.payload.outcomes;
+    // NATIONAL_TEAM은 content가 보낸 단일 FIXED outcome의 identity만 감사 로그에 남긴다. effects는
+    // 아래의 nationalTeamEffects로 대체되므로 client payload를 신뢰하지 않지만, id·kind·weight와
+    // cardinality는 canonical EVT-NAT-001 choice와 일치해야 한다.
+    if (!Array.isArray(outcomes) || outcomes.length !== 1 || outcomes[0]?.id !== canonicalOutcome?.id) {
+      return fail('VALIDATION_FAILED', 'NATIONAL_TEAM outcome가 선택한 canonical choice와 일치하지 않는다.', {
+        reason: 'OUTCOME_MISMATCH',
+      });
+    }
+    if (outcomes.some((outcome) => !isChapterOutcomeKind(outcome.kind))) {
+      return fail('VALIDATION_FAILED', 'RESOLVE_EVENT outcome에는 kind이 필요하다.', {
+        reason: 'OUTCOME_KIND_REQUIRED',
+      });
+    }
+    if (outcomes.some((outcome) => !Number.isInteger(outcome.weight) || outcome.weight <= 0)) {
+      return fail('VALIDATION_FAILED', 'outcome weight는 양의 정수여야 한다.', {
+        reason: 'INVALID_WEIGHT',
+      });
+    }
+    const weightSum = outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
+    if (!Number.isInteger(weightSum) || weightSum <= 0 || weightSum > 0xffffffff) {
+      return fail('VALIDATION_FAILED', 'outcome 가중치 합은 1 이상 2^32 이하의 정수여야 한다.');
+    }
+    const selectedOutcome = outcomes[0];
+    if (
+      canonicalOutcome === undefined ||
+      selectedOutcome === undefined ||
+      selectedOutcome.kind !== canonicalOutcome.kind ||
+      selectedOutcome.weight !== canonicalOutcome.weight
+    ) {
+      return fail('VALIDATION_FAILED', 'NATIONAL_TEAM outcome가 선택한 canonical choice와 일치하지 않는다.', {
+        reason: 'OUTCOME_MISMATCH',
+      });
+    }
+
+    const effects = nationalTeamEffects(input.ruleset, pending.eventId, callUp);
+    const effectResult = applyEffects(
+      state,
+      effects,
+      { step: pending.step },
+      input.ruleset.relationshipRules,
+    );
+    const record = buildNationalTeamCallUpRecord(
+      state,
+      pending.eventId,
+      pending.version,
+      callUp,
+      null,
+      pending.step,
+    );
+    let nationalTeam = applyNationalTeamCallUp(state.nationalTeam, record);
+    if (callUp !== 'DECLINE') nationalTeam = reserveNationalDebut(nationalTeam, input.ruleset);
+    // `NATIONAL_TEAM_CALLED/DECLINED`는 timeline kind이지 저장 tag가 아니다. D-51의 저장 tag는
+    // ACCEPT·CONDITIONAL의 `대표팀_소집` 하나만 남긴다.
+    const nationalTags = callUp === 'DECLINE' ? [] : ['대표팀_소집'];
+    const tags = sortUniqueTags([...effectResult.state.tags, ...nationalTags]);
+    const nextRevision = snapshot.revision + 1;
+    const outcomeId = outcomes[0]!.id;
+    const extraTimeline: TimelineEntry = {
+      revision: nextRevision,
+      kind: callUp === 'DECLINE' ? 'NATIONAL_TEAM_DECLINED' : 'NATIONAL_TEAM_CALLED',
+      refId: pending.eventId,
+      age: state.age,
+      step: pending.step,
+    };
+    const nextState: CareerState = {
+      ...effectResult.state,
+      tags,
+      nationalTeam,
+      pending: null,
+      resolvedEventIds: [...state.resolvedEventIds, pending.eventId],
+      rngState: state.rngState,
+      timeline: [
+        ...state.timeline,
+        {
+          revision: nextRevision,
+          kind: 'EVENT_RESOLVED',
+          refId: `${pending.eventId}:${command.payload.choiceId}:${outcomeId}`,
+          age: state.age,
+          step: pending.step,
+        },
+        extraTimeline,
+      ],
+    };
+    return {
+      ok: true,
+      snapshot: buildSnapshot(nextState, nextRevision, 'EVENT_RESOLVED'),
+      roll: 0,
+      outcomeId,
+      appliedEffects: effectResult.applied,
+      nextAction: 'ADVANCE',
+    };
   }
 
   let episodeIndex = -1;
   if (pending.kind === 'INJURY') {
     episodeIndex = state.health.episodes.findIndex((episode) => episode.id === pending.episodeId);
     if (episodeIndex === -1) {
-      return fail('VALIDATION_FAILED', 'pending.episodeId의 부상 기록을 찾지 못했다.', { reason: 'EPISODE_NOT_FOUND' });
+      return fail('VALIDATION_FAILED', 'pending.episodeId의 부상 기록을 찾지 못했다.', {
+        reason: 'EPISODE_NOT_FOUND',
+      });
     }
   }
 
   const outcomes = command.payload.outcomes;
+  // Commands are client-supplied at this boundary. Keep the shared contract's required `kind`
+  // invariant at runtime too, before any RNG draw or outcome effect is applied.
+  if (outcomes.some((outcome) => !isChapterOutcomeKind(outcome.kind))) {
+    return fail('VALIDATION_FAILED', 'RESOLVE_EVENT outcome에는 kind이 필요하다.', {
+      reason: 'OUTCOME_KIND_REQUIRED',
+    });
+  }
   const weightSum = outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
   // rollInt는 maxExclusive가 1 이상의 정수가 아니면 throw한다(프로그래밍 오류 가정). 여기서
   // 미리 검증해 simulate()가 throw하지 않는다는 규칙을 content 데이터 오류로도 어기지 않게 한다.
@@ -1551,7 +1937,12 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     return fail('VALIDATION_FAILED', 'outcomes가 비어 있다.');
   }
 
-  const effectResult = applyEffects(state, chosen.effects, { step: state.currentStep });
+  const effectResult = applyEffects(
+    state,
+    chosen.effects,
+    { step: state.currentStep },
+    input.ruleset.relationshipRules,
+  );
 
   let tags = effectResult.state.tags;
   if (chosen.addTags && chosen.addTags.length > 0) {
@@ -1565,15 +1956,17 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 
   const nextRevision = snapshot.revision + 1;
 
-  // T-4-001 D-52: INJURY는 재활 계획을 에피소드에 적용하고 REHAB_CHOSEN을, NATIONAL_TEAM은 응답에
-  // 따라 NATIONAL_TEAM_CALLED/DECLINED를 추가 타임라인으로 남긴다(둘 다 EVENT_RESOLVED 다음).
+  // T-4-002 D-49: INJURY는 재활 계획을 에피소드에 적용하고 EVENT_RESOLVED 다음에 REHAB_CHOSEN을
+  // 남긴다. NATIONAL_TEAM은 위의 전용 분기에서 같은 timeline 순서를 처리한다.
   let health = effectResult.state.health;
   let season = effectResult.state.season;
   const extraTimeline: TimelineEntry[] = [];
   if (pending.kind === 'INJURY') {
     const episode = health.episodes[episodeIndex]!;
     const updated = applyRehabPlan(episode, rehabPlan as RehabPlan, input.ruleset.injuryRules);
-    health = { episodes: health.episodes.map((candidate, i) => (i === episodeIndex ? updated : candidate)) };
+    health = {
+      episodes: health.episodes.map((candidate, i) => (i === episodeIndex ? updated : candidate)),
+    };
     if (updated.remainingMatches === undefined) {
       throw new RangeError(`resolveEvent: ${updated.id}에 remainingMatches가 없다.`);
     }
@@ -1585,10 +1978,13 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
         availability: { kind: 'INJURY', matchesRemaining: returnMatches, sinceMatchId },
       };
     }
-    extraTimeline.push({ revision: nextRevision, kind: 'REHAB_CHOSEN', refId: pending.episodeId, age: state.age, step: state.currentStep });
-  } else if (pending.kind === 'NATIONAL_TEAM') {
-    const kind = callUp === 'DECLINE' ? 'NATIONAL_TEAM_DECLINED' : 'NATIONAL_TEAM_CALLED';
-    extraTimeline.push({ revision: nextRevision, kind, refId: command.payload.eventId, age: state.age, step: state.currentStep });
+    extraTimeline.push({
+      revision: nextRevision,
+      kind: 'REHAB_CHOSEN',
+      refId: pending.episodeId,
+      age: state.age,
+      step: state.currentStep,
+    });
   }
 
   const nextState: CareerState = {
@@ -1596,6 +1992,13 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     season,
     tags,
     health,
+    controversyFailures:
+      state.controversyFailures +
+      (chosen.kind === 'FAIL' &&
+      (command.payload.eventId.startsWith('EVT-ETH-') ||
+        command.payload.eventId.startsWith('EVT-MEDIA-'))
+        ? 1
+        : 0),
     resolvedEventIds: [...state.resolvedEventIds, command.payload.eventId],
     rngState: rolled.state,
     pending: null,
@@ -1634,9 +2037,13 @@ function resolveChapterCommand(input: SimulationInput, snapshot: DomainSnapshot)
   }
   const state = snapshot.state;
   if (state.status !== 'ACTIVE') {
-    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 RESOLVE_CHAPTER를 받을 수 없다.`, {
-      reason: 'NOT_ACTIVE',
-    });
+    return fail(
+      'VALIDATION_FAILED',
+      `status가 ${state.status}일 때는 RESOLVE_CHAPTER를 받을 수 없다.`,
+      {
+        reason: 'NOT_ACTIVE',
+      },
+    );
   }
 
   const result = resolveChapter({
@@ -1706,13 +2113,24 @@ const NEGOTIATION_ASK_KEY: Record<NegotiationAsk, 'wage' | 'role' | 'length'> = 
 };
 
 /** 현재 열린 stint(`toSeasonIndex === null`)를 찾아 마감한다. clubHistory는 항상 열린 stint 1개를 가진다. */
-function closeOpenStint(clubHistory: readonly ClubStint[], toSeasonIndex: number, endReason: ClubStintEndReason): ClubStint[] {
-  return clubHistory.map((stint) => (stint.toSeasonIndex === null ? { ...stint, toSeasonIndex, endReason } : stint));
+function closeOpenStint(
+  clubHistory: readonly ClubStint[],
+  toSeasonIndex: number,
+  endReason: ClubStintEndReason,
+): ClubStint[] {
+  return clubHistory.map((stint) =>
+    stint.toSeasonIndex === null ? { ...stint, toSeasonIndex, endReason } : stint,
+  );
 }
 
 /** T-3-003 §4 RENEWAL: 클럽·stint는 그대로 두고 열린 stint의 contractId만 새 계약 id로 바꾼다. */
-function swapOpenStintContract(clubHistory: readonly ClubStint[], newContractId: string): ClubStint[] {
-  return clubHistory.map((stint) => (stint.toSeasonIndex === null ? { ...stint, contractId: newContractId } : stint));
+function swapOpenStintContract(
+  clubHistory: readonly ClubStint[],
+  newContractId: string,
+): ClubStint[] {
+  return clubHistory.map((stint) =>
+    stint.toSeasonIndex === null ? { ...stint, contractId: newContractId } : stint,
+  );
 }
 
 /** T-3-003 §4: `transferRules.rivalPairs`는 순서 없는 쌍이라 양방향으로 검사한다. */
@@ -1722,10 +2140,15 @@ function isRivalPair(ruleset: Ruleset, fromTeamId: string, toTeamId: string): bo
   );
 }
 
-type OfferLookup = { ok: true; offer: Offer } | { ok: false; reason: 'OFFER_NOT_FOUND' | 'OFFER_EXPIRED' };
+type OfferLookup =
+  { ok: true; offer: Offer } | { ok: false; reason: 'OFFER_NOT_FOUND' | 'OFFER_EXPIRED' };
 
 /** 원본 목록(만료 전)엔 없으면 OFFER_NOT_FOUND, 있었지만 만료로 빠졌으면 OFFER_EXPIRED. */
-function lookupKeptOffer(originalOffers: readonly Offer[], kept: readonly Offer[], offerId: string): OfferLookup {
+function lookupKeptOffer(
+  originalOffers: readonly Offer[],
+  kept: readonly Offer[],
+  offerId: string,
+): OfferLookup {
   const original = originalOffers.find((candidate) => candidate.id === offerId);
   if (original === undefined) return { ok: false, reason: 'OFFER_NOT_FOUND' };
   const offer = kept.find((candidate) => candidate.id === offerId);
@@ -1773,12 +2196,24 @@ function buildStayState(state: CareerState, nextRevision: number): CareerState {
     tags: stripMarketDeclarationTags(state.tags),
     timeline: [
       ...state.timeline,
-      { revision: nextRevision, kind: 'OFFER_REJECTED', refId: 'ALL', age: state.age, step: state.currentStep },
+      {
+        revision: nextRevision,
+        kind: 'OFFER_REJECTED',
+        refId: 'ALL',
+        age: state.age,
+        step: state.currentStep,
+      },
     ],
   };
 }
 
-type NewClubTransition = { context: CareerState['context']; relationships: CareerState['relationships']; tags: string[] };
+type NewClubTransition = {
+  context: CareerState['context'];
+  relationships: CareerState['relationships'];
+  tags: string[];
+  captaincy: CareerState['captaincy'];
+  captaincySeasons: CareerState['captaincySeasons'];
+};
 
 /**
  * T-3-003 §4 TRANSFER·FREE_AGENT·LOAN 공통 context·관계 전환(D-45). `applyMoveEffects`가 false면(LOAN)
@@ -1793,7 +2228,9 @@ function buildNewClubTransition(
 ): NewClubTransition {
   const carryRules = ruleset.transferRules.relationshipCarry;
   const isRivalMove =
-    applyMoveEffects && (isRivalPair(ruleset, previousContract.teamId, offer.teamId) || state.tags.includes('잔류_선언'));
+    applyMoveEffects &&
+    (isRivalPair(ruleset, previousContract.teamId, offer.teamId) ||
+      state.tags.includes('잔류_선언'));
   const isPromiseBreachMove = applyMoveEffects && previousContract.promiseBreaches >= 1;
 
   const profile = state.player.profile;
@@ -1816,8 +2253,16 @@ function buildNewClubTransition(
       squadStatus: ruleset.contractRules.squadStatusByRole[offer.rolePromise],
       positionProficiency,
     },
-    relationships: { managerTrust: carryRules.newManagerTrustBase, captain: 0, rival: 0, fans, agent: state.relationships.agent },
+    relationships: {
+      managerTrust: carryRules.newManagerTrustBase,
+      captain: 0,
+      rival: 0,
+      fans,
+      agent: state.relationships.agent,
+    },
     tags: stripMarketDeclarationTags(isRivalMove ? [...state.tags, '배신_이적'] : state.tags),
+    captaincy: 'NONE',
+    captaincySeasons: 0,
   };
 }
 
@@ -1833,34 +2278,55 @@ function negotiateOffer(input: SimulationInput, snapshot: DomainSnapshot): Simul
   }
   const state = snapshot.state;
   if (state.status !== 'ACTIVE') {
-    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 NEGOTIATE를 받을 수 없다.`, { reason: 'NOT_ACTIVE' });
+    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 NEGOTIATE를 받을 수 없다.`, {
+      reason: 'NOT_ACTIVE',
+    });
   }
   const pending = state.pending;
   if (pending === null || (pending.kind !== 'OFFERS' && pending.kind !== 'CONTRACT')) {
-    return fail('VALIDATION_FAILED', '결정 대기 중인 이적시장 제안이 없다.', { reason: 'NO_PENDING_OFFERS' });
+    return fail('VALIDATION_FAILED', '결정 대기 중인 이적시장 제안이 없다.', {
+      reason: 'NO_PENDING_OFFERS',
+    });
   }
 
   const nextRevision = snapshot.revision + 1;
-  const { kept, timelineAdds } = prepareMarketOffers(pending, nextRevision, state.age, state.currentStep);
+  const { kept, timelineAdds } = prepareMarketOffers(
+    pending,
+    nextRevision,
+    state.age,
+    state.currentStep,
+  );
   const { offerId, ask } = command.payload;
   const lookup = lookupKeptOffer(pending.offers, kept, offerId);
   if (!lookup.ok) {
-    return fail('VALIDATION_FAILED', lookup.reason === 'OFFER_NOT_FOUND' ? '제안 목록에 없는 offerId다.' : '대상 제안이 만료됐다.', {
-      reason: lookup.reason,
-    });
+    return fail(
+      'VALIDATION_FAILED',
+      lookup.reason === 'OFFER_NOT_FOUND' ? '제안 목록에 없는 offerId다.' : '대상 제안이 만료됐다.',
+      {
+        reason: lookup.reason,
+      },
+    );
   }
   const offer = lookup.offer;
 
   const askKey = NEGOTIATION_ASK_KEY[ask];
-  if (!canNegotiate(offer) || !offer.negotiable[askKey] || offer.negotiatedAsk !== null || (ask === 'ROLE' && offer.rolePromise === 'STARTER')) {
-    return fail('VALIDATION_FAILED', '이 제안은 이 항목을 협상할 수 없다.', { reason: 'NOT_NEGOTIABLE' });
+  if (
+    !canNegotiate(offer) ||
+    !offer.negotiable[askKey] ||
+    offer.negotiatedAsk !== null ||
+    (ask === 'ROLE' && offer.rolePromise === 'STARTER')
+  ) {
+    return fail('VALIDATION_FAILED', '이 제안은 이 항목을 협상할 수 없다.', {
+      reason: 'NOT_NEGOTIABLE',
+    });
   }
 
   const ruleset = input.ruleset;
   const negotiationRules = ruleset.transferRules.negotiation;
   const team = findTeam(ruleset, offer.teamId);
   const successBp = clamp(
-    negotiationRules.successBp[offer.kind][ask] + negotiationRules.reputationAdjustBpPerPoint * (team.reputation - 3),
+    negotiationRules.successBp[offer.kind][ask] +
+      negotiationRules.reputationAdjustBpPerPoint * (team.reputation - 3),
     0,
     10000,
   );
@@ -1874,18 +2340,28 @@ function negotiateOffer(input: SimulationInput, snapshot: DomainSnapshot): Simul
     refIdSuffix = 'COUNTERED';
     let countered: Offer = { ...offer, negotiationState: 'COUNTERED', negotiatedAsk: ask };
     if (ask === 'WAGE') {
-      countered = { ...countered, wageMinorPerWeek: Math.floor((offer.wageMinorPerWeek * negotiationRules.counter.wageBp) / 10000) };
+      countered = {
+        ...countered,
+        wageMinorPerWeek: Math.floor(
+          (offer.wageMinorPerWeek * negotiationRules.counter.wageBp) / 10000,
+        ),
+      };
     } else if (ask === 'LENGTH') {
       countered = {
         ...countered,
-        lengthSeasons: Math.min(offer.lengthSeasons + negotiationRules.counter.lengthDelta, ruleset.offerRules.lengthSeasons.max),
+        lengthSeasons: Math.min(
+          offer.lengthSeasons + negotiationRules.counter.lengthDelta,
+          ruleset.offerRules.lengthSeasons.max,
+        ),
       };
     } else {
       const upgradedRole = ROLE_UPGRADE[offer.rolePromise];
       countered = {
         ...countered,
         rolePromise: upgradedRole,
-        appearancePromise: { minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[upgradedRole] },
+        appearancePromise: {
+          minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[upgradedRole],
+        },
       };
     }
     nextOffers = kept.map((candidate) => (candidate.id === offer.id ? countered : candidate));
@@ -1901,7 +2377,13 @@ function negotiateOffer(input: SimulationInput, snapshot: DomainSnapshot): Simul
     timeline: [
       ...state.timeline,
       ...timelineAdds,
-      { revision: nextRevision, kind: 'NEGOTIATED', refId: `${offer.id}:${ask}:${refIdSuffix}`, age: state.age, step: state.currentStep },
+      {
+        revision: nextRevision,
+        kind: 'NEGOTIATED',
+        refId: `${offer.id}:${ask}:${refIdSuffix}`,
+        age: state.age,
+        step: state.currentStep,
+      },
     ],
   };
 
@@ -1925,26 +2407,45 @@ function rejectOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   }
   const state = snapshot.state;
   if (state.status !== 'ACTIVE') {
-    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 REJECT_OFFER를 받을 수 없다.`, { reason: 'NOT_ACTIVE' });
+    return fail(
+      'VALIDATION_FAILED',
+      `status가 ${state.status}일 때는 REJECT_OFFER를 받을 수 없다.`,
+      { reason: 'NOT_ACTIVE' },
+    );
   }
   const pending = state.pending;
   if (pending === null || (pending.kind !== 'OFFERS' && pending.kind !== 'CONTRACT')) {
-    return fail('VALIDATION_FAILED', '결정 대기 중인 이적시장 제안이 없다.', { reason: 'NO_PENDING_OFFERS' });
+    return fail('VALIDATION_FAILED', '결정 대기 중인 이적시장 제안이 없다.', {
+      reason: 'NO_PENDING_OFFERS',
+    });
   }
 
   const nextRevision = snapshot.revision + 1;
-  const { kept, timelineAdds } = prepareMarketOffers(pending, nextRevision, state.age, state.currentStep);
+  const { kept, timelineAdds } = prepareMarketOffers(
+    pending,
+    nextRevision,
+    state.age,
+    state.currentStep,
+  );
   const { offerId } = command.payload;
 
   if (offerId !== null) {
     const lookup = lookupKeptOffer(pending.offers, kept, offerId);
     if (!lookup.ok) {
-      return fail('VALIDATION_FAILED', lookup.reason === 'OFFER_NOT_FOUND' ? '제안 목록에 없는 offerId다.' : '대상 제안이 만료됐다.', {
-        reason: lookup.reason,
-      });
+      return fail(
+        'VALIDATION_FAILED',
+        lookup.reason === 'OFFER_NOT_FOUND'
+          ? '제안 목록에 없는 offerId다.'
+          : '대상 제안이 만료됐다.',
+        {
+          reason: lookup.reason,
+        },
+      );
     }
     if (offerId === pending.market.safeOfferId) {
-      return fail('VALIDATION_FAILED', '안전 잔류 제안은 개별 거절할 수 없다.', { reason: 'SAFE_OFFER' });
+      return fail('VALIDATION_FAILED', '안전 잔류 제안은 개별 거절할 수 없다.', {
+        reason: 'SAFE_OFFER',
+      });
     }
     const nextOffers = kept.filter((candidate) => candidate.id !== offerId);
     const nextState: CareerState = {
@@ -1953,17 +2454,33 @@ function rejectOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
       timeline: [
         ...state.timeline,
         ...timelineAdds,
-        { revision: nextRevision, kind: 'OFFER_REJECTED', refId: offerId, age: state.age, step: state.currentStep },
+        {
+          revision: nextRevision,
+          kind: 'OFFER_REJECTED',
+          refId: offerId,
+          age: state.age,
+          step: state.currentStep,
+        },
       ],
     };
-    return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'STEP_BOUNDARY'), appliedEffects: [], nextAction: 'DECISION' };
+    return {
+      ok: true,
+      snapshot: buildSnapshot(nextState, nextRevision, 'STEP_BOUNDARY'),
+      appliedEffects: [],
+      nextAction: 'DECISION',
+    };
   }
 
   const stateWithExpiry: CareerState = { ...state, timeline: [...state.timeline, ...timelineAdds] };
 
   if (pending.kind === 'OFFERS') {
     const nextState = buildStayState(stateWithExpiry, nextRevision);
-    return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'), appliedEffects: [], nextAction: 'ADVANCE' };
+    return {
+      ok: true,
+      snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'),
+      appliedEffects: [],
+      nextAction: 'ADVANCE',
+    };
   }
 
   const nextState: CareerState = {
@@ -1971,10 +2488,21 @@ function rejectOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     pending: null,
     timeline: [
       ...stateWithExpiry.timeline,
-      { revision: nextRevision, kind: 'OFFER_REJECTED', refId: 'ALL', age: state.age, step: state.currentStep },
+      {
+        revision: nextRevision,
+        kind: 'OFFER_REJECTED',
+        refId: 'ALL',
+        age: state.age,
+        step: state.currentStep,
+      },
     ],
   };
-  return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'), appliedEffects: [], nextAction: 'ADVANCE' };
+  return {
+    ok: true,
+    snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'),
+    appliedEffects: [],
+    nextAction: 'ADVANCE',
+  };
 }
 
 /**
@@ -1982,7 +2510,12 @@ function rejectOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
  * `acceptOffer`가 호출한다. 지금 코드 그대로다(T-3-003 §1 전처리는 FIRST_CONTRACT 제안이 항상
  * `validUntilRevision: null`이라 실질적으로 no-op).
  */
-function acceptFirstContractOffer(state: CareerState, ruleset: Ruleset, offer: Offer, nextRevision: number): SimulationResult {
+function acceptFirstContractOffer(
+  state: CareerState,
+  ruleset: Ruleset,
+  offer: Offer,
+  nextRevision: number,
+): SimulationResult {
   if (state.player.profile === null) {
     throw new RangeError('acceptFirstContractOffer: player.profile이 null이다.');
   }
@@ -2034,6 +2567,9 @@ function acceptFirstContractOffer(state: CareerState, ruleset: Ruleset, offer: O
     ...state,
     stage,
     contract,
+    nextManager: null,
+    captaincy: isNewClub ? 'NONE' : state.captaincy,
+    captaincySeasons: isNewClub ? 0 : state.captaincySeasons,
     clubHistory: [...state.clubHistory, clubStint],
     pending: null,
     context: {
@@ -2046,7 +2582,13 @@ function acceptFirstContractOffer(state: CareerState, ruleset: Ruleset, offer: O
       : state.relationships,
     timeline: [
       ...state.timeline,
-      { revision: nextRevision, kind: 'CONTRACT_SIGNED', refId: contract.id, age: state.age, step: state.currentStep },
+      {
+        revision: nextRevision,
+        kind: 'CONTRACT_SIGNED',
+        refId: contract.id,
+        age: state.age,
+        step: state.currentStep,
+      },
     ],
   };
 
@@ -2062,8 +2604,13 @@ function acceptFirstContractOffer(state: CareerState, ruleset: Ruleset, offer: O
  * T-3-003 §4 RENEWAL(step 7 사전 협상·EXPIRED 안전 잔류·협상된 RENEWAL 공통): 같은 클럽 재계약. 팀·
  * context·관계·clubHistory 항목은 건드리지 않고 현재 열린 stint의 contractId만 새 계약 id로 바꾼다.
  */
-function acceptRenewalOffer(state: CareerState, offer: Offer, nextRevision: number): SimulationResult {
-  const signedSeasonIndex = state.season !== null ? state.season.index + 1 : state.seasonHistory.length + 1;
+function acceptRenewalOffer(
+  state: CareerState,
+  offer: Offer,
+  nextRevision: number,
+): SimulationResult {
+  const signedSeasonIndex =
+    state.season !== null ? state.season.index + 1 : state.seasonHistory.length + 1;
   const newContract: Contract = {
     id: `CTR-${nextRevision}`,
     offerId: offer.id,
@@ -2093,15 +2640,32 @@ function acceptRenewalOffer(state: CareerState, offer: Offer, nextRevision: numb
     pending: null,
     timeline: [
       ...state.timeline,
-      { revision: nextRevision, kind: 'CONTRACT_RENEWED', refId: newContract.id, age: state.age, step: state.currentStep },
+      {
+        revision: nextRevision,
+        kind: 'CONTRACT_RENEWED',
+        refId: newContract.id,
+        age: state.age,
+        step: state.currentStep,
+      },
     ],
   };
 
-  return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'), appliedEffects: [], nextAction: 'ADVANCE' };
+  return {
+    ok: true,
+    snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'),
+    appliedEffects: [],
+    nextAction: 'ADVANCE',
+  };
 }
 
 /** T-3-003 §4 TRANSFER·FREE_AGENT: 현재 stint를 마감하고 새 클럽에서 새 Contract·stint를 연다. */
-function acceptNewClubOffer(state: CareerState, ruleset: Ruleset, contract: Contract, offer: Offer, nextRevision: number): SimulationResult {
+function acceptNewClubOffer(
+  state: CareerState,
+  ruleset: Ruleset,
+  contract: Contract,
+  offer: Offer,
+  nextRevision: number,
+): SimulationResult {
   const transition = buildNewClubTransition(state, ruleset, contract, offer, true);
   const stage: CareerStage = offer.leagueTier === 'YOUTH' ? 'YOUTH' : 'PRO';
   const signedSeasonIndex = state.seasonHistory.length + 1;
@@ -2145,9 +2709,12 @@ function acceptNewClubOffer(state: CareerState, ruleset: Ruleset, contract: Cont
     ...state,
     stage,
     contract: newContract,
+    nextManager: null,
     clubHistory: [...closedHistory, newStint],
     context: transition.context,
     relationships: transition.relationships,
+    captaincy: transition.captaincy,
+    captaincySeasons: transition.captaincySeasons,
     tags: transition.tags,
     pending: null,
     timeline: [
@@ -2162,7 +2729,12 @@ function acceptNewClubOffer(state: CareerState, ruleset: Ruleset, contract: Cont
     ],
   };
 
-  return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'), appliedEffects: [], nextAction: 'ADVANCE' };
+  return {
+    ok: true,
+    snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'),
+    appliedEffects: [],
+    nextAction: 'ADVANCE',
+  };
 }
 
 /**
@@ -2170,7 +2742,13 @@ function acceptNewClubOffer(state: CareerState, ruleset: Ruleset, contract: Cont
  * Contract(kind LOAN)·stint를 연다. context·관계 전환은 TRANSFER와 같되 라이벌·`배신_이적`은 적용하지
  * 않는다(임대는 배신이 아니다).
  */
-function acceptLoanOffer(state: CareerState, ruleset: Ruleset, contract: Contract, offer: Offer, nextRevision: number): SimulationResult {
+function acceptLoanOffer(
+  state: CareerState,
+  ruleset: Ruleset,
+  contract: Contract,
+  offer: Offer,
+  nextRevision: number,
+): SimulationResult {
   const transition = buildNewClubTransition(state, ruleset, contract, offer, false);
   const stage: CareerStage = offer.leagueTier === 'YOUTH' ? 'YOUTH' : 'PRO';
   const signedSeasonIndex = state.seasonHistory.length + 1;
@@ -2214,18 +2792,32 @@ function acceptLoanOffer(state: CareerState, ruleset: Ruleset, contract: Contrac
     stage,
     contract: loanContract,
     parentContract: { ...contract, suspended: true },
+    nextManager: null,
     clubHistory: [...closedHistory, newStint],
     context: transition.context,
     relationships: transition.relationships,
+    captaincy: transition.captaincy,
+    captaincySeasons: transition.captaincySeasons,
     tags: transition.tags,
     pending: null,
     timeline: [
       ...state.timeline,
-      { revision: nextRevision, kind: 'LOANED', refId: loanContract.id, age: state.age, step: state.currentStep },
+      {
+        revision: nextRevision,
+        kind: 'LOANED',
+        refId: loanContract.id,
+        age: state.age,
+        step: state.currentStep,
+      },
     ],
   };
 
-  return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'), appliedEffects: [], nextAction: 'ADVANCE' };
+  return {
+    ok: true,
+    snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'),
+    appliedEffects: [],
+    nextAction: 'ADVANCE',
+  };
 }
 
 /**
@@ -2241,13 +2833,19 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   }
   const state = snapshot.state;
   if (state.status !== 'ACTIVE') {
-    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 ACCEPT_OFFER를 받을 수 없다.`, {
-      reason: 'NOT_ACTIVE',
-    });
+    return fail(
+      'VALIDATION_FAILED',
+      `status가 ${state.status}일 때는 ACCEPT_OFFER를 받을 수 없다.`,
+      {
+        reason: 'NOT_ACTIVE',
+      },
+    );
   }
   const pending = state.pending;
   if (pending === null || (pending.kind !== 'OFFERS' && pending.kind !== 'CONTRACT')) {
-    return fail('VALIDATION_FAILED', '결정 대기 중인 제안이 없다.', { reason: 'NO_PENDING_OFFERS' });
+    return fail('VALIDATION_FAILED', '결정 대기 중인 제안이 없다.', {
+      reason: 'NO_PENDING_OFFERS',
+    });
   }
   if (state.player.profile === null) {
     throw new RangeError('acceptOffer: ACTIVE 상태인데 player.profile이 null이다.');
@@ -2255,16 +2853,29 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
 
   const ruleset = input.ruleset;
   const nextRevision = snapshot.revision + 1;
-  const { kept, timelineAdds } = prepareMarketOffers(pending, nextRevision, state.age, state.currentStep);
+  const { kept, timelineAdds } = prepareMarketOffers(
+    pending,
+    nextRevision,
+    state.age,
+    state.currentStep,
+  );
   const lookup = lookupKeptOffer(pending.offers, kept, command.payload.offerId);
   if (!lookup.ok) {
-    return fail('VALIDATION_FAILED', lookup.reason === 'OFFER_NOT_FOUND' ? '제안 목록에 없는 offerId다.' : '대상 제안이 만료됐다.', {
-      reason: lookup.reason,
-    });
+    return fail(
+      'VALIDATION_FAILED',
+      lookup.reason === 'OFFER_NOT_FOUND' ? '제안 목록에 없는 offerId다.' : '대상 제안이 만료됐다.',
+      {
+        reason: lookup.reason,
+      },
+    );
   }
   const offer = lookup.offer;
 
-  const baseState: CareerState = { ...state, tags: stripMarketDeclarationTags(state.tags), timeline: [...state.timeline, ...timelineAdds] };
+  const baseState: CareerState = {
+    ...state,
+    tags: stripMarketDeclarationTags(state.tags),
+    timeline: [...state.timeline, ...timelineAdds],
+  };
   // TRANSFER/FREE_AGENT의 라이벌·배신 판정은 원본 `잔류_선언`을 사용한 뒤에 선언 태그를 제거한다.
   const stateWithExpiry: CareerState = { ...state, timeline: [...state.timeline, ...timelineAdds] };
 
@@ -2273,7 +2884,12 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   }
   if (pending.market.reason === 'INTEREST' && offer.id === pending.market.safeOfferId) {
     const nextState = buildStayState(baseState, nextRevision);
-    return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'), appliedEffects: [], nextAction: 'ADVANCE' };
+    return {
+      ok: true,
+      snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'),
+      appliedEffects: [],
+      nextAction: 'ADVANCE',
+    };
   }
 
   const contract = state.contract;
@@ -2318,10 +2934,17 @@ function restoreParentContractAndStint(state: CareerState, nextRevision: number)
     ...state,
     contract: restoredContract,
     parentContract: null,
+    nextManager: null,
     clubHistory: [...closedHistory, newStint],
     timeline: [
       ...state.timeline,
-      { revision: nextRevision, kind: 'LOAN_RETURNED', refId: 'RETURN', age: state.age, step: state.currentStep },
+      {
+        revision: nextRevision,
+        kind: 'LOAN_RETURNED',
+        refId: 'RETURN',
+        age: state.age,
+        step: state.currentStep,
+      },
     ],
   };
 }
@@ -2339,9 +2962,13 @@ function restoreParentClubState(state: CareerState, ruleset: Ruleset): CareerSta
   }
   const carryRules = ruleset.transferRules.relationshipCarry;
   const positionProficiency =
-    parent.positionPlan === profile.primaryPosition ? state.context.positionProficiency : ruleset.contractRules.imposedPositionProficiency;
+    parent.positionPlan === profile.primaryPosition
+      ? state.context.positionProficiency
+      : ruleset.contractRules.imposedPositionProficiency;
   return {
     ...state,
+    captaincy: 'NONE',
+    captaincySeasons: 0,
     context: {
       tacticalFit: ruleset.offerRules.tacticalFitEstimate.min,
       squadStatus: ruleset.contractRules.squadStatusByRole[parent.rolePromise],
@@ -2363,7 +2990,12 @@ function restoreParentClubState(state: CareerState, ruleset: Ruleset): CareerSta
  * (`RETURN` + 매입 옵션이 되면 `PERMANENT`). rng는 `parentRemaining === 0`일 때만(재사용하는 시장
  * 생성기가) 소비한다 — LOAN_RETURN 명령 처리기 자체는 소비하지 않는다.
  */
-function settleLoanSeason(state: CareerState, ruleset: Ruleset, result: SeasonResult, nextRevision: number): CareerState {
+function settleLoanSeason(
+  state: CareerState,
+  ruleset: Ruleset,
+  result: SeasonResult,
+  nextRevision: number,
+): CareerState {
   const loanContract = state.contract;
   if (loanContract === null || loanContract.kind !== 'LOAN') {
     throw new RangeError('settleLoanSeason: contract가 LOAN이 아니다.');
@@ -2373,22 +3005,42 @@ function settleLoanSeason(state: CareerState, ruleset: Ruleset, result: SeasonRe
     throw new RangeError('settleLoanSeason: parentContract가 null이다.');
   }
 
-  const parentRemaining = computeContractSeasonsRemaining(parent.lengthSeasons, parent.signedAtRevision, state.timeline);
+  const parentRemaining = computeContractSeasonsRemaining(
+    parent.lengthSeasons,
+    parent.signedAtRevision,
+    state.timeline,
+  );
 
   if (parentRemaining === 0) {
-    const restored = restoreParentClubState(restoreParentContractAndStint(state, nextRevision), ruleset);
-    const generated = generateMarket({ state: restored, ruleset, reason: 'EXPIRED', revision: nextRevision, rng: restored.rngState });
+    const restored = restoreParentClubState(
+      restoreParentContractAndStint(state, nextRevision),
+      ruleset,
+    );
+    const generated = generateMarket({
+      state: restored,
+      ruleset,
+      reason: 'EXPIRED',
+      revision: nextRevision,
+      rng: restored.rngState,
+    });
     return { ...restored, rngState: generated.rngState, pending: generated.pending };
   }
 
   const possibleMinutes = result.selectionSummary.possibleMinutes;
-  const shareBp = possibleMinutes === 0 ? 0 : Math.floor((result.selectionSummary.minutes * 10000) / possibleMinutes);
+  const shareBp =
+    possibleMinutes === 0
+      ? 0
+      : Math.floor((result.selectionSummary.minutes * 10000) / possibleMinutes);
   const buyOptionMinor = loanContract.loan === null ? null : loanContract.loan.buyOptionMinor;
   const canBuy = buyOptionMinor !== null && shareBp >= ruleset.transferRules.loan.buyMinShareBp;
 
   return {
     ...state,
-    pending: { kind: 'LOAN_RETURN', options: canBuy ? ['RETURN', 'PERMANENT'] : ['RETURN'], buyOptionMinor },
+    pending: {
+      kind: 'LOAN_RETURN',
+      options: canBuy ? ['RETURN', 'PERMANENT'] : ['RETURN'],
+      buyOptionMinor,
+    },
   };
 }
 
@@ -2403,15 +3055,23 @@ function loanReturn(input: SimulationInput, snapshot: DomainSnapshot): Simulatio
   }
   const state = snapshot.state;
   if (state.status !== 'ACTIVE') {
-    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 LOAN_RETURN을 받을 수 없다.`, { reason: 'NOT_ACTIVE' });
+    return fail(
+      'VALIDATION_FAILED',
+      `status가 ${state.status}일 때는 LOAN_RETURN을 받을 수 없다.`,
+      { reason: 'NOT_ACTIVE' },
+    );
   }
   const pending = state.pending;
   if (pending === null || pending.kind !== 'LOAN_RETURN') {
-    return fail('VALIDATION_FAILED', '결정 대기 중인 임대 복귀 결정이 없다.', { reason: 'NO_PENDING_LOAN_RETURN' });
+    return fail('VALIDATION_FAILED', '결정 대기 중인 임대 복귀 결정이 없다.', {
+      reason: 'NO_PENDING_LOAN_RETURN',
+    });
   }
   const decision = command.payload.decision;
   if (!pending.options.includes(decision)) {
-    return fail('VALIDATION_FAILED', `이 결정(${decision})은 선택할 수 없다.`, { reason: 'OPTION_NOT_AVAILABLE' });
+    return fail('VALIDATION_FAILED', `이 결정(${decision})은 선택할 수 없다.`, {
+      reason: 'OPTION_NOT_AVAILABLE',
+    });
   }
   if (state.player.profile === null) {
     throw new RangeError('loanReturn: ACTIVE 상태인데 player.profile이 null이다.');
@@ -2422,7 +3082,10 @@ function loanReturn(input: SimulationInput, snapshot: DomainSnapshot): Simulatio
   const ruleset = input.ruleset;
 
   if (decision === 'RETURN') {
-    const restored = restoreParentClubState(restoreParentContractAndStint(state, nextRevision), ruleset);
+    const restored = restoreParentClubState(
+      restoreParentContractAndStint(state, nextRevision),
+      ruleset,
+    );
     const parent = restored.contract;
     if (parent === null) {
       throw new RangeError('loanReturn: 복원 뒤 contract가 null이다.');
@@ -2431,7 +3094,12 @@ function loanReturn(input: SimulationInput, snapshot: DomainSnapshot): Simulatio
       ...restored,
       pending: null,
     };
-    return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'), appliedEffects: [], nextAction: 'ADVANCE' };
+    return {
+      ok: true,
+      snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'),
+      appliedEffects: [],
+      nextAction: 'ADVANCE',
+    };
   }
 
   // decision === 'PERMANENT'
@@ -2446,8 +3114,18 @@ function loanReturn(input: SimulationInput, snapshot: DomainSnapshot): Simulatio
 
   const team = findTeam(ruleset, loanContract.teamId);
   const band = findOvrBand(ruleset.contractRules, profile.baseOvr);
-  const wage = lookupBandAmount(ruleset.contractRules.wageBands, team.wageBandId, band.id, 'wageBands');
-  const signingBonus = lookupBandAmount(ruleset.contractRules.signingBonus, team.wageBandId, band.id, 'signingBonus');
+  const wage = lookupBandAmount(
+    ruleset.contractRules.wageBands,
+    team.wageBandId,
+    band.id,
+    'wageBands',
+  );
+  const signingBonus = lookupBandAmount(
+    ruleset.contractRules.signingBonus,
+    team.wageBandId,
+    band.id,
+    'signingBonus',
+  );
   const rolePromise = lastSeason.result.selectionSummary.squadRoleAtEnd;
   const signedSeasonIndex = state.seasonHistory.length + 1;
 
@@ -2473,7 +3151,11 @@ function loanReturn(input: SimulationInput, snapshot: DomainSnapshot): Simulatio
     signedSeasonIndex,
   };
 
-  const closedHistory = closeOpenStint(state.clubHistory, state.seasonHistory.length, 'TRANSFERRED');
+  const closedHistory = closeOpenStint(
+    state.clubHistory,
+    state.seasonHistory.length,
+    'TRANSFERRED',
+  );
   const newStint: ClubStint = {
     teamId: loanContract.teamId,
     teamName: loanContract.teamName,
@@ -2489,16 +3171,39 @@ function loanReturn(input: SimulationInput, snapshot: DomainSnapshot): Simulatio
     ...state,
     contract: newContract,
     parentContract: null,
+    // PERMANENT는 실제 teamId가 같은 임대 구단 잔류이므로 결산에서 예약한 감독 교체와
+    // 해당 구단의 주장단 상태·누적을 다음 START_SEASON까지 보존한다. RETURN 분기는 위의
+    // restoreParentClubState에서 원소속 기준으로 명시적으로 초기화한다.
+    nextManager: state.nextManager,
+    captaincy: state.captaincy,
+    captaincySeasons: state.captaincySeasons,
     clubHistory: [...closedHistory, newStint],
     pending: null,
     timeline: [
       ...state.timeline,
-      { revision: nextRevision, kind: 'LOAN_RETURNED', refId: 'PERMANENT', age: state.age, step: state.currentStep },
-      { revision: nextRevision, kind: 'TRANSFERRED', refId: newContract.id, age: state.age, step: state.currentStep },
+      {
+        revision: nextRevision,
+        kind: 'LOAN_RETURNED',
+        refId: 'PERMANENT',
+        age: state.age,
+        step: state.currentStep,
+      },
+      {
+        revision: nextRevision,
+        kind: 'TRANSFERRED',
+        refId: newContract.id,
+        age: state.age,
+        step: state.currentStep,
+      },
     ],
   };
 
-  return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'), appliedEffects: [], nextAction: 'ADVANCE' };
+  return {
+    ok: true,
+    snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'),
+    appliedEffects: [],
+    nextAction: 'ADVANCE',
+  };
 }
 
 /**
@@ -2516,7 +3221,12 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   }
   const state = snapshot.state;
   const season = state.season;
-  if (season === null || season.currentStep !== 12 || state.pending === null || state.pending.kind !== 'SETTLEMENT') {
+  if (
+    season === null ||
+    season.currentStep !== 12 ||
+    state.pending === null ||
+    state.pending.kind !== 'SETTLEMENT'
+  ) {
     return fail('VALIDATION_FAILED', '시즌을 결산할 수 없다.', { reason: 'SEASON_NOT_SETTLEABLE' });
   }
   const profile = state.player.profile;
@@ -2552,7 +3262,10 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     form: { before: expiredState.state.form, after: reset.form },
     fitness: { before: expiredState.state.fitness, after: reset.fitness },
     morale: { before: expiredState.state.morale, after: reset.morale },
-    managerTrust: { before: expiredState.relationships.managerTrust, after: expiredState.relationships.managerTrust },
+    managerTrust: {
+      before: expiredState.relationships.managerTrust,
+      after: expiredState.relationships.managerTrust,
+    },
   };
 
   const resultWithoutHash = buildSeasonResult({
@@ -2575,7 +3288,9 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 
   // D-40 규칙 2: 시즌 경계 회귀가 `appliedSourceIds`의 `season:` 접두 항목(ONCE_PER_SEASON 중복 검사
   // 키)을 지운다 — 다음 시즌에 같은 sourceId가 다시 적용될 수 있어야 한다.
-  const clearedAppliedSourceIds = expiredState.appliedSourceIds.filter((id) => !id.startsWith('season:'));
+  const clearedAppliedSourceIds = expiredState.appliedSourceIds.filter(
+    (id) => !id.startsWith('season:'),
+  );
 
   const settledState: CareerState = {
     ...expiredState,
@@ -2602,12 +3317,83 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     result,
     ruleset: input.ruleset,
     rng: settledState.rngState,
+    timelineRevision: nextRevision,
   });
-  const stateAfterRelations: CareerState = { ...relationsResult.state, rngState: relationsResult.rng };
+  const stateAfterRelations: CareerState = {
+    ...relationsResult.state,
+    rngState: relationsResult.rng,
+  };
 
-  // D-42: `seasonHistory`에 이번 시즌 result가 들어간 뒤에 평가한다(커리어 누적 챕터 집계가 이번
-  // 시즌 몫까지 포함하도록).
-  const grantedTagIds = evaluateCareerTags(stateAfterRelations, result, input.ruleset);
+  // T-3-003 D-47/D-46/D-43, T-4-003 P1: 약속 위반은 관계 상태를 바꾸므로 태그 평가보다 먼저
+  // 적용한다. 그래야 TAG-MANAGER-FAVOURITE가 위반 전 managerTrust와 결산 result를 보고 지급되지
+  // 않는다.
+  const contractForPromise = stateAfterRelations.contract;
+  if (contractForPromise === null) {
+    throw new RangeError('settleSeason: 결산 뒤 contract가 null이다.');
+  }
+  const carryRules = input.ruleset.transferRules.relationshipCarry;
+  const promiseBreachState: CareerState = result.promiseFulfilment.fulfilled
+    ? {
+        ...stateAfterRelations,
+        tags: sortUniqueTags(stateAfterRelations.tags.filter((tag) => tag !== '약속_위반')),
+      }
+    : (() => {
+        const breachEffect: Effect = {
+          kind: 'RELATION',
+          target: 'managerTrust',
+          delta: carryRules.managerTrustPromiseBreach,
+          clamp: { min: 0, max: 100 },
+          appliesAt: { kind: 'IMMEDIATE' },
+          expiresAt: null,
+          stackingRule: 'SUM',
+          sourceId: `SETTLE_SEASON:${season.index}:PROMISE_BREACH`,
+          reasonTag: 'PROMISE_BREACH',
+        };
+        const applied = applyEffects(
+          stateAfterRelations,
+          [breachEffect],
+          { step: 12 },
+          input.ruleset.relationshipRules,
+        ).state;
+        return {
+          ...applied,
+          contract: {
+            ...contractForPromise,
+            promiseBreaches: contractForPromise.promiseBreaches + 1,
+          },
+          tags: sortUniqueTags([...applied.tags, '약속_위반']),
+        };
+      })();
+
+  // 약속 위반을 포함한 최종 managerTrust를 SeasonResult와 seasonHistory 양쪽에 기록한다. 결과를
+  // 먼저 history에 넣어 둔 뒤 관계·위반 효과를 적용하므로, 여기서 결과를 다시 해시하고 이번
+  // 시즌 summary만 교체해야 누적 태그 평가와 snapshot이 같은 결산 값을 읽는다.
+  const finalizedResultWithoutHash: Omit<SeasonResult, 'hash'> = {
+    ...result,
+    stateDeltas: {
+      ...result.stateDeltas,
+      managerTrust: {
+        ...result.stateDeltas.managerTrust,
+        after: promiseBreachState.relationships.managerTrust,
+      },
+    },
+  };
+  const finalizedResult: SeasonResult = {
+    ...finalizedResultWithoutHash,
+    hash: hashSeasonResult(finalizedResultWithoutHash),
+  };
+  const stateBeforeTags: CareerState = {
+    ...promiseBreachState,
+    seasonHistory: promiseBreachState.seasonHistory.map((seasonSummary) =>
+      seasonSummary.index === season.index && seasonSummary.settledAtRevision === nextRevision
+        ? { ...seasonSummary, result: finalizedResult }
+        : seasonSummary,
+    ),
+  };
+
+  // D-42: 이번 시즌의 최종 result가 `seasonHistory`에 들어간 뒤 평가한다(커리어 누적 챕터 집계가
+  // 이번 시즌 몫까지 포함하고 약속 위반 뒤의 managerTrust를 사용하도록 한다).
+  const grantedTagIds = evaluateCareerTags(stateBeforeTags, finalizedResult, input.ruleset);
   const nextState = grantedTagIds.reduce((acc, tagId) => {
     const granted = grantCareerTag(acc, tagId, {
       seasonIndex: season.index,
@@ -2618,34 +3404,21 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
       ...granted,
       timeline: [
         ...granted.timeline,
-        { revision: nextRevision, kind: 'CAREER_TAG_GRANTED' as const, refId: tagId, age: nextAge, step: 12 },
+        {
+          revision: nextRevision,
+          kind: 'CAREER_TAG_GRANTED' as const,
+          refId: tagId,
+          age: nextAge,
+          step: 12,
+        },
       ],
     };
-  }, stateAfterRelations);
-
-  // T-3-003 D-47/D-46/D-43: 태그 부여 뒤 순서대로 — (a) 약속 위반 판정 → (b) 임대면 LOAN_RETURN 분기
-  // → (c) 아니면 결산 뒤 시장 개방.
-  const contractForPromise = nextState.contract;
-  if (contractForPromise === null) {
-    throw new RangeError('settleSeason: 결산 뒤 contract가 null이다.');
-  }
-  const carryRules = input.ruleset.transferRules.relationshipCarry;
-  const promiseBreachState: CareerState = result.promiseFulfilment.fulfilled
-    ? { ...nextState, tags: sortUniqueTags(nextState.tags.filter((tag) => tag !== '약속_위반')) }
-    : {
-        ...nextState,
-        contract: { ...contractForPromise, promiseBreaches: contractForPromise.promiseBreaches + 1 },
-        tags: sortUniqueTags([...nextState.tags, '약속_위반']),
-        relationships: {
-          ...nextState.relationships,
-          managerTrust: clamp(nextState.relationships.managerTrust + carryRules.managerTrustPromiseBreach, 0, 100),
-        },
-      };
+  }, stateBeforeTags);
 
   const finalState =
-    promiseBreachState.contract !== null && promiseBreachState.contract.kind === 'LOAN'
-      ? settleLoanSeason(promiseBreachState, input.ruleset, result, nextRevision)
-      : openMarketAfterSettlement(promiseBreachState, input.ruleset, nextRevision).state;
+    nextState.contract !== null && nextState.contract.kind === 'LOAN'
+      ? settleLoanSeason(nextState, input.ruleset, finalizedResult, nextRevision)
+      : openMarketAfterSettlement(nextState, input.ruleset, nextRevision).state;
 
   return {
     ok: true,
@@ -2655,7 +3428,7 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     // 결정이라 'ADVANCE'가 아니라 'DECISION'이다 — season이 null인 채로 'ADVANCE'를 보내면 seasonPhase가
     // SETTLEMENT로 남아 NOTHING_TO_ADVANCE로 실패한다.
     nextAction: 'DECISION',
-    seasonResult: result,
+    seasonResult: finalizedResult,
   };
 }
 
@@ -2681,16 +3454,24 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   }
   const state = snapshot.state;
   if (state.status !== 'ACTIVE') {
-    return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 RESOLVE_ROLE을 받을 수 없다.`, {
-      reason: 'NOT_ACTIVE',
-    });
+    return fail(
+      'VALIDATION_FAILED',
+      `status가 ${state.status}일 때는 RESOLVE_ROLE을 받을 수 없다.`,
+      {
+        reason: 'NOT_ACTIVE',
+      },
+    );
   }
   const pending = state.pending;
   if (pending === null || pending.kind !== 'ROLE_PROPOSAL') {
-    return fail('VALIDATION_FAILED', '결정 대기 중인 역할 제안이 없다.', { reason: 'NO_ROLE_PROPOSAL' });
+    return fail('VALIDATION_FAILED', '결정 대기 중인 역할 제안이 없다.', {
+      reason: 'NO_ROLE_PROPOSAL',
+    });
   }
   if (state.season === null || state.player.profile === null || state.contract === null) {
-    throw new RangeError('resolveRole: ROLE_PROPOSAL pending인데 season·player.profile·contract 중 null이 있다.');
+    throw new RangeError(
+      'resolveRole: ROLE_PROPOSAL pending인데 season·player.profile·contract 중 null이 있다.',
+    );
   }
 
   const proposal = pending.proposal;
@@ -2710,7 +3491,11 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   } else if (proposal.type === 'POSITION_CHANGE') {
     managerTrust = clamp(managerTrust + rules.roleProposal.acceptTrustDelta, 0, 100);
     profile = { ...profile, primaryPosition: proposal.to };
-    context = { ...context, tacticalFit: proposal.tacticalFitAfter, positionProficiency: proposal.proficiencyAfter };
+    context = {
+      ...context,
+      tacticalFit: proposal.tacticalFitAfter,
+      positionProficiency: proposal.proficiencyAfter,
+    };
   } else {
     // proposal.type === 'ROLE_CHANGE'
     managerTrust = clamp(managerTrust + rules.roleProposal.acceptTrustDelta, 0, 100);
@@ -2739,7 +3524,11 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     squadStatus: context.squadStatus,
     competitors: season.squad.competitors,
   });
-  const nextSeason: FootballSeason = { ...season, squadRole: squadRoleFromSelection(ranking), selection: ranking };
+  const nextSeason: FootballSeason = {
+    ...season,
+    squadRole: squadRoleFromSelection(ranking),
+    selection: ranking,
+  };
 
   const nextState: CareerState = {
     ...state,
@@ -2796,7 +3585,10 @@ export function simulate(input: SimulationInput): SimulationResult {
       expectedRevision: command.expectedRevision,
     });
   }
-  if (input.rulesetVersion !== snapshot.rulesetVersion || input.contentPackVersion !== snapshot.contentPackVersion) {
+  if (
+    input.rulesetVersion !== snapshot.rulesetVersion ||
+    input.contentPackVersion !== snapshot.contentPackVersion
+  ) {
     return fail('VERSION_MISMATCH', 'SimulationInput의 버전이 snapshot과 다르다.');
   }
 
@@ -2849,7 +3641,9 @@ function hasDuplicates(values: readonly string[]): boolean {
  * T-2-001: ADVANCE 한 번이 여러 step을 지나갈 수 있어(RULE-TIME-002) 같은 revision에 STEP_PASSED
  * 항목이 여럿 남을 수 있으므로 "단조 증가"가 아니라 "비감소"만 요구한다.
  */
-export function verifySnapshot(snapshot: DomainSnapshot): { ok: true } | { ok: false; reason: string } {
+export function verifySnapshot(
+  snapshot: DomainSnapshot,
+): { ok: true } | { ok: false; reason: string } {
   if (hashState(snapshot.state) !== snapshot.stateHash) {
     return { ok: false, reason: 'STATE_HASH_MISMATCH' };
   }

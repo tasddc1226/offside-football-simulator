@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import type { ChapterTrigger } from '@offside/domain';
 import { CURRENT_TARGETS, EffectSchema, RELATION_TARGETS } from './effect.ts';
-import { EffectPreviewSchema, NarrativeSchema, OUTCOME_KINDS, RISK_LABELS } from './event.ts';
+import { AuthoringKindSchema, EffectPreviewSchema, NarrativeSchema, OUTCOME_KINDS, RISK_LABELS } from './event.ts';
 import { STAT_GROUPS } from './ruleset.ts';
 import { findNarrativeTokenIssues } from './narrative.ts';
 
-export const CHAPTER_ID_PATTERN = /^CHP-MATCH-\d{3}$/;
+export const CHAPTER_ID_PATTERN = /^CHP-(MATCH|NAT)-\d{3}$/;
 
 const StatGroupSchema = z.enum(STAT_GROUPS);
 const ImportanceSchema = z.enum(['MAJOR', 'MINOR']);
@@ -16,6 +16,7 @@ export const ChapterTriggerSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('CUP_FINAL') }),
   z.strictObject({ kind: z.literal('DECIDER'), maxRankGap: z.number().int().nonnegative() }),
   z.strictObject({ kind: z.literal('INJURY_RETURN') }),
+  z.strictObject({ kind: z.literal('NATIONAL_DEBUT') }),
   z.strictObject({ kind: z.literal('TAG'), tag: z.string().min(1) }),
 ]) satisfies z.ZodType<ChapterTrigger>;
 
@@ -101,6 +102,7 @@ export const ChapterDefinitionSchema = z
     weight: z.number().int().positive(),
     positionGroups: z.array(StatGroupSchema).optional(),
     decisions: z.array(ChapterDecisionSchema).min(1).max(3),
+    authoring: AuthoringKindSchema.optional(),
   })
   .superRefine((chapter, ctx) => {
     for (const [textPath, text] of collectNarrativeStrings(chapter)) {

@@ -56,6 +56,11 @@ function passesInjuryReturnFilter(chapter: ChapterDefinition, state: CareerState
   return true;
 }
 
+function passesNationalDebutFilter(chapter: ChapterDefinition, state: CareerState): boolean {
+  if (chapter.trigger.kind !== 'NATIONAL_DEBUT') return true;
+  return state.nationalTeam.pendingDebut !== null && !state.nationalTeam.debuted;
+}
+
 function compareChapterId(a: ChapterCandidate, b: ChapterCandidate): number {
   if (a.chapterId < b.chapterId) return -1;
   if (a.chapterId > b.chapterId) return 1;
@@ -74,6 +79,7 @@ export function selectChapterCandidates(pack: ContentPack, state: CareerState): 
   return pack.chapters
     .filter((chapter) => passesPositionGroupFilter(chapter, state))
     .filter((chapter) => passesInjuryReturnFilter(chapter, state))
+    .filter((chapter) => passesNationalDebutFilter(chapter, state))
     .filter((chapter) => !isAlreadyResolvedThisSeason(chapter, state))
     .map((chapter) => ({
       chapterId: chapter.id,

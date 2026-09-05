@@ -1,6 +1,6 @@
 {
   "revision": 11,
-  "stateHash": "6171f0e088fcc54db5eae733179ee367537844607d9274cea036e4807125a94d",
+  "stateHash": "b24ab3fbf7a329760a0a29d9b6f2a1a4dabe55d2588039584de9d636fde10425",
   "rngStateDraws": 398,
   "checkpoint": "SEASON_START",
   "baseOvr": 58,
@@ -31,38 +31,46 @@
     }
   },
   "selection": {
-    "_comment": "핵심 인수 조건: PLAYER는 baseOvr 58로 W 포지션 경쟁자 두 명(둘 다 baseOvr 80)보다 22 낮지만, 감독 선호 아키타입(w-inverted-winger)이라 Tactical Fit이 75로 경쟁자(49/46)를 크게 앞서 rank 1(START)이다.",
     "position": "W",
     "slots": 2,
     "benchSlots": 1,
     "candidates": [
       {
         "id": "PLAYER",
+        "name": "한도전",
         "baseOvr": 58,
         "tacticalFit": 75,
+        "managerTrust": 40,
         "expectedPerformance": 61,
         "squadStatus": 40,
         "score": 59,
+        "excluded": null,
         "rank": 1,
         "appearance": "START"
       },
       {
         "id": "COMP-W-1",
+        "name": "이민준",
         "baseOvr": 80,
         "tacticalFit": 49,
+        "managerTrust": 50,
         "expectedPerformance": 73,
         "squadStatus": 80,
         "score": 58,
+        "excluded": null,
         "rank": 2,
         "appearance": "START"
       },
       {
         "id": "COMP-W-2",
+        "name": "이현우",
         "baseOvr": 80,
         "tacticalFit": 46,
+        "managerTrust": 44,
         "expectedPerformance": 73,
         "squadStatus": 80,
         "score": 56,
+        "excluded": null,
         "rank": 3,
         "appearance": "SUB"
       }

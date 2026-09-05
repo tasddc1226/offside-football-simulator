@@ -1,6 +1,6 @@
 {
   "revision": 23,
-  "stateHash": "54f70c895e6de0a2a7555b157069cf56307d8e437d5b05f865c0308016721e9c",
+  "stateHash": "048019e2cc6c2a78c98c196dd570b86d4e2a716068e60f0fe73ff9cf981d5efa",
   "checkpoint": "SEASON_START",
   "rngStateDraws": 1140,
   "age": 19,
@@ -19,8 +19,7 @@
       "kind": "PERMANENT",
       "fromSeasonIndex": 1,
       "toSeasonIndex": 1,
-      "endReason": "LOANED",
-      "contractId": "CTR-10"
+      "endReason": "LOANED"
     },
     {
       "teamId": "busan-tier2",
@@ -34,8 +33,7 @@
       "kind": "PERMANENT",
       "fromSeasonIndex": 3,
       "toSeasonIndex": null,
-      "endReason": null,
-      "contractId": "CTR-10"
+      "endReason": null
     }
   ]
 }

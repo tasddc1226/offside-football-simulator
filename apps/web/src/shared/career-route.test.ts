@@ -59,6 +59,12 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     timeline: [],
     season: null,
     seasonHistory: [],
+    nextManager: null,
+    captaincy: 'NONE',
+    captaincySeasons: 0,
+    controversyFailures: 0,
+    nationalityRuleState: { moduleId: 'DEFAULT', exceptions: [] },
+    nationalTeam: { callUps: [], debuted: false, pendingDebut: null },
     health: { episodes: [] },
     relationshipLog: [],
     memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
@@ -68,6 +74,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
 }
 
 const TEST_MARKET_SUMMARY = { openedAtRevision: 1, seasonIndex: 0, reason: 'FIRST_CONTRACT', safeOfferId: null } as const;
+const TEST_TRANSFER_MARKET_SUMMARY = { openedAtRevision: 9, seasonIndex: 1, reason: 'EXPIRED', safeOfferId: 'OFR-safe' } as const;
 
 describe('screenForCareer', () => {
   it.each([
@@ -163,14 +170,24 @@ describe('screenForCareer', () => {
       'SCR-009',
     ],
     [
+      'ACTIVE, pending OFFERS(EXPIRED) → SCR-017(시장 비교)',
+      baseState({ status: 'ACTIVE', pending: { kind: 'OFFERS', offers: [], market: TEST_TRANSFER_MARKET_SUMMARY } }),
+      'SCR-017',
+    ],
+    [
+      'ACTIVE, pending LOAN_RETURN은 전역 SCR-020이 아닌 대시보드 목적지다',
+      baseState({ status: 'ACTIVE', pending: { kind: 'LOAN_RETURN', options: ['RETURN'], buyOptionMinor: null } }),
+      'SCR-029',
+    ],
+    [
       'ACTIVE, pending INJURY → SCR-013(범용 이벤트 화면, SCR-022는 T-4-005)',
       baseState({ status: 'ACTIVE', pending: { kind: 'INJURY', step: 4, episodeId: '', eventId: '', version: 0 } }),
       'SCR-013',
     ],
     [
-      'ACTIVE, pending NATIONAL_TEAM → SCR-029(자동 통과, 대시보드 진행 버튼)',
-      baseState({ status: 'ACTIVE', pending: { kind: 'NATIONAL_TEAM', step: 5, eventId: '', version: 0 } }),
-      'SCR-029',
+      'ACTIVE, pending NATIONAL_TEAM → SCR-013(대표팀 소집 이벤트 화면)',
+      baseState({ status: 'ACTIVE', pending: { kind: 'NATIONAL_TEAM', step: 5, eventId: 'EVT-NAT-001', version: 1 } }),
+      'SCR-013',
     ],
     ['RETIRED → SCR-029', baseState({ status: 'RETIRED' }), 'SCR-029'],
     ['ARCHIVED → SCR-029', baseState({ status: 'ARCHIVED' }), 'SCR-029'],

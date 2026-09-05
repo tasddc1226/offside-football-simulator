@@ -6,7 +6,12 @@ import { compareCodePoints } from './canonical.js';
 import { hashState } from './hash.js';
 import * as injuryModule from './injury.js';
 import { rollRange } from './roll-range.js';
-import { computeSquadStatus, familiarityOf, rankPositionForPlayer, squadRoleFromSelection } from './selection.js';
+import {
+  computeSquadStatus,
+  familiarityOf,
+  rankPositionForPlayer,
+  squadRoleFromSelection,
+} from './selection.js';
 import { simulate, verifySnapshot, type Command, type SimulationInput } from './simulate.js';
 import type {
   DomainSnapshot,
@@ -29,7 +34,9 @@ type CreateCareerCommand = Extract<Command, { type: 'CREATE_CAREER' }> & {
   expectedRevision: number;
 };
 
-function baseInput(overrides: Partial<SimulationInput> = {}): Omit<SimulationInput, 'command' | 'snapshot'> {
+function baseInput(
+  overrides: Partial<SimulationInput> = {},
+): Omit<SimulationInput, 'command' | 'snapshot'> {
   return {
     ruleset: RULESET,
     rulesetVersion: RULESET_VERSION,
@@ -38,7 +45,10 @@ function baseInput(overrides: Partial<SimulationInput> = {}): Omit<SimulationInp
   };
 }
 
-function createCareerCommand(overrides?: { careerId?: string; seed?: string }): CreateCareerCommand {
+function createCareerCommand(overrides?: {
+  careerId?: string;
+  seed?: string;
+}): CreateCareerCommand {
   return {
     type: 'CREATE_CAREER',
     commandId: 'cmd-create',
@@ -79,7 +89,11 @@ const FULL_DRAFT_STEP_1 = {
   nationalityCode: 'KR',
   preferredFoot: 'LEFT' as const,
 };
-const FULL_DRAFT_STEP_2 = { position: 'W' as const, archetypeId: 'inside-forward', backgroundId: 'club-academy' };
+const FULL_DRAFT_STEP_2 = {
+  position: 'W' as const,
+  archetypeId: 'inside-forward',
+  backgroundId: 'club-academy',
+};
 
 /** DRAFT: CREATE_CAREER 뒤 7개 필드를 모두 채운 snapshot(아직 CONFIRM_PLAYER 전). */
 function fullyDraftedSnapshot(seed?: string): DomainSnapshot {
@@ -93,14 +107,24 @@ function fullyDraftedSnapshot(seed?: string): DomainSnapshot {
 }
 
 function confirmPlayerCommand(expectedRevision: number): EngineCommand {
-  return { type: 'CONFIRM_PLAYER', commandId: `cmd-confirm-${expectedRevision}`, expectedRevision, payload: {} };
+  return {
+    type: 'CONFIRM_PLAYER',
+    commandId: `cmd-confirm-${expectedRevision}`,
+    expectedRevision,
+    payload: {},
+  };
 }
 
 /** ACTIVE: 김서준 draft를 CONFIRM_PLAYER까지 마친 snapshot. */
 function confirmedActiveSnapshot(seed?: string): DomainSnapshot {
   const drafted = fullyDraftedSnapshot(seed);
-  const result = simulate({ ...baseInput(), snapshot: drafted, command: confirmPlayerCommand(drafted.revision) });
-  if (!result.ok) throw new Error(`CONFIRM_PLAYER failed: ${result.error.code} ${result.error.message}`);
+  const result = simulate({
+    ...baseInput(),
+    snapshot: drafted,
+    command: confirmPlayerCommand(drafted.revision),
+  });
+  if (!result.ok)
+    throw new Error(`CONFIRM_PLAYER failed: ${result.error.code} ${result.error.message}`);
   return result.snapshot;
 }
 
@@ -108,7 +132,12 @@ function advanceCommand(
   expectedRevision: number,
   eligibleEvents: Array<{ eventId: string; version: number; weight: number }> = [],
 ): EngineCommand {
-  return { type: 'ADVANCE', commandId: `cmd-advance-${expectedRevision}`, expectedRevision, payload: { eligibleEvents } };
+  return {
+    type: 'ADVANCE',
+    commandId: `cmd-advance-${expectedRevision}`,
+    expectedRevision,
+    payload: { eligibleEvents },
+  };
 }
 
 function resolveEventCommand(
@@ -117,7 +146,7 @@ function resolveEventCommand(
     eventId: string;
     definitionVersion: number;
     choiceId: string;
-    outcomes: Array<{ id: string; weight: number; effects: Effect[]; addTags?: string[] }>;
+    outcomes: Array<{ id: string; kind: 'SUCCESS' | 'NEUTRAL' | 'FAIL' | 'FIXED'; weight: number; effects: Effect[]; addTags?: string[] }>;
     rehabPlan: RehabPlan;
     callUp: NationalTeamCallUp;
   }>,
@@ -125,6 +154,7 @@ function resolveEventCommand(
   const outcomes = overrides?.outcomes ?? [
     {
       id: 'success',
+      kind: 'SUCCESS',
       weight: 70,
       effects: [
         {
@@ -142,6 +172,7 @@ function resolveEventCommand(
     },
     {
       id: 'neutral',
+      kind: 'NEUTRAL',
       weight: 30,
       effects: [
         {
@@ -173,26 +204,38 @@ function resolveEventCommand(
 }
 
 /** ACTIVE 스냅샷에 EVT-TEST를 pending으로 올려 둔다(단일 후보라 rng를 소비하지 않는다). */
-function withPendingEvent(active: DomainSnapshot): DomainSnapshot {
+function withPendingEvent(active: DomainSnapshot, eventId = 'EVT-TEST'): DomainSnapshot {
   const result = simulate({
     ...baseInput(),
     snapshot: active,
-    command: advanceCommand(active.revision, [{ eventId: 'EVT-TEST', version: 1, weight: 10 }]),
+    command: advanceCommand(active.revision, [{ eventId, version: 1, weight: 10 }]),
   });
   if (!result.ok) throw new Error('withPendingEvent failed');
   return result.snapshot;
 }
 
 /** ACTIVE: 배경을 골라 CONFIRM_PLAYER까지 마친 snapshot(관계 초기값이 배경마다 다름을 이용한 테스트용). */
-function confirmedActiveSnapshotWithBackground(backgroundId: string, seed?: string): DomainSnapshot {
+function confirmedActiveSnapshotWithBackground(
+  backgroundId: string,
+  seed?: string,
+): DomainSnapshot {
   let snapshot = createDraftSnapshot(seed);
   const step1 = updateDraft(snapshot, FULL_DRAFT_STEP_1);
   if (!step1.ok) throw new Error('draft step1 failed');
   snapshot = step1.snapshot;
-  const step2 = updateDraft(snapshot, { position: 'W', archetypeId: 'inside-forward', backgroundId });
+  const step2 = updateDraft(snapshot, {
+    position: 'W',
+    archetypeId: 'inside-forward',
+    backgroundId,
+  });
   if (!step2.ok) throw new Error('draft step2 failed');
-  const result = simulate({ ...baseInput(), snapshot: step2.snapshot, command: confirmPlayerCommand(step2.snapshot.revision) });
-  if (!result.ok) throw new Error(`CONFIRM_PLAYER failed: ${result.error.code} ${result.error.message}`);
+  const result = simulate({
+    ...baseInput(),
+    snapshot: step2.snapshot,
+    command: confirmPlayerCommand(step2.snapshot.revision),
+  });
+  if (!result.ok)
+    throw new Error(`CONFIRM_PLAYER failed: ${result.error.code} ${result.error.message}`);
   return result.snapshot;
 }
 
@@ -204,11 +247,22 @@ function withTags(snapshot: DomainSnapshot, tags: string[]): DomainSnapshot {
 /** baseOvr 경계 테스트용으로 player.profile.baseOvr만 강제로 덮어쓴다. */
 function withBaseOvr(snapshot: DomainSnapshot, baseOvr: number): DomainSnapshot {
   const profile = snapshot.state.player.profile as PlayerProfile;
-  return { ...snapshot, state: { ...snapshot.state, player: { ...snapshot.state.player, profile: { ...profile, baseOvr } } } };
+  return {
+    ...snapshot,
+    state: {
+      ...snapshot.state,
+      player: { ...snapshot.state.player, profile: { ...profile, baseOvr } },
+    },
+  };
 }
 
 function acceptOfferCommand(expectedRevision: number, offerId: string): EngineCommand {
-  return { type: 'ACCEPT_OFFER', commandId: `cmd-accept-${expectedRevision}`, expectedRevision, payload: { offerId } };
+  return {
+    type: 'ACCEPT_OFFER',
+    commandId: `cmd-accept-${expectedRevision}`,
+    expectedRevision,
+    payload: { offerId },
+  };
 }
 
 describe('simulate — CREATE_CAREER', () => {
@@ -237,6 +291,7 @@ describe('simulate — CREATE_CAREER', () => {
     });
     expect(result.snapshot.state.pending).toBeNull();
     expect(result.snapshot.state.contract).toBeNull();
+    expect(result.snapshot.state.nationalityRuleState).toEqual({ moduleId: 'DEFAULT', exceptions: [] });
     expect(result.snapshot.state.timeline).toEqual([]);
     expect(result.snapshot.state.rngState.draws).toBe(0);
     expect(Object.values(result.snapshot.state.attributes).every((v) => v === 0)).toBe(true);
@@ -365,7 +420,10 @@ describe('simulate — UPDATE_PLAYER_DRAFT', () => {
     const result = updateDraft(snapshot, { position: 'ST', archetypeId: 'inside-forward' });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.details).toEqual({ field: 'archetypeId', reason: 'ARCHETYPE_POSITION_MISMATCH' });
+    expect(result.error.details).toEqual({
+      field: 'archetypeId',
+      reason: 'ARCHETYPE_POSITION_MISMATCH',
+    });
   });
 
   it('현재 저장된 position 기준으로 archetype만 바꿔도 불일치를 잡는다', () => {
@@ -376,31 +434,54 @@ describe('simulate — UPDATE_PLAYER_DRAFT', () => {
     const result = updateDraft(withPosition.snapshot, { archetypeId: 'inside-forward' });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.details).toEqual({ field: 'archetypeId', reason: 'ARCHETYPE_POSITION_MISMATCH' });
+    expect(result.error.details).toEqual({
+      field: 'archetypeId',
+      reason: 'ARCHETYPE_POSITION_MISMATCH',
+    });
   });
 });
 
 describe('simulate — CONFIRM_PLAYER', () => {
   it('draft 필드가 비어 있으면 missing 목록과 함께 VALIDATION_FAILED다', () => {
     const snapshot = createDraftSnapshot();
-    const result = simulate({ ...baseInput(), snapshot, command: confirmPlayerCommand(snapshot.revision) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot,
+      command: confirmPlayerCommand(snapshot.revision),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({
-      missing: ['name', 'gender', 'nationalityCode', 'preferredFoot', 'position', 'archetypeId', 'backgroundId'],
+      missing: [
+        'name',
+        'gender',
+        'nationalityCode',
+        'preferredFoot',
+        'position',
+        'archetypeId',
+        'backgroundId',
+      ],
     });
   });
 
   it('gender만 비어 있으면 missing에 gender만 담긴다', () => {
     let snapshot = createDraftSnapshot();
-    const step1 = updateDraft(snapshot, { name: '김서준', nationalityCode: 'KR', preferredFoot: 'LEFT' });
+    const step1 = updateDraft(snapshot, {
+      name: '김서준',
+      nationalityCode: 'KR',
+      preferredFoot: 'LEFT',
+    });
     if (!step1.ok) throw new Error('draft step1 failed');
     snapshot = step1.snapshot;
     const step2 = updateDraft(snapshot, FULL_DRAFT_STEP_2);
     if (!step2.ok) throw new Error('draft step2 failed');
     snapshot = step2.snapshot;
 
-    const result = simulate({ ...baseInput(), snapshot, command: confirmPlayerCommand(snapshot.revision) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot,
+      command: confirmPlayerCommand(snapshot.revision),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({ missing: ['gender'] });
@@ -408,7 +489,11 @@ describe('simulate — CONFIRM_PLAYER', () => {
 
   it('DRAFT가 아닌 상태에서는 VALIDATION_FAILED다', () => {
     const active = confirmedActiveSnapshot();
-    const result = simulate({ ...baseInput(), snapshot: active, command: confirmPlayerCommand(active.revision) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: confirmPlayerCommand(active.revision),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({ reason: 'NOT_DRAFT' });
@@ -416,7 +501,11 @@ describe('simulate — CONFIRM_PLAYER', () => {
 
   it('rng를 정확히 23회 소비하고 status·currentStep·seasonPhase를 확정한다', () => {
     const drafted = fullyDraftedSnapshot();
-    const result = simulate({ ...baseInput(), snapshot: drafted, command: confirmPlayerCommand(drafted.revision) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot: drafted,
+      command: confirmPlayerCommand(drafted.revision),
+    });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.snapshot.state.rngState.draws).toBe(drafted.state.rngState.draws + 23);
@@ -431,14 +520,30 @@ describe('simulate — CONFIRM_PLAYER', () => {
   it('club-academy 배경의 state·context·relationships가 D-5 표와 정확히 같다', () => {
     const active = confirmedActiveSnapshot();
     expect(active.state.state).toEqual({ form: 50, fitness: 80, morale: 60 });
-    expect(active.state.context).toEqual({ tacticalFit: 58, squadStatus: 40, positionProficiency: 100 });
-    expect(active.state.relationships).toEqual({ managerTrust: 40, captain: 50, rival: 50, fans: 50, agent: 50 });
+    expect(active.state.context).toEqual({
+      tacticalFit: 58,
+      squadStatus: 40,
+      positionProficiency: 100,
+    });
+    expect(active.state.relationships).toEqual({
+      managerTrust: 40,
+      captain: 50,
+      rival: 50,
+      fans: 50,
+      agent: 50,
+    });
   });
 
   it('CAREER_CONFIRMED 타임라인 항목을 남긴다', () => {
     const active = confirmedActiveSnapshot();
     expect(active.state.timeline).toEqual([
-      { revision: active.revision, kind: 'CAREER_CONFIRMED', refId: null, age: 17, step: 12 } satisfies TimelineEntry,
+      {
+        revision: active.revision,
+        kind: 'CAREER_CONFIRMED',
+        refId: null,
+        age: 17,
+        step: 12,
+      } satisfies TimelineEntry,
     ]);
   });
 });
@@ -457,7 +562,11 @@ describe('simulate — DRAFT 단계는 rng를 소비하지 않는다', () => {
 
   it('DRAFT 상태에서 ADVANCE는 VALIDATION_FAILED다', () => {
     const snapshot = createDraftSnapshot();
-    const result = simulate({ ...baseInput(), snapshot, command: advanceCommand(snapshot.revision) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot,
+      command: advanceCommand(snapshot.revision),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe('VALIDATION_FAILED');
@@ -465,7 +574,11 @@ describe('simulate — DRAFT 단계는 rng를 소비하지 않는다', () => {
 
   it('DRAFT 상태에서 RESOLVE_EVENT는 VALIDATION_FAILED다', () => {
     const snapshot = createDraftSnapshot();
-    const result = simulate({ ...baseInput(), snapshot, command: resolveEventCommand(snapshot.revision) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot,
+      command: resolveEventCommand(snapshot.revision),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe('VALIDATION_FAILED');
@@ -495,7 +608,11 @@ describe('simulate — ADVANCE', () => {
     ];
     const runOnce = () => {
       const active = confirmedActiveSnapshot('weighted-select-seed');
-      const result = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, events) });
+      const result = simulate({
+        ...baseInput(),
+        snapshot: active,
+        command: advanceCommand(active.revision, events),
+      });
       if (!result.ok) throw new Error('unreachable');
       return result.snapshot.state.pending;
     };
@@ -520,7 +637,11 @@ describe('simulate — ADVANCE', () => {
     });
     expect(atBoundary.ok).toBe(true);
     if (atBoundary.ok) {
-      expect(atBoundary.snapshot.state.pending).toEqual({ kind: 'EVENT', eventId: 'EVT-A', version: 1 });
+      expect(atBoundary.snapshot.state.pending).toEqual({
+        kind: 'EVENT',
+        eventId: 'EVT-A',
+        version: 1,
+      });
     }
 
     const pastBoundary = simulate({
@@ -533,7 +654,11 @@ describe('simulate — ADVANCE', () => {
     });
     expect(pastBoundary.ok).toBe(true);
     if (pastBoundary.ok) {
-      expect(pastBoundary.snapshot.state.pending).toEqual({ kind: 'EVENT', eventId: 'EVT-B', version: 1 });
+      expect(pastBoundary.snapshot.state.pending).toEqual({
+        kind: 'EVENT',
+        eventId: 'EVT-B',
+        version: 1,
+      });
     }
   });
 
@@ -555,7 +680,11 @@ describe('simulate — ADVANCE', () => {
   it('pending이 이미 있으면 PENDING_DECISION으로 거부한다', () => {
     const active = confirmedActiveSnapshot();
     const withPending = withPendingEvent(active);
-    const result = simulate({ ...baseInput(), snapshot: withPending, command: advanceCommand(withPending.revision) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot: withPending,
+      command: advanceCommand(withPending.revision),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({ reason: 'PENDING_DECISION' });
@@ -563,7 +692,11 @@ describe('simulate — ADVANCE', () => {
 
   it('eligibleEvents가 비어 있고 SETTLEMENT면 NOTHING_TO_ADVANCE다', () => {
     const active = confirmedActiveSnapshot();
-    const result = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: advanceCommand(active.revision, []),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({ reason: 'NOTHING_TO_ADVANCE' });
@@ -571,7 +704,11 @@ describe('simulate — ADVANCE', () => {
 
   it('ACTIVE가 아니면 NOT_ACTIVE로 거부한다', () => {
     const snapshot = createDraftSnapshot();
-    const result = simulate({ ...baseInput(), snapshot, command: advanceCommand(snapshot.revision) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot,
+      command: advanceCommand(snapshot.revision),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({ reason: 'NOT_ACTIVE' });
@@ -582,7 +719,11 @@ describe('simulate — RESOLVE_EVENT', () => {
   it('pending과 일치하면 roll 하나로 outcome을 고르고 pending을 비운다', () => {
     const active = confirmedActiveSnapshot();
     const pending = withPendingEvent(active);
-    const result = simulate({ ...baseInput(), snapshot: pending, command: resolveEventCommand(pending.revision) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot: pending,
+      command: resolveEventCommand(pending.revision),
+    });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.snapshot.revision).toBe(pending.revision + 1);
@@ -600,7 +741,11 @@ describe('simulate — RESOLVE_EVENT', () => {
 
   it('pending이 없으면 NO_PENDING_EVENT다', () => {
     const active = confirmedActiveSnapshot();
-    const result = simulate({ ...baseInput(), snapshot: active, command: resolveEventCommand(active.revision) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: resolveEventCommand(active.revision),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({ reason: 'NO_PENDING_EVENT' });
@@ -644,6 +789,41 @@ describe('simulate — RESOLVE_EVENT', () => {
     if (result.ok) return;
     expect(result.error.code).toBe('VALIDATION_FAILED');
   });
+
+  it('outcome kind이 없으면 RNG를 소비하지 않고 OUTCOME_KIND_REQUIRED로 거부한다', () => {
+    const active = confirmedActiveSnapshot();
+    const pending = withPendingEvent(active);
+    const beforeDraws = pending.state.rngState.draws;
+    const command = resolveEventCommand(pending.revision);
+    const malformed = JSON.parse(JSON.stringify(command)) as EngineCommand;
+    if (malformed.type !== 'RESOLVE_EVENT') throw new Error('unreachable');
+    delete (malformed.payload.outcomes[0] as unknown as { kind?: unknown }).kind;
+
+    expect(() => simulate({ ...baseInput(), snapshot: pending, command: malformed })).not.toThrow();
+    const result = simulate({ ...baseInput(), snapshot: pending, command: malformed });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.details).toEqual({ reason: 'OUTCOME_KIND_REQUIRED' });
+    expect(pending.state.rngState.draws).toBe(beforeDraws);
+  });
+
+  it.each(['EVT-ETH-010', 'EVT-MEDIA-010'] as const)('%s FAIL은 controversyFailures를 증가시킨다', (eventId) => {
+    const active = confirmedActiveSnapshot();
+    const pending = withPendingEvent(active, eventId);
+    const result = simulate({
+      ...baseInput(),
+      snapshot: pending,
+      command: resolveEventCommand(pending.revision, {
+        eventId,
+        outcomes: [{ id: 'fail', kind: 'FAIL', weight: 100, effects: [] }],
+      }),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.controversyFailures).toBe(1);
+    expect(result.snapshot.state.rngState.draws).toBe(pending.state.rngState.draws + 1);
+  });
 });
 
 // T-4-001 D-52: RESOLVE_EVENT가 INJURY·NATIONAL_TEAM pending도 닫는다. 생성기(T-4-002·T-4-004)가
@@ -664,11 +844,20 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
     remainingMatches: 3,
   };
 
-  function withPendingInjury(active: DomainSnapshot, episode: InjuryEpisode = TEST_EPISODE): DomainSnapshot {
+  function withPendingInjury(
+    active: DomainSnapshot,
+    episode: InjuryEpisode = TEST_EPISODE,
+  ): DomainSnapshot {
     const state: DomainSnapshot['state'] = {
       ...active.state,
       health: { episodes: [episode] },
-      pending: { kind: 'INJURY', step: active.state.currentStep, episodeId: episode.id, eventId: 'EVT-INJ-001', version: 1 },
+      pending: {
+        kind: 'INJURY',
+        step: active.state.currentStep,
+        episodeId: episode.id,
+        eventId: 'EVT-INJ-001',
+        version: 1,
+      },
     };
     return { ...active, state, stateHash: hashState(state) };
   }
@@ -676,14 +865,22 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
   function withPendingNationalTeam(active: DomainSnapshot): DomainSnapshot {
     const state: DomainSnapshot['state'] = {
       ...active.state,
-      pending: { kind: 'NATIONAL_TEAM', step: active.state.currentStep, eventId: 'EVT-NAT-001', version: 1 },
+      pending: {
+        kind: 'NATIONAL_TEAM',
+        step: active.state.currentStep,
+        eventId: 'EVT-NAT-001',
+        version: 1,
+      },
     };
     return { ...active, state, stateHash: hashState(state) };
   }
 
   it('INJURY pending: rehabPlan을 적용하고 REHAB_CHOSEN 타임라인을 남기며 pending을 비운다', () => {
     const pending = withPendingInjury(confirmedActiveSnapshot());
-    const command = resolveEventCommand(pending.revision, { eventId: 'EVT-INJ-001', rehabPlan: 'EARLY' });
+    const command = resolveEventCommand(pending.revision, {
+      eventId: 'EVT-INJ-001',
+      rehabPlan: 'EARLY',
+    });
     const result = simulate({ ...baseInput(), snapshot: pending, command });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -716,13 +913,22 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
     const state: DomainSnapshot['state'] = {
       ...active.state,
       health: { episodes: [] },
-      pending: { kind: 'INJURY', step: active.state.currentStep, episodeId: 'INJ-missing', eventId: 'EVT-INJ-001', version: 1 },
+      pending: {
+        kind: 'INJURY',
+        step: active.state.currentStep,
+        episodeId: 'INJ-missing',
+        eventId: 'EVT-INJ-001',
+        version: 1,
+      },
     };
     const pending: DomainSnapshot = { ...active, state, stateHash: hashState(state) };
     const result = simulate({
       ...baseInput(),
       snapshot: pending,
-      command: resolveEventCommand(pending.revision, { eventId: 'EVT-INJ-001', rehabPlan: 'STANDARD' }),
+      command: resolveEventCommand(pending.revision, {
+        eventId: 'EVT-INJ-001',
+        rehabPlan: 'STANDARD',
+      }),
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -765,32 +971,56 @@ describe('simulate — RESOLVE_EVENT (INJURY·NATIONAL_TEAM, T-4-001 D-52)', () 
     expect(result.error.details).toEqual({ reason: 'CALL_UP_REQUIRED' });
   });
 
-  it.each(['ACCEPT', 'CONDITIONAL'] as const)('NATIONAL_TEAM pending: callUp=%s는 NATIONAL_TEAM_CALLED를 남긴다', (callUp) => {
-    const pending = withPendingNationalTeam(confirmedActiveSnapshot());
-    const result = simulate({
-      ...baseInput(),
-      snapshot: pending,
-      command: resolveEventCommand(pending.revision, { eventId: 'EVT-NAT-001', callUp }),
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.snapshot.state.pending).toBeNull();
-    const lastEntry = result.snapshot.state.timeline.at(-1);
-    expect(lastEntry?.kind).toBe('NATIONAL_TEAM_CALLED');
-    expect(lastEntry?.refId).toBe('EVT-NAT-001');
-  });
+  it.each(['ACCEPT', 'CONDITIONAL'] as const)(
+    'NATIONAL_TEAM pending: callUp=%s는 NATIONAL_TEAM_CALLED를 남긴다',
+    (callUp) => {
+      const pending = withPendingNationalTeam(confirmedActiveSnapshot());
+      const result = simulate({
+        ...baseInput(),
+        snapshot: pending,
+        command: resolveEventCommand(pending.revision, {
+          eventId: 'EVT-NAT-001',
+          choiceId: callUp === 'ACCEPT' ? 'A' : 'B',
+          callUp,
+          outcomes: [
+            {
+              id: callUp === 'ACCEPT' ? 'A1' : 'B1',
+              kind: 'FIXED',
+              weight: 100,
+              effects: [],
+            },
+          ],
+        }),
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.snapshot.state.pending).toBeNull();
+      const lastEntry = result.snapshot.state.timeline.at(-1);
+      expect(lastEntry?.kind).toBe('NATIONAL_TEAM_CALLED');
+      expect(lastEntry?.refId).toBe('EVT-NAT-001');
+      expect(result.snapshot.state.tags).toContain('대표팀_소집');
+      expect(result.snapshot.state.tags).not.toContain('NATIONAL_TEAM_CALLED');
+    },
+  );
 
   it('NATIONAL_TEAM pending: callUp=DECLINE은 NATIONAL_TEAM_DECLINED를 남긴다', () => {
     const pending = withPendingNationalTeam(confirmedActiveSnapshot());
     const result = simulate({
       ...baseInput(),
       snapshot: pending,
-      command: resolveEventCommand(pending.revision, { eventId: 'EVT-NAT-001', callUp: 'DECLINE' }),
+      command: resolveEventCommand(pending.revision, {
+        eventId: 'EVT-NAT-001',
+        choiceId: 'C',
+        callUp: 'DECLINE',
+        outcomes: [{ id: 'C1', kind: 'FIXED', weight: 100, effects: [] }],
+      }),
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const lastEntry = result.snapshot.state.timeline.at(-1);
     expect(lastEntry?.kind).toBe('NATIONAL_TEAM_DECLINED');
+    expect(result.snapshot.state.tags).not.toContain('대표팀_소집');
+    expect(result.snapshot.state.tags).not.toContain('NATIONAL_TEAM_DECLINED');
   });
 });
 
@@ -804,7 +1034,10 @@ describe('verifySnapshot', () => {
     const active = confirmedActiveSnapshot();
     const tampered: DomainSnapshot = {
       ...active,
-      state: { ...active.state, attributes: { ...active.state.attributes, shooting: active.state.attributes.shooting + 1 } },
+      state: {
+        ...active.state,
+        attributes: { ...active.state.attributes, shooting: active.state.attributes.shooting + 1 },
+      },
     };
     const result = verifySnapshot(tampered);
     expect(result.ok).toBe(false);
@@ -818,7 +1051,10 @@ describe('verifySnapshot', () => {
       ...active.state.timeline,
       { ...active.state.timeline[0]!, revision: active.state.timeline[0]!.revision - 1 },
     ];
-    const tampered: DomainSnapshot = { ...active, state: { ...active.state, timeline: badTimeline } };
+    const tampered: DomainSnapshot = {
+      ...active,
+      state: { ...active.state, timeline: badTimeline },
+    };
     const rehashed: DomainSnapshot = { ...tampered, stateHash: hashState(tampered.state) };
     expect(verifySnapshot(rehashed)).toEqual({ ok: false, reason: 'TIMELINE_NOT_MONOTONIC' });
   });
@@ -831,7 +1067,10 @@ describe('verifySnapshot', () => {
       ...active.state.timeline,
       { ...active.state.timeline[0]!, revision: active.state.timeline[0]!.revision },
     ];
-    const tampered: DomainSnapshot = { ...active, state: { ...active.state, timeline: sameRevisionTimeline } };
+    const tampered: DomainSnapshot = {
+      ...active,
+      state: { ...active.state, timeline: sameRevisionTimeline },
+    };
     const rehashed: DomainSnapshot = { ...tampered, stateHash: hashState(tampered.state) };
     expect(verifySnapshot(rehashed)).toEqual({ ok: true });
   });
@@ -848,7 +1087,11 @@ describe('verifySnapshot', () => {
 
   it('contract와 pending(OFFERS)이 함께 있으면 CONTRACT_OFFERS_CONFLICT다', () => {
     const active = withTags(confirmedActiveSnapshot(), ['진로_아카데미']);
-    const offered = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
+    const offered = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: advanceCommand(active.revision, []),
+    });
     if (!offered.ok) throw new Error('setup failed');
     const tampered: DomainSnapshot = {
       ...offered.snapshot,
@@ -885,8 +1128,13 @@ describe('verifySnapshot', () => {
     // 계약된 선수에게 시즌 중 이벤트가 pending으로 걸리는 것은 Phase 2부터의 정상 상태다.
     // contract·pending 동시 존재 자체가 아니라 pending이 OFFERS일 때만 위반이다.
     const active = withTags(confirmedActiveSnapshot(), ['진로_아카데미']);
-    const offered = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
-    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('setup failed');
+    const offered = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: advanceCommand(active.revision, []),
+    });
+    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS')
+      throw new Error('setup failed');
     const offerId = offered.snapshot.state.pending.offers[0]!.id;
     const accepted = simulate({
       ...baseInput(),
@@ -897,7 +1145,10 @@ describe('verifySnapshot', () => {
 
     const tampered: DomainSnapshot = {
       ...accepted.snapshot,
-      state: { ...accepted.snapshot.state, pending: { kind: 'EVENT', eventId: 'EVT-SEASON', version: 1 } },
+      state: {
+        ...accepted.snapshot.state,
+        pending: { kind: 'EVENT', eventId: 'EVT-SEASON', version: 1 },
+      },
     };
     const rehashed: DomainSnapshot = { ...tampered, stateHash: hashState(tampered.state) };
     expect(verifySnapshot(rehashed)).toEqual({ ok: true });
@@ -908,12 +1159,21 @@ describe('결정론', () => {
   it('명령 순서를 바꾸면 hash가 달라진다', () => {
     const active = confirmedActiveSnapshot();
 
-    function makeResolveCommand(eventId: string, effect: Effect, expectedRevision: number): EngineCommand {
+    function makeResolveCommand(
+      eventId: string,
+      effect: Effect,
+      expectedRevision: number,
+    ): EngineCommand {
       return {
         type: 'RESOLVE_EVENT',
         commandId: `cmd-${eventId}`,
         expectedRevision,
-        payload: { eventId, definitionVersion: 1, choiceId: 'a', outcomes: [{ id: '1', weight: 1, effects: [effect] }] },
+        payload: {
+          eventId,
+          definitionVersion: 1,
+          choiceId: 'a',
+          outcomes: [{ id: '1', kind: 'SUCCESS', weight: 1, effects: [effect] }],
+        },
       };
     }
 
@@ -973,15 +1233,23 @@ describe('결정론', () => {
 });
 
 describe('RULE-PLY-001: gender는 시뮬레이션 입력이 아니다', () => {
-  function confirmedSnapshotWithGender(gender: 'FEMALE' | 'MALE' | 'UNSPECIFIED', seed?: string): DomainSnapshot {
+  function confirmedSnapshotWithGender(
+    gender: 'FEMALE' | 'MALE' | 'UNSPECIFIED',
+    seed?: string,
+  ): DomainSnapshot {
     let snapshot = createDraftSnapshot(seed);
     const step1 = updateDraft(snapshot, { ...FULL_DRAFT_STEP_1, gender });
     if (!step1.ok) throw new Error('draft step1 failed');
     snapshot = step1.snapshot;
     const step2 = updateDraft(snapshot, FULL_DRAFT_STEP_2);
     if (!step2.ok) throw new Error('draft step2 failed');
-    const result = simulate({ ...baseInput(), snapshot: step2.snapshot, command: confirmPlayerCommand(step2.snapshot.revision) });
-    if (!result.ok) throw new Error(`CONFIRM_PLAYER failed: ${result.error.code} ${result.error.message}`);
+    const result = simulate({
+      ...baseInput(),
+      snapshot: step2.snapshot,
+      command: confirmPlayerCommand(step2.snapshot.revision),
+    });
+    if (!result.ok)
+      throw new Error(`CONFIRM_PLAYER failed: ${result.error.code} ${result.error.message}`);
     return result.snapshot;
   }
 
@@ -992,10 +1260,16 @@ describe('RULE-PLY-001: gender는 시뮬레이션 입력이 아니다', () => {
 
     for (const other of [male, unspecified]) {
       expect(other.state.attributes).toEqual(female.state.attributes);
-      expect(other.state.player.profile?.truePotential).toBe(female.state.player.profile?.truePotential);
+      expect(other.state.player.profile?.truePotential).toBe(
+        female.state.player.profile?.truePotential,
+      );
       expect(other.state.player.profile?.baseOvr).toBe(female.state.player.profile?.baseOvr);
-      expect(other.state.player.profile?.scoutedPotentialMin).toBe(female.state.player.profile?.scoutedPotentialMin);
-      expect(other.state.player.profile?.scoutedPotentialMax).toBe(female.state.player.profile?.scoutedPotentialMax);
+      expect(other.state.player.profile?.scoutedPotentialMin).toBe(
+        female.state.player.profile?.scoutedPotentialMin,
+      );
+      expect(other.state.player.profile?.scoutedPotentialMax).toBe(
+        female.state.player.profile?.scoutedPotentialMax,
+      );
       expect(other.state.rngState).toEqual(female.state.rngState);
     }
 
@@ -1025,8 +1299,13 @@ describe('RULE-PLY-001: gender는 시뮬레이션 입력이 아니다', () => {
   it('같은 상태에서 성별만 달라도 제안 내용·계약이 같다', () => {
     function offerAndContractFor(gender: 'FEMALE' | 'MALE' | 'UNSPECIFIED') {
       const active = withTags(confirmedSnapshotWithGender(gender), ['진로_아카데미']);
-      const advanced = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
-      if (!advanced.ok) throw new Error(`ADVANCE failed: ${advanced.error.code} ${advanced.error.message}`);
+      const advanced = simulate({
+        ...baseInput(),
+        snapshot: active,
+        command: advanceCommand(active.revision, []),
+      });
+      if (!advanced.ok)
+        throw new Error(`ADVANCE failed: ${advanced.error.code} ${advanced.error.message}`);
       if (advanced.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('unreachable');
       const offer = advanced.snapshot.state.pending.offers[0]!;
       const accepted = simulate({
@@ -1034,7 +1313,8 @@ describe('RULE-PLY-001: gender는 시뮬레이션 입력이 아니다', () => {
         snapshot: advanced.snapshot,
         command: acceptOfferCommand(advanced.snapshot.revision, offer.id),
       });
-      if (!accepted.ok) throw new Error(`ACCEPT_OFFER failed: ${accepted.error.code} ${accepted.error.message}`);
+      if (!accepted.ok)
+        throw new Error(`ACCEPT_OFFER failed: ${accepted.error.code} ${accepted.error.message}`);
       return { offer, contract: accepted.snapshot.state.contract };
     }
 
@@ -1050,7 +1330,11 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
     let active = confirmedActiveSnapshot();
     active = withTags(active, tags);
     if (baseOvr !== undefined) active = withBaseOvr(active, baseOvr);
-    const result = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: advanceCommand(active.revision, []),
+    });
     return { active, result };
   }
 
@@ -1061,7 +1345,12 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
     expect(result.snapshot.state.pending).toEqual({
       kind: 'OFFERS',
       offers: [expect.objectContaining({ teamId: 'hangang-u18', leagueTier: 'YOUTH' })],
-      market: { openedAtRevision: result.snapshot.revision, seasonIndex: 0, reason: 'FIRST_CONTRACT', safeOfferId: null },
+      market: {
+        openedAtRevision: result.snapshot.revision,
+        seasonIndex: 0,
+        reason: 'FIRST_CONTRACT',
+        safeOfferId: null,
+      },
     });
     expect(result.snapshot.checkpoint).toBe('CHAPTER_DECISION');
     expect(result.nextAction).toBe('DECISION');
@@ -1071,7 +1360,12 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
   });
 
   it('lower-league 분기: 풀이 desiredCount보다 작으면 풀 크기만큼만, 비복원 추출(팀 중복 없음)', () => {
-    const { result } = advanceWithTags(['진로_하부리그', '입단테스트_완료', '에이전트_계약', '주목받는_유망주']);
+    const { result } = advanceWithTags([
+      '진로_하부리그',
+      '입단테스트_완료',
+      '에이전트_계약',
+      '주목받는_유망주',
+    ]);
     expect(result.ok).toBe(true);
     if (!result.ok || result.snapshot.state.pending?.kind !== 'OFFERS') return;
     const offers = result.snapshot.state.pending.offers;
@@ -1089,7 +1383,12 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
     expect(result.snapshot.state.pending).toEqual({
       kind: 'OFFERS',
       offers: [expect.objectContaining({ teamId: 'daejeon-tier3', leagueTier: 3 })],
-      market: { openedAtRevision: result.snapshot.revision, seasonIndex: 0, reason: 'FIRST_CONTRACT', safeOfferId: null },
+      market: {
+        openedAtRevision: result.snapshot.revision,
+        seasonIndex: 0,
+        reason: 'FIRST_CONTRACT',
+        safeOfferId: null,
+      },
     });
     expect(result.snapshot.state.rngState.draws).toBe(active.state.rngState.draws + 5);
   });
@@ -1099,7 +1398,9 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
     expect(result.ok).toBe(true);
     if (!result.ok || result.snapshot.state.pending?.kind !== 'OFFERS') return;
     expect(result.snapshot.state.pending.offers).toHaveLength(1);
-    expect(['busan-tier2', 'daejeon-tier3']).toContain(result.snapshot.state.pending.offers[0]!.teamId);
+    expect(['busan-tier2', 'daejeon-tier3']).toContain(
+      result.snapshot.state.pending.offers[0]!.teamId,
+    );
   });
 
   it('tryout-success 분기: baseOvr가 topTierMinOvr(60) 이상이면 첫 제안은 tier 1 팀으로 고정된다', () => {
@@ -1116,7 +1417,9 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
     expect(result.ok).toBe(true);
     if (!result.ok || result.snapshot.state.pending?.kind !== 'OFFERS') return;
     expect(result.snapshot.state.pending.offers).toHaveLength(1);
-    expect(['busan-tier2', 'daejeon-tier3', 'seoul-tier1']).toContain(result.snapshot.state.pending.offers[0]!.teamId);
+    expect(['busan-tier2', 'daejeon-tier3', 'seoul-tier1']).toContain(
+      result.snapshot.state.pending.offers[0]!.teamId,
+    );
   });
 
   it('tryout-skipped 분기: 미응시(입단테스트_완료 없음)면 고정 1건, tier 3', () => {
@@ -1126,7 +1429,12 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
     expect(result.snapshot.state.pending).toEqual({
       kind: 'OFFERS',
       offers: [expect.objectContaining({ teamId: 'daejeon-tier3', leagueTier: 3 })],
-      market: { openedAtRevision: result.snapshot.revision, seasonIndex: 0, reason: 'FIRST_CONTRACT', safeOfferId: null },
+      market: {
+        openedAtRevision: result.snapshot.revision,
+        seasonIndex: 0,
+        reason: 'FIRST_CONTRACT',
+        safeOfferId: null,
+      },
     });
   });
 
@@ -1137,7 +1445,12 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
     expect(result.snapshot.state.pending).toEqual({
       kind: 'OFFERS',
       offers: [expect.objectContaining({ teamId: 'daejeon-tier3', leagueTier: 3 })],
-      market: { openedAtRevision: result.snapshot.revision, seasonIndex: 0, reason: 'FIRST_CONTRACT', safeOfferId: null },
+      market: {
+        openedAtRevision: result.snapshot.revision,
+        seasonIndex: 0,
+        reason: 'FIRST_CONTRACT',
+        safeOfferId: null,
+      },
     });
   });
 
@@ -1153,8 +1466,13 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
 
   it('이미 contract가 있으면 분기를 다시 타지 않고 SETTLEMENT라 NOTHING_TO_ADVANCE다', () => {
     const active = withTags(confirmedActiveSnapshot(), ['진로_아카데미']);
-    const offered = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
-    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('setup failed');
+    const offered = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: advanceCommand(active.revision, []),
+    });
+    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS')
+      throw new Error('setup failed');
     const offerId = offered.snapshot.state.pending.offers[0]!.id;
     const accepted = simulate({
       ...baseInput(),
@@ -1178,7 +1496,11 @@ describe('simulate — ACCEPT_OFFER', () => {
     let active = confirmedActiveSnapshotWithBackground(backgroundId);
     active = withTags(active, tags);
     if (baseOvr !== undefined) active = withBaseOvr(active, baseOvr);
-    const result = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision, []) });
+    const result = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: advanceCommand(active.revision, []),
+    });
     if (!result.ok || result.snapshot.state.pending?.kind !== 'OFFERS') {
       throw new Error('offeredSnapshot 설정 실패');
     }
@@ -1199,7 +1521,9 @@ describe('simulate — ACCEPT_OFFER', () => {
     if (!result.ok) return;
     expect(result.snapshot.state.stage).toBe('YOUTH');
     expect(result.snapshot.state.relationships.managerTrust).toBe(35); // street 배경 초기값 유지
-    expect(result.snapshot.state.context.squadStatus).toBe(RULESET.contractRules.squadStatusByRole[offer.rolePromise]);
+    expect(result.snapshot.state.context.squadStatus).toBe(
+      RULESET.contractRules.squadStatusByRole[offer.rolePromise],
+    );
     expect(result.snapshot.state.context.tacticalFit).toBe(offer.tacticalFitEstimate);
     expect(result.snapshot.state.contract).toEqual({
       id: `CTR-${result.snapshot.revision}`,
@@ -1263,7 +1587,9 @@ describe('simulate — ACCEPT_OFFER', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.snapshot.state.stage).toBe('PRO');
-    expect(result.snapshot.state.relationships.managerTrust).toBe(RULESET.contractRules.newClubManagerTrust);
+    expect(result.snapshot.state.relationships.managerTrust).toBe(
+      RULESET.contractRules.newClubManagerTrust,
+    );
   });
 
   it('pending이 없으면 NO_PENDING_OFFERS다', () => {
@@ -1317,7 +1643,10 @@ describe('simulate — ACCEPT_OFFER', () => {
 });
 
 describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
-  function startSeasonCommand(expectedRevision: number, mode: 'FAST' | 'CHAPTER' = 'CHAPTER'): EngineCommand {
+  function startSeasonCommand(
+    expectedRevision: number,
+    mode: 'FAST' | 'CHAPTER' = 'CHAPTER',
+  ): EngineCommand {
     return {
       type: 'START_SEASON',
       commandId: `cmd-start-${expectedRevision}`,
@@ -1326,7 +1655,10 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
     };
   }
 
-  function resolveRoleCommand(expectedRevision: number, decision: 'ACCEPT' | 'DECLINE'): EngineCommand {
+  function resolveRoleCommand(
+    expectedRevision: number,
+    decision: 'ACCEPT' | 'DECLINE',
+  ): EngineCommand {
     return {
       type: 'RESOLVE_ROLE',
       commandId: `cmd-role-${expectedRevision}`,
@@ -1365,9 +1697,13 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
   }
 
   /** pending.proposal만 주어진 값으로 바꿔치기한다(resolveRole은 저장된 proposal을 그대로 신뢰해 적용한다). */
-  function withRoleProposal(snapshot: DomainSnapshot, proposal: Extract<DomainSnapshot['state']['pending'], { kind: 'ROLE_PROPOSAL' }>['proposal']): DomainSnapshot {
+  function withRoleProposal(
+    snapshot: DomainSnapshot,
+    proposal: Extract<DomainSnapshot['state']['pending'], { kind: 'ROLE_PROPOSAL' }>['proposal'],
+  ): DomainSnapshot {
     const pending = snapshot.state.pending;
-    if (pending === null || pending.kind !== 'ROLE_PROPOSAL') throw new Error('withRoleProposal: ROLE_PROPOSAL pending이 아니다');
+    if (pending === null || pending.kind !== 'ROLE_PROPOSAL')
+      throw new Error('withRoleProposal: ROLE_PROPOSAL pending이 아니다');
     const state = { ...snapshot.state, pending: { ...pending, proposal } };
     return { ...snapshot, state, stateHash: hashState(state) };
   }
@@ -1383,7 +1719,12 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
   function expectedSelectionAfter(
     before: DomainSnapshot,
     managerTrust: number,
-    overrides: { primaryPosition?: Position; tacticalFit?: number; positionProficiency?: number; squadStatus?: number } = {},
+    overrides: {
+      primaryPosition?: Position;
+      tacticalFit?: number;
+      positionProficiency?: number;
+      squadStatus?: number;
+    } = {},
   ) {
     const season = before.state.season!;
     const profile = before.state.player.profile!;
@@ -1399,7 +1740,10 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       form: before.state.state.form,
       fitness: before.state.state.fitness,
       morale: before.state.state.morale,
-      familiarity: familiarityOf(overrides.positionProficiency ?? before.state.context.positionProficiency, rules),
+      familiarity: familiarityOf(
+        overrides.positionProficiency ?? before.state.context.positionProficiency,
+        rules,
+      ),
       squadStatus: overrides.squadStatus ?? before.state.context.squadStatus,
       competitors: season.squad.competitors,
     });
@@ -1414,7 +1758,11 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
     it('ACCEPT: managerTrust += keepConfirmTrustDelta, primaryPosition은 그대로, season.selection은 새 managerTrust로 재산출된다, pending은 닫힌다', () => {
       const snapshot = keepSnapshot();
       const trustBefore = snapshot.state.relationships.managerTrust;
-      const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'ACCEPT') });
+      const result = simulate({
+        ...baseInput(),
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'ACCEPT'),
+      });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       const trustAfter = trustBefore + TRUST_DELTAS.keepConfirmTrustDelta;
@@ -1423,7 +1771,9 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
       // 브리프 D-26: season.squadRole은 항상 재산출된 season.selection에서 유도된다(squadRoleFromSelection
       // 이 유일한 유도 규칙) — proposal이 들고 있던 예측값을 그대로 옮기지 않는다.
-      expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
+      expect(result.snapshot.state.season?.squadRole).toBe(
+        squadRoleFromSelection(result.snapshot.state.season!.selection),
+      );
       expect(result.snapshot.state.player.profile?.primaryPosition).toBe('W');
       expect(result.snapshot.state.pending).toBeNull();
       expect(result.snapshot.checkpoint).toBe('STEP_BOUNDARY');
@@ -1441,23 +1791,37 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
     it('DECLINE: managerTrust += declineTrustDelta, season.selection·squadRole도 그 새 managerTrust로 재산출된다', () => {
       const snapshot = keepSnapshot();
       const trustBefore = snapshot.state.relationships.managerTrust;
-      const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'DECLINE') });
+      const result = simulate({
+        ...baseInput(),
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'DECLINE'),
+      });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       const trustAfter = trustBefore + TRUST_DELTAS.declineTrustDelta;
       const expectedSelection = expectedSelectionAfter(snapshot, trustAfter);
       expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
       expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
-      expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
+      expect(result.snapshot.state.season?.squadRole).toBe(
+        squadRoleFromSelection(result.snapshot.state.season!.selection),
+      );
       expect(result.snapshot.state.pending).toBeNull();
-      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'KEEP:DECLINE' });
+      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({
+        kind: 'ROLE_RESOLVED',
+        refId: 'KEEP:DECLINE',
+      });
     });
   });
 
   describe('ROLE_CHANGE', () => {
     function roleChangeSnapshot(): DomainSnapshot {
       const base = activeSnapshotWithRolePending();
-      return withRoleProposal(base, { type: 'ROLE_CHANGE', position: 'W', from: 'STARTER', to: 'ROTATION' });
+      return withRoleProposal(base, {
+        type: 'ROLE_CHANGE',
+        position: 'W',
+        from: 'STARTER',
+        to: 'ROTATION',
+      });
     }
 
     // proposal.to('ROTATION')는 제안 계산 시점의 예측값일 뿐이다 — resolveRole은 이를 season.squadRole에
@@ -1468,7 +1832,11 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       const snapshot = roleChangeSnapshot();
       const trustBefore = snapshot.state.relationships.managerTrust;
       const rolePromiseBefore = snapshot.state.contract?.rolePromise;
-      const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'ACCEPT') });
+      const result = simulate({
+        ...baseInput(),
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'ACCEPT'),
+      });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       const trustAfter = trustBefore + TRUST_DELTAS.acceptTrustDelta;
@@ -1477,27 +1845,40 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
         RULESET.selectionRules,
         RULESET.contractRules.squadStatusByRole,
       );
-      const expectedSelection = expectedSelectionAfter(snapshot, trustAfter, { squadStatus: squadStatusAfter });
+      const expectedSelection = expectedSelectionAfter(snapshot, trustAfter, {
+        squadStatus: squadStatusAfter,
+      });
       expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
-      expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
+      expect(result.snapshot.state.season?.squadRole).toBe(
+        squadRoleFromSelection(result.snapshot.state.season!.selection),
+      );
       expect(result.snapshot.state.contract?.rolePromise).toBe(rolePromiseBefore);
       expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
       expect(result.snapshot.state.pending).toBeNull();
-      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'ROLE_CHANGE:ACCEPT' });
+      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({
+        kind: 'ROLE_RESOLVED',
+        refId: 'ROLE_CHANGE:ACCEPT',
+      });
     });
 
     it('DECLINE: contract.rolePromise·context.squadStatus는 그대로, season.selection·squadRole은 declineTrustDelta 반영 재산출 결과다', () => {
       const snapshot = roleChangeSnapshot();
       const squadStatusBefore = snapshot.state.context.squadStatus;
       const trustBefore = snapshot.state.relationships.managerTrust;
-      const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'DECLINE') });
+      const result = simulate({
+        ...baseInput(),
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'DECLINE'),
+      });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       const trustAfter = trustBefore + TRUST_DELTAS.declineTrustDelta;
       const expectedSelection = expectedSelectionAfter(snapshot, trustAfter);
       expect(result.snapshot.state.context.squadStatus).toBe(squadStatusBefore);
       expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
-      expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
+      expect(result.snapshot.state.season?.squadRole).toBe(
+        squadRoleFromSelection(result.snapshot.state.season!.selection),
+      );
       expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
     });
 
@@ -1511,7 +1892,11 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
         RULESET.selectionRules,
         RULESET.contractRules.squadStatusByRole,
       );
-      const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'ACCEPT') });
+      const result = simulate({
+        ...baseInput(),
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'ACCEPT'),
+      });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       expect(result.snapshot.state.context.squadStatus).toBe(expected);
@@ -1534,21 +1919,34 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
     it('ACCEPT: primaryPosition·tacticalFit·positionProficiency·season.squadRole/selection이 제안대로 바뀐다', () => {
       const snapshot = positionChangeSnapshot();
       const trustBefore = snapshot.state.relationships.managerTrust;
-      const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'ACCEPT') });
+      const result = simulate({
+        ...baseInput(),
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'ACCEPT'),
+      });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       expect(result.snapshot.state.player.profile?.primaryPosition).toBe('AM');
       expect(result.snapshot.state.context.tacticalFit).toBe(88);
-      expect(result.snapshot.state.context.positionProficiency).toBe(RULESET.selectionRules.proficiencyOnChange.adjacent);
+      expect(result.snapshot.state.context.positionProficiency).toBe(
+        RULESET.selectionRules.proficiencyOnChange.adjacent,
+      );
       // squadRoleAfter('STARTER')는 제안 계산 시점의 값일 뿐이다 — resolveRole은 이를 그대로 믿지
       // 않고 재산출된 selection에서 다시 유도한다(아래 "재산출된 selection에서 유도된 값과 같다"
       // 테스트 참고). AM은 이 팀 전술의 slots가 0이라 재산출 결과는 ROTATION이다.
       expect(result.snapshot.state.season?.squadRole).toBe('ROTATION');
       expect(result.snapshot.state.season?.selection.position).toBe('AM');
-      expect(result.snapshot.state.season?.selection.candidates.some((c) => c.id === 'PLAYER')).toBe(true);
-      expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore + TRUST_DELTAS.acceptTrustDelta);
+      expect(
+        result.snapshot.state.season?.selection.candidates.some((c) => c.id === 'PLAYER'),
+      ).toBe(true);
+      expect(result.snapshot.state.relationships.managerTrust).toBe(
+        trustBefore + TRUST_DELTAS.acceptTrustDelta,
+      );
       expect(result.snapshot.state.pending).toBeNull();
-      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({ kind: 'ROLE_RESOLVED', refId: 'POSITION_CHANGE:ACCEPT' });
+      expect(result.snapshot.state.timeline.at(-1)).toMatchObject({
+        kind: 'ROLE_RESOLVED',
+        refId: 'POSITION_CHANGE:ACCEPT',
+      });
     });
 
     // season.squadRole은 항상 season.selection에서 유도된 값이어야 한다(squadRoleFromSelection이
@@ -1557,7 +1955,11 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
     // 계산 시점(managerTrust 변경 전)의 squadRoleAfter를 그대로 쓰면 어긋날 수 있다.
     it('ACCEPT: season.squadRole은 재산출된 season.selection에서 유도된 값과 같다', () => {
       const snapshot = positionChangeSnapshot();
-      const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'ACCEPT') });
+      const result = simulate({
+        ...baseInput(),
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'ACCEPT'),
+      });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       const season = result.snapshot.state.season!;
@@ -1568,21 +1970,31 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
       const snapshot = positionChangeSnapshot();
       const positionBefore = snapshot.state.player.profile?.primaryPosition;
       const trustBefore = snapshot.state.relationships.managerTrust;
-      const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'DECLINE') });
+      const result = simulate({
+        ...baseInput(),
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'DECLINE'),
+      });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       const trustAfter = trustBefore + TRUST_DELTAS.declineTrustDelta;
       const expectedSelection = expectedSelectionAfter(snapshot, trustAfter);
       expect(result.snapshot.state.player.profile?.primaryPosition).toBe(positionBefore);
       expect(result.snapshot.state.season?.selection).toEqual(expectedSelection);
-      expect(result.snapshot.state.season?.squadRole).toBe(squadRoleFromSelection(result.snapshot.state.season!.selection));
+      expect(result.snapshot.state.season?.squadRole).toBe(
+        squadRoleFromSelection(result.snapshot.state.season!.selection),
+      );
       expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
     });
   });
 
   it('ROLE_PROPOSAL pending이 없으면 NO_ROLE_PROPOSAL이다', () => {
     const active = confirmedActiveSnapshot();
-    const result = simulate({ ...baseInput(), snapshot: active, command: resolveRoleCommand(active.revision, 'ACCEPT') });
+    const result = simulate({
+      ...baseInput(),
+      snapshot: active,
+      command: resolveRoleCommand(active.revision, 'ACCEPT'),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({ reason: 'NO_ROLE_PROPOSAL' });
@@ -1591,7 +2003,11 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
   it('pending이 EVENT면 NO_ROLE_PROPOSAL이다', () => {
     const active = confirmedActiveSnapshot();
     const withEvent = withPendingEvent(active);
-    const result = simulate({ ...baseInput(), snapshot: withEvent, command: resolveRoleCommand(withEvent.revision, 'ACCEPT') });
+    const result = simulate({
+      ...baseInput(),
+      snapshot: withEvent,
+      command: resolveRoleCommand(withEvent.revision, 'ACCEPT'),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({ reason: 'NO_ROLE_PROPOSAL' });
@@ -1599,7 +2015,11 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
 
   it('ACTIVE가 아니면 NOT_ACTIVE다', () => {
     const snapshot = createDraftSnapshot();
-    const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'ACCEPT') });
+    const result = simulate({
+      ...baseInput(),
+      snapshot,
+      command: resolveRoleCommand(snapshot.revision, 'ACCEPT'),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.details).toEqual({ reason: 'NOT_ACTIVE' });
@@ -1607,7 +2027,11 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
 
   it('rng를 소비하지 않는다', () => {
     const snapshot = activeSnapshotWithRolePending();
-    const result = simulate({ ...baseInput(), snapshot, command: resolveRoleCommand(snapshot.revision, 'ACCEPT') });
+    const result = simulate({
+      ...baseInput(),
+      snapshot,
+      command: resolveRoleCommand(snapshot.revision, 'ACCEPT'),
+    });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.snapshot.state.rngState.draws).toBe(snapshot.state.rngState.draws);
@@ -1618,15 +2042,31 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
 // 회귀 방지. 헬퍼(resolveDeferredEffects) 단위 테스트만으로는 startSeason/advanceInSeason이 season을
 // 어떻게 조립하는지까지 검증할 수 없어(리뷰 지적 그대로) simulate() 수준으로 확인한다.
 describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 R2-1)', () => {
-  function resolveRoleCommand(expectedRevision: number, decision: 'ACCEPT' | 'DECLINE'): EngineCommand {
-    return { type: 'RESOLVE_ROLE', commandId: `cmd-role-${expectedRevision}`, expectedRevision, payload: { decision } };
+  function resolveRoleCommand(
+    expectedRevision: number,
+    decision: 'ACCEPT' | 'DECLINE',
+  ): EngineCommand {
+    return {
+      type: 'RESOLVE_ROLE',
+      commandId: `cmd-role-${expectedRevision}`,
+      expectedRevision,
+      payload: { decision },
+    };
   }
 
   function settleSeasonCommand(expectedRevision: number): EngineCommand {
-    return { type: 'SETTLE_SEASON', commandId: `cmd-settle-${expectedRevision}`, expectedRevision, payload: {} };
+    return {
+      type: 'SETTLE_SEASON',
+      commandId: `cmd-settle-${expectedRevision}`,
+      expectedRevision,
+      payload: {},
+    };
   }
 
-  function startSeasonFastCommand(expectedRevision: number, serviceSeasonId: string): EngineCommand {
+  function startSeasonFastCommand(
+    expectedRevision: number,
+    serviceSeasonId: string,
+  ): EngineCommand {
     return {
       type: 'START_SEASON',
       commandId: `cmd-start-${expectedRevision}`,
@@ -1644,7 +2084,8 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
       snapshot: withTags(active, ['진로_아카데미']),
       command: advanceCommand(active.revision, []),
     });
-    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('setup: OFFERS 실패');
+    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS')
+      throw new Error('setup: OFFERS 실패');
     const offer = offered.snapshot.state.pending.offers[0]!;
     const accepted = simulate({
       ...baseInput(),
@@ -1670,7 +2111,10 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
 
   /** withRoleProposal과 같은 패턴: pending 값만 바꿔치기하지 않고 deferredEffects에 하나 얹는다. */
   function withDeferredEffect(snapshot: DomainSnapshot, effect: Effect): DomainSnapshot {
-    const state = { ...snapshot.state, deferredEffects: [...snapshot.state.deferredEffects, effect] };
+    const state = {
+      ...snapshot.state,
+      deferredEffects: [...snapshot.state.deferredEffects, effect],
+    };
     return { ...snapshot, state, stateHash: hashState(state) };
   }
 
@@ -1686,7 +2130,9 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
       const pending = current.state.pending;
       if (pending?.kind === 'SETTLEMENT') return current;
       const command: EngineCommand =
-        pending?.kind === 'ROLE_PROPOSAL' ? resolveRoleCommand(current.revision, 'ACCEPT') : advanceCommand(current.revision, []);
+        pending?.kind === 'ROLE_PROPOSAL'
+          ? resolveRoleCommand(current.revision, 'ACCEPT')
+          : advanceCommand(current.revision, []);
       if (pending?.kind === 'INJURY') {
         const result = simulate({
           ...baseInput(),
@@ -1695,7 +2141,7 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
             eventId: pending.eventId,
             definitionVersion: pending.version,
             rehabPlan: 'STANDARD',
-            outcomes: [{ id: 'A1', weight: 100, effects: [] }],
+            outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
           }),
         });
         if (!result.ok) throw new Error(`driveToSettlement: RESOLVE_EVENT 실패: ${result.error.code} ${result.error.message}`);
@@ -1703,7 +2149,10 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
         continue;
       }
       const result = simulate({ ...baseInput(), snapshot: current, command });
-      if (!result.ok) throw new Error(`driveToSettlement: ${command.type} 실패: ${result.error.code} ${result.error.message}`);
+      if (!result.ok)
+        throw new Error(
+          `driveToSettlement: ${command.type} 실패: ${result.error.code} ${result.error.message}`,
+        );
       current = result.snapshot;
     }
     throw new Error('driveToSettlement: 100회 안에 SETTLEMENT에 이르지 못했다(무한루프 의심).');
@@ -1713,20 +2162,40 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
     const preSeason = preSeasonSnapshot();
     const withDeferred = withDeferredEffect(preSeason, deferredEffect(1, 'TEST-R2-1-A'));
 
-    const baseline = simulate({ ...baseInput(), snapshot: preSeason, command: startSeasonFastCommand(preSeason.revision, 'svc-r2-1-a-base') });
-    const withEffect = simulate({ ...baseInput(), snapshot: withDeferred, command: startSeasonFastCommand(withDeferred.revision, 'svc-r2-1-a') });
-    if (!baseline.ok) throw new Error(`setup: baseline START_SEASON 실패: ${baseline.error.code} ${baseline.error.message}`);
-    if (!withEffect.ok) throw new Error(`setup: withEffect START_SEASON 실패: ${withEffect.error.code} ${withEffect.error.message}`);
+    const baseline = simulate({
+      ...baseInput(),
+      snapshot: preSeason,
+      command: startSeasonFastCommand(preSeason.revision, 'svc-r2-1-a-base'),
+    });
+    const withEffect = simulate({
+      ...baseInput(),
+      snapshot: withDeferred,
+      command: startSeasonFastCommand(withDeferred.revision, 'svc-r2-1-a'),
+    });
+    if (!baseline.ok)
+      throw new Error(
+        `setup: baseline START_SEASON 실패: ${baseline.error.code} ${baseline.error.message}`,
+      );
+    if (!withEffect.ok)
+      throw new Error(
+        `setup: withEffect START_SEASON 실패: ${withEffect.error.code} ${withEffect.error.message}`,
+      );
 
     // 리뷰 (a): walk 이후 context.tacticalFit이 +6, season.scheduledEffects 비어 있음, deferredEffects 비어 있음.
-    expect(withEffect.snapshot.state.context.tacticalFit).toBe(baseline.snapshot.state.context.tacticalFit + 6);
+    expect(withEffect.snapshot.state.context.tacticalFit).toBe(
+      baseline.snapshot.state.context.tacticalFit + 6,
+    );
     expect(withEffect.snapshot.state.season?.scheduledEffects).toEqual([]);
     expect(withEffect.snapshot.state.deferredEffects).toEqual([]);
   });
 
   it('(b) 시즌 N 중에 미룬 NEXT_SEASON_STEP 5 효과는 시즌 N에는 적용되지 않고, 시즌 N+1에서 적용된다', () => {
     const preSeason = preSeasonSnapshot();
-    const season1Started = simulate({ ...baseInput(), snapshot: preSeason, command: startSeasonFastCommand(preSeason.revision, 'svc-r2-1-b-s1') });
+    const season1Started = simulate({
+      ...baseInput(),
+      snapshot: preSeason,
+      command: startSeasonFastCommand(preSeason.revision, 'svc-r2-1-b-s1'),
+    });
     if (!season1Started.ok || season1Started.snapshot.state.pending?.kind !== 'ROLE_PROPOSAL') {
       throw new Error('setup: 시즌 1 START_SEASON 실패');
     }
@@ -1740,7 +2209,10 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
     // "시즌 N step 2에서 미룬다": season이 이미 배정된 뒤라 이 효과는 season.scheduledEffects가 아니라
     // state.deferredEffects로 들어간다(이번 시즌 중 새로 미루는 효과의 대기열 — season 배정 시점엔
     // 이미 지나서, 다음 START_SEASON이 옮겨줄 때까지는 어느 season에도 속하지 않는다).
-    const withDeferred = withDeferredEffect(season1RoleAccepted.snapshot, deferredEffect(5, 'TEST-R2-1-B'));
+    const withDeferred = withDeferredEffect(
+      season1RoleAccepted.snapshot,
+      deferredEffect(5, 'TEST-R2-1-B'),
+    );
     const tacticalFitBeforeSeason1 = withDeferred.state.context.tacticalFit;
 
     const season1Settled = driveToSettlement(withDeferred);
@@ -1749,8 +2221,15 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
     expect(season1Settled.state.season?.scheduledEffects).toEqual([]);
     expect(season1Settled.state.deferredEffects).toEqual(withDeferred.state.deferredEffects);
 
-    const settleResult = simulate({ ...baseInput(), snapshot: season1Settled, command: settleSeasonCommand(season1Settled.revision) });
-    if (!settleResult.ok) throw new Error(`setup: SETTLE_SEASON 실패: ${settleResult.error.code} ${settleResult.error.message}`);
+    const settleResult = simulate({
+      ...baseInput(),
+      snapshot: season1Settled,
+      command: settleSeasonCommand(season1Settled.revision),
+    });
+    if (!settleResult.ok)
+      throw new Error(
+        `setup: SETTLE_SEASON 실패: ${settleResult.error.code} ${settleResult.error.message}`,
+      );
     expect(settleResult.snapshot.state.deferredEffects).toEqual(withDeferred.state.deferredEffects);
 
     const season2Started = simulate({
@@ -1762,7 +2241,9 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
       throw new Error('setup: 시즌 2 START_SEASON 실패');
     }
     expect(season2Started.snapshot.state.deferredEffects).toEqual([]);
-    expect(season2Started.snapshot.state.season?.scheduledEffects).toEqual(withDeferred.state.deferredEffects);
+    expect(season2Started.snapshot.state.season?.scheduledEffects).toEqual(
+      withDeferred.state.deferredEffects,
+    );
 
     const season2RoleAccepted = simulate({
       ...baseInput(),
@@ -1860,15 +2341,29 @@ describe('simulate — NEGOTIATE/REJECT_OFFER/LOAN_RETURN(T-3-003 전까지 미�
 describe('simulate — START_SEASON은 season.manager·injuryCount를 채운다(T-4-001 D-50)', () => {
   it('첫 시즌: season.manager는 룰셋 managerRules 기반 기본값이고 injuryCount는 0이다', () => {
     const active = confirmedActiveSnapshotWithBackground('club-academy');
-    const offered = simulate({ ...baseInput(), snapshot: withTags(active, ['진로_아카데미']), command: advanceCommand(active.revision, []) });
-    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('setup: OFFERS 실패');
+    const offered = simulate({
+      ...baseInput(),
+      snapshot: withTags(active, ['진로_아카데미']),
+      command: advanceCommand(active.revision, []),
+    });
+    if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS')
+      throw new Error('setup: OFFERS 실패');
     const offer = offered.snapshot.state.pending.offers[0]!;
-    const accepted = simulate({ ...baseInput(), snapshot: offered.snapshot, command: acceptOfferCommand(offered.snapshot.revision, offer.id) });
+    const accepted = simulate({
+      ...baseInput(),
+      snapshot: offered.snapshot,
+      command: acceptOfferCommand(offered.snapshot.revision, offer.id),
+    });
     if (!accepted.ok) throw new Error('setup: ACCEPT_OFFER 실패');
     const started = simulate({
       ...baseInput(),
       snapshot: accepted.snapshot,
-      command: { type: 'START_SEASON', commandId: 'cmd-start-mgr', expectedRevision: accepted.snapshot.revision, payload: { simulationMode: 'FAST', serviceSeasonId: 'svc-mgr-test' } },
+      command: {
+        type: 'START_SEASON',
+        commandId: 'cmd-start-mgr',
+        expectedRevision: accepted.snapshot.revision,
+        payload: { simulationMode: 'FAST', serviceSeasonId: 'svc-mgr-test' },
+      },
     });
     expect(started.ok).toBe(true);
     if (!started.ok) return;
@@ -1890,7 +2385,11 @@ describe('simulate — START_SEASON은 season.manager·injuryCount를 채운다(
     // 잔류(첫 제안)를 수락하고 START_SEASON을 이어간다(pending이 남아 있으면 MARKET_OPEN으로 막힌다).
     if (settled.state.pending?.kind === 'OFFERS') {
       const offerId = settled.state.pending.offers[0]!.id;
-      const accepted = simulate({ ...baseInput(), snapshot: settled, command: acceptOfferCommand(settled.revision, offerId) });
+      const accepted = simulate({
+        ...baseInput(),
+        snapshot: settled,
+        command: acceptOfferCommand(settled.revision, offerId),
+      });
       if (!accepted.ok) throw new Error('setup: 결산 후 시장 ACCEPT_OFFER 실패');
       settled = accepted.snapshot;
     }
@@ -1912,6 +2411,107 @@ describe('simulate — START_SEASON은 season.manager·injuryCount를 채운다(
     expect(season?.teamId).toBe(teamId);
     expect(season?.manager?.id).toBe(`${teamId}-mgr-1`);
     expect(season?.manager?.tenureSeasons).toBe(2);
+    expect(settled.state.nextManager?.id).toBe(
+      settled.state.seasonHistory.at(-1)?.result.managerId,
+    );
+    expect(nextSeason.snapshot.state.relationships.managerTrust).toBe(
+      settled.state.relationships.managerTrust,
+    );
+  });
+
+  it('예약 감독의 팀 접두사가 현재 계약 팀과 다르면 폐기하고 현재 팀 기본 감독을 쓴다', () => {
+    let settled = runSettledFixture().snapshot;
+    if (settled.state.pending?.kind === 'OFFERS') {
+      const offerId = settled.state.pending.offers[0]!.id;
+      const accepted = simulate({
+        ...baseInput(),
+        snapshot: settled,
+        command: acceptOfferCommand(settled.revision, offerId),
+      });
+      if (!accepted.ok) throw new Error('setup: 결산 후 시장 ACCEPT_OFFER 실패');
+      settled = accepted.snapshot;
+    }
+    const teamId = settled.state.contract?.teamId;
+    if (teamId === undefined) throw new Error('setup: contract.teamId가 없다.');
+    const staleState = {
+      ...settled.state,
+      nextManager: {
+        id: 'stale-other-team-mgr-9',
+        name: RULESET.managerRules.names[0]!,
+        preferredArchetypeIds: [],
+        tenureSeasons: 7,
+        trustBase: RULESET.managerRules.trustBase,
+      },
+    };
+    const staleSnapshot: DomainSnapshot = {
+      ...settled,
+      state: staleState,
+      stateHash: hashState(staleState),
+    };
+    const started = simulate({
+      ...baseInput(),
+      snapshot: staleSnapshot,
+      command: {
+        type: 'START_SEASON',
+        commandId: 'cmd-start-stale-manager',
+        expectedRevision: staleSnapshot.revision,
+        payload: { simulationMode: 'FAST', serviceSeasonId: 'svc-stale-manager' },
+      },
+    });
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+    expect(started.snapshot.state.season?.manager?.id).toBe(`${teamId}-mgr-1`);
+    expect(started.snapshot.state.season?.manager?.id.startsWith(`${teamId}-mgr-`)).toBe(true);
+    expect(started.snapshot.state.nextManager).toBeNull();
+  });
+
+  it('실제 교체 예약만 START_SEASON에서 trustBase로 재설정한다', () => {
+    let settled = runSettledFixture().snapshot;
+    if (settled.state.pending?.kind === 'OFFERS') {
+      const offerId = settled.state.pending.offers[0]!.id;
+      const accepted = simulate({
+        ...baseInput(),
+        snapshot: settled,
+        command: acceptOfferCommand(settled.revision, offerId),
+      });
+      if (!accepted.ok) throw new Error('setup: 결산 후 시장 ACCEPT_OFFER 실패');
+      settled = accepted.snapshot;
+    }
+    const teamId = settled.state.contract?.teamId;
+    if (teamId === undefined) throw new Error('setup: contract.teamId가 없다.');
+    const replacementId = `${teamId}-mgr-99`;
+    const replacementState = {
+      ...settled.state,
+      nextManager: {
+        id: replacementId,
+        name: RULESET.managerRules.names[1]!,
+        preferredArchetypeIds: [],
+        tenureSeasons: 1,
+        trustBase: RULESET.managerRules.trustBase,
+      },
+      relationships: { ...settled.state.relationships, managerTrust: 97 },
+    };
+    const replacementSnapshot: DomainSnapshot = {
+      ...settled,
+      state: replacementState,
+      stateHash: hashState(replacementState),
+    };
+    const started = simulate({
+      ...baseInput(),
+      snapshot: replacementSnapshot,
+      command: {
+        type: 'START_SEASON',
+        commandId: 'cmd-start-manager-replacement',
+        expectedRevision: replacementSnapshot.revision,
+        payload: { simulationMode: 'FAST', serviceSeasonId: 'svc-manager-replacement' },
+      },
+    });
+
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+    expect(started.snapshot.state.season?.manager?.id).toBe(replacementId);
+    expect(started.snapshot.state.relationships.managerTrust).toBe(RULESET.managerRules.trustBase);
+    expect(started.snapshot.state.nextManager).toBeNull();
   });
 });
 

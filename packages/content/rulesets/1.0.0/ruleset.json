@@ -1610,6 +1610,10 @@
           {
             "kind": "EVENT",
             "required": false
+          },
+          {
+            "kind": "NATIONAL_TEAM",
+            "required": true
           }
         ]
       },
@@ -3242,7 +3246,17 @@
   "relationshipRules": {
     "logMax": 40,
     "memoryTagsMax": 3,
-    "captainAppointment": { "minCaptain": 75, "minSeasons": 2 }
+    "captainAppointment": { "minCaptain": 70, "minSeasons": 3 },
+    "tagThresholds": {
+      "glassPotential": 85,
+      "glassMajorEpisodes": 3,
+      "managerTrust": 80,
+      "managerSeasons": 3,
+      "lockerRelation": 75,
+      "lockerSeasons": 3,
+      "comebackRole": "STARTER",
+      "controversialFailures": 3
+    }
   },
   "reputationRules": {
     "initialPopularityCenti": 5000,
@@ -3251,8 +3265,15 @@
     "settlement": { "starterSeasonCenti": 300, "ratingAbove70Centi": 200, "titleCenti": 500, "decayCenti": 100 }
   },
   "nationalTeamRules": {
+    "event": { "id": "EVT-NAT-001", "version": 1 },
+    "outcomeByChoice": {
+      "A": { "callUp": "ACCEPT", "id": "A1", "kind": "FIXED", "weight": 100 },
+      "B": { "callUp": "CONDITIONAL", "id": "B1", "kind": "FIXED", "weight": 100 },
+      "C": { "callUp": "DECLINE", "id": "C1", "kind": "FIXED", "weight": 100 }
+    },
     "callUpStep": 8,
     "minOvrByTier": { "YOUTH": 70, "1": 68, "2": 74, "3": 78 },
+    "minRatingTenths": 70,
     "minPopularityCenti": 6000,
     "fitnessCost": { "ACCEPT": 15, "CONDITIONAL": 8, "DECLINE": 0 },
     "relationDelta": {

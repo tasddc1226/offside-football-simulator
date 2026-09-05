@@ -56,6 +56,9 @@ export function buildSeasonResult(input: BuildSeasonResultInput): Omit<SeasonRes
   if (contract === null) {
     throw new RangeError('buildSeasonResult: state.contract가 null이다.');
   }
+  // 정상 START_SEASON 경로에서는 manager가 항상 존재한다. 기존 결산 순수 함수 테스트의 축약 시즌
+  // 리터럴도 유지할 수 있도록, 축약 입력에서만 예약 감독·안전 식별자로 보완한다.
+  const managerId = season.manager?.id ?? state.nextManager?.id ?? 'UNKNOWN-MANAGER';
 
   const stats = season.playerStats;
   const possibleMinutes = season.schedule.filter((entry) => entry.skipped === undefined).length * 90;
@@ -97,6 +100,8 @@ export function buildSeasonResult(input: BuildSeasonResultInput): Omit<SeasonRes
     index: season.index,
     simulationMode: season.simulationMode,
     teamId: season.teamId,
+    managerId,
+    captaincyAtEnd: state.captaincy,
     competitions: season.competitions,
     playerStats: stats,
     selectionSummary: {

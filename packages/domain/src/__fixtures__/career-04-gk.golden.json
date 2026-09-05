@@ -1,6 +1,6 @@
 {
   "revision": 16,
-  "stateHash": "6442d0c4e7b8ef86496114e73234458783bf4a2a277bcbb8c64bfa36cd611f0b",
+  "stateHash": "3f29a15492360186d6a198672f54c3d97f9dd5eb660ca07486c580d013dfd375",
   "rngStateDraws": 403,
   "age": 18,
   "seasonHistory": [
@@ -39,6 +39,8 @@
         "index": 1,
         "simulationMode": "FAST",
         "teamId": "busan-tier2",
+        "managerId": "busan-tier2-mgr-1",
+        "captaincyAtEnd": "NONE",
         "competitions": [
           {
             "competitionId": "LEAGUE",
@@ -577,7 +579,7 @@
             "passedAtRevision": 15
           }
         ],
-        "hash": "c80ed350d53fe7d5539e43e3b5bcd4412a06fa25475c93da2c91399afabed577"
+        "hash": "5a4de64010f71de471d2871458b2943bc0b1436c68dc94420f0321d0cb3512cc"
       }
     }
   ],

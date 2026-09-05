@@ -53,6 +53,7 @@
         "outcomes": [
           {
             "id": "A1",
+            "kind": "FIXED",
             "weight": 100,
             "effects": [],
             "addTags": [
@@ -83,6 +84,7 @@
         "outcomes": [
           {
             "id": "B1",
+            "kind": "SUCCESS",
             "weight": 85,
             "effects": [
               {
@@ -108,6 +110,7 @@
           },
           {
             "id": "B2",
+            "kind": "NEUTRAL",
             "weight": 15,
             "effects": [],
             "addTags": [

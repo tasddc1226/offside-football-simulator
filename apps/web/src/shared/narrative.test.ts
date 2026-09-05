@@ -10,6 +10,7 @@ const TOKENS: NarrativeTokenValues = {
   manager: '정우성',
   rival: '이도현',
   captain: '박준서',
+  agent: '한지민',
 };
 
 describe('renderNarrative', () => {
@@ -27,6 +28,10 @@ describe('renderNarrative', () => {
 
   it('접미 없는 토큰은 값만 치환한다', () => {
     expect(renderNarrative('{manager} 감독', TOKENS)).toBe('정우성 감독');
+  });
+
+  it('agent 토큰과 조사 접미를 치환한다(T-3-005)', () => {
+    expect(renderNarrative('{agent:이/가} 연락했다', TOKENS)).toBe('한지민이 연락했다');
   });
 
   it('을/를, 과/와, 으로/로, 아/야 조사 쌍을 모두 지원한다', () => {
@@ -88,6 +93,12 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     timeline: [],
     season: null,
     seasonHistory: [],
+    nextManager: null,
+    captaincy: 'NONE',
+    captaincySeasons: 0,
+    controversyFailures: 0,
+    nationalityRuleState: { moduleId: 'DEFAULT', exceptions: [] },
+    nationalTeam: { callUps: [], debuted: false, pendingDebut: null },
     health: { episodes: [] },
     relationshipLog: [],
     memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
@@ -138,5 +149,13 @@ describe('buildNarrativeTokens', () => {
     expect(tokens.manager).toBe(activeContentPack.narrativeTokens.manager[0]);
     expect(tokens.rival).toBe(activeContentPack.narrativeTokens.rival[0]);
     expect(tokens.captain).toBe(activeContentPack.narrativeTokens.captain[0]);
+  });
+
+  it('0.2.0 snapshot/import는 agent 토큰을 읽고 활성 0.1.0은 바꾸지 않는다', async () => {
+    const { loadContentPack } = await import('@offside/content');
+    const pack020 = loadContentPack('0.2.0');
+    const tokens = buildNarrativeTokens(baseState({}), pack020, activeRuleset);
+    expect(tokens.agent).toBe(pack020.narrativeTokens.agent[0]);
+    expect(activeContentPack.manifest.contentPackVersion).toBe('0.1.0');
   });
 });

@@ -26,6 +26,7 @@
         "outcomes": [
           {
             "id": "A1",
+            "kind": "FIXED",
             "weight": 100,
             "effects": []
           }
@@ -48,6 +49,7 @@
         "outcomes": [
           {
             "id": "A1",
+            "kind": "FIXED",
             "weight": 100,
             "effects": []
           }

@@ -75,7 +75,7 @@ function buildCareerCommands(archetypeId: string): Array<{ type: Command['type']
         eventId: 'EVT-CON-002',
         definitionVersion: 1,
         choiceId: 'A',
-        outcomes: [{ id: 'A1', weight: 100, effects: [], addTags: ['진로_입단테스트'] }],
+        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [], addTags: ['진로_입단테스트'] }],
       },
     },
     { type: 'ADVANCE', payload: { eligibleEvents: [{ eventId: 'EVT-CON-003', version: 1, weight: 10 }] } },
@@ -88,6 +88,7 @@ function buildCareerCommands(archetypeId: string): Array<{ type: Command['type']
         outcomes: [
           {
             id: 'B1',
+            kind: 'SUCCESS',
             weight: 85,
             effects: [
               {
@@ -103,7 +104,7 @@ function buildCareerCommands(archetypeId: string): Array<{ type: Command['type']
             ],
             addTags: ['입단테스트_완료', '테스트_성공'],
           },
-          { id: 'B2', weight: 15, effects: [], addTags: ['입단테스트_완료', '테스트_보통'] },
+          { id: 'B2', kind: 'NEUTRAL', weight: 15, effects: [], addTags: ['입단테스트_완료', '테스트_보통'] },
         ],
       },
     },

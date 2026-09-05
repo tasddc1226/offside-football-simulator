@@ -39,7 +39,6 @@ import { useEngine } from '../engine/use-engine.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
 import {
-  LEAGUE_TIER_LABEL_KO,
   positionHeaderField,
   POSITION_LABELS,
   ROLE_DECISION_LABEL_KO,
@@ -51,7 +50,6 @@ import {
 } from '../shared/labels.js';
 import { markStatsRevealed, readRevealedStats } from '../shared/revealed-stats.js';
 import { proStatusStripItems, u18StatusStripItems } from '../shared/status-strip.js';
-import { formatKrw } from '../shared/format.js';
 import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { SeasonTimeline } from '../shared/season-timeline.js';
@@ -61,8 +59,10 @@ import { eventOutcomeTitle } from '../shared/legacy-event-copy.js';
 import { familiarityPercentLabel, SelectionRankingList } from '../shared/tactical-room.js';
 import { useReducedMotion } from '../shared/ui-store.js';
 import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
+import { buildCurrentContractSummary } from '../shared/transfer-view.js';
 
 type DashboardSearch = { signed?: boolean };
+type ChapterPending = Extract<CareerState['pending'], { kind: 'CHAPTER' }>;
 
 export const Route = createFileRoute('/career/$careerId/')({
   validateSearch: (search: Record<string, unknown>): DashboardSearch =>
@@ -75,6 +75,17 @@ const CAPTION_STYLE = {
   fontSize: 'var(--os-fs-caption)',
   lineHeight: 'var(--os-lh-caption)',
 } as const;
+
+function chapterCardLabel(state: CareerState, pending: ChapterPending): string {
+  if (pending.trigger === 'NATIONAL_DEBUT') {
+    const opponentName = pending.virtualOpponent?.opponentName;
+    return opponentName === undefined ? '대표팀 데뷔전' : `대표팀 데뷔전 — ${opponentName}`;
+  }
+
+  const opponent = state.season?.matches.find((candidate) => candidate.id === pending.matchId)?.opponent;
+  const opponentName = opponent === undefined ? undefined : opponentDisplayName(opponent, activeRuleset);
+  return opponentName === undefined ? '핵심 경기' : `핵심 경기 — ${opponentName}`;
+}
 
 function timelineSentence(entry: TimelineEntry, state: CareerState): string {
   switch (entry.kind) {
@@ -370,7 +381,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
     }
   };
 
-  if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY')) {
+  if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM')) {
     const target = screenForCareer(state);
     return (
       <Card className="flex flex-col gap-os-4">
@@ -402,6 +413,32 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
           style={buttonStyle}
         >
           제안 보기
+        </Link>
+      </Card>
+    );
+  }
+
+  if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
+    return (
+      <Card className="flex flex-wrap items-center justify-between gap-os-3">
+        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          재계약 제안 {pending.offers.length}건
+        </p>
+        <Link to="/career/$careerId/offers" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
+          제안 비교
+        </Link>
+      </Card>
+    );
+  }
+
+  if (pending !== null && pending.kind === 'LOAN_RETURN') {
+    return (
+      <Card className="flex flex-wrap items-center justify-between gap-os-3">
+        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          임대 복귀 결정
+        </p>
+        <Link to="/career/$careerId/transfer-result" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
+          복귀 조건 보기
         </Link>
       </Card>
     );
@@ -448,17 +485,10 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   }
 
   if (pending !== null && pending.kind === 'CHAPTER') {
-    // 상대 이름은 season.matches에서 찾아 덧붙인다 — 기존 단위 테스트가 matchId 없이 CHAPTER
-    // pending을 주입하므로(match 조회 실패), 그때는 상대 이름 없이 "핵심 경기"로만 낮춘다.
-    const opponent = state.season?.matches.find(
-      (candidate) => candidate.id === pending.matchId,
-    )?.opponent;
-    const opponentName =
-      opponent === undefined ? undefined : opponentDisplayName(opponent, activeRuleset);
     return (
       <Card className="flex flex-col gap-os-4">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          {opponentName === undefined ? '핵심 경기' : `핵심 경기 — ${opponentName}`}
+          {chapterCardLabel(state, pending)}
         </p>
         <Link
           to="/career/$careerId/chapter"
@@ -800,26 +830,12 @@ function CareerDashboard() {
                     className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
                     style={CAPTION_STYLE}
                   >
-                    <div>
-                      <dt>팀</dt>
-                      <dd className="text-os-text">{state.contract.teamName}</dd>
-                    </div>
-                    <div>
-                      <dt>리그</dt>
-                      <dd className="text-os-text">
-                        {LEAGUE_TIER_LABEL_KO[state.contract.leagueTier]}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>기간</dt>
-                      <dd className="os-num text-os-text">{state.contract.lengthSeasons}시즌</dd>
-                    </div>
-                    <div>
-                      <dt>주급</dt>
-                      <dd className="os-num text-os-text">
-                        {formatKrw(state.contract.wageMinorPerWeek)}
-                      </dd>
-                    </div>
+                    {buildCurrentContractSummary(state).map((item) => (
+                      <div key={item.label}>
+                        <dt>{item.label}</dt>
+                        <dd className="text-os-text">{item.value}</dd>
+                      </div>
+                    ))}
                   </dl>
                 ) : null}
               </DashboardSection>

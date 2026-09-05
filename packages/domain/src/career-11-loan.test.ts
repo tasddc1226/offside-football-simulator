@@ -31,13 +31,17 @@ describe('career-11-loan fixture — INTEREST 시장 LOAN·LOAN_RETURN(RETURN) �
     expect(contract.lengthSeasons).toBe(golden.contract.lengthSeasons);
     expect(contract.suspended).toBe(golden.contract.suspended);
     expect(snapshot.state.parentContract).toBeNull();
+    expect(snapshot.state.season?.manager?.id.startsWith(`${contract.teamId}-mgr-`)).toBe(true);
 
     expect(snapshot.state.clubHistory).toEqual(
       golden.clubHistory.map((stint) => ({
         ...stint,
         teamName: expect.any(String),
         leagueTier: expect.any(Number),
-        contractId: stint.contractId ?? expect.any(String),
+        contractId:
+          'contractId' in stint && stint.contractId !== null
+            ? stint.contractId
+            : expect.any(String),
       })),
     );
   });

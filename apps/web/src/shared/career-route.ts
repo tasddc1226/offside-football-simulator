@@ -25,9 +25,9 @@ const DRAFT_FIELDS_WITHOUT_ARCHETYPE = [
 /**
  * DRAFT: archetypeId를 뺀 6개 필드 중 하나라도 null이면 SCR-002, archetypeId만 비었으면 SCR-003,
  * 그 외 SCR-004. ACTIVE: pending.kind === 'EVENT'면 이벤트별 화면(기본 SCR-013), 'INJURY'면 SCR-013, 'OFFERS'면
- * SCR-009, 'ROLE_PROPOSAL'이면 SCR-012, 'CHAPTER'면 SCR-031(자리표시), 그 외(SETTLEMENT·CONTRACT·
- * NATIONAL_TEAM)와 pending 없음은 SCR-029. RETIRED·ARCHIVED는 SCR-029(phase-1-plan.md D-13
- * 화면 해석 규칙).
+ * SCR-009/017, 'ROLE_PROPOSAL'이면 SCR-012, 'CHAPTER'면 SCR-031(자리표시), LOAN_RETURN은 대시보드의
+ * 전용 SCR-020 CTA가 열고, 그 외(SETTLEMENT·CONTRACT·NATIONAL_TEAM)와 pending 없음은 SCR-029.
+ * RETIRED·ARCHIVED는 SCR-029(phase-1-plan.md D-13 화면 해석 규칙).
  */
 export function screenForCareer(state: CareerState): ScreenTarget {
   const params = { careerId: state.careerId };
@@ -42,17 +42,16 @@ export function screenForCareer(state: CareerState): ScreenTarget {
 
   if (state.status === 'ACTIVE') {
     const pending = state.pending;
-    if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY')) {
+    if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM')) {
       const screenId = pending.kind === 'EVENT' ? EVENT_SCREEN_OVERRIDES[pending.eventId] ?? 'SCR-013' : 'SCR-013';
       return { screenId, params };
     }
     if (pending !== null && pending.kind === 'OFFERS') {
-      return { screenId: 'SCR-009', params };
+      return { screenId: pending.market.reason === 'FIRST_CONTRACT' ? 'SCR-009' : 'SCR-017', params };
     }
-    // T-3-003 §9: step 7 재계약 사전 협상(CONTRACT, 제안 있음)도 OFFERS와 같은 화면(SCR-009)을
-    // 재사용한다. offers.length === 0이면 자동 통과 대상이라 여기 도달하지 않는다.
+    // T-3-003 §9: step 7 재계약 사전 협상(CONTRACT, 제안 있음)은 시장 비교 화면을 재사용한다.
     if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
-      return { screenId: 'SCR-009', params };
+      return { screenId: pending.market.reason === 'FIRST_CONTRACT' ? 'SCR-009' : 'SCR-017', params };
     }
     // T-2-002 D-34: 감독 역할 제안은 RESOLVE_ROLE로만 닫히는 실제 결정이라 전용 화면으로 보낸다.
     if (pending !== null && pending.kind === 'ROLE_PROPOSAL') {

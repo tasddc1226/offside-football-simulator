@@ -26,7 +26,9 @@ const expectedLegacyDecisions: Record<string, GoldenDecision[]> = {
   'career-07-df': [{ revision: 16, rngStateDraws: 403 }],
   'career-08-mf': [{ revision: 15, rngStateDraws: 404 }],
   'career-09-fw': [{ revision: 15, rngStateDraws: 398 }],
-  'career-10-transfer': [{ revision: 24, rngStateDraws: 1140 }],
+  // career-10은 두 번째 결산의 정확한 7000 INTEREST 시장과 안전 잔류 응답을 fixture에 추가했다.
+  // 시장의 비안전 제안 생성이 main stream 4회를 소비하고, OFR-23-0 수락 자체는 소비하지 않는다.
+  'career-10-transfer': [{ revision: 25, rngStateDraws: 1146 }],
   'career-11-loan': [{ revision: 23, rngStateDraws: 1140 }],
 };
 

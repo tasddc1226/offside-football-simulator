@@ -1,6 +1,6 @@
 // EngineClient 위의 순수 함수(React 없음). 06 "분석 이벤트": 실행마다 command_submitted ·
 // command_resolved(outcomeClass = nextAction) · command_failed를 보낸다.
-import type { ChapterOutcomeKind, Command, Effect, PlayerDraft, SimulationMode } from '@offside/domain';
+import type { ChapterOutcomeKind, Command, Effect, NegotiationAsk, PlayerDraft, SimulationMode } from '@offside/domain';
 import { selectChapterCandidates, selectEligibleEvents, type ChapterDefinition, type EventDefinition } from '@offside/content';
 import type { EngineCommand, ExecuteResult, LoadResult } from '@offside/engine-client';
 import { deleteCareerOnServer } from '../api/client.js';
@@ -168,6 +168,7 @@ export async function deleteCareer(engine: AppEngine, careerId: string): Promise
 
 type ResolveEventOutcomePayload = {
   id: string;
+  kind: EventDefinition['choices'][number]['outcomes'][number]['kind'];
   weight: number;
   effects: Effect[];
   addTags?: string[];
@@ -178,7 +179,8 @@ type ResolveEventOutcomePayload = {
  * 팩 outcome(EventDefinition['choices'][number]['outcomes'])을 RESOLVE_EVENT payload의 outcome
  * 형태로 좁힌다. `outcome.effects`는 content `EffectSchema`가 이미 `EFFECT_DEFAULTS`를 채운 완전한
  * domain `Effect` 형태로 파싱하므로(스키마가 `satisfies z.ZodType<Effect>`) 값 변환은 없고,
- * `cause`·`kind`·`title`·`followUps`처럼 명령 payload에 없는 필드만 걷어낸다.
+ * `cause`·`title`·`followUps`처럼 명령 payload에 없는 필드만 걷어낸다. `kind`는
+ * ETHICS/MEDIA FAIL 누계에 필요하므로 보존한다.
  */
 export function toResolveEventOutcomes(
   outcomes: EventDefinition['choices'][number]['outcomes'],
@@ -186,6 +188,7 @@ export function toResolveEventOutcomes(
   return outcomes.map((outcome) => {
     const payload: ResolveEventOutcomePayload = {
       id: outcome.id,
+      kind: outcome.kind,
       weight: outcome.weight,
       effects: outcome.effects,
     };
@@ -196,10 +199,11 @@ export function toResolveEventOutcomes(
 }
 
 /**
- * `state.pending.kind === 'EVENT' | 'INJURY'`의 `eventId`로 `engine.pack.eventsById`에서 정의를
- * 찾아 RESOLVE_EVENT를 보낸다. INJURY는 presentation이 INJURY인 정의와 choice의 rehabPlan을
- * 함께 요구한다(전용 SCR-022가 생기기 전까지 SCR-013의 최소 호환 경로). pending이 없거나 팩에
- * 정의·선택지가 없으면(딥링크 오용 등) 커밋 없이 VALIDATION_FAILED를 돌려준다.
+ * `state.pending.kind === 'EVENT' | 'INJURY' | 'NATIONAL_TEAM'`의 `eventId`로
+ * `engine.pack.eventsById`에서 정의를 찾아 RESOLVE_EVENT를 보낸다. INJURY는 presentation이
+ * INJURY인 정의와 choice의 rehabPlan을, NATIONAL_TEAM은 presentation이 NATIONAL_TEAM인 정의와
+ * choice의 callUp을 함께 요구한다(전용 UI 없이 기존 이벤트 adapter만 확장한다). pending이 없거나
+ * 팩에 정의·선택지가 없으면(딥링크 오용 등) 커밋 없이 VALIDATION_FAILED를 돌려준다.
  */
 export async function resolveEvent(engine: AppEngine, careerId: string, choiceId: string): Promise<ExecuteResult> {
   const load: LoadResult = await engine.client.loadCareer(careerId);
@@ -208,7 +212,7 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
   }
 
   const pending = load.snapshot.state.pending;
-  if (pending === null || (pending.kind !== 'EVENT' && pending.kind !== 'INJURY')) {
+  if (pending === null || (pending.kind !== 'EVENT' && pending.kind !== 'INJURY' && pending.kind !== 'NATIONAL_TEAM')) {
     return { ok: false, error: { code: 'VALIDATION_FAILED', message: 'resolveEvent: 해소할 pending 이벤트가 없다.' } };
   }
 
@@ -232,6 +236,12 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
       error: { code: 'VALIDATION_FAILED', message: `resolveEvent: INJURY 이벤트는 INJURY pending에서만 해소할 수 있다: ${pending.eventId}` },
     };
   }
+  if (pending.kind === 'NATIONAL_TEAM' && definition.presentation !== 'NATIONAL_TEAM') {
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: `NATIONAL_TEAM pending에 맞는 이벤트 정의가 아니다: ${pending.eventId}` },
+    };
+  }
 
   const choice = definition.choices.find((candidate) => candidate.id === choiceId);
   if (choice === undefined) {
@@ -249,6 +259,14 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
     };
   }
 
+  const callUp = pending.kind === 'NATIONAL_TEAM' ? choice.callUp : undefined;
+  if (pending.kind === 'NATIONAL_TEAM' && callUp === undefined) {
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: `callUp이 없는 NATIONAL_TEAM choice다: ${choiceId}` },
+    };
+  }
+
   const command: Command = {
     type: 'RESOLVE_EVENT',
     payload: {
@@ -257,6 +275,7 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
       choiceId,
       outcomes: toResolveEventOutcomes(choice.outcomes),
       ...(rehabPlan === undefined ? {} : { rehabPlan }),
+      ...(callUp === undefined ? {} : { callUp }),
     },
   };
 
@@ -265,6 +284,30 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
 
 export function acceptOffer(engine: AppEngine, careerId: string, offerId: string): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'ACCEPT_OFFER', payload: { offerId } });
+}
+
+/** T-3-005 시장 결정 어댑터. expectedRevision은 execute()가 매번 최신 Snapshot에서 채운다. */
+export function negotiateOffer(
+  engine: AppEngine,
+  careerId: string,
+  offerId: string,
+  ask: NegotiationAsk,
+): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'NEGOTIATE', payload: { offerId, ask } });
+}
+
+/** 개별 offerId 또는 null(전체 거절 → 안전 잔류)을 domain 명령으로 그대로 전달한다. */
+export function rejectOffer(engine: AppEngine, careerId: string, offerId: string | null): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'REJECT_OFFER', payload: { offerId } });
+}
+
+/** LOAN_RETURN 전용 결정 어댑터. domain이 pending.options를 최종 검증한다. */
+export function resolveLoanReturn(
+  engine: AppEngine,
+  careerId: string,
+  decision: 'RETURN' | 'PERMANENT',
+): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'LOAN_RETURN', payload: { decision } });
 }
 
 export type StartSeasonChoice = { simulationMode: SimulationMode; trainingFocus?: TrainingFocus };

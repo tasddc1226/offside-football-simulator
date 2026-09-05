@@ -27,7 +27,7 @@
         "definitionVersion": 1,
         "choiceId": "A",
         "outcomes": [
-          { "id": "A1", "weight": 100, "effects": [], "addTags": ["진로_입단테스트"] }
+          { "id": "A1", "kind": "FIXED", "weight": 100, "effects": [], "addTags": ["진로_입단테스트"] }
         ]
       }
     },
@@ -44,6 +44,7 @@
         "outcomes": [
           {
             "id": "B1",
+            "kind": "SUCCESS",
             "weight": 85,
             "effects": [
               {
@@ -61,6 +62,7 @@
           },
           {
             "id": "B2",
+            "kind": "NEUTRAL",
             "weight": 15,
             "effects": [],
             "addTags": ["입단테스트_완료", "테스트_보통"]

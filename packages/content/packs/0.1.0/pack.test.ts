@@ -3,21 +3,22 @@ import { dirname } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { loadPack } from '../../src/cli/load-pack.ts';
 import { validatePack } from '../../src/cli/validate-pack.ts';
+import { ChapterDefinitionSchema } from '../../src/schema/chapter.ts';
 import { EventDefinitionSchema } from '../../src/schema/event.ts';
 import { PERMANENT_TARGETS, CURRENT_TARGETS, CONTEXT_TARGETS, RELATION_TARGETS } from '../../src/schema/effect.ts';
 
 const PACK_DIR = dirname(fileURLToPath(import.meta.url));
 
 describe('packs/0.1.0', () => {
-  it('has exactly 10 events and 3 chapters that load and validate without errors', () => {
+  it('has exactly 11 events and 4 chapters that load and validate without errors', () => {
     const loaded = loadPack(PACK_DIR);
-    expect(loaded.events).toHaveLength(10);
-    expect(loaded.chapters).toHaveLength(3);
+    expect(loaded.events).toHaveLength(11);
+    expect(loaded.chapters).toHaveLength(4);
 
     const result = validatePack(loaded, { writeChecksum: false });
     expect(result.errors).toEqual([]);
-    expect(result.eventCount).toBe(10);
-    expect(result.chapterCount).toBe(3);
+    expect(result.eventCount).toBe(11);
+    expect(result.chapterCount).toBe(4);
   });
 
   it('every chapter id is unique', () => {
@@ -77,6 +78,23 @@ describe('packs/0.1.0', () => {
           }
         }
       }
+    }
+  });
+
+  it('NATIONAL_DEBUT keeps the 0.1-origin authoring shape and no-rating preview contract', () => {
+    const loaded = loadPack(PACK_DIR);
+    const chapter = loaded.chapters.find(({ raw }) => (raw as { id: string }).id === 'CHP-NAT-001');
+    if (chapter === undefined) throw new Error('CHP-NAT-001 is missing');
+    const definition = ChapterDefinitionSchema.parse(chapter.raw);
+    expect((chapter.raw as Record<string, unknown>).authoring).toBeUndefined();
+    for (const option of definition.decisions.flatMap((decision) => decision.options)) {
+      expect(option.outcomes.every((outcome) => outcome.ratingDeltaTenths === 0)).toBe(true);
+    }
+    const event = loaded.events.find(({ raw }) => (raw as { id: string }).id === 'EVT-NAT-001');
+    if (event === undefined) throw new Error('EVT-NAT-001 is missing');
+    const eventDefinition = EventDefinitionSchema.parse(event.raw);
+    for (const choice of eventDefinition.choices) {
+      expect(choice.previewEffects.some((preview) => preview.label === '특례 규칙: 적용 없음')).toBe(true);
     }
   });
 

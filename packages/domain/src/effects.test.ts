@@ -83,6 +83,12 @@ function baseState(): CareerState {
     timeline: [],
     season: null,
     seasonHistory: [],
+    nextManager: null,
+    captaincy: 'NONE',
+    captaincySeasons: 0,
+    controversyFailures: 0,
+    nationalityRuleState: { moduleId: 'DEFAULT', exceptions: [] },
+    nationalTeam: { callUps: [], debuted: false, pendingDebut: null },
     health: { episodes: [] },
     relationshipLog: [],
     memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
@@ -228,6 +234,161 @@ describe('applyEffects', () => {
     applyEffects(state, [makeEffect({ delta: 5, stackingRule: 'SUM' })], { step: 1 });
     expect(state).toEqual(snapshot);
   });
+
+  it.each(['managerTrust', 'captain', 'rival', 'fans', 'agent'] as const)(
+    '5축 RELATION은 clamp 뒤 실제 delta와 감사 필드를 기록한다: %s',
+    (target) => {
+      const state = {
+        ...baseState(),
+        season: seasonWithIndex(3),
+        relationships: { managerTrust: 40, captain: 40, rival: 40, fans: 40, agent: 40 },
+      };
+      const effect = makeEffect({
+        kind: 'RELATION',
+        target,
+        delta: -7,
+        clamp: { min: 35, max: 100 },
+        sourceId: `SRC-${target}`,
+        reasonTag: `REASON-${target}`,
+        stackingRule: 'SUM',
+      });
+
+      const result = applyEffects(state, [effect], { step: 7 }, { logMax: 40, memoryTagsMax: 3 });
+
+      expect(result.state.relationships[target]).toBe(35);
+      expect(result.state.relationshipLog).toEqual([
+        {
+          target,
+          delta: -5,
+          sourceId: `SRC-${target}`,
+          reasonTag: `REASON-${target}`,
+          seasonIndex: 3,
+          step: 7,
+        },
+      ]);
+      expect(result.state.memoryTags[target]).toEqual([`REASON-${target}`]);
+    },
+  );
+
+  it('clamp으로 실제 delta가 0이면 relationshipLog와 memory tag를 만들지 않는다', () => {
+    const state = {
+      ...baseState(),
+      season: seasonWithIndex(3),
+      relationships: { ...baseState().relationships, managerTrust: 40 },
+      relationshipLog: [
+        { target: 'captain' as const, delta: 1, sourceId: 'prior', reasonTag: 'prior', seasonIndex: 2, step: 4 },
+      ],
+      memoryTags: { ...baseState().memoryTags, managerTrust: ['prior'] },
+    };
+    const effect = makeEffect({
+      kind: 'RELATION',
+      target: 'managerTrust',
+      delta: 7,
+      clamp: { min: 0, max: 40 },
+      sourceId: 'SRC-ZERO',
+      reasonTag: 'REASON-ZERO',
+      stackingRule: 'SUM',
+    });
+
+    const result = applyEffects(state, [effect], { step: 7 }, { logMax: 40, memoryTagsMax: 3 });
+
+    expect(result.state.relationships.managerTrust).toBe(40);
+    expect(result.state.relationshipLog).toEqual(state.relationshipLog);
+    expect(result.state.memoryTags).toEqual(state.memoryTags);
+  });
+
+  it('relationshipLog는 logMax만큼만 최근 항목을 보존한다', () => {
+    const state = { ...baseState(), season: seasonWithIndex(2) };
+    const effects = (['managerTrust', 'captain', 'rival'] as const).map((target, index) =>
+      makeEffect({
+        kind: 'RELATION',
+        target,
+        delta: index + 1,
+        sourceId: `SRC-${target}`,
+        stackingRule: 'SUM',
+      }),
+    );
+
+    const result = applyEffects(state, effects, { step: 9 }, { logMax: 2, memoryTagsMax: 3 });
+
+    expect(result.state.relationshipLog).toEqual([
+      { target: 'captain', delta: 2, sourceId: 'SRC-captain', reasonTag: null, seasonIndex: 2, step: 9 },
+      { target: 'rival', delta: 3, sourceId: 'SRC-rival', reasonTag: null, seasonIndex: 2, step: 9 },
+    ]);
+  });
+
+  it('memoryTags는 target별 LRU로 중복을 뒤로 옮기고 memoryTagsMax를 절단한다', () => {
+    const state = baseState();
+    const tagged = (target: Effect['target'], reasonTag: string, sourceId: string): Effect =>
+      makeEffect({ kind: 'RELATION', target, delta: 1, reasonTag, sourceId, stackingRule: 'SUM' });
+
+    const first = applyEffects(
+      state,
+      [tagged('managerTrust', 'A', 'SRC-A1'), tagged('managerTrust', 'B', 'SRC-B'), tagged('managerTrust', 'A', 'SRC-A2')],
+      { step: 1 },
+      { logMax: 40, memoryTagsMax: 2 },
+    ).state;
+    expect(first.memoryTags.managerTrust).toEqual(['B', 'A']);
+    expect(first.memoryTags.captain).toEqual([]);
+
+    const second = applyEffects(
+      first,
+      [tagged('managerTrust', 'C', 'SRC-C'), tagged('captain', 'A', 'SRC-CA')],
+      { step: 2 },
+      { logMax: 40, memoryTagsMax: 2 },
+    ).state;
+    expect(second.memoryTags.managerTrust).toEqual(['A', 'C']);
+    expect(second.memoryTags.captain).toEqual(['A']);
+  });
+
+  it.each(['managerTrust', 'captain', 'rival', 'fans', 'agent', 'popularity', 'media'] as const)(
+    'RELATION/reputation 반복 적용은 attributes와 profile.baseOvr를 바꾸지 않는다: %s',
+    (target) => {
+      const state = {
+        ...baseState(),
+        player: {
+          ...baseState().player,
+          profile: {
+            name: '테스트 선수',
+            gender: 'UNSPECIFIED' as const,
+            nationalityCode: 'KR',
+            preferredFoot: 'RIGHT' as const,
+            preferredPosition: 'ST' as const,
+            primaryPosition: 'ST' as const,
+            archetypeId: 'inside-forward',
+            backgroundId: 'club-academy',
+            truePotential: 80,
+            scoutedPotentialMin: 75,
+            scoutedPotentialMax: 85,
+            baseOvr: 61,
+          },
+        },
+      };
+      const attributesBefore = { ...state.attributes };
+      const profileBaseOvrBefore = state.player.profile.baseOvr;
+      let actual: CareerState = state;
+
+      for (let index = 0; index < 5; index += 1) {
+        actual = applyEffects(
+          actual,
+          [
+            makeEffect({
+              kind: 'RELATION',
+              target,
+              delta: target === 'popularity' || target === 'media' ? 100 : 5,
+              clamp: { min: 0, max: 10000 },
+              sourceId: `SRC-${target}-${index}`,
+              stackingRule: 'SUM',
+            }),
+          ],
+          { step: index + 1 },
+        ).state;
+      }
+
+      expect(actual.attributes).toEqual(attributesBefore);
+      expect(actual.player.profile?.baseOvr).toBe(profileBaseOvrBefore);
+    },
+  );
 });
 
 describe('resolveDeferredKind', () => {
@@ -538,6 +699,8 @@ describe('RELATION — reputation(popularity/media, T-4-001 D-49)', () => {
     const result = applyEffects(state, [effect], { step: 1 });
     expect(result.state.reputation.popularityCenti).toBe(5500);
     expect(result.state.relationships).toEqual(state.relationships);
+    expect(result.state.relationshipLog).toEqual([]);
+    expect(result.state.memoryTags).toEqual(state.memoryTags);
   });
 });
 

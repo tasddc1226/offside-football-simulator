@@ -109,6 +109,8 @@ export const AdvancePayloadSchema = z
 
 const ResolveEventOutcomeSchema = z.strictObject({
   id: z.string().min(1),
+  // T-4-003: ETHICS/MEDIA FAIL 누계를 위해 content outcome kind를 보존한다.
+  kind: ChapterOutcomeKindSchema,
   weight: z.number().int().min(1),
   effects: z.array(EffectSchema),
   addTags: z.array(z.string()).optional(),

@@ -64,7 +64,15 @@ const DEFINITION: ChapterDefinition = {
   ],
 };
 
+const NATIONAL_DEFINITION: ChapterDefinition = {
+  ...DEFINITION,
+  id: 'CHP-NAT-001',
+  trigger: { kind: 'NATIONAL_DEBUT' },
+};
+
 const PACK = { chaptersById: new Map([[DEFINITION.id, DEFINITION]]) } as unknown as ContentPack;
+const NATIONAL_PACK = { chaptersById: new Map([[NATIONAL_DEFINITION.id, NATIONAL_DEFINITION]]) } as unknown as ContentPack;
+const NATIONAL_OPPONENT = { opponentId: 'NATIONAL_OPPONENT_001', opponentName: '노르카니아' };
 
 const MATCH: MatchRecord = {
   id: 'match-1',
@@ -141,6 +149,12 @@ function baseState(overrides: Partial<CareerState>): CareerState {
     timeline: [],
     season: null,
     seasonHistory: [],
+    nextManager: null,
+    captaincy: 'NONE',
+    captaincySeasons: 0,
+    controversyFailures: 0,
+    nationalityRuleState: { moduleId: 'DEFAULT', exceptions: [] },
+    nationalTeam: { callUps: [], debuted: false, pendingDebut: null },
     health: { episodes: [] },
     relationshipLog: [],
     memoryTags: { managerTrust: [], captain: [], rival: [], fans: [], agent: [] },
@@ -165,6 +179,32 @@ describe('deriveChapterView', () => {
     expect(view?.resolved).toEqual([]);
     expect(view?.chapterRecord).toBeNull();
     expect(view?.match).toEqual(MATCH);
+    expect(view?.context).toEqual({ kind: 'CLUB', competition: 'LEAGUE', opponent: MATCH.opponent, home: true });
+  });
+
+  it('pending NATIONAL_DEBUT은 club MatchRecord를 국가대표 경기로 바꾸지 않고 virtualOpponent를 맥락으로 노출한다', () => {
+    const state = baseState({
+      pending: {
+        kind: 'CHAPTER',
+        step: 2,
+        chapterId: NATIONAL_DEFINITION.id,
+        version: 1,
+        importance: 'MAJOR',
+        trigger: 'NATIONAL_DEBUT',
+        matchId: MATCH.id,
+        decisionsTotal: 2,
+        resolved: [],
+        virtualOpponent: NATIONAL_OPPONENT,
+      },
+      season: seasonWith({}),
+    });
+
+    const view = deriveChapterView(state, NATIONAL_PACK);
+
+    expect(view).not.toBeNull();
+    expect(view?.context).toEqual({ kind: 'NATIONAL_TEAM', competition: 'NATIONAL_TEAM', opponent: NATIONAL_OPPONENT });
+    expect(view?.match).toBe(MATCH);
+    expect(view?.match.opponent).toEqual(MATCH.opponent);
   });
 
   it('판단 하나가 확정되면 그 판단을 정의로 복원해 resolved에 담고 인덱스를 하나 올린다', () => {
@@ -221,6 +261,36 @@ describe('deriveChapterView', () => {
     expect(view?.resolved).toHaveLength(2);
     expect(view?.resolved[1]?.outcome.id).toBe('D2-FAIL');
     expect(view?.chapterRecord).toEqual(chapterRecord);
+  });
+
+  it('완료된 NATIONAL_DEBUT도 ChapterRecord의 virtualOpponent와 국가대표 맥락을 복원한다', () => {
+    const chapterRecord: ChapterRecord = {
+      chapterId: NATIONAL_DEFINITION.id,
+      version: 1,
+      step: 2,
+      matchId: MATCH.id,
+      importance: 'MAJOR',
+      trigger: 'NATIONAL_DEBUT',
+      decisions: [
+        { decisionId: 'D1', optionId: 'SAFE', outcomeId: 'D1-SUCCESS', outcomeKind: 'SUCCESS' },
+        { decisionId: 'D2', optionId: 'BOLD', outcomeId: 'D2-FAIL', outcomeKind: 'FAIL' },
+      ],
+      ratingDeltaTenths: 0,
+      virtualOpponent: NATIONAL_OPPONENT,
+    };
+    const state = baseState({
+      pending: null,
+      season: seasonWith({ chapters: [chapterRecord] }),
+      timeline: [{ revision: 5, kind: 'CHAPTER_RESOLVED', refId: `${NATIONAL_DEFINITION.id}:D2:BOLD:D2-FAIL`, age: 17, step: 2 }],
+    });
+
+    const view = deriveChapterView(state, NATIONAL_PACK);
+
+    expect(view).not.toBeNull();
+    expect(view?.completed).toBe(true);
+    expect(view?.context).toEqual({ kind: 'NATIONAL_TEAM', competition: 'NATIONAL_TEAM', opponent: NATIONAL_OPPONENT });
+    expect(view?.chapterRecord).toEqual(chapterRecord);
+    expect(view?.match.opponent).toEqual(MATCH.opponent);
   });
 
   it('같은 상태를 다시 읽어도(새로고침·뒤로 가기 시뮬레이션) 같은 뷰를 돌려준다', () => {

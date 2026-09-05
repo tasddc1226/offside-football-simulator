@@ -78,9 +78,8 @@ function countChapterDecisionOutcomes(
 }
 
 /**
- * T-2-014 D-42: 이번 브리프가 등록하는 세 평가기. `evaluateCareerTags`가 이미 부여된 태그를 먼저
- * 거르므로 여기서는 "지금 조건을 만족하는가"만 본다. 나머지 13종은 등록하지 않는다(Phase 3~5가
- * 자기 몫을 여기 추가한다).
+ * T-2-014 D-42, T-4-003: 결산 시점에 평가할 수 있는 Phase 2~4 평가기. `evaluateCareerTags`가
+ * 이미 부여된 태그를 먼저 거르므로 여기서는 "지금 조건을 만족하는가"만 본다.
  */
 export const CAREER_TAG_EVALUATORS: Partial<Record<CareerTagId, CareerTagEvaluator>> = {
   // 14: "핵심 경기 챕터 성공 5회 이상, 결승·더비 득점 관여 포함" — Phase 2는 챕터 SUCCESS 누계만 본다
@@ -99,6 +98,42 @@ export const CAREER_TAG_EVALUATORS: Partial<Record<CareerTagId, CareerTagEvaluat
       return shareBp >= 8000;
     });
   },
+  // T-4-003: truePotential 상위 밴드와 커리어 MAJOR 부상 누계.
+  'TAG-GLASS-GENIUS': (state, _result, ruleset) => {
+    const threshold = ruleset.relationshipRules.tagThresholds;
+    return (
+      state.player.profile?.truePotential ?? 0
+    ) >= threshold.glassPotential &&
+      state.health.episodes.filter((episode) => episode.severity === 'MAJOR').length >= threshold.glassMajorEpisodes;
+  },
+  // T-4-003: 같은 감독 아래 신뢰 80 이상으로 마친 시즌 3회.
+  'TAG-MANAGER-FAVOURITE': (state, result, ruleset) => {
+    const threshold = ruleset.relationshipRules.tagThresholds;
+    return (
+      state.seasonHistory.filter(
+        (summary) => summary.result.managerId === result.managerId && summary.result.stateDeltas.managerTrust.after >= threshold.managerTrust,
+      ).length >= threshold.managerSeasons
+    );
+  },
+  // T-4-003: 주장단 상태·누적 시즌·captain 관계를 모두 확인한다.
+  'TAG-LOCKER-LEADER': (state, _result, ruleset) => {
+    const threshold = ruleset.relationshipRules.tagThresholds;
+    return (
+      (state.captaincy === 'VICE' || state.captaincy === 'CAPTAIN') &&
+      state.captaincySeasons >= threshold.lockerSeasons &&
+      state.relationships.captain >= threshold.lockerRelation
+    );
+  },
+  // T-4-003: 직전 시즌에 발생한 MAJOR 부상 뒤 이번 시즌의 결산 역할이 STARTER인지 본다.
+  'TAG-COMEBACK': (state, result, ruleset) => {
+    const majorInPreviousSeason = state.health.episodes.some(
+      (episode) => episode.severity === 'MAJOR' && episode.occurredAt.seasonIndex === result.index - 1,
+    );
+    return majorInPreviousSeason && result.selectionSummary.squadRoleAtEnd === ruleset.relationshipRules.tagThresholds.comebackRole;
+  },
+  // T-4-003: 윤리·미디어 FAIL outcome 누계는 RESOLVE_EVENT가 additive counter로 관리한다.
+  'TAG-CONTROVERSIAL': (state, _result, ruleset) =>
+    state.controversyFailures >= ruleset.relationshipRules.tagThresholds.controversialFailures,
   // T-3-003 D-48: clubHistory 중 kind PERMANENT 항목의 서로 다른 teamId가 1개(임대는 세지 않는다)이고
   // 커리어가 8시즌 이상이면 원클럽맨이다.
   'TAG-ONE-CLUB': (state) => {
