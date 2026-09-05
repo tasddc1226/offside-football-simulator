@@ -16,10 +16,9 @@ import {
 import { RETRYABLE_BY_CODE } from '@offside/contracts';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { getProfile, issueRecoveryCode } from '../api/client.js';
-import { activeRuleset as ruleset } from '../engine/content.js';
+import { activeContentPack, activeRuleset as ruleset } from '../engine/content.js';
 import { recordFunnelReached } from '../engine/funnel.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
-import { ACTIVE_CONTENT_PACK_VERSION } from '../engine/versions.js';
 import { platform } from '../platform/index.js';
 import { GENDER_LABELS, POSITION_LABELS, PREFERRED_FOOT_LABELS } from '../shared/labels.js';
 import {
@@ -371,7 +370,7 @@ function ConfirmScreen() {
           <div className="flex justify-between gap-os-2">
             <dt>룰셋 · 콘텐츠 팩</dt>
             <dd className="os-num text-os-text">
-              {ruleset.version} / {ACTIVE_CONTENT_PACK_VERSION}
+              {ruleset.version} / {activeContentPack.manifest.contentPackVersion}
             </dd>
           </div>
         </dl>
