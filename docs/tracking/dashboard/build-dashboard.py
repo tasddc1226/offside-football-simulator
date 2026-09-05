@@ -121,6 +121,7 @@ NOW = ("Phase 0·1·2 코드는 끝났고 Phase 2는 사용자 게이트(플레�
        "Phase 3(계약·이적)은 9/5 새벽 T-3-005 UI(PR #65)까지 머지돼 코드가 끝났습니다. Phase 4(부상·관계·평판·대표팀)는 T-4-001 타입, T-4-002 부상(PR #64), T-4-003 관계·감독·평판(PR #67), T-4-004 대표팀(PR #68, 11:07)까지 domain·content가 전부 머지됐고, 남은 것은 T-4-007 디자인 재통합·T-4-005 화면·T-4-006 통합 검증입니다. "
        "9/5 오전 오케스트레이션은 Claude 세션으로 복귀했고(9/4 저녁~9/5 오전은 Codex+Luna), 이후 코드 작업은 Claude Code Workflow의 Sonnet 5 에이전트가 전담하며 Claude는 검증·리뷰·머지(화면은 ego-browser 확인)를 맡습니다. 11:07에 T-4-007(디자인 PR #66 재통합)과 T-4-006 domain(3시즌 fixture·불변 property)을 Sonnet 5 워크플로로 병렬 투입했고, 그 뒤 T-4-005 화면 → T-4-006 e2e 순입니다. "
        "11:50에는 사용자 지시(병렬 최대, D-59)로 동시 워커 상한을 없애고 T-4-008(콘텐츠 팩 0.3.0)·T-4-009(Phase 4 화면 준비: DEV 팩 오버라이드·라벨·seed 탐색)·T-2-016(staging 리허설 자동화)을 추가 투입해 워커 5명이 서로 다른 파일 소유권으로 병행 중이며, 읽기 전용 Phase 3·4 코드 감사(관점 7 → 3렌즈 반박 검증)와 CI e2e 간헐 실패 조사도 병행합니다. "
+       "12:30 세션 한도로 워커 4개가 중단됐다가 15:20 WIP를 이어받아 재개했고, 그 사이 사용자가 디자인 PR #66(T-4-007 완료)과 Phase 5 PR #70·#71을 머지했습니다. 감사 1차 확인 14건은 domain(T-4-012)·api 테스트(T-4-013)·web(T-4-014) 묶음으로 고칩니다. "
        "다음 사용자 결정은 U-014(Workers Paid 플랜)·U-015(테스터 모집)·U-005(종이 플레이테스트)입니다.")
 
 
@@ -173,7 +174,8 @@ LAYERS = [
       "결정론적 부상·재활·재발·후유증 상태기계, INJURY forced pending, career-12-injury (T-4-002)",
       "관계 감사 로그·memory tag LRU·결산 평판·주장단·감독 교체 예약·Phase 4 태그 5종·SLUMP/LOCKER_ROOM/ETHICS/MEDIA 이벤트 (T-4-003)",
       "대표팀 차출 자격 판정(tier OVR·평점+인기)·step 8 NATIONAL_TEAM pending·callUp 3종 체력/관계 delta·부상 자동 사양·NATIONAL_DEBUT MAJOR 챕터 예약·nationalityRuleState 기본 모듈 (T-4-004)"],
-     ["3시즌 통합 fixture career-13·OVR 불변 property·결정 예산·Snapshot 크기 (T-4-006 domain, 진행 중)"]),
+     ["3시즌 통합 fixture career-13·OVR 불변 property·결정 예산·Snapshot 크기 (T-4-006 domain, 진행 중)",
+      "감사 domain 수정 묶음 C1~C7·C12·C13 (T-4-012, T-4-006 뒤)"]),
     ("content", "이벤트·룰셋 데이터",
      ["프로토타입 팩 0.1.0(이벤트 10개)",
       "조건 DSL·효과 스키마·검증 CLI",
@@ -227,7 +229,8 @@ LAYERS = [
       "서비스 시즌 포인터 ACTIVE_SERVICE_SEASON_ID·GET /service-seasons/current·생성 시 시즌 상태 검사(409)·analytics_events 수집(화이트리스트·rate limit)·svc_line_test 시드·마이그레이션 0003 (T-2-012)",
       "analytics_events 삽입 14행 청크(D1 변수 100개 상한, 예행 503)·unknown error 응답 고정 문구·원문은 로그로만 (T-2-015)",
       "PUT 3경로·멱등·요청 크기 probe 회귀 (T-3-004)"],
-     ["실제 Google 계정 검증 (U-003 대기)"]),
+     ["실제 Google 계정 검증 (U-003 대기)",
+      "careers.test.ts 100회 병렬 테스트 타임아웃 60초 (T-4-013, 진행 중)"]),
     ("web · ui", "React 화면",
      ["라우터·디자인 토큰·허브 빈 상태",
       "Pretendard 동적 서브셋(2109KB→269KB)",
@@ -253,15 +256,19 @@ LAYERS = [
       "PRE_NEGOTIATION 제안 비교·상세·협상·거절·수락, LOAN_RETURN 결정, SCR-020 이적·임대 결과 (T-3-005)",
       "로컬 QA 표시 오류 4건 수정: 컵 코드·출전 집계·진로 서사·입단 테스트 ID (PR #63)",
       "narrative.ts agent 토큰 (T-3-005)",
-      "NATIONAL_TEAM pending → SCR-013 라우팅·callUp 어댑터·데뷔 챕터 맥락 격리 (T-4-004)"],
+      "NATIONAL_TEAM pending → SCR-013 라우팅·callUp 어댑터·데뷔 챕터 맥락 격리 (T-4-004)",
+      "디자인 PR #66 재통합(T-4-007): 19개 화면 모바일 개편 + T-3-005·T-4-004 화면 정합, SCR-020 디자인 정합 — 사용자 머지 7bd3d84",
+      "staging 리허설 자동화 config·spec·e2e:staging (T-2-016, PR #69)"],
      ["Phase 4 화면 SCR-016·018·021·022·024·032, 관계 수치 점진 공개 (T-4-005)",
-      "디자인 PR #66(19개 화면 모바일 개편) 최신 main 재통합·새 화면 디자인 정합 (T-4-007, 진행 중)",
       "DEV 팩 오버라이드(D-56)·관계/평판/부상 라벨 함수·presentation 도달 seed 탐색 도구·phase4-seeds (T-4-009, 진행 중)",
-      "staging 리허설 자동화 config·spec·e2e:staging (T-2-016, 진행 중)"]),
+      "SCR-020 잔류(STAY) 결과 카드·redirect 제거 (T-4-011, 진행 중)",
+      "감사 web 수정: step 7 전부 거절 문구·휴대폰 탭 시장 사유 (T-4-014, 진행 중)",
+      "e2e 간헐 실패 안정화·CI 실패 아티팩트 (T-4-010, 재개)"]),
     ("CI · 배포", "GitHub Actions · Pages · Workers",
      [],
      ["U-002 Cloudflare 계정 대기 (T-0-010)"]),
 ]
+
 
 ETA = [
     ("9/2 20:50", "Wave 1·2 전부 머지(도메인 제안·계약, 이벤트 선택기, contracts 스키마). 웹 엔진 배선(T-1-007) 진행 중"),
@@ -319,7 +326,10 @@ ETA = [
     ("9/5 10:50", "오케스트레이션 Claude 복귀·Sonnet 5 워크플로 전환(사용자 지시). 브리프 T-4-007·T-4-005·T-4-006, 결정 D-56~D-58, README 워크플로 갱신. Codex 세션은 PR #68까지만 마무리"),
     ("9/5 11:07", "PR #68 머지(T-4-004 대표팀 차출·데뷔 예약, Codex). Phase 4 domain·content 완료. 직후 T-4-007(디자인 PR #66 재통합) ‖ T-4-006 domain을 Sonnet 5 워크플로로 투입"),
     ("9/5 11:50", "병렬 상한 해제(D-59, 사용자 지시). T-4-008(팩 0.3.0)·T-4-009(Phase 4 화면 준비)·T-2-016(staging 리허설) Sonnet 5 추가 투입 — 워커 5명 병행. Phase 3·4 코드 감사 워크플로(읽기 전용)·CI e2e 간헐 실패 조사 병행"),
-    ("9/5~", "T-4-007·T-4-009 머지 → T-4-005 화면 묶음 3개 병행 → T-4-006 e2e·세션 길이 → 감사 finding 수정 워커. 사용자: U-014·U-015(LINE TEST 9/8)·U-005"),
+    ("9/5 12:35", "PR #69 머지(T-2-016 staging 리허설 자동화). 12:30 무렵 세션 한도로 워커 4개·감사 검증 중단"),
+    ("9/5 14:59", "사용자가 디자인 PR #66(T-4-007 재통합 포함) 머지 — Phase 3·4 화면이 새 디자인 계약 위에 올라감. Phase 5 PR #70·#71도 사용자 세션에서 머지"),
+    ("9/5 15:20", "한도 초기화. 중단 워커 WIP 보존 → T-4-006·008·009·010 재개 + T-4-011 투입. 감사 1차 확인 14건(P1 비호환 보고는 정정·반박), 11건 재검증. T-4-013·T-4-014 투입"),
+    ("9/5~", "T-4-009 머지 → T-4-005 화면 묶음 3개 병행 → T-4-006 e2e·세션 길이 → T-4-012 domain 수정 → Phase 4 완료 조건 표. 사용자: U-014·U-015(LINE TEST 9/8)·U-005"),
 ]
 DECISIONS = [
     ("오케스트레이터 인계·Luna Max 전용", "Claude 세션 ec0b55e0…은 T-3-003 뒤 정지. Codex는 docs·배정·리뷰·검증·머지만 담당하고 구현·테스트 코드는 Orca gpt-5.6-luna reasoning max 워커에게만 맡긴다."),

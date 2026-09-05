@@ -2,6 +2,18 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (오후, 세션 한도 중단·재개, PR #66·#69 머지, 감사 1차 결과와 정정, 수정 묶음 T-4-012~014)
+
+**중단과 재개**: 12:30 무렵 Claude 세션 한도("resets 3:20pm")로 워커 4개(T-4-006 domain·T-4-008·T-4-009·T-4-010)와 감사 검증 에이전트 34개·종합 에이전트가 죽었다. 15:20 초기화 뒤 중단된 worktree의 변경을 오케스트레이터가 WIP 커밋(T-4-006 `3eb0124` 13파일, T-4-008 `903eed3` 44파일, T-4-009 `1efbb5d` 10파일, T-4-010 `2a737de` 4파일)으로 보존하고 worktree를 정리한 뒤, 같은 브랜치를 이어받는 워커 4명과 T-4-011을 `wf_4498dfc0-665`(Sonnet 5, xhigh, 격리 worktree)로 재투입했다. 워커는 origin/main(PR #66·#70·#71 포함)을 merge한 뒤 WIP를 정상 커밋으로 다시 만든다.
+
+**머지**: PR #69(T-2-016) `a468837` 오케스트레이터 squash(체인: lint·typecheck·web unit 382 통과, 기본 e2e에 staging spec 미포함 확인; PR CI는 api 100회 병렬 멱등 테스트 20.8s 타임아웃 1회 뒤 재실행 통과). **PR #66(디자인 재통합 포함)은 사용자가 14:59 직접 머지**(`7bd3d84`) — T-4-007 완료. 사용자는 같은 시간대에 Phase 5 PR #70·#71(T-5-001·T-5-002, `docs/tracking/phase-5-plan.md`)도 별도 세션으로 머지했다. main(`3f39511`) 검증 체인: 부하(load 40~70) 중 타임아웃 3건은 단독 재실행에서 전부 통과, api `100회 병렬 경쟁` 테스트는 단독에서도 23.0s로 20s 예산 초과 → T-4-013.
+
+**감사 1차 결과(`wf_de6c9e2d-1a5`, finder 7·검증 73/107)**: 확인 14건(3렌즈 2/3 이상) — domain: C1 감독 교체 roll이 결정 스트림 word를 복사 재사용(D-50 위반, 시장 첫 팀 추첨과 상관), C2 walk 시작 시점 stale 부상 상태로 회복 선수도 대표팀 자동 사양, C3 시장 경쟁자 파생 시드에 careerId 포함(fork-by-replay 불일치), C4·C10 EXPIRED 시장 전부 거절이 안전 잔류 계약을 맺지 않고 만료 계약 유지(D-43·D-44 위반), C5 임대→FA 이적 시 유령 stint·팬 관계 이중 이월, C6 FIRST_CONTRACT 전부 거절이 계약 없이 pending을 닫음, C7 step 7 제안이 비어도 nextAction DECISION; web: C8 SCR-020 RETURN "관계 복원" 문구 오류, C9 step 7 사전 협상 '전부 거절하고 잔류'가 실제로는 만료→강제 시장, C11 휴대폰 탭 시장 사유·제안 수 미표시; 테스트 공백: C12 P3-2 전부 거절 fixture, C13 P4-2 감독 교체 골든·buildReplacementManager 단위 테스트, C14 P4-3 previewEffects 하드코딩 비교. 반박 8건(재활 STANDARD 자동 처리·followUp 그림자·SCR-014 결과 카드(T-4-005 범위)·SCR-020 Base OVR 자기참조·**구 커리어 비호환 P1**·content EffectSchema 정수·P3-6·P3-4). 11건(effects-ownership 6·content-dsl 5)은 검증 에이전트가 한도로 죽어 재검증 워크플로를 돌린다.
+
+**정정(오케스트레이터가 앞서 사용자에게 P1로 보고한 항목)**: "#67 이전 커리어가 GET 503·simulate TypeError·fork hash 불일치"는 코드 사실은 맞지만 결함이 아니다 — D-53("schemaVersion 1 유지, 공개 출시 전 관례, 골든은 hash·신규 필드만 바뀐다")과 T-3-001 브리프("새 필드는 재생으로 채워진다, 마이그레이션 코드는 쓰지 않는다")가 명시적으로 수용한 동작이고 Phase 2 T-2-014 선례와 같다. 운영 항목으로만 남긴다: **LINE TEST 시작 전 staging D1의 #67 이전 커리어(재예행·리허설 synthetic 행 포함)를 초기화**한다.
+
+**수정 묶음(D-59 소유권 분할)**: T-4-012 domain(C1~C7·C12·C13; C1은 D-50을 "파생 시드 `seedRng('manager:…')`로 독립"으로 정정해 골든 불변 유지, C3는 careerId 제거로 골든 재생성; T-4-006 domain 머지 뒤 투입해 career-13 골든 충돌을 피한다), T-4-013 api 테스트 타임아웃(즉시 투입), T-4-014 web(C9·C11, 즉시 투입; C8은 T-4-011 머지 뒤 한 줄 수정), C14는 T-4-008 머지 뒤 content 테스트 수정.
+
 ## 2026-09-05 (낮, 병렬 상한 해제 D-59·2차 웨이브 투입·Phase 3·4 감사 워크플로)
 
 **사용자 지시**: "병렬 진행을 최대로할 순 없나?" (Ultracode 켜짐). → **D-59**([phase-3-4-plan.md](phase-3-4-plan.md)): 동시 워커 상한 3개를 없애고 파일 소유권(D-53)으로만 병렬을 제한한다. 같은 파일을 만지는 작업은 순서를 정해 뒤 작업이 `origin/main`을 merge한다. [README](README.md) 위임 워크플로 문단 갱신.
