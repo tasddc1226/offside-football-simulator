@@ -1,10 +1,10 @@
 // T-3-005 SCR-020: 성공한 계약/임대 전환을 저장된 Snapshot의 timeline·clubHistory에서 재구성한다.
 // mutation 응답의 휘발성 payload에 의존하지 않으므로 새로고침·응답 유실·뒤로가기에 안전하다.
-import type { CareerState, Contract, TimelineEntry } from '@offside/domain';
+import { computeContractSeasonsRemaining, type CareerState, type Contract, type TimelineEntry } from '@offside/domain';
 import { LEAGUE_TIER_LABEL_KO, POSITION_LABELS, SQUAD_ROLE_LABELS } from './labels.js';
-import { OFFER_KIND_LABEL_KO } from './transfer-view.js';
+import { MARKET_REASON_LABEL_KO, OFFER_KIND_LABEL_KO } from './transfer-view.js';
 
-export type TransferResultKind = 'RENEWAL' | 'TRANSFER' | 'FREE_AGENT' | 'LOAN' | 'RETURN' | 'PERMANENT';
+export type TransferResultKind = 'RENEWAL' | 'TRANSFER' | 'FREE_AGENT' | 'LOAN' | 'RETURN' | 'PERMANENT' | 'STAY';
 
 export type TransferResultView = {
   revision: number;
@@ -42,15 +42,23 @@ const TRANSITION_KINDS = new Set<TimelineEntry['kind']>([
   'LOANED',
   'LOAN_RETURNED',
   'CONTRACT_SIGNED',
+  // T-4-011: 안전 잔류(ACCEPT_OFFER의 INTEREST safe offer, REJECT_OFFER(null))는 계약·clubHistory를
+  // 바꾸지 않고 OFFER_REJECTED(refId 'ALL')만 남긴다. 개별 제안 거절(refId = offerId)은 시장이 아직
+  // 열려 있다는 뜻이라 결과로 취급하면 안 되므로 isTransitionEntry에서 refId를 함께 확인한다.
+  'OFFER_REJECTED',
 ]);
 
+function isTransitionEntry(entry: TimelineEntry): boolean {
+  return TRANSITION_KINDS.has(entry.kind) && (entry.kind !== 'OFFER_REJECTED' || entry.refId === 'ALL');
+}
+
 function transitionEntriesAtRevision(state: CareerState, revision: number): TimelineEntry[] {
-  return state.timeline.filter((entry) => entry.revision === revision && TRANSITION_KINDS.has(entry.kind));
+  return state.timeline.filter((entry) => entry.revision === revision && isTransitionEntry(entry));
 }
 
 /** 결과 deep-link에 rev가 없을 때 최신 계약 전환 revision을 찾는다. */
 export function latestTransferRevision(state: CareerState): number | null {
-  const latest = [...state.timeline].reverse().find((entry) => TRANSITION_KINDS.has(entry.kind));
+  const latest = [...state.timeline].reverse().find((entry) => isTransitionEntry(entry));
   return latest?.revision ?? null;
 }
 
@@ -85,6 +93,7 @@ function resultKind(state: CareerState, entries: readonly TimelineEntry[]): Tran
     const previous = state.clubHistory.at(-2);
     return previous?.endReason === 'EXPIRED' ? 'FREE_AGENT' : null;
   }
+  if (entries.some((entry) => entry.kind === 'OFFER_REJECTED')) return 'STAY';
   return null;
 }
 
@@ -102,13 +111,15 @@ function kindLabel(kind: TransferResultKind): string {
       return '원소속 복귀';
     case 'PERMANENT':
       return '임대 구단 완전 이적';
+    case 'STAY':
+      return '잔류';
   }
 }
 
 function currentAndPreviousTeams(state: CareerState, kind: TransferResultKind): { previousTeam: string; newTeam: string } {
   const current = state.clubHistory.at(-1);
   const previous = state.clubHistory.at(-2);
-  if (kind === 'RENEWAL') {
+  if (kind === 'RENEWAL' || kind === 'STAY') {
     const team = current?.teamName ?? state.contract?.teamName ?? '현재 팀';
     return { previousTeam: team, newTeam: team };
   }
@@ -143,8 +154,17 @@ function contractView(state: CareerState): TransferResultView['contract'] {
   };
 }
 
-/** timeline의 같은 revision에 남은 도메인 transition만 이용해 SCR-020을 재구성한다. */
-export function resolveTransferResultView(state: CareerState, revision: number): TransferResultView | null {
+/**
+ * timeline의 같은 revision에 남은 도메인 transition만 이용해 SCR-020을 재구성한다. `interestedClubCount`는
+ * INTEREST 시장 안전 잔류(STAY) 전용 표시값이다 — 도메인이 잔류 시점에 시장에 있던 타 구단 제안 수를
+ * timeline에 남기지 않으므로(§ buildStayState), 호출자가 수락 직전 pending에서 직접 세어 넘긴다.
+ * 새로고침·딥링크로 재진입해 값이 없으면 구체적 개수 없이도 STAY 카드는 그대로 렌더된다.
+ */
+export function resolveTransferResultView(
+  state: CareerState,
+  revision: number,
+  interestedClubCount?: number,
+): TransferResultView | null {
   // 과거 contract/clubHistory의 계약 조건을 보존한 저장 근거가 없으므로, 최신 transition만 현재
   // contract와 조합한다. 옛 rev를 허용하면 과거 kind와 최신 팀/계약이 섞인 결과가 된다.
   if (latestTransferRevision(state) !== revision) return null;
@@ -156,15 +176,22 @@ export function resolveTransferResultView(state: CareerState, revision: number):
   const contract = contractView(state);
   // relationshipLog는 이 전환과 revision으로 연결되지 않을 수 있다. 과거 이벤트의 reasonTag를
   // 새 이적 사유처럼 보이지 않게 하고, timeline transition kind에서 확인 가능한 사실만 문장화한다.
-  const reasonTag = transitionReason(kind, state, contract?.competition ?? '프리시즌에서 확정');
+  const reasonTag = transitionReason(kind, state, contract?.competition ?? '프리시즌에서 확정', interestedClubCount);
   const baseOvr = state.player.profile?.baseOvr ?? 0;
-  const title = kind === 'RENEWAL' ? `${teams.newTeam}과 계약을 갱신했습니다` : `${teams.newTeam}에서 새 출발합니다`;
+  const title =
+    kind === 'STAY'
+      ? `${teams.newTeam}에 잔류합니다`
+      : kind === 'RENEWAL'
+        ? `${teams.newTeam}과 계약을 갱신했습니다`
+        : `${teams.newTeam}에서 새 출발합니다`;
   const body =
-    kind === 'RETURN'
-      ? `${teams.previousTeam} 생활을 마치고 원소속으로 돌아갑니다.`
-      : kind === 'LOAN'
-        ? `${teams.newTeam} 임대 계약이 확정되었습니다.`
-        : `${kindLabel(kind)} 결과가 저장되었습니다.`;
+    kind === 'STAY'
+      ? `${teams.newTeam}과의 계약을 그대로 유지하며 시즌을 이어갑니다.`
+      : kind === 'RETURN'
+        ? `${teams.previousTeam} 생활을 마치고 원소속으로 돌아갑니다.`
+        : kind === 'LOAN'
+          ? `${teams.newTeam} 임대 계약이 확정되었습니다.`
+          : `${kindLabel(kind)} 결과가 저장되었습니다.`;
 
   return {
     revision,
@@ -180,7 +207,23 @@ export function resolveTransferResultView(state: CareerState, revision: number):
   };
 }
 
-function transitionReason(kind: TransferResultKind, state: CareerState, competition: string): string {
+function transitionReason(kind: TransferResultKind, state: CareerState, competition: string, interestedClubCount?: number): string {
+  if (kind === 'STAY') {
+    const contract = state.contract;
+    const remainingSeasons =
+      contract === null ? 0 : computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline);
+    const interestPhrase =
+      interestedClubCount === undefined
+        ? '관심을 보인 구단들의 제안'
+        : interestedClubCount > 0
+          ? `관심을 보인 구단 ${interestedClubCount}곳의 제안`
+          : '타 구단 이적 제안';
+    return (
+      `${interestPhrase}을 뒤로하고 안전하게 잔류했습니다. 남은 계약 ${remainingSeasons}시즌 · ` +
+      `시장 사유: ${MARKET_REASON_LABEL_KO.INTEREST} · 전술 적합도 ${state.context.tacticalFit} · 경쟁 상태: ${competition}. ` +
+      '관계·평판 변화는 없습니다.'
+    );
+  }
   const relationshipReason =
     kind === 'RENEWAL'
       ? '관계 변화 없이 기존 소속을 유지했습니다.'

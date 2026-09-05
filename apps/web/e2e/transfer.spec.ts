@@ -345,3 +345,66 @@ async function settleAndOpenLoanReturn(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
   await page.getByRole('link', { name: '복귀 조건 보기' }).click();
 }
+
+// T-4-011: SCR-020 잔류(STAY) 결과 — INTEREST 시장에서 안전 잔류를 수락했을 때 loader가 대시보드로
+// 튕겨내지 않고(T-4-010 원인 2) STAY 결과 카드에 머무는지 고정 seed로 회귀를 잡는다. `offside:e2e-seed`
+// 후보 20개 이내에서 실제 런타임 룰셋(1.0.0)으로 탐색해 첫 시즌 결산 직후 INTEREST 시장(안전 잔류
+// 제안)을 여는 시드를 찾았다 — t4011-interest-1(EXPIRED), -2(간헐적 타임아웃), -3(EXPIRED),
+// -4(INTEREST, 채택).
+const CAREER_STAY_SEED = 't4011-interest-4';
+
+test('TEST-E2E-003(c): INTEREST 시장 안전 잔류(STAY) 수락 → SCR-020 잔류 결과 카드, loader redirect 없이', async ({ page }) => {
+  test.slow();
+  await page.addInitScript((seed) => {
+    window.localStorage.setItem('offside:e2e-seed', seed);
+  }, CAREER_STAY_SEED);
+
+  await reachFirstContractOffers(page);
+  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
+  await signFirstOffer(page);
+  const careerId = careerIdFromUrl(page);
+  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await resolveRoleProposal(page);
+  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await advanceToSettlementRejectingRenewal(page);
+  await settleAndOpenOffers(page);
+
+  // 이 seed는 시즌 1 결산 직후 INTEREST 시장(안전 잔류 제안, pending.offers[0])을 연다.
+  await expect(page.getByRole('heading', { level: 1, name: '이적시장 제안 비교' })).toBeVisible();
+  const marketCards = page.locator('[data-compare-layout="stacked"] > div');
+  const safeCard = marketCards.first();
+  await expect(safeCard).toBeVisible();
+  const beforeStay = await readSavedCareer(page, careerId);
+  await safeCard.getByRole('link', { name: '제안 상세·결정' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+  const stayAccept = page.getByRole('button', { name: '이 조건 수락' });
+  await expect(stayAccept).toBeEnabled();
+  await stayAccept.click();
+
+  // T-4-010 원인 2: 고치기 전에는 buildStayState(OFFER_REJECTED ALL만 남김) 뒤 transfer-result의
+  // loader가 전환 엔트리를 찾지 못해 대시보드로 튕겨냈다. 이 assertion이 그 회귀를 고정한다.
+  // "관심을 보인 구단 N곳"을 위해 goToResult가 interested 검색 파라미터를 함께 붙이므로 $ 앵커 없이 확인한다.
+  await expect(page).toHaveURL(/\/career\/.+\/transfer-result\?rev=\d+/);
+  const stayResult = page.getByTestId('transfer-result');
+  await expect(stayResult).toBeVisible();
+  await expect(stayResult).toHaveAttribute('data-result-kind', 'STAY');
+  await expect(page.getByText('잔류', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/남은 계약 \d+시즌/)).toBeVisible();
+  await expect(page.getByText(/시장 사유: 타 구단 관심/)).toBeVisible();
+  await expect(page.getByText('관계·평판 변화는 없습니다.')).toBeVisible();
+  await expectNoSeriousOrCriticalViolations(page, 'SCR-020 STAY result');
+
+  const afterStay = await readSavedCareer(page, careerId);
+  expect(afterStay.recordRevision).toBe(beforeStay.recordRevision + 1);
+  expect(afterStay.snapshotRevision).toBe(afterStay.recordRevision);
+  expect(afterStay.baseOvr).toBe(beforeStay.baseOvr);
+  const stayOvr = await resultBaseOvr(page);
+  expect(stayOvr.before).toBe(stayOvr.after);
+  expect(stayOvr.before).toBe(beforeStay.baseOvr);
+
+  await page.getByRole('link', { name: /^(대시보드로|새 시즌 준비)$/ }).click();
+  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/preseason)?$/);
+  const saved = await readSavedCareer(page, careerId);
+  expectSavedAuditUnchanged(afterStay, saved, 'STAY result to next screen');
+});

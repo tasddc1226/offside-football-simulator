@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   committedTransferRevision,
   isCurrentTransferResultRevision,
+  latestTransferRevision,
   resolveTransferResultView,
   transferResultNextScreen,
 } from './transfer-result.js';
@@ -104,5 +105,65 @@ describe('T-3-005 SCR-020 result projection', () => {
   it('활성 시즌 중 결과 CTA는 대시보드, 결산 뒤에만 프리시즌이다', () => {
     expect(transferResultNextScreen(makeState({ season: {} as CareerState['season'] }))).toBe('DASHBOARD');
     expect(transferResultNextScreen(makeState({ season: null }))).toBe('PRESEASON');
+  });
+
+  // T-4-011: SCR-020 잔류(STAY) 결과 — INTEREST 시장에서 안전 잔류를 수락하면 `buildStayState`가
+  // 계약·clubHistory를 바꾸지 않고 `OFFER_REJECTED(refId 'ALL')`만 남긴다.
+  it('INTEREST 시장 안전 잔류(OFFER_REJECTED ALL)를 STAY 결과로 재구성하고 관계·평판 변화 없음을 명시한다', () => {
+    const state = makeState({
+      timeline: [
+        { revision: 2, kind: 'TRANSFERRED', refId: 'CTR-2', age: 18, step: 7 },
+        { revision: 3, kind: 'SEASON_STARTED', refId: null, age: 18, step: 1 },
+        { revision: 24, kind: 'OFFER_REJECTED', refId: 'ALL', age: 19, step: 12 },
+      ],
+    });
+    const view = resolveTransferResultView(state, 24, 3);
+    expect(view?.kind).toBe('STAY');
+    expect(view?.kindLabel).toBe('잔류');
+    expect(view?.previousTeam).toBe('새 팀');
+    expect(view?.newTeam).toBe('새 팀');
+    expect(view?.title).toContain('새 팀에 잔류합니다');
+    expect(view?.contract).not.toBeNull();
+    expect(view?.baseOvr.before).toBe(view?.baseOvr.after);
+    expect(view?.reasonTag).toContain('관심을 보인 구단 3곳의 제안');
+    expect(view?.reasonTag).toContain('남은 계약 1시즌');
+    expect(view?.reasonTag).toContain('시장 사유: 타 구단 관심');
+    expect(view?.reasonTag).toContain('관계·평판 변화는 없습니다.');
+  });
+
+  it('interestedClubCount 없이(새로고침·딥링크) 재구성해도 STAY 카드는 개수 없이 그대로 렌더된다', () => {
+    const state = makeState({
+      timeline: [
+        { revision: 2, kind: 'TRANSFERRED', refId: 'CTR-2', age: 18, step: 7 },
+        { revision: 24, kind: 'OFFER_REJECTED', refId: 'ALL', age: 19, step: 12 },
+      ],
+    });
+    const view = resolveTransferResultView(state, 24);
+    expect(view?.kind).toBe('STAY');
+    expect(view?.reasonTag).toContain('관심을 보인 구단들의 제안');
+    expect(view?.reasonTag).not.toContain('undefined');
+  });
+
+  it('EXPIRED 시장 안전 잔류(재계약, CONTRACT_RENEWED)는 STAY가 아니라 기존 RENEWAL 결과로 남는다', () => {
+    const state = makeState({
+      timeline: [
+        { revision: 2, kind: 'TRANSFERRED', refId: 'CTR-2', age: 18, step: 7 },
+        { revision: 24, kind: 'CONTRACT_RENEWED', refId: 'CTR-2', age: 20, step: 12 },
+      ],
+    });
+    const view = resolveTransferResultView(state, 24);
+    expect(view?.kind).toBe('RENEWAL');
+    expect(view?.kindLabel).not.toBe('잔류');
+  });
+
+  it('개별 제안 거절(refId != ALL)은 시장이 아직 열려 있다는 뜻이라 결과 화면 전환으로 취급하지 않는다', () => {
+    const state = makeState({
+      timeline: [
+        { revision: 2, kind: 'TRANSFERRED', refId: 'CTR-2', age: 18, step: 7 },
+        { revision: 24, kind: 'OFFER_REJECTED', refId: 'OFR-24-1', age: 19, step: 12 },
+      ],
+    });
+    expect(resolveTransferResultView(state, 24)).toBeNull();
+    expect(latestTransferRevision(state)).toBe(2);
   });
 });
