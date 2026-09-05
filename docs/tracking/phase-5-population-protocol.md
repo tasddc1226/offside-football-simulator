@@ -11,6 +11,13 @@ The eventual publish target is 10,000 independently seeded careers in each of
 1 through 20 seasons: row `i` requests `1 + (i mod --seasons)` seasons. Realized
 seasons may be shorter when the engine requires retirement.
 
+Distribution acceptance uses all 40,000 rows, not a post-selected 20-season subset.
+Band and 80+ denominators, the zero-team-trophy subset, and predeclared numerical
+tolerances are fixed in the [balance acceptance criteria](phase-5-balance-redesign.md#분포-판정-기준-고정--2026-09-05).
+These are product review criteria for the final full run, not per-PR statistical
+assertions. The final synthetic choice policy and candidate versions remain open;
+no diagnostic v5 policy is approved for publication by that clarification.
+
 The retained baseline protocol is v2: ruleset `1.0.0`, registered content pack `0.3.0`,
 protocol `phase5-population-2-registered-choices`, choice policy
 `registered-hash-strata-v1`, and seed
