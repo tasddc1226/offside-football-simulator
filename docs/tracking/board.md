@@ -170,7 +170,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-014 | B | web | 감사 web 묶음: step 7 사전 협상 '전부 거절' 문구·안내(C9), 휴대폰 탭 시장 사유·제안 수(C11) | T-4-007 | done | [브리프](briefs/T-4-014.md). 워커 완료 **PR #78 `384a37e`**(2026-09-05 16:50) . 360px 스크린샷 2장(offers·휴대폰 탭) 확인 완료. 체인 2회: 16:56(main 회귀·injury 레이스, 무관) / 17:30(season.spec:17 랜덤 seed 잔여 → T-4-021, 무관). T-4-021 머지 뒤 재큐. 후속 발견 → T-4-018 → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. 원 PR #78 MERGED |
 | T-4-015 | B | content | 감사 content 묶음: season.stats 8필드 playerStats 파생(F2), 슬럼프 게이트 `recentRatedMatches`·sentinel(F1), EVT-CON-010 phase 정합(F2), INJURY previewEffects 룰셋 대조 검증기(F4; C14 테스트는 D-61 보류) | T-4-008 | done | [브리프](briefs/T-4-015.md). 워커 완료 **PR #82 `db29402`**(2026-09-05 17:40, 오케스트레이터 REST 개설). 워커 체인 그린(content:validate 경고 0, test 401, e2e 98). 잔여: EVT-CON-010은 phase 수정 뒤에도 D-52 RUMOUR presentation 제외로 미도달(RUMOUR pending 생성기 부재, T-3-005 기지 공백) → 백로그. T-4-021 머지 뒤 검증 큐 → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. 원 PR #82 MERGED |
 | T-4-016 | B | web | 감사 web 소수정: SCR-020 RETURN 관계 문구(C8), `{manager}` 서사 토큰을 `season.manager.name` 우선으로(F5) | T-4-011 | done | [브리프](briefs/T-4-016.md). 워커 완료 **PR #79 `193e3e3`**(2026-09-05 16:59). T-4-019 핫픽스 머지 뒤 검증 큐 → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. 원 PR #79 MERGED |
-| T-4-017 | A | api(test) | Node/workerd 해시 probe에 career-12·career-13 fixture 추가(T-4-006 §1(d) 잔여) | T-4-006(domain) | in-progress | [브리프](briefs/T-4-017.md). **보류(D-61, 새 테스트 작성 금지)**. 테스트 작업 재개 시 투입 → **2026-09-05 20:05 재개(D-62·D-65)**, Sonnet 5 워크플로 투입 예정 |
+| T-4-017 | A | api(test) | Node/workerd 해시 probe에 career-12·career-13 fixture 추가(T-4-006 §1(d) 잔여) | T-4-006(domain) | done | [브리프](briefs/T-4-017.md). Sonnet 5 워커 PR #90 `ce4eac3` → 오케스트레이터 체인 EXIT 0(e2e 98 passed) → 2026-09-05 20:10 squash 머지 `84709ec`. career-12 rev20 `ad92d9c3…`·career-13 rev45 `b21c5c65…` Node·workerd·golden 일치 |
 | T-4-018 | B | web | SCR-017 offers 화면 eyebrow를 시장 사유별로(INTEREST/LOAN_END/PRE_NEGOTIATION에서 "계약 만료·FA" 고정 노출 수정; PR #78 스크린샷 발견) | T-4-014 | done | [브리프](briefs/T-4-018.md). PR #78 머지 뒤 투입(`offers.tsx` 소유권) → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. Codex 구현(시장 사유 UI 보강), 브리프 미투입 |
 | T-4-019 | — | web(e2e) | [핫픽스] main 회귀: `signFirstOffer` 헬퍼 정규식(PR #74)이 STAY 결과 URL `&interested=N`(PR #76)을 거부해 season.spec:121 결정적 실패 | T-4-010, T-4-011 | done | [브리프](briefs/T-4-019.md). 17:01 투입 → 17:10 BLOCKED(헬퍼 수정 커밋 `a6e8136`, season.spec:143 단언이 #76 프리시즌 경로와 불일치) → 17:12 단언 완화 허용해 재투입 → 17:22 완료 **PR #81 `689aaa0`**(워커 체인 전부 그린, e2e 98). 검증 큐 #81→#80→#78→#79(앞 PR 머지 대기 게이트 추가) |
 | T-4-020 | — | web(e2e) | [핫픽스] injury.spec `reachForcedInjury` poll의 타임아웃 없는 `textContent()`가 `/event` 전환 순간 무한 대기 → 반복 60초 타임아웃(trace로 확정) | T-4-010 | done | [브리프](briefs/T-4-020.md). 17:05 투입 → 17:15 워커 완료 **PR #80 `67835d8`**(오케스트레이터 REST 개설, 훅 차단). `--repeat-each=3` 3/3, 체인 통과(season.spec:121은 T-4-019 대상). 오케스트레이터 체인 CHAIN EXIT 0(e2e 98) → **머지 `01be661`**(17:28) |
@@ -195,7 +195,6 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-4-017 | Sonnet 5 · Workflow `wf_92460c27-98b` | 2026-09-05 20:08 | 해시 probe career-12·13 추가 중 |
 | T-4-023 | Sonnet 5 · Workflow | 2026-09-05 20:15 | 대표팀 seed 탐색·캡처 |
 | T-4-024 | Sonnet 5 · Workflow | 2026-09-05 20:15 | season_settled/step_passed elapsedSec |
 
@@ -203,6 +202,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 내용 | 커밋 |
 |---|---|---|
+| T-4-017 | PR #90 `84709ec` | 2026-09-05 20:10 | 해시 probe career-12·13, api 테스트 2파일 |
 | T-4-005·009·012·014·015·016·018·021 | PR #85 `a2354a5` (T-4-022) | 2026-09-05 | 사용자·Codex 통합 PR로 일괄 반영. 원 PR #78·#79·#82·#83·#84 MERGED. 증거: `docs/qa/phase34-completion.md`·`phase34-acceptance.md` |
 | T-4-020 | PR #80 `01be661` | 2026-09-05 | 핫픽스: injury.spec poll `textContent` 타임아웃(반복 60초 타임아웃의 실제 원인). 체인 e2e 98 passed |
 | T-4-019 | PR #81 `9bf89fc` | 2026-09-05 | 핫픽스: e2e 헬퍼 `&interested=` 허용·season.spec:121 프리시즌 경로. main 회귀(#74×#76) 해소, 체인 e2e 98 passed |

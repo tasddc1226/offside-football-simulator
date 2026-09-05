@@ -2,6 +2,11 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (20:10, PR #90 T-4-017 머지 — 출시 게이트 1/3)
+
+- **T-4-017 해시 probe PR #90 `ce4eac3` squash 머지 `84709ec`.** 변경은 `apps/api/src/test/cross-runtime-hash.test.ts`·`hash-probe.worker.ts` 두 파일(career-12-injury·career-13-integration 항목, `replayInjury`/`replayIntegration` kind). `packages/fixtures/src/index.ts`는 이미 export 중이라 무변경. 오케스트레이터 체인 EXIT 0(turbo 캐시 재생 — 워커가 같은 sha로 2회 통과한 입력 해시, e2e는 실측 98 passed/6 skipped 2.5분). 큐 러너를 bash로 띄워 한 번 죽은 것(zsh 전용 `${=line}`)은 zsh로 재시작해 해결.
+- 남은 출시 게이트: T-4-023(SCR-032 캡처)·T-4-024(elapsedSec) 진행 중.
+
 ## 2026-09-05 (20:15, D-65 출시 게이트 워커 3명 투입)
 
 - **T-4-017(api 해시 probe) 20:08, T-4-023(SCR-032 대표팀 자연 플레이 캡처)·T-4-024(실사용자 플레이 시간 측정 준비) 20:15 Sonnet 5 워크플로 투입.** 브리프 [T-4-023](briefs/T-4-023.md)·[T-4-024](briefs/T-4-024.md). 파일 소유권: T-4-017 `apps/api/src/test/*`·`packages/fixtures/src/index.ts`, T-4-023 `apps/web/e2e/helpers/*`·`phase4-seed-reachability.test.ts`·`docs/qa/phase34/national-team*.png`, T-4-024 `apps/web/src/engine/funnel.ts`·`packages/contracts/src/analytics.ts`(props가 `strictObject` 화이트리스트라 스키마 갱신 필수). 근거: D-65 사용자 결정, D-62 최소 검증(새 테스트 파일 없이 기존 구조만 갱신, 룰셋 조정 금지).
