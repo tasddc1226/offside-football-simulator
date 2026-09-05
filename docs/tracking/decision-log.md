@@ -2,6 +2,10 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (16:51, PR #76 머지·T-4-016 투입 — 검증 큐 3건 모두 종료)
+
+**PR #76(T-4-011 SCR-020 STAY) `25544b3` squash 머지.** 체인 web 42/42·build·bundle·contrast·e2e 97 passed(STAY 카드 케이스·a11y serious/critical 0, `CHAIN EXIT 0`). 360px 시각 확인은 PR preview가 프로덕션 빌드라 DEV seed 훅으로 INTEREST 시장에 닿을 수 없어 e2e(chromium)로 갈음하고, T-4-005c 대시보드 검증 때 같은 결과 카드 컴포넌트를 함께 본다. 직후 **T-4-016**(C8·F5 web 문구, `wf_93182b9d-f34`) 투입. 오늘 오후 머지: #72·#73·#75·#74·#76(5건). 남은 워커: T-4-009(seed 탐색)·T-4-014·T-4-012·T-4-015·T-4-016.
+
 ## 2026-09-05 (16:48, PR #74 머지)
 
 **PR #74(T-4-010 e2e 안정화) `552481c` squash 머지.** 큐 재실행에서 domain 55/55·api 27/27·web 42/42·e2e 97 passed(`CHAIN EXIT 0`). 이제 CI Browser gates 실패 시 Playwright test-results가 아티팩트로 남는다. 큐는 #76(T-4-011) 실행 중.
