@@ -64,9 +64,10 @@ checksum, archive hash, retirement revision을 함께 검증한다. 로드·명�
 
 ## 로컬 통합 검증
 
-`3fea40c` 기준으로 lint, dependency lint, typecheck, content validation, production build와 bundle
-검사를 통과했다. bundle 측정값은 100.47 KB다. 이 값은 이후 통합된 새 밸런스 후보의 최종 gate를
-대체하지 않는다.
+`4b64c64` 기준으로 lint, dependency lint, typecheck, content validation, production build와 bundle
+검사를 통과했다. bundle 측정값은 100.46 KB다. 이 값은 이후 통합된 새 밸런스 후보의 최종 gate를
+대체하지 않는다. 뒤이은 경쟁자 OVR 문구 수정 `907ec62`는 별도로 웹 typecheck와 transfer-view
+테스트 19개를 통과했다.
 
 - 선수 생성·엔딩 관련 단위 테스트: 42개 통과
 - 시즌 대표 E2E: 3개 통과
@@ -82,15 +83,35 @@ revision 23, 생성 출처 `svc_kickoff`, Archive hash는
 진입했을 때 상세 묶음이 열리고 해당 항목에 포커스되는 것도 확인했다. 개인정보와 recovery code
 원문은 이 기록에 남기지 않는다.
 
+1.1 QA 중 발견한 경계도 보완했다. `eff9dca`는 짧은 출전의 기록 생산량이 90분 출전과 같아질 수
+있던 minutes 노출 문제를 수정했다. `d2821ba`는 현재 서비스 시즌과 ID가 다른 기존 커리어를
+`테스트 시즌`으로 오분류하지 않고 중립적인 `이전 시즌`으로 표시한다. `4b64c64`는 선수 확정 카드가
+전역 활성 팩이 아니라 커리어 record에 고정된 팩 버전을 표시하게 했고, `907ec62`는 경쟁자 요약의
+OVR 숫자를 `내 선수 기준 OVR 차이`와 부호로 명확히 했다.
+
+ruleset `1.1.0`, content pack `0.3.0`, 서비스 시즌 `svc_phase5_qa`에서도 김서윤 커리어를 실제
+로컬 API와 웹으로 확인했다. 여성·왼발 AM 선수가 하부리그 구단과 2시즌·주급 700,000 계약을 맺고
+FAST 역할 경로를 거쳐, 첫 시즌 0분과 OVR 61→63을 기록한 뒤 18세에 `COACH_EPILOGUE`를 선택했다.
+결과는 Legacy 10, `END-PLAYER-COACH`였다. API GET은 200, revision 20이었고 Archive hash는
+`a24edd49a4ac16467bc1be60b9902cdd1407bd043283eb80fa2ab66834751bf7`, Legacy hash는
+`f03c9950edcc7ca62dd55451397cac7dc29e2928c188da95a3a7da10df802cfb`였다. 이전 박준서
+`svc_kickoff` 커리어도 다시 불러와 기존 Archive hash가 동일함을 확인했다. 김서윤의 한 시즌이
+0분이었으므로 이 관측만으로 `eff9dca`의 자연 경기 통계 보정 효과를 웹에서 실증했다고 주장하지 않는다.
+
+중요하게, `loadRetirementArtifacts`는 아직 candidate Legacy version을 선택하지 않는다. 따라서
+김서윤처럼 ruleset 1.1.0과 pack 0.3.0으로 새로 만든 게임도 현재 런타임에서는 Legacy `1.0.0`으로
+계산·보관된다. 이는 승인되지 않은 후보 평가식을 자동 활성화하지 않는 의도적인 gate이며, Legacy
+1.1 평가식의 런타임 활성화가 끝났다는 뜻이 아니다.
+
 ## 남은 인수 항목
 
-Legacy 1.1 후보의 mixed 800 파일럿은 아직 제품 목표를 충족하지 못했다. LEGEND 0.38%, ICON
-11.63%, 80점 이상 5.75%였고 무관 80점 이상은 31명 중 0명이었다. 이는 실제 사용자의 선택 분포가
-아니라 포지션과 요청 길이를 통제한 합성 진단 표본이다. 따라서 실제 사용자 분포처럼 설명하거나,
-목표 비율에 맞추기 위해 점수를 역산하지 않는다.
+minutes 노출 수정 뒤 새 800 evidence `84799b6`의 결과도 아직 제품 목표를 충족하지 못했다.
+[보존된 진단](evidence/stat-exposure-2026-09-06/README.md)은 LEGEND 0.5%, ICON 10%, REMEMBERED
+32%, 80점 이상 6.63%를 기록했고, 무관 80점 이상은 29명 중 0명이었다. 무관 표본은 판정에 필요한
+분모와 자격 근거가 부족하다. 이는 실제 사용자의 선택 분포가 아니라 포지션과 요청 길이를 통제한
+합성 진단 표본이므로 실제 사용자 분포처럼 설명하거나 목표 비율에 맞춰 점수를 역산하지 않는다.
 
-추가 진단에서 15분 출전의 stat 생산량이 90분과 같아질 수 있는 문제가 발견돼 별도 수정 중이다.
-이 문제는 포지션별 기여와 무관 고득점 경로를 왜곡할 수 있으므로, 수정된 후보의 새 checksum과
-표본으로 다시 검증하기 전에는 800 결과를 최종 밸런스나 참조 모집단으로 채택하지 않는다. 최종
-head의 전체 gate, 새 파일럿과 필요한 인수 근거를 확보한 뒤 PR을 열고 Draft PR #77의 병합 여부를
-판단한다.
+후속 CI와 Draft PR 정리는 계속 필요하며, 기준 선택에 대한 답변 전에는 `main`에 병합하지 않는다.
+특히 후보 Legacy 평가식 활성화, 참조집단 등록, 실제 Legacy 1.1 결과의 신규 생성·보관·새로고침·복구
+검증은 필수 잔여 항목이다. 최종 head의 전체 gate와 이 근거를 확보한 뒤 새 PR을 준비하고 Draft
+PR #77의 병합 여부를 판단한다.
