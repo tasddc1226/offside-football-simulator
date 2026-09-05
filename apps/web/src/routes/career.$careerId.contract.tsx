@@ -17,7 +17,7 @@ import {
 } from '../shared/labels.js';
 import { formatKrw } from '../shared/format.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
-import { committedTransferRevision } from '../shared/transfer-result.js';
+import { committedTransferRevision, resolveTransferResultView } from '../shared/transfer-result.js';
 import {
   actionableRevision,
   buildNegotiationResultView,
@@ -178,14 +178,22 @@ function ContractScreen() {
   const selectedOffer: Offer = offer;
 
   const safeOfferId = pending.market.safeOfferId;
+  // INTEREST 시장 안전 잔류 결과에 "관심을 보인 구단 N곳"을 보여주려는 값. 닫힌 함수(handleAccept) 안에서는
+  // TS가 pending의 null 좁힘을 유지하지 않으므로 여기서(narrowing이 되는 최상위 스코프) 미리 센다.
+  const marketOfferCount = pending.offers.length;
   const firstContract = pending.market.reason === 'FIRST_CONTRACT';
   const parentTeamName = state.contract?.teamName ?? state.clubHistory.at(-1)?.teamName ?? null;
   const actionRevision = actionableRevision(record.revision);
   const status = offerStatus(offer, actionRevision);
   const detailRows = offerDetailRows(offer, record.revision, safeOfferId, parentTeamName);
 
-  function goToResult(revision: number) {
-    void navigate({ to: '/career/$careerId/transfer-result', params: { careerId }, search: { rev: revision }, replace: true });
+  function goToResult(revision: number, interestedClubCount?: number) {
+    void navigate({
+      to: '/career/$careerId/transfer-result',
+      params: { careerId },
+      search: interestedClubCount === undefined ? { rev: revision } : { rev: revision, interested: interestedClubCount },
+      replace: true,
+    });
   }
 
   function navigateToCurrentDecision(nextState: typeof state) {
@@ -272,6 +280,10 @@ function ContractScreen() {
     if (submittingRef.current || !canAcceptOffer(selectedOffer, record.revision)) return;
     submittingRef.current = true;
     operationRef.current = { kind: 'accept', offerId, beforeNegotiationState: selectedOffer.negotiationState };
+    // INTEREST 시장 안전 잔류(안전 offerId 수락)는 결과 화면에 "관심을 보인 구단 N곳"을 보여준다.
+    // buildStayState가 pending을 지워 도메인이 이 개수를 저장하지 않으므로, 수락 전 이 렌더의
+    // pending에서 직접 센다(mutation 응답이 아니라 이미 로드된 조회 데이터라 유실 걱정이 없다).
+    const interestedClubCount = selectedOffer.id === safeOfferId ? marketOfferCount - 1 : undefined;
     setErrorMessage(null);
     setAnnouncement('처리 중');
     try {
@@ -287,7 +299,14 @@ function ContractScreen() {
         void navigate({ to: '/career/$careerId', params: { careerId }, search: { signed: true }, replace: true });
       } else {
         operationRef.current = null;
-        goToResult(result.domainSnapshot.revision);
+        const { state: nextState, revision: nextRevision } = result.domainSnapshot;
+        if (resolveTransferResultView(nextState, nextRevision, interestedClubCount) !== null) {
+          goToResult(nextRevision, interestedClubCount);
+        } else {
+          // 결과로 재구성할 수 없는 전환(도메인이 timeline에 남기지 않는 케이스)이면 transfer-result의
+          // loader가 다시 튕겨내기 전에 여기서 바로 현재 결정 화면으로 보낸다.
+          navigateToCurrentDecision(nextState);
+        }
       }
     } catch {
       setErrorMessage('응답을 확인하지 못했습니다. 저장 상태를 새로 확인해 주세요.');
