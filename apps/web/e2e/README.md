@@ -6,6 +6,7 @@ pnpm --filter @offside/web e2e           # 전체 스펙 실행(dev 서버 자�
 pnpm --filter @offside/web e2e:api       # 실제 apps/api(E2E_WITH_API=1) — 아래 "실제 API로 실행" 참조
 pnpm --filter @offside/web e2e:perf      # 실제 빌드 대상 성능 측정(E2E_PREVIEW=1) — perf.spec.ts만
 pnpm --filter @offside/web e2e:staging   # 실 staging 리허설 — 아래 "staging 리허설" 참조
+pnpm --filter @offside/web exec playwright test --config playwright.smoke.config.ts # 배포 후 작은 API/UI 스모크
 ```
 
 `playwright.config.ts`가 기본적으로 `vite dev --port 5174`를 `webServer`로 자동 기동한다(이미 떠 있으면 재사용). Chromium 1개 프로젝트, 기본 뷰포트 360×780, 실패 시 trace `retain-on-failure`. `E2E_PREVIEW=1`이면 대신 `pnpm build && vite preview --port 5175`를 띄운다(dev 서버는 HMR·미압축 번들이라 LCP·CLS가 실제 배포본과 다르게 나온다).
@@ -36,6 +37,11 @@ pnpm --filter @offside/web e2e:staging   # 실 staging 리허설 — 아래 "sta
 - `perf.spec.ts`(T-1-014, `E2E_PREVIEW=1`일 때만): 커리어 카드 3장이 있는 허브를 실제 빌드(`vite preview`) 대상으로, CDP `Network.emulateNetworkConditions`(4G: 다운 4Mbps·RTT 150ms)에서 LCP·CLS를 3회 측정해 중앙값을 콘솔·`docs/tracking/phase-1-completion.md`에 기록한다(목표값은 assert하지 않는다, D-22). 커리어는 실제 UI로 만들어 로컬 IndexedDB에만 쓴다 — 이 모드는 `apps/api`를 띄우지 않으므로 실 네트워크 접근이 없다.
 
 ## staging 리허설(T-2-016)
+
+자동 main 배포는 `playwright.smoke.config.ts`의 `staging-smoke.spec.ts`만 실행한다.
+health·서비스 시즌/CORS·온보딩/새로고침/슬라이드 이동을 실제 Worker에서 확인하며 새 커리어나
+복구 코드를 만들지 않는다. 기본 E2E에서는 이 스모크와 아래 전체 리허설을 모두 제외한다.
+기존 `e2e:staging`의 실제 플레이 리허설은 계속 수동으로 실행한다.
 
 `staging-rehearsal.spec.ts`는 `playwright.staging.config.ts`(`e2e:staging` 스크립트)로만 실행되며 기본
 `pnpm e2e`·CI에는 포함되지 않는다(기본 config는 이 파일을 `testIgnore`로 제외한다). `webServer`가 없고

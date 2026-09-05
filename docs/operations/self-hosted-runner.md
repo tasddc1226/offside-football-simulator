@@ -1,7 +1,8 @@
 # macOS self-hosted Actions runner
 
 2026-09-05 사용자 승인: GitHub-hosted Actions의 계정 결제/지출 한도 차단에 대응해 현재 Mac에서 CI를 실행한다.
-저장소 공개 전환, 유료 한도 변경, 검사 생략은 하지 않는다. GitHub 결제 상태 자체가 해결된 것은 아니다.
+전환 당시 저장소 공개 전환, 유료 한도 변경, 검사 생략은 하지 않았다. GitHub 결제 상태 자체가 해결된 것은 아니다.
+이후 사용자 승인으로 검사 빈도를 경량화했다. 현재 정책은 [CI와 staging](ci-and-staging.md)을 따른다.
 
 ## 설치
 
@@ -26,15 +27,17 @@ LaunchAgent는 로그인 세션에서 동작한다. Mac이 꺼지거나 로그�
 
 ## 실행 정책
 
-- 러너 한 개이므로 한 번에 한 job만 실행한다. 품질/E2E 뒤에만 기존 배포 job이 실행된다.
+- 러너 한 개이므로 한 번에 한 job만 실행한다. PR은 가벼운 검사만 하고, main은 한 job에서 최소 검증·배포·스모크를 수행한다.
 - PR CI는 동일 저장소의 신뢰된 브랜치만 허용한다. 저장소의 private fork workflow 실행도 비활성 상태임을 확인했다.
-- `pull_request_target`는 도입하지 않는다. `GITHUB_TOKEN` 권한은 기존 `contents: read`를 유지하고 checkout credentials를 남기지 않는다.
+- `pull_request_target`는 도입하지 않는다. `GITHUB_TOKEN`은 `contents: read`, main 기준 SHA 조회만 `actions: read`를 사용하며 checkout credentials를 남기지 않는다.
 - cleanup은 닫힌 PR의 코드를 실행하지 않고 repository default branch를 checkout한다.
 - macOS에서는 Playwright Chromium만 설치하며 Linux의 `--with-deps`/apt를 사용하지 않는다.
 - pnpm 실행 파일과 store는 `runner.tool_cache` 하위 `offside-pnpm`/`offside-pnpm-store`로 제한한다.
   사용자 전역 pnpm 설정은 수정하지 않는다. 지속형 로컬 store를 사용하므로 setup-node의 GitHub 원격 캐시는 비활성화한다.
-- E2E는 worker 1개, 포트 `5274`로 개발 세션과 충돌 가능성을 줄인다. 포트가 사용 중이면 다른 프로세스를 임의 종료하지 않는다.
-- `workflow_dispatch`는 Quality/Browser 검사만 수동 실행한다. 기존 PR preview 및 main push staging 배포 조건은 유지한다.
+- 수동 전체 E2E는 worker 1개, 포트 `5274`다. 배포 후 스모크는 원격 staging에 붙으며 로컬 서버를 띄우지 않는다. 사용 중인 다른 프로세스는 임의 종료하지 않는다.
+- `Full Validation (manual)`은 수동 전체 검사만 수행하고 배포하지 않는다. 자동 배포는 main의 미배포 코드 변경에만 적용하며 PR Preview는 생성하지 않는다.
+- main의 이전 성공 run 조회에 GitHub CLI가 필요하다. 현재 Mac의 `gh --version`을 확인하고 runner PATH에서도 접근 가능해야 한다. 없으면 문서 변경도 전체 검증하는 보수적 경로가 된다.
+- 배포 중간 취소는 금지하며 expanded QA와 공용 D1 concurrency를 유지한다.
 - GitHub artifact/cache 저장소 제한은 로컬 러너와 별개다. 그러한 오류가 생겨도 성공으로 숨기지 않는다.
 
 **이 디렉터리는 보안 샌드박스가 아니다.** job은 로그인 사용자의 권한으로 실행되므로 그 사용자의 파일에 접근할 수 있다.

@@ -1,172 +1,153 @@
-name: CI and Cloudflare Preview
+name: CI and Staging
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
     branches: [main]
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never interrupt migrations/deploys. Superseded PR checks may be cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  quality:
-    name: Quality gates
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, macOS, ARM64, offside]
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          dest: ${{ runner.tool_cache }}/offside-pnpm
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .node-version
-          package-manager-cache: false
-      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
-      - run: node --test .github/scripts/cleanup-preview.test.mjs
-      - run: pnpm lint
-      - run: pnpm lint:deps
-      - run: pnpm typecheck
-      # API concurrency tests and domain performance budgets are wall-clock
-      # sensitive. Keep both off the shared package-test CPU pool.
-      - run: pnpm turbo run test --filter='!@offside/api' --filter='!@offside/domain'
-      - run: pnpm --filter @offside/api test
-      - run: pnpm --filter @offside/domain test
-      - run: pnpm build
-      - run: pnpm --filter @offside/web check:bundle
-      - run: pnpm --filter @offside/api db:check
-
-  e2e:
-    name: Browser gates
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, macOS, ARM64, offside]
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          dest: ${{ runner.tool_cache }}/offside-pnpm
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .node-version
-          package-manager-cache: false
-      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
-      - run: pnpm --filter @offside/web exec playwright install chromium
-      - run: pnpm --filter @offside/web exec playwright test --workers=1
-        env:
-          CI: 'true'
-          E2E_PORT: '5274'
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-test-results
-          path: apps/web/test-results
-          retention-days: 7
-
-  deploy-preview:
-    name: Deploy PR preview
+  pr-checks:
+    name: PR quick checks
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    needs: [quality, e2e]
     runs-on: [self-hosted, macOS, ARM64, offside]
-    timeout-minutes: 20
-    concurrency:
-      group: cloudflare-preview-d1
-      cancel-in-progress: false
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
+          fetch-depth: 0
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          dest: ${{ runner.tool_cache }}/offside-pnpm
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           package-manager-cache: false
-      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
-      - name: Migrate and seed preview D1
+      - name: Detect code changes
+        id: scope
+        run: node .github/scripts/ci-scope.mjs
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.sha }}
+      - name: Documentation-only summary
+        if: steps.scope.outputs.code_changed == 'false'
+        run: echo 'Documentation-only change; game checks and deployment are not required.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: pnpm/action-setup@v4
+        if: steps.scope.outputs.code_changed == 'true'
+        with:
+          dest: ${{ runner.tool_cache }}/offside-pnpm
+      - if: steps.scope.outputs.code_changed == 'true'
+        run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
+      - name: Lint and typecheck
+        if: steps.scope.outputs.code_changed == 'true'
         run: |
-          pnpm --filter @offside/api db:migrate:preview
-          pnpm --filter @offside/api exec wrangler d1 execute offside-preview --remote --env preview --file seeds/bootstrap-non-production.sql
-      - name: Deploy API preview
-        run: |
-          API_URL="https://offside-api-pr-${PR_NUMBER}.tasddc1569.workers.dev"
-          WEB_URL="https://offside-web-pr-${PR_NUMBER}.tasddc1569.workers.dev"
-          pnpm --filter @offside/api exec wrangler deploy --env preview \
-            --name "offside-api-pr-${PR_NUMBER}" \
-            --var "ENVIRONMENT:preview" \
-            --var "ALLOWED_ORIGINS:${WEB_URL}" \
-            --var "WEB_APP_URL:${WEB_URL}" \
-            --var "GOOGLE_REDIRECT_URI:${API_URL}/v1/auth/google/callback" \
-            --var "GOOGLE_FAKE:0" \
-            --var "ACTIVE_SERVICE_SEASON_ID:svc_kickoff"
-      - name: Build and deploy web preview
-        run: |
-          API_URL="https://offside-api-pr-${PR_NUMBER}.tasddc1569.workers.dev"
-          VITE_API_BASE_URL="${API_URL}" pnpm --filter @offside/web build
-          pnpm --filter @offside/web exec wrangler deploy --env preview --name "offside-web-pr-${PR_NUMBER}"
-      - name: Smoke test preview
-        run: |
-          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
-            "https://offside-api-pr-${PR_NUMBER}.tasddc1569.workers.dev/v1/health"
-          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
-            "https://offside-web-pr-${PR_NUMBER}.tasddc1569.workers.dev/" >/dev/null
+          node --test .github/scripts/*.test.mjs
+          pnpm lint
+          pnpm lint:deps
+          pnpm typecheck
 
   deploy-staging:
-    name: Deploy staging
+    name: Main checks and staging deploy
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [quality, e2e]
     runs-on: [self-hosted, macOS, ARM64, offside]
     timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
     concurrency:
+      # Expanded QA shares the staging D1 database.
       group: cloudflare-staging
       cancel-in-progress: false
     environment:
       name: staging
       url: https://offside-web-staging.tasddc1569.workers.dev
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v6
         with:
+          fetch-depth: 0
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          dest: ${{ runner.tool_cache }}/offside-pnpm
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           package-manager-cache: false
-      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
-      - name: Migrate and seed staging D1
+      - name: Detect changes since last successful main run
+        id: scope
+        # push.before can lose undeployed code when a docs push replaces a pending run.
+        # A failed lookup deliberately checks all code.
+        run: |
+          CI_BASE_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // ""' || true)"
+          export CI_BASE_SHA
+          if [[ "$CI_BASE_SHA" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "${CI_BASE_SHA}^{commit}" 2>/dev/null; then
+            if ! git merge-base --is-ancestor "$CI_BASE_SHA" "$CI_HEAD_SHA"; then
+              echo 'Refusing an older/divergent main run; use the latest main commit.' >&2
+              exit 1
+            fi
+          fi
+          node .github/scripts/ci-scope.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_HEAD_SHA: ${{ github.sha }}
+      - name: Documentation-only summary
+        if: steps.scope.outputs.code_changed == 'false'
+        run: echo 'No undeployed code changes; skipped game checks and Cloudflare deployment.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: pnpm/action-setup@v4
+        if: steps.scope.outputs.code_changed == 'true'
+        with:
+          dest: ${{ runner.tool_cache }}/offside-pnpm
+      - if: steps.scope.outputs.code_changed == 'true'
+        run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
+      - name: Static and content checks
+        if: steps.scope.outputs.code_changed == 'true'
+        run: |
+          node --test .github/scripts/*.test.mjs
+          pnpm lint
+          pnpm lint:deps
+          pnpm typecheck
+          pnpm content:validate
+      - name: Existing critical save and replay tests
+        if: steps.scope.outputs.code_changed == 'true'
+        run: |
+          pnpm --filter @offside/domain exec vitest run src/season-determinism.test.ts src/career-13-integration-determinism.test.ts
+          pnpm --filter @offside/engine-client exec vitest run src/engine.test.ts src/snapshot.test.ts src/import.test.ts
+          pnpm --filter @offside/api exec vitest run src/sync/season-sync.test.ts src/sync/verify-snapshot.test.ts src/routes/profile-recovery.test.ts src/db/migrations.test.ts
+          pnpm --filter @offside/web exec vitest run src/engine/versions.test.ts
+      - name: Build before remote writes
+        if: steps.scope.outputs.code_changed == 'true'
+        run: |
+          pnpm --filter @offside/api db:check
+          VITE_API_BASE_URL="https://offside-api-staging.tasddc1569.workers.dev" pnpm --filter @offside/web build
+          pnpm --filter @offside/web check:bundle
+          pnpm --filter @offside/web exec playwright install chromium
+      - name: Migrate and deploy staging
+        if: steps.scope.outputs.code_changed == 'true'
         run: |
           pnpm --filter @offside/api db:migrate:staging
           pnpm --filter @offside/api exec wrangler d1 execute offside-staging --remote --env staging --file seeds/bootstrap-non-production.sql
-      - name: Deploy staging API
-        run: pnpm --filter @offside/api deploy:staging
-      - name: Build and deploy staging web
-        run: |
-          VITE_API_BASE_URL="https://offside-api-staging.tasddc1569.workers.dev" pnpm --filter @offside/web build
+          pnpm --filter @offside/api deploy:staging
           pnpm --filter @offside/web deploy:staging
-      - name: Smoke test staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Verify deployed health and UI
+        if: steps.scope.outputs.code_changed == 'true'
         run: |
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
-            "https://offside-api-staging.tasddc1569.workers.dev/v1/health"
+            "https://offside-api-staging.tasddc1569.workers.dev/v1/health" >/dev/null
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
             "https://offside-web-staging.tasddc1569.workers.dev/" >/dev/null
+          pnpm --filter @offside/web exec playwright test --config playwright.smoke.config.ts
+        env:
+          CI: 'true'
+      - uses: actions/upload-artifact@v4
+        if: failure() && steps.scope.outputs.code_changed == 'true'
+        with:
+          name: staging-smoke-failure
+          path: apps/web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
