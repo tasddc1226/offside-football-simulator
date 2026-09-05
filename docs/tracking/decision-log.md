@@ -2,6 +2,10 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (16:48, PR #74 머지)
+
+**PR #74(T-4-010 e2e 안정화) `552481c` squash 머지.** 큐 재실행에서 domain 55/55·api 27/27·web 42/42·e2e 97 passed(`CHAIN EXIT 0`). 이제 CI Browser gates 실패 시 Playwright test-results가 아티팩트로 남는다. 큐는 #76(T-4-011) 실행 중.
+
 ## 2026-09-05 (16:46, PR #75 머지·T-4-015 투입)
 
 **PR #75(T-4-008 팩 0.3.0) `13eeaaf` squash 머지.** 부하 게이트 큐에서 체인 한 번에 통과(lint·typecheck는 turbo 캐시 재생, content 22/22 실행, api 27/27, build·bundle·contrast·e2e 96, `CHAIN EXIT 0`). 직후 **T-4-015**(content 감사 묶음 F1·F2·F4, `wf_a2cc4721-227`) 투입. 큐는 #74(재실행, 자동 격리 재시험 단계 포함) → #76 순.
