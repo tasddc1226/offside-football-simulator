@@ -178,7 +178,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-021 | — | web(e2e) | [핫픽스] season.spec:17(랜덤 seed)에서 STAY 수락 뒤 `/preseason` 도착 시 "계획하러 가기" 기대가 실패(PR #76 경로, #81 1차 수정의 잔여) | T-4-019 | done | [브리프](briefs/T-4-021.md). 17:35 투입 → 17:43 완료 **PR #83 `1aee5e7`**(워커 체인 그린, `--repeat-each=4` 12 passed). 검증 큐 재시작 #83→#82→#78→#79 → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. 원 PR #83 MERGED |
 | T-4-023 | — | web(e2e)·qa | SCR-032 대표팀 소집 자연 플레이 도달 seed 탐색(0.3.0/0.2.0, 200 seed×30시즌)·360px 캡처 2장·phase4-seeds 갱신 (D-62 출시 QA 잔여) | T-4-022 | in-progress | [브리프](briefs/T-4-023.md). 2026-09-05 20:15 Sonnet 5 워크플로 투입 |
 | T-4-024 | — | web·api | 실사용자 플레이 시간 측정 준비: `season_settled`·`step_passed`에 초 단위 `elapsedSec` 추가, 측정 쿼리·프로토콜 문서(오케스트레이터) | T-2-012 | done | [브리프](briefs/T-4-024.md). Sonnet 5 워커 PR #94 `adfa212` → 리뷰 후속 3건 `30ad35c` → 오케스트레이터 체인 EXIT 0(e2e 98 passed) → 2026-09-05 20:40 squash 머지 `232bc83`. `season_settled`·`step_passed`에 `elapsedSec`(정수 초, 상한 7200, optional), 호출부 careerId 배선. 측정 프로토콜 [play-time-measurement.md](../qa/play-time-measurement.md). staging 반영은 U-017 뒤 |
-| T-4-028 | — | web(문구) | 대표팀 `agent` 축 문구 정합: SCR-032 안내·SCR-014 결과 맥락 2줄 (P4-7 문구 게이트, T-4-023 캡처에서 확인) | T-4-023 | in-progress | [브리프](briefs/T-4-028.md). 2026-09-05 21:36 Sonnet 5 워크플로 투입 |
+| T-4-028 | — | web(문구) | 대표팀 `agent` 축 문구 정합: SCR-032 안내·SCR-014 결과 맥락 2줄 (P4-7 문구 게이트, T-4-023 캡처에서 확인) | T-4-023 | done | [브리프](briefs/T-4-028.md). Sonnet 5 워커 PR #98 `d816420` → 오케스트레이터 체인 EXIT 0(e2e 98 passed) → 2026-09-05 21:47 squash 머지 `452d32d`. SCR-032 안내·SCR-014 결과 맥락에 "에이전트 관계(협회 관계의 대리값)" 명시(D-66) |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
@@ -198,12 +198,12 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
 | T-4-023 | Sonnet 5 · Workflow `wf_3a416e2c-9a9` → 마무리 워커 | 2026-09-05 20:15 | 21:40 워커 턴 강제 종료(BLOCKED, 미커밋: 코드 3파일·PNG 2장·PR 본문, 백그라운드 체인은 종료 신호로 중단). 21:45 같은 워크트리에서 마무리 워커 투입(체인→커밋→push→PR) |
-| T-4-028 | Sonnet 5 · Workflow | 2026-09-05 21:36 | 대표팀 agent 축 문구 2줄 |
 
 ## 완료
 
 | ID | 내용 | 커밋 |
 |---|---|---|
+| T-4-028 | PR #98 `452d32d` | 2026-09-05 21:47 | 대표팀 agent 축 문구 2줄(web) |
 | T-4-024 | PR #94 `232bc83` | 2026-09-05 20:40 | season_settled·step_passed elapsedSec(web funnel·route, contracts) |
 | T-4-017 | PR #90 `84709ec` | 2026-09-05 20:10 | 해시 probe career-12·13, api 테스트 2파일 |
 | T-4-005·009·012·014·015·016·018·021 | PR #85 `a2354a5` (T-4-022) | 2026-09-05 | 사용자·Codex 통합 PR로 일괄 반영. 원 PR #78·#79·#82·#83·#84 MERGED. 증거: `docs/qa/phase34-completion.md`·`phase34-acceptance.md` |
