@@ -123,6 +123,7 @@ describe('funnel 시각 저장·1회 발화', () => {
       decisionsOpened: 4,
       matchesPlayed: 2,
       elapsedSecBucket: '<60',
+      elapsedSec: expect.any(Number),
     });
   });
 });

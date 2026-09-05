@@ -53,6 +53,8 @@
 
 ## 5. 측정 쿼리(D1, `wrangler d1 execute offside-staging --remote --env staging --command "<SQL>"`)
 
+> **T-4-024 이후**: `season_settled`·`step_passed`에 정수 초 `elapsedSec`이 추가된다. 시즌 완주 시간 판정(FAST 4~6분·CHAPTER 8~12분)은 버킷 대신 [play-time-measurement.md](../qa/play-time-measurement.md) §3 쿼리와 §4 절단 규칙으로 한다.
+
 `analytics_events` 열: `id, client_id, profile_id, name, props_json, client_ts, received_at`. props는 `json_extract(props_json, '$.키')`. `client_id`는 기기 단위(브라우저 저장소를 지우면 새 id), `careerIndex`는 기기 안 커리어 순번이라 "첫 커리어"는 `careerIndex = 1`.
 
 ```sql

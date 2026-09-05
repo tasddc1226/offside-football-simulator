@@ -63,9 +63,15 @@ export async function completeOnboardingAndConfirm(page: Page): Promise<void> {
 }
 
 /** 지금 뜬 이벤트 화면(SCR-007·008·013 공통 본문)에서 첫 선택지를 확정하고, SCR-014 결과 카드를
- * 거쳐 "다음"으로 넘어간다. 선택지 자체(어떤 라벨인지)는 보지 않는다. */
-export async function resolveCurrentEventScreen(page: Page): Promise<void> {
-  await page.getByRole('radio').first().click();
+ * 거쳐 "다음"으로 넘어간다. INJURY와 관계 이벤트도 같은 본문이라 별도 분기 없이 처리한다. */
+export async function resolveCurrentEventScreen(
+  page: Page,
+  options: { onScreen?: (title: string) => void } = {},
+): Promise<void> {
+  const firstChoice = page.getByRole('radio').first();
+  await firstChoice.waitFor({ state: 'visible' });
+  options.onScreen?.((await page.getByRole('heading', { level: 1 }).first().innerText()).trim());
+  await firstChoice.click();
   await page.getByRole('button', { name: '확정' }).click();
 
   await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
@@ -248,7 +254,10 @@ export async function resolveCurrentChapterScreen(page: Page): Promise<void> {
  * 쪽이었는지 가린다. 클릭 뒤에도 마찬가지로 헤더의 step 텍스트 변화 또는 pathname 변화 — 관측
  * 가능한 상태 변화 — 를 기다린 뒤에야 다음 루프로 들어가서, 같은 step에서 두 번 클릭하는 일이 없게
  * 한다. */
-export async function advanceThroughSeasonToSettlement(page: Page): Promise<void> {
+export async function advanceThroughSeasonToSettlement(
+  page: Page,
+  options: { onEventScreen?: (title: string) => void } = {},
+): Promise<void> {
   const progressButton = page.getByRole('button', { name: '진행', exact: true });
   const settleButton = page.getByRole('button', { name: '결산하기', exact: true });
   const stepCaption = page.getByText(/step \d+\/12/);
@@ -259,7 +268,10 @@ export async function advanceThroughSeasonToSettlement(page: Page): Promise<void
       continue;
     }
     if (/\/(event|path|tryout)$/.test(pathnameBefore)) {
-      await resolveCurrentEventScreen(page);
+      await resolveCurrentEventScreen(
+        page,
+        options.onEventScreen === undefined ? {} : { onScreen: options.onEventScreen },
+      );
       continue;
     }
     if (pathnameBefore.endsWith('/offers')) {
