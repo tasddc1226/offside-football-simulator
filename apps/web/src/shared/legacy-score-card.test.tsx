@@ -51,7 +51,9 @@ describe('LegacyScoreCard', () => {
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('원클럽 레전드');
     expect(screen.getByText('88')).toBeInTheDocument();
     expect(screen.getByText('레전드')).toBeInTheDocument();
-    expect(screen.getByText('자동 시뮬레이션 참조집단 기준')).toBeInTheDocument();
+    expect(
+      screen.getByText('같은 포지션 그룹의 자동 시뮬레이션 참조집단 기준'),
+    ).toBeInTheDocument();
     expect(screen.getByText('실제 이용자 순위가 아닙니다.')).toBeInTheDocument();
     expect(screen.getByText('참조집단의 84%보다 앞섰다')).toBeInTheDocument();
     expect(screen.getByText('상위 기여 요인')).toBeInTheDocument();
@@ -79,7 +81,9 @@ describe('LegacyScoreCard', () => {
   it('omits percentile DOM when percentileHidden is true and does not invent missing sources', () => {
     const hidden = { ...result, percentileHidden: true, percentile: 99 } as unknown as LegacyResult;
     render(<LegacyScoreCard result={hidden} />);
-    expect(screen.queryByText('자동 시뮬레이션 참조집단 기준')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('같은 포지션 그룹의 자동 시뮬레이션 참조집단 기준'),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText('실제 이용자 순위가 아닙니다.')).not.toBeInTheDocument();
     expect(screen.queryByText(/참조집단의/)).not.toBeInTheDocument();
     expect(screen.queryAllByText('근거 보기')).toHaveLength(3);
