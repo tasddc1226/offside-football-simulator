@@ -24,7 +24,10 @@ export type TransferResultView = {
     position: string;
     tacticalFit: number;
     competition: string;
+    appliesAt: string;
   } | null;
+  /** Response-loss recovery binding; not rendered. */
+  contractOfferId: string | null;
   reasonTag: string;
   baseOvr: { before: number; after: number };
 };
@@ -78,7 +81,7 @@ export function committedTransferRevision(state: CareerState, currentRevision: n
   if (revision === null || revision !== currentRevision) return null;
   const view = resolveTransferResultView(state, revision);
   if (view === null) return null;
-  if (offerId !== undefined && state.contract?.offerId !== offerId) return null;
+  if (offerId !== undefined && view.contractOfferId !== offerId) return null;
   return revision;
 }
 
@@ -138,8 +141,10 @@ function competitionStatus(state: CareerState, contract: Contract | null): strin
   return `현재 선발 경쟁 ${player.rank}위 · ${appearance}`;
 }
 
-function contractView(state: CareerState): TransferResultView['contract'] {
-  const contract = state.contract;
+function contractView(state: CareerState, kind: TransferResultKind, entries: readonly TimelineEntry[]): TransferResultView['contract'] {
+  const transitionContractId = entries.find((entry) => entry.kind === 'CONTRACT_RENEWED')?.refId;
+  const futureRenewal = kind === 'RENEWAL' && state.nextContract?.id === transitionContractId;
+  const contract = futureRenewal ? state.nextContract ?? null : state.contract;
   if (contract === null) return null;
   return {
     kind: contract.kind,
@@ -150,8 +155,15 @@ function contractView(state: CareerState): TransferResultView['contract'] {
     appearanceSharePercent: Math.round(contract.appearancePromise.minutesShareBp / 100),
     position: POSITION_LABELS[contract.positionPlan],
     tacticalFit: state.context.tacticalFit,
-    competition: competitionStatus(state, contract),
+    competition: futureRenewal ? '다음 시즌 시작 시 확정' : competitionStatus(state, contract),
+    appliesAt: futureRenewal ? '이번 시즌 종료 후 적용' : '즉시 적용',
   };
+}
+
+function withAndParticle(name: string): string {
+  const last = name.codePointAt(name.length - 1);
+  if (last === undefined || last < 0xac00 || last > 0xd7a3) return `${name}와`;
+  return `${name}${(last - 0xac00) % 28 === 0 ? '와' : '과'}`;
 }
 
 /**
@@ -173,7 +185,10 @@ export function resolveTransferResultView(
   if (kind === null) return null;
 
   const teams = currentAndPreviousTeams(state, kind);
-  const contract = contractView(state);
+  const contract = contractView(state, kind, entries);
+  const renewalContractId = entries.find((entry) => entry.kind === 'CONTRACT_RENEWED')?.refId;
+  const resultContract = kind === 'RENEWAL' && state.nextContract?.id === renewalContractId ? state.nextContract : state.contract;
+  const contractOfferId = resultContract?.offerId ?? null;
   // relationshipLog는 이 전환과 revision으로 연결되지 않을 수 있다. 과거 이벤트의 reasonTag를
   // 새 이적 사유처럼 보이지 않게 하고, timeline transition kind에서 확인 가능한 사실만 문장화한다.
   const reasonTag = transitionReason(kind, state, contract?.competition ?? '프리시즌에서 확정', interestedClubCount);
@@ -182,7 +197,7 @@ export function resolveTransferResultView(
     kind === 'STAY'
       ? `${teams.newTeam}에 잔류합니다`
       : kind === 'RENEWAL'
-        ? `${teams.newTeam}과 계약을 갱신했습니다`
+        ? `${withAndParticle(teams.newTeam)} 계약을 갱신했습니다`
         : `${teams.newTeam}에서 새 출발합니다`;
   const body =
     kind === 'STAY'
@@ -202,6 +217,7 @@ export function resolveTransferResultView(
     previousTeam: teams.previousTeam,
     newTeam: teams.newTeam,
     contract,
+    contractOfferId,
     reasonTag,
     baseOvr: { before: baseOvr, after: baseOvr },
   };
