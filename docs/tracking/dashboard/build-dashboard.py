@@ -121,7 +121,7 @@ NOW = ("Phase 0·1·2 코드는 끝났고 Phase 2는 사용자 게이트(플레�
        "Phase 3(계약·이적)은 9/5 새벽 T-3-005 UI(PR #65)까지 머지돼 코드가 끝났습니다. Phase 4(부상·관계·평판·대표팀)는 T-4-001 타입, T-4-002 부상(PR #64), T-4-003 관계·감독·평판(PR #67), T-4-004 대표팀(PR #68, 11:07)까지 domain·content가 전부 머지됐고, 남은 것은 T-4-007 디자인 재통합·T-4-005 화면·T-4-006 통합 검증입니다. "
        "9/5 오전 오케스트레이션은 Claude 세션으로 복귀했고(9/4 저녁~9/5 오전은 Codex+Luna), 이후 코드 작업은 Claude Code Workflow의 Sonnet 5 에이전트가 전담하며 Claude는 검증·리뷰·머지(화면은 ego-browser 확인)를 맡습니다. 11:07에 T-4-007(디자인 PR #66 재통합)과 T-4-006 domain(3시즌 fixture·불변 property)을 Sonnet 5 워크플로로 병렬 투입했고, 그 뒤 T-4-005 화면 → T-4-006 e2e 순입니다. "
        "11:50에는 사용자 지시(병렬 최대, D-59)로 동시 워커 상한을 없애고 T-4-008(콘텐츠 팩 0.3.0)·T-4-009(Phase 4 화면 준비: DEV 팩 오버라이드·라벨·seed 탐색)·T-2-016(staging 리허설 자동화)을 추가 투입해 워커 5명이 서로 다른 파일 소유권으로 병행 중이며, 읽기 전용 Phase 3·4 코드 감사(관점 7 → 3렌즈 반박 검증)와 CI e2e 간헐 실패 조사도 병행합니다. "
-       "12:30 세션 한도로 워커 4개가 중단됐다가 15:20 WIP를 이어받아 재개했고, 그 사이 사용자가 디자인 PR #66(T-4-007 완료)과 Phase 5 PR #70·#71을 머지했습니다. 코드 감사는 확인 22건(고유 20건)·반박 9건으로 종결했고 정정 결정 D-60(감독 교체 roll 파생 시드, 시장 시드 careerId 제거, step 7 재계약 교체 시점)을 남겼습니다. 수정은 소유권별 묶음 T-4-012(domain)·T-4-013(api)·T-4-014(web)·T-4-015(content)·T-4-016(web 문구)·T-4-017(api 해시 probe)로 나눠 투입합니다. 15:51 PR #72(T-4-006 domain)·#73(T-4-013)이 올라와 검증 체인 중입니다. 16:02 사용자 지시(D-61)로 새 테스트 코드 작성은 보류하고 기존 테스트·골든 갱신만 합니다. "
+       "12:30 세션 한도로 워커 4개가 중단됐다가 15:20 WIP를 이어받아 재개했고, 그 사이 사용자가 디자인 PR #66(T-4-007 완료)과 Phase 5 PR #70·#71을 머지했습니다. 코드 감사는 확인 22건(고유 20건)·반박 9건으로 종결했고 정정 결정 D-60(감독 교체 roll 파생 시드, 시장 시드 careerId 제거, step 7 재계약 교체 시점)을 남겼습니다. 수정은 소유권별 묶음 T-4-012(domain)·T-4-013(api)·T-4-014(web)·T-4-015(content)·T-4-016(web 문구)·T-4-017(api 해시 probe)로 나눠 투입합니다. 16:02 사용자 지시(D-61)로 새 테스트 코드 작성은 보류하고 기존 테스트·골든 갱신만 합니다. 16:30~16:38 PR #72(T-4-006 domain)·#73(T-4-013)을 머지하고 T-4-012(감사 domain 수정)를 투입했으며, 워커가 끝낸 T-4-010(PR #74)·T-4-008(PR #75)·T-4-011(PR #76)은 부하 게이트 순차 검증 큐에 있습니다. "
        "다음 사용자 결정은 U-014(Workers Paid 플랜)·U-015(테스터 모집)·U-005(종이 플레이테스트)입니다.")
 
 
@@ -173,9 +173,9 @@ LAYERS = [
       "트랙 B 타입 슬라이스: health·relationshipLog·reputation·season.manager·HEALTH Effect·RESOLVE_EVENT INJURY/NATIONAL_TEAM·훅 골격 3개 (T-4-001)",
       "결정론적 부상·재활·재발·후유증 상태기계, INJURY forced pending, career-12-injury (T-4-002)",
       "관계 감사 로그·memory tag LRU·결산 평판·주장단·감독 교체 예약·Phase 4 태그 5종·SLUMP/LOCKER_ROOM/ETHICS/MEDIA 이벤트 (T-4-003)",
-      "대표팀 차출 자격 판정(tier OVR·평점+인기)·step 8 NATIONAL_TEAM pending·callUp 3종 체력/관계 delta·부상 자동 사양·NATIONAL_DEBUT MAJOR 챕터 예약·nationalityRuleState 기본 모듈 (T-4-004)"],
-     ["3시즌 통합 fixture career-13·OVR 불변 property·결정 예산·Snapshot 크기 (T-4-006 domain, PR #72 검증 중)",
-      "감사 domain 수정 묶음 C1~C7·C12·C13·F6~F8·F10·F11, D-60 정정 (T-4-012, PR #72 뒤)"]),
+      "대표팀 차출 자격 판정(tier OVR·평점+인기)·step 8 NATIONAL_TEAM pending·callUp 3종 체력/관계 delta·부상 자동 사양·NATIONAL_DEBUT MAJOR 챕터 예약·nationalityRuleState 기본 모듈 (T-4-004)",
+      "3시즌 통합 fixture career-13·불변 property 200 seed·결정 예산·Snapshot 크기 (T-4-006 domain, PR #72)"],
+     ["감사 domain 수정 묶음 C1~C7·C10·F6~F8·F10·F11, D-60 정정 (T-4-012, 진행 중)"]),
     ("content", "이벤트·룰셋 데이터",
      ["프로토타입 팩 0.1.0(이벤트 10개)",
       "조건 DSL·효과 스키마·검증 CLI",
@@ -190,8 +190,7 @@ LAYERS = [
       "팩 0.2.0 등록(활성 0.1.0 유지)·PRO 이벤트 5종 PROTOTYPE·authoring 스키마·agent 토큰·룰셋 팀 12 (T-3-006)",
       "트랙 B 룰셋 섹션 5종(injury·manager·relationship·reputation·nationalTeam)·INJURY/NATIONAL_TEAM 이벤트 스키마·DSL health/manager/reputation 토큰 (T-4-001)",
       "EVT-NAT-001·CHP-NAT-001(0.1.0·0.2.0)·nationalTeamRules event/minRatingTenths·presentation 이벤트 분리 테스트 (T-4-004)"],
-     ["콘텐츠 팩 0.3.0: 카탈로그 후보 승격(INJ·REL·MGR·SLUMP·ETH·MEDIA·NAT)·포지션 전용 MATCH 챕터 3종·도달성 표 (T-4-008, 진행 중)",
-      "감사 content 묶음: season.stats 파생·슬럼프 게이트·EVT-CON-010 phase·INJURY previewEffects 검증기 (T-4-015, T-4-008 뒤)"]),
+     ["콘텐츠 팩 0.3.0: Phase 4 이벤트 12종·포지션 챕터 3종·500 seed 도달성 (T-4-008, PR #75 검증 중)"]),
     ("contracts", "API·명령 스키마(Zod)",
      ["요청·응답 봉투·오류 코드·프로필 설정",
       "커리어 동기화 GET/PUT·Snapshot 봉투",
@@ -229,10 +228,10 @@ LAYERS = [
       "시즌 3경로 동기화·Miniflare golden 순회 (T-2-006)",
       "서비스 시즌 포인터 ACTIVE_SERVICE_SEASON_ID·GET /service-seasons/current·생성 시 시즌 상태 검사(409)·analytics_events 수집(화이트리스트·rate limit)·svc_line_test 시드·마이그레이션 0003 (T-2-012)",
       "analytics_events 삽입 14행 청크(D1 변수 100개 상한, 예행 503)·unknown error 응답 고정 문구·원문은 로그로만 (T-2-015)",
-      "PUT 3경로·멱등·요청 크기 probe 회귀 (T-3-004)"],
+      "PUT 3경로·멱등·요청 크기 probe 회귀 (T-3-004)",
+      "api 100회 병렬 테스트 타임아웃 60초 (T-4-013, PR #73)"],
      ["실제 Google 계정 검증 (U-003 대기)",
-      "Node/workerd 해시 probe에 career-12·13 추가 (T-4-017, PR #72 뒤)",
-      "api 100회 병렬 테스트 타임아웃 60초 (T-4-013, PR #73 검증 중)"]),
+      "Node/workerd 해시 probe에 career-12·13 추가 (T-4-017, PR #72 뒤)"]),
     ("web · ui", "React 화면",
      ["라우터·디자인 토큰·허브 빈 상태",
       "Pretendard 동적 서브셋(2109KB→269KB)",
@@ -332,6 +331,8 @@ ETA = [
     ("9/5 14:59", "사용자가 디자인 PR #66(T-4-007 재통합 포함) 머지 — Phase 3·4 화면이 새 디자인 계약 위에 올라감. Phase 5 PR #70·#71도 사용자 세션에서 머지"),
     ("9/5 15:20", "한도 초기화. 중단 워커 WIP 보존 → T-4-006·008·009·010 재개 + T-4-011 투입. 감사 1차 확인 14건(P1 비호환 보고는 정정·반박), 11건 재검증. T-4-013·T-4-014 투입"),
     ("9/5 15:51", "PR #72(T-4-006 domain: career-13 3시즌 fixture·불변 property 200 seed·결정 예산·Snapshot 크기)·PR #73(T-4-013) 도착, 검증 체인 병렬 시작. 감사 재검증 종결(확인 22건·반박 9건), D-60 정정, 브리프 T-4-012·015·016·017"),
+    ("9/5 16:30", "PR #72 머지(T-4-006 domain: career-13 3시즌 fixture·불변 property·결정 예산·Snapshot 크기). T-4-012(감사 domain 수정, D-60) 투입. 16:02 D-61(새 테스트 작성 보류)"),
+    ("9/5 16:38", "PR #73 머지(T-4-013). T-4-010→PR #74, T-4-008→PR #75(REST 개설), T-4-011→PR #76(워커 중단분 오케스트레이터 커밋). 검증은 load 40 미만 게이트 순차 큐"),
     ("9/5~", "T-4-009 머지 → T-4-005 화면 묶음 3개 병행 → T-4-006 e2e·세션 길이 → T-4-012 domain 수정 → Phase 4 완료 조건 표. 사용자: U-014·U-015(LINE TEST 9/8)·U-005"),
 ]
 DECISIONS = [
