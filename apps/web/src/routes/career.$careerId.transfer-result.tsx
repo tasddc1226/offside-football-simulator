@@ -19,16 +19,22 @@ import { formatKrw } from '../shared/format.js';
 import { platform } from '../platform/index.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
 
-type TransferResultSearch = { rev?: number };
+type TransferResultSearch = { rev?: number; interested?: number };
 
 function parseRevision(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined;
 }
 
+/** STAY 전용 "관심을 보인 구단 N곳" 표시값. 음수·비정수는 무시하고 카드는 개수 없이 그대로 렌더한다. */
+function parseInterestedClubCount(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : undefined;
+}
+
 export const Route = createFileRoute('/career/$careerId/transfer-result')({
   validateSearch: (search: Record<string, unknown>): TransferResultSearch => {
     const rev = parseRevision(search.rev);
-    return rev === undefined ? {} : { rev };
+    const interested = parseInterestedClubCount(search.interested);
+    return { ...(rev === undefined ? {} : { rev }), ...(interested === undefined ? {} : { interested }) };
   },
   loaderDeps: ({ search }) => ({ rev: search.rev }),
   loader: async ({ params, deps }) => {
@@ -151,7 +157,14 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
 function ContractResult({ view, careerId, state }: { view: TransferResultView; careerId: string; state: Parameters<typeof transferResultNextScreen>[0] }) {
   const ctaToPreseason = view.contract !== null && transferResultNextScreen(state) === 'PRESEASON';
   return (
-    <div className="os-screen" data-testid="transfer-result" data-result-revision={view.revision} data-base-ovr-before={view.baseOvr.before} data-base-ovr-after={view.baseOvr.after}>
+    <div
+      className="os-screen"
+      data-testid="transfer-result"
+      data-result-kind={view.kind}
+      data-result-revision={view.revision}
+      data-base-ovr-before={view.baseOvr.before}
+      data-base-ovr-after={view.baseOvr.after}
+    >
       <ScreenIntro eyebrow={view.kindLabel} title={view.title} description={view.body} />
 
       <Card className="flex flex-col gap-os-3">
@@ -181,7 +194,7 @@ function ContractResult({ view, careerId, state }: { view: TransferResultView; c
       {view.contract !== null ? (
         <Card className="flex flex-col gap-os-3">
           <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
-            새 계약
+            {view.kind === 'STAY' ? '현재 계약' : '새 계약'}
           </h2>
           <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
             <div>
@@ -245,7 +258,7 @@ function ContractResult({ view, careerId, state }: { view: TransferResultView; c
 
 function TransferResultScreen() {
   const { careerId } = Route.useParams();
-  const { rev } = Route.useSearch();
+  const { rev, interested } = Route.useSearch();
   const query = useCareer(careerId);
   const [announcement, setAnnouncement] = useState('');
 
@@ -258,7 +271,7 @@ function TransferResultScreen() {
   const view =
     state === undefined || revision === null || query.data === undefined || !isCurrentTransferResultRevision(state, query.data.record.revision, revision)
       ? null
-      : resolveTransferResultView(state, revision);
+      : resolveTransferResultView(state, revision, interested);
 
   useEffect(() => {
     if (view === null) return;

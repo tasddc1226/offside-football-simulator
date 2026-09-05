@@ -149,14 +149,17 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-007 | B | web + ui | 디자인 PR #66 재통합(D-58): 최신 main merge·충돌 해결·T-3-005/T-4-004 화면 디자인 정합 | T-4-004 | done | PR #66 `7bd3d84`(사용자 머지 2026-09-05 14:59, 워커 커밋 5bb89e6·07f2ce4), [브리프](briefs/T-4-007.md). 오케스트레이터 체인 통과(타임아웃 3건 단독 재실행 통과). staging 360px ego-browser 확인(16:10): 허브·커리어 생성 1단계 새 디자인 렌더, 가로 오버플로 0 |
 | T-4-008 | A | content | 콘텐츠 팩 0.3.0(0.2.0 복사 + 부상·관계·감독·슬럼프·윤리·미디어·대표팀 이벤트 승격, 포지션 전용 챕터 3종), 0.1.0·0.2.0 무변경, 도달성 표 | T-4-004 | done | **PR #75 `13eeaaf`**(2026-09-05 16:45), [브리프](briefs/T-4-008.md). 워커는 PR 게이트에 막혀 push+PR_BODY로 멈춤 → 오케스트레이터가 REST로 개설. EVT-NAT-002 트리거는 `popularityCenti ≥ 5200` 대체(잠정) |
 | T-4-009 | B | web(engine·labels·e2e helper) | Phase 4 화면 준비: D-56 DEV 팩 오버라이드 `resolveActiveContentPackVersion`, D-57 라벨 함수, presentation 도달 seed 탐색 도구·`phase4-seeds.ts`, 도달성 보고 | T-4-004 | in-progress | [브리프](briefs/T-4-009.md). Sonnet 5 워크플로 투입(2026-09-05 11:48), 브랜치 `T-4-009-phase4-prep`. 라우트·`packages/ui` 금지(T-4-007과 소유권 분리). 15:20 세션 한도로 중단 → `wf_4498dfc0-665`로 재개(WIP 1efbb5d) |
-| T-4-010 | B | web(e2e) + ci | e2e 간헐 실패 안정화: season-result 카운트업 건너뛰기 경쟁, signFirstOffer 잔류 경로 허용, INTEREST 고정 seed 케이스, CI 실패 아티팩트 업로드 | T-3-005 | in-progress | [브리프](briefs/T-4-010.md). **PR #74**(`56f8f2c`, 16:12) 검증 큐 실행 중. 워커 질문(D-61 소급?): 지시 이전 브리프 요구분이므로 INTEREST 고정 seed 케이스 유지 |
-| T-4-011 | B | web | SCR-020 잔류 결과(STAY): INTEREST 시장 안전 잔류 수락 시 결과 카드 렌더·loader redirect 튕김 제거 | T-4-007 | in-progress | [브리프](briefs/T-4-011.md). 워커가 구현·자체 검증 뒤 구조화 출력 강제 종료로 커밋 전 중단 → 오케스트레이터가 5파일을 커밋해 **PR #76**(`38ac62b`, 16:38) 개설, 검증 큐 대기 |
+| T-4-010 | B | web(e2e) + ci | e2e 간헐 실패 안정화: season-result 카운트업 건너뛰기 경쟁, signFirstOffer 잔류 경로 허용, INTEREST 고정 seed 케이스, CI 실패 아티팩트 업로드 | T-3-005 | done | **PR #74 `552481c`**(2026-09-05 16:48), [브리프](briefs/T-4-010.md). INTEREST 고정 seed 케이스는 D-61 이전 요구분으로 유지 |
+| T-4-011 | B | web | SCR-020 잔류 결과(STAY): INTEREST 시장 안전 잔류 수락 시 결과 카드 렌더·loader redirect 튕김 제거 | T-4-007 | done | **PR #76 `25544b3`**(2026-09-05 16:50), [브리프](briefs/T-4-011.md). 워커 구현분(구조화 출력 강제 종료로 커밋 전 중단)을 오케스트레이터가 커밋·개설. e2e TEST-E2E-003(c) STAY 카드 포함 97 passed |
 | T-4-012 | A | domain | 감사 확인 finding domain 묶음: 감독 교체 roll RNG(C1), walk 중 stale 부상 상태 대표팀 자동 사양(C2), 시장 파생 시드 careerId(C3), EXPIRED 전부 거절 안전 잔류 미체결(C4·C10), 임대→FA 이적 유령 stint(C5), FIRST_CONTRACT 전부 거절(C6), step 7 빈 제안 nextAction(C7), 재검증 확정 F6~F8·F10·F11(step 7 재계약 계약 교체 시점·결산 시장 생략·임대 복귀 감독 이력) | T-4-006(domain) | in-progress | [브리프](briefs/T-4-012.md)(D-60 정정). Sonnet 5 워크플로 `wf_6ba9548e-839` 투입(2026-09-05 16:31), 브랜치 `T-4-012-domain-audit`. C12·C13(테스트 공백)은 D-61로 보류 |
 | T-4-013 | A | api(test) | careers.test.ts 100회 병렬 테스트 2건 타임아웃 60초(러너·부하 flake) | — | done | **PR #73 `add9f53`**(2026-09-05 16:35), [브리프](briefs/T-4-013.md). 체인은 api 파일 부하 게이트 뒤 단독 재실행 25/25 |
-| T-4-014 | B | web | 감사 web 묶음: step 7 사전 협상 '전부 거절' 문구·안내(C9), 휴대폰 탭 시장 사유·제안 수(C11) | T-4-007 | in-progress | [브리프](briefs/T-4-014.md). 투입 2026-09-05 15:30. C8(SCR-020 RETURN 문구)은 T-4-011 머지 뒤 |
+| T-4-014 | B | web | 감사 web 묶음: step 7 사전 협상 '전부 거절' 문구·안내(C9), 휴대폰 탭 시장 사유·제안 수(C11) | T-4-007 | in-progress | [브리프](briefs/T-4-014.md). 워커 완료 **PR #78 `384a37e`**(2026-09-05 16:50) → 검증 큐 실행 중. 360px 스크린샷 2장(offers·휴대폰 탭) 확인 완료. 후속 발견 → T-4-018 |
 | T-4-015 | B | content | 감사 content 묶음: season.stats 8필드 playerStats 파생(F2), 슬럼프 게이트 `recentRatedMatches`·sentinel(F1), EVT-CON-010 phase 정합(F2), INJURY previewEffects 룰셋 대조 검증기(F4; C14 테스트는 D-61 보류) | T-4-008 | in-progress | [브리프](briefs/T-4-015.md). Sonnet 5 워크플로 `wf_a2cc4721-227` 투입(2026-09-05 16:46), 브랜치 `T-4-015-content-audit` |
-| T-4-016 | B | web | 감사 web 소수정: SCR-020 RETURN 관계 문구(C8), `{manager}` 서사 토큰을 `season.manager.name` 우선으로(F5) | T-4-011 | todo | [브리프](briefs/T-4-016.md). T-4-011 머지 직후 투입 |
+| T-4-016 | B | web | 감사 web 소수정: SCR-020 RETURN 관계 문구(C8), `{manager}` 서사 토큰을 `season.manager.name` 우선으로(F5) | T-4-011 | in-progress | [브리프](briefs/T-4-016.md). 워커 완료 **PR #79 `193e3e3`**(2026-09-05 16:59). T-4-019 핫픽스 머지 뒤 검증 큐 |
 | T-4-017 | A | api(test) | Node/workerd 해시 probe에 career-12·career-13 fixture 추가(T-4-006 §1(d) 잔여) | T-4-006(domain) | deferred | [브리프](briefs/T-4-017.md). **보류(D-61, 새 테스트 작성 금지)**. 테스트 작업 재개 시 투입 |
+| T-4-018 | B | web | SCR-017 offers 화면 eyebrow를 시장 사유별로(INTEREST/LOAN_END/PRE_NEGOTIATION에서 "계약 만료·FA" 고정 노출 수정; PR #78 스크린샷 발견) | T-4-014 | todo | [브리프](briefs/T-4-018.md). PR #78 머지 뒤 투입(`offers.tsx` 소유권) |
+| T-4-019 | — | web(e2e) | [핫픽스] main 회귀: `signFirstOffer` 헬퍼 정규식(PR #74)이 STAY 결과 URL `&interested=N`(PR #76)을 거부해 season.spec:121 결정적 실패 | T-4-010, T-4-011 | in-progress | [브리프](briefs/T-4-019.md). 17:01 투입 → 17:10 BLOCKED(헬퍼 수정 커밋 `a6e8136`, season.spec:143 단언이 #76 프리시즌 경로와 불일치) → 17:12 단언 완화 허용해 재투입. 머지 전까지 PR #78·#79 검증 큐 보류 |
+| T-4-020 | — | web(e2e) | [핫픽스] injury.spec `reachForcedInjury` poll의 타임아웃 없는 `textContent()`가 `/event` 전환 순간 무한 대기 → 반복 60초 타임아웃(trace로 확정) | T-4-010 | in-progress | [브리프](briefs/T-4-020.md). 2026-09-05 17:05 Sonnet 5 워크플로 투입 |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
@@ -178,14 +181,17 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-012 | Sonnet 5 · Workflow `wf_6ba9548e-839` | 2026-09-05 16:31 | 감사 domain 묶음(C1~C7·C10·F6~F8·F10·F11, D-60) 구현 중 — 새 테스트 없이 기존 골든 재기록만(D-61) |
 | T-4-015 | Sonnet 5 · Workflow `wf_a2cc4721-227` | 2026-09-05 16:46 | content 감사 묶음(F1·F2·F4) 구현 중, D-61 |
 | T-4-009 | Sonnet 5 · Workflow `wf_4498dfc0-665`(재개) | 2026-09-05 15:22 | WIP 1efbb5d 이어받아 seed 탐색·phase4-seeds·도달성 보고 마무리 중 |
-| T-4-010 | Sonnet 5 · Workflow `wf_4498dfc0-665`(재개) | 2026-09-05 15:22 | 워커 완료 → PR #74, 오케스트레이터 검증 체인 실행 중(E2E 5303) |
-| T-4-011 | Sonnet 5 · Workflow `wf_4498dfc0-665` → 오케스트레이터 커밋 | 2026-09-05 15:22 | PR #76 검증 큐 대기 |
-| T-4-014 | Sonnet 5 · Workflow `wf_b145e191-8e7` | 2026-09-05 15:30 | step 7 전부 거절 문구·휴대폰 탭 시장 사유 표시 중 |
+| T-4-016 | Sonnet 5 · Workflow `wf_93182b9d-f34` | 2026-09-05 16:51 | 워커 완료, PR #79 — T-4-019 머지 뒤 검증 큐 |
+| T-4-019 | Sonnet 5 · Workflow `wf_f783c4e5-428` | 2026-09-05 17:01 | e2e 헬퍼 정규식 핫픽스(main 회귀) |
+| T-4-020 | Sonnet 5 · Workflow | 2026-09-05 17:05 | injury.spec poll 타임아웃 핫픽스(반복 플레이크 원인) |
+| T-4-014 | Sonnet 5 · Workflow `wf_b145e191-8e7` | 2026-09-05 15:30 | 워커 완료, PR #78 검증 큐 실행 중 |
 
 ## 완료
 
 | ID | 내용 | 커밋 |
 |---|---|---|
+| T-4-011 | PR #76 `25544b3` | 2026-09-05 | Sonnet 5 구현 + 오케스트레이터 커밋·개설. 체인 CHAIN EXIT 0(e2e 97, STAY 카드 a11y 0) |
+| T-4-010 | PR #74 `552481c` | 2026-09-05 | Sonnet 5 두 세션(한도 중단·WIP 이어받기). 체인 재실행 CHAIN EXIT 0(e2e 97) |
 | T-4-008 | PR #75 `13eeaaf` | 2026-09-05 | Sonnet 5 두 세션(한도 중단·WIP 이어받기), 이벤트 12·챕터 3·도달성 테스트. 체인 CHAIN EXIT 0(content 22/22, e2e 96) |
 | T-4-013 | PR #73 `add9f53` | 2026-09-05 | Sonnet 5, 타임아웃 2줄. 체인은 api 파일 부하 게이트 뒤 단독 재실행 통과, e2e 96 passed |
 | T-4-006(domain) | PR #72 `518db98` | 2026-09-05 | Sonnet 5 두 세션(한도 중단·WIP 이어받기), 테스트 전용 13파일 +2,897. 체인은 부하 타임아웃 2파일 단독 재실행 통과, e2e 96 passed |
