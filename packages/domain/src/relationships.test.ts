@@ -307,8 +307,8 @@ describe('onSettlementRelations', () => {
     });
     const inputRngBytes = JSON.stringify(state.rngState);
     const directRoll = rollInt(state.rngState, 10000);
-    const resetCounterRoll = rollInt({ s: state.rngState.s, draws: 0 }, 10000);
-    expect(resetCounterRoll.value).toBe(directRoll.value);
+    const managerRoll = rollInt(seedRng(`manager:${makeSeason(makeManager()).index}:${state.rngState.s.join(',')}`), 10000);
+    expect(managerRoll.value).not.toBe(directRoll.value);
     const result = onSettlementRelations({
       state,
       season: makeSeason(makeManager({ tenureSeasons: 3 })),
@@ -323,7 +323,7 @@ describe('onSettlementRelations', () => {
     expect(JSON.stringify(result.rng)).toBe(inputRngBytes);
     expect(result.rng.draws).toBe(state.rngState.draws);
     expect(result.managerDecisionRng?.draws).toBe(1);
-    expect(result.managerDecisionRng).toEqual(resetCounterRoll.state);
+    expect(result.managerDecisionRng).toEqual(managerRoll.state);
     const replay = onSettlementRelations({
       state,
       season: makeSeason(makeManager({ tenureSeasons: 3 })),

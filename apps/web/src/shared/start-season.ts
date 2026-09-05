@@ -5,6 +5,11 @@ import type { CareerState, SimulationMode, TrainingFocus } from '@offside/domain
 
 export type { TrainingFocus };
 
+/** 계약·임대 복귀 등의 결정을 마친 커리어만 새 시즌을 계획할 수 있다. */
+export function canPlanNextSeason(state: CareerState): boolean {
+  return state.status === 'ACTIVE' && state.contract !== null && state.season === null && state.pending === null;
+}
+
 export const TRAINING_FOCUS_OPTIONS: readonly TrainingFocus[] = ['ROLE', 'TECHNICAL', 'PHYSICAL', 'MENTAL'];
 
 export const TRAINING_FOCUS_LABEL_KO: Record<TrainingFocus, string> = {

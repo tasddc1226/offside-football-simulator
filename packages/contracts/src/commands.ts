@@ -71,6 +71,7 @@ const EligibleEventSchema = z.strictObject({
   eventId: z.string().min(1),
   version: z.number().int().min(1),
   weight: z.number().int().min(1),
+  slot: z.literal('TRANSFER_WINDOW').exactOptional(),
 });
 
 // T-2-004 D-38: ADVANCE payload의 chapterCandidates 원소 하나. domain `ChapterCandidateInput`과 동일.

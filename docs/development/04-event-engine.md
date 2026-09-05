@@ -40,6 +40,10 @@ ELIGIBLE → OFFERED → COMMITTING → RESOLVED
 - `FAST` 모드에서 열리지 않은 선택 이벤트는 ELIGIBLE에 머문 것으로 기록하며 roll을 소비하지 않는다. 노출되지 않은 이벤트는 cooldown을 시작하지 않는다.
 - 이벤트 배치는 [시간 모델](11-time-model-and-pacing.md)의 step 결정 슬롯과 결정 예산 안에서만 일어난다.
 
+Phase 4 화면은 콘텐츠 `presentation`과 pending을 함께 읽어 부상·대표팀·슬럼프·라커룸·윤리·미디어·루머 맥락을 표시하고, 확정·저장·재시도는 공통 이벤트 흐름을 사용한다. 이벤트 정의는 현재 DEV 기본 팩이 아니라 **커리어에 저장된 콘텐츠 팩 버전**으로 읽는다.
+
+`INJURY`·`NATIONAL_TEAM`은 전용 pending 생성기를 유지한다. `RUMOUR`는 이적 창의 제안 없는 CONTRACT 체크포인트에서 `slot: 'TRANSFER_WINDOW'` 후보로만 연다. 일반 EVENT와 섞어 추첨하지 않는다([D-63](../tracking/phase-3-4-plan.md#d-63-이적-루머의-실제-진입-경로)).
+
 `phases`의 값은 `CareerPhase`다.
 
 ```ts
@@ -95,6 +99,8 @@ type CareerPhase =
 5. 후속 이벤트를 예약한다.
 6. narrative token을 확정 값으로 렌더링한다. 조사 토큰 `{name:이/가}`, `{team:과/와}`는 렌더러가 받침을 판정한다.
 7. Event, Career, Snapshot을 한 트랜잭션으로 저장한다.
+
+결과 UI는 해당 revision 전후 Snapshot의 실제 차이를 우선한다. clamp·중복 방지 후의 적용량을 보여주고, 과거 Snapshot이 없을 때만 정의 효과라는 안내와 함께 대체 표시한다. 화면 조회는 재추첨이나 커리어 변경을 일으키지 않는다.
 
 ## 공정성 규칙
 

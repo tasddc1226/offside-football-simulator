@@ -1,6 +1,12 @@
 // 06 "내비게이션": 깊은 링크·재진입이 커리어 단계와 맞지 않을 때 이 함수가 안전한 화면을 고른다.
 import type { CareerState } from '@offside/domain';
 import { SCREEN_ROUTES } from '../routes.js';
+import { contentForCareer } from '../engine/content.js';
+
+const PRESENTATION_SCREENS = {
+  INJURY: 'SCR-022', NATIONAL_TEAM: 'SCR-032', SLUMP: 'SCR-021',
+  LOCKER_ROOM: 'SCR-018', ETHICS: 'SCR-016', MEDIA: 'SCR-024', RUMOUR: 'SCR-019',
+} as const;
 
 export type ScreenTarget = {
   screenId: keyof typeof SCREEN_ROUTES;
@@ -24,9 +30,9 @@ const DRAFT_FIELDS_WITHOUT_ARCHETYPE = [
 
 /**
  * DRAFT: archetypeId를 뺀 6개 필드 중 하나라도 null이면 SCR-002, archetypeId만 비었으면 SCR-003,
- * 그 외 SCR-004. ACTIVE: pending.kind === 'EVENT'면 이벤트별 화면(기본 SCR-013), 'INJURY'면 SCR-013, 'OFFERS'면
- * SCR-009/017, 'ROLE_PROPOSAL'이면 SCR-012, 'CHAPTER'면 SCR-031(자리표시), LOAN_RETURN은 대시보드의
- * 전용 SCR-020 CTA가 열고, 그 외(SETTLEMENT·CONTRACT·NATIONAL_TEAM)와 pending 없음은 SCR-029.
+ * 그 외 SCR-004. ACTIVE: 커리어에 저장된 팩의 presentation으로 EVENT 화면을 고른다.
+ * INJURY/NATIONAL_TEAM은 SCR-022/032, OFFERS/제안 있는 CONTRACT는 SCR-009/017,
+ * ROLE_PROPOSAL은 SCR-012, CHAPTER는 SCR-031, LOAN_RETURN은 SCR-020. 나머지는 SCR-029.
  * RETIRED·ARCHIVED는 SCR-025 FULL TIME retirement 화면으로 보낸다.
  */
 export function screenForCareer(state: CareerState): ScreenTarget {
@@ -43,7 +49,12 @@ export function screenForCareer(state: CareerState): ScreenTarget {
   if (state.status === 'ACTIVE') {
     const pending = state.pending;
     if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM')) {
-      const screenId = pending.kind === 'EVENT' ? EVENT_SCREEN_OVERRIDES[pending.eventId] ?? 'SCR-013' : 'SCR-013';
+      const presentation = pending.kind === 'EVENT'
+        ? contentForCareer(state).eventsById.get(pending.eventId)?.presentation
+        : pending.kind;
+      const screenId = (presentation && presentation in PRESENTATION_SCREENS
+        ? PRESENTATION_SCREENS[presentation as keyof typeof PRESENTATION_SCREENS] : undefined)
+        ?? EVENT_SCREEN_OVERRIDES[pending.eventId] ?? 'SCR-013';
       return { screenId, params };
     }
     if (pending !== null && pending.kind === 'OFFERS') {
@@ -57,6 +68,7 @@ export function screenForCareer(state: CareerState): ScreenTarget {
     if (pending !== null && pending.kind === 'ROLE_PROPOSAL') {
       return { screenId: 'SCR-012', params };
     }
+    if (pending?.kind === 'LOAN_RETURN') return { screenId: 'SCR-020', params };
     // T-2-004(PR #41, origin/main 머지 확인)가 CHAPTER pending에 chapterId 등 실제 형태를 채웠다.
     // 실제 경기 화면은 T-2-008 몫이라 여기서는 자리표시(SCR-031)로만 보낸다.
     if (pending !== null && pending.kind === 'CHAPTER') {

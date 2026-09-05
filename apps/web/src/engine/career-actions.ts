@@ -11,6 +11,7 @@ import { startCareerFunnel } from './funnel.js';
 import { classifyDeleteResult, queuePendingDelete } from './pending-delete.js';
 import { resolveServiceSeasonId } from './service-season.js';
 import { getSyncClient } from './sync.js';
+import { contentForCareer } from './content.js';
 
 type LatencyBucket = '<100ms' | '<500ms' | '<2s' | '>=2s';
 
@@ -145,8 +146,9 @@ export async function advance(engine: AppEngine, careerId: string): Promise<Exec
   if (!load.ok) {
     return { ok: false, error: load.error };
   }
-  const eligibleEvents = selectEligibleEvents(engine.pack, load.snapshot.state);
-  const chapterCandidates = selectChapterCandidates(engine.pack, load.snapshot.state);
+  const pack = contentForCareer(load.snapshot.state);
+  const eligibleEvents = selectEligibleEvents(pack, load.snapshot.state);
+  const chapterCandidates = selectChapterCandidates(pack, load.snapshot.state);
   return commit(engine, careerId, load.snapshot.revision, {
     type: 'ADVANCE',
     payload: { eligibleEvents, chapterCandidates },
@@ -216,7 +218,7 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
     return { ok: false, error: { code: 'VALIDATION_FAILED', message: 'resolveEvent: 해소할 pending 이벤트가 없다.' } };
   }
 
-  const definition = engine.pack.eventsById.get(pending.eventId);
+  const definition = contentForCareer(load.snapshot.state).eventsById.get(pending.eventId);
   if (definition === undefined) {
     return {
       ok: false,
@@ -395,7 +397,7 @@ export async function resolveChapter(
     return { ok: false, error: { code: 'VALIDATION_FAILED', message: 'resolveChapter: 해소할 pending 챕터가 없다.' } };
   }
 
-  const definition = engine.pack.chaptersById.get(pending.chapterId);
+  const definition = contentForCareer(load.snapshot.state).chaptersById.get(pending.chapterId);
   if (definition === undefined) {
     return {
       ok: false,

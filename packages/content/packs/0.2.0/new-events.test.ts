@@ -1,7 +1,8 @@
 // T-3-006: 팩 0.2.0이 새로 더한 PRO 이벤트 5개(EVT-CON-010~013, EVT-MEDIA-006)의 계약 테스트.
 // 스키마 통과는 loadContentPack이 이미 강제하므로(파싱 실패 시 throw), 여기서는 그 위의 콘텐츠
-// 불변식(태그 문자열·배타·효과 제한·RUMOUR 제외·PRO/YOUTH 트리거 분기)만 확인한다.
+// 불변식(태그 문자열·배타·효과 제한·RUMOUR 체크포인트·PRO/YOUTH 트리거 분기)만 확인한다.
 import { describe, expect, it } from 'vitest';
+import type { CareerState } from '@offside/domain';
 import type { EventDefinition } from '../../src/schema/event.ts';
 import type { ContentPack } from '../../src/packs/load-content-pack.ts';
 import type { NarrativeDictionary } from '../../src/schema/narrative.ts';
@@ -153,12 +154,32 @@ describe('EVT-CON-010: presentation RUMOUR은 일반 EVENT 후보에서 빠진�
     expect(getEvent('EVT-CON-010').presentation).toBe('RUMOUR');
   });
 
-  it('트리거가 통과할 조건이어도 selectEligibleEvents 결과에 EVT-CON-010이 없다', () => {
+  it('빈 CONTRACT 체크포인트에서 트리거가 통과하면 EVT-CON-010이 후보가 된다', () => {
     const event = getEvent('EVT-CON-010');
     const state = buildTestState({
       stage: 'PRO',
       seasonPhase: 'TRANSFER_WINDOW',
       currentStep: 7,
+      season: {
+        currentStep: 7,
+        steps: [{ index: 7, windowOpen: true }],
+        matches: [],
+        playerStats: {
+          appearances: { total: 15 },
+          minutes: 0,
+          ratedMatches: 0,
+          ratingSumTenths: 0,
+          totals: { group: 'FW', goals: 0, assists: 0 },
+          yellow: 0,
+          red: 0,
+        },
+      } as unknown as CareerState['season'],
+      pending: {
+        kind: 'CONTRACT',
+        step: 7,
+        offers: [],
+        market: { openedAtRevision: 1, seasonIndex: 1, reason: 'PRE_NEGOTIATION', safeOfferId: null },
+      },
       contract: {
         id: 'CTR-test',
         offerId: 'OFR-test',
@@ -181,7 +202,7 @@ describe('EVT-CON-010: presentation RUMOUR은 일반 EVENT 후보에서 빠진�
         signedSeasonIndex: 1,
       },
     });
-    expect(selectEligibleEvents(isolatedPack(event), state)).toEqual([]);
+    expect(selectEligibleEvents(isolatedPack(event), state)).toEqual([{ eventId: event.id, version: 1, weight: event.weight, slot: 'TRANSFER_WINDOW' }]);
   });
 });
 

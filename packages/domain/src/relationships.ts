@@ -1,5 +1,5 @@
 import type { RngState } from './rng.js';
-import { rollInt } from './rng.js';
+import { rollInt, seedRng } from './rng.js';
 import { compareCodePoints } from './canonical.js';
 import { buildReplacementManager } from './manager.js';
 import { applySettlementReputation } from './reputation.js';
@@ -65,9 +65,10 @@ function applyManagerDecision(input: SettlementRelationsInput): SettlementRelati
   let shouldChange = false;
   let managerDecisionRng: RngState | null = null;
   if (currentManager.tenureSeasons >= managerRules.minTenureSeasons) {
-    // Reuse only the main stream words. Resetting the counter makes this derived
-    // stream exactly one draw without mutating the main decision stream.
-    const managerStream: RngState = { s: input.rng.s, draws: 0 };
+    // Derive a separate stream from the season and decision-stream state. The
+    // main stream is intentionally untouched, while the manager roll no longer
+    // shares its first word with market/match decisions.
+    const managerStream: RngState = seedRng(`manager:${input.season.index}:${input.rng.s.join(',')}`);
     const rolled = rollInt(managerStream, 10000);
     managerDecisionRng = rolled.state;
     const probabilityBp = Math.min(

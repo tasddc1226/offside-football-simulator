@@ -5,11 +5,14 @@
 // 결과 화면에 남아 오류를 보여준다(오류를 조용히 삼키고 이동하지 않는다).
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import { decodeSnapshot } from '@offside/engine-client';
 import { Button, ErrorState, ResultCard, ScreenIntro, Skeleton } from '@offside/ui';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
-import { activeContentPack } from '../engine/content.js';
+import { contentForCareer } from '../engine/content.js';
+import { getAppEngine } from '../engine/engine.js';
 import { screenForCareer } from '../shared/career-route.js';
-import { resolveEventResultView } from '../shared/event-result.js';
+import { actualEventEffects, resolveEventResultView } from '../shared/event-result.js';
+import { INJURY_BODY_PART_LABELS, INJURY_SEVERITY_LABELS, REHAB_PLAN_LABELS } from '../shared/labels.js';
 import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
@@ -23,11 +26,24 @@ export const Route = createFileRoute('/career/$careerId/event_/result')({
   loaderDeps: ({ search }) => ({ rev: search.rev }),
   loader: async ({ params, deps }) => {
     const { state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
-    const view = resolveEventResultView(state, activeContentPack, deps.rev);
+    const view = resolveEventResultView(state, contentForCareer(state), deps.rev);
     if (view === null) {
       const target = screenForCareer(state);
       throw redirect({ to: SCREEN_ROUTES[target.screenId], params: target.params });
     }
+    // 읽기만 한다. 과거 결과에 현재 상태를 섞거나 결과 RNG를 다시 실행하지 않는다.
+    const engine = await getAppEngine();
+    const records = await engine.store.transaction('readonly', async (tx) =>
+      Promise.all([tx.snapshots.get(params.careerId, deps.rev - 1), tx.snapshots.get(params.careerId, deps.rev)]),
+    );
+    const [before, after] = records.map((record) => record ? decodeSnapshot(record) : null);
+    const historical = after?.ok ? after.snapshot.state : null;
+    const rehab = historical?.timeline.find((entry) => entry.revision === deps.rev && entry.kind === 'REHAB_CHOSEN');
+    return {
+      actualEffects: before?.ok && historical ? actualEventEffects(before.snapshot.state, historical) : null,
+      episode: historical?.health.episodes.find((entry) => entry.id === rehab?.refId) ?? null,
+      nextKind: historical?.pending?.kind ?? null,
+    };
   },
   component: EventResultScreen,
 });
@@ -35,6 +51,7 @@ export const Route = createFileRoute('/career/$careerId/event_/result')({
 function EventResultScreen() {
   const { careerId } = Route.useParams();
   const { rev } = Route.useSearch();
+  const details = Route.useLoaderData();
   const query = useCareer(careerId);
   const advanceMutation = useCareerMutation('advance');
   const navigate = useNavigate();
@@ -45,7 +62,7 @@ function EventResultScreen() {
   const view =
     query.data === undefined
       ? null
-      : resolveEventResultView(query.data.state, activeContentPack, rev);
+      : resolveEventResultView(query.data.state, contentForCareer(query.data.state), rev);
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', {
@@ -87,6 +104,8 @@ function EventResultScreen() {
     // 라우트 loader가 이미 screenForCareer로 redirect했어야 한다. 방어적 fallback.
     return null;
   }
+  const eventEntry = state.timeline.find((candidate) => candidate.revision === rev && candidate.kind === 'EVENT_RESOLVED');
+  const eventDefinition = eventEntry?.refId ? contentForCareer(state).eventsById.get(eventEntry.refId.split(':')[0] ?? '') : undefined;
 
   async function handleNext() {
     if (submittingRef.current) return;
@@ -134,9 +153,22 @@ function EventResultScreen() {
         kindLabel={view.kindLabel}
         title={view.title}
         body={view.body}
-        effects={view.effects}
+        effects={details.actualEffects ?? view.effects}
         tags={view.tags}
       />
+      <p className="os-muted">{details.actualEffects === null
+        ? '이 기기에는 당시의 상세 저장 기록이 없어 선택의 기본 효과를 표시합니다. 상한과 중복 적용에 따라 실제 변화는 달라질 수 있습니다.'
+        : '선택 직전과 직후의 저장값을 비교한 실제 변화입니다. 이후 적용될 효과는 선택 안내를 참고하세요.'}</p>
+      {details.episode !== null || eventDefinition?.presentation === 'NATIONAL_TEAM' || details.nextKind !== null ? (
+        <section className="os-panel flex flex-col gap-os-2" aria-label="결과 상세">
+          <h2 className="font-os font-semibold text-os-text">이번 결과의 맥락</h2>
+          {eventDefinition?.presentation === 'INJURY' && details.episode ? (
+            <p className="font-os text-os-text-2">{INJURY_BODY_PART_LABELS[details.episode.bodyPart]} · {INJURY_SEVERITY_LABELS[details.episode.severity]} · {details.episode.diagnosisRange.minMatches}~{details.episode.diagnosisRange.maxMatches}경기 · {details.episode.rehab ? REHAB_PLAN_LABELS[details.episode.rehab] : '진단 대기'}</p>
+          ) : null}
+          {eventDefinition?.presentation === 'NATIONAL_TEAM' ? <p className="font-os text-os-text-2">대표팀 결과 · 감독 신뢰는 변하지 않습니다</p> : null}
+          {details.nextKind !== null ? <p className="font-os text-os-text-2">이 선택에 이어진 이야기: {details.nextKind === 'EVENT' ? '새 이벤트 선택' : details.nextKind === 'NATIONAL_TEAM' ? '대표팀 선택' : details.nextKind === 'INJURY' ? '재활 계획 선택' : '다음 결정'}</p> : null}
+        </section>
+      ) : null}
       {errorMessage ? <ErrorState message={errorMessage} onRetry={handleNext} /> : null}
       <div className="os-action-dock">
         <Button variant="primary" onClick={handleNext} disabled={advanceMutation.isPending}>

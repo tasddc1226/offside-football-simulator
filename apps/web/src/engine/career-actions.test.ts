@@ -114,6 +114,20 @@ describe('updateDraft·confirmPlayer', () => {
 });
 
 describe('advance: selectEligibleEvents 배선', () => {
+  it('새 커리어용 팩이 달라도 기존 커리어의 진행·선택은 저장된 팩을 사용한다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToConfirmed(engine);
+    const otherPack = loadContentPack('0.3.0');
+    const switched = { ...engine, pack: { ...otherPack, events: [], eventsById: new Map() } };
+    const advanced = await advance(switched, careerId);
+    expect(advanced.ok).toBe(true);
+    if (!advanced.ok) throw new Error('진행 실패');
+    expect(advanced.domainSnapshot.state.pending?.kind).toBe('EVENT');
+    const resolved = await resolveEvent(switched, careerId, 'A');
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) throw new Error('선택 실패');
+    expect(resolved.domainSnapshot.state.contentPackVersion).toBe('0.1.0');
+  });
   it('career01 픽스처를 CONFIRM_PLAYER까지 재생한 뒤 advance가 selectEligibleEvents 결과(EVT-CON-002 포함)를 ADVANCE payload로 보낸다', async () => {
     const engine = makeTestEngine();
     const careerId = career01.createCareer.careerId;
@@ -280,7 +294,7 @@ describe('settleSeason', () => {
     expect(result.domainSnapshot.state.season).toBeNull();
     expect(result.domainSnapshot.state.pending).toBeNull();
     expect(result.domainSnapshot.state.seasonHistory).toHaveLength(1);
-    expect(result.domainSnapshot.state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_SETTLED' });
+    expect(result.domainSnapshot.state.timeline).toContainEqual(expect.objectContaining({ kind: 'SEASON_SETTLED' }));
   });
 });
 

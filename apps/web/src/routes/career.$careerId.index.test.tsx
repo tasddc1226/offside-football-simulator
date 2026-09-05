@@ -4,7 +4,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
-import type { ChapterRecord, Ruleset } from '@offside/domain';
+import type { ChapterRecord, Offer, Ruleset } from '@offside/domain';
 import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -166,6 +166,34 @@ async function seasonActiveNoPendingCareerId(engine: AppEngine): Promise<string>
     throw new Error('역할 수락 뒤 시즌이 진행 중이고 pending이 없어야 한다');
   }
   return careerId;
+}
+
+/** T-4-014 C11 테스트 전용: 실제 시장 offer 생성기를 거치지 않고 최소 형태의 Offer를 만든다. */
+function buildFakeOffer(id: string, overrides: Partial<Offer> = {}): Offer {
+  return {
+    id,
+    kind: 'TRANSFER',
+    teamId: `team-${id}`,
+    teamName: `테스트 FC ${id}`,
+    fromTeamId: null,
+    leagueTier: 1,
+    lengthSeasons: 2,
+    wageMinorPerWeek: 5_000_000,
+    signingBonusMinor: 0,
+    transferFeeMinor: null,
+    rolePromise: 'STARTER',
+    appearancePromise: { minutesShareBp: 7000 },
+    positionPlan: 'W',
+    shirtNumber: 7,
+    tacticalFitEstimate: 70,
+    competitorSummary: null,
+    validUntilRevision: null,
+    negotiable: { wage: false, role: false, length: false },
+    negotiationState: 'OPEN',
+    negotiatedAsk: null,
+    loan: null,
+    ...overrides,
+  };
 }
 
 async function nationalTeamPendingCareerId(engine: AppEngine): Promise<string> {
@@ -800,5 +828,40 @@ describe('T-2-009 다이어리 연대기 요약: buildSeasonChronicleItems·buil
 
     const pastLinks = buildPastSeasonLinks(state);
     expect(pastLinks.some((link) => link.historyIndex === justSettledIndex)).toBe(false);
+  });
+});
+
+describe('T-4-014 C11: 휴대폰 탭의 시장 사유·제안 수(T-3-005 브리프 §1)', () => {
+  it('열린 OFFERS pending이 있으면 시장 사유·제안 수와 이적시장 링크를 보여준다', async () => {
+    const engine = setTestEngine();
+    const careerId = await signedCareerId(engine);
+
+    renderAt(`/career/${careerId}`);
+    // Radix Tabs는 mousedown(자동 활성화 모드)에서 선택을 바꾼다 — click만으로는 안 바뀐다.
+    fireEvent.mouseDown(await screen.findByRole('tab', { name: '휴대폰' }));
+    // 계약 직후(시즌 시작 전)라 pending이 없다 — 시장 사유·제안 수 문구도, 링크도 없어야 한다.
+    expect(await screen.findByText('현재 역할')).toBeInTheDocument();
+    expect(screen.queryByText(/제안 \d+건/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '이적시장에서 확인' })).not.toBeInTheDocument();
+
+    const options = careerQueryOptions(careerId);
+    const current = queryClient.getQueryData(options.queryKey);
+    if (current === undefined) throw new Error('캐시된 커리어가 있어야 한다');
+    act(() => {
+      queryClient.setQueryData(options.queryKey, {
+        ...current,
+        state: {
+          ...current.state,
+          pending: {
+            kind: 'OFFERS',
+            offers: [buildFakeOffer('o1'), buildFakeOffer('o2'), buildFakeOffer('o3')],
+            market: { openedAtRevision: current.record.revision, seasonIndex: 1, reason: 'INTEREST', safeOfferId: 'o1' },
+          } satisfies typeof current.state.pending,
+        },
+      });
+    });
+
+    expect(await screen.findByText('타 구단 관심 · 제안 3건')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '이적시장에서 확인' })).toBeInTheDocument();
   });
 });

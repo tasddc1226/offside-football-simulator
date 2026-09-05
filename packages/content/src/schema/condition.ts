@@ -135,6 +135,9 @@ export const CONDITION_FIELDS: readonly ConditionFieldSpec[] = [
   { path: 'season.manager.tenureSeasons', type: 'int' },
   { path: 'season.manager.id', type: 'string' },
   { path: 'season.stats.recentFormAvg', type: 'int' },
+  // F1(T-4-015): 최근 5경기 중 평점을 받은 경기 수(recentFormAvg와 같은 표본). 슬럼프 트리거가
+  // 이 값으로 "평점 표본이 충분한지"를 먼저 게이트한 뒤 recentFormAvg를 본다.
+  { path: 'season.stats.recentRatedMatches', type: 'int' },
 ] as const;
 
 const CONDITION_FIELD_MAP = new Map(CONDITION_FIELDS.map((field) => [field.path, field]));

@@ -161,6 +161,10 @@ Archive 본문은 클라이언트가 계산한 LegacyResult를 포함한다. 서
 
 각 명령은 `commandId`, `expectedRevision`, `payload`를 받고 확정 Snapshot과 `nextAction`을 돌려준다. 멱등성·revision·checkpoint 규칙은 [저장·버전](05-save-and-versioning.md)을 따른다.
 
+Phase 3·4 통합 보강: `ADVANCE.payload.eligibleEvents[]`는 `{ eventId, version, weight, slot?: 'TRANSFER_WINDOW' }`다. `slot`이 없는 기존 payload는 일반 슬롯 후보로 유지한다. 창 전용 후보는 제안 없는 CONTRACT 체크포인트에서만 사용하며 일반 EVENT 추첨에서는 제외한다. HTTP 엔드포인트나 별도 루머 해결 명령은 추가하지 않는다([D-63](../tracking/phase-3-4-plan.md#d-63-이적-루머의-실제-진입-경로)).
+
+시즌 중 재계약은 선택 필드 `CareerState.nextContract`에 보관한다(필드 없는 과거 상태도 허용). 진행 중인 시즌의 기존 계약으로 약속·시즌 태그를 판정한 후 다음 계약을 적용한다. 임대 뒤 원소속 계약이 만료된 FA 시장에서는 서명 전까지 열린 소속 stint가 없을 수 있으며, 종료된 stint의 종료 시즌은 시작 시즌보다 빠를 수 없다.
+
 Phase 8 WORLD STAGE는 새 서버 명령을 만들지 않는다. 해외 제안 협상·확정은 `CMD-CON-001~004`, 적응 선택은 `CMD-EVT-001`, 국제 시즌·경기는 `CMD-SIM-001~003`을 재사용한다. 확장 payload와 원자 등록 판정은 [WORLD STAGE 명세](15-world-stage-expansion.md)를 따른다.
 
 ## 계약 테스트

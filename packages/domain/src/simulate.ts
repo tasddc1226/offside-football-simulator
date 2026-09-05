@@ -141,7 +141,7 @@ export type Command =
   | {
       type: 'ADVANCE';
       payload: {
-        eligibleEvents: Array<{ eventId: string; version: number; weight: number }>;
+        eligibleEvents: EligibleEvent[];
         // T-2-004 D-38: 웹이 팩 chapters[]에서 요약해 보낸다. 비면(undefined 포함) 챕터는 열리지
         // 않는다(기존 골든 호환 — chapterCandidates를 보내지 않던 골든은 stateHash가 그대로다).
         chapterCandidates?: ChapterCandidateInput[];
@@ -930,6 +930,10 @@ function createStepMatchWiring(
       forcedPending,
       injuryReturnMatchId,
       injuryUnavailable: availability?.kind === 'INJURY' || health.episodes.some((episode) => episode.status === 'ACTIVE' || episode.status === 'REHAB'),
+      squadRole,
+      playerStats,
+      availability,
+      playerProfile,
     };
   };
 
@@ -1029,6 +1033,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
         primaryPosition: profile.primaryPosition,
         seasonHistory: state.seasonHistory,
         ruleset,
+        timeline: state.timeline,
       });
   // 결산은 교체·유지 모두 `nextManager`를 예약한다. 직전 SeasonResult의 id와 비교해야 유지 예약은
   // 기존 신뢰를 보존하고, 새 감독 예약만 trustBase로 초기화한다.
@@ -1371,6 +1376,33 @@ function advanceInSeason(
   let steps = season.steps;
   let timeline = state.timeline;
   let currentStepIndex = season.currentStep;
+
+  // 빈 사전 협상 슬롯은 이미 step 7의 경기 결과를 저장한 체크포인트다. 다음 ADVANCE의
+  // 후보는 그 현재 상태로 평가되므로, 미래 step 조건을 이전 스냅샷에 억지로 대입하지 않는다.
+  // 루머는 자동 통과할 계약 슬롯을 대체하며 경기 재실행이나 추가 결정 슬롯을 만들지 않는다.
+  const windowEvents = eligibleEvents.filter((event) => event.slot === 'TRANSFER_WINDOW');
+  if (state.pending?.kind === 'CONTRACT' && state.pending.offers.length === 0 &&
+      findSeasonStep(steps, currentStepIndex).windowOpen && windowEvents.length > 0) {
+    let chosen = windowEvents[0]!;
+    let nextRngState = state.rngState;
+    if (windowEvents.length > 1) {
+      const rolled = rollRange(nextRngState, 1, windowEvents.reduce((sum, event) => sum + event.weight, 0));
+      nextRngState = rolled.state;
+      let cumulative = 0;
+      for (const event of windowEvents) {
+        cumulative += event.weight;
+        if (rolled.value <= cumulative) { chosen = event; break; }
+      }
+    }
+    return {
+      ok: true,
+      snapshot: buildSnapshot({ ...state, rngState: nextRngState,
+        pending: { kind: 'EVENT', eventId: chosen.eventId, version: chosen.version },
+      }, nextRevision, 'EVENT_OFFERED'),
+      appliedEffects: [],
+      nextAction: 'DECISION',
+    };
+  }
 
   // 현재 step이 아직 닫히지 않았으면(summary === null) 보통 마지막 결정을 닫고 다음 step으로 간다.
   // 다만 forced INJURY 또는 NATIONAL_TEAM을 RESOLVE_EVENT로 닫은 직후에는 같은 step의 남은 후보를
@@ -2393,7 +2425,7 @@ function negotiateOffer(input: SimulationInput, snapshot: DomainSnapshot): Simul
   const nextState: CareerState = {
     ...state,
     rngState: roll.state,
-    pending: { ...pending, offers: nextOffers },
+    pending: nextOffers.length === 0 ? null : { ...pending, offers: nextOffers },
     timeline: [
       ...state.timeline,
       ...timelineAdds,
@@ -2404,6 +2436,9 @@ function negotiateOffer(input: SimulationInput, snapshot: DomainSnapshot): Simul
         age: state.age,
         step: state.currentStep,
       },
+      ...(nextOffers.length === 0
+        ? [{ revision: nextRevision, kind: 'OFFER_REJECTED' as const, refId: 'ALL', age: state.age, step: state.currentStep }]
+        : []),
     ],
   };
 
@@ -2411,7 +2446,7 @@ function negotiateOffer(input: SimulationInput, snapshot: DomainSnapshot): Simul
     ok: true,
     snapshot: buildSnapshot(nextState, nextRevision, 'STEP_BOUNDARY'),
     appliedEffects: [],
-    nextAction: 'DECISION',
+    nextAction: nextOffers.length === 0 ? 'ADVANCE' : 'DECISION',
   };
 }
 
@@ -2450,6 +2485,11 @@ function rejectOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   const { offerId } = command.payload;
 
   if (offerId !== null) {
+    if (pending.market.reason === 'FIRST_CONTRACT' && kept.length <= 1) {
+      return fail('VALIDATION_FAILED', '첫 계약의 마지막 제안은 거절할 수 없다.', {
+        reason: 'FIRST_CONTRACT_REQUIRED',
+      });
+    }
     const lookup = lookupKeptOffer(pending.offers, kept, offerId);
     if (!lookup.ok) {
       return fail(
@@ -2470,7 +2510,7 @@ function rejectOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     const nextOffers = kept.filter((candidate) => candidate.id !== offerId);
     const nextState: CareerState = {
       ...state,
-      pending: { ...pending, offers: nextOffers },
+      pending: nextOffers.length === 0 ? null : { ...pending, offers: nextOffers },
       timeline: [
         ...state.timeline,
         ...timelineAdds,
@@ -2481,19 +2521,43 @@ function rejectOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
           age: state.age,
           step: state.currentStep,
         },
+        ...(nextOffers.length === 0
+          ? [{ revision: nextRevision, kind: 'OFFER_REJECTED' as const, refId: 'ALL', age: state.age, step: state.currentStep }]
+          : []),
       ],
     };
     return {
       ok: true,
       snapshot: buildSnapshot(nextState, nextRevision, 'STEP_BOUNDARY'),
       appliedEffects: [],
-      nextAction: 'DECISION',
+      nextAction: nextOffers.length === 0 ? 'ADVANCE' : 'DECISION',
     };
   }
 
   const stateWithExpiry: CareerState = { ...state, timeline: [...state.timeline, ...timelineAdds] };
 
   if (pending.kind === 'OFFERS') {
+    if (pending.market.reason === 'FIRST_CONTRACT') {
+      return fail('VALIDATION_FAILED', '첫 계약 제안은 전부 거절할 수 없다.', {
+        reason: 'FIRST_CONTRACT_REQUIRED',
+      });
+    }
+    if (pending.market.reason === 'EXPIRED') {
+      const safeOffer = kept.find((offer) => offer.id === pending.market.safeOfferId);
+      if (safeOffer === undefined || safeOffer.kind !== 'RENEWAL') {
+        return fail('VALIDATION_FAILED', '만료 시장의 안전 잔류 제안을 찾을 수 없다.', { reason: 'SAFE_OFFER' });
+      }
+      const renewed = acceptRenewalOffer(stateWithExpiry, safeOffer, nextRevision);
+      if (!renewed.ok) return renewed;
+      const renewedState = {
+        ...renewed.snapshot.state,
+        timeline: [
+          ...renewed.snapshot.state.timeline,
+          { revision: nextRevision, kind: 'OFFER_REJECTED' as const, refId: 'ALL', age: state.age, step: state.currentStep },
+        ],
+      };
+      return { ...renewed, snapshot: buildSnapshot(renewedState, nextRevision, 'CONTRACT_CONFIRMED') };
+    }
     const nextState = buildStayState(stateWithExpiry, nextRevision);
     return {
       ok: true,
@@ -2653,10 +2717,28 @@ function acceptRenewalOffer(
     signedSeasonIndex,
   };
 
+  const hasOpenStint = state.clubHistory.some((stint) => stint.toSeasonIndex === null);
+  const renewalStints = hasOpenStint
+    ? swapOpenStintContract(state.clubHistory, newContract.id)
+    : [
+        ...state.clubHistory,
+        {
+          teamId: newContract.teamId,
+          teamName: newContract.teamName,
+          leagueTier: newContract.leagueTier,
+          kind: 'PERMANENT' as const,
+          fromSeasonIndex: state.seasonHistory.length + 1,
+          toSeasonIndex: null,
+          endReason: null,
+          contractId: newContract.id,
+        },
+      ];
   const nextState: CareerState = {
     ...state,
-    contract: newContract,
-    clubHistory: swapOpenStintContract(state.clubHistory, newContract.id),
+    tags: stripMarketDeclarationTags(state.tags),
+    ...(state.season !== null
+      ? { nextContract: newContract }
+      : { contract: newContract, clubHistory: renewalStints }),
     pending: null,
     timeline: [
       ...state.timeline,
@@ -2932,7 +3014,7 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
  * 원소속 stint를 새로 연다. 관계·context 복원은 아래 `restoreParentClubState`가 명시적 RETURN과
  * 결산 중 자동 FA 분기에서 함께 적용한다.
  */
-function restoreParentContractAndStint(state: CareerState, nextRevision: number): CareerState {
+function restoreParentContractAndStint(state: CareerState, nextRevision: number, reopenStint = true): CareerState {
   const parent = state.parentContract;
   if (parent === null) {
     throw new RangeError('restoreParentContractAndStint: parentContract가 null이다.');
@@ -2955,7 +3037,7 @@ function restoreParentContractAndStint(state: CareerState, nextRevision: number)
     contract: restoredContract,
     parentContract: null,
     nextManager: null,
-    clubHistory: [...closedHistory, newStint],
+    clubHistory: reopenStint ? [...closedHistory, newStint] : closedHistory,
     timeline: [
       ...state.timeline,
       {
@@ -2974,7 +3056,7 @@ function restoreParentContractAndStint(state: CareerState, nextRevision: number)
  * 버리고, 원소속 계약 기준으로 재설정한다. positionProficiency는 명시적 RETURN과 동일하게 원래
  * 포지션 계획이면 현재 값을 유지하고, 아니면 룰셋의 강제값을 쓴다.
  */
-function restoreParentClubState(state: CareerState, ruleset: Ruleset): CareerState {
+function restoreParentClubState(state: CareerState, ruleset: Ruleset, carryFans = true): CareerState {
   const parent = state.contract;
   const profile = state.player.profile;
   if (parent === null || profile === null) {
@@ -2999,7 +3081,7 @@ function restoreParentClubState(state: CareerState, ruleset: Ruleset): CareerSta
       managerTrust: carryRules.newManagerTrustBase,
       captain: 0,
       rival: 0,
-      fans: Math.floor((state.relationships.fans * carryRules.fansCarryBp) / 10000),
+      fans: carryFans ? Math.floor((state.relationships.fans * carryRules.fansCarryBp) / 10000) : state.relationships.fans,
     },
   };
 }
@@ -3033,8 +3115,9 @@ function settleLoanSeason(
 
   if (parentRemaining === 0) {
     const restored = restoreParentClubState(
-      restoreParentContractAndStint(state, nextRevision),
+      restoreParentContractAndStint(state, nextRevision, false),
       ruleset,
+      false,
     );
     const generated = generateMarket({
       state: restored,
@@ -3415,7 +3498,7 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   // D-42: 이번 시즌의 최종 result가 `seasonHistory`에 들어간 뒤 평가한다(커리어 누적 챕터 집계가
   // 이번 시즌 몫까지 포함하고 약속 위반 뒤의 managerTrust를 사용하도록 한다).
   const grantedTagIds = evaluateCareerTags(stateBeforeTags, finalizedResult, input.ruleset);
-  const nextState = grantedTagIds.reduce((acc, tagId) => {
+  const taggedState = grantedTagIds.reduce((acc, tagId) => {
     const granted = grantCareerTag(acc, tagId, {
       seasonIndex: season.index,
       revision: nextRevision,
@@ -3435,6 +3518,14 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
       ],
     };
   }, stateBeforeTags);
+  const nextState = taggedState.nextContract
+    ? {
+        ...taggedState,
+        contract: taggedState.nextContract,
+        nextContract: null,
+        clubHistory: swapOpenStintContract(taggedState.clubHistory, taggedState.nextContract.id),
+      }
+    : taggedState;
 
   const finalState =
     nextState.contract !== null && nextState.contract.kind === 'LOAN'

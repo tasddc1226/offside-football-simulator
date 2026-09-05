@@ -16,6 +16,8 @@ import { activeRuleset } from '../engine/content.js';
 import { careerQueryOptions, useCareer } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
+import { screenForCareer } from '../shared/career-route.js';
+import { canPlanNextSeason } from '../shared/start-season.js';
 import { platform } from '../platform/index.js';
 import { CountUp } from '../shared/countup.js';
 import { SeasonCompareSection } from '../shared/season-compare.js';
@@ -229,6 +231,7 @@ function SeasonResultScreen() {
       ? null
       : Math.round((selection.minutes / selection.possibleMinutes) * 100);
   const stateDeltaRows = buildStateDeltaRows(view);
+  const nextTarget = canPlanNextSeason(state) ? 'SCR-005' : screenForCareer(state).screenId;
 
   return (
     <div className="os-screen" data-testid="season-result" data-result-hash={view.hash}>
@@ -521,7 +524,7 @@ function SeasonResultScreen() {
             대시보드
           </Link>
           <Link
-            to="/career/$careerId/preseason"
+            to={SCREEN_ROUTES[nextTarget]}
             params={{ careerId }}
             className={buttonClassName('primary')}
             style={buttonStyle}
@@ -529,6 +532,9 @@ function SeasonResultScreen() {
             다음 시즌
           </Link>
         </div>
+        {state.pending?.kind === 'OFFERS' || state.pending?.kind === 'LOAN_RETURN' ? (
+          <p className="os-muted">다음 시즌 전에 계약·소속 결정을 먼저 마칩니다.</p>
+        ) : null}
       </div>
     </div>
   );

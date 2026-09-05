@@ -1,6 +1,6 @@
 {
   "revision": 18,
-  "stateHash": "a8747f3704a386d792353a604210a04346b9c5938562883f447bdb141be30d2d",
+  "stateHash": "c5b41ffdb03427c2c6ac6a6b2dfba4cee08fe4224379a351ae98b5a8285ba3a9",
   "rngStateDraws": 406,
   "age": 18,
   "seasonHistory": [
@@ -494,10 +494,10 @@
             "before": 46,
             "after": 60
           },
-        "managerTrust": {
-          "before": 45,
-          "after": 37
-        }
+          "managerTrust": {
+            "before": 45,
+            "after": 37
+          }
         },
         "chapters": [
           {
