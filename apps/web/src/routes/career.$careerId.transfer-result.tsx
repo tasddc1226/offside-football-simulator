@@ -2,7 +2,7 @@
 // pending이 있으면 임대 복귀 선택 UI, pending이 닫혔으면 timeline revision 결과 UI다.
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
-import { Button, Card, ErrorState } from '@offside/ui';
+import { Button, buttonClassName, buttonStyle, Card, ErrorState, ScreenIntro } from '@offside/ui';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
@@ -47,7 +47,6 @@ export const Route = createFileRoute('/career/$careerId/transfer-result')({
   component: TransferResultScreen,
 });
 
-const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
 const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
@@ -117,18 +116,15 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-os-6">
+    <div className="os-screen">
       <p className="sr-only" aria-live="polite" data-testid="transfer-result-announcement">
         {announcement}
       </p>
-      <div className="flex flex-col gap-os-2">
-        <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-          임대 복귀 결정
-        </h1>
-        <p className="font-os text-os-text-2" style={BODY_STYLE}>
-          임대 시즌 결과를 저장했습니다. 원소속으로 돌아가거나, 조건을 충족했다면 임대 구단에 남을 수 있습니다.
-        </p>
-      </div>
+      <ScreenIntro
+        eyebrow="임대 복귀"
+        title="임대 복귀 결정"
+        description="임대 시즌 결과를 저장했습니다. 원소속으로 돌아가거나, 조건을 충족했다면 임대 구단에 남을 수 있습니다."
+      />
       <Card className="flex flex-col gap-os-2">
         <p className="font-os text-os-text" style={BODY_STYLE}>
           매입 옵션
@@ -138,7 +134,7 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
         </p>
       </Card>
       {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void refreshDecisionState()} retryLabel="저장 상태 다시 확인" /> : null}
-      <div className="flex flex-col gap-os-3 sm:flex-row">
+      <div className="os-action-dock">
         <Button variant="secondary" onClick={() => void decide('RETURN')} disabled={mutation.isPending}>
           원소속으로 복귀
         </Button>
@@ -155,18 +151,8 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
 function ContractResult({ view, careerId, state }: { view: TransferResultView; careerId: string; state: Parameters<typeof transferResultNextScreen>[0] }) {
   const ctaToPreseason = view.contract !== null && transferResultNextScreen(state) === 'PRESEASON';
   return (
-    <div className="flex flex-col gap-os-6" data-testid="transfer-result" data-result-revision={view.revision} data-base-ovr-before={view.baseOvr.before} data-base-ovr-after={view.baseOvr.after}>
-      <div className="flex flex-col gap-os-2">
-        <p className="font-os font-semibold text-os-text-2" style={BODY_STYLE}>
-          {view.kindLabel}
-        </p>
-        <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-          {view.title}
-        </h1>
-        <p className="font-os text-os-text-2" style={BODY_STYLE}>
-          {view.body}
-        </p>
-      </div>
+    <div className="os-screen" data-testid="transfer-result" data-result-revision={view.revision} data-base-ovr-before={view.baseOvr.before} data-base-ovr-after={view.baseOvr.after}>
+      <ScreenIntro eyebrow={view.kindLabel} title={view.title} description={view.body} />
 
       <Card className="flex flex-col gap-os-3">
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
@@ -243,14 +229,16 @@ function ContractResult({ view, careerId, state }: { view: TransferResultView; c
         </p>
       </Card>
 
-      <Link
-        to={ctaToPreseason ? '/career/$careerId/preseason' : '/career/$careerId'}
-        params={{ careerId }}
-        className="inline-flex min-h-[var(--os-touch-min)] items-center justify-center rounded-os-m bg-os-accent px-os-4 font-os font-semibold text-os-on-accent"
-        style={BODY_STYLE}
-      >
-        {ctaToPreseason ? '새 시즌 준비' : '대시보드로'}
-      </Link>
+      <div className="os-action-dock">
+        <Link
+          to={ctaToPreseason ? '/career/$careerId/preseason' : '/career/$careerId'}
+          params={{ careerId }}
+          className={buttonClassName('primary')}
+          style={buttonStyle}
+        >
+          {ctaToPreseason ? '새 시즌 준비' : '대시보드로'}
+        </Link>
+      </div>
     </div>
   );
 }
