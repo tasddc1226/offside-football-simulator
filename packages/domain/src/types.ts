@@ -380,7 +380,8 @@ export type TimelineEntry = {
     | 'MANAGER_CHANGED'
     | 'NATIONAL_TEAM_CALLED'
     | 'NATIONAL_TEAM_DECLINED'
-    | 'CAPTAIN_APPOINTED';
+    | 'CAPTAIN_APPOINTED'
+    | 'RETIRED';
   refId: string | null;
   age: number;
   step: number;

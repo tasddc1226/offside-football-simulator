@@ -279,6 +279,7 @@ export const TimelineEntrySchema = z.strictObject({
     'MANAGER_CHANGED',
     'NATIONAL_TEAM_CALLED',
     'NATIONAL_TEAM_DECLINED',
+    'RETIRED',
     'CAPTAIN_APPOINTED',
   ]),
   refId: z.string().nullable(),

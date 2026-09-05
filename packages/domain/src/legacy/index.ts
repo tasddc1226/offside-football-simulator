@@ -1,4 +1,5 @@
 // Phase 5 staging boundary. Intentionally not exported by the shared domain barrel until integration.
+export { legacyEndingPresentation, legacyBandPresentation } from './presentation.js';
 export {
   assessRetirement,
   createRetirementDecision,

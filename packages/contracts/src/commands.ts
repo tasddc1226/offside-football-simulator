@@ -181,8 +181,11 @@ export const ResolveRolePayloadSchema = z.strictObject({
   decision: z.enum(['ACCEPT', 'DECLINE']),
 });
 
-/** Phase 2+ 명령(아직 domain에 없음)은 형태를 모르므로 임의 payload를 통과시킨다. */
-const UnknownPayloadSchema = z.record(z.string(), z.unknown());
+// Phase 5 retirement decision. The payload is intentionally closed so the command
+// log and request boundaries cannot silently accept a future or misspelled choice.
+export const RetirePayloadSchema = z.strictObject({
+  choice: z.enum(['RETIRE', 'COACH_EPILOGUE']),
+});
 
 // T-3-001 D-44: NEGOTIATE payload. 처리기는 T-3-003 전까지 VALIDATION_FAILED만 돌려주지만, 계약
 // 형태는 이 작업이 확정한다.
@@ -219,7 +222,7 @@ export const COMMAND_PAYLOAD_SCHEMAS = {
   ACCEPT_OFFER: AcceptOfferPayloadSchema,
   REJECT_OFFER: RejectOfferPayloadSchema,
   LOAN_RETURN: LoanReturnPayloadSchema,
-  RETIRE: UnknownPayloadSchema,
+  RETIRE: RetirePayloadSchema,
 } as const satisfies Record<CommandType, z.ZodTypeAny>;
 
 export type CommandPayloadByType = {

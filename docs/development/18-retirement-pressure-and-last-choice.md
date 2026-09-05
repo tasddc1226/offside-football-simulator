@@ -1,6 +1,10 @@
 # 18. 은퇴 압력과 마지막 선택 — 독립 코어
 
 상태: T-5-003의 독립 판정·선택 계획 구현. 실제 명령·저장·이벤트·화면 연결 전.
+
+후속 갱신: [로컬 은퇴 통합](../tracking/briefs/T-5-003-local-integration.md)에서 명시적 RETIRE와
+로컬 Archive 원자 저장, 실제 20시즌 검증을 추가했다. 아래 내용은 독립 압력/계획 코어의
+계약을 설명하며 운영 policy·마지막 계약 소비·전체 Legacy/화면이 완료됐다는 뜻은 아니다.
 선행: [Phase 5 계획](../tracking/phase-5-plan.md), [Archive 계약](17-phase5-archive-contract.md).
 근거: [Phase 5 은퇴 판정](../phases/phase-05-retirement-and-legacy.md), [성장·노쇠 정본](03-game-simulation-engine.md#성장과-노쇠).
 

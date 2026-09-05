@@ -1,7 +1,7 @@
 // ADR-003 "브라우저 Web Worker에서 시뮬레이션": 기본 deps는 Worker + createWorkerSimulator를 쓴다.
 // 테스트(jsdom)는 createAppEngine에 inlineSimulator + MemoryLocalStore를 직접 주입해 Worker를
 // 피한다(브리프).
-import { loadContentPack, loadRuleset, type ContentPack } from '@offside/content';
+import { loadContentPack, loadRuleset, loadRetirementArtifacts, type ContentPack } from '@offside/content';
 import type { Ruleset } from '@offside/domain';
 import {
   createEngineClient,
@@ -45,7 +45,10 @@ export function createAppEngine(deps: AppEngineDeps): AppEngine {
     );
   }
 
-  const client = createEngineClient({ store, simulator, ruleset, newId });
+  const client = createEngineClient({ store, simulator, ruleset, newId,
+    retirementArtifacts: ({ rulesetVersion, contentPackVersion }) =>
+      loadRetirementArtifacts(rulesetVersion, contentPackVersion),
+  });
 
   return {
     client,

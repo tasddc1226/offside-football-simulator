@@ -12,6 +12,7 @@ import {
 import { evaluateCareerTags, grantCareerTag } from './career-tags.js';
 import { computeGrowth } from './growth.js';
 import { hashState } from './hash.js';
+import { aggregateCareerRecords } from './legacy/career-records.js';
 import {
   applyRehabPlan,
   injuryAvailabilityFromHealth,
@@ -190,7 +191,8 @@ export type Command =
   // (throw 금지). payload 형태는 phase-3-4-plan D-44/D-46이 정한 것을 그대로 옮긴다.
   | { type: 'NEGOTIATE'; payload: { offerId: string; ask: NegotiationAsk } }
   | { type: 'REJECT_OFFER'; payload: { offerId: string | null } } // null = 전부 거절 → 잔류
-  | { type: 'LOAN_RETURN'; payload: { decision: 'RETURN' | 'PERMANENT' } };
+  | { type: 'LOAN_RETURN'; payload: { decision: 'RETURN' | 'PERMANENT' } }
+  | { type: 'RETIRE'; payload: { choice: 'RETIRE' | 'COACH_EPILOGUE' } };
 
 export type SimulationInput = {
   snapshot: DomainSnapshot | null;
@@ -3592,7 +3594,18 @@ export function simulate(input: SimulationInput): SimulationResult {
     return fail('VERSION_MISMATCH', 'SimulationInput의 버전이 snapshot과 다르다.');
   }
 
+  // Terminal careers never enter ordinary handlers. Repeated command IDs are handled by the
+  // engine-client's persisted idempotency record before simulation, not by another state mutation.
+  if (snapshot.state.status === 'RETIRED' || snapshot.state.status === 'ARCHIVED') {
+    return fail('VALIDATION_FAILED', '은퇴한 커리어는 더 이상 진행할 수 없다.', {
+      // Preserve START_SEASON's existing public failure reason.
+      reason: command.type === 'START_SEASON' ? 'NOT_ACTIVE' : 'CAREER_RETIRED',
+    });
+  }
+
   switch (command.type) {
+    case 'RETIRE':
+      return retireCareer(input, snapshot);
     case 'UPDATE_PLAYER_DRAFT':
       return updatePlayerDraft(input, snapshot);
     case 'CONFIRM_PLAYER':
@@ -3618,6 +3631,50 @@ export function simulate(input: SimulationInput): SimulationResult {
     case 'LOAN_RETURN':
       return loanReturn(input, snapshot);
   }
+}
+
+/** Explicit confirmation at a completed-season boundary; age/pressure never retires a player. */
+function retireCareer(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
+  const { command } = input;
+  if (command.type !== 'RETIRE') return fail('VALIDATION_FAILED', 'RETIRE 명령이 필요하다.');
+  const { state } = snapshot;
+  if (command.payload.choice !== 'RETIRE' && command.payload.choice !== 'COACH_EPILOGUE') {
+    return fail('VALIDATION_FAILED', '은퇴 또는 지도자 에필로그를 명시적으로 선택해야 한다.');
+  }
+  if (
+    state.status !== 'ACTIVE' || state.player.profile === null || state.season !== null ||
+    state.pending !== null || state.seasonHistory.length === 0
+  ) {
+    return fail('VALIDATION_FAILED', '시즌 결산과 남아 있는 선택을 마친 뒤 은퇴할 수 있다.', {
+      reason: 'RETIREMENT_BOUNDARY_REQUIRED',
+    });
+  }
+  if (!verifySnapshot(snapshot).ok) {
+    return fail('VALIDATION_FAILED', '은퇴 원본 snapshot을 검증할 수 없다.');
+  }
+  if (!Number.isSafeInteger(snapshot.revision) || snapshot.revision >= Number.MAX_SAFE_INTEGER) {
+    return fail('VALIDATION_FAILED', '은퇴 revision을 안전하게 증가시킬 수 없다.');
+  }
+  try {
+    aggregateCareerRecords(state.seasonHistory);
+  } catch {
+    return fail('VALIDATION_FAILED', '확정 시즌 기록을 검증할 수 없다.');
+  }
+  const revision = snapshot.revision + 1;
+  const retired: CareerState = {
+    ...state,
+    status: 'RETIRED',
+    timeline: [...state.timeline, {
+      revision, kind: 'RETIRED', refId: command.payload.choice,
+      age: state.age, step: state.currentStep,
+    }],
+  };
+  return {
+    ok: true,
+    snapshot: buildSnapshot(retired, revision, 'RETIREMENT'),
+    appliedEffects: [],
+    nextAction: 'SETTLEMENT',
+  };
 }
 
 function isSorted(values: readonly string[]): boolean {

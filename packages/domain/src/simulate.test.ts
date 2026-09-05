@@ -2262,7 +2262,7 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
 });
 
 describe('Command 타입', () => {
-  it('type은 13개 명령으로 고정된다', () => {
+  it('type은 RETIRE를 포함한 14개 명령으로 고정된다', () => {
     expectTypeOf<Command['type']>().toEqualTypeOf<
       | 'CREATE_CAREER'
       | 'UPDATE_PLAYER_DRAFT'
@@ -2277,6 +2277,7 @@ describe('Command 타입', () => {
       | 'NEGOTIATE'
       | 'REJECT_OFFER'
       | 'LOAN_RETURN'
+      | 'RETIRE'
     >();
   });
 });

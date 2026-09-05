@@ -1,5 +1,6 @@
 export const CONTENT_VERSION = '0.1.0';
 export const PACK_0_1_0 = '0.1.0';
+export { loadRetirementArtifacts, type RetirementArtifacts } from './retirement-artifacts.ts';
 
 export {
   CONDITION_FIELDS,

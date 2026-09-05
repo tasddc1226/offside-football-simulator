@@ -11,6 +11,7 @@ import {
   LoanReturnPayloadSchema,
   NegotiatePayloadSchema,
   RejectOfferPayloadSchema,
+  RetirePayloadSchema,
   ResolveEventPayloadSchema,
   ResolveRolePayloadSchema,
   SettleSeasonPayloadSchema,
@@ -443,14 +444,27 @@ describe('CommandRequestSchema', () => {
     expect(arbitraryPayload.success).toBe(false);
   });
 
-  it('Phase 2+ 명령(RETIRE)도 임의 payload를 통과시킨다', () => {
-    const result = CommandRequestSchema.safeParse({
-      commandId: 'cmd_1',
-      expectedRevision: 5,
-      type: 'RETIRE',
-      payload: {},
-    });
-    expect(result.success).toBe(true);
+  it('RETIRE는 두 가지 choice만 허용하고 임의 payload는 거부한다', () => {
+    for (const choice of ['RETIRE', 'COACH_EPILOGUE'] as const) {
+      expect(
+        CommandRequestSchema.safeParse({
+          commandId: 'cmd_1',
+          expectedRevision: 5,
+          type: 'RETIRE',
+          payload: { choice },
+        }).success,
+      ).toBe(true);
+    }
+    for (const payload of [{}, { choice: 'UNKNOWN' }, { choice: 'RETIRE', extra: true }]) {
+      expect(
+        CommandRequestSchema.safeParse({
+          commandId: 'cmd_1',
+          expectedRevision: 5,
+          type: 'RETIRE',
+          payload,
+        }).success,
+      ).toBe(false);
+    }
   });
 });
 
@@ -481,12 +495,37 @@ describe('CommandLogEntrySchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('Phase 2+ 명령은 임의 payload로 성공한다', () => {
-    const result = CommandLogEntrySchema.safeParse({
-      ...base,
-      commandType: 'RETIRE',
-      payload: { anything: true },
-    });
-    expect(result.success).toBe(true);
+  it('RETIRE 로그는 두 가지 choice만 허용하고 임의 payload는 거부한다', () => {
+    for (const choice of ['RETIRE', 'COACH_EPILOGUE'] as const) {
+      expect(
+        CommandLogEntrySchema.safeParse({
+          ...base,
+          commandType: 'RETIRE',
+          payload: { choice },
+        }).success,
+      ).toBe(true);
+    }
+    for (const payload of [{}, { choice: 'UNKNOWN' }, { choice: 'RETIRE', extra: true }]) {
+      expect(
+        CommandLogEntrySchema.safeParse({
+          ...base,
+          commandType: 'RETIRE',
+          payload,
+        }).success,
+      ).toBe(false);
+    }
+  });
+});
+
+describe('RetirePayloadSchema', () => {
+  it('choice가 RETIRE 또는 COACH_EPILOGUE이면 통과한다', () => {
+    expect(RetirePayloadSchema.safeParse({ choice: 'RETIRE' }).success).toBe(true);
+    expect(RetirePayloadSchema.safeParse({ choice: 'COACH_EPILOGUE' }).success).toBe(true);
+  });
+
+  it('unknown·empty·extra payload를 거부한다', () => {
+    expect(RetirePayloadSchema.safeParse({}).success).toBe(false);
+    expect(RetirePayloadSchema.safeParse({ choice: 'UNKNOWN' }).success).toBe(false);
+    expect(RetirePayloadSchema.safeParse({ choice: 'RETIRE', extra: true }).success).toBe(false);
   });
 });

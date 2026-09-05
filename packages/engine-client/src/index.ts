@@ -1,5 +1,7 @@
 export const ENGINE_CLIENT_VERSION = '0.1.0';
 
+export { loadLocalCareerArchive, type RetirementArtifactsResolver } from './retirement-archive.js';
+
 export type {
   EngineCommand,
   EngineError,

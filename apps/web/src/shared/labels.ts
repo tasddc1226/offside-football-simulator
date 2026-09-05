@@ -143,6 +143,7 @@ export const SEASON_PHASE_LABEL_KO: Record<SeasonPhase, string> = {
 
 /** SCR-029 다이어리(CareerTimeline) 항목의 구분 라벨. */
 export const TIMELINE_KIND_LABEL_KO: Record<TimelineEntry['kind'], string> = {
+  RETIRED: '은퇴',
   CAREER_CONFIRMED: '데뷔',
   EVENT_RESOLVED: '이벤트',
   CONTRACT_SIGNED: '계약',
@@ -319,6 +320,7 @@ export const SERVICE_SEASON_NOTICE_KO: Record<'LINE_TEST', string> = {
 
 /** 충돌 대화상자 비교 카드의 "마지막 기록" 행. */
 export const TIMELINE_KIND_LABELS: Record<TimelineEntry['kind'], string> = {
+  RETIRED: '은퇴 확정',
   CAREER_CONFIRMED: '커리어 확정',
   EVENT_RESOLVED: '이벤트 해결',
   CONTRACT_SIGNED: '계약 체결',

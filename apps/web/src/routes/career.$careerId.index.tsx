@@ -89,6 +89,8 @@ function chapterCardLabel(state: CareerState, pending: ChapterPending): string {
 
 function timelineSentence(entry: TimelineEntry, state: CareerState): string {
   switch (entry.kind) {
+    case 'RETIRED':
+      return entry.refId === 'COACH_EPILOGUE' ? '선수 생활을 마치고 지도자로 새 출발' : '선수 생활을 마치다';
     case 'CAREER_CONFIRMED':
       return '선수 생활 시작';
     case 'CONTRACT_SIGNED':

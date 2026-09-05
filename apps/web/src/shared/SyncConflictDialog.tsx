@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button, CompareCards, Dialog, DialogContent, type CompareCardItem, type CompareRow } from '@offside/ui';
 import { forkCareerByReplay, type CareerSyncState, type EngineError } from '@offside/engine-client';
 import { CareerStateSchema, type CareerSnapshot } from '@offside/contracts';
+import type { TimelineEntry } from '@offside/domain';
 import { getAppEngine } from '../engine/engine.js';
 import { getSyncClient } from '../engine/sync.js';
 import { useCareer } from '../engine/use-career.js';
@@ -23,32 +24,7 @@ type MinimalCareerState = {
   age: number;
   stage: 'YOUTH' | 'PRO';
   timeline: ReadonlyArray<{
-    // T-2-002 D-34·T-2-004 D-38·T-3-001: exhaustive union이 typecheck에서 깨져 최소 수정(PR 본문 참고).
-    kind:
-      | 'CAREER_CONFIRMED'
-      | 'EVENT_RESOLVED'
-      | 'CONTRACT_SIGNED'
-      | 'SEASON_STARTED'
-      | 'STEP_PASSED'
-      | 'SEASON_SETTLED'
-      | 'ROLE_RESOLVED'
-      | 'CHAPTER_RESOLVED'
-      | 'CAREER_TAG_GRANTED'
-      | 'CONTRACT_RENEWED'
-      | 'TRANSFERRED'
-      | 'LOANED'
-      | 'LOAN_RETURNED'
-      | 'OFFER_REJECTED'
-      | 'OFFER_EXPIRED'
-      | 'NEGOTIATED'
-      | 'INJURED'
-      | 'REHAB_CHOSEN'
-      | 'RECOVERED'
-      | 'INJURY_RECURRED'
-      | 'MANAGER_CHANGED'
-      | 'NATIONAL_TEAM_CALLED'
-      | 'NATIONAL_TEAM_DECLINED'
-      | 'CAPTAIN_APPOINTED';
+    kind: TimelineEntry['kind'];
   }>;
 };
 

@@ -1,5 +1,10 @@
 export const DOMAIN_VERSION = '0.1.0';
 
+export {
+  ArchiveError, createCareerArchiveCore, verifyCareerArchiveCore, planCareerArchiveWrite,
+  type ArchiveArtifacts, type ArchiveContext, type CareerArchiveCore,
+} from './legacy/archive.js';
+
 export { clamp } from './clamp.js';
 export { canonicalize, compareCodePoints, utf8Encode, type JsonValue } from './canonical.js';
 export { sha256Hex, hashState } from './hash.js';
