@@ -55,6 +55,7 @@ WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. �
 | U-014 | Workers Paid 플랜으로 전환 | todo | LINE TEST 공개 직전(T-2-012 코드는 2026-09-04 머지됨). 개발·PR preview·내부 staging은 Free 유지 |
 | U-015 | LINE TEST 테스터 모집(10~30명)·안내문 발송·피드백 채널 결정 | todo | [line-test-plan.md](line-test-plan.md) 2·4절. 일정 제안 2026-09-08 시작, 2주. 오케스트레이터가 staging 예행(FAST·CHAPTER 1시즌)을 먼저 끝낸다 |
 | U-016 | 오케스트레이터 기기 wrangler 로그인(LINE TEST 기준선 D1 조회용) | done | 2026-09-04 14:56 사용자가 `! pnpm --filter @offside/api exec wrangler login` 실행(OAuth 성공). 5절 쿼리 실행 확인, line-test-plan 준비 체크리스트 #3·#7 ✅ |
+| U-017 | GitHub Actions 결제·지출 한도 해결(한도 상향 또는 저장소 공개) | todo | 2026-09-05 20:21부터 main CI 잡이 "recent account payments have failed or your spending limit needs to be increased"로 시작조차 안 됨(run 33962595554 Deploy staging, 33963157095 Quality·Browser gates). 비공개 저장소라 Actions 분수가 과금 대상. 해결 전까지 staging 배포·PR CI 없음, 머지 게이트는 로컬 체인 EXIT 0만. 브랜치 보호 없음(Free 플랜) |
 
 ## Phase 0 백로그 (착수 순서)
 
@@ -170,13 +171,14 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-014 | B | web | 감사 web 묶음: step 7 사전 협상 '전부 거절' 문구·안내(C9), 휴대폰 탭 시장 사유·제안 수(C11) | T-4-007 | done | [브리프](briefs/T-4-014.md). 워커 완료 **PR #78 `384a37e`**(2026-09-05 16:50) . 360px 스크린샷 2장(offers·휴대폰 탭) 확인 완료. 체인 2회: 16:56(main 회귀·injury 레이스, 무관) / 17:30(season.spec:17 랜덤 seed 잔여 → T-4-021, 무관). T-4-021 머지 뒤 재큐. 후속 발견 → T-4-018 → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. 원 PR #78 MERGED |
 | T-4-015 | B | content | 감사 content 묶음: season.stats 8필드 playerStats 파생(F2), 슬럼프 게이트 `recentRatedMatches`·sentinel(F1), EVT-CON-010 phase 정합(F2), INJURY previewEffects 룰셋 대조 검증기(F4; C14 테스트는 D-61 보류) | T-4-008 | done | [브리프](briefs/T-4-015.md). 워커 완료 **PR #82 `db29402`**(2026-09-05 17:40, 오케스트레이터 REST 개설). 워커 체인 그린(content:validate 경고 0, test 401, e2e 98). 잔여: EVT-CON-010은 phase 수정 뒤에도 D-52 RUMOUR presentation 제외로 미도달(RUMOUR pending 생성기 부재, T-3-005 기지 공백) → 백로그. T-4-021 머지 뒤 검증 큐 → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. 원 PR #82 MERGED |
 | T-4-016 | B | web | 감사 web 소수정: SCR-020 RETURN 관계 문구(C8), `{manager}` 서사 토큰을 `season.manager.name` 우선으로(F5) | T-4-011 | done | [브리프](briefs/T-4-016.md). 워커 완료 **PR #79 `193e3e3`**(2026-09-05 16:59). T-4-019 핫픽스 머지 뒤 검증 큐 → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. 원 PR #79 MERGED |
-| T-4-017 | A | api(test) | Node/workerd 해시 probe에 career-12·career-13 fixture 추가(T-4-006 §1(d) 잔여) | T-4-006(domain) | in-progress | [브리프](briefs/T-4-017.md). **보류(D-61, 새 테스트 작성 금지)**. 테스트 작업 재개 시 투입 → **2026-09-05 20:05 재개(D-62·D-65)**, Sonnet 5 워크플로 투입 예정 |
+| T-4-017 | A | api(test) | Node/workerd 해시 probe에 career-12·career-13 fixture 추가(T-4-006 §1(d) 잔여) | T-4-006(domain) | done | [브리프](briefs/T-4-017.md). Sonnet 5 워커 PR #90 `ce4eac3` → 오케스트레이터 체인 EXIT 0(e2e 98 passed) → 2026-09-05 20:10 squash 머지 `84709ec`. career-12 rev20 `ad92d9c3…`·career-13 rev45 `b21c5c65…` Node·workerd·golden 일치 |
 | T-4-018 | B | web | SCR-017 offers 화면 eyebrow를 시장 사유별로(INTEREST/LOAN_END/PRE_NEGOTIATION에서 "계약 만료·FA" 고정 노출 수정; PR #78 스크린샷 발견) | T-4-014 | done | [브리프](briefs/T-4-018.md). PR #78 머지 뒤 투입(`offers.tsx` 소유권) → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. Codex 구현(시장 사유 UI 보강), 브리프 미투입 |
 | T-4-019 | — | web(e2e) | [핫픽스] main 회귀: `signFirstOffer` 헬퍼 정규식(PR #74)이 STAY 결과 URL `&interested=N`(PR #76)을 거부해 season.spec:121 결정적 실패 | T-4-010, T-4-011 | done | [브리프](briefs/T-4-019.md). 17:01 투입 → 17:10 BLOCKED(헬퍼 수정 커밋 `a6e8136`, season.spec:143 단언이 #76 프리시즌 경로와 불일치) → 17:12 단언 완화 허용해 재투입 → 17:22 완료 **PR #81 `689aaa0`**(워커 체인 전부 그린, e2e 98). 검증 큐 #81→#80→#78→#79(앞 PR 머지 대기 게이트 추가) |
 | T-4-020 | — | web(e2e) | [핫픽스] injury.spec `reachForcedInjury` poll의 타임아웃 없는 `textContent()`가 `/event` 전환 순간 무한 대기 → 반복 60초 타임아웃(trace로 확정) | T-4-010 | done | [브리프](briefs/T-4-020.md). 17:05 투입 → 17:15 워커 완료 **PR #80 `67835d8`**(오케스트레이터 REST 개설, 훅 차단). `--repeat-each=3` 3/3, 체인 통과(season.spec:121은 T-4-019 대상). 오케스트레이터 체인 CHAIN EXIT 0(e2e 98) → **머지 `01be661`**(17:28) |
 | T-4-021 | — | web(e2e) | [핫픽스] season.spec:17(랜덤 seed)에서 STAY 수락 뒤 `/preseason` 도착 시 "계획하러 가기" 기대가 실패(PR #76 경로, #81 1차 수정의 잔여) | T-4-019 | done | [브리프](briefs/T-4-021.md). 17:35 투입 → 17:43 완료 **PR #83 `1aee5e7`**(워커 체인 그린, `--repeat-each=4` 12 passed). 검증 큐 재시작 #83→#82→#78→#79 → **PR #85(T-4-022, 사용자·Codex 통합, 2026-09-05 19:01 `a2354a5`)로 main 반영**. 원 PR #83 MERGED |
 | T-4-023 | — | web(e2e)·qa | SCR-032 대표팀 소집 자연 플레이 도달 seed 탐색(0.3.0/0.2.0, 200 seed×30시즌)·360px 캡처 2장·phase4-seeds 갱신 (D-62 출시 QA 잔여) | T-4-022 | in-progress | [브리프](briefs/T-4-023.md). 2026-09-05 20:15 Sonnet 5 워크플로 투입 |
-| T-4-024 | — | web·api | 실사용자 플레이 시간 측정 준비: `season_settled`·`step_passed`에 초 단위 `elapsedSec` 추가, 측정 쿼리·프로토콜 문서(오케스트레이터) | T-2-012 | in-progress | [브리프](briefs/T-4-024.md). 2026-09-05 20:15 Sonnet 5 워크플로 투입 |
+| T-4-024 | — | web·api | 실사용자 플레이 시간 측정 준비: `season_settled`·`step_passed`에 초 단위 `elapsedSec` 추가, 측정 쿼리·프로토콜 문서(오케스트레이터) | T-2-012 | done | [브리프](briefs/T-4-024.md). Sonnet 5 워커 PR #94 `adfa212` → 리뷰 후속 3건 `30ad35c` → 오케스트레이터 체인 EXIT 0(e2e 98 passed) → 2026-09-05 20:40 squash 머지 `232bc83`. `season_settled`·`step_passed`에 `elapsedSec`(정수 초, 상한 7200, optional), 호출부 careerId 배선. 측정 프로토콜 [play-time-measurement.md](../qa/play-time-measurement.md). staging 반영은 U-017 뒤 |
+| T-4-028 | — | web(문구) | 대표팀 `agent` 축 문구 정합: SCR-032 안내·SCR-014 결과 맥락 2줄 (P4-7 문구 게이트, T-4-023 캡처에서 확인) | T-4-023 | done | [브리프](briefs/T-4-028.md). Sonnet 5 워커 PR #98 `d816420` → 오케스트레이터 체인 EXIT 0(e2e 98 passed) → 2026-09-05 21:47 squash 머지 `452d32d`. SCR-032 안내·SCR-014 결과 맥락에 "에이전트 관계(협회 관계의 대리값)" 명시(D-66) |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
@@ -195,14 +197,15 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 | ID | 워커 | 시작 | 상태 |
 |---|---|---|---|
-| T-4-017 | Sonnet 5 · Workflow `wf_92460c27-98b` | 2026-09-05 20:08 | 해시 probe career-12·13 추가 중 |
-| T-4-023 | Sonnet 5 · Workflow | 2026-09-05 20:15 | 대표팀 seed 탐색·캡처 |
-| T-4-024 | Sonnet 5 · Workflow | 2026-09-05 20:15 | season_settled/step_passed elapsedSec |
+| T-4-023 | Sonnet 5 · Workflow `wf_3a416e2c-9a9` → 마무리 워커 | 2026-09-05 20:15 | 21:40 워커 턴 강제 종료(BLOCKED, 미커밋: 코드 3파일·PNG 2장·PR 본문, 백그라운드 체인은 종료 신호로 중단). 21:45 같은 워크트리에서 마무리 워커 투입(체인→커밋→push→PR) |
 
 ## 완료
 
 | ID | 내용 | 커밋 |
 |---|---|---|
+| T-4-028 | PR #98 `452d32d` | 2026-09-05 21:47 | 대표팀 agent 축 문구 2줄(web) |
+| T-4-024 | PR #94 `232bc83` | 2026-09-05 20:40 | season_settled·step_passed elapsedSec(web funnel·route, contracts) |
+| T-4-017 | PR #90 `84709ec` | 2026-09-05 20:10 | 해시 probe career-12·13, api 테스트 2파일 |
 | T-4-005·009·012·014·015·016·018·021 | PR #85 `a2354a5` (T-4-022) | 2026-09-05 | 사용자·Codex 통합 PR로 일괄 반영. 원 PR #78·#79·#82·#83·#84 MERGED. 증거: `docs/qa/phase34-completion.md`·`phase34-acceptance.md` |
 | T-4-020 | PR #80 `01be661` | 2026-09-05 | 핫픽스: injury.spec poll `textContent` 타임아웃(반복 60초 타임아웃의 실제 원인). 체인 e2e 98 passed |
 | T-4-019 | PR #81 `9bf89fc` | 2026-09-05 | 핫픽스: e2e 헬퍼 `&interested=` 허용·season.spec:121 프리시즌 경로. main 회귀(#74×#76) 해소, 체인 e2e 98 passed |

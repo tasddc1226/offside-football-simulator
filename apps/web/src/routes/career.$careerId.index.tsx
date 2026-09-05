@@ -357,7 +357,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
       if (result.ok) {
         const nextState = result.domainSnapshot.state;
         if (nextState.currentStep > state.currentStep && nextState.season !== null) {
-          trackStepPassed(nextState.season);
+          trackStepPassed(nextState.season, careerId);
         }
         const target = screenForCareer(nextState);
         void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });

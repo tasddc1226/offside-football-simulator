@@ -4,6 +4,11 @@ import { PACK_VERSIONS, RULESET_VERSIONS } from '@offside/content';
 
 export const ACTIVE_RULESET_VERSION = '1.0.0';
 export const ACTIVE_CONTENT_PACK_VERSION = '0.1.0';
+/**
+ * Phase 3+4 확장 콘텐츠 실플레이 전용 팩. 기본·preview·일반 staging·production 빌드는 이 값을
+ * 선택하지 않는다. `vite build --mode expanded`라는 명시적 opt-in에서만 사용한다.
+ */
+export const EXPANDED_QA_CONTENT_PACK_VERSION = '0.3.0';
 
 /**
  * T-2-012 D-54: 더 이상 "활성 시즌"이 아니다 — 서버가 `ACTIVE_SERVICE_SEASON_ID`(env var)로 가리키는
@@ -33,12 +38,32 @@ export function resolveActiveRulesetVersion(): string {
     ? candidate : ACTIVE_RULESET_VERSION;
 }
 
-export function resolveActiveContentPackVersion(): string {
-  if (import.meta.env.DEV && typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
-    const override = localStorage.getItem(E2E_CONTENT_PACK_STORAGE_KEY);
-    if (override !== null && (PACK_VERSIONS as readonly string[]).includes(override)) {
-      return override;
-    }
+export function selectContentPackVersion(input: {
+  mode: string;
+  dev: boolean;
+  devOverride: string | null;
+}): string {
+  if (input.mode === 'expanded') return EXPANDED_QA_CONTENT_PACK_VERSION;
+  if (
+    input.dev &&
+    input.devOverride !== null &&
+    (PACK_VERSIONS as readonly string[]).includes(input.devOverride)
+  ) {
+    return input.devOverride;
   }
   return ACTIVE_CONTENT_PACK_VERSION;
+}
+
+export function resolveActiveContentPackVersion(): string {
+  const devOverride =
+    import.meta.env.DEV &&
+    typeof localStorage !== 'undefined' &&
+    typeof localStorage.getItem === 'function'
+      ? localStorage.getItem(E2E_CONTENT_PACK_STORAGE_KEY)
+      : null;
+  return selectContentPackVersion({
+    mode: import.meta.env.MODE,
+    dev: import.meta.env.DEV,
+    devOverride,
+  });
 }
