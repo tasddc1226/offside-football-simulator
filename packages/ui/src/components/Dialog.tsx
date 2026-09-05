@@ -5,8 +5,10 @@ export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
 
-export interface DialogContentProps
-  extends Omit<ComponentProps<typeof DialogPrimitive.Content>, 'title'> {
+export interface DialogContentProps extends Omit<
+  ComponentProps<typeof DialogPrimitive.Content>,
+  'title'
+> {
   /** 대화상자 제목. Radix Title로 렌더한다. */
   title: string;
   /** 대화상자 설명. Radix Description으로 렌더한다. 없으면 Radix가 자동으로 aria-describedby를 비운다. */
@@ -25,7 +27,7 @@ export function DialogContent({
   ...props
 }: DialogContentProps) {
   const contentClasses = [
-    'fixed left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 rounded-os-m border border-os-border bg-os-surface p-os-5 outline-none',
+    'os-dialog fixed left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[448px] -translate-x-1/2 -translate-y-1/2 border border-os-border bg-os-surface p-os-5 outline-none',
     className,
   ]
     .filter(Boolean)
@@ -33,7 +35,7 @@ export function DialogContent({
 
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 bg-os-text/50" />
+      <DialogPrimitive.Overlay className="os-dialog-overlay fixed inset-0" />
       <DialogPrimitive.Content className={contentClasses} {...props}>
         <DialogPrimitive.Title
           className="font-os font-bold text-os-text"

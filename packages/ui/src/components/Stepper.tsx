@@ -21,15 +21,26 @@ export function Stepper({ steps, currentStepId }: StepperProps) {
   const currentIndex = steps.findIndex((step) => step.id === currentStepId);
 
   return (
-    <ol className="flex items-start gap-os-2" aria-label={`${currentIndex + 1} / ${steps.length}`}>
+    <ol
+      className="os-stepper flex items-start gap-os-2"
+      aria-label={`${currentIndex + 1} / ${steps.length}`}
+    >
       {steps.map((step, index) => {
-        const status: StepStatus = index < currentIndex ? 'complete' : index === currentIndex ? 'current' : 'upcoming';
+        const status: StepStatus =
+          index < currentIndex ? 'complete' : index === currentIndex ? 'current' : 'upcoming';
 
         return (
-          <li key={step.id} className="flex flex-1 flex-col items-center gap-os-1" aria-current={status === 'current' ? 'step' : undefined}>
+          <li
+            key={step.id}
+            className="flex flex-1 flex-col items-center gap-os-1"
+            aria-current={status === 'current' ? 'step' : undefined}
+          >
             <span
               aria-hidden="true"
-              className={['os-num flex items-center justify-center rounded-full font-os font-semibold', MARKER_CLASS[status]].join(' ')}
+              className={[
+                'os-num flex items-center justify-center rounded-full font-os font-semibold',
+                MARKER_CLASS[status],
+              ].join(' ')}
               style={{
                 minHeight: 'var(--os-space-6)',
                 minWidth: 'var(--os-space-6)',

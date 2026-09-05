@@ -6,9 +6,10 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
-  DisplayWord,
   EmptyState,
   ErrorState,
+  FootballMark,
+  ScreenIntro,
   Skeleton,
   Toast,
 } from '@offside/ui';
@@ -16,11 +17,20 @@ import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-ro
 import type { ServiceSeasonCurrent } from '@offside/contracts';
 import { trackCareerAbandonedHint } from '../engine/funnel.js';
 import { useServiceSeason } from '../engine/service-season.js';
-import { careersQueryOptions, useCareerList, useCareerMutation, type CareerSummary } from '../engine/use-career.js';
+import {
+  careersQueryOptions,
+  useCareerList,
+  useCareerMutation,
+  type CareerSummary,
+} from '../engine/use-career.js';
 import { useSyncState } from '../engine/use-sync.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { SCREEN_ROUTES } from '../routes.js';
-import { CAREER_STATUS_LABELS, POSITION_LABELS, SERVICE_SEASON_NOTICE_KO } from '../shared/labels.js';
+import {
+  CAREER_STATUS_LABELS,
+  POSITION_LABELS,
+  SERVICE_SEASON_NOTICE_KO,
+} from '../shared/labels.js';
 import { formatLocalDateTime } from '../shared/format.js';
 import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
@@ -37,9 +47,11 @@ export const Route = createFileRoute('/')({
   component: HubScreen,
 });
 
-const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
 
 function displayName(summary: CareerSummary): string {
   const { state } = summary;
@@ -97,12 +109,27 @@ function CareerCard({
   }
 
   return (
-    <Card className="flex flex-col gap-os-3" data-testid="career-card" data-revision={record.revision}>
-      <div className="flex items-center justify-between gap-os-2">
-        <h2 className="font-os font-bold text-os-text" style={H2_STYLE}>
-          {name}
-        </h2>
-        <div className="flex items-center gap-os-2">
+    <Card
+      className="flex flex-col gap-os-4"
+      data-testid="career-card"
+      data-revision={record.revision}
+    >
+      <div className="flex items-start justify-between gap-os-3">
+        <div className="flex min-w-0 items-center gap-os-3">
+          <div
+            aria-hidden="true"
+            className="flex shrink-0 items-center justify-center rounded-os-m bg-os-surface-2 p-os-3 text-os-accent"
+          >
+            <FootballMark className="h-os-6 w-os-6" />
+          </div>
+          <div className="min-w-0">
+            <p className="os-eyebrow">나의 선수</p>
+            <h2 className="font-os font-bold text-os-text" style={H2_STYLE}>
+              {name}
+            </h2>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-os-2">
           {isTestArchiveCard ? (
             <span
               data-testid="career-card-test-badge"
@@ -121,40 +148,46 @@ function CareerCard({
         </div>
       </div>
 
-      <SyncBadge state={syncState} />
-
-      <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+      <dl
+        className="grid grid-cols-2 gap-os-4 rounded-os-m bg-os-surface-2 p-os-4 font-os text-os-text-2"
+        style={CAPTION_STYLE}
+      >
         <div>
           <dt>포지션</dt>
-          <dd className="text-os-text">{positionLabel}</dd>
+          <dd className="mt-os-1 font-semibold text-os-text">{positionLabel}</dd>
         </div>
         <div>
           <dt>나이</dt>
-          <dd className="os-num text-os-text">{state.age}</dd>
+          <dd className="os-num mt-os-1 font-semibold text-os-text">{state.age}</dd>
         </div>
         <div>
           <dt>규칙 · 콘텐츠 팩</dt>
-          <dd className="os-num text-os-text">
+          <dd className="os-num mt-os-1 break-words text-os-text">
             {record.rulesetVersion} / {record.contentPackVersion}
           </dd>
         </div>
         <div>
           <dt>마지막 갱신</dt>
-          <dd className="os-num text-os-text">{formatLocalDateTime(record.updatedAt)}</dd>
+          <dd className="os-num mt-os-1 text-os-text">{formatLocalDateTime(record.updatedAt)}</dd>
         </div>
       </dl>
+      <SyncBadge state={syncState} />
 
       <div className="flex gap-os-3">
-        <Button variant="primary" onClick={handleContinue}>
+        <Button variant="primary" className="flex-1" onClick={handleContinue}>
           이어하기
         </Button>
         <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
-            <Button variant="secondary">삭제</Button>
+            <Button variant="ghost">삭제</Button>
           </DialogTrigger>
           <DialogContent
             title="커리어 삭제"
-            description={confirmStep === 1 ? `${name}의 커리어를 삭제하시겠습니까?` : '되돌릴 수 없습니다. 정말 삭제할까요?'}
+            description={
+              confirmStep === 1
+                ? `${name}의 커리어를 삭제하시겠습니까?`
+                : '되돌릴 수 없습니다. 정말 삭제할까요?'
+            }
             closeLabel="닫기"
           >
             {confirmStep === 1 ? (
@@ -178,12 +211,15 @@ function HubScreen() {
   const createMutation = useCareerMutation('create');
   const navigate = useNavigate();
   const defaultSimulationMode = useUiStore((state) => state.defaultSimulationMode);
-  const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(null);
+  const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(
+    null,
+  );
   const startingRef = useRef(false);
   const serviceSeason = useServiceSeason();
   // T-2-012 D-54: 조회가 안 끝났으면(로딩·에러) 폴백으로 커리어 생성은 그대로 허용한다 —
   // LOCKED·ARCHIVED가 확인된 경우에만 막는다.
-  const newCareerDisabled = serviceSeason.data?.status === 'LOCKED' || serviceSeason.data?.status === 'ARCHIVED';
+  const newCareerDisabled =
+    serviceSeason.data?.status === 'LOCKED' || serviceSeason.data?.status === 'ARCHIVED';
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-001', careerPhase: 'NONE' });
@@ -197,9 +233,15 @@ function HubScreen() {
     try {
       const result = await createMutation.mutateAsync({ simulationMode: defaultSimulationMode });
       if (result.ok) {
-        void navigate({ to: '/career/$careerId/create', params: { careerId: result.snapshot.careerId } });
+        void navigate({
+          to: '/career/$careerId/create',
+          params: { careerId: result.snapshot.careerId },
+        });
       } else {
-        setToast({ variant: 'error', message: '커리어를 시작하지 못했습니다. 다시 시도해 주세요.' });
+        setToast({
+          variant: 'error',
+          message: '커리어를 시작하지 못했습니다. 다시 시도해 주세요.',
+        });
       }
     } catch {
       // engine.client.execute의 IndexedDB 트랜잭션이 reject(예: QuotaExceededError)하면
@@ -211,7 +253,12 @@ function HubScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-os-6">
+    <div className="os-screen">
+      <ScreenIntro
+        eyebrow="OFFSIDE · MY CAREER"
+        title="커리어 허브"
+        description="다시 휘슬이 울리면, 나의 축구 인생도 계속됩니다."
+      />
       {query.isPending ? (
         <div className="flex flex-col gap-os-4" aria-label="불러오는 중">
           <Skeleton className="h-os-8 w-full" />
@@ -219,17 +266,28 @@ function HubScreen() {
         </div>
       ) : query.isError ? (
         <ErrorState
-          message={query.error instanceof Error ? query.error.message : '커리어 목록을 불러오지 못했습니다'}
+          message={
+            query.error instanceof Error ? query.error.message : '커리어 목록을 불러오지 못했습니다'
+          }
           onRetry={() => void query.refetch()}
         />
       ) : query.data.length === 0 ? (
-        <div className="flex flex-col items-center gap-os-6 text-center">
-          <DisplayWord word="KICKOFF" caption="첫 커리어를 시작할 준비가 됐습니다" />
+        <div className="os-panel flex flex-col gap-os-4 text-center">
+          <p className="os-eyebrow">KICKOFF</p>
+          <p className="font-os font-semibold text-os-text" style={H2_STYLE}>
+            첫 커리어를 시작할 준비가 됐습니다
+          </p>
           <EmptyState
+            headingLevel={2}
             reason="아직 만든 커리어가 없습니다"
             action={
-              <div className="flex flex-col items-center gap-os-2">
-                <Button variant="primary" onClick={handleStart} disabled={createMutation.isPending || newCareerDisabled}>
+              <div className="flex w-full flex-col items-center gap-os-2">
+                <Button
+                  variant="primary"
+                  className="w-full"
+                  onClick={handleStart}
+                  disabled={createMutation.isPending || newCareerDisabled}
+                >
                   커리어 시작
                 </Button>
                 {newCareerDisabled ? (
@@ -243,9 +301,12 @@ function HubScreen() {
         </div>
       ) : (
         <div className="flex flex-col gap-os-4">
-          <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-            커리어 허브
-          </h1>
+          <div className="flex items-center justify-between gap-os-3">
+            <h2 className="os-section-title">나의 커리어</h2>
+            <span className="os-num os-muted" style={CAPTION_STYLE}>
+              {query.data.length}명
+            </span>
+          </div>
           {serviceSeason.data?.notice === 'LINE_TEST' ? (
             <p
               data-testid="service-season-banner"
@@ -261,15 +322,25 @@ function HubScreen() {
                 <CareerCard
                   summary={summary}
                   currentServiceSeason={serviceSeason.data}
-                  onDeleted={(name) => setToast({ variant: 'success', message: `${name}의 커리어를 삭제했습니다` })}
+                  onDeleted={(name) =>
+                    setToast({ variant: 'success', message: `${name}의 커리어를 삭제했습니다` })
+                  }
                   onDeleteFailed={(name) =>
-                    setToast({ variant: 'error', message: `${name}의 커리어를 삭제하지 못했습니다. 다시 시도해 주세요.` })
+                    setToast({
+                      variant: 'error',
+                      message: `${name}의 커리어를 삭제하지 못했습니다. 다시 시도해 주세요.`,
+                    })
                   }
                 />
               </li>
             ))}
           </ul>
-          <Button variant="secondary" onClick={handleStart} disabled={createMutation.isPending || newCareerDisabled}>
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={handleStart}
+            disabled={createMutation.isPending || newCareerDisabled}
+          >
             새 커리어
           </Button>
           {newCareerDisabled ? (
@@ -280,7 +351,10 @@ function HubScreen() {
         </div>
       )}
 
-      <nav className="flex gap-os-4" aria-label="추가 메뉴">
+      <nav
+        className="flex flex-wrap justify-center gap-os-4 border-t border-os-border pt-os-4"
+        aria-label="추가 메뉴"
+      >
         <Link to="/settings" className="font-os text-os-text-2" style={CAPTION_STYLE}>
           설정
         </Link>
@@ -292,7 +366,9 @@ function HubScreen() {
         </Link>
       </nav>
 
-      {toast ? <Toast variant={toast.variant} message={toast.message} onDismiss={() => setToast(null)} /> : null}
+      {toast ? (
+        <Toast variant={toast.variant} message={toast.message} onDismiss={() => setToast(null)} />
+      ) : null}
     </div>
   );
 }

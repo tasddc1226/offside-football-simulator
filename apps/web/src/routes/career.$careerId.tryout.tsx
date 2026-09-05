@@ -4,7 +4,7 @@
 // 결과를 바꾸지 않는다: 결과는 이미 커밋된 뒤라 연출은 화면 연출일 뿐이다.
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { Button, Stepper, type StepperStep } from '@offside/ui';
+import { Button, FootballMark, ScreenIntro, Stepper, type StepperStep } from '@offside/ui';
 import { careerQueryOptions } from '../engine/use-career.js';
 import { EventDecisionScreen } from '../shared/event-screen.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -23,7 +23,10 @@ export const Route = createFileRoute('/career/$careerId/tryout')({
   component: TryoutScreen,
 });
 
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
 
 const TRYOUT_STEPS: StepperStep[] = [
   { id: 'warmup', label: '몸풀기' },
@@ -32,7 +35,13 @@ const TRYOUT_STEPS: StepperStep[] = [
 ];
 const STEP_DURATION_MS = 500;
 
-function TryoutAnimation({ reducedMotion, onDone }: { reducedMotion: boolean; onDone: () => void }) {
+function TryoutAnimation({
+  reducedMotion,
+  onDone,
+}: {
+  reducedMotion: boolean;
+  onDone: () => void;
+}) {
   const [stepIndex, setStepIndex] = useState(0);
   const onDoneRef = useRef(onDone);
 
@@ -58,14 +67,27 @@ function TryoutAnimation({ reducedMotion, onDone }: { reducedMotion: boolean; on
   if (reducedMotion) return null;
 
   return (
-    <div className="flex flex-col items-center gap-os-6">
-      <Stepper steps={TRYOUT_STEPS} currentStepId={TRYOUT_STEPS[stepIndex]!.id} />
-      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-        평가는 자동으로 진행되며 다시 볼 수 없습니다.
-      </p>
-      <Button variant="secondary" onClick={onDone}>
-        건너뛰기
-      </Button>
+    <div className="os-screen">
+      <ScreenIntro
+        eyebrow="입단 테스트"
+        title="그라운드에서 보여줄 시간"
+        description="준비한 플레이가 스카우트의 평가로 이어집니다."
+      />
+      <section
+        className="os-panel flex flex-col items-center gap-os-6"
+        aria-label="입단 테스트 진행"
+      >
+        <FootballMark className="h-16 w-16 text-os-accent" />
+        <Stepper steps={TRYOUT_STEPS} currentStepId={TRYOUT_STEPS[stepIndex]!.id} />
+        <p className="font-os text-center text-os-text-2" style={CAPTION_STYLE}>
+          평가는 자동으로 진행되며 다시 볼 수 없습니다.
+        </p>
+      </section>
+      <div className="os-action-dock">
+        <Button variant="secondary" onClick={onDone}>
+          건너뛰기
+        </Button>
+      </div>
     </div>
   );
 }

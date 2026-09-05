@@ -5,7 +5,7 @@
 // 결과 화면에 남아 오류를 보여준다(오류를 조용히 삼키고 이동하지 않는다).
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { Button, ErrorState, ResultCard, Skeleton } from '@offside/ui';
+import { Button, ErrorState, ResultCard, ScreenIntro, Skeleton } from '@offside/ui';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { activeContentPack } from '../engine/content.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -17,7 +17,9 @@ import { SCREEN_ROUTES } from '../routes.js';
 type EventResultSearch = { rev: number };
 
 export const Route = createFileRoute('/career/$careerId/event_/result')({
-  validateSearch: (search: Record<string, unknown>): EventResultSearch => ({ rev: Number(search.rev) }),
+  validateSearch: (search: Record<string, unknown>): EventResultSearch => ({
+    rev: Number(search.rev),
+  }),
   loaderDeps: ({ search }) => ({ rev: search.rev }),
   loader: async ({ params, deps }) => {
     const { state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
@@ -40,10 +42,16 @@ function EventResultScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
-  const view = query.data === undefined ? null : resolveEventResultView(query.data.state, activeContentPack, rev);
+  const view =
+    query.data === undefined
+      ? null
+      : resolveEventResultView(query.data.state, activeContentPack, rev);
 
   useEffect(() => {
-    platform.analytics.track('screen_viewed', { screenId: 'SCR-014', careerPhase: query.data?.state.seasonPhase ?? 'NONE' });
+    platform.analytics.track('screen_viewed', {
+      screenId: 'SCR-014',
+      careerPhase: query.data?.state.seasonPhase ?? 'NONE',
+    });
     // 마운트 시 1회만(로더가 이미 캐시를 채웠다).
   }, []);
 
@@ -66,7 +74,9 @@ function EventResultScreen() {
   if (query.isError) {
     return (
       <ErrorState
-        message={query.error instanceof Error ? query.error.message : '커리어를 불러오지 못했습니다'}
+        message={
+          query.error instanceof Error ? query.error.message : '커리어를 불러오지 못했습니다'
+        }
         onRetry={() => void query.refetch()}
       />
     );
@@ -90,7 +100,10 @@ function EventResultScreen() {
         return;
       }
       const details = result.error.details;
-      const reason = typeof details === 'object' && details !== null && 'reason' in details ? (details as { reason?: unknown }).reason : undefined;
+      const reason =
+        typeof details === 'object' && details !== null && 'reason' in details
+          ? (details as { reason?: unknown }).reason
+          : undefined;
       if (reason === 'NOTHING_TO_ADVANCE') {
         // 정산 단계에서 더 진행할 게 없다 — 결과 화면에 남을 이유가 없으니 현재 상태 그대로
         // screenForCareer로 이동한다(보통 SCR-029).
@@ -107,15 +120,29 @@ function EventResultScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-os-6">
+    <div className="os-screen">
       <p className="sr-only" aria-live="polite" data-testid="event-result-announcement">
         {announcement}
       </p>
-      <ResultCard kind={view.kind} kindLabel={view.kindLabel} title={view.title} body={view.body} effects={view.effects} tags={view.tags} />
-      <Button variant="primary" onClick={handleNext} disabled={advanceMutation.isPending}>
-        다음
-      </Button>
+      <ScreenIntro
+        eyebrow="이어지는 이야기"
+        title="선택의 결과"
+        description="당신의 결정이 커리어에 남긴 변화를 확인하세요."
+      />
+      <ResultCard
+        kind={view.kind}
+        kindLabel={view.kindLabel}
+        title={view.title}
+        body={view.body}
+        effects={view.effects}
+        tags={view.tags}
+      />
       {errorMessage ? <ErrorState message={errorMessage} onRetry={handleNext} /> : null}
+      <div className="os-action-dock">
+        <Button variant="primary" onClick={handleNext} disabled={advanceMutation.isPending}>
+          다음
+        </Button>
+      </div>
     </div>
   );
 }

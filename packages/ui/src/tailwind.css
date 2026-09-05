@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 @import './tokens.css';
+@import './game.css';
+@import './modal-motion.css';
+@import './screen-motion.css';
+@import './swipe-motion.css';
 
 /* apps/web은 이 파일을 apps/web/node_modules 심볼릭 링크로 소비하므로 Tailwind의
    자동 콘텐츠 탐지(Vite 루트=apps/web 기준)가 packages/ui/src를 건너뛴다.

@@ -22,10 +22,10 @@ describe('StatusStrip', () => {
     expect(screen.getByText('59').className).toContain('os-num');
   });
 
-  it('wraps chips instead of scrolling horizontally', () => {
+  it('uses an auto-fitting stat grid instead of scrolling horizontally', () => {
     render(<StatusStrip items={ITEMS} />);
     const list = screen.getByText('기본 OVR').closest('ul');
-    expect(list?.className).toContain('flex-wrap');
+    expect(list?.className).toContain('os-stat-strip');
     expect(list?.className).not.toMatch(/overflow-x/);
   });
 });

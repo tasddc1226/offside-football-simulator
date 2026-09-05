@@ -5,12 +5,16 @@ test('첫 방문은 온보딩으로 가고, 건너뛰면 빈 허브가 보인다
   await page.goto('/');
 
   await expect(page).toHaveURL(/\/onboarding$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'OVR 하나가 아니라 여러 수치로 성장합니다' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'OVR 하나가 아니라 여러 수치로 성장합니다' }),
+  ).toBeVisible();
 
   await page.getByRole('button', { name: '건너뛰기' }).click();
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { level: 1, name: '아직 만든 커리어가 없습니다' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: '커리어 시작' })).toBeVisible();
 });
 
@@ -21,7 +25,9 @@ test('KICKOFF로 커리어를 만들면 허브 카드가 보이고, 삭제하면
   await page.getByRole('button', { name: 'KICKOFF' }).click();
 
   await expect(page).toHaveURL(/\/career\/.+\/create$/);
-  await expect(page.getByRole('heading', { level: 1, name: '선수 정보를 입력하세요' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '선수 정보를 입력하세요' }),
+  ).toBeVisible();
 
   // SCR-002는(자리표시와 달리) 허브로 돌아가는 링크를 두지 않는다(01 문서 "이탈": 다음으로만
   // 나간다) — 허브 카드 확인을 위해 직접 이동한다.

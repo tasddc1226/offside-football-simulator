@@ -28,24 +28,36 @@ export interface ResultCardProps {
 
 export function ResultCard({ kind, kindLabel, title, body, effects, tags }: ResultCardProps) {
   return (
-    <div className="flex flex-col gap-os-3 rounded-os-m border border-os-border bg-os-surface p-os-4">
-      <div className="flex items-center gap-os-2 font-os font-semibold" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+    <div className="os-panel os-result-card flex flex-col gap-os-3">
+      <div
+        className="flex items-center gap-os-2 font-os font-semibold"
+        style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+      >
         <span aria-hidden="true" className={KIND_COLOR_CLASS[kind]}>
           {KIND_ICON[kind]}
         </span>
         <span className="text-os-text">{kindLabel}</span>
       </div>
 
-      <h3 className="font-os font-bold text-os-text" style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' }}>
+      <h2
+        className="font-os font-bold text-os-text"
+        style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' }}
+      >
         {title}
-      </h3>
+      </h2>
 
-      <p className="font-os text-os-text" style={{ fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' }}>
+      <p
+        className="font-os text-os-text"
+        style={{ fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' }}
+      >
         {body}
       </p>
 
       {effects.length > 0 ? (
-        <ul className="flex flex-col gap-os-1 font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+        <ul
+          className="flex flex-col gap-os-1 font-os text-os-text-2"
+          style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+        >
           {effects.map((effect) => (
             <li key={effect}>{effect}</li>
           ))}

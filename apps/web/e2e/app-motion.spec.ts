@@ -1,0 +1,269 @@
+// Native-like presentation checks use fresh browser contexts and a stub API. The animation
+// recorder observes real Web Animations rather than replacing them or racing their short duration.
+import { expect, type Locator, type Page, test } from '@playwright/test';
+import {
+  completeOnboardingThroughContract,
+  fulfillJson,
+  META,
+  startNewCareer,
+} from './helpers/player-creation.js';
+
+type RecordedAnimation = { animation: Animation; target: Element };
+type MotionWindow = Window & { offsideMotionRecords: RecordedAnimation[] };
+
+test.beforeEach(async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.route('**/v1/**', (route) =>
+    fulfillJson(route, 503, {
+      error: {
+        code: 'SERVICE_UNAVAILABLE',
+        message: '모션 테스트의 격리된 API입니다.',
+        retryable: true,
+      },
+      meta: META,
+    }),
+  );
+  await page.addInitScript(() => {
+    const records: RecordedAnimation[] = [];
+    (window as unknown as MotionWindow).offsideMotionRecords = records;
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (keyframes, options) {
+      const animation = animate.call(this, keyframes, options);
+      records.push({ animation, target: this });
+      return animation;
+    };
+  });
+});
+
+async function routeAnimations(page: Page) {
+  return page.evaluate(() =>
+    (window as unknown as MotionWindow).offsideMotionRecords
+      .filter(
+        ({ animation, target }) =>
+          animation.id === 'offside-screen-transition' &&
+          target.classList.contains('os-route-motion'),
+      )
+      .map(({ animation }) => ({
+        duration: animation.effect?.getTiming().duration,
+        frames: (animation.effect as KeyframeEffect).getKeyframes(),
+      })),
+  );
+}
+
+async function clearAnimations(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    (window as unknown as MotionWindow).offsideMotionRecords.length = 0;
+  });
+}
+
+async function openEmptyHub(page: Page): Promise<void> {
+  await page.goto('/onboarding');
+  await page.getByRole('button', { name: '건너뛰기', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '커리어 허브' })).toBeVisible();
+}
+
+/** Real Chromium touches exercise pointer capture and native pan-y scrolling. A sequence of
+ * synthetic PointerEvents cannot capture a pointer, so it would only test the cancel path. */
+async function swipe(
+  target: Locator,
+  deltaX: number,
+  deltaY = 0,
+  startAtLeftEdge = false,
+): Promise<void> {
+  await target.scrollIntoViewIfNeeded();
+  const page = target.page();
+  const point = await target.evaluate((element, fromEdge) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: fromEdge ? rect.left + 22 : rect.left + rect.width / 2,
+      y: Math.max(1, Math.min(rect.top + Math.min(44, rect.height / 2), window.innerHeight - 80)),
+    };
+  }, startAtLeftEdge);
+  const session = await page.context().newCDPSession(page);
+  try {
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ ...point, id: 81 }],
+    });
+    for (let frame = 1; frame <= 6; frame += 1) {
+      await page.evaluate(
+        () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+      );
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [
+          { x: point.x + (deltaX * frame) / 6, y: point.y + (deltaY * frame) / 6, id: 81 },
+        ],
+      });
+    }
+    await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  } finally {
+    await session.detach();
+  }
+}
+
+test('페이지 이동은 방향 있는 짧은 모션을 쓰고 공통 레이어를 재마운트하지 않는다', async ({
+  page,
+}) => {
+  await openEmptyHub(page);
+  const layer = page.locator('.os-route-motion');
+  await layer.evaluate((element) => element.setAttribute('data-persistent-check', 'same-layer'));
+  await clearAnimations(page);
+  await page.getByRole('link', { name: '게임 설정', exact: true }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(layer).toHaveAttribute('data-direction', 'forward');
+  await expect.poll(async () => (await routeAnimations(page)).length).toBe(1);
+  const forward = (await routeAnimations(page))[0]!;
+  expect(Number(forward.duration)).toBeGreaterThan(0);
+  expect(Number(forward.duration)).toBeLessThanOrEqual(300);
+  expect(forward.frames[0]?.transform).not.toEqual(forward.frames.at(-1)?.transform);
+  expect(forward.frames.every((frame) => Number(frame.opacity) === 1)).toBe(true);
+  await page.goBack();
+  await expect(page.getByRole('heading', { level: 1, name: '커리어 허브' })).toBeVisible();
+  await expect(layer).toHaveAttribute('data-direction', 'back');
+  await expect.poll(async () => (await routeAnimations(page)).length).toBe(2);
+  const back = (await routeAnimations(page))[1]!;
+  expect(back.frames[0]?.transform).not.toEqual(forward.frames[0]?.transform);
+  await expect(layer).toHaveAttribute('data-persistent-check', 'same-layer');
+});
+
+test('키보드로 실행한 화면 이동에는 슬라이드 효과를 넣지 않는다', async ({ page }) => {
+  await openEmptyHub(page);
+  await clearAnimations(page);
+  await page.getByRole('link', { name: '게임 설정', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  expect(await routeAnimations(page)).toEqual([]);
+});
+
+for (const preference of ['OS', '앱'] as const) {
+  test(`${preference} 모션 감소 설정에서 화면 전환 슬라이드를 생략한다`, async ({ page }) => {
+    if (preference === 'OS') {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+    }
+    await page.goto('/settings');
+    if (preference === '앱') {
+      await page
+        .getByRole('radiogroup', { name: '모션 감소' })
+        .getByRole('radio', { name: '켜기', exact: true })
+        .click();
+    }
+    await expect(page.locator('html')).toHaveAttribute('data-reduced-motion', 'true');
+    await clearAnimations(page);
+    await page.getByRole('link', { name: '온보딩 다시 보기', exact: true }).click();
+    await expect(page).toHaveURL(/\/onboarding$/);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'OVR 하나가 아니라 여러 수치로 성장합니다' }),
+    ).toBeVisible();
+    expect(await routeAnimations(page)).toEqual([]);
+  });
+}
+
+test('공통 팝업은 배경을 블러 처리하고 Escape 뒤 원래 버튼으로 포커스를 돌린다', async ({
+  page,
+}) => {
+  await startNewCareer(page);
+  await page.goto('/');
+  const trigger = page.getByRole('button', { name: '삭제', exact: true });
+  await trigger.click();
+  const dialog = page.getByRole('dialog', { name: '커리어 삭제' });
+  await expect(dialog).toBeVisible();
+  const blur = await page.locator('.os-dialog-overlay').evaluate((element) => {
+    const style = getComputedStyle(element);
+    return style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter');
+  });
+  expect(blur).toMatch(/blur\([\d.]+px\)/);
+  expect(Number(blur.match(/blur\(([\d.]+)px\)/)?.[1])).toBeGreaterThan(0);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await expect(page.getByTestId('career-card')).toHaveCount(1);
+});
+
+test('온보딩은 좌우로 넘기되 마지막 장을 밀어도 커리어를 생성하지 않는다', async ({ page }) => {
+  await page.goto('/onboarding');
+  const surface = page.locator('.os-onboarding-motion .os-swipe-surface');
+  await expect(surface).toBeVisible();
+  await swipe(surface, -150);
+  await expect(
+    page.getByRole('heading', { level: 1, name: '선택은 되돌릴 수 없습니다' }),
+  ).toBeVisible();
+  await swipe(surface, 150);
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'OVR 하나가 아니라 여러 수치로 성장합니다' }),
+  ).toBeVisible();
+  await swipe(surface, -150);
+  await expect(
+    page.getByRole('heading', { level: 1, name: '선택은 되돌릴 수 없습니다' }),
+  ).toBeVisible();
+  await swipe(surface, -150);
+  await expect(
+    page.getByRole('heading', { level: 1, name: '복구 코드가 유일한 열쇠입니다' }),
+  ).toBeVisible();
+  await swipe(surface, -150);
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page.getByRole('button', { name: 'KICKOFF', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '건너뛰기', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '아직 만든 커리어가 없습니다' })).toBeVisible();
+  await expect(page.getByTestId('career-card')).toHaveCount(0);
+});
+
+test('세로 드래그와 버튼 위 드래그는 온보딩 단계를 바꾸지 않는다', async ({ page }) => {
+  await page.goto('/onboarding');
+  const heading = page.getByRole('heading', {
+    level: 1,
+    name: 'OVR 하나가 아니라 여러 수치로 성장합니다',
+  });
+  const surface = page.locator('.os-onboarding-motion .os-swipe-surface');
+  await expect(surface).toBeVisible();
+  await swipe(surface, -12, 150);
+  await expect(heading).toBeVisible();
+  await swipe(page.getByRole('button', { name: '다음', exact: true }), -150);
+  await expect(heading).toBeVisible();
+  await page.getByRole('button', { name: '다음', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '선택은 되돌릴 수 없습니다' }),
+  ).toBeVisible();
+});
+
+test('문서의 가장자리 뒤로 가기는 외부 방문 기록 대신 설정으로 돌아간다', async ({ page }) => {
+  await page.goto('/legal/privacy');
+  await expect(page.getByRole('heading', { level: 1, name: '개인정보 처리방침' })).toBeVisible();
+  await swipe(page.locator('.os-route-motion > .os-swipe-surface'), 170, 0, true);
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.locator('.os-route-motion')).toHaveAttribute('data-direction', 'back');
+});
+
+test('대시보드 스와이프는 구역만 바꾸고 경기 진행을 실행하지 않는다', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() =>
+    window.localStorage.setItem('offside:e2e-seed', 'e2e-season-result-01'),
+  );
+  await completeOnboardingThroughContract(page);
+  const url = page.url();
+  const surface = page.locator('.os-dashboard-tabs-motion .os-swipe-surface');
+  await expect(surface).toBeVisible();
+  await expect(page.getByRole('tab', { name: '일정표', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await swipe(surface, -150);
+  await expect(page.getByRole('tab', { name: '라커룸', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await swipe(surface, -150);
+  await expect(page.getByRole('tab', { name: '전술실', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await swipe(surface, 150);
+  await expect(page.getByRole('tab', { name: '라커룸', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page).toHaveURL(url);
+  await expect(page.getByRole('link', { name: '계획하러 가기', exact: true })).toBeVisible();
+});

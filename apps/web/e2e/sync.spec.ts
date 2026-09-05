@@ -15,7 +15,10 @@ async function startNewCareer(page: Page): Promise<void> {
 test('(a) 커리어 생성 즉시 저장하고 배지가 "저장됨"으로 바뀐다', async ({ page }) => {
   await page.route('**/v1/careers/*', async (route) => {
     if (route.request().method() === 'PUT') {
-      await fulfillJson(route, 200, { data: { revision: 1, syncedAt: '2026-09-02T00:00:00Z' }, meta: E2E_META });
+      await fulfillJson(route, 200, {
+        data: { revision: 1, syncedAt: '2026-09-02T00:00:00Z' },
+        meta: E2E_META,
+      });
       return;
     }
     await route.continue();
@@ -34,9 +37,13 @@ test('(a) 커리어 생성 즉시 저장하고 배지가 "저장됨"으로 바�
   await expect(page.getByText('아직 저장 안 됨')).not.toBeVisible();
 });
 
-test('(b) "다른 기기 진행 가져오기": 로컬을 서버 상태로 덮고 배지가 저장됨, 서버 단계 화면으로 이동한다', async ({ page }) => {
+test('(b) "다른 기기 진행 가져오기": 로컬을 서버 상태로 덮고 배지가 저장됨, 서버 단계 화면으로 이동한다', async ({
+  page,
+}) => {
   const { careerId } = await triggerConflictAndOpenDialog(page);
-  await expect(page.getByRole('heading', { level: 2, name: '다른 기기에서 이 커리어가 더 진행됐습니다' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 2, name: '다른 기기에서 이 커리어가 더 진행됐습니다' }),
+  ).toBeVisible();
 
   await page.getByRole('button', { name: '다른 기기 진행 가져오기' }).click();
 
@@ -46,7 +53,9 @@ test('(b) "다른 기기 진행 가져오기": 로컬을 서버 상태로 덮고
   await expect(page.getByText('저장됨')).toBeVisible();
 });
 
-test('(c) "이 기기 진행 유지": 포크된 새 커리어가 생기고 baseRevision 0으로 저장을 시도한다', async ({ page }) => {
+test('(c) "이 기기 진행 유지": 포크된 새 커리어가 생기고 baseRevision 0으로 저장을 시도한다', async ({
+  page,
+}) => {
   const { careerId } = await triggerConflictAndOpenDialog(page);
 
   const putBodies: Array<{ baseRevision: number }> = [];
@@ -63,7 +72,10 @@ test('(c) "이 기기 진행 유지": 포크된 새 커리어가 생기고 baseR
     }
     if (request.method() === 'PUT') {
       putBodies.push(request.postDataJSON() as { baseRevision: number });
-      await fulfillJson(route, 200, { data: { revision: 1, syncedAt: '2026-09-02T00:10:00Z' }, meta: E2E_META });
+      await fulfillJson(route, 200, {
+        data: { revision: 1, syncedAt: '2026-09-02T00:10:00Z' },
+        meta: E2E_META,
+      });
       return;
     }
     await route.continue();
@@ -72,12 +84,14 @@ test('(c) "이 기기 진행 유지": 포크된 새 커리어가 생기고 baseR
   await page.getByRole('button', { name: '이 기기 진행 유지' }).click();
 
   await expect(
-    page.getByText('이 기기의 진행을 새 커리어로 복사했습니다. 원래 커리어는 다른 기기의 진행을 따릅니다'),
+    page.getByText(
+      '이 기기의 진행을 새 커리어로 복사했습니다. 원래 커리어는 다른 기기의 진행을 따릅니다',
+    ),
   ).toBeVisible();
   await expect(page).not.toHaveURL(new RegExp(`/career/${careerId}/`));
 
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 2 })).toHaveCount(2);
+  await expect(page.getByTestId('career-card')).toHaveCount(2);
 
   await expect.poll(() => putBodies.some((body) => body.baseRevision === 0)).toBe(true);
 });
@@ -104,7 +118,10 @@ test('(d) 오프라인이면 배지가 오프라인으로, 온라인 복귀 뒤 
   await page.route('**/v1/careers/*', async (route) => {
     if (route.request().method() === 'PUT') {
       putCount += 1;
-      await fulfillJson(route, 200, { data: { revision: putCount, syncedAt: '2026-09-02T00:00:00Z' }, meta: E2E_META });
+      await fulfillJson(route, 200, {
+        data: { revision: putCount, syncedAt: '2026-09-02T00:00:00Z' },
+        meta: E2E_META,
+      });
       return;
     }
     await route.continue();
@@ -130,7 +147,10 @@ test('(d) 오프라인이면 배지가 오프라인으로, 온라인 복귀 뒤 
 test('(e) PUT 401이면 설정에 "로컬 전용" 안내와 "다시 연결" 버튼이 보인다', async ({ page }) => {
   await page.route('**/v1/careers/*', async (route) => {
     if (route.request().method() === 'PUT') {
-      await fulfillJson(route, 401, { error: { code: 'PROFILE_REQUIRED', message: '세션이 없습니다.', retryable: false }, meta: E2E_META });
+      await fulfillJson(route, 401, {
+        error: { code: 'PROFILE_REQUIRED', message: '세션이 없습니다.', retryable: false },
+        meta: E2E_META,
+      });
       return;
     }
     await route.continue();

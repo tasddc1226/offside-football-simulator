@@ -40,17 +40,23 @@ export function ChoiceCard({
   disabled,
   ...props
 }: ChoiceCardProps) {
-  const classes = ['group flex flex-col gap-os-3 p-os-4 data-[state=checked]:border-2 data-[state=checked]:border-os-accent', className]
+  const classes = ['os-choice-card group data-[state=checked]:border-os-accent', className]
     .filter(Boolean)
     .join(' ');
 
   return (
     <RadioGroupItem className={classes} disabled={disabled} {...props}>
       <div className="flex items-start justify-between gap-os-3">
-        <p className="font-os font-semibold text-os-text" style={{ fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' }}>
+        <p
+          className="font-os font-semibold text-os-text"
+          style={{ fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' }}
+        >
           {label}
         </p>
-        <span className="flex items-center gap-os-1 font-os" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+        <span
+          className="flex items-center gap-os-1 font-os"
+          style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+        >
           <span aria-hidden="true" className={RISK_COLOR_CLASS[riskLevel]}>
             {RISK_ICON[riskLevel]}
           </span>
@@ -59,14 +65,17 @@ export function ChoiceCard({
       </div>
 
       {effects.length > 0 ? (
-        <ul className="flex flex-col gap-os-1 font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+        <ul
+          className="flex flex-col gap-os-1 font-os text-os-text-2"
+          style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+        >
           {effects.map((effect) => (
             <li key={effect}>{effect}</li>
           ))}
         </ul>
       ) : null}
 
-      <span className="hidden items-center gap-os-1 font-os font-semibold text-os-text group-data-[state=checked]:inline-flex" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+      <span className="os-choice-selected">
         <span aria-hidden="true" className="text-os-success">
           ✓
         </span>
@@ -74,7 +83,10 @@ export function ChoiceCard({
       </span>
 
       {disabled && lockReason ? (
-        <p className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+        <p
+          className="font-os text-os-text-2"
+          style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+        >
           {lockReason}
         </p>
       ) : null}

@@ -12,6 +12,7 @@ import {
   CompareCards,
   EmptyState,
   ErrorState,
+  ScreenIntro,
   type CompareCardItem,
   type CompareRow,
 } from '@offside/ui';
@@ -53,7 +54,6 @@ export const Route = createFileRoute('/career/$careerId/offers')({
   component: OffersScreen,
 });
 
-const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
 const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
 
@@ -77,27 +77,22 @@ function MarketSummary({ state, offers }: { state: CareerState; offers: readonly
   if (pending === null || (pending.kind !== 'OFFERS' && pending.kind !== 'CONTRACT')) return null;
   const values = buildCurrentContractSummary(state);
   return (
-    <div className="flex flex-col gap-os-3">
-      <p className="font-os text-os-text-2" style={BODY_STYLE}>
-        현재 계약과 시장 상황을 비교해 다음 소속을 결정하세요.
-      </p>
-      <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
-        {values.map((item) => (
-          <div key={item.label}>
-            <dt>{item.label}</dt>
-            <dd className="text-os-text">{item.value}</dd>
-          </div>
-        ))}
-        <div>
-          <dt>시장 이유</dt>
-          <dd className="text-os-text">{MARKET_REASON_LABEL_KO[pending.market.reason]}</dd>
+    <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+      {values.map((item) => (
+        <div key={item.label}>
+          <dt>{item.label}</dt>
+          <dd className="text-os-text">{item.value}</dd>
         </div>
-        <div>
-          <dt>제안 수</dt>
-          <dd className="os-num text-os-text">{offers.length}건</dd>
-        </div>
-      </dl>
-    </div>
+      ))}
+      <div>
+        <dt>시장 이유</dt>
+        <dd className="text-os-text">{MARKET_REASON_LABEL_KO[pending.market.reason]}</dd>
+      </div>
+      <div>
+        <dt>제안 수</dt>
+        <dd className="os-num text-os-text">{offers.length}건</dd>
+      </div>
+    </dl>
   );
 }
 
@@ -188,49 +183,52 @@ function FirstContractOffers({
     ];
   }
 
+  if (offers.length === 0) {
+    return (
+      <EmptyState
+        headingLevel={2}
+        reason="제안이 없습니다"
+        action={
+          <Link to="/" className={buttonClassName('primary')} style={buttonStyle}>
+            허브로
+          </Link>
+        }
+      />
+    );
+  }
+
+  if (offers.length === 1) {
+    const offer = offers[0]!;
+    return (
+      <Card className="flex flex-col gap-os-3">
+        <h2 className="font-os font-bold text-os-text" style={{ fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' }}>
+          {offer.teamName}
+        </h2>
+        <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+          <div><dt>리그</dt><dd className="text-os-text">{LEAGUE_TIER_LABEL_KO[offer.leagueTier]}</dd></div>
+          <div><dt>기간</dt><dd className="os-num text-os-text">{offer.lengthSeasons}시즌</dd></div>
+          <div><dt>주급</dt><dd className="os-num text-os-text">{formatKrw(offer.wageMinorPerWeek)}</dd></div>
+          <div><dt>계약금</dt><dd className="os-num text-os-text">{formatKrw(offer.signingBonusMinor)}</dd></div>
+          <div><dt>역할 약속</dt><dd className="text-os-text">{SQUAD_ROLE_LABELS[offer.rolePromise]}</dd></div>
+          <div><dt>등번호</dt><dd className="os-num text-os-text">{offer.shirtNumber}</dd></div>
+          <div><dt>전술 적합도</dt><dd className="os-num text-os-text">{offer.tacticalFitEstimate}</dd></div>
+        </dl>
+        <Link to="/career/$careerId/contract" params={{ careerId }} search={{ offerId: offer.id }} className={buttonClassName('primary')} style={buttonStyle}>
+          이 제안 보기
+        </Link>
+      </Card>
+    );
+  }
+
   return (
-    <>
-      <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-        제안 비교
-      </h1>
-      {offers.length === 0 ? (
-        <EmptyState
-          reason="제안이 없습니다"
-          action={
-            <Link to="/" className={buttonClassName('primary')} style={buttonStyle}>
-              허브로
-            </Link>
-          }
-        />
-      ) : offers.length === 1 ? (
-          <Card className="flex flex-col gap-os-3">
-            <h2 className="font-os font-bold text-os-text" style={{ fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' }}>
-              {offers[0]!.teamName}
-            </h2>
-            <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
-              <div><dt>리그</dt><dd className="text-os-text">{LEAGUE_TIER_LABEL_KO[offers[0]!.leagueTier]}</dd></div>
-              <div><dt>기간</dt><dd className="os-num text-os-text">{offers[0]!.lengthSeasons}시즌</dd></div>
-              <div><dt>주급</dt><dd className="os-num text-os-text">{formatKrw(offers[0]!.wageMinorPerWeek)}</dd></div>
-              <div><dt>계약금</dt><dd className="os-num text-os-text">{formatKrw(offers[0]!.signingBonusMinor)}</dd></div>
-              <div><dt>역할 약속</dt><dd className="text-os-text">{SQUAD_ROLE_LABELS[offers[0]!.rolePromise]}</dd></div>
-              <div><dt>등번호</dt><dd className="os-num text-os-text">{offers[0]!.shirtNumber}</dd></div>
-              <div><dt>전술 적합도</dt><dd className="os-num text-os-text">{offers[0]!.tacticalFitEstimate}</dd></div>
-            </dl>
-            <Link to="/career/$careerId/contract" params={{ careerId }} search={{ offerId: offers[0]!.id }} className={buttonClassName('primary')} style={buttonStyle}>
-              이 제안 보기
-            </Link>
-          </Card>
-        ) : (
-          <CompareCards
-            cards={offers.map((offer): CompareCardItem => ({
-              id: offer.id,
-              title: offer.teamName,
-              renderAction: (layout) => <ViewOfferLink careerId={careerId} offerId={offer.id} layout={layout} />,
-            }))}
-            rows={buildFirstContractRows()}
-          />
-        )}
-    </>
+    <CompareCards
+      cards={offers.map((offer): CompareCardItem => ({
+        id: offer.id,
+        title: offer.teamName,
+        renderAction: (layout) => <ViewOfferLink careerId={careerId} offerId={offer.id} layout={layout} />,
+      }))}
+      rows={buildFirstContractRows()}
+    />
   );
 }
 
@@ -250,14 +248,15 @@ function MarketOffers({
   const parentTeamName = state.contract?.teamName ?? state.clubHistory.at(-1)?.teamName ?? null;
   return (
     <>
-      <div className="flex flex-col gap-os-2">
-        <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-          이적시장 제안 비교
-        </h1>
+      <Card className="flex flex-col gap-os-3">
+        <h2 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          현재 계약
+        </h2>
         <MarketSummary state={state} offers={offers} />
-      </div>
+      </Card>
       {offers.length === 0 ? (
         <EmptyState
+          headingLevel={2}
           reason="현재 유효한 제안이 없습니다"
           action={
             <Link to="/career/$careerId" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
@@ -299,8 +298,25 @@ function OffersScreen() {
   const offers = pending.offers;
   const firstContract = pending.market.reason === 'FIRST_CONTRACT';
   return (
-    <div className="flex flex-col gap-os-6">
-      {firstContract ? <FirstContractOffers careerId={careerId} offers={offers} /> : <MarketOffers careerId={careerId} state={state} revision={record.revision} offers={offers} />}
+    <div className="os-screen">
+      {firstContract ? (
+        <ScreenIntro
+          eyebrow="새로운 유니폼"
+          title="제안 비교"
+          description="리그의 높이만큼, 내가 뛸 수 있는 자리도 중요해요. 다음 팀의 조건을 살펴보세요."
+        />
+      ) : (
+        <ScreenIntro
+          eyebrow="계약 만료·FA"
+          title="이적시장 제안 비교"
+          description="현재 계약과 시장 상황을 비교해 다음 소속을 결정하세요."
+        />
+      )}
+      {firstContract ? (
+        <FirstContractOffers careerId={careerId} offers={offers} />
+      ) : (
+        <MarketOffers careerId={careerId} state={state} revision={record.revision} offers={offers} />
+      )}
     </div>
   );
 }

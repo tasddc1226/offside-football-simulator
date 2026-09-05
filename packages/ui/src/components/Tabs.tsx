@@ -12,13 +12,13 @@ export function Tabs({ className, ...props }: TabsProps) {
 }
 
 export function TabsList({ className, ...props }: TabsListProps) {
-  const classes = ['flex gap-os-2 border-b border-os-border', className].filter(Boolean).join(' ');
+  const classes = ['os-tab-list', className].filter(Boolean).join(' ');
   return <TabsPrimitive.List className={classes} {...props} />;
 }
 
 export function TabsTrigger({ className, style, ...props }: TabsTriggerProps) {
   const classes = [
-    'font-os font-semibold text-os-text-2 outline-none border-b-2 border-transparent px-os-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-os-focus data-[state=active]:border-os-accent data-[state=active]:text-os-text data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60',
+    'os-tab-trigger font-os font-semibold text-os-text-2 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-os-focus data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60',
     className,
   ]
     .filter(Boolean)
@@ -29,7 +29,7 @@ export function TabsTrigger({ className, style, ...props }: TabsTriggerProps) {
       className={classes}
       style={{
         minHeight: 'var(--os-touch-min)',
-        fontSize: 'var(--os-fs-body)',
+        fontSize: 'var(--os-fs-caption)',
         lineHeight: 'var(--os-lh-body)',
         ...style,
       }}
@@ -39,7 +39,10 @@ export function TabsTrigger({ className, style, ...props }: TabsTriggerProps) {
 }
 
 export function TabsContent({ className, ...props }: TabsContentProps) {
-  const classes = ['outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-os-focus', className]
+  const classes = [
+    'outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-os-focus',
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
   return <TabsPrimitive.Content className={classes} {...props} />;

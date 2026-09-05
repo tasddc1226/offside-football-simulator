@@ -3,14 +3,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import type { NegotiationAsk, Offer } from '@offside/domain';
-import { Button, Card, ErrorState } from '@offside/ui';
+import { Button, Card, ErrorState, ScreenIntro } from '@offside/ui';
 import { recordFunnelReached } from '../engine/funnel.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { platform } from '../platform/index.js';
-import { LEAGUE_TIER_LABEL_KO, ROLE_PROMISE_SENTENCE, SQUAD_ROLE_LABELS } from '../shared/labels.js';
+import {
+  LEAGUE_TIER_LABEL_KO,
+  ROLE_PROMISE_SENTENCE,
+  SQUAD_ROLE_LABELS,
+} from '../shared/labels.js';
 import { formatKrw } from '../shared/format.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
 import { committedTransferRevision } from '../shared/transfer-result.js';
@@ -41,7 +45,9 @@ export const Route = createFileRoute('/career/$careerId/contract')({
     const { record, state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
     const pending = state.pending;
     const offer =
-      pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT' ? pending.offers.find((candidate) => candidate.id === deps.offerId) : undefined;
+      pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT'
+        ? pending.offers.find((candidate) => candidate.id === deps.offerId)
+        : undefined;
     if (offer === undefined) {
       const committedRevision = committedTransferRevision(state, record.revision, deps.offerId);
       if (committedRevision !== null) {
@@ -59,9 +65,11 @@ export const Route = createFileRoute('/career/$careerId/contract')({
   component: ContractScreen,
 });
 
-const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
 
 const ASK_LABELS: Record<NegotiationAsk, string> = { WAGE: '주급', ROLE: '역할', LENGTH: '기간' };
 
@@ -359,58 +367,96 @@ function ContractScreen() {
   if (firstContract) {
     const playerName = state.player.profile?.name ?? state.player.draft.name ?? '선수';
     return (
-      <div className="flex flex-col gap-os-6">
-        <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-          {offer.teamName} 계약
-        </h1>
+      <div className="os-screen">
+        <ScreenIntro
+          eyebrow="나의 다음 팀"
+          title={`${offer.teamName} 계약`}
+          description="함께 뛸 팀과 약속할 조건을 마지막으로 확인하세요."
+        />
 
-        <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
-          <div>
-            <dt>리그</dt>
-            <dd className="text-os-text">{LEAGUE_TIER_LABEL_KO[offer.leagueTier]}</dd>
+        <section className="os-panel flex flex-col gap-os-5" aria-labelledby="contract-terms-heading">
+          <div className="flex items-center justify-between gap-os-3 border-b border-os-border pb-os-4">
+            <div className="flex flex-col gap-os-1">
+              <p className="os-eyebrow">계약 조건</p>
+              <h2 id="contract-terms-heading" className="os-section-title">
+                {offer.teamName}
+              </h2>
+            </div>
+            <span
+              className="os-num rounded-os-m bg-os-surface-2 px-os-3 py-os-2 font-bold text-os-text-2"
+              aria-label={`등번호 ${offer.shirtNumber}`}
+            >
+              #{offer.shirtNumber}
+            </span>
           </div>
-          <div>
-            <dt>기간</dt>
-            <dd className="os-num text-os-text">{offer.lengthSeasons}시즌</dd>
-          </div>
-          <div>
-            <dt>주급</dt>
-            <dd className="os-num text-os-text">{formatKrw(offer.wageMinorPerWeek)}</dd>
-          </div>
-          <div>
-            <dt>계약금</dt>
-            <dd className="os-num text-os-text">{formatKrw(offer.signingBonusMinor)}</dd>
-          </div>
-          <div>
-            <dt>역할 약속</dt>
-            <dd className="text-os-text">{SQUAD_ROLE_LABELS[offer.rolePromise]}</dd>
-          </div>
-          <div>
-            <dt>등번호</dt>
-            <dd className="os-num text-os-text">{offer.shirtNumber}</dd>
-          </div>
-        </dl>
+          <dl className="grid grid-cols-2 gap-os-4 font-os text-os-text-2" style={CAPTION_STYLE}>
+            <div className="flex flex-col gap-os-1">
+              <dt>리그</dt>
+              <dd className="font-semibold text-os-text">{LEAGUE_TIER_LABEL_KO[offer.leagueTier]}</dd>
+            </div>
+            <div className="flex flex-col gap-os-1">
+              <dt>기간</dt>
+              <dd className="os-num font-semibold text-os-text">{offer.lengthSeasons}시즌</dd>
+            </div>
+            <div className="flex flex-col gap-os-1">
+              <dt>주급</dt>
+              <dd className="os-num font-semibold text-os-text">
+                {formatKrw(offer.wageMinorPerWeek)}
+              </dd>
+            </div>
+            <div className="flex flex-col gap-os-1">
+              <dt>계약금</dt>
+              <dd className="os-num font-semibold text-os-text">
+                {formatKrw(offer.signingBonusMinor)}
+              </dd>
+            </div>
+            <div className="flex flex-col gap-os-1">
+              <dt>역할 약속</dt>
+              <dd className="font-semibold text-os-text">{SQUAD_ROLE_LABELS[offer.rolePromise]}</dd>
+            </div>
+            <div className="flex flex-col gap-os-1">
+              <dt>등번호</dt>
+              <dd className="os-num font-semibold text-os-text">{offer.shirtNumber}</dd>
+            </div>
+          </dl>
+        </section>
 
-        <p className="font-os text-os-text" style={BODY_STYLE}>
-          {ROLE_PROMISE_SENTENCE[offer.rolePromise]}
-        </p>
+        <section className="os-story-card" aria-labelledby="contract-promise-heading">
+          <h2 id="contract-promise-heading" className="os-eyebrow">
+            구단의 약속
+          </h2>
+          <p className="font-os text-os-text" style={BODY_STYLE}>
+            {ROLE_PROMISE_SENTENCE[offer.rolePromise]}
+          </p>
+        </section>
 
-        <div className="flex flex-col gap-os-1">
-          <p className="font-os font-bold text-os-text" style={BODY_STYLE}>
+        <section className="os-panel flex flex-col gap-os-3" aria-label="선수 서명">
+          <p className="os-eyebrow">선수 서명</p>
+          <p className="border-b border-dashed border-os-border pb-os-4 font-os text-2xl font-bold text-os-text">
             {playerName}
           </p>
           <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-            자동 서명으로 처리됩니다. 손글씨 서명은 이후 지원됩니다.
+            사인을 누르면 이 조건으로 계약이 체결됩니다.
           </p>
-        </div>
+        </section>
 
         {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void recoverFromError()} /> : null}
 
-        <div className="flex gap-os-3">
-          <Button variant="secondary" onClick={handleBack}>
+        <div className="os-action-dock os-action-row">
+          <Button
+            variant="secondary"
+            className="basis-1/3"
+            onClick={handleBack}
+            disabled={acceptMutation.isPending}
+          >
             뒤로
           </Button>
-          <Button variant="primary" onClick={() => void handleAccept()} disabled={acceptMutation.isPending}>
+          <Button
+            variant="primary"
+            className="basis-2/3"
+            onClick={() => void handleAccept()}
+            disabled={acceptMutation.isPending}
+          >
             사인
           </Button>
         </div>
@@ -419,18 +465,16 @@ function ContractScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-os-6">
+    <div className="os-screen">
       <p className="sr-only" aria-live="polite" data-testid="contract-announcement">
         {announcement}
       </p>
-      <div className="flex flex-col gap-os-2">
-        <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-          {offer.teamName} 제안 상세
-        </h1>
-        <p className="font-os text-os-text-2" style={BODY_STYLE}>
-          비교한 조건을 협상하거나 결정하세요.
-        </p>
-      </div>
+
+      <ScreenIntro
+        eyebrow="계약 만료·FA"
+        title={`${offer.teamName} 제안 상세`}
+        description="비교한 조건을 협상하거나 결정하세요."
+      />
 
       {negotiationResult !== null ? (
         <NegotiationResultPanel
@@ -480,7 +524,7 @@ function ContractScreen() {
 
       {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void recoverFromError()} retryLabel="저장 상태 다시 확인" /> : null}
 
-      <div className="flex flex-wrap gap-os-3">
+      <div className="os-action-dock flex flex-col gap-os-2">
         <Button variant="secondary" onClick={handleBack} disabled={committing}>
           뒤로
         </Button>

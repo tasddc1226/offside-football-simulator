@@ -10,13 +10,16 @@ export interface StatusStripProps {
 
 export function StatusStrip({ items }: StatusStripProps) {
   return (
-    <ul className="flex flex-wrap gap-os-2">
+    <ul className="os-stat-strip" data-count={items.length}>
       {items.map((item) => (
         <li
           key={item.id}
           className="flex flex-col items-start gap-os-1 rounded-os-s bg-os-surface-2 px-os-3 py-os-2"
         >
-          <span className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+          <span
+            className="font-os text-os-text-2"
+            style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+          >
             {item.label}
           </span>
           <span

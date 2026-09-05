@@ -1,7 +1,7 @@
 // SCR-029 대시보드의 "다음 결정 카드" 분기 표: pending EVENT/OFFERS/ROLE_PROPOSAL/SETTLEMENT,
 // season===null&&contract!==null(프리시즌 계획), season 있고 pending 없음(진행), NOTHING_TO_ADVANCE
 // 가 각각 옳은 CTA·문구를 보여주는지 확인한다.
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
 import type { ChapterRecord, Ruleset } from '@offside/domain';
@@ -74,7 +74,10 @@ function nationalTestRuleset(): Ruleset {
 
 function renderAt(path: string) {
   cleanup();
-  const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: [path] }) });
+  const router = createRouter({
+    routeTree,
+    history: createMemoryHistory({ initialEntries: [path] }),
+  });
   render(<RouterProvider router={router} />);
   return router;
 }
@@ -90,7 +93,10 @@ async function advanceUntilOffers(engine: AppEngine, careerId: string) {
     const { pending } = advanced.domainSnapshot.state;
     if (pending === null) continue;
     if (pending.kind === 'OFFERS') return advanced;
-    if (pending.kind !== 'EVENT') throw new Error(`이 테스트는 시즌을 시작하지 않으므로 EVENT·OFFERS만 예상한다: ${pending.kind}`);
+    if (pending.kind !== 'EVENT')
+      throw new Error(
+        `이 테스트는 시즌을 시작하지 않으므로 EVENT·OFFERS만 예상한다: ${pending.kind}`,
+      );
     const definition = engine.pack.eventsById.get(pending.eventId);
     if (!definition) throw new Error(`이벤트 정의를 찾지 못했다: ${pending.eventId}`);
     const choiceId = definition.choices[0]?.id;
@@ -106,8 +112,17 @@ async function confirmedCareerId(engine: AppEngine): Promise<string> {
   const created = await createCareer(engine, { simulationMode: 'FAST' });
   if (!created.ok) throw new Error('createCareer 실패');
   const careerId = created.snapshot.careerId;
-  await updateDraft(engine, careerId, { name: '김서준', gender: 'UNSPECIFIED', nationalityCode: 'KR', preferredFoot: 'LEFT' });
-  const confirmed = await updateDraft(engine, careerId, { position: 'W', archetypeId: 'inside-forward', backgroundId: 'club-academy' });
+  await updateDraft(engine, careerId, {
+    name: '김서준',
+    gender: 'UNSPECIFIED',
+    nationalityCode: 'KR',
+    preferredFoot: 'LEFT',
+  });
+  const confirmed = await updateDraft(engine, careerId, {
+    position: 'W',
+    archetypeId: 'inside-forward',
+    backgroundId: 'club-academy',
+  });
   if (!confirmed.ok) throw new Error('updateDraft 실패');
   const result = await confirmPlayer(engine, careerId);
   if (!result.ok) throw new Error('confirmPlayer 실패');
@@ -143,7 +158,11 @@ async function startedSeasonCareerId(engine: AppEngine): Promise<string> {
 async function seasonActiveNoPendingCareerId(engine: AppEngine): Promise<string> {
   const careerId = await startedSeasonCareerId(engine);
   const resolved = await resolveRole(engine, careerId, 'ACCEPT');
-  if (!resolved.ok || resolved.domainSnapshot.state.pending !== null || resolved.domainSnapshot.state.season === null) {
+  if (
+    !resolved.ok ||
+    resolved.domainSnapshot.state.pending !== null ||
+    resolved.domainSnapshot.state.season === null
+  ) {
     throw new Error('역할 수락 뒤 시즌이 진행 중이고 pending이 없어야 한다');
   }
   return careerId;
@@ -234,6 +253,19 @@ afterEach(() => {
 });
 
 describe('SCR-029 다음 결정 카드 분기', () => {
+  it('모바일 대시보드는 하나의 제목과 지금 할 일 구역에 진행 CTA를 모은다', async () => {
+    const engine = setTestEngine();
+    const careerId = await seasonActiveNoPendingCareerId(engine);
+
+    renderAt(`/career/${careerId}`);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '나의 커리어' }),
+    ).toBeInTheDocument();
+    const nextAction = screen.getByRole('region', { name: '지금 할 일' });
+    expect(within(nextAction).getByRole('button', { name: '진행' })).not.toBeDisabled();
+    expect(screen.getAllByRole('tab')).toHaveLength(5);
+  });
+
   it('pending EVENT면 "결정이 기다립니다"와 결정하러 가기 CTA를 보여준다', async () => {
     const engine = setTestEngine();
     const careerId = await confirmedCareerId(engine);
@@ -624,7 +656,11 @@ describe('SCR-029 다음 결정 카드 분기', () => {
           if (request.command.type === 'ADVANCE') {
             return Promise.resolve({
               ok: false,
-              error: { code: 'VALIDATION_FAILED', message: '더 진행할 것이 없다.', details: { reason: 'NOTHING_TO_ADVANCE' } },
+              error: {
+                code: 'VALIDATION_FAILED',
+                message: '더 진행할 것이 없다.',
+                details: { reason: 'NOTHING_TO_ADVANCE' },
+              },
             });
           }
           return engine.client.execute(request);

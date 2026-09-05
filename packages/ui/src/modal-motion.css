@@ -1,0 +1,115 @@
+/* All modal tasks share one material. Toasts and non-modal feedback stay clear.
+   The solid scrim remains usable in browsers without backdrop-filter support. */
+.os-dialog-overlay {
+  background: rgb(15 23 42 / 58%);
+}
+
+@supports (backdrop-filter: blur(6px)) or (-webkit-backdrop-filter: blur(6px)) {
+  .os-dialog-overlay {
+    background: rgb(15 23 42 / 34%);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+}
+
+.os-dialog {
+  transform-origin: center;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 22%);
+}
+
+/* Radix Presence keeps the exiting portal mounted until the CSS animation ends.
+   Only opacity and transform move; the blur radius itself is never animated. */
+.os-dialog-overlay[data-state='open'] {
+  animation: os-dialog-backdrop-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.os-dialog-overlay[data-state='closed'] {
+  animation: os-dialog-backdrop-out 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.os-dialog[data-state='open'] {
+  animation: os-dialog-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.os-dialog[data-state='closed'] {
+  animation: os-dialog-out 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes os-dialog-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes os-dialog-backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Tailwind's translate longhand owns the -50% centering. These transforms only
+   add the small entry offset and scale, so content of any height stays centered. */
+@keyframes os-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes os-dialog-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+/* Keyboard actions must not wait for decoration. The app tracks modality at the
+   document root, which also reaches Radix portals outside the route container. */
+[data-input-modality='keyboard'] .os-dialog[data-state],
+[data-input-modality='keyboard'] .os-dialog-overlay[data-state],
+[data-reduced-motion='true'] .os-dialog[data-state],
+[data-reduced-motion='true'] .os-dialog-overlay[data-state] {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os-dialog[data-state],
+  .os-dialog-overlay[data-state] {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .os-dialog-overlay {
+    background: rgb(15 23 42 / 76%);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .os-dialog-overlay {
+    background: rgb(15 23 42 / 82%);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .os-dialog {
+    border: 2px solid var(--os-text);
+    box-shadow: none;
+  }
+}

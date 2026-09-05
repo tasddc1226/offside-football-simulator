@@ -3,7 +3,14 @@
 // 도메인 명령이 없어 두지 않는다(PR 본문 참고).
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { Button, CompareCards, ErrorState, type CompareCardItem, type CompareRow } from '@offside/ui';
+import {
+  Button,
+  CompareCards,
+  ErrorState,
+  ScreenIntro,
+  type CompareCardItem,
+  type CompareRow,
+} from '@offside/ui';
 import { deriveTacticalRoom } from '@offside/domain';
 import { activeRuleset } from '../engine/content.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
@@ -24,9 +31,11 @@ export const Route = createFileRoute('/career/$careerId/role')({
   component: RoleProposalScreen,
 });
 
-const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
 
 function RoleProposalScreen() {
   const { careerId } = Route.useParams();
@@ -37,7 +46,10 @@ function RoleProposalScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    platform.analytics.track('screen_viewed', { screenId: 'SCR-012', careerPhase: query.data?.state.seasonPhase ?? 'NONE' });
+    platform.analytics.track('screen_viewed', {
+      screenId: 'SCR-012',
+      careerPhase: query.data?.state.seasonPhase ?? 'NONE',
+    });
     // 마운트 시 1회만(로더가 이미 캐시를 채웠다).
   }, []);
 
@@ -48,7 +60,8 @@ function RoleProposalScreen() {
 
   const proposal = pending.proposal;
   const room = deriveTacticalRoom(state, activeRuleset);
-  const playerRank = room?.ranking.candidates.find((candidate) => candidate.id === 'PLAYER')?.rank ?? null;
+  const playerRank =
+    room?.ranking.candidates.find((candidate) => candidate.id === 'PLAYER')?.rank ?? null;
 
   async function handleDecision(decision: 'ACCEPT' | 'DECLINE') {
     if (submittingRef.current) return;
@@ -74,17 +87,31 @@ function RoleProposalScreen() {
 
   if (proposal.type === 'KEEP') {
     return (
-      <div className="flex flex-col gap-os-6">
-        <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-          감독 제안
-        </h1>
-        <p className="font-os text-os-text" style={BODY_STYLE}>
-          감독은 {POSITION_LABELS[proposal.position]}·{SQUAD_ROLE_LABELS[proposal.squadRole]}을 유지하자고 합니다.
-        </p>
-        {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void handleDecision('ACCEPT')} /> : null}
-        <Button variant="primary" disabled={committing} onClick={() => void handleDecision('ACCEPT')}>
-          확인
-        </Button>
+      <div className="os-screen">
+        <ScreenIntro
+          eyebrow="MANAGER'S OFFICE"
+          title="감독 제안"
+          description="감독이 생각하는 팀에서의 내 역할이에요."
+        />
+        <div className="os-story-card flex flex-col gap-os-3">
+          <p className="os-eyebrow">현재 역할 유지</p>
+          <p className="font-os text-os-text" style={BODY_STYLE}>
+            감독은 {POSITION_LABELS[proposal.position]}·{SQUAD_ROLE_LABELS[proposal.squadRole]}을
+            유지하자고 합니다.
+          </p>
+        </div>
+        {errorMessage ? (
+          <ErrorState message={errorMessage} onRetry={() => void handleDecision('ACCEPT')} />
+        ) : null}
+        <div className="os-action-dock">
+          <Button
+            variant="primary"
+            disabled={committing}
+            onClick={() => void handleDecision('ACCEPT')}
+          >
+            확인
+          </Button>
+        </div>
       </div>
     );
   }
@@ -95,21 +122,37 @@ function RoleProposalScreen() {
       { id: 'proposed', title: '제안' },
     ];
     const rows: CompareRow[] = [
-      { id: 'position', label: '포지션', cells: [{ value: POSITION_LABELS[proposal.from] }, { value: POSITION_LABELS[proposal.to], highlighted: true }] },
+      {
+        id: 'position',
+        label: '포지션',
+        cells: [
+          { value: POSITION_LABELS[proposal.from] },
+          { value: POSITION_LABELS[proposal.to], highlighted: true },
+        ],
+      },
       {
         id: 'tacticalFit',
         label: '전술 적합도',
-        cells: [{ value: String(state.context.tacticalFit) }, { value: String(proposal.tacticalFitAfter), highlighted: true }],
+        cells: [
+          { value: String(state.context.tacticalFit) },
+          { value: String(proposal.tacticalFitAfter), highlighted: true },
+        ],
       },
       {
         id: 'proficiency',
         label: '포지션 숙련도',
-        cells: [{ value: String(state.context.positionProficiency) }, { value: String(proposal.proficiencyAfter), highlighted: true }],
+        cells: [
+          { value: String(state.context.positionProficiency) },
+          { value: String(proposal.proficiencyAfter), highlighted: true },
+        ],
       },
       {
         id: 'role',
         label: '역할',
-        cells: [{ value: SQUAD_ROLE_LABELS[state.season?.squadRole ?? proposal.squadRoleAfter] }, { value: SQUAD_ROLE_LABELS[proposal.squadRoleAfter], highlighted: true }],
+        cells: [
+          { value: SQUAD_ROLE_LABELS[state.season?.squadRole ?? proposal.squadRoleAfter] },
+          { value: SQUAD_ROLE_LABELS[proposal.squadRoleAfter], highlighted: true },
+        ],
       },
       {
         id: 'ranking',
@@ -119,27 +162,39 @@ function RoleProposalScreen() {
     ];
 
     return (
-      <div className="flex flex-col gap-os-6">
-        <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-          포지션 변경 제안
-        </h1>
+      <div className="os-screen">
+        <ScreenIntro
+          eyebrow="MANAGER'S OFFICE"
+          title="포지션 변경 제안"
+          description="다른 자리에서 기회를 찾을 수 있을까요? 현재 조건과 제안을 비교해 보세요."
+        />
         <CompareCards cards={cards} rows={rows} />
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           능력치는 바뀌지 않고 역할 가중치와 숙련도만 바뀝니다.
         </p>
-        {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void handleDecision('ACCEPT')} /> : null}
-        <div className="flex flex-col gap-os-1">
-          <div className="flex gap-os-3">
-            <Button variant="secondary" disabled={committing} onClick={() => void handleDecision('DECLINE')}>
-              거절
-            </Button>
-            <Button variant="primary" disabled={committing} onClick={() => void handleDecision('ACCEPT')}>
-              수락
-            </Button>
-          </div>
+        {errorMessage ? (
+          <ErrorState message={errorMessage} onRetry={() => void handleDecision('ACCEPT')} />
+        ) : null}
+        <div className="os-action-dock flex flex-col gap-os-2">
           <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
             거절하면 감독 신뢰가 내려갈 수 있습니다.
           </p>
+          <div className="grid grid-cols-2 gap-os-2">
+            <Button
+              variant="secondary"
+              disabled={committing}
+              onClick={() => void handleDecision('DECLINE')}
+            >
+              거절
+            </Button>
+            <Button
+              variant="primary"
+              disabled={committing}
+              onClick={() => void handleDecision('ACCEPT')}
+            >
+              수락
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -147,29 +202,44 @@ function RoleProposalScreen() {
 
   // proposal.type === 'ROLE_CHANGE'
   return (
-    <div className="flex flex-col gap-os-6">
-      <h1 className="font-os font-bold text-os-text" style={H1_STYLE}>
-        역할 변경 제안
-      </h1>
-      <p className="font-os text-os-text" style={BODY_STYLE}>
-        현재 약속: {SQUAD_ROLE_LABELS[proposal.from]} → 제안: {SQUAD_ROLE_LABELS[proposal.to]}
-      </p>
-      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-        {ROLE_PROMISE_SENTENCE[proposal.to]}
-      </p>
-      {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void handleDecision('ACCEPT')} /> : null}
-      <div className="flex flex-col gap-os-1">
-        <div className="flex gap-os-3">
-          <Button variant="secondary" disabled={committing} onClick={() => void handleDecision('DECLINE')}>
-            거절
-          </Button>
-          <Button variant="primary" disabled={committing} onClick={() => void handleDecision('ACCEPT')}>
-            수락
-          </Button>
-        </div>
+    <div className="os-screen">
+      <ScreenIntro
+        eyebrow="MANAGER'S OFFICE"
+        title="역할 변경 제안"
+        description="팀에서 맡게 될 역할과 출전 약속을 확인해 보세요."
+      />
+      <div className="os-story-card flex flex-col gap-os-3">
+        <p className="os-eyebrow">감독의 새로운 구상</p>
+        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          현재 약속: {SQUAD_ROLE_LABELS[proposal.from]} → 제안: {SQUAD_ROLE_LABELS[proposal.to]}
+        </p>
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          {ROLE_PROMISE_SENTENCE[proposal.to]}
+        </p>
+      </div>
+      {errorMessage ? (
+        <ErrorState message={errorMessage} onRetry={() => void handleDecision('ACCEPT')} />
+      ) : null}
+      <div className="os-action-dock flex flex-col gap-os-2">
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           거절하면 감독 신뢰가 내려갈 수 있습니다.
         </p>
+        <div className="grid grid-cols-2 gap-os-2">
+          <Button
+            variant="secondary"
+            disabled={committing}
+            onClick={() => void handleDecision('DECLINE')}
+          >
+            거절
+          </Button>
+          <Button
+            variant="primary"
+            disabled={committing}
+            onClick={() => void handleDecision('ACCEPT')}
+          >
+            수락
+          </Button>
+        </div>
       </div>
     </div>
   );

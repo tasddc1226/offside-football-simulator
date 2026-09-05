@@ -1,32 +1,40 @@
-/* 13-visual-design-system.md DSN-COL-001·TYP-001·SPC-001. 값은 문서와 동일해야 한다(변경 금지).
+/* OFFSIDE mobile refresh: docs/design/mobile-game-refresh.md.
+   Independently authored tokens; no Toss UI Kit assets or font are distributed.
    @font-face 선언은 fonts.css(T-0-013, dynamic subset)로 옮겼다. tokens.css는 fonts.css를
    import하지 않는다 — 앱이 두 파일을 각각 import한다. */
 
 :root {
   /* DSN-COL-001 라이트 */
-  --os-bg: #F7F6F1;
-  --os-surface: #FFFFFF;
-  --os-surface-2: #EEECE4;
-  --os-border: #D6D3C9;
-  --os-text: #141A17;
-  --os-text-2: #4F5A54;
-  --os-accent: #F5C400;
-  --os-on-accent: #0B1410;
-  --os-line: #0E7C8A;
-  --os-success: #1E7B45;
-  --os-warning: #8A5A00;
-  --os-danger: #B3261E;
-  --os-neutral: #4F5A54;
-  --os-focus: #0E7C8A;
+  --os-bg: #f2f5f8;
+  --os-surface: #ffffff;
+  --os-surface-2: #e9eff5;
+  --os-border: #d5dfea;
+  --os-text: #192638;
+  --os-text-2: #52647a;
+  --os-accent: #225ac4;
+  --os-on-accent: #ffffff;
+  --os-line: #146e74;
+  --os-success: #23784f;
+  --os-warning: #845609;
+  --os-danger: #bd3544;
+  --os-neutral: #52647a;
+  --os-focus: #225ac4;
+  --os-canvas: #e5ecf3;
+  --os-hero: #132b40;
+  --os-on-hero: #f5faff;
+  --os-hero-muted: #c3d5e5;
+  --os-shadow: 0 4px 20px rgb(19 43 64 / 4%);
 
   /* DSN-TYP-001 */
-  --os-font: 'Pretendard Variable', 'Pretendard Fallback', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  --os-tracking-display: 0.12em;
+  --os-font:
+    'Pretendard Variable', 'Pretendard Fallback', Pretendard, -apple-system, 'Apple SD Gothic Neo',
+    'Noto Sans KR', sans-serif;
+  --os-tracking-display: 0.04em;
 
   --os-fs-display: 2rem;
   --os-lh-display: 2.5rem;
-  --os-fs-h1: 1.5rem;
-  --os-lh-h1: 2rem;
+  --os-fs-h1: 1.625rem;
+  --os-lh-h1: 2.125rem;
   --os-fs-h2: 1.125rem;
   --os-lh-h2: 1.625rem;
   --os-fs-body: 1rem;
@@ -51,9 +59,10 @@
   --os-space-6: 32px;
   --os-space-7: 48px;
   --os-space-8: 64px;
-  --os-radius-s: 4px;
-  --os-radius-m: 8px;
-  --os-touch-min: 44px;
+  --os-radius-s: 8px;
+  --os-radius-m: 12px;
+  --os-radius-panel: 20px;
+  --os-touch-min: 48px;
 
   /* DSN-CHN-001, web 채널 값 */
   --os-safe-top: env(safe-area-inset-top, 0px);
@@ -61,38 +70,42 @@
 }
 
 :root[data-theme='dark'] {
-  --os-bg: #0B1410;
-  --os-surface: #121C17;
-  --os-surface-2: #1A2620;
-  --os-border: #2B3A32;
-  --os-text: #F2F5F3;
-  --os-text-2: #A7B3AC;
-  --os-accent: #F5C400;
-  --os-on-accent: #0B1410;
-  --os-line: #7DF2FF;
-  --os-success: #5BD98A;
-  --os-warning: #FFB020;
-  --os-danger: #FF6B6B;
-  --os-neutral: #A7B3AC;
-  --os-focus: #7DF2FF;
+  --os-bg: #121b28;
+  --os-surface: #1b293a;
+  --os-surface-2: #24354b;
+  --os-border: #3a506a;
+  --os-text: #f3f7fc;
+  --os-text-2: #b0c3d9;
+  --os-accent: #91bbff;
+  --os-on-accent: #10274b;
+  --os-line: #7ad6d3;
+  --os-success: #7fd6a3;
+  --os-warning: #f2c76c;
+  --os-danger: #ff9ea5;
+  --os-neutral: #b0c3d9;
+  --os-focus: #91bbff;
+  --os-canvas: #0c1420;
+  --os-shadow: none;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --os-bg: #0B1410;
-    --os-surface: #121C17;
-    --os-surface-2: #1A2620;
-    --os-border: #2B3A32;
-    --os-text: #F2F5F3;
-    --os-text-2: #A7B3AC;
-    --os-accent: #F5C400;
-    --os-on-accent: #0B1410;
-    --os-line: #7DF2FF;
-    --os-success: #5BD98A;
-    --os-warning: #FFB020;
-    --os-danger: #FF6B6B;
-    --os-neutral: #A7B3AC;
-    --os-focus: #7DF2FF;
+    --os-bg: #121b28;
+    --os-surface: #1b293a;
+    --os-surface-2: #24354b;
+    --os-border: #3a506a;
+    --os-text: #f3f7fc;
+    --os-text-2: #b0c3d9;
+    --os-accent: #91bbff;
+    --os-on-accent: #10274b;
+    --os-line: #7ad6d3;
+    --os-success: #7fd6a3;
+    --os-warning: #f2c76c;
+    --os-danger: #ff9ea5;
+    --os-neutral: #b0c3d9;
+    --os-focus: #91bbff;
+    --os-canvas: #0c1420;
+    --os-shadow: none;
   }
 }
 

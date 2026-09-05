@@ -27,6 +27,8 @@ export type { ErrorStateProps } from './components/ErrorState.js';
 export { OffsideLine } from './components/OffsideLine.js';
 export { PageShell } from './components/PageShell.js';
 export type { PageShellProps } from './components/PageShell.js';
+export { FootballMark, ScreenIntro } from './components/ScreenIntro.js';
+export type { ScreenIntroProps } from './components/ScreenIntro.js';
 export { PlayerHeader } from './components/PlayerHeader.js';
 export type { PlayerHeaderField, PlayerHeaderProps } from './components/PlayerHeader.js';
 export { RadioGroup, RadioGroupItem } from './components/RadioGroup.js';
@@ -38,8 +40,15 @@ export type { SkeletonProps } from './components/Skeleton.js';
 export { StatusStrip } from './components/StatusStrip.js';
 export type { StatusStripItem, StatusStripProps } from './components/StatusStrip.js';
 export { Stepper } from './components/Stepper.js';
+export { SwipeSurface } from './components/SwipeSurface.js';
+export type { SwipeSurfaceProps } from './components/SwipeSurface.js';
 export type { StepperProps, StepperStep } from './components/Stepper.js';
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './components/Tabs.js';
-export type { TabsContentProps, TabsListProps, TabsProps, TabsTriggerProps } from './components/Tabs.js';
+export type {
+  TabsContentProps,
+  TabsListProps,
+  TabsProps,
+  TabsTriggerProps,
+} from './components/Tabs.js';
 export { Toast } from './components/Toast.js';
 export type { ToastProps, ToastVariant } from './components/Toast.js';

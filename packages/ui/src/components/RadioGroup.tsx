@@ -5,7 +5,7 @@ export type RadioGroupProps = ComponentProps<typeof RadioGroupPrimitive.Root>;
 export type RadioGroupItemProps = ComponentProps<typeof RadioGroupPrimitive.Item>;
 
 const ITEM_BASE_CLASS =
-  'block w-full rounded-os-m border border-os-border bg-os-surface text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-os-focus data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60';
+  'os-radio-item block w-full rounded-os-m border border-os-border bg-os-surface text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-os-focus data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60';
 
 export function RadioGroup({ className, ...props }: RadioGroupProps) {
   const classes = ['flex flex-col gap-os-3', className].filter(Boolean).join(' ');

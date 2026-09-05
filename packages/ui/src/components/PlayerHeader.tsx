@@ -17,7 +17,10 @@ export interface PlayerHeaderProps {
 function Field({ field }: { field: PlayerHeaderField }) {
   return (
     <div className="flex flex-col items-end gap-os-1">
-      <span className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+      <span
+        className="font-os text-os-text-2"
+        style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+      >
         {field.label}
       </span>
       <span
@@ -27,7 +30,10 @@ function Field({ field }: { field: PlayerHeaderField }) {
         {field.value}
       </span>
       {field.caption !== undefined ? (
-        <span className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+        <span
+          className="font-os text-os-text-2"
+          style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+        >
           {field.caption}
         </span>
       ) : null}
@@ -37,16 +43,39 @@ function Field({ field }: { field: PlayerHeaderField }) {
 
 export function PlayerHeader({ name, team, position, archetype, shirtNumber }: PlayerHeaderProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-os-4 rounded-os-m border border-os-border bg-os-surface p-os-4">
-      <div className="flex flex-col gap-os-1">
-        <h2 className="font-os font-bold text-os-text" style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' }}>
-          {name}
-        </h2>
-        <p className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
-          {team}
-        </p>
+    <div className="os-panel os-player-header">
+      <div className="os-player-identity">
+        <div className="os-player-shirt" aria-hidden="true">
+          <svg viewBox="0 0 56 60" fill="none" focusable="false">
+            <path
+              d="m17 4 11 4 11-4 14 12-8 10-5-4v33H16V22l-5 4-8-10L17 4Z"
+              fill="currentColor"
+              opacity=".12"
+            />
+            <path
+              d="m17 4 11 4 11-4 14 12-8 10-5-4v33H16V22l-5 4-8-10L17 4Z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+          </svg>
+          <span className="os-num" data-shirt-number={shirtNumber.value} />
+        </div>
+        <div className="flex flex-col gap-os-1">
+          <h2
+            className="font-os font-bold text-os-text"
+            style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' }}
+          >
+            {name}
+          </h2>
+          <p
+            className="font-os text-os-text-2"
+            style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+          >
+            {team}
+          </p>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-os-4">
+      <div className="os-player-fields">
         <Field field={position} />
         <Field field={archetype} />
         <Field field={shirtNumber} />

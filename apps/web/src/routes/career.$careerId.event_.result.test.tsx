@@ -5,7 +5,13 @@ import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/rea
 import { loadContentPack, loadRuleset } from '@offside/content';
 import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { advance, confirmPlayer, createCareer, resolveEvent, updateDraft } from '../engine/career-actions.js';
+import {
+  advance,
+  confirmPlayer,
+  createCareer,
+  resolveEvent,
+  updateDraft,
+} from '../engine/career-actions.js';
 import { createAppEngine, type AppEngine } from '../engine/engine.js';
 import { routeTree } from '../routeTree.gen.js';
 import { queryClient } from '../shared/query-client.js';
@@ -40,7 +46,10 @@ function setTestEngine(): AppEngine {
 
 function renderAt(path: string) {
   cleanup();
-  const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: [path] }) });
+  const router = createRouter({
+    routeTree,
+    history: createMemoryHistory({ initialEntries: [path] }),
+  });
   render(<RouterProvider router={router} />);
   return router;
 }
@@ -50,8 +59,17 @@ async function resultUrl(engine: AppEngine): Promise<string> {
   const created = await createCareer(engine, { simulationMode: 'FAST' });
   if (!created.ok) throw new Error('createCareer 실패');
   const careerId = created.snapshot.careerId;
-  await updateDraft(engine, careerId, { name: '김서준', gender: 'UNSPECIFIED', nationalityCode: 'KR', preferredFoot: 'LEFT' });
-  await updateDraft(engine, careerId, { position: 'W', archetypeId: 'inside-forward', backgroundId: 'club-academy' });
+  await updateDraft(engine, careerId, {
+    name: '김서준',
+    gender: 'UNSPECIFIED',
+    nationalityCode: 'KR',
+    preferredFoot: 'LEFT',
+  });
+  await updateDraft(engine, careerId, {
+    position: 'W',
+    archetypeId: 'inside-forward',
+    backgroundId: 'club-academy',
+  });
   const confirmed = await confirmPlayer(engine, careerId);
   if (!confirmed.ok) throw new Error('confirmPlayer 실패');
   const advanced = await advance(engine, careerId);
@@ -86,6 +104,21 @@ afterEach(() => {
 });
 
 describe('SCR-014 "다음" 실패 처리', () => {
+  it('결과를 읽을 수 있는 제목과 안내를 제공하고 다음 행동을 유지한다', async () => {
+    const engine = setTestEngine();
+    const url = await resultUrl(engine);
+    renderAt(url);
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '선택의 결과' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('당신의 결정이 커리어에 남긴 변화를 확인하세요.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '다음' })).toBeEnabled();
+    await waitFor(() => {
+      expect(screen.getByTestId('event-result-announcement')).not.toBeEmptyDOMElement();
+    });
+  });
+
   it('advance가 NOTHING_TO_ADVANCE로 실패하면 현재 상태로 이동한다(에러를 보여주지 않는다)', async () => {
     const engine = setTestEngine();
     const url = await resultUrl(engine);
@@ -97,7 +130,11 @@ describe('SCR-014 "다음" 실패 처리', () => {
           if (request.command.type === 'ADVANCE') {
             return Promise.resolve({
               ok: false,
-              error: { code: 'VALIDATION_FAILED', message: '더 진행할 것이 없다.', details: { reason: 'NOTHING_TO_ADVANCE' } },
+              error: {
+                code: 'VALIDATION_FAILED',
+                message: '더 진행할 것이 없다.',
+                details: { reason: 'NOTHING_TO_ADVANCE' },
+              },
             });
           }
           return engine.client.execute(request);
@@ -124,7 +161,10 @@ describe('SCR-014 "다음" 실패 처리', () => {
         ...engine.client,
         execute: (request) => {
           if (request.command.type === 'ADVANCE') {
-            return Promise.resolve({ ok: false, error: { code: 'VALIDATION_FAILED', message: 'Worker 응답 없음.' } });
+            return Promise.resolve({
+              ok: false,
+              error: { code: 'VALIDATION_FAILED', message: 'Worker 응답 없음.' },
+            });
           }
           return engine.client.execute(request);
         },
@@ -135,7 +175,9 @@ describe('SCR-014 "다음" 실패 처리', () => {
     const router = renderAt(url);
     fireEvent.click(await screen.findByRole('button', { name: '다음' }));
 
-    expect(await screen.findByText('다음으로 넘어가지 못했습니다. 다시 시도해 주세요.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('다음으로 넘어가지 못했습니다. 다시 시도해 주세요.'),
+    ).toBeInTheDocument();
     expect(router.state.location.href).toBe(url);
   });
 });
