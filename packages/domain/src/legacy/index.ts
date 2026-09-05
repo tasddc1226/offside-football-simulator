@@ -1,5 +1,18 @@
 // Phase 5 staging boundary. Intentionally not exported by the shared domain barrel until integration.
 export {
+  assessRetirement,
+  createRetirementDecision,
+  resolveRetirementDecision,
+  type RetirementIntent,
+  type RetirementFacts,
+  type RetirementPolicy,
+  type RetirementAssessment,
+  type RetirementBoundary,
+  type RetirementChoice,
+  type RetirementDecision,
+  type RetirementResolution,
+} from './retirement.js';
+export {
   aggregateCareerRecords,
   type CareerRecords,
   type CareerRecordTotals,
