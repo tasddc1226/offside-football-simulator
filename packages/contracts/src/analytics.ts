@@ -83,7 +83,9 @@ export const ANALYTICS_EVENT_PROPS_SCHEMAS = {
     decisionsOpened: z.number().int().nonnegative(),
     matchesPlayed: z.number().int().nonnegative(),
     elapsedSecBucket: ElapsedSecBucketSchema,
-    elapsedSec: ElapsedSecSchema,
+    // T-4-024: 배포 직후 구버전 클라이언트(elapsedSec 없이 season_settled를 보내는 번들)의 이벤트를
+    // strictObject가 통째로 버리지 않도록 optional로 둔다 — 현재 클라이언트는 항상 채워 보낸다.
+    elapsedSec: ElapsedSecSchema.optional(),
   }),
   career_abandoned_hint: z.strictObject({
     seasonIndex: SeasonIndexSchema,

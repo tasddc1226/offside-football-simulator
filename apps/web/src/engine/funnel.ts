@@ -174,7 +174,11 @@ export function trackStepPassed(
       ...baseProps,
       ...(baseline !== undefined ? { elapsedSec: clampElapsedSec(Date.now() - baseline) } : {}),
     });
-  })();
+  })().catch(() => {
+    // T-4-024: funnel 레코드 조회(engine.store 접근)가 실패해도 step_passed 이벤트 자체를 잃지 않는다 —
+    // baseProps만으로 보낸다(elapsedSec 없이).
+    platform.analytics.track('step_passed', baseProps);
+  });
 }
 
 /** 커리어 삭제 확인(2단계 다이얼로그의 "삭제 확정") 시 호출한다. */
