@@ -1,5 +1,5 @@
 // TEST-E2E-002 "프리시즌→핵심 경기→시즌 결산": SCR-015 프로 시즌 결과 화면 — 공통 지표 합, 평균
-// 평점 미집계 구분, CompareCards 세그먼트 전환·차이만 보기, 카운트업 건너뛰기, 헤더 OVR과 결산
+// 평점 미집계 구분, CompareCards 세그먼트 전환·차이만 보기, 카운트업 완료, 헤더 OVR과 결산
 // after 일치, 다이어리 연대기·다음 시즌 이동. 두 번째 테스트는 결산 PUT 응답 유실 복구
 // (resilience.spec.ts (c)와 같은 방식)로 같은 result.hash를 확인한다.
 import { expect, test, type Page } from '@playwright/test';
@@ -60,16 +60,14 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   await expect(root).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: '프로 시즌 결과' })).toBeVisible();
 
-  // 카운트업 건너뛰기부터 먼저 확인한다(reducedMotion을 끄지 않아 진짜로 800ms 애니메이션이
-  // 도는 중이어야 의미가 있다 — 뒤로 미루면 다른 assertion들이 시간을 소비해 애니메이션이 이미
-  // 끝나버릴 수 있다). "출전 시간(분)" 확정값과 건너뛴 뒤 표시 텍스트가 같아야 한다.
+  // 800ms 뒤 사라지는 버튼은 count()와 click() 사이에도 없어질 수 있다. 특히 화면 전환 중
+  // Playwright의 안정성 대기가 겹치므로 E2E는 자연 완료를 검증한다. 건너뛰기 클릭의 즉시 확정·
+  // 버튼 제거·콜백은 shared/countup.test.tsx에서 별도로 검증한다. 애니메이션은 끄지 않는다.
   const minutesDd = page.locator('dt:text-is("출전 시간(분)") + dd');
-  const skipButton = minutesDd.getByRole('button', { name: '건너뛰기' });
-  if ((await skipButton.count()) > 0) {
-    await skipButton.click();
-  }
   const minutesValueEl = minutesDd.locator('[data-value]');
   const minutesDataValue = await minutesValueEl.getAttribute('data-value');
+  expect(minutesDataValue).not.toBeNull();
+  await expect(minutesValueEl).toHaveAttribute('data-animating', 'false');
   await expect(minutesValueEl).toHaveText(minutesDataValue ?? '');
   await expect(minutesDd.getByRole('button', { name: '건너뛰기' })).toHaveCount(0);
 
