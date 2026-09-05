@@ -439,7 +439,7 @@ function ChapterResultSection({ view }: { view: ChapterView }) {
   return (
     <div className="flex flex-col gap-os-4">
       <h2 className="font-os font-bold text-os-text" style={H1_STYLE}>
-        경기 결과
+        {isNationalTeam ? '대표팀 데뷔 결과' : '경기 결과'}
       </h2>
       {!isNationalTeam && (
       <p className="os-num font-os font-bold text-os-text" style={NUM_STYLE} aria-label={`최종 스코어 ${match.result.goalsFor} 대 ${match.result.goalsAgainst}`}>

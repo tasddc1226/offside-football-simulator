@@ -376,7 +376,7 @@ describe('resolveEvent', () => {
       },
     };
 
-      const result = await resolveEvent(wrappedEngine, careerId, 'A');
+    const result = await resolveEvent(wrappedEngine, careerId, 'A');
 
     expect(result.ok).toBe(true);
     expect(capturedCommand).toMatchObject({

@@ -546,7 +546,8 @@ describe('SCR-029 다음 결정 카드 분기', () => {
 
     renderAt(`/career/${careerId}/chapter?d=1`);
     expect(await screen.findByText('대표팀 · 노르카니아')).toBeInTheDocument();
-    expect(await screen.findByText('경기 결과')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: '대표팀 데뷔 결과' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 2, name: '경기 결과' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /계획대로 움직였다/ })).toBeInTheDocument();
     expect(screen.queryByText(match.opponent.name)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(`최종 스코어 ${match.result.goalsFor} 대 ${match.result.goalsAgainst}`)).not.toBeInTheDocument();
@@ -607,7 +608,7 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     });
 
     renderAt(`/career/${careerId}/chapter?d=${definition.decisions.length}`);
-    expect(await screen.findByText('경기 결과')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: '경기 결과' })).toBeInTheDocument();
     expect(screen.getByLabelText(`최종 스코어 ${match.result.goalsFor} 대 ${match.result.goalsAgainst}`)).toBeInTheDocument();
     expect(screen.getByText(`${match.result.goalsFor}:${match.result.goalsAgainst}`)).toBeInTheDocument();
   });

@@ -2,7 +2,7 @@
 // 평점 미집계 구분, CompareCards 세그먼트 전환·차이만 보기, 카운트업 건너뛰기, 헤더 OVR과 결산
 // after 일치, 다이어리 연대기·다음 시즌 이동. 두 번째 테스트는 결산 PUT 응답 유실 복구
 // (resilience.spec.ts (c)와 같은 방식)로 같은 result.hash를 확인한다.
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
@@ -29,16 +29,6 @@ async function countUpValue(page: Page, dtLabel: string): Promise<number> {
   const value = await page.locator(`dt:text-is("${dtLabel}") + dd [data-value]`).first().getAttribute('data-value');
   if (value === null) throw new Error(`CountUp data-value를 찾지 못했다: ${dtLabel}`);
   return Number(value);
-}
-
-/** CountUp이 끝나 버튼을 제거하기 전에 같은 브라우저 작업에서 있으면 건너뛴다(TOCTOU 방지). */
-async function clickSkipIfPresent(container: Locator): Promise<boolean> {
-  return container.evaluate((element) => {
-    const button = element.querySelector('button');
-    if (!(button instanceof HTMLButtonElement) || button.textContent?.trim() !== '건너뛰기') return false;
-    button.click();
-    return true;
-  });
 }
 
 /** 계약 체결 뒤 프리시즌 계획→시즌 시작→역할 제안→진행 반복→결산하기로 SCR-015에 도착한다. */
@@ -74,7 +64,10 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   // 도는 중이어야 의미가 있다 — 뒤로 미루면 다른 assertion들이 시간을 소비해 애니메이션이 이미
   // 끝나버릴 수 있다). "출전 시간(분)" 확정값과 건너뛴 뒤 표시 텍스트가 같아야 한다.
   const minutesDd = page.locator('dt:text-is("출전 시간(분)") + dd');
-  await clickSkipIfPresent(minutesDd);
+  const skipButton = minutesDd.getByRole('button', { name: '건너뛰기' });
+  if ((await skipButton.count()) > 0) {
+    await skipButton.click();
+  }
   const minutesValueEl = minutesDd.locator('[data-value]');
   const minutesDataValue = await minutesValueEl.getAttribute('data-value');
   await expect(minutesValueEl).toHaveText(minutesDataValue ?? '');

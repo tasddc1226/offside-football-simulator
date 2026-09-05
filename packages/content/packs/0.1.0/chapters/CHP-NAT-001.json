@@ -14,7 +14,7 @@
           "label": "기본 역할을 지킨다",
           "riskLabel": "LOW",
           "priorProbability": null,
-          "previewEffects": [{ "label": "경기 평점 유지" }],
+          "previewEffects": [{ "label": "대표팀 데뷔 맥락 유지" }],
           "outcomes": [{ "id": "STEADY-1", "kind": "FIXED", "weight": 100, "title": "계획대로 움직였다", "ratingDeltaTenths": 0, "effects": [], "narrative": { "situation": "준비한 역할을 차분하게 수행했다." } }]
         },
         {
@@ -22,7 +22,7 @@
           "label": "상황에 맞춰 조정한다",
           "riskLabel": "MEDIUM",
           "priorProbability": null,
-          "previewEffects": [{ "label": "경기 평점 유지" }],
+          "previewEffects": [{ "label": "대표팀 데뷔 맥락 유지" }],
           "outcomes": [{ "id": "ADAPT-1", "kind": "FIXED", "weight": 100, "title": "흐름을 읽고 조정했다", "ratingDeltaTenths": 0, "effects": [], "narrative": { "situation": "동료의 움직임에 맞춰 판단을 바꿨다." } }]
         },
         {
@@ -30,7 +30,7 @@
           "label": "주도적으로 시도한다",
           "riskLabel": "HIGH",
           "priorProbability": null,
-          "previewEffects": [{ "label": "경기 평점 유지" }],
+          "previewEffects": [{ "label": "대표팀 데뷔 맥락 유지" }],
           "outcomes": [{ "id": "BOLD-1", "kind": "FIXED", "weight": 100, "title": "첫 무대에서 존재감을 보였다", "ratingDeltaTenths": 0, "effects": [], "narrative": { "situation": "주저하지 않고 첫 기회를 만들었다." } }]
         }
       ]

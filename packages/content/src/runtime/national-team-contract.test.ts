@@ -28,3 +28,18 @@ describe('EVT-NAT-001과 nationalTeamRules canonical contract', () => {
     }
   });
 });
+
+describe('CHP-NAT-001 대표팀 데뷔 preview contract', () => {
+  it.each(['0.1.0', '0.2.0'] as const)('%s pack uses national/debut-neutral preview wording', (packVersion) => {
+    const chapter = loadContentPack(packVersion).chaptersById.get('CHP-NAT-001');
+    expect(chapter).toBeDefined();
+    const previewLabels = chapter!.decisions.flatMap((decision) =>
+      decision.options.map((option) => option.previewEffects.map((effect) => effect.label)),
+    );
+    expect(previewLabels).toEqual([
+      ['대표팀 데뷔 맥락 유지'],
+      ['대표팀 데뷔 맥락 유지'],
+      ['대표팀 데뷔 맥락 유지'],
+    ]);
+  });
+});
