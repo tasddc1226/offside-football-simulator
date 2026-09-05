@@ -147,6 +147,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-007 | B | web + ui | 디자인 PR #66 재통합(D-58): 최신 main merge·충돌 해결·T-3-005/T-4-004 화면 디자인 정합 | T-4-004 | in-progress | [브리프](briefs/T-4-007.md). Sonnet 5 워크플로 `wf_0b8d9171-68c` 투입(2026-09-05 11:07), 브랜치 `design/tds-game-screens`(PR #66 재사용) |
 | T-4-008 | A | content | 콘텐츠 팩 0.3.0(0.2.0 복사 + 부상·관계·감독·슬럼프·윤리·미디어·대표팀 이벤트 승격, 포지션 전용 챕터 3종), 0.1.0·0.2.0 무변경, 도달성 표 | T-4-004 | in-progress | [브리프](briefs/T-4-008.md). Sonnet 5 워크플로 투입(2026-09-05 11:48), 브랜치 `T-4-008-content-0.3.0` |
 | T-4-009 | B | web(engine·labels·e2e helper) | Phase 4 화면 준비: D-56 DEV 팩 오버라이드 `resolveActiveContentPackVersion`, D-57 라벨 함수, presentation 도달 seed 탐색 도구·`phase4-seeds.ts`, 도달성 보고 | T-4-004 | in-progress | [브리프](briefs/T-4-009.md). Sonnet 5 워크플로 투입(2026-09-05 11:48), 브랜치 `T-4-009-phase4-prep`. 라우트·`packages/ui` 금지(T-4-007과 소유권 분리) |
+| T-4-010 | B | web(e2e) + ci | e2e 간헐 실패 안정화: season-result 카운트업 건너뛰기 경쟁, signFirstOffer 잔류 경로 허용, INTEREST 고정 seed 케이스, CI 실패 아티팩트 업로드 | T-3-005 | in-progress | [브리프](briefs/T-4-010.md). 조사 `wf_77670be2-155` 결과. Sonnet 5 워크플로 투입(2026-09-05), 브랜치 `T-4-010-e2e-stabilize` |
+| T-4-011 | B | web | SCR-020 잔류 결과(STAY): INTEREST 시장 안전 잔류 수락 시 결과 카드 렌더·loader redirect 튕김 제거 | T-4-007, T-4-010 | todo | [브리프](briefs/T-4-011.md). T-4-007 머지 뒤 투입 |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
@@ -170,6 +172,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-008 | Sonnet 5 · Workflow(2차 웨이브) | 2026-09-05 11:48 | 콘텐츠 팩 0.3.0(이벤트 승격·포지션 챕터) 작성·도달성 측정 중 |
 | T-4-009 | Sonnet 5 · Workflow(2차 웨이브) | 2026-09-05 11:48 | DEV 팩 오버라이드·라벨 함수·presentation 도달 seed 탐색 중 |
 | T-2-016 | Sonnet 5 · Workflow(2차 웨이브) | 2026-09-05 11:48 | staging 리허설 config·spec 커밋·1회 실행 중 |
+| T-4-010 | Sonnet 5 · Workflow(2차 웨이브) | 2026-09-05 | e2e 2건 안정화·INTEREST 고정 seed·CI 아티팩트 업로드 중 |
 | Phase 3·4 감사 | 읽기 전용 Workflow `wf_de6c9e2d-1a5` | 2026-09-05 11:48 | 관점 7(결정론·Effect 소유권·명령 전이·콘텐츠 DSL·웹 인수·API 동기화·테스트 공백) → 3렌즈 반박 검증 → 수정 묶음 제안 |
 
 ## 완료
