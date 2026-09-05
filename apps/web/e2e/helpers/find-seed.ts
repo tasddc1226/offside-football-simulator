@@ -44,7 +44,15 @@
 // 개입하지 않는다(무해한 방어 등록).
 import { register } from 'node:module';
 import type { ChapterDefinition, ContentPack, EventDefinition } from '@offside/content';
-import type { ChapterOutcomeKind, Command, NationalTeamCallUp, RehabPlan, Ruleset } from '@offside/domain';
+import type {
+  CareerState,
+  ChapterOutcomeKind,
+  Command,
+  NationalTeamCallUp,
+  NationalTeamQualificationReason,
+  RehabPlan,
+  Ruleset,
+} from '@offside/domain';
 import type { EngineClient, EngineCommand, ExecuteResult } from '@offside/engine-client';
 
 function registerJsToTsFallbackLoader(): void {
@@ -65,12 +73,14 @@ function registerJsToTsFallbackLoader(): void {
 registerJsToTsFallbackLoader();
 
 type ContentModule = typeof import('@offside/content');
+type DomainModule = typeof import('@offside/domain');
 type EngineClientModule = typeof import('@offside/engine-client');
 type Deps = {
   loadContentPack: ContentModule['loadContentPack'];
   loadRuleset: ContentModule['loadRuleset'];
   selectChapterCandidates: ContentModule['selectChapterCandidates'];
   selectEligibleEvents: ContentModule['selectEligibleEvents'];
+  qualifyNationalTeam: DomainModule['qualifyNationalTeam'];
   createEngineClient: EngineClientModule['createEngineClient'];
   inlineSimulator: EngineClientModule['inlineSimulator'];
   MemoryLocalStore: EngineClientModule['MemoryLocalStore'];
@@ -78,18 +88,23 @@ type Deps = {
 
 let depsPromise: Promise<Deps> | null = null;
 
-/** `@offside/content`·`@offside/engine-client`의 값 바인딩을 처음 쓸 때 한 번만 동적으로 불러온다
- * (registerJsToTsFallbackLoader가 이미 등록된 뒤라 plain node에서도 해석된다). 이 파일의 최상단
- * 정적 import로 두면 후크 등록 전에 실행돼 의미가 없다 — 그래서 함수·클래스가 실제로 값을 쓰는
- * 시점까지 지연한다. */
+/** `@offside/content`·`@offside/domain`·`@offside/engine-client`의 값 바인딩을 처음 쓸 때 한 번만
+ * 동적으로 불러온다(registerJsToTsFallbackLoader가 이미 등록된 뒤라 plain node에서도 해석된다). 이
+ * 파일의 최상단 정적 import로 두면 후크 등록 전에 실행돼 의미가 없다 — 그래서 함수·클래스가 실제로
+ * 값을 쓰는 시점까지 지연한다. */
 async function getDeps(): Promise<Deps> {
   depsPromise ??= (async () => {
-    const [content, engineClient] = await Promise.all([import('@offside/content'), import('@offside/engine-client')]);
+    const [content, domain, engineClient] = await Promise.all([
+      import('@offside/content'),
+      import('@offside/domain'),
+      import('@offside/engine-client'),
+    ]);
     return {
       loadContentPack: content.loadContentPack,
       loadRuleset: content.loadRuleset,
       selectChapterCandidates: content.selectChapterCandidates,
       selectEligibleEvents: content.selectEligibleEvents,
+      qualifyNationalTeam: domain.qualifyNationalTeam,
       createEngineClient: engineClient.createEngineClient,
       inlineSimulator: engineClient.inlineSimulator,
       MemoryLocalStore: engineClient.MemoryLocalStore,
@@ -113,7 +128,22 @@ export const PRESENTATION_TARGETS = [
 ] as const;
 export type PresentationTarget = (typeof PRESENTATION_TARGETS)[number];
 
-export type PresentationHit = { seed: string; seasonIndex: number; step: number; eventId: string };
+/** T-4-023: NATIONAL_TEAM 소집 hit에만 붙는 자격 판정 상세(소집 사유·그 시점 수치) — PR 본문 탐색
+ * 표를 위한 출력 필드 추가일 뿐, `recordIfNew`의 "가장 이른 사례" 정책 자체는 바꾸지 않는다. */
+export type NationalTeamHitDetail = {
+  reason: NationalTeamQualificationReason;
+  baseOvr: number | null;
+  popularityCenti: number;
+  leagueTier: 'YOUTH' | 1 | 2 | 3 | null;
+};
+
+export type PresentationHit = {
+  seed: string;
+  seasonIndex: number;
+  step: number;
+  eventId: string;
+  nationalTeam?: NationalTeamHitDetail;
+};
 
 /** 한 seed로 `maxSeasons`까지 실제로 플레이해 만난 presentation 7종의 "가장 이른" 사례. 못 만난
  * 항목은 null. */
@@ -234,10 +264,29 @@ class SeedRun {
     });
   }
 
-  private recordIfNew(presentation: PresentationTarget, seasonIndex: number, step: number, eventId: string): void {
+  private recordIfNew(
+    presentation: PresentationTarget,
+    seasonIndex: number,
+    step: number,
+    eventId: string,
+    nationalTeam?: NationalTeamHitDetail,
+  ): void {
     if (this.hits[presentation] === null) {
-      this.hits[presentation] = { seed: this.seed, seasonIndex, step, eventId };
+      this.hits[presentation] = { seed: this.seed, seasonIndex, step, eventId, ...(nationalTeam === undefined ? {} : { nationalTeam }) };
     }
+  }
+
+  /** T-4-023: pending.kind==='NATIONAL_TEAM' 시점의 state는 아직 이 소집을 resolve하지 않았으므로,
+   * 이벤트가 raise될 때와 같은 입력(state·step)으로 `qualifyNationalTeam`을 다시 읽기만 해도(RNG·
+   * 상태 변경 없음) 그 소집을 연 사유·수치를 그대로 얻는다. */
+  private buildNationalTeamDetail(state: CareerState, step: number): NationalTeamHitDetail {
+    const qualification = this.deps.qualifyNationalTeam(state, this.ruleset, step);
+    return {
+      reason: qualification.reason,
+      baseOvr: state.player.profile?.baseOvr ?? null,
+      popularityCenti: state.reputation.popularityCenti,
+      leagueTier: state.contract?.leagueTier ?? null,
+    };
   }
 
   /** CREATE_CAREER부터 첫 계약(OFFERS 수락)까지. 실패하면 문자열 이유를 돌려준다. */
@@ -327,7 +376,8 @@ class SeedRun {
       if (definition === undefined) return { kind: 'BLOCKED', reason: `팩에 이벤트 정의 없음: ${pending.eventId}` };
       if (definition.presentation !== undefined) {
         const step = pending.kind === 'EVENT' ? state.currentStep : pending.step;
-        this.recordIfNew(definition.presentation, seasonIndex, step, definition.id);
+        const nationalTeam = pending.kind === 'NATIONAL_TEAM' ? this.buildNationalTeamDetail(state, step) : undefined;
+        this.recordIfNew(definition.presentation, seasonIndex, step, definition.id, nationalTeam);
       }
       const choice = definition.choices[0]!;
       const rehabPlan: RehabPlan | undefined = pending.kind === 'INJURY' ? choice.rehabPlan : undefined;
