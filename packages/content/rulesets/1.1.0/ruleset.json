@@ -3208,7 +3208,7 @@
     },
     "gapCap": 20,
     "minutesFull": 2400,
-    "minutesFloorBp": 3000,
+    "minutesFloorBp": 4500,
     "experiencePerRatedMatchCenti": 4,
     "experienceCapCenti": 120,
     "goodRatingTenths": 75,

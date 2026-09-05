@@ -54,6 +54,18 @@ reference policy. Existing publisher/runtime validation still rejects v5 until a
 separate balance acceptance and release change registers it. Old checkpoints and
 diagnostic rows are not relabelled or resumed as v5.
 
+The predeclared final candidate policy is `mixed`: a seed-fixed 50/50 split between
+`ui-action-strata-v1` behavior and the public-information opportunity policy. This
+is a synthetic reference choice mix, not an estimate of player behavior. Candidate
+rows also retain recorded career tag IDs, 40%-minutes active-season count, and
+versioned sustained-contribution-season count for audit. These fields never feed
+choices or simulation. The 2026-09-06 800-career pilot missed the LEGEND and 80+
+gates, so v5 remains non-publishable and the 40,000-career run is blocked.
+The frozen candidate's 80-career normal/accelerated parity check matched every row
+(bundle `3e4d1df24bd74f27c107d67e8e2ba8762ae58920d422edb4bfdc1ab5d07ee09b`,
+7.62x observed speedup). This validates execution equivalence, not distribution
+acceptance.
+
 The earlier v1 runner used fixed fixture outcomes and content pack `0.1.0`. That
 run is retired. Its timings and outputs are not official evidence and must not be
 combined with v2 checkpoints or used as the reference population.

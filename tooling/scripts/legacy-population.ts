@@ -11,6 +11,8 @@ import { createCareerArchiveCore } from '../../packages/domain/src/legacy/archiv
 import {
   createLegacyResult,
   deriveLegacyEvidence,
+  deriveRetirementTags,
+  LEGACY_POLICY_110,
   legacyPolicyForVersion,
   type LegacyVersion,
 } from '../../packages/domain/src/legacy/result.ts';
@@ -71,6 +73,9 @@ export type PopulationRow = Readonly<{
   trophies: number;
   endingCandidates: readonly string[];
   strategy: string;
+  careerTags: readonly string[];
+  activeSeasons: number;
+  establishedContributionSeasons: number;
 }>;
 type Group = Readonly<{ position: Position; rows: readonly PopulationRow[]; hash: string }>;
 type Checkpoint = {
@@ -107,6 +112,11 @@ export type CareerSeasonReading = Readonly<{
   trainingFocus: TrainingFocus;
   snapshot: DomainSnapshot;
 }>;
+export type CareerSeasonStartReading = Readonly<{
+  seasonIndex: number;
+  trainingFocus: TrainingFocus;
+  snapshot: DomainSnapshot;
+}>;
 
 /**
  * Optional hooks are diagnostic-only. With no options, runCareer uses the exact
@@ -116,6 +126,7 @@ export type RunCareerOptions = Readonly<{
   rulesetVersion?: string;
   strategy?: PopulationStrategy;
   trainingFocusOverride?: TrainingFocus;
+  onSeasonStarted?: (reading: CareerSeasonStartReading) => void;
   onSeasonSettled?: (reading: CareerSeasonReading) => void;
 }>;
 
@@ -393,6 +404,7 @@ export function runCareer(
       `${position}-${seedIndex}-${seasonIndex}-start`,
       runtime,
     );
+    options.onSeasonStarted?.({ seasonIndex, trainingFocus, snapshot });
     for (let step = 0; step < 200; step += 1) {
       if (snapshot.state.pending?.kind === 'SETTLEMENT') {
         snapshot = command(
@@ -477,6 +489,19 @@ export function runCareer(
     strategy: informedStrategy(snapshot.state.careerId, runtime.strategy)
       ? 'opportunity'
       : 'random',
+    careerTags: deriveRetirementTags(snapshot.state),
+    activeSeasons: snapshot.state.seasonHistory.filter(
+      (season) => season.result.promiseFulfilment.minutesShareBp >= 4000,
+    ).length,
+    establishedContributionSeasons: snapshot.state.seasonHistory.filter((season) => {
+      const stats = season.result.playerStats;
+      return (
+        stats.ratedMatches >= LEGACY_POLICY_110.merit.minimumRatedMatches &&
+        stats.ratedMatches > 0 &&
+        stats.ratingSumTenths / stats.ratedMatches >= LEGACY_POLICY_110.merit.minimumRatingTenths &&
+        season.result.promiseFulfilment.minutesShareBp >= LEGACY_POLICY_110.merit.minimumMinutesBp
+      );
+    }).length,
   };
 }
 

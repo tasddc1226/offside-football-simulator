@@ -68,8 +68,17 @@ export type LegacyVersion = '1.0.0' | '1.1.0';
 export const LEGACY_POLICY_110 = Object.freeze({
   version: '1.1.0',
   basePolicyChecksum: sha256Hex(canonicalize(LEGACY_POLICY as unknown as JsonValue)),
-  contribution: Object.freeze({ careerPercent: 50, primePercent: 50, primeSeasons: 5 }),
-  longevity: Object.freeze({ fullActiveMinutesBp: 6000, pointsPerActiveSeason: 5 }),
+  contribution: Object.freeze({ careerPercent: 30, primePercent: 70, primeSeasons: 5 }),
+  longevity: Object.freeze({ fullActiveMinutesBp: 4000, pointsPerActiveSeason: 6 }),
+  merit: Object.freeze({
+    minimumRatedMatches: 10,
+    minimumRatingTenths: 65,
+    minimumMinutesBp: 4000,
+    basePerSeason: 3,
+    ratingStepTenths: 2,
+    maxPerSeason: 9,
+    cap: 60,
+  }),
   relationship: Object.freeze({
     strongestBonds: 2,
     careerPercent: 70,
@@ -78,7 +87,7 @@ export const LEGACY_POLICY_110 = Object.freeze({
     primeAnchor: 80,
     primeSeasons: 3,
   }),
-  narrative: Object.freeze({ COMMON: 8, RARE: 20, EPIC: 35 }),
+  narrative: Object.freeze({ COMMON: 10, RARE: 25, EPIC: 50 }),
 });
 
 export function legacyPolicyForVersion(version: LegacyVersion) {
@@ -213,6 +222,7 @@ export function deriveLegacyEvidence(archive: CareerArchiveCore, version: Legacy
   let chapterSuccesses = 0;
   let derbySuccesses = 0;
   let nationalCaps = 0;
+  const meritPolicy = version === '1.1.0' ? LEGACY_POLICY_110.merit : LEGACY_POLICY.merit;
   const decisiveInternational =
     state.legacyEvents?.tournaments.some(
       (t) => t.medal === 'GOLD' && t.matches.at(-1)?.won === true,
@@ -230,13 +240,31 @@ export function deriveLegacyEvidence(archive: CareerArchiveCore, version: Legacy
     // Versioned individual season recognition, separate from trophies. Ratings belong to
     // achievement; the contribution axis uses position rates/minutes/promises, not ratings again.
     if (
-      result.playerStats.ratedMatches >= LEGACY_POLICY.merit.minimumRatedMatches &&
+      result.playerStats.ratedMatches >= meritPolicy.minimumRatedMatches &&
       ratio(result.playerStats.ratingSumTenths, result.playerStats.ratedMatches) >=
-        LEGACY_POLICY.merit.minimumRatingTenths &&
-      result.promiseFulfilment.minutesShareBp >= LEGACY_POLICY.merit.minimumMinutesBp
+        meritPolicy.minimumRatingTenths &&
+      result.promiseFulfilment.minutesShareBp >= meritPolicy.minimumMinutesBp
     ) {
-      individualMeritPoints += LEGACY_POLICY.merit.perSeason;
-      add('achievement', { ...source, sourceId: `season:${season.index}:individual-merit` });
+      const seasonMeritPoints =
+        version === '1.1.0'
+          ? Math.min(
+              LEGACY_POLICY_110.merit.maxPerSeason,
+              LEGACY_POLICY_110.merit.basePerSeason +
+                Math.floor(
+                  (ratio(result.playerStats.ratingSumTenths, result.playerStats.ratedMatches) -
+                    LEGACY_POLICY_110.merit.minimumRatingTenths) /
+                    LEGACY_POLICY_110.merit.ratingStepTenths,
+                ),
+            )
+          : LEGACY_POLICY.merit.perSeason;
+      individualMeritPoints += seasonMeritPoints;
+      add('achievement', {
+        ...source,
+        sourceId:
+          version === '1.1.0'
+            ? `season:${season.index}:established-contribution`
+            : `season:${season.index}:individual-merit`,
+      });
     }
     const tier = state.clubHistory.find(
       (stint) =>
@@ -296,7 +324,7 @@ export function deriveLegacyEvidence(archive: CareerArchiveCore, version: Legacy
   const components: LegacyComponentScores = {
     achievement: score(
       trophyPoints +
-        Math.min(LEGACY_POLICY.merit.cap, individualMeritPoints) +
+        Math.min(meritPolicy.cap, individualMeritPoints) +
         Math.min(LEGACY_POLICY.chapters.cap, chapterSuccesses * LEGACY_POLICY.chapters.each) +
         Math.min(
           LEGACY_POLICY.chapters.seniorCapLimit,

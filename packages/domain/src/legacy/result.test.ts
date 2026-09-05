@@ -111,6 +111,16 @@ describe('Phase 5 full LegacyResult projection', () => {
     expect(Math.max(...totals) - Math.min(...totals)).toBeLessThanOrEqual(5);
   });
 
+  it('records sustained first-team contribution without rewriting 1.0 merit evidence', () => {
+    const { archive, context } = equalQualityArchive('MF');
+    const old = createLegacyResult(archive, context, undefined, '1.0.0');
+    const next = createLegacyResult(archive, context, undefined, '1.1.0');
+    expect(old.sources.some((source) => source.sourceId.endsWith(':individual-merit'))).toBe(false);
+    expect(
+      next.sources.some((source) => source.sourceId.endsWith(':established-contribution')),
+    ).toBe(true);
+  });
+
   it('does not label a late-starting player as improved merely because pre-26 history is absent', () => {
     const { snapshot } = archiveFixture();
     snapshot.state.careerTags = [];

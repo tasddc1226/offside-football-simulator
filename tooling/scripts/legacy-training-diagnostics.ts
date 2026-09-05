@@ -8,7 +8,7 @@ import { runCareer, type Position, type PopulationRow } from './legacy-populatio
 import { canonicalize, type JsonValue } from '../../packages/domain/src/canonical.ts';
 import { legacyPolicyForVersion } from '../../packages/domain/src/legacy/result.ts';
 import { sha256Hex } from '../../packages/domain/src/hash.ts';
-import type { CareerSeasonReading } from './legacy-population.ts';
+import type { CareerSeasonReading, CareerSeasonStartReading } from './legacy-population.ts';
 import type { PositionStatsTotals, TrainingFocus } from '../../packages/domain/src/types.ts';
 
 const RULESET_VERSION = '1.1.0' as const;
@@ -105,6 +105,23 @@ function seasonReading(reading: CareerSeasonReading) {
   };
 }
 
+function seasonStartReading(reading: CareerSeasonStartReading) {
+  const state = reading.snapshot.state;
+  const season = state.season;
+  if (season === null) throw new Error(`season start ${reading.seasonIndex} is missing`);
+  const player = season.selection.candidates.find((candidate) => candidate.id === 'PLAYER');
+  const competitors = season.selection.candidates.filter((candidate) => candidate.id !== 'PLAYER');
+  return {
+    index: reading.seasonIndex,
+    age: state.age,
+    leagueTier: state.contract?.leagueTier ?? null,
+    rolePromise: state.contract?.rolePromise ?? null,
+    truePotential: state.player.profile?.truePotential ?? null,
+    player: player === undefined ? null : { baseOvr: player.baseOvr, rank: player.rank, score: player.score },
+    competitors: competitors.map(({ baseOvr, rank, score }) => ({ baseOvr, rank, score })),
+  };
+}
+
 async function gitOutput(args: readonly string[]): Promise<string | null> {
   try {
     const result = await execFileAsync('git', [...args], {
@@ -157,10 +174,12 @@ function experimentRun(
   trainingFocus: DiagnosticFocus,
 ) {
   const seasonReadings: ReturnType<typeof seasonReading>[] = [];
+  const seasonStarts: ReturnType<typeof seasonStartReading>[] = [];
   const row: PopulationRow = runCareer(position, seedIndex, requestedSeasons, LEGACY_VERSION, {
     rulesetVersion: RULESET_VERSION,
     strategy: STRATEGY,
     trainingFocusOverride: trainingFocus,
+    onSeasonStarted: (reading) => seasonStarts.push(seasonStartReading(reading)),
     onSeasonSettled: (reading) => seasonReadings.push(seasonReading(reading)),
   });
   return {
@@ -180,6 +199,7 @@ function experimentRun(
     archiveHash: row.archiveHash,
     resultHash: row.resultHash,
     seasonReadings,
+    seasonStarts,
   };
 }
 
