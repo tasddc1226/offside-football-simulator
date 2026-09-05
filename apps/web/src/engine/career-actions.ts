@@ -1,6 +1,6 @@
 // EngineClient 위의 순수 함수(React 없음). 06 "분석 이벤트": 실행마다 command_submitted ·
 // command_resolved(outcomeClass = nextAction) · command_failed를 보낸다.
-import type { ChapterOutcomeKind, Command, Effect, NegotiationAsk, PlayerDraft, SimulationMode } from '@offside/domain';
+import type { CareerState, ChapterOutcomeKind, Command, Effect, NegotiationAsk, PlayerDraft, SimulationMode } from '@offside/domain';
 import { loadContentPack, loadRuleset, selectChapterCandidates, selectEligibleEvents, type ChapterDefinition, type EventDefinition } from '@offside/content';
 import type { EngineCommand, ExecuteResult, LoadResult } from '@offside/engine-client';
 import { deleteCareerOnServer } from '../api/client.js';
@@ -343,6 +343,19 @@ export async function startSeason(engine: AppEngine, careerId: string, choice: S
 
 export function resolveRole(engine: AppEngine, careerId: string, decision: 'ACCEPT' | 'DECLINE'): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'RESOLVE_ROLE', payload: { decision } });
+}
+
+/** START_SEASON 직후의 순수 현상 유지 확인만 접는다. 이름이 KEEP이어도 실제 포지션·역할이 다르면 명시 결정을 보존한다. */
+export function shouldAutoAcceptUnchangedRole(state: CareerState): boolean {
+  const pending = state.pending;
+  return (
+    pending?.kind === 'ROLE_PROPOSAL' &&
+    pending.proposal.type === 'KEEP' &&
+    state.season !== null &&
+    state.player.profile !== null &&
+    pending.proposal.position === state.player.profile.primaryPosition &&
+    pending.proposal.squadRole === state.season.squadRole
+  );
 }
 
 export function settleSeason(engine: AppEngine, careerId: string): Promise<ExecuteResult> {

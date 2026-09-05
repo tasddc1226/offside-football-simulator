@@ -15,6 +15,7 @@ import {
   resolveEvent,
   resolveRole,
   settleSeason,
+  shouldAutoAcceptUnchangedRole,
   startSeason,
   toResolveChapterOutcomes,
   toResolveEventOutcomes,
@@ -263,6 +264,32 @@ describe('startSeason', () => {
     expect(result.domainSnapshot.state.season?.simulationMode).toBe('FAST');
     expect(result.domainSnapshot.state.pending?.kind).toBe('ROLE_PROPOSAL');
     expect(result.domainSnapshot.state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_STARTED' });
+  });
+
+  it('실제 포지션·역할과 같은 KEEP만 자동 확인 대상으로 본다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToSigned(engine);
+    const result = await startSeason(engine, careerId, { simulationMode: 'FAST' });
+    if (!result.ok) throw new Error('startSeason 실패');
+
+    const profile = result.domainSnapshot.state.player.profile;
+    const season = result.domainSnapshot.state.season;
+    if (profile === null || season === null) throw new Error('시즌 상태 필요');
+    const unchanged = {
+      ...result.domainSnapshot.state,
+      pending: {
+        kind: 'ROLE_PROPOSAL' as const,
+        step: 1,
+        proposal: { type: 'KEEP' as const, position: profile.primaryPosition, squadRole: season.squadRole },
+      },
+    };
+    expect(shouldAutoAcceptUnchangedRole(unchanged)).toBe(true);
+    expect(
+      shouldAutoAcceptUnchangedRole({
+        ...unchanged,
+        pending: { ...unchanged.pending, proposal: { ...unchanged.pending.proposal, position: profile.primaryPosition === 'GK' ? 'ST' : 'GK' } },
+      }),
+    ).toBe(false);
   });
 });
 

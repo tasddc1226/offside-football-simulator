@@ -6,6 +6,7 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Button, ErrorState, ScreenIntro } from '@offside/ui';
 import { buildSeasonSteps, type SimulationMode } from '@offside/domain';
 import { rulesetForCareer } from '../engine/content.js';
+import { shouldAutoAcceptUnchangedRole } from '../engine/career-actions.js';
 import { recordFunnelReached, recordSeasonStart } from '../engine/funnel.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -73,8 +74,10 @@ function SeasonPrepScreen() {
   const navigate = useNavigate();
   const query = useCareer(careerId);
   const startSeasonMutation = useCareerMutation('startSeason');
+  const resolveRoleMutation = useCareerMutation('resolveRole');
   const submittingRef = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [confirmingKeep, setConfirmingKeep] = useState(false);
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', {
@@ -132,11 +135,22 @@ function SeasonPrepScreen() {
       platform.analytics.track('season_started', { simulationMode: mode, trainingFocus: focus });
       await recordFunnelReached(careerId, 'SEASON_STARTED');
       await recordSeasonStart(careerId);
-      const target = screenForCareer(result.domainSnapshot.state);
+      let nextState = result.domainSnapshot.state;
+      if (shouldAutoAcceptUnchangedRole(nextState)) {
+        setConfirmingKeep(true);
+        try {
+          const resolved = await resolveRoleMutation.mutateAsync({ careerId, decision: 'ACCEPT' });
+          if (resolved.ok) nextState = resolved.domainSnapshot.state;
+        } catch {
+          // START_SEASON은 이미 저장됐다. 재전송하지 않고 아래에서 기존 ROLE 복구 화면으로 이동한다.
+        }
+      }
+      const target = screenForCareer(nextState);
       void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
     } catch {
       setErrorMessage('시즌을 시작하지 못했습니다. 다시 시도해 주세요.');
     } finally {
+      setConfirmingKeep(false);
       submittingRef.current = false;
     }
   }
@@ -149,7 +163,7 @@ function SeasonPrepScreen() {
     });
   }
 
-  const committing = startSeasonMutation.isPending;
+  const committing = startSeasonMutation.isPending || resolveRoleMutation.isPending;
 
   return (
     <div className="os-screen">
@@ -204,8 +218,8 @@ function SeasonPrepScreen() {
 
       {committing ? (
         <GamePending
-          title={`${SIMULATION_MODE_LABEL_KO[mode]} 모드로 시즌을 시작하고 있습니다`}
-          detail={`${TRAINING_FOCUS_LABEL_KO[focus]} 계획과 시즌 일정을 저장하고 있습니다.`}
+          title={confirmingKeep ? '변경 없는 역할은 유지하고 시작합니다' : `${SIMULATION_MODE_LABEL_KO[mode]} 모드로 시즌을 시작하고 있습니다`}
+          detail={confirmingKeep ? '현재 포지션과 역할을 확인해 시즌 준비를 마칩니다.' : `${TRAINING_FOCUS_LABEL_KO[focus]} 계획과 시즌 일정을 저장하고 있습니다.`}
         />
       ) : null}
 

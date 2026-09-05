@@ -219,6 +219,9 @@ function ContractScreen() {
   const actionRevision = actionableRevision(record.revision);
   const status = offerStatus(offer, actionRevision);
   const detailRows = offerDetailRows(offer, record.revision, safeOfferId, parentTeamName);
+  const firstContractDetailRows = detailRows.filter(
+    (row) => !['리그', '기간', '주급', '계약금', '역할 약속'].includes(row.label),
+  );
 
   function goToResult(revision: number, interestedClubCount?: number) {
     void navigate({
@@ -493,6 +496,23 @@ function ContractScreen() {
             {ROLE_PROMISE_SENTENCE[offer.rolePromise]}
           </p>
         </section>
+
+        <details className="os-panel">
+          <summary className="cursor-pointer font-os font-semibold text-os-text">전체 제안 조건 확인</summary>
+          <dl className="mt-os-3 grid grid-cols-2 gap-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
+            {firstContractDetailRows.map((row) => (
+              <div key={row.label}>
+                <dt>{row.label}</dt>
+                <dd className="font-semibold text-os-text">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {state.rulesetVersion === '1.0.0' ? (
+            <p className="mt-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
+              전술 적합도와 경쟁자 정보는 1.0 커리어의 기존 산정값을 보여 주는 참고 정보이며, 실제 출전 선택을 예측하지 않습니다.
+            </p>
+          ) : null}
+        </details>
 
         <section className="os-panel flex flex-col gap-os-3" aria-label="선수 서명">
           <p className="os-eyebrow">선수 서명</p>
