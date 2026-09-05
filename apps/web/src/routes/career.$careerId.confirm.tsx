@@ -15,7 +15,7 @@ import {
 import { RETRYABLE_BY_CODE } from '@offside/contracts';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { getProfile, issueRecoveryCode } from '../api/client.js';
-import { activeContentPack, rulesetForCareer } from '../engine/content.js';
+import { rulesetForCareer } from '../engine/content.js';
 import { recordFunnelReached } from '../engine/funnel.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
@@ -333,7 +333,7 @@ function ConfirmScreen() {
     );
   }
 
-  const { state } = query.data;
+  const { record, state } = query.data;
   const ruleset = rulesetForCareer(state);
   const draft = state.player.draft;
   const archetype = ruleset.archetypes.find((candidate) => candidate.id === draft.archetypeId);
@@ -381,7 +381,7 @@ function ConfirmScreen() {
           </div>
           <div className="flex justify-between gap-os-2">
             <dt>룰셋 · 콘텐츠 팩</dt>
-            <dd className="os-num">{ruleset.version} / {activeContentPack.manifest.contentPackVersion}</dd>
+            <dd className="os-num">{record.rulesetVersion} / {record.contentPackVersion}</dd>
           </div>
         </dl>
       </CreationCard>

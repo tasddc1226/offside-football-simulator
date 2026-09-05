@@ -1,7 +1,7 @@
 // SCR-002·003·004 통합 테스트. app-routes.test.tsx와 같은 harness(getAppEngine 자리에
 // inlineSimulator + MemoryLocalStore 테스트 엔진 주입)를 쓰고, 이 파일만 src/api/client.js를
 // 함께 모킹해 복구 코드 단계의 분기(미발급/이미 발급/API 실패)를 검증한다.
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiResult } from './api/client.js';
 import { advance, confirmPlayer, createCareer, updateDraft } from './engine/career-actions.js';
 import { createAppEngine, type AppEngine } from './engine/engine.js';
+import { careerQueryOptions } from './engine/use-career.js';
 import { routeTree } from './routeTree.gen.js';
 import { queryClient } from './shared/query-client.js';
 import { useUiStore } from './shared/ui-store.js';
@@ -324,6 +325,26 @@ describe('SCR-004 확인 및 복구 코드', () => {
     });
     return careerId;
   }
+
+  it('전역 활성 팩과 달라도 커리어 record에 고정된 콘텐츠 팩 버전을 표시한다', async () => {
+    const engine = setTestEngine();
+    const careerId = await seedReadyForConfirm(engine);
+    renderAt(`/career/${careerId}/confirm`);
+    await screen.findByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' });
+
+    const options = careerQueryOptions(careerId);
+    const current = queryClient.getQueryData(options.queryKey);
+    if (current === undefined) throw new Error('캐시된 커리어가 있어야 한다');
+    act(() => {
+      queryClient.setQueryData(options.queryKey, {
+        ...current,
+        record: { ...current.record, contentPackVersion: '0.3.0' },
+      });
+    });
+
+    expect(await screen.findByText('1.0.0 / 0.3.0')).toBeInTheDocument();
+    expect(screen.queryByText('1.0.0 / 0.1.0')).not.toBeInTheDocument();
+  });
 
   it('선수 요약을 보여주고 KICKOFF 확정 후 복구 코드를 발급한다', async () => {
     const engine = setTestEngine();
