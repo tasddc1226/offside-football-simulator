@@ -90,13 +90,15 @@ describe('buildConditionContext: season.stats.recentFormAvg', () => {
     expect(context['season.stats.recentFormAvg']).toBe(72);
   });
 
-  it('시즌 밖이거나 유효한 평점이 없으면 0이다', () => {
-    expect(buildConditionContext(buildTestState({ season: null }))['season.stats.recentFormAvg']).toBe(0);
+  // F1(T-4-015): 평점 표본이 없으면 0이 아니라 sentinel(100)을 낸다 — 이전 0은 출전 0경기 선수에게도
+  // lt(recentFormAvg, N)류 슬럼프 조건이 걸리는 결함이었다(감사 finding F1).
+  it('시즌 밖이거나 유효한 평점이 없으면 100(슬럼프 조건이 걸리지 않는 sentinel)이다', () => {
+    expect(buildConditionContext(buildTestState({ season: null }))['season.stats.recentFormAvg']).toBe(100);
     expect(
       buildConditionContext(buildTestState({ season: seasonWithRatings([null, null]) }))[
         'season.stats.recentFormAvg'
       ],
-    ).toBe(0);
+    ).toBe(100);
   });
 });
 
@@ -219,7 +221,8 @@ describe('buildConditionContext: T-3-001 신규 필드', () => {
 
   // T-4-001: health.*·season.manager.*는 이제 실제 값을 낸다(활성 에피소드·manager 없음 →
   // NOT_MODELED와 같은 형태의 기본값). reputation.popularityCenti는 CareerState 기본값(5000)을
-  // 그대로 낸다 — 더 이상 NOT_MODELED가 아니다. season.stats.recentFormAvg만 T-4-003 몫으로 남는다.
+  // 그대로 낸다 — 더 이상 NOT_MODELED가 아니다. season.stats.recentFormAvg는 season이 없으면
+  // F1(T-4-015) sentinel(100)을 낸다(더 이상 0이 아니다).
   it('트랙 B 필드는 에피소드·manager가 없으면 기본값이다(reputation 제외)', () => {
     const context = buildConditionContext(buildTestState());
     expect(context['health.activeSeverity']).toBe('');
@@ -228,7 +231,7 @@ describe('buildConditionContext: T-3-001 신규 필드', () => {
     expect(context['reputation.popularityCenti']).toBe(5000);
     expect(context['season.manager.tenureSeasons']).toBe(0);
     expect(context['season.manager.id']).toBe('');
-    expect(context['season.stats.recentFormAvg']).toBe(0);
+    expect(context['season.stats.recentFormAvg']).toBe(100);
   });
 
   it('health.*는 활성(ACTIVE) 에피소드가 있으면 그 값을 낸다', () => {

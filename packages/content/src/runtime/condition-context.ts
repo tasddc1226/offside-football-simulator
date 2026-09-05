@@ -1,5 +1,5 @@
-import type { CareerState, Contract, Position, TimelineEntry } from '@offside/domain';
-import type { ConditionContext } from '../schema/condition.ts';
+import type { CareerState, Contract, Position, PositionStatsTotals, TimelineEntry } from '@offside/domain';
+import type { ConditionContext, SeasonStat } from '../schema/condition.ts';
 import { SEASON_STATS } from '../schema/condition.ts';
 import { ATTRIBUTE_KEYS } from '../schema/ruleset.ts';
 
@@ -34,6 +34,29 @@ const NOT_MODELED_STRING = '';
 const NO_INJURY_ROLL = 100;
 
 /**
+ * F2(T-4-015): 파생 뒤에도 상수(NOT_MODELED)로 남는 조건 필드 → 값. `buildConditionContext`가
+ * 이 객체를 그대로 context에 spread하고, `validate-pack.ts`의 `checkConstantFieldTriggers`는
+ * `NOT_MODELED_CONDITION_FIELDS`(이 객체의 키 목록)만으로 트리거가 구성된 이벤트에 경고를 낸다.
+ * 필드를 실값으로 바꾸려면 이 객체에서 지우고 context 조립부에 실제 파생식을 추가한다 — 별도
+ * 목록을 손으로 맞추지 않는다.
+ */
+const NOT_MODELED_FIELDS = {
+  'context.managerTrust': NOT_MODELED_INT,
+  'context.competitionRank': NOT_MODELED_INT,
+  'contract.monthsRemaining': NOT_MODELED_INT,
+  'contract.wageBand': NOT_MODELED_STRING,
+  'rng.injuryRoll': NO_INJURY_ROLL,
+} as const;
+
+export const NOT_MODELED_CONDITION_FIELDS: readonly string[] = Object.keys(NOT_MODELED_FIELDS);
+
+// F1(T-4-015): 평점 표본이 0건이면 슬럼프류 lt(recentFormAvg, N) 조건이 걸리지 않도록 하는 상한
+// sentinel(모든 슬럼프 임계값보다 큰 값). recentRatedMatches 게이트(최근 5경기 중 평점 받은 경기
+// 수 ≥ 3)와 함께 써서 이중으로 막는다 — sentinel 하나만으로는 팩 저작자가 실수로 100 이상 임계를
+// 쓰면 다시 뚫릴 수 있어서다.
+const NO_SLUMP_FORM_SAMPLE = 100;
+
+/**
  * ADR-010 유도식(`lengthSeasons − 서명 이후 SEASON_STARTED 횟수`)을 그대로 복제한다.
  * content는 domain 런타임 함수를 import할 수 없으므로(ADR-005, 타입만 import) domain의
  * `computeContractSeasonsRemaining`과 동일한 계산을 여기서도 순수 함수로 둔다.
@@ -58,14 +81,51 @@ function findActiveEpisode(episodes: CareerState['health']['episodes']): CareerS
   return null;
 }
 
-function recentFormAverage(state: CareerState): number {
-  if (state.season === null) return 0;
-  const ratings = state.season.matches
+/** T-4-003 정의를 그대로 유지: 활성 시즌의 non-null 평점 중 최근 최대 5개(경기 순서, null은 표본에서
+ * 제외). recentFormAvg·recentRatedMatches 둘 다 이 표본에서 파생한다. */
+function recentRatings(state: CareerState): number[] {
+  if (state.season === null) return [];
+  return state.season.matches
     .map((match) => match.ratingTenths)
     .filter((rating): rating is number => rating !== null)
     .slice(-5);
-  if (ratings.length === 0) return 0;
+}
+
+/** F1(T-4-015): 표본이 없으면(시즌 밖이거나 평점 받은 경기가 하나도 없으면) 슬럼프 lt 조건이 걸리지
+ * 않는 sentinel을 낸다. 이전에는 0을 내 출전 0경기 선수에게도 EVT-SLUMP-010이 열렸다. */
+function recentFormAverage(ratings: readonly number[]): number {
+  if (ratings.length === 0) return NO_SLUMP_FORM_SAMPLE;
   return Math.round(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length);
+}
+
+/** F2(T-4-015): `state.season.playerStats.totals`는 포지션군마다 다른 판별 유니언이라(FW만 goals를
+ * 가진다) season.stats.goals/assists는 그룹별로 값이 있을 때만 실값을, 없으면 0을 낸다. */
+function seasonStatGoals(totals: PositionStatsTotals): number {
+  return totals.group === 'FW' ? totals.goals : 0;
+}
+
+function seasonStatAssists(totals: PositionStatsTotals): number {
+  return totals.group === 'FW' || totals.group === 'MF' ? totals.assists : 0;
+}
+
+/** F2(T-4-015): 조건 DSL의 8개 season.stats 필드를 `state.season.playerStats`에서 파생한다. season이
+ * 없으면(시즌 사이) 전부 0. 단위: rating은 ratingSumTenths 평균을 내림한 값(×10 정수, recentFormAvg와
+ * 같은 스케일 — 평균 7.2 → 72). PR 본문에 이 단위를 그대로 옮긴다. */
+function computeSeasonStats(state: CareerState): Record<SeasonStat, number> {
+  const stats = state.season?.playerStats;
+  if (!stats) {
+    return { goals: 0, assists: 0, appearances: 0, starts: 0, minutes: 0, rating: 0, yellowCards: 0, redCards: 0 };
+  }
+  return {
+    goals: seasonStatGoals(stats.totals),
+    assists: seasonStatAssists(stats.totals),
+    appearances: stats.appearances.total,
+    starts: stats.appearances.started,
+    minutes: stats.minutes,
+    rating: stats.ratedMatches > 0 ? Math.floor(stats.ratingSumTenths / stats.ratedMatches) : 0,
+    yellowCards: stats.yellow,
+    redCards: stats.red,
+  };
 }
 
 function proSeasonCount(state: CareerState): number {
@@ -80,6 +140,7 @@ export function buildConditionContext(state: CareerState): ConditionContext {
   const contract = state.contract;
   const seasonsRemaining = contract ? computeSeasonsRemaining(contract, state.timeline) : NOT_MODELED_INT;
   const activeEpisode = findActiveEpisode(state.health.episodes);
+  const recentRatingsSample = recentRatings(state);
 
   const context: ConditionContext = {
     'career.age': state.age,
@@ -98,9 +159,7 @@ export function buildConditionContext(state: CareerState): ConditionContext {
     'state.morale': state.state.morale,
 
     'context.tacticalFit': state.context.tacticalFit,
-    'context.managerTrust': NOT_MODELED_INT,
     'context.squadStatus': state.context.squadStatus,
-    'context.competitionRank': NOT_MODELED_INT,
 
     'relationships.managerTrust': state.relationships.managerTrust,
     'relationships.captain': state.relationships.captain,
@@ -114,16 +173,13 @@ export function buildConditionContext(state: CareerState): ConditionContext {
     'season.tags': [],
     'season.chapterHighlights': 0,
 
-    'contract.monthsRemaining': NOT_MODELED_INT,
     'contract.rolePromise': state.contract?.rolePromise ?? NOT_MODELED_STRING,
-    'contract.wageBand': NOT_MODELED_STRING,
+    ...NOT_MODELED_FIELDS,
 
     // T-4-001: Phase 1 경로 두 개. health.injuryEpisode는 스키마 type이 'string'이라(condition.ts,
     // T-4-001 이전부터 예약된 값) 1/0을 문자열로 낸다.
     'health.injuryEpisode': activeEpisode !== null ? '1' : '0',
     'health.recurrenceRisk': Math.floor((activeEpisode?.recurrenceRiskBp ?? 0) / 100),
-
-    'rng.injuryRoll': NO_INJURY_ROLL,
 
     // T-3-001 D-53: 트랙 A(계약·이적) 조건 화이트리스트. seasonsRemaining은 "지금 진행 중인 시즌
     // 뒤에 남은 시즌 수"다 — 예: 2시즌 계약을 시즌 1 시작 전 서명 → 시즌 1 진행 중 remaining
@@ -146,14 +202,16 @@ export function buildConditionContext(state: CareerState): ConditionContext {
     'reputation.popularityCenti': state.reputation.popularityCenti,
     'season.manager.tenureSeasons': state.season?.manager?.tenureSeasons ?? NOT_MODELED_INT,
     'season.manager.id': state.season?.manager?.id ?? NOT_MODELED_STRING,
-    'season.stats.recentFormAvg': recentFormAverage(state),
+    'season.stats.recentFormAvg': recentFormAverage(recentRatingsSample),
+    'season.stats.recentRatedMatches': recentRatingsSample.length,
   };
 
   for (const key of ATTRIBUTE_KEYS) {
     context[`player.attributes.${key}`] = state.attributes[key];
   }
+  const seasonStats = computeSeasonStats(state);
   for (const stat of SEASON_STATS) {
-    context[`season.stats.${stat}`] = 0;
+    context[`season.stats.${stat}`] = seasonStats[stat];
   }
 
   return context;

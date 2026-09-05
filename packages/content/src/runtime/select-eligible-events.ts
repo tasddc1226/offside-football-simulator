@@ -8,8 +8,23 @@ export type EligibleEvent = { eventId: string; version: number; weight: number }
 
 const STEPS_PER_SEASON = 12;
 
+/**
+ * F2(T-4-015): 룰셋 1.0.0의 리그 캘린더는 `SeasonStep.phase`를 PRESEASON/LEAGUE/SETTLEMENT로만
+ * 채운다 — `SeasonPhase.TRANSFER_WINDOW`는 어떤 step에도 나오지 않는다(step 7은 `phase: 'LEAGUE'`,
+ * `windowOpen: true`). 이 때문에 `phases: ['TRANSFER_WINDOW']`인 이벤트(EVT-CON-010)는 이전
+ * 매핑(`state.seasonPhase`만 보는 switch)에서 영원히 후보에 들지 못했다. `CareerPhase.TRANSFER_WINDOW`는
+ * step의 `windowOpen` 플래그를 가리키는 별도 창이므로 season.phase 매핑보다 우선한다. domain 런타임
+ * 함수(`findSeasonStep`)는 import할 수 없어(ADR-005) 같은 조회를 여기서 순수 함수로 복제한다.
+ */
+function isTransferWindowStep(state: CareerState): boolean {
+  if (state.season === null) return false;
+  const step = state.season.steps.find((candidate) => candidate.index === state.season!.currentStep);
+  return step?.windowOpen ?? false;
+}
+
 function currentCareerPhase(state: CareerState): CareerPhase {
   if (state.stage === 'YOUTH') return 'YOUTH';
+  if (isTransferWindowStep(state)) return 'TRANSFER_WINDOW';
   switch (state.seasonPhase) {
     case 'PRESEASON':
       return 'PRESEASON';

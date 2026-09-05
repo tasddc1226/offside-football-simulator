@@ -2,7 +2,7 @@
   "id": "EVT-SLUMP-011",
   "version": 1,
   "phases": ["IN_SEASON"],
-  "triggers": { "lt": ["season.stats.recentFormAvg", 45] },
+  "triggers": { "all": [{ "gte": ["season.stats.recentRatedMatches", 3] }, { "lt": ["season.stats.recentFormAvg", 60] }] },
   "exclusionTags": [],
   "cooldown": { "seasons": 1 },
   "weight": 18,
