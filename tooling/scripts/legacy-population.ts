@@ -2,7 +2,10 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { loadRetirementArtifacts } from '../../packages/content/src/retirement-artifacts.ts';
 import { loadRuleset } from '../../packages/content/src/rulesets/load-ruleset.ts';
-import { loadContentPack } from '../../packages/content/src/packs/load-content-pack.ts';
+import {
+  loadContentPack,
+  type ContentPack,
+} from '../../packages/content/src/packs/load-content-pack.ts';
 import { canonicalize, type JsonValue } from '../../packages/domain/src/canonical.ts';
 import { createCareerArchiveCore } from '../../packages/domain/src/legacy/archive.ts';
 import {
@@ -27,19 +30,24 @@ import {
   type SimulationMode,
   type StatGroup,
   type Offer,
+  type TrainingFocus,
 } from '../../packages/domain/src/types.ts';
 
 const RULESET_VERSION = arg(process.argv.slice(2), '--ruleset-version') ?? '1.0.0';
 const CONTENT_PACK_VERSION = '0.3.0';
 const POSITIONS = ['GK', 'DF', 'MF', 'FW'] as const satisfies readonly StatGroup[];
-const STRATEGY = arg(process.argv.slice(2), '--strategy') ?? 'random';
-if (!['random', 'opportunity', 'mixed'].includes(STRATEGY))
+export type PopulationStrategy = 'random' | 'opportunity' | 'mixed';
+const configuredStrategy = arg(process.argv.slice(2), '--strategy') ?? 'random';
+if (!['random', 'opportunity', 'mixed'].includes(configuredStrategy))
   throw new Error('--strategy must be random, opportunity, or mixed');
-const PROTOCOL_VERSION = STRATEGY === 'random' && RULESET_VERSION === '1.0.0'
-  ? 'phase5-population-3-ui-choices' : 'phase5-population-5-policy-isolation';
+const STRATEGY = configuredStrategy as PopulationStrategy;
+const PROTOCOL_VERSION =
+  STRATEGY === 'random' && RULESET_VERSION === '1.0.0'
+    ? 'phase5-population-3-ui-choices'
+    : 'phase5-population-5-policy-isolation';
 const CHOICE_POLICY = STRATEGY === 'random' ? 'ui-action-strata-v1' : `ui-${STRATEGY}-v1`;
-type Position = (typeof POSITIONS)[number];
-type PopulationRow = Readonly<{
+export type Position = (typeof POSITIONS)[number];
+export type PopulationRow = Readonly<{
   position: Position;
   seedIndex: number;
   seed: string;
@@ -85,14 +93,71 @@ function canonicalAny(value: unknown): string {
 }
 const runtimeRuleset = loadRuleset(RULESET_VERSION);
 const runtimePack = loadContentPack(CONTENT_PACK_VERSION);
+
+type PopulationRuntime = Readonly<{
+  rulesetVersion: string;
+  contentPackVersion: typeof CONTENT_PACK_VERSION;
+  ruleset: typeof runtimeRuleset;
+  pack: ContentPack;
+  strategy: PopulationStrategy;
+}>;
+
+export type CareerSeasonReading = Readonly<{
+  seasonIndex: number;
+  trainingFocus: TrainingFocus;
+  snapshot: DomainSnapshot;
+}>;
+
+/**
+ * Optional hooks are diagnostic-only. With no options, runCareer uses the exact
+ * command-line runtime selected above, preserving the population generator.
+ */
+export type RunCareerOptions = Readonly<{
+  rulesetVersion?: string;
+  strategy?: PopulationStrategy;
+  trainingFocusOverride?: TrainingFocus;
+  onSeasonSettled?: (reading: CareerSeasonReading) => void;
+}>;
+
+const defaultRuntime: PopulationRuntime = {
+  rulesetVersion: RULESET_VERSION,
+  contentPackVersion: CONTENT_PACK_VERSION,
+  ruleset: runtimeRuleset,
+  pack: runtimePack,
+  strategy: STRATEGY,
+};
+
+function runtimeFor(options: RunCareerOptions): PopulationRuntime {
+  const strategy = options.strategy ?? STRATEGY;
+  if (!['random', 'opportunity', 'mixed'].includes(strategy))
+    throw new Error('strategy must be random, opportunity, or mixed');
+  if (options.rulesetVersion === undefined && strategy === STRATEGY) return defaultRuntime;
+  return {
+    rulesetVersion: options.rulesetVersion ?? RULESET_VERSION,
+    contentPackVersion: CONTENT_PACK_VERSION,
+    ruleset: loadRuleset(options.rulesetVersion ?? RULESET_VERSION),
+    pack: runtimePack,
+    strategy,
+  };
+}
+
 function policyChecksum(version: LegacyVersion): string {
   return sha256Hex(canonicalAny(legacyPolicyForVersion(version)));
 }
 // A published reference population must never become an input to its own generation.
-function sourceArtifacts() {
-  const { rulesetVersion, rulesetChecksum, contentPackVersion, contentPackChecksum } =
-    loadRetirementArtifacts(RULESET_VERSION, CONTENT_PACK_VERSION);
-  return { rulesetVersion, rulesetChecksum, contentPackVersion, contentPackChecksum };
+function sourceArtifacts(rulesetVersion = RULESET_VERSION) {
+  const {
+    rulesetVersion: loadedRulesetVersion,
+    rulesetChecksum,
+    contentPackVersion,
+    contentPackChecksum,
+  } = loadRetirementArtifacts(rulesetVersion, CONTENT_PACK_VERSION);
+  return {
+    rulesetVersion: loadedRulesetVersion,
+    rulesetChecksum,
+    contentPackVersion,
+    contentPackChecksum,
+  };
 }
 
 function command(
@@ -100,6 +165,7 @@ function command(
   type: Command['type'],
   payload: unknown,
   id: string,
+  runtime: PopulationRuntime = defaultRuntime,
 ): DomainSnapshot {
   const result = simulate({
     snapshot,
@@ -112,39 +178,55 @@ function command(
       commandId: string;
       expectedRevision: number;
     },
-    ruleset: runtimeRuleset,
-    rulesetVersion: RULESET_VERSION,
-    contentPackVersion: CONTENT_PACK_VERSION,
+    ruleset: runtime.ruleset,
+    rulesetVersion: runtime.rulesetVersion,
+    contentPackVersion: runtime.contentPackVersion,
   });
   if (!result.ok) throw new Error(`${type} failed: ${result.error.code}: ${result.error.message}`);
   return result.snapshot;
 }
 
 /** Synthetic strategy, fixed before replay. Only public offer/role/age information is used. */
-function informedStrategy(careerId: string): boolean {
-  return STRATEGY === 'opportunity' ||
-    (STRATEGY === 'mixed' && chooseDeterministicIndex(careerId, 'career-strategy', 2) === 0);
+function informedStrategy(careerId: string, strategy: PopulationStrategy = STRATEGY): boolean {
+  return (
+    strategy === 'opportunity' ||
+    (strategy === 'mixed' && chooseDeterministicIndex(careerId, 'career-strategy', 2) === 0)
+  );
 }
 
-function opportunityOffer(offers: readonly Offer[], currentTeamId: string | undefined): Offer | undefined {
-  const ranked = offers.toSorted((a, b) =>
-    (a.competitorSummary?.rank ?? 99) - (b.competitorSummary?.rank ?? 99) ||
-    b.tacticalFitEstimate - a.tacticalFitEstimate ||
-    Number(b.teamId === currentTeamId) - Number(a.teamId === currentTeamId),
+function opportunityOffer(
+  offers: readonly Offer[],
+  currentTeamId: string | undefined,
+): Offer | undefined {
+  const ranked = offers.toSorted(
+    (a, b) =>
+      (a.competitorSummary?.rank ?? 99) - (b.competitorSummary?.rank ?? 99) ||
+      b.tacticalFitEstimate - a.tacticalFitEstimate ||
+      Number(b.teamId === currentTeamId) - Number(a.teamId === currentTeamId),
   );
   const best = ranked[0];
   const stay = offers.find((offer) => offer.teamId === currentTeamId);
   // Avoid a move for a negligible fit advantage when the projected competition rank is equal.
-  if (best && stay && best.competitorSummary?.rank === stay.competitorSummary?.rank &&
-    best.tacticalFitEstimate - stay.tacticalFitEstimate < 10) return stay;
+  if (
+    best &&
+    stay &&
+    best.competitorSummary?.rank === stay.competitorSummary?.rank &&
+    best.tacticalFitEstimate - stay.tacticalFitEstimate < 10
+  )
+    return stay;
   return best;
 }
 
-function closePending(snapshot: DomainSnapshot, id: string): DomainSnapshot {
+function closePending(
+  snapshot: DomainSnapshot,
+  id: string,
+  runtime: PopulationRuntime = defaultRuntime,
+): DomainSnapshot {
   const pending = snapshot.state.pending;
   const seed = snapshot.state.careerId;
-  const registered = commandForPending(snapshot.state, runtimePack, seed);
-  if (registered !== undefined) return command(snapshot, registered.type, registered.payload, id);
+  const registered = commandForPending(snapshot.state, runtime.pack, seed);
+  if (registered !== undefined)
+    return command(snapshot, registered.type, registered.payload, id, runtime);
   if (pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT') {
     const offers = pending.offers.filter(
       (offer) =>
@@ -156,12 +238,12 @@ function closePending(snapshot: DomainSnapshot, id: string): DomainSnapshot {
       `market:${snapshot.state.seasonHistory.length}:${snapshot.state.currentStep}`,
       offers.length + 1,
     );
-    const offer = informedStrategy(seed)
+    const offer = informedStrategy(seed, runtime.strategy)
       ? opportunityOffer(offers, snapshot.state.contract?.teamId)
-      : offers[index] ?? (snapshot.state.contract === null ? offers[0] : undefined);
+      : (offers[index] ?? (snapshot.state.contract === null ? offers[0] : undefined));
     return offer === undefined
-      ? command(snapshot, 'REJECT_OFFER', { offerId: null }, id)
-      : command(snapshot, 'ACCEPT_OFFER', { offerId: offer.id }, id);
+      ? command(snapshot, 'REJECT_OFFER', { offerId: null }, id, runtime)
+      : command(snapshot, 'ACCEPT_OFFER', { offerId: offer.id }, id, runtime);
   }
   if (pending?.kind === 'ROLE_PROPOSAL') {
     // Preserve the position stratum: cross-group changes are explicitly declined.
@@ -171,8 +253,16 @@ function closePending(snapshot: DomainSnapshot, id: string): DomainSnapshot {
         statGroupOf(snapshot.state.player.profile!.primaryPosition);
     const accept =
       pending.proposal.type === 'KEEP' ||
-      (!crossesGroup && (informedStrategy(seed) || chooseDeterministicIndex(seed, `role:${snapshot.revision}`, 2) === 0));
-    return command(snapshot, 'RESOLVE_ROLE', { decision: accept ? 'ACCEPT' : 'DECLINE' }, id);
+      (!crossesGroup &&
+        (informedStrategy(seed, runtime.strategy) ||
+          chooseDeterministicIndex(seed, `role:${snapshot.revision}`, 2) === 0));
+    return command(
+      snapshot,
+      'RESOLVE_ROLE',
+      { decision: accept ? 'ACCEPT' : 'DECLINE' },
+      id,
+      runtime,
+    );
   }
   if (pending?.kind === 'LOAN_RETURN') {
     return command(
@@ -185,6 +275,7 @@ function closePending(snapshot: DomainSnapshot, id: string): DomainSnapshot {
           ],
       },
       id,
+      runtime,
     );
   }
   if (pending !== null && pending?.kind !== 'SETTLEMENT')
@@ -192,18 +283,20 @@ function closePending(snapshot: DomainSnapshot, id: string): DomainSnapshot {
   return snapshot;
 }
 
-function runCareer(
+export function runCareer(
   position: Position,
   seedIndex: number,
   requestedSeasons: number,
   legacyVersion: LegacyVersion,
+  options: RunCareerOptions = {},
 ): PopulationRow {
+  const runtime = runtimeFor(options);
   const seed = `phase5-population:${position}:${seedIndex}`;
-  const archetypes = runtimeRuleset.archetypes.filter((a) => statGroupOf(a.position) === position);
+  const archetypes = runtime.ruleset.archetypes.filter((a) => statGroupOf(a.position) === position);
   const archetype = archetypes[chooseDeterministicIndex(seed, 'archetype', archetypes.length)]!;
   const background =
-    runtimeRuleset.backgrounds[
-      chooseDeterministicIndex(seed, 'background', runtimeRuleset.backgrounds.length)
+    runtime.ruleset.backgrounds[
+      chooseDeterministicIndex(seed, 'background', runtime.ruleset.backgrounds.length)
     ]!;
   const simulationMode: SimulationMode =
     chooseDeterministicIndex(seed, 'mode', 2) === 0 ? 'FAST' : 'CHAPTER';
@@ -214,10 +307,11 @@ function runCareer(
       careerId: `population-${position}-${seedIndex}`,
       seed,
       simulationMode,
-      rulesetVersion: RULESET_VERSION,
-      contentPackVersion: CONTENT_PACK_VERSION,
+      rulesetVersion: runtime.rulesetVersion,
+      contentPackVersion: runtime.contentPackVersion,
     },
     `${seed}-create`,
+    runtime,
   );
   snapshot = command(
     snapshot,
@@ -234,24 +328,26 @@ function runCareer(
       },
     },
     `${seed}-draft`,
+    runtime,
   );
-  snapshot = command(snapshot, 'CONFIRM_PLAYER', {}, `${seed}-confirm`);
+  snapshot = command(snapshot, 'CONFIRM_PLAYER', {}, `${seed}-confirm`, runtime);
   for (let step = 0; snapshot.state.contract === null && step < 100; step++) {
     snapshot =
       snapshot.state.pending === null
         ? command(
             snapshot,
             'ADVANCE',
-            advancePayload(snapshot.state, runtimePack),
+            advancePayload(snapshot.state, runtime.pack),
             `${seed}-youth-${step}`,
+            runtime,
           )
-        : closePending(snapshot, `${seed}-youth-${step}`);
+        : closePending(snapshot, `${seed}-youth-${step}`, runtime);
   }
   if (snapshot.state.contract === null) throw new Error(`No first contract for ${seed}`);
   let seasons = 0;
   while (seasons < requestedSeasons) {
     for (let step = 0; snapshot.state.pending !== null && step < 100; step++)
-      snapshot = closePending(snapshot, `${seed}-boundary-${seasons}-${step}`);
+      snapshot = closePending(snapshot, `${seed}-boundary-${seasons}-${step}`, runtime);
     if (seasons > 0 && retirementDecisionRequired(snapshot.state)) break;
     for (let decision = 0; decision < 3; decision++) {
       const choices = careerEventChoices(snapshot.state);
@@ -271,24 +367,31 @@ function runCareer(
         'CAREER_EVENT',
         { choice },
         `${seed}-career-event-${seasons}-${decision}`,
+        runtime,
       );
     }
     seasons += 1;
     const seasonIndex = seasons;
+    const trainingFocus: TrainingFocus =
+      options.trainingFocusOverride ??
+      (informedStrategy(snapshot.state.careerId, runtime.strategy)
+        ? snapshot.state.age < 30
+          ? 'ROLE'
+          : 'MENTAL'
+        : (['ROLE', 'TECHNICAL', 'PHYSICAL', 'MENTAL'] as const)[
+            chooseDeterministicIndex(seed, `training:${seasons}`, 4)
+          ]!);
     snapshot = command(
       snapshot,
       'START_SEASON',
       {
         simulationMode,
-        trainingFocus: informedStrategy(snapshot.state.careerId)
-          ? snapshot.state.age < 30 ? 'ROLE' : 'MENTAL'
-          : ['ROLE', 'TECHNICAL', 'PHYSICAL', 'MENTAL'][
-          chooseDeterministicIndex(seed, `training:${seasons}`, 4)
-        ],
+        trainingFocus,
         serviceSeasonId: `population-${position}-${seedIndex}-${seasonIndex}`,
         legacyLedger: true,
       },
       `${position}-${seedIndex}-${seasonIndex}-start`,
+      runtime,
     );
     for (let step = 0; step < 200; step += 1) {
       if (snapshot.state.pending?.kind === 'SETTLEMENT') {
@@ -297,6 +400,7 @@ function runCareer(
           'SETTLE_SEASON',
           {},
           `${position}-${seedIndex}-${seasonIndex}-${step}-settle`,
+          runtime,
         );
         break;
       }
@@ -305,19 +409,21 @@ function runCareer(
           ? command(
               snapshot,
               'ADVANCE',
-              advancePayload(snapshot.state, runtimePack),
+              advancePayload(snapshot.state, runtime.pack),
               `${seed}-${seasonIndex}-${step}-advance`,
+              runtime,
             )
-          : closePending(snapshot, `${seed}-${seasonIndex}-${step}-resolve`);
+          : closePending(snapshot, `${seed}-${seasonIndex}-${step}-resolve`, runtime);
     }
     if (snapshot.state.season !== null || snapshot.state.seasonHistory.length !== seasonIndex)
       throw new Error(`season ${seasonIndex} did not settle for ${position}/${seedIndex}`);
     const verification = verifySnapshot(snapshot);
     if (!verification.ok)
       throw new Error(`invalid snapshot for ${position}/${seedIndex}: ${verification.reason}`);
+    options.onSeasonSettled?.({ seasonIndex, trainingFocus, snapshot });
   }
   for (let step = 0; snapshot.state.pending !== null && step < 100; step++)
-    snapshot = closePending(snapshot, `${seed}-retire-before-${step}`);
+    snapshot = closePending(snapshot, `${seed}-retire-before-${step}`, runtime);
   const finalChoice =
     chooseDeterministicIndex(seed, 'epilogue', 2) === 0 ? 'RETIRE' : 'COACH_EPILOGUE';
   snapshot = command(
@@ -325,18 +431,19 @@ function runCareer(
     'RETIRE',
     { choice: finalChoice },
     `${position}-${seedIndex}-retire`,
+    runtime,
   );
   if (snapshot.state.status !== 'RETIRED')
     throw new Error(`retirement did not settle for ${position}/${seedIndex}`);
   if (statGroupOf(snapshot.state.player.profile!.primaryPosition) !== position)
     throw new Error(`position stratum drift for ${position}/${seedIndex}`);
-  const artifacts = sourceArtifacts();
+  const artifacts = sourceArtifacts(runtime.rulesetVersion);
   const context = {
     binding: {
       careerId: snapshot.state.careerId,
       createdServiceSeasonId: `population-${position}-${seedIndex}-1`,
-      rulesetVersion: RULESET_VERSION,
-      contentPackVersion: CONTENT_PACK_VERSION,
+      rulesetVersion: runtime.rulesetVersion,
+      contentPackVersion: runtime.contentPackVersion,
     },
     artifacts,
   };
@@ -367,7 +474,9 @@ function runCareer(
     ),
     trophies: evidence.trophies,
     endingCandidates: result.endingCandidates,
-    strategy: informedStrategy(snapshot.state.careerId) ? 'opportunity' : 'random',
+    strategy: informedStrategy(snapshot.state.careerId, runtime.strategy)
+      ? 'opportunity'
+      : 'random',
   };
 }
 

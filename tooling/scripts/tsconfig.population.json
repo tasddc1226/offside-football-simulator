@@ -8,6 +8,7 @@
   "include": [
     "legacy-population.ts",
     "legacy-population-choices.ts",
+    "legacy-training-diagnostics.ts",
     "node-hash.ts",
     "publish-legacy-population.ts",
     "retain-legacy-baseline.ts"
