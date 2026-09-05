@@ -2,6 +2,13 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-05 (22:05, 워크트리·브랜치 정리 — 사용자 지시)
+
+- 워크트리: 워커·검증 워크트리 전부 제거, 남은 것은 `main`(원본)과 `main-2`(오케스트레이터 문서용)뿐. 중단된 T-4-012 워커 워크트리는 미커밋 골든 31개를 WIP 커밋 `f339971`로 로컬 브랜치 `T-4-012-domain-audit`(커밋 4개, 범위는 PR #85로 대체됨)에 보존한 뒤 제거 — 필요 없으면 `git branch -D T-4-012-domain-audit`.
+- 로컬 브랜치: 자동 생성 `worktree-wf_*` 14개(모두 main에 포함) 삭제. `design/tds-game-screens`(사용자 디자인 브랜치)는 유지.
+- 원격 브랜치: 이 세션 워커 PR 중 MERGED 확인된 14개(#69·#72~#76·#78·#79·#82~#84·#90·#98·#100)의 head 브랜치 삭제. 사용자 브랜치(`tasddc1226/*`, `T-4-022`·`T-4-025-staging-ui-fixes`·`T-4-026`·`T-4-027`, `T-5-*`, `content/*`, `design/*`, `fix/*`, `infra/*`, `ops/*`, `pr/18`)는 건드리지 않음.
+- 스크래치패드: 조사용 산출물(flake·v8cov·mut·trace78) 삭제, 체인 로그만 유지. 디스크 여유 57G → 72G.
+
 ## 2026-09-05 (21:55, PR #100 T-4-023 머지 — Phase 3·4 출시 게이트 종결)
 
 - **T-4-023 PR #100 `6ffc1c4` squash 머지 `42046ef`.** 변경: `find-seed.ts`(NATIONAL_TEAM hit에 사유·수치 출력 필드), `phase4-seeds.ts`(NATIONAL_TEAM: 0.3.0 `offside-nat-search-0` 시즌 20 step 8 EVT-NAT-001), `phase4-seed-reachability.test.ts`(항목 추가, 120s 타임아웃, 실측 53.9s), 캡처 2장. 오케스트레이터 체인 EXIT 0(web test는 turbo 캐시 재생, e2e 98 passed 실측). 탐색 결과: 0.3.0·0.2.0 모두 seed 인덱스 0에서 곧바로 도달(RATING_AND_POPULARITY 경로 — 3부 리그 base OVR 임계 78 미달이라 평점·인기 경로), 룰셋 조정 없음(D-62).
