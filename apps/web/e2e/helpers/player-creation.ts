@@ -117,8 +117,16 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
   await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
   await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
   await page.getByRole('button', { name: '이 조건 수락' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/transfer-result\?rev=\d+$/);
-  await page.getByRole('link', { name: /^(대시보드로|새 시즌 준비)$/ }).click();
+  // 안전 잔류 제안(항상 offers[0])을 수락하면 도메인은 OFFER_REJECTED(ALL)만 남기고 transfer
+  // 엔트리를 만들지 않는다 — handleAccept는 그래도 무조건 /transfer-result?rev=N으로 보내지만
+  // 그 loader가 전환 엔트리를 못 찾아 대시보드로 바로 redirect한다(seed 의존, T-3-005부터 존재).
+  // 그 외 제안은 실제 transfer-result 화면에 도착해 "대시보드로"/"새 시즌 준비" 링크를 눌러야
+  // 대시보드에 닿는다 — 두 결과를 모두 허용한다.
+  const transferResultOrDashboard = /(?:\/career\/.+\/transfer-result\?rev=\d+|\/career\/[^/]+)$/;
+  await expect(page).toHaveURL(transferResultOrDashboard);
+  if (/\/transfer-result\?rev=\d+$/.test(page.url())) {
+    await page.getByRole('link', { name: /^(대시보드로|새 시즌 준비)$/ }).click();
+  }
   await expect(page).toHaveURL(/\/career\/[^/]+(?:\/preseason)?$/);
 }
 

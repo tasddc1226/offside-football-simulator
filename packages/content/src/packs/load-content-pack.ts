@@ -48,7 +48,51 @@ import chapterMatch004v020 from '../../packs/0.2.0/chapters/CHP-MATCH-004.json' 
 import chapterNat001v020 from '../../packs/0.2.0/chapters/CHP-NAT-001.json' with { type: 'json' };
 import narrativeTokens020 from '../../packs/0.2.0/narrative/tokens.json' with { type: 'json' };
 
-export const PACK_VERSIONS = ['0.1.0', '0.2.0'] as const;
+// T-4-008: 0.3.0 = 0.2.0 전체 복사 + Phase 4 카탈로그 후보 승격(부상·관계·감독·슬럼프·윤리·미디어·
+// 대표팀) + 포지션 전용 챕터 3종. 활성 팩은 여전히 0.2.0이다(ACTIVE_CONTENT_PACK_VERSION 불변).
+import manifest030 from '../../packs/0.3.0/manifest.json' with { type: 'json' };
+import eventCon001v030 from '../../packs/0.3.0/events/EVT-CON-001.json' with { type: 'json' };
+import eventCon002v030 from '../../packs/0.3.0/events/EVT-CON-002.json' with { type: 'json' };
+import eventCon003v030 from '../../packs/0.3.0/events/EVT-CON-003.json' with { type: 'json' };
+import eventCon010v030 from '../../packs/0.3.0/events/EVT-CON-010.json' with { type: 'json' };
+import eventCon011v030 from '../../packs/0.3.0/events/EVT-CON-011.json' with { type: 'json' };
+import eventCon012v030 from '../../packs/0.3.0/events/EVT-CON-012.json' with { type: 'json' };
+import eventCon013v030 from '../../packs/0.3.0/events/EVT-CON-013.json' with { type: 'json' };
+import eventDev001v030 from '../../packs/0.3.0/events/EVT-DEV-001.json' with { type: 'json' };
+import eventDev002v030 from '../../packs/0.3.0/events/EVT-DEV-002.json' with { type: 'json' };
+import eventEth010v030 from '../../packs/0.3.0/events/EVT-ETH-010.json' with { type: 'json' };
+import eventEth011 from '../../packs/0.3.0/events/EVT-ETH-011.json' with { type: 'json' };
+import eventInj001v030 from '../../packs/0.3.0/events/EVT-INJ-001.json' with { type: 'json' };
+import eventInj003 from '../../packs/0.3.0/events/EVT-INJ-003.json' with { type: 'json' };
+import eventInj004 from '../../packs/0.3.0/events/EVT-INJ-004.json' with { type: 'json' };
+import eventMedia001v030 from '../../packs/0.3.0/events/EVT-MEDIA-001.json' with { type: 'json' };
+import eventMedia002 from '../../packs/0.3.0/events/EVT-MEDIA-002.json' with { type: 'json' };
+import eventMedia004 from '../../packs/0.3.0/events/EVT-MEDIA-004.json' with { type: 'json' };
+import eventMedia006v030 from '../../packs/0.3.0/events/EVT-MEDIA-006.json' with { type: 'json' };
+import eventMedia010v030 from '../../packs/0.3.0/events/EVT-MEDIA-010.json' with { type: 'json' };
+import eventMgr001v030 from '../../packs/0.3.0/events/EVT-MGR-001.json' with { type: 'json' };
+import eventMgr003 from '../../packs/0.3.0/events/EVT-MGR-003.json' with { type: 'json' };
+import eventMgr004 from '../../packs/0.3.0/events/EVT-MGR-004.json' with { type: 'json' };
+import eventNat001v030 from '../../packs/0.3.0/events/EVT-NAT-001.json' with { type: 'json' };
+import eventNat002 from '../../packs/0.3.0/events/EVT-NAT-002.json' with { type: 'json' };
+import eventRel001v030 from '../../packs/0.3.0/events/EVT-REL-001.json' with { type: 'json' };
+import eventRel002v030 from '../../packs/0.3.0/events/EVT-REL-002.json' with { type: 'json' };
+import eventRel003 from '../../packs/0.3.0/events/EVT-REL-003.json' with { type: 'json' };
+import eventRel005 from '../../packs/0.3.0/events/EVT-REL-005.json' with { type: 'json' };
+import eventRel008 from '../../packs/0.3.0/events/EVT-REL-008.json' with { type: 'json' };
+import eventRel010v030 from '../../packs/0.3.0/events/EVT-REL-010.json' with { type: 'json' };
+import eventSlump010v030 from '../../packs/0.3.0/events/EVT-SLUMP-010.json' with { type: 'json' };
+import eventSlump011 from '../../packs/0.3.0/events/EVT-SLUMP-011.json' with { type: 'json' };
+import chapterMatch001v030 from '../../packs/0.3.0/chapters/CHP-MATCH-001.json' with { type: 'json' };
+import chapterMatch002v030 from '../../packs/0.3.0/chapters/CHP-MATCH-002.json' with { type: 'json' };
+import chapterMatch004v030 from '../../packs/0.3.0/chapters/CHP-MATCH-004.json' with { type: 'json' };
+import chapterMatch005 from '../../packs/0.3.0/chapters/CHP-MATCH-005.json' with { type: 'json' };
+import chapterMatch006 from '../../packs/0.3.0/chapters/CHP-MATCH-006.json' with { type: 'json' };
+import chapterMatch007 from '../../packs/0.3.0/chapters/CHP-MATCH-007.json' with { type: 'json' };
+import chapterNat001v030 from '../../packs/0.3.0/chapters/CHP-NAT-001.json' with { type: 'json' };
+import narrativeTokens030 from '../../packs/0.3.0/narrative/tokens.json' with { type: 'json' };
+
+export const PACK_VERSIONS = ['0.1.0', '0.2.0', '0.3.0'] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
 export type ContentPack = {
@@ -107,6 +151,53 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
     ],
     chapters: [chapterMatch001v020, chapterMatch002v020, chapterMatch004v020, chapterNat001v020],
     narrativeTokens: narrativeTokens020,
+  },
+  '0.3.0': {
+    manifest: manifest030,
+    events: [
+      eventCon001v030,
+      eventCon002v030,
+      eventCon003v030,
+      eventCon010v030,
+      eventCon011v030,
+      eventCon012v030,
+      eventCon013v030,
+      eventDev001v030,
+      eventDev002v030,
+      eventEth010v030,
+      eventEth011,
+      eventInj001v030,
+      eventInj003,
+      eventInj004,
+      eventMedia001v030,
+      eventMedia002,
+      eventMedia004,
+      eventMedia006v030,
+      eventMedia010v030,
+      eventMgr001v030,
+      eventMgr003,
+      eventMgr004,
+      eventNat001v030,
+      eventNat002,
+      eventRel001v030,
+      eventRel002v030,
+      eventRel003,
+      eventRel005,
+      eventRel008,
+      eventRel010v030,
+      eventSlump010v030,
+      eventSlump011,
+    ],
+    chapters: [
+      chapterMatch001v030,
+      chapterMatch002v030,
+      chapterMatch004v030,
+      chapterMatch005,
+      chapterMatch006,
+      chapterMatch007,
+      chapterNat001v030,
+    ],
+    narrativeTokens: narrativeTokens030,
   },
 };
 

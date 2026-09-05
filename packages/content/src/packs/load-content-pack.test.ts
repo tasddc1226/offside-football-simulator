@@ -80,8 +80,63 @@ describe('loadContentPack: 0.2.0', () => {
   });
 });
 
+// T-4-008: 팩 0.3.0은 0.2.0 전체(이벤트 20·챕터 4)를 바이트 동일하게 품고, Phase 4 카탈로그
+// 후보 12개와 포지션 전용 챕터 3개를 더한다.
+describe('loadContentPack: 0.3.0', () => {
+  it('0.3.0의 이벤트 개수가 32개이고 manifest.files의 events 목록과 id가 일치한다', () => {
+    const pack = loadContentPack('0.3.0');
+    expect(pack.events).toHaveLength(32);
+
+    const idsFromManifest = pack.manifest.files
+      .filter((file) => file.startsWith('events/'))
+      .map((file) => file.replace('events/', '').replace('.json', ''))
+      .sort();
+    const idsFromEvents = pack.events.map((event) => event.id).sort();
+    expect(idsFromEvents).toEqual(idsFromManifest);
+  });
+
+  it('챕터는 7개다', () => {
+    const pack = loadContentPack('0.3.0');
+    expect(pack.chapters).toHaveLength(7);
+  });
+
+  it('0.2.0 로드 결과는 불변이다(정의 20개 deep-equal, 챕터 4개)', () => {
+    const pack020 = loadContentPack('0.2.0');
+    expect(pack020.events).toHaveLength(20);
+    expect(pack020.chapters).toHaveLength(4);
+  });
+
+  it('0.3.0의 0.2.0 유래 이벤트 정의 20개는 0.2.0과 deep-equal이다', () => {
+    const pack020 = loadContentPack('0.2.0');
+    const pack030 = loadContentPack('0.3.0');
+    for (const event020 of pack020.events) {
+      const event030 = pack030.eventsById.get(event020.id);
+      expect(event030, event020.id).toEqual(event020);
+    }
+  });
+
+  it('0.3.0의 0.2.0 유래 챕터 정의 4개는 0.2.0과 deep-equal이다', () => {
+    const pack020 = loadContentPack('0.2.0');
+    const pack030 = loadContentPack('0.3.0');
+    for (const chapter020 of pack020.chapters) {
+      const chapter030 = pack030.chaptersById.get(chapter020.id);
+      expect(chapter030, chapter020.id).toEqual(chapter020);
+    }
+  });
+
+  it('eventsById·chaptersById가 모든 정의를 id로 조회할 수 있다', () => {
+    const pack = loadContentPack('0.3.0');
+    for (const event of pack.events) {
+      expect(pack.eventsById.get(event.id)).toBe(event);
+    }
+    for (const chapter of pack.chapters) {
+      expect(pack.chaptersById.get(chapter.id)).toBe(chapter);
+    }
+  });
+});
+
 describe('EVT-INJ-001 재활 선택 preview 정량 계약', () => {
-  it.each(['0.1.0', '0.2.0'] as const)('%s가 세 rehabPlan의 이동량·재발 bp를 선택 전에 보여준다', (version) => {
+  it.each(['0.1.0', '0.2.0', '0.3.0'] as const)('%s가 세 rehabPlan의 이동량·재발 bp를 선택 전에 보여준다', (version) => {
     const event = loadContentPack(version).eventsById.get('EVT-INJ-001');
     expect(event).toBeDefined();
     const previews = Object.fromEntries(
