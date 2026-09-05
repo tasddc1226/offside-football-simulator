@@ -23,6 +23,12 @@ Its commands are engine-valid, but this is an important player-policy mismatch.
 No official reference population has been published. Original band goals remain
 unchanged; interim smoke or parity output is not a balance pass.
 
+The complete v2 run finished in 3,261,059 ms. Retained evidence and its exact frozen
+generator are compressed under `evidence/phase5-baseline-v2/`, with checksums and
+band counts in [manifest.json](evidence/phase5-baseline-v2/manifest.json). Across
+40,000 runs there were two ICON results, zero LEGEND, and 7,687 REMEMBERED.
+These files are deliberately outside the runtime content registry.
+
 The current generator is v3: `phase5-population-3-ui-choices`, choice policy
 `ui-action-strata-v1`. KEEP always accepts, other role choices preserve the previous
 policy. It accepts `--legacy-version 1.0.0|1.1.0` (default 1.0.0) and pins the
