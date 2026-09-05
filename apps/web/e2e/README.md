@@ -5,6 +5,7 @@ pnpm --filter @offside/web e2e:install   # Chromium 최초 1회
 pnpm --filter @offside/web e2e           # 전체 스펙 실행(dev 서버 자동 기동, 스텁 API)
 pnpm --filter @offside/web e2e:api       # 실제 apps/api(E2E_WITH_API=1) — 아래 "실제 API로 실행" 참조
 pnpm --filter @offside/web e2e:perf      # 실제 빌드 대상 성능 측정(E2E_PREVIEW=1) — perf.spec.ts만
+pnpm --filter @offside/web e2e:staging   # 실 staging 리허설 — 아래 "staging 리허설" 참조
 ```
 
 `playwright.config.ts`가 기본적으로 `vite dev --port 5174`를 `webServer`로 자동 기동한다(이미 떠 있으면 재사용). Chromium 1개 프로젝트, 기본 뷰포트 360×780, 실패 시 trace `retain-on-failure`. `E2E_PREVIEW=1`이면 대신 `pnpm build && vite preview --port 5175`를 띄운다(dev 서버는 HMR·미압축 번들이라 LCP·CLS가 실제 배포본과 다르게 나온다).
@@ -33,6 +34,29 @@ pnpm --filter @offside/web e2e:perf      # 실제 빌드 대상 성능 측정(E2
 - `first-contract.spec.ts`: 온보딩 → SCR-002~004 → KICKOFF → 이벤트 화면(SCR-007/008/013, 반복) → SCR-014 → SCR-009 → SCR-010 → SCR-029 전 구간. `test.use({ contextOptions: { reducedMotion: 'reduce' } })`로 SCR-008 진행 연출을 건너뛴다. CONFIRM_PLAYER 직후 FAST 모드는 SETTLEMENT 단계에서 몇 차례의 서사 이벤트(도메인 가중 랜덤)를 소진한 뒤에야 제안이 열리므로, 어떤 이벤트·화면이 몇 번 뜨는지는 고정하지 않고 offers 도착까지 반복한다(안전 상한 10회). `create.spec.ts`와 함께 `helpers/player-creation.ts`의 온보딩→SCR-002~004→이벤트 도착 헬퍼를 공유한다.
 - `sync.spec.ts`(T-1-011): 배경 동기화 상태 배지(SyncBadge) 전이 — 생성 즉시 저장, "다른 기기 진행 가져오기"·"이 기기 진행 유지" 충돌 해소, 오프라인→온라인 복귀, PUT 401 시 "로컬 전용" 안내.
 - `perf.spec.ts`(T-1-014, `E2E_PREVIEW=1`일 때만): 커리어 카드 3장이 있는 허브를 실제 빌드(`vite preview`) 대상으로, CDP `Network.emulateNetworkConditions`(4G: 다운 4Mbps·RTT 150ms)에서 LCP·CLS를 3회 측정해 중앙값을 콘솔·`docs/tracking/phase-1-completion.md`에 기록한다(목표값은 assert하지 않는다, D-22). 커리어는 실제 UI로 만들어 로컬 IndexedDB에만 쓴다 — 이 모드는 `apps/api`를 띄우지 않으므로 실 네트워크 접근이 없다.
+
+## staging 리허설(T-2-016)
+
+`staging-rehearsal.spec.ts`는 `playwright.staging.config.ts`(`e2e:staging` 스크립트)로만 실행되며 기본
+`pnpm e2e`·CI에는 포함되지 않는다(기본 config는 이 파일을 `testIgnore`로 제외한다). `webServer`가 없고
+`baseURL`은 기본값 `https://offside-web-staging.tasddc1569.workers.dev`(`E2E_STAGING_URL`로 오버라이드
+가능)이다. 스텁 없이 실 api에 붙는다 — `helpers/recovery.ts`의 실 api 전용 헬퍼(`createCareerAndIssueRecoveryCode`)와
+`helpers/player-creation.ts`의 스텁 없는 헬퍼만 쓴다(`page.route`로 온보딩 확정을 우회하는
+`completeOnboardingAndConfirm`류는 쓰지 않는다 — staging에서 실제 응답을 왜곡한다). 실제 서비스에
+붙으므로 `workers: 1`·`retries: 0`이다.
+
+```bash
+pnpm --filter @offside/web e2e:staging
+```
+
+**staging에 실제 데이터가 생긴다.** 이 스펙은 (1) 새 커리어를 하나 만들어 복구 코드를 발급하고, (2)
+첫 계약을 체결하며, (3) FAST 시즌 하나를 결산까지 완주하고, (4) 그 과정에서 분석 이벤트를 실제
+`analytics_events` 테이블에 적재한다 — 전부 `svc_line_test`(테스트 시즌, `is_test=1`) 아래에 남는다.
+실행마다 새 커리어가 생기므로 **반복 실행하지 않는다**(브리프 기준 1회). 실행 결과 콘솔·Playwright
+attachment(`rehearsal-ids`)에 찍힌 `careerId`·`recoveryCode`·`deviceId`(분석 `clientId`, 확보되면)를
+오케스트레이터가 기록해 뒀다가 `wrangler d1 execute offside-staging --remote --env staging`으로 해당
+`careers`·`analytics_events` 행을 정리한다(정리 SQL은 `docs/tracking/line-test-plan.md` 5절 쿼리 형태를
+참고해 `id`/`client_id`로 좁힌다). 실패 시 `trace: retain-on-failure`로 trace가 `test-results/`에 남는다.
 
 ## 실제 API로 실행(E2E_WITH_API=1)
 
