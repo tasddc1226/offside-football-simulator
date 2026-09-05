@@ -4,7 +4,11 @@ import type { CareerState } from '../../packages/domain/src/types.ts';
 
 /** Drop-in SHA-256 implementation for the offline Node accelerator. Canonicalization and UTF-8 bytes are unchanged. */
 export function sha256Hex(input: string): string {
-  return createHash('sha256').update(utf8Encode(input)).digest('hex');
+  // Native UTF-8 is byte-equivalent for well-formed strings. Preserve the domain's
+  // explicit encoding of unpaired surrogates instead of Node's replacement character.
+  return createHash('sha256')
+    .update(input.isWellFormed() ? input : utf8Encode(input))
+    .digest('hex');
 }
 
 export function hashState(state: CareerState): string {

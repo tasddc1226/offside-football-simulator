@@ -17,7 +17,7 @@ const scores = z
   );
 const PopulationSchema = z
   .object({
-    id: z.literal('phase5-reference-1.0.0-0.1.0'),
+    id: z.literal('phase5-reference-1.0.0-0.3.0'),
     legacyVersion: z.literal('1.0.0'),
     rulesetVersion: z.literal('1.0.0'),
     scores: z.object({ GK: scores, DF: scores, MF: scores, FW: scores }).strict(),
@@ -33,17 +33,18 @@ export const PopulationManifestSchema = z
     generatorBundleGzipChecksum: hash,
     provenance: z
       .object({
-        protocolVersion: z.literal('phase5-population-1'),
+        protocolVersion: z.literal('phase5-population-2-registered-choices'),
         generatorCodeHash: hash,
         seedPolicy: z.literal('phase5-population:<position>:<zero-based-index>'),
         requestedSeasonPolicy: z.literal('1 + (seedIndex mod --seasons)'),
+        choicePolicy: z.literal('registered-hash-strata-v1'),
         rulesetVersion: z.literal('1.0.0'),
-        contentPackVersion: z.literal('0.1.0'),
+        contentPackVersion: z.literal('0.3.0'),
         artifacts: z
           .object({
             rulesetVersion: z.literal('1.0.0'),
             rulesetChecksum: hash,
-            contentPackVersion: z.literal('0.1.0'),
+            contentPackVersion: z.literal('0.3.0'),
             contentPackChecksum: hash,
           })
           .strict(),

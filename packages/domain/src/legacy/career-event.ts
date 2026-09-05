@@ -1,5 +1,6 @@
 import { roll100 } from '../rng.js';
 import type { CareerState, CareerTournament } from '../types.js';
+import { retirementDecisionRequired } from './career-retirement.js';
 import {
   assessNationalityAtSeasonBoundary,
   grantTournamentException,
@@ -32,9 +33,11 @@ export function careerEventChoices(state: CareerState): CareerEventChoice[] {
     state.age,
     seasonIndex,
   );
+  if (retirementDecisionRequired(state)) return [];
   const choices: CareerEventChoice[] = nationality.routeChoices.filter(
     (route): route is 'MILITARY_CLUB' | 'CAREER_BREAK' => route !== 'SPORTS_SERVICE',
   );
+  if (state.retirement?.lastChanceConsumed === true) choices.length = 0;
   if (
     seasonIndex > 0 &&
     seasonIndex % 2 === 0 &&

@@ -2,29 +2,31 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { loadRetirementArtifacts } from '../../packages/content/src/retirement-artifacts.ts';
 import { loadRuleset } from '../../packages/content/src/rulesets/load-ruleset.ts';
+import { loadContentPack } from '../../packages/content/src/packs/load-content-pack.ts';
 import { canonicalize, type JsonValue } from '../../packages/domain/src/canonical.ts';
 import { createCareerArchiveCore } from '../../packages/domain/src/legacy/archive.ts';
 import { createLegacyResult, LEGACY_POLICY } from '../../packages/domain/src/legacy/result.ts';
 import { retirementDecisionRequired } from '../../packages/domain/src/legacy/career-retirement.ts';
 import { sha256Hex } from '../../packages/domain/src/hash.ts';
+import { careerEventChoices } from '../../packages/domain/src/legacy/career-event.ts';
 import {
-  runCareerFixture,
-  type CareerFixture,
-} from '../../packages/domain/src/__fixtures__/career-01.ts';
-import { careerGkFixture } from '../../packages/domain/src/__fixtures__/career-04-gk.ts';
-import { careerDfFixture } from '../../packages/domain/src/__fixtures__/career-07-df.ts';
-import { careerMfFixture } from '../../packages/domain/src/__fixtures__/career-08-mf.ts';
-import { careerFwFixture } from '../../packages/domain/src/__fixtures__/career-09-fw.ts';
-import seasonRaw from '../../packages/domain/src/__fixtures__/career-02-season.json' with { type: 'json' };
+  advancePayload,
+  commandForPending,
+  chooseDeterministicIndex,
+} from './legacy-population-choices.ts';
 import { simulate, verifySnapshot, type Command } from '../../packages/domain/src/simulate.ts';
-import type { DomainSnapshot, SimulationMode, StatGroup } from '../../packages/domain/src/types.ts';
+import {
+  statGroupOf,
+  type DomainSnapshot,
+  type SimulationMode,
+  type StatGroup,
+} from '../../packages/domain/src/types.ts';
 
 const RULESET_VERSION = '1.0.0';
-const CONTENT_PACK_VERSION = '0.1.0';
+const CONTENT_PACK_VERSION = '0.3.0';
 const POSITIONS = ['GK', 'DF', 'MF', 'FW'] as const satisfies readonly StatGroup[];
-const PROTOCOL_VERSION = 'phase5-population-1';
+const PROTOCOL_VERSION = 'phase5-population-2-registered-choices';
 type Position = (typeof POSITIONS)[number];
-type SeasonLog = { commands: Array<{ type: Command['type']; payload: unknown }> };
 type PopulationRow = Readonly<{
   position: Position;
   seedIndex: number;
@@ -36,6 +38,10 @@ type PopulationRow = Readonly<{
   endingId: string;
   archiveHash: string;
   resultHash: string;
+  archetypeId: string;
+  backgroundId: string;
+  simulationMode: SimulationMode;
+  finalChoice: string;
 }>;
 type Group = Readonly<{ position: Position; rows: readonly PopulationRow[]; hash: string }>;
 type Checkpoint = {
@@ -54,6 +60,7 @@ function canonicalAny(value: unknown): string {
   return canonicalize(value as JsonValue);
 }
 const runtimeRuleset = loadRuleset(RULESET_VERSION);
+const runtimePack = loadContentPack(CONTENT_PACK_VERSION);
 const POLICY_CHECKSUM = sha256Hex(canonicalAny(LEGACY_POLICY));
 // A published reference population must never become an input to its own generation.
 function sourceArtifacts() {
@@ -62,20 +69,20 @@ function sourceArtifacts() {
   return { rulesetVersion, rulesetChecksum, contentPackVersion, contentPackChecksum };
 }
 
-const seasonLog = (seasonRaw as { commands: Record<SimulationMode, SeasonLog['commands']> })
-  .commands.FAST;
-const fixtureEvent = seasonLog.find((command) => command.type === 'ADVANCE')?.payload;
-if (fixtureEvent === undefined) throw new Error('FAST fixture has no ADVANCE payload');
-
 function command(
-  snapshot: DomainSnapshot,
+  snapshot: DomainSnapshot | null,
   type: Command['type'],
   payload: unknown,
   id: string,
 ): DomainSnapshot {
   const result = simulate({
     snapshot,
-    command: { type, payload, commandId: id, expectedRevision: snapshot.revision } as Command & {
+    command: {
+      type,
+      payload,
+      commandId: id,
+      expectedRevision: snapshot?.revision ?? 0,
+    } as Command & {
       commandId: string;
       expectedRevision: number;
     },
@@ -89,86 +96,145 @@ function command(
 
 function closePending(snapshot: DomainSnapshot, id: string): DomainSnapshot {
   const pending = snapshot.state.pending;
-  if (pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT')
-    return command(snapshot, 'REJECT_OFFER', { offerId: null }, `${id}-reject`);
-  if (pending?.kind === 'ROLE_PROPOSAL')
-    return command(snapshot, 'RESOLVE_ROLE', { decision: 'ACCEPT' }, `${id}-role`);
-  if (pending?.kind === 'EVENT')
+  const seed = snapshot.state.careerId;
+  const registered = commandForPending(snapshot.state, runtimePack, seed);
+  if (registered !== undefined) return command(snapshot, registered.type, registered.payload, id);
+  if (pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT') {
+    const offers = pending.offers.filter(
+      (offer) =>
+        offer.negotiationState !== 'WITHDRAWN' &&
+        (offer.validUntilRevision === null || offer.validUntilRevision >= snapshot.revision + 1),
+    );
+    const index = chooseDeterministicIndex(
+      seed,
+      `market:${snapshot.state.seasonHistory.length}:${snapshot.state.currentStep}`,
+      offers.length + 1,
+    );
+    const offer = offers[index] ?? (snapshot.state.contract === null ? offers[0] : undefined);
+    return offer === undefined
+      ? command(snapshot, 'REJECT_OFFER', { offerId: null }, id)
+      : command(snapshot, 'ACCEPT_OFFER', { offerId: offer.id }, id);
+  }
+  if (pending?.kind === 'ROLE_PROPOSAL') {
+    // Preserve the position stratum: cross-group changes are explicitly declined.
+    const crossesGroup =
+      pending.proposal.type === 'POSITION_CHANGE' &&
+      statGroupOf(pending.proposal.to) !==
+        statGroupOf(snapshot.state.player.profile!.primaryPosition);
+    const accept =
+      !crossesGroup && chooseDeterministicIndex(seed, `role:${snapshot.revision}`, 2) === 0;
+    return command(snapshot, 'RESOLVE_ROLE', { decision: accept ? 'ACCEPT' : 'DECLINE' }, id);
+  }
+  if (pending?.kind === 'LOAN_RETURN') {
     return command(
       snapshot,
-      'RESOLVE_EVENT',
+      'LOAN_RETURN',
       {
-        eventId: pending.eventId,
-        definitionVersion: pending.version,
-        choiceId: 'A',
-        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
+        decision:
+          pending.options[
+            chooseDeterministicIndex(seed, `loan:${snapshot.revision}`, pending.options.length)
+          ],
       },
-      `${id}-event`,
+      id,
     );
-  if (pending?.kind === 'INJURY')
-    return command(
-      snapshot,
-      'RESOLVE_EVENT',
-      {
-        eventId: pending.eventId,
-        definitionVersion: pending.version,
-        choiceId: 'A',
-        outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
-        rehabPlan: 'STANDARD',
-      },
-      `${id}-injury`,
-    );
-  if (pending?.kind === 'NATIONAL_TEAM')
-    return command(
-      snapshot,
-      'RESOLVE_EVENT',
-      {
-        eventId: pending.eventId,
-        definitionVersion: pending.version,
-        choiceId: 'C',
-        outcomes: [{ id: 'C1', kind: 'FIXED', weight: 100, effects: [] }],
-        callUp: 'DECLINE',
-      },
-      `${id}-national`,
-    );
+  }
+  if (pending !== null && pending?.kind !== 'SETTLEMENT')
+    throw new Error(`Unhandled pending ${pending?.kind}`);
   return snapshot;
 }
 
-function runCareer(
-  fixture: CareerFixture,
-  position: Position,
-  seedIndex: number,
-  requestedSeasons: number,
-): PopulationRow {
+function runCareer(position: Position, seedIndex: number, requestedSeasons: number): PopulationRow {
   const seed = `phase5-population:${position}:${seedIndex}`;
-  let snapshot = runCareerFixture(
+  const archetypes = runtimeRuleset.archetypes.filter((a) => statGroupOf(a.position) === position);
+  const archetype = archetypes[chooseDeterministicIndex(seed, 'archetype', archetypes.length)]!;
+  const background =
+    runtimeRuleset.backgrounds[
+      chooseDeterministicIndex(seed, 'background', runtimeRuleset.backgrounds.length)
+    ]!;
+  const simulationMode: SimulationMode =
+    chooseDeterministicIndex(seed, 'mode', 2) === 0 ? 'FAST' : 'CHAPTER';
+  let snapshot = command(
+    null,
+    'CREATE_CAREER',
     {
-      ...fixture,
-      createCareer: {
-        ...fixture.createCareer,
-        careerId: `population-${position}-${seedIndex}`,
-        seed,
+      careerId: `population-${position}-${seedIndex}`,
+      seed,
+      simulationMode,
+      rulesetVersion: RULESET_VERSION,
+      contentPackVersion: CONTENT_PACK_VERSION,
+    },
+    `${seed}-create`,
+  );
+  snapshot = command(
+    snapshot,
+    'UPDATE_PLAYER_DRAFT',
+    {
+      draft: {
+        name: `표본 ${position} ${seedIndex}`,
+        gender: chooseDeterministicIndex(seed, 'gender', 2) === 0 ? 'MALE' : 'FEMALE',
+        nationalityCode: 'KR',
+        preferredFoot: ['LEFT', 'RIGHT', 'BOTH'][chooseDeterministicIndex(seed, 'foot', 3)],
+        position: archetype.position,
+        archetypeId: archetype.id,
+        backgroundId: background.id,
       },
     },
-    runtimeRuleset,
+    `${seed}-draft`,
   );
+  snapshot = command(snapshot, 'CONFIRM_PLAYER', {}, `${seed}-confirm`);
+  for (let step = 0; snapshot.state.contract === null && step < 100; step++) {
+    snapshot =
+      snapshot.state.pending === null
+        ? command(
+            snapshot,
+            'ADVANCE',
+            advancePayload(snapshot.state, runtimePack),
+            `${seed}-youth-${step}`,
+          )
+        : closePending(snapshot, `${seed}-youth-${step}`);
+  }
+  if (snapshot.state.contract === null) throw new Error(`No first contract for ${seed}`);
   let seasons = 0;
   while (seasons < requestedSeasons) {
+    for (let step = 0; snapshot.state.pending !== null && step < 100; step++)
+      snapshot = closePending(snapshot, `${seed}-boundary-${seasons}-${step}`);
+    if (seasons > 0 && retirementDecisionRequired(snapshot.state)) break;
+    for (let decision = 0; decision < 3; decision++) {
+      const choices = careerEventChoices(snapshot.state);
+      const eligible = choices.filter(
+        (choice) =>
+          choice !== 'MENTOR' || chooseDeterministicIndex(seed, `mentor:${seasons}`, 2) === 0,
+      );
+      if (eligible.length === 0) break;
+      // Sample eligible U23 first; service options disappear if a medal grants special service.
+      const choice = eligible.includes('INTERNATIONAL')
+        ? 'INTERNATIONAL'
+        : eligible[
+            chooseDeterministicIndex(seed, `career-event:${seasons}:${decision}`, eligible.length)
+          ];
+      snapshot = command(
+        snapshot,
+        'CAREER_EVENT',
+        { choice },
+        `${seed}-career-event-${seasons}-${decision}`,
+      );
+    }
     seasons += 1;
     const seasonIndex = seasons;
-    snapshot = closePending(snapshot, `${position}-${seedIndex}-${seasonIndex}-before`);
     snapshot = command(
       snapshot,
       'START_SEASON',
       {
-        simulationMode: 'FAST',
+        simulationMode,
+        trainingFocus: ['ROLE', 'TECHNICAL', 'PHYSICAL', 'MENTAL'][
+          chooseDeterministicIndex(seed, `training:${seasons}`, 4)
+        ],
         serviceSeasonId: `population-${position}-${seedIndex}-${seasonIndex}`,
         legacyLedger: true,
       },
       `${position}-${seedIndex}-${seasonIndex}-start`,
     );
-    for (let step = 0; step < 100; step += 1) {
-      snapshot = closePending(snapshot, `${position}-${seedIndex}-${seasonIndex}-${step}`);
+    for (let step = 0; step < 200; step += 1) {
       if (snapshot.state.pending?.kind === 'SETTLEMENT') {
         snapshot = command(
           snapshot,
@@ -178,24 +244,36 @@ function runCareer(
         );
         break;
       }
-      snapshot = command(
-        snapshot,
-        'ADVANCE',
-        fixtureEvent,
-        `${position}-${seedIndex}-${seasonIndex}-${step}-advance`,
-      );
+      snapshot =
+        snapshot.state.pending === null
+          ? command(
+              snapshot,
+              'ADVANCE',
+              advancePayload(snapshot.state, runtimePack),
+              `${seed}-${seasonIndex}-${step}-advance`,
+            )
+          : closePending(snapshot, `${seed}-${seasonIndex}-${step}-resolve`);
     }
     if (snapshot.state.season !== null || snapshot.state.seasonHistory.length !== seasonIndex)
       throw new Error(`season ${seasonIndex} did not settle for ${position}/${seedIndex}`);
     const verification = verifySnapshot(snapshot);
     if (!verification.ok)
       throw new Error(`invalid snapshot for ${position}/${seedIndex}: ${verification.reason}`);
-    if (retirementDecisionRequired(snapshot.state)) break;
   }
-  snapshot = closePending(snapshot, `${position}-${seedIndex}-retire-before`);
-  snapshot = command(snapshot, 'RETIRE', { choice: 'RETIRE' }, `${position}-${seedIndex}-retire`);
+  for (let step = 0; snapshot.state.pending !== null && step < 100; step++)
+    snapshot = closePending(snapshot, `${seed}-retire-before-${step}`);
+  const finalChoice =
+    chooseDeterministicIndex(seed, 'epilogue', 2) === 0 ? 'RETIRE' : 'COACH_EPILOGUE';
+  snapshot = command(
+    snapshot,
+    'RETIRE',
+    { choice: finalChoice },
+    `${position}-${seedIndex}-retire`,
+  );
   if (snapshot.state.status !== 'RETIRED')
     throw new Error(`retirement did not settle for ${position}/${seedIndex}`);
+  if (statGroupOf(snapshot.state.player.profile!.primaryPosition) !== position)
+    throw new Error(`position stratum drift for ${position}/${seedIndex}`);
   const artifacts = sourceArtifacts();
   const context = {
     binding: {
@@ -219,6 +297,10 @@ function runCareer(
     endingId: result.endingId,
     archiveHash: archive.hash,
     resultHash: result.hash,
+    archetypeId: archetype.id,
+    backgroundId: background.id,
+    simulationMode,
+    finalChoice,
   };
 }
 
@@ -334,6 +416,7 @@ async function writePopulation(
   const provenance = {
     protocolVersion: PROTOCOL_VERSION,
     generatorCodeHash: process.env.LEGACY_POPULATION_BUNDLE_HASH ?? 'UNHASHED_WORKTREE',
+    choicePolicy: 'registered-hash-strata-v1',
     seedPolicy: 'phase5-population:<position>:<zero-based-index>',
     requestedSeasonPolicy: '1 + (seedIndex mod --seasons)',
     rulesetVersion: RULESET_VERSION,
@@ -404,18 +487,12 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
     return;
   }
   const checkpoint = await readCheckpoint(checkpointPath, artifacts, count, seasons);
-  const fixtures: Record<Position, CareerFixture> = {
-    GK: careerGkFixture,
-    DF: careerDfFixture,
-    MF: careerMfFixture,
-    FW: careerFwFixture,
-  };
   for (const position of positions) {
     const existing = checkpoint.groups[position];
     const rows = [...(existing?.rows ?? [])];
     for (let index = rows.length; index < count; index += 1) {
       const requestedSeasons = (index % seasons) + 1;
-      rows.push(runCareer(fixtures[position], position, index, requestedSeasons));
+      rows.push(runCareer(position, index, requestedSeasons));
       if (rows.length % 100 === 0 || rows.length === count) {
         checkpoint.groups[position] = { position, rows, hash: hashRows(rows) };
         await writeCheckpoint(checkpointPath, checkpoint);

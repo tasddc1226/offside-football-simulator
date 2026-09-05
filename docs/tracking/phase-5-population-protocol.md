@@ -1,27 +1,55 @@
 # Phase 5 reference-population protocol
 
-This protocol describes the offline, deterministic population builder used for the
-Legacy Score reference population. It is a data-generation gate, not a gameplay
-path and not a source of legal or real-world player eligibility claims.
+This is the offline, deterministic data-generation protocol for the Legacy Score
+reference population. It is a reproducibility and data-integrity gate, not a
+gameplay path, a model of real players, or a source of legal or eligibility claims.
 
-## Required population
+## Target and status
 
-The publish target is 10,000 independently seeded careers for each of `GK`, `DF`,
-`MF`, and `FW` (40,000 careers total). Each career is run for a deterministic
-number of seasons from 1 through 20 as a separate sample. The current builder
-defaults to 20 seasons; a production invocation must record the selected
-`--seasons` value and may not mix values in one artifact.
+The eventual publish target is 10,000 independently seeded careers in each of
+`GK`, `DF`, `MF`, and `FW` (40,000 total). Requested lengths are stratified from
+1 through 20 seasons: row `i` requests `1 + (i mod --seasons)` seasons. Realized
+seasons may be shorter when the engine requires retirement.
 
-The seed is `phase5-population:<position>:<zero-based-index>`. Position fixtures
-are the existing real domain fixtures (`career-04-gk`, `career-07-df`,
-`career-08-mf`, and `career-09-fw`), with only career id and seed replaced. Every
-season is executed through `simulate`: `START_SEASON`, `ADVANCE`, pending
-resolution, and `SETTLE_SEASON`; the final state is retired through the real
-`RETIRE` command. No `SeasonSummary`, score, or ending is copied from a fixture.
+The current protocol is v2: ruleset `1.0.0`, registered content pack `0.3.0`,
+protocol `phase5-population-2-registered-choices`, choice policy
+`registered-hash-strata-v1`, and seed
+`phase5-population:<position>:<zero-based-index>`.
 
-## Command
+The 40,000-career run is still in progress. It has not passed the publication gate,
+and no official reference population has been published. The original band goals
+remain unchanged; interim smoke or parity output is not a balance pass.
 
-Run the script with the repository's already-installed `tsx` dependency:
+The earlier v1 runner used fixed fixture outcomes and content pack `0.1.0`. That
+run is retired. Its timings and outputs are not official evidence and must not be
+combined with v2 checkpoints or used as the reference population.
+
+## v2 career and choice policy
+
+Every career uses the real domain command path: creation, draft confirmation, youth
+progression, `START_SEASON`, content-backed `ADVANCE`, pending resolution,
+`SETTLE_SEASON`, and `RETIRE`. Archives and results are built with
+`createCareerArchiveCore` and `createLegacyResult`; no score, season summary,
+ending, or result is copied from a fixture.
+
+The seed deterministically selects a compatible archetype, background, gender,
+preferred foot, simulation mode, training focus, registered event/chapter choices,
+eligible career-event choices, market/role handling, and terminal `RETIRE` versus
+`COACH_EPILOGUE`.
+
+`tooling/scripts/legacy-population-choices.ts` uses
+`selectEligibleEvents` and `selectChapterCandidates` for `ADVANCE`, resolves
+pending events only through the matching pack definition, and copies the selected
+choice's exact outcomes, effects, tags, rehabilitation plan, call-up, and chapter
+rating delta. It never invents an event, choice, or outcome. Role, market,
+loan-return, and settlement handling remain generator policy because they are not
+content-pack choices. Cross-group position changes are deliberately declined to
+preserve the four position strata. Negotiation is not sampled in v2.
+
+All sampling is a deterministic SHA-256 index over `(seed, policy key)`. This is a
+declared synthetic policy, not an actual-user or real-world player distribution.
+
+## Commands
 
 ```sh
 node_modules/.pnpm/node_modules/.bin/tsx tooling/scripts/legacy-population.ts \
@@ -30,8 +58,8 @@ node_modules/.pnpm/node_modules/.bin/tsx tooling/scripts/legacy-population.ts \
   --out artifacts/legacy-population.json
 ```
 
-For the accelerated four-way runner, keep the bundle and checkpoints in a
-persistent work directory so an interrupted run can resume:
+The accelerated runner keeps its bundle and four position checkpoints in a
+persistent work directory:
 
 ```sh
 node tooling/scripts/legacy-population-node.mjs \
@@ -40,63 +68,52 @@ node tooling/scripts/legacy-population-node.mjs \
   --out artifacts/legacy-population.json
 ```
 
-Use a small run for smoke testing, for example
-`--count 2 --seasons 20 --smoke`; this writes an explicit `SMOKE_REPORT` and
-never a publishable reference-population artifact.
-The script resolves the registered `1.0.0` ruleset and `0.1.0` content pack and
-records their real `loadRetirementArtifacts` checksums in both checkpoint and
-published output.
+Use `--count 20 --seasons 20 --smoke` for a non-publishing smoke report. Counts
+below 10,000 are rejected for normal publication and are written only as an
+explicitly marked `SMOKE_REPORT`.
 
-## Checkpoint and publication rules
+## Artifacts, checkpoints, and publication
 
-The checkpoint is updated in verified 100-career batches per position. Its group
-hash is the canonical SHA-256 of the rows. A resume rejects protocol, generator
-bundle, version, artifact, count, seed/length, or group-hash mismatches. It
-writes through a temporary file and rename so a process interruption cannot
-leave a partially written checkpoint.
+The runner loads the registered ruleset and content pack and records the registry
+manifest checksums returned by `loadRetirementArtifacts`. These are raw registry
+artifact checksums, not hashes of parsed objects or runtime `Map` instances.
 
-The final population file is written only after all four groups have the exact
-requested count and season setting. Counts below 10,000 are rejected unless
-`--smoke` is present; smoke output is explicitly marked `SMOKE_REPORT` and is
-not a reference-population publish. A partial checkpoint is never published as
-the reference population. The final `populationHash` is the canonical SHA-256
-of the payload before that field is added. A failed simulation, invalid snapshot,
-retirement/archive/result construction failure, or checksum mismatch aborts the run.
+Checkpoint state is written after every 100 verified rows per position using a
+temporary file followed by rename. Resume rejects mismatches in protocol, generator
+bundle hash, policy checksum, versions, artifact checksums, count, requested-length
+sequence, seed sequence, or canonical group hash. A failed simulation, invalid
+snapshot, archive/result construction failure, or artifact mismatch aborts the run.
 
-The output rows contain position, seed index, seed, season count, calculated
-score, calculated ending id, archive hash, and a deterministic result/evidence
-hash. These hashes are audit material; they are not a replacement for retaining
-the immutable artifact registry versions.
+Publication requires all four groups to contain exactly the requested count and
+refuses partial output. Provenance includes protocol, generator code hash, choice
+policy, seed/length policies, versions, artifacts, policy checksum, count, and max
+seasons. `populationHash` is the canonical SHA-256 of the payload before that
+field is added. No smoke report is a reference population.
 
-## Smoke evidence and extrapolation
+## v2 parity evidence
 
-On 2026-09-05, `--count 20 --seasons 20 --smoke` completed 80 real careers
-(20 per position, requested lengths 1 through 20) in 28.76 seconds wall time;
-all four groups contained 20 rows and every result hash was 64 hex characters.
-A simple linear extrapolation to 40,000 careers is about 14,380 seconds (roughly
-4 hours) on that development machine. This is planning evidence only: it is not
-a production throughput claim and does not account for contention or checkpoint
-I/O. The full 40,000-career batch remains pending review and was not run in
-this verification task.
+The valid v2 parity run completed 80 careers (20 per position, requested lengths 1
+through 20). Normal wall time was **43.2665s**; accelerated wall time was
+**5.7933s**, a **7.468×** speedup. Every row, archive hash, and result hash
+matched exactly. Domain SHA-256/UTF-8 vectors also passed for ASCII, Korean, emoji,
+and an unpaired surrogate.
 
-For local acceleration, `tooling/scripts/legacy-population-node.mjs` bundles
-the runner with an explicit alias for only `domain/src/hash.ts`; the shim uses
-Node's SHA-256 implementation over the domain's exact `utf8Encode` bytes. It
-partitions GK/DF/MF/FW into four concurrent jobs and merges only validated
-checkpoints. `--verify` compares normal and accelerated rows/archive/result
-hashes for 80 careers and checks ASCII, Korean, emoji, and an unpaired-surrogate
-UTF-8 vectors. On 2026-09-05 normal took 26.22s and accelerated took 5.32s
-(4.93×), with identical rows and hashes. The verification report also records
-per-position score min/median/max and band counts.
+The frozen accelerated bundle used by the current full run has hash:
 
-## Sampling-bias disclosure
+```text
+53e392c5481120504e2834a6d506c3574212071a15df9480bc309348bb057187
+```
 
-The current career fixtures provide deterministic, scripted choices: pending
-roles are accepted, events use fixed `A` outcomes, injury resolution uses the
-standard plan, national-team calls are declined, and market offers are rejected.
-The builder therefore proves reproducibility and real-engine execution, but its
-distribution is not yet an unbiased model of player decision-making. A published
-reference population must either keep this protocol versioned as the declared
-sampling policy or introduce a separately versioned, deterministic choice policy
-and regenerate every group. It must never silently combine populations made by
-different policies.
+The four-way accelerator aliases only the domain hash implementation to Node's
+SHA-256 while preserving domain canonicalization and exact UTF-8 encoding; merged
+checkpoints are independently validated before publication.
+
+## Limitations and disclosure
+
+The v2 policy improves registered-content and strategy coverage, but remains a
+declared synthetic sampling policy. It is not an actual-user distribution and must
+not be presented as one. Negotiation and cross-group position changes remain
+unsampled by design. Band goals remain the product target; scores are not
+normalized or retrofitted to meet them. Any policy, ruleset, content-pack, or
+generator-code change requires a new protocol/checkpoint identity and complete
+regeneration.

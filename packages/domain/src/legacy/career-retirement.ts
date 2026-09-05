@@ -58,6 +58,8 @@ export function retirementContinuationOptions(state: CareerState) {
   if (
     state.status !== 'ACTIVE' ||
     state.season !== null ||
+    ('serviceStatus' in state.nationalityRuleState &&
+      state.nationalityRuleState.serviceStatus === 'SERVING') ||
     state.retirement?.lastChanceConsumed === true ||
     state.pending?.kind !== 'OFFERS'
   )
@@ -81,5 +83,12 @@ export function retirementDecisionRequired(state: CareerState): boolean {
     state.retirement.lastChanceSeasonIndex !== null
   )
     return state.seasonHistory.length >= state.retirement.lastChanceSeasonIndex;
+  // A planned CAREER_BREAK is a scheduled service absence, not a lost playing opportunity.
+  // Do not force a retirement review while its two-season service route is still completing.
+  if (
+    'serviceStatus' in state.nationalityRuleState &&
+    state.nationalityRuleState.serviceStatus === 'SERVING'
+  )
+    return false;
   return assessCareerRetirement(state)?.status === 'REVIEW';
 }

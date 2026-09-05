@@ -15,7 +15,7 @@ const registered = {
 
 function population() {
   return {
-    id: 'phase5-reference-1.0.0-0.1.0' as const,
+    id: 'phase5-reference-1.0.0-0.3.0' as const,
     legacyVersion: '1.0.0' as const,
     rulesetVersion: '1.0.0' as const,
     scores: {
@@ -36,16 +36,17 @@ function manifestFor(raw: ReturnType<typeof population>): PopulationManifest {
     evidenceGzipChecksum: hash,
     generatorBundleGzipChecksum: hash,
     provenance: {
-      protocolVersion: 'phase5-population-1',
+      protocolVersion: 'phase5-population-2-registered-choices',
       generatorCodeHash: hash,
       seedPolicy: 'phase5-population:<position>:<zero-based-index>',
       requestedSeasonPolicy: '1 + (seedIndex mod --seasons)',
+      choicePolicy: 'registered-hash-strata-v1',
       rulesetVersion: '1.0.0',
-      contentPackVersion: '0.1.0',
+      contentPackVersion: '0.3.0',
       artifacts: {
         rulesetVersion: '1.0.0',
         rulesetChecksum: registered.rulesetChecksum,
-        contentPackVersion: '0.1.0',
+        contentPackVersion: '0.3.0',
         contentPackChecksum: registered.contentPackChecksum,
       },
       policyChecksum: populationChecksum(LEGACY_POLICY),
@@ -64,7 +65,7 @@ describe('legacy reference population validator', () => {
   it('accepts the synthetic 10k-per-group artifact with the registered checksums and policy', () => {
     const raw = population();
     const validated = validateLegacyPopulation(raw, manifestFor(raw), registered);
-    expect(validated.id).toBe('phase5-reference-1.0.0-0.1.0');
+    expect(validated.id).toBe('phase5-reference-1.0.0-0.3.0');
     expect(validated.scores.GK).toHaveLength(10_000);
     expect(validated.scores.GK.every((value, index, values) => index === 0 || value >= values[index - 1]!)).toBe(true);
   });

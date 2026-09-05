@@ -17,6 +17,13 @@ const canonicalHash = (value: unknown) => digest(canonicalize(value as JsonValue
 const report = JSON.parse(await readFile(input, 'utf8'));
 const { population, provenance, groups } = report;
 if (
+  provenance.protocolVersion !== 'phase5-population-2-registered-choices' ||
+  provenance.choicePolicy !== 'registered-hash-strata-v1' ||
+  provenance.contentPackVersion !== '0.3.0' ||
+  provenance.rulesetVersion !== '1.0.0'
+)
+  throw new Error('Not a registered-content population protocol');
+if (
   report.kind !== 'REFERENCE_POPULATION' ||
   report.populationHash !== canonicalHash({ population, provenance, groups })
 )

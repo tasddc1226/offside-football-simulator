@@ -5,6 +5,8 @@ import { rulesetProto } from '../__fixtures__/career-01.js';
 import { hashState } from '../hash.js';
 import { simulate } from '../simulate.js';
 import { retirementContinuationOptions, retirementDecisionRequired } from './career-retirement.js';
+import { careerEventChoices } from './career-event.js';
+import { initializeNationalityModule, resolveNationalityChoice } from './nationality.js';
 import type { DomainSnapshot } from '../types.js';
 import type { Command } from '../simulate.js';
 
@@ -90,6 +92,79 @@ describe('career retirement continuation', () => {
     expect(blocked).toMatchObject({ ok: false, error: { details: { reason: 'RETIREMENT_DECISION_REQUIRED' } } });
     const reused = retirementContinuationOptions(snapshot.state);
     expect(reused).toHaveLength(0);
+  });
+
+  it('does not offer a two-season service route after a one-season last chance is consumed', () => {
+    const prepared = singleOfferBoundary();
+    const { snapshot } = retireContinuation(prepared);
+    const state = {
+      ...snapshot.state,
+      age: 18,
+      nationalityRuleState: initializeNationalityModule('KR', 'MALE'),
+    };
+    expect(retirementDecisionRequired(state)).toBe(false);
+    expect(careerEventChoices(state)).not.toContain('CAREER_BREAK');
+    expect(careerEventChoices(state)).not.toContain('MILITARY_CLUB');
+  });
+
+  it('keeps the promised last-chance season available before its target despite high pressure', () => {
+    const prepared = singleOfferBoundary();
+    const { snapshot } = retireContinuation(prepared);
+    const highPressure = { ...snapshot.state, age: 38 };
+    expect(retirementDecisionRequired(highPressure)).toBe(false);
+  });
+
+  it('removes all CAREER_EVENT choices once the explicit last-chance target is reached', () => {
+    const prepared = singleOfferBoundary();
+    const { snapshot } = retireContinuation(prepared);
+    const started = simulate({
+      snapshot,
+      command: { type: 'START_SEASON', commandId: 'target-season-start', expectedRevision: snapshot.revision, payload: { simulationMode: 'FAST', serviceSeasonId: 'target-season' } },
+      ruleset: rulesetProto,
+      rulesetVersion: snapshot.rulesetVersion,
+      contentPackVersion: snapshot.contentPackVersion,
+    });
+    expect(started.ok).toBe(true);
+    const finished = runSeason(started.ok ? started.snapshot : snapshot);
+    const targetState = {
+      ...finished.state,
+      pending: null,
+    };
+    expect(retirementDecisionRequired(targetState)).toBe(true);
+    expect(careerEventChoices(targetState)).toEqual([]);
+  });
+
+  it('does not force a high-pressure retirement review while CAREER_BREAK service is serving', () => {
+    const source = runSettledFixture().snapshot;
+    const service = resolveNationalityChoice(
+      initializeNationalityModule('KR', 'MALE'),
+      'CAREER_BREAK',
+      0,
+    );
+    const state = {
+      ...source.state,
+      age: 38,
+      nationalityRuleState: service,
+      retirement: { policyVersion: '1.0.0' as const, marketOffers: 0, lastChanceConsumed: false, lastChanceSeasonIndex: null },
+    };
+    expect(retirementDecisionRequired(state)).toBe(false);
+  });
+
+  it('does not expose one-season continuation offers while two-season service is serving', () => {
+    const source = runSettledFixture().snapshot;
+    const service = resolveNationalityChoice(
+      initializeNationalityModule('KR', 'MALE'),
+      'CAREER_BREAK',
+      0,
+    );
+    const pending = source.state.pending;
+    if (pending?.kind !== 'OFFERS') throw new Error('fixture must expose offers');
+    const state = {
+      ...source.state,
+      nationalityRuleState: service,
+      pending: { ...pending, offers: [{ ...pending.offers[0]!, lengthSeasons: 1 }] },
+    };
+    expect(retirementContinuationOptions(state)).toEqual([]);
   });
 
   it('does not infer review from age alone or absent market evidence', () => {

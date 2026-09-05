@@ -141,6 +141,55 @@ describe('CAREER_EVENT legacy wiring', () => {
     expect(careerEventChoices({ ...snapshot, state: injuredState, stateHash: hashState(injuredState) }.state)).toEqual([]);
   }, 60_000);
 
+  it('runs an INTERNATIONAL CAREER_EVENT between two real settled seasons and archives its evidence', () => {
+    let snapshot = koreanBoundary();
+    snapshot = runOptInSeason(snapshot, 'u23-real-season-1');
+    if (snapshot.state.pending?.kind === 'OFFERS' || snapshot.state.pending?.kind === 'CONTRACT') {
+      snapshot = run(snapshot, {
+        type: 'REJECT_OFFER',
+        payload: { offerId: null },
+        commandId: 'u23-close-market',
+        expectedRevision: snapshot.revision,
+      } as EngineCommand);
+    }
+    const profile = snapshot.state.player.profile;
+    if (profile === null) throw new Error('fixture profile missing');
+    // Keep the U23 eligibility gate open for the event; the season history itself remains entirely
+    // engine-produced (no duplicated SeasonSummary is introduced).
+    const boostedState = {
+      ...snapshot.state,
+      player: { ...snapshot.state.player, profile: { ...profile, baseOvr: 90 } },
+      health: {
+        ...snapshot.state.health,
+        // The fixture's season replay can end with a rehab episode; clear that unrelated pending
+        // condition so this test exercises the U23 gate and not injury gating.
+        episodes: snapshot.state.health.episodes.map((episode) => ({
+          ...episode,
+          status: 'RECOVERED' as const,
+          remainingMatches: 0,
+        })),
+      },
+    };
+    snapshot = { ...snapshot, state: boostedState, stateHash: hashState(boostedState) };
+    expect(careerEventChoices(snapshot.state)).toContain('INTERNATIONAL');
+    snapshot = run(snapshot, {
+      type: 'CAREER_EVENT',
+      payload: { choice: 'INTERNATIONAL' },
+      commandId: 'u23-real-event',
+      expectedRevision: snapshot.revision,
+    } as EngineCommand);
+    expect(snapshot.state.legacyEvents?.tournaments).toHaveLength(1);
+    expect(snapshot.state.legacyEvents?.tournaments[0]?.matches).toHaveLength(6);
+    expect(snapshot.state.timeline.at(-1)?.kind).toBe('INTERNATIONAL_TOURNAMENT');
+
+    snapshot = runOptInSeason(snapshot, 'u23-real-season-2');
+    expect(snapshot.state.seasonHistory).toHaveLength(3);
+    const retired = retireWithLegacy(snapshot);
+    expect(retired.legacy.international.youthAppearances).toBe(6);
+    expect(retired.snapshot.checkpoint).toBe('RETIREMENT');
+    expect(retired.legacy.archiveHash).toBeDefined();
+  }, 60_000);
+
   it('MENTOR is offered once per season only after age 30 with captaincy threshold', () => {
     const source = koreanBoundary();
     const state = { ...source.state, age: 30, relationships: { ...source.state.relationships, captain: 50 } };
