@@ -39,6 +39,9 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   reporter: 'list',
+  // T-2-016: staging-rehearsal.spec.ts는 playwright.staging.config.ts(testMatch)로만 실행한다 —
+  // 실 staging에 접속하므로 기본(스텁 API) 실행에는 포함하지 않는다.
+  testIgnore: /staging-rehearsal\.spec\.ts/,
   use: {
     baseURL: BASE_URL,
     viewport: { width: 360, height: 780 },
