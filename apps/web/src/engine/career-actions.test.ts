@@ -43,7 +43,7 @@ vi.mock('./sync.js', () => ({
 const serviceSeasonHolder = vi.hoisted(() => ({ current: undefined as undefined | ServiceSeasonCurrent }));
 vi.mock('./service-season.js', () => ({
   resolveServiceSeason: () => Promise.resolve(serviceSeasonHolder.current ?? FALLBACK_SERVICE_SEASON),
-  resolveServiceSeasonId: () => Promise.resolve(FALLBACK_SERVICE_SEASON_ID),
+  resolveServiceSeasonId: () => Promise.resolve(serviceSeasonHolder.current?.id ?? FALLBACK_SERVICE_SEASON_ID),
 }));
 
 function makeIdGenerator(prefix: string): () => string {
@@ -112,6 +112,27 @@ describe('createCareer', () => {
       expect(result.domainSnapshot.state.contentPackVersion).toBe('0.3.0');
       const [record] = await engine.client.listCareers();
       expect(record?.createdServiceSeasonId).toBe('svc_phase5_qa');
+    } finally {
+      serviceSeasonHolder.current = undefined;
+    }
+  });
+
+  it.each([
+    ['지원하지 않는 버전', '9.9.9', '0.3.0'],
+    ['호환되지 않는 룰셋·팩', '1.1.0', '0.1.0'],
+  ])('%s이면 CREATE_CAREER를 실행하기 전에 실패한다', async (_label, rulesetVersion, contentPackVersion) => {
+    serviceSeasonHolder.current = {
+      ...FALLBACK_SERVICE_SEASON,
+      id: 'svc_invalid',
+      rulesetVersion,
+      contentPackVersion,
+    };
+    const engine = makeTestEngine();
+    const executeSpy = vi.spyOn(engine.client, 'execute');
+    try {
+      await expect(createCareer(engine, { simulationMode: 'FAST' })).rejects.toThrow();
+      expect(executeSpy).not.toHaveBeenCalled();
+      expect(await engine.client.listCareers()).toEqual([]);
     } finally {
       serviceSeasonHolder.current = undefined;
     }
@@ -264,6 +285,35 @@ describe('startSeason', () => {
     expect(result.domainSnapshot.state.season?.simulationMode).toBe('FAST');
     expect(result.domainSnapshot.state.pending?.kind).toBe('ROLE_PROPOSAL');
     expect(result.domainSnapshot.state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_STARTED' });
+  });
+
+  it('기존 1.0/0.1 커리어는 현재 시즌 참여 id만 기록하고 커리어 버전은 바꾸지 않는다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToSigned(engine);
+    serviceSeasonHolder.current = {
+      ...FALLBACK_SERVICE_SEASON,
+      id: 'svc_phase5_qa',
+      rulesetVersion: '1.1.0',
+      contentPackVersion: '0.3.0',
+    };
+    try {
+      const result = await startSeason(engine, careerId, { simulationMode: 'FAST' });
+      if (!result.ok) throw new Error('startSeason 실패');
+      expect(result.domainSnapshot.state).toMatchObject({
+        rulesetVersion: '1.0.0',
+        contentPackVersion: '0.1.0',
+        season: { serviceSeasonId: 'svc_phase5_qa' },
+      });
+      expect(result.domainSnapshot.state.seasonHistory).toEqual([]);
+      const [record] = await engine.client.listCareers();
+      expect(record).toMatchObject({
+        createdServiceSeasonId: 'svc_kickoff',
+        rulesetVersion: '1.0.0',
+        contentPackVersion: '0.1.0',
+      });
+    } finally {
+      serviceSeasonHolder.current = undefined;
+    }
   });
 
   it('실제 포지션·역할과 같은 KEEP만 자동 확인 대상으로 본다', async () => {

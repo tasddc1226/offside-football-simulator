@@ -30,7 +30,8 @@ export const FALLBACK_SERVICE_SEASON: ServiceSeasonCurrent = {
 };
 
 /**
- * T-4-009 D-56: DEV 서버 전용 콘텐츠 팩 오버라이드. `import.meta.env.DEV`는 프로덕션 빌드에서 상수
+ * T-4-009 D-56: DEV 화면·해시 진단 전용 콘텐츠 팩 오버라이드. 새 커리어 CREATE의 버전은 이 값이
+ * 아니라 current service-season fixture/응답이 결정한다. `import.meta.env.DEV`는 프로덕션 빌드에서 상수
  * false로 치환돼 이 분기가 죽은 코드로 제거된다(같은 관례: `career-actions.ts`의 `offside:e2e-seed`
  * 훅, `apps/web/src/main.tsx`의 `/__dev/hash-probe` 분기) — 프로덕션 번들·경로는 바뀌지 않는다.
  * `localStorage['offside:e2e-content-pack']`이 `PACK_VERSIONS`에 있는 값이면 그 값을, 아니면(없거나
