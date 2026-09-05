@@ -36,6 +36,8 @@ const OutcomeClassSchema = z.enum(['DECISION', 'ADVANCE', 'SETTLEMENT']);
 const LatencyBucketSchema = z.enum(['<100ms', '<500ms', '<2s', '>=2s']);
 const FunnelStageSchema = z.enum(['ONBOARDING_STARTED', 'PLAYER_CONFIRMED', 'CONTRACT_SIGNED', 'SEASON_STARTED', 'SEASON_SETTLED']);
 const ElapsedSecBucketSchema = z.enum(['<60', '<180', '<360', '<720', '<1800', '>=1800']);
+/** T-4-024: 실사용자 플레이 시간 측정용 초 단위 경과(bucket과 별개). 상한 2시간(7200초). */
+const ElapsedSecSchema = z.number().int().nonnegative().max(7200);
 const CareerIndexSchema = z.number().int().positive();
 const StepSchema = z.number().int().nonnegative();
 const SeasonIndexSchema = z.number().int().nonnegative();
@@ -68,13 +70,20 @@ export const ANALYTICS_EVENT_PROPS_SCHEMAS = {
     careerIndex: CareerIndexSchema,
     elapsedSecBucket: ElapsedSecBucketSchema,
   }),
-  step_passed: z.strictObject({ seasonIndex: SeasonIndexSchema, step: StepSchema, simulationMode: SimulationModeSchema }),
+  step_passed: z.strictObject({
+    seasonIndex: SeasonIndexSchema,
+    step: StepSchema,
+    simulationMode: SimulationModeSchema,
+    // T-4-024: baseline(시즌 시작 기준)을 못 찾으면 클라이언트가 필드를 생략한다.
+    elapsedSec: ElapsedSecSchema.optional(),
+  }),
   season_settled: z.strictObject({
     seasonIndex: SeasonIndexSchema,
     simulationMode: SimulationModeSchema,
     decisionsOpened: z.number().int().nonnegative(),
     matchesPlayed: z.number().int().nonnegative(),
     elapsedSecBucket: ElapsedSecBucketSchema,
+    elapsedSec: ElapsedSecSchema,
   }),
   career_abandoned_hint: z.strictObject({
     seasonIndex: SeasonIndexSchema,

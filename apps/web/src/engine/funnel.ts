@@ -35,6 +35,13 @@ export function elapsedSecBucket(elapsedMs: number): ElapsedSecBucket {
   return '>=1800';
 }
 
+/** T-4-024: 실사용자 플레이 시간 측정용 초 단위 경과(bucket과 별개, 상한 2시간). */
+const MAX_ELAPSED_SEC = 7200;
+
+function clampElapsedSec(elapsedMs: number): number {
+  return Math.min(Math.round(elapsedMs / 1000), MAX_ELAPSED_SEC);
+}
+
 /** 온보딩(SCR-034) 마운트 시 호출 — 아직 careerId가 없으니 기기 단위로 "대기 중" 시각만 남긴다. */
 export async function markOnboardingPending(): Promise<void> {
   const engine = await getAppEngine();
@@ -130,22 +137,41 @@ export async function recordSeasonSettled(careerId: string, props: SeasonSettled
   const baseline = record?.seasonStartedAt ?? record?.onboardingStartedAt;
   if (baseline === undefined) return;
 
+  const elapsedMs = Date.now() - baseline;
   platform.analytics.track('season_settled', {
     seasonIndex: props.seasonIndex,
     simulationMode: props.simulationMode,
     decisionsOpened: props.decisionsOpened,
     matchesPlayed: props.matchesPlayed,
-    elapsedSecBucket: elapsedSecBucket(Date.now() - baseline),
+    elapsedSecBucket: elapsedSecBucket(elapsedMs),
+    elapsedSec: clampElapsedSec(elapsedMs),
   });
 }
 
-/** ADVANCE 응답으로 currentStep이 오를 때마다 호출한다(이탈 step은 마지막 호출로 계산된다). */
-export function trackStepPassed(season: { index: number; currentStep: number; simulationMode: SimulationMode }): void {
-  platform.analytics.track('step_passed', {
-    seasonIndex: season.index,
-    step: season.currentStep,
-    simulationMode: season.simulationMode,
-  });
+/**
+ * ADVANCE 응답으로 currentStep이 오를 때마다 호출한다(이탈 step은 마지막 호출로 계산된다).
+ * T-4-024: careerId를 넘기면 season_settled와 같은 baseline(seasonStartedAt ?? onboardingStartedAt,
+ * 상한 2시간)으로 elapsedSec을 함께 보낸다 — careerId를 안 넘기거나 funnel 레코드·baseline을
+ * 못 찾으면(복구 커리어 등) 필드를 생략한다.
+ */
+export function trackStepPassed(
+  season: { index: number; currentStep: number; simulationMode: SimulationMode },
+  careerId?: string,
+): void {
+  const baseProps = { seasonIndex: season.index, step: season.currentStep, simulationMode: season.simulationMode };
+  if (careerId === undefined) {
+    platform.analytics.track('step_passed', baseProps);
+    return;
+  }
+  void (async () => {
+    const engine = await getAppEngine();
+    const record = await engine.store.transaction('readonly', (tx) => tx.kv.get<FunnelRecord>(funnelRecordKey(careerId)));
+    const baseline = record?.seasonStartedAt ?? record?.onboardingStartedAt;
+    platform.analytics.track('step_passed', {
+      ...baseProps,
+      ...(baseline !== undefined ? { elapsedSec: clampElapsedSec(Date.now() - baseline) } : {}),
+    });
+  })();
 }
 
 /** 커리어 삭제 확인(2단계 다이얼로그의 "삭제 확정") 시 호출한다. */
