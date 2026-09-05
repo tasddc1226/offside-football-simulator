@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,10 +17,13 @@ concurrency:
 jobs:
   quality:
     name: Quality gates
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ARM64, offside]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
@@ -40,20 +44,24 @@ jobs:
 
   e2e:
     name: Browser gates
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ARM64, offside]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @offside/web exec playwright install --with-deps chromium
-      - run: pnpm --filter @offside/web e2e
+      - run: pnpm --filter @offside/web exec playwright install chromium
+      - run: pnpm --filter @offside/web exec playwright test --workers=1
         env:
           CI: 'true'
+          E2E_PORT: '5274'
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -65,7 +73,7 @@ jobs:
     name: Deploy PR preview
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     needs: [quality, e2e]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64, offside]
     timeout-minutes: 20
     concurrency:
       group: cloudflare-preview-d1
@@ -76,6 +84,8 @@ jobs:
       PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
@@ -114,7 +124,7 @@ jobs:
     name: Deploy staging
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [quality, e2e]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64, offside]
     timeout-minutes: 20
     concurrency:
       group: cloudflare-staging
@@ -127,6 +137,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
