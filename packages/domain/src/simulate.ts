@@ -2449,6 +2449,38 @@ function negotiateOffer(input: SimulationInput, snapshot: DomainSnapshot): Simul
           minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[upgradedRole],
         },
       };
+      // 1.1 offer projections are derived from the promised role.  A ROLE
+      // counter changes that input, so refresh the preview that START_SEASON
+      // will use instead of carrying the original offer's values forward.
+      // The first-contract path supplies managerTrust explicitly in advance(),
+      // because it can distinguish the player's background club; later market
+      // paths use projectOfferSelection's existing current/new-club rules.
+      if (ruleset.offerProjection !== undefined) {
+        const managerTrust =
+          pending.kind === 'OFFERS' && pending.market.reason === 'FIRST_CONTRACT'
+            ? (() => {
+                const background = ruleset.backgrounds.find(
+                  (candidate) => candidate.id === state.player.profile?.backgroundId,
+                );
+                return background?.startTeamId === team.id
+                  ? state.relationships.managerTrust
+                  : ruleset.contractRules.newClubManagerTrust;
+              })()
+            : undefined;
+        const projection = projectOfferSelection({
+          state,
+          ruleset,
+          team,
+          rolePromise: upgradedRole,
+          seasonIndex: state.seasonHistory.length + 1,
+          ...(managerTrust === undefined ? {} : { managerTrust }),
+        });
+        countered = {
+          ...countered,
+          tacticalFitEstimate: projection.tacticalFit,
+          competitorSummary: projection.competitorSummary,
+        };
+      }
     }
     nextOffers = kept.map((candidate) => (candidate.id === offer.id ? countered : candidate));
   } else {
