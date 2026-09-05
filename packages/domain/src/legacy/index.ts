@@ -19,3 +19,21 @@ export {
   type LegacyEndingId,
   type LegacyEndingResolution,
 } from './endings.js';
+export {
+  ArchiveError,
+  createCareerArchiveCore,
+  verifyCareerArchiveCore,
+  planCareerArchiveWrite,
+  type ArchiveArtifacts,
+  type ArchiveCareerBinding,
+  type ArchiveContext,
+  type ArchiveErrorCode,
+  type ArchiveWritePlan,
+  type CareerArchiveCore,
+} from './archive.js';
+export {
+  bindArchiveLegacyVersion,
+  planArchiveLegacyBindingWrite,
+  type ArchiveLegacyBinding,
+  type LegacyDefinitionBinding,
+} from './archive-legacy-binding.js';
