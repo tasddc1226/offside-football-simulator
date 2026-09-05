@@ -125,19 +125,35 @@ export async function loadLocalLegacyResult(
   const archive = await loadLocalCareerArchive(store, careerId, ownerProfileId, resolveArtifacts);
   if (archive === null) return null;
   const artifacts = resolveArtifacts(archive.binding);
-  const stored = await store.transaction('readonly', (tx) =>
-    tx.kv.get<LegacyResult>(legacyResultKey(careerId)),
-  );
-  const result = createLegacyResult(archive, {
-    binding: archive.binding,
-    artifacts,
-  }, legacyPopulationForResult(stored, artifacts), legacyVersionForResult(stored, artifacts));
-  if (
-    stored !== undefined &&
-    canonicalize(stored as unknown as JsonValue) !== canonicalize(result as unknown as JsonValue)
-  )
-    throw new ArchiveError('LEGACY_DEFINITION_CONFLICT');
-  return result;
+  return store.transaction('readwrite', async (tx) => {
+    // Re-check ownership and archive identity immediately before the first derived write.
+    // A concurrent delete/replacement must not leave an orphan Legacy KV record behind.
+    const career = await tx.careers.get(careerId);
+    const currentArchive = await tx.kv.get<CareerArchiveCore>(retirementArchiveKey(careerId));
+    if (
+      career === undefined ||
+      career.ownerProfileId !== ownerProfileId ||
+      (career.status !== 'RETIRED' && career.status !== 'ARCHIVED') ||
+      currentArchive === undefined ||
+      currentArchive.hash !== archive.hash
+    )
+      throw new ArchiveError('LEGACY_DEFINITION_CONFLICT');
+
+    const stored = await tx.kv.get<LegacyResult>(legacyResultKey(careerId));
+    const result = createLegacyResult(
+      archive,
+      { binding: archive.binding, artifacts },
+      legacyPopulationForResult(stored, artifacts),
+      legacyVersionForResult(stored, artifacts),
+    );
+    if (stored !== undefined) {
+      if (canonicalize(stored as unknown as JsonValue) !== canonicalize(result as unknown as JsonValue))
+        throw new ArchiveError('LEGACY_DEFINITION_CONFLICT');
+    } else {
+      await tx.kv.put(legacyResultKey(careerId), result);
+    }
+    return result;
+  });
 }
 
 /** Private local evidence, not a public DTO or server authorization substitute. */

@@ -168,4 +168,25 @@ describe('retirement recovery roundtrip', () => {
     const body = await source.engine.buildSyncBody(source.archive.binding.careerId);
     expect(body).toMatchObject({ retirementLegacyVersion: '1.1.0' });
   });
+
+  it('pins a core-only archive on first 1.1.0 local derivation before sync', async () => {
+    const source = await responseFixture();
+    await source.store.transaction('readwrite', (tx) =>
+      tx.kv.delete(legacyResultKey(source.archive.binding.careerId)),
+    );
+    const derived = await loadLocalLegacyResult(
+      source.store,
+      source.archive.binding.careerId,
+      null,
+      () => VERSIONED_ARTIFACTS,
+    );
+    expect(derived?.legacyVersion).toBe('1.1.0');
+    const stored = await source.store.transaction('readonly', (tx) =>
+      tx.kv.get<ReturnType<typeof createLegacyResult>>(legacyResultKey(source.archive.binding.careerId)),
+    );
+    expect(stored?.legacyVersion).toBe('1.1.0');
+    expect(await source.engine.buildSyncBody(source.archive.binding.careerId)).toMatchObject({
+      retirementLegacyVersion: '1.1.0',
+    });
+  });
 });
