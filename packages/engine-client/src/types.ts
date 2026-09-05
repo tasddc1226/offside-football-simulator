@@ -21,6 +21,8 @@ export type IdempotencyRecord = {
   resultHash: string;
   response: ExecuteSuccess;
   createdAt: string;
+  /** New records bind the ID to its full request. Absent only on pre-Phase-5 local records. */
+  requestHash?: string;
 };
 
 export type EngineCommand = Command & { commandId: string; expectedRevision: number };

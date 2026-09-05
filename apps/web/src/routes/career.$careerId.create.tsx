@@ -26,7 +26,7 @@ import {
   type PreferredFoot,
 } from '@offside/domain';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { activeRuleset as ruleset } from '../engine/content.js';
+import { activeRuleset, rulesetForCareer } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import {
@@ -87,9 +87,7 @@ const FIELD_CLASS =
   'os-input w-full font-os text-os-text disabled:cursor-not-allowed disabled:opacity-60';
 const FIELD_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
 
-const POSITION_GROUPS = positionsByGroup(ruleset.positions);
-
-function isCreationScratch(value: unknown): value is CreationScratch {
+function isCreationScratch(value: unknown, ruleset: typeof activeRuleset): value is CreationScratch {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as { form?: unknown; panel?: unknown };
   if (candidate.panel !== 0 && candidate.panel !== 1 && candidate.panel !== 2) return false;
@@ -105,7 +103,7 @@ function isCreationScratch(value: unknown): value is CreationScratch {
   );
 }
 
-function validateForm(form: FormFields): FieldErrors {
+function validateForm(form: FormFields, ruleset: typeof activeRuleset): FieldErrors {
   const errors: FieldErrors = {};
   const name = validateDraftName(form.name, ruleset.draftRules);
   if (!name.ok) errors.name = name.message;
@@ -121,6 +119,8 @@ function CreatePlayerScreen() {
   const { careerId } = Route.useParams();
   const navigate = useNavigate();
   const query = useCareer(careerId);
+  const ruleset = query.data === undefined ? activeRuleset : rulesetForCareer(query.data.state);
+  const positionGroups = positionsByGroup(ruleset.positions);
   const blocked = useCareerStepGuard(query.data?.state, 'SCR-002');
   const updateDraftMutation = useCareerMutation('updateDraft');
 
@@ -160,7 +160,7 @@ function CreatePlayerScreen() {
       const raw = sessionStorage.getItem(`offside:player-creation:${careerId}`);
       if (raw !== null) {
         const parsed: unknown = JSON.parse(raw);
-        if (isCreationScratch(parsed)) restored = parsed;
+        if (isCreationScratch(parsed, ruleset)) restored = parsed;
       }
     } catch {
       // 손상되거나 사용할 수 없는 scratch는 엔진에 저장된 draft로 안전하게 복구한다.
@@ -203,7 +203,7 @@ function CreatePlayerScreen() {
   }
 
   function validateCurrentPanel(): boolean {
-    const all = validateForm(form);
+    const all = validateForm(form, ruleset);
     const keys: Array<keyof FormFields> = panel === 0
       ? ['name', 'gender', 'nationalityCode', 'preferredFoot']
       : panel === 1 ? ['position'] : ['backgroundId'];
@@ -233,7 +233,7 @@ function CreatePlayerScreen() {
   }
 
   async function handleNext() {
-    const validationErrors = validateForm(form);
+    const validationErrors = validateForm(form, ruleset);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
       if (validationErrors.name) {
@@ -505,9 +505,9 @@ function CreatePlayerScreen() {
             순서에 끼어들지 않게 한다(Radix 기본은 role="tabpanel"에 tabindex="0"을 준다). */}
         <Tabs value={positionGroup} onValueChange={(value) => handlePositionGroupChange(value as PositionGroup)}>
           <TabsList aria-label="포지션 구분">
-            {POSITION_GROUPS.map(({ group }) => <TabsTrigger key={group} value={group}>{POSITION_GROUP_LABELS[group]}</TabsTrigger>)}
+            {positionGroups.map(({ group }) => <TabsTrigger key={group} value={group}>{POSITION_GROUP_LABELS[group]}</TabsTrigger>)}
           </TabsList>
-          {POSITION_GROUPS.map(({ group }) => <TabsContent key={group} value={group} tabIndex={-1} />)}
+          {positionGroups.map(({ group }) => <TabsContent key={group} value={group} tabIndex={-1} />)}
         </Tabs>
         <div className="os-creation-two-up">
           <div className="flex flex-col gap-os-3">
@@ -518,7 +518,7 @@ function CreatePlayerScreen() {
               value={form.position}
               onValueChange={(value) => updateField('position', value as Position)}
             >
-              {(POSITION_GROUPS.find((entry) => entry.group === positionGroup)?.positions ?? []).map((position) => (
+              {(positionGroups.find((entry) => entry.group === positionGroup)?.positions ?? []).map((position) => (
                 <RadioGroupItemRow key={position} value={position} label={POSITION_LABELS[position]} description={POSITION_DESCRIPTIONS[position]} disabled={committing} />
               ))}
             </RadioGroup>

@@ -982,6 +982,12 @@ export const MatchRulesSchema = z
 export const RulesetSchema = z
   .strictObject({
     version: SemverSchema,
+    offerProjection: z
+      .strictObject({
+        version: z.literal('1.1.0'),
+        competitorSeedVersion: z.literal('squad:season-team-v1'),
+      })
+      .optional(),
     positions: z.array(PositionSchema).min(1),
     archetypes: z.array(ArchetypeSchema),
     backgrounds: z.array(BackgroundSchema).min(1),
@@ -1016,6 +1022,20 @@ export const RulesetSchema = z
     marketValueRules: MarketValueRulesSchema,
   })
   .superRefine((ruleset, ctx) => {
+    if (ruleset.version === '1.1.0' && ruleset.offerProjection === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        message: '1.1.0 룰셋은 offerProjection 정책을 명시해야 한다.',
+        path: ['offerProjection'],
+      });
+    }
+    if (ruleset.version === '1.0.0' && ruleset.offerProjection !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        message: '1.0.0 룰셋에는 1.1 전용 offerProjection을 넣을 수 없다.',
+        path: ['offerProjection'],
+      });
+    }
     const archetypeIds = new Set<string>();
     for (const [index, archetype] of ruleset.archetypes.entries()) {
       if (archetypeIds.has(archetype.id)) {

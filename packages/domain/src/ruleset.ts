@@ -384,6 +384,8 @@ export type LeagueCalendar = {
 // D-8: 룰셋 데이터는 콘텐츠 패키지가 소유하고, domain은 이 타입으로 입력만 받는다.
 export type Ruleset = {
   version: string;
+  /** 1.1 only: market previews and season squads share this deterministic stream. */
+  offerProjection?: { version: '1.1.0'; competitorSeedVersion: 'squad:season-team-v1' } | undefined;
   positions: Position[];
   archetypes: Archetype[];
   backgrounds: Background[];

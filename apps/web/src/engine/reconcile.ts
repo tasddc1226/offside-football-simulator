@@ -117,6 +117,7 @@ export async function reconcileAfterRecovery(
         continue;
       }
       const imported = await importCareerFromServer(engine.store, result.data, {
+        retirementArtifacts: (versions) => loadRetirementArtifacts(versions.rulesetVersion, versions.contentPackVersion),
         createdServiceSeasonId,
         now,
       });
@@ -131,3 +132,4 @@ export async function reconcileAfterRecovery(
   await queryClient.invalidateQueries();
   return failed.length > 0 ? { ok: false, failed } : { ok: true };
 }
+import { loadRetirementArtifacts } from '@offside/content';

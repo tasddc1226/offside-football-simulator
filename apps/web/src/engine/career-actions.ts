@@ -325,6 +325,7 @@ export function toStartSeasonPayload(choice: StartSeasonChoice, serviceSeasonId:
     payload: {
       simulationMode: choice.simulationMode,
       serviceSeasonId,
+      legacyLedger: true,
       ...(choice.trainingFocus !== undefined ? { trainingFocus: choice.trainingFocus } : {}),
     },
   };

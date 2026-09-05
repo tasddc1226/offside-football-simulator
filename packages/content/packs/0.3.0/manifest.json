@@ -1,7 +1,8 @@
 {
   "contentPackVersion": "0.3.0",
   "compatibleRulesetVersions": [
-    "1.0.0"
+    "1.0.0",
+    "1.1.0"
   ],
   "clientMinVersion": "0.1.0",
   "playtested": false,

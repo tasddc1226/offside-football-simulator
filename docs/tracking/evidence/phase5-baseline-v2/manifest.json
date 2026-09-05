@@ -1,0 +1,42 @@
+{
+  "kind": "ENGINE_STRESS_BASELINE_NOT_PLAYER_REFERENCE",
+  "reason": "v2 samples KEEP declines that are not offered by the player UI",
+  "sourcePayloadHash": "fca6febd282c5ad3cf3a2ef19e05be5b5405fdf35a525a6a542ab843d60e9468",
+  "generatorCodeHash": "53e392c5481120504e2834a6d506c3574212071a15df9480bc309348bb057187",
+  "evidenceGzipChecksum": "24303f747c58aa10eae520bfc282b7d9f3337ced38dca41e668d457776d26e66",
+  "generatorGzipChecksum": "257dda84c73aecdbd2850b5c3bf25ac38650db95be1aa2b7ada983a5471e4343",
+  "groups": [
+    {
+      "position": "GK",
+      "count": 10000,
+      "maximumScore": 72,
+      "legend": 0,
+      "icon": 0,
+      "remembered": 1103
+    },
+    {
+      "position": "DF",
+      "count": 10000,
+      "maximumScore": 75,
+      "legend": 0,
+      "icon": 1,
+      "remembered": 3658
+    },
+    {
+      "position": "MF",
+      "count": 10000,
+      "maximumScore": 75,
+      "legend": 0,
+      "icon": 1,
+      "remembered": 1241
+    },
+    {
+      "position": "FW",
+      "count": 10000,
+      "maximumScore": 73,
+      "legend": 0,
+      "icon": 0,
+      "remembered": 1685
+    }
+  ]
+}

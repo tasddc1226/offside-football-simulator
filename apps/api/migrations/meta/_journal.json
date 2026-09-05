@@ -29,6 +29,13 @@
       "when": 1788484810068,
       "tag": "0003_gorgeous_gorilla_man",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788590989026,
+      "tag": "0004_mature_micromax",
+      "breakpoints": true
     }
   ]
 }

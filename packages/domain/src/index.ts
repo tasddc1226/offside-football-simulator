@@ -1,8 +1,14 @@
 export const DOMAIN_VERSION = '0.1.0';
 
+export {
+  ArchiveError, createCareerArchiveCore, verifyCareerArchiveCore, planCareerArchiveWrite,
+  type ArchiveArtifacts, type ArchiveContext, type CareerArchiveCore,
+} from './legacy/archive.js';
+
 export { clamp } from './clamp.js';
 export { canonicalize, compareCodePoints, utf8Encode, type JsonValue } from './canonical.js';
 export { sha256Hex, hashState } from './hash.js';
+export { projectOfferSelection, seasonSquadSeed, type OfferProjection } from './offer-projection.js';
 export { seedRng, nextUint32, rollInt, roll100, type RngState } from './rng.js';
 export { rollRange } from './roll-range.js';
 export {
@@ -248,3 +254,9 @@ export {
   stepMatchResultsFor,
   type SeasonMatchBooks,
 } from './season-stats.js';
+export { createLegacyResult, deriveLegacyEvidence, deriveRetirementTags, LEGACY_POLICY, LEGACY_POLICY_110, legacyPolicyForVersion, type LegacyVersion, type LegacyResult, type LegacyReferencePopulation, type LegacyFactor, type LegacySource } from './legacy/result.js';
+export { legacyEndingPresentation, legacyBandPresentation } from './legacy/presentation.js';
+export { selectLegacyDisplayEnding, type LegacyEndingId } from './legacy/endings.js';
+export { initializeNationalityModule, assessNationalityAtSeasonBoundary, resolveNationalityChoice, grantTournamentException, isU23Eligible, type NationalityState } from './legacy/nationality.js';
+export { careerEventChoices, nationalityForCareer, type CareerEventChoice } from './legacy/career-event.js';
+export { assessCareerRetirement, retirementContinuationOptions, retirementDecisionRequired, RETIREMENT_POLICY } from './legacy/career-retirement.js';

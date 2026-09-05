@@ -15,7 +15,7 @@ import {
 import { RETRYABLE_BY_CODE } from '@offside/contracts';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { getProfile, issueRecoveryCode } from '../api/client.js';
-import { activeContentPack, activeRuleset as ruleset } from '../engine/content.js';
+import { activeContentPack, rulesetForCareer } from '../engine/content.js';
 import { recordFunnelReached } from '../engine/funnel.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
@@ -334,6 +334,7 @@ function ConfirmScreen() {
   }
 
   const { state } = query.data;
+  const ruleset = rulesetForCareer(state);
   const draft = state.player.draft;
   const archetype = ruleset.archetypes.find((candidate) => candidate.id === draft.archetypeId);
   const background = ruleset.backgrounds.find((candidate) => candidate.id === draft.backgroundId);

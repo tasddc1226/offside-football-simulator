@@ -35,6 +35,7 @@ export const COMMAND_TYPES = [
   'REJECT_OFFER',
   'LOAN_RETURN',
   'RETIRE',
+  'CAREER_EVENT',
 ] as const;
 
 export const CommandTypeSchema = z.enum(COMMAND_TYPES);
@@ -172,6 +173,7 @@ export const StartSeasonPayloadSchema = z.strictObject({
   simulationMode: z.enum(['FAST', 'CHAPTER']),
   serviceSeasonId: z.string().min(1),
   trainingFocus: TrainingFocusSchema.exactOptional(),
+  legacyLedger: z.boolean().exactOptional(),
 });
 
 // T-2-001 D-25: SETTLE_SEASON payload. 필드 없음(domain Command payload는 `Record<string, never>`).
@@ -182,8 +184,12 @@ export const ResolveRolePayloadSchema = z.strictObject({
   decision: z.enum(['ACCEPT', 'DECLINE']),
 });
 
-/** Phase 2+ 명령(아직 domain에 없음)은 형태를 모르므로 임의 payload를 통과시킨다. */
-const UnknownPayloadSchema = z.record(z.string(), z.unknown());
+// Phase 5 retirement decision. The payload is intentionally closed so the command
+// log and request boundaries cannot silently accept a future or misspelled choice.
+export const RetirePayloadSchema = z.union([z.strictObject({
+  choice: z.enum(['RETIRE', 'COACH_EPILOGUE']),
+}), z.strictObject({ choice: z.enum(['LAST_CONTRACT', 'LOWER_LEAGUE']), offerId: z.string().min(1) })]);
+export const CareerEventPayloadSchema = z.strictObject({ choice: z.enum(['MILITARY_CLUB', 'CAREER_BREAK', 'INTERNATIONAL', 'MENTOR']) });
 
 // T-3-001 D-44: NEGOTIATE payload. 처리기는 T-3-003 전까지 VALIDATION_FAILED만 돌려주지만, 계약
 // 형태는 이 작업이 확정한다.
@@ -220,7 +226,8 @@ export const COMMAND_PAYLOAD_SCHEMAS = {
   ACCEPT_OFFER: AcceptOfferPayloadSchema,
   REJECT_OFFER: RejectOfferPayloadSchema,
   LOAN_RETURN: LoanReturnPayloadSchema,
-  RETIRE: UnknownPayloadSchema,
+  RETIRE: RetirePayloadSchema,
+  CAREER_EVENT: CareerEventPayloadSchema,
 } as const satisfies Record<CommandType, z.ZodTypeAny>;
 
 export type CommandPayloadByType = {
@@ -251,6 +258,7 @@ export const CommandRequestSchema = z.discriminatedUnion('type', [
   commandRequestMember('REJECT_OFFER', COMMAND_PAYLOAD_SCHEMAS.REJECT_OFFER),
   commandRequestMember('LOAN_RETURN', COMMAND_PAYLOAD_SCHEMAS.LOAN_RETURN),
   commandRequestMember('RETIRE', COMMAND_PAYLOAD_SCHEMAS.RETIRE),
+  commandRequestMember('CAREER_EVENT', COMMAND_PAYLOAD_SCHEMAS.CAREER_EVENT),
 ]);
 
 export type CommandRequest = z.infer<typeof CommandRequestSchema>;

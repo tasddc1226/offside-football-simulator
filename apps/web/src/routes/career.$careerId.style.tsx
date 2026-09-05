@@ -13,7 +13,7 @@ import {
 } from '@offside/ui';
 import { RETRYABLE_BY_CODE } from '@offside/contracts';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { activeRuleset as ruleset } from '../engine/content.js';
+import { rulesetForCareer } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { POSITION_LABELS } from '../shared/labels.js';
@@ -68,6 +68,7 @@ function StyleScreen() {
 
   const committing = screenState.kind === 'COMMITTING';
   const position = query.data?.state.player.draft.position;
+  const ruleset = query.data === undefined ? null : rulesetForCareer(query.data.state);
 
   async function handleNext() {
     if (archetypeId === '') {
@@ -124,6 +125,7 @@ function StyleScreen() {
     );
   }
 
+  if (ruleset === null) return null;
   const archetypes = archetypesForPosition(ruleset, position);
 
   return (

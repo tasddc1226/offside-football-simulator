@@ -209,7 +209,7 @@ describe('toStartSeasonPayload', () => {
     const command = toStartSeasonPayload({ simulationMode: 'FAST' }, FALLBACK_SERVICE_SEASON_ID);
     expect(command).toEqual({
       type: 'START_SEASON',
-      payload: { simulationMode: 'FAST', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID },
+      payload: { simulationMode: 'FAST', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID, legacyLedger: true },
     });
   });
 
@@ -217,7 +217,7 @@ describe('toStartSeasonPayload', () => {
     const command = toStartSeasonPayload({ simulationMode: 'CHAPTER', trainingFocus: 'TECHNICAL' }, FALLBACK_SERVICE_SEASON_ID);
     expect(command).toEqual({
       type: 'START_SEASON',
-      payload: { simulationMode: 'CHAPTER', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID, trainingFocus: 'TECHNICAL' },
+      payload: { simulationMode: 'CHAPTER', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID, trainingFocus: 'TECHNICAL', legacyLedger: true },
     });
   });
 });

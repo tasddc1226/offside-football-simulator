@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Button, ScreenIntro, Tabs, TabsContent, TabsList, TabsTrigger } from '@offside/ui';
 import { computeBaseOvr } from '@offside/domain';
-import { activeRuleset } from '../engine/content.js';
+import { rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
 import {
@@ -60,15 +60,16 @@ function AttributesScreen() {
   const { state } = query.data;
   const profile = state.player.profile;
   if (profile === null) return null; // 라우트 loader가 ACTIVE를 보장하지만(=profile 존재), 방어적 fallback.
+  const ruleset = rulesetForCareer(state);
 
-  const currentArchetype = activeRuleset.archetypes.find(
+  const currentArchetype = ruleset.archetypes.find(
     (candidate) => candidate.id === profile.archetypeId,
   );
   if (currentArchetype === undefined) return null;
 
   const computedBaseOvr = computeBaseOvr(state.attributes, currentArchetype.roleWeights);
   const roleWeightPercents = roleWeightPercentEntries(currentArchetype.roleWeights);
-  const previewCandidates = archetypesSharingPosition(activeRuleset, profile.primaryPosition);
+  const previewCandidates = archetypesSharingPosition(ruleset, profile.primaryPosition);
   const defaultPreviewId = previewCandidates.some(
     (candidate) => candidate.id === profile.archetypeId,
   )

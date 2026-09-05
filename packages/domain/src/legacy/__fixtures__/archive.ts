@@ -10,7 +10,7 @@ export function copy<T>(value: T): Mutable<T> {
 
 const settled = runSettledFixture().snapshot;
 
-/** Explicitly synthetic retirement boundary; the real RETIRE command does not exist yet. */
+/** Explicitly synthetic archive-unit-test boundary; actual RETIRE is tested separately. */
 export function archiveFixture(): { snapshot: DomainSnapshot; context: ArchiveContext } {
   const snapshot = copy(settled);
   snapshot.revision++;
