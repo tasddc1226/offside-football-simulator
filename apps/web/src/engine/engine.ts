@@ -11,7 +11,7 @@ import {
   type Simulator,
 } from '@offside/engine-client';
 import { platform } from '../platform/index.js';
-import { ACTIVE_CONTENT_PACK_VERSION, ACTIVE_RULESET_VERSION } from './versions.js';
+import { ACTIVE_RULESET_VERSION, resolveActiveContentPackVersion } from './versions.js';
 
 export type AppEngine = {
   client: EngineClient;
@@ -64,7 +64,7 @@ async function createDefaultAppEngine(): Promise<AppEngine> {
   const worker = new Worker(new URL('@offside/engine-client/worker', import.meta.url), { type: 'module' });
   const simulator = createWorkerSimulator(worker as unknown as Parameters<typeof createWorkerSimulator>[0]);
   const ruleset = loadRuleset(ACTIVE_RULESET_VERSION);
-  const pack = loadContentPack(ACTIVE_CONTENT_PACK_VERSION);
+  const pack = loadContentPack(resolveActiveContentPackVersion());
 
   return createAppEngine({ store, simulator, ruleset, pack });
 }
