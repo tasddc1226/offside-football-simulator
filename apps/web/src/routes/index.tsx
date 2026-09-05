@@ -58,6 +58,17 @@ function displayName(summary: CareerSummary): string {
   return state.player.profile?.name ?? state.player.draft.name ?? '이름 없는 선수';
 }
 
+/** 조회에 성공한 현재 시즌과 생성 시즌의 관계만 표시한다. 과거 시즌의 test 여부는 현재 포인터로
+ * 알 수 없으므로 접두사나 ID 형태로 추론하지 않는다. */
+export function serviceSeasonBadgeLabel(
+  createdServiceSeasonId: string,
+  currentServiceSeason: ServiceSeasonCurrent | undefined,
+): '테스트 시즌' | '이전 시즌' | null {
+  if (currentServiceSeason === undefined) return null;
+  if (createdServiceSeasonId !== currentServiceSeason.id) return '이전 시즌';
+  return currentServiceSeason.isTest ? '테스트 시즌' : null;
+}
+
 function CareerCard({
   summary,
   currentServiceSeason,
@@ -80,9 +91,10 @@ function CareerCard({
   const positionLabel = position ? POSITION_LABELS[position] : '—';
   const syncState = useSyncState(record.id);
   // T-2-012 D-54: 현재 시즌 조회가 아직 없으면(로딩·실패) 판단할 근거가 없으니 배지를 달지 않는다.
-  const isTestArchiveCard =
-    currentServiceSeason !== undefined &&
-    (record.createdServiceSeasonId !== currentServiceSeason.id || currentServiceSeason.isTest);
+  const serviceSeasonBadge = serviceSeasonBadgeLabel(
+    record.createdServiceSeasonId,
+    currentServiceSeason,
+  );
 
   function handleContinue() {
     const target = screenForCareer(state);
@@ -130,13 +142,13 @@ function CareerCard({
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-os-2">
-          {isTestArchiveCard ? (
+          {serviceSeasonBadge ? (
             <span
               data-testid="career-card-test-badge"
               className="rounded-os-s bg-os-surface-2 px-os-2 py-os-1 font-os text-os-text-2"
               style={CAPTION_STYLE}
             >
-              테스트 시즌
+              {serviceSeasonBadge}
             </span>
           ) : null}
           <span
