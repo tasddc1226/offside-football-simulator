@@ -1,0 +1,215 @@
+name: Production Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Read-only preflight, or deploy after all release inputs are final'
+        required: true
+        default: preflight
+        type: choice
+        options: [preflight, deploy]
+      expected_sha:
+        description: 'Exact main commit SHA to inspect or deploy'
+        required: true
+        type: string
+      confirmation:
+        description: 'Deploy only: type DEPLOY_PRODUCTION'
+        required: false
+        type: string
+      season_starts_at:
+        description: 'Deploy only: RFC3339 UTC (for example 2026-09-06T00:00:00Z)'
+        required: false
+        type: string
+      season_ends_at:
+        description: 'Deploy only: RFC3339 UTC (for example 2026-12-31T23:59:59Z)'
+        required: false
+        type: string
+      challenge_set_id:
+        description: 'Deploy only: approved challenge-set identifier'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-production
+  cancel-in-progress: false
+
+jobs:
+  production-release:
+    name: ${{ inputs.mode == 'deploy' && 'Deploy production' || 'Preflight production' }}
+    runs-on: [self-hosted, macOS, ARM64, offside]
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://offside-web.tasddc1569.workers.dev
+    env:
+      PRODUCTION_API_URL: https://offside-api.tasddc1569.workers.dev
+      PRODUCTION_WEB_URL: https://offside-web.tasddc1569.workers.dev
+      SEASON_STARTS_AT: ${{ inputs.season_starts_at }}
+      SEASON_ENDS_AT: ${{ inputs.season_ends_at }}
+      CHALLENGE_SET_ID: ${{ inputs.challenge_set_id }}
+    steps:
+      - name: Require main and explicit deploy confirmation
+        env:
+          RELEASE_MODE: ${{ inputs.mode }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main" || { echo "Production releases must run from main." >&2; exit 1; }
+          if [ "$RELEASE_MODE" = "deploy" ] && [ "$CONFIRMATION" != "DEPLOY_PRODUCTION" ]; then
+            echo "Deploy confirmation did not match DEPLOY_PRODUCTION." >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require exact current main SHA
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          case "$EXPECTED_SHA" in
+            *[!0-9a-f]*|'') echo "expected_sha must be a lowercase hexadecimal commit SHA." >&2; exit 1 ;;
+          esac
+          test "${#EXPECTED_SHA}" -eq 40 || { echo "expected_sha must contain 40 characters." >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA" || { echo "Checked-out HEAD differs from expected_sha." >&2; exit 1; }
+          MAIN_SHA="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          test "$MAIN_SHA" = "$EXPECTED_SHA" || { echo "Current remote main differs from expected_sha." >&2; exit 1; }
+
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.tool_cache }}/offside-pnpm
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
+
+      - name: Validate release inputs and critical compatibility
+        env:
+          REQUIRE_PROPOSAL: ${{ inputs.mode == 'deploy' }}
+        run: |
+          node tooling/scripts/production-release.mjs proposal
+          pnpm --filter @offside/scripts exec vitest run production-release.test.mjs
+          pnpm --filter @offside/content exec vitest run src/legacy/load-population.test.ts src/legacy/validate-population.test.ts
+          pnpm --filter @offside/web exec vitest run src/engine/versions.test.ts
+          pnpm --filter @offside/api exec vitest run src/routes/service-seasons.test.ts src/db/migrations.test.ts
+          pnpm --filter @offside/api typecheck
+          pnpm --filter @offside/web typecheck
+
+      - name: Build production web before remote writes
+        run: |
+          VITE_API_BASE_URL="$PRODUCTION_API_URL" pnpm --filter @offside/web build
+          pnpm --filter @offside/web check:bundle
+
+      - name: Capture recovery bookmark and inspect current schema
+        id: schema
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mkdir -p .release
+          pnpm --filter @offside/api exec wrangler d1 time-travel info offside-production --env production --json > .release/time-travel.json
+          node tooling/scripts/production-release.mjs bookmark .release/time-travel.json
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name" > .release/schema.json
+          echo "has_service_seasons=$(node tooling/scripts/production-release.mjs schema .release/schema.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Inspect existing service-season metadata
+        if: steps.schema.outputs.has_service_seasons == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test FROM service_seasons ORDER BY id" > .release/seasons.json
+          node tooling/scripts/production-release.mjs seasons .release/seasons.json
+
+      - name: Inspect aggregate counts before remote writes
+        if: steps.schema.outputs.has_service_seasons == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json --command \
+            "SELECT 'profiles' table_name, COUNT(*) row_count FROM profiles UNION ALL SELECT 'sessions', COUNT(*) FROM sessions UNION ALL SELECT 'careers', COUNT(*) FROM careers UNION ALL SELECT 'snapshots', COUNT(*) FROM snapshots UNION ALL SELECT 'command_log', COUNT(*) FROM command_log UNION ALL SELECT 'idempotency', COUNT(*) FROM idempotency UNION ALL SELECT 'auth_attempts', COUNT(*) FROM auth_attempts UNION ALL SELECT 'audit_log', COUNT(*) FROM audit_log UNION ALL SELECT 'service_seasons', COUNT(*) FROM service_seasons UNION ALL SELECT 'analytics_events', COUNT(*) FROM analytics_events UNION ALL SELECT 'career_archives', COUNT(*) FROM career_archives" > .release/counts-before.json
+          node tooling/scripts/production-release.mjs counts .release/counts-before.json
+
+      - name: Apply production migrations
+        if: inputs.mode == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm --filter @offside/api db:migrate:production
+
+      - name: Inspect aggregate counts after migration
+        if: inputs.mode == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json --command \
+            "SELECT 'profiles' table_name, COUNT(*) row_count FROM profiles UNION ALL SELECT 'sessions', COUNT(*) FROM sessions UNION ALL SELECT 'careers', COUNT(*) FROM careers UNION ALL SELECT 'snapshots', COUNT(*) FROM snapshots UNION ALL SELECT 'command_log', COUNT(*) FROM command_log UNION ALL SELECT 'idempotency', COUNT(*) FROM idempotency UNION ALL SELECT 'auth_attempts', COUNT(*) FROM auth_attempts UNION ALL SELECT 'audit_log', COUNT(*) FROM audit_log UNION ALL SELECT 'service_seasons', COUNT(*) FROM service_seasons UNION ALL SELECT 'analytics_events', COUNT(*) FROM analytics_events UNION ALL SELECT 'career_archives', COUNT(*) FROM career_archives" > .release/counts-after.json
+          node tooling/scripts/production-release.mjs counts .release/counts-after.json
+
+      - name: Plan and insert the production service season
+        if: inputs.mode == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SEASON_SQL_PATH: ${{ github.workspace }}/.release/season-insert.sql
+        run: |
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test FROM service_seasons WHERE status = 'ACTIVE' OR id = 'svc_season_1' ORDER BY id" > .release/active-before.json
+          ACTION="$(node tooling/scripts/production-release.mjs plan .release/active-before.json)"
+          if [ "$ACTION" = "insert" ]; then
+            pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --file "$SEASON_SQL_PATH" --yes >/dev/null
+          fi
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test FROM service_seasons WHERE status = 'ACTIVE' OR id = 'svc_season_1' ORDER BY id" > .release/active-after.json
+          VERIFY_ACTION="$(node tooling/scripts/production-release.mjs plan .release/active-after.json)"
+          test "$VERIFY_ACTION" = "noop" || { echo "Production season verification failed." >&2; exit 1; }
+
+      - name: Deploy production API and web
+        if: inputs.mode == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm --filter @offside/api deploy:production
+          pnpm --filter @offside/web deploy:production
+
+      - name: Verify production health, season, and exact CORS
+        if: inputs.mode == 'deploy'
+        run: |
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_API_URL/v1/health" >/dev/null
+          CURRENT_JSON="$(curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors -H "Origin: $PRODUCTION_WEB_URL" "$PRODUCTION_API_URL/v1/service-seasons/current")"
+          CURRENT_JSON="$CURRENT_JSON" node -e '
+            const value = JSON.parse(process.env.CURRENT_JSON ?? "{}").data;
+            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== "1.1.0" || value?.contentPackVersion !== "0.3.0" || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== process.env.SEASON_ENDS_AT) throw new Error("Unexpected production service-season response.");
+          '
+          ALLOWED_ORIGIN="$(curl --fail --silent --show-error -D - -o /dev/null -H "Origin: $PRODUCTION_WEB_URL" "$PRODUCTION_API_URL/v1/service-seasons/current" | tr -d '\r' | awk -F ': ' 'tolower($1) == "access-control-allow-origin" { print $2 }')"
+          test "$ALLOWED_ORIGIN" = "$PRODUCTION_WEB_URL"
+          DENIED_ORIGIN="$(curl --fail --silent --show-error -D - -o /dev/null -H "Origin: https://example.invalid" "$PRODUCTION_API_URL/v1/service-seasons/current" | tr -d '\r' | awk -F ': ' 'tolower($1) == "access-control-allow-origin" { print $2 }')"
+          test -z "$DENIED_ORIGIN"
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_WEB_URL/" >/dev/null
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-${{ inputs.mode }}-${{ inputs.expected_sha }}
+          path: |
+            .release/time-travel.json
+            .release/schema.json
+            .release/counts-before.json
+            .release/counts-after.json
+            .release/seasons.json
+            .release/active-before.json
+            .release/active-after.json
+          if-no-files-found: ignore
+          retention-days: 30
