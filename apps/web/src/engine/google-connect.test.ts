@@ -37,4 +37,24 @@ describe('prepareGoogleConnect', () => {
     getStateMock.mockReturnValue({ kind: 'FAILED', error: { code: 'UNKNOWN', message: '실패' } });
     await expect(prepareGoogleConnect()).resolves.toMatchObject({ ok: false });
   });
+
+  it('미전송 진행이 CAREER_NOT_OWNED로 막힌 경우에만 소유권 회복 OAuth를 허용한다', async () => {
+    listCareersMock.mockResolvedValue([{ id: 'car_1', revision: 5, lastSyncedRevision: 4 }]);
+    getStateMock.mockReturnValue({
+      kind: 'FAILED',
+      error: { code: 'CAREER_NOT_OWNED', message: '소유자가 아닙니다.' },
+    });
+
+    await expect(prepareGoogleConnect()).resolves.toEqual({ ok: true });
+  });
+
+  it('미전송 진행의 일반 서버 오류는 계속 OAuth를 막는다', async () => {
+    listCareersMock.mockResolvedValue([{ id: 'car_1', revision: 5, lastSyncedRevision: 4 }]);
+    getStateMock.mockReturnValue({
+      kind: 'FAILED',
+      error: { code: 'SERVICE_UNAVAILABLE', message: '실패' },
+    });
+
+    await expect(prepareGoogleConnect()).resolves.toMatchObject({ ok: false });
+  });
 });
