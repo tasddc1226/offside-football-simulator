@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   createHeaders,
+  createHeadMarkup,
   createRobotsTxt,
   createSitemapXml,
   parsePublicSiteUrl,
@@ -12,6 +13,15 @@ test('accepts only an HTTPS origin', () => {
   assert.equal(parsePublicSiteUrl('https://play.example.com/'), 'https://play.example.com');
   assert.equal(parsePublicSiteUrl('http://play.example.com'), undefined);
   assert.equal(parsePublicSiteUrl('https://play.example.com/path'), undefined);
+});
+
+test('brand discovery uses the versioned approved flag assets', () => {
+  const head = createHeadMarkup({ origin: undefined, indexingEnabled: false });
+  assert.match(head, /offside-flag-v5-64\.png/);
+  assert.match(head, /offside-flag-v5-180\.png/);
+  assert.match(head, /og-offside-flag-v5\.png/);
+  assert.match(head, /site\.webmanifest/);
+  assert.doesNotMatch(head, /favicon\.svg/);
 });
 
 test('indexing is opt-in and production-only', () => {

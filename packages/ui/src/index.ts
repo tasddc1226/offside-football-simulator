@@ -1,5 +1,7 @@
 export { Button, buttonClassName, buttonStyle } from './components/Button.js';
 export type { ButtonProps, ButtonVariant } from './components/Button.js';
+export { BrandMark } from './components/BrandMark.js';
+export type { BrandMarkProps } from './components/BrandMark.js';
 export { Card } from './components/Card.js';
 export type { CardProps } from './components/Card.js';
 export { CareerTimeline } from './components/CareerTimeline.js';

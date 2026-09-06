@@ -1,6 +1,12 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+
+const BRAND_SOURCE = fileURLToPath(
+  new URL('../brand/offside-app-icon-flag-v5.png', import.meta.url),
+);
+const BRAND_VERSION = 'v5';
 
 export const PUBLIC_PAGES = {
   '/': {
@@ -68,7 +74,8 @@ export function createHeadMarkup(config, path = '/', forceNoIndex = false) {
       ? 'index, follow'
       : 'noindex, nofollow';
   const canonical = forceNoIndex ? undefined : absoluteUrl(config.origin, path);
-  const image = config.origin ? `${config.origin}/og-offside.png` : '/og-offside.png';
+  const imagePath = `/og-offside-flag-${BRAND_VERSION}.png`;
+  const image = config.origin ? `${config.origin}${imagePath}` : imagePath;
   return `<!-- offside-seo:start --><script>document.documentElement.dataset.publicRobots=${JSON.stringify(robots)}</script><meta name="description" content="${escapeHtml(page.description)}" />
     <meta name="robots" content="${robots}" />
     <meta property="og:type" content="website" /><meta property="og:locale" content="ko_KR" /><meta property="og:site_name" content="OFFSIDE" />
@@ -76,7 +83,9 @@ export function createHeadMarkup(config, path = '/', forceNoIndex = false) {
     <meta property="og:image" content="${escapeHtml(image)}" /><meta property="og:image:width" content="1200" /><meta property="og:image:height" content="630" />
     ${canonical ? `<meta property="og:url" content="${escapeHtml(canonical)}" /><link rel="canonical" href="${escapeHtml(canonical)}" />` : ''}
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" /><link rel="icon" href="/favicon.png" type="image/png" /><!-- offside-seo:end -->`;
+    <link rel="icon" href="/brand/offside-flag-${BRAND_VERSION}-64.png" type="image/png" sizes="64x64" />
+    <link rel="apple-touch-icon" href="/brand/offside-flag-${BRAND_VERSION}-180.png" sizes="180x180" />
+    <link rel="manifest" href="/site.webmanifest" /><!-- offside-seo:end -->`;
 }
 export function createRobotsTxt({ origin, indexingEnabled }) {
   return !indexingEnabled || !origin
@@ -113,15 +122,58 @@ function pageHtml(baseHtml, config, path, body, forceNoIndex = false) {
     );
 }
 async function createBrandAssets(outputDirectory) {
-  const ball = `<circle cx="32" cy="32" r="26" fill="none" stroke="currentColor" stroke-width="4"/><path d="m32 20 11.4 8.4-4.4 13.2H25l-4.4-13.2L32 20Z" fill="currentColor"/><path d="M32 6v14M8 24l12.6 4.4M16.6 53.2 25 41.6m22.4 11.6L39 41.6M56 24l-12.6 4.4" fill="none" stroke="currentColor" stroke-width="4"/>`;
-  const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" color="#91bbff"><rect width="64" height="64" rx="14" fill="#121b28"/>${ball}</svg>`;
-  const card = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#121b28"/><g transform="translate(95 219) scale(3)" color="#91bbff">${ball}</g><text x="340" y="298" fill="#f2f5f8" font-family="Arial,sans-serif" font-size="112" font-weight="800">OFFSIDE</text><text x="346" y="375" fill="#91bbff" font-family="Arial,sans-serif" font-size="42">FOOTBALL CAREER STORY</text></svg>`;
-  await writeFile(join(outputDirectory, 'favicon.svg'), favicon);
-  await sharp(Buffer.from(favicon))
-    .resize(64, 64)
+  const sizes = [64, 180, 192, 512];
+  const resized = new Map();
+  for (const size of sizes) {
+    const buffer = await sharp(BRAND_SOURCE).resize(size, size).png().toBuffer();
+    resized.set(size, buffer);
+    await writeFile(
+      join(outputDirectory, 'brand', `offside-flag-${BRAND_VERSION}-${size}.png`),
+      buffer,
+    );
+  }
+  const favicon64 = resized.get(64);
+  const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><image width="64" height="64" href="data:image/png;base64,${favicon64.toString('base64')}"/></svg>`;
+  await writeFile(join(outputDirectory, 'favicon.svg'), faviconSvg);
+  await writeFile(join(outputDirectory, 'favicon.png'), favicon64);
+  const ogPath = join(outputDirectory, `og-offside-flag-${BRAND_VERSION}.png`);
+  await sharp({ create: { width: 1200, height: 630, channels: 4, background: '#101722' } })
+    .composite([
+      { input: await sharp(BRAND_SOURCE).resize(260, 260).png().toBuffer(), left: 84, top: 185 },
+      {
+        input: Buffer.from(
+          `<svg width="760" height="260"><text x="0" y="112" fill="#f3f6fa" font-family="Arial,sans-serif" font-size="112" font-weight="800">OFFSIDE</text><text x="4" y="184" fill="#8ebcf0" font-family="Arial,sans-serif" font-size="40">FOOTBALL CAREER STORY</text></svg>`,
+        ),
+        left: 390,
+        top: 192,
+      },
+    ])
     .png()
-    .toFile(join(outputDirectory, 'favicon.png'));
-  await sharp(Buffer.from(card)).png().toFile(join(outputDirectory, 'og-offside.png'));
+    .toFile(ogPath);
+  await writeFile(join(outputDirectory, 'og-offside.png'), await readFile(ogPath));
+  await writeFile(
+    join(outputDirectory, 'site.webmanifest'),
+    JSON.stringify({
+      name: 'OFFSIDE',
+      short_name: 'OFFSIDE',
+      start_url: '/',
+      display: 'standalone',
+      background_color: '#101722',
+      theme_color: '#101722',
+      icons: [
+        {
+          src: `/brand/offside-flag-${BRAND_VERSION}-192.png`,
+          sizes: '192x192',
+          type: 'image/png',
+        },
+        {
+          src: `/brand/offside-flag-${BRAND_VERSION}-512.png`,
+          sizes: '512x512',
+          type: 'image/png',
+        },
+      ],
+    }),
+  );
 }
 export function seoPlugin(config) {
   let outputDirectory = 'dist';
@@ -163,6 +215,7 @@ export function seoPlugin(config) {
       if (config.indexingEnabled && config.origin)
         await writeFile(sitemap, createSitemapXml(config.origin));
       else await rm(sitemap, { force: true });
+      await mkdir(join(outputDirectory, 'brand'), { recursive: true });
       await createBrandAssets(outputDirectory);
     },
   };

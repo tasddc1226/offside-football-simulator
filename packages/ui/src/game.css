@@ -84,6 +84,13 @@ select {
 .os-brand svg {
   color: var(--os-accent);
 }
+.os-brand-mark {
+  display: block;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 6px;
+}
 .os-nav-settings {
   display: inline-flex;
   align-items: center;

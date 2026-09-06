@@ -1,5 +1,5 @@
 // 루트 레이아웃. SCR ID 없음: PageShell·QueryClientProvider·not-found 안내를 담당한다.
-import { buttonClassName, buttonStyle, EmptyState, FootballMark, PageShell } from '@offside/ui';
+import { BrandMark, buttonClassName, buttonStyle, EmptyState, PageShell } from '@offside/ui';
 import { QueryClientProvider, useIsMutating } from '@tanstack/react-query';
 import { createRootRoute, Link, Outlet, useRouterState } from '@tanstack/react-router';
 import { queryClient } from '../shared/query-client.js';
@@ -66,12 +66,12 @@ function GameNavigation() {
       <nav className="os-app-nav" aria-label="게임 메뉴">
         {inCareer ? (
           <span className="os-brand">
-            <FootballMark />
+            <BrandMark />
             <span>OFFSIDE</span>
           </span>
         ) : inPublicInfo ? (
           <a href="/" className="os-brand" aria-label="오프사이드 홈">
-            <FootballMark />
+            <BrandMark />
             <span>OFFSIDE</span>
           </a>
         ) : (
@@ -84,7 +84,7 @@ function GameNavigation() {
               if (mutating) event.preventDefault();
             }}
           >
-            <FootballMark />
+            <BrandMark />
             <span>OFFSIDE</span>
           </Link>
         )}
