@@ -6,7 +6,7 @@ gameplay path, a model of real players, or a source of legal or eligibility clai
 
 ## Target and status
 
-The eventual publish target is 10,000 independently seeded careers in each of
+The published v5 population contains 10,000 independently seeded careers in each of
 `GK`, `DF`, `MF`, and `FW` (40,000 total). Requested lengths are stratified from
 1 through 20 seasons: row `i` requests `1 + (i mod --seasons)` seasons. Realized
 seasons may be shorter when the engine requires retirement.
@@ -26,8 +26,9 @@ The v2 40,000-career run is retained as engine stress/before-change evidence, **
 as a publishable player reference**. A later UI audit found that it sometimes
 declines a KEEP proposal, while the actual screen only offers ACCEPT/confirmation.
 Its commands are engine-valid, but this is an important player-policy mismatch.
-No official reference population has been published. Original band goals remain
-unchanged; interim smoke or parity output is not a balance pass.
+At that historical baseline stage no official reference population was published.
+The final v5 publication is recorded below. Interim smoke or parity output is not
+substituted for that release evidence.
 
 The complete v2 run finished in 3,261,059 ms. Retained evidence and its exact frozen
 generator are compressed under `evidence/phase5-baseline-v2/`, with checksums and
@@ -170,7 +171,7 @@ through 20). Normal wall time was **43.2665s**; accelerated wall time was
 matched exactly. Domain SHA-256/UTF-8 vectors also passed for ASCII, Korean, emoji,
 and an unpaired surrogate.
 
-The frozen accelerated bundle used by the current full run has hash:
+The frozen accelerated bundle used by the historical v2 full run had hash:
 
 ```text
 53e392c5481120504e2834a6d506c3574212071a15df9480bc309348bb057187
@@ -182,8 +183,8 @@ checkpoints are independently validated before publication.
 
 ## Limitations and disclosure
 
-The v2 policy improves registered-content and strategy coverage, but remains a
-declared synthetic sampling policy. It is not an actual-user distribution and must
+The published v5 policy extends the registered-content and strategy coverage but
+remains a declared synthetic sampling policy. It is not an actual-user distribution and must
 not be presented as one. Negotiation and cross-group position changes remain
 unsampled by design. Band goals remain the product target; scores are not
 normalized or retrofitted to meet them. Any policy, ruleset, content-pack, or
