@@ -49,8 +49,8 @@ jobs:
       PRODUCTION_API_URL: https://api.offside-lab.com
       PRODUCTION_WEB_URL: https://offside-lab.com
       VITE_PUBLIC_SITE_URL: https://offside-lab.com
-      # Keep false until DNS, both OAuth callbacks, recovery, and legacy/new-host QA are confirmed.
-      VITE_ENABLE_SEARCH_INDEXING: 'false'
+      # Enabled after DNS, both OAuth callbacks, recovery, and legacy/new-host QA were confirmed.
+      VITE_ENABLE_SEARCH_INDEXING: 'true'
       SEASON_STARTS_AT: ${{ inputs.season_starts_at }}
       SEASON_ENDS_AT: ${{ inputs.season_ends_at }}
       CHALLENGE_SET_ID: ${{ inputs.challenge_set_id }}

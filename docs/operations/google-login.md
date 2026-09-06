@@ -1,5 +1,17 @@
 # Google 로그인 운영 연결
 
+## 사용자 도메인 추가 (2026-09-06)
+
+개인 계정의 `offside-football-prod` → `OFFSIDE Production Web`에서 아래 callback 두 개를
+저장하고 페이지를 다시 열어 유지되는 것을 확인했다. 클라이언트/secret/scopes를 교체하지 않았다.
+
+- 기존: `https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback`
+- 신규: `https://api.offside-lab.com/v1/auth/google/callback`
+
+승인된 도메인에 `offside-lab.com`과 기존 `tasddc1569.workers.dev`가 함께 표시된다.
+전환 배포와 실제 인증 결과는 [사용자 도메인 전환](custom-domain.md)을 참고한다.
+아래 최초 도입의 운영 통과 기록은 기존 주소 기준이며 신규 주소 검증과 구분한다.
+
 ## 상태와 승인 범위
 
 2026-09-06 사용자가 개인 계정 `tasddc1569@gmail.com`에 오프사이드 전용 Google Cloud
