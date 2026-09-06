@@ -33,7 +33,7 @@ import { useScreenState } from '../shared/screen-state.js';
 import { useUiStore } from '../shared/ui-store.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
-import { CreationCard } from '../shared/player-creation-ui.js';
+import { PlayerCard } from '../shared/PlayerCard.js';
 import { GameCompletionTransition, GamePending } from '../shared/game-presentation.js';
 import { SCREEN_ROUTES } from '../routes.js';
 
@@ -364,43 +364,32 @@ function ConfirmScreen() {
         description="당신이 만든 선수 카드입니다. 준비가 됐다면 첫 휘슬을 울리세요."
       />
 
-      <CreationCard
+      <PlayerCard
+        eyebrow="PLAYER PROFILE"
         name={draft.name}
-        team={currentTeamName(state, ruleset, teamNameOverrides)}
-        position={POSITION_LABELS[draft.position]}
-        archetype={archetype.name}
-        foot={PREFERRED_FOOT_LABELS[draft.preferredFoot]}
-        nationality={
-          ruleset.nationalities.find((item) => item.code === draft.nationalityCode)?.name ??
-          draft.nationalityCode ??
-          '—'
-        }
-      >
-        <dl className="os-creation-card-details">
-          <div className="flex justify-between gap-os-4">
-            <dt>성별</dt>
-            <dd>{GENDER_LABELS[draft.gender]}</dd>
-          </div>
-          <div className="flex justify-between gap-os-4">
-            <dt>출발 배경</dt>
-            <dd>{background.name}</dd>
-          </div>
-          <div className="flex justify-between gap-os-4">
-            <dt>현재 상황</dt>
-            <dd>{opening?.title ?? '다음 기회 준비'}</dd>
-          </div>
-          <div className="flex justify-between gap-os-4">
-            <dt>스타일의 주요 무기</dt>
-            <dd>{attributeLabelList(topAttributeKeys(archetype, 3))}</dd>
-          </div>
-          <div className="flex justify-between gap-os-2">
-            <dt>룰셋 · 콘텐츠 팩</dt>
-            <dd className="os-num">
-              {record.rulesetVersion} / {record.contentPackVersion}
-            </dd>
-          </div>
-        </dl>
-      </CreationCard>
+        subtitle={`${POSITION_LABELS[draft.position]} · ${archetype.name}`}
+        rows={[
+          { label: '소속', value: currentTeamName(state, ruleset, teamNameOverrides) },
+          {
+            label: '국적',
+            value:
+              ruleset.nationalities.find((item) => item.code === draft.nationalityCode)?.name ??
+              draft.nationalityCode ??
+              '—',
+          },
+          { label: '주발', value: PREFERRED_FOOT_LABELS[draft.preferredFoot] },
+          { label: '선호 위치', value: POSITION_LABELS[draft.position] },
+          { label: '성별', value: GENDER_LABELS[draft.gender] },
+          { label: '출발 배경', value: background.name },
+          { label: '현재 상황', value: opening?.title ?? '다음 기회 준비' },
+          { label: '스타일의 주요 무기', value: attributeLabelList(topAttributeKeys(archetype, 3)) },
+          {
+            label: '룰셋 · 콘텐츠 팩',
+            value: `${record.rulesetVersion} / ${record.contentPackVersion}`,
+            numeric: true,
+          },
+        ]}
+      />
       <p className="os-creation-note">
         선호 포지션과 플레이 스타일은 고정된 출전 역할이나 결과를 보장하지 않습니다. 시작한 뒤에는
         이 선수 정보를 되돌릴 수 없어요.

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import type { NegotiationAsk, Offer } from '@offside/domain';
 import { Button, Card, ErrorState, ScreenIntro, TeamBadge } from '@offside/ui';
+import { PlayerCard } from '../shared/PlayerCard.js';
 import { recordFunnelReached } from '../engine/funnel.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -47,6 +48,7 @@ type FirstContractCommit = {
   wage: string;
   seasons: number;
   playerName: string;
+  shirtNumber: number;
 };
 
 export const Route = createFileRoute('/career/$careerId/contract')({
@@ -178,26 +180,22 @@ function ContractScreen() {
   const { record, state } = query.data;
   const pending = state.pending;
   if (firstContractCommit !== null) {
-    const committedIdentity = getTeamIdentity(firstContractCommit.teamId);
     return (
       <div className="os-screen" aria-live="polite">
         <ScreenIntro eyebrow="계약 체결 완료" title="프로의 첫 유니폼" description={`${firstContractCommit.playerName} 선수의 첫 프로 계약이 저장되었습니다.`} />
-        <section className="os-panel flex flex-col gap-os-5" aria-labelledby="signed-contract-heading">
-          <div>
-            <p className="os-eyebrow">WELCOME TO</p>
-            <h2 id="signed-contract-heading" className="os-section-title flex items-center gap-os-2">
-              <TeamBadge initials={committedIdentity.initials} colorVar={committedIdentity.colorVar} size="m" />
-              {firstContractCommit.teamName}
-            </h2>
-          </div>
-          <dl className="grid grid-cols-2 gap-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
-            <div><dt>리그</dt><dd className="font-semibold text-os-text">{firstContractCommit.league}</dd></div>
-            <div><dt>역할</dt><dd className="font-semibold text-os-text">{firstContractCommit.role}</dd></div>
-            <div><dt>주급</dt><dd className="os-num font-semibold text-os-text">{firstContractCommit.wage}</dd></div>
-            <div><dt>기간</dt><dd className="os-num font-semibold text-os-text">{firstContractCommit.seasons}시즌</dd></div>
-          </dl>
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>확정된 계약 내용은 커리어 기록에 그대로 남습니다.</p>
-        </section>
+        <PlayerCard
+          eyebrow="WELCOME TO"
+          name={firstContractCommit.playerName}
+          team={{ id: firstContractCommit.teamId, name: firstContractCommit.teamName }}
+          shirtNumber={firstContractCommit.shirtNumber}
+          rows={[
+            { label: '리그', value: firstContractCommit.league },
+            { label: '역할', value: firstContractCommit.role },
+            { label: '주급', value: firstContractCommit.wage, numeric: true },
+            { label: '기간', value: `${firstContractCommit.seasons}시즌`, numeric: true },
+          ]}
+        />
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>확정된 계약 내용은 커리어 기록에 그대로 남습니다.</p>
         <div className="os-action-dock">
           <Button variant="primary" onClick={() => void navigate({ to: '/career/$careerId', params: { careerId }, search: { signed: true }, replace: true })}>커리어 시작</Button>
         </div>
@@ -358,6 +356,7 @@ function ContractScreen() {
           wage: formatKrw(committed.wageMinorPerWeek),
           seasons: committed.lengthSeasons,
           playerName: result.domainSnapshot.state.player.profile?.name ?? '선수',
+          shirtNumber: committed.shirtNumber,
         });
       } else {
         operationRef.current = null;
