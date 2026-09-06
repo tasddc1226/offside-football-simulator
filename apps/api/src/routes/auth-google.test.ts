@@ -159,6 +159,17 @@ describe('GET /v1/auth/google/start', () => {
     await ctx.dispose();
   });
 
+  it.each([
+    ['https://api.offside-lab.com', 'https://offside-lab.com'],
+    ['https://offside-api.tasddc1569.workers.dev', 'https://offside-web.tasddc1569.workers.dev'],
+  ])('production callback on %s returns only to its paired web origin', async (apiOrigin, webOrigin) => {
+    const app = createApp();
+    const env = { ...ctx.env, ENVIRONMENT: 'production' };
+    const res = await app.request(`${apiOrigin}/v1/auth/google/callback`, {}, env);
+    expect(res.status).toBe(302);
+    expect(new URL(res.headers.get('Location') ?? '').origin).toBe(webOrigin);
+  });
+
   it('302, offside_oauth 쿠키(HttpOnly·로컬은 Secure 없음·Path 제한), 가짜 콜백으로 리다이렉트', async () => {
     const { cookie } = await issueCookie(ctx);
     const app = createApp();
@@ -198,6 +209,30 @@ describe('GET /v1/auth/google/start', () => {
     expect(location.searchParams.get('code_challenge_method')).toBe('S256');
     expect(location.searchParams.get('code_challenge')).toBeTruthy();
     expect(location.searchParams.get('scope')).toContain('email');
+  });
+
+  it.each([
+    ['https://api.offside-lab.com', 'https://api.offside-lab.com/v1/auth/google/callback'],
+    ['https://offside-api.tasddc1569.workers.dev', 'https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback'],
+  ])('production host %s uses only its paired Google callback', async (apiOrigin, redirectUri) => {
+    const { cookie } = await issueCookie(ctx);
+    const app = createApp();
+    const env = withoutGoogleFake(ctx.env, {
+      ENVIRONMENT: 'production',
+      GOOGLE_CLIENT_ID: 'test-client-id',
+      GOOGLE_CLIENT_SECRET: 'test-secret',
+    });
+    const res = await app.request(`${apiOrigin}/v1/auth/google/start`, { headers: { Cookie: cookie } }, env);
+    expect(res.status).toBe(302);
+    expect(new URL(res.headers.get('Location') ?? '').searchParams.get('redirect_uri')).toBe(redirectUri);
+  });
+
+  it('rejects Google auth on an unknown production API hostname', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const app = createApp();
+    const env = withoutGoogleFake(ctx.env, { ENVIRONMENT: 'production', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'secret' });
+    const res = await app.request('https://unknown.example/v1/auth/google/start', { headers: { Cookie: cookie } }, env);
+    expect(res.status).toBe(503);
   });
 
   it('클라이언트 ID 없이 arctic 경로면 503(앱은 U-003 없이도 뜬다)', async () => {

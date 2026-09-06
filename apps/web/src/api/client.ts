@@ -24,8 +24,12 @@ import {
   type RecoverProfileResponse,
   type ServiceSeasonCurrent,
 } from '@offside/contracts';
+import { resolveApiBaseUrl } from './base-url.js';
 
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8787';
+export const API_BASE_URL = resolveApiBaseUrl(
+  import.meta.env.VITE_API_BASE_URL as string | undefined,
+  typeof window === 'undefined' ? undefined : window.location.hostname,
+);
 
 export type ApiErrorCode = ErrorCode | 'NETWORK_ERROR' | 'INVALID_RESPONSE';
 export type ApiError = { code: ApiErrorCode; message: string; retryable: boolean; details?: unknown };

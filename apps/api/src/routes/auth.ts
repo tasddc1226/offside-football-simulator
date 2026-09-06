@@ -21,6 +21,7 @@ import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { moveCareersAndRotateWebSession } from '../profile/merge.js';
 import { resolveGoogleCallback } from '../profile/google-link.js';
+import { resolveRequestHostPair } from '../production-hosts.js';
 
 /** D-21: 시간당 30회. `auth_attempts`의 시간 윈도는 RATE_LIMIT_WINDOW_MS(1시간)를 그대로 쓴다. */
 const GOOGLE_START_RATE_LIMIT_MAX = 30;
@@ -46,7 +47,11 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
   });
 
   app.get('/v1/auth/google/start', requireProfile, async (c) => {
-    const oidc = selectGoogleOidc(c.env);
+    const hostPair = resolveRequestHostPair(c.req.url, c.env);
+    const oidc = hostPair === null ? null : selectGoogleOidc({
+      ...c.env,
+      GOOGLE_REDIRECT_URI: hostPair.googleRedirectUri,
+    });
     if (oidc === null) {
       throw new AppError({
         code: 'SERVICE_UNAVAILABLE',
@@ -82,11 +87,16 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/auth/google/callback', async (c) => {
     const now = new Date().toISOString();
     const local = isLocalEnv(c.env);
+    const hostPair = resolveRequestHostPair(c.req.url, c.env);
+    if (hostPair === null) {
+      throw new AppError({ code: 'SERVICE_UNAVAILABLE', message: 'Google 로그인을 사용할 수 없습니다.' });
+    }
+    const callbackWebOrigin = hostPair.webOrigin;
 
     function redirectToSettings(query: Record<string, string>, rotatedToken?: string): Response {
       c.header('Set-Cookie', clearOauthCookie(local));
       if (rotatedToken) c.header('Set-Cookie', sessionCookie(rotatedToken), { append: true });
-      const url = new URL('/settings', c.env.WEB_APP_URL);
+      const url = new URL('/settings', callbackWebOrigin);
       for (const [key, value] of Object.entries(query)) {
         url.searchParams.set(key, value);
       }
@@ -117,7 +127,10 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
       return redirectToSettings({ google: 'error', reason: 'exchange' });
     }
 
-    const oidc = selectGoogleOidc(c.env);
+    const oidc = selectGoogleOidc({
+      ...c.env,
+      GOOGLE_REDIRECT_URI: hostPair.googleRedirectUri,
+    });
     if (oidc === null) {
       return redirectToSettings({ google: 'error', reason: 'exchange' });
     }
