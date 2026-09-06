@@ -32,12 +32,21 @@ select {
   min-height: 100dvh;
   margin-inline: auto;
   background: var(--os-bg);
+  --os-header-height: 0px;
 }
 .os-shell-main {
   flex: 1;
   min-width: 0;
   padding: 16px 16px calc(24px + var(--os-safe-bottom));
   outline: none;
+  scroll-margin-top: calc(var(--os-header-height) + var(--os-space-2));
+}
+.os-shell-header {
+  position: fixed;
+  inset: 0 auto auto 50%;
+  z-index: 30;
+  width: min(100%, var(--os-content-max, 560px));
+  transform: translateX(-50%);
 }
 .os-shell-main :where(h1, h2, h3, p, span, dd, li) {
   overflow-wrap: anywhere;
@@ -47,6 +56,9 @@ select {
 }
 .os-shell-main :where(input, select) {
   max-width: 100%;
+}
+.os-shell-main :where([id]) {
+  scroll-margin-top: calc(var(--os-header-height) + var(--os-space-2));
 }
 .os-app-nav {
   display: flex;
@@ -537,12 +549,10 @@ a,
   background: var(--os-bg);
 }
 .os-shell-main {
-  padding: 24px 20px calc(40px + var(--os-safe-bottom));
+  padding: calc(24px + var(--os-header-height)) 20px calc(40px + var(--os-safe-bottom));
 }
 .os-app-nav {
-  position: sticky;
-  top: 0;
-  z-index: 30;
+  position: relative;
   min-height: 64px;
   padding: calc(8px + var(--os-safe-top)) 20px 8px;
   border-bottom-color: color-mix(in srgb, var(--os-border) 78%, transparent);
