@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 export interface PageShellProps {
   children: ReactNode;
@@ -7,41 +7,17 @@ export interface PageShellProps {
   header?: ReactNode;
 }
 
+/**
+ * UX-006: 앱 셸(고정 프레임 + 내부 스크롤) 모델. `.os-shell-canvas`가 뷰포트에 고정되고(100dvh),
+ * `.os-shell`은 그 안에서 header·main·footer를 세로 flex로 쌓는다 — header는 이제 일반 flex
+ * 자식이라(더는 position:fixed가 아니다) 셸 자체의 고정 높이가 상단 고정을 보장하고, 별도의 높이
+ * 실측(ResizeObserver)이나 본문 패딩 보정이 필요 없다. 실제 스크롤은 main만 한다(overflow-y:auto).
+ */
 export function PageShell({ children, footer, header }: PageShellProps) {
-  const headerRef = useRef<HTMLDivElement>(null);
-  const [headerHeight, setHeaderHeight] = useState<number>();
-
-  useLayoutEffect(() => {
-    const element = headerRef.current;
-    if (!element || !header) {
-      setHeaderHeight(0);
-      return;
-    }
-    const updateHeight = () => setHeaderHeight(element.getBoundingClientRect().height);
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    const observer =
-      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateHeight);
-    observer?.observe(element);
-    return () => {
-      window.removeEventListener('resize', updateHeight);
-      observer?.disconnect();
-    };
-  }, [header]);
-
-  const shellStyle =
-    header && headerHeight === undefined
-      ? undefined
-      : ({ '--os-header-height': `${header ? headerHeight : 0}px` } as CSSProperties);
-
   return (
     <div className="os-shell-canvas">
-      <div className="os-shell" style={shellStyle}>
-        {header ? (
-          <div ref={headerRef} className="os-shell-header">
-            {header}
-          </div>
-        ) : null}
+      <div className="os-shell">
+        {header ? <div className="os-shell-header">{header}</div> : null}
         <main id="game-content" className="os-shell-main" tabIndex={-1}>
           {children}
         </main>
