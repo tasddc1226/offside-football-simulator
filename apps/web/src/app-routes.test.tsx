@@ -87,7 +87,8 @@ async function seedDraftCareer(): Promise<void> {
 }
 
 async function openCareerDetails(): Promise<void> {
-  fireEvent.click(screen.getByText('상세 관리', { exact: true }));
+  fireEvent.click(screen.getByRole('link', { name: /선수단 관리/ }));
+  fireEvent.click(await screen.findByText('상세 관리', { exact: true }));
   await screen.findByRole('button', { name: '커리어 삭제' });
 }
 
