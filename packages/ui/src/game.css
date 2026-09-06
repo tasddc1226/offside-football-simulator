@@ -20,7 +20,12 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 .os-shell-canvas {
-  min-height: 100dvh;
+  /* UX-006: app-shell model. The canvas is pinned to the viewport (100vh fallback declared
+     first, then overridden by 100dvh for iOS's dynamic toolbar) and never scrolls itself —
+     only .os-shell-main scrolls, inside this fixed frame. */
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background: var(--os-canvas);
   color: var(--os-text);
 }
@@ -29,24 +34,25 @@ select {
   flex-direction: column;
   width: 100%;
   max-width: 480px;
-  min-height: 100dvh;
+  height: 100%;
   margin-inline: auto;
   background: var(--os-bg);
-  --os-header-height: 0px;
 }
 .os-shell-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   padding: 16px 16px calc(24px + var(--os-safe-bottom));
   outline: none;
-  scroll-margin-top: calc(var(--os-header-height) + var(--os-space-2));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-margin-top: var(--os-space-2);
 }
 .os-shell-header {
-  position: fixed;
-  inset: 0 auto auto 50%;
-  z-index: 30;
-  width: min(100%, var(--os-content-max, 560px));
-  transform: translateX(-50%);
+  /* No longer position:fixed (UX-006): a normal flex child, so the shell's own fixed height
+     keeps it pinned to the top without a separate height measurement/padding offset. */
+  flex: none;
 }
 .os-shell-main :where(h1, h2, h3, p, span, dd, li) {
   overflow-wrap: anywhere;
@@ -58,7 +64,7 @@ select {
   max-width: 100%;
 }
 .os-shell-main :where([id]) {
-  scroll-margin-top: calc(var(--os-header-height) + var(--os-space-2));
+  scroll-margin-top: var(--os-space-2);
 }
 .os-app-nav {
   display: flex;
@@ -592,7 +598,7 @@ a,
   background: var(--os-bg);
 }
 .os-shell-main {
-  padding: calc(24px + var(--os-header-height)) 20px calc(40px + var(--os-safe-bottom));
+  padding: 24px 20px calc(40px + var(--os-safe-bottom));
 }
 .os-app-nav {
   position: relative;
@@ -791,8 +797,11 @@ a,
 }
 @media (min-width: 720px) {
   .os-shell {
+    /* UX-006: width is unchanged (--os-content-max) — only height becomes fixed to the
+       viewport (minus this margin) so the card's own overflow stays clipped and
+       .os-shell-main scrolls inside it instead of the card growing with content. */
     margin-block: 24px;
-    min-height: calc(100dvh - 48px);
+    height: calc(100dvh - 48px);
     border: 1px solid var(--os-border);
     border-radius: 24px;
     overflow: clip;
