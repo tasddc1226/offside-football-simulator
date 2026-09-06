@@ -1,0 +1,73 @@
+import { describe, expect, it } from 'vitest';
+import {
+  decideSeason,
+  inspectCounts,
+  inspectSchema,
+  PRODUCTION_SEASON,
+  validateProposal,
+} from './production-release.mjs';
+
+const proposal = validateProposal({
+  startsAt: '2026-09-06T00:00:00Z',
+  endsAt: '2026-12-31T23:59:59Z',
+  challengeSetId: 'cs_season_1',
+});
+
+describe('production release guards', () => {
+  it('recognizes an empty production schema without treating it as an error', () => {
+    expect(inspectSchema([{ results: [] }])).toEqual({
+      tableCount: 0,
+      tables: [],
+      hasServiceSeasons: false,
+    });
+  });
+
+  it('fails closed when Wrangler does not return a valid results envelope', () => {
+    expect(() => inspectSchema({ success: true })).toThrow('results array');
+    expect(() => inspectSchema({ success: false, errors: ['redacted'] })).toThrow('unsuccessful');
+  });
+
+  it('retains only aggregate table counts from D1 output', () => {
+    expect(inspectCounts([{ results: [{ table_name: 'profiles', row_count: 3 }] }])).toEqual([
+      { table: 'profiles', rows: 3 },
+    ]);
+  });
+
+  it('only permits an idempotent exact ACTIVE season', () => {
+    expect(decideSeason([{ ...proposal }], proposal)).toEqual({ action: 'noop', sql: null });
+    expect(() => decideSeason([{ ...proposal, rulesetVersion: '1.0.0' }], proposal)).toThrow(
+      'different ACTIVE',
+    );
+    expect(() => decideSeason([{ ...proposal }, { ...proposal, id: 'other' }], proposal)).toThrow(
+      'at most one',
+    );
+    expect(() => decideSeason([{ ...proposal, status: 'LOCKED' }], proposal)).toThrow(
+      'status LOCKED',
+    );
+  });
+
+  it('generates INSERT-only SQL when no ACTIVE season exists', () => {
+    const decision = decideSeason([], proposal);
+    expect(decision.action).toBe('insert');
+    expect(decision.sql).toContain('INSERT INTO service_seasons');
+    expect(decision.sql).not.toMatch(/UPDATE|REPLACE|DELETE/i);
+    expect(decision.sql).toContain(PRODUCTION_SEASON.rulesetVersion);
+  });
+
+  it('rejects incomplete or inverted release periods', () => {
+    expect(() =>
+      validateProposal({
+        startsAt: '2026-09-06T00:00:00Z',
+        endsAt: '',
+        challengeSetId: 'cs_season_1',
+      }),
+    ).toThrow('provided together');
+    expect(() =>
+      validateProposal({
+        startsAt: '2027-01-01T00:00:00Z',
+        endsAt: '2026-12-31T23:59:59Z',
+        challengeSetId: 'cs_season_1',
+      }),
+    ).toThrow('before');
+  });
+});

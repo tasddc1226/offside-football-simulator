@@ -99,8 +99,8 @@
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",
         "GOOGLE_FAKE": "0",
-        // T-2-012 D-54: ACTIVE_SERVICE_SEASON_ID를 의도적으로 비운다 — 출시 게이트 전 실수 방지(09 런북).
-        // 값이 없으면 GET /v1/service-seasons/current가 503 SERVICE_SEASON_UNAVAILABLE을 돌려준다.
+        // 운영 배포 workflow가 정확히 일치하는 ACTIVE 행을 INSERT-only로 보장한 뒤 API를 배포한다.
+        "ACTIVE_SERVICE_SEASON_ID": "svc_season_1",
       },
     },
   },
