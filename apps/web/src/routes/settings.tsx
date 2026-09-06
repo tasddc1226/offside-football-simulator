@@ -50,6 +50,7 @@ import { queryClient } from '../shared/query-client.js';
 import { formatLocalDate, formatLocalDateTime } from '../shared/format.js';
 import { validateRecoveryCodeInput } from '../shared/recovery-code-input.js';
 import { SyncBadge } from '../shared/SyncBadge.js';
+import { TeamNamesSettings } from '../shared/TeamNamesSettings.js';
 import {
   useUiStore,
   type ReducedMotionPreference,
@@ -1300,6 +1301,12 @@ function SettingsScreen() {
           플레이
         </a>
         <a
+          href="#settings-team-names"
+          className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
+        >
+          구단 이름
+        </a>
+        <a
           href="#settings-safety"
           className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
         >
@@ -1432,6 +1439,8 @@ function SettingsScreen() {
             </Link>
           </section>
         </section>
+
+        <TeamNamesSettings />
 
         <section
           id="settings-safety"

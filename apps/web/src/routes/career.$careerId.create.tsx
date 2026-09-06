@@ -46,6 +46,8 @@ import {
   validateDraftName,
 } from '../shared/player-draft.js';
 import { useScreenState } from '../shared/screen-state.js';
+import { resolveTeamName } from '../shared/team-names.js';
+import { useUiStore } from '../shared/ui-store.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
 import { CreationStage, PositionPitch } from '../shared/player-creation-ui.js';
 
@@ -120,6 +122,7 @@ function CreatePlayerScreen() {
   const navigate = useNavigate();
   const query = useCareer(careerId);
   const ruleset = query.data === undefined ? activeRuleset : rulesetForCareer(query.data.state);
+  const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
   const positionGroups = positionsByGroup(ruleset.positions);
   const blocked = useCareerStepGuard(query.data?.state, 'SCR-002');
   const updateDraftMutation = useCareerMutation('updateDraft');
@@ -582,7 +585,9 @@ function CreatePlayerScreen() {
         >
           {ruleset.backgrounds.map((background) => {
             const riskLevel = backgroundRiskLevel(background.id);
-            const startTeam = ruleset.teams.find((team) => team.id === background.startTeamId);
+            const startTeamName =
+              resolveTeamName(ruleset, background.startTeamId, teamNameOverrides) ??
+              background.startTeamId;
             const opening = backgroundOpening(background.id, background.name);
             return (
               <ChoiceCard
@@ -594,7 +599,7 @@ function CreatePlayerScreen() {
                 riskLabel={RISK_LABELS[riskLevel]}
                 effects={[
                   opening.situation,
-                  `시작 팀: ${startTeam?.name ?? background.startTeamId}`,
+                  `시작 팀: ${startTeamName}`,
                 ]}
                 selectedLabel="선택됨"
               />

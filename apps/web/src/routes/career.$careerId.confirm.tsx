@@ -30,6 +30,7 @@ import {
 } from '../shared/player-draft.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { useScreenState } from '../shared/screen-state.js';
+import { useUiStore } from '../shared/ui-store.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
 import { CreationCard } from '../shared/player-creation-ui.js';
@@ -55,6 +56,7 @@ function ConfirmScreen() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const query = useCareer(careerId);
+  const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
 
   const [postConfirmInFlight, setPostConfirmInFlight] = useState(false);
   const [ceremonyReady, setCeremonyReady] = useState(false);
@@ -364,7 +366,7 @@ function ConfirmScreen() {
 
       <CreationCard
         name={draft.name}
-        team={currentTeamName(state, ruleset)}
+        team={currentTeamName(state, ruleset, teamNameOverrides)}
         position={POSITION_LABELS[draft.position]}
         archetype={archetype.name}
         foot={PREFERRED_FOOT_LABELS[draft.preferredFoot]}
