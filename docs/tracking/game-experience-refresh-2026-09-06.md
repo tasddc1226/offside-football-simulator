@@ -1,7 +1,9 @@
 # 게임 경험 새로고침 통합 기록 — 2026-09-06
 
-상태: Draft PR [#103](https://github.com/tasddc1226/offside-football-simulator/pull/103)에서 최종
-통합·검증 중이며 아직 `main`에 병합하지 않았다. 이 문서는 변경의 사용자 경험과 현재 검증 범위를 요약하며,
+상태: PR [#103](https://github.com/tasddc1226/offside-football-simulator/pull/103)은 main
+`fb8b78260377c838947ae43caa3290481c3a4999`에 병합됐다. quick checks run 34002089936은 54초에
+성공했다. main staging run 34002153036과 expanded 수동 deploy run 34002280639도 성공했고,
+expanded의 새 1.1 커리어 은퇴·보관·강제 새로고침까지 확인해 staging 인수를 완료했다. 이 문서는 변경의 사용자 경험과 현재 검증 범위를 요약하며,
 기존 설계 문서나 밸런스 인수 기록을 대체하지 않는다.
 
 2026-09-06 사용자 결정으로 합성 참조집단의 LEGEND·ICON·REMEMBERED 비율은 관찰·회귀 목표이며
@@ -141,8 +143,32 @@ minutes 노출 수정 뒤 새 800 evidence `84799b6`도 관찰 목표와 차이�
 [밸런스 재설계 기록](phase-5-balance-redesign.md#동결-40000명-운영-기준선--2026-09-06)에 남겼다.
 content validation은 경고 0, production build는 1.35초, bundle은 100.46 KB로 통과했다. 최종
 lint는 10 tasks·4.701초, dependency lint, typecheck는 9 tasks·20.504초로 통과했다. PR quick
-checks는 진행 중이며, main 병합·normal staging·수동 expanded staging은
-아직 완료로 표현하지 않는다.
+checks run 34002089936은 54초에 성공했고 main 병합도 완료됐다. main staging run 34002153036은
+2분, 수동 expanded deploy run 34002280639는 1분 19초에 성공했다. 최신 main의 nationality/career-event/season-ledger 관련
+3파일 17 tests도 849ms에 통과했다.
+
+배포 뒤 일반 staging의 `svc_line_test`는 그대로였고 expanded는 `svc_phase5_qa`, ruleset 1.1.0,
+pack 0.3.0이었다. 기존 expanded 1.0 커리어 `c70cccb3-48b1-4e37-99a0-72d57ab9bbf3`은 배포 전후
+revision 19와 state hash `264d609fdba2faa4882e79e9ad55d78200ad93a29b917d562762e92da7d24432`가 같았다.
+배포 뒤 UI 은퇴도 Legacy 1.0 27점, null reference, 원래 cohort `svc_phase34_qa`를 유지했다.
+Archive hash는 `0f1337093da3ede11efda66b615dd5ba24634740af3c2510336023b7b6ef6994`, Legacy hash는
+`2129cbfa8cbe790416e1c18082d5e63505f1ab548ad27b7b282b651eae055060`이다.
+
+새 expanded 1.1 김유진 커리어(`2b50d512-0f6a-4fa3-bafa-53a1431e5570`)를 실제 UI로 끝까지
+진행했다. 첫 계약 예상 적합도 77과 실제 시즌 시작값 77이 일치했고, 현재 주급 400,000과 사전
+재계약 2년·주급 480,000이 다음 시즌 조건으로 구분됐다. 첫 시즌은 17경기·1,410분·평점 6.1·1골·
+2도움, OVR 60→61, 갈매 타운 FC 3부 10위였다.
+
+커리어 다음 선택에서 은퇴 확인 대화상자와 확정을 거쳐 회고·Legacy·최종 프로필까지 확인했다.
+API GET 200, revision 23, Legacy 1.1 총점 26(성취 2 / 기여 54 / 장기성 6 / 관계 74 / 서사 0),
+참조집단은 `phase5-reference-1.1.0-1.1.0-0.3.0-ui-mixed-v1-d62cbf8372dd119feccb79e6f14ab7c4d0d99182ec75f1f64d35d30a9a2afca1`이었다.
+Archive hash `175afb39b6d36ba9a309ad7169a598306ae4426761febd5e5b6927fb962e8532`, Legacy hash
+`cbb97509ad73aa1649b5025ed9dcf2c094a9ed572d3b6eafc6b242790e148598`는 강제 새로고침 뒤에도
+동일했다. UI는 26점, 최종 프로필은 OVR 61·17경기·Legacy 26을 유지했다. 이로써 승인된 필수
+gate와 staging 인수를 완료했지만, 14종 엔딩을 모두 자연 플레이했거나 합성 분포가 실제 사용자
+분포를 대표하거나 Production에 배포됐다고 주장하지 않는다.
+390×844 최종 프로필에서도 `clientWidth=scrollWidth=390`으로 가로 넘침이 없었고 같은 OVR·경기·
+Legacy 값이 보였다.
 
 운영 콘텐츠 후속으로 포지션별 이벤트 eligibility와 문구도 점검한다. 실제 GK 신규 커리어에서
 `EVT-REL-001`이 열려 윙어를 전제로 한 감독 요구와 인사이드 포워드 결과 문장이 노출됐다. 이 이벤트는
@@ -152,3 +178,11 @@ situation에는 NPC `이도현`을 하드코딩하고 0.3.0의 rival token에도
 병합을 막는 항목은 아니며, 다음 콘텐츠 버전에서 포지션 조건·포지션 중립 문구·이름 충돌 회피를 함께
 검증한다([후속 이슈 #104](https://github.com/tasddc1226/offside-football-simulator/issues/104)). 생성 화면의 외부 `새 커리어 · 1/3`와 내부
 `3/3 출발 배경`처럼 서로 다른 단계 체계가 한 화면에 보이는 표현도 후속 UX 정리 대상으로 남긴다.
+
+이 통합으로 원본 PR [#77](https://github.com/tasddc1226/offside-football-simulator/pull/77)은 superseded로
+닫혔고, 제안 예측 이슈 [#93](https://github.com/tasddc1226/offside-football-simulator/issues/93)은
+완료로 닫혔다. 포지션별 이벤트 문구 [#104](https://github.com/tasddc1226/offside-football-simulator/issues/104)는
+다음 content pack 후속으로 열려 있다. 저장된 tag id를 사용자 문구로 그대로 노출하는
+[UI 후속 #105](https://github.com/tasddc1226/offside-football-simulator/issues/105)도 열어 두었으며,
+이는 web presentation 문제라 동결 content pack을 바꾸지 않고 후속 처리한다. 두 항목 모두 이번
+staging 인수를 막지 않는다.

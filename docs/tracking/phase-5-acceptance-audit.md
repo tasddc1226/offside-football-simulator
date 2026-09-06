@@ -13,14 +13,19 @@
 필수다: (1) 기존 Archive·Legacy 결과와 null reference binding의 byte/hash 호환성, (2) 동일 품질
 GK/DF/MF/FW의 점수 공정성, (3) 저장된 경기 근거를 사용하는 고득점 경로의 실제 도달 가능성,
 (4) 참조집단 provenance·표본 수·seed 무결성.
-새 후보의 런타임 생성·보관·재로드 증거는 아래 후속 결과로 확보했다. 다만 최종 CI·main 병합·staging
-검증 전에는 전체 완료로 표시하지 않는다.
+새 후보의 런타임 생성·보관·재로드 증거와 PR quick checks·main 병합은 아래 후속 결과로 확보했다.
+main/expanded staging 배포와 구버전 불변, expanded 신규 1.1 커리어의 은퇴·보관·새로고침까지
+확인해 release staging 검증을 완료했다. Production 출시나 실제 사용자 분포 검증으로 확대하지 않는다.
 
 현재 통합에서 RETIRE 명령·서버 원자 보관·Legacy 계산/근거·네 엔딩 화면·한국 모듈은 구현됐다.
 ruleset 1.1/content 0.3 신규 은퇴의 Legacy 1.1·발행 참조집단 선택, 최종 40k의
 provenance/count/seed, 동일 품질 포지션 공정성과 네 포지션 80점 이상 도달성, 신규
-생성→플레이→은퇴→보관→새로고침/API 재조회는 확인했다. 남은 gate는 최종 head CI, main 병합과
-staging 배포 검증이다. 실제 브라우저 새로고침/API 재조회와 서버 registry roundtrip·import 자동
+생성→플레이→은퇴→보관→새로고침/API 재조회는 확인했다. PR quick checks는 54초에 성공했고 main
+`fb8b78260377c838947ae43caa3290481c3a4999`로 병합됐다. main staging run 34002153036과 expanded
+수동 deploy run 34002280639도 성공했다. 일반 staging의 `svc_line_test`는 바뀌지 않았고 expanded는
+`svc_phase5_qa` ruleset 1.1.0/pack 0.3.0을 가리킨다. expanded 신규 1.1 커리어의 실제 은퇴와
+강제 새로고침까지 확인해 승인된 필수 gate와 staging 인수를 닫았다.
+실제 브라우저 새로고침/API 재조회와 서버 registry roundtrip·import 자동
 회귀는 확인했다. recovery code를 브라우저에 직접 입력한 검증으로 확대 해석하지 않는다.
 
 기준 문서: `phase-05-retirement-and-legacy.md`, `14-legacy-score-and-endings.md`,

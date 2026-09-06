@@ -1,8 +1,9 @@
 # Phase 5 통합 검증 기록
 
-검증일: 2026-09-05. PR: [#77](https://github.com/tasddc1226/offside-football-simulator/pull/77).
-**현재 판정: 1.1 artifact 발행·런타임 활성화·실제 웹/API QA는 확인했고, 최종 CI·main 병합·staging은
-아직 완료가 아니다.** 기능
+최초 검증일: 2026-09-05. 원본 PR [#77](https://github.com/tasddc1226/offside-football-simulator/pull/77)은
+통합 PR #103으로 대체되어 closed됐다.
+**현재 판정: 1.1 artifact 발행·런타임 활성화·실제 웹/API QA·PR quick checks·main 병합,
+main/expanded staging 배포와 신규 1.1 은퇴 검증을 완료했다.** 기능
 구현과 합성 분포 관찰 목표를 같은 의미로 취급하지 않는다.
 
 ### 2026-09-06 인수 기준 변경
@@ -16,7 +17,10 @@ LEGEND 약 2%, ICON 약 8%, REMEMBERED 약 30%와 80점 이상 비율은 계속 
 
 이번 통합은 원자 저장·은퇴/Legacy UI·14종 eligibility·한국 모듈·1.1 후보 계산 경로를 구현했다.
 최종 40k 산출물 검증·발행, 신규 은퇴의 Legacy 1.1/참조집단 선택, 실제 브라우저/API 보관·재로드는
-아래 후속 증거로 확인했다. 남은 순서는 최종 CI, main 병합과 staging 검증이다. 아래 기존 브라우저와
+아래 후속 증거로 확인했다. PR #103 quick checks run 34002089936은 54초에 성공했고 main
+`fb8b78260377c838947ae43caa3290481c3a4999`에 병합됐다. main staging run 34002153036(2분)과 expanded
+수동 deploy run 34002280639(1분 19초)도 성공했다. expanded의 새 1.1 은퇴·보관·강제 새로고침까지
+확인해 staging 인수를 완료했다. 아래 기존 브라우저와
 배치 결과는 각 실행 시점의 역사 증거다. 40k는 정책·참조집단
 변경 때 수행하는 별도 검증이며 모든 PR에서 반복하는 상시 CI가 아니다.
 
@@ -114,8 +118,37 @@ MF는 11회 팀 우승, 출전 24,275/36,360분, 최고 OVR 77이었다. DF는 1
   provenance/count/seed 무결성과 네 포지션 80점 이상 도달 경로를 확인했고, 등급 비율 편차는 승인된
   운영 관찰치로 숨기지 않는다.
 - 저장 호환성·포지션 공정성·고득점 도달성: 확인. 최종 lint 10 tasks(4.701초), dependency lint,
-  typecheck 9 tasks(20.504초)는 통과했다. PR quick checks의 최종 원격 결과는 대기한다.
-- main 검증·staging 배포: 대기. PR preview 배포는 현재 절차에 없으며 Production 출시로 표현하지 않는다.
+  typecheck 9 tasks(20.504초)는 통과했다. PR quick checks run 34002089936도 54초에 성공했다.
+- main `fb8b78260377c838947ae43caa3290481c3a4999` 병합: 완료. main staging run 34002153036과
+  expanded deploy run 34002280639: 성공. expanded 신규 1.1 은퇴·보관·강제 새로고침: 확인.
+  PR preview 배포는 현재 절차에 없으며 Production 출시로 표현하지 않는다.
+
+배포 뒤 일반 staging의 `svc_line_test`는 그대로였고 expanded는 `svc_phase5_qa`, ruleset 1.1.0,
+pack 0.3.0을 반환했다. 배포 전에 만든 expanded 1.0 커리어 `c70cccb3-48b1-4e37-99a0-72d57ab9bbf3`은
+첫 시즌 revision 19와 state hash
+`264d609fdba2faa4882e79e9ad55d78200ad93a29b917d562762e92da7d24432`가 배포 전후 같았다. 배포 뒤
+UI에서 은퇴한 revision 20 결과도 Legacy 1.0, 27점, null reference와 원래 생성 cohort
+`svc_phase34_qa`를 유지했다. Archive hash는
+`0f1337093da3ede11efda66b615dd5ba24634740af3c2510336023b7b6ef6994`, Legacy hash는
+`2129cbfa8cbe790416e1c18082d5e63505f1ab548ad27b7b282b651eae055060`이다.
+
+배포 뒤 새 expanded 1.1 커리어 `2b50d512-0f6a-4fa3-bafa-53a1431e5570`(김유진, 여성·KR·오른발 W,
+인사이드 포워드·아카데미)을 실제 UI로 진행했다. 첫 계약 예상 적합도 77과 시즌 시작 실제 값 77이
+일치했고, 현재 주급 400,000과 사전 재계약 2년·주급 480,000이 다음 시즌 적용 조건으로 구분됐다.
+첫 시즌은 17경기·1,410분·평점 6.1·1골·2도움, OVR 60→61, 갈매 타운 FC 3부 10위였고 STARTER 제안을
+수락했다.
+
+UI의 커리어 다음 선택→은퇴 확인 대화상자→확정→회고→Legacy→최종 프로필을 완료했다. API GET
+200, revision 23, Legacy 1.1 총점 26(성취 2 / 기여 54 / 장기성 6 / 관계 74 / 서사 0)이었고,
+참조집단은 `phase5-reference-1.1.0-1.1.0-0.3.0-ui-mixed-v1-d62cbf8372dd119feccb79e6f14ab7c4d0d99182ec75f1f64d35d30a9a2afca1`이었다.
+Archive hash는 `175afb39b6d36ba9a309ad7169a598306ae4426761febd5e5b6927fb962e8532`, Legacy hash는
+`cbb97509ad73aa1649b5025ed9dcf2c094a9ed572d3b6eafc6b242790e148598`이다. 강제 새로고침 뒤 API
+hash와 UI 26점이 같았고 최종 프로필도 OVR 61·17경기·Legacy 26을 유지했다.
+390×844 viewport에서도 최종 프로필의 `clientWidth`와 `scrollWidth`가 모두 390으로 같아 가로
+넘침이 없었고, OVR 61·17경기·Legacy 26이 그대로 보였다.
+
+이 검증은 승인된 저장 호환성·포지션 공정성·고득점 도달성과 staging 인수를 닫는다. 14종 엔딩의
+자연 플레이 달성, 실제 사용자 등급 분포, Production 배포를 주장하지 않는다.
 
 중간 CI `33954575560` (`5b37729`)은 Quality 통과, 새 은퇴 E2E 18.6초 통과였다.
 Browser 전체는 98 통과·1 실패·6 조건부 제외였고, 실패는 기존 이적 헬퍼의
@@ -125,7 +158,8 @@ Browser 전체는 98 통과·1 실패·6 조건부 제외였고, 실패는 기�
 이후 `82c8efa`의 CI `33955209905`는 Quality, Browser, PR preview 배포 모두 통과했다.
 이는 밸런스 재설계 전 기능 통합 head의 결과다. 이후 후보 정책·버전 호환 변경까지
 최종 검증되었다는 의미는 아니다. 사용자 승인으로 [밸런스 재설계](phase-5-balance-redesign.md)를
-이번 범위에 포함했으며, 아직 main 병합·Phase 5 완료는 보류한다.
+이번 범위에 포함했고, 이 중간 실행 당시에는 main 병합·Phase 5 완료를 보류했다. 현재 상태는 문서
+상단의 판정을 따른다.
 
 ## 독립 리뷰 처리
 
