@@ -22,8 +22,6 @@ import {
   CareerTimeline,
   DashboardSection,
   ErrorState,
-  PlayerHeader,
-  ScreenIntro,
   StatusStrip,
   SwipeSurface,
   Tabs,
@@ -53,7 +51,6 @@ import {
   TIMELINE_KIND_LABEL_KO,
 } from '../shared/labels.js';
 import { markStatsRevealed, readRevealedStats } from '../shared/revealed-stats.js';
-import { proStatusStripItems, u18StatusStripItems } from '../shared/status-strip.js';
 import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { SeasonTimeline } from '../shared/season-timeline.js';
@@ -65,13 +62,19 @@ import { useReducedMotion } from '../shared/ui-store.js';
 import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 import { buildCurrentContractSummary, MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
 import { GamePending } from '../shared/game-presentation.js';
+import { buildCareerClock } from '../shared/career-clock.js';
+import { proStatusStripItems, u18StatusStripItems } from '../shared/status-strip.js';
 
-type DashboardSearch = { signed?: boolean };
+const DASHBOARD_TABS = ['home', 'schedule', 'player', 'contract', 'records'] as const;
+type DashboardTab = (typeof DASHBOARD_TABS)[number];
+type DashboardSearch = { signed?: boolean; view?: DashboardTab };
 type ChapterPending = Extract<CareerState['pending'], { kind: 'CHAPTER' }>;
 
 export const Route = createFileRoute('/career/$careerId/')({
-  validateSearch: (search: Record<string, unknown>): DashboardSearch =>
-    search.signed === true ? { signed: true } : {},
+  validateSearch: (search: Record<string, unknown>): DashboardSearch => {
+    const view = DASHBOARD_TABS.find((candidate) => candidate === search.view);
+    return { ...(search.signed === true ? { signed: true } : {}), ...(view ? { view } : {}) };
+  },
   component: CareerDashboard,
 });
 
@@ -190,10 +193,15 @@ function buildTimelineItems(state: CareerState): CareerTimelineItem[] {
     // revision을 공유한다(packages/domain/src/simulate.ts) — revision만으로는 key가
     // 중복될 수 있어 배열 위치를 덧붙인다(T-2-009에서 발견, PR 본문 기록).
     id: `${entry.kind}-${entry.revision}-${index}`,
-    age: entry.age,
+    age: `${entry.age}세`,
     stage: TIMELINE_KIND_LABEL_KO[entry.kind],
     title: timelineSentence(entry, state),
   }));
+}
+
+/** 반복적인 step 통과는 보존하되, 기본 연대기에서는 실제 커리어 사건만 앞세운다. */
+function buildCareerMilestoneItems(state: CareerState): CareerTimelineItem[] {
+  return buildTimelineItems(state).filter((item) => !item.id.startsWith('STEP_PASSED-'));
 }
 
 /** T-2-009 목표 "다이어리에 이번 시즌 연대기 요약을 붙인다": 이번 시즌(진행 중이면 현재, 아니면
@@ -287,6 +295,11 @@ export function buildPastSeasonLinks(state: CareerState): PastSeasonLink[] {
     .map((summary, historyIndex) => ({ historyIndex, seasonNumber: summary.index }))
     .filter((entry) => entry.historyIndex !== excludeHistoryIndex)
     .reverse();
+}
+
+function storedSeasonAgeLabel(state: CareerState, historyIndex: number): string {
+  const ageAtStart = state.seasonHistory[historyIndex]?.result.legacy?.ageAtStart;
+  return ageAtStart === undefined ? '' : `${ageAtStart}세 · `;
 }
 
 /** 계약 전에는 전술실·휴대폰을 잠근다. 계약 직후 처음 열릴 때만 한 줄 설명을 보여준다(브리프:
@@ -587,16 +600,14 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   );
 }
 
-const DASHBOARD_TABS = ['schedule', 'locker', 'tactics', 'phone', 'diary'] as const;
-
 function CareerDashboard() {
   const { careerId } = Route.useParams();
-  const { signed } = Route.useSearch();
+  const { signed, view } = Route.useSearch();
   const navigate = useNavigate();
   const query = useCareer(careerId);
   const [showSignedToast, setShowSignedToast] = useState(signed === true);
   const initialisedRef = useRef(false);
-  const [tab, setTab] = useState<string>('schedule');
+  const tab = view ?? 'home';
   const [tabDirection, setTabDirection] = useState<ScreenDirection>('forward');
   const reducedMotion = useReducedMotion();
   const mutating = useIsMutating() > 0;
@@ -606,7 +617,12 @@ function CareerDashboard() {
     const nextIndex = DASHBOARD_TABS.findIndex((candidate) => candidate === value);
     if (nextIndex < 0) return;
     setTabDirection(nextIndex < tabIndex ? 'back' : 'forward');
-    setTab(value);
+    void navigate({
+      to: '/career/$careerId',
+      params: { careerId },
+      search: { ...(signed === true ? { signed: true } : {}), ...(value === 'home' ? {} : { view: value as DashboardTab }) },
+      replace: true,
+    });
   }
 
   useEffect(() => {
@@ -617,7 +633,12 @@ function CareerDashboard() {
       careerPhase: query.data?.state.seasonPhase ?? 'NONE',
     });
     if (signed === true) {
-      void navigate({ to: '/career/$careerId', params: { careerId }, search: {}, replace: true });
+      void navigate({
+        to: '/career/$careerId',
+        params: { careerId },
+        search: view ? { view } : {},
+        replace: true,
+      });
     }
     // 마운트 시 1회만.
   }, []);
@@ -642,6 +663,9 @@ function CareerDashboard() {
   const ruleset = rulesetForCareer(state);
   const room = deriveTacticalRoom(state, ruleset);
   const seasonChronicleItems = buildSeasonChronicleItems(state);
+  const seasonResultItem = seasonChronicleItems.find(
+    (item) => item.seasonResultHistoryIndex !== null,
+  );
   const pastSeasonLinks = buildPastSeasonLinks(state);
   // C11: SCR-017 상단(MarketSummary)에만 있던 시장 사유·제안 수를 휴대폰 탭에도 조건부로 보여준다
   // (T-3-005 브리프 §1). 대시보드에서는 결정을 확정하지 않으므로 결정 화면으로 가는 링크만 둔다.
@@ -649,56 +673,33 @@ function CareerDashboard() {
     state.pending !== null && (state.pending.kind === 'OFFERS' || state.pending.kind === 'CONTRACT')
       ? state.pending
       : null;
+  const clock = buildCareerClock(state);
+  const statusItems = hasContract ? proStatusStripItems(state) : u18StatusStripItems(state);
+  const homeStatusItems = statusItems.filter((item) => item.id === 'form' || item.id === 'fitness');
 
   return (
     <div className="os-screen">
-      <ScreenIntro
-        eyebrow="MY CAREER"
-        title="나의 커리어"
-        description="경기장 안팎의 선택이 나만의 이야기가 됩니다."
-      />
-      <PlayerHeader
-        name={name}
-        team={currentTeamName(state, ruleset)}
-        position={positionField}
-        archetype={{
-          label: '아키타입',
-          value: archetypeName(ruleset, profile?.archetypeId ?? draft.archetypeId),
-        }}
-        shirtNumber={{
-          label: '등번호',
-          value: state.contract ? String(state.contract.shirtNumber) : '—',
-        }}
-      />
-
-      <StatusStrip items={hasContract ? proStatusStripItems(state) : u18StatusStripItems(state)} />
-
-      <section className="flex flex-col gap-os-2" aria-label="지금 할 일">
-        <div className="flex flex-wrap items-baseline justify-between gap-os-2 px-os-1">
-          <h2 className="os-section-title">지금 할 일</h2>
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-            {season !== null
-              ? `${state.age}세 · 시즌 ${season.index} · ${SEASON_PHASE_LABEL_KO[state.seasonPhase]} · step ${state.currentStep}/12`
-              : `${state.age}세 · ${SEASON_PHASE_LABEL_KO[state.seasonPhase]} · step ${state.currentStep}`}
-          </p>
+      <header className="flex flex-col gap-os-2 px-os-1">
+        <p className="os-eyebrow">{currentTeamName(state, ruleset)}</p>
+        <div className="flex items-end justify-between gap-os-3">
+          <h1 className="min-w-0 truncate font-os text-os-text" style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)', fontWeight: 750 }}>{name}</h1>
+          <span className="os-num shrink-0 font-os font-bold text-os-accent">OVR {profile?.baseOvr ?? '—'}</span>
         </div>
-        <NextDecisionCard careerId={careerId} state={state} />
-        {state.status === 'ACTIVE' && state.season === null && state.seasonHistory.length > 0 ? (
-          <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>커리어의 다음 선택</Link>
-        ) : null}
-        {state.status === 'RETIRED' || state.status === 'ARCHIVED' ? (
-          <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>통산 기록 보기</Link>
-        ) : null}
-      </section>
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          {clock.headline} · {positionField.value}
+        </p>
+      </header>
 
       <Tabs value={tab} onValueChange={changeTab}>
-        <TabsList aria-label="대시보드 구역">
-          <TabsTrigger value="schedule">일정표</TabsTrigger>
-          <TabsTrigger value="locker">라커룸</TabsTrigger>
-          <TabsTrigger value="tactics">전술실</TabsTrigger>
-          <TabsTrigger value="phone">휴대폰</TabsTrigger>
-          <TabsTrigger value="diary">다이어리</TabsTrigger>
-        </TabsList>
+        <div className="sticky top-0 z-20 overflow-x-auto bg-os-bg py-os-1">
+          <TabsList aria-label="커리어 구역" className="min-w-max">
+            <TabsTrigger value="home">홈</TabsTrigger>
+            <TabsTrigger value="schedule">일정</TabsTrigger>
+            <TabsTrigger value="player">선수</TabsTrigger>
+            <TabsTrigger value="contract">계약</TabsTrigger>
+            <TabsTrigger value="records">기록</TabsTrigger>
+          </TabsList>
+        </div>
 
         <p className="os-swipe-hint">탭을 누르거나 내용을 좌우로 밀어 둘러보세요</p>
         <MotionPanel motionKey={tab} direction={tabDirection} className="os-dashboard-tabs-motion">
@@ -712,6 +713,21 @@ function CareerDashboard() {
               if (next) changeTab(next);
             }}
           >
+            <TabsContent value="home">
+              <section aria-label="지금 할 일">
+                <DashboardSection title="지금 할 일" description={`${clock.detail} · ${clock.progress}`}>
+                  <StatusStrip items={homeStatusItems} />
+                  <NextDecisionCard careerId={careerId} state={state} />
+                  {state.status === 'ACTIVE' && state.season === null && state.seasonHistory.length > 0 ? (
+                    <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>커리어의 다음 선택</Link>
+                  ) : null}
+                  {state.status === 'RETIRED' || state.status === 'ARCHIVED' ? (
+                    <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>통산 기록 보기</Link>
+                  ) : null}
+                </DashboardSection>
+              </section>
+            </TabsContent>
+
             <TabsContent value="schedule">
               <DashboardSection
                 title="일정표"
@@ -722,11 +738,11 @@ function CareerDashboard() {
                     <p className="font-os text-os-text" style={BODY_STYLE}>
                       step {state.currentStep} · {SEASON_PHASE_LABEL_KO[state.seasonPhase]}
                     </p>
-                    <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                      {state.pending === null
-                        ? '다음 결정은 진행 후 열립니다.'
-                        : '위 카드에서 결정을 확인하세요.'}
-                    </p>
+                    {state.pending === null ? (
+                      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>다음 결정은 진행 후 열립니다.</p>
+                    ) : (
+                      <Button variant="secondary" onClick={() => changeTab('home')}>홈에서 결정 확인</Button>
+                    )}
                   </>
                 ) : (
                   <div className="flex flex-col gap-os-4">
@@ -795,7 +811,13 @@ function CareerDashboard() {
               </DashboardSection>
             </TabsContent>
 
-            <TabsContent value="locker">
+            <TabsContent value="player">
+              <StatusStrip items={statusItems} />
+              <dl className="mb-os-3 grid grid-cols-2 gap-os-2 rounded-os-m bg-os-surface-2 p-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
+                <div><dt>포지션</dt><dd className="mt-os-1 font-semibold text-os-text">{positionField.value}</dd><dd>{positionField.caption}</dd></div>
+                <div><dt>아키타입</dt><dd className="mt-os-1 font-semibold text-os-text">{archetypeName(ruleset, profile?.archetypeId ?? draft.archetypeId)}</dd></div>
+                <div><dt>등번호</dt><dd className="os-num mt-os-1 font-semibold text-os-text">{state.contract ? state.contract.shirtNumber : '—'}</dd></div>
+              </dl>
               <DashboardSection
                 title="라커룸"
                 description="감독·주장·경쟁자·동료 관계의 최근 기억입니다."
@@ -848,9 +870,6 @@ function CareerDashboard() {
                   </div>
                 ) : null}
               </DashboardSection>
-            </TabsContent>
-
-            <TabsContent value="tactics">
               <DashboardSection
                 title="전술실"
                 description="역할 약속과 전술 적합도, 선발 순위를 봅니다."
@@ -928,7 +947,7 @@ function CareerDashboard() {
               </DashboardSection>
             </TabsContent>
 
-            <TabsContent value="phone">
+            <TabsContent value="contract">
               <DashboardSection
                 title="휴대폰"
                 description="계약 상태를 확인합니다."
@@ -990,15 +1009,42 @@ function CareerDashboard() {
               </DashboardSection>
             </TabsContent>
 
-            <TabsContent value="diary">
+            <TabsContent value="records">
               <DashboardSection title="다이어리" description="이번 커리어의 연대기입니다.">
                 <div className="flex flex-col gap-os-4">
-                  {seasonChronicleItems.length > 0 ? (
+                  <div className="flex flex-col gap-os-2">
+                    <h3 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+                      나의 연대기
+                    </h3>
+                    <CareerTimeline
+                      items={buildCareerMilestoneItems(state)}
+                      emptyMessage="아직 기록이 없습니다"
+                    />
+                  </div>
+                  {seasonResultItem?.seasonResultHistoryIndex !== null &&
+                  seasonResultItem?.seasonResultHistoryIndex !== undefined ? (
                     <div className="flex flex-col gap-os-2">
                       <h3 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-                        이번 시즌
+                        최근 시즌 결과
                       </h3>
-                      <ol className="flex flex-col gap-os-1">
+                      <Link
+                        to="/career/$careerId/season-result"
+                        params={{ careerId }}
+                        search={{ season: seasonResultItem.seasonResultHistoryIndex }}
+                        className="font-os text-os-text underline"
+                        style={CAPTION_STYLE}
+                      >
+                        {storedSeasonAgeLabel(state, seasonResultItem.seasonResultHistoryIndex)}
+                        {seasonResultItem.sentence}
+                      </Link>
+                    </div>
+                  ) : null}
+                  {seasonChronicleItems.length > 0 ? (
+                    <details className="rounded-os-m border border-os-border px-os-3 py-os-2">
+                      <summary className="cursor-pointer font-os font-semibold text-os-text" style={BODY_STYLE}>
+                        이번 시즌 상세 진행 {seasonChronicleItems.length}개
+                      </summary>
+                      <ol className="mt-os-3 flex flex-col gap-os-1">
                         {seasonChronicleItems.map((item) =>
                           item.seasonResultHistoryIndex !== null ? (
                             <li key={item.id}>
@@ -1023,7 +1069,7 @@ function CareerDashboard() {
                           ),
                         )}
                       </ol>
-                    </div>
+                    </details>
                   ) : null}
                   {pastSeasonLinks.length > 0 ? (
                     <div className="flex flex-col gap-os-2">
@@ -1040,17 +1086,13 @@ function CareerDashboard() {
                               className="font-os text-os-text underline"
                               style={CAPTION_STYLE}
                             >
-                              시즌 {link.seasonNumber} 결산 보기
+                              {storedSeasonAgeLabel(state, link.historyIndex)}시즌 {link.seasonNumber} 결산 보기
                             </Link>
                           </li>
                         ))}
                       </ul>
                     </div>
                   ) : null}
-                  <CareerTimeline
-                    items={buildTimelineItems(state)}
-                    emptyMessage="아직 기록이 없습니다"
-                  />
                 </div>
               </DashboardSection>
             </TabsContent>

@@ -1,0 +1,293 @@
+{
+  "id": "EVT-MGR-001",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": { "all": [{ "eq": ["season.step", 2] }, { "lt": ["context.tacticalFit", 70] }] },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 1 },
+  "weight": 100,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "수락, 윙어로 전환 훈련",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "적합도 크게 상승", "target": "tacticalFit", "direction": "UP" },
+        { "label": "숙련도 0.97로 시작" },
+        { "label": "결정력 성장 둔화" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 65,
+          "title": "새 역할에 빠르게 적응",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MGR-001.A.A1.0",
+              "target": "tacticalFit",
+              "delta": 14,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MGR-001.A.A1.1",
+              "target": "positionProficiency",
+              "delta": 97,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "REPLACE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MGR-001.A.A1.2",
+              "target": "managerTrust",
+              "delta": 8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["유연한_선수"]
+        },
+        {
+          "id": "A2",
+          "kind": "NEUTRAL",
+          "weight": 35,
+          "title": "적응 중, 감독은 인내",
+          "cause": "적응 기간",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MGR-001.A.A2.0",
+              "target": "tacticalFit",
+              "delta": 8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MGR-001.A.A2.1",
+              "target": "positionProficiency",
+              "delta": 92,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "REPLACE"
+            },
+            {
+              "kind": "DEFERRED",
+              "sourceId": "EVT-MGR-001.A.A2.2",
+              "target": "tacticalFit",
+              "delta": 4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "NEXT_SEASON_STEP", "step": 1 },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "거절, 내 자리로 증명",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "적합도 유지" },
+        { "label": "신뢰 하락 위험", "target": "managerTrust", "direction": "DOWN" },
+        { "label": "챕터 활약 시 보너스" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 40,
+          "title": "훈련 경기 2골로 감독 설득",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MGR-001.B.B1.0",
+              "target": "tacticalFit",
+              "delta": 6,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MGR-001.B.B1.1",
+              "target": "managerTrust",
+              "delta": 4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MGR-001.B.B1.2",
+              "target": "form",
+              "delta": 8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["증명"]
+        },
+        {
+          "id": "B2",
+          "kind": "NEUTRAL",
+          "weight": 40,
+          "title": "감독은 지켜보겠다고만 한다",
+          "cause": "자기 확신",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MGR-001.B.B2.0",
+              "target": "managerTrust",
+              "delta": -2,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MGR-001.B.B2.1",
+              "target": "morale",
+              "delta": 3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        },
+        {
+          "id": "B3",
+          "kind": "FAIL",
+          "weight": 20,
+          "title": "벤치 시작 확정",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MGR-001.B.B3.0",
+              "target": "managerTrust",
+              "delta": -8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MGR-001.B.B3.1",
+              "target": "squadStatus",
+              "delta": -10,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["고집"],
+          "followUps": [{ "eventId": "EVT-REL-001", "weightMultiplierBp": 20000 }]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "조건부: 두 역할 병행",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "적합도 소폭 상승", "target": "tacticalFit", "direction": "UP" },
+        { "label": "훈련 피로" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "SUCCESS",
+          "weight": 60,
+          "title": "두 역할 모두 준비",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MGR-001.C.C1.0",
+              "target": "tacticalFit",
+              "delta": 9,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MGR-001.C.C1.1",
+              "target": "fitness",
+              "delta": -6,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        },
+        {
+          "id": "C2",
+          "kind": "NEUTRAL",
+          "weight": 40,
+          "title": "어느 쪽도 완성 못 함",
+          "cause": "훈련 과부하",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MGR-001.C.C2.0",
+              "target": "tacticalFit",
+              "delta": 4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MGR-001.C.C2.1",
+              "target": "fitness",
+              "delta": -10,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MGR-001.C.C2.2",
+              "target": "form",
+              "delta": -3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "{manager} 감독이 부른다. \"터치라인 윙어로 뛰면 기회를 주겠다. 안쪽으로만 들어오면 준서 뒤에서 기다려야 한다.\""
+  }
+}

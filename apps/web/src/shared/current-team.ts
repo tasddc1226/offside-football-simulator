@@ -3,6 +3,10 @@ import type { CareerState, Ruleset } from '@offside/domain';
 /** 계약이 있으면 계약 팀 이름, 없으면 배경의 시작 팀 이름. 배경·팀을 못 찾으면 "무소속". */
 export function currentTeamName(state: CareerState, ruleset: Ruleset): string {
   if (state.contract !== null) return state.contract.teamName;
+  const recovery = ruleset.transferRules.recovery;
+  if (recovery !== undefined && state.age > recovery.youthMaxAge) {
+    return state.seasonHistory.length === 0 ? '계약 전 · 다음 팀 준비' : '무소속 · 다음 팀 준비';
+  }
 
   const backgroundId = state.player.profile?.backgroundId ?? state.player.draft.backgroundId;
   const background = backgroundId === null || backgroundId === undefined

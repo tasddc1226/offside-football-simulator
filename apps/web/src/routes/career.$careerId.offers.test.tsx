@@ -23,6 +23,7 @@ import { routeTree } from '../routeTree.gen.js';
 import { careerQueryOptions } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { useUiStore } from '../shared/ui-store.js';
+import { shouldShowRecoveryOpportunityNotice } from './career.$careerId.offers.js';
 
 const engineHolder = vi.hoisted(() => ({ promise: null as Promise<unknown> | null }));
 
@@ -186,5 +187,41 @@ describe('T-4-014 C9: SCR-017 전부 거절 버튼 문구는 시장 종류에 �
       screen.getByText('거절하면 계약이 만료돼 시즌 결산 뒤 이적시장이 열립니다. 잔류 제안은 그때 다시 나옵니다.'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '제안 모두 거절하고 잔류' })).not.toBeInTheDocument();
+  });
+});
+
+describe('recovery opportunity notice', () => {
+  it('requires the configured zero-minute streak and an actual recovery-tier offer', () => {
+    const ruleset = loadRuleset('1.3.0');
+    const state = {
+      rulesetVersion: ruleset.version,
+      contract: { teamId: 'current-team' },
+      seasonHistory: [
+        { result: { playerStats: { minutes: 0 } } },
+        { result: { playerStats: { minutes: 0 } } },
+      ],
+    } as unknown as import('@offside/domain').CareerState;
+    const opportunity = buildFakeOffer('recovery', { leagueTier: 3 });
+
+    expect(shouldShowRecoveryOpportunityNotice(state, [opportunity])).toBe(true);
+    expect(
+      shouldShowRecoveryOpportunityNotice(
+        {
+          ...state,
+          seasonHistory: [
+            ...state.seasonHistory.slice(0, 1),
+            {
+              ...state.seasonHistory[1]!,
+              result: {
+                ...state.seasonHistory[1]!.result,
+                playerStats: { ...state.seasonHistory[1]!.result.playerStats, minutes: 1 },
+              },
+            },
+          ],
+        },
+        [opportunity],
+      ),
+    ).toBe(false);
+    expect(shouldShowRecoveryOpportunityNotice(state, [buildFakeOffer('top')])).toBe(false);
   });
 });

@@ -28,23 +28,24 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
   await resolveRoleProposal(page);
 
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
-  await expect(page.getByText(/시즌 1 · .* · step 1\/12/)).toBeVisible();
+  await expect(page.getByText('시즌 1 · 1/12 단계')).toBeVisible();
+  await page.getByRole('tab', { name: '일정' }).click();
   const seasonTimeline = page.getByLabel('시즌 진행 12 step');
   await expect(seasonTimeline).toBeVisible();
   await expect(seasonTimeline.locator('li')).toHaveCount(12);
 
   // 새로고침해도 진행 중인 step이 그대로 유지된다(로컬 우선 — ADR-002).
   await page.reload();
-  await expect(page.getByText(/시즌 1 · .* · step 1\/12/)).toBeVisible();
+  await expect(page.getByText('시즌 1 · 1/12 단계')).toBeVisible();
 
   await advanceThroughSeasonToSettlement(page);
 
-  // 일정표 구역(기본 탭): 시즌 대부분을 진행했으니 최소 한 경기는 스코어가 잡혀 있어야 한다.
-  await page.getByRole('tab', { name: '일정표' }).click();
+  // 일정 탭: 시즌 대부분을 진행했으니 최소 한 경기는 스코어가 잡혀 있어야 한다.
+  await page.getByRole('tab', { name: '일정' }).click();
   await expect(page.getByText(/\d+:\d+/).first()).toBeVisible();
 
   // 전술실 구역: 선발 순위 목록에 내 이름 행이 있다.
-  await page.getByRole('tab', { name: '전술실' }).click();
+  await page.getByRole('tab', { name: '선수' }).click();
   await expect(page.getByText('(나)')).toBeVisible();
 
   // SCR-033: "표시된 능력 × 가중치"가 헤더 Base OVR과 같다(인수 조건).
@@ -57,8 +58,9 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
   await expect(page.getByText('정찰 범위')).toBeVisible();
 
   await page.goBack();
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expect(page).toHaveURL(/\/career\/[^/]+\?view=player$/);
 
+  await page.getByRole('tab', { name: '홈' }).click();
   await page.getByRole('button', { name: '결산하기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
   await expect(page.getByRole('heading', { level: 1, name: '프로 시즌 결과' })).toBeVisible();

@@ -327,7 +327,7 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-029(일정표, 기본)');
 
-  await page.getByRole('tab', { name: '휴대폰' }).click();
+  await page.getByRole('tab', { name: '계약' }).click();
   await expect(page.getByText('주급')).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-029(휴대폰)');
@@ -368,7 +368,7 @@ test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', a
 
 test('SCR-033 능력치 상세 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   await completeOnboardingThroughContract(page);
-  await page.getByRole('tab', { name: '전술실' }).click();
+  await page.getByRole('tab', { name: '선수' }).click();
   await page.getByRole('link', { name: '능력치 상세' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/attributes$/);
 

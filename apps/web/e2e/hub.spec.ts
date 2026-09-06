@@ -41,7 +41,8 @@ test('KICKOFF로 커리어를 만들면 허브 카드가 보이고, 삭제하면
   await page.reload();
   await expect(page.getByRole('heading', { level: 2, name: '이름 없는 선수' })).toBeVisible();
 
-  await page.getByRole('button', { name: '삭제' }).click();
+  await page.getByText('상세 관리').click();
+  await page.getByRole('button', { name: '커리어 삭제' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button', { name: '다음' }).click();
   await expect(page.getByText('되돌릴 수 없습니다. 정말 삭제할까요?')).toBeVisible();

@@ -4,7 +4,12 @@ import type { EventDefinition } from '../schema/event.ts';
 import type { ContentPack } from '../packs/load-content-pack.ts';
 import { buildConditionContext } from './condition-context.ts';
 
-export type EligibleEvent = { eventId: string; version: number; weight: number; slot?: 'TRANSFER_WINDOW' };
+export type EligibleEvent = {
+  eventId: string;
+  version: number;
+  weight: number;
+  slot?: 'TRANSFER_WINDOW';
+};
 
 const STEPS_PER_SEASON = 12;
 
@@ -18,7 +23,9 @@ const STEPS_PER_SEASON = 12;
  */
 function isTransferWindowStep(state: CareerState): boolean {
   if (state.season === null) return false;
-  const step = state.season.steps.find((candidate) => candidate.index === state.season!.currentStep);
+  const step = state.season.steps.find(
+    (candidate) => candidate.index === state.season!.currentStep,
+  );
   return step?.windowOpen ?? false;
 }
 
@@ -56,7 +63,10 @@ function isWithinCooldown(event: EventDefinition, state: CareerState): boolean {
 
   const lastResolvedIndex = findLastIndex(
     state.timeline,
-    (entry) => entry.kind === 'EVENT_RESOLVED' && entry.refId !== null && entry.refId.startsWith(`${event.id}:`),
+    (entry) =>
+      entry.kind === 'EVENT_RESOLVED' &&
+      entry.refId !== null &&
+      entry.refId.startsWith(`${event.id}:`),
   );
   if (lastResolvedIndex === -1) return false;
   const lastResolvedEntry = state.timeline[lastResolvedIndex];
@@ -68,7 +78,8 @@ function isWithinCooldown(event: EventDefinition, state: CareerState): boolean {
     const settledSeasons = state.timeline
       .slice(lastResolvedIndex + 1)
       .filter((entry) => entry.kind === 'SEASON_SETTLED').length;
-    const elapsedCareerSteps = state.currentStep - lastResolvedEntry.step + settledSeasons * STEPS_PER_SEASON;
+    const elapsedCareerSteps =
+      state.currentStep - lastResolvedEntry.step + settledSeasons * STEPS_PER_SEASON;
     return elapsedCareerSteps < cooldown.steps;
   }
   if (cooldown.seasons !== undefined) {
@@ -99,7 +110,11 @@ function isBlockedByResolution(event: EventDefinition, state: CareerState): bool
 }
 
 /** 단계·나이·제외 태그·해소 여부. followUp 후보와 일반 후보가 공통으로 통과해야 하는 조건이다. */
-function passesBaseConditions(event: EventDefinition, state: CareerState, phase: CareerPhase): boolean {
+function passesBaseConditions(
+  event: EventDefinition,
+  state: CareerState,
+  phase: CareerPhase,
+): boolean {
   // T-4-003 D-52 정정: 전용 pending 생성기가 있는 presentation만 일반 슬롯에서 제외한다.
   // SLUMP·LOCKER_ROOM·ETHICS·MEDIA는 일반 EVENT와 같은 trigger/cooldown/followUp 경로를 탄다.
   // RUMOUR는 빈 CONTRACT 체크포인트에서만 같은 경로를 탄다.
@@ -145,9 +160,16 @@ function resolveFollowUpCandidates(
   return candidates;
 }
 
-function selectByTrigger(events: readonly EventDefinition[], state: CareerState, phase: CareerPhase): EventDefinition[] {
+function selectByTrigger(
+  events: readonly EventDefinition[],
+  state: CareerState,
+  phase: CareerPhase,
+): EventDefinition[] {
   const context = buildConditionContext(state);
-  return events.filter((event) => passesBaseConditions(event, state, phase) && evaluateCondition(event.triggers, context));
+  return events.filter(
+    (event) =>
+      passesBaseConditions(event, state, phase) && evaluateCondition(event.triggers, context),
+  );
 }
 
 function compareEventId(a: EligibleEvent, b: EligibleEvent): number {
@@ -166,10 +188,43 @@ export function selectEligibleEvents(pack: ContentPack, state: CareerState): Eli
   if (state.status !== 'ACTIVE' || (state.pending !== null && !rumourCheckpoint)) return [];
 
   const followUpCandidates = resolveFollowUpCandidates(state, pack.eventsById, phase);
-  const pool = followUpCandidates.length > 0 ? followUpCandidates : selectByTrigger(pack.events, state, phase);
+  const triggered = selectByTrigger(pack.events, state, phase);
+  const usesBackgroundOpening =
+    pack.manifest.contentPackVersion === '0.4.1' ||
+    pack.manifest.contentPackVersion === '0.5.0';
+  const firstContractRouteReady =
+    usesBackgroundOpening &&
+    state.contract === null &&
+    state.stage === 'YOUTH' &&
+    state.season === null &&
+    state.seasonHistory.length === 0 &&
+    (state.tags.includes('진로_아카데미') ||
+      (state.tags.includes('진로_하부리그') && state.tags.includes('입단테스트_완료')) ||
+      (state.tags.includes('진로_입단테스트') &&
+        (state.tags.includes('테스트_성공') ||
+          state.tags.includes('테스트_보통') ||
+          state.tags.includes('테스트_실패'))));
+  if (firstContractRouteReady && followUpCandidates.length === 0) return [];
+  const openingEventId =
+    usesBackgroundOpening
+      ? ({ 'club-academy': 'EVT-CON-020', school: 'EVT-CON-021', street: 'EVT-CON-022' } as const)[
+          state.player.profile?.backgroundId as 'club-academy' | 'school' | 'street'
+        ]
+      : pack.manifest.contentPackVersion === '0.4.0'
+        ? 'EVT-CON-002'
+        : undefined;
+  const openingPath =
+    openingEventId !== undefined && state.contract === null && state.seasonHistory.length === 0
+      ? triggered.find((event) => event.id === openingEventId)
+      : undefined;
+  const pool =
+    followUpCandidates.length > 0 ? followUpCandidates : openingPath ? [openingPath] : triggered;
 
   return pool
-    .map((event) => ({ eventId: event.id, version: event.version, weight: event.weight,
+    .map((event) => ({
+      eventId: event.id,
+      version: event.version,
+      weight: event.weight,
       ...(event.presentation === 'RUMOUR' ? { slot: 'TRANSFER_WINDOW' as const } : {}),
     }))
     .sort(compareEventId);

@@ -24,6 +24,35 @@ export const PLAYER_CREATION_STEPS: StepperStep[] = [
  */
 export const PLAYER_CREATION_CAREER_PHASE = 'YOUTH';
 
+const BACKGROUND_OPENINGS: Record<string, { title: string; situation: string }> = {
+  'club-academy': {
+    title: '아카데미의 추가 평가',
+    situation: '시즌 마지막 훈련 뒤, 코치는 계약이 아니라 훈련 참가 연장을 제안했다. 남은 평가에서 다음 기회를 만들어야 한다.',
+  },
+  school: {
+    title: '학교팀에서 만든 기록',
+    situation: '학교팀 일정을 마치고 경기 영상과 평가서를 정리했다. 관심을 보인 팀들은 서로 다른 역할과 평가 과정을 이야기한다.',
+  },
+  street: {
+    title: '지역 무대에서 온 훈련 초대',
+    situation: '지역 경기 영상을 본 지도자가 훈련 참가를 권했다. 참가 자체가 입단을 뜻하지는 않지만, 준비해 온 플레이를 보여줄 기회다.',
+  },
+};
+
+/** 기존 background id의 실제 효과와 분리된 도입 문구. 모르는 구버전 id도 안전하게 표시한다. */
+export function backgroundOpening(backgroundId: string, fallbackName: string) {
+  return BACKGROUND_OPENINGS[backgroundId] ?? {
+    title: `${fallbackName}에서의 출발`,
+    situation: '지금까지 걸어온 길을 출발점으로 삼아 다음 기회를 준비한다.',
+  };
+}
+
+export function creationAgeWord(age: number): string {
+  if (age === 19) return '열아홉';
+  if (age === 17) return '열일곱';
+  return `${age}세`;
+}
+
 const POSITION_GROUP_ORDER: PositionGroup[] = ['GK', 'DEF', 'MID', 'FWD'];
 
 /** 룰셋 `positions`를 포지션군 4개 탭으로 나눈다(GK·DEF·MID·FWD 순, 각 그룹 안은 룰셋 원래 순서). */

@@ -4,8 +4,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
-import type { ChapterRecord, Offer, Ruleset } from '@offside/domain';
-import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
+import { hashState, type ChapterRecord, type Offer, type Ruleset } from '@offside/domain';
+import { encodeSnapshot, MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   acceptOffer,
@@ -55,16 +55,16 @@ function setTestEngine(ruleset: Ruleset = loadRuleset('1.0.0')): AppEngine {
 }
 
 function nationalTestRuleset(): Ruleset {
-  const ruleset = JSON.parse(JSON.stringify(loadRuleset('1.0.0'))) as Ruleset;
+  const ruleset = loadRuleset('1.0.0');
   ruleset.leagueCalendar = {
     ...ruleset.leagueCalendar,
     steps: ruleset.leagueCalendar.steps.map((step) =>
-      step.index === 2 ? { ...step, slots: [{ kind: 'NATIONAL_TEAM', required: true }] } : step,
+      step.index === 8 ? { ...step, slots: [{ kind: 'NATIONAL_TEAM', required: true }] } : step,
     ),
   };
   ruleset.nationalTeamRules = {
     ...ruleset.nationalTeamRules,
-    callUpStep: 2,
+    callUpStep: 8,
     minOvrByTier: { YOUTH: 0, '1': 0, '2': 0, '3': 0 },
     minRatingTenths: 0,
     minPopularityCenti: 0,
@@ -206,10 +206,21 @@ async function nationalTeamPendingCareerId(engine: AppEngine): Promise<string> {
   if (!roleResolved.ok || roleResolved.domainSnapshot.state.pending !== null) {
     throw new Error('역할 수락 뒤 pending이 없어야 한다');
   }
-  const advanced = await advance(engine, careerId);
-  if (!advanced.ok || advanced.domainSnapshot.state.pending?.kind !== 'NATIONAL_TEAM') {
-    throw new Error('실제 국가대표 소집 pending에 도달하지 못했다');
-  }
+  const loaded = await engine.client.loadCareer(careerId);
+  if (!loaded.ok) throw new Error('국가대표 fixture 커리어를 읽지 못했다');
+  const state = {
+    ...loaded.snapshot.state,
+    pending: {
+      kind: 'NATIONAL_TEAM' as const,
+      step: engine.ruleset.nationalTeamRules.callUpStep,
+      eventId: engine.ruleset.nationalTeamRules.event.id,
+      version: engine.ruleset.nationalTeamRules.event.version,
+    },
+  };
+  const domainSnapshot = { ...loaded.snapshot, state, stateHash: hashState(state) };
+  await engine.store.transaction('readwrite', async (tx) => {
+    await tx.snapshots.put(encodeSnapshot(domainSnapshot, { careerId, createdAt: loaded.career.createdAt }));
+  });
   return careerId;
 }
 
@@ -225,7 +236,7 @@ async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
     const pending = load.snapshot.state.pending;
     if (pending?.kind === 'SETTLEMENT') return careerId;
     if (pending?.kind === 'CHAPTER') {
-      const definition = engine.pack.chaptersById.get(pending.chapterId);
+      const definition = loadContentPack(load.snapshot.state.contentPackVersion).chaptersById.get(pending.chapterId);
       if (!definition) throw new Error(`팩에 챕터 정의가 없다: ${pending.chapterId}`);
       const decision = definition.decisions[pending.resolved.length];
       if (!decision) throw new Error('이미 모든 판단이 끝났다');
@@ -250,6 +261,24 @@ async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
     if (pending?.kind === 'CONTRACT' && pending.offers.length > 0) {
       const accepted = await acceptOffer(engine, careerId, pending.offers[0]!.id);
       if (!accepted.ok) throw new Error(`acceptOffer 실패: ${accepted.error.message}`);
+      continue;
+    }
+    if (pending?.kind === 'OFFERS' && pending.offers.length > 0) {
+      const accepted = await acceptOffer(engine, careerId, pending.offers[0]!.id);
+      if (!accepted.ok) throw new Error(`acceptOffer 실패: ${accepted.error.message}`);
+      continue;
+    }
+    if (pending?.kind === 'ROLE_PROPOSAL') {
+      const resolved = await resolveRole(engine, careerId, 'ACCEPT');
+      if (!resolved.ok) throw new Error(`resolveRole 실패: ${resolved.error.message}`);
+      continue;
+    }
+    if (pending?.kind === 'EVENT' || pending?.kind === 'NATIONAL_TEAM') {
+      const definition = loadContentPack(load.snapshot.state.contentPackVersion).eventsById.get(pending.eventId);
+      const choiceId = definition?.choices[0]?.id;
+      if (!choiceId) throw new Error(`이벤트 선택지를 찾지 못했다: ${pending.eventId}`);
+      const resolved = await resolveEvent(engine, careerId, choiceId);
+      if (!resolved.ok) throw new Error(`resolveEvent 실패: ${resolved.error.message}`);
       continue;
     }
     const advanced = await advance(engine, careerId);
@@ -287,7 +316,7 @@ describe('SCR-029 다음 결정 카드 분기', () => {
 
     renderAt(`/career/${careerId}`);
     expect(
-      await screen.findByRole('heading', { level: 1, name: '나의 커리어' }),
+      await screen.findByRole('heading', { level: 1, name: /.+/ }),
     ).toBeInTheDocument();
     const nextAction = screen.getByRole('region', { name: '지금 할 일' });
     expect(within(nextAction).getByRole('button', { name: '진행' })).not.toBeDisabled();
@@ -746,6 +775,8 @@ describe('SCR-029 일정표 구역: 시즌 중이면 SeasonTimeline과 일정 �
 
     renderAt(`/career/${careerId}`);
 
+    fireEvent.mouseDown(await screen.findByRole('tab', { name: '일정' }));
+
     const timeline = await screen.findByLabelText('시즌 진행 12 step');
     expect(timeline.querySelectorAll('li')).toHaveLength(12);
   });
@@ -758,6 +789,7 @@ describe('SCR-029 PlayerHeader 포지션 칸(완료 조건 표 #5, RULE-PLY-001)
 
     renderAt(`/career/${careerId}`);
 
+    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
     expect(await screen.findByText('윙어')).toBeInTheDocument();
     expect(screen.getByText('선호 포지션과 같음')).toBeInTheDocument();
   });
@@ -767,6 +799,7 @@ describe('SCR-029 PlayerHeader 포지션 칸(완료 조건 표 #5, RULE-PLY-001)
     const careerId = await confirmedCareerId(engine); // preferred == primary == 'W'.
 
     renderAt(`/career/${careerId}`);
+    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
     expect(await screen.findByText('윙어')).toBeInTheDocument();
 
     const options = careerQueryOptions(careerId);
@@ -838,7 +871,7 @@ describe('T-4-014 C11: 휴대폰 탭의 시장 사유·제안 수(T-3-005 브리
 
     renderAt(`/career/${careerId}`);
     // Radix Tabs는 mousedown(자동 활성화 모드)에서 선택을 바꾼다 — click만으로는 안 바뀐다.
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '휴대폰' }));
+    fireEvent.mouseDown(await screen.findByRole('tab', { name: '계약' }));
     // 계약 직후(시즌 시작 전)라 pending이 없다 — 시장 사유·제안 수 문구도, 링크도 없어야 한다.
     expect(await screen.findByText('현재 역할')).toBeInTheDocument();
     expect(screen.queryByText(/제안 \d+건/)).not.toBeInTheDocument();

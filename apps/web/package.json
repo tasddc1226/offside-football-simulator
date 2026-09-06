@@ -13,7 +13,7 @@
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:production": "wrangler deploy --env production",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run && node --test scripts/seo.test.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p e2e/tsconfig.json",
     "check:bundle": "node scripts/check-bundle.mjs",

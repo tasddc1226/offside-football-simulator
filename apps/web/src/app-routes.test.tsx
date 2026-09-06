@@ -86,6 +86,11 @@ async function seedDraftCareer(): Promise<void> {
   await createCareer(engine, { simulationMode: 'FAST' });
 }
 
+async function openCareerDetails(): Promise<void> {
+  fireEvent.click(screen.getByText('상세 관리', { exact: true }));
+  await screen.findByRole('button', { name: '커리어 삭제' });
+}
+
 beforeEach(() => {
   setTestEngine();
   queryClient.clear();
@@ -98,13 +103,17 @@ beforeEach(() => {
   });
 });
 
-describe('SCR-001 허브 → SCR-034 온보딩 리다이렉트', () => {
-  it('첫 방문(onboardingSeen=false)이고 커리어가 없으면 /onboarding으로 리다이렉트한다', async () => {
+describe('SCR-001 공개 소개 → SCR-034 온보딩', () => {
+  it('첫 방문이고 커리어가 없으면 공개 소개에서 온보딩을 시작한다', async () => {
     const router = renderAt('/');
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/onboarding');
-    });
+    expect(await screen.findByRole('heading', { level: 1, name: 'OFFSIDE' })).toBeInTheDocument();
+    expect(screen.getByText('이번 생은 프리미어리거!')).toBeInTheDocument();
+    expect(screen.getByText(/선택으로 나만의 축구 선수 커리어/)).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/');
+
+    fireEvent.click(screen.getByRole('link', { name: '게임 시작' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/onboarding'));
     expect(
       await screen.findByRole('heading', {
         level: 1,
@@ -120,6 +129,7 @@ describe('SCR-001 허브 → SCR-034 온보딩 리다이렉트', () => {
     expect(
       await screen.findByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),
     ).toBeInTheDocument();
+    expect(screen.getByText('이번 생은 프리미어리거!')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('button', { name: '커리어 시작' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
@@ -127,12 +137,13 @@ describe('SCR-001 허브 → SCR-034 온보딩 리다이렉트', () => {
 });
 
 describe('SCR-034 온보딩', () => {
-  it('"다음"으로 3장을 모두 이동하고 마지막 장에서 KICKOFF 버튼과 복구 코드 문구를 보여준다', async () => {
+  it('"다음"으로 3장을 모두 이동하고 마지막 장에서 새 인생 시작 버튼과 복구 코드 문구를 보여준다', async () => {
     renderAt('/onboarding');
     await screen.findByRole('heading', {
       level: 1,
       name: 'OVR 하나가 아니라 여러 수치로 성장합니다',
     });
+    expect(screen.getByText('이번 생은 프리미어리거!')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
     expect(
@@ -141,10 +152,10 @@ describe('SCR-034 온보딩', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
     expect(
-      await screen.findByRole('heading', { level: 1, name: '복구 코드가 유일한 열쇠입니다' }),
+      await screen.findByRole('heading', { level: 1, name: '커리어를 다시 찾을 방법을 준비하세요' }),
     ).toBeInTheDocument();
     expect(screen.getByText('커리어에는 VAR이 없다')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'KICKOFF' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /새 인생 시작/ })).toBeInTheDocument();
   });
 
   it('"건너뛰기"는 onboardingSeen을 저장하고 허브로 이동한다', async () => {
@@ -162,7 +173,7 @@ describe('SCR-034 온보딩', () => {
     expect(useUiStore.getState().onboardingSeen).toBe(true);
   });
 
-  it('마지막 장의 KICKOFF는 커리어를 만들고 SCR-002 자리표시로 이동한다', async () => {
+  it('새 인생 시작은 커리어를 한 번 만들고 브랜드 전환 뒤 SCR-002로 이동한다', async () => {
     const router = renderAt('/onboarding');
     await screen.findByRole('heading', {
       level: 1,
@@ -171,14 +182,16 @@ describe('SCR-034 온보딩', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
-    fireEvent.click(screen.getByRole('button', { name: 'KICKOFF' }));
+    fireEvent.click(screen.getByRole('button', { name: /새 인생 시작/ }));
+
+    expect(await screen.findByText('새 인생이 시작됩니다')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(router.state.location.pathname).toMatch(/^\/career\/.+\/create$/);
     });
     expect(useUiStore.getState().onboardingSeen).toBe(true);
     expect(
-      await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' }),
+      await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' }),
     ).toBeInTheDocument();
   });
 });
@@ -239,7 +252,8 @@ describe('SCR-001 허브 - 카드', () => {
     renderAt('/');
     await screen.findByRole('heading', { level: 2, name: '이름 없는 선수' });
 
-    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
+    await openCareerDetails();
+    fireEvent.click(screen.getByRole('button', { name: '커리어 삭제' }));
     const dialog = await screen.findByRole('dialog');
     expect(
       within(dialog).getByText('이름 없는 선수의 커리어를 삭제하시겠습니까?'),
@@ -271,11 +285,12 @@ describe('SCR-001 허브 - 카드', () => {
 
     // SCR-002를 한 번 방문해 ['career', careerId] 쿼리 캐시(staleTime 30s)를 채운다.
     renderAt(`/career/${careerId}/create`);
-    await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
+    await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' });
 
     renderAt('/');
     await screen.findByRole('heading', { level: 2, name: '이름 없는 선수' });
-    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
+    await openCareerDetails();
+    fireEvent.click(screen.getByRole('button', { name: '커리어 삭제' }));
     const dialog = await screen.findByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: '다음' }));
     fireEvent.click(within(dialog).getByRole('button', { name: '삭제 확정' }));
@@ -312,7 +327,8 @@ describe('SCR-001 허브 - 카드', () => {
     renderAt('/');
     await screen.findByRole('heading', { level: 2, name: '이름 없는 선수' });
 
-    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
+    await openCareerDetails();
+    fireEvent.click(screen.getByRole('button', { name: '커리어 삭제' }));
     const dialog = await screen.findByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: '다음' }));
     fireEvent.click(within(dialog).getByRole('button', { name: '삭제 확정' }));
@@ -329,7 +345,8 @@ describe('SCR-001 허브 - 카드', () => {
     renderAt('/');
     await screen.findByRole('heading', { level: 2, name: '이름 없는 선수' });
 
-    const deleteButton = screen.getByRole('button', { name: '삭제' });
+    await openCareerDetails();
+    const deleteButton = screen.getByRole('button', { name: '커리어 삭제' });
     await user.click(deleteButton);
     await screen.findByRole('dialog');
 

@@ -89,6 +89,7 @@ export const CONDITION_FIELDS: readonly ConditionFieldSpec[] = [
   { path: 'career.tags', type: 'tags' },
   { path: 'career.proSeasons', type: 'int' },
   { path: 'player.primaryPosition', type: 'string' },
+  { path: 'player.backgroundId', type: 'string' },
   { path: 'player.positionGroup', type: 'string' },
   { path: 'player.archetypeId', type: 'string' },
   { path: 'player.baseOvr', type: 'int' },

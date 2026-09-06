@@ -1,5 +1,5 @@
-// SCR-007 졸업 후 진로 선택. EVT-CON-002 전용 변형: 범용 이벤트 화면 위에 정찰 범위와 세 경로
-// 비교 카드를 더한다. 확정 로직은 SCR-013과 동일(EventDecisionScreen).
+// SCR-007 첫 진로 선택. 기존 공통 진로와 배경별 도입 사건에서 범용 이벤트 화면 위에 정찰 범위와
+// 실제 previewEffects 비교 카드를 더한다. 확정 로직은 SCR-013과 동일(EventDecisionScreen).
 import { CompareCards, type CompareRow } from '@offside/ui';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import type { EventDefinition } from '@offside/content';
@@ -25,48 +25,32 @@ const CAPTION_STYLE = {
   lineHeight: 'var(--os-lh-caption)',
 } as const;
 
-/** EVT-CON-002 전용 데이터: previewEffects는 A·B는 "성장→출전" 순서지만 C는 순서가 다르고
- * "성장 기대" 줄이 아예 없다(콘텐츠 확인 사항, PR 본문에 기록). 제안 범위는 previewEffects에
- * 없어 phase-1-plan.md D-9 분기표(진로 태그 → offerRules)에서 가져온다. */
+/** 기존 공통 진로 사건의 제안 범위만 콘텐츠 밖의 확정된 분기표를 사용한다. 배경별 신규 사건은
+ * 계약을 약속하지 않으므로 각 선택지에 실제로 정의된 previewEffects만 그대로 비교한다. */
 const OFFER_RANGE_BY_CHOICE: Record<string, string> = {
   A: '입단 테스트 결과에 따라 1~3부',
   B: '유스 잔류 계약 1건(고정)',
   C: '2부·3부',
 };
 
-function pickByKeyword(labels: string[], keyword: string): string {
-  return labels.find((label) => label.includes(keyword)) ?? '정보 없음';
-}
-
 function buildCompareRows(definition: EventDefinition): CompareRow[] {
   const choices = definition.choices;
-  return [
-    {
-      id: 'growth',
-      label: '성장 기대',
-      cells: choices.map((choice) => ({
-        value: pickByKeyword(
-          choice.previewEffects.map((preview) => preview.label),
-          '성장',
-        ),
-      })),
-    },
-    {
-      id: 'playing-time',
-      label: '출전 기대',
-      cells: choices.map((choice) => ({
-        value: pickByKeyword(
-          choice.previewEffects.map((preview) => preview.label),
-          '출전',
-        ),
-      })),
-    },
-    {
+  const previewCount = Math.max(0, ...choices.map((choice) => choice.previewEffects.length));
+  const rows: CompareRow[] = Array.from({ length: previewCount }, (_, index) => ({
+    id: `preview-${index}`,
+    label: `예상 영향 ${index + 1}`,
+    cells: choices.map((choice) => ({
+      value: choice.previewEffects[index]?.label ?? '추가 영향 없음',
+    })),
+  }));
+  if (definition.id === 'EVT-CON-002') {
+    rows.push({
       id: 'offer-range',
       label: '제안 범위',
       cells: choices.map((choice) => ({ value: OFFER_RANGE_BY_CHOICE[choice.id] ?? '정보 없음' })),
-    },
-  ];
+    });
+  }
+  return rows;
 }
 
 function renderAbove({ state, definition }: EventDecisionContext) {

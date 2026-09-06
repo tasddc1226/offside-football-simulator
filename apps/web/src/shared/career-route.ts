@@ -16,6 +16,9 @@ export type ScreenTarget = {
 /** EVT-CON-002 → SCR-007(진로 선택), EVT-CON-003 → SCR-008(입단 테스트). 그 외는 SCR-013. */
 const EVENT_SCREEN_OVERRIDES: Partial<Record<string, keyof typeof SCREEN_ROUTES>> = {
   'EVT-CON-002': 'SCR-007',
+  'EVT-CON-020': 'SCR-007',
+  'EVT-CON-021': 'SCR-007',
+  'EVT-CON-022': 'SCR-007',
   'EVT-CON-003': 'SCR-008',
 };
 

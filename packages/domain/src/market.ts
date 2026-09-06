@@ -53,6 +53,7 @@ export function judgeMarketReason(state: CareerState, ruleset: Ruleset): 'EXPIRE
   const remaining = computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline);
   if (remaining === 0) return 'EXPIRED';
 
+  if (needsRecoveryOpportunity(state, ruleset)) return 'INTEREST';
   if (state.tags.includes('잔류_선언')) return null;
   if (state.tags.includes('이적_희망')) return 'INTEREST';
 
@@ -87,6 +88,52 @@ function findTeamById(ruleset: Ruleset, teamId: string): Team {
     throw new RangeError(`market.ts: 룰셋에 teamId '${teamId}'가 없다.`);
   }
   return team;
+}
+
+function hasConsecutiveZeroMinuteSeasons(state: CareerState, count: number): boolean {
+  return state.seasonHistory.length >= count && state.seasonHistory.slice(-count).every((season) => season.result.playerStats.minutes === 0);
+}
+
+function needsRecoveryOpportunity(state: CareerState, ruleset: Ruleset): boolean {
+  const policy = ruleset.transferRules.recovery;
+  return policy !== undefined && hasConsecutiveZeroMinuteSeasons(state, policy.zeroMinutesConsecutiveSeasons);
+}
+
+export function isYouthExitRequired(state: CareerState, ruleset: Ruleset): boolean {
+  const policy = ruleset.transferRules.recovery;
+  const contract = state.contract;
+  return policy !== undefined && contract !== null && contract.leagueTier === 'YOUTH' && state.age > policy.youthMaxAge;
+}
+
+/** A visible lower-tier route, not an appearance guarantee: normal selection still decides every match. */
+function buildRecoveryOpportunity(state: CareerState, ruleset: Ruleset, revision: number, offerIndex: number): Offer {
+  const policy = ruleset.transferRules.recovery;
+  const contract = state.contract;
+  const profile = state.player.profile;
+  if (policy === undefined || contract === null || profile === null) throw new RangeError('buildRecoveryOpportunity: recovery context is incomplete.');
+  const team = ruleset.teams
+    .filter((candidate) => candidate.leagueTier === policy.opportunityTier && candidate.id !== contract.teamId)
+    .sort((a, b) => a.squadStrength - b.squadStrength || compareCodePoints(a.id, b.id))[0];
+  if (team === undefined) throw new RangeError(`buildRecoveryOpportunity: tier ${policy.opportunityTier} team is missing.`);
+  const band = findOvrBand(ruleset.contractRules, profile.baseOvr);
+  const remaining = computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline);
+  const kind: OfferKind = remaining === 0 ? 'FREE_AGENT' : 'LOAN';
+  const projection = ruleset.offerProjection === undefined ? null : projectOfferSelection({ state, ruleset, team, rolePromise: policy.opportunityRole, seasonIndex: state.seasonHistory.length + 1 });
+  return {
+    id: `OFR-${revision}-${offerIndex}`, kind, teamId: team.id, teamName: team.name,
+    fromTeamId: kind === 'LOAN' ? contract.teamId : null,
+    leagueTier: team.leagueTier, lengthSeasons: 1,
+    wageMinorPerWeek: lookupBandAmount(ruleset.contractRules.wageBands, team.wageBandId, band.id, 'wageBands'),
+    signingBonusMinor: lookupBandAmount(ruleset.contractRules.signingBonus, team.wageBandId, band.id, 'signingBonus'),
+    transferFeeMinor: null,
+    rolePromise: policy.opportunityRole,
+    appearancePromise: { minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[policy.opportunityRole] },
+    positionPlan: profile.primaryPosition, shirtNumber: contract.shirtNumber,
+    tacticalFitEstimate: projection?.tacticalFit ?? state.context.tacticalFit,
+    competitorSummary: projection?.competitorSummary ?? computeCompetitorSummary(ruleset, team, profile.primaryPosition, profile.baseOvr, `recovery:${state.careerId}:${revision}:${team.id}`),
+    validUntilRevision: null, negotiable: { wage: false, role: false, length: false }, negotiationState: 'OPEN', negotiatedAsk: null,
+    loan: kind === 'LOAN' ? { parentTeamId: contract.teamId, seasons: 1, wageShareBp: ruleset.transferRules.loan.wageShareBp, buyOptionMinor: null } : null,
+  };
 }
 
 /**
@@ -371,8 +418,13 @@ export function generateMarket(args: GenerateMarketArgs): GeneratedMarket {
     });
   }
 
-  const safeOffer = buildSafeOffer({ state, ruleset, reason, revision, contract, squadRole });
-  const offers = [safeOffer, ...drawnOffers];
+  const youthExit = isYouthExitRequired(state, ruleset);
+  const safeOffer = youthExit
+    ? buildRecoveryOpportunity(state, ruleset, revision, 0)
+    : buildSafeOffer({ state, ruleset, reason, revision, contract, squadRole });
+  const offers = needsRecoveryOpportunity(state, ruleset) && !youthExit
+    ? [safeOffer, buildRecoveryOpportunity(state, ruleset, revision, 1), ...drawnOffers.slice(1)]
+    : [safeOffer, ...drawnOffers];
 
   return {
     pending: {

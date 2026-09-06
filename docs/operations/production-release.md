@@ -22,7 +22,7 @@
 | 신규 운영 시즌 | `svc_season_1`, 표시명 `시즌 1`, ACTIVE, isTest=false |
 | 기간 | 2026-09-06 00:00 KST부터, 종료일 미정(`endsAt: null`) |
 | 문의 | `tasddc1569@gmail.com` |
-| 신규 커리어 버전 | ruleset 1.1.0 / content pack 0.3.0 / Legacy 1.1.0 |
+| 현재 신규 커리어 버전 | ruleset 1.3.0 / content pack 0.5.0 |
 
 ## 최초 공개 결과
 
@@ -105,6 +105,28 @@
 6. ego-browser로 온보딩/새 선수 생성과 API 저장·새로고침을 확인한다. QA 기록을 실제 사용자 지표와
    혼동하지 않도록 이름과 검증 시각을 남기며, 기존 사용자 기록은 지우지 않는다.
 7. 실행 URL·source SHA·Worker 버전·season manifest·배포 후 검증을 이 문서 또는 PR에 남긴다.
+
+## 시즌 1 manifest 승격
+
+시즌 ID와 기간을 바꾸지 않는 콘텐츠 승격은 호환 API, web, manifest 순으로 배포한다. 현재 승인된
+승격은 `svc_season_1`의 `1.1.0/0.3.0`에서 `1.3.0/0.5.0`으로의 전환뿐이다. 시작은
+`2026-09-05T15:00:00Z`, 종료는 NULL, challenge set은 `cs_season_1`, ACTIVE/non-test를 유지한다.
+
+1. API를 먼저 배포한다. 시즌 1에 한해 정확한 두 승인 pair만 신규 최초 sync에 허용한다. mixed pair,
+   다른 과거 버전, 다른 시즌 ID는 허용하지 않는다. 이미 서버에 있는 커리어는 기존처럼 생성 당시
+   버전으로 후속 Snapshot·command 저장을 계속한다.
+2. web을 배포한다. 이 짧은 전환 구간에는 구·신 web이 모두 있을 수 있으므로 API의 두 pair 허용이
+   필요하다.
+3. 마지막으로 시즌 1 행을 old pair에서 new pair로 compare-and-set한다. 이름·상태·시작·NULL 종료·
+   challenge set·isTest 및 old pair가 모두 일치하지 않으면 쓰지 않는다. 즉시 D1을 다시 읽고 new pair
+   전체 메타데이터가 정확한지 검증한다.
+
+workflow artifact의 `season-rollback.sql`은 자동 실행하지 않는다. 이는 행이 여전히 정확한 new
+manifest일 때 버전 두 필드만 old pair로 되돌리는 역 compare-and-set이다. 실행 전 새 web 노출 범위와
+영향을 확인하고 API의 양 pair 호환 코드를 먼저 유지해야 한다. 서버에 저장된 신버전 커리어는 manifest
+rollback과 무관하게 생성 버전으로 계속 동기화되며, 아직 offline인 신버전 커리어도 이 호환 API가 old
+manifest에서 정확한 new pair를 허용하므로 업로드할 수 있다. DB Time Travel 복구나 사용자 기록 삭제를
+manifest rollback 대신 사용하지 않는다.
 
 ## 나중에 종료일 정하기
 

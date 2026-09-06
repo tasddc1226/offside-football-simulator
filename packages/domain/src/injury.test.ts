@@ -8,6 +8,7 @@ import {
   onMatchRecurrence,
   onRecurrenceCheckFailed,
   rehabDurationRange,
+  recurrenceChainLength,
 } from './injury.js';
 import { rulesetProto } from './__fixtures__/career-01.js';
 import { seedRng } from './rng.js';
@@ -393,6 +394,21 @@ describe('onMatchInjury', () => {
     for (let i = 0; i < 4; i += 1) expired = onRecurrenceCheckFailed({ ...source, health: expired }, original.id);
     expect(expired.episodes[0]?.recurrenceChecksRemaining).toBe(0);
     expect(onRecurrenceCheckFailed({ ...source, health: expired }, original.id).episodes[0]?.recurrenceChecksRemaining).toBe(0);
+  });
+
+  it('CONSERVATIVE risk survives recurrence and only the contiguous same-body chain counts', () => {
+    const original = baseEpisode({ id: 'INJ-original', status: 'RECOVERED', rehab: 'CONSERVATIVE', recurrenceRiskBp: 1500, recurrenceChecksRemaining: 6 });
+    const source = state('bounded-conservative', { health: { episodes: [original] } });
+    const policyRuleset = { ...rulesetProto, injuryRules: { ...rulesetProto.injuryRules, recurrenceMaxChain: 2 } };
+    const result = onMatchRecurrence({ state: source, seasonIndex: 1, step: 8, match: match('m-bounded'), episodeId: original.id, injuryCount: 2, ruleset: policyRuleset, rng: seedRng('bounded-conservative-roll'), allowForcedPending: false });
+    expect(result.health.episodes[1]!.recurrenceRiskBp).toBe(1500);
+    const next = { ...result.health.episodes[1]!, status: 'RECOVERED' as const };
+    expect(recurrenceChainLength([result.health.episodes[0]!, next], next.id)).toBe(1);
+    const fresh = baseEpisode({ id: 'INJ-fresh', bodyPart: 'ANKLE', status: 'RECOVERED' });
+    expect(recurrenceChainLength([result.health.episodes[0]!, next, fresh], fresh.id)).toBe(0);
+
+    const legacy = onMatchRecurrence({ state: source, seasonIndex: 1, step: 8, match: match('m-legacy'), episodeId: original.id, injuryCount: 2, ruleset: rulesetProto, rng: seedRng('bounded-conservative-roll'), allowForcedPending: false });
+    expect(legacy.health.episodes[1]!.recurrenceRiskBp).toBe(3000);
   });
 
   it('HEAD 후유증 없음과 clamp 경계의 실제 delta를 기록한다', () => {

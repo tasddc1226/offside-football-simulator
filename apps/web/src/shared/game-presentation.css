@@ -6,6 +6,48 @@
 
 .os-game-reveal-cue { min-height: 7.5rem; }
 
+.os-game-completion {
+  min-height: 16rem;
+  padding: var(--os-space-6) var(--os-space-4);
+  animation: os-game-completion-enter 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.os-game-completion-mark {
+  position: relative;
+  display: grid;
+  width: 8rem;
+  height: 4.5rem;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-m);
+  background: var(--os-surface-2);
+}
+
+.os-game-completion-line {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  background: var(--os-border);
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.os-game-completion-ball {
+  position: relative;
+  animation: os-game-completion-ball 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes os-game-completion-enter {
+  from { opacity: 0; transform: translateY(0.375rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes os-game-completion-ball {
+  from { opacity: 0; transform: translate3d(-1.25rem, 0, 0) scale(0.94); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
 @keyframes os-game-result-enter {
   from { opacity: 0; transform: translateY(0.5rem); }
   to { opacity: 1; transform: translateY(0); }
@@ -27,6 +69,8 @@
 @media (prefers-reduced-motion: reduce) {
   .os-game-reveal { animation: none; }
   .os-game-pending-dot { animation: none; opacity: 1; }
+  .os-game-completion,
+  .os-game-completion-ball { animation: none; }
 }
 
 html[data-reduced-motion='true'] .os-game-reveal {
@@ -36,4 +80,9 @@ html[data-reduced-motion='true'] .os-game-reveal {
 html[data-reduced-motion='true'] .os-game-pending-dot {
   animation: none;
   opacity: 1;
+}
+
+html[data-reduced-motion='true'] .os-game-completion,
+html[data-reduced-motion='true'] .os-game-completion-ball {
+  animation: none;
 }

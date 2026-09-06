@@ -405,6 +405,14 @@ export const TransferRulesSchema = z.strictObject({
   }),
   feeByIndexBand: z.array(z.strictObject({ maxIndexCenti: z.number().int().min(0), feeMinor: z.number().int().nonnegative() })).min(1),
   safeRenewal: z.strictObject({ lengthSeasons: z.number().int().positive(), wageBp: z.number().int().min(0).max(10000) }),
+  recovery: z
+    .strictObject({
+      youthMaxAge: z.number().int().min(15).max(30),
+      zeroMinutesConsecutiveSeasons: z.number().int().positive(),
+      opportunityTier: z.literal(3),
+      opportunityRole: SquadRoleSchema,
+    })
+    .optional(),
   // wageBpByRole은 "현재 급여 대비 배율"(bp)이라 재계약 인상분을 반영해 10000(100%)을 넘을 수 있다.
   renewal: z.strictObject({
     lengthSeasons: z.number().int().positive(),
@@ -544,6 +552,7 @@ export const InjuryRulesSchema = z
       )
       .min(1),
     recurrenceWindowMatches: z.number().int().positive(),
+    recurrenceMaxChain: z.number().int().positive().optional(),
     rehab: z.strictObject({ EARLY: RehabPlanRuleSchema, STANDARD: RehabPlanRuleSchema, CONSERVATIVE: RehabPlanRuleSchema }),
     maxForcedPerSeason: z.number().int().nonnegative(),
     durabilityPivot: z.number().int(),
@@ -983,6 +992,8 @@ export const MatchRulesSchema = z
 export const RulesetSchema = z
   .strictObject({
     version: SemverSchema,
+    /** 신규 커리어의 시작 나이. 필드가 없는 과거 룰셋은 도메인의 17세 폴백을 유지한다. */
+    initialAge: z.number().int().min(15).max(30).optional(),
     offerProjection: z
       .strictObject({
         version: z.literal('1.1.0'),

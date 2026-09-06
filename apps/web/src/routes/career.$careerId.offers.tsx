@@ -23,6 +23,7 @@ import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
 import { MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
 import { buildCurrentContractSummary } from '../shared/transfer-view.js';
 import { CompactOfferCard } from '../shared/contract-presentation.js';
+import { rulesetForCareer } from '../engine/content.js';
 
 type OffersTarget = 'SCR-009' | 'SCR-017';
 
@@ -48,6 +49,25 @@ export const Route = createFileRoute('/career/$careerId/offers')({
 
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
 const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+
+export function shouldShowRecoveryOpportunityNotice(
+  state: CareerState,
+  offers: readonly Offer[],
+): boolean {
+  const policy = rulesetForCareer(state).transferRules.recovery;
+  if (policy === undefined || state.seasonHistory.length < policy.zeroMinutesConsecutiveSeasons) {
+    return false;
+  }
+  const recent = state.seasonHistory.slice(-policy.zeroMinutesConsecutiveSeasons);
+  const hasConsecutiveZeroMinutes = recent.every(
+    (season) => season.result.playerStats.minutes === 0,
+  );
+  const hasActualOpportunity = offers.some(
+    (offer) =>
+      offer.leagueTier === policy.opportunityTier && offer.teamId !== state.contract?.teamId,
+  );
+  return hasConsecutiveZeroMinutes && hasActualOpportunity;
+}
 
 function MarketSummary({ state, offers }: { state: CareerState; offers: readonly Offer[] }) {
   const pending = state.pending;
@@ -195,6 +215,12 @@ function MarketOffers({
         </h2>
         <MarketSummary state={state} offers={offers} />
       </Card>
+      {shouldShowRecoveryOpportunityNotice(state, offers) ? (
+        <Card className="font-os text-os-text-2" style={BODY_STYLE}>
+          최근 두 시즌 출전이 없었습니다. 현재 계약 유지와 하부리그 기회를 비교해 보세요. 역할 약속은
+          출전 보장이 아니며 경쟁 상황도 함께 확인하세요.
+        </Card>
+      ) : null}
       {offers.length === 0 ? (
         <EmptyState
           headingLevel={2}

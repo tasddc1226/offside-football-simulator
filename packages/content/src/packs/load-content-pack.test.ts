@@ -149,3 +149,20 @@ describe('EVT-INJ-001 재활 선택 preview 정량 계약', () => {
     });
   });
 });
+
+describe('loadContentPack: 0.5.0', () => {
+  it('manifest의 정의를 모두 등록하고 이전 팩은 그대로 보존한다', () => {
+    const previous = loadContentPack('0.4.1');
+    const pack = loadContentPack('0.5.0');
+    const manifestIds = (prefix: 'events/' | 'chapters/') =>
+      pack.manifest.files
+        .filter((file) => file.startsWith(prefix))
+        .map((file) => file.slice(prefix.length, -'.json'.length))
+        .sort();
+
+    expect(pack.events.map((event) => event.id).sort()).toEqual(manifestIds('events/'));
+    expect(pack.chapters.map((chapter) => chapter.id).sort()).toEqual(manifestIds('chapters/'));
+    expect(previous.manifest.contentPackVersion).toBe('0.4.1');
+    expect(pack.manifest.compatibleRulesetVersions).toEqual(['1.3.0']);
+  });
+});

@@ -210,6 +210,20 @@ function closeOpenRecurrenceWindows(episodes: readonly InjuryEpisode[]): InjuryE
   );
 }
 
+/** Counts only the current same-body recurrence chain; an unrelated fresh injury starts over. */
+export function recurrenceChainLength(episodes: readonly InjuryEpisode[], episodeId: string): number {
+  const index = episodes.findIndex((episode) => episode.id === episodeId);
+  if (index < 0) return 0;
+  const bodyPart = episodes[index]!.bodyPart;
+  let chain = 0;
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const prior = episodes[i]!;
+    if (prior.bodyPart !== bodyPart || prior.status !== 'RECURRED') break;
+    chain += 1;
+  }
+  return chain;
+}
+
 /** 경기의 injuredOff 한 번에 대해 심각도→부위→이탈 경기 수 순서로 정확히 3회 roll한다. */
 export function onMatchInjury(input: {
   state: CareerState;
@@ -354,7 +368,12 @@ export function onMatchRecurrence(input: {
     occurredAt: { seasonIndex: input.seasonIndex, step: input.step, matchId: input.match.id },
     diagnosisRange: { minMatches: range.min, maxMatches: range.max },
     rehab: forced ? null : 'STANDARD',
-    recurrenceRiskBp: bodyPart.recurrenceBaseBp,
+    // Conservative rehab remains meaningful after a recurrence instead of being
+    // silently reset to the body-part base risk for the next loop.
+    recurrenceRiskBp:
+      rules.recurrenceMaxChain !== undefined && original.rehab === 'CONSERVATIVE'
+        ? original.recurrenceRiskBp
+        : bodyPart.recurrenceBaseBp,
     recurrenceChecksRemaining: 0,
     status: forced ? 'ACTIVE' : 'REHAB',
     permanentDelta: null,

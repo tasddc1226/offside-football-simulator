@@ -298,6 +298,19 @@ describe('simulate — CREATE_CAREER', () => {
     expect(result.snapshot.stateHash).toBe(hashState(result.snapshot.state));
   });
 
+  it('새 룰셋은 시작 나이를 선택하고 과거 룰셋은 17세 폴백을 유지한다', () => {
+    const ruleset19 = { ...RULESET, version: '1.2.0', initialAge: 19 };
+    const command = {
+      ...createCareerCommand(),
+      payload: { ...createCareerCommand().payload, rulesetVersion: '1.2.0' },
+    };
+    const result = simulate({ ...baseInput({ ruleset: ruleset19, rulesetVersion: '1.2.0' }), snapshot: null, command });
+    expect(result.ok && result.snapshot.state.age).toBe(19);
+
+    const legacy = simulate({ ...baseInput(), snapshot: null, command: createCareerCommand() });
+    expect(legacy.ok && legacy.snapshot.state.age).toBe(17);
+  });
+
   it('명령 버전이 SimulationInput과 다르면 VERSION_MISMATCH다', () => {
     const command = createCareerCommand();
     command.payload.rulesetVersion = '9.9.9';

@@ -18,6 +18,7 @@ import { deriveRetirementTags } from './legacy/result.js';
 import { retirementContinuationOptions, retirementDecisionRequired } from './legacy/career-retirement.js';
 import {
   applyRehabPlan,
+  recurrenceChainLength,
   injuryAvailabilityFromHealth,
   onInjuryRecovered,
   onMatchInjury,
@@ -321,7 +322,7 @@ function createCareer(input: SimulationInput): SimulationResult {
     careerId: command.payload.careerId,
     status: 'DRAFT',
     stage: 'YOUTH',
-    age: 17,
+    age: input.ruleset.initialAge ?? 17,
     currentStep: 0,
     seasonPhase: 'PRESEASON',
     simulationMode: command.payload.simulationMode,
@@ -767,7 +768,10 @@ function createStepMatchWiring(
         .reverse()
         .find(
           (episode) =>
-            episode.status === 'RECOVERED' && episode.recurrenceChecksRemaining > 0,
+            episode.status === 'RECOVERED' &&
+            episode.recurrenceChecksRemaining > 0 &&
+            (ruleset.injuryRules.recurrenceMaxChain === undefined ||
+              recurrenceChainLength(health.episodes, episode.id) < ruleset.injuryRules.recurrenceMaxChain),
         );
       const recurrenceCheck =
         recurrenceEpisode === undefined
@@ -1725,6 +1729,7 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
         state.player.profile.primaryPosition,
         nextRevision,
         state.rngState,
+        state.age,
       );
       const projectedOffers =
         input.ruleset.offerProjection === undefined

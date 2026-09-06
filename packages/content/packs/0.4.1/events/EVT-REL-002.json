@@ -1,0 +1,147 @@
+{
+  "id": "EVT-REL-002",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": {
+    "all": [
+      { "eq": ["season.step", 9] },
+      { "eq": ["career.age", 19] },
+      { "not": { "hasTag": ["career.tags", "에이전트_계약"] } }
+    ]
+  },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 1 },
+  "weight": 100,
+  "minAge": 19,
+  "maxAge": 19,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "에이전트와 계약",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [{ "label": "입단 테스트 제안 수 증가" }, { "label": "가족 관계 긴장" }],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 70,
+          "title": "에이전트가 두 구단 스카우트를 데려온다",
+          "effects": [],
+          "addTags": ["에이전트_계약", "부모의_걱정"]
+        },
+        {
+          "id": "A2",
+          "kind": "NEUTRAL",
+          "weight": 30,
+          "title": "계약은 했지만 스카우트는 아직",
+          "cause": "성급한 결정",
+          "effects": [],
+          "addTags": ["에이전트_계약"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "가족과 학업 병행 약속",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "사기 안정", "target": "morale", "direction": "UP" },
+        { "label": "대학 경로 보너스" },
+        { "label": "훈련 시간 감소" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "집이 조용해졌다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-002.B.B1.0",
+              "target": "morale",
+              "delta": 6,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-002.B.B1.1",
+              "target": "fitness",
+              "delta": -4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["학업_병행"]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "둘 다 보류, 축구에만 집중",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "폼 상승", "target": "form", "direction": "UP" },
+        { "label": "진로 선택지 축소 위험" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "SUCCESS",
+          "weight": 60,
+          "title": "시즌 후반 몰입",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-002.C.C1.0",
+              "target": "form",
+              "delta": 7,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-002.C.C1.1",
+              "target": "morale",
+              "delta": 2,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        },
+        {
+          "id": "C2",
+          "kind": "NEUTRAL",
+          "weight": 40,
+          "title": "집에서 냉기가 돈다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-002.C.C2",
+              "target": "form",
+              "delta": 4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["대화_회피"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "수능이 두 달 남았다. 부모는 대학 진학을 말하고, 같은 주에 에이전트가 찾아와 \"프로 직행이면 내가 계약을 책임진다\"고 한다."
+  }
+}

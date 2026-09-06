@@ -5,7 +5,7 @@ import {
   inspectCounts,
   inspectSchema,
   inspectServiceSeasons,
-  PRODUCTION_SEASON,
+  PREVIOUS_PRODUCTION_VERSION,
   validateProposal,
 } from './production-release.mjs';
 
@@ -45,7 +45,11 @@ describe('production release guards', () => {
   });
 
   it('only permits an idempotent exact ACTIVE season', () => {
-    expect(decideSeason([{ ...proposal }], proposal)).toEqual({ action: 'noop', sql: null });
+    expect(decideSeason([{ ...proposal }], proposal)).toEqual({
+      action: 'noop',
+      sql: null,
+      rollbackSql: null,
+    });
     expect(() => decideSeason([{ ...proposal, rulesetVersion: '1.0.0' }], proposal)).toThrow(
       'different ACTIVE',
     );
@@ -57,13 +61,22 @@ describe('production release guards', () => {
     );
   });
 
-  it('generates INSERT-only SQL when no ACTIVE season exists', () => {
-    const decision = decideSeason([], proposal);
-    expect(decision.action).toBe('insert');
-    expect(decision.sql).toContain('INSERT INTO service_seasons');
-    expect(decision.sql).not.toMatch(/UPDATE|REPLACE|DELETE/i);
-    expect(decision.sql).toContain(PRODUCTION_SEASON.rulesetVersion);
-    expect(decision.sql).toContain('NULL');
+  it('activates only from the exact previous manifest and emits a guarded inverse', () => {
+    const previous = { ...proposal, ...PREVIOUS_PRODUCTION_VERSION };
+    const decision = decideSeason([previous], proposal);
+    expect(decision.action).toBe('activate');
+    expect(decision.sql).toContain("ruleset_version = '1.1.0'");
+    expect(decision.sql).toContain("content_pack_version = '0.3.0'");
+    expect(decision.sql).toContain("SET ruleset_version = '1.3.0', content_pack_version = '0.5.0'");
+    expect(decision.rollbackSql).toContain("SET ruleset_version = '1.1.0', content_pack_version = '0.3.0'");
+    expect(decision.rollbackSql).toContain("ruleset_version = '1.3.0'");
+    expect(() =>
+      decideSeason([{ ...previous, contentPackVersion: '0.4.0' }], proposal),
+    ).toThrow('different ACTIVE');
+  });
+
+  it('never creates a replacement production season when the existing row is absent', () => {
+    expect(() => decideSeason([], proposal)).toThrow('existing ACTIVE svc_season_1');
   });
 
   it('allows an open end and rejects incomplete or inverted release periods', () => {

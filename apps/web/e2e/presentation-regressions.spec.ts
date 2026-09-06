@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { completeOnboardingAndConfirm, resolveCurrentEventScreen } from './helpers/player-creation.js';
+import {
+  advanceUntilOffers,
+  completeOnboardingAndConfirm,
+  fulfillJson,
+  goToConfirm,
+  planPreseason,
+  resolveCurrentEventScreen,
+  signFirstOffer,
+  META,
+} from './helpers/player-creation.js';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
@@ -43,3 +52,33 @@ for (const choice of [0, 2]) {
     await expect(page).toHaveURL(/\/offers$/);
   });
 }
+
+test.describe('저장 성공 전환', () => {
+  test.use({ contextOptions: { reducedMotion: 'no-preference' } });
+
+  test('포인터 확정과 시즌 시작은 완료를 보여준 뒤 실제 목적 화면으로 자동 이동한다', async ({ page }) => {
+    test.slow();
+    await page.addInitScript(() =>
+      window.localStorage.setItem('offside:e2e-seed', 'e2e-season-result-01'),
+    );
+    await goToConfirm(page);
+    await page.route('**/v1/profile', (route) =>
+      fulfillJson(route, 503, {
+        error: { code: 'SERVICE_UNAVAILABLE', message: '서비스를 이용할 수 없습니다.', retryable: true },
+        meta: META,
+      }),
+    );
+
+    await page.getByRole('button', { name: 'KICKOFF' }).click();
+    await expect(page.getByText('선수 등록 완료')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: '복구 코드를 저장하세요' })).toBeVisible();
+    await page.getByRole('button', { name: '계속' }).click();
+    await advanceUntilOffers(page);
+    await signFirstOffer(page);
+    await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+
+    await page.getByRole('button', { name: '시즌 시작' }).click();
+    await expect(page.getByText('시즌 준비 완료')).toBeVisible();
+    await expect(page).toHaveURL(/\/career\/[^/]+(?:\/role)?$/);
+  });
+});

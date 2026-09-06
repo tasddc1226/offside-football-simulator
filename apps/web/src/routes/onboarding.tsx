@@ -1,7 +1,7 @@
 // SCR-034 온보딩. 3장 이내, 대표 문장 하나와 두 문장 이내 설명. 건너뛰기·KICKOFF 모두
 // onboardingSeen = true를 저장한다. 이 라우트는 언제든 열린다(설정의 "온보딩 다시 보기").
 import { useEffect, useRef, useState } from 'react';
-import { Button, ScreenIntro, Stepper, SwipeSurface, Toast } from '@offside/ui';
+import { Button, DisplayWord, ScreenIntro, Stepper, SwipeSurface, Toast } from '@offside/ui';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { markOnboardingPending } from '../engine/funnel.js';
 import { useServiceSeason } from '../engine/service-season.js';
@@ -10,6 +10,8 @@ import { platform } from '../platform/index.js';
 import { SERVICE_SEASON_NOTICE_KO } from '../shared/labels.js';
 import { useReducedMotion, useUiStore } from '../shared/ui-store.js';
 import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
+import { GameCompletionTransition } from '../shared/game-presentation.js';
+import { BRAND_SUBTITLE } from '../shared/brand.js';
 
 export const Route = createFileRoute('/onboarding')({
   component: OnboardingScreen,
@@ -21,7 +23,7 @@ const SLIDES: Slide[] = [
   {
     id: 'numbers',
     headline: 'OVR 하나가 아니라 여러 수치로 성장합니다',
-    body: 'U18 시기에는 기본 OVR·폼·체력만 보입니다. 첫 프로 계약을 맺으면 전술 적합도와 감독 신뢰 같은 수치가 열립니다.',
+    body: '첫 계약 전에는 기본 OVR·폼·체력만 보입니다. 첫 프로 계약을 맺으면 전술 적합도와 감독 신뢰 같은 수치가 열립니다.',
   },
   {
     id: 'choices',
@@ -56,6 +58,7 @@ function OnboardingScreen() {
   const defaultSimulationMode = useUiStore((state) => state.defaultSimulationMode);
   const createMutation = useCareerMutation('create');
   const [toast, setToast] = useState<string | null>(null);
+  const [createdCareerId, setCreatedCareerId] = useState<string | null>(null);
   const startingRef = useRef(false);
 
   useEffect(() => {
@@ -86,10 +89,7 @@ function OnboardingScreen() {
     try {
       const result = await createMutation.mutateAsync({ simulationMode: defaultSimulationMode });
       if (result.ok) {
-        void navigate({
-          to: '/career/$careerId/create',
-          params: { careerId: result.snapshot.careerId },
-        });
+        setCreatedCareerId(result.snapshot.careerId);
       } else {
         setToast('커리어를 시작하지 못했습니다. 다시 시도해 주세요.');
       }
@@ -100,6 +100,18 @@ function OnboardingScreen() {
     } finally {
       startingRef.current = false;
     }
+  }
+
+  if (createdCareerId !== null) {
+    return (
+      <GameCompletionTransition
+        title="새 인생이 시작됩니다"
+        detail="지금까지 훈련해 온 환경과 현재 마주한 기회를 선택하세요."
+        onComplete={() => void navigate({ to: '/career/$careerId/create', params: { careerId: createdCareerId } })}
+      >
+        <DisplayWord word="OFFSIDE" caption={BRAND_SUBTITLE} />
+      </GameCompletionTransition>
+    );
   }
 
   return (
@@ -120,6 +132,7 @@ function OnboardingScreen() {
               title={slide.headline}
               description={slide.body}
             />
+            <p className="os-eyebrow px-os-1">{BRAND_SUBTITLE}</p>
 
             <div className="os-panel flex flex-col gap-os-4">
               <p className="os-eyebrow">시작하기 전에</p>
@@ -198,7 +211,7 @@ function OnboardingScreen() {
                 letterSpacing: 'var(--os-tracking-display)',
               }}
             >
-              KICKOFF
+              KICKOFF · 새 인생 시작
             </Button>
             <p className="text-center font-os text-os-text-2" style={CAPTION_STYLE}>
               첫 커리어를 시작할 준비가 됐습니다

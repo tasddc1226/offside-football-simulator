@@ -120,7 +120,7 @@ jobs:
           pnpm --filter @offside/scripts exec vitest run production-release.test.mjs
           pnpm --filter @offside/content exec vitest run src/legacy/load-population.test.ts src/legacy/validate-population.test.ts
           pnpm --filter @offside/web exec vitest run src/engine/versions.test.ts
-          pnpm --filter @offside/api exec vitest run src/routes/service-seasons.test.ts src/db/migrations.test.ts
+          pnpm --filter @offside/api exec vitest run src/routes/service-seasons.test.ts src/db/migrations.test.ts src/sync/season-version-compatibility.test.ts
           pnpm --filter @offside/api typecheck
           pnpm --filter @offside/web typecheck
 
@@ -160,6 +160,17 @@ jobs:
           pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
             --command "SELECT id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test FROM service_seasons ORDER BY id" > .release/seasons.json
           node tooling/scripts/production-release.mjs seasons .release/seasons.json
+
+      - name: Validate exact production manifest transition before remote writes
+        if: inputs.mode == 'deploy'
+        env:
+          HAS_SERVICE_SEASONS: ${{ steps.schema.outputs.has_service_seasons }}
+          SEASON_SQL_PATH: ${{ github.workspace }}/.release/season-activate.sql
+          SEASON_ROLLBACK_SQL_PATH: ${{ github.workspace }}/.release/season-rollback.sql
+        run: |
+          test "$HAS_SERVICE_SEASONS" = "true" || { echo "Production service_seasons table is missing." >&2; exit 1; }
+          ACTION="$(node tooling/scripts/production-release.mjs plan .release/seasons.json)"
+          test "$ACTION" = "activate" || test "$ACTION" = "noop" || { echo "Unexpected production manifest plan." >&2; exit 1; }
 
       - name: Inspect aggregate counts before remote writes
         if: steps.schema.outputs.has_service_seasons == 'true'
@@ -206,24 +217,6 @@ jobs:
             "SELECT 'profiles' table_name, COUNT(*) row_count FROM profiles; SELECT 'sessions' table_name, COUNT(*) row_count FROM sessions; SELECT 'careers' table_name, COUNT(*) row_count FROM careers; SELECT 'snapshots' table_name, COUNT(*) row_count FROM snapshots; SELECT 'command_log' table_name, COUNT(*) row_count FROM command_log; SELECT 'idempotency' table_name, COUNT(*) row_count FROM idempotency; SELECT 'auth_attempts' table_name, COUNT(*) row_count FROM auth_attempts; SELECT 'audit_log' table_name, COUNT(*) row_count FROM audit_log; SELECT 'service_seasons' table_name, COUNT(*) row_count FROM service_seasons; SELECT 'analytics_events' table_name, COUNT(*) row_count FROM analytics_events; SELECT 'career_archives' table_name, COUNT(*) row_count FROM career_archives;" > .release/counts-after.json
           node tooling/scripts/production-release.mjs counts .release/counts-after.json
 
-      - name: Plan and insert the production service season
-        if: inputs.mode == 'deploy'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SEASON_SQL_PATH: ${{ github.workspace }}/.release/season-insert.sql
-        run: |
-          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
-            --command "SELECT id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test FROM service_seasons WHERE status = 'ACTIVE' OR id = 'svc_season_1' ORDER BY id" > .release/active-before.json
-          ACTION="$(node tooling/scripts/production-release.mjs plan .release/active-before.json)"
-          if [ "$ACTION" = "insert" ]; then
-            pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --file "$SEASON_SQL_PATH" --yes >/dev/null
-          fi
-          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
-            --command "SELECT id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test FROM service_seasons WHERE status = 'ACTIVE' OR id = 'svc_season_1' ORDER BY id" > .release/active-after.json
-          VERIFY_ACTION="$(node tooling/scripts/production-release.mjs plan .release/active-after.json)"
-          test "$VERIFY_ACTION" = "noop" || { echo "Production season verification failed." >&2; exit 1; }
-
       - name: Deploy production API
         if: inputs.mode == 'deploy'
         env:
@@ -249,6 +242,25 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: pnpm --filter @offside/web deploy:production
 
+      - name: Compare-and-set the production season manifest
+        if: inputs.mode == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SEASON_SQL_PATH: ${{ github.workspace }}/.release/season-activate.sql
+          SEASON_ROLLBACK_SQL_PATH: ${{ github.workspace }}/.release/season-rollback.sql
+        run: |
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test FROM service_seasons WHERE status = 'ACTIVE' OR id = 'svc_season_1' ORDER BY id" > .release/active-before.json
+          ACTION="$(node tooling/scripts/production-release.mjs plan .release/active-before.json)"
+          if [ "$ACTION" = "activate" ]; then
+            pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --file "$SEASON_SQL_PATH" --yes >/dev/null
+          fi
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test FROM service_seasons WHERE status = 'ACTIVE' OR id = 'svc_season_1' ORDER BY id" > .release/active-after.json
+          VERIFY_ACTION="$(node tooling/scripts/production-release.mjs plan .release/active-after.json)"
+          test "$VERIFY_ACTION" = "noop" || { echo "Production season activation readback failed." >&2; exit 1; }
+
       - name: Verify production health, season, and exact CORS
         if: inputs.mode == 'deploy'
         run: |
@@ -257,7 +269,7 @@ jobs:
           CURRENT_JSON="$CURRENT_JSON" node -e '
             const value = JSON.parse(process.env.CURRENT_JSON ?? "{}").data;
             const expectedEnd = process.env.SEASON_ENDS_AT || null;
-            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== "1.1.0" || value?.contentPackVersion !== "0.3.0" || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== expectedEnd) throw new Error("Unexpected production service-season response.");
+            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== "1.3.0" || value?.contentPackVersion !== "0.5.0" || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== expectedEnd) throw new Error("Unexpected production service-season response.");
           '
           ALLOWED_ORIGIN="$(curl --fail --silent --show-error -D - -o /dev/null -H "Origin: $PRODUCTION_WEB_URL" "$PRODUCTION_API_URL/v1/service-seasons/current" | tr -d '\r' | awk -F ': ' 'tolower($1) == "access-control-allow-origin" { print $2 }')"
           test "$ALLOWED_ORIGIN" = "$PRODUCTION_WEB_URL"
@@ -272,7 +284,7 @@ jobs:
           CURRENT_JSON="$CURRENT_JSON" node -e '
             const value = JSON.parse(process.env.CURRENT_JSON ?? "{}").data;
             const expectedEnd = process.env.SEASON_ENDS_AT || null;
-            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== "1.1.0" || value?.contentPackVersion !== "0.3.0" || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== expectedEnd) throw new Error("Unexpected production service-season response after end-date change.");
+            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== "1.3.0" || value?.contentPackVersion !== "0.5.0" || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== expectedEnd) throw new Error("Unexpected production service-season response after end-date change.");
           '
 
       - uses: actions/upload-artifact@v4
@@ -287,6 +299,7 @@ jobs:
             .release/seasons.json
             .release/active-before.json
             .release/active-after.json
+            .release/season-rollback.sql
             .release/end-before.json
             .release/end-after.json
           if-no-files-found: ignore

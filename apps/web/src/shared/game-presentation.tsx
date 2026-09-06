@@ -1,10 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button, FootballMark } from '@offside/ui';
 import { useReducedMotion } from './ui-store.js';
 import './game-presentation.css';
 
 const DEFAULT_REVEAL_MS = 560;
 const FAST_REVEAL_MS = 180;
+const DEFAULT_COMPLETION_MS = 650;
 
 export function GamePending({ title, detail }: { title: string; detail: string }) {
   return (
@@ -18,6 +19,63 @@ export function GamePending({ title, detail }: { title: string; detail: string }
         <strong className="font-os text-os-text">{title}</strong>
         <span className="font-os text-os-text-2">{detail}</span>
       </span>
+    </div>
+  );
+}
+
+/** A saved-success bridge between a command screen and its real destination. */
+export function GameCompletionTransition({
+  title,
+  detail,
+  onComplete,
+  durationMs = DEFAULT_COMPLETION_MS,
+  visual,
+  children,
+}: {
+  title: string;
+  detail: string;
+  onComplete: () => void;
+  durationMs?: number;
+  visual?: ReactNode;
+  children?: ReactNode;
+}) {
+  const reducedMotion = useReducedMotion();
+  const keyboard = document.documentElement.dataset.inputModality === 'keyboard';
+  const completedRef = useRef(false);
+  const timerRef = useRef<number | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  const complete = useCallback(() => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    onCompleteRef.current();
+  }, []);
+
+  useEffect(() => {
+    timerRef.current = window.setTimeout(complete, reducedMotion || keyboard ? 0 : durationMs);
+    return () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    };
+  }, [complete, durationMs, keyboard, reducedMotion]);
+
+  return (
+    <div className="os-game-completion flex flex-col items-center gap-os-4 text-center" role="status" aria-live="polite">
+      {visual ?? (
+        <div className="os-game-completion-mark" aria-hidden="true">
+          <span className="os-game-completion-line" />
+          <FootballMark className="os-game-completion-ball h-10 w-10 text-os-accent" />
+        </div>
+      )}
+      <div className="flex flex-col gap-os-1">
+        <strong className="font-os text-os-text">{title}</strong>
+        <span className="font-os text-os-text-2">{detail}</span>
+      </div>
+      {children}
+      {!reducedMotion && !keyboard ? (
+        <Button variant="ghost" onClick={complete}>바로 계속</Button>
+      ) : null}
     </div>
   );
 }

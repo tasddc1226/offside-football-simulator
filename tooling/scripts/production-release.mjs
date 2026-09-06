@@ -6,9 +6,14 @@ export const PRODUCTION_SEASON = Object.freeze({
   id: 'svc_season_1',
   name: '시즌 1',
   status: 'ACTIVE',
+  rulesetVersion: '1.3.0',
+  contentPackVersion: '0.5.0',
+  isTest: 0,
+});
+
+export const PREVIOUS_PRODUCTION_VERSION = Object.freeze({
   rulesetVersion: '1.1.0',
   contentPackVersion: '0.3.0',
-  isTest: 0,
 });
 
 function rowsFromWrangler(value) {
@@ -128,29 +133,31 @@ export function decideSeason(candidateRows, proposal) {
   if (activeRows.length === 1) {
     const actual = activeRows[0];
     const equal = Object.entries(proposal).every(([key, value]) => actual[key] === value);
-    if (!equal) throw new Error(`A different ACTIVE season already exists (${actual.id}).`);
-    return { action: 'noop', sql: null };
+    if (equal) return { action: 'noop', sql: null, rollbackSql: null };
+    const fixedKeys = [
+      'id',
+      'name',
+      'status',
+      'startsAt',
+      'endsAt',
+      'challengeSetId',
+      'isTest',
+    ];
+    const isExactPrevious =
+      fixedKeys.every((key) => actual[key] === proposal[key]) &&
+      actual.rulesetVersion === PREVIOUS_PRODUCTION_VERSION.rulesetVersion &&
+      actual.contentPackVersion === PREVIOUS_PRODUCTION_VERSION.contentPackVersion;
+    if (!isExactPrevious)
+      throw new Error(`A different ACTIVE season already exists (${actual.id}).`);
+    const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
+    const fixedWhere = `id = ${quote(proposal.id)} AND name = ${quote(proposal.name)} AND status = 'ACTIVE'\n  AND starts_at = ${quote(proposal.startsAt)} AND ${proposal.endsAt === null ? 'ends_at IS NULL' : `ends_at = ${quote(proposal.endsAt)}`}\n  AND challenge_set_id = ${quote(proposal.challengeSetId)} AND is_test = 0`;
+    return {
+      action: 'activate',
+      sql: `UPDATE service_seasons\nSET ruleset_version = ${quote(proposal.rulesetVersion)}, content_pack_version = ${quote(proposal.contentPackVersion)}\nWHERE ${fixedWhere}\n  AND ruleset_version = ${quote(PREVIOUS_PRODUCTION_VERSION.rulesetVersion)}\n  AND content_pack_version = ${quote(PREVIOUS_PRODUCTION_VERSION.contentPackVersion)};\n`,
+      rollbackSql: `UPDATE service_seasons\nSET ruleset_version = ${quote(PREVIOUS_PRODUCTION_VERSION.rulesetVersion)}, content_pack_version = ${quote(PREVIOUS_PRODUCTION_VERSION.contentPackVersion)}\nWHERE ${fixedWhere}\n  AND ruleset_version = ${quote(proposal.rulesetVersion)}\n  AND content_pack_version = ${quote(proposal.contentPackVersion)};\n`,
+    };
   }
-  const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
-  const values = [
-    proposal.id,
-    proposal.name,
-    proposal.status,
-    proposal.startsAt,
-    proposal.endsAt,
-    proposal.rulesetVersion,
-    proposal.contentPackVersion,
-    proposal.challengeSetId,
-    proposal.isTest,
-  ]
-    .map((value) =>
-      value === null ? 'NULL' : typeof value === 'number' ? String(value) : quote(value),
-    )
-    .join(', ');
-  return {
-    action: 'insert',
-    sql: `INSERT INTO service_seasons (id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test)\nSELECT ${values}\nWHERE NOT EXISTS (SELECT 1 FROM service_seasons WHERE status = 'ACTIVE')\n  AND NOT EXISTS (SELECT 1 FROM service_seasons WHERE id = ${quote(proposal.id)});\n`,
-  };
+  throw new Error('The existing ACTIVE svc_season_1 row is required for an in-place release.');
 }
 
 export function decideSeasonEnd(candidateRows, proposal) {
@@ -238,6 +245,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     });
     const decision = decideSeason(inspectServiceSeasons(readJson(path)), proposal);
     if (decision.sql) writeFileSync(process.env.SEASON_SQL_PATH, decision.sql, { mode: 0o600 });
+    if (decision.rollbackSql && process.env.SEASON_ROLLBACK_SQL_PATH)
+      writeFileSync(process.env.SEASON_ROLLBACK_SQL_PATH, decision.rollbackSql, { mode: 0o600 });
     appendSummary([
       `### Season write plan`,
       `- action: ${decision.action}`,

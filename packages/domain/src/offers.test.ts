@@ -124,6 +124,13 @@ describe('generateOffers — 팀 풀', () => {
     expect(generated.offers).toHaveLength(1);
     expect(generated.offers[0]!.teamId).toBe('hangang-u18');
   });
+
+  it('새 recovery 정책의 19세 첫 계약은 fixed youth 팀 대신 3부 팀을 쓴다', () => {
+    const ruleset = { ...RULESET, transferRules: { ...RULESET.transferRules, recovery: { youthMaxAge: 18, zeroMinutesConsecutiveSeasons: 2, opportunityTier: 3 as const, opportunityRole: 'ROTATION' as const } } };
+    const generated = generateOffers(ruleset, branch('academy'), ['진로_아카데미'], 50, 'ST', 1, seedRng('adult-academy'), 19);
+    expect(generated.offers[0]).toMatchObject({ kind: 'FREE_AGENT', leagueTier: 3 });
+    expect(generated.offers[0]!.teamId).not.toBe('hangang-u18');
+  });
 });
 
 describe('generateOffers — rng 소비 횟수', () => {

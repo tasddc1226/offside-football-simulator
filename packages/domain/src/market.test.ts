@@ -410,6 +410,34 @@ describe('buildRenewalOffer', () => {
   });
 });
 
+describe('bounded career recovery policy', () => {
+  it('an expired over-age youth market contains no youth renewal and leads with an adult free-agent route', () => {
+    const settledState = runSettledFixture().snapshot.state;
+    const youth = marketFixtureRuleset.teams.find((team) => team.leagueTier === 'YOUTH')!;
+    const state: CareerState = {
+      ...settledState,
+      age: 19,
+      pending: null,
+      contract: { ...settledState.contract!, teamId: youth.id, teamName: youth.name, leagueTier: 'YOUTH', lengthSeasons: 1 },
+    };
+    const ruleset = { ...marketFixtureRuleset, transferRules: { ...marketFixtureRuleset.transferRules, recovery: { youthMaxAge: 18, zeroMinutesConsecutiveSeasons: 2, opportunityTier: 3 as const, opportunityRole: 'ROTATION' as const } } };
+    const result = generateMarket({ state, ruleset, reason: 'EXPIRED', revision: 119, rng: state.rngState });
+    expect(result.pending.offers[0]).toMatchObject({ kind: 'FREE_AGENT', leagueTier: 3, fromTeamId: null });
+    expect(result.pending.offers.some((offer) => offer.kind === 'RENEWAL' && offer.leagueTier === 'YOUTH')).toBe(false);
+  });
+
+  it('two consecutive zero-minute seasons add a tier-3 opportunity without removing the safe option or guaranteeing minutes', () => {
+    const settledState = runSettledFixture().snapshot.state;
+    const zero = { ...settledState.seasonHistory.at(-1)!, result: { ...settledState.seasonHistory.at(-1)!.result, playerStats: { ...settledState.seasonHistory.at(-1)!.result.playerStats, minutes: 0 } } };
+    const state: CareerState = { ...settledState, pending: null, seasonHistory: [zero, { ...zero, index: zero.index + 1 }] };
+    const ruleset = { ...marketFixtureRuleset, transferRules: { ...marketFixtureRuleset.transferRules, recovery: { youthMaxAge: 18, zeroMinutesConsecutiveSeasons: 2, opportunityTier: 3 as const, opportunityRole: 'ROTATION' as const } } };
+    const result = generateMarket({ state, ruleset, reason: 'INTEREST', revision: 120, rng: state.rngState });
+    expect(result.pending.offers[0]!.teamId).toBe(state.contract!.teamId);
+    expect(result.pending.offers[1]).toMatchObject({ kind: 'LOAN', leagueTier: 3, rolePromise: 'ROTATION', fromTeamId: state.contract!.teamId });
+    expect(result.pending.offers[1]!.appearancePromise.minutesShareBp).toBe(ruleset.contractRules.promiseMinutesShareBp.ROTATION);
+  });
+});
+
 describe('step 7 CONTRACT 슬롯(season.ts의 selectOpenSlot) 통합', () => {
   const { beforeSettlementState: base } = runSettledFixture();
   const contractStep: SeasonStep = { index: 7, phase: 'LEAGUE', windowOpen: true, decisionSlots: [{ kind: 'CONTRACT', required: false }], summary: null };
