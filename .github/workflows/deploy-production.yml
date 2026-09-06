@@ -8,25 +8,25 @@ on:
         required: true
         default: preflight
         type: choice
-        options: [preflight, deploy]
+        options: [preflight, deploy, set-season-end]
       expected_sha:
         description: 'Exact main commit SHA to inspect or deploy'
         required: true
         type: string
       confirmation:
-        description: 'Deploy only: type DEPLOY_PRODUCTION'
+        description: 'Deploy: DEPLOY_PRODUCTION; end-date change: SET_SEASON_END'
         required: false
         type: string
       season_starts_at:
-        description: 'Deploy only: RFC3339 UTC (for example 2026-09-06T00:00:00Z)'
+        description: 'Deploy/end-date guard: approved RFC3339 UTC season start'
         required: false
         type: string
       season_ends_at:
-        description: 'Deploy only: RFC3339 UTC (for example 2026-12-31T23:59:59Z)'
+        description: 'Optional RFC3339 UTC end; blank means open-ended'
         required: false
         type: string
       challenge_set_id:
-        description: 'Deploy only: approved challenge-set identifier'
+        description: 'Deploy/end-date guard: approved challenge-set identifier'
         required: false
         type: string
 
@@ -39,7 +39,7 @@ concurrency:
 
 jobs:
   production-release:
-    name: ${{ inputs.mode == 'deploy' && 'Deploy production' || 'Preflight production' }}
+    name: ${{ inputs.mode == 'deploy' && 'Deploy production' || inputs.mode == 'set-season-end' && 'Set production season end' || 'Preflight production' }}
     runs-on: [self-hosted, macOS, ARM64, offside]
     timeout-minutes: 30
     environment:
@@ -60,6 +60,10 @@ jobs:
           test "$GITHUB_REF" = "refs/heads/main" || { echo "Production releases must run from main." >&2; exit 1; }
           if [ "$RELEASE_MODE" = "deploy" ] && [ "$CONFIRMATION" != "DEPLOY_PRODUCTION" ]; then
             echo "Deploy confirmation did not match DEPLOY_PRODUCTION." >&2
+            exit 1
+          fi
+          if [ "$RELEASE_MODE" = "set-season-end" ] && [ "$CONFIRMATION" != "SET_SEASON_END" ]; then
+            echo "End-date confirmation did not match SET_SEASON_END." >&2
             exit 1
           fi
 
@@ -91,6 +95,7 @@ jobs:
       - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
 
       - name: Validate release inputs and critical compatibility
+        if: inputs.mode != 'set-season-end'
         env:
           REQUIRE_PROPOSAL: ${{ inputs.mode == 'deploy' }}
         run: |
@@ -102,7 +107,16 @@ jobs:
           pnpm --filter @offside/api typecheck
           pnpm --filter @offside/web typecheck
 
+      - name: Validate season-end guard only
+        if: inputs.mode == 'set-season-end'
+        env:
+          REQUIRE_PROPOSAL: 'true'
+        run: |
+          node tooling/scripts/production-release.mjs proposal
+          pnpm --filter @offside/scripts exec vitest run production-release.test.mjs
+
       - name: Build production web before remote writes
+        if: inputs.mode != 'set-season-end'
         run: |
           VITE_API_BASE_URL="$PRODUCTION_API_URL" pnpm --filter @offside/web build
           pnpm --filter @offside/web check:bundle
@@ -146,6 +160,24 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: pnpm --filter @offside/api db:migrate:production
+
+      - name: Compare-and-set the production season end date
+        if: inputs.mode == 'set-season-end'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SEASON_SQL_PATH: ${{ github.workspace }}/.release/season-end-update.sql
+        run: |
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test FROM service_seasons WHERE status = 'ACTIVE' OR id = 'svc_season_1' ORDER BY id" > .release/end-before.json
+          ACTION="$(node tooling/scripts/production-release.mjs plan-end .release/end-before.json)"
+          if [ "$ACTION" = "update-end" ]; then
+            pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --file "$SEASON_SQL_PATH" --yes >/dev/null
+          fi
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test FROM service_seasons WHERE status = 'ACTIVE' OR id = 'svc_season_1' ORDER BY id" > .release/end-after.json
+          VERIFY_ACTION="$(node tooling/scripts/production-release.mjs plan-end .release/end-after.json)"
+          test "$VERIFY_ACTION" = "noop" || { echo "Production season end-date verification failed." >&2; exit 1; }
 
       - name: Inspect aggregate counts after migration
         if: inputs.mode == 'deploy'
@@ -191,13 +223,24 @@ jobs:
           CURRENT_JSON="$(curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors -H "Origin: $PRODUCTION_WEB_URL" "$PRODUCTION_API_URL/v1/service-seasons/current")"
           CURRENT_JSON="$CURRENT_JSON" node -e '
             const value = JSON.parse(process.env.CURRENT_JSON ?? "{}").data;
-            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== "1.1.0" || value?.contentPackVersion !== "0.3.0" || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== process.env.SEASON_ENDS_AT) throw new Error("Unexpected production service-season response.");
+            const expectedEnd = process.env.SEASON_ENDS_AT || null;
+            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== "1.1.0" || value?.contentPackVersion !== "0.3.0" || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== expectedEnd) throw new Error("Unexpected production service-season response.");
           '
           ALLOWED_ORIGIN="$(curl --fail --silent --show-error -D - -o /dev/null -H "Origin: $PRODUCTION_WEB_URL" "$PRODUCTION_API_URL/v1/service-seasons/current" | tr -d '\r' | awk -F ': ' 'tolower($1) == "access-control-allow-origin" { print $2 }')"
           test "$ALLOWED_ORIGIN" = "$PRODUCTION_WEB_URL"
           DENIED_ORIGIN="$(curl --fail --silent --show-error -D - -o /dev/null -H "Origin: https://example.invalid" "$PRODUCTION_API_URL/v1/service-seasons/current" | tr -d '\r' | awk -F ': ' 'tolower($1) == "access-control-allow-origin" { print $2 }')"
           test -z "$DENIED_ORIGIN"
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_WEB_URL/" >/dev/null
+
+      - name: Verify updated season end date through production API
+        if: inputs.mode == 'set-season-end'
+        run: |
+          CURRENT_JSON="$(curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors -H "Origin: $PRODUCTION_WEB_URL" "$PRODUCTION_API_URL/v1/service-seasons/current")"
+          CURRENT_JSON="$CURRENT_JSON" node -e '
+            const value = JSON.parse(process.env.CURRENT_JSON ?? "{}").data;
+            const expectedEnd = process.env.SEASON_ENDS_AT || null;
+            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== "1.1.0" || value?.contentPackVersion !== "0.3.0" || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== expectedEnd) throw new Error("Unexpected production service-season response after end-date change.");
+          '
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -211,5 +254,7 @@ jobs:
             .release/seasons.json
             .release/active-before.json
             .release/active-after.json
+            .release/end-before.json
+            .release/end-after.json
           if-no-files-found: ignore
           retention-days: 30

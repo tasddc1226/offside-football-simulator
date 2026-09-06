@@ -14,7 +14,7 @@ export const ServiceSeasonCurrentSchema = z.strictObject({
   status: z.enum(['PRESEASON', 'ACTIVE', 'LOCKED', 'ARCHIVED']),
   isTest: z.boolean(),
   startsAt: IsoUtcSchema,
-  endsAt: IsoUtcSchema,
+  endsAt: IsoUtcSchema.nullable(),
   rulesetVersion: SemverSchema,
   contentPackVersion: SemverSchema,
   notice: ServiceSeasonNoticeKeySchema.nullable(),

@@ -5,6 +5,30 @@ import { upsertServiceSeason } from '../db/repos/serviceSeasons.js';
 import { createTestD1 } from '../test/d1.js';
 
 describe('GET /v1/service-seasons/current (API-SVC-001)', () => {
+  it('returns null for an open-ended active season', async () => {
+    const ctx = await createTestD1();
+    try {
+      await upsertServiceSeason(ctx.db, {
+        id: 'svc_open_ended',
+        name: 'Open ended',
+        status: 'ACTIVE',
+        startsAt: '2026-09-06T00:00:00Z',
+        endsAt: null,
+        rulesetVersion: '1.1.0',
+        contentPackVersion: '0.3.0',
+        challengeSetId: 'cs_open_ended',
+      });
+      const response = await createApp().request('/v1/service-seasons/current', {}, {
+        ...ctx.env,
+        ACTIVE_SERVICE_SEASON_ID: 'svc_open_ended',
+      });
+      expect(response.status).toBe(200);
+      expect(successEnvelope(ServiceSeasonCurrentSchema).parse(await response.json()).data.endsAt).toBeNull();
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
   it('포인터가 가리키는 시즌을 돌려준다(프로필 세션 불필요, 공개)', async () => {
     const ctx = await createTestD1();
     try {

@@ -2,7 +2,7 @@
 // 채운다. 값이 비면 legal/privacy.tsx·terms.tsx가 "준비 중"으로 표시한다.
 export const OPERATOR = {
   name: 'OFFSIDE 운영팀',
-  contactEmail: '',
+  contactEmail: 'tasddc1569@gmail.com',
   effectiveDate: '2026-09-02',
 } as const;
 

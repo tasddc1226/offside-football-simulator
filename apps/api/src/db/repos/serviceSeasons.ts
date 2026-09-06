@@ -18,7 +18,7 @@ export type UpsertServiceSeasonInput = {
   name: string;
   status: ServiceSeasonRecord['status'];
   startsAt: string;
-  endsAt: string;
+  endsAt: string | null;
   rulesetVersion: string;
   contentPackVersion: string;
   challengeSetId: string;
