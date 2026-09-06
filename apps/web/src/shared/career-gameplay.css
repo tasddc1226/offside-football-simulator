@@ -27,8 +27,28 @@
   flex-direction: column;
   gap: var(--os-space-3);
 }
-.os-career-home-status {
-  padding-inline: var(--os-space-1);
+
+/* UX-007 컨디션 타일: 폼·체력·사기를 같은 위계의 타일 + 0~100 미터로 보여준다. StatusStrip과 달리
+   첫 항목을 액센트로 강조하지 않는다(단 두세 항목만 있을 때 하나만 통짜 색 블록이 되어 버튼처럼
+   보인다는 불만, PR 본문 참고). */
+.os-condition-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--os-space-2);
+}
+
+.os-condition-meter {
+  height: 0.3rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--os-border);
+}
+
+.os-condition-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--os-accent);
 }
 
 .os-season-breakdown > summary {

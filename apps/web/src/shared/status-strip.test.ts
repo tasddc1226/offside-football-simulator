@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CareerState } from '@offside/domain';
-import { proStatusStripItems, u18StatusStripItems } from './status-strip.js';
+import { conditionTileItems, proStatusStripItems, u18StatusStripItems } from './status-strip.js';
 
 function baseState(overrides: Partial<CareerState>): CareerState {
   return {
@@ -91,6 +91,17 @@ describe('proStatusStripItems', () => {
       { id: 'fitness', label: '체력', value: 90 },
       { id: 'tacticalFit', label: '전술 적합도', value: 12 },
       { id: 'managerTrust', label: '감독 신뢰', value: 8 },
+    ]);
+  });
+});
+
+describe('conditionTileItems', () => {
+  it('폼·체력·사기 3개를 값과 함께 돌려주고, 40 미만이면 low를 세운다', () => {
+    const items = conditionTileItems(baseState({ state: { form: 55, fitness: 90, morale: 30 } }));
+    expect(items).toEqual([
+      { id: 'form', label: '폼', value: 55, low: false, tierLabel: '보통' },
+      { id: 'fitness', label: '체력', value: 90, low: false, tierLabel: '매우 높음' },
+      { id: 'morale', label: '사기', value: 30, low: true, tierLabel: '낮음' },
     ]);
   });
 });
