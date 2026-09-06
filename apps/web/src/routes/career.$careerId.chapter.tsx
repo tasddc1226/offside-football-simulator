@@ -48,6 +48,7 @@ import {
   OUTCOME_KIND_LABEL_KO,
   positionHeaderField,
   POSITION_GROUP_LABELS,
+  resultTagLabels,
   RISK_LABEL_KO,
   SELECTION_REASON_LABEL_KO,
 } from '../shared/labels.js';
@@ -267,7 +268,7 @@ function decisionResultCardProps(
     title: outcome.title,
     body: `${option.label} — ${renderNarrative(outcome.narrative.situation, tokens)}`,
     effects: outcome.effects.map(formatEffectSummary),
-    tags: outcome.addTags ?? [],
+    tags: resultTagLabels(outcome.addTags ?? []),
   };
 }
 
@@ -542,7 +543,7 @@ function ChapterResultSection({ view }: { view: ChapterView }) {
     const sign = delta > 0 ? '+' : '';
     return `${label} ${sign}${delta}`;
   });
-  const addedTags = collectedAddedTags(view.resolved);
+  const addedTags = resultTagLabels(collectedAddedTags(view.resolved));
 
   return (
     <div className="os-panel flex flex-col gap-os-4">
