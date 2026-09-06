@@ -43,6 +43,8 @@ import { SyncBadge } from '../shared/SyncBadge.js';
 import { BRAND_SUBTITLE } from '../shared/brand.js';
 import { useUiStore } from '../shared/ui-store.js';
 import { PublicIntroduction } from '../shared/public-content.js';
+import { HomeCommunity } from '../shared/home-community.js';
+import '../shared/home-hub.css';
 
 const HUB_TABS = ['resume', 'squad', 'retired'] as const;
 type HubTab = (typeof HUB_TABS)[number];
@@ -102,7 +104,8 @@ function CareerCard({
   const name = displayName(summary);
   const position = state.player.profile?.primaryPosition ?? state.player.draft.position;
   const positionLabel = position ? POSITION_LABELS[position] : '—';
-  const team = state.player.profile === null ? null : currentTeamName(state, rulesetForCareer(state));
+  const team =
+    state.player.profile === null ? null : currentTeamName(state, rulesetForCareer(state));
   const ovr = state.player.profile?.baseOvr;
   const syncState = useSyncState(record.id);
   // T-2-012 D-54: 현재 시즌 조회가 아직 없으면(로딩·실패) 판단할 근거가 없으니 배지를 달지 않는다.
@@ -207,50 +210,58 @@ function CareerCard({
           이어하기
         </Button>
       </div>
-      <details
-        className="rounded-os-m border border-os-border px-os-3 py-os-2 font-os text-os-text-2"
-        style={CAPTION_STYLE}
-      >
-        <summary className="cursor-pointer font-semibold text-os-text">상세 관리</summary>
-        <dl className="mt-os-3 grid grid-cols-2 gap-os-3">
-          <div>
-            <dt>규칙 · 콘텐츠 팩</dt>
-            <dd className="os-num mt-os-1 break-words text-os-text">
-              {record.rulesetVersion} / {record.contentPackVersion}
-            </dd>
-          </div>
-          <div>
-            <dt>마지막 갱신</dt>
-            <dd className="os-num mt-os-1 text-os-text">{formatLocalDateTime(record.updatedAt)}</dd>
-          </div>
-        </dl>
-        <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" className="mt-os-3">
-              커리어 삭제
-            </Button>
-          </DialogTrigger>
-          <DialogContent
-            title="커리어 삭제"
-            description={
-              confirmStep === 1
-                ? `${name}의 커리어를 삭제하시겠습니까?`
-                : '되돌릴 수 없습니다. 정말 삭제할까요?'
-            }
-            closeLabel="닫기"
-          >
-            {confirmStep === 1 ? (
-              <Button variant="primary" onClick={() => setConfirmStep(2)}>
-                다음
+      {!featured ? (
+        <details
+          className="rounded-os-m border border-os-border px-os-3 py-os-2 font-os text-os-text-2"
+          style={CAPTION_STYLE}
+        >
+          <summary className="cursor-pointer font-semibold text-os-text">상세 관리</summary>
+          <dl className="mt-os-3 grid grid-cols-2 gap-os-3">
+            <div>
+              <dt>규칙 · 콘텐츠 팩</dt>
+              <dd className="os-num mt-os-1 break-words text-os-text">
+                {record.rulesetVersion} / {record.contentPackVersion}
+              </dd>
+            </div>
+            <div>
+              <dt>마지막 갱신</dt>
+              <dd className="os-num mt-os-1 text-os-text">
+                {formatLocalDateTime(record.updatedAt)}
+              </dd>
+            </div>
+          </dl>
+          <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" className="mt-os-3">
+                커리어 삭제
               </Button>
-            ) : (
-              <Button variant="primary" onClick={handleDelete} disabled={deleteMutation.isPending}>
-                삭제 확정
-              </Button>
-            )}
-          </DialogContent>
-        </Dialog>
-      </details>
+            </DialogTrigger>
+            <DialogContent
+              title="커리어 삭제"
+              description={
+                confirmStep === 1
+                  ? `${name}의 커리어를 삭제하시겠습니까?`
+                  : '되돌릴 수 없습니다. 정말 삭제할까요?'
+              }
+              closeLabel="닫기"
+            >
+              {confirmStep === 1 ? (
+                <Button variant="primary" onClick={() => setConfirmStep(2)}>
+                  다음
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                >
+                  삭제 확정
+                </Button>
+              )}
+            </DialogContent>
+          </Dialog>
+        </details>
+      ) : null}
     </Card>
   );
 }
@@ -272,6 +283,29 @@ function HubScreen() {
   const newCareerDisabled =
     serviceSeason.data?.status === 'LOCKED' || serviceSeason.data?.status === 'ARCHIVED';
   const selectedTab = tab ?? 'resume';
+
+  const seasonStatus = (() => {
+    if (serviceSeason.isPending)
+      return { label: '시즌 정보 확인 중', detail: '새 커리어는 계속 시작할 수 있습니다.' };
+    if (serviceSeason.isError)
+      return {
+        label: '시즌 정보를 불러오지 못했습니다',
+        detail: '시즌 정보를 확인하지 못했습니다. 기존 기록은 계속 열 수 있습니다.',
+      };
+    if (serviceSeason.data.status === 'LOCKED')
+      return {
+        label: '새 커리어 시작 잠김',
+        detail: '현재 시즌에서는 기존 커리어만 이어갈 수 있습니다.',
+      };
+    if (serviceSeason.data.status === 'ARCHIVED')
+      return { label: '시즌 종료', detail: '현재 시즌이 보관되어 새 커리어를 시작할 수 없습니다.' };
+    return {
+      label: serviceSeason.data.name,
+      detail: serviceSeason.data.isTest
+        ? '현재 테스트 시즌이 운영 중입니다.'
+        : '현재 커리어를 시작할 수 있는 시즌입니다.',
+    };
+  })();
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-001', careerPhase: 'NONE' });
@@ -369,44 +403,25 @@ function HubScreen() {
         </div>
       ) : (
         <div className="flex flex-col gap-os-4">
-          <div className="flex items-center justify-between gap-os-3">
+          <div
+            className={
+              selectedTab === 'resume' ? 'sr-only' : 'flex items-center justify-between gap-os-3'
+            }
+          >
             <h2 className="os-section-title">선수 목록</h2>
             <span className="os-num os-muted" style={CAPTION_STYLE}>
               {query.data.length}명
             </span>
           </div>
-          {serviceSeason.data?.notice === 'LINE_TEST' ? (
-            <p
-              data-testid="service-season-banner"
-              className="rounded-os-s bg-os-surface-2 px-os-3 py-os-2 font-os text-os-text-2"
-              style={CAPTION_STYLE}
-            >
-              {SERVICE_SEASON_NOTICE_KO.LINE_TEST}
-            </p>
-          ) : null}
-          <Tabs value={selectedTab} onValueChange={changeTab}>
-            <div className="overflow-x-auto">
-              <TabsList aria-label="커리어 허브 구역" className="min-w-max">
-                <TabsTrigger value="resume">최근 선수</TabsTrigger>
-                <TabsTrigger value="squad">다른 선수</TabsTrigger>
-                <TabsTrigger value="retired">보관·은퇴</TabsTrigger>
-              </TabsList>
-            </div>
-            {(() => {
-              const resumable = query.data.filter(
-                ({ state }) => state.status !== 'RETIRED' && state.status !== 'ARCHIVED',
-              );
-              const retired = query.data.filter(
-                ({ state }) => state.status === 'RETIRED' || state.status === 'ARCHIVED',
-              );
-              const recent = [...resumable].sort((a, b) =>
-                b.record.updatedAt.localeCompare(a.record.updatedAt),
-              )[0];
-              const renderCard = (summary: CareerSummary, featured = false) => (
+          {selectedTab === 'resume' ? (
+            (() => {
+              const recent = query.data
+                .filter(({ state }) => state.status !== 'RETIRED' && state.status !== 'ARCHIVED')
+                .sort((a, b) => b.record.updatedAt.localeCompare(a.record.updatedAt))[0];
+              return recent ? (
                 <CareerCard
-                  key={summary.record.id}
-                  summary={summary}
-                  featured={featured}
+                  summary={recent}
+                  featured
                   currentServiceSeason={serviceSeason.data}
                   onDeleted={(name) =>
                     setToast({ variant: 'success', message: `${name}의 커리어를 삭제했습니다` })
@@ -418,38 +433,68 @@ function HubScreen() {
                     })
                   }
                 />
+              ) : (
+                <EmptyState headingLevel={2} reason="이어갈 현역 커리어가 없습니다" />
               );
-              return (
-                <>
-                  <TabsContent value="resume">
-                    {recent ? (
-                      renderCard(recent, true)
-                    ) : (
-                      <EmptyState headingLevel={2} reason="이어갈 현역 커리어가 없습니다" />
-                    )}
-                  </TabsContent>
-                  <TabsContent value="squad">
-                    <div className="flex flex-col gap-os-4">
-                      {resumable.length > 0 ? (
-                        resumable.map((summary) => renderCard(summary))
-                      ) : (
-                        <EmptyState headingLevel={2} reason="현역 선수가 없습니다" />
-                      )}
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="retired">
-                    <div className="flex flex-col gap-os-4">
-                      {retired.length > 0 ? (
-                        retired.map((summary) => renderCard(summary))
-                      ) : (
-                        <EmptyState headingLevel={2} reason="아직 은퇴 기록이 없습니다" />
-                      )}
-                    </div>
-                  </TabsContent>
-                </>
-              );
-            })()}
-          </Tabs>
+            })()
+          ) : (
+            <Tabs value={selectedTab} onValueChange={changeTab}>
+              <div className="overflow-x-auto">
+                <TabsList aria-label="커리어 허브 구역" className="min-w-max">
+                  <TabsTrigger value="resume">최근 선수</TabsTrigger>
+                  <TabsTrigger value="squad">다른 선수</TabsTrigger>
+                  <TabsTrigger value="retired">보관·은퇴</TabsTrigger>
+                </TabsList>
+              </div>
+              {(() => {
+                const resumable = query.data.filter(
+                  ({ state }) => state.status !== 'RETIRED' && state.status !== 'ARCHIVED',
+                );
+                const retired = query.data.filter(
+                  ({ state }) => state.status === 'RETIRED' || state.status === 'ARCHIVED',
+                );
+                const renderCard = (summary: CareerSummary, featured = false) => (
+                  <CareerCard
+                    key={summary.record.id}
+                    summary={summary}
+                    featured={featured}
+                    currentServiceSeason={serviceSeason.data}
+                    onDeleted={(name) =>
+                      setToast({ variant: 'success', message: `${name}의 커리어를 삭제했습니다` })
+                    }
+                    onDeleteFailed={(name) =>
+                      setToast({
+                        variant: 'error',
+                        message: `${name}의 커리어를 삭제하지 못했습니다. 다시 시도해 주세요.`,
+                      })
+                    }
+                  />
+                );
+                return (
+                  <>
+                    <TabsContent value="squad">
+                      <div className="flex flex-col gap-os-4">
+                        {resumable.length > 0 ? (
+                          resumable.map((summary) => renderCard(summary))
+                        ) : (
+                          <EmptyState headingLevel={2} reason="현역 선수가 없습니다" />
+                        )}
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="retired">
+                      <div className="flex flex-col gap-os-4">
+                        {retired.length > 0 ? (
+                          retired.map((summary) => renderCard(summary))
+                        ) : (
+                          <EmptyState headingLevel={2} reason="아직 은퇴 기록이 없습니다" />
+                        )}
+                      </div>
+                    </TabsContent>
+                  </>
+                );
+              })()}
+            </Tabs>
+          )}
           <Button
             variant="secondary"
             className="w-full"
@@ -465,6 +510,63 @@ function HubScreen() {
           ) : null}
         </div>
       )}
+
+      <section className="flex flex-col gap-os-3" aria-labelledby="home-management">
+        <h2 id="home-management" className="os-section-title">
+          바로가기
+        </h2>
+        <nav className="os-home-tools" aria-label="커리어 관리">
+          <Link to="/" search={{ tab: 'squad' }} className="os-home-tool">
+            <strong>선수단 관리</strong>
+            <span>현역 선수와 다른 커리어 보기</span>
+          </Link>
+          <Link to="/" search={{ tab: 'retired' }} className="os-home-tool">
+            <strong>기록 관리</strong>
+            <span>은퇴·보관된 선수 기록 보기</span>
+          </Link>
+          <Link to="/guide" className="os-home-tool">
+            <strong>게임 가이드</strong>
+            <span>선수 생성부터 은퇴까지 알아보기</span>
+          </Link>
+          <Link to="/faq" className="os-home-tool">
+            <strong>자주 묻는 질문</strong>
+            <span>저장과 진행 방법 확인하기</span>
+          </Link>
+        </nav>
+      </section>
+
+      <section
+        className="flex flex-col gap-os-2 border-y border-os-border py-os-3"
+        aria-labelledby="service-season-status"
+      >
+        <p className="os-eyebrow">서비스 시즌</p>
+        <h2
+          id="service-season-status"
+          className="font-os font-semibold text-os-text"
+          style={H2_STYLE}
+        >
+          {seasonStatus.label}
+        </h2>
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          {seasonStatus.detail}
+        </p>
+        {serviceSeason.isSuccess && serviceSeason.data.endsAt === null ? (
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            종료일 미정
+          </p>
+        ) : null}
+        {serviceSeason.data?.notice === 'LINE_TEST' ? (
+          <p
+            data-testid="service-season-banner"
+            className="font-os text-os-text-2"
+            style={CAPTION_STYLE}
+          >
+            {SERVICE_SEASON_NOTICE_KO.LINE_TEST}
+          </p>
+        ) : null}
+      </section>
+
+      <HomeCommunity />
 
       <nav
         className="flex flex-wrap justify-center gap-os-4 border-t border-os-border pt-os-4"

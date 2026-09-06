@@ -1,8 +1,9 @@
 import { buttonClassName, buttonStyle, Card } from '@offside/ui';
 import { Link } from '@tanstack/react-router';
 import { useEffect } from 'react';
-
-export const SUPPORT_EMAIL = 'tasddc1569@gmail.com';
+import { HomeCommunity } from './home-community.js';
+import { SUPPORT_EMAIL } from './home-notices.js';
+export { SUPPORT_EMAIL } from './home-notices.js';
 
 const COPY = {
   guide: {
@@ -68,13 +69,20 @@ export function PublicIntroduction() {
         >
           OFFSIDE
         </h1>
-        <p className="font-os font-semibold text-os-text">이번 생은 프리미어리거! 한 명의 선수로 데뷔부터 은퇴까지.</p>
+        <p className="font-os font-semibold text-os-text">
+          이번 생은 프리미어리거! 한 명의 선수로 데뷔부터 은퇴까지.
+        </p>
         <p className="max-w-prose font-os text-os-text-2">
           유망주가 되어 훈련과 경기 사이의 선택을 내리고, 시즌을 거듭하며 한 선수의 축구 인생을
           만들어 가는 커리어 스토리 시뮬레이션입니다.
         </p>
         <div className="flex flex-col gap-os-2 sm:flex-row">
-          <Link aria-label="게임 시작" to="/onboarding" className={buttonClassName('primary', 'w-full')} style={buttonStyle}>
+          <Link
+            aria-label="게임 시작"
+            to="/onboarding"
+            className={buttonClassName('primary', 'w-full')}
+            style={buttonStyle}
+          >
             내 선수 만들기
           </Link>
           <a href="/guide" className={buttonClassName('secondary', 'w-full')} style={buttonStyle}>
@@ -88,23 +96,33 @@ export function PublicIntroduction() {
         </h2>
         <ol className="grid gap-os-3 border-y border-os-border py-os-3">
           <li className="grid grid-cols-[2rem_1fr] gap-os-3">
-            <span className="os-num font-os font-bold text-os-accent">01</span><div><h3 className="font-os font-semibold text-os-text">19세 유망주 만들기</h3>
-            <p className="mt-os-1 font-os text-os-text-2">
-              이름, 성장 배경, 성별과 선호 포지션, 플레이 성향을 정하고 프로 무대를 향한 첫 커리어를
-              시작합니다.
-            </p></div>
+            <span className="os-num font-os font-bold text-os-accent">01</span>
+            <div>
+              <h3 className="font-os font-semibold text-os-text">19세 유망주 만들기</h3>
+              <p className="mt-os-1 font-os text-os-text-2">
+                이름, 성장 배경, 성별과 선호 포지션, 플레이 성향을 정하고 프로 무대를 향한 첫
+                커리어를 시작합니다.
+              </p>
+            </div>
           </li>
           <li className="grid grid-cols-[2rem_1fr] gap-os-3">
-            <span className="os-num font-os font-bold text-os-accent">02</span><div><h3 className="font-os font-semibold text-os-text">시즌과 경기 이야기</h3>
-            <p className="mt-os-1 font-os text-os-text-2">
-              경기 일정과 커리어 사건을 만나고, 매 순간의 선택에 따라 성장과 다음 기회가 달라집니다.
-            </p></div>
+            <span className="os-num font-os font-bold text-os-accent">02</span>
+            <div>
+              <h3 className="font-os font-semibold text-os-text">시즌과 경기 이야기</h3>
+              <p className="mt-os-1 font-os text-os-text-2">
+                경기 일정과 커리어 사건을 만나고, 매 순간의 선택에 따라 성장과 다음 기회가
+                달라집니다.
+              </p>
+            </div>
           </li>
           <li className="grid grid-cols-[2rem_1fr] gap-os-3">
-            <span className="os-num font-os font-bold text-os-accent">03</span><div><h3 className="font-os font-semibold text-os-text">이적부터 은퇴까지</h3>
-            <p className="mt-os-1 font-os text-os-text-2">
-              제안을 검토하고 팀을 옮기며 기록을 쌓아, 한 선수의 커리어를 마지막까지 완성합니다.
-            </p></div>
+            <span className="os-num font-os font-bold text-os-accent">03</span>
+            <div>
+              <h3 className="font-os font-semibold text-os-text">이적부터 은퇴까지</h3>
+              <p className="mt-os-1 font-os text-os-text-2">
+                제안을 검토하고 팀을 옮기며 기록을 쌓아, 한 선수의 커리어를 마지막까지 완성합니다.
+              </p>
+            </div>
           </li>
         </ol>
       </section>
@@ -121,6 +139,7 @@ export function PublicIntroduction() {
           실제 플레이 화면 · 테스트 선수 예시. 선택과 버전에 따라 결과가 달라집니다.
         </figcaption>
       </figure>
+      <HomeCommunity compact />
       <PublicFooter />
     </div>
   );
