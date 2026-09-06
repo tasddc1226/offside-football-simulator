@@ -8,6 +8,182 @@
     <meta name="theme-color" content="#F7F6F1" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0B1410" media="(prefers-color-scheme: dark)" />
     <title>OFFSIDE</title>
+    <!--
+      첫 페인트 크리티컬 CSS. React가 mount되기 전(main.tsx의 bootstrap()이 프로필 보장·엔진
+      초기화·UI 스토어 하이드레이션을 await하는 동안) #root 안의 SEO 정적 콘텐츠가 브라우저 기본
+      스타일(흰 배경·검정 글씨·좌상단 정렬)로 그대로 노출되는 FOUC를 막는다. 정적 콘텐츠 자체는
+      삭제·숨김 없이 그대로 유지하고, 스타일만 입힌다.
+
+      선택자는 전부 `#root > main`으로 시작한다 — 실제 마운트된 앱은 PageShell이
+      `#root > div.os-shell-canvas > div.os-shell > main#game-content`처럼 main을 두 단계 깊이
+      아래에 렌더링하므로(packages/ui/src/components/PageShell.tsx), 마운트 후에는 이 선택자들이
+      절대 매치되지 않는다 — React가 #root의 자식을 교체하는 순간 이 스타일은 자연히 무효화된다.
+      `main:not(#game-content)`는 이 파일(`/`)의 원본 정적 main만 가리키고, `main#game-content`는
+      apps/web/scripts/seo.mjs가 만드는 /guide, /faq, app-shell(딥링크 새로고침) 정적 페이지의
+      main만 가리킨다 — 둘 다 실제 컴포넌트가 재사용하는 os-panel·os-eyebrow 같은 전역 클래스는
+      건드리지 않는다.
+
+      배경·글자색 hex는 이 파일의 theme-color 메타와 같은 관례(브리프 예외)로, packages/ui/src/tokens.css
+      의 --os-bg·--os-text·--os-text-2·--os-accent·--os-surface 값을 그대로 옮겼다(빌드 시점에 CSS
+      변수를 import할 수 없어 고정값으로 복제 — tokens.css가 바뀌면 이 값도 같이 갱신해야 한다).
+      다크 모드 기기의 흰 화면 플래시를 막기 위해 prefers-color-scheme만으로 판단한다(이 시점에는
+      아직 ui-store가 문서에 data-theme을 반영하지 않았다).
+    -->
+    <style>
+      :root {
+        --os-crit-bg: #f6f8fb;
+        --os-crit-surface: #ffffff;
+        --os-crit-text: #142033;
+        --os-crit-muted: #5d6b7e;
+        --os-crit-accent: #123b68;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --os-crit-bg: #101722;
+          --os-crit-surface: #172231;
+          --os-crit-text: #f3f6fa;
+          --os-crit-muted: #afbdcd;
+          --os-crit-accent: #8ebcf0;
+        }
+      }
+      html,
+      body {
+        background: var(--os-crit-bg);
+      }
+      body {
+        margin: 0;
+        color: var(--os-crit-text);
+        font-family:
+          'Pretendard Variable',
+          'Pretendard Fallback',
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Apple SD Gothic Neo',
+          'Noto Sans KR',
+          system-ui,
+          sans-serif;
+      }
+      /* "/"의 정적 인트로: 모바일 360px 기준 중앙 정렬 히어로. */
+      #root > main:not(#game-content) {
+        box-sizing: border-box;
+        display: flex;
+        min-height: 100dvh;
+        max-width: 560px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin-inline: auto;
+        padding: 48px 24px calc(48px + env(safe-area-inset-bottom, 0px));
+        text-align: center;
+      }
+      #root > main:not(#game-content) h1 {
+        margin: 0;
+        font-size: clamp(2rem, 8vw, 2.625rem);
+        line-height: 1.08;
+        letter-spacing: -0.035em;
+        font-weight: 800;
+      }
+      #root > main:not(#game-content) > p:nth-of-type(1) {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+      }
+      #root > main:not(#game-content) > p:nth-of-type(2) {
+        margin: 0;
+        max-width: 42ch;
+        color: var(--os-crit-muted);
+        font-size: 1rem;
+        line-height: 1.55;
+      }
+      #root > main:not(#game-content) section {
+        display: flex;
+        width: 100%;
+        max-width: 420px;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 8px;
+        text-align: left;
+      }
+      #root > main:not(#game-content) section h2 {
+        margin: 0;
+        color: var(--os-crit-muted);
+        font-size: 0.8125rem;
+        font-weight: 750;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      #root > main:not(#game-content) section h3 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      #root > main:not(#game-content) section p {
+        margin: 2px 0 0;
+        color: var(--os-crit-muted);
+        font-size: 0.875rem;
+      }
+      #root > main:not(#game-content) nav {
+        margin-top: 4px;
+        font-size: 0.875rem;
+      }
+      #root > main:not(#game-content) nav a {
+        color: var(--os-crit-accent);
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      /* /guide, /faq, app-shell(딥링크 새로고침)의 정적 문서: 실제 os-panel·os-eyebrow와
+         비슷한 위계로 보이게 하되, 위 전역 클래스 자체는 다시 정의하지 않는다. */
+      #root > main#game-content {
+        box-sizing: border-box;
+        display: flex;
+        max-width: 560px;
+        flex-direction: column;
+        gap: 16px;
+        margin-inline: auto;
+        padding: 32px 20px 48px;
+      }
+      #root > main#game-content h1 {
+        margin: 0;
+        font-size: clamp(1.625rem, 6vw, 2rem);
+        line-height: 1.2;
+        letter-spacing: -0.035em;
+        font-weight: 800;
+      }
+      #root > main#game-content h2 {
+        margin: 16px 0 8px;
+        font-size: 1.125rem;
+        line-height: 1.45;
+        font-weight: 750;
+      }
+      #root > main#game-content h2:first-child {
+        margin-top: 0;
+      }
+      #root > main#game-content p {
+        margin: 0;
+      }
+      #root > main#game-content .os-eyebrow {
+        margin: 0 0 4px;
+        color: var(--os-crit-muted);
+        font-size: 0.8125rem;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+      }
+      #root > main#game-content .os-panel {
+        border-radius: 18px;
+        background: var(--os-crit-surface);
+        padding: 20px;
+      }
+      #root > main#game-content nav a,
+      #root > main#game-content p a {
+        color: var(--os-crit-accent);
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+    </style>
   </head>
   <body>
     <div id="root">
