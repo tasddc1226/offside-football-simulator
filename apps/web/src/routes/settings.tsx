@@ -49,6 +49,7 @@ import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
 import { formatLocalDate, formatLocalDateTime } from '../shared/format.js';
 import { validateRecoveryCodeInput } from '../shared/recovery-code-input.js';
+import { SettingsFooter } from '../shared/SettingsFooter.js';
 import { SyncBadge } from '../shared/SyncBadge.js';
 import {
   useUiStore,
@@ -1484,6 +1485,8 @@ function SettingsScreen() {
           </section>
         </section>
       </div>
+
+      <SettingsFooter />
 
       <Link to="/" className={buttonClassName('secondary')} style={buttonStyle}>
         허브로
