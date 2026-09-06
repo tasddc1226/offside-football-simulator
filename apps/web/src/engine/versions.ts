@@ -5,11 +5,6 @@ import type { ServiceSeasonCurrent } from '@offside/contracts';
 
 export const ACTIVE_RULESET_VERSION = '1.0.0';
 export const ACTIVE_CONTENT_PACK_VERSION = '0.1.0';
-/**
- * Phase 3+4 확장 콘텐츠 실플레이 전용 팩. 기본·preview·일반 staging·production 빌드는 이 값을
- * 선택하지 않는다. `vite build --mode expanded`라는 명시적 opt-in에서만 사용한다.
- */
-export const EXPANDED_QA_CONTENT_PACK_VERSION = '0.3.0';
 
 /**
  * T-2-012 D-54: 더 이상 "활성 시즌"이 아니다 — 서버가 `ACTIVE_SERVICE_SEASON_ID`(env var)로 가리키는
@@ -43,20 +38,16 @@ export const E2E_RULESET_STORAGE_KEY = 'offside:e2e-ruleset';
 
 /** 신규 규칙 검증은 명시적 QA에서만 허용한다. 저장된 커리어의 버전은 바꾸지 않는다. */
 export function resolveActiveRulesetVersion(): string {
-  const expanded = import.meta.env.MODE === 'expanded' ? import.meta.env.VITE_RULESET_VERSION : undefined;
   const dev = import.meta.env.DEV && typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function'
     ? localStorage.getItem(E2E_RULESET_STORAGE_KEY) : undefined;
-  const candidate = expanded ?? dev;
-  return candidate && (RULESET_VERSIONS as readonly string[]).includes(candidate)
-    ? candidate : ACTIVE_RULESET_VERSION;
+  return dev && (RULESET_VERSIONS as readonly string[]).includes(dev)
+    ? dev : ACTIVE_RULESET_VERSION;
 }
 
 export function selectContentPackVersion(input: {
-  mode: string;
   dev: boolean;
   devOverride: string | null;
 }): string {
-  if (input.mode === 'expanded') return EXPANDED_QA_CONTENT_PACK_VERSION;
   if (
     input.dev &&
     input.devOverride !== null &&
@@ -75,7 +66,6 @@ export function resolveActiveContentPackVersion(): string {
       ? localStorage.getItem(E2E_CONTENT_PACK_STORAGE_KEY)
       : null;
   return selectContentPackVersion({
-    mode: import.meta.env.MODE,
     dev: import.meta.env.DEV,
     devOverride,
   });
