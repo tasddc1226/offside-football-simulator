@@ -9,6 +9,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  TeamBadge,
   buttonClassName,
   buttonStyle,
 } from '@offside/ui';
@@ -17,9 +18,12 @@ import { careerQueryOptions, useCareer } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { screenForCareer } from '../shared/career-route.js';
+import { currentTeamId, currentTeamName } from '../shared/current-team.js';
 import { canPlanNextSeason } from '../shared/start-season.js';
 import { platform } from '../platform/index.js';
 import { CountUp } from '../shared/countup.js';
+import { PlayerBanner } from '../shared/PlayerBanner.js';
+import { seasonResultHeadline } from '../shared/result-narrative.js';
 import { SeasonCompareSection } from '../shared/season-compare.js';
 import {
   deriveSeasonResultView,
@@ -32,11 +36,15 @@ import { ATTRIBUTE_GROUP_LABEL_KO } from '../shared/attribute-groups.js';
 import {
   ATTRIBUTE_LABELS,
   POSITION_STAT_LABEL_KO,
+  positionHeaderField,
   ROLE_DECISION_LABEL_KO,
   ROLE_PROPOSAL_TYPE_LABEL_KO,
   SQUAD_ROLE_LABELS,
   chapterTriggerLabel,
 } from '../shared/labels.js';
+import { getTeamIdentity } from '../shared/team-identity.js';
+import { resolveTeamName } from '../shared/team-names.js';
+import { useUiStore } from '../shared/ui-store.js';
 import { GameResultReveal } from '../shared/game-presentation.js';
 
 type SeasonResultSearch = { season?: number };
@@ -216,6 +224,7 @@ function SeasonResultScreen() {
   const { careerId } = Route.useParams();
   const { season } = Route.useSearch();
   const query = useCareer(careerId);
+  const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
 
   useEffect(() => {
     if (query.data === undefined) return;
@@ -234,6 +243,8 @@ function SeasonResultScreen() {
   const index = season ?? state.seasonHistory.length - 1;
   const view = deriveSeasonResultView(state, index, ruleset);
   if (view === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
+  const profile = state.player.profile;
+  if (profile === null) return null; // deriveSeasonResultView가 이미 profile 확정을 요구한다. 방어적 fallback.
 
   const { common, positionCard, promise, selection } = view;
   const minutesSharePercent =
@@ -244,12 +255,50 @@ function SeasonResultScreen() {
   const nextTarget = canPlanNextSeason(state) ? 'SCR-005' : screenForCareer(state).screenId;
   const headlineTeamResult = view.teamRecords[0];
 
+  // UX-010 P2c: 이번 시즌 실제 소속팀 표기(TeamBadge, 요구사항 5) — view.teamId는 이 시즌에 뛴 팀이라
+  // 이후 이적이 있어도 바뀌지 않는다(현재 소속과 다를 수 있다, 아래 PlayerBanner와는 별개 값).
+  const seasonTeamIdentity = getTeamIdentity(view.teamId);
+  const seasonTeamName = resolveTeamName(ruleset, view.teamId, teamNameOverrides) ?? '무소속';
+
+  // UX-010 P2c: 리그 순위로 승격·강등권 여부를 가려 헤드라인 분기에 쓴다. 컵만 뛴 시즌·순위 미확정은
+  // 둘 다 false(평균 평점만으로 분기).
+  const leagueRecord = view.result.competitions.find((competition) => competition.kind === 'LEAGUE') ?? null;
+  const league = leagueRecord === null ? undefined : ruleset.leagues.find((candidate) => candidate.id === leagueRecord.competitionId);
+  const promoted =
+    leagueRecord !== null &&
+    leagueRecord.position !== null &&
+    league !== undefined &&
+    league.promotionSpots > 0 &&
+    leagueRecord.position <= league.promotionSpots;
+  const relegated =
+    leagueRecord !== null &&
+    leagueRecord.position !== null &&
+    league !== undefined &&
+    league.relegationSpots > 0 &&
+    leagueRecord.position > league.teamCount - league.relegationSpots;
+  const headline = seasonResultHeadline({
+    seed: `${state.careerId}:${view.historyIndex}`,
+    promoted,
+    relegated,
+    avgRatingTenths: common.avgRatingTenths,
+  });
+
   return (
     <div className="os-screen" data-testid="season-result" data-result-hash={view.hash}>
       <ScreenIntro
         eyebrow="SEASON REVIEW"
         title={view.isYouth ? '유소년 시즌 결과' : '프로 시즌 결과'}
         description={`시즌 ${view.seasonNumber}`}
+      />
+
+      <PlayerBanner
+        name={profile.name}
+        teamName={currentTeamName(state, ruleset, teamNameOverrides)}
+        teamId={currentTeamId(state, ruleset)}
+        position={positionHeaderField(profile.primaryPosition, profile.preferredPosition).value}
+        shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
+        age={state.age}
+        ovr={profile.baseOvr}
       />
 
       <GameResultReveal
@@ -259,15 +308,27 @@ function SeasonResultScreen() {
       >
         <section className="os-story-card flex flex-col gap-os-3" aria-label="시즌 한눈에 보기">
           <p className="os-eyebrow">시즌 {view.seasonNumber} · 최종 기록</p>
-          <p className="font-os font-semibold text-os-text" style={H2_STYLE}>
+          <p className="font-os font-bold text-os-text" style={H2_STYLE}>{headline}</p>
+          <div className="flex items-center gap-os-2">
+            <TeamBadge initials={seasonTeamIdentity.initials} colorVar={seasonTeamIdentity.colorVar} size="s" />
+            <span className="font-os text-os-text-2" style={BODY_STYLE}>{seasonTeamName}</span>
+          </div>
+          <p className="font-os text-os-text" style={BODY_STYLE}>
             {common.total}경기 · {common.minutes}분 · 평균 평점 {ratingText(common.avgRatingTenths)}
           </p>
           <p className="font-os text-os-text-2" style={BODY_STYLE}>
             {headlineTeamResult
               ? `${headlineTeamResult.label} ${headlineTeamResult.standingText}`
               : `${SQUAD_ROLE_LABELS[selection.roleAtStart]}에서 ${SQUAD_ROLE_LABELS[selection.roleAtEnd]}로 시즌을 마쳤습니다.`}
-            {' · '}Base OVR {view.baseOvr.before} → {view.baseOvr.after}
           </p>
+          {view.baseOvr.before !== view.baseOvr.after ? (
+            <p className="flex flex-wrap items-baseline gap-os-2 font-os font-bold text-os-accent" style={H2_STYLE}>
+              <span className="os-num">{view.baseOvr.before}</span>
+              <span aria-hidden="true">→</span>
+              <span className="os-num">{view.baseOvr.after}</span>
+              <span className="font-os text-os-text-2" style={CAPTION_STYLE}>Base OVR 변화</span>
+            </p>
+          ) : null}
         </section>
       </GameResultReveal>
 

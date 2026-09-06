@@ -3,6 +3,14 @@
   border-bottom: 1px solid var(--os-border);
 }
 
+/* UX-010 P5: PlayerBanner.tsx. 홈 탭 os-career-identity와 시각 계열(eyebrow 팀명 → h1 이름 → 우측
+   큰 강조 숫자)은 맞추되, 대시보드 전용 클래스에 얽매이지 않는 독립 규칙이다 — 챕터·이벤트·이벤트
+   결과·시즌 결과 화면이 함께 쓴다. */
+.os-player-banner {
+  padding-bottom: var(--os-space-3);
+  border-bottom: 1px solid var(--os-border);
+}
+
 .os-career-progress {
   height: 0.3rem;
   overflow: hidden;

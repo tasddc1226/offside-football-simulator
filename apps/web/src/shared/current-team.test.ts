@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadRuleset } from '@offside/content';
 import type { CareerState } from '@offside/domain';
-import { currentTeamName } from './current-team.js';
+import { currentTeamId, currentTeamName } from './current-team.js';
 
 function state(rulesetVersion: string, overrides: { age?: number; seasonHistory?: unknown[] } = {}): CareerState {
   return {
@@ -36,5 +36,17 @@ describe('currentTeamName', () => {
   it('1.3의 성인 무계약 선수에게도 U18을 현재 소속으로 되살리지 않는다', () => {
     const adult = state('1.3.0', { age: 20, seasonHistory: [{}] });
     expect(currentTeamName(adult, loadRuleset('1.3.0'))).toBe('무소속 · 다음 팀 준비');
+  });
+});
+
+describe('currentTeamId (UX-010 P5: PlayerBanner TeamBadge)', () => {
+  it('계약 전 배경 선수는 배경의 출발 팀 id를 돌려준다', () => {
+    const ruleset = loadRuleset('1.2.0');
+    const background = ruleset.backgrounds.find((candidate) => candidate.id === 'club-academy');
+    expect(currentTeamId(state('1.2.0'), ruleset)).toBe(background?.startTeamId);
+  });
+
+  it('배경 배지가 되살아나면 안 되는 경우(1.3 계약 전 U18 초과)는 null이다', () => {
+    expect(currentTeamId(state('1.3.0'), loadRuleset('1.3.0'))).toBeNull();
   });
 });

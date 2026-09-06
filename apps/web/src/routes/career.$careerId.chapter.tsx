@@ -21,13 +21,14 @@ import {
   ScreenIntro,
   Skeleton,
   StatusStrip,
+  TeamBadge,
 } from '@offside/ui';
 import type { ChapterDefinition } from '@offside/content';
 import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { opponentDisplayName } from '../shared/competition-labels.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
-import { archetypeName, currentTeamName } from '../shared/current-team.js';
+import { currentTeamId, currentTeamName } from '../shared/current-team.js';
 import {
   deriveChapterView,
   type ChapterView,
@@ -39,6 +40,7 @@ import {
   decisionTimeLabel,
   scoreAtDecision,
 } from '../shared/chapter-scoreboard.js';
+import { CountUp } from '../shared/countup.js';
 import { formatEffectSummary } from '../shared/effect-summary.js';
 import { buildNarrativeTokens, renderNarrative } from '../shared/narrative.js';
 import {
@@ -52,15 +54,18 @@ import {
   RISK_LABEL_KO,
   SELECTION_REASON_LABEL_KO,
 } from '../shared/labels.js';
+import { PlayerBanner } from '../shared/PlayerBanner.js';
+import { matchResultHeadline, type ChapterOutcomeTone } from '../shared/result-narrative.js';
 import { ratingText } from '../shared/season-schedule.js';
 import { proStatusStripItems } from '../shared/status-strip.js';
+import { getTeamIdentity } from '../shared/team-identity.js';
 import type { TeamNameOverrides } from '../shared/team-names.js';
 import { useUiStore } from '../shared/ui-store.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { platform } from '../platform/index.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
-import { GamePending, GameResultReveal } from '../shared/game-presentation.js';
+import { GamePending, GameResultReveal, useDelayedReveal } from '../shared/game-presentation.js';
 
 type ChapterSearch = { d: number };
 
@@ -187,6 +192,15 @@ function aggregateEffectDeltas(
 
 function collectedAddedTags(resolved: ResolvedChapterDecision[]): string[] {
   return Array.from(new Set(resolved.flatMap(({ outcome }) => outcome.addTags ?? [])));
+}
+
+/** UX-010 P2a: 챕터가 경기 평점에 더한 부호를 헤드라인 분기용 톤으로 바꾼다. 챕터가 없으면 null
+ * (헤드라인 함수가 이 경기는 챕터와 무관한 것으로 취급한다). */
+function chapterOutcomeTone(chapterRecord: ChapterView['chapterRecord']): ChapterOutcomeTone {
+  if (chapterRecord === null) return null;
+  if (chapterRecord.ratingDeltaTenths > 0) return 'SUCCESS';
+  if (chapterRecord.ratingDeltaTenths < 0) return 'FAIL';
+  return 'NEUTRAL';
 }
 
 interface DecisionInputProps {
@@ -379,6 +393,10 @@ function ChapterScreen() {
   const tokens = buildNarrativeTokens(state, contentPack, ruleset, teamNameOverrides);
   const room = isNationalTeam ? null : deriveTacticalRoom(state, ruleset);
   const reasonText = playerReasonText(season.selection.playerReason);
+  // UX-010 요구사항 5: "오늘의 경기" 카드의 TeamBadge. NATIONAL_TEAM은 가상 상대라 배지를 그리지
+  // 않는다(context.kind로 직접 좁혀야 TS가 opponent.id를 CLUB 분기로 안다).
+  const opponentIdentity = view.context.kind === 'CLUB' ? getTeamIdentity(view.context.opponent.id) : null;
+  const ownIdentity = getTeamIdentity(currentTeamId(state, ruleset) ?? '');
 
   async function handleConfirm(decisionId: string, optionId: string) {
     if (view === null || submittingRef.current) return;
@@ -437,17 +455,26 @@ function ChapterScreen() {
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-os-2 border-y border-os-border py-os-3">
-        <div className="min-w-0">
-          <p className="truncate font-os font-semibold text-os-text">{profile.name} · {positionField.value}</p>
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{currentTeamName(state, ruleset, teamNameOverrides)} · {archetypeName(ruleset, profile.archetypeId)}</p>
-        </div>
-        <span className="os-num font-os font-semibold text-os-text-2">#{state.contract?.shirtNumber ?? '—'}</span>
-      </div>
+      <PlayerBanner
+        name={profile.name}
+        teamName={currentTeamName(state, ruleset, teamNameOverrides)}
+        teamId={currentTeamId(state, ruleset)}
+        position={positionField.value}
+        shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
+        age={state.age}
+        ovr={profile.baseOvr}
+      />
       <StatusStrip items={proStatusStripItems(state)} />
 
       <section className="os-panel flex flex-col gap-os-2" aria-label="경기 맥락">
         <p className="os-eyebrow">오늘의 경기</p>
+        {opponentIdentity !== null ? (
+          <div className="flex items-center gap-os-2" aria-hidden="true">
+            <TeamBadge initials={ownIdentity.initials} colorVar={ownIdentity.colorVar} size="s" />
+            <span className="font-os text-os-text-2" style={CAPTION_STYLE}>vs</span>
+            <TeamBadge initials={opponentIdentity.initials} colorVar={opponentIdentity.colorVar} size="s" />
+          </div>
+        ) : null}
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
           {chapterContextLabel(view, ruleset, teamNameOverrides)}
         </p>
@@ -519,7 +546,7 @@ function ChapterScreen() {
             ? '대표팀 데뷔 결과가 확정되었습니다'
             : `경기 결과 ${view.match.result.goalsFor} 대 ${view.match.result.goalsAgainst}, 평점 ${ratingText(view.match.ratingTenths)}`}
         >
-          <ChapterResultSection view={view} />
+          <ChapterResultSection view={view} careerId={careerId} />
         </GameResultReveal>
       )}
 
@@ -534,7 +561,7 @@ function ChapterScreen() {
   );
 }
 
-function ChapterResultSection({ view }: { view: ChapterView }) {
+function ChapterResultSection({ view, careerId }: { view: ChapterView; careerId: string }) {
   const match = view.match;
   const isNationalTeam = view.context.kind === 'NATIONAL_TEAM';
   const stats = positionStatEntries(match.stats);
@@ -544,12 +571,28 @@ function ChapterResultSection({ view }: { view: ChapterView }) {
     return `${label} ${sign}${delta}`;
   });
   const addedTags = resultTagLabels(collectedAddedTags(view.resolved));
+  // UX-010 P2b: 스코어는 즉시, 평점은 짧게(0.5초 이내) 늦춰 드러낸다(가벼운 서스펜스 리빌).
+  const ratingRevealed = useDelayedReveal();
+  // UX-010 P2a: 결과 성격 한 줄 헤드라인. 같은 경기(careerId+matchId)면 항상 같은 문구가 나온다.
+  const headline = isNationalTeam
+    ? null
+    : matchResultHeadline({
+        seed: `${careerId}:${match.id}`,
+        outcome: match.result.outcome,
+        ratingTenths: match.ratingTenths,
+        scored: match.stats.group === 'FW' && match.stats.goals > 0,
+        assisted: (match.stats.group === 'FW' || match.stats.group === 'MF') && match.stats.assists > 0,
+        chapterOutcome: chapterOutcomeTone(view.chapterRecord),
+      });
 
   return (
     <div className="os-panel flex flex-col gap-os-4">
       <h2 className="font-os font-bold text-os-text" style={H1_STYLE}>
         {isNationalTeam ? '대표팀 데뷔 결과' : '경기 결과'}
       </h2>
+      {headline !== null ? (
+        <p className="font-os font-semibold text-os-accent" style={BODY_STYLE}>{headline}</p>
+      ) : null}
       {!isNationalTeam && (
       <div className="flex flex-col items-center gap-os-2 rounded-os-m bg-os-surface-2 py-os-4">
         <p className="os-eyebrow">FULL TIME</p>
@@ -576,7 +619,19 @@ function ChapterResultSection({ view }: { view: ChapterView }) {
         </div>
         <div>
           <dt>평점</dt>
-          <dd className="os-num text-os-text">{ratingText(match.ratingTenths)}</dd>
+          <dd className="os-num text-os-text">
+            {match.ratingTenths === null || ratingRevealed ? (
+              <CountUp
+                value={match.ratingTenths}
+                label="평점"
+                format={(value) => ratingText(Math.round(value))}
+                durationMs={420}
+                onSkip={() => platform.analytics.track('countup_skipped', { field: 'chapterRating' })}
+              />
+            ) : (
+              <span>—</span>
+            )}
+          </dd>
         </div>
         <div>
           <dt>카드</dt>

@@ -8,14 +8,23 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { decodeSnapshot } from '@offside/engine-client';
 import { Button, ErrorState, ResultCard, ScreenIntro, Skeleton } from '@offside/ui';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
-import { contentForCareer } from '../engine/content.js';
+import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { getAppEngine } from '../engine/engine.js';
 import { screenForCareer } from '../shared/career-route.js';
+import { currentTeamId, currentTeamName } from '../shared/current-team.js';
 import { actualEventEffects, eventResultTagLabel, resolveEventResultView } from '../shared/event-result.js';
-import { INJURY_BODY_PART_LABELS, INJURY_SEVERITY_LABELS, REHAB_PLAN_LABELS } from '../shared/labels.js';
+import {
+  INJURY_BODY_PART_LABELS,
+  INJURY_SEVERITY_LABELS,
+  POSITION_LABELS,
+  positionHeaderField,
+  REHAB_PLAN_LABELS,
+} from '../shared/labels.js';
+import { PlayerBanner } from '../shared/PlayerBanner.js';
 import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
+import { useUiStore } from '../shared/ui-store.js';
 import { GameResultReveal } from '../shared/game-presentation.js';
 
 type EventResultSearch = { rev: number };
@@ -58,6 +67,7 @@ function EventResultScreen() {
   const navigate = useNavigate();
   const submittingRef = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
 
   const view =
     query.data === undefined
@@ -96,6 +106,15 @@ function EventResultScreen() {
     return null;
   }
   const eventEntry = state.timeline.find((candidate) => candidate.revision === rev && candidate.kind === 'EVENT_RESOLVED');
+  // UX-010 P5: 확정 직후 현재(=이 결과가 만든) 선수 정체성을 보여준다. 드래프트 단계 이벤트라
+  // 프로필이 아직 없을 수도 있어(profile null) 초안값으로 대체한다(event-screen.tsx와 같은 패턴).
+  const ruleset = rulesetForCareer(state);
+  const profile = state.player.profile;
+  const bannerPosition = profile
+    ? positionHeaderField(profile.primaryPosition, profile.preferredPosition).value
+    : state.player.draft.position
+      ? POSITION_LABELS[state.player.draft.position]
+      : '—';
   const eventDefinition = eventEntry?.refId ? contentForCareer(state).eventsById.get(eventEntry.refId.split(':')[0] ?? '') : undefined;
 
   async function handleNext() {
@@ -135,6 +154,15 @@ function EventResultScreen() {
         eyebrow="이어지는 이야기"
         title="선택의 결과"
         description="당신의 결정이 커리어에 남긴 변화를 확인하세요."
+      />
+      <PlayerBanner
+        name={profile?.name ?? state.player.draft.name ?? '이름 없는 선수'}
+        teamName={currentTeamName(state, ruleset, teamNameOverrides)}
+        teamId={currentTeamId(state, ruleset)}
+        position={bannerPosition}
+        shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
+        age={state.age}
+        ovr={profile?.baseOvr ?? null}
       />
       <GameResultReveal
         fast={state.simulationMode === 'FAST'}

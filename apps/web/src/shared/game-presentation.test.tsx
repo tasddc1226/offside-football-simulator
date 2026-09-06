@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GameCompletionTransition, GameResultReveal } from './game-presentation.js';
+import { GameCompletionTransition, GameResultReveal, useDelayedReveal } from './game-presentation.js';
 import { useUiStore } from './ui-store.js';
 
 afterEach(() => {
@@ -88,5 +88,26 @@ describe('GameResultReveal', () => {
     expect(screen.getByTestId('announcement')).toBeEmptyDOMElement();
     act(() => vi.runAllTimers());
     expect(screen.getByTestId('announcement')).toHaveTextContent('결과 확정');
+  });
+});
+
+describe('useDelayedReveal (UX-010 P2b 평점 리빌)', () => {
+  function Probe({ delayMs }: { delayMs?: number }) {
+    const revealed = useDelayedReveal(delayMs);
+    return <span data-testid="probe">{revealed ? 'revealed' : 'hidden'}</span>;
+  }
+
+  it('지연 시간이 지나야 true가 된다', () => {
+    vi.useFakeTimers();
+    render(<Probe delayMs={400} />);
+    expect(screen.getByTestId('probe')).toHaveTextContent('hidden');
+    act(() => vi.advanceTimersByTime(400));
+    expect(screen.getByTestId('probe')).toHaveTextContent('revealed');
+  });
+
+  it('모션 감소·키보드 입력 모드는 지연 없이 즉시 true다', () => {
+    useUiStore.setState({ reducedMotion: 'ON' });
+    render(<Probe />);
+    expect(screen.getByTestId('probe')).toHaveTextContent('revealed');
   });
 });

@@ -29,6 +29,24 @@ export function currentTeamName(
   return resolveTeamName(ruleset, background.startTeamId, overrides) ?? '무소속';
 }
 
+/**
+ * UX-010 P5: PlayerBanner의 TeamBadge용 팀 id. `currentTeamName`과 같은 분기를 따르되 화면 표시
+ * 문구("계약 전 · 다음 팀 준비" 등) 대신 배지가 그릴 수 있는 팀 id(또는 배지를 그리지 않을 null)를
+ * 돌려준다 — 오버라이드는 적용하지 않는다(TeamBadge는 team-identity.ts가 팀 id 기준으로만 정하고
+ * 이름 오버라이드에 영향받지 않는다, UX-008 요구사항 4).
+ */
+export function currentTeamId(state: CareerState, ruleset: Ruleset): string | null {
+  if (state.contract !== null) return state.contract.teamId;
+  const recovery = ruleset.transferRules.recovery;
+  if (recovery !== undefined && state.age > recovery.youthMaxAge) return null;
+
+  const backgroundId = state.player.profile?.backgroundId ?? state.player.draft.backgroundId;
+  const background = backgroundId === null || backgroundId === undefined
+    ? undefined
+    : ruleset.backgrounds.find((candidate) => candidate.id === backgroundId);
+  return background?.startTeamId ?? null;
+}
+
 /** 룰셋에서 아키타입 한글 이름을 찾는다. id가 없거나 룰셋에 없으면 id를 그대로 돌려준다(방어적). */
 export function archetypeName(ruleset: Ruleset, archetypeId: string | null | undefined): string {
   if (archetypeId === null || archetypeId === undefined) return '—';
