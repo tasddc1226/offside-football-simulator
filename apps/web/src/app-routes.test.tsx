@@ -86,6 +86,13 @@ async function seedDraftCareer(): Promise<void> {
   await createCareer(engine, { simulationMode: 'FAST' });
 }
 
+/** UX-009: SCR-034 진입 시마다 뜨는 시네마틱 인트로를 걷어낸다. 인트로는 자체 rAF 스케줄로 자동
+ * 진행되지만, 이 스킵 버튼(전체 화면 버튼, 접근성 이름 "탭하여 스킵")을 눌러 즉시 넘긴다 — jsdom의
+ * requestAnimationFrame 지원 여부에 기존 슬라이드 단언들이 기대지 않게 한다. */
+async function skipCinematicIntro(): Promise<void> {
+  fireEvent.click(await screen.findByRole('button', { name: '탭하여 스킵' }));
+}
+
 async function openCareerDetails(): Promise<void> {
   fireEvent.click(screen.getByRole('link', { name: /선수단 관리/ }));
   fireEvent.click(await screen.findByText('상세 관리', { exact: true }));
@@ -115,6 +122,7 @@ describe('SCR-001 공개 소개 → SCR-034 온보딩', () => {
 
     fireEvent.click(screen.getByRole('link', { name: '게임 시작' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/onboarding'));
+    await skipCinematicIntro();
     expect(
       await screen.findByRole('heading', {
         level: 1,
@@ -140,6 +148,7 @@ describe('SCR-001 공개 소개 → SCR-034 온보딩', () => {
 describe('SCR-034 온보딩', () => {
   it('"다음"으로 3장을 모두 이동하고 마지막 장에서 새 인생 시작 버튼과 복구 코드 문구를 보여준다', async () => {
     renderAt('/onboarding');
+    await skipCinematicIntro();
     await screen.findByRole('heading', {
       level: 1,
       name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
@@ -163,6 +172,7 @@ describe('SCR-034 온보딩', () => {
 
   it('"건너뛰기"는 onboardingSeen을 저장하고 허브로 이동한다', async () => {
     const router = renderAt('/onboarding');
+    await skipCinematicIntro();
     await screen.findByRole('heading', {
       level: 1,
       name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
@@ -178,6 +188,7 @@ describe('SCR-034 온보딩', () => {
 
   it('새 인생 시작은 커리어를 한 번 만들고 브랜드 전환 뒤 SCR-002로 이동한다', async () => {
     const router = renderAt('/onboarding');
+    await skipCinematicIntro();
     await screen.findByRole('heading', {
       level: 1,
       name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
