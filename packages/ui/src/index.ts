@@ -54,5 +54,7 @@ export type {
   TabsProps,
   TabsTriggerProps,
 } from './components/Tabs.js';
+export { TeamBadge } from './components/TeamBadge.js';
+export type { TeamBadgeProps, TeamBadgeSize } from './components/TeamBadge.js';
 export { Toast } from './components/Toast.js';
 export type { ToastProps, ToastVariant } from './components/Toast.js';

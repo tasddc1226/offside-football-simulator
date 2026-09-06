@@ -457,6 +457,33 @@ select {
   grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
   gap: 8px;
 }
+/* UX-008: 구단 이니셜 배지. background는 컴포넌트가 인라인 style로 팀별 --os-team-<id>(또는
+   중립 폴백 --os-neutral)를 꽂아 넣고, 이 규칙은 모양·타이포만 잡는다. 두 값 모두
+   check-contrast.mjs가 --os-on-accent와 4.5:1을 확인한다. */
+.os-team-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--os-font);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--os-on-accent);
+  word-break: keep-all;
+}
+.os-team-badge[data-size='s'] {
+  width: 20px;
+  height: 20px;
+  font-size: 0.5625rem;
+  letter-spacing: -0.02em;
+}
+.os-team-badge[data-size='m'] {
+  width: 28px;
+  height: 28px;
+  font-size: 0.6875rem;
+  letter-spacing: -0.02em;
+}
 .os-stat-strip > li {
   min-width: 0;
   padding: 12px 10px;

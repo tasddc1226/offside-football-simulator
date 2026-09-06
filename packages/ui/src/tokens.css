@@ -19,6 +19,23 @@
   --os-swatch-crimson: #7a1f30;
   --os-swatch-amber: #7a4b0a;
   --os-swatch-mono: #33404f;
+  /* UX-008 구단 배지 컬러(활성 룰셋 12개 구단, apps/web/src/shared/team-identity.ts와 id를 맞춰
+     둔다 — 팀을 추가·삭제하면 여기와 그 파일, packages/ui/scripts/check-contrast.mjs의
+     TEAM_IDS를 함께 고친다). 배지 위 이니셜 텍스트는 --os-on-accent를 쓰므로, 이 값들은 전부
+     --os-on-accent와 4.5:1 이상이 되도록 골랐다(라이트는 짙은 색 + 흰 글자, 다크는 옅은 색 +
+     짙은 글자 — check:contrast가 두 테마 모두 검증). */
+  --os-team-hangang-u18: #6f2020;
+  --os-team-seorabeol-united: #6f4720;
+  --os-team-cheongyeon-fc: #6f6f20;
+  --os-team-gangdong-rovers: #476f20;
+  --os-team-onsaemiro-city: #206f20;
+  --os-team-byeolbit-united: #206f47;
+  --os-team-galmae-town: #206f6f;
+  --os-team-noeulhang-fc: #204e6f;
+  --os-team-geumbit-fc: #202d6f;
+  --os-team-eunha-rovers: #3a206f;
+  --os-team-gangnaru-united: #62206f;
+  --os-team-dalbit-town-fc: #6f2054;
   --os-line: #17845b;
   --os-success: #18794e;
   --os-warning: #91610b;
@@ -134,6 +151,18 @@
   --os-swatch-crimson: #f0a3ae;
   --os-swatch-amber: #f0c37a;
   --os-swatch-mono: #c7d0da;
+  --os-team-hangang-u18: #e9a5a5;
+  --os-team-seorabeol-united: #e9c7a5;
+  --os-team-cheongyeon-fc: #e9e9a5;
+  --os-team-gangdong-rovers: #c7e9a5;
+  --os-team-onsaemiro-city: #a5e9a5;
+  --os-team-byeolbit-united: #a5e9c7;
+  --os-team-galmae-town: #a5e9e9;
+  --os-team-noeulhang-fc: #a5cde9;
+  --os-team-geumbit-fc: #a5b0e9;
+  --os-team-eunha-rovers: #bca5e9;
+  --os-team-gangnaru-united: #dda5e9;
+  --os-team-dalbit-town-fc: #e9a5d2;
   --os-line: #62c99a;
   --os-success: #69d19e;
   --os-warning: #f0c36a;
@@ -195,6 +224,18 @@
     --os-swatch-crimson: #f0a3ae;
     --os-swatch-amber: #f0c37a;
     --os-swatch-mono: #c7d0da;
+    --os-team-hangang-u18: #e9a5a5;
+    --os-team-seorabeol-united: #e9c7a5;
+    --os-team-cheongyeon-fc: #e9e9a5;
+    --os-team-gangdong-rovers: #c7e9a5;
+    --os-team-onsaemiro-city: #a5e9a5;
+    --os-team-byeolbit-united: #a5e9c7;
+    --os-team-galmae-town: #a5e9e9;
+    --os-team-noeulhang-fc: #a5cde9;
+    --os-team-geumbit-fc: #a5b0e9;
+    --os-team-eunha-rovers: #bca5e9;
+    --os-team-gangnaru-united: #dda5e9;
+    --os-team-dalbit-town-fc: #e9a5d2;
     --os-line: #62c99a;
     --os-success: #69d19e;
     --os-warning: #f0c36a;

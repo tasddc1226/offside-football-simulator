@@ -1,8 +1,9 @@
 import { computeContractSeasonsRemaining, type CareerState, type Offer } from '@offside/domain';
-import { buttonClassName, buttonStyle } from '@offside/ui';
+import { buttonClassName, buttonStyle, TeamBadge } from '@offside/ui';
 import { Link } from '@tanstack/react-router';
 import { formatKrw } from './format.js';
 import { LEAGUE_TIER_LABEL_KO, SQUAD_ROLE_LABELS } from './labels.js';
+import { getTeamIdentity } from './team-identity.js';
 import { actionableRevision, OFFER_KIND_LABEL_KO, offerDetailRows, offerProjectionNotice, offerStatusLabel } from './transfer-view.js';
 
 function signedDelta(value: number, current: number): string {
@@ -56,6 +57,7 @@ export function CompactOfferCard({
   safeOfferId: string | null;
   parentTeamName: string | null;
 }) {
+  const identity = getTeamIdentity(offer.teamId);
   const headline = offerHeadlineRows(offer, state, recordRevision, safeOfferId);
   const headlineLabels = new Set(headline.map((row) => row.label));
   const details = offerDetailRows(offer, recordRevision, safeOfferId, parentTeamName).filter(
@@ -70,7 +72,10 @@ export function CompactOfferCard({
     <article className="os-panel flex flex-col gap-os-4" aria-labelledby={`offer-${offer.id}`}>
       <div>
         <p className="os-eyebrow">{OFFER_KIND_LABEL_KO[offer.kind]}</p>
-        <h2 id={`offer-${offer.id}`} className="os-section-title">{offer.teamName}</h2>
+        <h2 id={`offer-${offer.id}`} className="os-section-title flex items-center gap-os-2">
+          <TeamBadge initials={identity.initials} colorVar={identity.colorVar} size="m" />
+          {offer.teamName}
+        </h2>
       </div>
       <dl className="grid grid-cols-2 gap-os-3">
         {headline.map((row) => (

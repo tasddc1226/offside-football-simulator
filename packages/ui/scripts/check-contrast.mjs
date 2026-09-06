@@ -165,7 +165,43 @@ const presetRows = ACCENT_PRESET_IDS.flatMap((id) => {
   ];
 });
 
-const rows = [...checkTheme('light', light), ...checkTheme('dark', dark), ...presetRows];
+// UX-008 구단 배지. tokens.css --os-team-<id> 목록과 id를 맞춰 둔다(팀을 추가·빼면 여기도 고친다).
+// 배지 텍스트는 항상 --os-on-accent라 그 값과의 대비만 보면 된다(배경은 컴포넌트가 이 변수를
+// 인라인 style로 꽂아 넣을 뿐 별도 조합이 없다).
+const TEAM_IDS = [
+  'hangang-u18',
+  'seorabeol-united',
+  'cheongyeon-fc',
+  'gangdong-rovers',
+  'onsaemiro-city',
+  'byeolbit-united',
+  'galmae-town',
+  'noeulhang-fc',
+  'geumbit-fc',
+  'eunha-rovers',
+  'gangnaru-united',
+  'dalbit-town-fc',
+];
+
+/**
+ * @param {string} themeName
+ * @param {Record<string, string>} vars
+ */
+function checkTeamBadges(themeName, vars) {
+  return TEAM_IDS.map((id) => {
+    const ratio = contrastRatio(vars['os-on-accent'], vars[`os-team-${id}`]);
+    return { theme: themeName, fg: 'on-accent', bg: `team-${id}`, ratio, min: 4.5, pass: ratio >= 4.5 };
+  });
+}
+
+const teamRows = [...checkTeamBadges('light', light), ...checkTeamBadges('dark', dark)];
+
+const rows = [
+  ...checkTheme('light', light),
+  ...checkTheme('dark', dark),
+  ...presetRows,
+  ...teamRows,
+];
 
 let allPass = true;
 for (const row of rows) {

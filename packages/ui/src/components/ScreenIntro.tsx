@@ -25,7 +25,8 @@ export function FootballMark({ className }: { className?: string }) {
 
 export interface ScreenIntroProps {
   eyebrow?: string;
-  title: string;
+  /** 대부분 문자열이지만, UX-008 배지처럼 제목 옆에 장식 요소를 붙여야 할 때는 ReactNode도 받는다. */
+  title: ReactNode;
   description?: string;
   children?: ReactNode;
 }

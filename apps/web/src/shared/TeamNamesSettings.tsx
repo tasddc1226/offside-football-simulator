@@ -3,10 +3,11 @@
 // 저장은 기기 로컬(ui-store.ts의 teamNameOverrides)뿐이라 다른 기기·서버 프로필과는 동기화되지
 // 않는다 — SLB(야구 게임)의 "구단 이름 변경"과 같은 로컬 전용 커스터마이즈다.
 import type { Team } from '@offside/domain';
-import { Button } from '@offside/ui';
+import { Button, TeamBadge } from '@offside/ui';
 import { activeRuleset } from '../engine/content.js';
 import { LEAGUE_TIER_LABEL_KO } from './labels.js';
 import { TEAM_FLAVOR_TEXT } from './team-flavor.js';
+import { getTeamIdentity } from './team-identity.js';
 import { useUiStore } from './ui-store.js';
 
 const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
@@ -33,10 +34,16 @@ function TeamNameField({ team }: { team: Team }) {
   const override = useUiStore((state) => state.teamNameOverrides[team.id]);
   const setTeamNameOverride = useUiStore((state) => state.setTeamNameOverride);
   const inputId = `team-name-${team.id}`;
+  const identity = getTeamIdentity(team.id);
 
   return (
     <div className="flex flex-col gap-os-1">
-      <label htmlFor={inputId} className="font-os font-semibold text-os-text" style={H2_STYLE}>
+      <label
+        htmlFor={inputId}
+        className="flex items-center gap-os-2 font-os font-semibold text-os-text"
+        style={H2_STYLE}
+      >
+        <TeamBadge initials={identity.initials} colorVar={identity.colorVar} size="s" />
         {team.name}
       </label>
       <input
