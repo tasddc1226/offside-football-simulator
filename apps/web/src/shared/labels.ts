@@ -122,7 +122,7 @@ export const SQUAD_ROLE_LABELS: Record<SquadRole, string> = {
   STARTER: '주전',
   ROTATION: '로테이션',
   BENCH: '벤치',
-  RESERVE: '리저브',
+  RESERVE: '예비 선수',
 };
 
 /** SCR-010 "출전 약속" 문장. 역할 약속을 한 문장으로 풀어 쓴다. */
@@ -130,7 +130,7 @@ export const ROLE_PROMISE_SENTENCE: Record<SquadRole, string> = {
   STARTER: '주전으로 뛸 것으로 예상됩니다.',
   ROTATION: '로테이션 멤버로 기용될 예정입니다.',
   BENCH: '벤치에서 기회를 노립니다.',
-  RESERVE: '리저브팀에서 경기 감각을 쌓습니다.',
+  RESERVE: '출전 명단 진입을 위해 경쟁합니다.',
 };
 
 /** 13-visual-design-system.md DSN-CMP-002·003: 위험 라벨·결과 등급의 한국어 표기. */

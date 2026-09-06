@@ -73,9 +73,9 @@ async function setup(
   ctx: TestD1,
   versions = { rulesetVersion: '1.0.0', contentPackVersion: '0.1.0' },
 ) {
-  const simulationRuleset = versions.rulesetVersion === '1.1.0'
-    ? loadRuleset('1.1.0')
-    : rulesetProto;
+  const simulationRuleset = versions.rulesetVersion === '1.0.0'
+    ? rulesetProto
+    : loadRuleset(versions.rulesetVersion);
   await upsertServiceSeason(ctx.db, {
     id: SERVICE_SEASON_ID,
     name: 'Retirement sync',
@@ -225,6 +225,26 @@ describe('retirement Archive sync', () => {
         legacyVersion: '1.1.0',
         referencePopulationId,
         percentileHidden: false,
+      });
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
+  it('roundtrips a retired 1.2/0.4 career with Legacy 1.1 and no borrowed population', async () => {
+    const ctx = await createTestD1();
+    try {
+      const state = await setup(ctx, { rulesetVersion: '1.2.0', contentPackVersion: '0.4.0' });
+      const response = await put(ctx, state.cookie, state.careerId, {
+        ...state.body,
+        retirementLegacyVersion: '1.1.0',
+        retirementReferencePopulationId: null,
+      }, 'retirement-120-no-population');
+      expect(response.status, await response.clone().text()).toBe(200);
+      const recovered = await createApp().request(`/v1/careers/${state.careerId}`, { headers: { Cookie: state.cookie } }, ctx.env);
+      const parsed = successEnvelope(GetCareerResponseSchema).parse(await recovered.json());
+      expect(JSON.parse(parsed.data.retirementArchive!.legacy)).toMatchObject({
+        legacyVersion: '1.1.0', referencePopulationId: null, percentileHidden: true,
       });
     } finally {
       await ctx.dispose();

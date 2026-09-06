@@ -91,8 +91,67 @@ import chapterMatch006 from '../../packs/0.3.0/chapters/CHP-MATCH-006.json' with
 import chapterMatch007 from '../../packs/0.3.0/chapters/CHP-MATCH-007.json' with { type: 'json' };
 import chapterNat001v030 from '../../packs/0.3.0/chapters/CHP-NAT-001.json' with { type: 'json' };
 import narrativeTokens030 from '../../packs/0.3.0/narrative/tokens.json' with { type: 'json' };
+import manifest040 from '../../packs/0.4.0/manifest.json' with { type: 'json' };
+import eventCon001v040 from '../../packs/0.4.0/events/EVT-CON-001.json' with { type: 'json' };
+import eventCon002v040 from '../../packs/0.4.0/events/EVT-CON-002.json' with { type: 'json' };
+import eventCon003v040 from '../../packs/0.4.0/events/EVT-CON-003.json' with { type: 'json' };
+import eventCon010v040 from '../../packs/0.4.0/events/EVT-CON-010.json' with { type: 'json' };
+import eventCon011v040 from '../../packs/0.4.0/events/EVT-CON-011.json' with { type: 'json' };
+import eventCon012v040 from '../../packs/0.4.0/events/EVT-CON-012.json' with { type: 'json' };
+import eventCon013v040 from '../../packs/0.4.0/events/EVT-CON-013.json' with { type: 'json' };
+import eventDev001v040 from '../../packs/0.4.0/events/EVT-DEV-001.json' with { type: 'json' };
+import eventDev002v040 from '../../packs/0.4.0/events/EVT-DEV-002.json' with { type: 'json' };
+import eventEth010v040 from '../../packs/0.4.0/events/EVT-ETH-010.json' with { type: 'json' };
+import eventEth011v040 from '../../packs/0.4.0/events/EVT-ETH-011.json' with { type: 'json' };
+import eventInj001v040 from '../../packs/0.4.0/events/EVT-INJ-001.json' with { type: 'json' };
+import eventInj003v040 from '../../packs/0.4.0/events/EVT-INJ-003.json' with { type: 'json' };
+import eventInj004v040 from '../../packs/0.4.0/events/EVT-INJ-004.json' with { type: 'json' };
+import eventMedia001v040 from '../../packs/0.4.0/events/EVT-MEDIA-001.json' with { type: 'json' };
+import eventMedia002v040 from '../../packs/0.4.0/events/EVT-MEDIA-002.json' with { type: 'json' };
+import eventMedia004v040 from '../../packs/0.4.0/events/EVT-MEDIA-004.json' with { type: 'json' };
+import eventMedia006v040 from '../../packs/0.4.0/events/EVT-MEDIA-006.json' with { type: 'json' };
+import eventMedia010v040 from '../../packs/0.4.0/events/EVT-MEDIA-010.json' with { type: 'json' };
+import eventMgr001v040 from '../../packs/0.4.0/events/EVT-MGR-001.json' with { type: 'json' };
+import eventMgr003v040 from '../../packs/0.4.0/events/EVT-MGR-003.json' with { type: 'json' };
+import eventMgr004v040 from '../../packs/0.4.0/events/EVT-MGR-004.json' with { type: 'json' };
+import eventNat001v040 from '../../packs/0.4.0/events/EVT-NAT-001.json' with { type: 'json' };
+import eventNat002v040 from '../../packs/0.4.0/events/EVT-NAT-002.json' with { type: 'json' };
+import eventRel001v040 from '../../packs/0.4.0/events/EVT-REL-001.json' with { type: 'json' };
+import eventRel002v040 from '../../packs/0.4.0/events/EVT-REL-002.json' with { type: 'json' };
+import eventRel003v040 from '../../packs/0.4.0/events/EVT-REL-003.json' with { type: 'json' };
+import eventRel005v040 from '../../packs/0.4.0/events/EVT-REL-005.json' with { type: 'json' };
+import eventRel008v040 from '../../packs/0.4.0/events/EVT-REL-008.json' with { type: 'json' };
+import eventRel010v040 from '../../packs/0.4.0/events/EVT-REL-010.json' with { type: 'json' };
+import eventSlump010v040 from '../../packs/0.4.0/events/EVT-SLUMP-010.json' with { type: 'json' };
+import eventSlump011v040 from '../../packs/0.4.0/events/EVT-SLUMP-011.json' with { type: 'json' };
+import chapterMatch001v040 from '../../packs/0.4.0/chapters/CHP-MATCH-001.json' with { type: 'json' };
+import chapterMatch002v040 from '../../packs/0.4.0/chapters/CHP-MATCH-002.json' with { type: 'json' };
+import chapterMatch004v040 from '../../packs/0.4.0/chapters/CHP-MATCH-004.json' with { type: 'json' };
+import chapterMatch005v040 from '../../packs/0.4.0/chapters/CHP-MATCH-005.json' with { type: 'json' };
+import chapterMatch006v040 from '../../packs/0.4.0/chapters/CHP-MATCH-006.json' with { type: 'json' };
+import chapterMatch007v040 from '../../packs/0.4.0/chapters/CHP-MATCH-007.json' with { type: 'json' };
+import chapterNat001v040 from '../../packs/0.4.0/chapters/CHP-NAT-001.json' with { type: 'json' };
+import narrativeTokens040 from '../../packs/0.4.0/narrative/tokens.json' with { type: 'json' };
+import manifest041 from '../../packs/0.4.1/manifest.json' with { type: 'json' };
+import eventCon003v041 from '../../packs/0.4.1/events/EVT-CON-003.json' with { type: 'json' };
+import eventCon020v041 from '../../packs/0.4.1/events/EVT-CON-020.json' with { type: 'json' };
+import eventCon021v041 from '../../packs/0.4.1/events/EVT-CON-021.json' with { type: 'json' };
+import eventCon022v041 from '../../packs/0.4.1/events/EVT-CON-022.json' with { type: 'json' };
+import eventCon023v041 from '../../packs/0.4.1/events/EVT-CON-023.json' with { type: 'json' };
+import eventCon024v041 from '../../packs/0.4.1/events/EVT-CON-024.json' with { type: 'json' };
+import eventCon025v041 from '../../packs/0.4.1/events/EVT-CON-025.json' with { type: 'json' };
+import eventCon026v041 from '../../packs/0.4.1/events/EVT-CON-026.json' with { type: 'json' };
+import eventCon027v041 from '../../packs/0.4.1/events/EVT-CON-027.json' with { type: 'json' };
+import eventCon028v041 from '../../packs/0.4.1/events/EVT-CON-028.json' with { type: 'json' };
+import eventMgr020v041 from '../../packs/0.4.1/events/EVT-MGR-020.json' with { type: 'json' };
+import eventMgr021v041 from '../../packs/0.4.1/events/EVT-MGR-021.json' with { type: 'json' };
+import eventRel001v041 from '../../packs/0.4.1/events/EVT-REL-001.json' with { type: 'json' };
+import manifest050 from '../../packs/0.5.0/manifest.json' with { type: 'json' };
+import eventCon003v050 from '../../packs/0.5.0/events/EVT-CON-003.json' with { type: 'json' };
+import eventDev002v050 from '../../packs/0.5.0/events/EVT-DEV-002.json' with { type: 'json' };
+import eventMgr001v050 from '../../packs/0.5.0/events/EVT-MGR-001.json' with { type: 'json' };
 
-export const PACK_VERSIONS = ['0.1.0', '0.2.0', '0.3.0'] as const;
+export const PACK_VERSIONS = ['0.1.0', '0.2.0', '0.3.0', '0.4.0', '0.4.1', '0.5.0'] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
 export type ContentPack = {
@@ -104,7 +163,12 @@ export type ContentPack = {
   narrativeTokens: NarrativeDictionary;
 };
 
-type PackSource = { manifest: unknown; events: readonly unknown[]; chapters: readonly unknown[]; narrativeTokens: unknown };
+type PackSource = {
+  manifest: unknown;
+  events: readonly unknown[];
+  chapters: readonly unknown[];
+  narrativeTokens: unknown;
+};
 
 const PACK_SOURCES: Record<PackVersion, PackSource> = {
   '0.1.0': {
@@ -198,6 +262,165 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       chapterNat001v030,
     ],
     narrativeTokens: narrativeTokens030,
+  },
+  '0.4.0': {
+    manifest: manifest040,
+    events: [
+      eventCon001v040,
+      eventCon002v040,
+      eventCon003v040,
+      eventCon010v040,
+      eventCon011v040,
+      eventCon012v040,
+      eventCon013v040,
+      eventDev001v040,
+      eventDev002v040,
+      eventEth010v040,
+      eventEth011v040,
+      eventInj001v040,
+      eventInj003v040,
+      eventInj004v040,
+      eventMedia001v040,
+      eventMedia002v040,
+      eventMedia004v040,
+      eventMedia006v040,
+      eventMedia010v040,
+      eventMgr001v040,
+      eventMgr003v040,
+      eventMgr004v040,
+      eventNat001v040,
+      eventNat002v040,
+      eventRel001v040,
+      eventRel002v040,
+      eventRel003v040,
+      eventRel005v040,
+      eventRel008v040,
+      eventRel010v040,
+      eventSlump010v040,
+      eventSlump011v040,
+    ],
+    chapters: [
+      chapterMatch001v040,
+      chapterMatch002v040,
+      chapterMatch004v040,
+      chapterMatch005v040,
+      chapterMatch006v040,
+      chapterMatch007v040,
+      chapterNat001v040,
+    ],
+    narrativeTokens: narrativeTokens040,
+  },
+  '0.4.1': {
+    manifest: manifest041,
+    events: [
+      eventCon001v040,
+      eventCon003v041,
+      eventCon010v040,
+      eventCon011v040,
+      eventCon012v040,
+      eventCon013v040,
+      eventDev002v040,
+      eventEth010v040,
+      eventEth011v040,
+      eventInj001v040,
+      eventInj003v040,
+      eventInj004v040,
+      eventMedia001v040,
+      eventMedia002v040,
+      eventMedia004v040,
+      eventMedia006v040,
+      eventMedia010v040,
+      eventMgr001v040,
+      eventMgr003v040,
+      eventMgr004v040,
+      eventNat001v040,
+      eventNat002v040,
+      eventRel001v041,
+      eventRel002v040,
+      eventRel003v040,
+      eventRel005v040,
+      eventRel008v040,
+      eventRel010v040,
+      eventSlump010v040,
+      eventSlump011v040,
+      eventCon020v041,
+      eventCon021v041,
+      eventCon022v041,
+      eventCon023v041,
+      eventCon024v041,
+      eventCon025v041,
+      eventCon026v041,
+      eventCon027v041,
+      eventCon028v041,
+      eventMgr020v041,
+      eventMgr021v041,
+    ],
+    chapters: [
+      chapterMatch001v040,
+      chapterMatch002v040,
+      chapterMatch004v040,
+      chapterMatch005v040,
+      chapterMatch006v040,
+      chapterMatch007v040,
+      chapterNat001v040,
+    ],
+    narrativeTokens: narrativeTokens040,
+  },
+  '0.5.0': {
+    manifest: manifest050,
+    events: [
+      eventCon001v040,
+      eventCon003v050,
+      eventCon010v040,
+      eventCon011v040,
+      eventCon012v040,
+      eventCon013v040,
+      eventDev002v050,
+      eventEth010v040,
+      eventEth011v040,
+      eventInj001v040,
+      eventInj003v040,
+      eventInj004v040,
+      eventMedia001v040,
+      eventMedia002v040,
+      eventMedia004v040,
+      eventMedia006v040,
+      eventMedia010v040,
+      eventMgr001v050,
+      eventMgr003v040,
+      eventMgr004v040,
+      eventNat001v040,
+      eventNat002v040,
+      eventRel001v041,
+      eventRel002v040,
+      eventRel003v040,
+      eventRel005v040,
+      eventRel008v040,
+      eventRel010v040,
+      eventSlump010v040,
+      eventSlump011v040,
+      eventCon020v041,
+      eventCon021v041,
+      eventCon022v041,
+      eventCon023v041,
+      eventCon024v041,
+      eventCon025v041,
+      eventCon026v041,
+      eventCon027v041,
+      eventCon028v041,
+      eventMgr020v041,
+      eventMgr021v041,
+    ],
+    chapters: [
+      chapterMatch001v040,
+      chapterMatch002v040,
+      chapterMatch004v040,
+      chapterMatch005v040,
+      chapterMatch006v040,
+      chapterMatch007v040,
+      chapterNat001v040,
+    ],
+    narrativeTokens: narrativeTokens040,
   },
 };
 

@@ -1,5 +1,5 @@
 import { selectChapter, type ChapterCandidateInput, type ChapterOpenResult } from './chapter.js';
-import { buildRenewalOffer } from './market.js';
+import { buildRenewalOffer, isYouthExitRequired } from './market.js';
 import { computeContractSeasonsRemaining } from './market-value.js';
 import {
   applyNationalTeamCallUp,
@@ -280,7 +280,7 @@ export function selectOpenSlot(
       const isLastSeason =
         contract.kind !== 'LOAN' &&
         computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline) === 0;
-      const offers = isLastSeason ? [buildRenewalOffer(state, ruleset, revision)] : [];
+      const offers = isLastSeason && !isYouthExitRequired(state, ruleset) ? [buildRenewalOffer(state, ruleset, revision)] : [];
       const market: MarketSummary = { openedAtRevision: revision, seasonIndex, reason: 'PRE_NEGOTIATION', safeOfferId: null };
       return { opened: true, pending: { kind: 'CONTRACT', step: step.index, offers, market }, rngState };
     }

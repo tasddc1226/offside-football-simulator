@@ -14,12 +14,18 @@ export async function startNewCareer(page: Page): Promise<void> {
   await page.goto('/onboarding');
   await page.getByRole('button', { name: '다음' }).click();
   await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await page.getByRole('button', { name: /새 인생 시작/ }).click();
   await expect(page).toHaveURL(/\/career\/.+\/create$/);
 }
 
 /** SCR-002의 6개 필드(성별·선호 포지션 포함, PR #32/T-1-016)를 채운다. */
-export async function fillPlayerInfo(page: Page, name = '김서준'): Promise<void> {
+export async function fillPlayerInfo(
+  page: Page,
+  name = '김서준',
+  backgroundName: RegExp = /아카데미의 추가 평가/,
+): Promise<void> {
+  await page.getByRole('radio', { name: backgroundName }).click();
+  await page.getByRole('button', { name: '다음', exact: true }).click();
   await page.getByRole('textbox', { name: '이름', exact: true }).fill(name);
   await page.getByRole('radio', { name: '남성' }).click();
   await page.getByLabel('국적').selectOption('KR');
@@ -27,8 +33,6 @@ export async function fillPlayerInfo(page: Page, name = '김서준'): Promise<vo
   await page.getByRole('button', { name: '다음', exact: true }).click();
   await page.getByRole('tab', { name: '공격수' }).click();
   await page.getByRole('radio', { name: /윙어/ }).click();
-  await page.getByRole('button', { name: '다음', exact: true }).click();
-  await page.getByRole('radio', { name: /클럽 아카데미/ }).click();
 }
 
 /** SCR-002 입력 → SCR-003 스타일 선택 → SCR-004 확인 화면 도착까지. */
@@ -267,7 +271,7 @@ export async function advanceThroughSeasonToSettlement(
 ): Promise<void> {
   const progressButton = page.getByRole('button', { name: '진행', exact: true });
   const settleButton = page.getByRole('button', { name: '결산하기', exact: true });
-  const stepCaption = page.getByText(/step \d+\/12/);
+  const currentStepCaption = page.getByText(/시즌 \d+ · \d+\/12 단계/);
   for (let step = 0; step < 20; step += 1) {
     const pathnameBefore = new URL(page.url()).pathname;
     if (pathnameBefore.endsWith('/chapter')) {
@@ -295,7 +299,7 @@ export async function advanceThroughSeasonToSettlement(
     ]);
     if (new URL(page.url()).pathname !== pathnameBefore) continue;
     if (await settleButton.isVisible()) return;
-    const stepTextBefore = await stepCaption.textContent();
+    const stepTextBefore = await currentStepCaption.textContent();
     // 클릭 액션 자체의 actionability 재확인 도중에도(디스패치 전) advance 성공→화면 전환이 끼어들어
     // 버튼이 사라질 수 있다 — 그 detach는 실패로 삼키고(클릭이 실제로 먹혔는지는 다음 스텝 진입 시
     // 위 pathname·step 텍스트 재검사가 가린다), 여기서 무한정(테스트 전체 타임아웃까지) 기다리지
@@ -303,7 +307,7 @@ export async function advanceThroughSeasonToSettlement(
     await progressButton.click({ timeout: 15_000 }).catch(() => {});
     await Promise.race([
       page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
-      expect(stepCaption).not.toHaveText(stepTextBefore ?? '', { timeout: 60_000 }),
+      expect(currentStepCaption).not.toHaveText(stepTextBefore ?? '', { timeout: 60_000 }),
     ]);
   }
   throw new Error('SETTLEMENT(결산하기)에 도달하지 못했다(최대 20회 시도)');

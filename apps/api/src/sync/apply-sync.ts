@@ -8,6 +8,7 @@ import { careerArchives, careers, commandLog, serviceSeasons, snapshots } from '
 import { buildRetirementRows } from './retirement.js';
 import { AppError } from '../errors.js';
 import { verifyIncomingSnapshot } from './verify-snapshot.js';
+import { isAcceptedSeasonVersion } from './season-version-compatibility.js';
 
 export type ApplySyncInput = {
   profileId: string;
@@ -95,10 +96,7 @@ export async function applySync(
     }
     // 신규 커리어만 생성 대상 서비스 시즌의 manifest와 맞아야 한다. 기존 커리어는 생성 당시 버전에
     // 고정되므로 시즌 포인터나 manifest가 바뀐 뒤에도 replay·후속 PUT을 계속 허용한다.
-    if (
-      season.rulesetVersion !== body.rulesetVersion ||
-      season.contentPackVersion !== body.contentPackVersion
-    ) {
+    if (!isAcceptedSeasonVersion(season.id, season, body)) {
       throw new AppError({
         code: 'VERSION_MISMATCH',
         message: '서비스 시즌과 커리어 버전이 다릅니다.',

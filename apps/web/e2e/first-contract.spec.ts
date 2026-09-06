@@ -20,9 +20,10 @@ test('온보딩부터 계약·대시보드까지: SCR-002~004 → 이벤트 → 
 
   await expect(page.getByRole('heading', { level: 2, name: '김서준' })).toBeVisible();
   // 계약 후에만 열리는 전술 적합도·감독 신뢰(06 "점진적 공개")가 보이면 계약이 실제로 반영된 것이다.
+  await page.getByRole('tab', { name: '선수' }).click();
   await expect(page.getByText('전술 적합도')).toBeVisible();
 
-  await page.getByRole('tab', { name: '휴대폰' }).click();
+  await page.getByRole('tab', { name: '계약' }).click();
   await expect(page.getByText('팀')).toBeVisible();
   await expect(page.getByText('주급')).toBeVisible();
 

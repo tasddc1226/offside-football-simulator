@@ -8,7 +8,6 @@ import {
   ErrorState,
   RadioGroup,
   RadioGroupItem,
-  ScreenIntro,
   Skeleton,
   Tabs,
   TabsContent,
@@ -37,7 +36,9 @@ import {
 } from '../shared/labels.js';
 import {
   backgroundEffectLines,
+  backgroundOpening,
   backgroundRiskLevel,
+  creationAgeWord,
   PLAYER_CREATION_CAREER_PHASE,
   positionsByGroup,
   RISK_LABELS,
@@ -74,7 +75,7 @@ const GENDER_OPTIONS = ['FEMALE', 'MALE', 'UNSPECIFIED'] as const satisfies read
 
 type FieldErrors = Partial<Record<keyof FormFields, string>>;
 type CreationPanel = 0 | 1 | 2;
-type CreationScratch = { form: FormFields; panel: CreationPanel };
+type CreationScratch = { form: FormFields; panel: CreationPanel; version?: 2 };
 
 const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
 const CAPTION_STYLE = {
@@ -87,8 +88,9 @@ const FIELD_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-bo
 
 function isCreationScratch(value: unknown, ruleset: typeof activeRuleset): value is CreationScratch {
   if (typeof value !== 'object' || value === null) return false;
-  const candidate = value as { form?: unknown; panel?: unknown };
+  const candidate = value as { form?: unknown; panel?: unknown; version?: unknown };
   if (candidate.panel !== 0 && candidate.panel !== 1 && candidate.panel !== 2) return false;
+  if (candidate.version !== undefined && candidate.version !== 2) return false;
   if (typeof candidate.form !== 'object' || candidate.form === null) return false;
   const form = candidate.form as Partial<Record<keyof FormFields, unknown>>;
   if ((Object.keys(EMPTY_FORM) as Array<keyof FormFields>).some((key) => typeof form[key] !== 'string')) return false;
@@ -165,7 +167,12 @@ function CreatePlayerScreen() {
     }
     const nextForm = restored?.form ?? savedForm;
     setForm(nextForm);
-    setPanel(restored?.panel === 1 || restored?.panel === 2 ? restored.panel : 0);
+    const restoredPanel = restored === undefined
+      ? 0
+      : restored.version === 2
+        ? restored.panel
+        : restored.panel === 0 ? 1 : restored.panel === 1 ? 2 : 0;
+    setPanel(restoredPanel);
     setPositionGroup(nextForm.position ? positionGroupOf(nextForm.position) : 'GK');
     toDraft({});
   }, [blocked, careerId, query.data, toDraft]);
@@ -173,7 +180,7 @@ function CreatePlayerScreen() {
   useEffect(() => {
     if (!seededRef.current || screenState.kind !== 'DRAFT') return;
     try {
-      sessionStorage.setItem(`offside:player-creation:${careerId}`, JSON.stringify({ form, panel } satisfies CreationScratch));
+      sessionStorage.setItem(`offside:player-creation:${careerId}`, JSON.stringify({ form, panel, version: 2 } satisfies CreationScratch));
     } catch {
       // 저장 공간이 막힌 환경에서도 폼 자체는 계속 사용할 수 있다.
     }
@@ -182,10 +189,14 @@ function CreatePlayerScreen() {
   useEffect(() => {
     if (!focusPanelHeadingRef.current) return;
     focusPanelHeadingRef.current = false;
-    document.getElementById(panel === 0 ? 'draft-identity-heading' : panel === 1 ? 'draft-position-heading' : 'draft-background-heading')?.focus();
+    document.getElementById(panel === 0 ? 'draft-background-heading' : panel === 1 ? 'draft-identity-heading' : 'draft-position-heading')?.focus();
   }, [panel]);
 
   const committing = screenState.kind === 'COMMITTING';
+  const selectedBackground = ruleset.backgrounds.find((background) => background.id === form.backgroundId);
+  const selectedOpening = selectedBackground === undefined
+    ? undefined
+    : backgroundOpening(selectedBackground.id, selectedBackground.name);
   const savedDraft = query.data?.state.player.draft;
   const hasUnsavedChanges = savedDraft !== undefined &&
     (Object.keys(EMPTY_FORM) as Array<keyof FormFields>).some(
@@ -203,8 +214,8 @@ function CreatePlayerScreen() {
   function validateCurrentPanel(): boolean {
     const all = validateForm(form, ruleset);
     const keys: Array<keyof FormFields> = panel === 0
-      ? ['name', 'gender', 'nationalityCode', 'preferredFoot']
-      : panel === 1 ? ['position'] : ['backgroundId'];
+      ? ['backgroundId']
+      : panel === 1 ? ['name', 'gender', 'nationalityCode', 'preferredFoot'] : ['position'];
     const nextErrors: FieldErrors = {};
     for (const key of keys) {
       const message = all[key];
@@ -280,7 +291,7 @@ function CreatePlayerScreen() {
     }
   }
 
-  if (blocked || screenState.kind === 'LOADING') {
+  if (blocked || screenState.kind === 'LOADING' || query.data === undefined) {
     return (
       <div className="flex flex-col gap-os-4" aria-label="불러오는 중">
         <Skeleton className="h-os-8 w-full" />
@@ -313,21 +324,36 @@ function CreatePlayerScreen() {
 
   return (
     <div className="os-screen">
-      <ScreenIntro
-        eyebrow="새 커리어 · 1/3"
-        title="선수 정보를 입력하세요"
-        description={`${panel + 1}/3 · ${panel === 0 ? '정체성' : panel === 1 ? '선호 위치' : '출발 배경'}`}
-      />
+      <section className="os-creation-prologue" aria-labelledby="creation-prologue-title">
+        <p className="os-eyebrow">새 인생 · {query.data.state.age}세</p>
+        <h1 id="creation-prologue-title">다음 무대를 향해, 킥오프</h1>
+        {panel === 0 ? (
+          <p>
+            {creationAgeWord(query.data.state.age)}. 지금까지 훈련해 온 환경은 저마다 다르다. 아카데미의
+            추가 평가, 학교팀에서 만든 기록, 지역 무대에서 온 훈련 초대 가운데 이 선수의 출발점을
+            고른다.
+          </p>
+        ) : (
+          <p>
+            {selectedOpening?.title ?? '선택한 배경'}에서 커리어가 시작된다. 아직 계약이나 출전 역할은
+            정해지지 않았다.
+          </p>
+        )}
+      </section>
+
+      <p className="os-creation-step-caption">
+        선수 등록 · {panel + 1}/3 · {panel === 0 ? '첫 출발점' : panel === 1 ? '정체성' : '선호 위치'}
+      </p>
 
       <ol className="os-creation-panel-progress" aria-label={`선수 정보 ${panel + 1} / 3`}>
-        {['정체성', '선호 위치', '출발 배경'].map((label, index) => (
+        {['첫 출발점', '정체성', '선호 위치'].map((label, index) => (
           <li key={label} aria-current={index === panel ? 'step' : undefined} data-complete={index < panel}>{label}</li>
         ))}
       </ol>
 
-      {panel === 0 ? (
+      {panel === 1 ? (
       <CreationStage
-        number="01"
+        number="02"
         eyebrow="Identity"
         title="나를 소개하세요"
         description="선수의 정체성을 정하세요. 성별은 능력치와 성장에 영향을 주지 않습니다."
@@ -486,9 +512,9 @@ function CreatePlayerScreen() {
       </CreationStage>
       ) : null}
 
-      {panel === 1 ? (
+      {panel === 2 ? (
       <CreationStage
-        number="02"
+        number="03"
         eyebrow="Preference"
         title="내가 가장 뛰고 싶은 위치"
         description="선호 포지션은 출발점입니다. 실제 역할과 출전 위치는 성장, 선택, 팀 상황에 따라 달라질 수 있어요."
@@ -538,12 +564,12 @@ function CreatePlayerScreen() {
       </CreationStage>
       ) : null}
 
-      {panel === 2 ? (
+      {panel === 0 ? (
       <CreationStage
-        number="03"
+        number="01"
         eyebrow="Origin"
-        title="축구를 시작한 곳"
-        description="배경은 시작 팀과 초기 능력에 실제로 영향을 줍니다. 효과를 비교해 선택하세요."
+        title="어떤 환경에서 출발했나요?"
+        description="첫 상황은 출발 배경과 초기 능력에 실제로 연결됩니다. 효과를 확인하고 고르세요."
         labelledBy="draft-background-heading"
       >
         <RadioGroup
@@ -557,16 +583,18 @@ function CreatePlayerScreen() {
           {ruleset.backgrounds.map((background) => {
             const riskLevel = backgroundRiskLevel(background.id);
             const startTeam = ruleset.teams.find((team) => team.id === background.startTeamId);
+            const opening = backgroundOpening(background.id, background.name);
             return (
               <ChoiceCard
                 key={background.id}
                 value={background.id}
                 disabled={committing}
-                label={background.name}
+                label={opening.title}
                 riskLevel={riskLevel}
                 riskLabel={RISK_LABELS[riskLevel]}
                 effects={[
-                  background.blurb,
+                  opening.situation,
+                  `출발 배경: ${background.name} · ${background.blurb}`,
                   ...backgroundEffectLines(background.attributeDeltas),
                   `시작 팀: ${startTeam?.name ?? background.startTeamId}`,
                 ]}

@@ -26,7 +26,7 @@ import {
   type TrainingFocus,
 } from '../shared/start-season.js';
 import { platform } from '../platform/index.js';
-import { GamePending } from '../shared/game-presentation.js';
+import { GameCompletionTransition, GamePending } from '../shared/game-presentation.js';
 
 type SeasonPrepSearch = { mode?: SimulationMode; focus?: TrainingFocus };
 
@@ -78,6 +78,8 @@ function SeasonPrepScreen() {
   const submittingRef = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [confirmingKeep, setConfirmingKeep] = useState(false);
+  const [kickoffReady, setKickoffReady] = useState(false);
+  const nextStateRef = useRef<NonNullable<typeof query.data>['state'] | null>(null);
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', {
@@ -145,8 +147,8 @@ function SeasonPrepScreen() {
           // START_SEASON은 이미 저장됐다. 재전송하지 않고 아래에서 기존 ROLE 복구 화면으로 이동한다.
         }
       }
-      const target = screenForCareer(nextState);
-      void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
+      nextStateRef.current = nextState;
+      setKickoffReady(true);
     } catch {
       setErrorMessage('시즌을 시작하지 못했습니다. 다시 시도해 주세요.');
     } finally {
@@ -164,6 +166,25 @@ function SeasonPrepScreen() {
   }
 
   const committing = startSeasonMutation.isPending || resolveRoleMutation.isPending;
+
+  function continueToSeason() {
+    const nextState = nextStateRef.current;
+    if (nextState === null) return;
+    const target = screenForCareer(nextState);
+    void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
+  }
+
+  if (kickoffReady) {
+    return (
+      <GameCompletionTransition
+        title="시즌 준비 완료"
+        detail={`${SIMULATION_MODE_LABEL_KO[mode]} 모드와 ${TRAINING_FOCUS_LABEL_KO[focus]} 계획을 저장했습니다.`}
+        onComplete={continueToSeason}
+      >
+        <p className="os-eyebrow">KICKOFF · 새 시즌이 시작됩니다</p>
+      </GameCompletionTransition>
+    );
+  }
 
   return (
     <div className="os-screen">

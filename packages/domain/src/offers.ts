@@ -26,11 +26,19 @@ function computeOfferCount(rules: OfferRules, branch: OfferBranch, tags: readonl
   return clamp(1 + bonus, 1, rules.maxOffers);
 }
 
-function buildTeamPool(ruleset: Ruleset, branch: OfferBranch): { pool: Team[]; fixed: boolean } {
+function buildTeamPool(ruleset: Ruleset, branch: OfferBranch, age?: number): { pool: Team[]; fixed: boolean } {
   if (branch.fixedTeamId !== undefined) {
     const team = ruleset.teams.find((candidate) => candidate.id === branch.fixedTeamId);
     if (team === undefined) {
       throw new RangeError(`buildTeamPool: 룰셋에 fixedTeamId '${branch.fixedTeamId}'가 없다.`);
+    }
+    const recovery = ruleset.transferRules.recovery;
+    if (team.leagueTier === 'YOUTH' && age !== undefined && recovery !== undefined && age > recovery.youthMaxAge) {
+      const adultTeam = ruleset.teams
+        .filter((candidate) => candidate.leagueTier === recovery.opportunityTier)
+        .sort((a, b) => a.squadStrength - b.squadStrength || compareCodePoints(a.id, b.id))[0];
+      if (adultTeam === undefined) throw new RangeError(`buildTeamPool: tier ${recovery.opportunityTier} recovery team is missing.`);
+      return { pool: [adultTeam], fixed: true };
     }
     return { pool: [team], fixed: true };
   }
@@ -79,10 +87,11 @@ export function generateOffers(
   primaryPosition: Position,
   revision: number,
   rng: RngState,
+  age?: number,
 ): GeneratedOffers {
   const rules = ruleset.offerRules;
   const desiredCount = computeOfferCount(rules, branch, tags);
-  const { pool, fixed } = buildTeamPool(ruleset, branch);
+  const { pool, fixed } = buildTeamPool(ruleset, branch, age);
   const count = Math.min(desiredCount, pool.length);
   const band = findOvrBand(ruleset.contractRules, baseOvr);
   const useTopTierFirst = !fixed && branch.topTierMinOvr !== undefined && baseOvr >= branch.topTierMinOvr;

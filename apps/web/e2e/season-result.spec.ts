@@ -117,16 +117,14 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
   await expect(page.getByRole('heading', { level: 1, name: '프리시즌 계획' })).toBeVisible();
 
-  // 대시보드로 돌아가 헤더(StatusStrip) "기본 OVR"이 결산 after와 같은지 확인한다(StatusStrip은
-  // <li><span>라벨</span><span>값</span></li> 구조라 dt/dd가 아니다).
+  // 대시보드로 돌아가 헤더 OVR이 결산 after와 같은지 확인한다(홈 탭에는 StatusStrip OVR이 없다).
   await page.goto(page.url().replace(/\/preseason.*$/, ''));
-  const statusOvrItem = page.locator('li').filter({ hasText: '기본 OVR' });
-  const statusOvrText = await statusOvrItem.locator('span').nth(1).textContent();
-  expect(statusOvrText?.trim()).toBe(afterOvrValue);
+  const headerOvrText = await page.locator('header').getByText(/^OVR \d+$/).textContent();
+  expect(headerOvrText?.replace(/^OVR /, '').trim()).toBe(afterOvrValue);
 
   // 다이어리: 이번 시즌 연대기에 "시즌 정산" 항목이 SCR-015로 연결된다.
-  await page.getByRole('tab', { name: '다이어리' }).click();
-  const settledLink = page.getByRole('link', { name: '시즌 정산' });
+  await page.getByRole('tab', { name: '기록' }).click();
+  const settledLink = page.getByRole('link', { name: /시즌 정산$/ });
   await expect(settledLink).toBeVisible();
   await settledLink.click();
   await expect(page).toHaveURL(/\/career\/.+\/season-result\?season=0$/);

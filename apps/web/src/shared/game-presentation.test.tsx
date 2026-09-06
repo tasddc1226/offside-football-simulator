@@ -1,12 +1,50 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GameResultReveal } from './game-presentation.js';
+import { GameCompletionTransition, GameResultReveal } from './game-presentation.js';
 import { useUiStore } from './ui-store.js';
 
 afterEach(() => {
   vi.useRealTimers();
   useUiStore.setState({ reducedMotion: 'SYSTEM' });
   delete document.documentElement.dataset.inputModality;
+});
+
+describe('GameCompletionTransition', () => {
+  it('shows saved completion and continues once when skipped', () => {
+    vi.useFakeTimers();
+    const onComplete = vi.fn();
+    render(
+      <GameCompletionTransition title="선수 등록 완료" detail="피치로 이동합니다" onComplete={onComplete} />,
+    );
+
+    expect(screen.getByText('선수 등록 완료')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '바로 계속' }));
+    act(() => vi.runAllTimers());
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  it('does not hold keyboard-initiated or reduced-motion navigation', () => {
+    vi.useFakeTimers();
+    document.documentElement.dataset.inputModality = 'keyboard';
+    const onComplete = vi.fn();
+    const { unmount } = render(
+      <GameCompletionTransition title="킥오프 준비 완료" detail="시즌으로 이동합니다" onComplete={onComplete} />,
+    );
+    expect(screen.queryByRole('button', { name: '바로 계속' })).not.toBeInTheDocument();
+    act(() => vi.runAllTimers());
+    expect(onComplete).toHaveBeenCalledOnce();
+
+    unmount();
+    delete document.documentElement.dataset.inputModality;
+    useUiStore.setState({ reducedMotion: 'ON' });
+    const onReducedComplete = vi.fn();
+    render(
+      <GameCompletionTransition title="등록 완료" detail="다음 화면으로 이동합니다" onComplete={onReducedComplete} />,
+    );
+    expect(screen.queryByRole('button', { name: '바로 계속' })).not.toBeInTheDocument();
+    act(() => vi.runAllTimers());
+    expect(onReducedComplete).toHaveBeenCalledOnce();
+  });
 });
 
 describe('GameResultReveal', () => {

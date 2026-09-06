@@ -4,6 +4,8 @@ import {
   archetypesForPosition,
   attributeLabelList,
   backgroundEffectLines,
+  backgroundOpening,
+  creationAgeWord,
   backgroundRiskLevel,
   positionsByGroup,
   relativeWeaknessAttributeKeys,
@@ -130,6 +132,23 @@ describe('backgroundRiskLevel', () => {
   });
 });
 
+describe('backgroundOpening', () => {
+  it('배경마다 계약을 보장하지 않는 서로 다른 현재 상황을 돌려준다', () => {
+    expect(backgroundOpening('club-academy', '클럽 아카데미')).toMatchObject({
+      title: '아카데미의 추가 평가',
+    });
+    expect(backgroundOpening('school', '학교 축구')).toMatchObject({
+      title: '학교팀에서 만든 기록',
+    });
+    expect(backgroundOpening('street', '동네 클럽')).toMatchObject({
+      title: '지역 무대에서 온 훈련 초대',
+    });
+    for (const id of ['club-academy', 'school', 'street']) {
+      expect(backgroundOpening(id, id).situation).not.toMatch(/계약 확정|입단 확정|주전 보장/);
+    }
+  });
+});
+
 describe('backgroundEffectLines', () => {
   it('변화가 없으면 안정적이라는 한 줄을 돌려준다', () => {
     expect(backgroundEffectLines({})).toEqual(['능력치 변화 없음. 안정적인 훈련 환경.']);
@@ -137,5 +156,12 @@ describe('backgroundEffectLines', () => {
 
   it('증가·감소를 부호와 함께 표시한다', () => {
     expect(backgroundEffectLines({ pace: 3, decisions: -2 })).toEqual(['스피드 +3', '판단력 −2']);
+  });
+});
+
+describe('creationAgeWord', () => {
+  it('저장된 17세와 신규 19세를 각각 그대로 도입 문구에 쓴다', () => {
+    expect(creationAgeWord(17)).toBe('열일곱');
+    expect(creationAgeWord(19)).toBe('열아홉');
   });
 });

@@ -272,6 +272,7 @@ export type InjuryRules = {
   matchesOut: { MINOR: { min: number; max: number }; MODERATE: { min: number; max: number }; MAJOR: { min: number; max: number } };
   bodyParts: Array<{ id: InjuryBodyPart; weight: number; recurrenceBaseBp: number; sequelaKeys: AttributeKey[] }>;
   recurrenceWindowMatches: number;
+  recurrenceMaxChain?: number | undefined;
   rehab: Record<RehabPlan, { returnShiftMatches: number; recurrenceAddBp: number }>;
   maxForcedPerSeason: number;
   durabilityPivot: number;
@@ -348,6 +349,12 @@ export type TransferRules = {
   loan: { seasons: 1; wageShareBp: number; buyOptionChanceBp: number; buyMinShareBp: number };
   feeByIndexBand: Array<{ maxIndexCenti: number; feeMinor: number }>;
   safeRenewal: { lengthSeasons: number; wageBp: number };
+  recovery?: {
+    youthMaxAge: number;
+    zeroMinutesConsecutiveSeasons: number;
+    opportunityTier: 3;
+    opportunityRole: SquadRole;
+  } | undefined;
   renewal: { lengthSeasons: number; wageBpByRole: Record<SquadRole, number> };
   negotiation: {
     successBp: Record<'TRANSFER' | 'FREE_AGENT' | 'LOAN' | 'RENEWAL', Record<'WAGE' | 'ROLE' | 'LENGTH', number>>;
@@ -386,6 +393,7 @@ export type LeagueCalendar = {
 // D-8: 룰셋 데이터는 콘텐츠 패키지가 소유하고, domain은 이 타입으로 입력만 받는다.
 export type Ruleset = {
   version: string;
+  initialAge?: number | undefined;
   /** 1.1 only: market previews and season squads share this deterministic stream. */
   offerProjection?: { version: '1.1.0'; competitorSeedVersion: 'squad:season-team-v1' } | undefined;
   positions: Position[];

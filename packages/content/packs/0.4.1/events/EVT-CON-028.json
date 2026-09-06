@@ -1,0 +1,73 @@
+{
+  "id": "EVT-CON-028",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": { "hasTag": ["career.tags", "진로_지역_이동훈련"] },
+  "exclusionTags": [],
+  "weight": 100,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "동료에게 수비 약속부터 묻는다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "전술 적합도 회복", "target": "tacticalFit", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "낯선 훈련의 규칙이 조금씩 읽혔다",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-CON-028.A.A1",
+              "target": "tacticalFit",
+              "delta": 5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["진로_하부리그", "입단테스트_완료"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "익숙한 기술로 먼저 존재감을 보인다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "폼 상승", "target": "form", "direction": "UP" },
+        { "label": "조직 적응은 남은 과제" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "기술은 눈에 띄었고 조직 훈련은 더 필요하다는 평을 들었다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-CON-028.B.B1",
+              "target": "form",
+              "delta": 5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["진로_입단테스트", "입단테스트_완료", "테스트_보통"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "합동 훈련 첫날, 개인 기술과 조직적인 움직임을 동시에 보여줘야 한다. 지도자는 참가가 선발을 뜻하지 않는다고 다시 확인했다."
+  }
+}

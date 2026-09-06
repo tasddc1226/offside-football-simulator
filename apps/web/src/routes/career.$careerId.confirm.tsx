@@ -20,8 +20,10 @@ import { recordFunnelReached } from '../engine/funnel.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { GENDER_LABELS, POSITION_LABELS, PREFERRED_FOOT_LABELS } from '../shared/labels.js';
+import { currentTeamName } from '../shared/current-team.js';
 import {
   attributeLabelList,
+  backgroundOpening,
   PLAYER_CREATION_CAREER_PHASE,
   PLAYER_CREATION_STEPS,
   topAttributeKeys,
@@ -30,8 +32,8 @@ import { screenForCareer } from '../shared/career-route.js';
 import { useScreenState } from '../shared/screen-state.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
-import { useReducedMotion } from '../shared/ui-store.js';
 import { CreationCard } from '../shared/player-creation-ui.js';
+import { GameCompletionTransition, GamePending } from '../shared/game-presentation.js';
 import { SCREEN_ROUTES } from '../routes.js';
 
 export const Route = createFileRoute('/career/$careerId/confirm')({
@@ -59,7 +61,6 @@ function ConfirmScreen() {
   const kickoffInFlightRef = useRef(false);
   const confirmCompletedRef = useRef(false);
   const advanceCompletedRef = useRef(false);
-  const reducedMotion = useReducedMotion();
   const isActive = query.data !== undefined && query.data.state.status !== 'DRAFT';
   const recoveryStepActive = search.step === 'recovery' || postConfirmInFlight;
   const blocked = useCareerStepGuard(query.data?.state, 'SCR-004', { recoveryStepActive });
@@ -144,7 +145,7 @@ function ConfirmScreen() {
     }
   }
 
-  async function handleKickoff(skipCeremony = false) {
+  async function handleKickoff() {
     if (kickoffInFlightRef.current) return;
     kickoffInFlightRef.current = true;
     setPostConfirmInFlight(true);
@@ -184,11 +185,7 @@ function ConfirmScreen() {
         advanceCompletedRef.current = true;
       }
 
-      if (reducedMotion || skipCeremony) {
-        await continueAfterCeremony();
-      } else {
-        setCeremonyReady(true);
-      }
+      setCeremonyReady(true);
     } catch {
       toError({
         code: 'UNKNOWN',
@@ -208,12 +205,6 @@ function ConfirmScreen() {
       replace: true,
     });
   }
-
-  useEffect(() => {
-    if (!ceremonyReady) return;
-    const timer = window.setTimeout(() => void continueAfterCeremony(), 500);
-    return () => window.clearTimeout(timer);
-  }, [ceremonyReady]);
 
   if (blocked) {
     return (
@@ -287,28 +278,23 @@ function ConfirmScreen() {
   }
 
   if (screenState.kind === 'COMMITTING') {
+    if (ceremonyReady) {
+      return (
+        <GameCompletionTransition
+          title="선수 등록 완료"
+          detail="선수 카드가 저장되었습니다. 첫 번째 이야기로 이동합니다."
+          onComplete={() => void continueAfterCeremony()}
+          visual={<OffsideLine />}
+        >
+          <DisplayWord word="KICKOFF" caption="선수가 피치에 들어섭니다" />
+        </GameCompletionTransition>
+      );
+    }
     return (
-      <div
-        className="os-creation-kickoff flex flex-col items-center gap-os-6 text-center"
-        role="status"
-        aria-live="polite"
-      >
-        <OffsideLine />
-        <DisplayWord
-          word="KICKOFF"
-          caption={ceremonyReady ? '선수가 피치에 들어섭니다' : '선수 카드를 등록하고 있습니다'}
-        />
-        <p className="os-creation-kickoff-status">
-          {ceremonyReady
-            ? '모든 준비가 끝났습니다. 첫 번째 이야기를 시작합니다.'
-            : '중복 없이 한 번만 확정하고 있어요. 잠시만 기다려 주세요.'}
-        </p>
-        {ceremonyReady ? (
-          <Button variant="ghost" onClick={() => void continueAfterCeremony()}>
-            연출 건너뛰기
-          </Button>
-        ) : null}
-      </div>
+      <GamePending
+        title="선수 카드를 등록하고 있습니다"
+        detail="선수 정보와 첫 번째 이야기를 한 번만 저장하고 있어요."
+      />
     );
   }
 
@@ -352,9 +338,9 @@ function ConfirmScreen() {
   const draft = state.player.draft;
   const archetype = ruleset.archetypes.find((candidate) => candidate.id === draft.archetypeId);
   const background = ruleset.backgrounds.find((candidate) => candidate.id === draft.backgroundId);
-  const startTeam = background
-    ? ruleset.teams.find((team) => team.id === background.startTeamId)
-    : undefined;
+  const opening = background === undefined
+    ? undefined
+    : backgroundOpening(background.id, background.name);
 
   if (
     draft.name === null ||
@@ -378,7 +364,7 @@ function ConfirmScreen() {
 
       <CreationCard
         name={draft.name}
-        team={startTeam?.name ?? background.startTeamId}
+        team={currentTeamName(state, ruleset)}
         position={POSITION_LABELS[draft.position]}
         archetype={archetype.name}
         foot={PREFERRED_FOOT_LABELS[draft.preferredFoot]}
@@ -396,6 +382,10 @@ function ConfirmScreen() {
           <div className="flex justify-between gap-os-4">
             <dt>출발 배경</dt>
             <dd>{background.name}</dd>
+          </div>
+          <div className="flex justify-between gap-os-4">
+            <dt>현재 상황</dt>
+            <dd>{opening?.title ?? '다음 기회 준비'}</dd>
           </div>
           <div className="flex justify-between gap-os-4">
             <dt>스타일의 주요 무기</dt>
@@ -424,7 +414,7 @@ function ConfirmScreen() {
         <Button
           aria-label="KICKOFF"
           variant="primary"
-          onClick={(event) => void handleKickoff(event.detail === 0)}
+          onClick={() => void handleKickoff()}
           disabled={postConfirmInFlight}
         >
           {postConfirmInFlight ? '확정하는 중' : 'KICKOFF · 커리어 시작'}

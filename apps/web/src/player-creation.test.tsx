@@ -106,8 +106,10 @@ describe('SCR-002 선수 정보', () => {
     const careerId = await createDraftCareer(engine);
     const user = userEvent.setup();
     const router = renderAt(`/career/${careerId}/create`);
-    await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
+    await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' });
 
+    await user.click(screen.getByRole('radio', { name: /아카데미의 추가 평가/ }));
+    await user.click(screen.getByRole('button', { name: '다음' }));
     await user.type(screen.getByLabelText('이름'), '김서준');
     await user.click(screen.getByRole('radio', { name: '남성' }));
     await user.selectOptions(screen.getByLabelText('국적'), 'KR');
@@ -115,8 +117,6 @@ describe('SCR-002 선수 정보', () => {
     await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('tab', { name: '공격수' }));
     await user.click(screen.getByRole('radio', { name: /스트라이커/ }));
-    await user.click(screen.getByRole('button', { name: '다음' }));
-    await user.click(screen.getByRole('radio', { name: /클럽 아카데미/ }));
     await user.click(screen.getByRole('button', { name: '플레이 스타일 고르기' }));
 
     await waitFor(() => {
@@ -129,8 +129,10 @@ describe('SCR-002 선수 정보', () => {
     const careerId = await createDraftCareer(engine);
     const user = userEvent.setup();
     renderAt(`/career/${careerId}/create`);
-    await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
+    await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' });
 
+    await user.click(screen.getByRole('radio', { name: /아카데미의 추가 평가/ }));
+    await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('button', { name: '다음' }));
 
     expect(await screen.findByText(/이름은 .+자여야 합니다\./)).toBeInTheDocument();
@@ -157,8 +159,8 @@ describe('SCR-002 선수 정보', () => {
 
     renderAt(`/career/${careerId}/create`);
 
-    expect(await screen.findByRole('heading', { level: 2, name: '나를 소개하세요' })).toBeInTheDocument();
-    expect(screen.getByLabelText('이름')).toHaveValue('');
+    expect(await screen.findByRole('heading', { level: 2, name: '어떤 환경에서 출발했나요?' })).toBeInTheDocument();
+    expect(screen.getAllByRole('radio').every((radio) => !radio.hasAttribute('data-state') || radio.getAttribute('data-state') !== 'checked')).toBe(true);
   });
 
   it('저장 실패 → 입력으로 돌아가기 → 폼(이름 입력)이 다시 보인다', async () => {
@@ -170,8 +172,10 @@ describe('SCR-002 선수 정보', () => {
     });
     const user = userEvent.setup();
     renderAt(`/career/${careerId}/create`);
-    await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
+    await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' });
 
+    await user.click(screen.getByRole('radio', { name: /아카데미의 추가 평가/ }));
+    await user.click(screen.getByRole('button', { name: '다음' }));
     await user.type(screen.getByLabelText('이름'), '김서준');
     await user.click(screen.getByRole('radio', { name: '남성' }));
     await user.selectOptions(screen.getByLabelText('국적'), 'KR');
@@ -179,14 +183,12 @@ describe('SCR-002 선수 정보', () => {
     await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('tab', { name: '공격수' }));
     await user.click(screen.getByRole('radio', { name: /스트라이커/ }));
-    await user.click(screen.getByRole('button', { name: '다음' }));
-    await user.click(screen.getByRole('radio', { name: /클럽 아카데미/ }));
     await user.click(screen.getByRole('button', { name: '플레이 스타일 고르기' }));
 
     await screen.findByText('저장하지 못했습니다.');
     await user.click(screen.getByRole('button', { name: '입력으로 돌아가기' }));
 
-    expect(await screen.findByLabelText('이름')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: '어떤 환경에서 출발했나요?' })).toBeInTheDocument();
   });
 });
 
@@ -281,7 +283,7 @@ describe('가드: DRAFT 단계가 맞지 않으면 앞선 화면으로 보낸다
 
     const router = renderAt(`/career/${careerId}/create`);
 
-    await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
+    await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' });
     expect(router.state.location.pathname).toBe(`/career/${careerId}/create`);
   });
 });
@@ -302,12 +304,12 @@ describe('SCR-002→003: 포지션 변경 시 기존 아키타입을 자동 확�
 
     const user = userEvent.setup();
     renderAt(`/career/${careerId}/create`);
-    await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
+    await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' });
 
+    await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('tab', { name: '공격수' }));
     await user.click(screen.getByRole('radio', { name: /스트라이커/ }));
-    await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('button', { name: '플레이 스타일 고르기' }));
 
     await screen.findByRole('heading', { level: 1, name: '플레이 스타일을 고르세요' });

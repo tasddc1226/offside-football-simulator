@@ -11,7 +11,7 @@ import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-
 import { contentForCareer } from '../engine/content.js';
 import { getAppEngine } from '../engine/engine.js';
 import { screenForCareer } from '../shared/career-route.js';
-import { actualEventEffects, resolveEventResultView } from '../shared/event-result.js';
+import { actualEventEffects, eventResultTagLabel, resolveEventResultView } from '../shared/event-result.js';
 import { INJURY_BODY_PART_LABELS, INJURY_SEVERITY_LABELS, REHAB_PLAN_LABELS } from '../shared/labels.js';
 import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
@@ -147,7 +147,7 @@ function EventResultScreen() {
           title={view.title}
           body={view.body}
           effects={details.actualEffects ?? view.effects}
-          tags={view.tags}
+          tags={view.tags.map(eventResultTagLabel)}
         />
       </GameResultReveal>
       <p className="os-muted">{details.actualEffects === null

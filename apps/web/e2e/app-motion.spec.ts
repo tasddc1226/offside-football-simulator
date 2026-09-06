@@ -50,6 +50,31 @@ async function routeAnimations(page: Page) {
   );
 }
 
+async function latestCareerRevision(page: Page): Promise<number> {
+  const careerId = /\/career\/([^/?]+)/.exec(page.url())?.[1];
+  if (!careerId) throw new Error('현재 URL에서 careerId를 찾지 못했다');
+  return page.evaluate(
+    (id) =>
+      new Promise<number>((resolve, reject) => {
+        const request = indexedDB.open('offside');
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const index = request.result.transaction('snapshots', 'readonly').objectStore('snapshots').index('careerId');
+          const revisions: number[] = [];
+          const cursor = index.openCursor(IDBKeyRange.only(id));
+          cursor.onerror = () => reject(cursor.error);
+          cursor.onsuccess = () => {
+            if (cursor.result) {
+              revisions.push((cursor.result.value as { revision: number }).revision);
+              cursor.result.continue();
+            } else resolve(Math.max(...revisions));
+          };
+        };
+      }),
+    careerId,
+  );
+}
+
 async function clearAnimations(page: Page): Promise<void> {
   await page.evaluate(() => {
     (window as unknown as MotionWindow).offsideMotionRecords.length = 0;
@@ -242,28 +267,22 @@ test('대시보드 스와이프는 구역만 바꾸고 경기 진행을 실행�
     window.localStorage.setItem('offside:e2e-seed', 'e2e-season-result-01'),
   );
   await completeOnboardingThroughContract(page);
-  const url = page.url();
+  const pathname = new URL(page.url()).pathname;
+  const revision = await latestCareerRevision(page);
   const surface = page.locator('.os-dashboard-tabs-motion .os-swipe-surface');
   await expect(surface).toBeVisible();
-  await expect(page.getByRole('tab', { name: '일정표', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: '홈', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',
   );
   await swipe(surface, -150);
-  await expect(page.getByRole('tab', { name: '라커룸', exact: true })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await expect.poll(() => page.locator('[role="tab"][aria-selected="true"]').textContent()).toBe('일정');
   await swipe(surface, -150);
-  await expect(page.getByRole('tab', { name: '전술실', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: '선수', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',
   );
-  await swipe(surface, 150);
-  await expect(page.getByRole('tab', { name: '라커룸', exact: true })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
-  await expect(page).toHaveURL(url);
-  await expect(page.getByRole('link', { name: '계획하러 가기', exact: true })).toBeVisible();
+  await expect.poll(() => new URL(page.url()).pathname).toBe(pathname);
+  await expect.poll(() => new URL(page.url()).searchParams.get('view')).toBe('player');
+  await expect.poll(() => latestCareerRevision(page)).toBe(revision);
 });

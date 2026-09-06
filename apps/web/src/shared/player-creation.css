@@ -1,3 +1,12 @@
+.os-creation-prologue {
+  display: flex; flex-direction: column; gap: var(--os-space-2); padding: clamp(1rem, 5vw, 1.5rem);
+  border-inline-start: 3px solid var(--os-accent); border-radius: 0 var(--os-radius-m) var(--os-radius-m) 0;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--os-accent) 9%, var(--os-surface)), var(--os-surface));
+}
+.os-creation-prologue h1 { color: var(--os-text); font: 800 var(--os-fs-h1)/var(--os-lh-h1) var(--os-font); letter-spacing: -.025em; }
+.os-creation-prologue > p:last-child { color: var(--os-text-2); font: 450 var(--os-fs-body)/var(--os-lh-body) var(--os-font); }
+.os-creation-step-caption { color: var(--os-text-2); font: 650 var(--os-fs-caption)/var(--os-lh-caption) var(--os-font); }
+
 .os-creation-stage {
   display: flex;
   flex-direction: column;
@@ -36,7 +45,7 @@
   border: 1px solid color-mix(in srgb, var(--os-line) 55%, var(--os-border)); border-radius: 1rem;
   background:
     repeating-linear-gradient(0deg, transparent 0 12.5%, color-mix(in srgb, var(--os-on-hero) 4%, transparent) 12.5% 25%),
-    linear-gradient(145deg, color-mix(in srgb, var(--os-line) 90%, #14362f), color-mix(in srgb, var(--os-line) 72%, #071d1a));
+    linear-gradient(145deg, color-mix(in srgb, var(--os-line) 90%, var(--os-hero)), color-mix(in srgb, var(--os-line) 72%, var(--os-hero)));
 }
 .os-creation-pitch::before { content: ''; position: absolute; inset: .75rem; border: 1px solid rgb(255 255 255 / 55%); }
 .os-creation-pitch-line { position: absolute; left: .75rem; right: .75rem; border-top: 1px solid rgb(255 255 255 / 55%); }

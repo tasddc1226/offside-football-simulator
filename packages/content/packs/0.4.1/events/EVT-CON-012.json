@@ -1,0 +1,171 @@
+{
+  "id": "EVT-CON-012",
+  "version": 1,
+  "phases": ["PRESEASON", "IN_SEASON"],
+  "triggers": {
+    "all": [
+      { "eq": ["career.stage", "PRO"] },
+      { "gte": ["contract.promiseBreaches", 1] },
+      { "lte": ["season.step", 3] }
+    ]
+  },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 1 },
+  "weight": 80,
+  "authoring": "PROTOTYPE",
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "면담 요구",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "감독 신뢰 하락", "target": "managerTrust", "direction": "DOWN" },
+        { "label": "스쿼드 상태 상승", "target": "squadStatus", "direction": "UP" },
+        { "label": "이적 희망으로 이어질 수 있음" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 60,
+          "title": "감독이 진지하게 받아들였다",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-012.A.A1.0",
+              "target": "managerTrust",
+              "delta": -3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-CON-012.A.A1.1",
+              "target": "squadStatus",
+              "delta": 5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 40,
+          "title": "면담은 형식적으로 끝났다",
+          "cause": "의미 없는 대화",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-012.A.A2.0",
+              "target": "managerTrust",
+              "delta": -3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-CON-012.A.A2.1",
+              "target": "squadStatus",
+              "delta": 5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["이적_희망"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "언론에 말함",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "팬 반응 상승", "target": "fans", "direction": "UP" },
+        { "label": "감독 신뢰 크게 하락", "target": "managerTrust", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "인터뷰에서 속내를 밝혔다",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-012.B.B1.0",
+              "target": "fans",
+              "delta": 3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-012.B.B1.1",
+              "target": "managerTrust",
+              "delta": -8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["언론_충돌"]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "참는다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "사기 하락", "target": "morale", "direction": "DOWN" },
+        { "label": "주장 관계 상승", "target": "captain", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "묵묵히 넘어갔다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-CON-012.C.C1.0",
+              "target": "morale",
+              "delta": -3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-012.C.C1.1",
+              "target": "captain",
+              "delta": 3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "{name:은/는} 감독이 약속한 출전 기회가 이번에도 지켜지지 않았다는 걸 다시 확인한다."
+  }
+}

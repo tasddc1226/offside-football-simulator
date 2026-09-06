@@ -150,6 +150,7 @@ export function buildConditionContext(state: CareerState): ConditionContext {
     'career.proSeasons': proSeasonCount(state),
 
     'player.primaryPosition': profile?.primaryPosition ?? NOT_MODELED_STRING,
+    'player.backgroundId': profile?.backgroundId ?? NOT_MODELED_STRING,
     'player.positionGroup': profile ? resolvePositionGroup(profile.primaryPosition) : NOT_MODELED_STRING,
     'player.archetypeId': profile?.archetypeId ?? NOT_MODELED_STRING,
     'player.baseOvr': profile?.baseOvr ?? NOT_MODELED_INT,

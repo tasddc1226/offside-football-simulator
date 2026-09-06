@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CareerState } from '@offside/domain';
 import { activeContentPack } from '../engine/content.js';
-import { actualEventEffects, resolveEventResultView } from './event-result.js';
+import { actualEventEffects, eventResultTagLabel, resolveEventResultView } from './event-result.js';
 
 function baseState(overrides: Partial<CareerState>): CareerState {
   return {
@@ -55,6 +55,12 @@ function baseState(overrides: Partial<CareerState>): CareerState {
 }
 
 describe('resolveEventResultView', () => {
+  it('결과 태그는 저장 ID를 보존한 채 화면에서만 읽기 좋은 라벨로 바꾼다', () => {
+    expect(eventResultTagLabel('진로_학교_성인훈련')).toBe('학교·성인 훈련 경로');
+    expect(eventResultTagLabel('역할_시험_협의')).toBe('역할 시험 협의 중');
+    expect(eventResultTagLabel('새_태그')).toBe('새 태그');
+  });
+
   it('결과 상세는 상한 적용 뒤 저장값 차이와 평판 단위를 표시한다', () => {
     const before = baseState({ relationships: { managerTrust: 98, captain: 0, rival: 0, fans: 0, agent: 0 } });
     const after = { ...before, relationships: { ...before.relationships, managerTrust: 100 }, reputation: { ...before.reputation, popularityCenti: 5125 } };
