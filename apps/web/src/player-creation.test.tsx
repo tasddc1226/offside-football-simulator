@@ -204,8 +204,12 @@ describe('SCR-003 플레이 스타일', () => {
     const user = userEvent.setup();
     const router = renderAt(`/career/${careerId}/style`);
     await screen.findByRole('heading', { level: 1, name: '플레이 스타일을 고르세요' });
+    expect(screen.getByText(/플레이 핵심은 이 스타일에서 비중이 큰 능력/)).toHaveTextContent(
+      '같은 능력이 두 목록에 함께 나올 수 있습니다',
+    );
+    expect(screen.getAllByText('플레이 핵심')).toHaveLength(3);
+    expect(screen.getAllByText('비교 열세')).toHaveLength(3);
 
-    // CompareCards는 모바일·데스크톱 레이아웃마다 하나씩, 아키타입당 라디오 2개를 함께 렌더한다.
     const radios = screen.getAllByRole('radio');
     const uniqueChoices = new Set(radios.map((radio) => radio.getAttribute('aria-label')));
     expect(uniqueChoices.size).toBe(3);

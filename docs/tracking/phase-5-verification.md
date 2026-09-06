@@ -86,8 +86,8 @@ MF는 11회 팀 우승, 출전 24,275/36,360분, 최고 OVR 77이었다. DF는 1
   단독 병합 차단선이 아니며, 실제 결과와 편차를 숨기지 않고 보고한다.
 - `TEST-LEG-006`: 무관 RAW_EVIDENCE 80점 검증과 실제 참조 분포 목표는 별도다.
   표본 크기·checksum 통과만으로 밸런스까지 통과 처리하지 않는다.
-- 저장 호환성·포지션 공정성·고득점 도달성 및 PR 최종 Quality/Browser/Preview 게이트: 대기.
-- main 병합·staging 배포: 대기. Production 출시로 표현하지 않는다.
+- 저장 호환성·포지션 공정성·고득점 도달성 및 PR quick checks: 최종 head 확인 대기.
+- main 검증·staging 배포: 대기. PR preview 배포는 현재 절차에 없으며 Production 출시로 표현하지 않는다.
 
 중간 CI `33954575560` (`5b37729`)은 Quality 통과, 새 은퇴 E2E 18.6초 통과였다.
 Browser 전체는 98 통과·1 실패·6 조건부 제외였고, 실패는 기존 이적 헬퍼의

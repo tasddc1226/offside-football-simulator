@@ -156,6 +156,9 @@ function StyleScreen() {
         >
           나의 경기 방식
         </h2>
+        <p className="os-muted" style={CAPTION_STYLE}>
+          플레이 핵심은 이 스타일에서 비중이 큰 능력입니다. 비교 열세는 같은 포지션의 다른 스타일 중 최고 수치보다 낮은 능력이며, 같은 능력이 두 목록에 함께 나올 수 있습니다.
+        </p>
 
         <RadioGroup
           className="os-creation-style-grid"
@@ -180,8 +183,8 @@ function StyleScreen() {
               </span>
               <p>{archetype.summary}</p>
               <span className="os-creation-tradeoffs">
-                <span className="os-creation-tradeoff"><span>주요 무기</span>{attributeLabelList(topAttributeKeys(archetype, 3))}</span>
-                <span className="os-creation-tradeoff"><span>상대적 약점</span>{attributeLabelList(relativeWeaknessAttributeKeys(ruleset, archetype, 2))}</span>
+                <span className="os-creation-tradeoff"><span>플레이 핵심</span>{attributeLabelList(topAttributeKeys(archetype, 3))}</span>
+                <span className="os-creation-tradeoff"><span>비교 열세</span>{attributeLabelList(relativeWeaknessAttributeKeys(ruleset, archetype, 2))}</span>
               </span>
             </RadioGroupItem>
           ))}
