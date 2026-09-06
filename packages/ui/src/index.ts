@@ -18,6 +18,8 @@ export { DashboardSection } from './components/DashboardSection.js';
 export type { DashboardSectionProps } from './components/DashboardSection.js';
 export { Dialog, DialogClose, DialogContent, DialogTrigger } from './components/Dialog.js';
 export type { DialogContentProps } from './components/Dialog.js';
+export { Disclosure } from './components/Disclosure.js';
+export type { DisclosureProps } from './components/Disclosure.js';
 export { DisplayWord } from './components/DisplayWord.js';
 export type { DisplayWordProps } from './components/DisplayWord.js';
 export { EmptyState } from './components/EmptyState.js';

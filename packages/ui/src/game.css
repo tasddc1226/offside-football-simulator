@@ -139,6 +139,42 @@ select {
   outline-offset: 3px;
   border-radius: var(--os-radius-s);
 }
+.os-disclosure-summary {
+  display: flex;
+  min-height: var(--os-touch-min);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+.os-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+.os-disclosure-summary::marker {
+  content: '';
+}
+.os-disclosure-summary:focus-visible {
+  outline: 2px solid var(--os-focus);
+  outline-offset: 2px;
+  border-radius: var(--os-radius-s);
+}
+.os-disclosure-arrow {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--os-text-2);
+  border-bottom: 2px solid var(--os-text-2);
+  transform: rotate(45deg);
+  transition: transform 160ms var(--os-ease-out);
+}
+.os-disclosure[open] > .os-disclosure-summary .os-disclosure-arrow {
+  transform: rotate(-135deg);
+}
+.os-disclosure-content {
+  padding-top: 12px;
+}
 .os-eyebrow {
   font-size: var(--os-fs-caption);
   line-height: var(--os-lh-caption);

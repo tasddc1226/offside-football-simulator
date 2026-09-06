@@ -11,6 +11,7 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  Disclosure,
   RadioGroup,
   RadioGroupItem,
   ScreenIntro,
@@ -48,6 +49,7 @@ import { useSyncSummary } from '../engine/use-sync.js';
 import { platform } from '../platform/index.js';
 import { APP_VERSION_LABEL } from '../shared/app-version.js';
 import { queryClient } from '../shared/query-client.js';
+import { useExpandDisclosuresOnHash } from '../shared/expand-disclosures-on-hash.js';
 import { formatLocalDate, formatLocalDateTime } from '../shared/format.js';
 import { validateRecoveryCodeInput } from '../shared/recovery-code-input.js';
 import { SettingsFooter } from '../shared/SettingsFooter.js';
@@ -468,38 +470,39 @@ function ProfileRecoverRow() {
 
   return (
     <Card className="flex flex-col gap-os-3">
-      <span className="font-os text-os-text">프로필 복구</span>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-os-2">
-        <label
-          htmlFor="recover-code-input"
-          className="font-os text-os-text-2"
-          style={CAPTION_STYLE}
-        >
-          다른 기기에서 발급받은 복구 코드
-        </label>
-        <input
-          id="recover-code-input"
-          ref={inputRef}
-          type="text"
-          autoComplete="off"
-          inputMode="text"
-          placeholder="OFS-XXXX-XXXX-XXXX"
-          value={code}
-          onChange={(event) => setCode(event.target.value.toUpperCase())}
-          aria-invalid={error !== null}
-          aria-describedby={error !== null ? 'recover-code-error' : undefined}
-          className="os-num rounded-os-m border border-os-border bg-os-surface px-os-3 font-os text-os-text"
-          style={buttonStyle}
-        />
-        {error !== null ? (
-          <p id="recover-code-error" className="font-os text-os-danger" style={CAPTION_STYLE}>
-            {error}
-          </p>
-        ) : null}
-        <Button type="submit" variant="primary" disabled={busy}>
-          복구
-        </Button>
-      </form>
+      <Disclosure summary="프로필 복구">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-os-2">
+          <label
+            htmlFor="recover-code-input"
+            className="font-os text-os-text-2"
+            style={CAPTION_STYLE}
+          >
+            다른 기기에서 발급받은 복구 코드
+          </label>
+          <input
+            id="recover-code-input"
+            ref={inputRef}
+            type="text"
+            autoComplete="off"
+            inputMode="text"
+            placeholder="OFS-XXXX-XXXX-XXXX"
+            value={code}
+            onChange={(event) => setCode(event.target.value.toUpperCase())}
+            aria-invalid={error !== null}
+            aria-describedby={error !== null ? 'recover-code-error' : undefined}
+            className="os-num rounded-os-m border border-os-border bg-os-surface px-os-3 font-os text-os-text"
+            style={buttonStyle}
+          />
+          {error !== null ? (
+            <p id="recover-code-error" className="font-os text-os-danger" style={CAPTION_STYLE}>
+              {error}
+            </p>
+          ) : null}
+          <Button type="submit" variant="primary" disabled={busy}>
+            복구
+          </Button>
+        </form>
+      </Disclosure>
 
       <Dialog
         open={conflict !== null}
@@ -993,10 +996,12 @@ function LogoutRow() {
           </DialogContent>
         </Dialog>
       </div>
-      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-        Google을 연결한 프로필에서만 쓸 수 있습니다. 로그아웃해도 이 기기의 진행은 남고, 다시
-        Google로 연결하면 같은 프로필로 돌아올 수 있습니다.
-      </p>
+      <Disclosure summary="자세히">
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          Google을 연결한 프로필에서만 쓸 수 있습니다. 로그아웃해도 이 기기의 진행은 남고, 다시
+          Google로 연결하면 같은 프로필로 돌아올 수 있습니다.
+        </p>
+      </Disclosure>
       {toast !== null ? (
         <Toast variant="success" message={toast} onDismiss={() => setToast(null)} />
       ) : null}
@@ -1275,6 +1280,9 @@ function SettingsScreen() {
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-030', careerPhase: 'NONE' });
   }, []);
+  // 접힌 Disclosure(프로필 복구·로그아웃 설명·버전·데이터 위험 작업) 안으로 향하는 상단 빠른 이동
+  // 앵커를 자동으로 펼친다.
+  useExpandDisclosuresOnHash();
 
   return (
     <div className="os-screen os-settings">
@@ -1463,41 +1471,41 @@ function SettingsScreen() {
             <p className="os-num font-os font-semibold text-os-text" style={CAPTION_STYLE}>
               OFFSIDE {APP_VERSION_LABEL}
             </p>
-            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-              상세 버전
-            </p>
-            <dl
-              className="os-num flex flex-col gap-os-1 font-os text-os-text-2 opacity-70"
-              style={CAPTION_STYLE}
-              aria-labelledby="settings-version"
-            >
-              <div className="flex justify-between gap-os-2">
-                <dt>룰셋</dt>
-                <dd>{activeRuleset.version}</dd>
-              </div>
-              <div className="flex justify-between gap-os-2">
-                <dt>콘텐츠 팩</dt>
-                <dd>{activeContentPack.manifest.contentPackVersion}</dd>
-              </div>
-              <div className="flex justify-between gap-os-2">
-                <dt>엔진 클라이언트</dt>
-                <dd>{ENGINE_CLIENT_VERSION}</dd>
-              </div>
-            </dl>
+            <Disclosure summary="상세 버전" aria-labelledby="settings-version">
+              <dl
+                className="os-num flex flex-col gap-os-1 font-os text-os-text-2 opacity-70"
+                style={CAPTION_STYLE}
+              >
+                <div className="flex justify-between gap-os-2">
+                  <dt>룰셋</dt>
+                  <dd>{activeRuleset.version}</dd>
+                </div>
+                <div className="flex justify-between gap-os-2">
+                  <dt>콘텐츠 팩</dt>
+                  <dd>{activeContentPack.manifest.contentPackVersion}</dd>
+                </div>
+                <div className="flex justify-between gap-os-2">
+                  <dt>엔진 클라이언트</dt>
+                  <dd>{ENGINE_CLIENT_VERSION}</dd>
+                </div>
+              </dl>
+            </Disclosure>
           </section>
 
           <section className="flex flex-col gap-os-3">
             <h2 id="settings-data" className="font-os font-semibold text-os-text" style={H2_STYLE}>
               데이터
             </h2>
-            <ul className="flex flex-col gap-os-2" aria-labelledby="settings-data">
-              <li>
-                <DeleteProfileRow />
-              </li>
-              <li>
-                <DeleteDeviceDataRow />
-              </li>
-            </ul>
+            <Disclosure summary="위험 작업 보기" aria-labelledby="settings-data">
+              <ul className="flex flex-col gap-os-2">
+                <li>
+                  <DeleteProfileRow />
+                </li>
+                <li>
+                  <DeleteDeviceDataRow />
+                </li>
+              </ul>
+            </Disclosure>
           </section>
         </section>
       </div>

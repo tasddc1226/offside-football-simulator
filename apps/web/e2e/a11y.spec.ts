@@ -221,6 +221,8 @@ test('T-1-012 설정: 프로필 복구 충돌 선택 대화상자에 axe serious
   );
 
   await page.goto('/settings');
+  // UX-003: 프로필 복구 폼은 기본 접힘이다 — Disclosure summary를 열어야 입력을 채울 수 있다.
+  await page.getByText('프로필 복구', { exact: true }).click();
   await page.getByLabel('다른 기기에서 발급받은 복구 코드').fill('OFS-ABCD-EFGH-JKMN');
   await page.getByRole('button', { name: '복구' }).click();
   await expect(
@@ -234,6 +236,8 @@ test('T-1-012 설정: 이 기기 데이터 삭제 확인 대화상자에 axe ser
   page,
 }) => {
   await page.goto('/settings');
+  // UX-003: 위험 작업(프로필·기기 데이터 삭제) 목록은 기본 접힘이다.
+  await page.getByText('위험 작업 보기').click();
   const row = page.locator('li').filter({ hasText: '이 기기 데이터 삭제' });
   await row.getByRole('button', { name: '삭제' }).click();
   await expect(page.getByRole('heading', { level: 2, name: '이 기기 데이터 삭제' })).toBeVisible();
@@ -252,6 +256,7 @@ test('T-1-012 설정: 프로필 삭제 확인 대화상자에 axe serious·criti
   );
 
   await page.goto('/settings');
+  await page.getByText('위험 작업 보기').click();
   const row = page.locator('li').filter({ hasText: '프로필 삭제' });
   await row.getByRole('button', { name: '삭제' }).click();
   await expect(page.getByRole('heading', { level: 2, name: '프로필 삭제' })).toBeVisible();
