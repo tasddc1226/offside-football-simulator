@@ -53,6 +53,9 @@ test('staging health와 current service-season manifest/CORS가 실제 Worker �
 });
 
 async function onboardingTitle(page: Page): Promise<string> {
+  const nextButton = page.getByRole('button', { name: '다음', exact: true });
+  await expect(nextButton).toBeVisible();
+  await expect(nextButton).toBeEnabled();
   const heading = page.getByRole('heading', { level: 1 });
   await expect(heading).toBeVisible();
   const title = (await heading.textContent())?.trim() ?? '';
