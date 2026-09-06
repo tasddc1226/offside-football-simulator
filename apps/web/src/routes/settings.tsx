@@ -47,11 +47,14 @@ import { getSyncClient, requeueAllUnsynced } from '../engine/sync.js';
 import { useCareerList } from '../engine/use-career.js';
 import { useSyncSummary } from '../engine/use-sync.js';
 import { platform } from '../platform/index.js';
+import { APP_VERSION_LABEL } from '../shared/app-version.js';
 import { queryClient } from '../shared/query-client.js';
 import { useExpandDisclosuresOnHash } from '../shared/expand-disclosures-on-hash.js';
 import { formatLocalDate, formatLocalDateTime } from '../shared/format.js';
 import { validateRecoveryCodeInput } from '../shared/recovery-code-input.js';
+import { SettingsFooter } from '../shared/SettingsFooter.js';
 import { SyncBadge } from '../shared/SyncBadge.js';
+import { TeamNamesSettings } from '../shared/TeamNamesSettings.js';
 import {
   useUiStore,
   type ReducedMotionPreference,
@@ -1308,6 +1311,12 @@ function SettingsScreen() {
           플레이
         </a>
         <a
+          href="#settings-team-names"
+          className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
+        >
+          구단 이름
+        </a>
+        <a
           href="#settings-safety"
           className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
         >
@@ -1441,6 +1450,8 @@ function SettingsScreen() {
           </section>
         </section>
 
+        <TeamNamesSettings />
+
         <section
           id="settings-safety"
           className="flex scroll-mt-20 flex-col gap-os-5"
@@ -1457,8 +1468,14 @@ function SettingsScreen() {
             >
               버전
             </h2>
-            <Disclosure summary="버전 정보 보기" aria-labelledby="settings-version">
-              <dl className="os-num flex flex-col gap-os-1 font-os text-os-text-2" style={CAPTION_STYLE}>
+            <p className="os-num font-os font-semibold text-os-text" style={CAPTION_STYLE}>
+              OFFSIDE {APP_VERSION_LABEL}
+            </p>
+            <Disclosure summary="상세 버전" aria-labelledby="settings-version">
+              <dl
+                className="os-num flex flex-col gap-os-1 font-os text-os-text-2 opacity-70"
+                style={CAPTION_STYLE}
+              >
                 <div className="flex justify-between gap-os-2">
                   <dt>룰셋</dt>
                   <dd>{activeRuleset.version}</dd>
@@ -1492,6 +1509,8 @@ function SettingsScreen() {
           </section>
         </section>
       </div>
+
+      <SettingsFooter />
 
       <Link to="/" className={buttonClassName('secondary')} style={buttonStyle}>
         허브로

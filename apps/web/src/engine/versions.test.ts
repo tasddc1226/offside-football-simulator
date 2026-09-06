@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   ACTIVE_CONTENT_PACK_VERSION,
   E2E_CONTENT_PACK_STORAGE_KEY,
-  EXPANDED_QA_CONTENT_PACK_VERSION,
   resolveActiveContentPackVersion,
   selectContentPackVersion,
 } from './versions.js';
@@ -34,25 +33,14 @@ describe('resolveActiveContentPackVersion', () => {
   });
 });
 
-describe('selectContentPackVersion — expanded QA build isolation', () => {
-  it('expanded mode만 0.3.0을 선택한다', () => {
-    expect(selectContentPackVersion({ mode: 'expanded', dev: false, devOverride: null })).toBe(
-      EXPANDED_QA_CONTENT_PACK_VERSION,
+describe('selectContentPackVersion', () => {
+  it('dev가 아니면 override 값이 있어도 기본 0.1.0을 유지한다', () => {
+    expect(selectContentPackVersion({ dev: false, devOverride: '0.3.0' })).toBe(
+      ACTIVE_CONTENT_PACK_VERSION,
     );
   });
 
-  it.each(['production', 'preview', 'staging', 'toss'])(
-    '%s mode는 override 값이 있어도 기본 0.1.0을 유지한다',
-    (mode) => {
-      expect(selectContentPackVersion({ mode, dev: false, devOverride: '0.3.0' })).toBe(
-        ACTIVE_CONTENT_PACK_VERSION,
-      );
-    },
-  );
-
-  it('expanded가 아닌 DEV mode에서는 기존 유효 팩 override를 유지한다', () => {
-    expect(selectContentPackVersion({ mode: 'development', dev: true, devOverride: '0.2.0' })).toBe(
-      '0.2.0',
-    );
+  it('DEV에서는 유효한 override를 유지한다', () => {
+    expect(selectContentPackVersion({ dev: true, devOverride: '0.2.0' })).toBe('0.2.0');
   });
 });

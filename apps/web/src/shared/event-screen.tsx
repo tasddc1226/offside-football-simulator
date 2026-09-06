@@ -25,6 +25,7 @@ import { positionHeaderField, POSITION_LABELS, RISK_LABEL_KO } from './labels.js
 import { buildNarrativeTokens, renderNarrative, type NarrativeTokenValues } from './narrative.js';
 import { eventSituation } from './legacy-event-copy.js';
 import { u18StatusStripItems } from './status-strip.js';
+import { useUiStore } from './ui-store.js';
 import { useCommittingExitGuard } from './use-committing-exit-guard.js';
 import { GamePending } from './game-presentation.js';
 
@@ -70,6 +71,7 @@ export function EventDecisionScreen({
   const query = useCareer(careerId);
   const resolveMutation = useCareerMutation('resolveEvent');
   const navigate = useNavigate();
+  const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const submittingRef = useRef(false);
@@ -117,7 +119,7 @@ export function EventDecisionScreen({
     return <ErrorState message={`이벤트 정의를 찾을 수 없습니다: ${pending.eventId}`} />;
   }
 
-  const tokens = buildNarrativeTokens(state, pack, ruleset);
+  const tokens = buildNarrativeTokens(state, pack, ruleset, teamNameOverrides);
   const profile = state.player.profile;
   const positionField = profile
     ? positionHeaderField(profile.primaryPosition, profile.preferredPosition)

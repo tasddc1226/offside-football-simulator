@@ -10,3 +10,9 @@ export const OPERATOR = {
 export function operatorFieldOrPending(value: string): string {
   return value.trim().length > 0 ? value : '준비 중';
 }
+
+/**
+ * UX-002: 설정 하단 SNS·커뮤니티 채널 목록. 지금은 채널이 없어 빈 배열이다 — 채우면 설정 화면
+ * 푸터(SettingsFooter)가 자동으로 목록을 보여준다. 비어 있는 동안은 그 영역을 렌더링하지 않는다.
+ */
+export const CHANNELS: ReadonlyArray<{ label: string; url: string }> = [];

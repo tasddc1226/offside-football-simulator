@@ -12,8 +12,15 @@ export type ReducedMotionPreference = ProfileSettings['reducedMotion'];
 export type TextScale = ProfileSettings['textScale'];
 
 const UI_SETTINGS_KV_KEY = 'ui:settings';
+/** UX-001: 구단 이름 커스터마이즈 트림 후 길이 규칙. 빈 값은 오버라이드 제거(기본 이름 복귀)다. */
+const TEAM_NAME_OVERRIDE_MAX_LENGTH = 16;
 
-type StoredUiSettings = ProfileSettings & { onboardingSeen: boolean };
+type StoredUiSettings = ProfileSettings & {
+  onboardingSeen: boolean;
+  /** UX-001: 팀 id → 커스텀 표시 이름. 기기 로컬 전용(서버 ProfileSettings에는 없다) — 팀 id가
+   * 없으면 룰셋 기본 이름을 그대로 쓴다. */
+  teamNameOverrides: Record<string, string>;
+};
 
 const DEFAULT_SETTINGS: StoredUiSettings = {
   theme: 'SYSTEM',
@@ -21,19 +28,35 @@ const DEFAULT_SETTINGS: StoredUiSettings = {
   textScale: 100,
   defaultSimulationMode: 'FAST',
   onboardingSeen: false,
+  teamNameOverrides: {},
 };
 
+/** 손상된 값이 섞여도 유효한 항목만 남긴다(트림 1~16자, 문자열 값만) — 저장값에 필드가 아예 없던
+ * 과거 버전도 빈 객체로 안전하게 읽힌다. */
+function parseTeamNameOverrides(value: unknown): Record<string, string> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  const result: Record<string, string> = {};
+  for (const [teamId, name] of Object.entries(value as Record<string, unknown>)) {
+    if (teamId.length === 0 || typeof name !== 'string') continue;
+    const trimmed = name.trim();
+    if (trimmed.length < 1 || trimmed.length > TEAM_NAME_OVERRIDE_MAX_LENGTH) continue;
+    result[teamId] = trimmed;
+  }
+  return result;
+}
+
 /** apps/web은 zod를 직접 의존하지 않는다(ADR-005). contracts의 ProfileSettingsSchema로 4개
- * 필드를 검증하고, onboardingSeen은 boolean 여부만 따로 확인한다. */
+ * 필드를 검증하고, onboardingSeen은 boolean 여부만, teamNameOverrides(서버 스키마에 없는 로컬 전용
+ * 필드)는 parseTeamNameOverrides로 따로 확인한다. */
 function parseStoredSettings(raw: unknown): StoredUiSettings | null {
   if (typeof raw !== 'object' || raw === null) return null;
-  const { onboardingSeen, ...rest } = raw as Record<string, unknown>;
+  const { onboardingSeen, teamNameOverrides, ...rest } = raw as Record<string, unknown>;
   if (typeof onboardingSeen !== 'boolean') return null;
 
   const parsed = ProfileSettingsSchema.safeParse(rest);
   if (!parsed.success) return null;
 
-  return { ...parsed.data, onboardingSeen };
+  return { ...parsed.data, onboardingSeen, teamNameOverrides: parseTeamNameOverrides(teamNameOverrides) };
 }
 
 export interface UiState extends StoredUiSettings {
@@ -42,6 +65,9 @@ export interface UiState extends StoredUiSettings {
   setTextScale: (textScale: TextScale) => void;
   setDefaultSimulationMode: (mode: SimulationMode) => void;
   setOnboardingSeen: (seen: boolean) => void;
+  /** 트림 후 빈 값이면 오버라이드를 지운다(기본 이름 복귀). 16자를 넘는 값은 잘라서 저장한다. */
+  setTeamNameOverride: (teamId: string, name: string) => void;
+  resetTeamNameOverrides: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -61,6 +87,21 @@ export const useUiStore = create<UiState>((set) => ({
   setOnboardingSeen: (onboardingSeen) => {
     set({ onboardingSeen });
   },
+  setTeamNameOverride: (teamId, name) => {
+    set((state) => {
+      const trimmed = name.trim().slice(0, TEAM_NAME_OVERRIDE_MAX_LENGTH);
+      const next = { ...state.teamNameOverrides };
+      if (trimmed.length === 0) {
+        delete next[teamId];
+      } else {
+        next[teamId] = trimmed;
+      }
+      return { teamNameOverrides: next };
+    });
+  },
+  resetTeamNameOverrides: () => {
+    set({ teamNameOverrides: {} });
+  },
 }));
 
 function persistedSlice(state: UiState): StoredUiSettings {
@@ -70,6 +111,7 @@ function persistedSlice(state: UiState): StoredUiSettings {
     textScale: state.textScale,
     defaultSimulationMode: state.defaultSimulationMode,
     onboardingSeen: state.onboardingSeen,
+    teamNameOverrides: state.teamNameOverrides,
   };
 }
 

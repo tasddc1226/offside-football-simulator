@@ -104,8 +104,11 @@ function CareerCard({
   const name = displayName(summary);
   const position = state.player.profile?.primaryPosition ?? state.player.draft.position;
   const positionLabel = position ? POSITION_LABELS[position] : '—';
+  const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
   const team =
-    state.player.profile === null ? null : currentTeamName(state, rulesetForCareer(state));
+    state.player.profile === null
+      ? null
+      : currentTeamName(state, rulesetForCareer(state), teamNameOverrides);
   const ovr = state.player.profile?.baseOvr;
   const syncState = useSyncState(record.id);
   // T-2-012 D-54: 현재 시즌 조회가 아직 없으면(로딩·실패) 판단할 근거가 없으니 배지를 달지 않는다.

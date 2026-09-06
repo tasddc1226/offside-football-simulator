@@ -12,6 +12,7 @@ import {
 } from '@offside/domain';
 import { CUP_ROUND_LABEL_KO, MATCH_APPEARANCE_LABEL_KO, OUT_REASON_LABEL_KO } from './labels.js';
 import { opponentDisplayName } from './competition-labels.js';
+import type { TeamNameOverrides } from './team-names.js';
 
 export type ScheduleRowMatch = {
   scoreText: string;
@@ -54,7 +55,11 @@ export function ratingText(ratingTenths: number | null): string {
   return ratingTenths === null ? '—' : (ratingTenths / 10).toFixed(1);
 }
 
-export function buildScheduleRows(season: FootballSeason, ruleset: Ruleset): ScheduleRow[] {
+export function buildScheduleRows(
+  season: FootballSeason,
+  ruleset: Ruleset,
+  overrides: TeamNameOverrides = {},
+): ScheduleRow[] {
   const team = ruleset.teams.find((candidate) => candidate.id === season.teamId);
   if (team === undefined) {
     throw new RangeError(`buildScheduleRows: 룰셋에 teamId '${season.teamId}'가 없다.`);
@@ -74,7 +79,7 @@ export function buildScheduleRows(season: FootballSeason, ruleset: Ruleset): Sch
       step: entry.step,
       order: entry.order,
       competitionLabel: label,
-      opponentName: opponentDisplayName(opponent, ruleset),
+      opponentName: opponentDisplayName(opponent, ruleset, overrides),
       home: entry.home,
       eliminated: false,
       match:

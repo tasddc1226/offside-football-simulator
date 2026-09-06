@@ -5,8 +5,6 @@ const DEFAULT_API_URL = 'https://offside-api-staging.tasddc1569.workers.dev';
 const ALLOWED_WORKER_HOSTS = new Set([
   'offside-web-staging.tasddc1569.workers.dev',
   'offside-api-staging.tasddc1569.workers.dev',
-  'offside-web-expanded.tasddc1569.workers.dev',
-  'offside-api-expanded.tasddc1569.workers.dev',
 ]);
 
 type SmokeMetadata = Readonly<{
@@ -41,16 +39,7 @@ function workerOrigin(value: string, kind: 'web' | 'api'): string {
 
 const BASE_URL = workerOrigin(process.env.E2E_STAGING_URL ?? DEFAULT_WEB_URL, 'web');
 const API_URL = workerOrigin(process.env.E2E_STAGING_API_URL ?? DEFAULT_API_URL, 'api');
-const webProfile = BASE_URL.includes('-expanded.') ? 'expanded' : 'staging';
-const apiProfile = API_URL.includes('-expanded.') ? 'expanded' : 'staging';
-if (webProfile !== apiProfile) {
-  throw new Error('E2E staging web/API URLs must use the same staging or expanded Worker profile');
-}
-
-const expectedSeason =
-  webProfile === 'expanded'
-    ? { id: 'svc_phase34_qa', contentPackVersion: '0.3.0' }
-    : { id: 'svc_line_test', contentPackVersion: '0.1.0' };
+const expectedSeason = { id: 'svc_line_test', contentPackVersion: '0.1.0' };
 const smokeMetadata: SmokeMetadata = {
   webUrl: BASE_URL,
   apiUrl: API_URL,
