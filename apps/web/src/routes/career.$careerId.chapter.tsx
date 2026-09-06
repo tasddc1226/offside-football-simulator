@@ -16,7 +16,6 @@ import {
   Button,
   ChoiceCard,
   ErrorState,
-  PlayerHeader,
   RadioGroup,
   ResultCard,
   ScreenIntro,
@@ -430,16 +429,13 @@ function ChapterScreen() {
         </p>
       ) : null}
 
-      <PlayerHeader
-        name={profile.name}
-        team={currentTeamName(state, ruleset)}
-        position={positionField}
-        archetype={{ label: '아키타입', value: archetypeName(ruleset, profile.archetypeId) }}
-        shirtNumber={{
-          label: '등번호',
-          value: state.contract ? String(state.contract.shirtNumber) : '—',
-        }}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-os-2 border-y border-os-border py-os-3">
+        <div className="min-w-0">
+          <p className="truncate font-os font-semibold text-os-text">{profile.name} · {positionField.value}</p>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{currentTeamName(state, ruleset)} · {archetypeName(ruleset, profile.archetypeId)}</p>
+        </div>
+        <span className="os-num font-os font-semibold text-os-text-2">#{state.contract?.shirtNumber ?? '—'}</span>
+      </div>
       <StatusStrip items={proStatusStripItems(state)} />
 
       <section className="os-panel flex flex-col gap-os-2" aria-label="경기 맥락">

@@ -594,8 +594,6 @@ function CreatePlayerScreen() {
                 riskLabel={RISK_LABELS[riskLevel]}
                 effects={[
                   opening.situation,
-                  `출발 배경: ${background.name} · ${background.blurb}`,
-                  ...backgroundEffectLines(background.attributeDeltas),
                   `시작 팀: ${startTeam?.name ?? background.startTeamId}`,
                 ]}
                 selectedLabel="선택됨"
@@ -603,6 +601,15 @@ function CreatePlayerScreen() {
             );
           })}
         </RadioGroup>
+        {selectedBackground !== undefined && selectedOpening !== undefined ? (
+          <aside className="os-creation-note" aria-live="polite">
+            <strong className="block text-os-text">{selectedOpening.title} · {selectedBackground.name}</strong>
+            <span className="mt-os-1 block">{selectedBackground.blurb}</span>
+            <span className="mt-os-2 block font-semibold text-os-text">
+              {backgroundEffectLines(selectedBackground.attributeDeltas).join(' · ')}
+            </span>
+          </aside>
+        ) : null}
         {errors.backgroundId !== undefined ? (
           <p
             id="draft-background-error"

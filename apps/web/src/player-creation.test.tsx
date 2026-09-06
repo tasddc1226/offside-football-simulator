@@ -206,8 +206,8 @@ describe('SCR-003 플레이 스타일', () => {
     const user = userEvent.setup();
     const router = renderAt(`/career/${careerId}/style`);
     await screen.findByRole('heading', { level: 1, name: '플레이 스타일을 고르세요' });
-    expect(screen.getByText(/플레이 핵심은 이 스타일에서 비중이 큰 능력/)).toHaveTextContent(
-      '같은 능력이 두 목록에 함께 나올 수 있습니다',
+    expect(screen.getByText(/핵심 능력과 상대적으로 약한 부분/)).toHaveTextContent(
+      '같은 능력이 두 항목에 함께 나올 수 있습니다',
     );
     expect(screen.getAllByText('플레이 핵심')).toHaveLength(3);
     expect(screen.getAllByText('비교 열세')).toHaveLength(3);

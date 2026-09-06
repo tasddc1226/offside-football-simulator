@@ -118,7 +118,8 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
     await targetOffer.click();
 
     await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
-    await page.getByRole('button', { name: '사인' }).click();
+    await enterTypedSignature(page);
+    await page.getByRole('button', { name: '서명하고 계약 확정' }).click();
 
     await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
     await page.getByRole('button', { name: '커리어 시작' }).click();
@@ -131,7 +132,13 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
   await expect(marketHeading).toBeVisible();
   await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
   await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
-  await page.getByRole('button', { name: '이 조건 수락' }).click();
+  const signedAccept = page.getByRole('button', { name: '서명하고 계약 확정' });
+  if (await signedAccept.isVisible()) {
+    await enterTypedSignature(page);
+    await signedAccept.click();
+  } else {
+    await page.getByRole('button', { name: '현재 팀 잔류 확정' }).click();
+  }
   // 안전 잔류 제안(항상 offers[0])을 수락하면 /transfer-result?rev=N(&interested=K)의 STAY 결과
   // 카드에 도착한다(T-4-011). 그 외 제안도 같은 화면에 도착한다 — "대시보드로"/"새 시즌 준비"
   // 링크를 눌러야 대시보드에 닿는다. rev 뒤에 다른 시장이 붙인 &interested=K가 있을 수 있으므로
@@ -142,6 +149,11 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
     await page.getByRole('link', { name: /^(대시보드로|새 시즌 준비)$/ }).click();
   }
   await expect(page).toHaveURL(/\/career\/[^/]+(?:\/preseason)?$/);
+}
+
+export async function enterTypedSignature(page: Page, name = '김서준'): Promise<void> {
+  await page.getByRole('button', { name: '이름 입력' }).click();
+  await page.getByRole('textbox', { name: '서명할 이름' }).fill(name);
 }
 
 /** 온보딩부터 첫 프로 계약 체결까지(대시보드 도착) 전 구간. first-contract.spec.ts·season.spec.ts가

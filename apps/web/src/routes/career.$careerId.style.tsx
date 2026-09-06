@@ -132,11 +132,11 @@ function StyleScreen() {
     <div className="os-screen">
       <Stepper steps={PLAYER_CREATION_STEPS} currentStepId="style" />
       <ScreenIntro
-        eyebrow="새 커리어 · 2/3"
+        eyebrow="선수 등록 · 플레이 스타일"
         title="플레이 스타일을 고르세요"
         description="모든 스타일에는 무기와 대가가 있습니다. 어떤 선수가 되고 싶은지 선택하세요."
       />
-      <div className="os-panel os-creation-two-up">
+      <div className="flex items-center gap-os-3 border-y border-os-border py-os-3">
         <div className="flex items-center gap-os-3">
           <FootballMark className="h-os-6 w-os-6 shrink-0 text-os-accent" />
           <div className="min-w-0 flex-1">
@@ -144,9 +144,6 @@ function StyleScreen() {
             <p className="os-muted" style={CAPTION_STYLE}>선호 포지션 · {POSITION_LABELS[position]}</p>
           </div>
         </div>
-        <p className="os-creation-note">
-          선호 포지션과 스타일은 커리어의 출발점입니다. 팀 상황과 선택에 따라 실제 역할은 달라질 수 있어요.
-        </p>
       </div>
       <section className="flex flex-col gap-os-3" aria-labelledby="style-compare-heading">
         <h2
@@ -157,7 +154,7 @@ function StyleScreen() {
           나의 경기 방식
         </h2>
         <p className="os-muted" style={CAPTION_STYLE}>
-          플레이 핵심은 이 스타일에서 비중이 큰 능력입니다. 비교 열세는 같은 포지션의 다른 스타일 중 최고 수치보다 낮은 능력이며, 같은 능력이 두 목록에 함께 나올 수 있습니다.
+          각 스타일의 핵심 능력과 상대적으로 약한 부분을 비교하세요. 같은 능력이 두 항목에 함께 나올 수 있습니다.
         </p>
 
         <RadioGroup

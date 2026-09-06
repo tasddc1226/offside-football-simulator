@@ -271,7 +271,10 @@ function SeasonResultScreen() {
         </section>
       </GameResultReveal>
 
-      <section className="os-panel flex flex-col gap-os-4">
+      <details className="os-season-breakdown">
+        <summary>시즌 상세 기록 보기</summary>
+        <div className="mt-os-3 flex flex-col gap-os-3">
+          <section className="os-panel flex flex-col gap-os-4">
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
           공통 지표
         </h2>
@@ -346,7 +349,7 @@ function SeasonResultScreen() {
             </div>
           ))}
         </dl>
-      </section>
+          </section>
 
       {view.isYouth ? (
         <p
@@ -533,7 +536,7 @@ function SeasonResultScreen() {
         </dl>
       </section>
 
-      <section className="os-panel flex flex-col gap-os-4" data-testid="season-compare">
+          <section className="os-panel flex flex-col gap-os-4" data-testid="season-compare">
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
           비교
         </h2>
@@ -546,7 +549,9 @@ function SeasonResultScreen() {
             })
           }
         />
-      </section>
+          </section>
+        </div>
+      </details>
 
       <div className="os-action-dock">
         <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>커리어의 다음 선택</Link>

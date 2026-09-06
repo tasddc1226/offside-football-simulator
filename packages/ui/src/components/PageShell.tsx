@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 export interface PageShellProps {
   children: ReactNode;
@@ -8,10 +8,40 @@ export interface PageShellProps {
 }
 
 export function PageShell({ children, footer, header }: PageShellProps) {
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState<number>();
+
+  useLayoutEffect(() => {
+    const element = headerRef.current;
+    if (!element || !header) {
+      setHeaderHeight(0);
+      return;
+    }
+    const updateHeight = () => setHeaderHeight(element.getBoundingClientRect().height);
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateHeight);
+    observer?.observe(element);
+    return () => {
+      window.removeEventListener('resize', updateHeight);
+      observer?.disconnect();
+    };
+  }, [header]);
+
+  const shellStyle =
+    header && headerHeight === undefined
+      ? undefined
+      : ({ '--os-header-height': `${header ? headerHeight : 0}px` } as CSSProperties);
+
   return (
     <div className="os-shell-canvas">
-      <div className="os-shell">
-        {header}
+      <div className="os-shell" style={shellStyle}>
+        {header ? (
+          <div ref={headerRef} className="os-shell-header">
+            {header}
+          </div>
+        ) : null}
         <main id="game-content" className="os-shell-main" tabIndex={-1}>
           {children}
         </main>

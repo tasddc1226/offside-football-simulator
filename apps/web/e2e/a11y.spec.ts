@@ -313,7 +313,9 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-010');
 
-  await page.getByRole('button', { name: '사인' }).click();
+  await page.getByRole('button', { name: '이름 입력' }).click();
+  await page.getByRole('textbox', { name: '서명할 이름' }).fill('김서준');
+  await page.getByRole('button', { name: '서명하고 계약 확정' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
   await expectNoSeriousOrCriticalViolations(page, 'SCR-010 계약 완료');
   await page.getByRole('button', { name: '커리어 시작' }).click();

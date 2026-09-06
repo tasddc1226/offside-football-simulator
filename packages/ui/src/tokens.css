@@ -1,56 +1,54 @@
-/* OFFSIDE mobile refresh: docs/design/mobile-game-refresh.md.
-   Independently authored tokens; no Toss UI Kit assets or font are distributed.
-   @font-face 선언은 fonts.css(T-0-013, dynamic subset)로 옮겼다. tokens.css는 fonts.css를
-   import하지 않는다 — 앱이 두 파일을 각각 import한다. */
-
+/* OFFSIDE interface tokens. Independently authored; no third-party UI-kit assets. */
 :root {
-  /* DSN-COL-001 라이트 */
-  --os-bg: #f2f5f8;
-  --os-surface: #ffffff;
-  --os-surface-2: #e9eff5;
-  --os-border: #d5dfea;
-  --os-text: #192638;
-  --os-text-2: #52647a;
-  --os-accent: #225ac4;
-  --os-on-accent: #ffffff;
-  --os-line: #146e74;
-  --os-success: #23784f;
-  --os-warning: #845609;
-  --os-danger: #bd3544;
-  --os-neutral: #52647a;
-  --os-focus: #225ac4;
-  --os-canvas: #e5ecf3;
-  --os-hero: #132b40;
-  --os-on-hero: #f5faff;
-  --os-hero-muted: #c3d5e5;
-  --os-shadow: 0 4px 20px rgb(19 43 64 / 4%);
-
-  /* DSN-TYP-001 */
+  color-scheme: light;
+  --os-bg: #f6f8fb;
+  --os-surface: #fff;
+  --os-surface-2: #eef2f6;
+  --os-surface-raised: #fff;
+  --os-border: #dce3eb;
+  --os-border-strong: #bdc9d6;
+  --os-text: #142033;
+  --os-text-2: #5d6b7e;
+  --os-accent: #123b68;
+  --os-accent-hover: #0d3158;
+  --os-accent-soft: #e7eef6;
+  --os-on-accent: #fff;
+  --os-line: #17845b;
+  --os-success: #18794e;
+  --os-warning: #91610b;
+  --os-danger: #b42338;
+  --os-neutral: #5d6b7e;
+  --os-focus: #1769aa;
+  --os-canvas: #edf1f5;
+  --os-hero: #102b48;
+  --os-on-hero: #fff;
+  --os-hero-muted: #c7d6e5;
+  --os-overlay: rgb(9 19 31 / 54%);
+  --os-shadow-sm: 0 1px 2px rgb(20 32 51 / 5%);
+  --os-shadow: 0 10px 30px rgb(20 32 51 / 7%);
+  --os-shadow-lg: 0 24px 64px rgb(8 19 33 / 18%);
   --os-font:
-    'Pretendard Variable', 'Pretendard Fallback', Pretendard, -apple-system, 'Apple SD Gothic Neo',
-    'Noto Sans KR', sans-serif;
-  --os-tracking-display: 0.04em;
-
-  --os-fs-display: 2rem;
-  --os-lh-display: 2.5rem;
-  --os-fs-h1: 1.625rem;
-  --os-lh-h1: 2.125rem;
+    'Pretendard Variable', 'Pretendard Fallback', Pretendard, -apple-system, BlinkMacSystemFont,
+    'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+  --os-tracking-display: -0.035em;
+  --os-fs-display: clamp(2rem, 8vw, 2.625rem);
+  --os-lh-display: 1.08;
+  --os-fs-h1: clamp(1.625rem, 6vw, 2rem);
+  --os-lh-h1: 1.2;
   --os-fs-h2: 1.125rem;
-  --os-lh-h2: 1.625rem;
+  --os-lh-h2: 1.45;
   --os-fs-body: 1rem;
-  --os-lh-body: 1.5rem;
+  --os-lh-body: 1.55;
   --os-fs-caption: 0.8125rem;
-  --os-lh-caption: 1.125rem;
+  --os-lh-caption: 1.45;
   --os-fs-num-xl: 3rem;
-  --os-lh-num-xl: 3.25rem;
+  --os-lh-num-xl: 1.05;
   --os-fs-num-lg: 1.75rem;
-  --os-lh-num-lg: 2rem;
+  --os-lh-num-lg: 1.15;
   --os-fs-num-md: 1.125rem;
-  --os-lh-num-md: 1.5rem;
+  --os-lh-num-md: 1.35;
   --os-fs-num-sm: 0.875rem;
-  --os-lh-num-sm: 1.25rem;
-
-  /* DSN-SPC-001 */
+  --os-lh-num-sm: 1.4;
   --os-space-1: 4px;
   --os-space-2: 8px;
   --os-space-3: 12px;
@@ -61,54 +59,74 @@
   --os-space-8: 64px;
   --os-radius-s: 8px;
   --os-radius-m: 12px;
-  --os-radius-panel: 20px;
+  --os-radius-panel: 18px;
   --os-touch-min: 48px;
-
-  /* DSN-CHN-001, web 채널 값 */
+  --os-content-max: 560px;
+  --os-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --os-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --os-safe-top: env(safe-area-inset-top, 0px);
   --os-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
-
 :root[data-theme='dark'] {
-  --os-bg: #121b28;
-  --os-surface: #1b293a;
-  --os-surface-2: #24354b;
-  --os-border: #3a506a;
-  --os-text: #f3f7fc;
-  --os-text-2: #b0c3d9;
-  --os-accent: #91bbff;
-  --os-on-accent: #10274b;
-  --os-line: #7ad6d3;
-  --os-success: #7fd6a3;
-  --os-warning: #f2c76c;
-  --os-danger: #ff9ea5;
-  --os-neutral: #b0c3d9;
-  --os-focus: #91bbff;
-  --os-canvas: #0c1420;
-  --os-shadow: none;
+  color-scheme: dark;
+  --os-bg: #101722;
+  --os-surface: #172231;
+  --os-surface-2: #202d3d;
+  --os-surface-raised: #1c2939;
+  --os-border: #314155;
+  --os-border-strong: #53667c;
+  --os-text: #f3f6fa;
+  --os-text-2: #afbdcd;
+  --os-accent: #8ebcf0;
+  --os-accent-hover: #a8cdf5;
+  --os-accent-soft: #203b59;
+  --os-on-accent: #0b223b;
+  --os-line: #62c99a;
+  --os-success: #69d19e;
+  --os-warning: #f0c36a;
+  --os-danger: #ff9ca8;
+  --os-neutral: #afbdcd;
+  --os-focus: #8fc6ff;
+  --os-canvas: #0b111a;
+  --os-hero: #193554;
+  --os-on-hero: #f8fbff;
+  --os-hero-muted: #bfd0e2;
+  --os-overlay: rgb(0 0 0 / 68%);
+  --os-shadow-sm: 0 1px 2px rgb(0 0 0 / 18%);
+  --os-shadow: 0 12px 32px rgb(0 0 0 / 24%);
+  --os-shadow-lg: 0 28px 72px rgb(0 0 0 / 46%);
 }
-
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --os-bg: #121b28;
-    --os-surface: #1b293a;
-    --os-surface-2: #24354b;
-    --os-border: #3a506a;
-    --os-text: #f3f7fc;
-    --os-text-2: #b0c3d9;
-    --os-accent: #91bbff;
-    --os-on-accent: #10274b;
-    --os-line: #7ad6d3;
-    --os-success: #7fd6a3;
-    --os-warning: #f2c76c;
-    --os-danger: #ff9ea5;
-    --os-neutral: #b0c3d9;
-    --os-focus: #91bbff;
-    --os-canvas: #0c1420;
-    --os-shadow: none;
+    color-scheme: dark;
+    --os-bg: #101722;
+    --os-surface: #172231;
+    --os-surface-2: #202d3d;
+    --os-surface-raised: #1c2939;
+    --os-border: #314155;
+    --os-border-strong: #53667c;
+    --os-text: #f3f6fa;
+    --os-text-2: #afbdcd;
+    --os-accent: #8ebcf0;
+    --os-accent-hover: #a8cdf5;
+    --os-accent-soft: #203b59;
+    --os-on-accent: #0b223b;
+    --os-line: #62c99a;
+    --os-success: #69d19e;
+    --os-warning: #f0c36a;
+    --os-danger: #ff9ca8;
+    --os-neutral: #afbdcd;
+    --os-focus: #8fc6ff;
+    --os-canvas: #0b111a;
+    --os-hero: #193554;
+    --os-on-hero: #f8fbff;
+    --os-hero-muted: #bfd0e2;
+    --os-overlay: rgb(0 0 0 / 68%);
+    --os-shadow-sm: 0 1px 2px rgb(0 0 0 / 18%);
+    --os-shadow: 0 12px 32px rgb(0 0 0 / 24%);
+    --os-shadow-lg: 0 28px 72px rgb(0 0 0 / 46%);
   }
 }
-
 .os-num {
   font-variant-numeric: tabular-nums;
 }

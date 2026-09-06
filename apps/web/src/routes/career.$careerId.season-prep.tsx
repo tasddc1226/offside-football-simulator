@@ -62,7 +62,6 @@ export const Route = createFileRoute('/career/$careerId/season-prep')({
 });
 
 const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
-const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
 const CAPTION_STYLE = {
   fontSize: 'var(--os-fs-caption)',
   lineHeight: 'var(--os-lh-caption)',
@@ -212,28 +211,27 @@ function SeasonPrepScreen() {
         </p>
       </section>
 
-      <section className="os-panel flex flex-col gap-os-3">
-        <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
-          시즌 일정(12 step)
+      <section className="os-plan-summary" aria-labelledby="selected-plan-title">
+        <p className="os-eyebrow">선택한 계획</p>
+        <h2 id="selected-plan-title" className="os-section-title">
+          {SIMULATION_MODE_LABEL_KO[mode]} · {TRAINING_FOCUS_LABEL_KO[focus]}
         </h2>
-        <SeasonTimeline steps={previewSteps} currentStep={0} />
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-          컵 일정:{' '}
-          {ruleset.leagueCalendar.cupRounds
-            .map((round) => `${CUP_ROUND_LABEL_KO[round.round]} step ${round.step}`)
-            .join(' · ')}
+          모드는 시즌 중 적용되고, 훈련 계획은 시즌 결산 때 능력에 반영됩니다.
         </p>
       </section>
 
-      <section className="os-panel flex flex-col gap-os-3">
-        <h2 className="os-section-title">선택한 계획</h2>
-        <p className="font-os text-os-text" style={BODY_STYLE}>
-          모드: {SIMULATION_MODE_LABEL_KO[mode]} (시즌 중 적용)
-        </p>
-        <p className="font-os text-os-text" style={BODY_STYLE}>
-          훈련 계획: {TRAINING_FOCUS_LABEL_KO[focus]} (시즌 결산 때 능력에 반영, 다음 시즌부터 체감)
-        </p>
-      </section>
+      <details className="os-panel">
+        <summary className="cursor-pointer font-os font-semibold text-os-text">12 step 일정과 컵 일정 보기</summary>
+        <div className="mt-os-3 flex flex-col gap-os-3">
+          <SeasonTimeline steps={previewSteps} currentStep={0} />
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            컵 일정: {ruleset.leagueCalendar.cupRounds
+              .map((round) => `${CUP_ROUND_LABEL_KO[round.round]} step ${round.step}`)
+              .join(' · ')}
+          </p>
+        </div>
+      </details>
 
       {errorMessage ? <ErrorState message={errorMessage} onRetry={handleStart} /> : null}
 

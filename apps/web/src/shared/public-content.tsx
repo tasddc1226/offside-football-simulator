@@ -60,7 +60,7 @@ export function PublicFooter() {
 export function PublicIntroduction() {
   return (
     <div className="os-screen">
-      <section className="os-panel flex flex-col items-center gap-os-4 text-center">
+      <section className="flex flex-col gap-os-4 py-os-4">
         <p className="os-eyebrow">FOOTBALL CAREER STORY</p>
         <h1
           className="font-os font-bold text-os-text"
@@ -68,42 +68,47 @@ export function PublicIntroduction() {
         >
           OFFSIDE
         </h1>
-        <p className="font-os font-semibold text-os-text">이번 생은 프리미어리거!</p>
-        <p className="font-os text-os-text-2">
+        <p className="font-os font-semibold text-os-text">이번 생은 프리미어리거! 한 명의 선수로 데뷔부터 은퇴까지.</p>
+        <p className="max-w-prose font-os text-os-text-2">
           유망주가 되어 훈련과 경기 사이의 선택을 내리고, 시즌을 거듭하며 한 선수의 축구 인생을
           만들어 가는 커리어 스토리 시뮬레이션입니다.
         </p>
-        <Link to="/onboarding" className={buttonClassName('primary', 'w-full')} style={buttonStyle}>
-          게임 시작
-        </Link>
+        <div className="flex flex-col gap-os-2 sm:flex-row">
+          <Link aria-label="게임 시작" to="/onboarding" className={buttonClassName('primary', 'w-full')} style={buttonStyle}>
+            내 선수 만들기
+          </Link>
+          <a href="/guide" className={buttonClassName('secondary', 'w-full')} style={buttonStyle}>
+            먼저 게임 알아보기
+          </a>
+        </div>
       </section>
       <section aria-labelledby="career-story" className="flex flex-col gap-os-3">
         <h2 id="career-story" className="os-section-title">
           선택이 쌓여 선수가 됩니다
         </h2>
-        <div className="grid gap-os-3">
-          <Card>
-            <h3 className="font-os font-semibold text-os-text">19세 유망주 만들기</h3>
-            <p className="mt-os-2 font-os text-os-text-2">
+        <ol className="grid gap-os-3 border-y border-os-border py-os-3">
+          <li className="grid grid-cols-[2rem_1fr] gap-os-3">
+            <span className="os-num font-os font-bold text-os-accent">01</span><div><h3 className="font-os font-semibold text-os-text">19세 유망주 만들기</h3>
+            <p className="mt-os-1 font-os text-os-text-2">
               이름, 성장 배경, 성별과 선호 포지션, 플레이 성향을 정하고 프로 무대를 향한 첫 커리어를
               시작합니다.
-            </p>
-          </Card>
-          <Card>
-            <h3 className="font-os font-semibold text-os-text">시즌과 경기 이야기</h3>
-            <p className="mt-os-2 font-os text-os-text-2">
+            </p></div>
+          </li>
+          <li className="grid grid-cols-[2rem_1fr] gap-os-3">
+            <span className="os-num font-os font-bold text-os-accent">02</span><div><h3 className="font-os font-semibold text-os-text">시즌과 경기 이야기</h3>
+            <p className="mt-os-1 font-os text-os-text-2">
               경기 일정과 커리어 사건을 만나고, 매 순간의 선택에 따라 성장과 다음 기회가 달라집니다.
-            </p>
-          </Card>
-          <Card>
-            <h3 className="font-os font-semibold text-os-text">이적부터 은퇴까지</h3>
-            <p className="mt-os-2 font-os text-os-text-2">
+            </p></div>
+          </li>
+          <li className="grid grid-cols-[2rem_1fr] gap-os-3">
+            <span className="os-num font-os font-bold text-os-accent">03</span><div><h3 className="font-os font-semibold text-os-text">이적부터 은퇴까지</h3>
+            <p className="mt-os-1 font-os text-os-text-2">
               제안을 검토하고 팀을 옮기며 기록을 쌓아, 한 선수의 커리어를 마지막까지 완성합니다.
-            </p>
-          </Card>
-        </div>
+            </p></div>
+          </li>
+        </ol>
       </section>
-      <figure className="os-panel flex flex-col items-center gap-os-3">
+      <figure className="flex flex-col items-center gap-os-3 border-t border-os-border pt-os-4">
         <img
           src="/gameplay-career.png"
           width="780"

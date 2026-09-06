@@ -28,6 +28,8 @@ import {
 } from '../engine/use-career.js';
 import { useSyncState } from '../engine/use-sync.js';
 import { screenForCareer } from '../shared/career-route.js';
+import { currentTeamName } from '../shared/current-team.js';
+import { rulesetForCareer } from '../engine/content.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import {
   CAREER_STATUS_LABELS,
@@ -100,6 +102,8 @@ function CareerCard({
   const name = displayName(summary);
   const position = state.player.profile?.primaryPosition ?? state.player.draft.position;
   const positionLabel = position ? POSITION_LABELS[position] : '—';
+  const team = state.player.profile === null ? null : currentTeamName(state, rulesetForCareer(state));
+  const ovr = state.player.profile?.baseOvr;
   const syncState = useSyncState(record.id);
   // T-2-012 D-54: 현재 시즌 조회가 아직 없으면(로딩·실패) 판단할 근거가 없으니 배지를 달지 않는다.
   const serviceSeasonBadge = serviceSeasonBadgeLabel(
@@ -172,7 +176,7 @@ function CareerCard({
       </div>
 
       <dl
-        className="grid grid-cols-2 gap-os-4 rounded-os-m bg-os-surface-2 p-os-4 font-os text-os-text-2"
+        className="grid grid-cols-2 gap-x-os-4 gap-y-os-3 border-y border-os-border py-os-3 font-os text-os-text-2 sm:grid-cols-4"
         style={CAPTION_STYLE}
       >
         <div>
@@ -183,6 +187,18 @@ function CareerCard({
           <dt>나이</dt>
           <dd className="os-num mt-os-1 font-semibold text-os-text">{state.age}</dd>
         </div>
+        {team !== null ? (
+          <div>
+            <dt>팀</dt>
+            <dd className="mt-os-1 font-semibold text-os-text">{team}</dd>
+          </div>
+        ) : null}
+        {ovr !== undefined ? (
+          <div>
+            <dt>OVR</dt>
+            <dd className="os-num mt-os-1 font-semibold text-os-text">{ovr}</dd>
+          </div>
+        ) : null}
       </dl>
       <SyncBadge state={syncState} />
 
@@ -354,7 +370,7 @@ function HubScreen() {
       ) : (
         <div className="flex flex-col gap-os-4">
           <div className="flex items-center justify-between gap-os-3">
-            <h2 className="os-section-title">나의 커리어</h2>
+            <h2 className="os-section-title">선수 목록</h2>
             <span className="os-num os-muted" style={CAPTION_STYLE}>
               {query.data.length}명
             </span>
@@ -371,9 +387,9 @@ function HubScreen() {
           <Tabs value={selectedTab} onValueChange={changeTab}>
             <div className="overflow-x-auto">
               <TabsList aria-label="커리어 허브 구역" className="min-w-max">
-                <TabsTrigger value="resume">이어하기</TabsTrigger>
-                <TabsTrigger value="squad">선수단</TabsTrigger>
-                <TabsTrigger value="retired">은퇴 기록</TabsTrigger>
+                <TabsTrigger value="resume">최근 선수</TabsTrigger>
+                <TabsTrigger value="squad">다른 선수</TabsTrigger>
+                <TabsTrigger value="retired">보관·은퇴</TabsTrigger>
               </TabsList>
             </div>
             {(() => {

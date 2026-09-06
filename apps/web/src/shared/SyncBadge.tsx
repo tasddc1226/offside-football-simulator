@@ -53,7 +53,10 @@ export function describeSyncState(state: CareerSyncState): SyncBadgeCopy {
   }
 }
 
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
 
 export function SyncBadge({ state }: { state: CareerSyncState }) {
   const copy = describeSyncState(state);
@@ -69,7 +72,7 @@ export function SyncBadge({ state }: { state: CareerSyncState }) {
   }, [state]);
 
   return (
-    <span className="inline-flex items-center gap-os-1 font-os" style={CAPTION_STYLE}>
+    <span className="os-sync-badge" data-sync-state={state.kind} style={CAPTION_STYLE}>
       <span aria-hidden="true" className={TONE_CLASS[copy.tone]}>
         {TONE_ICON[copy.tone]}
       </span>
