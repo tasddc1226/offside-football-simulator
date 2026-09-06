@@ -1,4 +1,5 @@
 import { GetCareerResponseSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { loadRetirementArtifacts, loadRuleset } from '@offside/content';
 import { canonicalize, simulate, type DomainSnapshot, type JsonValue } from '@offside/domain';
 import { career06SettledEngineCommands } from '@offside/fixtures';
 import { rulesetProto } from '../../../../packages/domain/src/__fixtures__/career-01.js';
@@ -68,15 +69,21 @@ async function put(ctx: TestD1, cookie: string, careerId: string, body: unknown,
   );
 }
 
-async function setup(ctx: TestD1) {
+async function setup(
+  ctx: TestD1,
+  versions = { rulesetVersion: '1.0.0', contentPackVersion: '0.1.0' },
+) {
+  const simulationRuleset = versions.rulesetVersion === '1.1.0'
+    ? loadRuleset('1.1.0')
+    : rulesetProto;
   await upsertServiceSeason(ctx.db, {
     id: SERVICE_SEASON_ID,
     name: 'Retirement sync',
     status: 'ACTIVE',
     startsAt: '2026-01-01T00:00:00Z',
     endsAt: '2026-12-31T23:59:59Z',
-    rulesetVersion: '1.0.0',
-    contentPackVersion: '0.1.0',
+    rulesetVersion: versions.rulesetVersion,
+    contentPackVersion: versions.contentPackVersion,
     challengeSetId: 'test',
   });
   const cookie = await issueCookie(ctx);
@@ -85,15 +92,25 @@ async function setup(ctx: TestD1) {
   const all = career06SettledEngineCommands(() => `retirement-engine-${commandCounter++}`);
   const records: Record<string, unknown>[] = [];
   let initial: { snapshot: DomainSnapshot; records: Record<string, unknown>[] } | null = null;
-  for (const command of all) {
+  for (const sourceCommand of all) {
+    const command = sourceCommand.type === 'CREATE_CAREER'
+      ? {
+          ...sourceCommand,
+          payload: {
+            ...sourceCommand.payload,
+            rulesetVersion: versions.rulesetVersion,
+            contentPackVersion: versions.contentPackVersion,
+          },
+        }
+      : sourceCommand;
     if (command.type === 'START_SEASON' && snapshot !== null)
       initial = { snapshot, records: records.slice() };
     const result = simulate({
       snapshot,
       command,
-      ruleset: rulesetProto,
-      rulesetVersion: '1.0.0',
-      contentPackVersion: '0.1.0',
+      ruleset: simulationRuleset,
+      rulesetVersion: versions.rulesetVersion,
+      contentPackVersion: versions.contentPackVersion,
     });
     if (!result.ok) throw new Error(`${command.type} failed: ${result.error.message}`);
     snapshot = result.snapshot;
@@ -107,8 +124,10 @@ async function setup(ctx: TestD1) {
   }
   if (!snapshot || !initial) throw new Error('fixture replay incomplete');
   const active = initial.snapshot;
+  const marketClosed =
+    snapshot.state.pending?.kind === 'OFFERS' || snapshot.state.pending?.kind === 'CONTRACT';
   const closed =
-    snapshot.state.pending?.kind === 'OFFERS' || snapshot.state.pending?.kind === 'CONTRACT'
+    marketClosed
       ? simulate({
           snapshot,
           command: {
@@ -117,9 +136,9 @@ async function setup(ctx: TestD1) {
             commandId: 'retirement-market-close',
             expectedRevision: snapshot.revision,
           },
-          ruleset: rulesetProto,
-          rulesetVersion: '1.0.0',
-          contentPackVersion: '0.1.0',
+          ruleset: simulationRuleset,
+          rulesetVersion: versions.rulesetVersion,
+          contentPackVersion: versions.contentPackVersion,
         })
       : { ok: true as const, snapshot };
   if (!closed.ok) throw new Error('market close failed');
@@ -131,19 +150,21 @@ async function setup(ctx: TestD1) {
       commandId: 'retirement-sync-retire',
       expectedRevision: closed.snapshot.revision,
     },
-    ruleset: rulesetProto,
-    rulesetVersion: '1.0.0',
-    contentPackVersion: '0.1.0',
+    ruleset: simulationRuleset,
+    rulesetVersion: versions.rulesetVersion,
+    contentPackVersion: versions.contentPackVersion,
   });
   if (!retired.ok) throw new Error(`RETIRE failed: ${retired.error.message}`);
   const finalRecords = records.slice(initial.records.length);
-  finalRecords.push({
-    revision: closed.snapshot.revision,
-    commandId: 'retirement-market-close',
-    commandType: 'REJECT_OFFER',
-    payload: { offerId: null },
-    resultHash: closed.snapshot.stateHash,
-  });
+  if (marketClosed) {
+    finalRecords.push({
+      revision: closed.snapshot.revision,
+      commandId: 'retirement-market-close',
+      commandType: 'REJECT_OFFER',
+      payload: { offerId: null },
+      resultHash: closed.snapshot.stateHash,
+    });
+  }
   finalRecords.push({
     revision: retired.snapshot.revision,
     commandId: 'retirement-sync-retire',
@@ -170,6 +191,46 @@ async function setup(ctx: TestD1) {
 }
 
 describe('retirement Archive sync', () => {
+  it('roundtrips a newly retired 1.1/0.3 career with the published Legacy 1.1 reference', async () => {
+    const ctx = await createTestD1();
+    try {
+      const state = await setup(ctx, {
+        rulesetVersion: '1.1.0',
+        contentPackVersion: '0.3.0',
+      });
+      const artifacts = loadRetirementArtifacts('1.1.0', '0.3.0');
+      const referencePopulationId = artifacts.legacyReferencePopulation?.id;
+      if (referencePopulationId === undefined) throw new Error('published population missing');
+
+      const response = await put(
+        ctx,
+        state.cookie,
+        state.careerId,
+        {
+          ...state.body,
+          retirementLegacyVersion: '1.1.0',
+          retirementReferencePopulationId: referencePopulationId,
+        },
+        'retirement-legacy-110-sync',
+      );
+      expect(response.status, await response.clone().text()).toBe(200);
+
+      const recovered = await createApp().request(
+        `/v1/careers/${state.careerId}`,
+        { headers: { Cookie: state.cookie } },
+        ctx.env,
+      );
+      const parsed = successEnvelope(GetCareerResponseSchema).parse(await recovered.json());
+      expect(JSON.parse(parsed.data.retirementArchive!.legacy)).toMatchObject({
+        legacyVersion: '1.1.0',
+        referencePopulationId,
+        percentileHidden: false,
+      });
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
   it('rejects a changed evaluation pin on an already-retired snapshot without rewriting it', async () => {
     const ctx = await createTestD1();
     try {

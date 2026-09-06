@@ -16,6 +16,26 @@ describe('loadRetirementArtifacts', () => {
     expect(first.rulesetChecksum).toBe(rulesetManifest.checksum);
     expect(first.contentPackChecksum).toBe(packManifest.checksum);
     expect(Object.isFrozen(first)).toBe(true);
+    expect(first.legacyVersion).toBeUndefined();
+    expect(first.legacyReferencePopulation).toBeUndefined();
+  });
+
+  it('activates the published Legacy 1.1 reference only for the 1.1/0.3 release pair', () => {
+    const artifacts = loadRetirementArtifacts('1.1.0', '0.3.0');
+
+    expect(artifacts.legacyVersion).toBe('1.1.0');
+    expect(artifacts.legacyReferencePopulation).toMatchObject({
+      legacyVersion: '1.1.0',
+      rulesetVersion: '1.1.0',
+    });
+    expect(artifacts.legacyReferencePopulation?.id).toMatch(/\S/);
+  });
+
+  it('does not retrofit Legacy 1.1 onto the Legacy 1.0 ruleset', () => {
+    const artifacts = loadRetirementArtifacts('1.0.0', '0.3.0');
+
+    expect(artifacts.legacyVersion).toBeUndefined();
+    expect(artifacts.legacyReferencePopulation).toBeUndefined();
   });
 
   it('produces different content checksums for registered pack versions', () => {

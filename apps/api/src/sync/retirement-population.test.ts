@@ -5,8 +5,8 @@ import { selectRetirementReferencePopulation } from './retirement.js';
 // Selection contract only; these arrays are not production population evidence.
 const population: LegacyReferencePopulation = {
   id: 'known-reference',
-  legacyVersion: '1.0.0',
-  rulesetVersion: '1.0.0',
+  legacyVersion: '1.1.0',
+  rulesetVersion: '1.1.0',
   scores: { GK: [], DF: [], MF: [], FW: [] },
 };
 

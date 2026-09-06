@@ -11,6 +11,8 @@ const ARTIFACTS = { rulesetVersion: '1.0.0', rulesetChecksum: 'a'.repeat(64), co
 const POPULATION: LegacyReferencePopulation = { id: 'test-population-10k', legacyVersion: '1.0.0', rulesetVersion: '1.0.0', scores: { GK: Array(10_000).fill(50), DF: Array(10_000).fill(50), MF: Array(10_000).fill(50), FW: Array(10_000).fill(50) } };
 const POPULATED_ARTIFACTS = { ...ARTIFACTS, legacyReferencePopulation: POPULATION } as const;
 const VERSIONED_ARTIFACTS = { ...ARTIFACTS, legacyVersion: '1.1.0' as const };
+const VERSIONED_POPULATION = { ...POPULATION, id: 'test-population-1.1-10k', legacyVersion: '1.1.0' as const };
+const VERSIONED_POPULATED_ARTIFACTS = { ...VERSIONED_ARTIFACTS, legacyReferencePopulation: VERSIONED_POPULATION } as const;
 const MISMATCHED_ARTIFACTS = { ...ARTIFACTS, legacyReferencePopulation: { ...POPULATION, id: 'different-population-10k' } } as const;
 
 async function responseFixture(runtimeArtifacts: RetirementRuntimeArtifacts = ARTIFACTS): Promise<{ response: GetCareerResponse; archive: ReturnType<typeof createCareerArchiveCore>; legacy: ReturnType<typeof createLegacyResult>; store: MemoryLocalStore; engine: ReturnType<typeof createEngineClient> }> {
@@ -101,6 +103,32 @@ describe('retirement recovery roundtrip', () => {
     expect(loaded?.referencePopulationId).toBeNull();
     expect(loaded?.percentileHidden).toBe(true);
     expect(loaded?.hash).toBe(source.legacy.hash);
+  });
+
+  it('pins the activated policy and population for a new result and imports it byte-for-byte', async () => {
+    const source = await responseFixture(VERSIONED_POPULATED_ARTIFACTS);
+    expect(source.legacy).toMatchObject({
+      legacyVersion: '1.1.0',
+      referencePopulationId: VERSIONED_POPULATION.id,
+      percentileHidden: false,
+    });
+    expect(await source.engine.buildSyncBody(source.archive.binding.careerId)).toMatchObject({
+      retirementLegacyVersion: '1.1.0',
+      retirementReferencePopulationId: VERSIONED_POPULATION.id,
+    });
+
+    const store = new MemoryLocalStore();
+    const imported = await importCareerFromServer(store, source.response, {
+      createdServiceSeasonId: source.archive.binding.createdServiceSeasonId,
+      now: '2026-09-05T00:00:00.000Z',
+      retirementArtifacts: () => VERSIONED_POPULATED_ARTIFACTS,
+    });
+    expect(imported.ok).toBe(true);
+    expect(
+      await store.transaction('readonly', (tx) =>
+        tx.kv.get(legacyResultKey(source.archive.binding.careerId)),
+      ),
+    ).toEqual(source.legacy);
   });
 
   it('rejects a populated Legacy when the resolver is missing or has a different population', async () => {
