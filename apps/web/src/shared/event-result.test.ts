@@ -58,7 +58,10 @@ describe('resolveEventResultView', () => {
   it('결과 태그는 저장 ID를 보존한 채 화면에서만 읽기 좋은 라벨로 바꾼다', () => {
     expect(eventResultTagLabel('진로_학교_성인훈련')).toBe('학교·성인 훈련 경로');
     expect(eventResultTagLabel('역할_시험_협의')).toBe('역할 시험 협의 중');
-    expect(eventResultTagLabel('새_태그')).toBe('새 태그');
+  });
+
+  it('카탈로그에 없는 태그 id는 원문을 노출하지 않도록 null을 돌려준다', () => {
+    expect(eventResultTagLabel('새_태그')).toBeNull();
   });
 
   it('결과 상세는 상한 적용 뒤 저장값 차이와 평판 단위를 표시한다', () => {

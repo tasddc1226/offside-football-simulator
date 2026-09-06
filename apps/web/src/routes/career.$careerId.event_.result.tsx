@@ -147,7 +147,7 @@ function EventResultScreen() {
           title={view.title}
           body={view.body}
           effects={details.actualEffects ?? view.effects}
-          tags={view.tags.map(eventResultTagLabel)}
+          tags={view.tags.map(eventResultTagLabel).filter((label): label is string => label !== null)}
         />
       </GameResultReveal>
       <p className="os-muted">{details.actualEffects === null
