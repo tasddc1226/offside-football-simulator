@@ -12,6 +12,8 @@ describe('useApplyTheme', () => {
     document.documentElement.removeAttribute('data-theme');
     document.documentElement.removeAttribute('data-text-scale');
     document.documentElement.removeAttribute('data-reduced-motion');
+    document.documentElement.removeAttribute('data-accent');
+    useUiStore.setState({ accentPreset: 'DEFAULT' });
   });
 
   it('SYSTEM이면 data-theme 속성을 제거한다', () => {
@@ -78,6 +80,20 @@ describe('useApplyTheme', () => {
     });
 
     expect(document.documentElement.hasAttribute('data-reduced-motion')).toBe(false);
+  });
+
+  it('accentPreset을 고르면 data-accent를 설정하고, DEFAULT로 되돌리면 지운다', () => {
+    renderHook(() => useApplyTheme());
+
+    act(() => {
+      useUiStore.getState().setAccentPreset('green');
+    });
+    expect(document.documentElement.dataset.accent).toBe('green');
+
+    act(() => {
+      useUiStore.getState().setAccentPreset('DEFAULT');
+    });
+    expect(document.documentElement.hasAttribute('data-accent')).toBe(false);
   });
 });
 
@@ -158,6 +174,15 @@ describe('hydrateUiStore', () => {
     await hydrateUiStore(store);
 
     expect(useUiStore.getState()).toMatchObject(DEFAULTS);
+  });
+
+  it('accentPreset이 없던 옛 저장값도 DEFAULT로 안전하게 읽는다', async () => {
+    const store = new MemoryLocalStore();
+    await store.transaction('readwrite', (tx) => tx.kv.put('ui:settings', DEFAULTS));
+
+    await hydrateUiStore(store);
+
+    expect(useUiStore.getState().accentPreset).toBe('DEFAULT');
   });
 
   it('onboardingSeen이 boolean이 아니면 기본값으로 대체한다', async () => {

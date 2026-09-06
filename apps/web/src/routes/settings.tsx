@@ -50,6 +50,7 @@ import { queryClient } from '../shared/query-client.js';
 import { formatLocalDate, formatLocalDateTime } from '../shared/format.js';
 import { validateRecoveryCodeInput } from '../shared/recovery-code-input.js';
 import { SyncBadge } from '../shared/SyncBadge.js';
+import { AccentPresetPicker } from '../shared/AccentPresetPicker.js';
 import {
   useUiStore,
   type ReducedMotionPreference,
@@ -1263,10 +1264,12 @@ function SettingsScreen() {
   const theme = useUiStore((state) => state.theme);
   const reducedMotion = useUiStore((state) => state.reducedMotion);
   const textScale = useUiStore((state) => state.textScale);
+  const accentPreset = useUiStore((state) => state.accentPreset);
   const defaultSimulationMode = useUiStore((state) => state.defaultSimulationMode);
   const setTheme = useUiStore((state) => state.setTheme);
   const setReducedMotion = useUiStore((state) => state.setReducedMotion);
   const setTextScale = useUiStore((state) => state.setTextScale);
+  const setAccentPreset = useUiStore((state) => state.setAccentPreset);
   const setDefaultSimulationMode = useUiStore((state) => state.setDefaultSimulationMode);
 
   useEffect(() => {
@@ -1347,6 +1350,8 @@ function SettingsScreen() {
               ))}
             </RadioGroup>
           </section>
+
+          <AccentPresetPicker value={accentPreset} onValueChange={setAccentPreset} />
 
           <section className="flex flex-col gap-os-3">
             <h2

@@ -84,6 +84,22 @@ const darkBlock = extractBlock(css, /:root\[data-theme=['"]dark['"]\]\s*\{/);
 const light = parseVars(lightBlock);
 const dark = { ...light, ...parseVars(darkBlock) };
 
+// UX-004 포인트 색상 프리셋. tokens.css의 id 목록과 맞춰 둔다(색을 더하거나 빼면 여기도 고친다).
+const ACCENT_PRESET_IDS = ['green', 'violet', 'crimson', 'amber', 'mono'];
+
+/** @param {string} id */
+function presetVars(id) {
+  const lightPresetBlock = extractBlock(css, new RegExp(`:root\\[data-accent=['"]${id}['"]\\]\\s*\\{`));
+  const darkPresetBlock = extractBlock(
+    css,
+    new RegExp(`:root\\[data-theme=['"]dark['"]\\]\\[data-accent=['"]${id}['"]\\]\\s*\\{`),
+  );
+  return {
+    light: { ...light, ...parseVars(lightPresetBlock) },
+    dark: { ...dark, ...parseVars(darkPresetBlock) },
+  };
+}
+
 // 텍스트: 4.5:1. [전경, 배경]
 const TEXT_PAIRS = [
   ['text', 'bg'],
@@ -123,7 +139,33 @@ function checkTheme(themeName, vars) {
   return rows;
 }
 
-const rows = [...checkTheme('light', light), ...checkTheme('dark', dark)];
+// 프리셋은 accent 계열만 새로 정의하므로(다른 토큰은 기본 테마 값을 그대로 물려받음) 이 두 쌍만
+// 다시 본다. 나머지 쌍은 위 checkTheme('light'|'dark', ...)가 이미 확인했다.
+const ACCENT_PAIRS = [
+  ['on-accent', 'accent'],
+  ['accent', 'surface'],
+];
+
+/**
+ * @param {string} themeName
+ * @param {Record<string, string>} vars
+ */
+function checkAccentPairs(themeName, vars) {
+  return ACCENT_PAIRS.map(([fg, bg]) => {
+    const ratio = contrastRatio(vars[`os-${fg}`], vars[`os-${bg}`]);
+    return { theme: themeName, fg, bg, ratio, min: 4.5, pass: ratio >= 4.5 };
+  });
+}
+
+const presetRows = ACCENT_PRESET_IDS.flatMap((id) => {
+  const { light: lightPreset, dark: darkPreset } = presetVars(id);
+  return [
+    ...checkAccentPairs(`light/${id}`, lightPreset),
+    ...checkAccentPairs(`dark/${id}`, darkPreset),
+  ];
+});
+
+const rows = [...checkTheme('light', light), ...checkTheme('dark', dark), ...presetRows];
 
 let allPass = true;
 for (const row of rows) {

@@ -13,6 +13,12 @@
   --os-accent-hover: #0d3158;
   --os-accent-soft: #e7eef6;
   --os-on-accent: #fff;
+  --os-swatch-default: #123b68;
+  --os-swatch-green: #125c3f;
+  --os-swatch-violet: #3c2a7a;
+  --os-swatch-crimson: #7a1f30;
+  --os-swatch-amber: #7a4b0a;
+  --os-swatch-mono: #33404f;
   --os-line: #17845b;
   --os-success: #18794e;
   --os-warning: #91610b;
@@ -67,6 +73,47 @@
   --os-safe-top: env(safe-area-inset-top, 0px);
   --os-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
+/*
+ * UX-004 포인트 색상 프리셋. apps/web의 ui-store가 document.documentElement에 setAttribute하는
+ * data-accent 값별로 --os-accent·--os-accent-hover·--os-accent-soft만 재정의한다('DEFAULT'는
+ * 속성을 아예 지워 이 블록들과 매치되지 않게 하고 위 :root 베이스의 네이비 값을 그대로 쓴다).
+ * --os-on-accent는 두 테마 모두 이 값들과 4.5:1을 넘도록 골라 손대지 않는다(각 값의 계산 근거는
+ * PR 본문 참고). 라이트 쪽은 아래 :root[data-accent] 블록, 다크 쪽은 그 아래
+ * :root[data-theme='dark'][data-accent] 블록과 파일 끝의 @media(prefers-color-scheme: dark)
+ * 블록에 같은 값을 중복 정의한다 — 기존 다크 테마 블록이 이미 이 두 곳에 값을 중복해 두는 방식과
+ * 같다(명시적 data-theme='dark'와 시스템 선호 각각을 잡기 위함). data-accent만 있고 data-theme이
+ * 없는 :root[data-accent] 블록은 특이도가 :root[data-theme='dark']와 같아 파일 순서상 그 블록에
+ * 덮이므로, 다크일 때는 항상 더 높은 특이도의 조합 블록이 최종값을 정한다.
+ *
+ * --os-swatch-*(위 :root 베이스에 정의)는 별개다: data-accent와 무관하게 항상 6개 값 모두 존재해
+ * AccentPresetPicker가 현재 선택과 상관없이 모든 프리셋 스와치를 동시에 그릴 수 있게 한다. 테마별
+ * 색만 다르므로 다크 블록·다크 media 블록에서 값만 다시 정의한다(다른 --os-* 토큰과 같은 방식).
+ */
+:root[data-accent='green'] {
+  --os-accent: #125c3f;
+  --os-accent-hover: #0e4a32;
+  --os-accent-soft: #e3f2ea;
+}
+:root[data-accent='violet'] {
+  --os-accent: #3c2a7a;
+  --os-accent-hover: #2f2060;
+  --os-accent-soft: #ece7f8;
+}
+:root[data-accent='crimson'] {
+  --os-accent: #7a1f30;
+  --os-accent-hover: #611926;
+  --os-accent-soft: #f7e6ea;
+}
+:root[data-accent='amber'] {
+  --os-accent: #7a4b0a;
+  --os-accent-hover: #613c08;
+  --os-accent-soft: #f7ecdc;
+}
+:root[data-accent='mono'] {
+  --os-accent: #33404f;
+  --os-accent-hover: #28323e;
+  --os-accent-soft: #e9edf1;
+}
 :root[data-theme='dark'] {
   color-scheme: dark;
   --os-bg: #101722;
@@ -81,6 +128,12 @@
   --os-accent-hover: #a8cdf5;
   --os-accent-soft: #203b59;
   --os-on-accent: #0b223b;
+  --os-swatch-default: #8ebcf0;
+  --os-swatch-green: #7fd7ab;
+  --os-swatch-violet: #bda8f2;
+  --os-swatch-crimson: #f0a3ae;
+  --os-swatch-amber: #f0c37a;
+  --os-swatch-mono: #c7d0da;
   --os-line: #62c99a;
   --os-success: #69d19e;
   --os-warning: #f0c36a;
@@ -95,6 +148,31 @@
   --os-shadow-sm: 0 1px 2px rgb(0 0 0 / 18%);
   --os-shadow: 0 12px 32px rgb(0 0 0 / 24%);
   --os-shadow-lg: 0 28px 72px rgb(0 0 0 / 46%);
+}
+:root[data-theme='dark'][data-accent='green'] {
+  --os-accent: #7fd7ab;
+  --os-accent-hover: #9be3c0;
+  --os-accent-soft: #1f3f30;
+}
+:root[data-theme='dark'][data-accent='violet'] {
+  --os-accent: #bda8f2;
+  --os-accent-hover: #cdbdf6;
+  --os-accent-soft: #2f2657;
+}
+:root[data-theme='dark'][data-accent='crimson'] {
+  --os-accent: #f0a3ae;
+  --os-accent-hover: #f4b8c1;
+  --os-accent-soft: #4a2530;
+}
+:root[data-theme='dark'][data-accent='amber'] {
+  --os-accent: #f0c37a;
+  --os-accent-hover: #f4d194;
+  --os-accent-soft: #4a3820;
+}
+:root[data-theme='dark'][data-accent='mono'] {
+  --os-accent: #c7d0da;
+  --os-accent-hover: #d7dee6;
+  --os-accent-soft: #333e4a;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
@@ -111,6 +189,12 @@
     --os-accent-hover: #a8cdf5;
     --os-accent-soft: #203b59;
     --os-on-accent: #0b223b;
+    --os-swatch-default: #8ebcf0;
+    --os-swatch-green: #7fd7ab;
+    --os-swatch-violet: #bda8f2;
+    --os-swatch-crimson: #f0a3ae;
+    --os-swatch-amber: #f0c37a;
+    --os-swatch-mono: #c7d0da;
     --os-line: #62c99a;
     --os-success: #69d19e;
     --os-warning: #f0c36a;
@@ -125,6 +209,33 @@
     --os-shadow-sm: 0 1px 2px rgb(0 0 0 / 18%);
     --os-shadow: 0 12px 32px rgb(0 0 0 / 24%);
     --os-shadow-lg: 0 28px 72px rgb(0 0 0 / 46%);
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-accent='green'] {
+    --os-accent: #7fd7ab;
+    --os-accent-hover: #9be3c0;
+    --os-accent-soft: #1f3f30;
+  }
+  :root:not([data-theme='light'])[data-accent='violet'] {
+    --os-accent: #bda8f2;
+    --os-accent-hover: #cdbdf6;
+    --os-accent-soft: #2f2657;
+  }
+  :root:not([data-theme='light'])[data-accent='crimson'] {
+    --os-accent: #f0a3ae;
+    --os-accent-hover: #f4b8c1;
+    --os-accent-soft: #4a2530;
+  }
+  :root:not([data-theme='light'])[data-accent='amber'] {
+    --os-accent: #f0c37a;
+    --os-accent-hover: #f4d194;
+    --os-accent-soft: #4a3820;
+  }
+  :root:not([data-theme='light'])[data-accent='mono'] {
+    --os-accent: #c7d0da;
+    --os-accent-hover: #d7dee6;
+    --os-accent-soft: #333e4a;
   }
 }
 .os-num {
