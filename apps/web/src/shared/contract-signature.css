@@ -1,0 +1,57 @@
+.os-signature {
+  display: flex;
+  flex-direction: column;
+  gap: var(--os-space-3);
+  padding: var(--os-space-4);
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-panel);
+  background: var(--os-surface);
+}
+.os-signature-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--os-space-2);
+}
+.os-signature-pad {
+  width: 100%;
+  min-height: 8.5rem;
+  border: 1px solid var(--os-border-strong);
+  border-radius: var(--os-radius-m);
+  background: var(--os-surface-2);
+  touch-action: none;
+  cursor: crosshair;
+}
+.os-signature-pad[data-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.os-signature-pad polyline {
+  fill: none;
+  stroke: var(--os-text);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.os-signature-line {
+  fill: none;
+  stroke: var(--os-border);
+  stroke-width: 2;
+  stroke-dasharray: 10 8;
+}
+.os-signature-name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--os-space-2);
+  color: var(--os-text-2);
+  font: 600 var(--os-fs-caption)/var(--os-lh-caption) var(--os-font);
+}
+.os-signature-name input {
+  min-height: var(--os-touch-min);
+  padding: var(--os-space-3);
+  border: 1px solid var(--os-border-strong);
+  border-radius: var(--os-radius-m);
+  background: var(--os-surface-2);
+  color: var(--os-text);
+  font: 700 var(--os-fs-body)/var(--os-lh-body) var(--os-font);
+}

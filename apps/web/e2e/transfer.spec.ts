@@ -216,7 +216,9 @@ test('TEST-E2E-003(a): 3개 이상 제안 비교→협상→FREE_AGENT 확정→
   expect(revisionAfterNegotiation).toBe(revisionBeforeNegotiation + 1);
   await expect(page.getByTestId('negotiation-result-live')).toContainText('조정되어');
 
-  const accept = page.getByRole('button', { name: '이 조건 수락' });
+  await page.getByRole('button', { name: '이름 입력' }).click();
+  await page.getByRole('textbox', { name: '서명할 이름' }).fill('김서준');
+  const accept = page.getByRole('button', { name: '서명하고 계약 확정' });
   await expect(accept).toBeEnabled();
   const beforeAccept = await readSavedCareer(page, careerId);
   await accept.focus();
@@ -276,7 +278,9 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   await expect(page.getByText('임대 조건')).toBeVisible();
   await expectNoSeriousOrCriticalViolations(page, 'SCR-017 loan detail');
 
-  const loanAccept = page.getByRole('button', { name: '이 조건 수락' });
+  await page.getByRole('button', { name: '이름 입력' }).click();
+  await page.getByRole('textbox', { name: '서명할 이름' }).fill('김서준');
+  const loanAccept = page.getByRole('button', { name: '서명하고 계약 확정' });
   await expect(loanAccept).toBeEnabled();
   const careerId = loanCareerId;
   const beforeLoanAccept = await readSavedCareer(page, careerId);
@@ -378,7 +382,7 @@ test('TEST-E2E-003(c): INTEREST 시장 안전 잔류(STAY) 수락 → SCR-020 �
   const beforeStay = await readSavedCareer(page, careerId);
   await safeCard.getByRole('link', { name: '제안 상세·결정' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
-  const stayAccept = page.getByRole('button', { name: '이 조건 수락' });
+  const stayAccept = page.getByRole('button', { name: '현재 팀 잔류 확정' });
   await expect(stayAccept).toBeEnabled();
   await stayAccept.click();
 

@@ -29,6 +29,7 @@ import {
   offerStatus,
   type NegotiationResultView,
 } from '../shared/transfer-view.js';
+import { ContractSignature } from '../shared/ContractSignature.js';
 
 type ContractSearch = { offerId: string };
 type PendingOperation = {
@@ -156,6 +157,7 @@ function ContractScreen() {
   const [announcement, setAnnouncement] = useState('');
   const [negotiationResult, setNegotiationResult] = useState<NegotiationResultView | null>(null);
   const [firstContractCommit, setFirstContractCommit] = useState<FirstContractCommit | null>(null);
+  const [readySignatureFingerprint, setReadySignatureFingerprint] = useState<string | null>(null);
   const operationRef = useRef<PendingOperation | null>(null);
   const committing = acceptMutation.isPending || negotiateMutation.isPending || rejectMutation.isPending;
 
@@ -216,6 +218,9 @@ function ContractScreen() {
   // TS가 pending의 null 좁힘을 유지하지 않으므로 여기서(narrowing이 되는 최상위 스코프) 미리 센다.
   const marketOfferCount = pending.offers.length;
   const firstContract = pending.market.reason === 'FIRST_CONTRACT';
+  const requiresSignature = !(pending.market.reason === 'INTEREST' && offer.id === pending.market.safeOfferId);
+  const signatureFingerprint = JSON.stringify({ careerId, revision: record.revision, offer });
+  const signatureReady = readySignatureFingerprint === signatureFingerprint;
   const projectionNotice = offerProjectionNotice(state.rulesetVersion, pending.market.reason);
   const parentTeamName = state.contract?.teamName ?? state.clubHistory.at(-1)?.teamName ?? null;
   const actionRevision = actionableRevision(record.revision);
@@ -315,7 +320,7 @@ function ContractScreen() {
   }
 
   async function handleAccept() {
-    if (submittingRef.current || !canAcceptOffer(selectedOffer, record.revision)) return;
+    if (submittingRef.current || !canAcceptOffer(selectedOffer, record.revision) || (requiresSignature && !signatureReady)) return;
     submittingRef.current = true;
     operationRef.current = { kind: 'accept', offerId, beforeNegotiationState: selectedOffer.negotiationState };
     // INTEREST 시장 안전 잔류(안전 offerId 수락)는 결과 화면에 "관심을 보인 구단 N곳"을 보여준다.
@@ -517,15 +522,13 @@ function ContractScreen() {
           ) : null}
         </details>
 
-        <section className="os-panel flex flex-col gap-os-3" aria-label="선수 서명">
-          <p className="os-eyebrow">선수 서명</p>
-          <p className="border-b border-dashed border-os-border pb-os-4 font-os text-2xl font-bold text-os-text">
-            {playerName}
-          </p>
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-            사인을 누르면 이 조건으로 계약이 체결됩니다.
-          </p>
-        </section>
+        <ContractSignature
+          key={signatureFingerprint}
+          signerName={playerName}
+          fingerprint={signatureFingerprint}
+          disabled={acceptMutation.isPending}
+          onReadyChange={(ready) => setReadySignatureFingerprint(ready ? signatureFingerprint : null)}
+        />
 
         {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void recoverFromError()} /> : null}
 
@@ -542,9 +545,9 @@ function ContractScreen() {
             variant="primary"
             className="basis-2/3"
             onClick={() => void handleAccept()}
-            disabled={acceptMutation.isPending}
+            disabled={acceptMutation.isPending || !canAcceptOffer(offer, record.revision) || !signatureReady}
           >
-            사인
+            서명하고 계약 확정
           </Button>
         </div>
       </div>
@@ -593,6 +596,18 @@ function ContractScreen() {
         </details>
       </Card>
 
+      {requiresSignature ? (
+        <ContractSignature
+          key={signatureFingerprint}
+          signerName={state.player.profile?.name ?? state.player.draft.name ?? '선수'}
+          fingerprint={signatureFingerprint}
+          disabled={committing}
+          onReadyChange={(ready) => setReadySignatureFingerprint(ready ? signatureFingerprint : null)}
+        />
+      ) : (
+        <p className="os-muted">현재 팀 잔류 선택에는 별도 서명이 필요하지 않습니다.</p>
+      )}
+
       <Card className="flex flex-col gap-os-3">
         <h2 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
           한 번 협상하기
@@ -624,8 +639,8 @@ function ContractScreen() {
             제안 거절
           </Button>
         </div>
-        <Button variant="primary" onClick={() => void handleAccept()} disabled={committing || !canAcceptOffer(offer, record.revision)}>
-          이 조건 수락
+        <Button variant="primary" onClick={() => void handleAccept()} disabled={committing || !canAcceptOffer(offer, record.revision) || (requiresSignature && !signatureReady)}>
+          {requiresSignature ? '서명하고 계약 확정' : '현재 팀 잔류 확정'}
         </Button>
       </div>
     </div>
