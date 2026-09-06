@@ -21,6 +21,8 @@
     },
     "production": {
       "name": "offside-web",
+      "workers_dev": true,
+      "routes": [{ "pattern": "offside-lab.com", "custom_domain": true }],
     },
   },
 }

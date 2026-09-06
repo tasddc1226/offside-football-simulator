@@ -85,6 +85,8 @@
     },
     "production": {
       "name": "offside-api",
+      "workers_dev": true,
+      "routes": [{ "pattern": "api.offside-lab.com", "custom_domain": true }],
       "d1_databases": [
         {
           "binding": "DB",
@@ -95,7 +97,7 @@
       ],
       "vars": {
         "ENVIRONMENT": "production",
-        "ALLOWED_ORIGINS": "https://offside-web.tasddc1569.workers.dev",
+        "ALLOWED_ORIGINS": "https://offside-lab.com,https://offside-web.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",
         "GOOGLE_FAKE": "0",

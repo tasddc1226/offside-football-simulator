@@ -11,6 +11,7 @@ import { retryPendingDeletes, startPendingDeleteRetryOnOnline } from './engine/p
 import { getSyncClient } from './engine/sync.js';
 import { queryClient } from './shared/query-client.js';
 import { hydrateUiStore } from './shared/ui-store.js';
+import { isLegacyProductionHost } from './api/base-url.js';
 
 const router = createRouter({ routeTree });
 
@@ -30,6 +31,13 @@ if (!container) {
  * 분기가 죽은 코드로 제거되어 probe·fixtures가 프로덕션 번들에 들어가지 않는다.
  */
 async function bootstrap(rootContainer: HTMLElement): Promise<void> {
+  if (isLegacyProductionHost(window.location.hostname)) {
+    const notice = document.createElement('aside');
+    notice.setAttribute('role', 'status');
+    notice.style.cssText = 'padding:10px 16px;text-align:center;background:#fff3cd;color:#3d3100;font:14px/1.5 system-ui,sans-serif';
+    notice.innerHTML = '먼저 이 사이트에서 동기화가 완료됐는지 확인하고 Google 계정을 연결하거나 복구 코드를 발급하세요. 그런 다음 새 주소 <a href="https://offside-lab.com/settings" style="color:inherit;font-weight:700">offside-lab.com 설정</a>에서 계정을 복구하세요. 동기화되지 않은 이 기기의 데이터는 자동으로 옮겨지지 않습니다.';
+    rootContainer.before(notice);
+  }
   if (import.meta.env.DEV && window.location.pathname === '/__dev/hash-probe') {
     const { mountHashProbe } = await import('./dev/hash-probe.js');
     mountHashProbe(rootContainer);
