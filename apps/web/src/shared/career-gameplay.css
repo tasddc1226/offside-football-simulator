@@ -1,0 +1,73 @@
+.os-career-identity {
+  padding: var(--os-space-2) var(--os-space-1) var(--os-space-3);
+  border-bottom: 1px solid var(--os-border);
+}
+
+.os-career-progress {
+  height: 0.3rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--os-surface-2);
+}
+
+.os-career-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--os-accent);
+}
+
+.os-next-action {
+  border-color: color-mix(in srgb, var(--os-accent) 38%, var(--os-border));
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--os-text) 8%, transparent);
+}
+
+.os-career-home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--os-space-3);
+}
+.os-career-home-status {
+  padding-inline: var(--os-space-1);
+}
+
+.os-season-breakdown > summary {
+  min-height: var(--os-touch-min);
+  padding: var(--os-space-3) var(--os-space-4);
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-m);
+  background: var(--os-surface);
+  color: var(--os-text);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.os-plan-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--os-space-2);
+  padding: var(--os-space-4);
+  border-left: 4px solid var(--os-accent);
+  border-radius: var(--os-radius-m);
+  background: var(--os-surface-2);
+}
+
+.os-offer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--os-space-3);
+  align-items: stretch;
+}
+
+.os-offer-grid > * {
+  height: 100%;
+}
+
+.os-comparison-note {
+  padding: var(--os-space-3) var(--os-space-4);
+  border-radius: var(--os-radius-m);
+  background: var(--os-surface-2);
+  color: var(--os-text-2);
+  font-size: var(--os-fs-caption);
+  line-height: var(--os-lh-caption);
+}

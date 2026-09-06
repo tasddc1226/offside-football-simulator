@@ -186,7 +186,7 @@ function FirstContractOffers({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-os-3 md:grid-cols-2">
+    <div className="os-offer-grid">
       {offers.map((offer) => <CompactOfferCard key={offer.id} careerId={careerId} offer={offer} state={state} recordRevision={revision} safeOfferId={null} parentTeamName={null} />)}
     </div>
   );
@@ -209,12 +209,12 @@ function MarketOffers({
   const parentTeamName = state.contract?.teamName ?? state.clubHistory.at(-1)?.teamName ?? null;
   return (
     <>
-      <Card className="flex flex-col gap-os-3">
-        <h2 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          현재 계약
-        </h2>
-        <MarketSummary state={state} offers={offers} />
-      </Card>
+      <details className="os-panel">
+        <summary className="cursor-pointer font-os font-semibold text-os-text">현재 계약과 시장 기준</summary>
+        <div className="mt-os-3">
+          <MarketSummary state={state} offers={offers} />
+        </div>
+      </details>
       {shouldShowRecoveryOpportunityNotice(state, offers) ? (
         <Card className="font-os text-os-text-2" style={BODY_STYLE}>
           최근 두 시즌 출전이 없었습니다. 현재 계약 유지와 하부리그 기회를 비교해 보세요. 역할 약속은
@@ -232,7 +232,7 @@ function MarketOffers({
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-os-3 md:grid-cols-2">
+        <div className="os-offer-grid">
           {offers.map((offer) => <CompactOfferCard key={offer.id} careerId={careerId} offer={offer} state={state} recordRevision={revision} safeOfferId={safeOfferId} parentTeamName={parentTeamName} />)}
         </div>
       )}
@@ -274,6 +274,9 @@ function OffersScreen() {
           description="현재 계약과 시장 상황을 비교해 다음 소속을 결정하세요."
         />
       )}
+      {offers.length > 1 ? (
+        <p className="os-comparison-note">리그 · 역할 · 주급 · 계약 기간을 같은 순서로 비교하세요. 카드를 열면 협상 가능 여부와 전체 조건을 확인할 수 있습니다.</p>
+      ) : null}
       {firstContract ? (
         <FirstContractOffers careerId={careerId} state={state} revision={record.revision} offers={offers} />
       ) : (

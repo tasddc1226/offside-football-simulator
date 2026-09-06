@@ -89,7 +89,7 @@ function GameNavigation() {
           </Link>
         )}
         {inCareer ? (
-          <span className="os-eyebrow os-muted">나의 축구 인생</span>
+          <span className="os-nav-context">커리어</span>
         ) : inPublicInfo ? (
           <a href="/settings" className="os-nav-settings" aria-label="게임 설정">
             <span aria-hidden="true">설정</span>

@@ -108,7 +108,7 @@ describe('SCR-001 공개 소개 → SCR-034 온보딩', () => {
     const router = renderAt('/');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'OFFSIDE' })).toBeInTheDocument();
-    expect(screen.getByText('이번 생은 프리미어리거!')).toBeInTheDocument();
+    expect(screen.getByText(/이번 생은 프리미어리거!/)).toBeInTheDocument();
     expect(screen.getByText(/유망주가 되어 훈련과 경기 사이의 선택/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
 
@@ -117,7 +117,7 @@ describe('SCR-001 공개 소개 → SCR-034 온보딩', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'OVR 하나가 아니라 여러 수치로 성장합니다',
+        name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
       }),
     ).toBeInTheDocument();
   });
@@ -141,9 +141,8 @@ describe('SCR-034 온보딩', () => {
     renderAt('/onboarding');
     await screen.findByRole('heading', {
       level: 1,
-      name: 'OVR 하나가 아니라 여러 수치로 성장합니다',
+      name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
     });
-    expect(screen.getByText('이번 생은 프리미어리거!')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
     expect(
@@ -165,7 +164,7 @@ describe('SCR-034 온보딩', () => {
     const router = renderAt('/onboarding');
     await screen.findByRole('heading', {
       level: 1,
-      name: 'OVR 하나가 아니라 여러 수치로 성장합니다',
+      name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
     });
 
     fireEvent.click(screen.getByRole('button', { name: '건너뛰기' }));
@@ -180,7 +179,7 @@ describe('SCR-034 온보딩', () => {
     const router = renderAt('/onboarding');
     await screen.findByRole('heading', {
       level: 1,
-      name: 'OVR 하나가 아니라 여러 수치로 성장합니다',
+      name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
     });
 
     fireEvent.click(screen.getByRole('button', { name: '다음' }));

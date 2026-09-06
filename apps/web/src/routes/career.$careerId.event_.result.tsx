@@ -155,7 +155,7 @@ function EventResultScreen() {
         : '선택 직전과 직후의 저장값을 비교한 실제 변화입니다. 이후 적용될 효과는 선택 안내를 참고하세요.'}</p>
       {details.episode !== null || eventDefinition?.presentation === 'NATIONAL_TEAM' || details.nextKind !== null ? (
         <section className="os-panel flex flex-col gap-os-2" aria-label="결과 상세">
-          <h2 className="font-os font-semibold text-os-text">이번 결과의 맥락</h2>
+          <h2 className="font-os font-semibold text-os-text">이어지는 영향</h2>
           {eventDefinition?.presentation === 'INJURY' && details.episode ? (
             <p className="font-os text-os-text-2">{INJURY_BODY_PART_LABELS[details.episode.bodyPart]} · {INJURY_SEVERITY_LABELS[details.episode.severity]} · {details.episode.diagnosisRange.minMatches}~{details.episode.diagnosisRange.maxMatches}경기 · {details.episode.rehab ? REHAB_PLAN_LABELS[details.episode.rehab] : '진단 대기'}</p>
           ) : null}

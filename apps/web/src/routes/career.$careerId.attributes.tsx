@@ -121,7 +121,7 @@ function AttributesScreen() {
       {attributeGroups().map((group) => (
         <section
           key={group.id}
-          className="os-panel flex flex-col gap-os-4"
+          className="flex flex-col gap-os-4 border-t border-os-border pt-os-4"
           aria-labelledby={`attribute-group-${group.id}`}
         >
           <h2
@@ -157,7 +157,7 @@ function AttributesScreen() {
       ))}
 
       {previewCandidates.length > 0 ? (
-        <section className="os-panel flex flex-col gap-os-3">
+        <section className="flex flex-col gap-os-3 border-t border-os-border pt-os-4">
           <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
             역할별 OVR 미리보기
           </h2>
@@ -185,7 +185,7 @@ function AttributesScreen() {
         </section>
       ) : null}
 
-      <section className="os-panel flex flex-col gap-os-2">
+      <section className="flex flex-col gap-os-2 border-t border-os-border pt-os-4">
         <p className="font-os text-os-text" style={BODY_STYLE}>
           포지션({POSITION_LABELS[profile.primaryPosition]}) 숙련도:{' '}
           {state.context.positionProficiency}

@@ -1276,156 +1276,214 @@ function SettingsScreen() {
   return (
     <div className="os-screen os-settings">
       <ScreenIntro
-        eyebrow="MY GAME"
+        eyebrow="MY OFFSIDE"
         title="설정"
-        description="나에게 편한 플레이 환경과 저장 상태를 확인해요."
+        description="계정과 저장 상태를 먼저 확인하고, 플레이 환경을 나에게 맞게 바꾸세요."
       />
+      <nav className="os-segmented overflow-x-auto" aria-label="설정 빠른 이동">
+        <a
+          href="#settings-account"
+          className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
+        >
+          계정·저장
+        </a>
+        <a
+          href="#settings-presentation"
+          className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
+        >
+          표시·접근성
+        </a>
+        <a
+          href="#settings-play"
+          className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
+        >
+          플레이
+        </a>
+        <a
+          href="#settings-safety"
+          className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
+        >
+          데이터 관리
+        </a>
+      </nav>
+      <div className="flex flex-col gap-os-6">
+        <section
+          id="settings-account"
+          className="flex scroll-mt-20 flex-col gap-os-3"
+          aria-labelledby="settings-account-title"
+        >
+          <h2 id="settings-account-title" className="os-section-title">
+            계정·저장
+          </h2>
+          <SyncStatusRow />
+          <RecoveryCodeRow />
+          <ProfileRecoverRow />
+          <GoogleRow />
+          <LogoutRow />
+        </section>
 
-      <section className="flex flex-col gap-os-3">
-        <h2 id="settings-theme" className="font-os font-semibold text-os-text" style={H2_STYLE}>
-          테마
-        </h2>
-        <RadioGroup
-          className="os-segmented"
-          aria-labelledby="settings-theme"
-          value={theme}
-          onValueChange={(value) => setTheme(value as ThemePreference)}
+        <section
+          id="settings-presentation"
+          className="flex scroll-mt-20 flex-col gap-os-5"
+          aria-labelledby="settings-presentation-title"
         >
-          {THEME_OPTIONS.map((option) => (
-            <RadioGroupItem key={option.value} value={option.value}>
-              {option.label}
-            </RadioGroupItem>
-          ))}
-        </RadioGroup>
-      </section>
+          <h2 id="settings-presentation-title" className="os-section-title">
+            표시·접근성
+          </h2>
+          <section className="flex flex-col gap-os-3">
+            <h2 id="settings-theme" className="font-os font-semibold text-os-text" style={H2_STYLE}>
+              테마
+            </h2>
+            <RadioGroup
+              className="os-segmented"
+              aria-labelledby="settings-theme"
+              value={theme}
+              onValueChange={(value) => setTheme(value as ThemePreference)}
+            >
+              {THEME_OPTIONS.map((option) => (
+                <RadioGroupItem key={option.value} value={option.value}>
+                  {option.label}
+                </RadioGroupItem>
+              ))}
+            </RadioGroup>
+          </section>
 
-      <section className="flex flex-col gap-os-3">
-        <h2
-          id="settings-reduced-motion"
-          className="font-os font-semibold text-os-text"
-          style={H2_STYLE}
-        >
-          모션 감소
-        </h2>
-        <RadioGroup
-          className="os-segmented"
-          aria-labelledby="settings-reduced-motion"
-          value={reducedMotion}
-          onValueChange={(value) => setReducedMotion(value as ReducedMotionPreference)}
-        >
-          {REDUCED_MOTION_OPTIONS.map((option) => (
-            <RadioGroupItem key={option.value} value={option.value}>
-              {option.label}
-            </RadioGroupItem>
-          ))}
-        </RadioGroup>
-      </section>
+          <section className="flex flex-col gap-os-3">
+            <h2
+              id="settings-reduced-motion"
+              className="font-os font-semibold text-os-text"
+              style={H2_STYLE}
+            >
+              모션 감소
+            </h2>
+            <RadioGroup
+              className="os-segmented"
+              aria-labelledby="settings-reduced-motion"
+              value={reducedMotion}
+              onValueChange={(value) => setReducedMotion(value as ReducedMotionPreference)}
+            >
+              {REDUCED_MOTION_OPTIONS.map((option) => (
+                <RadioGroupItem key={option.value} value={option.value}>
+                  {option.label}
+                </RadioGroupItem>
+              ))}
+            </RadioGroup>
+          </section>
 
-      <section className="flex flex-col gap-os-3">
-        <h2
-          id="settings-text-scale"
-          className="font-os font-semibold text-os-text"
-          style={H2_STYLE}
-        >
-          텍스트 크기
-        </h2>
-        <RadioGroup
-          className="os-segmented"
-          aria-labelledby="settings-text-scale"
-          value={String(textScale)}
-          onValueChange={(value) => setTextScale(Number(value) as TextScale)}
-        >
-          {TEXT_SCALE_OPTIONS.map((option) => (
-            <RadioGroupItem key={option.value} value={String(option.value)}>
-              {option.label}
-            </RadioGroupItem>
-          ))}
-        </RadioGroup>
-      </section>
+          <section className="flex flex-col gap-os-3">
+            <h2
+              id="settings-text-scale"
+              className="font-os font-semibold text-os-text"
+              style={H2_STYLE}
+            >
+              텍스트 크기
+            </h2>
+            <RadioGroup
+              className="os-segmented"
+              aria-labelledby="settings-text-scale"
+              value={String(textScale)}
+              onValueChange={(value) => setTextScale(Number(value) as TextScale)}
+            >
+              {TEXT_SCALE_OPTIONS.map((option) => (
+                <RadioGroupItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </RadioGroupItem>
+              ))}
+            </RadioGroup>
+          </section>
+        </section>
 
-      <section className="flex flex-col gap-os-3">
-        <h2
-          id="settings-simulation-mode"
-          className="font-os font-semibold text-os-text"
-          style={H2_STYLE}
+        <section
+          id="settings-play"
+          className="flex scroll-mt-20 flex-col gap-os-5"
+          aria-labelledby="settings-play-title"
         >
-          시뮬레이션 기본 모드
-        </h2>
-        <RadioGroup
-          className="os-segmented os-segmented-two"
-          aria-labelledby="settings-simulation-mode"
-          value={defaultSimulationMode}
-          onValueChange={(value) => setDefaultSimulationMode(value as SimulationMode)}
+          <h2 id="settings-play-title" className="os-section-title">
+            플레이
+          </h2>
+          <section className="flex flex-col gap-os-3">
+            <h2
+              id="settings-simulation-mode"
+              className="font-os font-semibold text-os-text"
+              style={H2_STYLE}
+            >
+              시뮬레이션 기본 모드
+            </h2>
+            <RadioGroup
+              className="os-segmented os-segmented-two"
+              aria-labelledby="settings-simulation-mode"
+              value={defaultSimulationMode}
+              onValueChange={(value) => setDefaultSimulationMode(value as SimulationMode)}
+            >
+              {SIMULATION_MODE_OPTIONS.map((option) => (
+                <RadioGroupItem key={option.value} value={option.value}>
+                  {option.label}
+                </RadioGroupItem>
+              ))}
+            </RadioGroup>
+          </section>
+
+          <section className="flex flex-col gap-os-3">
+            <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
+              온보딩
+            </h2>
+            <Link to="/onboarding" className={buttonClassName('secondary')} style={buttonStyle}>
+              온보딩 다시 보기
+            </Link>
+          </section>
+        </section>
+
+        <section
+          id="settings-safety"
+          className="flex scroll-mt-20 flex-col gap-os-5"
+          aria-labelledby="settings-safety-title"
         >
-          {SIMULATION_MODE_OPTIONS.map((option) => (
-            <RadioGroupItem key={option.value} value={option.value}>
-              {option.label}
-            </RadioGroupItem>
-          ))}
-        </RadioGroup>
-      </section>
+          <h2 id="settings-safety-title" className="os-section-title">
+            데이터 관리
+          </h2>
+          <section className="flex flex-col gap-os-3">
+            <h2
+              id="settings-version"
+              className="font-os font-semibold text-os-text"
+              style={H2_STYLE}
+            >
+              버전
+            </h2>
+            <dl
+              className="os-num flex flex-col gap-os-1 font-os text-os-text-2"
+              style={CAPTION_STYLE}
+              aria-labelledby="settings-version"
+            >
+              <div className="flex justify-between gap-os-2">
+                <dt>룰셋</dt>
+                <dd>{activeRuleset.version}</dd>
+              </div>
+              <div className="flex justify-between gap-os-2">
+                <dt>콘텐츠 팩</dt>
+                <dd>{activeContentPack.manifest.contentPackVersion}</dd>
+              </div>
+              <div className="flex justify-between gap-os-2">
+                <dt>엔진 클라이언트</dt>
+                <dd>{ENGINE_CLIENT_VERSION}</dd>
+              </div>
+            </dl>
+          </section>
 
-      <section className="flex flex-col gap-os-3">
-        <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
-          온보딩
-        </h2>
-        <Link to="/onboarding" className={buttonClassName('secondary')} style={buttonStyle}>
-          온보딩 다시 보기
-        </Link>
-      </section>
-
-      <section className="flex flex-col gap-os-3">
-        <h2 id="settings-version" className="font-os font-semibold text-os-text" style={H2_STYLE}>
-          버전
-        </h2>
-        <dl
-          className="os-num flex flex-col gap-os-1 font-os text-os-text-2"
-          style={CAPTION_STYLE}
-          aria-labelledby="settings-version"
-        >
-          <div className="flex justify-between gap-os-2">
-            <dt>룰셋</dt>
-            <dd>{activeRuleset.version}</dd>
-          </div>
-          <div className="flex justify-between gap-os-2">
-            <dt>콘텐츠 팩</dt>
-            <dd>{activeContentPack.manifest.contentPackVersion}</dd>
-          </div>
-          <div className="flex justify-between gap-os-2">
-            <dt>엔진 클라이언트</dt>
-            <dd>{ENGINE_CLIENT_VERSION}</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section className="flex flex-col gap-os-3">
-        <h2 id="settings-data" className="font-os font-semibold text-os-text" style={H2_STYLE}>
-          데이터
-        </h2>
-        <ul className="flex flex-col gap-os-2" aria-labelledby="settings-data">
-          <li>
-            <SyncStatusRow />
-          </li>
-          <li>
-            <RecoveryCodeRow />
-          </li>
-          <li>
-            <ProfileRecoverRow />
-          </li>
-          <li>
-            <GoogleRow />
-          </li>
-          <li>
-            <LogoutRow />
-          </li>
-          <li>
-            <DeleteProfileRow />
-          </li>
-          <li>
-            <DeleteDeviceDataRow />
-          </li>
-        </ul>
-      </section>
+          <section className="flex flex-col gap-os-3">
+            <h2 id="settings-data" className="font-os font-semibold text-os-text" style={H2_STYLE}>
+              데이터
+            </h2>
+            <ul className="flex flex-col gap-os-2" aria-labelledby="settings-data">
+              <li>
+                <DeleteProfileRow />
+              </li>
+              <li>
+                <DeleteDeviceDataRow />
+              </li>
+            </ul>
+          </section>
+        </section>
+      </div>
 
       <Link to="/" className={buttonClassName('secondary')} style={buttonStyle}>
         허브로

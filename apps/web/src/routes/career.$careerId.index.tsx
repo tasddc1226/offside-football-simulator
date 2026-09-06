@@ -428,7 +428,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM')) {
     const target = screenForCareer(state);
     return (
-      <Card className="flex flex-col gap-os-4">
+      <Card className="os-next-action flex flex-col gap-os-4">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
           결정이 기다립니다
         </p>
@@ -446,7 +446,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
 
   if (pending !== null && pending.kind === 'OFFERS') {
     return (
-      <Card className="flex flex-col gap-os-4">
+      <Card className="os-next-action flex flex-col gap-os-4">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
           제안 {pending.offers.length}건
         </p>
@@ -464,7 +464,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
 
   if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
     return (
-      <Card className="flex flex-wrap items-center justify-between gap-os-3">
+      <Card className="os-next-action flex flex-wrap items-center justify-between gap-os-3">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
           재계약 제안 {pending.offers.length}건
         </p>
@@ -477,7 +477,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
 
   if (pending !== null && pending.kind === 'LOAN_RETURN') {
     return (
-      <Card className="flex flex-wrap items-center justify-between gap-os-3">
+      <Card className="os-next-action flex flex-wrap items-center justify-between gap-os-3">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
           임대 복귀 결정
         </p>
@@ -490,7 +490,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
 
   if (pending !== null && pending.kind === 'ROLE_PROPOSAL') {
     return (
-      <Card className="flex flex-col gap-os-4">
+      <Card className="os-next-action flex flex-col gap-os-4">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
           감독 제안이 기다립니다
         </p>
@@ -508,7 +508,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
 
   if (pending !== null && pending.kind === 'SETTLEMENT') {
     return (
-      <Card className="flex flex-col gap-os-2">
+      <Card className="os-next-action flex flex-col gap-os-2">
         <div className="flex flex-col gap-os-4">
           <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
             시즌 결산
@@ -536,7 +536,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
 
   if (pending !== null && pending.kind === 'CHAPTER') {
     return (
-      <Card className="flex flex-col gap-os-4">
+      <Card className="os-next-action flex flex-col gap-os-4">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
           {chapterCardLabel(state, pending, rulesetForCareer(state))}
         </p>
@@ -555,7 +555,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
 
   if (pending === null && state.season === null && state.contract !== null) {
     return (
-      <Card className="flex flex-col gap-os-4">
+      <Card className="os-next-action flex flex-col gap-os-4">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
           프리시즌 계획
         </p>
@@ -572,7 +572,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   }
 
   return (
-    <Card className="flex flex-col gap-os-2">
+    <Card className="os-next-action flex flex-col gap-os-2">
       <Button
         variant="primary"
         onClick={() => void handleAdvance()}
@@ -679,7 +679,7 @@ function CareerDashboard() {
 
   return (
     <div className="os-screen">
-      <header className="flex flex-col gap-os-2 px-os-1">
+      <header className="os-career-identity flex flex-col gap-os-2">
         <p className="os-eyebrow">{currentTeamName(state, ruleset)}</p>
         <div className="flex items-end justify-between gap-os-3">
           <h1 className="min-w-0 truncate font-os text-os-text" style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)', fontWeight: 750 }}>{name}</h1>
@@ -688,6 +688,11 @@ function CareerDashboard() {
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           {clock.headline} · {positionField.value}
         </p>
+        {season ? (
+          <div className="os-career-progress" aria-label={`시즌 진행 ${season.currentStep} / ${season.steps.length}`}>
+            <span style={{ width: `${Math.min(100, (season.currentStep / season.steps.length) * 100)}%` }} />
+          </div>
+        ) : null}
       </header>
 
       <Tabs value={tab} onValueChange={changeTab}>
@@ -701,7 +706,6 @@ function CareerDashboard() {
           </TabsList>
         </div>
 
-        <p className="os-swipe-hint">탭을 누르거나 내용을 좌우로 밀어 둘러보세요</p>
         <MotionPanel motionKey={tab} direction={tabDirection} className="os-dashboard-tabs-motion">
           <SwipeSurface
             canSwipeLeft={tabIndex < DASHBOARD_TABS.length - 1}
@@ -714,17 +718,22 @@ function CareerDashboard() {
             }}
           >
             <TabsContent value="home">
-              <section aria-label="지금 할 일">
-                <DashboardSection title="지금 할 일" description={`${clock.detail} · ${clock.progress}`}>
+              <section className="os-career-home" aria-label="지금 할 일">
+                <div>
+                  <p className="os-eyebrow">{clock.progress}</p>
+                  <h2 id="next-action-title" className="os-section-title">다음 행동</h2>
+                  <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{clock.detail}</p>
+                </div>
+                <NextDecisionCard careerId={careerId} state={state} />
+                <div className="os-career-home-status" aria-label="현재 컨디션">
                   <StatusStrip items={homeStatusItems} />
-                  <NextDecisionCard careerId={careerId} state={state} />
-                  {state.status === 'ACTIVE' && state.season === null && state.seasonHistory.length > 0 ? (
-                    <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>커리어의 다음 선택</Link>
-                  ) : null}
-                  {state.status === 'RETIRED' || state.status === 'ARCHIVED' ? (
+                </div>
+                {state.status === 'ACTIVE' && state.season === null && state.seasonHistory.length > 0 ? (
+                  <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>커리어의 다음 선택</Link>
+                ) : null}
+                {state.status === 'RETIRED' || state.status === 'ARCHIVED' ? (
                     <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>통산 기록 보기</Link>
                   ) : null}
-                </DashboardSection>
               </section>
             </TabsContent>
 

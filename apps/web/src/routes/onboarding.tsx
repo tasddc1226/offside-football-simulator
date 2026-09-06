@@ -22,8 +22,8 @@ type Slide = { id: string; headline: string; body: string; note?: string };
 const SLIDES: Slide[] = [
   {
     id: 'numbers',
-    headline: 'OVR 하나가 아니라 여러 수치로 성장합니다',
-    body: '첫 계약 전에는 기본 OVR·폼·체력만 보입니다. 첫 프로 계약을 맺으면 전술 적합도와 감독 신뢰 같은 수치가 열립니다.',
+    headline: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
+    body: '출발 배경과 포지션을 고르고, 선택을 쌓아 나만의 커리어를 만듭니다. 첫 계약 후에는 전술 적합도와 감독 신뢰도 열립니다.',
   },
   {
     id: 'choices',
@@ -40,7 +40,7 @@ const SLIDES: Slide[] = [
 
 const STEPPER_STEPS = SLIDES.map((slide, index) => ({
   id: slide.id,
-  label: `${index + 1}/${SLIDES.length}`,
+  label: ['선수', '선택', '저장'][index]!,
 }));
 
 const CAPTION_STYLE = {
@@ -128,36 +128,15 @@ function OnboardingScreen() {
         >
           <div className="os-screen">
             <ScreenIntro
-              eyebrow={`OFFSIDE · 플레이 가이드 ${stepIndex + 1}`}
+              eyebrow="OFFSIDE 시작 안내"
               title={slide.headline}
               description={slide.body}
             />
-            <p className="os-eyebrow px-os-1">{BRAND_SUBTITLE}</p>
 
-            <div className="os-panel flex flex-col gap-os-4">
-              <p className="os-eyebrow">시작하기 전에</p>
-              <ol className="flex flex-col gap-os-4" aria-label="오프사이드 플레이 원칙">
-                {[
-                  { title: '나만의 선수', detail: '이름과 선호 포지션을 정하고 출발해요.' },
-                  { title: '선택으로 쌓는 커리어', detail: '매 순간의 결정이 다음 기회를 바꿔요.' },
-                  { title: '이어지는 축구 인생', detail: '플레이 기록을 저장하고 다시 이어가요.' },
-                ].map((item, index) => (
-                  <li key={item.title} className="flex items-start gap-os-3">
-                    <span
-                      aria-hidden="true"
-                      className="os-num rounded-os-m bg-os-surface-2 px-os-3 py-os-2 font-semibold text-os-accent"
-                    >
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-os font-semibold text-os-text">{item.title}</p>
-                      <p className="os-muted" style={CAPTION_STYLE}>
-                        {item.detail}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
+            <div className="os-creation-note">
+              <p className="font-os font-semibold text-os-text">
+                {stepIndex === 0 ? '나만의 선수를 만들고 성장을 기록합니다.' : stepIndex === 1 ? '확정 전에 결과와 영향을 꼭 확인하세요.' : '복구 코드나 Google 연결 중 하나를 준비하세요.'}
+              </p>
               {slide.note ? (
                 <p
                   className="border-t border-os-border pt-os-4 font-os font-semibold text-os-text"
@@ -190,21 +169,19 @@ function OnboardingScreen() {
             이전 안내
           </Button>
         ) : null}
-        <p className="os-swipe-hint">좌우로 밀거나 버튼으로 안내를 넘겨보세요</p>
+        <p className="os-swipe-hint">{stepIndex + 1} / {SLIDES.length}</p>
       </div>
 
-      <div className="os-action-dock os-action-row">
-        <Button variant="ghost" onClick={handleSkip}>
+      <div className="os-action-dock flex flex-col gap-os-2 sm:flex-row">
+        <Button variant="ghost" className="w-full sm:w-auto" onClick={handleSkip}>
           건너뛰기
         </Button>
         {isLast ? (
-          <div className="flex min-w-0 flex-1 flex-col items-center gap-os-2">
-            {/* 짧은 킥오프 버튼에도 동작을 설명하는 caption을 함께 제공한다. */}
             <Button
               variant="primary"
               onClick={handleKickoff}
               disabled={createMutation.isPending}
-              className="os-num w-full font-bold uppercase"
+              className="os-num w-full min-w-0 flex-1 whitespace-normal font-bold uppercase"
               style={{
                 fontSize: 'var(--os-fs-h2)',
                 lineHeight: 'var(--os-lh-h2)',
@@ -213,20 +190,12 @@ function OnboardingScreen() {
             >
               KICKOFF · 새 인생 시작
             </Button>
-            <p className="text-center font-os text-os-text-2" style={CAPTION_STYLE}>
-              첫 커리어를 시작할 준비가 됐습니다
-            </p>
-          </div>
         ) : (
           <Button variant="primary" className="flex-1" onClick={() => changeSlide(1)}>
             다음
           </Button>
         )}
       </div>
-      <p className="text-center font-os text-os-text-2" style={CAPTION_STYLE}>
-        건너뛰어도 각 수치는 처음 열리는 순간 한 줄 설명을 보여줍니다.
-      </p>
-
       {toast ? <Toast variant="error" message={toast} onDismiss={() => setToast(null)} /> : null}
     </div>
   );

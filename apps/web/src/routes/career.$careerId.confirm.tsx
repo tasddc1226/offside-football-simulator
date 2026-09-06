@@ -357,7 +357,7 @@ function ConfirmScreen() {
     <div className="os-screen">
       <Stepper steps={PLAYER_CREATION_STEPS} currentStepId="confirm" />
       <ScreenIntro
-        eyebrow="새 커리어 · 3/3"
+        eyebrow="선수 등록 · 최종 확인"
         title="확정 전 정보를 확인하세요"
         description="당신이 만든 선수 카드입니다. 준비가 됐다면 첫 휘슬을 울리세요."
       />

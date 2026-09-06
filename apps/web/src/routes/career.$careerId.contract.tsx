@@ -571,21 +571,26 @@ function ContractScreen() {
       ) : null}
 
       <Card className="flex flex-col gap-os-3">
-        <h2 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          공개 조건
+        <p className="os-eyebrow">핵심 조건</p>
+        <h2 className="os-section-title">
+          {SQUAD_ROLE_LABELS[offer.rolePromise]} · 주급 {formatKrw(offer.wageMinorPerWeek)}
         </h2>
-        <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
-          {detailRows.map((row) => (
-            <div key={row.label}>
-              <dt>{row.label}</dt>
-              <dd className="text-os-text">{row.value}</dd>
-            </div>
-          ))}
-        </dl>
         <p className="font-os text-os-text" style={BODY_STYLE}>
-          {ROLE_PROMISE_SENTENCE[offer.rolePromise]}
+          {offer.lengthSeasons}시즌 · {LEAGUE_TIER_LABEL_KO[offer.leagueTier]} · 등번호 {offer.shirtNumber}
         </p>
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{ROLE_PROMISE_SENTENCE[offer.rolePromise]}</p>
         {projectionNotice ? <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{projectionNotice}</p> : null}
+        <details className="border-t border-os-border pt-os-3">
+          <summary className="cursor-pointer font-os font-semibold text-os-text">전체 공개 조건</summary>
+          <dl className="mt-os-3 grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+            {detailRows.map((row) => (
+              <div key={row.label}>
+                <dt>{row.label}</dt>
+                <dd className="text-os-text">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
       </Card>
 
       <Card className="flex flex-col gap-os-3">
@@ -613,12 +618,12 @@ function ContractScreen() {
       {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void recoverFromError()} retryLabel="저장 상태 다시 확인" /> : null}
 
       <div className="os-action-dock flex flex-col gap-os-2">
-        <Button variant="secondary" onClick={handleBack} disabled={committing}>
-          뒤로
-        </Button>
-        <Button variant="secondary" onClick={() => void handleReject()} disabled={committing || offer.id === safeOfferId || status === 'EXPIRED' || status === 'WITHDRAWN'}>
-          이 제안 거절
-        </Button>
+        <div className="grid grid-cols-2 gap-os-2">
+          <Button variant="secondary" onClick={handleBack} disabled={committing}>목록으로</Button>
+          <Button variant="secondary" onClick={() => void handleReject()} disabled={committing || offer.id === safeOfferId || status === 'EXPIRED' || status === 'WITHDRAWN'}>
+            제안 거절
+          </Button>
+        </div>
         <Button variant="primary" onClick={() => void handleAccept()} disabled={committing || !canAcceptOffer(offer, record.revision)}>
           이 조건 수락
         </Button>
