@@ -6,6 +6,7 @@ import './game-presentation.css';
 const DEFAULT_REVEAL_MS = 560;
 const FAST_REVEAL_MS = 180;
 const DEFAULT_COMPLETION_MS = 650;
+const DEFAULT_DELAYED_REVEAL_MS = 420;
 
 export function GamePending({ title, detail }: { title: string; detail: string }) {
   return (
@@ -78,6 +79,30 @@ export function GameCompletionTransition({
       ) : null}
     </div>
   );
+}
+
+/**
+ * UX-010 P2b: 이미 공개된 결과 안에서 평점처럼 서스펜스가 필요한 값 하나만 짧게(기본 420ms, 0.5초
+ * 이내) 늦춰 드러낸다. 모션 감소·키보드 입력 모드는 GameResultReveal과 같은 기준으로 지연 없이
+ * 즉시 true를 돌려준다. 확정값 자체는 지연 대상 컴포넌트(CountUp 등)가 처음부터 접근성 이름에
+ * 담으므로, 이 훅은 순수하게 시각 타이밍만 맡는다(스코어보드는 그대로, 평점만 늦게).
+ */
+export function useDelayedReveal(delayMs: number = DEFAULT_DELAYED_REVEAL_MS): boolean {
+  const reducedMotion = useReducedMotion();
+  const immediate = reducedMotion || document.documentElement.dataset.inputModality === 'keyboard';
+  const [revealed, setRevealed] = useState(immediate);
+
+  useEffect(() => {
+    if (immediate) {
+      setRevealed(true);
+      return;
+    }
+    setRevealed(false);
+    const timer = window.setTimeout(() => setRevealed(true), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [delayMs, immediate]);
+
+  return revealed;
 }
 
 export function GameResultReveal({

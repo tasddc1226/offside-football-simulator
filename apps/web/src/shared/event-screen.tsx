@@ -20,10 +20,11 @@ import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
-import { archetypeName } from './current-team.js';
+import { archetypeName, currentTeamId } from './current-team.js';
 import { positionHeaderField, POSITION_LABELS, RISK_LABEL_KO } from './labels.js';
 import { buildNarrativeTokens, renderNarrative, type NarrativeTokenValues } from './narrative.js';
 import { eventSituation } from './legacy-event-copy.js';
+import { PlayerBanner } from './PlayerBanner.js';
 import { u18StatusStripItems } from './status-strip.js';
 import { useUiStore } from './ui-store.js';
 import { useCommittingExitGuard } from './use-committing-exit-guard.js';
@@ -179,10 +180,17 @@ export function EventDecisionScreen({
     <div className="os-screen">
       <ScreenIntro {...EVENT_INTRO[screenId]} />
 
+      <PlayerBanner
+        name={tokens.name}
+        teamName={tokens.team}
+        teamId={currentTeamId(state, ruleset)}
+        position={positionField.value}
+        shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
+        age={state.age}
+        ovr={profile?.baseOvr ?? null}
+      />
+
       <section className="os-story-card" aria-label="현재 상황">
-        <p className="os-eyebrow">
-          {tokens.name} · {tokens.team}
-        </p>
         <p className="font-os text-os-text" style={BODY_STYLE}>
           {renderNarrative(eventSituation(definition), tokens)}
         </p>
