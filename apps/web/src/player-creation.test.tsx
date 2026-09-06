@@ -1,7 +1,7 @@
 // SCR-002·003·004 통합 테스트. app-routes.test.tsx와 같은 harness(getAppEngine 자리에
 // inlineSimulator + MemoryLocalStore 테스트 엔진 주입)를 쓰고, 이 파일만 src/api/client.js를
 // 함께 모킹해 복구 코드 단계의 분기(미발급/이미 발급/API 실패)를 검증한다.
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiResult } from './api/client.js';
 import { advance, confirmPlayer, createCareer, updateDraft } from './engine/career-actions.js';
 import { createAppEngine, type AppEngine } from './engine/engine.js';
+import { careerQueryOptions } from './engine/use-career.js';
 import { routeTree } from './routeTree.gen.js';
 import { queryClient } from './shared/query-client.js';
 import { useUiStore } from './shared/ui-store.js';
@@ -71,6 +72,7 @@ const UNISSUED_PROFILE: Profile = {
 };
 
 beforeEach(() => {
+  sessionStorage.clear();
   setTestEngine();
   queryClient.clear();
   useUiStore.setState({
@@ -110,10 +112,12 @@ describe('SCR-002 선수 정보', () => {
     await user.click(screen.getByRole('radio', { name: '남성' }));
     await user.selectOptions(screen.getByLabelText('국적'), 'KR');
     await user.click(screen.getByRole('radio', { name: '왼발' }));
+    await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('tab', { name: '공격수' }));
     await user.click(screen.getByRole('radio', { name: /스트라이커/ }));
-    await user.click(screen.getByRole('radio', { name: /클럽 아카데미/ }));
     await user.click(screen.getByRole('button', { name: '다음' }));
+    await user.click(screen.getByRole('radio', { name: /클럽 아카데미/ }));
+    await user.click(screen.getByRole('button', { name: '플레이 스타일 고르기' }));
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/career/${careerId}/style`);
@@ -133,6 +137,30 @@ describe('SCR-002 선수 정보', () => {
     expect(screen.getByLabelText('이름')).toHaveFocus();
   });
 
+  it('형식은 JSON이지만 값이 잘못된 scratch는 무시하고 저장된 draft로 복구한다', async () => {
+    const engine = setTestEngine();
+    const careerId = await createDraftCareer(engine);
+    sessionStorage.setItem(
+      `offside:player-creation:${careerId}`,
+      JSON.stringify({
+        form: {
+          name: '김서준',
+          gender: 'MALE',
+          nationalityCode: 'KR',
+          preferredFoot: 'LEFT',
+          position: 'BAD',
+          backgroundId: 'club-academy',
+        },
+        panel: 1,
+      }),
+    );
+
+    renderAt(`/career/${careerId}/create`);
+
+    expect(await screen.findByRole('heading', { level: 2, name: '나를 소개하세요' })).toBeInTheDocument();
+    expect(screen.getByLabelText('이름')).toHaveValue('');
+  });
+
   it('저장 실패 → 입력으로 돌아가기 → 폼(이름 입력)이 다시 보인다', async () => {
     const engine = setTestEngine();
     const careerId = await createDraftCareer(engine);
@@ -148,10 +176,12 @@ describe('SCR-002 선수 정보', () => {
     await user.click(screen.getByRole('radio', { name: '남성' }));
     await user.selectOptions(screen.getByLabelText('국적'), 'KR');
     await user.click(screen.getByRole('radio', { name: '왼발' }));
+    await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('tab', { name: '공격수' }));
     await user.click(screen.getByRole('radio', { name: /스트라이커/ }));
-    await user.click(screen.getByRole('radio', { name: /클럽 아카데미/ }));
     await user.click(screen.getByRole('button', { name: '다음' }));
+    await user.click(screen.getByRole('radio', { name: /클럽 아카데미/ }));
+    await user.click(screen.getByRole('button', { name: '플레이 스타일 고르기' }));
 
     await screen.findByText('저장하지 못했습니다.');
     await user.click(screen.getByRole('button', { name: '입력으로 돌아가기' }));
@@ -174,8 +204,12 @@ describe('SCR-003 플레이 스타일', () => {
     const user = userEvent.setup();
     const router = renderAt(`/career/${careerId}/style`);
     await screen.findByRole('heading', { level: 1, name: '플레이 스타일을 고르세요' });
+    expect(screen.getByText(/플레이 핵심은 이 스타일에서 비중이 큰 능력/)).toHaveTextContent(
+      '같은 능력이 두 목록에 함께 나올 수 있습니다',
+    );
+    expect(screen.getAllByText('플레이 핵심')).toHaveLength(3);
+    expect(screen.getAllByText('비교 열세')).toHaveLength(3);
 
-    // CompareCards는 모바일·데스크톱 레이아웃마다 하나씩, 아키타입당 라디오 2개를 함께 렌더한다.
     const radios = screen.getAllByRole('radio');
     const uniqueChoices = new Set(radios.map((radio) => radio.getAttribute('aria-label')));
     expect(uniqueChoices.size).toBe(3);
@@ -270,9 +304,11 @@ describe('SCR-002→003: 포지션 변경 시 기존 아키타입을 자동 확�
     renderAt(`/career/${careerId}/create`);
     await screen.findByRole('heading', { level: 1, name: '선수 정보를 입력하세요' });
 
+    await user.click(screen.getByRole('button', { name: '다음' }));
     await user.click(screen.getByRole('tab', { name: '공격수' }));
     await user.click(screen.getByRole('radio', { name: /스트라이커/ }));
     await user.click(screen.getByRole('button', { name: '다음' }));
+    await user.click(screen.getByRole('button', { name: '플레이 스타일 고르기' }));
 
     await screen.findByRole('heading', { level: 1, name: '플레이 스타일을 고르세요' });
     expect(screen.queryByText('선택됨')).not.toBeInTheDocument();
@@ -293,6 +329,26 @@ describe('SCR-004 확인 및 복구 코드', () => {
     });
     return careerId;
   }
+
+  it('전역 활성 팩과 달라도 커리어 record에 고정된 콘텐츠 팩 버전을 표시한다', async () => {
+    const engine = setTestEngine();
+    const careerId = await seedReadyForConfirm(engine);
+    renderAt(`/career/${careerId}/confirm`);
+    await screen.findByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' });
+
+    const options = careerQueryOptions(careerId);
+    const current = queryClient.getQueryData(options.queryKey);
+    if (current === undefined) throw new Error('캐시된 커리어가 있어야 한다');
+    act(() => {
+      queryClient.setQueryData(options.queryKey, {
+        ...current,
+        record: { ...current.record, contentPackVersion: '0.3.0' },
+      });
+    });
+
+    expect(await screen.findByText('1.0.0 / 0.3.0')).toBeInTheDocument();
+    expect(screen.queryByText('1.0.0 / 0.1.0')).not.toBeInTheDocument();
+  });
 
   it('선수 요약을 보여주고 KICKOFF 확정 후 복구 코드를 발급한다', async () => {
     const engine = setTestEngine();

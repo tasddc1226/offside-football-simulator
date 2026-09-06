@@ -3,6 +3,7 @@ import { compareCodePoints } from './canonical.js';
 import { generateCompetitors } from './competitors.js';
 import { computeContractSeasonsRemaining, computeMarketValueIndex, buildMarketValueInput } from './market-value.js';
 import { findOvrBand, lookupBandAmount } from './offers.js';
+import { projectOfferSelection } from './offer-projection.js';
 import { rollInt, seedRng, type RngState } from './rng.js';
 import { rollRange } from './roll-range.js';
 import type { Ruleset, Team, TransferRules } from './ruleset.js';
@@ -171,6 +172,16 @@ function buildSafeOffer(args: BuildSafeOfferArgs): Offer {
 
   if (reason === 'INTEREST') {
     const remaining = computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline);
+    const projection =
+      ruleset.offerProjection === undefined
+        ? null
+        : projectOfferSelection({
+            state,
+            ruleset,
+            team: findTeamById(ruleset, contract.teamId),
+            rolePromise: contract.rolePromise,
+            seasonIndex: state.seasonHistory.length + 1,
+          });
     return {
       ...base,
       lengthSeasons: remaining,
@@ -179,8 +190,8 @@ function buildSafeOffer(args: BuildSafeOfferArgs): Offer {
       transferFeeMinor: null,
       rolePromise: contract.rolePromise,
       appearancePromise: contract.appearancePromise,
-      tacticalFitEstimate: state.context.tacticalFit,
-      competitorSummary: null,
+      tacticalFitEstimate: projection?.tacticalFit ?? state.context.tacticalFit,
+      competitorSummary: projection?.competitorSummary ?? null,
       validUntilRevision: null,
       negotiable: { wage: false, role: false, length: false },
       negotiationState: 'OPEN',
@@ -196,6 +207,16 @@ function buildSafeOffer(args: BuildSafeOfferArgs): Offer {
   const wageBase = lookupBandAmount(ruleset.contractRules.wageBands, team.wageBandId, band.id, 'wageBands');
   const wage = Math.floor((wageBase * ruleset.transferRules.safeRenewal.wageBp) / 10000);
   const degradedRole = ROLE_DEGRADE[squadRole];
+  const projection =
+    ruleset.offerProjection === undefined
+      ? null
+      : projectOfferSelection({
+          state,
+          ruleset,
+          team,
+          rolePromise: degradedRole,
+          seasonIndex: state.seasonHistory.length + 1,
+        });
 
   return {
     ...base,
@@ -205,8 +226,8 @@ function buildSafeOffer(args: BuildSafeOfferArgs): Offer {
     transferFeeMinor: null,
     rolePromise: degradedRole,
     appearancePromise: { minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[degradedRole] },
-    tacticalFitEstimate: state.context.tacticalFit,
-    competitorSummary: null,
+    tacticalFitEstimate: projection?.tacticalFit ?? state.context.tacticalFit,
+    competitorSummary: projection?.competitorSummary ?? null,
     validUntilRevision: null,
     negotiable: { wage: false, role: false, length: false },
     negotiationState: 'OPEN',
@@ -295,20 +316,35 @@ export function generateMarket(args: GenerateMarketArgs): GeneratedMarket {
     const shirtRoll = rollRange(rngState, ruleset.offerRules.shirtNumber.min, ruleset.offerRules.shirtNumber.max);
     rngState = shirtRoll.state;
 
-    const fitRoll = rollRange(rngState, ruleset.offerRules.tacticalFitEstimate.min, ruleset.offerRules.tacticalFitEstimate.max);
-    rngState = fitRoll.state;
+    const fitRoll =
+      ruleset.offerProjection === undefined
+        ? rollRange(rngState, ruleset.offerRules.tacticalFitEstimate.min, ruleset.offerRules.tacticalFitEstimate.max)
+        : null;
+    if (fitRoll !== null) rngState = fitRoll.state;
 
     const band = findOvrBand(ruleset.contractRules, profile.baseOvr);
     const wage = lookupBandAmount(ruleset.contractRules.wageBands, team.wageBandId, band.id, 'wageBands');
     const signingBonus = lookupBandAmount(ruleset.contractRules.signingBonus, team.wageBandId, band.id, 'signingBonus');
 
-    const competitorSummary = computeCompetitorSummary(
-      ruleset,
-      team,
-      profile.primaryPosition,
-      profile.baseOvr,
-      `market:${revision}:${team.id}:${rng.s.join(',')}`,
-    );
+    const projection =
+      ruleset.offerProjection === undefined
+        ? null
+        : projectOfferSelection({
+            state,
+            ruleset,
+            team,
+            rolePromise,
+            seasonIndex: state.seasonHistory.length + 1,
+          });
+    const competitorSummary =
+      projection?.competitorSummary ??
+      computeCompetitorSummary(
+        ruleset,
+        team,
+        profile.primaryPosition,
+        profile.baseOvr,
+        `market:${revision}:${team.id}:${rng.s.join(',')}`,
+      );
 
     drawnOffers.push({
       id: `OFR-${revision}-${index + 1}`,
@@ -325,7 +361,7 @@ export function generateMarket(args: GenerateMarketArgs): GeneratedMarket {
       appearancePromise: { minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[rolePromise] },
       positionPlan: profile.primaryPosition,
       shirtNumber: shirtRoll.value,
-      tacticalFitEstimate: fitRoll.value,
+      tacticalFitEstimate: projection?.tacticalFit ?? fitRoll!.value,
       competitorSummary,
       validUntilRevision: revision + transferRules.offerValidityRevisions,
       negotiable: kind === 'LOAN' ? { wage: false, role: true, length: false } : { wage: true, role: true, length: true },

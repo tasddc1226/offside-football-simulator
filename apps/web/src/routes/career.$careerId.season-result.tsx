@@ -12,7 +12,7 @@ import {
   buttonClassName,
   buttonStyle,
 } from '@offside/ui';
-import { activeRuleset, contentForCareer } from '../engine/content.js';
+import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
@@ -37,6 +37,7 @@ import {
   SQUAD_ROLE_LABELS,
   chapterTriggerLabel,
 } from '../shared/labels.js';
+import { GameResultReveal } from '../shared/game-presentation.js';
 
 type SeasonResultSearch = { season?: number };
 
@@ -60,7 +61,7 @@ export const Route = createFileRoute('/career/$careerId/season-result')({
   loader: async ({ params, deps }) => {
     const { state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
     const index = deps.season ?? state.seasonHistory.length - 1;
-    const view = deriveSeasonResultView(state, index, activeRuleset);
+    const view = deriveSeasonResultView(state, index, rulesetForCareer(state));
     if (view === null) {
       throw redirect({ to: SCREEN_ROUTES['SCR-029'], params: { careerId: params.careerId } });
     }
@@ -173,8 +174,8 @@ type StateDeltaRow = {
   boundaryReset: boolean;
 };
 
-function buildStateDeltaRows(view: SeasonResultView): StateDeltaRow[] {
-  const reset = activeRuleset.seasonBoundaryReset;
+function buildStateDeltaRows(view: SeasonResultView, ruleset: Parameters<typeof deriveSeasonResultView>[2]): StateDeltaRow[] {
+  const reset = ruleset.seasonBoundaryReset;
   return [
     {
       id: 'form',
@@ -219,7 +220,7 @@ function SeasonResultScreen() {
   useEffect(() => {
     if (query.data === undefined) return;
     const index = season ?? query.data.state.seasonHistory.length - 1;
-    const initialView = deriveSeasonResultView(query.data.state, index, activeRuleset);
+    const initialView = deriveSeasonResultView(query.data.state, index, rulesetForCareer(query.data.state));
     platform.analytics.track('screen_viewed', {
       screenId: initialView?.isYouth === true ? 'SCR-006' : 'SCR-015',
       careerPhase: query.data.state.seasonPhase,
@@ -229,8 +230,9 @@ function SeasonResultScreen() {
 
   if (query.data === undefined) return null;
   const { state } = query.data;
+  const ruleset = rulesetForCareer(state);
   const index = season ?? state.seasonHistory.length - 1;
-  const view = deriveSeasonResultView(state, index, activeRuleset);
+  const view = deriveSeasonResultView(state, index, ruleset);
   if (view === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
 
   const { common, positionCard, promise, selection } = view;
@@ -238,8 +240,9 @@ function SeasonResultScreen() {
     selection.possibleMinutes === 0
       ? null
       : Math.round((selection.minutes / selection.possibleMinutes) * 100);
-  const stateDeltaRows = buildStateDeltaRows(view);
+  const stateDeltaRows = buildStateDeltaRows(view, ruleset);
   const nextTarget = canPlanNextSeason(state) ? 'SCR-005' : screenForCareer(state).screenId;
+  const headlineTeamResult = view.teamRecords[0];
 
   return (
     <div className="os-screen" data-testid="season-result" data-result-hash={view.hash}>
@@ -248,6 +251,25 @@ function SeasonResultScreen() {
         title={view.isYouth ? '유소년 시즌 결과' : '프로 시즌 결과'}
         description={`시즌 ${view.seasonNumber}`}
       />
+
+      <GameResultReveal
+        fast={state.simulationMode === 'FAST'}
+        announcement={`시즌 ${view.seasonNumber} 결과, 평균 평점 ${ratingText(common.avgRatingTenths)}`}
+        skippable={false}
+      >
+        <section className="os-story-card flex flex-col gap-os-3" aria-label="시즌 한눈에 보기">
+          <p className="os-eyebrow">시즌 {view.seasonNumber} · 최종 기록</p>
+          <p className="font-os font-semibold text-os-text" style={H2_STYLE}>
+            {common.total}경기 · {common.minutes}분 · 평균 평점 {ratingText(common.avgRatingTenths)}
+          </p>
+          <p className="font-os text-os-text-2" style={BODY_STYLE}>
+            {headlineTeamResult
+              ? `${headlineTeamResult.label} ${headlineTeamResult.standingText}`
+              : `${SQUAD_ROLE_LABELS[selection.roleAtStart]}에서 ${SQUAD_ROLE_LABELS[selection.roleAtEnd]}로 시즌을 마쳤습니다.`}
+            {' · '}Base OVR {view.baseOvr.before} → {view.baseOvr.after}
+          </p>
+        </section>
+      </GameResultReveal>
 
       <section className="os-panel flex flex-col gap-os-4">
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
@@ -445,6 +467,7 @@ function SeasonResultScreen() {
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
           {view.isYouth ? '성장 기록' : 'OVR 변화'}
         </h2>
+        {view.attributeDeltaGroups.some((group) => group.entries.some((entry) => entry.causes.some((cause) => cause.cause === 'AGE_DECLINE' && cause.centi < 0))) ? <aside className="rounded-os-m bg-os-surface-2 p-os-4"><h3 className="font-semibold">몸의 변화, 다음 시즌의 선택</h3><p>연령에 따른 하락이 기록됐어요. 아래 포지션별 능력 추세를 살펴보고 다음 시즌의 훈련 초점과 역할을 선택해 보세요. OVR 하락만으로 은퇴가 결정되지는 않습니다.</p></aside> : null}
         {view.topCause !== null ? (
           <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
             가장 큰 원인: {ATTRIBUTE_CHANGE_CAUSE_LABEL_KO[view.topCause]}
@@ -526,6 +549,7 @@ function SeasonResultScreen() {
       </section>
 
       <div className="os-action-dock">
+        <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>커리어의 다음 선택</Link>
         <div className="grid grid-cols-2 gap-os-2">
           <Link
             to="/career/$careerId"

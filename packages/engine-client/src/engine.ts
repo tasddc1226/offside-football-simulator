@@ -1,5 +1,6 @@
 import type { CareerSnapshot, CommandLogEntry, PutCareerBody } from '@offside/contracts';
-import type { DomainSnapshot, Ruleset } from '@offside/domain';
+import { ArchiveError, canonicalize, sha256Hex, type JsonValue, type DomainSnapshot, type LegacyResult, type Ruleset } from '@offside/domain';
+import { legacyVersionForResult, persistRetirementArchive, retirementArchiveKey, legacyResultKey, type RetirementArtifactsResolver, type RetirementRuntimeArtifacts } from './retirement-archive.js';
 import { decodeSnapshot, encodeSnapshot } from './snapshot.js';
 import { replayCommandLog } from './replay.js';
 import type { Simulator } from './simulator/index.js';
@@ -15,14 +16,15 @@ import type { LocalStore } from './ports/local-store.js';
 export type EngineClientDeps = {
   store: LocalStore;
   simulator: Simulator;
-  /**
-   * simulate()에 그대로 전달하는 룰셋. 버전별 선택·content 연동은 T-1-007·T-1-015에서 배선한다.
-   * 이 단계에서는 이 EngineClient 인스턴스의 모든 simulate 호출에 같은 룰셋을 쓴다.
-   */
+  /** 새 커리어의 기본 룰셋. 기존 커리어는 자신에게 고정된 버전을 사용한다. */
   ruleset: Ruleset;
+  /** 다른 저장 버전의 실행·복구용 immutable registry. 미지원 버전은 기본값으로 대체하지 않는다. */
+  rulesetForVersion?: (version: string) => Ruleset;
   now?: () => string;
   newId?: () => string;
   ownerProfileId?: () => string | null;
+  /** Required for RETIRE: resolve checksums from bundled immutable artifacts, never user payload. */
+  retirementArtifacts?: RetirementArtifactsResolver;
 };
 
 export type ExecuteRequest = { careerId: string; command: EngineCommand; createdServiceSeasonId?: string };
@@ -104,9 +106,20 @@ type ReadOutcome =
 export function createEngineClient(deps: EngineClientDeps): EngineClient {
   const store = deps.store;
   const simulator = deps.simulator;
-  const ruleset = deps.ruleset;
   const now = deps.now ?? (() => new Date().toISOString());
   const ownerProfileId = deps.ownerProfileId ?? (() => null);
+
+  function resolveRuleset(version: string): Ruleset | null {
+    try {
+      const candidate = deps.ruleset.version === version ? deps.ruleset : deps.rulesetForVersion?.(version);
+      return candidate?.version === version ? candidate : null;
+    } catch {
+      return null;
+    }
+  }
+  const missingRulesetError: EngineError = {
+    code: 'VERSION_MISMATCH', message: '이 커리어에 고정된 룰셋을 찾을 수 없다.',
+  };
 
   const queues = new Map<string, Promise<unknown>>();
 
@@ -128,6 +141,10 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
 
   async function doExecute(request: ExecuteRequest): Promise<ExecuteResult> {
     const { careerId, command } = request;
+    const requestHash = sha256Hex(canonicalize({ careerId, command } as unknown as JsonValue));
+    const reusedIdError: EngineError = {
+      code: 'COMMAND_ALREADY_RESOLVED', message: '이미 사용한 commandId에 다른 요청을 보낼 수 없다.',
+    };
 
     if (command.type === 'CREATE_CAREER' && !request.createdServiceSeasonId) {
       return {
@@ -139,6 +156,11 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
     const readOutcome: ReadOutcome = await store.transaction('readonly', async (tx) => {
       const existing = await tx.idempotency.get(command.commandId);
       if (existing !== undefined) {
+        if (existing.careerId !== careerId ||
+          (existing.requestHash !== undefined && existing.requestHash !== requestHash) ||
+          (command.type === 'RETIRE' && existing.requestHash === undefined)) {
+          return { kind: 'rejected', error: reusedIdError };
+        }
         return { kind: 'idempotent', response: { ...existing.response, replayed: true } };
       }
 
@@ -198,6 +220,8 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
 
     let baseSnapshot: DomainSnapshot | null;
     const versions = readOutcome.versions;
+    const ruleset = resolveRuleset(versions.rulesetVersion);
+    if (ruleset === null) return { ok: false, error: missingRulesetError };
 
     if (readOutcome.kind === 'ready') {
       baseSnapshot = readOutcome.snapshot;
@@ -227,12 +251,29 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       return { ok: false, error: simResult.error };
     }
 
+    let retirementArtifacts: RetirementRuntimeArtifacts | null = null;
+    if (command.type === 'RETIRE' && simResult.snapshot.state.status === 'RETIRED') {
+      if (deps.retirementArtifacts === undefined) {
+        return { ok: false, error: { code: 'VERSION_MISMATCH', message: '은퇴 보관용 artifact registry가 필요하다.' } };
+      }
+      try {
+        retirementArtifacts = deps.retirementArtifacts(versions);
+      } catch {
+        return { ok: false, error: { code: 'VERSION_MISMATCH', message: '이 커리어의 원본 artifact를 찾을 수 없다.' } };
+      }
+    }
+
     const createdAt = now();
     const careerSnapshot = encodeSnapshot(simResult.snapshot, { careerId, createdAt });
 
     const writeOutcome = await store.transaction('readwrite', async (tx) => {
       const existing = await tx.idempotency.get(command.commandId);
       if (existing !== undefined) {
+        if (existing.careerId !== careerId ||
+          (existing.requestHash !== undefined && existing.requestHash !== requestHash) ||
+          (command.type === 'RETIRE' && existing.requestHash === undefined)) {
+          return { kind: 'rejected', error: reusedIdError } as const;
+        }
         return { kind: 'idempotent', response: existing.response } as const;
       }
 
@@ -256,6 +297,9 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
         } as const;
       }
 
+      if (retirementArtifacts !== null && currentCareer !== undefined) {
+        await persistRetirementArchive(tx, currentCareer, simResult.snapshot, retirementArtifacts);
+      }
       await tx.snapshots.put(careerSnapshot);
       await tx.commandLog.append({
         careerId,
@@ -303,6 +347,7 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
         resultHash: simResult.snapshot.stateHash,
         response,
         createdAt,
+        requestHash,
       });
 
       return { kind: 'success', response } as const;
@@ -318,7 +363,16 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
   }
 
   async function execute(request: ExecuteRequest): Promise<ExecuteResult> {
-    return runQueued(request.careerId, () => doExecute(request));
+    return runQueued(request.careerId, async () => {
+      try {
+        return await doExecute(request);
+      } catch (error) {
+        if (error instanceof ArchiveError) {
+          return { ok: false, error: { code: 'VERIFICATION_FAILED', message: error.message } };
+        }
+        throw error;
+      }
+    });
   }
 
   async function loadCareer(careerId: string): Promise<LoadResult> {
@@ -352,6 +406,8 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       rulesetVersion: readOutcome.career.rulesetVersion,
       contentPackVersion: readOutcome.career.contentPackVersion,
     };
+    const ruleset = resolveRuleset(versions.rulesetVersion);
+    if (ruleset === null) return { ok: false, error: missingRulesetError };
     const recovery = await recoverLatestSnapshot(
       simulator,
       readOutcome.priorSnapshots,
@@ -395,6 +451,8 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       await tx.snapshots.deleteByCareer(careerId);
       await tx.commandLog.deleteByCareer(careerId);
       await tx.idempotency.deleteByCareer(careerId);
+      await tx.kv.delete(retirementArchiveKey(careerId));
+      await tx.kv.delete(legacyResultKey(careerId));
     });
   }
 
@@ -413,6 +471,20 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       const latest = await tx.snapshots.getLatest(careerId);
       if (latest === undefined) {
         throw new Error(`buildSyncBody: career ${careerId}의 최신 Snapshot이 없다.`);
+      }
+
+      const legacy = career.status === 'RETIRED'
+        ? await tx.kv.get<LegacyResult>(legacyResultKey(careerId))
+        : undefined;
+      const referencePopulationId = legacy?.referencePopulationId ?? null;
+      const legacyVersion = legacy === undefined
+        ? '1.0.0'
+        : legacyVersionForResult(legacy, {
+            legacyVersion: legacy.legacyVersion,
+          });
+      if (career.status === 'RETIRED' && referencePopulationId !== null &&
+        (typeof referencePopulationId !== 'string' || referencePopulationId.trim().length === 0)) {
+        throw new Error(`buildSyncBody: career ${careerId}의 referencePopulationId가 유효하지 않다.`);
       }
 
       return {
@@ -436,6 +508,9 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
         createdServiceSeasonId: career.createdServiceSeasonId,
         rulesetVersion: career.rulesetVersion,
         contentPackVersion: career.contentPackVersion,
+        ...(career.status === 'RETIRED'
+          ? { retirementReferencePopulationId: referencePopulationId, retirementLegacyVersion: legacyVersion }
+          : {}),
       };
     });
   }

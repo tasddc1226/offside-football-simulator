@@ -24,7 +24,7 @@ import {
   StatusStrip,
 } from '@offside/ui';
 import type { ChapterDefinition } from '@offside/content';
-import { activeRuleset, contentForCareer } from '../engine/content.js';
+import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { opponentDisplayName } from '../shared/competition-labels.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -58,6 +58,7 @@ import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { platform } from '../platform/index.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
+import { GamePending, GameResultReveal } from '../shared/game-presentation.js';
 
 type ChapterSearch = { d: number };
 
@@ -148,11 +149,11 @@ function chapterCompetitionLabel(view: ChapterView): string {
   return label === undefined ? '컵' : `컵 · ${label}`;
 }
 
-function chapterContextLabel(view: ChapterView): string {
+function chapterContextLabel(view: ChapterView, ruleset: ReturnType<typeof rulesetForCareer>): string {
   if (view.context.kind === 'NATIONAL_TEAM') {
     return `${chapterCompetitionLabel(view)} · ${view.context.opponent.opponentName}`;
   }
-  return `${chapterCompetitionLabel(view)} · ${view.context.home ? '홈' : '원정'} · ${opponentDisplayName(view.context.opponent, activeRuleset)}`;
+  return `${chapterCompetitionLabel(view)} · ${view.context.home ? '홈' : '원정'} · ${opponentDisplayName(view.context.opponent, ruleset)}`;
 }
 
 function playerReasonText(reason: SelectionRanking['playerReason']): string | null {
@@ -357,6 +358,7 @@ function ChapterScreen() {
 
   const { state } = query.data;
   const contentPack = contentForCareer(state);
+  const ruleset = rulesetForCareer(state);
   const view: ChapterView | null = deriveChapterView(state, contentPack);
   const season = state.season;
   const profile = state.player.profile;
@@ -367,8 +369,8 @@ function ChapterScreen() {
   const minute = decisionMinute(displayDecisionNumber, decisionsTotal);
   const isNationalTeam = view.context.kind === 'NATIONAL_TEAM';
   const score = scoreAtDecision(view.match.result.goalsFor, view.match.result.goalsAgainst, minute);
-  const tokens = buildNarrativeTokens(state, contentPack, activeRuleset);
-  const room = isNationalTeam ? null : deriveTacticalRoom(state, activeRuleset);
+  const tokens = buildNarrativeTokens(state, contentPack, ruleset);
+  const room = isNationalTeam ? null : deriveTacticalRoom(state, ruleset);
   const reasonText = playerReasonText(season.selection.playerReason);
 
   async function handleConfirm(decisionId: string, optionId: string) {
@@ -430,9 +432,9 @@ function ChapterScreen() {
 
       <PlayerHeader
         name={profile.name}
-        team={currentTeamName(state, activeRuleset)}
+        team={currentTeamName(state, ruleset)}
         position={positionField}
-        archetype={{ label: '아키타입', value: archetypeName(activeRuleset, profile.archetypeId) }}
+        archetype={{ label: '아키타입', value: archetypeName(ruleset, profile.archetypeId) }}
         shirtNumber={{
           label: '등번호',
           value: state.contract ? String(state.contract.shirtNumber) : '—',
@@ -443,7 +445,7 @@ function ChapterScreen() {
       <section className="os-panel flex flex-col gap-os-2" aria-label="경기 맥락">
         <p className="os-eyebrow">오늘의 경기</p>
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          {chapterContextLabel(view)}
+          {chapterContextLabel(view, ruleset)}
         </p>
         {!isNationalTeam && (
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
@@ -489,17 +491,32 @@ function ChapterScreen() {
             </div>
           </div>
         ) : (
-          <DecisionInput
-            decision={view.definition.decisions[cursor]!}
-            submitting={resolveMutation.isPending}
-            errorMessage={errorMessage}
-            onConfirm={(optionId) =>
-              void handleConfirm(view.definition.decisions[cursor]!.id, optionId)
-            }
-          />
+          <>
+            <DecisionInput
+              decision={view.definition.decisions[cursor]!}
+              submitting={resolveMutation.isPending}
+              errorMessage={errorMessage}
+              onConfirm={(optionId) =>
+                void handleConfirm(view.definition.decisions[cursor]!.id, optionId)
+              }
+            />
+            {resolveMutation.isPending ? (
+              <GamePending
+                title={`${decisionTimeLabel(displayDecisionNumber)} 판단을 확정하고 있습니다`}
+                detail="경기 결과에 반영될 실제 판정을 저장하고 있습니다."
+              />
+            ) : null}
+          </>
         )
       ) : (
-        <ChapterResultSection view={view} />
+        <GameResultReveal
+          fast={state.simulationMode === 'FAST'}
+          announcement={isNationalTeam
+            ? '대표팀 데뷔 결과가 확정되었습니다'
+            : `경기 결과 ${view.match.result.goalsFor} 대 ${view.match.result.goalsAgainst}, 평점 ${ratingText(view.match.ratingTenths)}`}
+        >
+          <ChapterResultSection view={view} />
+        </GameResultReveal>
       )}
 
       {cursor >= decisionsTotal ? (

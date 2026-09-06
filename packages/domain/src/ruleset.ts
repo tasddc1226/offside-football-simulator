@@ -153,6 +153,8 @@ export type MatchRules = {
   minutesTable: MatchMinutesTable;
   involvement: { performanceWeight: number; opponentStrengthWeight: number; rollMin: number; rollMax: number };
   statTables: Record<StatGroup, Record<string, StatDistributionTable>>;
+  /** 있으면 raw 개인 기록을 이 분 수치 기준으로 출전 시간에 비례시켜 확률 반올림한다. 1.0은 생략. */
+  statExposureFullMinutes?: number;
   disciplineTable: DisciplineTable;
   yellowSuspensionAt: number;
   redSuspension: { min: number; max: number };
@@ -384,6 +386,8 @@ export type LeagueCalendar = {
 // D-8: 룰셋 데이터는 콘텐츠 패키지가 소유하고, domain은 이 타입으로 입력만 받는다.
 export type Ruleset = {
   version: string;
+  /** 1.1 only: market previews and season squads share this deterministic stream. */
+  offerProjection?: { version: '1.1.0'; competitorSeedVersion: 'squad:season-team-v1' } | undefined;
   positions: Position[];
   archetypes: Archetype[];
   backgrounds: Background[];

@@ -206,3 +206,13 @@ export const analyticsEvents = sqliteTable(
   },
   (table) => [index('analytics_events_client_id_idx').on(table.clientId)],
 );
+/** Private immutable retirement evidence; deleting the owning career cascades to its archive. */
+export const careerArchives = sqliteTable('career_archives', {
+  careerId: text('career_id').primaryKey().references(() => careers.id, { onDelete: 'cascade' }),
+  retirementRevision: integer('retirement_revision').notNull(),
+  archiveHash: text('archive_hash').notNull(),
+  archiveJson: text('archive_json').notNull(),
+  legacyVersion: text('legacy_version').notNull(),
+  legacyJson: text('legacy_json').notNull(),
+  createdAt: text('created_at').notNull(),
+});

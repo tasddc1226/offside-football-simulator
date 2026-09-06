@@ -25,6 +25,7 @@ import {
   canNegotiateOffer,
   MARKET_REASON_LABEL_KO,
   offerDetailRows,
+  offerProjectionNotice,
   offerStatus,
   type NegotiationResultView,
 } from '../shared/transfer-view.js';
@@ -35,6 +36,14 @@ type PendingOperation = {
   offerId: string;
   beforeNegotiationState: string;
   beforeOffer?: Offer;
+};
+type FirstContractCommit = {
+  teamName: string;
+  league: string;
+  role: string;
+  wage: string;
+  seasons: number;
+  playerName: string;
 };
 
 export const Route = createFileRoute('/career/$careerId/contract')({
@@ -146,6 +155,7 @@ function ContractScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [negotiationResult, setNegotiationResult] = useState<NegotiationResultView | null>(null);
+  const [firstContractCommit, setFirstContractCommit] = useState<FirstContractCommit | null>(null);
   const operationRef = useRef<PendingOperation | null>(null);
   const committing = acceptMutation.isPending || negotiateMutation.isPending || rejectMutation.isPending;
 
@@ -163,6 +173,29 @@ function ContractScreen() {
 
   const { record, state } = query.data;
   const pending = state.pending;
+  if (firstContractCommit !== null) {
+    return (
+      <div className="os-screen" aria-live="polite">
+        <ScreenIntro eyebrow="계약 체결 완료" title="프로의 첫 유니폼" description={`${firstContractCommit.playerName} 선수의 첫 프로 계약이 저장되었습니다.`} />
+        <section className="os-panel flex flex-col gap-os-5" aria-labelledby="signed-contract-heading">
+          <div>
+            <p className="os-eyebrow">WELCOME TO</p>
+            <h2 id="signed-contract-heading" className="os-section-title">{firstContractCommit.teamName}</h2>
+          </div>
+          <dl className="grid grid-cols-2 gap-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
+            <div><dt>리그</dt><dd className="font-semibold text-os-text">{firstContractCommit.league}</dd></div>
+            <div><dt>역할</dt><dd className="font-semibold text-os-text">{firstContractCommit.role}</dd></div>
+            <div><dt>주급</dt><dd className="os-num font-semibold text-os-text">{firstContractCommit.wage}</dd></div>
+            <div><dt>기간</dt><dd className="os-num font-semibold text-os-text">{firstContractCommit.seasons}시즌</dd></div>
+          </dl>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>확정된 계약 내용은 커리어 기록에 그대로 남습니다.</p>
+        </section>
+        <div className="os-action-dock">
+          <Button variant="primary" onClick={() => void navigate({ to: '/career/$careerId', params: { careerId }, search: { signed: true }, replace: true })}>커리어 시작</Button>
+        </div>
+      </div>
+    );
+  }
   if (pending === null || (pending.kind !== 'OFFERS' && pending.kind !== 'CONTRACT')) return null;
   const offer = pending.offers.find((candidate) => candidate.id === offerId);
   if (offer === undefined) {
@@ -183,10 +216,14 @@ function ContractScreen() {
   // TS가 pending의 null 좁힘을 유지하지 않으므로 여기서(narrowing이 되는 최상위 스코프) 미리 센다.
   const marketOfferCount = pending.offers.length;
   const firstContract = pending.market.reason === 'FIRST_CONTRACT';
+  const projectionNotice = offerProjectionNotice(state.rulesetVersion, pending.market.reason);
   const parentTeamName = state.contract?.teamName ?? state.clubHistory.at(-1)?.teamName ?? null;
   const actionRevision = actionableRevision(record.revision);
   const status = offerStatus(offer, actionRevision);
   const detailRows = offerDetailRows(offer, record.revision, safeOfferId, parentTeamName);
+  const firstContractDetailRows = detailRows.filter(
+    (row) => !['리그', '기간', '주급', '계약금', '역할 약속'].includes(row.label),
+  );
 
   function goToResult(revision: number, interestedClubCount?: number) {
     void navigate({
@@ -297,7 +334,19 @@ function ContractScreen() {
       }
       if (firstContract) {
         await recordFunnelReached(careerId, 'CONTRACT_SIGNED');
-        void navigate({ to: '/career/$careerId', params: { careerId }, search: { signed: true }, replace: true });
+        const committed = result.domainSnapshot.state.contract;
+        if (committed === null) {
+          setErrorMessage('계약은 처리됐지만 확정 내용을 불러오지 못했습니다. 저장 상태를 확인해 주세요.');
+          return;
+        }
+        setFirstContractCommit({
+          teamName: committed.teamName,
+          league: LEAGUE_TIER_LABEL_KO[committed.leagueTier],
+          role: SQUAD_ROLE_LABELS[committed.rolePromise],
+          wage: formatKrw(committed.wageMinorPerWeek),
+          seasons: committed.lengthSeasons,
+          playerName: result.domainSnapshot.state.player.profile?.name ?? '선수',
+        });
       } else {
         operationRef.current = null;
         const { state: nextState, revision: nextRevision } = result.domainSnapshot;
@@ -448,7 +497,25 @@ function ContractScreen() {
           <p className="font-os text-os-text" style={BODY_STYLE}>
             {ROLE_PROMISE_SENTENCE[offer.rolePromise]}
           </p>
+          {projectionNotice ? <p className="mt-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>{projectionNotice}</p> : null}
         </section>
+
+        <details className="os-panel">
+          <summary className="cursor-pointer font-os font-semibold text-os-text">전체 제안 조건 확인</summary>
+          <dl className="mt-os-3 grid grid-cols-2 gap-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
+            {firstContractDetailRows.map((row) => (
+              <div key={row.label}>
+                <dt>{row.label}</dt>
+                <dd className="font-semibold text-os-text">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {state.rulesetVersion === '1.0.0' ? (
+            <p className="mt-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
+              전술 적합도와 경쟁자 정보는 1.0 커리어의 기존 산정값을 보여 주는 참고 정보이며, 실제 출전 선택을 예측하지 않습니다.
+            </p>
+          ) : null}
+        </details>
 
         <section className="os-panel flex flex-col gap-os-3" aria-label="선수 서명">
           <p className="os-eyebrow">선수 서명</p>
@@ -518,6 +585,7 @@ function ContractScreen() {
         <p className="font-os text-os-text" style={BODY_STYLE}>
           {ROLE_PROMISE_SENTENCE[offer.rolePromise]}
         </p>
+        {projectionNotice ? <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{projectionNotice}</p> : null}
       </Card>
 
       <Card className="flex flex-col gap-os-3">

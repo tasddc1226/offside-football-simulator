@@ -33,7 +33,7 @@ const DRAFT_FIELDS_WITHOUT_ARCHETYPE = [
  * 그 외 SCR-004. ACTIVE: 커리어에 저장된 팩의 presentation으로 EVENT 화면을 고른다.
  * INJURY/NATIONAL_TEAM은 SCR-022/032, OFFERS/제안 있는 CONTRACT는 SCR-009/017,
  * ROLE_PROPOSAL은 SCR-012, CHAPTER는 SCR-031, LOAN_RETURN은 SCR-020. 나머지는 SCR-029.
- * RETIRED·ARCHIVED는 SCR-029(phase-1-plan.md D-13 화면 해석 규칙).
+ * RETIRED·ARCHIVED는 SCR-025 FULL TIME retirement 화면으로 보낸다.
  */
 export function screenForCareer(state: CareerState): ScreenTarget {
   const params = { careerId: state.careerId };
@@ -78,7 +78,7 @@ export function screenForCareer(state: CareerState): ScreenTarget {
   }
 
   // RETIRED · ARCHIVED
-  return { screenId: 'SCR-029', params };
+  return { screenId: 'SCR-025', params };
 }
 
 export type PlayerCreationScreenId = 'SCR-002' | 'SCR-003' | 'SCR-004';

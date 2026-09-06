@@ -1,0 +1,48 @@
+{
+  "kind": "VERIFIED_LEGACY_REFERENCE",
+  "populationChecksum": "0d5c8a1acd5e08b6f44d0960de42d95c1200f6b431d1ce326e1ae4007c8577a7",
+  "evidencePayloadHash": "7b7b657d80b8d0c329e51b1335ead44d5ba5c0dfd7a31628124849aba8332878",
+  "evidenceGzipChecksum": "120f24538244b1f78517a7ca656ae3520f3aafeb80250c04b8d1cc6451f55d36",
+  "generatorBundleGzipChecksum": "5bf4c30bce1effbeb66323df0de8510d5b13610b0613b57a11159997e2ab9285",
+  "provenance": {
+    "protocolVersion": "phase5-population-5-policy-isolation",
+    "generatorCodeHash": "b1e951c6965117d5bbb3e75223893e2e9328938472e0a5ae141d3a8c7becfeb5",
+    "choicePolicy": "ui-mixed-v1",
+    "seedPolicy": "phase5-population:<position>:<zero-based-index>",
+    "requestedSeasonPolicy": "1 + (seedIndex mod --seasons)",
+    "rulesetVersion": "1.1.0",
+    "contentPackVersion": "0.3.0",
+    "artifacts": {
+      "rulesetVersion": "1.1.0",
+      "rulesetChecksum": "ea9becea77c9ef5941e4e1a066e6ae21c036eb1bca42252cd0911d50e2f1745e",
+      "contentPackVersion": "0.3.0",
+      "contentPackChecksum": "15bafeb76059b1dd4d2f381eacda61cf837877be16b07144597aac3cd8758a79"
+    },
+    "policyChecksum": "65f999560d714cff24741921f8fff7d04fd5a2e0b84283eb1a2f72acfe4c8e69",
+    "legacyVersion": "1.1.0",
+    "countPerPosition": 10000,
+    "maxSeasons": 20
+  },
+  "groups": [
+    {
+      "position": "GK",
+      "count": 10000,
+      "hash": "d274acd10b57497de7e5bfa2e5089708f532681ad5462c891b03e16c0c3170b4"
+    },
+    {
+      "position": "DF",
+      "count": 10000,
+      "hash": "e9610b582a6f3986a8b5306581b9d5f5aa57cb9afaafcb56eb04e44a44644432"
+    },
+    {
+      "position": "MF",
+      "count": 10000,
+      "hash": "b3261137b4802750c10553703a48727a36c73101a1a8095606b94d3ac4de39f4"
+    },
+    {
+      "position": "FW",
+      "count": 10000,
+      "hash": "bf8829f73ddd6657f8b03f9d2aa7d9bebd098310853b7dd26044fe4b24f802b3"
+    }
+  ]
+}

@@ -156,6 +156,37 @@ describe('T-3-005 SCR-020 result projection', () => {
     expect(view?.kindLabel).not.toBe('잔류');
   });
 
+  it('시즌 중 사전 재계약은 현재 계약이 아니라 저장된 nextContract 조건과 적용 시점을 보여준다', () => {
+    const current = makeState().contract!;
+    const future = {
+      ...current,
+      id: 'CTR-FUTURE',
+      offerId: 'OFR-17-0',
+      lengthSeasons: 2,
+      wageMinorPerWeek: 840_000,
+      rolePromise: 'STARTER' as const,
+      appearancePromise: { minutesShareBp: 6500 },
+      signedAtRevision: 18,
+      signedSeasonIndex: 2,
+    };
+    const state = makeState({
+      season: { teamId: current.teamId } as CareerState['season'],
+      nextContract: future,
+      timeline: [{ revision: 18, kind: 'CONTRACT_RENEWED', refId: future.id, age: 18, step: 7 }],
+    });
+
+    const view = resolveTransferResultView(state, 18);
+    expect(view?.contract).toMatchObject({
+      lengthSeasons: 2,
+      wageMinorPerWeek: 840_000,
+      role: '주전',
+      appearanceSharePercent: 65,
+      appliesAt: '이번 시즌 종료 후 적용',
+    });
+    expect(view?.title).toBe('새 팀과 계약을 갱신했습니다');
+    expect(committedTransferRevision(state, 18, 'OFR-17-0')).toBe(18);
+  });
+
   it('개별 제안 거절(refId != ALL)은 시장이 아직 열려 있다는 뜻이라 결과 화면 전환으로 취급하지 않는다', () => {
     const state = makeState({
       timeline: [

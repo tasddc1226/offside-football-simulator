@@ -189,8 +189,8 @@ describe('screenForCareer', () => {
       baseState({ status: 'ACTIVE', pending: { kind: 'NATIONAL_TEAM', step: 5, eventId: 'EVT-NAT-001', version: 1 } }),
       'SCR-032',
     ],
-    ['RETIRED → SCR-029', baseState({ status: 'RETIRED' }), 'SCR-029'],
-    ['ARCHIVED → SCR-029', baseState({ status: 'ARCHIVED' }), 'SCR-029'],
+    ['RETIRED → SCR-025', baseState({ status: 'RETIRED' }), 'SCR-025'],
+    ['ARCHIVED → SCR-025', baseState({ status: 'ARCHIVED' }), 'SCR-025'],
   ] as const)('%s', (_label, state, expected) => {
     expect(screenForCareer(state).screenId).toBe(expected);
   });

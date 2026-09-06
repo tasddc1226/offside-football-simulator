@@ -143,8 +143,20 @@ export async function createDexieLocalStore(dbName = 'offside'): Promise<LocalSt
     kind: 'dexie',
     transaction<T>(mode: StoreMode, run: (tx: LocalStoreTx) => Promise<T>): Promise<T> {
       const dexieMode = mode === 'readwrite' ? 'rw' : 'r';
-      return db.transaction(dexieMode, [db.careers, db.snapshots, db.commandLog, db.idempotency, db.kv], () =>
-        run(createTx(db)),
+      // Dexie detects native async scopes to keep its transaction context through nested awaits.
+      // A plain callback returning run() can lose that context in multi-handle workflows, letting
+      // later db.table operations open independent transactions. Bind every table to this exact
+      // transaction as well: command logs and snapshots must never commit independently.
+      return db.transaction(
+        dexieMode,
+        [db.careers, db.snapshots, db.commandLog, db.idempotency, db.kv],
+        async (transaction) => run(createTx({
+          careers: transaction.table('careers'),
+          snapshots: transaction.table('snapshots'),
+          commandLog: transaction.table('commandLog'),
+          idempotency: transaction.table('idempotency'),
+          kv: transaction.table('kv'),
+        })),
       );
     },
     async close() {

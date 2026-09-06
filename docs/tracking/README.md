@@ -4,7 +4,11 @@
 
 ## 역할
 
-> **현재 인계(2026-09-05, D-62)**: Claude 한도 중단으로 Phase 3·4 마감은 Codex가 이어받았다. 작은 수정·검증은 Luna 서브에이전트에 위임하고 Codex가 통합 구현·리뷰·최종 검증을 맡는다. 사용자 정책은 ‘최소한의 필요한 테스트’이며 CI 통과 후 main 병합을 승인받았다. 아래 Claude 전담/신규 테스트 금지/항상 squash 규칙은 당시 운영 이력이다. 이번 통합 PR은 기존 PR 커밋을 보존하는 merge commit을 사용한다. Phase 5는 보류한다.
+> **현재 인계(2026-09-06)**: Phase 5와 게임 경험 새로고침은 Draft PR
+> [#103](https://github.com/tasddc1226/offside-football-simulator/pull/103)에서 최종 증거를 검증 중이다.
+> 합성 grade 비율은 관찰 목표이며 단독 merge hard gate가 아니다. 저장 호환성, 동일 품질 포지션
+> 공정성, Archive 근거의 고득점 도달성, population 무결성은 필수다. 아래 Claude 전담·Phase 5
+> 보류·항상 squash 문구는 당시 운영 이력이며 현재 상태는 [통합 기록](game-experience-refresh-2026-09-06.md)을 따른다.
 
 | 역할 | 담당 | 하는 일 | 하지 않는 일 |
 |---|---|---|---|

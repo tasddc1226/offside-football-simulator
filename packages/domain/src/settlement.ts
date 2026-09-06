@@ -97,6 +97,15 @@ export function buildSeasonResult(input: BuildSeasonResultInput): Omit<SeasonRes
     }));
 
   return {
+    ...(season.legacyContext === undefined ? {} : { legacy: {
+      policyVersion: '1.0.0' as const,
+      incomeMinor: 'serviceStatus' in state.nationalityRuleState && state.nationalityRuleState.serviceStatus === 'SERVING' && state.nationalityRuleState.route === 'CAREER_BREAK' ? 0 : season.legacyContext.wageMinorPerWeek * 52 + season.legacyContext.signingBonusMinor,
+      contractId: season.legacyContext.contractId,
+      relationships: { ...state.relationships },
+      promotion: season.competitions.some((competition) => competition.kind === 'LEAGUE' && competition.position !== null && competition.position <= (ruleset.leagues.find((league) => league.id === competition.competitionId)?.promotionSlots ?? 0)),
+      ageAtStart: seasonStartEntry.age,
+      injuryMissedMatches: season.matches.filter((match) => match.outReason === 'INJURY').length,
+    } }),
     index: season.index,
     simulationMode: season.simulationMode,
     teamId: season.teamId,

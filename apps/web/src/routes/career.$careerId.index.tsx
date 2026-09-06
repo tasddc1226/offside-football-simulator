@@ -33,7 +33,7 @@ import {
   Toast,
   type CareerTimelineItem,
 } from '@offside/ui';
-import { activeRuleset, contentForCareer } from '../engine/content.js';
+import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { recordSeasonSettled, sumStepSummaries, trackStepPassed } from '../engine/funnel.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { useEngine } from '../engine/use-engine.js';
@@ -64,6 +64,7 @@ import { familiarityPercentLabel, SelectionRankingList } from '../shared/tactica
 import { useReducedMotion } from '../shared/ui-store.js';
 import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 import { buildCurrentContractSummary, MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
+import { GamePending } from '../shared/game-presentation.js';
 
 type DashboardSearch = { signed?: boolean };
 type ChapterPending = Extract<CareerState['pending'], { kind: 'CHAPTER' }>;
@@ -98,19 +99,25 @@ function relationshipRows(state: CareerState, revealNumbers: boolean) {
   }));
 }
 
-function chapterCardLabel(state: CareerState, pending: ChapterPending): string {
+function chapterCardLabel(state: CareerState, pending: ChapterPending, ruleset: Ruleset): string {
   if (pending.trigger === 'NATIONAL_DEBUT') {
     const opponentName = pending.virtualOpponent?.opponentName;
     return opponentName === undefined ? '대표팀 데뷔전' : `대표팀 데뷔전 — ${opponentName}`;
   }
 
   const opponent = state.season?.matches.find((candidate) => candidate.id === pending.matchId)?.opponent;
-  const opponentName = opponent === undefined ? undefined : opponentDisplayName(opponent, activeRuleset);
+  const opponentName = opponent === undefined ? undefined : opponentDisplayName(opponent, ruleset);
   return opponentName === undefined ? '핵심 경기' : `핵심 경기 — ${opponentName}`;
 }
 
 function timelineSentence(entry: TimelineEntry, state: CareerState): string {
   switch (entry.kind) {
+    case 'SERVICE_STARTED': return '복무 경로를 선택하다';
+    case 'SERVICE_COMPLETED': return '복무를 마치고 다음 시즌을 준비하다';
+    case 'INTERNATIONAL_TOURNAMENT': return 'U23 국제대회를 마치다';
+    case 'MENTORED': return '후배와 경험을 나누다';
+    case 'RETIRED':
+      return entry.refId === 'COACH_EPILOGUE' ? '선수 생활을 마치고 지도자로 새 출발' : '선수 생활을 마치다';
     case 'CAREER_CONFIRMED':
       return '선수 생활 시작';
     case 'CONTRACT_SIGNED':
@@ -340,6 +347,8 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   const submittingRef = useRef(false);
 
   const pending = state.pending;
+  const advancing = advanceMutation.isPending;
+  const settling = settleSeasonMutation.isPending;
 
   const handleAdvance = async () => {
     if (submittingRef.current) return;
@@ -496,8 +505,14 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
             disabled={settleSeasonMutation.isPending}
             onClick={() => void handleSettle()}
           >
-            결산하기
+            {settling ? '결산 중' : '결산하기'}
           </Button>
+          {settling ? (
+            <GamePending
+              title={`시즌 ${state.season?.index ?? ''} 기록을 정리하고 있습니다`}
+              detail="경기 기록과 성장 결과를 저장한 뒤 시즌 리뷰를 엽니다."
+            />
+          ) : null}
         </div>
         {errorMessage ? (
           <ErrorState message={errorMessage} onRetry={() => void handleSettle()} />
@@ -510,7 +525,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
     return (
       <Card className="flex flex-col gap-os-4">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          {chapterCardLabel(state, pending)}
+          {chapterCardLabel(state, pending, rulesetForCareer(state))}
         </p>
         <Link
           to="/career/$careerId/chapter"
@@ -550,8 +565,16 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
         onClick={() => void handleAdvance()}
         disabled={nothingToAdvance || advanceMutation.isPending}
       >
-        진행
+        {advancing ? '진행 중' : '진행'}
       </Button>
+      {advancing ? (
+        <GamePending
+          title="시즌을 진행하고 있습니다"
+          detail={state.season === null
+            ? '다음 일정을 준비하고 있습니다.'
+            : `시즌 ${state.season.index} · step ${state.currentStep} 이후 일정을 처리하고 있습니다.`}
+        />
+      ) : null}
       {nothingToAdvance ? (
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           다음 시즌은 곧 열립니다
@@ -616,7 +639,8 @@ function CareerDashboard() {
     : { label: '포지션', value: draft.position ? POSITION_LABELS[draft.position] : '—' };
   const hasContract = state.contract !== null;
   const season = state.season;
-  const room = deriveTacticalRoom(state, activeRuleset);
+  const ruleset = rulesetForCareer(state);
+  const room = deriveTacticalRoom(state, ruleset);
   const seasonChronicleItems = buildSeasonChronicleItems(state);
   const pastSeasonLinks = buildPastSeasonLinks(state);
   // C11: SCR-017 상단(MarketSummary)에만 있던 시장 사유·제안 수를 휴대폰 탭에도 조건부로 보여준다
@@ -635,11 +659,11 @@ function CareerDashboard() {
       />
       <PlayerHeader
         name={name}
-        team={currentTeamName(state, activeRuleset)}
+        team={currentTeamName(state, ruleset)}
         position={positionField}
         archetype={{
           label: '아키타입',
-          value: archetypeName(activeRuleset, profile?.archetypeId ?? draft.archetypeId),
+          value: archetypeName(ruleset, profile?.archetypeId ?? draft.archetypeId),
         }}
         shirtNumber={{
           label: '등번호',
@@ -659,6 +683,12 @@ function CareerDashboard() {
           </p>
         </div>
         <NextDecisionCard careerId={careerId} state={state} />
+        {state.status === 'ACTIVE' && state.season === null && state.seasonHistory.length > 0 ? (
+          <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>커리어의 다음 선택</Link>
+        ) : null}
+        {state.status === 'RETIRED' || state.status === 'ARCHIVED' ? (
+          <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>통산 기록 보기</Link>
+        ) : null}
       </section>
 
       <Tabs value={tab} onValueChange={changeTab}>
@@ -735,12 +765,12 @@ function CareerDashboard() {
                           className="os-num font-os text-os-text-2"
                           style={CAPTION_STYLE}
                         >
-                          {competitionSummaryLine(record, season, activeRuleset)}
+                          {competitionSummaryLine(record, season, ruleset)}
                         </p>
                       ))}
                     </div>
                     <div className="flex flex-col gap-os-2">
-                      {buildScheduleRows(season, activeRuleset).map((row) => (
+                      {buildScheduleRows(season, ruleset).map((row) => (
                         <div
                           key={`${row.step}-${row.order}`}
                           className="flex min-w-0 flex-col gap-os-1 rounded-os-m border border-os-border px-os-3 py-os-3 font-os text-os-text-2"

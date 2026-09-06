@@ -95,6 +95,34 @@ async function corruptCommandLogResultHash(store: MemoryLocalStore, careerId: st
 }
 
 describe('golden fixture', () => {
+  it('기본 룰셋이 바뀌어도 저장 버전으로 실행·복구하고 미지원 버전은 거부한다', async () => {
+    const store = new MemoryLocalStore();
+    const engine = createEngineClient({
+      store, simulator: inlineSimulator,
+      ruleset: { ...rulesetProto, version: '1.1.0' },
+      rulesetForVersion: (version) => {
+        if (version !== rulesetProto.version) throw new Error('unsupported ruleset');
+        return rulesetProto;
+      },
+    });
+    const created = await engine.execute({
+      careerId: 'pinned-old', command: makeCreateCommand('pinned-old', 'pinned-create'),
+      createdServiceSeasonId: 'old-season',
+    });
+    if (!created.ok) throw new Error(created.error.message);
+    await store.transaction('readwrite', (tx) => tx.snapshots.deleteByCareer('pinned-old'));
+    const restored = await engine.loadCareer('pinned-old');
+    expect(restored.ok && restored.snapshot.stateHash).toBe(created.domainSnapshot.stateHash);
+    expect(restored.ok && restored.career.rulesetVersion).toBe('1.0.0');
+
+    const unknown = makeCreateCommand('unknown', 'unknown-create');
+    if (unknown.type !== 'CREATE_CAREER') throw new Error('create command expected');
+    unknown.payload.rulesetVersion = '9.0.0';
+    const rejected = await engine.execute({ careerId: 'unknown', command: unknown, createdServiceSeasonId: 'future' });
+    expect(!rejected.ok && rejected.error.code).toBe('VERSION_MISMATCH');
+    expect((await engine.listCareers()).map((career) => career.id)).toEqual(['pinned-old']);
+  });
+
   it('inline 시뮬레이터로 career01을 순서대로 실행하면 golden과 일치한다', async () => {
     const { store, engine, careerId } = await runGoldenOnFreshStore();
 

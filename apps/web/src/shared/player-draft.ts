@@ -70,6 +70,36 @@ export function weakestAttributeKeys(archetype: Archetype, count: number): Attri
     .map(([key]) => key);
 }
 
+/**
+ * 같은 포지션의 다른 아키타입보다 실제 template 값이 낮은 능력을 비교한다. 포지션 아키타입 중
+ * 누구도 roleWeights에 쓰지 않는 능력(예: 필드 플레이어의 골키핑)은 비교에서 제외한다.
+ */
+export function relativeWeaknessAttributeKeys(
+  ruleset: Ruleset,
+  archetype: Archetype,
+  count: number,
+): AttributeKey[] {
+  const peers = archetypesForPosition(ruleset, archetype.position).filter(
+    (candidate) => candidate.id !== archetype.id,
+  );
+  const relevant = new Set<AttributeKey>();
+  for (const candidate of [archetype, ...peers]) {
+    for (const [key, weight] of Object.entries(candidate.roleWeights) as Array<[AttributeKey, number]>) {
+      if (weight > 0) relevant.add(key);
+    }
+  }
+  return [...relevant]
+    .map((key) => ({
+      key,
+      gap: (archetype.template[key] ?? 0) - Math.max(...peers.map((peer) => peer.template[key] ?? 0)),
+      value: archetype.template[key] ?? 0,
+    }))
+    .filter((entry) => entry.gap < 0)
+    .sort((a, b) => a.gap - b.gap || a.value - b.value || a.key.localeCompare(b.key))
+    .slice(0, count)
+    .map((entry) => entry.key);
+}
+
 export function attributeLabelList(keys: AttributeKey[]): string {
   return keys.map((key) => ATTRIBUTE_LABELS[key]).join(', ');
 }

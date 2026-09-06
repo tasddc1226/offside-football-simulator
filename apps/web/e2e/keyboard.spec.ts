@@ -170,13 +170,16 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
 
   // SCR-009: 제안 링크 → Enter(링크는 클릭 없이 Enter로 활성화된다).
-  const offerLink = page.getByRole('link', { name: '이 제안 보기' }).first();
+  const offerLink = page.getByRole('link', { name: '제안 상세·결정' }).first();
   await tabTo(page, offerLink);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
 
-  // SCR-010: 사인 → 계약 완료(대시보드).
+  // SCR-010: 사인 → 첫 계약 완료 카드 → 커리어 시작 → 대시보드.
   await tabTo(page, page.getByRole('button', { name: '사인' }));
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
+  await tabTo(page, page.getByRole('button', { name: '커리어 시작' }));
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
   await expect(page.getByText('계약을 맺었습니다')).toBeVisible();

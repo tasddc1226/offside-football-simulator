@@ -6,7 +6,8 @@
 // 명령 조립)로 독립 재생해 같은 pending이 열리는지 확인했다.
 //
 // T-4-005가 이 상수를 그대로 쓴다: e2e에서 `localStorage['offside:e2e-seed'] = seed`·
-// `localStorage['offside:e2e-content-pack'] = packVersion`을 실행 전에 설정하면(예:
+// 새 커리어 E2E는 같은 packVersion의 current service-season 응답을 fixture로 제공해야 한다.
+// `localStorage['offside:e2e-content-pack'] = packVersion`은 화면·해시 진단만 바꾸며 CREATE 버전을 바꾸지 않는다(예:
 // `chapter.ts`의 `seedDeterministicChapterRun`과 같은 관례) 해당 season·step에서 정확히 그
 // eventId가 pending으로 열린다 — "첫 선택지 반복"으로 온보딩·시즌을 진행했을 때 기준이다(다른
 // 선택 경로를 쓰면 다른 step에 열릴 수 있다).

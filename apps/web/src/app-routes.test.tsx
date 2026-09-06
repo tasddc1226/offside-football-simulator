@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
+import type { ServiceSeasonCurrent } from '@offside/contracts';
 import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCareer } from './engine/career-actions.js';
@@ -9,6 +10,7 @@ import { createAppEngine, getAppEngine, type AppEngine } from './engine/engine.j
 import { routeTree } from './routeTree.gen.js';
 import { queryClient } from './shared/query-client.js';
 import { useUiStore } from './shared/ui-store.js';
+import { serviceSeasonBadgeLabel } from './routes/index.js';
 
 /**
  * 컴포넌트 렌더 테스트는 실제 Worker 대신 inlineSimulator + MemoryLocalStore로 만든 테스트
@@ -40,6 +42,32 @@ function setTestEngine(): AppEngine {
   engineHolder.promise = Promise.resolve(engine);
   return engine;
 }
+
+const currentServiceSeason = {
+  id: 'svc-current',
+  name: '현재 시즌',
+  status: 'ACTIVE',
+  isTest: true,
+  startsAt: '2026-09-01T00:00:00.000Z',
+  endsAt: '2026-12-01T00:00:00.000Z',
+  rulesetVersion: '1.1.0',
+  contentPackVersion: '0.3.0',
+  notice: 'LINE_TEST',
+} satisfies ServiceSeasonCurrent;
+
+describe('SCR-001 서비스 시즌 배지', () => {
+  it('현재 테스트 시즌에서 만든 커리어만 테스트 시즌으로 표시한다', () => {
+    expect(serviceSeasonBadgeLabel('svc-current', currentServiceSeason)).toBe('테스트 시즌');
+  });
+
+  it('다른 생성 시즌은 과거 metadata를 추론하지 않고 이전 시즌으로 표시한다', () => {
+    expect(serviceSeasonBadgeLabel('svc-kickoff', currentServiceSeason)).toBe('이전 시즌');
+  });
+
+  it('현재 시즌 조회 결과가 없으면 배지를 표시하지 않는다', () => {
+    expect(serviceSeasonBadgeLabel('svc-kickoff', undefined)).toBeNull();
+  });
+});
 
 function renderAt(path: string) {
   // 한 테스트 안에서 renderAt을 여러 번 부르는 경우(예: 삭제 뒤 딥링크 재방문)를 대비해

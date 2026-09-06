@@ -4,7 +4,8 @@ import type { Db } from '../db/client.js';
 import { runBatch } from '../db/repos/batch.js';
 import { getCareer } from '../db/repos/careers.js';
 import { getSnapshotByRevision, pruneSnapshots } from '../db/repos/snapshots.js';
-import { careers, commandLog, serviceSeasons, snapshots } from '../db/schema.js';
+import { careerArchives, careers, commandLog, serviceSeasons, snapshots } from '../db/schema.js';
+import { buildRetirementRows } from './retirement.js';
 import { AppError } from '../errors.js';
 import { verifyIncomingSnapshot } from './verify-snapshot.js';
 
@@ -46,7 +47,13 @@ function warnIfStateOversized(careerId: string, revision: number, state: string)
   const bytes = new TextEncoder().encode(state).length;
   if (bytes > SNAPSHOT_STATE_RECOMMENDED_BYTES) {
     console.log(
-      JSON.stringify({ level: 'warn', msg: 'SNAPSHOT_STATE_OVER_RECOMMENDED', careerId, revision, bytes }),
+      JSON.stringify({
+        level: 'warn',
+        msg: 'SNAPSHOT_STATE_OVER_RECOMMENDED',
+        careerId,
+        revision,
+        bytes,
+      }),
     );
   }
 }
@@ -55,7 +62,10 @@ function warnIfStateOversized(careerId: string, revision: number, state: string)
  * 설계 결정 2·3·4·6·7의 흐름을 하나로 묶는다. 서버는 시뮬레이션·리플레이를 하지 않는다(ADR-003):
  * `verifyIncomingSnapshot`은 재계산이 아니라 stateHash·형식·버전 필드의 정합성만 본다.
  */
-export async function applySync(db: Db, { profileId, careerId, body, now }: ApplySyncInput): Promise<ApplySyncResult> {
+export async function applySync(
+  db: Db,
+  { profileId, careerId, body, now }: ApplySyncInput,
+): Promise<ApplySyncResult> {
   const existing = await getCareer(db, careerId);
 
   if (!existing) {
@@ -106,7 +116,63 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
     if (existing.status === 'ARCHIVED') {
       throw new AppError({ code: 'CAREER_ARCHIVED', message: '이미 보관된 커리어입니다.' });
     }
-    if (existing.rulesetVersion !== body.rulesetVersion || existing.contentPackVersion !== body.contentPackVersion) {
+    if (existing.status === 'RETIRED') {
+      if (
+        await checkAlreadyApplied(
+          db,
+          careerId,
+          body.snapshot.revision,
+          body.snapshot.stateHash,
+          existing.revision,
+        )
+      ) {
+        // A terminal retry must preserve the immutable evaluation binding as well as the snapshot.
+        // Earlier already-applied ACTIVE revisions have no retirement pin and remain idempotent.
+        if (body.snapshot.revision === existing.revision) {
+          const [storedArchive] = await db
+            .select({ legacyJson: careerArchives.legacyJson })
+            .from(careerArchives)
+            .where(eq(careerArchives.careerId, careerId))
+            .limit(1);
+          const storedLegacy: unknown =
+            storedArchive === undefined ? null : JSON.parse(storedArchive.legacyJson);
+          const validObject = storedLegacy !== null && typeof storedLegacy === 'object';
+          const storedPin =
+            validObject && 'referencePopulationId' in storedLegacy
+              ? storedLegacy.referencePopulationId
+              : undefined;
+          const storedVersion =
+            validObject && 'legacyVersion' in storedLegacy &&
+            (storedLegacy.legacyVersion === '1.0.0' || storedLegacy.legacyVersion === '1.1.0')
+              ? storedLegacy.legacyVersion
+              : undefined;
+          if (
+            storedPin === undefined ||
+            storedPin !== (body.retirementReferencePopulationId ?? null) ||
+            storedVersion !== (body.retirementLegacyVersion ?? '1.0.0')
+          ) {
+            throw new AppError({
+              code: 'VALIDATION_FAILED',
+              message: '이미 보관된 Legacy 평가 기준은 변경할 수 없습니다.',
+              details: { reason: 'RETIREMENT_REFERENCE_CONFLICT' },
+            });
+          }
+        }
+        return {
+          revision: existing.revision,
+          syncedAt: now,
+          verificationStatus: existing.verificationStatus,
+        };
+      }
+      throw new AppError({
+        code: 'CAREER_ARCHIVED',
+        message: '은퇴한 커리어는 다시 진행할 수 없습니다.',
+      });
+    }
+    if (
+      existing.rulesetVersion !== body.rulesetVersion ||
+      existing.contentPackVersion !== body.contentPackVersion
+    ) {
       throw new AppError({ code: 'VERSION_MISMATCH', message: '버전이 서버와 다릅니다.' });
     }
     if (existing.revision !== body.baseRevision) {
@@ -118,7 +184,11 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
         existing.revision,
       );
       if (idempotent) {
-        return { revision: existing.revision, syncedAt: now, verificationStatus: existing.verificationStatus };
+        return {
+          revision: existing.revision,
+          syncedAt: now,
+          verificationStatus: existing.verificationStatus,
+        };
       }
       throw conflictError(existing.revision, careerId);
     }
@@ -134,6 +204,15 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
   }
 
   warnIfStateOversized(careerId, body.snapshot.revision, body.snapshot.state);
+  const retirementRow =
+    verified.status === 'RETIRED'
+      ? buildRetirementRows(
+          careerId,
+          existing?.createdServiceSeasonId ?? body.createdServiceSeasonId,
+          body,
+          now,
+        )
+      : null;
 
   const snapshotRow = {
     id: `${careerId}:${body.snapshot.revision}`,
@@ -151,7 +230,12 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
   const careerStatement = existing
     ? db
         .update(careers)
-        .set({ revision: body.snapshot.revision, status: verified.status, lastSyncedAt: now, updatedAt: now })
+        .set({
+          revision: body.snapshot.revision,
+          status: verified.status,
+          lastSyncedAt: now,
+          updatedAt: now,
+        })
         .where(and(eq(careers.id, careerId), eq(careers.revision, body.baseRevision)))
         .returning({ id: careers.id })
     : db.insert(careers).values({
@@ -181,6 +265,7 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
         createdAt: now,
       }),
     ),
+    ...(retirementRow === null ? [] : [db.insert(careerArchives).values(retirementRow)]),
   ];
 
   let updateMatched = true;
@@ -198,7 +283,10 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
     // 다시 읽어 설계 결정 4를 적용한다.
     const refreshed = await getCareer(db, careerId);
     if (!refreshed) {
-      throw new AppError({ code: 'SERVICE_UNAVAILABLE', message: '동기화 처리 중 오류가 발생했습니다.' });
+      throw new AppError({
+        code: 'SERVICE_UNAVAILABLE',
+        message: '동기화 처리 중 오류가 발생했습니다.',
+      });
     }
     if (refreshed.ownerProfileId !== profileId) {
       throw new AppError({ code: 'CAREER_NOT_OWNED', message: '이 커리어의 소유자가 아닙니다.' });
@@ -211,7 +299,11 @@ export async function applySync(db: Db, { profileId, careerId, body, now }: Appl
       refreshed.revision,
     );
     if (idempotent) {
-      return { revision: refreshed.revision, syncedAt: now, verificationStatus: refreshed.verificationStatus };
+      return {
+        revision: refreshed.revision,
+        syncedAt: now,
+        verificationStatus: refreshed.verificationStatus,
+      };
     }
     throw conflictError(refreshed.revision, careerId);
   }

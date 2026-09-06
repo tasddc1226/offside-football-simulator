@@ -108,6 +108,25 @@ function rollStatValue(
   return { value: bucket.values[rolled.value]!, state: rolled.state };
 }
 
+/**
+ * 출전 시간에 비례한 정수 기록의 기대값을 보존한다. 음수 centi도 절댓값을 같은 방식으로 반올림한 뒤
+ * 부호를 복원한다. fullMinutes가 없으면 1.0 호환 경로로 RNG를 전혀 소비하지 않는다.
+ */
+export function scaleAdditiveStatForMinutes(
+  state: RngState,
+  value: number,
+  minutes: number,
+  fullMinutes?: number,
+): { value: number; state: RngState } {
+  if (fullMinutes === undefined) return { value, state };
+  const magnitudeNumerator = Math.abs(value) * minutes;
+  const base = Math.floor(magnitudeNumerator / fullMinutes);
+  const remainder = magnitudeNumerator % fullMinutes;
+  const rounded = rollInt(state, fullMinutes);
+  const magnitude = base + (rounded.value < remainder ? 1 : 0);
+  return { value: magnitude === 0 ? 0 : value < 0 ? -magnitude : magnitude, state: rounded.state };
+}
+
 /** 브리프 5번 제약을 적용해 포지션군 통계를 만든다(고정 키 순서로 각 1회 roll). */
 function rollStatsForGroup(
   state: RngState,
@@ -124,6 +143,16 @@ function rollStatsForGroup(
     const rolled = rollStatValue(s, group, key, involvement, ruleset);
     s = rolled.state;
     raw[key] = rolled.value;
+  }
+  for (const key of STAT_KEYS[group]) {
+    const scaled = scaleAdditiveStatForMinutes(
+      s,
+      raw[key]!,
+      minutes,
+      ruleset.matchRules.statExposureFullMinutes,
+    );
+    s = scaled.state;
+    raw[key] = scaled.value;
   }
 
   const cleanSheetMinMinutes = ruleset.matchRules.cleanSheetMinMinutes;
@@ -233,7 +262,8 @@ export function applyCompetitorFormDrift(
 /**
  * T-2-003 D-35: 경기 하나를 계산한다. RNG 소비 순서(고정, 테스트가 draw 카운트로 검사한다):
  * 1. 팀 결과(`roll100` 1 + `rollInt` 2) 2. 선발(roll 없음) 3. 출전 시간(START·SUB만 각 1회, OUT은 0)
- * 4. 관여량(minutes>0만 1회) 5. 포지션군 통계(minutes>0만, 고정 키 순서로 각 1회)
+ * 4. 관여량(minutes>0만 1회) 5. 포지션군 통계(minutes>0만, 고정 키 순서로 각 1회;
+ * statExposureFullMinutes가 있는 1.1은 raw roll 뒤 키마다 노출 보정 1회 추가)
  * 6. 카드(minutes>0만 1회) 7. 재발 검사(대상 출전이면 1회)→새 부상 이탈(minutes>0만 1회)
  * 8. 평점(roll 없음). 경쟁자 `form` drift도 이 함수가 매 경기 적용한다(roll 없음).
  */

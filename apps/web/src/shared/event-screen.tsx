@@ -16,7 +16,7 @@ import {
   Skeleton,
   StatusStrip,
 } from '@offside/ui';
-import { activeRuleset, contentForCareer } from '../engine/content.js';
+import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
@@ -26,6 +26,7 @@ import { buildNarrativeTokens, renderNarrative, type NarrativeTokenValues } from
 import { eventSituation } from './legacy-event-copy.js';
 import { u18StatusStripItems } from './status-strip.js';
 import { useCommittingExitGuard } from './use-committing-exit-guard.js';
+import { GamePending } from './game-presentation.js';
 
 const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
@@ -110,12 +111,13 @@ export function EventDecisionScreen({
   }
 
   const pack = contentForCareer(state);
+  const ruleset = rulesetForCareer(state);
   const definition = pack.eventsById.get(pending.eventId);
   if (definition === undefined) {
     return <ErrorState message={`이벤트 정의를 찾을 수 없습니다: ${pending.eventId}`} />;
   }
 
-  const tokens = buildNarrativeTokens(state, pack, activeRuleset);
+  const tokens = buildNarrativeTokens(state, pack, ruleset);
   const profile = state.player.profile;
   const positionField = profile
     ? positionHeaderField(profile.primaryPosition, profile.preferredPosition)
@@ -196,7 +198,7 @@ export function EventDecisionScreen({
             archetype={{
               label: '아키타입',
               value: archetypeName(
-                activeRuleset,
+                ruleset,
                 profile?.archetypeId ?? state.player.draft.archetypeId,
               ),
             }}
@@ -245,13 +247,20 @@ export function EventDecisionScreen({
 
       {errorMessage ? <ErrorState message={errorMessage} onRetry={handleConfirm} /> : null}
 
+      {resolveMutation.isPending ? (
+        <GamePending
+          title="선택을 확정하고 있습니다"
+          detail="결과가 저장되면 실제 변화와 함께 공개됩니다."
+        />
+      ) : null}
+
       <div className="os-action-dock">
         <Button
           variant="primary"
           onClick={handleConfirm}
           disabled={selectedChoiceId === null || resolveMutation.isPending}
         >
-          확정
+          {resolveMutation.isPending ? '확정 중' : '확정'}
         </Button>
       </div>
     </div>

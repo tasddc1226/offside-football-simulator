@@ -1,11 +1,13 @@
 import { RulesetSchema, type Ruleset } from '../schema/ruleset.ts';
 import ruleset100 from '../../rulesets/1.0.0/ruleset.json' with { type: 'json' };
+import ruleset110 from '../../rulesets/1.1.0/ruleset.json' with { type: 'json' };
 
-export const RULESET_VERSIONS = ['1.0.0'] as const;
+export const RULESET_VERSIONS = ['1.0.0', '1.1.0'] as const;
 export type RulesetVersion = (typeof RULESET_VERSIONS)[number];
 
 const RULESET_SOURCES: Record<RulesetVersion, unknown> = {
   '1.0.0': ruleset100,
+  '1.1.0': ruleset110,
 };
 
 /** 번들에 포함된 룰셋 JSON을 `RulesetSchema`로 검증해 동기로 돌려준다. */

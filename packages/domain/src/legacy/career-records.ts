@@ -62,6 +62,7 @@ function validateSeason(season: SeasonSummary): void {
   const { result } = season;
   safeInteger(season.index, 'season index', 1);
   safeInteger(season.settledAtRevision, 'settlement revision', 1);
+  if (result.legacy !== undefined) safeInteger(result.legacy.incomeMinor, 'income');
   if (
     season.teamId.length === 0 ||
     season.index !== result.index ||

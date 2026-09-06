@@ -20,12 +20,14 @@ export async function startNewCareer(page: Page): Promise<void> {
 
 /** SCR-002의 6개 필드(성별·선호 포지션 포함, PR #32/T-1-016)를 채운다. */
 export async function fillPlayerInfo(page: Page, name = '김서준'): Promise<void> {
-  await page.getByLabel('이름').fill(name);
+  await page.getByRole('textbox', { name: '이름', exact: true }).fill(name);
   await page.getByRole('radio', { name: '남성' }).click();
   await page.getByLabel('국적').selectOption('KR');
   await page.getByRole('radio', { name: '왼발' }).click();
+  await page.getByRole('button', { name: '다음', exact: true }).click();
   await page.getByRole('tab', { name: '공격수' }).click();
   await page.getByRole('radio', { name: /윙어/ }).click();
+  await page.getByRole('button', { name: '다음', exact: true }).click();
   await page.getByRole('radio', { name: /클럽 아카데미/ }).click();
 }
 
@@ -33,7 +35,7 @@ export async function fillPlayerInfo(page: Page, name = '김서준'): Promise<vo
 export async function goToConfirm(page: Page): Promise<void> {
   await startNewCareer(page);
   await fillPlayerInfo(page);
-  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/style$/);
 
   await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
@@ -89,7 +91,7 @@ export async function advanceUntilOffers(page: Page): Promise<void> {
 }
 
 /**
- * SCR-009 첫 계약이면 기존 `제안 비교`·`이 제안 보기`·`사인` 퍼널을 그대로 타고, Phase 3
+ * SCR-009 첫 계약이면 `제안 비교`·`제안 상세·결정`·`사인` 퍼널을 타고, Phase 3
  * 시장 제안이면 `이적시장 제안 비교`·`제안 상세·결정`·`이 조건 수락`·SCR-020을 탄다. 두
  * 화면을 heading/link로 먼저 구분해야 PRE_NEGOTIATION의 새 UI가 기존 시즌 진행 헬퍼에서
  * FIRST_CONTRACT로 오인되지 않는다.
@@ -99,7 +101,7 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
   const marketHeading = page.getByRole('heading', { level: 1, name: '이적시장 제안 비교', exact: true });
   await firstContractHeading.or(marketHeading).first().waitFor({ state: 'visible', timeout: 60_000 });
   if (await firstContractHeading.isVisible()) {
-    const offerLinks = page.getByRole('link', { name: '이 제안 보기' });
+    const offerLinks = page.getByRole('link', { name: '제안 상세·결정' });
     const offerCards = page.locator('[data-compare-layout="stacked"] > div');
     let targetOffer = offerLinks.first();
     if ((await offerCards.count()) > 1 && options.preferredMinLengthSeasons !== undefined) {
@@ -107,12 +109,15 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
       const preferredLength = options.preferredMinLengthSeasons;
       const preferredCard = offerCards.filter({ hasText: new RegExp(`[${preferredLength}-9]시즌`) }).first();
       await expect(preferredCard).toHaveCount(1);
-      targetOffer = preferredCard.getByRole('link', { name: '이 제안 보기' });
+      targetOffer = preferredCard.getByRole('link', { name: '제안 상세·결정' });
     }
     await targetOffer.click();
 
     await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
     await page.getByRole('button', { name: '사인' }).click();
+
+    await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
+    await page.getByRole('button', { name: '커리어 시작' }).click();
 
     await expect(page).toHaveURL(/\/career\/[^/]+$/);
     await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
@@ -170,10 +175,12 @@ export async function fillPreseasonPlan(page: Page, mode: 'FAST' | 'CHAPTER', mo
   await expect(page.getByText('(시즌 결산 때 능력에 반영, 다음 시즌부터 체감)')).toBeVisible();
 }
 
-/** SCR-012: proposal.type이 KEEP("확인")이든 POSITION_CHANGE·ROLE_CHANGE("수락")든 승낙한다
- * (RULE-TIME-002: 시즌 step 1은 항상 ROLE_PROPOSAL). */
+/** SCR-012의 POSITION_CHANGE·ROLE_CHANGE를 승낙한다. 현재 역할과 완전히 같은 KEEP은 시즌 준비
+ * 화면이 원자적으로 수락하고 대시보드로 바로 이동하므로, 그 경로에서는 할 일이 없다. KEEP 자동
+ * 수락의 두 번째 명령이 실패한 경우에는 복구용 /role이 남아 이 함수가 "확인"으로 마무리한다. */
 export async function resolveRoleProposal(page: Page): Promise<void> {
-  await expect(page).toHaveURL(/\/career\/.+\/role$/);
+  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/role)?$/);
+  if (!page.url().endsWith('/role')) return;
   // KEEP은 "확인" 하나, POSITION_CHANGE·ROLE_CHANGE는 "거절"·"수락" 둘을 보여준다 — 어느 쪽이든
   // 받아들이는 버튼을 하나의 locator로 묶어 렌더 경합 없이 기다린다(count() 스냅샷은 로더 직후
   // 첫 렌더 전에 0을 읽을 수 있다).

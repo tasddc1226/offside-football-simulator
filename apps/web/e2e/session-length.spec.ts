@@ -80,7 +80,7 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   counts.screens += 1;
 
   // SCR-002: 이름(텍스트 입력 1) + 성별·국적·주발·포지션 구분 탭·포지션·배경(선택 6).
-  await page.getByLabel('이름').fill('김서준');
+  await page.getByRole('textbox', { name: '이름', exact: true }).fill('김서준');
   counts.textInputs += 1;
   await page.getByRole('radio', { name: '남성' }).click();
   counts.selections += 1;
@@ -88,13 +88,19 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   counts.selections += 1;
   await page.getByRole('radio', { name: '왼발' }).click();
   counts.selections += 1;
+  await page.getByRole('button', { name: '다음', exact: true }).click();
+  counts.confirmations += 1;
+  counts.screens += 1;
   await page.getByRole('tab', { name: '공격수' }).click();
   counts.selections += 1;
   await page.getByRole('radio', { name: /윙어/ }).click();
   counts.selections += 1;
+  await page.getByRole('button', { name: '다음', exact: true }).click();
+  counts.confirmations += 1;
+  counts.screens += 1;
   await page.getByRole('radio', { name: /클럽 아카데미/ }).click();
   counts.selections += 1;
-  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
   counts.confirmations += 1;
   await expect(page).toHaveURL(/\/career\/.+\/style$/);
   counts.screens += 1;
@@ -132,13 +138,17 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
 
   // SCR-009: 제안 선택(확정) → SCR-010.
-  await page.getByRole('link', { name: '이 제안 보기' }).first().click();
+  await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
   counts.confirmations += 1;
   await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
   counts.screens += 1;
 
-  // SCR-010: 사인(확정) → 계약 완료(대시보드).
+  // SCR-010: 사인(확정) → 첫 계약 완료 카드 → 커리어 시작 → 대시보드.
   await page.getByRole('button', { name: '사인' }).click();
+  counts.confirmations += 1;
+  await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
+  counts.screens += 1;
+  await page.getByRole('button', { name: '커리어 시작' }).click();
   counts.confirmations += 1;
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
   await expect(page.getByText('계약을 맺었습니다')).toBeVisible();

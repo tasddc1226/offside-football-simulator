@@ -1,4 +1,5 @@
 import { EFFECT_DEFAULTS, loadContentPack } from '@offside/content';
+import type { ServiceSeasonCurrent } from '@offside/contracts';
 import { hashState } from '@offside/domain';
 import { career01, career01EngineCommands, career05Chapter, career05ChapterEngineCommands, rulesetProto } from '@offside/fixtures';
 import { encodeSnapshot, MemoryLocalStore, inlineSimulator, type ExecuteResult } from '@offside/engine-client';
@@ -14,6 +15,7 @@ import {
   resolveEvent,
   resolveRole,
   settleSeason,
+  shouldAutoAcceptUnchangedRole,
   startSeason,
   toResolveChapterOutcomes,
   toResolveEventOutcomes,
@@ -21,7 +23,7 @@ import {
   updateDraft,
 } from './career-actions.js';
 import { createAppEngine, type AppEngine } from './engine.js';
-import { FALLBACK_SERVICE_SEASON_ID } from './versions.js';
+import { FALLBACK_SERVICE_SEASON, FALLBACK_SERVICE_SEASON_ID } from './versions.js';
 
 const syncHolder = vi.hoisted(() => ({ notifyCommitted: vi.fn() }));
 vi.mock('./sync.js', () => ({
@@ -38,8 +40,10 @@ vi.mock('./sync.js', () => ({
 
 // service-season.ts는 네트워크(TanStack Query)를 거친다 — 이 테스트는 시즌 id 주입 자체가 아니라
 // createCareer·startSeason의 명령 조립·재생을 본다(폴백 순서는 service-season.test.ts가 본다).
+const serviceSeasonHolder = vi.hoisted(() => ({ current: undefined as undefined | ServiceSeasonCurrent }));
 vi.mock('./service-season.js', () => ({
-  resolveServiceSeasonId: () => Promise.resolve(FALLBACK_SERVICE_SEASON_ID),
+  resolveServiceSeason: () => Promise.resolve(serviceSeasonHolder.current ?? FALLBACK_SERVICE_SEASON),
+  resolveServiceSeasonId: () => Promise.resolve(serviceSeasonHolder.current?.id ?? FALLBACK_SERVICE_SEASON_ID),
 }));
 
 function makeIdGenerator(prefix: string): () => string {
@@ -86,6 +90,52 @@ describe('createCareer', () => {
     expect(first.ok && second.ok).toBe(true);
     if (!first.ok || !second.ok) throw new Error('unreachable');
     expect(first.snapshot.careerId).not.toBe(second.snapshot.careerId);
+  });
+
+  it('현재 서비스 시즌의 id·룰셋·팩을 한 묶음으로 새 커리어에 고정한다', async () => {
+    serviceSeasonHolder.current = {
+      ...FALLBACK_SERVICE_SEASON,
+      id: 'svc_phase5_qa',
+      name: 'PHASE 5 QA',
+      status: 'PRESEASON',
+      isTest: true,
+      rulesetVersion: '1.1.0',
+      contentPackVersion: '0.3.0',
+      notice: 'LINE_TEST',
+    };
+    try {
+      const engine = makeTestEngine();
+      const result = await createCareer(engine, { simulationMode: 'FAST' });
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error('unreachable');
+      expect(result.domainSnapshot.state.rulesetVersion).toBe('1.1.0');
+      expect(result.domainSnapshot.state.contentPackVersion).toBe('0.3.0');
+      const [record] = await engine.client.listCareers();
+      expect(record?.createdServiceSeasonId).toBe('svc_phase5_qa');
+    } finally {
+      serviceSeasonHolder.current = undefined;
+    }
+  });
+
+  it.each([
+    ['지원하지 않는 버전', '9.9.9', '0.3.0'],
+    ['호환되지 않는 룰셋·팩', '1.1.0', '0.1.0'],
+  ])('%s이면 CREATE_CAREER를 실행하기 전에 실패한다', async (_label, rulesetVersion, contentPackVersion) => {
+    serviceSeasonHolder.current = {
+      ...FALLBACK_SERVICE_SEASON,
+      id: 'svc_invalid',
+      rulesetVersion,
+      contentPackVersion,
+    };
+    const engine = makeTestEngine();
+    const executeSpy = vi.spyOn(engine.client, 'execute');
+    try {
+      await expect(createCareer(engine, { simulationMode: 'FAST' })).rejects.toThrow();
+      expect(executeSpy).not.toHaveBeenCalled();
+      expect(await engine.client.listCareers()).toEqual([]);
+    } finally {
+      serviceSeasonHolder.current = undefined;
+    }
   });
 });
 
@@ -209,7 +259,7 @@ describe('toStartSeasonPayload', () => {
     const command = toStartSeasonPayload({ simulationMode: 'FAST' }, FALLBACK_SERVICE_SEASON_ID);
     expect(command).toEqual({
       type: 'START_SEASON',
-      payload: { simulationMode: 'FAST', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID },
+      payload: { simulationMode: 'FAST', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID, legacyLedger: true },
     });
   });
 
@@ -217,7 +267,7 @@ describe('toStartSeasonPayload', () => {
     const command = toStartSeasonPayload({ simulationMode: 'CHAPTER', trainingFocus: 'TECHNICAL' }, FALLBACK_SERVICE_SEASON_ID);
     expect(command).toEqual({
       type: 'START_SEASON',
-      payload: { simulationMode: 'CHAPTER', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID, trainingFocus: 'TECHNICAL' },
+      payload: { simulationMode: 'CHAPTER', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID, trainingFocus: 'TECHNICAL', legacyLedger: true },
     });
   });
 });
@@ -235,6 +285,61 @@ describe('startSeason', () => {
     expect(result.domainSnapshot.state.season?.simulationMode).toBe('FAST');
     expect(result.domainSnapshot.state.pending?.kind).toBe('ROLE_PROPOSAL');
     expect(result.domainSnapshot.state.timeline.at(-1)).toMatchObject({ kind: 'SEASON_STARTED' });
+  });
+
+  it('기존 1.0/0.1 커리어는 현재 시즌 참여 id만 기록하고 커리어 버전은 바꾸지 않는다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToSigned(engine);
+    serviceSeasonHolder.current = {
+      ...FALLBACK_SERVICE_SEASON,
+      id: 'svc_phase5_qa',
+      rulesetVersion: '1.1.0',
+      contentPackVersion: '0.3.0',
+    };
+    try {
+      const result = await startSeason(engine, careerId, { simulationMode: 'FAST' });
+      if (!result.ok) throw new Error('startSeason 실패');
+      expect(result.domainSnapshot.state).toMatchObject({
+        rulesetVersion: '1.0.0',
+        contentPackVersion: '0.1.0',
+        season: { serviceSeasonId: 'svc_phase5_qa' },
+      });
+      expect(result.domainSnapshot.state.seasonHistory).toEqual([]);
+      const [record] = await engine.client.listCareers();
+      expect(record).toMatchObject({
+        createdServiceSeasonId: 'svc_kickoff',
+        rulesetVersion: '1.0.0',
+        contentPackVersion: '0.1.0',
+      });
+    } finally {
+      serviceSeasonHolder.current = undefined;
+    }
+  });
+
+  it('실제 포지션·역할과 같은 KEEP만 자동 확인 대상으로 본다', async () => {
+    const engine = makeTestEngine();
+    const careerId = await replayToSigned(engine);
+    const result = await startSeason(engine, careerId, { simulationMode: 'FAST' });
+    if (!result.ok) throw new Error('startSeason 실패');
+
+    const profile = result.domainSnapshot.state.player.profile;
+    const season = result.domainSnapshot.state.season;
+    if (profile === null || season === null) throw new Error('시즌 상태 필요');
+    const unchanged = {
+      ...result.domainSnapshot.state,
+      pending: {
+        kind: 'ROLE_PROPOSAL' as const,
+        step: 1,
+        proposal: { type: 'KEEP' as const, position: profile.primaryPosition, squadRole: season.squadRole },
+      },
+    };
+    expect(shouldAutoAcceptUnchangedRole(unchanged)).toBe(true);
+    expect(
+      shouldAutoAcceptUnchangedRole({
+        ...unchanged,
+        pending: { ...unchanged.pending, proposal: { ...unchanged.pending.proposal, position: profile.primaryPosition === 'GK' ? 'ST' : 'GK' } },
+      }),
+    ).toBe(false);
   });
 });
 

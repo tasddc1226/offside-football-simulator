@@ -218,6 +218,10 @@ function ContractResult({ view, careerId, state }: { view: TransferResultView; c
               <dd className="text-os-text">{view.contract.position}</dd>
             </div>
             <div>
+              <dt>적용 시점</dt>
+              <dd className="text-os-text">{view.contract.appliesAt}</dd>
+            </div>
+            <div>
               <dt>전술 적합도</dt>
               <dd className="os-num text-os-text">{view.contract.tacticalFit}</dd>
             </div>
