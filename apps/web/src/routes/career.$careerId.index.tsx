@@ -1,7 +1,7 @@
 // SCR-029 커리어 대시보드. 다섯 구역 탭 + "다음 결정" 카드. 대시보드에서는 어떤 명령도 확정하지
 // 않는다 — advance/settleSeason은 결정이 아니라 "진행"이며(다음에 뭐가 뜰지는 도메인이 정한다),
 // 결정 확정은 전용 화면(SCR-007·008·009·010·012·013·014)에서만 일어난다.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useIsMutating } from '@tanstack/react-query';
 import {
@@ -63,8 +63,13 @@ import { useReducedMotion, useUiStore } from '../shared/ui-store.js';
 import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 import { buildCurrentContractSummary, MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
 import { GamePending } from '../shared/game-presentation.js';
-import { buildCareerClock } from '../shared/career-clock.js';
-import { proStatusStripItems, u18StatusStripItems } from '../shared/status-strip.js';
+import { buildCareerClock, type CareerClockView } from '../shared/career-clock.js';
+import {
+  conditionTileItems,
+  proStatusStripItems,
+  u18StatusStripItems,
+  type ConditionTileItem,
+} from '../shared/status-strip.js';
 
 const DASHBOARD_TABS = ['home', 'schedule', 'player', 'contract', 'records'] as const;
 type DashboardTab = (typeof DASHBOARD_TABS)[number];
@@ -358,7 +363,29 @@ function competitionSummaryLine(
   return `${cup?.name ?? '컵'} · ${roundText} · ${winDrawLoss}`;
 }
 
-function NextDecisionCard({ careerId, state }: { careerId: string; state: CareerState }) {
+/** UX-007 다음 행동 히어로: pending 없이 시즌이 진행 중일 때, 아직 안 치른 다음 일정이 경기면
+ * "vs 상대팀 · 대회/라운드" 맥락을 만든다. 일정 탭과 같은 buildScheduleRows(같은 소스)에서
+ * 파생하고 새 도메인 계산은 하지 않는다 — 탈락 행·이미 치른 행은 건너뛴다. */
+export function nextMatchHeroContext(
+  season: FootballSeason,
+  ruleset: Ruleset,
+  teamNameOverrides: TeamNameOverrides,
+): string | null {
+  const upcoming = buildScheduleRows(season, ruleset, teamNameOverrides).find(
+    (row) => !row.eliminated && row.match === null,
+  );
+  return upcoming === undefined ? null : `vs ${upcoming.opponentName} · ${upcoming.competitionLabel}`;
+}
+
+function NextDecisionCard({
+  careerId,
+  state,
+  clock,
+}: {
+  careerId: string;
+  state: CareerState;
+  clock: CareerClockView;
+}) {
   const navigate = useNavigate();
   const advanceMutation = useCareerMutation('advance');
   const settleSeasonMutation = useCareerMutation('settleSeason');
@@ -370,6 +397,28 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   const pending = state.pending;
   const advancing = advanceMutation.isPending;
   const settling = settleSeasonMutation.isPending;
+  const ruleset = rulesetForCareer(state);
+
+  /** UX-007: 맥락(eyebrow+제목+선택 설명)과 CTA를 한 프레임 안에 묶는다(이중 프레임 제거) — 상태별
+   * 분기는 그대로 두고 시각 구조만 통일한다. */
+  function hero(heading: string, detail: string | null, children: ReactNode) {
+    return (
+      <Card className="os-next-action flex flex-col gap-os-4">
+        <div className="flex flex-col gap-os-1">
+          <p className="os-eyebrow">{clock.progress}</p>
+          <h2 id="next-action-title" className="os-section-title">
+            {heading}
+          </h2>
+          {detail !== null ? (
+            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+              {detail}
+            </p>
+          ) : null}
+        </div>
+        {children}
+      </Card>
+    );
+  }
 
   const handleAdvance = async () => {
     if (submittingRef.current) return;
@@ -435,92 +484,64 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
 
   if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM')) {
     const target = screenForCareer(state);
-    return (
-      <Card className="os-next-action flex flex-col gap-os-4">
-        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          결정이 기다립니다
-        </p>
-        <Link
-          to={SCREEN_ROUTES[target.screenId]}
-          params={target.params}
-          className={buttonClassName('primary')}
-          style={buttonStyle}
-        >
-          결정하러 가기
-        </Link>
-      </Card>
-    );
+    return hero('결정이 기다립니다', null, (
+      <Link
+        to={SCREEN_ROUTES[target.screenId]}
+        params={target.params}
+        className={buttonClassName('primary')}
+        style={buttonStyle}
+      >
+        결정하러 가기
+      </Link>
+    ));
   }
 
   if (pending !== null && pending.kind === 'OFFERS') {
-    return (
-      <Card className="os-next-action flex flex-col gap-os-4">
-        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          제안 {pending.offers.length}건
-        </p>
-        <Link
-          to="/career/$careerId/offers"
-          params={{ careerId }}
-          className={buttonClassName('primary')}
-          style={buttonStyle}
-        >
-          제안 보기
-        </Link>
-      </Card>
-    );
+    return hero(`제안 ${pending.offers.length}건`, null, (
+      <Link
+        to="/career/$careerId/offers"
+        params={{ careerId }}
+        className={buttonClassName('primary')}
+        style={buttonStyle}
+      >
+        제안 보기
+      </Link>
+    ));
   }
 
   if (pending !== null && pending.kind === 'CONTRACT' && pending.offers.length > 0) {
-    return (
-      <Card className="os-next-action flex flex-wrap items-center justify-between gap-os-3">
-        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          재계약 제안 {pending.offers.length}건
-        </p>
-        <Link to="/career/$careerId/offers" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
-          제안 비교
-        </Link>
-      </Card>
-    );
+    return hero(`재계약 제안 ${pending.offers.length}건`, null, (
+      <Link to="/career/$careerId/offers" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
+        제안 비교
+      </Link>
+    ));
   }
 
   if (pending !== null && pending.kind === 'LOAN_RETURN') {
-    return (
-      <Card className="os-next-action flex flex-wrap items-center justify-between gap-os-3">
-        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          임대 복귀 결정
-        </p>
-        <Link to="/career/$careerId/transfer-result" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
-          복귀 조건 보기
-        </Link>
-      </Card>
-    );
+    return hero('임대 복귀 결정', null, (
+      <Link to="/career/$careerId/transfer-result" params={{ careerId }} className={buttonClassName('primary')} style={buttonStyle}>
+        복귀 조건 보기
+      </Link>
+    ));
   }
 
   if (pending !== null && pending.kind === 'ROLE_PROPOSAL') {
-    return (
-      <Card className="os-next-action flex flex-col gap-os-4">
-        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          감독 제안이 기다립니다
-        </p>
-        <Link
-          to="/career/$careerId/role"
-          params={{ careerId }}
-          className={buttonClassName('primary')}
-          style={buttonStyle}
-        >
-          제안 보기
-        </Link>
-      </Card>
-    );
+    return hero('감독 제안이 기다립니다', null, (
+      <Link
+        to="/career/$careerId/role"
+        params={{ careerId }}
+        className={buttonClassName('primary')}
+        style={buttonStyle}
+      >
+        제안 보기
+      </Link>
+    ));
   }
 
   if (pending !== null && pending.kind === 'SETTLEMENT') {
-    return (
-      <Card className="os-next-action flex flex-col gap-os-2">
+    return hero('시즌 결산', null, (
+      <div className="flex flex-col gap-os-2">
         <div className="flex flex-col gap-os-4">
-          <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-            시즌 결산
-          </p>
           <Button
             variant="primary"
             disabled={settleSeasonMutation.isPending}
@@ -538,49 +559,43 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
         {errorMessage ? (
           <ErrorState message={errorMessage} onRetry={() => void handleSettle()} />
         ) : null}
-      </Card>
-    );
+      </div>
+    ));
   }
 
   if (pending !== null && pending.kind === 'CHAPTER') {
-    return (
-      <Card className="os-next-action flex flex-col gap-os-4">
-        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          {chapterCardLabel(state, pending, rulesetForCareer(state), teamNameOverrides)}
-        </p>
-        <Link
-          to="/career/$careerId/chapter"
-          params={{ careerId }}
-          search={{ d: pending.resolved.length }}
-          className={buttonClassName('primary')}
-          style={buttonStyle}
-        >
-          경기 보기
-        </Link>
-      </Card>
-    );
+    return hero(chapterCardLabel(state, pending, ruleset, teamNameOverrides), null, (
+      <Link
+        to="/career/$careerId/chapter"
+        params={{ careerId }}
+        search={{ d: pending.resolved.length }}
+        className={buttonClassName('primary')}
+        style={buttonStyle}
+      >
+        경기 보기
+      </Link>
+    ));
   }
 
   if (pending === null && state.season === null && state.contract !== null) {
-    return (
-      <Card className="os-next-action flex flex-col gap-os-4">
-        <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          프리시즌 계획
-        </p>
-        <Link
-          to="/career/$careerId/preseason"
-          params={{ careerId }}
-          className={buttonClassName('primary')}
-          style={buttonStyle}
-        >
-          계획하러 가기
-        </Link>
-      </Card>
-    );
+    return hero('프리시즌 계획', null, (
+      <Link
+        to="/career/$careerId/preseason"
+        params={{ careerId }}
+        className={buttonClassName('primary')}
+        style={buttonStyle}
+      >
+        계획하러 가기
+      </Link>
+    ));
   }
 
-  return (
-    <Card className="os-next-action flex flex-col gap-os-2">
+  // UX-007: 다음 일정이 실제 경기면(탈락·이미 치른 경기가 아니면) "다음 경기" 맥락을 크게 보여준다.
+  // 경기가 아니거나 시즌이 없으면 기존 "다음 행동" 문구(clock.detail)를 그대로 유지한다.
+  const matchContext = state.season === null ? null : nextMatchHeroContext(state.season, ruleset, teamNameOverrides);
+
+  return hero(matchContext !== null ? '다음 경기' : '다음 행동', matchContext ?? clock.detail, (
+    <div className="flex flex-col gap-os-2">
       <Button
         variant="primary"
         onClick={() => void handleAdvance()}
@@ -604,7 +619,50 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
       {errorMessage ? (
         <ErrorState message={errorMessage} onRetry={() => void handleAdvance()} />
       ) : null}
-    </Card>
+    </div>
+  ));
+}
+
+/** UX-007 컨디션 타일: 폼·체력·사기를 같은 위계의 타일 + 0~100 미터로 보여준다(StatusStrip과 달리
+ * 첫 항목을 액센트로 강조하지 않는다 — player 탭 Base OVR과 섞이면 버튼처럼 보인다는 불만,
+ * PR 본문 참고). 낮은 값은 색 대신 아이콘+라벨도 같이 보여준다(색약 대응). */
+function ConditionTiles({ items }: { items: ConditionTileItem[] }) {
+  return (
+    <ul className="os-condition-tiles" aria-label="현재 컨디션">
+      {items.map((item) => {
+        const percent = Math.max(0, Math.min(100, item.value));
+        return (
+          <li key={item.id} className="flex flex-col gap-os-2 rounded-os-m bg-os-surface-2 p-os-3">
+            <div className="flex items-baseline justify-between gap-os-2">
+              <span className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                {item.label}
+              </span>
+              <span
+                className="os-num font-os font-semibold text-os-text"
+                style={{ fontSize: 'var(--os-fs-num-md)', lineHeight: 'var(--os-lh-num-md)' }}
+              >
+                {item.value}
+              </span>
+            </div>
+            <div
+              className="os-condition-meter"
+              role="progressbar"
+              aria-label={item.label}
+              aria-valuenow={item.value}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <span style={{ width: `${percent}%` }} />
+            </div>
+            {item.low ? (
+              <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                <span aria-hidden="true" className="text-os-warning">▼</span> {item.tierLabel}
+              </p>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -684,7 +742,11 @@ function CareerDashboard() {
       : null;
   const clock = buildCareerClock(state);
   const statusItems = hasContract ? proStatusStripItems(state) : u18StatusStripItems(state);
-  const homeStatusItems = statusItems.filter((item) => item.id === 'form' || item.id === 'fitness');
+  // UX-007 홈 탭 컨디션 타일: StatusStrip과 별도로 폼·체력·사기를 동일한 위계의 타일+미터로 보여준다
+  // (StatusStrip의 "첫 항목 액센트 강조"는 player 탭 Base OVR용이라 여기서는 쓰지 않는다).
+  const conditionItems = conditionTileItems(state);
+  // UX-007 최근 소식: 기록 탭과 같은 seasonChronicleItems를 재사용해 최근 것부터 최대 3개만 보여준다.
+  const recentChronicleItems = seasonChronicleItems.slice(-3).reverse();
 
   return (
     <div className="os-screen">
@@ -728,15 +790,38 @@ function CareerDashboard() {
           >
             <TabsContent value="home">
               <section className="os-career-home" aria-label="지금 할 일">
-                <div>
-                  <p className="os-eyebrow">{clock.progress}</p>
-                  <h2 id="next-action-title" className="os-section-title">다음 행동</h2>
-                  <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{clock.detail}</p>
-                </div>
-                <NextDecisionCard careerId={careerId} state={state} />
-                <div className="os-career-home-status" aria-label="현재 컨디션">
-                  <StatusStrip items={homeStatusItems} />
-                </div>
+                <NextDecisionCard careerId={careerId} state={state} clock={clock} />
+
+                <ConditionTiles items={conditionItems} />
+
+                {season !== null && season.competitions.length > 0 ? (
+                  <DashboardSection title="이번 시즌 요약" description="현재 리그·컵 성적입니다.">
+                    <div className="flex flex-col gap-os-1">
+                      {season.competitions.map((record) => (
+                        <p
+                          key={record.competitionId}
+                          className="os-num font-os text-os-text"
+                          style={BODY_STYLE}
+                        >
+                          {competitionSummaryLine(record, season, ruleset)}
+                        </p>
+                      ))}
+                    </div>
+                  </DashboardSection>
+                ) : null}
+
+                {recentChronicleItems.length > 0 ? (
+                  <DashboardSection title="최근 소식" description="최근 커리어 진행 상황입니다.">
+                    <ul className="flex flex-col gap-os-1">
+                      {recentChronicleItems.map((item) => (
+                        <li key={item.id} className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                          {item.sentence}
+                        </li>
+                      ))}
+                    </ul>
+                  </DashboardSection>
+                ) : null}
+
                 {state.status === 'ACTIVE' && state.season === null && state.seasonHistory.length > 0 ? (
                   <Link to="/career/$careerId/retirement" params={{ careerId }} className={buttonClassName('secondary')} style={buttonStyle}>커리어의 다음 선택</Link>
                 ) : null}
@@ -1118,11 +1203,13 @@ function CareerDashboard() {
         </MotionPanel>
       </Tabs>
 
-      <div className="flex gap-os-4">
+      {/* UX-007: 허브로·설정을 같은 위계(보조 버튼)의 나란한 두 버튼으로 맞춘다(이전에는 버튼+텍스트
+          링크가 섞여 정렬이 어긋나 보였다). 탭과 무관한 공용 하단 영역이라 모든 탭에서 동일하다. */}
+      <div className="grid grid-cols-2 gap-os-3">
         <Link to="/" className={buttonClassName('secondary')} style={buttonStyle}>
           허브로
         </Link>
-        <Link to="/settings" className="font-os text-os-text-2" style={CAPTION_STYLE}>
+        <Link to="/settings" className={buttonClassName('secondary')} style={buttonStyle}>
           설정
         </Link>
       </div>

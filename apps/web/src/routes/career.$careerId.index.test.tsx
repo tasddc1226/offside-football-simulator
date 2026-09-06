@@ -4,7 +4,15 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
-import { hashState, type ChapterRecord, type Offer, type Ruleset } from '@offside/domain';
+import {
+  hashState,
+  type ChapterRecord,
+  type FootballSeason,
+  type MatchRecord,
+  type Offer,
+  type Ruleset,
+  type ScheduleEntry,
+} from '@offside/domain';
 import { encodeSnapshot, MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -25,7 +33,7 @@ import { routeTree } from '../routeTree.gen.js';
 import { careerQueryOptions } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { useUiStore } from '../shared/ui-store.js';
-import { buildPastSeasonLinks, buildSeasonChronicleItems } from './career.$careerId.index.js';
+import { buildPastSeasonLinks, buildSeasonChronicleItems, nextMatchHeroContext } from './career.$careerId.index.js';
 
 const engineHolder = vi.hoisted(() => ({ promise: null as Promise<unknown> | null }));
 
@@ -321,6 +329,11 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     const nextAction = screen.getByRole('region', { name: '지금 할 일' });
     expect(within(nextAction).getByRole('button', { name: '진행' })).not.toBeDisabled();
     expect(screen.getAllByRole('tab')).toHaveLength(5);
+    // UX-007: 맥락(제목)과 진행 버튼이 같은 프레임(region) 안에 있다 — 다음 일정이 경기면 "다음
+    // 경기", 아니면(휴식 step 등) 기존 "다음 행동" 문구를 유지한다.
+    expect(
+      within(nextAction).getByRole('heading', { level: 2, name: /^(다음 경기|다음 행동)$/ }),
+    ).toBeInTheDocument();
   });
 
   it('pending EVENT면 "결정이 기다립니다"와 결정하러 가기 CTA를 보여준다', async () => {
@@ -861,6 +874,42 @@ describe('T-2-009 다이어리 연대기 요약: buildSeasonChronicleItems·buil
 
     const pastLinks = buildPastSeasonLinks(state);
     expect(pastLinks.some((link) => link.historyIndex === justSettledIndex)).toBe(false);
+  });
+});
+
+describe('UX-007 nextMatchHeroContext: 다음 행동 히어로의 "다음 경기" 맥락', () => {
+  const ruleset = loadRuleset('1.0.0');
+  const TEAM_ID = 'seorabeol-united';
+  const OPPONENT_ID = 'cheongyeon-fc';
+
+  function seasonWith(schedule: ScheduleEntry[], matches: MatchRecord[]): FootballSeason {
+    return { teamId: TEAM_ID, schedule, matches } as unknown as FootballSeason;
+  }
+
+  it('아직 안 치른 다음 경기가 있으면 "vs 상대팀 · 대회/라운드"를 돌려준다', () => {
+    const entry: ScheduleEntry = { step: 2, order: 0, competitionId: 'LEAGUE', kind: 'LEAGUE', round: null, opponentId: OPPONENT_ID, home: true };
+
+    const context = nextMatchHeroContext(seasonWith([entry], []), ruleset, {});
+
+    expect(context).toBe('vs 청연 FC · 리그');
+  });
+
+  it('일정이 전부 치렀거나(match 있음) 탈락 처리된 행뿐이면 null이다(기존 "다음 행동" 문구 유지)', () => {
+    const played: ScheduleEntry = { step: 1, order: 0, competitionId: 'LEAGUE', kind: 'LEAGUE', round: null, opponentId: OPPONENT_ID, home: true };
+    const match = {
+      step: 1,
+      order: 0,
+      result: { goalsFor: 1, goalsAgainst: 0, outcome: 'WIN' },
+      appearance: 'START',
+      outReason: null,
+      minutes: 90,
+      ratingTenths: 70,
+    } as MatchRecord;
+    const eliminated: ScheduleEntry = { step: 9, order: 0, competitionId: 'CUP', kind: 'CUP', round: 'SEMI', opponentId: `${ruleset.cups[0]!.id}-SEMI`, home: true, skipped: 'ELIMINATED' };
+
+    const context = nextMatchHeroContext(seasonWith([played, eliminated], [match]), ruleset, {});
+
+    expect(context).toBeNull();
   });
 });
 
