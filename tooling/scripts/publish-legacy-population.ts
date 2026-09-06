@@ -8,8 +8,11 @@ import {
   type LegacyVersion,
 } from '../../packages/domain/src/legacy/result.ts';
 import { validateLegacyPopulation } from '../../packages/content/src/legacy/validate-population.ts';
-import rulesetManifest from '../../packages/content/rulesets/1.0.0/manifest.json' with { type: 'json' };
+import ruleset100Manifest from '../../packages/content/rulesets/1.0.0/manifest.json' with { type: 'json' };
+import ruleset110Manifest from '../../packages/content/rulesets/1.1.0/manifest.json' with { type: 'json' };
 import packManifest from '../../packages/content/packs/0.3.0/manifest.json' with { type: 'json' };
+import { legacyPopulationId } from './legacy-population-identity.ts';
+import { chooseDeterministicIndex } from './legacy-population-choices.ts';
 
 // Offline release tool: does not simulate, change scores, or publish to a remote service.
 const input = process.argv[2];
@@ -22,14 +25,23 @@ const digest = (value: Uint8Array | string) => createHash('sha256').update(value
 const canonicalHash = (value: unknown) => digest(canonicalize(value as JsonValue));
 const report = JSON.parse(await readFile(input, 'utf8'));
 const { population, provenance, groups } = report;
+const isLegacyV3 =
+  provenance.protocolVersion === 'phase5-population-3-ui-choices' &&
+  provenance.choicePolicy === 'ui-action-strata-v1' &&
+  provenance.rulesetVersion === '1.0.0';
+const isApprovedV5 =
+  provenance.protocolVersion === 'phase5-population-5-policy-isolation' &&
+  provenance.choicePolicy === 'ui-mixed-v1' &&
+  provenance.legacyVersion === '1.1.0' &&
+  provenance.rulesetVersion === '1.1.0';
 if (
-  provenance.protocolVersion !== 'phase5-population-3-ui-choices' ||
-  provenance.choicePolicy !== 'ui-action-strata-v1' ||
+  (!isLegacyV3 && !isApprovedV5) ||
   (provenance.legacyVersion !== '1.0.0' && provenance.legacyVersion !== '1.1.0') ||
   population.legacyVersion !== provenance.legacyVersion ||
-  population.id !== `phase5-reference-${provenance.legacyVersion}-1.0.0-0.3.0` ||
+  population.rulesetVersion !== provenance.rulesetVersion ||
+  population.id !== legacyPopulationId(provenance) ||
   provenance.contentPackVersion !== '0.3.0' ||
-  provenance.rulesetVersion !== '1.0.0'
+  provenance.artifacts.rulesetVersion !== provenance.rulesetVersion
 )
   throw new Error('Not a registered-content population protocol');
 if (
@@ -61,11 +73,22 @@ for (const group of groups) {
   if (group.rows.length !== 10000 || group.hash !== canonicalHash(group.rows))
     throw new Error('Invalid evidence group');
   for (const [index, row] of group.rows.entries()) {
+    const expectedStrategy =
+      provenance.choicePolicy === 'ui-mixed-v1'
+        ? chooseDeterministicIndex(
+            `population-${group.position}-${index}`,
+            'career-strategy',
+            2,
+          ) === 0
+          ? 'opportunity'
+          : 'random'
+        : 'random';
     if (
       row.position !== group.position ||
       row.seedIndex !== index ||
       row.seed !== `phase5-population:${group.position}:${index}` ||
       row.requestedSeasons !== 1 + (index % 20) ||
+      row.strategy !== expectedStrategy ||
       !Number.isInteger(row.seasons) ||
       row.seasons < 1 ||
       row.seasons > row.requestedSeasons ||
@@ -126,7 +149,10 @@ const manifest = {
 };
 // The final compact runtime schema pins the actual registry, not just self-reported evidence.
 validateLegacyPopulation(population, manifest, {
-  rulesetChecksum: rulesetManifest.checksum,
+  rulesetChecksum:
+    provenance.rulesetVersion === '1.1.0'
+      ? ruleset110Manifest.checksum
+      : ruleset100Manifest.checksum,
   contentPackChecksum: packManifest.checksum,
 });
 async function immutableWrite(path: string, bytes: Uint8Array | string) {

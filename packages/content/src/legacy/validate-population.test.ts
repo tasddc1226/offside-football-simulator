@@ -62,6 +62,28 @@ function manifestFor(raw: ReturnType<typeof population>): PopulationManifest {
   };
 }
 
+function approvedV5() {
+  const raw = {
+    ...population(),
+    id: '',
+    legacyVersion: '1.1.0' as const,
+    rulesetVersion: '1.1.0' as const,
+  };
+  const manifest = manifestFor(population()) as PopulationManifest;
+  manifest.provenance = {
+    ...manifest.provenance,
+    protocolVersion: 'phase5-population-5-policy-isolation',
+    choicePolicy: 'ui-mixed-v1',
+    legacyVersion: '1.1.0',
+    rulesetVersion: '1.1.0',
+    artifacts: { ...manifest.provenance.artifacts, rulesetVersion: '1.1.0' },
+    policyChecksum: populationChecksum(legacyPolicyForVersion('1.1.0')),
+  };
+  raw.id = `phase5-reference-1.1.0-1.1.0-0.3.0-ui-mixed-v1-${populationChecksum(manifest.provenance)}`;
+  manifest.populationChecksum = populationChecksum(raw);
+  return { raw, manifest };
+}
+
 describe('legacy reference population validator', () => {
   it('accepts the synthetic 10k-per-group artifact with the registered checksums and policy', () => {
     const raw = population();
@@ -84,6 +106,16 @@ describe('legacy reference population validator', () => {
     expect(() => {
       (validated.scores.GK as unknown as number[])[0] = 49;
     }).toThrow(TypeError);
+  });
+
+  it('accepts only the provenance-bound approved v5 mixed tuple', () => {
+    const { raw, manifest } = approvedV5();
+    expect(validateLegacyPopulation(raw, manifest, registered).id).toBe(raw.id);
+    const wrongChoice = structuredClone(manifest);
+    wrongChoice.provenance.choicePolicy = 'ui-action-strata-v1';
+    expect(() => validateLegacyPopulation(raw, wrongChoice, registered)).toThrow(
+      /checksum\/provenance/,
+    );
   });
 
   it('rejects wrong count and unsorted score groups', () => {

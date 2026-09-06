@@ -11,12 +11,11 @@ The eventual publish target is 10,000 independently seeded careers in each of
 1 through 20 seasons: row `i` requests `1 + (i mod --seasons)` seasons. Realized
 seasons may be shorter when the engine requires retirement.
 
-Distribution acceptance uses all 40,000 rows, not a post-selected 20-season subset.
-Band and 80+ denominators, the zero-team-trophy subset, and predeclared numerical
-tolerances are fixed in the [balance acceptance criteria](phase-5-balance-redesign.md#분포-판정-기준-고정--2026-09-05).
-These are product review criteria for the final full run, not per-PR statistical
-assertions. The final synthetic choice policy and candidate versions remain open;
-no diagnostic v5 policy is approved for publication by that clarification.
+Distribution observations use all 40,000 rows, not a post-selected 20-season subset.
+On 2026-09-06 the user approved the predeclared band, 80+, and zero-team-trophy
+proportions as operational observation targets rather than hard merge gates. Storage
+compatibility, equal-quality position fairness, attainable source-backed high-score
+paths, and exact population provenance/count/seed integrity remain mandatory gates.
 
 The retained baseline protocol is v2: ruleset `1.0.0`, registered content pack `0.3.0`,
 protocol `phase5-population-2-registered-choices`, choice policy
@@ -36,22 +35,22 @@ band counts in [manifest.json](evidence/phase5-baseline-v2/manifest.json). Acros
 40,000 runs there were two ICON results, zero LEGEND, and 7,687 REMEMBERED.
 These files are deliberately outside the runtime content registry.
 
-The current generator is v3: `phase5-population-3-ui-choices`, choice policy
+The preserved legacy generator contract is v3: `phase5-population-3-ui-choices`, choice policy
 `ui-action-strata-v1`. KEEP always accepts, other role choices preserve the previous
 policy. It accepts `--legacy-version 1.0.0|1.1.0` (default 1.0.0) and pins the
-selected definition checksum. Version 1.1.0 is an unactivated candidate, not an
-accepted scoring release. The original v3 population ID is retained for compatibility.
+selected definition checksum. Before the 2026-09-06 approval, Version 1.1.0 was an
+unactivated candidate. The original v3 population ID is retained for compatibility.
 Rows also retain the five components, minutes, possible minutes, peak OVR,
-trophies and eligible endings for diagnosis. Final balance acceptance remains open.
+trophies and eligible endings for diagnosis.
 
 Ruleset 1.1 or informed-strategy runs now use the candidate protocol
 `phase5-population-5-policy-isolation`. Their IDs include the choice policy and
 canonical SHA-256 of the complete provenance: generator, artifact checksums,
 versions, choice/seed/length policies, requested count and scoring policy. Random,
 opportunity and mixed reports therefore cannot alias one another or a report from
-a different source bundle. This is identity isolation, not registration of a new
-reference policy. Existing publisher/runtime validation still rejects v5 until a
-separate balance acceptance and release change registers it. Old checkpoints and
+a different source bundle. This identity isolation is now also the registered v5
+contract for exactly Legacy `1.1.0`, ruleset `1.1.0`, pack `0.3.0`, and
+`ui-mixed-v1`. Legacy v3 remains a separate supported tuple. Old checkpoints and
 diagnostic rows are not relabelled or resumed as v5.
 
 The predeclared final candidate policy is `mixed`: a seed-fixed 50/50 split between
@@ -60,11 +59,32 @@ is a synthetic reference choice mix, not an estimate of player behavior. Candida
 rows also retain recorded career tag IDs, 40%-minutes active-season count, and
 versioned sustained-contribution-season count for audit. These fields never feed
 choices or simulation. The 2026-09-06 800-career pilot missed the LEGEND and 80+
-gates, so v5 remains non-publishable and the 40,000-career run is blocked.
+targets. Those misses remain disclosed observations, not reasons to tune scores to a
+desired histogram. After the 2026-09-06 decision, the final 40,000-career run may be
+published once the mandatory integrity and path gates pass.
 The frozen candidate's 80-career normal/accelerated parity check matched every row
 (bundle `3e4d1df24bd74f27c107d67e8e2ba8762ae58920d422edb4bfdc1ab5d07ee09b`,
 7.62x observed speedup). This validates execution equivalence, not distribution
 acceptance.
+
+### Published v5 run — 2026-09-06
+
+The stat-exposure-corrected source was frozen as generator bundle
+`b1e951c6965117d5bbb3e75223893e2e9328938472e0a5ae141d3a8c7becfeb5`. A fresh
+80-career normal/accelerated comparison matched every row (6.94x observed speedup),
+then the same bundle generated exactly 10,000 rows per position in 2,563,504 ms on
+Node 22.22.1. No earlier checkpoint or pilot row was resumed.
+
+The final payload hash is
+`7b7b657d80b8d0c329e51b1335ead44d5ba5c0dfd7a31628124849aba8332878` and the compact
+population checksum is
+`0d5c8a1acd5e08b6f44d0960de42d95c1200f6b431d1ce326e1ae4007c8577a7`.
+The immutable runtime population, manifest, compressed raw evidence, and compressed
+generator are stored under `packages/content/legacy/1.1.0/`. The publisher validates
+every seed, requested length, score/band, five-axis calculation, hash shape, and the
+seed-derived per-career mixed strategy before the immutable write. `content:validate`
+checks the registered tuple, compact artifact, content bindings, and retained gzip
+checksums without regenerating careers.
 
 The earlier v1 runner used fixed fixture outcomes and content pack `0.1.0`. That
 run is retired. Its timings and outputs are not official evidence and must not be
@@ -104,6 +124,7 @@ bundle and four position checkpoints in a persistent work directory:
 node tooling/scripts/legacy-population-node.mjs \
   --work-dir /persistent/phase5-population-work \
   --count 10000 --seasons 20 \
+  --ruleset-version 1.1.0 --legacy-version 1.1.0 --strategy mixed \
   --out artifacts/legacy-population.json
 ```
 
