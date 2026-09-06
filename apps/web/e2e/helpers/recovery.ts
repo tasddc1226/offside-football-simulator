@@ -43,6 +43,8 @@ export async function createCareerAndIssueRecoveryCode(pageA: Page): Promise<{ c
 /** 설정에서 복구 코드를 입력해 컨텍스트 B가 같은 커리어를 되찾는다. 허브에 카드가 보일 때까지. */
 export async function recoverProfile(pageB: Page, codeText: string): Promise<void> {
   await pageB.goto('/settings');
+  // UX-003: 프로필 복구 폼은 기본 접힘이다 — Disclosure summary를 열어야 입력을 채울 수 있다.
+  await pageB.getByText('프로필 복구', { exact: true }).click();
   await pageB.getByLabel('다른 기기에서 발급받은 복구 코드').fill(codeText);
   await pageB.getByRole('button', { name: '복구' }).click();
 

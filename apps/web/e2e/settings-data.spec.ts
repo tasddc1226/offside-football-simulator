@@ -77,6 +77,8 @@ test('프로필 복구: 형식이 잘못된 코드는 필드 옆에 오류를 �
   });
 
   await page.goto('/settings');
+  // UX-003: 프로필 복구 폼은 기본 접힘이다 — Disclosure summary를 열어야 입력을 채울 수 있다.
+  await page.getByText('프로필 복구', { exact: true }).click();
   await page.getByLabel('다른 기기에서 발급받은 복구 코드').fill('너무-짧음');
   await page.getByRole('button', { name: '복구' }).click();
 
@@ -97,6 +99,7 @@ test('프로필 복구: 코드가 맞지 않으면 안내하고 입력·포커�
   );
 
   await page.goto('/settings');
+  await page.getByText('프로필 복구', { exact: true }).click();
   const input = page.getByLabel('다른 기기에서 발급받은 복구 코드');
   await input.fill('OFS-ABCD-EFGH-JKMN');
   await page.getByRole('button', { name: '복구' }).click();
@@ -115,6 +118,8 @@ test('프로필 복구: 시도 횟수를 넘으면 잠시 뒤 다시 시도하�
   );
 
   await page.goto('/settings');
+  // UX-003: 프로필 복구 폼은 기본 접힘이다 — Disclosure summary를 열어야 입력을 채울 수 있다.
+  await page.getByText('프로필 복구', { exact: true }).click();
   await page.getByLabel('다른 기기에서 발급받은 복구 코드').fill('OFS-ABCD-EFGH-JKMN');
   await page.getByRole('button', { name: '복구' }).click();
 
@@ -154,6 +159,8 @@ test('프로필 복구: RECOVERY_CONFLICT면 선택 대화상자가 뜨고 merge
   });
 
   await page.goto('/settings');
+  // UX-003: 프로필 복구 폼은 기본 접힘이다 — Disclosure summary를 열어야 입력을 채울 수 있다.
+  await page.getByText('프로필 복구', { exact: true }).click();
   await page.getByLabel('다른 기기에서 발급받은 복구 코드').fill('OFS-ABCD-EFGH-JKMN');
   await page.getByRole('button', { name: '복구' }).click();
 
@@ -181,6 +188,8 @@ test('프로필 삭제: 1단계 → 확인 대화상자 → 2단계 → 온보�
   });
 
   await page.goto('/settings');
+  // UX-003: 위험 작업(프로필·기기 데이터 삭제) 목록은 기본 접힘이다.
+  await page.getByText('위험 작업 보기').click();
   const row = page.locator('li').filter({ hasText: '프로필 삭제' });
   await row.getByRole('button', { name: '삭제' }).click();
 
@@ -216,6 +225,7 @@ test('이 기기 데이터 삭제: 확인 → 온보딩 → 허브가 빈 상태
   await expect(page).toHaveURL(/\/career\/.+\/create$/);
 
   await page.goto('/settings');
+  await page.getByText('위험 작업 보기').click();
   const row = page.locator('li').filter({ hasText: '이 기기 데이터 삭제' });
   await row.getByRole('button', { name: '삭제' }).click();
 
