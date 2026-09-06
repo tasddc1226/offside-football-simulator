@@ -49,8 +49,9 @@
 첫 deploy 실행 `34008638141`에서는 migration 0000~0005가 모두 적용됐으나,
 11개 테이블을 UNION ALL로 합친 점검 쿼리가 D1 compound SELECT 제한에 걸려 중단됐다.
 시즌 INSERT와 API/web 배포는 실행되지 않았고, 운영 career/season/snapshot/archive는 모두 0개임을
-직접 확인했다. 재실행 시 DB를 복원하거나 migration을 되돌리지 않는다. 집계는 6개·5개 쿼리로
-나누고 다중 응답을 합친다. 최초 적용 직전 bookmark는
+직접 확인했다. 재실행 시 DB를 복원하거나 migration을 되돌리지 않는다. 후속 실행 `34008861370`의
+6개·5개 compound 분할도 읽기 전용 사전 조회에서 같은 제한에 걸렸다. 최종 집계는 UNION 없이
+11개의 독립 SELECT를 실행하고 다중 응답을 합친다. 최초 적용 직전 bookmark는
 `00000003-00000000-000050de-3168698264c097987b0c3af31e5882ad`다.
 
 ## 실행 순서
