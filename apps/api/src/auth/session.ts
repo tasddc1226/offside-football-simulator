@@ -1,9 +1,14 @@
 import { AUTHORIZATION_HEADER } from '@offside/contracts';
+import { eq } from 'drizzle-orm';
+import type { BatchItem } from 'drizzle-orm/batch';
 import type { Context } from 'hono';
 import { generateCookie, getCookie } from 'hono/cookie';
 import type { Db } from '../db/client.js';
 import { sha256Hex } from '../db/hash.js';
+import { newId } from '../db/ids.js';
+import { runBatch } from '../db/repos/batch.js';
 import { createSession, type SessionChannel, type SessionRecord } from '../db/repos/sessions.js';
+import { sessions } from '../db/schema.js';
 import type { AppEnv } from '../env.js';
 
 export const SESSION_COOKIE_NAME = 'offside_session';
@@ -27,7 +32,9 @@ export async function issueSession(
 ): Promise<{ token: string; session: SessionRecord }> {
   const token = randomToken();
   const tokenHash = await sha256Hex(token);
-  const expiresAt = new Date(new Date(input.now).getTime() + SESSION_MAX_AGE_SECONDS * 1000).toISOString();
+  const expiresAt = new Date(
+    new Date(input.now).getTime() + SESSION_MAX_AGE_SECONDS * 1000,
+  ).toISOString();
   const session = await createSession(db, {
     profileId: input.profileId,
     channel: input.channel,
@@ -35,6 +42,42 @@ export async function issueSession(
     expiresAt,
   });
   return { token, session };
+}
+
+/** 인증 경계에서 기존 토큰 폐기와 새 web 세션 발급을 한 D1 batch로 묶는다. */
+export async function prepareWebSessionRotation(
+  db: Db,
+  input: { oldSessionId: string; profileId: string; now: string },
+): Promise<{ token: string; statements: [BatchItem<'sqlite'>, BatchItem<'sqlite'>] }> {
+  const token = randomToken();
+  const tokenHash = await sha256Hex(token);
+  const expiresAt = new Date(
+    new Date(input.now).getTime() + SESSION_MAX_AGE_SECONDS * 1000,
+  ).toISOString();
+  return {
+    token,
+    statements: [
+      db.insert(sessions).values({
+        id: newId('ses'),
+        profileId: input.profileId,
+        channel: 'web',
+        tokenHash,
+        createdAt: input.now,
+        expiresAt,
+        lastSeenAt: input.now,
+      }),
+      db.update(sessions).set({ revokedAt: input.now }).where(eq(sessions.id, input.oldSessionId)),
+    ],
+  };
+}
+
+export async function rotateWebSession(
+  db: Db,
+  input: { oldSessionId: string; profileId: string; now: string },
+): Promise<string> {
+  const prepared = await prepareWebSessionRotation(db, input);
+  await runBatch(db, prepared.statements);
+  return prepared.token;
 }
 
 /** 설계 결정 1의 쿠키 속성을 그대로 문자열로 만든다. */

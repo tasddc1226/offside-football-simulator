@@ -7,11 +7,21 @@ import type { Bindings } from '../env.js';
  */
 export interface GoogleOidc {
   createAuthorizationUrl(state: string, codeVerifier: string): URL;
-  exchangeCode(code: string, codeVerifier: string): Promise<{ sub: string; email: string | null; emailVerified: boolean }>;
+  exchangeCode(
+    code: string,
+    codeVerifier: string,
+  ): Promise<{ sub: string; email: string | null; emailVerified: boolean }>;
+}
+
+export function verifiedGoogleEmail(claims: {
+  email: string | null;
+  emailVerified: boolean;
+}): string | null {
+  return claims.emailVerified ? claims.email : null;
 }
 
 const GOOGLE_SCOPES = ['openid', 'email'];
-const GOOGLE_ISSUER = 'https://accounts.google.com';
+const GOOGLE_ISSUERS = new Set(['https://accounts.google.com', 'accounts.google.com']);
 
 type IdTokenClaims = {
   sub?: unknown;
@@ -26,14 +36,14 @@ type IdTokenClaims = {
  * arctic은 토큰 엔드포인트와 직접 TLS로 통신해 ID 토큰을 받는다(전송 계층이 신뢰 근거다) — 그래서
  * 서명 검증 없이 `iss`·`aud`·`exp`만 검사한다(OIDC Core 1.0 §3.1.3.7 비고).
  */
-function verifyIdTokenClaims(
+export function verifyGoogleIdTokenClaims(
   idToken: string,
   clientId: string,
   now: number,
 ): { sub: string; email: string | null; emailVerified: boolean } {
   const claims = decodeIdToken(idToken) as IdTokenClaims;
 
-  if (claims.iss !== GOOGLE_ISSUER) {
+  if (typeof claims.iss !== 'string' || !GOOGLE_ISSUERS.has(claims.iss)) {
     throw new Error('Google ID 토큰의 iss가 올바르지 않습니다.');
   }
   if (claims.aud !== clientId) {
@@ -71,7 +81,7 @@ export function createArcticGoogleOidc(
         }
         throw err;
       }
-      return verifyIdTokenClaims(tokens.idToken(), clientId, Date.now());
+      return verifyGoogleIdTokenClaims(tokens.idToken(), clientId, Date.now());
     },
   };
 }
@@ -124,9 +134,16 @@ export function isLocalFakeMode(env: Pick<Bindings, 'ENVIRONMENT' | 'GOOGLE_FAKE
  * U-003 전에 뜬다).
  */
 export function selectGoogleOidc(
-  env: Pick<Bindings, 'ENVIRONMENT' | 'GOOGLE_FAKE' | 'GOOGLE_CLIENT_ID' | 'GOOGLE_CLIENT_SECRET' | 'GOOGLE_REDIRECT_URI'>,
+  env: Pick<
+    Bindings,
+    | 'ENVIRONMENT'
+    | 'GOOGLE_FAKE'
+    | 'GOOGLE_CLIENT_ID'
+    | 'GOOGLE_CLIENT_SECRET'
+    | 'GOOGLE_REDIRECT_URI'
+  >,
 ): GoogleOidc | null {
   if (isLocalFakeMode(env)) return createFakeGoogleOidc();
-  if (!env.GOOGLE_CLIENT_ID) return null;
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return null;
   return createArcticGoogleOidc(env);
 }

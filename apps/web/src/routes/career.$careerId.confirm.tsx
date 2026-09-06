@@ -252,7 +252,8 @@ function ConfirmScreen() {
                 코드 복사
               </Button>
               <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                이 코드가 없으면 다른 기기에서 복구할 수 없습니다.
+                이 코드를 보관하거나, 설정에서 Google 계정을 연결하면 다른 기기에서도 프로필을 찾을
+                수 있습니다.
               </p>
               <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
                 설정에서 다시 발급할 수 있습니다.
@@ -287,13 +288,26 @@ function ConfirmScreen() {
 
   if (screenState.kind === 'COMMITTING') {
     return (
-      <div className="os-creation-kickoff flex flex-col items-center gap-os-6 text-center" role="status" aria-live="polite">
+      <div
+        className="os-creation-kickoff flex flex-col items-center gap-os-6 text-center"
+        role="status"
+        aria-live="polite"
+      >
         <OffsideLine />
-        <DisplayWord word="KICKOFF" caption={ceremonyReady ? '선수가 피치에 들어섭니다' : '선수 카드를 등록하고 있습니다'} />
+        <DisplayWord
+          word="KICKOFF"
+          caption={ceremonyReady ? '선수가 피치에 들어섭니다' : '선수 카드를 등록하고 있습니다'}
+        />
         <p className="os-creation-kickoff-status">
-          {ceremonyReady ? '모든 준비가 끝났습니다. 첫 번째 이야기를 시작합니다.' : '중복 없이 한 번만 확정하고 있어요. 잠시만 기다려 주세요.'}
+          {ceremonyReady
+            ? '모든 준비가 끝났습니다. 첫 번째 이야기를 시작합니다.'
+            : '중복 없이 한 번만 확정하고 있어요. 잠시만 기다려 주세요.'}
         </p>
-        {ceremonyReady ? <Button variant="ghost" onClick={() => void continueAfterCeremony()}>연출 건너뛰기</Button> : null}
+        {ceremonyReady ? (
+          <Button variant="ghost" onClick={() => void continueAfterCeremony()}>
+            연출 건너뛰기
+          </Button>
+        ) : null}
       </div>
     );
   }
@@ -356,7 +370,11 @@ function ConfirmScreen() {
   return (
     <div className="os-screen">
       <Stepper steps={PLAYER_CREATION_STEPS} currentStepId="confirm" />
-      <ScreenIntro eyebrow="새 커리어 · 3/3" title="확정 전 정보를 확인하세요" description="당신이 만든 선수 카드입니다. 준비가 됐다면 첫 휘슬을 울리세요." />
+      <ScreenIntro
+        eyebrow="새 커리어 · 3/3"
+        title="확정 전 정보를 확인하세요"
+        description="당신이 만든 선수 카드입니다. 준비가 됐다면 첫 휘슬을 울리세요."
+      />
 
       <CreationCard
         name={draft.name}
@@ -364,7 +382,11 @@ function ConfirmScreen() {
         position={POSITION_LABELS[draft.position]}
         archetype={archetype.name}
         foot={PREFERRED_FOOT_LABELS[draft.preferredFoot]}
-        nationality={ruleset.nationalities.find((item) => item.code === draft.nationalityCode)?.name ?? draft.nationalityCode ?? '—'}
+        nationality={
+          ruleset.nationalities.find((item) => item.code === draft.nationalityCode)?.name ??
+          draft.nationalityCode ??
+          '—'
+        }
       >
         <dl className="os-creation-card-details">
           <div className="flex justify-between gap-os-4">
@@ -381,11 +403,16 @@ function ConfirmScreen() {
           </div>
           <div className="flex justify-between gap-os-2">
             <dt>룰셋 · 콘텐츠 팩</dt>
-            <dd className="os-num">{record.rulesetVersion} / {record.contentPackVersion}</dd>
+            <dd className="os-num">
+              {record.rulesetVersion} / {record.contentPackVersion}
+            </dd>
           </div>
         </dl>
       </CreationCard>
-      <p className="os-creation-note">선호 포지션과 플레이 스타일은 고정된 출전 역할이나 결과를 보장하지 않습니다. 시작한 뒤에는 이 선수 정보를 되돌릴 수 없어요.</p>
+      <p className="os-creation-note">
+        선호 포지션과 플레이 스타일은 고정된 출전 역할이나 결과를 보장하지 않습니다. 시작한 뒤에는
+        이 선수 정보를 되돌릴 수 없어요.
+      </p>
 
       <div className="os-action-dock os-action-row">
         <Button

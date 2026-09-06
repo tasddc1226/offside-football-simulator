@@ -2,9 +2,23 @@ import type { GetCareerResponse } from '@offside/contracts';
 import { decodeSnapshot } from './snapshot.js';
 import type { EngineError, LocalCareerRecord } from './types.js';
 import type { LocalStore } from './ports/local-store.js';
-import { ArchiveError, canonicalize, createCareerArchiveCore, createLegacyResult, type CareerArchiveCore, type LegacyResult, type JsonValue } from '@offside/domain';
+import {
+  ArchiveError,
+  canonicalize,
+  createCareerArchiveCore,
+  createLegacyResult,
+  type CareerArchiveCore,
+  type LegacyResult,
+  type JsonValue,
+} from '@offside/domain';
 import { CareerStateSchema } from '@offside/contracts';
-import { legacyPopulationForResult, legacyResultKey, legacyVersionForResult, retirementArchiveKey, type RetirementArtifactsResolver } from './retirement-archive.js';
+import {
+  legacyPopulationForResult,
+  legacyResultKey,
+  legacyVersionForResult,
+  retirementArchiveKey,
+  type RetirementArtifactsResolver,
+} from './retirement-archive.js';
 
 export type ImportCareerResult = { ok: true; revision: number } | { ok: false; error: EngineError };
 
@@ -18,6 +32,8 @@ export async function importCareerFromServer(
   meta: {
     now: string;
     retirementArtifacts?: RetirementArtifactsResolver;
+    /** 명시적으로 선택한 원격 프로필의 저장본으로 로컬 동일 id를 원자 교체한다. */
+    replaceLocal?: boolean;
     /** @deprecated Recovery uses the server-owned response field. */
     createdServiceSeasonId?: string;
   },
@@ -39,8 +55,18 @@ export async function importCareerFromServer(
   let retirement: { archive: CareerArchiveCore; legacy: LegacyResult } | null = null;
   if (decoded.snapshot.state.status === 'RETIRED' || decoded.snapshot.state.status === 'ARCHIVED') {
     try {
-      if (meta.retirementArtifacts === undefined || response.retirementArchive === undefined || !CareerStateSchema.safeParse(decoded.snapshot.state).success) throw new ArchiveError('INVALID_SNAPSHOT');
-      const binding = { careerId, createdServiceSeasonId: response.createdServiceSeasonId, rulesetVersion: response.snapshot.rulesetVersion, contentPackVersion: response.snapshot.contentPackVersion };
+      if (
+        meta.retirementArtifacts === undefined ||
+        response.retirementArchive === undefined ||
+        !CareerStateSchema.safeParse(decoded.snapshot.state).success
+      )
+        throw new ArchiveError('INVALID_SNAPSHOT');
+      const binding = {
+        careerId,
+        createdServiceSeasonId: response.createdServiceSeasonId,
+        rulesetVersion: response.snapshot.rulesetVersion,
+        contentPackVersion: response.snapshot.contentPackVersion,
+      };
       const artifacts = meta.retirementArtifacts(binding);
       const context = { binding, artifacts };
       const archive = createCareerArchiveCore(decoded.snapshot, context);
@@ -51,35 +77,85 @@ export async function importCareerFromServer(
         legacyPopulationForResult(suppliedLegacy, artifacts),
         legacyVersionForResult(suppliedLegacy, artifacts),
       );
-      if (canonicalize(JSON.parse(response.retirementArchive.archive) as JsonValue) !== canonicalize(archive as unknown as JsonValue) || canonicalize(suppliedLegacy as unknown as JsonValue) !== canonicalize(legacy as unknown as JsonValue)) throw new ArchiveError('ARCHIVE_MISMATCH');
+      if (
+        canonicalize(JSON.parse(response.retirementArchive.archive) as JsonValue) !==
+          canonicalize(archive as unknown as JsonValue) ||
+        canonicalize(suppliedLegacy as unknown as JsonValue) !==
+          canonicalize(legacy as unknown as JsonValue)
+      )
+        throw new ArchiveError('ARCHIVE_MISMATCH');
       retirement = { archive, legacy };
     } catch {
-      return { ok: false, error: { code: 'VERIFICATION_FAILED', message: '서버 은퇴 보관 기록을 검증할 수 없다.' } };
+      return {
+        ok: false,
+        error: { code: 'VERIFICATION_FAILED', message: '서버 은퇴 보관 기록을 검증할 수 없다.' },
+      };
     }
   } else if (response.retirementArchive !== undefined) {
-    return { ok: false, error: { code: 'VERIFICATION_FAILED', message: '진행 중 커리어에 은퇴 보관 기록이 포함되어 있다.' } };
+    return {
+      ok: false,
+      error: {
+        code: 'VERIFICATION_FAILED',
+        message: '진행 중 커리어에 은퇴 보관 기록이 포함되어 있다.',
+      },
+    };
   }
 
   return store.transaction('readwrite', async (tx) => {
     const existing = await tx.careers.get(careerId);
-    if (existing !== undefined && existing.revision > existing.lastSyncedRevision) {
+    if (
+      meta.replaceLocal !== true &&
+      existing !== undefined &&
+      existing.revision > existing.lastSyncedRevision
+    ) {
       return {
         ok: false,
-        error: { code: 'CAREER_REVISION_CONFLICT', message: '이 기기에 미전송 진행이 있어 덮어쓰지 않았다.' },
+        error: {
+          code: 'CAREER_REVISION_CONFLICT',
+          message: '이 기기에 미전송 진행이 있어 덮어쓰지 않았다.',
+        },
       };
     }
     const existingArchive = await tx.kv.get<CareerArchiveCore>(retirementArchiveKey(careerId));
-    if (existingArchive !== undefined && (retirement === null || canonicalize(existingArchive as unknown as JsonValue) !== canonicalize(retirement.archive as unknown as JsonValue))) {
-      return { ok: false, error: { code: 'VERIFICATION_FAILED', message: '기존 불변 은퇴 기록과 달라 덮어쓰지 않았다.' } };
+    if (
+      meta.replaceLocal !== true &&
+      existingArchive !== undefined &&
+      (retirement === null ||
+        canonicalize(existingArchive as unknown as JsonValue) !==
+          canonicalize(retirement.archive as unknown as JsonValue))
+    ) {
+      return {
+        ok: false,
+        error: {
+          code: 'VERIFICATION_FAILED',
+          message: '기존 불변 은퇴 기록과 달라 덮어쓰지 않았다.',
+        },
+      };
     }
     const existingLegacy = await tx.kv.get<LegacyResult>(legacyResultKey(careerId));
-    if (existingLegacy !== undefined && retirement !== null && canonicalize(existingLegacy as unknown as JsonValue) !== canonicalize(retirement.legacy as unknown as JsonValue)) {
-      return { ok: false, error: { code: 'VERIFICATION_FAILED', message: '기존 불변 Legacy 기록과 달라 덮어쓰지 않았다.' } };
+    if (
+      meta.replaceLocal !== true &&
+      existingLegacy !== undefined &&
+      retirement !== null &&
+      canonicalize(existingLegacy as unknown as JsonValue) !==
+        canonicalize(retirement.legacy as unknown as JsonValue)
+    ) {
+      return {
+        ok: false,
+        error: {
+          code: 'VERIFICATION_FAILED',
+          message: '기존 불변 Legacy 기록과 달라 덮어쓰지 않았다.',
+        },
+      };
     }
 
     await tx.snapshots.deleteByCareer(careerId);
     await tx.commandLog.deleteByCareer(careerId);
     await tx.idempotency.deleteByCareer(careerId);
+    if (meta.replaceLocal === true) {
+      await tx.kv.delete(retirementArchiveKey(careerId));
+      await tx.kv.delete(legacyResultKey(careerId));
+    }
 
     await tx.snapshots.put(response.snapshot);
     for (const command of response.commands) {

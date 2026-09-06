@@ -1,7 +1,12 @@
 // D-20 대조 표: KEEP_LINKED_ONLY·MOVE_TO_LINKED·NONE × 로컬만·서버만·둘 다(동기화됨)·둘 다(미전송).
 import type { QueryClient } from '@tanstack/react-query';
-import { describe, expect, it, vi } from 'vitest';
-import { planReconciliation, reconcileAfterRecovery, type ReconcileLocalCareer, type ReconcileServerCareer } from './reconcile.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  planReconciliation,
+  reconcileAfterRecovery,
+  type ReconcileLocalCareer,
+  type ReconcileServerCareer,
+} from './reconcile.js';
 
 const listRemoteCareersMock = vi.fn();
 const getRemoteCareerMock = vi.fn();
@@ -19,22 +24,47 @@ vi.mock('@offside/engine-client', () => ({
 }));
 
 const listCareersMock = vi.fn().mockResolvedValue([]);
+const deleteCareerMock = vi.fn().mockResolvedValue(undefined);
 // getAppEngine()은 대조 실패 경로에서는 반환값을 쓰지 않는다 — 존재만 하면 된다.
 vi.mock('./engine.js', () => ({
-  getAppEngine: () => Promise.resolve({ client: { listCareers: () => listCareersMock() }, store: {} }),
+  getAppEngine: () =>
+    Promise.resolve({
+      client: { listCareers: () => listCareersMock(), deleteCareer: deleteCareerMock },
+      store: { kind: 'actual' },
+    }),
 }));
 
 vi.mock('./service-season.js', () => ({
   resolveServiceSeasonId: () => Promise.resolve('svc_kickoff'),
 }));
 
-const LOCAL_ONLY_SYNCED: ReconcileLocalCareer = { id: 'car_local_only', revision: 3, lastSyncedRevision: 3 };
-const LOCAL_ONLY_UNSENT: ReconcileLocalCareer = { id: 'car_local_unsent', revision: 5, lastSyncedRevision: 2 };
-const BOTH_IN_SYNC_LOCAL: ReconcileLocalCareer = { id: 'car_both_sync', revision: 4, lastSyncedRevision: 4 };
+const LOCAL_ONLY_SYNCED: ReconcileLocalCareer = {
+  id: 'car_local_only',
+  revision: 3,
+  lastSyncedRevision: 3,
+};
+const LOCAL_ONLY_UNSENT: ReconcileLocalCareer = {
+  id: 'car_local_unsent',
+  revision: 5,
+  lastSyncedRevision: 2,
+};
+const BOTH_IN_SYNC_LOCAL: ReconcileLocalCareer = {
+  id: 'car_both_sync',
+  revision: 4,
+  lastSyncedRevision: 4,
+};
 const BOTH_IN_SYNC_SERVER: ReconcileServerCareer = { id: 'car_both_sync', revision: 4 };
-const BOTH_BEHIND_LOCAL: ReconcileLocalCareer = { id: 'car_both_behind', revision: 1, lastSyncedRevision: 1 };
+const BOTH_BEHIND_LOCAL: ReconcileLocalCareer = {
+  id: 'car_both_behind',
+  revision: 1,
+  lastSyncedRevision: 1,
+};
 const BOTH_BEHIND_SERVER: ReconcileServerCareer = { id: 'car_both_behind', revision: 3 };
-const BOTH_UNSENT_AHEAD_LOCAL: ReconcileLocalCareer = { id: 'car_both_unsent', revision: 6, lastSyncedRevision: 2 };
+const BOTH_UNSENT_AHEAD_LOCAL: ReconcileLocalCareer = {
+  id: 'car_both_unsent',
+  revision: 6,
+  lastSyncedRevision: 2,
+};
 const BOTH_UNSENT_AHEAD_SERVER: ReconcileServerCareer = { id: 'car_both_unsent', revision: 4 };
 const SERVER_ONLY: ReconcileServerCareer = { id: 'car_server_only', revision: 1 };
 
@@ -57,21 +87,32 @@ describe('planReconciliation', () => {
     expect(plan.toDownload).toEqual(['car_server_only']);
   });
 
-  it('KEEP_LINKED_ONLY: 둘 다 있고 동기화된 커리어는 지우지도 받지도 않는다', () => {
-    const plan = planReconciliation('KEEP_LINKED_ONLY', [BOTH_IN_SYNC_LOCAL], [BOTH_IN_SYNC_SERVER]);
+  it('KEEP_LINKED_ONLY: 둘 다 있으면 Google 저장본 교체 대상으로 둔다', () => {
+    const plan = planReconciliation(
+      'KEEP_LINKED_ONLY',
+      [BOTH_IN_SYNC_LOCAL],
+      [BOTH_IN_SYNC_SERVER],
+    );
     expect(plan.toDelete).toEqual([]);
     expect(plan.toDownload).toEqual([]);
+    expect(plan.toReplace).toEqual(['car_both_sync']);
   });
 
-  it('KEEP_LINKED_ONLY: 둘 다 있고 로컬이 뒤처졌으며 미전송분이 없으면 다운로드한다', () => {
+  it('KEEP_LINKED_ONLY: 둘 다 있으면 로컬 revision과 무관하게 Google 저장본으로 교체한다', () => {
     const plan = planReconciliation('KEEP_LINKED_ONLY', [BOTH_BEHIND_LOCAL], [BOTH_BEHIND_SERVER]);
-    expect(plan.toDownload).toEqual(['car_both_behind']);
+    expect(plan.toDownload).toEqual([]);
+    expect(plan.toReplace).toEqual(['car_both_behind']);
   });
 
-  it('KEEP_LINKED_ONLY: 둘 다 있고 로컬에 미전송분이 있으면(로컬이 더 앞서도) 덮어쓰지 않는다', () => {
-    const plan = planReconciliation('KEEP_LINKED_ONLY', [BOTH_UNSENT_AHEAD_LOCAL], [BOTH_UNSENT_AHEAD_SERVER]);
+  it('KEEP_LINKED_ONLY: 같은 id의 미전송 로컬 진행도 명시적으로 선택한 Google 저장본으로 교체한다', () => {
+    const plan = planReconciliation(
+      'KEEP_LINKED_ONLY',
+      [BOTH_UNSENT_AHEAD_LOCAL],
+      [BOTH_UNSENT_AHEAD_SERVER],
+    );
     expect(plan.toDownload).toEqual([]);
     expect(plan.toDelete).toEqual([]);
+    expect(plan.toReplace).toEqual(['car_both_unsent']);
   });
 
   it('MOVE_TO_LINKED: 로컬만 있고 미전송분이 있으면 notifyCommitted 대상이고 지워지지 않는다', () => {
@@ -96,7 +137,11 @@ describe('planReconciliation', () => {
   });
 
   it('MOVE_TO_LINKED: 둘 다 있고 로컬에 미전송분이 있으면 notifyCommitted만 하고 덮어쓰지 않는다', () => {
-    const plan = planReconciliation('MOVE_TO_LINKED', [BOTH_UNSENT_AHEAD_LOCAL], [BOTH_UNSENT_AHEAD_SERVER]);
+    const plan = planReconciliation(
+      'MOVE_TO_LINKED',
+      [BOTH_UNSENT_AHEAD_LOCAL],
+      [BOTH_UNSENT_AHEAD_SERVER],
+    );
     expect(plan.toNotifyCommitted).toEqual(['car_both_unsent']);
     expect(plan.toDownload).toEqual([]);
   });
@@ -115,11 +160,20 @@ describe('planReconciliation', () => {
       [BOTH_IN_SYNC_SERVER, BOTH_BEHIND_SERVER, SERVER_ONLY],
     );
     expect(plan.toDelete).toEqual(['car_local_only']);
-    expect(plan.toDownload).toEqual(['car_both_behind', 'car_server_only']);
+    expect(plan.toDownload).toEqual(['car_server_only']);
+    expect(plan.toReplace).toEqual(['car_both_sync', 'car_both_behind']);
   });
 });
 
 describe('reconcileAfterRecovery', () => {
+  beforeEach(() => {
+    listRemoteCareersMock.mockReset();
+    getRemoteCareerMock.mockReset();
+    importCareerFromServerMock.mockReset();
+    listCareersMock.mockReset().mockResolvedValue([]);
+    deleteCareerMock.mockReset().mockResolvedValue(undefined);
+  });
+
   it('서버 커리어 목록을 받지 못하면 로컬 대조를 하지 않고 ok:false를 돌려준다', async () => {
     listRemoteCareersMock.mockResolvedValue({
       ok: false,
@@ -152,12 +206,13 @@ describe('reconcileAfterRecovery', () => {
     getRemoteCareerMock.mockImplementation((careerId: string) =>
       Promise.resolve({ ok: true, data: { snapshot: { careerId }, commands: [] } }),
     );
-    importCareerFromServerMock.mockImplementation((_store: unknown, response: { snapshot: { careerId: string } }) =>
-      Promise.resolve(
-        response.snapshot.careerId === 'car_fail'
-          ? { ok: false, error: { code: 'VERIFICATION_FAILED', message: '검증 실패' } }
-          : { ok: true, revision: 2 },
-      ),
+    importCareerFromServerMock.mockImplementation(
+      (_store: unknown, response: { snapshot: { careerId: string } }) =>
+        Promise.resolve(
+          response.snapshot.careerId === 'car_fail'
+            ? { ok: false, error: { code: 'VERIFICATION_FAILED', message: '검증 실패' } }
+            : { ok: true, revision: 2 },
+        ),
     );
     const invalidateQueries = vi.fn().mockResolvedValue(undefined);
     const queryClient = { invalidateQueries } as unknown as QueryClient;
@@ -167,5 +222,59 @@ describe('reconcileAfterRecovery', () => {
     expect(result).toEqual({ ok: false, failed: ['car_fail'] });
     // car_ok는 반영됐으니 화면은 그래도 갱신한다.
     expect(invalidateQueries).toHaveBeenCalledTimes(1);
+  });
+
+  it('KEEP_LINKED_ONLY는 opt-in 원자 교체로 같은 id의 미전송 로컬 진행을 Google 저장본으로 바꾼다', async () => {
+    listCareersMock.mockResolvedValue([{ id: 'car_same', revision: 6, lastSyncedRevision: 2 }]);
+    listRemoteCareersMock.mockResolvedValue({
+      ok: true,
+      data: { items: [{ id: 'car_same', revision: 4 }], nextCursor: null },
+    });
+    getRemoteCareerMock.mockResolvedValue({
+      ok: true,
+      data: { snapshot: { careerId: 'car_same' }, commands: [] },
+    });
+    importCareerFromServerMock.mockResolvedValue({ ok: true, revision: 4 });
+    const invalidateQueries = vi.fn().mockResolvedValue(undefined);
+    const queryClient = { invalidateQueries } as unknown as QueryClient;
+
+    await expect(reconcileAfterRecovery('KEEP_LINKED_ONLY', queryClient)).resolves.toEqual({
+      ok: true,
+    });
+
+    expect(importCareerFromServerMock).toHaveBeenCalledOnce();
+    expect(importCareerFromServerMock).toHaveBeenCalledWith(
+      { kind: 'actual' },
+      expect.objectContaining({ snapshot: { careerId: 'car_same' } }),
+      expect.objectContaining({ replaceLocal: true }),
+    );
+    expect(deleteCareerMock).not.toHaveBeenCalledWith('car_same');
+  });
+
+  it('KEEP_LINKED_ONLY는 Google 저장본 import 실패 시 로컬 전용 커리어를 삭제하지 않는다', async () => {
+    listCareersMock.mockResolvedValue([
+      { id: 'car_local_only', revision: 2, lastSyncedRevision: 2 },
+    ]);
+    listRemoteCareersMock.mockResolvedValue({
+      ok: true,
+      data: { items: [{ id: 'car_server_only', revision: 4 }], nextCursor: null },
+    });
+    getRemoteCareerMock.mockResolvedValue({
+      ok: true,
+      data: { snapshot: { careerId: 'car_server_only' }, commands: [] },
+    });
+    importCareerFromServerMock.mockResolvedValue({
+      ok: false,
+      error: { code: 'VERIFICATION_FAILED', message: '검증 실패' },
+    });
+    const queryClient = {
+      invalidateQueries: vi.fn().mockResolvedValue(undefined),
+    } as unknown as QueryClient;
+
+    await expect(reconcileAfterRecovery('KEEP_LINKED_ONLY', queryClient)).resolves.toEqual({
+      ok: false,
+      failed: ['car_server_only'],
+    });
+    expect(deleteCareerMock).not.toHaveBeenCalledWith('car_local_only');
   });
 });

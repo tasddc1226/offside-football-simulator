@@ -12,6 +12,23 @@ import { createTestD1, type TestD1 } from '../test/d1.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
 const SERVICE_SEASON_ID = 'svc_test';
+const rotatedCookies = new Map<string, string>();
+
+function currentCookie(cookie: string): string {
+  let current = cookie;
+  while (rotatedCookies.has(current)) current = rotatedCookies.get(current)!;
+  return current;
+}
+
+function recordRotation(cookie: string, response: Response): string | null {
+  const activeCookie = currentCookie(cookie);
+  const setCookie = response.headers.get('Set-Cookie') ?? '';
+  if (!setCookie.includes('offside_session=')) return null;
+  const rotated = extractCookiePair(setCookie, 'offside_session');
+  rotatedCookies.set(cookie, rotated);
+  rotatedCookies.set(activeCookie, rotated);
+  return rotated;
+}
 
 /** `GOOGLE_FAKE`를 값 자체로 지운다(로컬 wrangler.jsonc 기본값 '1'을 끄고 arctic 경로를 강제한다). */
 function withoutGoogleFake(env: Bindings, overrides: Partial<Bindings> = {}): Bindings {
@@ -65,12 +82,19 @@ async function addCareer(ctx: TestD1, ownerProfileId: string, careerId: string):
 
 async function getProfile(ctx: TestD1, cookie: string) {
   const app = createApp();
-  const res = await app.request('/v1/profile', { headers: { Cookie: cookie } }, ctx.env);
+  const res = await app.request(
+    '/v1/profile',
+    { headers: { Cookie: currentCookie(cookie) } },
+    ctx.env,
+  );
   return successEnvelope(ProfileSchema).parse(await res.json()).data;
 }
 
 /** `GET /v1/auth/google/start`를 호출해 state·oauth 쿠키를 얻는다. */
-async function startGoogleFlow(ctx: TestD1, cookie: string): Promise<{ state: string; oauthCookie: string }> {
+async function startGoogleFlow(
+  ctx: TestD1,
+  cookie: string,
+): Promise<{ state: string; oauthCookie: string }> {
   const app = createApp();
   const res = await app.request('/v1/auth/google/start', { headers: { Cookie: cookie } }, ctx.env);
   expect(res.status).toBe(302);
@@ -87,12 +111,19 @@ async function callGoogleCallback(
   cookie: string,
   input: { code: string; state?: string; skipOauthCookie?: boolean },
 ): Promise<Response> {
-  const { state: startedState, oauthCookie } = await startGoogleFlow(ctx, cookie);
+  const activeCookie = currentCookie(cookie);
+  const { state: startedState, oauthCookie } = await startGoogleFlow(ctx, activeCookie);
   const state = input.state ?? startedState;
-  const cookieHeader = input.skipOauthCookie ? cookie : `${cookie}; ${oauthCookie}`;
+  const cookieHeader = input.skipOauthCookie ? activeCookie : `${activeCookie}; ${oauthCookie}`;
   const app = createApp();
   const query = new URLSearchParams({ code: input.code, state });
-  return app.request(`/v1/auth/google/callback?${query.toString()}`, { headers: { Cookie: cookieHeader } }, ctx.env);
+  const response = await app.request(
+    `/v1/auth/google/callback?${query.toString()}`,
+    { headers: { Cookie: cookieHeader } },
+    ctx.env,
+  );
+  recordRotation(cookie, response);
+  return response;
 }
 
 /** 처음부터 끝까지: start → callback(`fake:<sub>`) → Location을 돌려준다. */
@@ -102,12 +133,17 @@ async function linkGoogle(ctx: TestD1, cookie: string, sub: string): Promise<URL
   return new URL(res.headers.get('Location') ?? '');
 }
 
-function jsonInit(input: { body?: unknown; cookie?: string; origin?: string | null; idempotencyKey?: string | null }): RequestInit {
+function jsonInit(input: {
+  body?: unknown;
+  cookie?: string;
+  origin?: string | null;
+  idempotencyKey?: string | null;
+}): RequestInit {
   const { body, cookie, origin = ALLOWED_ORIGIN, idempotencyKey = 'idem-key-0001' } = input;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (origin !== null) headers.Origin = origin;
   if (idempotencyKey !== null) headers['Idempotency-Key'] = idempotencyKey;
-  if (cookie) headers.Cookie = cookie;
+  if (cookie) headers.Cookie = currentCookie(cookie);
   return { method: 'POST', headers, body: JSON.stringify(body ?? {}) };
 }
 
@@ -115,6 +151,7 @@ describe('GET /v1/auth/google/start', () => {
   let ctx: TestD1;
 
   beforeEach(async () => {
+    rotatedCookies.clear();
     ctx = await createTestD1();
   });
 
@@ -126,7 +163,11 @@ describe('GET /v1/auth/google/start', () => {
     const { cookie } = await issueCookie(ctx);
     const app = createApp();
 
-    const res = await app.request('/v1/auth/google/start', { headers: { Cookie: cookie } }, ctx.env);
+    const res = await app.request(
+      '/v1/auth/google/start',
+      { headers: { Cookie: cookie } },
+      ctx.env,
+    );
     expect(res.status).toBe(302);
     const location = res.headers.get('Location') ?? '';
     expect(location).toContain('/v1/auth/google/callback');
@@ -138,12 +179,19 @@ describe('GET /v1/auth/google/start', () => {
     expect(setCookie).not.toContain('Secure');
   });
 
-  it('arctic 경로에서는 PKCE code_challenge_method=S256을 낸다(로컬 fake를 끄고 clientId만 준다)', async () => {
+  it('arctic 경로에서는 PKCE code_challenge_method=S256을 낸다', async () => {
     const { cookie } = await issueCookie(ctx);
     const app = createApp();
-    const arcticEnv = withoutGoogleFake(ctx.env, { GOOGLE_CLIENT_ID: 'test-client-id', GOOGLE_CLIENT_SECRET: 'test-secret' });
+    const arcticEnv = withoutGoogleFake(ctx.env, {
+      GOOGLE_CLIENT_ID: 'test-client-id',
+      GOOGLE_CLIENT_SECRET: 'test-secret',
+    });
 
-    const res = await app.request('/v1/auth/google/start', { headers: { Cookie: cookie } }, arcticEnv);
+    const res = await app.request(
+      '/v1/auth/google/start',
+      { headers: { Cookie: cookie } },
+      arcticEnv,
+    );
     expect(res.status).toBe(302);
     const location = new URL(res.headers.get('Location') ?? '');
     expect(location.hostname).toBe('accounts.google.com');
@@ -157,9 +205,27 @@ describe('GET /v1/auth/google/start', () => {
     const app = createApp();
     const noClientEnv = withoutGoogleFake(ctx.env);
 
-    const res = await app.request('/v1/auth/google/start', { headers: { Cookie: cookie } }, noClientEnv);
+    const res = await app.request(
+      '/v1/auth/google/start',
+      { headers: { Cookie: cookie } },
+      noClientEnv,
+    );
     expect(res.status).toBe(503);
     expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('SERVICE_UNAVAILABLE');
+  });
+
+  it('클라이언트 secret 없이 arctic 경로면 교환 전에 503', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const app = createApp();
+    const noSecretEnv = withoutGoogleFake(ctx.env, { GOOGLE_CLIENT_ID: 'test-client-id' });
+    delete noSecretEnv.GOOGLE_CLIENT_SECRET;
+
+    const res = await app.request(
+      '/v1/auth/google/start',
+      { headers: { Cookie: cookie } },
+      noSecretEnv,
+    );
+    expect(res.status).toBe(503);
   });
 
   it('세션이 없으면 401', async () => {
@@ -168,32 +234,36 @@ describe('GET /v1/auth/google/start', () => {
     expect(res.status).toBe(401);
   });
 
-  it(
-    '시간당 30회 초과(31번째)는 429',
-    async () => {
-      const { cookie } = await issueCookie(ctx);
-      const app = createApp();
+  it('시간당 30회 초과(31번째)는 429', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const app = createApp();
 
-      for (let i = 1; i <= 30; i++) {
-        const res = await app.request('/v1/auth/google/start', { headers: { Cookie: cookie } }, ctx.env);
-        expect(res.status).toBe(302);
-      }
+    for (let i = 1; i <= 30; i++) {
+      const res = await app.request(
+        '/v1/auth/google/start',
+        { headers: { Cookie: cookie } },
+        ctx.env,
+      );
+      expect(res.status).toBe(302);
+    }
 
-      const res = await app.request('/v1/auth/google/start', { headers: { Cookie: cookie } }, ctx.env);
-      expect(res.status).toBe(429);
-      expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('RATE_LIMITED');
-    },
-    // 순차 요청 31회 × 로컬 D1 왕복이라 vitest 기본 5000ms로는 부족할 때가 있다(동시에 여러
-    // 워크트리가 테스트·빌드를 돌리는 공유 머신에서 특히). 로직 자체의 타임아웃이 아니라
-    // 테스트 예산만 넉넉히 잡는다.
-    20_000,
-  );
+    const res = await app.request(
+      '/v1/auth/google/start',
+      { headers: { Cookie: cookie } },
+      ctx.env,
+    );
+    expect(res.status).toBe(429);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('RATE_LIMITED');
+  }, // 워크트리가 테스트·빌드를 돌리는 공유 머신에서 특히). 로직 자체의 타임아웃이 아니라 // 순차 요청 31회 × 로컬 D1 왕복이라 vitest 기본 5000ms로는 부족할 때가 있다(동시에 여러
+  // 테스트 예산만 넉넉히 잡는다.
+  20_000);
 });
 
 describe('GET /v1/auth/google/callback', () => {
   let ctx: TestD1;
 
   beforeEach(async () => {
+    rotatedCookies.clear();
     ctx = await createTestD1();
   });
 
@@ -203,7 +273,10 @@ describe('GET /v1/auth/google/callback', () => {
 
   it('state 불일치면 error 리다이렉트와 쿠키 삭제', async () => {
     const { cookie } = await issueCookie(ctx);
-    const res = await callGoogleCallback(ctx, cookie, { code: 'fake:sub-mismatch', state: 'wrong-state' });
+    const res = await callGoogleCallback(ctx, cookie, {
+      code: 'fake:sub-mismatch',
+      state: 'wrong-state',
+    });
 
     expect(res.status).toBe(302);
     const location = new URL(res.headers.get('Location') ?? '');
@@ -217,12 +290,40 @@ describe('GET /v1/auth/google/callback', () => {
 
   it('oauth 쿠키가 없으면 error(state) 리다이렉트', async () => {
     const { cookie } = await issueCookie(ctx);
-    const res = await callGoogleCallback(ctx, cookie, { code: 'fake:sub-no-cookie', skipOauthCookie: true });
+    const res = await callGoogleCallback(ctx, cookie, {
+      code: 'fake:sub-no-cookie',
+      skipOauthCookie: true,
+    });
 
     expect(res.status).toBe(302);
     const location = new URL(res.headers.get('Location') ?? '');
     expect(location.searchParams.get('google')).toBe('error');
     expect(location.searchParams.get('reason')).toBe('state');
+  });
+
+  it('OAuth를 시작한 세션과 callback 세션이 다르면 거부한다', async () => {
+    const a = await issueCookie(ctx);
+    const b = await issueCookie(ctx);
+    const { state, oauthCookie } = await startGoogleFlow(ctx, a.cookie);
+    const app = createApp();
+    const res = await app.request(
+      `/v1/auth/google/callback?code=fake:sub-session-mismatch&state=${state}`,
+      { headers: { Cookie: `${b.cookie}; ${oauthCookie}` } },
+      ctx.env,
+    );
+    expect(new URL(res.headers.get('Location') ?? '').searchParams.get('reason')).toBe('state');
+  });
+
+  it('state와 세션이 맞는 Google 동의 취소는 cancelled로 구분한다', async () => {
+    const owner = await issueCookie(ctx);
+    const { state, oauthCookie } = await startGoogleFlow(ctx, owner.cookie);
+    const app = createApp();
+    const res = await app.request(
+      `/v1/auth/google/callback?error=access_denied&state=${state}`,
+      { headers: { Cookie: `${owner.cookie}; ${oauthCookie}` } },
+      ctx.env,
+    );
+    expect(new URL(res.headers.get('Location') ?? '').searchParams.get('reason')).toBe('cancelled');
   });
 
   it('교환 실패(가짜 코드 형식 아님)는 error(exchange) 리다이렉트', async () => {
@@ -251,6 +352,18 @@ describe('GET /v1/auth/google/callback', () => {
     expect(JSON.parse(linkedLogs[0]!.payloadJson)).toEqual({ emailDomain: 'example.com' });
     // 이메일 원문·sub는 감사 로그에 없다.
     expect(linkedLogs[0]!.payloadJson).not.toContain('@example.com');
+
+    const profileSessions = await ctx.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.profileId, profileId));
+    expect(profileSessions.filter((row) => row.revokedAt !== null)).toHaveLength(1);
+    expect(profileSessions.filter((row) => row.revokedAt === null)).toHaveLength(1);
+    const app = createApp();
+    expect(
+      (await app.request('/v1/profile', { headers: { Cookie: currentCookie(cookie) } }, ctx.env))
+        .status,
+    ).toBe(200);
   });
 
   it('같은 sub로 다시 연결해도 감사 로그가 쌓이기만 하고 값은 그대로다', async () => {
@@ -306,7 +419,11 @@ describe('GET /v1/auth/google/callback', () => {
     const { data: tokenData } = (await tokenRes.json()) as { data: { confirmToken: string } };
     await app.request(
       '/v1/profile/delete',
-      jsonInit({ body: { confirmToken: tokenData.confirmToken }, cookie: owner.cookie, idempotencyKey: 'idem-del-confirm' }),
+      jsonInit({
+        body: { confirmToken: tokenData.confirmToken },
+        cookie: owner.cookie,
+        idempotencyKey: 'idem-del-confirm',
+      }),
       ctx.env,
     );
 
@@ -315,10 +432,14 @@ describe('GET /v1/auth/google/callback', () => {
     expect(location.searchParams.get('google')).toBe('linked');
   });
 
-  it('세션이 없으면 401', async () => {
+  it('세션이 없으면 OAuth 쿠키를 지우고 settings state 오류로 복귀한다', async () => {
     const app = createApp();
     const res = await app.request('/v1/auth/google/callback?code=fake:x&state=y', {}, ctx.env);
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(302);
+    const location = new URL(res.headers.get('Location') ?? '');
+    expect(location.pathname).toBe('/settings');
+    expect(location.searchParams.get('reason')).toBe('state');
+    expect(res.headers.get('Set-Cookie')).toContain('offside_oauth=;');
   });
 });
 
@@ -326,6 +447,7 @@ describe('POST /v1/auth/merge', () => {
   let ctx: TestD1;
 
   beforeEach(async () => {
+    rotatedCookies.clear();
     ctx = await createTestD1();
     await ensureServiceSeason(ctx);
   });
@@ -334,7 +456,10 @@ describe('POST /v1/auth/merge', () => {
     await ctx.dispose();
   });
 
-  async function setUpMergeRequired(): Promise<{ a: { cookie: string; profileId: string }; b: { cookie: string; profileId: string } }> {
+  async function setUpMergeRequired(): Promise<{
+    a: { cookie: string; profileId: string };
+    b: { cookie: string; profileId: string };
+  }> {
     const b = await issueCookie(ctx);
     await linkGoogle(ctx, b.cookie, 'sub-merge-route');
     const a = await issueCookie(ctx);
@@ -354,19 +479,34 @@ describe('POST /v1/auth/merge', () => {
       ctx.env,
     );
     expect(res.status).toBe(200);
+    recordRotation(a.cookie, res);
     const body = (await res.json()) as { data: { profileId: string; careerCount: number } };
     expect(body.data.profileId).toBe(b.profileId);
     expect(body.data.careerCount).toBe(1);
 
-    const bCareers = await ctx.db.select().from(careers).where(eq(careers.ownerProfileId, b.profileId));
+    const bCareers = await ctx.db
+      .select()
+      .from(careers)
+      .where(eq(careers.ownerProfileId, b.profileId));
     expect(bCareers.map((row) => row.id)).toEqual(['car_route_a1']);
 
-    const mergedLogs = await ctx.db.select().from(auditLog).where(eq(auditLog.kind, 'PROFILE_MERGED'));
+    const mergedLogs = await ctx.db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.kind, 'PROFILE_MERGED'));
     expect(mergedLogs).toHaveLength(1);
 
     const profile = await getProfile(ctx, a.cookie);
     expect(profile.id).toBe(b.profileId);
     expect(profile.pendingMerge).toBeNull();
+
+    const replay = await app.request(
+      '/v1/auth/merge',
+      jsonInit({ body: { mergeChoice: 'MOVE_TO_LINKED' }, cookie: a.cookie }),
+      ctx.env,
+    );
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('Idempotent-Replayed')).toBe('true');
   });
 
   it('KEEP_LINKED_ONLY: 재바인딩만, A의 커리어는 그대로 A 소유로 남는다', async () => {
@@ -379,11 +519,15 @@ describe('POST /v1/auth/merge', () => {
       ctx.env,
     );
     expect(res.status).toBe(200);
+    recordRotation(a.cookie, res);
     const body = (await res.json()) as { data: { profileId: string; careerCount: number } };
     expect(body.data.profileId).toBe(b.profileId);
     expect(body.data.careerCount).toBe(0);
 
-    const aCareers = await ctx.db.select().from(careers).where(eq(careers.ownerProfileId, a.profileId));
+    const aCareers = await ctx.db
+      .select()
+      .from(careers)
+      .where(eq(careers.ownerProfileId, a.profileId));
     expect(aCareers.map((row) => row.id)).toEqual(['car_route_a1']);
 
     const profile = await getProfile(ctx, a.cookie);
@@ -394,7 +538,11 @@ describe('POST /v1/auth/merge', () => {
     const { cookie } = await issueCookie(ctx);
     const app = createApp();
 
-    const res = await app.request('/v1/auth/merge', jsonInit({ body: { mergeChoice: 'KEEP_LINKED_ONLY' }, cookie }), ctx.env);
+    const res = await app.request(
+      '/v1/auth/merge',
+      jsonInit({ body: { mergeChoice: 'KEEP_LINKED_ONLY' }, cookie }),
+      ctx.env,
+    );
     expect(res.status).toBe(400);
     const body = ErrorEnvelopeSchema.parse(await res.json());
     expect(body.error.code).toBe('VALIDATION_FAILED');
@@ -403,7 +551,10 @@ describe('POST /v1/auth/merge', () => {
 
   it('pending 만료 뒤에는 400 VALIDATION_FAILED(NO_PENDING_MERGE)', async () => {
     const { a } = await setUpMergeRequired();
-    await ctx.db.update(sessions).set({ pendingMergeExpiresAt: '2020-01-01T00:00:00Z' }).where(eq(sessions.profileId, a.profileId));
+    await ctx.db
+      .update(sessions)
+      .set({ pendingMergeExpiresAt: '2020-01-01T00:00:00Z' })
+      .where(eq(sessions.profileId, a.profileId));
     const app = createApp();
 
     const res = await app.request(
@@ -412,12 +563,17 @@ describe('POST /v1/auth/merge', () => {
       ctx.env,
     );
     expect(res.status).toBe(400);
-    expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({ reason: 'NO_PENDING_MERGE' });
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({
+      reason: 'NO_PENDING_MERGE',
+    });
   });
 
   it('대상 프로필이 확정 전에 삭제되면 400 VALIDATION_FAILED(NO_PENDING_MERGE)', async () => {
     const { a, b } = await setUpMergeRequired();
-    await ctx.db.update(profiles).set({ deletedAt: new Date().toISOString() }).where(eq(profiles.id, b.profileId));
+    await ctx.db
+      .update(profiles)
+      .set({ deletedAt: new Date().toISOString() })
+      .where(eq(profiles.id, b.profileId));
     const app = createApp();
 
     const res = await app.request(
@@ -426,15 +582,24 @@ describe('POST /v1/auth/merge', () => {
       ctx.env,
     );
     expect(res.status).toBe(400);
-    expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({ reason: 'NO_PENDING_MERGE' });
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({
+      reason: 'NO_PENDING_MERGE',
+    });
 
-    const aCareers = await ctx.db.select().from(careers).where(eq(careers.ownerProfileId, a.profileId));
+    const aCareers = await ctx.db
+      .select()
+      .from(careers)
+      .where(eq(careers.ownerProfileId, a.profileId));
     expect(aCareers.map((row) => row.id)).toEqual(['car_route_a1']);
   });
 
   it('세션이 없으면 401', async () => {
     const app = createApp();
-    const res = await app.request('/v1/auth/merge', jsonInit({ body: { mergeChoice: 'KEEP_LINKED_ONLY' } }), ctx.env);
+    const res = await app.request(
+      '/v1/auth/merge',
+      jsonInit({ body: { mergeChoice: 'KEEP_LINKED_ONLY' } }),
+      ctx.env,
+    );
     expect(res.status).toBe(401);
   });
 });
@@ -443,6 +608,7 @@ describe('POST /v1/auth/google/unlink', () => {
   let ctx: TestD1;
 
   beforeEach(async () => {
+    rotatedCookies.clear();
     ctx = await createTestD1();
   });
 

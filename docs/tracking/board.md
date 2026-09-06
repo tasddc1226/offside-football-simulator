@@ -40,7 +40,7 @@ WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. �
 |---|---|---|---|
 | U-001 | 도메인 구매, 네임서버를 Cloudflare로 | todo | ADR-006 후보 참고 |
 | U-002 | Cloudflare 계정·최소 권한 API 토큰·환경별 D1 준비 | completed | 2026-09-04. GitHub Secrets 2종 등록, APAC D1 `offside-preview`·`staging`·`production` 생성. Free 플랜 유지 |
-| U-003 | Google Cloud 프로젝트에서 OAuth 클라이언트 ID·시크릿 발급 | todo | ADR-008. 콜백 URL은 도메인 확정 후. 코드는 PR #33으로 준비됨(가짜 OIDC 검증 완료) — ID·시크릿은 `wrangler secret put`, 발급 뒤 오케스트레이터가 실계정 검증 |
+| U-003 | Google Cloud 프로젝트에서 OAuth 클라이언트 ID·시크릿 발급 | in-progress | 2026-09-06 개인 계정 `tasddc1569@gmail.com`의 오프사이드 전용 프로젝트 생성 승인. 운영 callback 확정, 코드 안전성 보강·자격 증명 설정 진행 중. 실제 Google 인증 왕복 전에는 완료 처리하지 않는다. [연결 런북](../operations/google-login.md) |
 | U-004 | Sentry 프로젝트 생성, DSN 등록 | todo | ADR-007 |
 | U-005 | 종이 프로토타입 3회 플레이, `docs/content/prototype/playtest-log.md` 작성 | todo | 양식 제공됨(2026-09-02). 회차별 시트와 3회 합산 답만 채우면 된다. 고정 seed 3종 키트는 `docs/content/kickoff/paper-playtest-kit.md`(PR #24) |
 | U-006 | ADR-001~009 검토·승인 또는 반려 | completed | 2026-09-02 승인 |
