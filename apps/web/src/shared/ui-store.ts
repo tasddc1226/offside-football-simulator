@@ -6,10 +6,12 @@ import { create } from 'zustand';
 import { ProfileSettingsSchema, type ProfileSettings } from '@offside/contracts';
 import type { LocalStore } from '@offside/engine-client';
 import type { SimulationMode } from '@offside/domain';
+import { ACCENT_PRESET_IDS, type AccentPresetId } from './accent-presets.js';
 
 export type ThemePreference = ProfileSettings['theme'];
 export type ReducedMotionPreference = ProfileSettings['reducedMotion'];
 export type TextScale = ProfileSettings['textScale'];
+export type { AccentPresetId };
 
 const UI_SETTINGS_KV_KEY = 'ui:settings';
 /** UX-001: 구단 이름 커스터마이즈 트림 후 길이 규칙. 빈 값은 오버라이드 제거(기본 이름 복귀)다. */
@@ -17,6 +19,7 @@ const TEAM_NAME_OVERRIDE_MAX_LENGTH = 16;
 
 type StoredUiSettings = ProfileSettings & {
   onboardingSeen: boolean;
+  accentPreset: AccentPresetId;
   /** UX-001: 팀 id → 커스텀 표시 이름. 기기 로컬 전용(서버 ProfileSettings에는 없다) — 팀 id가
    * 없으면 룰셋 기본 이름을 그대로 쓴다. */
   teamNameOverrides: Record<string, string>;
@@ -28,8 +31,13 @@ const DEFAULT_SETTINGS: StoredUiSettings = {
   textScale: 100,
   defaultSimulationMode: 'FAST',
   onboardingSeen: false,
+  accentPreset: 'DEFAULT',
   teamNameOverrides: {},
 };
+
+function isAccentPresetId(value: unknown): value is AccentPresetId {
+  return typeof value === 'string' && (ACCENT_PRESET_IDS as readonly string[]).includes(value);
+}
 
 /** 손상된 값이 섞여도 유효한 항목만 남긴다(트림 1~16자, 문자열 값만) — 저장값에 필드가 아예 없던
  * 과거 버전도 빈 객체로 안전하게 읽힌다. */
@@ -45,18 +53,23 @@ function parseTeamNameOverrides(value: unknown): Record<string, string> {
   return result;
 }
 
-/** apps/web은 zod를 직접 의존하지 않는다(ADR-005). contracts의 ProfileSettingsSchema로 4개
- * 필드를 검증하고, onboardingSeen은 boolean 여부만, teamNameOverrides(서버 스키마에 없는 로컬 전용
- * 필드)는 parseTeamNameOverrides로 따로 확인한다. */
+/** apps/web은 zod를 직접 의존하지 않는다(ADR-005). contracts의 ProfileSettingsSchema는 strictObject라
+ * accentPreset·teamNameOverrides(둘 다 로컬 전용이라 contracts에는 없음)는 onboardingSeen과 같이 먼저
+ * 떼어내고 별도로 검증해야 한다 — 안 떼면 매번 파싱이 실패해 기본값으로 되돌아간다. */
 function parseStoredSettings(raw: unknown): StoredUiSettings | null {
   if (typeof raw !== 'object' || raw === null) return null;
-  const { onboardingSeen, teamNameOverrides, ...rest } = raw as Record<string, unknown>;
+  const { onboardingSeen, accentPreset, teamNameOverrides, ...rest } = raw as Record<string, unknown>;
   if (typeof onboardingSeen !== 'boolean') return null;
 
   const parsed = ProfileSettingsSchema.safeParse(rest);
   if (!parsed.success) return null;
 
-  return { ...parsed.data, onboardingSeen, teamNameOverrides: parseTeamNameOverrides(teamNameOverrides) };
+  return {
+    ...parsed.data,
+    onboardingSeen,
+    accentPreset: isAccentPresetId(accentPreset) ? accentPreset : 'DEFAULT',
+    teamNameOverrides: parseTeamNameOverrides(teamNameOverrides),
+  };
 }
 
 export interface UiState extends StoredUiSettings {
@@ -65,6 +78,7 @@ export interface UiState extends StoredUiSettings {
   setTextScale: (textScale: TextScale) => void;
   setDefaultSimulationMode: (mode: SimulationMode) => void;
   setOnboardingSeen: (seen: boolean) => void;
+  setAccentPreset: (accentPreset: AccentPresetId) => void;
   /** 트림 후 빈 값이면 오버라이드를 지운다(기본 이름 복귀). 16자를 넘는 값은 잘라서 저장한다. */
   setTeamNameOverride: (teamId: string, name: string) => void;
   resetTeamNameOverrides: () => void;
@@ -86,6 +100,9 @@ export const useUiStore = create<UiState>((set) => ({
   },
   setOnboardingSeen: (onboardingSeen) => {
     set({ onboardingSeen });
+  },
+  setAccentPreset: (accentPreset) => {
+    set({ accentPreset });
   },
   setTeamNameOverride: (teamId, name) => {
     set((state) => {
@@ -111,6 +128,7 @@ function persistedSlice(state: UiState): StoredUiSettings {
     textScale: state.textScale,
     defaultSimulationMode: state.defaultSimulationMode,
     onboardingSeen: state.onboardingSeen,
+    accentPreset: state.accentPreset,
     teamNameOverrides: state.teamNameOverrides,
   };
 }
@@ -157,6 +175,7 @@ export function useApplyTheme() {
   const theme = useUiStore((state) => state.theme);
   const textScale = useUiStore((state) => state.textScale);
   const reducedMotion = useUiStore((state) => state.reducedMotion);
+  const accentPreset = useUiStore((state) => state.accentPreset);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -166,6 +185,17 @@ export function useApplyTheme() {
       root.setAttribute('data-theme', theme === 'DARK' ? 'dark' : 'light');
     }
   }, [theme]);
+
+  // UX-004: tokens.css의 :root[data-accent='...'] 블록과 짝을 이룬다. 'DEFAULT'는 속성을 지워
+  // 기본 네이비(:root 베이스)로 되돌린다.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (accentPreset === 'DEFAULT') {
+      root.removeAttribute('data-accent');
+    } else {
+      root.setAttribute('data-accent', accentPreset);
+    }
+  }, [accentPreset]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-text-scale', String(textScale));
