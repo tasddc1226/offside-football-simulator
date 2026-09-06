@@ -11,6 +11,7 @@ import { SERVICE_SEASON_NOTICE_KO } from '../shared/labels.js';
 import { useReducedMotion, useUiStore } from '../shared/ui-store.js';
 import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 import { GameCompletionTransition } from '../shared/game-presentation.js';
+import { CinematicIntro } from '../shared/cinematic-intro.js';
 import { BRAND_SUBTITLE } from '../shared/brand.js';
 
 export const Route = createFileRoute('/onboarding')({
@@ -49,6 +50,9 @@ const CAPTION_STYLE = {
 } as const;
 
 function OnboardingScreen() {
+  // UX-009: 온보딩에 진입할 때마다(첫 방문·"온보딩 다시 보기" 모두) 3슬라이드 앞에 시네마틱 인트로를
+  // 한 번 보여준다. 로컬 state라 슬라이드 내 이전/다음 이동으로는 다시 뜨지 않는다.
+  const [introDone, setIntroDone] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState<ScreenDirection>('forward');
   const reducedMotion = useReducedMotion();
@@ -100,6 +104,14 @@ function OnboardingScreen() {
     } finally {
       startingRef.current = false;
     }
+  }
+
+  if (!introDone) {
+    return (
+      <div className="os-screen">
+        <CinematicIntro onComplete={() => setIntroDone(true)} />
+      </div>
+    );
   }
 
   if (createdCareerId !== null) {
