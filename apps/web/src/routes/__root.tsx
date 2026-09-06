@@ -5,6 +5,7 @@ import { createRootRoute, Link, Outlet, useRouterState } from '@tanstack/react-r
 import { queryClient } from '../shared/query-client.js';
 import { useApplyTheme } from '../shared/ui-store.js';
 import { AppMotionFrame } from '../shared/app-motion-frame.js';
+import { useEffect } from 'react';
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -31,6 +32,32 @@ function GameNavigation() {
   // Career screens already own their safe back/next actions. A global Link would bypass
   // those COMMITTING guards, including asynchronous post-confirm recovery work.
   const inCareer = pathname.startsWith('/career/');
+  const inPublicInfo = /^\/(guide|faq)\/?$/.test(pathname);
+  useEffect(() => {
+    if (inPublicInfo) return;
+    const isHome = pathname === '/';
+    document.title = isHome ? '오프사이드 — 이번 생은 프리미어리거!' : 'OFFSIDE';
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute(
+        'content',
+        isHome
+          ? '선택으로 한 명의 축구 선수 커리어를 만들어 가는 스토리 시뮬레이션 게임, 오프사이드.'
+          : 'OFFSIDE 게임 화면',
+      );
+    document
+      .querySelector('meta[name="robots"]')
+      ?.setAttribute(
+        'content',
+        isHome
+          ? (document.documentElement.dataset.publicRobots ?? 'noindex, nofollow')
+          : 'noindex, nofollow',
+      );
+    if (!isHome)
+      document
+        .querySelectorAll('link[rel="canonical"], meta[property="og:url"]')
+        .forEach((node) => node.remove());
+  }, [inPublicInfo, pathname]);
   return (
     <>
       <a href="#game-content" className="os-skip-link">
@@ -42,6 +69,11 @@ function GameNavigation() {
             <FootballMark />
             <span>OFFSIDE</span>
           </span>
+        ) : inPublicInfo ? (
+          <a href="/" className="os-brand" aria-label="오프사이드 홈">
+            <FootballMark />
+            <span>OFFSIDE</span>
+          </a>
         ) : (
           <Link
             to="/"
@@ -58,6 +90,10 @@ function GameNavigation() {
         )}
         {inCareer ? (
           <span className="os-eyebrow os-muted">나의 축구 인생</span>
+        ) : inPublicInfo ? (
+          <a href="/settings" className="os-nav-settings" aria-label="게임 설정">
+            <span aria-hidden="true">설정</span>
+          </a>
         ) : (
           <Link
             to="/settings"

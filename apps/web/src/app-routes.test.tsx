@@ -109,7 +109,7 @@ describe('SCR-001 공개 소개 → SCR-034 온보딩', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'OFFSIDE' })).toBeInTheDocument();
     expect(screen.getByText('이번 생은 프리미어리거!')).toBeInTheDocument();
-    expect(screen.getByText(/선택으로 나만의 축구 선수 커리어/)).toBeInTheDocument();
+    expect(screen.getByText(/유망주가 되어 훈련과 경기 사이의 선택/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
 
     fireEvent.click(screen.getByRole('link', { name: '게임 시작' }));
@@ -152,7 +152,10 @@ describe('SCR-034 온보딩', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
     expect(
-      await screen.findByRole('heading', { level: 1, name: '커리어를 다시 찾을 방법을 준비하세요' }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '커리어를 다시 찾을 방법을 준비하세요',
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText('커리어에는 VAR이 없다')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /새 인생 시작/ })).toBeInTheDocument();
