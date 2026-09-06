@@ -58,7 +58,8 @@ import { buildScheduleRows } from '../shared/season-schedule.js';
 import { cupProgressLabel, opponentDisplayName } from '../shared/competition-labels.js';
 import { eventOutcomeTitle } from '../shared/legacy-event-copy.js';
 import { familiarityPercentLabel, SelectionRankingList } from '../shared/tactical-room.js';
-import { useReducedMotion } from '../shared/ui-store.js';
+import type { TeamNameOverrides } from '../shared/team-names.js';
+import { useReducedMotion, useUiStore } from '../shared/ui-store.js';
 import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 import { buildCurrentContractSummary, MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
 import { GamePending } from '../shared/game-presentation.js';
@@ -102,14 +103,20 @@ function relationshipRows(state: CareerState, revealNumbers: boolean) {
   }));
 }
 
-function chapterCardLabel(state: CareerState, pending: ChapterPending, ruleset: Ruleset): string {
+function chapterCardLabel(
+  state: CareerState,
+  pending: ChapterPending,
+  ruleset: Ruleset,
+  teamNameOverrides: TeamNameOverrides,
+): string {
   if (pending.trigger === 'NATIONAL_DEBUT') {
     const opponentName = pending.virtualOpponent?.opponentName;
     return opponentName === undefined ? '대표팀 데뷔전' : `대표팀 데뷔전 — ${opponentName}`;
   }
 
   const opponent = state.season?.matches.find((candidate) => candidate.id === pending.matchId)?.opponent;
-  const opponentName = opponent === undefined ? undefined : opponentDisplayName(opponent, ruleset);
+  const opponentName =
+    opponent === undefined ? undefined : opponentDisplayName(opponent, ruleset, teamNameOverrides);
   return opponentName === undefined ? '핵심 경기' : `핵심 경기 — ${opponentName}`;
 }
 
@@ -355,6 +362,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
   const navigate = useNavigate();
   const advanceMutation = useCareerMutation('advance');
   const settleSeasonMutation = useCareerMutation('settleSeason');
+  const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
   const [nothingToAdvance, setNothingToAdvance] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const submittingRef = useRef(false);
@@ -538,7 +546,7 @@ function NextDecisionCard({ careerId, state }: { careerId: string; state: Career
     return (
       <Card className="os-next-action flex flex-col gap-os-4">
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          {chapterCardLabel(state, pending, rulesetForCareer(state))}
+          {chapterCardLabel(state, pending, rulesetForCareer(state), teamNameOverrides)}
         </p>
         <Link
           to="/career/$careerId/chapter"
@@ -610,6 +618,7 @@ function CareerDashboard() {
   const tab = view ?? 'home';
   const [tabDirection, setTabDirection] = useState<ScreenDirection>('forward');
   const reducedMotion = useReducedMotion();
+  const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
   const mutating = useIsMutating() > 0;
   const tabIndex = DASHBOARD_TABS.findIndex((value) => value === tab);
 
@@ -680,7 +689,7 @@ function CareerDashboard() {
   return (
     <div className="os-screen">
       <header className="os-career-identity flex flex-col gap-os-2">
-        <p className="os-eyebrow">{currentTeamName(state, ruleset)}</p>
+        <p className="os-eyebrow">{currentTeamName(state, ruleset, teamNameOverrides)}</p>
         <div className="flex items-end justify-between gap-os-3">
           <h1 className="min-w-0 truncate font-os text-os-text" style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)', fontWeight: 750 }}>{name}</h1>
           <span className="os-num shrink-0 font-os font-bold text-os-accent">OVR {profile?.baseOvr ?? '—'}</span>
@@ -795,7 +804,7 @@ function CareerDashboard() {
                       ))}
                     </div>
                     <div className="flex flex-col gap-os-2">
-                      {buildScheduleRows(season, ruleset).map((row) => (
+                      {buildScheduleRows(season, ruleset, teamNameOverrides).map((row) => (
                         <div
                           key={`${row.step}-${row.order}`}
                           className="flex min-w-0 flex-col gap-os-1 rounded-os-m border border-os-border px-os-3 py-os-3 font-os text-os-text-2"

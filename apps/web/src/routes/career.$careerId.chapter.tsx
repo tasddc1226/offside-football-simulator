@@ -53,6 +53,8 @@ import {
 } from '../shared/labels.js';
 import { ratingText } from '../shared/season-schedule.js';
 import { proStatusStripItems } from '../shared/status-strip.js';
+import type { TeamNameOverrides } from '../shared/team-names.js';
+import { useUiStore } from '../shared/ui-store.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { platform } from '../platform/index.js';
@@ -148,11 +150,15 @@ function chapterCompetitionLabel(view: ChapterView): string {
   return label === undefined ? '컵' : `컵 · ${label}`;
 }
 
-function chapterContextLabel(view: ChapterView, ruleset: ReturnType<typeof rulesetForCareer>): string {
+function chapterContextLabel(
+  view: ChapterView,
+  ruleset: ReturnType<typeof rulesetForCareer>,
+  teamNameOverrides: TeamNameOverrides,
+): string {
   if (view.context.kind === 'NATIONAL_TEAM') {
     return `${chapterCompetitionLabel(view)} · ${view.context.opponent.opponentName}`;
   }
-  return `${chapterCompetitionLabel(view)} · ${view.context.home ? '홈' : '원정'} · ${opponentDisplayName(view.context.opponent, ruleset)}`;
+  return `${chapterCompetitionLabel(view)} · ${view.context.home ? '홈' : '원정'} · ${opponentDisplayName(view.context.opponent, ruleset, teamNameOverrides)}`;
 }
 
 function playerReasonText(reason: SelectionRanking['playerReason']): string | null {
@@ -315,6 +321,7 @@ function ChapterScreen() {
   const navigate = useNavigate();
   const query = useCareer(careerId);
   const resolveMutation = useCareerMutation('resolveChapter');
+  const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
   const submittingRef = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -368,7 +375,7 @@ function ChapterScreen() {
   const minute = decisionMinute(displayDecisionNumber, decisionsTotal);
   const isNationalTeam = view.context.kind === 'NATIONAL_TEAM';
   const score = scoreAtDecision(view.match.result.goalsFor, view.match.result.goalsAgainst, minute);
-  const tokens = buildNarrativeTokens(state, contentPack, ruleset);
+  const tokens = buildNarrativeTokens(state, contentPack, ruleset, teamNameOverrides);
   const room = isNationalTeam ? null : deriveTacticalRoom(state, ruleset);
   const reasonText = playerReasonText(season.selection.playerReason);
 
@@ -432,7 +439,7 @@ function ChapterScreen() {
       <div className="flex flex-wrap items-center justify-between gap-os-2 border-y border-os-border py-os-3">
         <div className="min-w-0">
           <p className="truncate font-os font-semibold text-os-text">{profile.name} · {positionField.value}</p>
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{currentTeamName(state, ruleset)} · {archetypeName(ruleset, profile.archetypeId)}</p>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{currentTeamName(state, ruleset, teamNameOverrides)} · {archetypeName(ruleset, profile.archetypeId)}</p>
         </div>
         <span className="os-num font-os font-semibold text-os-text-2">#{state.contract?.shirtNumber ?? '—'}</span>
       </div>
@@ -441,7 +448,7 @@ function ChapterScreen() {
       <section className="os-panel flex flex-col gap-os-2" aria-label="경기 맥락">
         <p className="os-eyebrow">오늘의 경기</p>
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-          {chapterContextLabel(view, ruleset)}
+          {chapterContextLabel(view, ruleset, teamNameOverrides)}
         </p>
         {!isNationalTeam && (
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>

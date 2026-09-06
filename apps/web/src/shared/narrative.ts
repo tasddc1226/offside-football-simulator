@@ -2,6 +2,7 @@
 import { PARTICLE_PAIRS, type ContentPack } from '@offside/content';
 import type { CareerState, Ruleset } from '@offside/domain';
 import { currentTeamName } from './current-team.js';
+import type { TeamNameOverrides } from './team-names.js';
 
 const TOKEN_PATTERN = /\{([a-zA-Z]+)(?::([^}]*))?\}/g;
 
@@ -64,8 +65,13 @@ export function renderNarrative(text: string, tokens: NarrativeTokenValues): str
  * 둘 다 없을 때만 팩 사전 첫 값으로 대체한다. 나머지(`rival`·`captain`)는 팩 `narrativeTokens`의
  * 첫 값이다.
  */
-export function buildNarrativeTokens(state: CareerState, pack: ContentPack, ruleset: Ruleset): NarrativeTokenValues {
-  const team = currentTeamName(state, ruleset);
+export function buildNarrativeTokens(
+  state: CareerState,
+  pack: ContentPack,
+  ruleset: Ruleset,
+  teamNameOverrides: TeamNameOverrides = {},
+): NarrativeTokenValues {
+  const team = currentTeamName(state, ruleset, teamNameOverrides);
   return {
     name: state.player.profile?.name ?? state.player.draft.name ?? '',
     club: team,
