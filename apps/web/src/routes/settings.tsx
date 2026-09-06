@@ -39,6 +39,7 @@ import {
 import { ensureProfile } from '../api/profile.js';
 import { activeContentPack, activeRuleset } from '../engine/content.js';
 import { getAppEngine } from '../engine/engine.js';
+import { prepareGoogleConnect } from '../engine/google-connect.js';
 import { retryPendingDeletes } from '../engine/pending-delete.js';
 import { reconcileAfterRecovery } from '../engine/reconcile.js';
 import { getSyncClient, requeueAllUnsynced } from '../engine/sync.js';
@@ -127,6 +128,7 @@ const FAILED_CODE_MESSAGE: Partial<Record<ErrorCode, string>> = {
 const GOOGLE_ERROR_REASON_MESSAGE: Record<string, string> = {
   state: '연결 요청이 만료됐습니다. 다시 시도해 주세요.',
   exchange: 'Google 인증에 실패했습니다. 다시 시도해 주세요.',
+  cancelled: 'Google 연결을 취소했습니다.',
 };
 
 function googleErrorMessage(reason: string | undefined): string {
@@ -353,7 +355,8 @@ function RecoveryCodeRow() {
               {issuedCode}
             </p>
             <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-              다른 기기에서 이 프로필을 되찾을 유일한 열쇠입니다. 안전한 곳에 적어 두세요.
+              다른 기기에서 이 프로필을 되찾는 방법 중 하나입니다. 안전한 곳에 적어 두세요. 이미
+              연결한 Google 계정으로도 돌아올 수 있습니다.
             </p>
             <div className="flex gap-os-3">
               <Button variant="secondary" onClick={() => void handleCopy()}>
@@ -586,6 +589,7 @@ function GoogleRow() {
   );
   const unlinkCancelRef = useRef<HTMLButtonElement>(null);
   const mergeCancelRef = useRef<HTMLButtonElement>(null);
+  const connectInFlightRef = useRef(false);
 
   const googleLinked = profileQuery.data?.linked.google === true;
   const googleEmailMasked = profileQuery.data?.googleEmailMasked ?? null;
@@ -639,9 +643,26 @@ function GoogleRow() {
     clearGoogleQuery();
   }, [search.google]);
 
-  function handleConnect() {
+  async function handleConnect() {
+    if (connectInFlightRef.current) return;
+    connectInFlightRef.current = true;
+    setBusy(true);
+    setError(null);
     platform.analytics.track('google_link_started');
-    platform.openExternal(`${API_BASE_URL}/v1/auth/google/start`);
+    const prepared = await prepareGoogleConnect();
+    if (!prepared.ok) {
+      setError(prepared.message);
+      setBusy(false);
+      connectInFlightRef.current = false;
+      return;
+    }
+    try {
+      platform.openExternal(`${API_BASE_URL}/v1/auth/google/start`);
+    } catch {
+      setError('Google 연결 화면을 열지 못했습니다. 다시 시도해 주세요.');
+      setBusy(false);
+      connectInFlightRef.current = false;
+    }
   }
 
   async function handleUnlink() {
@@ -785,11 +806,17 @@ function GoogleRow() {
             </DialogContent>
           </Dialog>
         ) : (
-          <Button variant="secondary" onClick={handleConnect}>
-            Google로 연결
+          <Button variant="secondary" onClick={() => void handleConnect()} disabled={busy}>
+            {busy ? '저장 확인 중' : 'Google로 연결'}
           </Button>
         )}
       </div>
+
+      {error !== null && !mergeDialogOpen && !unlinkOpen ? (
+        <p role="alert" className="font-os text-os-danger" style={CAPTION_STYLE}>
+          {error}
+        </p>
+      ) : null}
 
       <Dialog
         open={mergeDialogOpen}
@@ -800,7 +827,7 @@ function GoogleRow() {
       >
         <DialogContent
           title="Google에 연결된 프로필이 있습니다"
-          description="이 기기의 커리어와 Google에 연결된 프로필의 커리어 중 무엇을 남길지 골라 주세요."
+          description="이 기기의 커리어를 Google 프로필로 옮길지, 이 기기에서는 Google 프로필의 저장본만 사용할지 골라 주세요. 원래 익명 프로필의 서버 데이터는 여기서 삭제되지 않습니다."
           closeLabel="닫기"
           onOpenAutoFocus={(event) => {
             event.preventDefault();
@@ -836,8 +863,8 @@ function GoogleRow() {
                 onClick={() => void handleMergeChoice('KEEP_LINKED_ONLY')}
                 disabled={busy}
               >
-                Google 프로필(커리어 {pendingMerge.targetCareerCount}개)만 사용하고 이 기기의
-                커리어는 지우기
+                이 기기에서 Google 프로필(커리어 {pendingMerge.targetCareerCount}개)의 저장본만
+                사용하기
               </Button>
               <button
                 ref={mergeCancelRef}
@@ -907,7 +934,7 @@ function LogoutRow() {
           </DialogTrigger>
           <DialogContent
             title="로그아웃"
-            description="지금 로그아웃하면 이 프로필을 되찾을 수 없습니다. 이 기기의 진행은 그대로 남습니다."
+            description="이 기기의 진행은 그대로 남습니다. 다시 Google로 연결하면 이 프로필로 돌아올 수 있습니다."
             closeLabel="닫기"
             onOpenAutoFocus={(event) => {
               event.preventDefault();
@@ -954,8 +981,8 @@ function LogoutRow() {
         </Dialog>
       </div>
       <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-        Google을 연결한 프로필에서만 쓸 수 있습니다. 지금 로그아웃하면 이 프로필을 되찾을 수
-        없습니다.
+        Google을 연결한 프로필에서만 쓸 수 있습니다. 로그아웃해도 이 기기의 진행은 남고, 다시
+        Google로 연결하면 같은 프로필로 돌아올 수 있습니다.
       </p>
       {toast !== null ? (
         <Toast variant="success" message={toast} onDismiss={() => setToast(null)} />

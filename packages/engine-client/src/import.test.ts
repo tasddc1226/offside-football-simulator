@@ -26,7 +26,9 @@ async function runGoldenOnFreshStore(): Promise<{ store: MemoryLocalStore; engin
       ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc_kickoff' } : {}),
     });
     if (!result.ok) {
-      throw new Error(`golden 명령 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+      throw new Error(
+        `golden 명령 실패: ${command.type} ${result.error.code} ${result.error.message}`,
+      );
     }
   }
 
@@ -34,12 +36,19 @@ async function runGoldenOnFreshStore(): Promise<{ store: MemoryLocalStore; engin
 }
 
 /** 서버가 `GET /careers/{id}`로 돌려줄 법한 응답을 소스 store에서 그대로 읽어 만든다. */
-async function buildGetCareerResponse(store: MemoryLocalStore, careerId: string): Promise<GetCareerResponse> {
+async function buildGetCareerResponse(
+  store: MemoryLocalStore,
+  careerId: string,
+): Promise<GetCareerResponse> {
   return store.transaction('readonly', async (tx) => {
     const snapshot = await tx.snapshots.getLatest(careerId);
     if (snapshot === undefined) throw new Error('snapshot 없음');
     const commands = await tx.commandLog.listSince(careerId, 0);
-    return { createdServiceSeasonId: 'svc_kickoff', snapshot, commands: commands.slice().sort((a, b) => a.revision - b.revision) };
+    return {
+      createdServiceSeasonId: 'svc_kickoff',
+      snapshot,
+      commands: commands.slice().sort((a, b) => a.revision - b.revision),
+    };
   });
 }
 
@@ -47,7 +56,11 @@ describe('importCareerFromServer', () => {
   it('golden Snapshot을 가져오면 loadCareer가 같은 state를 돌려준다', async () => {
     const { store: sourceStore } = await runGoldenOnFreshStore();
     const response = await buildGetCareerResponse(sourceStore, CAREER_ID);
-    const sourceEngine = createEngineClient({ store: sourceStore, simulator: inlineSimulator, ruleset: rulesetProto });
+    const sourceEngine = createEngineClient({
+      store: sourceStore,
+      simulator: inlineSimulator,
+      ruleset: rulesetProto,
+    });
     const sourceLoaded = await sourceEngine.loadCareer(CAREER_ID);
     expect(sourceLoaded.ok).toBe(true);
     if (!sourceLoaded.ok) throw new Error('unreachable');
@@ -62,7 +75,11 @@ describe('importCareerFromServer', () => {
     if (!result.ok) throw new Error('unreachable');
     expect(result.revision).toBe(response.snapshot.revision);
 
-    const destEngine = createEngineClient({ store: destStore, simulator: inlineSimulator, ruleset: rulesetProto });
+    const destEngine = createEngineClient({
+      store: destStore,
+      simulator: inlineSimulator,
+      ruleset: rulesetProto,
+    });
     const destLoaded = await destEngine.loadCareer(CAREER_ID);
     expect(destLoaded.ok).toBe(true);
     if (!destLoaded.ok) throw new Error('unreachable');
@@ -138,5 +155,36 @@ describe('importCareerFromServer', () => {
     expect(record?.revision).toBe(2);
     expect(record?.lastSyncedRevision).toBe(1);
     expect(record?.createdServiceSeasonId).toBe('svc_local');
+  });
+
+  it('명시적 원격 프로필 선택은 검증된 서버 snapshot으로 미전송 로컬 진행을 원자 교체한다', async () => {
+    const { store: sourceStore } = await runGoldenOnFreshStore();
+    const response = await buildGetCareerResponse(sourceStore, CAREER_ID);
+    const destStore = new MemoryLocalStore();
+    await destStore.transaction('readwrite', (tx) =>
+      tx.careers.put({
+        id: CAREER_ID,
+        ownerProfileId: null,
+        status: 'ACTIVE',
+        revision: 2,
+        lastSyncedRevision: 1,
+        createdServiceSeasonId: 'svc_local',
+        rulesetVersion: rulesetProto.version,
+        contentPackVersion: '0.1.0',
+        createdAt: NOW,
+        updatedAt: NOW,
+      }),
+    );
+
+    const result = await importCareerFromServer(destStore, response, {
+      now: NOW,
+      replaceLocal: true,
+    });
+
+    expect(result).toEqual({ ok: true, revision: response.snapshot.revision });
+    const record = await destStore.transaction('readonly', (tx) => tx.careers.get(CAREER_ID));
+    expect(record?.revision).toBe(response.snapshot.revision);
+    expect(record?.lastSyncedRevision).toBe(response.snapshot.revision);
+    expect(record?.createdServiceSeasonId).toBe(response.createdServiceSeasonId);
   });
 });

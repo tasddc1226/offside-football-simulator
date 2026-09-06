@@ -18,6 +18,8 @@ export type ReconcilePlan = {
   toNotifyCommitted: string[];
   /** 선택과 무관: 로컬에 없거나 로컬이 뒤처졌고 미전송분이 없는 서버 커리어(다운로드 대상). */
   toDownload: string[];
+  /** KEEP_LINKED_ONLY: 같은 id의 로컬 데이터도 선택한 Google 저장본으로 교체한다. */
+  toReplace: string[];
 };
 
 /** 대조 표: KEEP_LINKED_ONLY·MOVE_TO_LINKED·NONE × 로컬만·서버만·둘 다·미전송. */
@@ -37,18 +39,26 @@ export function planReconciliation(
   const toNotifyCommitted =
     choice === 'KEEP_LINKED_ONLY'
       ? []
-      : local.filter((career) => career.revision > career.lastSyncedRevision).map((career) => career.id);
+      : local
+          .filter((career) => career.revision > career.lastSyncedRevision)
+          .map((career) => career.id);
+
+  const toReplace =
+    choice === 'KEEP_LINKED_ONLY'
+      ? server.filter((summary) => localById.has(summary.id)).map((summary) => summary.id)
+      : [];
 
   const toDownload = server
     .filter((summary) => {
       const localCareer = localById.get(summary.id);
       if (localCareer === undefined) return true;
+      if (choice === 'KEEP_LINKED_ONLY') return false;
       const hasUnsent = localCareer.revision > localCareer.lastSyncedRevision;
       return localCareer.revision < summary.revision && !hasUnsent;
     })
     .map((summary) => summary.id);
 
-  return { toDelete, toNotifyCommitted, toDownload };
+  return { toDelete, toNotifyCommitted, toDownload, toReplace };
 }
 
 async function fetchAllRemoteCareers(): Promise<ReconcileServerCareer[] | null> {
@@ -91,10 +101,6 @@ export async function reconcileAfterRecovery(
 
   const plan = planReconciliation(choice, local, serverCareers);
 
-  for (const careerId of plan.toDelete) {
-    await engine.client.deleteCareer(careerId);
-  }
-
   if (plan.toNotifyCommitted.length > 0) {
     const sync = await getSyncClient();
     for (const careerId of plan.toNotifyCommitted) {
@@ -105,6 +111,20 @@ export async function reconcileAfterRecovery(
 
   const now = new Date().toISOString();
   const failed: string[] = [];
+  for (const careerId of plan.toReplace) {
+    const result = await getRemoteCareer(careerId);
+    if (!result.ok) {
+      failed.push(careerId);
+      continue;
+    }
+    const imported = await importCareerFromServer(engine.store, result.data, {
+      retirementArtifacts: (versions) =>
+        loadRetirementArtifacts(versions.rulesetVersion, versions.contentPackVersion),
+      now,
+      replaceLocal: true,
+    });
+    if (!imported.ok) failed.push(careerId);
+  }
   if (plan.toDownload.length > 0) {
     for (const careerId of plan.toDownload) {
       const result = await getRemoteCareer(careerId);
@@ -113,13 +133,22 @@ export async function reconcileAfterRecovery(
         continue;
       }
       const imported = await importCareerFromServer(engine.store, result.data, {
-        retirementArtifacts: (versions) => loadRetirementArtifacts(versions.rulesetVersion, versions.contentPackVersion),
+        retirementArtifacts: (versions) =>
+          loadRetirementArtifacts(versions.rulesetVersion, versions.contentPackVersion),
         now,
       });
       // CAREER_REVISION_CONFLICT는 이 기기의 미전송 진행을 보호하려는 의도된 건너뛰기라 실패로 세지 않는다.
       if (!imported.ok && imported.error.code !== 'CAREER_REVISION_CONFLICT') {
         failed.push(careerId);
       }
+    }
+  }
+
+  // Google 저장본의 fetch·검증·import가 하나라도 실패하면 원래 익명 프로필의 로컬 전용
+  // 커리어를 남겨 재시도·복구할 수 있게 한다. 모두 준비된 뒤에만 명시한 기기 정리를 적용한다.
+  if (failed.length === 0) {
+    for (const careerId of plan.toDelete) {
+      await engine.client.deleteCareer(careerId);
     }
   }
 

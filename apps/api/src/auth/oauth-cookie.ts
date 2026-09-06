@@ -9,14 +9,21 @@ const OAUTH_COOKIE_MAX_AGE_SECONDS = 600;
 const DELIMITER = '.';
 
 /** `state`·`codeVerifier`는 둘 다 base64url이라 `.`을 구분자로 써도 안전하다. */
-export function encodeOauthCookieValue(state: string, codeVerifier: string): string {
-  return `${state}${DELIMITER}${codeVerifier}`;
+export function encodeOauthCookieValue(
+  state: string,
+  codeVerifier: string,
+  sessionId: string,
+): string {
+  return `${state}${DELIMITER}${codeVerifier}${DELIMITER}${sessionId}`;
 }
 
-export function decodeOauthCookieValue(value: string): { state: string; codeVerifier: string } | null {
-  const index = value.indexOf(DELIMITER);
-  if (index <= 0 || index === value.length - 1) return null;
-  return { state: value.slice(0, index), codeVerifier: value.slice(index + 1) };
+export function decodeOauthCookieValue(
+  value: string,
+): { state: string; codeVerifier: string; sessionId: string } | null {
+  const parts = value.split(DELIMITER);
+  if (parts.length !== 3 || parts.some((part) => part.length === 0)) return null;
+  const [state, codeVerifier, sessionId] = parts as [string, string, string];
+  return { state, codeVerifier, sessionId };
 }
 
 /** 로컬(http)에서는 Secure를 뺀다 — 그 외 환경은 항상 Secure다. */

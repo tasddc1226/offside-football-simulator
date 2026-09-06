@@ -31,8 +31,9 @@ export function TermsContent() {
           계정과 복구 코드
         </h2>
         <p className="font-os text-os-text-2" style={BODY_STYLE}>
-          복구 코드는 본인만 보관해야 합니다. 복구 코드를 분실하거나 다른 사람에게 노출해 생기는
-          불이익은 이용자 본인의 책임입니다.
+          다른 기기에서는 복구 코드 또는 미리 연결한 Google 계정으로 프로필을 찾을 수 있습니다. 복구
+          코드는 본인만 보관해야 하며, 다른 사람에게 노출해 생기는 불이익은 이용자 본인의
+          책임입니다.
         </p>
       </section>
 
@@ -56,7 +57,9 @@ export function TermsContent() {
 
       <p className="font-os text-os-text-2" style={BODY_STYLE}>
         시행일{' '}
-        <time dateTime={OPERATOR.effectiveDate}>{operatorFieldOrPending(OPERATOR.effectiveDate)}</time>
+        <time dateTime={OPERATOR.effectiveDate}>
+          {operatorFieldOrPending(OPERATOR.effectiveDate)}
+        </time>
       </p>
     </div>
   );

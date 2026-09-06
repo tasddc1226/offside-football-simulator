@@ -7,6 +7,7 @@
 // (b) 스텁(page.route)으로 ?google=merge_required 진입 → 대화상자 → POST /auth/merge에 mergeChoice가
 //     실리는지 확인한다.
 import { expect, test } from '@playwright/test';
+import { fillPlayerInfo, startNewCareer } from './helpers/player-creation.js';
 import { E2E_META, fulfillJson } from './helpers/sync-conflict.js';
 
 const WITH_API = process.env.E2E_WITH_API === '1';
@@ -26,24 +27,13 @@ test.describe('Google 연결·병합(실제 api)', () => {
       await expect(pageA.getByRole('button', { name: '연결 해제' })).toBeVisible({ timeout: 15_000 });
 
       const pageB = await contextB.newPage();
-      await pageB.goto('/onboarding');
-      await pageB.getByRole('button', { name: '다음' }).click();
-      await pageB.getByRole('button', { name: '다음' }).click();
-      await pageB.getByRole('button', { name: 'KICKOFF' }).click();
-      await pageB.getByLabel('이름').fill('박은비');
-      await pageB.getByRole('radio', { name: '여성' }).click();
-      await pageB.getByLabel('국적').selectOption('KR');
-      await pageB.getByRole('radio', { name: '오른발' }).click();
-      await pageB.getByRole('tab', { name: '공격수' }).click();
-      await pageB.getByRole('radio', { name: /윙어/ }).click();
-      await pageB.getByRole('radio', { name: /클럽 아카데미/ }).click();
-      await pageB.getByRole('button', { name: '다음' }).click();
+      await startNewCareer(pageB);
+      await fillPlayerInfo(pageB, '박은비');
+      await pageB.getByRole('button', { name: '플레이 스타일 고르기' }).click();
       await expect(pageB).toHaveURL(/\/career\/.+\/style$/);
 
       await pageB.goto('/settings');
-      // 서버의 currentCareerCount(ADR-008)는 서버에 실제로 저장된 커리어만 센다 — 디바운스된 PUT이
-      // 끝나길 기다리지 않고 연결하면 0개로 보여 switched로 새고, merge_required를 못 본다.
-      await expect(pageB.getByText('저장됨')).toBeVisible({ timeout: 15_000 });
+      // prepareGoogleConnect가 OAuth 이동 직전에 이 커리어의 디바운스된 저장까지 flush한다.
       await pageB.getByRole('button', { name: 'Google로 연결' }).click();
       // GoogleRow는 ?google= 쿼리를 받는 즉시 지운다(대화상자는 서버의 pendingMerge로 유지된다) —
       // 그래서 쿼리가 아니라 대화상자 자체가 뜨는지로 검사한다.

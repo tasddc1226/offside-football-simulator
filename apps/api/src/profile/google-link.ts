@@ -2,14 +2,14 @@ import type { Db } from '../db/client.js';
 import { insertAuditLog } from '../db/repos/auditLog.js';
 import { countCareersByOwner } from '../db/repos/careers.js';
 import { getProfile, getProfileByGoogleSub, linkGoogleAccount } from '../db/repos/profiles.js';
-import { rebindSessionProfile, setPendingMerge } from '../db/repos/sessions.js';
+import { setPendingMerge } from '../db/repos/sessions.js';
 import { AppError } from '../errors.js';
 
 const PENDING_MERGE_TTL_MS = 10 * 60 * 1000;
 
 export type GoogleCallbackOutcome =
   | { kind: 'linked' }
-  | { kind: 'switched' }
+  | { kind: 'switched'; profileId: string }
   | { kind: 'merge_required'; currentCareerCount: number; targetCareerCount: number };
 
 export type ResolveGoogleCallbackInput = {
@@ -33,7 +33,10 @@ function emailDomain(email: string | null): string | null {
  * 즉시 재바인딩) 또는 `merge_required`(A에 커리어가 있어 선택이 필요 — 세션에 대기 병합을 남긴다)로
  * 갈린다.
  */
-export async function resolveGoogleCallback(db: Db, input: ResolveGoogleCallbackInput): Promise<GoogleCallbackOutcome> {
+export async function resolveGoogleCallback(
+  db: Db,
+  input: ResolveGoogleCallbackInput,
+): Promise<GoogleCallbackOutcome> {
   const target = await getProfileByGoogleSub(db, input.sub);
 
   if (!target || target.deletedAt !== null || target.id === input.currentProfileId) {
@@ -59,8 +62,7 @@ export async function resolveGoogleCallback(db: Db, input: ResolveGoogleCallback
 
   const currentCareerCount = await countCareersByOwner(db, input.currentProfileId);
   if (currentCareerCount === 0) {
-    await rebindSessionProfile(db, input.sessionId, target.id);
-    return { kind: 'switched' };
+    return { kind: 'switched', profileId: target.id };
   }
 
   const targetCareerCount = await countCareersByOwner(db, target.id);

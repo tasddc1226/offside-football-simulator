@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { prepareWebSessionRotation } from '../auth/session.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { listCareerIdsByOwner } from '../db/repos/careers.js';
@@ -18,7 +19,10 @@ export type MoveCareersAndRebindInput = {
  * (D-21)이 있었다면 같은 문으로 지운다. `apps/api/src/profile/recover.ts`(D-14)와
  * `apps/api/src/routes/auth.ts`의 `POST /v1/auth/merge`(D-21)가 함께 쓴다.
  */
-export async function moveCareersAndRebind(db: Db, input: MoveCareersAndRebindInput): Promise<void> {
+export async function moveCareersAndRebind(
+  db: Db,
+  input: MoveCareersAndRebindInput,
+): Promise<void> {
   const careerIds = await listCareerIdsByOwner(db, input.fromProfileId);
   await runBatch(db, [
     db
@@ -29,12 +33,52 @@ export async function moveCareersAndRebind(db: Db, input: MoveCareersAndRebindIn
       id: newId('aud'),
       kind: 'PROFILE_MERGED',
       profileId: input.toProfileId,
-      payloadJson: JSON.stringify({ fromProfileId: input.fromProfileId, toProfileId: input.toProfileId, careerIds }),
+      payloadJson: JSON.stringify({
+        fromProfileId: input.fromProfileId,
+        toProfileId: input.toProfileId,
+        careerIds,
+      }),
       createdAt: input.now,
     }),
     db
       .update(sessions)
-      .set({ profileId: input.toProfileId, pendingMergeProfileId: null, pendingMergeExpiresAt: null })
+      .set({
+        profileId: input.toProfileId,
+        pendingMergeProfileId: null,
+        pendingMergeExpiresAt: null,
+      })
       .where(eq(sessions.id, input.sessionId)),
   ]);
+}
+
+/** Google 병합은 소유권 이동과 인증 세션 회전을 한 batch로 확정한다. */
+export async function moveCareersAndRotateWebSession(
+  db: Db,
+  input: MoveCareersAndRebindInput,
+): Promise<string> {
+  const careerIds = await listCareerIdsByOwner(db, input.fromProfileId);
+  const rotation = await prepareWebSessionRotation(db, {
+    oldSessionId: input.sessionId,
+    profileId: input.toProfileId,
+    now: input.now,
+  });
+  await runBatch(db, [
+    db
+      .update(careers)
+      .set({ ownerProfileId: input.toProfileId, updatedAt: input.now })
+      .where(eq(careers.ownerProfileId, input.fromProfileId)),
+    db.insert(auditLog).values({
+      id: newId('aud'),
+      kind: 'PROFILE_MERGED',
+      profileId: input.toProfileId,
+      payloadJson: JSON.stringify({
+        fromProfileId: input.fromProfileId,
+        toProfileId: input.toProfileId,
+        careerIds,
+      }),
+      createdAt: input.now,
+    }),
+    ...rotation.statements,
+  ]);
+  return rotation.token;
 }
