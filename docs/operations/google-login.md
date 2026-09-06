@@ -7,6 +7,12 @@
 현재 상태는 **설정·구현 진행 중**이며 실제 Google 인증 왕복 전에는 U-003을 완료로 처리하지 않는다.
 결제 계정·유료 서비스·Google의 다른 API는 추가하지 않는다.
 
+개인 계정 로그인을 확인하고 조직 없이 `OFFSIDE Football Simulator` 프로젝트
+(`offside-football-prod`)를 생성했다. 같은 개인 계정의 기존 `kbo-lab-prod`도 변경하지 않았다.
+`OFFSIDE Production Web` 웹 클라이언트를 생성하고 아래 운영 callback만 등록했다.
+client ID·secret은 메모리에서 CLI 표준 입력으로 GitHub production environment secrets에
+전달했으며 값 출력·스크린샷·JSON 파일 다운로드는 하지 않았다. 두 secret 이름의 존재를 확인했다.
+
 익명 플레이는 계속 기본 경로다. Google 연결은 기존 프로필의 복구·동기화 수단을 추가하며,
 선수 생성 조건이나 게임 진행 조건이 아니다. 토스 채널에는 이 웹 OAuth 흐름을 노출하지 않는다.
 
@@ -25,8 +31,8 @@
 | Worker                               | `offside-api`, Wrangler environment `production`                     |
 | 자격 증명 이름                       | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                           |
 
-프로젝트 ID·클라이언트 등록·대상 공개 상태는 콘솔에서 실제 생성 후 기록한다. 임의의 프로젝트 ID나
-검증 완료 여부를 추정하지 않는다. 테스트 사용자만 허용하는 상태와 일반 이용자에게 공개된 상태를
+대상 공개 상태는 콘솔에서 실제 확인 후 기록한다. 검증 완료 여부를 추정하지 않는다.
+테스트 사용자만 허용하는 상태와 일반 이용자에게 공개된 상태를
 구분한다. Google이 요구하는 도메인 소유 확인·앱 검증이 있으면 그 게이트를 별도로 해결한다.
 
 클라이언트가 직접 Google 토큰을 받는 방식이 아니라 API가 authorization code를 교환한다.
