@@ -46,6 +46,13 @@
 `00000001-00000000-000050de-bec332f2e29a6d8729c87f41b327f211`이다. 실제 배포 직전 다시 조회한다.
 운영 웹과 API `/v1/health`도 당시에는 Cloudflare의 미배포 페이지를 반환했다.
 
+첫 deploy 실행 `34008638141`에서는 migration 0000~0005가 모두 적용됐으나,
+11개 테이블을 UNION ALL로 합친 점검 쿼리가 D1 compound SELECT 제한에 걸려 중단됐다.
+시즌 INSERT와 API/web 배포는 실행되지 않았고, 운영 career/season/snapshot/archive는 모두 0개임을
+직접 확인했다. 재실행 시 DB를 복원하거나 migration을 되돌리지 않는다. 집계는 6개·5개 쿼리로
+나누고 다중 응답을 합친다. 최초 적용 직전 bookmark는
+`00000003-00000000-000050de-3168698264c097987b0c3af31e5882ad`다.
+
 ## 실행 순서
 
 수동 production workflow는 read-only preflight와 명시적 `DEPLOY_PRODUCTION` 배포 실행을

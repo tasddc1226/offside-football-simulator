@@ -33,8 +33,14 @@ describe('production release guards', () => {
   });
 
   it('retains only aggregate table counts from D1 output', () => {
-    expect(inspectCounts([{ results: [{ table_name: 'profiles', row_count: 3 }] }])).toEqual([
+    expect(
+      inspectCounts([
+        { results: [{ table_name: 'profiles', row_count: 3 }] },
+        { results: [{ table_name: 'careers', row_count: 2 }] },
+      ]),
+    ).toEqual([
       { table: 'profiles', rows: 3 },
+      { table: 'careers', rows: 2 },
     ]);
   });
 

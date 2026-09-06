@@ -151,7 +151,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json --command \
-            "SELECT 'profiles' table_name, COUNT(*) row_count FROM profiles UNION ALL SELECT 'sessions', COUNT(*) FROM sessions UNION ALL SELECT 'careers', COUNT(*) FROM careers UNION ALL SELECT 'snapshots', COUNT(*) FROM snapshots UNION ALL SELECT 'command_log', COUNT(*) FROM command_log UNION ALL SELECT 'idempotency', COUNT(*) FROM idempotency UNION ALL SELECT 'auth_attempts', COUNT(*) FROM auth_attempts UNION ALL SELECT 'audit_log', COUNT(*) FROM audit_log UNION ALL SELECT 'service_seasons', COUNT(*) FROM service_seasons UNION ALL SELECT 'analytics_events', COUNT(*) FROM analytics_events UNION ALL SELECT 'career_archives', COUNT(*) FROM career_archives" > .release/counts-before.json
+            "SELECT 'profiles' table_name, COUNT(*) row_count FROM profiles UNION ALL SELECT 'sessions', COUNT(*) FROM sessions UNION ALL SELECT 'careers', COUNT(*) FROM careers UNION ALL SELECT 'snapshots', COUNT(*) FROM snapshots UNION ALL SELECT 'command_log', COUNT(*) FROM command_log UNION ALL SELECT 'idempotency', COUNT(*) FROM idempotency; SELECT 'auth_attempts' table_name, COUNT(*) row_count FROM auth_attempts UNION ALL SELECT 'audit_log', COUNT(*) FROM audit_log UNION ALL SELECT 'service_seasons', COUNT(*) FROM service_seasons UNION ALL SELECT 'analytics_events', COUNT(*) FROM analytics_events UNION ALL SELECT 'career_archives', COUNT(*) FROM career_archives" > .release/counts-before.json
           node tooling/scripts/production-release.mjs counts .release/counts-before.json
 
       - name: Apply production migrations
@@ -186,7 +186,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json --command \
-            "SELECT 'profiles' table_name, COUNT(*) row_count FROM profiles UNION ALL SELECT 'sessions', COUNT(*) FROM sessions UNION ALL SELECT 'careers', COUNT(*) FROM careers UNION ALL SELECT 'snapshots', COUNT(*) FROM snapshots UNION ALL SELECT 'command_log', COUNT(*) FROM command_log UNION ALL SELECT 'idempotency', COUNT(*) FROM idempotency UNION ALL SELECT 'auth_attempts', COUNT(*) FROM auth_attempts UNION ALL SELECT 'audit_log', COUNT(*) FROM audit_log UNION ALL SELECT 'service_seasons', COUNT(*) FROM service_seasons UNION ALL SELECT 'analytics_events', COUNT(*) FROM analytics_events UNION ALL SELECT 'career_archives', COUNT(*) FROM career_archives" > .release/counts-after.json
+            "SELECT 'profiles' table_name, COUNT(*) row_count FROM profiles UNION ALL SELECT 'sessions', COUNT(*) FROM sessions UNION ALL SELECT 'careers', COUNT(*) FROM careers UNION ALL SELECT 'snapshots', COUNT(*) FROM snapshots UNION ALL SELECT 'command_log', COUNT(*) FROM command_log UNION ALL SELECT 'idempotency', COUNT(*) FROM idempotency; SELECT 'auth_attempts' table_name, COUNT(*) row_count FROM auth_attempts UNION ALL SELECT 'audit_log', COUNT(*) FROM audit_log UNION ALL SELECT 'service_seasons', COUNT(*) FROM service_seasons UNION ALL SELECT 'analytics_events', COUNT(*) FROM analytics_events UNION ALL SELECT 'career_archives', COUNT(*) FROM career_archives" > .release/counts-after.json
           node tooling/scripts/production-release.mjs counts .release/counts-after.json
 
       - name: Plan and insert the production service season
