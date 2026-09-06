@@ -62,7 +62,9 @@
 2026-09-06 사용자가 구매한 `offside-lab.com`의 Cloudflare Registrar 활성 상태를 확인했다
 (만료 2027-09-06). 대표 웹은 `https://offside-lab.com`, API는 `https://api.offside-lab.com`으로 정한다.
 기존 workers.dev 호스트는 강제 리디렉션하지 않는다. 연결 절차와 검증 상태는
-[사용자 도메인 전환](custom-domain.md)을 따른다. 검색 공개 플래그는 실서비스 검증 전까지 OFF다.
+[사용자 도메인 전환](custom-domain.md)을 따른다. 첫 도메인 배포는 OFF였으며,
+실제 Google 로그인·기록 복원 검증 후 공개 3개 페이지에 한해 검색 허용을 활성화한다.
+Search Console/네이버 제출과 실제 노출은 아직 별도 후속 작업이다.
 
 1. 대표 호스트 하나와 웹/API 구성을 확정하고 TLS를 확인한다.
 2. 기존 호스트의 미동기화 기록 저장과 Google 연결/복구 수단을 안내한다.
