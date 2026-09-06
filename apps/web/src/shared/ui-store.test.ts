@@ -119,6 +119,29 @@ describe('useReducedMotion', () => {
   });
 });
 
+describe('UX-001: 구단 이름 오버라이드', () => {
+  afterEach(() => {
+    useUiStore.setState({ teamNameOverrides: {} });
+  });
+
+  it('빈 값(트림 후)으로 바꾸면 오버라이드를 지운다', () => {
+    useUiStore.getState().setTeamNameOverride('cheongyeon-fc', '내 팀');
+    expect(useUiStore.getState().teamNameOverrides).toEqual({ 'cheongyeon-fc': '내 팀' });
+
+    useUiStore.getState().setTeamNameOverride('cheongyeon-fc', '   ');
+    expect(useUiStore.getState().teamNameOverrides).toEqual({});
+  });
+
+  it('resetTeamNameOverrides는 모든 오버라이드를 지운다', () => {
+    useUiStore.getState().setTeamNameOverride('cheongyeon-fc', '내 팀');
+    useUiStore.getState().setTeamNameOverride('seorabeol-united', '다른 팀');
+
+    useUiStore.getState().resetTeamNameOverrides();
+
+    expect(useUiStore.getState().teamNameOverrides).toEqual({});
+  });
+});
+
 const DEFAULTS = {
   theme: 'SYSTEM' as const,
   reducedMotion: 'SYSTEM' as const,
@@ -210,6 +233,15 @@ describe('hydrateUiStore', () => {
     expect(useUiStore.getState()).toMatchObject(DEFAULTS);
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
+  });
+
+  it('UX-001: teamNameOverrides가 저장값에 없어도 빈 객체로 안전하게 읽힌다', async () => {
+    const store = new MemoryLocalStore();
+    await store.transaction('readwrite', (tx) => tx.kv.put('ui:settings', { ...DEFAULTS }));
+
+    await hydrateUiStore(store);
+
+    expect(useUiStore.getState().teamNameOverrides).toEqual({});
   });
 
   it('hydrate 뒤 상태 변경은 같은 kv 키에 다시 저장된다', async () => {

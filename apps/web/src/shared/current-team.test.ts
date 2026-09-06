@@ -25,6 +25,14 @@ describe('currentTeamName', () => {
     expect(currentTeamName(state('1.2.0'), ruleset)).toBe(startTeam?.name);
   });
 
+  it('UX-001: 계약 전 배경 팀은 오버라이드된 이름을 보여준다', () => {
+    const ruleset = loadRuleset('1.2.0');
+    const background = ruleset.backgrounds.find((candidate) => candidate.id === 'club-academy');
+    expect(
+      currentTeamName(state('1.2.0'), ruleset, { [background!.startTeamId]: '내 팀' }),
+    ).toBe('내 팀');
+  });
+
   it('1.3의 성인 무계약 선수에게도 U18을 현재 소속으로 되살리지 않는다', () => {
     const adult = state('1.3.0', { age: 20, seasonHistory: [{}] });
     expect(currentTeamName(adult, loadRuleset('1.3.0'))).toBe('무소속 · 다음 팀 준비');

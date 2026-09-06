@@ -27,4 +27,10 @@ describe('컵 표시 호환성 (#57)', () => {
     expect(opponentDisplayName({ id: 'cheongyeon-fc', name: '청연 FC' }, ruleset)).toBe('청연 FC');
     expect(opponentDisplayName({ id: 'unknown', name: 'FINAL FC' }, ruleset)).toBe('FINAL FC');
   });
+
+  it('UX-001: 실제 구단 상대는 오버라이드된 이름을 보여준다', () => {
+    expect(
+      opponentDisplayName({ id: 'cheongyeon-fc', name: '청연 FC' }, ruleset, { 'cheongyeon-fc': '내 라이벌' }),
+    ).toBe('내 라이벌');
+  });
 });

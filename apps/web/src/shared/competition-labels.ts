@@ -1,5 +1,6 @@
 import type { Ruleset } from '@offside/domain';
 import { CUP_ROUND_LABEL_KO } from './labels.js';
+import { resolveTeamName, type TeamNameOverrides } from './team-names.js';
 
 const CUP_PROGRESS_LABELS: Readonly<Record<string, string>> = {
   ...CUP_ROUND_LABEL_KO,
@@ -15,8 +16,14 @@ export function cupProgressLabel(round: string | null): string {
   return round !== null && Object.hasOwn(CUP_PROGRESS_LABELS, round) ? CUP_PROGRESS_LABELS[round]! : '—';
 }
 
-export function opponentDisplayName(opponent: { id: string; name: string }, ruleset: Ruleset): string {
-  if (ruleset.teams.some((team) => team.id === opponent.id)) return opponent.name;
+/** `overrides`(UX-001)는 실제 구단(이름 없는 상대·컵 라운드 상대가 아닌)일 때만 적용한다. */
+export function opponentDisplayName(
+  opponent: { id: string; name: string },
+  ruleset: Ruleset,
+  overrides: TeamNameOverrides = {},
+): string {
+  const named = resolveTeamName(ruleset, opponent.id, overrides);
+  if (named !== undefined) return named;
   for (const cup of ruleset.cups) {
     for (const [round, label] of Object.entries(CUP_ROUND_LABEL_KO)) {
       if (opponent.id === `${cup.id}-${round}`) return `${cup.name} ${label} 상대`;
