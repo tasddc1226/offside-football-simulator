@@ -33,7 +33,12 @@ import { routeTree } from '../routeTree.gen.js';
 import { careerQueryOptions } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { useUiStore } from '../shared/ui-store.js';
-import { buildPastSeasonLinks, buildSeasonChronicleItems, nextMatchHeroContext } from './career.$careerId.index.js';
+import {
+  buildPastSeasonLinks,
+  buildSeasonChronicleItems,
+  nextMatchHeroContext,
+  visibleRecentChronicleItems,
+} from './career.$careerId.index.js';
 
 const engineHolder = vi.hoisted(() => ({ promise: null as Promise<unknown> | null }));
 
@@ -877,6 +882,34 @@ describe('T-2-009 다이어리 연대기 요약: buildSeasonChronicleItems·buil
   });
 });
 
+describe('UX-007 홈 탭 "최근 소식": visibleRecentChronicleItems가 무정보 항목을 걸러낸다', () => {
+  it('"진행" 단독 같은 제네릭 문장은 걸러내고, 남은 항목은 최근 것부터 최대 3개만 돌려준다', () => {
+    const items = [
+      { id: 'a', sentence: '시즌 시작', seasonResultHistoryIndex: null },
+      { id: 'b', sentence: '진행', seasonResultHistoryIndex: null },
+      { id: 'c', sentence: '진행', seasonResultHistoryIndex: null },
+      { id: 'd', sentence: '2승 1무', seasonResultHistoryIndex: null },
+      { id: 'e', sentence: '역할 결정', seasonResultHistoryIndex: null },
+      { id: 'f', sentence: '진행', seasonResultHistoryIndex: null },
+      { id: 'g', sentence: '시즌 정산', seasonResultHistoryIndex: 0 },
+    ];
+
+    const visible = visibleRecentChronicleItems(items);
+
+    expect(visible.map((item) => item.sentence)).toEqual(['시즌 정산', '역할 결정', '2승 1무']);
+    expect(visible.some((item) => item.sentence === '진행')).toBe(false);
+  });
+
+  it('의미 있는 항목이 하나도 없으면 빈 배열을 돌려줘 호출부가 섹션을 숨길 수 있다', () => {
+    const items = [
+      { id: 'a', sentence: '진행', seasonResultHistoryIndex: null },
+      { id: 'b', sentence: '진행', seasonResultHistoryIndex: null },
+    ];
+
+    expect(visibleRecentChronicleItems(items)).toEqual([]);
+  });
+});
+
 describe('UX-007 nextMatchHeroContext: 다음 행동 히어로의 "다음 경기" 맥락', () => {
   const ruleset = loadRuleset('1.0.0');
   const TEAM_ID = 'seorabeol-united';
@@ -910,6 +943,31 @@ describe('UX-007 nextMatchHeroContext: 다음 행동 히어로의 "다음 경기
     const context = nextMatchHeroContext(seasonWith([played, eliminated], [match]), ruleset, {});
 
     expect(context).toBeNull();
+  });
+});
+
+describe('RES-BUG-001과 같은 정책: 라커룸 기억 태그(state.tags)는 원문 대신 한국어 라벨만 보여준다', () => {
+  it('카탈로그에 매핑된 태그는 한국어 라벨로, 매핑 없는 태그는 원문을 숨긴다', async () => {
+    const engine = setTestEngine();
+    const careerId = await signedCareerId(engine);
+
+    renderAt(`/career/${careerId}`);
+    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
+    await screen.findByText('라커룸');
+
+    const options = careerQueryOptions(careerId);
+    const current = queryClient.getQueryData(options.queryKey);
+    if (current === undefined) throw new Error('캐시된 커리어가 있어야 한다');
+    act(() => {
+      queryClient.setQueryData(options.queryKey, {
+        ...current,
+        state: { ...current.state, tags: ['프로_데뷔', 'internal_unmapped_tag'] },
+      });
+    });
+
+    expect(await screen.findByText('프로 데뷔')).toBeInTheDocument();
+    expect(screen.queryByText('프로_데뷔')).not.toBeInTheDocument();
+    expect(screen.queryByText('internal_unmapped_tag')).not.toBeInTheDocument();
   });
 });
 

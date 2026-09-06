@@ -46,6 +46,7 @@ import {
   popularityTierLabel,
   relationTierLabel,
   relationshipDirectionArrow,
+  resultTagLabels,
   SEASON_PHASE_LABEL_KO,
   SQUAD_ROLE_LABELS,
   TIMELINE_KIND_LABEL_KO,
@@ -295,6 +296,17 @@ export function buildSeasonChronicleItems(state: CareerState): SeasonChronicleIt
         seasonResultHistoryIndex: seasonResultHistoryIndex < 0 ? null : seasonResultHistoryIndex,
       };
     });
+}
+
+/** UX-007 홈 탭 "최근 소식"에서만 걸러낼 무정보 문장 — STEP_PASSED가 결과 없이(휴식 step 등)
+ * `stepPassedChronicleSentence`의 기본값으로 떨어진 경우다. 기록 탭 상세 목록(모든 항목)은 그대로
+ * 두고 홈 탭 요약만 걸러낸다(다른 소비부는 건드리지 않는다). */
+const GENERIC_CHRONICLE_SENTENCE = '진행';
+
+/** 홈 탭 "최근 소식": 정보 없는 항목을 걸러낸 뒤 최근 것부터 최대 3개만 보여준다(중복 제네릭
+ * 라벨 노출 방지). 전부 걸러지면 빈 배열을 돌려줘 호출부가 섹션을 숨긴다. */
+export function visibleRecentChronicleItems(items: readonly SeasonChronicleItem[]): SeasonChronicleItem[] {
+  return items.filter((item) => item.sentence !== GENERIC_CHRONICLE_SENTENCE).slice(-3).reverse();
 }
 
 export type PastSeasonLink = { historyIndex: number; seasonNumber: number };
@@ -745,8 +757,12 @@ function CareerDashboard() {
   // UX-007 홈 탭 컨디션 타일: StatusStrip과 별도로 폼·체력·사기를 동일한 위계의 타일+미터로 보여준다
   // (StatusStrip의 "첫 항목 액센트 강조"는 player 탭 Base OVR용이라 여기서는 쓰지 않는다).
   const conditionItems = conditionTileItems(state);
-  // UX-007 최근 소식: 기록 탭과 같은 seasonChronicleItems를 재사용해 최근 것부터 최대 3개만 보여준다.
-  const recentChronicleItems = seasonChronicleItems.slice(-3).reverse();
+  // RES-BUG-001과 같은 정책: state.tags(라커룸 기억, 콘텐츠 팩 자유 문자열)를 원문 그대로 보여주지
+  // 않고 RESULT_TAG_LABEL_KO 카탈로그로 바꾼다 — 미매핑 태그는 숨긴다(내부 식별자 노출 금지).
+  const lockerRoomTagLabels = resultTagLabels(state.tags);
+  // UX-007 최근 소식: 기록 탭과 같은 seasonChronicleItems를 재사용하되, 정보 없는 항목("진행" 단독
+  // 같은 제네릭 라벨)은 걸러 의미 있는 최근 것부터 최대 3개만 보여준다.
+  const recentChronicleItems = visibleRecentChronicleItems(seasonChronicleItems);
 
   return (
     <div className="os-screen">
@@ -760,7 +776,14 @@ function CareerDashboard() {
           {clock.headline} · {positionField.value}
         </p>
         {season ? (
-          <div className="os-career-progress" aria-label={`시즌 진행 ${season.currentStep} / ${season.steps.length}`}>
+          <div
+            className="os-career-progress"
+            role="progressbar"
+            aria-label={`시즌 진행 ${season.currentStep} / ${season.steps.length}`}
+            aria-valuenow={season.currentStep}
+            aria-valuemin={0}
+            aria-valuemax={season.steps.length}
+          >
             <span style={{ width: `${Math.min(100, (season.currentStep / season.steps.length) * 100)}%` }} />
           </div>
         ) : null}
@@ -925,13 +948,13 @@ function CareerDashboard() {
                 title="라커룸"
                 description="감독·주장·경쟁자·동료 관계의 최근 기억입니다."
               >
-                {state.tags.length === 0 ? (
+                {lockerRoomTagLabels.length === 0 ? (
                   <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
                     아직 기억 태그가 없습니다.
                   </p>
                 ) : (
                   <ul className="flex flex-wrap gap-os-1">
-                    {state.tags.map((tag) => (
+                    {lockerRoomTagLabels.map((tag) => (
                       <li
                         key={tag}
                         className="rounded-os-s bg-os-surface-2 px-os-2 py-os-1 font-os text-os-text-2"
