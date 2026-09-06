@@ -1,0 +1,172 @@
+.os-player-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--os-space-3);
+  padding: clamp(1.25rem, 5vw, 1.75rem);
+  border-radius: var(--os-radius-panel);
+  color: var(--os-on-hero);
+  background: linear-gradient(
+    145deg,
+    var(--os-hero),
+    color-mix(in srgb, var(--os-hero) 76%, var(--os-line))
+  );
+  box-shadow: var(--os-shadow-lg);
+  animation: os-player-card-arrive 320ms var(--os-ease-out);
+}
+.os-player-card[data-team='true'] {
+  color: var(--os-on-accent);
+  background: linear-gradient(
+    145deg,
+    var(--os-player-card-accent),
+    color-mix(in srgb, var(--os-player-card-accent) 84%, black 16%)
+  );
+}
+/* 다크 테마의 팀 컬러는 옅은 파스텔이라(team-identity.ts) 검게 섞으면 --os-on-accent(짙은 남색)
+   대비가 줄어든다. 그래서 다크에서만 방향을 뒤집어 밝게 섞는다 — 라이트는 더 짙게, 다크는 더
+   밝게, 어느 쪽이든 그라데이션 두 번째 정지점이 원래 팀 컬러보다 --os-on-accent와의 대비를
+   깎지 않는 쪽으로만 움직인다(check-contrast.mjs가 검증하는 값은 평평한 --os-team-<id> 자체이지
+   이 그라데이션이 아니라서, 대비를 줄이지 않는다는 보장은 이 방향 선택이 스스로 진다). */
+:root[data-theme='dark'] .os-player-card[data-team='true'] {
+  background: linear-gradient(
+    145deg,
+    var(--os-player-card-accent),
+    color-mix(in srgb, var(--os-player-card-accent) 84%, white 16%)
+  );
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .os-player-card[data-team='true'] {
+    background: linear-gradient(
+      145deg,
+      var(--os-player-card-accent),
+      color-mix(in srgb, var(--os-player-card-accent) 84%, white 16%)
+    );
+  }
+}
+
+.os-player-card-watermark {
+  position: absolute;
+  top: -1.75rem;
+  right: -1.75rem;
+  z-index: 0;
+  display: grid;
+  width: clamp(6.5rem, 34vw, 9rem);
+  height: clamp(6.5rem, 34vw, 9rem);
+  opacity: 0.2;
+  pointer-events: none;
+}
+.os-player-card-watermark .os-team-badge[data-size='m'] {
+  width: 100%;
+  height: 100%;
+  font-size: clamp(2.25rem, 12vw, 3.5rem);
+}
+.os-player-card-monogram {
+  position: absolute;
+  top: -1.5rem;
+  right: -1.25rem;
+  z-index: 0;
+  display: grid;
+  place-items: center;
+  width: clamp(6rem, 32vw, 8.5rem);
+  height: clamp(6rem, 32vw, 8.5rem);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 8%);
+  color: currentColor;
+  opacity: 0.55;
+  font: 850 clamp(3rem, 16vw, 4.5rem)/1 var(--os-font);
+}
+
+.os-player-card-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--os-space-3);
+}
+.os-player-card-eyebrow {
+  /* 대비를 깎지 않도록 opacity로 흐리지 않는다 — currentColor를 그대로 쓰고
+     자간·크기·굵기로만 위계를 낸다(아래 team·subtitle·dt도 같은 이유로 동일). */
+  color: currentColor;
+  font: 750 var(--os-fs-caption) / var(--os-lh-caption) var(--os-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.os-player-card-number {
+  flex-shrink: 0;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 16%);
+  color: currentColor;
+  font: 800 var(--os-fs-caption) / 1 var(--os-font);
+}
+
+.os-player-card-team {
+  position: relative;
+  z-index: 1;
+  color: currentColor;
+  font: 650 var(--os-fs-caption) / var(--os-lh-caption) var(--os-font);
+}
+
+.os-player-card-identity {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+.os-player-card-subtitle {
+  margin-bottom: 0.2rem;
+  color: currentColor;
+  font: 650 var(--os-fs-caption) / var(--os-lh-caption) var(--os-font);
+}
+.os-player-card-identity h2 {
+  overflow-wrap: anywhere;
+  color: currentColor;
+  font: 850 clamp(1.55rem, 7vw, 2.25rem) / 1.15 var(--os-font);
+  letter-spacing: -0.03em;
+}
+
+.os-player-card-rows {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.55rem;
+  padding-top: var(--os-space-3);
+  border-top: 1px solid rgb(255 255 255 / 16%);
+  color: currentColor;
+  font: 500 var(--os-fs-caption) / var(--os-lh-caption) var(--os-font);
+}
+.os-player-card-rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--os-space-4);
+}
+.os-player-card-rows dt {
+  font-weight: 500;
+}
+.os-player-card-rows dd {
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-weight: 750;
+}
+
+@keyframes os-player-card-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .os-player-card {
+    animation: none;
+  }
+}
+[data-reduced-motion='true'] .os-player-card {
+  animation: none;
+}
+@media (prefers-contrast: more) {
+  .os-player-card {
+    border: 2px solid currentColor;
+  }
+}
