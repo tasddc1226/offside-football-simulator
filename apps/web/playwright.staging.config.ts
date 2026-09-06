@@ -1,16 +1,23 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// T-2-016/T-4-027: staging 리허설 전용 config. 기본은 일반 staging, 명시적 expanded profile은
-// 별도 Phase 3+4 QA Worker에 직접 붙는다. webServer 없음,
+// T-2-016/T-4-027: staging 리허설 전용 config. staging Worker에 직접 붙는다. webServer 없음,
 // `pnpm --filter @offside/web e2e:staging`으로만 실행한다. 기본 `pnpm e2e`·CI에는 포함되지
 // 않는다(testMatch로 staging-rehearsal.spec.ts만 선택하고, 기본
 // playwright.config.ts는 이 파일을 testIgnore로 제외한다). staging에 실제 데이터(커리어·복구 코드·
 // 분석 이벤트)가 생기므로 실행 절차는 apps/web/e2e/README.md를 따른다.
-const DEFAULT_BASE_URL =
-  process.env.E2E_STAGING_PROFILE === 'expanded'
-    ? 'https://offside-web-expanded.tasddc1569.workers.dev'
-    : 'https://offside-web-staging.tasddc1569.workers.dev';
-const BASE_URL = process.env.E2E_STAGING_URL ?? DEFAULT_BASE_URL;
+const DEFAULT_BASE_URL = 'https://offside-web-staging.tasddc1569.workers.dev';
+const baseUrl = new URL(process.env.E2E_STAGING_URL ?? DEFAULT_BASE_URL);
+if (
+  baseUrl.origin !== DEFAULT_BASE_URL ||
+  baseUrl.pathname !== '/' ||
+  baseUrl.search !== '' ||
+  baseUrl.hash !== '' ||
+  baseUrl.username !== '' ||
+  baseUrl.password !== ''
+) {
+  throw new Error('E2E staging web URL은 승인된 staging Worker여야 한다.');
+}
+const BASE_URL = baseUrl.origin;
 
 export default defineConfig({
   testDir: './e2e',

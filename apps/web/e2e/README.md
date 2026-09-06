@@ -32,7 +32,7 @@ pnpm --filter @offside/web exec playwright test --config playwright.smoke.config
 - `a11y.spec.ts`: `/legal/privacy`·`/legal/terms`·`/onboarding`·`/settings`·빈 허브·카드 있는 허브·SCR-002~004·007/008/013/014·009·010·029(기본·휴대폰 탭)·**SCR-031(T-2-008: 판단 확정 화면·경기 결과 화면, `chapter.spec.ts`와 같은 결정론 시드 오버라이드로 도달)**·T-1-011 충돌 대화상자·T-1-012/T-1-013 설정의 대화상자(재발급 확인·복구 코드 결과·복구 충돌 선택·이 기기 데이터 삭제 확인·프로필 삭제 확인·Google 연결 해제·Google 병합 선택·로그아웃 확인)에서 axe `serious`·`critical` 위반 0건(콘솔에 요약 출력). 추가로 텍스트 크기 150%+360px 가로 스크롤 없음, 모션 감소 시 입단 테스트 결과 즉시 표시(카운트업 없음), 결과 확정 시 `aria-live` 갱신 횟수(`MutationObserver`로 세어 그대로 보고 — 현재 0건, 범위 밖 발견 사항)도 검사한다.
 - `chapter.spec.ts`(T-2-008, TEST-E2E-010): CHAPTER 모드로 시즌을 시작해 SCR-031(핵심 경기 챕터)에 도달 → 경기 전 맥락(고정 헤더) → 판단 확정(`RESOLVE_CHAPTER`) → 경기 결과 → 대시보드까지 이동한다. 확정 전 mid-flow 새로고침·뒤로 가기가 이미 확정된 판단을 다시 묻지 않고(roll을 다시 소비하지 않고) 같은 스코어·평점을 재생하는지 `career-card`의 `data-revision`으로 확인한다(뒤로 가기·새로고침 2회가 명령을 하나도 만들지 않아야 한다). T-2-011 9번: 화면에 보이는 스코어 일치만으로는 우연의 일치를 배제할 수 없어, 새로고침 2회 각각의 전후로 `rngState.draws`(로컬 IndexedDB `offside` DB의 `snapshots` 스토어에서 해당 careerId의 최신 revision을 직접 읽는다, `readLatestRngDraws`)가 같음도 함께 단언한다. SCR-029 도착 헬퍼(`planPreseasonChapterMode`·`resolveRoleProposal`·`advanceToChapter`)는 `helpers/chapter.ts`로 뽑혀 `a11y.spec.ts`와 공유한다. 데뷔 챕터(DEBUT: `seasonIndex===1 && isFirstCareerAppearance && minutes>0`)가 몇 번째 "진행"에 열리는지는 시드에 달려 있어 — 매 실행 `crypto.getRandomValues`로 새 시드를 뽑으면 시즌 내내 한 번도 안 열리는 시드가 걸릴 수 있다 — `page.addInitScript`로 `localStorage['offside:e2e-seed']`를 심어 결정론 시드를 강제한다(아래 "e2e 결정론 시드 오버라이드" 참고).
 - `hash-probe.spec.ts`: dev 전용 라우트 `/__dev/hash-probe`(브라우저 Web Worker에서 `@offside/fixtures`의 career-01을 재생)가 렌더한 `revision`·`stateHash`가 golden과 같은지 확인한다. 이 라우트는 `import.meta.env.DEV`일 때만 등록되며 프로덕션 빌드에는 포함되지 않는다(`apps/web/src/main.tsx`, `apps/web/src/dev/hash-probe.tsx`).
-- `first-contract.spec.ts`: 온보딩 → SCR-002~004 → KICKOFF → 이벤트 화면(SCR-007/008/013, 반복) → SCR-014 → SCR-009 → SCR-010 → SCR-029 전 구간. `test.use({ contextOptions: { reducedMotion: 'reduce' } })`로 SCR-008 진행 연출을 건너뛴다. CONFIRM_PLAYER 직후 FAST 모드는 SETTLEMENT 단계에서 몇 차례의 서사 이벤트(도메인 가중 랜덤)를 소진한 뒤에야 제안이 열리므로, 어떤 이벤트·화면이 몇 번 뜨는지는 고정하지 않고 offers 도착까지 반복한다(안전 상한 10회). `create.spec.ts`와 함께 `helpers/player-creation.ts`의 온보딩→SCR-002~004→이벤트 도착 헬퍼를 공유한다.
+- `first-contract.spec.ts`: 온보딩 → SCR-002~~004 → KICKOFF → 이벤트 화면(SCR-007/008/013, 반복) → SCR-014 → SCR-009 → SCR-010 → SCR-029 전 구간. `test.use({ contextOptions: { reducedMotion: 'reduce' } })`로 SCR-008 진행 연출을 건너뛴다. CONFIRM_PLAYER 직후 FAST 모드는 SETTLEMENT 단계에서 몇 차례의 서사 이벤트(도메인 가중 랜덤)를 소진한 뒤에야 제안이 열리므로, 어떤 이벤트·화면이 몇 번 뜨는지는 고정하지 않고 offers 도착까지 반복한다(안전 상한 10회). `create.spec.ts`와 함께 `helpers/player-creation.ts`의 온보딩→SCR-002~~004→이벤트 도착 헬퍼를 공유한다.
 - `sync.spec.ts`(T-1-011): 배경 동기화 상태 배지(SyncBadge) 전이 — 생성 즉시 저장, "다른 기기 진행 가져오기"·"이 기기 진행 유지" 충돌 해소, 오프라인→온라인 복귀, PUT 401 시 "로컬 전용" 안내.
 - `perf.spec.ts`(T-1-014, `E2E_PREVIEW=1`일 때만): 커리어 카드 3장이 있는 허브를 실제 빌드(`vite preview`) 대상으로, CDP `Network.emulateNetworkConditions`(4G: 다운 4Mbps·RTT 150ms)에서 LCP·CLS를 3회 측정해 중앙값을 콘솔·`docs/tracking/phase-1-completion.md`에 기록한다(목표값은 assert하지 않는다, D-22). 커리어는 실제 UI로 만들어 로컬 IndexedDB에만 쓴다 — 이 모드는 `apps/api`를 띄우지 않으므로 실 네트워크 접근이 없다.
 
@@ -45,9 +45,9 @@ health·서비스 시즌/CORS·온보딩/새로고침/슬라이드 이동을 실
 
 `staging-rehearsal.spec.ts`는 `playwright.staging.config.ts`(`e2e:staging` 스크립트)로만 실행되며 기본
 `pnpm e2e`·CI에는 포함되지 않는다(기본 config는 이 파일을 `testIgnore`로 제외한다). `webServer`가 없고
-기본 profile은 일반 staging의 `https://offside-web-staging.tasddc1569.workers.dev`다. `E2E_STAGING_PROFILE=expanded`를
-명시하면 expanded Worker가 기본 URL이 되고 `E2E_STAGING_URL`·`E2E_STAGING_API_URL`로 각각 덮어쓸 수
-있다. 스텁 없이 실 api에 붙는다 — `helpers/recovery.ts`의 실 api 전용 헬퍼(`createCareerAndIssueRecoveryCode`)와
+대상은 `https://offside-web-staging.tasddc1569.workers.dev`다.
+`E2E_STAGING_URL`·`E2E_STAGING_API_URL`로 staging URL을 덮어쓸 수 있다. 스텁 없이 실 api에 붙는다 —
+`helpers/recovery.ts`의 실 api 전용 헬퍼(`createCareerAndIssueRecoveryCode`)와
 `helpers/player-creation.ts`의 스텁 없는 헬퍼만 쓴다(`page.route`로 온보딩 확정을 우회하는
 `completeOnboardingAndConfirm`류는 쓰지 않는다 — staging에서 실제 응답을 왜곡한다). 실제 서비스에
 붙으므로 `workers: 1`·`retries: 0`이다.
@@ -56,17 +56,11 @@ health·서비스 시즌/CORS·온보딩/새로고침/슬라이드 이동을 실
 # 일반 staging: LINE TEST/0.1.0, FAST 한 시즌
 pnpm --filter @offside/web e2e:staging
 
-# expanded QA: PHASE 3+4 QA/0.3.0, FAST와 CHAPTER를 각 한 시즌
-E2E_STAGING_PROFILE=expanded \
-E2E_STAGING_SEASON_NAME='PHASE 3+4 QA' \
-E2E_STAGING_URL=https://offside-web-expanded.tasddc1569.workers.dev \
-E2E_STAGING_API_URL=https://offside-api-expanded.tasddc1569.workers.dev \
-pnpm --filter @offside/web e2e:staging
 ```
 
-`E2E_STAGING_SEASON_NAME` 기본값은 일반 profile에서 `LINE TEST`, expanded profile에서 `PHASE 3+4 QA`다.
-리허설은 current service season의 id·이름·ruleset·content pack·CORS를 먼저 검사한다. expanded는
-FAST·CHAPTER 두 커리어를 만들고, 시즌 진행 중 만난 범용·부상·관계 이벤트를 같은 공통 헬퍼로
+`E2E_STAGING_SEASON_NAME` 기본값은 `LINE TEST`다.
+리허설은 current service season의 id·이름·ruleset·content pack·CORS를 먼저 검사한다. FAST 커리어를
+만들고, 시즌 진행 중 만난 범용·부상·관계 이벤트를 같은 공통 헬퍼로
 해소한 뒤 화면 제목을 결과 attachment에 남긴다. 무작위로 나타나지 않은 이벤트는 도달했다고 주장하지
 않는다.
 

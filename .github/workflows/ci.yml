@@ -61,7 +61,7 @@ jobs:
       contents: read
       actions: read
     concurrency:
-      # Expanded QA shares the staging D1 database.
+  # Serialize staging migrations and deployments against the shared staging environment.
       group: cloudflare-staging
       cancel-in-progress: false
     environment:

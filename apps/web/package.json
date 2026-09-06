@@ -6,10 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:expanded": "vite build --mode expanded",
     "build:toss": "vite build --mode toss",
-    "deploy:preview": "wrangler deploy --env preview",
-    "deploy:expanded": "wrangler deploy --env expanded",
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:production": "wrangler deploy --env production",
     "preview": "vite preview",

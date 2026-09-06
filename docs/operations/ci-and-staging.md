@@ -5,14 +5,13 @@
 
 ## 실행 정책
 
-| 상황 | 자동 실행 |
-| --- | --- |
-| 순수 문서 PR | checkout·변경 분류 후 성공 보고. 패키지 설치·게임 검사·배포 없음 |
-| 코드 PR(Draft 포함) | CI 보조 코드의 소수 검사, lint·의존성 방향·typecheck. E2E·Preview 없음 |
-| main 코드 변경 | 정적·콘텐츠 검증 → 기존 핵심 저장/재생 검사 → DB 변경 누락 확인·웹 빌드 → staging 배포 → API/UI 스모크 |
-| main 문서 변경 | 마지막 성공 main 이후 미배포 코드가 없을 때 검사·배포 생략 |
-| 전체 회귀 | `Full Validation (manual)`을 필요할 때 실행. 단위·통합·전체 기본 E2E, 배포 없음 |
-| expanded QA | 기존 `Deploy Expanded QA Staging` 유지. 수동 확인 입력 + main 코드만 배포 |
+| 상황                | 자동 실행                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------ |
+| 순수 문서 PR        | checkout·변경 분류 후 성공 보고. 패키지 설치·게임 검사·배포 없음                                       |
+| 코드 PR(Draft 포함) | CI 보조 코드의 소수 검사, lint·의존성 방향·typecheck. E2E·Preview 없음                                 |
+| main 코드 변경      | 정적·콘텐츠 검증 → 기존 핵심 저장/재생 검사 → DB 변경 누락 확인·웹 빌드 → staging 배포 → API/UI 스모크 |
+| main 문서 변경      | 마지막 성공 main 이후 미배포 코드가 없을 때 검사·배포 생략                                             |
+| 전체 회귀           | `Full Validation (manual)`을 필요할 때 실행. 단위·통합·전체 기본 E2E, 배포 없음                        |
 
 PR이 main에 합쳐져도 원격 반영 전의 최소 검증이 실패하면 배포하지 않는다. 같은 run의
 `Main checks and staging deploy` 한 job이 검증부터 배포 후 확인까지 맡아 job 사이의 추가
@@ -32,8 +31,8 @@ PR은 base와 PR merge commit을 비교한다. main은 GitHub Actions API에서 
 API 조회 실패·이전 SHA 부재는 보수적으로 검증·배포하며, 알려진 마지막 성공 SHA보다
 오래되거나 갈라진 commit의 재실행은 거부한다.
 
-main 실행은 중간 취소하지 않는다. 확장 QA와 `cloudflare-staging` concurrency를 공유해
-공용 D1 migration/deploy를 겹치지 않게 한다. PR의 이전 검사는 새 commit으로 대체할 수 있다.
+main 실행은 중간 취소하지 않는다. staging D1 migration/deploy를 겹치지 않게 한다.
+PR의 이전 검사는 새 commit으로 대체할 수 있다.
 main 성공 기록 조회에만 `actions: read`를 추가하며, Cloudflare secret은 배포 step에만 주입한다.
 러너의 `gh` CLI가 필요하다. 없거나 API 조회가 실패해도 검사를 건너뛰지는 않는다.
 
@@ -54,7 +53,7 @@ main 성공 기록 조회에만 `actions: read`를 추가하며, Cloudflare secr
 
 `playwright.smoke.config.ts`의 작은 스모크가 실제 staging API health·서비스 시즌·CORS와
 온보딩 렌더링·새로고침·슬라이드 이동을 확인한다. API 스텁·seed 주입·커리어 생성·복구 코드
-발급은 하지 않는다. staging/expanded의 승인된 web/API origin만 허용하여 production 오접속을 막는다.
+발급은 하지 않는다. staging의 승인된 web/API origin만 허용하여 production 오접속을 막는다.
 이는 실제 장기 플레이·실계정 복구·모든 화면 검증을 통과했다는 뜻이 아니다.
 
 스모크 실패는 run 실패로 보고하며 실패 자료를 private Actions artifact에 7일 보관한다.
