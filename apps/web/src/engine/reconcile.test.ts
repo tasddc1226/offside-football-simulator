@@ -153,6 +153,14 @@ describe('planReconciliation', () => {
     expect(plan.toDownload).toEqual(['car_server_only']);
   });
 
+  it('NONE: 같은 Google로 복귀하면 서버와 같은 id의 미전송 로컬 진행을 보존해 재전송한다', () => {
+    const plan = planReconciliation('NONE', [BOTH_UNSENT_AHEAD_LOCAL], [BOTH_UNSENT_AHEAD_SERVER]);
+    expect(plan.toNotifyCommitted).toEqual(['car_both_unsent']);
+    expect(plan.toDownload).toEqual([]);
+    expect(plan.toDelete).toEqual([]);
+    expect(plan.toReplace).toEqual([]);
+  });
+
   it('여러 커리어가 섞여도 각각 독립적으로 판정한다', () => {
     const plan = planReconciliation(
       'KEEP_LINKED_ONLY',

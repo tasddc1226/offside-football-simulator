@@ -25,7 +25,7 @@ T-1-014 산출물. `docs/phases/phase-01-career-vertical-slice.md` "완료 조�
 | 12 | 모든 화면이 시각 토큰만 쓰고 UI 문자열에 폐기 어휘가 없다. | 오케스트레이터 수동 점검(2026-09-03, PR #35 뒤): 12 문서 폐기 어휘(`VAR CHECK`, 시즌 결산의 `FULL TIME`, `적용됩니다`)가 `apps/web`·`packages/ui`·`packages/content` 소스의 UI 문자열에 0건, `apps/web`·`packages/ui` 소스에 hex 색 리터럴 0건 | ✅ (수동) | grep 점검. 13 토큰 규칙은 모든 워커 브리프의 제약이라 PR마다 리뷰한다. | 자동 lint는 없다 — Phase 2 T-2-014(공유 계약 정리) 때 도입을 검토한다. |
 | 13 | 화면·엔진 코드에 `@apps-in-toss/*` import와 채널 분기가 없다(lint로 확인). | `pnpm lint && pnpm lint:deps` 통과 | ✅ | 루트 검증 체인(아래) | |
 | 14 | ADR-008: 개인정보 처리방침에 국외 이전 항목(이전받는 자·국가·항목·목적·보유기간) 명시. | "개인정보의 국외 이전" 절 + 표(Cloudflare, Inc./Google LLC 2행) 추가, e2e 1건 통과 | ✅ | `apps/web/src/legal/privacy.tsx`, `e2e/legal.spec.ts` | (이 PR) ADR-008이 요구하는 5개 항목(이전받는 자·국가·이전 항목·이전 목적·보유·이용 기간)을 표로 명시했다. 운영자 정보(U-010, "준비 중")는 건드리지 않았다. 법률 자문이 아니라 ADR·기존 문서에 이미 있는 사실만 옮겼다. |
-| 15 | Google 실계정 검증(U-003). | 대기 | ⏳ U-003 대기 | `docs/tracking/decision-log.md`(T-1-013), ADR-008 | 로컬은 `GOOGLE_FAKE=1` 가짜 OIDC로만 검증됨(`e2e/google-link.spec.ts`). 실계정 자격 증명은 U-003이 아직 채우지 않았다. |
+| 15 | Google 실계정 검증(U-003). | 운영 최초 연결·로그아웃 직후 재로그인·새로고침, 기존 ID/revision/hash 동일 | ✅ (2026-09-06) | [운영 연결 인수](../operations/google-login.md), PR #112, deploy run34010879775 | 개인 계정의 전용 프로젝트·외부/프로덕션 대상. 별도 기기 실로그인과 실계정 간 파괴적 병합은 미실행이며, Google 브랜딩 인증은 별도 미완료. |
 
 ## 측정값(TEST-E2E-009 + 11 "세션 길이 목표")
 

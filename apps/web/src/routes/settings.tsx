@@ -596,6 +596,9 @@ function GoogleRow() {
   const pendingMerge = profileQuery.data?.pendingMerge ?? null;
   const noRecoveryCode = (profileQuery.data?.recoveryCodeIssuedAt ?? null) === null;
   const localCareerCount = (careerQuery.data ?? []).length;
+  const unsyncedLocalCareerCount = (careerQuery.data ?? []).filter(
+    ({ record }) => record.revision > record.lastSyncedRevision,
+  ).length;
   const mergeDialogOpen = pendingMerge !== null && !mergeDismissed;
 
   function clearGoogleQuery() {
@@ -855,8 +858,15 @@ function GoogleRow() {
                 onClick={() => void handleMergeChoice('MOVE_TO_LINKED')}
                 disabled={busy}
               >
-                이 기기의 커리어 {localCareerCount}개를 Google 프로필로 옮기기
+                이 기기의 커리어 {localCareerCount}개를 보존하며 Google 프로필로 전환하기
               </Button>
+              {unsyncedLocalCareerCount > 0 ? (
+                <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+                  이 기기에 아직 서버에 저장되지 않은 진행 {unsyncedLocalCareerCount}개가 있습니다.
+                  Google 저장본만 사용하면 로컬 전용 커리어는 삭제되고, 같은 ID의 진행은 Google 서버
+                  저장본으로 교체됩니다. 보존하려면 위의 전환을 선택하세요.
+                </p>
+              ) : null}
               <Button
                 variant="secondary"
                 style={DANGER_STYLE}

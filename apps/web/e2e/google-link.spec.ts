@@ -16,7 +16,9 @@ test.describe('Google 연결·병합(실제 api)', () => {
   test.skip(!WITH_API, 'E2E_WITH_API=1일 때만 실제 apps/api로 검사한다');
   test.describe.configure({ mode: 'serial' });
 
-  test('연결 → 병합 대화상자 → 옮기기: 두 번째 기기의 커리어가 연결된 프로필에 남는다', async ({ browser }) => {
+  test('연결 → 병합 대화상자 → 옮기기: 두 번째 기기의 커리어가 연결된 프로필에 남는다', async ({
+    browser,
+  }) => {
     const contextA = await browser.newContext();
     const contextB = await browser.newContext();
     try {
@@ -24,7 +26,9 @@ test.describe('Google 연결·병합(실제 api)', () => {
       await pageA.goto('/settings');
       await pageA.getByRole('button', { name: 'Google로 연결' }).click();
       await expect(pageA).toHaveURL(/\/settings(\?google=.*)?$/, { timeout: 15_000 });
-      await expect(pageA.getByRole('button', { name: '연결 해제' })).toBeVisible({ timeout: 15_000 });
+      await expect(pageA.getByRole('button', { name: '연결 해제' })).toBeVisible({
+        timeout: 15_000,
+      });
 
       const pageB = await contextB.newPage();
       await startNewCareer(pageB);
@@ -37,21 +41,84 @@ test.describe('Google 연결·병합(실제 api)', () => {
       await pageB.getByRole('button', { name: 'Google로 연결' }).click();
       // GoogleRow는 ?google= 쿼리를 받는 즉시 지운다(대화상자는 서버의 pendingMerge로 유지된다) —
       // 그래서 쿼리가 아니라 대화상자 자체가 뜨는지로 검사한다.
-      await expect(pageB.getByRole('heading', { level: 2, name: 'Google에 연결된 프로필이 있습니다' })).toBeVisible({
+      await expect(
+        pageB.getByRole('heading', { level: 2, name: 'Google에 연결된 프로필이 있습니다' }),
+      ).toBeVisible({
         timeout: 15_000,
       });
 
-      await pageB.getByRole('button', { name: '이 기기의 커리어 1개를 Google 프로필로 옮기기' }).click();
-      await expect(pageB.getByText(/Google 프로필과 합쳤습니다\. 커리어 \d+개/)).toBeVisible({ timeout: 15_000 });
+      await pageB
+        .getByRole('button', { name: '이 기기의 커리어 1개를 보존하며 Google 프로필로 전환하기' })
+        .click();
+      await expect(pageB.getByText(/Google 프로필과 합쳤습니다\. 커리어 \d+개/)).toBeVisible({
+        timeout: 15_000,
+      });
 
       await pageB.goto('/');
       // 로컬 D1이 반복 실행 상태를 남기면 같은 이름의 이전 커리어가 남아있을 수 있어(고정된
       // 가짜 sub, D-21) 정확히 하나가 아니라 적어도 하나가 보이는지만 본다.
-      await expect(pageB.getByRole('heading', { level: 2, name: '박은비' }).first()).toBeVisible({ timeout: 15_000 });
+      await expect(pageB.getByRole('heading', { level: 2, name: '박은비' }).first()).toBeVisible({
+        timeout: 15_000,
+      });
     } finally {
       await contextA.close();
       await contextB.close();
     }
+  });
+
+  test('로그아웃 뒤 로컬 진행은 같은 Google 재인증 후 원 프로필에 다시 저장된다', async ({
+    page,
+  }) => {
+    await page.goto('/settings');
+    await page.getByRole('button', { name: 'Google로 연결' }).click();
+    await expect(page.getByRole('button', { name: '연결 해제' })).toBeVisible({ timeout: 15_000 });
+
+    await startNewCareer(page);
+    await fillPlayerInfo(page, '재인증점검');
+    await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
+    await expect(page).toHaveURL(/\/career\/[^/]+\/style$/);
+    const careerId = /\/career\/([^/]+)\/style$/.exec(new URL(page.url()).pathname)?.[1];
+    if (careerId === undefined) throw new Error('careerId를 찾지 못했다');
+
+    await page.goto('/settings');
+    await expect(page.getByText('저장됨')).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: '로그아웃', exact: true }).first().click();
+    await page.getByRole('button', { name: '로그아웃', exact: true }).last().click();
+    await expect(
+      page.getByText('로그아웃했습니다. 이 기기의 진행은 그대로 남습니다'),
+    ).toBeVisible();
+
+    await page.goto(`/career/${careerId}/create`);
+    await page.getByRole('textbox', { name: '이름', exact: true }).fill('재인증점검수정');
+    await page.getByRole('button', { name: '다음', exact: true }).click();
+    await page.getByRole('button', { name: '다음', exact: true }).click();
+    await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
+    await page.goto('/settings');
+    await expect(page.getByText(/서버 저장 실패|저장되지 않은 진행/).first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const resync = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PUT' &&
+        response.url().endsWith(`/v1/careers/${careerId}`) &&
+        response.status() === 200,
+      { timeout: 15_000 },
+    );
+    await page.getByRole('button', { name: 'Google로 연결' }).click();
+    const response = await resync;
+    const sent = response.request().postDataJSON() as {
+      snapshot: { revision: number; stateHash: string };
+    };
+
+    const apiUrl = process.env.E2E_API_URL ?? 'http://localhost:8787';
+    const storedResponse = await page.request.get(`${apiUrl}/v1/careers/${careerId}`);
+    expect(storedResponse.status()).toBe(200);
+    const stored = (await storedResponse.json()) as {
+      data: { snapshot: { revision: number; stateHash: string } };
+    };
+    expect(stored.data.snapshot.revision).toBe(sent.snapshot.revision);
+    expect(stored.data.snapshot.stateHash).toBe(sent.snapshot.stateHash);
   });
 });
 
@@ -67,7 +134,12 @@ test('Google 병합(스텁): ?google=merge_required 진입 시 대화상자가 �
     await fulfillJson(route, 200, {
       data: {
         id: 'prf_e2e_stub',
-        settings: { reducedMotion: 'SYSTEM', textScale: 100, theme: 'SYSTEM', defaultSimulationMode: 'FAST' },
+        settings: {
+          reducedMotion: 'SYSTEM',
+          textScale: 100,
+          theme: 'SYSTEM',
+          defaultSimulationMode: 'FAST',
+        },
         linked: { google: false, toss: false },
         recoveryCodeIssuedAt: '2026-09-01T00:00:00Z',
         createdAt: '2026-08-01T00:00:00Z',
@@ -86,13 +158,20 @@ test('Google 병합(스텁): ?google=merge_required 진입 시 대화상자가 �
   });
   await page.route('**/v1/auth/merge', async (route) => {
     mergeBody = route.request().postDataJSON() as { mergeChoice?: string };
-    await fulfillJson(route, 200, { data: { profileId: 'prf_target', careerCount: 3 }, meta: E2E_META });
+    await fulfillJson(route, 200, {
+      data: { profileId: 'prf_target', careerCount: 3 },
+      meta: E2E_META,
+    });
   });
 
   await page.goto('/settings?google=merge_required&current=0&target=3');
 
-  await expect(page.getByRole('heading', { level: 2, name: 'Google에 연결된 프로필이 있습니다' })).toBeVisible();
-  await page.getByRole('button', { name: '이 기기의 커리어 0개를 Google 프로필로 옮기기' }).click();
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Google에 연결된 프로필이 있습니다' }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: '이 기기의 커리어 0개를 보존하며 Google 프로필로 전환하기' })
+    .click();
 
   await expect.poll(() => mergeBody?.mergeChoice).toBe('MOVE_TO_LINKED');
   await expect(page).toHaveURL(/\/settings$/);
