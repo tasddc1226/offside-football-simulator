@@ -1,7 +1,7 @@
 # 운영 웹 배포 런북
 
 2026-09-06 사용자가 운영 배포를 승인했다. 이 문서는 기존 staging/expanded 배포와 별도로
-운영의 첫 공개를 다룬다. 현재는 배포 준비 단계이며, 실행 결과 없이 배포 완료로 표현하지 않는다.
+운영의 첫 공개를 다룬다. **2026-09-06 12:33 KST 운영 API/web 배포와 후속 브라우저 저장 검증을 완료했다.**
 사용자는 첫 시즌을 종료일 미정으로 열고, 나중에 직접 종료일을 정하기로 확정했다.
 공개 문의 이메일은 `tasddc1569@gmail.com`으로 승인했다.
 
@@ -16,6 +16,35 @@
 | 기간 | 2026-09-06 00:00 KST부터, 종료일 미정(`endsAt: null`) |
 | 문의 | `tasddc1569@gmail.com` |
 | 신규 커리어 버전 | ruleset 1.1.0 / content pack 0.3.0 / Legacy 1.1.0 |
+
+## 최초 공개 결과
+
+- 구현 PR [#108](https://github.com/tasddc1226/offside-football-simulator/pull/108),
+  D1 집계 점검 보정 [#109](https://github.com/tasddc1226/offside-football-simulator/pull/109),
+  [#110](https://github.com/tasddc1226/offside-football-simulator/pull/110)을 main에 반영했다.
+- 실제 배포 source: `82a46fcb1f21b6e24dffc1e88263632fcea32dad`.
+  [운영 deploy run34009144236](https://github.com/tasddc1226/offside-football-simulator/actions/runs/34009144236)
+  성공(1분40초), [main staging run34009134418](https://github.com/tasddc1226/offside-football-simulator/actions/runs/34009134418)
+  성공(2분1초). 최초 실패에서 적용한 migration은 재실행 때 no-op이었다.
+- API Worker version `9eaa9bb0-3007-4c75-bcdc-419ad1da01c6`,
+  web Worker version `cec8d1b2-9827-4bb1-816f-3fb0ff876ebe`.
+- 성공 배포 직전 bookmark: `00000007-00000000-000050de-b4429cab36d9b6f2d1fee0345d530c06`.
+  운영 current API에서 `svc_season_1`, ACTIVE/non-test, `endsAt: null`, ruleset 1.1.0/pack 0.3.0을
+  확인했다. health, 정확한 운영 CORS 허용 및 다른 origin 거부, web 200도 통과했다.
+- migration 전후 실제 staging careers 11 / snapshots 47 / archives 2 / command_log 395가 동일했다.
+  기존 Legacy 1.0/1.1 두 엔딩의 archive/Legacy hash도 동일하며 FK 오류는 0개였다.
+- ego-browser 운영 smoke: `운영점검`(남성·대한민국·오른발·중앙 미드필더·클럽 아카데미·중앙 플레이메이커)을
+  생성하고 첫 이벤트에서 `주장에게 중재 요청`을 선택했다. QA career ID는
+  `ce73f6a6-167b-4c6b-bbd8-2b8053c5fcc3`. API 200, 운영 시즌·버전 고정,
+  생성 revision 5와 첫 선택 revision 6의 서버 저장 및 각각 새로고침 후 동일 hash를 확인했다.
+  최종 hash는 `bbe8c92c0c21335b3a87196d47fa6324b789b99bdcda848f216f4bc2ecf30b03`이다.
+  이 기록은 QA 표본으로 구분하고 삭제하지 않았다. 복구 코드는 출력·캡처·문서화하지 않았다.
+- 실제 개인정보 처리방침에서 문의 이메일 `tasddc1569@gmail.com` 노출을 확인했다.
+- [종료일 제어 run34009319184](https://github.com/tasddc1226/offside-football-simulator/actions/runs/34009319184)는
+  빈 종료일로 실행해 성공(1분3초)했다. 기존 NULL과 같은 no-op으로 DB metadata 전후 동일,
+  API null 유지, migration/build/deploy 미실행을 확인했다. 임의의 실제 종료일은 설정하지 않았다.
+- 검증 범위는 운영의 익명 생성·첫 선택·저장·새로고침이다. 운영 전체 엔딩 재플레이 또는 Google
+  실연동을 완료했다는 의미가 아니다. Phase 5 장기/엔딩 인수 근거는 기존 PR #103/#106을 따른다.
 
 - 사용자 승인된 최신 main을 수동 배포한다. main push의 staging 자동 배포 정책은 바꾸지 않는다.
 - 기존 GitHub Actions 비밀값으로 배포한다. 비밀값을 추출하거나 문서/로그에 출력하지 않는다.
