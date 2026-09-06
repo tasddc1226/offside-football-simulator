@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { operatorFieldOrPending } from './operator.js';
+import { OPERATOR, operatorFieldOrPending } from './operator.js';
+
+describe('OPERATOR', () => {
+  it('공개 승인된 운영 문의 이메일을 제공한다', () => {
+    expect(OPERATOR.contactEmail).toBe('tasddc1569@gmail.com');
+  });
+});
 
 describe('operatorFieldOrPending', () => {
   it('빈 문자열은 "준비 중"으로 표시한다', () => {

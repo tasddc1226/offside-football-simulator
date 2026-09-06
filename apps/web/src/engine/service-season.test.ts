@@ -59,6 +59,21 @@ describe('service-season 폴백 순서(네트워크 실패 → kv-store → 상�
     await expect(resolveServiceSeason()).resolves.toEqual(SERVICE_SEASON);
   });
 
+  it('종료일이 미정인 시즌도 그대로 저장하고 복원한다', async () => {
+    const openEndedSeason = {
+      ...SERVICE_SEASON,
+      endsAt: null,
+    };
+    getServiceSeasonCurrentMock.mockResolvedValue({ ok: true, data: openEndedSeason });
+    const { resolveServiceSeason } = await import('./service-season.js');
+
+    await expect(resolveServiceSeason()).resolves.toEqual(openEndedSeason);
+    const cached = await engineHolder.current!.store.transaction('readonly', (tx) =>
+      tx.kv.get('service-season:current'),
+    );
+    expect(cached).toEqual(openEndedSeason);
+  });
+
   it('네트워크 실패면 kv-store에 저장된 마지막 성공 값을 쓴다', async () => {
     await engineHolder.current!.store.transaction('readwrite', (tx) => tx.kv.put('service-season:current', SERVICE_SEASON));
     getServiceSeasonCurrentMock.mockResolvedValue({

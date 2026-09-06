@@ -182,7 +182,8 @@ export const serviceSeasons = sqliteTable(
     name: text('name').notNull(),
     status: text('status', { enum: ['PRESEASON', 'ACTIVE', 'LOCKED', 'ARCHIVED'] }).notNull(),
     startsAt: text('starts_at').notNull(),
-    endsAt: text('ends_at').notNull(),
+    /** null means the operating season is open-ended until an explicit transition is scheduled. */
+    endsAt: text('ends_at'),
     rulesetVersion: text('ruleset_version').notNull(),
     contentPackVersion: text('content_pack_version').notNull(),
     challengeSetId: text('challenge_set_id').notNull(),

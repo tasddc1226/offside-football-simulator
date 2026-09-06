@@ -50,12 +50,12 @@ function identifier(value, field) {
 export function validateProposal(input, { required = true } = {}) {
   const present = Boolean(input.startsAt || input.endsAt || input.challengeSetId);
   if (!required && !present) return null;
-  if (!input.startsAt || !input.endsAt || !input.challengeSetId) {
-    throw new Error('startsAt, endsAt, and challengeSetId must be provided together.');
+  if (!input.startsAt || !input.challengeSetId) {
+    throw new Error('startsAt and challengeSetId must be provided together.');
   }
   const startsAt = isoInstant(input.startsAt, 'startsAt');
-  const endsAt = isoInstant(input.endsAt, 'endsAt');
-  if (Date.parse(startsAt) >= Date.parse(endsAt))
+  const endsAt = input.endsAt ? isoInstant(input.endsAt, 'endsAt') : null;
+  if (endsAt && Date.parse(startsAt) >= Date.parse(endsAt))
     throw new Error('startsAt must be before endsAt.');
   return {
     ...PRODUCTION_SEASON,
@@ -78,17 +78,33 @@ export function inspectSchema(json) {
 }
 
 export function inspectServiceSeasons(json) {
-  return rowsFromWrangler(json).map((row) => ({
-    id: String(row.id),
-    name: String(row.name),
-    status: String(row.status),
-    startsAt: String(row.starts_at),
-    endsAt: String(row.ends_at),
-    rulesetVersion: String(row.ruleset_version),
-    contentPackVersion: String(row.content_pack_version),
-    challengeSetId: String(row.challenge_set_id),
-    isTest: Number(row.is_test),
-  }));
+  const requiredKeys = [
+    'id',
+    'name',
+    'status',
+    'starts_at',
+    'ends_at',
+    'ruleset_version',
+    'content_pack_version',
+    'challenge_set_id',
+    'is_test',
+  ];
+  return rowsFromWrangler(json).map((row) => {
+    if (!requiredKeys.every((key) => Object.hasOwn(row, key))) {
+      throw new Error('Service-season query did not return every required metadata column.');
+    }
+    return {
+      id: String(row.id),
+      name: String(row.name),
+      status: String(row.status),
+      startsAt: String(row.starts_at),
+      endsAt: row.ends_at === null ? null : String(row.ends_at),
+      rulesetVersion: String(row.ruleset_version),
+      contentPackVersion: String(row.content_pack_version),
+      challengeSetId: String(row.challenge_set_id),
+      isTest: Number(row.is_test),
+    };
+  });
 }
 
 export function inspectCounts(json) {
@@ -127,11 +143,42 @@ export function decideSeason(candidateRows, proposal) {
     proposal.challengeSetId,
     proposal.isTest,
   ]
-    .map((value) => (typeof value === 'number' ? String(value) : quote(value)))
+    .map((value) =>
+      value === null ? 'NULL' : typeof value === 'number' ? String(value) : quote(value),
+    )
     .join(', ');
   return {
     action: 'insert',
     sql: `INSERT INTO service_seasons (id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test)\nSELECT ${values}\nWHERE NOT EXISTS (SELECT 1 FROM service_seasons WHERE status = 'ACTIVE')\n  AND NOT EXISTS (SELECT 1 FROM service_seasons WHERE id = ${quote(proposal.id)});\n`,
+  };
+}
+
+export function decideSeasonEnd(candidateRows, proposal) {
+  const activeRows = candidateRows.filter((row) => row.status === 'ACTIVE');
+  if (activeRows.length !== 1 || activeRows[0].id !== proposal.id) {
+    throw new Error('Season-end changes require exactly svc_season_1 to be ACTIVE.');
+  }
+  const actual = activeRows[0];
+  const fixedKeys = [
+    'id',
+    'name',
+    'status',
+    'startsAt',
+    'rulesetVersion',
+    'contentPackVersion',
+    'challengeSetId',
+    'isTest',
+  ];
+  if (!fixedKeys.every((key) => actual[key] === proposal[key])) {
+    throw new Error('Production season metadata differs from the approved fixed values.');
+  }
+  if (actual.endsAt === proposal.endsAt) return { action: 'noop', sql: null };
+  const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
+  const target = proposal.endsAt === null ? 'NULL' : quote(proposal.endsAt);
+  const previous = actual.endsAt === null ? 'ends_at IS NULL' : `ends_at = ${quote(actual.endsAt)}`;
+  return {
+    action: 'update-end',
+    sql: `UPDATE service_seasons SET ends_at = ${target}\nWHERE id = ${quote(proposal.id)} AND name = ${quote(proposal.name)} AND status = 'ACTIVE'\n  AND starts_at = ${quote(proposal.startsAt)} AND ruleset_version = ${quote(proposal.rulesetVersion)}\n  AND content_pack_version = ${quote(proposal.contentPackVersion)} AND challenge_set_id = ${quote(proposal.challengeSetId)}\n  AND is_test = 0 AND ${previous};\n`,
   };
 }
 
@@ -180,7 +227,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       `- rows: ${rows.length}`,
       ...rows.map(
         (row) =>
-          `- ${row.id}: ${row.status}, ${row.startsAt}–${row.endsAt}, ruleset ${row.rulesetVersion}, pack ${row.contentPackVersion}, test=${row.isTest}`,
+          `- ${row.id}: ${row.status}, ${row.startsAt}–${row.endsAt ?? 'open-ended'}, ruleset ${row.rulesetVersion}, pack ${row.contentPackVersion}, test=${row.isTest}`,
       ),
     ]);
   } else if (command === 'plan') {
@@ -195,7 +242,21 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       `### Season write plan`,
       `- action: ${decision.action}`,
       `- id: ${proposal.id}`,
-      `- period: ${proposal.startsAt}–${proposal.endsAt}`,
+      `- period: ${proposal.startsAt}–${proposal.endsAt ?? 'open-ended'}`,
+    ]);
+    process.stdout.write(decision.action);
+  } else if (command === 'plan-end') {
+    const proposal = validateProposal({
+      startsAt: process.env.SEASON_STARTS_AT,
+      endsAt: process.env.SEASON_ENDS_AT,
+      challengeSetId: process.env.CHALLENGE_SET_ID,
+    });
+    const decision = decideSeasonEnd(inspectServiceSeasons(readJson(path)), proposal);
+    if (decision.sql) writeFileSync(process.env.SEASON_SQL_PATH, decision.sql, { mode: 0o600 });
+    appendSummary([
+      '### Season end-date write plan',
+      `- action: ${decision.action}`,
+      `- ends at: ${proposal.endsAt ?? 'open-ended'}`,
     ]);
     process.stdout.write(decision.action);
   } else if (command === 'proposal') {
@@ -210,12 +271,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     appendSummary([
       `### Release proposal`,
       proposal
-        ? `- ${proposal.id}: ${proposal.startsAt}–${proposal.endsAt}, ${proposal.rulesetVersion}/${proposal.contentPackVersion}, test=${proposal.isTest}`
+        ? `- ${proposal.id}: ${proposal.startsAt}–${proposal.endsAt ?? 'open-ended'}, ${proposal.rulesetVersion}/${proposal.contentPackVersion}, test=${proposal.isTest}`
         : '- season period pending; deploy mode is blocked',
     ]);
   } else {
     throw new Error(
-      'Usage: production-release.mjs bookmark|schema|counts|seasons|plan|proposal [wrangler-json]',
+      'Usage: production-release.mjs bookmark|schema|counts|seasons|plan|plan-end|proposal [wrangler-json]',
     );
   }
 }
