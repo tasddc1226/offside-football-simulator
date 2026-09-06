@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FaqRouteImport } from './routes/faq'
+import { Route as GuideRouteImport } from './routes/guide'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as CareerCareerIdRouteImport } from './routes/career.$careerId'
@@ -40,6 +42,16 @@ import { Route as CareerCareerIdEventResultRouteImport } from './routes/career.$
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -182,6 +194,8 @@ const CareerCareerIdEventResultRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/faq': typeof FaqRoute
+  '/guide': typeof GuideRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/career/$careerId': typeof CareerCareerIdRouteWithChildren
@@ -211,6 +225,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/faq': typeof FaqRoute
+  '/guide': typeof GuideRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/legal/privacy': typeof LegalPrivacyRoute
@@ -240,6 +256,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/faq': typeof FaqRoute
+  '/guide': typeof GuideRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/career/$careerId': typeof CareerCareerIdRouteWithChildren
@@ -271,6 +289,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/faq'
+    | '/guide'
     | '/onboarding'
     | '/settings'
     | '/career/$careerId'
@@ -300,6 +320,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/faq'
+    | '/guide'
     | '/onboarding'
     | '/settings'
     | '/legal/privacy'
@@ -328,6 +350,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/faq'
+    | '/guide'
     | '/onboarding'
     | '/settings'
     | '/career/$careerId'
@@ -358,6 +382,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FaqRoute: typeof FaqRoute
+  GuideRoute: typeof GuideRoute
   OnboardingRoute: typeof OnboardingRoute
   SettingsRoute: typeof SettingsRoute
   CareerCareerIdRoute: typeof CareerCareerIdRouteWithChildren
@@ -372,6 +398,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -613,6 +653,8 @@ const CareerCareerIdRouteWithChildren = CareerCareerIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FaqRoute: FaqRoute,
+  GuideRoute: GuideRoute,
   OnboardingRoute: OnboardingRoute,
   SettingsRoute: SettingsRoute,
   CareerCareerIdRoute: CareerCareerIdRouteWithChildren,

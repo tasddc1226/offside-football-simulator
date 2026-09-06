@@ -2,8 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Button,
-  buttonClassName,
-  buttonStyle,
   Card,
   Dialog,
   DialogContent,
@@ -42,6 +40,7 @@ import { queryClient } from '../shared/query-client.js';
 import { SyncBadge } from '../shared/SyncBadge.js';
 import { BRAND_SUBTITLE } from '../shared/brand.js';
 import { useUiStore } from '../shared/ui-store.js';
+import { PublicIntroduction } from '../shared/public-content.js';
 
 const HUB_TABS = ['resume', 'squad', 'retired'] as const;
 type HubTab = (typeof HUB_TABS)[number];
@@ -172,7 +171,10 @@ function CareerCard({
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 gap-os-4 rounded-os-m bg-os-surface-2 p-os-4 font-os text-os-text-2" style={CAPTION_STYLE}>
+      <dl
+        className="grid grid-cols-2 gap-os-4 rounded-os-m bg-os-surface-2 p-os-4 font-os text-os-text-2"
+        style={CAPTION_STYLE}
+      >
         <div>
           <dt>포지션</dt>
           <dd className="mt-os-1 font-semibold text-os-text">{positionLabel}</dd>
@@ -189,16 +191,47 @@ function CareerCard({
           이어하기
         </Button>
       </div>
-      <details className="rounded-os-m border border-os-border px-os-3 py-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+      <details
+        className="rounded-os-m border border-os-border px-os-3 py-os-2 font-os text-os-text-2"
+        style={CAPTION_STYLE}
+      >
         <summary className="cursor-pointer font-semibold text-os-text">상세 관리</summary>
         <dl className="mt-os-3 grid grid-cols-2 gap-os-3">
-          <div><dt>규칙 · 콘텐츠 팩</dt><dd className="os-num mt-os-1 break-words text-os-text">{record.rulesetVersion} / {record.contentPackVersion}</dd></div>
-          <div><dt>마지막 갱신</dt><dd className="os-num mt-os-1 text-os-text">{formatLocalDateTime(record.updatedAt)}</dd></div>
+          <div>
+            <dt>규칙 · 콘텐츠 팩</dt>
+            <dd className="os-num mt-os-1 break-words text-os-text">
+              {record.rulesetVersion} / {record.contentPackVersion}
+            </dd>
+          </div>
+          <div>
+            <dt>마지막 갱신</dt>
+            <dd className="os-num mt-os-1 text-os-text">{formatLocalDateTime(record.updatedAt)}</dd>
+          </div>
         </dl>
         <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
-          <DialogTrigger asChild><Button variant="ghost" className="mt-os-3">커리어 삭제</Button></DialogTrigger>
-          <DialogContent title="커리어 삭제" description={confirmStep === 1 ? `${name}의 커리어를 삭제하시겠습니까?` : '되돌릴 수 없습니다. 정말 삭제할까요?'} closeLabel="닫기">
-            {confirmStep === 1 ? <Button variant="primary" onClick={() => setConfirmStep(2)}>다음</Button> : <Button variant="primary" onClick={handleDelete} disabled={deleteMutation.isPending}>삭제 확정</Button>}
+          <DialogTrigger asChild>
+            <Button variant="ghost" className="mt-os-3">
+              커리어 삭제
+            </Button>
+          </DialogTrigger>
+          <DialogContent
+            title="커리어 삭제"
+            description={
+              confirmStep === 1
+                ? `${name}의 커리어를 삭제하시겠습니까?`
+                : '되돌릴 수 없습니다. 정말 삭제할까요?'
+            }
+            closeLabel="닫기"
+          >
+            {confirmStep === 1 ? (
+              <Button variant="primary" onClick={() => setConfirmStep(2)}>
+                다음
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={handleDelete} disabled={deleteMutation.isPending}>
+                삭제 확정
+              </Button>
+            )}
           </DialogContent>
         </Dialog>
       </details>
@@ -261,40 +294,22 @@ function HubScreen() {
   }
 
   if (!query.isPending && !query.isError && query.data.length === 0 && !onboardingSeen) {
-    return (
-      <div className="os-screen">
-        <section className="os-panel flex flex-col items-center gap-os-4 text-center">
-          <p className="os-eyebrow">FOOTBALL CAREER STORY</p>
-          <h1
-            className="font-os font-bold text-os-text"
-            style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' }}
-          >
-            OFFSIDE
-          </h1>
-          <p className="font-os font-semibold text-os-text" style={H2_STYLE}>
-            {BRAND_SUBTITLE}
-          </p>
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-            선택으로 나만의 축구 선수 커리어를 만들어 가는 스토리 시뮬레이션 게임입니다.
-          </p>
-          <Link
-            to="/onboarding"
-            className={buttonClassName('primary', 'w-full')}
-            style={buttonStyle}
-          >
-            게임 시작
-          </Link>
-        </section>
-      </div>
-    );
+    return <PublicIntroduction />;
   }
 
   return (
     <div className="os-screen">
       <header className="flex flex-col gap-os-1 px-os-1">
         <p className="os-eyebrow">{BRAND_SUBTITLE}</p>
-        <h1 className="font-os font-bold text-os-text" style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' }}>커리어 허브</h1>
-        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>선수 생활을 이어가거나 새로운 커리어를 시작하세요.</p>
+        <h1
+          className="font-os font-bold text-os-text"
+          style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' }}
+        >
+          커리어 허브
+        </h1>
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          선수 생활을 이어가거나 새로운 커리어를 시작하세요.
+        </p>
       </header>
       {query.isPending ? (
         <div className="flex flex-col gap-os-4" aria-label="불러오는 중">
@@ -354,31 +369,69 @@ function HubScreen() {
             </p>
           ) : null}
           <Tabs value={selectedTab} onValueChange={changeTab}>
-            <div className="overflow-x-auto"><TabsList aria-label="커리어 허브 구역" className="min-w-max">
-              <TabsTrigger value="resume">이어하기</TabsTrigger>
-              <TabsTrigger value="squad">선수단</TabsTrigger>
-              <TabsTrigger value="retired">은퇴 기록</TabsTrigger>
-            </TabsList></div>
+            <div className="overflow-x-auto">
+              <TabsList aria-label="커리어 허브 구역" className="min-w-max">
+                <TabsTrigger value="resume">이어하기</TabsTrigger>
+                <TabsTrigger value="squad">선수단</TabsTrigger>
+                <TabsTrigger value="retired">은퇴 기록</TabsTrigger>
+              </TabsList>
+            </div>
             {(() => {
-              const resumable = query.data.filter(({ state }) => state.status !== 'RETIRED' && state.status !== 'ARCHIVED');
-              const retired = query.data.filter(({ state }) => state.status === 'RETIRED' || state.status === 'ARCHIVED');
-              const recent = [...resumable].sort((a, b) => b.record.updatedAt.localeCompare(a.record.updatedAt))[0];
-              const renderCard = (summary: CareerSummary, featured = false) => (
-                <CareerCard key={summary.record.id} summary={summary} featured={featured} currentServiceSeason={serviceSeason.data}
-                  onDeleted={(name) => setToast({ variant: 'success', message: `${name}의 커리어를 삭제했습니다` })}
-                  onDeleteFailed={(name) => setToast({ variant: 'error', message: `${name}의 커리어를 삭제하지 못했습니다. 다시 시도해 주세요.` })} />
+              const resumable = query.data.filter(
+                ({ state }) => state.status !== 'RETIRED' && state.status !== 'ARCHIVED',
               );
-              return <>
-                <TabsContent value="resume">
-                  {recent ? renderCard(recent, true) : <EmptyState headingLevel={2} reason="이어갈 현역 커리어가 없습니다" />}
-                </TabsContent>
-                <TabsContent value="squad"><div className="flex flex-col gap-os-4">
-                  {resumable.length > 0 ? resumable.map((summary) => renderCard(summary)) : <EmptyState headingLevel={2} reason="현역 선수가 없습니다" />}
-                </div></TabsContent>
-                <TabsContent value="retired"><div className="flex flex-col gap-os-4">
-                  {retired.length > 0 ? retired.map((summary) => renderCard(summary)) : <EmptyState headingLevel={2} reason="아직 은퇴 기록이 없습니다" />}
-                </div></TabsContent>
-              </>;
+              const retired = query.data.filter(
+                ({ state }) => state.status === 'RETIRED' || state.status === 'ARCHIVED',
+              );
+              const recent = [...resumable].sort((a, b) =>
+                b.record.updatedAt.localeCompare(a.record.updatedAt),
+              )[0];
+              const renderCard = (summary: CareerSummary, featured = false) => (
+                <CareerCard
+                  key={summary.record.id}
+                  summary={summary}
+                  featured={featured}
+                  currentServiceSeason={serviceSeason.data}
+                  onDeleted={(name) =>
+                    setToast({ variant: 'success', message: `${name}의 커리어를 삭제했습니다` })
+                  }
+                  onDeleteFailed={(name) =>
+                    setToast({
+                      variant: 'error',
+                      message: `${name}의 커리어를 삭제하지 못했습니다. 다시 시도해 주세요.`,
+                    })
+                  }
+                />
+              );
+              return (
+                <>
+                  <TabsContent value="resume">
+                    {recent ? (
+                      renderCard(recent, true)
+                    ) : (
+                      <EmptyState headingLevel={2} reason="이어갈 현역 커리어가 없습니다" />
+                    )}
+                  </TabsContent>
+                  <TabsContent value="squad">
+                    <div className="flex flex-col gap-os-4">
+                      {resumable.length > 0 ? (
+                        resumable.map((summary) => renderCard(summary))
+                      ) : (
+                        <EmptyState headingLevel={2} reason="현역 선수가 없습니다" />
+                      )}
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="retired">
+                    <div className="flex flex-col gap-os-4">
+                      {retired.length > 0 ? (
+                        retired.map((summary) => renderCard(summary))
+                      ) : (
+                        <EmptyState headingLevel={2} reason="아직 은퇴 기록이 없습니다" />
+                      )}
+                    </div>
+                  </TabsContent>
+                </>
+              );
             })()}
           </Tabs>
           <Button
