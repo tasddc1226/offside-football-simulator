@@ -13,13 +13,15 @@
 필수다: (1) 기존 Archive·Legacy 결과와 null reference binding의 byte/hash 호환성, (2) 동일 품질
 GK/DF/MF/FW의 점수 공정성, (3) 저장된 경기 근거를 사용하는 고득점 경로의 실제 도달 가능성,
 (4) 참조집단 provenance·표본 수·seed 무결성.
-새 후보의 런타임 생성·보관·재로드·복구 증거가 준비되기 전에는 전체 완료로 표시하지 않는다.
+새 후보의 런타임 생성·보관·재로드 증거는 아래 후속 결과로 확보했다. 다만 최종 CI·main 병합·staging
+검증 전에는 전체 완료로 표시하지 않는다.
 
 현재 통합에서 RETIRE 명령·서버 원자 보관·Legacy 계산/근거·네 엔딩 화면·한국 모듈은 구현됐다.
-남은 필수 gate는 (a) ruleset 1.1/content 0.3 신규 은퇴가 Legacy 1.1과 발행 참조집단을 실제로
-선택하는 활성화, (b) 최종 40k 산출물의 provenance/count/seed와 동일 품질 포지션 공정성·80점 이상
-도달성 확인, (c) 그 구성으로 신규 생성→플레이→은퇴→보관→새로고침→복구를 거치는 실제 QA,
-(d) 최종 head CI와 병합이다. 이 항목들의 결과는 아직 이 문서에 기록하지 않는다.
+ruleset 1.1/content 0.3 신규 은퇴의 Legacy 1.1·발행 참조집단 선택, 최종 40k의
+provenance/count/seed, 동일 품질 포지션 공정성과 네 포지션 80점 이상 도달성, 신규
+생성→플레이→은퇴→보관→새로고침/API 재조회는 확인했다. 남은 gate는 최종 head CI, main 병합과
+staging 배포 검증이다. 실제 브라우저 새로고침/API 재조회와 서버 registry roundtrip·import 자동
+회귀는 확인했다. recovery code를 브라우저에 직접 입력한 검증으로 확대 해석하지 않는다.
 
 기준 문서: `phase-05-retirement-and-legacy.md`, `14-legacy-score-and-endings.md`,
 `17-phase5-archive-contract.md`, `18-retirement-pressure-and-last-choice.md`.

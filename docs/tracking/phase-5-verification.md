@@ -1,7 +1,8 @@
 # Phase 5 통합 검증 기록
 
 검증일: 2026-09-05. PR: [#77](https://github.com/tasddc1226/offside-football-simulator/pull/77).
-**현재 판정: 최종 검증 중이며 아직 artifact 발행·실제 1.1 QA·main 병합 완료가 아니다.** 기능
+**현재 판정: 1.1 artifact 발행·런타임 활성화·실제 웹/API QA는 확인했고, 최종 CI·main 병합·staging은
+아직 완료가 아니다.** 기능
 구현과 합성 분포 관찰 목표를 같은 의미로 취급하지 않는다.
 
 ### 2026-09-06 인수 기준 변경
@@ -14,10 +15,33 @@ LEGEND 약 2%, ICON 약 8%, REMEMBERED 약 30%와 80점 이상 비율은 계속 
 소급해 통과로 바꾸지 않는다.
 
 이번 통합은 원자 저장·은퇴/Legacy UI·14종 eligibility·한국 모듈·1.1 후보 계산 경로를 구현했다.
-아직 남은 순서는 최종 40k 산출물 검증 및 발행, 신규 은퇴에서 Legacy 1.1/참조집단을 선택하는 런타임
-활성화, 그 구성의 실제 브라우저/API 보관·재로드·복구 QA, 최종 CI와 main 병합이다. 아래 브라우저와
-배치 결과는 각 실행 시점의 역사 증거이며 이 남은 순서를 대신하지 않는다. 40k는 정책·참조집단
+최종 40k 산출물 검증·발행, 신규 은퇴의 Legacy 1.1/참조집단 선택, 실제 브라우저/API 보관·재로드는
+아래 후속 증거로 확인했다. 남은 순서는 최종 CI, main 병합과 staging 검증이다. 아래 기존 브라우저와
+배치 결과는 각 실행 시점의 역사 증거다. 40k는 정책·참조집단
 변경 때 수행하는 별도 검증이며 모든 PR에서 반복하는 상시 CI가 아니다.
+
+### 2026-09-06 Legacy 1.1 실제 활성화 확인
+
+새 커리어 `804ed0cf-4f59-4921-a886-7390a9d7b7c2`(한지우, W)를 ruleset 1.1.0/content pack
+0.3.0으로 생성해 실제 UI에서 한 시즌을 진행하고 은퇴했다. 15경기·295분·평점 6.0·1골·1도움,
+OVR 59→60 뒤 Legacy 22로 보관됐으며 새로고침과 API GET 200에서 결과가 같았다. 저장 결과는
+Legacy 1.1과 발행 참조집단
+`phase5-reference-1.1.0-1.1.0-0.3.0-ui-mixed-v1-d62cbf8372dd119feccb79e6f14ab7c4d0d99182ec75f1f64d35d30a9a2afca1`을 사용했다. Archive hash는
+`da5711d8816f7b7843ed371ea82b2e0816d4873df5dc521fcd98dd44a3fd639f`, Legacy hash는
+`79dbea8b00fec7f799b99fa18fd378253860bfed39502c20677ae59faaba08e8`로 재로드 뒤에도 동일했다.
+
+추가 GK 커리어 `dd94b63f-ccdb-436e-b762-c8da216fd8da`는 실제 세 시즌 동안 0경기·0분 뒤
+은퇴했고 API GET 200에서 Legacy 1.1, 16점이었다. 축 점수는 성취 9 / 기여 7 / 장기성 0 /
+관계 75 / 서사 0이었다. Archive hash는
+`b6a570ad15b174d21dcf35a5a2655f5fc9a00d9fc30eb96c2eaf423348ce0d14`, Legacy hash는
+`82284da8fbe40f9ca82c94cca7baf044758db85d6884a5c677a16f73d5b18a9d`다. 이는 무출전 커리어를
+장기성 고득점으로 부풀리지 않는 실제 경계 사례이며 자연 분포 표본은 아니다.
+
+기존 Legacy 1.0 박준서 30점과 김서윤 10점 결과는 API GET 200, 기존 Archive/Legacy hash와
+`referencePopulationId: null`이 그대로였다. 따라서 신규 1.1 활성화가 이전 저장 결과를 재평가하지
+않는 경계를 실제 데이터로 확인했다. 브라우저에서는 신규 생성·은퇴·API 보관·새로고침을 확인했고,
+서버 복구는 real registry roundtrip·import 통합 테스트로 확인했다. recovery code를 브라우저에 직접
+입력한 테스트를 수행했다고 주장하지 않는다.
 
 ## 인수 조건과 증거 종류
 
@@ -78,7 +102,7 @@ MF는 11회 팀 우승, 출전 24,275/36,360분, 최고 OVR 77이었다. DF는 1
 
 ## 모집단·밸런스·CI 최종 게이트
 
-- v2 4×10,000 배치: 완료(54분 21초). UI에 없는 KEEP 거절이 포함되어 공식 참조집단으로 발행하지 않는다.
+- 역사 기준선 v2 4×10,000 배치: 완료(54분 21초). UI에 없는 KEEP 거절이 포함되어 공식 참조집단으로 발행하지 않는다.
   [보존 manifest](evidence/phase5-baseline-v2/manifest.json), [프로토콜](phase-5-population-protocol.md).
   GK 최고 72 / DF 75 / MF 75 / FW 73, ICON 2/40,000(0.005%), LEGEND 0,
   REMEMBERED 7,687/40,000(19.22%). 압축 원본과 동결 생성기 checksum을 함께 보존했다.
@@ -86,7 +110,11 @@ MF는 11회 팀 우승, 출전 24,275/36,360분, 최고 OVR 77이었다. DF는 1
   단독 병합 차단선이 아니며, 실제 결과와 편차를 숨기지 않고 보고한다.
 - `TEST-LEG-006`: 무관 RAW_EVIDENCE 80점 검증과 실제 참조 분포 목표는 별도다.
   표본 크기·checksum 통과만으로 밸런스까지 통과 처리하지 않는다.
-- 저장 호환성·포지션 공정성·고득점 도달성 및 PR quick checks: 최종 head 확인 대기.
+- 최종 발행 40k 결과와 해석은 [밸런스 재설계의 동결 40,000명 운영 기준선](phase-5-balance-redesign.md#동결-40000명-운영-기준선--2026-09-06)을 따른다.
+  provenance/count/seed 무결성과 네 포지션 80점 이상 도달 경로를 확인했고, 등급 비율 편차는 승인된
+  운영 관찰치로 숨기지 않는다.
+- 저장 호환성·포지션 공정성·고득점 도달성: 확인. 최종 lint 10 tasks(4.701초), dependency lint,
+  typecheck 9 tasks(20.504초)는 통과했다. PR quick checks의 최종 원격 결과는 대기한다.
 - main 검증·staging 배포: 대기. PR preview 배포는 현재 절차에 없으며 Production 출시로 표현하지 않는다.
 
 중간 CI `33954575560` (`5b37729`)은 Quality 통과, 새 은퇴 E2E 18.6초 통과였다.

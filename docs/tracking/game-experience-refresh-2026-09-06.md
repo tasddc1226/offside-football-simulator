@@ -111,8 +111,23 @@ FAST 역할 경로를 거쳐, 첫 시즌 0분과 OVR 61→63을 기록한 뒤 18
 version을 선택하지 않았다. 따라서
 김서윤처럼 ruleset 1.1.0과 pack 0.3.0으로 새로 만든 게임도 현재 런타임에서는 Legacy `1.0.0`으로
 계산·보관된다. 이는 승인되지 않은 후보 평가식을 자동 활성화하지 않는 의도적인 gate이며, Legacy
-1.1 평가식의 런타임 활성화가 끝났다는 뜻이 아니었다. 최종 통합에서는 신규 1.1 은퇴가 Legacy 1.1과
-발행 참조집단을 선택하는지 별도의 실제 QA로 확인해야 하며, 그 결과가 나오기 전에는 활성화 완료로 적지 않는다.
+1.1 평가식의 런타임 활성화가 끝났다는 뜻이 아니었다.
+
+후속 활성화 뒤에는 새 1.1 커리어 한지우(`804ed0cf-4f59-4921-a886-7390a9d7b7c2`)를 실제 UI에서
+한 시즌 진행해 은퇴 확정했다. 15경기·295분·평점 6.0·1골·1도움, OVR 59→60, Legacy 22였고
+Legacy 1.1과 발행 참조집단
+`phase5-reference-1.1.0-1.1.0-0.3.0-ui-mixed-v1-d62cbf8372dd119feccb79e6f14ab7c4d0d99182ec75f1f64d35d30a9a2afca1`이 저장됐다. Archive hash
+`da5711d8816f7b7843ed371ea82b2e0816d4873df5dc521fcd98dd44a3fd639f`와 Legacy hash
+`79dbea8b00fec7f799b99fa18fd378253860bfed39502c20677ae59faaba08e8`는 새로고침과 API GET 200 뒤에도
+같았다. 기존 박준서 30점·김서윤 10점 Legacy 1.0 결과도 기존 hash와 null reference binding을
+유지한 채 API GET 200이었다. 이는 신규 활성화와 구버전 불변을 함께 확인한 실제 QA다.
+
+0분 GK도 실제 세 시즌 0경기·0분 뒤 Legacy 1.1 16점(성취 9 / 기여 7 / 장기성 0 / 관계 75 /
+서사 0)으로 보관하고 API GET 200을 확인했다. 해당 Archive hash는
+`b6a570ad15b174d21dcf35a5a2655f5fc9a00d9fc30eb96c2eaf423348ce0d14`, Legacy hash는
+`82284da8fbe40f9ca82c94cca7baf044758db85d6884a5c677a16f73d5b18a9d`다. 브라우저에서는 신규
+생성·은퇴·API 보관·새로고침을, 서버 복구 경계는 real registry roundtrip·import 통합 테스트로
+확인했다. recovery code를 브라우저에 직접 입력한 검증은 수행하지 않았다.
 
 ## 남은 인수 항목
 
@@ -122,11 +137,12 @@ minutes 노출 수정 뒤 새 800 evidence `84799b6`도 관찰 목표와 차이�
 분모와 자격 근거가 부족하다. 이는 실제 사용자의 선택 분포가 아니라 포지션과 요청 길이를 통제한
 합성 진단 표본이므로 실제 사용자 분포처럼 설명하거나 목표 비율에 맞춰 점수를 역산하지 않는다.
 
-후속 CI와 Draft PR 검증은 계속 필요하며, 최종 증거가 준비되기 전에는 완료나 `main` 병합으로
-표현하지 않는다.
-특히 후보 Legacy 평가식 활성화, 참조집단 등록, 실제 Legacy 1.1 결과의 신규 생성·보관·새로고침·복구
-검증은 필수 잔여 항목이다. 최종 head의 전체 gate와 이 근거를 확보한 뒤 PR #103의 병합 여부를
-판단한다.
+최종 40k의 발행·무결성 및 네 포지션 고득점 도달성은
+[밸런스 재설계 기록](phase-5-balance-redesign.md#동결-40000명-운영-기준선--2026-09-06)에 남겼다.
+content validation은 경고 0, production build는 1.35초, bundle은 100.46 KB로 통과했다. 최종
+lint는 10 tasks·4.701초, dependency lint, typecheck는 9 tasks·20.504초로 통과했다. PR quick
+checks는 진행 중이며, main 병합·normal staging·수동 expanded staging은
+아직 완료로 표현하지 않는다.
 
 운영 콘텐츠 후속으로 포지션별 이벤트 eligibility와 문구도 점검한다. 실제 GK 신규 커리어에서
 `EVT-REL-001`이 열려 윙어를 전제로 한 감독 요구와 인사이드 포워드 결과 문장이 노출됐다. 이 이벤트는
