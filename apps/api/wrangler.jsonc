@@ -7,12 +7,12 @@
     {
       "binding": "DB",
       "database_name": "offside-local",
-      // 원격 ID는 U-002 이후 T-0-010이 env.preview/staging/production에 넣는다.
+      // 원격 ID는 배포 환경의 env.staging/production에만 둔다.
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations",
     },
   ],
-  // 앱인토스 origin 4종은 T-0-010이 환경별로 추가한다. 비밀값 없음.
+  // 로컬 기본값. 원격 origin은 staging/production 환경에만 둔다. 비밀값 없음.
   "vars": {
     "ENVIRONMENT": "local",
     "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173",
@@ -21,29 +21,10 @@
     "WEB_APP_URL": "http://localhost:5173",
     "GOOGLE_REDIRECT_URI": "http://localhost:8787/v1/auth/google/callback",
     "GOOGLE_FAKE": "1",
-    // T-2-012 D-54: local·preview·CI 테스트는 svc_kickoff(기존 테스트 불변), staging은 svc_line_test.
+    // T-2-012 D-54: local·CI 테스트는 svc_kickoff(기존 테스트 불변), staging은 svc_line_test.
     "ACTIVE_SERVICE_SEASON_ID": "svc_kickoff",
   },
   "env": {
-    "preview": {
-      "name": "offside-api-preview",
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "offside-preview",
-          "database_id": "c6edc33e-e879-4ccf-9fc1-807aeb61561d",
-          "migrations_dir": "migrations",
-        },
-      ],
-      "vars": {
-        "ENVIRONMENT": "preview",
-        "ALLOWED_ORIGINS": "https://offside-web-preview.tasddc1569.workers.dev",
-        "WEB_APP_URL": "https://offside-web-preview.tasddc1569.workers.dev",
-        "GOOGLE_REDIRECT_URI": "https://offside-api-preview.tasddc1569.workers.dev/v1/auth/google/callback",
-        "GOOGLE_FAKE": "0",
-        "ACTIVE_SERVICE_SEASON_ID": "svc_kickoff",
-      },
-    },
     "staging": {
       "name": "offside-api-staging",
       "d1_databases": [
@@ -61,26 +42,6 @@
         "GOOGLE_REDIRECT_URI": "https://offside-api-staging.tasddc1569.workers.dev/v1/auth/google/callback",
         "GOOGLE_FAKE": "0",
         "ACTIVE_SERVICE_SEASON_ID": "svc_line_test",
-      },
-    },
-    "expanded": {
-      "name": "offside-api-expanded",
-      // 일반 staging Worker와 D1만 공유한다. origin·서비스 시즌 포인터는 expanded 전용이다.
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "offside-staging",
-          "database_id": "37688e3f-b905-4240-abdb-e23e778dfad9",
-          "migrations_dir": "migrations",
-        },
-      ],
-      "vars": {
-        "ENVIRONMENT": "expanded",
-        "ALLOWED_ORIGINS": "https://offside-web-expanded.tasddc1569.workers.dev",
-        "WEB_APP_URL": "https://offside-web-expanded.tasddc1569.workers.dev",
-        "GOOGLE_REDIRECT_URI": "https://offside-api-expanded.tasddc1569.workers.dev/v1/auth/google/callback",
-        "GOOGLE_FAKE": "0",
-        "ACTIVE_SERVICE_SEASON_ID": "svc_phase5_qa",
       },
     },
     "production": {

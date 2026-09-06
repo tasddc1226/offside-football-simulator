@@ -12,13 +12,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply offside-local --local",
     "db:seed": "wrangler d1 execute offside-local --local --file seeds/local.sql",
-    "db:migrate:preview": "wrangler d1 migrations apply offside-preview --remote --env preview",
-    "db:migrate:expanded": "wrangler d1 migrations apply offside-staging --remote --env expanded",
-    "db:seed:expanded": "wrangler d1 execute offside-staging --remote --env expanded --file seeds/bootstrap-expanded.sql",
     "db:migrate:staging": "wrangler d1 migrations apply offside-staging --remote --env staging",
     "db:migrate:production": "wrangler d1 migrations apply offside-production --remote --env production",
-    "deploy:preview": "wrangler deploy --env preview",
-    "deploy:expanded": "wrangler deploy --env expanded",
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:production": "wrangler deploy --env production",
     "db:check": "drizzle-kit generate && test -z \"$(git status --porcelain -- migrations)\""

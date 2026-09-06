@@ -1,6 +1,5 @@
-// T-2-016/T-4-027: 실제 Cloudflare QA Worker를 스텁 없이 검증하는 수동 리허설. 기본 profile은
-// 일반 staging의 LINE TEST/0.1.0/FAST 한 시즌이고, expanded profile은 PHASE 3+4 QA/0.3.0에서
-// FAST와 CHAPTER를 각각 한 시즌 완주한다. 기본 `pnpm e2e`·CI에는 포함되지 않는다.
+// 실제 Cloudflare staging Worker를 스텁 없이 검증하는 수동 LINE TEST 리허설.
+// 기본 `pnpm e2e`·CI에는 포함되지 않는다.
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { createCareerAndIssueRecoveryCode } from './helpers/recovery.js';
 import {
@@ -11,22 +10,25 @@ import {
   signFirstOffer,
 } from './helpers/player-creation.js';
 
-type RehearsalProfile = 'line-test' | 'expanded';
 type RehearsalMode = {
   mode: 'FAST' | 'CHAPTER';
   label: '빠른 시즌' | '챕터 시즌';
 };
 
-const rawProfile = process.env.E2E_STAGING_PROFILE ?? 'line-test';
-if (rawProfile !== 'line-test' && rawProfile !== 'expanded') {
-  throw new Error(`E2E_STAGING_PROFILE은 line-test 또는 expanded여야 한다: ${rawProfile}`);
+const profile = 'line-test';
+const defaultWebUrl = 'https://offside-web-staging.tasddc1569.workers.dev';
+const webUrlValue = new URL(process.env.E2E_STAGING_URL ?? defaultWebUrl);
+if (
+  webUrlValue.origin !== defaultWebUrl ||
+  webUrlValue.pathname !== '/' ||
+  webUrlValue.search !== '' ||
+  webUrlValue.hash !== '' ||
+  webUrlValue.username !== '' ||
+  webUrlValue.password !== ''
+) {
+  throw new Error('E2E staging web URL은 승인된 staging Worker여야 한다.');
 }
-const profile: RehearsalProfile = rawProfile;
-const expanded = profile === 'expanded';
-const defaultWebUrl = expanded
-  ? 'https://offside-web-expanded.tasddc1569.workers.dev'
-  : 'https://offside-web-staging.tasddc1569.workers.dev';
-const webUrl = new URL(process.env.E2E_STAGING_URL ?? defaultWebUrl).origin;
+const webUrl = webUrlValue.origin;
 
 function deriveApiUrl(value: string): string {
   const url = new URL(value);
@@ -38,17 +40,22 @@ function deriveApiUrl(value: string): string {
   return url.origin;
 }
 
-const apiUrl = new URL(process.env.E2E_STAGING_API_URL ?? deriveApiUrl(webUrl)).origin;
-const expectedSeasonName =
-  process.env.E2E_STAGING_SEASON_NAME?.trim() || (expanded ? 'PHASE 3+4 QA' : 'LINE TEST');
-const expectedServiceSeasonId = expanded ? 'svc_phase34_qa' : 'svc_line_test';
-const expectedContentPackVersion = expanded ? '0.3.0' : '0.1.0';
-const modes: RehearsalMode[] = expanded
-  ? [
-      { mode: 'FAST', label: '빠른 시즌' },
-      { mode: 'CHAPTER', label: '챕터 시즌' },
-    ]
-  : [{ mode: 'FAST', label: '빠른 시즌' }];
+const apiUrlValue = new URL(process.env.E2E_STAGING_API_URL ?? deriveApiUrl(webUrl));
+if (
+  apiUrlValue.origin !== 'https://offside-api-staging.tasddc1569.workers.dev' ||
+  apiUrlValue.pathname !== '/' ||
+  apiUrlValue.search !== '' ||
+  apiUrlValue.hash !== '' ||
+  apiUrlValue.username !== '' ||
+  apiUrlValue.password !== ''
+) {
+  throw new Error('E2E staging API URL은 승인된 staging Worker여야 한다.');
+}
+const apiUrl = apiUrlValue.origin;
+const expectedSeasonName = process.env.E2E_STAGING_SEASON_NAME?.trim() || 'LINE TEST';
+const expectedServiceSeasonId = 'svc_line_test';
+const expectedContentPackVersion = '0.1.0';
+const modes: RehearsalMode[] = [{ mode: 'FAST', label: '빠른 시즌' }];
 
 async function expectServiceSeason(request: APIRequestContext): Promise<void> {
   const response = await request.get(`${apiUrl}/v1/service-seasons/current`, {

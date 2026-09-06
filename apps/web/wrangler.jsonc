@@ -10,14 +10,8 @@
     "not_found_handling": "none",
   },
   "env": {
-    "preview": {
-      "name": "offside-web-preview",
-    },
     "staging": {
       "name": "offside-web-staging",
-    },
-    "expanded": {
-      "name": "offside-web-expanded",
     },
     "production": {
       "name": "offside-web",
