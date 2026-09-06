@@ -46,6 +46,7 @@ import { getSyncClient, requeueAllUnsynced } from '../engine/sync.js';
 import { useCareerList } from '../engine/use-career.js';
 import { useSyncSummary } from '../engine/use-sync.js';
 import { platform } from '../platform/index.js';
+import { APP_VERSION_LABEL } from '../shared/app-version.js';
 import { queryClient } from '../shared/query-client.js';
 import { formatLocalDate, formatLocalDateTime } from '../shared/format.js';
 import { validateRecoveryCodeInput } from '../shared/recovery-code-input.js';
@@ -1449,8 +1450,14 @@ function SettingsScreen() {
             >
               버전
             </h2>
+            <p className="os-num font-os font-semibold text-os-text" style={CAPTION_STYLE}>
+              OFFSIDE {APP_VERSION_LABEL}
+            </p>
+            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+              상세 버전
+            </p>
             <dl
-              className="os-num flex flex-col gap-os-1 font-os text-os-text-2"
+              className="os-num flex flex-col gap-os-1 font-os text-os-text-2 opacity-70"
               style={CAPTION_STYLE}
               aria-labelledby="settings-version"
             >
