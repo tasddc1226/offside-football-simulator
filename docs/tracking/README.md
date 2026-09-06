@@ -4,8 +4,13 @@
 
 ## 역할
 
-> **현재 인계(2026-09-06)**: Phase 5와 게임 경험 새로고침은 Draft PR
-> [#103](https://github.com/tasddc1226/offside-football-simulator/pull/103)에서 최종 증거를 검증 중이다.
+> **현재 인계(2026-09-06)**: Phase 5와 게임 경험 새로고침 PR
+> [#103](https://github.com/tasddc1226/offside-football-simulator/pull/103)은 main
+> `fb8b78260377c838947ae43caa3290481c3a4999`로 병합됐다. PR quick checks
+> [run 34002089936](https://github.com/tasddc1226/offside-football-simulator/actions/runs/34002089936)은
+> 54초에 성공했다. main staging run 34002153036(2분), expanded 수동 deploy run
+> 34002280639(1분 19초)도 성공했다. expanded 신규 1.1 커리어의 실제 은퇴·보관·강제 새로고침까지
+> 확인해 staging 인수를 완료했다. Production 출시는 별도다.
 > 합성 grade 비율은 관찰 목표이며 단독 merge hard gate가 아니다. 저장 호환성, 동일 품질 포지션
 > 공정성, Archive 근거의 고득점 도달성, population 무결성은 필수다. 아래 Claude 전담·Phase 5
 > 보류·항상 squash 문구는 당시 운영 이력이며 현재 상태는 [통합 기록](game-experience-refresh-2026-09-06.md)을 따른다.

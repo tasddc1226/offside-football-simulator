@@ -17,8 +17,8 @@
 | T-5-004 | 원본→5축 정규화, source 연결, 동일 품질 4포지션 공정성 회귀                     | 최종 40k 발행·무결성·네 포지션 고득점 경로 확인 완료     |
 | T-5-005 | 14종 eligibility·폴백·최고 순간·미선택 에필로그                                | RAW_EVIDENCE 검증임을 유지; 자연 플레이 14회로 오표현 금지 |
 | T-5-006 | FULL TIME→Legacy→source 연대기→최종 프로필 및 보관 UX                           | 실제 1.1 브라우저/API 보관·재로드 확인 완료              |
-| T-5-007 | 4포지션 20시즌·원자성·복구·변조·중복 요청 회귀                                 | 최종 CI·main 검증·staging 배포 대기                       |
-| T-5-008 | 한국 복무/휴식/U23/특례/멘토링과 Archive 연결                                  | 최종 head 실제 경로 회귀                                 |
+| T-5-007 | 4포지션 20시즌·원자성·복구·변조·중복 요청 회귀                                 | main/expanded 배포와 신규 1.1 실제 은퇴 인수 완료         |
+| T-5-008 | 한국 복무/휴식/U23/특례/멘토링과 Archive 연결                                  | 최신 main 관련 3파일 17 tests 통과                       |
 
 Phase 5 전체 완료는 위 검증과 정본의 미충족 조건을 모두 닫은 뒤에만 선언한다.
 
@@ -28,8 +28,11 @@ Phase 5 전체 완료는 위 검증과 정본의 미충족 조건을 모두 닫�
 
 **2026-09-06 사용자 결정:** 합성 grade 비율은 배포 후에도 추적할 관찰 목표이며 단독 merge hard
 gate가 아니다. 저장 호환성, 동일 품질 포지션 공정성, 실제 Archive 근거로 고득점에 도달 가능한
-경로, population provenance·count·seed 무결성은 필수다. 현재 통합은 Draft PR
-[#103](https://github.com/tasddc1226/offside-football-simulator/pull/103)에서 최종 증거를 확인 중이다.
+경로, population provenance·count·seed 무결성은 필수다. 통합 PR
+[#103](https://github.com/tasddc1226/offside-football-simulator/pull/103)은 main
+`fb8b78260377c838947ae43caa3290481c3a4999`에 병합됐다. main staging run 34002153036과 expanded
+수동 deploy run 34002280639도 성공했다. expanded의 새 1.1 실제 은퇴·보관·강제 새로고침까지
+확인해 staging 인수를 완료했다. Production 출시는 이 완료 범위에 포함하지 않는다.
 
 ## 1. 충돌 회피 계약
 
