@@ -81,8 +81,10 @@ export function CompactOfferCard({
         {headline.map((row) => (
           <div key={row.label} className="flex flex-col gap-os-1">
             <dt className="os-eyebrow">{row.label}</dt>
-            <dd className="font-os font-semibold text-os-text">{row.value}</dd>
-            {'delta' in row ? <span className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)' }}>{row.delta}</span> : null}
+            <dd className="flex flex-col gap-os-1">
+              <span className="font-os font-semibold text-os-text">{row.value}</span>
+              {'delta' in row ? <span className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)' }}>{row.delta}</span> : null}
+            </dd>
           </div>
         ))}
       </dl>
