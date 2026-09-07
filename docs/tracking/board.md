@@ -1,6 +1,8 @@
 # 진행 보드
 
-갱신: 2026-09-06. 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
+갱신: 2026-09-07. 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
+
+2026-09-07 후속: **운영 서비스 출시(SEASON 1: KICKOFF).** 2026-09-06 12:33 사용자 세션이 수동 `Production Release`로 첫 운영 배포를 마쳤고 [offside-lab.com](https://offside-lab.com)에서 시즌 1(`svc_season_1`, 테스트 아님, 종료일 미정, 룰셋 1.3.0·팩 0.5.0)이 ACTIVE다. Phase 5(PR #103)·Phase 6은 종결, Phase 7 운영·밸런스가 진행 중이다. 아래 [Phase 5](#phase-5-백로그-장기-성장은퇴legacy--2026-09-06-통합-pr-103으로-종결)·[Phase 6](#phase-6-출시-항목-season-1-kickoff--2026-09-06-1233-운영-출시-사용자-세션)·[Phase 7](#phase-7-운영-항목-라이브-운영밸런스-2026-09-06) 표와 [현재 게이트](#현재-게이트) 마지막 문단이 이 문서의 나머지 이력보다 우선한다.
 
 2026-09-06 후속: **U-003 완료** — Google 로그인 PR #112 운영 배포와 실제 최초 연결·재로그인·기존 기록 보존 검증을 마쳤다. 아래 과거 이력의 U-003 대기 표기보다 이 결과와 [연결 런북](../operations/google-login.md)이 우선한다. Google 브랜딩 인증은 별도 후속이다.
 
@@ -34,13 +36,15 @@ Claude 한도 중단으로 Codex가 Phase 3·4를 인계했다. **이 표가 아
 
 **세션 한도 중단과 재개, PR #66·#69 머지, 감사 1차 결과(2026-09-05 15:20~15:30).** 12:30 무렵 Claude 세션 한도(15:20 초기화)로 진행 중이던 워커 4개(T-4-006 domain·T-4-008·T-4-009·T-4-010)와 감사 검증 에이전트 34개가 중단됐다. 그 사이 **사용자가 별도 세션에서 디자인 PR #66(T-4-007 재통합 포함, `7bd3d84`, 14:59)과 Phase 5 PR #70·#71(T-5-001 커리어 기록·Legacy, T-5-002 은퇴 아카이브, [phase-5-plan.md](phase-5-plan.md))을 머지**했고, 오케스트레이터는 PR #69(T-2-016, `a468837`)를 머지했다. 15:20 중단된 워커의 작업물을 WIP 커밋으로 보존한 뒤 브랜치를 이어받는 워커 4명 + T-4-011(SCR-020 잔류 결과)을 `wf_4498dfc0-665`로 재투입했다. 감사 1차: finding 33건 중 14건 확인(3렌즈 2/3 이상), 8건 반박, 11건은 검증 에이전트가 한도로 죽어 재검증 중. **정정**: 앞서 P1로 보고한 "구 커리어 비호환(GET 503)"은 3렌즈 모두 반박 — D-53·T-3-001 브리프가 공개 출시 전 in-place 변경(마이그레이션 없음)을 명시적으로 수용한 관례라 결함이 아니다. 다만 staging의 #67 이전 커리어는 실제로 열리지 않으므로 LINE TEST 시작 전 staging D1 커리어 초기화를 운영 항목으로 둔다. 확인된 finding은 소유권별 수정 묶음(T-4-012 domain, T-4-013 api 테스트, T-4-014 web)으로 투입한다. main 검증 체인(`3f39511`)은 부하 중 타임아웃 3건(domain 1,000회 결정론 10초 예산·Phase 5 20시즌 집계·web 5초 라우트 테스트)이 단독 재실행에서 전부 통과했고, api `100회 병렬` 테스트 2건은 단독 실행에서도 20초를 넘겨 T-4-013으로 예산을 올린다.
 
+**사용자 세션 출시 기록(2026-09-05 밤~2026-09-07 새벽, Codex·Sol·Luna).** 9/5 23:22 PR #102로 CI를 PR quick checks·main staging 배포·수동 운영 릴리스 구조로 줄였다(self-hosted runner, U-017 완료). 9/6 09:46 **Phase 5 통합 PR #103**(#77 대체: 선수 생성·게임 연출·Legacy 1.1·한국 모듈, T-5-001~008)이 main에 들어갔고 10:01 PR #106으로 배포 후 인수 검증을 마쳤다(후속 이슈 #104·#105). 11:57 PR #107 수동 `Production Release` 워크플로, 12:14 PR #108 시즌 1 무기한 운영 시즌·문의 이메일(U-010 해소), #109·#110 D1 릴리스 검사 수정 뒤 **12:33 첫 운영 배포 성공**(run 34009144236, `82a46fc`, 기록 PR #111). 13:11 PR #112·13:29 #114 Google 로그인 운영 연결(U-003 완료). 오후 운영 3회 플레이 QA(Luna, 커리어 A/B/C: 실패 뒤 회복·성인 진로 전환 약함) → 17:46 PR #115 시즌 1 게임성 개선(19세 시작, 룰셋 1.3.0·팩 0.5.0), #116 스모크. 19:49~20:02 PR #117·#118·#119 공개 가이드·**offside-lab.com 도메인**(U-001 완료)·공개 검색. 21:51 PR #120 UI/UX 개편, #121 홈 허브 소식·피드백, 22:25 #122 두 환경 정리(expanded 제거), 23:09~23:32 UX-001~005(#123~#128)·FOUC #129·플래그 브랜드 #130. 9/7 00:10~01:46 앱 셸 UX-006(#131)·커리어 홈 UX-007(#134)·TeamBadge UX-008(#133)·시네마틱 인트로 UX-009(#135)·결과 연출 UX-010(#139)·트레이딩 카드 UX-011(#138)·수정 #132·#136·#137 머지 → **01:51~01:52 운영 재배포**(`939fe48`). 이 Claude 세션은 9/7 오전에 복귀해 문서·현황판만 갱신했다(코드 수정 없음). 남은 것은 Phase 7 표 참조: 이슈 #104·#105, Google 브랜딩 인증, Search Console·네이버 등록, staging 룰셋·팩 승격, 실사용자 플레이 측정, U-014·U-004·U-005. U-015 LINE TEST는 시즌 1 공개 출시로 대체됐다.
+
 WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. 현재 Phase 1~7의 국내 MVP 순서를 바꾸지 않으며, Phase 3~5와 Phase 7 완료 후 새 ruleset의 신규 Career에 해외 이적·가상 해외 리그·대륙대회를 연다. 정본은 [WORLD STAGE 개발 명세](../development/15-world-stage-expansion.md)와 [Phase 8](../phases/phase-08-world-stage.md)이다.
 
 ## 사용자 액션
 
 | ID | 내용 | 상태 | 메모 |
 |---|---|---|---|
-| U-001 | 도메인 구매, 네임서버를 Cloudflare로 | todo | ADR-006 후보 참고 |
+| U-001 | 도메인 구매, 네임서버를 Cloudflare로 | completed | 2026-09-06 PR #118로 `offside-lab.com`(web)·`api.offside-lab.com`(api) 연결, legacy `workers.dev` 로그인 호환 유지. 공개 검색은 PR #119. 런북 [custom-domain.md](../operations/custom-domain.md). Search Console·네이버 등록은 Phase 7 후속 |
 | U-002 | Cloudflare 계정·최소 권한 API 토큰·환경별 D1 준비 | completed | 2026-09-04. GitHub Secrets 2종 등록, APAC D1 `offside-preview`·`staging`·`production` 생성. Free 플랜 유지 |
 | U-003 | Google Cloud 프로젝트에서 OAuth 클라이언트 ID·시크릿 발급 | completed | 2026-09-06 개인 계정의 `offside-football-prod` 생성·외부/프로덕션 공개, 운영 secrets 설정 및 PR #112 배포. 실제 최초 연결·같은 계정 재로그인·새로고침에서 기존 ID/revision/hash 유지 확인. 브랜딩 인증은 별도 미완료. [연결 런북](../operations/google-login.md) |
 | U-004 | Sentry 프로젝트 생성, DSN 등록 | todo | ADR-007 |
@@ -49,15 +53,15 @@ WORLD STAGE 세계관 확장은 2026-09-03 승인된 Phase 8 후속 범위다. �
 | U-007 | 앱인토스 콘솔 가입(토스 비즈니스, 만 19세), 워크스페이스·제작자 이름, 앱 등록(유형 **게임**, `appName` 확정), 고객문의 이메일 | deferred | ADR-009, ADR-006. appName은 변경 불가 |
 | U-008 | 앱인토스 서버 mTLS 인증서 발급 → `wrangler mtls-certificate upload`, certificate_id 공유 | deferred | ADR-007. U-002·U-007 이후 |
 | U-009 | 게임물 등급분류 신청(GRAC, 스토어명 `기타-앱인토스`). 개인 신청 가능 여부 먼저 확인 | deferred | ADR-009. 10~15일 + 수수료. 증명서 PDF를 콘솔에 등록 |
-| U-010 | 약관·개인정보 처리방침 최종 문안 검토, 사업자명·문의 이메일·시행일 확정(`apps/web/src/legal/operator.ts`) | todo | D-20. 초안 완료(PR #31, `apps/web/src/legal/privacy.tsx`·`terms.tsx`, 연락처는 "준비 중"으로 표시). 사용자가 문안·사업자명·문의 이메일·시행일을 정하면 오케스트레이터가 반영 작업을 만든다. 출시 전 필수 |
+| U-010 | 약관·개인정보 처리방침 최종 문안 검토, 사업자명·문의 이메일·시행일 확정(`apps/web/src/legal/operator.ts`) | completed | 2026-09-06 PR #108: 운영자 `OFFSIDE 운영팀`, 문의 이메일 확정, 시행일 2026-09-02. 설정 화면 제작자·피드백 푸터는 PR #123(UX-002). 초안 이력: PR #31(`privacy.tsx`·`terms.tsx`), D-20 |
 | U-010 | 이 세션에서 `/mcp` → `apps-in-toss-console` 인증 완료 | deferred | 서버는 등록됨, OAuth 로그인만 남음 |
 | U-011 | (U-009에서 개인 신청 불가 시) 개인사업자 등록 후 콘솔 사업자 등록 | deferred | 조건부. 면세 사업자 불가 |
 | U-013 | Phase 3·4 워커의 이벤트 문구 `PROTOTYPE` 작성 허용 여부, 가상 구단 8→12 확장 | completed | 2026-09-04 오전: (A) 워커가 메커니즘 검증용 최소 문구를 `PROTOTYPE`·`playtested: false`로 작성, 정식 문구는 콘텐츠 승격 뒤 교체. 가상 구단 12개로 확장(T-3-006) |
 | U-012 | ADR-010(Phase 3+ 공유 계약: Effect 규칙·시장가치 입력·CareerTag) 검토·승인 | completed | 2026-09-04 오전 설계 승인(사용자). PR #43 코드는 이미 main. T-3-001 투입 |
-| U-014 | Workers Paid 플랜으로 전환 | todo | LINE TEST 공개 직전(T-2-012 코드는 2026-09-04 머지됨). 개발·PR preview·내부 staging은 Free 유지 |
-| U-015 | LINE TEST 테스터 모집(10~30명)·안내문 발송·피드백 채널 결정 | todo | [line-test-plan.md](line-test-plan.md) 2·4절. 일정 제안 2026-09-08 시작, 2주. 오케스트레이터가 staging 예행(FAST·CHAPTER 1시즌)을 먼저 끝낸다 |
+| U-014 | Workers Paid 플랜으로 전환 | todo | 시즌 1은 2026-09-06 Free 플랜으로 출시됨. Workers·D1 무료 한도 접근 시 전환(운영 트래픽 관찰 뒤 결정). 개발·staging은 Free 유지 |
+| U-015 | LINE TEST 테스터 모집(10~30명)·안내문 발송·피드백 채널 결정 | deferred | 2026-09-06 사용자 결정으로 시즌 1 공개 출시(PR #108, `svc_season_1` 테스트 아님·종료일 미정)가 LINE TEST를 대체. 별도 테스트 시즌·모집 없음. [line-test-plan.md](line-test-plan.md)는 staging 예행·D1 측정 쿼리 절차로만 유지. 피드백 채널은 홈 허브 피드백(PR #121)·설정 푸터(PR #123) |
 | U-016 | 오케스트레이터 기기 wrangler 로그인(LINE TEST 기준선 D1 조회용) | done | 2026-09-04 14:56 사용자가 `! pnpm --filter @offside/api exec wrangler login` 실행(OAuth 성공). 5절 쿼리 실행 확인, line-test-plan 준비 체크리스트 #3·#7 ✅ |
-| U-017 | GitHub Actions 결제·지출 한도 해결 → 사용자가 PR #96(21:33 머지)으로 CI·배포를 Mac self-hosted runner(`self-hosted, macOS, ARM64, offside`)로 전환 | in-progress | 2026-09-05 20:21부터 main CI 잡이 "recent account payments have failed or your spending limit needs to be increased"로 시작조차 안 됨(run 33962595554 Deploy staging, 33963157095 Quality·Browser gates). 비공개 저장소라 Actions 분수가 과금 대상. 해결 전까지 staging 배포·PR CI 없음, 머지 게이트는 로컬 체인 EXIT 0만. 브랜치 보호 없음(Free 플랜) |
+| U-017 | GitHub Actions 결제·지출 한도 해결 → 사용자가 PR #96(21:33 머지)으로 CI·배포를 Mac self-hosted runner(`self-hosted, macOS, ARM64, offside`)로 전환 | completed | 2026-09-05 21:33 PR #96 self-hosted runner 전환 → 23:22 PR #102 CI 정리(PR quick checks·main staging·수동 운영 릴리스). 2026-09-06 main·staging·`Production Release`(run 34009144236 등) 전부 runner에서 성공, 9/7 01:51~01:52 재배포 성공. 런북 [self-hosted-runner.md](../operations/self-hosted-runner.md). 이력: 2026-09-05 20:21부터 main CI 잡이 "recent account payments have failed or your spending limit needs to be increased"로 시작조차 안 됨(run 33962595554 Deploy staging, 33963157095 Quality·Browser gates). 비공개 저장소라 Actions 분수가 과금 대상. 해결 전까지 staging 배포·PR CI 없음, 머지 게이트는 로컬 체인 EXIT 0만. 브랜치 보호 없음(Free 플랜) |
 
 ## Phase 0 백로그 (착수 순서)
 
@@ -182,6 +186,53 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-4-024 | — | web·api | 실사용자 플레이 시간 측정 준비: `season_settled`·`step_passed`에 초 단위 `elapsedSec` 추가, 측정 쿼리·프로토콜 문서(오케스트레이터) | T-2-012 | done | [브리프](briefs/T-4-024.md). Sonnet 5 워커 PR #94 `adfa212` → 리뷰 후속 3건 `30ad35c` → 오케스트레이터 체인 EXIT 0(e2e 98 passed) → 2026-09-05 20:40 squash 머지 `232bc83`. `season_settled`·`step_passed`에 `elapsedSec`(정수 초, 상한 7200, optional), 호출부 careerId 배선. 측정 프로토콜 [play-time-measurement.md](../qa/play-time-measurement.md). staging 반영은 U-017 뒤 |
 | T-4-028 | — | web(문구) | 대표팀 `agent` 축 문구 정합: SCR-032 안내·SCR-014 결과 맥락 2줄 (P4-7 문구 게이트, T-4-023 캡처에서 확인) | T-4-023 | done | [브리프](briefs/T-4-028.md). Sonnet 5 워커 PR #98 `d816420` → 오케스트레이터 체인 EXIT 0(e2e 98 passed) → 2026-09-05 21:47 squash 머지 `452d32d`. SCR-032 안내·SCR-014 결과 맥락에 "에이전트 관계(협회 관계의 대리값)" 명시(D-66) |
 
+## Phase 5 백로그 (장기 성장·은퇴·Legacy — 2026-09-06 통합 PR #103으로 종결)
+
+사용자 세션이 Phase 5를 구현·통합했다(PR #70·#71 → #77 보류 → #103 통합, `fb8b782`, 09:46). 배포 후 인수 검증은 PR #106(10:01). 정본은 [Phase 5 계획](phase-5-plan.md)·[인수 감사](phase-5-acceptance-audit.md)·[검증 기록](phase-5-verification.md)·[통합 기록](game-experience-refresh-2026-09-06.md). 후속 이슈 #104(GK 관계 이벤트·NPC 이름 충돌)·#105(챕터 제목 내부 TAG 노출)는 Phase 7 표에 있다.
+
+| ID | 패키지 | 내용 | 상태 | 비고 |
+|---|---|---|---|---|
+| T-5-001 | domain | 통산 기록 projection, 정규화된 Legacy 가중합·밴드, 엔딩 우선순위 | completed | PR #70 `3a5a79e` (9/5) |
+| T-5-002 | domain·contracts·api | 통산·업적 정본, 불변 Archive, Legacy 1.1 저장 계약·버전/checksum, D1 owner GET·복구·삭제 | completed | PR #71 → #103. 구버전 hash/null binding·신규 1.1 재로드 확인 |
+| T-5-003 | domain | 다년 성장·노쇠, 은퇴 압력, 마지막 선택, RETIRE/terminal 명령 거부, 연령 회귀 | completed | PR #103. 신규 1.1 실제 커리어 은퇴·새로고침 확인 |
+| T-5-004 | domain | 기록→Legacy 5축 정규화, source 연결, 동일 품질 4포지션 공정성 | completed | PR #103. 40k 발행·무결성·네 포지션 고득점 경로 확인 |
+| T-5-005 | domain·content | 14종 엔딩 eligibility·폴백, 최고 순간·기여 이유·선택하지 않은 기회 | completed | PR #103. RAW_EVIDENCE 검증, 자연 플레이 14회 오표현 금지 |
+| T-5-006 | web | SCR-025~028 FULL TIME→Legacy→연대기→최종 프로필, 보관함→새 커리어 | completed | PR #103. 실제 1.1 브라우저/API 보관·재로드 확인 |
+| T-5-007 | domain·api·web | 4포지션 20시즌 완주, Archive 원자성·복구·변조·중복 요청 회귀, E2E | completed | PR #103·#106. main/expanded 배포와 신규 1.1 실제 은퇴 인수 |
+| T-5-008 | domain·content | 한국 복무/휴식/U23/특례/멘토링 규칙 모듈, Archive 연결·연대기 검증 | completed | PR #103. 관련 3파일 17 tests |
+
+## Phase 6 출시 항목 (SEASON 1: KICKOFF — 2026-09-06 12:33 운영 출시, 사용자 세션)
+
+사용자 세션(Codex·Sol·Luna) 작업이라 T- 번호 대신 PR 번호로 적는다. 런북: [production-release.md](../operations/production-release.md)·[public-test-launch.md](../operations/public-test-launch.md)·[two-environments.md](../operations/two-environments.md)·[google-login.md](../operations/google-login.md)·[custom-domain.md](../operations/custom-domain.md)·[ci-and-staging.md](../operations/ci-and-staging.md).
+
+| ID | 영역 | 내용 | 상태 | 비고 |
+|---|---|---|---|---|
+| PR #102 | CI | PR은 quick checks만, staging 배포는 main에서만(self-hosted runner) | completed | 2026-09-05 23:22. U-017 종결 |
+| PR #107 | CI | 수동 `Production Release` 워크플로(가드·D1 검사) | completed | 2026-09-06 11:57 |
+| PR #108 | api·web | 시즌 1 무기한 운영 시즌(`svc_season_1`, isTest=false, 종료일 없음)·문의 이메일 | completed | 12:14. U-010 해소, LINE TEST 대체 |
+| PR #109·#110 | api | 릴리스 검사 D1 compound select 상한·독립 count 쿼리 | completed | 12:22·12:29 |
+| 운영 출시 | 배포 | `Production Release` run 34009144236 (`82a46fc`) 성공 → 시즌 1 오픈 | completed | 12:33. 기록 PR #111(12:40) |
+| PR #112·#114 | api·web | Google 로그인 운영 연결(개인 GCP `offside-football-prod`)·재인증 중 미동기화 진행 보존 | completed | 13:11·13:29, 운영 배포 13:15 run 34010879775. U-003 완료, 브랜딩 인증은 Phase 7 |
+| PR #117·#118·#119 | web·CI | 공개 가이드·opt-in SEO → `offside-lab.com` 도메인 연결(legacy 로그인 호환) → 공개 검색 허용 | completed | 19:49~20:02. U-001 완료 |
+| PR #122·#127 | CI·infra | staging·production 두 환경으로 정리(expanded 삭제, 참조 정리) | completed | 22:25·23:09 |
+
+## Phase 7 운영 항목 (라이브 운영·밸런스, 2026-09-06~)
+
+| ID | 영역 | 내용 | 상태 | 비고 |
+|---|---|---|---|---|
+| QA 3회 | qa | 운영 3회 플레이 QA(Luna, 커리어 A/B/C) — 실패 뒤 회복·성인 진로 전환 약함 | completed | 2026-09-06 [기록](../qa/2026-09-06-production-three-runs/README.md) |
+| PR #115·#116 | domain·content·web | 시즌 1 게임성 개선: 19세 시작·성인 진로 진행, 룰셋 1.3.0·팩 0.5.0 운영 활성 + 스모크 안정화 | completed | 17:46·17:52 |
+| PR #120·#121 | web | 밝고 정돈된 스포츠 앱 UI/UX 개편, 홈 허브 소식·피드백 | completed | 21:51·22:10. 설계 [app-experience-redesign.md](../design/app-experience-redesign.md) |
+| UX-001~005 | web·ui | 구단 이름 커스터마이즈(#128)·설정 푸터(#123)·접이식 설정(#125)·포인트 색상(#126)·앱 버전(#124) + FOUC 제거(#129)·플래그 브랜드(#130) | completed | 23:09~23:32 |
+| UX-006~009 | web·ui | 앱 셸 100dvh(#131)·커리어 홈 탭(#134)·TeamBadge(#133)·시네마틱 인트로(#135) + 태그 ID 노출 제거(#132) | completed | 2026-09-07 00:10~01:15 |
+| UX-010·011 | web·api | 결과 서사 헤드라인·선수 배너(#139)·트레이딩 카드(#138) + 홈 탭 정리(#136)·api health CORS(#137) | completed | 01:45~01:46 → 01:51~01:52 운영 재배포 `939fe48` |
+| 이슈 #104 | content | GK에도 윙어 전용 관계 이벤트 노출, NPC 이름이 선수와 충돌 (P2) | todo | PR #103 후속. 사용자 세션 배정 |
+| 이슈 #105 | web | 핵심 경기 제목에 내부 TAG(프로_데뷔) 노출 (P2) | todo | PR #103 후속 |
+| staging 승격 | infra | staging 활성 시즌·룰셋·팩을 운영과 맞춤(`svc_line_test` 1.0.0/0.1.0 → 1.3.0/0.5.0) | todo | [two-environments.md](../operations/two-environments.md) |
+| 외부 등록 | 운영 | Google 브랜딩 인증, Search Console·네이버 등록 | todo | 사용자 외부 절차. [seo-rollout.md](../operations/seo-rollout.md)·[google-login.md](../operations/google-login.md) |
+| 플레이 측정 | 운영 | 실사용자 플레이 시간·퍼널 측정(D1 `analytics_events`, elapsedSec) → D-62 실사용자 판정 | todo | [play-time-measurement.md](../qa/play-time-measurement.md). 시즌 1 데이터 |
+| 플랜·모니터링 | 운영 | U-014 Workers Paid 전환, U-004 Sentry DSN | todo | 사용자 액션 |
+
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
 선행: U-007 콘솔 등록(`appName` 확정). 리드타임은 등급분류(U-009) 10~15일과 콘솔 검토 2~4주. 코드 작업은 M-001~M-004이며 구조가 준비돼 있으면 각각 워커 1건 규모다.
@@ -197,12 +248,14 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 ## 진행 중
 
-진행 중 워커 없음 (2026-09-05 21:55 — D-65 출시 게이트 3건 모두 main 반영, Phase 3·4 게이트 종결. 남은 것은 사용자 항목 U-017 runner 운영·U-014·U-015·U-005와 Phase 5 PR #77 재개)
+진행 중 워커 없음 (2026-09-07 오전 — 이 세션은 문서 전담. 9/5 밤~9/7 새벽 코드 작업은 사용자 세션(Codex·Sol·Luna)이 PR #91~#139로 직접 머지·배포. 남은 항목은 Phase 7 표와 사용자 액션 U-014·U-004·U-005)
 
 ## 완료
 
 | ID | 내용 | 커밋 |
 |---|---|---|
+| Phase 6·7 (사용자 세션) | PR #102~#139 | 2026-09-05 23:22 ~ 2026-09-07 01:52 | 운영 출시·도메인·Google 로그인·게임성 1.3.0·UI/UX 개편·UX-001~011. 목록은 위 Phase 6·7 표, 운영 재배포 `939fe48` |
+| T-5-001~008 | PR #103 `fb8b782` (Phase 5 통합, 사용자 세션) | 2026-09-06 09:46 | 선수 생성·게임 연출·Legacy 1.1·한국 모듈. PR #77 대체, 인수 검증 PR #106. 후속 이슈 #104·#105 |
 | T-4-023 | PR #100 `42046ef` | 2026-09-05 21:55 | 대표팀 seed·reachability·캡처 2장(e2e helpers·web test·docs/qa) |
 | T-4-028 | PR #98 `452d32d` | 2026-09-05 21:47 | 대표팀 agent 축 문구 2줄(web) |
 | T-4-024 | PR #94 `232bc83` | 2026-09-05 20:40 | season_settled·step_passed elapsedSec(web funnel·route, contracts) |

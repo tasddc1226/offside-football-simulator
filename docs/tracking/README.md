@@ -4,13 +4,21 @@
 
 ## 역할
 
-> **현재 인계(2026-09-06)**: Phase 5와 게임 경험 새로고침 PR
+> **현재 인계(2026-09-07)**: 운영 서비스가 열렸다. 2026-09-06 12:33 `Production Release`
+> run 34009144236(`82a46fc`)으로 첫 운영 배포, 9/7 01:51~01:52 `939fe48` 재배포.
+> [offside-lab.com](https://offside-lab.com)에서 시즌 1(`svc_season_1`, 테스트 아님, 종료일 미정,
+> 룰셋 1.3.0·팩 0.5.0)이 ACTIVE다. Phase 5(PR #103·#106)·Phase 6은 종결, Phase 7 운영·밸런스가
+> 진행 중이다 — 현황은 [board.md](board.md) 상단과 Phase 5·6·7 표, 결정은 [decision-log.md](decision-log.md)
+> 2026-09-07 항목. 9/5 밤부터 코드 PR은 사용자 세션(Codex·Sol·Luna)이 열고 머지하며 Claude 세션은
+> 문서·현황판·CI 검토만 맡는다.
+>
+> 이전 인계(2026-09-06): Phase 5와 게임 경험 새로고침 PR
 > [#103](https://github.com/tasddc1226/offside-football-simulator/pull/103)은 main
 > `fb8b78260377c838947ae43caa3290481c3a4999`로 병합됐다. PR quick checks
 > [run 34002089936](https://github.com/tasddc1226/offside-football-simulator/actions/runs/34002089936)은
 > 54초에 성공했다. main staging run 34002153036(2분), expanded 수동 deploy run
-> 34002280639(1분 19초)도 성공했다. expanded 신규 1.1 커리어의 실제 은퇴·보관·강제 새로고침까지
-> 확인해 staging 인수를 완료했다. Production 출시는 별도다.
+> 34002280639(1분 19초)도 성공했다(expanded 환경은 9/6 PR #122로 삭제됨). expanded 신규 1.1 커리어의
+> 실제 은퇴·보관·강제 새로고침까지 확인해 staging 인수를 완료했다.
 > 합성 grade 비율은 관찰 목표이며 단독 merge hard gate가 아니다. 저장 호환성, 동일 품질 포지션
 > 공정성, Archive 근거의 고득점 도달성, population 무결성은 필수다. 아래 Claude 전담·Phase 5
 > 보류·항상 squash 문구는 당시 운영 이력이며 현재 상태는 [통합 기록](game-experience-refresh-2026-09-06.md)을 따른다.

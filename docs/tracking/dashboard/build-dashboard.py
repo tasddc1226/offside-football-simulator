@@ -77,11 +77,19 @@ PHASES = [
     ("Phase 1", "첫 계약까지", "Phase 1 백로그", "온보딩 → 선수 만들기 → 진로 → 첫 계약 → 대시보드"),
     ("Phase 2", "한 시즌", "Phase 2 백로그", "12 step 시즌 · 경기 · 핵심 경기 챕터 · 결산·성장"),
     ("Phase 3·4", "계약·이적 + 부상·관계", "Phase 3·4 백로그", "트랙 A 계약·임대·이적, 트랙 B 부상·관계·평판 (병렬)"),
-    ("Phase 5", "장기 성장·은퇴·Legacy", None, "노쇠·은퇴·Legacy 점수·엔딩"),
-    ("Phase 6", "SEASON 1: KICKOFF", None, "첫 서비스 시즌 출시"),
-    ("Phase 7", "운영·밸런스", None, "라이브 운영·밸런스 조정·확장"),
+    ("Phase 5", "장기 성장·은퇴·Legacy", "Phase 5 백로그", "노쇠·은퇴·Legacy 점수·엔딩"),
+    ("Phase 6", "SEASON 1: KICKOFF", "Phase 6 출시 항목", "첫 서비스 시즌 출시"),
+    ("Phase 7", "운영·밸런스", "Phase 7 운영 항목", "라이브 운영·밸런스 조정·확장"),
     ("Phase 8", "WORLD STAGE", "Phase 8 WORLD STAGE 백로그", "해외 이적·가상 해외 리그·대륙대회 (Phase 3~7 뒤)"),
 ]
+# board.md 표가 없거나 표만으로 상태를 정하기 어려운 Phase는 여기서 손으로 고정한다. 값: "done" | "active" | "todo" | None(표 집계)
+PHASE_OVERRIDE = {
+    "Phase 2": "done",      # 코드 종료(9/4). 잔여 T-2-010(콘텐츠 팩 0.2.0)은 0.3.0~0.5.0 팩이 대체해 사실상 종료
+    "Phase 3·4": "done",    # 9/5 21:55 D-65 출시 게이트 종결
+    "Phase 5": "done",      # 9/6 PR #103 통합·staging 인수, 9/6 12:33 운영 배포에 포함
+    "Phase 6": "done",      # 9/6 12:33 운영 시즌 1 출시(svc_season_1), 9/6 저녁 offside-lab.com·Google 로그인
+    "Phase 7": "active",    # 운영 3회 평가 → 게임성 개선(PR #115) → UI/UX 개편(#120~#139) 진행 중
+}
 STATUS = {
     "done": ("완료", "done"), "completed": ("완료", "done"), "in-progress": ("진행 중", "active"),
     "todo": ("예정", "todo"), "blocked": ("대기", "blocked"), "deferred": ("보류", "todo"), "in-review": ("리뷰 중", "active"),
@@ -108,23 +116,21 @@ log = subprocess.run(["git", "-C", ROOT, "log", "origin/main", "--format=%h|%ci|
 merges = []
 for line in log.splitlines():
     h, ts, subj = line.split("|", 2)
-    if re.match(r"^T-\d-\d{3}:", subj):
-        m = re.search(r"\(#(\d+)\)$", subj)
-        merges.append(dict(sha=h, time=ts[11:16], date=ts[:10], task=subj.split(":")[0], title=re.sub(r"\s*\(#\d+\)$", "", subj.split(":", 1)[1]).strip(), pr=m.group(1) if m else None))
+    pr_m = re.search(r"\(#(\d+)\)$", subj)
+    if pr_m and not subj.startswith("docs"):  # PR 머지 커밋(워커 T-x-xxx: 와 사용자 세션 feat/fix/UX-xxx 모두), docs 커밋 제외
+        task_m = re.match(r"^(T-\d-\d{3}|UX-\d{3})", subj)
+        merges.append(dict(sha=h, time=ts[11:16], date=ts[:10], task=task_m.group(1) if task_m else subj.split(":")[0], title=re.sub(r"\s*\(#\d+\)$", "", subj.split(":", 1)[-1]).strip(), pr=pr_m.group(1)))
 
 now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
 updated = now.strftime("%Y-%m-%d %H:%M KST")
 today_md = f"{now.month}/{now.day}"
 
 # 한 줄 현황(오케스트레이터가 머지·투입마다 손으로 갱신)
-NOW = ("Phase 0·1·2 코드는 끝났고 Phase 2는 사용자 게이트(플레이테스트 U-005·LINE TEST 9/8 시작 예정, U-014·U-015)만 남았습니다. "
-       "Phase 3(계약·이적)은 9/5 새벽 T-3-005 UI(PR #65)까지 머지돼 코드가 끝났습니다. Phase 4(부상·관계·평판·대표팀)는 T-4-001 타입, T-4-002 부상(PR #64), T-4-003 관계·감독·평판(PR #67), T-4-004 대표팀(PR #68, 11:07)까지 domain·content가 전부 머지됐고, 남은 것은 T-4-007 디자인 재통합·T-4-005 화면·T-4-006 통합 검증입니다. "
-       "9/5 오전 오케스트레이션은 Claude 세션으로 복귀했고(9/4 저녁~9/5 오전은 Codex+Luna), 이후 코드 작업은 Claude Code Workflow의 Sonnet 5 에이전트가 전담하며 Claude는 검증·리뷰·머지(화면은 ego-browser 확인)를 맡습니다. 11:07에 T-4-007(디자인 PR #66 재통합)과 T-4-006 domain(3시즌 fixture·불변 property)을 Sonnet 5 워크플로로 병렬 투입했고, 그 뒤 T-4-005 화면 → T-4-006 e2e 순입니다. "
-       "11:50에는 사용자 지시(병렬 최대, D-59)로 동시 워커 상한을 없애고 T-4-008(콘텐츠 팩 0.3.0)·T-4-009(Phase 4 화면 준비: DEV 팩 오버라이드·라벨·seed 탐색)·T-2-016(staging 리허설 자동화)을 추가 투입해 워커 5명이 서로 다른 파일 소유권으로 병행 중이며, 읽기 전용 Phase 3·4 코드 감사(관점 7 → 3렌즈 반박 검증)와 CI e2e 간헐 실패 조사도 병행합니다. "
-       "12:30 세션 한도로 워커 4개가 중단됐다가 15:20 WIP를 이어받아 재개했고, 그 사이 사용자가 디자인 PR #66(T-4-007 완료)과 Phase 5 PR #70·#71을 머지했습니다. 코드 감사는 확인 22건(고유 20건)·반박 9건으로 종결했고 정정 결정 D-60(감독 교체 roll 파생 시드, 시장 시드 careerId 제거, step 7 재계약 교체 시점)을 남겼습니다. 수정은 소유권별 묶음 T-4-012(domain)·T-4-013(api)·T-4-014(web)·T-4-015(content)·T-4-016(web 문구)·T-4-017(api 해시 probe)로 나눠 투입합니다. 16:02 사용자 지시(D-61)로 새 테스트 코드 작성은 보류하고 기존 테스트·골든 갱신만 합니다. 16:30~16:38 PR #72(T-4-006 domain)·#73(T-4-013)을 머지하고 T-4-012(감사 domain 수정)를 투입했으며, 16:45 PR #75(T-4-008 팩 0.3.0)를 머지하고 T-4-015(content 감사 수정)를 투입했으며, 16:48~16:50 PR #74(T-4-010 e2e 안정화)·#76(T-4-011 SCR-020 잔류 결과)도 머지해 오후 머지 5건, T-4-016(web 문구)을 투입했습니다. 19:01 사용자·Codex 통합 PR #85(T-4-022)가 머지되어 이 세션의 PR #78·#79·#82·#83·#84가 모두 main에 들어갔고, T-4-012·T-4-018·T-4-005a/b/c도 Codex 구현으로 함께 반영됐습니다(main CI 성공·staging 배포). 사용자 지시로 19:50 일시 중지 — 검증 큐 종료, T-4-012 워커 중단, 워크트리 정리. 남은 D-62 출시 게이트와 Phase 5 PR #77 재개는 사용자 결정으로 넘겼습니다. "
-       "20:00 사용자 결정(D-65): 출시 게이트는 이 세션이 진행, 기본 팩 0.1.0 유지, Phase 5 PR #77 보류. 20:08~20:15 T-4-017(api 해시 probe career-12·13)·T-4-023(SCR-032 대표팀 자연 플레이 seed 탐색·360px 캡처)·T-4-024(season_settled·step_passed 초 단위 elapsedSec)를 Sonnet 5 워크플로로 병행 투입했고, 측정 프로토콜 문서(docs/qa/play-time-measurement.md)는 오케스트레이터가 썼습니다. 20:10 PR #90(T-4-017), 20:40 PR #94(T-4-024, 리뷰 후속 3건 반영)를 머지해 게이트 2/3을 닫았고, 21:36 T-4-023 캡처에서 P4-7 문구 게이트(SCR-032 협회 관계 vs SCR-014 에이전트 관계)가 확인돼 D-66으로 문구 2줄(T-4-028)을 고쳐 21:47 PR #98을 머지했습니다. 21:55 PR #100(T-4-023 캡처)까지 머지해 D-65 출시 게이트 3건을 모두 닫았고 Phase 3·4는 종결됐습니다(phase34-completion.md 종결 기록). 실사용자 플레이 시간 판정만 staging 배포·LINE TEST 뒤 절차로 남습니다. 사용자 세션은 PR #96으로 CI를 Mac self-hosted runner로 전환해 U-017을 풀고 있습니다. "
-       "20:25 GitHub Actions 결제·지출 한도 문제로 main CI와 staging 배포가 멈췄습니다(비공개 저장소 분수 소진 추정, U-017). 로컬 체인과 워커는 영향이 없어 계속 진행하지만, T-4-024 이후 LINE TEST 측정은 U-017 해결 뒤에 가능합니다. "
-       "다음 사용자 결정은 U-017(Actions 한도 상향 또는 저장소 공개)·U-014(Workers Paid 플랜)·U-015(테스터 모집)·U-005(종이 플레이테스트)입니다.")
+NOW = ("운영 서비스가 열렸습니다. 9/6 12:33 사용자 세션이 수동 Production Release 워크플로로 첫 운영 배포를 마쳤고(run 34009144236, 82a46fc, 기록 PR #111), web offside-lab.com·api api.offside-lab.com에서 시즌 1(svc_season_1, 테스트 시즌 아님, 종료일 미정)이 ACTIVE입니다. 운영 활성 룰셋 1.3.0·콘텐츠 팩 0.5.0. "
+       "Phase 5(장기 성장·은퇴·Legacy)는 9/6 09:46 통합 PR #103(#77 대체, 선수 생성·게임 연출·Legacy 1.1·한국 모듈)으로 main에 들어갔고 10:01 PR #106 배포 후 인수 검증까지 끝나 T-5-001~008 전부 완료입니다(후속 이슈 #104·#105). Phase 6(SEASON 1: KICKOFF)은 운영 릴리스 워크플로(#107)·시즌 1 무기한(#108)·D1 릴리스 검사 수정(#109·#110)·출시 기록(#111)·Google 로그인 운영 연결(#112·#114, U-003 완료)·offside-lab.com 도메인(#118, U-001 완료)·공개 가이드·검색(#117·#119)·두 환경 정리(#122·#127)로 닫혔습니다. "
+       "Phase 7(운영·밸런스)이 진행 중입니다. Luna의 운영 3회 플레이 QA(커리어 A/B/C — 실패 뒤 회복·성인 진로 전환이 약함)를 받아 17:46 PR #115(19세 시작·성인 진로 개선, 룰셋 1.3.0·팩 0.5.0)를 냈고, 밤사이 UI/UX 개편 #120·홈 허브 소식/피드백 #121·UX-001~005(#123~#126·#128)·FOUC #129·플래그 브랜드 #130, 9/7 새벽 앱 셸 UX-006(#131)·커리어 홈 UX-007(#134)·TeamBadge UX-008(#133)·시네마틱 인트로 UX-009(#135)·트레이딩 카드 UX-011(#138)·결과 연출 UX-010(#139)·수정 #132·#136·#137까지 머지해 01:51~01:52 운영 재배포(939fe48)를 마쳤습니다. "
+       "9/5 밤 이후 코드 PR은 전부 사용자 세션(Codex·Sol·Luna)이 열고 머지했고, 이 Claude 세션은 문서·현황판·CI 검토만 맡습니다(코드 수정 없음). CI는 PR quick checks → main 최소 검사·staging 배포·스모크 → 수동 Production Release(#102) 구조로 Mac self-hosted runner(U-017 완료) 위에서 돕니다. staging은 아직 svc_line_test(룰셋 1.0.0·팩 0.1.0)라 승격이 남았습니다. "
+       "남은 것: 이슈 #104(GK 관계 이벤트·NPC 이름 충돌)·#105(챕터 제목 내부 TAG 노출), Google 브랜딩 인증, Search Console·네이버 등록, staging 룰셋·팩 승격(1.3.0/0.5.0), 실사용자 플레이 시간 측정(D1), U-014(Workers Paid)·U-004(Sentry)·U-005(종이 플레이테스트). U-015 LINE TEST 테스터 모집은 시즌 1 공개 출시로 대체됐습니다.")
 
 
 GLOSSARY = [
@@ -132,11 +138,14 @@ GLOSSARY = [
     ("U-014", "사용자 액션. 계정·결제·도메인·승인처럼 사용자만 할 수 있는 일"),
     ("D-44 / ADR-010", "설계 결정 번호 / 아키텍처 결정 기록. 결정 로그·ADR 문서에 원문"),
     ("PR #48", "GitHub Pull Request. 워커가 열고 오케스트레이터가 검증 뒤 squash 머지"),
-    ("워커", "Claude Code Workflow로 띄우는 Sonnet 5 에이전트(격리 worktree). 브리프대로 구현·PR. 동시 수 상한 없음 — 파일 소유권으로만 제한(D-59, 9/5 낮). 9/4~9/5 오전은 Orca gpt-5.6-luna max"),
+    ("워커", "Claude Code Workflow로 띄우는 Sonnet 5 에이전트(격리 worktree). 브리프대로 구현·PR. 동시 수 상한 없음 — 파일 소유권으로만 제한(D-59, 9/5 낮). 9/4~9/5 오전은 Orca gpt-5.6-luna max, 9/5 밤~9/7은 사용자 세션의 Codex·Sol·Luna가 직접 PR을 열고 머지"),
     ("브리프", "워커에게 주는 작업 지시서(docs/tracking/briefs). 범위·파일·테스트·금지 사항"),
     ("골든", "결정론 검증용 고정 결과(golden fixture). 같은 시드면 같은 결과가 나와야 함"),
     ("트랙 A / B", "Phase 3(계약·이적) / Phase 4(부상·관계·평판). 파일 소유권을 나눠 병렬 진행"),
-    ("LINE TEST", "첫 외부 테스트 서비스 시즌(svc_line_test). staging 환경에서 소수 사용자 대상"),
+    ("LINE TEST", "원래 계획한 첫 외부 테스트 시즌(svc_line_test). 9/6 시즌 1 공개 출시로 대체돼 지금은 staging에만 남음"),
+    ("시즌 1", "운영 서비스 시즌 svc_season_1. 2026-09-06 12:33 출시, 테스트 시즌 아님, 종료일 미정, 룰셋 1.3.0·팩 0.5.0"),
+    ("UX-007", "사용자 세션(Codex·Sol·Luna)의 UI/UX 개편 작업 번호(9/6~9/7). PR 제목·브랜치에만 쓰고 보드 표에는 PR 번호로 기록"),
+    ("Production Release", "운영 배포는 main 자동 배포가 아니라 사용자가 수동 실행하는 GitHub Actions 워크플로(가드·D1 검사)"),
 ]
 
 # --- 손으로 유지하는 데이터 ---
@@ -153,17 +162,29 @@ SCREENS = [
     ("SCR-010", "계약 확정", "구현", "T-1-009"),
     ("SCR-029", "대시보드(5탭·다음 결정 카드)", "구현", "T-1-009"),
     ("SCR-030", "설정·데이터(복구·삭제)", "구현", "테마·모션·글자 크기·기본 모드·버전 (T-1-007), 동기화 행 (T-1-011), 복구 코드·프로필 복구·삭제·기기 데이터 삭제 (T-1-012), Google 연결·병합·해제·로그아웃 (T-1-013, 실계정은 U-003 뒤)"),
-    ("법적 문서", "개인정보·약관", "구현", "본문 초안 (T-1-012). 운영자명·연락처는 U-010"),
+    ("법적 문서", "개인정보·약관", "구현", "본문 초안 (T-1-012). 운영자 OFFSIDE 운영팀·문의 이메일·시행일 확정 (PR #108, U-010 완료)"),
+    ("시즌 화면", "프리시즌 계획·시즌 준비·역할 제안·일정표·전술실·능력치 상세", "구현", "T-2-007 (대시보드 시즌화)"),
+    ("SCR-031", "핵심 경기 챕터", "구현", "T-2-008. 제목 내부 TAG 노출은 이슈 #105"),
+    ("SCR-015 (+006)", "시즌 결산·연대기", "구현", "T-2-009. 결산 원인 설명 보강 PR #92, 서사 헤드라인·선수 배너 UX-010 (PR #139)"),
+    ("제안 협상", "PRE_NEGOTIATION 제안 비교·상세·협상·거절·수락, LOAN_RETURN 결정", "구현", "T-3-005"),
+    ("SCR-020", "이적·임대 결과", "구현", "T-3-005, STAY 카드 T-4-011, RETURN 문구 T-4-016"),
+    ("SCR-016·018·021·022·024·032", "Phase 4 맥락 화면(부상·관계·감독·평판·대표팀)", "구현", "T-4-005a/b/c·T-4-018 (PR #85), SCR-032 문구·캡처 T-4-028·T-4-023"),
+    ("SCR-025~028", "은퇴(FULL TIME)·Legacy·연대기·최종 프로필·보관함→새 커리어", "구현", "T-5-006 (PR #103, Legacy 1.1)"),
+    ("선수 생성·계약 연출", "선수 생성·게임 연출(PR #103), 트레이딩 카드 UX-011", "구현", "PR #103·#138"),
+    ("홈 허브 개편", "소식·피드백(#121), 커리어 홈 탭 정보형 대시보드 UX-007(#134), 홈 탭 정리(#136)", "구현", "UI/UX 개편 PR #120 위. 설계 docs/design/app-experience-redesign.md"),
+    ("앱 셸·브랜드", "100dvh 고정 프레임 앱 셸 UX-006(#131), 플래그 브랜드(#130), TeamBadge UX-008(#133), FOUC 제거(#129)", "구현", "9/6 밤~9/7 새벽 사용자 세션"),
+    ("시네마틱 인트로", "SCR-034 온보딩 시네마틱 인트로 UX-009", "구현", "PR #135"),
+    ("공개 가이드·SEO", "공개 가이드 페이지·opt-in SEO·공개 검색 허용", "구현", "PR #117·#119, offside-lab.com (#118)"),
 ]
 LAYERS = [
-    ("domain", "결정론 시뮬레이터", ["시드 RNG·canonical hash·golden fixture", "CREATE_CAREER·RESOLVE_EVENT·ADVANCE", "효과 5종·태그·지연 효과", "선수 모델·Base OVR 59·DRAFT→확정·이벤트 제시 (T-1-001)", "제안 생성·계약 확정, golden 첫 계약까지 (T-1-005)", "선수 성별(결과 불변)·선호/현재 포지션 분리·golden 갱신 (T-1-016)", "시즌 구조·12 step·START/SETTLE_SEASON·ADVANCE 재정의·결정 예산 (T-2-001)", "전술 스타일·경쟁자 8×2·Tactical Fit·선발 순위·step-1 역할 제안 RESOLVE_ROLE, golden underdog (T-2-002)", "경기 계산: 일정·팀 결과·출전 시간·통계·평점·카드·부상·시즌 집계, 경기 전용 RNG (T-2-003)", "시즌 결산 SeasonResult·성장식(D-39)·폼/체력/사기·출전 약속·DEFERRED 시즌 적용 (T-2-005)", "핵심 경기 챕터: 후보 선택·RESOLVE_CHAPTER·ChapterRecord, golden career-05-chapter (T-2-004)", "Effect 중첩·만료·복원(D-40)·시장가치 지수(D-41)·CareerTag 16종·결산 훅(D-42), ADR-010 (T-2-014)", "Phase 3·4 타입 슬라이스: Offer/Contract v2·clubHistory·MarketSummary·pending 5종·타임라인 kind 15종·제안 상태기계·CMD-CON payload·DSL contract.* (T-3-001)", "이적시장 생성기: 사유 판정·후보 구단·제안 4종·안전 잔류·유효기간·step 7 재계약 제안·transferRules·시장 골든 3종 (T-3-002)", "이적시장 명령 처리기 4종·결산 배선·임대·약속 위반·태그 5종·골든 career-10·11 (T-3-003)", "트랙 B 타입 슬라이스: health·relationshipLog·reputation·season.manager·HEALTH Effect·RESOLVE_EVENT INJURY/NATIONAL_TEAM·훅 골격 3개 (T-4-001)", "결정론적 부상·재활·재발·후유증 상태기계, INJURY forced pending, career-12-injury (T-4-002)", "관계 감사 로그·memory tag LRU·결산 평판·주장단·감독 교체 예약·Phase 4 태그 5종·SLUMP/LOCKER_ROOM/ETHICS/MEDIA 이벤트 (T-4-003)", "대표팀 차출 자격 판정(tier OVR·평점+인기)·step 8 NATIONAL_TEAM pending·callUp 3종 체력/관계 delta·부상 자동 사양·NATIONAL_DEBUT MAJOR 챕터 예약·nationalityRuleState 기본 모듈 (T-4-004)", "3시즌 통합 fixture career-13·불변 property 200 seed·결정 예산·Snapshot 크기 (T-4-006 domain, PR #72)", "감사 domain 수정 §1 RNG·§2 시장/계약·§3 임대 복귀 (T-4-012, Codex 통합 PR #85)"], []),
-    ("content", "이벤트·룰셋 데이터", ["프로토타입 팩 0.1.0(이벤트 10개)", "조건 DSL·효과 스키마·검증 CLI", "룰셋 1.0.0(아키타입 24·배경 3·팀 8·제안·계약 규칙)", "조건 컨텍스트·적격 이벤트 선택기·브라우저 팩 로더 (T-1-015)", "룰셋 leagueCalendar 12 step·seasonBoundaryReset (T-2-001)", "리그 4·FA컵·전술 스타일 3종·선발 상수·경쟁자 이름 40 (T-2-002)", "matchRules·결과표·통계표·징계·부상 (T-2-003)", "growthRules·conditionRules·promiseMinutesShareBp (T-2-005)", "팩 chapters 3종(CHP-MATCH-001/002/004)·챕터 스키마·리그 라이벌/승격·강등 정보 (T-2-004)", "marketValueRules·EffectSchema 확장(ONCE_PER_SEASON·AT_SEASON_END·SEASONS_AFTER·reasonTag) (T-2-014)", "팩 0.2.0 등록(활성 0.1.0 유지)·PRO 이벤트 5종 PROTOTYPE·authoring 스키마·agent 토큰·룰셋 팀 12 (T-3-006)", "트랙 B 룰셋 섹션 5종(injury·manager·relationship·reputation·nationalTeam)·INJURY/NATIONAL_TEAM 이벤트 스키마·DSL health/manager/reputation 토큰 (T-4-001)", "EVT-NAT-001·CHP-NAT-001(0.1.0·0.2.0)·nationalTeamRules event/minRatingTenths·presentation 이벤트 분리 테스트 (T-4-004)", "콘텐츠 팩 0.3.0: Phase 4 이벤트 12종·포지션 챕터 3종·500 seed 도달성 (T-4-008, PR #75)", "감사 content: season.stats 파생·슬럼프 게이트·EVT-CON-010 phase·INJURY previewEffects 검증기 (T-4-015, PR #82→#85)", "RUMOUR 이적 창 진입 경로 D-63 (T-4-022, PR #85)"], []),
-    ("contracts", "API·명령 스키마(Zod)", ["요청·응답 봉투·오류 코드·프로필 설정", "커리어 동기화 GET/PUT·Snapshot 봉투", "Phase 1 명령 payload 판별 유니온·CareerState·PlayerPublic(잠재력 비노출)·복구·삭제 스키마 (T-1-006)", "api 복구·삭제 라우트가 contracts 스키마로 검증 (T-1-012)", "선수 성별·선호/현재 포지션 스키마 (T-1-016)", "Google 병합·pendingMerge 스키마 (T-1-013)", "RESOLVE_ROLE·ROLE_PROPOSAL·경쟁자·선발 순위 스키마 (T-2-002)", "golden 순회 strict 정합·목록 가드·Snapshot 크기 15.3 KB(예산 6%) (T-2-006)", "분석 이벤트 12종 strict props·service-season current·오류 코드 SERVICE_SEASON_UNAVAILABLE/CLOSED (T-2-012)", "career-10·11 strict 명령·snapshot 불변 검증 (T-3-004)", "analytics props elapsedSec(int 0~7200, optional) (T-4-024, PR #94)"], []),
+    ("domain", "결정론 시뮬레이터", ["시드 RNG·canonical hash·golden fixture", "CREATE_CAREER·RESOLVE_EVENT·ADVANCE", "효과 5종·태그·지연 효과", "선수 모델·Base OVR 59·DRAFT→확정·이벤트 제시 (T-1-001)", "제안 생성·계약 확정, golden 첫 계약까지 (T-1-005)", "선수 성별(결과 불변)·선호/현재 포지션 분리·golden 갱신 (T-1-016)", "시즌 구조·12 step·START/SETTLE_SEASON·ADVANCE 재정의·결정 예산 (T-2-001)", "전술 스타일·경쟁자 8×2·Tactical Fit·선발 순위·step-1 역할 제안 RESOLVE_ROLE, golden underdog (T-2-002)", "경기 계산: 일정·팀 결과·출전 시간·통계·평점·카드·부상·시즌 집계, 경기 전용 RNG (T-2-003)", "시즌 결산 SeasonResult·성장식(D-39)·폼/체력/사기·출전 약속·DEFERRED 시즌 적용 (T-2-005)", "핵심 경기 챕터: 후보 선택·RESOLVE_CHAPTER·ChapterRecord, golden career-05-chapter (T-2-004)", "Effect 중첩·만료·복원(D-40)·시장가치 지수(D-41)·CareerTag 16종·결산 훅(D-42), ADR-010 (T-2-014)", "Phase 3·4 타입 슬라이스: Offer/Contract v2·clubHistory·MarketSummary·pending 5종·타임라인 kind 15종·제안 상태기계·CMD-CON payload·DSL contract.* (T-3-001)", "이적시장 생성기: 사유 판정·후보 구단·제안 4종·안전 잔류·유효기간·step 7 재계약 제안·transferRules·시장 골든 3종 (T-3-002)", "이적시장 명령 처리기 4종·결산 배선·임대·약속 위반·태그 5종·골든 career-10·11 (T-3-003)", "트랙 B 타입 슬라이스: health·relationshipLog·reputation·season.manager·HEALTH Effect·RESOLVE_EVENT INJURY/NATIONAL_TEAM·훅 골격 3개 (T-4-001)", "결정론적 부상·재활·재발·후유증 상태기계, INJURY forced pending, career-12-injury (T-4-002)", "관계 감사 로그·memory tag LRU·결산 평판·주장단·감독 교체 예약·Phase 4 태그 5종·SLUMP/LOCKER_ROOM/ETHICS/MEDIA 이벤트 (T-4-003)", "대표팀 차출 자격 판정(tier OVR·평점+인기)·step 8 NATIONAL_TEAM pending·callUp 3종 체력/관계 delta·부상 자동 사양·NATIONAL_DEBUT MAJOR 챕터 예약·nationalityRuleState 기본 모듈 (T-4-004)", "3시즌 통합 fixture career-13·불변 property 200 seed·결정 예산·Snapshot 크기 (T-4-006 domain, PR #72)", "감사 domain 수정 §1 RNG·§2 시장/계약·§3 임대 복귀 (T-4-012, Codex 통합 PR #85)", "통산 기록 projection·정규화 Legacy 가중합·밴드·엔딩 우선순위 (T-5-001, PR #70)", "불변 Archive·통산/업적 정본·Legacy 1.1 저장 계약·버전/checksum (T-5-002, PR #71→#103)", "다년 성장·노쇠·은퇴 압력·마지막 선택·RETIRE/terminal 명령 거부 (T-5-003)", "기록→Legacy 5축 정규화·source 연결·동일 품질 4포지션 공정성 (T-5-004)", "14종 엔딩 eligibility·폴백·최고 순간·미선택 에필로그 (T-5-005)", "4포지션 20시즌 완주·원자성·복구·변조·중복 요청 회귀 (T-5-007)", "한국 복무/휴식/U23/특례/멘토링 규칙 모듈·Archive 연결 (T-5-008)", "성인 진로 진행 개선·19세 시작 (PR #115, 룰셋 1.3.0)"], []),
+    ("content", "이벤트·룰셋 데이터", ["프로토타입 팩 0.1.0(이벤트 10개)", "조건 DSL·효과 스키마·검증 CLI", "룰셋 1.0.0(아키타입 24·배경 3·팀 8·제안·계약 규칙)", "조건 컨텍스트·적격 이벤트 선택기·브라우저 팩 로더 (T-1-015)", "룰셋 leagueCalendar 12 step·seasonBoundaryReset (T-2-001)", "리그 4·FA컵·전술 스타일 3종·선발 상수·경쟁자 이름 40 (T-2-002)", "matchRules·결과표·통계표·징계·부상 (T-2-003)", "growthRules·conditionRules·promiseMinutesShareBp (T-2-005)", "팩 chapters 3종(CHP-MATCH-001/002/004)·챕터 스키마·리그 라이벌/승격·강등 정보 (T-2-004)", "marketValueRules·EffectSchema 확장(ONCE_PER_SEASON·AT_SEASON_END·SEASONS_AFTER·reasonTag) (T-2-014)", "팩 0.2.0 등록(활성 0.1.0 유지)·PRO 이벤트 5종 PROTOTYPE·authoring 스키마·agent 토큰·룰셋 팀 12 (T-3-006)", "트랙 B 룰셋 섹션 5종(injury·manager·relationship·reputation·nationalTeam)·INJURY/NATIONAL_TEAM 이벤트 스키마·DSL health/manager/reputation 토큰 (T-4-001)", "EVT-NAT-001·CHP-NAT-001(0.1.0·0.2.0)·nationalTeamRules event/minRatingTenths·presentation 이벤트 분리 테스트 (T-4-004)", "콘텐츠 팩 0.3.0: Phase 4 이벤트 12종·포지션 챕터 3종·500 seed 도달성 (T-4-008, PR #75)", "감사 content: season.stats 파생·슬럼프 게이트·EVT-CON-010 phase·INJURY previewEffects 검증기 (T-4-015, PR #82→#85)", "RUMOUR 이적 창 진입 경로 D-63 (T-4-022, PR #85)", "룰셋 1.1.0~1.3.0·팩 0.4.0·0.5.0 등록 (Phase 5 통합 #103 → 시즌 1 게임성 개선 #115), 운영 활성 1.3.0/0.5.0", "GK 관계 이벤트·NPC 이름 충돌은 이슈 #104"], []),
+    ("contracts", "API·명령 스키마(Zod)", ["요청·응답 봉투·오류 코드·프로필 설정", "커리어 동기화 GET/PUT·Snapshot 봉투", "Phase 1 명령 payload 판별 유니온·CareerState·PlayerPublic(잠재력 비노출)·복구·삭제 스키마 (T-1-006)", "api 복구·삭제 라우트가 contracts 스키마로 검증 (T-1-012)", "선수 성별·선호/현재 포지션 스키마 (T-1-016)", "Google 병합·pendingMerge 스키마 (T-1-013)", "RESOLVE_ROLE·ROLE_PROPOSAL·경쟁자·선발 순위 스키마 (T-2-002)", "golden 순회 strict 정합·목록 가드·Snapshot 크기 15.3 KB(예산 6%) (T-2-006)", "분석 이벤트 12종 strict props·service-season current·오류 코드 SERVICE_SEASON_UNAVAILABLE/CLOSED (T-2-012)", "career-10·11 strict 명령·snapshot 불변 검증 (T-3-004)", "analytics props elapsedSec(int 0~7200, optional) (T-4-024, PR #94)", "Legacy 1.1 Archive·owner GET·버전/checksum 스키마 (T-5-002, PR #103)"], []),
     ("engine-client", "브라우저 실행기", ["명령 실행기·멱등성·Snapshot 복구", "Web Worker 시뮬레이터", "동기화 클라이언트(재시도·409 처리)", "룰셋 배선 (T-1-001)", "포크(fork-by-replay)·Worker 실패 처리 (T-1-011)", "서버 커리어 가져오기 importCareerFromServer (T-1-012)", "시즌 명령 replay·fork·import golden, 로컬 저장 시즌 checkpoint 계약 (T-2-006)", "replay/fork/import 회귀·브라우저 Worker hash probe (T-3-004)"], []),
     ("platform", "저장소 추상화", ["Dexie(IndexedDB) LocalStore", "KV LocalStore(토스 채널용 스텁)", "features.googleLink 채널 기능 플래그 (T-1-013)", "웹 분석 클라이언트: 배치 20건/10초/pagehide, sendBeacon→fetch keepalive, 익명 clientId (T-2-012)"], []),
-    ("api", "Cloudflare Workers + D1", ["D1 스키마·migration", "세션(쿠키·Bearer)·익명 프로필·설정", "커리어 동기화 GET/PUT·If-Match·멱등", "복구 코드·프로필 복구·삭제·로그아웃·커리어 삭제 (T-1-004)", "Google OIDC start/callback/merge/unlink·가짜 OIDC (T-1-013)", "시즌 3경로 동기화·Miniflare golden 순회 (T-2-006)", "서비스 시즌 포인터 ACTIVE_SERVICE_SEASON_ID·GET /service-seasons/current·생성 시 시즌 상태 검사(409)·analytics_events 수집(화이트리스트·rate limit)·svc_line_test 시드·마이그레이션 0003 (T-2-012)", "analytics_events 삽입 14행 청크(D1 변수 100개 상한, 예행 503)·unknown error 응답 고정 문구·원문은 로그로만 (T-2-015)", "PUT 3경로·멱등·요청 크기 probe 회귀 (T-3-004)", "api 100회 병렬 테스트 타임아웃 60초 (T-4-013, PR #73)", "해시 probe career-12 부상·career-13 통합 추가, Node·workerd·golden 일치 (T-4-017, PR #90)"], ["실제 Google 계정 검증 (U-003 대기)"]),
-    ("web · ui", "React 화면", ["라우터·디자인 토큰·허브 빈 상태", "Pretendard 동적 서브셋(2109KB→269KB)", "Button·Card 등 기본 부품", "Radix RadioGroup·Dialog·Tabs, ChoiceCard·CompareCards 등 부품 10종", "Playwright + axe E2E, 브라우저 Worker 해시 검증 (T-1-010)", "엔진 배선(Worker·IndexedDB)·허브·온보딩·설정 영속화 (T-1-007)", "선수 만들기 SCR-002~004·복구 코드 발급·API 클라이언트 (T-1-008)", "동기화 배선·저장 배지·충돌 대화상자·오프라인 (T-1-011)", "진로·입단 테스트·이벤트·결과·제안·계약·대시보드 화면, first-contract e2e (T-1-009)", "설정 데이터 섹션(복구·삭제·대조)·법적 문서·실제 api 복구 e2e (T-1-012)", "선수 성별 RadioGroup·선호 포지션 라벨·확인 요약 (T-1-016)", "Google 연결 행·병합 선택·로그아웃, google-link e2e (T-1-013)", "resilience·recovery-conflict·keyboard·session-length·perf e2e, 완료 조건 표 15행 (T-1-014)", "포지션 탭 키보드 도달·선호/주포지션 표시·국외 이전 표·결과 aria-live·이탈 경고 (T-1-017)", "브라우저 Worker 시즌 리플레이 hash·9.6~15 ms (T-2-006)", "프리시즌 계획·시즌 준비·역할 제안·대시보드 시즌화·능력치 상세, season/a11y e2e, E2E_PORT (T-2-007)", "핵심 경기 챕터 화면 SCR-031·chapterCandidates·RESOLVE_CHAPTER·재생, chapter e2e·DEV 시드 오버라이드 (T-2-008)", "시즌 결산 화면 SCR-015(+SCR-006)·변화 원인 분리·CompareCards·CountUp·응답 유실 복구·다이어리 연대기 (T-2-009)", "Phase 2 완료 조건 검증: 포지션군 fixture 3종·결정론·집계·B > A·시즌 완주 세션 측정·rngState.draws e2e·68건 3회 무결점 (T-2-011)", "LINE TEST 준비: useServiceSeason(kv 캐시·폴백)·허브 LINE TEST 배너·테스트 시즌 배지·LOCKED 시 생성 비활성·퍼널/결산/이탈 분석 이벤트·service-season e2e 4종 (T-2-012)", "온보딩 첫 슬라이드 LINE TEST 안내 (T-2-015)", "PRE_NEGOTIATION 제안 비교·상세·협상·거절·수락, LOAN_RETURN 결정, SCR-020 이적·임대 결과 (T-3-005)", "로컬 QA 표시 오류 4건 수정: 컵 코드·출전 집계·진로 서사·입단 테스트 ID (PR #63)", "narrative.ts agent 토큰 (T-3-005)", "NATIONAL_TEAM pending → SCR-013 라우팅·callUp 어댑터·데뷔 챕터 맥락 격리 (T-4-004)", "디자인 PR #66 재통합(T-4-007): 19개 화면 모바일 개편 + T-3-005·T-4-004 화면 정합, SCR-020 디자인 정합 — 사용자 머지 7bd3d84", "staging 리허설 자동화 config·spec·e2e:staging (T-2-016, PR #69)", "e2e 간헐 실패 안정화·CI 실패 아티팩트·INTEREST 시드 케이스 (T-4-010, PR #74)", "SCR-020 잔류 결과 STAY 카드·loader redirect 튕김 제거 (T-4-011, PR #76)", "[핫픽스] e2e 헬퍼 `&interested=` 허용·season.spec 프리시즌 단언 — main 회귀 해소 (T-4-019, PR #81)", "[핫픽스] injury.spec poll textContent 타임아웃 — 반복 플레이크 원인 제거 (T-4-020, PR #80)", "DEV 팩 오버라이드·라벨 함수·phase4-seeds (T-4-009, PR #84→#85)", "step 7 전부 거절 문구·휴대폰 탭 시장 사유 (T-4-014, PR #78→#85)", "SCR-020 RETURN 문구·{manager} 토큰 (T-4-016, PR #79→#85)", "season.spec:17 프리시즌 도착 허용 (T-4-021, PR #83→#85)", "Phase 4 화면 SCR-016·018·021·022·024·032 맥락 패널·점진 공개·실제 적용량 결과 카드 D-64 (T-4-005a/b/c·T-4-018, Codex 통합 PR #85)", "season_settled·step_passed 초 단위 elapsedSec, 호출부 careerId 배선 (T-4-024, PR #94)", "대표팀 agent 축 문구 정합: SCR-032 안내·SCR-014 결과 맥락 (T-4-028, PR #98, D-66)", "SCR-032 대표팀 자연 플레이 seed(0.3.0 시즌 20)·reachability·360px 캡처 2장 (T-4-023, PR #100)"], []),
-    ("CI · 배포", "GitHub Actions · Pages · Workers", [], ["U-002 Cloudflare 계정 대기 (T-0-010)"]),
+    ("api", "Cloudflare Workers + D1", ["D1 스키마·migration", "세션(쿠키·Bearer)·익명 프로필·설정", "커리어 동기화 GET/PUT·If-Match·멱등", "복구 코드·프로필 복구·삭제·로그아웃·커리어 삭제 (T-1-004)", "Google OIDC start/callback/merge/unlink·가짜 OIDC (T-1-013)", "시즌 3경로 동기화·Miniflare golden 순회 (T-2-006)", "서비스 시즌 포인터 ACTIVE_SERVICE_SEASON_ID·GET /service-seasons/current·생성 시 시즌 상태 검사(409)·analytics_events 수집(화이트리스트·rate limit)·svc_line_test 시드·마이그레이션 0003 (T-2-012)", "analytics_events 삽입 14행 청크(D1 변수 100개 상한, 예행 503)·unknown error 응답 고정 문구·원문은 로그로만 (T-2-015)", "PUT 3경로·멱등·요청 크기 probe 회귀 (T-3-004)", "api 100회 병렬 테스트 타임아웃 60초 (T-4-013, PR #73)", "해시 probe career-12 부상·career-13 통합 추가, Node·workerd·golden 일치 (T-4-017, PR #90)", "Archive+Legacy 원자 저장·D1 owner GET·복구·삭제 (T-5-002, PR #103)", "시즌 1 무기한 운영 시즌 svc_season_1·문의 이메일 (PR #108)", "릴리스 검사 D1 compound select 상한·독립 count 쿼리 (PR #109·#110)", "Google 로그인 운영 연결(개인 GCP offside-football-prod)·재인증 중 미동기화 진행 보존 (PR #112·#114, U-003)", "테스트 환경 cors env 참조 health 503 수정 (PR #137)"], ["staging 룰셋·팩 승격 1.0.0/0.1.0 → 1.3.0/0.5.0", "Google 브랜딩 인증(외부 절차)"]),
+    ("web · ui", "React 화면", ["라우터·디자인 토큰·허브 빈 상태", "Pretendard 동적 서브셋(2109KB→269KB)", "Button·Card 등 기본 부품", "Radix RadioGroup·Dialog·Tabs, ChoiceCard·CompareCards 등 부품 10종", "Playwright + axe E2E, 브라우저 Worker 해시 검증 (T-1-010)", "엔진 배선(Worker·IndexedDB)·허브·온보딩·설정 영속화 (T-1-007)", "선수 만들기 SCR-002~004·복구 코드 발급·API 클라이언트 (T-1-008)", "동기화 배선·저장 배지·충돌 대화상자·오프라인 (T-1-011)", "진로·입단 테스트·이벤트·결과·제안·계약·대시보드 화면, first-contract e2e (T-1-009)", "설정 데이터 섹션(복구·삭제·대조)·법적 문서·실제 api 복구 e2e (T-1-012)", "선수 성별 RadioGroup·선호 포지션 라벨·확인 요약 (T-1-016)", "Google 연결 행·병합 선택·로그아웃, google-link e2e (T-1-013)", "resilience·recovery-conflict·keyboard·session-length·perf e2e, 완료 조건 표 15행 (T-1-014)", "포지션 탭 키보드 도달·선호/주포지션 표시·국외 이전 표·결과 aria-live·이탈 경고 (T-1-017)", "브라우저 Worker 시즌 리플레이 hash·9.6~15 ms (T-2-006)", "프리시즌 계획·시즌 준비·역할 제안·대시보드 시즌화·능력치 상세, season/a11y e2e, E2E_PORT (T-2-007)", "핵심 경기 챕터 화면 SCR-031·chapterCandidates·RESOLVE_CHAPTER·재생, chapter e2e·DEV 시드 오버라이드 (T-2-008)", "시즌 결산 화면 SCR-015(+SCR-006)·변화 원인 분리·CompareCards·CountUp·응답 유실 복구·다이어리 연대기 (T-2-009)", "Phase 2 완료 조건 검증: 포지션군 fixture 3종·결정론·집계·B > A·시즌 완주 세션 측정·rngState.draws e2e·68건 3회 무결점 (T-2-011)", "LINE TEST 준비: useServiceSeason(kv 캐시·폴백)·허브 LINE TEST 배너·테스트 시즌 배지·LOCKED 시 생성 비활성·퍼널/결산/이탈 분석 이벤트·service-season e2e 4종 (T-2-012)", "온보딩 첫 슬라이드 LINE TEST 안내 (T-2-015)", "PRE_NEGOTIATION 제안 비교·상세·협상·거절·수락, LOAN_RETURN 결정, SCR-020 이적·임대 결과 (T-3-005)", "로컬 QA 표시 오류 4건 수정: 컵 코드·출전 집계·진로 서사·입단 테스트 ID (PR #63)", "narrative.ts agent 토큰 (T-3-005)", "NATIONAL_TEAM pending → SCR-013 라우팅·callUp 어댑터·데뷔 챕터 맥락 격리 (T-4-004)", "디자인 PR #66 재통합(T-4-007): 19개 화면 모바일 개편 + T-3-005·T-4-004 화면 정합, SCR-020 디자인 정합 — 사용자 머지 7bd3d84", "staging 리허설 자동화 config·spec·e2e:staging (T-2-016, PR #69)", "e2e 간헐 실패 안정화·CI 실패 아티팩트·INTEREST 시드 케이스 (T-4-010, PR #74)", "SCR-020 잔류 결과 STAY 카드·loader redirect 튕김 제거 (T-4-011, PR #76)", "[핫픽스] e2e 헬퍼 `&interested=` 허용·season.spec 프리시즌 단언 — main 회귀 해소 (T-4-019, PR #81)", "[핫픽스] injury.spec poll textContent 타임아웃 — 반복 플레이크 원인 제거 (T-4-020, PR #80)", "DEV 팩 오버라이드·라벨 함수·phase4-seeds (T-4-009, PR #84→#85)", "step 7 전부 거절 문구·휴대폰 탭 시장 사유 (T-4-014, PR #78→#85)", "SCR-020 RETURN 문구·{manager} 토큰 (T-4-016, PR #79→#85)", "season.spec:17 프리시즌 도착 허용 (T-4-021, PR #83→#85)", "Phase 4 화면 SCR-016·018·021·022·024·032 맥락 패널·점진 공개·실제 적용량 결과 카드 D-64 (T-4-005a/b/c·T-4-018, Codex 통합 PR #85)", "season_settled·step_passed 초 단위 elapsedSec, 호출부 careerId 배선 (T-4-024, PR #94)", "대표팀 agent 축 문구 정합: SCR-032 안내·SCR-014 결과 맥락 (T-4-028, PR #98, D-66)", "SCR-032 대표팀 자연 플레이 seed(0.3.0 시즌 20)·reachability·360px 캡처 2장 (T-4-023, PR #100)", "스테이징 UI 이슈 #86~#89 수정 (PR #91)", "Phase 3 잔여 진행 안내·결산 원인 설명 보강 (PR #92)", "Phase 5 화면 SCR-025~028 FULL TIME→Legacy→연대기→최종 프로필·보관 UX, 선수 생성·게임 연출 (T-5-006, PR #103)", "성인 진로 개선·시즌 1 게임성 갱신 (PR #115), 스모크 온보딩 대기 (PR #116)", "공개 가이드·opt-in SEO (PR #117), 공개 검색 허용 (PR #119)", "밝고 정돈된 스포츠 앱 UI/UX 개편 (PR #120), 홈 허브 소식·피드백 (PR #121)", "설정 푸터(UX-002 #123)·앱 버전(UX-005 #124)·접이식 설정(UX-003 #125)·포인트 색상 프리셋(UX-004 #126)·구단 이름 커스터마이즈·팀 플레이버(UX-001 #128)", "FOUC 제거 (PR #129), 플래그 브랜드 (PR #130)", "앱 셸 100dvh 고정 프레임·내부 스크롤 (UX-006, PR #131)", "커리어 홈 탭 정보형 대시보드 (UX-007, PR #134), 홈 탭 태그 노출·진행 바 접근성·소식 필터 (PR #136)", "TeamBadge 구단 이니셜·컬러 배지 (UX-008, PR #133), 결과 화면 내부 태그 ID 노출 제거 (PR #132)", "SCR-034 시네마틱 인트로 (UX-009, PR #135)", "경기·시즌 결과 서사 헤드라인·선수 배너 (UX-010, PR #139), 선수 생성·계약 완료 트레이딩 카드 (UX-011, PR #138)"], []),
+    ("CI · 배포", "GitHub Actions · Pages · Workers", ["main 푸시 staging 자동 배포 (T-0-010, PR #46)", "Mac self-hosted runner 전환 (PR #96, U-017)", "expanded QA staging 격리 (T-4-027, PR #95), preview cleanup 오류 보고 (PR #99)", "PR은 quick checks만, staging 배포는 main에서만 (PR #102)", "수동 Production Release 워크플로·가드·D1 검사 (PR #107) → 첫 운영 배포 9/6 12:33 (PR #111), 재배포 9/7 01:51", "staging·production 두 환경(expanded 제거, PR #122·#127)", "offside-lab.com 커스텀 도메인·legacy workers.dev 로그인 호환 (PR #118)"], ["U-014 Workers Paid 플랜", "U-004 Sentry DSN"]),
 ]
 
 
@@ -247,9 +268,32 @@ ETA = [
     ("9/5 21:36", "T-4-023 캡처로 P4-7 문구 게이트 확인(SCR-032 협회 관계 vs SCR-014 에이전트 관계) → D-66, T-4-028 문구 2줄 워커 투입(사용자 세션 T-4-025~027과 번호 충돌로 재번호)"),
     ("9/5 21:47", "PR #98(T-4-028 대표팀 agent 축 문구) 머지 `452d32d`. T-4-023(캡처 PR)은 마무리 워커가 체인·PR 진행 중"),
     ("9/5 21:55", "PR #100(T-4-023 대표팀 자연 플레이 캡처) 머지 `42046ef` — D-65 출시 게이트 3/3 종료, Phase 3·4 게이트 종결. 남은 것은 사용자 항목(U-017 runner·U-014·U-015·U-005)과 Phase 5 PR #77"),
-    ("9/5~", "T-4-009 머지 → T-4-005 화면 묶음 3개 병행 → T-4-006 e2e·세션 길이 → T-4-012 domain 수정 → Phase 4 완료 조건 표. 사용자: U-014·U-015(LINE TEST 9/8)·U-005"),
+    ("9/5 23:07", "사용자 PR #92(Phase 3 잔여 진행 안내·결산 원인 설명)·#99(preview cleanup 오류 보고) 머지. 21:58 #91(스테이징 UI 이슈 #86~#89)"),
+    ("9/5 23:22", "PR #102 CI 정리: PR은 quick checks만, staging 배포는 main에서만 — self-hosted runner(PR #96) 위. 이 시점부터 코드 PR은 전부 사용자 세션(Codex·Sol·Luna)"),
+    ("9/6 09:46", "PR #103 Phase 5 통합 머지(#77 대체): 선수 생성·게임 연출·Legacy 1.1·한국 모듈, T-5-001~008 종결. 10:01 PR #106 배포 후 인수 검증(staging·expanded 실제 은퇴·보관·재로드). 후속 이슈 #104·#105"),
+    ("9/6 11:57", "PR #107 수동 Production Release 워크플로(가드·D1 검사) 준비 → 12:14 #108 시즌 1 무기한 운영 시즌(svc_season_1, isTest=false, 종료일 없음)·문의 이메일(U-010 해소) → #109·#110 D1 릴리스 검사 수정"),
+    ("9/6 12:33", "첫 운영 배포 성공(Production Release run 34009144236, 82a46fc) — SEASON 1: KICKOFF 출시. 12:40 PR #111 출시 기록"),
+    ("9/6 13:11", "PR #112 Google 로그인 운영 연결(개인 GCP offside-football-prod, U-003 완료) → 13:15 운영 배포(run 34010879775). 13:29 #114 재인증 시 미동기화 진행 보존"),
+    ("9/6 17:46", "운영 3회 플레이 QA(Luna, 커리어 A/B/C: 실패 뒤 회복·성인 진로 전환 약함) → PR #115 시즌 1 게임성 개선(19세 시작·성인 진로, 룰셋 1.3.0·팩 0.5.0 운영 활성). 17:52 #116 스모크 안정화"),
+    ("9/6 19:49", "PR #117 공개 가이드·opt-in SEO → 19:53 #118 offside-lab.com 도메인 연결(U-001 완료, legacy workers.dev 로그인 호환) → 20:02 #119 공개 검색 허용"),
+    ("9/6 21:51", "PR #120 밝고 정돈된 스포츠 앱 UI/UX 개편. 22:10 #121 홈 허브 소식·피드백, 22:25 #122 staging·production 두 환경으로 정리(expanded 제거)"),
+    ("9/6 23:09", "UX 묶음 머지: #127 expanded 참조 정리, #123 설정 푸터(UX-002), #124 앱 버전(UX-005), #128 구단 이름(UX-001), #129 FOUC 제거, #125 접이식 설정(UX-003), #126 포인트 색상(UX-004). 23:32 #130 플래그 브랜드"),
+    ("9/7 00:10", "PR #131 앱 셸 전환(UX-006, 100dvh 고정 프레임·내부 스크롤)"),
+    ("9/7 01:11", "PR #134 커리어 홈 탭 정보형 대시보드(UX-007). 01:15 #132 결과 화면 태그 ID 노출 제거·#133 TeamBadge(UX-008)·#135 시네마틱 인트로(UX-009)"),
+    ("9/7 01:45", "#136 홈 탭 정리·#137 api health CORS 수정·#138 트레이딩 카드(UX-011)·#139 결과 서사 헤드라인(UX-010) 머지 → 01:51~01:52 Production Release 2회 성공(939fe48)"),
+    ("9/7 오전", "Claude 세션 복귀(문서 전담): 9/5 밤~9/7 새벽 사용자 세션 출시 기록을 보드·결정 로그·현황판에 반영. Phase 5·6 완료, Phase 7 진행 중으로 표기"),
+    ("9/7~", "Phase 7 운영·밸런스: 이슈 #104·#105, Google 브랜딩 인증, Search Console·네이버 등록, staging 룰셋·팩 승격(1.3.0/0.5.0), 실사용자 플레이 시간 측정(D1), U-014 Workers Paid·U-004 Sentry·U-005 종이 플레이테스트. Phase 8 WORLD STAGE는 그 뒤"),
 ]
 DECISIONS = [
+    ("Phase 5·6 종결·Phase 7 진행 표기(9/7 오전, 이 세션)", "보드에 Phase 5 백로그(T-5-001~008 완료)·Phase 6 출시 항목·Phase 7 운영 항목 표를 추가. 사용자 세션 작업은 새 T- 번호를 만들지 않고 PR 번호(UX-xxx)로 기록해 번호 충돌을 피한다. Phase 2~7 상태는 표 집계 대신 출시·운영 기록으로 고정(생성기 PHASE_OVERRIDE)."),
+    ("LINE TEST 대신 시즌 1 공개 출시(9/6, 사용자)", "별도 테스트 시즌 없이 svc_season_1을 isTest=false·종료일 미정으로 운영에 열었다(PR #108). U-015 테스터 모집은 대체되고 line-test-plan은 staging 예행·측정 쿼리 절차로만 남는다. staging은 아직 svc_line_test(1.0.0/0.1.0)."),
+    ("운영 릴리스는 수동 워크플로(9/6, PR #107)", "main 푸시는 최소 검사→staging 배포→스모크까지만. 운영은 Production Release 워크플로를 사용자가 수동 실행(가드·D1 검사 #109·#110). 첫 배포 9/6 12:33, 재배포 9/7 01:51~01:52. docs-only 푸시는 검사·배포 생략."),
+    ("두 환경만 유지(9/6, PR #122·#127)", "expanded 환경 삭제. staging(offside-staging D1)·production(offside-production D1)만 남기고 참조 정리. T-4-027 expanded QA 격리(PR #95)는 역할을 마침."),
+    ("도메인 offside-lab.com(9/6, PR #118, U-001)", "web offside-lab.com·api api.offside-lab.com. legacy workers.dev 로그인 호환을 유지하고, 공개 검색은 커스텀 도메인 로그인 검증 뒤 허용(PR #119). Search Console·네이버 등록은 후속."),
+    ("Google 로그인 운영(9/6, PR #112·#114, U-003)", "개인 GCP 프로젝트 offside-football-prod OAuth로 운영 연결. 실제 최초 연결·재로그인·기존 기록 보존 확인. 재인증 중 미동기화 진행은 보존(#114). 브랜딩 인증은 후속."),
+    ("시즌 1 게임성 개선 1.3.0(9/6, PR #115)", "운영 3회 플레이 QA(커리어 A/B/C) 결론 — 실패 뒤 회복·성인 진로 전환이 약함 — 에 따라 19세 시작·성인 진로 진행을 개선하고 룰셋 1.3.0·팩 0.5.0을 운영 활성. 시즌 1 진행 중 룰셋 교체를 허용한 사용자 결정."),
+    ("Phase 5 통합 PR #103(9/6 09:46, 사용자)", "PR #77 보류를 풀고 선수 생성·게임 연출·Legacy 1.1·한국 모듈을 한 PR로 통합. 합성 grade 비율은 관찰 목표(hard gate 아님), 저장 호환성·포지션 공정성·Archive 고득점 도달성·population 무결성은 필수. 후속 이슈 #104·#105."),
+    ("CI 최소화(9/5 23:22, PR #102)", "PR은 quick checks만 돌리고 staging 배포는 main에서만. Mac self-hosted runner(PR #96, U-017 완료) 위에서 돈다. 9/5 밤부터 코드 PR은 사용자 세션이 열고 머지하며 Claude는 문서·CI 검토만."),
     ("오케스트레이터 인계·Luna Max 전용", "Claude 세션 ec0b55e0…은 T-3-003 뒤 정지. Codex는 docs·배정·리뷰·검증·머지만 담당하고 구현·테스트 코드는 Orca gpt-5.6-luna reasoning max 워커에게만 맡긴다."),
     ("PR #54 리뷰: 이적·임대 P1 세 건", "태그 제거 전 배신 판정, LOAN의 약속 위반 이동 페널티 제외, 임대 만료 자동 FA의 원소속 상태 복원을 수정. golden revision/draw 변화와 career-11 계약 3시즌은 기능 요구로 수용하고 transferFee 표시는 T-3-005로 이관."),
     ("PR #48 리뷰: contract.isLastSeason 정정", "ADR-010 유도식에서 진행 중 마지막 시즌의 잔여는 0이므로 season !== null && remaining === 0일 때만 1(브리프의 <= 1은 오류). stepSummaries 11개 유지, followUp도 presentation 제외, 골든 멀티라인 수용."),
@@ -421,7 +465,8 @@ def bar(c, total):
     d = c["done"] / total * 100 if total else 0; ac = c["active"] / total * 100 if total else 0; b = c["blocked"] / total * 100 if total else 0
     return f'<div class="bar"><i class="d" style="width:{d:.1f}%"></i><i class="a" style="left:{d:.1f}%;width:{ac:.1f}%"></i><i class="b" style="left:{d+ac:.1f}%;width:{b:.1f}%"></i></div>'
 
-def phase_state(rows):
+def phase_state(rows, name=None):
+    if name and PHASE_OVERRIDE.get(name): return PHASE_OVERRIDE[name]
     if not rows: return "todo"
     c = counts(rows)
     if c["done"] == len(rows): return "done"
@@ -444,7 +489,7 @@ def render():
     open_u = [u for u in uacts if u["status"] == "todo"]
     deferred_u = [u for u in uacts if u["status"] == "deferred"]
     done_u = [u for u in uacts if u["status"] in ("completed", "done")]
-    cur_phase = next((n for n, _, sec, _ in PHASES if sec and phase_state(phase_rows[n]) == "active"), None)
+    cur_phase = next((n for n, _, sec, _ in PHASES if phase_state(phase_rows[n], n) == "active"), None)
 
     a(f"""<title>OFFSIDE 개발 현황판</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -468,9 +513,9 @@ def render():
 """)
 
     # 1. 로드맵
-    a('<section><h2>어디까지 왔나</h2><p class="sub">Phase 8단계 로드맵. 막대는 각 Phase 작업의 완료·진행·사용자 대기 비율입니다.</p><div class="road">')
+    a('<section><h2>어디까지 왔나</h2><p class="sub">Phase 8단계 로드맵. 막대는 각 Phase 작업의 완료·진행·사용자 대기 비율입니다. 표가 없는 Phase는 출시·운영 기록으로 상태를 정합니다.</p><div class="road">')
     for name, title, sec, meaning in PHASES:
-        rows = phase_rows[name]; st = phase_state(rows); c = counts(rows) if rows else None
+        rows = phase_rows[name]; st = phase_state(rows, name); c = counts(rows) if rows else None
         label = {"done": "완료", "active": "진행 중", "todo": "예정"}[st]
         a(f'<div class="ph {st}"><div class="n">{esc(name)}</div><div class="t">{esc(title)}</div>{pill({"done":"done","active":"in-progress","todo":"todo"}[st])}')
         if rows:
@@ -479,7 +524,7 @@ def render():
     a('</div><div class="legend"><span><i style="background:var(--success)"></i>완료</span><span><i style="background:var(--accent)"></i>진행 중</span><span><i style="background:var(--danger);opacity:.6"></i>사용자 액션 대기</span><span><i style="background:var(--surface-2);border:1px solid var(--border)"></i>예정</span></div></section>')
 
     # 2. 워커 + 사용자 할 일
-    a('<div class="cols"><section><h2>지금 돌고 있는 워커</h2><p class="sub">Sonnet 5 세션이 Orca 워크트리 하나씩 맡아 브리프대로 구현합니다. 동시 최대 3명.</p>')
+    a('<div class="cols"><section><h2>지금 돌고 있는 워커</h2><p class="sub">브리프를 받은 구현 에이전트(Claude Code Workflow Sonnet 5, 또는 사용자 세션의 Codex·Sol·Luna)가 워크트리 하나씩 맡아 PR을 엽니다.</p>')
     if active:
         a('<div class="workers">')
         for w in active:
@@ -530,7 +575,7 @@ def render():
     for name, title, sec, meaning in PHASES:
         rows = phase_rows[name]
         if not rows: continue
-        st = phase_state(rows); c = counts(rows)
+        st = phase_state(rows, name); c = counts(rows)
         a(f'<details class="inner"{" open" if st == "active" else ""}><summary>{esc(name)} · {esc(title)} <small>{c["done"]}/{len(rows)} 완료</small></summary><div class="body"><div class="tscroll"><table><thead><tr><th>ID</th><th>영역</th><th>작업</th><th>상태</th><th>메모</th></tr></thead><tbody>')
         for r in rows:
             area = " · ".join(x for x in [r["track"] and f"트랙 {r['track']}", r["area"], r["wave"] and f"Wave {r['wave']}"] if x)
