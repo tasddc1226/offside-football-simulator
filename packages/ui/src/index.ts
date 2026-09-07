@@ -33,6 +33,8 @@ export { PageShell } from './components/PageShell.js';
 export type { PageShellProps } from './components/PageShell.js';
 export { FootballMark, ScreenIntro } from './components/ScreenIntro.js';
 export type { ScreenIntroProps } from './components/ScreenIntro.js';
+export { ScreenTransition, SCREEN_TRANSITION_MS } from './components/ScreenTransition.js';
+export type { ScreenTransitionProps } from './components/ScreenTransition.js';
 export { PlayerHeader } from './components/PlayerHeader.js';
 export type { PlayerHeaderField, PlayerHeaderProps } from './components/PlayerHeader.js';
 export { RadioGroup, RadioGroupItem } from './components/RadioGroup.js';

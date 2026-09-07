@@ -162,6 +162,34 @@ test('키보드로 실행한 화면 이동에는 슬라이드 효과를 넣지 �
   expect(await routeAnimations(page)).toEqual([]);
 });
 
+// UX-012: 전역 화면 전환(ScreenTransition)은 프로그레스 바 연출로 3초를 채운 뒤에만 다음 화면으로
+// 넘어간다. 모션이 켜진(이 파일 beforeEach의 no-preference) 상태에서 허브 "커리어 시작"을 눌러
+// 실제 3초 연출 자체를 검증한다 — 키보드 입력 모달리티도 더 이상 스킵 조건이 아니다(D-70).
+test('허브 "커리어 시작"은 3초 고정 진행 바 연출을 보여준 뒤에만 SCR-002로 이동한다', async ({
+  page,
+}) => {
+  await openEmptyHub(page);
+  const startButton = page.getByRole('button', { name: '커리어 시작' });
+  await expect(startButton).toBeVisible();
+
+  const clickedAt = Date.now();
+  await startButton.click();
+
+  const progressbar = page.getByRole('progressbar');
+  await expect(progressbar).toBeVisible();
+  await expect(progressbar).toHaveAttribute('aria-valuemin', '0');
+  await expect(progressbar).toHaveAttribute('aria-valuemax', '100');
+  await expect(page.getByText('새 인생을 준비합니다')).toBeVisible();
+
+  // 3초가 다 차기 전에는 아직 허브에 머문다(스킵 불가 — 바로 계속 버튼도, 키보드 스킵도 없다).
+  await page.waitForTimeout(1500);
+  await expect(page).toHaveURL(/\/$/);
+
+  // 그러나 3초 안팎에는 반드시 다음 화면(SCR-002 자리표시)으로 넘어간다.
+  await expect(page).toHaveURL(/\/career\/.+\/create$/, { timeout: 4000 });
+  expect(Date.now() - clickedAt).toBeGreaterThanOrEqual(2700);
+});
+
 for (const preference of ['OS', '앱'] as const) {
   test(`${preference} 모션 감소 설정에서 화면 전환 슬라이드를 생략한다`, async ({ page }) => {
     if (preference === 'OS') {

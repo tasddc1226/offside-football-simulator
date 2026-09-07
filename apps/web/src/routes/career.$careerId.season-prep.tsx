@@ -179,6 +179,7 @@ function SeasonPrepScreen() {
         title="시즌 준비 완료"
         detail={`${SIMULATION_MODE_LABEL_KO[mode]} 모드와 ${TRAINING_FOCUS_LABEL_KO[focus]} 계획을 저장했습니다.`}
         onComplete={continueToSeason}
+        stages={['훈련 계획 저장 중', '일정표 준비 중', '피치 입장']}
       >
         <p className="os-eyebrow">KICKOFF · 새 시즌이 시작됩니다</p>
       </GameCompletionTransition>

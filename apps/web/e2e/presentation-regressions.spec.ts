@@ -70,7 +70,11 @@ test.describe('저장 성공 전환', () => {
     );
 
     await page.getByRole('button', { name: 'KICKOFF' }).click();
-    await expect(page.getByText('선수 등록 완료')).toBeVisible();
+    // UX-012: ScreenTransition은 3초 고정이다 — role=progressbar가 뜨고, 그 3초를 실제로 채운
+    // 뒤에야(reducedMotion:'no-preference'라 즉시 완료로 빠지지 않는다) 다음 화면으로 넘어간다.
+    await expect(page.getByText('선수 등록을 완료합니다')).toBeVisible();
+    await expect(page.getByRole('progressbar')).toBeVisible();
+    await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
     await expect(page.getByRole('heading', { level: 1, name: '복구 코드를 저장하세요' })).toBeVisible();
     await page.getByRole('button', { name: '계속' }).click();
     await advanceUntilOffers(page);

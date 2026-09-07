@@ -1,0 +1,151 @@
+import { act, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ScreenTransition, SCREEN_TRANSITION_MS } from './ScreenTransition.js';
+
+describe('ScreenTransition', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('제목·설명·진행 바·단계 문구를 접근성 속성과 함께 렌더한다', () => {
+    vi.useFakeTimers();
+    render(
+      <ScreenTransition
+        title="새 인생을 준비합니다"
+        detail="선수 카드를 등록합니다"
+        onComplete={() => {}}
+        reducedMotion={false}
+        stages={['선수 카드 등록 중', '첫 시즌 준비 중', '피치 입장']}
+      />,
+    );
+
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('새 인생을 준비합니다')).toBeInTheDocument();
+    expect(screen.getByText('선수 카드를 등록합니다')).toBeInTheDocument();
+    expect(screen.getByText('선수 카드 등록 중')).toBeInTheDocument();
+    const progressbar = screen.getByRole('progressbar');
+    expect(progressbar).toHaveAttribute('aria-valuemin', '0');
+    expect(progressbar).toHaveAttribute('aria-valuemax', '100');
+  });
+
+  it('waitFor 없이는 3초가 지나야 onComplete를 정확히 한 번 호출한다', async () => {
+    vi.useFakeTimers();
+    const onComplete = vi.fn();
+    render(<ScreenTransition title="t" detail="d" onComplete={onComplete} reducedMotion={false} />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SCREEN_TRANSITION_MS - 1);
+    });
+    expect(onComplete).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  it('waitFor가 3초보다 늦게 끝나면 그 완료까지 onComplete를 미룬다', async () => {
+    vi.useFakeTimers();
+    const onComplete = vi.fn();
+    let resolveWait: () => void = () => {};
+    const waitFor = new Promise<void>((resolve) => {
+      resolveWait = resolve;
+    });
+
+    render(
+      <ScreenTransition
+        title="t"
+        detail="d"
+        onComplete={onComplete}
+        reducedMotion={false}
+        waitFor={waitFor}
+      />,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SCREEN_TRANSITION_MS);
+    });
+    // 3초는 지났지만 실제 작업이 아직 안 끝났다 — 아직 완료를 부르지 않는다.
+    expect(onComplete).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveWait();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  it('waitFor가 reject되면 onComplete 대신 onError를 호출하고 이후에도 완료하지 않는다', async () => {
+    vi.useFakeTimers();
+    const onComplete = vi.fn();
+    const onError = vi.fn();
+    let rejectWait: (error: unknown) => void = () => {};
+    const waitFor = new Promise<void>((_resolve, reject) => {
+      rejectWait = reject;
+    });
+
+    render(
+      <ScreenTransition
+        title="t"
+        detail="d"
+        onComplete={onComplete}
+        onError={onError}
+        reducedMotion={false}
+        waitFor={waitFor}
+      />,
+    );
+
+    await act(async () => {
+      rejectWait(new Error('실패'));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(onError).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SCREEN_TRANSITION_MS);
+    });
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it('모션 감소는 3초를 기다리지 않고 waitFor 완료 즉시 onComplete를 호출한다', async () => {
+    vi.useFakeTimers();
+    const onComplete = vi.fn();
+    let resolveWait: () => void = () => {};
+    const waitFor = new Promise<void>((resolve) => {
+      resolveWait = resolve;
+    });
+
+    render(
+      <ScreenTransition
+        title="t"
+        detail="d"
+        onComplete={onComplete}
+        reducedMotion
+        waitFor={waitFor}
+      />,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SCREEN_TRANSITION_MS);
+    });
+    // waitFor가 아직 안 끝났으니 모션 감소라도 완료를 부르지 않는다.
+    expect(onComplete).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveWait();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  it('모션 감소이고 waitFor가 없으면 거의 즉시 onComplete를 호출한다', async () => {
+    vi.useFakeTimers();
+    const onComplete = vi.fn();
+    render(<ScreenTransition title="t" detail="d" onComplete={onComplete} reducedMotion />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+});

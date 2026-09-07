@@ -34,7 +34,7 @@ import { useUiStore } from '../shared/ui-store.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
 import { PlayerCard } from '../shared/PlayerCard.js';
-import { GameCompletionTransition, GamePending } from '../shared/game-presentation.js';
+import { GameCompletionTransition } from '../shared/game-presentation.js';
 import { SCREEN_ROUTES } from '../routes.js';
 
 export const Route = createFileRoute('/career/$careerId/confirm')({
@@ -51,6 +51,19 @@ const CAPTION_STYLE = {
 type RecoveryPhase =
   { kind: 'CHECKING' } | { kind: 'ISSUED'; code: string } | { kind: 'UNAVAILABLE' };
 
+/** UX-012: CONFIRM_PLAYER·ADVANCE 중 실패한 단계를 ScreenTransition의 onError로 그대로
+ * 넘기기 위한 캐리어. 재시도(handleKickoff 재호출)는 confirmCompletedRef로 이미 끝난 단계를
+ * 건너뛰므로 여기엔 실패한 단계의 코드만 담는다. */
+class KickoffError extends Error {
+  readonly code: string;
+  readonly retryable: boolean;
+  constructor(code: string, message: string, retryable: boolean) {
+    super(message);
+    this.code = code;
+    this.retryable = retryable;
+  }
+}
+
 function ConfirmScreen() {
   const { careerId } = Route.useParams();
   const search = Route.useSearch();
@@ -59,7 +72,7 @@ function ConfirmScreen() {
   const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
 
   const [postConfirmInFlight, setPostConfirmInFlight] = useState(false);
-  const [ceremonyReady, setCeremonyReady] = useState(false);
+  const [kickoffWaitFor, setKickoffWaitFor] = useState<Promise<void> | null>(null);
   const kickoffInFlightRef = useRef(false);
   const confirmCompletedRef = useRef(false);
   const advanceCompletedRef = useRef(false);
@@ -147,56 +160,60 @@ function ConfirmScreen() {
     }
   }
 
-  async function handleKickoff() {
+  /** CONFIRM_PLAYER → ADVANCE를 순서대로 실행한다. 이미 끝난 단계는 각자의 ref로 건너뛰어
+   * 재시도가 확정 명령을 반복하지 않는다. 실패는 KickoffError로 던져 ScreenTransition의
+   * onError(handleKickoffError)가 기존 오류 UI로 넘긴다 — 3초 연출은 이 프라미스를 기다린다. */
+  async function performKickoff(): Promise<void> {
+    if (!confirmCompletedRef.current) {
+      const confirmed = await confirmMutation.mutateAsync({ careerId });
+      if (!confirmed.ok) {
+        throw new KickoffError(
+          confirmed.error.code,
+          confirmed.error.message,
+          RETRYABLE_BY_CODE[confirmed.error.code],
+        );
+      }
+      confirmCompletedRef.current = true;
+      await recordFunnelReached(careerId, 'PLAYER_CONFIRMED');
+    }
+
+    if (!advanceCompletedRef.current) {
+      const advanced = await advanceMutation.mutateAsync({ careerId });
+      if (!advanced.ok) {
+        // 확정은 성공했지만 다음 결정 계산이 실패했다. 재시도는 확정 명령을 반복하지 않고
+        // ADVANCE부터 이어 간다.
+        throw new KickoffError(
+          advanced.error.code,
+          advanced.error.message,
+          RETRYABLE_BY_CODE[advanced.error.code],
+        );
+      }
+      advanceCompletedRef.current = true;
+    }
+  }
+
+  function handleKickoff() {
     if (kickoffInFlightRef.current) return;
     kickoffInFlightRef.current = true;
     setPostConfirmInFlight(true);
     const commandId = crypto.randomUUID();
     toCommitting(commandId);
+    setKickoffWaitFor(performKickoff());
+  }
 
-    try {
-      if (!confirmCompletedRef.current) {
-        const confirmed = await confirmMutation.mutateAsync({ careerId });
-        if (!confirmed.ok) {
-          toError({
-            code: confirmed.error.code,
-            message: confirmed.error.message,
-            retryable: RETRYABLE_BY_CODE[confirmed.error.code],
-          });
-          setPostConfirmInFlight(false);
-          kickoffInFlightRef.current = false;
-          return;
-        }
-        confirmCompletedRef.current = true;
-        await recordFunnelReached(careerId, 'PLAYER_CONFIRMED');
-      }
-
-      if (!advanceCompletedRef.current) {
-        const advanced = await advanceMutation.mutateAsync({ careerId });
-        if (!advanced.ok) {
-          // 확정은 성공했지만 다음 결정 계산이 실패했다. 재시도는 확정 명령을 반복하지 않고
-          // ADVANCE부터 이어 간다.
-          toError({
-            code: advanced.error.code,
-            message: advanced.error.message,
-            retryable: RETRYABLE_BY_CODE[advanced.error.code],
-          });
-          kickoffInFlightRef.current = false;
-          return;
-        }
-        advanceCompletedRef.current = true;
-      }
-
-      setCeremonyReady(true);
-    } catch {
+  function handleKickoffError(error: unknown) {
+    kickoffInFlightRef.current = false;
+    setKickoffWaitFor(null);
+    if (error instanceof KickoffError) {
+      toError({ code: error.code, message: error.message, retryable: error.retryable });
+    } else {
       toError({
         code: 'UNKNOWN',
         message: '확정하지 못했습니다. 다시 시도해 주세요.',
         retryable: true,
       });
-      if (!confirmCompletedRef.current) setPostConfirmInFlight(false);
-      kickoffInFlightRef.current = false;
     }
+    if (!confirmCompletedRef.current) setPostConfirmInFlight(false);
   }
 
   async function continueAfterCeremony() {
@@ -280,23 +297,21 @@ function ConfirmScreen() {
   }
 
   if (screenState.kind === 'COMMITTING') {
-    if (ceremonyReady) {
-      return (
-        <GameCompletionTransition
-          title="선수 등록 완료"
-          detail="선수 카드가 저장되었습니다. 첫 번째 이야기로 이동합니다."
-          onComplete={() => void continueAfterCeremony()}
-          visual={<OffsideLine />}
-        >
-          <DisplayWord word="KICKOFF" caption="선수가 피치에 들어섭니다" />
-        </GameCompletionTransition>
-      );
-    }
+    // toCommitting과 setKickoffWaitFor는 handleKickoff 안에서 항상 같은 이벤트 핸들러 틱에
+    // 함께 설정된다 — null인 채로 COMMITTING만 보일 일은 없다.
+    if (kickoffWaitFor === null) return null;
     return (
-      <GamePending
-        title="선수 카드를 등록하고 있습니다"
-        detail="선수 정보와 첫 번째 이야기를 한 번만 저장하고 있어요."
-      />
+      <GameCompletionTransition
+        title="선수 등록을 완료합니다"
+        detail="선수 카드와 첫 번째 이야기를 저장하고 있습니다."
+        onComplete={() => void continueAfterCeremony()}
+        onError={handleKickoffError}
+        waitFor={kickoffWaitFor}
+        visual={<OffsideLine />}
+        stages={['선수 정보 확정 중', '첫 이야기 준비 중', '피치 입장']}
+      >
+        <DisplayWord word="KICKOFF" caption="선수가 피치에 들어섭니다" />
+      </GameCompletionTransition>
     );
   }
 

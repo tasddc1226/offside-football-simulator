@@ -186,33 +186,42 @@ describe('SCR-034 온보딩', () => {
     expect(useUiStore.getState().onboardingSeen).toBe(true);
   });
 
-  it('새 인생 시작은 커리어를 한 번 만들고 브랜드 전환 뒤 SCR-002로 이동한다', async () => {
-    const router = renderAt('/onboarding');
-    await skipCinematicIntro();
-    await screen.findByRole('heading', {
-      level: 1,
-      name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
-    });
+  it(
+    '새 인생 시작은 커리어를 한 번 만들고 브랜드 전환 뒤 SCR-002로 이동한다',
+    async () => {
+      const router = renderAt('/onboarding');
+      await skipCinematicIntro();
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
+      });
 
-    fireEvent.click(screen.getByRole('button', { name: '다음' }));
-    fireEvent.click(screen.getByRole('button', { name: '다음' }));
-    fireEvent.click(screen.getByRole('button', { name: /새 인생 시작/ }));
+      fireEvent.click(screen.getByRole('button', { name: '다음' }));
+      fireEvent.click(screen.getByRole('button', { name: '다음' }));
+      fireEvent.click(screen.getByRole('button', { name: /새 인생 시작/ }));
 
-    expect(await screen.findByText('새 인생이 시작됩니다')).toBeInTheDocument();
+      expect(await screen.findByText('새 인생이 시작됩니다')).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toMatch(/^\/career\/.+\/create$/);
-    });
-    expect(useUiStore.getState().onboardingSeen).toBe(true);
-    expect(
-      await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' }),
-    ).toBeInTheDocument();
-  });
+      // UX-012: ScreenTransition은 3초 고정이다 — 실제 연출 시간을 그대로 검증하므로 기본
+      // waitFor 타임아웃(1000ms)보다 넉넉하게 잡는다.
+      await waitFor(
+        () => {
+          expect(router.state.location.pathname).toMatch(/^\/career\/.+\/create$/);
+        },
+        { timeout: 4000 },
+      );
+      expect(useUiStore.getState().onboardingSeen).toBe(true);
+      expect(
+        await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' }),
+      ).toBeInTheDocument();
+    },
+    8000,
+  );
 });
 
 describe('SCR-001 허브 - 빈 상태', () => {
   beforeEach(() => {
-    useUiStore.setState({ onboardingSeen: true });
+    useUiStore.setState({ onboardingSeen: true, reducedMotion: 'ON' });
   });
 
   it('"커리어 시작" 클릭 시 커리어를 만들고 SCR-002 자리표시로 이동한다', async () => {
