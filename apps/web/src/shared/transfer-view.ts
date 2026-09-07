@@ -171,6 +171,30 @@ export function canNegotiateOffer(offer: Offer, recordRevision: number, ask: Neg
   return offerStatus(offer, actionableRevision(recordRevision)) === 'OPEN' && offer.negotiable[negotiationKey(ask)];
 }
 
+/**
+ * D-69(이슈 #141): 협상 버튼이 비활성일 때 사람이 읽을 수 있는 사유를 고정 문구로 돌려준다(우선순위 고정).
+ * `canNegotiateOffer`가 보지 않는 나머지 두 NOT_NEGOTIABLE 조건(packages/domain/src/simulate.ts
+ * negotiateOffer 2404~2413행: `negotiatedAsk !== null`·`ask === 'ROLE' && rolePromise === 'STARTER'`)까지
+ * 여기서 미리 알려준다 — 그렇지 않으면 도메인이 조용히 거절하는데 버튼은 활성으로 보이는 경우가 생긴다
+ * (운영 QA #141: WG·CM·ST에서 "역할 협상" 클릭 뒤 결과 없이 disabled). `canNegotiateOffer`는 그대로 두고
+ * 호출부에서 두 함수를 함께 쓴다(이 함수가 null일 때만 활성).
+ */
+export function negotiationDisabledReason(offer: Offer, recordRevision: number, ask: NegotiationAsk): string | null {
+  if (offerStatus(offer, actionableRevision(recordRevision)) !== 'OPEN') {
+    return '이 제안은 더 이상 열려 있지 않습니다';
+  }
+  if (!offer.negotiable[negotiationKey(ask)]) {
+    return `이 제안 유형에서는 ${ASK_LABELS[ask]} 협상이 열리지 않습니다`;
+  }
+  if (offer.negotiatedAsk !== null) {
+    return '협상 기회 1회를 이미 사용했습니다';
+  }
+  if (ask === 'ROLE' && offer.rolePromise === 'STARTER') {
+    return '이미 최고 역할(주전)입니다';
+  }
+  return null;
+}
+
 export function canAcceptOffer(offer: Offer, recordRevision: number): boolean {
   const status = offerStatus(offer, actionableRevision(recordRevision));
   return status === 'OPEN' || status === 'COUNTERED';

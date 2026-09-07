@@ -23,7 +23,7 @@ import { routeTree } from '../routeTree.gen.js';
 import { careerQueryOptions } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { useUiStore } from '../shared/ui-store.js';
-import { shouldShowRecoveryOpportunityNotice } from './career.$careerId.offers.js';
+import { recoveryOpportunityHeadline, shouldShowRecoveryOpportunityNotice } from './career.$careerId.offers.js';
 
 const engineHolder = vi.hoisted(() => ({ promise: null as Promise<unknown> | null }));
 
@@ -223,5 +223,18 @@ describe('recovery opportunity notice', () => {
       ),
     ).toBe(false);
     expect(shouldShowRecoveryOpportunityNotice(state, [buildFakeOffer('top')])).toBe(false);
+  });
+});
+
+// T-7-004 D-69(이슈 #141): "최근 두 시즌 출전이 없었습니다"가 룰셋 값(1.3.0 = 2시즌)과 무관하게
+// 하드코딩돼 있었다. n=1은 "지난 시즌", n>=2는 실제 시즌 수를 문장에 넣는다.
+describe('recovery opportunity headline text', () => {
+  it('1시즌이면 "지난 시즌 출전이 없었습니다."를 쓴다', () => {
+    expect(recoveryOpportunityHeadline(1)).toBe('지난 시즌 출전이 없었습니다.');
+  });
+
+  it('2시즌 이상이면 시즌 수를 문장에 넣는다', () => {
+    expect(recoveryOpportunityHeadline(2)).toBe('최근 2시즌 출전이 없었습니다.');
+    expect(recoveryOpportunityHeadline(3)).toBe('최근 3시즌 출전이 없었습니다.');
   });
 });

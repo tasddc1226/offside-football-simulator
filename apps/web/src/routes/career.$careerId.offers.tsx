@@ -69,6 +69,16 @@ export function shouldShowRecoveryOpportunityNotice(
   return hasConsecutiveZeroMinutes && hasActualOpportunity;
 }
 
+/**
+ * D-69(이슈 #141): "최근 두 시즌 출전이 없었습니다"가 룰셋 값(1.3.0 = 2시즌)과 무관하게 하드코딩돼
+ * 있었다. 1이면 "지난 시즌", 2 이상이면 실제 시즌 수를 문장에 넣는다.
+ */
+export function recoveryOpportunityHeadline(zeroMinutesConsecutiveSeasons: number): string {
+  return zeroMinutesConsecutiveSeasons === 1
+    ? '지난 시즌 출전이 없었습니다.'
+    : `최근 ${zeroMinutesConsecutiveSeasons}시즌 출전이 없었습니다.`;
+}
+
 function MarketSummary({ state, offers }: { state: CareerState; offers: readonly Offer[] }) {
   const pending = state.pending;
   if (pending === null || (pending.kind !== 'OFFERS' && pending.kind !== 'CONTRACT')) return null;
@@ -207,6 +217,8 @@ function MarketOffers({
   const safeOfferId = pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT' ? pending.market.safeOfferId : null;
   const rejectAllKind: 'OFFERS' | 'CONTRACT' = pending?.kind === 'CONTRACT' ? 'CONTRACT' : 'OFFERS';
   const parentTeamName = state.contract?.teamName ?? state.clubHistory.at(-1)?.teamName ?? null;
+  const showRecoveryNotice = shouldShowRecoveryOpportunityNotice(state, offers);
+  const recoveryPolicy = rulesetForCareer(state).transferRules.recovery;
   return (
     <>
       <details className="os-panel">
@@ -215,10 +227,10 @@ function MarketOffers({
           <MarketSummary state={state} offers={offers} />
         </div>
       </details>
-      {shouldShowRecoveryOpportunityNotice(state, offers) ? (
+      {showRecoveryNotice && recoveryPolicy !== undefined ? (
         <Card className="font-os text-os-text-2" style={BODY_STYLE}>
-          최근 두 시즌 출전이 없었습니다. 현재 계약 유지와 하부리그 기회를 비교해 보세요. 역할 약속은
-          출전 보장이 아니며 경쟁 상황도 함께 확인하세요.
+          {recoveryOpportunityHeadline(recoveryPolicy.zeroMinutesConsecutiveSeasons)} 현재 계약 유지와
+          하부리그 기회를 비교해 보세요. 역할 약속은 출전 보장이 아니며 경쟁 상황도 함께 확인하세요.
         </Card>
       ) : null}
       {offers.length === 0 ? (
