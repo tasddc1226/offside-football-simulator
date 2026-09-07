@@ -165,6 +165,12 @@ describe('deriveSeasonResultView', () => {
     expect(deriveSeasonResultView(baseState({ seasonHistory: [] }), 0, ruleset)).toBeNull();
   });
 
+  it('선발 경쟁 순위(finalRank)를 selection에 그대로 담는다(결산 "선발 등급" 행의 경쟁 순위 표시용)', () => {
+    const result = seasonResult({ selectionSummary: { ...seasonResult().selectionSummary, finalRank: 7 } });
+    const view = deriveSeasonResultView(baseState({ seasonHistory: [summary(result)] }), 0, ruleset);
+    expect(view?.selection.finalRank).toBe(7);
+  });
+
   it('출전 약속 미이행의 실제 규칙 벌점과 전체 신뢰 변화를 구분한다', () => {
     const result = seasonResult({
       promiseFulfilment: { promised: 'STARTER', delivered: 'BENCH', fulfilled: false, minutesShareBp: 2000 },

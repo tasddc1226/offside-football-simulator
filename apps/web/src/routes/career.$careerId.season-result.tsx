@@ -476,7 +476,8 @@ function SeasonResultScreen() {
               선발 등급 (시즌 시작 → 종료)
             </dt>
             <dd>
-              {SQUAD_ROLE_LABELS[selection.roleAtStart]} → {SQUAD_ROLE_LABELS[selection.roleAtEnd]}
+              {SQUAD_ROLE_LABELS[selection.roleAtStart]} → {SQUAD_ROLE_LABELS[selection.roleAtEnd]} (경쟁 순위{' '}
+              {selection.finalRank}위)
             </dd>
           </div>
           <div>
