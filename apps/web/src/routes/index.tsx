@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DisplayWord,
   EmptyState,
   ErrorState,
   FootballMark,
@@ -44,6 +45,7 @@ import { BRAND_SUBTITLE } from '../shared/brand.js';
 import { useUiStore } from '../shared/ui-store.js';
 import { PublicIntroduction } from '../shared/public-content.js';
 import { HomeCommunity } from '../shared/home-community.js';
+import { GameCompletionTransition } from '../shared/game-presentation.js';
 import '../shared/home-hub.css';
 
 const HUB_TABS = ['resume', 'squad', 'retired'] as const;
@@ -280,6 +282,8 @@ function HubScreen() {
     null,
   );
   const startingRef = useRef(false);
+  const [kickoffWaitFor, setKickoffWaitFor] = useState<Promise<void> | null>(null);
+  const createdCareerIdRef = useRef<string | null>(null);
   const serviceSeason = useServiceSeason();
   // T-2-012 D-54: 조회가 안 끝났으면(로딩·에러) 폴백으로 커리어 생성은 그대로 허용한다 —
   // LOCKED·ARCHIVED가 확인된 경우에만 막는다.
@@ -314,31 +318,35 @@ function HubScreen() {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-001', careerPhase: 'NONE' });
   }, []);
 
-  async function handleStart() {
+  /** UX-012: DRAFT 생성 커맨드를 ScreenTransition의 waitFor로 넘긴다 — 3초 연출 뒤(또는 생성이
+   * 더 오래 걸리면 그 완료 뒤) /create로 이동한다. 실패 시에는 기존 토스트 경로를 그대로 쓴다. */
+  function handleStart() {
     // isPending은 첫 클릭 뒤 리렌더가 있어야 반영된다. 같은 틱의 연속 클릭(더블탭)이
     // mutateAsync를 두 번 트리거해 DRAFT를 두 개 만들지 않도록 동기 플래그로 막는다.
     if (startingRef.current) return;
     startingRef.current = true;
-    try {
-      const result = await createMutation.mutateAsync({ simulationMode: defaultSimulationMode });
-      if (result.ok) {
-        void navigate({
-          to: '/career/$careerId/create',
-          params: { careerId: result.snapshot.careerId },
-        });
-      } else {
-        setToast({
-          variant: 'error',
-          message: '커리어를 시작하지 못했습니다. 다시 시도해 주세요.',
-        });
-      }
-    } catch {
-      // engine.client.execute의 IndexedDB 트랜잭션이 reject(예: QuotaExceededError)하면
-      // {ok:false} 대신 예외가 온다. delete와 같은 실패 안내를 보여준다.
-      setToast({ variant: 'error', message: '커리어를 시작하지 못했습니다. 다시 시도해 주세요.' });
-    } finally {
-      startingRef.current = false;
-    }
+    setKickoffWaitFor(
+      (async () => {
+        // engine.client.execute의 IndexedDB 트랜잭션이 reject(예: QuotaExceededError)하면
+        // {ok:false} 대신 예외가 온다 — 둘 다 이 프라미스의 reject로 합쳐 onError 하나로 처리한다.
+        const result = await createMutation.mutateAsync({ simulationMode: defaultSimulationMode });
+        if (!result.ok) throw new Error('커리어를 시작하지 못했습니다.');
+        createdCareerIdRef.current = result.snapshot.careerId;
+      })(),
+    );
+  }
+
+  function handleStartError() {
+    startingRef.current = false;
+    setKickoffWaitFor(null);
+    setToast({ variant: 'error', message: '커리어를 시작하지 못했습니다. 다시 시도해 주세요.' });
+  }
+
+  function handleStartComplete() {
+    const careerId = createdCareerIdRef.current;
+    startingRef.current = false;
+    if (careerId === null) return;
+    void navigate({ to: '/career/$careerId/create', params: { careerId } });
   }
 
   function changeTab(value: string) {
@@ -348,6 +356,21 @@ function HubScreen() {
 
   if (!query.isPending && !query.isError && query.data.length === 0 && !onboardingSeen) {
     return <PublicIntroduction />;
+  }
+
+  if (kickoffWaitFor !== null) {
+    return (
+      <GameCompletionTransition
+        title="새 인생을 준비합니다"
+        detail="첫 무대에 서기 위한 준비를 마칩니다."
+        onComplete={handleStartComplete}
+        onError={handleStartError}
+        waitFor={kickoffWaitFor}
+        stages={['선수 카드 등록 중', '첫 시즌 준비 중', '피치 입장']}
+      >
+        <DisplayWord word="OFFSIDE" caption={BRAND_SUBTITLE} />
+      </GameCompletionTransition>
+    );
   }
 
   return (

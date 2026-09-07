@@ -120,6 +120,7 @@ function OnboardingScreen() {
         title="새 인생이 시작됩니다"
         detail="지금까지 훈련해 온 환경과 현재 마주한 기회를 선택하세요."
         onComplete={() => void navigate({ to: '/career/$careerId/create', params: { careerId: createdCareerId } })}
+        stages={['선수 카드 등록 중', '첫 시즌 준비 중', '피치 입장']}
       >
         <DisplayWord word="OFFSIDE" caption={BRAND_SUBTITLE} />
       </GameCompletionTransition>

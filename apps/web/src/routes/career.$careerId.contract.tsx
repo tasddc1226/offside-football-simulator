@@ -18,6 +18,7 @@ import {
 } from '../shared/labels.js';
 import { formatKrw } from '../shared/format.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
+import { GameCompletionTransition } from '../shared/game-presentation.js';
 import { committedTransferRevision, resolveTransferResultView } from '../shared/transfer-result.js';
 import { getTeamIdentity } from '../shared/team-identity.js';
 import {
@@ -180,6 +181,9 @@ function ContractScreen() {
   const [negotiationResult, setNegotiationResult] = useState<NegotiationResultView | null>(null);
   const [negotiateInlineError, setNegotiateInlineError] = useState<string | null>(null);
   const [firstContractCommit, setFirstContractCommit] = useState<FirstContractCommit | null>(null);
+  // UX-012: "커리어 시작" 클릭 뒤 3초 고정 전환을 거쳐 대시보드로 이동한다. 계약은 이미 확정된
+  // 뒤라 waitFor는 필요 없다(순수 연출).
+  const [startingFirstSeason, setStartingFirstSeason] = useState(false);
   const [readySignatureFingerprint, setReadySignatureFingerprint] = useState<string | null>(null);
   const operationRef = useRef<PendingOperation | null>(null);
   const negotiationPanelRef = useRef<HTMLDivElement>(null);
@@ -210,6 +214,20 @@ function ContractScreen() {
   const { record, state } = query.data;
   const pending = state.pending;
   if (firstContractCommit !== null) {
+    if (startingFirstSeason) {
+      return (
+        <GameCompletionTransition
+          title="첫 시즌으로"
+          detail={`${firstContractCommit.teamName}에서 새로운 여정이 시작됩니다.`}
+          onComplete={() =>
+            void navigate({ to: '/career/$careerId', params: { careerId }, search: { signed: true }, replace: true })
+          }
+          stages={['라커룸 배정 중', '훈련 일정 준비 중', '피치 입장']}
+        >
+          <p className="os-eyebrow">KICKOFF · 첫 시즌이 시작됩니다</p>
+        </GameCompletionTransition>
+      );
+    }
     return (
       <div className="os-screen" aria-live="polite">
         <ScreenIntro eyebrow="계약 체결 완료" title="프로의 첫 유니폼" description={`${firstContractCommit.playerName} 선수의 첫 프로 계약이 저장되었습니다.`} />
@@ -227,7 +245,7 @@ function ContractScreen() {
         />
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>확정된 계약 내용은 커리어 기록에 그대로 남습니다.</p>
         <div className="os-action-dock">
-          <Button variant="primary" onClick={() => void navigate({ to: '/career/$careerId', params: { careerId }, search: { signed: true }, replace: true })}>커리어 시작</Button>
+          <Button variant="primary" onClick={() => setStartingFirstSeason(true)}>커리어 시작</Button>
         </div>
       </div>
     );

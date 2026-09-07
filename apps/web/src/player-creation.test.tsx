@@ -318,6 +318,13 @@ describe('SCR-002→003: 포지션 변경 시 기존 아키타입을 자동 확�
 });
 
 describe('SCR-004 확인 및 복구 코드', () => {
+  // UX-012: KICKOFF 확정 뒤 ScreenTransition은 3초 고정이다 — 이 통합 테스트는 실제 연출
+  // 시간을 검증하는 목적이 아니므로(app-motion.spec.ts e2e가 그 역할을 한다) 모션 감소로
+  // 즉시 완료시켜 findBy* 기본 타임아웃(1000ms) 안에서 끝나게 한다.
+  beforeEach(() => {
+    useUiStore.setState({ reducedMotion: 'ON' });
+  });
+
   async function seedReadyForConfirm(engine: AppEngine): Promise<string> {
     const careerId = await createDraftCareer(engine);
     await updateDraft(engine, careerId, {

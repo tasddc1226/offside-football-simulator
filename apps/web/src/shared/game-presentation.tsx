@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Button, FootballMark } from '@offside/ui';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Button, FootballMark, ScreenTransition } from '@offside/ui';
 import { useReducedMotion } from './ui-store.js';
 import './game-presentation.css';
 
 const DEFAULT_REVEAL_MS = 560;
 const FAST_REVEAL_MS = 180;
-const DEFAULT_COMPLETION_MS = 650;
 const DEFAULT_DELAYED_REVEAL_MS = 420;
 
 export function GamePending({ title, detail }: { title: string; detail: string }) {
@@ -24,60 +23,47 @@ export function GamePending({ title, detail }: { title: string; detail: string }
   );
 }
 
-/** A saved-success bridge between a command screen and its real destination. */
+/**
+ * UX-012: 저장 성공 화면과 실제 목적 화면 사이를 잇는 3초 고정 전환. `@offside/ui`의
+ * `ScreenTransition`에 앱의 모션 감소 설정(useReducedMotion, 시스템+앱 통합값)만 주입하는 얇은
+ * 래퍼다 — 지속 시간 prop도, 입력 모달리티(키보드) 스킵도 두지 않는다(사용자 결정: 3초 고정,
+ * 스킵 불가). `waitFor`를 넘기면 onComplete는 max(3초, waitFor 완료) 시점에 불리고, waitFor가
+ * reject되면 onError로 넘어간다.
+ */
 export function GameCompletionTransition({
   title,
   detail,
   onComplete,
-  durationMs = DEFAULT_COMPLETION_MS,
+  onError,
   visual,
   children,
+  stages,
+  waitFor,
 }: {
   title: string;
   detail: string;
   onComplete: () => void;
-  durationMs?: number;
+  onError?: (error: unknown) => void;
   visual?: ReactNode;
   children?: ReactNode;
+  stages?: string[];
+  waitFor?: Promise<unknown>;
 }) {
   const reducedMotion = useReducedMotion();
-  const keyboard = document.documentElement.dataset.inputModality === 'keyboard';
-  const completedRef = useRef(false);
-  const timerRef = useRef<number | null>(null);
-  const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
-
-  const complete = useCallback(() => {
-    if (completedRef.current) return;
-    completedRef.current = true;
-    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-    onCompleteRef.current();
-  }, []);
-
-  useEffect(() => {
-    timerRef.current = window.setTimeout(complete, reducedMotion || keyboard ? 0 : durationMs);
-    return () => {
-      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-    };
-  }, [complete, durationMs, keyboard, reducedMotion]);
 
   return (
-    <div className="os-game-completion flex flex-col items-center gap-os-4 text-center" role="status" aria-live="polite">
-      {visual ?? (
-        <div className="os-game-completion-mark" aria-hidden="true">
-          <span className="os-game-completion-line" />
-          <FootballMark className="os-game-completion-ball h-10 w-10 text-os-accent" />
-        </div>
-      )}
-      <div className="flex flex-col gap-os-1">
-        <strong className="font-os text-os-text">{title}</strong>
-        <span className="font-os text-os-text-2">{detail}</span>
-      </div>
+    <ScreenTransition
+      title={title}
+      detail={detail}
+      onComplete={onComplete}
+      reducedMotion={reducedMotion}
+      {...(onError !== undefined ? { onError } : {})}
+      {...(visual !== undefined ? { visual } : {})}
+      {...(stages !== undefined ? { stages } : {})}
+      {...(waitFor !== undefined ? { waitFor } : {})}
+    >
       {children}
-      {!reducedMotion && !keyboard ? (
-        <Button variant="ghost" onClick={complete}>바로 계속</Button>
-      ) : null}
-    </div>
+    </ScreenTransition>
   );
 }
 
