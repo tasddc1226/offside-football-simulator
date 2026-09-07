@@ -181,4 +181,31 @@ describe('ScreenTransition', () => {
     expect(nearEnd).toBeGreaterThan(mid);
     expect(nearEnd).toBeLessThanOrEqual(96);
   });
+
+  it('.os-shell-main 조상이 있으면 그 콘텐츠 높이(clientHeight - 상하 padding)를 인라인 min-height로 설정한다', () => {
+    const shellMain = document.createElement('main');
+    shellMain.className = 'os-shell-main';
+    Object.defineProperty(shellMain, 'clientHeight', { value: 600, configurable: true });
+    const originalGetComputedStyle = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element: Element, ...rest) => {
+      if (element === shellMain) {
+        return { paddingTop: '16px', paddingBottom: '40px' } as CSSStyleDeclaration;
+      }
+      return originalGetComputedStyle(element, ...rest);
+    });
+    document.body.appendChild(shellMain);
+
+    const { container } = render(
+      <ScreenTransition title="t" detail="d" onComplete={() => {}} reducedMotion />,
+      { container: shellMain.appendChild(document.createElement('div')) },
+    );
+
+    const overlay = container.querySelector('.os-screen-transition') as HTMLElement;
+    expect(overlay).not.toBeNull();
+    // 600(clientHeight) - 16(padding-top) - 40(padding-bottom) = 544
+    expect(overlay.style.minHeight).toBe('544px');
+
+    document.body.removeChild(shellMain);
+    vi.restoreAllMocks();
+  });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { FootballMark } from './ScreenIntro.js';
 
 /**
@@ -91,6 +91,46 @@ export function ScreenTransition({
 
   useEffect(() => {
     containerRef.current?.focus();
+  }, []);
+
+  // `.os-screen-transition`은 `.os-shell-main`(확정 높이를 가진 셸 본문) 안에서 그 세로 공간을
+  // 통째로 대체하는 용도로 쓰인다(컴포넌트 계약). CSS `min-height: 100%`는 실제 조상 체인의
+  // 중간 래퍼(os-route-motion·os-swipe-surface·os-swipe-content)가 모두 display:block auto
+  // 높이라 퍼센트가 0으로 접혀 효과가 없다 — 그렇다고 그 래퍼들에 height:100%를 주면 모든 라우트
+  // 레이아웃에 영향을 준다. 대신 이 컴포넌트가 스스로 `.os-shell-main`을 찾아 그 clientHeight에서
+  // 상하 padding을 뺀 값(콘텐츠 박스 높이)을 인라인 min-height로 잡는다 — border-box이므로 이
+  // 값이 곧 `.os-screen-transition`이 셸 본문의 콘텐츠 영역을 정확히 채우는 높이다.
+  // `.os-shell-main` 조상이 없으면(스토리·테스트 등 비셸 맥락) CSS의 100% 폴백을 그대로 둔다.
+  useLayoutEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    function syncHeight() {
+      const shellMain = node?.closest('.os-shell-main');
+      if (!(shellMain instanceof HTMLElement) || !node) return;
+      const computed = window.getComputedStyle(shellMain);
+      const paddingTop = Number.parseFloat(computed.paddingTop) || 0;
+      const paddingBottom = Number.parseFloat(computed.paddingBottom) || 0;
+      const contentHeight = shellMain.clientHeight - paddingTop - paddingBottom;
+      if (contentHeight > 0) {
+        node.style.minHeight = `${contentHeight}px`;
+      }
+    }
+
+    const shellMain = node.closest('.os-shell-main');
+    if (!(shellMain instanceof HTMLElement)) {
+      // 셸 밖(스토리·단위 테스트)에서는 CSS min-height: 100% 폴백에 맡긴다.
+      return;
+    }
+
+    syncHeight();
+
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(shellMain);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
