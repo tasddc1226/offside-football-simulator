@@ -7,6 +7,8 @@ import {
   buildOfferRows,
   canAcceptOffer,
   canNegotiateOffer,
+  isOfferNonNegotiable,
+  negotiationDisabledReason,
   negotiationKey,
   offerStatus,
   offerProjectionNotice,
@@ -115,6 +117,54 @@ describe('T-3-005 revision-based offer state', () => {
     const validity = rows.find((row) => row.id === 'validity')?.cells[0]?.value;
     expect(validity).toContain('앞으로 1번의 결정 안에 처리해야 합니다');
     expect(validity).toContain('화면을 보는 것만으로는 줄지 않습니다');
+  });
+});
+
+// T-7-004 D-69(이슈 #141): 우선순위 순 — OPEN 아님 → 이 제안 유형에서 협상 불가 → 1회 소진 → 이미 주전 → null.
+describe('T-7-004 negotiationDisabledReason', () => {
+  it('OPEN이 아니면(철회·만료·이미 협상됨) 사유는 "OPEN 아님"이 가장 먼저 온다', () => {
+    const withdrawn = offer({ negotiationState: 'WITHDRAWN', negotiable: { wage: true, role: true, length: true } });
+    expect(negotiationDisabledReason(withdrawn, 5, 'WAGE')).toBe('이 제안은 더 이상 열려 있지 않습니다');
+  });
+
+  it('OPEN이지만 이 ask가 negotiable하지 않으면 제안 유형 문구를 돌려준다', () => {
+    const notNegotiable = offer({ negotiable: { wage: false, role: false, length: false } });
+    expect(negotiationDisabledReason(notNegotiable, 5, 'WAGE')).toBe('이 제안 유형에서는 주급 협상이 열리지 않습니다');
+  });
+
+  it('negotiable해도 이미 다른 ask로 협상 기회를 썼으면 1회 소진 사유를 돌려준다', () => {
+    const alreadyNegotiated = offer({
+      negotiable: { wage: true, role: false, length: false },
+      negotiatedAsk: 'ROLE',
+    });
+    expect(negotiationDisabledReason(alreadyNegotiated, 5, 'WAGE')).toBe('협상 기회 1회를 이미 사용했습니다');
+  });
+
+  it('ROLE 협상은 이미 주전이면 도메인 NOT_NEGOTIABLE과 같은 이유로 막는다', () => {
+    const alreadyStarter = offer({ negotiable: { wage: false, role: true, length: false }, rolePromise: 'STARTER' });
+    expect(negotiationDisabledReason(alreadyStarter, 5, 'ROLE')).toBe('이미 최고 역할(주전)입니다');
+  });
+
+  it('네 조건을 모두 벗어나면 null(활성)을 돌려준다', () => {
+    const negotiable = offer({ negotiable: { wage: true, role: false, length: false } });
+    expect(negotiationDisabledReason(negotiable, 5, 'WAGE')).toBeNull();
+  });
+});
+
+// PR #174 리뷰 후속: "협상 없이 조건 그대로 결정" 캡션은 negotiable이 전부 false일 때만 사실이다.
+describe('T-7-004 isOfferNonNegotiable', () => {
+  it('negotiable의 wage·role·length가 전부 false면(현 구단 잔류·첫 계약) true다', () => {
+    const safe = offer({ negotiable: { wage: false, role: false, length: false } });
+    expect(isOfferNonNegotiable(safe)).toBe(true);
+  });
+
+  it('negotiable 중 하나라도 true면(예: 이적 제안이 협상을 1회 써서 COUNTERED됐어도) false다', () => {
+    const countered = offer({
+      negotiable: { wage: true, role: false, length: false },
+      negotiationState: 'COUNTERED',
+      negotiatedAsk: 'WAGE',
+    });
+    expect(isOfferNonNegotiable(countered)).toBe(false);
   });
 });
 

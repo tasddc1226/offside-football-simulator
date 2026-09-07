@@ -1,6 +1,6 @@
 // SCR-010 첫 계약 상세와 SCR-017 시장 결정 상세를 같은 URL에서 처리한다.
 // 첫 계약은 기존 사인 흐름을 보존하고, 시장 제안은 협상·개별 거절·수락을 제공한다.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import type { NegotiationAsk, Offer } from '@offside/domain';
 import { Button, Card, ErrorState, ScreenIntro, TeamBadge } from '@offside/ui';
@@ -25,7 +25,9 @@ import {
   buildNegotiationResultView,
   canAcceptOffer,
   canNegotiateOffer,
+  isOfferNonNegotiable,
   MARKET_REASON_LABEL_KO,
+  negotiationDisabledReason,
   offerDetailRows,
   offerProjectionNotice,
   offerStatus,
@@ -87,56 +89,72 @@ const CAPTION_STYLE = {
 } as const;
 
 const ASK_LABELS: Record<NegotiationAsk, string> = { WAGE: '주급', ROLE: '역할', LENGTH: '기간' };
+const NEGOTIATION_ASKS = Object.keys(ASK_LABELS) as NegotiationAsk[];
 
-function NegotiationResultPanel({ view, onBack }: { view: NegotiationResultView; onBack: () => void }) {
+function NegotiationResultPanel({
+  view,
+  onBack,
+  backLabel = '제안 목록으로',
+  panelRef,
+}: {
+  view: NegotiationResultView;
+  onBack: () => void;
+  backLabel?: string;
+  panelRef?: RefObject<HTMLDivElement | null>;
+}) {
   return (
-    <Card className="flex flex-col gap-os-3" data-testid="negotiation-result">
-      <h2 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-        협상 결과
-      </h2>
-      <p className="font-os text-os-text" style={BODY_STYLE} aria-live="polite" data-testid="negotiation-result-live">
-        {view.reason}
-      </p>
-      <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+    // D-69: 협상 결과는 항상 보이고 포커스를 받는다(ContractScreen의 useEffect가 이 노드로
+    // scrollIntoView·focus한다). tabIndex=-1은 시각적 탭 순서에 새 정지점을 추가하지 않으면서
+    // 프로그램적 포커스만 허용한다.
+    <div ref={panelRef} tabIndex={-1}>
+      <Card className="flex flex-col gap-os-3" data-testid="negotiation-result">
+        <h2 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
+          협상 결과
+        </h2>
+        <p className="font-os text-os-text" style={BODY_STYLE} aria-live="polite" data-testid="negotiation-result-live">
+          {view.reason}
+        </p>
+        <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+          <div>
+            <dt>협상 항목</dt>
+            <dd className="text-os-text">{view.askLabel}</dd>
+          </div>
+          <div>
+            <dt>변경 전</dt>
+            <dd className="text-os-text">{view.before}</dd>
+          </div>
+          <div>
+            <dt>변경 후</dt>
+            <dd className="text-os-text">{view.after}</dd>
+          </div>
+          <div>
+            <dt>상태</dt>
+            <dd className="text-os-text">{view.outcome === 'COUNTERED' ? '협상된 제안' : '철회됨'}</dd>
+          </div>
+        </dl>
         <div>
-          <dt>협상 항목</dt>
-          <dd className="text-os-text">{view.askLabel}</dd>
+          <h3 className="font-os font-semibold text-os-text" style={CAPTION_STYLE}>
+            남은 대안
+          </h3>
+          {view.remainingOffers.length > 0 ? (
+            <ul className="flex flex-col gap-os-1 font-os text-os-text-2" style={CAPTION_STYLE} aria-label="남은 대안">
+              {view.remainingOffers.map((candidate) => (
+                <li key={candidate.id}>
+                  {candidate.teamName} · {candidate.kind}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+              남은 대안이 없습니다.
+            </p>
+          )}
         </div>
-        <div>
-          <dt>변경 전</dt>
-          <dd className="text-os-text">{view.before}</dd>
-        </div>
-        <div>
-          <dt>변경 후</dt>
-          <dd className="text-os-text">{view.after}</dd>
-        </div>
-        <div>
-          <dt>상태</dt>
-          <dd className="text-os-text">{view.outcome === 'COUNTERED' ? '협상된 제안' : '철회됨'}</dd>
-        </div>
-      </dl>
-      <div>
-        <h3 className="font-os font-semibold text-os-text" style={CAPTION_STYLE}>
-          남은 대안
-        </h3>
-        {view.remainingOffers.length > 0 ? (
-          <ul className="flex flex-col gap-os-1 font-os text-os-text-2" style={CAPTION_STYLE} aria-label="남은 대안">
-            {view.remainingOffers.map((candidate) => (
-              <li key={candidate.id}>
-                {candidate.teamName} · {candidate.kind}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-            남은 대안이 없습니다.
-          </p>
-        )}
-      </div>
-      <Button variant="secondary" onClick={onBack}>
-        제안 목록으로
-      </Button>
-    </Card>
+        <Button variant="secondary" onClick={onBack}>
+          {backLabel}
+        </Button>
+      </Card>
+    </div>
   );
 }
 
@@ -160,9 +178,11 @@ function ContractScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [negotiationResult, setNegotiationResult] = useState<NegotiationResultView | null>(null);
+  const [negotiateInlineError, setNegotiateInlineError] = useState<string | null>(null);
   const [firstContractCommit, setFirstContractCommit] = useState<FirstContractCommit | null>(null);
   const [readySignatureFingerprint, setReadySignatureFingerprint] = useState<string | null>(null);
   const operationRef = useRef<PendingOperation | null>(null);
+  const negotiationPanelRef = useRef<HTMLDivElement>(null);
   const committing = acceptMutation.isPending || negotiateMutation.isPending || rejectMutation.isPending;
 
   useCommittingExitGuard(committing);
@@ -174,6 +194,16 @@ function ContractScreen() {
       (pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT') && pending.market.reason === 'FIRST_CONTRACT' ? 'SCR-010' : 'SCR-017';
     platform.analytics.track('screen_viewed', { screenId, careerPhase: query.data.state.seasonPhase });
   }, [query.data?.record.revision, query.data?.state.pending?.kind]);
+
+  // D-69: 협상 결과가 새로 생기면(성공·실패·철회 모두) 패널로 시선을 옮긴다. tabIndex=-1 노드로만
+  // 포커스하므로 다른 입력 포커스를 가로채지 않는다.
+  useEffect(() => {
+    if (negotiationResult === null) return;
+    const panel = negotiationPanelRef.current;
+    if (panel === null) return;
+    panel.scrollIntoView({ block: 'nearest' });
+    panel.focus();
+  }, [negotiationResult]);
 
   if (query.data === undefined) return null;
 
@@ -202,19 +232,33 @@ function ContractScreen() {
       </div>
     );
   }
-  if (pending === null || (pending.kind !== 'OFFERS' && pending.kind !== 'CONTRACT')) return null;
-  const offer = pending.offers.find((candidate) => candidate.id === offerId);
+  // D-69: pending이 OFFERS/CONTRACT가 아니어도(마지막 남은 제안의 협상이 실패하면 도메인이 pending
+  // 전체를 null로 지운다 — packages/domain/src/simulate.ts negotiateOffer) 이미 받은 협상 결과가
+  // 있으면 그 패널을 먼저 보여준다. 여기서 return null하면 화면이 비어버리는 것이 원래 결함이었다.
+  const activePending =
+    pending !== null && (pending.kind === 'OFFERS' || pending.kind === 'CONTRACT') ? pending : null;
+  const offer = activePending?.offers.find((candidate) => candidate.id === offerId);
   if (offer === undefined) {
     if (negotiationResult === null) return null;
+    const hasRemainingOffers = (activePending?.offers.length ?? 0) > 0;
     return (
       <div className="flex flex-col gap-os-6">
         <NegotiationResultPanel
           view={negotiationResult}
-          onBack={() => void navigate({ to: '/career/$careerId/offers', params: { careerId }, replace: true })}
+          panelRef={negotiationPanelRef}
+          backLabel={hasRemainingOffers ? '제안 목록으로' : '커리어 홈'}
+          onBack={() =>
+            void navigate(
+              hasRemainingOffers
+                ? { to: '/career/$careerId/offers', params: { careerId }, replace: true }
+                : { to: '/career/$careerId', params: { careerId }, replace: true },
+            )
+          }
         />
       </div>
     );
   }
+  if (pending === null || (pending.kind !== 'OFFERS' && pending.kind !== 'CONTRACT')) return null;
   const selectedOffer: Offer = offer;
 
   const safeOfferId = pending.market.safeOfferId;
@@ -332,6 +376,7 @@ function ContractScreen() {
     // pending에서 직접 센다(mutation 응답이 아니라 이미 로드된 조회 데이터라 유실 걱정이 없다).
     const interestedClubCount = selectedOffer.id === safeOfferId ? marketOfferCount - 1 : undefined;
     setErrorMessage(null);
+    setNegotiateInlineError(null);
     setAnnouncement('처리 중');
     try {
       const result = await acceptMutation.mutateAsync({ careerId, offerId });
@@ -387,12 +432,16 @@ function ContractScreen() {
       beforeOffer: selectedOffer,
     };
     setErrorMessage(null);
+    setNegotiateInlineError(null);
     setAnnouncement('협상 처리 중');
     try {
       const result = await negotiateMutation.mutateAsync({ careerId, offerId, ask });
       if (!result.ok) {
         operationRef.current = null;
-        setErrorMessage('이 항목은 지금 협상할 수 없습니다. 제안 상태를 확인해 주세요.');
+        // D-69: 이 실패는 저장 상태를 놓친 게 아니라 도메인이 즉시 돌려준 거절(NOT_NEGOTIABLE·
+        // OFFER_EXPIRED 등)이다. recoverFromError로 재조회할 필요가 없으므로 하단 공용
+        // errorMessage(재시도 버튼)가 아니라 협상 버튼 바로 아래 인라인 문구로 보여준다.
+        setNegotiateInlineError('이 항목은 지금 협상할 수 없습니다. 제안 상태를 확인해 주세요.');
         setAnnouncement('협상할 수 없습니다');
         return;
       }
@@ -419,6 +468,7 @@ function ContractScreen() {
     submittingRef.current = true;
     operationRef.current = { kind: 'reject', offerId, beforeNegotiationState: selectedOffer.negotiationState };
     setErrorMessage(null);
+    setNegotiateInlineError(null);
     setAnnouncement('거절 처리 중');
     try {
       const result = await rejectMutation.mutateAsync({ careerId, offerId });
@@ -563,6 +613,17 @@ function ContractScreen() {
   }
 
   const marketOfferIdentity = getTeamIdentity(offer.teamId);
+  // D-69: canNegotiateOffer(그대로 둔다)는 OPEN·negotiable만 본다. negotiationDisabledReason은
+  // 도메인의 나머지 NOT_NEGOTIABLE 조건(1회 소진·이미 주전)까지 포함해 버튼마다 사유를 고정 문구로 낸다.
+  const negotiationReasons = NEGOTIATION_ASKS.map((ask) => ({
+    ask,
+    reason: negotiationDisabledReason(offer, record.revision, ask),
+  }));
+  // PR 174 리뷰 후속: "협상 없이 조건 그대로 결정" 캡션은 negotiable(wage·role·length)이 전부
+  // false인 제안(현 구단 잔류·첫 계약)에서만 사실이다. negotiationReasons가 전부 비활성이어도
+  // (예: 이적 제안에서 협상을 1회 써서 COUNTERED된 경우) negotiable 중 하나는 여전히 true일 수 있어
+  // 이 캡션을 쓰면 틀린 안내가 된다.
+  const offerNotNegotiable = isOfferNonNegotiable(offer);
   return (
     <div className="os-screen">
       <p className="sr-only" aria-live="polite" data-testid="contract-announcement">
@@ -583,6 +644,7 @@ function ContractScreen() {
       {negotiationResult !== null ? (
         <NegotiationResultPanel
           view={negotiationResult}
+          panelRef={negotiationPanelRef}
           onBack={() => void navigate({ to: '/career/$careerId/offers', params: { careerId }, replace: true })}
         />
       ) : null}
@@ -630,18 +692,36 @@ function ContractScreen() {
           협상은 제안마다 한 번만 가능합니다. 철회된 제안은 다시 협상할 수 없습니다.
         </p>
         <div className="grid grid-cols-1 gap-os-2 sm:grid-cols-3">
-          {(Object.keys(ASK_LABELS) as NegotiationAsk[]).map((ask) => (
+          {negotiationReasons.map(({ ask, reason }) => (
             <Button
               key={ask}
               variant="secondary"
               onClick={() => void handleNegotiate(ask)}
-              disabled={committing || !canNegotiateOffer(offer, record.revision, ask)}
+              disabled={committing || !canNegotiateOffer(offer, record.revision, ask) || reason !== null}
               aria-label={`${ASK_LABELS[ask]} 협상`}
+              aria-describedby={reason !== null ? `negotiate-reason-${ask}` : undefined}
             >
               {ASK_LABELS[ask]} 협상
             </Button>
           ))}
         </div>
+        {
+          // D-69: 비활성 항목마다 사유를 한 줄씩 보여준다(각 버튼의 aria-describedby가 가리키는
+          // id는 항상 여기서 렌더돼야 한다 — 없으면 존재하지 않는 id를 참조하는 접근성 결함이 된다).
+          negotiationReasons
+            .filter((entry) => entry.reason !== null)
+            .map(({ ask, reason }) => (
+              <p key={ask} id={`negotiate-reason-${ask}`} className="os-muted" style={CAPTION_STYLE}>
+                {reason}
+              </p>
+            ))
+        }
+        {offerNotNegotiable ? (
+          <p className="os-muted" style={CAPTION_STYLE}>
+            현 구단 잔류·첫 계약 제안은 협상 없이 조건 그대로 결정합니다
+          </p>
+        ) : null}
+        {negotiateInlineError ? <ErrorState message={negotiateInlineError} /> : null}
       </Card>
 
       {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void recoverFromError()} retryLabel="저장 상태 다시 확인" /> : null}
