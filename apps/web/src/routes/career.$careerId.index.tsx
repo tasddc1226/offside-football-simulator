@@ -44,6 +44,7 @@ import {
   ROLE_PROMISE_SENTENCE,
   ROLE_PROPOSAL_TYPE_LABEL_KO,
   popularityTierLabel,
+  relationshipReasonLabel,
   relationTierLabel,
   relationshipDirectionArrow,
   resultTagLabels,
@@ -980,7 +981,10 @@ function CareerDashboard() {
                         <div key={row.target}>
                           <dt>{row.label} {row.direction}</dt>
                           <dd className="text-os-text">{row.display}</dd>
-                          <dd>{state.memoryTags[row.target].join(' · ') || '아직 쌓인 기억이 없습니다'}</dd>
+                          <dd>
+                            {state.memoryTags[row.target].map((tag) => relationshipReasonLabel(tag)).join(' · ') ||
+                              '아직 쌓인 기억이 없습니다'}
+                          </dd>
                         </div>
                       ))}
                     </dl>
@@ -988,7 +992,7 @@ function CareerDashboard() {
                       <ul className="flex flex-col gap-os-1 font-os text-os-text-2" style={CAPTION_STYLE}>
                         {state.relationshipLog.slice(-3).reverse().map((entry, index) => (
                           <li key={`${entry.sourceId}-${entry.seasonIndex}-${entry.step}-${index}`}>
-                            {RELATION_LABELS[entry.target]} {entry.delta > 0 ? '↑' : entry.delta < 0 ? '↓' : '→'} · {entry.reasonTag ?? '최근 변화'}
+                            {RELATION_LABELS[entry.target]} {entry.delta > 0 ? '↑' : entry.delta < 0 ? '↓' : '→'} · {relationshipReasonLabel(entry.reasonTag)}
                           </li>
                         ))}
                       </ul>

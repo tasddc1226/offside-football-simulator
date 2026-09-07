@@ -971,6 +971,37 @@ describe('RES-BUG-001과 같은 정책: 라커룸 기억 태그(state.tags)는 �
   });
 });
 
+// no-hex-literals.test.ts가 .tsx 전체에서 `#`+hex 패턴을 금지한다 — 이슈 번호는 해시 없이 적는다.
+describe('T-7-005 이슈 142: 관계 사유(relationshipLog·memoryTags)는 원문 대신 한국어 라벨을 보여준다', () => {
+  it('PROMISE_BREACH가 화면에 원문으로 없고 "출전 약속 미이행"으로 보인다', async () => {
+    const engine = setTestEngine();
+    const careerId = await signedCareerId(engine);
+
+    renderAt(`/career/${careerId}`);
+    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
+    await screen.findByText('라커룸');
+
+    const options = careerQueryOptions(careerId);
+    const current = queryClient.getQueryData(options.queryKey);
+    if (current === undefined) throw new Error('캐시된 커리어가 있어야 한다');
+    act(() => {
+      queryClient.setQueryData(options.queryKey, {
+        ...current,
+        state: {
+          ...current.state,
+          relationshipLog: [
+            { target: 'managerTrust', delta: -4, sourceId: 'src-1', reasonTag: 'PROMISE_BREACH', seasonIndex: 0, step: 1 },
+          ],
+          memoryTags: { ...current.state.memoryTags, managerTrust: ['PROMISE_BREACH'] },
+        },
+      });
+    });
+
+    expect(await screen.findAllByText(/출전 약속 미이행/)).not.toHaveLength(0);
+    expect(screen.queryByText(/PROMISE_BREACH/)).not.toBeInTheDocument();
+  });
+});
+
 describe('T-4-014 C11: 휴대폰 탭의 시장 사유·제안 수(T-3-005 브리프 §1)', () => {
   it('열린 OFFERS pending이 있으면 시장 사유·제안 수와 이적시장 링크를 보여준다', async () => {
     const engine = setTestEngine();
