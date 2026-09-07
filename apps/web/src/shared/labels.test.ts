@@ -2,6 +2,7 @@
 import type { ChapterTrigger, RelationshipLogEntry } from '@offside/domain';
 import { describe, expect, it } from 'vitest';
 import {
+  careerTagLabel,
   chapterTriggerLabel,
   effectExpiresAtLabel,
   INJURY_BODY_PART_LABELS,
@@ -16,6 +17,7 @@ import {
   relationshipDirectionArrow,
   relationshipReasonLabel,
   relationTierLabel,
+  resultTagLabel,
 } from './labels.js';
 
 function logEntry(target: RelationshipLogEntry['target'], delta: number): RelationshipLogEntry {
@@ -154,6 +156,20 @@ describe('relationshipReasonLabel (T-7-005 이슈 #142)', () => {
 
   it('null은 최근 변화다', () => {
     expect(relationshipReasonLabel(null)).toBe('최근 변화');
+  });
+});
+
+describe('T-7-010 이슈 144·D-68: 승격 표현을 승격권(순위 기록)으로 정합', () => {
+  it('resultTagLabel: 승격_기여 태그는 승격권 기여로 표시한다(리그 이동으로 오독되지 않도록)', () => {
+    expect(resultTagLabel('승격_기여')).toBe('승격권 기여');
+  });
+
+  it('careerTagLabel: TAG-PROMOTION-EXPERT는 도메인 라벨(승격 전문가) 대신 승격권 전문가로 덮어쓴다', () => {
+    expect(careerTagLabel('TAG-PROMOTION-EXPERT', '승격 전문가')).toBe('승격권 전문가');
+  });
+
+  it('careerTagLabel: 덮어쓸 라벨이 없는 태그는 도메인 라벨을 그대로 쓴다', () => {
+    expect(careerTagLabel('TAG-SOME-OTHER', '기타 태그')).toBe('기타 태그');
   });
 });
 

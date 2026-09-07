@@ -308,6 +308,13 @@ function SeasonResultScreen() {
         <section className="os-story-card flex flex-col gap-os-3" aria-label="시즌 한눈에 보기">
           <p className="os-eyebrow">시즌 {view.seasonNumber} · 최종 기록</p>
           <p className="font-os font-bold text-os-text" style={H2_STYLE}>{headline}</p>
+          {/* T-7-010 이슈 144·D-68: 승격권은 순위 기록일 뿐 리그 이동은 이번 버전에 없다 — 화면 문구가
+              리그가 바뀐 것처럼 읽히지 않도록 캡션을 남긴다. 라우트 전용 상수라 labels.ts로 옮기지 않는다. */}
+          {promoted ? (
+            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+              승격권은 리그 순위 기록입니다. 이번 버전에서는 소속 리그가 바뀌지 않습니다.
+            </p>
+          ) : null}
           <div className="flex items-center gap-os-2">
             <TeamBadge initials={seasonTeamIdentity.initials} colorVar={seasonTeamIdentity.colorVar} size="s" />
             <span className="font-os text-os-text-2" style={BODY_STYLE}>{seasonTeamName}</span>
