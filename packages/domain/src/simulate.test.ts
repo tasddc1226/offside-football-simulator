@@ -1916,6 +1916,168 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
     });
   });
 
+  // T-7-002 D-67(이슈 #140): 룰셋 1.4.0(roleProposal.acceptedRoleUpdatesPromise === true)이면
+  // ROLE_CHANGE ACCEPT가 contract.rolePromise·appearancePromise도 proposal.to로 갱신한다. 1.3.0
+  // 이하(키 없음)는 계약이 그대로라 다음 경기부터 옛 rolePromise 기준으로 squadStatus가 되돌아간다
+  // (운영 QA 결함 1·7 재현) — 두 룰셋을 나란히 돌려 대조한다.
+  describe('T-7-002 D-67: ROLE_CHANGE ACCEPT가 계약에 남는가(룰셋 1.4.0 대 1.3.0)', () => {
+    const RULESET_1_4_0 = {
+      ...RULESET,
+      selectionRules: {
+        ...RULESET.selectionRules,
+        roleProposal: { ...RULESET.selectionRules.roleProposal, acceptedRoleUpdatesPromise: true, declineDowngradeTrustDelta: 0 },
+      },
+    };
+
+    /** 계약 rolePromise를 BENCH로 강제한 뒤 BENCH→ROTATION ROLE_CHANGE 제안을 얹는다. */
+    function benchToRotationSnapshot(): DomainSnapshot {
+      const base = activeSnapshotWithRolePending();
+      const bench: DomainSnapshot = {
+        ...base,
+        state: { ...base.state, contract: { ...base.state.contract!, rolePromise: 'BENCH' } },
+      };
+      return withRoleProposal(bench, { type: 'ROLE_CHANGE', position: 'W', from: 'BENCH', to: 'ROTATION' });
+    }
+
+    it('(a) 1.4.0: ACCEPT 즉시 contract.rolePromise·appearancePromise가 ROTATION으로 갱신되고, 경기 2회 이상 지나도 유지되며 squadStatus는 ROTATION 기준으로 재계산된다', () => {
+      const snapshot = benchToRotationSnapshot();
+      const accepted = simulate({
+        ...baseInput(),
+        ruleset: RULESET_1_4_0,
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'ACCEPT'),
+      });
+      expect(accepted.ok).toBe(true);
+      if (!accepted.ok) return;
+      expect(accepted.snapshot.state.contract?.rolePromise).toBe('ROTATION');
+      expect(accepted.snapshot.state.contract?.appearancePromise).toEqual({
+        minutesShareBp: RULESET.contractRules.promiseMinutesShareBp.ROTATION,
+      });
+
+      // 경기 2회 이상: FAST 계약 배경(academy)은 step 7 CONTRACT 결정 전까지도 이미 여러 경기를
+      // 치른다 — 한 번의 ADVANCE로 season.matches.length가 2 이상이 되는지까지 함께 고정한다.
+      const advanced = simulate({
+        ...baseInput(),
+        ruleset: RULESET_1_4_0,
+        snapshot: accepted.snapshot,
+        command: advanceCommand(accepted.snapshot.revision, []),
+      });
+      expect(advanced.ok).toBe(true);
+      if (!advanced.ok) return;
+      const state = advanced.snapshot.state;
+      expect(state.season?.matches.length ?? 0).toBeGreaterThanOrEqual(2);
+      expect(state.contract?.rolePromise).toBe('ROTATION');
+      // match.ts의 nextSquadStatus 공식 그대로: captaincy는 항상 'NONE'(캡틴 보너스는 이 축과
+      // 별개), lastRating은 마지막 경기 평점.
+      const lastRatingTenths = state.season?.lastRatingTenths ?? null;
+      expect(state.context.squadStatus).toBe(
+        computeSquadStatus(
+          { rolePromise: 'ROTATION', captaincy: 'NONE', lastRating: lastRatingTenths === null ? null : lastRatingTenths / 10 },
+          RULESET.selectionRules,
+          RULESET.contractRules.squadStatusByRole,
+        ),
+      );
+    });
+
+    it('(b) 1.3.0(키 없음): ACCEPT해도 contract.rolePromise는 BENCH 그대로다 — 경기를 치른 뒤에도 계약이 바뀌지 않는다', () => {
+      const snapshot = benchToRotationSnapshot();
+      const accepted = simulate({
+        ...baseInput(),
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'ACCEPT'),
+      });
+      expect(accepted.ok).toBe(true);
+      if (!accepted.ok) return;
+      expect(accepted.snapshot.state.contract?.rolePromise).toBe('BENCH');
+
+      const advanced = simulate({
+        ...baseInput(),
+        snapshot: accepted.snapshot,
+        command: advanceCommand(accepted.snapshot.revision, []),
+      });
+      expect(advanced.ok).toBe(true);
+      if (!advanced.ok) return;
+      expect(advanced.snapshot.state.contract?.rolePromise).toBe('BENCH');
+    });
+  });
+
+  // T-7-002 D-67: 하향 제안(제안된 역할이 현재 contract.rolePromise보다 나쁜 ROLE_CHANGE) 거절은
+  // 1.4.0(declineDowngradeTrustDelta 정의)이면 그 값(0)을, 1.3.0 이하(키 없음)면 기존
+  // declineTrustDelta(-8)를 쓴다. 상향 제안 거절은 두 룰셋 모두 declineTrustDelta 그대로다.
+  describe('T-7-002 D-67: 하향 제안 DECLINE 무벌점(룰셋 1.4.0 대 1.3.0)', () => {
+    const RULESET_1_4_0 = {
+      ...RULESET,
+      selectionRules: {
+        ...RULESET.selectionRules,
+        roleProposal: { ...RULESET.selectionRules.roleProposal, acceptedRoleUpdatesPromise: true, declineDowngradeTrustDelta: 0 },
+      },
+    };
+
+    /** 계약 rolePromise를 STARTER로 강제한 뒤 STARTER→BENCH(하향) ROLE_CHANGE 제안을 얹는다. */
+    function downgradeProposalSnapshot(): DomainSnapshot {
+      const base = activeSnapshotWithRolePending();
+      const starter: DomainSnapshot = {
+        ...base,
+        state: { ...base.state, contract: { ...base.state.contract!, rolePromise: 'STARTER' } },
+      };
+      return withRoleProposal(starter, { type: 'ROLE_CHANGE', position: 'W', from: 'STARTER', to: 'BENCH' });
+    }
+
+    it('(c) 1.4.0: 하향 제안 DECLINE은 managerTrust 변화가 0이다', () => {
+      const snapshot = downgradeProposalSnapshot();
+      const trustBefore = snapshot.state.relationships.managerTrust;
+      const result = simulate({
+        ...baseInput(),
+        ruleset: RULESET_1_4_0,
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'DECLINE'),
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore);
+      expect(result.snapshot.state.contract?.rolePromise).toBe('STARTER');
+    });
+
+    it('(c) 1.3.0(키 없음): 같은 하향 제안 DECLINE은 declineTrustDelta(-8)를 그대로 쓴다', () => {
+      const snapshot = downgradeProposalSnapshot();
+      const trustBefore = snapshot.state.relationships.managerTrust;
+      const result = simulate({
+        ...baseInput(),
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'DECLINE'),
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.snapshot.state.relationships.managerTrust).toBe(
+        trustBefore + TRUST_DELTAS.declineTrustDelta,
+      );
+    });
+
+    it('1.4.0에서도 상향 제안 DECLINE은 declineTrustDelta 그대로다(무벌점 특례는 하향에만 적용)', () => {
+      // roleChangeSnapshot()과 같은 상향 시나리오(STARTER→ROTATION 제안 계산 결과가 재산출에서
+      // STARTER로 되돌아가는 fixture)를 재사용하지 않고, 여기서는 contract.rolePromise='BENCH'인
+      // 채로 proposal.to='ROTATION'(상향)을 얹어 isSquadRoleBetter 분기가 반대로 갈리는지 본다.
+      const base = activeSnapshotWithRolePending();
+      const bench: DomainSnapshot = {
+        ...base,
+        state: { ...base.state, contract: { ...base.state.contract!, rolePromise: 'BENCH' } },
+      };
+      const snapshot = withRoleProposal(bench, { type: 'ROLE_CHANGE', position: 'W', from: 'BENCH', to: 'ROTATION' });
+      const trustBefore = snapshot.state.relationships.managerTrust;
+      const result = simulate({
+        ...baseInput(),
+        ruleset: RULESET_1_4_0,
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'DECLINE'),
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.snapshot.state.relationships.managerTrust).toBe(
+        trustBefore + TRUST_DELTAS.declineTrustDelta,
+      );
+    });
+  });
+
   describe('POSITION_CHANGE', () => {
     function positionChangeSnapshot(): DomainSnapshot {
       const base = activeSnapshotWithRolePending();

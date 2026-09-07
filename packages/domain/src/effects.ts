@@ -76,13 +76,18 @@ function relationshipRulesFor(
   return relationshipRules ?? DEFAULT_RELATIONSHIP_RULES;
 }
 
-/** T-4-003: 관계 축은 값 하나만 유지하고, 변화 이력은 최근 로그로 남긴다. */
+/**
+ * T-4-003: 관계 축은 값 하나만 유지하고, 변화 이력은 최근 로그로 남긴다. delta 0은 기본적으로
+ * no-op(잡음 방지) — T-7-002 D-67: `options.force`가 true면 delta 0이어도 남긴다(예: 결산 약속
+ * 위반이 `managerTrustPromiseBreach: 0`이어도 "위반이 있었다"는 로그·기억 태그는 남아야 한다).
+ */
 export function appendRelationshipLog(
   state: CareerState,
   entry: RelationshipLogEntry,
   relationshipRules?: Pick<RelationshipRules, 'logMax' | 'memoryTagsMax'>,
+  options?: { force?: boolean },
 ): CareerState {
-  if (entry.delta === 0) return state;
+  if (entry.delta === 0 && options?.force !== true) return state;
   const limits = relationshipRulesFor(relationshipRules);
   const relationshipLog = [...state.relationshipLog, entry].slice(-limits.logMax);
   let memoryTags = state.memoryTags;

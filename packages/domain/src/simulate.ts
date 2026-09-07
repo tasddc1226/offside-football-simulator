@@ -4,6 +4,7 @@ import { resolveChapter, type ChapterCandidateInput } from './chapter.js';
 import { applyCondition, type ConditionState } from './condition.js';
 import { generateCompetitors } from './competitors.js';
 import {
+  appendRelationshipLog,
   applyEffects,
   expireAtSeasonEnd,
   expireEffects,
@@ -75,6 +76,7 @@ import {
   computeTacticalFit,
   familiarityOf,
   findTacticalStyle,
+  isSquadRoleBetter,
   rankPositionForPlayer,
   squadRoleFromSelection,
   type RoleProposalContext,
@@ -3529,13 +3531,33 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
           { step: 12 },
           input.ruleset.relationshipRules,
         ).state;
+        // T-7-002 D-67: 1.4.0+ managerTrustPromiseBreach가 0이면 breachEffect.delta도 0이라
+        // applyEffects가 actualDelta === 0 가드로 관계 로그를 남기지 않는다 — 위반 자체는 있었으니
+        // 로그(reasonTag: PROMISE_BREACH)만 delta 0으로 강제 기록한다(태그·promiseBreaches 카운터는
+        // 아래에서 이미 delta와 무관하게 처리된다).
+        const loggedApplied =
+          breachEffect.delta === 0
+            ? appendRelationshipLog(
+                applied,
+                {
+                  target: 'managerTrust',
+                  delta: 0,
+                  sourceId: breachEffect.sourceId,
+                  reasonTag: 'PROMISE_BREACH',
+                  seasonIndex: applied.season?.index ?? applied.seasonHistory.length,
+                  step: 12,
+                },
+                input.ruleset.relationshipRules,
+                { force: true },
+              )
+            : applied;
         return {
-          ...applied,
+          ...loggedApplied,
           contract: {
             ...contractForPromise,
             promiseBreaches: contractForPromise.promiseBreaches + 1,
           },
-          tags: sortUniqueTags([...applied.tags, '약속_위반']),
+          tags: sortUniqueTags([...loggedApplied.tags, '약속_위반']),
         };
       })();
 
@@ -3667,9 +3689,19 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   let managerTrust = state.relationships.managerTrust;
   let context = state.context;
   let profile = state.player.profile;
+  let contract = state.contract;
 
   if (decision === 'DECLINE') {
-    managerTrust = clamp(managerTrust + rules.roleProposal.declineTrustDelta, 0, 100);
+    // T-7-002 D-67: 1.4.0+(declineDowngradeTrustDelta 정의)면 하향 제안(제안된 역할이 현재
+    // contract.rolePromise보다 나쁜 ROLE_CHANGE) 거절은 무벌점으로 대체한다. POSITION_CHANGE·상향
+    // 제안·1.3.0 이하(키 없음)는 기존 declineTrustDelta 그대로.
+    const isRoleDowngrade =
+      proposal.type === 'ROLE_CHANGE' && isSquadRoleBetter(contract.rolePromise, proposal.to);
+    const declineDelta =
+      isRoleDowngrade && rules.roleProposal.declineDowngradeTrustDelta !== undefined
+        ? rules.roleProposal.declineDowngradeTrustDelta
+        : rules.roleProposal.declineTrustDelta;
+    managerTrust = clamp(managerTrust + declineDelta, 0, 100);
   } else if (proposal.type === 'KEEP') {
     managerTrust = clamp(managerTrust + rules.roleProposal.keepConfirmTrustDelta, 0, 100);
   } else if (proposal.type === 'POSITION_CHANGE') {
@@ -3691,6 +3723,18 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
         input.ruleset.contractRules.squadStatusByRole,
       ),
     };
+    // T-7-002 D-67: 1.4.0+(acceptedRoleUpdatesPromise === true)면 역할 수락이 계약에 남는다 —
+    // contract.rolePromise·appearancePromise를 proposal.to로 갱신해, 다음 경기부터 원소속에 머무는
+    // 선수도 새 역할 기준 squadStatus가 유지된다(운영 QA 결함 1·7 — 이전에는 ACCEPT가
+    // context.squadStatus만 한 번 올리고 다음 경기의 match wiring이 옛 contract.rolePromise로
+    // 되돌렸다). 급여·기간·서명 revision은 바꾸지 않는다. 1.3.0 이하(키 없음)는 계약 불변 그대로.
+    if (rules.roleProposal.acceptedRoleUpdatesPromise === true) {
+      contract = {
+        ...contract,
+        rolePromise: proposal.to,
+        appearancePromise: { minutesShareBp: input.ruleset.contractRules.promiseMinutesShareBp[proposal.to] },
+      };
+    }
   }
 
   const ranking = rankPositionForPlayer({
@@ -3720,6 +3764,7 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     context,
     player: { ...state.player, profile },
     relationships: { ...state.relationships, managerTrust },
+    contract,
     pending: null,
     timeline: [
       ...state.timeline,

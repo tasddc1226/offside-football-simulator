@@ -195,6 +195,100 @@ describe('buildSeasonResult (career-02-season FAST 재생으로 통합 확인)',
       expect.objectContaining({ tagId: 'TAG-MANAGER-FAVOURITE' }),
     );
   });
+
+  // T-7-002 D-67(이슈 #140): 룰셋 1.4.0은 transferRules.relationshipCarry.managerTrustPromiseBreach를
+  // 0으로 둔다(무벌점 미이행) — RELATION effect의 delta가 0이라 applyEffects의 actualDelta===0
+  // 가드가 관계 로그를 걸러내지만, "위반이 있었다"는 사실 자체(로그·약속_위반 태그·
+  // contract.promiseBreaches)는 delta와 무관하게 남아야 한다. 위 "실제 약속 위반 결산"
+  // 테스트(managerTrustPromiseBreach: -8, 1.3.0)와 같은 fixture 구성을 그대로 재사용하고
+  // relationshipCarry만 0으로 바꿔 대조한다.
+  it('T-7-002 D-67: 1.4.0(managerTrustPromiseBreach: 0) 약속 위반은 managerTrust는 그대로지만 관계 로그·약속_위반 태그·promiseBreaches는 delta와 무관하게 남는다', () => {
+    const fixture = runSettledFixture();
+    const source = fixture.beforeSettlementState;
+    const currentSeason = source.season;
+    const contract = source.contract;
+    if (currentSeason === null || currentSeason.manager === null || contract === null) {
+      throw new Error('setup 실패: 결산 전 season.manager·contract가 없다.');
+    }
+    const prior = runSeasonFixture('FAST').snapshot.state.seasonHistory[0];
+    if (prior === undefined) throw new Error('setup 실패: 선행 시즌이 없다.');
+
+    const managerId = currentSeason.manager.id;
+    const teamId = contract.teamId;
+    const priorHistory = [1, 2].map((index) => ({
+      ...prior,
+      index,
+      teamId,
+      result: {
+        ...prior.result,
+        index,
+        teamId,
+        managerId,
+        stateDeltas: {
+          ...prior.result.stateDeltas,
+          managerTrust: { before: 80, after: 80 },
+        },
+      },
+    }));
+    const promiseBreachesBefore = contract.promiseBreaches;
+    const state: CareerState = {
+      ...source,
+      season: {
+        ...currentSeason,
+        index: 3,
+        playerStats: { ...currentSeason.playerStats, minutes: 0 },
+      },
+      seasonHistory: priorHistory,
+      relationships: { ...source.relationships, managerTrust: 80 },
+    };
+    const baseSnapshot: DomainSnapshot = {
+      ...fixture.snapshot,
+      revision: fixture.snapshot.revision - 1,
+      state,
+      stateHash: hashState(state),
+    };
+    const ruleset140 = {
+      ...rulesetProto,
+      transferRules: {
+        ...rulesetProto.transferRules,
+        relationshipCarry: { ...rulesetProto.transferRules.relationshipCarry, managerTrustPromiseBreach: 0 },
+      },
+    };
+
+    const settled = simulate({
+      snapshot: baseSnapshot,
+      command: {
+        type: 'SETTLE_SEASON',
+        commandId: 'settlement-promise-breach-zero-delta',
+        expectedRevision: baseSnapshot.revision,
+        payload: {},
+      },
+      ruleset: ruleset140,
+      rulesetVersion: '1.0.0',
+      contentPackVersion: '0.1.0',
+    });
+
+    expect(settled.ok).toBe(true);
+    if (!settled.ok) return;
+    const result = settled.seasonResult;
+    if (result === undefined) throw new Error('setup 실패: SETTLE_SEASON 결과가 없다.');
+    expect(result.promiseFulfilment.fulfilled).toBe(false);
+    // managerTrust는 delta 0이라 그대로다(1.3.0의 80→72와 대조).
+    expect(result.stateDeltas.managerTrust).toEqual({ before: 80, after: 80 });
+    expect(settled.snapshot.state.relationships.managerTrust).toBe(80);
+    // 위반 카운터·태그는 delta와 무관하게 남는다.
+    expect(settled.snapshot.state.contract?.promiseBreaches).toBe(promiseBreachesBefore + 1);
+    expect(settled.snapshot.state.tags).toContain('약속_위반');
+    // 관계 로그도(브리프 항목 3): delta 0이어도 PROMISE_BREACH 사유가 기록으로 남는다.
+    expect(settled.snapshot.state.relationshipLog).toContainEqual(
+      expect.objectContaining({
+        target: 'managerTrust',
+        delta: 0,
+        reasonTag: 'PROMISE_BREACH',
+        sourceId: 'SETTLE_SEASON:3:PROMISE_BREACH',
+      }),
+    );
+  });
 });
 
 describe('computePromiseFulfilment', () => {

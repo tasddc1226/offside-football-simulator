@@ -203,8 +203,9 @@ export function squadRoleFromSelection(selection: SelectionRanking): SquadRole {
 
 const SQUAD_ROLE_RANK: Record<SquadRole, number> = { STARTER: 0, ROTATION: 1, BENCH: 2, RESERVE: 3 };
 
-/** 숫자가 작을수록(=STARTER에 가까울수록) 좋은 역할이다. */
-function isSquadRoleBetter(a: SquadRole, b: SquadRole): boolean {
+/** 숫자가 작을수록(=STARTER에 가까울수록) 좋은 역할이다. T-7-002 D-67: simulate.ts의 resolveRole
+ * DECLINE 분기가 하향 제안 여부(SQUAD_ROLE_RANK 비교)를 판정하는 데도 이 함수를 그대로 쓴다. */
+export function isSquadRoleBetter(a: SquadRole, b: SquadRole): boolean {
   return SQUAD_ROLE_RANK[a] < SQUAD_ROLE_RANK[b];
 }
 
