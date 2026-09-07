@@ -232,6 +232,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | 외부 등록 | 운영 | Google 브랜딩 인증, Search Console·네이버 등록 | todo | 사용자 외부 절차. [seo-rollout.md](../operations/seo-rollout.md)·[google-login.md](../operations/google-login.md) |
 | 플레이 측정 | 운영 | 실사용자 플레이 시간·퍼널 측정(D1 `analytics_events`, elapsedSec) → D-62 실사용자 판정 | todo | [play-time-measurement.md](../qa/play-time-measurement.md). 시즌 1 데이터 |
 | 플랜·모니터링 | 운영 | U-014 Workers Paid 전환, U-004 Sentry DSN | todo | 사용자 액션 |
+| 3관점 리뷰 | qa | 운영 3관점 플레이 리뷰(디자인·게임성·기능 — Sonnet 서브에이전트 3명 + ego-browser, 룰셋 1.3.0·팩 0.5.0, 3커리어 9시즌). 성인 진로 전환은 개선, 무출전 회복은 여전. 결함 P1 2·P2 7·P3 7 | completed | 2026-09-07 오후 [기록](../qa/2026-09-07-production-three-perspectives/README.md) |
+| 리뷰 후속 | domain·web | P1: 출전 약속 미이행 반복 시 탈출 경로, 역할 협상 결과 피드백. P2: 하단 고정 CTA 여백(4화면), 커스텀 라디오 키보드 선택, 대표팀 경기 결과 공백, 관계 태그 enum 노출(+#105 챕터 제목), 제안 비교 셀 정렬, 서명 placeholder | todo | 이슈 등록·배정은 사용자 결정 |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 
@@ -248,7 +250,7 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 
 ## 진행 중
 
-진행 중 워커 없음 (2026-09-07 오전 — 이 세션은 문서 전담. 9/5 밤~9/7 새벽 코드 작업은 사용자 세션(Codex·Sol·Luna)이 PR #91~#139로 직접 머지·배포. 남은 항목은 Phase 7 표와 사용자 액션 U-014·U-004·U-005)
+진행 중 워커 없음 (2026-09-07 오후 — 이 세션은 문서·QA 전담. 12:48 운영 3관점 플레이 리뷰(Sonnet 서브에이전트 3명, ego-browser) 완료. 9/5 밤~9/7 새벽 코드 작업은 사용자 세션(Codex·Sol·Luna)이 PR #91~#139로 직접 머지·배포. 남은 항목은 Phase 7 표와 사용자 액션 U-014·U-004·U-005)
 
 ## 완료
 
