@@ -1,5 +1,5 @@
 import type { EventDecisionContext } from '../../shared/event-screen.js';
-import { relationTierLabel, relationshipDirectionArrow } from '../../shared/labels.js';
+import { relationshipReasonLabel, relationTierLabel, relationshipDirectionArrow } from '../../shared/labels.js';
 import type { RelationTarget } from '@offside/domain';
 
 const RELATIONS: readonly { target: RelationTarget; label: string }[] = [
@@ -22,7 +22,7 @@ export function LockerRoomContext({ state }: EventDecisionContext) {
           <div key={target} className="rounded-os-m bg-os-surface-2 p-os-3">
             <div className="flex items-center justify-between gap-os-2"><span>{label}</span><span aria-label={`${label} 방향`}>{relationshipDirectionArrow(state.relationshipLog, target)}</span></div>
             <p className="os-muted">{relationTierLabel(state.relationships[target])}</p>
-            <p className="mt-os-1 text-os-text-2">기억: {state.memoryTags[target].length > 0 ? state.memoryTags[target].join(' · ') : '기록 없음'}</p>
+            <p className="mt-os-1 text-os-text-2">기억: {state.memoryTags[target].length > 0 ? state.memoryTags[target].map((tag) => relationshipReasonLabel(tag)).join(' · ') : '기록 없음'}</p>
           </div>
         ))}
       </div>
@@ -30,7 +30,7 @@ export function LockerRoomContext({ state }: EventDecisionContext) {
         <h3 className="font-semibold">최근 변화</h3>
         {state.relationshipLog.length > 0 ? (
           <ul className="mt-os-2 flex flex-col gap-os-1 text-os-text-2">
-            {state.relationshipLog.slice(-3).reverse().map((entry, index) => <li key={`${entry.sourceId}-${entry.step}-${index}`}>{RELATIONS.find((relation) => relation.target === entry.target)?.label} {entry.delta > 0 ? '상승' : entry.delta < 0 ? '하락' : '변화 없음'} · {entry.reasonTag ?? '최근 변화'}</li>)}
+            {state.relationshipLog.slice(-3).reverse().map((entry, index) => <li key={`${entry.sourceId}-${entry.step}-${index}`}>{RELATIONS.find((relation) => relation.target === entry.target)?.label} {entry.delta > 0 ? '상승' : entry.delta < 0 ? '하락' : '변화 없음'} · {relationshipReasonLabel(entry.reasonTag)}</li>)}
           </ul>
         ) : <p className="os-muted mt-os-2">최근 관계 변화 기록이 없습니다.</p>}
       </div>

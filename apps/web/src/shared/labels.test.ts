@@ -1,7 +1,8 @@
 // T-4-009 D-57: Phase 4 라벨 함수(순수 함수) 단위 테스트. 화면이 아직 없으므로 입력→출력만 본다.
-import type { RelationshipLogEntry } from '@offside/domain';
+import type { ChapterTrigger, RelationshipLogEntry } from '@offside/domain';
 import { describe, expect, it } from 'vitest';
 import {
+  chapterTriggerLabel,
   effectExpiresAtLabel,
   INJURY_BODY_PART_LABELS,
   INJURY_EPISODE_STATUS_LABELS,
@@ -13,6 +14,7 @@ import {
   REHAB_PLAN_LABELS,
   relationshipDirection,
   relationshipDirectionArrow,
+  relationshipReasonLabel,
   relationTierLabel,
 } from './labels.js';
 
@@ -126,5 +128,45 @@ describe('effectExpiresAtLabel', () => {
   it('content 원본 형태(STEPS_AFTER·SEASONS_AFTER)도 방어적으로 처리한다', () => {
     expect(effectExpiresAtLabel({ kind: 'STEPS_AFTER', steps: 2 }, context)).toBe('2스텝 뒤 만료');
     expect(effectExpiresAtLabel({ kind: 'SEASONS_AFTER', seasons: 1 }, context)).toBe('1시즌 뒤 만료');
+  });
+});
+
+describe('relationshipReasonLabel (T-7-005 이슈 #142)', () => {
+  it('카탈로그 3종을 한국어로 바꾼다', () => {
+    expect(relationshipReasonLabel('PROMISE_BREACH')).toBe('출전 약속 미이행');
+    expect(relationshipReasonLabel('NATIONAL_TEAM_ACCEPT')).toBe('대표팀 소집 수락');
+    expect(relationshipReasonLabel('CAPTAIN_MEDIATION')).toBe('주장 중재');
+  });
+
+  it('LEGACY_ 접두 키는 은퇴 평가로 묶는다', () => {
+    expect(relationshipReasonLabel('LEGACY_ACHIEVEMENT')).toBe('은퇴 평가');
+    expect(relationshipReasonLabel('LEGACY_LONGEVITY')).toBe('은퇴 평가');
+  });
+
+  it('미등록 대문자 스네이크 키는 내부 식별자로 보고 숨긴다', () => {
+    expect(relationshipReasonLabel('SOME_UNKNOWN_INTERNAL_TAG')).toBe('최근 변화');
+  });
+
+  it('resultTagLabel 카탈로그에 있는 한글 스네이크 태그는 그 라벨을 재사용한다', () => {
+    expect(relationshipReasonLabel('증명')).toBe('증명');
+    expect(relationshipReasonLabel('팀_우선')).toBe('팀 우선');
+  });
+
+  it('null은 최근 변화다', () => {
+    expect(relationshipReasonLabel(null)).toBe('최근 변화');
+  });
+});
+
+describe('chapterTriggerLabel TAG 분기 (T-7-005 #105)', () => {
+  it('프로_데뷔 tag는 재사용 챕터용 별도 제목을 쓴다(진짜 데뷔전과 다른 문구)', () => {
+    const trigger: ChapterTrigger = { kind: 'TAG', tag: '프로_데뷔' };
+    expect(chapterTriggerLabel(trigger)).toBe('데뷔 이후의 무대');
+    expect(chapterTriggerLabel({ kind: 'DEBUT' })).toBe('프로 데뷔전');
+  });
+
+  it('미등록 태그는 원시 키를 그대로 반환하지 않고 안전한 일반 제목으로 떨어진다', () => {
+    const trigger: ChapterTrigger = { kind: 'TAG', tag: 'internal_unmapped_tag' };
+    expect(chapterTriggerLabel(trigger)).toBe('핵심 경기');
+    expect(chapterTriggerLabel(trigger)).not.toBe('internal_unmapped_tag');
   });
 });

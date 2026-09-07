@@ -378,8 +378,16 @@ export const POSITION_STAT_LABEL_KO = {
   buildUpPasses: '빌드업 패스',
 } as const;
 
-/** T-2-008 SCR-031: 챕터 트리거를 "왜 이 경기인가" 문구로 바꾼다. TAG는 Phase 3+ 전용이라 정의
- * 자체의 tag 문구를 그대로 쓴다(고정 사전이 없다 — D-38). */
+/** T-7-005 #105: TAG 챕터가 같은 트리거 타입을 재사용할 때 붙는 제목. 진짜 데뷔전(DEBUT kind)과는
+ * 다른 화면이라 여기서만 쓰는 별도 문구를 둔다. 이 표에 없는 tag는 chapterTriggerLabel이
+ * resultTagLabel로 한 번 더 시도한다. */
+const CHAPTER_TAG_TITLE_KO: Record<string, string> = {
+  프로_데뷔: '데뷔 이후의 무대',
+};
+
+/** T-2-008 SCR-031: 챕터 트리거를 "왜 이 경기인가" 문구로 바꾼다. TAG는 Phase 3+ 전용이라 고정
+ * 사전이 없었다(D-38) — T-7-005 #105부터 CHAPTER_TAG_TITLE_KO·RESULT_TAG_LABEL_KO를 순서대로
+ * 거쳐 원시 tag 문자열(예: "프로_데뷔")이 제목으로 그대로 새는 경로를 막는다. */
 export function chapterTriggerLabel(trigger: ChapterTrigger): string {
   switch (trigger.kind) {
     case 'DEBUT':
@@ -395,7 +403,7 @@ export function chapterTriggerLabel(trigger: ChapterTrigger): string {
     case 'NATIONAL_DEBUT':
       return '대표팀 데뷔전';
     case 'TAG':
-      return trigger.tag;
+      return CHAPTER_TAG_TITLE_KO[trigger.tag] ?? resultTagLabel(trigger.tag) ?? '핵심 경기';
   }
 }
 
@@ -504,6 +512,52 @@ export function relationshipDirection(log: readonly RelationshipLogEntry[], targ
 /** relationshipDirection의 화살표 문자열 버전(화면이 바로 문자열로 쓸 수 있게). */
 export function relationshipDirectionArrow(log: readonly RelationshipLogEntry[], target: RelationTarget): string {
   return RELATION_DIRECTION_ARROW[relationshipDirection(log, target)];
+}
+
+/**
+ * T-7-005 이슈 #142: `RelationshipLogEntry.reasonTag`·`state.memoryTags[target]` 항목은 도메인이
+ * 정의한 자유 문자열이라(매핑 없음) 화면에 그대로 내보내면 `PROMISE_BREACH`·`NATIONAL_TEAM_ACCEPT`
+ * 같은 내부 키가 새어나간다. 저장값은 건드리지 않고 화면 표시만 이 표를 거친다(RESULT_TAG_LABEL_KO와
+ * 같은 관례). `packages/domain/src/legacy/result.ts`가 채우는 `LEGACY_*` 키는 은퇴 평가 사유라
+ * 일괄 문구로 묶는다.
+ */
+export const RELATIONSHIP_REASON_LABEL_KO: Record<string, string> = {
+  PROMISE_BREACH: '출전 약속 미이행',
+  NATIONAL_TEAM_ACCEPT: '대표팀 소집 수락',
+  NATIONAL_TEAM_DECLINE: '대표팀 소집 거절',
+  NATIONAL_TEAM_CONDITIONAL: '대표팀 소집 조건부 수락',
+  CAPTAIN_MEDIATION: '주장 중재',
+  ETHICS_DISCLOSURE: '윤리 문제 공개',
+  ETHICS_FAILURE: '윤리 문제 외면',
+  ETHICS_REVIEW: '윤리 검토',
+  LOCKER_SILENCE: '라커룸 침묵',
+  MEDIA_MISREAD: '언론 오독',
+  OPEN_CONVERSATION: '솔직한 대화',
+  OVEREXERTION: '무리한 훈련',
+  PERSONAL_GOAL: '개인 목표 우선',
+  RECOVERY_ROUTINE: '회복 루틴',
+  TACTICAL_REVIEW: '전술 복기',
+  TEAM_FIRST: '팀 우선',
+};
+
+const UPPER_SNAKE_CASE_TAG = /^[A-Z][A-Z0-9_]*$/;
+
+/**
+ * 관계 로그·기억 태그 하나를 화면용 한국어로 바꾼다. 우선순위: (1) 위 카탈로그, (2) `LEGACY_` 접두
+ * 키는 '은퇴 평가', (3) `resultTagLabel`(한글 스네이크 결과 태그와 값 공간이 겹칠 수 있어 재시도),
+ * (4) 그래도 없고 대문자 스네이크 케이스(내부 식별자로 보이면) '최근 변화'로 숨긴다, (5) 그 외(알
+ * 수 없는 소문자·혼합 문자열)는 원문 그대로 — 내부 키가 아니라 콘텐츠가 직접 넣은 문구일 수 있어서다.
+ * `null`은 '최근 변화'.
+ */
+export function relationshipReasonLabel(tag: string | null): string {
+  if (tag === null) return '최근 변화';
+  const known = RELATIONSHIP_REASON_LABEL_KO[tag];
+  if (known !== undefined) return known;
+  if (tag.startsWith('LEGACY_')) return '은퇴 평가';
+  const asResultTag = resultTagLabel(tag);
+  if (asResultTag !== null) return asResultTag;
+  if (UPPER_SNAKE_CASE_TAG.test(tag)) return '최근 변화';
+  return tag;
 }
 
 /** `CareerState.reputation`(popularityCenti·mediaCenti, 0~10000) 5단계 경계. RELATION_TIER_BOUNDARIES와
