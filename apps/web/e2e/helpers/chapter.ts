@@ -58,7 +58,7 @@ export async function resolveRoleProposal(page: Page): Promise<void> {
  */
 export async function advanceToChapter(page: Page): Promise<void> {
   const nextButton = page.getByRole('button', { name: '진행', exact: true });
-  const stepCaption = page.getByText(/step \d+\/12/);
+  const stepCaption = page.getByText(/\d+\/12 단계/);
   for (let step = 0; step < 20; step += 1) {
     const pathnameBefore = new URL(page.url()).pathname;
     if (pathnameBefore.endsWith('/chapter')) return;

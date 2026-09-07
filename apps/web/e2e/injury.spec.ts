@@ -72,7 +72,7 @@ async function readLatestCareerSnapshot(page: Page): Promise<StoredCareerSnapsho
 /** 대시보드에서 진행해 generic event 화면에 실제 forced INJURY pending이 열릴 때까지 찾는다. */
 async function reachForcedInjury(page: Page): Promise<void> {
   const progressButton = page.getByRole('button', { name: '진행', exact: true });
-  const stepCaption = page.getByText(/step \d+\/12/);
+  const stepCaption = page.getByText(/\d+\/12 단계/);
 
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const pathname = new URL(page.url()).pathname;

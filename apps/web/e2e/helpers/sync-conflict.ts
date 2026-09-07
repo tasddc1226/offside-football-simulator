@@ -5,6 +5,7 @@ import type { CareerSnapshot } from '@offside/contracts';
 import { loadRuleset } from '@offside/content';
 import { createEngineClient, inlineSimulator, MemoryLocalStore, encodeSnapshot } from '@offside/engine-client';
 import type { Page, Route } from '@playwright/test';
+import { fillPlayerInfo, startNewCareer } from './player-creation.js';
 
 // @offside/fixtures의 career-01 JSON import는 import attribute 없이 돼 있어(브라우저·vitest
 // 번들러에서는 통과하지만) Playwright의 Node ESM 로더에서는 깨진다 — 그래서 여기서는 대신
@@ -47,7 +48,15 @@ export async function stubRevisionConflict(page: Page, careerId: string, serverS
   await page.route(`**/v1/careers/${careerId}`, async (route) => {
     const method = route.request().method();
     if (method === 'GET') {
-      await fulfillJson(route, 200, { data: { snapshot: serverSnapshot, commands: [] }, meta: E2E_META });
+      // GetCareerResponseSchema(packages/contracts/src/careers.ts)는 strictObject라
+      // createdServiceSeasonId가 없으면 파싱이 실패한다 — engine-client의
+      // resolveRevisionConflict가 그 실패를 SERVICE_UNAVAILABLE로 삼켜 조용히 재시도만 반복하고
+      // CONFLICT 상태로 못 넘어간다(직접 확인: PUT 409→GET 200을 몇 초 간격으로 무한 반복, 대화상자는
+      // 끝내 안 뜬다). buildForeignDeviceSnapshot이 CREATE_CAREER에 쓴 것과 같은 값을 넣는다.
+      await fulfillJson(route, 200, {
+        data: { createdServiceSeasonId: 'svc_kickoff', snapshot: serverSnapshot, commands: [] },
+        meta: E2E_META,
+      });
       return;
     }
     if (method === 'PUT') {
@@ -84,18 +93,9 @@ export async function triggerConflictAndOpenDialog(page: Page): Promise<{ career
     await route.continue();
   });
 
-  await page.goto('/onboarding');
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
-  await page.getByLabel('이름').fill('김서준');
-  await page.getByRole('radio', { name: '남성' }).click();
-  await page.getByLabel('국적').selectOption('KR');
-  await page.getByRole('radio', { name: '왼발' }).click();
-  await page.getByRole('tab', { name: '공격수' }).click();
-  await page.getByRole('radio', { name: /윙어/ }).click();
-  await page.getByRole('radio', { name: /클럽 아카데미/ }).click();
-  await page.getByRole('button', { name: '다음' }).click();
+  await startNewCareer(page);
+  await fillPlayerInfo(page);
+  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
   await page.waitForURL(/\/career\/.+\/style$/);
 
   const match = page.url().match(/\/career\/([^/]+)\/style/);
@@ -113,6 +113,12 @@ export async function triggerConflictAndOpenDialog(page: Page): Promise<{ career
   if (getResponse.status() !== 200) throw new Error(`e2e: 충돌 GET 스텁 실패(${getResponse.status()})`);
 
   await page.goto(`/career/${careerId}/style`);
+  // 충돌 감지는 이 페이지의 useSyncState가 진입 시 걸어 두는 GET 왕복(스텁 응답이라도 네트워크
+  // 큐·React 렌더 타이밍은 남는다) 뒤에야 대화상자를 띄운다 — 고정 대기 대신 대화상자 자체가 뜨는
+  // 것을 상태 기반으로 기다린다. 병렬 워커로 CPU를 나눠 쓰면 늦어질 수 있어 넉넉히 잡는다.
+  await page
+    .getByRole('heading', { level: 2, name: '다른 기기에서 이 커리어가 더 진행됐습니다' })
+    .waitFor({ state: 'visible', timeout: 20_000 });
 
   return { careerId, serverSnapshot };
 }

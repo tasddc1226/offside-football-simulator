@@ -133,11 +133,17 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
   await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
   await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
   const signedAccept = page.getByRole('button', { name: '서명하고 계약 확정' });
+  const stayConfirm = page.getByRole('button', { name: '현재 팀 잔류 확정' });
+  // isVisible()은 스냅샷 한 번뿐이라 URL이 바뀐 직후(라우트 전환 렌더가 아직 안 끝난 시점)에
+  // 부르면 두 버튼 다 아직 안 붙어 있어 signedAccept가 false로 읽히고 잘못 stayConfirm 분기로
+  // 빠질 수 있다(offers[0]이 서명이 필요한 재계약 제안일 때 재현됨 — stayConfirm은 이 화면에
+  // 끝내 없어 90s 타임아웃). 둘 중 하나가 실제로 뜨는 것부터 기다린 뒤 분기한다.
+  await signedAccept.or(stayConfirm).first().waitFor({ state: 'visible' });
   if (await signedAccept.isVisible()) {
     await enterTypedSignature(page);
     await signedAccept.click();
   } else {
-    await page.getByRole('button', { name: '현재 팀 잔류 확정' }).click();
+    await stayConfirm.click();
   }
   // 안전 잔류 제안(항상 offers[0])을 수락하면 /transfer-result?rev=N(&interested=K)의 STAY 결과
   // 카드에 도착한다(T-4-011). 그 외 제안도 같은 화면에 도착한다 — "대시보드로"/"새 시즌 준비"
@@ -186,9 +192,8 @@ export async function fillPreseasonPlan(page: Page, mode: 'FAST' | 'CHAPTER', mo
   const url = new URL(page.url());
   expect(url.searchParams.get('mode')).toBe(mode);
   await expect(page.getByRole('heading', { level: 1, name: '시즌 준비' })).toBeVisible();
-  // SCR-011 인수 조건: "시즌 중 적용" vs "시즌 결산 때 능력에 반영"으로 즉시/시즌 결산 효과를 구분한다.
-  await expect(page.getByText('(시즌 중 적용)')).toBeVisible();
-  await expect(page.getByText('(시즌 결산 때 능력에 반영, 다음 시즌부터 체감)')).toBeVisible();
+  // SCR-011 인수 조건: 모드는 시즌 중 적용, 훈련 계획은 시즌 결산 때 능력에 반영 — 한 문장으로 구분한다.
+  await expect(page.getByText('모드는 시즌 중 적용되고, 훈련 계획은 시즌 결산 때 능력에 반영됩니다.')).toBeVisible();
 }
 
 /** SCR-012의 POSITION_CHANGE·ROLE_CHANGE를 승낙한다. 현재 역할과 완전히 같은 KEEP은 시즌 준비
@@ -283,7 +288,7 @@ export async function advanceThroughSeasonToSettlement(
 ): Promise<void> {
   const progressButton = page.getByRole('button', { name: '진행', exact: true });
   const settleButton = page.getByRole('button', { name: '결산하기', exact: true });
-  const currentStepCaption = page.getByText(/시즌 \d+ · \d+\/12 단계/);
+  const currentStepCaption = page.getByText(/\d+\/12 단계/);
   for (let step = 0; step < 20; step += 1) {
     const pathnameBefore = new URL(page.url()).pathname;
     if (pathnameBefore.endsWith('/chapter')) {

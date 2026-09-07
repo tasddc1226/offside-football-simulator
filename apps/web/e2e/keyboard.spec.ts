@@ -218,6 +218,12 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/$/);
 
+  // "최근 선수"(resume) 탭의 기본 카드는 featured=true라 상세 관리 disclosure를 두지 않는다 —
+  // "선수단 관리"(squad 탭)로 이동해야 상세 관리·삭제 버튼에 닿는다.
+  await tabTo(page, page.getByRole('link', { name: '선수단 관리' }));
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\?tab=squad$/);
+
   const detailSummary = page.locator('summary').filter({ hasText: '상세 관리' });
   await tabTo(page, detailSummary);
   await page.keyboard.press('Enter');

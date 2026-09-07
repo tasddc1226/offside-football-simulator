@@ -69,15 +69,17 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   ).toEqual([]);
 }
 
-test('큰 화면에서도 게임 프레임은 480px로 중앙 정렬된다', async ({ page }, testInfo) => {
+test('큰 화면에서도 게임 프레임은 560px로 중앙 정렬된다', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.goto('/onboarding');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   const shell = await page.locator('.os-shell').boundingBox();
   expect(shell).not.toBeNull();
-  expect(shell!.width).toBeLessThanOrEqual(480);
-  expect(shell!.width).toBeGreaterThanOrEqual(478);
+  // packages/ui/src/tokens.css의 --os-content-max: 560px(디자인 토큰)가 game.css의 .os-shell
+  // max-width를 정한다(480px는 그 이전 값이다).
+  expect(shell!.width).toBeLessThanOrEqual(560);
+  expect(shell!.width).toBeGreaterThanOrEqual(558);
   expect(Math.abs(shell!.x - (1440 - shell!.width) / 2)).toBeLessThanOrEqual(1);
   await expectNoHorizontalOverflow(page);
   await attachScreen(page, testInfo, 'desktop-onboarding-1440');
@@ -107,7 +109,11 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await startNewCareer(page);
-      await expect(page.getByRole('heading', { name: '선수 정보를 입력하세요' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' })).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+      // SCR-002 패널 1(정체성)의 성별 라디오그룹은 배경 패널 다음이라 먼저 배경을 골라야 보인다.
+      await page.getByRole('radio', { name: /아카데미의 추가 평가/ }).click();
+      await page.getByRole('button', { name: '다음', exact: true }).click();
       await expectNoHorizontalOverflow(page);
       const gender = page.getByRole('radiogroup', { name: '성별' });
       const boxes = await gender.getByRole('radio').evaluateAll((elements) =>
@@ -147,12 +153,12 @@ for (const colorScheme of ['light', 'dark'] as const) {
       )
       .toBeCloseTo(initialFontSize * 1.5, 1);
     await startNewCareer(page);
-    await expect(page.getByRole('heading', { name: '선수 정보를 입력하세요' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await fillPlayerInfo(page, '긴이름선수박준서');
     await expectNoHorizontalOverflow(page);
     await attachScreen(page, testInfo, `create-${colorScheme}-320-text150`);
-    await page.getByRole('button', { name: '다음', exact: true }).click();
+    await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
     await expect(page.getByRole('heading', { name: '플레이 스타일을 고르세요' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
     const comparisonsStack = await page
@@ -185,6 +191,9 @@ test('세그먼트 키보드 선택은 크기를 바꾸지 않고 하단 동작�
 }, testInfo) => {
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await startNewCareer(page);
+  // SCR-002 패널 1(정체성)의 이름 입력은 배경 패널 다음이라 먼저 배경을 골라야 보인다.
+  await page.getByRole('radio', { name: /아카데미의 추가 평가/ }).click();
+  await page.getByRole('button', { name: '다음', exact: true }).click();
   await page.getByLabel('이름').fill('박준서');
   await page.keyboard.press('Tab');
   const first = page.getByRole('radio', { name: '여성', exact: true });
@@ -200,14 +209,23 @@ test('세그먼트 키보드 선택은 크기를 바꾸지 않고 하단 동작�
   const after = await first.boundingBox();
   expect(after?.height).toBe(before?.height);
   expect(after?.width).toBe(before?.width);
-  const borders = await Promise.all(
+  // game.css의 .os-segmented > .os-radio-item[data-state='checked']는 border-color를 transparent로
+  // 되돌리고 대신 background(os-surface-raised)·box-shadow로 선택 상태를 표시한다(PR #120 UI 개편) —
+  // border 색은 checked·unchecked 모두 투명해 더 이상 구분 신호가 아니다.
+  const backgrounds = await Promise.all(
     [first, second].map((radio) =>
-      radio.evaluate((element) => getComputedStyle(element).borderTopColor),
+      radio.evaluate((element) => getComputedStyle(element).backgroundColor),
     ),
   );
-  expect(borders[0]).not.toBe(borders[1]);
-  await fillPlayerInfo(page, '박준서');
-  const next = page.getByRole('button', { name: '다음', exact: true });
+  expect(backgrounds[0]).not.toBe(backgrounds[1]);
+  // 이름·성별은 이미 채웠으니 나머지 패널 1 필드와 패널 2(선호 위치)만 이어서 채운다 —
+  // fillPlayerInfo는 배경 선택부터 다시 시작해 이 중간 상태에서는 재사용할 수 없다.
+  await page.getByLabel('국적').selectOption('KR');
+  await page.getByRole('radio', { name: '왼발' }).click();
+  await page.getByRole('button', { name: '다음', exact: true }).click();
+  await page.getByRole('tab', { name: '공격수' }).click();
+  await page.getByRole('radio', { name: /윙어/ }).click();
+  const next = page.getByRole('button', { name: '플레이 스타일 고르기' });
   await next.scrollIntoViewIfNeeded();
   await expect(next).toBeInViewport();
   expect(
@@ -229,7 +247,12 @@ test('허브 삭제 대화상자는 프레임 위에 표시되고 Escape로 포�
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
   await startNewCareer(page);
   await page.goto('/');
-  const trigger = page.getByRole('button', { name: '삭제', exact: true });
+  // "최근 선수"(resume) 탭의 기본 카드는 featured=true라 상세 관리 disclosure를 두지 않는다 —
+  // "선수단 관리"(squad 탭)로 이동해야 상세 관리·삭제 버튼에 닿는다.
+  await page.getByRole('link', { name: '선수단 관리' }).click();
+  await expect(page).toHaveURL(/\?tab=squad$/);
+  await page.getByText('상세 관리').click();
+  const trigger = page.getByRole('button', { name: '커리어 삭제' });
   await trigger.click();
   const dialog = page.getByRole('dialog', { name: '커리어 삭제' });
   await expect(dialog).toBeVisible();
@@ -268,7 +291,7 @@ test('계약 대시보드와 시즌 결과도 모바일 프레임을 유지한�
   await attachScreen(page, testInfo, 'dashboard-light-360');
   await page.setViewportSize({ width: 1440, height: 960 });
   const desktopShell = await page.locator('.os-shell').boundingBox();
-  expect(desktopShell!.width).toBeLessThanOrEqual(480);
+  expect(desktopShell!.width).toBeLessThanOrEqual(560);
   await expectNoHorizontalOverflow(page);
   await page.setViewportSize({ width: 360, height: 780 });
   await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
