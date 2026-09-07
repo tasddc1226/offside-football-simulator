@@ -10,7 +10,9 @@
 > 룰셋 1.3.0·팩 0.5.0)이 ACTIVE다. Phase 5(PR #103·#106)·Phase 6은 종결, Phase 7 운영·밸런스가
 > 진행 중이다 — 현황은 [board.md](board.md) 상단과 Phase 5·6·7 표, 결정은 [decision-log.md](decision-log.md)
 > 2026-09-07 항목. 9/5 밤부터 코드 PR은 사용자 세션(Codex·Sol·Luna)이 열고 머지하며 Claude 세션은
-> 문서·현황판·CI 검토만 맡는다.
+> 문서·현황판·CI 검토만 맡는다. 9/7 오후 운영 플레이 QA 두 라운드(3관점 3명, 6케이스 6명 — Sonnet 서브에이전트 + ego-browser)의
+> 결과와 결함 우선순위는 [qa/2026-09-07-production-three-perspectives](../qa/2026-09-07-production-three-perspectives/README.md)·
+> [qa/2026-09-07-production-six-cases](../qa/2026-09-07-production-six-cases/README.md)에 있고 이슈화는 사용자 결정이다.
 >
 > 이전 인계(2026-09-06): Phase 5와 게임 경험 새로고침 PR
 > [#103](https://github.com/tasddc1226/offside-football-simulator/pull/103)은 main
