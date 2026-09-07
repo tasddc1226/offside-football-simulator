@@ -436,6 +436,59 @@ describe('bounded career recovery policy', () => {
     expect(result.pending.offers[1]).toMatchObject({ kind: 'LOAN', leagueTier: 3, rolePromise: 'ROTATION', fromTeamId: state.contract!.teamId });
     expect(result.pending.offers[1]!.appearancePromise.minutesShareBp).toBe(ruleset.contractRules.promiseMinutesShareBp.ROTATION);
   });
+
+  // T-7-002 D-67(이슈 #140): recovery.zeroMinutesConsecutiveSeasons는 이미 데이터로만 읽힌다
+  // (hasConsecutiveZeroMinuteSeasons/needsRecoveryOpportunity, market.ts 코드 변경 없음) — 룰셋
+  // 1.4.0(=1)과 1.3.0(=2)이 실제로 다른 문턱에서 회복 트리거를 여는지만 테스트로 고정한다.
+  // index발·평점발 INTEREST를 걷어내려고(judgeMarketReason describe 블록의 lowIndexBase와 같은
+  // 방식) baseOvr·scoutedPotential을 낮추고, squadRoleAtEnd는 원본 그대로 ROTATION(STARTER
+  // 아님)을 유지한다 — 순수하게 회복 트리거 하나만으로 INTEREST가 나오는지 본다.
+  describe('T-7-002 D-67: zeroMinutesConsecutiveSeasons 문턱(1.4.0=1, 1.3.0=2)', () => {
+    const { snapshot, beforeSettlementState } = runSettledFixture();
+    const settledLowIndex: CareerState = {
+      ...snapshot.state,
+      rngState: beforeSettlementState.rngState,
+      pending: null,
+      player: { ...snapshot.state.player, profile: { ...snapshot.state.player.profile!, baseOvr: 35, scoutedPotentialMin: 30, scoutedPotentialMax: 45 } },
+    };
+    const zeroMinuteLastSeason = {
+      ...settledLowIndex.seasonHistory.at(-1)!,
+      result: {
+        ...settledLowIndex.seasonHistory.at(-1)!.result,
+        playerStats: { ...settledLowIndex.seasonHistory.at(-1)!.result.playerStats, minutes: 0 },
+      },
+    };
+    const oneZeroMinuteSeasonState: CareerState = { ...settledLowIndex, seasonHistory: [zeroMinuteLastSeason] };
+
+    function rulesetWithRecovery(zeroMinutesConsecutiveSeasons: number) {
+      return {
+        ...marketFixtureRuleset,
+        transferRules: {
+          ...marketFixtureRuleset.transferRules,
+          recovery: { youthMaxAge: 18, zeroMinutesConsecutiveSeasons, opportunityTier: 3 as const, opportunityRole: 'ROTATION' as const },
+        },
+      };
+    }
+
+    it('1.4.0(zeroMinutesConsecutiveSeasons: 1): 0분 시즌 1회만으로 judgeMarketReason이 INTEREST고, 결산 시장에 회복 제안이 들어간다', () => {
+      const ruleset = rulesetWithRecovery(1);
+      expect(judgeMarketReason(oneZeroMinuteSeasonState, ruleset)).toBe('INTEREST');
+      const result = openMarketAfterSettlement(oneZeroMinuteSeasonState, ruleset, 130);
+      expect(result.opened).toBe(true);
+      if (result.state.pending?.kind !== 'OFFERS') throw new Error('OFFERS pending이 아니다.');
+      expect(result.state.pending.market.reason).toBe('INTEREST');
+      expect(
+        result.state.pending.offers.some(
+          (offer) => offer.leagueTier === 3 && offer.rolePromise === 'ROTATION' && offer.fromTeamId === oneZeroMinuteSeasonState.contract!.teamId,
+        ),
+      ).toBe(true);
+    });
+
+    it('1.3.0(zeroMinutesConsecutiveSeasons: 2): 0분 시즌 1회로는 회복 트리거 미달이라 null이다(다른 신호도 없음)', () => {
+      const ruleset = rulesetWithRecovery(2);
+      expect(judgeMarketReason(oneZeroMinuteSeasonState, ruleset)).toBeNull();
+    });
+  });
 });
 
 describe('step 7 CONTRACT 슬롯(season.ts의 selectOpenSlot) 통합', () => {

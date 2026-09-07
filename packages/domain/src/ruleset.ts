@@ -107,7 +107,17 @@ export type SelectionRules = {
     managerTrustBase: number;
     managerTrustSpread: number;
   };
-  roleProposal: { acceptTrustDelta: number; declineTrustDelta: number; keepConfirmTrustDelta: number };
+  roleProposal: {
+    acceptTrustDelta: number;
+    declineTrustDelta: number;
+    keepConfirmTrustDelta: number;
+    /** T-7-002 D-67: 1.4.0+. true면 ROLE_CHANGE ACCEPT가 contract.rolePromise·appearancePromise도
+     * proposal.to로 갱신한다(1.3.0 이하는 키 없음 → 기존처럼 계약 불변). */
+    acceptedRoleUpdatesPromise?: boolean | undefined;
+    /** T-7-002 D-67: 1.4.0+. ROLE_CHANGE DECLINE이 하향 제안(proposal.to가 contract.rolePromise보다
+     * 나쁜 역할)이면 declineTrustDelta 대신 이 값을 쓴다(정의됐을 때만). */
+    declineDowngradeTrustDelta?: number | undefined;
+  };
 };
 
 // T-2-003 D-35: 경기 결과(diff 구간 → 승·무·패 정수 확률, 합 100). 구간은 연속이어야 한다(content
