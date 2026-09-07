@@ -227,6 +227,16 @@ function formatOfferValidity(offer: Offer, recordRevision: number, actionRevisio
   return `앞으로 ${remainingDecisions}번의 결정 안에 처리해야 합니다 · 협상·거절 등 결정을 확정할 때 줄어듭니다. 화면을 보는 것만으로는 줄지 않습니다`;
 }
 
+/**
+ * T-7-007(이슈 #151): 제안 비교 카드의 "결정 기한" 셀은 값을 짧게 고정해 카드 높이를 맞춘다.
+ * 기한이 지나면 철회된다는 긴 설명은 카드 밖 목록 상단 캡션으로 옮겼다(offers.tsx).
+ */
+export function offerDecisionDeadlineLabel(offer: Offer, recordRevision: number): string {
+  if (offer.validUntilRevision === null) return '제한 없음';
+  const remainingDecisions = Math.max(0, offer.validUntilRevision - recordRevision);
+  return `결정 ${remainingDecisions}번 안`;
+}
+
 type NegotiationOutcome = 'COUNTERED' | 'WITHDRAWN';
 
 export type NegotiationResultView = {

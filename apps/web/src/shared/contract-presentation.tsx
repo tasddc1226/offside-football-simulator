@@ -4,7 +4,7 @@ import { Link } from '@tanstack/react-router';
 import { formatKrw } from './format.js';
 import { LEAGUE_TIER_LABEL_KO, SQUAD_ROLE_LABELS } from './labels.js';
 import { getTeamIdentity } from './team-identity.js';
-import { actionableRevision, OFFER_KIND_LABEL_KO, offerDetailRows, offerProjectionNotice, offerStatusLabel } from './transfer-view.js';
+import { actionableRevision, OFFER_KIND_LABEL_KO, offerDecisionDeadlineLabel, offerDetailRows, offerProjectionNotice, offerStatusLabel } from './transfer-view.js';
 
 function signedDelta(value: number, current: number): string {
   const delta = value - current;
@@ -15,7 +15,7 @@ function signedDelta(value: number, current: number): string {
 export function offerHeadlineRows(offer: Offer, state: CareerState, recordRevision: number, safeOfferId: string | null) {
   const current = state.contract;
   const remaining = current === null ? null : computeContractSeasonsRemaining(current.lengthSeasons, current.signedAtRevision, state.timeline);
-  const validity = offerDetailRows(offer, recordRevision, safeOfferId).find((row) => row.label === '유효 기간')?.value ?? '—';
+  const deadline = offerDecisionDeadlineLabel(offer, recordRevision);
   return [
     { label: '제안', value: `${OFFER_KIND_LABEL_KO[offer.kind]} · ${offerStatusLabel(offer, actionableRevision(recordRevision), safeOfferId)}` },
     { label: '리그', value: LEAGUE_TIER_LABEL_KO[offer.leagueTier] },
@@ -38,7 +38,7 @@ export function offerHeadlineRows(offer: Offer, state: CareerState, recordRevisi
             ? '현재와 같음'
             : `남은 ${remaining ?? 0}시즌 대비 ${offer.lengthSeasons > (remaining ?? 0) ? '+' : '−'}${Math.abs(offer.lengthSeasons - (remaining ?? 0))}시즌`,
     },
-    { label: '결정 기한', value: validity },
+    { label: '결정 기한', value: deadline },
   ];
 }
 
