@@ -31,6 +31,7 @@ import { screenForCareer } from '../shared/career-route.js';
 import { currentTeamId, currentTeamName } from '../shared/current-team.js';
 import {
   deriveChapterView,
+  deriveNationalTeamResultSummary,
   type ChapterView,
   type ResolvedChapterDecision,
 } from '../shared/chapter-state.js';
@@ -100,6 +101,13 @@ const CAPTION_STYLE = {
   lineHeight: 'var(--os-lh-caption)',
 } as const;
 const NUM_STYLE = { fontSize: 'var(--os-fs-num-xl)', lineHeight: 'var(--os-lh-num-xl)' } as const;
+
+// T-7-009 이슈 150: labels.ts는 T-7-005가 만지므로, 이 화면에서만 쓰는 대표팀 결과 문구는
+// 지역 상수로 둔다(PR 본문 "지역 상수 라벨" 목록 참고).
+const NATIONAL_TEAM_HEADLINE_KO = '대표팀 소집을 마쳤습니다';
+const NATIONAL_TEAM_SUMMARY_TITLE_KO = '대표팀 소집 결과';
+const NATIONAL_TEAM_CAPTION_KO = '대표팀 경기는 스코어와 개인 기록을 따로 집계하지 않습니다.';
+const NATIONAL_TEAM_DEBUT_VALUE_KO = 'A대표팀 데뷔 기록';
 
 const APPEARANCE_CONTEXT_LABEL: Record<MatchAppearance, string> = {
   START: '선발 출전',
@@ -564,6 +572,7 @@ function ChapterScreen() {
 function ChapterResultSection({ view, careerId }: { view: ChapterView; careerId: string }) {
   const match = view.match;
   const isNationalTeam = view.context.kind === 'NATIONAL_TEAM';
+  const nationalSummary = deriveNationalTeamResultSummary(view);
   const stats = positionStatEntries(match.stats);
   const changeLines = aggregateEffectDeltas(view.resolved).map(({ target, delta }) => {
     const label = (EFFECT_TARGET_LABEL_KO as Record<string, string | undefined>)[target] ?? target;
@@ -574,8 +583,9 @@ function ChapterResultSection({ view, careerId }: { view: ChapterView; careerId:
   // UX-010 P2b: 스코어는 즉시, 평점은 짧게(0.5초 이내) 늦춰 드러낸다(가벼운 서스펜스 리빌).
   const ratingRevealed = useDelayedReveal();
   // UX-010 P2a: 결과 성격 한 줄 헤드라인. 같은 경기(careerId+matchId)면 항상 같은 문구가 나온다.
+  // T-7-009 이슈 150: 대표팀은 스코어·평점이 없어 이 헤드라인 함수를 쓸 입력이 없으므로 고정 문구.
   const headline = isNationalTeam
-    ? null
+    ? NATIONAL_TEAM_HEADLINE_KO
     : matchResultHeadline({
         seed: `${careerId}:${match.id}`,
         outcome: match.result.outcome,
@@ -605,6 +615,57 @@ function ChapterResultSection({ view, careerId }: { view: ChapterView; careerId:
         </p>
       </div>
       )}
+
+      {nationalSummary !== null ? (
+        <>
+          <p className="os-eyebrow">{NATIONAL_TEAM_SUMMARY_TITLE_KO}</p>
+          <dl
+            className="grid grid-cols-1 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
+            style={CAPTION_STYLE}
+          >
+            <div>
+              <dt>소집</dt>
+              <dd className="text-os-text">
+                {chapterTriggerLabel(view.definition.trigger)} · {nationalSummary.opponentName}
+              </dd>
+            </div>
+            <div>
+              <dt>판단 결과</dt>
+              <dd className="text-os-text">
+                <p>{nationalSummary.successCount}/{nationalSummary.totalCount} 성공</p>
+                <ul className="mt-os-1 flex flex-col gap-os-1">
+                  {nationalSummary.decisions.map((resolved) => (
+                    <li key={resolved.entry.decisionId}>
+                      {resolved.option.label} → {resolved.outcome.title}
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+            {changeLines.length > 0 ? (
+              <div>
+                <dt>효과</dt>
+                <dd className="text-os-text">{changeLines.join(' · ')}</dd>
+              </div>
+            ) : null}
+            {addedTags.length > 0 ? (
+              <div>
+                <dt>획득 태그</dt>
+                <dd className="text-os-text">{addedTags.join(' · ')}</dd>
+              </div>
+            ) : null}
+            {nationalSummary.debutConfirmed ? (
+              <div>
+                <dt>데뷔</dt>
+                <dd className="text-os-text">{NATIONAL_TEAM_DEBUT_VALUE_KO}</dd>
+              </div>
+            ) : null}
+          </dl>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            {NATIONAL_TEAM_CAPTION_KO}
+          </p>
+        </>
+      ) : null}
 
       {!isNationalTeam && (
       <dl
@@ -658,7 +719,7 @@ function ChapterResultSection({ view, careerId }: { view: ChapterView; careerId:
         </p>
       ) : null}
 
-      {changeLines.length > 0 ? (
+      {!isNationalTeam && changeLines.length > 0 ? (
         <ul className="flex flex-col gap-os-1 font-os text-os-text-2" style={CAPTION_STYLE}>
           {changeLines.map((line) => (
             <li key={line}>{line}</li>
@@ -666,7 +727,7 @@ function ChapterResultSection({ view, careerId }: { view: ChapterView; careerId:
         </ul>
       ) : null}
 
-      {addedTags.length > 0 ? (
+      {!isNationalTeam && addedTags.length > 0 ? (
         <ul className="flex flex-wrap gap-os-1">
           {addedTags.map((tag) => (
             <li

@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CareerState, ChapterRecord, FootballSeason, MatchRecord } from '@offside/domain';
 import type { ChapterDefinition, ContentPack } from '@offside/content';
-import { deriveChapterView } from './chapter-state.js';
+import { deriveChapterView, deriveNationalTeamResultSummary } from './chapter-state.js';
 
 const DEFINITION: ChapterDefinition = {
   id: 'CHP-TEST-001',
@@ -368,5 +368,65 @@ describe('deriveChapterView', () => {
     });
 
     expect(deriveChapterView(state, PACK)).toBeNull();
+  });
+});
+
+describe('deriveNationalTeamResultSummary', () => {
+  it('완료된 NATIONAL_DEBUT 챕터 뷰에서 상대·판단 성공률·데뷔 확정 여부를 요약한다(이슈 150)', () => {
+    const chapterRecord: ChapterRecord = {
+      chapterId: NATIONAL_DEFINITION.id,
+      version: 1,
+      step: 2,
+      matchId: MATCH.id,
+      importance: 'MAJOR',
+      trigger: 'NATIONAL_DEBUT',
+      decisions: [
+        { decisionId: 'D1', optionId: 'SAFE', outcomeId: 'D1-SUCCESS', outcomeKind: 'SUCCESS' },
+        { decisionId: 'D2', optionId: 'BOLD', outcomeId: 'D2-FAIL', outcomeKind: 'FAIL' },
+      ],
+      ratingDeltaTenths: 0,
+      virtualOpponent: NATIONAL_OPPONENT,
+    };
+    const state = baseState({
+      pending: null,
+      season: seasonWith({ chapters: [chapterRecord] }),
+      timeline: [{ revision: 5, kind: 'CHAPTER_RESOLVED', refId: `${NATIONAL_DEFINITION.id}:D2:BOLD:D2-FAIL`, age: 17, step: 2 }],
+    });
+
+    const view = deriveChapterView(state, NATIONAL_PACK);
+    const summary = view === null ? null : deriveNationalTeamResultSummary(view);
+
+    expect(summary).not.toBeNull();
+    expect(summary?.opponentName).toBe(NATIONAL_OPPONENT.opponentName);
+    expect(summary?.successCount).toBe(1);
+    expect(summary?.totalCount).toBe(2);
+    expect(summary?.debutConfirmed).toBe(true);
+    expect(summary?.decisions.map((resolved) => resolved.outcome.title)).toEqual(['D1 성공', 'D2 실패']);
+  });
+
+  it('리그(CLUB) 챕터 뷰에서는 요약을 만들지 않는다(대표팀 전용)', () => {
+    const chapterRecord: ChapterRecord = {
+      chapterId: DEFINITION.id,
+      version: 1,
+      step: 2,
+      matchId: MATCH.id,
+      importance: 'MAJOR',
+      trigger: 'DEBUT',
+      decisions: [
+        { decisionId: 'D1', optionId: 'SAFE', outcomeId: 'D1-SUCCESS', outcomeKind: 'SUCCESS' },
+        { decisionId: 'D2', optionId: 'BOLD', outcomeId: 'D2-FAIL', outcomeKind: 'FAIL' },
+      ],
+      ratingDeltaTenths: -2,
+    };
+    const state = baseState({
+      pending: null,
+      season: seasonWith({ chapters: [chapterRecord] }),
+      timeline: [{ revision: 5, kind: 'CHAPTER_RESOLVED', refId: `${DEFINITION.id}:D2:BOLD:D2-FAIL`, age: 17, step: 2 }],
+    });
+
+    const view = deriveChapterView(state, PACK);
+
+    expect(view).not.toBeNull();
+    expect(view === null ? null : deriveNationalTeamResultSummary(view)).toBeNull();
   });
 });
