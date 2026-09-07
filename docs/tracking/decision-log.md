@@ -2,6 +2,15 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-07 (14:50, 리뷰 후속 1차 웨이브 브리프 T-7-001~010 — 사용자 지시 "우선순위 높은 것부터 위임 전 브리프")
+
+- 대상: P1 #140(무출전 고착)·#141(협상 버튼 무결과)과 P2 중 표시 계층·UI로 닫히는 #142·#143·#105·#144·#146·#149·#150·#151·#152. P2 #145·#147·#148은 T-7-002와 같은 도메인 파일(`simulate.ts`·`market.ts`·`season.ts`)을 만지므로 2차 웨이브로 미뤘다. 브리프 10건은 [briefs/T-7-001](briefs/T-7-001.md)~[T-7-010](briefs/T-7-010.md), e2e 포트 5261~5270. 투입(Workflow Sonnet 5)은 사용자 승인 뒤.
+- **D-67 룰셋 1.4.0 회복 규칙.** 원소속 잔류 중 무출전 고착의 코드 원인 4가지를 확인했다: (1) 회복 제안(`buildRecoveryOpportunity`)은 0분 시즌 **2회 연속** 뒤에만(`transferRules.recovery.zeroMinutesConsecutiveSeasons: 2`), (2) 결산 약속 미이행이 **선수의** 감독 신뢰를 -8(`relationshipCarry.managerTrustPromiseBreach`) 깎아 선발 점수를 더 낮춤, (3) 역할 제안 수락은 `context.squadStatus`만 올리고 `contract.rolePromise`는 그대로라 다음 경기부터 `playMatch`가 원래 값으로 되돌림(한 경기 효과), (4) 하향 제안 거절 -8(`roleProposal.declineTrustDelta`). 룰셋은 불변 아티팩트이므로(05-save-and-versioning) **1.4.0**을 1.3.0 복사로 만들어 (1) 2→1, (2) -8→0(위반 카운터·태그·로그·EVT-CON-012는 유지), (3)(4)는 새 선택 키 `roleProposal.acceptedRoleUpdatesPromise: true`·`declineDowngradeTrustDelta: 0`으로 넣고 도메인은 키 존재로 가드한다(D-43 패턴) — 1.0.0~1.3.0 재생·골든·해시 불변, 새 rng roll 없음. 팩 0.5.0은 `compatibleRulesetVersions`에 1.4.0만 추가(checksum은 파일 목록 대상이라 불변). 검증은 INSERT-only 로컬 QA 시즌(`svc_recovery_rules_qa`)으로 하고, **운영 시즌의 1.4.0 승격과 api CURRENT/PREVIOUS 전환은 사용자 결정**. 시즌 중 임대 요청 같은 새 행동은 엔진 지원이 확인되지 않아 넣지 않았다(2차 후보). 룰셋 수치 조정 금지(D-62)는 워커에 그대로 적용되고, 위 값들은 오케스트레이터 결정이다.
+- **D-68 승격은 순위 기록.** 구단 티어는 룰셋 정적 데이터이고 `legacy.promotion`은 "최종 순위 ≤ promotionSlots"라는 기록이며 리그 이동은 어디에도 없다. 이번에는 웹 문구를 "승격권"으로 맞추고 결산에 "리그가 바뀌지 않는다" 캡션을 붙인다(T-7-010). 실제 승강은 Phase 8(WORLD STAGE, 새 룰셋의 신규 커리어) 후보로 보류.
+- **D-69 협상 결과·불가 사유 표시 규칙.** 협상 결과(성공·실패·철회)는 제안이 목록에서 사라져도 항상 패널로 보이고 포커스를 받는다(`contract.tsx`의 `pending===null` 이른 반환이 마지막 제안 철회 시 빈 화면을 만드는 결함 수정). 비활성 버튼은 사유 문구를 함께 보여 준다(OPEN 아님 / 이 제안 유형에서는 열리지 않음 / 1회 사용 / 이미 주전). `negotiable` 생성 규칙·성공률(재계약 ROLE 0bp 등)은 룰셋이므로 바꾸지 않는다.
+- 표시 라벨(T-7-005): 관계 사유 키는 `labels.ts`의 `relationshipReasonLabel`로만 그리고 미등록 대문자 키는 '최근 변화'로 폴백, 챕터 TAG 제목은 전용 표(`프로_데뷔`→'데뷔 이후의 무대') + `resultTagLabel` + '핵심 경기' 폴백(D-38 보완). 결산 표는 "선발 등급(시즌 시작→종료)"과 "계약 역할 약속"을 다른 행·캡션으로 분리한다(#143은 데이터 오류가 아니라 출처가 다른 두 값).
+- 파일 소유권·순서: T-7-001 → T-7-002·T-7-003(병행). 웹은 T-7-004·T-7-005·T-7-009 병행, T-7-007은 T-7-004 뒤(`offers.tsx`), T-7-010은 T-7-005 뒤(`season-result.tsx`). ui는 T-7-006·T-7-008 병행(다른 파일). 브리프 규칙은 worker-brief-template 그대로(새 테스트 파일 금지, 기존 구조에 항목 추가, 룰셋 수치 조정 금지, 서브에이전트 금지, PR 직전 `git merge origin/main`).
+
 ## 2026-09-07 (오후, 운영 6케이스 플레이 리뷰 — 사용자 요청)
 
 - 방법: 사용자 지시("권장 6회로 돌려보자. ego-browser에서 겹치지 않게 주의해서 sonnet 5 에이전트에게 돌려줘")대로 Sonnet 서브에이전트 6명이 각자 ego-browser 작업공간에서 offside-lab.com을 12:52~13:47 병렬 플레이했다. 케이스는 포지션(GK·CB·WG·CM·ST·DM)·성별·국적·출발 카드·첫 갈림길·전략을 직교로 배치했고, 여섯 작업공간이 같은 브라우저 프로필을 공유하므로 선수 생성 구간만 스크래치패드 `mkdir` 잠금으로 직렬화했다(초안 혼선 0건). 안전 규칙은 3관점과 동일. 결과는 [docs/qa/2026-09-07-production-six-cases](../qa/2026-09-07-production-six-cases/README.md)(케이스별 문서 6건, 캡처 19장).

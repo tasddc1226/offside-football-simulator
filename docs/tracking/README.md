@@ -12,7 +12,9 @@
 > 2026-09-07 항목. 9/5 밤부터 코드 PR은 사용자 세션(Codex·Sol·Luna)이 열고 머지하며 Claude 세션은
 > 문서·현황판·CI 검토만 맡는다. 9/7 오후 운영 플레이 QA 두 라운드(3관점 3명, 6케이스 6명 — Sonnet 서브에이전트 + ego-browser)의
 > 결과와 결함 우선순위는 [qa/2026-09-07-production-three-perspectives](../qa/2026-09-07-production-three-perspectives/README.md)·
-> [qa/2026-09-07-production-six-cases](../qa/2026-09-07-production-six-cases/README.md)에 있고 이슈화는 사용자 결정이다.
+> [qa/2026-09-07-production-six-cases](../qa/2026-09-07-production-six-cases/README.md)에 있다. 개선 포인트는 이슈 #140~#172(33건)로
+> 등록했고, 1차 웨이브 브리프 [T-7-001](briefs/T-7-001.md)~[T-7-010](briefs/T-7-010.md)(D-67 룰셋 1.4.0 회복 규칙·D-68 승격권 문구·D-69 협상 결과 표시)을
+> 써 두었다. 워커 투입은 사용자 승인 뒤다.
 >
 > 이전 인계(2026-09-06): Phase 5와 게임 경험 새로고침 PR
 > [#103](https://github.com/tasddc1226/offside-football-simulator/pull/103)은 main
