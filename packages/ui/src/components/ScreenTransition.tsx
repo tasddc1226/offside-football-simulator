@@ -10,6 +10,22 @@ export const SCREEN_TRANSITION_MS = 3000;
 /** waitFor가 3초보다 오래 걸릴 때 바를 멈춰 두는 지점. 100%는 실제 완료 확인 뒤에만 채운다. */
 const PENDING_CEILING_PERCENT = 96;
 
+/** 진행 바를 갱신하는 간격(ms). 60~100ms 범위에서 rAF 없이도 매끄럽게 보이는 값. */
+const PROGRESS_TICK_MS = 80;
+
+/** 0(무게 없음) ~ 1(선형) 사이 값. smoothstep을 이 비율만큼만 선형에 섞어 "앞 살짝 느리게 →
+ * 중간 거의 선형 → 뒤 살짝 감속" 곡선을 만든다. 값이 클수록 양 끝이 더 완만해진다. */
+const EASE_BLEND = 0.28;
+
+/** fraction(경과/3초, 0~1)을 진행률 비율(0~1)로 변환한다. smoothstep(3x²-2x³)은 양 끝에서
+ * 기울기가 0이라 시작·종료가 완만해지고, 대부분 구간(중간)은 선형에 가깝게 유지된다. 두 곡선이
+ * 모두 [0,1]→[0,1] 단조 증가이므로 볼록조합도 단조 증가 — 역행(진행률 감소)은 발생하지 않는다. */
+function easeProgress(fraction: number): number {
+  const x = Math.min(1, Math.max(0, fraction));
+  const smoothstep = x * x * (3 - 2 * x);
+  return (1 - EASE_BLEND) * x + EASE_BLEND * smoothstep;
+}
+
 export interface ScreenTransitionProps {
   /** 전환 중 보여줄 제목. 세계관 톤의 한 문장. */
   title: string;
@@ -80,18 +96,28 @@ export function ScreenTransition({
   useEffect(() => {
     let cancelled = false;
     let done = false;
+    let progressIntervalId: number | null = null;
     const timers: number[] = [];
     const settle = frozenWaitFor ?? Promise.resolve();
+
+    function stopProgressInterval() {
+      if (progressIntervalId !== null) {
+        window.clearInterval(progressIntervalId);
+        progressIntervalId = null;
+      }
+    }
 
     function finish() {
       if (done || cancelled) return;
       done = true;
+      stopProgressInterval();
       onCompleteRef.current();
     }
 
     function fail(error: unknown) {
       if (done || cancelled) return;
       done = true;
+      stopProgressInterval();
       onErrorRef.current?.(error);
     }
 
@@ -133,9 +159,20 @@ export function ScreenTransition({
       }
     }
 
-    // 0 → 96%로 3초에 걸쳐 채운다. 실제 완료(waitFor)는 별도로 기다렸다가 100%로 마무리한다.
-    setFillPercent(PENDING_CEILING_PERCENT);
-    setAriaPercent(PENDING_CEILING_PERCENT);
+    // 0 → 96%를 3초에 걸쳐 거의 선형에 가깝게 채운다(easeProgress) — 실제 완료(waitFor)는
+    // 별도로 기다렸다가 100%로 마무리한다. rAF 대신 고정 간격 인터벌을 쓴다: 가짜 타이머
+    // 테스트에서도 결정론적으로 동작하고, 80ms면 체감상 충분히 매끄럽다.
+    const startedAt = Date.now();
+    progressIntervalId = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const fraction = elapsed / SCREEN_TRANSITION_MS;
+      const nextPercent = Math.round(PENDING_CEILING_PERCENT * easeProgress(fraction));
+      setFillPercent(nextPercent);
+      setAriaPercent(nextPercent);
+      if (fraction >= 1) {
+        stopProgressInterval();
+      }
+    }, PROGRESS_TICK_MS);
 
     const timeUpTimer = window.setTimeout(() => {
       timeUp = true;
@@ -158,6 +195,7 @@ export function ScreenTransition({
 
     return () => {
       cancelled = true;
+      stopProgressInterval();
       timers.forEach((timer) => window.clearTimeout(timer));
     };
     // frozenReducedMotion·frozenStages·frozenWaitFor는 정의상(useState 초깃값) 이 컴포넌트의

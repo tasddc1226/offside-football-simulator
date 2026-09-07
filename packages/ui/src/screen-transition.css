@@ -4,7 +4,10 @@
 .os-screen-transition {
   position: relative;
   display: flex;
-  min-height: min(74vh, 32rem);
+  /* 오버레이가 .os-shell-main 세로 공간을 꽉 채우게 한다(그 안이 아니면 100%는 auto로 접힌다 —
+     사용처는 항상 PageShell의 main 안에서 이 컴포넌트 하나만 반환한다는 계약을 따른다).
+     min-height라 콘텐츠가 더 크면 자연스럽게 늘어나고, 짧으면 100%까지 채워 아래가 비지 않는다. */
+  min-height: 100%;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -145,7 +148,10 @@
   overflow: hidden;
   border-radius: inherit;
   background: var(--os-on-hero);
-  transition: width 900ms var(--os-ease-out);
+  /* 진행률은 JS가 60~100ms 간격으로 이미 보간된 값을 밀어 넣는다(ScreenTransition.tsx) — 여기서
+     긴 ease-out을 걸면 각 갱신마다 트랜지션이 새로 시작해 밀리며 뭉친다. 짧은 linear로 다음 갱신
+     전까지만 부드럽게 잇는다. */
+  transition: width 100ms linear;
   width: 0%;
 }
 

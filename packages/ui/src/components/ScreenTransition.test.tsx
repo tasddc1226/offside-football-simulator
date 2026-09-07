@@ -148,4 +148,37 @@ describe('ScreenTransition', () => {
     });
     expect(onComplete).toHaveBeenCalledOnce();
   });
+
+  it('진행 바가 3초 내내 시간에 따라 값이 커지며 96%를 넘지 않는다', async () => {
+    vi.useFakeTimers();
+    render(<ScreenTransition title="t" detail="d" onComplete={() => {}} reducedMotion={false} />);
+
+    const progressbar = screen.getByRole('progressbar');
+    const readValue = () => Number(progressbar.getAttribute('aria-valuenow'));
+
+    expect(readValue()).toBe(0);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    const early = readValue();
+    expect(early).toBeGreaterThan(0);
+    expect(early).toBeLessThan(96);
+
+    // 앞 구간(0.4초)에서 이미 거의 다 차버리던 예전 방식이 아니라, 3초 내내 계속 오르는지
+    // 확인한다 — 0.5초 지점보다 1.5초 더 지난 시점 값이 눈에 띄게 더 커야 한다.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    const mid = readValue();
+    expect(mid).toBeGreaterThan(early);
+    expect(mid).toBeLessThan(96);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900);
+    });
+    const nearEnd = readValue();
+    expect(nearEnd).toBeGreaterThan(mid);
+    expect(nearEnd).toBeLessThanOrEqual(96);
+  });
 });
