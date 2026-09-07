@@ -247,10 +247,9 @@ function SeasonResultScreen() {
   if (profile === null) return null; // deriveSeasonResultView가 이미 profile 확정을 요구한다. 방어적 fallback.
 
   const { common, positionCard, promise, selection } = view;
-  const minutesSharePercent =
-    selection.possibleMinutes === 0
-      ? null
-      : Math.round((selection.minutes / selection.possibleMinutes) * 100);
+  // T-7-005 SCR-014: 계약 역할 약속의 실제 이행 비율(promise.minutesShareBp)로 표시한다 — 선발
+  // 등급(selection)과는 다른 출처라 season-compare.tsx의 actualPercent와 같은 계산을 쓴다.
+  const actualMinutesSharePercent = Math.round(promise.minutesShareBp / 100);
   const stateDeltaRows = buildStateDeltaRows(view, ruleset);
   const nextTarget = canPlanNextSeason(state) ? 'SCR-005' : screenForCareer(state).screenId;
   const headlineTeamResult = view.teamRecords[0];
@@ -467,33 +466,56 @@ function SeasonResultScreen() {
         </section>
       ) : null}
 
-      <section className="os-panel flex flex-col gap-os-2">
+      <section className="os-panel flex flex-col gap-os-3">
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
-          역할 시작/종료
+          역할과 출전 약속
         </h2>
-        <p className="font-os text-os-text" style={BODY_STYLE}>
-          {SQUAD_ROLE_LABELS[selection.roleAtStart]} → {SQUAD_ROLE_LABELS[selection.roleAtEnd]}
-        </p>
+        <dl className="flex flex-col gap-os-2 font-os text-os-text" style={BODY_STYLE}>
+          <div>
+            <dt className="text-os-text-2" style={CAPTION_STYLE}>
+              선발 등급 (시즌 시작 → 종료)
+            </dt>
+            <dd>
+              {SQUAD_ROLE_LABELS[selection.roleAtStart]} → {SQUAD_ROLE_LABELS[selection.roleAtEnd]} (경쟁 순위{' '}
+              {selection.finalRank}위)
+            </dd>
+          </div>
+          <div>
+            <dt className="text-os-text-2" style={CAPTION_STYLE}>
+              계약 역할 약속
+            </dt>
+            <dd>{SQUAD_ROLE_LABELS[promise.promised]}</dd>
+          </div>
+          <div>
+            <dt className="text-os-text-2" style={CAPTION_STYLE}>
+              실제 출전 등급
+            </dt>
+            <dd>
+              {SQUAD_ROLE_LABELS[promise.delivered]} (출전 시간 {actualMinutesSharePercent}%)
+            </dd>
+          </div>
+          <div>
+            <dt className="text-os-text-2" style={CAPTION_STYLE}>
+              약속 이행
+            </dt>
+            <dd>
+              {promise.fulfilled ? '이행' : '미이행'}
+              {!promise.fulfilled &&
+              typeof view.promiseBreachTrustRuleDelta === 'number' &&
+              view.promiseBreachTrustRuleDelta !== 0 ? (
+                <>
+                  {' '}
+                  · 감독 신뢰 기본 조정 {view.promiseBreachTrustRuleDelta >= 0 ? '+' : ''}
+                  {view.promiseBreachTrustRuleDelta}점. 전체 시즌 변화에 포함되며, 신뢰 하한에 따라 실제 감소 폭은
+                  달라질 수 있습니다.
+                </>
+              ) : null}
+            </dd>
+          </div>
+        </dl>
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-          최종 순위 {selection.finalRank}위 · 출전 시간 비율{' '}
-          {minutesSharePercent === null ? '—' : `${minutesSharePercent}%`}
+          선발 등급은 매 경기 경쟁 순위로 정해지고, 계약 역할 약속은 계약서의 역할입니다. 둘은 다를 수 있습니다.
         </p>
-      </section>
-
-      <section className="os-panel flex flex-col gap-os-2">
-        <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
-          출전 약속
-        </h2>
-        <p className="font-os text-os-text" style={BODY_STYLE}>
-          {SQUAD_ROLE_LABELS[promise.promised]} 약속 → {SQUAD_ROLE_LABELS[promise.delivered]} 실제 ·{' '}
-          {promise.fulfilled ? '이행' : '미이행'}
-        </p>
-        {typeof view.promiseBreachTrustRuleDelta === 'number' ? (
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-            출전 약속 미이행: 감독 신뢰 기본 조정 {view.promiseBreachTrustRuleDelta >= 0 ? '+' : ''}
-            {view.promiseBreachTrustRuleDelta}점. 전체 시즌 변화에 포함되며, 신뢰 하한에 따라 실제 감소 폭은 달라질 수 있습니다.
-          </p>
-        ) : null}
       </section>
 
       {view.roleChanges.length > 0 ? (
