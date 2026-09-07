@@ -25,6 +25,7 @@ import {
   buildNegotiationResultView,
   canAcceptOffer,
   canNegotiateOffer,
+  isOfferNonNegotiable,
   MARKET_REASON_LABEL_KO,
   negotiationDisabledReason,
   offerDetailRows,
@@ -618,7 +619,11 @@ function ContractScreen() {
     ask,
     reason: negotiationDisabledReason(offer, record.revision, ask),
   }));
-  const allNegotiationDisabled = negotiationReasons.every((entry) => entry.reason !== null);
+  // PR 174 리뷰 후속: "협상 없이 조건 그대로 결정" 캡션은 negotiable(wage·role·length)이 전부
+  // false인 제안(현 구단 잔류·첫 계약)에서만 사실이다. negotiationReasons가 전부 비활성이어도
+  // (예: 이적 제안에서 협상을 1회 써서 COUNTERED된 경우) negotiable 중 하나는 여전히 true일 수 있어
+  // 이 캡션을 쓰면 틀린 안내가 된다.
+  const offerNotNegotiable = isOfferNonNegotiable(offer);
   return (
     <div className="os-screen">
       <p className="sr-only" aria-live="polite" data-testid="contract-announcement">
@@ -711,7 +716,7 @@ function ContractScreen() {
               </p>
             ))
         }
-        {allNegotiationDisabled ? (
+        {offerNotNegotiable ? (
           <p className="os-muted" style={CAPTION_STYLE}>
             현 구단 잔류·첫 계약 제안은 협상 없이 조건 그대로 결정합니다
           </p>

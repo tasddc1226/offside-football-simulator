@@ -195,6 +195,15 @@ export function negotiationDisabledReason(offer: Offer, recordRevision: number, 
   return null;
 }
 
+/**
+ * PR #174 리뷰 후속: 세 협상 항목(wage·role·length)이 `negotiable`에서 전부 false인 제안(현 구단
+ * 잔류·첫 계약)만 "협상 없이 조건 그대로 결정" 캡션 대상이다. `negotiationDisabledReason`은 상태·
+ * 소진 등 다른 사유로도 null이 아닐 수 있으므로 그 결과만으로는 이 캡션 조건을 판단할 수 없다.
+ */
+export function isOfferNonNegotiable(offer: Offer): boolean {
+  return !offer.negotiable.wage && !offer.negotiable.role && !offer.negotiable.length;
+}
+
 export function canAcceptOffer(offer: Offer, recordRevision: number): boolean {
   const status = offerStatus(offer, actionableRevision(recordRevision));
   return status === 'OPEN' || status === 'COUNTERED';

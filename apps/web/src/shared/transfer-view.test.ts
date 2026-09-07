@@ -7,6 +7,7 @@ import {
   buildOfferRows,
   canAcceptOffer,
   canNegotiateOffer,
+  isOfferNonNegotiable,
   negotiationDisabledReason,
   negotiationKey,
   offerStatus,
@@ -147,6 +148,23 @@ describe('T-7-004 negotiationDisabledReason', () => {
   it('네 조건을 모두 벗어나면 null(활성)을 돌려준다', () => {
     const negotiable = offer({ negotiable: { wage: true, role: false, length: false } });
     expect(negotiationDisabledReason(negotiable, 5, 'WAGE')).toBeNull();
+  });
+});
+
+// PR #174 리뷰 후속: "협상 없이 조건 그대로 결정" 캡션은 negotiable이 전부 false일 때만 사실이다.
+describe('T-7-004 isOfferNonNegotiable', () => {
+  it('negotiable의 wage·role·length가 전부 false면(현 구단 잔류·첫 계약) true다', () => {
+    const safe = offer({ negotiable: { wage: false, role: false, length: false } });
+    expect(isOfferNonNegotiable(safe)).toBe(true);
+  });
+
+  it('negotiable 중 하나라도 true면(예: 이적 제안이 협상을 1회 써서 COUNTERED됐어도) false다', () => {
+    const countered = offer({
+      negotiable: { wage: true, role: false, length: false },
+      negotiationState: 'COUNTERED',
+      negotiatedAsk: 'WAGE',
+    });
+    expect(isOfferNonNegotiable(countered)).toBe(false);
   });
 });
 
