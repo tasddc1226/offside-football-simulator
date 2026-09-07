@@ -314,6 +314,8 @@ const RoleProposalRulesSchema = z.strictObject({
   acceptTrustDelta: z.number(),
   declineTrustDelta: z.number(),
   keepConfirmTrustDelta: z.number(),
+  acceptedRoleUpdatesPromise: z.boolean().optional(),
+  declineDowngradeTrustDelta: z.number().int().optional(),
 });
 
 function refineSum1(ctx: z.core.$RefinementCtx, weights: Record<string, number>, label: string, path: (string | number)[]) {

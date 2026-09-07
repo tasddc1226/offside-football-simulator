@@ -17,6 +17,27 @@ describe('loadRuleset', () => {
   });
 });
 
+// T-7-001 D-67: 룰셋 1.4.0은 1.3.0을 복사해 회복·신뢰 관련 5개 값만 바꾼다. 1.3.0은 재생 결과가
+// 바뀌면 안 되므로 기존 값을 그대로 유지하는지, 1.4.0은 새 값·새 선택 키를 갖는지 함께 고정한다.
+describe('loadRuleset: 1.4.0 회복 규칙 데이터(D-67)', () => {
+  it('1.3.0은 기존 값을 그대로 유지한다(재생 불변)', () => {
+    const ruleset = loadRuleset('1.3.0');
+    expect(ruleset.transferRules.recovery?.zeroMinutesConsecutiveSeasons).toBe(2);
+    expect(ruleset.transferRules.relationshipCarry.managerTrustPromiseBreach).toBe(-8);
+    expect(ruleset.selectionRules.roleProposal.acceptedRoleUpdatesPromise).toBeUndefined();
+    expect(ruleset.selectionRules.roleProposal.declineDowngradeTrustDelta).toBeUndefined();
+  });
+
+  it('1.4.0은 회복 제안을 0분 1시즌 뒤 열고, 약속 미이행이 신뢰를 깎지 않으며, 새 선택 키를 갖는다', () => {
+    const ruleset = loadRuleset('1.4.0');
+    expect(ruleset.version).toBe('1.4.0');
+    expect(ruleset.transferRules.recovery?.zeroMinutesConsecutiveSeasons).toBe(1);
+    expect(ruleset.transferRules.relationshipCarry.managerTrustPromiseBreach).toBe(0);
+    expect(ruleset.selectionRules.roleProposal.acceptedRoleUpdatesPromise).toBe(true);
+    expect(ruleset.selectionRules.roleProposal.declineDowngradeTrustDelta).toBe(0);
+  });
+});
+
 // T-3-006 U-013: 팀 풀 8→12(YOUTH 1·1부 3·2부 4·3부 4). 시장 다양성 확보 목적.
 describe('loadRuleset: 팀 풀 12개(U-013)', () => {
   const ruleset = loadRuleset('1.0.0');
