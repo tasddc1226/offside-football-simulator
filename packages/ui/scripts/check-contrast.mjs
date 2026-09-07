@@ -112,6 +112,11 @@ const TEXT_PAIRS = [
   ['on-hero', 'hero'],
   ['hero-muted', 'hero'],
   ['accent', 'surface'],
+  // T-7-012: .os-game-hero .os-eyebrow(game.css)가 이 색을 캡션 텍스트로 쓴다 — --os-line(3:1
+  // 비텍스트 기준)이 라이트 --os-bg·--os-surface-2 위에서 4.5:1을 못 넘겨 axe color-contrast
+  // serious로 잡혔던 자리(이슈 180)라 텍스트 기준(4.5:1)으로 회귀를 막는다.
+  ['accent', 'bg'],
+  ['accent', 'surface-2'],
 ];
 // 비텍스트 그래픽(라인·게이지·아이콘): 3:1.
 const NON_TEXT_PAIRS = [
@@ -139,11 +144,15 @@ function checkTheme(themeName, vars) {
   return rows;
 }
 
-// 프리셋은 accent 계열만 새로 정의하므로(다른 토큰은 기본 테마 값을 그대로 물려받음) 이 두 쌍만
-// 다시 본다. 나머지 쌍은 위 checkTheme('light'|'dark', ...)가 이미 확인했다.
+// 프리셋은 accent 계열만 새로 정의하므로(다른 토큰은 기본 테마 값을 그대로 물려받음) 이 쌍들만
+// 다시 본다. 나머지 쌍은 위 checkTheme('light'|'dark', ...)가 이미 확인했다. accent-bg·
+// accent-surface-2는 T-7-012: .os-game-hero .os-eyebrow가 프리셋과 무관하게 --os-accent를 쓰므로
+// 프리셋별로도 세 배경 모두 4.5:1을 넘는지 회귀를 막는다.
 const ACCENT_PAIRS = [
   ['on-accent', 'accent'],
   ['accent', 'surface'],
+  ['accent', 'bg'],
+  ['accent', 'surface-2'],
 ];
 
 /**

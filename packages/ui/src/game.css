@@ -221,7 +221,11 @@ select {
   letter-spacing: -0.035em;
 }
 .os-game-hero .os-eyebrow {
-  color: var(--os-line);
+  /* T-7-012: --os-line은 비텍스트 그래픽용(3:1 기준)이라 라이트 테마에서 --os-bg·--os-surface-2
+     배경 위 13px/750 캡션 텍스트로 쓰면 4.5:1을 못 넘는다(axe color-contrast serious, 이슈 180).
+     --os-accent는 라이트·다크 두 테마·모든 UX-004 프리셋에서 --os-bg·--os-surface·--os-surface-2
+     세 배경 모두와 4.5:1을 넘긴다(check:contrast의 accent-bg·accent-surface-2 행 참고). */
+  color: var(--os-accent);
 }
 .os-game-hero-description {
   max-width: 42ch;
