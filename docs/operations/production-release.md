@@ -64,6 +64,27 @@
   후속 PR #112 운영 배포에서 Google 연결도 활성화됐다. 최신 상태는 위 후속 완료 및 연결 런북을 따른다.
 - 콘텐츠의 동결 checksum이나 과거 Legacy 점수를 바꾸지 않는다. #104/#105는 알려진 비차단 후속이다.
 
+## 2026-09-07 21:50 재배포 (Phase 7 1차 웨이브·핫픽스, 오케스트레이터 실행, D-71)
+
+- source `308f9bcc8d133347ab3d0449ed3d8a2171ddb6f3`(main = T-7-011 머지 `45ff7b5` + 문서 커밋).
+  [preflight run34123657025](https://github.com/tasddc1226/offside-football-simulator/actions/runs/34123657025)
+  성공 뒤 [deploy run34123837271](https://github.com/tasddc1226/offside-football-simulator/actions/runs/34123837271)
+  성공(21:48~21:50, 약 2분 40초). 입력은 9/7 01:52 배포와 동일(시작 `2026-09-05T15:00:00Z`, 종료 비움, `cs_season_1`).
+- 포함 변경: PR #173·#174·#175·#176·#177·#178·#181·#182·#183·#184·#185·#186·#189(T-7-001~013: 룰셋 1.4.0 회복
+  규칙 데이터·도메인·로컬 QA seed, 협상 결과 표시, 라벨 정합, 액션 독, 서명 프리필, RadioGroup Enter, 대표팀 요약,
+  승격권 문구, e2e 정합, eyebrow 대비, 제안 비교 dl 구조)과 사용자 PR #187. **코드만 배포** — manifest plan은
+  noop이라 운영 시즌 1은 ruleset 1.3.0/pack 0.5.0 그대로다. 1.4.0 번들은 포함되지만 운영 시즌이 가리키지 않는다.
+- API Worker version `6b78751f-9b1c-40f0-8efa-9201be158340`, web Worker version `a37ab471-4172-4f4f-8c4a-e2314f3f3ba0`.
+  신규 migration 없음(기존 적용분 no-op), 집계 전후 동일, bookmark는 run artifact에 있다.
+- 배포 후 21:51 확인: health ok, current API `svc_season_1` ACTIVE/non-test/`endsAt: null`/1.3.0/0.5.0, web 200
+  (번들 `index-CqqlZtGc.js` → `index-BEIKlKvF.js`), 운영 origin CORS 허용·다른 origin 거부.
+- 플레이 검증(Playwright 360px, 21:51 KST): 랜딩 → 게임 시작 → 온보딩 → 생성(`QA배포2151`, 남성·대한민국·왼발·윙어·
+  인사이드 포워드) → KICKOFF → 복구 코드 발급 200 → `PUT /v1/careers/{id}` 200 → 새로고침 뒤 진로 화면(`/path`)에
+  이름·"저장됨" 유지 → 허브 카드 노출. QA career ID `46be888c-c794-4446-b43e-07d887b18932`. QA 표본으로 구분해
+  삭제하지 않으며 통계·랭킹에서 제외한다. 복구 코드는 출력·캡처하지 않았다.
+- 교훈: 워크플로 시작 직후 "Require exact current main SHA" 검사가 있어 실행 중 main 푸시(문서 커밋 포함)를 멈춰야
+  한다(20:34 1차 preflight가 이 이유로 중단). 같은 self-hosted runner를 main CI가 쓰므로 푸시 직후 큐가 겹칠 수 있다.
+
 ## 사전 확인
 
 1. 배포할 main SHA와 통과한 staging 검증을 연결한다. Phase 5 인수는 PR #103 `fb8b782`,

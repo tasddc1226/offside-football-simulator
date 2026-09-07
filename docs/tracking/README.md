@@ -5,7 +5,7 @@
 ## 역할
 
 > **현재 인계(2026-09-07)**: 운영 서비스가 열렸다. 2026-09-06 12:33 `Production Release`
-> run 34009144236(`82a46fc`)으로 첫 운영 배포, 9/7 01:51~01:52 `939fe48` 재배포.
+> run 34009144236(`82a46fc`)으로 첫 운영 배포, 9/7 01:51~01:52 `939fe48` 재배포, 9/7 21:50 `308f9bc` 재배포(Phase 7 1차 웨이브·핫픽스 13건, run 34123837271, 시즌 룰셋 1.3.0 유지).
 > [offside-lab.com](https://offside-lab.com)에서 시즌 1(`svc_season_1`, 테스트 아님, 종료일 미정,
 > 룰셋 1.3.0·팩 0.5.0)이 ACTIVE다. Phase 5(PR #103·#106)·Phase 6은 종결, Phase 7 운영·밸런스가
 > 진행 중이다 — 현황은 [board.md](board.md) 상단과 Phase 5·6·7 표, 결정은 [decision-log.md](decision-log.md)
