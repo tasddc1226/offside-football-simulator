@@ -70,7 +70,7 @@ export function shouldShowRecoveryOpportunityNotice(
 }
 
 /**
- * D-69(이슈 #141): "최근 두 시즌 출전이 없었습니다"가 룰셋 값(1.3.0 = 2시즌)과 무관하게 하드코딩돼
+ * D-69(이슈 141): "최근 두 시즌 출전이 없었습니다"가 룰셋 값(1.3.0 = 2시즌)과 무관하게 하드코딩돼
  * 있었다. 1이면 "지난 시즌", 2 이상이면 실제 시즌 수를 문장에 넣는다.
  */
 export function recoveryOpportunityHeadline(zeroMinutesConsecutiveSeasons: number): string {
