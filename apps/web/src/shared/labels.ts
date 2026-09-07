@@ -234,7 +234,7 @@ export const RESULT_TAG_LABEL_KO: Record<string, string> = {
   빌드업_모험: '빌드업 모험',
   빌드업_안정: '빌드업 안정',
   수비_영웅: '수비의 영웅',
-  승격_기여: '승격 기여',
+  승격_기여: '승격권 기여',
   언론_충돌: '언론과 충돌',
   언론_플레이: '언론 플레이',
   언론_회피: '언론 회피',
@@ -288,6 +288,17 @@ export function resultTagLabels(tagIds: readonly string[]): string[] {
     if (label !== null) labels.push(label);
     return labels;
   }, []);
+}
+
+/** T-7-010 이슈 144·D-68: `CAREER_TAGS`(도메인 데이터)의 라벨 중 화면에서 "리그가 바뀐다"는
+ * 오독을 남기는 것만 웹 표시용으로 덮어쓴다. 저장값(도메인 태그 id·설명)은 건드리지 않는다. */
+const CAREER_TAG_LABEL_OVERRIDE_KO: Partial<Record<string, string>> = {
+  'TAG-PROMOTION-EXPERT': '승격권 전문가',
+};
+
+/** 커리어 태그 id를 화면 표시용 라벨로 바꾼다. 덮어쓸 라벨이 없으면 도메인 정의 라벨을 그대로 쓴다. */
+export function careerTagLabel(tagId: string, domainLabel: string): string {
+  return CAREER_TAG_LABEL_OVERRIDE_KO[tagId] ?? domainLabel;
 }
 
 /** 충돌 대화상자 비교 카드의 "단계" 행. */

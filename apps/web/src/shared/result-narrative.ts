@@ -90,7 +90,7 @@ export interface SeasonResultHeadlineInput {
 }
 
 const SEASON_HEADLINES = {
-  PROMOTION: ['승격을 이끈 값진 시즌', '다음 무대로 향하는 발판을 놓은 시즌'],
+  PROMOTION: ['승격권을 확보한 값진 시즌', '다음 무대를 두드린 시즌'],
   RELEGATION: ['아쉬움 속에 강등을 맞은 시즌', '버텨냈지만 지켜내지 못한 시즌'],
   TOP_FORM: ['성장 가능성을 알린 시즌', '꾸준히 빛난 한 시즌'],
   STRUGGLE: ['인내가 필요했던 시즌', '쉽지 않았던 한 해'],

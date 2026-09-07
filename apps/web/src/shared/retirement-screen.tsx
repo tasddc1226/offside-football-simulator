@@ -24,7 +24,7 @@ import { getAppEngine } from '../engine/engine.js';
 import { execute } from '../engine/career-actions.js';
 import { screenForCareer } from './career-route.js';
 import { SCREEN_ROUTES } from '../routes.js';
-import { POSITION_LABELS, TIMELINE_KIND_LABEL_KO } from './labels.js';
+import { POSITION_LABELS, TIMELINE_KIND_LABEL_KO, careerTagLabel } from './labels.js';
 import './retirement-screen.css';
 
 type Mode = 'retirement' | 'legacy' | 'timeline' | 'final-profile';
@@ -521,7 +521,7 @@ export function RetirementScreen({
           {result.tags.length ? (
             <ul className="os-endgame-tags">
               {result.tags.map((tag) => (
-                <li key={tag}>{CAREER_TAGS[tag].label}</li>
+                <li key={tag}>{careerTagLabel(tag, CAREER_TAGS[tag].label)}</li>
               ))}
             </ul>
           ) : (

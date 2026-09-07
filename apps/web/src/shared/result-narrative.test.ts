@@ -49,11 +49,11 @@ describe('matchResultHeadline (결정론)', () => {
 });
 
 describe('seasonResultBucket', () => {
-  it('승격이 강등·평점보다 우선한다', () => {
+  it('승격권이 강등·평점보다 우선한다', () => {
     expect(seasonResultBucket({ seed: 's', promoted: true, relegated: false, avgRatingTenths: 40 })).toBe('PROMOTION');
   });
 
-  it('승격도 강등도 아니면 평균 평점으로 갈린다', () => {
+  it('승격권도 강등도 아니면 평균 평점으로 갈린다', () => {
     expect(seasonResultBucket({ seed: 's', promoted: false, relegated: false, avgRatingTenths: 80 })).toBe('TOP_FORM');
     expect(seasonResultBucket({ seed: 's', promoted: false, relegated: false, avgRatingTenths: 40 })).toBe('STRUGGLE');
     expect(seasonResultBucket({ seed: 's', promoted: false, relegated: false, avgRatingTenths: 65 })).toBe('STEADY');
