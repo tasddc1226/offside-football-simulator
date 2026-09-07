@@ -1,4 +1,18 @@
 /* Independent OFFSIDE game presentation. All colors come from semantic tokens. */
+/* T-7-006: 하단 액션 독(.os-action-dock) 위 그림자 전용 토큰. --os-bg 기반 페이드는 기존
+   토큰을 그대로 쓰므로 별도 정의가 필요 없지만, 그림자는 새 색상 리터럴이 필요해 라이트·다크
+   각각 정의한다(D-12: 색상은 --os-* 토큰만). */
+:root {
+  --os-shadow-dock: rgba(0, 0, 0, 0.18);
+}
+:root[data-theme='dark'] {
+  --os-shadow-dock: rgba(0, 0, 0, 0.46);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --os-shadow-dock: rgba(0, 0, 0, 0.46);
+  }
+}
 html {
   scroll-padding-bottom: 110px;
 }
@@ -48,6 +62,8 @@ select {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   scroll-margin-top: var(--os-space-2);
+  /* T-7-006: 포커스 이동·scrollIntoView가 sticky 액션 독 아래로 들어가지 않게 한다. */
+  scroll-padding-bottom: calc(96px + var(--os-safe-bottom));
 }
 .os-shell-header {
   /* No longer position:fixed (UX-006): a normal flex child, so the shell's own fixed height
@@ -347,7 +363,20 @@ select {
   padding: 12px 0 calc(12px + var(--os-safe-bottom));
   background: var(--os-bg);
   border-top: 1px solid var(--os-border);
-  margin-top: 4px;
+  margin-top: 12px;
+  /* T-7-006: 가림 어포던스 — 독 위 그림자로 콘텐츠가 그 아래 계속됨을 보여준다. */
+  box-shadow: 0 -6px 18px var(--os-shadow-dock, rgba(0, 0, 0, 0.18));
+}
+.os-action-dock::before {
+  /* T-7-006: 가림 어포던스 — 독 위 20px 페이드로 가려진 콘텐츠가 있음을 보여준다. */
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to bottom, transparent, var(--os-bg));
+  pointer-events: none;
 }
 .os-action-dock > :is(button, a) {
   width: 100%;
@@ -731,7 +760,9 @@ a,
   margin-inline: -20px;
   padding: 12px 20px calc(12px + var(--os-safe-bottom));
   border-top-color: color-mix(in srgb, var(--os-border) 70%, transparent);
-  background: color-mix(in srgb, var(--os-bg) 92%, transparent);
+  /* T-7-006: 페이드·그림자가 가려진 콘텐츠 신호로 읽히려면 독 배경이 불투명해야 한다
+     (반투명이면 스크롤된 콘텐츠가 비쳐 보여 신호가 흐려진다). */
+  background: var(--os-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }

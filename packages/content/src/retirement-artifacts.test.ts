@@ -45,6 +45,16 @@ describe('loadRetirementArtifacts', () => {
     expect(artifacts.contentPackVersion).toBe('0.5.0');
   });
 
+  // T-7-001 D-67: 룰셋 1.4.0(팩 0.5.0)도 1.3.0과 같은 짝으로 Legacy 1.1 채점을 쓰되 매칭 reference
+  // population이 없어 percentile은 숨긴다.
+  it('uses Legacy 1.1 scoring for 1.4/0.5 but hides percentile without a matching reference', () => {
+    const artifacts = loadRetirementArtifacts('1.4.0', '0.5.0');
+    expect(artifacts.legacyVersion).toBe('1.1.0');
+    expect(artifacts.legacyReferencePopulation).toBeUndefined();
+    expect(artifacts.rulesetVersion).toBe('1.4.0');
+    expect(artifacts.contentPackVersion).toBe('0.5.0');
+  });
+
   it('does not retrofit Legacy 1.1 onto the Legacy 1.0 ruleset', () => {
     const artifacts = loadRetirementArtifacts('1.0.0', '0.3.0');
 

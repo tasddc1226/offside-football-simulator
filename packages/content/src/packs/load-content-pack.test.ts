@@ -163,6 +163,7 @@ describe('loadContentPack: 0.5.0', () => {
     expect(pack.events.map((event) => event.id).sort()).toEqual(manifestIds('events/'));
     expect(pack.chapters.map((chapter) => chapter.id).sort()).toEqual(manifestIds('chapters/'));
     expect(previous.manifest.contentPackVersion).toBe('0.4.1');
-    expect(pack.manifest.compatibleRulesetVersions).toEqual(['1.3.0']);
+    // T-7-001 D-67: 팩 0.5.0은 룰셋 1.4.0과도 호환된다(이벤트·챕터 checksum은 파일 목록 대상이라 불변).
+    expect(pack.manifest.compatibleRulesetVersions).toEqual(['1.3.0', '1.4.0']);
   });
 });

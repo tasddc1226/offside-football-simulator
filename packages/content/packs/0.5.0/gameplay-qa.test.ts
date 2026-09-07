@@ -5,7 +5,8 @@ describe('packs/0.5.0 게임성 QA', () => {
   const pack = loadContentPack('0.5.0');
 
   it('새 페어의 배경별 첫 PATH 사건을 등록한다', () => {
-    expect(pack.manifest.compatibleRulesetVersions).toEqual(['1.3.0']);
+    // T-7-001 D-67: 팩 0.5.0은 룰셋 1.4.0과도 호환된다.
+    expect(pack.manifest.compatibleRulesetVersions).toEqual(['1.3.0', '1.4.0']);
     expect(['EVT-CON-020', 'EVT-CON-021', 'EVT-CON-022'].every((id) => pack.eventsById.has(id))).toBe(true);
   });
 
