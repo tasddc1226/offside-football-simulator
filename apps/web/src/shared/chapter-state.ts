@@ -119,3 +119,29 @@ export function deriveChapterView(state: CareerState, pack: ContentPack): Chapte
 
   return null;
 }
+
+// T-7-009 이슈 150: 대표팀 소집 챕터(NATIONAL_TEAM)는 도메인이 스코어·개인 기록을 만들지 않으므로,
+// 리그 경기용 ChapterResultSection이 그리는 스코어보드 대신 이미 있는 데이터(상대 표기·판단 결과·
+// 효과·태그·데뷔 확정 여부)만으로 요약 행을 만든다. CLUB 맥락이거나 아직 완료되지 않았으면(결과
+// 화면 전) null — 호출부가 결과 화면에서만 쓴다.
+export type NationalTeamResultSummary = {
+  opponentName: string;
+  decisions: ResolvedChapterDecision[];
+  successCount: number;
+  totalCount: number;
+  /** true면 이 챕터의 확정으로 대표팀 데뷔가 확정됐다(ChapterRecord.trigger가 NATIONAL_DEBUT).
+   * NATIONAL_DEBUT trigger는 예약 소비 시 한 번만 열리므로 이 요약이 존재하는 완료 뷰에서는
+   * 항상 true지만, "없는 데이터를 만들어 보여주지 않는다" 원칙에 맞춰 기록에서 직접 읽는다. */
+  debutConfirmed: boolean;
+};
+
+export function deriveNationalTeamResultSummary(view: ChapterView): NationalTeamResultSummary | null {
+  if (view.context.kind !== 'NATIONAL_TEAM' || view.chapterRecord === null) return null;
+  return {
+    opponentName: view.context.opponent.opponentName,
+    decisions: view.resolved,
+    successCount: view.resolved.filter(({ outcome }) => outcome.kind === 'SUCCESS').length,
+    totalCount: view.resolved.length,
+    debutConfirmed: view.chapterRecord.trigger === 'NATIONAL_DEBUT',
+  };
+}
