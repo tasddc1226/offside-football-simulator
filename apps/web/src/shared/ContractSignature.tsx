@@ -18,7 +18,7 @@ export function ContractSignature({
   const [mode, setMode] = useState<'draw' | 'type'>('draw');
   const [strokes, setStrokes] = useState<Point[][]>([]);
   const [draftStroke, setDraftStroke] = useState<Point[]>([]);
-  const [typedName, setTypedName] = useState('');
+  const [typedName, setTypedName] = useState(signerName);
   const activePointerRef = useRef<number | null>(null);
   const draftStrokeRef = useRef<Point[]>([]);
   const onReadyChangeRef = useRef(onReadyChange);
@@ -57,7 +57,7 @@ export function ContractSignature({
     draftStrokeRef.current = [];
     setStrokes([]);
     setDraftStroke([]);
-    setTypedName('');
+    setTypedName(signerName);
     onReadyChangeRef.current(false);
   }, [fingerprint, signerName]);
 
@@ -185,16 +185,21 @@ export function ContractSignature({
           ))}
         </svg>
       ) : (
-        <label className="os-signature-name">
-          <span>서명할 이름</span>
-          <input
-            value={typedName}
-            placeholder={signerName}
-            disabled={disabled}
-            onChange={(event) => setTypedName(event.target.value)}
-            autoComplete="name"
-          />
-        </label>
+        <>
+          <label className="os-signature-name">
+            <span>서명할 이름</span>
+            <input
+              value={typedName}
+              disabled={disabled}
+              onChange={(event) => setTypedName(event.target.value)}
+              autoComplete="name"
+              aria-describedby="signature-name-hint"
+            />
+          </label>
+          <p id="signature-name-hint" className="os-muted" style={{ fontSize: 'var(--os-fs-caption)' }}>
+            계약서에 남을 이름입니다. 필요하면 고쳐 쓰세요.
+          </p>
+        </>
       )}
       <div className="flex items-center justify-between gap-os-3">
         <p className="os-muted">

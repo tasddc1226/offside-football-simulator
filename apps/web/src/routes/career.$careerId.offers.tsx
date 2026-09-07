@@ -196,9 +196,14 @@ function FirstContractOffers({
   }
 
   return (
-    <div className="os-offer-grid">
-      {offers.map((offer) => <CompactOfferCard key={offer.id} careerId={careerId} offer={offer} state={state} recordRevision={revision} safeOfferId={null} parentTeamName={null} />)}
-    </div>
+    <>
+      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+        결정 기한이 지난 제안은 자동으로 철회됩니다.
+      </p>
+      <div className="os-offer-grid">
+        {offers.map((offer) => <CompactOfferCard key={offer.id} careerId={careerId} offer={offer} state={state} recordRevision={revision} safeOfferId={null} parentTeamName={null} />)}
+      </div>
+    </>
   );
 }
 
@@ -244,9 +249,14 @@ function MarketOffers({
           }
         />
       ) : (
-        <div className="os-offer-grid">
-          {offers.map((offer) => <CompactOfferCard key={offer.id} careerId={careerId} offer={offer} state={state} recordRevision={revision} safeOfferId={safeOfferId} parentTeamName={parentTeamName} />)}
-        </div>
+        <>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            결정 기한이 지난 제안은 자동으로 철회됩니다.
+          </p>
+          <div className="os-offer-grid">
+            {offers.map((offer) => <CompactOfferCard key={offer.id} careerId={careerId} offer={offer} state={state} recordRevision={revision} safeOfferId={safeOfferId} parentTeamName={parentTeamName} />)}
+          </div>
+        </>
       )}
       {offers.length > 0 ? <RejectAllButton careerId={careerId} kind={rejectAllKind} /> : null}
     </>

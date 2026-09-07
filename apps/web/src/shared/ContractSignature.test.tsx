@@ -51,4 +51,28 @@ describe('ContractSignature', () => {
     expect(onReadyChange).toHaveBeenLastCalledWith(false);
     expect(screen.getByRole('textbox', { name: '서명할 이름' })).toHaveValue('');
   });
+
+  it('이름 입력 모드는 signerName으로 프리필되어 바로 서명 가능하고, 비우면 비활성화된다', () => {
+    const onReadyChange = vi.fn();
+    const { rerender } = render(
+      <ContractSignature signerName="김서준" fingerprint="offer-c" onReadyChange={onReadyChange} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '이름 입력' }));
+    const input = screen.getByRole('textbox', { name: '서명할 이름' });
+    expect(input).toHaveValue('김서준');
+    expect(onReadyChange).toHaveBeenLastCalledWith(true);
+
+    fireEvent.change(input, { target: { value: '' } });
+    expect(onReadyChange).toHaveBeenLastCalledWith(false);
+
+    fireEvent.change(input, { target: { value: '박서준' } });
+    expect(input).toHaveValue('박서준');
+    expect(onReadyChange).toHaveBeenLastCalledWith(true);
+
+    rerender(
+      <ContractSignature signerName="이수민" fingerprint="offer-d" onReadyChange={onReadyChange} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '이름 입력' }));
+    expect(screen.getByRole('textbox', { name: '서명할 이름' })).toHaveValue('이수민');
+  });
 });
