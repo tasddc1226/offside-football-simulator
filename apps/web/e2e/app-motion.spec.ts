@@ -179,7 +179,7 @@ for (const preference of ['OS', '앱'] as const) {
     await page.getByRole('link', { name: '온보딩 다시 보기', exact: true }).click();
     await expect(page).toHaveURL(/\/onboarding$/);
     await expect(
-      page.getByRole('heading', { level: 1, name: 'OVR 하나가 아니라 여러 수치로 성장합니다' }),
+      page.getByRole('heading', { level: 1, name: '한 명의 선수로, 축구 인생 전체를 플레이하세요' }),
     ).toBeVisible();
     expect(await routeAnimations(page)).toEqual([]);
   });
@@ -190,7 +190,12 @@ test('공통 팝업은 배경을 블러 처리하고 Escape 뒤 원래 버튼으
 }) => {
   await startNewCareer(page);
   await page.goto('/');
-  const trigger = page.getByRole('button', { name: '삭제', exact: true });
+  // "최근 선수"(resume) 탭의 기본 카드는 featured=true라 상세 관리 disclosure를 두지 않는다 —
+  // "선수단 관리"(squad 탭)로 이동해야 상세 관리·삭제 버튼에 닿는다.
+  await page.getByRole('link', { name: '선수단 관리' }).click();
+  await expect(page).toHaveURL(/\?tab=squad$/);
+  await page.getByText('상세 관리').click();
+  const trigger = page.getByRole('button', { name: '커리어 삭제' });
   await trigger.click();
   const dialog = page.getByRole('dialog', { name: '커리어 삭제' });
   await expect(dialog).toBeVisible();
@@ -216,7 +221,7 @@ test('온보딩은 좌우로 넘기되 마지막 장을 밀어도 커리어를 �
   ).toBeVisible();
   await swipe(surface, 150);
   await expect(
-    page.getByRole('heading', { level: 1, name: 'OVR 하나가 아니라 여러 수치로 성장합니다' }),
+    page.getByRole('heading', { level: 1, name: '한 명의 선수로, 축구 인생 전체를 플레이하세요' }),
   ).toBeVisible();
   await swipe(surface, -150);
   await expect(
@@ -224,11 +229,11 @@ test('온보딩은 좌우로 넘기되 마지막 장을 밀어도 커리어를 �
   ).toBeVisible();
   await swipe(surface, -150);
   await expect(
-    page.getByRole('heading', { level: 1, name: '복구 코드가 유일한 열쇠입니다' }),
+    page.getByRole('heading', { level: 1, name: '커리어를 다시 찾을 방법을 준비하세요' }),
   ).toBeVisible();
   await swipe(surface, -150);
   await expect(page).toHaveURL(/\/onboarding$/);
-  await expect(page.getByRole('button', { name: 'KICKOFF', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /KICKOFF · 새 인생 시작/ })).toBeVisible();
   await page.getByRole('button', { name: '건너뛰기', exact: true }).click();
   await expect(page.getByRole('heading', { name: '아직 만든 커리어가 없습니다' })).toBeVisible();
   await expect(page.getByTestId('career-card')).toHaveCount(0);
@@ -238,7 +243,7 @@ test('세로 드래그와 버튼 위 드래그는 온보딩 단계를 바꾸지 
   await page.goto('/onboarding');
   const heading = page.getByRole('heading', {
     level: 1,
-    name: 'OVR 하나가 아니라 여러 수치로 성장합니다',
+    name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
   });
   const surface = page.locator('.os-onboarding-motion .os-swipe-surface');
   await expect(surface).toBeVisible();

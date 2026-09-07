@@ -79,7 +79,14 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   await expect(page).toHaveURL(/\/career\/.+\/create$/);
   counts.screens += 1;
 
-  // SCR-002: 이름(텍스트 입력 1) + 성별·국적·주발·포지션 구분 탭·포지션·배경(선택 6).
+  // SCR-002 패널 1(첫 출발점): 배경(선택 1) → 다음.
+  await page.getByRole('radio', { name: /아카데미의 추가 평가/ }).click();
+  counts.selections += 1;
+  await page.getByRole('button', { name: '다음', exact: true }).click();
+  counts.confirmations += 1;
+  counts.screens += 1;
+
+  // SCR-002 패널 2(정체성): 이름(텍스트 입력 1) + 성별·국적·주발(선택 3) → 다음.
   await page.getByRole('textbox', { name: '이름', exact: true }).fill('김서준');
   counts.textInputs += 1;
   await page.getByRole('radio', { name: '남성' }).click();
@@ -91,14 +98,11 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   await page.getByRole('button', { name: '다음', exact: true }).click();
   counts.confirmations += 1;
   counts.screens += 1;
+
+  // SCR-002 패널 3(선호 위치): 포지션 구분 탭·포지션(선택 2) → 플레이 스타일 고르기.
   await page.getByRole('tab', { name: '공격수' }).click();
   counts.selections += 1;
   await page.getByRole('radio', { name: /윙어/ }).click();
-  counts.selections += 1;
-  await page.getByRole('button', { name: '다음', exact: true }).click();
-  counts.confirmations += 1;
-  counts.screens += 1;
-  await page.getByRole('radio', { name: /클럽 아카데미/ }).click();
   counts.selections += 1;
   await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
   counts.confirmations += 1;

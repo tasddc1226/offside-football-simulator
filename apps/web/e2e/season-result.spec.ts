@@ -39,7 +39,10 @@ async function settleOneSeason(page: Page): Promise<void> {
   await advanceThroughSeasonToSettlement(page);
   // 결산 전 일정의 실제 분 수를 독립 기준으로 삼는다. 저장 집계의 잘못된 total을
   // 기대값으로 재사용하면 같은 오류를 화면과 테스트가 함께 통과시킬 수 있다.
+  // 일정표는 "일정" 탭 안에 있다(기본 탭은 "홈") — 먼저 탭을 열어야 span.os-num이 보인다.
+  await page.getByRole('tab', { name: '일정' }).click();
   const scheduleTexts = await page.locator('span.os-num').allTextContents();
+  await page.getByRole('tab', { name: '홈' }).click();
   const matches = scheduleTexts.flatMap((text) => {
     const match = /^\d+:\d+ · (.+) · (\d+)분 · /.exec(text);
     return match === null ? [] : [{ appearance: match[1], minutes: Number(match[2]) }];
@@ -62,6 +65,11 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   const root = page.getByTestId('season-result');
   await expect(root).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: '프로 시즌 결과' })).toBeVisible();
+
+  // T-7-005(#175): 공통 지표·비교 섹션이 전부 <details class="os-season-breakdown">(요약 "시즌
+  // 상세 기록 보기") 안으로 옮겨갔다 — 접힌 채로도 textContent는 읽히지만(아래 statValue 등)
+  // toBeVisible()은 실제로 펼쳐야 통과한다. 설정 화면의 "위험 작업 보기"와 같은 패턴으로 연다.
+  await page.getByText('시즌 상세 기록 보기').click();
 
   // 800ms 뒤 사라지는 버튼은 count()와 click() 사이에도 없어질 수 있다. 특히 화면 전환 중
   // Playwright의 안정성 대기가 겹치므로 E2E는 자연 완료를 검증한다. 건너뛰기 클릭의 즉시 확정·
@@ -151,6 +159,9 @@ test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+
+  // T-7-005(#175): 비교 섹션도 <details class="os-season-breakdown">(요약 "시즌 상세 기록 보기") 안이다.
+  await page.getByText('시즌 상세 기록 보기').click();
 
   const compareSection = page.getByTestId('season-compare');
   await expect(compareSection.getByRole('tab', { name: '지난 시즌' })).toBeVisible();

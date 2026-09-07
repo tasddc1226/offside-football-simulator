@@ -28,15 +28,18 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
   await resolveRoleProposal(page);
 
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
-  await expect(page.getByText('시즌 1 · 1/12 단계')).toBeVisible();
+  await expect(page.getByText('1/12 단계')).toBeVisible();
   await page.getByRole('tab', { name: '일정' }).click();
   const seasonTimeline = page.getByLabel('시즌 진행 12 step');
   await expect(seasonTimeline).toBeVisible();
   await expect(seasonTimeline.locator('li')).toHaveCount(12);
 
-  // 새로고침해도 진행 중인 step이 그대로 유지된다(로컬 우선 — ADR-002).
+  // 탭은 ?view= 검색 파라미터로 유지된다 — 새로고침 전에 "홈"으로 되돌아가야 그 탭에만 있는
+  // "N/12 단계" 문구를 다시 볼 수 있다(진행 step 자체가 유지되는지는 이 문구 값으로 확인한다,
+  // 로컬 우선 — ADR-002).
+  await page.getByRole('tab', { name: '홈' }).click();
   await page.reload();
-  await expect(page.getByText('시즌 1 · 1/12 단계')).toBeVisible();
+  await expect(page.getByText('1/12 단계')).toBeVisible();
 
   await advanceThroughSeasonToSettlement(page);
 
@@ -140,7 +143,8 @@ test('시즌 1 결산 뒤 INTEREST 시장이 열리면 안전 잔류 제안을 �
   const offersCta = page.getByRole('link', { name: '다음 시즌' });
   await expect(offersCta).toBeVisible();
   await offersCta.click();
-  await expect(page.getByRole('definition').filter({ hasText: '타 구단 관심' })).toBeVisible();
+  // 시장 사유는 카드 dl 안이 아니라 화면 상단 eyebrow 문단으로 보인다(offers.tsx eyebrow prop).
+  await expect(page.getByText('타 구단 관심').first()).toBeVisible();
   // signFirstOffer는 offers[0](안전 잔류)을 수락한다 — STAY 결과 카드에 도착해 "새 시즌 준비"로
   // 프리시즌에 닿는다(state.season === null이면 ctaToPreseason이 그리로 보낸다, PR #76).
   await signFirstOffer(page);

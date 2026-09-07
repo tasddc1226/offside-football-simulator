@@ -57,10 +57,16 @@ test('복구 코드 발급이 실패해도 안내 후 계속 진행할 수 있�
 });
 
 test('SCR-002: 이름 길이 오류는 입력값을 보존하고 포커스를 이름 입력으로 되돌린다', async ({ page }) => {
+  // fillPlayerInfo는 패널 1(정체성) 제출까지 정상 통과를 전제하므로, 여기서는 짧은 이름이
+  // validateCurrentPanel을 막아 패널 2로 넘어가지 못하는 상황을 직접 재현한다.
   await startNewCareer(page);
-
-  await fillPlayerInfo(page, '김');
-  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('radio', { name: /아카데미의 추가 평가/ }).click();
+  await page.getByRole('button', { name: '다음', exact: true }).click();
+  await page.getByRole('textbox', { name: '이름', exact: true }).fill('김');
+  await page.getByRole('radio', { name: '남성' }).click();
+  await page.getByLabel('국적').selectOption('KR');
+  await page.getByRole('radio', { name: '왼발' }).click();
+  await page.getByRole('button', { name: '다음', exact: true }).click();
 
   await expect(page.getByText(/이름은 .+자여야 합니다\./)).toBeVisible();
   await expect(page.getByLabel('이름')).toBeFocused();
@@ -71,8 +77,7 @@ test('SCR-002: 저장한 뒤 새로고침해도 draft가 그대로 보인다', a
   await startNewCareer(page);
   await fillPlayerInfo(page);
   await expect(page.getByRole('status')).toContainText('아직 저장하지 않은 변경사항');
-  await expect(page.getByText('저장한 기록', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/style$/);
 
   await page.getByRole('button', { name: '이전' }).click();
@@ -80,9 +85,15 @@ test('SCR-002: 저장한 뒤 새로고침해도 draft가 그대로 보인다', a
 
   await page.reload();
 
-  await expect(page.getByRole('status')).not.toContainText('아직 저장하지 않은 변경사항');
+  // handleNext가 "플레이 스타일 고르기" 클릭 시 모든 필드를 도메인 draft로 커밋하고 세션 scratch를
+  // 지운다 — "이전"으로 되돌아와 새로고침하면 세션 scratch가 없으니 패널은 0(첫 출발점)부터 다시
+  // 보이지만, 각 필드 값은 도메인 draft에서 그대로 복원된다(hasUnsavedChanges가 false가 된다).
+  await expect(page.getByRole('radio', { name: /아카데미의 추가 평가/ })).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: '다음', exact: true }).click();
   await expect(page.getByLabel('이름')).toHaveValue('김서준');
   await expect(page.getByLabel('국적')).toHaveValue('KR');
   await expect(page.getByRole('radio', { name: '왼발' })).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: '다음', exact: true }).click();
   await expect(page.getByRole('radio', { name: /윙어/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('status')).not.toContainText('아직 저장하지 않은 변경사항');
 });

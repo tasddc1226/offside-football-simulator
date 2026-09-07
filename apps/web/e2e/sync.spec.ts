@@ -40,6 +40,10 @@ test('(a) 커리어 생성 즉시 저장하고 배지가 "저장됨"으로 바�
 test('(b) "다른 기기 진행 가져오기": 로컬을 서버 상태로 덮고 배지가 저장됨, 서버 단계 화면으로 이동한다', async ({
   page,
 }) => {
+  // triggerConflictAndOpenDialog의 "지금 동기화" 왕복은 실제 네트워크·React 렌더 타이밍에
+  // 걸려 있다 — 병렬 워커로 CPU를 나눠 쓰면 기본 30s 테스트 타임아웃을 넘길 수 있다(관찰됨).
+  // season.spec.ts의 advanceThroughSeasonToSettlement와 같은 이유로 test.slow()를 쓴다.
+  test.slow();
   const { careerId } = await triggerConflictAndOpenDialog(page);
   await expect(
     page.getByRole('heading', { level: 2, name: '다른 기기에서 이 커리어가 더 진행됐습니다' }),
@@ -56,6 +60,9 @@ test('(b) "다른 기기 진행 가져오기": 로컬을 서버 상태로 덮고
 test('(c) "이 기기 진행 유지": 포크된 새 커리어가 생기고 baseRevision 0으로 저장을 시도한다', async ({
   page,
 }) => {
+  // (b)와 같은 이유로 test.slow() — triggerConflictAndOpenDialog의 네트워크 왕복이 병렬
+  // 워커 부하 아래서 기본 30s를 넘길 수 있다(관찰됨).
+  test.slow();
   const { careerId } = await triggerConflictAndOpenDialog(page);
 
   const putBodies: Array<{ baseRevision: number }> = [];
@@ -91,6 +98,11 @@ test('(c) "이 기기 진행 유지": 포크된 새 커리어가 생기고 baseR
   await expect(page).not.toHaveURL(new RegExp(`/career/${careerId}/`));
 
   await page.goto('/');
+  // 허브 기본 탭("최근 선수")은 가장 최근에 갱신된 커리어 하나만 "이어하기" 카드로 보여준다
+  // (UX-006 개편) — 포크로 생긴 두 커리어(원본·새 커리어) 모두를 보려면 "선수단 관리"
+  // 바로가기로 "다른 선수" 탭(?tab=squad)으로 가야 한다.
+  await page.getByRole('link', { name: '선수단 관리' }).click();
+  await expect(page).toHaveURL(/\?tab=squad$/);
   await expect(page.getByTestId('career-card')).toHaveCount(2);
 
   await expect.poll(() => putBodies.some((body) => body.baseRevision === 0)).toBe(true);

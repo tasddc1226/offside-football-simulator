@@ -1,12 +1,19 @@
 // TEST-E2E(08 문서): 첫 방문 → 온보딩 → 건너뛰기 → 빈 허브 → KICKOFF → DRAFT → 허브 카드 → 삭제.
 import { expect, test } from '@playwright/test';
 
-test('첫 방문은 온보딩으로 가고, 건너뛰면 빈 허브가 보인다', async ({ page }) => {
+test('첫 방문은 게임 소개 페이지가 보이고, 온보딩을 건너뛰면 빈 허브가 보인다', async ({ page }) => {
+  // D-70(#117): 커리어가 없고 온보딩도 안 본 첫 방문자는 더 이상 /onboarding으로 자동 리다이렉트되지
+  // 않는다 — 허브(/)가 PublicIntroduction 랜딩을 직접 보여주고, "게임 시작" 링크로만 온보딩에 간다.
   await page.goto('/');
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'OFFSIDE' })).toBeVisible();
+
+  await page.getByRole('link', { name: '게임 시작' }).click();
 
   await expect(page).toHaveURL(/\/onboarding$/);
   await expect(
-    page.getByRole('heading', { level: 1, name: 'OVR 하나가 아니라 여러 수치로 성장합니다' }),
+    page.getByRole('heading', { level: 1, name: '한 명의 선수로, 축구 인생 전체를 플레이하세요' }),
   ).toBeVisible();
 
   await page.getByRole('button', { name: '건너뛰기' }).click();
@@ -26,7 +33,7 @@ test('KICKOFF로 커리어를 만들면 허브 카드가 보이고, 삭제하면
 
   await expect(page).toHaveURL(/\/career\/.+\/create$/);
   await expect(
-    page.getByRole('heading', { level: 1, name: '선수 정보를 입력하세요' }),
+    page.getByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' }),
   ).toBeVisible();
 
   // SCR-002는(자리표시와 달리) 허브로 돌아가는 링크를 두지 않는다(01 문서 "이탈": 다음으로만
@@ -41,6 +48,10 @@ test('KICKOFF로 커리어를 만들면 허브 카드가 보이고, 삭제하면
   await page.reload();
   await expect(page.getByRole('heading', { level: 2, name: '이름 없는 선수' })).toBeVisible();
 
+  // "최근 선수"(resume) 탭의 기본 카드는 featured=true라 상세 관리 disclosure를 두지 않는다 —
+  // 삭제하려면 "선수단 관리"(squad 탭)로 이동해야 한다.
+  await page.getByRole('link', { name: '선수단 관리' }).click();
+  await expect(page).toHaveURL(/\?tab=squad$/);
   await page.getByText('상세 관리').click();
   await page.getByRole('button', { name: '커리어 삭제' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
