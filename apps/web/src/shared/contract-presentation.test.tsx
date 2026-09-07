@@ -31,6 +31,15 @@ describe('contract presentation', () => {
 
     const unlimited = offerHeadlineRows({ ...offer, validUntilRevision: null }, state, 1, null);
     expect(unlimited.find((row) => row.label === '결정 기한')?.value).toBe('제한 없음');
+
+    const expired = offerHeadlineRows({ ...offer, validUntilRevision: 3 }, state, 5, null);
+    expect(expired.find((row) => row.label === '결정 기한')?.value).toBe('만료');
+
+    const atBoundary = offerHeadlineRows({ ...offer, validUntilRevision: 5 }, state, 5, null);
+    expect(atBoundary.find((row) => row.label === '결정 기한')?.value).toBe('만료');
+
+    const remainingTwo = offerHeadlineRows({ ...offer, validUntilRevision: 7 }, state, 5, null);
+    expect(remainingTwo.find((row) => row.label === '결정 기한')?.value).toBe('결정 2번 안');
   });
 
   it('labels the same fields as a first contract when no current contract exists', () => {

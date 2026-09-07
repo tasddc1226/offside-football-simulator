@@ -233,7 +233,8 @@ function formatOfferValidity(offer: Offer, recordRevision: number, actionRevisio
  */
 export function offerDecisionDeadlineLabel(offer: Offer, recordRevision: number): string {
   if (offer.validUntilRevision === null) return '제한 없음';
-  const remainingDecisions = Math.max(0, offer.validUntilRevision - recordRevision);
+  const remainingDecisions = offer.validUntilRevision - recordRevision;
+  if (remainingDecisions <= 0) return '만료';
   return `결정 ${remainingDecisions}번 안`;
 }
 
