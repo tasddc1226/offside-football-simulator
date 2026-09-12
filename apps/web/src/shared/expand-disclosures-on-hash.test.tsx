@@ -24,6 +24,20 @@ describe('useExpandDisclosuresOnHash', () => {
     expect(document.querySelector('details')).toHaveAttribute('open');
   });
 
+  it('opens ancestor details that contain the hash target (e.g. #settings-play nested inside a Disclosure)', () => {
+    render(
+      <details>
+        <summary>시뮬레이션</summary>
+        <div id="settings-play">본문</div>
+      </details>,
+    );
+    window.location.hash = '#settings-play';
+
+    renderHook(() => useExpandDisclosuresOnHash());
+
+    expect(document.querySelector('details')).toHaveAttribute('open');
+  });
+
   it('leaves details untouched when there is no hash', () => {
     render(
       <section id="settings-account">

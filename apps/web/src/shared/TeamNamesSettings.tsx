@@ -10,6 +10,7 @@ import { Button, Toast, buttonClassName, buttonStyle } from '@offside/ui';
 import { activeRuleset } from '../engine/content.js';
 import { ClubBadge } from './ClubBadge.js';
 import { LEAGUE_TIER_LABEL_KO } from './labels.js';
+import './settings-screen.css';
 import { TEAM_FLAVOR_TEXT } from './team-flavor.js';
 import {
   TEAM_LOGO_ACCEPT,
@@ -99,12 +100,12 @@ function TeamRow({ team, onToast }: { team: Team; onToast: (toast: TeamToast) =>
       <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
         {TEAM_FLAVOR_TEXT[team.id] ?? ''}
       </p>
-      <div className="flex flex-wrap items-center gap-os-2">
+      <div className="relative flex flex-wrap items-center gap-os-2">
         <input
           id={fileId}
           type="file"
           accept={TEAM_LOGO_ACCEPT}
-          className="peer sr-only"
+          className="peer os-team-logo-input"
           aria-label={`${team.name} 로고 변경`}
           disabled={busy}
           onChange={(event) => void handleLogoFile(event)}

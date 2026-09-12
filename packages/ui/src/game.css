@@ -528,7 +528,9 @@ select {
 }
 /* UX-013 홈 색상 타일 그리드(SwatchTilePicker): 4열 3:2 둥근 타일, 선택은 링 + 체크(색만으로 구분하지
    않음), 포커스 링은 --os-focus로 선택 링과 구분한다. 타일 색은 인라인 var(--os-swatch-*)이고 체크는
-   --os-on-accent라 프리셋 × 테마 대비는 check-contrast.mjs의 on-accent/accent 행이 보장한다. */
+   --os-on-accent라 프리셋 × 테마 대비는 check-contrast.mjs의 on-accent/accent 행이 보장한다.
+   min-height: 44px는 360px처럼 좁은 화면에서 3:2 비율만으로는 터치 최소 44px에 못 미치는 것을
+   막는 하한이다(800px+에서는 비율이 이미 44px를 넘어 영향 없음). */
 .os-swatch-picker {
   display: flex;
   flex-direction: column;
@@ -555,6 +557,7 @@ select {
   width: 100%;
   min-width: 0;
   aspect-ratio: 3 / 2;
+  min-height: 44px;
   padding: 0;
   border: 1px solid var(--os-border);
   border-radius: var(--os-radius-m);
