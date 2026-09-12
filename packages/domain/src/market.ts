@@ -436,6 +436,42 @@ export function generateMarket(args: GenerateMarketArgs): GeneratedMarket {
   };
 }
 
+/** 시즌 누계 통계에서 "실제로 뛴 경기 수"(minutes > 0). `appearances.total`은 결장(OUT)까지 센 기록
+ * 수이고 `zeroMinute`는 0분 경기(결장·미사용 교체) 수라, 차가 곧 1분 이상 뛴 경기 수다.
+ * 웹 시즌 결산(`appearanceSummary`)의 출전 수와 같은 식이라 #147 계약 출전·#148 임대 복귀 카드가 같은 값을 읽는다. */
+export function matchesWithMinutes(stats: SeasonPlayerStats): number {
+  return Math.max(0, stats.appearances.total - stats.appearances.zeroMinute);
+}
+
+/**
+ * 이슈 #147: 현재 계약에서 선수가 실제로 뛴 경기 수. 계약 서명 시즌(`signedSeasonIndex`) 이후 같은
+ * 구단에서 치른 결산 시즌의 누계 + 진행 중 시즌(같은 구단일 때)의 누계. 임대 시즌은 임대 구단
+ * 계약 몫이라 원소속 계약 집계에서 빠진다(teamId가 다르다). rng를 쓰지 않는 순수 파생값이다.
+ */
+export function countContractMatchesPlayed(state: CareerState, contract: Contract): number {
+  const settled = state.seasonHistory
+    .filter((summary) => summary.index >= contract.signedSeasonIndex && summary.teamId === contract.teamId)
+    .reduce((sum, summary) => sum + matchesWithMinutes(summary.result.playerStats), 0);
+  const season = state.season;
+  const current = season !== null && season.teamId === contract.teamId ? matchesWithMinutes(season.playerStats) : 0;
+  return settled + current;
+}
+
+/**
+ * 이슈 #147(1.4.0+ `contractRules.renewalWindow`): step 7 재계약 사전 협상 창이 "이번 계약에서 최소
+ * N경기 소화" 조건을 만족하는지. 키가 없는 룰셋(1.0.0~1.3.0)은 항상 true라 종전 동작(마지막 시즌이면
+ * 곧바로 RENEWAL)이 바이트 단위로 유지된다. 운영 QA(#147)는 1시즌 첫 계약이 시즌 1부터 잔여 0이라
+ * 한 경기도 뛰기 전에 사전 협상이 열리는 것을 봤다 — 잔여 계산 자체는 "현재 시즌 뒤에 남은 시즌
+ * 수"로 일관돼 오류가 아니고, 창을 여는 타이밍만 이 조건으로 늦춘다.
+ */
+export function isRenewalWindowOpen(state: CareerState, ruleset: Ruleset): boolean {
+  const window = ruleset.contractRules.renewalWindow;
+  if (window === undefined) return true;
+  const contract = state.contract;
+  if (contract === null) return false;
+  return countContractMatchesPlayed(state, contract) >= window.minMatchesPlayed;
+}
+
 /**
  * T-3-001 D-43 (a): step 7 재계약 사전 협상. rng를 쓰지 않는다. `season.ts`의 `selectOpenSlot` CONTRACT
  * 분기가 부른다(season이 활성 상태라 `state.season`이 반드시 있어야 한다).

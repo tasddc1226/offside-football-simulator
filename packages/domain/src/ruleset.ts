@@ -211,6 +211,11 @@ export type ContractRules = {
   /** T-3-003 D-45: 이적 시 `positionPlan ≠ profile.primaryPosition`이면 `context.positionProficiency`를
    * 이 값으로 둔다(같으면 유지). */
   imposedPositionProficiency: number;
+  /** 이슈 #147(1.4.0+): step 7 재계약 사전 협상 창을 여는 추가 조건. 현재 계약(서명 시즌 이후 같은
+   * 구단 시즌 누계)에서 선수가 실제로 뛴(minutes > 0) 경기가 `minMatchesPlayed` 이상일 때만
+   * `selectOpenSlot` CONTRACT 분기가 RENEWAL 제안을 만든다. 키가 없는 룰셋(1.3.0 이하)은 종전처럼
+   * 마지막 시즌 여부만 본다. rng 무영향. */
+  renewalWindow?: { minMatchesPlayed: number } | undefined;
 };
 
 // T-2-005 D-39: 성장식이 쓰는 연령대·능력 그룹.
@@ -366,6 +371,10 @@ export type TransferRules = {
     opportunityRole: SquadRole;
   } | undefined;
   renewal: { lengthSeasons: number; wageBpByRole: Record<SquadRole, number> };
+  /** 이슈 #148(1.4.0+): `reevaluate: true`면 LOAN_RETURN(RETURN)이 임대 시즌 결산값(출전 비율·평균
+   * 평점)으로 원소속 역할 약속·squadStatus를 재평가한다(`loan-return.ts`). 키가 없으면(1.3.0 이하)
+   * 종전처럼 원소속 계약의 rolePromise 기본값으로 되돌린다. 새 roll 없음. */
+  loanReturn?: { reevaluate: boolean } | undefined;
   negotiation: {
     successBp: Record<'TRANSFER' | 'FREE_AGENT' | 'LOAN' | 'RENEWAL', Record<'WAGE' | 'ROLE' | 'LENGTH', number>>;
     reputationAdjustBpPerPoint: number;

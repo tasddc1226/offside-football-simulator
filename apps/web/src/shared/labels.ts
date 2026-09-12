@@ -1,6 +1,8 @@
 // 06 "브랜드 언어"·12 브랜드 가이드: 화면 문구는 한국어, 브랜드 어휘는 폐쇄 목록 안에서만.
 // Record<T, string>로 선언해 ATTRIBUTE 전수(도메인 유니온 전체)를 타입으로 강제한다.
 import type {
+  AppearancePromiseOutlook,
+  AppearancePromiseOutlookStatus,
   AttributeKey,
   CareerStage,
   CareerStatus,
@@ -426,6 +428,28 @@ export const SELECTION_REASON_LABEL_KO: Record<SelectionReasonComponent, string>
   EXPECTED_PERFORMANCE: '경기 예상치',
   SQUAD_STATUS: '스쿼드 상태',
 };
+
+/** 이슈 145 SCR-031 경기 결과: 출전 약속 이행 전망(`computeAppearancePromiseOutlook.status`) 문구. */
+export const PROMISE_OUTLOOK_STATUS_LABEL_KO: Record<AppearancePromiseOutlookStatus, string> = {
+  SECURED: '이행 확정',
+  ON_TRACK: '기준 이상 · 남은 경기에 따라 달라집니다',
+  RECOVERABLE: '남은 경기로 회복 가능',
+  UNRECOVERABLE: '이번 시즌 이행 불가 확정',
+};
+
+/** 이슈 145: "출전 약속 벤치 15% · 현재 12% · 남은 6경기로 회복 가능" 한 줄. 약속 기준이 0%(예비
+ * 선수)면 비율 비교 대신 기준 없음을 알린다. 도메인이 계산한 값을 문구로만 바꾼다. */
+export function appearancePromiseOutlookLine(outlook: AppearancePromiseOutlook): string {
+  const role = SQUAD_ROLE_LABELS[outlook.promisedRole];
+  if (outlook.promisedShareBp === 0) return `출전 약속 ${role} · 최소 출전 기준 없음`;
+  const promised = Math.round(outlook.promisedShareBp / 100);
+  const current = Math.round(outlook.currentShareBp / 100);
+  const tail =
+    outlook.status === 'RECOVERABLE'
+      ? `남은 ${outlook.remainingMatches}경기로 회복 가능`
+      : PROMISE_OUTLOOK_STATUS_LABEL_KO[outlook.status];
+  return `출전 약속 ${role} ${promised}% · 현재 ${current}% · ${tail}`;
+}
 
 /** T-2-012 D-54: `GET /v1/service-seasons/current`의 `notice` 키 → 실제 문구. 서버는 문장을
  * 보내지 않는다(D-12 관례) — SCR-001 허브 배너가 이 문구를 그대로 쓴다. */
