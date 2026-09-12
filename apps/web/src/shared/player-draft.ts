@@ -10,6 +10,7 @@ import {
 } from '@offside/domain';
 import type { RiskLevel, StepperStep } from '@offside/ui';
 import { ATTRIBUTE_LABELS } from './labels.js';
+import { validatePlayerName, type PlayerNameRules, type PlayerNameValidation } from './player-name.js';
 
 /** SCR-002·003·004 공통 Stepper(정보 → 스타일 → 확인). */
 export const PLAYER_CREATION_STEPS: StepperStep[] = [
@@ -133,24 +134,30 @@ export function attributeLabelList(keys: AttributeKey[]): string {
   return keys.map((key) => ATTRIBUTE_LABELS[key]).join(', ');
 }
 
-export type NameValidation = { ok: true; value: string } | { ok: false; message: string };
+export type NameValidation = PlayerNameValidation;
 
 /**
- * SCR-002 이름 입력의 즉시 피드백. domain의 UPDATE_PLAYER_DRAFT 검증(simulate.ts)과 규칙을
- * 맞춘다(trim 뒤 길이, 제어문자 금지) — 서버·엔진 쪽 검증이 최종 권위이고, 이건 제출 전 UX용이다.
+ * SCR-002 이름 입력의 즉시 피드백. 규칙 본체는 `player-name.ts`의 `validatePlayerName`(이슈 158·104
+ * 문자 규칙·예약 이름 포함) — domain의 UPDATE_PLAYER_DRAFT 검증(simulate.ts)보다 좁은 제출 전 UX 규칙이다.
  */
-export function validateDraftName(raw: string, rules: { nameMin: number; nameMax: number }): NameValidation {
-  const trimmed = raw.trim();
-  if (trimmed.length < rules.nameMin || trimmed.length > rules.nameMax) {
-    return { ok: false, message: `이름은 ${rules.nameMin}~${rules.nameMax}자여야 합니다.` };
-  }
-  for (let i = 0; i < raw.length; i++) {
-    const code = raw.charCodeAt(i);
-    if (code < 0x20 || code === 0x7f) {
-      return { ok: false, message: '이름에 제어문자·줄바꿈을 쓸 수 없습니다.' };
-    }
-  }
-  return { ok: true, value: trimmed };
+export function validateDraftName(raw: string, rules: PlayerNameRules): NameValidation {
+  return validatePlayerName(raw, rules);
+}
+
+/**
+ * 이슈 161: 국적 select 정렬 — `pinnedCode`(기본 KR, 대한민국)를 최상단에 고정하고 나머지는 이름의
+ * 가나다순. 데이터(룰셋 nationalities)는 그대로 두고 표시 순서만 바꾼다. 같은 이름이면 code로 안정 정렬.
+ */
+export function sortNationalities<T extends { code: string; name: string }>(
+  nationalities: readonly T[],
+  pinnedCode = 'KR',
+): T[] {
+  const collator = new Intl.Collator('ko');
+  const pinned = nationalities.filter((item) => item.code === pinnedCode);
+  const rest = nationalities
+    .filter((item) => item.code !== pinnedCode)
+    .sort((a, b) => collator.compare(a.name, b.name) || collator.compare(a.code, b.code));
+  return [...pinned, ...rest];
 }
 
 /**

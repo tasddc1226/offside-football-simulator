@@ -2,6 +2,15 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-13 (D-75 — 룰셋 1.4.0 / 팩 0.5.1 운영 승격 — 사용자 지시)
+
+- 사용자 지시(9/12 밤): "콘텐츠 팩 0.5.1 작업도 투입시켜줘. 그리고 룰셋 1.4.0 운영환경에 승격시켜줘." D-71에서 "사용자 승인 필요"로 보류했던 승격을 실행한다. 시즌 메타데이터 변경은 자동 배포 정책의 예외지만 이 지시 자체가 그 승인이다.
+- 순서(결정론 보호): #200 팩 0.5.1(0.5.0 복사 + EVT-REL-001·EVT-CON-001 `primaryPosition in [W, AM, ST]`, 이슈 #104, 0.5.0 바이트 불변) → #199 도메인 2차 웨이브(1.4.0 선택 키 가드) → #198 승격 준비(`production-release.mjs` PRODUCTION 1.4.0/0.5.1·PREVIOUS 1.3.0/0.5.0 + `expect-version` 명령, `deploy-production.yml` 배포 후 verify가 하드코딩 대신 이 값을 읽음, api `APPROVED_PRODUCTION_MANIFESTS`=[1.1.0/0.3.0, 1.3.0/0.5.0, 1.4.0/0.5.1], staging seed `svc_line_test` 1.4.0/0.5.1, `versions.ts` 오프라인 폴백 + PACK/RULESET_VERSIONS fail-closed 테스트, 런북). 기존 커리어는 생성 시 고정된 1.3.0/0.5.0으로 계속 재현·동기화되고 새 커리어만 1.4.0/0.5.1을 받는다.
+- #198 2렌즈 리뷰 차단 5건 → 수정 `3530543`: staging 스모크·리허설 spec이 1.0.0/0.1.0 하드코딩이라 seed 변경 직후 main CI가 전부 실패할 뻔함(`expectedSeason` 1.4.0/0.5.1로 정합), 폴백 상수 fail-closed 테스트 부재, 롤백 SQL이 재승격을 막지 못하는 위험, 롤백 검증 단계 없음.
+- 검증: 세 PR 전체 체인에서 `golden.test.ts`(5s)·`phase4-seed-reachability`(120s) 타임아웃은 러너·워커 동시 실행 부하 플레이크(D-70, #197) → 단독 재실행 통과(11/11·7/7), build·bundle·`db:check`(스키마 변경 없음)·타깃 e2e 14/14. 머지 #198 `fe91543` → #196 `f42f954` → #195 `1b39e02`(파일 교집합 없음). main CI 두 건 성공, staging current API `svc_line_test` PRESEASON 1.4.0/0.5.1. 9/12 밤 CI 실패(939dc36)는 self-hosted 러너(이 Mac) 슬립 통신 두절이지 코드 문제가 아님 — CI 실패는 잡 주석부터 확인.
+- 적용(9/13 06:15~06:19 KST): preflight run 34719440933 성공 → deploy run 34719522293 `1b39e02`(`DEPLOY_PRODUCTION`, `season_starts_at=2026-09-05T15:00:00Z`, `challenge_set_id=cs_season_1`, `season_ends_at` 비움) 성공. API `e18854aa…`, web `702e315a…`, manifest plan activate → readback noop. 검증: current API `svc_season_1` ACTIVE 1.4.0/0.5.1 endsAt null, health ok, web 200(`index-B_glX-6K.js`), Orca 브라우저로 운영 설정 "상세 버전"에 룰셋 1.4.0·콘텐츠 팩 0.5.1 표시 확인. 롤백은 런북의 `season-rollback.sql`(1.3.0/0.5.0) + 직전 Workers 버전.
+- 함께 운영 반영된 코드: 온보딩 #193, Wave C-A #192·C-B #194, Wave D-D #199·D-F #195·D-G #196. 후속: EVT-CON-001 ST 포함 재검토, "남은 0시즌" 문구, 결산 "왜 달라졌는지" 캡션, local.sql `svc_kickoff` 버전 불일치, #161 국적 데이터 확장.
+
 ## 2026-09-12 (D-74 — Wave C·D 병렬 투입, 2렌즈 리뷰 파이프라인, 부하 플레이크 처리, 브랜치 정리)
 
 - 투입: Wave C 2워커(A `fix-a11y-debt`: #180 잔여 2건·#170·#190-1 / B `fix-p3-ui-batch`: #154·#155·#157·#188·#159·#160·#167·#171), Wave D 3워커(D `fix-domain-wave2`: #147·#148·#145 / F `fix-player-creation`: #153·#158·#161·#104 이름 / G `fix-play-guidance`: #163·#164·#166). 사용자 선택(D·F·G 추천 그대로, E 콘텐츠 팩 0.5.1 #104는 보류). 파일 소유권을 라우트·패키지 단위로 분리해 동시 수정 파일이 없게 했고, 브리프에 "다른 워커 소유 파일 수정 금지 — 필요하면 PR 후속 절에 기록"을 명시했다.

@@ -269,10 +269,13 @@ jobs:
         run: |
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_API_URL/v1/health" >/dev/null
           CURRENT_JSON="$(curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors -H "Origin: $PRODUCTION_WEB_URL" "$PRODUCTION_API_URL/v1/service-seasons/current")"
-          CURRENT_JSON="$CURRENT_JSON" node -e '
+          # 기대 manifest는 tooling/scripts/production-release.mjs PRODUCTION_SEASON 한 곳에서 읽는다.
+          EXPECTED_MANIFEST="$(node tooling/scripts/production-release.mjs expect-version)"
+          CURRENT_JSON="$CURRENT_JSON" EXPECTED_MANIFEST="$EXPECTED_MANIFEST" node -e '
             const value = JSON.parse(process.env.CURRENT_JSON ?? "{}").data;
+            const expected = JSON.parse(process.env.EXPECTED_MANIFEST ?? "{}");
             const expectedEnd = process.env.SEASON_ENDS_AT || null;
-            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== "1.3.0" || value?.contentPackVersion !== "0.5.0" || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== expectedEnd) throw new Error("Unexpected production service-season response.");
+            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== expected.rulesetVersion || value?.contentPackVersion !== expected.contentPackVersion || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== expectedEnd) throw new Error("Unexpected production service-season response.");
           '
           ALLOWED_ORIGIN="$(curl --fail --silent --show-error -D - -o /dev/null -H "Origin: $PRODUCTION_WEB_URL" "$PRODUCTION_API_URL/v1/service-seasons/current" | tr -d '\r' | awk -F ': ' 'tolower($1) == "access-control-allow-origin" { print $2 }')"
           test "$ALLOWED_ORIGIN" = "$PRODUCTION_WEB_URL"
@@ -284,10 +287,13 @@ jobs:
         if: inputs.mode == 'set-season-end'
         run: |
           CURRENT_JSON="$(curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors -H "Origin: $PRODUCTION_WEB_URL" "$PRODUCTION_API_URL/v1/service-seasons/current")"
-          CURRENT_JSON="$CURRENT_JSON" node -e '
+          # 기대 manifest는 tooling/scripts/production-release.mjs PRODUCTION_SEASON 한 곳에서 읽는다.
+          EXPECTED_MANIFEST="$(node tooling/scripts/production-release.mjs expect-version)"
+          CURRENT_JSON="$CURRENT_JSON" EXPECTED_MANIFEST="$EXPECTED_MANIFEST" node -e '
             const value = JSON.parse(process.env.CURRENT_JSON ?? "{}").data;
+            const expected = JSON.parse(process.env.EXPECTED_MANIFEST ?? "{}");
             const expectedEnd = process.env.SEASON_ENDS_AT || null;
-            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== "1.3.0" || value?.contentPackVersion !== "0.5.0" || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== expectedEnd) throw new Error("Unexpected production service-season response after end-date change.");
+            if (value?.id !== "svc_season_1" || value?.name !== "시즌 1" || value?.status !== "ACTIVE" || value?.rulesetVersion !== expected.rulesetVersion || value?.contentPackVersion !== expected.contentPackVersion || value?.isTest !== false || value?.startsAt !== process.env.SEASON_STARTS_AT || value?.endsAt !== expectedEnd) throw new Error("Unexpected production service-season response after end-date change.");
           '
 
       - uses: actions/upload-artifact@v4

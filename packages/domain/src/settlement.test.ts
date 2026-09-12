@@ -3,6 +3,7 @@ import { rulesetProto } from './__fixtures__/career-01.js';
 import { runSeasonFixture } from './__fixtures__/career-02-season.js';
 import { runSettledFixture } from './__fixtures__/career-06-settled.js';
 import { computePromiseFulfilment, hashSeasonResult } from './settlement.js';
+import { computeAppearancePromiseOutlook } from './promise-outlook.js';
 import { hashState } from './hash.js';
 import { simulate } from './simulate.js';
 import type { CareerState, DomainSnapshot, SeasonResult } from './types.js';
@@ -288,6 +289,56 @@ describe('buildSeasonResult (career-02-season FAST 재생으로 통합 확인)',
         sourceId: 'SETTLE_SEASON:3:PROMISE_BREACH',
       }),
     );
+  });
+});
+
+// 이슈 #145: 출전 약속 미이행이 결산에서만 사후 통보된다. 렌더 시점 파생값(`computeAppearancePromiseOutlook`)이
+// 결산 판정(`computePromiseFulfilment`)과 같은 기준·분모를 쓰는지, 그리고 네 상태 경계를 고정한다.
+describe('computeAppearancePromiseOutlook (이슈 #145)', () => {
+  const { beforeSettlementState: base, snapshot } = runSettledFixture();
+  const promisedBp = rulesetProto.contractRules.promiseMinutesShareBp[base.contract!.rolePromise];
+
+  function midSeason(played: number, minutes: number): CareerState {
+    const season = base.season!;
+    return {
+      ...base,
+      season: {
+        ...season,
+        matches: season.matches.slice(0, played),
+        playerStats: { ...season.playerStats, minutes },
+      },
+    };
+  }
+
+  it('결산 직전 상태의 securedShareBp·상태는 실제 결산 promiseFulfilment와 일치한다', () => {
+    const outlook = computeAppearancePromiseOutlook(base, rulesetProto)!;
+    const settled = snapshot.state.seasonHistory.at(-1)!.result.promiseFulfilment;
+    expect(outlook.promisedRole).toBe(settled.promised);
+    expect(outlook.promisedShareBp).toBe(promisedBp);
+    expect(outlook.remainingMatches).toBe(0);
+    expect(outlook.securedShareBp).toBe(settled.minutesShareBp);
+    expect(outlook.status).toBe(settled.fulfilled ? 'SECURED' : 'UNRECOVERABLE');
+  });
+
+  it('BENCH 약속(15%) 경계: ON_TRACK / RECOVERABLE / UNRECOVERABLE / SECURED', () => {
+    expect(base.contract!.rolePromise).toBe('BENCH');
+    const scheduled = base.season!.schedule.filter((entry) => entry.skipped === undefined).length;
+    expect(scheduled).toBe(26);
+    // 10경기 200분: 현재 22% ≥ 15%, 확보 8.5% < 15%, 최대 70% → ON_TRACK.
+    const onTrack = computeAppearancePromiseOutlook(midSeason(10, 200), rulesetProto)!;
+    expect(onTrack).toMatchObject({ playedMatches: 10, remainingMatches: 16, possibleMinutes: 2340, currentShareBp: 2222, securedShareBp: 855, maxShareBp: 7009, status: 'ON_TRACK' });
+    // 10경기 100분: 현재 11% < 15%지만 최대 66% → RECOVERABLE.
+    expect(computeAppearancePromiseOutlook(midSeason(10, 100), rulesetProto)!.status).toBe('RECOVERABLE');
+    // 24경기 100분: 남은 2경기를 다 뛰어도 12% < 15% → UNRECOVERABLE.
+    expect(computeAppearancePromiseOutlook(midSeason(24, 100), rulesetProto)!.status).toBe('UNRECOVERABLE');
+    // 24경기 400분: 이미 17% 확보 → SECURED.
+    expect(computeAppearancePromiseOutlook(midSeason(24, 400), rulesetProto)!.status).toBe('SECURED');
+  });
+
+  it('RESERVE 약속(0%)은 항상 SECURED, season이 없으면 null', () => {
+    const reserve: CareerState = { ...midSeason(0, 0), contract: { ...base.contract!, rolePromise: 'RESERVE' } };
+    expect(computeAppearancePromiseOutlook(reserve, rulesetProto)!.status).toBe('SECURED');
+    expect(computeAppearancePromiseOutlook({ ...base, season: null }, rulesetProto)).toBeNull();
   });
 });
 

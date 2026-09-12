@@ -11,11 +11,16 @@ import {
   type CompareCardItem,
   type CompareRow,
 } from '@offside/ui';
-import { deriveTacticalRoom } from '@offside/domain';
+import { deriveTacticalRoom, type TacticalRoomView } from '@offside/domain';
 import { rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
-import { POSITION_LABELS, ROLE_PROMISE_SENTENCE, SQUAD_ROLE_LABELS } from '../shared/labels.js';
+import {
+  POSITION_LABELS,
+  ROLE_PROMISE_SENTENCE,
+  SELECTION_REASON_LABEL_KO,
+  SQUAD_ROLE_LABELS,
+} from '../shared/labels.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { platform } from '../platform/index.js';
@@ -36,6 +41,44 @@ const CAPTION_STYLE = {
   fontSize: 'var(--os-fs-caption)',
   lineHeight: 'var(--os-lh-caption)',
 } as const;
+
+/**
+ * 이슈 145: 제안 사유. 도메인이 이미 계산해 둔 값만 문구로 옮긴다 — 제안은 `season.selection`
+ * (rankSelection 결과: 경쟁 순위·선발/벤치 자리 수·경계 후보와 가장 큰 차이 항목)과 전술 적합도·
+ * 감독 신뢰·폼(선발 점수 입력)에서 나온다. 새 규칙 계산은 하지 않는다.
+ */
+function ProposalReason({ room, form }: { room: TacticalRoomView | null; form: number }) {
+  if (room === null) return null;
+  const player = room.ranking.candidates.find((candidate) => candidate.id === 'PLAYER');
+  const reason = room.ranking.playerReason;
+  const rankLine =
+    player === undefined
+      ? null
+      : `경쟁 순위 ${player.rank}위 (선발 ${room.ranking.slots}자리 · 벤치 ${room.ranking.benchSlots}자리)`;
+  const inputsLine = `전술 적합도 ${room.tacticalFit} · 감독 신뢰 ${room.managerTrust} · 폼 ${form}`;
+  const gapLine =
+    reason === null
+      ? null
+      : `경계 후보와 가장 큰 차이: ${SELECTION_REASON_LABEL_KO[reason.component]} ${reason.delta > 0 ? '+' : ''}${reason.delta}`;
+  return (
+    <div className="flex flex-col gap-os-1" data-testid="role-proposal-reason">
+      <p className="os-eyebrow">제안 사유</p>
+      {rankLine !== null ? (
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          {rankLine}
+        </p>
+      ) : null}
+      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+        {inputsLine}
+      </p>
+      {gapLine !== null ? (
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          {gapLine}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 function RoleProposalScreen() {
   const { careerId } = Route.useParams();
@@ -173,6 +216,11 @@ function RoleProposalScreen() {
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           능력치는 바뀌지 않고 역할 가중치와 숙련도만 바뀝니다.
         </p>
+        {room !== null ? (
+          <div className="os-story-card">
+            <ProposalReason room={room} form={state.state.form} />
+          </div>
+        ) : null}
         {errorMessage ? (
           <ErrorState message={errorMessage} onRetry={() => void handleDecision('ACCEPT')} />
         ) : null}
@@ -217,6 +265,7 @@ function RoleProposalScreen() {
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           {ROLE_PROMISE_SENTENCE[proposal.to]}
         </p>
+        <ProposalReason room={room} form={state.state.form} />
       </div>
       {errorMessage ? (
         <ErrorState message={errorMessage} onRetry={() => void handleDecision('ACCEPT')} />

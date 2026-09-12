@@ -3,10 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
 import { Button, buttonClassName, buttonStyle, Card, ErrorState, ScreenIntro } from '@offside/ui';
+import { evaluateLoanReturnRole, type LoanReturnEvaluation } from '@offside/domain';
+import { rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { screenForCareer } from '../shared/career-route.js';
+import { LEAGUE_TIER_LABEL_KO, SQUAD_ROLE_LABELS } from '../shared/labels.js';
+import { ratingText } from '../shared/season-schedule.js';
+import { resolveTeamName } from '../shared/team-names.js';
+import { useUiStore } from '../shared/ui-store.js';
 import {
   committedTransferRevision,
   isCurrentTransferResultRevision,
@@ -57,6 +63,27 @@ const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } 
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
 const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
 
+/** 이슈 148: 복귀 후 역할 약속이 어떻게 정해지는지 한 줄. 도메인 판정값(`evaluateLoanReturnRole`)만 문구로 옮긴다. */
+function loanReturnRoleReason(evaluation: LoanReturnEvaluation, parentTier: string): string {
+  const parent = SQUAD_ROLE_LABELS[evaluation.parentRolePromise];
+  const delivered = SQUAD_ROLE_LABELS[evaluation.deliveredRole];
+  const share = Math.round(evaluation.loanSeason.minutesShareBp / 100);
+  if (!evaluation.applies) {
+    return `이 커리어의 규칙에서는 임대 성적과 무관하게 원소속 역할 약속(${parent})이 그대로 유지됩니다.`;
+  }
+  if (evaluation.reevaluatedRole !== evaluation.parentRolePromise) {
+    return `임대 출전 ${share}%는 ${delivered} 기준을 충족해, 원소속 역할 약속이 ${parent}에서 ${SQUAD_ROLE_LABELS[evaluation.reevaluatedRole]}(으)로 조정됩니다.`;
+  }
+  // 이행 역할이 약속보다 낮으면 '복귀로 내려가지 않음' 규칙이 약속을 지킨 것이지 등급 상한 때문이 아니다.
+  if (evaluation.belowPromise) {
+    return `임대 출전 ${share}%는 ${delivered} 기준이라 원소속 역할 약속은 ${parent} 그대로입니다(복귀로 내려가지는 않습니다).`;
+  }
+  if (evaluation.cappedByTier) {
+    return `임대 출전 ${share}%는 ${delivered} 기준이지만, ${parentTier} 구단이 제안하는 최대 역할이 ${SQUAD_ROLE_LABELS[evaluation.ceilingRole]}(이)라 역할 약속은 ${parent} 그대로입니다.`;
+  }
+  return `임대 출전 ${share}%는 ${delivered} 기준이라 원소속 역할 약속은 ${parent} 그대로입니다.`;
+}
+
 function LoanReturnDecision({ careerId }: { careerId: string }) {
   const query = useCareer(careerId);
   const mutation = useCareerMutation('resolveLoanReturn');
@@ -64,6 +91,7 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
   const submittingRef = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
   useCommittingExitGuard(mutation.isPending);
 
   if (query.data === undefined) return null;
@@ -71,6 +99,16 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
   const pending = state.pending;
   if (pending === null || pending.kind !== 'LOAN_RETURN') return null;
   const loanPending = pending;
+  // 이슈 148: 임대 성과 요약과 복귀 후 역할 근거(표시 전용 — 실제 전이는 LOAN_RETURN 명령이 같은 함수로 계산).
+  const ruleset = rulesetForCareer(state);
+  const parent = state.parentContract;
+  const evaluation = parent === null ? null : evaluateLoanReturnRole({ state, ruleset, parent });
+  const loanTeamName =
+    evaluation === null
+      ? null
+      : (resolveTeamName(ruleset, evaluation.loanSeason.teamId, teamNameOverrides) ?? state.contract?.teamName ?? '임대 구단');
+  const parentTeamName = parent === null ? '' : (resolveTeamName(ruleset, parent.teamId, teamNameOverrides) ?? parent.teamName);
+  const parentTierLabel = parent === null ? '' : LEAGUE_TIER_LABEL_KO[parent.leagueTier];
 
   async function recoverAfterResponseLoss(): Promise<number | null> {
     const refreshed = await query.refetch();
@@ -131,6 +169,49 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
         title="임대 복귀 결정"
         description="임대 시즌 결과를 저장했습니다. 원소속으로 돌아가거나, 조건을 충족했다면 임대 구단에 남을 수 있습니다."
       />
+      {evaluation !== null && parent !== null ? (
+        <Card className="flex flex-col gap-os-3" data-testid="loan-return-summary">
+          <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
+            임대 시즌 성과 · {loanTeamName}
+          </h2>
+          <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+            <div>
+              <dt>출전</dt>
+              <dd className="os-num text-os-text">
+                {evaluation.loanSeason.matches}경기 · 선발 {evaluation.loanSeason.started}
+              </dd>
+            </div>
+            <div>
+              <dt>출전 시간</dt>
+              <dd className="os-num text-os-text">
+                {evaluation.loanSeason.minutes}분 ({Math.round(evaluation.loanSeason.minutesShareBp / 100)}%)
+              </dd>
+            </div>
+            <div>
+              <dt>평균 평점</dt>
+              <dd className="os-num text-os-text">{ratingText(evaluation.loanSeason.avgRatingTenths)}</dd>
+            </div>
+            {evaluation.loanSeason.goals !== null || evaluation.loanSeason.assists !== null ? (
+              <div>
+                <dt>득점 · 도움</dt>
+                <dd className="os-num text-os-text">
+                  {evaluation.loanSeason.goals ?? '—'} · {evaluation.loanSeason.assists ?? '—'}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+          <div className="flex flex-col gap-os-1">
+            <p className="os-eyebrow">복귀 후 역할</p>
+            <p className="font-os text-os-text" style={BODY_STYLE} data-testid="loan-return-role-reason">
+              원소속 {parentTeamName}({parentTierLabel}) · 역할 약속 {SQUAD_ROLE_LABELS[evaluation.parentRolePromise]}
+              {evaluation.applies ? ` → ${SQUAD_ROLE_LABELS[evaluation.reevaluatedRole]}` : ' 유지'}
+            </p>
+            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+              {loanReturnRoleReason(evaluation, parentTierLabel)}
+            </p>
+          </div>
+        </Card>
+      ) : null}
       <Card className="flex flex-col gap-os-2">
         <p className="font-os text-os-text" style={BODY_STYLE}>
           매입 옵션

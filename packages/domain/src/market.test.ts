@@ -4,7 +4,14 @@ import { runGkFixture } from './__fixtures__/career-04-gk.js';
 import { runSettledFixture } from './__fixtures__/career-06-settled.js';
 import { marketFixtureRuleset } from './__fixtures__/market-fixture-ruleset.js';
 import { buildMarketValueInput, computeMarketValueIndex } from './market-value.js';
-import { buildRenewalOffer, generateMarket, judgeMarketReason, openMarketAfterSettlement } from './market.js';
+import {
+  buildRenewalOffer,
+  countContractMatchesPlayed,
+  generateMarket,
+  isRenewalWindowOpen,
+  judgeMarketReason,
+  openMarketAfterSettlement,
+} from './market.js';
 import { seedRng } from './rng.js';
 import { selectOpenSlot } from './season.js';
 import type { CareerState, SeasonStep, SquadRole } from './types.js';
@@ -528,6 +535,98 @@ describe('step 7 CONTRACT 슬롯(season.ts의 selectOpenSlot) 통합', () => {
     } else {
       throw new Error('CONTRACT pending이 아니다.');
     }
+  });
+
+  // 이슈 #147: 1시즌 첫 계약은 서명 직후 START_SEASON이 SEASON_STARTED를 남기는 순간 잔여 0(= "현재
+  // 시즌 뒤에 남은 시즌")이 되어, 시즌 1 step 7에 한 경기도 뛰지 않았어도 사전 협상이 열린다(운영 QA
+  // WG S1 "남은 계약 0시즌"). 잔여 계산은 오류가 아니라 정의가 그렇다 — 1.4.0 키
+  // `contractRules.renewalWindow.minMatchesPlayed`로 "이번 계약에서 N경기 소화" 조건을 더한다.
+  describe('이슈 #147: 재계약 사전 협상 창(1.4.0 renewalWindow 키 가드)', () => {
+    const RULESET_1_4_0 = {
+      ...rulesetProto,
+      contractRules: { ...rulesetProto.contractRules, renewalWindow: { minMatchesPlayed: 3 } },
+    };
+
+    /** 1시즌 계약·이번 계약(=이번 시즌)에서 `played`경기(1분 이상) 뛴 상태. */
+    function lastSeasonWithMatchesPlayed(played: number): CareerState {
+      const season = base.season!;
+      const stats = season.playerStats;
+      return {
+        ...base,
+        seasonHistory: [],
+        contract: { ...contractOf(base), lengthSeasons: 1 },
+        season: {
+          ...season,
+          playerStats: {
+            ...stats,
+            appearances: { total: played, started: played, sub: 0, zeroMinute: 0, out: 0 },
+            minutes: played * 60,
+          },
+        },
+      };
+    }
+
+    function openedOffers(state: CareerState, ruleset: typeof rulesetProto) {
+      const result = selectOpenSlot(contractStep, 'FAST', [], rng, null, null, 20, 1, state, ruleset);
+      if (!(result.opened && result.pending?.kind === 'CONTRACT')) throw new Error('CONTRACT pending이 아니다.');
+      return result.pending.offers;
+    }
+
+    it('재현(키 없음): 한 경기도 뛰지 않은 마지막 시즌 계약에도 step 7 RENEWAL이 열린다', () => {
+      expect(isRenewalWindowOpen(lastSeasonWithMatchesPlayed(0), rulesetProto)).toBe(true);
+      expect(openedOffers(lastSeasonWithMatchesPlayed(0), rulesetProto)).toHaveLength(1);
+    });
+
+    it('1.4.0(minMatchesPlayed 3): 2경기까지는 offers: []로 자동 통과, 3경기부터 RENEWAL이 열린다', () => {
+      expect(openedOffers(lastSeasonWithMatchesPlayed(2), RULESET_1_4_0)).toEqual([]);
+      const offers = openedOffers(lastSeasonWithMatchesPlayed(3), RULESET_1_4_0);
+      expect(offers).toHaveLength(1);
+      expect(offers[0]!.kind).toBe('RENEWAL');
+    });
+
+    it('0분 경기(결장·미사용 교체)는 소화 경기로 세지 않는다', () => {
+      const zeroMinute = lastSeasonWithMatchesPlayed(3);
+      const state: CareerState = {
+        ...zeroMinute,
+        season: {
+          ...zeroMinute.season!,
+          playerStats: {
+            ...zeroMinute.season!.playerStats,
+            appearances: { total: 5, started: 2, sub: 1, zeroMinute: 3, out: 2 },
+          },
+        },
+      };
+      expect(countContractMatchesPlayed(state, contractOf(state))).toBe(2);
+      expect(openedOffers(state, RULESET_1_4_0)).toEqual([]);
+    });
+
+    it('이번 계약 누계: 서명 시즌 이후 같은 구단 결산 시즌은 더하고, 임대(다른 구단) 시즌·서명 전 시즌은 뺀다', () => {
+      const current = lastSeasonWithMatchesPlayed(1);
+      const contract = { ...contractOf(current), signedSeasonIndex: 2 };
+      const settled = runSettledFixture().snapshot.state.seasonHistory[0]!;
+      const summaryWith = (index: number, teamId: string, played: number) => ({
+        ...settled,
+        index,
+        teamId,
+        result: {
+          ...settled.result,
+          playerStats: {
+            ...settled.result.playerStats,
+            appearances: { total: played + 1, started: played, sub: 0, zeroMinute: 1, out: 1 },
+          },
+        },
+      });
+      const state: CareerState = {
+        ...current,
+        contract,
+        seasonHistory: [
+          summaryWith(1, contract.teamId, 10), // 서명 전 시즌(index 1 < signedSeasonIndex 2)
+          summaryWith(2, contract.teamId, 4), // 이번 계약 첫 시즌
+          summaryWith(3, 'other-club', 20), // 임대 시즌
+        ],
+      };
+      expect(countContractMatchesPlayed(state, contract)).toBe(4 + 1);
+    });
   });
 });
 

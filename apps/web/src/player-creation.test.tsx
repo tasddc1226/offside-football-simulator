@@ -139,6 +139,39 @@ describe('SCR-002 선수 정보', () => {
     expect(screen.getByLabelText('이름')).toHaveFocus();
   });
 
+  it('정체성 오류는 필드를 고치는 즉시 사라지고, 등장인물 이름은 안내와 함께 거부한다(이슈 153·158·104)', async () => {
+    const engine = setTestEngine();
+    const careerId = await createDraftCareer(engine);
+    const user = userEvent.setup();
+    renderAt(`/career/${careerId}/create`);
+    await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' });
+
+    await user.click(screen.getByRole('radio', { name: /아카데미의 추가 평가/ }));
+    await user.click(screen.getByRole('button', { name: '다음' }));
+    await user.click(screen.getByRole('button', { name: '다음' }));
+
+    expect(await screen.findByText('성별을 선택해 주세요.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '다음' })).toBeDisabled();
+
+    await user.click(screen.getByRole('radio', { name: '남성' }));
+    expect(screen.queryByText('성별을 선택해 주세요.')).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('국적'), 'KR');
+    expect(screen.queryByText('국적을 선택해 주세요.')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: '왼발' }));
+    expect(screen.queryByText('주발을 선택해 주세요.')).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('이름'), '이도현');
+    expect(screen.getByText('게임 속 등장인물 이름과 같아요. 다른 이름을 골라 주세요.')).toBeInTheDocument();
+    expect(screen.getByLabelText('이름')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('button', { name: '다음' })).toBeDisabled();
+
+    await user.clear(screen.getByLabelText('이름'));
+    await user.type(screen.getByLabelText('이름'), '김서준');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('이름')).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.getByRole('button', { name: '다음' })).toBeEnabled();
+  });
+
   it('형식은 JSON이지만 값이 잘못된 scratch는 무시하고 저장된 draft로 복구한다', async () => {
     const engine = setTestEngine();
     const careerId = await createDraftCareer(engine);

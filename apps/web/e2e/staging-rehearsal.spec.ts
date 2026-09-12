@@ -54,7 +54,10 @@ if (
 const apiUrl = apiUrlValue.origin;
 const expectedSeasonName = process.env.E2E_STAGING_SEASON_NAME?.trim() || 'LINE TEST';
 const expectedServiceSeasonId = 'svc_line_test';
-const expectedContentPackVersion = '0.1.0';
+// staging seed(apps/api/seeds/bootstrap-non-production.sql)와 tooling/scripts/production-release.mjs
+// PRODUCTION_SEASON(운영 승격 목표 manifest)과 같은 값을 유지한다 — 바꿀 때 함께 갱신한다.
+const expectedRulesetVersion = '1.4.0';
+const expectedContentPackVersion = '0.5.1';
 const modes: RehearsalMode[] = [{ mode: 'FAST', label: '빠른 시즌' }];
 
 async function expectServiceSeason(request: APIRequestContext): Promise<void> {
@@ -69,7 +72,7 @@ async function expectServiceSeason(request: APIRequestContext): Promise<void> {
     name: expectedSeasonName,
     status: 'PRESEASON',
     isTest: true,
-    rulesetVersion: '1.0.0',
+    rulesetVersion: expectedRulesetVersion,
     contentPackVersion: expectedContentPackVersion,
   });
 }

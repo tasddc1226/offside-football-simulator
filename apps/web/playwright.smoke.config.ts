@@ -10,7 +10,7 @@ const ALLOWED_WORKER_HOSTS = new Set([
 type SmokeMetadata = Readonly<{
   webUrl: string;
   apiUrl: string;
-  expectedSeason: Readonly<{ id: string; contentPackVersion: string }>;
+  expectedSeason: Readonly<{ id: string; rulesetVersion: string; contentPackVersion: string }>;
 }>;
 
 function workerOrigin(value: string, kind: 'web' | 'api'): string {
@@ -39,7 +39,14 @@ function workerOrigin(value: string, kind: 'web' | 'api'): string {
 
 const BASE_URL = workerOrigin(process.env.E2E_STAGING_URL ?? DEFAULT_WEB_URL, 'web');
 const API_URL = workerOrigin(process.env.E2E_STAGING_API_URL ?? DEFAULT_API_URL, 'api');
-const expectedSeason = { id: 'svc_line_test', contentPackVersion: '0.1.0' };
+// staging `svc_line_test`의 manifest. main CI가 apps/api/seeds/bootstrap-non-production.sql을 staging D1에
+// upsert한 직후 이 값을 검증하므로 seed와, 그 정본인 tooling/scripts/production-release.mjs
+// PRODUCTION_SEASON(운영 승격 목표 manifest)과 같은 값을 유지한다 — 바꿀 때 함께 갱신한다.
+const expectedSeason = {
+  id: 'svc_line_test',
+  rulesetVersion: '1.4.0',
+  contentPackVersion: '0.5.1',
+};
 const smokeMetadata: SmokeMetadata = {
   webUrl: BASE_URL,
   apiUrl: API_URL,

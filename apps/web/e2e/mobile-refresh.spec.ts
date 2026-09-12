@@ -196,7 +196,8 @@ test('세그먼트 키보드 선택은 크기를 바꾸지 않고 하단 동작�
   // SCR-002 패널 1(정체성)의 이름 입력은 배경 패널 다음이라 먼저 배경을 골라야 보인다.
   await page.getByRole('radio', { name: /아카데미의 추가 평가/ }).click();
   await page.getByRole('button', { name: '다음', exact: true }).click();
-  await page.getByLabel('이름').fill('박준서');
+  // 박준서는 콘텐츠 팩 captain 토큰이라 예약 이름(#104)이므로 fillPlayerInfo 기본값 김서준을 쓴다.
+  await page.getByLabel('이름').fill('김서준');
   await page.keyboard.press('Tab');
   const first = page.getByRole('radio', { name: '여성', exact: true });
   const second = page.getByRole('radio', { name: '남성', exact: true });
