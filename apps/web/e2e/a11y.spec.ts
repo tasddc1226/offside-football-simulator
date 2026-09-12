@@ -160,6 +160,8 @@ test('T-1-012 설정: 복구 코드 재발급 확인 대화상자에 axe serious
   });
 
   await page.goto('/settings');
+  // UX-013: 복구 코드 행은 계정 카드의 "계정 상세" 접이식 안에 있다.
+  await page.getByText('계정 상세', { exact: true }).click();
   await page.getByRole('button', { name: '재발급' }).click();
   await expect(page.getByRole('heading', { level: 2, name: '복구 코드 재발급' })).toBeVisible();
 
@@ -177,6 +179,8 @@ test('T-1-012 설정: 복구 코드 결과 대화상자에 axe serious·critical
   );
 
   await page.goto('/settings');
+  // UX-013: 복구 코드 행은 계정 카드의 "계정 상세" 접이식 안에 있다.
+  await page.getByText('계정 상세', { exact: true }).click();
   await page.getByRole('button', { name: '발급' }).click();
   await expect(page.getByRole('heading', { level: 2, name: '복구 코드' })).toBeVisible();
 
@@ -199,7 +203,8 @@ test('T-1-012 설정: 프로필 복구 충돌 선택 대화상자에 axe serious
   );
 
   await page.goto('/settings');
-  // UX-003: 프로필 복구 폼은 기본 접힘이다 — Disclosure summary를 열어야 입력을 채울 수 있다.
+  // UX-013: 프로필 복구 폼은 "계정 상세" 접이식 안에 다시 접혀 있다 — 둘 다 열어야 입력을 채울 수 있다.
+  await page.getByText('계정 상세', { exact: true }).click();
   await page.getByText('프로필 복구', { exact: true }).click();
   await page.getByLabel('다른 기기에서 발급받은 복구 코드').fill('OFS-ABCD-EFGH-JKMN');
   await page.getByRole('button', { name: '복구' }).click();
@@ -214,10 +219,8 @@ test('T-1-012 설정: 이 기기 데이터 삭제 확인 대화상자에 axe ser
   page,
 }) => {
   await page.goto('/settings');
-  // UX-003: 위험 작업(프로필·기기 데이터 삭제) 목록은 기본 접힘이다.
-  await page.getByText('위험 작업 보기').click();
-  const row = page.locator('li').filter({ hasText: '이 기기 데이터 삭제' });
-  await row.getByRole('button', { name: '삭제' }).click();
+  // UX-013: 위험 작업은 맨 아래 위험 텍스트 링크다.
+  await page.getByRole('button', { name: '이 기기 데이터 삭제', exact: true }).click();
   await expect(page.getByRole('heading', { level: 2, name: '이 기기 데이터 삭제' })).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'T-1-012 설정: 이 기기 데이터 삭제 확인');
@@ -234,9 +237,8 @@ test('T-1-012 설정: 프로필 삭제 확인 대화상자에 axe serious·criti
   );
 
   await page.goto('/settings');
-  await page.getByText('위험 작업 보기').click();
-  const row = page.locator('li').filter({ hasText: '프로필 삭제' });
-  await row.getByRole('button', { name: '삭제' }).click();
+  // UX-013: 위험 작업은 맨 아래 위험 텍스트 링크다.
+  await page.getByRole('button', { name: '프로필 삭제', exact: true }).click();
   await expect(page.getByRole('heading', { level: 2, name: '프로필 삭제' })).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'T-1-012 설정: 프로필 삭제 확인');
@@ -385,6 +387,8 @@ test('SCR-015 프로 시즌 결과 화면에 axe serious·critical 위반이 없
 
 test('텍스트 크기 150% + 360px에서 가로 스크롤이 생기지 않는다', async ({ page }) => {
   await page.goto('/settings');
+  // UX-013: 텍스트 크기 라디오는 "화면·플레이 설정" 접이식 안에 있다.
+  await page.getByText('화면·플레이 설정', { exact: true }).click();
   await page.getByRole('radio', { name: '150%' }).click();
 
   // 텍스트 크기는 useUiStore(zustand persist)로 전역 적용된다 — 실제 게임 화면(허브)에서 확인한다.
@@ -498,6 +502,8 @@ test('T-1-013 설정: Google 연결 해제 확인 대화상자에 axe serious·c
   });
 
   await page.goto('/settings');
+  // UX-013: "연결 해제"는 계정 카드의 "계정 상세" 접이식 안에 있다.
+  await page.getByText('계정 상세', { exact: true }).click();
   await page.getByRole('button', { name: '연결 해제' }).click();
   await expect(page.getByRole('heading', { level: 2, name: 'Google 연결 해제' })).toBeVisible();
 

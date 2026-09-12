@@ -26,9 +26,13 @@ test.describe('Google 연결·병합(실제 api)', () => {
       await pageA.goto('/settings');
       await pageA.getByRole('button', { name: 'Google로 연결' }).click();
       await expect(pageA).toHaveURL(/\/settings(\?google=.*)?$/, { timeout: 15_000 });
-      await expect(pageA.getByRole('button', { name: '연결 해제' })).toBeVisible({
+      // UX-013: 연결되면 계정 카드 머리에 "로그아웃"이 뜨고, "연결 해제"는 "계정 상세" 접이식 안에
+      // 있다 — OAuth 왕복이 끝나 연결 상태가 그려진 뒤에 접이식을 연다.
+      await expect(pageA.getByRole('button', { name: '로그아웃', exact: true })).toBeVisible({
         timeout: 15_000,
       });
+      await pageA.getByText('계정 상세', { exact: true }).click();
+      await expect(pageA.getByRole('button', { name: '연결 해제' })).toBeVisible();
 
       const pageB = await contextB.newPage();
       await startNewCareer(pageB);
@@ -71,7 +75,12 @@ test.describe('Google 연결·병합(실제 api)', () => {
   }) => {
     await page.goto('/settings');
     await page.getByRole('button', { name: 'Google로 연결' }).click();
-    await expect(page.getByRole('button', { name: '연결 해제' })).toBeVisible({ timeout: 15_000 });
+    // UX-013: 연결되면 계정 카드 머리에 "로그아웃"이 뜨고, "연결 해제"는 "계정 상세" 접이식 안에 있다.
+    await expect(page.getByRole('button', { name: '로그아웃', exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByText('계정 상세', { exact: true }).click();
+    await expect(page.getByRole('button', { name: '연결 해제' })).toBeVisible();
 
     await startNewCareer(page);
     await fillPlayerInfo(page, '재인증점검');

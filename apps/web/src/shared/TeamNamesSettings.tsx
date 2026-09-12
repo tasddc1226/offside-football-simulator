@@ -1,8 +1,9 @@
-// UX-001 → UX-013: 설정 "구단 이름·로고" 섹션. 활성 룰셋(activeRuleset)의 12개 구단을 리그 등급별로
-// 묶어 보여주고, 각 구단마다 기본 이름 placeholder가 있는 텍스트 인풋 + 플레이버 텍스트 한 줄 + 로고
-// 변경(file input)·기본 로고 복원 버튼을 둔다. 저장은 기기 로컬(ui-store.ts의 teamNameOverrides·
-// teamLogos)뿐이라 다른 기기·서버 프로필과는 동기화되지 않는다 — SLB(야구 게임)의 "TEAM SETTINGS"와
-// 같은 로컬 전용 커스터마이즈다.
+// UX-001 → UX-013: 설정 "구단 이름·로고 변경" 접이식의 본문. 활성 룰셋(activeRuleset)의 12개 구단을
+// 리그 등급별로 묶어 보여주고, 각 구단마다 기본 이름 placeholder가 있는 텍스트 인풋 + 플레이버 텍스트
+// 한 줄 + 로고 변경(file input)·기본 로고 복원 버튼을 둔다. 저장은 기기 로컬(ui-store.ts의
+// teamNameOverrides·teamLogos)뿐이라 다른 기기·서버 프로필과는 동기화되지 않는다 — SLB(야구 게임)의
+// "TEAM SETTINGS"와 같은 로컬 전용 커스터마이즈다. 바깥 섹션·h2·Disclosure는 settings.tsx가 그린다
+// (헤딩 계층 h1 배너 → h2 섹션 → 여기 리그 등급 h3).
 import { useState, type ChangeEvent } from 'react';
 import type { Team } from '@offside/domain';
 import { Button, Toast, buttonClassName, buttonStyle } from '@offside/ui';
@@ -136,14 +137,7 @@ export function TeamNamesSettings() {
   const tierGroups = groupTeamsByTier(activeRuleset.teams);
 
   return (
-    <section
-      id="settings-team-names"
-      className="flex scroll-mt-20 flex-col gap-os-5"
-      aria-labelledby="settings-team-names-title"
-    >
-      <h2 id="settings-team-names-title" className="os-section-title">
-        구단 이름·로고
-      </h2>
+    <div className="flex flex-col gap-os-5">
       <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
         게임 속 구단 이름과 로고를 원하는 대로 바꿔보세요. 이름·로고 변경은 이 기기에만 적용됩니다.
       </p>
@@ -157,10 +151,18 @@ export function TeamNamesSettings() {
       </div>
 
       {tierGroups.map((group) => (
-        <section key={group.tier} className="flex flex-col gap-os-3">
-          <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
+        <section
+          key={group.tier}
+          className="flex flex-col gap-os-3"
+          aria-labelledby={`settings-team-tier-${group.tier}`}
+        >
+          <h3
+            id={`settings-team-tier-${group.tier}`}
+            className="font-os font-semibold text-os-text"
+            style={H2_STYLE}
+          >
             {LEAGUE_TIER_LABEL_KO[group.tier]}
-          </h2>
+          </h3>
           <div className="flex flex-col gap-os-5">
             {group.teams.map((team) => (
               <TeamRow key={team.id} team={team} onToast={setToast} />
@@ -172,6 +174,6 @@ export function TeamNamesSettings() {
       {toast !== null ? (
         <Toast variant={toast.variant} message={toast.message} onDismiss={() => setToast(null)} />
       ) : null}
-    </section>
+    </div>
   );
 }

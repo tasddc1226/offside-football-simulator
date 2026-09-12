@@ -343,11 +343,8 @@ select {
 .os-segmented-two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-.os-settings > section {
-  padding: 20px;
-  border-radius: var(--os-radius-panel);
-  background: var(--os-surface);
-}
+/* UX-013: 설정 화면은 섹션(h2 + 카드 묶음)이 아니라 카드(.os-panel)가 패널이다 — 섹션 자체는
+   투명 컨테이너. 화면 전용 스타일은 apps/web/src/shared/settings-screen.css. */
 .os-settings input {
   width: 100%;
   min-height: var(--os-touch-min);
