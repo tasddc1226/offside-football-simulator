@@ -84,6 +84,14 @@ export function serviceSeasonBadgeLabel(
   return currentServiceSeason.isTest ? '테스트 시즌' : null;
 }
 
+/**
+ * 이슈 167: 카드 CTA는 status로 갈린다. RETIRED·ARCHIVED는 이어갈 진행이 없으니 "기록 보기"
+ * (screenForCareer가 SCR-025 은퇴·기록 화면으로 보낸다), DRAFT·ACTIVE만 "이어하기".
+ */
+export function careerCardCtaLabel(status: CareerSummary['state']['status']): '이어하기' | '기록 보기' {
+  return status === 'RETIRED' || status === 'ARCHIVED' ? '기록 보기' : '이어하기';
+}
+
 function CareerCard({
   summary,
   currentServiceSeason,
@@ -212,7 +220,7 @@ function CareerCard({
 
       <div className="flex gap-os-3">
         <Button variant="primary" className="flex-1" onClick={handleContinue}>
-          이어하기
+          {careerCardCtaLabel(state.status)}
         </Button>
       </div>
       {!featured ? (

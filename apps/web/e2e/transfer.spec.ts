@@ -4,6 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import {
   completeOnboardingAndConfirm,
+  expectFirstContractHeading,
   fillPreseasonPlan,
   planPreseason,
   resolveCurrentChapterScreen,
@@ -130,7 +131,8 @@ async function advanceToSettlementRejectingRenewal(page: Page): Promise<void> {
       continue;
     }
     if (pathnameBefore.endsWith('/offers')) {
-      await expect(page.getByRole('heading', { level: 1, name: '이적시장 제안 비교' })).toBeVisible();
+      // 이슈 #159: step 7 PRE_NEGOTIATION은 재계약 제안 1건뿐이라 "비교" 없는 표제를 쓴다.
+      await expect(page.getByRole('heading', { level: 1, name: '이적시장 제안' })).toBeVisible();
       await page.getByRole('button', { name: '제안 모두 거절하고 잔류' }).click();
       await expect(page).toHaveURL(/\/career\/[^/]+$/);
       continue;
@@ -179,7 +181,7 @@ test('TEST-E2E-003(a): 3개 이상 제안 비교→협상→FREE_AGENT 확정→
   }, CAREER_10_SEED);
 
   await reachFirstContractOffers(page);
-  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
+  await expectFirstContractHeading(page);
   await signFirstOffer(page);
   await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
@@ -373,7 +375,7 @@ test('TEST-E2E-003(c): INTEREST 시장 안전 잔류(STAY) 수락 → SCR-020 �
   }, CAREER_STAY_SEED);
 
   await reachFirstContractOffers(page);
-  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
+  await expectFirstContractHeading(page);
   await signFirstOffer(page);
   const careerId = careerIdFromUrl(page);
   await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');

@@ -29,8 +29,16 @@ describe('ContractSignature', () => {
     fireEvent.pointerUp(pad, { pointerId: 2, clientX: 160, clientY: 55 });
     expect(onReadyChange).toHaveBeenLastCalledWith(true);
 
-    fireEvent.click(screen.getByRole('button', { name: '지우고 다시 쓰기' }));
+    fireEvent.click(screen.getByRole('button', { name: '다시 쓰기' }));
     expect(onReadyChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it('이슈 157: 안내 문구는 모드별로 갈린다(이름 입력 모드에 캔버스 안내가 남지 않는다)', () => {
+    render(<ContractSignature signerName="김서준" fingerprint="offer-e" onReadyChange={vi.fn()} />);
+    expect(screen.getByText(/손가락이나 마우스로 쓰세요/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '이름 입력' }));
+    expect(screen.queryByText(/손가락이나 마우스로 쓰세요/)).not.toBeInTheDocument();
+    expect(screen.getByText(/입력한 이름이 서명으로 남습니다/)).toBeInTheDocument();
   });
 
   it('키보드 이름 입력은 공백을 거부하고 조건 fingerprint 변경 시 폐기한다', () => {

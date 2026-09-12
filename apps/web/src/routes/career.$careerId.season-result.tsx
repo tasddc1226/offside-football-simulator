@@ -3,6 +3,7 @@
 // 대시보드 "시즌 결산" CTA가 확정하고 이 화면은 아무것도 확정하지 않는다.
 import { useEffect } from 'react';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+import type { CareerState, Ruleset } from '@offside/domain';
 import {
   ScreenIntro,
   Tabs,
@@ -43,7 +44,7 @@ import {
   chapterTriggerLabel,
 } from '../shared/labels.js';
 import { getTeamIdentity } from '../shared/team-identity.js';
-import { resolveTeamName } from '../shared/team-names.js';
+import { resolveTeamName, type TeamNameOverrides } from '../shared/team-names.js';
 import { useUiStore } from '../shared/ui-store.js';
 import { GameResultReveal } from '../shared/game-presentation.js';
 
@@ -220,6 +221,50 @@ function trackCountupSkipped(field: string): void {
   platform.analytics.track('countup_skipped', { field });
 }
 
+export type SeasonClubDisplay = {
+  /** TeamBadge용 팀 id — 임대 시즌이면 임대팀 id(배지는 팀 id 기준, 이름 오버라이드 무관). */
+  teamId: string;
+  /** 표시 문자열. 임대 시즌이면 "임대 · <임대팀> (원소속 <원소속팀>)". */
+  label: string;
+  loan: boolean;
+};
+
+/**
+ * 이슈 171: 이 시즌에 실제로 뛴 팀의 표기 규칙. 임대 시즌이면 상단 배너와 요약이 같은 문자열을
+ * 쓴다. 임대 여부는 `state.clubHistory`의 LOAN stint가 `seasonNumber`(1부터, SeasonSummary.index)를
+ * 덮는지로 판단하고, 원소속은 그 직전 stint(endReason 'LOANED')·없으면 `state.parentContract`에서
+ * 읽는다. 팀 이름은 team-names.ts 리졸버(구단 이름 오버라이드 포함)를 거친다.
+ */
+export function seasonClubDisplay(
+  state: Pick<CareerState, 'clubHistory' | 'parentContract'>,
+  ruleset: Ruleset,
+  seasonNumber: number,
+  seasonTeamId: string,
+  overrides: TeamNameOverrides,
+): SeasonClubDisplay {
+  const teamName = (teamId: string) => resolveTeamName(ruleset, teamId, overrides) ?? '무소속';
+  const loanIndex = state.clubHistory.findIndex(
+    (stint) =>
+      stint.kind === 'LOAN' &&
+      stint.teamId === seasonTeamId &&
+      stint.fromSeasonIndex <= seasonNumber &&
+      (stint.toSeasonIndex === null || seasonNumber <= stint.toSeasonIndex),
+  );
+  if (loanIndex < 0) return { teamId: seasonTeamId, label: teamName(seasonTeamId), loan: false };
+
+  const previous = loanIndex > 0 ? state.clubHistory[loanIndex - 1] : undefined;
+  const parentTeamId =
+    previous !== undefined && previous.endReason === 'LOANED'
+      ? previous.teamId
+      : (state.parentContract?.teamId ?? null);
+  const loanLabel = `임대 · ${teamName(seasonTeamId)}`;
+  return {
+    teamId: seasonTeamId,
+    label: parentTeamId === null ? loanLabel : `${loanLabel} (원소속 ${teamName(parentTeamId)})`,
+    loan: true,
+  };
+}
+
 function SeasonResultScreen() {
   const { careerId } = Route.useParams();
   const { season } = Route.useSearch();
@@ -255,9 +300,14 @@ function SeasonResultScreen() {
   const headlineTeamResult = view.teamRecords[0];
 
   // UX-010 P2c: 이번 시즌 실제 소속팀 표기(TeamBadge, 요구사항 5) — view.teamId는 이 시즌에 뛴 팀이라
-  // 이후 이적이 있어도 바뀌지 않는다(현재 소속과 다를 수 있다, 아래 PlayerBanner와는 별개 값).
-  const seasonTeamIdentity = getTeamIdentity(view.teamId);
-  const seasonTeamName = resolveTeamName(ruleset, view.teamId, teamNameOverrides) ?? '무소속';
+  // 이후 이적이 있어도 바뀌지 않는다(현재 소속과 다를 수 있다). 이슈 171: 임대 시즌이면 상단
+  // PlayerBanner도 같은 표기 규칙("임대 · 임대팀 (원소속 …)")을 쓴다 — 비임대 시즌의 배너는 기존대로
+  // 현재 소속.
+  const seasonClub = seasonClubDisplay(state, ruleset, view.seasonNumber, view.teamId, teamNameOverrides);
+  const seasonTeamIdentity = getTeamIdentity(seasonClub.teamId);
+  const seasonTeamName = seasonClub.label;
+  const bannerTeamName = seasonClub.loan ? seasonClub.label : currentTeamName(state, ruleset, teamNameOverrides);
+  const bannerTeamId = seasonClub.loan ? seasonClub.teamId : currentTeamId(state, ruleset);
 
   // UX-010 P2c: 리그 순위로 승격·강등권 여부를 가려 헤드라인 분기에 쓴다. 컵만 뛴 시즌·순위 미확정은
   // 둘 다 false(평균 평점만으로 분기).
@@ -292,8 +342,8 @@ function SeasonResultScreen() {
 
       <PlayerBanner
         name={profile.name}
-        teamName={currentTeamName(state, ruleset, teamNameOverrides)}
-        teamId={currentTeamId(state, ruleset)}
+        teamName={bannerTeamName}
+        teamId={bannerTeamId}
         position={positionHeaderField(profile.primaryPosition, profile.preferredPosition).value}
         shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
         age={state.age}

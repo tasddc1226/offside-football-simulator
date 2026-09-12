@@ -1,5 +1,5 @@
 // 루트 레이아웃. SCR ID 없음: PageShell·QueryClientProvider·not-found 안내를 담당한다.
-import { BrandMark, buttonClassName, buttonStyle, EmptyState, PageShell } from '@offside/ui';
+import { BrandMark, PageShell } from '@offside/ui';
 import { QueryClientProvider, useIsMutating } from '@tanstack/react-query';
 import {
   createRootRoute,
@@ -11,10 +11,12 @@ import {
 import { queryClient } from '../shared/query-client.js';
 import { useApplyTheme } from '../shared/ui-store.js';
 import { AppMotionFrame } from '../shared/app-motion-frame.js';
+import { NotFoundScreen } from '../shared/NotFoundScreen.js';
 import { useEffect } from 'react';
 
 export const Route = createRootRoute({
   component: RootComponent,
+  // 이슈 155: 매칭되지 않는 경로·notFound()를 던진 커리어 라우트 모두 앱 셸 안의 이 화면으로.
   notFoundComponent: NotFoundScreen,
 });
 
@@ -149,18 +151,5 @@ function GameNavigation() {
         )}
       </nav>
     </>
-  );
-}
-
-function NotFoundScreen() {
-  return (
-    <EmptyState
-      reason="찾을 수 없는 화면입니다"
-      action={
-        <Link to="/" className={buttonClassName('primary')} style={buttonStyle}>
-          허브로 돌아가기
-        </Link>
-      }
-    />
   );
 }
