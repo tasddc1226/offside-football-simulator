@@ -68,13 +68,13 @@ export default {
         isPublicPage && indexingEnabled ? 'index, follow' : 'noindex, nofollow',
       );
     }
+    const shell = await env.ASSETS.fetch(new Request(new URL('/app-shell', url.origin), request));
     if (APP_PATHS.some((pattern) => pattern.test(url.pathname))) {
-      const shell = await env.ASSETS.fetch(new Request(new URL('/app-shell', url.origin), request));
       return withRobots(shell, 'noindex, nofollow');
     }
-    return new Response('Not Found', {
-      status: 404,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Robots-Tag': 'noindex, nofollow' },
-    });
+    // 이슈 155: 알 수 없는 경로도 평문 "Not Found" 대신 앱 셸을 404로 내려 SPA의 not-found 화면
+    // (routes/__root.tsx notFoundComponent)이 셸 안에서 그려지게 한다. 상태 코드·noindex는 유지.
+    const notFound = new Response(shell.body, { status: 404, headers: shell.headers });
+    return withRobots(notFound, 'noindex, nofollow');
   },
 };

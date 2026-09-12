@@ -329,7 +329,7 @@ describe('SCR-001 허브 - 카드', () => {
     expect(
       await screen.findByRole(
         'heading',
-        { level: 1, name: '찾을 수 없는 화면입니다' },
+        { level: 1, name: '페이지를 찾을 수 없습니다' },
         { timeout: 3000 },
       ),
     ).toBeInTheDocument();
@@ -425,13 +425,18 @@ describe('법적 문서 라우트', () => {
 });
 
 describe('존재하지 않는 경로', () => {
-  it('not-found 안내를 렌더하고 허브로 돌아가는 링크를 제공한다', async () => {
+  it('이슈 155: 앱 셸 안에서 not-found 안내를 렌더하고 허브로 가는 링크·문서 제목을 제공한다', async () => {
     renderAt('/no-such-route');
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: '찾을 수 없는 화면입니다' }),
+      await screen.findByRole('heading', { level: 1, name: '페이지를 찾을 수 없습니다' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '허브로 돌아가기' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '허브로' })).toBeInTheDocument();
+    // 앱 셸(게임 메뉴 nav)이 함께 그려진다.
+    expect(screen.getByRole('navigation', { name: '게임 메뉴' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.title).toBe('페이지를 찾을 수 없습니다 — OFFSIDE');
+    });
   });
 });
 
