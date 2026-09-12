@@ -6,6 +6,7 @@ import {
   advanceUntilOffers,
   completeOnboardingAndConfirm,
   completeOnboardingThroughContract,
+  expectFirstContractHeading,
   fillPlayerInfo,
   goToConfirm,
   planPreseason,
@@ -280,7 +281,7 @@ test('SCR-007/008/013 이벤트 화면·SCR-014 결과 화면에 axe serious·cr
 test('SCR-009 제안 비교 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   await completeOnboardingAndConfirm(page);
   await advanceUntilOffers(page);
-  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
+  await expectFirstContractHeading(page);
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-009');
 });

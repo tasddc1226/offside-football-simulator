@@ -23,7 +23,11 @@ import { routeTree } from '../routeTree.gen.js';
 import { careerQueryOptions } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { useUiStore } from '../shared/ui-store.js';
-import { recoveryOpportunityHeadline, shouldShowRecoveryOpportunityNotice } from './career.$careerId.offers.js';
+import {
+  offersScreenTitle,
+  recoveryOpportunityHeadline,
+  shouldShowRecoveryOpportunityNotice,
+} from './career.$careerId.offers.js';
 
 const engineHolder = vi.hoisted(() => ({ promise: null as Promise<unknown> | null }));
 
@@ -179,7 +183,8 @@ describe('T-4-014 C9: SCR-017 전부 거절 버튼 문구는 시장 종류에 �
 
     renderAt(`/career/${careerId}/offers`);
 
-    expect(await screen.findByRole('heading', { level: 1, name: '이적시장 제안 비교' })).toBeInTheDocument();
+    // 이슈 159: 재계약 사전 협상은 항상 제안 1건이라 "비교"가 아닌 표제를 쓴다.
+    expect(await screen.findByRole('heading', { level: 1, name: '이적시장 제안' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: '재계약 제안 거절 — 시즌 뒤 이적시장에서 결정' }),
     ).toBeInTheDocument();
@@ -236,5 +241,18 @@ describe('recovery opportunity headline text', () => {
   it('2시즌 이상이면 시즌 수를 문장에 넣는다', () => {
     expect(recoveryOpportunityHeadline(2)).toBe('최근 2시즌 출전이 없었습니다.');
     expect(recoveryOpportunityHeadline(3)).toBe('최근 3시즌 출전이 없었습니다.');
+  });
+});
+
+// 이슈 159: 제안이 1건이면 "비교" 표제를 쓰지 않는다.
+describe('offers screen title', () => {
+  it('첫 계약: 1건은 "받은 제안", 2건 이상은 "제안 비교"', () => {
+    expect(offersScreenTitle(true, 1)).toBe('받은 제안');
+    expect(offersScreenTitle(true, 2)).toBe('제안 비교');
+  });
+
+  it('시장: 1건은 "이적시장 제안", 2건 이상은 "이적시장 제안 비교"', () => {
+    expect(offersScreenTitle(false, 1)).toBe('이적시장 제안');
+    expect(offersScreenTitle(false, 3)).toBe('이적시장 제안 비교');
   });
 });
