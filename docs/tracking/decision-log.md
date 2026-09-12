@@ -2,6 +2,13 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-13 (D-76 — main 웹 단위 테스트 25건 결손 발견·복구, 체인 판정 규칙 보강)
+
+- 발견: UX-013 PR #201 검증 체인에서 `apps/web` 단위 테스트가 실패해 origin/main(`eadd1c0`)에서 재현하니 **main 자체가 25 실패 / 575 통과**(4파일: `player-creation`·`career.$careerId.index`·`event-result`·`narrative`)였다. 원인은 #198의 오프라인 폴백 상수 `ACTIVE_RULESET_VERSION/ACTIVE_CONTENT_PACK_VERSION` 1.0.0/0.1.0 → 1.4.0/0.5.1 변경. 이 값은 `engine/content.ts` 전역 싱글턴뿐 아니라 `resolveServiceSeason()`의 `FALLBACK_SERVICE_SEASON`으로도 흘러, API를 모킹하지 않는 단위 테스트에서 `createCareer`가 만드는 커리어 버전(1.4.0/0.5.1)과 테스트 엔진에 주입한 팩(0.1.0)이 어긋났다(`EVT-CON-020` 미발견, "한강 FC U18" 기대 등). 운영 코드는 커리어별 `contentForCareer/rulesetForCareer`를 쓰므로 **운영 회귀는 아니다**(운영 설정 화면·current API 1.4.0/0.5.1 정상).
+- 왜 못 잡았나: (1) PR 검사 잡은 lint·typecheck만, main 검사 잡은 "critical" 서브셋(`versions.test.ts` 등)만 돌려 전체 `pnpm test`는 오케스트레이터 체인(D-70)이 유일한 게이트다. (2) #198 체인에서 engine-client `golden.test.ts` 5초 타임아웃(부하 플레이크)에 turbo가 **형제 태스크 `@offside/web#test`를 취소**했는데, 플레이크 파일 2개만 단독 재실행하고 GREEN으로 판정했다.
+- 결정: (a) 폴백 상수는 #198 의도대로 1.4.0/0.5.1 유지(운영 manifest와 동일). (b) 테스트 쪽을 고친다 — PR #202 `150045b`: `apps/web/src/test/content-fixtures.ts`(`TEST_RULESET_VERSION` 1.0.0·`TEST_CONTENT_PACK_VERSION` 0.1.0·`testRuleset/testContentPack`·`seedTestServiceSeason()`으로 react-query 캐시에 시즌을 시딩)로 4파일이 폴백과 무관하게 픽스처를 고정. 단언 의미 유지(문자열 기대값만 상수 파생), 운영 코드·e2e 미변경. 검증: 전 패키지 `turbo run test --continue` 10/10 녹색(web 71파일 600건). (c) 체인 판정 규칙 보강: `pnpm test` 실패 시 `--continue`로 완주시키거나 취소된 패키지를 전부 재실행한 뒤 판정하고, "플레이크 파일뿐 + 취소 태스크 없음"일 때만 플레이크로 본다. 폴백 상수를 바꾸는 PR은 웹 전체 테스트 완주를 필수로.
+- 후속 후보: `createCareer`가 서비스 시즌을 명시 주입받는 경로(DI) 마련, main CI에 전체 단위 테스트 추가 여부(러너가 이 Mac 한 대라 시간 비용 검토), main e2e 부하 실패 16건(transfer·season·resilience·presentation-regressions·injury·nineteen-kickoff:150 등, #190)의 조용한 머신 재판정.
+
 ## 2026-09-13 (D-75 — 룰셋 1.4.0 / 팩 0.5.1 운영 승격 — 사용자 지시)
 
 - 사용자 지시(9/12 밤): "콘텐츠 팩 0.5.1 작업도 투입시켜줘. 그리고 룰셋 1.4.0 운영환경에 승격시켜줘." D-71에서 "사용자 승인 필요"로 보류했던 승격을 실행한다. 시즌 메타데이터 변경은 자동 배포 정책의 예외지만 이 지시 자체가 그 승인이다.
