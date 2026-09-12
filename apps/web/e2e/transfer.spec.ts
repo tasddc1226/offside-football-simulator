@@ -4,6 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import {
   completeOnboardingAndConfirm,
+  expectFirstContractHeading,
   fillPreseasonPlan,
   planPreseason,
   resolveCurrentChapterScreen,
@@ -17,21 +18,13 @@ const CAREER_10_SEED = 't10-search-1';
 // INTEREST LOAN, then LOAN_RETURN.
 const CAREER_11_SEED = 't11-search-61';
 
-// T-7-011 범위 밖: `.os-eyebrow`(PR #120 디자인 토큰) 색상 대비 부족은 a11y.spec.ts·
-// service-season.spec.ts:75·retirement.spec.ts에서와 동일한 이미 알려진 결함이다(T-7-012/013이
-// 고친다). 그 세 id만 여기서도 허용하고, 그 밖의 새로운 심각도 위반은 그대로 실패로 잡는다.
-const KNOWN_TRACKED_A11Y_IDS = new Set(['color-contrast', 'definition-list', 'only-dlitems']);
-
 async function expectNoSeriousOrCriticalViolations(page: Page, label: string): Promise<void> {
   const results = await new AxeBuilder({ page }).analyze();
   const seriousOrCritical = results.violations.filter(
     (violation) => violation.impact === 'serious' || violation.impact === 'critical',
   );
-  const unexpected = seriousOrCritical.filter((violation) => !KNOWN_TRACKED_A11Y_IDS.has(violation.id));
-  console.log(
-    `[transfer-e2e][a11y] ${label}: serious/critical ${seriousOrCritical.length}건(알려진 결함 제외 후 미확인 ${unexpected.length}건)`,
-  );
-  expect(unexpected).toEqual([]);
+  console.log(`[transfer-e2e][a11y] ${label}: serious/critical ${seriousOrCritical.length}건`);
+  expect(seriousOrCritical).toEqual([]);
 }
 
 type SavedCareerAudit = {
@@ -138,7 +131,8 @@ async function advanceToSettlementRejectingRenewal(page: Page): Promise<void> {
       continue;
     }
     if (pathnameBefore.endsWith('/offers')) {
-      await expect(page.getByRole('heading', { level: 1, name: '이적시장 제안 비교' })).toBeVisible();
+      // 이슈 #159: step 7 PRE_NEGOTIATION은 재계약 제안 1건뿐이라 "비교" 없는 표제를 쓴다.
+      await expect(page.getByRole('heading', { level: 1, name: '이적시장 제안' })).toBeVisible();
       await page.getByRole('button', { name: '제안 모두 거절하고 잔류' }).click();
       await expect(page).toHaveURL(/\/career\/[^/]+$/);
       continue;
@@ -187,7 +181,7 @@ test('TEST-E2E-003(a): 3개 이상 제안 비교→협상→FREE_AGENT 확정→
   }, CAREER_10_SEED);
 
   await reachFirstContractOffers(page);
-  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
+  await expectFirstContractHeading(page);
   await signFirstOffer(page);
   await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
@@ -381,7 +375,7 @@ test('TEST-E2E-003(c): INTEREST 시장 안전 잔류(STAY) 수락 → SCR-020 �
   }, CAREER_STAY_SEED);
 
   await reachFirstContractOffers(page);
-  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
+  await expectFirstContractHeading(page);
   await signFirstOffer(page);
   const careerId = careerIdFromUrl(page);
   await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');

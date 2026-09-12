@@ -6,8 +6,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import {
+  computeAppearancePromiseOutlook,
   deriveTacticalRoom,
   positionGroupOf,
+  type AppearancePromiseOutlook,
   type MatchAppearance,
   type PositionStats,
   type SelectionRanking,
@@ -45,6 +47,7 @@ import { CountUp } from '../shared/countup.js';
 import { formatEffectSummary } from '../shared/effect-summary.js';
 import { buildNarrativeTokens, renderNarrative } from '../shared/narrative.js';
 import {
+  appearancePromiseOutlookLine,
   chapterTriggerLabel,
   CUP_ROUND_LABEL_KO,
   EFFECT_TARGET_LABEL_KO,
@@ -401,6 +404,8 @@ function ChapterScreen() {
   const tokens = buildNarrativeTokens(state, contentPack, ruleset, teamNameOverrides);
   const room = isNationalTeam ? null : deriveTacticalRoom(state, ruleset);
   const reasonText = playerReasonText(season.selection.playerReason);
+  // 이슈 145: 출전 약속 이행 전망(렌더 시점 파생, 도메인 상태 불변). 대표팀 챕터는 클럽 출전과 무관.
+  const promiseOutlook = isNationalTeam ? null : computeAppearancePromiseOutlook(state, ruleset);
   // UX-010 요구사항 5: "오늘의 경기" 카드의 TeamBadge. NATIONAL_TEAM은 가상 상대라 배지를 그리지
   // 않는다(context.kind로 직접 좁혀야 TS가 opponent.id를 CLUB 분기로 안다).
   const opponentIdentity = view.context.kind === 'CLUB' ? getTeamIdentity(view.context.opponent.id) : null;
@@ -554,7 +559,7 @@ function ChapterScreen() {
             ? '대표팀 데뷔 결과가 확정되었습니다'
             : `경기 결과 ${view.match.result.goalsFor} 대 ${view.match.result.goalsAgainst}, 평점 ${ratingText(view.match.ratingTenths)}`}
         >
-          <ChapterResultSection view={view} careerId={careerId} />
+          <ChapterResultSection view={view} careerId={careerId} promiseOutlook={promiseOutlook} />
         </GameResultReveal>
       )}
 
@@ -569,7 +574,15 @@ function ChapterScreen() {
   );
 }
 
-function ChapterResultSection({ view, careerId }: { view: ChapterView; careerId: string }) {
+function ChapterResultSection({
+  view,
+  careerId,
+  promiseOutlook,
+}: {
+  view: ChapterView;
+  careerId: string;
+  promiseOutlook: AppearancePromiseOutlook | null;
+}) {
   const match = view.match;
   const isNationalTeam = view.context.kind === 'NATIONAL_TEAM';
   const nationalSummary = deriveNationalTeamResultSummary(view);
@@ -712,6 +725,32 @@ function ChapterResultSection({ view, careerId }: { view: ChapterView; careerId:
         ))}
       </dl>
       )}
+
+      {!isNationalTeam && promiseOutlook !== null ? (
+        // 이슈 145: 미이행이 확정되는 시점(남은 경기를 전부 뛰어도 기준 미달)에는 결산을 기다리지
+        // 않고 여기서 강조해 알린다. 그 외 상태는 한 줄 전망만 보여준다.
+        promiseOutlook.status === 'UNRECOVERABLE' ? (
+          <p
+            role="status"
+            data-testid="promise-outlook"
+            data-outlook-status={promiseOutlook.status}
+            className="rounded-os-m border border-os-border bg-os-surface-2 p-os-3 font-os text-os-danger"
+            style={CAPTION_STYLE}
+          >
+            <span className="font-semibold">출전 약속 미이행이 확정됐습니다.</span>{' '}
+            {appearancePromiseOutlookLine(promiseOutlook)}. 시즌 결산에서 약속 위반으로 기록됩니다.
+          </p>
+        ) : (
+          <p
+            data-testid="promise-outlook"
+            data-outlook-status={promiseOutlook.status}
+            className="font-os text-os-text-2"
+            style={CAPTION_STYLE}
+          >
+            {appearancePromiseOutlookLine(promiseOutlook)}
+          </p>
+        )
+      ) : null}
 
       {!isNationalTeam && view.chapterRecord !== null ? (
         <p className="font-os text-os-text" style={BODY_STYLE}>

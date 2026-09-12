@@ -191,7 +191,8 @@ export function selectEligibleEvents(pack: ContentPack, state: CareerState): Eli
   const triggered = selectByTrigger(pack.events, state, phase);
   const usesBackgroundOpening =
     pack.manifest.contentPackVersion === '0.4.1' ||
-    pack.manifest.contentPackVersion === '0.5.0';
+    pack.manifest.contentPackVersion === '0.5.0' ||
+    pack.manifest.contentPackVersion === '0.5.1';
   const firstContractRouteReady =
     usesBackgroundOpening &&
     state.contract === null &&

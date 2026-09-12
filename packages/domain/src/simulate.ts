@@ -28,6 +28,7 @@ import {
   syncInjuryRemaining,
 } from './injury.js';
 import { findInjuryReturnMatchId } from './injury-return.js';
+import { evaluateLoanReturnRole } from './loan-return.js';
 import { generateMarket, openMarketAfterSettlement } from './market.js';
 import { computeContractSeasonsRemaining } from './market-value.js';
 import { buildDefaultManager } from './manager.js';
@@ -3266,10 +3267,25 @@ function loanReturn(input: SimulationInput, snapshot: DomainSnapshot): Simulatio
     if (parent === null) {
       throw new RangeError('loanReturn: 복원 뒤 contract가 null이다.');
     }
-    const nextState: CareerState = {
-      ...restored,
-      pending: null,
-    };
+    // 이슈 #148(1.4.0+ transferRules.loanReturn.reevaluate): 임대 시즌 결산값(출전 비율·평균 평점)으로
+    // 원소속 역할 약속·squadStatus를 재평가한다(loan-return.ts, 새 roll 없음). 종전(키 없음)에는
+    // restoreParentClubState가 squadStatus를 원소속 rolePromise 기본값으로 되돌려 임대 성과가
+    // 복귀 뒤 역할 제안에 전혀 반영되지 않았다(운영 QA WG S3→S4 벤치→예비 하향).
+    const reevaluation =
+      ruleset.transferRules.loanReturn?.reevaluate === true ? evaluateLoanReturnRole({ state: restored, ruleset, parent }) : null;
+    const nextState: CareerState =
+      reevaluation === null
+        ? { ...restored, pending: null }
+        : {
+            ...restored,
+            contract: {
+              ...parent,
+              rolePromise: reevaluation.reevaluatedRole,
+              appearancePromise: { minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[reevaluation.reevaluatedRole] },
+            },
+            context: { ...restored.context, squadStatus: reevaluation.squadStatus },
+            pending: null,
+          };
     return {
       ok: true,
       snapshot: buildSnapshot(nextState, nextRevision, 'CONTRACT_CONFIRMED'),

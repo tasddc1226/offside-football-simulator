@@ -23,11 +23,15 @@ function buildCommand(
   return { type, commandId, expectedRevision, payload } as Command & { commandId: string; expectedRevision: number };
 }
 
-function runOrThrow(snapshot: DomainSnapshot, command: Command & { commandId: string; expectedRevision: number }): DomainSnapshot {
+function runOrThrow(
+  snapshot: DomainSnapshot,
+  command: Command & { commandId: string; expectedRevision: number },
+  ruleset: typeof rulesetProto = rulesetProto,
+): DomainSnapshot {
   const result: SimulationResult = simulate({
     snapshot,
     command,
-    ruleset: rulesetProto,
+    ruleset,
     rulesetVersion: careerLoanFixture.rulesetVersion,
     contentPackVersion: careerLoanFixture.contentPackVersion,
   });
@@ -38,6 +42,13 @@ function runOrThrow(snapshot: DomainSnapshot, command: Command & { commandId: st
 }
 
 export type LoanFixtureRun = { snapshot: DomainSnapshot };
+
+export type RunLoanFixtureOptions = {
+  /** 명령 로그를 잘라 중간 상태(예: LOAN_RETURN 직전)에서 멈춘다. 기본은 전체 재생. */
+  fixture?: LoanFixture;
+  /** 이슈 #148: 1.4.0 선택 키를 얹은 룰셋으로 같은 로그를 재생해 골든(키 없음)과 대조한다. */
+  ruleset?: typeof rulesetProto;
+};
 
 /**
  * T-3-003 §8: 첫 계약 3시즌 → 시즌 1 완주·결산(계약 잔여 2, INTEREST 시장에 LOAN 제안 포함) →
@@ -52,34 +63,36 @@ export type LoanFixtureRun = { snapshot: DomainSnapshot };
  * `LOAN_RETURN` 분기 자체가 열리지 않는다. 이 골든의 실제 목적(D-46 LOAN_RETURN 3분기 중 RETURN 분기
  * 검증)을 살리기 위해 3시즌으로 잡았다 — PR 본문 "결정 필요"에 기록.
  */
-export function runLoanFixture(): LoanFixtureRun {
+export function runLoanFixture(options: RunLoanFixtureOptions = {}): LoanFixtureRun {
+  const fixture = options.fixture ?? careerLoanFixture;
+  const ruleset = options.ruleset ?? rulesetProto;
   const createCommand: Command & { commandId: string; expectedRevision: number } = {
     type: 'CREATE_CAREER',
     commandId: 'loan-create',
     expectedRevision: 0,
     payload: {
-      careerId: careerLoanFixture.createCareer.careerId,
-      seed: careerLoanFixture.createCareer.seed,
-      simulationMode: careerLoanFixture.createCareer.simulationMode,
-      rulesetVersion: careerLoanFixture.rulesetVersion,
-      contentPackVersion: careerLoanFixture.contentPackVersion,
+      careerId: fixture.createCareer.careerId,
+      seed: fixture.createCareer.seed,
+      simulationMode: fixture.createCareer.simulationMode,
+      rulesetVersion: fixture.rulesetVersion,
+      contentPackVersion: fixture.contentPackVersion,
     },
   };
 
   const result = simulate({
     snapshot: null,
     command: createCommand,
-    ruleset: rulesetProto,
-    rulesetVersion: careerLoanFixture.rulesetVersion,
-    contentPackVersion: careerLoanFixture.contentPackVersion,
+    ruleset,
+    rulesetVersion: fixture.rulesetVersion,
+    contentPackVersion: fixture.contentPackVersion,
   });
   if (!result.ok) {
     throw new Error(`CREATE_CAREER 실패: ${result.error.code} ${result.error.message}`);
   }
   let snapshot = result.snapshot;
 
-  careerLoanFixture.commands.forEach((rawCommand, index) => {
-    snapshot = runOrThrow(snapshot, buildCommand(rawCommand.type, `loan-${index + 1}`, snapshot.revision, rawCommand.payload));
+  fixture.commands.forEach((rawCommand, index) => {
+    snapshot = runOrThrow(snapshot, buildCommand(rawCommand.type, `loan-${index + 1}`, snapshot.revision, rawCommand.payload), ruleset);
   });
 
   return { snapshot };

@@ -17,7 +17,14 @@ export function offerHeadlineRows(offer: Offer, state: CareerState, recordRevisi
   const remaining = current === null ? null : computeContractSeasonsRemaining(current.lengthSeasons, current.signedAtRevision, state.timeline);
   const deadline = offerDecisionDeadlineLabel(offer, recordRevision);
   return [
-    { label: '제안', value: `${OFFER_KIND_LABEL_KO[offer.kind]} · ${offerStatusLabel(offer, actionableRevision(recordRevision), safeOfferId)}` },
+    // 이슈 188: "완전 이적 · 안전 잔류 제안"처럼 한 값으로 붙이면 360px 2열 그리드에서 카드마다
+    // 다르게 감겨 카드 높이가 어긋났다. 종류는 값, 상태는 주급·기간 행과 같은 보조 줄(delta)로
+    // 내려 모든 카드의 헤드라인 행 높이를 같게 맞춘다.
+    {
+      label: '제안',
+      value: OFFER_KIND_LABEL_KO[offer.kind],
+      delta: offerStatusLabel(offer, actionableRevision(recordRevision), safeOfferId),
+    },
     { label: '리그', value: LEAGUE_TIER_LABEL_KO[offer.leagueTier] },
     {
       label: '역할 · 출전 약속',

@@ -95,14 +95,31 @@ export async function advanceUntilOffers(page: Page): Promise<void> {
 }
 
 /**
+ * 이슈 159: SCR-009 첫 계약 표제는 제안 건수로 갈린다 — 1건 "받은 제안", 2건 이상 "제안 비교".
+ * 첫 계약 제안 수는 seed·보유 태그(offerRules.countBonusTags → clamp(1+보너스, 1, maxOffers))에
+ * 따라 달라지므로 화면의 카드 수를 세어 그 건수에 맞는 정확한 표제를 단언한다(정규식 완화 아님).
+ */
+export async function expectFirstContractHeading(page: Page): Promise<void> {
+  await page
+    .getByRole('heading', { level: 1, name: /^(제안 비교|받은 제안)$/ })
+    .waitFor({ state: 'visible' });
+  const offerCount = await page.locator('.os-offer-grid > article').count();
+  await expect(
+    page.getByRole('heading', { level: 1, name: offerCount > 1 ? '제안 비교' : '받은 제안', exact: true }),
+  ).toBeVisible();
+}
+
+/**
  * SCR-009 첫 계약이면 `제안 비교`·`제안 상세·결정`·`사인` 퍼널을 타고, Phase 3
  * 시장 제안이면 `이적시장 제안 비교`·`제안 상세·결정`·`이 조건 수락`·SCR-020을 탄다. 두
  * 화면을 heading/link로 먼저 구분해야 PRE_NEGOTIATION의 새 UI가 기존 시즌 진행 헬퍼에서
  * FIRST_CONTRACT로 오인되지 않는다.
  */
 export async function signFirstOffer(page: Page, options: { preferredMinLengthSeasons?: number } = {}): Promise<void> {
-  const firstContractHeading = page.getByRole('heading', { level: 1, name: '제안 비교', exact: true });
-  const marketHeading = page.getByRole('heading', { level: 1, name: '이적시장 제안 비교', exact: true });
+  // 이슈 #159: 제안 1건이면 "받은 제안"·"이적시장 제안", 2건 이상이면 "제안 비교"·"이적시장 제안 비교".
+  // 이 헬퍼는 두 화면을 가르는 분기 탐지기라 건수와 무관하게 두 표제 모두 받는다.
+  const firstContractHeading = page.getByRole('heading', { level: 1, name: /^(제안 비교|받은 제안)$/ });
+  const marketHeading = page.getByRole('heading', { level: 1, name: /^이적시장 제안( 비교)?$/ });
   await firstContractHeading.or(marketHeading).first().waitFor({ state: 'visible', timeout: 60_000 });
   if (await firstContractHeading.isVisible()) {
     const offerLinks = page.getByRole('link', { name: '제안 상세·결정' });

@@ -415,6 +415,8 @@ export const TransferRulesSchema = z.strictObject({
       opportunityRole: SquadRoleSchema,
     })
     .optional(),
+  // 이슈 #148(1.4.0+): 임대 복귀 시 임대 시즌 성과로 원소속 역할을 재평가할지. 1.3.0 이하는 키 없음.
+  loanReturn: z.strictObject({ reevaluate: z.boolean() }).optional(),
   // wageBpByRole은 "현재 급여 대비 배율"(bp)이라 재계약 인상분을 반영해 10000(100%)을 넘을 수 있다.
   renewal: z.strictObject({
     lengthSeasons: z.number().int().positive(),
@@ -473,6 +475,9 @@ export const ContractRulesSchema = z.strictObject({
   // T-3-003 D-45: 이적 시 positionPlan ≠ profile.primaryPosition이면 context.positionProficiency를
   // 이 값으로 둔다(같으면 유지).
   imposedPositionProficiency: z.number().int(),
+  // 이슈 #147(1.4.0+): step 7 재계약 사전 협상은 현재 계약에서 minMatchesPlayed경기 이상 뛴 뒤에만
+  // 열린다. 1.3.0 이하는 키 없음(마지막 시즌 여부만 본다).
+  renewalWindow: z.strictObject({ minMatchesPlayed: z.number().int().nonnegative() }).optional(),
 });
 export type ContractRules = z.infer<typeof ContractRulesSchema>;
 

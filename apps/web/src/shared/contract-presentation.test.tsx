@@ -30,6 +30,9 @@ describe('contract presentation', () => {
     } as unknown as CareerState;
     const rows = offerHeadlineRows(offer, state, 0, null);
     expect(rows.map((row) => row.label)).toEqual(['제안', '리그', '역할 · 출전 약속', '주급', '기간', '결정 기한']);
+    // 이슈 188: 제안 종류는 값, 상태는 보조 줄로 나눠 카드 높이가 상태 문구 길이에 흔들리지 않는다.
+    expect(rows[0]?.value).toBe('완전 이적');
+    expect(rows[0]?.delta).toBe('검토 중');
     expect(rows[2]?.value).toContain('70%');
     expect(rows[3]?.delta).toContain('+');
     expect(rows[4]?.delta).toBe('남은 2시즌 대비 +1시즌');

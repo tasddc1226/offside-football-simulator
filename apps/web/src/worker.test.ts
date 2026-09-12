@@ -50,4 +50,12 @@ describe('public web worker route policy', () => {
       expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow');
     }
   });
+  it('이슈 155: 알 수 없는 경로는 404 상태로 앱 셸을 내려 SPA not-found 화면이 그려지게 한다', async () => {
+    const response = await worker.fetch(
+      new Request('https://example.test/not-a-route'),
+      environment(),
+    );
+    expect(response.status).toBe(404);
+    expect(await response.text()).toContain('shell');
+  });
 });
