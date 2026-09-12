@@ -229,6 +229,27 @@
   text-align: left;
 }
 
+/* 구단 로고 file input(TeamNamesSettings): packages/ui/src/game.css의 전역
+   `.os-settings input`(언레이어드: width:100%·min-height:var(--os-touch-min))이 Tailwind
+   유틸리티 레이어의 `sr-only`보다 캐스케이드 우선순위가 높아, 숨김 처리 없이 360×48 투명
+   블록으로 남아 문서 폭을 늘리고 탭을 가로챘다. 아래는 그 규칙보다 특이도가 높은(클래스 2개 +
+   태그) 언레이어드 선택자로 시각적으로만 숨긴다(스크린리더 전용 크기) — game.css의 전역 규칙
+   자체는 건드리지 않는다. 부모 행(.relative)이 이 absolute 배치의 기준이 되고, 라벨 클릭으로
+   파일 선택·키보드 포커스 시 라벨 포커스 링(peer-focus-visible)은 그대로 유지된다. */
+.os-settings input.os-team-logo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* 맨 아래 위험 링크 묶음. */
 .os-settings-danger {
   display: flex;
