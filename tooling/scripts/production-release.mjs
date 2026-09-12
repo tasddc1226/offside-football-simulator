@@ -2,10 +2,13 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-// 운영 시즌 1 manifest의 정본. 다음 세 곳이 이 값과 같아야 한다 — 바꿀 때 함께 갱신한다.
+// 운영 시즌 1 manifest의 정본. 다음 여섯 곳이 이 값과 같아야 한다 — 바꿀 때 함께 갱신한다.
 //   - .github/workflows/deploy-production.yml: verify 단계가 `expect-version` 명령으로 이 값을 읽는다.
 //   - apps/api/src/sync/season-version-compatibility.ts: APPROVED_PRODUCTION_MANIFESTS.
 //   - apps/web/src/engine/versions.ts: ACTIVE_RULESET_VERSION / ACTIVE_CONTENT_PACK_VERSION(오프라인 폴백).
+//   - apps/api/seeds/bootstrap-non-production.sql: staging `svc_line_test`(main push CI가 upsert).
+//   - apps/web/playwright.smoke.config.ts: expectedSeason(main push CI staging smoke가 위 seed를 검증).
+//   - apps/web/e2e/staging-rehearsal.spec.ts: expectedRulesetVersion / expectedContentPackVersion(수동 리허설).
 export const PRODUCTION_SEASON = Object.freeze({
   id: 'svc_season_1',
   name: '시즌 1',

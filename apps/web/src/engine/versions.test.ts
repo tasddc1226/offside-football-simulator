@@ -1,6 +1,7 @@
 // T-4-009 D-56: DEV 전용 콘텐츠 팩 오버라이드 단위 테스트. `import.meta.env.DEV`는 vitest에서 항상
 // true다(career-actions.test.ts의 e2e-seed 훅과 같은 전제) — 여기서는 override 유무·유효성만 본다.
 import { afterEach, describe, expect, it } from 'vitest';
+import { loadContentPack, PACK_VERSIONS, RULESET_VERSIONS } from '@offside/content';
 import {
   ACTIVE_CONTENT_PACK_VERSION,
   ACTIVE_RULESET_VERSION,
@@ -20,6 +21,21 @@ describe('오프라인 폴백 manifest', () => {
     expect(ACTIVE_CONTENT_PACK_VERSION).toBe('0.5.1');
     expect(FALLBACK_SERVICE_SEASON.rulesetVersion).toBe(ACTIVE_RULESET_VERSION);
     expect(FALLBACK_SERVICE_SEASON.contentPackVersion).toBe(ACTIVE_CONTENT_PACK_VERSION);
+  });
+
+  // fail-closed 게이트: ACTIVE 상수는 plain string이라 typecheck·build만으로는 번들에 없는 버전을 잡지
+  // 못한다. 이 파일은 main CI와 Production Release validate 단계 양쪽에서 돌기 때문에, 팩·룰셋 PR이
+  // 먼저 main에 없으면(런북 "전제" 머지 순서 위반) 여기서 막힌다 — 런타임의
+  // `loadContentPack(serviceSeason.contentPackVersion)`가 "알 수 없는 contentPackVersion"으로 터지기 전에.
+  it('ACTIVE 룰셋·팩이 번들 레지스트리(RULESET_VERSIONS·PACK_VERSIONS)에 존재한다', () => {
+    expect(RULESET_VERSIONS).toContain(ACTIVE_RULESET_VERSION);
+    expect(PACK_VERSIONS).toContain(ACTIVE_CONTENT_PACK_VERSION);
+  });
+
+  it('ACTIVE 팩의 compatibleRulesetVersions가 ACTIVE 룰셋을 포함한다', () => {
+    const pack = loadContentPack(ACTIVE_CONTENT_PACK_VERSION);
+    expect(pack.manifest.contentPackVersion).toBe(ACTIVE_CONTENT_PACK_VERSION);
+    expect(pack.manifest.compatibleRulesetVersions).toContain(ACTIVE_RULESET_VERSION);
   });
 });
 

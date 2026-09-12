@@ -12,7 +12,7 @@ const PRODUCTION_SEASON_ID = 'svc_season_1';
  * 빼지 않는다. 시즌 행이 정확한 승인 pair일 때만 다른 승인 pair를 받아들이고, mixed pair·다른 과거
  * 버전·다른 시즌 id는 여전히 거부한다.
  */
-const APPROVED_PRODUCTION_MANIFESTS: readonly VersionPair[] = Object.freeze([
+export const APPROVED_PRODUCTION_MANIFESTS: readonly VersionPair[] = Object.freeze([
   Object.freeze({ rulesetVersion: '1.1.0', contentPackVersion: '0.3.0' }),
   Object.freeze({ rulesetVersion: '1.3.0', contentPackVersion: '0.5.0' }),
   Object.freeze({ rulesetVersion: '1.4.0', contentPackVersion: '0.5.1' }),

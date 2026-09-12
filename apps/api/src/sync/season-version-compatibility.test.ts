@@ -1,11 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { isAcceptedSeasonVersion } from './season-version-compatibility.js';
+import { loadContentPack, PACK_VERSIONS, RULESET_VERSIONS } from '@offside/content';
+import {
+  APPROVED_PRODUCTION_MANIFESTS,
+  isAcceptedSeasonVersion,
+} from './season-version-compatibility.js';
 
 const firstVersion = { rulesetVersion: '1.1.0', contentPackVersion: '0.3.0' };
 const previousVersion = { rulesetVersion: '1.3.0', contentPackVersion: '0.5.0' };
 const currentVersion = { rulesetVersion: '1.4.0', contentPackVersion: '0.5.1' };
 
 describe('production season version compatibility', () => {
+  // fail-closed 게이트: 승인 목록의 pair는 번들 레지스트리에 실제로 있어야 한다. 이 파일은 Production
+  // Release validate 단계에서도 돌기 때문에 팩·룰셋 PR이 먼저 main에 없으면 여기서 배포가 막힌다.
+  it('every approved production manifest exists in the bundled registries', () => {
+    for (const { rulesetVersion, contentPackVersion } of APPROVED_PRODUCTION_MANIFESTS) {
+      expect(RULESET_VERSIONS).toContain(rulesetVersion);
+      expect(PACK_VERSIONS).toContain(contentPackVersion);
+      expect(loadContentPack(contentPackVersion).manifest.compatibleRulesetVersions).toContain(
+        rulesetVersion,
+      );
+    }
+  });
+
   it('accepts exact manifests for every season', () => {
     expect(isAcceptedSeasonVersion('svc_other', firstVersion, firstVersion)).toBe(true);
     expect(isAcceptedSeasonVersion('svc_other', currentVersion, currentVersion)).toBe(true);
