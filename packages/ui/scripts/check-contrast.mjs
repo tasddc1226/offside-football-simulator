@@ -130,10 +130,30 @@ function tokenColor(vars, name) {
   return resolveColor(raw, vars);
 }
 
+/**
+ * hero 그라데이션의 가장 밝은 끝. 화면 전환(packages/ui/src/screen-transition.css 78%)·시네마틱
+ * 인트로(apps/web/src/shared/cinematic-intro.css 80%)·트레이딩 카드(player-card.css·
+ * player-creation.css 76%)·은퇴 화면(retirement-screen.css 72%)이
+ * `linear-gradient(var(--os-hero), color-mix(in srgb, var(--os-hero) N%, var(--os-line)))` 위에
+ * --os-on-hero·--os-hero-muted 텍스트를 올리므로, 순수 --os-hero만 보면 다크(--os-line이 밝은
+ * 녹색)에서 그라데이션 끝이 4.5:1 아래로 떨어지는 회귀를 놓친다(axe도 그라데이션은 계산하지 못한다).
+ * 가장 낮은 비율(72%)을 가상 토큰 --os-hero-gradient-end로 만들어 텍스트 쌍을 검사한다 — 그라데이션
+ * 비율을 이보다 낮추는 화면을 새로 만들면 이 값도 함께 내린다.
+ */
+const HERO_GRADIENT_END_RATIO = 72;
+
+/** @param {Record<string, string>} vars */
+function withHeroGradientEnd(vars) {
+  return {
+    ...vars,
+    'os-hero-gradient-end': `color-mix(in srgb, var(--os-hero) ${HERO_GRADIENT_END_RATIO}%, var(--os-line))`,
+  };
+}
+
 const lightBlock = extractBlock(css, /:root\s*\{/);
 const darkBlock = extractBlock(css, /:root\[data-theme=['"]dark['"]\]\s*\{/);
-const light = parseVars(lightBlock);
-const dark = { ...light, ...parseVars(darkBlock) };
+const light = withHeroGradientEnd(parseVars(lightBlock));
+const dark = withHeroGradientEnd({ ...light, ...parseVars(darkBlock) });
 
 // UX-004 포인트 색상 프리셋 + UX-013 가상 구단 12팀 프리셋('team-<id>', TEAM_IDS 순서). tokens.css의
 // id 목록과 맞춰 둔다(색을 더하거나 빼면 여기도 고친다).
@@ -205,6 +225,9 @@ const TEXT_PAIRS = [
   // 어느 카드 맥락에서든 이 한 행이 보장한다. 배지를 반투명·currentColor로 되돌리면 그 보장이 깨진다.
   ['on-hero', 'hero'],
   ['hero-muted', 'hero'],
+  // hero 그라데이션의 가장 밝은 끝(위 HERO_GRADIENT_END_RATIO) 위 텍스트 — 순수 hero보다 항상 낮다.
+  ['on-hero', 'hero-gradient-end'],
+  ['hero-muted', 'hero-gradient-end'],
   ['accent', 'surface'],
   // T-7-012: .os-game-hero .os-eyebrow(game.css)가 이 색을 캡션 텍스트로 쓴다 — --os-line(3:1
   // 비텍스트 기준)이 라이트 --os-bg·--os-surface-2 위에서 4.5:1을 못 넘겨 axe color-contrast
@@ -243,7 +266,9 @@ function checkTheme(themeName, vars) {
 // accent-surface-2는 T-7-012: .os-game-hero .os-eyebrow가 프리셋과 무관하게 --os-accent를 쓰므로
 // 프리셋별로도 세 배경 모두 4.5:1을 넘는지 회귀를 막는다. on-hero/hero·hero-muted/hero는 UX-013:
 // 프리셋이 --os-hero를 팀 색으로 바꾸므로 배너 제목·캡션(hero-muted)·PlayerCard 등번호 배지가
-// 18종 × 2테마 전부에서 텍스트 기준을 넘어야 한다.
+// 18종 × 2테마 전부에서 텍스트 기준을 넘어야 한다. on-hero/hero-gradient-end·hero-muted/
+// hero-gradient-end는 화면 전환·트레이딩 카드·은퇴 화면의 그라데이션 끝(worst case) — 다크 --os-line이
+// 밝아 프리셋 hero가 라이트 값 그대로면 여기서 미달하므로 다크 블록은 더 짙은 hero를 쓴다.
 const ACCENT_PAIRS = [
   ['on-accent', 'accent'],
   ['accent', 'surface'],
@@ -251,6 +276,8 @@ const ACCENT_PAIRS = [
   ['accent', 'surface-2'],
   ['on-hero', 'hero'],
   ['hero-muted', 'hero'],
+  ['on-hero', 'hero-gradient-end'],
+  ['hero-muted', 'hero-gradient-end'],
 ];
 
 /**

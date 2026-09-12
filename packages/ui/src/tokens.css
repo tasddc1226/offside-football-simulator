@@ -121,12 +121,23 @@
  *
  * UX-013 "홈 색상": 프리셋은 --os-hero·--os-hero-muted도 재정의한다(배너·화면 전환·트레이딩
  * 카드·은퇴 화면이 같은 색으로 물든다 — 'DEFAULT'는 :root 베이스의 네이비 hero를 그대로 쓴다).
- * --os-hero는 두 테마 모두 짙은 프리셋 색(라이트 accent 값)이고 --os-on-hero는 손대지 않는다(흰색
+ * 라이트 --os-hero는 짙은 프리셋 색(라이트 accent 값)이고 --os-on-hero는 손대지 않는다(흰색
  * 계열이라 hero/on-hero가 두 테마에서 4.5:1 이상). --os-hero-muted는 on-hero와 hero의 color-mix로
  * 만들며 비율(기본 78%)은 hero 위 캡션 텍스트 4.5:1을 넘기는 최소값을 프리셋별로 고른다 —
- * 밝은 녹색·올리브 계열(청연·강동·온새미로·별빛·갈매)은 흰색과의 대비 여유가 적어 84~92%를 쓴다.
+ * 밝은 녹색·올리브 계열(청연·강동·온새미로·별빛·갈매)은 흰색과의 대비 여유가 적어 86~92%를 쓴다.
  * 가상 구단 12팀 프리셋(data-accent='team-<id>')은 --os-team-<id>와 같은 색을 accent·hero로 쓴다
  * (라이트: 짙은 색 + 흰 글자, 다크 accent: 옅은 색 + 짙은 글자). 전부 check-contrast.mjs가 검증한다.
+ *
+ * 대비 기준은 순수 --os-hero가 아니라 hero 그라데이션의 가장 밝은 끝이다: 화면 전환(screen-transition.css
+ * 78%)·시네마틱 인트로(80%)·트레이딩 카드(player-card.css·player-creation.css 76%)·은퇴 화면
+ * (retirement-screen.css 72%)이 `linear-gradient(var(--os-hero) → color-mix(in srgb, var(--os-hero)
+ * N%, var(--os-line)))`로 칠하므로 on-hero·hero-muted 텍스트는 `color-mix(in srgb, var(--os-hero) 72%,
+ * var(--os-line))` 위에서도 4.5:1을 넘어야 한다(check-contrast.mjs의 hero-gradient-end 행). 다크
+ * --os-line(#62c99a)은 밝은 녹색이라 다크에서 라이트용 hero를 그대로 쓰면 그 끝색이 밝아져 미달한다 —
+ * 그래서 다크 블록의 --os-hero는 같은 색상(hue)을 유지한 채 DEFAULT 다크 hero(#193554)와 비슷한 밝기까지
+ * 어둡게 내린 다크 전용 값이다(green·amber·mono·서라벌·청연·강동·온새미로·별빛·갈매·노을항 10종.
+ * 나머지 8종은 라이트 값 그대로 통과). 그라데이션 비율을 72%보다 낮추는 화면을 새로 만들면
+ * check-contrast.mjs의 HERO_GRADIENT_END_RATIO도 함께 내린다.
  */
 :root[data-accent='green'] {
   --os-accent: #125c3f;
@@ -203,7 +214,7 @@
   --os-accent-hover: #1a5939;
   --os-accent-soft: #e4eee9;
   --os-hero: #206f47;
-  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 84%, var(--os-hero));
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
 }
 :root[data-accent='team-galmae-town'] {
   --os-accent: #206f6f;
@@ -298,7 +309,7 @@
   --os-accent: #7fd7ab;
   --os-accent-hover: #9be3c0;
   --os-accent-soft: #1f3f30;
-  --os-hero: #125c3f;
+  --os-hero: #0b3927;
   --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='violet'] {
@@ -319,14 +330,14 @@
   --os-accent: #f0c37a;
   --os-accent-hover: #f4d194;
   --os-accent-soft: #4a3820;
-  --os-hero: #7a4b0a;
+  --os-hero: #4e3006;
   --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='mono'] {
   --os-accent: #c7d0da;
   --os-accent-hover: #d7dee6;
   --os-accent-soft: #333e4a;
-  --os-hero: #33404f;
+  --os-hero: #29333f;
   --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='team-hangang-u18'] {
@@ -340,49 +351,49 @@
   --os-accent: #e9c7a5;
   --os-accent-hover: #eed3b9;
   --os-accent-soft: #3b3a3c;
-  --os-hero: #6f4720;
+  --os-hero: #4b3016;
   --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='team-cheongyeon-fc'] {
   --os-accent: #e9e9a5;
   --os-accent-hover: #eeeeb9;
   --os-accent-soft: #3b413c;
-  --os-hero: #6f6f20;
+  --os-hero: #505017;
   --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 92%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='team-gangdong-rovers'] {
   --os-accent: #c7e9a5;
   --os-accent-hover: #d3eeb9;
   --os-accent-soft: #35413c;
-  --os-hero: #476f20;
+  --os-hero: #2f4915;
   --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='team-onsaemiro-city'] {
   --os-accent: #a5e9a5;
   --os-accent-hover: #b9eeb9;
   --os-accent-soft: #2e413c;
-  --os-hero: #206f20;
+  --os-hero: #154815;
   --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 84%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='team-byeolbit-united'] {
   --os-accent: #a5e9c7;
   --os-accent-hover: #b9eed3;
   --os-accent-soft: #2e4143;
-  --os-hero: #206f47;
-  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 84%, var(--os-hero));
+  --os-hero: #164b30;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='team-galmae-town'] {
   --os-accent: #a5e9e9;
   --os-accent-hover: #b9eeee;
   --os-accent-soft: #2e414a;
-  --os-hero: #206f6f;
+  --os-hero: #154949;
   --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='team-noeulhang-fc'] {
   --os-accent: #a5cde9;
   --os-accent-hover: #b9d8ee;
   --os-accent-soft: #2e3b4a;
-  --os-hero: #204e6f;
+  --os-hero: #16354b;
   --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='team-geumbit-fc'] {
@@ -467,7 +478,7 @@
     --os-accent: #7fd7ab;
     --os-accent-hover: #9be3c0;
     --os-accent-soft: #1f3f30;
-    --os-hero: #125c3f;
+    --os-hero: #0b3927;
     --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='violet'] {
@@ -488,14 +499,14 @@
     --os-accent: #f0c37a;
     --os-accent-hover: #f4d194;
     --os-accent-soft: #4a3820;
-    --os-hero: #7a4b0a;
+    --os-hero: #4e3006;
     --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='mono'] {
     --os-accent: #c7d0da;
     --os-accent-hover: #d7dee6;
     --os-accent-soft: #333e4a;
-    --os-hero: #33404f;
+    --os-hero: #29333f;
     --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='team-hangang-u18'] {
@@ -509,49 +520,49 @@
     --os-accent: #e9c7a5;
     --os-accent-hover: #eed3b9;
     --os-accent-soft: #3b3a3c;
-    --os-hero: #6f4720;
+    --os-hero: #4b3016;
     --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='team-cheongyeon-fc'] {
     --os-accent: #e9e9a5;
     --os-accent-hover: #eeeeb9;
     --os-accent-soft: #3b413c;
-    --os-hero: #6f6f20;
+    --os-hero: #505017;
     --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 92%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='team-gangdong-rovers'] {
     --os-accent: #c7e9a5;
     --os-accent-hover: #d3eeb9;
     --os-accent-soft: #35413c;
-    --os-hero: #476f20;
+    --os-hero: #2f4915;
     --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='team-onsaemiro-city'] {
     --os-accent: #a5e9a5;
     --os-accent-hover: #b9eeb9;
     --os-accent-soft: #2e413c;
-    --os-hero: #206f20;
+    --os-hero: #154815;
     --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 84%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='team-byeolbit-united'] {
     --os-accent: #a5e9c7;
     --os-accent-hover: #b9eed3;
     --os-accent-soft: #2e4143;
-    --os-hero: #206f47;
-    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 84%, var(--os-hero));
+    --os-hero: #164b30;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='team-galmae-town'] {
     --os-accent: #a5e9e9;
     --os-accent-hover: #b9eeee;
     --os-accent-soft: #2e414a;
-    --os-hero: #206f6f;
+    --os-hero: #154949;
     --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='team-noeulhang-fc'] {
     --os-accent: #a5cde9;
     --os-accent-hover: #b9d8ee;
     --os-accent-soft: #2e3b4a;
-    --os-hero: #204e6f;
+    --os-hero: #16354b;
     --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='team-geumbit-fc'] {

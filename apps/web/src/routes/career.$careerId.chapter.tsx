@@ -21,13 +21,13 @@ import {
   ScreenIntro,
   Skeleton,
   StatusStrip,
-  TeamBadge,
 } from '@offside/ui';
 import type { ChapterDefinition } from '@offside/content';
 import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { opponentDisplayName } from '../shared/competition-labels.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
+import { ClubBadge } from '../shared/ClubBadge.js';
 import { currentTeamId, currentTeamName } from '../shared/current-team.js';
 import {
   deriveChapterView,
@@ -59,7 +59,6 @@ import { PlayerBanner } from '../shared/PlayerBanner.js';
 import { matchResultHeadline, type ChapterOutcomeTone } from '../shared/result-narrative.js';
 import { ratingText } from '../shared/season-schedule.js';
 import { proStatusStripItems } from '../shared/status-strip.js';
-import { getTeamIdentity } from '../shared/team-identity.js';
 import type { TeamNameOverrides } from '../shared/team-names.js';
 import { useUiStore } from '../shared/ui-store.js';
 import { queryClient } from '../shared/query-client.js';
@@ -401,10 +400,11 @@ function ChapterScreen() {
   const tokens = buildNarrativeTokens(state, contentPack, ruleset, teamNameOverrides);
   const room = isNationalTeam ? null : deriveTacticalRoom(state, ruleset);
   const reasonText = playerReasonText(season.selection.playerReason);
-  // UX-010 요구사항 5: "오늘의 경기" 카드의 TeamBadge. NATIONAL_TEAM은 가상 상대라 배지를 그리지
-  // 않는다(context.kind로 직접 좁혀야 TS가 opponent.id를 CLUB 분기로 안다).
-  const opponentIdentity = view.context.kind === 'CLUB' ? getTeamIdentity(view.context.opponent.id) : null;
-  const ownIdentity = getTeamIdentity(currentTeamId(state, ruleset) ?? '');
+  // UX-010 요구사항 5: "오늘의 경기" 카드의 구단 배지. NATIONAL_TEAM은 가상 상대라 배지를 그리지
+  // 않는다(context.kind로 직접 좁혀야 TS가 opponent.id를 CLUB 분기로 안다). UX-013: 배지는
+  // ClubBadge(팀 id → 이니셜·팀 컬러 + 이 기기에 올린 로고)로 그린다 — TeamBadge 직접 사용 금지.
+  const opponentTeamId = view.context.kind === 'CLUB' ? view.context.opponent.id : null;
+  const ownTeamId = currentTeamId(state, ruleset) ?? '';
 
   async function handleConfirm(decisionId: string, optionId: string) {
     if (view === null || submittingRef.current) return;
@@ -476,11 +476,11 @@ function ChapterScreen() {
 
       <section className="os-panel flex flex-col gap-os-2" aria-label="경기 맥락">
         <p className="os-eyebrow">오늘의 경기</p>
-        {opponentIdentity !== null ? (
+        {opponentTeamId !== null ? (
           <div className="flex items-center gap-os-2" aria-hidden="true">
-            <TeamBadge initials={ownIdentity.initials} colorVar={ownIdentity.colorVar} size="s" />
+            <ClubBadge teamId={ownTeamId} size="s" />
             <span className="font-os text-os-text-2" style={CAPTION_STYLE}>vs</span>
-            <TeamBadge initials={opponentIdentity.initials} colorVar={opponentIdentity.colorVar} size="s" />
+            <ClubBadge teamId={opponentTeamId} size="s" />
           </div>
         ) : null}
         <p className="font-os font-semibold text-os-text" style={BODY_STYLE}>
