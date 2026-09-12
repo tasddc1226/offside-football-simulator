@@ -1,7 +1,10 @@
 // 이슈 163·164·166 플레이 안내: 저장된 결산·부상 이력만 읽는 순수 파생과 카드 렌더 1케이스.
 import { cleanup, render, screen } from '@testing-library/react';
+import type { EventDefinition } from '@offside/content';
 import type { CareerState, InjuryEpisode, SeasonResult, SeasonSummary } from '@offside/domain';
 import { afterEach, describe, expect, it } from 'vitest';
+import { InjuryContext } from '../routes/-phase4/injury.js';
+import type { NarrativeTokenValues } from './narrative.js';
 import {
   GuidanceCard,
   injuryRecurrenceNotice,
@@ -203,6 +206,64 @@ describe('injuryRecurrenceNotice (이슈 164)', () => {
     ];
     expect(injuryRecurrenceNotice(episodes, 'INJ-1-6-1')).toBeNull();
     expect(injuryRecurrenceNotice(episodes, 'missing')).toBeNull();
+  });
+
+  it('같은 부위 RECURRED가 연달아 2개면 사슬 길이 2를 돌려준다(도메인 recurrenceChainLength와 같은 셈)', () => {
+    const episodes = [
+      episode({ id: 'INJ-1-3-1', status: 'RECURRED', severity: 'MINOR' }),
+      episode({ id: 'INJ-1-6-1', status: 'RECURRED', severity: 'MODERATE' }),
+      episode({ id: 'INJ-1-9-1', status: 'REHAB', severity: 'MAJOR', recurrenceRiskBp: 1500, remainingMatches: 8 }),
+    ];
+    expect(injuryRecurrenceNotice(episodes, 'INJ-1-9-1')).toEqual({
+      bodyPart: 'KNEE',
+      chainLength: 2,
+      priorSeverity: 'MODERATE',
+      severity: 'MAJOR',
+      recurrenceRiskBp: 1500,
+    });
+  });
+
+  // 룰셋 1.3.0은 recurrenceMaxChain=2 — 도메인은 사슬 길이가 상한 미만인 회복 에피소드만 재발 판정을
+  // 돌리므로(simulate.ts) 화면 문장도 상한 도달 여부로 갈라져야 한다.
+  const injuryState = (episodes: InjuryEpisode[], rulesetVersion: string): CareerState =>
+    baseState({
+      rulesetVersion,
+      health: { episodes },
+      pending: { kind: 'INJURY', step: 9, episodeId: episodes.at(-1)!.id, eventId: 'injury.v1', version: 1 },
+    });
+  const renderInjury = (state: CareerState) =>
+    render(<InjuryContext state={state} definition={{} as EventDefinition} tokens={{} as NarrativeTokenValues} />);
+
+  it('재발 사슬이 상한(recurrenceMaxChain)에 닿으면 회복 뒤 재발 판정을 더 하지 않는다고 안내한다', () => {
+    const state = injuryState(
+      [
+        episode({ id: 'INJ-1-3-1', status: 'RECURRED' }),
+        episode({ id: 'INJ-1-6-1', status: 'RECURRED' }),
+        episode({ id: 'INJ-1-9-1', status: 'REHAB', severity: 'MODERATE', remainingMatches: 3 }),
+      ],
+      '1.3.0',
+    );
+    renderInjury(state);
+    const notice = screen.getByTestId('injury-recurrence');
+    expect(notice).toHaveTextContent('같은 부위 재발 2회째');
+    expect(notice).toHaveTextContent('같은 부위 재발이 상한(2회)에 닿아 회복 뒤 재발 판정은 더 하지 않습니다.');
+    expect(notice).not.toHaveTextContent('경기 동안 재발 판정을 다시 받습니다');
+    expect(notice).not.toHaveTextContent('누적 재발 위험');
+  });
+
+  it('재발 사슬이 상한 미만이면 회복 뒤 재발 창(recurrenceWindowMatches) 안내를 유지한다', () => {
+    const state = injuryState(
+      [
+        episode({ id: 'INJ-1-3-1', status: 'RECURRED' }),
+        episode({ id: 'INJ-1-6-1', status: 'REHAB', severity: 'MODERATE', remainingMatches: 3 }),
+      ],
+      '1.3.0',
+    );
+    renderInjury(state);
+    const notice = screen.getByTestId('injury-recurrence');
+    expect(notice).toHaveTextContent('같은 부위 재발 1회째');
+    expect(notice).toHaveTextContent('회복 뒤 6경기 동안 재발 판정을 다시 받습니다.');
+    expect(notice).not.toHaveTextContent('상한');
   });
 });
 

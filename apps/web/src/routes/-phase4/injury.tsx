@@ -9,9 +9,13 @@ export function InjuryContext({ state }: EventDecisionContext) {
     ? state.health.episodes.find((candidate) => candidate.id === pending.episodeId)
     : undefined;
   if (!episode) return null;
-  // 이슈 164: 이전 부상의 재발이면 배지와 누적 재발 정보를 보여준다(저장된 에피소드 이력만 읽는다).
+  // 이슈 164: 이전 부상의 재발이면 배지와 재발 사슬 정보를 보여준다(저장된 에피소드 이력만 읽는다).
   const recurrence = injuryRecurrenceNotice(state.health.episodes, episode.id);
-  const recurrenceWindowMatches = rulesetForCareer(state).injuryRules.recurrenceWindowMatches;
+  const { recurrenceWindowMatches, recurrenceMaxChain } = rulesetForCareer(state).injuryRules;
+  // 도메인(simulate.ts)은 사슬 길이가 recurrenceMaxChain 미만인 회복 에피소드만 재발 판정을 돌린다.
+  // 상한에 닿은 재발이면 회복 뒤 재발 판정이 없으므로 같은 문장을 단정하면 규칙을 틀리게 안내한다.
+  const recurrenceChainCapped =
+    recurrence !== null && recurrenceMaxChain !== undefined && recurrence.chainLength >= recurrenceMaxChain;
   const upcomingCups = (state.season?.schedule ?? [])
     .filter((entry) => !entry.skipped && entry.step > state.currentStep)
     .slice(0, episode.diagnosisRange.maxMatches)
@@ -26,8 +30,11 @@ export function InjuryContext({ state }: EventDecisionContext) {
             이전 {INJURY_BODY_PART_LABELS[recurrence.bodyPart]} 부상 재발
           </p>
           <p className="os-muted">
-            같은 부위 재발 {recurrence.chainLength}회째 · 심각도 {INJURY_SEVERITY_LABELS[recurrence.priorSeverity]} → {INJURY_SEVERITY_LABELS[recurrence.severity]} · 누적 재발 위험 {(recurrence.recurrenceRiskBp / 100).toFixed(1)}%
-            {' · '}회복 뒤 {recurrenceWindowMatches}경기 동안 재발 판정을 다시 받습니다.
+            같은 부위 재발 {recurrence.chainLength}회째 · 심각도 {INJURY_SEVERITY_LABELS[recurrence.priorSeverity]} → {INJURY_SEVERITY_LABELS[recurrence.severity]}
+            {' · '}
+            {recurrenceChainCapped
+              ? `같은 부위 재발이 상한(${recurrenceMaxChain}회)에 닿아 회복 뒤 재발 판정은 더 하지 않습니다.`
+              : `회복 뒤 ${recurrenceWindowMatches}경기 동안 재발 판정을 다시 받습니다.`}
           </p>
         </div>
       ) : null}
