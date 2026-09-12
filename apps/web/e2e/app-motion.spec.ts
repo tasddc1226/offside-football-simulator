@@ -196,6 +196,8 @@ for (const preference of ['OS', '앱'] as const) {
       await page.emulateMedia({ reducedMotion: 'reduce' });
     }
     await page.goto('/settings');
+    // UX-013: 모션 감소 라디오와 "온보딩 다시 보기" 링크는 "화면·플레이 설정" 접이식 안에 있다.
+    await page.getByText('화면·플레이 설정', { exact: true }).click();
     if (preference === '앱') {
       await page
         .getByRole('radiogroup', { name: '모션 감소' })

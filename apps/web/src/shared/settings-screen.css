@@ -1,0 +1,264 @@
+/* UX-013 설정 화면(SCR-030) 원작 구조 스타일. 색은 전부 --os-* 토큰(D-12) — 배너는 --os-hero 계열을
+   써서 "홈 색상" 프리셋(tokens.css data-accent 블록)에 따라 함께 물든다. 배너 위 텍스트 쌍
+   (on-hero/hero, hero-muted/hero)은 packages/ui check-contrast.mjs가 17 프리셋 × 2테마에서 4.5:1을
+   검증하므로 배너 배경은 그라데이션·틴트 없이 순수 --os-hero로만 칠한다. */
+.os-settings-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--os-on-hero) 14%, transparent);
+  border-radius: var(--os-radius-panel);
+  background: var(--os-hero);
+  color: var(--os-on-hero);
+  box-shadow: var(--os-shadow);
+}
+.os-settings-banner-back {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--os-touch-min);
+  height: var(--os-touch-min);
+  margin-left: -6px;
+  border-radius: 50%;
+  color: var(--os-on-hero);
+  text-decoration: none;
+  transition: background-color 140ms ease;
+}
+.os-settings-banner-back:focus-visible {
+  outline: 2px solid var(--os-on-hero);
+  outline-offset: 2px;
+}
+.os-settings-banner-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+.os-settings-banner-eyebrow {
+  color: var(--os-hero-muted);
+}
+.os-settings-banner-title {
+  margin: 0;
+  color: var(--os-on-hero);
+  font-size: var(--os-fs-h1);
+  line-height: var(--os-lh-h1);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+.os-settings-banner-badge {
+  flex: none;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--os-on-hero) 42%, transparent);
+  border-radius: 999px;
+  color: var(--os-on-hero);
+  font-size: var(--os-fs-caption);
+  line-height: var(--os-lh-caption);
+  font-weight: 650;
+  white-space: nowrap;
+}
+@media (hover: hover) and (pointer: fine) {
+  .os-settings-banner-back:hover {
+    background: color-mix(in srgb, var(--os-on-hero) 12%, transparent);
+  }
+}
+
+/* 섹션 소제목(h2): 원작의 아코디언 라벨처럼 작은 아이브로 톤. text-2/bg 대비는 check:contrast가 검증. */
+.os-settings-heading {
+  padding-inline: 4px;
+  color: var(--os-text-2);
+  font-size: var(--os-fs-caption);
+  line-height: var(--os-lh-caption);
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+/* 계정 카드 머리: 상태 문장 + 행동 버튼. "Google로 연결"은 카드 폭 전체(원작의 로그인 버튼), 로그아웃은
+   문장 오른쪽의 작은 보조 버튼이다. 360px에서 문장이 길면 버튼이 아래 줄로 내려간다. */
+.os-settings-account-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.os-settings-account-status {
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+.os-settings-account-action {
+  flex: none;
+  margin-left: auto;
+}
+.os-settings-account-action[data-wide='true'] {
+  flex: 1 1 100%;
+  margin-left: 0;
+}
+.os-settings-sync {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--os-border);
+}
+
+/* 텍스트 버튼(지금 동기화)·위험 텍스트 링크(프로필 삭제·이 기기 데이터 삭제): 터치 최소 높이는 지키되
+   존재감은 캡션 텍스트로 낮춘다. accent/bg·danger/bg 대비는 check:contrast 대상이다. */
+.os-settings-textlink,
+.os-settings-danger-link {
+  display: inline-flex;
+  min-height: var(--os-touch-min);
+  align-items: center;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--os-radius-s);
+  background: transparent;
+  color: var(--os-accent);
+  font-family: var(--os-font);
+  font-size: var(--os-fs-caption);
+  line-height: var(--os-lh-caption);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.os-settings-danger-link {
+  color: var(--os-danger);
+}
+.os-settings-textlink:disabled,
+.os-settings-danger-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.os-settings-textlink:focus-visible,
+.os-settings-danger-link:focus-visible {
+  outline: 2px solid var(--os-focus);
+  outline-offset: 2px;
+}
+
+/* 접이식 요약줄: 왼쪽 제목 + 오른쪽 현재 값(예: "시스템 · 100% · 빠르게"). Disclosure는 summary를
+   <span>으로 한 번 감싸므로 그 래퍼가 남은 폭을 차지하게 한다. */
+.os-settings .os-disclosure-summary > span:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.os-settings-summary {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.os-settings-summary-value {
+  min-width: 0;
+  color: var(--os-text-2);
+  font-size: var(--os-fs-caption);
+  line-height: var(--os-lh-caption);
+  font-weight: 550;
+  text-align: right;
+}
+
+/* 계정 상세·개인화 안의 한 줄 행(라벨 + 버튼). */
+.os-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.os-settings-row > div:first-child {
+  min-width: 0;
+}
+
+/* 서비스 정책 목록: 셰브론 행 2개, 행 전체가 내부 Link. */
+.os-settings-list {
+  padding-block: 4px;
+}
+.os-settings-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.os-settings-list li + li {
+  border-top: 1px solid var(--os-border);
+}
+.os-settings-list-row {
+  display: flex;
+  min-height: var(--os-touch-min);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--os-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.os-settings-list-row:focus-visible {
+  outline: 2px solid var(--os-focus);
+  outline-offset: 2px;
+  border-radius: var(--os-radius-s);
+}
+.os-settings-chevron {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--os-text-2);
+  border-bottom: 2px solid var(--os-text-2);
+  transform: rotate(-45deg);
+}
+
+/* 푸터의 "상세 버전" 소형 토글: 가운데 정렬·캡션 크기. */
+.os-settings-footer-version {
+  width: 100%;
+  max-width: 20rem;
+}
+.os-settings-footer-version .os-disclosure-summary {
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--os-touch-min);
+  color: var(--os-text-2);
+  font-size: var(--os-fs-caption);
+  line-height: var(--os-lh-caption);
+  font-weight: 600;
+}
+.os-settings .os-settings-footer-version .os-disclosure-summary > span:first-child {
+  flex: 0 0 auto;
+}
+.os-settings-footer-version .os-disclosure-content {
+  text-align: left;
+}
+
+/* 구단 로고 file input(TeamNamesSettings): packages/ui/src/game.css의 전역
+   `.os-settings input`(언레이어드: width:100%·min-height:var(--os-touch-min))이 Tailwind
+   유틸리티 레이어의 `sr-only`보다 캐스케이드 우선순위가 높아, 숨김 처리 없이 360×48 투명
+   블록으로 남아 문서 폭을 늘리고 탭을 가로챘다. 아래는 그 규칙보다 특이도가 높은(클래스 2개 +
+   태그) 언레이어드 선택자로 시각적으로만 숨긴다(스크린리더 전용 크기) — game.css의 전역 규칙
+   자체는 건드리지 않는다. 부모 행(.relative)이 이 absolute 배치의 기준이 되고, 라벨 클릭으로
+   파일 선택·키보드 포커스 시 라벨 포커스 링(peer-focus-visible)은 그대로 유지된다. */
+.os-settings input.os-team-logo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 맨 아래 위험 링크 묶음. */
+.os-settings-danger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 8px;
+  padding-top: 8px;
+}
+.os-settings-danger-sep {
+  color: var(--os-text-2);
+}

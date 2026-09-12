@@ -7,6 +7,7 @@ import { ProfileSettingsSchema, type ProfileSettings } from '@offside/contracts'
 import type { LocalStore } from '@offside/engine-client';
 import type { SimulationMode } from '@offside/domain';
 import { ACCENT_PRESET_IDS, type AccentPresetId } from './accent-presets.js';
+import { isTeamLogoDataUrl } from './team-logo.js';
 
 export type ThemePreference = ProfileSettings['theme'];
 export type ReducedMotionPreference = ProfileSettings['reducedMotion'];
@@ -14,6 +15,9 @@ export type TextScale = ProfileSettings['textScale'];
 export type { AccentPresetId };
 
 const UI_SETTINGS_KV_KEY = 'ui:settings';
+/** UX-013: 구단 로고(data URL 문자열)는 'ui:settings'의 형제 키에 따로 둔다 — 12팀 × ≤40KB라 테마
+ * 토글 같은 사소한 변경마다 다시 쓰지 않게 하고(toss 채널은 문자열 KV, ADR-002), 로고가 바뀔 때만 쓴다. */
+const UI_TEAM_LOGOS_KV_KEY = 'ui:team-logos';
 /** UX-001: 구단 이름 커스터마이즈 트림 후 길이 규칙. 빈 값은 오버라이드 제거(기본 이름 복귀)다. */
 const TEAM_NAME_OVERRIDE_MAX_LENGTH = 16;
 
@@ -25,6 +29,9 @@ type StoredUiSettings = ProfileSettings & {
   teamNameOverrides: Record<string, string>;
 };
 
+/** UX-013: 팀 id → 이 기기에 올린 로고 data URL. 기기 로컬 전용, contracts 스키마 밖, 별도 kv 키. */
+export type TeamLogos = Record<string, string>;
+
 const DEFAULT_SETTINGS: StoredUiSettings = {
   theme: 'SYSTEM',
   reducedMotion: 'SYSTEM',
@@ -35,8 +42,21 @@ const DEFAULT_SETTINGS: StoredUiSettings = {
   teamNameOverrides: {},
 };
 
+const DEFAULT_TEAM_LOGOS: TeamLogos = {};
+
 function isAccentPresetId(value: unknown): value is AccentPresetId {
   return typeof value === 'string' && (ACCENT_PRESET_IDS as readonly string[]).includes(value);
+}
+
+/** 손상된 값이 섞여도 우리 형식의 data URL만 남긴다(없던 저장값은 빈 객체). */
+function parseTeamLogos(value: unknown): TeamLogos {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  const result: TeamLogos = {};
+  for (const [teamId, dataUrl] of Object.entries(value as Record<string, unknown>)) {
+    if (teamId.length === 0 || !isTeamLogoDataUrl(dataUrl)) continue;
+    result[teamId] = dataUrl;
+  }
+  return result;
 }
 
 /** 손상된 값이 섞여도 유효한 항목만 남긴다(트림 1~16자, 문자열 값만) — 저장값에 필드가 아예 없던
@@ -73,6 +93,7 @@ function parseStoredSettings(raw: unknown): StoredUiSettings | null {
 }
 
 export interface UiState extends StoredUiSettings {
+  teamLogos: TeamLogos;
   setTheme: (theme: ThemePreference) => void;
   setReducedMotion: (reducedMotion: ReducedMotionPreference) => void;
   setTextScale: (textScale: TextScale) => void;
@@ -82,10 +103,16 @@ export interface UiState extends StoredUiSettings {
   /** 트림 후 빈 값이면 오버라이드를 지운다(기본 이름 복귀). 16자를 넘는 값은 잘라서 저장한다. */
   setTeamNameOverride: (teamId: string, name: string) => void;
   resetTeamNameOverrides: () => void;
+  /** UX-013: team-logo.ts processTeamLogo가 만든 data URL만 넣는다(형식 밖 값은 무시). */
+  setTeamLogo: (teamId: string, dataUrl: string) => void;
+  /** 기본 로고(이니셜 배지) 복원. */
+  clearTeamLogo: (teamId: string) => void;
+  resetTeamLogos: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
   ...DEFAULT_SETTINGS,
+  teamLogos: DEFAULT_TEAM_LOGOS,
   setTheme: (theme) => {
     set({ theme });
   },
@@ -119,6 +146,21 @@ export const useUiStore = create<UiState>((set) => ({
   resetTeamNameOverrides: () => {
     set({ teamNameOverrides: {} });
   },
+  setTeamLogo: (teamId, dataUrl) => {
+    if (teamId.length === 0 || !isTeamLogoDataUrl(dataUrl)) return;
+    set((state) => ({ teamLogos: { ...state.teamLogos, [teamId]: dataUrl } }));
+  },
+  clearTeamLogo: (teamId) => {
+    set((state) => {
+      if (!(teamId in state.teamLogos)) return {};
+      const next = { ...state.teamLogos };
+      delete next[teamId];
+      return { teamLogos: next };
+    });
+  },
+  resetTeamLogos: () => {
+    set({ teamLogos: {} });
+  },
 }));
 
 function persistedSlice(state: UiState): StoredUiSettings {
@@ -141,22 +183,32 @@ let unsubscribePersist: (() => void) | null = null;
  */
 export async function hydrateUiStore(store: LocalStore): Promise<void> {
   let initial: StoredUiSettings = DEFAULT_SETTINGS;
+  let initialTeamLogos: TeamLogos = DEFAULT_TEAM_LOGOS;
   try {
-    const raw = await store.transaction('readonly', (tx) => tx.kv.get<unknown>(UI_SETTINGS_KV_KEY));
-    const parsed = raw === undefined ? null : parseStoredSettings(raw);
+    const { settings, logos } = await store.transaction('readonly', async (tx) => ({
+      settings: await tx.kv.get<unknown>(UI_SETTINGS_KV_KEY),
+      logos: await tx.kv.get<unknown>(UI_TEAM_LOGOS_KV_KEY),
+    }));
+    const parsed = settings === undefined ? null : parseStoredSettings(settings);
     if (parsed !== null) {
       initial = parsed;
     }
+    initialTeamLogos = parseTeamLogos(logos);
   } catch (error) {
     console.warn('hydrateUiStore: 설정을 읽지 못해 기본값을 사용한다.', error);
   }
 
   unsubscribePersist?.();
-  useUiStore.setState(initial);
-  unsubscribePersist = useUiStore.subscribe((state) => {
+  useUiStore.setState({ ...initial, teamLogos: initialTeamLogos });
+  unsubscribePersist = useUiStore.subscribe((state, previous) => {
     store.transaction('readwrite', (tx) => tx.kv.put(UI_SETTINGS_KV_KEY, persistedSlice(state))).catch((error: unknown) => {
       console.warn('ui-store: 설정 저장 실패', error);
     });
+    if (state.teamLogos !== previous.teamLogos) {
+      store.transaction('readwrite', (tx) => tx.kv.put(UI_TEAM_LOGOS_KV_KEY, state.teamLogos)).catch((error: unknown) => {
+        console.warn('ui-store: 구단 로고 저장 실패', error);
+      });
+    }
   });
 }
 

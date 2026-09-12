@@ -68,6 +68,47 @@ function relativeLuminance({ r, g, b }) {
 }
 
 /**
+ * @param {{r: number; g: number; b: number}} rgb
+ * @returns {string}
+ */
+function rgbToHex({ r, g, b }) {
+  return `#${[r, g, b].map((c) => Math.round(c).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/**
+ * UX-013: 토큰 값이 hex 리터럴 외에 `var(--os-x)`와 `color-mix(in srgb, A p%, B)`(--os-hero-muted)
+ * 일 수 있어 hex로 풀어 준다. color-mix(in srgb)는 감마 sRGB 채널을 그대로 선형 보간하므로
+ * 브라우저 계산과 같다(반올림 ±1 채널 오차는 4.5:1 판정에 영향이 없는 여유를 둔다).
+ * @param {string} value
+ * @param {Record<string, string>} vars
+ * @param {number} [depth]
+ * @returns {string}
+ */
+function resolveColor(value, vars, depth = 0) {
+  const trimmed = value.trim();
+  if (depth > 8) throw new Error(`색 참조가 너무 깊다: ${value}`);
+  if (trimmed.startsWith('#')) return trimmed;
+  const varMatch = /^var\(--([a-z0-9-]+)\)$/i.exec(trimmed);
+  if (varMatch) {
+    const referenced = vars[varMatch[1]];
+    if (referenced === undefined) throw new Error(`정의되지 않은 토큰 참조: ${trimmed}`);
+    return resolveColor(referenced, vars, depth + 1);
+  }
+  const mixMatch = /^color-mix\(in srgb,\s*(.+?)\s+(\d+(?:\.\d+)?)%\s*,\s*(.+?)\)$/i.exec(trimmed);
+  if (mixMatch) {
+    const a = hexToRgb(resolveColor(mixMatch[1], vars, depth + 1));
+    const b = hexToRgb(resolveColor(mixMatch[3], vars, depth + 1));
+    const pa = Number(mixMatch[2]) / 100;
+    return rgbToHex({
+      r: a.r * pa + b.r * (1 - pa),
+      g: a.g * pa + b.g * (1 - pa),
+      b: a.b * pa + b.b * (1 - pa),
+    });
+  }
+  throw new Error(`해석할 수 없는 색 값: ${value}`);
+}
+
+/**
  * @param {string} hexA
  * @param {string} hexB
  */
@@ -79,13 +120,64 @@ function contrastRatio(hexA, hexB) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+/**
+ * @param {Record<string, string>} vars
+ * @param {string} name `os-` 없는 토큰 이름(예: 'hero-muted')
+ */
+function tokenColor(vars, name) {
+  const raw = vars[`os-${name}`];
+  if (raw === undefined) throw new Error(`토큰이 없다: --os-${name}`);
+  return resolveColor(raw, vars);
+}
+
+/**
+ * hero 그라데이션의 가장 밝은 끝. 화면 전환(packages/ui/src/screen-transition.css 78%)·시네마틱
+ * 인트로(apps/web/src/shared/cinematic-intro.css 80%)·트레이딩 카드(player-card.css·
+ * player-creation.css 76%)·은퇴 화면(retirement-screen.css 72%)이
+ * `linear-gradient(var(--os-hero), color-mix(in srgb, var(--os-hero) N%, var(--os-line)))` 위에
+ * --os-on-hero·--os-hero-muted 텍스트를 올리므로, 순수 --os-hero만 보면 다크(--os-line이 밝은
+ * 녹색)에서 그라데이션 끝이 4.5:1 아래로 떨어지는 회귀를 놓친다(axe도 그라데이션은 계산하지 못한다).
+ * 가장 낮은 비율(72%)을 가상 토큰 --os-hero-gradient-end로 만들어 텍스트 쌍을 검사한다 — 그라데이션
+ * 비율을 이보다 낮추는 화면을 새로 만들면 이 값도 함께 내린다.
+ */
+const HERO_GRADIENT_END_RATIO = 72;
+
+/** @param {Record<string, string>} vars */
+function withHeroGradientEnd(vars) {
+  return {
+    ...vars,
+    'os-hero-gradient-end': `color-mix(in srgb, var(--os-hero) ${HERO_GRADIENT_END_RATIO}%, var(--os-line))`,
+  };
+}
+
 const lightBlock = extractBlock(css, /:root\s*\{/);
 const darkBlock = extractBlock(css, /:root\[data-theme=['"]dark['"]\]\s*\{/);
-const light = parseVars(lightBlock);
-const dark = { ...light, ...parseVars(darkBlock) };
+const light = withHeroGradientEnd(parseVars(lightBlock));
+const dark = withHeroGradientEnd({ ...light, ...parseVars(darkBlock) });
 
-// UX-004 포인트 색상 프리셋. tokens.css의 id 목록과 맞춰 둔다(색을 더하거나 빼면 여기도 고친다).
-const ACCENT_PRESET_IDS = ['green', 'violet', 'crimson', 'amber', 'mono'];
+// UX-004 포인트 색상 프리셋 + UX-013 가상 구단 12팀 프리셋('team-<id>', TEAM_IDS 순서). tokens.css의
+// id 목록과 맞춰 둔다(색을 더하거나 빼면 여기도 고친다).
+const BASE_ACCENT_PRESET_IDS = ['green', 'violet', 'crimson', 'amber', 'mono'];
+
+// UX-008 구단 배지. tokens.css --os-team-<id> 목록과 id를 맞춰 둔다(팀을 추가·빼면 여기도 고친다).
+// 배지 텍스트는 항상 --os-on-accent라 그 값과의 대비만 보면 된다(배경은 컴포넌트가 이 변수를
+// 인라인 style로 꽂아 넣을 뿐 별도 조합이 없다).
+const TEAM_IDS = [
+  'hangang-u18',
+  'seorabeol-united',
+  'cheongyeon-fc',
+  'gangdong-rovers',
+  'onsaemiro-city',
+  'byeolbit-united',
+  'galmae-town',
+  'noeulhang-fc',
+  'geumbit-fc',
+  'eunha-rovers',
+  'gangnaru-united',
+  'dalbit-town-fc',
+];
+
+const ACCENT_PRESET_IDS = [...BASE_ACCENT_PRESET_IDS, ...TEAM_IDS.map((id) => `team-${id}`)];
 
 /** @param {string} id */
 function presetVars(id) {
@@ -94,9 +186,27 @@ function presetVars(id) {
     css,
     new RegExp(`:root\\[data-theme=['"]dark['"]\\]\\[data-accent=['"]${id}['"]\\]\\s*\\{`),
   );
+  // 시스템 다크(prefers-color-scheme) 블록은 data-theme='dark' 블록과 값이 같아야 한다 — 한쪽만
+  // 고치면 명시 다크와 시스템 다크가 다른 색이 되므로 여기서 드리프트를 잡는다.
+  const mediaPresetBlock = extractBlock(
+    css,
+    new RegExp(`:root:not\\(\\[data-theme=['"]light['"]\\]\\)\\[data-accent=['"]${id}['"]\\]\\s*\\{`),
+  );
+  const darkPreset = parseVars(darkPresetBlock);
+  const mediaPreset = parseVars(mediaPresetBlock);
+  const darkKeys = Object.keys(darkPreset).sort();
+  const mediaKeys = Object.keys(mediaPreset).sort();
+  const same =
+    darkKeys.length === mediaKeys.length &&
+    darkKeys.every((key, index) => key === mediaKeys[index] && darkPreset[key] === mediaPreset[key]);
+  if (!same) {
+    throw new Error(
+      `프리셋 '${id}'의 :root[data-theme='dark'] 블록과 @media dark 블록 값이 다르다 — 두 곳을 같게 맞춘다.`,
+    );
+  }
   return {
     light: { ...light, ...parseVars(lightPresetBlock) },
-    dark: { ...dark, ...parseVars(darkPresetBlock) },
+    dark: { ...dark, ...darkPreset },
   };
 }
 
@@ -115,6 +225,9 @@ const TEXT_PAIRS = [
   // 어느 카드 맥락에서든 이 한 행이 보장한다. 배지를 반투명·currentColor로 되돌리면 그 보장이 깨진다.
   ['on-hero', 'hero'],
   ['hero-muted', 'hero'],
+  // hero 그라데이션의 가장 밝은 끝(위 HERO_GRADIENT_END_RATIO) 위 텍스트 — 순수 hero보다 항상 낮다.
+  ['on-hero', 'hero-gradient-end'],
+  ['hero-muted', 'hero-gradient-end'],
   ['accent', 'surface'],
   // T-7-012: .os-game-hero .os-eyebrow(game.css)가 이 색을 캡션 텍스트로 쓴다 — --os-line(3:1
   // 비텍스트 기준)이 라이트 --os-bg·--os-surface-2 위에서 4.5:1을 못 넘겨 axe color-contrast
@@ -138,25 +251,33 @@ const NON_TEXT_PAIRS = [
 function checkTheme(themeName, vars) {
   const rows = [];
   for (const [fg, bg] of TEXT_PAIRS) {
-    const ratio = contrastRatio(vars[`os-${fg}`], vars[`os-${bg}`]);
+    const ratio = contrastRatio(tokenColor(vars, fg), tokenColor(vars, bg));
     rows.push({ theme: themeName, fg, bg, ratio, min: 4.5, pass: ratio >= 4.5 });
   }
   for (const [fg, bg] of NON_TEXT_PAIRS) {
-    const ratio = contrastRatio(vars[`os-${fg}`], vars[`os-${bg}`]);
+    const ratio = contrastRatio(tokenColor(vars, fg), tokenColor(vars, bg));
     rows.push({ theme: themeName, fg, bg, ratio, min: 3, pass: ratio >= 3 });
   }
   return rows;
 }
 
-// 프리셋은 accent 계열만 새로 정의하므로(다른 토큰은 기본 테마 값을 그대로 물려받음) 이 쌍들만
+// 프리셋은 accent·hero 계열만 새로 정의하므로(다른 토큰은 기본 테마 값을 그대로 물려받음) 이 쌍들만
 // 다시 본다. 나머지 쌍은 위 checkTheme('light'|'dark', ...)가 이미 확인했다. accent-bg·
 // accent-surface-2는 T-7-012: .os-game-hero .os-eyebrow가 프리셋과 무관하게 --os-accent를 쓰므로
-// 프리셋별로도 세 배경 모두 4.5:1을 넘는지 회귀를 막는다.
+// 프리셋별로도 세 배경 모두 4.5:1을 넘는지 회귀를 막는다. on-hero/hero·hero-muted/hero는 UX-013:
+// 프리셋이 --os-hero를 팀 색으로 바꾸므로 배너 제목·캡션(hero-muted)·PlayerCard 등번호 배지가
+// 18종 × 2테마 전부에서 텍스트 기준을 넘어야 한다. on-hero/hero-gradient-end·hero-muted/
+// hero-gradient-end는 화면 전환·트레이딩 카드·은퇴 화면의 그라데이션 끝(worst case) — 다크 --os-line이
+// 밝아 프리셋 hero가 라이트 값 그대로면 여기서 미달하므로 다크 블록은 더 짙은 hero를 쓴다.
 const ACCENT_PAIRS = [
   ['on-accent', 'accent'],
   ['accent', 'surface'],
   ['accent', 'bg'],
   ['accent', 'surface-2'],
+  ['on-hero', 'hero'],
+  ['hero-muted', 'hero'],
+  ['on-hero', 'hero-gradient-end'],
+  ['hero-muted', 'hero-gradient-end'],
 ];
 
 /**
@@ -165,7 +286,7 @@ const ACCENT_PAIRS = [
  */
 function checkAccentPairs(themeName, vars) {
   return ACCENT_PAIRS.map(([fg, bg]) => {
-    const ratio = contrastRatio(vars[`os-${fg}`], vars[`os-${bg}`]);
+    const ratio = contrastRatio(tokenColor(vars, fg), tokenColor(vars, bg));
     return { theme: themeName, fg, bg, ratio, min: 4.5, pass: ratio >= 4.5 };
   });
 }
@@ -178,31 +299,13 @@ const presetRows = ACCENT_PRESET_IDS.flatMap((id) => {
   ];
 });
 
-// UX-008 구단 배지. tokens.css --os-team-<id> 목록과 id를 맞춰 둔다(팀을 추가·빼면 여기도 고친다).
-// 배지 텍스트는 항상 --os-on-accent라 그 값과의 대비만 보면 된다(배경은 컴포넌트가 이 변수를
-// 인라인 style로 꽂아 넣을 뿐 별도 조합이 없다).
-const TEAM_IDS = [
-  'hangang-u18',
-  'seorabeol-united',
-  'cheongyeon-fc',
-  'gangdong-rovers',
-  'onsaemiro-city',
-  'byeolbit-united',
-  'galmae-town',
-  'noeulhang-fc',
-  'geumbit-fc',
-  'eunha-rovers',
-  'gangnaru-united',
-  'dalbit-town-fc',
-];
-
 /**
  * @param {string} themeName
  * @param {Record<string, string>} vars
  */
 function checkTeamBadges(themeName, vars) {
   return TEAM_IDS.map((id) => {
-    const ratio = contrastRatio(vars['os-on-accent'], vars[`os-team-${id}`]);
+    const ratio = contrastRatio(tokenColor(vars, 'on-accent'), tokenColor(vars, `team-${id}`));
     return { theme: themeName, fg: 'on-accent', bg: `team-${id}`, ratio, min: 4.5, pass: ratio >= 4.5 };
   });
 }

@@ -1,7 +1,8 @@
-// SCR-030 설정·데이터. 데이터 섹션(복구 코드·프로필 복구·로그아웃·이 기기 데이터 삭제·프로필 삭제,
-// Google 연결)은 T-1-012·T-1-013이 채운다. 채널 문구 분기는 platform이 주는 값으로만 한다(lint
-// noChannelBranchRules) — 이 화면은 채널별 문구가 필요 없는 부분만 다룬다.
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+// SCR-030 설정·데이터. UX-013: 원작(SLB) 구조로 개편 — 배너(hero) / 계정 1카드(+ "계정 상세" 접이식) /
+// 개인화 접이식 3장(구단 이름·로고, 홈 색상, 화면·플레이) / 서비스 정책 목록 / 푸터 / 맨 아래 위험 텍스트
+// 링크. 계정 뮤테이션·오류·토스트·병합 대화상자 로직(T-1-012·T-1-013, ADR-008)은 그대로 재사용한다.
+// 채널 문구 분기는 platform이 주는 값으로만 한다(lint noChannelBranchRules).
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Button,
@@ -14,7 +15,6 @@ import {
   Disclosure,
   RadioGroup,
   RadioGroupItem,
-  ScreenIntro,
   Toast,
 } from '@offside/ui';
 import { ENGINE_CLIENT_VERSION } from '@offside/engine-client';
@@ -48,14 +48,15 @@ import { getSyncClient, requeueAllUnsynced } from '../engine/sync.js';
 import { useCareerList } from '../engine/use-career.js';
 import { useSyncSummary } from '../engine/use-sync.js';
 import { platform } from '../platform/index.js';
-import { APP_VERSION_LABEL } from '../shared/app-version.js';
 import { queryClient } from '../shared/query-client.js';
 import { useExpandDisclosuresOnHash } from '../shared/expand-disclosures-on-hash.js';
 import { formatLocalDate, formatLocalDateTime } from '../shared/format.js';
 import { validateRecoveryCodeInput } from '../shared/recovery-code-input.js';
+import { accentPresetLabel } from '../shared/accent-presets.js';
+import { AccentPresetPicker } from '../shared/AccentPresetPicker.js';
+import { SettingsBanner } from '../shared/SettingsBanner.js';
 import { SettingsFooter } from '../shared/SettingsFooter.js';
 import { SyncBadge } from '../shared/SyncBadge.js';
-import { AccentPresetPicker } from '../shared/AccentPresetPicker.js';
 import { TeamNamesSettings } from '../shared/TeamNamesSettings.js';
 import {
   useUiStore,
@@ -63,6 +64,7 @@ import {
   type TextScale,
   type ThemePreference,
 } from '../shared/ui-store.js';
+import '../shared/settings-screen.css';
 
 /** `GET /v1/auth/google/callback`이 `/settings`로 되돌려줄 때 붙이는 쿼리(ADR-008). */
 type GoogleQueryResult = 'linked' | 'switched' | 'merge_required' | 'error';
@@ -102,10 +104,10 @@ const DANGER_STYLE: CSSProperties = { color: 'var(--os-danger)', borderColor: 'v
 
 const PROFILE_ID_KV_KEY = 'profile:id';
 
-const THEME_OPTIONS: Array<{ value: ThemePreference; label: string }> = [
-  { value: 'SYSTEM', label: '시스템 설정' },
-  { value: 'LIGHT', label: '라이트' },
-  { value: 'DARK', label: '다크' },
+const THEME_OPTIONS: Array<{ value: ThemePreference; label: string; short: string }> = [
+  { value: 'SYSTEM', label: '시스템 설정', short: '시스템' },
+  { value: 'LIGHT', label: '라이트', short: '라이트' },
+  { value: 'DARK', label: '다크', short: '다크' },
 ];
 
 const REDUCED_MOTION_OPTIONS: Array<{ value: ReducedMotionPreference; label: string }> = [
@@ -120,10 +122,21 @@ const TEXT_SCALE_OPTIONS: Array<{ value: TextScale; label: string }> = [
   { value: 150, label: '150%' },
 ];
 
-const SIMULATION_MODE_OPTIONS: Array<{ value: SimulationMode; label: string }> = [
-  { value: 'FAST', label: '빠르게' },
-  { value: 'CHAPTER', label: '챕터로 자세히' },
+const SIMULATION_MODE_OPTIONS: Array<{ value: SimulationMode; label: string; short: string }> = [
+  { value: 'FAST', label: '빠르게', short: '빠르게' },
+  { value: 'CHAPTER', label: '챕터로 자세히', short: '챕터' },
 ];
+
+/** "화면·플레이 설정" 접이식 요약줄("시스템 · 100% · 빠르게"). 알 수 없는 값은 비워 둔다. */
+export function displayPlaySummary(
+  theme: ThemePreference,
+  textScale: TextScale,
+  mode: SimulationMode,
+): string {
+  const themeShort = THEME_OPTIONS.find((option) => option.value === theme)?.short ?? '';
+  const modeShort = SIMULATION_MODE_OPTIONS.find((option) => option.value === mode)?.short ?? '';
+  return [themeShort, `${textScale}%`, modeShort].filter((part) => part.length > 0).join(' · ');
+}
 
 /** FAILED 코드별 안내. 목록에 없으면 "서버가 저장을 거부했습니다(코드)". */
 const FAILED_CODE_MESSAGE: Partial<Record<ErrorCode, string>> = {
@@ -145,7 +158,8 @@ function googleErrorMessage(reason: string | undefined): string {
   );
 }
 
-function SyncStatusRow() {
+/** 계정 카드의 동기화 상태 한 줄("저장됨 N분 전" + 지금 동기화) + LOCAL_ONLY·FAILED 안내. */
+function SyncStatusLine() {
   const summary = useSyncSummary();
   const [syncing, setSyncing] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
@@ -179,15 +193,18 @@ function SyncStatusRow() {
   }
 
   return (
-    <Card className="flex flex-col gap-os-3">
-      <div className="flex items-center justify-between gap-os-3">
-        <span className="font-os text-os-text">동기화 상태</span>
+    <div className="flex flex-col gap-os-2">
+      <div className="os-settings-sync">
         <SyncBadge state={summary} />
+        <button
+          type="button"
+          className="os-settings-textlink"
+          onClick={() => void handleSyncNow()}
+          disabled={syncing}
+        >
+          지금 동기화
+        </button>
       </div>
-
-      <Button variant="secondary" onClick={() => void handleSyncNow()} disabled={syncing}>
-        지금 동기화
-      </Button>
 
       {summary.kind === 'LOCAL_ONLY' ? (
         <div className="flex flex-col gap-os-2">
@@ -211,7 +228,7 @@ function SyncStatusRow() {
             `서버가 저장을 거부했습니다(${summary.error.code})`}
         </p>
       ) : null}
-    </Card>
+    </div>
   );
 }
 
@@ -279,8 +296,8 @@ function RecoveryCodeRow() {
   }
 
   return (
-    <Card className="flex flex-col gap-os-3">
-      <div className="flex items-center justify-between gap-os-3">
+    <div className="flex flex-col gap-os-2">
+      <div className="os-settings-row">
         <div className="flex flex-col gap-os-1">
           <span className="font-os text-os-text">복구 코드</span>
           <span className="font-os text-os-text-2" style={CAPTION_STYLE}>
@@ -380,7 +397,7 @@ function RecoveryCodeRow() {
       {copied ? (
         <Toast variant="success" message="복사했습니다" onDismiss={() => setCopied(false)} />
       ) : null}
-    </Card>
+    </div>
   );
 }
 
@@ -471,7 +488,7 @@ function ProfileRecoverRow() {
   }
 
   return (
-    <Card className="flex flex-col gap-os-3">
+    <div className="flex flex-col gap-os-2">
       <Disclosure summary="프로필 복구">
         <form onSubmit={handleSubmit} className="flex flex-col gap-os-2">
           <label
@@ -574,16 +591,117 @@ function ProfileRecoverRow() {
           }}
         />
       ) : null}
-    </Card>
+    </div>
+  );
+}
+
+/** 계정 카드 머리의 로그아웃 버튼(확인 대화상자·토스트 포함). Google을 연결한 프로필에서만 그린다. */
+function LogoutButton() {
+  const profileQuery = useProfileQuery();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  const canLogout = profileQuery.data?.linked.google === true;
+
+  async function handleConfirm() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await logout();
+      if (result.ok) {
+        setOpen(false);
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        platform.analytics.track('logout');
+        setToast('로그아웃했습니다. 이 기기의 진행은 그대로 남습니다');
+      } else {
+        setError(result.error.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (busy) return;
+          setOpen(next);
+        }}
+      >
+        <DialogTrigger asChild>
+          <Button variant="secondary" disabled={!canLogout}>
+            로그아웃
+          </Button>
+        </DialogTrigger>
+        <DialogContent
+          title="로그아웃"
+          description="이 기기의 진행은 그대로 남습니다. 다시 Google로 연결하면 이 프로필로 돌아올 수 있습니다."
+          closeLabel="닫기"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            cancelRef.current?.focus();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (busy) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (busy) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (busy) event.preventDefault();
+          }}
+        >
+          <div className="flex flex-col gap-os-3">
+            {error !== null ? (
+              <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+                {error}
+              </p>
+            ) : null}
+            <div className="flex gap-os-3">
+              <button
+                ref={cancelRef}
+                type="button"
+                className={buttonClassName('ghost')}
+                style={buttonStyle}
+                onClick={() => setOpen(false)}
+                disabled={busy}
+              >
+                취소
+              </button>
+              <Button
+                variant="secondary"
+                style={DANGER_STYLE}
+                onClick={() => void handleConfirm()}
+                disabled={busy}
+              >
+                로그아웃
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {toast !== null ? (
+        <Toast variant="success" message={toast} onDismiss={() => setToast(null)} />
+      ) : null}
+    </>
   );
 }
 
 /**
- * T-1-013 D-21: Google 연결 행. toss는 `platform.features.googleLink`로만 걸러 다른 문구를 보여준다
- * (채널 리터럴 비교 금지, lint noChannelBranchRules). 콜백이 되돌려주는 `?google=` 쿼리 처리와 대기
- * 병합(`pendingMerge`) 재안내를 이 컴포넌트가 함께 맡는다(ADR-008).
+ * UX-013 계정 카드 1장. 머리: 연결됨 → "<마스킹 이메일> · Google 계정으로 연결됐습니다" + 로그아웃 /
+ * 비로그인 → "비회원으로 플레이 중 · 이 기기에 자동 저장됩니다" + "Google로 연결"(primary). 아래로
+ * 동기화 상태 한 줄과 "계정 상세" 접이식(복구 코드·프로필 복구·Google 연결 해제·로그아웃 안내).
+ *
+ * T-1-013 D-21 Google 연결 로직은 GoogleRow에서 그대로 옮겼다: toss는 `platform.features.googleLink`로만
+ * 걸러 다른 문구를 보여준다(채널 리터럴 비교 금지, lint noChannelBranchRules). 콜백이 되돌려주는
+ * `?google=` 쿼리 처리와 대기 병합(`pendingMerge`) 재안내를 이 컴포넌트가 함께 맡는다(ADR-008).
  */
-function GoogleRow() {
+function AccountCard() {
   const profileQuery = useProfileQuery();
   const careerQuery = useCareerList();
   const search = Route.useSearch();
@@ -599,6 +717,7 @@ function GoogleRow() {
   const mergeCancelRef = useRef<HTMLButtonElement>(null);
   const connectInFlightRef = useRef(false);
 
+  const googleLinkAvailable = platform.features.googleLink;
   const googleLinked = profileQuery.data?.linked.google === true;
   const googleEmailMasked = profileQuery.data?.googleEmailMasked ?? null;
   const pendingMerge = profileQuery.data?.pendingMerge ?? null;
@@ -726,101 +845,55 @@ function GoogleRow() {
     }
   }
 
-  if (!platform.features.googleLink) {
-    return (
-      <Card className="flex items-center justify-between gap-os-3">
-        <span className="font-os text-os-text">Google 연결</span>
-        <span className="font-os text-os-text-2" style={CAPTION_STYLE}>
-          이 채널의 계정으로 자동 저장됩니다
-        </span>
-      </Card>
+  let status: ReactNode;
+  let action: ReactNode = null;
+  let actionWide = false;
+  if (!googleLinkAvailable) {
+    status = (
+      <p className="font-os text-os-text">
+        <span className="font-semibold">자동 저장 중</span> · 이 채널의 계정으로 자동 저장됩니다
+      </p>
     );
+  } else if (googleLinked) {
+    status = (
+      <p className="font-os text-os-text">
+        {googleEmailMasked !== null ? (
+          <>
+            <span className="os-num font-semibold">{googleEmailMasked}</span> ·{' '}
+          </>
+        ) : null}
+        Google 계정으로 연결됐습니다
+      </p>
+    );
+    action = <LogoutButton />;
+  } else {
+    status = (
+      <p className="font-os text-os-text">
+        <span className="font-semibold">비회원으로 플레이 중</span> · 이 기기에 자동 저장됩니다
+      </p>
+    );
+    action = (
+      <Button
+        variant="primary"
+        className="w-full"
+        onClick={() => void handleConnect()}
+        disabled={busy}
+      >
+        {busy ? '저장 확인 중' : 'Google로 연결'}
+      </Button>
+    );
+    actionWide = true;
   }
 
   return (
-    <Card className="flex flex-col gap-os-2">
-      <div className="flex items-center justify-between gap-os-3">
-        <div className="flex flex-col gap-os-1">
-          <span className="font-os text-os-text">Google 연결</span>
-          {googleLinked && googleEmailMasked !== null ? (
-            <span className="os-num font-os text-os-text-2" style={CAPTION_STYLE}>
-              {googleEmailMasked}
-            </span>
-          ) : null}
-        </div>
-
-        {googleLinked ? (
-          <Dialog
-            open={unlinkOpen}
-            onOpenChange={(open) => {
-              if (busy) return;
-              setUnlinkOpen(open);
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button variant="secondary" style={DANGER_STYLE}>
-                연결 해제
-              </Button>
-            </DialogTrigger>
-            <DialogContent
-              title="Google 연결 해제"
-              closeLabel="닫기"
-              onOpenAutoFocus={(event) => {
-                event.preventDefault();
-                unlinkCancelRef.current?.focus();
-              }}
-              onEscapeKeyDown={(event) => {
-                if (busy) event.preventDefault();
-              }}
-              onPointerDownOutside={(event) => {
-                if (busy) event.preventDefault();
-              }}
-              onInteractOutside={(event) => {
-                if (busy) event.preventDefault();
-              }}
-            >
-              <div className="flex flex-col gap-os-3">
-                <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                  Google 연결을 해제하면 이 계정으로 다시 찾아올 수 없습니다.
-                </p>
-                {noRecoveryCode ? (
-                  <p className="font-os text-os-danger" style={CAPTION_STYLE}>
-                    복구 코드가 없어 연결을 해제하면 이 프로필을 되돌릴 방법이 없습니다.
-                  </p>
-                ) : null}
-                {error !== null ? (
-                  <p className="font-os text-os-danger" style={CAPTION_STYLE}>
-                    {error}
-                  </p>
-                ) : null}
-                <div className="flex gap-os-3">
-                  <button
-                    ref={unlinkCancelRef}
-                    type="button"
-                    className={buttonClassName('ghost')}
-                    style={buttonStyle}
-                    onClick={() => setUnlinkOpen(false)}
-                    disabled={busy}
-                  >
-                    취소
-                  </button>
-                  <Button
-                    variant="secondary"
-                    style={DANGER_STYLE}
-                    onClick={() => void handleUnlink()}
-                    disabled={busy}
-                  >
-                    연결 해제
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        ) : (
-          <Button variant="secondary" onClick={() => void handleConnect()} disabled={busy}>
-            {busy ? '저장 확인 중' : 'Google로 연결'}
-          </Button>
-        )}
+    <Card className="flex flex-col gap-os-3">
+      <div className="os-settings-account-head">
+        <div className="os-settings-account-status">{status}</div>
+        {action !== null ? (
+          <div className="os-settings-account-action" data-wide={actionWide ? 'true' : undefined}>
+            {action}
+          </div>
+        ) : null}
       </div>
 
       {error !== null && !mergeDialogOpen && !unlinkOpen ? (
@@ -828,6 +901,99 @@ function GoogleRow() {
           {error}
         </p>
       ) : null}
+
+      <SyncStatusLine />
+
+      <Disclosure summary="계정 상세">
+        <div className="flex flex-col gap-os-4">
+          <RecoveryCodeRow />
+          <ProfileRecoverRow />
+
+          {googleLinkAvailable && googleLinked ? (
+            <div className="os-settings-row">
+              <div className="flex flex-col gap-os-1">
+                <span className="font-os text-os-text">Google 연결</span>
+                <span className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                  해제하면 이 계정으로 다시 찾아올 수 없습니다
+                </span>
+              </div>
+              <Dialog
+                open={unlinkOpen}
+                onOpenChange={(open) => {
+                  if (busy) return;
+                  setUnlinkOpen(open);
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="secondary" style={DANGER_STYLE}>
+                    연결 해제
+                  </Button>
+                </DialogTrigger>
+                <DialogContent
+                  title="Google 연결 해제"
+                  closeLabel="닫기"
+                  onOpenAutoFocus={(event) => {
+                    event.preventDefault();
+                    unlinkCancelRef.current?.focus();
+                  }}
+                  onEscapeKeyDown={(event) => {
+                    if (busy) event.preventDefault();
+                  }}
+                  onPointerDownOutside={(event) => {
+                    if (busy) event.preventDefault();
+                  }}
+                  onInteractOutside={(event) => {
+                    if (busy) event.preventDefault();
+                  }}
+                >
+                  <div className="flex flex-col gap-os-3">
+                    <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                      Google 연결을 해제하면 이 계정으로 다시 찾아올 수 없습니다.
+                    </p>
+                    {noRecoveryCode ? (
+                      <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+                        복구 코드가 없어 연결을 해제하면 이 프로필을 되돌릴 방법이 없습니다.
+                      </p>
+                    ) : null}
+                    {error !== null ? (
+                      <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+                        {error}
+                      </p>
+                    ) : null}
+                    <div className="flex gap-os-3">
+                      <button
+                        ref={unlinkCancelRef}
+                        type="button"
+                        className={buttonClassName('ghost')}
+                        style={buttonStyle}
+                        onClick={() => setUnlinkOpen(false)}
+                        disabled={busy}
+                      >
+                        취소
+                      </button>
+                      <Button
+                        variant="secondary"
+                        style={DANGER_STYLE}
+                        onClick={() => void handleUnlink()}
+                        disabled={busy}
+                      >
+                        연결 해제
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          ) : null}
+
+          {googleLinkAvailable ? (
+            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+              로그아웃은 Google을 연결한 프로필에서만 쓸 수 있습니다. 로그아웃해도 이 기기의 진행은
+              남고, 다시 Google로 연결하면 같은 프로필로 돌아올 수 있습니다.
+            </p>
+          ) : null}
+        </div>
+      </Disclosure>
 
       <Dialog
         open={mergeDialogOpen}
@@ -906,111 +1072,6 @@ function GoogleRow() {
   );
 }
 
-function LogoutRow() {
-  const profileQuery = useProfileQuery();
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const cancelRef = useRef<HTMLButtonElement>(null);
-
-  const canLogout = profileQuery.data?.linked.google === true;
-
-  async function handleConfirm() {
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await logout();
-      if (result.ok) {
-        setOpen(false);
-        await queryClient.invalidateQueries({ queryKey: ['profile'] });
-        platform.analytics.track('logout');
-        setToast('로그아웃했습니다. 이 기기의 진행은 그대로 남습니다');
-      } else {
-        setError(result.error.message);
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Card className="flex flex-col gap-os-2">
-      <div className="flex items-center justify-between gap-os-3">
-        <span className="font-os text-os-text">로그아웃</span>
-        <Dialog
-          open={open}
-          onOpenChange={(next) => {
-            if (busy) return;
-            setOpen(next);
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button variant="secondary" disabled={!canLogout}>
-              로그아웃
-            </Button>
-          </DialogTrigger>
-          <DialogContent
-            title="로그아웃"
-            description="이 기기의 진행은 그대로 남습니다. 다시 Google로 연결하면 이 프로필로 돌아올 수 있습니다."
-            closeLabel="닫기"
-            onOpenAutoFocus={(event) => {
-              event.preventDefault();
-              cancelRef.current?.focus();
-            }}
-            onEscapeKeyDown={(event) => {
-              if (busy) event.preventDefault();
-            }}
-            onPointerDownOutside={(event) => {
-              if (busy) event.preventDefault();
-            }}
-            onInteractOutside={(event) => {
-              if (busy) event.preventDefault();
-            }}
-          >
-            <div className="flex flex-col gap-os-3">
-              {error !== null ? (
-                <p className="font-os text-os-danger" style={CAPTION_STYLE}>
-                  {error}
-                </p>
-              ) : null}
-              <div className="flex gap-os-3">
-                <button
-                  ref={cancelRef}
-                  type="button"
-                  className={buttonClassName('ghost')}
-                  style={buttonStyle}
-                  onClick={() => setOpen(false)}
-                  disabled={busy}
-                >
-                  취소
-                </button>
-                <Button
-                  variant="secondary"
-                  style={DANGER_STYLE}
-                  onClick={() => void handleConfirm()}
-                  disabled={busy}
-                >
-                  로그아웃
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-      <Disclosure summary="자세히">
-        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-          Google을 연결한 프로필에서만 쓸 수 있습니다. 로그아웃해도 이 기기의 진행은 남고, 다시
-          Google로 연결하면 같은 프로필로 돌아올 수 있습니다.
-        </p>
-      </Disclosure>
-      {toast !== null ? (
-        <Toast variant="success" message={toast} onDismiss={() => setToast(null)} />
-      ) : null}
-    </Card>
-  );
-}
-
 /** 이 기기 데이터 삭제 실행부. "이 기기 데이터 삭제"·"프로필 삭제" 2단계가 공유한다(D-20). */
 async function clearThisDeviceAndGoToOnboarding(): Promise<void> {
   try {
@@ -1027,7 +1088,8 @@ async function clearThisDeviceAndGoToOnboarding(): Promise<void> {
   location.assign('/onboarding');
 }
 
-function DeleteProfileRow() {
+/** 맨 아래 "프로필 삭제" 위험 텍스트 링크. 1단계(토큰 발급) → 확인 대화상자 → 2단계 실행은 그대로. */
+function DeleteProfileLink() {
   const [stage, setStage] = useState<'idle' | 'confirm'>('idle');
   const [confirmToken, setConfirmToken] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
@@ -1083,20 +1145,17 @@ function DeleteProfileRow() {
   }
 
   return (
-    <Card className="flex flex-col gap-os-2">
-      <div className="flex items-center justify-between gap-os-3">
-        <span className="font-os text-os-text">프로필 삭제</span>
-        <Button
-          variant="secondary"
-          style={DANGER_STYLE}
-          onClick={() => void handleStart()}
-          disabled={busy}
-        >
-          삭제
-        </Button>
-      </div>
+    <>
+      <button
+        type="button"
+        className="os-settings-danger-link"
+        onClick={() => void handleStart()}
+        disabled={busy}
+      >
+        프로필 삭제
+      </button>
       {error !== null ? (
-        <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+        <p className="w-full text-center font-os text-os-danger" style={CAPTION_STYLE}>
           {error}
         </p>
       ) : null}
@@ -1157,11 +1216,12 @@ function DeleteProfileRow() {
           </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 }
 
-function DeleteDeviceDataRow() {
+/** 맨 아래 "이 기기 데이터 삭제" 위험 텍스트 링크. 확인 대화상자·실행부는 그대로. */
+function DeleteDeviceDataLink() {
   const profileQuery = useProfileQuery();
   const careerQuery = useCareerList();
   const [open, setOpen] = useState(false);
@@ -1190,82 +1250,78 @@ function DeleteDeviceDataRow() {
   }
 
   return (
-    <Card className="flex items-center justify-between gap-os-3">
-      <span className="font-os text-os-text">이 기기 데이터 삭제</span>
-
-      <Dialog
-        open={open}
-        onOpenChange={(next) => {
-          if (busy) return;
-          setOpen(next);
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (busy) return;
+        setOpen(next);
+      }}
+    >
+      <DialogTrigger asChild>
+        <button type="button" className="os-settings-danger-link">
+          이 기기 데이터 삭제
+        </button>
+      </DialogTrigger>
+      <DialogContent
+        title="이 기기 데이터 삭제"
+        closeLabel="닫기"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          cancelRef.current?.focus();
+        }}
+        onEscapeKeyDown={(event) => {
+          if (busy) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (busy) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (busy) event.preventDefault();
         }}
       >
-        <DialogTrigger asChild>
-          <Button variant="secondary" style={DANGER_STYLE}>
-            삭제
-          </Button>
-        </DialogTrigger>
-        <DialogContent
-          title="이 기기 데이터 삭제"
-          closeLabel="닫기"
-          onOpenAutoFocus={(event) => {
-            event.preventDefault();
-            cancelRef.current?.focus();
-          }}
-          onEscapeKeyDown={(event) => {
-            if (busy) event.preventDefault();
-          }}
-          onPointerDownOutside={(event) => {
-            if (busy) event.preventDefault();
-          }}
-          onInteractOutside={(event) => {
-            if (busy) event.preventDefault();
-          }}
-        >
-          <div className="flex flex-col gap-os-3">
-            <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-              이 기기의 모든 커리어와 설정이 지워집니다. 되돌릴 수 없습니다.
+        <div className="flex flex-col gap-os-3">
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            이 기기의 모든 커리어와 설정이 지워집니다. 되돌릴 수 없습니다.
+          </p>
+          {unsentCount > 0 ? (
+            <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+              아직 서버에 저장하지 못한 커리어가 {unsentCount}개 있습니다. 지우면 그 진행은
+              사라집니다.
             </p>
-            {unsentCount > 0 ? (
-              <p className="font-os text-os-danger" style={CAPTION_STYLE}>
-                아직 서버에 저장하지 못한 커리어가 {unsentCount}개 있습니다. 지우면 그 진행은
-                사라집니다.
-              </p>
-            ) : null}
-            {noRecoveryCode ? (
-              <p className="font-os text-os-danger" style={CAPTION_STYLE}>
-                복구 코드가 없어 되돌릴 수 없습니다.
-              </p>
-            ) : null}
-            {error !== null ? (
-              <p className="font-os text-os-danger" style={CAPTION_STYLE}>
-                {error}
-              </p>
-            ) : null}
-            <div className="flex gap-os-3">
-              <button
-                ref={cancelRef}
-                type="button"
-                className={buttonClassName('ghost')}
-                style={buttonStyle}
-                onClick={() => setOpen(false)}
-                disabled={busy}
-              >
-                취소
-              </button>
-              <Button
-                variant="secondary"
-                style={DANGER_STYLE}
-                onClick={() => void handleConfirm()}
-                disabled={busy}
-              >
-                삭제
-              </Button>
-            </div>
+          ) : null}
+          {noRecoveryCode ? (
+            <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+              복구 코드가 없어 되돌릴 수 없습니다.
+            </p>
+          ) : null}
+          {error !== null ? (
+            <p className="font-os text-os-danger" style={CAPTION_STYLE}>
+              {error}
+            </p>
+          ) : null}
+          <div className="flex gap-os-3">
+            <button
+              ref={cancelRef}
+              type="button"
+              className={buttonClassName('ghost')}
+              style={buttonStyle}
+              onClick={() => setOpen(false)}
+              disabled={busy}
+            >
+              취소
+            </button>
+            <Button
+              variant="secondary"
+              style={DANGER_STYLE}
+              onClick={() => void handleConfirm()}
+              disabled={busy}
+            >
+              삭제
+            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-    </Card>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1287,6 +1343,7 @@ export function activeVersionRows(
   };
 }
 
+/** 푸터의 "상세 버전" 소형 토글(UX-013: 본문 "버전" 섹션에서 푸터로 이동). */
 function DetailedVersionList() {
   const serviceSeason = useServiceSeason();
   const versions = activeVersionRows(serviceSeason.data, {
@@ -1294,7 +1351,7 @@ function DetailedVersionList() {
     contentPackVersion: activeContentPack.manifest.contentPackVersion,
   });
   return (
-    <Disclosure summary="상세 버전" aria-labelledby="settings-version">
+    <Disclosure summary="상세 버전" className="os-settings-footer-version">
       <dl
         className="os-num flex flex-col gap-os-1 font-os text-os-text-2 opacity-70"
         style={CAPTION_STYLE}
@@ -1321,92 +1378,42 @@ function DetailedVersionList() {
   );
 }
 
-function SettingsScreen() {
+/** 접이식 요약줄: 왼쪽 제목 + 오른쪽 현재 값. */
+function SummaryRow({ title, value }: { title: string; value?: string }) {
+  return (
+    <span className="os-settings-summary">
+      <span>{title}</span>
+      {value !== undefined ? <span className="os-settings-summary-value">{value}</span> : null}
+    </span>
+  );
+}
+
+/** "화면·플레이 설정" 접이식: 테마·모션 감소·텍스트 크기·시뮬레이션 기본 모드·온보딩 다시 보기. */
+function DisplayPlaySettings() {
   const theme = useUiStore((state) => state.theme);
   const reducedMotion = useUiStore((state) => state.reducedMotion);
   const textScale = useUiStore((state) => state.textScale);
-  const accentPreset = useUiStore((state) => state.accentPreset);
   const defaultSimulationMode = useUiStore((state) => state.defaultSimulationMode);
   const setTheme = useUiStore((state) => state.setTheme);
   const setReducedMotion = useUiStore((state) => state.setReducedMotion);
   const setTextScale = useUiStore((state) => state.setTextScale);
-  const setAccentPreset = useUiStore((state) => state.setAccentPreset);
   const setDefaultSimulationMode = useUiStore((state) => state.setDefaultSimulationMode);
 
-  useEffect(() => {
-    platform.analytics.track('screen_viewed', { screenId: 'SCR-030', careerPhase: 'NONE' });
-  }, []);
-  // 접힌 Disclosure(프로필 복구·로그아웃 설명·버전·데이터 위험 작업) 안으로 향하는 상단 빠른 이동
-  // 앵커를 자동으로 펼친다.
-  useExpandDisclosuresOnHash();
-
   return (
-    <div className="os-screen os-settings">
-      <ScreenIntro
-        eyebrow="MY OFFSIDE"
-        title="설정"
-        description="계정과 저장 상태를 먼저 확인하고, 플레이 환경을 나에게 맞게 바꾸세요."
-      />
-      <nav className="os-segmented overflow-x-auto" aria-label="설정 빠른 이동">
-        <a
-          href="#settings-account"
-          className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
-        >
-          계정·저장
-        </a>
-        <a
-          href="#settings-presentation"
-          className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
-        >
-          표시·접근성
-        </a>
-        <a
-          href="#settings-play"
-          className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
-        >
-          플레이
-        </a>
-        <a
-          href="#settings-team-names"
-          className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
-        >
-          구단 이름
-        </a>
-        <a
-          href="#settings-safety"
-          className="flex min-h-[48px] items-center px-os-3 font-os font-semibold text-os-text"
-        >
-          데이터 관리
-        </a>
-      </nav>
-      <div className="flex flex-col gap-os-6">
-        <section
-          id="settings-account"
-          className="flex scroll-mt-20 flex-col gap-os-3"
-          aria-labelledby="settings-account-title"
-        >
-          <h2 id="settings-account-title" className="os-section-title">
-            계정·저장
-          </h2>
-          <SyncStatusRow />
-          <RecoveryCodeRow />
-          <ProfileRecoverRow />
-          <GoogleRow />
-          <LogoutRow />
-        </section>
-
-        <section
-          id="settings-presentation"
-          className="flex scroll-mt-20 flex-col gap-os-5"
-          aria-labelledby="settings-presentation-title"
-        >
-          <h2 id="settings-presentation-title" className="os-section-title">
-            표시·접근성
-          </h2>
-          <section className="flex flex-col gap-os-3">
-            <h2 id="settings-theme" className="font-os font-semibold text-os-text" style={H2_STYLE}>
+    <Card id="settings-presentation" className="scroll-mt-20">
+      <Disclosure
+        summary={
+          <SummaryRow
+            title="화면·플레이 설정"
+            value={displayPlaySummary(theme, textScale, defaultSimulationMode)}
+          />
+        }
+      >
+        <div className="flex flex-col gap-os-5">
+          <div className="flex flex-col gap-os-3">
+            <h3 id="settings-theme" className="font-os font-semibold text-os-text" style={H2_STYLE}>
               테마
-            </h2>
+            </h3>
             <RadioGroup
               className="os-segmented"
               aria-labelledby="settings-theme"
@@ -1419,18 +1426,16 @@ function SettingsScreen() {
                 </RadioGroupItem>
               ))}
             </RadioGroup>
-          </section>
+          </div>
 
-          <AccentPresetPicker value={accentPreset} onValueChange={setAccentPreset} />
-
-          <section className="flex flex-col gap-os-3">
-            <h2
+          <div className="flex flex-col gap-os-3">
+            <h3
               id="settings-reduced-motion"
               className="font-os font-semibold text-os-text"
               style={H2_STYLE}
             >
               모션 감소
-            </h2>
+            </h3>
             <RadioGroup
               className="os-segmented"
               aria-labelledby="settings-reduced-motion"
@@ -1443,16 +1448,16 @@ function SettingsScreen() {
                 </RadioGroupItem>
               ))}
             </RadioGroup>
-          </section>
+          </div>
 
-          <section className="flex flex-col gap-os-3">
-            <h2
+          <div className="flex flex-col gap-os-3">
+            <h3
               id="settings-text-scale"
               className="font-os font-semibold text-os-text"
               style={H2_STYLE}
             >
               텍스트 크기
-            </h2>
+            </h3>
             <RadioGroup
               className="os-segmented"
               aria-labelledby="settings-text-scale"
@@ -1465,96 +1470,166 @@ function SettingsScreen() {
                 </RadioGroupItem>
               ))}
             </RadioGroup>
-          </section>
-        </section>
+          </div>
 
-        <section
-          id="settings-play"
-          className="flex scroll-mt-20 flex-col gap-os-5"
-          aria-labelledby="settings-play-title"
+          <div id="settings-play" className="flex scroll-mt-20 flex-col gap-os-5">
+            <div className="flex flex-col gap-os-3">
+              <h3
+                id="settings-simulation-mode"
+                className="font-os font-semibold text-os-text"
+                style={H2_STYLE}
+              >
+                시뮬레이션 기본 모드
+              </h3>
+              <RadioGroup
+                className="os-segmented os-segmented-two"
+                aria-labelledby="settings-simulation-mode"
+                value={defaultSimulationMode}
+                onValueChange={(value) => setDefaultSimulationMode(value as SimulationMode)}
+              >
+                {SIMULATION_MODE_OPTIONS.map((option) => (
+                  <RadioGroupItem key={option.value} value={option.value}>
+                    {option.label}
+                  </RadioGroupItem>
+                ))}
+              </RadioGroup>
+            </div>
+
+            <div className="flex flex-col gap-os-3">
+              <h3 className="font-os font-semibold text-os-text" style={H2_STYLE}>
+                온보딩
+              </h3>
+              <Link to="/onboarding" className={buttonClassName('secondary')} style={buttonStyle}>
+                온보딩 다시 보기
+              </Link>
+            </div>
+          </div>
+        </div>
+      </Disclosure>
+    </Card>
+  );
+}
+
+/** 개인화: 구단 이름·로고 변경 / 홈 색상 변경 / 화면·플레이 설정 — 전부 기본 접힘. */
+function PersonalizationSection() {
+  const accentPreset = useUiStore((state) => state.accentPreset);
+  const setAccentPreset = useUiStore((state) => state.setAccentPreset);
+
+  return (
+    <section
+      id="settings-personalization"
+      className="flex scroll-mt-20 flex-col gap-os-3"
+      aria-labelledby="settings-personalization-title"
+    >
+      <h2 id="settings-personalization-title" className="os-settings-heading font-os">
+        개인화
+      </h2>
+
+      <Card id="settings-team-names" className="scroll-mt-20">
+        <Disclosure summary="구단 이름·로고 변경">
+          <TeamNamesSettings />
+        </Disclosure>
+      </Card>
+
+      <Card id="settings-accent" className="scroll-mt-20">
+        <Disclosure
+          summary={
+            <SummaryRow
+              title="홈 색상 변경"
+              value={accentPresetLabel(accentPreset, activeRuleset.teams)}
+            />
+          }
         >
-          <h2 id="settings-play-title" className="os-section-title">
-            플레이
-          </h2>
-          <section className="flex flex-col gap-os-3">
-            <h2
-              id="settings-simulation-mode"
-              className="font-os font-semibold text-os-text"
-              style={H2_STYLE}
-            >
-              시뮬레이션 기본 모드
-            </h2>
-            <RadioGroup
-              className="os-segmented os-segmented-two"
-              aria-labelledby="settings-simulation-mode"
-              value={defaultSimulationMode}
-              onValueChange={(value) => setDefaultSimulationMode(value as SimulationMode)}
-            >
-              {SIMULATION_MODE_OPTIONS.map((option) => (
-                <RadioGroupItem key={option.value} value={option.value}>
-                  {option.label}
-                </RadioGroupItem>
-              ))}
-            </RadioGroup>
-          </section>
+          <AccentPresetPicker value={accentPreset} onValueChange={setAccentPreset} showHeading={false} />
+        </Disclosure>
+      </Card>
 
-          <section className="flex flex-col gap-os-3">
-            <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
-              온보딩
-            </h2>
-            <Link to="/onboarding" className={buttonClassName('secondary')} style={buttonStyle}>
-              온보딩 다시 보기
+      <DisplayPlaySettings />
+    </section>
+  );
+}
+
+/** 서비스 정책: 이용약관·개인정보 처리방침 셰브론 행(SPA 내부 라우트, ADR-009). */
+function LegalSection() {
+  return (
+    <section
+      id="settings-legal"
+      className="flex scroll-mt-20 flex-col gap-os-3"
+      aria-labelledby="settings-legal-title"
+    >
+      <h2 id="settings-legal-title" className="os-settings-heading font-os">
+        서비스 정책
+      </h2>
+      <Card className="os-settings-list">
+        <ul>
+          <li>
+            <Link to="/legal/terms" className="os-settings-list-row font-os">
+              <span>이용약관</span>
+              <span className="os-settings-chevron" aria-hidden="true" />
             </Link>
-          </section>
-        </section>
+          </li>
+          <li>
+            <Link to="/legal/privacy" className="os-settings-list-row font-os">
+              <span>개인정보 처리방침</span>
+              <span className="os-settings-chevron" aria-hidden="true" />
+            </Link>
+          </li>
+        </ul>
+      </Card>
+    </section>
+  );
+}
 
-        <TeamNamesSettings />
+function SettingsScreen() {
+  const profileQuery = useProfileQuery();
+  const googleLinked = profileQuery.data?.linked.google === true;
+  const badge = googleLinked
+    ? 'Google 동기화'
+    : platform.features.googleLink
+      ? '내 기기'
+      : '자동 저장';
 
-        <section
-          id="settings-safety"
-          className="flex scroll-mt-20 flex-col gap-os-5"
-          aria-labelledby="settings-safety-title"
-        >
-          <h2 id="settings-safety-title" className="os-section-title">
-            데이터 관리
-          </h2>
-          <section className="flex flex-col gap-os-3">
-            <h2
-              id="settings-version"
-              className="font-os font-semibold text-os-text"
-              style={H2_STYLE}
-            >
-              버전
-            </h2>
-            <p className="os-num font-os font-semibold text-os-text" style={CAPTION_STYLE}>
-              OFFSIDE {APP_VERSION_LABEL}
-            </p>
-            <DetailedVersionList />
-          </section>
+  useEffect(() => {
+    platform.analytics.track('screen_viewed', { screenId: 'SCR-030', careerPhase: 'NONE' });
+  }, []);
+  // 딥링크(`#settings-account` 등)로 들어오면 그 섹션 안의 접힌 Disclosure를 자동으로 펼친다.
+  useExpandDisclosuresOnHash();
 
-          <section className="flex flex-col gap-os-3">
-            <h2 id="settings-data" className="font-os font-semibold text-os-text" style={H2_STYLE}>
-              데이터
-            </h2>
-            <Disclosure summary="위험 작업 보기" aria-labelledby="settings-data">
-              <ul className="flex flex-col gap-os-2">
-                <li>
-                  <DeleteProfileRow />
-                </li>
-                <li>
-                  <DeleteDeviceDataRow />
-                </li>
-              </ul>
-            </Disclosure>
-          </section>
-        </section>
-      </div>
+  return (
+    <div className="os-screen os-settings">
+      <SettingsBanner badge={badge} />
 
-      <SettingsFooter />
+      <section
+        id="settings-account"
+        className="flex scroll-mt-20 flex-col gap-os-3"
+        aria-labelledby="settings-account-title"
+      >
+        <h2 id="settings-account-title" className="sr-only">
+          계정·저장
+        </h2>
+        <AccountCard />
+      </section>
 
-      <Link to="/" className={buttonClassName('secondary')} style={buttonStyle}>
-        허브로
-      </Link>
+      <PersonalizationSection />
+
+      <LegalSection />
+
+      <SettingsFooter versionDetails={<DetailedVersionList />} />
+
+      <section
+        id="settings-safety"
+        className="os-settings-danger scroll-mt-20"
+        aria-labelledby="settings-safety-title"
+      >
+        <h2 id="settings-safety-title" className="sr-only">
+          데이터 삭제
+        </h2>
+        <DeleteProfileLink />
+        <span className="os-settings-danger-sep font-os" aria-hidden="true">
+          ·
+        </span>
+        <DeleteDeviceDataLink />
+      </section>
     </div>
   );
 }

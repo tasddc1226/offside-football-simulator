@@ -343,11 +343,8 @@ select {
 .os-segmented-two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-.os-settings > section {
-  padding: 20px;
-  border-radius: var(--os-radius-panel);
-  background: var(--os-surface);
-}
+/* UX-013: 설정 화면은 섹션(h2 + 카드 묶음)이 아니라 카드(.os-panel)가 패널이다 — 섹션 자체는
+   투명 컨테이너. 화면 전용 스타일은 apps/web/src/shared/settings-screen.css. */
 .os-settings input {
   width: 100%;
   min-height: var(--os-touch-min);
@@ -507,6 +504,7 @@ select {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   border-radius: 999px;
   font-family: var(--os-font);
   font-weight: 700;
@@ -516,6 +514,86 @@ select {
 }
 .os-team-badge::before {
   content: attr(data-initials);
+}
+/* UX-013 기기 로컬 구단 로고: 이니셜 의사 요소 대신 이미지가 원형 배지를 cover로 채운다. */
+.os-team-badge[data-logo='true']::before {
+  content: none;
+}
+.os-team-badge > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+/* UX-013 홈 색상 타일 그리드(SwatchTilePicker): 4열 3:2 둥근 타일, 선택은 링 + 체크(색만으로 구분하지
+   않음), 포커스 링은 --os-focus로 선택 링과 구분한다. 타일 색은 인라인 var(--os-swatch-*)이고 체크는
+   --os-on-accent라 프리셋 × 테마 대비는 check-contrast.mjs의 on-accent/accent 행이 보장한다.
+   min-height: 44px는 360px처럼 좁은 화면에서 3:2 비율만으로는 터치 최소 44px에 못 미치는 것을
+   막는 하한이다(800px+에서는 비율이 이미 44px를 넘어 영향 없음). */
+.os-swatch-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.os-swatch-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.os-swatch-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.os-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--os-swatch-columns, 4), minmax(0, 1fr));
+  gap: 10px;
+}
+.os-swatch-tile {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 3 / 2;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-m);
+  color: var(--os-on-accent);
+  cursor: pointer;
+  outline: none;
+  place-items: center;
+  transition: transform 140ms var(--os-ease-out);
+}
+.os-swatch-tile:active {
+  transform: scale(0.97);
+}
+.os-swatch-tile[data-state='checked'] {
+  box-shadow:
+    0 0 0 2px var(--os-surface),
+    0 0 0 4px var(--os-text);
+}
+.os-swatch-tile:focus-visible {
+  outline: 2px solid var(--os-focus);
+  outline-offset: 2px;
+}
+.os-swatch-tile[data-state='checked']:focus-visible {
+  outline-offset: 6px;
+}
+.os-swatch-tile-check {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+}
+.os-swatch-caption {
+  margin: 0;
+  font-family: var(--os-font);
+  font-size: var(--os-fs-caption);
+  line-height: var(--os-lh-caption);
+  color: var(--os-text-2);
 }
 .os-team-badge[data-size='s'] {
   width: 20px;

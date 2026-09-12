@@ -10,7 +10,6 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-  TeamBadge,
   buttonClassName,
   buttonStyle,
 } from '@offside/ui';
@@ -43,7 +42,7 @@ import {
   SQUAD_ROLE_LABELS,
   chapterTriggerLabel,
 } from '../shared/labels.js';
-import { getTeamIdentity } from '../shared/team-identity.js';
+import { ClubBadge } from '../shared/ClubBadge.js';
 import { resolveTeamName, type TeamNameOverrides } from '../shared/team-names.js';
 import { useUiStore } from '../shared/ui-store.js';
 import { GameResultReveal } from '../shared/game-presentation.js';
@@ -299,12 +298,11 @@ function SeasonResultScreen() {
   const nextTarget = canPlanNextSeason(state) ? 'SCR-005' : screenForCareer(state).screenId;
   const headlineTeamResult = view.teamRecords[0];
 
-  // UX-010 P2c: 이번 시즌 실제 소속팀 표기(TeamBadge, 요구사항 5) — view.teamId는 이 시즌에 뛴 팀이라
+  // UX-010 P2c: 이번 시즌 실제 소속팀 표기(ClubBadge, 요구사항 5) — view.teamId는 이 시즌에 뛴 팀이라
   // 이후 이적이 있어도 바뀌지 않는다(현재 소속과 다를 수 있다). 이슈 171: 임대 시즌이면 상단
   // PlayerBanner도 같은 표기 규칙("임대 · 임대팀 (원소속 …)")을 쓴다 — 비임대 시즌의 배너는 기존대로
   // 현재 소속.
   const seasonClub = seasonClubDisplay(state, ruleset, view.seasonNumber, view.teamId, teamNameOverrides);
-  const seasonTeamIdentity = getTeamIdentity(seasonClub.teamId);
   const seasonTeamName = seasonClub.label;
   const bannerTeamName = seasonClub.loan ? seasonClub.label : currentTeamName(state, ruleset, teamNameOverrides);
   const bannerTeamId = seasonClub.loan ? seasonClub.teamId : currentTeamId(state, ruleset);
@@ -366,7 +364,7 @@ function SeasonResultScreen() {
             </p>
           ) : null}
           <div className="flex items-center gap-os-2">
-            <TeamBadge initials={seasonTeamIdentity.initials} colorVar={seasonTeamIdentity.colorVar} size="s" />
+            <ClubBadge teamId={seasonClub.teamId} size="s" />
             <span className="font-os text-os-text-2" style={BODY_STYLE}>{seasonTeamName}</span>
           </div>
           <p className="font-os text-os-text" style={BODY_STYLE}>

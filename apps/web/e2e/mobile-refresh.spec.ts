@@ -143,6 +143,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
     const initialFontSize = await settingsHeading.evaluate((element) =>
       Number.parseFloat(getComputedStyle(element).fontSize),
     );
+    // UX-013: 텍스트 크기 라디오는 "화면·플레이 설정" 접이식 안에 있다.
+    await page.getByText('화면·플레이 설정', { exact: true }).click();
     await page.getByRole('radio', { name: '150%', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-text-scale', '150');
     await expect

@@ -1,5 +1,6 @@
-// TEST-E2E(08 문서) T-1-012: SCR-030 데이터 섹션. page.route로 API를 스텁한다(실제 api 서버는
-// recovery-api.spec.ts만 쓴다).
+// TEST-E2E(08 문서) T-1-012: SCR-030 계정·데이터. page.route로 API를 스텁한다(실제 api 서버는
+// recovery-api.spec.ts만 쓴다). UX-013 구조: 복구 코드·프로필 복구는 계정 카드의 "계정 상세"
+// 접이식 안에, 프로필 삭제·이 기기 데이터 삭제는 맨 아래 위험 텍스트 링크(2단계 확인 대화상자 유지).
 // (a) 복구 코드 재발급 확인 → 코드 대화상자 → 복사 → 닫힘, 발급일 갱신
 // (b) 프로필 복구 오류 3종(형식·RECOVERY_CODE_INVALID·RATE_LIMITED) 문구
 // (c) RECOVERY_CONFLICT 선택 대화상자 → mergeChoice를 붙여 재전송
@@ -45,6 +46,8 @@ test('복구 코드 재발급: 확인 → 코드 대화상자 → 복사 → 닫
   );
 
   await page.goto('/settings');
+  // UX-013: 복구 코드 행은 "계정 상세" 접이식 안에 있다.
+  await page.getByText('계정 상세', { exact: true }).click();
   await expect(page.locator('time[datetime="2026-08-01T08:00:00Z"]')).toBeVisible();
 
   await page.getByRole('button', { name: '재발급' }).click();
@@ -77,7 +80,8 @@ test('프로필 복구: 형식이 잘못된 코드는 필드 옆에 오류를 �
   });
 
   await page.goto('/settings');
-  // UX-003: 프로필 복구 폼은 기본 접힘이다 — Disclosure summary를 열어야 입력을 채울 수 있다.
+  // UX-013: 프로필 복구 폼은 "계정 상세" 접이식 안에 다시 접혀 있다 — 둘 다 열어야 입력을 채울 수 있다.
+  await page.getByText('계정 상세', { exact: true }).click();
   await page.getByText('프로필 복구', { exact: true }).click();
   await page.getByLabel('다른 기기에서 발급받은 복구 코드').fill('너무-짧음');
   await page.getByRole('button', { name: '복구' }).click();
@@ -99,6 +103,7 @@ test('프로필 복구: 코드가 맞지 않으면 안내하고 입력·포커�
   );
 
   await page.goto('/settings');
+  await page.getByText('계정 상세', { exact: true }).click();
   await page.getByText('프로필 복구', { exact: true }).click();
   const input = page.getByLabel('다른 기기에서 발급받은 복구 코드');
   await input.fill('OFS-ABCD-EFGH-JKMN');
@@ -118,7 +123,8 @@ test('프로필 복구: 시도 횟수를 넘으면 잠시 뒤 다시 시도하�
   );
 
   await page.goto('/settings');
-  // UX-003: 프로필 복구 폼은 기본 접힘이다 — Disclosure summary를 열어야 입력을 채울 수 있다.
+  // UX-013: 프로필 복구 폼은 "계정 상세" 접이식 안에 다시 접혀 있다 — 둘 다 열어야 입력을 채울 수 있다.
+  await page.getByText('계정 상세', { exact: true }).click();
   await page.getByText('프로필 복구', { exact: true }).click();
   await page.getByLabel('다른 기기에서 발급받은 복구 코드').fill('OFS-ABCD-EFGH-JKMN');
   await page.getByRole('button', { name: '복구' }).click();
@@ -159,7 +165,8 @@ test('프로필 복구: RECOVERY_CONFLICT면 선택 대화상자가 뜨고 merge
   });
 
   await page.goto('/settings');
-  // UX-003: 프로필 복구 폼은 기본 접힘이다 — Disclosure summary를 열어야 입력을 채울 수 있다.
+  // UX-013: 프로필 복구 폼은 "계정 상세" 접이식 안에 다시 접혀 있다 — 둘 다 열어야 입력을 채울 수 있다.
+  await page.getByText('계정 상세', { exact: true }).click();
   await page.getByText('프로필 복구', { exact: true }).click();
   await page.getByLabel('다른 기기에서 발급받은 복구 코드').fill('OFS-ABCD-EFGH-JKMN');
   await page.getByRole('button', { name: '복구' }).click();
@@ -188,10 +195,8 @@ test('프로필 삭제: 1단계 → 확인 대화상자 → 2단계 → 온보�
   });
 
   await page.goto('/settings');
-  // UX-003: 위험 작업(프로필·기기 데이터 삭제) 목록은 기본 접힘이다.
-  await page.getByText('위험 작업 보기').click();
-  const row = page.locator('li').filter({ hasText: '프로필 삭제' });
-  await row.getByRole('button', { name: '삭제' }).click();
+  // UX-013: 위험 작업은 맨 아래 위험 텍스트 링크다(1단계 = 링크 자체, 2단계 = 확인 대화상자).
+  await page.getByRole('button', { name: '프로필 삭제', exact: true }).click();
 
   await expect(page.getByRole('heading', { level: 2, name: '프로필 삭제' })).toBeVisible();
   await expect(
@@ -225,9 +230,8 @@ test('이 기기 데이터 삭제: 확인 → 온보딩 → 허브가 빈 상태
   await expect(page).toHaveURL(/\/career\/.+\/create$/);
 
   await page.goto('/settings');
-  await page.getByText('위험 작업 보기').click();
-  const row = page.locator('li').filter({ hasText: '이 기기 데이터 삭제' });
-  await row.getByRole('button', { name: '삭제' }).click();
+  // UX-013: 위험 작업은 맨 아래 위험 텍스트 링크다.
+  await page.getByRole('button', { name: '이 기기 데이터 삭제', exact: true }).click();
 
   await expect(page.getByRole('heading', { level: 2, name: '이 기기 데이터 삭제' })).toBeVisible();
   await expect(page.getByText('복구 코드가 없어 되돌릴 수 없습니다.')).toBeVisible();
