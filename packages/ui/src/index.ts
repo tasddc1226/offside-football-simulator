@@ -1,3 +1,4 @@
+export { useShellMainHeight } from './hooks/useShellMainHeight.js';
 export { Button, buttonClassName, buttonStyle } from './components/Button.js';
 export type { ButtonProps, ButtonVariant } from './components/Button.js';
 export { BrandMark } from './components/BrandMark.js';
