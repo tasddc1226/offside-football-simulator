@@ -1,0 +1,60 @@
+{
+  "id": "EVT-CON-024",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": { "hasTag": ["career.tags", "진로_아카데미_이동탐색"] },
+  "exclusionTags": [],
+  "weight": 100,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "출전 계획을 구체적으로 묻는다",
+      "riskLabel": "LOW",
+      "previewEffects": [{ "label": "역할 기대를 확인함" }],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "한 팀이 관찰 훈련과 예상 역할을 답했다",
+          "effects": [],
+          "addTags": ["진로_하부리그", "입단테스트_완료"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "두 팀의 훈련을 모두 경험한다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "비교할 근거를 얻음" },
+        { "label": "체력 부담", "target": "fitness", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "두 환경의 속도와 요구가 다르다는 걸 확인했다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-CON-024.B.B1",
+              "target": "fitness",
+              "delta": -5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["진로_입단테스트", "입단테스트_완료", "테스트_보통"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "두 팀의 관찰 훈련을 마쳤다. 하나는 출전 경쟁이 열린 팀이고, 다른 하나는 더 높은 수준에서 추가 관찰을 제안했다."
+  }
+}

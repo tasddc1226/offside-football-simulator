@@ -1,0 +1,71 @@
+{
+  "id": "EVT-SLUMP-011",
+  "version": 1,
+  "phases": ["IN_SEASON"],
+  "triggers": { "all": [{ "gte": ["season.stats.recentRatedMatches", 3] }, { "lt": ["season.stats.recentFormAvg", 60] }] },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 1 },
+  "weight": 18,
+  "safety": { "minorSafe": true },
+  "authoring": "PROTOTYPE",
+  "presentation": "SLUMP",
+  "choices": [
+    {
+      "id": "A",
+      "label": "스포츠 심리 상담을 받는다",
+      "riskLabel": "LOW",
+      "previewEffects": [{ "label": "사기 상승", "target": "morale", "direction": "UP" }],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 100,
+          "title": "상담이 마음을 정리하는 데 도움이 됐다",
+          "effects": [
+            { "kind": "CURRENT", "sourceId": "EVT-SLUMP-011.A.A1.0", "target": "morale", "delta": 6, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "역할을 단순하게 줄인다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [{ "label": "스쿼드 내 입지 변동" }],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "NEUTRAL",
+          "weight": 100,
+          "title": "역할을 좁혀 부담을 줄였다",
+          "effects": [
+            { "kind": "CONTEXT", "sourceId": "EVT-SLUMP-011.B.B1.0", "target": "squadStatus", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "완전 휴식을 요청한다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "폼 하락", "target": "form", "direction": "DOWN" },
+        { "label": "3스텝 뒤 만료" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FAIL",
+          "weight": 100,
+          "title": "휴식이 길어지며 감각이 더 무뎌졌다",
+          "effects": [
+            { "kind": "CURRENT", "sourceId": "EVT-SLUMP-011.C.C1.0", "target": "form", "delta": -8, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 3 }, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "몇 경기째 눈에 띄게 페이스가 떨어져 있다. 최근 평점 흐름이 심상치 않다. 이 긴 슬럼프를 어떻게 다룰지 정해야 한다."
+  }
+}
