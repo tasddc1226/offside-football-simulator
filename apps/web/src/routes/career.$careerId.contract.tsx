@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import type { NegotiationAsk, Offer } from '@offside/domain';
-import { Button, Card, ErrorState, ScreenIntro, TeamBadge } from '@offside/ui';
+import { Button, Card, ErrorState, ScreenIntro } from '@offside/ui';
 import { PlayerCard } from '../shared/PlayerCard.js';
 import { recordFunnelReached } from '../engine/funnel.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
@@ -20,7 +20,7 @@ import { formatKrw } from '../shared/format.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
 import { GameCompletionTransition } from '../shared/game-presentation.js';
 import { committedTransferRevision, resolveTransferResultView } from '../shared/transfer-result.js';
-import { getTeamIdentity } from '../shared/team-identity.js';
+import { ClubBadge } from '../shared/ClubBadge.js';
 import {
   actionableRevision,
   buildNegotiationResultView,
@@ -514,7 +514,6 @@ function ContractScreen() {
 
   if (firstContract) {
     const playerName = state.player.profile?.name ?? state.player.draft.name ?? '선수';
-    const identity = getTeamIdentity(offer.teamId);
     return (
       <div className="os-screen">
         <ScreenIntro
@@ -528,7 +527,7 @@ function ContractScreen() {
             <div className="flex flex-col gap-os-1">
               <p className="os-eyebrow">계약 조건</p>
               <h2 id="contract-terms-heading" className="os-section-title flex items-center gap-os-2">
-                <TeamBadge initials={identity.initials} colorVar={identity.colorVar} size="m" />
+                <ClubBadge teamId={offer.teamId} size="m" />
                 {offer.teamName}
               </h2>
             </div>
@@ -630,7 +629,6 @@ function ContractScreen() {
     );
   }
 
-  const marketOfferIdentity = getTeamIdentity(offer.teamId);
   // D-69: canNegotiateOffer(그대로 둔다)는 OPEN·negotiable만 본다. negotiationDisabledReason은
   // 도메인의 나머지 NOT_NEGOTIABLE 조건(1회 소진·이미 주전)까지 포함해 버튼마다 사유를 고정 문구로 낸다.
   const negotiationReasons = NEGOTIATION_ASKS.map((ask) => ({
@@ -652,7 +650,7 @@ function ContractScreen() {
         eyebrow={MARKET_REASON_LABEL_KO[pending.market.reason]}
         title={
           <span className="inline-flex items-center gap-os-2">
-            <TeamBadge initials={marketOfferIdentity.initials} colorVar={marketOfferIdentity.colorVar} size="s" />
+            <ClubBadge teamId={offer.teamId} size="s" />
             {offer.teamName} 제안 상세
           </span>
         }

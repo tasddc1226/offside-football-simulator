@@ -29,4 +29,21 @@ describe('TeamBadge', () => {
     expect(badge?.textContent).toBe('');
     expect(container.querySelector('h2')?.textContent).toBe('강동 로버스');
   });
+
+  it('UX-013: logoSrc가 있으면 장식 이미지로 채우고 이니셜 속성은 두지 않는다', () => {
+    const { container } = render(
+      <TeamBadge
+        initials="한강"
+        colorVar="var(--os-team-hangang-u18)"
+        logoSrc="data:image/png;base64,AAAA"
+      />,
+    );
+    const badge = container.querySelector('.os-team-badge');
+    expect(badge).toHaveAttribute('data-logo', 'true');
+    expect(badge).not.toHaveAttribute('data-initials');
+    const img = badge?.querySelector('img');
+    expect(img).toHaveAttribute('src', 'data:image/png;base64,AAAA');
+    expect(img).toHaveAttribute('alt', '');
+    expect(img).toHaveAttribute('aria-hidden', 'true');
+  });
 });

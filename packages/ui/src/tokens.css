@@ -19,6 +19,18 @@
   --os-swatch-crimson: #7a1f30;
   --os-swatch-amber: #7a4b0a;
   --os-swatch-mono: #33404f;
+  --os-swatch-team-hangang-u18: var(--os-team-hangang-u18);
+  --os-swatch-team-seorabeol-united: var(--os-team-seorabeol-united);
+  --os-swatch-team-cheongyeon-fc: var(--os-team-cheongyeon-fc);
+  --os-swatch-team-gangdong-rovers: var(--os-team-gangdong-rovers);
+  --os-swatch-team-onsaemiro-city: var(--os-team-onsaemiro-city);
+  --os-swatch-team-byeolbit-united: var(--os-team-byeolbit-united);
+  --os-swatch-team-galmae-town: var(--os-team-galmae-town);
+  --os-swatch-team-noeulhang-fc: var(--os-team-noeulhang-fc);
+  --os-swatch-team-geumbit-fc: var(--os-team-geumbit-fc);
+  --os-swatch-team-eunha-rovers: var(--os-team-eunha-rovers);
+  --os-swatch-team-gangnaru-united: var(--os-team-gangnaru-united);
+  --os-swatch-team-dalbit-town-fc: var(--os-team-dalbit-town-fc);
   /* UX-008 구단 배지 컬러(활성 룰셋 12개 구단, apps/web/src/shared/team-identity.ts와 id를 맞춰
      둔다 — 팀을 추가·삭제하면 여기와 그 파일, packages/ui/scripts/check-contrast.mjs의
      TEAM_IDS를 함께 고친다). 배지 위 이니셜 텍스트는 --os-on-accent를 쓰므로, 이 값들은 전부
@@ -92,7 +104,7 @@
 }
 /*
  * UX-004 포인트 색상 프리셋. apps/web의 ui-store가 document.documentElement에 setAttribute하는
- * data-accent 값별로 --os-accent·--os-accent-hover·--os-accent-soft만 재정의한다('DEFAULT'는
+ * data-accent 값별로 --os-accent·--os-accent-hover·--os-accent-soft(+ 아래 UX-013 hero 계열)를 재정의한다('DEFAULT'는
  * 속성을 아예 지워 이 블록들과 매치되지 않게 하고 위 :root 베이스의 네이비 값을 그대로 쓴다).
  * --os-on-accent는 두 테마 모두 이 값들과 4.5:1을 넘도록 골라 손대지 않는다(각 값의 계산 근거는
  * PR 본문 참고). 라이트 쪽은 아래 :root[data-accent] 블록, 다크 쪽은 그 아래
@@ -102,34 +114,138 @@
  * 없는 :root[data-accent] 블록은 특이도가 :root[data-theme='dark']와 같아 파일 순서상 그 블록에
  * 덮이므로, 다크일 때는 항상 더 높은 특이도의 조합 블록이 최종값을 정한다.
  *
- * --os-swatch-*(위 :root 베이스에 정의)는 별개다: data-accent와 무관하게 항상 6개 값 모두 존재해
+ * --os-swatch-*(위 :root 베이스에 정의)는 별개다: data-accent와 무관하게 항상 모든 값이 존재해
  * AccentPresetPicker가 현재 선택과 상관없이 모든 프리셋 스와치를 동시에 그릴 수 있게 한다. 테마별
  * 색만 다르므로 다크 블록·다크 media 블록에서 값만 다시 정의한다(다른 --os-* 토큰과 같은 방식).
+ * --os-swatch-team-<id>는 --os-team-<id>를 var()로 가리키므로 :root에 한 번만 두면 테마를 따라간다.
+ *
+ * UX-013 "홈 색상": 프리셋은 --os-hero·--os-hero-muted도 재정의한다(배너·화면 전환·트레이딩
+ * 카드·은퇴 화면이 같은 색으로 물든다 — 'DEFAULT'는 :root 베이스의 네이비 hero를 그대로 쓴다).
+ * --os-hero는 두 테마 모두 짙은 프리셋 색(라이트 accent 값)이고 --os-on-hero는 손대지 않는다(흰색
+ * 계열이라 hero/on-hero가 두 테마에서 4.5:1 이상). --os-hero-muted는 on-hero와 hero의 color-mix로
+ * 만들며 비율(기본 78%)은 hero 위 캡션 텍스트 4.5:1을 넘기는 최소값을 프리셋별로 고른다 —
+ * 밝은 녹색·올리브 계열(청연·강동·온새미로·별빛·갈매)은 흰색과의 대비 여유가 적어 84~92%를 쓴다.
+ * 가상 구단 12팀 프리셋(data-accent='team-<id>')은 --os-team-<id>와 같은 색을 accent·hero로 쓴다
+ * (라이트: 짙은 색 + 흰 글자, 다크 accent: 옅은 색 + 짙은 글자). 전부 check-contrast.mjs가 검증한다.
  */
 :root[data-accent='green'] {
   --os-accent: #125c3f;
   --os-accent-hover: #0e4a32;
   --os-accent-soft: #e3f2ea;
+  --os-hero: #125c3f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-accent='violet'] {
   --os-accent: #3c2a7a;
   --os-accent-hover: #2f2060;
   --os-accent-soft: #ece7f8;
+  --os-hero: #3c2a7a;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-accent='crimson'] {
   --os-accent: #7a1f30;
   --os-accent-hover: #611926;
   --os-accent-soft: #f7e6ea;
+  --os-hero: #7a1f30;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-accent='amber'] {
   --os-accent: #7a4b0a;
   --os-accent-hover: #613c08;
   --os-accent-soft: #f7ecdc;
+  --os-hero: #7a4b0a;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-accent='mono'] {
   --os-accent: #33404f;
   --os-accent-hover: #28323e;
   --os-accent-soft: #e9edf1;
+  --os-hero: #33404f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-accent='team-hangang-u18'] {
+  --os-accent: #6f2020;
+  --os-accent-hover: #591a1a;
+  --os-accent-soft: #eee4e4;
+  --os-hero: #6f2020;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-accent='team-seorabeol-united'] {
+  --os-accent: #6f4720;
+  --os-accent-hover: #59391a;
+  --os-accent-soft: #eee9e4;
+  --os-hero: #6f4720;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-accent='team-cheongyeon-fc'] {
+  --os-accent: #6f6f20;
+  --os-accent-hover: #59591a;
+  --os-accent-soft: #eeeee4;
+  --os-hero: #6f6f20;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 92%, var(--os-hero));
+}
+:root[data-accent='team-gangdong-rovers'] {
+  --os-accent: #476f20;
+  --os-accent-hover: #39591a;
+  --os-accent-soft: #e9eee4;
+  --os-hero: #476f20;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
+:root[data-accent='team-onsaemiro-city'] {
+  --os-accent: #206f20;
+  --os-accent-hover: #1a591a;
+  --os-accent-soft: #e4eee4;
+  --os-hero: #206f20;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 84%, var(--os-hero));
+}
+:root[data-accent='team-byeolbit-united'] {
+  --os-accent: #206f47;
+  --os-accent-hover: #1a5939;
+  --os-accent-soft: #e4eee9;
+  --os-hero: #206f47;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 84%, var(--os-hero));
+}
+:root[data-accent='team-galmae-town'] {
+  --os-accent: #206f6f;
+  --os-accent-hover: #1a5959;
+  --os-accent-soft: #e4eeee;
+  --os-hero: #206f6f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
+:root[data-accent='team-noeulhang-fc'] {
+  --os-accent: #204e6f;
+  --os-accent-hover: #1a3e59;
+  --os-accent-soft: #e4eaee;
+  --os-hero: #204e6f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-accent='team-geumbit-fc'] {
+  --os-accent: #202d6f;
+  --os-accent-hover: #1a2459;
+  --os-accent-soft: #e4e6ee;
+  --os-hero: #202d6f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-accent='team-eunha-rovers'] {
+  --os-accent: #3a206f;
+  --os-accent-hover: #2e1a59;
+  --os-accent-soft: #e7e4ee;
+  --os-hero: #3a206f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-accent='team-gangnaru-united'] {
+  --os-accent: #62206f;
+  --os-accent-hover: #4e1a59;
+  --os-accent-soft: #ece4ee;
+  --os-hero: #62206f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-accent='team-dalbit-town-fc'] {
+  --os-accent: #6f2054;
+  --os-accent-hover: #591a43;
+  --os-accent-soft: #eee4ea;
+  --os-hero: #6f2054;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -182,26 +298,120 @@
   --os-accent: #7fd7ab;
   --os-accent-hover: #9be3c0;
   --os-accent-soft: #1f3f30;
+  --os-hero: #125c3f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='violet'] {
   --os-accent: #bda8f2;
   --os-accent-hover: #cdbdf6;
   --os-accent-soft: #2f2657;
+  --os-hero: #3c2a7a;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='crimson'] {
   --os-accent: #f0a3ae;
   --os-accent-hover: #f4b8c1;
   --os-accent-soft: #4a2530;
+  --os-hero: #7a1f30;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='amber'] {
   --os-accent: #f0c37a;
   --os-accent-hover: #f4d194;
   --os-accent-soft: #4a3820;
+  --os-hero: #7a4b0a;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 :root[data-theme='dark'][data-accent='mono'] {
   --os-accent: #c7d0da;
   --os-accent-hover: #d7dee6;
   --os-accent-soft: #333e4a;
+  --os-hero: #33404f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-hangang-u18'] {
+  --os-accent: #e9a5a5;
+  --os-accent-hover: #eeb9b9;
+  --os-accent-soft: #3b333c;
+  --os-hero: #6f2020;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-seorabeol-united'] {
+  --os-accent: #e9c7a5;
+  --os-accent-hover: #eed3b9;
+  --os-accent-soft: #3b3a3c;
+  --os-hero: #6f4720;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-cheongyeon-fc'] {
+  --os-accent: #e9e9a5;
+  --os-accent-hover: #eeeeb9;
+  --os-accent-soft: #3b413c;
+  --os-hero: #6f6f20;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 92%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-gangdong-rovers'] {
+  --os-accent: #c7e9a5;
+  --os-accent-hover: #d3eeb9;
+  --os-accent-soft: #35413c;
+  --os-hero: #476f20;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-onsaemiro-city'] {
+  --os-accent: #a5e9a5;
+  --os-accent-hover: #b9eeb9;
+  --os-accent-soft: #2e413c;
+  --os-hero: #206f20;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 84%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-byeolbit-united'] {
+  --os-accent: #a5e9c7;
+  --os-accent-hover: #b9eed3;
+  --os-accent-soft: #2e4143;
+  --os-hero: #206f47;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 84%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-galmae-town'] {
+  --os-accent: #a5e9e9;
+  --os-accent-hover: #b9eeee;
+  --os-accent-soft: #2e414a;
+  --os-hero: #206f6f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-noeulhang-fc'] {
+  --os-accent: #a5cde9;
+  --os-accent-hover: #b9d8ee;
+  --os-accent-soft: #2e3b4a;
+  --os-hero: #204e6f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-geumbit-fc'] {
+  --os-accent: #a5b0e9;
+  --os-accent-hover: #b9c1ee;
+  --os-accent-soft: #2e364a;
+  --os-hero: #202d6f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-eunha-rovers'] {
+  --os-accent: #bca5e9;
+  --os-accent-hover: #cbb9ee;
+  --os-accent-soft: #32334a;
+  --os-hero: #3a206f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-gangnaru-united'] {
+  --os-accent: #dda5e9;
+  --os-accent-hover: #e4b9ee;
+  --os-accent-soft: #39334a;
+  --os-hero: #62206f;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-dalbit-town-fc'] {
+  --os-accent: #e9a5d2;
+  --os-accent-hover: #eeb9dc;
+  --os-accent-soft: #3b3345;
+  --os-hero: #6f2054;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
@@ -257,26 +467,120 @@
     --os-accent: #7fd7ab;
     --os-accent-hover: #9be3c0;
     --os-accent-soft: #1f3f30;
+    --os-hero: #125c3f;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='violet'] {
     --os-accent: #bda8f2;
     --os-accent-hover: #cdbdf6;
     --os-accent-soft: #2f2657;
+    --os-hero: #3c2a7a;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='crimson'] {
     --os-accent: #f0a3ae;
     --os-accent-hover: #f4b8c1;
     --os-accent-soft: #4a2530;
+    --os-hero: #7a1f30;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='amber'] {
     --os-accent: #f0c37a;
     --os-accent-hover: #f4d194;
     --os-accent-soft: #4a3820;
+    --os-hero: #7a4b0a;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
   }
   :root:not([data-theme='light'])[data-accent='mono'] {
     --os-accent: #c7d0da;
     --os-accent-hover: #d7dee6;
     --os-accent-soft: #333e4a;
+    --os-hero: #33404f;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-hangang-u18'] {
+    --os-accent: #e9a5a5;
+    --os-accent-hover: #eeb9b9;
+    --os-accent-soft: #3b333c;
+    --os-hero: #6f2020;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-seorabeol-united'] {
+    --os-accent: #e9c7a5;
+    --os-accent-hover: #eed3b9;
+    --os-accent-soft: #3b3a3c;
+    --os-hero: #6f4720;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-cheongyeon-fc'] {
+    --os-accent: #e9e9a5;
+    --os-accent-hover: #eeeeb9;
+    --os-accent-soft: #3b413c;
+    --os-hero: #6f6f20;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 92%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-gangdong-rovers'] {
+    --os-accent: #c7e9a5;
+    --os-accent-hover: #d3eeb9;
+    --os-accent-soft: #35413c;
+    --os-hero: #476f20;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-onsaemiro-city'] {
+    --os-accent: #a5e9a5;
+    --os-accent-hover: #b9eeb9;
+    --os-accent-soft: #2e413c;
+    --os-hero: #206f20;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 84%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-byeolbit-united'] {
+    --os-accent: #a5e9c7;
+    --os-accent-hover: #b9eed3;
+    --os-accent-soft: #2e4143;
+    --os-hero: #206f47;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 84%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-galmae-town'] {
+    --os-accent: #a5e9e9;
+    --os-accent-hover: #b9eeee;
+    --os-accent-soft: #2e414a;
+    --os-hero: #206f6f;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-noeulhang-fc'] {
+    --os-accent: #a5cde9;
+    --os-accent-hover: #b9d8ee;
+    --os-accent-soft: #2e3b4a;
+    --os-hero: #204e6f;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-geumbit-fc'] {
+    --os-accent: #a5b0e9;
+    --os-accent-hover: #b9c1ee;
+    --os-accent-soft: #2e364a;
+    --os-hero: #202d6f;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-eunha-rovers'] {
+    --os-accent: #bca5e9;
+    --os-accent-hover: #cbb9ee;
+    --os-accent-soft: #32334a;
+    --os-hero: #3a206f;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-gangnaru-united'] {
+    --os-accent: #dda5e9;
+    --os-accent-hover: #e4b9ee;
+    --os-accent-soft: #39334a;
+    --os-hero: #62206f;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-dalbit-town-fc'] {
+    --os-accent: #e9a5d2;
+    --os-accent-hover: #eeb9dc;
+    --os-accent-soft: #3b3345;
+    --os-hero: #6f2054;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
   }
 }
 .os-num {

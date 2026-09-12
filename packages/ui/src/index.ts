@@ -49,6 +49,12 @@ export type { StatusStripItem, StatusStripProps } from './components/StatusStrip
 export { Stepper } from './components/Stepper.js';
 export { SwipeSurface } from './components/SwipeSurface.js';
 export type { SwipeSurfaceProps } from './components/SwipeSurface.js';
+export { SwatchTilePicker } from './components/SwatchTilePicker.js';
+export type {
+  SwatchTileGroup,
+  SwatchTileOption,
+  SwatchTilePickerProps,
+} from './components/SwatchTilePicker.js';
 export type { StepperProps, StepperStep } from './components/Stepper.js';
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './components/Tabs.js';
 export type {

@@ -244,6 +244,34 @@ describe('hydrateUiStore', () => {
     expect(useUiStore.getState().teamNameOverrides).toEqual({});
   });
 
+  it("UX-013: 구단 로고는 'ui:team-logos' 키에서 우리 형식의 data URL만 읽고, 바뀔 때만 그 키에 다시 쓴다", async () => {
+    const store = new MemoryLocalStore();
+    await store.transaction('readwrite', (tx) =>
+      tx.kv.put('ui:team-logos', {
+        'hangang-u18': 'data:image/webp;base64,QUJD',
+        'cheongyeon-fc': 'https://evil.example/logo.png',
+        'geumbit-fc': 42,
+      }),
+    );
+
+    await hydrateUiStore(store);
+    expect(useUiStore.getState().teamLogos).toEqual({ 'hangang-u18': 'data:image/webp;base64,QUJD' });
+
+    act(() => {
+      useUiStore.getState().setTeamLogo('geumbit-fc', 'data:image/png;base64,QUJDRA==');
+      useUiStore.getState().clearTeamLogo('hangang-u18');
+    });
+
+    await vi.waitFor(async () => {
+      expect(await store.transaction('readonly', (tx) => tx.kv.get('ui:team-logos'))).toEqual({
+        'geumbit-fc': 'data:image/png;base64,QUJDRA==',
+      });
+    });
+    expect(await readPersisted(store)).not.toHaveProperty('teamLogos');
+    useUiStore.getState().resetTeamLogos();
+    expect(useUiStore.getState().teamLogos).toEqual({});
+  });
+
   it('hydrate 뒤 상태 변경은 같은 kv 키에 다시 저장된다', async () => {
     const store = new MemoryLocalStore();
     await hydrateUiStore(store);

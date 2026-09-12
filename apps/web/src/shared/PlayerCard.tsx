@@ -7,7 +7,7 @@
 // (.os-player-card-number): 자기 배경을 불투명 --os-hero로 고정하고 --os-on-hero 글자를 쓴다
 // (이슈 180, player-card.css 주석 참고).
 import type { CSSProperties, ReactNode } from 'react';
-import { TeamBadge } from '@offside/ui';
+import { ClubBadge } from './ClubBadge.js';
 import { getTeamIdentity } from './team-identity.js';
 import './player-card.css';
 
@@ -66,9 +66,9 @@ export function PlayerCard({
       style={style}
       aria-label={`${name} 선수 카드`}
     >
-      {identity !== undefined ? (
+      {team !== undefined ? (
         <span className="os-player-card-watermark" aria-hidden="true">
-          <TeamBadge initials={identity.initials} colorVar={identity.colorVar} size="m" />
+          <ClubBadge teamId={team.id} size="m" />
         </span>
       ) : (
         <span className="os-player-card-monogram" aria-hidden="true">

@@ -1,72 +1,42 @@
-// UX-004: 설정 "표시·접근성" 섹션의 "포인트 색상" 항목. settings.tsx 삽입을 최소화하려고 별도
-// 파일로 뺐다. RadioGroup(Radix 기반이라 화살표 키·Tab·Enter/Space로 조작 가능)에 프리셋마다
-// 원형 스와치(실제 색은 tokens.css --os-swatch-*)와 한국어 색 이름을 함께 채운다. 선택 상태는
-// packages/ui의 .os-radio-item[data-state='checked'] 테두리·배경(다른 라디오 그룹과 동일한
-// 기존 패턴)에 더해, 스와치 안 체크 표시로 색만으로 구분하지 않게 한다.
-import { RadioGroup, RadioGroupItem } from '@offside/ui';
-import { ACCENT_PRESET_OPTIONS, type AccentPresetId } from './accent-presets.js';
+// UX-004 → UX-013: 설정 "홈 색상" 항목. packages/ui SwatchTilePicker(radiogroup 4열 타일 그리드)에
+// 기본 6종 + 활성 룰셋 12개 구단 컬러 프리셋을 그룹으로 채운다. 구단 프리셋 라벨은 룰셋 기본 팀명
+// (구단 이름 오버라이드 미적용, accent-presets.ts 참고). 선택 상태는 타일 링 + 체크 아이콘 +
+// 아래 캡션의 이름으로, 색만으로 구분하지 않는다.
+import { useMemo } from 'react';
+import { SwatchTilePicker } from '@offside/ui';
+import { activeRuleset } from '../engine/content.js';
+import { buildAccentPresetGroups, type AccentPresetId } from './accent-presets.js';
 
 const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
-const SWATCH_SIZE = 28;
 
 export interface AccentPresetPickerProps {
   value: AccentPresetId;
   onValueChange: (value: AccentPresetId) => void;
+  /** 제목을 바깥(예: Disclosure summary)이 이미 보여주면 false — radiogroup 이름은 aria-label로 준다. */
+  showHeading?: boolean;
 }
 
-export function AccentPresetPicker({ value, onValueChange }: AccentPresetPickerProps) {
+export function AccentPresetPicker({
+  value,
+  onValueChange,
+  showHeading = true,
+}: AccentPresetPickerProps) {
+  const groups = useMemo(() => buildAccentPresetGroups(activeRuleset.teams), []);
+  const headingId = 'settings-accent-preset';
+
   return (
     <section className="flex flex-col gap-os-3">
-      <h2
-        id="settings-accent-preset"
-        className="font-os font-semibold text-os-text"
-        style={H2_STYLE}
-      >
-        포인트 색상
-      </h2>
-      <RadioGroup
-        aria-labelledby="settings-accent-preset"
+      {showHeading ? (
+        <h2 id={headingId} className="font-os font-semibold text-os-text" style={H2_STYLE}>
+          홈 색상
+        </h2>
+      ) : null}
+      <SwatchTilePicker
+        groups={groups}
         value={value}
         onValueChange={(next) => onValueChange(next as AccentPresetId)}
-      >
-        {ACCENT_PRESET_OPTIONS.map((option) => {
-          const checked = value === option.id;
-          return (
-            <RadioGroupItem
-              key={option.id}
-              value={option.id}
-              style={{ display: 'flex', alignItems: 'center', gap: 'var(--os-space-3)' }}
-            >
-              <span
-                aria-hidden="true"
-                className="inline-flex shrink-0 items-center justify-center rounded-full border border-os-border"
-                style={{
-                  width: SWATCH_SIZE,
-                  height: SWATCH_SIZE,
-                  backgroundColor: `var(${option.swatchVar})`,
-                }}
-              >
-                {checked ? (
-                  <svg
-                    viewBox="0 0 16 16"
-                    width="14"
-                    height="14"
-                    className="text-os-on-accent"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M3 8.5l3 3 7-7" />
-                  </svg>
-                ) : null}
-              </span>
-              <span className="font-os text-os-text">{option.label}</span>
-            </RadioGroupItem>
-          );
-        })}
-      </RadioGroup>
+        {...(showHeading ? { 'aria-labelledby': headingId } : { 'aria-label': '홈 색상' })}
+      />
     </section>
   );
 }
