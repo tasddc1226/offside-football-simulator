@@ -109,6 +109,10 @@ const TEXT_PAIRS = [
   ['text-2', 'surface'],
   ['text-2', 'surface-2'],
   ['on-accent', 'accent'],
+  // 이슈 180: UX-011 PlayerCard 등번호 배지(apps/web/src/shared/player-card.css
+  // .os-player-card-number)도 이 쌍이다 — 배지는 카드 배경(팀 컬러 12개 × 2테마 그라데이션·브랜드
+  // 중립 그라데이션)과 무관하게 불투명 --os-hero 위에 --os-on-hero 글자를 고정하므로, 배지의 대비는
+  // 어느 카드 맥락에서든 이 한 행이 보장한다. 배지를 반투명·currentColor로 되돌리면 그 보장이 깨진다.
   ['on-hero', 'hero'],
   ['hero-muted', 'hero'],
   ['accent', 'surface'],

@@ -94,12 +94,20 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+/* 이슈 180: 등번호 배지는 카드 위 다른 텍스트와 달리 currentColor를 따르지 않는다. 예전의
+   "반투명 흰 칩 + currentColor"는 배경이 카드 그라데이션(팀 컬러 12개 × 2테마, 또는 브랜드 중립)에
+   따라 달라져 대비를 보장할 수 없었고(axe 실측 1.17:1), 반투명이면 axe도 그라데이션 때문에 값을
+   못 정한다. 그래서 배경을 불투명 --os-hero로 고정하고 글자는 --os-on-hero를 쓴다 — 어느 카드
+   맥락에서든 대비 쌍은 on-hero/hero 하나뿐이고 check-contrast.mjs TEXT_PAIRS가 두 테마에서 그 쌍을
+   검증한다(라이트 14.37:1, 다크 12.05:1). 브랜드 중립 카드에서는 칩과 카드가 같은 계열이라 on-hero
+   1px 안쪽 링으로 칩 윤곽만 살린다. */
 .os-player-card-number {
   flex-shrink: 0;
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
-  background: rgb(255 255 255 / 16%);
-  color: currentColor;
+  background: var(--os-hero);
+  color: var(--os-on-hero);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--os-on-hero) 28%, transparent);
   font: 800 var(--os-fs-caption) / 1 var(--os-font);
 }
 
