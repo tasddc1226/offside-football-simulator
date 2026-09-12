@@ -10,7 +10,7 @@ import { createAppEngine, getAppEngine, type AppEngine } from './engine/engine.j
 import { routeTree } from './routeTree.gen.js';
 import { queryClient } from './shared/query-client.js';
 import { useUiStore } from './shared/ui-store.js';
-import { serviceSeasonBadgeLabel } from './routes/index.js';
+import { careerCardCtaLabel, serviceSeasonBadgeLabel } from './routes/index.js';
 
 /**
  * 컴포넌트 렌더 테스트는 실제 Worker 대신 inlineSimulator + MemoryLocalStore로 만든 테스트
@@ -66,6 +66,16 @@ describe('SCR-001 서비스 시즌 배지', () => {
 
   it('현재 시즌 조회 결과가 없으면 배지를 표시하지 않는다', () => {
     expect(serviceSeasonBadgeLabel('svc-kickoff', undefined)).toBeNull();
+  });
+});
+
+// 이슈 167: 보관함(은퇴·보관) 카드는 "이어하기"가 아니라 "기록 보기"다.
+describe('SCR-001 카드 CTA 라벨', () => {
+  it('DRAFT·ACTIVE는 이어하기, RETIRED·ARCHIVED는 기록 보기', () => {
+    expect(careerCardCtaLabel('DRAFT')).toBe('이어하기');
+    expect(careerCardCtaLabel('ACTIVE')).toBe('이어하기');
+    expect(careerCardCtaLabel('RETIRED')).toBe('기록 보기');
+    expect(careerCardCtaLabel('ARCHIVED')).toBe('기록 보기');
   });
 });
 
