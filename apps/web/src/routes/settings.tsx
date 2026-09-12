@@ -40,6 +40,7 @@ import {
 import { ensureProfile } from '../api/profile.js';
 import { activeContentPack, activeRuleset } from '../engine/content.js';
 import { getAppEngine } from '../engine/engine.js';
+import { useServiceSeason } from '../engine/service-season.js';
 import { prepareGoogleConnect } from '../engine/google-connect.js';
 import { retryPendingDeletes } from '../engine/pending-delete.js';
 import { reconcileAfterRecovery } from '../engine/reconcile.js';
@@ -1268,6 +1269,58 @@ function DeleteDeviceDataRow() {
   );
 }
 
+/**
+ * 이슈 154: "상세 버전"은 새 커리어에 실제로 적용되는 활성 값을 보여준다. 새 커리어의 룰셋·팩은
+ * `career-actions.ts createCareer`가 `resolveServiceSeason()`(현재 서비스 시즌 API)에서 고정하므로
+ * `activeRuleset`·`activeContentPack`(versions.ts의 ACTIVE 상수 = 오프라인 최후 폴백)은 서비스 시즌
+ * 조회가 없을 때만 보여 주고, 그때는 폴백임을 캡션으로 알린다.
+ */
+export function activeVersionRows(
+  serviceSeason: { rulesetVersion: string; contentPackVersion: string } | undefined,
+  fallback: { rulesetVersion: string; contentPackVersion: string },
+): { rulesetVersion: string; contentPackVersion: string; offlineFallback: boolean } {
+  if (serviceSeason === undefined) return { ...fallback, offlineFallback: true };
+  return {
+    rulesetVersion: serviceSeason.rulesetVersion,
+    contentPackVersion: serviceSeason.contentPackVersion,
+    offlineFallback: false,
+  };
+}
+
+function DetailedVersionList() {
+  const serviceSeason = useServiceSeason();
+  const versions = activeVersionRows(serviceSeason.data, {
+    rulesetVersion: activeRuleset.version,
+    contentPackVersion: activeContentPack.manifest.contentPackVersion,
+  });
+  return (
+    <Disclosure summary="상세 버전" aria-labelledby="settings-version">
+      <dl
+        className="os-num flex flex-col gap-os-1 font-os text-os-text-2 opacity-70"
+        style={CAPTION_STYLE}
+      >
+        <div className="flex justify-between gap-os-2">
+          <dt>룰셋</dt>
+          <dd>{versions.rulesetVersion}</dd>
+        </div>
+        <div className="flex justify-between gap-os-2">
+          <dt>콘텐츠 팩</dt>
+          <dd>{versions.contentPackVersion}</dd>
+        </div>
+        <div className="flex justify-between gap-os-2">
+          <dt>엔진 클라이언트</dt>
+          <dd>{ENGINE_CLIENT_VERSION}</dd>
+        </div>
+      </dl>
+      <p className="mt-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+        {versions.offlineFallback
+          ? '오프라인 기본값 — 시즌 정보를 받으면 새 커리어에 적용되는 값으로 바뀝니다.'
+          : '새 커리어에 적용되는 값입니다. 이미 만든 커리어는 생성 당시 버전을 유지합니다.'}
+      </p>
+    </Disclosure>
+  );
+}
+
 function SettingsScreen() {
   const theme = useUiStore((state) => state.theme);
   const reducedMotion = useUiStore((state) => state.reducedMotion);
@@ -1476,25 +1529,7 @@ function SettingsScreen() {
             <p className="os-num font-os font-semibold text-os-text" style={CAPTION_STYLE}>
               OFFSIDE {APP_VERSION_LABEL}
             </p>
-            <Disclosure summary="상세 버전" aria-labelledby="settings-version">
-              <dl
-                className="os-num flex flex-col gap-os-1 font-os text-os-text-2 opacity-70"
-                style={CAPTION_STYLE}
-              >
-                <div className="flex justify-between gap-os-2">
-                  <dt>룰셋</dt>
-                  <dd>{activeRuleset.version}</dd>
-                </div>
-                <div className="flex justify-between gap-os-2">
-                  <dt>콘텐츠 팩</dt>
-                  <dd>{activeContentPack.manifest.contentPackVersion}</dd>
-                </div>
-                <div className="flex justify-between gap-os-2">
-                  <dt>엔진 클라이언트</dt>
-                  <dd>{ENGINE_CLIENT_VERSION}</dd>
-                </div>
-              </dl>
-            </Disclosure>
+            <DetailedVersionList />
           </section>
 
           <section className="flex flex-col gap-os-3">
