@@ -1,5 +1,7 @@
 // UX-002: 설정 화면 맨 아래(허브로 버튼 위) 제작자·피드백·버전 푸터. 1인 개발 게임임을 알리고
 // 버그·건의를 받을 통로를 준다 — 커뮤니티 유대감이 목적이라 카드보다 낮은 존재감으로 둔다.
+// 이슈 160: 이용약관·개인정보 처리방침은 SPA 내부 라우트 링크(ADR-009 — 외부 이동 아님).
+import { Link } from '@tanstack/react-router';
 import { OPERATOR, CHANNELS } from '../legal/operator.js';
 import { ENGINE_CLIENT_VERSION } from '@offside/engine-client';
 
@@ -37,6 +39,15 @@ export function SettingsFooter() {
           ))}
         </nav>
       ) : null}
+
+      <nav className="flex flex-wrap items-center justify-center gap-os-3" aria-label="약관·개인정보">
+        <Link to="/legal/terms" className="font-os text-os-text-2 underline" style={CAPTION_STYLE}>
+          이용약관
+        </Link>
+        <Link to="/legal/privacy" className="font-os text-os-text-2 underline" style={CAPTION_STYLE}>
+          개인정보 처리방침
+        </Link>
+      </nav>
 
       <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
         만든 사람: {OPERATOR.name}
