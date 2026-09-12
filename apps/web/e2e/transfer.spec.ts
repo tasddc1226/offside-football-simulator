@@ -17,21 +17,13 @@ const CAREER_10_SEED = 't10-search-1';
 // INTEREST LOAN, then LOAN_RETURN.
 const CAREER_11_SEED = 't11-search-61';
 
-// T-7-011 범위 밖: `.os-eyebrow`(PR #120 디자인 토큰) 색상 대비 부족은 a11y.spec.ts·
-// service-season.spec.ts:75·retirement.spec.ts에서와 동일한 이미 알려진 결함이다(T-7-012/013이
-// 고친다). 그 세 id만 여기서도 허용하고, 그 밖의 새로운 심각도 위반은 그대로 실패로 잡는다.
-const KNOWN_TRACKED_A11Y_IDS = new Set(['color-contrast', 'definition-list', 'only-dlitems']);
-
 async function expectNoSeriousOrCriticalViolations(page: Page, label: string): Promise<void> {
   const results = await new AxeBuilder({ page }).analyze();
   const seriousOrCritical = results.violations.filter(
     (violation) => violation.impact === 'serious' || violation.impact === 'critical',
   );
-  const unexpected = seriousOrCritical.filter((violation) => !KNOWN_TRACKED_A11Y_IDS.has(violation.id));
-  console.log(
-    `[transfer-e2e][a11y] ${label}: serious/critical ${seriousOrCritical.length}건(알려진 결함 제외 후 미확인 ${unexpected.length}건)`,
-  );
-  expect(unexpected).toEqual([]);
+  console.log(`[transfer-e2e][a11y] ${label}: serious/critical ${seriousOrCritical.length}건`);
+  expect(seriousOrCritical).toEqual([]);
 }
 
 type SavedCareerAudit = {

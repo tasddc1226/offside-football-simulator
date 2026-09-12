@@ -1,7 +1,15 @@
 // SCR-034 온보딩. 3장 이내, 대표 문장 하나와 두 문장 이내 설명. 건너뛰기·KICKOFF 모두
 // onboardingSeen = true를 저장한다. 이 라우트는 언제든 열린다(설정의 "온보딩 다시 보기").
 import { useEffect, useRef, useState } from 'react';
-import { Button, DisplayWord, ScreenIntro, Stepper, SwipeSurface, Toast } from '@offside/ui';
+import {
+  Button,
+  DisplayWord,
+  ScreenIntro,
+  Stepper,
+  SwipeSurface,
+  Toast,
+  useShellMainHeight,
+} from '@offside/ui';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { markOnboardingPending } from '../engine/funnel.js';
 import { useServiceSeason } from '../engine/service-season.js';
@@ -13,6 +21,7 @@ import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 import { GameCompletionTransition } from '../shared/game-presentation.js';
 import { CinematicIntro } from '../shared/cinematic-intro.js';
 import { BRAND_SUBTITLE } from '../shared/brand.js';
+import './onboarding.css';
 
 export const Route = createFileRoute('/onboarding')({
   component: OnboardingScreen,
@@ -64,6 +73,10 @@ function OnboardingScreen() {
   const [toast, setToast] = useState<string | null>(null);
   const [createdCareerId, setCreatedCareerId] = useState<string | null>(null);
   const startingRef = useRef(false);
+  // 이슈 GH-156: 데스크톱(+모바일) 3슬라이드 하단 빈 공간 — 셸 본문(.os-shell-main) 실제 높이를
+  // 인라인 min-height로 채운 뒤 아래 os-onboarding-center가 그 안에서 콘텐츠를 세로 중앙 정렬한다.
+  const screenRef = useRef<HTMLDivElement>(null);
+  useShellMainHeight(screenRef);
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-034', careerPhase: 'NONE' });
@@ -128,61 +141,63 @@ function OnboardingScreen() {
   }
 
   return (
-    <div className="os-screen">
-      <Stepper steps={STEPPER_STEPS} currentStepId={slide.id} />
+    <div ref={screenRef} className="os-screen os-onboarding-screen">
+      <div className="os-onboarding-center">
+        <Stepper steps={STEPPER_STEPS} currentStepId={slide.id} />
 
-      <MotionPanel motionKey={stepIndex} direction={direction} className="os-onboarding-motion">
-        <SwipeSurface
-          canSwipeLeft={!isLast}
-          canSwipeRight={stepIndex > 0}
-          disabled={createMutation.isPending}
-          reducedMotion={reducedMotion}
-          onSwipe={(swipe) => changeSlide(swipe === 'left' ? 1 : -1)}
-        >
-          <div className="os-screen">
-            <ScreenIntro
-              eyebrow="OFFSIDE 시작 안내"
-              title={slide.headline}
-              description={slide.body}
-            />
-
-            <div className="os-creation-note">
-              <p className="font-os font-semibold text-os-text">
-                {stepIndex === 0 ? '나만의 선수를 만들고 성장을 기록합니다.' : stepIndex === 1 ? '확정 전에 결과와 영향을 꼭 확인하세요.' : '복구 코드나 Google 연결 중 하나를 준비하세요.'}
-              </p>
-              {slide.note ? (
-                <p
-                  className="border-t border-os-border pt-os-4 font-os font-semibold text-os-text"
-                  style={CAPTION_STYLE}
-                >
-                  {slide.note}
-                </p>
-              ) : null}
-              {stepIndex === 0 && serviceSeason.data?.notice === 'LINE_TEST' ? (
-                <p
-                  data-testid="onboarding-service-season-notice"
-                  className="font-os text-os-text-2"
-                  style={CAPTION_STYLE}
-                >
-                  {SERVICE_SEASON_NOTICE_KO.LINE_TEST}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        </SwipeSurface>
-      </MotionPanel>
-
-      <div className="flex items-center justify-between gap-os-2">
-        {stepIndex > 0 ? (
-          <Button
-            variant="ghost"
-            onClick={() => changeSlide(-1)}
+        <MotionPanel motionKey={stepIndex} direction={direction} className="os-onboarding-motion">
+          <SwipeSurface
+            canSwipeLeft={!isLast}
+            canSwipeRight={stepIndex > 0}
             disabled={createMutation.isPending}
+            reducedMotion={reducedMotion}
+            onSwipe={(swipe) => changeSlide(swipe === 'left' ? 1 : -1)}
           >
-            이전 안내
-          </Button>
-        ) : null}
-        <p className="os-swipe-hint">{stepIndex + 1} / {SLIDES.length}</p>
+            <div className="os-screen">
+              <ScreenIntro
+                eyebrow="OFFSIDE 시작 안내"
+                title={slide.headline}
+                description={slide.body}
+              />
+
+              <div className="os-creation-note">
+                <p className="font-os font-semibold text-os-text">
+                  {stepIndex === 0 ? '나만의 선수를 만들고 성장을 기록합니다.' : stepIndex === 1 ? '확정 전에 결과와 영향을 꼭 확인하세요.' : '복구 코드나 Google 연결 중 하나를 준비하세요.'}
+                </p>
+                {slide.note ? (
+                  <p
+                    className="border-t border-os-border pt-os-4 font-os font-semibold text-os-text"
+                    style={CAPTION_STYLE}
+                  >
+                    {slide.note}
+                  </p>
+                ) : null}
+                {stepIndex === 0 && serviceSeason.data?.notice === 'LINE_TEST' ? (
+                  <p
+                    data-testid="onboarding-service-season-notice"
+                    className="font-os text-os-text-2"
+                    style={CAPTION_STYLE}
+                  >
+                    {SERVICE_SEASON_NOTICE_KO.LINE_TEST}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </SwipeSurface>
+        </MotionPanel>
+
+        <div className="flex items-center justify-between gap-os-2">
+          {stepIndex > 0 ? (
+            <Button
+              variant="ghost"
+              onClick={() => changeSlide(-1)}
+              disabled={createMutation.isPending}
+            >
+              이전 안내
+            </Button>
+          ) : null}
+          <p className="os-swipe-hint">{stepIndex + 1} / {SLIDES.length}</p>
+        </div>
       </div>
 
       <div className="os-action-dock flex flex-col gap-os-2 sm:flex-row">

@@ -97,18 +97,6 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
     <button type="button" className="os-cinema-intro" onClick={complete}>
       <span className="os-cinema-glow os-cinema-glow-a" aria-hidden="true" />
       <span className="os-cinema-glow os-cinema-glow-b" aria-hidden="true" />
-      <svg
-        className="os-cinema-pitch"
-        viewBox="0 0 360 200"
-        preserveAspectRatio="xMidYMax slice"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M0 36 H360" />
-        <path d="M64 200 V132 H296 V200" />
-        <circle cx="180" cy="104" r="48" />
-        <circle cx="180" cy="104" r="2" fill="currentColor" stroke="none" />
-      </svg>
       <div className="os-cinema-copy" aria-hidden="true">
         {CINEMATIC_LINES.map((line, index) => {
           const shown = line.slice(0, visibleCounts[index] ?? 0);

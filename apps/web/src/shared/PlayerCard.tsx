@@ -3,7 +3,9 @@
 // 아직 정해지지 않았으면(예: SCR-004는 계약 전이라 team을 넘기지 않는다) 브랜드 중립(--os-hero)
 // 그라데이션을 쓴다. 카드 위 텍스트는 항상 currentColor로 그려 두 배경 모두에서 각각
 // --os-on-hero·--os-on-accent를 그대로 물려받는다(둘 다 tokens.css·check-contrast.mjs가 검증한
-// 값이라 이 컴포넌트가 별도로 대비를 계산할 필요가 없다).
+// 값이라 이 컴포넌트가 별도로 대비를 계산할 필요가 없다). 유일한 예외는 등번호 배지
+// (.os-player-card-number): 자기 배경을 불투명 --os-hero로 고정하고 --os-on-hero 글자를 쓴다
+// (이슈 180, player-card.css 주석 참고).
 import type { CSSProperties, ReactNode } from 'react';
 import { TeamBadge } from '@offside/ui';
 import { getTeamIdentity } from './team-identity.js';

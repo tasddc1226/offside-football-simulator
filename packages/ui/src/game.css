@@ -57,13 +57,20 @@ select {
   min-width: 0;
   min-height: 0;
   padding: 16px 16px calc(24px + var(--os-safe-bottom));
-  outline: none;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   scroll-margin-top: var(--os-space-2);
   /* T-7-006: 포커스 이동·scrollIntoView가 sticky 액션 독 아래로 들어가지 않게 한다. */
   scroll-padding-bottom: calc(96px + var(--os-safe-bottom));
+}
+/* 이슈 180: main은 tabindex=0인 스크롤 영역(PageShell.tsx)이라 키보드로 도달할 수 있고, 도달했을
+   때만(:focus-visible — 마우스 클릭·프로그램적 포커스에는 뜨지 않는다) 다른 컨트롤과 같은 토큰
+   포커스 링을 보인다. 링은 안쪽으로 그린다(offset 음수) — .os-shell-canvas overflow:hidden·
+   720px+ .os-shell overflow:clip이 바깥 링을 잘라내기 때문이다. */
+.os-shell-main:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--os-focus) 75%, white);
+  outline-offset: -3px;
 }
 .os-shell-header {
   /* No longer position:fixed (UX-006): a normal flex child, so the shell's own fixed height
@@ -492,7 +499,9 @@ select {
 }
 /* UX-008: 구단 이니셜 배지. background는 컴포넌트가 인라인 style로 팀별 --os-team-<id>(또는
    중립 폴백 --os-neutral)를 꽂아 넣고, 이 규칙은 모양·타이포만 잡는다. 두 값 모두
-   check-contrast.mjs가 --os-on-accent와 4.5:1을 확인한다. */
+   check-contrast.mjs가 --os-on-accent와 4.5:1을 확인한다.
+   이슈 170: 이니셜은 DOM 텍스트가 아니라 data-initials 속성을 ::before가 그린다 — 의사 요소
+   콘텐츠는 접근성 이름·innerText·textContent 어디에도 들어가지 않아 옆의 팀명과 이어지지 않는다. */
 .os-team-badge {
   display: inline-flex;
   flex-shrink: 0;
@@ -504,6 +513,9 @@ select {
   line-height: 1;
   color: var(--os-on-accent);
   word-break: keep-all;
+}
+.os-team-badge::before {
+  content: attr(data-initials);
 }
 .os-team-badge[data-size='s'] {
   width: 20px;
