@@ -216,9 +216,11 @@ function RoleProposalScreen() {
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
           능력치는 바뀌지 않고 역할 가중치와 숙련도만 바뀝니다.
         </p>
-        <div className="os-story-card">
-          <ProposalReason room={room} form={state.state.form} />
-        </div>
+        {room !== null ? (
+          <div className="os-story-card">
+            <ProposalReason room={room} form={state.state.form} />
+          </div>
+        ) : null}
         {errorMessage ? (
           <ErrorState message={errorMessage} onRetry={() => void handleDecision('ACCEPT')} />
         ) : null}

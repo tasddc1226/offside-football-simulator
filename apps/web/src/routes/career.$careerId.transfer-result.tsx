@@ -103,6 +103,7 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
     evaluation === null
       ? null
       : (resolveTeamName(ruleset, evaluation.loanSeason.teamId, teamNameOverrides) ?? state.contract?.teamName ?? '임대 구단');
+  const parentTeamName = parent === null ? '' : (resolveTeamName(ruleset, parent.teamId, teamNameOverrides) ?? parent.teamName);
   const parentTierLabel = parent === null ? '' : LEAGUE_TIER_LABEL_KO[parent.leagueTier];
 
   async function recoverAfterResponseLoss(): Promise<number | null> {
@@ -198,8 +199,8 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
           <div className="flex flex-col gap-os-1">
             <p className="os-eyebrow">복귀 후 역할</p>
             <p className="font-os text-os-text" style={BODY_STYLE} data-testid="loan-return-role-reason">
-              원소속 {parent.teamName}({parentTierLabel}) · 역할 약속 {SQUAD_ROLE_LABELS[evaluation.parentRolePromise]} →{' '}
-              {SQUAD_ROLE_LABELS[evaluation.reevaluatedRole]}
+              원소속 {parentTeamName}({parentTierLabel}) · 역할 약속 {SQUAD_ROLE_LABELS[evaluation.parentRolePromise]}
+              {evaluation.applies ? ` → ${SQUAD_ROLE_LABELS[evaluation.reevaluatedRole]}` : ' 유지'}
             </p>
             <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
               {loanReturnRoleReason(evaluation, parentTierLabel)}
