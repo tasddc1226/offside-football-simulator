@@ -25,8 +25,10 @@ ON CONFLICT(id) DO UPDATE SET
   is_test = excluded.is_test;
 
 -- T-2-012 D-54·D-55: staging의 ACTIVE_SERVICE_SEASON_ID가 가리키는 PRESEASON 테스트 시즌.
+-- 룰셋·팩은 운영 승격 목표 manifest(tooling/scripts/production-release.mjs PRODUCTION_SEASON)와 맞춘다.
+-- main 머지마다 ci.yml이 이 파일을 staging D1에 upsert하므로 별도 수동 적용은 없다.
 INSERT INTO service_seasons (id, name, status, starts_at, ends_at, ruleset_version, content_pack_version, challenge_set_id, is_test)
-VALUES ('svc_line_test', 'LINE TEST', 'PRESEASON', '2026-09-08T00:00:00Z', '2026-10-31T23:59:59Z', '1.0.0', '0.1.0', 'cs_line_test', 1)
+VALUES ('svc_line_test', 'LINE TEST', 'PRESEASON', '2026-09-08T00:00:00Z', '2026-10-31T23:59:59Z', '1.4.0', '0.5.1', 'cs_line_test', 1)
 ON CONFLICT(id) DO UPDATE SET
   name = excluded.name,
   status = excluded.status,

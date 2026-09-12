@@ -1,9 +1,11 @@
 import { expect, test, type APIRequestContext, type Page, type TestInfo } from '@playwright/test';
 
+// expectedSeason의 값은 playwright.smoke.config.ts 한 곳에서만 정한다(staging seed·tooling/scripts/
+// production-release.mjs PRODUCTION_SEASON과 동기). 이 spec은 버전 리터럴을 두지 않는다.
 type SmokeMetadata = {
   webUrl: string;
   apiUrl: string;
-  expectedSeason: { id: string; contentPackVersion: string };
+  expectedSeason: { id: string; rulesetVersion: string; contentPackVersion: string };
 };
 
 function smokeMetadata(testInfo: TestInfo): SmokeMetadata {
@@ -12,6 +14,7 @@ function smokeMetadata(testInfo: TestInfo): SmokeMetadata {
     typeof value?.webUrl !== 'string' ||
     typeof value.apiUrl !== 'string' ||
     typeof value.expectedSeason?.id !== 'string' ||
+    typeof value.expectedSeason.rulesetVersion !== 'string' ||
     typeof value.expectedSeason.contentPackVersion !== 'string'
   ) {
     throw new Error('staging smoke metadata is missing');
@@ -46,7 +49,7 @@ test('staging health와 current service-season manifest/CORS가 실제 Worker �
     data: {
       id: smoke.expectedSeason.id,
       isTest: true,
-      rulesetVersion: '1.0.0',
+      rulesetVersion: smoke.expectedSeason.rulesetVersion,
       contentPackVersion: smoke.expectedSeason.contentPackVersion,
     },
   });

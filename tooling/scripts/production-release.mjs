@@ -2,18 +2,26 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+// 운영 시즌 1 manifest의 정본. 다음 여섯 곳이 이 값과 같아야 한다 — 바꿀 때 함께 갱신한다.
+//   - .github/workflows/deploy-production.yml: verify 단계가 `expect-version` 명령으로 이 값을 읽는다.
+//   - apps/api/src/sync/season-version-compatibility.ts: APPROVED_PRODUCTION_MANIFESTS.
+//   - apps/web/src/engine/versions.ts: ACTIVE_RULESET_VERSION / ACTIVE_CONTENT_PACK_VERSION(오프라인 폴백).
+//   - apps/api/seeds/bootstrap-non-production.sql: staging `svc_line_test`(main push CI가 upsert).
+//   - apps/web/playwright.smoke.config.ts: expectedSeason(main push CI staging smoke가 위 seed를 검증).
+//   - apps/web/e2e/staging-rehearsal.spec.ts: expectedRulesetVersion / expectedContentPackVersion(수동 리허설).
 export const PRODUCTION_SEASON = Object.freeze({
   id: 'svc_season_1',
   name: '시즌 1',
   status: 'ACTIVE',
-  rulesetVersion: '1.3.0',
-  contentPackVersion: '0.5.0',
+  rulesetVersion: '1.4.0',
+  contentPackVersion: '0.5.1',
   isTest: 0,
 });
 
+// decideSeason은 DB 행이 정확히 이 pair일 때만 PRODUCTION_SEASON으로 compare-and-set한다.
 export const PREVIOUS_PRODUCTION_VERSION = Object.freeze({
-  rulesetVersion: '1.1.0',
-  contentPackVersion: '0.3.0',
+  rulesetVersion: '1.3.0',
+  contentPackVersion: '0.5.0',
 });
 
 function rowsFromWrangler(value) {
@@ -268,6 +276,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       `- ends at: ${proposal.endsAt ?? 'open-ended'}`,
     ]);
     process.stdout.write(decision.action);
+  } else if (command === 'expect-version') {
+    // 워크플로 verify 단계가 기대 manifest를 여기서 읽는다(하드코딩 중복 방지).
+    process.stdout.write(
+      JSON.stringify({
+        rulesetVersion: PRODUCTION_SEASON.rulesetVersion,
+        contentPackVersion: PRODUCTION_SEASON.contentPackVersion,
+      }),
+    );
   } else if (command === 'proposal') {
     const proposal = validateProposal(
       {
@@ -285,7 +301,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     ]);
   } else {
     throw new Error(
-      'Usage: production-release.mjs bookmark|schema|counts|seasons|plan|plan-end|proposal [wrangler-json]',
+      'Usage: production-release.mjs bookmark|schema|counts|seasons|plan|plan-end|proposal|expect-version [wrangler-json]',
     );
   }
 }
