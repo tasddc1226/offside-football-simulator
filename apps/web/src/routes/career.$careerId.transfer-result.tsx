@@ -74,10 +74,14 @@ function loanReturnRoleReason(evaluation: LoanReturnEvaluation, parentTier: stri
   if (evaluation.reevaluatedRole !== evaluation.parentRolePromise) {
     return `임대 출전 ${share}%는 ${delivered} 기준을 충족해, 원소속 역할 약속이 ${parent}에서 ${SQUAD_ROLE_LABELS[evaluation.reevaluatedRole]}(으)로 조정됩니다.`;
   }
-  if (evaluation.deliveredRole !== evaluation.parentRolePromise && evaluation.ceilingRole === evaluation.parentRolePromise) {
-    return `임대 출전 ${share}%는 ${delivered} 기준이지만, ${parentTier} 구단이 제안하는 최대 역할이 ${SQUAD_ROLE_LABELS[evaluation.ceilingRole]}이라 역할 약속은 ${parent} 그대로입니다.`;
+  // 이행 역할이 약속보다 낮으면 '복귀로 내려가지 않음' 규칙이 약속을 지킨 것이지 등급 상한 때문이 아니다.
+  if (evaluation.belowPromise) {
+    return `임대 출전 ${share}%는 ${delivered} 기준이라 원소속 역할 약속은 ${parent} 그대로입니다(복귀로 내려가지는 않습니다).`;
   }
-  return `임대 출전 ${share}%는 ${delivered} 기준이라 원소속 역할 약속은 ${parent} 그대로입니다(복귀로 내려가지는 않습니다).`;
+  if (evaluation.cappedByTier) {
+    return `임대 출전 ${share}%는 ${delivered} 기준이지만, ${parentTier} 구단이 제안하는 최대 역할이 ${SQUAD_ROLE_LABELS[evaluation.ceilingRole]}(이)라 역할 약속은 ${parent} 그대로입니다.`;
+  }
+  return `임대 출전 ${share}%는 ${delivered} 기준이라 원소속 역할 약속은 ${parent} 그대로입니다.`;
 }
 
 function LoanReturnDecision({ careerId }: { careerId: string }) {

@@ -1,3 +1,4 @@
+import { matchesWithMinutes } from './market.js';
 import type { Ruleset } from './ruleset.js';
 import { computeSquadStatus, isSquadRoleBetter } from './selection.js';
 import { computePromiseFulfilment } from './settlement.js';
@@ -13,8 +14,10 @@ export type LoanReturnEvaluation = {
   loanSeason: {
     index: number;
     teamId: string;
+    /** 1분 이상 뛴 경기 수(`total - zeroMinute`). 직전 시즌 결산 화면의 출전 수와 같은 식이다. */
     matches: number;
     started: number;
+    /** 실제로 투입된 교체 출전 수(미사용 교체 명단 `zeroMinute - out` 제외). 결산 화면과 같은 식이다. */
     sub: number;
     minutes: number;
     possibleMinutes: number;
@@ -31,6 +34,10 @@ export type LoanReturnEvaluation = {
   ceilingRole: SquadRole;
   /** 재평가 결과 역할: `max(parentRolePromise, min(deliveredRole, ceilingRole))` — 복귀로 내려가지는 않는다. */
   reevaluatedRole: SquadRole;
+  /** 임대 이행 역할이 원소속 등급 상한보다 높아 상한에 잘렸는지(`deliveredRole > ceilingRole`). */
+  cappedByTier: boolean;
+  /** 임대 이행 역할이 원소속 약속보다 낮아 '복귀로 내려가지 않음' 규칙이 약속을 지켰는지(`deliveredRole < parentRolePromise`). */
+  belowPromise: boolean;
   /** 재평가 역할 + 임대 시즌 평균 평점으로 `computeSquadStatus`가 낸 값(주장 보너스 없음). */
   squadStatus: number;
   /** 이 룰셋이 실제로 재평가를 적용하는지(1.4.0+ 키). false면 표시만 하고 계약은 그대로다. */
@@ -90,14 +97,18 @@ export function evaluateLoanReturnRole(args: EvaluateLoanReturnRoleArgs): LoanRe
   const totals = stats.totals;
   const goals = totals.group === 'FW' ? totals.goals : null;
   const assists = totals.group === 'FW' || totals.group === 'MF' ? totals.assists : null;
+  // 저장 집계의 sub는 미사용 교체 명단까지, total은 결장까지 센다. 결산 화면(appearanceSummary)과 같은 식으로
+  // 1분 이상 뛴 경기만 출전으로 세어 직전 화면과 같은 숫자가 읽히게 한다(원본 집계·해시는 그대로).
+  const appearances = stats.appearances;
+  const unusedSub = Math.max(0, appearances.zeroMinute - appearances.out);
 
   return {
     loanSeason: {
       index: loan.index,
       teamId: loan.teamId,
-      matches: stats.appearances.started + stats.appearances.sub,
-      started: stats.appearances.started,
-      sub: stats.appearances.sub,
+      matches: matchesWithMinutes(stats),
+      started: appearances.started,
+      sub: Math.max(0, appearances.sub - unusedSub),
       minutes: selection.minutes,
       possibleMinutes: selection.possibleMinutes,
       minutesShareBp: fulfilment.minutesShareBp,
@@ -109,6 +120,8 @@ export function evaluateLoanReturnRole(args: EvaluateLoanReturnRoleArgs): LoanRe
     deliveredRole: fulfilment.delivered,
     ceilingRole,
     reevaluatedRole,
+    cappedByTier: isSquadRoleBetter(fulfilment.delivered, ceilingRole),
+    belowPromise: isSquadRoleBetter(parent.rolePromise, fulfilment.delivered),
     squadStatus,
     applies: ruleset.transferRules.loanReturn?.reevaluate === true,
   };

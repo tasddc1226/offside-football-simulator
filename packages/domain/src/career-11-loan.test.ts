@@ -5,7 +5,7 @@ import { hashState } from './hash.js';
 import { evaluateLoanReturnRole } from './loan-return.js';
 import { computeSquadStatus } from './selection.js';
 import { simulate, verifySnapshot } from './simulate.js';
-import type { CareerState, DomainSnapshot } from './types.js';
+import type { CareerState, Contract, DomainSnapshot } from './types.js';
 
 /**
  * T-3-003 §8 골든 2(career-11-loan): 첫 계약 3시즌 → 시즌1 완주·결산(계약 잔여 2, INTEREST 시장에 LOAN
@@ -145,6 +145,12 @@ describe('이슈 #148: LOAN_RETURN(RETURN) 원소속 역할 재평가(1.4.0 키 
     expect(evaluation.deliveredRole).toBe('STARTER');
     expect(evaluation.ceilingRole).toBe('BENCH');
     expect(evaluation.reevaluatedRole).toBe('BENCH');
+    expect(evaluation.cappedByTier).toBe(true);
+    expect(evaluation.belowPromise).toBe(false);
+    // 출전 수는 직전 시즌 결산 화면(appearanceSummary)과 같은 식(1분 이상 뛴 경기)이어야 한다.
+    const appearances = snapshot.state.seasonHistory.at(-1)!.result.playerStats.appearances;
+    expect(evaluation.loanSeason.matches).toBe(appearances.total - appearances.zeroMinute);
+    expect(evaluation.loanSeason.sub).toBe(appearances.sub - (appearances.zeroMinute - appearances.out));
     const avgRatingTenths = Math.round(evaluation.loanSeason.avgRatingTenths!);
     expect(evaluation.squadStatus).toBe(
       computeSquadStatus(
@@ -172,10 +178,23 @@ describe('이슈 #148: LOAN_RETURN(RETURN) 원소속 역할 재평가(1.4.0 키 
     const evaluation = evaluateLoanReturnRole({ state: snapshot.state, ruleset: RULESET_1_4_0, parent })!;
     expect(evaluation.deliveredRole).toBe('RESERVE');
     expect(evaluation.reevaluatedRole).toBe('RESERVE');
+    expect(evaluation.cappedByTier).toBe(false);
+    expect(evaluation.belowPromise).toBe(false);
     const returned = loanReturn(snapshot, RULESET_1_4_0);
     expect(returned.ok).toBe(true);
     if (!returned.ok) return;
     expect(returned.snapshot.state.contract?.rolePromise).toBe('RESERVE');
+  });
+
+  it('1.4.0: 원소속 약속(BENCH)보다 임대 이행 역할(RESERVE)이 낮으면 belowPromise=true·cappedByTier=false로 "상한" 아닌 "하향 없음" 사유가 된다', () => {
+    const snapshot = beforeLoanReturn(RULESET_1_4_0);
+    const parent: Contract = { ...snapshot.state.parentContract!, rolePromise: 'BENCH' };
+    const evaluation = evaluateLoanReturnRole({ state: snapshot.state, ruleset: RULESET_1_4_0, parent })!;
+    expect(evaluation.deliveredRole).toBe('RESERVE');
+    expect(evaluation.ceilingRole).toBe('BENCH');
+    expect(evaluation.reevaluatedRole).toBe('BENCH');
+    expect(evaluation.belowPromise).toBe(true);
+    expect(evaluation.cappedByTier).toBe(false);
   });
 
   it('evaluateLoanReturnRole은 마지막 시즌이 원소속 시즌이면 null이다', () => {

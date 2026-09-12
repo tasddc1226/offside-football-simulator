@@ -437,8 +437,9 @@ export function generateMarket(args: GenerateMarketArgs): GeneratedMarket {
 }
 
 /** 시즌 누계 통계에서 "실제로 뛴 경기 수"(minutes > 0). `appearances.total`은 결장(OUT)까지 센 기록
- * 수이고 `zeroMinute`는 0분 경기(결장·미사용 교체) 수라, 차가 곧 1분 이상 뛴 경기 수다. */
-function matchesWithMinutes(stats: SeasonPlayerStats): number {
+ * 수이고 `zeroMinute`는 0분 경기(결장·미사용 교체) 수라, 차가 곧 1분 이상 뛴 경기 수다.
+ * 웹 시즌 결산(`appearanceSummary`)의 출전 수와 같은 식이라 #147 계약 출전·#148 임대 복귀 카드가 같은 값을 읽는다. */
+export function matchesWithMinutes(stats: SeasonPlayerStats): number {
   return Math.max(0, stats.appearances.total - stats.appearances.zeroMinute);
 }
 
