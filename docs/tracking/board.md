@@ -1,6 +1,6 @@
 # 진행 보드
 
-갱신: 2026-09-07 17:35. 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
+갱신: 2026-09-12 (Claude 오케스트레이터 세션, UX-012~013·Wave C·D 반영). 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
 
 2026-09-07 후속: **운영 서비스 출시(SEASON 1: KICKOFF).** 2026-09-06 12:33 사용자 세션이 수동 `Production Release`로 첫 운영 배포를 마쳤고 [offside-lab.com](https://offside-lab.com)에서 시즌 1(`svc_season_1`, 테스트 아님, 종료일 미정, 룰셋 1.3.0·팩 0.5.0)이 ACTIVE다. Phase 5(PR #103)·Phase 6은 종결, Phase 7 운영·밸런스가 진행 중이다. 아래 [Phase 5](#phase-5-백로그-장기-성장은퇴legacy--2026-09-06-통합-pr-103으로-종결)·[Phase 6](#phase-6-출시-항목-season-1-kickoff--2026-09-06-1233-운영-출시-사용자-세션)·[Phase 7](#phase-7-운영-항목-라이브-운영밸런스-2026-09-06) 표와 [현재 게이트](#현재-게이트) 마지막 문단이 이 문서의 나머지 이력보다 우선한다.
 
@@ -248,6 +248,16 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | T-7-012 | ui | `.os-eyebrow` 색 대비 axe 위반(12화면) 수정 + `check:contrast` 쌍 추가 | completed | [브리프](briefs/T-7-012.md) 이슈 #180. port 5273. 17:20 투입 (Workflow Sonnet 5) → 18:10 워커가 PR #183 개설(훅 통과). 검증은 워크플로 완료 보고 뒤 → 20:08 오케스트레이터 360px 측정: /settings eyebrow 라이트 4.40:1(`--os-line` 초록) → 10.66:1(`--os-accent` 남색), 다크 8.86 → 9.08. 캡처 shots183/. 체인 실행 중(run10) → 20:12 체인 녹색, e2e 51 실패(baseline 대비 새 실패 0·사라진 실패 9 = eyebrow 대비 항목 전부) → 20:12 PR #183 squash 머지(`5e5e2c4`) |
 | T-7-013 | web | SCR-009 제안 비교 `<dl>` 구조 axe 위반(`definition-list`·`only-dlitems`) 수정 | completed | [브리프](briefs/T-7-013.md) 이슈 #180. port 5274. 17:20 투입 (Workflow Sonnet 5) → 19:5x 워커 완료(`5ec4a86`, `<dd>` 안으로 delta 캡션 이동 + 기존 테스트 파일에 dl 구조 케이스 1개), PR #185(워커가 직접 개설). 워커 보고: definition-list·only-dlitems 위반 0, e2e 60/43/7로 baseline과 동일. 체인 큐 run9(#185, 포트 5274) → 20:24 체인 녹색, e2e 49 실패(새 실패 0, a11y:303 통과), 360px 제안 카드 레이아웃 이전 캡처와 동일 → 20:26 PR #185 squash 머지(`2074303`) |
 | 운영 배포 | web·api | 1차 웨이브 T-7-001~010 + 핫픽스 T-7-011~013 운영 반영(코드만, 시즌 룰셋 1.3.0 유지, D-71 사용자 지시) | completed | 21:48~21:50 deploy run 34123837271 `308f9bc`(preflight 34123657025). API `6b78751f…`·web `a37ab471…`, manifest noop. 배포 후 health·current·CORS·웹·360px 플레이(`QA배포2151`) 검증 통과, [런북 기록](../operations/production-release.md) |
+| UX-012 | ui·web | 전역 화면 전환 컴포넌트 `ScreenTransition`(3초 고정 단일 상수·프로그레스 바·단계 문구·`waitFor`로 실제 작업 동기화·키보드 즉시 스킵 제거) + 마일스톤 5곳(허브 커리어 시작·KICKOFF·시즌 준비·온보딩·계약 완료) 적용 | completed | 2026-09-08 PR #191 `c46b740`. 오케스트레이터 브라우저 관찰로 진행 바 ease-out(0.4초에 88%)·오버레이 셸 절반 문제를 잡아 수정 워커 2회 뒤 머지, 운영 배포 run 34136583584. D-72 |
+| 도구 | api·docs | 환경별 D1 조회 스크립트 `db:query`·`db:query:staging`·`db:query:production` + `CLAUDE.md`(/init) | completed | PR #187 `77d83f1`. preview 환경이 #122에서 제거돼 `db:query:preview`는 제외 |
+| 온보딩 수정 | web·ui | 이슈 #156 3슬라이드 세로 중앙 정렬(`useShellMainHeight` 훅을 ScreenTransition에서 추출, 조건부 렌더 시 ref 미추적 버그 발견·수정) + 시네마틱 인트로 경기장 SVG 일러스트 제거(사용자 지시 "온보딩 이미지 제거") | completed | 2026-09-12 PR #193. 체인: `phase4-seed-reachability` 120s 타임아웃은 부하 플레이크(단독 7/7 통과), build·bundle 녹색. 실측 위/아래 여백 데스크톱 218/218·모바일 98/98, 액션독 하단 고정. staging 배포 확인 뒤 #156 닫기 |
+| Wave C-A | ui·web·e2e | 접근성 빚: PlayerCard 등번호 배지 대비 1.15:1(#180)·정적 화면 스크롤 영역 포커스(#180)·TeamBadge 이니셜 "강동강동" 중복 읽힘(#170) + transfer·retirement e2e 허용 필터 제거(#190-1) | in-progress | 2026-09-12 Workflow Sonnet 5 `fix-a11y-debt`. 구현 → 회귀·접근성 2렌즈 독립 리뷰 → 차단 결함 자동 수정 파이프라인(D-74) |
+| Wave C-B | web | P3 UI 8건: #154 설정 상세 버전 불일치·#155 404 화면·#157/#188 서명 버튼·제안 카드 높이·#159 제안 표제·#160 약관 링크·#167 은퇴 카드 CTA·#171 임대 클럽명 | in-progress | `fix-p3-ui-batch`. 같은 파이프라인 |
+| Wave D-D | domain·content·web | 2차 웨이브 #147 재계약 사전 협상 타이밍·#148 임대 복귀 재평가·#145 약속 미이행 실시간 표시 — 상태 전이 변경은 룰셋 1.4.0 선택 키 가드(D-43/D-67 패턴), 표시 전용 계산 우선. season-result·contract-presentation·offers는 Wave C-B 소유라 후속 절로 | in-progress | `fix-domain-wave2`. 결정론·게임 규칙 2렌즈 리뷰. 1.4.0 승격 전엔 운영 미적용 |
+| Wave D-F | web | 선수 생성 정체성 단계: #153 유효성 경고 잔존·#158 이름 정책(기본안: 한글/영문 1자 이상, 허용 문자 제한)·#161 국적 정렬(데이터 확장은 1.4.0 후속)·#104 NPC 예약 이름 가드 | in-progress | `fix-player-creation` |
+| Wave D-G | web | 플레이 안내(표시 전용, 숨김값 미노출): #163 직전 결산 정체 사유 기반 상한 안내·#164 재활 화면 재발 표시·#166 은퇴 압력 40+ 프리시즌 예고 | in-progress | `fix-play-guidance` |
+| UX-013 | web·ui | 설정 화면을 원작(SLB) 구조로 개편: 배너 헤더(프리셋 색·저장 위치 배지)·계정 1카드+계정 상세 아코디언·홈 색상 4열 타일 그리드(+가상 구단 12팀 컬러 프리셋, `--os-hero` 연동)·구단 이름·로고 업로드(128px data URL, toss 문자열 KV 호환)·서비스 정책 목록·화면·플레이 설정 아코디언·하단 위험 링크 | todo | 2026-09-12 사용자 확정(D-73). Wave C 머지 뒤 투입(settings.tsx·TeamBadge 충돌 회피). 브리프: 세션 스크래치패드 `brief-ux-013-settings-redesign.md` |
+| 정리 | infra | 머지된 PR의 원격 브랜치 86개 삭제(보존: `T-5-003-retirement-decision`, 활성 워커 브랜치) | completed | 2026-09-12 사용자 승인 "삭제". 대상은 `gh pr list --state merged` 헤드 ∩ 원격 브랜치 − 열린 PR 헤드 |
 | 리뷰 후속(2차) | domain·web | P2 잔여: #145 미이행 실시간 알림, #147 재계약 사전 협상 타이밍, #148 임대 성과 미반영(셋 다 T-7-002와 같은 도메인 파일 → 2차 웨이브). P3 #153~#172 묶음 | todo | 2026-09-07 14시 이슈 #140~#172(33건) 등록, #104·#105 QA 코멘트. 1차 웨이브 T-7-001~010 브리프는 14:50 작성. 투입은 사용자 승인 뒤 |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
