@@ -43,6 +43,7 @@ import {
   positionsByGroup,
   RISK_LABELS,
   shouldResetArchetype,
+  sortNationalities,
   validateDraftName,
 } from '../shared/player-draft.js';
 import { useScreenState } from '../shared/screen-state.js';
@@ -78,6 +79,14 @@ const GENDER_OPTIONS = ['FEMALE', 'MALE', 'UNSPECIFIED'] as const satisfies read
 type FieldErrors = Partial<Record<keyof FormFields, string>>;
 type CreationPanel = 0 | 1 | 2;
 type CreationScratch = { form: FormFields; panel: CreationPanel; version?: 2 };
+
+const CREATION_PANELS = [0, 1, 2] as const satisfies readonly CreationPanel[];
+/** 패널별로 화면에 보이는(= 그 패널에서 검증·안내하는) 필드. */
+const PANEL_FIELDS: Record<CreationPanel, ReadonlyArray<keyof FormFields>> = {
+  0: ['backgroundId'],
+  1: ['name', 'gender', 'nationalityCode', 'preferredFoot'],
+  2: ['position'],
+};
 
 const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
 const CAPTION_STYLE = {
@@ -124,6 +133,7 @@ function CreatePlayerScreen() {
   const ruleset = query.data === undefined ? activeRuleset : rulesetForCareer(query.data.state);
   const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
   const positionGroups = positionsByGroup(ruleset.positions);
+  const nationalityOptions = sortNationalities(ruleset.nationalities);
   const blocked = useCareerStepGuard(query.data?.state, 'SCR-002');
   const updateDraftMutation = useCareerMutation('updateDraft');
 
@@ -136,6 +146,7 @@ function CreatePlayerScreen() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const seededRef = useRef(false);
   const focusPanelHeadingRef = useRef(false);
+  const submitAttemptedRef = useRef(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const nationalitySelectRef = useRef<HTMLSelectElement>(null);
 
@@ -196,6 +207,10 @@ function CreatePlayerScreen() {
   }, [panel]);
 
   const committing = screenState.kind === 'COMMITTING';
+  // 이슈 158: 제출 시도 뒤 이 패널에 아직 보이는 오류가 있으면 다음을 비활성화한다(오류는 아래
+  // updateField가 필드 변경마다 지우므로 고치는 즉시 다시 활성화된다). 첫 제출 전에는 비활성화하지
+  // 않는다 — 빈 폼 제출이 오류 안내·첫 오류 필드 포커스로 이어지는 기존 동작을 유지한다.
+  const hasVisibleErrors = PANEL_FIELDS[panel].some((key) => errors[key] !== undefined);
   const selectedBackground = ruleset.backgrounds.find((background) => background.id === form.backgroundId);
   const selectedOpening = selectedBackground === undefined
     ? undefined
@@ -206,8 +221,21 @@ function CreatePlayerScreen() {
       (key) => form[key] !== (savedDraft[key] ?? ''),
     );
 
+  // 이슈 153 원인: 오류가 제출 시점(validateCurrentPanel·handleNext)에만 계산되고 필드 change에서는
+  // 폼 값만 바뀌어 "선택해 주세요"가 값을 고른 뒤에도 남아 있었다. 수정: 그 패널에서 한 번 제출을
+  // 시도한 뒤에는 바뀐 필드를 change마다 재검증해 유효해지는 즉시 지우고, 이름처럼 메시지가 달라지면
+  // (길이 → 등장인물 이름 등) 갱신한다. 첫 제출 전에는 입력 중에 미리 경고하지 않는다.
   function updateField<K extends keyof FormFields>(key: K, value: FormFields[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+    if (!submitAttemptedRef.current) return;
+    const message = validateForm({ ...form, [key]: value }, ruleset)[key];
+    if (message === errors[key]) return;
+    setErrors((current) => {
+      const next = { ...current };
+      if (message === undefined) delete next[key];
+      else next[key] = message;
+      return next;
+    });
   }
 
   function handlePositionGroupChange(nextGroup: PositionGroup) {
@@ -215,12 +243,10 @@ function CreatePlayerScreen() {
   }
 
   function validateCurrentPanel(): boolean {
+    submitAttemptedRef.current = true;
     const all = validateForm(form, ruleset);
-    const keys: Array<keyof FormFields> = panel === 0
-      ? ['backgroundId']
-      : panel === 1 ? ['name', 'gender', 'nationalityCode', 'preferredFoot'] : ['position'];
     const nextErrors: FieldErrors = {};
-    for (const key of keys) {
+    for (const key of PANEL_FIELDS[panel]) {
       const message = all[key];
       if (message !== undefined) nextErrors[key] = message;
     }
@@ -232,12 +258,14 @@ function CreatePlayerScreen() {
 
   function handlePanelNext() {
     if (!validateCurrentPanel()) return;
+    submitAttemptedRef.current = false;
     focusPanelHeadingRef.current = true;
     setPanel((current) => (current === 0 ? 1 : 2));
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
   function handlePanelBack() {
+    submitAttemptedRef.current = false;
     setErrors({});
     focusPanelHeadingRef.current = true;
     setPanel((current) => (current === 2 ? 1 : 0));
@@ -245,9 +273,19 @@ function CreatePlayerScreen() {
   }
 
   async function handleNext() {
+    submitAttemptedRef.current = true;
     const validationErrors = validateForm(form, ruleset);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
+      // 앞 패널 필드(복원된 scratch의 예약 이름 등)가 틀렸으면 그 패널로 되돌려 안내가 보이게 한다.
+      const errorPanel =
+        CREATION_PANELS.find((candidate) => PANEL_FIELDS[candidate].some((key) => validationErrors[key] !== undefined)) ?? panel;
+      if (errorPanel !== panel) {
+        focusPanelHeadingRef.current = true;
+        setPanel(errorPanel);
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        return;
+      }
       if (validationErrors.name) {
         nameInputRef.current?.focus();
       } else if (validationErrors.nationalityCode) {
@@ -313,6 +351,7 @@ function CreatePlayerScreen() {
           <Button
             variant="secondary"
             onClick={() => {
+              submitAttemptedRef.current = false;
               setErrors({});
               setPanel(0);
               toDraft({});
@@ -459,7 +498,7 @@ function CreatePlayerScreen() {
             onChange={(event) => updateField('nationalityCode', event.target.value)}
           >
             <option value="">국적을 선택하세요</option>
-            {ruleset.nationalities.map((nationality) => (
+            {nationalityOptions.map((nationality) => (
               <option key={nationality.code} value={nationality.code}>
                 {nationality.name}
               </option>
@@ -635,7 +674,7 @@ function CreatePlayerScreen() {
         <Button
           variant="primary"
           onClick={panel === 2 ? () => void handleNext() : handlePanelNext}
-          disabled={committing}
+          disabled={committing || hasVisibleErrors}
           className={panel === 0 ? 'w-full' : undefined}
           {...(panel === 2 ? { 'aria-describedby': 'draft-save-notice' } : {})}
         >
