@@ -17,7 +17,13 @@ import { rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
-import { positionHeaderField } from '../shared/labels.js';
+import { ATTRIBUTE_LABELS, positionHeaderField } from '../shared/labels.js';
+import {
+  GuidanceCard,
+  potentialCapNotice,
+  retirementEvidenceText,
+  retirementPressureNotice,
+} from '../shared/play-guidance.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import {
@@ -87,6 +93,10 @@ function PreseasonScreen() {
     team === undefined
       ? undefined
       : ruleset.tacticalStyles.find((candidate) => candidate.id === team.tacticalStyleId);
+  // 이슈 163·166: 직전 결산에 이미 저장된 값만 읽는 표시 전용 안내(데이터 없으면 숨김).
+  const capNotice = potentialCapNotice(state);
+  const pressureNotice = retirementPressureNotice(state);
+  const pressureEvidence = pressureNotice === null ? null : retirementEvidenceText(pressureNotice);
 
   return (
     <div className="os-screen">
@@ -111,6 +121,29 @@ function PreseasonScreen() {
           정해집니다
         </p>
       </div>
+
+      {pressureNotice !== null ? (
+        <GuidanceCard
+          label={`은퇴 압력 예고 · ${pressureNotice.total} / 100`}
+          detail={
+            pressureEvidence === null
+              ? '직전 결산에 연령 하락 기록은 없습니다. 출전 기회·계약·시장 수요가 압력에 함께 반영됩니다.'
+              : `직전 결산 노쇠 근거: ${pressureEvidence}`
+          }
+          action={
+            <Link
+              to="/career/$careerId/retirement"
+              params={{ careerId }}
+              className={buttonClassName('secondary')}
+              style={buttonStyle}
+            >
+              은퇴 결정 화면 보기
+            </Link>
+          }
+        >
+          다음 시즌도 비슷한 하락이 예상됩니다 — 은퇴 결정 화면에서 선택을 확인하세요.
+        </GuidanceCard>
+      ) : null}
 
       <section className="os-panel flex flex-col gap-os-3">
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
@@ -143,6 +176,17 @@ function PreseasonScreen() {
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
           훈련 계획
         </h2>
+        {capNotice !== null ? (
+          <GuidanceCard
+            label="잠재력 상한 안내"
+            className="bg-os-surface-2"
+            detail={`시즌 ${capNotice.seasonNumber} 결산 기준 · 정찰 범위 밖 수치는 보여주지 않습니다.`}
+          >
+            지난 시즌 {capNotice.attributeKeys.map((key) => ATTRIBUTE_LABELS[key]).join('·')}
+            {capNotice.attributeKeys.length === 1 ? '은(는)' : '은'} 잠재력 상한에 막혀 성장이 멈췄어요 — 다른
+            능력·역할 집중을 고려하세요.
+          </GuidanceCard>
+        ) : null}
         <RadioGroup
           className="os-choice-grid"
           aria-label="훈련 계획"
