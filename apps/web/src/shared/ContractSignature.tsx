@@ -201,16 +201,21 @@ export function ContractSignature({
           </p>
         </>
       )}
+      {/* 이슈 157: 안내는 모드별로 갈리고(이름 입력 모드에 캔버스 안내가 남지 않게), 버튼은
+          360px에서 라벨이 세 줄로 쪼개지지 않도록 짧은 라벨 + shrink-0으로 둔다. */}
       <div className="flex items-center justify-between gap-os-3">
-        <p className="os-muted">
-          손가락이나 마우스로 쓰세요. 게임 연출용이며 새로고침하거나 화면을 나가면 사라집니다.
+        <p className="os-muted min-w-0">
+          {mode === 'draw'
+            ? '손가락이나 마우스로 쓰세요. 게임 연출용이며 새로고침하거나 화면을 나가면 사라집니다.'
+            : '입력한 이름이 서명으로 남습니다. 게임 연출용이며 새로고침하거나 화면을 나가면 사라집니다.'}
         </p>
         <Button
           variant="ghost"
+          className="shrink-0 whitespace-nowrap"
           disabled={disabled || (strokes.length === 0 && typedName.length === 0)}
           onClick={clear}
         >
-          지우고 다시 쓰기
+          다시 쓰기
         </Button>
       </div>
       {!ready ? (

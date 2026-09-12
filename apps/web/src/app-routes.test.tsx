@@ -10,7 +10,7 @@ import { createAppEngine, getAppEngine, type AppEngine } from './engine/engine.j
 import { routeTree } from './routeTree.gen.js';
 import { queryClient } from './shared/query-client.js';
 import { useUiStore } from './shared/ui-store.js';
-import { serviceSeasonBadgeLabel } from './routes/index.js';
+import { careerCardCtaLabel, serviceSeasonBadgeLabel } from './routes/index.js';
 
 /**
  * 컴포넌트 렌더 테스트는 실제 Worker 대신 inlineSimulator + MemoryLocalStore로 만든 테스트
@@ -66,6 +66,16 @@ describe('SCR-001 서비스 시즌 배지', () => {
 
   it('현재 시즌 조회 결과가 없으면 배지를 표시하지 않는다', () => {
     expect(serviceSeasonBadgeLabel('svc-kickoff', undefined)).toBeNull();
+  });
+});
+
+// 이슈 167: 보관함(은퇴·보관) 카드는 "이어하기"가 아니라 "기록 보기"다.
+describe('SCR-001 카드 CTA 라벨', () => {
+  it('DRAFT·ACTIVE는 이어하기, RETIRED·ARCHIVED는 기록 보기', () => {
+    expect(careerCardCtaLabel('DRAFT')).toBe('이어하기');
+    expect(careerCardCtaLabel('ACTIVE')).toBe('이어하기');
+    expect(careerCardCtaLabel('RETIRED')).toBe('기록 보기');
+    expect(careerCardCtaLabel('ARCHIVED')).toBe('기록 보기');
   });
 });
 
@@ -329,7 +339,7 @@ describe('SCR-001 허브 - 카드', () => {
     expect(
       await screen.findByRole(
         'heading',
-        { level: 1, name: '찾을 수 없는 화면입니다' },
+        { level: 1, name: '페이지를 찾을 수 없습니다' },
         { timeout: 3000 },
       ),
     ).toBeInTheDocument();
@@ -425,13 +435,18 @@ describe('법적 문서 라우트', () => {
 });
 
 describe('존재하지 않는 경로', () => {
-  it('not-found 안내를 렌더하고 허브로 돌아가는 링크를 제공한다', async () => {
+  it('이슈 155: 앱 셸 안에서 not-found 안내를 렌더하고 허브로 가는 링크·문서 제목을 제공한다', async () => {
     renderAt('/no-such-route');
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: '찾을 수 없는 화면입니다' }),
+      await screen.findByRole('heading', { level: 1, name: '페이지를 찾을 수 없습니다' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '허브로 돌아가기' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '허브로' })).toBeInTheDocument();
+    // 앱 셸(게임 메뉴 nav)이 함께 그려진다.
+    expect(screen.getByRole('navigation', { name: '게임 메뉴' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.title).toBe('페이지를 찾을 수 없습니다 — OFFSIDE');
+    });
   });
 });
 

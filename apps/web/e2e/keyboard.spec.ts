@@ -13,7 +13,7 @@
 // 키 목록(Tab·Shift+Tab·Enter·Space·화살표)에 없어 쓰지 않고, 대화상자의 "닫기" 버튼을 Tab+Enter로
 // 눌러서 닫는다.
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { fulfillJson, META } from './helpers/player-creation.js';
+import { expectFirstContractHeading, fulfillJson, META } from './helpers/player-creation.js';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
@@ -171,7 +171,7 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   }
   if (!reachedOffers) throw new Error('offers 화면에 도달하지 못했다(최대 10회 시도)');
 
-  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
+  await expectFirstContractHeading(page);
 
   // SCR-009: 제안 링크 → Enter(링크는 클릭 없이 Enter로 활성화된다).
   const offerLink = page.getByRole('link', { name: '제안 상세·결정' }).first();

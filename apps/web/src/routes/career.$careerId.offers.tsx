@@ -79,6 +79,15 @@ export function recoveryOpportunityHeadline(zeroMinutesConsecutiveSeasons: numbe
     : `최근 ${zeroMinutesConsecutiveSeasons}시즌 출전이 없었습니다.`;
 }
 
+/**
+ * 이슈 159: 제안이 1건이면 "비교"가 아니다. 첫 계약은 "받은 제안", 시장은 "이적시장 제안"으로
+ * 갈리고(e2e 헬퍼가 두 화면을 표제로 구분하므로 시장 쪽 접두는 유지), 2건 이상은 기존 표제 그대로.
+ */
+export function offersScreenTitle(firstContract: boolean, offerCount: number): string {
+  if (firstContract) return offerCount <= 1 ? '받은 제안' : '제안 비교';
+  return offerCount <= 1 ? '이적시장 제안' : '이적시장 제안 비교';
+}
+
 function MarketSummary({ state, offers }: { state: CareerState; offers: readonly Offer[] }) {
   const pending = state.pending;
   if (pending === null || (pending.kind !== 'OFFERS' && pending.kind !== 'CONTRACT')) return null;
@@ -286,14 +295,18 @@ function OffersScreen() {
       {firstContract ? (
         <ScreenIntro
           eyebrow="새로운 유니폼"
-          title="제안 비교"
+          title={offersScreenTitle(true, offers.length)}
           description="리그의 높이만큼, 내가 뛸 수 있는 자리도 중요해요. 다음 팀의 조건을 살펴보세요."
         />
       ) : (
         <ScreenIntro
           eyebrow={MARKET_REASON_LABEL_KO[pending.market.reason]}
-          title="이적시장 제안 비교"
-          description="현재 계약과 시장 상황을 비교해 다음 소속을 결정하세요."
+          title={offersScreenTitle(false, offers.length)}
+          description={
+            offers.length > 1
+              ? '현재 계약과 시장 상황을 비교해 다음 소속을 결정하세요.'
+              : '현재 계약과 시장 상황을 살펴보고 다음 소속을 결정하세요.'
+          }
         />
       )}
       {offers.length > 1 ? (

@@ -14,6 +14,7 @@ import { expect, type Page, test } from '@playwright/test';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
+  expectFirstContractHeading,
   fulfillJson,
   META,
   planPreseason,
@@ -139,7 +140,7 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   }
   if (!reachedOffers) throw new Error('offers 화면에 도달하지 못했다(최대 10회 시도)');
 
-  await expect(page.getByRole('heading', { level: 1, name: '제안 비교' })).toBeVisible();
+  await expectFirstContractHeading(page);
 
   // SCR-009: 제안 선택(확정) → SCR-010.
   await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
