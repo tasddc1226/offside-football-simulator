@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildNarrativeTokens, renderNarrative, type NarrativeTokenValues } from './narrative.js';
-import { activeContentPack, activeRuleset } from '../engine/content.js';
+import { testContentPack, testRuleset, TEST_CONTENT_PACK_VERSION } from '../test/content-fixtures.js';
 import type { CareerState } from '@offside/domain';
 
 const TOKENS: NarrativeTokenValues = {
@@ -109,7 +109,7 @@ function baseState(overrides: Partial<CareerState>): CareerState {
 
 describe('buildNarrativeTokens', () => {
   it('계약이 없으면 team·club은 배경 시작 팀(한강 FC U18) 이름이다', () => {
-    const tokens = buildNarrativeTokens(baseState({}), activeContentPack, activeRuleset);
+    const tokens = buildNarrativeTokens(baseState({}), testContentPack, testRuleset);
     expect(tokens.team).toBe('한강 FC U18');
     expect(tokens.club).toBe('한강 FC U18');
     expect(tokens.name).toBe('김서준');
@@ -139,23 +139,23 @@ describe('buildNarrativeTokens', () => {
         signedSeasonIndex: 1,
       },
     });
-    const tokens = buildNarrativeTokens(state, activeContentPack, activeRuleset);
+    const tokens = buildNarrativeTokens(state, testContentPack, testRuleset);
     expect(tokens.team).toBe('서라벌 유나이티드');
     expect(tokens.club).toBe('서라벌 유나이티드');
   });
 
   it('manager·rival·captain은 팩 narrativeTokens의 첫 값이다', () => {
-    const tokens = buildNarrativeTokens(baseState({}), activeContentPack, activeRuleset);
-    expect(tokens.manager).toBe(activeContentPack.narrativeTokens.manager[0]);
-    expect(tokens.rival).toBe(activeContentPack.narrativeTokens.rival[0]);
-    expect(tokens.captain).toBe(activeContentPack.narrativeTokens.captain[0]);
+    const tokens = buildNarrativeTokens(baseState({}), testContentPack, testRuleset);
+    expect(tokens.manager).toBe(testContentPack.narrativeTokens.manager[0]);
+    expect(tokens.rival).toBe(testContentPack.narrativeTokens.rival[0]);
+    expect(tokens.captain).toBe(testContentPack.narrativeTokens.captain[0]);
   });
 
-  it('0.2.0 snapshot/import는 agent 토큰을 읽고 활성 0.1.0은 바꾸지 않는다', async () => {
+  it('0.2.0 snapshot/import는 agent 토큰을 읽고 고정 픽스처(0.1.0)는 바꾸지 않는다', async () => {
     const { loadContentPack } = await import('@offside/content');
     const pack020 = loadContentPack('0.2.0');
-    const tokens = buildNarrativeTokens(baseState({}), pack020, activeRuleset);
+    const tokens = buildNarrativeTokens(baseState({}), pack020, testRuleset);
     expect(tokens.agent).toBe(pack020.narrativeTokens.agent[0]);
-    expect(activeContentPack.manifest.contentPackVersion).toBe('0.1.0');
+    expect(testContentPack.manifest.contentPackVersion).toBe(TEST_CONTENT_PACK_VERSION);
   });
 });

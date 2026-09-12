@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CareerState } from '@offside/domain';
-import { activeContentPack } from '../engine/content.js';
+import { testContentPack } from '../test/content-fixtures.js';
 import { actualEventEffects, eventResultTagLabel, resolveEventResultView } from './event-result.js';
 
 function baseState(overrides: Partial<CareerState>): CareerState {
@@ -75,9 +75,9 @@ describe('resolveEventResultView', () => {
       const state = baseState({
         timeline: [{ revision: 4, kind: 'EVENT_RESOLVED', refId: `EVT-CON-002:${choice}:${outcome}`, age: 17, step: 12 }],
       });
-      const first = resolveEventResultView(state, activeContentPack, 4);
+      const first = resolveEventResultView(state, testContentPack, 4);
       expect(first?.title).toBe(title);
-      expect(resolveEventResultView(state, activeContentPack, 4)).toEqual(first);
+      expect(resolveEventResultView(state, testContentPack, 4)).toEqual(first);
     },
   );
   it('EVENT_RESOLVED 항목을 refId로 풀어 outcome 정의로 결과를 만든다(EVT-CON-003 A A1: SUCCESS)', () => {
@@ -85,7 +85,7 @@ describe('resolveEventResultView', () => {
       timeline: [{ revision: 4, kind: 'EVENT_RESOLVED', refId: 'EVT-CON-003:A:A1', age: 17, step: 12 }],
     });
 
-    const view = resolveEventResultView(state, activeContentPack, 4);
+    const view = resolveEventResultView(state, testContentPack, 4);
 
     expect(view).toEqual({
       kind: 'SUCCESS',
@@ -102,7 +102,7 @@ describe('resolveEventResultView', () => {
       timeline: [{ revision: 2, kind: 'EVENT_RESOLVED', refId: 'EVT-CON-002:C:C1', age: 17, step: 10 }],
     });
 
-    const view = resolveEventResultView(state, activeContentPack, 2);
+    const view = resolveEventResultView(state, testContentPack, 2);
 
     expect(view?.tags).toEqual(['밑바닥부터', '진로_하부리그']);
     expect(view?.kind).toBe('FIXED');
@@ -114,7 +114,7 @@ describe('resolveEventResultView', () => {
       timeline: [{ revision: 4, kind: 'EVENT_RESOLVED', refId: 'EVT-CON-003:A:A1', age: 17, step: 12 }],
     });
 
-    expect(resolveEventResultView(state, activeContentPack, 99)).toBeNull();
+    expect(resolveEventResultView(state, testContentPack, 99)).toBeNull();
   });
 
   it('같은 rev를 다시 조회해도(새로고침·뒤로 가기 시뮬레이션) 같은 결과를 돌려준다', () => {
@@ -122,8 +122,8 @@ describe('resolveEventResultView', () => {
       timeline: [{ revision: 4, kind: 'EVENT_RESOLVED', refId: 'EVT-CON-003:B:B2', age: 17, step: 12 }],
     });
 
-    const first = resolveEventResultView(state, activeContentPack, 4);
-    const second = resolveEventResultView(state, activeContentPack, 4);
+    const first = resolveEventResultView(state, testContentPack, 4);
+    const second = resolveEventResultView(state, testContentPack, 4);
 
     expect(first).toEqual(second);
     expect(first?.kind).toBe('NEUTRAL');
@@ -134,6 +134,6 @@ describe('resolveEventResultView', () => {
       timeline: [{ revision: 4, kind: 'CONTRACT_SIGNED', refId: 'CTR-4', age: 17, step: 12 }],
     });
 
-    expect(resolveEventResultView(state, activeContentPack, 4)).toBeNull();
+    expect(resolveEventResultView(state, testContentPack, 4)).toBeNull();
   });
 });
