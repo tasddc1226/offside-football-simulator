@@ -3,13 +3,24 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   ACTIVE_CONTENT_PACK_VERSION,
+  ACTIVE_RULESET_VERSION,
   E2E_CONTENT_PACK_STORAGE_KEY,
+  FALLBACK_SERVICE_SEASON,
   resolveActiveContentPackVersion,
   selectContentPackVersion,
 } from './versions.js';
 
 afterEach(() => {
   localStorage.removeItem(E2E_CONTENT_PACK_STORAGE_KEY);
+});
+
+describe('오프라인 폴백 manifest', () => {
+  it('운영 승격 목표 manifest 1.4.0/0.5.1과 같다', () => {
+    expect(ACTIVE_RULESET_VERSION).toBe('1.4.0');
+    expect(ACTIVE_CONTENT_PACK_VERSION).toBe('0.5.1');
+    expect(FALLBACK_SERVICE_SEASON.rulesetVersion).toBe(ACTIVE_RULESET_VERSION);
+    expect(FALLBACK_SERVICE_SEASON.contentPackVersion).toBe(ACTIVE_CONTENT_PACK_VERSION);
+  });
 });
 
 describe('resolveActiveContentPackVersion', () => {
@@ -34,7 +45,7 @@ describe('resolveActiveContentPackVersion', () => {
 });
 
 describe('selectContentPackVersion', () => {
-  it('dev가 아니면 override 값이 있어도 기본 0.1.0을 유지한다', () => {
+  it('dev가 아니면 override 값이 있어도 기본 ACTIVE_CONTENT_PACK_VERSION을 유지한다', () => {
     expect(selectContentPackVersion({ dev: false, devOverride: '0.3.0' })).toBe(
       ACTIVE_CONTENT_PACK_VERSION,
     );

@@ -22,7 +22,7 @@
 | 신규 운영 시즌 | `svc_season_1`, 표시명 `시즌 1`, ACTIVE, isTest=false |
 | 기간 | 2026-09-06 00:00 KST부터, 종료일 미정(`endsAt: null`) |
 | 문의 | `tasddc1569@gmail.com` |
-| 현재 신규 커리어 버전 | ruleset 1.3.0 / content pack 0.5.0 |
+| 현재 신규 커리어 버전 | ruleset 1.3.0 / content pack 0.5.0 (승격 대기: 1.4.0 / 0.5.1, 아래 "시즌 1 manifest 2차 승격") |
 
 ## 최초 공개 결과
 
@@ -127,27 +127,68 @@
    혼동하지 않도록 이름과 검증 시각을 남기며, 기존 사용자 기록은 지우지 않는다.
 7. 실행 URL·source SHA·Worker 버전·season manifest·배포 후 검증을 이 문서 또는 PR에 남긴다.
 
-## 시즌 1 manifest 승격
+## 시즌 1 manifest 승격 (공통 절차)
 
-시즌 ID와 기간을 바꾸지 않는 콘텐츠 승격은 호환 API, web, manifest 순으로 배포한다. 현재 승인된
-승격은 `svc_season_1`의 `1.1.0/0.3.0`에서 `1.3.0/0.5.0`으로의 전환뿐이다. 시작은
+시즌 ID와 기간을 바꾸지 않는 콘텐츠 승격은 호환 API, web, manifest 순으로 배포한다. 시작은
 `2026-09-05T15:00:00Z`, 종료는 NULL, challenge set은 `cs_season_1`, ACTIVE/non-test를 유지한다.
+1차 승격(`1.1.0/0.3.0` → `1.3.0/0.5.0`)은 2026-09-06 완료했고, 2차 승격(`1.3.0/0.5.0` → `1.4.0/0.5.1`)은
+아래 절에 따른다.
 
-1. API를 먼저 배포한다. 시즌 1에 한해 정확한 두 승인 pair만 신규 최초 sync에 허용한다. mixed pair,
-   다른 과거 버전, 다른 시즌 ID는 허용하지 않는다. 이미 서버에 있는 커리어는 기존처럼 생성 당시
+1. API를 먼저 배포한다. 시즌 1에 한해 승인 manifest 목록(`apps/api/src/sync/season-version-compatibility.ts`
+   `APPROVED_PRODUCTION_MANIFESTS`)에 있는 pair끼리만 신규 최초 sync를 상호 허용한다. mixed pair,
+   목록에 없는 과거 버전, 다른 시즌 ID는 허용하지 않는다. 이미 서버에 있는 커리어는 기존처럼 생성 당시
    버전으로 후속 Snapshot·command 저장을 계속한다.
-2. web을 배포한다. 이 짧은 전환 구간에는 구·신 web이 모두 있을 수 있으므로 API의 두 pair 허용이
+2. web을 배포한다. 이 짧은 전환 구간에는 구·신 web이 모두 있을 수 있으므로 API의 복수 pair 허용이
    필요하다.
 3. 마지막으로 시즌 1 행을 old pair에서 new pair로 compare-and-set한다. 이름·상태·시작·NULL 종료·
-   challenge set·isTest 및 old pair가 모두 일치하지 않으면 쓰지 않는다. 즉시 D1을 다시 읽고 new pair
-   전체 메타데이터가 정확한지 검증한다.
+   challenge set·isTest 및 old pair(`PREVIOUS_PRODUCTION_VERSION`)가 모두 일치하지 않으면 쓰지 않는다.
+   즉시 D1을 다시 읽고 new pair 전체 메타데이터가 정확한지 검증한다.
 
 workflow artifact의 `season-rollback.sql`은 자동 실행하지 않는다. 이는 행이 여전히 정확한 new
 manifest일 때 버전 두 필드만 old pair로 되돌리는 역 compare-and-set이다. 실행 전 새 web 노출 범위와
-영향을 확인하고 API의 양 pair 호환 코드를 먼저 유지해야 한다. 서버에 저장된 신버전 커리어는 manifest
+영향을 확인하고 API의 복수 pair 호환 코드를 먼저 유지해야 한다. 서버에 저장된 신버전 커리어는 manifest
 rollback과 무관하게 생성 버전으로 계속 동기화되며, 아직 offline인 신버전 커리어도 이 호환 API가 old
 manifest에서 정확한 new pair를 허용하므로 업로드할 수 있다. DB Time Travel 복구나 사용자 기록 삭제를
 manifest rollback 대신 사용하지 않는다.
+
+## 시즌 1 manifest 2차 승격: 1.3.0/0.5.0 → 1.4.0/0.5.1 (사용자 결정 2026-09-12)
+
+룰셋 1.4.0은 회복 규칙(D-67, T-7-001~003)과 2차 웨이브 도메인 가드(Wave D-D, `fix-domain-wave2`)를
+담는다. 팩 0.5.1은 0.5.0 복사 + 이벤트 조건 추가이고 `compatibleRulesetVersions`는 1.3.0·1.4.0이다.
+목표 manifest의 정본은 `tooling/scripts/production-release.mjs`의 `PRODUCTION_SEASON`(1.4.0/0.5.1)과
+`PREVIOUS_PRODUCTION_VERSION`(1.3.0/0.5.0)이며, 워크플로 verify 단계는 `expect-version` 명령으로 이 값을
+읽는다. 같은 값을 유지해야 하는 곳: `apps/api/src/sync/season-version-compatibility.ts`(승인 목록 마지막 두
+항목), `apps/web/src/engine/versions.ts`(오프라인 폴백 상수), `apps/api/seeds/bootstrap-non-production.sql`
+(`svc_line_test`, staging).
+
+### 전제 (main 머지 순서)
+
+1. 팩 0.5.1 PR(`content-pack-0-5-1`)이 main에 있어야 한다. 없으면 web 번들이
+   `알 수 없는 contentPackVersion: 0.5.1`로 폴백 생성을 실패하고 `apps/web` 단위 테스트
+   (`career-actions.test.ts`)가 모듈 로드에서 깨진다.
+2. 도메인 2차 웨이브 PR(`fix-domain-wave2`)이 main에 있어야 한다(1.4.0 선택 키 가드 동작 확정).
+3. 그 뒤 이 승격 PR(`release-ruleset-1-4-0`)을 머지한다. 이 PR은 코드만 바꾸며 운영 D1은 건드리지 않는다.
+
+### 절차
+
+1. **staging 확인.** 승격 PR 머지 → main CI가 `bootstrap-non-production.sql`을 staging D1에 upsert해
+   `svc_line_test`가 1.4.0/0.5.1이 된다. staging web에서 새 커리어를 만들어 설정 화면·`PUT /v1/careers/{id}`
+   응답의 룰셋·팩이 1.4.0/0.5.1인지, 기존 staging 커리어(1.0.0/0.1.0 등)가 그대로 열리는지 확인한다.
+2. **preflight.** Production Release → `mode=preflight`, `expected_sha`=최신 main. 요약의 "Service-season
+   metadata"에서 `svc_season_1`이 1.3.0/0.5.0 ACTIVE인지 본다. 워크플로 시작 직후 main SHA 검사가 있으므로
+   실행 중 main 푸시(문서 커밋 포함)를 멈춘다.
+3. **deploy.** `mode=deploy`, `confirmation=DEPLOY_PRODUCTION`, `season_starts_at=2026-09-05T15:00:00Z`,
+   `season_ends_at` 비움, `challenge_set_id=cs_season_1`. "Validate exact production manifest transition"
+   단계의 plan은 **activate**여야 한다(이미 승격됐다면 noop, 그 외 값이면 중단). 이어서 migration(없음,
+   no-op) → API → web → 시즌 1 행 compare-and-set(1.3.0/0.5.0 → 1.4.0/0.5.1) → 재조회 plan=noop 확인.
+4. **배포 후 검증.** 워크플로가 `GET /v1/service-seasons/current`를 `expect-version` 값(1.4.0/0.5.1)과
+   비교한다. 추가로 health·CORS·web 200과 Playwright 360px 플레이(생성 → KICKOFF → 저장 → 새로고침)를
+   기존 절차대로 남긴다. QA 커리어는 이름·시각으로 구분하고 삭제하지 않는다.
+5. **롤백.** run artifact의 `.release/season-rollback.sql`이 1.4.0/0.5.1 행을 1.3.0/0.5.0으로 되돌리는 역
+   compare-and-set이다. API는 1.1.0/0.3.0·1.3.0/0.5.0·1.4.0/0.5.1 셋을 상호 허용하므로 롤백 뒤에도 이미
+   1.4.0/0.5.1로 만들어진 커리어의 최초 sync는 막히지 않는다. 자동 실행하지 않으며 실행 전 영향 범위를 기록한다.
+6. **기록.** 실행 URL·source SHA·Worker 버전·manifest 전후·검증 결과를 이 문서와 `docs/tracking/`에 남기고,
+   위 표의 "현재 신규 커리어 버전"을 1.4.0/0.5.1로 갱신한다.
 
 ## 나중에 종료일 정하기
 

@@ -1,14 +1,22 @@
 type VersionPair = { rulesetVersion: string; contentPackVersion: string };
 
 const PRODUCTION_SEASON_ID = 'svc_season_1';
-const PREVIOUS_PRODUCTION_VERSION = Object.freeze({
-  rulesetVersion: '1.1.0',
-  contentPackVersion: '0.3.0',
-});
-const CURRENT_PRODUCTION_VERSION = Object.freeze({
-  rulesetVersion: '1.3.0',
-  contentPackVersion: '0.5.0',
-});
+
+/**
+ * svc_season_1에서 상호 허용하는 승인 manifest. 순서는 승격 이력(오래된 것부터)이다.
+ * tooling/scripts/production-release.mjs의 PREVIOUS_PRODUCTION_VERSION / PRODUCTION_SEASON과
+ * 마지막 두 항목이 같아야 한다.
+ *
+ * 1.1.0/0.3.0은 2026-09-06 최초 공개 manifest다. 그 시점에 만들어져 아직 최초 sync를 하지 않은
+ * 오프라인 커리어(IndexedDB 정본)가 남아 있을 수 있으므로, 두 번째 승격(1.4.0/0.5.1)에서도 목록에서
+ * 빼지 않는다. 시즌 행이 정확한 승인 pair일 때만 다른 승인 pair를 받아들이고, mixed pair·다른 과거
+ * 버전·다른 시즌 id는 여전히 거부한다.
+ */
+const APPROVED_PRODUCTION_MANIFESTS: readonly VersionPair[] = Object.freeze([
+  Object.freeze({ rulesetVersion: '1.1.0', contentPackVersion: '0.3.0' }),
+  Object.freeze({ rulesetVersion: '1.3.0', contentPackVersion: '0.5.0' }),
+  Object.freeze({ rulesetVersion: '1.4.0', contentPackVersion: '0.5.1' }),
+]);
 
 function sameVersion(left: VersionPair, right: VersionPair): boolean {
   return (
@@ -17,11 +25,15 @@ function sameVersion(left: VersionPair, right: VersionPair): boolean {
   );
 }
 
+function isApprovedProductionManifest(version: VersionPair): boolean {
+  return APPROVED_PRODUCTION_MANIFESTS.some((approved) => sameVersion(approved, version));
+}
+
 /**
- * New careers normally have to match the season manifest exactly. The sole exception keeps an
- * two approved manifests uploadable across the API -> web -> pointer-CAS transition and a guarded
- * rollback. It deliberately does not admit mixed pairs, other historical versions, a third stored
- * manifest, or another season id.
+ * New careers normally have to match the season manifest exactly. The sole exception keeps the
+ * approved production manifests uploadable across the API -> web -> pointer-CAS transition and a
+ * guarded rollback. It deliberately does not admit mixed pairs, other historical versions, or
+ * another season id.
  */
 export function isAcceptedSeasonVersion(
   seasonId: string,
@@ -30,11 +42,7 @@ export function isAcceptedSeasonVersion(
 ): boolean {
   if (sameVersion(seasonVersion, requestedVersion)) return true;
   if (seasonId !== PRODUCTION_SEASON_ID) return false;
-  const storedManifestIsApproved =
-    sameVersion(seasonVersion, PREVIOUS_PRODUCTION_VERSION) ||
-    sameVersion(seasonVersion, CURRENT_PRODUCTION_VERSION);
-  const requestedManifestIsApproved =
-    sameVersion(requestedVersion, PREVIOUS_PRODUCTION_VERSION) ||
-    sameVersion(requestedVersion, CURRENT_PRODUCTION_VERSION);
-  return storedManifestIsApproved && requestedManifestIsApproved;
+  return (
+    isApprovedProductionManifest(seasonVersion) && isApprovedProductionManifest(requestedVersion)
+  );
 }
