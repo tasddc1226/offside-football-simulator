@@ -159,13 +159,21 @@ export {
 export { canNegotiate, expireOffers, isOfferExpired, type ExpireOffersResult } from './negotiation.js';
 export {
   buildRenewalOffer,
+  countContractMatchesPlayed,
   generateMarket,
+  isRenewalWindowOpen,
   judgeMarketReason,
   openMarketAfterSettlement,
   type GenerateMarketArgs,
   type GeneratedMarket,
   type OpenMarketResult,
 } from './market.js';
+export { evaluateLoanReturnRole, type EvaluateLoanReturnRoleArgs, type LoanReturnEvaluation } from './loan-return.js';
+export {
+  computeAppearancePromiseOutlook,
+  type AppearancePromiseOutlook,
+  type AppearancePromiseOutlookStatus,
+} from './promise-outlook.js';
 export { attributeGroupOf, computeGrowth, type GrowthAttributeDelta, type GrowthInput, type GrowthResult } from './growth.js';
 export { applyCondition, type ConditionState } from './condition.js';
 export {

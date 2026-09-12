@@ -1,5 +1,5 @@
 import { selectChapter, type ChapterCandidateInput, type ChapterOpenResult } from './chapter.js';
-import { buildRenewalOffer, isYouthExitRequired } from './market.js';
+import { buildRenewalOffer, isRenewalWindowOpen, isYouthExitRequired } from './market.js';
 import { computeContractSeasonsRemaining } from './market-value.js';
 import {
   applyNationalTeamCallUp,
@@ -272,7 +272,8 @@ export function selectOpenSlot(
     if (slot.kind === 'CONTRACT') {
       // T-3-002 D-43 (a): 계약이 임대가 아니고 진행 중 시즌이 계약 마지막 시즌이면 현 구단 RENEWAL
       // 제안 1건을 연다. 아니면(계약 잔여 있음) 지금처럼 offers: []로 자동 통과한다. reason
-      // 'PRE_NEGOTIATION'은 이 슬롯의 용도(step 7 사전 협상)를 그대로 담는다.
+      // 'PRE_NEGOTIATION'은 이 슬롯의 용도(step 7 사전 협상)를 그대로 담는다. 이슈 #147(1.4.0+
+      // `contractRules.renewalWindow`): 이번 계약에서 최소 N경기를 뛴 뒤에만 연다(키 없으면 종전대로).
       const contract = state.contract;
       if (contract === null) {
         throw new RangeError('selectOpenSlot: CONTRACT 슬롯을 열려는데 contract가 없다.');
@@ -280,7 +281,10 @@ export function selectOpenSlot(
       const isLastSeason =
         contract.kind !== 'LOAN' &&
         computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline) === 0;
-      const offers = isLastSeason && !isYouthExitRequired(state, ruleset) ? [buildRenewalOffer(state, ruleset, revision)] : [];
+      const offers =
+        isLastSeason && !isYouthExitRequired(state, ruleset) && isRenewalWindowOpen(state, ruleset)
+          ? [buildRenewalOffer(state, ruleset, revision)]
+          : [];
       const market: MarketSummary = { openedAtRevision: revision, seasonIndex, reason: 'PRE_NEGOTIATION', safeOfferId: null };
       return { opened: true, pending: { kind: 'CONTRACT', step: step.index, offers, market }, rngState };
     }

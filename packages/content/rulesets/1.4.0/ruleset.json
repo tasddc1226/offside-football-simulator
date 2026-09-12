@@ -1484,6 +1484,9 @@
       "opportunityTier": 3,
       "opportunityRole": "ROTATION"
     },
+    "loanReturn": {
+      "reevaluate": true
+    },
     "renewal": {
       "lengthSeasons": 2,
       "wageBpByRole": {
@@ -1616,7 +1619,10 @@
       "BENCH": 1500,
       "RESERVE": 0
     },
-    "imposedPositionProficiency": 55
+    "imposedPositionProficiency": 55,
+    "renewalWindow": {
+      "minMatchesPlayed": 3
+    }
   },
   "leagueCalendar": {
     "id": "default-12",

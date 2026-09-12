@@ -26,6 +26,9 @@ describe('loadRuleset: 1.4.0 회복 규칙 데이터(D-67)', () => {
     expect(ruleset.transferRules.relationshipCarry.managerTrustPromiseBreach).toBe(-8);
     expect(ruleset.selectionRules.roleProposal.acceptedRoleUpdatesPromise).toBeUndefined();
     expect(ruleset.selectionRules.roleProposal.declineDowngradeTrustDelta).toBeUndefined();
+    // 2차 웨이브(이슈 #147·#148) 선택 키도 1.3.0에는 없다.
+    expect(ruleset.contractRules.renewalWindow).toBeUndefined();
+    expect(ruleset.transferRules.loanReturn).toBeUndefined();
   });
 
   it('1.4.0은 회복 제안을 0분 1시즌 뒤 열고, 약속 미이행이 신뢰를 깎지 않으며, 새 선택 키를 갖는다', () => {
@@ -35,6 +38,9 @@ describe('loadRuleset: 1.4.0 회복 규칙 데이터(D-67)', () => {
     expect(ruleset.transferRules.relationshipCarry.managerTrustPromiseBreach).toBe(0);
     expect(ruleset.selectionRules.roleProposal.acceptedRoleUpdatesPromise).toBe(true);
     expect(ruleset.selectionRules.roleProposal.declineDowngradeTrustDelta).toBe(0);
+    // 2차 웨이브: #147 사전 협상 창(이번 계약 3경기 소화), #148 임대 복귀 역할 재평가.
+    expect(ruleset.contractRules.renewalWindow).toEqual({ minMatchesPlayed: 3 });
+    expect(ruleset.transferRules.loanReturn).toEqual({ reevaluate: true });
   });
 });
 
