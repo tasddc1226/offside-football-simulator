@@ -34,6 +34,12 @@ import { careerQueryOptions } from '../engine/use-career.js';
 import { queryClient } from '../shared/query-client.js';
 import { useUiStore } from '../shared/ui-store.js';
 import {
+  seedTestServiceSeason,
+  testContentPack,
+  testRuleset,
+  TEST_RULESET_VERSION,
+} from '../test/content-fixtures.js';
+import {
   buildPastSeasonLinks,
   buildSeasonChronicleItems,
   nextMatchHeroContext,
@@ -55,20 +61,21 @@ function makeIdGenerator(prefix: string): () => string {
   return () => `${prefix}-${counter++}`;
 }
 
-function setTestEngine(ruleset: Ruleset = loadRuleset('1.0.0')): AppEngine {
+function setTestEngine(ruleset: Ruleset = testRuleset): AppEngine {
   const engine = createAppEngine({
     store: new MemoryLocalStore(),
     simulator: inlineSimulator,
     ruleset,
-    pack: loadContentPack('0.1.0'),
+    pack: testContentPack,
     newId: makeIdGenerator('test'),
   });
   engineHolder.promise = Promise.resolve(engine);
+  seedTestServiceSeason();
   return engine;
 }
 
 function nationalTestRuleset(): Ruleset {
-  const ruleset = loadRuleset('1.0.0');
+  const ruleset = loadRuleset(TEST_RULESET_VERSION);
   ruleset.leagueCalendar = {
     ...ruleset.leagueCalendar,
     steps: ruleset.leagueCalendar.steps.map((step) =>

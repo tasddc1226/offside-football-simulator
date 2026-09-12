@@ -4,7 +4,6 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
-import { loadContentPack, loadRuleset } from '@offside/content';
 import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
 import type { IssueRecoveryCodeResponse, Profile } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +14,13 @@ import { careerQueryOptions } from './engine/use-career.js';
 import { routeTree } from './routeTree.gen.js';
 import { queryClient } from './shared/query-client.js';
 import { useUiStore } from './shared/ui-store.js';
+import {
+  seedTestServiceSeason,
+  testContentPack,
+  testRuleset,
+  TEST_CONTENT_PACK_VERSION,
+  TEST_RULESET_VERSION,
+} from './test/content-fixtures.js';
 
 const engineHolder = vi.hoisted(() => ({ promise: null as Promise<unknown> | null }));
 const apiHolder = vi.hoisted(() => ({ getProfile: vi.fn(), issueRecoveryCode: vi.fn() }));
@@ -40,11 +46,12 @@ function setTestEngine(): AppEngine {
   const engine = createAppEngine({
     store: new MemoryLocalStore(),
     simulator: inlineSimulator,
-    ruleset: loadRuleset('1.0.0'),
-    pack: loadContentPack('0.1.0'),
+    ruleset: testRuleset,
+    pack: testContentPack,
     newId: makeIdGenerator('test'),
   });
   engineHolder.promise = Promise.resolve(engine);
+  seedTestServiceSeason();
   return engine;
 }
 
@@ -388,8 +395,8 @@ describe('SCR-004 확인 및 복구 코드', () => {
       });
     });
 
-    expect(await screen.findByText('1.0.0 / 0.3.0')).toBeInTheDocument();
-    expect(screen.queryByText('1.0.0 / 0.1.0')).not.toBeInTheDocument();
+    expect(await screen.findByText(`${TEST_RULESET_VERSION} / 0.3.0`)).toBeInTheDocument();
+    expect(screen.queryByText(`${TEST_RULESET_VERSION} / ${TEST_CONTENT_PACK_VERSION}`)).not.toBeInTheDocument();
   });
 
   it('선수 요약을 보여주고 KICKOFF 확정 후 복구 코드를 발급한다', async () => {
