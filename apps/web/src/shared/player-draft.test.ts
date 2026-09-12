@@ -10,12 +10,22 @@ import {
   positionsByGroup,
   relativeWeaknessAttributeKeys,
   shouldResetArchetype,
+  sortNationalities,
   topAttributeKeys,
   validateDraftName,
   weakestAttributeKeys,
 } from './player-draft.js';
 
 const ruleset = loadRuleset('1.0.0');
+
+describe('sortNationalities (이슈 161)', () => {
+  it('대한민국을 최상단에 고정하고 나머지는 가나다순으로 정렬한다', () => {
+    const sorted = sortNationalities(ruleset.nationalities).map((item) => item.name);
+    expect(sorted).toEqual(['대한민국', '나이지리아', '독일', '미국', '브라질', '스페인', '영국', '일본', '프랑스', '호주']);
+    expect(ruleset.nationalities[0]?.code).toBe('KR');
+    expect(ruleset.nationalities.map((item) => item.name)).not.toEqual(sorted);
+  });
+});
 
 describe('positionsByGroup', () => {
   it('GK·DEF·MID·FWD 순으로 묶고, 없는 그룹은 뺀다', () => {
