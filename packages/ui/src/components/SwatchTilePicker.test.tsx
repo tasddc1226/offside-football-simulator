@@ -27,6 +27,42 @@ describe('SwatchTilePicker', () => {
     expect(label).toHaveAttribute('aria-hidden', 'true');
   });
 
+  it('UX-013 다듬기: caption을 주면 보이는 캡션은 caption을, aria-label은 label을 그대로 쓴다', () => {
+    const groupsWithCaption: readonly SwatchTileGroup[] = [
+      {
+        id: 'team',
+        label: '구단',
+        options: [
+          { id: 'x', label: '금빛 FC 컬러', caption: '금빛 FC', swatchVar: '--os-swatch-team-x' },
+        ],
+      },
+    ];
+
+    render(
+      <SwatchTilePicker
+        groups={groupsWithCaption}
+        value="x"
+        onValueChange={vi.fn()}
+        aria-label="테스트"
+      />,
+    );
+
+    expect(screen.getByRole('radio', { name: '금빛 FC 컬러' })).toBeInTheDocument();
+    const label = document.querySelector('.os-swatch-tile-label');
+    expect(label).toHaveTextContent('금빛 FC');
+    expect(label).not.toHaveTextContent('컬러');
+  });
+
+  it('UX-013 다듬기: 그리드 하단에 "선택: <이름>" 캡션을 더는 그리지 않는다 — 선택 상태는 aria-checked로 확인한다', () => {
+    render(
+      <SwatchTilePicker groups={GROUPS} value="b" onValueChange={vi.fn()} aria-label="테스트" />,
+    );
+
+    expect(screen.queryByTestId('swatch-caption')).not.toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '그린' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: '네이비' })).toHaveAttribute('aria-checked', 'false');
+  });
+
   it('UX-013 후속: 그룹 소제목 id는 useId() 기반이라 한 페이지에 두 개를 렌더해도 겹치지 않는다', () => {
     const twoGroups: readonly SwatchTileGroup[] = [
       {

@@ -5,7 +5,7 @@ import { activeRuleset } from '../engine/content.js';
 import { AccentPresetPicker } from './AccentPresetPicker.js';
 
 describe('AccentPresetPicker', () => {
-  it('각 프리셋을 색 이름 라벨의 radio 타일로 노출하고, 선택 항목만 checked이며 캡션에 선택 이름을 쓴다', () => {
+  it('각 프리셋을 색 이름 라벨의 radio 타일로 노출하고, 선택 항목만 checked다(UX-013 다듬기: 그리드 하단 "선택: <이름>" 캡션은 없앴다 — aria-checked로 확인)', () => {
     render(<AccentPresetPicker value="green" onValueChange={vi.fn()} />);
 
     expect(screen.getByRole('radiogroup', { name: '홈 색상' })).toBeInTheDocument();
@@ -14,7 +14,22 @@ describe('AccentPresetPicker', () => {
       'aria-checked',
       'false',
     );
-    expect(screen.getByTestId('swatch-caption')).toHaveTextContent('선택: 그린');
+    expect(screen.queryByTestId('swatch-caption')).not.toBeInTheDocument();
+  });
+
+  it('UX-013 다듬기: 구단 타일 아래 보이는 캡션은 "컬러" 접미사 없이 팀 이름만 쓴다(aria-label·요약줄 이름은 그대로 "<팀명> 컬러")', () => {
+    render(<AccentPresetPicker value="DEFAULT" onValueChange={vi.fn()} />);
+
+    const team = activeRuleset.teams.find((candidate) => candidate.id === 'seorabeol-united');
+    expect(team).toBeDefined();
+    const teamName = team?.name ?? '';
+    const radio = screen.getByRole('radio', { name: `${teamName} 컬러` });
+    const caption = radio
+      .closest('.os-swatch-tile-wrap')
+      ?.querySelector('.os-swatch-tile-label');
+
+    expect(caption).toHaveTextContent(teamName);
+    expect(caption?.textContent).not.toContain('컬러');
   });
 
   it('UX-013: 활성 룰셋 12개 구단 컬러 프리셋을 "구단" 그룹에 "<팀명> 컬러"로 노출한다', () => {

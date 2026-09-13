@@ -28,4 +28,11 @@ describe('SettingsBanner', () => {
     expect(prefix).not.toBeNull();
     expect(prefix).toHaveTextContent('저장 위치:');
   });
+
+  it('UX-013 다듬기: Google 연결이 없는 채널의 배지는 "이 기기 · 자동 동기화"로, 낭독은 "저장 위치: 이 기기 · 자동 동기화"가 된다', () => {
+    render(<SettingsBanner badge="이 기기 · 자동 동기화" />);
+
+    const badge = screen.getByText('이 기기 · 자동 동기화').closest('.os-settings-banner-badge');
+    expect(badge?.textContent).toBe('저장 위치: 이 기기 · 자동 동기화');
+  });
 });

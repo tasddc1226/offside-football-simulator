@@ -1587,7 +1587,9 @@ function SettingsScreen() {
     ? 'Google 동기화'
     : platform.features.googleLink
       ? '내 기기'
-      : '자동 저장';
+      // UX-013 다듬기: Google 연결 기능이 없는 채널(toss 등)은 "자동 저장"만으로는 어디에
+      // 저장되는지 불분명했다 — 저장 위치(이 기기)와 동작(자동 동기화)을 함께 알린다.
+      : '이 기기 · 자동 동기화';
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-030', careerPhase: 'NONE' });

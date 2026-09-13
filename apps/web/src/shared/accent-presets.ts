@@ -47,8 +47,14 @@ export const ACCENT_PRESET_IDS: readonly AccentPresetId[] = [
 
 export interface AccentPresetOption {
   id: AccentPresetId;
-  /** 타일의 접근 가능한 이름이자 캡션에 병기하는 한국어 이름. 색만으로 구분하지 않기 위함(접근성). */
+  /** 타일의 접근 가능한 이름(aria-label)이자 접이식 요약줄에 쓰는 한국어 이름. 색만으로 구분하지
+   * 않기 위함(접근성). */
   label: string;
+  /** UX-013 다듬기: 타일 아래 보이는 짧은 캡션. 생략하면 SwatchTilePicker가 label을 그대로 쓴다
+   * (기본 6종은 "네이비(기본)"·"그린"처럼 label 자체가 이미 짧다). 구단 프리셋은 label이
+   * "<팀명> 컬러"라 캡션에서는 "컬러"를 떼고 팀 이름만 보여준다 — aria-label·요약줄은 label을
+   * 그대로 쓰므로 접근성 이름은 바뀌지 않는다. */
+  caption?: string;
   /** tokens.css의 --os-swatch-* 변수 이름. 테마별 실제 프리셋 색을 그대로 미리 보여준다. */
   swatchVar: string;
 }
@@ -84,16 +90,25 @@ export interface AccentPresetTeamName {
 }
 
 /**
- * 구단 프리셋 라벨은 "<룰셋 기본 팀명> 컬러"다 — 사용자의 구단 이름 오버라이드(team-names.ts)는 적용하지
- * 않는다(프리셋은 팀 id 기준 색 정의라 이름을 바꿔도 같은 프리셋이어야 하고, 설정 화면 안에서
- * 이름 입력과 색 타일이 서로 갱신되는 순환을 피한다). 룰셋에 없는 팀 id는 id를 그대로 보여준다.
+ * 룰셋 기본 팀명을 그대로 돌려준다(사용자의 구단 이름 오버라이드는 team-names.ts에만 적용 — 프리셋은
+ * 팀 id 기준 색 정의라 이름을 바꿔도 같은 프리셋이어야 하고, 설정 화면 안에서 이름 입력과 색 타일이
+ * 서로 갱신되는 순환을 피한다). 룰셋에 없는 팀 id는 id를 그대로 돌려준다.
  */
+function teamAccentPresetName(
+  teamId: TeamAccentTeamId,
+  teams: readonly AccentPresetTeamName[],
+): string {
+  return teams.find((team) => team.id === teamId)?.name ?? teamId;
+}
+
+/** 구단 프리셋의 접근 가능한 이름(aria-label)이자 요약줄 표시 이름. "<팀명> 컬러" 형태 — "컬러"는
+ * 색만으로 구분하지 않기 위한 접미어다. 타일 아래 보이는 캡션은 이 접미어를 뗀
+ * `teamAccentPresetName`을 쓴다(buildTeamAccentPresetOptions 참고). */
 export function teamAccentPresetLabel(
   teamId: TeamAccentTeamId,
   teams: readonly AccentPresetTeamName[],
 ): string {
-  const name = teams.find((team) => team.id === teamId)?.name ?? teamId;
-  return `${name} 컬러`;
+  return `${teamAccentPresetName(teamId, teams)} 컬러`;
 }
 
 export function buildTeamAccentPresetOptions(
@@ -102,6 +117,7 @@ export function buildTeamAccentPresetOptions(
   return TEAM_ACCENT_PRESET_TEAM_IDS.map((teamId) => ({
     id: `team-${teamId}`,
     label: teamAccentPresetLabel(teamId, teams),
+    caption: teamAccentPresetName(teamId, teams),
     swatchVar: `--os-swatch-team-${teamId}`,
   }));
 }
