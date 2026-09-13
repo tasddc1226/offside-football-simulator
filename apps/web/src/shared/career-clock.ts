@@ -1,3 +1,5 @@
+import { seasonYearLabel } from './season-year.js';
+
 export type CareerClockState = {
   age: number;
   status: string;
@@ -14,8 +16,10 @@ export type CareerClockView = {
   progress: string;
 };
 
-/** 실제 저장된 나이와 시즌만 표현한다. 달력 날짜나 생일은 추정하지 않는다. */
-export function buildCareerClock(state: CareerClockState): CareerClockView {
+/** 실제 저장된 나이와 시즌만 표현한다. 달력 날짜나 생일은 추정하지 않는다. `startYear`는 호출부가
+ * `season-year.ts`의 `careerStartYear()`로 미리 구한 커리어 시작 연도다(2026-09-13 사용자 결정:
+ * 1시즌 = 1년, "시즌 N" 대신 "2026 시즌"으로 표기). */
+export function buildCareerClock(state: CareerClockState, startYear: number): CareerClockView {
   const completed = state.seasonHistory.length;
 
   if (state.status === 'RETIRED' || state.status === 'ARCHIVED') {
@@ -27,9 +31,10 @@ export function buildCareerClock(state: CareerClockState): CareerClockView {
   }
 
   if (state.season !== null) {
+    const yearLabel = seasonYearLabel(startYear, state.season.index);
     return {
-      headline: `${state.age}세 · 시즌 ${state.season.index}`,
-      detail: `시즌 ${state.season.index}`,
+      headline: `${state.age}세 · ${yearLabel}`,
+      detail: yearLabel,
       progress: `${state.season.currentStep}/12 단계`,
     };
   }

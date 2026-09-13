@@ -22,9 +22,18 @@ import { LegacyScoreCard } from './legacy-score-card.js';
 import { GameResultReveal } from './game-presentation.js';
 import { getAppEngine } from '../engine/engine.js';
 import { execute } from '../engine/career-actions.js';
+import { useServiceSeason } from '../engine/service-season.js';
 import { screenForCareer } from './career-route.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { POSITION_LABELS, TIMELINE_KIND_LABEL_KO, careerTagLabel } from './labels.js';
+import {
+  careerStartYear,
+  FALLBACK_CAREER_START_YEAR,
+  seasonYear,
+  seasonYearLabel,
+  seasonYearLabelWithOrdinal,
+  seasonYearRangeLabel,
+} from './season-year.js';
 import './retirement-screen.css';
 
 type Mode = 'retirement' | 'legacy' | 'timeline' | 'final-profile';
@@ -37,6 +46,10 @@ export type RetirementScreenProps = {
   onSourceClick?: (sourceId: string) => void;
   busy?: boolean;
   error?: string;
+  /** 2026-09-13 사용자 결정: 1시즌 = 1년 표기의 커리어 시작 연도(season-year.ts). react-query가
+   * 필요한 조회는 `RetirementPage`가 대신 하고, 이 컴포넌트는 순수 표시(테스트에서 Provider 없이
+   * 직접 렌더한다) — 값을 안 주면 폴백 2026을 쓴다. */
+  startYear?: number;
 };
 
 /** All four pages load and validate the same immutable source. */
@@ -49,6 +62,7 @@ export function RetirementPage({
 }) {
   const cache = useQueryClient();
   const navigate = useNavigate();
+  const serviceSeasonQuery = useServiceSeason();
   const query = useQuery({
     queryKey: ['retirement', careerId],
     queryFn: async () => {
@@ -120,10 +134,16 @@ export function RetirementPage({
         </Link>
       </section>
     );
+  // 사용자 결정(2026-09-13): 1시즌 = 1년, 커리어 시작 연도부터 "2026 시즌"으로 표기(season-year.ts).
+  const startYear = careerStartYear({
+    seasonServiceSeasonId: state.season?.serviceSeasonId ?? null,
+    currentServiceSeason: serviceSeasonQuery.data,
+  });
   return (
     <RetirementScreen
       state={state}
       mode={mode}
+      startYear={startYear}
       {...(archive === null ? {} : { archive })}
       {...(result === null ? {} : { result })}
       busy={mutation.isPending}
@@ -158,7 +178,22 @@ const CHOICE_LABEL = {
   MENTOR: '후배에게 경험 나누기',
 } as const;
 
-function TimelineRevision({ state, revision }: { state: CareerState; revision: number }) {
+/** "2026–2041 · 16시즌"(2026-09-13 사용자 결정: 은퇴·보관함 기록에도 연도가 보이게 한다). 완주한
+ * 시즌이 없으면(0) 기간을 만들 근거가 없어 개수만 남긴다. */
+function totalSeasonsPeriodLabel(startYear: number, totalSeasons: number): string {
+  if (totalSeasons <= 0) return `${totalSeasons}시즌`;
+  return `${seasonYearRangeLabel(startYear, 1, totalSeasons)} · ${totalSeasons}시즌`;
+}
+
+function TimelineRevision({
+  state,
+  revision,
+  startYear,
+}: {
+  state: CareerState;
+  revision: number;
+  startYear: number;
+}) {
   return (
     <li
       className="os-panel os-endgame-section scroll-mt-20"
@@ -176,7 +211,7 @@ function TimelineRevision({ state, revision }: { state: CareerState; revision: n
         .filter((season) => season.settledAtRevision === revision)
         .map((season) => (
           <p key={season.index}>
-            {season.index}시즌 · 출전{' '}
+            {seasonYearLabelWithOrdinal(startYear, season.index)} · 출전{' '}
             {season.result.playerStats.appearances.total -
               season.result.playerStats.appearances.zeroMinute}
             경기 · {season.result.playerStats.minutes}분 · 감독 신뢰{' '}
@@ -208,10 +243,12 @@ function TimelineList({
   state,
   primaryRevisions,
   routineRevisions,
+  startYear,
 }: {
   state: CareerState;
   primaryRevisions: number[];
   routineRevisions: number[];
+  startYear: number;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
@@ -226,7 +263,7 @@ function TimelineList({
     <div className="os-endgame-stack">
       <ol className="os-endgame-timeline" aria-label="커리어 연대기">
         {primaryRevisions.map((revision) => (
-          <TimelineRevision state={state} revision={revision} key={revision} />
+          <TimelineRevision state={state} revision={revision} startYear={startYear} key={revision} />
         ))}
       </ol>
       {routineRevisions.length ? (
@@ -234,7 +271,7 @@ function TimelineList({
           <summary>일상적인 시즌 진행 {routineRevisions.length}개 보기</summary>
           <ol className="os-endgame-timeline mt-os-3" aria-label="일상적인 시즌 진행 기록">
             {routineRevisions.map((revision) => (
-              <TimelineRevision state={state} revision={revision} key={revision} />
+              <TimelineRevision state={state} revision={revision} startYear={startYear} key={revision} />
             ))}
           </ol>
         </details>
@@ -252,6 +289,7 @@ export function RetirementScreen({
   onSourceClick,
   busy = false,
   error,
+  startYear = FALLBACK_CAREER_START_YEAR,
 }: RetirementScreenProps) {
   const [localError, setLocalError] = useState<string>();
   const [localBusy, setLocalBusy] = useState(false);
@@ -306,6 +344,8 @@ export function RetirementScreen({
   const retirementEntry = state.timeline.findLast((entry) => entry.kind === 'RETIRED');
   const finalChoice = retirementEntry?.refId === 'COACH_EPILOGUE' ? '지도자로 이어지는 마지막 휘슬' : '선수로서 맞은 마지막 휘슬';
   const bestMoment = result?.sources.find((source) => source.sourceId === result.bestMomentRef);
+  // 은퇴 연도: 마지막으로 완주한 시즌의 해(완주한 시즌이 없으면 커리어 시작 연도 그대로).
+  const retirementYear = seasonYear(startYear, Math.max(state.seasonHistory.length, 1));
   return (
     <div className="os-endgame-stack">
       <ScreenIntro
@@ -447,29 +487,29 @@ export function RetirementScreen({
         <GameResultReveal fast={state.simulationMode === 'FAST'} announcement={`${profile?.name ?? '선수'}의 커리어 기록이 확정되었습니다`}>
           <div className="os-endgame-stack">
             <section className="os-endgame-hero" aria-labelledby="career-recap-heading">
-              <p>FULL TIME · {state.age}세</p>
+              <p>FULL TIME · {retirementYear}년 · {state.age}세</p>
               <h2 id="career-recap-heading">{profile?.name}의 축구 인생</h2>
               <p>{finalChoice}. 기록은 변경되지 않는 커리어 보관 자료로 남습니다.</p>
             </section>
             <section className="os-panel os-endgame-section">
               <h2>통산 기록</h2>
               <dl className="os-endgame-stat-grid">
-                <div className="os-endgame-stat"><dt>시즌</dt><dd>{archive.records.totals.seasons}</dd></div>
+                <div className="os-endgame-stat"><dt>시즌</dt><dd>{totalSeasonsPeriodLabel(startYear, archive.records.totals.seasons)}</dd></div>
                 <div className="os-endgame-stat"><dt>출전</dt><dd>{archive.records.totals.playedMatches}경기</dd></div>
                 <div className="os-endgame-stat"><dt>출전 시간</dt><dd>{archive.records.totals.minutes.toLocaleString('ko-KR')}분</dd></div>
                 <div className="os-endgame-stat"><dt>평균 평점</dt><dd>{archive.records.totals.averageRatingTenths === null ? '미집계' : (archive.records.totals.averageRatingTenths / 10).toFixed(1)}</dd></div>
               </dl>
-              {bestMoment ? <button type="button" className="os-endgame-callout text-left" onClick={() => onSourceClick?.(bestMoment.sourceId)}>대표 장면 · {bestMoment.seasonIndex === null ? '마지막 선택' : `${bestMoment.seasonIndex}시즌`} 기록 보기</button> : null}
+              {bestMoment ? <button type="button" className="os-endgame-callout text-left" onClick={() => onSourceClick?.(bestMoment.sourceId)}>대표 장면 · {bestMoment.seasonIndex === null ? '마지막 선택' : seasonYearLabel(startYear, bestMoment.seasonIndex)} 기록 보기</button> : null}
             </section>
             <section className="os-panel os-endgame-section">
               <h2>가장 빛난 시즌</h2>
-              <p>{bestSeason ? `${bestSeason.index}시즌 · 평균 평점 ${(bestSeason.result.playerStats.ratingSumTenths / bestSeason.result.playerStats.ratedMatches / 10).toFixed(1)} · ${bestSeason.result.playerStats.minutes.toLocaleString('ko-KR')}분` : '10경기 이상 평점이 기록된 시즌이 없습니다.'}</p>
+              <p>{bestSeason ? `${seasonYearLabel(startYear, bestSeason.index)} · 평균 평점 ${(bestSeason.result.playerStats.ratingSumTenths / bestSeason.result.playerStats.ratedMatches / 10).toFixed(1)} · ${bestSeason.result.playerStats.minutes.toLocaleString('ko-KR')}분` : '10경기 이상 평점이 기록된 시즌이 없습니다.'}</p>
               <details>
                 <summary>구단·트로피·대표팀 기록</summary>
                 <div className="os-endgame-section mt-os-3">
                   <ul>{archive.records.clubs.map((club) => <li key={club.teamId}>{state.clubHistory.find((stint) => stint.teamId === club.teamId)?.teamName ?? club.teamId} · {club.totals.seasons}시즌 · {club.totals.playedMatches}경기</li>)}</ul>
                   <h3>트로피 {trophies.length}개</h3>
-                  {trophies.length ? <ul>{trophies.map((trophy) => <li key={`${trophy.season}:${trophy.id}`}>{trophy.season}시즌 · {trophy.name}</li>)}</ul> : <p>기록된 우승이 없습니다.</p>}
+                  {trophies.length ? <ul>{trophies.map((trophy) => <li key={`${trophy.season}:${trophy.id}`}>{seasonYearLabel(startYear, trophy.season)} · {trophy.name}</li>)}</ul> : <p>기록된 우승이 없습니다.</p>}
                   <p>성인 대표팀 {result.international.seniorCaps}회 · U23 {result.international.youthAppearances}회 (별도 집계)</p>
                   <p>복무 경로 · {SERVICE_LABEL[result.nationality.serviceStatus]}</p>
                   <p>
@@ -495,6 +535,7 @@ export function RetirementScreen({
           state={state}
           primaryRevisions={primaryTimelineRevisions}
           routineRevisions={routineTimelineRevisions}
+          startYear={startYear}
         />
       ) : null}
       {mode === 'final-profile' && terminal && profile && result ? (
@@ -507,7 +548,7 @@ export function RetirementScreen({
           <div className="os-panel os-endgame-section">
             <dl className="os-endgame-stat-grid">
               <div className="os-endgame-stat"><dt>최종 OVR</dt><dd>{profile.baseOvr}</dd></div>
-              {archive ? <><div className="os-endgame-stat"><dt>시즌</dt><dd>{archive.records.totals.seasons}</dd></div><div className="os-endgame-stat"><dt>출전</dt><dd>{archive.records.totals.playedMatches}</dd></div></> : null}
+              {archive ? <><div className="os-endgame-stat"><dt>시즌</dt><dd>{totalSeasonsPeriodLabel(startYear, archive.records.totals.seasons)}</dd></div><div className="os-endgame-stat"><dt>출전</dt><dd>{archive.records.totals.playedMatches}</dd></div></> : null}
               <div className="os-endgame-stat"><dt>Legacy</dt><dd>{result.totalScore}</dd></div>
             </dl>
           {ending ? (

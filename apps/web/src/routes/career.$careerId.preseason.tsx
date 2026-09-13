@@ -14,6 +14,7 @@ import {
 } from '@offside/ui';
 import { rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer } from '../engine/use-career.js';
+import { useServiceSeason } from '../engine/service-season.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
 import { ATTRIBUTE_LABELS, positionHeaderField } from '../shared/labels.js';
@@ -24,6 +25,7 @@ import {
   retirementPressureNotice,
 } from '../shared/play-guidance.js';
 import { queryClient } from '../shared/query-client.js';
+import { careerStartYear, extractCalendarStartYear, seasonYearLabel } from '../shared/season-year.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import {
   canPlanNextSeason,
@@ -58,6 +60,7 @@ const CAPTION_STYLE = {
 function PreseasonScreen() {
   const { careerId } = Route.useParams();
   const query = useCareer(careerId);
+  const serviceSeasonQuery = useServiceSeason();
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', {
@@ -75,6 +78,12 @@ function PreseasonScreen() {
   const contract = state.contract;
   if (profile === null || contract === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
   const ruleset = rulesetForCareer(state);
+  // 사용자 결정(2026-09-13): 1시즌 = 1년, 커리어 시작 연도부터 "2026 시즌"으로 표기(season-year.ts).
+  const startYear = careerStartYear({
+    seasonServiceSeasonId: state.season?.serviceSeasonId ?? null,
+    currentServiceSeason: serviceSeasonQuery.data,
+    calendarStartYear: extractCalendarStartYear(ruleset.leagueCalendar),
+  });
 
   const team = ruleset.teams.find((candidate) => candidate.id === contract.teamId);
   const style =
@@ -141,7 +150,7 @@ function PreseasonScreen() {
           <GuidanceCard
             label="잠재력 상한 안내"
             className="bg-os-surface-2"
-            detail={`시즌 ${capNotice.seasonNumber} 결산 기준 · 정찰 범위 밖 수치는 보여주지 않습니다.`}
+            detail={`${seasonYearLabel(startYear, capNotice.seasonNumber)} 결산 기준 · 정찰 범위 밖 수치는 보여주지 않습니다.`}
           >
             지난 시즌 {capNotice.attributeKeys.map((key) => ATTRIBUTE_LABELS[key]).join('·')}
             {capNotice.attributeKeys.length === 1 ? '은(는)' : '은'} 잠재력 상한에 막혀 성장이 멈췄어요 — 다른
