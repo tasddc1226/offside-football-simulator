@@ -4,9 +4,11 @@
 
 - **목적**: 훈련, 포지션 준비, 체력, 테스트 경기 우선순위를 정한다.
 - **표시**: 현재 능력·폼·체력, 감독 전술, 주전 경쟁, 선택별 위험.
-- **동작**: 2~3개 계획 중 선택, 시뮬레이션 모드(`FAST`/`CHAPTER`) 선택.
-- **이탈**: CURRENT/CONTEXT Effect와 `simulationMode`를 저장하고 CMD-SIM-001로 시즌을 시작한다.
-- **인수 조건**: 계획이 Base OVR, Expected Performance 중 무엇에 영향을 주는지 구분한다. 첫 프로 시즌과 새 팀 첫 시즌은 CHAPTER가 기본 선택이다.
+- **동작**: 2~3개 계획 중 선택. 시뮬레이션 모드 선택 단계는 없다(사용자 결정 2026-09-13, D-77 —
+  원작(SLB)에는 모드가 없어 클라이언트에서 제거했다) — `simulationMode`는 항상 `FAST`로 고정된다.
+- **이탈**: CURRENT/CONTEXT Effect와 고정된 `simulationMode`(`FAST`)를 저장하고 CMD-SIM-001로
+  시즌을 시작한다.
+- **인수 조건**: 계획이 Base OVR, Expected Performance 중 무엇에 영향을 주는지 구분한다.
 
 ## SCR-006 아마추어/유소년 시즌 결과
 

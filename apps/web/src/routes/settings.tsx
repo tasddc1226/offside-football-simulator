@@ -24,7 +24,6 @@ import {
   type MergeChoice,
   type Profile,
 } from '@offside/contracts';
-import type { SimulationMode } from '@offside/domain';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import {
   API_BASE_URL,
@@ -122,20 +121,11 @@ const TEXT_SCALE_OPTIONS: Array<{ value: TextScale; label: string }> = [
   { value: 150, label: '150%' },
 ];
 
-const SIMULATION_MODE_OPTIONS: Array<{ value: SimulationMode; label: string; short: string }> = [
-  { value: 'FAST', label: '빠르게', short: '빠르게' },
-  { value: 'CHAPTER', label: '챕터로 자세히', short: '챕터' },
-];
-
-/** "화면·플레이 설정" 접이식 요약줄("시스템 · 100% · 빠르게"). 알 수 없는 값은 비워 둔다. */
-export function displayPlaySummary(
-  theme: ThemePreference,
-  textScale: TextScale,
-  mode: SimulationMode,
-): string {
+/** "화면·플레이 설정" 접이식 요약줄("시스템 · 100%"). 알 수 없는 값은 비워 둔다. 사용자 결정
+ * (2026-09-13, D-77)으로 시뮬레이션 모드 항목은 더 이상 요약에 없다 — 모든 시즌은 항상 FAST다. */
+export function displayPlaySummary(theme: ThemePreference, textScale: TextScale): string {
   const themeShort = THEME_OPTIONS.find((option) => option.value === theme)?.short ?? '';
-  const modeShort = SIMULATION_MODE_OPTIONS.find((option) => option.value === mode)?.short ?? '';
-  return [themeShort, `${textScale}%`, modeShort].filter((part) => part.length > 0).join(' · ');
+  return [themeShort, `${textScale}%`].filter((part) => part.length > 0).join(' · ');
 }
 
 /** FAILED 코드별 안내. 목록에 없으면 "서버가 저장을 거부했습니다(코드)". */
@@ -1388,26 +1378,20 @@ function SummaryRow({ title, value }: { title: string; value?: string }) {
   );
 }
 
-/** "화면·플레이 설정" 접이식: 테마·모션 감소·텍스트 크기·시뮬레이션 기본 모드·온보딩 다시 보기. */
+/** "화면·플레이 설정" 접이식: 테마·모션 감소·텍스트 크기·온보딩 다시 보기. 사용자 결정
+ * (2026-09-13, D-77): 시뮬레이션 기본 모드 항목은 제거됐다 — 모든 시즌은 항상 FAST로 시작한다. */
 function DisplayPlaySettings() {
   const theme = useUiStore((state) => state.theme);
   const reducedMotion = useUiStore((state) => state.reducedMotion);
   const textScale = useUiStore((state) => state.textScale);
-  const defaultSimulationMode = useUiStore((state) => state.defaultSimulationMode);
   const setTheme = useUiStore((state) => state.setTheme);
   const setReducedMotion = useUiStore((state) => state.setReducedMotion);
   const setTextScale = useUiStore((state) => state.setTextScale);
-  const setDefaultSimulationMode = useUiStore((state) => state.setDefaultSimulationMode);
 
   return (
     <Card id="settings-presentation" className="scroll-mt-20">
       <Disclosure
-        summary={
-          <SummaryRow
-            title="화면·플레이 설정"
-            value={displayPlaySummary(theme, textScale, defaultSimulationMode)}
-          />
-        }
+        summary={<SummaryRow title="화면·플레이 설정" value={displayPlaySummary(theme, textScale)} />}
       >
         <div className="flex flex-col gap-os-5">
           <div className="flex flex-col gap-os-3">
@@ -1473,28 +1457,6 @@ function DisplayPlaySettings() {
           </div>
 
           <div id="settings-play" className="flex scroll-mt-20 flex-col gap-os-5">
-            <div className="flex flex-col gap-os-3">
-              <h3
-                id="settings-simulation-mode"
-                className="font-os font-semibold text-os-text"
-                style={H2_STYLE}
-              >
-                시뮬레이션 기본 모드
-              </h3>
-              <RadioGroup
-                className="os-segmented os-segmented-two"
-                aria-labelledby="settings-simulation-mode"
-                value={defaultSimulationMode}
-                onValueChange={(value) => setDefaultSimulationMode(value as SimulationMode)}
-              >
-                {SIMULATION_MODE_OPTIONS.map((option) => (
-                  <RadioGroupItem key={option.value} value={option.value}>
-                    {option.label}
-                  </RadioGroupItem>
-                ))}
-              </RadioGroup>
-            </div>
-
             <div className="flex flex-col gap-os-3">
               <h3 className="font-os font-semibold text-os-text" style={H2_STYLE}>
                 온보딩

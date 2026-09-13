@@ -187,30 +187,32 @@ export async function completeOnboardingThroughContract(page: Page): Promise<voi
   await signFirstOffer(page);
 }
 
-/** SCR-029의 "프리시즌 계획" CTA에서 SCR-005 입력·SCR-011 확인까지: 모드·훈련 계획을 고르고
- * search 파라미터로 넘어가는지 확인한다. T-2-009: season.spec.ts에서 뽑아 season-result.spec.ts·
+/** SCR-029의 "프리시즌 계획" CTA에서 SCR-005 입력·SCR-011 확인까지: 훈련 계획을 고르고 search
+ * 파라미터로 넘어가는지 확인한다. 사용자 결정(2026-09-13, D-77)으로 시뮬레이션 모드 선택 단계는
+ * 없다 — 모든 시즌은 항상 FAST로 시작한다. T-2-009: season.spec.ts에서 뽑아 season-result.spec.ts·
  * a11y.spec.ts와 공유한다. */
-export async function planPreseason(page: Page, mode: 'FAST' | 'CHAPTER', modeLabel: string, focusLabel: string): Promise<void> {
+export async function planPreseason(page: Page, focusLabel: string): Promise<void> {
   await page.getByRole('link', { name: '계획하러 가기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
-  await fillPreseasonPlan(page, mode, modeLabel, focusLabel);
+  await fillPreseasonPlan(page, focusLabel);
 }
 
 /** 이미 SCR-005 프리시즌 화면에 있는 경우의 입력 경로. 결과 화면 CTA가 프리시즌으로 이동한
  * 뒤에는 `계획하러 가기`가 없으므로 planPreseason과 분리해 같은 저장·진행 검증을 재사용한다. */
-export async function fillPreseasonPlan(page: Page, mode: 'FAST' | 'CHAPTER', modeLabel: string, focusLabel: string): Promise<void> {
+export async function fillPreseasonPlan(page: Page, focusLabel: string): Promise<void> {
   await expect(page.getByRole('heading', { level: 1, name: '프리시즌 계획' })).toBeVisible();
 
-  await page.getByRole('radio', { name: new RegExp(`^${modeLabel}`) }).click();
+  // 사용자 결정(2026-09-13, D-77): 시뮬레이션 모드 라디오는 더 이상 없다.
+  await expect(page.getByText('시뮬레이션 모드', { exact: true })).not.toBeVisible();
   await page.getByRole('radio', { name: new RegExp(`^${focusLabel}`) }).click();
   await page.getByRole('link', { name: '다음' }).click();
 
   await expect(page).toHaveURL(/\/career\/.+\/season-prep\b/);
   const url = new URL(page.url());
-  expect(url.searchParams.get('mode')).toBe(mode);
+  expect(url.searchParams.has('mode')).toBe(false);
   await expect(page.getByRole('heading', { level: 1, name: '시즌 준비' })).toBeVisible();
-  // SCR-011 인수 조건: 모드는 시즌 중 적용, 훈련 계획은 시즌 결산 때 능력에 반영 — 한 문장으로 구분한다.
-  await expect(page.getByText('모드는 시즌 중 적용되고, 훈련 계획은 시즌 결산 때 능력에 반영됩니다.')).toBeVisible();
+  // SCR-011 인수 조건: 훈련 계획은 시즌 결산 때 능력에 반영된다.
+  await expect(page.getByText('훈련 계획은 시즌 결산 때 능력에 반영됩니다.')).toBeVisible();
 }
 
 /** SCR-012의 POSITION_CHANGE·ROLE_CHANGE를 승낙한다. 현재 역할과 완전히 같은 KEEP은 시즌 준비

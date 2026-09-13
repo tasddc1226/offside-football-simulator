@@ -5,6 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
+  fillPreseasonPlan,
   resolveCurrentChapterScreen,
   resolveCurrentEventScreen,
   resolveRoleProposal,
@@ -139,10 +140,7 @@ test('career-12 고정 seed의 실제 forced INJURY pending은 generic event에�
 
   await completeOnboardingThroughContract(page);
   await page.getByRole('link', { name: '계획하러 가기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
-  await page.getByRole('radio', { name: /^빠른 시즌/ }).click();
-  await page.getByRole('radio', { name: /^역할 집중/ }).click();
-  await page.getByRole('link', { name: '다음' }).click();
+  await fillPreseasonPlan(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
 

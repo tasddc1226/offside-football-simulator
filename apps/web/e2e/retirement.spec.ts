@@ -28,7 +28,7 @@ test('deterministic settled career can retire, reload its Legacy views, and retu
   });
 
   await completeOnboardingThroughContract(page);
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);

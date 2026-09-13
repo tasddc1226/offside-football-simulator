@@ -87,7 +87,7 @@ test('1.2/0.4 새 인생: 19세 도입과 첫 진로를 거쳐 첫 시즌 뒤 20
 
   await advanceUntilOffers(page);
   await signFirstOffer(page);
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
@@ -190,7 +190,7 @@ test('1.3/0.5 새 인생: 성인 팀과 계약해 첫 시즌 뒤 20세가 된다
   await signFirstOffer(page);
   await expect(page.locator('body')).not.toContainText('한강 FC U18과 계약');
 
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);

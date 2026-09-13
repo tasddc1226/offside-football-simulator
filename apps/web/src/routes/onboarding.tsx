@@ -17,6 +17,7 @@ import { useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { SERVICE_SEASON_NOTICE_KO } from '../shared/labels.js';
 import { useReducedMotion, useUiStore } from '../shared/ui-store.js';
+import { FIXED_SIMULATION_MODE } from '../shared/start-season.js';
 import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 import { GameCompletionTransition } from '../shared/game-presentation.js';
 import { CinematicIntro } from '../shared/cinematic-intro.js';
@@ -68,7 +69,6 @@ function OnboardingScreen() {
   const navigate = useNavigate();
   const serviceSeason = useServiceSeason();
   const setOnboardingSeen = useUiStore((state) => state.setOnboardingSeen);
-  const defaultSimulationMode = useUiStore((state) => state.defaultSimulationMode);
   const createMutation = useCareerMutation('create');
   const [toast, setToast] = useState<string | null>(null);
   const [createdCareerId, setCreatedCareerId] = useState<string | null>(null);
@@ -104,7 +104,7 @@ function OnboardingScreen() {
     startingRef.current = true;
     setOnboardingSeen(true);
     try {
-      const result = await createMutation.mutateAsync({ simulationMode: defaultSimulationMode });
+      const result = await createMutation.mutateAsync({ simulationMode: FIXED_SIMULATION_MODE });
       if (result.ok) {
         setCreatedCareerId(result.snapshot.careerId);
       } else {

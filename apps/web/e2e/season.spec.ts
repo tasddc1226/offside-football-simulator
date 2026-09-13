@@ -23,7 +23,7 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
 
   await completeOnboardingThroughContract(page);
 
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
 
@@ -97,7 +97,7 @@ test('SCR-011에서 시즌을 시작한 뒤 뒤로 가기로 재진입해도 시
   const revisionBeforeStart = Number(await page.getByTestId('career-card').getAttribute('data-revision'));
   await page.getByRole('button', { name: '이어하기' }).click();
 
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
@@ -109,6 +109,8 @@ test('SCR-011에서 시즌을 시작한 뒤 뒤로 가기로 재진입해도 시
 
   // 브라우저 뒤로 가기: role → season-prep(스택에 남은 옛 URL). 시즌이 이미 있으니 로더가 즉시
   // 대시보드로 돌려보내 "시즌 시작" 버튼을 다시 보여주지 않는다(season-prep.tsx 로더 가드).
+  // `mode=FAST`는 사용자 결정(2026-09-13, D-77) 이전의 옛 딥링크·북마크를 흉내낸다 — validateSearch가
+  // 무시하므로 있어도 없어도 이 리다이렉트 동작은 같다.
   await page.getByRole('button', { name: '이어하기' }).click();
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
   await page.goto(`${page.url()}/season-prep?mode=FAST&focus=ROLE`);
@@ -131,7 +133,7 @@ test('시즌 1 결산 뒤 INTEREST 시장이 열리면 안전 잔류 제안을 �
   await page.addInitScript((seed) => window.localStorage.setItem('offside:e2e-seed', seed), E2E_INTEREST_MARKET_SEED);
   await completeOnboardingThroughContract(page);
 
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);

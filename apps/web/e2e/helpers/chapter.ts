@@ -6,8 +6,10 @@ import { resolveCurrentEventScreen } from './player-creation.js';
 /** e2e 결정론 시드(README "e2e 결정론 시드 오버라이드" 참고). DEBUT 트리거
  * (seasonIndex===1 && isFirstCareerAppearance && minutes>0)가 몇 번째 "진행"에 열리는지는 시드에
  * 달렸다 — crypto.getRandomValues로 매번 새 시드를 뽑으면 시즌 12 step 내내 한 번도 안 맞는 시드가
- * 걸릴 수 있다(부하가 걸린 병렬 실행에서 실제로 재현됨). 이 시드는 CHAPTER 모드로 시즌을 시작해
- * "역할 집중"으로 준비한 뒤 "진행" 1회 만에 데뷔 챕터가 열리는 것을 확인하고 골랐다(같은 문자열로
+ * 걸릴 수 있다(부하가 걸린 병렬 실행에서 실제로 재현됨). 이 시드는 원래 CHAPTER 모드로 "역할 집중"
+ * 준비 뒤 "진행" 1회 만에 데뷔 챕터가 열리는 것을 확인하고 골랐다. 사용자 결정(2026-09-13, D-77) 뒤
+ * FAST로도 재검증했다 — CHP-MATCH-001(데뷔전)은 importance MAJOR라 FAST에서도 열리는 슬롯이고
+ * (RULE-TIME-003), 같은 시드로 FAST 시즌을 "진행"해도 같은 스텝에서 데뷔 챕터가 열린다(같은 문자열로
  * 반복 실행해 재현 확인, `apps/web/src/engine/career-actions.ts`의 seedRng가 문자열을 FNV-1a로
  * 접어 splitmix32 시드로 쓰므로 값 자체의 의미는 없다). */
 export const E2E_DEBUT_CHAPTER_SEED = 'e2e-debut-chapter-01';
@@ -18,16 +20,6 @@ export async function seedDeterministicChapterRun(page: Page): Promise<void> {
   await page.addInitScript((seed) => {
     window.localStorage.setItem('offside:e2e-seed', seed);
   }, E2E_DEBUT_CHAPTER_SEED);
-}
-
-/** SCR-011 시즌 준비에서 CHAPTER 모드·역할 집중을 골라 season-prep까지 이동한다. */
-export async function planPreseasonChapterMode(page: Page): Promise<void> {
-  await page.getByRole('link', { name: '계획하러 가기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
-  await page.getByRole('radio', { name: /^챕터 시즌/ }).click();
-  await page.getByRole('radio', { name: /^역할 집중/ }).click();
-  await page.getByRole('link', { name: '다음' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-prep\b/);
 }
 
 /** SCR-012 역할 제안을 받아들인다. */

@@ -1,12 +1,13 @@
-// SCR-031 핵심 경기 챕터(TEST-E2E-010): CHAPTER 모드로 시즌을 시작해 데뷔전 챕터(CHP-MATCH-001)에
-// 도달 → 경기 전 맥락 → 판단 확정(RESOLVE_CHAPTER) → 경기 결과 → 대시보드까지 이동한다. 실제 팩의
+// SCR-031 핵심 경기 챕터(TEST-E2E-010): FAST(항상 고정, 사용자 결정 2026-09-13 D-77)로 시즌을
+// 시작해 데뷔전 챕터(CHP-MATCH-001, importance MAJOR라 FAST에서도 열린다 — RULE-TIME-003)에 도달
+// → 경기 전 맥락 → 판단 확정(RESOLVE_CHAPTER) → 경기 결과 → 대시보드까지 이동한다. 실제 팩의
 // CHP-MATCH-001은 판단이 1개뿐이라("다음 판단"이 아니라 "경기 결과" 버튼이 뜬다) 이 흐름으로 끝까지
 // 확인하고, 판단 수를 화면 문구로만 판정한다(하드코딩하지 않아 콘텐츠가 늘어도 그대로 맞는다).
 // 새로고침·뒤로 가기가 이미 확정된 판단을 다시 묻지 않고(roll을 다시 소비하지 않고) 같은 결과를
 // 재생하는지 표시된 최종 스코어·revision으로 확인한다.
 import { expect, test, type Page } from '@playwright/test';
-import { completeOnboardingThroughContract } from './helpers/player-creation.js';
-import { advanceToChapter, planPreseasonChapterMode, resolveRoleProposal, seedDeterministicChapterRun } from './helpers/chapter.js';
+import { completeOnboardingThroughContract, planPreseason } from './helpers/player-creation.js';
+import { advanceToChapter, resolveRoleProposal, seedDeterministicChapterRun } from './helpers/chapter.js';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
@@ -62,7 +63,7 @@ async function readLatestRngDraws(page: Page): Promise<number> {
   );
 }
 
-test('CHAPTER 모드 데뷔전: 경기 전 맥락 → 판단 확정 → 경기 결과 → 대시보드, 새로고침·뒤로 가기가 재생만 한다', async ({
+test('데뷔전: 경기 전 맥락 → 판단 확정 → 경기 결과 → 대시보드, 새로고침·뒤로 가기가 재생만 한다', async ({
   page,
 }) => {
   // DEBUT 트리거(matchesTrigger: seasonIndex===1 && isFirstCareerAppearance && minutes>0)까지 몇 번의
@@ -75,7 +76,7 @@ test('CHAPTER 모드 데뷔전: 경기 전 맥락 → 판단 확정 → 경기 �
 
   await seedDeterministicChapterRun(page);
   await completeOnboardingThroughContract(page);
-  await planPreseasonChapterMode(page);
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
@@ -136,5 +137,5 @@ test('CHAPTER 모드 데뷔전: 경기 전 맥락 → 판단 확정 → 경기 �
   expect(revisionSecondCheck).toBe(revisionAfterChapter);
 
   const elapsedMs = Date.now() - startedAt;
-  console.log(`[chapter] 계약 뒤 CHAPTER 시즌 시작→데뷔전 챕터 확정→대시보드 소요 시간: ${elapsedMs}ms`);
+  console.log(`[chapter] 계약 뒤 시즌 시작→데뷔전 챕터 확정→대시보드 소요 시간: ${elapsedMs}ms`);
 });

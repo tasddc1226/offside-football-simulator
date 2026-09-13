@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { ProfileSettingsSchema, type ProfileSettings } from '@offside/contracts';
 import type { LocalStore } from '@offside/engine-client';
-import type { SimulationMode } from '@offside/domain';
 import { ACCENT_PRESET_IDS, type AccentPresetId } from './accent-presets.js';
 import { isTeamLogoDataUrl } from './team-logo.js';
+import { FIXED_SIMULATION_MODE } from './start-season.js';
 
 export type ThemePreference = ProfileSettings['theme'];
 export type ReducedMotionPreference = ProfileSettings['reducedMotion'];
@@ -36,7 +36,9 @@ const DEFAULT_SETTINGS: StoredUiSettings = {
   theme: 'SYSTEM',
   reducedMotion: 'SYSTEM',
   textScale: 100,
-  defaultSimulationMode: 'FAST',
+  // 사용자 결정(2026-09-13, D-77): 더 이상 사용자가 고르지 않는다 — contracts의 ProfileSettingsSchema가
+  // 여전히 이 필드를 요구해(수정 금지 경계) 타입 호환을 위해 남겨 두지만 항상 FIXED_SIMULATION_MODE다.
+  defaultSimulationMode: FIXED_SIMULATION_MODE,
   onboardingSeen: false,
   accentPreset: 'DEFAULT',
   teamNameOverrides: {},
@@ -86,6 +88,9 @@ function parseStoredSettings(raw: unknown): StoredUiSettings | null {
 
   return {
     ...parsed.data,
+    // 사용자 결정(2026-09-13, D-77): 기기에 남아 있던 옛 저장값(과거에는 CHAPTER를 고를 수 있었다)은
+    // 무시하고 항상 FIXED_SIMULATION_MODE로 덮어쓴다 — 그 값 하나 때문에 다른 설정까지 초기화하지 않는다.
+    defaultSimulationMode: FIXED_SIMULATION_MODE,
     onboardingSeen,
     accentPreset: isAccentPresetId(accentPreset) ? accentPreset : 'DEFAULT',
     teamNameOverrides: parseTeamNameOverrides(teamNameOverrides),
@@ -97,7 +102,6 @@ export interface UiState extends StoredUiSettings {
   setTheme: (theme: ThemePreference) => void;
   setReducedMotion: (reducedMotion: ReducedMotionPreference) => void;
   setTextScale: (textScale: TextScale) => void;
-  setDefaultSimulationMode: (mode: SimulationMode) => void;
   setOnboardingSeen: (seen: boolean) => void;
   setAccentPreset: (accentPreset: AccentPresetId) => void;
   /** 트림 후 빈 값이면 오버라이드를 지운다(기본 이름 복귀). 16자를 넘는 값은 잘라서 저장한다. */
@@ -121,9 +125,6 @@ export const useUiStore = create<UiState>((set) => ({
   },
   setTextScale: (textScale) => {
     set({ textScale });
-  },
-  setDefaultSimulationMode: (defaultSimulationMode) => {
-    set({ defaultSimulationMode });
   },
   setOnboardingSeen: (onboardingSeen) => {
     set({ onboardingSeen });

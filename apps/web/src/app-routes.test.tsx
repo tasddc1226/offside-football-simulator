@@ -405,15 +405,18 @@ describe('SCR-030 설정', () => {
     expect(screen.getByRole('radio', { name: '다크' })).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('시뮬레이션 기본 모드를 챕터로 바꾸면 즉시 반영된다', async () => {
+  // 사용자 결정(2026-09-13, D-77): 원작(SLB)에는 시뮬레이션 모드가 없어 제거했다 — "화면·플레이
+  // 설정"에는 더 이상 모드 컨트롤이 없고 요약줄도 테마·텍스트 크기만 보여준다.
+  it('시뮬레이션 모드 컨트롤이 없고 화면·플레이 설정 요약줄에 모드가 없다', async () => {
     renderAt('/settings');
     await screen.findByRole('heading', { level: 1, name: '설정' });
 
-    fireEvent.click(screen.getByRole('radio', { name: '챕터로 자세히' }));
+    fireEvent.click(screen.getByText('화면·플레이 설정', { exact: true }));
 
-    await waitFor(() => {
-      expect(useUiStore.getState().defaultSimulationMode).toBe('CHAPTER');
-    });
+    expect(await screen.findByText('시스템 · 100%')).toBeInTheDocument();
+    expect(screen.queryByText('시뮬레이션 기본 모드')).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: '빠르게' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: '챕터로 자세히' })).not.toBeInTheDocument();
   });
 });
 

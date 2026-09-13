@@ -79,7 +79,7 @@ test.describe('저장 성공 전환', () => {
     await page.getByRole('button', { name: '계속' }).click();
     await advanceUntilOffers(page);
     await signFirstOffer(page);
-    await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+    await planPreseason(page, '역할 집중');
 
     await page.getByRole('button', { name: '시즌 시작' }).click();
     await expect(page.getByText('시즌 준비 완료')).toBeVisible();
