@@ -1,13 +1,7 @@
 // 루트 레이아웃. SCR ID 없음: PageShell·QueryClientProvider·not-found 안내를 담당한다.
 import { BrandMark, PageShell } from '@offside/ui';
 import { QueryClientProvider, useIsMutating } from '@tanstack/react-query';
-import {
-  createRootRoute,
-  Link,
-  Outlet,
-  useRouter,
-  useRouterState,
-} from '@tanstack/react-router';
+import { createRootRoute, Link, Outlet, useRouter, useRouterState } from '@tanstack/react-router';
 import { queryClient } from '../shared/query-client.js';
 import { useApplyTheme } from '../shared/ui-store.js';
 import { AppMotionFrame } from '../shared/app-motion-frame.js';
@@ -42,13 +36,35 @@ function RootComponent() {
  * 라우트의 로더가 끝나 실제 DOM이 커밋된 시점에 온다(AppMotionFrame의 화면 전환 애니메이션과 같은
  * 이유로 이 이벤트를 쓴다 — location은 로더가 끝나기 전에 먼저 바뀌므로, 그때 리셋하면 아직 화면에
  * 남아 있는 이전 화면이 먼저 맨 위로 튀어 오른다). 뒤로 가기 시 이전 스크롤 위치 복원은 범위 밖이다.
+ *
+ * UX-013 후속(이슈 없음, 딥링크 경합): pathname이 그대로인 전환(같은 경로 안 해시 변경 포함)은
+ * `pathChanged`가 이미 false라 손대지 않는다. pathname이 바뀌었더라도 목적지 해시가 실제 존재하는
+ * 요소를 가리키면(`/settings#settings-play` 같은 딥링크) 리셋을 건너뛴다 — 그러지 않으면
+ * useExpandDisclosuresOnHash가 막 열고 스크롤한 위치를 이 리셋이 같은 커밋 주기에 도로 0으로
+ * 되돌린다. 해시가 없거나 해시 대상이 없는 보통 전환은 그대로 새 화면을 맨 위에서 시작한다.
  */
+export function shouldResetScrollOnRouteChange(params: {
+  pathChanged: boolean;
+  hash: string;
+  hashTargetExists: boolean;
+}): boolean {
+  if (!params.pathChanged) return false;
+  if (params.hash !== '' && params.hashTargetExists) return false;
+  return true;
+}
+
 function useResetScrollOnRouteChange(): void {
   const router = useRouter();
   useEffect(
     () =>
-      router.subscribe('onRendered', ({ pathChanged }) => {
-        if (!pathChanged) return;
+      router.subscribe('onRendered', ({ pathChanged, toLocation }) => {
+        const hashTargetExists =
+          toLocation.hash !== '' && document.getElementById(toLocation.hash) !== null;
+        if (
+          !shouldResetScrollOnRouteChange({ pathChanged, hash: toLocation.hash, hashTargetExists })
+        ) {
+          return;
+        }
         const main = document.getElementById('game-content');
         if (main) main.scrollTop = 0;
       }),

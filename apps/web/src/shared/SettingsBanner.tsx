@@ -32,7 +32,14 @@ export function SettingsBanner({ badge }: SettingsBannerProps) {
         <p className="os-eyebrow os-settings-banner-eyebrow">SETTINGS</p>
         <h1 className="font-os os-settings-banner-title">설정</h1>
       </div>
-      <span className="os-settings-banner-badge font-os">{badge}</span>
+      <span className="os-settings-banner-badge font-os">
+        {/* UX-013 후속: 배지 문구("Google 동기화"·"내 기기"·"자동 저장")만으로는 스크린리더가 무엇의
+            상태인지 문맥 없이 읽는다. sr-only는 여기서 안전하다 — .os-settings-banner-badge에는
+            settings-screen.css에도 game.css에도 이 span의 크기를 되돌릴 언레이어드 규칙이 없다
+            (os-team-logo-input과 달리). */}
+        <span className="sr-only">저장 위치: </span>
+        {badge}
+      </span>
     </header>
   );
 }

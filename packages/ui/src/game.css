@@ -551,6 +551,33 @@ select {
   grid-template-columns: repeat(var(--os-swatch-columns, 4), minmax(0, 1fr));
   gap: 10px;
 }
+/* UX-013 후속(마우스 사용자용 타일 이름): 타일(버튼)과 그 아래 보이는 이름 캡션을 한 그리드 칸에
+   묶는 래퍼. min-width: 0은 그리드 아이템 기본값(auto)이 긴 구단명 캡션 때문에 칸 폭을 늘려 4열을
+   깨뜨리는 것을 막는다. */
+.os-swatch-tile-wrap {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+/* 캡션은 radio의 aria-label과 같은 이름이라 aria-hidden으로 중복 낭독을 막는다 — 그래도 보이는
+   이유는 색만으로 구분되는 라디오 그룹 옆에서 마우스 사용자가 이름을 확인할 방법이 없었기 때문.
+   360px 4열(칸 폭 ~65px)에서 "서라벌 유나이티드 컬러" 같은 긴 구단 프리셋 이름은 2줄로도 다 못
+   담을 수 있어 줄임표로 자른다(title 속성이 마우스 호버 시 전체 이름을 보여준다). */
+.os-swatch-tile-label {
+  display: -webkit-box;
+  overflow: hidden;
+  width: 100%;
+  color: var(--os-text-2);
+  font-family: var(--os-font);
+  font-size: var(--os-fs-caption);
+  line-height: 1.25;
+  text-align: center;
+  word-break: keep-all;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
 .os-swatch-tile {
   position: relative;
   display: grid;
