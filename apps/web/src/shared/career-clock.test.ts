@@ -17,7 +17,7 @@ describe('buildCareerClock', () => {
     ).toEqual({ headline: '23세 · 2030 시즌', detail: '2030 시즌', progress: '7/12 단계' });
   });
 
-  it('marks a finished career from its real completed-season count', () => {
+  it('marks a finished career from its real completed-season count, shown as a real year range too', () => {
     expect(
       buildCareerClock(
         {
@@ -29,7 +29,7 @@ describe('buildCareerClock', () => {
         },
         2026,
       ),
-    ).toEqual({ headline: '36세 · 선수 생활 종료', detail: '3시즌 완료', progress: '은퇴 기록' });
+    ).toEqual({ headline: '36세 · 선수 생활 종료', detail: '2026–2028 · 3시즌 완료', progress: '은퇴 기록' });
   });
 
   it('shows the completed season as a real year between seasons too (settlement 후~다음 시즌 시작 전), not a leftover "N시즌" count', () => {

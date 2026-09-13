@@ -22,12 +22,14 @@ import { LegacyScoreCard } from './legacy-score-card.js';
 import { GameResultReveal } from './game-presentation.js';
 import { getAppEngine } from '../engine/engine.js';
 import { execute } from '../engine/career-actions.js';
+import { rulesetForCareer } from '../engine/content.js';
 import { useServiceSeason } from '../engine/service-season.js';
 import { screenForCareer } from './career-route.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { POSITION_LABELS, TIMELINE_KIND_LABEL_KO, careerTagLabel } from './labels.js';
 import {
   careerStartYear,
+  extractCalendarStartYear,
   FALLBACK_CAREER_START_YEAR,
   seasonYear,
   seasonYearLabel,
@@ -138,6 +140,7 @@ export function RetirementPage({
   const startYear = careerStartYear({
     seasonServiceSeasonId: state.season?.serviceSeasonId ?? null,
     currentServiceSeason: serviceSeasonQuery.data,
+    calendarStartYear: extractCalendarStartYear(rulesetForCareer(state).leagueCalendar),
   });
   return (
     <RetirementScreen

@@ -33,7 +33,7 @@ import {
 } from '../shared/season-result-view.js';
 import { ratingText } from '../shared/season-schedule.js';
 import { ATTRIBUTE_CHANGE_CAUSE_LABEL_KO } from '../shared/season-result.js';
-import { careerStartYear, extractCalendarStartYear, seasonYearLabelWithOrdinal } from '../shared/season-year.js';
+import { careerStartYear, extractCalendarStartYear, seasonYearLabel } from '../shared/season-year.js';
 import { ATTRIBUTE_GROUP_LABEL_KO } from '../shared/attribute-groups.js';
 import {
   ATTRIBUTE_LABELS,
@@ -344,7 +344,7 @@ function SeasonResultScreen() {
       <ScreenIntro
         eyebrow="SEASON REVIEW"
         title={view.isYouth ? '유소년 시즌 결과' : '프로 시즌 결과'}
-        description={seasonYearLabelWithOrdinal(startYear, view.seasonNumber)}
+        description={seasonYearLabel(startYear, view.seasonNumber)}
       />
 
       <PlayerBanner
@@ -359,11 +359,11 @@ function SeasonResultScreen() {
 
       <GameResultReveal
         fast={state.simulationMode === 'FAST'}
-        announcement={`${seasonYearLabelWithOrdinal(startYear, view.seasonNumber)} 결과, 평균 평점 ${ratingText(common.avgRatingTenths)}`}
+        announcement={`${seasonYearLabel(startYear, view.seasonNumber)} 결과, 평균 평점 ${ratingText(common.avgRatingTenths)}`}
         skippable={false}
       >
         <section className="os-story-card flex flex-col gap-os-3" aria-label="시즌 한눈에 보기">
-          <p className="os-eyebrow">{seasonYearLabelWithOrdinal(startYear, view.seasonNumber)} · 최종 기록</p>
+          <p className="os-eyebrow">{seasonYearLabel(startYear, view.seasonNumber)} · 최종 기록</p>
           <p className="font-os font-bold text-os-text" style={H2_STYLE}>{headline}</p>
           {/* T-7-010 이슈 144·D-68: 승격권은 순위 기록일 뿐 리그 이동은 이번 버전에 없다 — 화면 문구가
               리그가 바뀐 것처럼 읽히지 않도록 캡션을 남긴다. 라우트 전용 상수라 labels.ts로 옮기지 않는다. */}

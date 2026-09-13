@@ -66,7 +66,12 @@ import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 import { buildCurrentContractSummary, MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
 import { GamePending } from '../shared/game-presentation.js';
 import { buildCareerClock, type CareerClockView } from '../shared/career-clock.js';
-import { careerStartYear, seasonYearLabel, seasonYearLabelWithOrdinal } from '../shared/season-year.js';
+import {
+  careerStartYear,
+  extractCalendarStartYear,
+  seasonYearLabel,
+  seasonYearLabelWithOrdinal,
+} from '../shared/season-year.js';
 import { useServiceSeason } from '../engine/service-season.js';
 import {
   conditionTileItems,
@@ -737,10 +742,12 @@ function CareerDashboard() {
   }
 
   const { state } = query.data;
+  const ruleset = rulesetForCareer(state);
   // 사용자 결정(2026-09-13): 1시즌 = 1년, 커리어 시작 연도부터 "2026 시즌"으로 표기(season-year.ts).
   const startYear = careerStartYear({
     seasonServiceSeasonId: state.season?.serviceSeasonId ?? null,
     currentServiceSeason: serviceSeasonQuery.data,
+    calendarStartYear: extractCalendarStartYear(ruleset.leagueCalendar),
   });
   const profile = state.player.profile;
   const draft = state.player.draft;
@@ -750,7 +757,6 @@ function CareerDashboard() {
     : { label: '포지션', value: draft.position ? POSITION_LABELS[draft.position] : '—' };
   const hasContract = state.contract !== null;
   const season = state.season;
-  const ruleset = rulesetForCareer(state);
   const room = deriveTacticalRoom(state, ruleset);
   const seasonChronicleItems = buildSeasonChronicleItems(state);
   const seasonResultItem = seasonChronicleItems.find(

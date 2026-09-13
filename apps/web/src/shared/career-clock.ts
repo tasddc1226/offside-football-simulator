@@ -1,4 +1,4 @@
-import { seasonYearLabel } from './season-year.js';
+import { seasonYearLabel, seasonYearRangeLabel } from './season-year.js';
 
 export type CareerClockState = {
   age: number;
@@ -25,7 +25,10 @@ export function buildCareerClock(state: CareerClockState, startYear: number): Ca
   if (state.status === 'RETIRED' || state.status === 'ARCHIVED') {
     return {
       headline: `${state.age}세 · 선수 생활 종료`,
-      detail: `${completed}시즌 완료`,
+      detail:
+        completed > 0
+          ? `${seasonYearRangeLabel(startYear, 1, completed)} · ${completed}시즌 완료`
+          : `${completed}시즌 완료`,
       progress: '은퇴 기록',
     };
   }
