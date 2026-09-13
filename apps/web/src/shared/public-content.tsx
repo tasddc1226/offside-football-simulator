@@ -126,19 +126,6 @@ export function PublicIntroduction() {
           </li>
         </ol>
       </section>
-      <figure className="flex flex-col items-center gap-os-3 border-t border-os-border pt-os-4">
-        <img
-          src="/gameplay-career.png"
-          width="780"
-          height="1688"
-          loading="lazy"
-          alt="오프사이드 선수 커리어 홈 실제 플레이 화면"
-          style={{ width: '100%', maxWidth: 300, height: 'auto' }}
-        />
-        <figcaption className="font-os text-os-text-2">
-          실제 플레이 화면 · 테스트 선수 예시. 선택과 버전에 따라 결과가 달라집니다.
-        </figcaption>
-      </figure>
       <HomeCommunity compact />
       <PublicFooter />
     </div>
