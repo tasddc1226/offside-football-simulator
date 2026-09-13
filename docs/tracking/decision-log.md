@@ -2,6 +2,15 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-13 (D-77 — 시뮬레이션 모드 선택 제거, 항상 FAST — 사용자 결정)
+
+- 사용자 지시: "원작에서는 시뮬레이션 모드 같은 기능은 존재하지 않으니 내 게임에서도 제거해줘." 고정 방식 질문(CHAPTER 권장 vs FAST)에 **FAST** 선택. FAST = 필수 슬롯·계약·부상·역할 변경·MAJOR 챕터만(시즌당 결정 상한 6), 선택 이벤트·MINOR 챕터는 열리지 않는다(RULE-TIME-003/004).
+- 결정론 경계: `packages/domain`·`contracts`·`content`·`apps/api`·픽스처는 **무수정**. 도메인의 `simulationMode`(CREATE_CAREER·START_SEASON payload, season 상태, `buildSeasonSteps`)는 과거 커리어(CHAPTER 시즌 포함)의 명령 로그 리플레이·해시 검증을 위해 남기고, 클라이언트가 항상 `FIXED_SIMULATION_MODE = 'FAST'`(`apps/web/src/shared/start-season.ts`)를 보낸다. 화면이 `season.simulationMode`를 읽어 분기하는 코드는 유지(기존 CHAPTER 시즌 재현).
+- 제거: 설정 "시뮬레이션 기본 모드" 컨트롤·요약줄 항목, SCR-005 모드 RadioGroup, SCR-011 `mode` 검색 파라미터·모드 문구, `ui-store.setDefaultSimulationMode`(필드는 contracts `ProfileSettingsSchema` 호환으로 남기되 항상 FAST 강제, 옛 IndexedDB 값 무시). 문서: RULE-TIME-003·`docs/screens/02-season-flow.md`·`05-hub-and-support.md`.
+- e2e 재구성(단언 완화 없음): `helpers/player-creation.ts` 모드 인자 제거 + "모드 없음" 단언, `helpers/chapter.ts`의 CHAPTER 선택 헬퍼 제거 → chapter·a11y(SCR-011/012/031)·injury·season-result·session-length가 FAST 경로로 전환(CHP-MATCH-001은 MAJOR라 FAST에서도 열림, 기존 결정론 seed 재사용). **session-length의 CHAPTER 시즌 완주 시간 측정은 UI로 도달 불가해 삭제** — 오케스트레이터 판단: 모드가 사라졌으니 사람 기준 시간 비교도 의미가 없어 대체 벤치마크를 만들지 않는다. `find-seed.ts`·`phase4-seed-reachability.test.ts`는 엔진 계층 도구라 CHAPTER 유지.
+- 검증: 워커 e2e 전체 82/21/7 → 실패 21 = 베이스라인 16 + 부하 플레이크 5(단독 재실행 통과), 새 실패 0. 브라우저로 온보딩→SCR-005(모드 없음)→SCR-011→시즌 시작 뒤 IndexedDB `season.simulationMode === 'FAST'` 확인. 오케스트레이터 체인·e2e·배포 결과는 보드 행에 기록. 기존 플레이크 2건은 이슈 #207.
+- 후속 후보: `apps/api` 신규 프로필 `DEFAULT_SETTINGS.defaultSimulationMode: 'CHAPTER'`는 이제 죽은 값(서버 변경이 허용될 때 정리), contracts `ProfileSettingsSchema`에서 필드 제거 여부(별도 결정), 고아 CSS `.os-segmented-two` 정리(PR #206 후속 커밋).
+
 ## 2026-09-13 (D-76 — main 웹 단위 테스트 25건 결손 발견·복구, 체인 판정 규칙 보강)
 
 - 발견: UX-013 PR #201 검증 체인에서 `apps/web` 단위 테스트가 실패해 origin/main(`eadd1c0`)에서 재현하니 **main 자체가 25 실패 / 575 통과**(4파일: `player-creation`·`career.$careerId.index`·`event-result`·`narrative`)였다. 원인은 #198의 오프라인 폴백 상수 `ACTIVE_RULESET_VERSION/ACTIVE_CONTENT_PACK_VERSION` 1.0.0/0.1.0 → 1.4.0/0.5.1 변경. 이 값은 `engine/content.ts` 전역 싱글턴뿐 아니라 `resolveServiceSeason()`의 `FALLBACK_SERVICE_SEASON`으로도 흘러, API를 모킹하지 않는 단위 테스트에서 `createCareer`가 만드는 커리어 버전(1.4.0/0.5.1)과 테스트 엔진에 주입한 팩(0.1.0)이 어긋났다(`EVT-CON-020` 미발견, "한강 FC U18" 기대 등). 운영 코드는 커리어별 `contentForCareer/rulesetForCareer`를 쓰므로 **운영 회귀는 아니다**(운영 설정 화면·current API 1.4.0/0.5.1 정상).
