@@ -22,7 +22,7 @@ Worker들은 staging D1을 공유했으므로 D1 자체는 삭제하거나 초�
 - `cleanup-preview.yml`은 전환 전 PR Worker 잔재만 정리하며 새 preview를 만들지 않는다.
 
 staging의 서비스 시즌 포인터(`ACTIVE_SERVICE_SEASON_ID` → `svc_line_test`)는 바꾸지 않는다. 그 행의
-ruleset/content pack은 `apps/api/seeds/bootstrap-non-production.sql`이 정하며, 2026-09-12 룰셋 1.4.0 승격
-준비(`release-ruleset-1-4-0`)에서 운영 승격 목표 manifest(1.4.0/0.5.1)와 맞췄다. main 머지마다 CI가 이
-seed를 staging D1에 upsert하므로 staging은 운영보다 먼저 새 manifest로 새 커리어를 만든다. 절차는
-[production-release.md](production-release.md)의 "시즌 1 manifest 2차 승격"을 따른다.
+ruleset/content pack은 `apps/api/seeds/bootstrap-non-production.sql`이 정하며, 2026-09-13 룰셋 1.5.0 승격
+준비(`release-ruleset-1-5-0`, #208 K리그식 리그·팀 구조 위에 스택)에서 운영 승격 목표 manifest(1.5.0/0.6.0)와
+맞췄다. main 머지마다 CI가 이 seed를 staging D1에 upsert하므로 staging은 운영보다 먼저 새 manifest로 새
+커리어를 만든다. 절차는 [production-release.md](production-release.md)의 "시즌 1 manifest 3차 승격"을 따른다.
