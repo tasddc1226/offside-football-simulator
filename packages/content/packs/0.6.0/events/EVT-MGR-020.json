@@ -1,0 +1,93 @@
+{
+  "id": "EVT-MGR-020",
+  "version": 1,
+  "phases": ["PRESEASON"],
+  "triggers": {
+    "all": [
+      { "eq": ["career.stage", "PRO"] },
+      { "not": { "hasTag": ["career.tags", "역할_협의_완료"] } }
+    ]
+  },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 2 },
+  "weight": 16,
+  "maxAge": 24,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "제안된 임무를 제한된 기간 시험한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "전술 적합도 상승", "target": "tacticalFit", "direction": "UP" },
+        { "label": "초기 폼 부담", "target": "form", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "시험 기간과 재검토 날짜를 합의했다",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MGR-020.A.A1.0",
+              "target": "tacticalFit",
+              "delta": 6,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MGR-020.A.A1.1",
+              "target": "form",
+              "delta": -4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["역할_시험_협의"],
+          "followUps": [{ "eventId": "EVT-MGR-021" }]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "기존 장점을 먼저 증명하겠다고 설명한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "현재 적응도를 지킴" },
+        { "label": "감독 신뢰 소폭 하락", "target": "managerTrust", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "감독은 기존 역할에서 확인할 기준을 제시했다",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MGR-020.B.B1",
+              "target": "managerTrust",
+              "delta": -3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["역할_기존장점_증명"],
+          "followUps": [{ "eventId": "EVT-MGR-021" }]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "감독이 선호 포지션을 바꾸라는 약속 대신, 팀이 필요한 움직임을 훈련에서 시험해 보자고 제안했다. 실제 기용은 훈련 뒤 다시 논의한다."
+  }
+}

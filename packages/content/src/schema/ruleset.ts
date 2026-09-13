@@ -1001,6 +1001,9 @@ export const RulesetSchema = z
     version: SemverSchema,
     /** 신규 커리어의 시작 나이. 필드가 없는 과거 룰셋은 도메인의 17세 폴백을 유지한다. */
     initialAge: z.number().int().min(15).max(30).optional(),
+    /** 1.5.0+: 커리어 시작 연도 표시용(진행 로직에는 관여하지 않는다). 없는 과거 룰셋은 화면이
+     * 표시하지 않는다. */
+    calendar: z.strictObject({ startYear: z.number().int() }).optional(),
     offerProjection: z
       .strictObject({
         version: z.literal('1.1.0'),

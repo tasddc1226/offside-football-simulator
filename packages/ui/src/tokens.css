@@ -31,6 +31,18 @@
   --os-swatch-team-eunha-rovers: var(--os-team-eunha-rovers);
   --os-swatch-team-gangnaru-united: var(--os-team-gangnaru-united);
   --os-swatch-team-dalbit-town-fc: var(--os-team-dalbit-town-fc);
+  --os-swatch-team-seoul-hangang-fc: var(--os-team-seoul-hangang-fc);
+  --os-swatch-team-suwon-hwahong-fc: var(--os-team-suwon-hwahong-fc);
+  --os-swatch-team-incheon-gaetbeol-fc: var(--os-team-incheon-gaetbeol-fc);
+  --os-swatch-team-jeonju-deulnyeok-united: var(--os-team-jeonju-deulnyeok-united);
+  --os-swatch-team-ulsan-pado-fc: var(--os-team-ulsan-pado-fc);
+  --os-swatch-team-pohang-donghae-fc: var(--os-team-pohang-donghae-fc);
+  --os-swatch-team-daegu-palgong-fc: var(--os-team-daegu-palgong-fc);
+  --os-swatch-team-jeju-halla-city: var(--os-team-jeju-halla-city);
+  --os-swatch-team-gangneung-haesol-fc: var(--os-team-gangneung-haesol-fc);
+  --os-swatch-team-gwangju-mudeung-fc: var(--os-team-gwangju-mudeung-fc);
+  --os-swatch-team-daejeon-gapcheon-fc: var(--os-team-daejeon-gapcheon-fc);
+  --os-swatch-team-busan-deungdae-fc: var(--os-team-busan-deungdae-fc);
   /* UX-008 구단 배지 컬러(활성 룰셋 12개 구단, apps/web/src/shared/team-identity.ts와 id를 맞춰
      둔다 — 팀을 추가·삭제하면 여기와 그 파일, packages/ui/scripts/check-contrast.mjs의
      TEAM_IDS를 함께 고친다). 배지 위 이니셜 텍스트는 --os-on-accent를 쓰므로, 이 값들은 전부
@@ -48,6 +60,33 @@
   --os-team-eunha-rovers: #3a206f;
   --os-team-gangnaru-united: #62206f;
   --os-team-dalbit-town-fc: #6f2054;
+  --os-team-seoul-hangang-fc-b: #6f2020;
+  --os-team-seoul-hangang-fc: #6f3120;
+  --os-team-suwon-hwahong-fc: #6f4320;
+  --os-team-incheon-gaetbeol-fc: #6f5420;
+  --os-team-jeonju-deulnyeok-united: #6f6620;
+  --os-team-ulsan-pado-fc: #666f20;
+  --os-team-pohang-donghae-fc: #546f20;
+  --os-team-daegu-palgong-fc: #436f20;
+  --os-team-jeju-halla-city: #316f20;
+  --os-team-gangneung-haesol-fc: #206f20;
+  --os-team-gwangju-mudeung-fc: #206f31;
+  --os-team-daejeon-gapcheon-fc: #206f43;
+  --os-team-busan-deungdae-fc: #206f54;
+  --os-team-anyang-gwanak-fc: #206f66;
+  --os-team-bucheon-wonmi-fc: #20666f;
+  --os-team-seongnam-tancheon-fc: #20546f;
+  --os-team-gimpo-pyeongya-fc: #20436f;
+  --os-team-cheonan-heungtaryeong-fc: #20316f;
+  --os-team-asan-oncheon-fc: #20206f;
+  --os-team-cheongju-jikji-fc: #31206f;
+  --os-team-changwon-jinhae-fc: #43206f;
+  --os-team-gwangyang-maehwa-fc: #54206f;
+  --os-team-gimcheon-hwangak-fc: #66206f;
+  --os-team-ansan-gaetgol-fc: #6f2066;
+  --os-team-yongin-hanteo-fc: #6f2054;
+  --os-team-hwaseong-gukhwa-fc: #6f2043;
+  --os-team-seoul-namsan-fc: #6f2031;
   --os-line: #17845b;
   --os-success: #18794e;
   --os-warning: #91610b;
@@ -258,6 +297,90 @@
   --os-hero: #6f2054;
   --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
+:root[data-accent='team-seoul-hangang-fc'] {
+  --os-accent: #6f3120;
+  --os-accent-hover: #59271a;
+  --os-accent-soft: #eee6e4;
+  --os-hero: #6f3120;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-accent='team-suwon-hwahong-fc'] {
+  --os-accent: #6f4320;
+  --os-accent-hover: #59361a;
+  --os-accent-soft: #eee8e4;
+  --os-hero: #6f4320;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-accent='team-incheon-gaetbeol-fc'] {
+  --os-accent: #6f5420;
+  --os-accent-hover: #59431a;
+  --os-accent-soft: #eeeae4;
+  --os-hero: #6f5420;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+}
+:root[data-accent='team-jeonju-deulnyeok-united'] {
+  --os-accent: #6f6620;
+  --os-accent-hover: #59521a;
+  --os-accent-soft: #eeede4;
+  --os-hero: #6f6620;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
+:root[data-accent='team-ulsan-pado-fc'] {
+  --os-accent: #666f20;
+  --os-accent-hover: #52591a;
+  --os-accent-soft: #edeee4;
+  --os-hero: #666f20;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 90%, var(--os-hero));
+}
+:root[data-accent='team-pohang-donghae-fc'] {
+  --os-accent: #546f20;
+  --os-accent-hover: #43591a;
+  --os-accent-soft: #eaeee4;
+  --os-hero: #546f20;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
+:root[data-accent='team-daegu-palgong-fc'] {
+  --os-accent: #436f20;
+  --os-accent-hover: #36591a;
+  --os-accent-soft: #e8eee4;
+  --os-hero: #436f20;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
+:root[data-accent='team-jeju-halla-city'] {
+  --os-accent: #316f20;
+  --os-accent-hover: #27591a;
+  --os-accent-soft: #e6eee4;
+  --os-hero: #316f20;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
+:root[data-accent='team-gangneung-haesol-fc'] {
+  --os-accent: #206f20;
+  --os-accent-hover: #1a591a;
+  --os-accent-soft: #e4eee4;
+  --os-hero: #206f20;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
+:root[data-accent='team-gwangju-mudeung-fc'] {
+  --os-accent: #206f31;
+  --os-accent-hover: #1a5927;
+  --os-accent-soft: #e4eee6;
+  --os-hero: #206f31;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
+:root[data-accent='team-daejeon-gapcheon-fc'] {
+  --os-accent: #206f43;
+  --os-accent-hover: #1a5936;
+  --os-accent-soft: #e4eee8;
+  --os-hero: #206f43;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
+:root[data-accent='team-busan-deungdae-fc'] {
+  --os-accent: #206f54;
+  --os-accent-hover: #1a5943;
+  --os-accent-soft: #e4eeea;
+  --os-hero: #206f54;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 86%, var(--os-hero));
+}
 :root[data-theme='dark'] {
   color-scheme: dark;
   --os-bg: #101722;
@@ -290,6 +413,33 @@
   --os-team-eunha-rovers: #bca5e9;
   --os-team-gangnaru-united: #dda5e9;
   --os-team-dalbit-town-fc: #e9a5d2;
+  --os-team-seoul-hangang-fc-b: #e9a5a5;
+  --os-team-seoul-hangang-fc: #e9b4a5;
+  --os-team-suwon-hwahong-fc: #e9c4a5;
+  --os-team-incheon-gaetbeol-fc: #e9d2a5;
+  --os-team-jeonju-deulnyeok-united: #e9e1a5;
+  --os-team-ulsan-pado-fc: #e1e9a5;
+  --os-team-pohang-donghae-fc: #d2e9a5;
+  --os-team-daegu-palgong-fc: #c4e9a5;
+  --os-team-jeju-halla-city: #b4e9a5;
+  --os-team-gangneung-haesol-fc: #a5e9a5;
+  --os-team-gwangju-mudeung-fc: #a5e9b4;
+  --os-team-daejeon-gapcheon-fc: #a5e9c4;
+  --os-team-busan-deungdae-fc: #a5e9d2;
+  --os-team-anyang-gwanak-fc: #a5e9e1;
+  --os-team-bucheon-wonmi-fc: #a5e1e9;
+  --os-team-seongnam-tancheon-fc: #a5d2e9;
+  --os-team-gimpo-pyeongya-fc: #a5c4e9;
+  --os-team-cheonan-heungtaryeong-fc: #a5b4e9;
+  --os-team-asan-oncheon-fc: #a5a5e9;
+  --os-team-cheongju-jikji-fc: #b4a5e9;
+  --os-team-changwon-jinhae-fc: #c4a5e9;
+  --os-team-gwangyang-maehwa-fc: #d2a5e9;
+  --os-team-gimcheon-hwangak-fc: #e1a5e9;
+  --os-team-ansan-gaetgol-fc: #e9a5e1;
+  --os-team-yongin-hanteo-fc: #e9a5d2;
+  --os-team-hwaseong-gukhwa-fc: #e9a5c4;
+  --os-team-seoul-namsan-fc: #e9a5b4;
   --os-line: #62c99a;
   --os-success: #69d19e;
   --os-warning: #f0c36a;
@@ -424,6 +574,90 @@
   --os-hero: #6f2054;
   --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
 }
+:root[data-theme='dark'][data-accent='team-seoul-hangang-fc'] {
+  --os-accent: #e9b4a5;
+  --os-accent-hover: #edc3b7;
+  --os-accent-soft: #383d49;
+  --os-hero: #6f3120;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 82%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-suwon-hwahong-fc'] {
+  --os-accent: #e9c4a5;
+  --os-accent-hover: #edd0b7;
+  --os-accent-soft: #383f49;
+  --os-hero: #6f4320;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 90%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-incheon-gaetbeol-fc'] {
+  --os-accent: #e9d2a5;
+  --os-accent-hover: #eddbb7;
+  --os-accent-soft: #384149;
+  --os-hero: #6f5420;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-jeonju-deulnyeok-united'] {
+  --os-accent: #e9e1a5;
+  --os-accent-hover: #ede7b7;
+  --os-accent-soft: #384349;
+  --os-hero: #5f571c;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-ulsan-pado-fc'] {
+  --os-accent: #e1e9a5;
+  --os-accent-hover: #e7edb7;
+  --os-accent-soft: #374449;
+  --os-hero: #505719;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 94%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-pohang-donghae-fc'] {
+  --os-accent: #d2e9a5;
+  --os-accent-hover: #dbedb7;
+  --os-accent-soft: #354449;
+  --os-hero: #485f1c;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 98%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-daegu-palgong-fc'] {
+  --os-accent: #c4e9a5;
+  --os-accent-hover: #d0edb7;
+  --os-accent-soft: #344449;
+  --os-hero: #3a5f1c;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-jeju-halla-city'] {
+  --os-accent: #b4e9a5;
+  --os-accent-hover: #c3edb7;
+  --os-accent-soft: #324449;
+  --os-hero: #2a5f1c;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-gangneung-haesol-fc'] {
+  --os-accent: #a5e9a5;
+  --os-accent-hover: #b7edb7;
+  --os-accent-soft: #304449;
+  --os-hero: #1e671e;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 99%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-gwangju-mudeung-fc'] {
+  --os-accent: #a5e9b4;
+  --os-accent-hover: #b7edc3;
+  --os-accent-soft: #30444b;
+  --os-hero: #1e672e;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 99%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-daejeon-gapcheon-fc'] {
+  --os-accent: #a5e9c4;
+  --os-accent-hover: #b7edd0;
+  --os-accent-soft: #30444d;
+  --os-hero: #1c5f3a;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
+}
+:root[data-theme='dark'][data-accent='team-busan-deungdae-fc'] {
+  --os-accent: #a5e9d2;
+  --os-accent-hover: #b7eddb;
+  --os-accent-soft: #30444f;
+  --os-hero: #1c5f48;
+  --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
@@ -457,6 +691,33 @@
     --os-team-eunha-rovers: #bca5e9;
     --os-team-gangnaru-united: #dda5e9;
     --os-team-dalbit-town-fc: #e9a5d2;
+    --os-team-seoul-hangang-fc-b: #e9a5a5;
+    --os-team-seoul-hangang-fc: #e9b4a5;
+    --os-team-suwon-hwahong-fc: #e9c4a5;
+    --os-team-incheon-gaetbeol-fc: #e9d2a5;
+    --os-team-jeonju-deulnyeok-united: #e9e1a5;
+    --os-team-ulsan-pado-fc: #e1e9a5;
+    --os-team-pohang-donghae-fc: #d2e9a5;
+    --os-team-daegu-palgong-fc: #c4e9a5;
+    --os-team-jeju-halla-city: #b4e9a5;
+    --os-team-gangneung-haesol-fc: #a5e9a5;
+    --os-team-gwangju-mudeung-fc: #a5e9b4;
+    --os-team-daejeon-gapcheon-fc: #a5e9c4;
+    --os-team-busan-deungdae-fc: #a5e9d2;
+    --os-team-anyang-gwanak-fc: #a5e9e1;
+    --os-team-bucheon-wonmi-fc: #a5e1e9;
+    --os-team-seongnam-tancheon-fc: #a5d2e9;
+    --os-team-gimpo-pyeongya-fc: #a5c4e9;
+    --os-team-cheonan-heungtaryeong-fc: #a5b4e9;
+    --os-team-asan-oncheon-fc: #a5a5e9;
+    --os-team-cheongju-jikji-fc: #b4a5e9;
+    --os-team-changwon-jinhae-fc: #c4a5e9;
+    --os-team-gwangyang-maehwa-fc: #d2a5e9;
+    --os-team-gimcheon-hwangak-fc: #e1a5e9;
+    --os-team-ansan-gaetgol-fc: #e9a5e1;
+    --os-team-yongin-hanteo-fc: #e9a5d2;
+    --os-team-hwaseong-gukhwa-fc: #e9a5c4;
+    --os-team-seoul-namsan-fc: #e9a5b4;
     --os-line: #62c99a;
     --os-success: #69d19e;
     --os-warning: #f0c36a;
@@ -592,6 +853,90 @@
     --os-accent-soft: #3b3345;
     --os-hero: #6f2054;
     --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 78%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-seoul-hangang-fc'] {
+    --os-accent: #e9b4a5;
+    --os-accent-hover: #edc3b7;
+    --os-accent-soft: #383d49;
+    --os-hero: #6f3120;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 82%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-suwon-hwahong-fc'] {
+    --os-accent: #e9c4a5;
+    --os-accent-hover: #edd0b7;
+    --os-accent-soft: #383f49;
+    --os-hero: #6f4320;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 90%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-incheon-gaetbeol-fc'] {
+    --os-accent: #e9d2a5;
+    --os-accent-hover: #eddbb7;
+    --os-accent-soft: #384149;
+    --os-hero: #6f5420;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-jeonju-deulnyeok-united'] {
+    --os-accent: #e9e1a5;
+    --os-accent-hover: #ede7b7;
+    --os-accent-soft: #384349;
+    --os-hero: #5f571c;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-ulsan-pado-fc'] {
+    --os-accent: #e1e9a5;
+    --os-accent-hover: #e7edb7;
+    --os-accent-soft: #374449;
+    --os-hero: #505719;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 94%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-pohang-donghae-fc'] {
+    --os-accent: #d2e9a5;
+    --os-accent-hover: #dbedb7;
+    --os-accent-soft: #354449;
+    --os-hero: #485f1c;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 98%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-daegu-palgong-fc'] {
+    --os-accent: #c4e9a5;
+    --os-accent-hover: #d0edb7;
+    --os-accent-soft: #344449;
+    --os-hero: #3a5f1c;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-jeju-halla-city'] {
+    --os-accent: #b4e9a5;
+    --os-accent-hover: #c3edb7;
+    --os-accent-soft: #324449;
+    --os-hero: #2a5f1c;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-gangneung-haesol-fc'] {
+    --os-accent: #a5e9a5;
+    --os-accent-hover: #b7edb7;
+    --os-accent-soft: #304449;
+    --os-hero: #1e671e;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 99%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-gwangju-mudeung-fc'] {
+    --os-accent: #a5e9b4;
+    --os-accent-hover: #b7edc3;
+    --os-accent-soft: #30444b;
+    --os-hero: #1e672e;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 99%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-daejeon-gapcheon-fc'] {
+    --os-accent: #a5e9c4;
+    --os-accent-hover: #b7edd0;
+    --os-accent-soft: #30444d;
+    --os-hero: #1c5f3a;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
+  }
+  :root:not([data-theme='light'])[data-accent='team-busan-deungdae-fc'] {
+    --os-accent: #a5e9d2;
+    --os-accent-hover: #b7eddb;
+    --os-accent-soft: #30444f;
+    --os-hero: #1c5f48;
+    --os-hero-muted: color-mix(in srgb, var(--os-on-hero) 97%, var(--os-hero));
   }
 }
 .os-num {

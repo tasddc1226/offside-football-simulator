@@ -413,6 +413,8 @@ export type LeagueCalendar = {
 export type Ruleset = {
   version: string;
   initialAge?: number | undefined;
+  /** 1.5.0+: 커리어 시작 연도 표시용(진행 로직 미사용). */
+  calendar?: { startYear: number } | undefined;
   /** 1.1 only: market previews and season squads share this deterministic stream. */
   offerProjection?: { version: '1.1.0'; competitorSeedVersion: 'squad:season-team-v1' } | undefined;
   positions: Position[];
