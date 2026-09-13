@@ -32,10 +32,10 @@ export const TEAM_FLAVOR_TEXT: Readonly<Record<string, string>> = {
   'jeju-halla-city': '섬 특유의 여유로 점유율 축구를 고집한다. 원정 이동 거리는 리그 최고다.',
   'gangneung-haesol-fc': '해안 도시 특유의 빠른 역습이 무기다. 후반 체력이 늘 아쉽다.',
   'gwangju-mudeung-fc': '산 이름처럼 묵묵히 버틴다. 화려하진 않아도 꾸준하다.',
-  'daejeon-gapcheon-fc': '하천 도시답게 물 흐르듯 패스한다. 결정력은 여전히 과제다.',
+  'daejeon-gapcheon-fc': '하천 물살처럼 거세게 압박한다. 뒷공간 관리가 늘 과제다.',
   'busan-deungdae-fc': '항구 도시 뚝심으로 역습 한 번을 노린다. 중위권이 편안한 자리다.',
   // 1.5.0 K2
-  'anyang-gwanak-fc': '압박 축구로 승격권을 노린다. 체력 소모가 큰 게 흠이다.',
+  'anyang-pyeongchon-fc': '압박 축구로 승격권을 노린다. 체력 소모가 큰 게 흠이다.',
   'bucheon-wonmi-fc': '역습 한 방을 믿는다. 그래도 우리 서포터즈는 끝까지 남는다.',
   'seongnam-tancheon-fc': '하천 옆 훈련장에서 점유율 축구를 갈고닦는다. 골이 안 들어가는 게 문제다.',
   'gimpo-pyeongya-fc': '평야처럼 넓게 뛴다. 승강 플레이오프가 늘 남 얘기는 아니다.',

@@ -180,6 +180,11 @@ export const TeamSchema = z.strictObject({
   leagueId: z.string().min(1),
   tacticalStyleId: z.string().min(1),
   squadStrength: z.number().int().min(40).max(90),
+  // PR #208 리뷰 후속(D-77 우회 대신 선택 키 가드): 1.5.0+ 전용 선택 필드. 정의되면 domain의
+  // isRivalOpponent(schedule.ts)가 이 팀과의 리그 경기를 DERBY(라이벌) 매치로 인정한다(같은 리그의
+  // 다른 이름 있는 팀 id, 상호 참조 권장). 1.0.0~1.4.0 JSON에는 이 키가 없어 기존 "이름 없는 상대만
+  // 라이벌" 로직이 그대로 유지된다(D-43/D-67 가드 패턴 — 옛 룰셋 결과·해시 불변).
+  rivalTeamId: z.string().min(1).optional(),
 });
 export type Team = z.infer<typeof TeamSchema>;
 
@@ -1138,6 +1143,7 @@ export const RulesetSchema = z
     // T-2-002 D-34.
     const leagueById = new Map(ruleset.leagues.map((league) => [league.id, league]));
     const tacticalStyleIds = new Set(ruleset.tacticalStyles.map((style) => style.id));
+    const teamById = new Map(ruleset.teams.map((team) => [team.id, team]));
     for (const [index, team] of ruleset.teams.entries()) {
       const league = leagueById.get(team.leagueId);
       if (league === undefined) {
@@ -1156,6 +1162,34 @@ export const RulesetSchema = z
           path: ['teams', index, 'tacticalStyleId'],
         });
       }
+      // PR #208 리뷰 후속: rivalTeamId(이름 있는 라이벌, 1.5.0+)는 존재하는 팀 id·같은 리그·
+      // 자기 자신이 아님을 요구한다. domain의 isRivalOpponent(schedule.ts)가 이 값을 그대로
+      // opponentId와 비교하므로, 다른 리그 팀이나 존재하지 않는 id를 가리키면 DERBY가 영영 열리지
+      // 않는 소리 없는 회귀가 된다 — 여기서 즉시 막는다.
+      if (team.rivalTeamId !== undefined) {
+        if (team.rivalTeamId === team.id) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `teams[${index}].rivalTeamId가 자기 자신을 가리킨다: ${team.id}`,
+            path: ['teams', index, 'rivalTeamId'],
+          });
+        } else {
+          const rivalTeam = teamById.get(team.rivalTeamId);
+          if (rivalTeam === undefined) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `teams[${index}].rivalTeamId가 teams에 없다: ${team.rivalTeamId}`,
+              path: ['teams', index, 'rivalTeamId'],
+            });
+          } else if (rivalTeam.leagueId !== team.leagueId) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `teams[${index}].rivalTeamId(${team.rivalTeamId})가 다른 리그 팀이다: leagueId ${rivalTeam.leagueId} !== ${team.leagueId}`,
+              path: ['teams', index, 'rivalTeamId'],
+            });
+          }
+        }
+      }
     }
 
     // D-77 회귀 재발 방지: schedule.ts의 buildLeagueRounds는 리그당 이름 있는 팀이
@@ -1163,19 +1197,27 @@ export const RulesetSchema = z
     // 이름 있는 팀 수가 teamCount-rivalOpponentIndex를 넘으면 그 리그에는 `-opp-${rivalOpponentIndex}`
     // 상대가 단 하나도 생기지 않아 isRivalOpponent(schedule.ts)가 영원히 false만 반환하고, DERBY
     // 챕터·TAG-DERBY-HERO 업적이 그 리그에서 영구히 발동 불가능해진다(리그 로스터를 이름 있는 팀으로
-    // 전부 채우면서 teamCount를 그대로 둔 회귀 — 콘텐츠 팩만으로는 되돌릴 수 없다: 이 스키마 검증이
-    // 유일한 방어선).
-    const namedTeamCountByLeague = new Map<string, number>();
+    // 전부 채우면서 teamCount를 그대로 둔 회귀). PR #208 리뷰 후속: 리그의 팀이 전부 rivalTeamId를
+    // 갖췄으면(이름 있는 라이벌 쌍이 전 팀을 커버) 이름 없는 상대 없이도 isRivalOpponent가 실제
+    // 라이벌 매치를 잡을 수 있으므로 이 검증을 건너뛴다 — 그 외(R리그 B팀·K3 필러처럼 rivalTeamId가
+    // 없는 팀이 하나라도 있는 리그)는 기존 검증을 그대로 적용한다.
+    const teamsByLeague = new Map<string, Team[]>();
     for (const team of ruleset.teams) {
-      namedTeamCountByLeague.set(team.leagueId, (namedTeamCountByLeague.get(team.leagueId) ?? 0) + 1);
+      const list = teamsByLeague.get(team.leagueId);
+      if (list === undefined) teamsByLeague.set(team.leagueId, [team]);
+      else list.push(team);
     }
     for (const [leagueIndex, league] of ruleset.leagues.entries()) {
-      const namedCount = namedTeamCountByLeague.get(league.id) ?? 0;
+      const teamsInLeague = teamsByLeague.get(league.id) ?? [];
+      const allNamedTeamsHaveRival =
+        teamsInLeague.length > 0 && teamsInLeague.every((team) => team.rivalTeamId !== undefined);
+      if (allNamedTeamsHaveRival) continue;
+      const namedCount = teamsInLeague.length;
       const maxNamedForRival = league.teamCount - league.rivalOpponentIndex;
       if (namedCount > maxNamedForRival) {
         ctx.addIssue({
           code: 'custom',
-          message: `leagues[${league.id}]: 이름 있는 팀 수(${namedCount})가 teamCount(${league.teamCount})-rivalOpponentIndex(${league.rivalOpponentIndex})=${maxNamedForRival}개를 넘는다 — 이름 없는 라이벌 상대(opp-${league.rivalOpponentIndex})가 생기지 않아 DERBY가 이 리그에서 영원히 발동하지 않는다. teamCount를 늘리거나 이름 있는 팀을 줄여라.`,
+          message: `leagues[${league.id}]: 이름 있는 팀 수(${namedCount})가 teamCount(${league.teamCount})-rivalOpponentIndex(${league.rivalOpponentIndex})=${maxNamedForRival}개를 넘는다 — 이름 없는 라이벌 상대(opp-${league.rivalOpponentIndex})가 생기지 않아 DERBY가 이 리그에서 영원히 발동하지 않는다. teamCount를 늘리거나 이름 있는 팀을 줄이거나, 팀마다 rivalTeamId(이름 있는 라이벌)를 지정해라.`,
           path: ['leagues', leagueIndex, 'teamCount'],
         });
       }

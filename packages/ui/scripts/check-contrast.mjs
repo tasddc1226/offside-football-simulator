@@ -199,7 +199,7 @@ const BADGE_TEAM_IDS = [
   'seoul-hangang-fc-b',
   // 1.5.0 K1 + K2
   ...ACCENT_TEAM_IDS,
-  'anyang-gwanak-fc',
+  'anyang-pyeongchon-fc',
   'bucheon-wonmi-fc',
   'seongnam-tancheon-fc',
   'gimpo-pyeongya-fc',

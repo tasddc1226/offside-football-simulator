@@ -10,7 +10,7 @@ describe('packs/0.6.0 게임성 QA', () => {
 
   it('0.5.1의 이벤트·챕터를 그대로 품고 narrative만 다르다', () => {
     expect(pack.manifest.contentPackVersion).toBe('0.6.0');
-    expect(pack.manifest.compatibleRulesetVersions).toEqual(['1.4.0', '1.5.0']);
+    expect(pack.manifest.compatibleRulesetVersions).toEqual(['1.5.0']);
     expect(pack.events.map((event) => event.id).sort()).toEqual(
       previous.events.map((event) => event.id).sort(),
     );

@@ -1,12 +1,11 @@
 {
   "contentPackVersion": "0.6.0",
   "compatibleRulesetVersions": [
-    "1.4.0",
     "1.5.0"
   ],
   "clientMinVersion": "0.1.0",
   "playtested": false,
-  "checksum": "f6069f6551bcee7b913c90eaa9f4a9186adf82f073ef6436f93ef854e0228bcb",
+  "checksum": "b7eac78ecd9ea3e56baecc57017ba041f5b0fad428b9b0f3c918a0d1ca3a9f5f",
   "files": [
     "chapters/CHP-MATCH-001.json",
     "chapters/CHP-MATCH-002.json",

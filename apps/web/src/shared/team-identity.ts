@@ -47,7 +47,7 @@ const TEAM_IDENTITY: Record<string, TeamIdentity> = {
   'daejeon-gapcheon-fc': { initials: '갑천', colorVar: 'var(--os-team-daejeon-gapcheon-fc)' },
   'busan-deungdae-fc': { initials: '등대', colorVar: 'var(--os-team-busan-deungdae-fc)' },
   // 1.5.0 K2
-  'anyang-gwanak-fc': { initials: '관악', colorVar: 'var(--os-team-anyang-gwanak-fc)' },
+  'anyang-pyeongchon-fc': { initials: '평촌', colorVar: 'var(--os-team-anyang-pyeongchon-fc)' },
   'bucheon-wonmi-fc': { initials: '원미', colorVar: 'var(--os-team-bucheon-wonmi-fc)' },
   'seongnam-tancheon-fc': { initials: '탄천', colorVar: 'var(--os-team-seongnam-tancheon-fc)' },
   'gimpo-pyeongya-fc': { initials: '평야', colorVar: 'var(--os-team-gimpo-pyeongya-fc)' },

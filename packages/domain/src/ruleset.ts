@@ -46,6 +46,11 @@ export type Team = {
   leagueId: string;
   tacticalStyleId: string;
   squadStrength: number;
+  /** PR #208 리뷰 후속(D-77 우회 대신 선택 키 가드): 1.5.0+. 정의되면 이 팀과의 리그 경기가
+   * isRivalOpponent(schedule.ts)에서 DERBY(라이벌) 매치로 인정된다(같은 리그의 다른 이름 있는 팀
+   * id). 1.0.0~1.4.0에는 키가 없어 기존 "이름 없는 상대만 라이벌" 로직이 그대로 유지된다
+   * (D-43/D-67 가드 패턴 — 옛 룰셋 결과·해시 불변). */
+  rivalTeamId?: string | undefined;
 };
 
 // T-2-002 D-34: 리그 하나. `teamCount`는 이름 있는 팀 + 이름 없는 상대를 합한 총 팀 수(T-2-003이

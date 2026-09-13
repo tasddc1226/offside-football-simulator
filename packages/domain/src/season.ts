@@ -375,6 +375,9 @@ export type ChapterWalkContext = {
   existingChapterIds: readonly string[];
   league: League;
   seasonIndex: number;
+  /** PR #208 리뷰 후속: 선수 소속 팀의 `Team.rivalTeamId`. selectChapter의 DERBY 판정에 그대로
+   * 넘긴다(없으면 기존 이름 없는 상대 로직 폴백). */
+  rivalTeamId?: string | undefined;
 };
 
 /**
@@ -444,6 +447,7 @@ export function walkToNextDecision(
       resolvedChapterIds: chapterContext.resolvedChapterIds,
       existingChapterIds: chapterContext.existingChapterIds,
       league: chapterContext.league,
+      rivalTeamId: chapterContext.rivalTeamId,
       injuryReturnMatchId: matchResult.injuryReturnMatchId,
       // An injury discovered after the match must preserve the persistent debut reservation;
       // it cannot open a NATIONAL_DEBUT chapter on an unavailable appearance.

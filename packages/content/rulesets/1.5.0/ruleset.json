@@ -1173,7 +1173,8 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "possession",
-      "squadStrength": 88
+      "squadStrength": 88,
+      "rivalTeamId": "suwon-hwahong-fc"
     },
     {
       "id": "suwon-hwahong-fc",
@@ -1183,7 +1184,8 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "press",
-      "squadStrength": 83
+      "squadStrength": 83,
+      "rivalTeamId": "seoul-hangang-fc"
     },
     {
       "id": "incheon-gaetbeol-fc",
@@ -1193,7 +1195,8 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "counter",
-      "squadStrength": 80
+      "squadStrength": 80,
+      "rivalTeamId": "gangneung-haesol-fc"
     },
     {
       "id": "jeonju-deulnyeok-united",
@@ -1203,7 +1206,8 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "possession",
-      "squadStrength": 86
+      "squadStrength": 86,
+      "rivalTeamId": "gwangju-mudeung-fc"
     },
     {
       "id": "ulsan-pado-fc",
@@ -1213,7 +1217,8 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "press",
-      "squadStrength": 87
+      "squadStrength": 87,
+      "rivalTeamId": "pohang-donghae-fc"
     },
     {
       "id": "pohang-donghae-fc",
@@ -1223,7 +1228,8 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "counter",
-      "squadStrength": 81
+      "squadStrength": 81,
+      "rivalTeamId": "ulsan-pado-fc"
     },
     {
       "id": "daegu-palgong-fc",
@@ -1233,7 +1239,8 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "press",
-      "squadStrength": 76
+      "squadStrength": 76,
+      "rivalTeamId": "busan-deungdae-fc"
     },
     {
       "id": "jeju-halla-city",
@@ -1243,7 +1250,8 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "possession",
-      "squadStrength": 75
+      "squadStrength": 75,
+      "rivalTeamId": "daejeon-gapcheon-fc"
     },
     {
       "id": "gangneung-haesol-fc",
@@ -1253,7 +1261,8 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "counter",
-      "squadStrength": 74
+      "squadStrength": 74,
+      "rivalTeamId": "incheon-gaetbeol-fc"
     },
     {
       "id": "gwangju-mudeung-fc",
@@ -1263,7 +1272,8 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "possession",
-      "squadStrength": 73
+      "squadStrength": 73,
+      "rivalTeamId": "jeonju-deulnyeok-united"
     },
     {
       "id": "daejeon-gapcheon-fc",
@@ -1273,7 +1283,8 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "press",
-      "squadStrength": 72
+      "squadStrength": 72,
+      "rivalTeamId": "jeju-halla-city"
     },
     {
       "id": "busan-deungdae-fc",
@@ -1283,17 +1294,19 @@
       "wageBandId": "tier1",
       "leagueId": "league-tier1",
       "tacticalStyleId": "counter",
-      "squadStrength": 71
+      "squadStrength": 71,
+      "rivalTeamId": "daegu-palgong-fc"
     },
     {
-      "id": "anyang-gwanak-fc",
-      "name": "안양 관악 FC",
+      "id": "anyang-pyeongchon-fc",
+      "name": "안양 평촌 FC",
       "leagueTier": 2,
       "reputation": 3,
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "press",
-      "squadStrength": 66
+      "squadStrength": 66,
+      "rivalTeamId": "bucheon-wonmi-fc"
     },
     {
       "id": "bucheon-wonmi-fc",
@@ -1303,7 +1316,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "counter",
-      "squadStrength": 65
+      "squadStrength": 65,
+      "rivalTeamId": "anyang-pyeongchon-fc"
     },
     {
       "id": "seongnam-tancheon-fc",
@@ -1313,7 +1327,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "possession",
-      "squadStrength": 64
+      "squadStrength": 64,
+      "rivalTeamId": "yongin-hanteo-fc"
     },
     {
       "id": "gimpo-pyeongya-fc",
@@ -1323,7 +1338,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "counter",
-      "squadStrength": 60
+      "squadStrength": 60,
+      "rivalTeamId": "seoul-namsan-fc"
     },
     {
       "id": "cheonan-heungtaryeong-fc",
@@ -1333,7 +1349,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "press",
-      "squadStrength": 63
+      "squadStrength": 63,
+      "rivalTeamId": "asan-oncheon-fc"
     },
     {
       "id": "asan-oncheon-fc",
@@ -1343,7 +1360,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "possession",
-      "squadStrength": 59
+      "squadStrength": 59,
+      "rivalTeamId": "cheonan-heungtaryeong-fc"
     },
     {
       "id": "cheongju-jikji-fc",
@@ -1353,7 +1371,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "press",
-      "squadStrength": 61
+      "squadStrength": 61,
+      "rivalTeamId": "gwangyang-maehwa-fc"
     },
     {
       "id": "changwon-jinhae-fc",
@@ -1363,7 +1382,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "counter",
-      "squadStrength": 58
+      "squadStrength": 58,
+      "rivalTeamId": "gimcheon-hwangak-fc"
     },
     {
       "id": "gwangyang-maehwa-fc",
@@ -1373,7 +1393,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "possession",
-      "squadStrength": 57
+      "squadStrength": 57,
+      "rivalTeamId": "cheongju-jikji-fc"
     },
     {
       "id": "gimcheon-hwangak-fc",
@@ -1383,7 +1404,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "press",
-      "squadStrength": 62
+      "squadStrength": 62,
+      "rivalTeamId": "changwon-jinhae-fc"
     },
     {
       "id": "ansan-gaetgol-fc",
@@ -1393,7 +1415,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "counter",
-      "squadStrength": 56
+      "squadStrength": 56,
+      "rivalTeamId": "hwaseong-gukhwa-fc"
     },
     {
       "id": "yongin-hanteo-fc",
@@ -1403,7 +1426,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "possession",
-      "squadStrength": 55
+      "squadStrength": 55,
+      "rivalTeamId": "seongnam-tancheon-fc"
     },
     {
       "id": "hwaseong-gukhwa-fc",
@@ -1413,7 +1437,8 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "counter",
-      "squadStrength": 54
+      "squadStrength": 54,
+      "rivalTeamId": "ansan-gaetgol-fc"
     },
     {
       "id": "seoul-namsan-fc",
@@ -1423,11 +1448,12 @@
       "wageBandId": "tier2",
       "leagueId": "league-tier2",
       "tacticalStyleId": "press",
-      "squadStrength": 60
+      "squadStrength": 60,
+      "rivalTeamId": "gimpo-pyeongya-fc"
     },
     {
-      "id": "yeoncheon-bomun-fc",
-      "name": "연천 보문 FC",
+      "id": "yeoncheon-hantangang-fc",
+      "name": "연천 한탄강 FC",
       "leagueTier": 3,
       "reputation": 1,
       "wageBandId": "tier3",
@@ -1728,11 +1754,11 @@
         "suwon-hwahong-fc"
       ],
       [
-        "anyang-gwanak-fc",
+        "anyang-pyeongchon-fc",
         "bucheon-wonmi-fc"
       ],
       [
-        "yeoncheon-bomun-fc",
+        "yeoncheon-hantangang-fc",
         "boeun-songni-fc"
       ]
     ]
@@ -2400,7 +2426,7 @@
       "id": "league-tier1",
       "name": "K1 리그",
       "tier": 1,
-      "teamCount": 13,
+      "teamCount": 12,
       "rounds": 2,
       "strength": 85,
       "rivalOpponentIndex": 1,
@@ -2412,7 +2438,7 @@
       "id": "league-tier2",
       "name": "K2 리그",
       "tier": 2,
-      "teamCount": 15,
+      "teamCount": 14,
       "rounds": 2,
       "strength": 60,
       "rivalOpponentIndex": 1,
