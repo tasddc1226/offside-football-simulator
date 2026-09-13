@@ -19,15 +19,12 @@ function expandDisclosuresForCurrentHash() {
       ancestor.open = true;
     }
   }
-  // __root.tsx의 라우트 전환 스크롤 리셋(main#game-content.scrollTop = 0, onRendered 구독)이
-  // 같은 커밋 주기에 뒤따라와 방금 연 스크롤을 되돌릴 수 있어, 다음 프레임으로 미뤄 그 리셋
-  // 이후에 스크롤한다. jsdom(테스트 환경)은 scrollIntoView·rAF를 구현하지 않을 수 있다.
-  const raf = window.requestAnimationFrame?.bind(window);
-  if (raf) {
-    raf(() => target.scrollIntoView?.());
-  } else {
-    target.scrollIntoView?.();
-  }
+  // __root.tsx의 라우트 전환 스크롤 리셋(main#game-content.scrollTop = 0, onRendered 구독)은
+  // 목적지 해시가 가리키는 요소가 실제로 존재하는 전환에서는 건너뛰도록 고쳤다(UX-013 후속) — 그
+  // 전에는 같은 커밋 주기에 이 스크롤을 도로 0으로 되돌릴 수 있어 다음 프레임으로 미루는 우회가
+  // 필요했다. 이제 경합 자체가 없어 즉시 스크롤한다. jsdom(테스트 환경)은 scrollIntoView를
+  // 구현하지 않을 수 있다.
+  target.scrollIntoView?.();
 }
 
 /** 마운트 시 한 번, 이후 해시가 바뀔 때마다(앵커 클릭) 대상 안팎의 details를 열고 스크롤한다. */
