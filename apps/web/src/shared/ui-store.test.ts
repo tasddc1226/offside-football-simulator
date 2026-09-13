@@ -174,6 +174,31 @@ describe('hydrateUiStore', () => {
         theme: 'DARK',
         reducedMotion: 'ON',
         textScale: 150,
+        defaultSimulationMode: 'FAST',
+        onboardingSeen: true,
+      }),
+    );
+
+    await hydrateUiStore(store);
+
+    expect(useUiStore.getState()).toMatchObject({
+      theme: 'DARK',
+      reducedMotion: 'ON',
+      textScale: 150,
+      defaultSimulationMode: 'FAST',
+      onboardingSeen: true,
+    });
+  });
+
+  // 사용자 결정(2026-09-13, D-77): 이 기기에 남아 있던 옛 저장값(과거에는 CHAPTER를 고를 수 있었다)은
+  // 무시하고 항상 FAST로 덮어쓴다 — 그 값 하나 때문에 나머지 저장값까지 기본값으로 초기화하지 않는다.
+  it('옛 저장값이 CHAPTER여도 무시하고 FAST로 덮어쓰며, 다른 설정은 그대로 읽는다', async () => {
+    const store = new MemoryLocalStore();
+    await store.transaction('readwrite', (tx) =>
+      tx.kv.put('ui:settings', {
+        theme: 'DARK',
+        reducedMotion: 'ON',
+        textScale: 150,
         defaultSimulationMode: 'CHAPTER',
         onboardingSeen: true,
       }),
@@ -185,7 +210,7 @@ describe('hydrateUiStore', () => {
       theme: 'DARK',
       reducedMotion: 'ON',
       textScale: 150,
-      defaultSimulationMode: 'CHAPTER',
+      defaultSimulationMode: 'FAST',
       onboardingSeen: true,
     });
   });

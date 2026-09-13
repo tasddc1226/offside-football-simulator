@@ -43,6 +43,7 @@ import { queryClient } from '../shared/query-client.js';
 import { SyncBadge } from '../shared/SyncBadge.js';
 import { BRAND_SUBTITLE } from '../shared/brand.js';
 import { useUiStore } from '../shared/ui-store.js';
+import { FIXED_SIMULATION_MODE } from '../shared/start-season.js';
 import { PublicIntroduction } from '../shared/public-content.js';
 import { HomeCommunity } from '../shared/home-community.js';
 import { GameCompletionTransition } from '../shared/game-presentation.js';
@@ -284,7 +285,6 @@ function HubScreen() {
   const query = useCareerList();
   const createMutation = useCareerMutation('create');
   const navigate = useNavigate();
-  const defaultSimulationMode = useUiStore((state) => state.defaultSimulationMode);
   const onboardingSeen = useUiStore((state) => state.onboardingSeen);
   const [toast, setToast] = useState<{ variant: 'success' | 'error'; message: string } | null>(
     null,
@@ -337,7 +337,7 @@ function HubScreen() {
       (async () => {
         // engine.client.execute의 IndexedDB 트랜잭션이 reject(예: QuotaExceededError)하면
         // {ok:false} 대신 예외가 온다 — 둘 다 이 프라미스의 reject로 합쳐 onError 하나로 처리한다.
-        const result = await createMutation.mutateAsync({ simulationMode: defaultSimulationMode });
+        const result = await createMutation.mutateAsync({ simulationMode: FIXED_SIMULATION_MODE });
         if (!result.ok) throw new Error('커리어를 시작하지 못했습니다.');
         createdCareerIdRef.current = result.snapshot.careerId;
       })(),

@@ -8,17 +8,14 @@ import {
   completeOnboardingThroughContract,
   expectFirstContractHeading,
   fillPlayerInfo,
+  fillPreseasonPlan,
   goToConfirm,
   planPreseason,
   resolveRoleProposal,
   startNewCareer,
 } from './helpers/player-creation.js';
 import { E2E_META, fulfillJson, triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
-import {
-  advanceToChapter,
-  planPreseasonChapterMode,
-  seedDeterministicChapterRun,
-} from './helpers/chapter.js';
+import { advanceToChapter, seedDeterministicChapterRun } from './helpers/chapter.js';
 
 const PROFILE_WITH_CODE = {
   id: 'prf_e2e',
@@ -333,9 +330,7 @@ test('SCR-005 프리시즌 계획 화면에 axe serious·critical 위반이 없�
 test('SCR-011 시즌 준비 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   await completeOnboardingThroughContract(page);
   await page.getByRole('link', { name: '계획하러 가기' }).click();
-  await page.getByRole('radio', { name: /^빠른 시즌/ }).click();
-  await page.getByRole('radio', { name: /^역할 집중/ }).click();
-  await page.getByRole('link', { name: '다음' }).click();
+  await fillPreseasonPlan(page, '역할 집중');
   await expect(page.getByRole('heading', { level: 1, name: '시즌 준비' })).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-011');
@@ -344,9 +339,7 @@ test('SCR-011 시즌 준비 화면에 axe serious·critical 위반이 없다', a
 test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   await completeOnboardingThroughContract(page);
   await page.getByRole('link', { name: '계획하러 가기' }).click();
-  await page.getByRole('radio', { name: /^빠른 시즌/ }).click();
-  await page.getByRole('radio', { name: /^역할 집중/ }).click();
-  await page.getByRole('link', { name: '다음' }).click();
+  await fillPreseasonPlan(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
 
   // PR #103: 제안된 역할이 현재 포지션·스쿼드 역할과 완전히 같으면(KEEP) shouldAutoAcceptUnchangedRole이
@@ -374,7 +367,7 @@ test('SCR-033 능력치 상세 화면에 axe serious·critical 위반이 없다'
 
 test('SCR-015 프로 시즌 결과 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   await completeOnboardingThroughContract(page);
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
@@ -570,7 +563,7 @@ test.describe('SCR-031 핵심 경기 챕터', () => {
   test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
   test('판단 확정 화면·경기 결과 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
-    // CHAPTER 모드로 시즌을 시작해 챕터에 도달하기까지 몇 번의 "진행"이 필요한지는 시드에 달렸다 —
+    // 시즌을 시작해 챕터에 도달하기까지 몇 번의 "진행"이 필요한지는 시드에 달렸다 —
     // seedDeterministicChapterRun으로 chapter.spec.ts와 같은 결정론 시드를 강제한다(같은 이유, 같은
     // helpers/chapter.ts). 그래도 병렬 워커로 CPU를 나눠 쓰면 mutateAsync가 느려질 수 있어 기본 30s
     // 테스트 타임아웃 대신 넉넉히 기다린다.
@@ -578,7 +571,7 @@ test.describe('SCR-031 핵심 경기 챕터', () => {
 
     await seedDeterministicChapterRun(page);
     await completeOnboardingThroughContract(page);
-    await planPreseasonChapterMode(page);
+    await planPreseason(page, '역할 집중');
     await page.getByRole('button', { name: '시즌 시작' }).click();
     await resolveRoleProposal(page);
     await expect(page).toHaveURL(/\/career\/[^/]+$/);

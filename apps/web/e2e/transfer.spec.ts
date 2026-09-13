@@ -183,7 +183,7 @@ test('TEST-E2E-003(a): 3개 이상 제안 비교→협상→FREE_AGENT 확정→
   await reachFirstContractOffers(page);
   await expectFirstContractHeading(page);
   await signFirstOffer(page);
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
@@ -263,7 +263,7 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   await reachFirstContractOffers(page);
   await signFirstOffer(page, { preferredMinLengthSeasons: 3 });
   const loanCareerId = careerIdFromUrl(page);
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceToSettlementRejectingRenewal(page);
@@ -316,7 +316,7 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   await page.getByRole('link', { name: '새 시즌 준비' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
 
-  await fillPreseasonPlan(page, 'FAST', '빠른 시즌', '역할 집중');
+  await fillPreseasonPlan(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceToSettlementRejectingRenewal(page);
@@ -378,7 +378,7 @@ test('TEST-E2E-003(c): INTEREST 시장 안전 잔류(STAY) 수락 → SCR-020 �
   await expectFirstContractHeading(page);
   await signFirstOffer(page);
   const careerId = careerIdFromUrl(page);
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await expect(page).toHaveURL(/\/career\/[^/]+$/);

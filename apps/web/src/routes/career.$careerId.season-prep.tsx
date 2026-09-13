@@ -1,10 +1,12 @@
-// SCR-011 시즌 준비: SCR-005에서 넘어온 선택(모드·훈련 계획)을 확인하고 START_SEASON을 보낸다.
-// search 파라미터가 없거나 잘못되면 SCR-005로 돌려보내고, 시즌이 이미 있으면(뒤로 가기 등)
-// screenForCareer로 보내 시즌을 두 번 시작하지 않는다.
+// SCR-011 시즌 준비: SCR-005에서 넘어온 훈련 계획 선택을 확인하고 START_SEASON을 보낸다. search
+// 파라미터가 없거나 잘못되면 SCR-005로 돌려보내고, 시즌이 이미 있으면(뒤로 가기 등) screenForCareer로
+// 보내 시즌을 두 번 시작하지 않는다. 시뮬레이션 모드는 더 이상 고르지 않는다(사용자 결정 2026-09-13,
+// D-77) — START_SEASON은 항상 FIXED_SIMULATION_MODE(FAST)로 보낸다. 과거 딥링크·북마크에 남은
+// `mode` search 파라미터는 있어도 무시한다(validateSearch가 걸러낸다).
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Button, ErrorState, ScreenIntro } from '@offside/ui';
-import { buildSeasonSteps, type SimulationMode } from '@offside/domain';
+import { buildSeasonSteps } from '@offside/domain';
 import { rulesetForCareer } from '../engine/content.js';
 import { shouldAutoAcceptUnchangedRole } from '../engine/career-actions.js';
 import { recordFunnelReached, recordSeasonStart } from '../engine/funnel.js';
@@ -19,7 +21,7 @@ import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { SeasonTimeline } from '../shared/season-timeline.js';
 import {
-  SIMULATION_MODE_LABEL_KO,
+  FIXED_SIMULATION_MODE,
   canPlanNextSeason,
   TRAINING_FOCUS_LABEL_KO,
   TRAINING_FOCUS_OPTIONS,
@@ -28,11 +30,7 @@ import {
 import { platform } from '../platform/index.js';
 import { GameCompletionTransition, GamePending } from '../shared/game-presentation.js';
 
-type SeasonPrepSearch = { mode?: SimulationMode; focus?: TrainingFocus };
-
-function parseMode(value: unknown): SimulationMode | undefined {
-  return value === 'FAST' || value === 'CHAPTER' ? value : undefined;
-}
+type SeasonPrepSearch = { focus?: TrainingFocus };
 
 function parseFocus(value: unknown): TrainingFocus | undefined {
   return typeof value === 'string' && (TRAINING_FOCUS_OPTIONS as readonly string[]).includes(value)
@@ -42,11 +40,10 @@ function parseFocus(value: unknown): TrainingFocus | undefined {
 
 export const Route = createFileRoute('/career/$careerId/season-prep')({
   validateSearch: (search: Record<string, unknown>): SeasonPrepSearch => {
-    const mode = parseMode(search.mode);
     const focus = parseFocus(search.focus);
-    return { ...(mode !== undefined ? { mode } : {}), ...(focus !== undefined ? { focus } : {}) };
+    return { ...(focus !== undefined ? { focus } : {}) };
   },
-  loaderDeps: ({ search }) => ({ mode: search.mode, focus: search.focus }),
+  loaderDeps: ({ search }) => ({ focus: search.focus }),
   loader: async ({ params, deps }) => {
     const { state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
     const seasonNotStarted = canPlanNextSeason(state);
@@ -54,7 +51,7 @@ export const Route = createFileRoute('/career/$careerId/season-prep')({
       const target = screenForCareer(state);
       throw redirect({ to: SCREEN_ROUTES[target.screenId], params: target.params });
     }
-    if (deps.mode === undefined || deps.focus === undefined) {
+    if (deps.focus === undefined) {
       throw redirect({ to: SCREEN_ROUTES['SCR-005'], params });
     }
   },
@@ -69,7 +66,7 @@ const CAPTION_STYLE = {
 
 function SeasonPrepScreen() {
   const { careerId } = Route.useParams();
-  const { mode, focus } = Route.useSearch();
+  const { focus } = Route.useSearch();
   const navigate = useNavigate();
   const query = useCareer(careerId);
   const startSeasonMutation = useCareerMutation('startSeason');
@@ -88,7 +85,7 @@ function SeasonPrepScreen() {
     // 마운트 시 1회만(로더가 이미 캐시를 채웠다).
   }, []);
 
-  if (query.data === undefined || mode === undefined || focus === undefined) return null;
+  if (query.data === undefined || focus === undefined) return null;
   const { state } = query.data;
   const contract = state.contract;
   if (contract === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
@@ -103,16 +100,16 @@ function SeasonPrepScreen() {
     team === undefined
       ? undefined
       : ruleset.tacticalStyles.find((candidate) => candidate.id === team.tacticalStyleId);
-  const previewSteps = buildSeasonSteps(ruleset.leagueCalendar, mode);
+  const previewSteps = buildSeasonSteps(ruleset.leagueCalendar, FIXED_SIMULATION_MODE);
 
   async function handleStart() {
-    if (submittingRef.current || mode === undefined || focus === undefined) return;
+    if (submittingRef.current || focus === undefined) return;
     submittingRef.current = true;
     setErrorMessage(null);
     try {
       const result = await startSeasonMutation.mutateAsync({
         careerId,
-        choice: { simulationMode: mode, trainingFocus: focus },
+        choice: { simulationMode: FIXED_SIMULATION_MODE, trainingFocus: focus },
       });
       if (!result.ok) {
         const details = result.error.details;
@@ -133,7 +130,7 @@ function SeasonPrepScreen() {
         setErrorMessage('시즌을 시작하지 못했습니다. 다시 시도해 주세요.');
         return;
       }
-      platform.analytics.track('season_started', { simulationMode: mode, trainingFocus: focus });
+      platform.analytics.track('season_started', { simulationMode: FIXED_SIMULATION_MODE, trainingFocus: focus });
       await recordFunnelReached(careerId, 'SEASON_STARTED');
       await recordSeasonStart(careerId);
       let nextState = result.domainSnapshot.state;
@@ -160,7 +157,7 @@ function SeasonPrepScreen() {
     void navigate({
       to: '/career/$careerId/preseason',
       params: { careerId },
-      search: { mode, focus },
+      search: { focus },
     });
   }
 
@@ -177,7 +174,7 @@ function SeasonPrepScreen() {
     return (
       <GameCompletionTransition
         title="시즌 준비 완료"
-        detail={`${SIMULATION_MODE_LABEL_KO[mode]} 모드와 ${TRAINING_FOCUS_LABEL_KO[focus]} 계획을 저장했습니다.`}
+        detail={`${TRAINING_FOCUS_LABEL_KO[focus]} 계획을 저장했습니다.`}
         onComplete={continueToSeason}
         stages={['훈련 계획 저장 중', '일정표 준비 중', '피치 입장']}
       >
@@ -215,10 +212,10 @@ function SeasonPrepScreen() {
       <section className="os-plan-summary" aria-labelledby="selected-plan-title">
         <p className="os-eyebrow">선택한 계획</p>
         <h2 id="selected-plan-title" className="os-section-title">
-          {SIMULATION_MODE_LABEL_KO[mode]} · {TRAINING_FOCUS_LABEL_KO[focus]}
+          {TRAINING_FOCUS_LABEL_KO[focus]}
         </h2>
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-          모드는 시즌 중 적용되고, 훈련 계획은 시즌 결산 때 능력에 반영됩니다.
+          훈련 계획은 시즌 결산 때 능력에 반영됩니다.
         </p>
       </section>
 
@@ -238,7 +235,7 @@ function SeasonPrepScreen() {
 
       {committing ? (
         <GamePending
-          title={confirmingKeep ? '변경 없는 역할은 유지하고 시작합니다' : `${SIMULATION_MODE_LABEL_KO[mode]} 모드로 시즌을 시작하고 있습니다`}
+          title={confirmingKeep ? '변경 없는 역할은 유지하고 시작합니다' : '시즌을 시작하고 있습니다'}
           detail={confirmingKeep ? '현재 포지션과 역할을 확인해 시즌 준비를 마칩니다.' : `${TRAINING_FOCUS_LABEL_KO[focus]} 계획과 시즌 일정을 저장하고 있습니다.`}
         />
       ) : null}

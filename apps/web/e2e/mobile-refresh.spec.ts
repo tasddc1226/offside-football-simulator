@@ -297,7 +297,7 @@ test('계약 대시보드와 시즌 결과도 모바일 프레임을 유지한�
   expect(desktopShell!.width).toBeLessThanOrEqual(560);
   await expectNoHorizontalOverflow(page);
   await page.setViewportSize({ width: 360, height: 780 });
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);

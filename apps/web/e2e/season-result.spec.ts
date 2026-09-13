@@ -6,6 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
+  fillPreseasonPlan,
   fulfillJson,
   META,
   planPreseason,
@@ -33,7 +34,7 @@ async function countUpValue(page: Page, dtLabel: string): Promise<number> {
 
 /** 계약 체결 뒤 프리시즌 계획→시즌 시작→역할 제안→진행 반복→결산하기로 SCR-015에 도착한다. */
 async function settleOneSeason(page: Page): Promise<void> {
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
@@ -147,13 +148,10 @@ test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그
   await settleOneSeason(page);
 
   // "다음 시즌"을 누르면 이미 SCR-005(프리시즌 계획)에 도착해 있다 — planPreseason은 대시보드의
-  // "계획하러 가기" CTA부터 시작하므로 여기서는 그 클릭만 건너뛰고 나머지를 그대로 따라간다.
+  // "계획하러 가기" CTA부터 시작하므로 여기서는 그 클릭만 건너뛰고 fillPreseasonPlan으로 나머지를
+  // 그대로 따라간다.
   await page.getByRole('link', { name: '다음 시즌' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
-  await page.getByRole('radio', { name: /^빠른 시즌/ }).click();
-  await page.getByRole('radio', { name: /^역할 집중/ }).click();
-  await page.getByRole('link', { name: '다음' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-prep\b/);
+  await fillPreseasonPlan(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
@@ -208,7 +206,7 @@ test('결산 PUT 응답 유실: 재시도 뒤에도 같은 result.hash로 SCR-01
   });
 
   await completeOnboardingThroughContract(page);
-  await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+  await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);

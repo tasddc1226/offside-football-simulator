@@ -1,6 +1,6 @@
-// SCR-005 프리시즌 계획: 시뮬레이션 모드·훈련 계획을 고르고 선택을 search 파라미터로 SCR-011에
-// 넘긴다(명령 없음 — RULE-TIME-003 "모드는 START_SEASON 시 고정"이라 여기서는 아무것도 확정하지
-// 않는다). 새로고침·뒤로 가기에도 선택이 유지되도록 URL에 싣는다.
+// SCR-005 프리시즌 계획: 훈련 계획을 고르고 선택을 search 파라미터로 SCR-011에 넘긴다(명령 없음).
+// 새로고침·뒤로 가기에도 선택이 유지되도록 URL에 싣는다. 시뮬레이션 모드는 더 이상 고르지 않는다
+// (사용자 결정 2026-09-13, D-77) — 모든 시즌은 항상 FIXED_SIMULATION_MODE(FAST)로 시작한다.
 import { useEffect, useState } from 'react';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import {
@@ -12,7 +12,6 @@ import {
   buttonClassName,
   buttonStyle,
 } from '@offside/ui';
-import type { SimulationMode } from '@offside/domain';
 import { rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -27,10 +26,7 @@ import {
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import {
-  defaultSimulationMode,
   canPlanNextSeason,
-  SIMULATION_MODE_LABEL_KO,
-  SIMULATION_MODE_SUMMARY_KO,
   TRAINING_FOCUS_IMPACT_KO,
   TRAINING_FOCUS_LABEL_KO,
   TRAINING_FOCUS_OPTIONS,
@@ -38,7 +34,6 @@ import {
   type TrainingFocus,
 } from '../shared/start-season.js';
 import { u18StatusStripItems } from '../shared/status-strip.js';
-import { useUiStore } from '../shared/ui-store.js';
 import { platform } from '../platform/index.js';
 
 export const Route = createFileRoute('/career/$careerId/preseason')({
@@ -63,7 +58,6 @@ const CAPTION_STYLE = {
 function PreseasonScreen() {
   const { careerId } = Route.useParams();
   const query = useCareer(careerId);
-  const profileDefaultMode = useUiStore((uiState) => uiState.defaultSimulationMode);
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', {
@@ -74,15 +68,9 @@ function PreseasonScreen() {
   }, []);
 
   const state = query.data?.state;
-  const [mode, setMode] = useState<SimulationMode | null>(null);
   const [focus, setFocus] = useState<TrainingFocus>('ROLE');
 
-  useEffect(() => {
-    if (state === undefined || mode !== null) return;
-    setMode(defaultSimulationMode(state, profileDefaultMode));
-  }, [state, profileDefaultMode, mode]);
-
-  if (state === undefined || mode === null) return null;
+  if (state === undefined) return null;
   const profile = state.player.profile;
   const contract = state.contract;
   if (profile === null || contract === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
@@ -147,33 +135,6 @@ function PreseasonScreen() {
 
       <section className="os-panel flex flex-col gap-os-3">
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
-          시뮬레이션 모드
-        </h2>
-        <RadioGroup
-          className="os-choice-grid"
-          aria-label="시뮬레이션 모드"
-          value={mode}
-          onValueChange={(value) => setMode(value as SimulationMode)}
-        >
-          {(['FAST', 'CHAPTER'] as const).map((candidate) => (
-            <RadioGroupItem
-              key={candidate}
-              value={candidate}
-              className="flex flex-col gap-os-1 p-os-3 text-left"
-            >
-              <span className="font-os font-semibold text-os-text" style={BODY_STYLE}>
-                {SIMULATION_MODE_LABEL_KO[candidate]}
-              </span>
-              <span className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                {SIMULATION_MODE_SUMMARY_KO[candidate]}
-              </span>
-            </RadioGroupItem>
-          ))}
-        </RadioGroup>
-      </section>
-
-      <section className="os-panel flex flex-col gap-os-3">
-        <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
           훈련 계획
         </h2>
         {capNotice !== null ? (
@@ -217,7 +178,7 @@ function PreseasonScreen() {
         <Link
           to="/career/$careerId/season-prep"
           params={{ careerId }}
-          search={{ mode, focus }}
+          search={{ focus }}
           className={buttonClassName('primary')}
           style={buttonStyle}
         >

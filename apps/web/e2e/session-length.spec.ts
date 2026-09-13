@@ -20,7 +20,7 @@ import {
   planPreseason,
   resolveRoleProposal,
 } from './helpers/player-creation.js';
-import { planPreseasonChapterMode, seedDeterministicChapterRun } from './helpers/chapter.js';
+import { seedDeterministicChapterRun } from './helpers/chapter.js';
 
 // SCR-008 입단 테스트 연출을 건너뛰어(reducedMotion) "애니메이션 대기" 항을 0으로 고정한다
 // (D-22: "애니메이션 대기(건너뛰기 누르면 0)").
@@ -188,9 +188,15 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
 // 헬퍼들은 그대로 쓰기로 했으므로(TOCTOU를 피하려 공들여 다듬은 대기 로직을 다시 손대지 않는다)
 // 합계 하나로만 보고한다.
 //
-// FAST·CHAPTER 둘 다 chapter.spec.ts와 같은 결정론 시드(E2E_DEBUT_CHAPTER_SEED)를 강제한다 — 매
-// 실행 새 시드(crypto.getRandomValues)를 쓰면 시즌 진행에 필요한 "진행" 횟수·챕터/이벤트 등장
-// 여부가 매번 달라져 두 모드의 자동화 시간을 비교할 수 없다.
+// chapter.spec.ts와 같은 결정론 시드(E2E_DEBUT_CHAPTER_SEED)를 강제한다 — 매 실행 새 시드
+// (crypto.getRandomValues)를 쓰면 시즌 진행에 필요한 "진행" 횟수·챕터/이벤트 등장 여부가 매번
+// 달라져 자동화 시간을 비교할 수 없다.
+//
+// 사용자 결정(2026-09-13, D-77): 원작(SLB)에는 시뮬레이션 모드가 없어 클라이언트에서 모드 선택
+// 화면을 제거했다 — 모든 시즌은 항상 FAST로 시작한다. 이 스펙은 원래 FAST·CHAPTER 두 모드를 같은
+// 자리에서 재는 것이 목적이었지만("T-2-011 8번: FAST 6분·CHAPTER 12분 스크립트 플레이"), 이제
+// CHAPTER는 이 화면에서 선택할 방법이 없어 CHAPTER 쪽 측정은 e2e에서 제거했다(domain의 CHAPTER
+// 동작 자체는 packages/domain 단위 테스트가 계속 검증한다) — 남은 FAST 측정만 기록한다.
 async function readRevisionAndReturn(page: Page): Promise<number> {
   await page.goto('/');
   const revision = Number(await page.getByTestId('career-card').getAttribute('data-revision'));
@@ -198,7 +204,7 @@ async function readRevisionAndReturn(page: Page): Promise<number> {
   return revision;
 }
 
-test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간', () => {
+test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간(FAST 단일 측정)', () => {
   test('FAST 시즌 1개 완주(프리시즌 계획→결산 화면): 자동화 시간·명령 수를 기록한다', async ({ page }) => {
     test.slow();
 
@@ -207,7 +213,7 @@ test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간', () =>
 
     const startedAt = performance.now();
 
-    await planPreseason(page, 'FAST', '빠른 시즌', '역할 집중');
+    await planPreseason(page, '역할 집중');
     await page.getByRole('button', { name: '시즌 시작' }).click();
     await resolveRoleProposal(page);
     await expect(page).toHaveURL(/\/career\/[^/]+$/);
@@ -232,40 +238,5 @@ test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간', () =>
     const outDir = path.join(import.meta.dirname, '..', 'test-results');
     mkdirSync(outDir, { recursive: true });
     writeFileSync(path.join(outDir, 'session-length-fast-season.json'), JSON.stringify(result, null, 2));
-  });
-
-  test('CHAPTER 시즌 1개 완주(프리시즌 계획→결산 화면, 챕터 판단 포함): 자동화 시간·명령 수를 기록한다', async ({
-    page,
-  }) => {
-    test.slow();
-
-    await seedDeterministicChapterRun(page);
-    await completeOnboardingThroughContract(page);
-
-    const startedAt = performance.now();
-
-    await planPreseasonChapterMode(page);
-    await page.getByRole('button', { name: '시즌 시작' }).click();
-    await resolveRoleProposal(page);
-    await expect(page).toHaveURL(/\/career\/[^/]+$/);
-
-    const revisionAtSeasonStart = await readRevisionAndReturn(page);
-
-    await advanceThroughSeasonToSettlement(page);
-    const revisionBeforeSettle = await readRevisionAndReturn(page);
-
-    await page.getByRole('button', { name: '결산하기', exact: true }).click();
-    await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
-    await expect(page.getByRole('heading', { level: 1, name: '프로 시즌 결과' })).toBeVisible();
-
-    const automationMs = performance.now() - startedAt;
-    const commandCount = revisionBeforeSettle - revisionAtSeasonStart;
-
-    const result = { mode: 'CHAPTER', automationMs, commandCount, budgetMs: 120_000 };
-    console.log(`[session-length:chapter-season] ${JSON.stringify(result)}`);
-
-    const outDir = path.join(import.meta.dirname, '..', 'test-results');
-    mkdirSync(outDir, { recursive: true });
-    writeFileSync(path.join(outDir, 'session-length-chapter-season.json'), JSON.stringify(result, null, 2));
   });
 });
