@@ -1,7 +1,8 @@
 // UX-004 → UX-013: 설정 "홈 색상" 항목. packages/ui SwatchTilePicker(radiogroup 4열 타일 그리드)에
-// 기본 6종 + 활성 룰셋 12개 구단 컬러 프리셋을 그룹으로 채운다. 구단 프리셋 라벨은 룰셋 기본 팀명
-// (구단 이름 오버라이드 미적용, accent-presets.ts 참고). 선택 상태는 타일 링 + 체크 아이콘 +
-// 아래 캡션의 이름으로, 색만으로 구분하지 않는다.
+// 기본 6종 + 활성 룰셋 12개 구단 컬러 프리셋을 그룹으로 채운다. 구단 프리셋의 aria-label·요약줄
+// 이름은 룰셋 기본 팀명 + " 컬러"(구단 이름 오버라이드 미적용, accent-presets.ts 참고), 타일 아래
+// 보이는 캡션은 "컬러"를 뗀 팀 이름만(UX-013 다듬기). 선택 상태는 타일 링 + 체크 아이콘으로,
+// 색만으로 구분하지 않는다.
 import { useMemo } from 'react';
 import { SwatchTilePicker } from '@offside/ui';
 import { activeRuleset } from '../engine/content.js';
