@@ -41,6 +41,18 @@ describe('RulesetSchema', () => {
     expect(() => RulesetSchema.parse(ruleset)).toThrowError(/startTeamId가 teams에 없다/);
   });
 
+  it('rejects a league whose named teams leave no room for an unnamed rival opponent (D-77 회귀 방지)', () => {
+    // buildLeagueRounds(schedule.ts)는 이름 있는 팀이 teamCount-1을 다 채우면 이름 없는
+    // `${league.id}-opp-${n}` 상대를 하나도 만들지 않는다 — isRivalOpponent가 그 리그에서 영원히
+    // false만 반환해 DERBY 챕터·TAG-DERBY-HERO 업적이 발동 불가능해진다(1.5.0 K1·K2 회귀).
+    const ruleset = cloneRuleset();
+    const league = ruleset.leagues.find((l) => l.id === 'league-tier3');
+    if (!league) throw new Error('fixture missing league-tier3');
+    const namedTeamCount = ruleset.teams.filter((t) => t.leagueId === league.id).length;
+    league.teamCount = namedTeamCount + league.rivalOpponentIndex - 1;
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/이름 없는 라이벌 상대\(opp-1\)가 생기지 않아/);
+  });
+
   it('rejects a team referencing an unknown wageBandId', () => {
     const ruleset = cloneRuleset();
     const team = ruleset.teams[0];

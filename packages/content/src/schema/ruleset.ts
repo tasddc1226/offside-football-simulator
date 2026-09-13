@@ -1158,6 +1158,29 @@ export const RulesetSchema = z
       }
     }
 
+    // D-77 회귀 재발 방지: schedule.ts의 buildLeagueRounds는 리그당 이름 있는 팀이
+    // teamCount-1개(이하)를 채우고 남는 만큼만 이름 없는 상대(`${league.id}-opp-${n}`)를 만든다.
+    // 이름 있는 팀 수가 teamCount-rivalOpponentIndex를 넘으면 그 리그에는 `-opp-${rivalOpponentIndex}`
+    // 상대가 단 하나도 생기지 않아 isRivalOpponent(schedule.ts)가 영원히 false만 반환하고, DERBY
+    // 챕터·TAG-DERBY-HERO 업적이 그 리그에서 영구히 발동 불가능해진다(리그 로스터를 이름 있는 팀으로
+    // 전부 채우면서 teamCount를 그대로 둔 회귀 — 콘텐츠 팩만으로는 되돌릴 수 없다: 이 스키마 검증이
+    // 유일한 방어선).
+    const namedTeamCountByLeague = new Map<string, number>();
+    for (const team of ruleset.teams) {
+      namedTeamCountByLeague.set(team.leagueId, (namedTeamCountByLeague.get(team.leagueId) ?? 0) + 1);
+    }
+    for (const [leagueIndex, league] of ruleset.leagues.entries()) {
+      const namedCount = namedTeamCountByLeague.get(league.id) ?? 0;
+      const maxNamedForRival = league.teamCount - league.rivalOpponentIndex;
+      if (namedCount > maxNamedForRival) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `leagues[${league.id}]: 이름 있는 팀 수(${namedCount})가 teamCount(${league.teamCount})-rivalOpponentIndex(${league.rivalOpponentIndex})=${maxNamedForRival}개를 넘는다 — 이름 없는 라이벌 상대(opp-${league.rivalOpponentIndex})가 생기지 않아 DERBY가 이 리그에서 영원히 발동하지 않는다. teamCount를 늘리거나 이름 있는 팀을 줄여라.`,
+          path: ['leagues', leagueIndex, 'teamCount'],
+        });
+      }
+    }
+
     for (const [styleIndex, style] of ruleset.tacticalStyles.entries()) {
       for (const position of ruleset.positions) {
         const archetypesAtPosition = new Set(ruleset.archetypes.filter((a) => a.position === position).map((a) => a.id));
