@@ -204,7 +204,7 @@ async function readRevisionAndReturn(page: Page): Promise<number> {
   return revision;
 }
 
-test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간', () => {
+test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간(FAST 단일 측정)', () => {
   test('FAST 시즌 1개 완주(프리시즌 계획→결산 화면): 자동화 시간·명령 수를 기록한다', async ({ page }) => {
     test.slow();
 
