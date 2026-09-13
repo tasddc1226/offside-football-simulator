@@ -61,7 +61,7 @@ export function buildCareerClock(state: CareerClockState, startYear: number): Ca
   }
 
   return {
-    headline: `${state.age}세 · ${completed}시즌 완료`,
+    headline: `${state.age}세 · ${seasonYearLabel(startYear, completed)} 완료`,
     detail: state.seasonPhase === 'SETTLEMENT' ? '시즌 정산 완료' : '시즌 사이',
     progress: state.pending ? '다음 선택 대기' : '시즌 준비',
   };

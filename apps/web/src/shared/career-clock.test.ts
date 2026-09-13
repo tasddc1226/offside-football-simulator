@@ -32,6 +32,23 @@ describe('buildCareerClock', () => {
     ).toEqual({ headline: '36세 · 선수 생활 종료', detail: '3시즌 완료', progress: '은퇴 기록' });
   });
 
+  it('shows the completed season as a real year between seasons too (settlement 후~다음 시즌 시작 전), not a leftover "N시즌" count', () => {
+    expect(
+      buildCareerClock(
+        {
+          age: 24,
+          status: 'ACTIVE',
+          currentStep: 0,
+          season: null,
+          seasonHistory: [{}, {}],
+          seasonPhase: 'SETTLEMENT',
+          pending: { kind: 'CONTRACT' },
+        },
+        2026,
+      ),
+    ).toEqual({ headline: '24세 · 2027 시즌 완료', detail: '시즌 정산 완료', progress: '다음 선택 대기' });
+  });
+
   it('does not describe a pre-contract opening story as a completed settlement', () => {
     expect(
       buildCareerClock(
