@@ -174,7 +174,6 @@ function injuryReceipt(state: CareerState, episode: InjuryEpisode): CareerFollow
       : state.timeline.find(
           (entry) => entry.kind === 'EVENT_RESOLVED' && entry.revision === rehabEntry.revision,
         );
-  const sourceEvent = sourceEntry?.refId?.split(':')[0];
   const terminal =
     episode.status === 'RECURRED' ||
     (episode.status === 'RECOVERED' && episode.recurrenceChecksRemaining === 0);
@@ -188,7 +187,7 @@ function injuryReceipt(state: CareerState, episode: InjuryEpisode): CareerFollow
         ? '아직 재활 방법을 선택하지 않았습니다.'
         : `${REHAB_PLAN_LABELS[episode.rehab]}을 선택했습니다.`,
     action: injuryAction(episode),
-    source: `시즌 ${episode.occurredAt.seasonIndex} step ${episode.occurredAt.step} 부상 기록${sourceEvent === undefined ? '' : ` · 선택 source ${sourceEvent}`}`,
+    source: `시즌 ${episode.occurredAt.seasonIndex} · ${episode.occurredAt.step}번째 진행 시점 부상 기록${sourceEntry === undefined ? '' : ' · 재활 선택 기록'}`,
     terminal,
     sortRevision:
       rehabEntry?.revision ?? episode.occurredAt.seasonIndex * 100 + episode.occurredAt.step,

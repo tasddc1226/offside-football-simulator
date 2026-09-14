@@ -963,7 +963,8 @@ describe('T-2-009 다이어리 연대기 요약: buildSeasonChronicleItems·buil
     expect(injuryReceipt).toMatchObject({ kind: 'INJURY', stage: '회복 완료', terminal: true });
     expect(injuryReceipt?.response).toBe('표준 재활을 선택했습니다.');
     expect(injuryReceipt?.action).toContain('영구 능력치 변화 스태미나 -1');
-    expect(injuryReceipt?.source).toContain('선택 source EVT-INJ-001');
+    expect(injuryReceipt?.source).toContain('재활 선택 기록');
+    expect(injuryReceipt?.source).not.toContain('EVT-INJ-001');
   });
 });
 
