@@ -435,5 +435,13 @@ describe('RulesetSchema', () => {
       const ruleset = { ...cloneRuleset(), retirementRules: rules };
       expect(() => RulesetSchema.parse(ruleset)).toThrowError(/ageBands는 fromAge 오름차순이어야 한다/);
     });
+
+    // T-7-032(추가 항목): ageBands.pressure가 감소하면 도메인 validatePolicy와 동치로 거부해야 한다.
+    it('rejects ageBands whose pressure decreases', () => {
+      const rules = validRetirementRules();
+      rules.ageBands[2]!.pressure = rules.ageBands[1]!.pressure - 1;
+      const ruleset = { ...cloneRuleset(), retirementRules: rules };
+      expect(() => RulesetSchema.parse(ruleset)).toThrowError(/ageBands는 pressure가 감소하면 안 된다/);
+    });
   });
 });
