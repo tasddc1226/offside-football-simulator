@@ -409,7 +409,7 @@ function renderCareerSection(labelA, a, labelB, b) {
   const hasB = b !== undefined;
   const header = hasB ? ['지표', labelA, labelB, '차이'] : ['지표', labelA];
   const diffNum = (x, y) => (typeof x === 'number' && typeof y === 'number' ? round2(y - x) : '');
-  const row = (label, va, vb) => (hasB ? [label, va, vb, ''] : [label, va]);
+  const row = (label, va, vb) => (hasB ? [label, va, vb, diffNum(va, vb)] : [label, va]);
   const rowNum = (label, sa, sb) => {
     if (!hasB) return [label, fmtStats(sa)];
     return [label, fmtStats(sa), fmtStats(sb), diffNum(sa.mean, sb.mean)];
