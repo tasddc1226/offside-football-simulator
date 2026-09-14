@@ -2,6 +2,14 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-14 (D-79 — 밸런스 조정용 헤드리스 커리어 일괄 시뮬레이션 CLI, 도메인 직접 호출 방식 — 사용자 요청)
+
+- 요청(9/14 12:58): "일단 로컬라이제이션 기획은 대기하고, UI 없이 시뮬레이션을 좀 많이 여러번 돌려서 최적값으로 세팅하려고 해." 앞선 질문(12:51) "로컬에서 간단하게 시뮬레이션을 진행해서 실제 선수들의 커리어들을 빠르게 테스트해볼 수 있나?"의 후속.
+- 조사: 헤드리스 재생 선례는 둘 — (1) `apps/web/src/engine/ruleset-1.5.0-smoke.test.ts`(engine-client `MemoryLocalStore + inlineSimulator`, vitest 안에서 1시즌, 모든 pending을 첫 선택지로 닫음), (2) `tooling/scripts/legacy-population.ts`(Phase 5 기준 모집단 생성기 — 도메인 `simulate()` 직접 호출, 결정론 표본·`opportunity` 정책·은퇴·Legacy 결과까지, 팩 0.3.0 고정·코드 해시로 동결). 워크스페이스에 `tsx@4.23.13`이 transitive로 있고 `legacy-population-node.mjs`가 그 바이너리를 쓴다.
+- 타당성 실험(오케스트레이터, 이 맥, 13:05): (1) 방식으로 platform 없이 1커리어 25시즌 재생 성공(414 명령, 나이 44·T3 잔류·OVR 60/잠재 78 — first 정책이 같은 팀 재계약만 반복) — 그러나 142초, 시즌이 늘수록 명령당 시간이 증가. CPU 프로파일 self-time: `structuredClone` 48%, `sha256Hex` 18%, GC 11%, canonical 10% — 시뮬레이션 자체는 미미. 첫 시즌만이면 0.35초.
+- 결정: **도구를 먼저 만든다([T-7-017](briefs/T-7-017.md), `tooling/scripts/career-sim.ts`).** 도메인 `simulate()`를 직접 이어 부르는 (2) 방식(스냅샷 복제·해시가 명령마다 없음), `legacy-population-choices.ts`의 결정론 선택 헬퍼 재사용, 정책 3종(first·random·opportunity), `--jobs` 자식 프로세스 분할, CSV 2종 + summary.json + failures.csv, `--verify` 결정론 검사. `legacy-population*.ts`는 동결 상태라 수정하지 않고 새 파일로 만든다. `tsx`는 `tooling/scripts` devDependency로 고정(같은 4.23.13). 룰셋 수치 조정은 이 작업에 넣지 않는다(D-62) — **조정은 결과를 본 뒤 새 룰셋 버전 1.5.1**(룰셋 불변, 05-save-and-versioning)로 별도 작업하며, 어떤 지표를 어느 값으로 맞출지는 사용자 확인 대상(후보: 나이별 OVR 곡선·잠재 도달률, 1부 도달률·시즌, 부상 빈도, 계약 길이·주급 밴드, 은퇴 나이, Legacy 등급 분포).
+- 로컬라이제이션 기획은 사용자 지시로 대기(12:26 요청분은 클라우드플레어 국가 조회까지 답변).
+
 ## 2026-09-14 (D-78 — 상단 네비바 실시간 "플레이 중 인원" 배지, D1 세션 하트비트 방식 — 사용자 요청)
 
 - 요청(9/14 11:20): "상단 공통 네비바에 실시간으로 플레이중인 유저 수를 노출시키는 기능을 추가하고 싶어."
