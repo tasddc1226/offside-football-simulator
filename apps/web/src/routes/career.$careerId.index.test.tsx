@@ -1147,6 +1147,24 @@ describe('T-4-014 C11: 휴대폰 탭의 시장 사유·제안 수(T-3-005 브리
 
     const cached = queryClient.getQueryData(options.queryKey);
     if (cached?.state.clubMeeting === undefined) throw new Error('면담 receipt 상태가 있어야 한다');
+    const orderedReceipts = buildCareerFollowUpReceipts({
+      ...cached.state,
+      clubMeeting: {
+        ...cached.state.clubMeeting,
+        seasonIndex: 2,
+        goal: { ...cached.state.clubMeeting.goal, seasonIndex: 2 },
+      },
+      health: {
+        episodes: [{
+          id: 'INJ-old-no-timeline', severity: 'MINOR', bodyPart: 'ANKLE',
+          occurredAt: { seasonIndex: 1, step: 12, matchId: 'old-match' },
+          diagnosisRange: { minMatches: 1, maxMatches: 2 }, rehab: null,
+          recurrenceRiskBp: 0, recurrenceChecksRemaining: 0, status: 'RECOVERED',
+          permanentDelta: [],
+        }],
+      },
+    });
+    expect(orderedReceipts[0]).toMatchObject({ kind: 'CLUB_MEETING', title: '2시즌 · 이적 요청' });
     const terminalCases = [
       ['NO_CANDIDATE', '탐색 종료', '조건에 맞는 제안이 없어 이번 요청이 종료되었습니다.'],
       ['CANCELLED', '요청 종료', '계약 만료 또는 소속 변경으로 이전 요청이 종료되었습니다.'],

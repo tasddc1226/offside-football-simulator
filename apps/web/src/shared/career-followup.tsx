@@ -24,7 +24,8 @@ export type CareerFollowUpReceipt = {
   action: string;
   source: string;
   terminal: boolean;
-  sortRevision: number;
+  sortSeasonIndex: number;
+  sortStep: number;
 };
 
 const MEETING_REQUEST_LABELS: Record<ClubMeetingState['request'], string> = {
@@ -55,9 +56,6 @@ function meetingGoalForSeason(
 
 function meetingReceipt(state: CareerState, meeting: ClubMeetingState): CareerFollowUpReceipt {
   const goal = meetingGoalForSeason(state, meeting.seasonIndex);
-  const settledRevision = state.seasonHistory.find(
-    (summary) => summary.index === meeting.seasonIndex,
-  )?.settledAtRevision;
   const requestLabel = MEETING_REQUEST_LABELS[meeting.request];
   const response =
     meeting.response === 'REFUSED'
@@ -118,7 +116,11 @@ function meetingReceipt(state: CareerState, meeting: ClubMeetingState): CareerFo
     action,
     source: `구단 면담 응답 · 시즌 ${meeting.seasonIndex}`,
     terminal,
-    sortRevision: settledRevision ?? state.timeline.at(-1)?.revision ?? meeting.seasonIndex,
+    sortSeasonIndex: meeting.seasonIndex,
+    sortStep:
+      goal !== null || (meeting.preferenceStatus !== null && meeting.preferenceStatus !== 'PENDING')
+        ? 13
+        : 0,
   };
 }
 
@@ -139,7 +141,8 @@ function historicalMeetingReceipts(state: CareerState): CareerFollowUpReceipt[] 
         action: `출전 기준 ${Math.round(goal.targetMinutesShareBp / 100)}% · 실제 ${Math.round(goal.actualMinutesShareBp / 100)}% · ${goal.status === 'MET' ? '목표 달성' : '목표 미달'}`,
         source: `시즌 ${summary.index} 결산에 보존된 면담 목표`,
         terminal: true,
-        sortRevision: summary.settledAtRevision,
+        sortSeasonIndex: summary.index,
+        sortStep: 13,
       },
     ];
   });
@@ -189,17 +192,14 @@ function injuryReceipt(state: CareerState, episode: InjuryEpisode): CareerFollow
     action: injuryAction(episode),
     source: `시즌 ${episode.occurredAt.seasonIndex} · ${episode.occurredAt.step}번째 진행 시점 부상 기록${sourceEntry === undefined ? '' : ' · 재활 선택 기록'}`,
     terminal,
-    sortRevision:
-      rehabEntry?.revision ?? episode.occurredAt.seasonIndex * 100 + episode.occurredAt.step,
+    sortSeasonIndex: episode.occurredAt.seasonIndex,
+    sortStep: episode.occurredAt.step,
   };
 }
 
 function loanReceipts(state: CareerState): CareerFollowUpReceipt[] {
   return state.clubHistory.flatMap((stint, stintIndex) => {
     if (stint.kind !== 'LOAN') return [];
-    const loanedEntry = state.timeline.find(
-      (entry) => entry.kind === 'LOANED' && entry.refId === stint.contractId,
-    );
     const summaries = state.seasonHistory.filter(
       (summary) =>
         summary.teamId === stint.teamId &&
@@ -245,7 +245,8 @@ function loanReceipts(state: CareerState): CareerFollowUpReceipt[] {
         action,
         source: `소속 이력 · 임대 계약 · ${summaries.length > 0 ? '시즌 결산' : '결산 대기'}`,
         terminal: stint.toSeasonIndex !== null,
-        sortRevision: loanedEntry?.revision ?? stint.fromSeasonIndex,
+        sortSeasonIndex: stint.toSeasonIndex ?? state.season?.index ?? stint.fromSeasonIndex,
+        sortStep: stint.toSeasonIndex === null ? state.currentStep : 13,
       },
     ];
   });
@@ -261,7 +262,12 @@ export function buildCareerFollowUpReceipts(state: CareerState): CareerFollowUpR
     ...(state.clubMeeting === undefined ? [] : [meetingReceipt(state, state.clubMeeting)]),
     ...state.health.episodes.map((episode) => injuryReceipt(state, episode)),
     ...loanReceipts(state),
-  ].sort((a, b) => b.sortRevision - a.sortRevision || a.id.localeCompare(b.id));
+  ].sort(
+    (a, b) =>
+      b.sortSeasonIndex - a.sortSeasonIndex ||
+      b.sortStep - a.sortStep ||
+      a.id.localeCompare(b.id),
+  );
 }
 
 const KIND_LABELS: Record<CareerFollowUpKind, string> = {
