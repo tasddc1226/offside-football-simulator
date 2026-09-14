@@ -203,7 +203,42 @@ describe('RetirementScreen terminal public views', () => {
     expect(screen.getByRole('link', { name: '커리어 돌아보기' })).toBeInTheDocument();
     expect(screen.getByText('통산 출전 50경기')).toBeInTheDocument();
     expect(screen.getByText('공격수 통산 득점 10골')).toBeInTheDocument();
-    expect(screen.getByText(/Legacy 점수나 게임 효과를 더하지 않습니다/)).toBeInTheDocument();
+    expect(screen.getByText(/언제든 이 화면에서 다시 볼 수 있습니다/)).toBeInTheDocument();
+
+    const laterSeason = {
+      ...retrospectiveState.seasonHistory[0],
+      index: 2,
+      settledAtRevision: 18,
+      result: {
+        ...retrospectiveState.seasonHistory[0]!.result,
+        playerStats: {
+          ...retrospectiveState.seasonHistory[0]!.result.playerStats,
+          appearances: { total: 1, started: 1, sub: 0, zeroMinute: 0, out: 0 },
+          minutes: 90,
+          ratedMatches: 1,
+          ratingSumTenths: 70,
+          totals: { group: 'FW', goals: 1, assists: 0, xgCenti: 50, shots: 2, offsides: 0 },
+        },
+      },
+    };
+    rerender(
+      <RetirementScreen
+        state={{
+          ...retrospectiveState,
+          seasonHistory: [...retrospectiveState.seasonHistory, laterSeason],
+        } as unknown as CareerState}
+        result={retrospectiveResult}
+        archive={{
+          ...archive,
+          records: {
+            ...archive.records,
+            sources: [...archive.records.sources, { seasonIndex: 2, settledAtRevision: 18 }],
+          },
+        } as unknown as CareerArchiveCore}
+      />,
+    );
+    expect(screen.getAllByText('2026 시즌 달성')).toHaveLength(2);
+    expect(screen.queryByText('2027 시즌 달성')).not.toBeInTheDocument();
     delete document.documentElement.dataset.inputModality;
   });
 });

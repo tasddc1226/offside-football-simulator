@@ -1031,7 +1031,7 @@ export function RetirementScreen({
               ) : (
                 <p>보관 기록에서 확인할 수 있는 마일스톤이 아직 없습니다.</p>
               )}
-              <p>마일스톤은 보관된 기록을 요약하며 Legacy 점수나 게임 효과를 더하지 않습니다.</p>
+              <p>마일스톤과 확정된 커리어 기록은 언제든 이 화면에서 다시 볼 수 있습니다.</p>
             </section>
             <div className="os-endgame-choice-grid">
               <Link
