@@ -422,6 +422,13 @@ export type Ruleset = {
   calendar?: { startYear: number } | undefined;
   /** 1.1 only: market previews and season squads share this deterministic stream. */
   offerProjection?: { version: '1.1.0'; competitorSeedVersion: 'squad:season-team-v1' } | undefined;
+  clubMeetingRules?: {
+    playingTimeMinTrust: number;
+    loanMinTrust: number;
+    transferMaxTrust: number;
+    immediate: Record<'PLAYING_TIME_ACCEPTED' | 'PLAYING_TIME_REFUSED' | 'LOAN_ACCEPTED' | 'LOAN_REFUSED' | 'TRANSFER_ACCEPTED' | 'TRANSFER_REFUSED', { managerTrustDelta: number; moraleDelta: number }>;
+    goalMet: { managerTrustDelta: number; moraleDelta: number };
+  } | undefined;
   positions: Position[];
   archetypes: Archetype[];
   backgrounds: Background[];

@@ -159,8 +159,10 @@ import eventRel001v051 from '../../packs/0.5.1/events/EVT-REL-001.json' with { t
 // 1.5.0과 짝). 이벤트·챕터는 0.5.1과 바이트 동일해 기존 import를 재사용한다.
 import manifest060 from '../../packs/0.6.0/manifest.json' with { type: 'json' };
 import narrativeTokens060 from '../../packs/0.6.0/narrative/tokens.json' with { type: 'json' };
+import manifest061 from '../../packs/0.6.1/manifest.json' with { type: 'json' };
+import narrativeTokens061 from '../../packs/0.6.1/narrative/tokens.json' with { type: 'json' };
 
-export const PACK_VERSIONS = ['0.1.0', '0.2.0', '0.3.0', '0.4.0', '0.4.1', '0.5.0', '0.5.1', '0.6.0'] as const;
+export const PACK_VERSIONS = ['0.1.0', '0.2.0', '0.3.0', '0.4.0', '0.4.1', '0.5.0', '0.5.1', '0.6.0', '0.6.1'] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
 export type ContentPack = {
@@ -542,6 +544,62 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       chapterNat001v040,
     ],
     narrativeTokens: narrativeTokens060,
+  },
+  '0.6.1': {
+    manifest: manifest061,
+    events: [
+      eventCon001v051,
+      eventCon003v050,
+      eventCon010v040,
+      eventCon011v040,
+      eventCon012v040,
+      eventCon013v040,
+      eventDev002v050,
+      eventEth010v040,
+      eventEth011v040,
+      eventInj001v040,
+      eventInj003v040,
+      eventInj004v040,
+      eventMedia001v040,
+      eventMedia002v040,
+      eventMedia004v040,
+      eventMedia006v040,
+      eventMedia010v040,
+      eventMgr001v050,
+      eventMgr003v040,
+      eventMgr004v040,
+      eventNat001v040,
+      eventNat002v040,
+      eventRel001v051,
+      eventRel002v040,
+      eventRel003v040,
+      eventRel005v040,
+      eventRel008v040,
+      eventRel010v040,
+      eventSlump010v040,
+      eventSlump011v040,
+      eventCon020v041,
+      eventCon021v041,
+      eventCon022v041,
+      eventCon023v041,
+      eventCon024v041,
+      eventCon025v041,
+      eventCon026v041,
+      eventCon027v041,
+      eventCon028v041,
+      eventMgr020v041,
+      eventMgr021v041,
+    ],
+    chapters: [
+      chapterMatch001v040,
+      chapterMatch002v040,
+      chapterMatch004v040,
+      chapterMatch005v040,
+      chapterMatch006v040,
+      chapterMatch007v040,
+      chapterNat001v040,
+    ],
+    narrativeTokens: narrativeTokens061,
   },
 };
 

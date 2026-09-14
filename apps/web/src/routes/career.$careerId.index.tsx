@@ -205,6 +205,10 @@ function timelineSentence(entry: TimelineEntry, state: CareerState): string {
       return '국가대표 소집 거절';
     case 'CAPTAIN_APPOINTED':
       return '주장 임명';
+    case 'CLUB_MEETING_RESOLVED':
+      return '구단 면담';
+    case 'CLUB_MEETING_GOAL_EVALUATED':
+      return '면담 목표 평가';
   }
 }
 
@@ -831,6 +835,14 @@ function CareerDashboard() {
             <TabsContent value="home">
               <section className="os-career-home" aria-label="지금 할 일">
                 <NextDecisionCard careerId={careerId} state={state} clock={clock} startYear={startYear} />
+
+                {season !== null && state.clubMeeting?.goal.seasonIndex === season.index ? (
+                  <section className="os-panel flex flex-col gap-os-1" aria-label="이번 시즌 구단 면담 목표">
+                    <p className="os-eyebrow">이번 시즌 목표</p>
+                    <p>시즌 출전 확인 기준 {state.clubMeeting.goal.targetMinutesShareBp / 100}%</p>
+                    <p className="os-muted">선발 보장이 아닌 시즌 종료 후 확인 기준입니다.</p>
+                  </section>
+                ) : null}
 
                 <ConditionTiles items={conditionItems} />
 

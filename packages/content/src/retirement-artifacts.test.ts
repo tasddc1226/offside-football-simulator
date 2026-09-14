@@ -18,6 +18,14 @@ describe('loadRetirementArtifacts', () => {
     expect(Object.isFrozen(first)).toBe(true);
     expect(first.legacyVersion).toBeUndefined();
     expect(first.legacyReferencePopulation).toBeUndefined();
+    const meetingArtifacts = loadRetirementArtifacts('1.6.0', '0.6.1');
+    expect(meetingArtifacts).toMatchObject({
+      rulesetVersion: '1.6.0',
+      contentPackVersion: '0.6.1',
+      legacyVersion: '1.1.0',
+    });
+    expect(meetingArtifacts.rulesetChecksum).toMatch(/^[a-f0-9]{64}$/);
+    expect(meetingArtifacts.contentPackChecksum).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('activates the published Legacy 1.1 reference only for the 1.1/0.3 release pair', () => {

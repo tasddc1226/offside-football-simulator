@@ -356,6 +356,14 @@ function SeasonResultScreen() {
         age={state.age}
         ovr={profile.baseOvr}
       />
+      {view.result.clubMeetingGoal ? (
+        <section className="os-panel flex flex-col gap-os-2" aria-label="구단 면담 목표 결과">
+          <p className="os-eyebrow">구단 면담 목표</p>
+          <p className="font-os font-semibold text-os-text">{view.result.clubMeetingGoal.status === 'MET' ? '목표 달성' : '기준 미달 · 추가 불이익 없음'}</p>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>시즌 출전 확인 기준 {view.result.clubMeetingGoal.targetMinutesShareBp / 100}% · 실제 {view.result.clubMeetingGoal.actualMinutesShareBp / 100}%</p>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>적용 효과: 감독 신뢰 {view.result.clubMeetingGoal.effect.managerTrustDelta >= 0 ? '+' : ''}{view.result.clubMeetingGoal.effect.managerTrustDelta} · 사기 {view.result.clubMeetingGoal.effect.moraleDelta >= 0 ? '+' : ''}{view.result.clubMeetingGoal.effect.moraleDelta}</p>
+        </section>
+      ) : null}
 
       <GameResultReveal
         fast={state.simulationMode === 'FAST'}

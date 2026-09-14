@@ -337,7 +337,11 @@ export function generateMarket(args: GenerateMarketArgs): GeneratedMarket {
     } else {
       const kindRoll = rollInt(rngState, 100);
       rngState = kindRoll.state;
-      kind = kindRoll.value < transferRules.kindWeightsByRole[squadRole].TRANSFER ? 'TRANSFER' : 'LOAN';
+      const rolledKind = kindRoll.value < transferRules.kindWeightsByRole[squadRole].TRANSFER ? 'TRANSFER' : 'LOAN';
+      const preference = state.clubMeeting?.preferenceStatus === 'PENDING' && state.clubMeeting.contractId === contract.id && state.clubMeeting.seasonIndex === state.seasonHistory.length
+        ? state.clubMeeting.preferredOfferKind
+        : null;
+      kind = index === 0 && preference !== null ? preference : rolledKind;
     }
 
     let loan: Offer['loan'] = null;
@@ -529,8 +533,11 @@ export function openMarketAfterSettlement(settledState: CareerState, ruleset: Ru
     return { state: settledState, opened: false };
   }
   const generated = generateMarket({ state: settledState, ruleset, reason, revision, rng: settledState.rngState });
+  const meeting = settledState.clubMeeting;
+  const consumePreference = reason === 'INTEREST' && meeting?.preferenceStatus === 'PENDING' && meeting.contractId === settledState.contract?.id && meeting.seasonIndex === settledState.seasonHistory.length;
+  const requestedOfferExists = consumePreference && generated.pending.offers.some((offer) => offer.id !== generated.pending.market.safeOfferId && offer.kind === meeting.preferredOfferKind);
   return {
-    state: { ...settledState, rngState: generated.rngState, pending: generated.pending },
+    state: { ...settledState, rngState: generated.rngState, pending: generated.pending, ...(meeting?.preferenceStatus === 'PENDING' && reason === 'EXPIRED' ? { clubMeeting: { ...meeting, preferenceStatus: 'CANCELLED' as const } } : consumePreference ? { clubMeeting: { ...meeting, preferenceStatus: requestedOfferExists ? 'OFFERED' as const : 'NO_CANDIDATE' as const } } : {}) },
     opened: true,
   };
 }

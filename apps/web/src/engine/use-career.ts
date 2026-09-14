@@ -1,6 +1,6 @@
 // React 훅(TanStack Query). 쿼리 키는 ['careers'] · ['career', careerId]다.
 import { queryOptions, useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
-import type { CareerState, NegotiationAsk, PlayerDraft, SimulationMode } from '@offside/domain';
+import type { CareerState, ClubMeetingRequest, NegotiationAsk, PlayerDraft, SimulationMode } from '@offside/domain';
 import type { LocalCareerRecord } from '@offside/engine-client';
 import type { StartSeasonChoice } from './career-actions.js';
 import {
@@ -11,6 +11,7 @@ import {
   deleteCareer,
   negotiateOffer,
   rejectOffer,
+  requestClubMeeting,
   resolveChapter,
   resolveEvent,
   resolveLoanReturn,
@@ -81,7 +82,8 @@ export type CareerMutationKind =
   | 'startSeason'
   | 'resolveRole'
   | 'settleSeason'
-  | 'resolveChapter';
+  | 'resolveChapter'
+  | 'requestClubMeeting';
 
 type CreateVariables = { simulationMode: SimulationMode };
 type UpdateDraftVariables = { careerId: string; draft: Partial<PlayerDraft> };
@@ -94,6 +96,7 @@ type ResolveLoanReturnVariables = { careerId: string; decision: 'RETURN' | 'PERM
 type StartSeasonVariables = { careerId: string; choice: StartSeasonChoice };
 type ResolveRoleVariables = { careerId: string; decision: 'ACCEPT' | 'DECLINE' };
 type ResolveChapterVariables = { careerId: string; decisionId: string; optionId: string };
+type RequestClubMeetingVariables = { careerId: string; request: ClubMeetingRequest };
 
 async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
   const engine = await getAppEngine();
@@ -145,6 +148,10 @@ async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
       const { careerId, decisionId, optionId } = variables as ResolveChapterVariables;
       return resolveChapter(engine, careerId, decisionId, optionId);
     }
+    case 'requestClubMeeting': {
+      const { careerId, request } = variables as RequestClubMeetingVariables;
+      return requestClubMeeting(engine, careerId, request);
+    }
     default: {
       const exhaustive: never = kind;
       throw new Error(`알 수 없는 mutation kind: ${String(exhaustive)}`);
@@ -168,6 +175,7 @@ type MutationDataFor<K extends CareerMutationKind> = K extends 'create'
           | 'resolveRole'
           | 'settleSeason'
           | 'resolveChapter'
+          | 'requestClubMeeting'
       ? Awaited<ReturnType<typeof confirmPlayer>>
       : void;
 
@@ -189,6 +197,8 @@ type MutationVariablesFor<K extends CareerMutationKind> = K extends 'create'
                 ? StartSeasonVariables
                 : K extends 'resolveRole'
                   ? ResolveRoleVariables
+                  : K extends 'requestClubMeeting'
+                    ? RequestClubMeetingVariables
                   : K extends 'resolveChapter'
                     ? ResolveChapterVariables
                     : CareerIdVariables;

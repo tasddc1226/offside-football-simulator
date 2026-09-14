@@ -87,6 +87,9 @@ export {
   type StepSummary,
   type TimelineEntry,
   type TrainingFocus,
+  type ClubMeetingRequest,
+  type ClubMeetingState,
+  type ClubMeetingGoalResult,
 } from './types.js';
 export {
   applyNationalTeamCallUp,
