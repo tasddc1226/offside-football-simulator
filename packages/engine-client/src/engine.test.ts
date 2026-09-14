@@ -1,4 +1,4 @@
-import { PutCareerBodySchema } from '@offside/contracts';
+import { PutCareerBodySchema, REQUEST_BODY_MAX_BYTES } from '@offside/contracts';
 import { career01, career01EngineCommands, career04GkEngineCommands, rulesetProto } from '@offside/fixtures';
 import { canonicalize, hashState, type CareerState, type JsonValue, type Ruleset } from '@offside/domain';
 import ruleset170Raw from '../../content/rulesets/1.7.0/ruleset.json' with { type: 'json' };
@@ -7,6 +7,7 @@ import { createEngineClient, type EngineClient } from './engine.js';
 import { inlineSimulator, type Simulator } from './simulator/index.js';
 import { MemoryLocalStore } from './store/memory.js';
 import type { EngineCommand, ExecuteResult } from './types.js';
+import { createSyncClient } from './sync/client.js';
 import { attachSimulatorHandler } from './worker/protocol.js';
 import { createWorkerSimulator } from './worker/host.js';
 import type { LocalStore, LocalStoreTx } from './ports/local-store.js';
@@ -549,6 +550,35 @@ describe('buildSyncBody / markSynced', () => {
     await engine.markSynced(careerId, career01.golden.revision);
     const afterSync = await engine.buildSyncBody(careerId);
     expect(afterSync).toBeNull();
+
+    const finalRun = await runLedgerCareer(false);
+    const finalBody = await finalRun.engine.buildSyncBody(finalRun.careerId);
+    if (finalBody === null) throw new Error('final 1.7 sync body 없음');
+    expect(PutCareerBodySchema.safeParse(finalBody).success).toBe(true);
+    let capturedInit: RequestInit | undefined;
+    const sync = createSyncClient({
+      engine: finalRun.engine,
+      store: finalRun.store,
+      fetch: async (_url, init) => {
+        capturedInit = init;
+        return {
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            data: { revision: finalBody.snapshot.revision, syncedAt: '2026-01-01T00:00:00.000Z' },
+            meta: { requestId: 'req_final_ledger' },
+          }),
+        };
+      },
+      baseUrl: '/v1',
+      now: () => '2026-01-01T00:00:00.000Z',
+      newId: () => 'req_final_ledger',
+    });
+    await sync.flush(finalRun.careerId);
+    expect(capturedInit?.method).toBe('PUT');
+    expect(capturedInit?.body).toBe(JSON.stringify(finalBody));
+    expect(new TextEncoder().encode(capturedInit?.body as string).byteLength).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+    sync.dispose();
   });
 
   it('markSynced(5) 뒤에는 revision 6부터의 명령만 남는다', async () => {
