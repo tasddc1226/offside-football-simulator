@@ -534,6 +534,21 @@ export const FinalLeagueTableRowSchema = z.tuple([
   z.number().int().nonnegative(),
 ]);
 
+function compareFinalTableTeamIds(a: string, b: string): number {
+  const ai = a[Symbol.iterator]();
+  const bi = b[Symbol.iterator]();
+  for (;;) {
+    const an = ai.next();
+    const bn = bi.next();
+    if (an.done && bn.done) return 0;
+    if (an.done) return -1;
+    if (bn.done) return 1;
+    const ac = an.value.codePointAt(0) as number;
+    const bc = bn.value.codePointAt(0) as number;
+    if (ac !== bc) return ac < bc ? -1 : 1;
+  }
+}
+
 export const FinalLeagueTableSchema = z.strictObject({
   policyVersion: z.literal('1.0.0'),
   leagueId: z.string().min(1),
@@ -541,9 +556,13 @@ export const FinalLeagueTableSchema = z.strictObject({
   seasonIndex: z.number().int().positive(),
   teamId: z.string().min(1),
   completedRounds: z.number().int().nonnegative(),
-  rows: z.array(FinalLeagueTableRowSchema).min(1),
+  rows: z.array(FinalLeagueTableRowSchema).min(2).max(16),
 }).superRefine((table, ctx) => {
   const teamIds = new Set<string>();
+  const expectedPlayed = 2 * (table.rows.length - 1);
+  const expectedRounds = table.rows.length % 2 === 0
+    ? 2 * (table.rows.length - 1)
+    : 2 * table.rows.length;
   let totalWon = 0;
   let totalDrawn = 0;
   let totalLost = 0;
@@ -562,6 +581,9 @@ export const FinalLeagueTableSchema = z.strictObject({
     if (played !== won + drawn + lost) {
       ctx.addIssue({ code: 'custom', path: ['rows', index, 3], message: '경기 수는 승·무·패 합과 같아야 한다.' });
     }
+    if (played !== expectedPlayed) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 3], message: '모든 팀은 홈·원정으로 다른 팀과 두 번 경기해야 한다.' });
+    }
     if (goalDifference !== goalsFor - goalsAgainst) {
       ctx.addIssue({ code: 'custom', path: ['rows', index, 9], message: '득실차는 득점에서 실점을 뺀 값이어야 한다.' });
     }
@@ -573,8 +595,18 @@ export const FinalLeagueTableSchema = z.strictObject({
     totalLost += lost;
     totalGoalsFor += goalsFor;
     totalGoalsAgainst += goalsAgainst;
+    const next = table.rows[index + 1];
+    if (next !== undefined) {
+      const order = next[10] - points || next[9] - goalDifference || next[7] - goalsFor || compareFinalTableTeamIds(teamId, next[1]);
+      if (order > 0) {
+        ctx.addIssue({ code: 'custom', path: ['rows', index], message: '순위표가 승점·득실차·득점·팀 ID 순서와 일치해야 한다.' });
+      }
+    }
   });
 
+  if (table.completedRounds !== expectedRounds) {
+    ctx.addIssue({ code: 'custom', path: ['completedRounds'], message: '완료 라운드 수가 홈·원정 전체 일정과 일치해야 한다.' });
+  }
   if (!teamIds.has(table.teamId)) {
     ctx.addIssue({ code: 'custom', path: ['teamId'], message: '소속 팀은 최종 순위표에 포함되어야 한다.' });
   }

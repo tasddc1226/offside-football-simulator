@@ -394,12 +394,16 @@ describe('CareerStateSchema', () => {
     expect(FinalLeagueTableSchema.safeParse({ ...finalTable, rows: [[1, 'team-1']] }).success).toBe(false);
     for (const rows of [
       [],
+      [finalTable.rows[0]],
       [finalTable.rows[0]!, [2, 'team-1', '중복 팀', 2, 0, 1, 1, 1, 3, -2, 1]],
       [[2, ...finalTable.rows[0]!.slice(1)], finalTable.rows[1]],
       [[1, 'team-1', '팀 1', 2, 2, 2, 2, 0, 9, 123, 999], finalTable.rows[1]],
+      [[1, 'team-1', '팀 1', 2, 0, 1, 1, 1, 3, -2, 1], [2, 'team-2', '팀 2', 2, 1, 1, 0, 3, 1, 2, 4]],
     ]) {
       expect(FinalLeagueTableSchema.safeParse({ ...finalTable, rows }).success).toBe(false);
     }
+    expect(FinalLeagueTableSchema.safeParse({ ...finalTable, completedRounds: 1 }).success).toBe(false);
+    expect(FinalLeagueTableSchema.safeParse({ ...finalTable, rows: Array.from({ length: 17 }, () => finalTable.rows[0]) }).success).toBe(false);
     expect(FinalLeagueTableSchema.safeParse({ ...finalTable, teamId: 'missing-team' }).success).toBe(false);
     expect(getCareerStateInvariantIssues({
       rulesetVersion: '1.7.0',
