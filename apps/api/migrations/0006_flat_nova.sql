@@ -1,0 +1,1 @@
+CREATE INDEX `sessions_last_seen_at_idx` ON `sessions` (`last_seen_at`);

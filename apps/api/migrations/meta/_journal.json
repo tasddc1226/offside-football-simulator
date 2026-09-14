@@ -43,6 +43,13 @@
       "when": 1788664012767,
       "tag": "0005_adorable_tombstone",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789352706743,
+      "tag": "0006_flat_nova",
+      "breakpoints": true
     }
   ]
 }

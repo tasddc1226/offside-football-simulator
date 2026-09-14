@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, countDistinct, eq, gt, gte, isNull } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
 import { sessions } from '../schema.js';
@@ -42,6 +42,20 @@ export async function revokeSession(db: Db, id: string, at: string): Promise<voi
 export async function getSessionById(db: Db, id: string): Promise<SessionRecord | undefined> {
   const [row] = await db.select().from(sessions).where(eq(sessions.id, id));
   return row;
+}
+
+/** D-78 API-PRES-002: 하트비트로 갱신한다. 호출부가 30초 스로틀을 판단한다. */
+export async function touchSessionLastSeen(db: Db, id: string, at: string): Promise<void> {
+  await db.update(sessions).set({ lastSeenAt: at }).where(eq(sessions.id, id));
+}
+
+/** D-78 API-PRES-001: `sinceIso`(now - 5분) 이후 활동했고 아직 유효한 세션의 프로필 수(중복 제거). */
+export async function countDistinctProfilesActiveSince(db: Db, sinceIso: string, nowIso: string): Promise<number> {
+  const [row] = await db
+    .select({ count: countDistinct(sessions.profileId) })
+    .from(sessions)
+    .where(and(gte(sessions.lastSeenAt, sinceIso), isNull(sessions.revokedAt), gt(sessions.expiresAt, nowIso)));
+  return row?.count ?? 0;
 }
 
 /**
