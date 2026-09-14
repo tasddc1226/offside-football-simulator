@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { runCareerSim, CAREERS_CSV_HEADER } from './career-sim.ts';
+import { runCareerSim, CAREERS_CSV_HEADER, CAREERS_STORAGE_CSV_HEADER } from './career-sim.ts';
 
 let workDir;
 
@@ -108,6 +108,19 @@ describe('runCareerSim', () => {
     expect(result.ok).toBe(true);
     const header = readFileSync(path.join(out, 'careers.csv'), 'utf8').split('\n')[0];
     expect(header.split(',')).toEqual([...CAREERS_CSV_HEADER]);
+    expect(result.ok && result.batch.careers[0]).not.toHaveProperty('peakStateBytes');
+
+    const measuredOut = path.join(workDir, 'measured');
+    const measured = await runCareerSim({
+      rulesetVersion: '1.5.0', contentPackVersion: '0.6.0', seeds: 1,
+      seedPrefix: 'career-sim-measured', seasons: 1, toRetirement: false,
+      policy: 'first', position: 'GK', mode: 'CHAPTER', jobs: 1,
+      out: measuredOut, verify: false, measureStorage: true,
+    });
+    expect(measured.ok).toBe(true);
+    const measuredHeader = readFileSync(path.join(measuredOut, 'careers.csv'), 'utf8').split('\n')[0];
+    expect(measuredHeader.split(',')).toEqual([...CAREERS_STORAGE_CSV_HEADER]);
+    expect(measured.ok && measured.batch.careers[0]).toHaveProperty('peakStateBytes');
   }, 20_000); // 공유 머신 부하 대비
 
   it('팩과 호환되지 않는 룰셋 버전은 exit 없이 오류 객체를 돌려준다', async () => {

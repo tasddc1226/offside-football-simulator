@@ -1,7 +1,12 @@
 import type { CareerSnapshot } from '@offside/contracts';
-import { ATTRIBUTE_KEYS, hashState, type AttributeKey, type CareerState, type DomainSnapshot } from '@offside/domain';
+import { career04GkEngineCommands } from '@offside/fixtures';
+import { ATTRIBUTE_KEYS, hashState, type AttributeKey, type CareerState, type DomainSnapshot, type Ruleset } from '@offside/domain';
+import ruleset170Raw from '../../content/rulesets/1.7.0/ruleset.json' with { type: 'json' };
 import { describe, expect, it } from 'vitest';
+import { createEngineClient } from './engine.js';
+import { inlineSimulator } from './simulator/index.js';
 import { decodeSnapshot, encodeSnapshot } from './snapshot.js';
+import { MemoryLocalStore } from './store/memory.js';
 
 function buildAttributes(value: number): Record<AttributeKey, number> {
   const attributes = {} as Record<AttributeKey, number>;
@@ -67,6 +72,30 @@ function buildValidDomainSnapshot(): DomainSnapshot {
   };
 }
 
+async function buildLedgerSeasonStart(): Promise<DomainSnapshot> {
+  let id = 0;
+  const commands = career04GkEngineCommands(() => `ledger-snapshot-${++id}`);
+  const ruleset = ruleset170Raw as unknown as Ruleset;
+  const engine = createEngineClient({ store: new MemoryLocalStore(), simulator: inlineSimulator, ruleset });
+  let careerId = '';
+  for (const source of commands) {
+    const command = structuredClone(source);
+    if (command.type === 'CREATE_CAREER') {
+      command.payload.rulesetVersion = '1.7.0';
+      command.payload.contentPackVersion = '0.6.2';
+      careerId = command.payload.careerId;
+    }
+    const result = await engine.execute({
+      careerId,
+      command,
+      ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc-ledger-snapshot' } : {}),
+    });
+    if (!result.ok) throw new Error(`${command.type}: ${result.error.message}`);
+    if (command.type === 'START_SEASON') return result.domainSnapshot;
+  }
+  throw new Error('START_SEASON command가 없다.');
+}
+
 describe('encodeSnapshot / decodeSnapshot', () => {
   it('정상 왕복: encode 후 decode하면 원래 DomainSnapshot과 같다', () => {
     const domain = buildValidDomainSnapshot();
@@ -95,7 +124,7 @@ describe('encodeSnapshot / decodeSnapshot', () => {
     expect(decodeSnapshot(tampered)).toEqual({ ok: false, reason: 'RNG_STATE_MISMATCH' });
   });
 
-  it('tags 정렬이 깨지면(해시는 재계산) INVALID_STATE', () => {
+  it('tags 정렬 또는 신규 compact ledger canonical 형태가 깨지면(해시는 재계산) INVALID_STATE', async () => {
     const domain = buildValidDomainSnapshot();
     const reversedState: CareerState = { ...domain.state, tags: [...domain.state.tags].reverse() };
     const reversedDomain: DomainSnapshot = { ...domain, state: reversedState, stateHash: hashState(reversedState) };
@@ -121,6 +150,29 @@ describe('encodeSnapshot / decodeSnapshot', () => {
       careerId: domain.state.careerId,
       createdAt: '2026-01-01T00:00:00.000Z',
     }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
+
+    const ledgerDomain = await buildLedgerSeasonStart();
+    const ledger = ledgerDomain.state.season?.leagueLedger;
+    if (ledger === undefined) throw new Error('ledger setup 실패');
+    for (const results of [
+      [[Number.MAX_SAFE_INTEGER, 0, 0]],
+      [[0, 0, 0], [0, 1, 0]],
+      [[0, 0, 0]],
+    ] as const) {
+      const corruptedState: CareerState = {
+        ...ledgerDomain.state,
+        season: { ...ledgerDomain.state.season!, leagueLedger: { ...ledger, results: results.map((row) => [...row]) } },
+      };
+      const corruptedDomain: DomainSnapshot = {
+        ...ledgerDomain,
+        state: corruptedState,
+        stateHash: hashState(corruptedState),
+      };
+      expect(decodeSnapshot(encodeSnapshot(corruptedDomain, {
+        careerId: corruptedState.careerId,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
+    }
   });
 
   it('wrapper의 careerId가 state.careerId와 다르면 CAREER_ID_MISMATCH', () => {

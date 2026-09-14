@@ -5,6 +5,7 @@ import {
   canonicalize,
   hashSeasonResult,
   hashState,
+  projectLeagueCompetition,
   simulate,
   type DomainSnapshot,
   type JsonValue,
@@ -578,11 +579,42 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
         ...entry,
         order: all.slice(0, index).filter((candidate) => candidate.step === entry.step).length,
       }));
+    const templateMatch = activeTemplateSeason.matches[0]!;
+    const activeLeagueMatches = activeSchedule.filter((entry) => entry.kind === 'LEAGUE').map((entry) => {
+      const fixtureIndex = fixtures.findIndex((fixture) => fixture.fixtureId === entry.fixtureId);
+      const fixtureResult = ledger.results.find((result) => result[0] === fixtureIndex)!;
+      const goalsFor = entry.home ? fixtureResult[1] : fixtureResult[2];
+      const goalsAgainst = entry.home ? fixtureResult[2] : fixtureResult[1];
+      const opponent = teams.find((team) => team.teamId === entry.opponentId)!;
+      return {
+        ...templateMatch,
+        id: `20-${entry.step}-${entry.order}`,
+        step: entry.step,
+        order: entry.order,
+        competitionId: 'LEAGUE',
+        kind: 'LEAGUE' as const,
+        round: entry.round,
+        opponent: { id: opponent.teamId, name: opponent.name, strength: opponent.strength },
+        home: entry.home,
+        result: {
+          goalsFor,
+          goalsAgainst,
+          outcome: goalsFor > goalsAgainst ? 'WIN' as const : goalsFor < goalsAgainst ? 'LOSS' as const : 'DRAW' as const,
+        },
+      };
+    });
     const activeState = {
       ...activeTemplate.snapshot.state,
       rulesetVersion: '1.7.0',
       contentPackVersion: '0.6.2',
-      season: { ...activeTemplateSeason, index: 20, leagueLedger: ledger, schedule: activeSchedule },
+      season: {
+        ...activeTemplateSeason,
+        index: 20,
+        leagueLedger: ledger,
+        schedule: activeSchedule,
+        matches: activeLeagueMatches,
+        competitions: projectLeagueCompetition(maxRuleset, ledger, activeTemplateSeason.competitions),
+      },
     };
     assertSeasonLeagueLedgerInvariant(maxRuleset, activeState.season);
     const activeTarget: Step = {

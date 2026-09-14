@@ -1,5 +1,7 @@
 import type { GetCareerResponse } from '@offside/contracts';
-import { career01, career01EngineCommands, rulesetProto } from '@offside/fixtures';
+import { career01, career01EngineCommands, career04GkEngineCommands, rulesetProto } from '@offside/fixtures';
+import { canonicalize, hashState, type CareerState, type JsonValue, type Ruleset } from '@offside/domain';
+import ruleset170Raw from '../../content/rulesets/1.7.0/ruleset.json' with { type: 'json' };
 import { describe, expect, it } from 'vitest';
 import { createEngineClient, type EngineClient } from './engine.js';
 import { importCareerFromServer } from './import.js';
@@ -50,6 +52,30 @@ async function buildGetCareerResponse(
       commands: commands.slice().sort((a, b) => a.revision - b.revision),
     };
   });
+}
+
+async function buildLedgerGetCareerResponse(): Promise<GetCareerResponse> {
+  const store = new MemoryLocalStore();
+  const ruleset = ruleset170Raw as unknown as Ruleset;
+  const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset });
+  let id = 0;
+  let careerId = '';
+  for (const source of career04GkEngineCommands(() => `ledger-import-${++id}`)) {
+    const command = structuredClone(source);
+    if (command.type === 'CREATE_CAREER') {
+      command.payload.rulesetVersion = '1.7.0';
+      command.payload.contentPackVersion = '0.6.2';
+      careerId = command.payload.careerId;
+    }
+    const result = await engine.execute({
+      careerId,
+      command,
+      ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc-ledger-import' } : {}),
+    });
+    if (!result.ok) throw new Error(`${command.type}: ${result.error.message}`);
+    if (command.type === 'START_SEASON') return buildGetCareerResponse(store, careerId);
+  }
+  throw new Error('START_SEASON command가 없다.');
 }
 
 describe('importCareerFromServer', () => {
@@ -120,6 +146,30 @@ describe('importCareerFromServer', () => {
 
     const records = await destStore.transaction('readonly', (tx) => tx.careers.list());
     expect(records).toHaveLength(0);
+
+    const ledgerResponse = await buildLedgerGetCareerResponse();
+    const ledgerState = JSON.parse(ledgerResponse.snapshot.state) as CareerState;
+    const ledger = ledgerState.season?.leagueLedger;
+    if (ledger === undefined || ledger.teams[1] === undefined) throw new Error('ledger import setup 실패');
+    ledger.teams[1] = { ...ledger.teams[1], strength: ledger.teams[1].strength + 1 };
+    const ledgerHash = hashState(ledgerState);
+    const wrongRosterResponse: GetCareerResponse = {
+      ...ledgerResponse,
+      snapshot: {
+        ...ledgerResponse.snapshot,
+        state: canonicalize(ledgerState as unknown as JsonValue),
+        stateHash: ledgerHash,
+      },
+    };
+    const rejectedLedger = await importCareerFromServer(new MemoryLocalStore(), wrongRosterResponse, {
+      now: NOW,
+      rulesetForVersion: (version) => {
+        if (version !== '1.7.0') throw new RangeError(`unexpected ruleset ${version}`);
+        return ruleset170Raw as unknown as Ruleset;
+      },
+    });
+    expect(rejectedLedger.ok).toBe(false);
+    if (!rejectedLedger.ok) expect(rejectedLedger.error.code).toBe('VERIFICATION_FAILED');
   });
 
   it('로컬에 미전송 revision이 있으면 덮어쓰지 않는다', async () => {

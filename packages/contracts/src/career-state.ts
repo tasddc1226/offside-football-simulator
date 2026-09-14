@@ -450,7 +450,7 @@ export const LeagueSeasonLedgerSchema = z.strictObject({
   seasonIndex: z.number().int().positive(),
   teamId: z.string().min(1),
   seed: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative(), z.number().int().nonnegative(), z.number().int().nonnegative()]),
-  teams: z.array(LeagueTeamSnapshotSchema).superRefine((teams, ctx) => {
+  teams: z.array(LeagueTeamSnapshotSchema).min(2).max(16).superRefine((teams, ctx) => {
     const seen = new Set<string>();
     for (let index = 0; index < teams.length; index += 1) {
       const teamId = teams[index]!.teamId;
@@ -473,12 +473,36 @@ export const LeagueSeasonLedgerSchema = z.strictObject({
     ctx.addIssue({ code: 'custom', path: ['teamId'], message: '소속 팀이 roster에 없다.' });
   }
   const fixtureIndexes = new Set<number>();
+  const teamCount = ledger.teams.length;
+  const fixtureCount = teamCount * (teamCount - 1);
+  const fixturesPerRound = Math.floor(teamCount / 2);
+  const totalRounds = teamCount % 2 === 0 ? 2 * (teamCount - 1) : 2 * teamCount;
   for (let index = 0; index < ledger.results.length; index += 1) {
     const result = ledger.results[index]!;
+    if (result[0] >= fixtureCount) {
+      ctx.addIssue({ code: 'custom', path: ['results', index, 0], message: 'fixture index가 canonical 일정 범위를 벗어났다.' });
+    }
     if (fixtureIndexes.has(result[0])) {
       ctx.addIssue({ code: 'custom', path: ['results', index, 0], message: 'fixture index가 중복이다.' });
     }
     fixtureIndexes.add(result[0]);
+  }
+  const completed = new Set(ledger.completedRounds);
+  for (let index = 0; index < ledger.completedRounds.length; index += 1) {
+    if (ledger.completedRounds[index]! > totalRounds) {
+      ctx.addIssue({ code: 'custom', path: ['completedRounds', index], message: '완료 round가 canonical 일정 범위를 벗어났다.' });
+    }
+  }
+  for (let round = 1; round <= totalRounds; round += 1) {
+    const actual = [...fixtureIndexes].filter(
+      (fixtureIndex) => Math.floor(fixtureIndex / fixturesPerRound) + 1 === round,
+    ).length;
+    if (actual !== 0 && actual !== fixturesPerRound) {
+      ctx.addIssue({ code: 'custom', path: ['results'], message: `round ${round} 결과가 부분 집합이다.` });
+    }
+    if (completed.has(round) !== (actual === fixturesPerRound)) {
+      ctx.addIssue({ code: 'custom', path: ['completedRounds'], message: `round ${round} 완료 표식과 결과가 다르다.` });
+    }
   }
 });
 

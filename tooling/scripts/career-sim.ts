@@ -81,6 +81,8 @@ export type CareerSimOptions = {
   verify: boolean;
   /** T-7-020: true면 Node crypto 주입을 끄고 도메인 순수 SHA-256 구현으로 돌린다(동등성 검증·회귀용). */
   pureHash?: boolean;
+  /** T-7-022: 보수적 offline PUT/state 크기 계측. 기본 CSV와 hot path는 변경하지 않는다. */
+  measureStorage?: boolean;
   /** 내부용: 자식 프로세스가 담당할 seed 범위(0-based, end exclusive). 생략하면 0..seeds. */
   rangeStart?: number;
   rangeEnd?: number;
@@ -120,7 +122,12 @@ export const CAREERS_CSV_HEADER = [
   'seasonsInTier2', 'seasonsInTier3', 'totalApps', 'totalMinutes', 'totalGoals', 'totalAssists',
   'avgRatingTenths', 'injuries', 'severeInjuries', 'contracts', 'peakWageMinorPerWeek',
   'totalIncomeMinor', 'nationalCallUps', 'captainSeasons', 'legacyScore', 'legacyBandId',
-  'legacyEndingId', 'commands', 'peakStateBytes', 'peakPutBodyBytes', 'season20ActiveStateBytes',
+  'legacyEndingId', 'commands', 'stateHash',
+] as const;
+
+export const CAREERS_STORAGE_CSV_HEADER = [
+  ...CAREERS_CSV_HEADER.slice(0, -1),
+  'peakStateBytes', 'peakPutBodyBytes', 'season20ActiveStateBytes',
   'season20ActivePutBodyBytes', 'stateHash',
 ] as const;
 
@@ -466,36 +473,38 @@ function runOneCareer(
     if (type === 'START_SEASON' && createdServiceSeasonId === null) {
       createdServiceSeasonId = (payload as { serviceSeasonId: string }).serviceSeasonId;
     }
-    syncCommands.push({
-      revision: next.revision,
-      commandId: id,
-      commandType: type,
-      payload,
-      resultHash: next.stateHash,
-    });
-    const state = canonicalize(next.state as unknown as JsonValue);
-    const stateBytes = Buffer.byteLength(state, 'utf8');
-    const putBodyBytes = Buffer.byteLength(JSON.stringify({
-      baseRevision: 0,
-      snapshot: {
+    if (options.measureStorage === true) {
+      syncCommands.push({
         revision: next.revision,
-        checkpoint: next.checkpoint,
-        state,
-        stateHash: next.stateHash,
-        rulesetVersion: next.rulesetVersion,
-        contentPackVersion: next.contentPackVersion,
-        rngState: { s: [...next.state.rngState.s], draws: next.state.rngState.draws },
-      },
-      commands: syncCommands,
-      createdServiceSeasonId,
-      rulesetVersion: runtime.rulesetVersion,
-      contentPackVersion: runtime.contentPackVersion,
-    }), 'utf8');
-    peakStateBytes = Math.max(peakStateBytes, stateBytes);
-    peakPutBodyBytes = Math.max(peakPutBodyBytes, putBodyBytes);
-    if (next.state.season !== null && next.state.seasonHistory.length === 19) {
-      season20ActiveStateBytes = Math.max(season20ActiveStateBytes, stateBytes);
-      season20ActivePutBodyBytes = Math.max(season20ActivePutBodyBytes, putBodyBytes);
+        commandId: id,
+        commandType: type,
+        payload,
+        resultHash: next.stateHash,
+      });
+      const state = canonicalize(next.state as unknown as JsonValue);
+      const stateBytes = Buffer.byteLength(state, 'utf8');
+      const putBodyBytes = Buffer.byteLength(JSON.stringify({
+        baseRevision: 0,
+        snapshot: {
+          revision: next.revision,
+          checkpoint: next.checkpoint,
+          state,
+          stateHash: next.stateHash,
+          rulesetVersion: next.rulesetVersion,
+          contentPackVersion: next.contentPackVersion,
+          rngState: { s: [...next.state.rngState.s], draws: next.state.rngState.draws },
+        },
+        commands: syncCommands,
+        createdServiceSeasonId,
+        rulesetVersion: runtime.rulesetVersion,
+        contentPackVersion: runtime.contentPackVersion,
+      }), 'utf8');
+      peakStateBytes = Math.max(peakStateBytes, stateBytes);
+      peakPutBodyBytes = Math.max(peakPutBodyBytes, putBodyBytes);
+      if (next.state.season !== null && next.state.seasonHistory.length === 19) {
+        season20ActiveStateBytes = Math.max(season20ActiveStateBytes, stateBytes);
+        season20ActivePutBodyBytes = Math.max(season20ActivePutBodyBytes, putBodyBytes);
+      }
     }
     return next;
   };
@@ -783,10 +792,12 @@ function runOneCareer(
       legacyBandId,
       legacyEndingId,
       commands,
-      peakStateBytes,
-      peakPutBodyBytes,
-      season20ActiveStateBytes,
-      season20ActivePutBodyBytes,
+      ...(options.measureStorage === true ? {
+        peakStateBytes,
+        peakPutBodyBytes,
+        season20ActiveStateBytes,
+        season20ActivePutBodyBytes,
+      } : {}),
       stateHash: finalSnapshot.stateHash,
     };
     return { career, seasons: seasonRows, ms: Date.now() - startedAt };
@@ -833,10 +844,12 @@ function runOneCareer(
       legacyBandId: '',
       legacyEndingId: '',
       commands,
-      peakStateBytes,
-      peakPutBodyBytes,
-      season20ActiveStateBytes,
-      season20ActivePutBodyBytes,
+      ...(options.measureStorage === true ? {
+        peakStateBytes,
+        peakPutBodyBytes,
+        season20ActiveStateBytes,
+        season20ActivePutBodyBytes,
+      } : {}),
       stateHash: '',
     };
     const failure: FailureRow = {
@@ -1111,7 +1124,8 @@ export async function runCareerSim(rawOptions: CareerSimOptions): Promise<Career
   const summary = buildSummary(options, batch, startedAt, elapsedMs);
 
   await mkdir(options.out, { recursive: true });
-  await writeFile(resolve(options.out, 'careers.csv'), toCsv(CAREERS_CSV_HEADER, batch.careers), 'utf8');
+  const careersHeader = options.measureStorage === true ? CAREERS_STORAGE_CSV_HEADER : CAREERS_CSV_HEADER;
+  await writeFile(resolve(options.out, 'careers.csv'), toCsv(careersHeader, batch.careers), 'utf8');
   await writeFile(resolve(options.out, 'seasons.csv'), toCsv(SEASONS_CSV_HEADER, batch.seasons), 'utf8');
   await writeFile(resolve(options.out, 'failures.csv'), toCsv(FAILURES_CSV_HEADER, batch.failures), 'utf8');
   await writeFile(resolve(options.out, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
@@ -1169,6 +1183,7 @@ async function runParallel(options: CareerSimOptions): Promise<CareerSimBatch> {
         ...(options.backgroundId !== undefined ? ['--background', options.backgroundId] : []),
         '--mode', options.mode,
         ...(options.pureHash === true ? ['--pure-hash'] : []),
+        ...(options.measureStorage === true ? ['--measure-storage'] : []),
         '--jobs', '1',
         '--out', dir,
         '--range-start', String(start),
@@ -1199,7 +1214,8 @@ async function runParallel(options: CareerSimOptions): Promise<CareerSimBatch> {
         readFile(resolve(dir, 'failures.csv'), 'utf8'),
         readFile(resolve(dir, 'ms.json'), 'utf8'),
       ]);
-      careers.push(...parseCsv(careersCsv, CAREERS_CSV_HEADER, CAREERS_NUMERIC_COLUMNS));
+      const careersHeader = options.measureStorage === true ? CAREERS_STORAGE_CSV_HEADER : CAREERS_CSV_HEADER;
+      careers.push(...parseCsv(careersCsv, careersHeader, CAREERS_NUMERIC_COLUMNS));
       seasons.push(...parseCsv(seasonsCsv, SEASONS_CSV_HEADER, SEASONS_NUMERIC_COLUMNS));
       failures.push(...parseCsv(failuresCsv, FAILURES_CSV_HEADER, FAILURES_NUMERIC_COLUMNS));
       msValues.push(...(JSON.parse(msJson) as number[]));
@@ -1293,6 +1309,7 @@ const HELP_TEXT = `career-sim: 헤드리스 커리어 일괄 시뮬레이션 CLI
   --out <dir>               결과 디렉터리(필수)
   --verify                  seed 3개를 두 번 돌려 결정론 확인
   --pure-hash               T-7-020: Node crypto 주입을 끄고 도메인 순수 SHA-256 구현으로 돌린다
+  --measure-storage         T-7-022: state와 보수적 offline PUT 크기를 추가 계측한다
   --help                    이 도움말
 `;
 
@@ -1316,6 +1333,7 @@ export function parseArgs(argv: string[]): CareerSimOptions | { help: true } {
     out: argValue(argv, '--out') ?? '',
     verify: argv.includes('--verify'),
     pureHash: argv.includes('--pure-hash'),
+    measureStorage: argv.includes('--measure-storage'),
     ...(archetypeId !== undefined ? { archetypeId } : {}),
     ...(backgroundId !== undefined ? { backgroundId } : {}),
     ...(rangeStartArg !== undefined ? { rangeStart: Number(rangeStartArg) } : {}),

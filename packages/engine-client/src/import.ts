@@ -10,6 +10,8 @@ import {
   type CareerArchiveCore,
   type LegacyResult,
   type JsonValue,
+  assertSeasonLeagueLedgerInvariant,
+  type Ruleset,
 } from '@offside/domain';
 import { CareerStateSchema } from '@offside/contracts';
 import {
@@ -32,6 +34,8 @@ export async function importCareerFromServer(
   meta: {
     now: string;
     retirementArtifacts?: RetirementArtifactsResolver;
+    /** 지원 버전의 roster/league/schedule binding을 저장 전에 검증한다. */
+    rulesetForVersion?: (version: string) => Ruleset;
     /** 명시적으로 선택한 원격 프로필의 저장본으로 로컬 동일 id를 원자 교체한다. */
     replaceLocal?: boolean;
     /** @deprecated Recovery uses the server-owned response field. */
@@ -48,6 +52,21 @@ export async function importCareerFromServer(
         details: { reason: decoded.reason },
       },
     };
+  }
+  if (decoded.snapshot.state.season !== null) {
+    try {
+      const ruleset = meta.rulesetForVersion?.(decoded.snapshot.rulesetVersion);
+      if (ruleset !== undefined) {
+        assertSeasonLeagueLedgerInvariant(ruleset, decoded.snapshot.state.season);
+      } else if (decoded.snapshot.rulesetVersion === '1.7.0') {
+        throw new RangeError('지원 룰셋 import에는 ruleset registry가 필요하다.');
+      }
+    } catch {
+      return {
+        ok: false,
+        error: { code: 'VERIFICATION_FAILED', message: '서버 Snapshot의 리그 원장을 검증할 수 없다.' },
+      };
+    }
   }
 
   const careerId = response.snapshot.careerId;

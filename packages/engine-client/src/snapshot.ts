@@ -1,5 +1,13 @@
 import { SnapshotStateEnvelopeSchema, getCareerStateInvariantIssues, type CareerSnapshot } from '@offside/contracts';
-import { canonicalize, hashState, verifySnapshot, type CareerState, type DomainSnapshot, type JsonValue } from '@offside/domain';
+import {
+  assertLeagueLedgerInvariant,
+  canonicalize,
+  hashState,
+  verifySnapshot,
+  type CareerState,
+  type DomainSnapshot,
+  type JsonValue,
+} from '@offside/domain';
 
 export function encodeSnapshot(domain: DomainSnapshot, meta: { careerId: string; createdAt: string }): CareerSnapshot {
   const rngState = domain.state.rngState;
@@ -71,6 +79,15 @@ export function decodeSnapshot(snapshot: CareerSnapshot): DecodeResult {
   const state = parsed as CareerState;
   if (getCareerStateInvariantIssues(parsed).length > 0) {
     return { ok: false, reason: 'INVALID_STATE' };
+  }
+  if (state.rulesetVersion === '1.7.0' && state.season?.leagueLedger !== undefined) {
+    try {
+      // 저장된 roster snapshot만으로 복원되는 canonical fixture ordinal·whole-round 형태는
+      // ruleset registry가 없는 decode/import 경계에서도 검증할 수 있다.
+      assertLeagueLedgerInvariant(state.season.leagueLedger);
+    } catch {
+      return { ok: false, reason: 'INVALID_STATE' };
+    }
   }
 
   let computedHash: string;

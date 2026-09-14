@@ -146,7 +146,8 @@ export function assertSeasonLeagueLedgerInvariant(ruleset: Ruleset, season: Foot
   }
   assertLeagueLedgerInvariant(ledger);
 
-  const expected = buildLeagueFixtures(season.index, league.id, ledger.teams)
+  const fixtures = buildLeagueFixtures(season.index, league.id, ledger.teams);
+  const expected = fixtures
     .filter((fixture) => fixture.homeTeamId === team.id || fixture.awayTeamId === team.id);
   const actual = season.schedule.filter((entry) => entry.kind === 'LEAGUE');
   if (actual.length !== expected.length) {
@@ -166,6 +167,31 @@ export function assertSeasonLeagueLedgerInvariant(ruleset: Ruleset, season: Foot
     ) {
       throw new RangeError(`league ledger: schedule fixture '${fixture.fixtureId}' 연결이 다르다.`);
     }
+
+    const fixtureIndex = fixtures.findIndex((candidate) => candidate.fixtureId === fixture.fixtureId);
+    const result = ledger.results.find((candidate) => candidate[0] === fixtureIndex);
+    const match = season.matches.find(
+      (candidate) => candidate.step === entry.step && candidate.order === entry.order,
+    );
+    if (result !== undefined) {
+      if (match === undefined) {
+        throw new RangeError(`league ledger: 완료 fixture '${fixture.fixtureId}'의 선수 경기 기록이 없다.`);
+      }
+      const expectedHomeGoals = entry.home ? match.result.goalsFor : match.result.goalsAgainst;
+      const expectedAwayGoals = entry.home ? match.result.goalsAgainst : match.result.goalsFor;
+      if (result[1] !== expectedHomeGoals || result[2] !== expectedAwayGoals) {
+        throw new RangeError(`league ledger: 완료 fixture '${fixture.fixtureId}'의 선수 경기 스코어가 다르다.`);
+      }
+    } else if (match !== undefined) {
+      throw new RangeError(`league ledger: 선수 경기 '${match.id}'의 fixture 결과가 없다.`);
+    }
+  }
+
+  const projected = projectLeagueCompetition(ruleset, ledger, season.competitions);
+  const leagueRows = season.competitions.filter((competition) => competition.kind === 'LEAGUE');
+  const projectedLeagueRows = projected.filter((competition) => competition.kind === 'LEAGUE');
+  if (leagueRows.length !== 1 || JSON.stringify(leagueRows) !== JSON.stringify(projectedLeagueRows)) {
+    throw new RangeError('league ledger: LEAGUE competition projection이 원장 순위와 다르다.');
   }
 }
 

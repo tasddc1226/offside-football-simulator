@@ -9,6 +9,7 @@ import { hashState } from './hash.js';
 import { hashSeasonResult } from './settlement.js';
 import * as injuryModule from './injury.js';
 import { rollRange } from './roll-range.js';
+import { buildLeagueFixtures } from './schedule.js';
 import {
   computeSquadStatus,
   familiarityOf,
@@ -2427,6 +2428,58 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
     });
     expect(rejectedSettle.ok).toBe(false);
     if (!rejectedSettle.ok) expect(rejectedSettle.error.details).toMatchObject({ reason: 'INVALID_LEAGUE_LEDGER' });
+
+    const settledSeason = ledgerSettlement.state.season!;
+    const settledLedger = settledSeason.leagueLedger!;
+    const settledFixtures = buildLeagueFixtures(settledSeason.index, settledLedger.leagueId, settledLedger.teams);
+    const ownResult = settledLedger.results.find((result) => {
+      const fixture = settledFixtures[result[0]]!;
+      return fixture.homeTeamId === settledSeason.teamId || fixture.awayTeamId === settledSeason.teamId;
+    })!;
+    const scoreChangedLedger = {
+      ...settledLedger,
+      results: settledLedger.results.map((result) => result === ownResult
+        ? [result[0], result[1] + 1, result[2]] as typeof result
+        : result),
+    };
+    const scoreChangedState = {
+      ...ledgerSettlement.state,
+      season: { ...settledSeason, leagueLedger: scoreChangedLedger },
+    };
+    const scoreChangedSnapshot: DomainSnapshot = {
+      ...ledgerSettlement,
+      state: scoreChangedState,
+      stateHash: hashState(scoreChangedState),
+    };
+    const rejectedOwnScore = simulate({
+      ...ledgerInput,
+      snapshot: scoreChangedSnapshot,
+      command: settleSeasonCommand(scoreChangedSnapshot.revision),
+    });
+    expect(rejectedOwnScore.ok).toBe(false);
+    if (!rejectedOwnScore.ok) expect(rejectedOwnScore.error.details).toMatchObject({ reason: 'INVALID_LEAGUE_LEDGER' });
+
+    const competitionChangedState = {
+      ...ledgerSettlement.state,
+      season: {
+        ...settledSeason,
+        competitions: settledSeason.competitions.map((competition) => competition.kind === 'LEAGUE'
+          ? { ...competition, position: (competition.position ?? 1) + 1 }
+          : competition),
+      },
+    };
+    const competitionChangedSnapshot: DomainSnapshot = {
+      ...ledgerSettlement,
+      state: competitionChangedState,
+      stateHash: hashState(competitionChangedState),
+    };
+    const rejectedCompetition = simulate({
+      ...ledgerInput,
+      snapshot: competitionChangedSnapshot,
+      command: settleSeasonCommand(competitionChangedSnapshot.revision),
+    });
+    expect(rejectedCompetition.ok).toBe(false);
+    if (!rejectedCompetition.ok) expect(rejectedCompetition.error.details).toMatchObject({ reason: 'INVALID_LEAGUE_LEDGER' });
 
     const oldAttempt = simulate({ ...baseInput(), snapshot: preSeason, command: { type: 'REQUEST_CLUB_MEETING', commandId: 'old-meeting', expectedRevision: preSeason.revision, payload: { request: 'TRANSFER' } } });
     expect(oldAttempt.ok).toBe(false);

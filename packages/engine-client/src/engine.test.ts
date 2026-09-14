@@ -1,5 +1,7 @@
 import { PutCareerBodySchema } from '@offside/contracts';
-import { career01, career01EngineCommands, rulesetProto } from '@offside/fixtures';
+import { career01, career01EngineCommands, career04GkEngineCommands, rulesetProto } from '@offside/fixtures';
+import { canonicalize, hashState, type CareerState, type JsonValue, type Ruleset } from '@offside/domain';
+import ruleset170Raw from '../../content/rulesets/1.7.0/ruleset.json' with { type: 'json' };
 import { describe, expect, it } from 'vitest';
 import { createEngineClient, type EngineClient } from './engine.js';
 import { inlineSimulator, type Simulator } from './simulator/index.js';
@@ -47,6 +49,30 @@ async function runGoldenOnFreshStore(): Promise<{ store: MemoryLocalStore; engin
   }
 
   return { store, engine, careerId };
+}
+
+async function runLedgerToSeasonStart(): Promise<{ store: MemoryLocalStore; engine: EngineClient; careerId: string }> {
+  const store = new MemoryLocalStore();
+  const ruleset = ruleset170Raw as unknown as Ruleset;
+  const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset });
+  let id = 0;
+  let careerId = '';
+  for (const source of career04GkEngineCommands(() => `ledger-engine-${++id}`)) {
+    const command = structuredClone(source);
+    if (command.type === 'CREATE_CAREER') {
+      command.payload.rulesetVersion = '1.7.0';
+      command.payload.contentPackVersion = '0.6.2';
+      careerId = command.payload.careerId;
+    }
+    const result = await engine.execute({
+      careerId,
+      command,
+      ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc-ledger-engine' } : {}),
+    });
+    if (!result.ok) throw new Error(`${command.type}: ${result.error.message}`);
+    if (command.type === 'START_SEASON') return { store, engine, careerId };
+  }
+  throw new Error('START_SEASON command가 없다.');
 }
 
 function wrapStoreWithThrowingAppend(inner: LocalStore): LocalStore {
@@ -362,6 +388,28 @@ describe('복구', () => {
 
     const repaired = await store.transaction('readonly', (tx) => tx.snapshots.getLatest(careerId));
     expect(repaired?.stateHash).toBe(career01.golden.stateHash);
+
+    // Hash와 compact 자체 형태는 맞아도 실제 1.7 ruleset roster와 다른 latest는 ready로 선택하지 않고
+    // 직전 snapshot에서 START_SEASON을 재생해 복구한다.
+    const ledgerRun = await runLedgerToSeasonStart();
+    const brokenLatest = await ledgerRun.store.transaction('readonly', (tx) => tx.snapshots.getLatest(ledgerRun.careerId));
+    if (brokenLatest === undefined) throw new Error('ledger latest 없음');
+    const brokenState = JSON.parse(brokenLatest.state) as CareerState;
+    const brokenLedger = brokenState.season?.leagueLedger;
+    if (brokenLedger === undefined || brokenLedger.teams[1] === undefined) throw new Error('ledger roster setup 실패');
+    brokenLedger.teams[1] = { ...brokenLedger.teams[1], strength: brokenLedger.teams[1].strength + 1 };
+    const brokenStateHash = hashState(brokenState);
+    await ledgerRun.store.transaction('readwrite', (tx) => tx.snapshots.put({
+      ...brokenLatest,
+      state: canonicalize(brokenState as unknown as JsonValue),
+      stateHash: brokenStateHash,
+    }));
+    const recoveredLedger = await ledgerRun.engine.loadCareer(ledgerRun.careerId);
+    expect(recoveredLedger.ok).toBe(true);
+    if (recoveredLedger.ok) {
+      expect(recoveredLedger.recovered).toEqual({ fromRevision: brokenLatest.revision - 1, replayed: 1 });
+      expect(recoveredLedger.snapshot.stateHash).not.toBe(brokenStateHash);
+    }
   });
 
   it('(b) 모든 Snapshot이 변조되면 로그 전체를 재생해 복구한다', async () => {
