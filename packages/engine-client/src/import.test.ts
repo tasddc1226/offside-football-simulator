@@ -207,6 +207,20 @@ describe('importCareerFromServer', () => {
     });
     expect(rejectedFinal.ok).toBe(false);
     if (!rejectedFinal.ok) expect(rejectedFinal.error.code).toBe('VERIFICATION_FAILED');
+
+    const inconsistentFinalResponse = structuredClone(finalLedgerResponse);
+    const inconsistentFinalState = JSON.parse(inconsistentFinalResponse.snapshot.state) as CareerState;
+    const inconsistentRows = inconsistentFinalState.seasonHistory.at(-1)?.result.finalLeagueTable?.rows;
+    if (inconsistentRows?.[0] === undefined) throw new Error('inconsistent final rows setup 실패');
+    inconsistentRows[0][9] += 1;
+    inconsistentFinalResponse.snapshot.state = canonicalize(inconsistentFinalState as unknown as JsonValue);
+    inconsistentFinalResponse.snapshot.stateHash = hashState(inconsistentFinalState);
+    const rejectedInconsistentFinal = await importCareerFromServer(new MemoryLocalStore(), inconsistentFinalResponse, {
+      now: NOW,
+      rulesetForVersion: () => ruleset170Raw as unknown as Ruleset,
+    });
+    expect(rejectedInconsistentFinal.ok).toBe(false);
+    if (!rejectedInconsistentFinal.ok) expect(rejectedInconsistentFinal.error.code).toBe('VERIFICATION_FAILED');
   });
 
   it('로컬에 미전송 revision이 있으면 덮어쓰지 않는다', async () => {

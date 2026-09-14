@@ -201,6 +201,22 @@ describe('encodeSnapshot / decodeSnapshot', () => {
       careerId: malformedFinalState.careerId,
       createdAt: '2026-01-01T00:00:00.000Z',
     }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
+
+    const inconsistentFinalState = structuredClone(finalDomain.state);
+    const inconsistentFinalTable = inconsistentFinalState.seasonHistory.at(-1)?.result.finalLeagueTable;
+    if (inconsistentFinalTable === undefined || inconsistentFinalTable.rows[0] === undefined) {
+      throw new Error('inconsistent final table setup 실패');
+    }
+    inconsistentFinalTable.rows[0][10] += 1;
+    const inconsistentFinalDomain: DomainSnapshot = {
+      ...finalDomain,
+      state: inconsistentFinalState,
+      stateHash: hashState(inconsistentFinalState),
+    };
+    expect(decodeSnapshot(encodeSnapshot(inconsistentFinalDomain, {
+      careerId: inconsistentFinalState.careerId,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
   });
 
   it('wrapper의 careerId가 state.careerId와 다르면 CAREER_ID_MISMATCH', () => {
