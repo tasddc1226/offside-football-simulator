@@ -1,0 +1,127 @@
+/* UX-014 커리어 상단 헤더 + 4탭. 색은 토큰만(D-12) — 네이비 히어로 밴드는 --os-hero 계열, 탭 바는
+   기본 표면 토큰. 사용자 결정(2026-09-14) 원작 SLB 캡처: 히어로 밴드(홈 버튼·구단 배지·이름·OVR) +
+   바로 아래 흰 탭 바(4칸, 활성 밑줄 accent). PageShell 헤더 슬롯(.os-shell-header)은 이미 스크롤
+   영역(.os-shell-main) 밖이라 별도 position:fixed 없이도 고정된다. */
+.os-career-header {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.os-career-header-band {
+  display: flex;
+  align-items: center;
+  gap: var(--os-space-3);
+  min-width: 0;
+  padding: calc(var(--os-space-2) + var(--os-safe-top)) var(--os-space-4) var(--os-space-3);
+  background: var(--os-hero);
+  color: var(--os-on-hero);
+}
+.os-career-header-home {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--os-on-hero) 16%, transparent);
+  color: var(--os-on-hero);
+  text-decoration: none;
+}
+.os-career-header-home[aria-disabled='true'] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.os-career-header-home:focus-visible {
+  outline: 2px solid var(--os-on-hero);
+  outline-offset: 2px;
+}
+.os-career-header-badge {
+  flex: none;
+}
+.os-career-header-identity {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.os-career-header-name {
+  margin: 0;
+  overflow: hidden;
+  color: var(--os-on-hero);
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.os-career-header-meta {
+  margin: 0;
+  overflow: hidden;
+  color: var(--os-hero-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.os-career-header-ovr {
+  flex: none;
+  text-align: right;
+}
+.os-career-header-ovr-label {
+  display: block;
+  color: var(--os-hero-muted);
+  letter-spacing: 0.04em;
+}
+.os-career-header-ovr-value {
+  display: block;
+  color: var(--os-on-hero);
+  font-size: var(--os-fs-num-lg);
+  font-weight: 800;
+  line-height: var(--os-lh-num-lg);
+}
+.os-career-header-presence {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  color: var(--os-hero-muted);
+  font-size: var(--os-fs-caption);
+}
+
+/* 360px: 이름이 가장 먼저 줄어든다(min-width:0 + truncate) — 홈 버튼·배지·OVR·인원 배지는 항상 온전히
+   보인다. 아주 좁은 화면에서는 실시간 인원 배지를 감춰 한 줄을 지킨다. */
+@media (max-width: 359px) {
+  .os-career-header-presence {
+    display: none;
+  }
+}
+
+.os-career-tabs {
+  display: flex;
+  overflow-x: auto;
+  background: var(--os-surface);
+  border-bottom: 1px solid var(--os-border);
+}
+.os-career-tab {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  min-width: max-content;
+  min-height: var(--os-touch-min);
+  padding: 0 var(--os-space-3);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--os-text-2);
+  font-family: var(--os-font);
+  font-size: var(--os-fs-caption);
+  font-weight: 650;
+  cursor: pointer;
+}
+.os-career-tab[aria-selected='true'] {
+  border-bottom-color: var(--os-accent);
+  color: var(--os-text);
+}
+.os-career-tab:focus-visible {
+  outline: 2px solid var(--os-focus);
+  outline-offset: -2px;
+}
+.os-career-header-presence .os-nav-live-dot {
+  background: var(--os-on-hero);
+}

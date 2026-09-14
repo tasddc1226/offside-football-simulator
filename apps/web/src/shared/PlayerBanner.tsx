@@ -1,8 +1,10 @@
-// UX-010 P5: 챕터·이벤트·이벤트 결과·시즌 결과 화면 상단에 일관되게 붙는 선수 정체성 배너. 각
-// 화면에 흩어져 있던 "이름 · 팀 · 포지션" 중복 텍스트를 이 컴포넌트 하나로 모은다. 홈 탭 헤더
-// (career.$careerId.index.tsx의 os-career-identity: eyebrow 팀명 → h1 이름 → 우측 큰 숫자 강조)와
-// 시각 계열은 맞추되, 클래스·마크업은 독립이다 — 대시보드 전용 클래스에 얽매이지 않고 여러 화면이
-// 재사용한다. 이름은 DSN-CMP-001 관례(13-visual-design-system.md)를 따라 `<h2>`로 h1 토큰 크기를 쓴다.
+// UX-010 P5: 챕터·이벤트·이벤트 결과·시즌 결과 화면 "본문"에 붙는 선수 정체성 배너(상단 고정
+// CareerHeader와는 별개 — 그 헤더는 레이아웃이 모든 /career/:id/* 화면에 항상 그리고, 이 배너는
+// 화면 콘텐츠 안에서 그 시점의 맥락(임대·이적 등)을 함께 보여줄 필요가 있는 화면만 쓴다, UX-014
+// PR 본문 한계 참고). 각 화면에 흩어져 있던 "이름 · 팀 · 포지션" 중복 텍스트를 이 컴포넌트 하나로
+// 모은다 — eyebrow 팀명 → h1 이름 → 우측 큰 숫자 강조 시각 계열은 CareerHeader와 맞추되, 클래스·
+// 마크업은 독립이다. 이름은 DSN-CMP-001 관례(13-visual-design-system.md)를 따라 `<h2>`로 h1 토큰
+// 크기를 쓴다.
 import { ClubBadge } from './ClubBadge.js';
 
 export interface PlayerBannerProps {

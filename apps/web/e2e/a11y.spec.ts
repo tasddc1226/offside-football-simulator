@@ -313,9 +313,14 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
   // 섞여 글자색이 흐려 보이는 것뿐). 전환이 끝난 뒤(opacity: 1) 상태 기반으로 기다린다.
   await expect(signedToast).toHaveCSS('opacity', '1');
 
+  // UX-014(2026-09-14): 커리어 상단 헤더(네이비 히어로 밴드 + 대시보드 4탭)가 고정으로 떠 있어야
+  // 한다 — 홈 버튼(하단 "허브로" 버튼과 별개 — CSS로 구분)과 OVR 표시로 존재를 확인하고, axe도 그
+  // 헤더·탭을 포함해 검사한다.
+  await expect(page.locator('.os-career-header-home')).toBeVisible();
+  await expect(page.getByText(/^OVR \d+$/)).toBeVisible();
   await expectNoSeriousOrCriticalViolations(page, 'SCR-029(일정표, 기본)');
 
-  await page.getByRole('tab', { name: '계약' }).click();
+  await page.getByRole('tab', { name: '커리어' }).click();
   await expect(page.getByText('주급')).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-029(휴대폰)');
