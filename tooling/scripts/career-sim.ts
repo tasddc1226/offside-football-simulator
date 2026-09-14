@@ -5,6 +5,7 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 // `pnpm --filter @offside/scripts` runs with cwd == tooling/scripts, but the CLI's public
 // examples write `--out`(상대 경로) relative to the repo root. Resolve relative `--out` against
@@ -13,6 +14,14 @@ import { spawn } from 'node:child_process';
 const REPO_ROOT = resolve(new URL('../..', import.meta.url).pathname);
 function resolveOut(out: string): string {
   return isAbsolute(out) ? out : resolve(REPO_ROOT, out);
+}
+
+// T-7-020: Node crypto의 SHA-256을 도메인에 주입한다(값은 순수 구현과 동일해야 한다 — hash.ts
+// JSDoc·hash.test.ts가 그 동등성 검증 책임을 진다). `--pure-hash`로 끌 수 있다(동등성 검증·회귀용).
+const NODE_SHA256_PROVIDER: Sha256Provider = (input) => createHash('sha256').update(input, 'utf8').digest('hex');
+
+function applyHashProvider(pureHash: boolean): void {
+  setSha256Provider(pureHash ? null : NODE_SHA256_PROVIDER);
 }
 
 import { loadRetirementArtifacts } from '../../packages/content/src/retirement-artifacts.ts';
@@ -36,6 +45,7 @@ import {
   advancePayload,
 } from './legacy-population-choices.ts';
 import { simulate, type Command } from '../../packages/domain/src/simulate.ts';
+import { setSha256Provider, type Sha256Provider } from '../../packages/domain/src/hash.ts';
 import {
   statGroupOf,
   type DomainSnapshot,
@@ -68,6 +78,8 @@ export type CareerSimOptions = {
   jobs: number;
   out: string;
   verify: boolean;
+  /** T-7-020: true면 Node crypto 주입을 끄고 도메인 순수 SHA-256 구현으로 돌린다(동등성 검증·회귀용). */
+  pureHash?: boolean;
   /** 내부용: 자식 프로세스가 담당할 seed 범위(0-based, end exclusive). 생략하면 0..seeds. */
   rangeStart?: number;
   rangeEnd?: number;
@@ -952,6 +964,7 @@ export function buildSummary(
       seasonsCap: options.seasons,
       toRetirement: options.toRetirement,
       jobs: options.jobs,
+      hashProvider: options.pureHash === true ? 'pure' : 'node-crypto',
       startedAt,
       elapsedMs,
       msPerCareer: { mean: msStats.mean, p50: msStats.p50, p90: msStats.p90 },
@@ -970,6 +983,9 @@ export function buildSummary(
 
 export async function runCareerSim(rawOptions: CareerSimOptions): Promise<CareerSimResult> {
   const options: CareerSimOptions = { ...rawOptions, out: resolveOut(rawOptions.out) };
+  // T-7-020: 이 프로세스에서 실행되는 모든 시뮬레이션(자식 프로세스는 각자 main()을 거쳐 다시
+  // 이 함수를 호출한다)에 Node crypto SHA-256을 주입한다. `--pure-hash`면 순수 구현을 쓴다.
+  applyHashProvider(options.pureHash === true);
   const startedAt = new Date().toISOString();
   const started = Date.now();
   try {
@@ -1006,6 +1022,27 @@ export async function runCareerSim(rawOptions: CareerSimOptions): Promise<Career
       return {
         ok: false,
         error: { code: 'NONDETERMINISTIC', message: `--verify 실패: ${firstHashes} !== ${secondHashes}` },
+      };
+    }
+
+    // T-7-020: seed 1개(범위 [0,1))를 순수 구현과 Node crypto 주입 각각으로 돌려 stateHash가
+    // 같은지 확인한다(같은 프로세스에서 provider를 켰다 끄면 된다). 끝나면 options.pureHash에
+    // 맞는 상태로 되돌린다.
+    const singleSeedOptions: CareerSimOptions = { ...options, seeds: 1, jobs: 1, rangeStart: 0, rangeEnd: 1 };
+    applyHashProvider(true);
+    const pureRun = simulateRange(singleSeedOptions);
+    applyHashProvider(false);
+    const injectedRun = simulateRange(singleSeedOptions);
+    applyHashProvider(options.pureHash === true);
+    const pureHash = pureRun.careers[0]?.stateHash;
+    const injectedHash = injectedRun.careers[0]?.stateHash;
+    if (pureHash !== injectedHash) {
+      return {
+        ok: false,
+        error: {
+          code: 'NONDETERMINISTIC',
+          message: `--verify 실패: 순수 해시(${String(pureHash)}) !== 주입 해시(${String(injectedHash)})`,
+        },
       };
     }
   }
@@ -1071,6 +1108,7 @@ async function runParallel(options: CareerSimOptions): Promise<CareerSimBatch> {
         ...(options.archetypeId !== undefined ? ['--archetype', options.archetypeId] : []),
         ...(options.backgroundId !== undefined ? ['--background', options.backgroundId] : []),
         '--mode', options.mode,
+        ...(options.pureHash === true ? ['--pure-hash'] : []),
         '--jobs', '1',
         '--out', dir,
         '--range-start', String(start),
@@ -1194,6 +1232,7 @@ const HELP_TEXT = `career-sim: 헤드리스 커리어 일괄 시뮬레이션 CLI
   --jobs <n>                자식 프로세스 수, 기본 1
   --out <dir>               결과 디렉터리(필수)
   --verify                  seed 3개를 두 번 돌려 결정론 확인
+  --pure-hash               T-7-020: Node crypto 주입을 끄고 도메인 순수 SHA-256 구현으로 돌린다
   --help                    이 도움말
 `;
 
@@ -1216,6 +1255,7 @@ export function parseArgs(argv: string[]): CareerSimOptions | { help: true } {
     jobs: Number(argValue(argv, '--jobs') ?? '1'),
     out: argValue(argv, '--out') ?? '',
     verify: argv.includes('--verify'),
+    pureHash: argv.includes('--pure-hash'),
     ...(archetypeId !== undefined ? { archetypeId } : {}),
     ...(backgroundId !== undefined ? { backgroundId } : {}),
     ...(rangeStartArg !== undefined ? { rangeStart: Number(rangeStartArg) } : {}),
