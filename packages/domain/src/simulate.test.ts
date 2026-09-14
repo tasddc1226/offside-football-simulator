@@ -2385,8 +2385,18 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
     const duplicate = simulate({ ...input160, snapshot: met.snapshot, command: { type: 'REQUEST_CLUB_MEETING', commandId: 'meeting-duplicate', expectedRevision: met.snapshot.revision, payload: { request: 'TRANSFER' } } });
     expect(duplicate.ok).toBe(false);
     if (!duplicate.ok) expect(duplicate.error.code).toBe('COMMAND_ALREADY_RESOLVED');
-    const guaranteedMeeting = { ...met.snapshot.state.clubMeeting!, goal: { ...met.snapshot.state.clubMeeting!.goal, targetMinutesShareBp: 0 } };
-    const guaranteedState = { ...met.snapshot.state, clubMeeting: guaranteedMeeting };
+    const guaranteedMeeting = {
+      ...met.snapshot.state.clubMeeting!,
+      preferredOfferKind: 'TRANSFER' as const,
+      preferenceStatus: 'PENDING' as const,
+      goal: { ...met.snapshot.state.clubMeeting!.goal, targetMinutesShareBp: 0 },
+    };
+    const replacementContract = { ...met.snapshot.state.contract!, id: `${met.snapshot.state.contract!.id}-renewed` };
+    const guaranteedState = {
+      ...met.snapshot.state,
+      clubMeeting: guaranteedMeeting,
+      nextContract: replacementContract,
+    };
     const guaranteed: DomainSnapshot = { ...met.snapshot, state: guaranteedState, stateHash: hashState(guaranteedState) };
     const started = simulate({ ...input160, snapshot: guaranteed, command: startSeasonFastCommand(guaranteed.revision, 'svc-meeting-met') });
     if (!started.ok) throw new Error('meeting START_SEASON failed');
@@ -2397,6 +2407,29 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
     expect(frozen.clubMeetingGoal).toMatchObject({ status: 'MET', targetMinutesShareBp: 0, effect: { managerTrustDelta: 3, moraleDelta: 2 } });
     expect(frozen.hash).toBe(hashSeasonResult(frozen));
     expect(settled.snapshot.state.state.morale).toBe(frozen.stateDeltas.morale.after);
+    expect(settled.snapshot.state.appliedSourceIds).toContain('CLUB_MEETING_GOAL:1:TRUST');
+    expect(settled.snapshot.state.appliedSourceIds).toContain('CLUB_MEETING_GOAL:1:MORALE');
+    expect(settled.snapshot.state.clubMeeting?.preferenceStatus).toBe('CANCELLED');
+    expect(settled.snapshot.state.contract?.id).toBe(replacementContract.id);
+    const nextPreseasonState = { ...settled.snapshot.state, pending: null };
+    const nextPreseason: DomainSnapshot = {
+      ...settled.snapshot,
+      state: nextPreseasonState,
+      stateHash: hashState(nextPreseasonState),
+    };
+    const nextMeeting = simulate({
+      ...input160,
+      snapshot: nextPreseason,
+      command: {
+        type: 'REQUEST_CLUB_MEETING',
+        commandId: 'meeting-next-season',
+        expectedRevision: nextPreseason.revision,
+        payload: { request: 'TRANSFER' },
+      },
+    });
+    if (!nextMeeting.ok) throw new Error('next season meeting failed');
+    expect(nextMeeting.snapshot.state.clubMeeting?.seasonIndex).toBe(2);
+    expect(nextMeeting.snapshot.state.seasonHistory.at(-1)!.result).toEqual(frozen);
     const refusedState = { ...eligible.state, relationships: { ...eligible.state.relationships, managerTrust: 44 } };
     const refusedSnapshot: DomainSnapshot = { ...eligible, state: refusedState, stateHash: hashState(refusedState) };
     const refused = simulate({ ...input160, snapshot: refusedSnapshot, command: { type: 'REQUEST_CLUB_MEETING', commandId: 'meeting-refused', expectedRevision: refusedSnapshot.revision, payload: { request: 'PLAYING_TIME' } } });

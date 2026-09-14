@@ -18,7 +18,7 @@ import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-
 import { useServiceSeason } from '../engine/service-season.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
-import { ATTRIBUTE_LABELS, positionHeaderField } from '../shared/labels.js';
+import { ATTRIBUTE_LABELS, positionHeaderField, SQUAD_ROLE_LABELS } from '../shared/labels.js';
 import {
   GuidanceCard,
   potentialCapNotice,
@@ -218,7 +218,7 @@ function PreseasonScreen() {
             </RadioGroup>
             {meetingError ? <p role="alert" className="text-os-danger">{meetingError}</p> : null}
             <button type="button" className={buttonClassName('secondary')} style={buttonStyle} disabled={meetingMutation.isPending || (meetingRequest === 'PLAYING_TIME' && playingTimeImpossible) || (meetingRequest === 'LOAN' && loanImpossible)} onClick={() => void submitMeeting()}>{meetingMutation.isPending ? '면담 중…' : '면담 요청하기'}</button>
-          </> : <div className="rounded-os-m bg-os-surface-2 p-os-3"><p className="font-semibold">{requestLabels[meeting.request]} · {meeting.response === 'ACCEPTED' ? '구단 수락' : '구단 거절'}</p><p className="os-muted">즉시 변화: 감독 신뢰 {meeting.immediateEffect.managerTrustDelta >= 0 ? '+' : ''}{meeting.immediateEffect.managerTrustDelta} · 사기 {meeting.immediateEffect.moraleDelta >= 0 ? '+' : ''}{meeting.immediateEffect.moraleDelta}</p><p>시즌 출전 확인 기준: {meeting.goal.targetMinutesShareBp / 100}% · {meeting.plannedRole}</p><p className="os-muted">실제 역할과 출전은 프리시즌 경쟁 후 조정될 수 있습니다.</p></div>}
+          </> : <div className="rounded-os-m bg-os-surface-2 p-os-3"><p className="font-semibold">{requestLabels[meeting.request]} · {meeting.response === 'ACCEPTED' ? '구단 수락' : '구단 거절'}</p><p className="os-muted">즉시 변화: 감독 신뢰 {meeting.immediateEffect.managerTrustDelta >= 0 ? '+' : ''}{meeting.immediateEffect.managerTrustDelta} · 사기 {meeting.immediateEffect.moraleDelta >= 0 ? '+' : ''}{meeting.immediateEffect.moraleDelta}</p><p>시즌 출전 확인 기준: {meeting.goal.targetMinutesShareBp / 100}% · {SQUAD_ROLE_LABELS[meeting.plannedRole]}</p><p className="os-muted">실제 역할과 출전은 프리시즌 경쟁 후 조정될 수 있습니다.</p></div>}
         </section>
       ) : null}
 

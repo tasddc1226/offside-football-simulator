@@ -680,5 +680,51 @@ describe('openMarketAfterSettlement', () => {
     expect(result.opened).toBe(true);
     expect(result.state.pending?.kind).toBe('OFFERS');
     expect(result.state.rngState.draws).toBeGreaterThan(state.rngState.draws);
+
+    // 면담이 없는 기존 경로는 같은 입력의 pending·RNG를 그대로 유지한다.
+    const unchanged = openMarketAfterSettlement({ ...state }, rulesetProto, 20);
+    expect(unchanged.state.pending).toEqual(result.state.pending);
+    expect(unchanged.state.rngState).toEqual(result.state.rngState);
+
+    const contract = contractOf(state);
+    const meeting = {
+      seasonIndex: state.seasonHistory.length,
+      request: 'LOAN' as const,
+      response: 'ACCEPTED' as const,
+      reason: 'TEST',
+      teamId: contract.teamId,
+      contractId: contract.id,
+      immediateEffect: { managerTrustDelta: -1, moraleDelta: 2 },
+      plannedRole: contract.rolePromise,
+      preferredOfferKind: 'LOAN' as const,
+      preferenceStatus: 'PENDING' as const,
+      goal: {
+        seasonIndex: state.seasonHistory.length,
+        role: contract.rolePromise,
+        targetMinutesShareBp: contract.appearancePromise.minutesShareBp,
+        status: 'PENDING' as const,
+      },
+    };
+    const preferred = openMarketAfterSettlement({ ...state, clubMeeting: meeting }, rulesetProto, 20);
+    expect(preferred.state.clubMeeting?.preferenceStatus).toBe('OFFERED');
+    const preferredPending = preferred.state.pending;
+    if (preferredPending?.kind !== 'OFFERS') throw new Error('setup: preferred market가 열리지 않았다');
+    const requested = preferredPending.offers.find((offer) => offer.id !== preferredPending.market.safeOfferId);
+    expect(requested?.kind).toBe('LOAN');
+
+    const noCandidateRules = {
+      ...rulesetProto,
+      teams: rulesetProto.teams.filter((team) => team.id === contract.teamId),
+    };
+    const noCandidate = openMarketAfterSettlement({ ...state, clubMeeting: meeting }, noCandidateRules, 20);
+    expect(noCandidate.state.clubMeeting?.preferenceStatus).toBe('NO_CANDIDATE');
+
+    const expiredContract = { ...contract, lengthSeasons: 1 };
+    const expired = openMarketAfterSettlement(
+      { ...state, contract: expiredContract, clubMeeting: { ...meeting, contractId: expiredContract.id } },
+      rulesetProto,
+      20,
+    );
+    expect(expired.state.clubMeeting?.preferenceStatus).toBe('CANCELLED');
   });
 });

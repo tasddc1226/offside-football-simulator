@@ -3505,7 +3505,7 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 
   // D-40 규칙 2: 시즌 경계 회귀가 `appliedSourceIds`의 `season:` 접두 항목(ONCE_PER_SEASON 중복 검사
   // 키)을 지운다 — 다음 시즌에 같은 sourceId가 다시 적용될 수 있어야 한다.
-  const clearedAppliedSourceIds = expiredState.appliedSourceIds.filter(
+  const clearedAppliedSourceIds = goalApplied.appliedSourceIds.filter(
     (id) => !id.startsWith('season:'),
   );
 
