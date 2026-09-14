@@ -23,8 +23,11 @@ function NoticeRow({ notice }: { notice: Notice }) {
       </DialogTrigger>
       <DialogContent className="os-home-notice-dialog" title={notice.title} description={date} closeLabel="닫기">
         <div className="flex flex-col gap-os-3">
-          {notice.body.map((paragraph) => (
-            <p key={paragraph} className="font-os text-os-text-2">
+          {/* 문단 텍스트를 key로 쓰면 같은 문장이 두 번 나오는 공지에서 React key가 충돌한다 —
+              body는 서버가 게시 순서대로 내려주는 고정 배열이고(재정렬·중간 삽입 없음) 다이얼로그가
+              열려 있는 동안만 렌더되므로 인덱스를 key로 써도 안전하다. */}
+          {notice.body.map((paragraph, index) => (
+            <p key={index} className="font-os text-os-text-2">
               {paragraph}
             </p>
           ))}
