@@ -21,8 +21,8 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--os-touch-min);
+  height: var(--os-touch-min);
   border-radius: 50%;
   background: color-mix(in srgb, var(--os-on-hero) 16%, transparent);
   color: var(--os-on-hero);
