@@ -40,6 +40,13 @@ describe('runCareerSim', () => {
     expect(second.batch.careers[0].stateHash).toBe(first.batch.careers[0].stateHash);
     expect(first.batch.careers[0].stateHash).not.toBe('');
 
+    // T-7-020: 같은 seed를 pureHash: true(도메인 순수 SHA-256)와 기본(Node crypto 주입)으로
+    // 돌리면 최종 stateHash가 같아야 한다 — 주입은 값을 바꾸지 않고 구현만 교체한다.
+    const pure = await runCareerSim({ ...options, pureHash: true, out: path.join(workDir, 'run-pure') });
+    expect(pure.ok).toBe(true);
+    if (!pure.ok) return;
+    expect(pure.batch.careers[0].stateHash).toBe(first.batch.careers[0].stateHash);
+
     // --jobs 1(단일 프로세스)과 --jobs 2(runParallel이 shard CSV를 되읽어 합침)는 summary.json이
     // runtime(elapsedMs·msPerCareer 등 타이밍 값)을 제외하면 완전히 같아야 한다 — parseCsv가 숫자
     // 컬럼을 원래 타입으로 되돌리지 못하면 tierBySeasonIndex 같은 문자열 비교 집계가 어긋난다.
