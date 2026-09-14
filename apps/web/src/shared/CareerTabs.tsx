@@ -8,6 +8,11 @@ import { useRef, type KeyboardEvent } from 'react';
 export interface CareerTabItem {
   value: string;
   label: string;
+  /** PR 231 리뷰: 이 탭 버튼의 안정적인 id — 짝이 되는 패널의 aria-labelledby가 가리킨다.
+   * 없으면 버튼에 id를 붙이지 않는다(범용 호출부 하위 호환). */
+  id?: string;
+  /** 이 탭이 펼치는 패널의 id — aria-controls로 노출한다. */
+  controls?: string;
 }
 
 export interface CareerTabsProps {
@@ -52,9 +57,11 @@ export function CareerTabs({ items, active, onChange }: CareerTabsProps) {
             ref={(el) => {
               buttonRefs.current[item.value] = el;
             }}
+            id={item.id}
             type="button"
             role="tab"
             aria-selected={selected}
+            aria-controls={item.controls}
             tabIndex={selected ? 0 : -1}
             className="os-career-tab"
             onClick={() => onChange(item.value)}

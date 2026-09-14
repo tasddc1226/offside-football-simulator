@@ -37,6 +37,8 @@ import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName } from '../shared/current-team.js';
 import {
   DASHBOARD_TABS,
+  dashboardPanelId,
+  dashboardTabId,
   normalizeDashboardTab,
   type DashboardTab,
 } from '../shared/dashboard-tabs.js';
@@ -882,7 +884,11 @@ function CareerDashboard() {
           >
             {/* UX-014: "시즌" 탭은 옛 "홈"+"일정" 탭을 병합한다(사용자 결정 2026-09-14) — 원작
                 4탭 구조에 맞춘다. */}
-            <TabsContent value="season">
+            <TabsContent
+              value="season"
+              id={dashboardPanelId('season')}
+              aria-labelledby={dashboardTabId('season')}
+            >
               <section className="os-career-home" aria-label="지금 할 일">
                 <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
                   {clock.headline} · {positionField.value}
@@ -1083,7 +1089,11 @@ function CareerDashboard() {
               </DashboardSection>
             </TabsContent>
 
-            <TabsContent value="player">
+            <TabsContent
+              value="player"
+              id={dashboardPanelId('player')}
+              aria-labelledby={dashboardTabId('player')}
+            >
               <StatusStrip items={statusItems} />
               <dl
                 className="mb-os-3 grid grid-cols-2 gap-os-2 rounded-os-m bg-os-surface-2 p-os-3 font-os text-os-text-2"
@@ -1262,7 +1272,11 @@ function CareerDashboard() {
 
             {/* UX-014: "커리어" 탭은 옛 "기록"+"계약" 탭을 병합한다(사용자 결정 2026-09-14, 다이어리
                 연대기 먼저 → 휴대폰 계약 정보). */}
-            <TabsContent value="career">
+            <TabsContent
+              value="career"
+              id={dashboardPanelId('career')}
+              aria-labelledby={dashboardTabId('career')}
+            >
               <DashboardSection title="다이어리" description="이번 커리어의 연대기입니다.">
                 <div className="flex flex-col gap-os-4">
                   <div className="flex flex-col gap-os-2">
@@ -1420,7 +1434,11 @@ function CareerDashboard() {
               </DashboardSection>
             </TabsContent>
 
-            <TabsContent value="trophies">
+            <TabsContent
+              value="trophies"
+              id={dashboardPanelId('trophies')}
+              aria-labelledby={dashboardTabId('trophies')}
+            >
               <DashboardSection title="우승 연혁" description="리그·컵 우승 기록입니다.">
                 {trophies.length === 0 ? (
                   <p className="font-os text-os-text-2" style={CAPTION_STYLE}>

@@ -11,8 +11,28 @@ export const DASHBOARD_TAB_LABELS: Record<DashboardTab, string> = {
   trophies: '우승 연혁',
 };
 
-export const DASHBOARD_TAB_ITEMS: ReadonlyArray<{ value: DashboardTab; label: string }> =
-  DASHBOARD_TABS.map((value) => ({ value, label: DASHBOARD_TAB_LABELS[value] }));
+/** PR 231 리뷰: 헤더의 CareerTabs(role="tab" 버튼)와 index.tsx의 TabsContent(role="tabpanel")는
+ * 서로 다른 React 서브트리라 Radix Tabs.Root 컨텍스트로 자동 연결되지 않는다(CareerTabs.tsx 상단
+ * 주석) — 두 id를 이 파일 하나에서 값별로 고정해 aria-controls·aria-labelledby가 항상 실존하는
+ * 상대를 가리키게 한다. */
+export function dashboardTabId(value: DashboardTab): string {
+  return `career-tab-${value}`;
+}
+export function dashboardPanelId(value: DashboardTab): string {
+  return `career-panel-${value}`;
+}
+
+export const DASHBOARD_TAB_ITEMS: ReadonlyArray<{
+  value: DashboardTab;
+  label: string;
+  id: string;
+  controls: string;
+}> = DASHBOARD_TABS.map((value) => ({
+  value,
+  label: DASHBOARD_TAB_LABELS[value],
+  id: dashboardTabId(value),
+  controls: dashboardPanelId(value),
+}));
 
 /** 5탭(홈·일정·선수·계약·기록) 시절의 북마크·공유 링크를 새 4탭으로 되돌린다. 'home'은 과거에도
  * URL에 남지 않는 기본값이었지만(옛 코드 `value === 'home' ? {} : {view: value}`), 혹시 남아 있는
