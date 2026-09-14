@@ -10,6 +10,7 @@ import { hashSeasonResult } from './settlement.js';
 import * as injuryModule from './injury.js';
 import { rollRange } from './roll-range.js';
 import { buildLeagueFixtures } from './schedule.js';
+import { standingRowsFromFinalLeagueTable, standingsFromLedger } from './league-ledger.js';
 import {
   computeSquadStatus,
   familiarityOf,
@@ -2480,6 +2481,20 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
     });
     expect(rejectedCompetition.ok).toBe(false);
     if (!rejectedCompetition.ok) expect(rejectedCompetition.error.details).toMatchObject({ reason: 'INVALID_LEAGUE_LEDGER' });
+
+    const acceptedSettlement = simulate({
+      ...ledgerInput,
+      snapshot: ledgerSettlement,
+      command: settleSeasonCommand(ledgerSettlement.revision),
+    });
+    expect(acceptedSettlement.ok).toBe(true);
+    if (!acceptedSettlement.ok) throw new Error('ledger SETTLE_SEASON 실패');
+    const finalTable = acceptedSettlement.snapshot.state.seasonHistory.at(-1)?.result.finalLeagueTable;
+    if (finalTable === undefined) throw new Error('final league table 없음');
+    expect(finalTable.rows.every((row) => row.length === 11)).toBe(true);
+    expect(standingRowsFromFinalLeagueTable(finalTable)).toEqual(standingsFromLedger(ledgerRuleset, settledLedger));
+    expect(acceptedSettlement.snapshot.state.seasonHistory.at(-1)?.result.hash)
+      .toBe(hashSeasonResult(acceptedSettlement.snapshot.state.seasonHistory.at(-1)!.result));
 
     const oldAttempt = simulate({ ...baseInput(), snapshot: preSeason, command: { type: 'REQUEST_CLUB_MEETING', commandId: 'old-meeting', expectedRevision: preSeason.revision, payload: { request: 'TRANSFER' } } });
     expect(oldAttempt.ok).toBe(false);

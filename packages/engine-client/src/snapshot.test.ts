@@ -72,12 +72,13 @@ function buildValidDomainSnapshot(): DomainSnapshot {
   };
 }
 
-async function buildLedgerSeasonStart(): Promise<DomainSnapshot> {
+async function buildLedgerSnapshot(stopAfterSeasonStart = true): Promise<DomainSnapshot> {
   let id = 0;
   const commands = career04GkEngineCommands(() => `ledger-snapshot-${++id}`);
   const ruleset = ruleset170Raw as unknown as Ruleset;
   const engine = createEngineClient({ store: new MemoryLocalStore(), simulator: inlineSimulator, ruleset });
   let careerId = '';
+  let snapshot: DomainSnapshot | undefined;
   for (const source of commands) {
     const command = structuredClone(source);
     if (command.type === 'CREATE_CAREER') {
@@ -91,9 +92,11 @@ async function buildLedgerSeasonStart(): Promise<DomainSnapshot> {
       ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc-ledger-snapshot' } : {}),
     });
     if (!result.ok) throw new Error(`${command.type}: ${result.error.message}`);
-    if (command.type === 'START_SEASON') return result.domainSnapshot;
+    snapshot = result.domainSnapshot;
+    if (stopAfterSeasonStart && command.type === 'START_SEASON') return result.domainSnapshot;
   }
-  throw new Error('START_SEASON command가 없다.');
+  if (snapshot === undefined) throw new Error('ledger snapshot을 만들지 못했다.');
+  return snapshot;
 }
 
 describe('encodeSnapshot / decodeSnapshot', () => {
@@ -151,7 +154,7 @@ describe('encodeSnapshot / decodeSnapshot', () => {
       createdAt: '2026-01-01T00:00:00.000Z',
     }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
 
-    const ledgerDomain = await buildLedgerSeasonStart();
+    const ledgerDomain = await buildLedgerSnapshot();
     const ledger = ledgerDomain.state.season?.leagueLedger;
     if (ledger === undefined) throw new Error('ledger setup 실패');
     for (const results of [
@@ -173,6 +176,31 @@ describe('encodeSnapshot / decodeSnapshot', () => {
         createdAt: '2026-01-01T00:00:00.000Z',
       }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
     }
+
+    const finalDomain = await buildLedgerSnapshot(false);
+    const finalTable = finalDomain.state.seasonHistory.at(-1)?.result.finalLeagueTable;
+    if (finalTable === undefined) throw new Error('final table setup 실패');
+    const finalEncoded = encodeSnapshot(finalDomain, {
+      careerId: finalDomain.state.careerId,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+    expect(decodeSnapshot(finalEncoded)).toEqual({ ok: true, snapshot: finalDomain });
+    const malformedFinalState = structuredClone(finalDomain.state);
+    const malformedFinalTable = malformedFinalState.seasonHistory.at(-1)?.result.finalLeagueTable;
+    if (malformedFinalTable === undefined) throw new Error('malformed final table setup 실패');
+    malformedFinalTable.rows[0] = {
+      rank: 1,
+      teamId: 'old-object-row',
+    } as unknown as typeof malformedFinalTable.rows[number];
+    const malformedFinalDomain: DomainSnapshot = {
+      ...finalDomain,
+      state: malformedFinalState,
+      stateHash: hashState(malformedFinalState),
+    };
+    expect(decodeSnapshot(encodeSnapshot(malformedFinalDomain, {
+      careerId: malformedFinalState.careerId,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
   });
 
   it('wrapper의 careerId가 state.careerId와 다르면 CAREER_ID_MISMATCH', () => {

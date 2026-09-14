@@ -5,6 +5,7 @@ import type { League, Ruleset, Team } from './ruleset.js';
 import type {
   CompetitionRecord,
   FinalLeagueTable,
+  FinalLeagueTableRow,
   FootballSeason,
   LeagueFixture,
   LeagueFixtureResult,
@@ -398,6 +399,47 @@ export function buildFinalLeagueTable(ruleset: Ruleset, ledger: LeagueSeasonLedg
     seasonIndex: ledger.seasonIndex,
     teamId: ledger.teamId,
     completedRounds: totalRounds,
-    rows: standingsFromLedger(ruleset, ledger),
+    rows: standingsFromLedger(ruleset, ledger).map((row): FinalLeagueTableRow => [
+      row.rank,
+      row.teamId,
+      row.teamName,
+      row.played,
+      row.won,
+      row.drawn,
+      row.lost,
+      row.goalsFor,
+      row.goalsAgainst,
+      row.goalDifference,
+      row.points,
+    ]),
   };
+}
+
+/** Expands the persisted tuple without consulting current ruleset/content names. */
+export function standingRowsFromFinalLeagueTable(table: FinalLeagueTable): StandingRow[] {
+  return table.rows.map(([
+    rank,
+    teamId,
+    teamName,
+    played,
+    won,
+    drawn,
+    lost,
+    goalsFor,
+    goalsAgainst,
+    goalDifference,
+    points,
+  ]) => ({
+    rank,
+    teamId,
+    teamName,
+    played,
+    won,
+    drawn,
+    lost,
+    goalsFor,
+    goalsAgainst,
+    goalDifference,
+    points,
+  }));
 }

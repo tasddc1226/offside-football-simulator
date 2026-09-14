@@ -72,7 +72,9 @@ export function LeagueStandingsTable({
                 >
                   <td className="os-num px-os-2 py-os-2 text-right">{row.rank}</td>
                   <th scope="row" className="whitespace-nowrap px-os-2 py-os-2 text-left">
-                    {resolveTeamName(ruleset, row.teamId, teamNameOverrides) ?? row.teamName}
+                    {final
+                      ? (teamNameOverrides[row.teamId] ?? row.teamName)
+                      : (resolveTeamName(ruleset, row.teamId, teamNameOverrides) ?? row.teamName)}
                     {own ? <span className="ml-os-1 text-os-accent">내 팀</span> : null}
                     {zone ? <span className="ml-os-1 font-normal text-os-text-2">{zone}</span> : null}
                   </th>

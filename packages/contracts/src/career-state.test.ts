@@ -59,6 +59,7 @@ import {
   ClubStintSchema,
   ContractSchema,
   EffectSchema,
+  FinalLeagueTableSchema,
   FootballSeasonSchema,
   InjuryEpisodeSchema,
   NationalityRuleStateSchema,
@@ -373,6 +374,21 @@ describe('CareerStateSchema', () => {
       .toContainEqual(expect.objectContaining({ path: ['season', 'leagueLedger'] }));
     expect(getCareerStateInvariantIssues({ rulesetVersion: '1.6.0', season: { index: 1, teamId: 'team-1' } }))
       .toEqual([]);
+    const finalTable = {
+      policyVersion: '1.0.0',
+      leagueId: 'league-1',
+      leagueName: '리그 1',
+      seasonIndex: 1,
+      teamId: 'team-1',
+      completedRounds: 2,
+      rows: [[1, 'team-1', '팀 1', 2, 1, 1, 0, 3, 1, 2, 4]],
+    };
+    expect(FinalLeagueTableSchema.safeParse(finalTable).success).toBe(true);
+    expect(FinalLeagueTableSchema.safeParse({
+      ...finalTable,
+      rows: [{ rank: 1, teamId: 'team-1', teamName: '팀 1', played: 2, won: 1, drawn: 1, lost: 0, goalsFor: 3, goalsAgainst: 1, goalDifference: 2, points: 4 }],
+    }).success).toBe(false);
+    expect(FinalLeagueTableSchema.safeParse({ ...finalTable, rows: [[1, 'team-1']] }).success).toBe(false);
   });
 
   it('대표팀 기본 상태는 최소 strict shape이고 수락 여부는 callUps에서 파생한다', () => {
