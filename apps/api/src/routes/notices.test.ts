@@ -105,6 +105,32 @@ describe('GET /v1/notices (API-NOTICE-001)', () => {
     }
   });
 
+  it('빈/공백 문단은 걸러내고, 문단이 모두 비면 그 공지를 응답에서 제외한다', async () => {
+    const ctx = await createTestD1();
+    try {
+      await seedNotice(ctx.db, {
+        id: 'mixed',
+        title: '일부 문단이 비어 있는 공지',
+        body: ['', '   ', '실제 문단'],
+        publishedAt: '2026-09-10T00:00:00Z',
+      });
+      await seedNotice(ctx.db, {
+        id: 'empty-only',
+        title: '문단이 모두 비어 있는 공지',
+        body: ['', '   '],
+        publishedAt: '2026-09-05T00:00:00Z',
+      });
+
+      const res = await createApp().request('/v1/notices', {}, ctx.env);
+      expect(res.status).toBe(200);
+      const body = successEnvelope(NoticesResponseSchema).parse(await res.json());
+      expect(body.data.items.map((item) => item.id)).toEqual(['mixed']);
+      expect(body.data.items[0]?.body).toEqual(['실제 문단']);
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
   it('limit을 생략하면 기본값 10건까지만 돌려준다', async () => {
     const ctx = await createTestD1();
     try {
