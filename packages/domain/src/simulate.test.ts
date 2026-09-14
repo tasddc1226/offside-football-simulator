@@ -1,9 +1,12 @@
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { rulesetProto } from './__fixtures__/career-01.js';
+import ruleset160Raw from '../../content/rulesets/1.6.0/ruleset.json' with { type: 'json' };
+import type { Ruleset } from './ruleset.js';
 import { runGkFixture } from './__fixtures__/career-04-gk.js';
 import { runSettledFixture } from './__fixtures__/career-06-settled.js';
 import { compareCodePoints } from './canonical.js';
 import { hashState } from './hash.js';
+import { hashSeasonResult } from './settlement.js';
 import * as injuryModule from './injury.js';
 import { rollRange } from './roll-range.js';
 import {
@@ -2299,7 +2302,7 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
    * step 수 대신 SETTLEMENT 도달까지 반복한다 — 그래도 각 ADVANCE 안에서 지나친 모든 step은
    * advanceEffectsThroughWalk가 하나씩 접어 처리하므로(walkToNextDecision이 한 번에 여러 step을
    * 건너뛰어도) step 5를 "지나침" 자체는 정확히 일어난다. */
-  function driveToSettlement(snapshot: DomainSnapshot): DomainSnapshot {
+  function driveToSettlement(snapshot: DomainSnapshot, inputBase = baseInput()): DomainSnapshot {
     let current = snapshot;
     for (let guard = 0; guard < 100; guard++) {
       const pending = current.state.pending;
@@ -2310,7 +2313,7 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
           : advanceCommand(current.revision, []);
       if (pending?.kind === 'INJURY') {
         const result = simulate({
-          ...baseInput(),
+          ...inputBase,
           snapshot: current,
           command: resolveEventCommand(current.revision, {
             eventId: pending.eventId,
@@ -2323,7 +2326,7 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
         current = result.snapshot;
         continue;
       }
-      const result = simulate({ ...baseInput(), snapshot: current, command });
+      const result = simulate({ ...inputBase, snapshot: current, command });
       if (!result.ok)
         throw new Error(
           `driveToSettlement: ${command.type} 실패: ${result.error.code} ${result.error.message}`,
@@ -2362,6 +2365,52 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
     );
     expect(withEffect.snapshot.state.season?.scheduledEffects).toEqual([]);
     expect(withEffect.snapshot.state.deferredEffects).toEqual([]);
+
+    const oldAttempt = simulate({ ...baseInput(), snapshot: preSeason, command: { type: 'REQUEST_CLUB_MEETING', commandId: 'old-meeting', expectedRevision: preSeason.revision, payload: { request: 'TRANSFER' } } });
+    expect(oldAttempt.ok).toBe(false);
+    expect(preSeason.state.clubMeeting).toBeUndefined();
+    expect(preSeason.stateHash).toBe(hashState(preSeason.state));
+
+    const ruleset160 = ruleset160Raw as unknown as Ruleset;
+    const proTeam = ruleset160.teams.find((team) => team.leagueTier === 3)!;
+    const contract160 = { ...preSeason.state.contract!, teamId: proTeam.id, teamName: proTeam.name, leagueTier: 3 as const, lengthSeasons: 3, rolePromise: 'BENCH' as const, appearancePromise: { minutesShareBp: ruleset160.contractRules.promiseMinutesShareBp.BENCH } };
+    const eligibleState = { ...preSeason.state, stage: 'PRO' as const, rulesetVersion: '1.6.0', relationships: { ...preSeason.state.relationships, managerTrust: 45 }, contract: contract160, clubHistory: preSeason.state.clubHistory.map((stint) => ({ ...stint, teamId: proTeam.id, teamName: proTeam.name, leagueTier: 3 as const, contractId: contract160.id })) };
+    const eligible: DomainSnapshot = { ...preSeason, state: eligibleState, rulesetVersion: '1.6.0', stateHash: hashState(eligibleState) };
+    const input160 = baseInput({ ruleset: ruleset160, rulesetVersion: '1.6.0' });
+    const met = simulate({ ...input160, snapshot: eligible, command: { type: 'REQUEST_CLUB_MEETING', commandId: 'meeting-accept', expectedRevision: eligible.revision, payload: { request: 'PLAYING_TIME' } } });
+    expect(met.ok).toBe(true);
+    if (!met.ok) return;
+    expect(met.snapshot.state.clubMeeting).toMatchObject({ seasonIndex: 1, response: 'ACCEPTED', plannedRole: 'ROTATION' });
+    expect(met.snapshot.state.contract?.rolePromise).toBe('ROTATION');
+    const duplicate = simulate({ ...input160, snapshot: met.snapshot, command: { type: 'REQUEST_CLUB_MEETING', commandId: 'meeting-duplicate', expectedRevision: met.snapshot.revision, payload: { request: 'TRANSFER' } } });
+    expect(duplicate.ok).toBe(false);
+    if (!duplicate.ok) expect(duplicate.error.code).toBe('COMMAND_ALREADY_RESOLVED');
+    const guaranteedMeeting = { ...met.snapshot.state.clubMeeting!, goal: { ...met.snapshot.state.clubMeeting!.goal, targetMinutesShareBp: 0 } };
+    const guaranteedState = { ...met.snapshot.state, clubMeeting: guaranteedMeeting };
+    const guaranteed: DomainSnapshot = { ...met.snapshot, state: guaranteedState, stateHash: hashState(guaranteedState) };
+    const started = simulate({ ...input160, snapshot: guaranteed, command: startSeasonFastCommand(guaranteed.revision, 'svc-meeting-met') });
+    if (!started.ok) throw new Error('meeting START_SEASON failed');
+    const atSettlement = driveToSettlement(started.snapshot, input160);
+    const settled = simulate({ ...input160, snapshot: atSettlement, command: settleSeasonCommand(atSettlement.revision) });
+    if (!settled.ok) throw new Error('meeting SETTLE_SEASON failed');
+    const frozen = settled.snapshot.state.seasonHistory.at(-1)!.result;
+    expect(frozen.clubMeetingGoal).toMatchObject({ status: 'MET', targetMinutesShareBp: 0, effect: { managerTrustDelta: 3, moraleDelta: 2 } });
+    expect(frozen.hash).toBe(hashSeasonResult(frozen));
+    expect(settled.snapshot.state.state.morale).toBe(frozen.stateDeltas.morale.after);
+    const refusedState = { ...eligible.state, relationships: { ...eligible.state.relationships, managerTrust: 44 } };
+    const refusedSnapshot: DomainSnapshot = { ...eligible, state: refusedState, stateHash: hashState(refusedState) };
+    const refused = simulate({ ...input160, snapshot: refusedSnapshot, command: { type: 'REQUEST_CLUB_MEETING', commandId: 'meeting-refused', expectedRevision: refusedSnapshot.revision, payload: { request: 'PLAYING_TIME' } } });
+    if (!refused.ok) throw new Error('meeting refusal failed');
+    expect(refused.snapshot.state.clubMeeting).toMatchObject({ response: 'REFUSED', immediateEffect: { managerTrustDelta: 0, moraleDelta: -1 } });
+    const missedMeeting = { ...refused.snapshot.state.clubMeeting!, goal: { ...refused.snapshot.state.clubMeeting!.goal, targetMinutesShareBp: 10000 } };
+    const missedState = { ...refused.snapshot.state, clubMeeting: missedMeeting };
+    const missedSnapshot: DomainSnapshot = { ...refused.snapshot, state: missedState, stateHash: hashState(missedState) };
+    const missedStarted = simulate({ ...input160, snapshot: missedSnapshot, command: startSeasonFastCommand(missedSnapshot.revision, 'svc-meeting-missed') });
+    if (!missedStarted.ok) throw new Error('missed START failed');
+    const missedAtSettlement = driveToSettlement(missedStarted.snapshot, input160);
+    const missedSettled = simulate({ ...input160, snapshot: missedAtSettlement, command: settleSeasonCommand(missedAtSettlement.revision) });
+    if (!missedSettled.ok) throw new Error('missed settle failed');
+    expect(missedSettled.snapshot.state.seasonHistory.at(-1)!.result.clubMeetingGoal).toMatchObject({ status: 'MISSED', effect: { managerTrustDelta: 0, moraleDelta: 0 } });
   });
 
   it('(b) 시즌 N 중에 미룬 NEXT_SEASON_STEP 5 효과는 시즌 N에는 적용되지 않고, 시즌 N+1에서 적용된다', () => {
@@ -2454,6 +2503,7 @@ describe('Command 타입', () => {
       | 'LOAN_RETURN'
       | 'RETIRE'
       | 'CAREER_EVENT'
+      | 'REQUEST_CLUB_MEETING'
     >();
   });
 });

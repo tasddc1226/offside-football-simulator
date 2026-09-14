@@ -362,8 +362,12 @@ function confirmedStateLiteral() {
 
 describe('CareerStateSchema', () => {
   it('확정 직후 상태 리터럴을 받아들인다', () => {
-    const result = CareerStateSchema.safeParse(confirmedStateLiteral());
+    const state = confirmedStateLiteral();
+    expect('clubMeeting' in state).toBe(false);
+    const result = CareerStateSchema.safeParse(state);
     expect(result.success).toBe(true);
+    const withMeeting = { ...state, clubMeeting: { seasonIndex: 1, request: 'TRANSFER', response: 'ACCEPTED', reason: 'REQUEST_ACCEPTED', teamId: 'team-1', contractId: 'contract-1', immediateEffect: { managerTrustDelta: -2, moraleDelta: 2 }, plannedRole: 'BENCH', preferredOfferKind: 'TRANSFER', preferenceStatus: 'PENDING', goal: { seasonIndex: 1, role: 'BENCH', targetMinutesShareBp: 3000, status: 'PENDING' } } };
+    expect(CareerStateSchema.safeParse(withMeeting).success).toBe(true);
   });
 
   it('대표팀 기본 상태는 최소 strict shape이고 수락 여부는 callUps에서 파생한다', () => {
