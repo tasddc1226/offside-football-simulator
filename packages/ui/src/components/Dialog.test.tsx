@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
-import { Dialog, DialogContent, DialogTrigger } from './Dialog.js';
+import { Dialog, DialogContent, DialogTrigger, SheetContent } from './Dialog.js';
 
 function TestDialog() {
   const [open, setOpen] = useState(false);
@@ -103,5 +103,42 @@ describe('Dialog', () => {
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
     expect(document.querySelectorAll('.os-dialog-overlay')).toHaveLength(1);
     expect(screen.getByRole('button', { name: '확정' })).toHaveFocus();
+  });
+});
+
+function TestSheet() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger>열기</DialogTrigger>
+      <SheetContent title="이용약관" closeLabel="닫기">
+        <p>본문</p>
+      </SheetContent>
+    </Dialog>
+  );
+}
+
+describe('SheetContent', () => {
+  it('role=dialog로 열리고 제목이 접근성 이름이 된다', async () => {
+    const user = userEvent.setup();
+    render(<TestSheet />);
+
+    await user.click(screen.getByRole('button', { name: '열기' }));
+
+    const dialog = screen.getByRole('dialog', { name: '이용약관' });
+    expect(dialog).toHaveClass('os-sheet');
+    expect(dialog).toContainElement(screen.getByText('본문'));
+  });
+
+  it('닫기 버튼으로 닫히고 트리거로 포커스가 돌아온다', async () => {
+    const user = userEvent.setup();
+    render(<TestSheet />);
+
+    const trigger = screen.getByRole('button', { name: '열기' });
+    await user.click(trigger);
+    await user.click(screen.getByRole('button', { name: '닫기' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 });

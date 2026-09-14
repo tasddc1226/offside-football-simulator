@@ -172,7 +172,8 @@
   min-width: 0;
 }
 
-/* 서비스 정책 목록: 셰브론 행 2개, 행 전체가 내부 Link. */
+/* 서비스 정책 목록: 셰브론 행 2개. 각 행은 라우트 이동 대신 시트를 여는 <button>이다(설정.tsx
+   LegalSheetRow) — 네이티브 버튼 크롬을 지우고 예전 <Link> 행과 같은 모양으로 되돌린다. */
 .os-settings-list {
   padding-block: 4px;
 }
@@ -186,13 +187,18 @@
 }
 .os-settings-list-row {
   display: flex;
+  width: 100%;
   min-height: var(--os-touch-min);
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  border: 0;
+  background: transparent;
   color: var(--os-text);
   font-weight: 600;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
 }
 .os-settings-list-row:focus-visible {
   outline: 2px solid var(--os-focus);
