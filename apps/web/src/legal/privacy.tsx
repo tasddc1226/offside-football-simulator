@@ -19,6 +19,10 @@ export function PrivacyContent() {
           <li>복구 코드는 원문이 아니라 해시로만 저장합니다</li>
           <li>Google 계정으로 연결하면 Google 계정 식별자와 이메일</li>
           <li>요청 로그와 요청 식별자</li>
+          <li>
+            세션의 마지막 활동 시각 — 플레이 중 인원 집계(5분 창)에만 쓰이며 개인을 표시하지
+            않습니다.
+          </li>
         </ul>
       </section>
 
