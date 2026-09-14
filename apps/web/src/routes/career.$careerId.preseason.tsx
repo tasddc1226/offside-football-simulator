@@ -2,6 +2,7 @@
 // 새로고침·뒤로 가기에도 선택이 유지되도록 URL에 싣는다. 시뮬레이션 모드는 더 이상 고르지 않는다
 // (사용자 결정 2026-09-13, D-77) — 모든 시즌은 항상 FIXED_SIMULATION_MODE(FAST)로 시작한다.
 import { useEffect, useState } from 'react';
+import { computeContractSeasonsRemaining, type ClubMeetingRequest } from '@offside/domain';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import {
   PlayerHeader,
@@ -13,10 +14,11 @@ import {
   buttonStyle,
 } from '@offside/ui';
 import { rulesetForCareer } from '../engine/content.js';
-import { careerQueryOptions, useCareer } from '../engine/use-career.js';
+import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
+import { useServiceSeason } from '../engine/service-season.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { archetypeName, currentTeamName } from '../shared/current-team.js';
-import { ATTRIBUTE_LABELS, positionHeaderField } from '../shared/labels.js';
+import { ATTRIBUTE_LABELS, positionHeaderField, SQUAD_ROLE_LABELS } from '../shared/labels.js';
 import {
   GuidanceCard,
   potentialCapNotice,
@@ -24,6 +26,7 @@ import {
   retirementPressureNotice,
 } from '../shared/play-guidance.js';
 import { queryClient } from '../shared/query-client.js';
+import { careerStartYear, extractCalendarStartYear, seasonYearLabel } from '../shared/season-year.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import {
   canPlanNextSeason,
@@ -58,6 +61,7 @@ const CAPTION_STYLE = {
 function PreseasonScreen() {
   const { careerId } = Route.useParams();
   const query = useCareer(careerId);
+  const serviceSeasonQuery = useServiceSeason();
 
   useEffect(() => {
     platform.analytics.track('screen_viewed', {
@@ -69,12 +73,21 @@ function PreseasonScreen() {
 
   const state = query.data?.state;
   const [focus, setFocus] = useState<TrainingFocus>('ROLE');
+  const [meetingRequest, setMeetingRequest] = useState<ClubMeetingRequest>('PLAYING_TIME');
+  const meetingMutation = useCareerMutation('requestClubMeeting');
+  const [meetingError, setMeetingError] = useState<string | null>(null);
 
   if (state === undefined) return null;
   const profile = state.player.profile;
   const contract = state.contract;
   if (profile === null || contract === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
   const ruleset = rulesetForCareer(state);
+  // 사용자 결정(2026-09-13): 1시즌 = 1년, 커리어 시작 연도부터 "2026 시즌"으로 표기(season-year.ts).
+  const startYear = careerStartYear({
+    seasonServiceSeasonId: state.season?.serviceSeasonId ?? null,
+    currentServiceSeason: serviceSeasonQuery.data,
+    calendarStartYear: extractCalendarStartYear(ruleset.leagueCalendar),
+  });
 
   const team = ruleset.teams.find((candidate) => candidate.id === contract.teamId);
   const style =
@@ -85,6 +98,25 @@ function PreseasonScreen() {
   const capNotice = potentialCapNotice(state);
   const pressureNotice = retirementPressureNotice(state);
   const pressureEvidence = pressureNotice === null ? null : retirementEvidenceText(pressureNotice);
+  const upcomingSeasonIndex = state.seasonHistory.length + 1;
+  const meeting = state.clubMeeting?.seasonIndex === upcomingSeasonIndex ? state.clubMeeting : null;
+  const meetingEnabled = ruleset.clubMeetingRules !== undefined;
+  const remaining = computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline);
+  const playingTimeImpossible = contract.rolePromise === 'STARTER';
+  const loanImpossible = remaining < 2;
+  const requestLabels: Record<ClubMeetingRequest, string> = { PLAYING_TIME: '출전 기회 요청', LOAN: '임대 요청', TRANSFER: '이적 요청' };
+  async function submitMeeting() {
+    setMeetingError(null);
+    try {
+      const result = await meetingMutation.mutateAsync({ careerId, request: meetingRequest });
+      if (!result.ok) {
+        if (result.error.code === 'COMMAND_ALREADY_RESOLVED') await query.refetch();
+        setMeetingError(result.error.code === 'COMMAND_ALREADY_RESOLVED' ? '다른 화면에서 이미 이번 시즌 면담을 마쳤습니다.' : result.error.message);
+      }
+    } catch {
+      setMeetingError('면담 요청을 저장하지 못했습니다. 다시 시도해 주세요.');
+    }
+  }
 
   return (
     <div className="os-screen">
@@ -141,7 +173,7 @@ function PreseasonScreen() {
           <GuidanceCard
             label="잠재력 상한 안내"
             className="bg-os-surface-2"
-            detail={`시즌 ${capNotice.seasonNumber} 결산 기준 · 정찰 범위 밖 수치는 보여주지 않습니다.`}
+            detail={`${seasonYearLabel(startYear, capNotice.seasonNumber)} 결산 기준 · 정찰 범위 밖 수치는 보여주지 않습니다.`}
           >
             지난 시즌 {capNotice.attributeKeys.map((key) => ATTRIBUTE_LABELS[key]).join('·')}
             {capNotice.attributeKeys.length === 1 ? '은(는)' : '은'} 잠재력 상한에 막혀 성장이 멈췄어요 — 다른
@@ -174,6 +206,22 @@ function PreseasonScreen() {
         </p>
       </section>
 
+      {meetingEnabled ? (
+        <section className="os-panel flex flex-col gap-os-3" aria-label="구단 면담">
+          <div><h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>구단 면담</h2><p className="font-os text-os-text-2" style={CAPTION_STYLE}>선택 사항 · 시즌마다 한 번 구단에 계획을 요청할 수 있습니다.</p></div>
+          {meeting === null ? <>
+            <RadioGroup className="os-choice-grid" aria-label="구단 면담 요청" value={meetingRequest} onValueChange={(value) => setMeetingRequest(value as ClubMeetingRequest)}>
+              {(['PLAYING_TIME','LOAN','TRANSFER'] as const).map((request) => {
+                const disabled = (request === 'PLAYING_TIME' && playingTimeImpossible) || (request === 'LOAN' && loanImpossible);
+                return <RadioGroupItem key={request} value={request} disabled={disabled || meetingMutation.isPending} className="flex flex-col gap-os-1 p-os-3 text-left"><span>{requestLabels[request]}</span>{disabled ? <span className="os-muted">{request === 'PLAYING_TIME' ? '이미 주전 역할입니다.' : '다음 이적시장 전 계약이 만료됩니다.'}</span> : null}</RadioGroupItem>;
+              })}
+            </RadioGroup>
+            {meetingError ? <p role="alert" className="text-os-danger">{meetingError}</p> : null}
+            <button type="button" className={buttonClassName('secondary')} style={buttonStyle} disabled={meetingMutation.isPending || (meetingRequest === 'PLAYING_TIME' && playingTimeImpossible) || (meetingRequest === 'LOAN' && loanImpossible)} onClick={() => void submitMeeting()}>{meetingMutation.isPending ? '면담 중…' : '면담 요청하기'}</button>
+          </> : <div className="rounded-os-m bg-os-surface-2 p-os-3"><p className="font-semibold">{requestLabels[meeting.request]} · {meeting.response === 'ACCEPTED' ? '구단 수락' : '구단 거절'}</p><p className="os-muted">즉시 변화: 감독 신뢰 {meeting.immediateEffect.managerTrustDelta >= 0 ? '+' : ''}{meeting.immediateEffect.managerTrustDelta} · 사기 {meeting.immediateEffect.moraleDelta >= 0 ? '+' : ''}{meeting.immediateEffect.moraleDelta}</p><p>시즌 출전 확인 기준: {meeting.goal.targetMinutesShareBp / 100}% · {SQUAD_ROLE_LABELS[meeting.plannedRole]}</p><p className="os-muted">실제 역할과 출전은 프리시즌 경쟁 후 조정될 수 있습니다.</p></div>}
+        </section>
+      ) : null}
+
       <div className="os-action-dock">
         <Link
           to="/career/$careerId/season-prep"
@@ -181,6 +229,8 @@ function PreseasonScreen() {
           search={{ focus }}
           className={buttonClassName('primary')}
           style={buttonStyle}
+          aria-disabled={meetingMutation.isPending}
+          onClick={(event) => { if (meetingMutation.isPending) event.preventDefault(); }}
         >
           다음
         </Link>

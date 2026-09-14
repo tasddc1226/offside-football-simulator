@@ -16,9 +16,9 @@ afterEach(() => {
 });
 
 describe('오프라인 폴백 manifest', () => {
-  it('운영 승격 목표 manifest 1.4.0/0.5.1과 같다', () => {
-    expect(ACTIVE_RULESET_VERSION).toBe('1.4.0');
-    expect(ACTIVE_CONTENT_PACK_VERSION).toBe('0.5.1');
+  it('운영 승격 목표 manifest 1.5.0/0.6.0과 같다', () => {
+    expect(ACTIVE_RULESET_VERSION).toBe('1.5.0');
+    expect(ACTIVE_CONTENT_PACK_VERSION).toBe('0.6.0');
     expect(FALLBACK_SERVICE_SEASON.rulesetVersion).toBe(ACTIVE_RULESET_VERSION);
     expect(FALLBACK_SERVICE_SEASON.contentPackVersion).toBe(ACTIVE_CONTENT_PACK_VERSION);
   });

@@ -138,8 +138,8 @@ describe('오류 코드 표', () => {
 });
 
 describe('CommandTypeSchema', () => {
-  it('15개다', () => {
-    expect(COMMAND_TYPES.length).toBe(15);
+  it('16개다', () => {
+    expect(COMMAND_TYPES.length).toBe(16);
     expect(COMMAND_TYPES).toContain('CAREER_EVENT');
   });
 

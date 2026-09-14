@@ -67,6 +67,13 @@ import { buildCurrentContractSummary, MARKET_REASON_LABEL_KO } from '../shared/t
 import { GamePending } from '../shared/game-presentation.js';
 import { buildCareerClock, type CareerClockView } from '../shared/career-clock.js';
 import {
+  careerStartYear,
+  extractCalendarStartYear,
+  seasonYearLabel,
+  seasonYearLabelWithOrdinal,
+} from '../shared/season-year.js';
+import { useServiceSeason } from '../engine/service-season.js';
+import {
   conditionTileItems,
   proStatusStripItems,
   u18StatusStripItems,
@@ -198,6 +205,10 @@ function timelineSentence(entry: TimelineEntry, state: CareerState): string {
       return '국가대표 소집 거절';
     case 'CAPTAIN_APPOINTED':
       return '주장 임명';
+    case 'CLUB_MEETING_RESOLVED':
+      return '구단 면담';
+    case 'CLUB_MEETING_GOAL_EVALUATED':
+      return '면담 목표 평가';
   }
 }
 
@@ -394,10 +405,12 @@ function NextDecisionCard({
   careerId,
   state,
   clock,
+  startYear,
 }: {
   careerId: string;
   state: CareerState;
   clock: CareerClockView;
+  startYear: number;
 }) {
   const navigate = useNavigate();
   const advanceMutation = useCareerMutation('advance');
@@ -564,7 +577,7 @@ function NextDecisionCard({
           </Button>
           {settling ? (
             <GamePending
-              title={`시즌 ${state.season?.index ?? ''} 기록을 정리하고 있습니다`}
+              title={`${state.season === null ? '시즌' : seasonYearLabel(startYear, state.season.index)} 기록을 정리하고 있습니다`}
               detail="경기 기록과 성장 결과를 저장한 뒤 시즌 리뷰를 엽니다."
             />
           ) : null}
@@ -621,7 +634,7 @@ function NextDecisionCard({
           title="시즌을 진행하고 있습니다"
           detail={state.season === null
             ? '다음 일정을 준비하고 있습니다.'
-            : `시즌 ${state.season.index} · step ${state.currentStep} 이후 일정을 처리하고 있습니다.`}
+            : `${seasonYearLabel(startYear, state.season.index)} · step ${state.currentStep} 이후 일정을 처리하고 있습니다.`}
         />
       ) : null}
       {nothingToAdvance ? (
@@ -684,6 +697,7 @@ function CareerDashboard() {
   const { signed, view } = Route.useSearch();
   const navigate = useNavigate();
   const query = useCareer(careerId);
+  const serviceSeasonQuery = useServiceSeason();
   const [showSignedToast, setShowSignedToast] = useState(signed === true);
   const initialisedRef = useRef(false);
   const tab = view ?? 'home';
@@ -732,6 +746,13 @@ function CareerDashboard() {
   }
 
   const { state } = query.data;
+  const ruleset = rulesetForCareer(state);
+  // 사용자 결정(2026-09-13): 1시즌 = 1년, 커리어 시작 연도부터 "2026 시즌"으로 표기(season-year.ts).
+  const startYear = careerStartYear({
+    seasonServiceSeasonId: state.season?.serviceSeasonId ?? null,
+    currentServiceSeason: serviceSeasonQuery.data,
+    calendarStartYear: extractCalendarStartYear(ruleset.leagueCalendar),
+  });
   const profile = state.player.profile;
   const draft = state.player.draft;
   const name = profile?.name ?? draft.name ?? '이름 없는 선수';
@@ -740,7 +761,6 @@ function CareerDashboard() {
     : { label: '포지션', value: draft.position ? POSITION_LABELS[draft.position] : '—' };
   const hasContract = state.contract !== null;
   const season = state.season;
-  const ruleset = rulesetForCareer(state);
   const room = deriveTacticalRoom(state, ruleset);
   const seasonChronicleItems = buildSeasonChronicleItems(state);
   const seasonResultItem = seasonChronicleItems.find(
@@ -753,7 +773,7 @@ function CareerDashboard() {
     state.pending !== null && (state.pending.kind === 'OFFERS' || state.pending.kind === 'CONTRACT')
       ? state.pending
       : null;
-  const clock = buildCareerClock(state);
+  const clock = buildCareerClock(state, startYear);
   const statusItems = hasContract ? proStatusStripItems(state) : u18StatusStripItems(state);
   // UX-007 홈 탭 컨디션 타일: StatusStrip과 별도로 폼·체력·사기를 동일한 위계의 타일+미터로 보여준다
   // (StatusStrip의 "첫 항목 액센트 강조"는 player 탭 Base OVR용이라 여기서는 쓰지 않는다).
@@ -814,7 +834,15 @@ function CareerDashboard() {
           >
             <TabsContent value="home">
               <section className="os-career-home" aria-label="지금 할 일">
-                <NextDecisionCard careerId={careerId} state={state} clock={clock} />
+                <NextDecisionCard careerId={careerId} state={state} clock={clock} startYear={startYear} />
+
+                {season !== null && state.clubMeeting?.goal.seasonIndex === season.index ? (
+                  <section className="os-panel flex flex-col gap-os-1" aria-label="이번 시즌 구단 면담 목표">
+                    <p className="os-eyebrow">이번 시즌 목표</p>
+                    <p>시즌 출전 확인 기준 {state.clubMeeting.goal.targetMinutesShareBp / 100}%</p>
+                    <p className="os-muted">선발 보장이 아닌 시즌 종료 후 확인 기준입니다.</p>
+                  </section>
+                ) : null}
 
                 <ConditionTiles items={conditionItems} />
 
@@ -970,8 +998,8 @@ function CareerDashboard() {
                   <div className="flex flex-col gap-os-3">
                     <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
                       {state.seasonHistory.length === 0
-                        ? '관계의 방향과 기억이 조금씩 열립니다.'
-                        : '관계 수치는 시즌 결산 뒤 공개됩니다.'}
+                        ? '관계 단계는 현재 상태입니다. 화살표는 최근 관계 기록의 변화 방향입니다.'
+                        : '공개된 수치는 현재 관계 값입니다. 화살표는 최근 관계 기록의 변화 방향입니다.'}
                     </p>
                     <dl
                       className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
@@ -979,8 +1007,8 @@ function CareerDashboard() {
                     >
                       {relationshipRows(state, state.seasonHistory.length > 0).map((row) => (
                         <div key={row.target}>
-                          <dt>{row.label} {row.direction}</dt>
-                          <dd className="text-os-text">{row.display}</dd>
+                          <dt>{row.label} <span aria-label={`${row.label} 최근 변화 방향`}>{row.direction}</span></dt>
+                          <dd className="text-os-text">{state.seasonHistory.length > 0 ? '현재 값' : '현재 단계'} {row.display}</dd>
                           <dd>
                             {state.memoryTags[row.target].map((tag) => relationshipReasonLabel(tag)).join(' · ') ||
                               '아직 쌓인 기억이 없습니다'}
@@ -988,6 +1016,9 @@ function CareerDashboard() {
                         </div>
                       ))}
                     </dl>
+                    {state.memoryTags.captain.length === 0 ? (
+                      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>주장단 관계는 관련 라커룸 사건과 선택에 따라 달라질 수 있습니다.</p>
+                    ) : null}
                     {state.relationshipLog.length > 0 ? (
                       <ul className="flex flex-col gap-os-1 font-os text-os-text-2" style={CAPTION_STYLE}>
                         {state.relationshipLog.slice(-3).reverse().map((entry, index) => (
@@ -1216,7 +1247,7 @@ function CareerDashboard() {
                               className="font-os text-os-text underline"
                               style={CAPTION_STYLE}
                             >
-                              {storedSeasonAgeLabel(state, link.historyIndex)}시즌 {link.seasonNumber} 결산 보기
+                              {storedSeasonAgeLabel(state, link.historyIndex)}{seasonYearLabelWithOrdinal(startYear, link.seasonNumber)} 결산 보기
                             </Link>
                           </li>
                         ))}

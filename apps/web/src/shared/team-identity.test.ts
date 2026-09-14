@@ -14,9 +14,18 @@ describe('getTeamIdentity', () => {
     expect(getTeamIdentity('unknown-team')).toEqual({ initials: '?', colorVar: 'var(--os-neutral)' });
   });
 
-  it('활성 룰셋의 12개 구단 모두 폴백 없이 매핑된다', () => {
+  // 룰셋 1.5.0 승격 뒤 activeRuleset.teams는 K3 필러 4개(생성 이름, 오퍼 풀용)도 포함하는데,
+  // 이 팀들은 의도적으로 배지 색이 없다(packages/ui/scripts/check-contrast.mjs BADGE_TEAM_IDS
+  // 참고 — "1.5.0(K리그식 27개)"만 검사하고 K3 필러는 빠져 있다). 나머지(YOUTH B팀·K1·K2)는
+  // 전부 실제 배지 색이 있어야 한다.
+  it('활성 룰셋의 구단은 K3 필러를 빼고 전부 폴백 없이 매핑되고, K3 필러는 중립 폴백이다', () => {
     for (const team of activeRuleset.teams) {
-      expect(getTeamIdentity(team.id).colorVar).not.toBe('var(--os-neutral)');
+      const colorVar = getTeamIdentity(team.id).colorVar;
+      if (team.leagueTier === 3) {
+        expect(colorVar).toBe('var(--os-neutral)');
+      } else {
+        expect(colorVar).not.toBe('var(--os-neutral)');
+      }
     }
   });
 });

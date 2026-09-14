@@ -282,6 +282,8 @@ export const TimelineEntrySchema = z.strictObject({
     'RETIRED',
     'SERVICE_STARTED', 'SERVICE_COMPLETED', 'INTERNATIONAL_TOURNAMENT', 'MENTORED',
     'CAPTAIN_APPOINTED',
+    'CLUB_MEETING_RESOLVED',
+    'CLUB_MEETING_GOAL_EVALUATED',
   ]),
   refId: z.string().nullable(),
   age: z.number().int(),
@@ -643,6 +645,19 @@ export const GrowthCauseSchema = z.enum(['TRAINING', 'MINUTES', 'EXPERIENCE', 'A
 
 // domain `RoleProposal['type']`과 동일.
 const RoleProposalTypeSchema = z.enum(['KEEP', 'POSITION_CHANGE', 'ROLE_CHANGE']);
+export const ClubMeetingRequestSchema = z.enum(['PLAYING_TIME', 'LOAN', 'TRANSFER']);
+const ClubMeetingEffectSchema = z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int() });
+const ClubMeetingGoalResultSchema = z.strictObject({
+  request: ClubMeetingRequestSchema, response: z.enum(['ACCEPTED', 'REFUSED']), reason: z.string().min(1),
+  role: SquadRoleSchema, targetMinutesShareBp: z.number().int().min(0).max(10000), actualMinutesShareBp: z.number().int().min(0).max(10000),
+  status: z.enum(['MET', 'MISSED']), effect: ClubMeetingEffectSchema,
+});
+const ClubMeetingStateSchema = z.strictObject({
+  seasonIndex: z.number().int().positive(), request: ClubMeetingRequestSchema, response: z.enum(['ACCEPTED', 'REFUSED']), reason: z.string().min(1),
+  teamId: z.string().min(1), contractId: z.string().min(1), immediateEffect: ClubMeetingEffectSchema, plannedRole: SquadRoleSchema,
+  preferredOfferKind: z.enum(['LOAN', 'TRANSFER']).nullable(), preferenceStatus: z.enum(['PENDING', 'OFFERED', 'NO_CANDIDATE', 'CANCELLED']).nullable(),
+  goal: z.strictObject({ seasonIndex: z.number().int().positive(), role: SquadRoleSchema, targetMinutesShareBp: z.number().int().min(0).max(10000), status: z.literal('PENDING') }),
+});
 
 // T-2-005 D-39: SETTLE_SEASON이 만드는 시즌 결산 결과. domain `SeasonResult`와 동일.
 export const SeasonResultSchema = z.strictObject({
@@ -683,6 +698,7 @@ export const SeasonResultSchema = z.strictObject({
     fulfilled: z.boolean(),
     minutesShareBp: z.number().int().nonnegative(),
   }),
+  clubMeetingGoal: ClubMeetingGoalResultSchema.exactOptional(),
   attributeDeltas: z.array(
     z.strictObject({
       key: z.enum(SELECTION_ATTRIBUTE_KEYS),
@@ -936,6 +952,7 @@ const CareerStateShapeSchema = z.strictObject({
   }),
   pending: PendingSchema,
   contract: ContractSchema.nullable(),
+  clubMeeting: ClubMeetingStateSchema.exactOptional(),
   // T-4-012 F7: optional for backwards-compatible snapshots; applies after settlement.
   nextContract: ContractSchema.nullable().optional(),
   // T-3-003 D-46: 임대 중 원소속 계약(`suspended: true`). Phase 1·비임대 상태는 항상 null.

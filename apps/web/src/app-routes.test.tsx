@@ -437,6 +437,24 @@ describe('법적 문서 라우트', () => {
   });
 });
 
+describe('D-78 상단 네비바 "N명 플레이 중" 배지', () => {
+  it('presence 쿼리에 데이터가 없으면 배지를 렌더하지 않는다', async () => {
+    renderAt('/');
+    await screen.findByRole('navigation', { name: '게임 메뉴' });
+    expect(screen.queryByText(/명 플레이 중/)).not.toBeInTheDocument();
+  });
+
+  it('playingNow: 12를 시딩하면 "12명 플레이 중"을 보여준다', async () => {
+    queryClient.setQueryData(['presence', 'live'], {
+      playingNow: 12,
+      windowMinutes: 5,
+      sampledAt: '2026-09-14T00:00:00.000Z',
+    });
+    renderAt('/');
+    expect(await screen.findByText('12명 플레이 중')).toBeInTheDocument();
+  });
+});
+
 describe('존재하지 않는 경로', () => {
   it('이슈 155: 앱 셸 안에서 not-found 안내를 렌더하고 허브로 가는 링크·문서 제목을 제공한다', async () => {
     renderAt('/no-such-route');

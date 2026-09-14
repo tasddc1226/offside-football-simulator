@@ -15,6 +15,7 @@ import {
 } from '@offside/ui';
 import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer } from '../engine/use-career.js';
+import { useServiceSeason } from '../engine/service-season.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -32,6 +33,7 @@ import {
 } from '../shared/season-result-view.js';
 import { ratingText } from '../shared/season-schedule.js';
 import { ATTRIBUTE_CHANGE_CAUSE_LABEL_KO } from '../shared/season-result.js';
+import { careerStartYear, extractCalendarStartYear, seasonYearLabel } from '../shared/season-year.js';
 import { ATTRIBUTE_GROUP_LABEL_KO } from '../shared/attribute-groups.js';
 import {
   ATTRIBUTE_LABELS,
@@ -268,6 +270,7 @@ function SeasonResultScreen() {
   const { careerId } = Route.useParams();
   const { season } = Route.useSearch();
   const query = useCareer(careerId);
+  const serviceSeasonQuery = useServiceSeason();
   const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
 
   useEffect(() => {
@@ -287,6 +290,12 @@ function SeasonResultScreen() {
   const index = season ?? state.seasonHistory.length - 1;
   const view = deriveSeasonResultView(state, index, ruleset);
   if (view === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
+  // 사용자 결정(2026-09-13): 1시즌 = 1년, 커리어 시작 연도부터 "2026 시즌"으로 표기(season-year.ts).
+  const startYear = careerStartYear({
+    seasonServiceSeasonId: state.season?.serviceSeasonId ?? null,
+    currentServiceSeason: serviceSeasonQuery.data,
+    calendarStartYear: extractCalendarStartYear(ruleset.leagueCalendar),
+  });
   const profile = state.player.profile;
   if (profile === null) return null; // deriveSeasonResultView가 이미 profile 확정을 요구한다. 방어적 fallback.
 
@@ -335,7 +344,7 @@ function SeasonResultScreen() {
       <ScreenIntro
         eyebrow="SEASON REVIEW"
         title={view.isYouth ? '유소년 시즌 결과' : '프로 시즌 결과'}
-        description={`시즌 ${view.seasonNumber}`}
+        description={seasonYearLabel(startYear, view.seasonNumber)}
       />
 
       <PlayerBanner
@@ -347,14 +356,22 @@ function SeasonResultScreen() {
         age={state.age}
         ovr={profile.baseOvr}
       />
+      {view.result.clubMeetingGoal ? (
+        <section className="os-panel flex flex-col gap-os-2" aria-label="구단 면담 목표 결과">
+          <p className="os-eyebrow">구단 면담 목표</p>
+          <p className="font-os font-semibold text-os-text">{view.result.clubMeetingGoal.status === 'MET' ? '목표 달성' : '기준 미달 · 추가 불이익 없음'}</p>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>시즌 출전 확인 기준 {view.result.clubMeetingGoal.targetMinutesShareBp / 100}% · 실제 {view.result.clubMeetingGoal.actualMinutesShareBp / 100}%</p>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>적용 효과: 감독 신뢰 {view.result.clubMeetingGoal.effect.managerTrustDelta >= 0 ? '+' : ''}{view.result.clubMeetingGoal.effect.managerTrustDelta} · 사기 {view.result.clubMeetingGoal.effect.moraleDelta >= 0 ? '+' : ''}{view.result.clubMeetingGoal.effect.moraleDelta}</p>
+        </section>
+      ) : null}
 
       <GameResultReveal
         fast={state.simulationMode === 'FAST'}
-        announcement={`시즌 ${view.seasonNumber} 결과, 평균 평점 ${ratingText(common.avgRatingTenths)}`}
+        announcement={`${seasonYearLabel(startYear, view.seasonNumber)} 결과, 평균 평점 ${ratingText(common.avgRatingTenths)}`}
         skippable={false}
       >
         <section className="os-story-card flex flex-col gap-os-3" aria-label="시즌 한눈에 보기">
-          <p className="os-eyebrow">시즌 {view.seasonNumber} · 최종 기록</p>
+          <p className="os-eyebrow">{seasonYearLabel(startYear, view.seasonNumber)} · 최종 기록</p>
           <p className="font-os font-bold text-os-text" style={H2_STYLE}>{headline}</p>
           {/* T-7-010 이슈 144·D-68: 승격권은 순위 기록일 뿐 리그 이동은 이번 버전에 없다 — 화면 문구가
               리그가 바뀐 것처럼 읽히지 않도록 캡션을 남긴다. 라우트 전용 상수라 labels.ts로 옮기지 않는다. */}

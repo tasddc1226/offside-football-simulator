@@ -119,6 +119,17 @@ describe('matchesTrigger', () => {
     expect(matchesTrigger({ kind: 'DERBY' }, cupVsRival, ctx)).toBe(false);
   });
 
+  // PR #208 리뷰 후속(D-77 우회 대신 선택 키 가드): ctx.rivalTeamId가 정의되면(1.5.0 K1·K2처럼
+  // 이름 있는 라이벌 쌍을 가진 팀) 그 팀과의 리그 경기만 DERBY로 맞고, 이름 없는 상대는 더 이상
+  // 맞지 않는다. rivalTeamId가 없는 경우(위 테스트, 기존 픽스처)는 동작이 그대로다.
+  it('ctx.rivalTeamId가 정의되면 그 팀과의 경기만 DERBY로 맞는다(이름 있는 라이벌)', () => {
+    const namedRivalCtx = { ...ctx, rivalTeamId: 'suwon-hwahong-fc' };
+    const namedRivalMatch = makeMatch({ opponent: { id: 'suwon-hwahong-fc', name: '수원 화홍 FC', strength: 83 } });
+    expect(matchesTrigger({ kind: 'DERBY' }, namedRivalMatch, namedRivalCtx)).toBe(true);
+    const unnamedMatch = makeMatch({ opponent: { id: 'league-youth-opp-4', name: 'Rival', strength: 50 } });
+    expect(matchesTrigger({ kind: 'DERBY' }, unnamedMatch, namedRivalCtx)).toBe(false);
+  });
+
   it('DECIDER는 마지막 리그 step이고 경계 ±maxRankGap 안일 때만 맞는다', () => {
     const match = makeMatch();
     const trigger: ChapterTrigger = { kind: 'DECIDER', maxRankGap: 1 };

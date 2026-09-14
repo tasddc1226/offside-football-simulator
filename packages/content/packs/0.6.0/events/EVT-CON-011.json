@@ -1,0 +1,119 @@
+{
+  "id": "EVT-CON-011",
+  "version": 1,
+  "phases": ["IN_SEASON"],
+  "triggers": {
+    "all": [
+      { "eq": ["career.stage", "PRO"] },
+      { "gte": ["career.proSeasons", 1] },
+      { "not": { "hasTag": ["career.tags", "에이전트_계약"] } },
+      { "not": { "hasTag": ["career.tags", "직접_협상"] } }
+    ]
+  },
+  "exclusionTags": ["에이전트_계약"],
+  "cooldown": { "seasons": 1 },
+  "weight": 80,
+  "authoring": "PROTOTYPE",
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "계약",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "에이전트 관계 상승", "target": "agent", "direction": "UP" },
+        { "label": "팬 반응 소폭 하락", "target": "fans", "direction": "DOWN" },
+        { "label": "다음 이적시장 제안 수 +1" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "에이전트와 계약했다",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-011.A.A1.0",
+              "target": "agent",
+              "delta": 8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-011.A.A1.1",
+              "target": "fans",
+              "delta": -2,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["에이전트_계약"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "보류",
+      "riskLabel": "LOW",
+      "previewEffects": [{ "label": "결정을 미룸, 변화 없음" }],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "당장은 답하지 않았다",
+          "effects": []
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "직접 협상",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "에이전트 관계 하락", "target": "agent", "direction": "DOWN" },
+        { "label": "감독 신뢰 상승", "target": "managerTrust", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "직접 나서기로 했다",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-011.C.C1.0",
+              "target": "agent",
+              "delta": -5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-011.C.C1.1",
+              "target": "managerTrust",
+              "delta": 3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["직접_협상"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "{agent} 에이전트가 연락해온다. \"제가 맡으면 제안이 하나 더 들어올 겁니다.\""
+  }
+}

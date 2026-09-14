@@ -13,8 +13,15 @@ function clampStrength(value: number): number {
   return Math.min(100, Math.max(0, value));
 }
 
-/** T-2-004 D-38: DERBY 트리거. 이름 있는 상대는 라이벌이 아니다(이름 없는 상대만 rivalOpponentIndex로 지정). */
-export function isRivalOpponent(league: League, opponentId: string): boolean {
+/**
+ * T-2-004 D-38: DERBY 트리거. `rivalTeamId`는 선수 소속 팀의 `Team.rivalTeamId`(정의됐으면 그 팀과의
+ * 경기가 라이벌)를 그대로 넘겨받는다 — PR #208 리뷰 후속(D-77 우회 대신 선택 키 가드). 정의돼 있지
+ * 않으면(1.0.0~1.4.0, 또는 1.5.0의 R리그 B팀·K3 필러처럼 이름 있는 라이벌이 없는 팀) 기존처럼
+ * 이름 없는 상대만 라이벌로 인정한다(rivalOpponentIndex, D-43/D-67 가드 패턴 — 옛 룰셋 결과·해시
+ * 불변).
+ */
+export function isRivalOpponent(league: League, opponentId: string, rivalTeamId?: string): boolean {
+  if (rivalTeamId !== undefined) return opponentId === rivalTeamId;
   return opponentId === `${league.id}-opp-${league.rivalOpponentIndex}`;
 }
 

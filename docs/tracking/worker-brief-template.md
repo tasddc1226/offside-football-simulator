@@ -34,6 +34,7 @@
 - e2e는 브리프가 지정한 워커별 포트로 돌린다(`E2E_PORT=<포트> pnpm --filter @offside/web e2e`, PR #42부터 지원; 실 api 모드는 `E2E_API_URL`). 지정이 없을 때만 아래 5174 규칙을 따른다.
 - 전체 체인의 e2e 단계 전에 `lsof -nP -iTCP:5174 -sTCP:LISTEN`이 비어 있는지 확인한다. Playwright가 이미 떠 있는 Vite 서버를 재사용하므로(포트 고정 5174), 다른 워커나 오케스트레이터의 e2e와 겹치면 다른 코드를 테스트하게 된다. 비어 있지 않으면 끝날 때까지 기다린다(`until ! lsof -nP -iTCP:5174 -sTCP:LISTEN >/dev/null; do sleep 10; done`).
 - PR 직전 `git fetch origin && git merge origin/main`으로 최신 main을 합친다. `pnpm-lock.yaml` 충돌은 손으로 고치지 말고 `git checkout origin/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile`로 재생성한 뒤 전체 체인을 다시 돌린다.
+- 머신을 여러 세션(오케스트레이터 검증 체인·CI 러너·다른 워커)이 함께 쓴다. 자기가 띄운 프로세스(dev 서버·wrangler·미리보기)는 **띄울 때 받은 PID로만** 끈다(`kill <pid>` 또는 `lsof -tiTCP:<포트> -sTCP:LISTEN | xargs kill`). `pkill -f "vite"`·`pkill -f workerd`·`killall node` 같은 이름 패턴 종료는 금지 — 2026-09-14 워커의 `pkill -f "vite"`가 다른 세션의 `vitest` 체인을 죽였다.
 
 ## 진행 보고
 - 체크포인트마다 `orca worktree set --worktree active --comment "..."` 갱신

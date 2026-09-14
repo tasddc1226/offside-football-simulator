@@ -208,6 +208,13 @@ function SeasonPrepScreen() {
           {ROLE_PROMISE_SENTENCE[contract.rolePromise]}
         </p>
       </section>
+      {state.clubMeeting?.seasonIndex === state.seasonHistory.length + 1 ? (
+        <section className="os-panel flex flex-col gap-os-2" aria-label="구단 면담 계획">
+          <p className="os-eyebrow">구단 면담 계획</p>
+          <p>{state.clubMeeting.response === 'ACCEPTED' ? '구단 수락' : '구단 거절'} · 시즌 출전 확인 기준 {state.clubMeeting.goal.targetMinutesShareBp / 100}%</p>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>실제 역할과 출전은 프리시즌 경쟁 후 조정될 수 있습니다.</p>
+        </section>
+      ) : null}
 
       <section className="os-plan-summary" aria-labelledby="selected-plan-title">
         <p className="os-eyebrow">선택한 계획</p>

@@ -59,6 +59,9 @@ export type SelectChapterInput = {
   /** `season.chapters[].chapterId`(이번 시즌에 이미 확정된 챕터, 재열림 방지). */
   existingChapterIds: readonly string[];
   league: League;
+  /** PR #208 리뷰 후속: 선수 소속 팀의 `Team.rivalTeamId`(정의됐으면 DERBY 판정에 쓴다 — 없으면
+   * isRivalOpponent가 기존 이름 없는 상대 로직으로 폴백한다). */
+  rivalTeamId?: string | undefined;
   /** 첫 회복 후 실제 출전 경기 id. 없으면 INJURY_RETURN 후보는 열리지 않는다. */
   injuryReturnMatchId?: string | null;
   /** 최초 수락 뒤 유지되는 NATIONAL_DEBUT 예약. null/undefined면 대표팀 데뷔 후보를 열지 않는다. */
@@ -95,6 +98,8 @@ type TriggerContext = {
   league: League;
   leaguePosition: number | null;
   tags: readonly string[];
+  /** PR #208 리뷰 후속: 선수 소속 팀의 `Team.rivalTeamId`. isRivalOpponent에 그대로 넘긴다. */
+  rivalTeamId?: string | undefined;
   injuryReturnMatchId?: string | null;
   nationalDebutReservation?: NationalDebutReservation | null;
 };
@@ -109,7 +114,7 @@ export function matchesTrigger(trigger: ChapterTrigger, match: MatchRecord, ctx:
     case 'DEBUT':
       return ctx.seasonIndex === 1 && ctx.isFirstCareerAppearance;
     case 'DERBY':
-      return match.kind === 'LEAGUE' && isRivalOpponent(ctx.league, match.opponent.id);
+      return match.kind === 'LEAGUE' && isRivalOpponent(ctx.league, match.opponent.id, ctx.rivalTeamId);
     case 'CUP_FINAL':
       return match.kind === 'CUP' && match.round === 'FINAL';
     case 'DECIDER':
@@ -159,6 +164,7 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
             league: input.league,
             leaguePosition,
             tags: input.tags,
+            rivalTeamId: input.rivalTeamId,
             ...(input.injuryReturnMatchId === undefined ? {} : { injuryReturnMatchId: input.injuryReturnMatchId }),
             ...(input.nationalDebutReservation === undefined ? {} : { nationalDebutReservation: input.nationalDebutReservation }),
           },

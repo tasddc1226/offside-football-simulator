@@ -155,14 +155,34 @@ const darkBlock = extractBlock(css, /:root\[data-theme=['"]dark['"]\]\s*\{/);
 const light = withHeroGradientEnd(parseVars(lightBlock));
 const dark = withHeroGradientEnd({ ...light, ...parseVars(darkBlock) });
 
-// UX-004 포인트 색상 프리셋 + UX-013 가상 구단 12팀 프리셋('team-<id>', TEAM_IDS 순서). tokens.css의
+// UX-004 포인트 색상 프리셋 + UX-013 가상 구단 프리셋('team-<id>', ACCENT_TEAM_IDS 순서). tokens.css의
 // id 목록과 맞춰 둔다(색을 더하거나 빼면 여기도 고친다).
 const BASE_ACCENT_PRESET_IDS = ['green', 'violet', 'crimson', 'amber', 'mono'];
 
+// UX-013: data-accent='team-<id>' 프리셋이 있는 팀. 1.5.0의 K1 리그 12개 구단(accent-presets.ts의
+// TEAM_ACCENT_PRESET_TEAM_IDS와 순서까지 같다). 1.0.0~1.4.0의 옛 12개 구단은 배지 색만 있고
+// 프리셋은 없다(교체됐다) — 아래 BADGE_TEAM_IDS에서만 검사한다.
+const ACCENT_TEAM_IDS = [
+  'seoul-hangang-fc',
+  'suwon-hwahong-fc',
+  'incheon-gaetbeol-fc',
+  'jeonju-deulnyeok-united',
+  'ulsan-pado-fc',
+  'pohang-donghae-fc',
+  'daegu-palgong-fc',
+  'jeju-halla-city',
+  'gangneung-haesol-fc',
+  'gwangju-mudeung-fc',
+  'daejeon-gapcheon-fc',
+  'busan-deungdae-fc',
+];
+
 // UX-008 구단 배지. tokens.css --os-team-<id> 목록과 id를 맞춰 둔다(팀을 추가·빼면 여기도 고친다).
 // 배지 텍스트는 항상 --os-on-accent라 그 값과의 대비만 보면 된다(배경은 컴포넌트가 이 변수를
-// 인라인 style로 꽂아 넣을 뿐 별도 조합이 없다).
-const TEAM_IDS = [
+// 인라인 style로 꽂아 넣을 뿐 별도 조합이 없다). 1.0.0~1.4.0(가상 구단 12개)과 1.5.0(K리그식 27개)이
+// 공존한다 — 과거 커리어의 ClubBadge가 계속 그려지므로 옛 id도 계속 검사한다.
+const BADGE_TEAM_IDS = [
+  // 1.0.0~1.4.0
   'hangang-u18',
   'seorabeol-united',
   'cheongyeon-fc',
@@ -175,9 +195,27 @@ const TEAM_IDS = [
   'eunha-rovers',
   'gangnaru-united',
   'dalbit-town-fc',
+  // 1.5.0 R리그(B팀)
+  'seoul-hangang-fc-b',
+  // 1.5.0 K1 + K2
+  ...ACCENT_TEAM_IDS,
+  'anyang-pyeongchon-fc',
+  'bucheon-wonmi-fc',
+  'seongnam-tancheon-fc',
+  'gimpo-pyeongya-fc',
+  'cheonan-heungtaryeong-fc',
+  'asan-oncheon-fc',
+  'cheongju-jikji-fc',
+  'changwon-jinhae-fc',
+  'gwangyang-maehwa-fc',
+  'gimcheon-hwangak-fc',
+  'ansan-gaetgol-fc',
+  'yongin-hanteo-fc',
+  'hwaseong-gukhwa-fc',
+  'seoul-namsan-fc',
 ];
 
-const ACCENT_PRESET_IDS = [...BASE_ACCENT_PRESET_IDS, ...TEAM_IDS.map((id) => `team-${id}`)];
+const ACCENT_PRESET_IDS = [...BASE_ACCENT_PRESET_IDS, ...ACCENT_TEAM_IDS.map((id) => `team-${id}`)];
 
 /** @param {string} id */
 function presetVars(id) {
@@ -304,7 +342,7 @@ const presetRows = ACCENT_PRESET_IDS.flatMap((id) => {
  * @param {Record<string, string>} vars
  */
 function checkTeamBadges(themeName, vars) {
-  return TEAM_IDS.map((id) => {
+  return BADGE_TEAM_IDS.map((id) => {
     const ratio = contrastRatio(tokenColor(vars, 'on-accent'), tokenColor(vars, `team-${id}`));
     return { theme: themeName, fg: 'on-accent', bg: `team-${id}`, ratio, min: 4.5, pass: ratio >= 4.5 };
   });

@@ -41,6 +41,62 @@ describe('RulesetSchema', () => {
     expect(() => RulesetSchema.parse(ruleset)).toThrowError(/startTeamId가 teams에 없다/);
   });
 
+  it('rejects a league whose named teams leave no room for an unnamed rival opponent (D-77 회귀 방지)', () => {
+    // buildLeagueRounds(schedule.ts)는 이름 있는 팀이 teamCount-1을 다 채우면 이름 없는
+    // `${league.id}-opp-${n}` 상대를 하나도 만들지 않는다 — isRivalOpponent가 그 리그에서 영원히
+    // false만 반환해 DERBY 챕터·TAG-DERBY-HERO 업적이 발동 불가능해진다(1.5.0 K1·K2 회귀).
+    const ruleset = cloneRuleset();
+    const league = ruleset.leagues.find((l) => l.id === 'league-tier3');
+    if (!league) throw new Error('fixture missing league-tier3');
+    const namedTeamCount = ruleset.teams.filter((t) => t.leagueId === league.id).length;
+    league.teamCount = namedTeamCount + league.rivalOpponentIndex - 1;
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/이름 없는 라이벌 상대\(opp-1\)가 생기지 않아/);
+  });
+
+  it('allows a league with no room for an unnamed rival opponent when every team in it has rivalTeamId (PR #208 리뷰 후속 — 이름 있는 라이벌 쌍이 전 팀을 커버)', () => {
+    const ruleset = cloneRuleset();
+    const league = ruleset.leagues.find((l) => l.id === 'league-tier3');
+    if (!league) throw new Error('fixture missing league-tier3');
+    const teamsInLeague = ruleset.teams.filter((t) => t.leagueId === league.id) as Array<{
+      id: string;
+      rivalTeamId?: string;
+    }>;
+    if (teamsInLeague.length !== 4) throw new Error('fixture league-tier3 팀 수 가정이 깨졌다(4개 예상)');
+    teamsInLeague[0]!.rivalTeamId = teamsInLeague[1]!.id;
+    teamsInLeague[1]!.rivalTeamId = teamsInLeague[0]!.id;
+    teamsInLeague[2]!.rivalTeamId = teamsInLeague[3]!.id;
+    teamsInLeague[3]!.rivalTeamId = teamsInLeague[2]!.id;
+    // 이름 없는 라이벌 슬롯(opp-1)이 하나도 남지 않게 teamCount를 줄인다 — rivalTeamId가 없었다면
+    // 위 D-77 검증에 걸렸을 값이다.
+    league.teamCount = teamsInLeague.length + league.rivalOpponentIndex - 1;
+    expect(() => RulesetSchema.parse(ruleset)).not.toThrow();
+  });
+
+  it('rejects a team whose rivalTeamId points to itself', () => {
+    const ruleset = cloneRuleset();
+    const team = ruleset.teams[0] as { id: string; rivalTeamId?: string };
+    team.rivalTeamId = team.id;
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/rivalTeamId가 자기 자신을 가리킨다/);
+  });
+
+  it('rejects a team whose rivalTeamId does not exist in teams', () => {
+    const ruleset = cloneRuleset();
+    const team = ruleset.teams[0] as { rivalTeamId?: string };
+    team.rivalTeamId = 'not-a-real-team';
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/rivalTeamId가 teams에 없다/);
+  });
+
+  it('rejects a team whose rivalTeamId belongs to a different league', () => {
+    const ruleset = cloneRuleset();
+    const team = ruleset.teams.find((t) => t.leagueId === 'league-tier1') as
+      | { leagueId: string; rivalTeamId?: string }
+      | undefined;
+    const otherLeagueTeam = ruleset.teams.find((t) => t.leagueId === 'league-tier2');
+    if (!team || !otherLeagueTeam) throw new Error('fixture missing teams');
+    team.rivalTeamId = otherLeagueTeam.id;
+    expect(() => RulesetSchema.parse(ruleset)).toThrowError(/다른 리그 팀이다/);
+  });
+
   it('rejects a team referencing an unknown wageBandId', () => {
     const ruleset = cloneRuleset();
     const team = ruleset.teams[0];
