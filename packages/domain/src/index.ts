@@ -271,3 +271,4 @@ export { selectLegacyDisplayEnding, type LegacyEndingId } from './legacy/endings
 export { initializeNationalityModule, assessNationalityAtSeasonBoundary, resolveNationalityChoice, grantTournamentException, isU23Eligible, type NationalityState } from './legacy/nationality.js';
 export { careerEventChoices, nationalityForCareer, type CareerEventChoice } from './legacy/career-event.js';
 export { assessCareerRetirement, retirementContinuationOptions, retirementDecisionRequired, RETIREMENT_POLICY } from './legacy/career-retirement.js';
+export type { RetirementPolicy } from './legacy/retirement.js';

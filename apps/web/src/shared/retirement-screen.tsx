@@ -12,6 +12,7 @@ import {
   nationalityForCareer,
   retirementContinuationOptions,
   legacyEndingPresentation,
+  RETIREMENT_POLICY,
   type CareerState,
   type Command,
   type CareerArchiveCore,
@@ -314,7 +315,8 @@ export function RetirementScreen({
   const terminal = state.status === 'RETIRED' || state.status === 'ARCHIVED';
   const profile = state.player.profile === null ? null : toPlayerPublic(state.player.profile);
   const ending = result === undefined ? null : legacyEndingPresentation(result.endingId);
-  const assessment = assessCareerRetirement(state);
+  const retirementPolicy = rulesetForCareer(state).retirementRules ?? RETIREMENT_POLICY;
+  const assessment = assessCareerRetirement(state, 'UNDECIDED', retirementPolicy);
   const nationality = nationalityForCareer(state);
   const careerId = state.careerId;
   const timelineRevisions = [...new Set(state.timeline.map((entry) => entry.revision))];

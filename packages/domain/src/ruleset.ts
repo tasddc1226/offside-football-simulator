@@ -10,6 +10,7 @@ import type {
   SquadRole,
   StatGroup,
 } from './types.js';
+import type { RetirementPolicy } from './legacy/retirement.js';
 
 // D-2: 아키타입 카탈로그. roleWeights 합은 1(±1e-9), template은 20키 전부.
 export type Archetype = {
@@ -429,6 +430,9 @@ export type Ruleset = {
     immediate: Record<'PLAYING_TIME_ACCEPTED' | 'PLAYING_TIME_REFUSED' | 'LOAN_ACCEPTED' | 'LOAN_REFUSED' | 'TRANSFER_ACCEPTED' | 'TRANSFER_REFUSED', { managerTrustDelta: number; moraleDelta: number }>;
     goalMet: { managerTrustDelta: number; moraleDelta: number };
   } | undefined;
+  /** T-7-031: 1.6.1+. 없는 룰셋(1.0.0~1.6.0)은 도메인 기본값 `RETIREMENT_POLICY`(1.0.0)를 그대로
+   * 쓴다 — 필드 부재가 과거 재현성을 보장한다(D-80 1라운드 ②). */
+  retirementRules?: RetirementPolicy | undefined;
   positions: Position[];
   archetypes: Archetype[];
   backgrounds: Background[];
