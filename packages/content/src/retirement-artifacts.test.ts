@@ -26,6 +26,15 @@ describe('loadRetirementArtifacts', () => {
     });
     expect(meetingArtifacts.rulesetChecksum).toMatch(/^[a-f0-9]{64}$/);
     expect(meetingArtifacts.contentPackChecksum).toMatch(/^[a-f0-9]{64}$/);
+    // T-7-025: 룰셋 1.6.1·팩 0.6.2(D-80 1라운드 ①)는 활성화 화이트리스트 밖이라 legacyVersion이 없다.
+    const peakAgeArtifacts = loadRetirementArtifacts('1.6.1', '0.6.2');
+    expect(peakAgeArtifacts).toMatchObject({
+      rulesetVersion: '1.6.1',
+      contentPackVersion: '0.6.2',
+    });
+    expect(peakAgeArtifacts.legacyVersion).toBeUndefined();
+    expect(peakAgeArtifacts.rulesetChecksum).toMatch(/^[a-f0-9]{64}$/);
+    expect(peakAgeArtifacts.contentPackChecksum).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('activates the published Legacy 1.1 reference only for the 1.1/0.3 release pair', () => {
