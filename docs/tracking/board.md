@@ -269,6 +269,8 @@ Phase 0 완료 조건은 [`phase-00-foundation.md`](../phases/phase-00-foundatio
 | 테스트 결손 복구 | web(test) | main 웹 단위 테스트 25건 실패(4파일) — #198 폴백 상수 1.4.0/0.5.1 변경으로 `resolveServiceSeason()` 폴백·`engine/content.ts` 싱글턴에 결합된 테스트가 깨짐. 테스트 픽스처를 1.0.0/0.1.0으로 고정(`src/test/content-fixtures.ts`, `seedTestServiceSeason()`), 운영 코드 미변경 | completed | 2026-09-13 PR #202 `150045b`. 발견 경위·CI 게이트 구멍·체인 판정 규칙 보강은 D-76. 전 패키지 `turbo run test --continue` 10/10 녹색 |
 | 운영 배포(1.4.0) | web·api·infra | 룰셋 1.4.0/팩 0.5.1 운영 승격(`svc_season_1` manifest activate, 기존 커리어는 1.3.0/0.5.0 유지) + Wave C·D·E·온보딩 #193 코드 | completed | 2026-09-13 06:17(KST) preflight run 34719440933 성공 → deploy run 34719522293 `1b39e02`(`DEPLOY_PRODUCTION`, `season_starts_at=2026-09-05T15:00:00Z`, `challenge_set_id=cs_season_1`) 성공. API `e18854aa…`·web `702e315a…`, manifest activate → readback noop. current API `svc_season_1` ACTIVE 1.4.0/0.5.1·health ok·web 200, 운영 설정 화면 상세 버전 1.4.0/0.5.1 표시 확인(Orca 브라우저). D-75 |
 | 리뷰 후속(2차) | domain·web | P2 잔여: #145 미이행 실시간 알림, #147 재계약 사전 협상 타이밍, #148 임대 성과 미반영(셋 다 T-7-002와 같은 도메인 파일 → 2차 웨이브). P3 #153~#172 묶음 | todo | 2026-09-07 14시 이슈 #140~#172(33건) 등록, #104·#105 QA 코멘트. 1차 웨이브 T-7-001~010 브리프는 14:50 작성. 투입은 사용자 승인 뒤 |
+| T-7-014 | api·contracts | 실시간 플레이 중 인원 API: `GET /v1/presence`(5분 창 프로필 수, 공개, 30초 캐시)·`POST /v1/presence/heartbeat`(세션 `last_seen_at` 갱신, 30초 스로틀), `sessions(last_seen_at)` 인덱스 마이그레이션 | todo | [브리프](briefs/T-7-014.md) D-78, port 5276. 사용자 승인 대기 |
+| T-7-015 | web·ui(css) | 상단 공통 네비바 "N명 플레이 중" 배지(60초 갱신, 0·미수신이면 숨김) + 탭 가시 시 60초 하트비트 + 개인정보 문구 1줄 | todo | [브리프](briefs/T-7-015.md) D-78, port 5277. T-7-014 머지 뒤 시작 |
 
 ## 미니앱 출시 준비 백로그 (보류, 사용자 결정 시 착수)
 

@@ -112,6 +112,15 @@ Archive 본문은 클라이언트가 계산한 LegacyResult를 포함한다. 서
 
 보상 수령은 Archive의 도전 판정 필드를 서버가 다시 계산해 확인한다. `verifyOnClaim`이 켜진 시즌은 API-VER-001 통과가 조건이다.
 
+## 실시간 현황 API (D-78)
+
+| ID | Method / Path | 목적 |
+|---|---|---|
+| API-PRES-001 | `GET /presence` | 최근 5분 안에 활동한 프로필 수(`playingNow`)·창 크기(`windowMinutes`)·표본 시각. 공개, 세션 불필요, `Cache-Control: public, max-age=30` |
+| API-PRES-002 | `POST /presence/heartbeat` | 호출한 세션의 `last_seen_at` 갱신(30초 스로틀). 세션이 없으면 204 no-op(프로필 생성 안 함). 클라이언트는 탭이 보이는 동안 60초 주기 |
+
+집계는 `sessions.last_seen_at`(프로필 기준 중복 제거)만 쓰고 새 테이블·바인딩을 만들지 않는다. 개인을 표시하지 않으며 값은 상단 네비바 "N명 플레이 중" 배지에만 쓰인다.
+
 ## 콘텐츠
 
 콘텐츠 팩과 ruleset은 API가 아니라 정적 자산이다.
