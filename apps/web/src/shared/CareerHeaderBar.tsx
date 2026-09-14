@@ -14,6 +14,7 @@ import { useCareer } from '../engine/use-career.js';
 import { careerHeaderName, careerHeaderOvr, careerHeaderRoleLabel } from './career-header-data.js';
 import { CareerHeader } from './CareerHeader.js';
 import { CareerTabs } from './CareerTabs.js';
+import { useIsCommittingGuardActive } from './committing-guard.js';
 import { currentTeamId, currentTeamName } from './current-team.js';
 import { DASHBOARD_TAB_ITEMS, normalizeDashboardTab, type DashboardTab } from './dashboard-tabs.js';
 import { isCareerDashboardPathname } from './career-pathname.js';
@@ -62,7 +63,13 @@ export function CareerHeaderBar({
   const search = useSearch({ strict: false }) as { view?: unknown; signed?: unknown };
   const signedFlag = search.signed === true;
   const teamNameOverrides = useUiStore((state) => state.teamNameOverrides);
-  const mutating = useIsMutating() > 0;
+  // PR 231 리뷰: 전역 useIsMutating()만 보면 confirm.tsx(SCR-004) 등 COMMITTING 화면의 결과 연출·
+  // 복구 코드 대기 구간(뮤테이션은 끝났지만 화면 FSM은 아직 COMMITTING)에서 홈 버튼이 이탈 방지를
+  // 우회한다 — useCommittingExitGuard가 켜는 전역 신호도 함께 반영한다. 두 훅 모두 매 렌더 항상
+  // 호출해야 하므로(Rules of Hooks) `||`로 묶어 단축 평가되지 않게 먼저 각자 변수에 담는다.
+  const isMutating = useIsMutating() > 0;
+  const isCommittingGuardActive = useIsCommittingGuardActive();
+  const mutating = isMutating || isCommittingGuardActive;
 
   const data = query.data;
   if (data === undefined || data.state.status === 'DRAFT') {
