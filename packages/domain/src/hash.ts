@@ -26,8 +26,24 @@ function toHex8(n: number): string {
   return (n >>> 0).toString(16).padStart(8, '0');
 }
 
-/** 순수 TS SHA-256(FIPS 180-4). 전역 `crypto`를 쓰지 않는다. */
-export function sha256Hex(input: string): string {
+/**
+ * `sha256Hex`가 순수 구현 대신 위임할 수 있는 해시 함수. 호스트(예: Node `crypto`)가 주입한다.
+ * 반환값은 동일해야 하며(같은 입력 → 같은 64자 hex 소문자) 호스트가 검증 책임을 진다.
+ */
+export type Sha256Provider = (input: string) => string;
+
+let sha256Provider: Sha256Provider | null = null;
+
+/**
+ * `sha256Hex`가 사용할 구현을 교체한다. `null`을 넘기면 순수 TS 구현으로 되돌아간다.
+ * 이 함수는 주입만 받을 뿐 Node·브라우저 API를 직접 import하지 않는다 — 도메인 순수성은
+ * 그대로 유지된다.
+ */
+export function setSha256Provider(provider: Sha256Provider | null): void {
+  sha256Provider = provider;
+}
+
+function sha256HexPure(input: string): string {
   const message = utf8Encode(input);
   const bitLength = message.length * 8;
 
@@ -103,6 +119,17 @@ export function sha256Hex(input: string): string {
   }
 
   return [h0!, h1!, h2!, h3!, h4!, h5!, h6!, h7!].map(toHex8).join('');
+}
+
+/**
+ * SHA-256 hex 다이제스트. `setSha256Provider`로 provider가 설치되어 있으면 그 결과를 그대로
+ * 돌려준다(이 경로는 `utf8Encode`를 부르지 않는다 — provider가 UTF-8 인코딩을 직접 한다).
+ * provider가 없으면 순수 TS 구현(FIPS 180-4)을 쓴다. 두 경로의 반환값은 동일해야 하며
+ * (같은 입력 → 같은 64자 hex 소문자) 호스트가 검증 책임을 진다.
+ */
+export function sha256Hex(input: string): string {
+  if (sha256Provider !== null) return sha256Provider(input);
+  return sha256HexPure(input);
 }
 
 /** `sha256Hex(canonicalize(state))`. Snapshot 무결성 검증의 기준값이다. */
