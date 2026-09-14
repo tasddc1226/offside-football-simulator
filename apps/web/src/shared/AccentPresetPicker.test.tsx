@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { loadRuleset } from '@offside/content';
 import { AccentPresetPicker } from './AccentPresetPicker.js';
 
-// 구단 컬러 프리셋은 룰셋 1.5.0(K1 12개)을 직접 읽는다(AccentPresetPicker.tsx 참고) — activeRuleset이
-// 아직 1.4.0이라도 라벨이 항상 정확한 팀명을 쓴다.
+// 구단 컬러 프리셋은 활성 룰셋(activeRuleset, 1.5.0 승격 뒤로는 K1 12개)의 팀명을 쓴다
+// (AccentPresetPicker.tsx 참고). 여기서는 같은 값을 리터럴로 다시 로드해 라벨을 검증한다.
 const presetRuleset = loadRuleset('1.5.0');
 
 describe('AccentPresetPicker', () => {

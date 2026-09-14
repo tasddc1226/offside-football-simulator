@@ -45,12 +45,12 @@ describe('production release guards', () => {
     ]);
   });
 
-  it('targets the 1.4.0/0.5.1 manifest from the 1.3.0/0.5.0 predecessor', () => {
-    expect(PRODUCTION_SEASON.rulesetVersion).toBe('1.4.0');
-    expect(PRODUCTION_SEASON.contentPackVersion).toBe('0.5.1');
+  it('targets the 1.5.0/0.6.0 manifest from the 1.4.0/0.5.1 predecessor', () => {
+    expect(PRODUCTION_SEASON.rulesetVersion).toBe('1.5.0');
+    expect(PRODUCTION_SEASON.contentPackVersion).toBe('0.6.0');
     expect(PREVIOUS_PRODUCTION_VERSION).toEqual({
-      rulesetVersion: '1.3.0',
-      contentPackVersion: '0.5.0',
+      rulesetVersion: '1.4.0',
+      contentPackVersion: '0.5.1',
     });
   });
 
@@ -63,10 +63,10 @@ describe('production release guards', () => {
     expect(() => decideSeason([{ ...proposal, rulesetVersion: '1.0.0' }], proposal)).toThrow(
       'different ACTIVE',
     );
-    // 두 세대 전 manifest(1.1.0/0.3.0)는 더 이상 승격 출발점이 아니다.
+    // 두 세대 전 manifest(1.3.0/0.5.0)는 더 이상 승격 출발점이 아니다.
     expect(() =>
       decideSeason(
-        [{ ...proposal, rulesetVersion: '1.1.0', contentPackVersion: '0.3.0' }],
+        [{ ...proposal, rulesetVersion: '1.3.0', contentPackVersion: '0.5.0' }],
         proposal,
       ),
     ).toThrow('different ACTIVE');
@@ -82,19 +82,19 @@ describe('production release guards', () => {
     const previous = { ...proposal, ...PREVIOUS_PRODUCTION_VERSION };
     const decision = decideSeason([previous], proposal);
     expect(decision.action).toBe('activate');
-    expect(decision.sql).toContain("ruleset_version = '1.3.0'");
-    expect(decision.sql).toContain("content_pack_version = '0.5.0'");
-    expect(decision.sql).toContain("SET ruleset_version = '1.4.0', content_pack_version = '0.5.1'");
+    expect(decision.sql).toContain("ruleset_version = '1.4.0'");
+    expect(decision.sql).toContain("content_pack_version = '0.5.1'");
+    expect(decision.sql).toContain("SET ruleset_version = '1.5.0', content_pack_version = '0.6.0'");
     expect(decision.rollbackSql).toContain(
-      "SET ruleset_version = '1.3.0', content_pack_version = '0.5.0'",
+      "SET ruleset_version = '1.4.0', content_pack_version = '0.5.1'",
     );
-    expect(decision.rollbackSql).toContain("ruleset_version = '1.4.0'");
-    expect(decision.rollbackSql).toContain("content_pack_version = '0.5.1'");
+    expect(decision.rollbackSql).toContain("ruleset_version = '1.5.0'");
+    expect(decision.rollbackSql).toContain("content_pack_version = '0.6.0'");
     expect(() => decideSeason([{ ...previous, contentPackVersion: '0.4.0' }], proposal)).toThrow(
       'different ACTIVE',
     );
-    // 1.4.0 룰셋만 먼저 올라간 혼합 pair도 출발점으로 인정하지 않는다.
-    expect(() => decideSeason([{ ...previous, rulesetVersion: '1.4.0' }], proposal)).toThrow(
+    // 1.5.0 룰셋만 먼저 올라간 혼합 pair도 출발점으로 인정하지 않는다.
+    expect(() => decideSeason([{ ...previous, rulesetVersion: '1.5.0' }], proposal)).toThrow(
       'different ACTIVE',
     );
   });
