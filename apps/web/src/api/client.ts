@@ -11,6 +11,7 @@ import {
   IssueRecoveryCodeResponseSchema,
   LivePresenceSchema,
   MergeResponseSchema,
+  NoticesResponseSchema,
   ProfileSchema,
   RecoverProfileResponseSchema,
   ServiceSeasonCurrentSchema,
@@ -22,6 +23,7 @@ import {
   type LivePresence,
   type MergeChoice,
   type MergeResponse,
+  type NoticesResponse,
   type Profile,
   type RecoverProfileResponse,
   type ServiceSeasonCurrent,
@@ -187,4 +189,10 @@ export function getLivePresence(): Promise<ApiResult<LivePresence>> {
 /** API-PRES-002. 성공·세션 없음 모두 204(본문 없음). D-78. */
 export function postPresenceHeartbeat(): Promise<ApiResult<undefined>> {
   return apiFetch('/v1/presence/heartbeat', { method: 'POST', body: '{}' });
+}
+
+/** API-NOTICE-001. 프로필 세션이 필요 없는 공개 엔드포인트. `limit` 생략 시 서버 기본값(10). */
+export function getNotices(limit?: number): Promise<ApiResult<NoticesResponse>> {
+  const query = limit !== undefined ? `?limit=${encodeURIComponent(String(limit))}` : '';
+  return apiFetch(`/v1/notices${query}`, { method: 'GET' }, NoticesResponseSchema);
 }

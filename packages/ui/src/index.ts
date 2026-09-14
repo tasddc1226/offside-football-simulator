@@ -19,8 +19,14 @@ export type {
 } from './components/CompareCards.js';
 export { DashboardSection } from './components/DashboardSection.js';
 export type { DashboardSectionProps } from './components/DashboardSection.js';
-export { Dialog, DialogClose, DialogContent, DialogTrigger } from './components/Dialog.js';
-export type { DialogContentProps } from './components/Dialog.js';
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTrigger,
+  SheetContent,
+} from './components/Dialog.js';
+export type { DialogContentProps, SheetContentProps } from './components/Dialog.js';
 export { Disclosure } from './components/Disclosure.js';
 export type { DisclosureProps } from './components/Disclosure.js';
 export { DisplayWord } from './components/DisplayWord.js';

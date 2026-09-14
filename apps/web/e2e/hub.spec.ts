@@ -1,13 +1,23 @@
 // TEST-E2E(08 문서): 첫 방문 → 온보딩 → 건너뛰기 → 빈 허브 → KICKOFF → DRAFT → 허브 카드 → 삭제.
 import { expect, test } from '@playwright/test';
+import { NOTICES_FIXTURE, stubNotices, stubNoticesFailure } from './helpers/notices.js';
 
 test('첫 방문은 게임 소개 페이지가 보이고, 온보딩을 건너뛰면 빈 허브가 보인다', async ({ page }) => {
+  // 사용자 결정(2026-09-14): 공지사항은 서버 API(GET /v1/notices)에서 온다 — 랜딩(PublicIntroduction)의
+  // HomeCommunity가 이관된 공지 2건을 그대로 보여주는지 함께 확인한다.
+  await stubNotices(page);
+
   // D-70(#117): 커리어가 없고 온보딩도 안 본 첫 방문자는 더 이상 /onboarding으로 자동 리다이렉트되지
   // 않는다 — 허브(/)가 PublicIntroduction 랜딩을 직접 보여주고, "게임 시작" 링크로만 온보딩에 간다.
   await page.goto('/');
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { level: 1, name: 'OFFSIDE' })).toBeVisible();
+
+  await expect(page.getByText(`${NOTICES_FIXTURE.length}개`)).toBeVisible();
+  for (const notice of NOTICES_FIXTURE) {
+    await expect(page.getByRole('button', { name: notice.title })).toBeVisible();
+  }
 
   await page.getByRole('link', { name: '게임 시작' }).click();
 
@@ -61,4 +71,14 @@ test('KICKOFF로 커리어를 만들면 허브 카드가 보이고, 삭제하면
 
   await expect(page.getByRole('heading', { level: 2, name: '이름 없는 선수' })).toHaveCount(0);
   await expect(page.getByRole('status')).toContainText('이름 없는 선수의 커리어를 삭제했습니다');
+});
+
+test('공지 API가 실패하면(캐시 없음) 빈 목록 문구로 대체된다', async ({ page }) => {
+  await stubNoticesFailure(page);
+
+  await page.goto('/');
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByText('아직 공지가 없습니다.')).toBeVisible();
+  await expect(page.getByText('0개')).toBeVisible();
 });

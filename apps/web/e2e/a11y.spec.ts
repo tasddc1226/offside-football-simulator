@@ -559,6 +559,16 @@ test('T-1-013 설정: Google 병합 선택 대화상자에 axe serious·critical
   await expectNoSeriousOrCriticalViolations(page, 'T-1-013 설정: Google 병합 선택');
 });
 
+test('설정: 서비스 정책 시트(이용약관)가 열린 상태에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
+  await page.goto('/settings');
+  await page.getByRole('button', { name: '이용약관' }).click();
+  await expect(page.getByRole('dialog', { name: '이용약관' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, '설정: 이용약관 시트');
+});
+
 test('T-1-013 설정: 로그아웃 확인 대화상자에 axe serious·critical 위반이 없다', async ({
   page,
 }) => {
