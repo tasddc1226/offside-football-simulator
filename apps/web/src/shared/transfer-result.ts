@@ -235,7 +235,7 @@ function transitionReason(kind: TransferResultKind, state: CareerState, competit
           ? `관심을 보인 구단 ${interestedClubCount}곳의 제안`
           : '타 구단 이적 제안';
     return (
-      `${interestPhrase}을 뒤로하고 안전하게 잔류했습니다. 남은 계약 ${remainingSeasons}시즌 · ` +
+      `${interestPhrase}을 뒤로하고 안전하게 잔류했습니다. ${remainingSeasons === 0 ? '현재 계약의 마지막 시즌' : `남은 계약 ${remainingSeasons}시즌`} · ` +
       `시장 사유: ${MARKET_REASON_LABEL_KO.INTEREST} · 전술 적합도 ${state.context.tacticalFit} · 경쟁 상태: ${competition}. ` +
       '관계·평판 변화는 없습니다.'
     );

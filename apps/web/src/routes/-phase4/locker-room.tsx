@@ -15,13 +15,13 @@ export function LockerRoomContext({ state }: EventDecisionContext) {
     <section className="os-panel flex flex-col gap-os-4" aria-label="라커룸 관계 맥락">
       <div>
         <h2 className="os-section-title">라커룸의 온도</h2>
-        <p className="os-muted">최근 관계 기록의 방향과 현재 단계만 표시합니다.</p>
+        <p className="os-muted">관계 단계는 현재 상태입니다. 화살표는 최근 관계 기록의 변화 방향입니다.</p>
       </div>
       <div className="grid grid-cols-1 gap-os-2 sm:grid-cols-2" aria-label="관계 5축">
         {RELATIONS.map(({ target, label }) => (
           <div key={target} className="rounded-os-m bg-os-surface-2 p-os-3">
-            <div className="flex items-center justify-between gap-os-2"><span>{label}</span><span aria-label={`${label} 방향`}>{relationshipDirectionArrow(state.relationshipLog, target)}</span></div>
-            <p className="os-muted">{relationTierLabel(state.relationships[target])}</p>
+            <div className="flex items-center justify-between gap-os-2"><span>{label}</span><span aria-label={`${label} 최근 변화 방향`}>{relationshipDirectionArrow(state.relationshipLog, target)}</span></div>
+            <p className="os-muted">현재 단계 {relationTierLabel(state.relationships[target])}</p>
             <p className="mt-os-1 text-os-text-2">기억: {state.memoryTags[target].length > 0 ? state.memoryTags[target].map((tag) => relationshipReasonLabel(tag)).join(' · ') : '기록 없음'}</p>
           </div>
         ))}
