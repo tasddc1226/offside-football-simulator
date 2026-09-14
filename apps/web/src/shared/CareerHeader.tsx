@@ -83,7 +83,12 @@ export function CareerHeader({
           <HomeIcon />
         </Link>
         {teamId !== null ? (
-          <ClubBadge teamId={teamId} size="m" className="os-career-header-badge" />
+          <ClubBadge
+            teamId={teamId}
+            teamName={teamName}
+            size="m"
+            className="os-career-header-badge"
+          />
         ) : null}
         <div className="os-career-header-identity min-w-0">
           <span className="sr-only">{teamName}</span>
