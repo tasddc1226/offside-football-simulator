@@ -1,15 +1,13 @@
 import type { StandingRow } from '@offside/domain';
 import { resolveTeamName, type TeamNameOverrides } from './team-names.js';
 import type { Ruleset } from '@offside/domain';
+import { leaguePositionSummary } from './league-context.js';
 
 export function leagueStandingSummary(rows: readonly StandingRow[], teamId: string): string {
   const own = rows.find((row) => row.teamId === teamId);
   if (own === undefined) return '순위 기록을 확인할 수 없습니다.';
-  if (own.played === 0) return '시즌 시작 전';
-  const above = own.rank <= 1 ? undefined : rows.find((row) => row.rank === own.rank - 1);
-  return above === undefined
-    ? `${own.rank}위 / ${rows.length}팀 · 현재 선두`
-    : `${own.rank}위 / ${rows.length}팀 · ${above.rank}위와 승점 ${above.points - own.points}점 차`;
+  if (rows.every((row) => row.played === 0)) return '아직 확정된 리그 경기 결과가 없습니다.';
+  return leaguePositionSummary(rows, teamId) ?? '순위 기록을 확인할 수 없습니다.';
 }
 
 export function LeagueStandingsTable({
