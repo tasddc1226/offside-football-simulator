@@ -8,7 +8,7 @@ PR #222가 제공하는 현재 활성 시즌 리그 원장을 사용해, 다음 
 
 - 요구사항: FR-CW-002/003/005/012, TEST-CW-005
 - 최초 검토 기준: PR #222 `d6b7a205d64fdd8677b7b56eb939ec403bd835de`
-- 최종 반영 부모: PR #222 `e4847d6d96c0cd04337c7ffcf090a1806e51cff4`
+- 최종 반영 부모: PR #222 `fc00e50e8de49721ee1d6e44f5b548bb68b7ea69`
 - 검토 문서: `career-world-prd.md`, `ADR-011-league-ledger-and-career-feedback.md`, `20-career-world-plan.md`
 - stacked base: `tasddc1226/T-7-022-league-ledger`
 
@@ -42,4 +42,4 @@ PR #222가 제공하는 현재 활성 시즌 리그 원장을 사용해, 다음 
 
 - 지원 1.7.0/0.6.2 자연 브라우저 검증을 이 작업의 할당 web/API 포트 5425/8825에서 수행했다. 자연 생성·계약·프리시즌·시즌 시작 뒤 0라운드 홈/계약 mount와 순위표 링크를 확인하고, UI 진행으로 결과를 확정한 뒤 `4라운드 종료 기준 · 2위/16팀 · 4경기 · 1위와 승점 2점 차`를 확인했다. reload와 360×800에서도 같은 맥락이 유지됐다. IDB나 게임 state를 주입하지 않았다.
 - 5179에서 수행한 초기 자연 생성 시도는 할당 서버 provenance가 확인되지 않아 이 변경의 브라우저 증거에서 제외한다.
-- 부모 PR #222의 final table tuple 압축과 의미/완결성 guard를 포함한 `e4847d6`을 반영했다. merge/deploy는 이 작업 범위가 아니다.
+- 부모 PR #222의 final table tuple 압축과 의미/완결성 guard, 최신 main 동기화를 포함한 `fc00e50`을 반영했다. merge/deploy는 이 작업 범위가 아니다.
