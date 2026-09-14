@@ -16,7 +16,8 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
     "content:validate": "turbo run content:validate",
-    "db:migrate": "turbo run db:migrate"
+    "db:migrate": "turbo run db:migrate",
+    "sim:career": "pnpm --filter @offside/scripts sim:career --"
   },
   "devDependencies": {
     "@offside/eslint-config": "workspace:*",
