@@ -183,6 +183,8 @@ export const TIMELINE_KIND_LABEL_KO: Record<TimelineEntry['kind'], string> = {
   NATIONAL_TEAM_CALLED: '국가대표 소집',
   NATIONAL_TEAM_DECLINED: '국가대표 소집 거절',
   CAPTAIN_APPOINTED: '주장 임명',
+  CLUB_MEETING_RESOLVED: '구단 면담',
+  CLUB_MEETING_GOAL_EVALUATED: '면담 목표 평가',
 };
 
 /**
@@ -489,6 +491,8 @@ export const TIMELINE_KIND_LABELS: Record<TimelineEntry['kind'], string> = {
   NATIONAL_TEAM_CALLED: '국가대표 소집',
   NATIONAL_TEAM_DECLINED: '국가대표 소집 거절',
   CAPTAIN_APPOINTED: '주장 임명',
+  CLUB_MEETING_RESOLVED: '구단 면담',
+  CLUB_MEETING_GOAL_EVALUATED: '면담 목표 평가',
 };
 
 // ---------------------------------------------------------------------------
