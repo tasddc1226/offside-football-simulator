@@ -79,6 +79,7 @@ import {
   u18StatusStripItems,
   type ConditionTileItem,
 } from '../shared/status-strip.js';
+import { buildCareerFollowUpReceipts, CareerFollowUpReceipts } from '../shared/career-followup.js';
 
 const DASHBOARD_TABS = ['home', 'schedule', 'player', 'contract', 'records'] as const;
 type DashboardTab = (typeof DASHBOARD_TABS)[number];
@@ -784,6 +785,10 @@ function CareerDashboard() {
   // UX-007 최근 소식: 기록 탭과 같은 seasonChronicleItems를 재사용하되, 정보 없는 항목("진행" 단독
   // 같은 제네릭 라벨)은 걸러 의미 있는 최근 것부터 최대 3개만 보여준다.
   const recentChronicleItems = visibleRecentChronicleItems(seasonChronicleItems);
+  const followUpReceipts = buildCareerFollowUpReceipts(state);
+  const contractFollowUpReceipts = followUpReceipts.filter(
+    (receipt) => receipt.kind === 'CLUB_MEETING' || receipt.kind === 'LOAN',
+  );
 
   return (
     <div className="os-screen">
@@ -871,6 +876,12 @@ function CareerDashboard() {
                         </li>
                       ))}
                     </ul>
+                  </DashboardSection>
+                ) : null}
+
+                {followUpReceipts.length > 0 ? (
+                  <DashboardSection title="선택 후속 결과" description="저장된 응답과 이후 결과를 이어서 확인합니다.">
+                    <CareerFollowUpReceipts receipts={followUpReceipts} limit={2} />
                   </DashboardSection>
                 ) : null}
 
@@ -1165,6 +1176,10 @@ function CareerDashboard() {
                         </div>
                       ) : null}
                     </dl>
+                    <div className="flex flex-col gap-os-2">
+                      <h3 className="font-os font-semibold text-os-text" style={BODY_STYLE}>면담·임대 후속 결과</h3>
+                      <CareerFollowUpReceipts receipts={contractFollowUpReceipts} emptyMessage="아직 저장된 면담·임대 후속 결과가 없습니다." />
+                    </div>
                   </div>
                 ) : null}
               </DashboardSection>
@@ -1181,6 +1196,10 @@ function CareerDashboard() {
                       items={buildCareerMilestoneItems(state)}
                       emptyMessage="아직 기록이 없습니다"
                     />
+                  </div>
+                  <div className="flex flex-col gap-os-2">
+                    <h3 className="font-os font-semibold text-os-text" style={BODY_STYLE}>선택 후속 결과</h3>
+                    <CareerFollowUpReceipts receipts={followUpReceipts} />
                   </div>
                   {seasonResultItem?.seasonResultHistoryIndex !== null &&
                   seasonResultItem?.seasonResultHistoryIndex !== undefined ? (

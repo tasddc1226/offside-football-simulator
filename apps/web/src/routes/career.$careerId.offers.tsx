@@ -24,6 +24,7 @@ import { MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
 import { buildCurrentContractSummary } from '../shared/transfer-view.js';
 import { CompactOfferCard } from '../shared/contract-presentation.js';
 import { rulesetForCareer } from '../engine/content.js';
+import { buildCareerFollowUpReceipts, CareerFollowUpReceipts } from '../shared/career-followup.js';
 
 type OffersTarget = 'SCR-009' | 'SCR-017';
 
@@ -233,8 +234,15 @@ function MarketOffers({
   const parentTeamName = state.contract?.teamName ?? state.clubHistory.at(-1)?.teamName ?? null;
   const showRecoveryNotice = shouldShowRecoveryOpportunityNotice(state, offers);
   const recoveryPolicy = rulesetForCareer(state).transferRules.recovery;
+  const meetingReceipts = buildCareerFollowUpReceipts(state).filter((receipt) => receipt.kind === 'CLUB_MEETING');
   return (
     <>
+      {meetingReceipts.length > 0 ? (
+        <section className="os-panel flex flex-col gap-os-2" aria-labelledby="meeting-followup-title">
+          <h2 id="meeting-followup-title" className="font-os font-semibold text-os-text" style={BODY_STYLE}>이 시장이 열린 이전 요청</h2>
+          <CareerFollowUpReceipts receipts={meetingReceipts} limit={1} />
+        </section>
+      ) : null}
       <details className="os-panel">
         <summary className="cursor-pointer font-os font-semibold text-os-text">현재 계약과 시장 기준</summary>
         <div className="mt-os-3">
