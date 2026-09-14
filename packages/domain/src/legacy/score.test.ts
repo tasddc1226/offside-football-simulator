@@ -93,6 +93,38 @@ describe('Phase 5 — normalized Legacy score (RULE-LEG-002)', () => {
     },
   );
 
+  // T-7-032(D-80 1라운드 ③): 기본 인자로 기존 호출(1.0.0/1.1.0)은 불변, 커스텀 cuts만 밴드를 바꾼다.
+  it('accepts custom band cuts without changing the default (1.0.0/1.1.0 golden) behavior', () => {
+    expect(legacyBandForScore(78)).toBe('BAND-ICON');
+    expect(legacyBandForScore(78, { LEGEND: 90, ICON: 82, REMEMBERED: 60, SOLID: 30 })).toBe(
+      'BAND-REMEMBERED',
+    );
+    expect(legacyBandForScore(59, { LEGEND: 90, ICON: 82, REMEMBERED: 60, SOLID: 30 })).toBe(
+      'BAND-SOLID',
+    );
+    expect(
+      calculateLegacyScore({
+        achievement: 70,
+        contribution: 95,
+        longevity: 90,
+        relationship: 85,
+        narrative: 75,
+      }).bandId,
+    ).toBe('BAND-ICON');
+    expect(
+      calculateLegacyScore(
+        {
+          achievement: 70,
+          contribution: 95,
+          longevity: 90,
+          relationship: 85,
+          narrative: 75,
+        },
+        { LEGEND: 82, ICON: 70, REMEMBERED: 50, SOLID: 25 },
+      ).bandId,
+    ).toBe('BAND-LEGEND');
+  });
+
   it('does not mutate or retain references to caller-owned components', () => {
     const source = Object.freeze({ ...zeros, achievement: 80 });
     const result = calculateLegacyScore(source);

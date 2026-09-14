@@ -12,6 +12,7 @@ import {
   type JsonValue,
   type LegacyReferencePopulation,
   type LegacyVersion,
+  LEGACY_VERSIONS,
 } from '@offside/domain';
 import type { LocalStore, LocalStoreTx } from './ports/local-store.js';
 import type { LocalCareerRecord } from './types.js';
@@ -55,11 +56,11 @@ export function legacyVersionForResult(
   const available = artifacts.legacyVersion ?? '1.0.0';
   if (stored === undefined || stored === null) return available;
   if (!Object.hasOwn(stored, 'legacyVersion')) throw new ArchiveError('INVALID_BINDING');
-  if (stored.legacyVersion !== '1.0.0' && stored.legacyVersion !== '1.1.0')
+  if (!LEGACY_VERSIONS.includes(stored.legacyVersion as LegacyVersion))
     throw new ArchiveError('INVALID_BINDING');
   // A newer stored policy cannot be recomputed by an older resolver. Older 1.0 results
   // remain readable when the resolver has moved forward.
-  if (stored.legacyVersion === '1.1.0' && available !== '1.1.0')
+  if (stored.legacyVersion !== '1.0.0' && stored.legacyVersion !== available)
     throw new ArchiveError('VERSION_MISMATCH');
   return stored.legacyVersion;
 }

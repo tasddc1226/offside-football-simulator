@@ -1085,6 +1085,14 @@ export const RulesetSchema = z
               path: ['ageBands', i, 'fromAge'],
             });
           }
+          // 도메인 legacy/retirement.ts의 validatePolicy와 동치: pressure는 감소하면 안 된다.
+          if (rules.ageBands[i]!.pressure < rules.ageBands[i - 1]!.pressure) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `retirementRules.ageBands는 pressure가 감소하면 안 된다(index ${i}).`,
+              path: ['ageBands', i, 'pressure'],
+            });
+          }
         }
       })
       .optional(),

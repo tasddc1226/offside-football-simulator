@@ -61,7 +61,11 @@ export const LEGACY_POLICY = Object.freeze({
   narrative: Object.freeze({ COMMON: 5, RARE: 12, EPIC: 25 }),
 });
 
-export type LegacyVersion = '1.0.0' | '1.1.0';
+export type LegacyVersion = '1.0.0' | '1.1.0' | '1.2.0';
+
+/** All known Legacy policy versions, oldest first. Source of truth for version enumeration
+ * outside the domain — keep in sync with {@link LegacyVersion}. */
+export const LEGACY_VERSIONS: readonly LegacyVersion[] = Object.freeze(['1.0.0', '1.1.0', '1.2.0']);
 
 /** Experimental next policy; runtime activation requires the separate population acceptance gate.
  * The 1.0.0 definition above and its persisted results must never be rewritten. */
@@ -90,9 +94,21 @@ export const LEGACY_POLICY_110 = Object.freeze({
   narrative: Object.freeze({ COMMON: 10, RARE: 25, EPIC: 50 }),
 });
 
+/** T-7-032(D-80 1라운드 ③): 1.6.1+ 활성화 게이트 전용. 1.1.0의 모든 항목을 상속하고
+ * `performancePer90Centi`(포지션 편차 조정)·`bandCuts`(상위 밴드 비율 조정)만 재정의한다.
+ * 1.0.0·1.1.0으로 바인딩된 결과는 이 정책을 절대 참조하지 않는다. */
+export const LEGACY_POLICY_120 = Object.freeze({
+  ...LEGACY_POLICY_110,
+  version: '1.2.0',
+  basePolicyChecksum: sha256Hex(canonicalize(LEGACY_POLICY_110 as unknown as JsonValue)),
+  performancePer90Centi: Object.freeze({ GK: 500, DF: 1300, MF: 550, FW: 120 }),
+  bandCuts: Object.freeze({ LEGEND: 90, ICON: 80, REMEMBERED: 60, SOLID: 30 }),
+});
+
 export function legacyPolicyForVersion(version: LegacyVersion) {
   if (version === '1.0.0') return LEGACY_POLICY;
   if (version === '1.1.0') return LEGACY_POLICY_110;
+  if (version === '1.2.0') return LEGACY_POLICY_120;
   throw new ArchiveError('VERSION_MISMATCH');
 }
 
@@ -136,7 +152,8 @@ function freeze<T>(value: T): T {
   return value;
 }
 
-function performance(summary: SeasonSummary): number {
+// T-7-032: 버전별 기대치. 1.0.0·1.1.0은 원래 LEGACY_POLICY 기대치를 그대로 쓴다(값·동작 불변).
+function performance(summary: SeasonSummary, version: LegacyVersion = '1.0.0'): number {
   const stats = summary.result.playerStats;
   const total = stats.totals;
   const value =
@@ -147,9 +164,11 @@ function performance(summary: SeasonSummary): number {
         : total.group === 'MF'
           ? total.chancesCreated + total.progressivePasses + total.ballRecoveries
           : total.goals + total.assists;
+  const performancePer90Centi =
+    version === '1.2.0' ? LEGACY_POLICY_120.performancePer90Centi : LEGACY_POLICY.performancePer90Centi;
   // Rate and exposure are separate: one excellent minute cannot produce a full contribution score.
   return score(
-    ratio(value * 90 * 100, stats.minutes * LEGACY_POLICY.performancePer90Centi[stats.group]) *
+    ratio(value * 90 * 100, stats.minutes * performancePer90Centi[stats.group]) *
       LEGACY_POLICY.contribution.expectedPerformance,
   );
 }
@@ -185,7 +204,7 @@ export function deriveRetirementTags(state: CareerState): CareerTagId[] {
   if (
     history.length >= 10 &&
     !history.some((s) => seasonWonTitle(s.result)) &&
-    mean(history.map(performance)) >= 80
+    mean(history.map((s) => performance(s))) >= 80
   )
     tags.add('TAG-UNCROWNED');
   if (
@@ -222,7 +241,11 @@ export function deriveLegacyEvidence(archive: CareerArchiveCore, version: Legacy
   let chapterSuccesses = 0;
   let derbySuccesses = 0;
   let nationalCaps = 0;
-  const meritPolicy = version === '1.1.0' ? LEGACY_POLICY_110.merit : LEGACY_POLICY.merit;
+  // 1.2.0은 1.1.0의 merit·relationship·narrative 등을 그대로 상속한다(performancePer90Centi·
+  // bandCuts만 재정의). LEGACY_POLICY_120에는 상속된 필드가 이미 담겨 있다.
+  const policy110Like =
+    version === '1.2.0' ? LEGACY_POLICY_120 : version === '1.1.0' ? LEGACY_POLICY_110 : null;
+  const meritPolicy = policy110Like ? policy110Like.merit : LEGACY_POLICY.merit;
   const decisiveInternational =
     state.legacyEvents?.tournaments.some(
       (t) => t.medal === 'GOLD' && t.matches.at(-1)?.won === true,
@@ -245,25 +268,23 @@ export function deriveLegacyEvidence(archive: CareerArchiveCore, version: Legacy
         meritPolicy.minimumRatingTenths &&
       result.promiseFulfilment.minutesShareBp >= meritPolicy.minimumMinutesBp
     ) {
-      const seasonMeritPoints =
-        version === '1.1.0'
-          ? Math.min(
-              LEGACY_POLICY_110.merit.maxPerSeason,
-              LEGACY_POLICY_110.merit.basePerSeason +
-                Math.floor(
-                  (ratio(result.playerStats.ratingSumTenths, result.playerStats.ratedMatches) -
-                    LEGACY_POLICY_110.merit.minimumRatingTenths) /
-                    LEGACY_POLICY_110.merit.ratingStepTenths,
-                ),
-            )
-          : LEGACY_POLICY.merit.perSeason;
+      const seasonMeritPoints = policy110Like
+        ? Math.min(
+            policy110Like.merit.maxPerSeason,
+            policy110Like.merit.basePerSeason +
+              Math.floor(
+                (ratio(result.playerStats.ratingSumTenths, result.playerStats.ratedMatches) -
+                  policy110Like.merit.minimumRatingTenths) /
+                  policy110Like.merit.ratingStepTenths,
+              ),
+          )
+        : LEGACY_POLICY.merit.perSeason;
       individualMeritPoints += seasonMeritPoints;
       add('achievement', {
         ...source,
-        sourceId:
-          version === '1.1.0'
-            ? `season:${season.index}:established-contribution`
-            : `season:${season.index}:individual-merit`,
+        sourceId: policy110Like
+          ? `season:${season.index}:established-contribution`
+          : `season:${season.index}:individual-merit`,
       });
     }
     const tier = state.clubHistory.find(
@@ -387,8 +408,8 @@ export function deriveLegacyEvidence(archive: CareerArchiveCore, version: Legacy
       tags.reduce((sum, tag) => sum + LEGACY_POLICY.narrative[CAREER_TAGS[tag].rarity], 0),
     ),
   };
-  if (version === '1.1.0') {
-    const policy = LEGACY_POLICY_110;
+  if (policy110Like) {
+    const policy = policy110Like;
     const top = (values: number[], count: number) =>
       values.toSorted((a, b) => b - a).slice(0, count);
     const contributions = history.map((season) => {
@@ -396,7 +417,7 @@ export function deriveLegacyEvidence(archive: CareerArchiveCore, version: Legacy
       return (
         LEGACY_POLICY.contribution.minutes *
           ratio(r.playerStats.minutes, r.selectionSummary.possibleMinutes) +
-        (LEGACY_POLICY.contribution.performancePercent / 100) * performance(season) +
+        (LEGACY_POLICY.contribution.performancePercent / 100) * performance(season, version) +
         (r.promiseFulfilment.fulfilled ? LEGACY_POLICY.contribution.promise : 0)
       );
     });
@@ -542,7 +563,10 @@ export function createLegacyResult(
   const verified = verifyCareerArchiveCore(archive, context);
   if (!verified.ok) throw new ArchiveError(verified.code);
   const evidence = deriveLegacyEvidence(archive, version);
-  const summary = calculateLegacyScore(evidence.components);
+  const summary = calculateLegacyScore(
+    evidence.components,
+    version === '1.2.0' ? LEGACY_POLICY_120.bandCuts : undefined,
+  );
   const ending = evaluateLegacyEndings(evidence.facts);
   const ordered = (
     Object.keys(LEGACY_COMPONENT_WEIGHTS) as Array<keyof LegacyComponentScores>
