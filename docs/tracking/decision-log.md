@@ -2,6 +2,16 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-15 (D-81 — 기능·UX 디테일 루프 1차: 액션 독·약관 시트·공지 서버 관리·커리어 헤더 4탭 — 사용자 결정)
+
+- 작업 방식(사용자 지시 9/13): "디자인 전체 개편 전에 기능·UX 디테일부터. 요구사항을 빠르게 수행 → 로컬에서 직접 확인 → 확인되면 main 배포." 상시 로컬 프리뷰(세션 워크트리, web :5500 + wrangler dev :8795 + 로컬 D1)를 두고 작업 브랜치를 프리뷰에 합쳐 보여준 뒤, 9/14 "모든 작업 완료되면 운영환경까지 배포" 지시로 4건을 한 배포로 묶었다. 여러 세션이 같은 main을 쓰므로(다른 세션의 T-7-03x·PR #219~#224) 새 코드는 새 파일·레이아웃 라우트에 두고 겹치는 파일(dashboard index.tsx 등)의 diff를 최소화했다.
+- 액션 독(PR #228): 원인은 스크롤 컨테이너 `.os-shell-main`의 하단 padding(24/40px + safe-area) 안에서 `sticky; bottom: 0` 독이 멈추는 구조 + 독 자체 safe-area 이중 적용. 결정: 독이 있는 화면만 `:has(.os-action-dock)`로 main 하단 padding 0(폴백은 기존 동작). 짧은 콘텐츠 화면의 바닥 정렬은 셸 중간 래퍼(auto-height) 구조 때문에 별도 과제.
+- 약관·개인정보(PR #229): 앱인토스 규칙(ADR-009)상 `/legal/*` 내부 라우트는 유지하고 설정에서만 바텀시트/모달. 열림 상태는 `?legal=` 검색 파라미터(뒤로가기로 닫힘·딥링크), 닫기는 직접 연 경우만 history.back, 아니면 replace. 본문은 `LegalDocument` 공용 컴포넌트.
+- 공지(PR #230): 사용자 선택 "서버 관리". D1 `notices`(id·title·body(JSON 문단 배열)·published_at·is_published) + 공개 `GET /v1/notices`(API-NOTICE-001). 쓰기 API는 두지 않고 운영자가 SQL(`db:query:production`·seed 파일)로 관리 — 배포 없이 공지 갱신. 손상 데이터(빈 본문)는 대체 문구 대신 응답에서 제외. 운영 적용: 배포의 `db:migrate:production`이 0007을 적용한 뒤 오케스트레이터가 멱등 seed SQL 실행(9/15 완료).
+- 커리어 헤더·4탭(PR #231): 원작 캡처 기준 사용자 결정 — 4탭 재편(시즌=홈+일정, 커리어=기록+계약, 선수, 우승 연혁 신설)·모든 커리어 화면에 헤더 고정(생성 단계 제외). 구조: PageShell 헤더 슬롯에서 `/career/:id/*`일 때 `CareerHeaderBar`로 위임(화면 파일 무수정), 탭은 헤더(루트 트리)와 패널(라우트 트리)이 다른 서브트리라 Radix Tabs 대신 자체 tablist(URL `?view=`로 동기화, id/aria-controls/aria-labelledby 명시). 리뷰 차단: 헤더 홈 버튼이 KICKOFF 확정·복구 코드 화면의 COMMITTING 이탈 방지를 우회 → `committing-guard.ts`(비영속 zustand 카운터)를 `useCommittingExitGuard`가 켜고 헤더가 구독. 우승 연혁은 리그 1위·컵 우승만(`seasonWonTitle` 재사용); Legacy 서사 확장은 미결. 미등록 팀(K3 필러) 배지는 "?" 대신 팀명 이니셜·중립색.
+- 검증·배포: 각 PR 2렌즈 리뷰(차단은 수정 워커) + 오케스트레이터 체인(`turbo run test --continue`·build·bundle·contrast·db:check) + e2e 베이스라인 제목 대조·단독 재실행. 머지 #228 `b6a7648` → #229 `b56d0b9` → #230 `e82824d` → #231 `d4c8c5f`, deploy run 34863700356(SHA 검증), 운영 실측(랜딩 공지 2·설정 시트) 통과.
+- 후속 후보: 챕터·결산 화면 `PlayerBanner`와 헤더 이중 표시 정리(다른 세션 PR 머지 뒤), ClubBadge 폴백 전 호출부 적용, 공지 스켈레톤 행 수·aria-live, 짧은 콘텐츠 화면의 독 바닥 정렬, 단위 테스트가 실행 중 로컬 API를 실제 호출하는 격리 결함(fetch 모킹).
+
 ## 2026-09-14 (D-80 — 밸런스 조정 1라운드 목표값 확정, 새 룰셋 1.6.1 — 사용자 승인)
 
 - 요청(9/14 18:02): 1만 회 기준선(D-79) 뒤 오케스트레이터가 낸 조정 목표 제안표에 사용자가 "제안대로 진행".
