@@ -420,6 +420,33 @@ describe('SCR-030 설정', () => {
   });
 });
 
+// 설정의 이용약관·개인정보 처리방침은 더 이상 /legal/*로 이동하지 않고 같은 화면 위에 시트로
+// 뜬다(?legal= 검색 파라미터). 열림·닫힘 자체는 여기서, "같은 본문을 보여준다"는 위 법적 문서
+// 라우트 테스트가 이미 확인한다.
+describe('SCR-030 설정: 서비스 정책 시트', () => {
+  it('?legal=terms로 렌더하면 대화상자가 열려 약관 제목·본문을 보여준다', async () => {
+    // 대화상자가 처음 렌더부터 열려 있어 Radix가 배경(설정 화면의 h1 포함)을 곧장
+    // aria-hidden 처리한다 — 그래서 배경 제목이 아니라 대화상자 쪽을 기다린다.
+    const router = renderAt('/settings?legal=terms');
+
+    const dialog = await screen.findByRole('dialog', { name: '이용약관' });
+    expect(within(dialog).getByRole('heading', { level: 2, name: '서비스 정의' })).toBeInTheDocument();
+    expect(router.state.location.search).toEqual({ legal: 'terms' });
+  });
+
+  it('닫기 버튼을 누르면 대화상자가 닫히고 legal 파라미터가 사라진다', async () => {
+    const router = renderAt('/settings?legal=privacy');
+    await screen.findByRole('dialog', { name: '개인정보 처리방침' });
+
+    fireEvent.click(screen.getByRole('button', { name: '닫기' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(router.state.location.search).toEqual({});
+  });
+});
+
 describe('법적 문서 라우트', () => {
   it('/legal/terms를 렌더한다', async () => {
     renderAt('/legal/terms');

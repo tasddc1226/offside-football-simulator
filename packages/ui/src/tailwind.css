@@ -2,6 +2,7 @@
 @import './tokens.css';
 @import './game.css';
 @import './modal-motion.css';
+@import './sheet-motion.css';
 @import './screen-motion.css';
 @import './swipe-motion.css';
 @import './screen-transition.css';
