@@ -86,7 +86,7 @@ describe('runCareerSim', () => {
     delete summary1.runtime;
     delete summary2.runtime;
     expect(summary2).toEqual(summary1);
-  });
+  }, 60_000); // 자식 프로세스 spawn 포함, 공유 머신 부하 대비
 
   it('careers.csv 헤더가 브리프 컬럼 순서와 같다', async () => {
     workDir = mkdtempSync(path.join(tmpdir(), 'career-sim-header-'));
@@ -108,7 +108,7 @@ describe('runCareerSim', () => {
     expect(result.ok).toBe(true);
     const header = readFileSync(path.join(out, 'careers.csv'), 'utf8').split('\n')[0];
     expect(header.split(',')).toEqual([...CAREERS_CSV_HEADER]);
-  });
+  }, 20_000); // 공유 머신 부하 대비
 
   it('팩과 호환되지 않는 룰셋 버전은 exit 없이 오류 객체를 돌려준다', async () => {
     workDir = mkdtempSync(path.join(tmpdir(), 'career-sim-incompat-'));
