@@ -82,6 +82,23 @@ describe('GET /v1/notices (API-NOTICE-001)', () => {
     }
   });
 
+  it('published_at이 같으면 id 내림차순으로 안정 정렬한다', async () => {
+    const ctx = await createTestD1();
+    try {
+      const tied = '2026-09-08T00:00:00Z';
+      // 입력 순서(a→b)와 반대로 나와야 "우연히 삽입 순서와 같다"가 아니라 실제로 id desc임을 검증한다.
+      await seedNotice(ctx.db, { id: 'tied-a', title: '동시 게시 A', body: ['본문 A'], publishedAt: tied });
+      await seedNotice(ctx.db, { id: 'tied-b', title: '동시 게시 B', body: ['본문 B'], publishedAt: tied });
+
+      const res = await createApp().request('/v1/notices', {}, ctx.env);
+      expect(res.status).toBe(200);
+      const body = successEnvelope(NoticesResponseSchema).parse(await res.json());
+      expect(body.data.items.map((item) => item.id)).toEqual(['tied-b', 'tied-a']);
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
   it('limit 상한(50)을 넘는 값은 50으로 잘린다', async () => {
     const ctx = await createTestD1();
     try {
