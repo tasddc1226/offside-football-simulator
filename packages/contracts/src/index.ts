@@ -173,6 +173,13 @@ export {
 } from './service-seasons.js';
 
 export {
+  LivePresenceSchema,
+  GetLivePresenceResponseSchema,
+  type LivePresence,
+  type GetLivePresenceResponse,
+} from './presence.js';
+
+export {
   ANALYTICS_EVENT_NAMES,
   AnalyticsEventNameSchema,
   ANALYTICS_EVENT_PROPS_SCHEMAS,
