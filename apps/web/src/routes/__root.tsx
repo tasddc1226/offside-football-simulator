@@ -7,6 +7,8 @@ import { useApplyTheme } from '../shared/ui-store.js';
 import { AppMotionFrame } from '../shared/app-motion-frame.js';
 import { NotFoundScreen } from '../shared/NotFoundScreen.js';
 import { LivePresenceBadge } from '../shared/LivePresenceBadge.js';
+import { CareerHeaderBar } from '../shared/CareerHeaderBar.js';
+import { careerIdFromPathname } from '../shared/career-pathname.js';
 import { useLivePresence, usePresenceHeartbeat } from '../engine/presence.js';
 import { useEffect } from 'react';
 
@@ -89,7 +91,7 @@ function GameNavigation({ playingNow }: { playingNow: number | undefined }) {
   const mutating = useIsMutating() > 0;
   // Career screens already own their safe back/next actions. A global Link would bypass
   // those COMMITTING guards, including asynchronous post-confirm recovery work.
-  const inCareer = pathname.startsWith('/career/');
+  const careerId = careerIdFromPathname(pathname);
   const inPublicInfo = /^\/(guide|faq)\/?$/.test(pathname);
   useEffect(() => {
     if (inPublicInfo) return;
@@ -116,18 +118,21 @@ function GameNavigation({ playingNow }: { playingNow: number | undefined }) {
         .querySelectorAll('link[rel="canonical"], meta[property="og:url"]')
         .forEach((node) => node.remove());
   }, [inPublicInfo, pathname]);
+
+  // UX-014 사용자 결정(2026-09-14): /career/:id/* 화면은 이 전역 브랜드 헤더 대신 커리어 상단
+  // 헤더(네이비 히어로 밴드 + 대시보드 4탭)를 쓴다 — CareerHeaderBar가 커리어 상태를 직접 읽어
+  // 선수 생성 단계(DRAFT)는 기존과 같은 최소 내비로, 그 외는 히어로 헤더로 그린다.
+  if (careerId !== null) {
+    return <CareerHeaderBar careerId={careerId} pathname={pathname} playingNow={playingNow} />;
+  }
+
   return (
     <>
       <a href="#game-content" className="os-skip-link">
         본문으로 건너뛰기
       </a>
       <nav className="os-app-nav" aria-label="게임 메뉴">
-        {inCareer ? (
-          <span className="os-brand">
-            <BrandMark />
-            <span>OFFSIDE</span>
-          </span>
-        ) : inPublicInfo ? (
+        {inPublicInfo ? (
           <a href="/" className="os-brand" aria-label="오프사이드 홈">
             <BrandMark />
             <span>OFFSIDE</span>
@@ -148,9 +153,7 @@ function GameNavigation({ playingNow }: { playingNow: number | undefined }) {
         )}
         <div className="os-nav-right">
           <LivePresenceBadge playingNow={playingNow} />
-          {inCareer ? (
-            <span className="os-nav-context">커리어</span>
-          ) : inPublicInfo ? (
+          {inPublicInfo ? (
             <a href="/settings" className="os-nav-settings" aria-label="게임 설정">
               <span aria-hidden="true">설정</span>
             </a>

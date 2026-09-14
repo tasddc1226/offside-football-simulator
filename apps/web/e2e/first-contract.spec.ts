@@ -18,12 +18,15 @@ test('온보딩부터 계약·대시보드까지: SCR-002~004 → 이벤트 → 
 
   await completeOnboardingThroughContract(page);
 
-  await expect(page.getByRole('heading', { level: 1, name: '김서준' })).toBeVisible();
+  // UX-014(2026-09-14): 선수 이름은 이제 대시보드 자체가 아니라 모든 /career/:id/* 화면에 고정된
+  // 커리어 상단 헤더(CareerHeaderBar)가 보여준다 — 그 페이지 h1은 화면마다 다른 제목을 쓰므로 여기서는
+  // heading이 아니라 헤더 안 텍스트로 확인한다.
+  await expect(page.getByText('김서준')).toBeVisible();
   // 계약 후에만 열리는 전술 적합도·감독 신뢰(06 "점진적 공개")가 보이면 계약이 실제로 반영된 것이다.
   await page.getByRole('tab', { name: '선수' }).click();
   await expect(page.getByText('전술 적합도', { exact: true })).toBeVisible();
 
-  await page.getByRole('tab', { name: '계약' }).click();
+  await page.getByRole('tab', { name: '커리어' }).click();
   await expect(page.getByText('팀')).toBeVisible();
   await expect(page.getByText('주급')).toBeVisible();
 

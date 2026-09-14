@@ -72,6 +72,20 @@ async function expectNoSeriousOrCriticalViolations(page: Page, label: string): P
   expect(seriousOrCritical).toEqual([]);
 }
 
+// PR 231 리뷰: 대시보드 헤더 탭(role=tab)과 TabsContent 패널(role=tabpanel)이 서로 다른 React
+// 서브트리라 id를 손으로 맞췄다(shared/dashboard-tabs.ts) — 실제 DOM에서 aria-controls·
+// aria-labelledby가 서로를 가리키는지 확인한다.
+async function expectTabPanelAriaWiring(page: Page, activeTabLabel: string): Promise<void> {
+  const tab = page.getByRole('tab', { name: activeTabLabel });
+  const panel = page.getByRole('tabpanel');
+  const tabId = await tab.getAttribute('id');
+  const panelId = await panel.getAttribute('id');
+  expect(tabId).not.toBeNull();
+  expect(panelId).not.toBeNull();
+  await expect(tab).toHaveAttribute('aria-controls', panelId ?? '');
+  await expect(panel).toHaveAttribute('aria-labelledby', tabId ?? '');
+}
+
 const STATIC_SCREENS = ['/legal/privacy', '/legal/terms', '/onboarding', '/settings'];
 
 for (const path of STATIC_SCREENS) {
@@ -313,12 +327,32 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
   // 섞여 글자색이 흐려 보이는 것뿐). 전환이 끝난 뒤(opacity: 1) 상태 기반으로 기다린다.
   await expect(signedToast).toHaveCSS('opacity', '1');
 
+  // UX-014(2026-09-14): 커리어 상단 헤더(네이비 히어로 밴드 + 대시보드 4탭)가 고정으로 떠 있어야
+  // 한다 — 홈 버튼(하단 "허브로" 버튼과 별개 — CSS로 구분)과 OVR 표시로 존재를 확인하고, axe도 그
+  // 헤더·탭을 포함해 검사한다.
+  await expect(page.locator('.os-career-header-home')).toBeVisible();
+  await expect(page.getByText(/^OVR \d+$/)).toBeVisible();
   await expectNoSeriousOrCriticalViolations(page, 'SCR-029(일정표, 기본)');
+  // PR 231 리뷰: 헤더의 탭(role=tab)과 TabsContent 패널(role=tabpanel)이 서로 다른 React 서브트리라
+  // Radix Tabs.Root 컨텍스트로 자동 연결되지 않는다(dashboard-tabs.ts가 id를 손으로 맞춘다) —
+  // aria-controls/aria-labelledby가 실제로 서로를 가리키는지, axe aria-valid-attr-value가
+  // incomplete로도 잡히지 않는지 직접 확인한다(expectNoSeriousOrCriticalViolations는 violations만
+  // 본다 — 존재하지 않는 id를 가리키는 경우는 보통 incomplete로 잡힌다).
+  await expectTabPanelAriaWiring(page, '시즌');
+  const incompleteBeforeSwitch = (await new AxeBuilder({ page }).analyze()).incomplete.map(
+    (item) => item.id,
+  );
+  expect(incompleteBeforeSwitch).not.toContain('aria-valid-attr-value');
 
-  await page.getByRole('tab', { name: '계약' }).click();
+  await page.getByRole('tab', { name: '커리어' }).click();
   await expect(page.getByText('주급')).toBeVisible();
+  await expectTabPanelAriaWiring(page, '커리어');
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-029(휴대폰)');
+  const incompleteAfterSwitch = (await new AxeBuilder({ page }).analyze()).incomplete.map(
+    (item) => item.id,
+  );
+  expect(incompleteAfterSwitch).not.toContain('aria-valid-attr-value');
 });
 
 // T-2-007(TEST-E2E-009 접근성 체크리스트): 새 화면 4개(SCR-005·011·012·033).
