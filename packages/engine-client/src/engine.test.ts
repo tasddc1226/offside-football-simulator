@@ -391,6 +391,36 @@ describe('복구', () => {
 
     // Hash와 compact 자체 형태는 맞아도 실제 1.7 ruleset roster와 다른 latest는 ready로 선택하지 않고
     // 직전 snapshot에서 START_SEASON을 재생해 복구한다.
+    const healthyRun = await runLedgerToSeasonStart();
+    const healthyReload = await healthyRun.engine.loadCareer(healthyRun.careerId);
+    expect(healthyReload.ok).toBe(true);
+    if (!healthyReload.ok) throw new Error('정상 1.7 canonical reload 실패');
+    expect(healthyReload.recovered).toBeNull();
+    const roleResolved = await healthyRun.engine.execute({
+      careerId: healthyRun.careerId,
+      command: {
+        type: 'RESOLVE_ROLE',
+        commandId: 'ledger-reload-role',
+        expectedRevision: healthyReload.snapshot.revision,
+        payload: { decision: 'ACCEPT' },
+      },
+    });
+    expect(roleResolved.ok).toBe(true);
+    if (!roleResolved.ok) throw new Error(roleResolved.error.message);
+    const reloadedForAdvance = await healthyRun.engine.loadCareer(healthyRun.careerId);
+    expect(reloadedForAdvance.ok).toBe(true);
+    if (!reloadedForAdvance.ok) throw new Error('ADVANCE 전 정상 1.7 reload 실패');
+    const advanced = await healthyRun.engine.execute({
+      careerId: healthyRun.careerId,
+      command: {
+        type: 'ADVANCE',
+        commandId: 'ledger-reload-advance',
+        expectedRevision: reloadedForAdvance.snapshot.revision,
+        payload: { eligibleEvents: [] },
+      },
+    });
+    expect(advanced.ok).toBe(true);
+
     const ledgerRun = await runLedgerToSeasonStart();
     const brokenLatest = await ledgerRun.store.transaction('readonly', (tx) => tx.snapshots.getLatest(ledgerRun.careerId));
     if (brokenLatest === undefined) throw new Error('ledger latest 없음');
