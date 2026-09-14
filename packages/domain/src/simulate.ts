@@ -3940,7 +3940,12 @@ export function simulate(input: SimulationInput): SimulationResult {
     case 'CAREER_EVENT': {
       try {
         const revision = snapshot.revision + 1;
-        const state = resolveCareerEvent(snapshot.state, command.payload.choice, revision);
+        const state = resolveCareerEvent(
+          snapshot.state,
+          command.payload.choice,
+          revision,
+          input.ruleset.retirementRules ?? RETIREMENT_POLICY,
+        );
         return { ok: true, snapshot: buildSnapshot(state, revision, 'EVENT_RESOLVED'), appliedEffects: [], nextAction: 'DECISION' };
       } catch {
         return fail('VALIDATION_FAILED', '현재 선택할 수 없는 커리어 이벤트다.');
