@@ -201,7 +201,7 @@ describe('T-3-005 current contract summary', () => {
       ],
       timeline: [{ revision: 4, kind: 'SEASON_STARTED' }],
     } as CareerState;
-    expect(buildCurrentContractSummary(state).find((item) => item.label === '남은 계약')?.value).toBe('0시즌');
+    expect(buildCurrentContractSummary(state).find((item) => item.label === '남은 계약')?.value).toBe('현재 계약의 마지막 시즌');
     expect(buildCurrentContractSummary(state).find((item) => item.label === '현재 역할')?.value).toBe('주전');
     expect(buildCurrentContractSummary(state).find((item) => item.label === '출전 약속 이행/위반')?.value).toBe('이행 0회 · 위반 0회');
   });

@@ -109,6 +109,7 @@ export function buildCurrentContractSummary(state: CareerState): CurrentContract
   if (contract === null || contract === undefined) return [];
   const fulfilledPromises = fulfilledPromisesForCurrentContract(state, contract);
   const fulfilmentValue = fulfilledPromises === null ? '이행 —' : `이행 ${fulfilledPromises}회`;
+  const remainingSeasons = computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline);
   return [
     // SCR-029 휴대폰의 기존 "팀"·"기간" 문구를 유지한다. SCR-017은 값의 의미로 현재
     // 계약을 설명하므로 별도 raw enum/내부 id 없이 같은 view-model을 재사용한다.
@@ -118,7 +119,7 @@ export function buildCurrentContractSummary(state: CareerState): CurrentContract
     { label: '현재 역할', value: SQUAD_ROLE_LABELS[contract.rolePromise] },
     {
       label: '남은 계약',
-      value: `${computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline)}시즌`,
+      value: remainingSeasons === 0 ? '현재 계약의 마지막 시즌' : `${remainingSeasons}시즌`,
     },
     { label: '현재 주급', value: formatKrw(contract.wageMinorPerWeek) },
     { label: '출전 약속 이행/위반', value: `${fulfilmentValue} · 위반 ${formatPromiseBreaches(contract)}` },
