@@ -970,8 +970,8 @@ function CareerDashboard() {
                   <div className="flex flex-col gap-os-3">
                     <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
                       {state.seasonHistory.length === 0
-                        ? '관계의 방향과 기억이 조금씩 열립니다.'
-                        : '관계 수치는 시즌 결산 뒤 공개됩니다.'}
+                        ? '관계 단계는 현재 상태입니다. 화살표는 최근 관계 기록의 변화 방향입니다.'
+                        : '공개된 수치는 현재 관계 값입니다. 화살표는 최근 관계 기록의 변화 방향입니다.'}
                     </p>
                     <dl
                       className="grid grid-cols-2 gap-os-2 font-os text-os-text-2 [&>div]:rounded-os-m [&>div]:bg-os-surface-2 [&>div]:p-os-3 [&_dd]:mt-os-1 [&_dd]:font-semibold"
@@ -979,8 +979,8 @@ function CareerDashboard() {
                     >
                       {relationshipRows(state, state.seasonHistory.length > 0).map((row) => (
                         <div key={row.target}>
-                          <dt>{row.label} {row.direction}</dt>
-                          <dd className="text-os-text">{row.display}</dd>
+                          <dt>{row.label} <span aria-label={`${row.label} 최근 변화 방향`}>{row.direction}</span></dt>
+                          <dd className="text-os-text">{state.seasonHistory.length > 0 ? '현재 값' : '현재 단계'} {row.display}</dd>
                           <dd>
                             {state.memoryTags[row.target].map((tag) => relationshipReasonLabel(tag)).join(' · ') ||
                               '아직 쌓인 기억이 없습니다'}
@@ -988,6 +988,9 @@ function CareerDashboard() {
                         </div>
                       ))}
                     </dl>
+                    {state.memoryTags.captain.length === 0 ? (
+                      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>주장단 관계는 관련 라커룸 사건과 선택에 따라 달라질 수 있습니다.</p>
+                    ) : null}
                     {state.relationshipLog.length > 0 ? (
                       <ul className="flex flex-col gap-os-1 font-os text-os-text-2" style={CAPTION_STYLE}>
                         {state.relationshipLog.slice(-3).reverse().map((entry, index) => (

@@ -41,6 +41,8 @@ export function offerHeadlineRows(offer: Offer, state: CareerState, recordRevisi
       delta:
         current === null
           ? '첫 프로 계약'
+          : remaining === 0
+            ? `현재 계약의 마지막 시즌 · 갱신 +${offer.lengthSeasons}시즌`
           : offer.lengthSeasons === (remaining ?? 0)
             ? '현재와 같음'
             : `남은 ${remaining ?? 0}시즌 대비 ${offer.lengthSeasons > (remaining ?? 0) ? '+' : '−'}${Math.abs(offer.lengthSeasons - (remaining ?? 0))}시즌`,
