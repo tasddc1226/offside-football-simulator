@@ -25,7 +25,10 @@ import {
 } from '../../packages/content/src/packs/load-content-pack.ts';
 import { createCareerArchiveCore } from '../../packages/domain/src/legacy/archive.ts';
 import { createLegacyResult, type LegacyVersion } from '../../packages/domain/src/legacy/result.ts';
-import { retirementDecisionRequired } from '../../packages/domain/src/legacy/career-retirement.ts';
+import {
+  retirementDecisionRequired,
+  retirementContinuationOptions,
+} from '../../packages/domain/src/legacy/career-retirement.ts';
 import { careerEventChoices } from '../../packages/domain/src/legacy/career-event.ts';
 import {
   commandForPending,
@@ -80,6 +83,8 @@ export type CareerSimBatch = {
   careers: CareerRow[];
   seasons: SeasonRow[];
   failures: FailureRow[];
+  /** 내부용: 커리어별 소요 ms(CSV에는 나가지 않는다, summary.json의 msPerCareer 산출용). */
+  msValues: number[];
 };
 
 export type CareerSimSuccess = {
@@ -98,11 +103,11 @@ export type CareerSimResult = CareerSimSuccess | { ok: false; error: CareerSimEr
 export const CAREERS_CSV_HEADER = [
   'seed', 'index', 'position', 'primaryPosition', 'archetypeId', 'backgroundId', 'mode', 'policy',
   'truePotential', 'baseOvrStart', 'peakOvr', 'peakOvrAge', 'finalOvr', 'seasons', 'retiredAge',
-  'status', 'finalChoice', 'clubs', 'firstTier', 'bestTier', 'seasonsInTier1', 'seasonsInTier2',
-  'seasonsInTier3', 'totalApps', 'totalMinutes', 'totalGoals', 'totalAssists', 'avgRatingTenths',
-  'injuries', 'severeInjuries', 'contracts', 'peakWageMinorPerWeek', 'totalIncomeMinor',
-  'nationalCallUps', 'captainSeasons', 'legacyScore', 'legacyBandId', 'legacyEndingId', 'commands',
-  'ms', 'stateHash',
+  'status', 'finalChoice', 'retireReason', 'clubs', 'firstTier', 'bestTier', 'seasonsInTier1',
+  'seasonsInTier2', 'seasonsInTier3', 'totalApps', 'totalMinutes', 'totalGoals', 'totalAssists',
+  'avgRatingTenths', 'injuries', 'severeInjuries', 'contracts', 'peakWageMinorPerWeek',
+  'totalIncomeMinor', 'nationalCallUps', 'captainSeasons', 'legacyScore', 'legacyBandId',
+  'legacyEndingId', 'commands', 'stateHash',
 ] as const;
 
 export const SEASONS_CSV_HEADER = [
@@ -269,10 +274,11 @@ function opportunityOffer(
 function closePending(
   snapshot: DomainSnapshot,
   id: string,
-  policy: Policy,
+  options: CareerSimOptions,
   pack: ContentPack,
   runtime: Runtime,
 ): DomainSnapshot {
+  const policy = options.policy;
   const state = snapshot.state;
   const pending = state.pending;
   const seed = state.careerId;
@@ -283,6 +289,21 @@ function closePending(
   if (registered !== undefined) return doCommand(snapshot, registered.type, registered.payload, id, runtime);
 
   if (pending.kind === 'OFFERS' || pending.kind === 'CONTRACT') {
+    // D-79 후속 수정: --to-retirement는 "심사가 걸려도 이어갈 수 있으면 이어간다"는 뜻이다.
+    // 심사가 걸렸는데 마지막 계약 옵션(LAST_CONTRACT·LOWER_LEAGUE)이 있으면 그걸 받아 이어가고,
+    // 없으면 기존 제안 처리로 넘어간다(그 뒤 시즌 경계에서 RETIRE된다).
+    if (options.toRetirement && retirementDecisionRequired(state)) {
+      const continuation = retirementContinuationOptions(state)[0];
+      if (continuation !== undefined) {
+        return doCommand(
+          snapshot,
+          'RETIRE',
+          { choice: continuation.choice, offerId: continuation.offerId },
+          id,
+          runtime,
+        );
+      }
+    }
     const offers = pending.offers.filter(
       (offer) =>
         offer.negotiationState !== 'WITHDRAWN' &&
@@ -374,7 +395,7 @@ function runOneCareer(
   pack: ContentPack,
   legacyVersion: LegacyVersion,
   artifacts: { rulesetVersion: string; rulesetChecksum: string; contentPackVersion: string; contentPackChecksum: string },
-): { career: CareerRow; seasons: SeasonRow[]; failure?: FailureRow } {
+): { career: CareerRow; seasons: SeasonRow[]; failure?: FailureRow; ms: number } {
   const seed = `${options.seedPrefix}:${position}:${index}`;
   const careerId = `career-sim-${position}-${index}`;
   const startedAt = Date.now();
@@ -444,6 +465,7 @@ function runOneCareer(
 
     let status = 'ACTIVE';
     let finalChoice = '';
+    let retireReason = '';
     let peakWage = 0;
     let step = 0;
 
@@ -467,17 +489,25 @@ function runOneCareer(
           step += 1;
           continue;
         }
-        snapshot = closePending(snapshot, `${seed}-resolve-${step}`, options.policy, pack, runtime);
+        const hadLastChance = state.retirement?.lastChanceConsumed === true;
+        snapshot = closePending(snapshot, `${seed}-resolve-${step}`, options, pack, runtime);
+        if (!hadLastChance && snapshot.state.retirement?.lastChanceConsumed === true) {
+          retireReason = 'CONTINUED';
+        }
         commands += 1;
         step += 1;
         continue;
       }
       if (state.contract !== null && state.season === null) {
+        // 은퇴 심사(REVIEW)가 걸리면 --to-retirement 여부와 무관하게 시즌 경계에서 강제 RETIRE된다
+        // (packages/domain/src/simulate.ts의 startSeason이 RETIREMENT_DECISION_REQUIRED로 거부한다).
+        // 시즌 상한(CAP)으로 강제 은퇴시키는 것은 이 도구의 인공물일 뿐 도메인 관찰이 아니다.
+        const reviewRequired = retirementDecisionRequired(state);
         const atSeasonCap = state.seasonHistory.length >= options.seasons;
-        const wantsRetire = options.toRetirement && retirementDecisionRequired(state);
-        if (atSeasonCap || wantsRetire) {
+        if (reviewRequired || atSeasonCap) {
           snapshot = command(snapshot, 'RETIRE', { choice: 'RETIRE' }, `${seed}-retire`);
           finalChoice = 'RETIRE';
+          retireReason = reviewRequired ? 'REVIEW' : 'CAP';
           continue;
         }
         for (let decision = 0; decision < 3; decision += 1) {
@@ -644,6 +674,7 @@ function runOneCareer(
       retiredAge: finalState.status === 'RETIRED' ? finalState.age : '',
       status,
       finalChoice,
+      retireReason,
       clubs: finalState.clubHistory.length,
       firstTier: String(firstTier),
       bestTier: String(bestTier),
@@ -666,10 +697,9 @@ function runOneCareer(
       legacyBandId,
       legacyEndingId,
       commands,
-      ms: Date.now() - startedAt,
       stateHash: finalSnapshot.stateHash,
     };
-    return { career, seasons: seasonRows };
+    return { career, seasons: seasonRows, ms: Date.now() - startedAt };
   } catch (error) {
     const info = error instanceof SimStepError ? error : undefined;
     const career: CareerRow = {
@@ -690,6 +720,7 @@ function runOneCareer(
       retiredAge: '',
       status: 'FAILED',
       finalChoice: '',
+      retireReason: '',
       clubs: '',
       firstTier: '',
       bestTier: '',
@@ -712,7 +743,6 @@ function runOneCareer(
       legacyBandId: '',
       legacyEndingId: '',
       commands,
-      ms: Date.now() - startedAt,
       stateHash: '',
     };
     const failure: FailureRow = {
@@ -725,7 +755,7 @@ function runOneCareer(
       errorCode: info?.errorCode ?? 'UNKNOWN',
       message: error instanceof Error ? error.message : String(error),
     };
-    return { career, seasons: seasonRows, failure };
+    return { career, seasons: seasonRows, failure, ms: Date.now() - startedAt };
   }
 }
 
@@ -753,10 +783,11 @@ export function simulateRange(options: CareerSimOptions): CareerSimBatch {
   const careers: CareerRow[] = [];
   const seasons: SeasonRow[] = [];
   const failures: FailureRow[] = [];
+  const msValues: number[] = [];
   for (let index = start; index < end; index += 1) {
     const position: StatGroup =
       options.position === 'all' ? POSITIONS[index % 4]! : (options.position as StatGroup);
-    const { career, seasons: seasonRows, failure } = runOneCareer(
+    const { career, seasons: seasonRows, failure, ms } = runOneCareer(
       position,
       index,
       options,
@@ -768,9 +799,10 @@ export function simulateRange(options: CareerSimOptions): CareerSimBatch {
     careers.push(career);
     seasons.push(...seasonRows);
     if (failure !== undefined) failures.push(failure);
+    msValues.push(ms);
     if ((index + 1) % 10 === 0) process.stderr.write(`career-sim: ${index + 1}/${end} (범위 ${start}-${end})\n`);
   }
-  return { careers, seasons, failures };
+  return { careers, seasons, failures, msValues };
 }
 
 // ---------------------------------------------------------------------------
@@ -802,12 +834,24 @@ function numericStats(values: readonly number[]): { mean: number; p10: number; p
   return { mean, p10: quantile(sorted, 0.1), p50: quantile(sorted, 0.5), p90: quantile(sorted, 0.9) };
 }
 
+// 시즌 상한(CAP)으로 강제 은퇴시킨 커리어가 상한 나이에 뭉치는 것은 도구의 인공물이지 도메인
+// 관찰이 아니다 — retiredAge 통계는 실제 은퇴 심사(REVIEW)로 은퇴한 커리어만 대상으로 한다.
+function retiredAgeStats(careers: readonly CareerRow[]): { mean: number | null; p10: number | null; p50: number | null; p90: number | null; n: number } {
+  const ages = careers
+    .filter((c) => c.retireReason === 'REVIEW')
+    .map((c) => c.retiredAge)
+    .filter((v): v is number => typeof v === 'number');
+  if (ages.length === 0) return { mean: null, p10: null, p50: null, p90: null, n: 0 };
+  const stats = numericStats(ages);
+  return { ...stats, n: ages.length };
+}
+
 function computeGroupSummary(careers: readonly CareerRow[]) {
   const numeric = (key: string) =>
     careers.map((c) => c[key]).filter((v): v is number => typeof v === 'number');
   const peakOvr = numericStats(numeric('peakOvr'));
   const finalOvr = numericStats(numeric('finalOvr'));
-  const retiredAge = numericStats(careers.map((c) => c.retiredAge).filter((v): v is number => typeof v === 'number'));
+  const retiredAge = retiredAgeStats(careers);
   const seasons = numericStats(numeric('seasons'));
   const totalInjuries = numeric('injuries').reduce((a, b) => a + b, 0);
   const totalSeasons = numeric('seasons').reduce((a, b) => a + b, 0);
@@ -875,6 +919,7 @@ export function buildSummary(
     tier1ReachBySeason[String(seasonMark)] =
       careers.length > 0 ? Math.round((reached / careers.length) * 10000) / 10000 : 0;
   }
+  const msStats = numericStats(batch.msValues);
   return {
     runtime: {
       rulesetVersion: options.rulesetVersion,
@@ -887,6 +932,7 @@ export function buildSummary(
       jobs: options.jobs,
       startedAt,
       elapsedMs,
+      msPerCareer: { mean: msStats.mean, p50: msStats.p50, p90: msStats.p90 },
     },
     careers: { count: careers.length, failed: failedCount },
     overall: { ...overall, tier1ReachBySeason },
@@ -950,6 +996,12 @@ export async function runCareerSim(rawOptions: CareerSimOptions): Promise<Career
   await writeFile(resolve(options.out, 'seasons.csv'), toCsv(SEASONS_CSV_HEADER, batch.seasons), 'utf8');
   await writeFile(resolve(options.out, 'failures.csv'), toCsv(FAILURES_CSV_HEADER, batch.failures), 'utf8');
   await writeFile(resolve(options.out, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+  // 병렬 실행(runParallel)이 shard의 careers.csv(ms 컬럼 없음)만으로는 msPerCareer를 다시 계산할
+  // 수 없어, 자식 프로세스(--range-start 지정)일 때만 원시 ms 배열을 내부용 파일로 남긴다.
+  // partDir 전체가 병합 뒤 삭제되므로 최종 --out 디렉터리에는 남지 않는다.
+  if (options.rangeStart !== undefined) {
+    await writeFile(resolve(options.out, 'ms.json'), JSON.stringify(batch.msValues), 'utf8');
+  }
 
   return { ok: true, batch, summary, elapsedMs };
 }
@@ -1007,6 +1059,7 @@ async function runParallel(options: CareerSimOptions): Promise<CareerSimBatch> {
   const careers: CareerRow[] = [];
   const seasons: SeasonRow[] = [];
   const failures: FailureRow[] = [];
+  const msValues: number[] = [];
   let anyFailed = false;
   for (let i = 0; i < results.length; i += 1) {
     const outcome = results[i]!;
@@ -1020,14 +1073,16 @@ async function runParallel(options: CareerSimOptions): Promise<CareerSimBatch> {
         careers: { count: number };
       };
       void partSummary;
-      const [careersCsv, seasonsCsv, failuresCsv] = await Promise.all([
+      const [careersCsv, seasonsCsv, failuresCsv, msJson] = await Promise.all([
         readFile(resolve(dir, 'careers.csv'), 'utf8'),
         readFile(resolve(dir, 'seasons.csv'), 'utf8'),
         readFile(resolve(dir, 'failures.csv'), 'utf8'),
+        readFile(resolve(dir, 'ms.json'), 'utf8'),
       ]);
       careers.push(...parseCsv(careersCsv, CAREERS_CSV_HEADER));
       seasons.push(...parseCsv(seasonsCsv, SEASONS_CSV_HEADER));
       failures.push(...parseCsv(failuresCsv, FAILURES_CSV_HEADER));
+      msValues.push(...(JSON.parse(msJson) as number[]));
     } catch {
       anyFailed = true;
     }
@@ -1035,7 +1090,7 @@ async function runParallel(options: CareerSimOptions): Promise<CareerSimBatch> {
   careers.sort((a, b) => Number(a.index) - Number(b.index) || String(a.position).localeCompare(String(b.position)));
   await rm(partDir, { recursive: true, force: true });
   if (anyFailed && careers.length === 0) throw new Error('모든 자식 프로세스가 실패했다');
-  return { careers, seasons, failures };
+  return { careers, seasons, failures, msValues };
 }
 
 function parseCsvLine(line: string): string[] {
