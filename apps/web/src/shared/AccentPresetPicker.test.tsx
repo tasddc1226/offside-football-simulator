@@ -1,8 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { activeRuleset } from '../engine/content.js';
+import { loadRuleset } from '@offside/content';
 import { AccentPresetPicker } from './AccentPresetPicker.js';
+
+// 구단 컬러 프리셋은 룰셋 1.5.0(K1 12개)을 직접 읽는다(AccentPresetPicker.tsx 참고) — activeRuleset이
+// 아직 1.4.0이라도 라벨이 항상 정확한 팀명을 쓴다.
+const presetRuleset = loadRuleset('1.5.0');
 
 describe('AccentPresetPicker', () => {
   it('각 프리셋을 색 이름 라벨의 radio 타일로 노출하고, 선택 항목만 checked다(UX-013 다듬기: 그리드 하단 "선택: <이름>" 캡션은 없앴다 — aria-checked로 확인)', () => {
@@ -20,7 +24,7 @@ describe('AccentPresetPicker', () => {
   it('UX-013 다듬기: 구단 타일 아래 보이는 캡션은 "컬러" 접미사 없이 팀 이름만 쓴다(aria-label·요약줄 이름은 그대로 "<팀명> 컬러")', () => {
     render(<AccentPresetPicker value="DEFAULT" onValueChange={vi.fn()} />);
 
-    const team = activeRuleset.teams.find((candidate) => candidate.id === 'seorabeol-united');
+    const team = presetRuleset.teams.find((candidate) => candidate.id === 'suwon-hwahong-fc');
     expect(team).toBeDefined();
     const teamName = team?.name ?? '';
     const radio = screen.getByRole('radio', { name: `${teamName} 컬러` });
@@ -38,7 +42,7 @@ describe('AccentPresetPicker', () => {
     const teamGroup = screen.getByRole('group', { name: '구단' });
     expect(screen.getByRole('group', { name: '기본' })).toBeInTheDocument();
     expect(teamGroup.querySelectorAll('[role="radio"]')).toHaveLength(12);
-    const firstTeam = activeRuleset.teams[0];
+    const firstTeam = presetRuleset.teams.find((candidate) => candidate.id === 'seoul-hangang-fc');
     expect(firstTeam).toBeDefined();
     expect(screen.getByRole('radio', { name: `${firstTeam?.name ?? ''} 컬러` })).toHaveAttribute(
       'aria-checked',
@@ -63,9 +67,9 @@ describe('AccentPresetPicker', () => {
     const onValueChange = vi.fn();
     render(<AccentPresetPicker value="DEFAULT" onValueChange={onValueChange} />);
 
-    const team = activeRuleset.teams.find((candidate) => candidate.id === 'geumbit-fc');
+    const team = presetRuleset.teams.find((candidate) => candidate.id === 'jeju-halla-city');
     await user.click(screen.getByRole('radio', { name: `${team?.name} 컬러` }));
 
-    expect(onValueChange).toHaveBeenCalledWith('team-geumbit-fc');
+    expect(onValueChange).toHaveBeenCalledWith('team-jeju-halla-city');
   });
 });

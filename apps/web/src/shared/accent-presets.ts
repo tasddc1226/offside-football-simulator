@@ -7,20 +7,27 @@
 // 이름은 설정 화면이 활성 룰셋의 teams를 넘겨 `buildAccentPresetGroups`로 만든다.
 export type BaseAccentPresetId = 'DEFAULT' | 'green' | 'violet' | 'crimson' | 'amber' | 'mono';
 
-/** 활성 룰셋 12개 구단 id. tokens.css --os-team-<id>·team-identity.ts와 순서까지 같다. */
+/**
+ * K1 리그 12개 구단 id(룰셋 1.5.0). tokens.css --os-swatch-team-<id>·:root[data-accent='team-<id>']
+ * 블록·team-identity.ts와 순서까지 같다.
+ *
+ * 이전 값(1.0.0~1.4.0의 가상 구단 12개, hangang-u18 등)은 1.5.0의 K리그식 구조로 교체됐다 — 그 id로
+ * 저장된 옛 data-accent 값은 더 이상 ACCENT_PRESET_IDS에 없으므로 ui-store가 검증에 실패해 'DEFAULT'로
+ * 안전 폴백한다(저장된 선택을 지우거나 오류를 내지 않는다).
+ */
 export const TEAM_ACCENT_PRESET_TEAM_IDS = [
-  'hangang-u18',
-  'seorabeol-united',
-  'cheongyeon-fc',
-  'gangdong-rovers',
-  'onsaemiro-city',
-  'byeolbit-united',
-  'galmae-town',
-  'noeulhang-fc',
-  'geumbit-fc',
-  'eunha-rovers',
-  'gangnaru-united',
-  'dalbit-town-fc',
+  'seoul-hangang-fc',
+  'suwon-hwahong-fc',
+  'incheon-gaetbeol-fc',
+  'jeonju-deulnyeok-united',
+  'ulsan-pado-fc',
+  'pohang-donghae-fc',
+  'daegu-palgong-fc',
+  'jeju-halla-city',
+  'gangneung-haesol-fc',
+  'gwangju-mudeung-fc',
+  'daejeon-gapcheon-fc',
+  'busan-deungdae-fc',
 ] as const;
 
 export type TeamAccentTeamId = (typeof TEAM_ACCENT_PRESET_TEAM_IDS)[number];
