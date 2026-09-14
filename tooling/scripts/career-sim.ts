@@ -123,6 +123,28 @@ export const FAILURES_CSV_HEADER = [
   'message',
 ] as const;
 
+// runParallel이 shard의 CSV를 다시 읽어 합칠 때(parseCsv), 시뮬레이션 직후의 행과 같은 타입으로
+// 되돌리기 위한 컬럼별 숫자 목록. 숫자처럼 보이더라도 원본이 문자열인 컬럼(예: seed는
+// `${seedPrefix}:${position}:${index}` 형태, leagueTier·firstTier·bestTier는 String()으로 감싼
+// 값, stateHash는 16진 해시)은 여기 넣지 않는다 — regex로 "숫자처럼 보이면 변환"하면
+// leagueTier="2" 같은 값이 Number(2)가 되어 buildSummary의 문자열 비교(`tier === '2'`)가 항상
+// 거짓이 된다(--jobs 1 vs --jobs 3 summary.json 불일치의 원인).
+const CAREERS_NUMERIC_COLUMNS = new Set<string>([
+  'index', 'truePotential', 'baseOvrStart', 'peakOvr', 'peakOvrAge', 'finalOvr', 'seasons',
+  'retiredAge', 'clubs', 'seasonsInTier1', 'seasonsInTier2', 'seasonsInTier3', 'totalApps',
+  'totalMinutes', 'totalGoals', 'totalAssists', 'avgRatingTenths', 'injuries', 'severeInjuries',
+  'contracts', 'peakWageMinorPerWeek', 'totalIncomeMinor', 'nationalCallUps', 'captainSeasons',
+  'legacyScore', 'commands',
+]);
+
+const SEASONS_NUMERIC_COLUMNS = new Set<string>([
+  'index', 'seasonIndex', 'age', 'finalRank', 'apps', 'started', 'minutes',
+  'possibleMinutes', 'avgRatingTenths', 'injuries', 'ovrBefore', 'ovrAfter', 'formAfter',
+  'fitnessAfter', 'moraleAfter', 'managerTrustAfter', 'wageMinorPerWeek',
+]);
+
+const FAILURES_NUMERIC_COLUMNS = new Set<string>(['index', 'seasonIndex', 'commandIndex']);
+
 const COMMAND_BUDGET = 5000;
 
 // ---------------------------------------------------------------------------
@@ -1079,9 +1101,9 @@ async function runParallel(options: CareerSimOptions): Promise<CareerSimBatch> {
         readFile(resolve(dir, 'failures.csv'), 'utf8'),
         readFile(resolve(dir, 'ms.json'), 'utf8'),
       ]);
-      careers.push(...parseCsv(careersCsv, CAREERS_CSV_HEADER));
-      seasons.push(...parseCsv(seasonsCsv, SEASONS_CSV_HEADER));
-      failures.push(...parseCsv(failuresCsv, FAILURES_CSV_HEADER));
+      careers.push(...parseCsv(careersCsv, CAREERS_CSV_HEADER, CAREERS_NUMERIC_COLUMNS));
+      seasons.push(...parseCsv(seasonsCsv, SEASONS_CSV_HEADER, SEASONS_NUMERIC_COLUMNS));
+      failures.push(...parseCsv(failuresCsv, FAILURES_CSV_HEADER, FAILURES_NUMERIC_COLUMNS));
       msValues.push(...(JSON.parse(msJson) as number[]));
     } catch {
       anyFailed = true;
@@ -1123,7 +1145,11 @@ function parseCsvLine(line: string): string[] {
   return cells;
 }
 
-function parseCsv(text: string, header: readonly string[]): Record<string, string | number>[] {
+function parseCsv(
+  text: string,
+  header: readonly string[],
+  numericColumns: ReadonlySet<string>,
+): Record<string, string | number>[] {
   const lines = text.split('\n').filter((l) => l.length > 0);
   const rows: Record<string, string | number>[] = [];
   for (let i = 1; i < lines.length; i += 1) {
@@ -1131,8 +1157,8 @@ function parseCsv(text: string, header: readonly string[]): Record<string, strin
     const row: Record<string, string | number> = {};
     header.forEach((key, idx) => {
       const raw = cells[idx] ?? '';
-      const num = raw !== '' && !Number.isNaN(Number(raw)) ? Number(raw) : undefined;
-      row[key] = num !== undefined && /^-?\d+(\.\d+)?$/.test(raw) ? num : raw;
+      // 빈칸은 빈칸으로 유지한다(goals/assists 등 GK·DF 포지션에서 의도적으로 빈 문자열).
+      row[key] = raw !== '' && numericColumns.has(key) ? Number(raw) : raw;
     });
     rows.push(row);
   }

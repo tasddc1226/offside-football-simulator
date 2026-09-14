@@ -39,6 +39,46 @@ describe('runCareerSim', () => {
     expect(first.batch.careers).toHaveLength(1);
     expect(second.batch.careers[0].stateHash).toBe(first.batch.careers[0].stateHash);
     expect(first.batch.careers[0].stateHash).not.toBe('');
+
+    // --jobs 1(단일 프로세스)과 --jobs 2(runParallel이 shard CSV를 되읽어 합침)는 summary.json이
+    // runtime(elapsedMs·msPerCareer 등 타이밍 값)을 제외하면 완전히 같아야 한다 — parseCsv가 숫자
+    // 컬럼을 원래 타입으로 되돌리지 못하면 tierBySeasonIndex 같은 문자열 비교 집계가 어긋난다.
+    const jobs1 = await runCareerSim({
+      rulesetVersion: '1.5.0',
+      contentPackVersion: '0.6.0',
+      seeds: 4,
+      seedPrefix: 'career-sim-jobs-test',
+      seasons: 2,
+      toRetirement: false,
+      policy: 'opportunity',
+      position: 'all',
+      mode: 'CHAPTER',
+      jobs: 1,
+      out: path.join(workDir, 'jobs1'),
+      verify: false,
+    });
+    const jobs2 = await runCareerSim({
+      rulesetVersion: '1.5.0',
+      contentPackVersion: '0.6.0',
+      seeds: 4,
+      seedPrefix: 'career-sim-jobs-test',
+      seasons: 2,
+      toRetirement: false,
+      policy: 'opportunity',
+      position: 'all',
+      mode: 'CHAPTER',
+      jobs: 2,
+      out: path.join(workDir, 'jobs2'),
+      verify: false,
+    });
+    expect(jobs1.ok).toBe(true);
+    expect(jobs2.ok).toBe(true);
+    if (!jobs1.ok || !jobs2.ok) return;
+    const summary1 = { ...jobs1.summary };
+    const summary2 = { ...jobs2.summary };
+    delete summary1.runtime;
+    delete summary2.runtime;
+    expect(summary2).toEqual(summary1);
   });
 
   it('careers.csv 헤더가 브리프 컬럼 순서와 같다', async () => {
