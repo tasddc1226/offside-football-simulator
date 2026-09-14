@@ -188,8 +188,23 @@ const INJURY_SEASON_BUCKETS = [
   { label: '6+', test: (n) => n >= 6 },
 ];
 
-function careerSummary(careers) {
+// seasons.csv에서 seed별 "가장 이른 1부(leagueTier===1) 도달 seasonIndex"를 구한다.
+// (누적 도달률 = seasonIndex <= N인 시즌 중 하나라도 1부였던 커리어의 비율)
+function firstTier1SeasonIndexBySeed(seasons) {
+  const map = new Map();
+  for (const s of seasons) {
+    if (String(s.leagueTier) !== '1') continue;
+    const idx = Number(s.seasonIndex);
+    if (!Number.isFinite(idx)) continue;
+    const prev = map.get(s.seed);
+    if (prev === undefined || idx < prev) map.set(s.seed, idx);
+  }
+  return map;
+}
+
+function careerSummary(careers, seasonRows) {
   const ok = careers.filter((c) => c.status !== 'FAILED');
+  const firstTier1BySeed = firstTier1SeasonIndexBySeed(seasonRows);
   const peakOvr = stats(num(ok, 'peakOvr'));
   const finalOvr = stats(num(ok, 'finalOvr'));
   const truePotential = stats(num(ok, 'truePotential'));
@@ -206,7 +221,10 @@ function careerSummary(careers) {
   const tier1ReachRate = pct(tier1Reach, ok.length);
   const tier1ReachBySeason = {};
   for (const mark of [5, 10, 15, 20]) {
-    const reached = ok.filter((c) => Number(c.seasons) >= mark && Number(c.seasonsInTier1) > 0).length;
+    const reached = ok.filter((c) => {
+      const firstIdx = firstTier1BySeed.get(c.seed);
+      return firstIdx !== undefined && firstIdx <= mark;
+    }).length;
     tier1ReachBySeason[mark] = pct(reached, ok.length);
   }
   const clubs = stats(num(ok, 'clubs'));
@@ -588,8 +606,8 @@ async function main(argv = process.argv.slice(2)) {
   const runA = await loadRun(resolveRunDir(dirA));
   const runB = dirB !== undefined ? await loadRun(resolveRunDir(dirB)) : undefined;
 
-  const careerA = careerSummary(runA.careers);
-  const careerB = runB !== undefined ? careerSummary(runB.careers) : undefined;
+  const careerA = careerSummary(runA.careers, runA.seasons);
+  const careerB = runB !== undefined ? careerSummary(runB.careers, runB.seasons) : undefined;
   const seasonA = seasonSummary(runA.seasons);
   const seasonB = runB !== undefined ? seasonSummary(runB.seasons) : undefined;
 
