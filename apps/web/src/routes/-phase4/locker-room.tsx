@@ -26,7 +26,6 @@ export function LockerRoomContext({ state }: EventDecisionContext) {
           </div>
         ))}
       </div>
-      {state.memoryTags.captain.length === 0 ? <p className="os-muted">주장단 관계는 관련 라커룸 사건과 선택에 따라 달라질 수 있습니다.</p> : null}
       <div>
         <h3 className="font-semibold">최근 변화</h3>
         {state.relationshipLog.length > 0 ? (
