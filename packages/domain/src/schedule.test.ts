@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { rulesetProto } from './__fixtures__/career-01.js';
-import { buildSchedule, findLeague, isRivalOpponent, resolveOpponent } from './schedule.js';
-import type { Ruleset } from './ruleset.js';
+import {
+  assertLeagueLedgerInvariant,
+  completeLeagueRoundsForStep,
+  createLeagueSeasonLedger,
+  standingsFromLedger,
+} from './league-ledger.js';
+import { buildLeagueFixtures, buildLeagueRoster, buildSchedule, findLeague, isRivalOpponent, resolveOpponent } from './schedule.js';
+import type { League, Ruleset } from './ruleset.js';
 
 const team = rulesetProto.teams.find((candidate) => candidate.id === 'seoul-tier1')!;
 const league = findLeague(rulesetProto, team.leagueId);
@@ -14,6 +20,76 @@ describe('buildSchedule', () => {
   it('teamCount 12 → 리그 22경기(원형 라운드로빈 2회전)를 만든다', () => {
     expect(league.teamCount).toBe(12);
     expect(leagueEntries).toHaveLength(22);
+
+    const ledgerRuleset: Ruleset = {
+      ...rulesetProto,
+      version: '1.7.0',
+      leagueLedgerRules: {
+        policyVersion: '1.0.0',
+        maxTeamCount: 16,
+        scoreKernel: 'MATCH_RULES_V1',
+        points: { win: 3, draw: 1, loss: 0 },
+        tieBreakers: ['POINTS', 'GOAL_DIFFERENCE', 'GOALS_FOR', 'TEAM_ID'],
+      },
+    };
+    const maxLeague: League = { ...league, teamCount: 16 };
+    const maxRoster = buildLeagueRoster(ledgerRuleset, team, maxLeague);
+    const maxFixtures = buildLeagueFixtures(20, maxLeague.id, maxRoster);
+    expect(maxRoster).toHaveLength(16);
+    expect(maxFixtures).toHaveLength(16 * 15);
+    expect(new Set(maxFixtures.map((fixture) => fixture.round)).size).toBe(30);
+    const pairings = new Map<string, Array<{ home: string; away: string }>>();
+    for (const fixture of maxFixtures) {
+      const key = [fixture.homeTeamId, fixture.awayTeamId].sort().join(':');
+      pairings.set(key, [...(pairings.get(key) ?? []), { home: fixture.homeTeamId, away: fixture.awayTeamId }]);
+    }
+    expect(pairings.size).toBe(16 * 15 / 2);
+    for (const legs of pairings.values()) {
+      expect(legs).toHaveLength(2);
+      expect(legs[0]).toEqual({ home: legs[1]!.away, away: legs[1]!.home });
+    }
+
+    const shuffled = [...maxRoster].reverse();
+    expect(buildLeagueFixtures(20, maxLeague.id, shuffled)).toEqual(maxFixtures);
+
+    const oddLeague: League = { ...league, teamCount: 5 };
+    const oddRoster = buildLeagueRoster(ledgerRuleset, team, oddLeague);
+    const oddFixtures = buildLeagueFixtures(1, oddLeague.id, oddRoster);
+    expect(oddFixtures).toHaveLength(20);
+    expect(new Set(oddFixtures.map((fixture) => fixture.round)).size).toBe(10);
+    for (const round of new Set(oddFixtures.map((fixture) => fixture.round))) {
+      expect(oddFixtures.filter((fixture) => fixture.round === round)).toHaveLength(2);
+    }
+
+    const seed: [number, number, number, number] = [1, 2, 3, 4];
+    const ledger = createLeagueSeasonLedger(ledgerRuleset, team, oddLeague, 1, seed)!;
+    const byeRound = [...new Set(oddFixtures.map((fixture) => fixture.round))].find((round) =>
+      oddFixtures.filter((fixture) => fixture.round === round).every(
+        (fixture) => fixture.homeTeamId !== team.id && fixture.awayTeamId !== team.id,
+      ),
+    )!;
+    const byeStep = oddFixtures.find((fixture) => fixture.round === byeRound)!.step;
+    const completed = completeLeagueRoundsForStep(ledgerRuleset, ledger, byeStep);
+    expect(seed).toEqual([1, 2, 3, 4]);
+    expect(completeLeagueRoundsForStep(ledgerRuleset, ledger, byeStep)).toEqual(completed);
+    assertLeagueLedgerInvariant(completed);
+    const standings = standingsFromLedger(ledgerRuleset, completed);
+    expect(standings.reduce((sum, row) => sum + row.goalsFor, 0)).toBe(
+      standings.reduce((sum, row) => sum + row.goalsAgainst, 0),
+    );
+    expect(standings.every((row) => row.played === row.won + row.drawn + row.lost)).toBe(true);
+
+    expect(() => assertLeagueLedgerInvariant({
+      ...completed,
+      results: completed.results.slice(0, 1),
+      completedRounds: [],
+    })).toThrow(/부분 집합/);
+    expect(() => assertLeagueLedgerInvariant({ ...ledger, completedRounds: [999] })).toThrow(/존재하지 않는/);
+    expect(() => assertLeagueLedgerInvariant({ ...ledger, teams: [...ledger.teams, ledger.teams[0]!] })).toThrow(/중복/);
+    expect(() => assertLeagueLedgerInvariant({
+      ...completed,
+      results: [{ ...completed.results[0]!, homeGoals: -1 }, ...completed.results.slice(1)],
+    })).toThrow(/스코어/);
   });
 
   it('리그 경기는 step 3~11에 2~3경기씩 배치된다', () => {

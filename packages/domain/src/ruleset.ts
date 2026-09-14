@@ -71,6 +71,15 @@ export type League = {
   promotionSlots: number;
 };
 
+/** T-7-022: 리그 전체 원장을 지원하는 신규 룰셋만 명시하는 버전 고정 정책. */
+export type LeagueLedgerRules = {
+  policyVersion: '1.0.0';
+  maxTeamCount: 16;
+  scoreKernel: 'MATCH_RULES_V1';
+  points: { win: 3; draw: 1; loss: 0 };
+  tieBreakers: ['POINTS', 'GOAL_DIFFERENCE', 'GOALS_FOR', 'TEAM_ID'];
+};
+
 // T-2-002 D-34: 컵 대회 하나. `rounds`는 항상 4라운드 고정 순서(R1 → R2 → SEMI → FINAL)다(content
 // 스키마가 정확한 값·순서를 강제한다. 여기서 튜플 타입을 쓰지 않는 이유는 JSON에서 그대로 `as Ruleset`
 // 캐스팅하는 fixture 로더들이 배열 리터럴을 튜플로 좁혀 추론하지 않기 때문이다).
@@ -429,6 +438,8 @@ export type Ruleset = {
     immediate: Record<'PLAYING_TIME_ACCEPTED' | 'PLAYING_TIME_REFUSED' | 'LOAN_ACCEPTED' | 'LOAN_REFUSED' | 'TRANSFER_ACCEPTED' | 'TRANSFER_REFUSED', { managerTrustDelta: number; moraleDelta: number }>;
     goalMet: { managerTrustDelta: number; moraleDelta: number };
   } | undefined;
+  /** 1.7.0+: 소속 리그 전체 대진·원장·실제 순위 지원 gate. */
+  leagueLedgerRules?: LeagueLedgerRules | undefined;
   positions: Position[];
   archetypes: Archetype[];
   backgrounds: Background[];

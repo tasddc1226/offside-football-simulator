@@ -1,4 +1,14 @@
-import { canonicalize, hashState, simulate, type DomainSnapshot, type JsonValue } from '@offside/domain';
+import {
+  buildLeagueFixtures,
+  canonicalize,
+  hashSeasonResult,
+  hashState,
+  simulate,
+  type DomainSnapshot,
+  type JsonValue,
+  type LeagueSeasonLedger,
+  type StandingRow,
+} from '@offside/domain';
 import {
   career01,
   career02Season,
@@ -513,5 +523,106 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
       expect(season.bodyBytes, `career-13-integration season${season.seasonIndex} PUT`).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
     }
     expect(bodyBytesFull, 'career-13-integration full PUT').toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+
+    // T-7-022 WP-03: 실제 직렬화 경로로 최대 16팀 active ledger와 20시즌 final table 보존 예산을 잰다.
+    // 자연 완주 성능은 career-sim으로 별도 검증하고, 이 테스트는 최악 크기 shape를 보수적으로 채운다.
+    const teams = Array.from({ length: 16 }, (_, index) => ({
+      teamId: `size-team-${String(index + 1).padStart(2, '0')}`,
+      name: `크기 측정 팀 ${index + 1}`,
+      strength: 50 + index,
+    }));
+    const fixtures = buildLeagueFixtures(20, 'size-league', teams);
+    const ledger: LeagueSeasonLedger = {
+      policyVersion: '1.0.0',
+      leagueId: 'size-league',
+      leagueName: '크기 측정 리그',
+      seasonIndex: 20,
+      teamId: teams[0]!.teamId,
+      seed: [1, 2, 3, 4],
+      teams,
+      results: fixtures.map((fixture, index) => ({
+        fixtureId: fixture.fixtureId,
+        round: fixture.round,
+        homeTeamId: fixture.homeTeamId,
+        awayTeamId: fixture.awayTeamId,
+        homeGoals: index % 4,
+        awayGoals: (index + 1) % 3,
+      })),
+      completedRounds: Array.from({ length: 30 }, (_, index) => index + 1),
+    };
+    const activeTemplate = [...steps].reverse().find((step) => step.snapshot.state.season !== null)!;
+    const activeState = {
+      ...activeTemplate.snapshot.state,
+      season: { ...activeTemplate.snapshot.state.season!, leagueLedger: ledger },
+    };
+    const activeTarget: Step = {
+      ...activeTemplate,
+      snapshot: { ...activeTemplate.snapshot, state: activeState, stateHash: hashState(activeState) },
+    };
+    const activeStateBytes = stateBytes(activeTarget.snapshot);
+    const activePutBody = buildPutBody(steps, 0, activeTarget);
+    const activePutBytes = byteLength(JSON.stringify(activePutBody));
+    expect(PutCareerBodySchema.safeParse(activePutBody).success).toBe(true);
+    expect(activeStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+    expect(activePutBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+
+    const rows: StandingRow[] = teams.map((team, index) => ({
+      rank: index + 1,
+      teamId: team.teamId,
+      teamName: team.name,
+      played: 30,
+      won: 15,
+      drawn: 0,
+      lost: 15,
+      goalsFor: 45 - index,
+      goalsAgainst: 30 + index,
+      goalDifference: 15 - index * 2,
+      points: 45,
+    }));
+    const resultTemplate = final.snapshot.state.seasonHistory.at(-1)!.result;
+    const seasonHistory = Array.from({ length: 20 }, (_, index) => {
+      const seasonIndex = index + 1;
+      const resultWithoutHash = {
+        ...resultTemplate,
+        index: seasonIndex,
+        finalLeagueTable: {
+          policyVersion: '1.0.0' as const,
+          leagueId: 'size-league',
+          leagueName: '크기 측정 리그',
+          seasonIndex,
+          teamId: teams[0]!.teamId,
+          completedRounds: 30,
+          rows,
+        },
+      };
+      const result = { ...resultWithoutHash, hash: hashSeasonResult(resultWithoutHash) };
+      return {
+        ...final.snapshot.state.seasonHistory.at(-1)!,
+        index: seasonIndex,
+        settledAtRevision: final.snapshot.revision + seasonIndex,
+        result,
+      };
+    });
+    const historyState = { ...final.snapshot.state, seasonHistory };
+    const historyTarget: Step = {
+      ...final,
+      snapshot: { ...final.snapshot, state: historyState, stateHash: hashState(historyState) },
+    };
+    const historyStateBytes = stateBytes(historyTarget.snapshot);
+    const historyPutBody = buildPutBody(steps, 0, historyTarget);
+    const historyPutBytes = byteLength(JSON.stringify(historyPutBody));
+    expect(PutCareerBodySchema.safeParse(historyPutBody).success).toBe(true);
+    expect(historyStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+    expect(historyPutBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+    console.log(JSON.stringify({
+      fixture: 'T-7-022-max-budget',
+      maxTeams: teams.length,
+      fixtures: fixtures.length,
+      activeStateBytes,
+      activePutBytes,
+      historySeasons: seasonHistory.length,
+      historyStateBytes,
+      historyPutBytes,
+    }));
   });
 });

@@ -48,6 +48,7 @@ import { ClubBadge } from '../shared/ClubBadge.js';
 import { resolveTeamName, type TeamNameOverrides } from '../shared/team-names.js';
 import { useUiStore } from '../shared/ui-store.js';
 import { GameResultReveal } from '../shared/game-presentation.js';
+import { LeagueStandingsTable } from '../shared/league-standings.js';
 
 type SeasonResultSearch = { season?: number };
 
@@ -319,7 +320,7 @@ function SeasonResultScreen() {
   // UX-010 P2c: 리그 순위로 승격·강등권 여부를 가려 헤드라인 분기에 쓴다. 컵만 뛴 시즌·순위 미확정은
   // 둘 다 false(평균 평점만으로 분기).
   const leagueRecord = view.result.competitions.find((competition) => competition.kind === 'LEAGUE') ?? null;
-  const league = leagueRecord === null ? undefined : ruleset.leagues.find((candidate) => candidate.id === leagueRecord.competitionId);
+  const league = leagueRecord === null ? undefined : ruleset.leagues.find((candidate) => candidate.id === (view.result.finalLeagueTable?.leagueId ?? leagueRecord.competitionId));
   const promoted =
     leagueRecord !== null &&
     leagueRecord.position !== null &&
@@ -537,6 +538,29 @@ function SeasonResultScreen() {
           </Tabs>
         </section>
       ) : null}
+
+      {view.result.finalLeagueTable === undefined || league === undefined ? (
+        <section className="os-panel flex flex-col gap-os-2" aria-label="전체 리그 순위 기록 지원 상태">
+          <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>전체 리그 순위</h2>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            룰셋 {state.rulesetVersion}의 이 시즌에는 전체 리그 순위 기록이 없습니다.
+          </p>
+        </section>
+      ) : (
+        <section className="os-panel">
+          <LeagueStandingsTable
+            rows={view.result.finalLeagueTable.rows}
+            teamId={view.result.finalLeagueTable.teamId}
+            leagueName={view.result.finalLeagueTable.leagueName}
+            completedRounds={view.result.finalLeagueTable.completedRounds}
+            ruleset={ruleset}
+            teamNameOverrides={teamNameOverrides}
+            promotionSpots={league.promotionSpots}
+            relegationSpots={league.relegationSpots}
+            final
+          />
+        </section>
+      )}
 
       <section className="os-panel flex flex-col gap-os-3">
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>

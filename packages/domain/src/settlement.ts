@@ -2,6 +2,7 @@ import { canonicalize, type JsonValue } from './canonical.js';
 import { sha256Hex } from './hash.js';
 import type { Ruleset } from './ruleset.js';
 import type { CareerState, RoleProposal, SeasonResult, SquadRole } from './types.js';
+import { buildFinalLeagueTable } from './league-ledger.js';
 
 const ROLE_ORDER: readonly SquadRole[] = ['STARTER', 'ROTATION', 'BENCH', 'RESERVE'];
 /** '이행'을 판정할 때만 쓰는 로컬 순위(숫자가 클수록 좋은 역할). selection.ts의 SQUAD_ROLE_RANK와는
@@ -102,7 +103,7 @@ export function buildSeasonResult(input: BuildSeasonResultInput): Omit<SeasonRes
       incomeMinor: 'serviceStatus' in state.nationalityRuleState && state.nationalityRuleState.serviceStatus === 'SERVING' && state.nationalityRuleState.route === 'CAREER_BREAK' ? 0 : season.legacyContext.wageMinorPerWeek * 52 + season.legacyContext.signingBonusMinor,
       contractId: season.legacyContext.contractId,
       relationships: { ...state.relationships },
-      promotion: season.competitions.some((competition) => competition.kind === 'LEAGUE' && competition.position !== null && competition.position <= (ruleset.leagues.find((league) => league.id === competition.competitionId)?.promotionSlots ?? 0)),
+      promotion: season.competitions.some((competition) => competition.kind === 'LEAGUE' && competition.position !== null && competition.position <= (ruleset.leagues.find((league) => league.id === (season.leagueLedger?.leagueId ?? competition.competitionId))?.promotionSlots ?? 0)),
       ageAtStart: seasonStartEntry.age,
       injuryMissedMatches: season.matches.filter((match) => match.outReason === 'INJURY').length,
     } }),
@@ -112,6 +113,7 @@ export function buildSeasonResult(input: BuildSeasonResultInput): Omit<SeasonRes
     managerId,
     captaincyAtEnd: state.captaincy,
     competitions: season.competitions,
+    ...(season.leagueLedger === undefined ? {} : { finalLeagueTable: buildFinalLeagueTable(ruleset, season.leagueLedger) }),
     playerStats: stats,
     selectionSummary: {
       squadRoleAtStart: season.squadRoleAtStart,

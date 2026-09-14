@@ -276,6 +276,20 @@ export const LeagueSchema = z
   });
 export type League = z.infer<typeof LeagueSchema>;
 
+export const LeagueLedgerRulesSchema = z.strictObject({
+  policyVersion: z.literal('1.0.0'),
+  maxTeamCount: z.literal(16),
+  scoreKernel: z.literal('MATCH_RULES_V1'),
+  points: z.strictObject({ win: z.literal(3), draw: z.literal(1), loss: z.literal(0) }),
+  tieBreakers: z.tuple([
+    z.literal('POINTS'),
+    z.literal('GOAL_DIFFERENCE'),
+    z.literal('GOALS_FOR'),
+    z.literal('TEAM_ID'),
+  ]),
+});
+export type LeagueLedgerRules = z.infer<typeof LeagueLedgerRulesSchema>;
+
 export const CupSchema = z.strictObject({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -1022,6 +1036,7 @@ export const RulesetSchema = z
       immediate: z.record(z.enum(['PLAYING_TIME_ACCEPTED', 'PLAYING_TIME_REFUSED', 'LOAN_ACCEPTED', 'LOAN_REFUSED', 'TRANSFER_ACCEPTED', 'TRANSFER_REFUSED']), z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int() })),
       goalMet: z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int() }),
     }).optional(),
+    leagueLedgerRules: LeagueLedgerRulesSchema.optional(),
     positions: z.array(PositionSchema).min(1),
     archetypes: z.array(ArchetypeSchema),
     backgrounds: z.array(BackgroundSchema).min(1),
@@ -1056,6 +1071,20 @@ export const RulesetSchema = z
     marketValueRules: MarketValueRulesSchema,
   })
   .superRefine((ruleset, ctx) => {
+    if (ruleset.version === '1.7.0' && ruleset.leagueLedgerRules === undefined) {
+      ctx.addIssue({ code: 'custom', message: '1.7.0 룰셋은 leagueLedgerRules를 명시해야 한다.', path: ['leagueLedgerRules'] });
+    }
+    if (ruleset.leagueLedgerRules !== undefined) {
+      for (const [index, league] of ruleset.leagues.entries()) {
+        if (league.teamCount > ruleset.leagueLedgerRules.maxTeamCount) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `ledger 지원 league teamCount는 ${ruleset.leagueLedgerRules.maxTeamCount} 이하여야 한다: ${league.teamCount}`,
+            path: ['leagues', index, 'teamCount'],
+          });
+        }
+      }
+    }
     if (ruleset.version === '1.1.0' && ruleset.offerProjection === undefined) {
       ctx.addIssue({
         code: 'custom',

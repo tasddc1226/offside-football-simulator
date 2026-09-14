@@ -173,5 +173,9 @@ describe('loadContentPack: 0.5.0', () => {
     expect(meetingPack.chapters.map((chapter) => chapter.id)).toEqual(
       loadContentPack('0.6.0').chapters.map((chapter) => chapter.id),
     );
+    const ledgerPack = loadContentPack('0.6.2');
+    expect(ledgerPack.manifest.compatibleRulesetVersions).toEqual(['1.7.0']);
+    expect(ledgerPack.events.map((event) => event.id)).toEqual(meetingPack.events.map((event) => event.id));
+    expect(ledgerPack.chapters.map((chapter) => chapter.id)).toEqual(meetingPack.chapters.map((chapter) => chapter.id));
   });
 });

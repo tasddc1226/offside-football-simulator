@@ -494,7 +494,66 @@ export type ScheduleEntry = {
   round: string | null;
   opponentId: string;
   home: boolean;
+  /** T-7-022: 신규 원장 지원 버전에서만 존재한다. */
+  fixtureId?: string;
+  /** 1부터 시작하는 리그 전체 라운드. 컵과 구버전 리그 일정에는 없다. */
+  leagueRound?: number;
   skipped?: 'ELIMINATED';
+};
+
+export type LeagueTeamSnapshot = { teamId: string; name: string; strength: number };
+
+export type LeagueFixture = {
+  fixtureId: string;
+  round: number;
+  step: number;
+  homeTeamId: string;
+  awayTeamId: string;
+};
+
+export type LeagueFixtureResult = {
+  fixtureId: string;
+  round: number;
+  homeTeamId: string;
+  awayTeamId: string;
+  homeGoals: number;
+  awayGoals: number;
+};
+
+export type LeagueSeasonLedger = {
+  policyVersion: '1.0.0';
+  leagueId: string;
+  leagueName: string;
+  seasonIndex: number;
+  teamId: string;
+  seed: [number, number, number, number];
+  teams: LeagueTeamSnapshot[];
+  results: LeagueFixtureResult[];
+  completedRounds: number[];
+};
+
+export type StandingRow = {
+  rank: number;
+  teamId: string;
+  teamName: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+};
+
+export type FinalLeagueTable = {
+  policyVersion: '1.0.0';
+  leagueId: string;
+  leagueName: string;
+  seasonIndex: number;
+  teamId: string;
+  completedRounds: number;
+  rows: StandingRow[];
 };
 
 // T-2-001이 타입만 두었던 것을 T-2-003이 확정한다(브리프 데이터 계약 D-35).
@@ -606,6 +665,8 @@ export type FootballSeason = {
   /** T-2-005 D-39: 이 시즌 훈련 초점(ROLE = 아키타입 roleWeights 그대로). */
   trainingFocus: TrainingFocus;
   competitions: CompetitionRecord[];
+  /** T-7-022: 진행 중인 소속 리그의 최소 확정 원장. 구버전에는 absent. */
+  leagueLedger?: LeagueSeasonLedger;
   /** T-2-003 D-35: roll 없이 시즌 시작 시 확정하는 리그·컵 일정(step·order 순 정렬). */
   schedule: ScheduleEntry[];
   matches: MatchRecord[];
@@ -703,6 +764,8 @@ export type SeasonResult = {
   /** T-4-003: 시즌을 마친 시점의 주장단 상태(결산 승격 전 값). */
   captaincyAtEnd: 'NONE' | 'VICE' | 'CAPTAIN';
   competitions: CompetitionRecord[];
+  /** T-7-022: 결산 hash 전에 한 번 고정한 전체 순위표. 구버전에는 absent. */
+  finalLeagueTable?: FinalLeagueTable;
   playerStats: SeasonPlayerStats;
   selectionSummary: {
     squadRoleAtStart: SquadRole;

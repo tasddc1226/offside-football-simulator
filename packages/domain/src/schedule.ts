@@ -1,6 +1,6 @@
-import { compareCodePoints } from './canonical.js';
+import { canonicalize, compareCodePoints } from './canonical.js';
 import type { League, Ruleset, Team } from './ruleset.js';
-import type { ScheduleEntry } from './types.js';
+import type { LeagueFixture, LeagueTeamSnapshot, ScheduleEntry } from './types.js';
 
 /** 이름 없는 상대 strength 오프셋(index로 결정, roll 없음). "균등 분산"을 대칭으로 도는 패턴으로 표현한다. */
 const UNNAMED_OPPONENT_SPREAD = [0, -5, 5, -10, 10, -15, 15, -20, 20] as const;
@@ -119,6 +119,101 @@ function buildLeagueRounds(ruleset: Ruleset, team: Team, league: League): RoundE
   return rounds;
 }
 
+/** T-7-022: 신규 원장용 참가팀 snapshot. 실제 소속 팀을 포함하고 합성 ID 충돌을 건너뛴다. */
+export function buildLeagueRoster(ruleset: Ruleset, team: Team, league: League): LeagueTeamSnapshot[] {
+  const named = ruleset.teams
+    .filter((candidate) => candidate.leagueId === league.id)
+    .sort((a, b) => compareCodePoints(a.id, b.id));
+  if (!named.some((candidate) => candidate.id === team.id)) {
+    throw new RangeError(`buildLeagueRoster: 소속 팀 '${team.id}'이 league '${league.id}'에 없다.`);
+  }
+  if (named.length > league.teamCount) {
+    throw new RangeError(`buildLeagueRoster: 이름 있는 팀 ${named.length}개가 teamCount ${league.teamCount}를 초과한다.`);
+  }
+
+  const allNamedIds = new Set(ruleset.teams.map((candidate) => candidate.id));
+  const roster: LeagueTeamSnapshot[] = named.map((candidate) => ({
+    teamId: candidate.id,
+    name: candidate.name,
+    strength: candidate.squadStrength,
+  }));
+  for (let n = 1; roster.length < league.teamCount; n++) {
+    const teamId = `${league.id}-opp-${n}`;
+    if (allNamedIds.has(teamId) || roster.some((candidate) => candidate.teamId === teamId)) continue;
+    const opponent = resolveOpponent(ruleset, league, teamId);
+    roster.push({ teamId, name: opponent.name, strength: opponent.strength });
+  }
+  return roster.sort((a, b) => compareCodePoints(a.teamId, b.teamId));
+}
+
+function fixtureIdFor(
+  seasonIndex: number,
+  leagueId: string,
+  round: number,
+  homeTeamId: string,
+  awayTeamId: string,
+): string {
+  return `league-fixture:${canonicalize([seasonIndex, leagueId, round, homeTeamId, awayTeamId])}`;
+}
+
+/** 1-based 리그 라운드 → 기존 경기 구간 step 3~11 균등 배치. */
+export function leagueStepForRound(round: number, roundsTotal: number): number {
+  return 3 + Math.floor(((round - 1) * 9) / roundsTotal);
+}
+
+/** T-7-022: 입력 순서와 무관한 circle 홈·원정 2회전. null 회전 슬롯은 BYE로 버린다. */
+export function buildLeagueFixtures(
+  seasonIndex: number,
+  leagueId: string,
+  teams: readonly LeagueTeamSnapshot[],
+): LeagueFixture[] {
+  const uniqueIds = new Set(teams.map((team) => team.teamId));
+  if (uniqueIds.size !== teams.length) {
+    throw new RangeError('buildLeagueFixtures: 참가팀 ID가 중복됐다.');
+  }
+  const rotation: Array<string | null> = [...uniqueIds].sort(compareCodePoints);
+  if (rotation.length % 2 === 1) rotation.push(null);
+  if (rotation.length < 2) return [];
+
+  const roundsPerLeg = rotation.length - 1;
+  const roundsTotal = roundsPerLeg * 2;
+  const firstLeg: LeagueFixture[] = [];
+  for (let roundIndex = 0; roundIndex < roundsPerLeg; roundIndex++) {
+    for (let pairIndex = 0; pairIndex < rotation.length / 2; pairIndex++) {
+      const left = rotation[pairIndex]!;
+      const right = rotation[rotation.length - 1 - pairIndex]!;
+      if (left === null || right === null) continue;
+      const swap = (roundIndex + pairIndex) % 2 === 1;
+      const homeTeamId = swap ? right : left;
+      const awayTeamId = swap ? left : right;
+      const round = roundIndex + 1;
+      firstLeg.push({
+        fixtureId: fixtureIdFor(seasonIndex, leagueId, round, homeTeamId, awayTeamId),
+        round,
+        step: leagueStepForRound(round, roundsTotal),
+        homeTeamId,
+        awayTeamId,
+      });
+    }
+    const last = rotation.pop()!;
+    rotation.splice(1, 0, last);
+  }
+
+  const secondLeg = firstLeg.map((fixture) => {
+    const round = fixture.round + roundsPerLeg;
+    return {
+      fixtureId: fixtureIdFor(seasonIndex, leagueId, round, fixture.awayTeamId, fixture.homeTeamId),
+      round,
+      step: leagueStepForRound(round, roundsTotal),
+      homeTeamId: fixture.awayTeamId,
+      awayTeamId: fixture.homeTeamId,
+    };
+  });
+  return [...firstLeg, ...secondLeg].sort(
+    (a, b) => a.round - b.round || compareCodePoints(a.homeTeamId, b.homeTeamId) || compareCodePoints(a.awayTeamId, b.awayTeamId),
+  );
+}
+
 const CUP_ROUND_HOME: Record<'R1' | 'R2' | 'SEMI' | 'FINAL', boolean> = {
   R1: true,
   R2: false,
@@ -132,7 +227,7 @@ const CUP_ROUND_HOME: Record<'R1' | 'R2' | 'SEMI' | 'FINAL', boolean> = {
  * `leagueTier`가 그 컵의 `tiers`에 없으면 컵 일정을 만들지 않는다 — 첫 번째로 맞는 컵만 쓴다). 같은
  * step에서는 리그가 먼저, 컵이 뒤(order로 표현).
  */
-export function buildSchedule(ruleset: Ruleset, team: Team): ScheduleEntry[] {
+export function buildSchedule(ruleset: Ruleset, team: Team, seasonIndex = 1): ScheduleEntry[] {
   const league = findLeague(ruleset, team.leagueId);
   const leagueRounds = buildLeagueRounds(ruleset, team, league);
 
@@ -145,16 +240,38 @@ export function buildSchedule(ruleset: Ruleset, team: Team): ScheduleEntry[] {
     else list.push(entry);
   };
 
-  for (const round of leagueRounds) {
-    pushEntry(round.step, {
-      step: round.step,
-      order: 0,
-      competitionId: 'LEAGUE',
-      kind: 'LEAGUE',
-      round: null,
-      opponentId: round.opponentId,
-      home: round.home,
-    });
+  if (ruleset.leagueLedgerRules === undefined) {
+    for (const round of leagueRounds) {
+      pushEntry(round.step, {
+        step: round.step,
+        order: 0,
+        competitionId: 'LEAGUE',
+        kind: 'LEAGUE',
+        round: null,
+        opponentId: round.opponentId,
+        home: round.home,
+      });
+    }
+  } else {
+    const roster = buildLeagueRoster(ruleset, team, league);
+    if (roster.length > ruleset.leagueLedgerRules.maxTeamCount) {
+      throw new RangeError(`buildSchedule: ledger teamCount ${roster.length}가 최대 ${ruleset.leagueLedgerRules.maxTeamCount}를 초과한다.`);
+    }
+    for (const fixture of buildLeagueFixtures(seasonIndex, league.id, roster)) {
+      if (fixture.homeTeamId !== team.id && fixture.awayTeamId !== team.id) continue;
+      const home = fixture.homeTeamId === team.id;
+      pushEntry(fixture.step, {
+        step: fixture.step,
+        order: 0,
+        competitionId: 'LEAGUE',
+        kind: 'LEAGUE',
+        round: String(fixture.round),
+        opponentId: home ? fixture.awayTeamId : fixture.homeTeamId,
+        home,
+        fixtureId: fixture.fixtureId,
+        leagueRound: fixture.round,
+      });
+    }
   }
 
   if (eligibleCup !== undefined) {

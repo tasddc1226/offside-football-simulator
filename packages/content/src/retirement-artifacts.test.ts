@@ -26,6 +26,13 @@ describe('loadRetirementArtifacts', () => {
     });
     expect(meetingArtifacts.rulesetChecksum).toMatch(/^[a-f0-9]{64}$/);
     expect(meetingArtifacts.contentPackChecksum).toMatch(/^[a-f0-9]{64}$/);
+    const ledgerArtifacts = loadRetirementArtifacts('1.7.0', '0.6.2');
+    expect(ledgerArtifacts).toMatchObject({
+      rulesetVersion: '1.7.0',
+      contentPackVersion: '0.6.2',
+      legacyVersion: '1.1.0',
+    });
+    expect(ledgerArtifacts.legacyReferencePopulation).toBeUndefined();
   });
 
   it('activates the published Legacy 1.1 reference only for the 1.1/0.3 release pair', () => {

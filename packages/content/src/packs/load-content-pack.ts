@@ -161,8 +161,10 @@ import manifest060 from '../../packs/0.6.0/manifest.json' with { type: 'json' };
 import narrativeTokens060 from '../../packs/0.6.0/narrative/tokens.json' with { type: 'json' };
 import manifest061 from '../../packs/0.6.1/manifest.json' with { type: 'json' };
 import narrativeTokens061 from '../../packs/0.6.1/narrative/tokens.json' with { type: 'json' };
+import manifest062 from '../../packs/0.6.2/manifest.json' with { type: 'json' };
+import narrativeTokens062 from '../../packs/0.6.2/narrative/tokens.json' with { type: 'json' };
 
-export const PACK_VERSIONS = ['0.1.0', '0.2.0', '0.3.0', '0.4.0', '0.4.1', '0.5.0', '0.5.1', '0.6.0', '0.6.1'] as const;
+export const PACK_VERSIONS = ['0.1.0', '0.2.0', '0.3.0', '0.4.0', '0.4.1', '0.5.0', '0.5.1', '0.6.0', '0.6.1', '0.6.2'] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
 export type ContentPack = {
@@ -181,7 +183,7 @@ type PackSource = {
   narrativeTokens: unknown;
 };
 
-const PACK_SOURCES: Record<PackVersion, PackSource> = {
+const PACK_SOURCES_BASE: Record<Exclude<PackVersion, '0.6.2'>, PackSource> = {
   '0.1.0': {
     manifest: manifest010,
     events: [
@@ -600,6 +602,15 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       chapterNat001v040,
     ],
     narrativeTokens: narrativeTokens061,
+  },
+};
+
+const PACK_SOURCES: Record<PackVersion, PackSource> = {
+  ...PACK_SOURCES_BASE,
+  '0.6.2': {
+    ...PACK_SOURCES_BASE['0.6.1'],
+    manifest: manifest062,
+    narrativeTokens: narrativeTokens062,
   },
 };
 

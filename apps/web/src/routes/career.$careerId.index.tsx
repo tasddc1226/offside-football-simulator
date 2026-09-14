@@ -6,6 +6,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useIsMutating } from '@tanstack/react-query';
 import {
   deriveTacticalRoom,
+  standingsFromLedger,
   type RelationTarget,
   type CareerState,
   type CompetitionRecord,
@@ -65,6 +66,7 @@ import { useReducedMotion, useUiStore } from '../shared/ui-store.js';
 import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 import { buildCurrentContractSummary, MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
 import { GamePending } from '../shared/game-presentation.js';
+import { LeagueStandingsTable, leagueStandingSummary } from '../shared/league-standings.js';
 import { buildCareerClock, type CareerClockView } from '../shared/career-clock.js';
 import {
   careerStartYear,
@@ -784,6 +786,12 @@ function CareerDashboard() {
   // UX-007 최근 소식: 기록 탭과 같은 seasonChronicleItems를 재사용하되, 정보 없는 항목("진행" 단독
   // 같은 제네릭 라벨)은 걸러 의미 있는 최근 것부터 최대 3개만 보여준다.
   const recentChronicleItems = visibleRecentChronicleItems(seasonChronicleItems);
+  const currentLeagueRows = season?.leagueLedger === undefined
+    ? null
+    : standingsFromLedger(ruleset, season.leagueLedger);
+  const currentLeague = season?.leagueLedger === undefined
+    ? undefined
+    : ruleset.leagues.find((candidate) => candidate.id === season.leagueLedger!.leagueId);
 
   return (
     <div className="os-screen">
@@ -849,6 +857,15 @@ function CareerDashboard() {
                 {season !== null && season.competitions.length > 0 ? (
                   <DashboardSection title="이번 시즌 요약" description="현재 리그·컵 성적입니다.">
                     <div className="flex flex-col gap-os-1">
+                      {currentLeagueRows === null ? (
+                        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                          룰셋 {state.rulesetVersion}에서는 전체 리그 순위 기록을 지원하지 않습니다.
+                        </p>
+                      ) : (
+                        <p className="os-num font-os font-semibold text-os-text" style={BODY_STYLE}>
+                          {leagueStandingSummary(currentLeagueRows, season.teamId)}
+                        </p>
+                      )}
                       {season.competitions.map((record) => (
                         <p
                           key={record.competitionId}
@@ -940,6 +957,22 @@ function CareerDashboard() {
                         </p>
                       ))}
                     </div>
+                    {currentLeagueRows === null || season.leagueLedger === undefined || currentLeague === undefined ? (
+                      <p className="rounded-os-m bg-os-surface-2 p-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
+                        룰셋 {state.rulesetVersion}에서는 전체 리그 순위 기록을 지원하지 않습니다.
+                      </p>
+                    ) : (
+                      <LeagueStandingsTable
+                        rows={currentLeagueRows}
+                        teamId={season.teamId}
+                        leagueName={season.leagueLedger.leagueName}
+                        completedRounds={season.leagueLedger.completedRounds.at(-1) ?? 0}
+                        ruleset={ruleset}
+                        teamNameOverrides={teamNameOverrides}
+                        promotionSpots={currentLeague.promotionSpots}
+                        relegationSpots={currentLeague.relegationSpots}
+                      />
+                    )}
                     <div className="flex flex-col gap-os-2">
                       {buildScheduleRows(season, ruleset, teamNameOverrides).map((row) => (
                         <div

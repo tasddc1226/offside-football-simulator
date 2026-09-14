@@ -47,6 +47,13 @@ import {
   lookupBandAmount,
 } from './offers.js';
 import { playMatch } from './match.js';
+import {
+  assertLeagueLedgerInvariant,
+  completeLeagueRoundsForStep,
+  createLeagueSeasonLedger,
+  projectLeagueCompetition,
+  recordPlayerLeagueResult,
+} from './league-ledger.js';
 import { generatePlayerProfile, type ConfirmedPlayerDraft } from './player.js';
 import { onSettlementRelations } from './relationships.js';
 import { rollInt, seedRng, type RngState } from './rng.js';
@@ -98,6 +105,7 @@ import {
   type DomainSnapshot,
   type Effect,
   type FootballSeason,
+  type LeagueSeasonLedger,
   type MatchRecord,
   type NationalTeamCallUp,
   type NegotiationAsk,
@@ -669,6 +677,7 @@ type StepMatchWiring = {
   playStepMatches: PlayStepMatches;
   getMatches: () => FootballSeason['matches'];
   getCompetitions: () => FootballSeason['competitions'];
+  getLeagueLedger: () => LeagueSeasonLedger | undefined;
   getSchedule: () => FootballSeason['schedule'];
   getPlayerStats: () => FootballSeason['playerStats'];
   getCompetitors: () => Competitor[];
@@ -691,6 +700,7 @@ type StepMatchWiring = {
 };
 
 type StepMatchWiringInitial = SeasonMatchBooks & {
+  leagueLedger?: LeagueSeasonLedger;
   competitors: readonly Competitor[];
   selection: SelectionRanking;
   squadRole: SquadRole;
@@ -739,6 +749,7 @@ function createStepMatchWiring(
 ): StepMatchWiring {
   let matches = initial.matches;
   let competitions = initial.competitions;
+  let leagueLedger = initial.leagueLedger;
   let schedule = initial.schedule;
   let playerStats = initial.playerStats;
   let competitors: Competitor[] = [...initial.competitors];
@@ -826,6 +837,11 @@ function createStepMatchWiring(
       competitions = books.competitions;
       playerStats = books.playerStats;
       schedule = books.schedule;
+      if (leagueLedger !== undefined && entry.kind === 'LEAGUE') {
+        leagueLedger = recordPlayerLeagueResult(leagueLedger, entry, result.match);
+        leagueLedger = completeLeagueRoundsForStep(ruleset, leagueLedger, stepIndex);
+        competitions = projectLeagueCompetition(ruleset, leagueLedger, competitions);
+      }
       competitors = result.nextCompetitors;
       selection = result.selection;
       squadRole = squadRoleFromSelection(result.selection);
@@ -927,6 +943,13 @@ function createStepMatchWiring(
       if (forcedPending !== null) break;
     }
     const stepRecords = matches.filter((match) => match.step === stepIndex);
+    // 선수 BYE round도 타팀 결과를 확정한다. 강제 pending으로 아직 선수 경기를 치르지 않은 round는
+    // completeLeagueRoundsForStep이 그대로 보류해 재개 뒤 처리한다.
+    if (leagueLedger !== undefined) {
+      leagueLedger = completeLeagueRoundsForStep(ruleset, leagueLedger, stepIndex);
+      competitions = projectLeagueCompetition(ruleset, leagueLedger, competitions);
+    }
+
     // pending이 열려 있는 동안에는 step을 닫지 않는다. 다음 ADVANCE가 남은 경기까지 처리한 뒤 한 번만
     // applyCondition을 호출해야, 중단된 경기 묶음이 재활 해소 후 중복 적용되지 않는다.
     if (forcedPending === null && !conditionAppliedSteps.has(stepIndex)) {
@@ -951,6 +974,7 @@ function createStepMatchWiring(
     playStepMatches,
     getMatches: () => matches,
     getCompetitions: () => competitions,
+    getLeagueLedger: () => leagueLedger,
     getSchedule: () => schedule,
     getPlayerStats: () => playerStats,
     getCompetitors: () => competitors,
@@ -1116,7 +1140,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   );
 
   const league = findLeague(ruleset, team.leagueId);
-  const schedule = buildSchedule(ruleset, team);
+  const schedule = buildSchedule(ruleset, team, state.seasonHistory.length + 1);
   const trainingFocus: TrainingFocus = command.payload.trainingFocus ?? 'ROLE';
   const initialCompetitions = buildInitialCompetitions(calendar);
   const initialPlayerStats = initialSeasonPlayerStats(statGroupOf(profile.primaryPosition));
@@ -1127,6 +1151,13 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   // 그대로 같아야 하는 T-2-006 테스트가 있다).
   const initialMatchRngState = seedRng(
     `match:${state.seasonHistory.length + 1}:${stateAfterSelection.rngState.s.join(',')}`,
+  );
+  const initialLeagueLedger = createLeagueSeasonLedger(
+    ruleset,
+    team,
+    league,
+    state.seasonHistory.length + 1,
+    stateAfterSelection.rngState.s,
   );
 
   // T-2-005 D-39 오케스트레이터 리뷰 2차(R2-1): DEFERRED 효과는 시즌 step 번호로만 해석할 수 있으니
@@ -1156,6 +1187,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     squadRoleAtStart: squadRole,
     trainingFocus,
     competitions: initialCompetitions,
+    ...(initialLeagueLedger === undefined ? {} : { leagueLedger: initialLeagueLedger }),
     schedule,
     matches: [],
     ageReferenceStep: 1,
@@ -1196,6 +1228,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     {
       matches: [],
       competitions: initialCompetitions,
+      ...(initialLeagueLedger === undefined ? {} : { leagueLedger: initialLeagueLedger }),
       schedule,
       playerStats: initialPlayerStats,
       competitors: generatedCompetitors.competitors,
@@ -1251,6 +1284,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     steps: walked.steps,
     squadRole: wiring.getSquadRole(),
     competitions: wiring.getCompetitions(),
+    ...(wiring.getLeagueLedger() === undefined ? {} : { leagueLedger: wiring.getLeagueLedger()! }),
     schedule: wiring.getSchedule(),
     matches: patchOpenedChapterMatch(wiring.getMatches(), walked.pending),
     ageReferenceStep: 1,
@@ -1361,6 +1395,7 @@ function advanceInSeason(
   const profile = state.player.profile;
   if (profile === null) throw new RangeError('advanceInSeason: player.profile이 null이다.');
   if (state.contract === null) throw new RangeError('advanceInSeason: contract가 null이다.');
+  if (season.leagueLedger !== undefined) assertLeagueLedgerInvariant(season.leagueLedger);
   const eligibleEvents: EligibleEvent[] = command.payload.eligibleEvents;
 
   if (eligibleEvents.length > 0) {
@@ -1509,6 +1544,7 @@ function advanceInSeason(
     {
       matches: season.matches,
       competitions: season.competitions,
+      ...(season.leagueLedger === undefined ? {} : { leagueLedger: season.leagueLedger }),
       schedule: season.schedule,
       playerStats: season.playerStats,
       competitors: season.squad.competitors,
@@ -1593,6 +1629,7 @@ function advanceInSeason(
     phase: findSeasonStep(walked.steps, walked.currentStepIndex).phase,
     squadRole: wiring.getSquadRole(),
     competitions: wiring.getCompetitions(),
+    ...(wiring.getLeagueLedger() === undefined ? {} : { leagueLedger: wiring.getLeagueLedger()! }),
     schedule: wiring.getSchedule(),
     matches: patchOpenedChapterMatch(wiring.getMatches(), walked.pending),
     squad: { competitors: wiring.getCompetitors() },
