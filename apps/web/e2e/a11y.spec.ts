@@ -299,6 +299,9 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
   await page.getByRole('textbox', { name: '서명할 이름' }).fill('김서준');
   await page.getByRole('button', { name: '서명하고 계약 확정' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
+  // PlayerCard의 진입 opacity 애니메이션 중간 프레임은 배지와 배경을 임시 혼색한다.
+  // 최종 렌더 상태가 된 뒤 실제 색 대비를 검사한다.
+  await expect(page.locator('.os-player-card')).toHaveCSS('opacity', '1');
   await expectNoSeriousOrCriticalViolations(page, 'SCR-010 계약 완료');
   await page.getByRole('button', { name: '커리어 시작' }).click();
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
@@ -337,19 +340,20 @@ test('SCR-011 시즌 준비 화면에 axe serious·critical 위반이 없다', a
 });
 
 test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+  test.slow();
+  await page.addInitScript(() => {
+    window.localStorage.setItem('offside:e2e-seed', 'e2e-season-result-01');
+  });
   await completeOnboardingThroughContract(page);
-  await page.getByRole('link', { name: '계획하러 가기' }).click();
+  await planPreseason(page, '역할 집중');
+  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await resolveRoleProposal(page);
+  await advanceThroughSeasonToSettlement(page);
+  await page.getByRole('button', { name: '결산하기' }).click();
+  await page.getByRole('link', { name: '다음 시즌' }).click();
   await fillPreseasonPlan(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
-
-  // PR #103: 제안된 역할이 현재 포지션·스쿼드 역할과 완전히 같으면(KEEP) shouldAutoAcceptUnchangedRole이
-  // SCR-012를 건너뛰고 대시보드로 바로 이동한다 — 시즌 첫 역할 제안은 방금 그 위치로 계약했으므로
-  // 항상 이 KEEP 경로를 탄다. 화면 자체가 뜨지 않으면 검사할 대상이 없다.
-  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/role)?$/);
-  if (!page.url().endsWith('/role')) {
-    console.log('[a11y] SCR-012: 역할 제안이 KEEP으로 자동 수락되어 화면을 건너뛰었다.');
-    return;
-  }
+  await expect(page).toHaveURL(/\/career\/.+\/role$/);
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-012');
 });

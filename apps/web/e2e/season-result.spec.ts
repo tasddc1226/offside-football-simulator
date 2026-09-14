@@ -141,6 +141,9 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
 });
 
 test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그먼트를 전환한다', async ({ page }) => {
+  // 이 검사는 모션이 아닌 두 시즌 결과의 세그먼트 상태를 검증한다. 반복되는 화면 전환이 전체
+  // 테스트 예산을 소모하지 않도록 사용자 모션 감소 선호를 에뮬레이션한다.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript((seed) => {
     window.localStorage.setItem('offside:e2e-seed', seed);
   }, E2E_SEASON_RESULT_SEED);
@@ -165,11 +168,15 @@ test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그
   await expect(compareSection.getByRole('tab', { name: '지난 시즌' })).toBeVisible();
   await expect(compareSection.getByRole('tab', { name: '계약 약속' })).toBeVisible();
 
-  await compareSection.getByRole('tab', { name: '지난 시즌' }).click();
+  const previousSeasonTab = compareSection.getByRole('tab', { name: '지난 시즌' });
+  await previousSeasonTab.click();
+  await expect(previousSeasonTab).toHaveAttribute('data-state', 'active');
   await expect(compareSection.getByText('Base OVR').first()).toBeVisible();
   await expect(compareSection.getByText('출전 시간(분)').first()).toBeVisible();
 
-  await compareSection.getByRole('tab', { name: '계약 약속' }).click();
+  const promiseTab = compareSection.getByRole('tab', { name: '계약 약속' });
+  await promiseTab.click();
+  await expect(promiseTab).toHaveAttribute('data-state', 'active');
   await expect(compareSection.getByText('역할').first()).toBeVisible();
 });
 
