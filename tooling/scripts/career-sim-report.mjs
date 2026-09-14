@@ -5,7 +5,15 @@
 // CSV 헤더·숫자 컬럼 목록은 career-sim.ts의 CAREERS_CSV_HEADER/SEASONS_CSV_HEADER,
 // CAREERS_NUMERIC_COLUMNS/SEASONS_NUMERIC_COLUMNS와 동일해야 한다(코드가 아니라 상수만 복제).
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
+
+// `pnpm --filter @offside/scripts`(루트 `pnpm sim:report`가 이를 통해 실행됨)는 cwd를
+// tooling/scripts로 바꾸지만, `--a`/`--b`의 공개 예시는 리포 루트 기준 상대 경로다
+// (career-sim.ts의 REPO_ROOT/resolveOut과 동일한 이유·동일한 처리).
+const REPO_ROOT = resolve(new URL('../..', import.meta.url).pathname);
+function resolveRunDir(dir) {
+  return isAbsolute(dir) ? dir : resolve(REPO_ROOT, dir);
+}
 
 const CAREERS_NUMERIC_COLUMNS = new Set([
   'index', 'truePotential', 'baseOvrStart', 'peakOvr', 'peakOvrAge', 'finalOvr', 'seasons',
@@ -577,8 +585,8 @@ async function main(argv = process.argv.slice(2)) {
     process.exitCode = 1;
     return;
   }
-  const runA = await loadRun(dirA);
-  const runB = dirB !== undefined ? await loadRun(dirB) : undefined;
+  const runA = await loadRun(resolveRunDir(dirA));
+  const runB = dirB !== undefined ? await loadRun(resolveRunDir(dirB)) : undefined;
 
   const careerA = careerSummary(runA.careers);
   const careerB = runB !== undefined ? careerSummary(runB.careers) : undefined;
