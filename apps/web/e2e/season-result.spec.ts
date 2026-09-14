@@ -6,6 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
+  continueToPreseason,
   fillPreseasonPlan,
   fulfillJson,
   META,
@@ -121,9 +122,10 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   await compareSection.getByRole('checkbox', { name: '차이만 보기' }).uncheck();
   await expect(compareSection.locator('dt')).toHaveCount(rowCountBefore);
 
-  // "다음 시즌" → SCR-005(프리시즌 계획).
+  // "다음 시즌" → SCR-005(프리시즌 계획). 대기 중인 시장이 있으면 안전 잔류를 수락한 뒤 이어간다
+  // (continueToPreseason, 룰셋 승격에 따른 seed 드리프트에도 견딘다).
   await page.getByRole('link', { name: '다음 시즌' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
+  await continueToPreseason(page);
   await expect(page.getByRole('heading', { level: 1, name: '프리시즌 계획' })).toBeVisible();
 
   // 대시보드로 돌아가 헤더 OVR이 결산 after와 같은지 확인한다(홈 탭에는 StatusStrip OVR이 없다).
@@ -154,6 +156,7 @@ test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그
   // "계획하러 가기" CTA부터 시작하므로 여기서는 그 클릭만 건너뛰고 fillPreseasonPlan으로 나머지를
   // 그대로 따라간다.
   await page.getByRole('link', { name: '다음 시즌' }).click();
+  await continueToPreseason(page);
   await fillPreseasonPlan(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);

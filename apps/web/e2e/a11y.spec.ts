@@ -6,6 +6,7 @@ import {
   advanceUntilOffers,
   completeOnboardingAndConfirm,
   completeOnboardingThroughContract,
+  continueToPreseason,
   expectFirstContractHeading,
   fillPlayerInfo,
   fillPreseasonPlan,
@@ -339,18 +340,29 @@ test('SCR-011 시즌 준비 화면에 axe serious·critical 위반이 없다', a
   await expectNoSeriousOrCriticalViolations(page, 'SCR-011');
 });
 
+// 룰셋 1.5.0 승격 뒤에는 'e2e-season-result-01'(옛 1.4.0 seed)로 두 번째 시즌을 시작하면
+// computeRoleProposal이 KEEP(현재 포지션·스쿼드 역할과 그대로 일치)을 반환해 시즌 준비 화면이
+// ROLE_PROPOSAL을 원자적으로 자동 수락해 버린다 — /role에 실제로 도달하지 못해 이 테스트의 목적
+// (SCR-012 화면 자체의 접근성 검사)을 달성할 수 없다. 아래 seed는 dev 서버 + Playwright로 후보
+// 문자열을 여러 개 돌려 찾은, 두 번째 시즌 시작 시 POSITION_CHANGE·ROLE_CHANGE(수동 확인이 필요한
+// 실제 /role 화면)로 이어지는 것을 확인한 값이다(3회 재실행으로 결정론 확인).
+const E2E_ROLE_CHANGE_SEED = 'rc-seed-3';
+
 test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   test.slow();
-  await page.addInitScript(() => {
-    window.localStorage.setItem('offside:e2e-seed', 'e2e-season-result-01');
-  });
+  await page.addInitScript((seed) => {
+    window.localStorage.setItem('offside:e2e-seed', seed);
+  }, E2E_ROLE_CHANGE_SEED);
   await completeOnboardingThroughContract(page);
   await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기' }).click();
+  // "다음 시즌"은 대기 중인 시장(OFFERS)이 있으면 프리시즌 대신 그 화면부터 보낸다 —
+  // continueToPreseason이 안전 잔류를 수락해 프리시즌으로 이어간다(룰셋 승격에 따른 seed 드리프트 대비).
   await page.getByRole('link', { name: '다음 시즌' }).click();
+  await continueToPreseason(page);
   await fillPreseasonPlan(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/role$/);
