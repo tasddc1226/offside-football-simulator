@@ -38,3 +38,24 @@ A = T-7-030 1만(1.6.1 성장만), B = T-7-031 1만(1.6.1 성장+은퇴 심사).
 Legacy(이제 1.1.0 정책이라 기준선과 비교 가능): LEGEND 7.1% + ICON 43.4% = **50.5%**(1.5.0 기준선 80%). 커리어가 짧아져 이미 30pp 내려왔다. 포지션별 LEGEND+ICON: DF LEGEND+ICON 75.9% LEGEND 5.0% FW LEGEND+ICON 42.4% LEGEND 4.0% GK LEGEND+ICON 56.4% LEGEND 13.7% MF LEGEND+ICON 27.2% LEGEND 5.6% legacyScore p50 75 p60 79 p70 82 p90 88 p95 90 . T-7-032 목표(30~40%, 편차 ≤10pp)의 출발점.
 
 회귀: 1.5.0/0.6.0 200커리어 stateHash 기준선과 200/200 일치. 파일: `T-7-031-report-161growth-vs-161retire-10k.md`, `T-7-031-summary-161-retire-10k.json`. 원본 CSV는 워커 워크트리 `wf_67c637ae-32d-1/tooling/sim-out/t7031-10k/`.
+
+## T-7-032 — Legacy 정책 1.2.0(bandCuts·performancePer90Centi), (1.6.1,0.6.2) 게이트 1.2.0 (1만 커리어, 21:35 완료)
+
+A = T-7-031 1만(1.6.1, Legacy 1.1.0), B = T-7-032 1만(1.6.1, Legacy 1.2.0). 같은 seed 접두어 base-150. Legacy 외 지표(peakOvr·정점 연령·은퇴 나이·시즌 수·1부 도달·이동·수입·대표팀)는 A와 B가 모두 동일 — 변경이 Legacy 산식에만 닿았음을 증명.
+
+| 지표 | 목표 | A (1.1.0) | B (1.2.0) | 판정 |
+| --- | --- | --- | --- | --- |
+| LEGEND+ICON | 30~40% | 50.5% | **31.9%** (LEGEND 3.7 + ICON 28.2) | 충족 |
+| LEGEND | ≤10% | 7.1% | 3.7% | 충족 |
+| COMPLETE | ≤10% | 0.3% | 0.8% | 충족 |
+| 포지션별 L+I (DF/GK/MF/FW) | 편차 ≤10pp | 75.9/56.4/27.2/42.4 (48.7pp) | **47.8/33.6/25.4/20.8 (27.0pp)** | 미충족 |
+| legacyScore p50/p90 | — | 75/88 | 73/86 | — |
+| 실패 커리어 | 0 | 0 | 0 | — |
+
+밴드 분포(B): REMEMBERED 45.6 · ICON 28.2 · SOLID 21.6 · LEGEND 3.7 · COMPLETE 0.8. 포지션별 LEGEND은 MF 11.4%·GK 2.7%·DF 0.4%·FW 0.3%로, DF는 ICON에 몰리고(47.5%) MF는 LEGEND와 SOLID 양극(LEGEND 11.4·SOLID 32.4)이다.
+
+정책 값(1.2.0): performancePer90Centi GK 500/DF 1300/MF 550/FW 120(1.0.0은 300/800/1200/70), bandCuts LEGEND 90/ICON 80/REMEMBERED 60/SOLID 30(1.0.0은 90/75/50/25). 워커 1천 회 반복 2회(iter1 27.1%·40.4pp → iter2 32.6%·31.2pp)로 확정.
+
+포지션 편차 미충족 진단: DF 기대치를 900→1300으로 올려도 DF L+I가 50%대에서 거의 움직이지 않아 contribution 성분이 레버가 아니다. T-7-031 1만의 포지션별 평균이 원인을 보여준다 — DF는 구단 이동 2.4회(타 포지션 3.4), 2부 체류 10.0시즌(7~7.7), 출전 23.4k분(MF 18.4k), 평점 66.6(MF 63.6), 대표팀 차출 3.1회(MF 1.0). 즉 시즌 시뮬의 포지션별 선발·출전·평점 편향이 longevity·merit·achievement 성분으로 전이된 것이라 Legacy 정책만으로는 못 잡는다. **2라운드 항목(포지션별 평점/선발/출전 모델)으로 제안.**
+
+회귀: 1.5.0/0.6.0 200커리어 stateHash·legacyScore·legacyBand 기준선과 200/200 일치(1.0.0 경로 불변). 파일: `T-7-032-report-161legacy110-vs-161legacy120-10k.md`, `T-7-032-summary-161-legacy120-10k.json`. 원본 CSV는 워커 워크트리 `wf_b6433a90-357-1/tooling/sim-out/t7032-10k/`.
