@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "sim:career": "tsx career-sim.ts"
   },
   "devDependencies": {
+    "tsx": "4.23.13",
     "vitest": "4.1.11"
   }
 }

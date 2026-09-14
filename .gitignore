@@ -34,3 +34,6 @@ pnpm-debug.log*
 
 # Python bytecode (docs/tracking/scripts 감시 스크립트)
 __pycache__/
+
+# career-sim CLI 결과물 (T-7-017)
+tooling/sim-out/
