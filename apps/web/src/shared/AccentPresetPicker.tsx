@@ -3,6 +3,10 @@
 // 이름은 룰셋 기본 팀명 + " 컬러"(구단 이름 오버라이드 미적용, accent-presets.ts 참고), 타일 아래
 // 보이는 캡션은 "컬러"를 뗀 팀 이름만(UX-013 다듬기). 선택 상태는 타일 링 + 체크 아이콘으로,
 // 색만으로 구분하지 않는다.
+//
+// 룰셋 1.5.0 운영 승격(release-ruleset-1-5-0) 뒤로는 activeRuleset이 K1 12개 구단이라 다시
+// activeRuleset을 읽는다(K리그식 리그·팀 구조 PR의 룰셋 1.5.0 리터럴 직접 로드 임시 우회는 그
+// 승격 전용이었다).
 import { useMemo } from 'react';
 import { SwatchTilePicker } from '@offside/ui';
 import { activeRuleset } from '../engine/content.js';

@@ -1217,6 +1217,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     existingChapterIds: [],
     league,
     seasonIndex: state.seasonHistory.length + 1,
+    rivalTeamId: team.rivalTeamId,
   };
   const walked = walkToNextDecision(
     initialSteps,
@@ -1546,6 +1547,7 @@ function advanceInSeason(
     existingChapterIds: season.chapters.map((chapter) => chapter.chapterId),
     league,
     seasonIndex: season.index,
+    rivalTeamId: team.rivalTeamId,
   };
   const walked = walkToNextDecision(
     steps,

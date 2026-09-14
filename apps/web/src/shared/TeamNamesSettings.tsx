@@ -47,6 +47,19 @@ function groupTeamsByTier(
   })).filter((group) => group.teams.length > 0);
 }
 
+/**
+ * K리그식 구조 PR 리뷰 후속: 이 화면(구단 이름·로고)의 그룹 헤딩만 활성 룰셋의 `leagues[].name`(1.5.0
+ * R리그·K1 리그·K2 리그·K3 리그)으로 표시한다 — 룰셋에 그 tier의 리그가 없으면(방어적 폴백)
+ * 기존 `LEAGUE_TIER_LABEL_KO`("유스/1부/2부/3부")를 그대로 쓴다. 다른 화면(계약·이적 등)의
+ * 티어 라벨은 `LEAGUE_TIER_LABEL_KO`를 그대로 쓰므로 건드리지 않는다.
+ */
+function teamGroupHeadingLabel(
+  tier: Team['leagueTier'],
+  leagues: readonly { tier: Team['leagueTier']; name: string }[],
+): string {
+  return leagues.find((league) => league.tier === tier)?.name ?? LEAGUE_TIER_LABEL_KO[tier];
+}
+
 function TeamRow({ team, onToast }: { team: Team; onToast: (toast: TeamToast) => void }) {
   const override = useUiStore((state) => state.teamNameOverrides[team.id]);
   const hasLogo = useUiStore((state) => state.teamLogos[team.id] !== undefined);
@@ -162,7 +175,7 @@ export function TeamNamesSettings() {
             className="font-os font-semibold text-os-text"
             style={H2_STYLE}
           >
-            {LEAGUE_TIER_LABEL_KO[group.tier]}
+            {teamGroupHeadingLabel(group.tier, activeRuleset.leagues)}
           </h3>
           <div className="flex flex-col gap-os-5">
             {group.teams.map((team) => (

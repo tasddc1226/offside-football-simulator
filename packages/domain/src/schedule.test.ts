@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { rulesetProto } from './__fixtures__/career-01.js';
-import { buildSchedule, findLeague, resolveOpponent } from './schedule.js';
+import { buildSchedule, findLeague, isRivalOpponent, resolveOpponent } from './schedule.js';
 import type { Ruleset } from './ruleset.js';
 
 const team = rulesetProto.teams.find((candidate) => candidate.id === 'seoul-tier1')!;
@@ -94,6 +94,23 @@ describe('resolveOpponent', () => {
 
   it('해석할 수 없는 opponentId는 예외를 던진다', () => {
     expect(() => resolveOpponent(rulesetProto, league, 'not-a-real-opponent')).toThrow(RangeError);
+  });
+});
+
+describe('isRivalOpponent', () => {
+  // PR #208 리뷰 후속(D-77 우회 대신 선택 키 가드): rivalTeamId가 정의되면 그 팀 id와 일치하는
+  // 상대만 라이벌이고, 이름 없는 상대(rivalOpponentIndex)는 더 이상 라이벌로 인정하지 않는다.
+  it('rivalTeamId가 정의되면 그 팀 id와 일치하는 상대만 라이벌이다(이름 있는 라이벌)', () => {
+    expect(isRivalOpponent(league, 'busan-tier2', 'busan-tier2')).toBe(true);
+    expect(isRivalOpponent(league, `${league.id}-opp-${league.rivalOpponentIndex}`, 'busan-tier2')).toBe(false);
+    expect(isRivalOpponent(league, 'some-other-team', 'busan-tier2')).toBe(false);
+  });
+
+  // rivalTeamId를 넘기지 않은 호출(1.0.0~1.4.0, 또는 1.5.0 R리그 B팀·K3 필러처럼 이름 있는
+  // 라이벌이 없는 팀)은 기존처럼 이름 없는 상대(rivalOpponentIndex)만 라이벌이다 — 동작·해시 불변.
+  it('rivalTeamId가 없으면 기존처럼 이름 없는 상대(rivalOpponentIndex)만 라이벌이다', () => {
+    expect(isRivalOpponent(league, `${league.id}-opp-${league.rivalOpponentIndex}`)).toBe(true);
+    expect(isRivalOpponent(league, 'busan-tier2')).toBe(false);
   });
 });
 

@@ -22,7 +22,7 @@
 | 신규 운영 시즌 | `svc_season_1`, 표시명 `시즌 1`, ACTIVE, isTest=false |
 | 기간 | 2026-09-06 00:00 KST부터, 종료일 미정(`endsAt: null`) |
 | 문의 | `tasddc1569@gmail.com` |
-| 현재 신규 커리어 버전 | ruleset 1.3.0 / content pack 0.5.0 (승격 대기: 1.4.0 / 0.5.1, 아래 "시즌 1 manifest 2차 승격") |
+| 현재 신규 커리어 버전 | ruleset 1.4.0 / content pack 0.5.1 (승격 대기: 1.5.0 / 0.6.0, 아래 "시즌 1 manifest 3차 승격") |
 
 ## 최초 공개 결과
 
@@ -131,8 +131,8 @@
 
 시즌 ID와 기간을 바꾸지 않는 콘텐츠 승격은 호환 API, web, manifest 순으로 배포한다. 시작은
 `2026-09-05T15:00:00Z`, 종료는 NULL, challenge set은 `cs_season_1`, ACTIVE/non-test를 유지한다.
-1차 승격(`1.1.0/0.3.0` → `1.3.0/0.5.0`)은 2026-09-06 완료했고, 2차 승격(`1.3.0/0.5.0` → `1.4.0/0.5.1`)은
-아래 절에 따른다.
+1차 승격(`1.1.0/0.3.0` → `1.3.0/0.5.0`)은 2026-09-06, 2차 승격(`1.3.0/0.5.0` → `1.4.0/0.5.1`)은 2026-09-13
+완료했다. 3차 승격(`1.4.0/0.5.1` → `1.5.0/0.6.0`)은 아래 절에 따른다.
 
 1. API를 먼저 배포한다. 시즌 1에 한해 승인 manifest 목록(`apps/api/src/sync/season-version-compatibility.ts`
    `APPROVED_PRODUCTION_MANIFESTS`)에 있는 pair끼리만 신규 최초 sync를 상호 허용한다. mixed pair,
@@ -226,6 +226,95 @@ preflight/deploy가 여기서 멈춘다.
      (`deploy`는 재승격, `set-season-end`는 "metadata differs" 실패).
 6. **기록.** 실행 URL·source SHA·Worker 버전·manifest 전후·검증 결과를 이 문서와 `docs/tracking/`에 남기고,
    위 표의 "현재 신규 커리어 버전"을 1.4.0/0.5.1로 갱신한다.
+
+## 시즌 1 manifest 3차 승격: 1.4.0/0.5.1 → 1.5.0/0.6.0 (사용자 결정 2026-09-13)
+
+룰셋 1.5.0(PR #208, 브랜치 `feat-kleague-structure`)은 K리그식 리그·팀 구조다 — `leagues`를 R리그·K1
+리그·K2 리그·K3 리그로, `teams`를 출발 B팀 + K1 12개(전부 이름·색·전술 스타일 지정) + K2 14개(전부
+지정) + K3 필러 4개(생성 이름, 오퍼 풀용)로 전면 교체하고 `calendar.startYear` 선택 필드를 추가했다.
+팩 0.6.0은 0.5.1을 그대로 복사하고 narrative/tokens.json의 club·team 풀만 새 구단 이름으로 교체했다
+(이벤트·챕터는 바이트 동일). `compatibleRulesetVersions`는 1.5.0만이다(0.5.1의 1.3.0·1.4.0과 달리
+1.4.0 호환은 없다 — 팀 구조가 전면 교체라 과거 룰셋과 같은 팩을 공유할 이유가 없다). 목표 manifest의
+정본은 `tooling/scripts/production-release.mjs`의 `PRODUCTION_SEASON`(1.5.0/0.6.0)과
+`PREVIOUS_PRODUCTION_VERSION`(1.4.0/0.5.1)이며, 워크플로 verify 단계는 `expect-version` 명령으로 이 값을
+읽는다. 같은 값을 유지해야 하는 곳: `apps/api/src/sync/season-version-compatibility.ts`(승인 목록 마지막 두
+항목), `apps/web/src/engine/versions.ts`(오프라인 폴백 상수), `apps/api/seeds/bootstrap-non-production.sql`
+(`svc_line_test`, staging), `apps/web/playwright.smoke.config.ts`(`expectedSeason` — main push CI의 staging
+smoke가 seed upsert 직후 검증한다), `apps/web/e2e/staging-rehearsal.spec.ts`(수동 리허설 기대값). 로컬
+`apps/api/seeds/local.sql`의 `svc_kickoff`도 이 값으로 맞춰(D-75 후속) 오프라인 폴백 상수와의 불일치를
+없앴다 — 이 행은 운영 승격 목표와 무관하게 항상 `ACTIVE_RULESET_VERSION`/`ACTIVE_CONTENT_PACK_VERSION`을
+따른다.
+
+자동 게이트: `apps/web/src/engine/versions.test.ts`와 `apps/api/src/sync/season-version-compatibility.test.ts`가
+ACTIVE 상수·승인 목록의 룰셋·팩이 번들 레지스트리(`RULESET_VERSIONS`·`PACK_VERSIONS`)에 있고 팩의
+`compatibleRulesetVersions`가 룰셋을 포함하는지 검사한다. 두 파일은 main CI와 Production Release
+"Validate release inputs" 단계 양쪽에서 돌므로, 아래 전제 순서를 어기면(팩 0.6.0이 main에 없으면) CI와
+preflight/deploy가 여기서 멈춘다.
+
+### 전제 (main 머지 순서)
+
+1. K리그 구조 PR #208(`feat-kleague-structure`, 룰셋 1.5.0·팩 0.6.0)이 main에 있어야 한다. 없으면 web
+   번들이 `알 수 없는 contentPackVersion: 0.6.0`으로 폴백 생성을 실패하고 `apps/web` 단위 테스트
+   (`career-actions.test.ts`)가 모듈 로드에서 깨진다.
+2. 그 뒤 이 승격 PR(`release-ruleset-1-5-0`)을 머지한다. 이 PR은 코드·문서만 바꾸며 운영 D1은 건드리지
+   않는다. 이 브랜치는 #208 위에 스택돼 있어(base가 `feat-kleague-structure`) GitHub PR이 그 상태로는
+   #208의 커밋까지 함께 보여준다 — #208이 먼저 main에 머지되면 GitHub이 이 PR의 base를 자동으로 main으로
+   바꾼다(리뷰 대상 diff가 이 PR만의 변경으로 줄어든다). #208이 머지되지 않은 채 이 PR만 머지하지 않는다.
+
+### 절차
+
+**주의 — `set-season-end` 모드는 이 PR 머지 후 승격(3단계) 완료 전까지 실패한다.** `decideSeasonEnd`가 현재
+행의 룰셋·팩을 코드의 `PRODUCTION_SEASON`(1.5.0/0.6.0)과 비교해 "Production season metadata differs"로 중단하기
+때문이다. 이 구간에 종료일을 바꿔야 하면 승격을 먼저 끝내거나, `PRODUCTION_SEASON`을 1.4.0/0.5.1로 되돌린
+코드를 main에 머지한 뒤 실행한다(5단계 롤백 뒤에도 같은 조건이다).
+
+1. **staging 확인.** 승격 PR 머지 → main CI가 `bootstrap-non-production.sql`을 staging D1에 upsert해
+   `svc_line_test`가 1.5.0/0.6.0이 된다. 같은 CI의 staging smoke(`playwright.smoke.config.ts` →
+   `e2e/staging-smoke.spec.ts`)가 `GET /v1/service-seasons/current`의 1.5.0/0.6.0을 자동 검증한다. 추가로
+   staging web에서 새 커리어를 만들어 설정 화면·`PUT /v1/careers/{id}` 응답의 룰셋·팩이 1.5.0/0.6.0인지, 홈
+   색상 프리셋·구단 이름 설정에 K1 12개 구단이 새 이름으로 뜨는지, 기존 staging 커리어(1.0.0/0.1.0 등)가
+   그대로 열리는지 확인한다.
+2. **preflight.** Production Release → `mode=preflight`, `expected_sha`=최신 main. 요약의 "Service-season
+   metadata"에서 `svc_season_1`이 1.4.0/0.5.1 ACTIVE인지 본다. 워크플로 시작 직후 main SHA 검사가 있으므로
+   실행 중 main 푸시(문서 커밋 포함)를 멈춘다.
+3. **deploy.** `mode=deploy`, `confirmation=DEPLOY_PRODUCTION`, `season_starts_at=2026-09-05T15:00:00Z`,
+   `season_ends_at` 비움, `challenge_set_id=cs_season_1`. "Validate exact production manifest transition"
+   단계의 plan은 **activate**여야 한다(이미 승격됐다면 noop, 그 외 값이면 중단). 이어서 migration(없음,
+   no-op) → API → web → 시즌 1 행 compare-and-set(1.4.0/0.5.1 → 1.5.0/0.6.0) → 재조회 plan=noop 확인.
+4. **배포 후 검증.** 워크플로가 `GET /v1/service-seasons/current`를 `expect-version` 값(1.5.0/0.6.0)과
+   비교한다. 추가로 health·CORS·web 200과 Playwright 360px 플레이(생성 → KICKOFF → 저장 → 새로고침)를
+   기존 절차대로 남긴다. 생성 화면에서 K1 구단명이 정상 노출되는지도 확인한다. QA 커리어는 이름·시각으로
+   구분하고 삭제하지 않는다.
+5. **롤백.** run artifact의 `.release/season-rollback.sql`이 1.5.0/0.6.0 행을 1.4.0/0.5.1로 되돌리는 역
+   compare-and-set이다. API는 1.1.0/0.3.0·1.3.0/0.5.0·1.4.0/0.5.1·1.5.0/0.6.0 네 pair를 상호 허용하므로
+   롤백 뒤에도 이미 1.5.0/0.6.0으로 만들어진 커리어의 최초 sync는 막히지 않는다. 자동 실행하지 않으며
+   실행 전 영향 범위를 기록한다.
+   - **실행.** artifact를 내려받아 수동으로 실행한다(비밀값은 GitHub Actions에만 있으므로 로컬에서는
+     `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID`를 동일 권한으로 준비한다):
+     `pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --file <artifact>/season-rollback.sql --yes --json`
+   - **성공 기준.** compare-and-set이 0행을 갱신해도 wrangler는 오류 없이 종료한다. 반드시 출력 JSON의
+     `meta.changes`가 **1**인지 확인한다. 0이면 WHERE 조건(이름·상태·시작·`ends_at IS NULL`·challenge set·
+     is_test·1.5.0/0.6.0)이 현재 행과 맞지 않은 것이므로 롤백되지 않았다고 기록하고 원인을 찾는다.
+     특히 승격 뒤 `set-season-end`로 종료일을 바꿨다면 artifact의 SQL은 `ends_at IS NULL`이라 매치되지 않는다
+     — 이때는 `ends_at IS NULL`을 현재 값(`ends_at = '<RFC3339>'`)으로 고친 SQL을 새로 만들어 쓰고 그 사실을
+     기록한다. 다른 조건은 고치지 않는다.
+   - **읽기 확인.** 이어서 재조회한다:
+     `pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json --command "SELECT id, ruleset_version, content_pack_version, ends_at FROM service_seasons WHERE id = 'svc_season_1'"`
+     → 1.4.0/0.5.1이어야 한다(같은 JSON을 `node tooling/scripts/production-release.mjs plan <파일>`에 넣으면
+     `activate`가 나온다). 운영 `GET /v1/service-seasons/current`도 1.4.0/0.5.1을 돌려주는지 확인한다.
+   - **코드 되돌림(필수).** 롤백 SQL을 실행했다면 코드의 `PRODUCTION_SEASON`은 여전히 1.5.0/0.6.0이므로,
+     그 상태에서 핫픽스 등으로 Production Release `deploy`를 한 번이라도 돌리면 "Validate exact production
+     manifest transition"이 plan=activate를 정상 경로로 받아들여 `season-activate.sql`을 다시 실행해
+     **롤백이 조용히 무효화된다**. 따라서 다음 deploy 전에 `tooling/scripts/production-release.mjs`의
+     `PRODUCTION_SEASON`을 1.4.0/0.5.1로 되돌리는 PR을 main에 먼저 머지한다(`PREVIOUS_PRODUCTION_VERSION`은
+     1.3.0/0.5.0으로, 스크립트 테스트·`apps/web/src/engine/versions.ts` 폴백·`bootstrap-non-production.sql`·
+     `playwright.smoke.config.ts`·`staging-rehearsal.spec.ts`도 같이 맞춘다. API 승인 목록 네 항목은 유지한다
+     — 이미 1.5.0/0.6.0으로 만들어진 커리어의 미동기화 최초 sync를 계속 보호한다).
+     그러면 plan이 noop이 되어 재승격되지 않고 `set-season-end`의 verify도 다시 맞는다.
+   - **금지.** 그 PR이 main에 머지되기 전에는 Production Release `deploy`·`set-season-end`를 실행하지 않는다
+     (`deploy`는 재승격, `set-season-end`는 "metadata differs" 실패).
+6. **기록.** 실행 URL·source SHA·Worker 버전·manifest 전후·검증 결과를 이 문서와 `docs/tracking/`에 남기고,
+   위 표의 "현재 신규 커리어 버전"을 1.5.0/0.6.0으로 갱신한다.
 
 ## 나중에 종료일 정하기
 
