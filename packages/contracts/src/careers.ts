@@ -30,7 +30,8 @@ export const PutCareerBodySchema = z
     /** Pin the locally persisted retirement result. Missing/null means a pre-population result. */
     retirementReferencePopulationId: z.string().min(1).max(128).nullable().optional(),
     /** Pin the Legacy policy used for an immutable retirement result. Omitted means 1.0.0. */
-    retirementLegacyVersion: z.enum(['1.0.0', '1.1.0']).optional(),
+    // T-7-032: LegacyVersion에 '1.2.0'이 추가돼(D-80 1라운드 ③) 여기도 따라간다.
+    retirementLegacyVersion: z.enum(['1.0.0', '1.1.0', '1.2.0']).optional(),
   })
   .superRefine((body, ctx) => {
     let expectedRevision = body.baseRevision + 1;

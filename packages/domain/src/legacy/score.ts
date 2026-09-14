@@ -30,17 +30,32 @@ function requireScore(value: number): void {
   }
 }
 
-export function legacyBandForScore(totalScore: number): LegacyBandId {
+/** Original (1.0.0/1.1.0) band cuts. Never change — persisted results rely on them staying fixed. */
+export const LEGACY_BAND_CUTS = Object.freeze({ LEGEND: 90, ICON: 75, REMEMBERED: 50, SOLID: 25 });
+export type LegacyBandCuts = Readonly<{
+  LEGEND: number;
+  ICON: number;
+  REMEMBERED: number;
+  SOLID: number;
+}>;
+
+export function legacyBandForScore(
+  totalScore: number,
+  cuts: LegacyBandCuts = LEGACY_BAND_CUTS,
+): LegacyBandId {
   requireScore(totalScore);
-  if (totalScore >= 90) return 'BAND-LEGEND';
-  if (totalScore >= 75) return 'BAND-ICON';
-  if (totalScore >= 50) return 'BAND-REMEMBERED';
-  if (totalScore >= 25) return 'BAND-SOLID';
+  if (totalScore >= cuts.LEGEND) return 'BAND-LEGEND';
+  if (totalScore >= cuts.ICON) return 'BAND-ICON';
+  if (totalScore >= cuts.REMEMBERED) return 'BAND-REMEMBERED';
+  if (totalScore >= cuts.SOLID) return 'BAND-SOLID';
   return 'BAND-COMPLETE';
 }
 
 /** No OVR, identity, clock, reference population or RNG input. Does not produce a full LegacyResult. */
-export function calculateLegacyScore(scores: Readonly<LegacyComponentScores>): LegacyScoreSummary {
+export function calculateLegacyScore(
+  scores: Readonly<LegacyComponentScores>,
+  cuts?: LegacyBandCuts,
+): LegacyScoreSummary {
   let weightedTotal = 0;
   const componentScores: LegacyComponentScores = {
     achievement: scores.achievement,
@@ -57,5 +72,5 @@ export function calculateLegacyScore(scores: Readonly<LegacyComponentScores>): L
   }
   // Keep the numerator integral; round once after summing, not once per component.
   const totalScore = Math.floor((weightedTotal + 50) / 100);
-  return { componentScores, totalScore, bandId: legacyBandForScore(totalScore) };
+  return { componentScores, totalScore, bandId: legacyBandForScore(totalScore, cuts) };
 }
