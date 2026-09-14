@@ -5,6 +5,7 @@
 import type { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ClubBadge } from './ClubBadge.js';
+import { LivePresenceBadge } from './LivePresenceBadge.js';
 
 export interface CareerHeaderProps {
   name: string;
@@ -101,12 +102,7 @@ export function CareerHeader({
           </span>{' '}
           <span className="os-num os-career-header-ovr-value">{ovr ?? '—'}</span>
         </div>
-        {playingNow !== undefined && playingNow > 0 ? (
-          <span className="os-career-header-presence" role="status" aria-live="off">
-            <span className="os-nav-live-dot" aria-hidden="true" />
-            <span>{playingNow.toLocaleString('ko-KR')}명</span>
-          </span>
-        ) : null}
+        <LivePresenceBadge playingNow={playingNow} compact />
       </div>
       {tabs}
     </header>

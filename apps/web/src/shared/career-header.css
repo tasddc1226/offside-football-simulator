@@ -74,19 +74,18 @@
   font-weight: 800;
   line-height: var(--os-lh-num-lg);
 }
-.os-career-header-presence {
-  display: inline-flex;
+/* PR 231 리뷰: 인라인 마크업 대신 LivePresenceBadge(.os-nav-live, packages/ui/src/game.css)를
+   재사용한다 — 이 히어로 밴드 안에서만 필요한 값(고정폭·팀 색과 대비되는 밝은 점 색)만 밴드
+   스코프로 덮어쓴다. flex·color는 기본 .os-nav-live와 겹쳐 명시적으로 덮어써야 하는 속성만 남긴다. */
+.os-career-header-band .os-nav-live {
   flex: none;
-  align-items: center;
-  gap: 6px;
   color: var(--os-hero-muted);
-  font-size: var(--os-fs-caption);
 }
 
 /* 360px: 이름이 가장 먼저 줄어든다(min-width:0 + truncate) — 홈 버튼·배지·OVR·인원 배지는 항상 온전히
    보인다. 아주 좁은 화면에서는 실시간 인원 배지를 감춰 한 줄을 지킨다. */
 @media (max-width: 359px) {
-  .os-career-header-presence {
+  .os-career-header-band .os-nav-live {
     display: none;
   }
 }
@@ -122,6 +121,6 @@
   outline: 2px solid var(--os-focus);
   outline-offset: -2px;
 }
-.os-career-header-presence .os-nav-live-dot {
+.os-career-header-band .os-nav-live-dot {
   background: var(--os-on-hero);
 }
