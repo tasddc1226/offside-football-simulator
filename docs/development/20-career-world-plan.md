@@ -1,6 +1,6 @@
 # 20. 리그 맥락·선택의 후속 결과·은퇴 회고 작업 계획
 
-- 작성일: 2026-09-14 / 상태: 첫 병렬 묶음 PR 생성, 리그 원장 검토 수정 진행
+- 작성일: 2026-09-14 / 상태: 구현 PR 4개 생성, 독립 리뷰·로컬 통합 검증 완료
 - 기준: main `cb6d2995c127a225a0cb926830ed47d808424ddd`
 - 제품: [PRD](../product/career-world-prd.md) / 설계: [ADR-011 제안](../adr/ADR-011-league-ledger-and-career-feedback.md)
 - 기존 [고도화 계획](16-advancement-execution-plan.md)·[Phase 5 통합](19-phase5-runtime-integration.md)을 재시작하지 않는다. 아래는 현재 구현 이후의 차이만 다룬다.
@@ -56,13 +56,23 @@ flowchart LR
 
 | 작업 | WP / 코드 소유 범위 | 의존성과 보고 |
 |---|---|---|
-| T-7-022 | WP-01/02/03: domain·contracts·content·저장·리그 표 수직 연결 | [PR #222](https://github.com/tasddc1226/offside-football-simulator/pull/222), 독립 리뷰 수정·검증 진행 |
+| T-7-022 | WP-01/02/03: domain·contracts·content·저장·리그 표 수직 연결 | [PR #222](https://github.com/tasddc1226/offside-football-simulator/pull/222), 독립 리뷰·자연 브라우저·로컬 검증 완료, Ready |
 | T-7-023 | WP-04: 기존 저장 사실 기반 면담·부상·임대 후속 화면 | [PR #221](https://github.com/tasddc1226/offside-football-simulator/pull/221), 검토 완료·Ready; 인과관계 기록 gap은 아래와 같이 유지 |
 | T-7-024 | WP-06: 은퇴 회고·마일스톤 표시 | [PR #220](https://github.com/tasddc1226/offside-football-simulator/pull/220), 검토 완료·Ready; 서버 동기화는 브라우저 검증 범위에서 미확인 |
-| T-7-025 | WP-05: 실제 리그 맥락과 후속 계약 보완 | T-7-022/023 검토 후 범위를 확정하고 착수 |
-| WP-07 검증 | 각 PR의 독립 리뷰 및 충돌·통합 검증 | 완료 보고의 정확한 SHA를 기준으로 검증하며 발견 사항은 구현 소유자에게 반환 |
+| Career World WP-05 | 실제 리그 맥락의 읽기 전용 요약 | [PR #224](https://github.com/tasddc1226/offside-football-simulator/pull/224), #222를 부모로 하는 PR; 독립 리뷰·자연 브라우저·관련 E2E 2개·빌드 완료 |
+| WP-07 검증 | 각 PR의 독립 리뷰 및 충돌·통합 검증 | 네 PR 최종 조합에 충돌·제품 코드 blocker 없음; 아래 정확한 검증 tree 참조 |
 
 WP-01의 구현 후보 계약은 최대 16팀, circle 홈·원정/BYE, 시즌 시작 RNG 상태 복사본에서 fixture별 난수 파생, 라운드 단위 원자 반영, `SeasonResult`에 최종 표 단일 보존이다. 새 버전 후보 `1.7.0`/`0.6.2`는 기존 버전을 보존하고 서비스 시즌을 활성화하지 않는다. 이 후보로 구현을 시작하되 크기·성능·구버전 재생 실측 전에는 ADR의 데이터 모델 게이트 통과로 간주하지 않는다.
+
+18:22 확인한 `origin/main` `67a18cd58ff6a630f6b4e84a1e107db96b7a597f`에서 T-7-025가 별도 성장 밸런스 작업에 배정됐다. 이 Run의 기존 T-7-025 브랜치·Task는 추적을 위해 유지하되, 제품 작업명은 Career World WP-05, brief는 `career-world-wp05.md`로 구분한다. 기존 T-7-025 문서는 수정하지 않는다. 아래 T-7-025 첫 슬라이스 설명도 이 Run의 WP-05를 뜻한다.
+
+이후 main `494d389d3c3903120570790da88e5a150fb5a0c8`에서 별도 밸런스 작업은 T-7-030/031로 재번호됐다. 이 Run의 WP-05 문서명은 그대로 유지했다.
+
+리그 저장 후보는 활성 fixture를 ordinal/스코어 tuple로, 최종 표를 순위·팀 ID·팀명·경기·승무패·득실·승점 11값 tuple로 저장하며 표시 시 순수 adapter로 펼친다. 동일 40개 FAST 커리어의 20시즌 재측정에서 최대 state는 229,715 bytes, 모델링한 미동기화 PUT는 363,635 bytes였다. 행동 CSV 지표는 일치했고 저장 표현 변경으로 state hash는 변경됐다. 실제 SDK PUT·서버 재생·WebWorker 시간의 증거와는 구분한다. ADR은 출시 게이트가 모두 확인될 때까지 제안 상태를 유지한다.
+
+최종 통합 입력은 #222 `fc00e50e8de49721ee1d6e44f5b548bb68b7ea69`, #224 `4380c71016ff37e749c0f258a3091813ea86ba4e`, #221 `9bd7f3a6f27009bac2946fda4416c65b298fdf78`, #220 `a9495021cc1c46df0aa1732e5c6697895d254d3c`다. 독립 sol의 임시 통합 commit은 `95524d2b27d27d6482c1d9f72f7c2de075e8243b`, tree는 `02bb33d304ec2a923864c34d96f00a572c7c2e4d`이며 main에 병합하지 않았다. 충돌 없이 web lint/typecheck·대시보드/은퇴 36개, 계약/엔진 lint/typecheck·계약 51개·decode/import/load 26개가 통과했다. 이후 테스트 추가와 문서 반영은 제품 코드 불변을 확인해 전체 검사를 반복하지 않았다.
+
+실제 1.7 시즌 결산의 `EngineClient.buildSyncBody`를 `createSyncClient` fake transport로 전달해 PUT 본문 동일성·스키마·1MiB 제한을 기존 테스트에서 확인했다. 자연 브라우저에서는 시즌 결산→다음 시즌→과거 14팀 표, 모바일 스크롤·reload를 확인했다. 이는 20시즌 실제 SDK 최대 요청, 운영 API 수신/재생, WebWorker 장기 성능을 증명하지 않는다. 전체 테스트 시간 초과와 중단된 광범위 E2E의 미확정 실패는 각 PR에 그대로 기록했으며, 관련 검사의 통과를 전체 suite 통과로 표현하지 않는다. 이 Run의 완료 범위는 구현·리뷰·PR 인계이며 운영 활성화는 포함하지 않는다.
 
 첫 WP-04 조사는 면담 이후 소비된 제안과 실제 계약 사이의 인과관계, 임대 복귀 이전 원소속 역할·평가 근거가 현재 저장에서 완전히 복원되지 않음을 확인했다. 화면은 이 관계를 추측하지 않으며 후속 계약 보완 여부는 T-7-025 범위 확정에 포함한다. 전체 무거운 검사 체인은 한 작업자씩 실행한다. 이번 인계의 산출물은 범위별 검증된 PR이며 merge·운영 활성화는 별도 단계다.
 
