@@ -5,6 +5,7 @@ import ruleset130Manifest from '../rulesets/1.3.0/manifest.json' with { type: 'j
 import ruleset140Manifest from '../rulesets/1.4.0/manifest.json' with { type: 'json' };
 import ruleset150Manifest from '../rulesets/1.5.0/manifest.json' with { type: 'json' };
 import ruleset160Manifest from '../rulesets/1.6.0/manifest.json' with { type: 'json' };
+import ruleset161Manifest from '../rulesets/1.6.1/manifest.json' with { type: 'json' };
 import { loadLegacyReferencePopulation } from './legacy/load-population.ts';
 import { loadContentPack } from './packs/load-content-pack.ts';
 import { loadRuleset } from './rulesets/load-ruleset.ts';
@@ -29,6 +30,7 @@ const RULESET_MANIFESTS: Readonly<Record<string, unknown>> = Object.freeze({
   '1.4.0': ruleset140Manifest,
   '1.5.0': ruleset150Manifest,
   '1.6.0': ruleset160Manifest,
+  '1.6.1': ruleset161Manifest,
 });
 
 /** Return existing registry checksums, not a second hash dialect of parsed objects.
