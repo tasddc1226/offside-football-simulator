@@ -6,6 +6,8 @@ import { queryClient } from '../shared/query-client.js';
 import { useApplyTheme } from '../shared/ui-store.js';
 import { AppMotionFrame } from '../shared/app-motion-frame.js';
 import { NotFoundScreen } from '../shared/NotFoundScreen.js';
+import { LivePresenceBadge } from '../shared/LivePresenceBadge.js';
+import { useLivePresence, usePresenceHeartbeat } from '../engine/presence.js';
 import { useEffect } from 'react';
 
 export const Route = createRootRoute({
@@ -20,12 +22,22 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <PageShell header={<GameNavigation />}>
-        <AppMotionFrame>
-          <Outlet />
-        </AppMotionFrame>
-      </PageShell>
+      <RootShell />
     </QueryClientProvider>
+  );
+}
+
+/** QueryClientProvider 아래에서만 presence 훅을 부를 수 있도록 분리한 얇은 레이어. */
+function RootShell() {
+  usePresenceHeartbeat();
+  const { data: presence } = useLivePresence();
+
+  return (
+    <PageShell header={<GameNavigation playingNow={presence?.playingNow} />}>
+      <AppMotionFrame>
+        <Outlet />
+      </AppMotionFrame>
+    </PageShell>
   );
 }
 
@@ -72,7 +84,7 @@ function useResetScrollOnRouteChange(): void {
   );
 }
 
-function GameNavigation() {
+function GameNavigation({ playingNow }: { playingNow: number | undefined }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const mutating = useIsMutating() > 0;
   // Career screens already own their safe back/next actions. A global Link would bypass
@@ -134,37 +146,40 @@ function GameNavigation() {
             <span>OFFSIDE</span>
           </Link>
         )}
-        {inCareer ? (
-          <span className="os-nav-context">커리어</span>
-        ) : inPublicInfo ? (
-          <a href="/settings" className="os-nav-settings" aria-label="게임 설정">
-            <span aria-hidden="true">설정</span>
-          </a>
-        ) : (
-          <Link
-            to="/settings"
-            className="os-nav-settings"
-            aria-label="게임 설정"
-            aria-disabled={mutating || undefined}
-            onClick={(event) => {
-              if (mutating) event.preventDefault();
-            }}
-          >
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              aria-hidden="true"
-              focusable="false"
+        <div className="os-nav-right">
+          <LivePresenceBadge playingNow={playingNow} />
+          {inCareer ? (
+            <span className="os-nav-context">커리어</span>
+          ) : inPublicInfo ? (
+            <a href="/settings" className="os-nav-settings" aria-label="게임 설정">
+              <span aria-hidden="true">설정</span>
+            </a>
+          ) : (
+            <Link
+              to="/settings"
+              className="os-nav-settings"
+              aria-label="게임 설정"
+              aria-disabled={mutating || undefined}
+              onClick={(event) => {
+                if (mutating) event.preventDefault();
+              }}
             >
-              <path d="M4 6h16M4 12h16M4 18h16" />
-              <path d="M9 3v6M16 9v6M8 15v6" strokeWidth="3" />
-            </svg>
-          </Link>
-        )}
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M4 6h16M4 12h16M4 18h16" />
+                <path d="M9 3v6M16 9v6M8 15v6" strokeWidth="3" />
+              </svg>
+            </Link>
+          )}
+        </div>
       </nav>
     </>
   );

@@ -9,6 +9,7 @@ import {
   GetCareerResponseSchema,
   IDEMPOTENCY_KEY_HEADER,
   IssueRecoveryCodeResponseSchema,
+  LivePresenceSchema,
   MergeResponseSchema,
   ProfileSchema,
   RecoverProfileResponseSchema,
@@ -18,6 +19,7 @@ import {
   type ErrorCode,
   type GetCareerResponse,
   type IssueRecoveryCodeResponse,
+  type LivePresence,
   type MergeChoice,
   type MergeResponse,
   type Profile,
@@ -175,4 +177,14 @@ export function unlinkGoogle(): Promise<ApiResult<undefined>> {
 /** API-SVC-001. 프로필 세션이 필요 없는 공개 엔드포인트. */
 export function getServiceSeasonCurrent(): Promise<ApiResult<ServiceSeasonCurrent>> {
   return apiFetch('/v1/service-seasons/current', { method: 'GET' }, ServiceSeasonCurrentSchema);
+}
+
+/** API-PRES-001. 프로필 세션이 필요 없는 공개 GET. D-78. */
+export function getLivePresence(): Promise<ApiResult<LivePresence>> {
+  return apiFetch('/v1/presence', { method: 'GET' }, LivePresenceSchema);
+}
+
+/** API-PRES-002. 성공·세션 없음 모두 204(본문 없음). D-78. */
+export function postPresenceHeartbeat(): Promise<ApiResult<undefined>> {
+  return apiFetch('/v1/presence/heartbeat', { method: 'POST', body: '{}' });
 }

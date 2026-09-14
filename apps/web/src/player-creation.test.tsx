@@ -35,6 +35,9 @@ vi.mock('./api/client.js', () => ({
   getProfile: () => apiHolder.getProfile(),
   issueRecoveryCode: () => apiHolder.issueRecoveryCode(),
   deleteCareerOnServer: () => Promise.resolve({ ok: true, data: undefined }),
+  // __root.tsx가 항상 마운트하는 D-78 presence 훅용 — 이 파일의 시나리오와 무관해 조용히 무응답 처리한다.
+  getLivePresence: () => Promise.resolve({ ok: false, error: { code: 'NETWORK_ERROR', message: '', retryable: true } }),
+  postPresenceHeartbeat: () => Promise.resolve({ ok: true, data: undefined }),
 }));
 
 function makeIdGenerator(prefix: string): () => string {
