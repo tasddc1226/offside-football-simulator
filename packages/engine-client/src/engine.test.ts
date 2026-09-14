@@ -429,6 +429,25 @@ describe('복구', () => {
     expect(finalRows).toBeDefined();
     expect(finalRows?.every((row) => row.length === 11)).toBe(true);
 
+    const brokenFinalLatest = await finalRun.store.transaction('readonly', (tx) => tx.snapshots.getLatest(finalRun.careerId));
+    if (brokenFinalLatest === undefined) throw new Error('final latest 없음');
+    const brokenFinalState = JSON.parse(brokenFinalLatest.state) as CareerState;
+    const brokenFinalRow = brokenFinalState.seasonHistory.at(-1)?.result.finalLeagueTable?.rows[0];
+    if (brokenFinalRow === undefined) throw new Error('final row setup 실패');
+    brokenFinalRow[10] += 1;
+    const brokenFinalHash = hashState(brokenFinalState);
+    await finalRun.store.transaction('readwrite', (tx) => tx.snapshots.put({
+      ...brokenFinalLatest,
+      state: canonicalize(brokenFinalState as unknown as JsonValue),
+      stateHash: brokenFinalHash,
+    }));
+    const recoveredFinal = await finalRun.engine.loadCareer(finalRun.careerId);
+    expect(recoveredFinal.ok).toBe(true);
+    if (recoveredFinal.ok) {
+      expect(recoveredFinal.recovered).not.toBeNull();
+      expect(recoveredFinal.snapshot.stateHash).not.toBe(brokenFinalHash);
+    }
+
     const ledgerRun = await runLedgerCareer();
     const brokenLatest = await ledgerRun.store.transaction('readonly', (tx) => tx.snapshots.getLatest(ledgerRun.careerId));
     if (brokenLatest === undefined) throw new Error('ledger latest 없음');

@@ -534,6 +534,21 @@ export const FinalLeagueTableRowSchema = z.tuple([
   z.number().int().nonnegative(),
 ]);
 
+function compareFinalTableTeamIds(a: string, b: string): number {
+  const ai = a[Symbol.iterator]();
+  const bi = b[Symbol.iterator]();
+  for (;;) {
+    const an = ai.next();
+    const bn = bi.next();
+    if (an.done && bn.done) return 0;
+    if (an.done) return -1;
+    if (bn.done) return 1;
+    const ac = an.value.codePointAt(0) as number;
+    const bc = bn.value.codePointAt(0) as number;
+    if (ac !== bc) return ac < bc ? -1 : 1;
+  }
+}
+
 export const FinalLeagueTableSchema = z.strictObject({
   policyVersion: z.literal('1.0.0'),
   leagueId: z.string().min(1),
@@ -541,7 +556,69 @@ export const FinalLeagueTableSchema = z.strictObject({
   seasonIndex: z.number().int().positive(),
   teamId: z.string().min(1),
   completedRounds: z.number().int().nonnegative(),
-  rows: z.array(FinalLeagueTableRowSchema),
+  rows: z.array(FinalLeagueTableRowSchema).min(2).max(16),
+}).superRefine((table, ctx) => {
+  const teamIds = new Set<string>();
+  const expectedPlayed = 2 * (table.rows.length - 1);
+  const expectedRounds = table.rows.length % 2 === 0
+    ? 2 * (table.rows.length - 1)
+    : 2 * table.rows.length;
+  let totalWon = 0;
+  let totalDrawn = 0;
+  let totalLost = 0;
+  let totalGoalsFor = 0;
+  let totalGoalsAgainst = 0;
+
+  table.rows.forEach((row, index) => {
+    const [rank, teamId, , played, won, drawn, lost, goalsFor, goalsAgainst, goalDifference, points] = row;
+    if (rank !== index + 1) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 0], message: '순위는 1부터 연속이며 행 순서와 같아야 한다.' });
+    }
+    if (teamIds.has(teamId)) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 1], message: '팀은 최종 순위표에 한 번만 나타나야 한다.' });
+    }
+    teamIds.add(teamId);
+    if (played !== won + drawn + lost) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 3], message: '경기 수는 승·무·패 합과 같아야 한다.' });
+    }
+    if (played !== expectedPlayed) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 3], message: '모든 팀은 홈·원정으로 다른 팀과 두 번 경기해야 한다.' });
+    }
+    if (goalDifference !== goalsFor - goalsAgainst) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 9], message: '득실차는 득점에서 실점을 뺀 값이어야 한다.' });
+    }
+    if (points !== won * 3 + drawn) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 10], message: '승점은 3×승+무와 같아야 한다.' });
+    }
+    totalWon += won;
+    totalDrawn += drawn;
+    totalLost += lost;
+    totalGoalsFor += goalsFor;
+    totalGoalsAgainst += goalsAgainst;
+    const next = table.rows[index + 1];
+    if (next !== undefined) {
+      const order = next[10] - points || next[9] - goalDifference || next[7] - goalsFor || compareFinalTableTeamIds(teamId, next[1]);
+      if (order > 0) {
+        ctx.addIssue({ code: 'custom', path: ['rows', index], message: '순위표가 승점·득실차·득점·팀 ID 순서와 일치해야 한다.' });
+      }
+    }
+  });
+
+  if (table.completedRounds !== expectedRounds) {
+    ctx.addIssue({ code: 'custom', path: ['completedRounds'], message: '완료 라운드 수가 홈·원정 전체 일정과 일치해야 한다.' });
+  }
+  if (!teamIds.has(table.teamId)) {
+    ctx.addIssue({ code: 'custom', path: ['teamId'], message: '소속 팀은 최종 순위표에 포함되어야 한다.' });
+  }
+  if (totalWon !== totalLost) {
+    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 승리와 패배 합은 같아야 한다.' });
+  }
+  if (totalGoalsFor !== totalGoalsAgainst) {
+    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 득점과 실점 합은 같아야 한다.' });
+  }
+  if (totalDrawn % 2 !== 0) {
+    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 무승부 합은 짝수여야 한다.' });
+  }
 });
 
 // T-2-001이 타입만 두었던 것을 T-2-003이 확정한다(브리프 데이터 계약 D-35).
@@ -1156,10 +1233,18 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
     value.seasonHistory.forEach((summary, index) => {
       const result = isRecord(summary) ? summary.result : undefined;
       const finalTable = isRecord(result) ? result.finalLeagueTable : undefined;
-      if (!FinalLeagueTableSchema.safeParse(finalTable).success) {
+      const resultIndex = isRecord(result) ? result.index : undefined;
+      const resultTeamId = isRecord(result) ? result.teamId : undefined;
+      const parsedFinalTable = FinalLeagueTableSchema.safeParse(finalTable);
+      if (!parsedFinalTable.success) {
         issues.push({
           path: ['seasonHistory', index, 'result', 'finalLeagueTable'],
           message: '지원 룰셋 결산에는 compact finalLeagueTable이 있어야 한다.',
+        });
+      } else if (parsedFinalTable.data.seasonIndex !== resultIndex || parsedFinalTable.data.teamId !== resultTeamId) {
+        issues.push({
+          path: ['seasonHistory', index, 'result', 'finalLeagueTable'],
+          message: 'finalLeagueTable이 결산 result의 season index/team과 일치해야 한다.',
         });
       }
     });
