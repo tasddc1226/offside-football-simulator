@@ -97,8 +97,8 @@ export const LEGACY_POLICY_120 = Object.freeze({
   ...LEGACY_POLICY_110,
   version: '1.2.0',
   basePolicyChecksum: sha256Hex(canonicalize(LEGACY_POLICY_110 as unknown as JsonValue)),
-  performancePer90Centi: Object.freeze({ GK: 450, DF: 900, MF: 900, FW: 300 }),
-  bandCuts: Object.freeze({ LEGEND: 90, ICON: 82, REMEMBERED: 60, SOLID: 30 }),
+  performancePer90Centi: Object.freeze({ GK: 500, DF: 1300, MF: 550, FW: 120 }),
+  bandCuts: Object.freeze({ LEGEND: 90, ICON: 80, REMEMBERED: 60, SOLID: 30 }),
 });
 
 export function legacyPolicyForVersion(version: LegacyVersion) {
