@@ -131,6 +131,29 @@ describe('GET /v1/notices (API-NOTICE-001)', () => {
     }
   });
 
+  it('limit이 정수가 아니면(소수·NaN·0 이하) 기본값 10건까지만 돌려준다', async () => {
+    const ctx = await createTestD1();
+    try {
+      for (let i = 0; i < 15; i += 1) {
+        await seedNotice(ctx.db, {
+          id: `notice-${String(i).padStart(2, '0')}`,
+          title: `공지 ${i}`,
+          body: ['본문'],
+          publishedAt: isoDaysAfterEpoch(i),
+        });
+      }
+
+      for (const limit of ['3.5', 'not-a-number', '0', '-5']) {
+        const res = await createApp().request(`/v1/notices?limit=${limit}`, {}, ctx.env);
+        expect(res.status).toBe(200);
+        const body = successEnvelope(NoticesResponseSchema).parse(await res.json());
+        expect(body.data.items.length).toBe(10);
+      }
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
   it('limit을 생략하면 기본값 10건까지만 돌려준다', async () => {
     const ctx = await createTestD1();
     try {

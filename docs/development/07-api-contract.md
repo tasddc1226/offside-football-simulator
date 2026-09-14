@@ -127,7 +127,7 @@ Archive 본문은 클라이언트가 계산한 LegacyResult를 포함한다. 서
 |---|---|---|
 | API-NOTICE-001 | `GET /notices?limit=N` | 홈 공지사항 목록(제목·본문 문단·게시일). 공개, 세션 불필요, `Cache-Control: public, max-age=60` |
 
-사용자 결정(2026-09-14): 공지는 더 이상 웹 코드 상수가 아니라 D1 `notices` 테이블이 정본이다. `is_published = 1`인 행만 `published_at` 내림차순으로 돌려준다. `limit`은 기본 10, 최대 50이며 범위를 벗어나거나 정수가 아니면 기본값을 쓴다. 운영자는 배포 없이 `db:query:production`(또는 seed 파일 실행)으로 SQL을 직접 넣어 공지를 추가·수정한다 — 별도 쓰기 API는 없다.
+사용자 결정(2026-09-14): 공지는 더 이상 웹 코드 상수가 아니라 D1 `notices` 테이블이 정본이다. `is_published = 1`인 행만 `published_at` 내림차순(동률은 `id` 내림차순)으로 돌려준다. `limit`은 기본 10, 최대 50이다. 값이 0 이하이거나 정수가 아니면(생략·NaN 포함) 기본값 10을 쓰고, 50을 넘으면 50으로 자른다. 운영자는 배포 없이 `db:query:production`(또는 seed 파일 실행)으로 SQL을 직접 넣어 공지를 추가·수정한다 — 별도 쓰기 API는 없다.
 
 ## 콘텐츠
 

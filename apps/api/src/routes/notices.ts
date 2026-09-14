@@ -3,11 +3,18 @@ import type { Hono } from 'hono';
 import { listPublishedNotices, type NoticeRecord } from '../db/repos/notices.js';
 import { getDb, type AppEnv } from '../env.js';
 
+/**
+ * 문서(07-api-contract.md, API-NOTICE-001)는 "정수가 아니면 기본값"을 명시한다. 이전 구현은
+ * `Math.trunc`로 소수를 내림해 통과시켜 문서와 어긋났다(예: `limit=3.5` → 3). `Number.isInteger`로
+ * 정수 여부를 직접 검사해 소수·NaN·Infinity·0 이하를 전부 기본값(10)으로 통일한다. 상한(50) 초과는
+ * 기본값이 아니라 클램프를 유지한다 — `limit=999`처럼 "너무 크게 요청"과 "값 자체가 무의미"는 서로
+ * 다른 경우라 구분해 다룬다(테스트: limit 상한(50) 초과는 50으로 잘림).
+ */
 function parseLimit(raw: string | undefined): number {
   if (!raw) return NOTICES_DEFAULT_LIMIT;
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) return NOTICES_DEFAULT_LIMIT;
-  return Math.min(Math.trunc(parsed), NOTICES_MAX_LIMIT);
+  if (!Number.isInteger(parsed) || parsed <= 0) return NOTICES_DEFAULT_LIMIT;
+  return Math.min(parsed, NOTICES_MAX_LIMIT);
 }
 
 /**
