@@ -12,6 +12,7 @@ import {
   nationalityForCareer,
   retirementContinuationOptions,
   legacyEndingPresentation,
+  RETIREMENT_POLICY,
   type CareerState,
   type Command,
   type CareerArchiveCore,
@@ -314,7 +315,8 @@ export function RetirementScreen({
   const terminal = state.status === 'RETIRED' || state.status === 'ARCHIVED';
   const profile = state.player.profile === null ? null : toPlayerPublic(state.player.profile);
   const ending = result === undefined ? null : legacyEndingPresentation(result.endingId);
-  const assessment = assessCareerRetirement(state);
+  const retirementPolicy = rulesetForCareer(state).retirementRules ?? RETIREMENT_POLICY;
+  const assessment = assessCareerRetirement(state, 'UNDECIDED', retirementPolicy);
   const nationality = nationalityForCareer(state);
   const careerId = state.careerId;
   const timelineRevisions = [...new Set(state.timeline.map((entry) => entry.revision))];
@@ -408,7 +410,7 @@ export function RetirementScreen({
               급여를 중단합니다. 메달에 따른 체육요원 경로도 실제 병역 자격을 판정하지 않습니다.
             </p>
             <div className="os-endgame-choice-grid">
-            {careerEventChoices(state).map((choice) => (
+            {careerEventChoices(state, retirementPolicy).map((choice) => (
               <Button
                 key={choice}
                 variant="secondary"

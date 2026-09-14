@@ -4,7 +4,7 @@ import { runSettledFixture } from '../__fixtures__/career-06-settled.js';
 import { rulesetProto } from '../__fixtures__/career-01.js';
 import { hashState } from '../hash.js';
 import { simulate } from '../simulate.js';
-import { retirementContinuationOptions, retirementDecisionRequired } from './career-retirement.js';
+import { assessCareerRetirement, retirementContinuationOptions, retirementDecisionRequired, RETIREMENT_POLICY } from './career-retirement.js';
 import { careerEventChoices } from './career-event.js';
 import { initializeNationalityModule, resolveNationalityChoice } from './nationality.js';
 import type { DomainSnapshot } from '../types.js';
@@ -171,5 +171,49 @@ describe('career retirement continuation', () => {
     const source = runSettledFixture().snapshot;
     const state = { ...source.state, age: 100, retirement: { policyVersion: '1.0.0' as const, marketOffers: null, lastChanceConsumed: false, lastChanceSeasonIndex: null } };
     expect(retirementDecisionRequired(state)).toBe(false);
+  });
+
+  // T-7-031 D-80 1라운드 ②: 정책은 인자로만 받는다(기본값은 RETIREMENT_POLICY 1.0.0). 룰셋에
+  // retirementRules가 없으면 이 기본값이 그대로 재현돼야 한다.
+  it('defaults to RETIREMENT_POLICY when no policy argument is given', () => {
+    const source = runSettledFixture().snapshot;
+    const state = { ...source.state, age: 38 };
+    expect(assessCareerRetirement(state)?.policyVersion).toBe(RETIREMENT_POLICY.version);
+    expect(assessCareerRetirement(state, 'UNDECIDED', RETIREMENT_POLICY)?.total).toBe(
+      assessCareerRetirement(state)?.total,
+    );
+  });
+
+  it('honors an explicit policy argument: a stricter policy requires review where the default policy does not', () => {
+    const prepared = singleOfferBoundary();
+    const { snapshot } = retireContinuation(prepared);
+    const started = simulate({
+      snapshot,
+      command: { type: 'START_SEASON', commandId: 'target-season-start-policy', expectedRevision: snapshot.revision, payload: { simulationMode: 'FAST', serviceSeasonId: 'target-season-policy', legacyLedger: true } },
+      ruleset: rulesetProto,
+      rulesetVersion: snapshot.rulesetVersion,
+      contentPackVersion: snapshot.contentPackVersion,
+    });
+    expect(started.ok).toBe(true);
+    const finished = runSeason(started.ok ? started.snapshot : snapshot);
+    // Strip the last-chance boundary (which forces review independently of the assessment) so the
+    // gate exercised here is purely the policy-driven assessCareerRetirement branch.
+    const targetState = {
+      ...finished.state,
+      pending: null,
+      retirement: { policyVersion: '1.0.0' as const, marketOffers: 0, lastChanceConsumed: false, lastChanceSeasonIndex: null },
+    };
+    // Baseline: the default policy (no argument) does not require review for this evidence.
+    const baseline = assessCareerRetirement(targetState);
+    expect(baseline?.policyVersion).toBe(RETIREMENT_POLICY.version);
+    expect(baseline?.status).not.toBe('REVIEW');
+    expect(retirementDecisionRequired(targetState)).toBe(false);
+    // A stricter policy (lower reviewThreshold, same weights so age/injury alone still can't force
+    // review) passed explicitly must flip the same evidence to REVIEW.
+    const stricterPolicy = { ...RETIREMENT_POLICY, version: 'test-strict', watchThreshold: 20, reviewThreshold: 26 };
+    const assessment = assessCareerRetirement(targetState, 'UNDECIDED', stricterPolicy);
+    expect(assessment?.policyVersion).toBe('test-strict');
+    expect(assessment?.status).toBe('REVIEW');
+    expect(retirementDecisionRequired(targetState, stricterPolicy)).toBe(true);
   });
 });

@@ -5,6 +5,8 @@ import { rulesetProto } from '../__fixtures__/career-01.js';
 import { hashState } from '../hash.js';
 import { initializeNationalityModule } from './nationality.js';
 import { careerEventChoices, resolveCareerEvent } from './career-event.js';
+import { RETIREMENT_POLICY } from './career-retirement.js';
+import type { RetirementPolicy } from './retirement.js';
 import { simulate, type Command } from '../simulate.js';
 import type { DomainSnapshot } from '../types.js';
 import { createCareerArchiveCore } from './archive.js';
@@ -222,5 +224,42 @@ describe('CAREER_EVENT legacy wiring', () => {
     snapshot = run(snapshot, { type: 'RETIRE', payload: { choice: 'RETIRE' }, commandId: 'retire', expectedRevision: snapshot.revision } as EngineCommand);
     const result = simulate({ snapshot, command: { type: 'ADVANCE', payload: { eligibleEvents: [] }, commandId: 'after-retire', expectedRevision: snapshot.revision } as EngineCommand, ruleset: rulesetProto, rulesetVersion: snapshot.rulesetVersion, contentPackVersion: snapshot.contentPackVersion });
     expect(result.ok).toBe(false);
+  });
+
+  it('T-7-031: careerEventChoices/resolveCareerEvent take a policy arg and forcing REVIEW empties the choices', () => {
+    const source = koreanBoundary();
+    const lastIndex = source.state.seasonHistory.length - 1;
+    const state = {
+      ...source.state,
+      age: 38,
+      seasonHistory: source.state.seasonHistory.map((season, index) =>
+        index === lastIndex
+          ? {
+              ...season,
+              result: {
+                ...season.result,
+                legacy: {
+                  ...(season.result.legacy ?? {
+                    policyVersion: '1.0.0' as const,
+                    incomeMinor: 0,
+                    contractId: 'legacy-test-contract',
+                    relationships: { managerTrust: 50, captain: 50, rival: 0, fans: 50, agent: 50 },
+                    promotion: false,
+                    ageAtStart: source.state.age,
+                  }),
+                  injuryMissedMatches: 0,
+                },
+              },
+            }
+          : season,
+      ),
+      retirement: { policyVersion: '1.0.0' as const, marketOffers: 0, lastChanceConsumed: false, lastChanceSeasonIndex: null },
+    };
+    expect(careerEventChoices(state)).toContain('MILITARY_CLUB');
+    // Same policy shape as career-retirement.test.ts's "honors an explicit policy argument" case:
+    // a stricter watch/review threshold, same weights, flips REVIEW without age/injury alone forcing it.
+    const stricterPolicy: RetirementPolicy = { ...RETIREMENT_POLICY, version: 'test-strict', watchThreshold: 20, reviewThreshold: 26 };
+    expect(careerEventChoices(state, stricterPolicy)).toHaveLength(0);
+    expect(() => resolveCareerEvent(state, 'MILITARY_CLUB', 99, stricterPolicy)).toThrow(RangeError);
   });
 });

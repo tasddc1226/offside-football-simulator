@@ -61,7 +61,8 @@ export function loadRetirementArtifacts(
     ((rulesetVersion === '1.3.0' || rulesetVersion === '1.4.0') &&
       (contentPackVersion === '0.5.0' || contentPackVersion === '0.5.1')) ||
     (rulesetVersion === '1.5.0' && contentPackVersion === '0.6.0') ||
-    (rulesetVersion === '1.6.0' && contentPackVersion === '0.6.1');
+    (rulesetVersion === '1.6.0' && contentPackVersion === '0.6.1') ||
+    (rulesetVersion === '1.6.1' && contentPackVersion === '0.6.2');
   const legacyReferencePopulation = activatesLegacy110
     ? loadLegacyReferencePopulation('1.1.0', rulesetVersion)
     : null;

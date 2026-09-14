@@ -1022,6 +1022,72 @@ export const RulesetSchema = z
       immediate: z.record(z.enum(['PLAYING_TIME_ACCEPTED', 'PLAYING_TIME_REFUSED', 'LOAN_ACCEPTED', 'LOAN_REFUSED', 'TRANSFER_ACCEPTED', 'TRANSFER_REFUSED']), z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int() })),
       goalMet: z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int() }),
     }).optional(),
+    /** T-7-031(D-80 1라운드 ②): 1.6.1+. 도메인 `RetirementPolicy`와 같은 모양. 없는 룰셋
+     * (1.0.0~1.6.0)은 도메인 기본값 `RETIREMENT_POLICY`(1.0.0)를 그대로 쓴다. */
+    retirementRules: z
+      .strictObject({
+        version: z.string().min(1).max(200),
+        ageBands: z
+          .array(z.strictObject({ fromAge: z.number().int().min(0).max(120), pressure: z.number().int().min(0).max(100) }))
+          .min(1),
+        weights: z.strictObject({
+          age: z.number().int().min(0).max(100),
+          injury: z.number().int().min(0).max(100),
+          market: z.number().int().min(0).max(100),
+          opportunity: z.number().int().min(0).max(100),
+          intent: z.number().int().min(0).max(100),
+        }),
+        injuryAbsenceWeight: z.number().int().min(0).max(100),
+        undecidedIntentPressure: z.number().int().min(0).max(100),
+        watchThreshold: z.number().int().min(1).max(99),
+        reviewThreshold: z.number().int().min(1).max(100),
+      })
+      .superRefine((rules, ctx) => {
+        if (
+          rules.weights.age +
+            rules.weights.injury +
+            rules.weights.market +
+            rules.weights.opportunity +
+            rules.weights.intent !==
+          100
+        ) {
+          ctx.addIssue({ code: 'custom', message: 'retirementRules.weights 합은 100이어야 한다.', path: ['weights'] });
+        }
+        if (rules.reviewThreshold <= rules.watchThreshold) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'retirementRules.reviewThreshold는 watchThreshold보다 커야 한다.',
+            path: ['reviewThreshold'],
+          });
+        }
+        if (rules.weights.age >= rules.reviewThreshold) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'retirementRules.weights.age는 reviewThreshold보다 작아야 한다(나이만으로 심사가 걸리면 안 된다).',
+            path: ['weights', 'age'],
+          });
+        }
+        if (rules.weights.injury >= rules.reviewThreshold) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'retirementRules.weights.injury는 reviewThreshold보다 작아야 한다(부상만으로 심사가 걸리면 안 된다).',
+            path: ['weights', 'injury'],
+          });
+        }
+        if (rules.ageBands[0]?.fromAge !== 0) {
+          ctx.addIssue({ code: 'custom', message: 'retirementRules.ageBands는 0세부터 시작해야 한다.', path: ['ageBands', 0, 'fromAge'] });
+        }
+        for (let i = 1; i < rules.ageBands.length; i++) {
+          if (rules.ageBands[i]!.fromAge <= rules.ageBands[i - 1]!.fromAge) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `retirementRules.ageBands는 fromAge 오름차순이어야 한다(index ${i}).`,
+              path: ['ageBands', i, 'fromAge'],
+            });
+          }
+        }
+      })
+      .optional(),
     positions: z.array(PositionSchema).min(1),
     archetypes: z.array(ArchetypeSchema),
     backgrounds: z.array(BackgroundSchema).min(1),

@@ -374,4 +374,66 @@ describe('RulesetSchema', () => {
       expect(() => RulesetSchema.parse(ruleset)).toThrowError(/newManagerTrustBase\(\d+\)는 contractRules\.newClubManagerTrust\(\d+\)와 같아야 한다/);
     });
   });
+
+  // T-7-031 D-80 1라운드 ②: 선택 필드 retirementRules. 없으면 기존처럼 통과해야 하고(1.0.0
+  // fixture는 필드가 없다), 있으면 도메인 RetirementPolicy와 같은 검증(weights 합 100, age·injury
+  // 단독으로 review 도달 금지, ageBands 0부터 오름차순)을 받는다.
+  describe('retirementRules', () => {
+    function validRetirementRules() {
+      return {
+        version: '1.1.0',
+        ageBands: [
+          { fromAge: 0, pressure: 0 },
+          { fromAge: 28, pressure: 20 },
+          { fromAge: 31, pressure: 50 },
+          { fromAge: 34, pressure: 80 },
+          { fromAge: 37, pressure: 100 },
+        ],
+        weights: { age: 40, injury: 15, market: 20, opportunity: 15, intent: 10 },
+        injuryAbsenceWeight: 70,
+        undecidedIntentPressure: 50,
+        watchThreshold: 35,
+        reviewThreshold: 55,
+      };
+    }
+
+    it('is optional and absent for ruleset 1.0.0', () => {
+      const parsed = RulesetSchema.parse(ruleset100);
+      expect((parsed as { retirementRules?: unknown }).retirementRules).toBeUndefined();
+    });
+
+    it('accepts a valid retirementRules block', () => {
+      const ruleset = { ...cloneRuleset(), retirementRules: validRetirementRules() };
+      expect(() => RulesetSchema.parse(ruleset)).not.toThrow();
+    });
+
+    it('rejects weights that do not sum to 100', () => {
+      const rules = validRetirementRules();
+      rules.weights.age += 1;
+      const ruleset = { ...cloneRuleset(), retirementRules: rules };
+      expect(() => RulesetSchema.parse(ruleset)).toThrowError(/weights 합은 100이어야 한다/);
+    });
+
+    it('rejects weights.age at or above reviewThreshold', () => {
+      const rules = validRetirementRules();
+      rules.weights.age = rules.reviewThreshold;
+      rules.weights.opportunity -= rules.reviewThreshold - 40;
+      const ruleset = { ...cloneRuleset(), retirementRules: rules };
+      expect(() => RulesetSchema.parse(ruleset)).toThrowError(/weights\.age는 reviewThreshold보다 작아야 한다/);
+    });
+
+    it('rejects ageBands not starting at fromAge 0', () => {
+      const rules = validRetirementRules();
+      rules.ageBands = rules.ageBands.slice(1);
+      const ruleset = { ...cloneRuleset(), retirementRules: rules };
+      expect(() => RulesetSchema.parse(ruleset)).toThrowError(/ageBands는 0세부터 시작해야 한다/);
+    });
+
+    it('rejects ageBands not in ascending fromAge order', () => {
+      const rules = validRetirementRules();
+      [rules.ageBands[1]!.fromAge, rules.ageBands[2]!.fromAge] = [rules.ageBands[2]!.fromAge, rules.ageBands[1]!.fromAge];
+      const ruleset = { ...cloneRuleset(), retirementRules: rules };
+      expect(() => RulesetSchema.parse(ruleset)).toThrowError(/ageBands는 fromAge 오름차순이어야 한다/);
+    });
+  });
 });
