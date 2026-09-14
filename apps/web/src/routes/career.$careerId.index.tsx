@@ -764,6 +764,12 @@ function CareerDashboard() {
   const hasContract = state.contract !== null;
   const season = state.season;
   const room = deriveTacticalRoom(state, ruleset);
+  const currentLeagueRows = season?.leagueLedger === undefined
+    ? null
+    : standingsFromLedger(ruleset, season.leagueLedger);
+  const currentLeague = season?.leagueLedger === undefined
+    ? undefined
+    : ruleset.leagues.find((candidate) => candidate.id === season.leagueLedger!.leagueId);
   const seasonChronicleItems = buildSeasonChronicleItems(state);
   const seasonResultItem = seasonChronicleItems.find(
     (item) => item.seasonResultHistoryIndex !== null,
@@ -786,12 +792,6 @@ function CareerDashboard() {
   // UX-007 최근 소식: 기록 탭과 같은 seasonChronicleItems를 재사용하되, 정보 없는 항목("진행" 단독
   // 같은 제네릭 라벨)은 걸러 의미 있는 최근 것부터 최대 3개만 보여준다.
   const recentChronicleItems = visibleRecentChronicleItems(seasonChronicleItems);
-  const currentLeagueRows = season?.leagueLedger === undefined
-    ? null
-    : standingsFromLedger(ruleset, season.leagueLedger);
-  const currentLeague = season?.leagueLedger === undefined
-    ? undefined
-    : ruleset.leagues.find((candidate) => candidate.id === season.leagueLedger!.leagueId);
 
   return (
     <div className="os-screen">
