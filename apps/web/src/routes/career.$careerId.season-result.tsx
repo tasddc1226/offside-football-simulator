@@ -3,7 +3,7 @@
 // 대시보드 "시즌 결산" CTA가 확정하고 이 화면은 아무것도 확정하지 않는다.
 import { useEffect } from 'react';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
-import type { CareerState, Ruleset } from '@offside/domain';
+import { standingRowsFromFinalLeagueTable, type CareerState, type Ruleset } from '@offside/domain';
 import {
   ScreenIntro,
   Tabs,
@@ -321,6 +321,9 @@ function SeasonResultScreen() {
   // 둘 다 false(평균 평점만으로 분기).
   const leagueRecord = view.result.competitions.find((competition) => competition.kind === 'LEAGUE') ?? null;
   const league = leagueRecord === null ? undefined : ruleset.leagues.find((candidate) => candidate.id === (view.result.finalLeagueTable?.leagueId ?? leagueRecord.competitionId));
+  const finalLeagueRows = view.result.finalLeagueTable === undefined
+    ? undefined
+    : standingRowsFromFinalLeagueTable(view.result.finalLeagueTable);
   const promoted =
     leagueRecord !== null &&
     leagueRecord.position !== null &&
@@ -539,7 +542,7 @@ function SeasonResultScreen() {
         </section>
       ) : null}
 
-      {view.result.finalLeagueTable === undefined || league === undefined ? (
+      {view.result.finalLeagueTable === undefined || finalLeagueRows === undefined || league === undefined ? (
         <section className="os-panel flex flex-col gap-os-2" aria-label="전체 리그 순위 기록 지원 상태">
           <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>전체 리그 순위</h2>
           <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
@@ -551,7 +554,7 @@ function SeasonResultScreen() {
       ) : (
         <section className="os-panel">
           <LeagueStandingsTable
-            rows={view.result.finalLeagueTable.rows}
+            rows={finalLeagueRows}
             teamId={view.result.finalLeagueTable.teamId}
             leagueName={view.result.finalLeagueTable.leagueName}
             completedRounds={view.result.finalLeagueTable.completedRounds}

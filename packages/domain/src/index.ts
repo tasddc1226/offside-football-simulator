@@ -40,6 +40,7 @@ export {
   type EffectStackingRule,
   type FootballSeason,
   type FinalLeagueTable,
+  type FinalLeagueTableRow,
   type LeagueFixture,
   type LeagueFixtureResult,
   type LeagueSeasonLedger,
@@ -270,6 +271,7 @@ export {
   projectLeagueCompetition,
   recordPlayerLeagueResult,
   standingsFromLedger,
+  standingRowsFromFinalLeagueTable,
 } from './league-ledger.js';
 export { applyCompetitorFormDrift, playMatch, type PlayMatchInput, type PlayMatchResult } from './match.js';
 export {

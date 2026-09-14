@@ -51,7 +51,7 @@ async function runGoldenOnFreshStore(): Promise<{ store: MemoryLocalStore; engin
   return { store, engine, careerId };
 }
 
-async function runLedgerToSeasonStart(): Promise<{ store: MemoryLocalStore; engine: EngineClient; careerId: string }> {
+async function runLedgerCareer(stopAfterSeasonStart = true): Promise<{ store: MemoryLocalStore; engine: EngineClient; careerId: string }> {
   const store = new MemoryLocalStore();
   const ruleset = ruleset170Raw as unknown as Ruleset;
   const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset });
@@ -70,9 +70,9 @@ async function runLedgerToSeasonStart(): Promise<{ store: MemoryLocalStore; engi
       ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc-ledger-engine' } : {}),
     });
     if (!result.ok) throw new Error(`${command.type}: ${result.error.message}`);
-    if (command.type === 'START_SEASON') return { store, engine, careerId };
+    if (stopAfterSeasonStart && command.type === 'START_SEASON') return { store, engine, careerId };
   }
-  throw new Error('START_SEASON command가 없다.');
+  return { store, engine, careerId };
 }
 
 function wrapStoreWithThrowingAppend(inner: LocalStore): LocalStore {
@@ -391,7 +391,7 @@ describe('복구', () => {
 
     // Hash와 compact 자체 형태는 맞아도 실제 1.7 ruleset roster와 다른 latest는 ready로 선택하지 않고
     // 직전 snapshot에서 START_SEASON을 재생해 복구한다.
-    const healthyRun = await runLedgerToSeasonStart();
+    const healthyRun = await runLedgerCareer();
     const healthyReload = await healthyRun.engine.loadCareer(healthyRun.careerId);
     expect(healthyReload.ok).toBe(true);
     if (!healthyReload.ok) throw new Error('정상 1.7 canonical reload 실패');
@@ -421,7 +421,15 @@ describe('복구', () => {
     });
     expect(advanced.ok).toBe(true);
 
-    const ledgerRun = await runLedgerToSeasonStart();
+    const finalRun = await runLedgerCareer(false);
+    const finalReload = await finalRun.engine.loadCareer(finalRun.careerId);
+    expect(finalReload.ok).toBe(true);
+    if (!finalReload.ok) throw new Error('final 1.7 reload 실패');
+    const finalRows = finalReload.snapshot.state.seasonHistory.at(-1)?.result.finalLeagueTable?.rows;
+    expect(finalRows).toBeDefined();
+    expect(finalRows?.every((row) => row.length === 11)).toBe(true);
+
+    const ledgerRun = await runLedgerCareer();
     const brokenLatest = await ledgerRun.store.transaction('readonly', (tx) => tx.snapshots.getLatest(ledgerRun.careerId));
     if (brokenLatest === undefined) throw new Error('ledger latest 없음');
     const brokenState = JSON.parse(brokenLatest.state) as CareerState;

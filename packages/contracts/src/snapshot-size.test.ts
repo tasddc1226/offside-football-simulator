@@ -8,10 +8,10 @@ import {
   projectLeagueCompetition,
   simulate,
   type DomainSnapshot,
+  type FinalLeagueTableRow,
   type JsonValue,
   type LeagueSeasonLedger,
   type Ruleset,
-  type StandingRow,
 } from '@offside/domain';
 import {
   career01,
@@ -634,19 +634,19 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
     expect(activeStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
     expect(activePutBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
 
-    const rows: StandingRow[] = teams.map((team, index) => ({
-      rank: index + 1,
-      teamId: team.teamId,
-      teamName: team.name,
-      played: 30,
-      won: 15,
-      drawn: 0,
-      lost: 15,
-      goalsFor: 45 - index,
-      goalsAgainst: 30 + index,
-      goalDifference: 15 - index * 2,
-      points: 45,
-    }));
+    const rows: FinalLeagueTableRow[] = teams.map((team, index) => [
+      index + 1,
+      team.teamId,
+      team.name,
+      30,
+      15,
+      0,
+      15,
+      45 - index,
+      30 + index,
+      15 - index * 2,
+      45,
+    ]);
     const resultTemplate = final.snapshot.state.seasonHistory.at(-1)!.result;
     const seasonHistory = Array.from({ length: 20 }, (_, index) => {
       const seasonIndex = index + 1;

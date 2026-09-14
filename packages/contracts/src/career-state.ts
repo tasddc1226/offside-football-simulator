@@ -520,6 +520,20 @@ export const StandingRowSchema = z.strictObject({
   points: z.number().int().nonnegative(),
 });
 
+export const FinalLeagueTableRowSchema = z.tuple([
+  z.number().int().positive(),
+  z.string().min(1),
+  z.string().min(1),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int(),
+  z.number().int().nonnegative(),
+]);
+
 export const FinalLeagueTableSchema = z.strictObject({
   policyVersion: z.literal('1.0.0'),
   leagueId: z.string().min(1),
@@ -527,7 +541,7 @@ export const FinalLeagueTableSchema = z.strictObject({
   seasonIndex: z.number().int().positive(),
   teamId: z.string().min(1),
   completedRounds: z.number().int().nonnegative(),
-  rows: z.array(StandingRowSchema),
+  rows: z.array(FinalLeagueTableRowSchema),
 });
 
 // T-2-001이 타입만 두었던 것을 T-2-003이 확정한다(브리프 데이터 계약 D-35).
@@ -1137,6 +1151,18 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
     } else if (ledger.seasonIndex !== season.index || ledger.teamId !== season.teamId) {
       issues.push({ path: ['season', 'leagueLedger'], message: 'leagueLedger가 활성 시즌 index/team과 일치해야 한다.' });
     }
+  }
+  if (value.rulesetVersion === '1.7.0' && Array.isArray(value.seasonHistory)) {
+    value.seasonHistory.forEach((summary, index) => {
+      const result = isRecord(summary) ? summary.result : undefined;
+      const finalTable = isRecord(result) ? result.finalLeagueTable : undefined;
+      if (!FinalLeagueTableSchema.safeParse(finalTable).success) {
+        issues.push({
+          path: ['seasonHistory', index, 'result', 'finalLeagueTable'],
+          message: '지원 룰셋 결산에는 compact finalLeagueTable이 있어야 한다.',
+        });
+      }
+    });
   }
 
   const openStints = Array.isArray(clubHistory)

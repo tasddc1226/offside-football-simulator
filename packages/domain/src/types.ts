@@ -540,6 +540,21 @@ export type StandingRow = {
   points: number;
 };
 
+/** Compact persisted final-table row. Public views expand this to StandingRow. */
+export type FinalLeagueTableRow = [
+  rank: number,
+  teamId: string,
+  teamName: string,
+  played: number,
+  won: number,
+  drawn: number,
+  lost: number,
+  goalsFor: number,
+  goalsAgainst: number,
+  goalDifference: number,
+  points: number,
+];
+
 export type FinalLeagueTable = {
   policyVersion: '1.0.0';
   leagueId: string;
@@ -547,7 +562,7 @@ export type FinalLeagueTable = {
   seasonIndex: number;
   teamId: string;
   completedRounds: number;
-  rows: StandingRow[];
+  rows: FinalLeagueTableRow[];
 };
 
 // T-2-001이 타입만 두었던 것을 T-2-003이 확정한다(브리프 데이터 계약 D-35).
