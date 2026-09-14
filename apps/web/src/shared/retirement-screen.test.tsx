@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { CareerState, Command, LegacyResult } from '@offside/domain';
+import type { CareerArchiveCore, CareerState, Command, LegacyResult } from '@offside/domain';
 import { RetirementPage, RetirementScreen } from './retirement-screen.js';
 
 const { navigateMock, getAppEngineMock } = vi.hoisted(() => ({
@@ -100,7 +100,9 @@ const activeState = {
 
 describe('RetirementScreen terminal public views', () => {
   it('hides retirement actions and renders public profile fields and four navigation links', () => {
-    render(<RetirementScreen state={state} result={result} mode="final-profile" />);
+    const { rerender } = render(
+      <RetirementScreen state={state} result={result} mode="final-profile" />,
+    );
     expect(screen.queryByRole('button', { name: /은퇴/ })).not.toBeInTheDocument();
     expect(screen.getByText('공개 선수')).toBeInTheDocument();
     expect(screen.getByText(/최종 포지션 스트라이커 · 선호 스트라이커/)).toBeInTheDocument();
@@ -111,6 +113,98 @@ describe('RetirementScreen terminal public views', () => {
     expect(screen.getByRole('link', { name: '최종 프로필' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '통산 기록' })).toBeInTheDocument();
     expect(screen.queryByText(/potential|잠재력/i)).not.toBeInTheDocument();
+
+    const retrospectiveState = {
+      ...state,
+      age: 35,
+      simulationMode: 'FAST',
+      contract: null,
+      state: { fitness: 80 },
+      timeline: [
+        { revision: 12, kind: 'SEASON_SETTLED', age: 34, step: 12 },
+        { revision: 20, kind: 'RETIRED', refId: 'RETIRE', age: 35, step: 12 },
+      ],
+      seasonHistory: [
+        {
+          index: 1,
+          teamId: 'TEAM-1',
+          settledAtRevision: 12,
+          result: {
+            competitions: [],
+            chapters: [],
+            playerStats: {
+              group: 'FW',
+              appearances: { total: 60, started: 55, sub: 0, zeroMinute: 5, out: 5 },
+              minutes: 4_950,
+              ratedMatches: 55,
+              ratingSumTenths: 3_850,
+              totals: { group: 'FW', goals: 12, assists: 4, xgCenti: 1_000, shots: 60, offsides: 8 },
+            },
+            stateDeltas: { managerTrust: { after: 75 } },
+            selectionSummary: { possibleMinutes: 5_400 },
+          },
+        },
+      ],
+    } as unknown as CareerState;
+    const retrospectiveResult = {
+      ...result,
+      bestMomentRef: 'season:1:performance',
+      international: { seniorCaps: 0, youthAppearances: 0, tournaments: [] },
+      nationality: { serviceStatus: 'NOT_APPLICABLE' },
+      sources: [
+        { sourceId: 'season:1:performance', revision: 12, seasonIndex: 1, kind: 'SEASON' },
+        { sourceId: 'season:1:relationships', revision: 12, seasonIndex: 1, kind: 'SEASON' },
+        { sourceId: 'season:1:duration', revision: 12, seasonIndex: 1, kind: 'SEASON' },
+      ],
+    } as unknown as LegacyResult;
+    const archive = {
+      records: {
+        totals: { seasons: 1, playedMatches: 55, minutes: 4_950, averageRatingTenths: 70 },
+        clubs: [],
+        positions: [
+          {
+            group: 'FW',
+            totals: { minutes: 4_950 },
+            statistics: { group: 'FW', goals: 12 },
+          },
+        ],
+        sources: [{ seasonIndex: 1, settledAtRevision: 12 }],
+      },
+    } as unknown as CareerArchiveCore;
+
+    rerender(
+      <RetirementScreen
+        state={retrospectiveState}
+        result={retrospectiveResult}
+        archive={archive}
+        retrospective="moment-2"
+      />,
+    );
+    expect(screen.getByLabelText('커리어 돌아보기 2 / 5 단계')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '시즌 기여 기록' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '전체 건너뛰기' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '최종 기록 바로 보기' })).toBeInTheDocument();
+
+    rerender(
+      <RetirementScreen
+        state={retrospectiveState}
+        result={{ ...retrospectiveResult, sources: [] } as unknown as LegacyResult}
+        archive={archive}
+        retrospective="moment-1"
+      />,
+    );
+    expect(screen.getByLabelText('커리어 돌아보기 1 / 2 단계')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '짧았지만 완결된 커리어' })).toBeInTheDocument();
+
+    document.documentElement.dataset.inputModality = 'keyboard';
+    rerender(
+      <RetirementScreen state={retrospectiveState} result={retrospectiveResult} archive={archive} />,
+    );
+    expect(screen.getByRole('link', { name: '커리어 돌아보기' })).toBeInTheDocument();
+    expect(screen.getByText('통산 출전 50경기')).toBeInTheDocument();
+    expect(screen.getByText('공격수 통산 득점 10골')).toBeInTheDocument();
+    expect(screen.getByText(/Legacy 점수나 게임 효과를 더하지 않습니다/)).toBeInTheDocument();
+    delete document.documentElement.dataset.inputModality;
   });
 });
 

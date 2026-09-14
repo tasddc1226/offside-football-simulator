@@ -58,6 +58,36 @@ test('deterministic settled career can retire, reload its Legacy views, and retu
   await expectNoSeriousOrCriticalViolations(page, 'FULL TIME');
   await expect(page.getByRole('button', { name: '선수 생활 마무리' })).not.toBeVisible();
 
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByRole('link', { name: '커리어 돌아보기' }).click();
+  await expect(page).toHaveURL(/\/retirement\?retrospective=moment-1$/);
+  const firstProgress = page.getByLabel(/커리어 돌아보기 1 \/ \d+ 단계/);
+  await expect(firstProgress).toBeVisible();
+  const retrospectiveUrl = page.url();
+  await page.reload();
+  await expect(page).toHaveURL(retrospectiveUrl);
+  await expect(firstProgress).toBeVisible();
+  await expectNoSeriousOrCriticalViolations(page, 'Guided retrospective');
+
+  for (let step = 0; step < 5; step += 1) {
+    const nextMoment = page.getByRole('link', { name: '다음 대표 순간' });
+    if (!(await nextMoment.isVisible())) break;
+    await nextMoment.focus();
+    await page.keyboard.press('Enter');
+  }
+  await page.getByRole('link', { name: 'Legacy 평가 보기' }).click();
+  await expect(page).toHaveURL(/\/retirement\?retrospective=legacy$/);
+  await expect(page.getByText('5축 점수 자세히 보기')).toBeVisible();
+  await page.getByRole('link', { name: '최종 기록 보기' }).click();
+  await expect(page).toHaveURL(/\/retirement\?retrospective=final$/);
+  await expect(page.getByText('FINAL PLAYER PROFILE')).toBeVisible();
+
+  await page.getByRole('link', { name: '통산 기록' }).click();
+  await page.getByRole('link', { name: '커리어 돌아보기' }).click();
+  await page.getByRole('link', { name: '전체 건너뛰기' }).click();
+  await expect(page).toHaveURL(/\/retirement\?retrospective=final$/);
+  await expect(page.getByText('FINAL PLAYER PROFILE')).toBeVisible();
+
   await page.getByRole('link', { name: 'Legacy Score' }).click();
   await expect(page).toHaveURL(/\/career\/[^/]+\/legacy$/);
   await expect(page.getByRole('heading', { name: 'Legacy Score' })).toBeVisible();
