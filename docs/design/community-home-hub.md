@@ -68,10 +68,16 @@ Emil 디자인 스킬은 반복 방문에서 불필요한 모션을 줄이고, �
   상세 관리·삭제는 선수단 관리에서 접근한다. `?tab=squad`, `?tab=retired` URL과 관리 탭은 유지한다.
   은퇴 선수만 있으면 현역 없음 상태와 기록 관리 바로가기를 제공한다.
 - `apps/web/src/shared/home-community.tsx`: 공지별 독립 Dialog, 메일 링크와 실제 주소를 제공한다.
-  공지별 Dialog를 사용해 닫았을 때 해당 공지 버튼으로 포커스가 복귀한다. 자동 팝업은 없다.
-- `apps/web/src/shared/home-notices.ts`: `HOME_NOTICES` 배열을 표시 순서대로 관리한다.
-  `id`는 고유하게, `date`는 `YYYY.MM.DD`, `title`은 짧은 제목, `body`는 문단 배열로 작성한다.
-  새 안내 추가/정정 후 PR과 웹 배포를 해야 사용자에게 반영된다. 문의 이메일도 이 파일을 단일 원본으로 사용한다.
+  공지별 Dialog를 사용해 닫았을 때 해당 공지 버튼으로 포커스가 복귀한다. 자동 팝업은 없다. 공지 목록은
+  `apps/web/src/engine/notices.ts`의 `useNotices`(TanStack Query, `GET /v1/notices` 조회 + kv-store
+  오프라인 캐시)가 제공한다.
+- 공지 갱신은 이 파일들을 고치는 게 아니라 D1 `notices` 테이블이 정본이다(API-NOTICE-001,
+  `apps/api/src/routes/notices.ts` · `apps/api/src/db/repos/notices.ts`). 운영자는 배포 없이
+  `db:query:production`(또는 `apps/api/seeds/notices-production-2026-09-14.sql` 같은 seed 파일 실행)으로
+  SQL을 직접 넣어 제목·게시일·본문을 추가·수정한다 — 자세한 절차는
+  [운영 런북](../operations/production-release.md)의 "공지 테이블 마이그레이션 + 운영 공지 seed 실행"을
+  참고한다. `apps/web/src/shared/home-notices.ts`에는 더 이상 공지 데이터가 없다 — `SUPPORT_EMAIL`
+  상수만 남아 있고, 문의 이메일도 이 상수를 단일 원본으로 사용한다.
 - `apps/web/src/shared/public-content.tsx`: 처음 방문한 사용자에게도 동일 공지·문의 영역을 제공한다.
   기존 소개·가이드·온보딩 흐름과 검색 메타데이터는 보존한다.
 - `apps/web/src/shared/home-hub.css`: 기존 시각 토큰을 재사용한다. 공지 제목 옆 닫기 영역 확보,
