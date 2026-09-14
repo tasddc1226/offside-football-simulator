@@ -67,6 +67,13 @@ import { buildCurrentContractSummary, MARKET_REASON_LABEL_KO } from '../shared/t
 import { GamePending } from '../shared/game-presentation.js';
 import { buildCareerClock, type CareerClockView } from '../shared/career-clock.js';
 import {
+  careerStartYear,
+  extractCalendarStartYear,
+  seasonYearLabel,
+  seasonYearLabelWithOrdinal,
+} from '../shared/season-year.js';
+import { useServiceSeason } from '../engine/service-season.js';
+import {
   conditionTileItems,
   proStatusStripItems,
   u18StatusStripItems,
@@ -394,10 +401,12 @@ function NextDecisionCard({
   careerId,
   state,
   clock,
+  startYear,
 }: {
   careerId: string;
   state: CareerState;
   clock: CareerClockView;
+  startYear: number;
 }) {
   const navigate = useNavigate();
   const advanceMutation = useCareerMutation('advance');
@@ -564,7 +573,7 @@ function NextDecisionCard({
           </Button>
           {settling ? (
             <GamePending
-              title={`시즌 ${state.season?.index ?? ''} 기록을 정리하고 있습니다`}
+              title={`${state.season === null ? '시즌' : seasonYearLabel(startYear, state.season.index)} 기록을 정리하고 있습니다`}
               detail="경기 기록과 성장 결과를 저장한 뒤 시즌 리뷰를 엽니다."
             />
           ) : null}
@@ -621,7 +630,7 @@ function NextDecisionCard({
           title="시즌을 진행하고 있습니다"
           detail={state.season === null
             ? '다음 일정을 준비하고 있습니다.'
-            : `시즌 ${state.season.index} · step ${state.currentStep} 이후 일정을 처리하고 있습니다.`}
+            : `${seasonYearLabel(startYear, state.season.index)} · step ${state.currentStep} 이후 일정을 처리하고 있습니다.`}
         />
       ) : null}
       {nothingToAdvance ? (
@@ -684,6 +693,7 @@ function CareerDashboard() {
   const { signed, view } = Route.useSearch();
   const navigate = useNavigate();
   const query = useCareer(careerId);
+  const serviceSeasonQuery = useServiceSeason();
   const [showSignedToast, setShowSignedToast] = useState(signed === true);
   const initialisedRef = useRef(false);
   const tab = view ?? 'home';
@@ -732,6 +742,13 @@ function CareerDashboard() {
   }
 
   const { state } = query.data;
+  const ruleset = rulesetForCareer(state);
+  // 사용자 결정(2026-09-13): 1시즌 = 1년, 커리어 시작 연도부터 "2026 시즌"으로 표기(season-year.ts).
+  const startYear = careerStartYear({
+    seasonServiceSeasonId: state.season?.serviceSeasonId ?? null,
+    currentServiceSeason: serviceSeasonQuery.data,
+    calendarStartYear: extractCalendarStartYear(ruleset.leagueCalendar),
+  });
   const profile = state.player.profile;
   const draft = state.player.draft;
   const name = profile?.name ?? draft.name ?? '이름 없는 선수';
@@ -740,7 +757,6 @@ function CareerDashboard() {
     : { label: '포지션', value: draft.position ? POSITION_LABELS[draft.position] : '—' };
   const hasContract = state.contract !== null;
   const season = state.season;
-  const ruleset = rulesetForCareer(state);
   const room = deriveTacticalRoom(state, ruleset);
   const seasonChronicleItems = buildSeasonChronicleItems(state);
   const seasonResultItem = seasonChronicleItems.find(
@@ -753,7 +769,7 @@ function CareerDashboard() {
     state.pending !== null && (state.pending.kind === 'OFFERS' || state.pending.kind === 'CONTRACT')
       ? state.pending
       : null;
-  const clock = buildCareerClock(state);
+  const clock = buildCareerClock(state, startYear);
   const statusItems = hasContract ? proStatusStripItems(state) : u18StatusStripItems(state);
   // UX-007 홈 탭 컨디션 타일: StatusStrip과 별도로 폼·체력·사기를 동일한 위계의 타일+미터로 보여준다
   // (StatusStrip의 "첫 항목 액센트 강조"는 player 탭 Base OVR용이라 여기서는 쓰지 않는다).
@@ -814,7 +830,7 @@ function CareerDashboard() {
           >
             <TabsContent value="home">
               <section className="os-career-home" aria-label="지금 할 일">
-                <NextDecisionCard careerId={careerId} state={state} clock={clock} />
+                <NextDecisionCard careerId={careerId} state={state} clock={clock} startYear={startYear} />
 
                 <ConditionTiles items={conditionItems} />
 
@@ -1216,7 +1232,7 @@ function CareerDashboard() {
                               className="font-os text-os-text underline"
                               style={CAPTION_STYLE}
                             >
-                              {storedSeasonAgeLabel(state, link.historyIndex)}시즌 {link.seasonNumber} 결산 보기
+                              {storedSeasonAgeLabel(state, link.historyIndex)}{seasonYearLabelWithOrdinal(startYear, link.seasonNumber)} 결산 보기
                             </Link>
                           </li>
                         ))}
