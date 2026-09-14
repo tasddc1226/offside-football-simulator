@@ -5,6 +5,7 @@ import type { League, Ruleset, Team } from './ruleset.js';
 import type {
   CompetitionRecord,
   FinalLeagueTable,
+  FootballSeason,
   LeagueFixture,
   LeagueFixtureResult,
   LeagueSeasonLedger,
@@ -17,6 +18,7 @@ function fixtureScore(
   ruleset: Ruleset,
   ledger: LeagueSeasonLedger,
   fixture: LeagueFixture,
+  fixtureIndex: number,
 ): LeagueFixtureResult {
   const home = ledger.teams.find((team) => team.teamId === fixture.homeTeamId);
   const away = ledger.teams.find((team) => team.teamId === fixture.awayTeamId);
@@ -58,19 +60,13 @@ function fixtureScore(
     homeGoals = outcome === 'HOME_WIN' ? winnerGoals : loserGoals;
     awayGoals = outcome === 'AWAY_WIN' ? winnerGoals : loserGoals;
   }
-  return {
-    fixtureId: fixture.fixtureId,
-    round: fixture.round,
-    homeTeamId: fixture.homeTeamId,
-    awayTeamId: fixture.awayTeamId,
-    homeGoals,
-    awayGoals,
-  };
+  return [fixtureIndex, homeGoals, awayGoals];
 }
 
-function fixtureMap(ledger: LeagueSeasonLedger): Map<string, LeagueFixture> {
+function fixtureMap(ledger: LeagueSeasonLedger): Map<string, { fixture: LeagueFixture; index: number }> {
   return new Map(
-    buildLeagueFixtures(ledger.seasonIndex, ledger.leagueId, ledger.teams).map((fixture) => [fixture.fixtureId, fixture]),
+    buildLeagueFixtures(ledger.seasonIndex, ledger.leagueId, ledger.teams)
+      .map((fixture, index) => [fixture.fixtureId, { fixture, index }]),
   );
 }
 
@@ -83,25 +79,20 @@ export function assertLeagueLedgerInvariant(ledger: LeagueSeasonLedger): void {
   if (!ledger.teams.some((team) => team.teamId === ledger.teamId)) {
     throw new RangeError(`league ledger: 소속 팀 '${ledger.teamId}'이 roster에 없다.`);
   }
-  const known = fixtureMap(ledger);
-  const resultIds = new Set<string>();
+  const fixtures = buildLeagueFixtures(ledger.seasonIndex, ledger.leagueId, ledger.teams);
+  const resultIndexes = new Set<number>();
   for (const result of ledger.results) {
-    if (resultIds.has(result.fixtureId)) throw new RangeError(`league ledger: fixture '${result.fixtureId}' 결과 중복.`);
-    resultIds.add(result.fixtureId);
-    const fixture = known.get(result.fixtureId);
-    if (
-      fixture === undefined ||
-      fixture.round !== result.round ||
-      fixture.homeTeamId !== result.homeTeamId ||
-      fixture.awayTeamId !== result.awayTeamId
-    ) {
-      throw new RangeError(`league ledger: fixture '${result.fixtureId}' identity 불일치.`);
+    const [fixtureIndex, homeGoals, awayGoals] = result;
+    if (!Number.isSafeInteger(fixtureIndex) || fixtureIndex < 0 || fixtureIndex >= fixtures.length) {
+      throw new RangeError(`league ledger: fixture index '${fixtureIndex}' 범위가 비정상이다.`);
     }
+    if (resultIndexes.has(fixtureIndex)) throw new RangeError(`league ledger: fixture index '${fixtureIndex}' 결과 중복.`);
+    resultIndexes.add(fixtureIndex);
     if (
-      !Number.isSafeInteger(result.homeGoals) || result.homeGoals < 0 ||
-      !Number.isSafeInteger(result.awayGoals) || result.awayGoals < 0
+      !Number.isSafeInteger(homeGoals) || homeGoals < 0 ||
+      !Number.isSafeInteger(awayGoals) || awayGoals < 0
     ) {
-      throw new RangeError(`league ledger: fixture '${result.fixtureId}' 스코어가 비정상이다.`);
+      throw new RangeError(`league ledger: fixture index '${fixtureIndex}' 스코어가 비정상이다.`);
     }
   }
   const completed = new Set<number>();
@@ -109,18 +100,71 @@ export function assertLeagueLedgerInvariant(ledger: LeagueSeasonLedger): void {
     if (completed.has(round)) throw new RangeError(`league ledger: 완료 round ${round} 중복.`);
     completed.add(round);
   }
-  const rounds = new Set([...known.values()].map((fixture) => fixture.round));
+  const rounds = new Set(fixtures.map((fixture) => fixture.round));
   for (const round of completed) {
     if (!rounds.has(round)) throw new RangeError(`league ledger: 존재하지 않는 완료 round ${round}.`);
   }
   for (const round of rounds) {
-    const expected = [...known.values()].filter((fixture) => fixture.round === round).length;
-    const actual = ledger.results.filter((result) => result.round === round).length;
+    const expected = fixtures.filter((fixture) => fixture.round === round).length;
+    const actual = ledger.results.filter((result) => fixtures[result[0]]?.round === round).length;
     if (actual !== 0 && actual !== expected) {
       throw new RangeError(`league ledger: round ${round} 결과가 부분 집합 ${actual}/${expected}이다.`);
     }
     if (completed.has(round) !== (actual === expected)) {
       throw new RangeError(`league ledger: round ${round} 완료 표식(${completed.has(round)})과 결과 ${actual}/${expected} 불일치.`);
+    }
+  }
+}
+
+/** 지원 룰셋의 외부 저장/표시 경계: 시즌·roster·schedule과 원장 binding을 함께 검증한다. */
+export function assertSeasonLeagueLedgerInvariant(ruleset: Ruleset, season: FootballSeason): void {
+  const policy = ruleset.leagueLedgerRules;
+  const ledger = season.leagueLedger;
+  if (policy === undefined) {
+    if (ledger !== undefined) throw new RangeError(`league ledger: 룰셋 '${ruleset.version}'은 원장을 지원하지 않는다.`);
+    return;
+  }
+  if (ledger === undefined) {
+    throw new RangeError(`league ledger: 지원 룰셋 '${ruleset.version}' 활성 시즌에 원장이 없다.`);
+  }
+  const team = ruleset.teams.find((candidate) => candidate.id === season.teamId);
+  if (team === undefined) throw new RangeError(`league ledger: 시즌 팀 '${season.teamId}'이 룰셋에 없다.`);
+  const league = ruleset.leagues.find((candidate) => candidate.id === team.leagueId);
+  if (league === undefined) throw new RangeError(`league ledger: 팀 '${team.id}'의 리그 '${team.leagueId}'가 없다.`);
+  if (
+    ledger.policyVersion !== policy.policyVersion ||
+    ledger.seasonIndex !== season.index ||
+    ledger.teamId !== season.teamId ||
+    ledger.leagueId !== league.id ||
+    ledger.leagueName !== league.name
+  ) {
+    throw new RangeError('league ledger: policy/season/team/league binding이 활성 시즌과 다르다.');
+  }
+  const expectedTeams = buildLeagueRoster(ruleset, team, league);
+  if (JSON.stringify(ledger.teams) !== JSON.stringify(expectedTeams)) {
+    throw new RangeError('league ledger: 시즌 시작 roster snapshot이 룰셋 참가팀과 다르다.');
+  }
+  assertLeagueLedgerInvariant(ledger);
+
+  const expected = buildLeagueFixtures(season.index, league.id, ledger.teams)
+    .filter((fixture) => fixture.homeTeamId === team.id || fixture.awayTeamId === team.id);
+  const actual = season.schedule.filter((entry) => entry.kind === 'LEAGUE');
+  if (actual.length !== expected.length) {
+    throw new RangeError(`league ledger: 소속 팀 schedule fixture 수 ${actual.length}/${expected.length} 불일치.`);
+  }
+  for (const fixture of expected) {
+    const entry = actual.find((candidate) => candidate.fixtureId === fixture.fixtureId);
+    const home = fixture.homeTeamId === team.id;
+    if (
+      entry === undefined ||
+      entry.leagueRound !== fixture.round ||
+      entry.step !== fixture.step ||
+      entry.competitionId !== 'LEAGUE' ||
+      entry.round !== String(fixture.round) ||
+      entry.opponentId !== (home ? fixture.awayTeamId : fixture.homeTeamId) ||
+      entry.home !== home
+    ) {
+      throw new RangeError(`league ledger: schedule fixture '${fixture.fixtureId}' 연결이 다르다.`);
     }
   }
 }
@@ -159,22 +203,16 @@ export function recordPlayerLeagueResult(
   match: MatchRecord,
 ): LeagueSeasonLedger {
   if (entry.kind !== 'LEAGUE' || entry.fixtureId === undefined || entry.leagueRound === undefined) return ledger;
-  const fixture = fixtureMap(ledger).get(entry.fixtureId);
-  if (fixture === undefined) throw new RangeError(`recordPlayerLeagueResult: fixture '${entry.fixtureId}'가 없다.`);
+  const indexed = fixtureMap(ledger).get(entry.fixtureId);
+  if (indexed === undefined) throw new RangeError(`recordPlayerLeagueResult: fixture '${entry.fixtureId}'가 없다.`);
+  const { fixture, index: fixtureIndex } = indexed;
   const homeGoals = entry.home ? match.result.goalsFor : match.result.goalsAgainst;
   const awayGoals = entry.home ? match.result.goalsAgainst : match.result.goalsFor;
-  const result: LeagueFixtureResult = {
-    fixtureId: fixture.fixtureId,
-    round: fixture.round,
-    homeTeamId: fixture.homeTeamId,
-    awayTeamId: fixture.awayTeamId,
-    homeGoals,
-    awayGoals,
-  };
-  const existing = ledger.results.find((candidate) => candidate.fixtureId === result.fixtureId);
+  const result: LeagueFixtureResult = [fixtureIndex, homeGoals, awayGoals];
+  const existing = ledger.results.find((candidate) => candidate[0] === fixtureIndex);
   if (existing !== undefined) {
     if (JSON.stringify(existing) !== JSON.stringify(result)) {
-      throw new RangeError(`recordPlayerLeagueResult: fixture '${result.fixtureId}'의 기존 결과와 충돌한다.`);
+      throw new RangeError(`recordPlayerLeagueResult: fixture '${fixture.fixtureId}'의 기존 결과와 충돌한다.`);
     }
     return ledger;
   }
@@ -187,7 +225,7 @@ export function completeLeagueRoundsForStep(
   ledger: LeagueSeasonLedger,
   step: number,
 ): LeagueSeasonLedger {
-  const fixtures = [...fixtureMap(ledger).values()];
+  const fixtures = buildLeagueFixtures(ledger.seasonIndex, ledger.leagueId, ledger.teams);
   let next = ledger;
   const rounds = [...new Set(fixtures.filter((fixture) => fixture.step === step).map((fixture) => fixture.round))].sort((a, b) => a - b);
   for (const round of rounds) {
@@ -196,18 +234,18 @@ export function completeLeagueRoundsForStep(
     const playerFixture = roundFixtures.find(
       (fixture) => fixture.homeTeamId === next.teamId || fixture.awayTeamId === next.teamId,
     );
-    if (playerFixture !== undefined && !next.results.some((result) => result.fixtureId === playerFixture.fixtureId)) {
+    const playerFixtureIndex = playerFixture === undefined ? -1 : fixtures.indexOf(playerFixture);
+    if (playerFixture !== undefined && !next.results.some((result) => result[0] === playerFixtureIndex)) {
       continue;
     }
-    const existing = new Set(next.results.map((result) => result.fixtureId));
+    const existing = new Set(next.results.map((result) => result[0]));
     const generated = roundFixtures
-      .filter((fixture) => !existing.has(fixture.fixtureId))
-      .map((fixture) => fixtureScore(ruleset, next, fixture));
+      .map((fixture) => ({ fixture, index: fixtures.indexOf(fixture) }))
+      .filter(({ index }) => !existing.has(index))
+      .map(({ fixture, index }) => fixtureScore(ruleset, next, fixture, index));
     next = {
       ...next,
-      results: [...next.results, ...generated].sort(
-        (a, b) => a.round - b.round || compareCodePoints(a.fixtureId, b.fixtureId),
-      ),
+      results: [...next.results, ...generated].sort((a, b) => a[0] - b[0]),
       completedRounds: [...next.completedRounds, round].sort((a, b) => a - b),
     };
   }
@@ -232,20 +270,25 @@ export function standingsFromLedger(ruleset: Ruleset, ledger: LeagueSeasonLedger
       goalsAgainst: 0,
     }]),
   );
+  const fixtures = buildLeagueFixtures(ledger.seasonIndex, ledger.leagueId, ledger.teams);
   for (const result of ledger.results) {
-    const home = rows.get(result.homeTeamId);
-    const away = rows.get(result.awayTeamId);
+    const fixture = fixtures[result[0]];
+    if (fixture === undefined) throw new RangeError(`standingsFromLedger: fixture index '${result[0]}'가 없다.`);
+    const home = rows.get(fixture.homeTeamId);
+    const away = rows.get(fixture.awayTeamId);
     if (home === undefined || away === undefined) throw new RangeError('standingsFromLedger: 결과 팀이 roster에 없다.');
+    const homeGoals = result[1];
+    const awayGoals = result[2];
     home.played += 1;
     away.played += 1;
-    home.goalsFor += result.homeGoals;
-    home.goalsAgainst += result.awayGoals;
-    away.goalsFor += result.awayGoals;
-    away.goalsAgainst += result.homeGoals;
-    if (result.homeGoals > result.awayGoals) {
+    home.goalsFor += homeGoals;
+    home.goalsAgainst += awayGoals;
+    away.goalsFor += awayGoals;
+    away.goalsAgainst += homeGoals;
+    if (homeGoals > awayGoals) {
       home.won += 1;
       away.lost += 1;
-    } else if (result.homeGoals < result.awayGoals) {
+    } else if (homeGoals < awayGoals) {
       away.won += 1;
       home.lost += 1;
     } else {
@@ -291,7 +334,7 @@ export function projectLeagueCompetition(
 
 export function buildFinalLeagueTable(ruleset: Ruleset, ledger: LeagueSeasonLedger): FinalLeagueTable {
   assertLeagueLedgerInvariant(ledger);
-  const fixtures = [...fixtureMap(ledger).values()];
+  const fixtures = buildLeagueFixtures(ledger.seasonIndex, ledger.leagueId, ledger.teams);
   const totalRounds = Math.max(0, ...fixtures.map((fixture) => fixture.round));
   if (ledger.completedRounds.length !== totalRounds) {
     throw new RangeError(`buildFinalLeagueTable: 완료 round ${ledger.completedRounds.length}/${totalRounds}.`);

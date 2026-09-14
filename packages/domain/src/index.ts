@@ -263,6 +263,7 @@ export {
 export { buildLeagueFixtures, buildLeagueRoster, buildSchedule, findLeague, isRivalOpponent, leagueStepForRound, resolveOpponent } from './schedule.js';
 export {
   assertLeagueLedgerInvariant,
+  assertSeasonLeagueLedgerInvariant,
   buildFinalLeagueTable,
   completeLeagueRoundsForStep,
   createLeagueSeasonLedger,

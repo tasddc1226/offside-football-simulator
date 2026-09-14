@@ -48,7 +48,7 @@ import {
 } from './offers.js';
 import { playMatch } from './match.js';
 import {
-  assertLeagueLedgerInvariant,
+  assertSeasonLeagueLedgerInvariant,
   completeLeagueRoundsForStep,
   createLeagueSeasonLedger,
   projectLeagueCompetition,
@@ -1395,7 +1395,6 @@ function advanceInSeason(
   const profile = state.player.profile;
   if (profile === null) throw new RangeError('advanceInSeason: player.profile이 null이다.');
   if (state.contract === null) throw new RangeError('advanceInSeason: contract가 null이다.');
-  if (season.leagueLedger !== undefined) assertLeagueLedgerInvariant(season.leagueLedger);
   const eligibleEvents: EligibleEvent[] = command.payload.eligibleEvents;
 
   if (eligibleEvents.length > 0) {
@@ -1680,6 +1679,18 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
     return fail('VALIDATION_FAILED', `status가 ${state.status}일 때는 ADVANCE를 받을 수 없다.`, {
       reason: 'NOT_ACTIVE',
     });
+  }
+  if (state.season !== null) {
+    try {
+      assertSeasonLeagueLedgerInvariant(input.ruleset, state.season);
+      if (state.contract === null || state.season.teamId !== state.contract.teamId) {
+        throw new RangeError('season/team contract binding 불일치.');
+      }
+    } catch (error) {
+      return fail('VALIDATION_FAILED', error instanceof Error ? error.message : '리그 원장을 검증할 수 없다.', {
+        reason: 'INVALID_LEAGUE_LEDGER',
+      });
+    }
   }
   const canAutoPassPending = state.season !== null && isAutoPassablePending(state.pending);
   if (state.pending !== null && !canAutoPassPending) {
@@ -3465,6 +3476,16 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   const profile = state.player.profile;
   if (profile === null) {
     throw new RangeError('settleSeason: season이 있는데 player.profile이 null이다.');
+  }
+  try {
+    assertSeasonLeagueLedgerInvariant(input.ruleset, season);
+    if (state.contract === null || season.teamId !== state.contract.teamId) {
+      throw new RangeError('season/team contract binding 불일치.');
+    }
+  } catch (error) {
+    return fail('VALIDATION_FAILED', error instanceof Error ? error.message : '리그 원장을 검증할 수 없다.', {
+      reason: 'INVALID_LEAGUE_LEDGER',
+    });
   }
 
   const nextRevision = snapshot.revision + 1;

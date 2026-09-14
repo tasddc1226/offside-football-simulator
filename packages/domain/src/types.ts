@@ -511,14 +511,8 @@ export type LeagueFixture = {
   awayTeamId: string;
 };
 
-export type LeagueFixtureResult = {
-  fixtureId: string;
-  round: number;
-  homeTeamId: string;
-  awayTeamId: string;
-  homeGoals: number;
-  awayGoals: number;
-};
+/** Deterministic fixture list index, home goals, away goals. Fixture identity is reconstructed. */
+export type LeagueFixtureResult = [fixtureIndex: number, homeGoals: number, awayGoals: number];
 
 export type LeagueSeasonLedger = {
   policyVersion: '1.0.0';

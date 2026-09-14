@@ -859,7 +859,9 @@ function CareerDashboard() {
                     <div className="flex flex-col gap-os-1">
                       {currentLeagueRows === null ? (
                         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                          룰셋 {state.rulesetVersion}에서는 전체 리그 순위 기록을 지원하지 않습니다.
+                          {ruleset.leagueLedgerRules === undefined
+                            ? `룰셋 ${state.rulesetVersion}에서는 전체 리그 순위 기록을 지원하지 않습니다.`
+                            : `룰셋 ${state.rulesetVersion} 시즌의 리그 원장 데이터가 없습니다. 저장 복구를 확인해 주세요.`}
                         </p>
                       ) : (
                         <p className="os-num font-os font-semibold text-os-text" style={BODY_STYLE}>
@@ -959,7 +961,9 @@ function CareerDashboard() {
                     </div>
                     {currentLeagueRows === null || season.leagueLedger === undefined || currentLeague === undefined ? (
                       <p className="rounded-os-m bg-os-surface-2 p-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
-                        룰셋 {state.rulesetVersion}에서는 전체 리그 순위 기록을 지원하지 않습니다.
+                        {ruleset.leagueLedgerRules === undefined
+                          ? `룰셋 ${state.rulesetVersion}에서는 전체 리그 순위 기록을 지원하지 않습니다.`
+                          : `룰셋 ${state.rulesetVersion} 시즌의 리그 원장 데이터가 올바르지 않습니다. 저장 복구를 확인해 주세요.`}
                       </p>
                     ) : (
                       <LeagueStandingsTable

@@ -2366,6 +2366,68 @@ describe('DEFERRED 효과: 시즌 step 배정(오케스트레이터 리뷰 2차 
     expect(withEffect.snapshot.state.season?.scheduledEffects).toEqual([]);
     expect(withEffect.snapshot.state.deferredEffects).toEqual([]);
 
+    // T-7-022: 구버전은 원장 absent로 끝까지 진행되지만, 지원 버전 활성 시즌에서 필드를 잃은
+    // snapshot은 ADVANCE와 SETTLE 양쪽 실행 경계에서 조용히 근사 경로로 후퇴하지 않는다.
+    expect(baseline.snapshot.state.season?.leagueLedger).toBeUndefined();
+    expect(driveToSettlement(baseline.snapshot).state.pending?.kind).toBe('SETTLEMENT');
+    const ledgerRuleset: Ruleset = {
+      ...rulesetProto,
+      version: '1.7.0',
+      leagueLedgerRules: {
+        policyVersion: '1.0.0',
+        maxTeamCount: 16,
+        scoreKernel: 'MATCH_RULES_V1',
+        points: { win: 3, draw: 1, loss: 0 },
+        tieBreakers: ['POINTS', 'GOAL_DIFFERENCE', 'GOALS_FOR', 'TEAM_ID'],
+      },
+    };
+    const ledgerPreSeasonState = { ...preSeason.state, rulesetVersion: '1.7.0' };
+    const ledgerPreSeason: DomainSnapshot = {
+      ...preSeason,
+      state: ledgerPreSeasonState,
+      stateHash: hashState(ledgerPreSeasonState),
+      rulesetVersion: '1.7.0',
+    };
+    const ledgerInput = baseInput({ ruleset: ledgerRuleset, rulesetVersion: '1.7.0' });
+    const ledgerStarted = simulate({
+      ...ledgerInput,
+      snapshot: ledgerPreSeason,
+      command: startSeasonFastCommand(ledgerPreSeason.revision, 'svc-ledger-required'),
+    });
+    if (!ledgerStarted.ok || ledgerStarted.snapshot.state.season === null) throw new Error('ledger START_SEASON 실패');
+    const { leagueLedger: _missingAdvanceLedger, ...seasonWithoutAdvanceLedger } = ledgerStarted.snapshot.state.season;
+    void _missingAdvanceLedger;
+    const missingAdvanceState = { ...ledgerStarted.snapshot.state, season: seasonWithoutAdvanceLedger };
+    const missingAdvance: DomainSnapshot = {
+      ...ledgerStarted.snapshot,
+      state: missingAdvanceState,
+      stateHash: hashState(missingAdvanceState),
+    };
+    const rejectedAdvance = simulate({
+      ...ledgerInput,
+      snapshot: missingAdvance,
+      command: advanceCommand(missingAdvance.revision, []),
+    });
+    expect(rejectedAdvance.ok).toBe(false);
+    if (!rejectedAdvance.ok) expect(rejectedAdvance.error.details).toMatchObject({ reason: 'INVALID_LEAGUE_LEDGER' });
+
+    const ledgerSettlement = driveToSettlement(ledgerStarted.snapshot, ledgerInput);
+    const { leagueLedger: _missingSettleLedger, ...seasonWithoutSettleLedger } = ledgerSettlement.state.season!;
+    void _missingSettleLedger;
+    const missingSettleState = { ...ledgerSettlement.state, season: seasonWithoutSettleLedger };
+    const missingSettle: DomainSnapshot = {
+      ...ledgerSettlement,
+      state: missingSettleState,
+      stateHash: hashState(missingSettleState),
+    };
+    const rejectedSettle = simulate({
+      ...ledgerInput,
+      snapshot: missingSettle,
+      command: settleSeasonCommand(missingSettle.revision),
+    });
+    expect(rejectedSettle.ok).toBe(false);
+    if (!rejectedSettle.ok) expect(rejectedSettle.error.details).toMatchObject({ reason: 'INVALID_LEAGUE_LEDGER' });
+
     const oldAttempt = simulate({ ...baseInput(), snapshot: preSeason, command: { type: 'REQUEST_CLUB_MEETING', commandId: 'old-meeting', expectedRevision: preSeason.revision, payload: { request: 'TRANSFER' } } });
     expect(oldAttempt.ok).toBe(false);
     expect(preSeason.state.clubMeeting).toBeUndefined();

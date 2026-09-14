@@ -437,14 +437,11 @@ export const LeagueTeamSnapshotSchema = z.strictObject({
   strength: z.number().int().min(0).max(100),
 });
 
-export const LeagueFixtureResultSchema = z.strictObject({
-  fixtureId: z.string().min(1),
-  round: z.number().int().positive(),
-  homeTeamId: z.string().min(1),
-  awayTeamId: z.string().min(1),
-  homeGoals: z.number().int().nonnegative(),
-  awayGoals: z.number().int().nonnegative(),
-});
+export const LeagueFixtureResultSchema = z.tuple([
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+]);
 
 export const LeagueSeasonLedgerSchema = z.strictObject({
   policyVersion: z.literal('1.0.0'),
@@ -475,27 +472,13 @@ export const LeagueSeasonLedgerSchema = z.strictObject({
   if (!teamIds.has(ledger.teamId)) {
     ctx.addIssue({ code: 'custom', path: ['teamId'], message: '소속 팀이 roster에 없다.' });
   }
-  const completed = new Set(ledger.completedRounds);
-  const resultRounds = new Set<number>();
-  const fixtureIds = new Set<string>();
+  const fixtureIndexes = new Set<number>();
   for (let index = 0; index < ledger.results.length; index += 1) {
     const result = ledger.results[index]!;
-    if (fixtureIds.has(result.fixtureId)) {
-      ctx.addIssue({ code: 'custom', path: ['results', index, 'fixtureId'], message: 'fixtureId가 중복이다.' });
+    if (fixtureIndexes.has(result[0])) {
+      ctx.addIssue({ code: 'custom', path: ['results', index, 0], message: 'fixture index가 중복이다.' });
     }
-    fixtureIds.add(result.fixtureId);
-    resultRounds.add(result.round);
-    if (!completed.has(result.round)) {
-      ctx.addIssue({ code: 'custom', path: ['results', index, 'round'], message: '완료되지 않은 round의 부분 결과다.' });
-    }
-    if (!teamIds.has(result.homeTeamId) || !teamIds.has(result.awayTeamId) || result.homeTeamId === result.awayTeamId) {
-      ctx.addIssue({ code: 'custom', path: ['results', index], message: '결과의 팀 identity가 roster와 맞지 않는다.' });
-    }
-  }
-  for (let index = 0; index < ledger.completedRounds.length; index += 1) {
-    if (!resultRounds.has(ledger.completedRounds[index]!)) {
-      ctx.addIssue({ code: 'custom', path: ['completedRounds', index], message: '결과 없는 완료 round다.' });
-    }
+    fixtureIndexes.add(result[0]);
   }
 });
 
@@ -1119,6 +1102,18 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
   const hasContract = hasOwn(value, 'contract');
   const hasParentContract = hasOwn(value, 'parentContract');
   const hasClubHistory = hasOwn(value, 'clubHistory');
+  const season = value.season;
+
+  // 신규 ledger 지원은 버전별 명시 계약이다. Envelope/API load 경계는 룰셋 전체를 로드하지 않으므로
+  // 여기서는 필수 존재와 자기 binding만 확인하고, roster/league/schedule은 domain 실행 경계가 검증한다.
+  if (value.rulesetVersion === '1.7.0' && isRecord(season)) {
+    const ledger = season.leagueLedger;
+    if (!isRecord(ledger)) {
+      issues.push({ path: ['season', 'leagueLedger'], message: '지원 룰셋 활성 시즌에는 leagueLedger가 있어야 한다.' });
+    } else if (ledger.seasonIndex !== season.index || ledger.teamId !== season.teamId) {
+      issues.push({ path: ['season', 'leagueLedger'], message: 'leagueLedger가 활성 시즌 index/team과 일치해야 한다.' });
+    }
+  }
 
   const openStints = Array.isArray(clubHistory)
     ? clubHistory.filter((stint): stint is Record<string, unknown> => isRecord(stint) && stint.toSeasonIndex === null)

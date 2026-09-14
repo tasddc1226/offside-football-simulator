@@ -45,6 +45,7 @@ import {
   advancePayload,
 } from './legacy-population-choices.ts';
 import { simulate, type Command } from '../../packages/domain/src/simulate.ts';
+import { canonicalize, type JsonValue } from '../../packages/domain/src/canonical.ts';
 import { setSha256Provider, type Sha256Provider } from '../../packages/domain/src/hash.ts';
 import {
   statGroupOf,
@@ -119,7 +120,8 @@ export const CAREERS_CSV_HEADER = [
   'seasonsInTier2', 'seasonsInTier3', 'totalApps', 'totalMinutes', 'totalGoals', 'totalAssists',
   'avgRatingTenths', 'injuries', 'severeInjuries', 'contracts', 'peakWageMinorPerWeek',
   'totalIncomeMinor', 'nationalCallUps', 'captainSeasons', 'legacyScore', 'legacyBandId',
-  'legacyEndingId', 'commands', 'stateHash',
+  'legacyEndingId', 'commands', 'peakStateBytes', 'peakPutBodyBytes', 'season20ActiveStateBytes',
+  'season20ActivePutBodyBytes', 'stateHash',
 ] as const;
 
 export const SEASONS_CSV_HEADER = [
@@ -146,7 +148,8 @@ const CAREERS_NUMERIC_COLUMNS = new Set<string>([
   'retiredAge', 'clubs', 'seasonsInTier1', 'seasonsInTier2', 'seasonsInTier3', 'totalApps',
   'totalMinutes', 'totalGoals', 'totalAssists', 'avgRatingTenths', 'injuries', 'severeInjuries',
   'contracts', 'peakWageMinorPerWeek', 'totalIncomeMinor', 'nationalCallUps', 'captainSeasons',
-  'legacyScore', 'commands',
+  'legacyScore', 'commands', 'peakStateBytes', 'peakPutBodyBytes', 'season20ActiveStateBytes',
+  'season20ActivePutBodyBytes',
 ]);
 
 const SEASONS_NUMERIC_COLUMNS = new Set<string>([
@@ -435,6 +438,20 @@ function runOneCareer(
   const startedAt = Date.now();
   let commands = 0;
   let lastSeasonIndex = 0;
+  let peakStateBytes = 0;
+  let peakPutBodyBytes = 0;
+  let season20ActiveStateBytes = 0;
+  let season20ActivePutBodyBytes = 0;
+  let createdServiceSeasonId: string | null = null;
+  // 성능/저장 예산 계측은 가장 보수적인 오프라인 큐를 모델링한다. 즉 markSynced 없이 revision 0부터
+  // 현재 명령까지 모두 쌓인 EngineClient.buildSyncBody와 같은 JSON shape를 매 명령 뒤 측정한다.
+  const syncCommands: Array<{
+    revision: number;
+    commandId: string;
+    commandType: Command['type'];
+    payload: unknown;
+    resultHash: string;
+  }> = [];
   const seasonRows: SeasonRow[] = [];
   const wageAtSeasonStart = new Map<number, number>();
 
@@ -445,7 +462,42 @@ function runOneCareer(
     id: string,
   ): DomainSnapshot => {
     commands += 1;
-    return doCommand(snapshot, type, payload, id, runtime);
+    const next = doCommand(snapshot, type, payload, id, runtime);
+    if (type === 'START_SEASON' && createdServiceSeasonId === null) {
+      createdServiceSeasonId = (payload as { serviceSeasonId: string }).serviceSeasonId;
+    }
+    syncCommands.push({
+      revision: next.revision,
+      commandId: id,
+      commandType: type,
+      payload,
+      resultHash: next.stateHash,
+    });
+    const state = canonicalize(next.state as unknown as JsonValue);
+    const stateBytes = Buffer.byteLength(state, 'utf8');
+    const putBodyBytes = Buffer.byteLength(JSON.stringify({
+      baseRevision: 0,
+      snapshot: {
+        revision: next.revision,
+        checkpoint: next.checkpoint,
+        state,
+        stateHash: next.stateHash,
+        rulesetVersion: next.rulesetVersion,
+        contentPackVersion: next.contentPackVersion,
+        rngState: { s: [...next.state.rngState.s], draws: next.state.rngState.draws },
+      },
+      commands: syncCommands,
+      createdServiceSeasonId,
+      rulesetVersion: runtime.rulesetVersion,
+      contentPackVersion: runtime.contentPackVersion,
+    }), 'utf8');
+    peakStateBytes = Math.max(peakStateBytes, stateBytes);
+    peakPutBodyBytes = Math.max(peakPutBodyBytes, putBodyBytes);
+    if (next.state.season !== null && next.state.seasonHistory.length === 19) {
+      season20ActiveStateBytes = Math.max(season20ActiveStateBytes, stateBytes);
+      season20ActivePutBodyBytes = Math.max(season20ActivePutBodyBytes, putBodyBytes);
+    }
+    return next;
   };
 
   try {
@@ -731,6 +783,10 @@ function runOneCareer(
       legacyBandId,
       legacyEndingId,
       commands,
+      peakStateBytes,
+      peakPutBodyBytes,
+      season20ActiveStateBytes,
+      season20ActivePutBodyBytes,
       stateHash: finalSnapshot.stateHash,
     };
     return { career, seasons: seasonRows, ms: Date.now() - startedAt };
@@ -777,6 +833,10 @@ function runOneCareer(
       legacyBandId: '',
       legacyEndingId: '',
       commands,
+      peakStateBytes,
+      peakPutBodyBytes,
+      season20ActiveStateBytes,
+      season20ActivePutBodyBytes,
       stateHash: '',
     };
     const failure: FailureRow = {

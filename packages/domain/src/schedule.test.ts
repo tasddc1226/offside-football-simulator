@@ -88,7 +88,7 @@ describe('buildSchedule', () => {
     expect(() => assertLeagueLedgerInvariant({ ...ledger, teams: [...ledger.teams, ledger.teams[0]!] })).toThrow(/중복/);
     expect(() => assertLeagueLedgerInvariant({
       ...completed,
-      results: [{ ...completed.results[0]!, homeGoals: -1 }, ...completed.results.slice(1)],
+      results: [[completed.results[0]![0], -1, completed.results[0]![2]], ...completed.results.slice(1)],
     })).toThrow(/스코어/);
   });
 

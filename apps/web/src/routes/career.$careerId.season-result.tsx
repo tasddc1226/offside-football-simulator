@@ -543,7 +543,9 @@ function SeasonResultScreen() {
         <section className="os-panel flex flex-col gap-os-2" aria-label="전체 리그 순위 기록 지원 상태">
           <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>전체 리그 순위</h2>
           <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-            룰셋 {state.rulesetVersion}의 이 시즌에는 전체 리그 순위 기록이 없습니다.
+            {ruleset.leagueLedgerRules === undefined
+              ? `룰셋 ${state.rulesetVersion}의 이 시즌에는 전체 리그 순위 기록이 없습니다.`
+              : `룰셋 ${state.rulesetVersion} 시즌의 최종 리그 원장이 없습니다. 저장 복구를 확인해 주세요.`}
           </p>
         </section>
       ) : (

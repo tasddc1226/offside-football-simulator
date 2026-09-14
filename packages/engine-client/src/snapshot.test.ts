@@ -105,6 +105,22 @@ describe('encodeSnapshot / decodeSnapshot', () => {
     });
 
     expect(decodeSnapshot(encoded)).toEqual({ ok: false, reason: 'INVALID_STATE' });
+
+    const missingLedgerState = {
+      ...domain.state,
+      rulesetVersion: '1.7.0',
+      season: { index: 1, teamId: 'team-1' } as CareerState['season'],
+    };
+    const missingLedgerDomain: DomainSnapshot = {
+      ...domain,
+      state: missingLedgerState,
+      stateHash: hashState(missingLedgerState),
+      rulesetVersion: '1.7.0',
+    };
+    expect(decodeSnapshot(encodeSnapshot(missingLedgerDomain, {
+      careerId: domain.state.careerId,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
   });
 
   it('wrapper의 careerId가 state.careerId와 다르면 CAREER_ID_MISMATCH', () => {

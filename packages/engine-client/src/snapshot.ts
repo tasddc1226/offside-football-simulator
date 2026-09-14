@@ -1,4 +1,4 @@
-import { SnapshotStateEnvelopeSchema, type CareerSnapshot } from '@offside/contracts';
+import { SnapshotStateEnvelopeSchema, getCareerStateInvariantIssues, type CareerSnapshot } from '@offside/contracts';
 import { canonicalize, hashState, verifySnapshot, type CareerState, type DomainSnapshot, type JsonValue } from '@offside/domain';
 
 export function encodeSnapshot(domain: DomainSnapshot, meta: { careerId: string; createdAt: string }): CareerSnapshot {
@@ -69,6 +69,9 @@ export function decodeSnapshot(snapshot: CareerSnapshot): DecodeResult {
   }
 
   const state = parsed as CareerState;
+  if (getCareerStateInvariantIssues(parsed).length > 0) {
+    return { ok: false, reason: 'INVALID_STATE' };
+  }
 
   let computedHash: string;
   try {

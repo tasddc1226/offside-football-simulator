@@ -1,5 +1,7 @@
 import {
+  assertSeasonLeagueLedgerInvariant,
   buildLeagueFixtures,
+  buildLeagueRoster,
   canonicalize,
   hashSeasonResult,
   hashState,
@@ -7,6 +9,7 @@ import {
   type DomainSnapshot,
   type JsonValue,
   type LeagueSeasonLedger,
+  type Ruleset,
   type StandingRow,
 } from '@offside/domain';
 import {
@@ -526,38 +529,71 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
 
     // T-7-022 WP-03: 실제 직렬화 경로로 최대 16팀 active ledger와 20시즌 final table 보존 예산을 잰다.
     // 자연 완주 성능은 career-sim으로 별도 검증하고, 이 테스트는 최악 크기 shape를 보수적으로 채운다.
-    const teams = Array.from({ length: 16 }, (_, index) => ({
-      teamId: `size-team-${String(index + 1).padStart(2, '0')}`,
-      name: `크기 측정 팀 ${index + 1}`,
-      strength: 50 + index,
-    }));
-    const fixtures = buildLeagueFixtures(20, 'size-league', teams);
+    const activeTemplate = [...steps].reverse().find((step) => step.snapshot.state.season !== null)!;
+    const activeTemplateSeason = activeTemplate.snapshot.state.season!;
+    const activeTeam = rulesetProto.teams.find((team) => team.id === activeTemplateSeason.teamId)!;
+    const templateLeague = rulesetProto.leagues.find((league) => league.id === activeTeam.leagueId)!;
+    const maxLeague = { ...templateLeague, teamCount: 16 };
+    const maxRuleset: Ruleset = {
+      ...rulesetProto,
+      version: '1.7.0',
+      leagues: rulesetProto.leagues.map((league) => league.id === maxLeague.id ? maxLeague : league),
+      leagueLedgerRules: {
+        policyVersion: '1.0.0',
+        maxTeamCount: 16,
+        scoreKernel: 'MATCH_RULES_V1',
+        points: { win: 3, draw: 1, loss: 0 },
+        tieBreakers: ['POINTS', 'GOAL_DIFFERENCE', 'GOALS_FOR', 'TEAM_ID'],
+      },
+    };
+    const teams = buildLeagueRoster(maxRuleset, activeTeam, maxLeague);
+    const fixtures = buildLeagueFixtures(20, maxLeague.id, teams);
     const ledger: LeagueSeasonLedger = {
       policyVersion: '1.0.0',
-      leagueId: 'size-league',
-      leagueName: '크기 측정 리그',
+      leagueId: maxLeague.id,
+      leagueName: maxLeague.name,
       seasonIndex: 20,
-      teamId: teams[0]!.teamId,
+      teamId: activeTeam.id,
       seed: [1, 2, 3, 4],
       teams,
-      results: fixtures.map((fixture, index) => ({
-        fixtureId: fixture.fixtureId,
-        round: fixture.round,
-        homeTeamId: fixture.homeTeamId,
-        awayTeamId: fixture.awayTeamId,
-        homeGoals: index % 4,
-        awayGoals: (index + 1) % 3,
-      })),
+      results: fixtures.map((_, index) => [index, index % 4, (index + 1) % 3]),
       completedRounds: Array.from({ length: 30 }, (_, index) => index + 1),
     };
-    const activeTemplate = [...steps].reverse().find((step) => step.snapshot.state.season !== null)!;
+    const leagueSchedule = fixtures
+      .filter((fixture) => fixture.homeTeamId === activeTeam.id || fixture.awayTeamId === activeTeam.id)
+      .map((fixture) => ({
+        step: fixture.step,
+        order: 0,
+        competitionId: 'LEAGUE',
+        kind: 'LEAGUE' as const,
+        round: String(fixture.round),
+        opponentId: fixture.homeTeamId === activeTeam.id ? fixture.awayTeamId : fixture.homeTeamId,
+        home: fixture.homeTeamId === activeTeam.id,
+        fixtureId: fixture.fixtureId,
+        leagueRound: fixture.round,
+      }));
+    const activeSchedule = [...leagueSchedule, ...activeTemplateSeason.schedule.filter((entry) => entry.kind === 'CUP')]
+      .sort((a, b) => a.step - b.step || (a.kind === b.kind ? 0 : a.kind === 'LEAGUE' ? -1 : 1))
+      .map((entry, index, all) => ({
+        ...entry,
+        order: all.slice(0, index).filter((candidate) => candidate.step === entry.step).length,
+      }));
     const activeState = {
       ...activeTemplate.snapshot.state,
-      season: { ...activeTemplate.snapshot.state.season!, leagueLedger: ledger },
+      rulesetVersion: '1.7.0',
+      contentPackVersion: '0.6.2',
+      season: { ...activeTemplateSeason, index: 20, leagueLedger: ledger, schedule: activeSchedule },
     };
+    assertSeasonLeagueLedgerInvariant(maxRuleset, activeState.season);
     const activeTarget: Step = {
       ...activeTemplate,
-      snapshot: { ...activeTemplate.snapshot, state: activeState, stateHash: hashState(activeState) },
+      snapshot: {
+        ...activeTemplate.snapshot,
+        state: activeState,
+        stateHash: hashState(activeState),
+        rulesetVersion: '1.7.0',
+        contentPackVersion: '0.6.2',
+      },
     };
     const activeStateBytes = stateBytes(activeTarget.snapshot);
     const activePutBody = buildPutBody(steps, 0, activeTarget);
@@ -587,10 +623,10 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
         index: seasonIndex,
         finalLeagueTable: {
           policyVersion: '1.0.0' as const,
-          leagueId: 'size-league',
-          leagueName: '크기 측정 리그',
+          leagueId: maxLeague.id,
+          leagueName: maxLeague.name,
           seasonIndex,
-          teamId: teams[0]!.teamId,
+          teamId: activeTeam.id,
           completedRounds: 30,
           rows,
         },
@@ -614,6 +650,21 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
     expect(PutCareerBodySchema.safeParse(historyPutBody).success).toBe(true);
     expect(historyStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
     expect(historyPutBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+
+    const combinedState = {
+      ...activeState,
+      seasonHistory: seasonHistory.slice(0, 19),
+    };
+    const combinedTarget: Step = {
+      ...activeTarget,
+      snapshot: { ...activeTarget.snapshot, state: combinedState, stateHash: hashState(combinedState) },
+    };
+    const combinedStateBytes = stateBytes(combinedTarget.snapshot);
+    const combinedPutBody = buildPutBody(steps, 0, combinedTarget);
+    const combinedPutBytes = byteLength(JSON.stringify(combinedPutBody));
+    expect(PutCareerBodySchema.safeParse(combinedPutBody).success).toBe(true);
+    expect(combinedStateBytes).toBeLessThanOrEqual(SNAPSHOT_STATE_RECOMMENDED_BYTES);
+    expect(combinedPutBytes).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
     console.log(JSON.stringify({
       fixture: 'T-7-022-max-budget',
       maxTeams: teams.length,
@@ -623,6 +674,9 @@ describe('Snapshot·PUT 본문 크기(D-33)', () => {
       historySeasons: seasonHistory.length,
       historyStateBytes,
       historyPutBytes,
+      combinedPreviousSeasons: combinedState.seasonHistory.length,
+      combinedStateBytes,
+      combinedPutBytes,
     }));
   });
 });
