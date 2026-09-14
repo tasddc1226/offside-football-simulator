@@ -63,6 +63,10 @@ export const LEGACY_POLICY = Object.freeze({
 
 export type LegacyVersion = '1.0.0' | '1.1.0' | '1.2.0';
 
+/** All known Legacy policy versions, oldest first. Source of truth for version enumeration
+ * outside the domain — keep in sync with {@link LegacyVersion}. */
+export const LEGACY_VERSIONS: readonly LegacyVersion[] = Object.freeze(['1.0.0', '1.1.0', '1.2.0']);
+
 /** Experimental next policy; runtime activation requires the separate population acceptance gate.
  * The 1.0.0 definition above and its persisted results must never be rewritten. */
 export const LEGACY_POLICY_110 = Object.freeze({

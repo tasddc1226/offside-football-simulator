@@ -265,7 +265,7 @@ export {
   stepMatchResultsFor,
   type SeasonMatchBooks,
 } from './season-stats.js';
-export { createLegacyResult, deriveLegacyEvidence, deriveRetirementTags, LEGACY_POLICY, LEGACY_POLICY_110, LEGACY_POLICY_120, legacyPolicyForVersion, type LegacyVersion, type LegacyResult, type LegacyReferencePopulation, type LegacyFactor, type LegacySource } from './legacy/result.js';
+export { createLegacyResult, deriveLegacyEvidence, deriveRetirementTags, LEGACY_POLICY, LEGACY_POLICY_110, LEGACY_POLICY_120, LEGACY_VERSIONS, legacyPolicyForVersion, type LegacyVersion, type LegacyResult, type LegacyReferencePopulation, type LegacyFactor, type LegacySource } from './legacy/result.js';
 export { legacyEndingPresentation, legacyBandPresentation } from './legacy/presentation.js';
 export { selectLegacyDisplayEnding, type LegacyEndingId } from './legacy/endings.js';
 export { initializeNationalityModule, assessNationalityAtSeasonBoundary, resolveNationalityChoice, grantTournamentException, isU23Eligible, type NationalityState } from './legacy/nationality.js';
