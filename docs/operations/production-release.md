@@ -22,7 +22,7 @@
 | 신규 운영 시즌 | `svc_season_1`, 표시명 `시즌 1`, ACTIVE, isTest=false |
 | 기간 | 2026-09-06 00:00 KST부터, 종료일 미정(`endsAt: null`) |
 | 문의 | `tasddc1569@gmail.com` |
-| 현재 신규 커리어 버전 | ruleset 1.4.0 / content pack 0.5.1 (승격 대기: 1.5.0 / 0.6.0, 아래 "시즌 1 manifest 3차 승격") |
+| 현재 신규 커리어 버전 | ruleset 1.5.0 / content pack 0.6.0 (2026-09-14 12:43 3차 승격 완료, 아래 "2026-09-14 12:43 재배포"; 기존 커리어는 생성 당시 버전 유지) |
 
 ## 최초 공개 결과
 
@@ -84,6 +84,36 @@
   삭제하지 않으며 통계·랭킹에서 제외한다. 복구 코드는 출력·캡처하지 않았다.
 - 교훈: 워크플로 시작 직후 "Require exact current main SHA" 검사가 있어 실행 중 main 푸시(문서 커밋 포함)를 멈춰야
   한다(20:34 1차 preflight가 이 이유로 중단). 같은 self-hosted runner를 main CI가 쓰므로 푸시 직후 큐가 겹칠 수 있다.
+
+## 2026-09-14 12:43 재배포 (실시간 플레이 중 배지 D-78 + K리그식 룰셋 1.5.0/0.6.0 3차 승격, 오케스트레이터 실행)
+
+- source `643cd2af3c8850f7b9cf713e21db641e736f8b87`(main = #211 T-7-014 `b05867b` → #208 `ceff29c` → #209 `139d1ca` → #212 T-7-015 `c77375f` → #215(#210 재적용) `4b29c4d` + 문서 3커밋).
+  [preflight run34803042783](https://github.com/tasddc1226/offside-football-simulator/actions/runs/34803042783)
+  성공 뒤 [deploy run34803426999](https://github.com/tasddc1226/offside-football-simulator/actions/runs/34803426999)
+  성공(12:40:53 큐 → 12:41:28 시작 → 12:43:00 완료, 약 1분 30초). 입력은 9/7과 동일(시작 `2026-09-05T15:00:00Z`, 종료 비움, `cs_season_1`).
+  사용자 지시(12:20) "오픈된 PR을 순차적으로 운영환경까지 배포".
+- 러너: 셀프호스트 `offside-mac-arm64`(사용자 맥북)가 잠자기로 오프라인이라 사용자 선택으로 이 맥에 임시 러너
+  `offside-mac-arm64-tmp`(같은 라벨, `~/offside-runner-tmp`)를 등록해 CI·스테이징·이 배포를 돌렸다. 다른 세션 PR CI가 쓰고 있어 당분간 유지한다.
+- 포함 변경: `GET /v1/presence`·`POST /v1/presence/heartbeat`(D-78, 마이그레이션 `0006_flat_nova` = `sessions_last_seen_at_idx`)와
+  상단 네비바 "N명 플레이 중" 배지·하트비트, K리그식 리그·팀 구조 룰셋 1.5.0·팩 0.6.0, 시즌=연도 표기, 1.5.0/0.6.0 승격 준비.
+  **manifest plan=activate** — 시즌 1 행이 1.4.0/0.5.1 → 1.5.0/0.6.0으로 compare-and-set되고 재조회 plan=noop 통과. 기존 커리어는 생성 당시 버전을 유지한다.
+- API Worker version `16808919-8fed-41a5-a5d2-36edca971e71`, web Worker version `b69dc26d-c966-4662-9538-4f6491fc4dd6`.
+  마이그레이션 0006 적용(인덱스 1개, 집계 전후 동일), bookmark는 run artifact에 있다.
+- 배포 후 12:43 확인(`https://api.offside-lab.com`): health ok, current `svc_season_1` ACTIVE/non-test/`endsAt: null`/**1.5.0/0.6.0**,
+  `GET /v1/presence` 200(`Cache-Control: public, max-age=30`), 세션 없는 heartbeat 204, 웹 200(번들 `index-DFfxjwla.js` → `index-BVYHFVZG.js`),
+  운영 origin `https://offside-lab.com` CORS 허용·다른 origin 거부. 주의: `offside-api.tasddc1569.workers.dev` 호스트는 offside-lab.com origin을
+  거부하므로 운영 CORS 검사는 `api.offside-lab.com`으로 한다.
+- 플레이 검증(Playwright 360px, 12:44 KST): 랜딩 → 게임 시작 → 온보딩 → 생성(`QA배포1244`, 윙어 19세) → KICKOFF → 복구 코드 발급 200 →
+  `PUT /v1/careers/{id}` 200 → 새로고침 뒤 이벤트 화면에 이름 유지 → 허브 카드 "저장됨". QA career ID `69255a9e-236c-45cb-8d4e-a6c9e1941cf4`.
+  QA 표본으로 구분해 삭제하지 않으며 통계·랭킹에서 제외한다. 복구 코드는 출력·캡처하지 않았다.
+- 배지 검증: 허브(설정 아이콘 옆)와 커리어 화면(커리어 캡션 옆)에 "1명 플레이 중" 표시, `.os-app-nav` 360px 한 줄·가로 넘침 없음,
+  네트워크에 `GET /v1/presence`·`POST /v1/presence/heartbeat` 정상. 운영 번들 `labels-DikQ6hX_.js`에 K1 구단명(서울 한강 FC 등) 포함 확인.
+  계약 화면까지는 진행하지 않아 K1 구단 오퍼 화면의 실제 노출은 다음 QA 세션 항목이다.
+- 검증 체인: 최종 합본(main+#208+#210+#209+#212) 전체 체인 12:18~12:28 통과(단위 10/10·빌드·번들·대비). e2e는 main 기존 16건(단독 실행에서도 실패, #207)
+  + 부하 3건(단독 통과) + `season-result SCR-015` seed 드리프트 1건(1.5.0 전환 영향, #207 기록) 외 새 실패 0.
+- 사고·교훈: (1) #210이 스택 PR(base `feat-kleague-structure`)인데 #208 머지 뒤 브랜치를 남겨 base가 main으로 안 바뀌었고 스크립트가 그대로
+  머지해 feature 브랜치에 들어감 → squash 커밋 cherry-pick #215로 재적용(트리 동일 확인). (2) 워커의 `pkill -f "vite"`가 오케스트레이터 `vitest` 체인을
+  죽임 → 템플릿에 PID 종료 규칙. (3) 검증 체인 2개 + CI + 다른 세션이 겹쳐 load 100에서 타임아웃 → 체인은 한 번에 하나, turbo concurrency 2.
 
 ## 사전 확인
 
