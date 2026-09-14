@@ -89,6 +89,7 @@ import {
   type AttributeKey,
   type CareerStage,
   type CareerState,
+  type ClubMeetingRequest,
   type ChapterOutcomeKind,
   type ClubStint,
   type ClubStintEndReason,
@@ -202,7 +203,8 @@ export type Command =
   | { type: 'REJECT_OFFER'; payload: { offerId: string | null } } // null = 전부 거절 → 잔류
   | { type: 'LOAN_RETURN'; payload: { decision: 'RETURN' | 'PERMANENT' } }
   | { type: 'RETIRE'; payload: { choice: 'RETIRE' | 'COACH_EPILOGUE' } | { choice: 'LAST_CONTRACT' | 'LOWER_LEAGUE'; offerId: string } }
-  | { type: 'CAREER_EVENT'; payload: { choice: CareerEventChoice } };
+  | { type: 'CAREER_EVENT'; payload: { choice: CareerEventChoice } }
+  | { type: 'REQUEST_CLUB_MEETING'; payload: { request: ClubMeetingRequest } };
 
 export type SimulationInput = {
   snapshot: DomainSnapshot | null;
@@ -3452,7 +3454,7 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     input.ruleset,
   );
 
-  const stateDeltas: SeasonResult['stateDeltas'] = {
+  let stateDeltas: SeasonResult['stateDeltas'] = {
     form: { before: expiredState.state.form, after: reset.form },
     fitness: { before: expiredState.state.fitness, after: reset.fitness },
     morale: { before: expiredState.state.morale, after: reset.morale },
@@ -3462,13 +3464,34 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     },
   };
 
-  const resultWithoutHash = buildSeasonResult({
+  const baseResultWithoutHash = buildSeasonResult({
     state: expiredState,
     ruleset: input.ruleset,
     attributeDeltas: growth.attributeDeltas,
     baseOvr: growth.baseOvr,
     stateDeltas,
   });
+  const meeting = expiredState.clubMeeting;
+  const pendingGoal = meeting?.goal.seasonIndex === season.index && meeting.goal.status === 'PENDING' ? meeting : null;
+  const goalMet = pendingGoal !== null && baseResultWithoutHash.promiseFulfilment.minutesShareBp >= pendingGoal.goal.targetMinutesShareBp;
+  const goalConfigured = goalMet ? input.ruleset.clubMeetingRules?.goalMet : undefined;
+  const boundaryState: CareerState = { ...expiredState, state: { form: reset.form, fitness: reset.fitness, morale: reset.morale } };
+  const goalApplied = goalConfigured === undefined
+    ? boundaryState
+    : applyEffects(boundaryState, clubMeetingEffects(`CLUB_MEETING_GOAL:${season.index}`, goalConfigured), { step: 12 }, input.ruleset.relationshipRules).state;
+  const goalEffect = { managerTrustDelta: goalApplied.relationships.managerTrust - boundaryState.relationships.managerTrust, moraleDelta: goalApplied.state.morale - boundaryState.state.morale };
+  stateDeltas = { ...stateDeltas, morale: { ...stateDeltas.morale, after: goalApplied.state.morale }, managerTrust: { ...stateDeltas.managerTrust, after: goalApplied.relationships.managerTrust } };
+  const goalResult = pendingGoal === null ? undefined : {
+    request: pendingGoal.request, response: pendingGoal.response, reason: pendingGoal.reason, role: pendingGoal.goal.role,
+    targetMinutesShareBp: pendingGoal.goal.targetMinutesShareBp,
+    actualMinutesShareBp: baseResultWithoutHash.promiseFulfilment.minutesShareBp,
+    status: goalMet ? 'MET' as const : 'MISSED' as const,
+    effect: goalMet ? goalEffect : { managerTrustDelta: 0, moraleDelta: 0 },
+  };
+  const resultWithoutHash = {
+    ...buildSeasonResult({ state: goalApplied, ruleset: input.ruleset, attributeDeltas: growth.attributeDeltas, baseOvr: growth.baseOvr, stateDeltas }),
+    ...(goalResult === undefined ? {} : { clubMeetingGoal: goalResult }),
+  };
   const result: SeasonResult = { ...resultWithoutHash, hash: hashSeasonResult(resultWithoutHash) };
 
   const summary: SeasonSummary = {
@@ -3482,12 +3505,12 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 
   // D-40 규칙 2: 시즌 경계 회귀가 `appliedSourceIds`의 `season:` 접두 항목(ONCE_PER_SEASON 중복 검사
   // 키)을 지운다 — 다음 시즌에 같은 sourceId가 다시 적용될 수 있어야 한다.
-  const clearedAppliedSourceIds = expiredState.appliedSourceIds.filter(
+  const clearedAppliedSourceIds = goalApplied.appliedSourceIds.filter(
     (id) => !id.startsWith('season:'),
   );
 
   const settledState: CareerState = {
-    ...expiredState,
+    ...goalApplied,
     age: nextAge,
     attributes: growth.attributes,
     growthCarryCenti: growth.growthCarryCenti,
@@ -3495,11 +3518,12 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     player: { ...expiredState.player, profile: { ...profile, baseOvr: growth.baseOvr.after } },
     season: null,
     seasonHistory: [...expiredState.seasonHistory, summary],
-    state: { form: reset.form, fitness: reset.fitness, morale: reset.morale },
+    state: goalApplied.state,
     pending: null,
     timeline: [
-      ...expiredState.timeline,
+      ...goalApplied.timeline,
       { revision: nextRevision, kind: 'SEASON_SETTLED', refId: null, age: nextAge, step: 12 },
+      ...(goalResult === undefined ? [] : [{ revision: nextRevision, kind: 'CLUB_MEETING_GOAL_EVALUATED' as const, refId: `${goalResult.request}:${goalResult.status}`, age: nextAge, step: 12 }]),
     ],
   };
 
@@ -3637,11 +3661,14 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
         clubHistory: swapOpenStintContract(taggedState.clubHistory, taggedState.nextContract.id),
       }
     : taggedState;
+  const marketReadyState: CareerState = nextState.clubMeeting?.preferenceStatus === 'PENDING' && nextState.contract?.id !== nextState.clubMeeting.contractId
+    ? { ...nextState, clubMeeting: { ...nextState.clubMeeting, preferenceStatus: 'CANCELLED' } }
+    : nextState;
 
   const finalState =
-    nextState.contract !== null && nextState.contract.kind === 'LOAN'
-      ? settleLoanSeason(nextState, input.ruleset, finalizedResult, nextRevision)
-      : openMarketAfterSettlement(nextState, input.ruleset, nextRevision).state;
+    marketReadyState.contract !== null && marketReadyState.contract.kind === 'LOAN'
+      ? settleLoanSeason(marketReadyState, input.ruleset, finalizedResult, nextRevision)
+      : openMarketAfterSettlement(marketReadyState, input.ruleset, nextRevision).state;
   const assessedState: CareerState = finalState.retirement === undefined ? finalState : { ...finalState, retirement: { ...finalState.retirement, marketOffers: finalState.pending?.kind === 'OFFERS' ? finalState.pending.offers.filter((offer) => offer.negotiationState !== 'WITHDRAWN').length : finalState.pending?.kind === 'LOAN_RETURN' ? null : 0 } };
 
   return {
@@ -3807,6 +3834,62 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   };
 }
 
+const BETTER_ROLE: Record<SquadRole, SquadRole> = { STARTER: 'STARTER', ROTATION: 'STARTER', BENCH: 'ROTATION', RESERVE: 'BENCH' };
+
+function clubMeetingEffects(prefix: string, effect: { managerTrustDelta: number; moraleDelta: number }): Effect[] {
+  return [
+    { kind: 'RELATION', sourceId: `${prefix}:TRUST`, target: 'managerTrust', delta: effect.managerTrustDelta, clamp: { min: 0, max: 100 }, appliesAt: { kind: 'IMMEDIATE' }, expiresAt: null, stackingRule: 'ONCE_PER_SOURCE', reasonTag: 'CLUB_MEETING' },
+    { kind: 'CURRENT', sourceId: `${prefix}:MORALE`, target: 'morale', delta: effect.moraleDelta, clamp: { min: 0, max: 100 }, appliesAt: { kind: 'IMMEDIATE' }, expiresAt: null, stackingRule: 'ONCE_PER_SOURCE' },
+  ];
+}
+
+function requestClubMeeting(input: SimulationInput, snapshot: DomainSnapshot): SimulationResult {
+  const command = input.command;
+  if (command.type !== 'REQUEST_CLUB_MEETING') return fail('VALIDATION_FAILED', '구단 면담 명령이 아니다.');
+  const state = snapshot.state;
+  const rules = input.ruleset.clubMeetingRules;
+  const contract = state.contract;
+  if (rules === undefined) return fail('VALIDATION_FAILED', '이 룰셋은 구단 면담을 지원하지 않는다.', { reason: 'FEATURE_UNAVAILABLE' });
+  if (state.status !== 'ACTIVE' || state.stage !== 'PRO' || state.season !== null || state.pending !== null || contract === null || contract.kind !== 'PERMANENT') {
+    return fail('VALIDATION_FAILED', '현재 구단 면담을 요청할 수 없다.', { reason: 'CLUB_MEETING_UNAVAILABLE' });
+  }
+  const seasonIndex = state.seasonHistory.length + 1;
+  if (state.clubMeeting?.seasonIndex === seasonIndex) return fail('COMMAND_ALREADY_RESOLVED', '이번 시즌 면담은 이미 완료했다.');
+  const request = command.payload.request;
+  const remaining = computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline);
+  if ((request === 'PLAYING_TIME' && contract.rolePromise === 'STARTER') || (request === 'LOAN' && remaining < 2)) {
+    return fail('VALIDATION_FAILED', '이 요청은 현재 계약에서 선택할 수 없다.', { reason: request === 'LOAN' ? 'CONTRACT_EXPIRES_BEFORE_MARKET' : 'ALREADY_STARTER' });
+  }
+  const accepted = request === 'PLAYING_TIME'
+    ? state.relationships.managerTrust >= rules.playingTimeMinTrust
+    : request === 'LOAN'
+      ? (contract.rolePromise === 'BENCH' || contract.rolePromise === 'RESERVE') && state.relationships.managerTrust >= rules.loanMinTrust
+      : state.relationships.managerTrust <= rules.transferMaxTrust || contract.promiseBreaches >= 1;
+  const key = `${request}_${accepted ? 'ACCEPTED' : 'REFUSED'}` as keyof typeof rules.immediate;
+  const configured = rules.immediate[key];
+  const plannedRole = request === 'PLAYING_TIME' && accepted ? BETTER_ROLE[contract.rolePromise] : contract.rolePromise;
+  const nextRevision = snapshot.revision + 1;
+  const prefix = `CLUB_MEETING:${seasonIndex}:${request}`;
+  const applied = applyEffects(state, clubMeetingEffects(prefix, configured), { step: 0 }, input.ruleset.relationshipRules).state;
+  const actualEffect = { managerTrustDelta: applied.relationships.managerTrust - state.relationships.managerTrust, moraleDelta: applied.state.morale - state.state.morale };
+  const nextContract = request === 'PLAYING_TIME' && accepted ? { ...contract, rolePromise: plannedRole, appearancePromise: { minutesShareBp: input.ruleset.contractRules.promiseMinutesShareBp[plannedRole] } } : contract;
+  const reason = accepted ? 'REQUEST_ACCEPTED' : request === 'PLAYING_TIME' ? 'TRUST_TOO_LOW' : request === 'LOAN' ? 'ROLE_OR_TRUST' : 'RELATIONSHIP_STABLE';
+  const nextState: CareerState = {
+    ...applied,
+    contract: nextContract,
+    tags: accepted && request !== 'PLAYING_TIME' ? sortUniqueTags([...applied.tags, '이적_희망']) : applied.tags,
+    clubMeeting: {
+      seasonIndex, request, response: accepted ? 'ACCEPTED' : 'REFUSED', reason,
+      teamId: contract.teamId, contractId: contract.id, immediateEffect: actualEffect, plannedRole,
+      preferredOfferKind: accepted && request !== 'PLAYING_TIME' ? request : null,
+      preferenceStatus: accepted && request !== 'PLAYING_TIME' ? 'PENDING' : null,
+      goal: { seasonIndex, role: plannedRole, targetMinutesShareBp: input.ruleset.contractRules.promiseMinutesShareBp[plannedRole], status: 'PENDING' },
+    },
+    timeline: [...applied.timeline, { revision: nextRevision, kind: 'CLUB_MEETING_RESOLVED', refId: `${request}:${accepted ? 'ACCEPTED' : 'REFUSED'}`, age: state.age, step: 0 }],
+  };
+  return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'STEP_BOUNDARY'), appliedEffects: clubMeetingEffects(prefix, configured), nextAction: 'DECISION' };
+}
+
 /**
  * CREATE_CAREER → UPDATE_PLAYER_DRAFT → CONFIRM_PLAYER → ADVANCE → RESOLVE_EVENT → RESOLVE_CHAPTER →
  * ACCEPT_OFFER → RESOLVE_ROLE 명령을 처리하는 순수 함수. throw하지 않는다: 도메인 오류는 항상
@@ -3884,6 +3967,8 @@ export function simulate(input: SimulationInput): SimulationResult {
       return rejectOffer(input, snapshot);
     case 'LOAN_RETURN':
       return loanReturn(input, snapshot);
+    case 'REQUEST_CLUB_MEETING':
+      return requestClubMeeting(input, snapshot);
   }
 }
 

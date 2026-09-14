@@ -36,6 +36,7 @@ export const COMMAND_TYPES = [
   'LOAN_RETURN',
   'RETIRE',
   'CAREER_EVENT',
+  'REQUEST_CLUB_MEETING',
 ] as const;
 
 export const CommandTypeSchema = z.enum(COMMAND_TYPES);
@@ -207,6 +208,7 @@ export const RejectOfferPayloadSchema = z.strictObject({
 export const LoanReturnPayloadSchema = z.strictObject({
   decision: z.enum(['RETURN', 'PERMANENT']),
 });
+export const RequestClubMeetingPayloadSchema = z.strictObject({ request: z.enum(['PLAYING_TIME', 'LOAN', 'TRANSFER']) });
 
 /**
  * 명령 타입 → payload 스키마 맵. `CommandRequestSchema`의 판별 유니온 멤버와
@@ -228,6 +230,7 @@ export const COMMAND_PAYLOAD_SCHEMAS = {
   LOAN_RETURN: LoanReturnPayloadSchema,
   RETIRE: RetirePayloadSchema,
   CAREER_EVENT: CareerEventPayloadSchema,
+  REQUEST_CLUB_MEETING: RequestClubMeetingPayloadSchema,
 } as const satisfies Record<CommandType, z.ZodTypeAny>;
 
 export type CommandPayloadByType = {
@@ -259,6 +262,7 @@ export const CommandRequestSchema = z.discriminatedUnion('type', [
   commandRequestMember('LOAN_RETURN', COMMAND_PAYLOAD_SCHEMAS.LOAN_RETURN),
   commandRequestMember('RETIRE', COMMAND_PAYLOAD_SCHEMAS.RETIRE),
   commandRequestMember('CAREER_EVENT', COMMAND_PAYLOAD_SCHEMAS.CAREER_EVENT),
+  commandRequestMember('REQUEST_CLUB_MEETING', COMMAND_PAYLOAD_SCHEMAS.REQUEST_CLUB_MEETING),
 ]);
 
 export type CommandRequest = z.infer<typeof CommandRequestSchema>;

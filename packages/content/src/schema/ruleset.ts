@@ -1015,6 +1015,13 @@ export const RulesetSchema = z
         competitorSeedVersion: z.literal('squad:season-team-v1'),
       })
       .optional(),
+    clubMeetingRules: z.strictObject({
+      playingTimeMinTrust: z.number().int().min(0).max(100),
+      loanMinTrust: z.number().int().min(0).max(100),
+      transferMaxTrust: z.number().int().min(0).max(100),
+      immediate: z.record(z.enum(['PLAYING_TIME_ACCEPTED', 'PLAYING_TIME_REFUSED', 'LOAN_ACCEPTED', 'LOAN_REFUSED', 'TRANSFER_ACCEPTED', 'TRANSFER_REFUSED']), z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int() })),
+      goalMet: z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int() }),
+    }).optional(),
     positions: z.array(PositionSchema).min(1),
     archetypes: z.array(ArchetypeSchema),
     backgrounds: z.array(BackgroundSchema).min(1),

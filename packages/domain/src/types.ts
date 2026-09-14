@@ -381,6 +381,8 @@ export type TimelineEntry = {
     | 'NATIONAL_TEAM_CALLED'
     | 'NATIONAL_TEAM_DECLINED'
     | 'CAPTAIN_APPOINTED'
+    | 'CLUB_MEETING_RESOLVED'
+    | 'CLUB_MEETING_GOAL_EVALUATED'
     | 'RETIRED'
     | 'SERVICE_STARTED'
     | 'SERVICE_COMPLETED'
@@ -661,6 +663,32 @@ export type ChapterRecord = {
 export type GrowthCause = 'TRAINING' | 'MINUTES' | 'EXPERIENCE' | 'AGE_DECLINE' | 'POTENTIAL_CAP';
 export type TrainingFocus = 'ROLE' | 'TECHNICAL' | 'PHYSICAL' | 'MENTAL';
 
+export type ClubMeetingRequest = 'PLAYING_TIME' | 'LOAN' | 'TRANSFER';
+export type ClubMeetingEffect = { managerTrustDelta: number; moraleDelta: number };
+export type ClubMeetingGoalResult = {
+  request: ClubMeetingRequest;
+  response: 'ACCEPTED' | 'REFUSED';
+  reason: string;
+  role: SquadRole;
+  targetMinutesShareBp: number;
+  actualMinutesShareBp: number;
+  status: 'MET' | 'MISSED';
+  effect: ClubMeetingEffect;
+};
+export type ClubMeetingState = {
+  seasonIndex: number;
+  request: ClubMeetingRequest;
+  response: 'ACCEPTED' | 'REFUSED';
+  reason: string;
+  teamId: string;
+  contractId: string;
+  immediateEffect: ClubMeetingEffect;
+  plannedRole: SquadRole;
+  preferredOfferKind: 'LOAN' | 'TRANSFER' | null;
+  preferenceStatus: 'PENDING' | 'OFFERED' | 'NO_CANDIDATE' | 'CANCELLED' | null;
+  goal: { seasonIndex: number; role: SquadRole; targetMinutesShareBp: number; status: 'PENDING' };
+};
+
 // T-2-005 D-39: SETTLE_SEASON이 만드는 시즌 결산 결과. `seasonHistory`에 그대로 남는다(FootballSeason에는
 // 두지 않는다 — season은 다음 START_SEASON에서 교체된다). 02 DATA-SEA-001은 `result?: SeasonResult`로
 // 적었지만 이 브리프(D-39)가 "결산은 항상 result를 만든다"로 확정해 필수 필드로 둔다. T-2-004 머지로
@@ -689,6 +717,7 @@ export type SeasonResult = {
   };
   roleChanges: Array<{ step: number; type: RoleProposal['type']; decision: 'ACCEPT' | 'DECLINE' }>;
   promiseFulfilment: { promised: SquadRole; delivered: SquadRole; fulfilled: boolean; minutesShareBp: number };
+  clubMeetingGoal?: ClubMeetingGoalResult;
   attributeDeltas: Array<{ key: AttributeKey; delta: number; causes: Array<{ cause: GrowthCause; centi: number }> }>;
   baseOvr: { before: number; after: number };
   stateDeltas: {
@@ -833,6 +862,8 @@ export type CareerState = {
   player: { draft: PlayerDraft; profile: PlayerProfile | null };
   pending: Pending;
   contract: Contract | null;
+  /** 1.6.0+ optional preseason club meeting; absent in legacy snapshots. */
+  clubMeeting?: ClubMeetingState;
   /** Step 7 renewal held until the current season is settled (legacy snapshots may omit it). */
   nextContract?: Contract | null;
   // T-3-003 D-46: 임대 중 원소속 계약(`suspended: true`). Phase 1·비임대 상태는 항상 null.

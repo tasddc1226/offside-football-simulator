@@ -361,6 +361,9 @@ export function shouldAutoAcceptUnchangedRole(state: CareerState): boolean {
 export function settleSeason(engine: AppEngine, careerId: string): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'SETTLE_SEASON', payload: {} });
 }
+export function requestClubMeeting(engine: AppEngine, careerId: string, request: 'PLAYING_TIME' | 'LOAN' | 'TRANSFER'): Promise<ExecuteResult> {
+  return execute(engine, careerId, { type: 'REQUEST_CLUB_MEETING', payload: { request } });
+}
 
 type ResolveChapterOutcomePayload = {
   id: string;
