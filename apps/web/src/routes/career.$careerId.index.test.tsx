@@ -83,20 +83,35 @@ function setTestEngine(ruleset: Ruleset = testRuleset): AppEngine {
 function setLeagueTestEngine(): AppEngine {
   const ruleset = loadRuleset('1.7.0');
   const engine = createAppEngine({
-    store: new MemoryLocalStore(), simulator: inlineSimulator, ruleset,
-    pack: loadContentPack('0.6.2'), newId: makeIdGenerator('league-test'),
+    store: new MemoryLocalStore(),
+    simulator: inlineSimulator,
+    ruleset,
+    pack: loadContentPack('0.6.3'),
+    newId: makeIdGenerator('league-test'),
   });
   engineHolder.promise = Promise.resolve(engine);
   queryClient.setQueryData(serviceSeasonQueryOptions.queryKey, {
-    ...TEST_SERVICE_SEASON, rulesetVersion: '1.7.0', contentPackVersion: '0.6.2',
+    ...TEST_SERVICE_SEASON,
+    rulesetVersion: '1.7.0',
+    contentPackVersion: '0.6.3',
   });
   return engine;
 }
 
 function standing(overrides: Partial<StandingRow>): StandingRow {
   return {
-    rank: 1, teamId: 'team-a', teamName: 'A', played: 4, won: 3, drawn: 1, lost: 0,
-    goalsFor: 8, goalsAgainst: 2, goalDifference: 6, points: 10, ...overrides,
+    rank: 1,
+    teamId: 'team-a',
+    teamName: 'A',
+    played: 4,
+    won: 3,
+    drawn: 1,
+    lost: 0,
+    goalsFor: 8,
+    goalsAgainst: 2,
+    goalDifference: 6,
+    points: 10,
+    ...overrides,
   };
 }
 
@@ -379,47 +394,103 @@ describe('SCR-029 다음 결정 카드 분기', () => {
 
     const leagueContext = screen.getByRole('region', { name: '현재 팀 리그 상황' });
     expect(within(leagueContext).getByText('아직 확정된 경기 없음')).toBeInTheDocument();
-    expect(within(leagueContext).getByText('0경기 · 아직 확정된 리그 경기 결과가 없습니다.')).toBeInTheDocument();
-    expect(within(leagueContext).getByRole('link', { name: '순위표 보기' })).toHaveAttribute('href', expect.stringContaining('view=schedule'));
-    fireEvent.mouseDown(screen.getByRole('tab', { name: '계약' }));
+    expect(
+      within(leagueContext).getByText('0경기 · 아직 확정된 리그 경기 결과가 없습니다.'),
+    ).toBeInTheDocument();
+    expect(within(leagueContext).getByRole('link', { name: '순위표 보기' })).toHaveAttribute(
+      'href',
+      `/career/${careerId}`,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: '커리어' }));
     await screen.findByText('현재 역할');
-    expect(screen.getByRole('region', { name: '현재 팀 리그 상황' })).toBeInTheDocument();
+    const careerLeagueContext = screen.getByRole('region', { name: '현재 팀 리그 상황' });
+    fireEvent.click(within(careerLeagueContext).getByRole('link', { name: '순위표 보기' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/career/${careerId}`);
+      expect(router.state.location.search).not.toHaveProperty('view');
+    });
+    expect(screen.getByRole('tab', { name: '시즌' })).toHaveAttribute('aria-selected', 'true');
 
     const loaded = await engine.client.loadCareer(careerId);
-    if (!loaded.ok || loaded.snapshot.state.season?.leagueLedger === undefined) throw new Error('지원 룰셋의 활성 시즌 원장이 있어야 한다');
+    if (!loaded.ok || loaded.snapshot.state.season?.leagueLedger === undefined)
+      throw new Error('지원 룰셋의 활성 시즌 원장이 있어야 한다');
     const season = loaded.snapshot.state.season;
     const ledger = season.leagueLedger;
     if (ledger === undefined) throw new Error('지원 룰셋의 활성 시즌 원장이 있어야 한다');
-    expect(buildCurrentLeagueContext(season, engine.ruleset)).toMatchObject({ confirmedRound: 0, ownPlayed: 0, hasConfirmedResults: false });
+    expect(buildCurrentLeagueContext(season, engine.ruleset)).toMatchObject({
+      confirmedRound: 0,
+      ownPlayed: 0,
+      hasConfirmedResults: false,
+    });
     const corrupted: FootballSeason[] = [
       { ...season, leagueLedger: { ...ledger, seasonIndex: season.index + 1 } },
       { ...season, leagueLedger: { ...ledger, teamId: 'other-team' } },
       { ...season, leagueLedger: { ...ledger, leagueId: 'other-league' } },
       { ...season, leagueLedger: { ...ledger, results: [[999, 1, 0]] } },
     ];
-    for (const candidate of corrupted) expect(buildCurrentLeagueContext(candidate, engine.ruleset)).toBeNull();
+    for (const candidate of corrupted)
+      expect(buildCurrentLeagueContext(candidate, engine.ruleset)).toBeNull();
     const seasonWithoutLedger = { ...season };
     delete seasonWithoutLedger.leagueLedger;
     expect(buildCurrentLeagueContext(seasonWithoutLedger, engine.ruleset)).toBeNull();
-    expect(buildCurrentLeagueContext(season, { ...engine.ruleset, leagueLedgerRules: undefined })).toBeNull();
+    expect(
+      buildCurrentLeagueContext(season, { ...engine.ruleset, leagueLedgerRules: undefined }),
+    ).toBeNull();
     expect(buildCurrentLeagueContext(null, engine.ruleset)).toBeNull();
 
     const positionCases = [
-      { rows: [standing({ rank: 1 }), standing({ rank: 2, teamId: 'mine', teamName: '내 팀' })], expected: '2위 / 2팀 · 4경기 · 1위와 승점 동률' },
-      { rows: [standing({ teamId: 'mine', teamName: '내 팀' }), standing({ rank: 2, teamId: 'team-b', teamName: 'B' })], expected: '1위 / 2팀 · 4경기 · 2위와 승점 동률' },
-      { rows: [standing({ points: 12 }), standing({ rank: 2, teamId: 'mine', teamName: '내 팀' })], expected: '2위 / 2팀 · 4경기 · 1위와 승점 2점 차' },
-      { rows: [standing({ played: 1, points: 3 }), standing({ rank: 2, teamId: 'mine', teamName: '내 팀', played: 0, won: 0, drawn: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 })], expected: '2위 / 2팀 · 0경기 · 1위와 승점 3점 차' },
+      {
+        rows: [standing({ rank: 1 }), standing({ rank: 2, teamId: 'mine', teamName: '내 팀' })],
+        expected: '2위 / 2팀 · 4경기 · 1위와 승점 동률',
+      },
+      {
+        rows: [
+          standing({ teamId: 'mine', teamName: '내 팀' }),
+          standing({ rank: 2, teamId: 'team-b', teamName: 'B' }),
+        ],
+        expected: '1위 / 2팀 · 4경기 · 2위와 승점 동률',
+      },
+      {
+        rows: [standing({ points: 12 }), standing({ rank: 2, teamId: 'mine', teamName: '내 팀' })],
+        expected: '2위 / 2팀 · 4경기 · 1위와 승점 2점 차',
+      },
+      {
+        rows: [
+          standing({ played: 1, points: 3 }),
+          standing({
+            rank: 2,
+            teamId: 'mine',
+            teamName: '내 팀',
+            played: 0,
+            won: 0,
+            drawn: 0,
+            goalsFor: 0,
+            goalsAgainst: 0,
+            goalDifference: 0,
+            points: 0,
+          }),
+        ],
+        expected: '2위 / 2팀 · 0경기 · 1위와 승점 3점 차',
+      },
     ];
     for (const { rows, expected } of positionCases) {
       expect(leaguePositionSummary(rows, 'mine')).toBe(expected);
       expect(leagueStandingSummary(rows, 'mine')).toBe(expected);
     }
-    expect(leagueStandingSummary([standing({ played: 0 }), standing({ rank: 2, teamId: 'mine', played: 0 })], 'mine')).toBe('아직 확정된 리그 경기 결과가 없습니다.');
+    expect(
+      leagueStandingSummary(
+        [standing({ played: 0 }), standing({ rank: 2, teamId: 'mine', played: 0 })],
+        'mine',
+      ),
+    ).toBe('아직 확정된 리그 경기 결과가 없습니다.');
 
     const progressedCareerId = await settlementPendingCareerId(engine);
     const progressed = await engine.client.loadCareer(progressedCareerId);
     if (!progressed.ok) throw new Error('실제 진행한 지원 시즌을 읽을 수 있어야 한다');
-    const progressedContext = buildCurrentLeagueContext(progressed.snapshot.state.season, engine.ruleset);
+    const progressedContext = buildCurrentLeagueContext(
+      progressed.snapshot.state.season,
+      engine.ruleset,
+    );
     expect(progressedContext?.confirmedRound).toBeGreaterThan(0);
     expect(progressedContext?.ownPlayed).toBeGreaterThan(0);
     expect(progressedContext?.summary).toMatch(/^\d+위 \/ \d+팀 · \d+경기 ·/);

@@ -111,7 +111,7 @@ export function CurrentLeagueContext({
       <Link
         to="/career/$careerId"
         params={{ careerId }}
-        search={{ view: 'schedule' }}
+        search={{}}
         className={buttonClassName('secondary')}
         style={buttonStyle}
       >
