@@ -190,6 +190,9 @@ import eventMgr122v064 from '../../packs/0.6.4/events/EVT-MGR-122.json' with { t
 import eventRel120v064 from '../../packs/0.6.4/events/EVT-REL-120.json' with { type: 'json' };
 import eventRel121v064 from '../../packs/0.6.4/events/EVT-REL-121.json' with { type: 'json' };
 import eventRel122v064 from '../../packs/0.6.4/events/EVT-REL-122.json' with { type: 'json' };
+// 0.6.5 is content-identical to 0.6.4 and pairs only with ruleset 1.7.1. Reuse the
+// immutable 0.6.4 definitions while registering the new manifest explicitly.
+import manifest065 from '../../packs/0.6.5/manifest.json' with { type: 'json' };
 
 export const PACK_VERSIONS = [
   '0.1.0',
@@ -204,6 +207,7 @@ export const PACK_VERSIONS = [
   '0.6.2',
   '0.6.3',
   '0.6.4',
+  '0.6.5',
 ] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
@@ -757,6 +761,80 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
   },
   '0.6.4': {
     manifest: manifest064,
+    events: [
+      eventCon001v051,
+      eventCon003v050,
+      eventCon010v040,
+      eventCon011v040,
+      eventCon012v040,
+      eventCon013v040,
+      eventCon020v041,
+      eventCon021v041,
+      eventCon022v041,
+      eventCon023v041,
+      eventCon024v041,
+      eventCon025v041,
+      eventCon026v041,
+      eventCon027v041,
+      eventCon028v041,
+      eventCon120v064,
+      eventCon121v064,
+      eventCon122v064,
+      eventDev002v050,
+      eventDev120v064,
+      eventDev121v064,
+      eventDev122v064,
+      eventEth010v040,
+      eventEth011v040,
+      eventInj001v040,
+      eventInj003v040,
+      eventInj004v040,
+      eventMatch120v064,
+      eventMatch121v064,
+      eventMatch122v064,
+      eventMedia001v040,
+      eventMedia002v040,
+      eventMedia004v040,
+      eventMedia006v040,
+      eventMedia010v040,
+      eventMedia120v064,
+      eventMedia121v064,
+      eventMedia122v064,
+      eventMgr001v050,
+      eventMgr003v040,
+      eventMgr004v040,
+      eventMgr020v041,
+      eventMgr021v041,
+      eventMgr120v064,
+      eventMgr121v064,
+      eventMgr122v064,
+      eventNat001v040,
+      eventNat002v040,
+      eventRel001v051,
+      eventRel002v040,
+      eventRel003v040,
+      eventRel005v040,
+      eventRel008v040,
+      eventRel010v040,
+      eventRel120v064,
+      eventRel121v064,
+      eventRel122v064,
+      eventSlump010v040,
+      eventSlump011v040,
+    ],
+    chapters: [
+      chapterMatch001v040,
+      chapterMatch002v040,
+      chapterMatch004v040,
+      chapterMatch005v040,
+      chapterMatch006v040,
+      chapterMatch007v040,
+      chapterNat001v040,
+    ],
+    narrativeTokens: narrativeTokens061,
+  },
+  '0.6.5': {
+    manifest: manifest065,
     events: [
       eventCon001v051,
       eventCon003v050,

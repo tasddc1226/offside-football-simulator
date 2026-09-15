@@ -195,6 +195,27 @@ describe('encodeSnapshot / decodeSnapshot', () => {
       ),
     ).toEqual({ ok: false, reason: 'INVALID_STATE' });
 
+    const missing171LedgerState = {
+      ...missingLedgerState,
+      rulesetVersion: '1.7.1',
+    };
+    expect(
+      decodeSnapshot(
+        encodeSnapshot(
+          {
+            ...missingLedgerDomain,
+            state: missing171LedgerState,
+            stateHash: hashState(missing171LedgerState),
+            rulesetVersion: '1.7.1',
+          },
+          {
+            careerId: domain.state.careerId,
+            createdAt: '2026-01-01T00:00:00.000Z',
+          },
+        ),
+      ),
+    ).toEqual({ ok: false, reason: 'INVALID_STATE' });
+
     const ledgerDomain = await buildLedgerSnapshot();
     const ledger = ledgerDomain.state.season?.leagueLedger;
     if (ledger === undefined) throw new Error('ledger setup 실패');

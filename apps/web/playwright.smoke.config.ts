@@ -44,8 +44,8 @@ const API_URL = workerOrigin(process.env.E2E_STAGING_API_URL ?? DEFAULT_API_URL,
 // PRODUCTION_SEASON(운영 승격 목표 manifest)과 같은 값을 유지한다 — 바꿀 때 함께 갱신한다.
 const expectedSeason = {
   id: 'svc_line_test',
-  rulesetVersion: '1.7.0',
-  contentPackVersion: '0.6.4',
+  rulesetVersion: '1.7.1',
+  contentPackVersion: '0.6.5',
 };
 const smokeMetadata: SmokeMetadata = {
   webUrl: BASE_URL,

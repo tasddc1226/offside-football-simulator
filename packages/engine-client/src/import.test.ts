@@ -13,6 +13,7 @@ import {
   type Ruleset,
 } from '@offside/domain';
 import ruleset170Raw from '../../content/rulesets/1.7.0/ruleset.json' with { type: 'json' };
+import ruleset171Raw from '../../content/rulesets/1.7.1/ruleset.json' with { type: 'json' };
 import { describe, expect, it } from 'vitest';
 import { createEngineClient, type EngineClient } from './engine.js';
 import { importCareerFromServer } from './import.js';
@@ -259,6 +260,41 @@ describe('importCareerFromServer', () => {
     expect(rejectedInconsistentFinal.ok).toBe(false);
     if (!rejectedInconsistentFinal.ok)
       expect(rejectedInconsistentFinal.error.code).toBe('VERIFICATION_FAILED');
+  });
+
+  it('1.7.1 ledger import도 registry 없이 거부하고 등록된 ruleset으로 검증한다', async () => {
+    const response = await buildLedgerGetCareerResponse();
+    const state = JSON.parse(response.snapshot.state) as CareerState;
+    const state171: CareerState = {
+      ...state,
+      rulesetVersion: '1.7.1',
+      contentPackVersion: '0.6.5',
+    };
+    const response171: GetCareerResponse = {
+      ...response,
+      snapshot: {
+        ...response.snapshot,
+        rulesetVersion: '1.7.1',
+        contentPackVersion: '0.6.5',
+        state: canonicalize(state171 as unknown as JsonValue),
+        stateHash: hashState(state171),
+      },
+    };
+
+    const withoutRegistry = await importCareerFromServer(new MemoryLocalStore(), response171, {
+      now: NOW,
+    });
+    expect(withoutRegistry.ok).toBe(false);
+    if (!withoutRegistry.ok) expect(withoutRegistry.error.code).toBe('VERIFICATION_FAILED');
+
+    const withRegistry = await importCareerFromServer(new MemoryLocalStore(), response171, {
+      now: NOW,
+      rulesetForVersion: (version) => {
+        if (version !== '1.7.1') throw new RangeError(`unexpected ruleset ${version}`);
+        return ruleset171Raw as unknown as Ruleset;
+      },
+    });
+    expect(withRegistry.ok).toBe(true);
   });
 
   it('로컬에 미전송 revision이 있으면 덮어쓰지 않는다', async () => {

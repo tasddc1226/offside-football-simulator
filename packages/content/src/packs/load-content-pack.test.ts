@@ -223,6 +223,12 @@ describe('loadContentPack: 0.5.0', () => {
       expect(varietyPack.eventsById.get(previousEvent.id)).toEqual(previousEvent);
     }
     expect(varietyPack.events.filter((event) => /-12[0-2]$/.test(event.id))).toHaveLength(18);
+    const exposurePack = loadContentPack('0.6.5');
+    expect(exposurePack.manifest.compatibleRulesetVersions).toEqual(['1.7.1']);
+    expect(exposurePack.manifest.checksum).toBe(varietyPack.manifest.checksum);
+    expect(exposurePack.events).toEqual(varietyPack.events);
+    expect(exposurePack.chapters).toEqual(varietyPack.chapters);
+    expect(exposurePack.narrativeTokens).toEqual(varietyPack.narrativeTokens);
     expect(loadContentPack('0.6.3').manifest.checksum).toBe(
       'b7eac78ecd9ea3e56baecc57017ba041f5b0fad428b9b0f3c918a0d1ca3a9f5f',
     );
