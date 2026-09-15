@@ -49,6 +49,7 @@
 - 11:25 #220 최종 통합 SHA b83d36f(16365a3+60aed6a 머지, remerge-diff 없음) 읽기전용 리뷰 PASS: 제품 delta 5파일의 stable patch-id가 10:55 리뷰한 16365a3과 동일(PR 고유 변경 무변동), retirement-screen.tsx 804행 정책 전달 보존, #221 변경 파일과 교차 없음. 비차단: docs 3파일이 main 대비 옛 기준(818d84c 이전)이라 머지 전 main 재병합 권고. 다음 CPU 슬롯: #222 회귀 반환 직후 b83d36f 전체 체인(e2e 제외).
 - 11:30 #222 a765da8/0.6.3 회귀 완료: 1.5.0 200 조인 200/200, 1.6.1 1000 조인 1000/1000(구 경로 불변), 1.7.0 1000×2 결정론 1000/1000, 실패 0. 1.7.0 분포는 성장·은퇴 지표 계승이나 Legacy 점수 −3.4·상위 밴드 33.3→22.7%(−10.6pp): 옛 computeLeaguePosition의 기대승점 투영이 리그 1위(seasonWonTitle)·승격을 과다 산출하던 것을 원장 실제 순위가 대체한 결과 → 버그 아님, D-80 ③ 상위 밴드 목표와 충돌. Codex/사용자에 (a) 머지 후 2라운드 밴드 재보정 vs (b) 머지 전 조정 결정 요청(제안 a). 증거 evidence/sim-round1-2026-09-14/PR222-*. 11:22 #220 b950c13 전체 체인(e2e 제외) 시작.
 - 11:33 #220 b950c13 전체 체인(e2e 제외) CHAIN EXIT 0(web 83 파일 실행, 나머지 9패키지는 c050957과 입력 해시 동일한 turbo 캐시 hit), Codex에 보고·CPU 반환. Codex 결정(사용자 선택 범위 = main 성장·은퇴 밸런스 계승, 기존 정책/골든 불변): #222는 (a)로 진행 — Legacy 컷/가중 조정 없이 머지, 1.7.0은 등록만 하고 ACTIVE/프로덕션 승격 없음. **1.7.0 상위 밴드 22.7%는 목표 32% 미달 → 릴리스 전 Legacy 재보정 검토 게이트(미통과)**로 tracking/ADR에 명시. 원인 설명은 코드상 해석(computeLeaguePosition 기대승점 투영 vs 원장 실제 순위)이며 추가 대량 시뮬은 지금 불필요.
+- 11:27 사용자 PR #220(T-7-024 커리어 피날레·은퇴 화면) Codex가 squash 머지 `3e0643e`(Sol scoped retirement e2e PASS 34.9s·axe serious/critical 0, exact b950c13 CI PASS). 머지 후 main 제품 tree = 체인 돌린 b950c13. CPU 반환 상태. 다음: Sol222 최종 main 동기화 SHA → Claude 전체 체인 배정 예정. (a) Legacy 정책 불변 + 활성화 전 재보정 게이트 방침 Codex→Sol 전달됨.
 
 ## 2026-09-14 (D-79 — 밸런스 조정용 헤드리스 커리어 일괄 시뮬레이션 CLI, 도메인 직접 호출 방식 — 사용자 요청)
 
