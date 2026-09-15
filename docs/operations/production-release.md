@@ -22,8 +22,8 @@
 | 신규 운영 시즌 | `svc_season_1`, 표시명 `시즌 1`, ACTIVE, isTest=false |
 | 기간 | 2026-09-06 00:00 KST부터, 종료일 미정(`endsAt: null`) |
 | 문의 | `tasddc1569@gmail.com` |
-| 현재 신규 커리어 버전 | ruleset 1.7.0 / content pack 0.6.4 (2026-09-15 작업 입력 기준 운영 current; 기존 커리어는 생성 당시 버전 유지) |
-| 다음 승격 목표        | ruleset 1.7.1 / content pack 0.6.5 (코드·런북 준비; 배포 전에는 운영 current가 아님) |
+| 현재 신규 커리어 버전 | ruleset 1.7.1 / content pack 0.6.5 (2026-09-15 작업 입력 기준 운영 current; 기존 커리어는 생성 당시 버전 유지) |
+| 다음 승격 목표        | ruleset 1.7.2 / content pack 0.6.6 (첫 계약 흐름 단축, 코드·런북 준비; 배포 전에는 운영 current가 아님) |
 
 ## 최초 공개 결과
 
@@ -164,8 +164,8 @@
 `2026-09-05T15:00:00Z`, 종료는 NULL, challenge set은 `cs_season_1`, ACTIVE/non-test를 유지한다.
 1차 승격(`1.1.0/0.3.0` → `1.3.0/0.5.0`)은 2026-09-06, 2차 승격(`1.3.0/0.5.0` → `1.4.0/0.5.1`)은 2026-09-13,
 3차 승격(`1.4.0/0.5.1` → `1.5.0/0.6.0`)은 2026-09-14 완료했고, 4차 승격
-(`1.5.0/0.6.0` → `1.7.0/0.6.3`)도 완료됐다. 5차 승격
-(`1.7.0/0.6.3` → `1.7.0/0.6.4`)은 아래 콘텐츠 팩 0.6.4 절에 따른다.
+(`1.5.0/0.6.0` → `1.7.0/0.6.3`)·5차 승격(`1.7.0/0.6.3` → `1.7.0/0.6.4`)·6차 승격
+(`1.7.0/0.6.4` → `1.7.1/0.6.5`)도 완료됐다. 7차 승격(`1.7.1/0.6.5` → `1.7.2/0.6.6`)은 아래 절에 따른다.
 
 1. API를 먼저 배포한다. 시즌 1에 한해 승인 manifest 목록(`apps/api/src/sync/season-version-compatibility.ts`
    `APPROVED_PRODUCTION_MANIFESTS`)에 있는 pair끼리만 신규 최초 sync를 상호 허용한다. mixed pair,
@@ -491,6 +491,63 @@ root가 열리면 같은 시즌에 후속 슬롯이 없고, step 4 root 뒤 step
 workflow artifact의 역 CAS는 행이 여전히 정확한 `1.7.1/0.6.5`일 때만 두 버전 필드를
 `1.7.0/0.6.4`로 돌린다. 자동 실행하지 않으며 `meta.changes` 합 1과 D1/API 재조회를 확인한다.
 롤백 뒤에도 승인 목록의 `1.7.1/0.6.5`를 제거하지 않아 이미 생성된 커리어를 보호한다.
+
+## 시즌 1 manifest 7차 승격: 1.7.1/0.6.5 → 1.7.2/0.6.6 (첫 계약 흐름 단축, 사용자 결정 2026-09-15)
+
+운영 current의 출발점은 `svc_season_1`, `시즌 1`, `ACTIVE`, `isTest=false`, 시작
+`2026-09-05T15:00:00Z`, 종료 `null`, `cs_season_1`, ruleset `1.7.1` / pack `0.6.5`이다. 이 승격은
+시즌 행의 ID·이름·상태·기간·challenge set·test 여부를 유지하고 ruleset·content pack 두 필드를
+`1.7.2/0.6.6`으로 compare-and-set한다. `1.7.2`는 `1.7.1` 전체 복사 + `offerRules.preContract`
+(계약 전 최대 이벤트 수·브리지 이벤트 화이트리스트) 선택 키 추가이고, 이 키가 없는 과거 룰셋
+(1.7.1 이하)은 기존 배열을 그대로 써 기존 동작이 바뀌지 않는다(`packages/domain` 전체 골든·해시
+회귀로 확인). `0.6.6`은 `0.6.5` 전체 복사 + EVT-REL-001(라커룸 갈등)·EVT-DEV-002(훈련 코칭)
+트리거에 `{ "neq": ["contract.kind", ""] }` 조건 추가뿐이고 나머지 정의는 바이트까지 동일하다.
+원인·변경 근거는 PR #238(`feat-first-contract-flow`)에 있다.
+
+동기화 대상은 `production-release.mjs`, API 승인 manifest 목록, web 오프라인 폴백, local
+`svc_kickoff`, non-production `svc_line_test`, staging smoke와 수동 rehearsal 기대값이다. API
+승인 목록에는 `1.7.2/0.6.6`을 추가하되 기존 일곱 pair를 모두 보존한다. 따라서 포인터 전환과
+롤백 중 승인된 구·신 커리어의 늦은 최초 sync는 계속 허용하고, mixed pair·목록 밖 버전·다른 시즌
+ID는 거부한다. 이미 생성된 커리어의 저장 버전은 바꾸지 않는다.
+
+### 전제 (main 머지 순서)
+
+1. 첫 계약 흐름 PR #238(`feat-first-contract-flow`, 룰셋 1.7.2·팩 0.6.6)이 main에 있어야 한다. 없으면
+   web 번들이 `알 수 없는 contentPackVersion: 0.6.6`으로 폴백 생성을 실패하고 `apps/web` 단위 테스트
+   (`career-actions.test.ts`)가 모듈 로드에서 깨진다.
+2. 그 뒤 이 승격 PR(`release-ruleset-1-7-2`)을 머지한다. 이 PR은 코드·문서만 바꾸며 운영 D1은
+   건드리지 않는다. 이 브랜치는 #238 위에 스택돼 있어(base가 `feat-first-contract-flow`) GitHub PR이
+   그 상태로는 #238의 커밋까지 함께 보여준다 — #238이 먼저 main에 머지되면 GitHub이 이 PR의 base를
+   자동으로 main으로 바꾼다(리뷰 대상 diff가 이 PR만의 변경으로 줄어든다). #238이 머지되지 않은 채
+   이 PR만 머지하지 않는다.
+
+### 실행 순서와 게이트
+
+1. release CAS의 activate/noop/fail-closed/역 CAS, API 승인 pair 전체 상호 호환, web ACTIVE
+   registry·pack 호환, content validation, lint·typecheck·unit·build·bundle checks를 통과시킨다.
+2. PR merge 뒤 main CI가 staging `svc_line_test`를 `1.7.2/0.6.6`으로 upsert하고 staging smoke가
+   current manifest를 검증해야 한다. 신규 커리어의 진로 선택 → 스카우트 평가 → 첫 제안 → 계약 서명
+   흐름(계약 전 사건 최대 1건)과 기존 `1.7.1/0.6.5` 커리어 열림은 실제 staging에서 별도로 확인한다.
+3. Production Release `mode=preflight`, `expected_sha`=배포할 최신 main으로 실행해 운영 행이 위
+   고정 메타데이터와 `1.7.1/0.6.5`로 정확한지 확인한다. 실행 중 main push를 멈춘다.
+4. root만 `mode=deploy`, `confirmation=DEPLOY_PRODUCTION`, 시작 `2026-09-05T15:00:00Z`, 종료 비움,
+   `challenge_set_id=cs_season_1`로 실행한다. remote write 전 plan은 `activate`, CAS 후 재조회
+   plan은 `noop`이어야 한다. 다른 plan은 중단한다.
+5. current API가 같은 시즌 메타데이터와 `1.7.2/0.6.6`을 돌려주는지, health·CORS·web 200을 확인한다.
+   360px 실제 플레이로 새 커리어의 첫 계약 흐름과 PUT 200, 새로고침 뒤 동일 ID/revision/hash를
+   검증한다. QA 표본은 삭제하지 않는다.
+
+### 롤백
+
+workflow artifact의 `season-rollback.sql`은 행이 여전히 정확한 `1.7.2/0.6.6`일 때만 버전 두 필드를
+`1.7.1/0.6.5`로 돌리는 역 compare-and-set이다. 자동 실행하지 않으며 Wrangler JSON의 `meta.changes`
+합이 정확히 1인지와 D1/API 재조회 결과를 모두 확인한다. 0이면 성공으로 기록하지 않는다.
+
+롤백 뒤에도 API 승인 목록의 `1.7.2/0.6.6`을 유지해 이미 생성됐거나 아직 오프라인인 신 룰셋·팩
+커리어를 보호한다. 다음 production deploy 전에는 `PRODUCTION_SEASON`을 `1.7.1/0.6.5`로 되돌리는
+후속 PR을 먼저 머지하고 fallback·seed·smoke·rehearsal도 함께 맞춘다. 그 전에는 Production Release
+`deploy`나 `set-season-end`를 실행하지 않는다. DB Time Travel 복구나 사용자 기록 삭제를 manifest
+rollback 대신 사용하지 않는다.
 
 ## 공지 테이블 마이그레이션 + 운영 공지 seed 실행 (2026-09-14, notices)
 

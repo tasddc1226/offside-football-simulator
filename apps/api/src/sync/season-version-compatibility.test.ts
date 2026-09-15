@@ -10,8 +10,9 @@ const secondVersion = { rulesetVersion: '1.3.0', contentPackVersion: '0.5.0' };
 const thirdVersion = { rulesetVersion: '1.4.0', contentPackVersion: '0.5.1' };
 const fourthVersion = { rulesetVersion: '1.5.0', contentPackVersion: '0.6.0' };
 const ledgerVersion = { rulesetVersion: '1.7.0', contentPackVersion: '0.6.3' };
-const previousVersion = { rulesetVersion: '1.7.0', contentPackVersion: '0.6.4' };
-const currentVersion = { rulesetVersion: '1.7.1', contentPackVersion: '0.6.5' };
+const fifthVersion = { rulesetVersion: '1.7.0', contentPackVersion: '0.6.4' };
+const previousVersion = { rulesetVersion: '1.7.1', contentPackVersion: '0.6.5' };
+const currentVersion = { rulesetVersion: '1.7.2', contentPackVersion: '0.6.6' };
 
 describe('production season version compatibility', () => {
   // fail-closed 게이트: 승인 목록의 pair는 번들 레지스트리에 실제로 있어야 한다. 이 파일은 Production
@@ -32,7 +33,7 @@ describe('production season version compatibility', () => {
   });
 
   it('accepts every approved production pair during promotion and rollback', () => {
-    // 1.7.0/0.6.4 → 1.7.1/0.6.5 승격 전환 구간과 롤백.
+    // 1.7.1/0.6.5 → 1.7.2/0.6.6 승격 전환 구간과 롤백.
     expect(isAcceptedSeasonVersion('svc_season_1', currentVersion, previousVersion)).toBe(true);
     expect(isAcceptedSeasonVersion('svc_season_1', previousVersion, currentVersion)).toBe(true);
     // 최초 공개부터 현재까지 어느 승격 지점으로 롤백해도 미동기화 최초 sync를 보호한다.
@@ -42,6 +43,7 @@ describe('production season version compatibility', () => {
       thirdVersion,
       fourthVersion,
       ledgerVersion,
+      fifthVersion,
       previousVersion,
       currentVersion,
     ];
@@ -66,7 +68,7 @@ describe('production season version compatibility', () => {
     expect(
       isAcceptedSeasonVersion('svc_season_1', currentVersion, {
         rulesetVersion: '1.1.0',
-        contentPackVersion: '0.6.4',
+        contentPackVersion: '0.6.6',
       }),
     ).toBe(false);
     expect(
