@@ -55,6 +55,7 @@
 - 11:40 사용자 PR #222(T-7-022 리그 원장: 룰셋 1.7.0·팩 0.6.3) Codex가 squash 머지 `80a7868`(exact f229f0f CI PASS·scoped season e2e PASS, 전체 체인 타임아웃 3건은 단독 재실행 통과). 머지 후 main 제품 tree = 체인 돌린 f229f0f. **1.7.0은 등록만, ACTIVE 승격 없음 — 활성화 전 Legacy 재보정 검토 게이트(상위 밴드 22.7% vs 목표 32%) 미통과 상태 유지.** 다음: #224(d196126)를 Sol이 main 통합·focused web+e2e 후 최종 SHA 보고 예정, CPU 반환 상태.
 - 11:48 #224 로컬 통합 b4b3ba8(d196126 + main d6a7dec) 읽기전용 확인 PASS: 제품 delta 4파일 patch-id가 d196126과 동일(index.tsx·league-standings.tsx 충돌은 PR 쪽으로 해결, 결과 동일). Sol focused/e2e 진행 중, 최종 push SHA 오면 전체 체인.
 - 11:52 #224 최종 SHA 7cee56a(b4b3ba8 + 테스트 1줄) 전체 체인(e2e 제외) CHAIN EXIT 0, 타임아웃 없음(api·web 실제 실행, 8패키지 캐시 hit). Codex 보고·CPU 반환. Sol E2E2 PASS와 합산해 Codex가 머지 판단.
+- 11:54 사용자 PR #224(T-7-025 현재 리그 맥락) Codex가 squash 머지 `9762b73`(exact ce92dfe = 7cee56a + docs; 전체 체인 PASS + Sol E2E2 + root 360px 키보드·CTA·reload·동점 UI 인수 PASS). 머지 후 main 제품 tree = 체인 돌린 7cee56a. **이로써 사용자 세션 개선 묶음 #219·#221·#220·#222·#224 전부 main 머지 완료.** 유지 경계: 룰셋 1.7.0·팩 0.6.3은 등록만(ACTIVE 미승격), Legacy 상위 밴드 22.7%(목표 32%) 활성화 전 재보정 게이트 미통과, live API·Worker 미검증. 추가 코드·대량 검증 불필요(Codex). Claude 검증 산출물: 체인 로그 4건(c050957·b950c13·f229f0f·7cee56a), 회귀 1건(a765da8), 리뷰 8건.
 
 ## 2026-09-14 (D-79 — 밸런스 조정용 헤드리스 커리어 일괄 시뮬레이션 CLI, 도메인 직접 호출 방식 — 사용자 요청)
 
