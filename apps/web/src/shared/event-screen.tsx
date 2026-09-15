@@ -9,10 +9,13 @@ import type { ExecuteSuccess } from '@offside/engine-client';
 import {
   Button,
   ChoiceCard,
+  Dialog,
+  DialogTrigger,
   ErrorState,
   PlayerHeader,
   RadioGroup,
   ScreenIntro,
+  SheetContent,
   Skeleton,
   StatusStrip,
 } from '@offside/ui';
@@ -33,7 +36,17 @@ import { GamePending } from './game-presentation.js';
 const H1_STYLE = { fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' } as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
 
-export type EventScreenId = 'SCR-007' | 'SCR-008' | 'SCR-013' | 'SCR-016' | 'SCR-018' | 'SCR-019' | 'SCR-021' | 'SCR-022' | 'SCR-024' | 'SCR-032';
+export type EventScreenId =
+  | 'SCR-007'
+  | 'SCR-008'
+  | 'SCR-013'
+  | 'SCR-016'
+  | 'SCR-018'
+  | 'SCR-019'
+  | 'SCR-021'
+  | 'SCR-022'
+  | 'SCR-024'
+  | 'SCR-032';
 
 const EVENT_INTRO: Record<EventScreenId, { eyebrow: string; title: string }> = {
   'SCR-007': { eyebrow: '다음 무대', title: '어떤 길을 걸어갈까요?' },
@@ -61,6 +74,8 @@ export interface EventDecisionScreenProps {
   renderAbove?: (ctx: EventDecisionContext) => ReactNode;
   /** 확정 성공 뒤 동작. 기본은 SCR-014로 곧장 이동한다(navigateToResult). SCR-008은 연출을 먼저 보여준 뒤 이걸 호출한다. */
   onResolved?: (result: ExecuteSuccess, navigateToResult: () => void) => void;
+  /** 게임 플레이 중 발생한 사건만 모달로 제시한다. 온보딩 SCR-007·008은 기존 전체 화면을 유지한다. */
+  modal?: boolean;
 }
 
 export function EventDecisionScreen({
@@ -68,6 +83,7 @@ export function EventDecisionScreen({
   screenId,
   renderAbove,
   onResolved,
+  modal = false,
 }: EventDecisionScreenProps) {
   const query = useCareer(careerId);
   const resolveMutation = useCareerMutation('resolveEvent');
@@ -75,6 +91,7 @@ export function EventDecisionScreen({
   const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(true);
   const submittingRef = useRef(false);
 
   useCommittingExitGuard(resolveMutation.isPending);
@@ -108,7 +125,10 @@ export function EventDecisionScreen({
 
   const { state } = query.data;
   const pending = state.pending;
-  if (pending === null || (pending.kind !== 'EVENT' && pending.kind !== 'INJURY' && pending.kind !== 'NATIONAL_TEAM')) {
+  if (
+    pending === null ||
+    (pending.kind !== 'EVENT' && pending.kind !== 'INJURY' && pending.kind !== 'NATIONAL_TEAM')
+  ) {
     // 라우트 loader가 이미 screenForCareer로 redirect했어야 한다. 방어적 fallback.
     return null;
   }
@@ -176,94 +196,59 @@ export function EventDecisionScreen({
     }
   }
 
-  return (
-    <div className="os-screen">
-      <ScreenIntro {...EVENT_INTRO[screenId]} />
+  function handleDialogOpenChange(nextOpen: boolean) {
+    if (!nextOpen && resolveMutation.isPending) return;
+    setDialogOpen(nextOpen);
+  }
 
-      <PlayerBanner
-        name={tokens.name}
-        teamName={tokens.team}
-        teamId={currentTeamId(state, ruleset)}
-        position={positionField.value}
-        shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
-        age={state.age}
-        ovr={profile?.baseOvr ?? null}
-      />
+  const intro = EVENT_INTRO[screenId];
 
-      <section className="os-story-card" aria-label="현재 상황">
-        <p className="font-os text-os-text" style={BODY_STYLE}>
-          {renderNarrative(eventSituation(definition), tokens)}
-        </p>
-      </section>
-
-      <details className="os-panel">
-        <summary className="cursor-pointer font-os font-semibold text-os-text">
-          선수 상태 보기
-        </summary>
-        <div className="mt-os-4 flex flex-col gap-os-3">
-          <PlayerHeader
-            name={tokens.name}
-            team={tokens.team}
-            position={positionField}
-            archetype={{
-              label: '아키타입',
-              value: archetypeName(
-                ruleset,
-                profile?.archetypeId ?? state.player.draft.archetypeId,
-              ),
-            }}
-            shirtNumber={{
-              label: '등번호',
-              value: state.contract ? String(state.contract.shirtNumber) : '—',
-            }}
+  const choiceSection = (
+    <section className="flex flex-col gap-os-3" aria-labelledby="event-choice-heading">
+      <div className="flex items-center justify-between gap-os-3">
+        <h2 id="event-choice-heading" className="os-section-title">
+          어떻게 행동할까요?
+        </h2>
+        <span className="os-muted" style={{ fontSize: 'var(--os-fs-caption)' }}>
+          하나를 선택하세요
+        </span>
+      </div>
+      <RadioGroup
+        aria-label="선택지"
+        value={selectedChoiceId}
+        onValueChange={handleSelect}
+        className="flex flex-col gap-os-3"
+      >
+        {definition.choices.map((choice) => (
+          <ChoiceCard
+            key={choice.id}
+            value={choice.id}
+            label={choice.label}
+            riskLevel={choice.riskLabel}
+            riskLabel={RISK_LABEL_KO[choice.riskLabel]}
+            effects={choice.previewEffects
+              .filter(
+                (preview) =>
+                  pending.kind !== 'NATIONAL_TEAM' || !preview.label.startsWith('특례 규칙:'),
+              )
+              .map((preview) => preview.label)}
+            selectedLabel="선택됨"
+            disabled={resolveMutation.isPending}
           />
-          <StatusStrip items={u18StatusStripItems(state)} />
-        </div>
-      </details>
+        ))}
+      </RadioGroup>
+    </section>
+  );
 
-      {renderAbove?.({ state, definition, tokens })}
-
-      <section className="flex flex-col gap-os-3" aria-labelledby="event-choice-heading">
-        <div className="flex items-center justify-between gap-os-3">
-          <h2 id="event-choice-heading" className="os-section-title">
-            어떻게 행동할까요?
-          </h2>
-          <span className="os-muted" style={{ fontSize: 'var(--os-fs-caption)' }}>
-            하나를 선택하세요
-          </span>
-        </div>
-        <RadioGroup
-          aria-label="선택지"
-          value={selectedChoiceId}
-          onValueChange={handleSelect}
-          className="flex flex-col gap-os-3"
-        >
-          {definition.choices.map((choice) => (
-            <ChoiceCard
-              key={choice.id}
-              value={choice.id}
-              label={choice.label}
-              riskLevel={choice.riskLabel}
-              riskLabel={RISK_LABEL_KO[choice.riskLabel]}
-              effects={choice.previewEffects
-                .filter((preview) => pending.kind !== 'NATIONAL_TEAM' || !preview.label.startsWith('특례 규칙:'))
-                .map((preview) => preview.label)}
-              selectedLabel="선택됨"
-              disabled={resolveMutation.isPending}
-            />
-          ))}
-        </RadioGroup>
-      </section>
-
+  const resolutionFeedback = (
+    <>
       {errorMessage ? <ErrorState message={errorMessage} onRetry={handleConfirm} /> : null}
-
       {resolveMutation.isPending ? (
         <GamePending
           title="선택을 확정하고 있습니다"
           detail="결과가 저장되면 실제 변화와 함께 공개됩니다."
         />
       ) : null}
-
       <div className="os-action-dock">
         <Button
           variant="primary"
@@ -273,7 +258,115 @@ export function EventDecisionScreen({
           {resolveMutation.isPending ? '확정 중' : '확정'}
         </Button>
       </div>
-    </div>
+    </>
+  );
+
+  if (!modal) {
+    return (
+      <div className="os-screen">
+        <ScreenIntro {...intro} />
+
+        <PlayerBanner
+          name={tokens.name}
+          teamName={tokens.team}
+          teamId={currentTeamId(state, ruleset)}
+          position={positionField.value}
+          shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
+          age={state.age}
+          ovr={profile?.baseOvr ?? null}
+        />
+
+        <section className="os-story-card" aria-label="현재 상황">
+          <p className="font-os text-os-text" style={BODY_STYLE}>
+            {renderNarrative(eventSituation(definition), tokens)}
+          </p>
+        </section>
+
+        <details className="os-panel">
+          <summary className="cursor-pointer font-os font-semibold text-os-text">
+            선수 상태 보기
+          </summary>
+          <div className="mt-os-4 flex flex-col gap-os-3">
+            <PlayerHeader
+              name={tokens.name}
+              team={tokens.team}
+              position={positionField}
+              archetype={{
+                label: '아키타입',
+                value: archetypeName(
+                  ruleset,
+                  profile?.archetypeId ?? state.player.draft.archetypeId,
+                ),
+              }}
+              shirtNumber={{
+                label: '등번호',
+                value: state.contract ? String(state.contract.shirtNumber) : '—',
+              }}
+            />
+            <StatusStrip items={u18StatusStripItems(state)} />
+          </div>
+        </details>
+
+        {renderAbove?.({ state, definition, tokens })}
+        {choiceSection}
+        {resolutionFeedback}
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
+      <div className="os-screen">
+        <ScreenIntro eyebrow="새로운 사건" title="결정이 기다리고 있습니다" />
+
+        <PlayerBanner
+          name={tokens.name}
+          teamName={tokens.team}
+          teamId={currentTeamId(state, ruleset)}
+          position={positionField.value}
+          shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
+          age={state.age}
+          ovr={profile?.baseOvr ?? null}
+        />
+
+        <section className="os-panel flex flex-col gap-os-3" aria-label="보류 중인 사건">
+          <p className="os-eyebrow">{intro.eyebrow}</p>
+          <h2 className="os-section-title">{intro.title}</h2>
+          <p className="os-muted">선택을 확정하기 전까지 이 사건은 그대로 기다립니다.</p>
+          <DialogTrigger asChild>
+            <Button variant="primary">사건 선택 다시 열기</Button>
+          </DialogTrigger>
+        </section>
+      </div>
+
+      <SheetContent
+        className="os-event-dialog"
+        title={intro.title}
+        closeLabel="사건 선택 닫기"
+        closeDisabled={resolveMutation.isPending}
+        onEscapeKeyDown={(event) => {
+          if (resolveMutation.isPending) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (resolveMutation.isPending) event.preventDefault();
+        }}
+      >
+        <div className="flex flex-col gap-os-4">
+          <p className="os-eyebrow">{intro.eyebrow}</p>
+
+          <section className="os-story-card" aria-label="현재 상황">
+            <p className="font-os text-os-text" style={BODY_STYLE}>
+              {renderNarrative(eventSituation(definition), tokens)}
+            </p>
+          </section>
+
+          {renderAbove?.({ state, definition, tokens })}
+
+          {choiceSection}
+          {resolutionFeedback}
+        </div>
+      </SheetContent>
+    </Dialog>
   );
 }
 

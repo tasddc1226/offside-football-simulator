@@ -23,10 +23,17 @@ function EventScreen() {
   const { careerId } = Route.useParams();
   const query = useCareer(careerId);
   const screenId = query.data ? screenForCareer(query.data.state).screenId : 'SCR-013';
-  return <EventDecisionScreen
-    key={query.data?.state.pending && 'eventId' in query.data.state.pending ? `${careerId}:${query.data.state.pending.eventId}:${query.data.state.currentStep}` : careerId}
-    careerId={careerId}
-    screenId={screenId as EventScreenId}
-    renderAbove={(context) => <Phase4Context {...context} />}
-  />;
+  return (
+    <EventDecisionScreen
+      key={
+        query.data?.state.pending && 'eventId' in query.data.state.pending
+          ? `${careerId}:${query.data.state.pending.eventId}:${query.data.state.currentStep}`
+          : careerId
+      }
+      careerId={careerId}
+      screenId={screenId as EventScreenId}
+      modal
+      renderAbove={(context) => <Phase4Context {...context} />}
+    />
+  );
 }
