@@ -45,7 +45,7 @@ const API_URL = workerOrigin(process.env.E2E_STAGING_API_URL ?? DEFAULT_API_URL,
 const expectedSeason = {
   id: 'svc_line_test',
   rulesetVersion: '1.7.0',
-  contentPackVersion: '0.6.3',
+  contentPackVersion: '0.6.4',
 };
 const smokeMetadata: SmokeMetadata = {
   webUrl: BASE_URL,

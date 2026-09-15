@@ -52,7 +52,7 @@ const expectedServiceSeasonId = 'svc_line_test';
 // staging seed(apps/api/seeds/bootstrap-non-production.sql)와 tooling/scripts/production-release.mjs
 // PRODUCTION_SEASON(운영 승격 목표 manifest)과 같은 값을 유지한다 — 바꿀 때 함께 갱신한다.
 const expectedRulesetVersion = '1.7.0';
-const expectedContentPackVersion = '0.6.3';
+const expectedContentPackVersion = '0.6.4';
 // 사용자 결정(2026-09-13, D-77): 클라이언트는 더 이상 시뮬레이션 모드를 고르지 않는다 — 모든 시즌은
 // 항상 FAST로 시작한다.
 const REHEARSAL_MODE = 'FAST';
