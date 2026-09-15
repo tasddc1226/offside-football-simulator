@@ -42,6 +42,7 @@
 - 10:58 Codex: #220 focused 검증 PASS(ego 검증 진행), #221 CPU 슬롯 배정, #219 문서 head 922b83d에 재통합 결정 반영 push. 최종 UI 머지 게이트는 정확 SHA에 Claude가 전체 체인+스코프 e2e 실행(대량 회귀는 UI에 불필요).
 - 10:56 #219(문서: 리그 맥락·커리어 경험 PRD·ADR 제안·작업 계획, 922b83d) CI 성공 후 squash `e8d70da` main 머지(Codex 조율). 앱 코드 변경 없음, 검증 반복 불필요.
 - 11:02 #221 통합 SHA c050957(3d96846 충돌 해결, main c0a83cd 기준) 읽기 전용 리뷰 **통과**: web 4파일+브리프만, 4탭 구조·우승 연혁·tab 4개 단언 유지, #221 옛 5탭 블록 폐기, 후속 영수증은 시즌/연대기/계약/offers에 배치. full 체인은 Codex 슬롯 배정 후 실행.
+- 11:04 Codex가 CPU 슬롯 배정 → #221 exact SHA c050957 전체 체인(e2e 제외, worker 스코프 e2e와 합산 예정) 시작. 워크트리 `/tmp/offside-verify/sha-c050957…`, Node 22.23.1, 로그 `$TMPDIR/verify-chain-c050957….log`(단계별 STEP 마커). 사전 확인: main HEAD 1d8f8ee와 #221 merge-base c0a83cd 사이 변경은 docs 7파일뿐(apps/packages/tooling/lock 불변) → 머지 전 제품 tree 불변 조건 충족.
 
 ## 2026-09-14 (D-79 — 밸런스 조정용 헤드리스 커리어 일괄 시뮬레이션 CLI, 도메인 직접 호출 방식 — 사용자 요청)
 
