@@ -8,8 +8,9 @@ import {
 const firstVersion = { rulesetVersion: '1.1.0', contentPackVersion: '0.3.0' };
 const secondVersion = { rulesetVersion: '1.3.0', contentPackVersion: '0.5.0' };
 const thirdVersion = { rulesetVersion: '1.4.0', contentPackVersion: '0.5.1' };
-const previousVersion = { rulesetVersion: '1.5.0', contentPackVersion: '0.6.0' };
-const currentVersion = { rulesetVersion: '1.7.0', contentPackVersion: '0.6.3' };
+const fourthVersion = { rulesetVersion: '1.5.0', contentPackVersion: '0.6.0' };
+const previousVersion = { rulesetVersion: '1.7.0', contentPackVersion: '0.6.3' };
+const currentVersion = { rulesetVersion: '1.7.0', contentPackVersion: '0.6.4' };
 
 describe('production season version compatibility', () => {
   // fail-closed 게이트: 승인 목록의 pair는 번들 레지스트리에 실제로 있어야 한다. 이 파일은 Production
@@ -30,11 +31,18 @@ describe('production season version compatibility', () => {
   });
 
   it('accepts every approved production pair during promotion and rollback', () => {
-    // 1.5.0/0.6.0 → 1.7.0/0.6.3 승격 전환 구간과 롤백.
+    // 1.7.0/0.6.3 → 1.7.0/0.6.4 승격 전환 구간과 롤백.
     expect(isAcceptedSeasonVersion('svc_season_1', currentVersion, previousVersion)).toBe(true);
     expect(isAcceptedSeasonVersion('svc_season_1', previousVersion, currentVersion)).toBe(true);
     // 최초 공개부터 현재까지 어느 승격 지점으로 롤백해도 미동기화 최초 sync를 보호한다.
-    const history = [firstVersion, secondVersion, thirdVersion, previousVersion, currentVersion];
+    const history = [
+      firstVersion,
+      secondVersion,
+      thirdVersion,
+      fourthVersion,
+      previousVersion,
+      currentVersion,
+    ];
     for (const seasonVersion of history) {
       for (const requestedVersion of history) {
         expect(
@@ -50,13 +58,13 @@ describe('production season version compatibility', () => {
     expect(
       isAcceptedSeasonVersion('svc_season_1', currentVersion, {
         rulesetVersion: '1.7.0',
-        contentPackVersion: '0.6.0',
+        contentPackVersion: '0.6.2',
       }),
     ).toBe(false);
     expect(
       isAcceptedSeasonVersion('svc_season_1', currentVersion, {
         rulesetVersion: '1.1.0',
-        contentPackVersion: '0.6.3',
+        contentPackVersion: '0.6.4',
       }),
     ).toBe(false);
     expect(
