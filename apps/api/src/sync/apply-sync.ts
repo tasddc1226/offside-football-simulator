@@ -1,4 +1,5 @@
 import { SNAPSHOT_STATE_RECOMMENDED_BYTES, type PutCareerBody } from '@offside/contracts';
+import { LEGACY_VERSIONS, type LegacyVersion } from '@offside/domain';
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { runBatch } from '../db/repos/batch.js';
@@ -141,8 +142,8 @@ export async function applySync(
               : undefined;
           const storedVersion =
             validObject && 'legacyVersion' in storedLegacy &&
-            (storedLegacy.legacyVersion === '1.0.0' || storedLegacy.legacyVersion === '1.1.0')
-              ? storedLegacy.legacyVersion
+            LEGACY_VERSIONS.includes(storedLegacy.legacyVersion as LegacyVersion)
+              ? (storedLegacy.legacyVersion as LegacyVersion)
               : undefined;
           if (
             storedPin === undefined ||

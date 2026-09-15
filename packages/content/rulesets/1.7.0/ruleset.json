@@ -1,16 +1,7 @@
 {
   "version": "1.7.0",
   "initialAge": 19,
-  "positions": [
-    "GK",
-    "CB",
-    "FB",
-    "DM",
-    "CM",
-    "AM",
-    "W",
-    "ST"
-  ],
+  "positions": ["GK", "CB", "FB", "DM", "CM", "AM", "W", "ST"],
   "archetypes": [
     {
       "id": "gk-shot-stopper",
@@ -1494,111 +1485,56 @@
   ],
   "offerRules": {
     "maxOffers": 3,
-    "countBonusTags": [
-      "에이전트_계약",
-      "주목받는_유망주"
-    ],
+    "countBonusTags": ["에이전트_계약", "주목받는_유망주"],
     "branches": [
       {
         "id": "academy",
-        "requireTags": [
-          "진로_아카데미"
-        ],
+        "requireTags": ["진로_아카데미"],
         "fixedTeamId": "seoul-hangang-fc-b",
-        "tiers": [
-          "YOUTH"
-        ]
+        "tiers": ["YOUTH"]
       },
       {
         "id": "lower-league",
-        "requireTags": [
-          "진로_하부리그",
-          "입단테스트_완료"
-        ],
-        "tiers": [
-          2,
-          3
-        ]
+        "requireTags": ["진로_하부리그", "입단테스트_완료"],
+        "tiers": [2, 3]
       },
       {
         "id": "tryout-fail",
-        "requireTags": [
-          "진로_입단테스트",
-          "테스트_실패"
-        ],
-        "tiers": [
-          3
-        ],
+        "requireTags": ["진로_입단테스트", "테스트_실패"],
+        "tiers": [3],
         "fixedCount": 1
       },
       {
         "id": "tryout-neutral",
-        "requireTags": [
-          "진로_입단테스트",
-          "테스트_보통"
-        ],
-        "tiers": [
-          2,
-          3
-        ]
+        "requireTags": ["진로_입단테스트", "테스트_보통"],
+        "tiers": [2, 3]
       },
       {
         "id": "tryout-success",
-        "requireTags": [
-          "진로_입단테스트",
-          "테스트_성공"
-        ],
-        "tiers": [
-          1,
-          2,
-          3
-        ],
+        "requireTags": ["진로_입단테스트", "테스트_성공"],
+        "tiers": [1, 2, 3],
         "topTierMinOvr": 60
       },
       {
         "id": "tryout-skipped",
-        "requireTags": [
-          "진로_입단테스트"
-        ],
-        "forbidTags": [
-          "입단테스트_완료"
-        ],
-        "tiers": [
-          3
-        ],
+        "requireTags": ["진로_입단테스트"],
+        "forbidTags": ["입단테스트_완료"],
+        "tiers": [3],
         "fixedCount": 1
       },
       {
         "id": "lower-league-skipped",
-        "requireTags": [
-          "진로_하부리그"
-        ],
-        "forbidTags": [
-          "입단테스트_완료"
-        ],
-        "tiers": [
-          3
-        ],
+        "requireTags": ["진로_하부리그"],
+        "forbidTags": ["입단테스트_완료"],
+        "tiers": [3],
         "fixedCount": 1
       }
     ],
     "rolePromiseByTier": {
-      "1": [
-        "RESERVE",
-        "BENCH"
-      ],
-      "2": [
-        "BENCH",
-        "ROTATION"
-      ],
-      "3": [
-        "ROTATION",
-        "STARTER"
-      ],
-      "YOUTH": [
-        "ROTATION",
-        "STARTER"
-      ]
+      "1": ["RESERVE", "BENCH"],
+      "2": ["BENCH", "ROTATION"],
+      "3": ["ROTATION", "STARTER"],
+      "YOUTH": ["ROTATION", "STARTER"]
     },
     "lengthSeasons": {
       "min": 1,
@@ -1618,30 +1554,19 @@
     "demandBands": [
       {
         "maxIndexCenti": 3499,
-        "tiers": [
-          3
-        ]
+        "tiers": [3]
       },
       {
         "maxIndexCenti": 5499,
-        "tiers": [
-          2,
-          3
-        ]
+        "tiers": [2, 3]
       },
       {
         "maxIndexCenti": 7499,
-        "tiers": [
-          1,
-          2
-        ]
+        "tiers": [1, 2]
       },
       {
         "maxIndexCenti": 10000,
-        "tiers": [
-          1,
-          2
-        ]
+        "tiers": [1, 2]
       }
     ],
     "interest": {
@@ -1749,18 +1674,9 @@
       "managerTrustPromiseBreach": 0
     },
     "rivalPairs": [
-      [
-        "seoul-hangang-fc",
-        "suwon-hwahong-fc"
-      ],
-      [
-        "anyang-pyeongchon-fc",
-        "bucheon-wonmi-fc"
-      ],
-      [
-        "yeoncheon-hantangang-fc",
-        "boeun-songni-fc"
-      ]
+      ["seoul-hangang-fc", "suwon-hwahong-fc"],
+      ["anyang-pyeongchon-fc", "bucheon-wonmi-fc"],
+      ["yeoncheon-hantangang-fc", "boeun-songni-fc"]
     ]
   },
   "contractRules": {
@@ -2116,30 +2032,14 @@
         }
       },
       "preferredArchetypeIds": {
-        "GK": [
-          "gk-sweeper-keeper"
-        ],
-        "CB": [
-          "cb-ball-playing"
-        ],
-        "FB": [
-          "fb-overlapping"
-        ],
-        "DM": [
-          "dm-deep-lying-playmaker"
-        ],
-        "CM": [
-          "cm-playmaker"
-        ],
-        "AM": [
-          "am-playmaker"
-        ],
-        "W": [
-          "w-inverted-winger"
-        ],
-        "ST": [
-          "st-false-nine"
-        ]
+        "GK": ["gk-sweeper-keeper"],
+        "CB": ["cb-ball-playing"],
+        "FB": ["fb-overlapping"],
+        "DM": ["dm-deep-lying-playmaker"],
+        "CM": ["cm-playmaker"],
+        "AM": ["am-playmaker"],
+        "W": ["w-inverted-winger"],
+        "ST": ["st-false-nine"]
       }
     },
     {
@@ -2249,30 +2149,14 @@
         }
       },
       "preferredArchetypeIds": {
-        "GK": [
-          "gk-shot-stopper"
-        ],
-        "CB": [
-          "cb-stopper"
-        ],
-        "FB": [
-          "fb-defensive"
-        ],
-        "DM": [
-          "dm-destroyer"
-        ],
-        "CM": [
-          "cm-box-to-box"
-        ],
-        "AM": [
-          "am-shadow-striker"
-        ],
-        "W": [
-          "w-touchline-winger"
-        ],
-        "ST": [
-          "st-poacher"
-        ]
+        "GK": ["gk-shot-stopper"],
+        "CB": ["cb-stopper"],
+        "FB": ["fb-defensive"],
+        "DM": ["dm-destroyer"],
+        "CM": ["cm-box-to-box"],
+        "AM": ["am-shadow-striker"],
+        "W": ["w-touchline-winger"],
+        "ST": ["st-poacher"]
       }
     },
     {
@@ -2382,30 +2266,14 @@
         }
       },
       "preferredArchetypeIds": {
-        "GK": [
-          "gk-commander"
-        ],
-        "CB": [
-          "cb-aerial-dominator"
-        ],
-        "FB": [
-          "fb-inverted"
-        ],
-        "DM": [
-          "dm-box-to-box"
-        ],
-        "CM": [
-          "cm-advanced"
-        ],
-        "AM": [
-          "am-wide-creator"
-        ],
-        "W": [
-          "inside-forward"
-        ],
-        "ST": [
-          "st-target-man"
-        ]
+        "GK": ["gk-commander"],
+        "CB": ["cb-aerial-dominator"],
+        "FB": ["fb-inverted"],
+        "DM": ["dm-box-to-box"],
+        "CM": ["cm-advanced"],
+        "AM": ["am-wide-creator"],
+        "W": ["inside-forward"],
+        "ST": ["st-target-man"]
       }
     }
   ],
@@ -2463,17 +2331,8 @@
     {
       "id": "fa-cup",
       "name": "K컵",
-      "tiers": [
-        1,
-        2,
-        3
-      ],
-      "rounds": [
-        "R1",
-        "R2",
-        "SEMI",
-        "FINAL"
-      ]
+      "tiers": [1, 2, 3],
+      "rounds": ["R1", "R2", "SEMI", "FINAL"]
     }
   ],
   "competitorNames": [
@@ -2547,35 +2406,13 @@
     },
     "positionAdjacency": {
       "GK": [],
-      "CB": [
-        "FB",
-        "DM"
-      ],
-      "FB": [
-        "CB",
-        "W"
-      ],
-      "DM": [
-        "CB",
-        "CM"
-      ],
-      "CM": [
-        "DM",
-        "AM"
-      ],
-      "AM": [
-        "CM",
-        "W"
-      ],
-      "W": [
-        "FB",
-        "AM",
-        "ST"
-      ],
-      "ST": [
-        "AM",
-        "W"
-      ]
+      "CB": ["FB", "DM"],
+      "FB": ["CB", "W"],
+      "DM": ["CB", "CM"],
+      "CM": ["DM", "AM"],
+      "AM": ["CM", "W"],
+      "W": ["FB", "AM", "ST"],
+      "ST": ["AM", "W"]
     },
     "proficiencyOnChange": {
       "adjacent": 80,
@@ -2674,36 +2511,9 @@
       }
     ],
     "scoreTable": {
-      "winnerGoals": [
-        1,
-        1,
-        2,
-        2,
-        2,
-        3,
-        3,
-        4
-      ],
-      "loserGoalsRaw": [
-        0,
-        0,
-        0,
-        1,
-        1,
-        1,
-        2,
-        3
-      ],
-      "drawGoals": [
-        0,
-        0,
-        1,
-        1,
-        1,
-        2,
-        2,
-        3
-      ]
+      "winnerGoals": [1, 1, 2, 2, 2, 3, 3, 4],
+      "loserGoalsRaw": [0, 0, 0, 1, 1, 1, 2, 3],
+      "drawGoals": [0, 0, 1, 1, 1, 2, 2, 3]
     },
     "minutesTable": {
       "start": [
@@ -2744,16 +2554,7 @@
           "minute": 80
         }
       ],
-      "sub": [
-        0,
-        0,
-        0,
-        10,
-        15,
-        20,
-        25,
-        30
-      ]
+      "sub": [0, 0, 0, 10, 15, 20, 25, 30]
     },
     "involvement": {
       "performanceWeight": 0.7,
@@ -2768,153 +2569,85 @@
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              0,
-              0
-            ]
+            "values": [0, 0, 0]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              0,
-              0,
-              1,
-              1
-            ]
+            "values": [0, 0, 1, 1]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              0,
-              1,
-              1,
-              1,
-              2
-            ]
+            "values": [0, 1, 1, 1, 2]
           }
         ],
         "assists": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              0,
-              0
-            ]
+            "values": [0, 0, 0]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              0,
-              0,
-              1
-            ]
+            "values": [0, 0, 1]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              0,
-              1,
-              1,
-              2
-            ]
+            "values": [0, 1, 1, 2]
           }
         ],
         "xgCenti": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              10,
-              20,
-              30
-            ]
+            "values": [10, 20, 30]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              30,
-              45,
-              60
-            ]
+            "values": [30, 45, 60]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              60,
-              80,
-              100,
-              120
-            ]
+            "values": [60, 80, 100, 120]
           }
         ],
         "shots": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              1,
-              1
-            ]
+            "values": [0, 1, 1]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              1,
-              2,
-              2,
-              3
-            ]
+            "values": [1, 2, 2, 3]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              2,
-              3,
-              4,
-              5
-            ]
+            "values": [2, 3, 4, 5]
           }
         ],
         "offsides": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              0,
-              0
-            ]
+            "values": [0, 0, 0]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              0,
-              0,
-              1
-            ]
+            "values": [0, 0, 1]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              0,
-              1,
-              1,
-              2
-            ]
+            "values": [0, 1, 1, 2]
           }
         ]
       },
@@ -2923,185 +2656,102 @@
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              0,
-              0
-            ]
+            "values": [0, 0, 0]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              0,
-              0,
-              1
-            ]
+            "values": [0, 0, 1]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              0,
-              1,
-              1,
-              2
-            ]
+            "values": [0, 1, 1, 2]
           }
         ],
         "chancesCreated": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              1,
-              1
-            ]
+            "values": [0, 1, 1]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              1,
-              2,
-              3
-            ]
+            "values": [1, 2, 3]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              2,
-              3,
-              4,
-              5
-            ]
+            "values": [2, 3, 4, 5]
           }
         ],
         "progressivePasses": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              1,
-              2,
-              3
-            ]
+            "values": [1, 2, 3]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              3,
-              4,
-              5,
-              6
-            ]
+            "values": [3, 4, 5, 6]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              5,
-              6,
-              7,
-              8,
-              9
-            ]
+            "values": [5, 6, 7, 8, 9]
           }
         ],
         "passesAttempted": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              15,
-              20,
-              25
-            ]
+            "values": [15, 20, 25]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              25,
-              30,
-              35,
-              40
-            ]
+            "values": [25, 30, 35, 40]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              35,
-              40,
-              45,
-              50
-            ]
+            "values": [35, 40, 45, 50]
           }
         ],
         "passesCompleted": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              10,
-              15,
-              20
-            ]
+            "values": [10, 15, 20]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              20,
-              25,
-              30,
-              32
-            ]
+            "values": [20, 25, 30, 32]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              30,
-              35,
-              38,
-              42
-            ]
+            "values": [30, 35, 38, 42]
           }
         ],
         "ballRecoveries": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              2,
-              3,
-              4
-            ]
+            "values": [2, 3, 4]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              4,
-              5,
-              6,
-              7
-            ]
+            "values": [4, 5, 6, 7]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              6,
-              7,
-              8,
-              9
-            ]
+            "values": [6, 7, 8, 9]
           }
         ]
       },
@@ -3110,121 +2760,68 @@
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              1,
-              1
-            ]
+            "values": [0, 1, 1]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              1,
-              2,
-              3
-            ]
+            "values": [1, 2, 3]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              2,
-              3,
-              4,
-              5
-            ]
+            "values": [2, 3, 4, 5]
           }
         ],
         "interceptions": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              1,
-              1
-            ]
+            "values": [0, 1, 1]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              1,
-              2,
-              3
-            ]
+            "values": [1, 2, 3]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              2,
-              3,
-              4
-            ]
+            "values": [2, 3, 4]
           }
         ],
         "aerialsWon": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              1,
-              1
-            ]
+            "values": [0, 1, 1]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              1,
-              2,
-              3
-            ]
+            "values": [1, 2, 3]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              2,
-              3,
-              4,
-              5
-            ]
+            "values": [2, 3, 4, 5]
           }
         ],
         "goalsConcededInvolved": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              1,
-              1,
-              2
-            ]
+            "values": [0, 1, 1, 2]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              0,
-              0,
-              1,
-              1
-            ]
+            "values": [0, 0, 1, 1]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              0,
-              0,
-              0,
-              1
-            ]
+            "values": [0, 0, 0, 1]
           }
         ]
       },
@@ -3233,120 +2830,68 @@
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              1,
-              2
-            ]
+            "values": [0, 1, 2]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              2,
-              3,
-              4,
-              5
-            ]
+            "values": [2, 3, 4, 5]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              4,
-              5,
-              6,
-              7
-            ]
+            "values": [4, 5, 6, 7]
           }
         ],
         "psxgMinusGoalsCenti": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              -50,
-              -20,
-              0
-            ]
+            "values": [-50, -20, 0]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              0,
-              20,
-              40
-            ]
+            "values": [0, 20, 40]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              30,
-              60,
-              90,
-              120
-            ]
+            "values": [30, 60, 90, 120]
           }
         ],
         "crossesClaimed": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              0,
-              1,
-              1
-            ]
+            "values": [0, 1, 1]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              1,
-              2,
-              3
-            ]
+            "values": [1, 2, 3]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              2,
-              3,
-              4
-            ]
+            "values": [2, 3, 4]
           }
         ],
         "buildUpPasses": [
           {
             "min": 0,
             "max": 39,
-            "values": [
-              10,
-              15,
-              20
-            ]
+            "values": [10, 15, 20]
           },
           {
             "min": 40,
             "max": 69,
-            "values": [
-              18,
-              22,
-              26
-            ]
+            "values": [18, 22, 26]
           },
           {
             "min": 70,
             "max": 100,
-            "values": [
-              22,
-              28,
-              32,
-              36
-            ]
+            "values": [22, 28, 32, 36]
           }
         ]
       }
@@ -3453,11 +2998,11 @@
     "ageCurves": {
       "PHYSICAL": [
         {
-          "maxAge": 25,
+          "maxAge": 22,
           "multBp": 10000
         },
         {
-          "maxAge": 28,
+          "maxAge": 25,
           "multBp": 5000
         },
         {
@@ -3467,15 +3012,15 @@
       ],
       "TECHNICAL": [
         {
-          "maxAge": 20,
+          "maxAge": 18,
           "multBp": 8000
         },
         {
-          "maxAge": 29,
+          "maxAge": 24,
           "multBp": 10000
         },
         {
-          "maxAge": 32,
+          "maxAge": 27,
           "multBp": 5000
         },
         {
@@ -3485,49 +3030,49 @@
       ],
       "MENTAL": [
         {
-          "maxAge": 23,
+          "maxAge": 21,
           "multBp": 7000
         },
         {
-          "maxAge": 33,
+          "maxAge": 28,
           "multBp": 10000
         },
         {
           "maxAge": 99,
-          "multBp": 3000
+          "multBp": 0
         }
       ],
       "GOALKEEPING": [
         {
-          "maxAge": 26,
+          "maxAge": 24,
           "multBp": 8000
         },
         {
-          "maxAge": 34,
+          "maxAge": 29,
           "multBp": 10000
         },
         {
           "maxAge": 99,
-          "multBp": 3000
+          "multBp": 0
         }
       ]
     },
     "decline": {
       "PHYSICAL": {
-        "startAge": 29,
-        "perYearCenti": 40
+        "startAge": 25,
+        "perYearCenti": 45
       },
       "TECHNICAL": {
-        "startAge": 32,
-        "perYearCenti": 25
+        "startAge": 28,
+        "perYearCenti": 30
       },
       "MENTAL": {
-        "startAge": 34,
-        "perYearCenti": 20
+        "startAge": 30,
+        "perYearCenti": 25
       },
       "GOALKEEPING": {
-        "startAge": 35,
-        "perYearCenti": 25
+        "startAge": 31,
+        "perYearCenti": 30
       }
     }
   },
@@ -3560,33 +3105,25 @@
         "id": "KNEE",
         "weight": 20,
         "recurrenceBaseBp": 2500,
-        "sequelaKeys": [
-          "durability"
-        ]
+        "sequelaKeys": ["durability"]
       },
       {
         "id": "ANKLE",
         "weight": 25,
         "recurrenceBaseBp": 2000,
-        "sequelaKeys": [
-          "durability"
-        ]
+        "sequelaKeys": ["durability"]
       },
       {
         "id": "HAMSTRING",
         "weight": 30,
         "recurrenceBaseBp": 3000,
-        "sequelaKeys": [
-          "durability"
-        ]
+        "sequelaKeys": ["durability"]
       },
       {
         "id": "SHOULDER",
         "weight": 15,
         "recurrenceBaseBp": 1500,
-        "sequelaKeys": [
-          "durability"
-        ]
+        "sequelaKeys": ["durability"]
       },
       {
         "id": "HEAD",
@@ -3725,12 +3262,7 @@
         "agent": -6
       }
     },
-    "opponents": [
-      "노르카니아",
-      "메리디안 연합",
-      "발디스탄",
-      "칼레도니아"
-    ]
+    "opponents": ["노르카니아", "메리디안 연합", "발디스탄", "칼레도니아"]
   },
   "conditionRules": {
     "formPivotTenths": 65,
@@ -3807,12 +3339,7 @@
       "draw": 1,
       "loss": 0
     },
-    "tieBreakers": [
-      "POINTS",
-      "GOAL_DIFFERENCE",
-      "GOALS_FOR",
-      "TEAM_ID"
-    ]
+    "tieBreakers": ["POINTS", "GOAL_DIFFERENCE", "GOALS_FOR", "TEAM_ID"]
   },
   "clubMeetingRules": {
     "playingTimeMinTrust": 45,
@@ -3848,5 +3375,41 @@
       "managerTrustDelta": 3,
       "moraleDelta": 2
     }
+  },
+  "retirementRules": {
+    "version": "1.1.0",
+    "ageBands": [
+      {
+        "fromAge": 0,
+        "pressure": 0
+      },
+      {
+        "fromAge": 28,
+        "pressure": 20
+      },
+      {
+        "fromAge": 31,
+        "pressure": 50
+      },
+      {
+        "fromAge": 34,
+        "pressure": 80
+      },
+      {
+        "fromAge": 37,
+        "pressure": 100
+      }
+    ],
+    "weights": {
+      "age": 40,
+      "injury": 15,
+      "market": 20,
+      "opportunity": 15,
+      "intent": 10
+    },
+    "injuryAbsenceWeight": 70,
+    "undecidedIntentPressure": 50,
+    "watchThreshold": 35,
+    "reviewThreshold": 55
   }
 }

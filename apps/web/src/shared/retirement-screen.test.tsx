@@ -24,6 +24,8 @@ vi.mock('../engine/engine.js', () => ({ getAppEngine: getAppEngineMock }));
 
 const state = {
   careerId: 'career-test',
+  rulesetVersion: '1.5.0',
+  contentPackVersion: '0.6.0',
   status: 'RETIRED',
   seasonHistory: [],
   timeline: [],

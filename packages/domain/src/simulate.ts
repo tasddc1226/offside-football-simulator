@@ -16,7 +16,11 @@ import { hashState } from './hash.js';
 import { aggregateCareerRecords } from './legacy/career-records.js';
 import { resolveCareerEvent, settleNationality, nationalityForCareer, type CareerEventChoice } from './legacy/career-event.js';
 import { deriveRetirementTags } from './legacy/result.js';
-import { retirementContinuationOptions, retirementDecisionRequired } from './legacy/career-retirement.js';
+import {
+  retirementContinuationOptions,
+  retirementDecisionRequired,
+  RETIREMENT_POLICY,
+} from './legacy/career-retirement.js';
 import {
   applyRehabPlan,
   recurrenceChainLength,
@@ -1018,7 +1022,8 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
       },
     );
   }
-  if (retirementDecisionRequired(state)) return fail('VALIDATION_FAILED', '마지막 커리어 선택을 먼저 확인해야 한다.', { reason: 'RETIREMENT_DECISION_REQUIRED' });
+  if (retirementDecisionRequired(state, input.ruleset.retirementRules ?? RETIREMENT_POLICY))
+    return fail('VALIDATION_FAILED', '마지막 커리어 선택을 먼저 확인해야 한다.', { reason: 'RETIREMENT_DECISION_REQUIRED' });
   if (state.season !== null) {
     return fail('VALIDATION_FAILED', '이미 활성 시즌이 있다.', { reason: 'SEASON_ALREADY_ACTIVE' });
   }
@@ -3993,7 +3998,12 @@ export function simulate(input: SimulationInput): SimulationResult {
     case 'CAREER_EVENT': {
       try {
         const revision = snapshot.revision + 1;
-        const state = resolveCareerEvent(snapshot.state, command.payload.choice, revision);
+        const state = resolveCareerEvent(
+          snapshot.state,
+          command.payload.choice,
+          revision,
+          input.ruleset.retirementRules ?? RETIREMENT_POLICY,
+        );
         return { ok: true, snapshot: buildSnapshot(state, revision, 'EVENT_RESOLVED'), appliedEffects: [], nextAction: 'DECISION' };
       } catch {
         return fail('VALIDATION_FAILED', '현재 선택할 수 없는 커리어 이벤트다.');

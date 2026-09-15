@@ -41,10 +41,10 @@ async function settleOneSeason(page: Page): Promise<void> {
   await advanceThroughSeasonToSettlement(page);
   // 결산 전 일정의 실제 분 수를 독립 기준으로 삼는다. 저장 집계의 잘못된 total을
   // 기대값으로 재사용하면 같은 오류를 화면과 테스트가 함께 통과시킬 수 있다.
-  // 일정표는 "일정" 탭 안에 있다(기본 탭은 "홈") — 먼저 탭을 열어야 span.os-num이 보인다.
-  await page.getByRole('tab', { name: '일정' }).click();
+  // UX-014(2026-09-14): 일정표는 "시즌" 탭 안이다(기본 탭이라 이미 열려 있지만, 명시적으로 클릭해
+  // 둔다) — span.os-num을 읽기 전에 확인.
+  await page.getByRole('tab', { name: '시즌' }).click();
   const scheduleTexts = await page.locator('span.os-num').allTextContents();
-  await page.getByRole('tab', { name: '홈' }).click();
   const matches = scheduleTexts.flatMap((text) => {
     const match = /^\d+:\d+ · (.+) · (\d+)분 · /.exec(text);
     return match === null ? [] : [{ appearance: match[1], minutes: Number(match[2]) }];
@@ -133,8 +133,9 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   const headerOvrText = await page.locator('header').getByText(/^OVR \d+$/).textContent();
   expect(headerOvrText?.replace(/^OVR /, '').trim()).toBe(afterOvrValue);
 
-  // 다이어리: 이번 시즌 연대기에 "시즌 정산" 항목이 SCR-015로 연결된다.
-  await page.getByRole('tab', { name: '기록' }).click();
+  // 다이어리: 이번 시즌 연대기에 "시즌 정산" 항목이 SCR-015로 연결된다. UX-014(2026-09-14):
+  // 다이어리·휴대폰은 이제 "커리어" 탭 안이다(옛 5탭 시절의 "기록" 탭은 없다).
+  await page.getByRole('tab', { name: '커리어' }).click();
   const settledLink = page.getByRole('link', { name: /시즌 정산$/ });
   await expect(settledLink).toBeVisible();
   await settledLink.click();

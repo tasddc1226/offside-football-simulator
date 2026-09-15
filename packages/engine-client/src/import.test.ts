@@ -1,6 +1,17 @@
 import type { GetCareerResponse } from '@offside/contracts';
-import { career01, career01EngineCommands, career04GkEngineCommands, rulesetProto } from '@offside/fixtures';
-import { canonicalize, hashState, type CareerState, type JsonValue, type Ruleset } from '@offside/domain';
+import {
+  career01,
+  career01EngineCommands,
+  career04GkEngineCommands,
+  rulesetProto,
+} from '@offside/fixtures';
+import {
+  canonicalize,
+  hashState,
+  type CareerState,
+  type JsonValue,
+  type Ruleset,
+} from '@offside/domain';
 import ruleset170Raw from '../../content/rulesets/1.7.0/ruleset.json' with { type: 'json' };
 import { describe, expect, it } from 'vitest';
 import { createEngineClient, type EngineClient } from './engine.js';
@@ -54,7 +65,9 @@ async function buildGetCareerResponse(
   });
 }
 
-async function buildLedgerGetCareerResponse(stopAfterSeasonStart = true): Promise<GetCareerResponse> {
+async function buildLedgerGetCareerResponse(
+  stopAfterSeasonStart = true,
+): Promise<GetCareerResponse> {
   const store = new MemoryLocalStore();
   const ruleset = ruleset170Raw as unknown as Ruleset;
   const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset });
@@ -64,7 +77,7 @@ async function buildLedgerGetCareerResponse(stopAfterSeasonStart = true): Promis
     const command = structuredClone(source);
     if (command.type === 'CREATE_CAREER') {
       command.payload.rulesetVersion = '1.7.0';
-      command.payload.contentPackVersion = '0.6.2';
+      command.payload.contentPackVersion = '0.6.3';
       careerId = command.payload.careerId;
     }
     const result = await engine.execute({
@@ -73,7 +86,8 @@ async function buildLedgerGetCareerResponse(stopAfterSeasonStart = true): Promis
       ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc-ledger-import' } : {}),
     });
     if (!result.ok) throw new Error(`${command.type}: ${result.error.message}`);
-    if (stopAfterSeasonStart && command.type === 'START_SEASON') return buildGetCareerResponse(store, careerId);
+    if (stopAfterSeasonStart && command.type === 'START_SEASON')
+      return buildGetCareerResponse(store, careerId);
   }
   return buildGetCareerResponse(store, careerId);
 }
@@ -150,7 +164,8 @@ describe('importCareerFromServer', () => {
     const ledgerResponse = await buildLedgerGetCareerResponse();
     const ledgerState = JSON.parse(ledgerResponse.snapshot.state) as CareerState;
     const ledger = ledgerState.season?.leagueLedger;
-    if (ledger === undefined || ledger.teams[1] === undefined) throw new Error('ledger import setup 실패');
+    if (ledger === undefined || ledger.teams[1] === undefined)
+      throw new Error('ledger import setup 실패');
     ledger.teams[1] = { ...ledger.teams[1], strength: ledger.teams[1].strength + 1 };
     const ledgerHash = hashState(ledgerState);
     const wrongRosterResponse: GetCareerResponse = {
@@ -161,13 +176,17 @@ describe('importCareerFromServer', () => {
         stateHash: ledgerHash,
       },
     };
-    const rejectedLedger = await importCareerFromServer(new MemoryLocalStore(), wrongRosterResponse, {
-      now: NOW,
-      rulesetForVersion: (version) => {
-        if (version !== '1.7.0') throw new RangeError(`unexpected ruleset ${version}`);
-        return ruleset170Raw as unknown as Ruleset;
+    const rejectedLedger = await importCareerFromServer(
+      new MemoryLocalStore(),
+      wrongRosterResponse,
+      {
+        now: NOW,
+        rulesetForVersion: (version) => {
+          if (version !== '1.7.0') throw new RangeError(`unexpected ruleset ${version}`);
+          return ruleset170Raw as unknown as Ruleset;
+        },
       },
-    });
+    );
     expect(rejectedLedger.ok).toBe(false);
     if (!rejectedLedger.ok) expect(rejectedLedger.error.code).toBe('VERIFICATION_FAILED');
 
@@ -198,29 +217,48 @@ describe('importCareerFromServer', () => {
     const malformedFinalState = JSON.parse(malformedFinalResponse.snapshot.state) as CareerState;
     const malformedRows = malformedFinalState.seasonHistory.at(-1)?.result.finalLeagueTable?.rows;
     if (malformedRows === undefined) throw new Error('malformed final rows setup 실패');
-    malformedRows[0] = { rank: 1, teamId: 'old-object-row' } as unknown as typeof malformedRows[number];
-    malformedFinalResponse.snapshot.state = canonicalize(malformedFinalState as unknown as JsonValue);
+    malformedRows[0] = {
+      rank: 1,
+      teamId: 'old-object-row',
+    } as unknown as (typeof malformedRows)[number];
+    malformedFinalResponse.snapshot.state = canonicalize(
+      malformedFinalState as unknown as JsonValue,
+    );
     malformedFinalResponse.snapshot.stateHash = hashState(malformedFinalState);
-    const rejectedFinal = await importCareerFromServer(new MemoryLocalStore(), malformedFinalResponse, {
-      now: NOW,
-      rulesetForVersion: () => ruleset170Raw as unknown as Ruleset,
-    });
+    const rejectedFinal = await importCareerFromServer(
+      new MemoryLocalStore(),
+      malformedFinalResponse,
+      {
+        now: NOW,
+        rulesetForVersion: () => ruleset170Raw as unknown as Ruleset,
+      },
+    );
     expect(rejectedFinal.ok).toBe(false);
     if (!rejectedFinal.ok) expect(rejectedFinal.error.code).toBe('VERIFICATION_FAILED');
 
     const inconsistentFinalResponse = structuredClone(finalLedgerResponse);
-    const inconsistentFinalState = JSON.parse(inconsistentFinalResponse.snapshot.state) as CareerState;
-    const inconsistentRows = inconsistentFinalState.seasonHistory.at(-1)?.result.finalLeagueTable?.rows;
+    const inconsistentFinalState = JSON.parse(
+      inconsistentFinalResponse.snapshot.state,
+    ) as CareerState;
+    const inconsistentRows =
+      inconsistentFinalState.seasonHistory.at(-1)?.result.finalLeagueTable?.rows;
     if (inconsistentRows?.[0] === undefined) throw new Error('inconsistent final rows setup 실패');
     inconsistentRows[0][9] += 1;
-    inconsistentFinalResponse.snapshot.state = canonicalize(inconsistentFinalState as unknown as JsonValue);
+    inconsistentFinalResponse.snapshot.state = canonicalize(
+      inconsistentFinalState as unknown as JsonValue,
+    );
     inconsistentFinalResponse.snapshot.stateHash = hashState(inconsistentFinalState);
-    const rejectedInconsistentFinal = await importCareerFromServer(new MemoryLocalStore(), inconsistentFinalResponse, {
-      now: NOW,
-      rulesetForVersion: () => ruleset170Raw as unknown as Ruleset,
-    });
+    const rejectedInconsistentFinal = await importCareerFromServer(
+      new MemoryLocalStore(),
+      inconsistentFinalResponse,
+      {
+        now: NOW,
+        rulesetForVersion: () => ruleset170Raw as unknown as Ruleset,
+      },
+    );
     expect(rejectedInconsistentFinal.ok).toBe(false);
-    if (!rejectedInconsistentFinal.ok) expect(rejectedInconsistentFinal.error.code).toBe('VERIFICATION_FAILED');
+    if (!rejectedInconsistentFinal.ok)
+      expect(rejectedInconsistentFinal.error.code).toBe('VERIFICATION_FAILED');
   });
 
   it('로컬에 미전송 revision이 있으면 덮어쓰지 않는다', async () => {

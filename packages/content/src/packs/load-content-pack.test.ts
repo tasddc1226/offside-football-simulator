@@ -60,7 +60,10 @@ describe('loadContentPack: 0.2.0', () => {
       // EVT-INJ-001·EVT-NAT-001은 각 티켓의 prototype 문구 표지가 0.2.0에 추가된다.
       // authoring을 제외한 정의 본문은 0.1.0과 그대로여야 한다.
       if (event010.id === 'EVT-INJ-001' || event010.id === 'EVT-NAT-001') {
-        expect({ ...event020, authoring: undefined }).toEqual({ ...event010, authoring: undefined });
+        expect({ ...event020, authoring: undefined }).toEqual({
+          ...event010,
+          authoring: undefined,
+        });
       } else {
         expect(event020).toEqual(event010);
       }
@@ -136,18 +139,36 @@ describe('loadContentPack: 0.3.0', () => {
 });
 
 describe('EVT-INJ-001 재활 선택 preview 정량 계약', () => {
-  it.each(['0.1.0', '0.2.0', '0.3.0'] as const)('%s가 세 rehabPlan의 이동량·재발 bp를 선택 전에 보여준다', (version) => {
-    const event = loadContentPack(version).eventsById.get('EVT-INJ-001');
-    expect(event).toBeDefined();
-    const previews = Object.fromEntries(
-      event!.choices.map((choice) => [choice.rehabPlan, choice.previewEffects.map((effect) => effect.label)]),
-    );
-    expect(previews).toEqual({
-      STANDARD: ['복귀 경기 범위 이동: 0경기 (중간값)', '재발 위험: 0bp 변화', '출전 기회: 중간 수준 상실'],
-      EARLY: ['복귀 경기 범위 이동: -2경기 (최소값)', '재발 위험: +1500bp', '출전 기회: 가장 적게 상실'],
-      CONSERVATIVE: ['복귀 경기 범위 이동: +2경기 (최대값)', '재발 위험: -1000bp', '출전 기회: 가장 많이 상실'],
-    });
-  });
+  it.each(['0.1.0', '0.2.0', '0.3.0'] as const)(
+    '%s가 세 rehabPlan의 이동량·재발 bp를 선택 전에 보여준다',
+    (version) => {
+      const event = loadContentPack(version).eventsById.get('EVT-INJ-001');
+      expect(event).toBeDefined();
+      const previews = Object.fromEntries(
+        event!.choices.map((choice) => [
+          choice.rehabPlan,
+          choice.previewEffects.map((effect) => effect.label),
+        ]),
+      );
+      expect(previews).toEqual({
+        STANDARD: [
+          '복귀 경기 범위 이동: 0경기 (중간값)',
+          '재발 위험: 0bp 변화',
+          '출전 기회: 중간 수준 상실',
+        ],
+        EARLY: [
+          '복귀 경기 범위 이동: -2경기 (최소값)',
+          '재발 위험: +1500bp',
+          '출전 기회: 가장 적게 상실',
+        ],
+        CONSERVATIVE: [
+          '복귀 경기 범위 이동: +2경기 (최대값)',
+          '재발 위험: -1000bp',
+          '출전 기회: 가장 많이 상실',
+        ],
+      });
+    },
+  );
 });
 
 describe('loadContentPack: 0.5.0', () => {
@@ -173,9 +194,23 @@ describe('loadContentPack: 0.5.0', () => {
     expect(meetingPack.chapters.map((chapter) => chapter.id)).toEqual(
       loadContentPack('0.6.0').chapters.map((chapter) => chapter.id),
     );
-    const ledgerPack = loadContentPack('0.6.2');
+    // T-7-025: 팩 0.6.2는 0.6.1 전체 복사 + compatibleRulesetVersions만 룰셋 1.6.1로 교체(D-80 1라운드 ①).
+    const peakAgePack = loadContentPack('0.6.2');
+    expect(peakAgePack.manifest.compatibleRulesetVersions).toEqual(['1.6.1']);
+    expect(peakAgePack.events.map((event) => event.id)).toEqual(
+      loadContentPack('0.6.1').events.map((event) => event.id),
+    );
+    expect(peakAgePack.chapters.map((chapter) => chapter.id)).toEqual(
+      loadContentPack('0.6.1').chapters.map((chapter) => chapter.id),
+    );
+    const ledgerPack = loadContentPack('0.6.3');
     expect(ledgerPack.manifest.compatibleRulesetVersions).toEqual(['1.7.0']);
-    expect(ledgerPack.events.map((event) => event.id)).toEqual(meetingPack.events.map((event) => event.id));
-    expect(ledgerPack.chapters.map((chapter) => chapter.id)).toEqual(meetingPack.chapters.map((chapter) => chapter.id));
+    expect(ledgerPack.manifest.checksum).toBe(peakAgePack.manifest.checksum);
+    expect(ledgerPack.events.map((event) => event.id)).toEqual(
+      peakAgePack.events.map((event) => event.id),
+    );
+    expect(ledgerPack.chapters.map((chapter) => chapter.id)).toEqual(
+      peakAgePack.chapters.map((chapter) => chapter.id),
+    );
   });
 });

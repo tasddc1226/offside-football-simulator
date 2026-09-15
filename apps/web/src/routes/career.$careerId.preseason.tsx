@@ -2,7 +2,7 @@
 // 새로고침·뒤로 가기에도 선택이 유지되도록 URL에 싣는다. 시뮬레이션 모드는 더 이상 고르지 않는다
 // (사용자 결정 2026-09-13, D-77) — 모든 시즌은 항상 FIXED_SIMULATION_MODE(FAST)로 시작한다.
 import { useEffect, useState } from 'react';
-import { computeContractSeasonsRemaining, type ClubMeetingRequest } from '@offside/domain';
+import { computeContractSeasonsRemaining, RETIREMENT_POLICY, type ClubMeetingRequest } from '@offside/domain';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import {
   PlayerHeader,
@@ -96,7 +96,7 @@ function PreseasonScreen() {
       : ruleset.tacticalStyles.find((candidate) => candidate.id === team.tacticalStyleId);
   // 이슈 163·166: 직전 결산에 이미 저장된 값만 읽는 표시 전용 안내(데이터 없으면 숨김).
   const capNotice = potentialCapNotice(state);
-  const pressureNotice = retirementPressureNotice(state);
+  const pressureNotice = retirementPressureNotice(state, ruleset.retirementRules ?? RETIREMENT_POLICY);
   const pressureEvidence = pressureNotice === null ? null : retirementEvidenceText(pressureNotice);
   const upcomingSeasonIndex = state.seasonHistory.length + 1;
   const meeting = state.clubMeeting?.seasonIndex === upcomingSeasonIndex ? state.clubMeeting : null;

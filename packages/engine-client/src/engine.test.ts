@@ -1,6 +1,17 @@
 import { PutCareerBodySchema, REQUEST_BODY_MAX_BYTES } from '@offside/contracts';
-import { career01, career01EngineCommands, career04GkEngineCommands, rulesetProto } from '@offside/fixtures';
-import { canonicalize, hashState, type CareerState, type JsonValue, type Ruleset } from '@offside/domain';
+import {
+  career01,
+  career01EngineCommands,
+  career04GkEngineCommands,
+  rulesetProto,
+} from '@offside/fixtures';
+import {
+  canonicalize,
+  hashState,
+  type CareerState,
+  type JsonValue,
+  type Ruleset,
+} from '@offside/domain';
 import ruleset170Raw from '../../content/rulesets/1.7.0/ruleset.json' with { type: 'json' };
 import { describe, expect, it } from 'vitest';
 import { createEngineClient, type EngineClient } from './engine.js';
@@ -32,7 +43,11 @@ function makeCreateCommand(careerId: string, commandId: string): EngineCommand {
   };
 }
 
-async function runGoldenOnFreshStore(): Promise<{ store: MemoryLocalStore; engine: EngineClient; careerId: string }> {
+async function runGoldenOnFreshStore(): Promise<{
+  store: MemoryLocalStore;
+  engine: EngineClient;
+  careerId: string;
+}> {
   const store = new MemoryLocalStore();
   const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
   const careerId = career01.createCareer.careerId;
@@ -45,14 +60,18 @@ async function runGoldenOnFreshStore(): Promise<{ store: MemoryLocalStore; engin
       ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'season-2025-26' } : {}),
     });
     if (!result.ok) {
-      throw new Error(`golden 명령 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+      throw new Error(
+        `golden 명령 실패: ${command.type} ${result.error.code} ${result.error.message}`,
+      );
     }
   }
 
   return { store, engine, careerId };
 }
 
-async function runLedgerCareer(stopAfterSeasonStart = true): Promise<{ store: MemoryLocalStore; engine: EngineClient; careerId: string }> {
+async function runLedgerCareer(
+  stopAfterSeasonStart = true,
+): Promise<{ store: MemoryLocalStore; engine: EngineClient; careerId: string }> {
   const store = new MemoryLocalStore();
   const ruleset = ruleset170Raw as unknown as Ruleset;
   const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset });
@@ -62,7 +81,7 @@ async function runLedgerCareer(stopAfterSeasonStart = true): Promise<{ store: Me
     const command = structuredClone(source);
     if (command.type === 'CREATE_CAREER') {
       command.payload.rulesetVersion = '1.7.0';
-      command.payload.contentPackVersion = '0.6.2';
+      command.payload.contentPackVersion = '0.6.3';
       careerId = command.payload.careerId;
     }
     const result = await engine.execute({
@@ -79,7 +98,10 @@ async function runLedgerCareer(stopAfterSeasonStart = true): Promise<{ store: Me
 function wrapStoreWithThrowingAppend(inner: LocalStore): LocalStore {
   return {
     kind: inner.kind,
-    transaction<T>(mode: 'readonly' | 'readwrite', run: (tx: LocalStoreTx) => Promise<T>): Promise<T> {
+    transaction<T>(
+      mode: 'readonly' | 'readwrite',
+      run: (tx: LocalStoreTx) => Promise<T>,
+    ): Promise<T> {
       return inner.transaction(mode, (tx) => {
         const wrapped: LocalStoreTx = {
           ...tx,
@@ -97,7 +119,11 @@ function wrapStoreWithThrowingAppend(inner: LocalStore): LocalStore {
   };
 }
 
-async function corruptSnapshotHash(store: MemoryLocalStore, careerId: string, revision: number): Promise<void> {
+async function corruptSnapshotHash(
+  store: MemoryLocalStore,
+  careerId: string,
+  revision: number,
+): Promise<void> {
   await store.transaction('readwrite', async (tx) => {
     const snapshot = await tx.snapshots.get(careerId, revision);
     if (snapshot === undefined) throw new Error(`snapshot ${revision} not found`);
@@ -106,7 +132,11 @@ async function corruptSnapshotHash(store: MemoryLocalStore, careerId: string, re
   });
 }
 
-async function corruptCommandLogResultHash(store: MemoryLocalStore, careerId: string, revision: number): Promise<void> {
+async function corruptCommandLogResultHash(
+  store: MemoryLocalStore,
+  careerId: string,
+  revision: number,
+): Promise<void> {
   await store.transaction('readwrite', async (tx) => {
     const entries = await tx.commandLog.listSince(careerId, 0);
     await tx.commandLog.deleteByCareer(careerId);
@@ -125,7 +155,8 @@ describe('golden fixture', () => {
   it('기본 룰셋이 바뀌어도 저장 버전으로 실행·복구하고 미지원 버전은 거부한다', async () => {
     const store = new MemoryLocalStore();
     const engine = createEngineClient({
-      store, simulator: inlineSimulator,
+      store,
+      simulator: inlineSimulator,
       ruleset: { ...rulesetProto, version: '1.1.0' },
       rulesetForVersion: (version) => {
         if (version !== rulesetProto.version) throw new Error('unsupported ruleset');
@@ -133,7 +164,8 @@ describe('golden fixture', () => {
       },
     });
     const created = await engine.execute({
-      careerId: 'pinned-old', command: makeCreateCommand('pinned-old', 'pinned-create'),
+      careerId: 'pinned-old',
+      command: makeCreateCommand('pinned-old', 'pinned-create'),
       createdServiceSeasonId: 'old-season',
     });
     if (!created.ok) throw new Error(created.error.message);
@@ -145,7 +177,11 @@ describe('golden fixture', () => {
     const unknown = makeCreateCommand('unknown', 'unknown-create');
     if (unknown.type !== 'CREATE_CAREER') throw new Error('create command expected');
     unknown.payload.rulesetVersion = '9.0.0';
-    const rejected = await engine.execute({ careerId: 'unknown', command: unknown, createdServiceSeasonId: 'future' });
+    const rejected = await engine.execute({
+      careerId: 'unknown',
+      command: unknown,
+      createdServiceSeasonId: 'future',
+    });
     expect(!rejected.ok && rejected.error.code).toBe('VERSION_MISMATCH');
     expect((await engine.listCareers()).map((career) => career.id)).toEqual(['pinned-old']);
   });
@@ -161,7 +197,9 @@ describe('golden fixture', () => {
 
     const logs = await store.transaction('readonly', (tx) => tx.commandLog.listSince(careerId, 0));
     expect(logs.length).toBe(career01.golden.revision);
-    const snapshots = await store.transaction('readonly', (tx) => tx.snapshots.listByCareer(careerId));
+    const snapshots = await store.transaction('readonly', (tx) =>
+      tx.snapshots.listByCareer(careerId),
+    );
     expect(snapshots.length).toBe(career01.golden.revision);
 
     const loaded = await engine.loadCareer(careerId);
@@ -176,8 +214,12 @@ describe('golden fixture', () => {
 
   it('worker 시뮬레이터로도 같은 golden 결과가 나온다', async () => {
     const channel = new MessageChannel();
-    const detach = attachSimulatorHandler(channel.port2 as unknown as Parameters<typeof attachSimulatorHandler>[0]);
-    const workerSimulator = createWorkerSimulator(channel.port1 as unknown as Parameters<typeof createWorkerSimulator>[0]);
+    const detach = attachSimulatorHandler(
+      channel.port2 as unknown as Parameters<typeof attachSimulatorHandler>[0],
+    );
+    const workerSimulator = createWorkerSimulator(
+      channel.port1 as unknown as Parameters<typeof createWorkerSimulator>[0],
+    );
 
     const store = new MemoryLocalStore();
     const engine = createEngineClient({ store, simulator: workerSimulator, ruleset: rulesetProto });
@@ -226,7 +268,9 @@ describe('멱등성', () => {
       payload: { draft: { name: '테스트' } },
     };
 
-    const results = await Promise.all(Array.from({ length: 100 }, () => engine.execute({ careerId, command })));
+    const results = await Promise.all(
+      Array.from({ length: 100 }, () => engine.execute({ careerId, command })),
+    );
 
     expect(results.every((r) => r.ok)).toBe(true);
     const hashes = new Set(results.map((r) => (r.ok ? r.snapshot.stateHash : 'error')));
@@ -243,15 +287,31 @@ describe('멱등성', () => {
 
   it('영속 멱등성: 새 EngineClient에서도 idempotency가 유지된다', async () => {
     const store = new MemoryLocalStore();
-    const engine1 = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
+    const engine1 = createEngineClient({
+      store,
+      simulator: inlineSimulator,
+      ruleset: rulesetProto,
+    });
     const careerId = 'car_persist';
     const createCommand = makeCreateCommand(careerId, 'create-1');
 
-    const createResult = await engine1.execute({ careerId, command: createCommand, createdServiceSeasonId: 'season-01' });
+    const createResult = await engine1.execute({
+      careerId,
+      command: createCommand,
+      createdServiceSeasonId: 'season-01',
+    });
     expect(createResult.ok).toBe(true);
 
-    const engine2 = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
-    const replay = await engine2.execute({ careerId, command: createCommand, createdServiceSeasonId: 'season-01' });
+    const engine2 = createEngineClient({
+      store,
+      simulator: inlineSimulator,
+      ruleset: rulesetProto,
+    });
+    const replay = await engine2.execute({
+      careerId,
+      command: createCommand,
+      createdServiceSeasonId: 'season-01',
+    });
     expect(replay.ok).toBe(true);
     if (replay.ok) expect(replay.replayed).toBe(true);
 
@@ -282,7 +342,9 @@ describe('revision 경쟁', () => {
       payload: { draft: { name: '테스트' } },
     }));
 
-    const results = await Promise.all(commands.map((command) => engine.execute({ careerId, command })));
+    const results = await Promise.all(
+      commands.map((command) => engine.execute({ careerId, command })),
+    );
     const oks = results.filter((r) => r.ok);
     const conflicts = results.filter((r): r is Extract<ExecuteResult, { ok: false }> => !r.ok);
 
@@ -290,7 +352,9 @@ describe('revision 경쟁', () => {
     expect(conflicts.length).toBe(99);
     expect(conflicts.every((r) => r.error.code === 'CAREER_REVISION_CONFLICT')).toBe(true);
 
-    const logsSinceCreate = await store.transaction('readonly', (tx) => tx.commandLog.listSince(careerId, baseRevision));
+    const logsSinceCreate = await store.transaction('readonly', (tx) =>
+      tx.commandLog.listSince(careerId, baseRevision),
+    );
     expect(logsSinceCreate.length).toBe(1);
   });
 });
@@ -320,7 +384,11 @@ describe('쓰기 단계 충돌', () => {
         return inlineSimulator.simulate(input);
       },
     };
-    const faultyEngine = createEngineClient({ store, simulator: faultySimulator, ruleset: rulesetProto });
+    const faultyEngine = createEngineClient({
+      store,
+      simulator: faultySimulator,
+      ruleset: rulesetProto,
+    });
 
     const advanceCommand: EngineCommand = {
       type: 'UPDATE_PLAYER_DRAFT',
@@ -335,9 +403,13 @@ describe('쓰기 단계 충돌', () => {
 
     const logs = await store.transaction('readonly', (tx) => tx.commandLog.listSince(careerId, 0));
     expect(logs.length).toBe(1);
-    const snapshots = await store.transaction('readonly', (tx) => tx.snapshots.listByCareer(careerId));
+    const snapshots = await store.transaction('readonly', (tx) =>
+      tx.snapshots.listByCareer(careerId),
+    );
     expect(snapshots.length).toBe(1);
-    const idem = await store.transaction('readonly', (tx) => tx.idempotency.get('advance-conflict'));
+    const idem = await store.transaction('readonly', (tx) =>
+      tx.idempotency.get('advance-conflict'),
+    );
     expect(idem).toBeUndefined();
   });
 });
@@ -345,7 +417,11 @@ describe('쓰기 단계 충돌', () => {
 describe('롤백', () => {
   it('쓰기 트랜잭션이 throw하면 이전 상태가 유지된다', async () => {
     const inner = new MemoryLocalStore();
-    const engine = createEngineClient({ store: inner, simulator: inlineSimulator, ruleset: rulesetProto });
+    const engine = createEngineClient({
+      store: inner,
+      simulator: inlineSimulator,
+      ruleset: rulesetProto,
+    });
     const careerId = 'car_rollback';
 
     const createResult = await engine.execute({
@@ -357,7 +433,11 @@ describe('롤백', () => {
     if (!createResult.ok) throw new Error('unreachable');
 
     const throwingStore = wrapStoreWithThrowingAppend(inner);
-    const throwingEngine = createEngineClient({ store: throwingStore, simulator: inlineSimulator, ruleset: rulesetProto });
+    const throwingEngine = createEngineClient({
+      store: throwingStore,
+      simulator: inlineSimulator,
+      ruleset: rulesetProto,
+    });
 
     const advanceCommand: EngineCommand = {
       type: 'UPDATE_PLAYER_DRAFT',
@@ -370,7 +450,9 @@ describe('롤백', () => {
 
     const career = await inner.transaction('readonly', (tx) => tx.careers.get(careerId));
     expect(career?.revision).toBe(createResult.domainSnapshot.revision);
-    const snapshots = await inner.transaction('readonly', (tx) => tx.snapshots.listByCareer(careerId));
+    const snapshots = await inner.transaction('readonly', (tx) =>
+      tx.snapshots.listByCareer(careerId),
+    );
     expect(snapshots.length).toBe(1);
   });
 });
@@ -426,22 +508,27 @@ describe('복구', () => {
     const finalReload = await finalRun.engine.loadCareer(finalRun.careerId);
     expect(finalReload.ok).toBe(true);
     if (!finalReload.ok) throw new Error('final 1.7 reload 실패');
-    const finalRows = finalReload.snapshot.state.seasonHistory.at(-1)?.result.finalLeagueTable?.rows;
+    const finalRows =
+      finalReload.snapshot.state.seasonHistory.at(-1)?.result.finalLeagueTable?.rows;
     expect(finalRows).toBeDefined();
     expect(finalRows?.every((row) => row.length === 11)).toBe(true);
 
-    const brokenFinalLatest = await finalRun.store.transaction('readonly', (tx) => tx.snapshots.getLatest(finalRun.careerId));
+    const brokenFinalLatest = await finalRun.store.transaction('readonly', (tx) =>
+      tx.snapshots.getLatest(finalRun.careerId),
+    );
     if (brokenFinalLatest === undefined) throw new Error('final latest 없음');
     const brokenFinalState = JSON.parse(brokenFinalLatest.state) as CareerState;
     const brokenFinalRow = brokenFinalState.seasonHistory.at(-1)?.result.finalLeagueTable?.rows[0];
     if (brokenFinalRow === undefined) throw new Error('final row setup 실패');
     brokenFinalRow[10] += 1;
     const brokenFinalHash = hashState(brokenFinalState);
-    await finalRun.store.transaction('readwrite', (tx) => tx.snapshots.put({
-      ...brokenFinalLatest,
-      state: canonicalize(brokenFinalState as unknown as JsonValue),
-      stateHash: brokenFinalHash,
-    }));
+    await finalRun.store.transaction('readwrite', (tx) =>
+      tx.snapshots.put({
+        ...brokenFinalLatest,
+        state: canonicalize(brokenFinalState as unknown as JsonValue),
+        stateHash: brokenFinalHash,
+      }),
+    );
     const recoveredFinal = await finalRun.engine.loadCareer(finalRun.careerId);
     expect(recoveredFinal.ok).toBe(true);
     if (recoveredFinal.ok) {
@@ -450,22 +537,33 @@ describe('복구', () => {
     }
 
     const ledgerRun = await runLedgerCareer();
-    const brokenLatest = await ledgerRun.store.transaction('readonly', (tx) => tx.snapshots.getLatest(ledgerRun.careerId));
+    const brokenLatest = await ledgerRun.store.transaction('readonly', (tx) =>
+      tx.snapshots.getLatest(ledgerRun.careerId),
+    );
     if (brokenLatest === undefined) throw new Error('ledger latest 없음');
     const brokenState = JSON.parse(brokenLatest.state) as CareerState;
     const brokenLedger = brokenState.season?.leagueLedger;
-    if (brokenLedger === undefined || brokenLedger.teams[1] === undefined) throw new Error('ledger roster setup 실패');
-    brokenLedger.teams[1] = { ...brokenLedger.teams[1], strength: brokenLedger.teams[1].strength + 1 };
+    if (brokenLedger === undefined || brokenLedger.teams[1] === undefined)
+      throw new Error('ledger roster setup 실패');
+    brokenLedger.teams[1] = {
+      ...brokenLedger.teams[1],
+      strength: brokenLedger.teams[1].strength + 1,
+    };
     const brokenStateHash = hashState(brokenState);
-    await ledgerRun.store.transaction('readwrite', (tx) => tx.snapshots.put({
-      ...brokenLatest,
-      state: canonicalize(brokenState as unknown as JsonValue),
-      stateHash: brokenStateHash,
-    }));
+    await ledgerRun.store.transaction('readwrite', (tx) =>
+      tx.snapshots.put({
+        ...brokenLatest,
+        state: canonicalize(brokenState as unknown as JsonValue),
+        stateHash: brokenStateHash,
+      }),
+    );
     const recoveredLedger = await ledgerRun.engine.loadCareer(ledgerRun.careerId);
     expect(recoveredLedger.ok).toBe(true);
     if (recoveredLedger.ok) {
-      expect(recoveredLedger.recovered).toEqual({ fromRevision: brokenLatest.revision - 1, replayed: 1 });
+      expect(recoveredLedger.recovered).toEqual({
+        fromRevision: brokenLatest.revision - 1,
+        replayed: 1,
+      });
       expect(recoveredLedger.snapshot.stateHash).not.toBe(brokenStateHash);
     }
   });
@@ -577,7 +675,9 @@ describe('buildSyncBody / markSynced', () => {
     await sync.flush(finalRun.careerId);
     expect(capturedInit?.method).toBe('PUT');
     expect(capturedInit?.body).toBe(JSON.stringify(finalBody));
-    expect(new TextEncoder().encode(capturedInit?.body as string).byteLength).toBeLessThanOrEqual(REQUEST_BODY_MAX_BYTES);
+    expect(new TextEncoder().encode(capturedInit?.body as string).byteLength).toBeLessThanOrEqual(
+      REQUEST_BODY_MAX_BYTES,
+    );
     sync.dispose();
   });
 
@@ -589,10 +689,7 @@ describe('buildSyncBody / markSynced', () => {
     expect(body).not.toBeNull();
     if (body === null) throw new Error('unreachable');
     expect(body.baseRevision).toBe(5);
-    const expectedRevisions = Array.from(
-      { length: career01.golden.revision - 5 },
-      (_, i) => i + 6,
-    );
+    const expectedRevisions = Array.from({ length: career01.golden.revision - 5 }, (_, i) => i + 6);
     expect(body.commands.map((c) => c.revision)).toEqual(expectedRevisions);
     expect(PutCareerBodySchema.safeParse(body).success).toBe(true);
   });

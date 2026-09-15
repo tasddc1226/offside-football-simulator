@@ -63,7 +63,9 @@ const TemplateSchema = z.object(
 
 const PotentialRangeSchema = z
   .strictObject({ min: z.number().int(), max: z.number().int() })
-  .refine((range) => range.min < range.max, { message: 'potentialRange.min은 max보다 작아야 한다.' });
+  .refine((range) => range.min < range.max, {
+    message: 'potentialRange.min은 max보다 작아야 한다.',
+  });
 
 export const ArchetypeSchema = z
   .strictObject({
@@ -157,7 +159,9 @@ const NationalitySchema = z.strictObject({ code: z.string().length(2), name: z.s
 
 const DraftRulesSchema = z
   .strictObject({ nameMin: z.number().int().positive(), nameMax: z.number().int().positive() })
-  .refine((rules) => rules.nameMin < rules.nameMax, { message: 'nameMin은 nameMax보다 작아야 한다.' });
+  .refine((rules) => rules.nameMin < rules.nameMax, {
+    message: 'nameMin은 nameMax보다 작아야 한다.',
+  });
 
 const ScoutBandSchema = z
   .strictObject({ min: z.number().int().nonnegative(), max: z.number().int().nonnegative() })
@@ -189,7 +193,8 @@ export const TeamSchema = z.strictObject({
 export type Team = z.infer<typeof TeamSchema>;
 
 // T-2-002 D-34: 전술 스타일·리그·컵·경쟁자 생성·선발 규칙(`selection.ts`가 소비).
-const StylePositionRecord = <T extends z.core.SomeType>(valueSchema: T) => z.record(PositionSchema, valueSchema);
+const StylePositionRecord = <T extends z.core.SomeType>(valueSchema: T) =>
+  z.record(PositionSchema, valueSchema);
 
 const TacticalFitStyleRoleWeightsSchema = StylePositionRecord(RoleWeightsSchema);
 const PreferredArchetypeIdsSchema = StylePositionRecord(z.array(z.string().min(1)));
@@ -209,7 +214,11 @@ export const TacticalStyleSchema = z
   .superRefine((style, ctx) => {
     const slotsSum = POSITIONS.reduce((sum, position) => sum + style.slots[position], 0);
     if (slotsSum !== 11) {
-      ctx.addIssue({ code: 'custom', message: `tacticalStyles[${style.id}].slots 합은 11이어야 한다: ${slotsSum}`, path: ['slots'] });
+      ctx.addIssue({
+        code: 'custom',
+        message: `tacticalStyles[${style.id}].slots 합은 11이어야 한다: ${slotsSum}`,
+        path: ['slots'],
+      });
     }
     // 포지션마다 아키타입은 항상 정확히 3개다(ArchetypeSchema 쪽 superRefine이 보장).
     // `competitors.ts`의 `pickArchetype`이 선호/비선호 두 그룹 모두를 가중 roll 후보로 쓰므로,
@@ -312,7 +321,11 @@ const SelectionWeightsSchema = z.strictObject({
   squadStatus: z.number(),
 });
 const TacticalFitWeightsSchema = z.strictObject({ style: z.number(), archetype: z.number() });
-const PositionFamiliaritySchema = z.strictObject({ natural: z.number(), trained: z.number(), makeshift: z.number() });
+const PositionFamiliaritySchema = z.strictObject({
+  natural: z.number(),
+  trained: z.number(),
+  makeshift: z.number(),
+});
 const ProficiencyThresholdsSchema = z.strictObject({ natural: z.number(), trained: z.number() });
 const PositionAdjacencySchema = StylePositionRecord(z.array(PositionSchema));
 const ProficiencyOnChangeSchema = z.strictObject({ adjacent: z.number(), other: z.number() });
@@ -337,10 +350,19 @@ const RoleProposalRulesSchema = z.strictObject({
   declineDowngradeTrustDelta: z.number().int().optional(),
 });
 
-function refineSum1(ctx: z.core.$RefinementCtx, weights: Record<string, number>, label: string, path: (string | number)[]) {
+function refineSum1(
+  ctx: z.core.$RefinementCtx,
+  weights: Record<string, number>,
+  label: string,
+  path: (string | number)[],
+) {
   const sum = Object.values(weights).reduce((total, w) => total + w, 0);
   if (Math.abs(sum - 1) > 1e-9) {
-    ctx.addIssue({ code: 'custom', message: `${label} 합은 1(오차 1e-9 이내)이어야 한다: ${sum}`, path });
+    ctx.addIssue({
+      code: 'custom',
+      message: `${label} 합은 1(오차 1e-9 이내)이어야 한다: ${sum}`,
+      path,
+    });
   }
 }
 
@@ -358,9 +380,15 @@ export const SelectionRulesSchema = z
     roleProposal: RoleProposalRulesSchema,
   })
   .superRefine((rules, ctx) => {
-    refineSum1(ctx, rules.performanceWeights, 'selectionRules.performanceWeights', ['performanceWeights']);
-    refineSum1(ctx, rules.selectionWeights, 'selectionRules.selectionWeights', ['selectionWeights']);
-    refineSum1(ctx, rules.tacticalFitWeights, 'selectionRules.tacticalFitWeights', ['tacticalFitWeights']);
+    refineSum1(ctx, rules.performanceWeights, 'selectionRules.performanceWeights', [
+      'performanceWeights',
+    ]);
+    refineSum1(ctx, rules.selectionWeights, 'selectionRules.selectionWeights', [
+      'selectionWeights',
+    ]);
+    refineSum1(ctx, rules.tacticalFitWeights, 'selectionRules.tacticalFitWeights', [
+      'tacticalFitWeights',
+    ]);
   });
 export type SelectionRules = z.infer<typeof SelectionRulesSchema>;
 
@@ -401,7 +429,10 @@ export type OfferRules = z.infer<typeof OfferRulesSchema>;
 
 // T-3-002 D-43/D-44: 결산 뒤 이적시장·step 7 재계약 상수.
 const TierSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
-const RoleKindWeightSchema = z.strictObject({ TRANSFER: z.number().int().min(0).max(100), LOAN: z.number().int().min(0).max(100) });
+const RoleKindWeightSchema = z.strictObject({
+  TRANSFER: z.number().int().min(0).max(100),
+  LOAN: z.number().int().min(0).max(100),
+});
 const NegotiationAxisBpSchema = z.strictObject({
   WAGE: z.number().int().min(0).max(10000),
   ROLE: z.number().int().min(0).max(10000),
@@ -410,7 +441,11 @@ const NegotiationAxisBpSchema = z.strictObject({
 
 export const TransferRulesSchema = z.strictObject({
   offerValidityRevisions: z.number().int().positive(),
-  demandBands: z.array(z.strictObject({ maxIndexCenti: z.number().int().min(0), tiers: z.array(TierSchema).min(1) })).min(1),
+  demandBands: z
+    .array(
+      z.strictObject({ maxIndexCenti: z.number().int().min(0), tiers: z.array(TierSchema).min(1) }),
+    )
+    .min(1),
   interest: z.strictObject({ minRatingTenths: z.number().int(), minIndexCenti: z.number().int() }),
   kindWeightsByRole: z.strictObject({
     STARTER: RoleKindWeightSchema,
@@ -424,8 +459,18 @@ export const TransferRulesSchema = z.strictObject({
     buyOptionChanceBp: z.number().int().min(0).max(10000),
     buyMinShareBp: z.number().int().min(0).max(10000),
   }),
-  feeByIndexBand: z.array(z.strictObject({ maxIndexCenti: z.number().int().min(0), feeMinor: z.number().int().nonnegative() })).min(1),
-  safeRenewal: z.strictObject({ lengthSeasons: z.number().int().positive(), wageBp: z.number().int().min(0).max(10000) }),
+  feeByIndexBand: z
+    .array(
+      z.strictObject({
+        maxIndexCenti: z.number().int().min(0),
+        feeMinor: z.number().int().nonnegative(),
+      }),
+    )
+    .min(1),
+  safeRenewal: z.strictObject({
+    lengthSeasons: z.number().int().positive(),
+    wageBp: z.number().int().min(0).max(10000),
+  }),
   recovery: z
     .strictObject({
       youthMaxAge: z.number().int().min(15).max(30),
@@ -455,7 +500,10 @@ export const TransferRulesSchema = z.strictObject({
     }),
     reputationAdjustBpPerPoint: z.number().int(),
     // wageBp도 renewal.wageBpByRole과 같은 "현재 급여 대비 배율"이라 10000을 넘을 수 있다.
-    counter: z.strictObject({ wageBp: z.number().int().nonnegative(), lengthDelta: z.number().int() }),
+    counter: z.strictObject({
+      wageBp: z.number().int().nonnegative(),
+      lengthDelta: z.number().int(),
+    }),
   }),
   relationshipCarry: z.strictObject({
     newManagerTrustBase: z.number().int(),
@@ -468,8 +516,17 @@ export const TransferRulesSchema = z.strictObject({
 });
 export type TransferRules = z.infer<typeof TransferRulesSchema>;
 
-const WageBandRow = z.strictObject({ low: z.number().int().nonnegative(), mid: z.number().int().nonnegative(), high: z.number().int().nonnegative() });
-const WageBandsSchema = z.strictObject({ tier1: WageBandRow, tier2: WageBandRow, tier3: WageBandRow, youth: WageBandRow });
+const WageBandRow = z.strictObject({
+  low: z.number().int().nonnegative(),
+  mid: z.number().int().nonnegative(),
+  high: z.number().int().nonnegative(),
+});
+const WageBandsSchema = z.strictObject({
+  tier1: WageBandRow,
+  tier2: WageBandRow,
+  tier3: WageBandRow,
+  youth: WageBandRow,
+});
 
 const OvrBandSchema = z.strictObject({ id: z.string().min(1), maxOvr: z.number().int() });
 
@@ -503,29 +560,44 @@ export type ContractRules = z.infer<typeof ContractRulesSchema>;
 // T-2-005 D-39: 성장식이 쓰는 능력 그룹(연령대는 budgetCenti의 키로만 쓰여 별도 스키마가 필요 없다).
 const GROWTH_ATTRIBUTE_GROUPS = ['TECHNICAL', 'PHYSICAL', 'MENTAL', 'GOALKEEPING'] as const;
 
-const GrowthAgeCurveRowSchema = z.strictObject({ maxAge: z.number().int(), multBp: z.number().int() });
+const GrowthAgeCurveRowSchema = z.strictObject({
+  maxAge: z.number().int(),
+  multBp: z.number().int(),
+});
 const GrowthByAttributeGroupRecordSchema = <T extends z.core.SomeType>(valueSchema: T) =>
-  z.strictObject({ TECHNICAL: valueSchema, PHYSICAL: valueSchema, MENTAL: valueSchema, GOALKEEPING: valueSchema });
+  z.strictObject({
+    TECHNICAL: valueSchema,
+    PHYSICAL: valueSchema,
+    MENTAL: valueSchema,
+    GOALKEEPING: valueSchema,
+  });
 
 // T-2-005 D-39: 결산 성장식 상수(`growth.ts`가 소비). 값은 balance-targets를 만족하도록 튜닝된다 —
 // 여기서는 형태만 검사하고 구체적인 수치 범위는 강제하지 않는다.
-export const GrowthRulesSchema = z.strictObject({
-  budgetCenti: z.strictObject({ U21: z.number().int(), PRIME: z.number().int(), VETERAN: z.number().int() }),
-  gapCap: z.number().int().positive(),
-  minutesFull: z.number().int().positive(),
-  minutesFloorBp: z.number().int().min(0).max(10000),
-  experiencePerRatedMatchCenti: z.number().int(),
-  experienceCapCenti: z.number().int(),
-  goodRatingTenths: z.number().int(),
-  goodRatingBonusCenti: z.number().int(),
-  roleWeightScale: z.number().int(),
-  baseShareBp: z.number().int().min(0).max(10000),
-  focusShareBp: z.number().int().min(0).max(10000),
-  seasonDeltaMin: z.number().int(),
-  seasonDeltaMax: z.number().int(),
-  ageCurves: GrowthByAttributeGroupRecordSchema(z.array(GrowthAgeCurveRowSchema).min(1)),
-  decline: GrowthByAttributeGroupRecordSchema(z.strictObject({ startAge: z.number().int(), perYearCenti: z.number().int() })),
-})
+export const GrowthRulesSchema = z
+  .strictObject({
+    budgetCenti: z.strictObject({
+      U21: z.number().int(),
+      PRIME: z.number().int(),
+      VETERAN: z.number().int(),
+    }),
+    gapCap: z.number().int().positive(),
+    minutesFull: z.number().int().positive(),
+    minutesFloorBp: z.number().int().min(0).max(10000),
+    experiencePerRatedMatchCenti: z.number().int(),
+    experienceCapCenti: z.number().int(),
+    goodRatingTenths: z.number().int(),
+    goodRatingBonusCenti: z.number().int(),
+    roleWeightScale: z.number().int(),
+    baseShareBp: z.number().int().min(0).max(10000),
+    focusShareBp: z.number().int().min(0).max(10000),
+    seasonDeltaMin: z.number().int(),
+    seasonDeltaMax: z.number().int(),
+    ageCurves: GrowthByAttributeGroupRecordSchema(z.array(GrowthAgeCurveRowSchema).min(1)),
+    decline: GrowthByAttributeGroupRecordSchema(
+      z.strictObject({ startAge: z.number().int(), perYearCenti: z.number().int() }),
+    ),
+  })
   .refine((rules) => rules.seasonDeltaMin <= rules.seasonDeltaMax, {
     message: 'growthRules.seasonDeltaMin은 seasonDeltaMax 이하여야 한다.',
   })
@@ -556,7 +628,10 @@ const MatchesOutRangeSchema = z
   .strictObject({ min: z.number().int().positive(), max: z.number().int().positive() })
   .refine((range) => range.min <= range.max, { message: 'min은 max 이하여야 한다.' });
 
-const RehabPlanRuleSchema = z.strictObject({ returnShiftMatches: z.number().int(), recurrenceAddBp: z.number().int() });
+const RehabPlanRuleSchema = z.strictObject({
+  returnShiftMatches: z.number().int(),
+  recurrenceAddBp: z.number().int(),
+});
 
 export const InjuryRulesSchema = z
   .strictObject({
@@ -566,7 +641,11 @@ export const InjuryRulesSchema = z
       MODERATE: z.number().int().nonnegative(),
       MAJOR: z.number().int().nonnegative(),
     }),
-    matchesOut: z.strictObject({ MINOR: MatchesOutRangeSchema, MODERATE: MatchesOutRangeSchema, MAJOR: MatchesOutRangeSchema }),
+    matchesOut: z.strictObject({
+      MINOR: MatchesOutRangeSchema,
+      MODERATE: MatchesOutRangeSchema,
+      MAJOR: MatchesOutRangeSchema,
+    }),
     bodyParts: z
       .array(
         z.strictObject({
@@ -579,7 +658,11 @@ export const InjuryRulesSchema = z
       .min(1),
     recurrenceWindowMatches: z.number().int().positive(),
     recurrenceMaxChain: z.number().int().positive().optional(),
-    rehab: z.strictObject({ EARLY: RehabPlanRuleSchema, STANDARD: RehabPlanRuleSchema, CONSERVATIVE: RehabPlanRuleSchema }),
+    rehab: z.strictObject({
+      EARLY: RehabPlanRuleSchema,
+      STANDARD: RehabPlanRuleSchema,
+      CONSERVATIVE: RehabPlanRuleSchema,
+    }),
     maxForcedPerSeason: z.number().int().nonnegative(),
     durabilityPivot: z.number().int(),
     severityShiftBpPerDurabilityPoint: z.number().int(),
@@ -589,13 +672,22 @@ export const InjuryRulesSchema = z
     ageAddBpPerYear: z.number().int(),
   })
   .superRefine((rules, ctx) => {
-    const severitySum = rules.severityWeights.MINOR + rules.severityWeights.MODERATE + rules.severityWeights.MAJOR;
+    const severitySum =
+      rules.severityWeights.MINOR + rules.severityWeights.MODERATE + rules.severityWeights.MAJOR;
     if (severitySum !== 10000) {
-      ctx.addIssue({ code: 'custom', message: `injuryRules.severityWeights 합은 10000이어야 한다: ${severitySum}`, path: ['severityWeights'] });
+      ctx.addIssue({
+        code: 'custom',
+        message: `injuryRules.severityWeights 합은 10000이어야 한다: ${severitySum}`,
+        path: ['severityWeights'],
+      });
     }
     const bodyPartWeightSum = rules.bodyParts.reduce((sum, part) => sum + part.weight, 0);
     if (bodyPartWeightSum !== 100) {
-      ctx.addIssue({ code: 'custom', message: `injuryRules.bodyParts weight 합은 100이어야 한다: ${bodyPartWeightSum}`, path: ['bodyParts'] });
+      ctx.addIssue({
+        code: 'custom',
+        message: `injuryRules.bodyParts weight 합은 100이어야 한다: ${bodyPartWeightSum}`,
+        path: ['bodyParts'],
+      });
     }
   });
 export type InjuryRules = z.infer<typeof InjuryRulesSchema>;
@@ -617,7 +709,11 @@ export const ManagerRulesSchema = z
   })
   .superRefine((rules, ctx) => {
     if (new Set(rules.names).size !== rules.names.length) {
-      ctx.addIssue({ code: 'custom', message: 'managerRules.names에 중복된 이름이 있다.', path: ['names'] });
+      ctx.addIssue({
+        code: 'custom',
+        message: 'managerRules.names에 중복된 이름이 있다.',
+        path: ['names'],
+      });
     }
   });
 export type ManagerRules = z.infer<typeof ManagerRulesSchema>;
@@ -626,7 +722,10 @@ export type ManagerRules = z.infer<typeof ManagerRulesSchema>;
 export const RelationshipRulesSchema = z.strictObject({
   logMax: z.number().int().positive(),
   memoryTagsMax: z.number().int().positive(),
-  captainAppointment: z.strictObject({ minCaptain: z.number().int().min(0).max(100), minSeasons: z.number().int().nonnegative() }),
+  captainAppointment: z.strictObject({
+    minCaptain: z.number().int().min(0).max(100),
+    minSeasons: z.number().int().nonnegative(),
+  }),
   tagThresholds: z.strictObject({
     glassPotential: z.number().int().min(0).max(100),
     glassMajorEpisodes: z.number().int().nonnegative(),
@@ -656,7 +755,10 @@ export const ReputationRulesSchema = z.strictObject({
 export type ReputationRules = z.infer<typeof ReputationRulesSchema>;
 
 // T-4-001 D-51: 대표팀 차출 규칙(소유 T-4-004). `opponents`는 실제 국가명을 쓰지 않는다.
-const NationalTeamRelationDeltaSchema = z.strictObject({ fans: z.number().int(), agent: z.number().int() });
+const NationalTeamRelationDeltaSchema = z.strictObject({
+  fans: z.number().int(),
+  agent: z.number().int(),
+});
 const NationalTeamOutcomeIdentitySchema = z.strictObject({
   callUp: z.enum(['ACCEPT', 'CONDITIONAL', 'DECLINE']),
   id: z.string().min(1),
@@ -729,7 +831,14 @@ const MarketValueWeightsBpSchema = z.strictObject({
 export const MarketValueRulesSchema = z
   .strictObject({
     weightsBp: MarketValueWeightsBpSchema,
-    ageCurve: z.array(z.strictObject({ maxAge: z.number().int().positive(), valueCenti: z.number().int().min(0).max(10000) })).min(1),
+    ageCurve: z
+      .array(
+        z.strictObject({
+          maxAge: z.number().int().positive(),
+          valueCenti: z.number().int().min(0).max(10000),
+        }),
+      )
+      .min(1),
     contractCurve: z.strictObject({
       remaining0: z.number().int().min(0).max(10000),
       remaining1: z.number().int().min(0).max(10000),
@@ -757,7 +866,15 @@ export const MarketValueRulesSchema = z
 export type MarketValueRules = z.infer<typeof MarketValueRulesSchema>;
 
 // T-2-001 D-33: 슬롯 kind는 domain `DecisionSlot['kind']`와 같은 7개.
-const DECISION_SLOT_KINDS = ['EVENT', 'CHAPTER', 'CONTRACT', 'ROLE', 'INJURY', 'NATIONAL_TEAM', 'SETTLEMENT'] as const;
+const DECISION_SLOT_KINDS = [
+  'EVENT',
+  'CHAPTER',
+  'CONTRACT',
+  'ROLE',
+  'INJURY',
+  'NATIONAL_TEAM',
+  'SETTLEMENT',
+] as const;
 const DecisionSlotKindSchema = z.enum(DECISION_SLOT_KINDS);
 const SlotImportanceSchema = z.enum(['MAJOR', 'MINOR']);
 
@@ -796,7 +913,11 @@ export const LeagueCalendarSchema = z
   })
   .superRefine((calendar, ctx) => {
     if (calendar.steps.length !== 12) {
-      ctx.addIssue({ code: 'custom', message: 'leagueCalendar.steps는 12개여야 한다.', path: ['steps'] });
+      ctx.addIssue({
+        code: 'custom',
+        message: 'leagueCalendar.steps는 12개여야 한다.',
+        path: ['steps'],
+      });
       return;
     }
 
@@ -829,11 +950,14 @@ export const LeagueCalendarSchema = z
 
     const lastStep = calendar.steps[11];
     if (lastStep !== undefined) {
-      const settlementSlots = lastStep.slots.filter((slot) => slot.kind === 'SETTLEMENT' && slot.required);
+      const settlementSlots = lastStep.slots.filter(
+        (slot) => slot.kind === 'SETTLEMENT' && slot.required,
+      );
       if (lastStep.phase !== 'SETTLEMENT' || settlementSlots.length !== 1) {
         ctx.addIssue({
           code: 'custom',
-          message: 'leagueCalendar.steps[11]은 phase SETTLEMENT이고 필수 SETTLEMENT 슬롯이 정확히 1개여야 한다.',
+          message:
+            'leagueCalendar.steps[11]은 phase SETTLEMENT이고 필수 SETTLEMENT 슬롯이 정확히 1개여야 한다.',
           path: ['steps', 11],
         });
       }
@@ -863,7 +987,14 @@ export const STAT_GROUPS = ['GK', 'DF', 'MF', 'FW'] as const;
 
 export const MATCH_STAT_KEYS: Record<(typeof STAT_GROUPS)[number], readonly string[]> = {
   FW: ['goals', 'assists', 'xgCenti', 'shots', 'offsides'],
-  MF: ['assists', 'chancesCreated', 'progressivePasses', 'passesAttempted', 'passesCompleted', 'ballRecoveries'],
+  MF: [
+    'assists',
+    'chancesCreated',
+    'progressivePasses',
+    'passesAttempted',
+    'passesCompleted',
+    'ballRecoveries',
+  ],
   DF: ['tackles', 'interceptions', 'aerialsWon', 'goalsConcededInvolved'],
   GK: ['saves', 'psxgMinusGoalsCenti', 'crossesClaimed', 'buildUpPasses'],
 };
@@ -916,8 +1047,16 @@ const StatTablesSchema = z.strictObject({
   FW: z.record(z.string(), StatDistributionTableSchema),
 });
 
-const DisciplineRowSchema = z.strictObject({ yellow: z.number().int().min(0).max(100), red: z.number().int().min(0).max(100) });
-const DisciplineTableSchema = z.strictObject({ GK: DisciplineRowSchema, DF: DisciplineRowSchema, MF: DisciplineRowSchema, FW: DisciplineRowSchema });
+const DisciplineRowSchema = z.strictObject({
+  yellow: z.number().int().min(0).max(100),
+  red: z.number().int().min(0).max(100),
+});
+const DisciplineTableSchema = z.strictObject({
+  GK: DisciplineRowSchema,
+  DF: DisciplineRowSchema,
+  MF: DisciplineRowSchema,
+  FW: DisciplineRowSchema,
+});
 
 const MatchInjuryRulesSchema = z.strictObject({
   perMatchPercent: z.number().int().min(0).max(100),
@@ -932,8 +1071,15 @@ const MatchRatingWeightsSchema = z.strictObject({
     MF: z.partialRecord(z.string(), z.number()),
     FW: z.partialRecord(z.string(), z.number()),
   }),
-  resultBonusTenths: z.strictObject({ WIN: z.number().int(), DRAW: z.number().int(), LOSS: z.number().int() }),
-  cardPenaltyTenths: z.strictObject({ yellow: z.number().int().nonnegative(), red: z.number().int().nonnegative() }),
+  resultBonusTenths: z.strictObject({
+    WIN: z.number().int(),
+    DRAW: z.number().int(),
+    LOSS: z.number().int(),
+  }),
+  cardPenaltyTenths: z.strictObject({
+    yellow: z.number().int().nonnegative(),
+    red: z.number().int().nonnegative(),
+  }),
 });
 
 export const MatchRulesSchema = z
@@ -947,7 +1093,10 @@ export const MatchRulesSchema = z
     statExposureFullMinutes: z.number().int().positive().max(120).exactOptional(),
     disciplineTable: DisciplineTableSchema,
     yellowSuspensionAt: z.number().int().positive(),
-    redSuspension: z.strictObject({ min: z.number().int().positive(), max: z.number().int().positive() }),
+    redSuspension: z.strictObject({
+      min: z.number().int().positive(),
+      max: z.number().int().positive(),
+    }),
     injury: MatchInjuryRulesSchema,
     ratingWeights: MatchRatingWeightsSchema,
     competitorFormDrift: z.strictObject({ amplitude: z.number().int().nonnegative() }),
@@ -1012,7 +1161,6 @@ export const MatchRulesSchema = z
         }
       }
     }
-
   });
 
 export const RulesetSchema = z
@@ -1029,13 +1177,117 @@ export const RulesetSchema = z
         competitorSeedVersion: z.literal('squad:season-team-v1'),
       })
       .optional(),
-    clubMeetingRules: z.strictObject({
-      playingTimeMinTrust: z.number().int().min(0).max(100),
-      loanMinTrust: z.number().int().min(0).max(100),
-      transferMaxTrust: z.number().int().min(0).max(100),
-      immediate: z.record(z.enum(['PLAYING_TIME_ACCEPTED', 'PLAYING_TIME_REFUSED', 'LOAN_ACCEPTED', 'LOAN_REFUSED', 'TRANSFER_ACCEPTED', 'TRANSFER_REFUSED']), z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int() })),
-      goalMet: z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int() }),
-    }).optional(),
+    clubMeetingRules: z
+      .strictObject({
+        playingTimeMinTrust: z.number().int().min(0).max(100),
+        loanMinTrust: z.number().int().min(0).max(100),
+        transferMaxTrust: z.number().int().min(0).max(100),
+        immediate: z.record(
+          z.enum([
+            'PLAYING_TIME_ACCEPTED',
+            'PLAYING_TIME_REFUSED',
+            'LOAN_ACCEPTED',
+            'LOAN_REFUSED',
+            'TRANSFER_ACCEPTED',
+            'TRANSFER_REFUSED',
+          ]),
+          z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int() }),
+        ),
+        goalMet: z.strictObject({
+          managerTrustDelta: z.number().int(),
+          moraleDelta: z.number().int(),
+        }),
+      })
+      .optional(),
+    /** T-7-031(D-80 1라운드 ②): 1.6.1+. 도메인 `RetirementPolicy`와 같은 모양. 없는 룰셋
+     * (1.0.0~1.6.0)은 도메인 기본값 `RETIREMENT_POLICY`(1.0.0)를 그대로 쓴다. */
+    retirementRules: z
+      .strictObject({
+        version: z.string().min(1).max(200),
+        ageBands: z
+          .array(
+            z.strictObject({
+              fromAge: z.number().int().min(0).max(120),
+              pressure: z.number().int().min(0).max(100),
+            }),
+          )
+          .min(1),
+        weights: z.strictObject({
+          age: z.number().int().min(0).max(100),
+          injury: z.number().int().min(0).max(100),
+          market: z.number().int().min(0).max(100),
+          opportunity: z.number().int().min(0).max(100),
+          intent: z.number().int().min(0).max(100),
+        }),
+        injuryAbsenceWeight: z.number().int().min(0).max(100),
+        undecidedIntentPressure: z.number().int().min(0).max(100),
+        watchThreshold: z.number().int().min(1).max(99),
+        reviewThreshold: z.number().int().min(1).max(100),
+      })
+      .superRefine((rules, ctx) => {
+        if (
+          rules.weights.age +
+            rules.weights.injury +
+            rules.weights.market +
+            rules.weights.opportunity +
+            rules.weights.intent !==
+          100
+        ) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'retirementRules.weights 합은 100이어야 한다.',
+            path: ['weights'],
+          });
+        }
+        if (rules.reviewThreshold <= rules.watchThreshold) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'retirementRules.reviewThreshold는 watchThreshold보다 커야 한다.',
+            path: ['reviewThreshold'],
+          });
+        }
+        if (rules.weights.age >= rules.reviewThreshold) {
+          ctx.addIssue({
+            code: 'custom',
+            message:
+              'retirementRules.weights.age는 reviewThreshold보다 작아야 한다(나이만으로 심사가 걸리면 안 된다).',
+            path: ['weights', 'age'],
+          });
+        }
+        if (rules.weights.injury >= rules.reviewThreshold) {
+          ctx.addIssue({
+            code: 'custom',
+            message:
+              'retirementRules.weights.injury는 reviewThreshold보다 작아야 한다(부상만으로 심사가 걸리면 안 된다).',
+            path: ['weights', 'injury'],
+          });
+        }
+        if (rules.ageBands[0]?.fromAge !== 0) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'retirementRules.ageBands는 0세부터 시작해야 한다.',
+            path: ['ageBands', 0, 'fromAge'],
+          });
+        }
+        for (let i = 1; i < rules.ageBands.length; i++) {
+          if (rules.ageBands[i]!.fromAge <= rules.ageBands[i - 1]!.fromAge) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `retirementRules.ageBands는 fromAge 오름차순이어야 한다(index ${i}).`,
+              path: ['ageBands', i, 'fromAge'],
+            });
+          }
+          // 도메인 legacy/retirement.ts의 validatePolicy와 동치: pressure는 감소하면 안 된다.
+          if (rules.ageBands[i]!.pressure < rules.ageBands[i - 1]!.pressure) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `retirementRules.ageBands는 pressure가 감소하면 안 된다(index ${i}).`,
+              path: ['ageBands', i, 'pressure'],
+            });
+          }
+        }
+      })
+      .optional(),
     leagueLedgerRules: LeagueLedgerRulesSchema.optional(),
     positions: z.array(PositionSchema).min(1),
     archetypes: z.array(ArchetypeSchema),
@@ -1072,7 +1324,11 @@ export const RulesetSchema = z
   })
   .superRefine((ruleset, ctx) => {
     if (ruleset.version === '1.7.0' && ruleset.leagueLedgerRules === undefined) {
-      ctx.addIssue({ code: 'custom', message: '1.7.0 룰셋은 leagueLedgerRules를 명시해야 한다.', path: ['leagueLedgerRules'] });
+      ctx.addIssue({
+        code: 'custom',
+        message: '1.7.0 룰셋은 leagueLedgerRules를 명시해야 한다.',
+        path: ['leagueLedgerRules'],
+      });
     }
     if (ruleset.leagueLedgerRules !== undefined) {
       for (const [index, league] of ruleset.leagues.entries()) {
@@ -1142,7 +1398,11 @@ export const RulesetSchema = z
     }
 
     if (ruleset.nationalities[0]?.code !== 'KR') {
-      ctx.addIssue({ code: 'custom', message: '국적 첫 항목은 KR이어야 한다.', path: ['nationalities', 0, 'code'] });
+      ctx.addIssue({
+        code: 'custom',
+        message: '국적 첫 항목은 KR이어야 한다.',
+        path: ['nationalities', 0, 'code'],
+      });
     }
     const nationalityCodes = new Set<string>();
     for (const [index, nationality] of ruleset.nationalities.entries()) {
@@ -1183,7 +1443,11 @@ export const RulesetSchema = z
     for (const [index, team] of ruleset.teams.entries()) {
       const league = leagueById.get(team.leagueId);
       if (league === undefined) {
-        ctx.addIssue({ code: 'custom', message: `teams[${index}].leagueId가 leagues에 없다: ${team.leagueId}`, path: ['teams', index, 'leagueId'] });
+        ctx.addIssue({
+          code: 'custom',
+          message: `teams[${index}].leagueId가 leagues에 없다: ${team.leagueId}`,
+          path: ['teams', index, 'leagueId'],
+        });
       } else if (league.tier !== team.leagueTier) {
         ctx.addIssue({
           code: 'custom',
@@ -1261,7 +1525,9 @@ export const RulesetSchema = z
 
     for (const [styleIndex, style] of ruleset.tacticalStyles.entries()) {
       for (const position of ruleset.positions) {
-        const archetypesAtPosition = new Set(ruleset.archetypes.filter((a) => a.position === position).map((a) => a.id));
+        const archetypesAtPosition = new Set(
+          ruleset.archetypes.filter((a) => a.position === position).map((a) => a.id),
+        );
         for (const archetypeId of style.preferredArchetypeIds[position] ?? []) {
           if (!archetypesAtPosition.has(archetypeId)) {
             ctx.addIssue({
@@ -1276,9 +1542,14 @@ export const RulesetSchema = z
 
     const uniqueCompetitorNames = new Set(ruleset.competitorNames);
     if (uniqueCompetitorNames.size !== ruleset.competitorNames.length) {
-      ctx.addIssue({ code: 'custom', message: 'competitorNames에 중복된 이름이 있다.', path: ['competitorNames'] });
+      ctx.addIssue({
+        code: 'custom',
+        message: 'competitorNames에 중복된 이름이 있다.',
+        path: ['competitorNames'],
+      });
     }
-    const minCompetitorNames = ruleset.selectionRules.competitorRule.perPosition * ruleset.positions.length * 2;
+    const minCompetitorNames =
+      ruleset.selectionRules.competitorRule.perPosition * ruleset.positions.length * 2;
     if (ruleset.competitorNames.length < minCompetitorNames) {
       ctx.addIssue({
         code: 'custom',
@@ -1292,7 +1563,11 @@ export const RulesetSchema = z
     // 사전(콘텐츠 팩 별도 파일)과의 중복은 스키마가 볼 수 없어 데이터 저작 시점에 수동으로 피한다.
     for (const name of ruleset.managerRules.names) {
       if (uniqueCompetitorNames.has(name)) {
-        ctx.addIssue({ code: 'custom', message: `managerRules.names가 competitorNames와 겹친다: ${name}`, path: ['managerRules', 'names'] });
+        ctx.addIssue({
+          code: 'custom',
+          message: `managerRules.names가 competitorNames와 겹친다: ${name}`,
+          path: ['managerRules', 'names'],
+        });
       }
     }
 
@@ -1343,7 +1618,10 @@ export const RulesetSchema = z
       }
     }
 
-    if (ruleset.transferRules.relationshipCarry.newManagerTrustBase !== ruleset.contractRules.newClubManagerTrust) {
+    if (
+      ruleset.transferRules.relationshipCarry.newManagerTrustBase !==
+      ruleset.contractRules.newClubManagerTrust
+    ) {
       ctx.addIssue({
         code: 'custom',
         message: `transferRules.relationshipCarry.newManagerTrustBase(${ruleset.transferRules.relationshipCarry.newManagerTrustBase})는 contractRules.newClubManagerTrust(${ruleset.contractRules.newClubManagerTrust})와 같아야 한다.`,

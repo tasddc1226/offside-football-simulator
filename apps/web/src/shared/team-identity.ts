@@ -17,6 +17,17 @@ export interface TeamIdentity {
 /** 룰셋에 없는(또는 앞으로 추가될) 팀 id를 위한 중립색 폴백. */
 const NEUTRAL_FALLBACK: TeamIdentity = { initials: '?', colorVar: 'var(--os-neutral)' };
 
+/** PR 231 리뷰: K3 필러 팀(예: "영월 동강 FC")처럼 TEAM_IDENTITY에 없는 id는 이름이 함께 오면
+ * "?" 대신 그 이름에서 이니셜을 뽑는다 — 한글은 앞 2글자(공백·"FC" 등은 건너뛴다), 영문/숫자는
+ * 대문자 2자. 이름이 없거나 뽑을 문자가 없으면 기존처럼 "?"로 남긴다. */
+function initialsFromName(name: string): string {
+  const hangul = (name.match(/[가-힣]/g) ?? []).join('');
+  if (hangul.length > 0) return hangul.slice(0, 2);
+  const alphanumeric = name.replace(/[^A-Za-z0-9]/g, '');
+  if (alphanumeric.length > 0) return alphanumeric.slice(0, 2).toUpperCase();
+  return NEUTRAL_FALLBACK.initials;
+}
+
 const TEAM_IDENTITY: Record<string, TeamIdentity> = {
   // 1.0.0~1.4.0
   'hangang-u18': { initials: '한강', colorVar: 'var(--os-team-hangang-u18)' },
@@ -63,7 +74,11 @@ const TEAM_IDENTITY: Record<string, TeamIdentity> = {
   'seoul-namsan-fc': { initials: '남산', colorVar: 'var(--os-team-seoul-namsan-fc)' },
 };
 
-/** 알 수 없는 teamId(컵 상대 등 룰셋 밖 id 포함)는 중립색 폴백을 돌려준다. */
-export function getTeamIdentity(teamId: string): TeamIdentity {
-  return TEAM_IDENTITY[teamId] ?? NEUTRAL_FALLBACK;
+/** 알 수 없는 teamId(컵 상대·K3 필러 등 룰셋 밖 id 포함)는 중립색 폴백을 돌려준다 — 호출부가
+ * teamName을 함께 주면 "?" 대신 그 이름에서 뽑은 이니셜을 쓴다(initialsFromName). */
+export function getTeamIdentity(teamId: string, teamName?: string): TeamIdentity {
+  const known = TEAM_IDENTITY[teamId];
+  if (known !== undefined) return known;
+  if (teamName === undefined) return NEUTRAL_FALLBACK;
+  return { initials: initialsFromName(teamName), colorVar: NEUTRAL_FALLBACK.colorVar };
 }
