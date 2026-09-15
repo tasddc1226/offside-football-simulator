@@ -9,6 +9,7 @@ PR #222가 제공하는 현재 활성 시즌 리그 원장을 사용해, 다음 
 - 요구사항: FR-CW-002/003/005/012, TEST-CW-005
 - 최초 검토 기준: PR #222 `d6b7a205d64fdd8677b7b56eb939ec403bd835de`
 - 최종 반영 부모: PR #222 `f229f0f6bb57a258a601af7e503199535604ba60`
+- 최종 반영 main: `bd4e83fa6bd9b454fb0390b70be85c78b33580e2`
 - 검토 문서: `career-world-prd.md`, `ADR-011-league-ledger-and-career-feedback.md`, `20-career-world-plan.md`
 - stacked base: `tasddc1226/T-7-022-league-ledger`
 
