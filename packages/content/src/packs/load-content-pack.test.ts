@@ -212,5 +212,19 @@ describe('loadContentPack: 0.5.0', () => {
     expect(ledgerPack.chapters.map((chapter) => chapter.id)).toEqual(
       peakAgePack.chapters.map((chapter) => chapter.id),
     );
+    const varietyPack = loadContentPack('0.6.4');
+    expect(varietyPack.manifest.compatibleRulesetVersions).toEqual(['1.7.0']);
+    const varietyManifestEventIds = varietyPack.manifest.files
+      .filter((file) => file.startsWith('events/'))
+      .map((file) => file.slice('events/'.length, -'.json'.length))
+      .sort();
+    expect(varietyPack.events.map((event) => event.id).sort()).toEqual(varietyManifestEventIds);
+    for (const previousEvent of ledgerPack.events) {
+      expect(varietyPack.eventsById.get(previousEvent.id)).toEqual(previousEvent);
+    }
+    expect(varietyPack.events.filter((event) => /-12[0-2]$/.test(event.id))).toHaveLength(18);
+    expect(loadContentPack('0.6.3').manifest.checksum).toBe(
+      'b7eac78ecd9ea3e56baecc57017ba041f5b0fad428b9b0f3c918a0d1ca3a9f5f',
+    );
   });
 });

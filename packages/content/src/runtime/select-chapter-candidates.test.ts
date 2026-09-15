@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Command, DomainSnapshot, Effect, FootballSeason, InjuryEpisode, SimulationResult } from '@offside/domain';
-import { simulate } from '@offside/domain';
+import { hashState, seedRng, simulate } from '@offside/domain';
 import { selectChapterCandidates } from './select-chapter-candidates.ts';
 import { selectEligibleEvents } from './select-eligible-events.ts';
 import { ChapterDefinitionSchema, type ChapterDefinition } from '../schema/chapter.ts';
@@ -407,5 +407,92 @@ describe('selectChapterCandidates: 실제 1.0.0 룰셋·0.1.0 팩', () => {
       step: 3,
       decisionsTotal: 1,
     });
+  });
+
+  it('1.7.0/0.6.4 실제 ADVANCE는 seed별 가중 경로를 재현하고 선택 의도의 후속 사건까지 연다', () => {
+    const ruleset = loadRuleset('1.7.0');
+    const pack = loadContentPack('0.6.4');
+
+    const offerForSeed = (seed: string): DomainSnapshot => {
+      const state = buildTestState({
+        stage: 'PRO',
+        age: 22,
+        currentStep: 4,
+        seasonPhase: 'LEAGUE',
+        rulesetVersion: '1.7.0',
+        contentPackVersion: '0.6.4',
+        rngState: seedRng(seed),
+        state: { form: 45, fitness: 80, morale: 60 },
+        relationships: { managerTrust: 60, captain: 60, rival: 55, fans: 55, agent: 50 },
+      });
+      const snapshot: DomainSnapshot = {
+        revision: 10,
+        checkpoint: 'STEP_BOUNDARY',
+        state,
+        stateHash: hashState(state),
+        rulesetVersion: '1.7.0',
+        contentPackVersion: '0.6.4',
+      };
+      const result = simulate({
+        snapshot,
+        command: buildCommand('ADVANCE', snapshot.revision, {
+          eligibleEvents: selectEligibleEvents(pack, state),
+        }),
+        ruleset,
+        rulesetVersion: '1.7.0',
+        contentPackVersion: '0.6.4',
+      });
+      if (!result.ok) throw new Error(`0.6.4 ADVANCE 실패: ${result.error.code}`);
+      return result.snapshot;
+    };
+
+    const first = offerForSeed('t7034-repeat');
+    const repeated = offerForSeed('t7034-repeat');
+    expect(repeated.stateHash).toBe(first.stateHash);
+    expect(repeated.state.pending).toEqual(first.state.pending);
+
+    const offeredIds = new Set<string>();
+    let reciprocity: DomainSnapshot | undefined;
+    for (let index = 0; index < 200; index += 1) {
+      const offered = offerForSeed(`t7034-variety-${index}`);
+      if (offered.state.pending?.kind !== 'EVENT') throw new Error('실제 ADVANCE가 EVENT를 열지 않았다.');
+      offeredIds.add(offered.state.pending.eventId);
+      if (offered.state.pending.eventId === 'EVT-REL-120') reciprocity = offered;
+    }
+    expect(offeredIds.size).toBeGreaterThan(1);
+    expect([...offeredIds].some((eventId) => /-12[0-2]$/.test(eventId))).toBe(true);
+    expect(reciprocity).toBeDefined();
+
+    const root = pack.eventsById.get('EVT-REL-120');
+    if (reciprocity === undefined || root === undefined) throw new Error('대표 연속 사건을 찾지 못했다.');
+    const cooperativeChoice = root.choices.find((choice) => choice.id === 'A');
+    if (cooperativeChoice === undefined) throw new Error('협력 선택지가 없다.');
+    const resolved = simulate({
+      snapshot: reciprocity,
+      command: buildCommand('RESOLVE_EVENT', reciprocity.revision, {
+        eventId: root.id,
+        definitionVersion: root.version,
+        choiceId: cooperativeChoice.id,
+        outcomes: toResolveEventOutcomes(cooperativeChoice.outcomes),
+      }),
+      ruleset,
+      rulesetVersion: '1.7.0',
+      contentPackVersion: '0.6.4',
+    });
+    if (!resolved.ok) throw new Error(`대표 사건 해소 실패: ${resolved.error.code}`);
+
+    const followUps = selectEligibleEvents(pack, resolved.snapshot.state);
+    expect(followUps).toEqual([{ eventId: 'EVT-REL-121', version: 1, weight: 100 }]);
+    const continued = simulate({
+      snapshot: resolved.snapshot,
+      command: buildCommand('ADVANCE', resolved.snapshot.revision, { eligibleEvents: followUps }),
+      ruleset,
+      rulesetVersion: '1.7.0',
+      contentPackVersion: '0.6.4',
+    });
+    expect(continued.ok).toBe(true);
+    if (continued.ok) {
+      expect(continued.snapshot.state.pending).toEqual({ kind: 'EVENT', eventId: 'EVT-REL-121', version: 1 });
+    }
   });
 });
