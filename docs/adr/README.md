@@ -2,6 +2,8 @@
 
 기술 스택과 인프라의 확정 결정이다. 개발 명세가 "권장"이라고 쓴 곳은 이 디렉터리의 결정이 우선한다. 결정을 뒤집을 때는 기존 ADR을 지우지 않고 `Superseded by ADR-xxx`로 표시한 뒤 새 번호를 만든다.
 
+`제안` 상태의 ADR도 검토를 위해 등록할 수 있지만, 채택되기 전에는 확정 ADR이나 기존 개발 계약보다 우선하지 않는다.
+
 | ID | 결정 | 상태 |
 |---|---|---|
 | [ADR-001](ADR-001-web-framework.md) | Vite + React SPA, Tailwind v4, Web Worker 엔진 | 확정 |
@@ -14,6 +16,7 @@
 | [ADR-008](ADR-008-auth-and-account-merge.md) | 익명 플레이 + Google 로그인 1종, 계정 연결·병합 | 확정 |
 | [ADR-009](ADR-009-apps-in-toss-channel.md) | 앱인토스 미니앱 대응 구조(출시 시점은 별도 결정): 채널 어댑터, 식별키·Bearer 세션, 네이티브 Storage, mTLS, 게임 등급분류 | 확정, 출시 준비는 보류 |
 | [ADR-010](ADR-010-shared-contracts.md) | Phase 3 이후 병렬화를 위한 공유 계약: Effect 만료·중첩·타깃 소유권, 시장가치 입력 소유권, CareerTag 카탈로그·부여 인터페이스 | 확정 |
+| [ADR-011](ADR-011-league-ledger-and-career-feedback.md) | 소속 리그 결과 원장, 결정론·저장·사건·모션의 분리 | 제안 — 신규 버전 구현 전 계약 검토 필요 |
 
 ## 한 줄 요약
 
