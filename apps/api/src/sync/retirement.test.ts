@@ -365,6 +365,34 @@ describe('retirement Archive sync', () => {
     }
   });
 
+  it('rejects a requested Legacy 1.2.0 when only 1.1.0 is active for the ruleset/pack pair', async () => {
+    const ctx = await createTestD1();
+    try {
+      const state = await setup(ctx, {
+        rulesetVersion: '1.1.0',
+        contentPackVersion: '0.3.0',
+      });
+      const response = await put(
+        ctx,
+        state.cookie,
+        state.careerId,
+        { ...state.body, retirementLegacyVersion: '1.2.0' },
+        'retirement-legacy-120-unavailable',
+      );
+      expect(response.status).toBe(400);
+      const rows = await ctx.db
+        .select()
+        .from(careerArchives)
+        .where(eq(careerArchives.careerId, state.careerId));
+      expect(rows).toHaveLength(0);
+      const preserved = await ctx.db.select().from(careers).where(eq(careers.id, state.careerId));
+      expect(preserved[0]?.status).toBe('ACTIVE');
+      expect(preserved[0]?.revision).toBe(state.body.baseRevision);
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
   it('rejects an unknown reference pin before writing any retirement record', async () => {
     const ctx = await createTestD1();
     try {

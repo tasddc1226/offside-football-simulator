@@ -6,9 +6,20 @@ import ruleset130 from '../../rulesets/1.3.0/ruleset.json' with { type: 'json' }
 import ruleset140 from '../../rulesets/1.4.0/ruleset.json' with { type: 'json' };
 import ruleset150 from '../../rulesets/1.5.0/ruleset.json' with { type: 'json' };
 import ruleset160 from '../../rulesets/1.6.0/ruleset.json' with { type: 'json' };
+import ruleset161 from '../../rulesets/1.6.1/ruleset.json' with { type: 'json' };
 import ruleset170 from '../../rulesets/1.7.0/ruleset.json' with { type: 'json' };
 
-export const RULESET_VERSIONS = ['1.0.0', '1.1.0', '1.2.0', '1.3.0', '1.4.0', '1.5.0', '1.6.0', '1.7.0'] as const;
+export const RULESET_VERSIONS = [
+  '1.0.0',
+  '1.1.0',
+  '1.2.0',
+  '1.3.0',
+  '1.4.0',
+  '1.5.0',
+  '1.6.0',
+  '1.6.1',
+  '1.7.0',
+] as const;
 export type RulesetVersion = (typeof RULESET_VERSIONS)[number];
 
 const RULESET_SOURCES: Record<RulesetVersion, unknown> = {
@@ -19,6 +30,7 @@ const RULESET_SOURCES: Record<RulesetVersion, unknown> = {
   '1.4.0': ruleset140,
   '1.5.0': ruleset150,
   '1.6.0': ruleset160,
+  '1.6.1': ruleset161,
   '1.7.0': ruleset170,
 };
 

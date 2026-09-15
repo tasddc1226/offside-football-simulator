@@ -1,6 +1,13 @@
 import type { CareerSnapshot } from '@offside/contracts';
 import { career04GkEngineCommands } from '@offside/fixtures';
-import { ATTRIBUTE_KEYS, hashState, type AttributeKey, type CareerState, type DomainSnapshot, type Ruleset } from '@offside/domain';
+import {
+  ATTRIBUTE_KEYS,
+  hashState,
+  type AttributeKey,
+  type CareerState,
+  type DomainSnapshot,
+  type Ruleset,
+} from '@offside/domain';
 import ruleset170Raw from '../../content/rulesets/1.7.0/ruleset.json' with { type: 'json' };
 import { describe, expect, it } from 'vitest';
 import { createEngineClient } from './engine.js';
@@ -41,7 +48,15 @@ function buildValidDomainSnapshot(): DomainSnapshot {
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',
     player: {
-      draft: { name: null, gender: null, nationalityCode: null, preferredFoot: null, position: null, archetypeId: null, backgroundId: null },
+      draft: {
+        name: null,
+        gender: null,
+        nationalityCode: null,
+        preferredFoot: null,
+        position: null,
+        archetypeId: null,
+        backgroundId: null,
+      },
       profile: null,
     },
     pending: null,
@@ -76,20 +91,26 @@ async function buildLedgerSnapshot(stopAfterSeasonStart = true): Promise<DomainS
   let id = 0;
   const commands = career04GkEngineCommands(() => `ledger-snapshot-${++id}`);
   const ruleset = ruleset170Raw as unknown as Ruleset;
-  const engine = createEngineClient({ store: new MemoryLocalStore(), simulator: inlineSimulator, ruleset });
+  const engine = createEngineClient({
+    store: new MemoryLocalStore(),
+    simulator: inlineSimulator,
+    ruleset,
+  });
   let careerId = '';
   let snapshot: DomainSnapshot | undefined;
   for (const source of commands) {
     const command = structuredClone(source);
     if (command.type === 'CREATE_CAREER') {
       command.payload.rulesetVersion = '1.7.0';
-      command.payload.contentPackVersion = '0.6.2';
+      command.payload.contentPackVersion = '0.6.3';
       careerId = command.payload.careerId;
     }
     const result = await engine.execute({
       careerId,
       command,
-      ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc-ledger-snapshot' } : {}),
+      ...(command.type === 'CREATE_CAREER'
+        ? { createdServiceSeasonId: 'svc-ledger-snapshot' }
+        : {}),
     });
     if (!result.ok) throw new Error(`${command.type}: ${result.error.message}`);
     snapshot = result.domainSnapshot;
@@ -102,7 +123,10 @@ async function buildLedgerSnapshot(stopAfterSeasonStart = true): Promise<DomainS
 describe('encodeSnapshot / decodeSnapshot', () => {
   it('정상 왕복: encode 후 decode하면 원래 DomainSnapshot과 같다', () => {
     const domain = buildValidDomainSnapshot();
-    const encoded = encodeSnapshot(domain, { careerId: domain.state.careerId, createdAt: '2026-01-01T00:00:00.000Z' });
+    const encoded = encodeSnapshot(domain, {
+      careerId: domain.state.careerId,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
 
     expect(encoded.id).toBe(`${domain.state.careerId}:${domain.revision}`);
     expect(encoded.careerId).toBe(domain.state.careerId);
@@ -113,7 +137,10 @@ describe('encodeSnapshot / decodeSnapshot', () => {
 
   it('state가 JSON으로 파싱되지 않으면 PARSE_FAILED', () => {
     const domain = buildValidDomainSnapshot();
-    const encoded = encodeSnapshot(domain, { careerId: domain.state.careerId, createdAt: '2026-01-01T00:00:00.000Z' });
+    const encoded = encodeSnapshot(domain, {
+      careerId: domain.state.careerId,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
     const tampered: CareerSnapshot = { ...encoded, state: '{not valid json' };
 
     expect(decodeSnapshot(tampered)).toEqual({ ok: false, reason: 'PARSE_FAILED' });
@@ -121,8 +148,14 @@ describe('encodeSnapshot / decodeSnapshot', () => {
 
   it('rngState.draws가 변조되면 RNG_STATE_MISMATCH', () => {
     const domain = buildValidDomainSnapshot();
-    const encoded = encodeSnapshot(domain, { careerId: domain.state.careerId, createdAt: '2026-01-01T00:00:00.000Z' });
-    const tampered: CareerSnapshot = { ...encoded, rngState: { ...encoded.rngState, draws: encoded.rngState.draws + 1 } };
+    const encoded = encodeSnapshot(domain, {
+      careerId: domain.state.careerId,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+    const tampered: CareerSnapshot = {
+      ...encoded,
+      rngState: { ...encoded.rngState, draws: encoded.rngState.draws + 1 },
+    };
 
     expect(decodeSnapshot(tampered)).toEqual({ ok: false, reason: 'RNG_STATE_MISMATCH' });
   });
@@ -130,7 +163,11 @@ describe('encodeSnapshot / decodeSnapshot', () => {
   it('tags 정렬 또는 신규 compact ledger canonical 형태가 깨지면(해시는 재계산) INVALID_STATE', async () => {
     const domain = buildValidDomainSnapshot();
     const reversedState: CareerState = { ...domain.state, tags: [...domain.state.tags].reverse() };
-    const reversedDomain: DomainSnapshot = { ...domain, state: reversedState, stateHash: hashState(reversedState) };
+    const reversedDomain: DomainSnapshot = {
+      ...domain,
+      state: reversedState,
+      stateHash: hashState(reversedState),
+    };
     const encoded = encodeSnapshot(reversedDomain, {
       careerId: reversedDomain.state.careerId,
       createdAt: '2026-01-01T00:00:00.000Z',
@@ -149,32 +186,46 @@ describe('encodeSnapshot / decodeSnapshot', () => {
       stateHash: hashState(missingLedgerState),
       rulesetVersion: '1.7.0',
     };
-    expect(decodeSnapshot(encodeSnapshot(missingLedgerDomain, {
-      careerId: domain.state.careerId,
-      createdAt: '2026-01-01T00:00:00.000Z',
-    }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
+    expect(
+      decodeSnapshot(
+        encodeSnapshot(missingLedgerDomain, {
+          careerId: domain.state.careerId,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        }),
+      ),
+    ).toEqual({ ok: false, reason: 'INVALID_STATE' });
 
     const ledgerDomain = await buildLedgerSnapshot();
     const ledger = ledgerDomain.state.season?.leagueLedger;
     if (ledger === undefined) throw new Error('ledger setup 실패');
     for (const results of [
       [[Number.MAX_SAFE_INTEGER, 0, 0]],
-      [[0, 0, 0], [0, 1, 0]],
+      [
+        [0, 0, 0],
+        [0, 1, 0],
+      ],
       [[0, 0, 0]],
     ] as const) {
       const corruptedState: CareerState = {
         ...ledgerDomain.state,
-        season: { ...ledgerDomain.state.season!, leagueLedger: { ...ledger, results: results.map((row) => [...row]) } },
+        season: {
+          ...ledgerDomain.state.season!,
+          leagueLedger: { ...ledger, results: results.map((row) => [...row]) },
+        },
       };
       const corruptedDomain: DomainSnapshot = {
         ...ledgerDomain,
         state: corruptedState,
         stateHash: hashState(corruptedState),
       };
-      expect(decodeSnapshot(encodeSnapshot(corruptedDomain, {
-        careerId: corruptedState.careerId,
-        createdAt: '2026-01-01T00:00:00.000Z',
-      }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
+      expect(
+        decodeSnapshot(
+          encodeSnapshot(corruptedDomain, {
+            careerId: corruptedState.careerId,
+            createdAt: '2026-01-01T00:00:00.000Z',
+          }),
+        ),
+      ).toEqual({ ok: false, reason: 'INVALID_STATE' });
     }
 
     const finalDomain = await buildLedgerSnapshot(false);
@@ -191,19 +242,24 @@ describe('encodeSnapshot / decodeSnapshot', () => {
     malformedFinalTable.rows[0] = {
       rank: 1,
       teamId: 'old-object-row',
-    } as unknown as typeof malformedFinalTable.rows[number];
+    } as unknown as (typeof malformedFinalTable.rows)[number];
     const malformedFinalDomain: DomainSnapshot = {
       ...finalDomain,
       state: malformedFinalState,
       stateHash: hashState(malformedFinalState),
     };
-    expect(decodeSnapshot(encodeSnapshot(malformedFinalDomain, {
-      careerId: malformedFinalState.careerId,
-      createdAt: '2026-01-01T00:00:00.000Z',
-    }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
+    expect(
+      decodeSnapshot(
+        encodeSnapshot(malformedFinalDomain, {
+          careerId: malformedFinalState.careerId,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        }),
+      ),
+    ).toEqual({ ok: false, reason: 'INVALID_STATE' });
 
     const inconsistentFinalState = structuredClone(finalDomain.state);
-    const inconsistentFinalTable = inconsistentFinalState.seasonHistory.at(-1)?.result.finalLeagueTable;
+    const inconsistentFinalTable =
+      inconsistentFinalState.seasonHistory.at(-1)?.result.finalLeagueTable;
     if (inconsistentFinalTable === undefined || inconsistentFinalTable.rows[0] === undefined) {
       throw new Error('inconsistent final table setup 실패');
     }
@@ -213,24 +269,38 @@ describe('encodeSnapshot / decodeSnapshot', () => {
       state: inconsistentFinalState,
       stateHash: hashState(inconsistentFinalState),
     };
-    expect(decodeSnapshot(encodeSnapshot(inconsistentFinalDomain, {
-      careerId: inconsistentFinalState.careerId,
-      createdAt: '2026-01-01T00:00:00.000Z',
-    }))).toEqual({ ok: false, reason: 'INVALID_STATE' });
+    expect(
+      decodeSnapshot(
+        encodeSnapshot(inconsistentFinalDomain, {
+          careerId: inconsistentFinalState.careerId,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        }),
+      ),
+    ).toEqual({ ok: false, reason: 'INVALID_STATE' });
   });
 
   it('wrapper의 careerId가 state.careerId와 다르면 CAREER_ID_MISMATCH', () => {
     const domain = buildValidDomainSnapshot();
-    const encoded = encodeSnapshot(domain, { careerId: domain.state.careerId, createdAt: '2026-01-01T00:00:00.000Z' });
+    const encoded = encodeSnapshot(domain, {
+      careerId: domain.state.careerId,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
     const otherCareerId = 'car_other';
-    const tampered: CareerSnapshot = { ...encoded, careerId: otherCareerId, id: `${otherCareerId}:${encoded.revision}` };
+    const tampered: CareerSnapshot = {
+      ...encoded,
+      careerId: otherCareerId,
+      id: `${otherCareerId}:${encoded.revision}`,
+    };
 
     expect(decodeSnapshot(tampered)).toEqual({ ok: false, reason: 'CAREER_ID_MISMATCH' });
   });
 
   it('id가 careerId:revision 형태가 아니면 REVISION_MISMATCH', () => {
     const domain = buildValidDomainSnapshot();
-    const encoded = encodeSnapshot(domain, { careerId: domain.state.careerId, createdAt: '2026-01-01T00:00:00.000Z' });
+    const encoded = encodeSnapshot(domain, {
+      careerId: domain.state.careerId,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
     const tampered: CareerSnapshot = { ...encoded, id: 'not-matching-id' };
 
     expect(decodeSnapshot(tampered)).toEqual({ ok: false, reason: 'REVISION_MISMATCH' });
@@ -238,7 +308,10 @@ describe('encodeSnapshot / decodeSnapshot', () => {
 
   it('stateHash가 맞지 않으면 STATE_HASH_MISMATCH', () => {
     const domain = buildValidDomainSnapshot();
-    const encoded = encodeSnapshot(domain, { careerId: domain.state.careerId, createdAt: '2026-01-01T00:00:00.000Z' });
+    const encoded = encodeSnapshot(domain, {
+      careerId: domain.state.careerId,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
     const tampered: CareerSnapshot = { ...encoded, stateHash: 'f'.repeat(64) };
 
     expect(decodeSnapshot(tampered)).toEqual({ ok: false, reason: 'STATE_HASH_MISMATCH' });

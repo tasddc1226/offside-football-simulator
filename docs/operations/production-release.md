@@ -346,6 +346,36 @@ preflight/deploy가 여기서 멈춘다.
 6. **기록.** 실행 URL·source SHA·Worker 버전·manifest 전후·검증 결과를 이 문서와 `docs/tracking/`에 남기고,
    위 표의 "현재 신규 커리어 버전"을 1.5.0/0.6.0으로 갱신한다.
 
+## 공지 테이블 마이그레이션 + 운영 공지 seed 실행 (2026-09-14, notices)
+
+사용자 결정(2026-09-14): 홈 공지사항을 웹 코드 상수(`HOME_NOTICES`)에서 D1 `notices` 테이블로
+옮긴다(API-NOTICE-001, `GET /v1/notices`). 시즌 승격과 달리 이 변경은 **스키마 마이그레이션 +
+데이터 seed** 두 단계이고, seed는 위 "실행 순서"의 일반 migration 단계에 포함되지 않는다(운영
+INSERT는 워크플로 입력이 아니라 정적 SQL 파일이다) — 그래서 별도로 적는다.
+
+1. **마이그레이션**은 새로 추가하지 않는다. 이 변경이 머지된 PR의 `apps/api/migrations/0007_*.sql`
+   (notices 테이블 생성)이 위 "실행 순서" 2단계(`pnpm --filter @offside/api db:migrate:production`,
+   `deploy-production.yml`)에서 다른 등록 migration과 함께 자동 적용된다 — 이 항목만을 위해 workflow를
+   따로 실행할 필요는 없다. 다음 정기 production 배포(또는 이 변경만을 위한 별도 실행) 때 0007이
+   적용됐는지 `sqlite_master`에서 `notices` 테이블 존재로 확인한다.
+2. **운영 공지 seed**는 workflow 밖에서 오케스트레이터가 직접 실행한다(운영 계정 권한 필요,
+   0007 적용 확인 뒤):
+   ```
+   pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production \
+     --file seeds/notices-production-2026-09-14.sql
+   ```
+   `apps/api/seeds/notices-production-2026-09-14.sql`은 이관 대상 공지 2건을 `ON CONFLICT(id) DO
+   UPDATE`로 넣는 멱등 SQL이다 — 재실행해도 완전히 같은 값이면 no-op이다. 운영자가 이후 이 두 공지를
+   직접 SQL로 편집했다면 재실행이 그 편집을 덮어쓰므로, 재실행 전 `SELECT id, title, published_at
+   FROM notices`로 현재 값을 먼저 확인한다.
+3. **검증.** `curl https://api.<운영 도메인>/v1/notices`로 공지 2건과 `Cache-Control: public,
+   max-age=60`을 확인하고, 운영 웹 홈에서 "공지사항" 배지가 2개로 보이는지 ego-browser로 확인한다.
+4. **롤백.** 이 변경은 새 테이블 추가 + INSERT뿐이라 기존 테이블·행을 건드리지 않는다. 되돌릴 일이
+   생기면 `notices` 테이블을 DROP하지 않고(아래 "장애 시 경계"의 일반 원칙) 대신 문제 있는 공지 행만
+   `UPDATE notices SET is_published = 0 WHERE id = '...'`로 내린다 — API는 `is_published = 1`만
+   돌려주므로 배포 없이 즉시 숨겨진다. 앱 자체의 폴백(오프라인 kv-store 캐시 → 빈 목록)은 API가 아예
+   응답하지 않을 때만 쓰인다.
+
 ## 나중에 종료일 정하기
 
 GitHub Actions의 **Production Release → Run workflow**에서 `main`과 정확한 최신 main SHA를

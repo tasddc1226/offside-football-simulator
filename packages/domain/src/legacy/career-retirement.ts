@@ -19,7 +19,11 @@ export const RETIREMENT_POLICY: RetirementPolicy = Object.freeze({
   reviewThreshold: 65,
 });
 
-export function assessCareerRetirement(state: CareerState, intent: RetirementIntent = 'UNDECIDED') {
+export function assessCareerRetirement(
+  state: CareerState,
+  intent: RetirementIntent = 'UNDECIDED',
+  policy: RetirementPolicy = RETIREMENT_POLICY,
+) {
   const season = state.seasonHistory.at(-1);
   if (season === undefined) return null;
   const stats = season.result.playerStats;
@@ -50,7 +54,7 @@ export function assessCareerRetirement(state: CareerState, intent: RetirementInt
       contractRemainingSeasons: remaining,
       intent,
     },
-    RETIREMENT_POLICY,
+    policy,
   );
 }
 
@@ -77,7 +81,10 @@ export function retirementContinuationOptions(state: CareerState) {
     }));
 }
 
-export function retirementDecisionRequired(state: CareerState): boolean {
+export function retirementDecisionRequired(
+  state: CareerState,
+  policy: RetirementPolicy = RETIREMENT_POLICY,
+): boolean {
   if (
     state.retirement?.lastChanceConsumed === true &&
     state.retirement.lastChanceSeasonIndex !== null
@@ -90,5 +97,5 @@ export function retirementDecisionRequired(state: CareerState): boolean {
     state.nationalityRuleState.serviceStatus === 'SERVING'
   )
     return false;
-  return assessCareerRetirement(state)?.status === 'REVIEW';
+  return assessCareerRetirement(state, 'UNDECIDED', policy)?.status === 'REVIEW';
 }

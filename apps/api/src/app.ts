@@ -10,6 +10,7 @@ import { session } from './middleware/session.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerCareerRoutes } from './routes/careers.js';
+import { registerNoticeRoutes } from './routes/notices.js';
 import { registerPresenceRoutes } from './routes/presence.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { registerServiceSeasonRoutes } from './routes/service-seasons.js';
@@ -37,6 +38,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerServiceSeasonRoutes(app);
   registerAnalyticsRoutes(app);
   registerPresenceRoutes(app);
+  registerNoticeRoutes(app);
 
   if (options.testRoutes) {
     app.get('/v1/test/throw', () => {

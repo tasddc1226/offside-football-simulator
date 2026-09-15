@@ -180,6 +180,15 @@ export {
 } from './presence.js';
 
 export {
+  NoticeSchema,
+  NoticesResponseSchema,
+  NOTICES_DEFAULT_LIMIT,
+  NOTICES_MAX_LIMIT,
+  type Notice,
+  type NoticesResponse,
+} from './notices.js';
+
+export {
   ANALYTICS_EVENT_NAMES,
   AnalyticsEventNameSchema,
   ANALYTICS_EVENT_PROPS_SCHEMAS,

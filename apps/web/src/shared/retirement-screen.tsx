@@ -12,6 +12,7 @@ import {
   nationalityForCareer,
   retirementContinuationOptions,
   legacyEndingPresentation,
+  RETIREMENT_POLICY,
   type CareerState,
   type Command,
   type CareerArchiveCore,
@@ -39,11 +40,13 @@ import {
 import './retirement-screen.css';
 
 type Mode = 'retirement' | 'legacy' | 'timeline' | 'final-profile';
+export type RetirementRetrospectiveStep = `moment-${number}` | 'legacy' | 'final';
 export type RetirementScreenProps = {
   state: CareerState;
   archive?: CareerArchiveCore;
   result?: LegacyResult;
   mode?: Mode;
+  retrospective?: RetirementRetrospectiveStep;
   onCommand?: (command: Command) => Promise<void>;
   onSourceClick?: (sourceId: string) => void;
   busy?: boolean;
@@ -58,9 +61,11 @@ export type RetirementScreenProps = {
 export function RetirementPage({
   careerId,
   mode = 'retirement',
+  retrospective,
 }: {
   careerId: string;
   mode?: Mode;
+  retrospective?: RetirementRetrospectiveStep;
 }) {
   const cache = useQueryClient();
   const navigate = useNavigate();
@@ -146,6 +151,7 @@ export function RetirementPage({
     <RetirementScreen
       state={state}
       mode={mode}
+      {...(retrospective === undefined ? {} : { retrospective })}
       startYear={startYear}
       {...(archive === null ? {} : { archive })}
       {...(result === null ? {} : { result })}
@@ -180,6 +186,288 @@ const CHOICE_LABEL = {
   INTERNATIONAL: 'U23 국제대회 참가',
   MENTOR: '후배에게 경험 나누기',
 } as const;
+
+type RetrospectiveHighlight = Readonly<{
+  sourceId: string;
+  revision: number;
+  eyebrow: string;
+  title: string;
+  detail: string;
+}>;
+
+type CareerMilestone = Readonly<{
+  id: string;
+  label: string;
+  value: number;
+  unit: string;
+  seasonIndex: number;
+}>;
+
+function sourceSeasonIndex(sourceId: string): number | null {
+  const match = /^season:(\d+):/.exec(sourceId);
+  return match === null ? null : Number(match[1]);
+}
+
+function highlightFromSource(
+  source: LegacyResult['sources'][number],
+  state: CareerState,
+  result: LegacyResult,
+  startYear: number,
+): RetrospectiveHighlight | null {
+  if (source.sourceId === 'retirement:alternative') return null;
+  const seasonIndex = source.seasonIndex ?? sourceSeasonIndex(source.sourceId);
+  const season =
+    seasonIndex === null
+      ? undefined
+      : state.seasonHistory.find((item) => item.index === seasonIndex);
+  const eyebrow = seasonIndex === null ? '마지막 선택' : seasonYearLabel(startYear, seasonIndex);
+
+  if (source.kind === 'RETIREMENT') {
+    const retirement = state.timeline.findLast((entry) => entry.kind === 'RETIRED');
+    if (retirement === undefined) return null;
+    return {
+      sourceId: source.sourceId,
+      revision: source.revision,
+      eyebrow,
+      title:
+        retirement.refId === 'COACH_EPILOGUE'
+          ? '지도자로 이어지는 마지막 휘슬'
+          : '선수로서 맞은 마지막 휘슬',
+      detail: `${state.seasonHistory.length}시즌의 확정 기록을 보관했습니다.`,
+    };
+  }
+
+  if (source.kind === 'TAG') {
+    const tag = source.sourceId.slice('tag:'.length) as keyof typeof CAREER_TAGS;
+    if (!result.tags.includes(tag) || CAREER_TAGS[tag] === undefined) return null;
+    return {
+      sourceId: source.sourceId,
+      revision: source.revision,
+      eyebrow,
+      title: careerTagLabel(tag, CAREER_TAGS[tag].label),
+      detail: '보관된 커리어 태그의 확정 근거입니다.',
+    };
+  }
+
+  if (source.kind === 'CHAPTER') {
+    const tournament = result.international.tournaments.find(
+      (item) => item.sourceId === source.sourceId,
+    );
+    if (tournament !== undefined) {
+      const medal =
+        tournament.medal === null
+          ? '메달 없음'
+          : { GOLD: '금메달', SILVER: '은메달', BRONZE: '동메달' }[tournament.medal];
+      return {
+        sourceId: source.sourceId,
+        revision: source.revision,
+        eyebrow,
+        title: tournament.tournament === 'OLYMPICS' ? '올림픽 여정' : '아시안게임 여정',
+        detail: `U23 대표팀 기록 · ${medal}`,
+      };
+    }
+    const chapterId = source.sourceId.split(':chapter:')[1];
+    const chapter = season?.result.chapters.find((item) => item.chapterId === chapterId);
+    if (season === undefined || chapter === undefined) return null;
+    const appearances =
+      season.result.playerStats.appearances.total -
+      season.result.playerStats.appearances.zeroMinute;
+    return {
+      sourceId: source.sourceId,
+      revision: source.revision,
+      eyebrow,
+      title: '결정적인 경기의 선택',
+      detail: `${appearances}경기 출전 시즌 · 저장된 선택 결과`,
+    };
+  }
+
+  if (season === undefined) return null;
+  const appearances =
+    season.result.playerStats.appearances.total - season.result.playerStats.appearances.zeroMinute;
+  if (source.sourceId.includes(':trophy:')) {
+    const competitionId = source.sourceId.split(':trophy:')[1];
+    const competition = season.result.competitions.find(
+      (item) => item.competitionId === competitionId,
+    );
+    if (competition === undefined || !seasonWonTitle({ competitions: [competition] })) return null;
+    return {
+      sourceId: source.sourceId,
+      revision: source.revision,
+      eyebrow,
+      title: competition.kind === 'CUP' ? '컵 우승' : '리그 우승',
+      detail: `${appearances}경기 출전 · ${season.result.playerStats.minutes.toLocaleString('ko-KR')}분`,
+    };
+  }
+  if (source.sourceId.endsWith(':relationships')) {
+    return {
+      sourceId: source.sourceId,
+      revision: source.revision,
+      eyebrow,
+      title: '함께 쌓은 신뢰',
+      detail: `시즌 종료 감독 신뢰 ${season.result.stateDeltas.managerTrust.after}`,
+    };
+  }
+  if (source.sourceId.endsWith(':duration')) {
+    return {
+      sourceId: source.sourceId,
+      revision: source.revision,
+      eyebrow,
+      title: `${season.index}번째 시즌 완주`,
+      detail: `${appearances}경기 출전 · ${season.result.playerStats.minutes.toLocaleString('ko-KR')}분`,
+    };
+  }
+  if (
+    source.sourceId.endsWith(':performance') ||
+    source.sourceId.endsWith(':individual-merit') ||
+    source.sourceId.endsWith(':established-contribution')
+  ) {
+    const average =
+      season.result.playerStats.ratedMatches === 0
+        ? '평균 평점 미집계'
+        : `평균 평점 ${(
+            season.result.playerStats.ratingSumTenths /
+            season.result.playerStats.ratedMatches /
+            10
+          ).toFixed(1)}`;
+    return {
+      sourceId: source.sourceId,
+      revision: source.revision,
+      eyebrow,
+      title: '시즌 기여 기록',
+      detail: `${appearances}경기 · ${season.result.playerStats.minutes.toLocaleString('ko-KR')}분 · ${average}`,
+    };
+  }
+  return null;
+}
+
+function buildRetrospectiveHighlights(
+  state: CareerState,
+  result: LegacyResult,
+  startYear: number,
+): RetrospectiveHighlight[] {
+  const preferred = [
+    result.sources.find((source) => source.sourceId === result.bestMomentRef),
+    ...result.sources.filter((source) => source.sourceId.includes(':trophy:')),
+    ...result.sources.filter((source) => source.kind === 'CHAPTER'),
+    ...result.sources.filter((source) => source.kind === 'TAG'),
+    ...result.sources.filter((source) => source.sourceId.endsWith(':performance')),
+    ...result.sources.filter((source) => source.sourceId.endsWith(':relationships')),
+    ...result.sources.filter((source) => source.sourceId.endsWith(':duration')),
+    ...result.sources.filter((source) => source.kind === 'RETIREMENT'),
+  ].filter((source): source is LegacyResult['sources'][number] => source !== undefined);
+  const unique = new Map<string, RetrospectiveHighlight>();
+  for (const source of preferred) {
+    if (unique.has(source.sourceId)) continue;
+    const highlight = highlightFromSource(source, state, result, startYear);
+    if (highlight !== null) unique.set(source.sourceId, highlight);
+    if (unique.size === 5) break;
+  }
+  return [...unique.values()].sort(
+    (left, right) => left.revision - right.revision || left.sourceId.localeCompare(right.sourceId),
+  );
+}
+
+function highestCrossedThreshold(value: number, thresholds: readonly number[]): number | null {
+  return thresholds.filter((threshold) => value >= threshold).at(-1) ?? null;
+}
+
+function buildCareerMilestones(state: CareerState, archive: CareerArchiveCore): CareerMilestone[] {
+  const milestones: CareerMilestone[] = [];
+  const definitions: Array<{
+    id: string;
+    label: string;
+    unit: string;
+    thresholds: readonly number[];
+    value: (season: CareerState['seasonHistory'][number]) => number;
+    supports: (season: CareerState['seasonHistory'][number]) => boolean;
+  }> = [
+    {
+      id: 'appearances',
+      label: '통산 출전',
+      unit: '경기',
+      thresholds: [50, 100, 200],
+      value: (season) =>
+        season.result.playerStats.appearances.total -
+        season.result.playerStats.appearances.zeroMinute,
+      supports: () => true,
+    },
+  ];
+  const primary = archive.records.positions.toSorted(
+    (left, right) =>
+      right.totals.minutes - left.totals.minutes || left.group.localeCompare(right.group),
+  )[0]?.group;
+  if (primary !== undefined) {
+    const metric = {
+      FW: {
+        id: 'goals',
+        label: '공격수 통산 득점',
+        unit: '골',
+        thresholds: [10, 25, 50],
+      },
+      MF: {
+        id: 'chances',
+        label: '미드필더 기회 창출',
+        unit: '회',
+        thresholds: [50, 100, 250],
+      },
+      DF: {
+        id: 'tackles',
+        label: '수비수 태클',
+        unit: '회',
+        thresholds: [50, 100, 250],
+      },
+      GK: {
+        id: 'saves',
+        label: '골키퍼 선방',
+        unit: '회',
+        thresholds: [50, 100, 250],
+      },
+    }[primary];
+    definitions.push({
+      ...metric,
+      value: (season) => {
+        const totals = season.result.playerStats.totals;
+        if (primary === 'FW' && totals.group === 'FW') return totals.goals;
+        if (primary === 'MF' && totals.group === 'MF') return totals.chancesCreated;
+        if (primary === 'DF' && totals.group === 'DF') return totals.tackles;
+        if (primary === 'GK' && totals.group === 'GK') return totals.saves;
+        return 0;
+      },
+      supports: (season) => season.result.playerStats.group === primary,
+    });
+  }
+  for (const definition of definitions) {
+    let cumulative = 0;
+    let reachedSeason: number | null = null;
+    let reachedValue = 0;
+    for (const season of state.seasonHistory) {
+      if (!definition.supports(season)) continue;
+      const previous = cumulative;
+      cumulative += definition.value(season);
+      const threshold = highestCrossedThreshold(
+        cumulative,
+        definition.thresholds.filter((value) => value > previous),
+      );
+      if (threshold !== null) {
+        reachedSeason = season.index;
+        reachedValue = threshold;
+      }
+    }
+    if (
+      reachedSeason !== null &&
+      archive.records.sources.some((source) => source.seasonIndex === reachedSeason)
+    ) {
+      milestones.push({
+        id: definition.id,
+        label: definition.label,
+        value: reachedValue,
+        unit: definition.unit,
+        seasonIndex: reachedSeason,
+      });
+    }
+  }
+  return milestones;
+}
 
 /** "2026–2041 · 16시즌"(2026-09-13 사용자 결정: 은퇴·보관함 기록에도 연도가 보이게 한다). 완주한
  * 시즌이 없으면(0) 기간을 만들 근거가 없어 개수만 남긴다. */
@@ -283,11 +571,211 @@ function TimelineList({
   );
 }
 
+function RetrospectiveProgress({ current, total }: { current: number; total: number }) {
+  return (
+    <div
+      className="os-panel os-retrospective-progress"
+      aria-label={`커리어 돌아보기 ${current} / ${total} 단계`}
+    >
+      <span>커리어 돌아보기</span>
+      <strong>
+        {current} / {total}
+      </strong>
+      <div className="os-retrospective-progress-track" aria-hidden="true">
+        <span style={{ width: `${(current / total) * 100}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function GuidedRetrospective({
+  state,
+  result,
+  archive,
+  step,
+  startYear,
+  onSourceClick,
+}: {
+  state: CareerState;
+  result: LegacyResult;
+  archive: CareerArchiveCore;
+  step: RetirementRetrospectiveStep;
+  startYear: number;
+  onSourceClick?: (sourceId: string) => void;
+}) {
+  const highlights = buildRetrospectiveHighlights(state, result, startYear);
+  const total = highlights.length + 2;
+  const requestedMoment = step.startsWith('moment-') ? Number(step.slice('moment-'.length)) : null;
+  const moment = requestedMoment === null ? null : highlights[requestedMoment - 1];
+  const normalizedStep =
+    step === 'legacy' || step === 'final'
+      ? step
+      : moment === undefined
+        ? highlights.length === 0
+          ? 'legacy'
+          : 'moment-1'
+        : step;
+  const current =
+    normalizedStep === 'legacy'
+      ? highlights.length + 1
+      : normalizedStep === 'final'
+        ? total
+        : Number(normalizedStep.slice('moment-'.length));
+  const currentMoment = normalizedStep.startsWith('moment-') ? highlights[current - 1] : undefined;
+  const careerId = state.careerId;
+
+  return (
+    <section className="os-endgame-stack" aria-labelledby="guided-retrospective-title">
+      <h2 id="guided-retrospective-title" className="sr-only">
+        커리어 돌아보기
+      </h2>
+      <RetrospectiveProgress current={current} total={total} />
+      {normalizedStep === 'final' ? null : (
+        <div className="os-retrospective-skip">
+          <Link
+            to="/career/$careerId/retirement"
+            params={{ careerId }}
+            search={{ retrospective: 'final' }}
+          >
+            전체 건너뛰기
+          </Link>
+        </div>
+      )}
+      {currentMoment !== undefined ? (
+        <article className="os-panel os-retrospective-moment">
+          <p>{currentMoment.eyebrow}</p>
+          <h2>{currentMoment.title}</h2>
+          <p>{currentMoment.detail}</p>
+          {onSourceClick === undefined ? null : (
+            <button
+              type="button"
+              className={buttonClassName('secondary')}
+              style={buttonStyle}
+              onClick={() => onSourceClick(currentMoment.sourceId)}
+            >
+              연대기에서 근거 보기
+            </button>
+          )}
+        </article>
+      ) : null}
+      {normalizedStep === 'legacy' ? (
+        <LegacyScoreCard result={result} {...(onSourceClick ? { onSourceClick } : {})} />
+      ) : null}
+      {normalizedStep === 'final' ? (
+        <FinalProfileView state={state} result={result} archive={archive} startYear={startYear} />
+      ) : null}
+      {normalizedStep !== 'final' ? (
+        <div className="os-endgame-choice-grid">
+          <Link
+            className={buttonClassName('primary')}
+            style={buttonStyle}
+            to="/career/$careerId/retirement"
+            params={{ careerId }}
+            search={{
+              retrospective:
+                normalizedStep === 'legacy'
+                  ? 'final'
+                  : current >= highlights.length
+                    ? 'legacy'
+                    : (`moment-${current + 1}` as const),
+            }}
+          >
+            {normalizedStep === 'legacy'
+              ? '최종 기록 보기'
+              : current >= highlights.length
+                ? 'Legacy 평가 보기'
+                : '다음 대표 순간'}
+          </Link>
+          <Link
+            className={buttonClassName('secondary')}
+            style={buttonStyle}
+            to="/career/$careerId/retirement"
+            params={{ careerId }}
+            search={{ retrospective: 'final' }}
+          >
+            최종 기록 바로 보기
+          </Link>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function FinalProfileView({
+  state,
+  result,
+  archive,
+  startYear,
+}: {
+  state: CareerState;
+  result: LegacyResult;
+  archive?: CareerArchiveCore;
+  startYear: number;
+}) {
+  const profile = state.player.profile === null ? null : toPlayerPublic(state.player.profile);
+  const ending = legacyEndingPresentation(result.endingId);
+  if (profile === null) return null;
+  return (
+    <section className="os-endgame-stack">
+      <div className="os-endgame-hero">
+        <p>FINAL PLAYER PROFILE</p>
+        <h2>{profile.name}</h2>
+        <p>
+          최종 포지션 {POSITION_LABELS[profile.primaryPosition]} · 선호{' '}
+          {POSITION_LABELS[profile.preferredPosition]}
+        </p>
+      </div>
+      <div className="os-panel os-endgame-section">
+        <dl className="os-endgame-stat-grid">
+          <div className="os-endgame-stat">
+            <dt>최종 OVR</dt>
+            <dd>{profile.baseOvr}</dd>
+          </div>
+          {archive ? (
+            <>
+              <div className="os-endgame-stat">
+                <dt>시즌</dt>
+                <dd>{totalSeasonsPeriodLabel(startYear, archive.records.totals.seasons)}</dd>
+              </div>
+              <div className="os-endgame-stat">
+                <dt>출전</dt>
+                <dd>{archive.records.totals.playedMatches}</dd>
+              </div>
+            </>
+          ) : null}
+          <div className="os-endgame-stat">
+            <dt>Legacy</dt>
+            <dd>{result.totalScore}</dd>
+          </div>
+        </dl>
+        <h3>커리어 엔딩</h3>
+        <p>{ending.title}</p>
+        <p>{ending.sentence}</p>
+        <h3>커리어 태그</h3>
+        {result.tags.length ? (
+          <ul className="os-endgame-tags">
+            {result.tags.map((tag) => (
+              <li key={tag}>{careerTagLabel(tag, CAREER_TAGS[tag].label)}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>아직 이름 붙지 않은 이야기라도, 모든 출전은 기록에 남습니다.</p>
+        )}
+        <p>보관된 기록은 새 플레이의 성장 수치에 더하지 않습니다.</p>
+      </div>
+      <Link className={buttonClassName('primary')} style={buttonStyle} to="/">
+        새 선수로 시작하기
+      </Link>
+    </section>
+  );
+}
+
 export function RetirementScreen({
   state,
   result,
   archive,
   mode = 'retirement',
+  retrospective,
   onCommand,
   onSourceClick,
   busy = false,
@@ -313,8 +801,8 @@ export function RetirementScreen({
   const pending = busy || localBusy;
   const terminal = state.status === 'RETIRED' || state.status === 'ARCHIVED';
   const profile = state.player.profile === null ? null : toPlayerPublic(state.player.profile);
-  const ending = result === undefined ? null : legacyEndingPresentation(result.endingId);
-  const assessment = assessCareerRetirement(state);
+  const retirementPolicy = rulesetForCareer(state).retirementRules ?? RETIREMENT_POLICY;
+  const assessment = assessCareerRetirement(state, 'UNDECIDED', retirementPolicy);
   const nationality = nationalityForCareer(state);
   const careerId = state.careerId;
   const timelineRevisions = [...new Set(state.timeline.map((entry) => entry.revision))];
@@ -347,6 +835,9 @@ export function RetirementScreen({
   const retirementEntry = state.timeline.findLast((entry) => entry.kind === 'RETIRED');
   const finalChoice = retirementEntry?.refId === 'COACH_EPILOGUE' ? '지도자로 이어지는 마지막 휘슬' : '선수로서 맞은 마지막 휘슬';
   const bestMoment = result?.sources.find((source) => source.sourceId === result.bestMomentRef);
+  const milestones = archive === undefined ? [] : buildCareerMilestones(state, archive);
+  const retrospectiveHighlights =
+    result === undefined ? [] : buildRetrospectiveHighlights(state, result, startYear);
   // 은퇴 연도: 마지막으로 완주한 시즌의 해(완주한 시즌이 없으면 커리어 시작 연도 그대로).
   const retirementYear = seasonYear(startYear, Math.max(state.seasonHistory.length, 1));
   return (
@@ -354,8 +845,10 @@ export function RetirementScreen({
       <ScreenIntro
         eyebrow={terminal ? '커리어의 마지막 휘슬' : '시즌 사이, 당신의 선택'}
         title={
-          mode === 'retirement'
-            ? terminal
+          retrospective !== undefined
+            ? '커리어 돌아보기'
+            : mode === 'retirement'
+              ? terminal
               ? '커리어 회고'
               : '다음 시즌을 앞두고'
             : mode === 'legacy'
@@ -408,7 +901,7 @@ export function RetirementScreen({
               급여를 중단합니다. 메달에 따른 체육요원 경로도 실제 병역 자격을 판정하지 않습니다.
             </p>
             <div className="os-endgame-choice-grid">
-            {careerEventChoices(state).map((choice) => (
+            {careerEventChoices(state, retirementPolicy).map((choice) => (
               <Button
                 key={choice}
                 variant="secondary"
@@ -486,7 +979,7 @@ export function RetirementScreen({
           </Link>
         </>
       ) : null}
-      {terminal && mode === 'retirement' && archive && result ? (
+      {terminal && mode === 'retirement' && archive && result && retrospective === undefined ? (
         <GameResultReveal fast={state.simulationMode === 'FAST'} announcement={`${profile?.name ?? '선수'}의 커리어 기록이 확정되었습니다`}>
           <div className="os-endgame-stack">
             <section className="os-endgame-hero" aria-labelledby="career-recap-heading">
@@ -526,9 +1019,57 @@ export function RetirementScreen({
                 </div>
               </details>
             </section>
+            <section className="os-panel os-endgame-section" aria-labelledby="career-milestones-heading">
+              <h2 id="career-milestones-heading">커리어 마일스톤</h2>
+              {milestones.length > 0 ? (
+                <ul className="os-milestone-grid">
+                  {milestones.map((milestone) => (
+                    <li key={milestone.id}>
+                      <span>{seasonYearLabel(startYear, milestone.seasonIndex)} 달성</span>
+                      <strong>{milestone.label} {milestone.value}{milestone.unit}</strong>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>보관 기록에서 확인할 수 있는 마일스톤이 아직 없습니다.</p>
+              )}
+              <p>마일스톤과 확정된 커리어 기록은 언제든 이 화면에서 다시 볼 수 있습니다.</p>
+            </section>
+            <div className="os-endgame-choice-grid">
+              <Link
+                className={buttonClassName('primary')}
+                style={buttonStyle}
+                to="/career/$careerId/retirement"
+                params={{ careerId }}
+                search={{
+                  retrospective: retrospectiveHighlights.length > 0 ? 'moment-1' : 'legacy',
+                }}
+              >
+                커리어 돌아보기
+              </Link>
+              <Link
+                className={buttonClassName('secondary')}
+                style={buttonStyle}
+                to="/career/$careerId/retirement"
+                params={{ careerId }}
+                search={{ retrospective: 'final' }}
+              >
+                최종 기록 바로 보기
+              </Link>
+            </div>
             <Link className={buttonClassName('primary')} style={buttonStyle} to="/career/$careerId/legacy" params={{ careerId }}>Legacy 평가 보기</Link>
           </div>
         </GameResultReveal>
+      ) : null}
+      {terminal && mode === 'retirement' && archive && result && retrospective !== undefined ? (
+        <GuidedRetrospective
+          state={state}
+          result={result}
+          archive={archive}
+          step={retrospective}
+          startYear={startYear}
+          {...(onSourceClick ? { onSourceClick } : {})}
+        />
       ) : null}
       {mode === 'legacy' && result ? (
         <LegacyScoreCard result={result} {...(onSourceClick ? { onSourceClick } : {})} />
@@ -541,40 +1082,13 @@ export function RetirementScreen({
           startYear={startYear}
         />
       ) : null}
-      {mode === 'final-profile' && terminal && profile && result ? (
-        <section className="os-endgame-stack">
-          <div className="os-endgame-hero">
-            <p>FINAL PLAYER PROFILE</p>
-            <h2>{profile.name}</h2>
-            <p>최종 포지션 {POSITION_LABELS[profile.primaryPosition]} · 선호 {POSITION_LABELS[profile.preferredPosition]}</p>
-          </div>
-          <div className="os-panel os-endgame-section">
-            <dl className="os-endgame-stat-grid">
-              <div className="os-endgame-stat"><dt>최종 OVR</dt><dd>{profile.baseOvr}</dd></div>
-              {archive ? <><div className="os-endgame-stat"><dt>시즌</dt><dd>{totalSeasonsPeriodLabel(startYear, archive.records.totals.seasons)}</dd></div><div className="os-endgame-stat"><dt>출전</dt><dd>{archive.records.totals.playedMatches}</dd></div></> : null}
-              <div className="os-endgame-stat"><dt>Legacy</dt><dd>{result.totalScore}</dd></div>
-            </dl>
-          {ending ? (
-            <>
-              <h3>커리어 엔딩</h3>
-              <p>{ending.title}</p>
-              <p>{ending.sentence}</p>
-            </>
-          ) : null}
-          <h3>커리어 태그</h3>
-          {result.tags.length ? (
-            <ul className="os-endgame-tags">
-              {result.tags.map((tag) => (
-                <li key={tag}>{careerTagLabel(tag, CAREER_TAGS[tag].label)}</li>
-              ))}
-            </ul>
-          ) : (
-            <p>아직 이름 붙지 않은 이야기라도, 모든 출전은 기록에 남습니다.</p>
-          )}
-          <p>보관된 기록은 새 플레이의 성장 수치에 더하지 않습니다.</p>
-          </div>
-          <Link className={buttonClassName('primary')} style={buttonStyle} to="/">새 선수로 시작하기</Link>
-        </section>
+      {mode === 'final-profile' && terminal && result ? (
+        <FinalProfileView
+          state={state}
+          result={result}
+          startYear={startYear}
+          {...(archive === undefined ? {} : { archive })}
+        />
       ) : null}
       {terminal ? (
         <nav aria-label="은퇴 결과" className="os-panel os-endgame-nav">

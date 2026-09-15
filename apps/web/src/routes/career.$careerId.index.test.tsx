@@ -50,6 +50,7 @@ import {
   nextMatchHeroContext,
   visibleRecentChronicleItems,
 } from './career.$careerId.index.js';
+import { buildCareerFollowUpReceipts } from '../shared/career-followup.js';
 
 const engineHolder = vi.hoisted(() => ({ promise: null as Promise<unknown> | null }));
 
@@ -264,7 +265,9 @@ async function nationalTeamPendingCareerId(engine: AppEngine): Promise<string> {
   };
   const domainSnapshot = { ...loaded.snapshot, state, stateHash: hashState(state) };
   await engine.store.transaction('readwrite', async (tx) => {
-    await tx.snapshots.put(encodeSnapshot(domainSnapshot, { careerId, createdAt: loaded.career.createdAt }));
+    await tx.snapshots.put(
+      encodeSnapshot(domainSnapshot, { careerId, createdAt: loaded.career.createdAt }),
+    );
   });
   return careerId;
 }
@@ -281,7 +284,9 @@ async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
     const pending = load.snapshot.state.pending;
     if (pending?.kind === 'SETTLEMENT') return careerId;
     if (pending?.kind === 'CHAPTER') {
-      const definition = loadContentPack(load.snapshot.state.contentPackVersion).chaptersById.get(pending.chapterId);
+      const definition = loadContentPack(load.snapshot.state.contentPackVersion).chaptersById.get(
+        pending.chapterId,
+      );
       if (!definition) throw new Error(`팩에 챕터 정의가 없다: ${pending.chapterId}`);
       const decision = definition.decisions[pending.resolved.length];
       if (!decision) throw new Error('이미 모든 판단이 끝났다');
@@ -319,7 +324,9 @@ async function settlementPendingCareerId(engine: AppEngine): Promise<string> {
       continue;
     }
     if (pending?.kind === 'EVENT' || pending?.kind === 'NATIONAL_TEAM') {
-      const definition = loadContentPack(load.snapshot.state.contentPackVersion).eventsById.get(pending.eventId);
+      const definition = loadContentPack(load.snapshot.state.contentPackVersion).eventsById.get(
+        pending.eventId,
+      );
       const choiceId = definition?.choices[0]?.id;
       if (!choiceId) throw new Error(`이벤트 선택지를 찾지 못했다: ${pending.eventId}`);
       const resolved = await resolveEvent(engine, careerId, choiceId);
@@ -360,12 +367,10 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     const careerId = await seasonActiveNoPendingCareerId(engine);
 
     renderAt(`/career/${careerId}`);
-    expect(
-      await screen.findByRole('heading', { level: 1, name: /.+/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /.+/ })).toBeInTheDocument();
     const nextAction = screen.getByRole('region', { name: '지금 할 일' });
     expect(within(nextAction).getByRole('button', { name: '진행' })).not.toBeDisabled();
-    expect(screen.getAllByRole('tab')).toHaveLength(5);
+    expect(screen.getAllByRole('tab')).toHaveLength(4);
     // UX-007: 맥락(제목)과 진행 버튼이 같은 프레임(region) 안에 있다 — 다음 일정이 경기면 "다음
     // 경기", 아니면(휴식 step 등) 기존 "다음 행동" 문구를 유지한다.
     expect(
@@ -466,7 +471,9 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/career/${careerId}/event`);
     });
-    expect(await screen.findByText('국제 일정에 참가할 대표팀 소집 통보가 왔다. 응답을 선택한다.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('국제 일정에 참가할 대표팀 소집 통보가 왔다. 응답을 선택한다.'),
+    ).toBeInTheDocument();
 
     router = renderAt(`/career/${careerId}/event`);
     expect(await screen.findByRole('radio', { name: /소집을 수락한다/ })).toBeInTheDocument();
@@ -716,7 +723,14 @@ describe('SCR-029 다음 결정 카드 분기', () => {
       matchId: match.id,
       importance: definition.importance,
       trigger: 'NATIONAL_DEBUT',
-      decisions: [{ decisionId: decision.id, optionId: option.id, outcomeId: outcome.id, outcomeKind: outcome.kind }],
+      decisions: [
+        {
+          decisionId: decision.id,
+          optionId: option.id,
+          outcomeId: outcome.id,
+          outcomeKind: outcome.kind,
+        },
+      ],
       ratingDeltaTenths: 0,
       virtualOpponent,
     } satisfies ChapterRecord;
@@ -745,12 +759,20 @@ describe('SCR-029 다음 결정 카드 분기', () => {
 
     renderAt(`/career/${careerId}/chapter?d=1`);
     expect(await screen.findByText('대표팀 · 노르카니아')).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { level: 2, name: '대표팀 데뷔 결과' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '대표팀 데뷔 결과' }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 2, name: '경기 결과' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /계획대로 움직였다/ })).toBeInTheDocument();
     expect(screen.queryByText(match.opponent.name)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(`최종 스코어 ${match.result.goalsFor} 대 ${match.result.goalsAgainst}`)).not.toBeInTheDocument();
-    expect(screen.queryByText(`${match.result.goalsFor}:${match.result.goalsAgainst}`)).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(
+        `최종 스코어 ${match.result.goalsFor} 대 ${match.result.goalsAgainst}`,
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(`${match.result.goalsFor}:${match.result.goalsAgainst}`),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/선발 출전|교체 투입|결장/)).not.toBeInTheDocument();
     expect(screen.queryByText('평점')).not.toBeInTheDocument();
     expect(screen.queryByText('카드')).not.toBeInTheDocument();
@@ -764,12 +786,14 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     const engine = setTestEngine();
     const careerId = await settlementPendingCareerId(engine);
     const load = await engine.client.loadCareer(careerId);
-    if (!load.ok || load.snapshot.state.season === null) throw new Error('저장된 시즌이 있어야 한다');
+    if (!load.ok || load.snapshot.state.season === null)
+      throw new Error('저장된 시즌이 있어야 한다');
 
     const season = load.snapshot.state.season;
     const match = season.matches[0];
     const definition = engine.pack.chaptersById.get('CHP-MATCH-001');
-    if (match === undefined || definition === undefined) throw new Error('클럽 챕터 테스트 자료가 있어야 한다');
+    if (match === undefined || definition === undefined)
+      throw new Error('클럽 챕터 테스트 자료가 있어야 한다');
     const decision = definition.decisions[0]!;
     const option = decision.options[0]!;
     const outcome = option.outcomes[0]!;
@@ -780,7 +804,14 @@ describe('SCR-029 다음 결정 카드 분기', () => {
       matchId: match.id,
       importance: definition.importance,
       trigger: definition.trigger.kind,
-      decisions: [{ decisionId: decision.id, optionId: option.id, outcomeId: outcome.id, outcomeKind: outcome.kind }],
+      decisions: [
+        {
+          decisionId: decision.id,
+          optionId: option.id,
+          outcomeId: outcome.id,
+          outcomeKind: outcome.kind,
+        },
+      ],
       ratingDeltaTenths: outcome.ratingDeltaTenths,
     } satisfies ChapterRecord;
 
@@ -808,8 +839,12 @@ describe('SCR-029 다음 결정 카드 분기', () => {
 
     renderAt(`/career/${careerId}/chapter?d=${definition.decisions.length}`);
     expect(await screen.findByRole('heading', { level: 2, name: '경기 결과' })).toBeInTheDocument();
-    expect(screen.getByLabelText(`최종 스코어 ${match.result.goalsFor} 대 ${match.result.goalsAgainst}`)).toBeInTheDocument();
-    expect(screen.getByText(`${match.result.goalsFor}:${match.result.goalsAgainst}`)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(`최종 스코어 ${match.result.goalsFor} 대 ${match.result.goalsAgainst}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`${match.result.goalsFor}:${match.result.goalsAgainst}`),
+    ).toBeInTheDocument();
   });
 
   it('advance가 NOTHING_TO_ADVANCE로 실패하면 버튼이 비활성화되고 안내 문구를 보여준다', async () => {
@@ -885,7 +920,7 @@ describe('SCR-029 일정표 구역: 시즌 중이면 SeasonTimeline과 일정 �
 
     renderAt(`/career/${careerId}`);
 
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '일정' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '시즌' }));
 
     const timeline = await screen.findByLabelText('시즌 진행 12 step');
     expect(timeline.querySelectorAll('li')).toHaveLength(12);
@@ -899,7 +934,7 @@ describe('SCR-029 PlayerHeader 포지션 칸(완료 조건 표 #5, RULE-PLY-001)
 
     renderAt(`/career/${careerId}`);
 
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '선수' }));
     expect(await screen.findByText('윙어')).toBeInTheDocument();
     expect(screen.getByText('선호 포지션과 같음')).toBeInTheDocument();
   });
@@ -909,7 +944,7 @@ describe('SCR-029 PlayerHeader 포지션 칸(완료 조건 표 #5, RULE-PLY-001)
     const careerId = await confirmedCareerId(engine); // preferred == primary == 'W'.
 
     renderAt(`/career/${careerId}`);
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '선수' }));
     expect(await screen.findByText('윙어')).toBeInTheDocument();
 
     const options = careerQueryOptions(careerId);
@@ -965,12 +1000,149 @@ describe('T-2-009 다이어리 연대기 요약: buildSeasonChronicleItems·buil
     const settledItems = items.filter((item) => item.sentence === '시즌 정산');
     expect(settledItems).toHaveLength(1);
     expect(settledItems[0]).toEqual(
-      expect.objectContaining({ sentence: '시즌 정산', seasonResultHistoryIndex: justSettledIndex }),
+      expect.objectContaining({
+        sentence: '시즌 정산',
+        seasonResultHistoryIndex: justSettledIndex,
+      }),
     );
-    expect(items.filter((item) => item.sentence !== '시즌 정산').every((item) => item.seasonResultHistoryIndex === null)).toBe(true);
+    expect(
+      items
+        .filter((item) => item.sentence !== '시즌 정산')
+        .every((item) => item.seasonResultHistoryIndex === null),
+    ).toBe(true);
 
     const pastLinks = buildPastSeasonLinks(state);
     expect(pastLinks.some((link) => link.historyIndex === justSettledIndex)).toBe(false);
+
+    const summary = state.seasonHistory[justSettledIndex]!;
+    const contract = state.contract;
+    if (contract === null) throw new Error('결산 뒤 현재 계약이 있어야 한다');
+    const goal = {
+      request: 'TRANSFER' as const,
+      response: 'ACCEPTED' as const,
+      reason: 'REQUEST_ACCEPTED',
+      role: contract.rolePromise,
+      targetMinutesShareBp: 5000,
+      actualMinutesShareBp: 4200,
+      status: 'MISSED' as const,
+      effect: { managerTrustDelta: 0, moraleDelta: 0 },
+    };
+    const meetingBase = {
+      seasonIndex: summary.index,
+      request: 'TRANSFER' as const,
+      response: 'ACCEPTED' as const,
+      reason: 'REQUEST_ACCEPTED',
+      teamId: contract.teamId,
+      contractId: contract.id,
+      immediateEffect: { managerTrustDelta: -2, moraleDelta: 2 },
+      plannedRole: contract.rolePromise,
+      preferredOfferKind: 'TRANSFER' as const,
+      preferenceStatus: 'NO_CANDIDATE' as const,
+      goal: {
+        seasonIndex: summary.index,
+        role: contract.rolePromise,
+        targetMinutesShareBp: 5000,
+        status: 'PENDING' as const,
+      },
+    };
+    const meetingReceipt = buildCareerFollowUpReceipts({
+      ...state,
+      clubMeeting: meetingBase,
+      seasonHistory: state.seasonHistory.map((entry, index) =>
+        index === justSettledIndex
+          ? { ...entry, result: { ...entry.result, clubMeetingGoal: goal } }
+          : entry,
+      ),
+    }).find((receipt) => receipt.kind === 'CLUB_MEETING');
+    expect(meetingReceipt).toMatchObject({ stage: '탐색 종료', terminal: true });
+    expect(meetingReceipt?.action).toContain('조건에 맞는 제안이 없어 이번 요청이 종료되었습니다.');
+    expect(meetingReceipt?.action).toContain(
+      '시즌 목표 평가: 출전 기준 50% · 실제 42% · 목표 미달',
+    );
+
+    const stint = state.clubHistory.at(-1)!;
+    const loanReceipts = buildCareerFollowUpReceipts({
+      ...state,
+      clubHistory: [
+        {
+          ...stint,
+          kind: 'LOAN',
+          contractId: 'CTR-loan-a',
+          fromSeasonIndex: 1,
+          toSeasonIndex: 1,
+          endReason: 'RETURNED',
+        },
+        {
+          ...stint,
+          kind: 'LOAN',
+          contractId: 'CTR-loan-b',
+          fromSeasonIndex: 2,
+          toSeasonIndex: 2,
+          endReason: 'TRANSFERRED',
+        },
+      ],
+      timeline: [
+        ...state.timeline,
+        {
+          revision: summary.settledAtRevision + 1,
+          kind: 'LOAN_RETURNED',
+          refId: 'PERMANENT',
+          age: state.age,
+          step: 12,
+        },
+      ],
+    }).filter((receipt) => receipt.kind === 'LOAN');
+    expect(loanReceipts).toHaveLength(2);
+    expect(loanReceipts.find((receipt) => receipt.id.includes('CTR-loan-a'))?.action).toBe(
+      '원소속 복귀가 소속 이력에 저장되었습니다.',
+    );
+    expect(loanReceipts.find((receipt) => receipt.id.includes('CTR-loan-b'))?.action).toContain(
+      '당시 선택은 별도 연결 기록이 없어 추정하지 않습니다.',
+    );
+    expect(loanReceipts.some((receipt) => receipt.action.includes('완전 이적을 확정'))).toBe(false);
+
+    const injuryRevision = summary.settledAtRevision + 2;
+    const [injuryReceipt] = buildCareerFollowUpReceipts({
+      ...state,
+      health: {
+        episodes: [
+          {
+            id: 'INJ-1-4-1',
+            severity: 'MODERATE',
+            bodyPart: 'ANKLE',
+            occurredAt: { seasonIndex: 1, step: 4, matchId: 'match-1' },
+            diagnosisRange: { minMatches: 2, maxMatches: 4 },
+            rehab: 'STANDARD',
+            recurrenceRiskBp: 800,
+            recurrenceChecksRemaining: 0,
+            status: 'RECOVERED',
+            permanentDelta: [{ key: 'stamina', delta: -1 }],
+          },
+        ],
+      },
+      timeline: [
+        ...state.timeline,
+        {
+          revision: injuryRevision,
+          kind: 'EVENT_RESOLVED',
+          refId: 'EVT-INJ-001:STANDARD:STANDARD',
+          age: state.age,
+          step: 4,
+        },
+        {
+          revision: injuryRevision,
+          kind: 'REHAB_CHOSEN',
+          refId: 'INJ-1-4-1',
+          age: state.age,
+          step: 4,
+        },
+      ],
+    });
+    expect(injuryReceipt).toMatchObject({ kind: 'INJURY', stage: '회복 완료', terminal: true });
+    expect(injuryReceipt?.response).toBe('표준 재활을 선택했습니다.');
+    expect(injuryReceipt?.action).toContain('영구 능력치 변화 스태미나 -1');
+    expect(injuryReceipt?.source).toContain('재활 선택 기록');
+    expect(injuryReceipt?.source).not.toContain('EVT-INJ-001');
   });
 });
 
@@ -1012,7 +1184,15 @@ describe('UX-007 nextMatchHeroContext: 다음 행동 히어로의 "다음 경기
   }
 
   it('아직 안 치른 다음 경기가 있으면 "vs 상대팀 · 대회/라운드"를 돌려준다', () => {
-    const entry: ScheduleEntry = { step: 2, order: 0, competitionId: 'LEAGUE', kind: 'LEAGUE', round: null, opponentId: OPPONENT_ID, home: true };
+    const entry: ScheduleEntry = {
+      step: 2,
+      order: 0,
+      competitionId: 'LEAGUE',
+      kind: 'LEAGUE',
+      round: null,
+      opponentId: OPPONENT_ID,
+      home: true,
+    };
 
     const context = nextMatchHeroContext(seasonWith([entry], []), ruleset, {});
 
@@ -1020,7 +1200,15 @@ describe('UX-007 nextMatchHeroContext: 다음 행동 히어로의 "다음 경기
   });
 
   it('일정이 전부 치렀거나(match 있음) 탈락 처리된 행뿐이면 null이다(기존 "다음 행동" 문구 유지)', () => {
-    const played: ScheduleEntry = { step: 1, order: 0, competitionId: 'LEAGUE', kind: 'LEAGUE', round: null, opponentId: OPPONENT_ID, home: true };
+    const played: ScheduleEntry = {
+      step: 1,
+      order: 0,
+      competitionId: 'LEAGUE',
+      kind: 'LEAGUE',
+      round: null,
+      opponentId: OPPONENT_ID,
+      home: true,
+    };
     const match = {
       step: 1,
       order: 0,
@@ -1030,7 +1218,16 @@ describe('UX-007 nextMatchHeroContext: 다음 행동 히어로의 "다음 경기
       minutes: 90,
       ratingTenths: 70,
     } as MatchRecord;
-    const eliminated: ScheduleEntry = { step: 9, order: 0, competitionId: 'CUP', kind: 'CUP', round: 'SEMI', opponentId: `${ruleset.cups[0]!.id}-SEMI`, home: true, skipped: 'ELIMINATED' };
+    const eliminated: ScheduleEntry = {
+      step: 9,
+      order: 0,
+      competitionId: 'CUP',
+      kind: 'CUP',
+      round: 'SEMI',
+      opponentId: `${ruleset.cups[0]!.id}-SEMI`,
+      home: true,
+      skipped: 'ELIMINATED',
+    };
 
     const context = nextMatchHeroContext(seasonWith([played, eliminated], [match]), ruleset, {});
 
@@ -1044,12 +1241,14 @@ describe('RES-BUG-001과 같은 정책: 라커룸 기억 태그(state.tags)는 �
     const careerId = await signedCareerId(engine);
 
     renderAt(`/career/${careerId}`);
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '선수' }));
     await screen.findByText('라커룸');
 
     const options = careerQueryOptions(careerId);
     const current = queryClient.getQueryData(options.queryKey);
     if (current === undefined) throw new Error('캐시된 커리어가 있어야 한다');
+    // T-7-023: 구버전처럼 clubMeeting이 없고 episode/임대 이력이 비어 있으면 가짜 receipt를 만들지 않는다.
+    expect(buildCareerFollowUpReceipts(current.state)).toEqual([]);
     act(() => {
       queryClient.setQueryData(options.queryKey, {
         ...current,
@@ -1070,7 +1269,7 @@ describe('T-7-005 이슈 142: 관계 사유(relationshipLog·memoryTags)는 원�
     const careerId = await signedCareerId(engine);
 
     renderAt(`/career/${careerId}`);
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '선수' }));
     await screen.findByText('라커룸');
 
     const options = careerQueryOptions(careerId);
@@ -1082,7 +1281,14 @@ describe('T-7-005 이슈 142: 관계 사유(relationshipLog·memoryTags)는 원�
         state: {
           ...current.state,
           relationshipLog: [
-            { target: 'managerTrust', delta: -4, sourceId: 'src-1', reasonTag: 'PROMISE_BREACH', seasonIndex: 0, step: 1 },
+            {
+              target: 'managerTrust',
+              delta: -4,
+              sourceId: 'src-1',
+              reasonTag: 'PROMISE_BREACH',
+              seasonIndex: 0,
+              step: 1,
+            },
           ],
           memoryTags: { ...current.state.memoryTags, managerTrust: ['PROMISE_BREACH'] },
         },
@@ -1100,10 +1306,10 @@ describe('T-4-014 C11: 휴대폰 탭의 시장 사유·제안 수(T-3-005 브리
     const careerId = await signedCareerId(engine);
 
     renderAt(`/career/${careerId}`);
-    // Radix Tabs는 mousedown(자동 활성화 모드)에서 선택을 바꾼다 — click만으로는 안 바뀐다.
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '계약' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '커리어' }));
     // 계약 직후(시즌 시작 전)라 pending이 없다 — 시장 사유·제안 수 문구도, 링크도 없어야 한다.
     expect(await screen.findByText('현재 역할')).toBeInTheDocument();
+    expect(screen.getByText('아직 저장된 면담·임대 후속 결과가 없습니다.')).toBeInTheDocument();
     expect(screen.queryByText(/제안 \d+건/)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '이적시장에서 확인' })).not.toBeInTheDocument();
 
@@ -1115,10 +1321,49 @@ describe('T-4-014 C11: 휴대폰 탭의 시장 사유·제안 수(T-3-005 브리
         ...current,
         state: {
           ...current.state,
+          clubMeeting: {
+            seasonIndex: 1,
+            request: 'TRANSFER',
+            response: 'ACCEPTED',
+            reason: 'REQUEST_ACCEPTED',
+            teamId: current.state.contract!.teamId,
+            contractId: current.state.contract!.id,
+            immediateEffect: { managerTrustDelta: -2, moraleDelta: 2 },
+            plannedRole: current.state.contract!.rolePromise,
+            preferredOfferKind: 'TRANSFER',
+            preferenceStatus: 'OFFERED',
+            goal: {
+              seasonIndex: 1,
+              role: current.state.contract!.rolePromise,
+              targetMinutesShareBp: current.state.contract!.appearancePromise.minutesShareBp,
+              status: 'PENDING',
+            },
+          },
+          health: {
+            episodes: [
+              {
+                id: 'INJ-career-tab',
+                severity: 'MINOR',
+                bodyPart: 'ANKLE',
+                occurredAt: { seasonIndex: 1, step: 4, matchId: 'match-career-tab' },
+                diagnosisRange: { minMatches: 1, maxMatches: 2 },
+                rehab: 'STANDARD',
+                recurrenceRiskBp: 0,
+                recurrenceChecksRemaining: 0,
+                status: 'RECOVERED',
+                permanentDelta: [],
+              },
+            ],
+          },
           pending: {
             kind: 'OFFERS',
             offers: [buildFakeOffer('o1'), buildFakeOffer('o2'), buildFakeOffer('o3')],
-            market: { openedAtRevision: current.record.revision, seasonIndex: 1, reason: 'INTEREST', safeOfferId: 'o1' },
+            market: {
+              openedAtRevision: current.record.revision,
+              seasonIndex: 1,
+              reason: 'INTEREST',
+              safeOfferId: 'o1',
+            },
           } satisfies typeof current.state.pending,
         },
       });
@@ -1126,5 +1371,50 @@ describe('T-4-014 C11: 휴대폰 탭의 시장 사유·제안 수(T-3-005 브리
 
     expect(await screen.findByText('타 구단 관심 · 제안 3건')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '이적시장에서 확인' })).toBeInTheDocument();
+    expect(screen.getByText('1시즌 · 이적 요청')).toBeInTheDocument();
+    expect(screen.getByText('제안 탐색 완료')).toBeInTheDocument();
+    expect(screen.getByText(/실제 계약 여부는 별도 선택과 계약 기록으로 확인/)).toBeInTheDocument();
+    expect(screen.getByText('부상·회복 후속 결과')).toBeInTheDocument();
+    expect(screen.getByText('1시즌 · 발목 경미 부상')).toBeInTheDocument();
+    expect(screen.getByText('회복 완료')).toBeInTheDocument();
+
+    const cached = queryClient.getQueryData(options.queryKey);
+    if (cached?.state.clubMeeting === undefined) throw new Error('면담 receipt 상태가 있어야 한다');
+    const orderedReceipts = buildCareerFollowUpReceipts({
+      ...cached.state,
+      clubMeeting: {
+        ...cached.state.clubMeeting,
+        seasonIndex: 2,
+        goal: { ...cached.state.clubMeeting.goal, seasonIndex: 2 },
+      },
+      health: {
+        episodes: [
+          {
+            id: 'INJ-old-no-timeline',
+            severity: 'MINOR',
+            bodyPart: 'ANKLE',
+            occurredAt: { seasonIndex: 1, step: 12, matchId: 'old-match' },
+            diagnosisRange: { minMatches: 1, maxMatches: 2 },
+            rehab: null,
+            recurrenceRiskBp: 0,
+            recurrenceChecksRemaining: 0,
+            status: 'RECOVERED',
+            permanentDelta: [],
+          },
+        ],
+      },
+    });
+    expect(orderedReceipts[0]).toMatchObject({ kind: 'CLUB_MEETING', title: '2시즌 · 이적 요청' });
+    const terminalCases = [
+      ['NO_CANDIDATE', '탐색 종료', '조건에 맞는 제안이 없어 이번 요청이 종료되었습니다.'],
+      ['CANCELLED', '요청 종료', '계약 만료 또는 소속 변경으로 이전 요청이 종료되었습니다.'],
+    ] as const;
+    for (const [preferenceStatus, stage, action] of terminalCases) {
+      const [receipt] = buildCareerFollowUpReceipts({
+        ...cached.state,
+        clubMeeting: { ...cached.state.clubMeeting, preferenceStatus },
+      });
+      expect(receipt).toMatchObject({ stage, action, terminal: true });
+    }
   });
 });

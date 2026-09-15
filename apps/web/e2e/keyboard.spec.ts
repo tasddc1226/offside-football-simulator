@@ -193,25 +193,26 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
   await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
 
-  // SCR-029 대시보드 탭: 폼 안 포지션 탭과 달리 RadioGroup에 중첩되지 않아 Tab으로 정상 도달한다
-  // (직접 확인). 화살표 키와 Enter로 "홈"에서 "선수"를 거쳐 "계약"까지 이동한다.
-  const homeTab = page.getByRole('tab', { name: '홈' });
-  await tabTo(page, homeTab);
-  await expect(homeTab).toHaveAttribute('aria-selected', 'true');
+  // UX-014(2026-09-14): 대시보드 탭은 이제 상단 커리어 헤더(레이아웃 라우트)의 독립 tablist다 —
+  // Radix Tabs가 아니라 role="tab" 버튼 + 직접 구현한 화살표 키 이동(CareerTabs.tsx)이지만, 폼 안
+  // 포지션 탭과 달리 RadioGroup에 중첩되지 않아 Tab으로 정상 도달하는 점은 그대로다(직접 확인).
+  // 화살표 키와 Enter로 "시즌"에서 "커리어"를 거쳐 "선수"까지 이동한다(시즌·커리어·선수·우승 연혁 순).
+  const seasonTab = page.getByRole('tab', { name: '시즌' });
+  await tabTo(page, seasonTab);
+  await expect(seasonTab).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('ArrowRight');
+  const careerTab = page.getByRole('tab', { name: '커리어' });
+  await page.keyboard.press('Enter');
+  await expect(careerTab).toBeFocused();
+  await expect(careerTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByText('팀')).toBeVisible();
+  await expect(page.getByText('주급')).toBeVisible();
   await page.keyboard.press('ArrowRight');
   const playerTab = page.getByRole('tab', { name: '선수' });
   await page.keyboard.press('Enter');
   await expect(playerTab).toBeFocused();
   await expect(playerTab).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByText('전술 적합도', { exact: true })).toBeVisible();
-  await page.keyboard.press('ArrowRight');
-  const contractTab = page.getByRole('tab', { name: '계약' });
-  await page.keyboard.press('Enter');
-  await expect(contractTab).toBeFocused();
-  await expect(contractTab).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByText('팀')).toBeVisible();
-  await expect(page.getByText('주급')).toBeVisible();
 
   // 대화상자 포커스 트랩·복귀: 허브의 삭제 확인 대화상자(hub.spec.ts와 같은 컴포넌트)로 확인한다.
   await tabTo(page, page.getByRole('link', { name: '허브로' }));
