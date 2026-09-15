@@ -23,6 +23,7 @@
 | 기간 | 2026-09-06 00:00 KST부터, 종료일 미정(`endsAt: null`) |
 | 문의 | `tasddc1569@gmail.com` |
 | 현재 신규 커리어 버전 | ruleset 1.5.0 / content pack 0.6.0 (2026-09-14 12:43 3차 승격 완료, 아래 "2026-09-14 12:43 재배포"; 기존 커리어는 생성 당시 버전 유지) |
+| 다음 승격 목표        | ruleset 1.7.0 / content pack 0.6.3 (T-7-033 코드·런북 준비; 배포 전에는 운영 current가 아님)                                           |
 
 ## 최초 공개 결과
 
@@ -110,7 +111,7 @@
   네트워크에 `GET /v1/presence`·`POST /v1/presence/heartbeat` 정상. 운영 번들 `labels-DikQ6hX_.js`에 K1 구단명(서울 한강 FC 등) 포함 확인.
   계약 화면까지는 진행하지 않아 K1 구단 오퍼 화면의 실제 노출은 다음 QA 세션 항목이다.
 - 검증 체인: 최종 합본(main+#208+#210+#209+#212) 전체 체인 12:18~12:28 통과(단위 10/10·빌드·번들·대비). e2e는 main 기존 16건(단독 실행에서도 실패, #207)
-  + 부하 3건(단독 통과) + `season-result SCR-015` seed 드리프트 1건(1.5.0 전환 영향, #207 기록) 외 새 실패 0.
+  - 부하 3건(단독 통과) + `season-result SCR-015` seed 드리프트 1건(1.5.0 전환 영향, #207 기록) 외 새 실패 0.
 - 사고·교훈: (1) #210이 스택 PR(base `feat-kleague-structure`)인데 #208 머지 뒤 브랜치를 남겨 base가 main으로 안 바뀌었고 스크립트가 그대로
   머지해 feature 브랜치에 들어감 → squash 커밋 cherry-pick #215로 재적용(트리 동일 확인). (2) 워커의 `pkill -f "vite"`가 오케스트레이터 `vitest` 체인을
   죽임 → 템플릿에 PID 종료 규칙. (3) 검증 체인 2개 + CI + 다른 세션이 겹쳐 load 100에서 타임아웃 → 체인은 한 번에 하나, turbo concurrency 2.
@@ -161,8 +162,9 @@
 
 시즌 ID와 기간을 바꾸지 않는 콘텐츠 승격은 호환 API, web, manifest 순으로 배포한다. 시작은
 `2026-09-05T15:00:00Z`, 종료는 NULL, challenge set은 `cs_season_1`, ACTIVE/non-test를 유지한다.
-1차 승격(`1.1.0/0.3.0` → `1.3.0/0.5.0`)은 2026-09-06, 2차 승격(`1.3.0/0.5.0` → `1.4.0/0.5.1`)은 2026-09-13
-완료했다. 3차 승격(`1.4.0/0.5.1` → `1.5.0/0.6.0`)은 아래 절에 따른다.
+1차 승격(`1.1.0/0.3.0` → `1.3.0/0.5.0`)은 2026-09-06, 2차 승격(`1.3.0/0.5.0` → `1.4.0/0.5.1`)은 2026-09-13,
+3차 승격(`1.4.0/0.5.1` → `1.5.0/0.6.0`)은 2026-09-14 완료했다. 4차 승격
+(`1.5.0/0.6.0` → `1.7.0/0.6.3`)은 아래 T-7-033 절에 따른다.
 
 1. API를 먼저 배포한다. 시즌 1에 한해 승인 manifest 목록(`apps/api/src/sync/season-version-compatibility.ts`
    `APPROVED_PRODUCTION_MANIFESTS`)에 있는 pair끼리만 신규 최초 sync를 상호 허용한다. mixed pair,
@@ -345,6 +347,71 @@ preflight/deploy가 여기서 멈춘다.
      (`deploy`는 재승격, `set-season-end`는 "metadata differs" 실패).
 6. **기록.** 실행 URL·source SHA·Worker 버전·manifest 전후·검증 결과를 이 문서와 `docs/tracking/`에 남기고,
    위 표의 "현재 신규 커리어 버전"을 1.5.0/0.6.0으로 갱신한다.
+
+## 시즌 1 manifest 4차 승격: 1.5.0/0.6.0 → 1.7.0/0.6.3 (T-7-033, 사용자 승인 2026-09-15)
+
+운영 current API의 출발점은 `svc_season_1`, `ACTIVE`, `isTest=false`, 시작
+`2026-09-05T15:00:00Z`, 종료 `null`, `cs_season_1`, ruleset `1.5.0` / pack `0.6.0`이다.
+승격은 ID·이름·상태·기간·challenge set·test 여부를 바꾸지 않고 버전 두 필드만
+`1.7.0/0.6.3`으로 compare-and-set한다. 목표 manifest의 정본은
+`tooling/scripts/production-release.mjs` 속 `PRODUCTION_SEASON`, 출발 pair의 정본은
+`PREVIOUS_PRODUCTION_VERSION`(실제 운영 `1.5.0/0.6.0`)이다.
+
+`1.7.0`은 `1.6.1`의 성장·은퇴 밸런스와 Legacy 1.2.0을 계승하고 실제 리그 원장을
+추가한다. matched 1,000 회귀의 Legacy 상위 밴드는 `1.6.1` 33.3%에서 `1.7.0`
+22.7%로 낮아졌다. 이 수치 비교는 검증됐지만 원장 순위 코드 경로 변화가 원인이라는
+설명은 합리적 추정이며 별도 인과 실험은 수행하지 않았다. 사용자는 이 구분과 수치를 알고 승격을 승인했다.
+이는 예전 32% 목표를 통과했다는 기록이 아니며, T-7-033에서 Legacy 컷·가중치를
+재조정하지 않는 알고 받은 활성화 선택이다.
+
+동기화해야 하는 곳은 API 승인 manifest 목록, web 오프라인 폴백, local
+`svc_kickoff`, non-production `svc_line_test`, staging smoke 기대값, staging rehearsal 기대값이다.
+API 목록은 신 `1.7.0/0.6.3`을 마지막에 추가하되 실제 과거 운영 pair
+`1.1.0/0.3.0`, `1.3.0/0.5.0`, `1.4.0/0.5.1`, `1.5.0/0.6.0`을 모두 유지한다.
+어느 승격 지점으로 롤백해도 승인 pair로 만든 오프라인 커리어의 늦은 최초 sync를
+허용하며, mixed pair·목록 밖 버전·다른 시즌 ID는 계속 거부한다. 이미 서버에
+생성된 커리어는 서비스 시즌 포인터와 무관하게 생성 버전으로 후속 PUT을 계속한다.
+
+### 실행 순서와 게이트
+
+1. **로컬 호환성.** release 전환/noop/fail-closed/역 compare-and-set, 승인 pair 전체 상호
+   최초 sync, mixed pair 거부, 오프라인 폴백·seed·smoke 값의 동기화를 검증한다.
+   신 ruleset/content pack/checksum/Legacy 산출물은 수정하지 않고 구버전 golden을 유지한다.
+2. **실제 로컬 경로.** 일회성 검증으로 실 HTTP API + 로컬 D1에서 신 포인터 상태의
+   구 `1.5.0/0.6.0` 오프라인 최초 PUT과 롤백 포인터 상태의 신 `1.7.0/0.6.3`
+   오프라인 최초 PUT을 각각 확인한다. 동일 명령은 실제 브라우저 Web Worker와 domain
+   replay의 hash·RNG draw가 같아야 한다. 서버는 incoming snapshot을 검증·저장하지
+   domain replay를 하지 않으므로, 이 결과를 "서버 replay" 증거로 표현하지 않는다.
+3. **저장 예산.** 20시즌 `1.7.0/0.6.3` state는 UTF-8 256KiB 이하, 실제 HTTP PUT body는
+   1MiB 이하여야 한다. 기존 합성 최대 shape·fake transport·CLI 모델링 측정과
+   실 HTTP/D1/Worker 측정을 서로 바꿔 부르지 않고 PR에 분리해 기록한다.
+4. **staging.** PR merge 후 main CI가 `svc_line_test`를 `1.7.0/0.6.3`으로 upsert하고
+   staging smoke가 current manifest를 검증해야 한다. staging에서 신규 `1.7.0/0.6.3`
+   커리어 생성·저장·새로고침과 기존 커리어 열림을 확인한다.
+5. **preflight.** Production Release `mode=preflight`, `expected_sha`=최신 main으로 실행하고
+   운영 행이 위 출발 메타데이터와 `1.5.0/0.6.0`으로 정확한지 본다. 실행 중 main
+   push를 멈춘다.
+6. **deploy.** root만 `mode=deploy`, `confirmation=DEPLOY_PRODUCTION`, 시작
+   `2026-09-05T15:00:00Z`, 종료 비움, `challenge_set_id=cs_season_1`로 실행한다.
+   remote write 전 plan은 `activate`, CAS 후 재조회 plan은 `noop`이어야 한다. 다른 plan은 중단한다.
+7. **배포 후.** current API가 동일 시즌 메타데이터와 `1.7.0/0.6.3`을 돌려주고,
+   health·정확한 CORS 허용/거부·web 200이어야 한다. 360px 실제 플레이로 생성 → KICKOFF
+   → PUT 200 → 새로고침 뒤 동일 ID/revision/hash·`1.7.0/0.6.3`을 확인하고 QA 표본은
+   삭제하지 않는다.
+
+### 롤백
+
+workflow artifact의 `season-rollback.sql`은 행이 여전히 정확한 `1.7.0/0.6.3`일 때만
+버전 두 필드를 `1.5.0/0.6.0`으로 돌리는 역 compare-and-set이다. 자동 실행하지
+않으며, 실행 시 Wrangler JSON의 `meta.changes` 합이 정확히 1인지와 D1/API 재조회
+`1.5.0/0.6.0`을 모두 확인한다. 0이면 롤백 성공으로 기록하지 않는다.
+
+롤백 뒤 API의 다중 pair 호환 코드를 유지해야 이미 생성되었거나 아직 오프라인인
+`1.7.0/0.6.3` 커리어가 저장된다. 다음 production deploy 전에는 코드의
+`PRODUCTION_SEASON`을 `1.5.0/0.6.0`, `PREVIOUS_PRODUCTION_VERSION`을 `1.4.0/0.5.1`로
+돌리는 롤백 후속 PR을 main에 먼저 머지하고, fallback·seed·smoke·rehearsal도 같이 맞춘다.
+API 승인 manifest 목록의 `1.7.0/0.6.3`을 제거하지 않는다. 이 후속 PR 전에
+Production Release `deploy`나 `set-season-end`를 실행하지 않는다.
 
 ## 공지 테이블 마이그레이션 + 운영 공지 seed 실행 (2026-09-14, notices)
 

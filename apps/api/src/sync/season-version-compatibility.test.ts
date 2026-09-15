@@ -7,8 +7,9 @@ import {
 
 const firstVersion = { rulesetVersion: '1.1.0', contentPackVersion: '0.3.0' };
 const secondVersion = { rulesetVersion: '1.3.0', contentPackVersion: '0.5.0' };
-const previousVersion = { rulesetVersion: '1.4.0', contentPackVersion: '0.5.1' };
-const currentVersion = { rulesetVersion: '1.5.0', contentPackVersion: '0.6.0' };
+const thirdVersion = { rulesetVersion: '1.4.0', contentPackVersion: '0.5.1' };
+const previousVersion = { rulesetVersion: '1.5.0', contentPackVersion: '0.6.0' };
+const currentVersion = { rulesetVersion: '1.7.0', contentPackVersion: '0.6.3' };
 
 describe('production season version compatibility', () => {
   // fail-closed 게이트: 승인 목록의 pair는 번들 레지스트리에 실제로 있어야 한다. 이 파일은 Production
@@ -28,32 +29,34 @@ describe('production season version compatibility', () => {
     expect(isAcceptedSeasonVersion('svc_other', currentVersion, currentVersion)).toBe(true);
   });
 
-  it('accepts the four approved production pairs during promotion and rollback', () => {
-    // 1.4.0/0.5.1 → 1.5.0/0.6.0 승격 전환 구간과 롤백.
+  it('accepts every approved production pair during promotion and rollback', () => {
+    // 1.5.0/0.6.0 → 1.7.0/0.6.3 승격 전환 구간과 롤백.
     expect(isAcceptedSeasonVersion('svc_season_1', currentVersion, previousVersion)).toBe(true);
     expect(isAcceptedSeasonVersion('svc_season_1', previousVersion, currentVersion)).toBe(true);
-    // 이전 승격들(1.3.0/0.5.0 → 1.4.0/0.5.1)의 미동기화 커리어도 계속 허용한다.
-    expect(isAcceptedSeasonVersion('svc_season_1', previousVersion, secondVersion)).toBe(true);
-    expect(isAcceptedSeasonVersion('svc_season_1', currentVersion, secondVersion)).toBe(true);
-    // 최초 공개 manifest로 만든 오프라인 커리어의 늦은 최초 sync는 계속 허용한다.
-    expect(isAcceptedSeasonVersion('svc_season_1', currentVersion, firstVersion)).toBe(true);
-    expect(isAcceptedSeasonVersion('svc_season_1', previousVersion, firstVersion)).toBe(true);
-    expect(isAcceptedSeasonVersion('svc_season_1', secondVersion, firstVersion)).toBe(true);
-    expect(isAcceptedSeasonVersion('svc_season_1', firstVersion, currentVersion)).toBe(true);
+    // 최초 공개부터 현재까지 어느 승격 지점으로 롤백해도 미동기화 최초 sync를 보호한다.
+    const history = [firstVersion, secondVersion, thirdVersion, previousVersion, currentVersion];
+    for (const seasonVersion of history) {
+      for (const requestedVersion of history) {
+        expect(
+          isAcceptedSeasonVersion('svc_season_1', seasonVersion, requestedVersion),
+          `${seasonVersion.rulesetVersion}/${seasonVersion.contentPackVersion} → ${requestedVersion.rulesetVersion}/${requestedVersion.contentPackVersion}`,
+        ).toBe(true);
+      }
+    }
   });
 
   it('rejects other seasons, mixed pairs, and unapproved historical manifests', () => {
     expect(isAcceptedSeasonVersion('svc_other', currentVersion, previousVersion)).toBe(false);
     expect(
       isAcceptedSeasonVersion('svc_season_1', currentVersion, {
-        rulesetVersion: '1.5.0',
-        contentPackVersion: '0.5.1',
+        rulesetVersion: '1.7.0',
+        contentPackVersion: '0.6.0',
       }),
     ).toBe(false);
     expect(
       isAcceptedSeasonVersion('svc_season_1', currentVersion, {
         rulesetVersion: '1.1.0',
-        contentPackVersion: '0.6.0',
+        contentPackVersion: '0.6.3',
       }),
     ).toBe(false);
     expect(

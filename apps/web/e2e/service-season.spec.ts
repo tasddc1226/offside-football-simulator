@@ -133,6 +133,8 @@ test.describe('실제 api로 서비스 시즌·분석 이벤트 확인', () => {
     const currentBody = (await current.json()) as { data: ServiceSeasonCurrent };
     expect(currentBody.data.id).toBe('svc_kickoff');
     expect(currentBody.data.isTest).toBe(false);
+    expect(currentBody.data.rulesetVersion).toBe('1.7.0');
+    expect(currentBody.data.contentPackVersion).toBe('0.6.3');
 
     await page.goto('/onboarding');
     await page.getByRole('button', { name: '다음' }).click();
