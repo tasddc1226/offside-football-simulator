@@ -14,6 +14,21 @@ const VERSIONED_ARTIFACTS = { ...ARTIFACTS, legacyVersion: '1.1.0' as const };
 const VERSIONED_POPULATION = { ...POPULATION, id: 'test-population-1.1-10k', legacyVersion: '1.1.0' as const };
 const VERSIONED_POPULATED_ARTIFACTS = { ...VERSIONED_ARTIFACTS, legacyReferencePopulation: VERSIONED_POPULATION } as const;
 const MISMATCHED_ARTIFACTS = { ...ARTIFACTS, legacyReferencePopulation: { ...POPULATION, id: 'different-population-10k' } } as const;
+const CLUB_MEETING_RULESET = {
+  ...rulesetProto,
+  clubMeetingRules: {
+    playingTimeMinTrust: 45, loanMinTrust: 30, transferMaxTrust: 40,
+    immediate: {
+      PLAYING_TIME_ACCEPTED: { managerTrustDelta: 2, moraleDelta: 3 },
+      PLAYING_TIME_REFUSED: { managerTrustDelta: 0, moraleDelta: -1 },
+      LOAN_ACCEPTED: { managerTrustDelta: -1, moraleDelta: 2 },
+      LOAN_REFUSED: { managerTrustDelta: -2, moraleDelta: -1 },
+      TRANSFER_ACCEPTED: { managerTrustDelta: -2, moraleDelta: 2 },
+      TRANSFER_REFUSED: { managerTrustDelta: -3, moraleDelta: -2 },
+    },
+    goalMet: { managerTrustDelta: 3, moraleDelta: 2 },
+  },
+};
 
 async function responseFixture(runtimeArtifacts: RetirementRuntimeArtifacts = ARTIFACTS): Promise<{ response: GetCareerResponse; archive: ReturnType<typeof createCareerArchiveCore>; legacy: ReturnType<typeof createLegacyResult>; store: MemoryLocalStore; engine: ReturnType<typeof createEngineClient> }> {
   const sourceStore = new MemoryLocalStore();
@@ -46,6 +61,38 @@ async function responseFixture(runtimeArtifacts: RetirementRuntimeArtifacts = AR
 }
 
 describe('retirement recovery roundtrip', () => {
+  it('구단 면담의 step 0 관계 로그를 보존한 채 은퇴 Archive를 저장하고 재로드한다', async () => {
+    const store = new MemoryLocalStore();
+    const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: CLUB_MEETING_RULESET, retirementArtifacts: () => ARTIFACTS });
+    const ids = (() => { let n = 0; return () => `club-meeting-retire-${n++}`; })();
+    for (const command of career06SettledEngineCommands(ids)) {
+      const result = await engine.execute({ careerId: career06Settled.createCareer.careerId, command, ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc_club_meeting' } : {}) });
+      if (!result.ok) throw new Error(`${command.type} failed: ${result.error.message}`);
+    }
+    const settled = await engine.loadCareer(career06Settled.createCareer.careerId);
+    if (!settled.ok) throw new Error('settled snapshot missing');
+    const closed = settled.snapshot.state.pending?.kind === 'OFFERS' || settled.snapshot.state.pending?.kind === 'CONTRACT'
+      ? await engine.execute({ careerId: career06Settled.createCareer.careerId, command: { type: 'REJECT_OFFER', commandId: 'club-meeting-close-market', expectedRevision: settled.snapshot.revision, payload: { offerId: null } } })
+      : settled;
+    if (!closed.ok) throw new Error(`market close failed: ${closed.error.message}`);
+    const meeting = await engine.execute({ careerId: career06Settled.createCareer.careerId, command: { type: 'REQUEST_CLUB_MEETING', commandId: 'club-meeting-before-retirement', expectedRevision: closed.snapshot.revision, payload: { request: 'TRANSFER' } } });
+    if (!meeting.ok) throw new Error(`club meeting failed: ${meeting.error.message}`);
+    expect(meeting.domainSnapshot.state.relationshipLog).toEqual(expect.arrayContaining([
+      expect.objectContaining({ sourceId: expect.stringMatching(/^CLUB_MEETING:/), reasonTag: 'CLUB_MEETING', step: 0 }),
+    ]));
+    const retired = await engine.execute({ careerId: career06Settled.createCareer.careerId, command: { type: 'RETIRE', commandId: 'club-meeting-retire', expectedRevision: meeting.snapshot.revision, payload: { choice: 'COACH_EPILOGUE' } } });
+    if (!retired.ok) throw new Error(`retire failed: ${retired.error.code} ${retired.error.message}`);
+    expect(retired.domainSnapshot.state.status).toBe('RETIRED');
+    expect(await store.transaction('readonly', (tx) => tx.kv.get(retirementArchiveKey(career06Settled.createCareer.careerId)))).toBeDefined();
+    const rehydratedEngine = createEngineClient({ store, simulator: inlineSimulator, ruleset: CLUB_MEETING_RULESET, retirementArtifacts: () => ARTIFACTS });
+    const rehydrated = await rehydratedEngine.loadCareer(career06Settled.createCareer.careerId);
+    if (!rehydrated.ok) throw new Error(`rehydration failed: ${rehydrated.error.message}`);
+    expect(rehydrated.snapshot.revision).toBe(retired.snapshot.revision);
+    expect(rehydrated.snapshot.state.relationshipLog).toEqual(expect.arrayContaining([
+      expect.objectContaining({ reasonTag: 'CLUB_MEETING', step: 0 }),
+    ]));
+  });
+
   it('imports and reloads immutable Archive and Legacy bytes exactly', async () => {
     const source = await responseFixture();
     const store = new MemoryLocalStore();

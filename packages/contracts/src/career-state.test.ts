@@ -65,6 +65,7 @@ import {
   NationalityRuleStateSchema,
   OfferSchema,
   PendingSchema,
+  RelationshipLogEntrySchema,
   SeasonSummarySchema,
   SquadRoleSchema,
   TimelineEntrySchema,
@@ -213,6 +214,26 @@ describe('OfferSchema·ContractSchema·EffectSchema 스모크', () => {
       expiresAt: { kind: 'STEPS_AFTER', steps: 2 },
     };
     expect(EffectSchema.safeParse(effect).success).toBe(true);
+  });
+});
+
+describe('RelationshipLogEntrySchema', () => {
+  const entry = {
+    target: 'managerTrust' as const,
+    delta: 3,
+    sourceId: 'CLUB_MEETING:5:PLAYING_TIME:TRUST',
+    reasonTag: 'CLUB_MEETING',
+    seasonIndex: 4,
+  };
+
+  it('프리시즌 구단 면담이 남기는 step 0과 시즌 마지막 step 12를 받아들인다', () => {
+    expect(RelationshipLogEntrySchema.safeParse({ ...entry, step: 0 }).success).toBe(true);
+    expect(RelationshipLogEntrySchema.safeParse({ ...entry, step: 12 }).success).toBe(true);
+  });
+
+  it('step -1과 13은 계속 거부한다', () => {
+    expect(RelationshipLogEntrySchema.safeParse({ ...entry, step: -1 }).success).toBe(false);
+    expect(RelationshipLogEntrySchema.safeParse({ ...entry, step: 13 }).success).toBe(false);
   });
 });
 

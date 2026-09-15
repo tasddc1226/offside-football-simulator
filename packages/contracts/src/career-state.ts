@@ -1052,7 +1052,9 @@ export const RelationshipLogEntrySchema = z.strictObject({
   // 확정 전 유스 이벤트도 관계 로그를 남길 수 있어 `state.season === null`이면
   // `state.seasonHistory.length`인 0을 기록한다(T-4-003). 실제 시즌 로그는 1부터 시작한다.
   seasonIndex: z.number().int().nonnegative(),
-  step: z.number().int().min(1).max(12),
+  // 프리시즌 구단 면담은 시즌 시작 전 경계에서 관계 효과를 적용하므로 step 0을 기록한다.
+  // 시즌 중 관계 로그(1..12)와 같은 감사 로그에 보존하되 그 밖의 범위는 허용하지 않는다.
+  step: z.number().int().min(0).max(12),
 });
 
 // T-4-001 D-49: 인기·미디어 평판(0~10000). domain `CareerState['reputation']`과 동일.
