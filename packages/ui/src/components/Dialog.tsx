@@ -64,12 +64,16 @@ export function DialogContent({
   );
 }
 
-export interface SheetContentProps
-  extends Omit<ComponentProps<typeof DialogPrimitive.Content>, 'title'> {
+export interface SheetContentProps extends Omit<
+  ComponentProps<typeof DialogPrimitive.Content>,
+  'title'
+> {
   /** 시트 제목. Radix Title로 렌더한다(role="dialog"의 aria-labelledby 대상). */
   title: string;
   /** 닫기 버튼의 접근성 이름. */
   closeLabel: string;
+  /** 되돌릴 수 없는 요청 처리 중처럼 시트를 닫을 수 없는 동안 닫기 컨트롤을 비활성화한다. */
+  closeDisabled?: boolean;
   children?: ReactNode;
 }
 
@@ -83,6 +87,7 @@ export interface SheetContentProps
 export function SheetContent({
   title,
   closeLabel,
+  closeDisabled = false,
   className,
   children,
   ...props
@@ -104,6 +109,7 @@ export function SheetContent({
           </DialogPrimitive.Title>
           <DialogPrimitive.Close
             aria-label={closeLabel}
+            disabled={closeDisabled}
             className="inline-flex flex-none items-center justify-center rounded-os-s outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-os-focus"
             style={{ minHeight: 'var(--os-touch-min)', minWidth: 'var(--os-touch-min)' }}
           >

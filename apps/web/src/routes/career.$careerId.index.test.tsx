@@ -527,6 +527,106 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     });
   });
 
+  it('게임 사건 모달은 닫아도 pending·선택을 보존하고 다시 열며 확정을 한 번만 실행한다', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine);
+    const loaded = await engine.client.loadCareer(careerId);
+    if (!loaded.ok) throw new Error('테스트 커리어를 읽지 못했다');
+    const state = {
+      ...loaded.snapshot.state,
+      pending: { kind: 'EVENT' as const, eventId: 'EVT-DEV-001', version: 1 },
+    };
+    const domainSnapshot = { ...loaded.snapshot, state, stateHash: hashState(state) };
+    await engine.store.transaction('readwrite', async (tx) => {
+      await tx.snapshots.put(
+        encodeSnapshot(domainSnapshot, { careerId, createdAt: loaded.career.createdAt }),
+      );
+    });
+
+    let router = renderAt(`/career/${careerId}/event`);
+    expect(await screen.findByRole('dialog', { name: '커리어의 갈림길' })).toBeInTheDocument();
+    expect(screen.getByText(/프리시즌 첫 주/)).toBeInTheDocument();
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
+
+    const selected = screen.getAllByRole('radio')[1]!;
+    fireEvent.click(selected);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: '사건 선택 다시 열기' })).toHaveFocus();
+    const stillPending = await engine.client.loadCareer(careerId);
+    expect(stillPending.ok && stillPending.snapshot.state.pending).toMatchObject({
+      kind: 'EVENT',
+      eventId: 'EVT-DEV-001',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '사건 선택 다시 열기' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getAllByRole('radio')[1]).toBeChecked();
+    const overlay = document.querySelector<HTMLElement>('.os-dialog-overlay');
+    expect(overlay).not.toBeNull();
+    fireEvent.pointerDown(overlay!, { button: 0, ctrlKey: false, pointerType: 'mouse' });
+    fireEvent.click(overlay!);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    router = renderAt(`/career/${careerId}/event`);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    const executeSpy = vi.spyOn(engine.client, 'execute');
+    fireEvent.click(screen.getAllByRole('radio')[0]!);
+    const confirm = screen.getByRole('button', { name: '확정' });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/career/${careerId}/event/result`);
+    });
+    expect(executeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('부상 pending은 긴 진단 본문과 세 선택지를 사건 모달 안에 보존한다', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine);
+    const loaded = await engine.client.loadCareer(careerId);
+    if (!loaded.ok) throw new Error('테스트 커리어를 읽지 못했다');
+    const episode = {
+      id: 'INJ-modal',
+      severity: 'MODERATE' as const,
+      bodyPart: 'KNEE' as const,
+      occurredAt: { seasonIndex: 0, step: 1, matchId: 'match-modal' },
+      diagnosisRange: { minMatches: 3, maxMatches: 6 },
+      rehab: null,
+      recurrenceRiskBp: 3000,
+      recurrenceChecksRemaining: 0,
+      status: 'ACTIVE' as const,
+      permanentDelta: null,
+      remainingMatches: 3,
+    };
+    const state = {
+      ...loaded.snapshot.state,
+      health: { episodes: [episode] },
+      pending: {
+        kind: 'INJURY' as const,
+        step: 1,
+        episodeId: episode.id,
+        eventId: 'EVT-INJ-001',
+        version: 1,
+      },
+    };
+    const domainSnapshot = { ...loaded.snapshot, state, stateHash: hashState(state) };
+    await engine.store.transaction('readwrite', async (tx) => {
+      await tx.snapshots.put(
+        encodeSnapshot(domainSnapshot, { careerId, createdAt: loaded.career.createdAt }),
+      );
+    });
+
+    renderAt(`/career/${careerId}/event`);
+    const dialog = await screen.findByRole('dialog', { name: '지금은 회복할 시간' });
+    expect(
+      within(dialog).getByRole('region', { name: '부상 진단과 복귀 계획' }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText('3~6경기')).toBeInTheDocument();
+    expect(within(dialog).getAllByRole('radio')).toHaveLength(3);
+  });
+
   it('실제 NATIONAL_TEAM pending은 SCR-013에서 선택·해소되고 결과 재진입으로 복구된다', async () => {
     const engine = setTestEngine(nationalTestRuleset());
     const careerId = await nationalTeamPendingCareerId(engine);
@@ -542,6 +642,7 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/career/${careerId}/event`);
     });
+    expect(await screen.findByRole('dialog', { name: '대표팀 소집 통보' })).toBeInTheDocument();
     expect(
       await screen.findByText('국제 일정에 참가할 대표팀 소집 통보가 왔다. 응답을 선택한다.'),
     ).toBeInTheDocument();

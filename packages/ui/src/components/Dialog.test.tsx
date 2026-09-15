@@ -106,12 +106,12 @@ describe('Dialog', () => {
   });
 });
 
-function TestSheet() {
+function TestSheet({ closeDisabled = false }: { closeDisabled?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger>열기</DialogTrigger>
-      <SheetContent title="이용약관" closeLabel="닫기">
+      <SheetContent title="이용약관" closeLabel="닫기" closeDisabled={closeDisabled}>
         <p>본문</p>
       </SheetContent>
     </Dialog>
@@ -140,5 +140,14 @@ describe('SheetContent', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+  });
+
+  it('처리 중에는 닫기 컨트롤을 비활성화할 수 있다', async () => {
+    const user = userEvent.setup();
+    render(<TestSheet closeDisabled />);
+
+    await user.click(screen.getByRole('button', { name: '열기' }));
+
+    expect(screen.getByRole('button', { name: '닫기' })).toBeDisabled();
   });
 });
