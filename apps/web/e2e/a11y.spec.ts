@@ -460,7 +460,11 @@ test.describe('모션 감소', () => {
     // (career.$careerId.tryout.tsx:43-56, STEP_DURATION_MS=500·3단계=1500ms). 그 미만 시간 안에
     // /event/result로 넘어가면 연출이 실행되지 않았다는 뜻이다 — ResultCard 자체엔 카운트업 로직이
     // 없어(packages/ui/src/components/ResultCard.tsx) 값은 항상 첫 프레임에 최종값이다.
-    await completeOnboardingAndConfirm(page);
+    // fix-precontract-whitelist: 기본 배경(club-academy)은 "남아 추가 평가"(EVT-CON-020 A →
+    // EVT-CON-023)만으로 끝나 애초에 입단 테스트가 없는 경로다(진로_아카데미 태그, SCR-008 대상
+    // 아님). SCR-008은 "학교팀"(school) 이상 배경에서 진로_하부리그·진로_입단테스트 태그를 거쳐
+    // EVT-CON-003이 뜰 때만 존재하므로, 이 테스트는 school 배경으로 명시해 그 경로를 강제한다.
+    await completeOnboardingAndConfirm(page, /학교팀에서 만든 기록/);
 
     let reachedTryout = false;
     for (let step = 0; step < 10 && !reachedTryout; step += 1) {
