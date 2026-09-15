@@ -15,6 +15,7 @@ import {
   Disclosure,
   RadioGroup,
   RadioGroupItem,
+  SheetContent,
   Toast,
 } from '@offside/ui';
 import { ENGINE_CLIENT_VERSION } from '@offside/engine-client';
@@ -50,6 +51,12 @@ import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
 import { useExpandDisclosuresOnHash } from '../shared/expand-disclosures-on-hash.js';
 import { formatLocalDate, formatLocalDateTime } from '../shared/format.js';
+import {
+  LegalDocument,
+  legalDocumentPath,
+  legalDocumentTitle,
+  type LegalDocumentKind,
+} from '../shared/legal-content.js';
 import { validateRecoveryCodeInput } from '../shared/recovery-code-input.js';
 import { accentPresetLabel } from '../shared/accent-presets.js';
 import { AccentPresetPicker } from '../shared/AccentPresetPicker.js';
@@ -78,12 +85,30 @@ function isGoogleQueryResult(value: unknown): value is GoogleQueryResult {
   return typeof value === 'string' && (GOOGLE_QUERY_RESULTS as readonly string[]).includes(value);
 }
 
-type SettingsSearch = { google?: GoogleQueryResult; reason?: string };
+/** 서비스 정책 시트(SheetContent)의 열림 상태(`?legal=terms|privacy`). ADR-009: 라우트 자체
+ * (`/legal/terms`·`/legal/privacy`)는 그대로 두고, 설정 화면에서만 이 파라미터로 시트를 띄운다. */
+const LEGAL_DOCUMENT_KINDS: readonly LegalDocumentKind[] = ['terms', 'privacy'];
+
+function isLegalDocumentKind(value: unknown): value is LegalDocumentKind {
+  return typeof value === 'string' && (LEGAL_DOCUMENT_KINDS as readonly string[]).includes(value);
+}
+
+type SettingsSearch = { google?: GoogleQueryResult; reason?: string; legal?: LegalDocumentKind };
+
+/** `legal`만 제거하고 나머지 검색 파라미터는 보존한다(rest 구조분해 대신 명시 필드 — 팀 lint의
+ * no-unused-vars는 rest형제 생략을 봐주지 않는다). */
+function withoutLegal(search: SettingsSearch): SettingsSearch {
+  return {
+    ...(search.google !== undefined ? { google: search.google } : {}),
+    ...(search.reason !== undefined ? { reason: search.reason } : {}),
+  };
+}
 
 export const Route = createFileRoute('/settings')({
   validateSearch: (search: Record<string, unknown>): SettingsSearch => ({
     ...(isGoogleQueryResult(search.google) ? { google: search.google } : {}),
     ...(typeof search.reason === 'string' ? { reason: search.reason } : {}),
+    ...(isLegalDocumentKind(search.legal) ? { legal: search.legal } : {}),
   }),
   component: SettingsScreen,
 });
@@ -1511,7 +1536,74 @@ function PersonalizationSection() {
   );
 }
 
-/** 서비스 정책: 이용약관·개인정보 처리방침 셰브론 행(SPA 내부 라우트, ADR-009). */
+/**
+ * 서비스 정책 시트의 열림 상태는 `/settings` 검색 파라미터 `legal`로 표현한다. 여는 동작은 새
+ * history 엔트리를 쌓는다(`push`, replace 아님) — 그래야 모바일 뒤로가기 제스처가 그대로 시트를
+ * 닫는다. 반대로 X·ESC·배경 클릭으로 닫을 때는 "이 세션에서 직접 열어 그 엔트리를 쌓았는지"를
+ * openedByPushRef로 기억해 뒀다가, 그 경우에만 같은 엔트리를 되감는다(`window.history.back()`) —
+ * 그래야 시트를 닫은 뒤 다시 뒤로가기를 누르면 설정 진입 전 페이지로 곧장 돌아간다(엔트리가 남지
+ * 않는다). 반면 `?legal=`로 바로 들어온 딥링크처럼 이 세션이 쌓은 엔트리가 없을 때 back()을 쓰면
+ * 앱 밖으로 나가거나 원치 않는 화면을 되살릴 수 있어(career.$careerId.attributes.tsx의 handleBack과
+ * 같은 이유 — window.history.length로 안전을 한 번 더 확인한다) 대신 파라미터만 지우는 replace로
+ * 닫는다.
+ */
+function useLegalSheet(kind: LegalDocumentKind) {
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const isOpen = search.legal === kind;
+  const openedByPushRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) openedByPushRef.current = false;
+  }, [isOpen]);
+
+  function openSheet() {
+    openedByPushRef.current = true;
+    void navigate({ to: '/settings', search: (prev) => ({ ...prev, legal: kind }) });
+  }
+
+  function closeSheet() {
+    const canStepBack =
+      openedByPushRef.current && typeof window !== 'undefined' && window.history.length > 1;
+    openedByPushRef.current = false;
+    if (canStepBack) {
+      window.history.back();
+      return;
+    }
+    void navigate({ to: '/settings', search: withoutLegal, replace: true });
+  }
+
+  return { isOpen, openSheet, closeSheet };
+}
+
+/** 서비스 정책 한 행: 셰브론 버튼(라우트 이동 대신 시트를 연다) + SheetContent(같은 LegalDocument를
+ * 라우트와 공유). "전체 페이지로 보기"는 시트 안에서 실제 /legal 라우트로 이동하는 보조 링크다. */
+function LegalSheetRow({ kind, label }: { kind: LegalDocumentKind; label: string }) {
+  const { isOpen, openSheet, closeSheet } = useLegalSheet(kind);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(next) => (next ? openSheet() : closeSheet())}>
+      <DialogTrigger asChild>
+        <button type="button" className="os-settings-list-row font-os">
+          <span>{label}</span>
+          <span className="os-settings-chevron" aria-hidden="true" />
+        </button>
+      </DialogTrigger>
+      <SheetContent title={legalDocumentTitle(kind)} closeLabel="닫기">
+        <div className="flex flex-col gap-os-4">
+          <Link to={legalDocumentPath(kind)} className="os-settings-textlink self-start">
+            전체 페이지로 보기
+          </Link>
+          <LegalDocument kind={kind} />
+        </div>
+      </SheetContent>
+    </Dialog>
+  );
+}
+
+/** 서비스 정책: 이용약관·개인정보 처리방침 셰브론 행 — 클릭하면 페이지 이동 대신 바텀시트/가운데
+ * 모달로 본문을 보여준다(ADR-009: 여전히 SPA 내부 컴포넌트만 쓴다. /legal 라우트 자체도 그대로
+ * 남아 있다). */
 function LegalSection() {
   return (
     <section
@@ -1525,16 +1617,10 @@ function LegalSection() {
       <Card className="os-settings-list">
         <ul>
           <li>
-            <Link to="/legal/terms" className="os-settings-list-row font-os">
-              <span>이용약관</span>
-              <span className="os-settings-chevron" aria-hidden="true" />
-            </Link>
+            <LegalSheetRow kind="terms" label="이용약관" />
           </li>
           <li>
-            <Link to="/legal/privacy" className="os-settings-list-row font-os">
-              <span>개인정보 처리방침</span>
-              <span className="os-settings-chevron" aria-hidden="true" />
-            </Link>
+            <LegalSheetRow kind="privacy" label="개인정보 처리방침" />
           </li>
         </ul>
       </Card>

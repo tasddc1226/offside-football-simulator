@@ -11,6 +11,7 @@ import {
   type InjuryBodyPart,
   type InjuryEpisode,
   type InjurySeverity,
+  type RetirementPolicy,
   type SeasonResult,
 } from '@offside/domain';
 import { ATTRIBUTE_GROUP_LABEL_KO, attributeGroups, type AttributeGroupId } from './attribute-groups.js';
@@ -124,18 +125,21 @@ export type RetirementPressureNotice = {
 /** 은퇴 압력이 룰셋 정책의 관찰 기준(`watchThreshold`, 현재 40) 이상이면 예고 데이터를 만든다. 압력은
  * 도메인이 export한 순수 평가 함수로만 구하고(rng 없음), 근거는 직전 결산에 이미 저장된 연령 하락
  * 기록이다 — 다음 시즌 하락 폭을 새로 시뮬레이션하지 않는다. */
-export function retirementPressureNotice(state: CareerState): RetirementPressureNotice | null {
+export function retirementPressureNotice(
+  state: CareerState,
+  policy: RetirementPolicy = RETIREMENT_POLICY,
+): RetirementPressureNotice | null {
   const result = latestResult(state);
   if (result === null) return null;
   let assessment: ReturnType<typeof assessCareerRetirement>;
   try {
-    assessment = assessCareerRetirement(state);
+    assessment = assessCareerRetirement(state, 'UNDECIDED', policy);
   } catch {
     // 오래된 스냅샷의 결산 값이 정책 검증 범위를 벗어나면 안내를 숨긴다(프리시즌 화면은 계속 동작).
     return null;
   }
   if (assessment === null || assessment.total === null) return null;
-  if (assessment.total < RETIREMENT_POLICY.watchThreshold) return null;
+  if (assessment.total < policy.watchThreshold) return null;
   const status = assessment.status === 'REVIEW' ? 'REVIEW' : 'WATCH';
 
   const groupDeclines: RetirementPressureNotice['groupDeclines'] = [];

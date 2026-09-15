@@ -272,6 +272,10 @@ const TEXT_PAIRS = [
   // serious로 잡혔던 자리(이슈 180)라 텍스트 기준(4.5:1)으로 회귀를 막는다.
   ['accent', 'bg'],
   ['accent', 'surface-2'],
+  // PR 231 리뷰: ClubBadge의 미등록 팀 id 폴백(team-identity.ts NEUTRAL_FALLBACK)이 이 쌍이다 —
+  // 팀 배지 텍스트는 항상 --os-on-accent라(TeamBadge.tsx) 폴백 배경 --os-neutral과의 대비도
+  // 등록된 팀(BADGE_TEAM_IDS)과 같은 기준으로 지킨다.
+  ['on-accent', 'neutral'],
 ];
 // 비텍스트 그래픽(라인·게이지·아이콘): 3:1.
 const NON_TEXT_PAIRS = [

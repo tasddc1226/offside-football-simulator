@@ -173,5 +173,14 @@ describe('loadContentPack: 0.5.0', () => {
     expect(meetingPack.chapters.map((chapter) => chapter.id)).toEqual(
       loadContentPack('0.6.0').chapters.map((chapter) => chapter.id),
     );
+    // T-7-025: 팩 0.6.2는 0.6.1 전체 복사 + compatibleRulesetVersions만 룰셋 1.6.1로 교체(D-80 1라운드 ①).
+    const peakAgePack = loadContentPack('0.6.2');
+    expect(peakAgePack.manifest.compatibleRulesetVersions).toEqual(['1.6.1']);
+    expect(peakAgePack.events.map((event) => event.id)).toEqual(
+      loadContentPack('0.6.1').events.map((event) => event.id),
+    );
+    expect(peakAgePack.chapters.map((chapter) => chapter.id)).toEqual(
+      loadContentPack('0.6.1').chapters.map((chapter) => chapter.id),
+    );
   });
 });

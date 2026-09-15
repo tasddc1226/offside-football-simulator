@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { canonicalize, type JsonValue } from '../canonical.js';
+import { sha256Hex } from '../hash.js';
 import { hashState } from '../hash.js';
 import { hashSeasonResult } from '../settlement.js';
 import { initialSeasonPlayerStats } from '../season-stats.js';
@@ -8,6 +10,9 @@ import {
   createLegacyResult,
   deriveRetirementTags,
   LEGACY_POLICY,
+  LEGACY_POLICY_110,
+  LEGACY_POLICY_120,
+  legacyPolicyForVersion,
   type LegacyReferencePopulation,
 } from './result.js';
 
@@ -101,6 +106,35 @@ describe('Phase 5 full LegacyResult projection', () => {
     expect(() =>
       createLegacyResult(archive, context, population(sortedTenThousand), '1.1.0'),
     ).toThrow();
+  });
+
+  // T-7-032(D-80 1라운드 ③): legacyPolicyForVersion이 1.2.0을 선택하고, 1.0.0·1.1.0 결과는
+  // 바이트 하나 바뀌지 않는다.
+  it('selects LEGACY_POLICY_120 for 1.2.0 while leaving 1.0.0/1.1.0 results byte-identical', () => {
+    expect(legacyPolicyForVersion('1.2.0')).toBe(LEGACY_POLICY_120);
+    expect(LEGACY_POLICY_120.basePolicyChecksum).toBe(
+      sha256Hex(canonicalize(LEGACY_POLICY_110 as unknown as JsonValue)),
+    );
+    const { archive, context } = archiveAndContext();
+    const legacy100 = createLegacyResult(archive, context, undefined, '1.0.0');
+    const legacy110 = createLegacyResult(archive, context, undefined, '1.1.0');
+    const legacy120 = createLegacyResult(archive, context, undefined, '1.2.0');
+    expect(legacy100).toEqual(createLegacyResult(archive, context, undefined, '1.0.0'));
+    expect(legacy110).toEqual(createLegacyResult(archive, context, undefined, '1.1.0'));
+    expect(legacy120.legacyVersion).toBe('1.2.0');
+    expect(legacy120.definitionChecksum).not.toBe(legacy110.definitionChecksum);
+    expect(legacy120.archiveHash).toBe(legacy100.archiveHash);
+  });
+
+  // performance()가 버전별 performancePer90Centi를 쓰는지 직접 확인: 같은 성적이라도 1.2.0의
+  // FW 기대치(300)가 1.0.0/1.1.0(70)보다 훨씬 높아 contribution 성분이 더 낮아야 한다.
+  it('uses the 1.2.0 performancePer90Centi only for version 1.2.0', () => {
+    const { archive: fwArchive, context: fwContext } = equalQualityArchive('FW');
+    const legacy110 = createLegacyResult(fwArchive, fwContext, undefined, '1.1.0');
+    const legacy120 = createLegacyResult(fwArchive, fwContext, undefined, '1.2.0');
+    expect(legacy120.componentScores.contribution).toBeLessThan(
+      legacy110.componentScores.contribution,
+    );
   });
 
   it('keeps equal-quality position scores aligned under the candidate policy', () => {

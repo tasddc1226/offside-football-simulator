@@ -306,12 +306,12 @@ test('대시보드 스와이프는 구역만 바꾸고 경기 진행을 실행�
   const revision = await latestCareerRevision(page);
   const surface = page.locator('.os-dashboard-tabs-motion .os-swipe-surface');
   await expect(surface).toBeVisible();
-  await expect(page.getByRole('tab', { name: '홈', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: '시즌', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',
   );
   await swipe(surface, -150);
-  await expect.poll(() => page.locator('[role="tab"][aria-selected="true"]').textContent()).toBe('일정');
+  await expect.poll(() => page.locator('[role="tab"][aria-selected="true"]').textContent()).toBe('커리어');
   await swipe(surface, -150);
   await expect(page.getByRole('tab', { name: '선수', exact: true })).toHaveAttribute(
     'aria-selected',

@@ -1,0 +1,82 @@
+{
+  "id": "EVT-MGR-004",
+  "version": 1,
+  "phases": ["IN_SEASON"],
+  "triggers": { "eq": ["season.manager.tenureSeasons", 1] },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 1 },
+  "weight": 24,
+  "safety": { "minorSafe": true },
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "새 전술에 적응한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "전술 적합도 상승", "target": "tacticalFit", "direction": "UP" },
+        { "label": "감독 신뢰 상승", "target": "managerTrust", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "새 감독의 방식에 맞춰 훈련했다",
+          "cause": "전술 적응",
+          "effects": [
+            { "kind": "CONTEXT", "sourceId": "EVT-MGR-004.A.A1.0", "target": "tacticalFit", "delta": 5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "RELATION", "sourceId": "EVT-MGR-004.A.A1.1", "target": "managerTrust", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "기존 역할을 설득한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "감독 신뢰 소폭 상승", "target": "managerTrust", "direction": "UP" },
+        { "label": "스쿼드 내 입지 상승" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "면담에서 기존 역할의 이유를 설명했다",
+          "cause": "역할 설득",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-MGR-004.B.B1.0", "target": "managerTrust", "delta": 1, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "CONTEXT", "sourceId": "EVT-MGR-004.B.B1.1", "target": "squadStatus", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "이적을 준비한다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "감독 신뢰 하락", "target": "managerTrust", "direction": "DOWN" },
+        { "label": "다음 결산 뒤 이적시장이 열릴 가능성이 커짐" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "새 체제에서 자리가 없다고 판단했다",
+          "cause": "이적 준비",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-MGR-004.C.C1.0", "target": "managerTrust", "delta": -4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ],
+          "addTags": ["이적_희망"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "구단이 감독을 교체했다. 새 감독 아래에서 자리를 어떻게 다시 잡을지 정해야 한다."
+  }
+}

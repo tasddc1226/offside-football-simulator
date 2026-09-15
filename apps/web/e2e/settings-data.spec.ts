@@ -245,3 +245,41 @@ test('이 기기 데이터 삭제: 확인 → 온보딩 → 허브가 빈 상태
     page.getByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),
   ).toBeVisible();
 });
+
+// 서비스 정책(SCR-030): 이용약관·개인정보 처리방침은 /legal/*로 이동하는 대신 같은 화면 위에
+// 시트로 뜬다(?legal= 검색 파라미터, ADR-009는 그대로 — 여전히 SPA 내부 컴포넌트만 쓴다. /legal
+// 라우트 자체는 legal.spec.ts가 계속 확인한다).
+test('서비스 정책 시트: 이용약관 행을 클릭해 열고, 뒤로가기로 닫힌다', async ({ page }) => {
+  await page.goto('/settings');
+  const row = page.getByRole('button', { name: '이용약관' });
+  await row.click();
+
+  await expect(page.getByRole('dialog', { name: '이용약관' })).toBeVisible();
+  await expect(page).toHaveURL(/\?legal=terms$/);
+
+  await page.goBack();
+
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page).toHaveURL(/\/settings$/);
+});
+
+test('서비스 정책 시트: 닫기 버튼을 누르면 파라미터가 사라지고 포커스가 여는 행으로 돌아온다', async ({
+  page,
+}) => {
+  await page.goto('/settings');
+  const row = page.getByRole('button', { name: '개인정보 처리방침' });
+  await row.click();
+  await expect(page.getByRole('dialog', { name: '개인정보 처리방침' })).toBeVisible();
+
+  await page.getByRole('dialog').getByRole('button', { name: '닫기' }).click();
+
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(row).toBeFocused();
+});
+
+test('서비스 정책 시트: /settings?legal=privacy 딥링크로 바로 열린다', async ({ page }) => {
+  await page.goto('/settings?legal=privacy');
+
+  await expect(page.getByRole('dialog', { name: '개인정보 처리방침' })).toBeVisible();
+});
