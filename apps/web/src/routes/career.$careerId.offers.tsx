@@ -302,7 +302,7 @@ function OffersScreen() {
     <div className="os-screen">
       {firstContract ? (
         <ScreenIntro
-          eyebrow="새로운 유니폼"
+          eyebrow="스카우트 평가 뒤 도착한 제안"
           title={offersScreenTitle(true, offers.length)}
           description="리그의 높이만큼, 내가 뛸 수 있는 자리도 중요해요. 다음 팀의 조건을 살펴보세요."
         />

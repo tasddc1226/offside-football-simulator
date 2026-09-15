@@ -1,0 +1,149 @@
+{
+  "id": "CHP-MATCH-002",
+  "version": 1,
+  "importance": "MINOR",
+  "trigger": { "kind": "DERBY" },
+  "weight": 60,
+  "decisions": [
+    {
+      "id": "D1",
+      "prompt": "라이벌 더비, 감정을 어떻게 다룰까?",
+      "options": [
+        {
+          "id": "HERO",
+          "label": "개인 영웅",
+          "riskLabel": "HIGH",
+          "priorProbability": { "successBp": 4000 },
+          "previewEffects": [
+            { "label": "잘되면 팬 지지 상승", "target": "fans", "direction": "UP" },
+            { "label": "카드 위험" }
+          ],
+          "outcomes": [
+            {
+              "id": "HERO-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 40,
+              "title": "혼자 힘으로 승부를 갈랐다",
+              "ratingDeltaTenths": 9,
+              "effects": [
+                {
+                  "kind": "RELATION",
+                  "sourceId": "CHP-MATCH-002.D1.HERO-SUCCESS.0",
+                  "target": "fans",
+                  "delta": 7,
+                  "clamp": { "min": 0, "max": 100 },
+                  "appliesAt": { "kind": "IMMEDIATE" },
+                  "expiresAt": null,
+                  "stackingRule": "SUM"
+                }
+              ],
+              "addTags": ["더비의_영웅"],
+              "narrative": { "situation": "혼자 힘으로 만든 장면이 그대로 승부를 갈랐다." }
+            },
+            {
+              "id": "HERO-FAIL",
+              "kind": "FAIL",
+              "weight": 60,
+              "title": "무리한 개인기가 카드로 돌아왔다",
+              "ratingDeltaTenths": -6,
+              "effects": [
+                {
+                  "kind": "RELATION",
+                  "sourceId": "CHP-MATCH-002.D1.HERO-FAIL.0",
+                  "target": "managerTrust",
+                  "delta": -4,
+                  "clamp": { "min": 0, "max": 100 },
+                  "appliesAt": { "kind": "IMMEDIATE" },
+                  "expiresAt": null,
+                  "stackingRule": "SUM"
+                }
+              ],
+              "addTags": [],
+              "narrative": { "situation": "무리하게 개인기를 시도하다 거친 파울로 흐름이 끊겼다." }
+            }
+          ]
+        },
+        {
+          "id": "LINK",
+          "label": "팀 연결",
+          "riskLabel": "MEDIUM",
+          "priorProbability": { "successBp": 6000 },
+          "previewEffects": [{ "label": "감독 신뢰 소폭 상승", "target": "managerTrust", "direction": "UP" }],
+          "outcomes": [
+            {
+              "id": "LINK-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 60,
+              "title": "동료와 손발이 맞았다",
+              "ratingDeltaTenths": 5,
+              "effects": [
+                {
+                  "kind": "RELATION",
+                  "sourceId": "CHP-MATCH-002.D1.LINK-SUCCESS.0",
+                  "target": "managerTrust",
+                  "delta": 4,
+                  "clamp": { "min": 0, "max": 100 },
+                  "appliesAt": { "kind": "IMMEDIATE" },
+                  "expiresAt": null,
+                  "stackingRule": "SUM"
+                }
+              ],
+              "addTags": [],
+              "narrative": { "situation": "동료와 미리 맞춘 움직임이 그대로 통했다." }
+            },
+            {
+              "id": "LINK-NEUTRAL",
+              "kind": "NEUTRAL",
+              "weight": 40,
+              "title": "무난히 흘러갔다",
+              "ratingDeltaTenths": 0,
+              "effects": [],
+              "addTags": [],
+              "narrative": { "situation": "특별한 장면 없이 연결 위주로 경기가 흘러갔다." }
+            }
+          ]
+        },
+        {
+          "id": "CALM",
+          "label": "감정 절제",
+          "riskLabel": "LOW",
+          "priorProbability": { "successBp": 8000 },
+          "previewEffects": [{ "label": "폼 소폭 상승", "target": "form", "direction": "UP" }],
+          "outcomes": [
+            {
+              "id": "CALM-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 80,
+              "title": "흥분하지 않고 경기를 운영했다",
+              "ratingDeltaTenths": 3,
+              "effects": [
+                {
+                  "kind": "CURRENT",
+                  "sourceId": "CHP-MATCH-002.D1.CALM-SUCCESS.0",
+                  "target": "form",
+                  "delta": 3,
+                  "clamp": { "min": 0, "max": 100 },
+                  "appliesAt": { "kind": "IMMEDIATE" },
+                  "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+                  "stackingRule": "SUM"
+                }
+              ],
+              "addTags": [],
+              "narrative": { "situation": "감정에 흔들리지 않고 차분하게 경기를 운영했다." }
+            },
+            {
+              "id": "CALM-NEUTRAL",
+              "kind": "NEUTRAL",
+              "weight": 20,
+              "title": "차분했지만 인상은 약했다",
+              "ratingDeltaTenths": 0,
+              "effects": [],
+              "addTags": [],
+              "narrative": { "situation": "위험은 피했지만 눈에 띄는 장면도 없었다." }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -234,3 +234,46 @@ describe('loadContentPack: 0.5.0', () => {
     );
   });
 });
+
+// T-7-036 D-89: 팩 0.6.6은 0.6.5 전체 복사 + EVT-REL-001·EVT-DEV-002 트리거에만 `contract.kind`
+// 존재 가드를 추가한다(계약 없음 구간에서 우연히 걸리던 일반 사건을 막는다 — 시즌 중 조건은 그대로).
+// compatibleRulesetVersions만 룰셋 1.7.2로 교체하고 나머지 59개 정의는 바이트까지 그대로 보존한다.
+describe('loadContentPack: 0.6.6', () => {
+  it('EVT-REL-001·EVT-DEV-002만 계약 존재 가드를 추가하고 나머지는 0.6.5와 그대로다', () => {
+    const previous = loadContentPack('0.6.5');
+    const pack = loadContentPack('0.6.6');
+
+    expect(pack.manifest.compatibleRulesetVersions).toEqual(['1.7.2']);
+    expect(pack.manifest.checksum).not.toBe(previous.manifest.checksum);
+    expect(pack.chapters).toEqual(previous.chapters);
+    expect(pack.narrativeTokens).toEqual(previous.narrativeTokens);
+    expect(pack.events.map((event) => event.id).sort()).toEqual(
+      previous.events.map((event) => event.id).sort(),
+    );
+
+    const changedIds = new Set(['EVT-REL-001', 'EVT-DEV-002']);
+    for (const previousEvent of previous.events) {
+      const nextEvent = pack.eventsById.get(previousEvent.id);
+      if (changedIds.has(previousEvent.id)) {
+        expect(nextEvent).not.toEqual(previousEvent);
+      } else {
+        expect(nextEvent).toEqual(previousEvent);
+      }
+    }
+
+    expect(pack.eventsById.get('EVT-REL-001')?.triggers).toEqual({
+      all: [
+        { neq: ['contract.kind', ''] },
+        { in: ['player.primaryPosition', ['W', 'AM', 'ST']] },
+        { any: [{ hasTag: ['career.tags', '고집'] }, { gte: ['season.step', 4] }] },
+      ],
+    });
+    expect(pack.eventsById.get('EVT-DEV-002')?.triggers).toEqual({
+      all: [
+        { neq: ['contract.kind', ''] },
+        { lt: ['state.form', 45] },
+        { gte: ['season.step', 5] },
+      ],
+    });
+  });
+});

@@ -128,6 +128,7 @@ export type {
   NationalTeamRules,
   OfferBranch,
   OfferRules,
+  PreContractRules,
   RelationshipRules,
   ReputationRules,
   Ruleset,

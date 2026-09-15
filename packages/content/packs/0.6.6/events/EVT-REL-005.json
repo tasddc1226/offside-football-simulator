@@ -1,0 +1,93 @@
+{
+  "id": "EVT-REL-005",
+  "version": 1,
+  "phases": ["IN_SEASON"],
+  "triggers": {
+    "any": [
+      { "lt": ["relationships.managerTrust", 45] },
+      { "lt": ["context.squadStatus", 40] }
+    ]
+  },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 1 },
+  "weight": 22,
+  "safety": { "minorSafe": true },
+  "authoring": "PROTOTYPE",
+  "presentation": "LOCKER_ROOM",
+  "choices": [
+    {
+      "id": "A",
+      "label": "직접 발언한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "동료 관계 상승", "target": "captain", "direction": "UP" },
+        { "label": "팬 반응 상승", "target": "fans", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 60,
+          "title": "솔직한 발언이 분위기를 바꿨다",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-REL-005.A.A1.0", "target": "captain", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "RELATION", "sourceId": "EVT-REL-005.A.A1.1", "target": "fans", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 40,
+          "title": "발언이 갈등을 더 드러냈다",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-REL-005.A.A2.0", "target": "managerTrust", "delta": -3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "주장을 지지한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "주장 관계 상승", "target": "captain", "direction": "UP" },
+        { "label": "감독 신뢰 상승", "target": "managerTrust", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 100,
+          "title": "주장을 지지하며 팀을 하나로 모았다",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-REL-005.B.B1.0", "target": "captain", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "RELATION", "sourceId": "EVT-REL-005.B.B1.1", "target": "managerTrust", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "침묵을 지킨다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "감독 신뢰 하락", "target": "managerTrust", "direction": "DOWN" },
+        { "label": "3스텝 뒤 만료" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FAIL",
+          "weight": 100,
+          "title": "침묵이 거리감으로 읽혔다",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-REL-005.C.C1.0", "target": "managerTrust", "delta": -5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 3 }, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "연패가 이어지며 라커룸 공기가 무겁다. 역할을 둘러싼 불만도 함께 터져나온다. 이 순간 무엇을 말할지 정해야 한다."
+  }
+}
