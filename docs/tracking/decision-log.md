@@ -37,6 +37,7 @@
 - 10:37 사용자 지시로 임시 러너 재가동(`~/offside-runner-tmp/run.sh`, online, 6a16982 CI 즉시 실행). 재부팅 시 다시 죽는 구조(nohup)라 필요하면 같은 명령으로 재가동.
 - 10:45 #222(fc00e50) 독립 리뷰 → Codex 회신: 옛 룰셋 경로 불변(leagueLedgerRules 없으면 스케줄·원장·결산 옛 코드, fc00e50에서 1.5.0 200커리어 stateHash 200/200). ~~Critical: contracts 스키마 미확장~~ **10:50 철회(오탐)** — PR 파일 목록을 content·domain·tooling으로 필터해 contracts 변경(career-state.ts +226, 테스트 2파일)을 놓쳤고 스키마는 main 트리를 읽음. fc00e50 트리에는 fixtureId·leagueRound·leagueLedger·finalLeagueTable이 exactOptional로 있고 불변식 검사도 있음. 교훈: 리뷰 근거는 PR head 트리(`git show SHA:path`)만. Important: 팩 compat 1줄 병합, Legacy 게이트 공존, career-sim.ts 정책 전달 3곳 보존, 스키마 superRefine 병합.
 - 10:47 **사용자 결정(d) 확정(Codex 경유 전달): 룰셋 1.7.0은 1.6.1 밸런스(growthRules·retirementRules)를 그대로 계승하고 leagueLedgerRules를 추가.** Legacy 게이트는 (1.7.0, 최종 팩)→1.2.0. 팩 번호/compat는 최소 변경 계약 검토 후 Codex가 확정. 검증 계획(Claude): 통합 SHA에서 1.7.0 1천 커리어 집계를 1.6.1 1만과 대조 + 결정론 2회 동일 + 1.5.0 200·1.6.1 1천 회귀 불변. 2라운드 항목 (a)(b)(c)는 계속 대기.
+- 10:50 팩 배정 합의(Codex 제안, Claude 동의): 1.7.0용 **신규 팩 0.6.3**(0.6.1 바이트 복사, compat [1.7.0]). 근거: 등록된 팩의 compat는 골든 테스트(load-content-pack.test.ts 178행 0.6.2 → [1.6.1])가 고정하는 관례 — compat 합치기(전날 합의)는 철회. 0.6.2는 무수정, Legacy 게이트 (1.7.0,0.6.3)→1.2.0, APPROVED_PRODUCTION_MANIFESTS 불변. sol 새 워커 2개는 pane 입력 미전달로 미실행(Claude 프로브 pane은 정상 → 특정 pane 문제), 기존 sol에게 진단 전달 중.
 
 ## 2026-09-14 (D-79 — 밸런스 조정용 헤드리스 커리어 일괄 시뮬레이션 CLI, 도메인 직접 호출 방식 — 사용자 요청)
 
