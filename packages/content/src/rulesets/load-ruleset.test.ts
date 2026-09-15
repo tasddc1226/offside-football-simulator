@@ -86,8 +86,13 @@ describe('loadRuleset: 1.7.2 offerRules.preContract(D-89)', () => {
     const ruleset = loadRuleset('1.7.2');
     expect(ruleset.version).toBe('1.7.2');
     expect(ruleset.offerRules.preContract).toEqual({
-      maxEventsBeforeFirstOffer: 2,
+      // fix-precontract-whitelist: EVT-CON-003(SCR-008 입단 테스트)이 화이트리스트에 없으면 진로
+      // 선택→스카우트 평가 브리지(EVT-CON-020~028)만으로 계약 전 구간이 끝나 SCR-008이 구조적으로
+      // 뜨지 않았다. EVT-CON-003을 더하고, 진로(1)+브리지(1)+입단 테스트(1)=3으로 상한도 올렸다
+      // (2였다면 브리지가 이미 상한을 채워 EVT-CON-003 후보 전에 FIRST_CONTRACT로 건너뛴다).
+      maxEventsBeforeFirstOffer: 3,
       bridgeEventIds: [
+        'EVT-CON-003',
         'EVT-CON-020',
         'EVT-CON-021',
         'EVT-CON-022',
