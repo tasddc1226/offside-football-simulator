@@ -6,7 +6,11 @@
 // 뜨고 소진된 뒤에야 제안(OFFERS)이 열린다. 그래서 특정 이벤트·화면을 고정하지 않고, "이벤트 화면
 // (SCR-007/008/013)이면 첫 선택지를 확정하고 결과를 다음으로 넘긴다"를 offers 도착까지 반복한다.
 import { expect, test } from '@playwright/test';
-import { completeOnboardingThroughContract } from './helpers/player-creation.js';
+import {
+  advanceUntilOffers,
+  completeOnboardingAndConfirm,
+  signFirstOffer,
+} from './helpers/player-creation.js';
 
 // SCR-008 입단 테스트의 진행 연출(Stepper)을 건너뛰어 결정론적으로 만든다 — useReducedMotion()이
 // OS 미디어쿼리(SYSTEM 기본값)를 구독하므로, 브라우저 컨텍스트 자체를 reduced-motion으로 연다.
@@ -16,7 +20,15 @@ test.use({ contextOptions: { reducedMotion: 'reduce' } });
 test('온보딩부터 계약·대시보드까지: SCR-002~004 → 이벤트 → SCR-009 → SCR-010 → SCR-029', async ({ page }) => {
   const startedAt = Date.now();
 
-  await completeOnboardingThroughContract(page);
+  await completeOnboardingAndConfirm(page);
+  await advanceUntilOffers(page);
+  // 리뷰 결함 수정(첫 계약 흐름 PR): 현재 운영 활성 룰셋(1.7.1)은 offerRules.preContract가 없어 이 커리어가
+  // 실제로 스카우트 평가 브리지를 겪었는지 보장하지 않는다 — 첫 제안 화면 eyebrow는 그 서사를
+  // 단정해서는 안 되고 기존 "새로운 유니폼"을 그대로 보여줘야 한다(precontract-flow.spec.ts가
+  // 1.7.2/0.6.6을 명시적으로 모킹해 새 문구를 검증한다).
+  await expect(page.getByText('새로운 유니폼')).toBeVisible();
+  await expect(page.getByText('스카우트 평가 뒤 도착한 제안')).not.toBeVisible();
+  await signFirstOffer(page);
 
   // UX-014(2026-09-14): 선수 이름은 이제 대시보드 자체가 아니라 모든 /career/:id/* 화면에 고정된
   // 커리어 상단 헤더(CareerHeaderBar)가 보여준다 — 그 페이지 h1은 화면마다 다른 제목을 쓰므로 여기서는

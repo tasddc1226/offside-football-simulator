@@ -195,6 +195,27 @@ describe('T-4-014 C9: SCR-017 전부 거절 버튼 문구는 시장 종류에 �
   });
 });
 
+// 리뷰 결함 수정(첫 계약 흐름 PR): offerRules.preContract가 없는 룰셋(1.7.1 이하, 현재 운영 활성)은
+// 첫 계약 제안 화면 eyebrow가 "스카우트 평가" 서사로 바뀌면 안 된다 — 그 서사는 1.7.2+ 브리지
+// 이벤트 가드가 실제로 켜졌을 때만 성립한다. setTestEngine()은 preContract 키가 없는 1.0.0을 쓴다.
+describe('첫 계약 제안 화면 eyebrow는 룰셋 preContract 유무로 갈린다', () => {
+  it('preContract가 없는 룰셋(예: 1.0.0, 1.7.1 이하와 동일 형태)에서는 기존 "새로운 유니폼"을 보여준다', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine);
+    await queryClient.ensureQueryData(careerQueryOptions(careerId));
+    await setPending(careerId, {
+      kind: 'OFFERS',
+      offers: [buildFakeOffer('o1')],
+      market: { openedAtRevision: 0, seasonIndex: 0, reason: 'FIRST_CONTRACT', safeOfferId: null },
+    });
+
+    renderAt(`/career/${careerId}/offers`);
+
+    expect(await screen.findByText('새로운 유니폼')).toBeInTheDocument();
+    expect(screen.queryByText('스카우트 평가 뒤 도착한 제안')).not.toBeInTheDocument();
+  });
+});
+
 describe('recovery opportunity notice', () => {
   it('requires the configured zero-minute streak and an actual recovery-tier offer', () => {
     const ruleset = loadRuleset('1.3.0');
