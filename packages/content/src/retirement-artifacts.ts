@@ -60,7 +60,8 @@ export function loadRetirementArtifacts(
   // T-7-032(D-80 1라운드 ③): 1.6.1 + 0.6.2는 Legacy 1.2.0으로 옮긴다(1.1.0 화이트리스트에서 제외).
   const activatesLegacy120 =
     (rulesetVersion === '1.6.1' && contentPackVersion === '0.6.2') ||
-    (rulesetVersion === '1.7.0' && contentPackVersion === '0.6.3');
+    (rulesetVersion === '1.7.0' &&
+      (contentPackVersion === '0.6.3' || contentPackVersion === '0.6.4'));
   const activatesLegacy110WithoutPopulation =
     (rulesetVersion === '1.2.0' &&
       (contentPackVersion === '0.4.0' || contentPackVersion === '0.4.1')) ||

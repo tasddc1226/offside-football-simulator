@@ -169,6 +169,27 @@ import manifest062 from '../../packs/0.6.2/manifest.json' with { type: 'json' };
 // T-7-022: 0.6.3 = 0.6.2 전체 복사, manifest의 compatibleRulesetVersions만 1.7.0으로 교체.
 // 이벤트·챕터·narrative는 0.6.2와 바이트 동일해 기존 import를 재사용한다.
 import manifest063 from '../../packs/0.6.3/manifest.json' with { type: 'json' };
+// T-7-034: 0.6.4 keeps every 0.6.3 artifact and adds six two-stage, outcome-branched
+// event arcs. Static imports keep the browser/worker registry explicit and replay-safe.
+import manifest064 from '../../packs/0.6.4/manifest.json' with { type: 'json' };
+import eventCon120v064 from '../../packs/0.6.4/events/EVT-CON-120.json' with { type: 'json' };
+import eventCon121v064 from '../../packs/0.6.4/events/EVT-CON-121.json' with { type: 'json' };
+import eventCon122v064 from '../../packs/0.6.4/events/EVT-CON-122.json' with { type: 'json' };
+import eventDev120v064 from '../../packs/0.6.4/events/EVT-DEV-120.json' with { type: 'json' };
+import eventDev121v064 from '../../packs/0.6.4/events/EVT-DEV-121.json' with { type: 'json' };
+import eventDev122v064 from '../../packs/0.6.4/events/EVT-DEV-122.json' with { type: 'json' };
+import eventMatch120v064 from '../../packs/0.6.4/events/EVT-MATCH-120.json' with { type: 'json' };
+import eventMatch121v064 from '../../packs/0.6.4/events/EVT-MATCH-121.json' with { type: 'json' };
+import eventMatch122v064 from '../../packs/0.6.4/events/EVT-MATCH-122.json' with { type: 'json' };
+import eventMedia120v064 from '../../packs/0.6.4/events/EVT-MEDIA-120.json' with { type: 'json' };
+import eventMedia121v064 from '../../packs/0.6.4/events/EVT-MEDIA-121.json' with { type: 'json' };
+import eventMedia122v064 from '../../packs/0.6.4/events/EVT-MEDIA-122.json' with { type: 'json' };
+import eventMgr120v064 from '../../packs/0.6.4/events/EVT-MGR-120.json' with { type: 'json' };
+import eventMgr121v064 from '../../packs/0.6.4/events/EVT-MGR-121.json' with { type: 'json' };
+import eventMgr122v064 from '../../packs/0.6.4/events/EVT-MGR-122.json' with { type: 'json' };
+import eventRel120v064 from '../../packs/0.6.4/events/EVT-REL-120.json' with { type: 'json' };
+import eventRel121v064 from '../../packs/0.6.4/events/EVT-REL-121.json' with { type: 'json' };
+import eventRel122v064 from '../../packs/0.6.4/events/EVT-REL-122.json' with { type: 'json' };
 
 export const PACK_VERSIONS = [
   '0.1.0',
@@ -182,6 +203,7 @@ export const PACK_VERSIONS = [
   '0.6.1',
   '0.6.2',
   '0.6.3',
+  '0.6.4',
 ] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
@@ -721,6 +743,80 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       eventCon028v041,
       eventMgr020v041,
       eventMgr021v041,
+    ],
+    chapters: [
+      chapterMatch001v040,
+      chapterMatch002v040,
+      chapterMatch004v040,
+      chapterMatch005v040,
+      chapterMatch006v040,
+      chapterMatch007v040,
+      chapterNat001v040,
+    ],
+    narrativeTokens: narrativeTokens061,
+  },
+  '0.6.4': {
+    manifest: manifest064,
+    events: [
+      eventCon001v051,
+      eventCon003v050,
+      eventCon010v040,
+      eventCon011v040,
+      eventCon012v040,
+      eventCon013v040,
+      eventCon020v041,
+      eventCon021v041,
+      eventCon022v041,
+      eventCon023v041,
+      eventCon024v041,
+      eventCon025v041,
+      eventCon026v041,
+      eventCon027v041,
+      eventCon028v041,
+      eventCon120v064,
+      eventCon121v064,
+      eventCon122v064,
+      eventDev002v050,
+      eventDev120v064,
+      eventDev121v064,
+      eventDev122v064,
+      eventEth010v040,
+      eventEth011v040,
+      eventInj001v040,
+      eventInj003v040,
+      eventInj004v040,
+      eventMatch120v064,
+      eventMatch121v064,
+      eventMatch122v064,
+      eventMedia001v040,
+      eventMedia002v040,
+      eventMedia004v040,
+      eventMedia006v040,
+      eventMedia010v040,
+      eventMedia120v064,
+      eventMedia121v064,
+      eventMedia122v064,
+      eventMgr001v050,
+      eventMgr003v040,
+      eventMgr004v040,
+      eventMgr020v041,
+      eventMgr021v041,
+      eventMgr120v064,
+      eventMgr121v064,
+      eventMgr122v064,
+      eventNat001v040,
+      eventNat002v040,
+      eventRel001v051,
+      eventRel002v040,
+      eventRel003v040,
+      eventRel005v040,
+      eventRel008v040,
+      eventRel010v040,
+      eventRel120v064,
+      eventRel121v064,
+      eventRel122v064,
+      eventSlump010v040,
+      eventSlump011v040,
     ],
     chapters: [
       chapterMatch001v040,

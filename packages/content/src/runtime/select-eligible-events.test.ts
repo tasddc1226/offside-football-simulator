@@ -400,4 +400,67 @@ describe('selectEligibleEvents: 필터(합성 이벤트)', () => {
       { eventId: 'EVT-DEV-902', version: 1, weight: 5 },
     ]);
   });
+
+  it('0.6.4 연속 사건은 선택 의도별 정확한 후속만 열고 단독 root·GK 문맥·쿨다운 재노출을 막는다', () => {
+    const pack = loadContentPack('0.6.4');
+    const proState = buildTestState({
+      stage: 'PRO',
+      age: 22,
+      currentStep: 4,
+      seasonPhase: 'LEAGUE',
+      rulesetVersion: '1.7.0',
+      contentPackVersion: '0.6.4',
+      relationships: { managerTrust: 60, captain: 60, rival: 55, fans: 55, agent: 50 },
+    });
+
+    const roots = selectEligibleEvents(pack, proState).map((event) => event.eventId);
+    expect(roots).toContain('EVT-REL-120');
+    expect(roots).not.toContain('EVT-REL-121');
+    expect(roots).not.toContain('EVT-REL-122');
+
+    const cooperativeSetback = {
+      ...proState,
+      resolvedEventIds: ['EVT-REL-120'],
+      timeline: [timelineEntry({ kind: 'EVENT_RESOLVED', refId: 'EVT-REL-120:A:A2', step: 4 })],
+    };
+    expect(selectEligibleEvents(pack, cooperativeSetback)).toEqual([
+      { eventId: 'EVT-REL-121', version: 1, weight: 100 },
+    ]);
+
+    const individualSuccess = {
+      ...proState,
+      resolvedEventIds: ['EVT-REL-120'],
+      timeline: [timelineEntry({ kind: 'EVENT_RESOLVED', refId: 'EVT-REL-120:B:B1', step: 4 })],
+    };
+    expect(selectEligibleEvents(pack, individualSuccess)).toEqual([
+      { eventId: 'EVT-REL-122', version: 1, weight: 100 },
+    ]);
+
+    const coolingDown = {
+      ...proState,
+      currentStep: 5,
+      resolvedEventIds: ['EVT-REL-120'],
+      timeline: [
+        timelineEntry({ kind: 'EVENT_RESOLVED', refId: 'EVT-REL-120:A:A1', step: 4 }),
+        timelineEntry({ kind: 'EVENT_RESOLVED', refId: 'EVT-ETH-010:A:A1', step: 5, revision: 2 }),
+      ],
+    };
+    expect(selectEligibleEvents(pack, coolingDown).map((event) => event.eventId)).not.toContain('EVT-REL-120');
+
+    const completed = { ...proState, tags: ['T7034_RECIPROCITY_DONE'] };
+    expect(selectEligibleEvents(pack, completed).map((event) => event.eventId)).not.toContain('EVT-REL-120');
+
+    const goalkeeper = {
+      ...proState,
+      player: {
+        ...proState.player,
+        profile: { ...TEST_PROFILE, preferredPosition: 'GK' as const, primaryPosition: 'GK' as const },
+      },
+    };
+    const goalkeeperEvents = selectEligibleEvents(pack, goalkeeper).map((event) => event.eventId);
+    expect(goalkeeperEvents).not.toContain('EVT-REL-120');
+    expect(goalkeeperEvents).not.toContain('EVT-MGR-120');
+    expect(goalkeeperEvents).not.toContain('EVT-DEV-120');
+    expect(goalkeeperEvents).not.toContain('EVT-MATCH-120');
+  });
 });

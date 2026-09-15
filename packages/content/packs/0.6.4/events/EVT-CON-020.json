@@ -1,0 +1,80 @@
+{
+  "id": "EVT-CON-020",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": {
+    "all": [{ "eq": ["career.age", 19] }, { "eq": ["player.backgroundId", "club-academy"] }]
+  },
+  "exclusionTags": [],
+  "weight": 100,
+  "minAge": 19,
+  "maxAge": 19,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "남아 추가 평가를 받는다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "익숙한 전술에서 평가를 이어감" },
+        { "label": "당장 출전할 기회는 줄어듦", "target": "squadStatus", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "추가 평가 계획이 확정됐다",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-CON-020.A.A1",
+              "target": "squadStatus",
+              "delta": -8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["진로_아카데미_평가"],
+          "followUps": [{ "eventId": "EVT-CON-023" }]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "출전 가능한 팀을 알아본다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "익숙한 환경을 떠남", "target": "tacticalFit", "direction": "DOWN" },
+        { "label": "다른 팀의 관찰 기회를 얻음" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "연락처 두 곳에 경기 영상을 보냈다",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-CON-020.B.B1",
+              "target": "tacticalFit",
+              "delta": -6,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["진로_아카데미_이동탐색"],
+          "followUps": [{ "eventId": "EVT-CON-024" }]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "아카데미 마지막 평가가 끝났다. 먼저 계약한 동기도 있지만, 당신에게 온 것은 한 달의 추가 훈련과 다른 팀의 관찰 제안이다."
+  }
+}
