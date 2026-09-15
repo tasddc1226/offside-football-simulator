@@ -1,6 +1,6 @@
 # OFFSIDE 개발 명세 인덱스
 
-이 디렉터리는 제품 기획서를 구현 가능한 계약으로 변환한 개발 정본이다. 제품 의도는 상위의 `offside-football-simulator-design.*`, 구현 판단은 이 디렉터리와 `phases/`, 화면 동작은 `screens/`를 따른다.
+이 디렉터리는 제품 기획서를 구현 가능한 계약으로 변환한 개발 정본이다. 제품 의도는 해당 범위를 명시한 `docs/product/` PRD와 기존 `offside-football-simulator-design.*`, 구현 판단은 이 디렉터리와 `phases/`, 화면 동작은 `screens/`를 따른다. 제품 의도끼리 충돌하면 해당 범위의 최신 PRD가 통합 설계서보다 우선하되 확정 구현 계약을 자동으로 변경하지 않는다.
 
 ## 읽는 순서
 
@@ -20,6 +20,9 @@
 14. [시각 디자인 시스템](13-visual-design-system.md)
 15. [Legacy Score·엔딩](14-legacy-score-and-endings.md)
 16. [WORLD STAGE 세계관 확장](15-world-stage-expansion.md)
+17. [리그 맥락·선택의 후속 결과·은퇴 회고 작업 계획](20-career-world-plan.md) — 현재 구현 이후의 추가 범위와 실행 게이트
+
+이 추가 작업의 제품 의도와 인수 기준은 [커리어 PRD](../product/career-world-prd.md), 아키텍처 제안은 [ADR-011](../adr/ADR-011-league-ledger-and-career-feedback.md)에 있다. PRD는 확정 개발 계약을 자동으로 대체하지 않으며, 제안 ADR은 채택 전까지 기존 동작을 변경하지 않는다.
 
 콘텐츠 저작 형식과 종이 프로토타입은 [`../content/README.md`](../content/README.md)에 있다. 기술 스택·인프라·앱인토스 채널 확정 결정은 [`../adr/README.md`](../adr/README.md), 진행 보드와 워커 위임 규칙은 [`../tracking/README.md`](../tracking/README.md)에 있다.
 
@@ -33,9 +36,10 @@
 2. `docs/phases/` 단계 명세
 3. `docs/screens/` 화면 명세
 4. `docs/content/` 콘텐츠와 프로토타입
-5. `docs/offside-football-simulator-design.*` 제품 설계서
+5. `docs/product/` 범위별 PRD 제품 의도·인수 기준
+6. `docs/offside-football-simulator-design.*` 통합 제품 설계서
 
-제품 설계서는 제품 의도와 원작 분석의 정본이다. 다음 절은 이 디렉터리로 대체됐으므로 구현 근거로 쓰지 않는다.
+범위별 PRD가 없는 영역은 통합 제품 설계서가 제품 의도와 원작 분석의 정본이다. PRD와 상위 확정 계약이 다르면 ADR/개발 명세를 먼저 갱신한 뒤 구현한다. 다음 통합 설계서 절은 이 디렉터리로 대체됐으므로 구현 근거로 쓰지 않는다.
 
 | 설계서 절 | 대체 문서 | 이유 |
 |---|---|---|
