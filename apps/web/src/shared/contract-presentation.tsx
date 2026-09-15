@@ -3,13 +3,22 @@ import { buttonClassName, buttonStyle } from '@offside/ui';
 import { Link } from '@tanstack/react-router';
 import { ClubBadge } from './ClubBadge.js';
 import { formatKrw } from './format.js';
-import { LEAGUE_TIER_LABEL_KO, SQUAD_ROLE_LABELS } from './labels.js';
+import { LEAGUE_TIER_LABEL_KO, POSITION_LABELS, ROLE_PROMISE_SENTENCE, SQUAD_ROLE_LABELS } from './labels.js';
 import { actionableRevision, OFFER_KIND_LABEL_KO, offerDecisionDeadlineLabel, offerDetailRows, offerProjectionNotice, offerStatusLabel } from './transfer-view.js';
 
 function signedDelta(value: number, current: number): string {
   const delta = value - current;
   if (delta === 0) return '현재와 같음';
   return `${delta > 0 ? '+' : '−'}${formatKrw(Math.abs(delta))}`;
+}
+
+/**
+ * 첫 계약 화면(SCR-009) 제안 카드 위 "왜 이 팀이 제안했나" 한 줄. offer.positionPlan·rolePromise·
+ * leagueTier를 조합한 표시 전용 문구다(도메인 계산 없음, 새 값 파생 없음 — 기존 필드를 문장으로
+ * 풀어 쓸 뿐). 스카우트 평가 뒤 도착한 제안이라는 맥락을 이어준다.
+ */
+export function offerRationale(offer: Offer): string {
+  return `${LEAGUE_TIER_LABEL_KO[offer.leagueTier]} ${offer.teamName}이(가) ${POSITION_LABELS[offer.positionPlan]} 자리를 보고 제안했습니다. ${ROLE_PROMISE_SENTENCE[offer.rolePromise]}`;
 }
 
 export function offerHeadlineRows(offer: Offer, state: CareerState, recordRevision: number, safeOfferId: string | null) {
@@ -76,6 +85,10 @@ export function CompactOfferCard({
     pending !== null && (pending.kind === 'OFFERS' || pending.kind === 'CONTRACT')
       ? offerProjectionNotice(state.rulesetVersion, pending.market.reason)
       : null;
+  const isFirstContractOffer =
+    pending !== null &&
+    (pending.kind === 'OFFERS' || pending.kind === 'CONTRACT') &&
+    pending.market.reason === 'FIRST_CONTRACT';
   return (
     <article className="os-panel flex flex-col gap-os-4" aria-labelledby={`offer-${offer.id}`}>
       <div>
@@ -84,6 +97,11 @@ export function CompactOfferCard({
           <ClubBadge teamId={offer.teamId} size="m" />
           {offer.teamName}
         </h2>
+        {isFirstContractOffer ? (
+          <p className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+            {offerRationale(offer)}
+          </p>
+        ) : null}
       </div>
       <dl className="grid grid-cols-2 gap-os-3">
         {headline.map((row) => (

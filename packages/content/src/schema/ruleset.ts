@@ -411,6 +411,13 @@ const IntRangeSchema = z
   .strictObject({ min: z.number().int(), max: z.number().int() })
   .refine((r) => r.min <= r.max, { message: 'min은 max 이하여야 한다.' });
 
+// 1.7.2+: 첫 계약 전 generic EVENT 매칭 상한·화이트리스트(도메인 `PreContractRules`와 같은 모양).
+// 없으면 도메인 advance()가 기존 동작(제한 없음)을 그대로 유지한다.
+const PreContractRulesSchema = z.strictObject({
+  maxEventsBeforeFirstOffer: z.number().int().positive(),
+  bridgeEventIds: z.array(z.string().min(1)).min(1),
+});
+
 export const OfferRulesSchema = z.strictObject({
   maxOffers: z.number().int().positive(),
   countBonusTags: z.array(z.string().min(1)),
@@ -424,6 +431,7 @@ export const OfferRulesSchema = z.strictObject({
   lengthSeasons: IntRangeSchema,
   shirtNumber: IntRangeSchema,
   tacticalFitEstimate: IntRangeSchema,
+  preContract: PreContractRulesSchema.optional(),
 });
 export type OfferRules = z.infer<typeof OfferRulesSchema>;
 

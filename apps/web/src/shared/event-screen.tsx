@@ -201,7 +201,17 @@ export function EventDecisionScreen({
     setDialogOpen(nextOpen);
   }
 
-  const intro = EVENT_INTRO[screenId];
+  // T-7-036 D-89: 계약 없음 구간의 진로 선택 뒤 브리지(스카우트 평가) 이벤트는 SCR-013 일반
+  // 사건과 같은 라우트를 타지만(EVENT_SCREEN_OVERRIDES에 없다), 표시 라벨만 맥락에 맞게 바꾼다
+  // (룰셋 offerRules.preContract.bridgeEventIds를 표시 전용으로 읽을 뿐 — 여기서 상한·매칭을
+  // 계산하지 않는다, 그건 도메인 몫이다). 없는 룰셋(1.7.1 이하)은 항상 false라 기존 라벨 그대로다.
+  const isPreContractBridgeEvent =
+    screenId === 'SCR-013' &&
+    state.contract === null &&
+    (ruleset.offerRules.preContract?.bridgeEventIds.includes(definition.id) ?? false);
+  const intro = isPreContractBridgeEvent
+    ? { eyebrow: '스카우트 평가', title: '평가가 이어지고 있습니다' }
+    : EVENT_INTRO[screenId];
 
   const choiceSection = (
     <section className="flex flex-col gap-os-3" aria-labelledby="event-choice-heading">
@@ -317,7 +327,10 @@ export function EventDecisionScreen({
   return (
     <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
       <div className="os-screen">
-        <ScreenIntro eyebrow="새로운 사건" title="결정이 기다리고 있습니다" />
+        <ScreenIntro
+          eyebrow={isPreContractBridgeEvent ? '스카우트 평가' : '새로운 사건'}
+          title={isPreContractBridgeEvent ? '평가가 이어지고 있습니다' : '결정이 기다리고 있습니다'}
+        />
 
         <PlayerBanner
           name={tokens.name}

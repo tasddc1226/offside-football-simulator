@@ -1,0 +1,234 @@
+{
+  "id": "EVT-MATCH-121",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "triggers": {
+    "hasTag": [
+      "career.tags",
+      "T7034_FOLLOWUP_ONLY"
+    ]
+  },
+  "exclusionTags": [
+    "T7034_COMEBACK_DONE"
+  ],
+  "cooldown": {
+    "steps": 12
+  },
+  "weight": 100,
+  "choices": [
+    {
+      "id": "A",
+      "label": "같은 역할의 성공률을 더 높인다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "스쿼드 지위 상승 기회",
+          "target": "squadStatus",
+          "direction": "UP"
+        },
+        {
+          "label": "화려한 장면은 적음"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 82,
+          "title": "짧은 출전에서 맡은 역할의 재현성을 보여 줬다",
+          "cause": "역할 재현성",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MATCH-121.A.S0",
+              "target": "squadStatus",
+              "delta": 4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-121_A_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MATCH-121.A.S1",
+              "target": "managerTrust",
+              "delta": 3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-121_A_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_COMEBACK_DONE"
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 18,
+          "title": "안전한 선택만 한다는 평가도 남았다",
+          "cause": "제한된 플레이 범위",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MATCH-121.A.F0",
+              "target": "form",
+              "delta": -1,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-121_A_F0"
+            }
+          ],
+          "addTags": [
+            "T7034_COMEBACK_DONE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "공격 임무 하나를 추가로 준비한다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        {
+          "label": "폼 큰 상승 기회",
+          "target": "form",
+          "direction": "UP"
+        },
+        {
+          "label": "체력 부담",
+          "target": "fitness",
+          "direction": "DOWN"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 57,
+          "title": "준비한 추가 임무가 짧은 출전에서 효과를 냈다",
+          "cause": "준비한 공격 패턴",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MATCH-121.B.S0",
+              "target": "form",
+              "delta": 6,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-121_B_S0"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MATCH-121.B.S1",
+              "target": "squadStatus",
+              "delta": 3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-121_B_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_COMEBACK_DONE"
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 43,
+          "title": "두 역할을 준비하다 기본 임무가 흐려졌다",
+          "cause": "넓어진 준비 범위",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MATCH-121.B.F0",
+              "target": "fitness",
+              "delta": -4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-121_B_F0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MATCH-121.B.F1",
+              "target": "managerTrust",
+              "delta": -2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-121_B_F1"
+            }
+          ],
+          "addTags": [
+            "T7034_COMEBACK_DONE"
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "첫 교체 출전 뒤 코치가 맡았던 움직임을 함께 검토하자고 했다. 실제 기용 순서를 약속받은 것은 아니며, 안정적인 역할과 더 큰 임팩트 사이에서 준비 방향을 정한다."
+  }
+}

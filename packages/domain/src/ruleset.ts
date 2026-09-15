@@ -241,6 +241,16 @@ export type OfferBranch = {
   topTierMinOvr?: number;
 };
 
+// 1.7.2+: 첫 계약 전(계약 없음) 구간에서 generic EVENT 매칭을 제한하는 선택 규칙. D-43/D-67
+// 상태 전이 가드 — 없는 룰셋(1.7.1 이하)은 advance()가 기존 동작을 그대로 유지한다(과거 커리어
+// 재현 불변). `maxEventsBeforeFirstOffer`는 계약 없음 구간에서 지금까지 해소된 EVENT 수(진로
+// 선택 자체 포함)의 상한이고, `bridgeEventIds`는 그 구간에서 후보가 될 수 있는 event id
+// 화이트리스트다(진로 선택 이벤트 + 그 뒤를 잇는 스카우트 평가 브리지 이벤트).
+export type PreContractRules = {
+  maxEventsBeforeFirstOffer: number;
+  bridgeEventIds: string[];
+};
+
 export type OfferRules = {
   maxOffers: number;
   countBonusTags: string[];
@@ -249,6 +259,7 @@ export type OfferRules = {
   lengthSeasons: { min: number; max: number };
   shirtNumber: { min: number; max: number };
   tacticalFitEstimate: { min: number; max: number };
+  preContract?: PreContractRules | undefined;
 };
 
 // D-9: 계약 규칙(wage band 표). 이 작업에서는 타입만 정의하고 사용하지 않는다(T-1-005가 소비한다).

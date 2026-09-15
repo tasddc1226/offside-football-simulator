@@ -1357,6 +1357,24 @@ function hasReservedNationalTeamEvent(
   return events.some((event) => event.eventId === ruleset.nationalTeamRules.event.id);
 }
 
+/**
+ * T-7-036: `offerRules.preContract`(1.7.2+)가 있을 때만 "계약 없음" 구간의 generic EVENT 후보를
+ * 제한한다. `preContractEventsResolved`는 지금까지 해소된 EVENT 수(진로 선택 자체를 포함, 그 뒤를
+ * 잇는 스카우트 평가 브리지 이벤트까지 상한 안에 들어온다) — 상한에 닿으면 빈 배열을 돌려줘 호출부가
+ * 바로 FIRST_CONTRACT 제안으로 넘어가게 한다. 상한 전이면 화이트리스트(`bridgeEventIds`) 밖
+ * event id를 후보에서 뺀다(팩 트리거가 계약 없음 구간에도 우연히 걸리는 일반 사건 방지). 키가 없는
+ * 룰셋은 원래 배열을 그대로 돌려줘 1.7.1 이하 골든·해시를 바꾸지 않는다.
+ */
+function applyPreContractEventGuard(
+  preContract: Ruleset['offerRules']['preContract'],
+  preContractEventsResolved: number,
+  eligibleEvents: readonly EligibleEvent[],
+): readonly EligibleEvent[] {
+  if (preContract === undefined) return eligibleEvents;
+  if (preContractEventsResolved >= preContract.maxEventsBeforeFirstOffer) return [];
+  return eligibleEvents.filter((event) => preContract.bridgeEventIds.includes(event.eventId));
+}
+
 /** T-2-001 RULE-TIME-002: pending 종류에 따라 다음에 클라이언트가 보낼 명령을 알려준다. */
 function nextActionForPending(pending: Pending): 'DECISION' | 'ADVANCE' | 'SETTLEMENT' {
   if (pending === null) {
@@ -1719,59 +1737,79 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
     return advanceInSeason(input, snapshot, state.season);
   }
 
-  const eligibleEvents = command.payload.eligibleEvents;
+  const rawEligibleEvents = command.payload.eligibleEvents;
 
-  if (eligibleEvents.length > 0) {
-    if (!isEligibleEventsSorted(eligibleEvents)) {
+  if (rawEligibleEvents.length > 0) {
+    if (!isEligibleEventsSorted(rawEligibleEvents)) {
       return fail('VALIDATION_FAILED', 'eligibleEvents는 eventId 오름차순이어야 한다.', {
         reason: 'UNSORTED_ELIGIBLE_EVENTS',
       });
     }
-    for (const event of eligibleEvents) {
+    for (const event of rawEligibleEvents) {
       if (!Number.isInteger(event.weight) || event.weight <= 0) {
         return fail('VALIDATION_FAILED', 'eligibleEvents의 weight는 양의 정수여야 한다.', {
           reason: 'INVALID_WEIGHT',
         });
       }
     }
-    if (hasReservedNationalTeamEvent(eligibleEvents, input.ruleset)) {
+    if (hasReservedNationalTeamEvent(rawEligibleEvents, input.ruleset)) {
       return fail('VALIDATION_FAILED', '대표팀 예약 event id는 generic EVENT로 열 수 없다.', {
         reason: 'RESERVED_NATIONAL_TEAM_EVENT',
       });
     }
 
-    let chosen = eligibleEvents[0]!;
-    let nextRngState = state.rngState;
-    if (eligibleEvents.length >= 2) {
-      const weightSum = eligibleEvents.reduce((sum, event) => sum + event.weight, 0);
-      if (weightSum > 0xffffffff) {
-        return fail('VALIDATION_FAILED', 'eligibleEvents weight 합이 2^32를 넘는다.', {
-          reason: 'INVALID_WEIGHT',
-        });
-      }
-      const rolled = rollRange(state.rngState, 1, weightSum);
-      nextRngState = rolled.state;
-      let cumulative = 0;
-      for (const event of eligibleEvents) {
-        cumulative += event.weight;
-        if (rolled.value <= cumulative) {
-          chosen = event;
-          break;
+    // T-7-036 D-89: 1.7.2+ offerRules.preContract가 있으면 "계약 없음" 구간(state.contract === null
+    // 인 동안만 — 계약 뒤 비시즌은 advanceInSeason 쪽이라 여기 오지 않는다)의 generic EVENT 매칭을
+    // 제한한다. 이미 해소된 EVENT 수(resolvedEventIds — 이 구간에서는 전부 계약 전 이벤트다, 계약이
+    // 한 번 맺어지면 다시 null이 되지 않는다)가 상한에 닿으면 매칭 자체를 건너뛰어 바로 아래
+    // `state.contract === null` 분기가 FIRST_CONTRACT 제안을 열게 하고, 상한 전이면 화이트리스트
+    // 밖 event id(팩이 실수로 계약 전에도 걸리게 만든 일반 사건)를 후보에서 뺀다. 키가 없는 룰셋
+    // (1.7.1 이하)은 원래 배열을 그대로 써 기존 골든·해시가 바뀌지 않는다.
+    const eligibleEvents =
+      state.contract === null
+        ? applyPreContractEventGuard(
+            input.ruleset.offerRules.preContract,
+            state.resolvedEventIds.length,
+            rawEligibleEvents,
+          )
+        : rawEligibleEvents;
+
+    if (eligibleEvents.length > 0) {
+      let chosen = eligibleEvents[0]!;
+      let nextRngState = state.rngState;
+      if (eligibleEvents.length >= 2) {
+        const weightSum = eligibleEvents.reduce((sum, event) => sum + event.weight, 0);
+        if (weightSum > 0xffffffff) {
+          return fail('VALIDATION_FAILED', 'eligibleEvents weight 합이 2^32를 넘는다.', {
+            reason: 'INVALID_WEIGHT',
+          });
+        }
+        const rolled = rollRange(state.rngState, 1, weightSum);
+        nextRngState = rolled.state;
+        let cumulative = 0;
+        for (const event of eligibleEvents) {
+          cumulative += event.weight;
+          if (rolled.value <= cumulative) {
+            chosen = event;
+            break;
+          }
         }
       }
-    }
 
-    const nextState: CareerState = {
-      ...state,
-      rngState: nextRngState,
-      pending: { kind: 'EVENT', eventId: chosen.eventId, version: chosen.version },
-    };
-    return {
-      ok: true,
-      snapshot: buildSnapshot(nextState, snapshot.revision + 1, 'EVENT_OFFERED'),
-      appliedEffects: [],
-      nextAction: 'DECISION',
-    };
+      const nextState: CareerState = {
+        ...state,
+        rngState: nextRngState,
+        pending: { kind: 'EVENT', eventId: chosen.eventId, version: chosen.version },
+      };
+      return {
+        ok: true,
+        snapshot: buildSnapshot(nextState, snapshot.revision + 1, 'EVENT_OFFERED'),
+        appliedEffects: [],
+        nextAction: 'DECISION',
+      };
+    }
+    // T-7-036: preContract 가드가 후보를 전부 걸러냈다(상한 도달 또는 화이트리스트 밖) — 아래
+    // `state.contract === null` 분기로 흘러 FIRST_CONTRACT 제안을 연다.
   }
 
   if (state.contract === null) {

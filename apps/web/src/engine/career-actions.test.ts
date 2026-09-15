@@ -1,4 +1,4 @@
-import { EFFECT_DEFAULTS, loadContentPack } from '@offside/content';
+import { EFFECT_DEFAULTS, loadContentPack, loadRuleset } from '@offside/content';
 import type { ServiceSeasonCurrent } from '@offside/contracts';
 import { hashState } from '@offside/domain';
 import { career01, career01EngineCommands, career05Chapter, career05ChapterEngineCommands, rulesetProto } from '@offside/fixtures';
@@ -217,6 +217,77 @@ describe('advance: selectEligibleEvents 배선', () => {
     expect(result.ok).toBe(true);
     expect(capturedPayloads).toHaveLength(1);
     expect(capturedPayloads[0]?.eligibleEvents.some((event) => event.eventId === 'EVT-CON-002')).toBe(true);
+  });
+});
+
+// fix-precontract-whitelist: 룰셋 1.7.2 offerRules.preContract.bridgeEventIds가 EVT-CON-020~028만
+// 허용해, 진로 선택에서 "입단 테스트/하부리그"(태그 진로_입단테스트·진로_하부리그)를 고른 선수의
+// EVT-CON-003(SCR-008 전용 입단 테스트 화면, career-route.ts EVENT_SCREEN_OVERRIDES)이 계약 전
+// 구간에서 구조적으로 뜨지 않았다. 화이트리스트에 EVT-CON-003을 추가하는 것만으로는 부족했다 —
+// 0.4.1부터 바이트 동일하게 재사용돼 온 EVT-CON-024~028(스카우트 평가 브리지)이 진로 태그
+// (진로_입단테스트·진로_하부리그)와 EVT-CON-003의 exclusionTags(입단테스트_완료)를 같은 outcome에서
+// 함께 addTags해, 브리지가 해소되는 즉시 EVT-CON-003이 영구히 제외됐다(0.6.5 이하·origin/main에도
+// 같은 구조가 있어 재현됨 — 다만 그 버전은 바이트 불변이라 고치지 않는다). 0.6.6에서만 다섯 파일을
+// 새로 갈라 입단테스트_완료 선주입을 제거했고(load-content-pack.ts가 0.6.6 전용 import로 교체),
+// maxEventsBeforeFirstOffer도 2(진로 1 + 브리지 1)에서 3(진로 1 + 브리지 1 + 입단 테스트 1)으로
+// 올렸다 — 2로는 브리지가 이미 상한을 채워 EVT-CON-003이 후보에 들기 전에 FIRST_CONTRACT로
+// 건너뛴다(도메인 가드 자체는 코드 변경 없음, packages/domain/src/simulate.test.ts의 기존
+// preContract 스위트가 그 일반 로직을 계속 지킨다).
+describe('T-7-036 fix-precontract-whitelist: 1.7.2/0.6.6 입단 테스트 경로', () => {
+  it('진로_입단테스트·진로_하부리그 경로(school 배경)에서 EVT-CON-003이 뜨고 해소된 뒤 첫 제안(OFFERS)이 열린다', async () => {
+    serviceSeasonHolder.current = {
+      ...FALLBACK_SERVICE_SEASON,
+      rulesetVersion: '1.7.2',
+      contentPackVersion: '0.6.6',
+    };
+    try {
+      const engine = createAppEngine({
+        store: new MemoryLocalStore(),
+        simulator: inlineSimulator,
+        ruleset: loadRuleset('1.7.2'),
+        pack: loadContentPack('0.6.6'),
+        newId: makeIdGenerator('t7036'),
+      });
+
+      const created = await createCareer(engine, { simulationMode: 'CHAPTER' });
+      expect(created.ok).toBe(true);
+      if (!created.ok) throw new Error('unreachable');
+      const careerId = created.snapshot.careerId;
+
+      await updateDraft(engine, careerId, { name: '김서준', gender: 'MALE', nationalityCode: 'KR', preferredFoot: 'LEFT' });
+      const draft2 = await updateDraft(engine, careerId, { position: 'W', archetypeId: 'inside-forward', backgroundId: 'school' });
+      expect(draft2.ok).toBe(true);
+      const confirmed = await confirmPlayer(engine, careerId);
+      expect(confirmed.ok).toBe(true);
+
+      let sawTryout = false;
+      let current = confirmed as ExecuteResult;
+      for (let step = 0; step < 10; step += 1) {
+        if (!current.ok) throw new Error(`재생 실패: ${current.error.code} ${current.error.message}`);
+        const pending = current.domainSnapshot.state.pending;
+        if (pending?.kind === 'OFFERS') break;
+        if (pending === null) {
+          current = await advance(engine, careerId);
+          continue;
+        }
+        if (pending.kind === 'EVENT') {
+          if (pending.eventId === 'EVT-CON-003') sawTryout = true;
+          current = await resolveEvent(engine, careerId, 'A');
+          continue;
+        }
+        throw new Error(`예상 밖 pending: ${pending.kind}`);
+      }
+
+      expect(sawTryout).toBe(true);
+      if (!current.ok) throw new Error('unreachable');
+      expect(current.domainSnapshot.state.pending?.kind).toBe('OFFERS');
+      expect(current.domainSnapshot.state.tags).toContain('입단테스트_완료');
+      if (current.domainSnapshot.state.pending?.kind === 'OFFERS') {
+        expect(current.domainSnapshot.state.pending.offers.length).toBeGreaterThanOrEqual(1);
+      }
+    } finally {
+      serviceSeasonHolder.current = undefined;
+    }
   });
 });
 

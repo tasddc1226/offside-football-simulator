@@ -72,6 +72,49 @@ describe('loadRuleset: 1.4.0 회복 규칙 데이터(D-67)', () => {
   });
 });
 
+// T-7-036 D-89: 룰셋 1.7.2는 1.7.1 전체 복사 + offerRules.preContract 선택 키만 추가한다(첫 계약
+// 전 generic EVENT 상한·화이트리스트). 없는 룰셋(1.7.1 이하)은 advance()가 기존 동작을 유지해야
+// 하므로 키 부재를 여기서 고정한다.
+describe('loadRuleset: 1.7.2 offerRules.preContract(D-89)', () => {
+  it('1.7.1은 preContract 키가 없다', () => {
+    const ruleset = loadRuleset('1.7.1');
+    expect(ruleset.offerRules.preContract).toBeUndefined();
+  });
+
+  it('1.7.2는 1.7.1과 offerRules.preContract만 다르다', () => {
+    const previous = loadRuleset('1.7.1');
+    const ruleset = loadRuleset('1.7.2');
+    expect(ruleset.version).toBe('1.7.2');
+    expect(ruleset.offerRules.preContract).toEqual({
+      // fix-precontract-whitelist: EVT-CON-003(SCR-008 입단 테스트)이 화이트리스트에 없으면 진로
+      // 선택→스카우트 평가 브리지(EVT-CON-020~028)만으로 계약 전 구간이 끝나 SCR-008이 구조적으로
+      // 뜨지 않았다. EVT-CON-003을 더하고, 진로(1)+브리지(1)+입단 테스트(1)=3으로 상한도 올렸다
+      // (2였다면 브리지가 이미 상한을 채워 EVT-CON-003 후보 전에 FIRST_CONTRACT로 건너뛴다).
+      maxEventsBeforeFirstOffer: 3,
+      bridgeEventIds: [
+        'EVT-CON-003',
+        'EVT-CON-020',
+        'EVT-CON-021',
+        'EVT-CON-022',
+        'EVT-CON-023',
+        'EVT-CON-024',
+        'EVT-CON-025',
+        'EVT-CON-026',
+        'EVT-CON-027',
+        'EVT-CON-028',
+      ],
+    });
+    const { version: previousVersion, offerRules: previousOfferRules, ...previousRest } = previous;
+    const { version: nextVersion, offerRules: nextOfferRules, ...nextRest } = ruleset;
+    expect(previousVersion).toBe('1.7.1');
+    expect(nextVersion).toBe('1.7.2');
+    expect(nextRest).toEqual(previousRest);
+    const nextOfferRulesRest: Partial<typeof nextOfferRules> = { ...nextOfferRules };
+    delete nextOfferRulesRest.preContract;
+    expect(nextOfferRulesRest).toEqual(previousOfferRules);
+  });
+});
+
 // T-3-006 U-013: 팀 풀 8→12(YOUTH 1·1부 3·2부 4·3부 4). 시장 다양성 확보 목적.
 describe('loadRuleset: 팀 풀 12개(U-013)', () => {
   const ruleset = loadRuleset('1.0.0');

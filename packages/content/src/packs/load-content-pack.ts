@@ -193,6 +193,25 @@ import eventRel122v064 from '../../packs/0.6.4/events/EVT-REL-122.json' with { t
 // 0.6.5 is content-identical to 0.6.4 and pairs only with ruleset 1.7.1. Reuse the
 // immutable 0.6.4 definitions while registering the new manifest explicitly.
 import manifest065 from '../../packs/0.6.5/manifest.json' with { type: 'json' };
+// T-7-036: 0.6.6은 0.6.5와 이벤트 두 건(EVT-REL-001·EVT-DEV-002)만 다르다 — 계약 없음 구간에서도
+// 우연히 걸리던 일반 사건 트리거에 `contract.kind` 존재 가드를 추가했다(시즌 중 발생 조건은 그대로).
+// 나머지는 0.6.4/0.6.5와 바이트 동일해 기존 import를 재사용한다. compatibleRulesetVersions는 1.7.2.
+import manifest066 from '../../packs/0.6.6/manifest.json' with { type: 'json' };
+import eventRel001v066 from '../../packs/0.6.6/events/EVT-REL-001.json' with { type: 'json' };
+import eventDev002v066 from '../../packs/0.6.6/events/EVT-DEV-002.json' with { type: 'json' };
+// fix-precontract-whitelist: EVT-CON-024~028(0.4.1부터 바이트 동일하게 재사용돼 온 스카우트 평가
+// 브리지)이 출력에서 `진로_입단테스트`·`진로_하부리그`와 `입단테스트_완료`를 같은 outcome에서 함께
+// addTags했다 — EVT-CON-003(SCR-008 전용 입단 테스트 화면)의 exclusionTags가 바로 그 태그라
+// 브리지가 해소되는 순간 EVT-CON-003이 구조적으로 다시 뜰 수 없었다(release a11y.spec.ts "모션
+// 감소 › SCR-008" 결정적 실패로 확인, ruleset.offerRules.preContract 화이트리스트 추가 여부와
+// 무관하게 재현됨 — 0.4.1/0.6.5/origin main에서도 동일). 0.6.5 이하는 바이트 불변이라 고칠 수
+// 없어, 0.6.6에서만 다섯 파일을 새로 갈라 `입단테스트_완료`를 제거했다(진로 태그·`테스트_보통`
+// 힌트는 유지 — EVT-CON-003 자신이 해소되며 그 태그를 다시 붙인다).
+import eventCon024v066 from '../../packs/0.6.6/events/EVT-CON-024.json' with { type: 'json' };
+import eventCon025v066 from '../../packs/0.6.6/events/EVT-CON-025.json' with { type: 'json' };
+import eventCon026v066 from '../../packs/0.6.6/events/EVT-CON-026.json' with { type: 'json' };
+import eventCon027v066 from '../../packs/0.6.6/events/EVT-CON-027.json' with { type: 'json' };
+import eventCon028v066 from '../../packs/0.6.6/events/EVT-CON-028.json' with { type: 'json' };
 
 export const PACK_VERSIONS = [
   '0.1.0',
@@ -208,6 +227,7 @@ export const PACK_VERSIONS = [
   '0.6.3',
   '0.6.4',
   '0.6.5',
+  '0.6.6',
 ] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
@@ -885,6 +905,80 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       eventNat001v040,
       eventNat002v040,
       eventRel001v051,
+      eventRel002v040,
+      eventRel003v040,
+      eventRel005v040,
+      eventRel008v040,
+      eventRel010v040,
+      eventRel120v064,
+      eventRel121v064,
+      eventRel122v064,
+      eventSlump010v040,
+      eventSlump011v040,
+    ],
+    chapters: [
+      chapterMatch001v040,
+      chapterMatch002v040,
+      chapterMatch004v040,
+      chapterMatch005v040,
+      chapterMatch006v040,
+      chapterMatch007v040,
+      chapterNat001v040,
+    ],
+    narrativeTokens: narrativeTokens061,
+  },
+  '0.6.6': {
+    manifest: manifest066,
+    events: [
+      eventCon001v051,
+      eventCon003v050,
+      eventCon010v040,
+      eventCon011v040,
+      eventCon012v040,
+      eventCon013v040,
+      eventCon020v041,
+      eventCon021v041,
+      eventCon022v041,
+      eventCon023v041,
+      eventCon024v066,
+      eventCon025v066,
+      eventCon026v066,
+      eventCon027v066,
+      eventCon028v066,
+      eventCon120v064,
+      eventCon121v064,
+      eventCon122v064,
+      eventDev002v066,
+      eventDev120v064,
+      eventDev121v064,
+      eventDev122v064,
+      eventEth010v040,
+      eventEth011v040,
+      eventInj001v040,
+      eventInj003v040,
+      eventInj004v040,
+      eventMatch120v064,
+      eventMatch121v064,
+      eventMatch122v064,
+      eventMedia001v040,
+      eventMedia002v040,
+      eventMedia004v040,
+      eventMedia006v040,
+      eventMedia010v040,
+      eventMedia120v064,
+      eventMedia121v064,
+      eventMedia122v064,
+      eventMgr001v050,
+      eventMgr003v040,
+      eventMgr004v040,
+      eventMgr020v041,
+      eventMgr021v041,
+      eventMgr120v064,
+      eventMgr121v064,
+      eventMgr122v064,
+      eventNat001v040,
+      eventNat002v040,
+      eventRel001v066,
       eventRel002v040,
       eventRel003v040,
       eventRel005v040,

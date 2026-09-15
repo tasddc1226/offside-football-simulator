@@ -234,3 +234,82 @@ describe('loadContentPack: 0.5.0', () => {
     );
   });
 });
+
+// T-7-036 D-89: 팩 0.6.6은 0.6.5 전체 복사 + EVT-REL-001·EVT-DEV-002 트리거에만 `contract.kind`
+// 존재 가드를 추가한다(계약 없음 구간에서 우연히 걸리던 일반 사건을 막는다 — 시즌 중 조건은 그대로).
+// compatibleRulesetVersions만 룰셋 1.7.2로 교체하고 나머지 정의는 바이트까지 그대로 보존한다.
+//
+// fix-precontract-whitelist: 위 T-7-036이 추가한 offerRules.preContract.bridgeEventIds가
+// EVT-CON-020~028만 허용해도, EVT-CON-003(SCR-008 전용 입단 테스트 화면)은 그 화이트리스트와
+// 무관하게 구조적으로 뜰 수 없었다 — EVT-CON-024~028(0.4.1부터 바이트 동일하게 재사용된 스카우트
+// 평가 브리지)이 진로 태그(진로_입단테스트·진로_하부리그)와 EVT-CON-003의 exclusionTags(태그
+// 입단테스트_완료)를 같은 outcome에서 함께 addTags해, 브리지가 해소되는 즉시 EVT-CON-003이 영구
+// 제외됐다(0.6.5 이하·origin/main에도 같은 구조가 있어 재현되지만, 그 버전은 바이트 불변이라
+// 고치지 않는다). 그래서 0.6.6에서만 이 다섯 이벤트도 갈라 입단테스트_완료 선주입을 제거했다
+// (진로 태그·테스트_보통 힌트는 유지 — EVT-CON-003 자신이 해소되며 그 태그를 다시 붙인다).
+describe('loadContentPack: 0.6.6', () => {
+  it('EVT-REL-001·EVT-DEV-002·EVT-CON-024~028만 0.6.5와 다르고 나머지는 그대로다', () => {
+    const previous = loadContentPack('0.6.5');
+    const pack = loadContentPack('0.6.6');
+
+    expect(pack.manifest.compatibleRulesetVersions).toEqual(['1.7.2']);
+    expect(pack.manifest.checksum).not.toBe(previous.manifest.checksum);
+    expect(pack.chapters).toEqual(previous.chapters);
+    expect(pack.narrativeTokens).toEqual(previous.narrativeTokens);
+    expect(pack.events.map((event) => event.id).sort()).toEqual(
+      previous.events.map((event) => event.id).sort(),
+    );
+
+    const changedIds = new Set([
+      'EVT-REL-001',
+      'EVT-DEV-002',
+      'EVT-CON-024',
+      'EVT-CON-025',
+      'EVT-CON-026',
+      'EVT-CON-027',
+      'EVT-CON-028',
+    ]);
+    for (const previousEvent of previous.events) {
+      const nextEvent = pack.eventsById.get(previousEvent.id);
+      if (changedIds.has(previousEvent.id)) {
+        expect(nextEvent).not.toEqual(previousEvent);
+      } else {
+        expect(nextEvent).toEqual(previousEvent);
+      }
+    }
+
+    expect(pack.eventsById.get('EVT-REL-001')?.triggers).toEqual({
+      all: [
+        { neq: ['contract.kind', ''] },
+        { in: ['player.primaryPosition', ['W', 'AM', 'ST']] },
+        { any: [{ hasTag: ['career.tags', '고집'] }, { gte: ['season.step', 4] }] },
+      ],
+    });
+    expect(pack.eventsById.get('EVT-DEV-002')?.triggers).toEqual({
+      all: [
+        { neq: ['contract.kind', ''] },
+        { lt: ['state.form', 45] },
+        { gte: ['season.step', 5] },
+      ],
+    });
+
+    // EVT-CON-024~028: 0.6.5와 트리거·choices 구조는 같고, 각 outcome의 addTags에서
+    // `입단테스트_완료`만 빠졌다(진로 태그·테스트_보통 힌트는 그대로).
+    for (const eventId of ['EVT-CON-024', 'EVT-CON-025', 'EVT-CON-026', 'EVT-CON-027', 'EVT-CON-028']) {
+      const previousEvent = previous.eventsById.get(eventId)!;
+      const nextEvent = pack.eventsById.get(eventId)!;
+      expect(nextEvent.triggers).toEqual(previousEvent.triggers);
+      expect(nextEvent.choices.map((choice) => choice.id)).toEqual(previousEvent.choices.map((choice) => choice.id));
+      for (const previousChoice of previousEvent.choices) {
+        const nextChoice = nextEvent.choices.find((choice) => choice.id === previousChoice.id)!;
+        for (const previousOutcome of previousChoice.outcomes) {
+          const nextOutcome = nextChoice.outcomes.find((outcome) => outcome.id === previousOutcome.id)!;
+          expect(nextOutcome.addTags).toEqual(
+            (previousOutcome.addTags ?? []).filter((tag) => tag !== '입단테스트_완료'),
+          );
+          expect(nextOutcome.effects).toEqual(previousOutcome.effects);
+        }
+      }
+    }
+  });
+});

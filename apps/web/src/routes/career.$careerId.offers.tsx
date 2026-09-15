@@ -298,11 +298,16 @@ function OffersScreen() {
 
   const offers = pending.offers;
   const firstContract = pending.market.reason === 'FIRST_CONTRACT';
+  // 리뷰 결함 수정(첫 계약 흐름 PR): offerRules.preContract(1.7.2+)가 있는 룰셋에서만 "계약 없음"
+  // 구간이 진로 선택+브리지 이벤트로 짧게 끝난다는 서사가 성립한다. 이 키가 없는 룰셋(1.7.1 이하,
+  // 현재 운영 활성)은 event-screen.tsx의 isPreContractBridgeEvent와 같은 패턴으로 기존 문구를 그대로
+  // 유지한다 — 그렇지 않으면 실제로 스카우트 평가 브리지를 겪지 않은 커리어에도 거짓 서사가 뜬다.
+  const isPreContractFlow = firstContract && rulesetForCareer(state).offerRules.preContract !== undefined;
   return (
     <div className="os-screen">
       {firstContract ? (
         <ScreenIntro
-          eyebrow="새로운 유니폼"
+          eyebrow={isPreContractFlow ? '스카우트 평가 뒤 도착한 제안' : '새로운 유니폼'}
           title={offersScreenTitle(true, offers.length)}
           description="리그의 높이만큼, 내가 뛸 수 있는 자리도 중요해요. 다음 팀의 조건을 살펴보세요."
         />

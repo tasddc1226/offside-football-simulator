@@ -1509,6 +1509,168 @@ describe('simulate — ADVANCE 3단계: 제안 생성(offerRules)', () => {
   });
 });
 
+// T-7-036 D-89: offerRules.preContract(1.7.2+)가 있을 때만 "계약 없음" 구간의 generic EVENT를
+// 제한한다 — 상한(maxEventsBeforeFirstOffer)에 닿으면 매칭을 건너뛰고 FIRST_CONTRACT 제안을 열고,
+// 상한 전이면 화이트리스트(bridgeEventIds) 밖 event id를 후보에서 뺀다. 키가 없는 룰셋(기존 전체
+// 테스트 스위트)은 이 describe 밖에서 그대로 통과해야 한다(과거 재현 불변의 증거).
+describe('simulate — ADVANCE offerRules.preContract(T-7-036 D-89)', () => {
+  const RULESET_WITH_PRE_CONTRACT: Ruleset = {
+    ...RULESET,
+    offerRules: {
+      ...RULESET.offerRules,
+      preContract: {
+        maxEventsBeforeFirstOffer: 2,
+        bridgeEventIds: ['EVT-PATH-001', 'EVT-BRIDGE-001'],
+      },
+    },
+  };
+
+  function preContractInput() {
+    return baseInput({ ruleset: RULESET_WITH_PRE_CONTRACT });
+  }
+
+  it('진로 선택(1건) + 브리지(1건)까지는 화이트리스트 후보만 뜨고, 상한 뒤에는 일반 사건을 건너뛰고 제안을 연다', () => {
+    const confirmed = confirmedActiveSnapshotWithBackground('club-academy');
+
+    // 1) 진로 선택 후보 — 화이트리스트 안이라 그대로 뜬다(count=0 < max=2).
+    const pathAdvance = simulate({
+      ...preContractInput(),
+      snapshot: confirmed,
+      command: advanceCommand(confirmed.revision, [
+        { eventId: 'EVT-PATH-001', version: 1, weight: 10 },
+      ]),
+    });
+    expect(pathAdvance.ok).toBe(true);
+    if (!pathAdvance.ok) return;
+    expect(pathAdvance.snapshot.state.pending).toEqual({
+      kind: 'EVENT',
+      eventId: 'EVT-PATH-001',
+      version: 1,
+    });
+
+    const pathResolved = simulate({
+      ...preContractInput(),
+      snapshot: pathAdvance.snapshot,
+      command: resolveEventCommand(pathAdvance.snapshot.revision, { eventId: 'EVT-PATH-001' }),
+    });
+    expect(pathResolved.ok).toBe(true);
+    if (!pathResolved.ok) return;
+    expect(pathResolved.snapshot.state.resolvedEventIds).toEqual(['EVT-PATH-001']);
+
+    // 2) 브리지(스카우트 평가) 후보 — 화이트리스트 밖 EVT-LEAK-001은 같은 호출에도 걸러진다
+    // (count=1 < max=2라 매칭 자체는 계속되지만 화이트리스트가 후보를 좁힌다).
+    const bridgeAdvance = simulate({
+      ...preContractInput(),
+      snapshot: pathResolved.snapshot,
+      command: advanceCommand(pathResolved.snapshot.revision, [
+        { eventId: 'EVT-BRIDGE-001', version: 1, weight: 10 },
+        { eventId: 'EVT-LEAK-001', version: 1, weight: 10 },
+      ]),
+    });
+    expect(bridgeAdvance.ok).toBe(true);
+    if (!bridgeAdvance.ok) return;
+    expect(bridgeAdvance.snapshot.state.pending).toEqual({
+      kind: 'EVENT',
+      eventId: 'EVT-BRIDGE-001',
+      version: 1,
+    });
+
+    const bridgeResolved = simulate({
+      ...preContractInput(),
+      snapshot: bridgeAdvance.snapshot,
+      command: resolveEventCommand(bridgeAdvance.snapshot.revision, { eventId: 'EVT-BRIDGE-001' }),
+    });
+    expect(bridgeResolved.ok).toBe(true);
+    if (!bridgeResolved.ok) return;
+    expect(bridgeResolved.snapshot.state.resolvedEventIds).toEqual([
+      'EVT-PATH-001',
+      'EVT-BRIDGE-001',
+    ]);
+
+    // 3) 상한 도달(count=2 >= max=2) — 팩이 EVT-LEAK-001을 계속 후보로 보내도 매칭을 건너뛰고
+    // 바로 FIRST_CONTRACT 제안을 연다(academy 분기 태그를 달아 offerRules가 매칭되게 한다).
+    const tagged = withTags(bridgeResolved.snapshot, ['진로_아카데미']);
+    const offerAdvance = simulate({
+      ...preContractInput(),
+      snapshot: tagged,
+      command: advanceCommand(tagged.revision, [
+        { eventId: 'EVT-LEAK-001', version: 1, weight: 10 },
+      ]),
+    });
+    expect(offerAdvance.ok).toBe(true);
+    if (!offerAdvance.ok) return;
+    expect(offerAdvance.snapshot.state.pending?.kind).toBe('OFFERS');
+    if (offerAdvance.snapshot.state.pending?.kind !== 'OFFERS') return;
+    expect(offerAdvance.snapshot.state.pending.market.reason).toBe('FIRST_CONTRACT');
+  });
+
+  it('같은 seed로 두 번 재생해도 최종 stateHash가 같다(결정론)', () => {
+    function runToOffer(seed: string): string {
+      const confirmed = confirmedActiveSnapshotWithBackground('club-academy', seed);
+      const pathAdvance = simulate({
+        ...preContractInput(),
+        snapshot: confirmed,
+        command: advanceCommand(confirmed.revision, [
+          { eventId: 'EVT-PATH-001', version: 1, weight: 10 },
+        ]),
+      });
+      if (!pathAdvance.ok) throw new Error('path advance failed');
+      const pathResolved = simulate({
+        ...preContractInput(),
+        snapshot: pathAdvance.snapshot,
+        command: resolveEventCommand(pathAdvance.snapshot.revision, { eventId: 'EVT-PATH-001' }),
+      });
+      if (!pathResolved.ok) throw new Error('path resolve failed');
+      const bridgeAdvance = simulate({
+        ...preContractInput(),
+        snapshot: pathResolved.snapshot,
+        command: advanceCommand(pathResolved.snapshot.revision, [
+          { eventId: 'EVT-BRIDGE-001', version: 1, weight: 10 },
+        ]),
+      });
+      if (!bridgeAdvance.ok) throw new Error('bridge advance failed');
+      const bridgeResolved = simulate({
+        ...preContractInput(),
+        snapshot: bridgeAdvance.snapshot,
+        command: resolveEventCommand(bridgeAdvance.snapshot.revision, {
+          eventId: 'EVT-BRIDGE-001',
+        }),
+      });
+      if (!bridgeResolved.ok) throw new Error('bridge resolve failed');
+      const tagged = withTags(bridgeResolved.snapshot, ['진로_아카데미']);
+      const offerAdvance = simulate({
+        ...preContractInput(),
+        snapshot: tagged,
+        command: advanceCommand(tagged.revision, []),
+      });
+      if (!offerAdvance.ok) throw new Error('offer advance failed');
+      return offerAdvance.snapshot.stateHash;
+    }
+
+    const hash1 = runToOffer('precontract-replay-seed');
+    const hash2 = runToOffer('precontract-replay-seed');
+    expect(hash1).toBe(hash2);
+  });
+
+  it('preContract 키가 없는 룰셋은 화이트리스트 밖 event id도 그대로 후보가 된다(기존 동작 불변)', () => {
+    const confirmed = confirmedActiveSnapshotWithBackground('club-academy');
+    const result = simulate({
+      ...baseInput(),
+      snapshot: confirmed,
+      command: advanceCommand(confirmed.revision, [
+        { eventId: 'EVT-LEAK-001', version: 1, weight: 10 },
+      ]),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.pending).toEqual({
+      kind: 'EVENT',
+      eventId: 'EVT-LEAK-001',
+      version: 1,
+    });
+  });
+});
+
 describe('simulate — ACCEPT_OFFER', () => {
   function offeredSnapshot(tags: string[], backgroundId = 'club-academy', baseOvr?: number) {
     let active = confirmedActiveSnapshotWithBackground(backgroundId);
