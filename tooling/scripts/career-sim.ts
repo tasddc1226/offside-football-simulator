@@ -37,6 +37,7 @@ import { createLegacyResult, type LegacyVersion } from '../../packages/domain/sr
 import {
   retirementDecisionRequired,
   retirementContinuationOptions,
+  RETIREMENT_POLICY,
 } from '../../packages/domain/src/legacy/career-retirement.ts';
 import { careerEventChoices } from '../../packages/domain/src/legacy/career-event.ts';
 import {
@@ -326,7 +327,7 @@ function closePending(
     // D-79 후속 수정: --to-retirement는 "심사가 걸려도 이어갈 수 있으면 이어간다"는 뜻이다.
     // 심사가 걸렸는데 마지막 계약 옵션(LAST_CONTRACT·LOWER_LEAGUE)이 있으면 그걸 받아 이어가고,
     // 없으면 기존 제안 처리로 넘어간다(그 뒤 시즌 경계에서 RETIRE된다).
-    if (options.toRetirement && retirementDecisionRequired(state)) {
+    if (options.toRetirement && retirementDecisionRequired(state, runtime.ruleset.retirementRules ?? RETIREMENT_POLICY)) {
       const continuation = retirementContinuationOptions(state)[0];
       if (continuation !== undefined) {
         return doCommand(
@@ -536,7 +537,7 @@ function runOneCareer(
         // 은퇴 심사(REVIEW)가 걸리면 --to-retirement 여부와 무관하게 시즌 경계에서 강제 RETIRE된다
         // (packages/domain/src/simulate.ts의 startSeason이 RETIREMENT_DECISION_REQUIRED로 거부한다).
         // 시즌 상한(CAP)으로 강제 은퇴시키는 것은 이 도구의 인공물일 뿐 도메인 관찰이 아니다.
-        const reviewRequired = retirementDecisionRequired(state);
+        const reviewRequired = retirementDecisionRequired(state, runtime.ruleset.retirementRules ?? RETIREMENT_POLICY);
         const atSeasonCap = state.seasonHistory.length >= options.seasons;
         if (reviewRequired || atSeasonCap) {
           snapshot = command(snapshot, 'RETIRE', { choice: 'RETIRE' }, `${seed}-retire`);
@@ -545,7 +546,7 @@ function runOneCareer(
           continue;
         }
         for (let decision = 0; decision < 3; decision += 1) {
-          const choices = careerEventChoices(snapshot.state);
+          const choices = careerEventChoices(snapshot.state, runtime.ruleset.retirementRules ?? RETIREMENT_POLICY);
           const eligible = choices.filter(
             (choice) =>
               choice !== 'MENTOR' ||

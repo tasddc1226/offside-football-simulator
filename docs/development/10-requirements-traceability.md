@@ -14,6 +14,7 @@
 | FR-INJ-001 | 부상·재활·재발·영구 후유증을 분리한다 | 4 | SCR-022 | TEST-E2E-004 |
 | FR-LEG-001 | 은퇴·Legacy·연대기·최종 프로필을 보관한다 | 5 | SCR-025~028 | TEST-E2E-005 |
 | FR-SVC-001 | 서비스 시즌과 축구 시즌을 분리한다 | 6 | 허브·시즌 결산 | TEST-E2E-006 |
+| FR-NOTICE-001 | 홈에서 운영이 배포 없이 올리는 공지를 본다(D1 `notices`, HOME_NOTICES 상수 대체) | 6 | 허브, API-NOTICE-001 | notices 라우트 테스트, hub.spec.ts |
 | FR-SAV-001 | 명령을 원자·멱등 저장하고 복구한다 | 전 Phase | 모든 명령 API | TEST-E2E-007 |
 | FR-A11Y-001 | P0 여정을 키보드·스크린리더로 완료한다 | 전 Phase | 모든 P0 화면 | 접근성 suite |
 | FR-REC-001 | 복구 코드로 다른 브라우저에서 프로필을 복원한다 | 1 | SCR-004, SCR-030, API-PRO-003~004 | TEST-E2E-008 |

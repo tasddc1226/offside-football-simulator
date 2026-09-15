@@ -181,7 +181,6 @@ test('1.3/0.5 새 인생: 성인 팀과 계약해 첫 시즌 뒤 20세가 된다
     }),
   );
   await page.getByRole('button', { name: 'KICKOFF' }).click();
-  await page.getByRole('button', { name: '계속' }).click();
   await expect(page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.')).toBeVisible();
   await page.getByRole('button', { name: '계속' }).click();
   await resolveCurrentEventScreen(page);

@@ -26,6 +26,15 @@ describe('loadRetirementArtifacts', () => {
     });
     expect(meetingArtifacts.rulesetChecksum).toMatch(/^[a-f0-9]{64}$/);
     expect(meetingArtifacts.contentPackChecksum).toMatch(/^[a-f0-9]{64}$/);
+    // T-7-032: 룰셋 1.6.1·팩 0.6.2(D-80 1라운드 ③)는 Legacy 1.2.0으로 옮겨졌다.
+    const peakAgeArtifacts = loadRetirementArtifacts('1.6.1', '0.6.2');
+    expect(peakAgeArtifacts).toMatchObject({
+      rulesetVersion: '1.6.1',
+      contentPackVersion: '0.6.2',
+      legacyVersion: '1.2.0',
+    });
+    expect(peakAgeArtifacts.rulesetChecksum).toMatch(/^[a-f0-9]{64}$/);
+    expect(peakAgeArtifacts.contentPackChecksum).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('activates the published Legacy 1.1 reference only for the 1.1/0.3 release pair', () => {

@@ -340,7 +340,7 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     ).toBeInTheDocument();
     const nextAction = screen.getByRole('region', { name: '지금 할 일' });
     expect(within(nextAction).getByRole('button', { name: '진행' })).not.toBeDisabled();
-    expect(screen.getAllByRole('tab')).toHaveLength(5);
+    expect(screen.getAllByRole('tab')).toHaveLength(4);
     // UX-007: 맥락(제목)과 진행 버튼이 같은 프레임(region) 안에 있다 — 다음 일정이 경기면 "다음
     // 경기", 아니면(휴식 step 등) 기존 "다음 행동" 문구를 유지한다.
     expect(
@@ -800,7 +800,7 @@ describe('SCR-029 일정표 구역: 시즌 중이면 SeasonTimeline과 일정 �
 
     renderAt(`/career/${careerId}`);
 
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '일정' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '시즌' }));
 
     const timeline = await screen.findByLabelText('시즌 진행 12 step');
     expect(timeline.querySelectorAll('li')).toHaveLength(12);
@@ -814,7 +814,7 @@ describe('SCR-029 PlayerHeader 포지션 칸(완료 조건 표 #5, RULE-PLY-001)
 
     renderAt(`/career/${careerId}`);
 
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '선수' }));
     expect(await screen.findByText('윙어')).toBeInTheDocument();
     expect(screen.getByText('선호 포지션과 같음')).toBeInTheDocument();
   });
@@ -824,7 +824,7 @@ describe('SCR-029 PlayerHeader 포지션 칸(완료 조건 표 #5, RULE-PLY-001)
     const careerId = await confirmedCareerId(engine); // preferred == primary == 'W'.
 
     renderAt(`/career/${careerId}`);
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '선수' }));
     expect(await screen.findByText('윙어')).toBeInTheDocument();
 
     const options = careerQueryOptions(careerId);
@@ -959,7 +959,7 @@ describe('RES-BUG-001과 같은 정책: 라커룸 기억 태그(state.tags)는 �
     const careerId = await signedCareerId(engine);
 
     renderAt(`/career/${careerId}`);
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '선수' }));
     await screen.findByText('라커룸');
 
     const options = careerQueryOptions(careerId);
@@ -985,7 +985,7 @@ describe('T-7-005 이슈 142: 관계 사유(relationshipLog·memoryTags)는 원�
     const careerId = await signedCareerId(engine);
 
     renderAt(`/career/${careerId}`);
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '선수' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '선수' }));
     await screen.findByText('라커룸');
 
     const options = careerQueryOptions(careerId);
@@ -1015,8 +1015,7 @@ describe('T-4-014 C11: 휴대폰 탭의 시장 사유·제안 수(T-3-005 브리
     const careerId = await signedCareerId(engine);
 
     renderAt(`/career/${careerId}`);
-    // Radix Tabs는 mousedown(자동 활성화 모드)에서 선택을 바꾼다 — click만으로는 안 바뀐다.
-    fireEvent.mouseDown(await screen.findByRole('tab', { name: '계약' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '커리어' }));
     // 계약 직후(시즌 시작 전)라 pending이 없다 — 시장 사유·제안 수 문구도, 링크도 없어야 한다.
     expect(await screen.findByText('현재 역할')).toBeInTheDocument();
     expect(screen.queryByText(/제안 \d+건/)).not.toBeInTheDocument();

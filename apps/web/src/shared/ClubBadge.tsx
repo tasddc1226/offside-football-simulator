@@ -7,12 +7,15 @@ import { useUiStore } from './ui-store.js';
 
 export interface ClubBadgeProps {
   teamId: string;
+  /** PR 231 리뷰: team-identity.ts에 없는 id(K3 필러 등) 폴백에만 쓴다 — 있으면 "?" 대신 이 이름에서
+   * 뽑은 이니셜을 보여준다. 등록된 팀은 이 값과 무관하게 항상 고유 이니셜·팀 컬러를 그대로 쓴다. */
+  teamName?: string;
   size?: TeamBadgeSize;
   className?: string;
 }
 
-export function ClubBadge({ teamId, size, className }: ClubBadgeProps) {
-  const identity = getTeamIdentity(teamId);
+export function ClubBadge({ teamId, teamName, size, className }: ClubBadgeProps) {
+  const identity = getTeamIdentity(teamId, teamName);
   const logoSrc = useUiStore((state) => state.teamLogos[teamId]);
   return (
     <TeamBadge

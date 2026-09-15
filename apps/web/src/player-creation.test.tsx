@@ -422,6 +422,12 @@ describe('SCR-004 확인 및 복구 코드', () => {
     expect(await screen.findByText('OFS-ABCD-2345-EFGH')).toBeInTheDocument();
     expect(router.state.location.search).toEqual({ step: 'recovery' });
 
+    // PR 231 리뷰: CONFIRM_PLAYER 성공 직후 state.status는 이미 DRAFT를 벗어나 CareerHeaderBar가
+    // 활성 헤더(홈 버튼 포함)를 그리지만, 이 화면의 로컬 FSM(screenState)은 복구 코드 단계 내내
+    // 여전히 COMMITTING이다 — 전역 useIsMutating()만 보던 예전 로직은 여기서 홈 버튼을 활성으로
+    // 그려 이탈 방지를 우회했다. committing-guard.ts를 거쳐 비활성으로 남는지 확인한다.
+    expect(screen.getByRole('link', { name: '허브로' })).toHaveAttribute('aria-disabled', 'true');
+
     await user.click(screen.getByRole('button', { name: '저장했어요' }));
 
     // ADVANCE로 뽑힌 첫 이벤트는 랜덤 seed에 따라 달라진다(career-actions.advance는 후보 목록만

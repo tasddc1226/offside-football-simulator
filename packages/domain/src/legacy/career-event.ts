@@ -1,6 +1,7 @@
 import { roll100 } from '../rng.js';
 import type { CareerState, CareerTournament } from '../types.js';
-import { retirementDecisionRequired } from './career-retirement.js';
+import { retirementDecisionRequired, RETIREMENT_POLICY } from './career-retirement.js';
+import type { RetirementPolicy } from './retirement.js';
 import {
   assessNationalityAtSeasonBoundary,
   grantTournamentException,
@@ -19,7 +20,10 @@ export function nationalityForCareer(state: CareerState) {
 }
 
 /** Version 1 compact U23 tournament, not a real competition calendar or legal entitlement. */
-export function careerEventChoices(state: CareerState): CareerEventChoice[] {
+export function careerEventChoices(
+  state: CareerState,
+  policy: RetirementPolicy = RETIREMENT_POLICY,
+): CareerEventChoice[] {
   if (
     state.status !== 'ACTIVE' ||
     state.player.profile === null ||
@@ -33,7 +37,7 @@ export function careerEventChoices(state: CareerState): CareerEventChoice[] {
     state.age,
     seasonIndex,
   );
-  if (retirementDecisionRequired(state)) return [];
+  if (retirementDecisionRequired(state, policy)) return [];
   const choices: CareerEventChoice[] = nationality.routeChoices.filter(
     (route): route is 'MILITARY_CLUB' | 'CAREER_BREAK' => route !== 'SPORTS_SERVICE',
   );
@@ -65,8 +69,9 @@ export function resolveCareerEvent(
   state: CareerState,
   choice: CareerEventChoice,
   revision: number,
+  policy: RetirementPolicy = RETIREMENT_POLICY,
 ): CareerState {
-  if (!careerEventChoices(state).includes(choice))
+  if (!careerEventChoices(state, policy).includes(choice))
     throw new RangeError('Career event is unavailable at this boundary.');
   const index = state.seasonHistory.length;
   const events = state.legacyEvents ?? {

@@ -6,7 +6,8 @@
   "scripts": {
     "test": "vitest run",
     "lint": "eslint .",
-    "sim:career": "tsx career-sim.ts"
+    "sim:career": "tsx career-sim.ts",
+    "sim:report": "node career-sim-report.mjs"
   },
   "devDependencies": {
     "tsx": "4.23.13",
