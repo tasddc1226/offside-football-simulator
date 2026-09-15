@@ -53,6 +53,7 @@
 - 11:36 #222 최종 동기화 SHA f229f0f(a765da8+3e0643e 무충돌 머지 95b2ef2 위 브리프 커밋) 읽기전용 검토 PASS: main 대비 제품 delta 83파일이 a765da8과 파일 집합·patch-id 동일, 도메인·content·contracts·engine-client·tooling 트리 diff 0 → 회귀 결과 재사용. 전체 체인(e2e 제외) 11:30 시작 → test 단계 CHAIN EXIT 1: 실패 3건 전부 5000ms 타임아웃(load 40+; api retirement.test.ts 2건·web ruleset-1.5.0-smoke 1건, 모두 #222 불변 파일이며 c050957 체인에선 통과). 같은 워크트리 단독 재실행 11/11·1/1 통과(SOLO EXIT 0), 잔여 build·check:bundle·check:contrast 통과(RESUME EXIT 0 11:35). 판정: 부하 플레이크, 실제 결함 0 → Codex 보고·CPU 반환. 비차단 관찰: smoke 테스트가 조용할 때도 4.1s로 5s 한도에 근접(main 자체).
 - 11:40 #224 준비 SHA d196126(T-7-025 현재 리그 맥락, f229f0f 계보) 읽기전용 리뷰 PASS: 제품 delta 4파일(web만; league-context.tsx 신규 뷰 모델+섹션, index.tsx 시즌/커리어 탭 mount, league-standings 요약 공유), 의존 방향·채널 분기·토큰 규칙 준수, 구버전 커리어는 섹션 미노출, CTA search={} 시즌 탭 기본. 비차단 메모: rank 순 정렬 전제, catch-all null, 기존 대시보드 테스트가 1.7.0 경로로 이동. 테스트는 Sol 후속(부모 #222 정산 후).
 - 11:40 사용자 PR #222(T-7-022 리그 원장: 룰셋 1.7.0·팩 0.6.3) Codex가 squash 머지 `80a7868`(exact f229f0f CI PASS·scoped season e2e PASS, 전체 체인 타임아웃 3건은 단독 재실행 통과). 머지 후 main 제품 tree = 체인 돌린 f229f0f. **1.7.0은 등록만, ACTIVE 승격 없음 — 활성화 전 Legacy 재보정 검토 게이트(상위 밴드 22.7% vs 목표 32%) 미통과 상태 유지.** 다음: #224(d196126)를 Sol이 main 통합·focused web+e2e 후 최종 SHA 보고 예정, CPU 반환 상태.
+- 11:48 #224 로컬 통합 b4b3ba8(d196126 + main d6a7dec) 읽기전용 확인 PASS: 제품 delta 4파일 patch-id가 d196126과 동일(index.tsx·league-standings.tsx 충돌은 PR 쪽으로 해결, 결과 동일). Sol focused/e2e 진행 중, 최종 push SHA 오면 전체 체인.
 
 ## 2026-09-14 (D-79 — 밸런스 조정용 헤드리스 커리어 일괄 시뮬레이션 CLI, 도메인 직접 호출 방식 — 사용자 요청)
 
