@@ -22,12 +22,13 @@ test('온보딩부터 계약·대시보드까지: SCR-002~004 → 이벤트 → 
 
   await completeOnboardingAndConfirm(page);
   await advanceUntilOffers(page);
-  // 리뷰 결함 수정(첫 계약 흐름 PR): 현재 운영 활성 룰셋(1.7.1)은 offerRules.preContract가 없어 이 커리어가
-  // 실제로 스카우트 평가 브리지를 겪었는지 보장하지 않는다 — 첫 제안 화면 eyebrow는 그 서사를
-  // 단정해서는 안 되고 기존 "새로운 유니폼"을 그대로 보여줘야 한다(precontract-flow.spec.ts가
-  // 1.7.2/0.6.6을 명시적으로 모킹해 새 문구를 검증한다).
-  await expect(page.getByText('새로운 유니폼')).toBeVisible();
-  await expect(page.getByText('스카우트 평가 뒤 도착한 제안')).not.toBeVisible();
+  // 룰셋 1.7.2/팩 0.6.6 운영 승격(release-ruleset-1-7-2): 현재 운영 활성 룰셋은 offerRules.preContract가
+  // 있어(진로 선택 → 스카우트 평가 브리지 1건 → 첫 제안) 이 커리어는 항상 그 서사를 겪는다 — 첫 제안
+  // 화면 eyebrow는 새 문구 "스카우트 평가 뒤 도착한 제안"이어야 하고 옛 "새로운 유니폼"은 보이지
+  // 않아야 한다. preContract 없는 옛 룰셋에서의 옛 문구 회귀는 career.$careerId.offers.test.tsx가
+  // ACTIVE_RULESET_VERSION과 무관하게 1.0.0/0.1.0을 명시 고정해 계속 검증한다.
+  await expect(page.getByText('스카우트 평가 뒤 도착한 제안')).toBeVisible();
+  await expect(page.getByText('새로운 유니폼')).not.toBeVisible();
   await signFirstOffer(page);
 
   // UX-014(2026-09-14): 선수 이름은 이제 대시보드 자체가 아니라 모든 /career/:id/* 화면에 고정된

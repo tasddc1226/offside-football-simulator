@@ -126,8 +126,12 @@ test('SCR-011에서 시즌을 시작한 뒤 뒤로 가기로 재진입해도 시
 /** T-4-010: 시즌 1 결산 뒤 시장 사유가 INTEREST("타 구단 관심")로 열리는 결정론적 seed. DEV
  * 훅(`offside:e2e-seed`)으로 20개 후보 중 `e2e/_seed-search.spec.ts`(PR에는 남기지 않은 탐색용
  * 스펙)로 찾았다 — 매번 새 무작위 seed를 쓰면 이 경로(타이밍이 아니라 seed 의존 상태 분기, 원인 2)가
- * 우연히만 재현돼 회귀를 잡지 못한다. */
-const E2E_INTEREST_MARKET_SEED = 't4010-interest-search-11';
+ * 우연히만 재현돼 회귀를 잡지 못한다. 옛 값 't4010-interest-search-11'은 룰셋 1.7.2/팩 0.6.6 승격
+ * (계약 전 사건 상한 도입)으로 온보딩 RNG 소비 경로가 달라져(seed 드리프트) 더 이상 시즌 1 결산
+ * 직후 INTEREST 시장을 열지 못한다(NO_MARKET로 드리프트). 아래 값은 같은 문제를 engine-client
+ * (@offside/domain·@offside/content)만으로 헤드리스 재생하는 임시 스크립트로 1.7.2/0.6.6 조합에
+ * 대해 다시 스윕해 찾았다. */
+const E2E_INTEREST_MARKET_SEED = 't4010-interest-172-2';
 
 test('시즌 1 결산 뒤 INTEREST 시장이 열리면 안전 잔류 제안을 수락하고 새 시즌 준비로 이동한다', async ({ page }) => {
   await page.addInitScript((seed) => window.localStorage.setItem('offside:e2e-seed', seed), E2E_INTEREST_MARKET_SEED);
