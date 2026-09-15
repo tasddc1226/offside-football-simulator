@@ -199,6 +199,19 @@ import manifest065 from '../../packs/0.6.5/manifest.json' with { type: 'json' };
 import manifest066 from '../../packs/0.6.6/manifest.json' with { type: 'json' };
 import eventRel001v066 from '../../packs/0.6.6/events/EVT-REL-001.json' with { type: 'json' };
 import eventDev002v066 from '../../packs/0.6.6/events/EVT-DEV-002.json' with { type: 'json' };
+// fix-precontract-whitelist: EVT-CON-024~028(0.4.1부터 바이트 동일하게 재사용돼 온 스카우트 평가
+// 브리지)이 출력에서 `진로_입단테스트`·`진로_하부리그`와 `입단테스트_완료`를 같은 outcome에서 함께
+// addTags했다 — EVT-CON-003(SCR-008 전용 입단 테스트 화면)의 exclusionTags가 바로 그 태그라
+// 브리지가 해소되는 순간 EVT-CON-003이 구조적으로 다시 뜰 수 없었다(release a11y.spec.ts "모션
+// 감소 › SCR-008" 결정적 실패로 확인, ruleset.offerRules.preContract 화이트리스트 추가 여부와
+// 무관하게 재현됨 — 0.4.1/0.6.5/origin main에서도 동일). 0.6.5 이하는 바이트 불변이라 고칠 수
+// 없어, 0.6.6에서만 다섯 파일을 새로 갈라 `입단테스트_완료`를 제거했다(진로 태그·`테스트_보통`
+// 힌트는 유지 — EVT-CON-003 자신이 해소되며 그 태그를 다시 붙인다).
+import eventCon024v066 from '../../packs/0.6.6/events/EVT-CON-024.json' with { type: 'json' };
+import eventCon025v066 from '../../packs/0.6.6/events/EVT-CON-025.json' with { type: 'json' };
+import eventCon026v066 from '../../packs/0.6.6/events/EVT-CON-026.json' with { type: 'json' };
+import eventCon027v066 from '../../packs/0.6.6/events/EVT-CON-027.json' with { type: 'json' };
+import eventCon028v066 from '../../packs/0.6.6/events/EVT-CON-028.json' with { type: 'json' };
 
 export const PACK_VERSIONS = [
   '0.1.0',
@@ -927,11 +940,11 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       eventCon021v041,
       eventCon022v041,
       eventCon023v041,
-      eventCon024v041,
-      eventCon025v041,
-      eventCon026v041,
-      eventCon027v041,
-      eventCon028v041,
+      eventCon024v066,
+      eventCon025v066,
+      eventCon026v066,
+      eventCon027v066,
+      eventCon028v066,
       eventCon120v064,
       eventCon121v064,
       eventCon122v064,

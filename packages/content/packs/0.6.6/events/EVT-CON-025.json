@@ -32,7 +32,7 @@
               "stackingRule": "ONCE_PER_SOURCE"
             }
           ],
-          "addTags": ["진로_하부리그", "입단테스트_완료"]
+          "addTags": ["진로_하부리그"]
         }
       ]
     },
@@ -72,7 +72,7 @@
               "stackingRule": "ONCE_PER_SOURCE"
             }
           ],
-          "addTags": ["진로_하부리그", "입단테스트_완료"]
+          "addTags": ["진로_하부리그"]
         }
       ]
     }
