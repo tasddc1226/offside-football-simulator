@@ -40,6 +40,7 @@
 - 10:50 팩 배정 합의(Codex 제안, Claude 동의): 1.7.0용 **신규 팩 0.6.3**(0.6.1 바이트 복사, compat [1.7.0]). 근거: 등록된 팩의 compat는 골든 테스트(load-content-pack.test.ts 178행 0.6.2 → [1.6.1])가 고정하는 관례 — compat 합치기(전날 합의)는 철회. 0.6.2는 무수정, Legacy 게이트 (1.7.0,0.6.3)→1.2.0, APPROVED_PRODUCTION_MANIFESTS 불변. sol 새 워커 2개는 pane 입력 미전달로 미실행(Claude 프로브 pane은 정상 → 특정 pane 문제), 기존 sol에게 진단 전달 중.
 - 10:55 #220 통합 SHA 16365a3(a949502+967ed2e) 읽기 전용 리뷰 **통과**: 충돌 파일 retirement-screen.tsx에서 T-7-031 정책 전달 2줄 보존, 옛 assessCareerRetirement(state) 폐기, ending 계산은 하위 컴포넌트로 이동(의미 동일), 테스트 fixture 유지, 도메인 무변경(회귀 생략). sol #221·#220은 기존 세션 재사용으로 실행 중, #221/#222 코드 준비 중.
 - 10:58 Codex: #220 focused 검증 PASS(ego 검증 진행), #221 CPU 슬롯 배정, #219 문서 head 922b83d에 재통합 결정 반영 push. 최종 UI 머지 게이트는 정확 SHA에 Claude가 전체 체인+스코프 e2e 실행(대량 회귀는 UI에 불필요).
+- 10:56 #219(문서: 리그 맥락·커리어 경험 PRD·ADR 제안·작업 계획, 922b83d) CI 성공 후 squash `e8d70da` main 머지(Codex 조율). 앱 코드 변경 없음, 검증 반복 불필요.
 
 ## 2026-09-14 (D-79 — 밸런스 조정용 헤드리스 커리어 일괄 시뮬레이션 CLI, 도메인 직접 호출 방식 — 사용자 요청)
 
