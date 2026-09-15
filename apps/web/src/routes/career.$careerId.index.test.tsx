@@ -381,7 +381,7 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     const engine = setLeagueTestEngine();
     const careerId = await seasonActiveNoPendingCareerId(engine);
 
-    renderAt(`/career/${careerId}`);
+    const router = renderAt(`/career/${careerId}`);
     expect(await screen.findByRole('heading', { level: 1, name: /.+/ })).toBeInTheDocument();
     const nextAction = screen.getByRole('region', { name: '지금 할 일' });
     expect(within(nextAction).getByRole('button', { name: '진행' })).not.toBeDisabled();
