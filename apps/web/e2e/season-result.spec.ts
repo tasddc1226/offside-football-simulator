@@ -6,6 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
+  continueToPreseason,
   fillPreseasonPlan,
   fulfillJson,
   META,
@@ -40,10 +41,10 @@ async function settleOneSeason(page: Page): Promise<void> {
   await advanceThroughSeasonToSettlement(page);
   // 결산 전 일정의 실제 분 수를 독립 기준으로 삼는다. 저장 집계의 잘못된 total을
   // 기대값으로 재사용하면 같은 오류를 화면과 테스트가 함께 통과시킬 수 있다.
-  // 일정표는 "일정" 탭 안에 있다(기본 탭은 "홈") — 먼저 탭을 열어야 span.os-num이 보인다.
-  await page.getByRole('tab', { name: '일정' }).click();
+  // UX-014(2026-09-14): 일정표는 "시즌" 탭 안이다(기본 탭이라 이미 열려 있지만, 명시적으로 클릭해
+  // 둔다) — span.os-num을 읽기 전에 확인.
+  await page.getByRole('tab', { name: '시즌' }).click();
   const scheduleTexts = await page.locator('span.os-num').allTextContents();
-  await page.getByRole('tab', { name: '홈' }).click();
   const matches = scheduleTexts.flatMap((text) => {
     const match = /^\d+:\d+ · (.+) · (\d+)분 · /.exec(text);
     return match === null ? [] : [{ appearance: match[1], minutes: Number(match[2]) }];
@@ -121,9 +122,10 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   await compareSection.getByRole('checkbox', { name: '차이만 보기' }).uncheck();
   await expect(compareSection.locator('dt')).toHaveCount(rowCountBefore);
 
-  // "다음 시즌" → SCR-005(프리시즌 계획).
+  // "다음 시즌" → SCR-005(프리시즌 계획). 대기 중인 시장이 있으면 안전 잔류를 수락한 뒤 이어간다
+  // (continueToPreseason, 룰셋 승격에 따른 seed 드리프트에도 견딘다).
   await page.getByRole('link', { name: '다음 시즌' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
+  await continueToPreseason(page);
   await expect(page.getByRole('heading', { level: 1, name: '프리시즌 계획' })).toBeVisible();
 
   // 대시보드로 돌아가 헤더 OVR이 결산 after와 같은지 확인한다(홈 탭에는 StatusStrip OVR이 없다).
@@ -131,8 +133,9 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   const headerOvrText = await page.locator('header').getByText(/^OVR \d+$/).textContent();
   expect(headerOvrText?.replace(/^OVR /, '').trim()).toBe(afterOvrValue);
 
-  // 다이어리: 이번 시즌 연대기에 "시즌 정산" 항목이 SCR-015로 연결된다.
-  await page.getByRole('tab', { name: '기록' }).click();
+  // 다이어리: 이번 시즌 연대기에 "시즌 정산" 항목이 SCR-015로 연결된다. UX-014(2026-09-14):
+  // 다이어리·휴대폰은 이제 "커리어" 탭 안이다(옛 5탭 시절의 "기록" 탭은 없다).
+  await page.getByRole('tab', { name: '커리어' }).click();
   const settledLink = page.getByRole('link', { name: /시즌 정산$/ });
   await expect(settledLink).toBeVisible();
   await settledLink.click();
@@ -141,6 +144,9 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
 });
 
 test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그먼트를 전환한다', async ({ page }) => {
+  // 이 검사는 모션이 아닌 두 시즌 결과의 세그먼트 상태를 검증한다. 반복되는 화면 전환이 전체
+  // 테스트 예산을 소모하지 않도록 사용자 모션 감소 선호를 에뮬레이션한다.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript((seed) => {
     window.localStorage.setItem('offside:e2e-seed', seed);
   }, E2E_SEASON_RESULT_SEED);
@@ -151,6 +157,7 @@ test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그
   // "계획하러 가기" CTA부터 시작하므로 여기서는 그 클릭만 건너뛰고 fillPreseasonPlan으로 나머지를
   // 그대로 따라간다.
   await page.getByRole('link', { name: '다음 시즌' }).click();
+  await continueToPreseason(page);
   await fillPreseasonPlan(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
@@ -165,11 +172,15 @@ test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그
   await expect(compareSection.getByRole('tab', { name: '지난 시즌' })).toBeVisible();
   await expect(compareSection.getByRole('tab', { name: '계약 약속' })).toBeVisible();
 
-  await compareSection.getByRole('tab', { name: '지난 시즌' }).click();
+  const previousSeasonTab = compareSection.getByRole('tab', { name: '지난 시즌' });
+  await previousSeasonTab.click();
+  await expect(previousSeasonTab).toHaveAttribute('data-state', 'active');
   await expect(compareSection.getByText('Base OVR').first()).toBeVisible();
   await expect(compareSection.getByText('출전 시간(분)').first()).toBeVisible();
 
-  await compareSection.getByRole('tab', { name: '계약 약속' }).click();
+  const promiseTab = compareSection.getByRole('tab', { name: '계약 약속' });
+  await promiseTab.click();
+  await expect(promiseTab).toHaveAttribute('data-state', 'active');
   await expect(compareSection.getByText('역할').first()).toBeVisible();
 });
 

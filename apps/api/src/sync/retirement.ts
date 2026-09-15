@@ -51,9 +51,9 @@ export function buildRetirementRows(
     );
     const legacyVersion: LegacyVersion = body.retirementLegacyVersion ?? '1.0.0';
     const availableLegacyVersion = artifacts.legacyVersion ?? '1.0.0';
-    // 1.0.0 remains importable for historical clients; a candidate 1.1.0 result requires
-    // an explicitly activated artifact registry entry and must fail closed otherwise.
-    if (legacyVersion === '1.1.0' && availableLegacyVersion !== '1.1.0')
+    // 1.0.0 remains importable for historical clients; a candidate newer-than-1.0.0 result
+    // requires an explicitly activated artifact registry entry and must fail closed otherwise.
+    if (legacyVersion !== '1.0.0' && legacyVersion !== availableLegacyVersion)
       throw new Error('Requested Legacy version is not active');
     const legacy = createLegacyResult(archive, context, population, legacyVersion);
     return {

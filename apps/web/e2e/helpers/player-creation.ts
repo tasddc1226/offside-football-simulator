@@ -215,6 +215,18 @@ export async function fillPreseasonPlan(page: Page, focusLabel: string): Promise
   await expect(page.getByText('훈련 계획은 시즌 결산 때 능력에 반영됩니다.')).toBeVisible();
 }
 
+/** SCR-015의 "다음 시즌" CTA는 항상 SCR-005(프리시즌 계획)로 가지는 않는다 — 링크가 가리키는
+ * 대상은 결산 직후 상태의 `nextTarget`(season-result.tsx)이라, 계약 만료·관심 등으로 대기 중인
+ * 시장(OFFERS)이 있으면 그 화면(SCR-009 계열)으로 먼저 보낸다. seed·룰셋 버전이 바뀌어 이 분기가
+ * 달라져도 테스트가 깨지지 않도록, offers 화면이면 안전 잔류(offers[0], signFirstOffer)를 수락해
+ * 프리시즌으로 이어가고, 이미 프리시즌이면 그대로 둔다(season.spec.ts의 동일 처리를 공용화했다). */
+export async function continueToPreseason(page: Page): Promise<void> {
+  if (/\/offers$/.test(page.url())) {
+    await signFirstOffer(page);
+  }
+  await expect(page).toHaveURL(/\/preseason$/);
+}
+
 /** SCR-012의 POSITION_CHANGE·ROLE_CHANGE를 승낙한다. 현재 역할과 완전히 같은 KEEP은 시즌 준비
  * 화면이 원자적으로 수락하고 대시보드로 바로 이동하므로, 그 경로에서는 할 일이 없다. KEEP 자동
  * 수락의 두 번째 명령이 실패한 경우에는 복구용 /role이 남아 이 함수가 "확인"으로 마무리한다. */

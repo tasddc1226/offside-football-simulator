@@ -29,22 +29,22 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
 
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
   await expect(page.getByText('1/12 단계')).toBeVisible();
-  await page.getByRole('tab', { name: '일정' }).click();
+  await page.getByRole('tab', { name: '시즌' }).click();
   const seasonTimeline = page.getByLabel('시즌 진행 12 step');
   await expect(seasonTimeline).toBeVisible();
   await expect(seasonTimeline.locator('li')).toHaveCount(12);
 
-  // 탭은 ?view= 검색 파라미터로 유지된다 — 새로고침 전에 "홈"으로 되돌아가야 그 탭에만 있는
-  // "N/12 단계" 문구를 다시 볼 수 있다(진행 step 자체가 유지되는지는 이 문구 값으로 확인한다,
+  // 탭은 ?view= 검색 파라미터로 유지된다 — 새로고침 전에 "시즌"(기본 탭)으로 되돌아가야 그 탭에만
+  // 있는 "N/12 단계" 문구를 다시 볼 수 있다(진행 step 자체가 유지되는지는 이 문구 값으로 확인한다,
   // 로컬 우선 — ADR-002).
-  await page.getByRole('tab', { name: '홈' }).click();
+  await page.getByRole('tab', { name: '시즌' }).click();
   await page.reload();
   await expect(page.getByText('1/12 단계')).toBeVisible();
 
   await advanceThroughSeasonToSettlement(page);
 
-  // 일정 탭: 시즌 대부분을 진행했으니 최소 한 경기는 스코어가 잡혀 있어야 한다.
-  await page.getByRole('tab', { name: '일정' }).click();
+  // 시즌 탭(옛 일정 탭 병합): 시즌 대부분을 진행했으니 최소 한 경기는 스코어가 잡혀 있어야 한다.
+  await page.getByRole('tab', { name: '시즌' }).click();
   await expect(page.getByText(/\d+:\d+/).first()).toBeVisible();
 
   // 전술실 구역: 선발 순위 목록에 내 이름 행이 있다.
@@ -63,7 +63,7 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
   await page.goBack();
   await expect(page).toHaveURL(/\/career\/[^/]+\?view=player$/);
 
-  await page.getByRole('tab', { name: '홈' }).click();
+  await page.getByRole('tab', { name: '시즌' }).click();
   await page.getByRole('button', { name: '결산하기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
   await expect(page.getByRole('heading', { level: 1, name: '프로 시즌 결과' })).toBeVisible();

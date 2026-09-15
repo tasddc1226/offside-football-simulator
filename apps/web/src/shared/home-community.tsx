@@ -1,11 +1,47 @@
 import { Dialog, DialogContent, DialogTrigger } from '@offside/ui';
-import { HOME_NOTICES, SUPPORT_EMAIL } from './home-notices.js';
+import type { Notice } from '@offside/contracts';
+import { useNotices } from '../engine/notices.js';
+import { SUPPORT_EMAIL } from './home-notices.js';
 import './home-hub.css';
 
 export const FEEDBACK_EMAIL = SUPPORT_EMAIL;
 
+/** 기존 표시 형식("2026.09.06")을 유지한다 — publishedAt의 날짜 부분만 쓴다. */
+function formatPublishedDate(publishedAt: string): string {
+  return publishedAt.slice(0, 10).replaceAll('-', '.');
+}
+
+function NoticeRow({ notice }: { notice: Notice }) {
+  const date = formatPublishedDate(notice.publishedAt);
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button type="button" className="os-home-notice">
+          <span>{notice.title}</span>
+          <time dateTime={notice.publishedAt.slice(0, 10)}>{date}</time>
+        </button>
+      </DialogTrigger>
+      <DialogContent className="os-home-notice-dialog" title={notice.title} description={date} closeLabel="닫기">
+        <div className="flex flex-col gap-os-3">
+          {/* 문단 텍스트를 key로 쓰면 같은 문장이 두 번 나오는 공지에서 React key가 충돌한다 —
+              body는 서버가 게시 순서대로 내려주는 고정 배열이고(재정렬·중간 삽입 없음) 다이얼로그가
+              열려 있는 동안만 렌더되므로 인덱스를 key로 써도 안전하다. */}
+          {notice.body.map((paragraph, index) => (
+            <p key={index} className="font-os text-os-text-2">
+              {paragraph}
+            </p>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function HomeCommunity({ compact = false }: { compact?: boolean }) {
   const headingId = compact ? 'public-news' : 'home-news';
+  const { data: notices, isLoading } = useNotices();
+  const items = notices ?? [];
+
   return (
     <section className="flex flex-col gap-os-3" aria-labelledby={headingId}>
       <div className="flex items-end justify-between gap-os-3">
@@ -15,35 +51,23 @@ export function HomeCommunity({ compact = false }: { compact?: boolean }) {
             공지사항
           </h2>
         </div>
-        <span className="os-num os-muted" style={{ fontSize: 'var(--os-fs-caption)' }}>
-          {HOME_NOTICES.length}개
-        </span>
+        {!isLoading && (
+          <span className="os-num os-muted" style={{ fontSize: 'var(--os-fs-caption)' }}>
+            {items.length}개
+          </span>
+        )}
       </div>
       <div className="os-home-notice-list">
-        {HOME_NOTICES.map((notice) => (
-          <Dialog key={notice.id}>
-            <DialogTrigger asChild>
-              <button type="button" className="os-home-notice">
-                <span>{notice.title}</span>
-                <time dateTime={notice.date.replaceAll('.', '-')}>{notice.date}</time>
-              </button>
-            </DialogTrigger>
-            <DialogContent
-              className="os-home-notice-dialog"
-              title={notice.title}
-              description={notice.date}
-              closeLabel="닫기"
-            >
-              <div className="flex flex-col gap-os-3">
-                {notice.body.map((paragraph) => (
-                  <p key={paragraph} className="font-os text-os-text-2">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
-        ))}
+        {isLoading ? (
+          <>
+            <div className="os-home-notice-skeleton" aria-hidden="true" />
+            <div className="os-home-notice-skeleton" aria-hidden="true" />
+          </>
+        ) : items.length === 0 ? (
+          <p className="font-os text-os-text-2 os-home-notice-empty">아직 공지가 없습니다.</p>
+        ) : (
+          items.map((notice) => <NoticeRow key={notice.id} notice={notice} />)
+        )}
       </div>
       <div className="os-home-support">
         <p className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)' }}>

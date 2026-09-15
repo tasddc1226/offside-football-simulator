@@ -208,6 +208,27 @@ export const analyticsEvents = sqliteTable(
   },
   (table) => [index('analytics_events_client_id_idx').on(table.clientId)],
 );
+/**
+ * 사용자 결정(2026-09-14): 홈 공지사항을 코드 상수(`HOME_NOTICES`)가 아니라 서버가 관리한다.
+ * `id`는 사람이 읽는 slug(기존 상수 id를 그대로 옮긴다). `body`는 문단 배열이었던 기존 구조를
+ * 줄바꿈 텍스트가 아니라 JSON 문자열 배열로 저장한다 — 문단 자체에 개행이 섞여도 경계가
+ * 모호해지지 않고, 라우트가 `JSON.parse`로 그대로 복원해 contracts의 `Notice.body: string[]`와
+ * 1:1로 맞는다(줄바꿈 split은 원문 개행과 문단 구분을 구별할 수 없다). `publishedAt`이 정렬 키다.
+ */
+export const notices = sqliteTable(
+  'notices',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    publishedAt: text('published_at').notNull(),
+    isPublished: integer('is_published').notNull().default(1),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [index('notices_is_published_published_at_idx').on(table.isPublished, table.publishedAt)],
+);
+
 /** Private immutable retirement evidence; deleting the owning career cascades to its archive. */
 export const careerArchives = sqliteTable('career_archives', {
   careerId: text('career_id').primaryKey().references(() => careers.id, { onDelete: 'cascade' }),

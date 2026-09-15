@@ -10,7 +10,8 @@ import {
   type LocalStore,
   type LocalStoreTx,
 } from './index.js';
-import { retirementArchiveKey } from './retirement-archive.js';
+import { legacyVersionForResult, retirementArchiveKey } from './retirement-archive.js';
+import type { LegacyResult } from '@offside/domain';
 
 const OWNER = 'owner-retirement-test';
 const ARTIFACTS = {
@@ -305,5 +306,24 @@ describe('engine retirement archive integration', () => {
       },
     });
     expect(result).toMatchObject({ ok: false, error: { details: { reason: 'CAREER_RETIRED' } } });
+  });
+
+  it('reselects a stored 1.2.0 Legacy result when 1.2.0 is available', () => {
+    const stored = { legacyVersion: '1.2.0' } as unknown as LegacyResult;
+    expect(legacyVersionForResult(stored, { legacyVersion: '1.2.0' })).toBe('1.2.0');
+  });
+
+  it('rejects a stored 1.2.0 Legacy result when only 1.1.0 is available', () => {
+    const stored = { legacyVersion: '1.2.0' } as unknown as LegacyResult;
+    expect(() => legacyVersionForResult(stored, { legacyVersion: '1.1.0' })).toThrow(
+      'VERSION_MISMATCH',
+    );
+  });
+
+  it('rejects a stored 1.1.0 Legacy result when 1.2.0 is available instead', () => {
+    const stored = { legacyVersion: '1.1.0' } as unknown as LegacyResult;
+    expect(() => legacyVersionForResult(stored, { legacyVersion: '1.2.0' })).toThrow(
+      'VERSION_MISMATCH',
+    );
   });
 });

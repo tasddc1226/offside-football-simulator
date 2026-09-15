@@ -1,0 +1,211 @@
+{
+  "runtime": {
+    "rulesetVersion": "1.6.1",
+    "contentPackVersion": "0.6.2",
+    "policy": "opportunity",
+    "mode": "CHAPTER",
+    "seeds": 100000,
+    "seasonsCap": 30,
+    "toRetirement": true,
+    "jobs": 8,
+    "hashProvider": "node-crypto",
+    "startedAt": "2026-09-14T12:47:31.410Z",
+    "elapsedMs": 11932315,
+    "msPerCareer": {
+      "mean": 0,
+      "p50": 0,
+      "p90": 0
+    }
+  },
+  "careers": {
+    "count": 100000,
+    "failed": 0
+  },
+  "overall": {
+    "peakOvr": {
+      "mean": 68.27,
+      "p10": 62,
+      "p50": 68,
+      "p90": 74
+    },
+    "finalOvr": {
+      "mean": 59.37,
+      "p10": 50,
+      "p50": 60,
+      "p90": 68
+    },
+    "retiredAge": {
+      "mean": 36.56,
+      "p10": 34,
+      "p50": 37,
+      "p90": 38,
+      "n": 100000
+    },
+    "seasons": {
+      "mean": 17.56,
+      "p10": 15,
+      "p50": 18,
+      "p90": 19
+    },
+    "injuriesPerSeason": 1.28,
+    "tier1ReachRate": 0.2368,
+    "legacyBand": {
+      "BAND-REMEMBERED": 45416,
+      "BAND-ICON": 28656,
+      "BAND-SOLID": 21459,
+      "BAND-LEGEND": 3782,
+      "BAND-COMPLETE": 687
+    },
+    "tier1ReachBySeason": {
+      "5": 0.2368,
+      "10": 0.2368
+    }
+  },
+  "byPosition": {
+    "GK": {
+      "peakOvr": {
+        "mean": 68.53,
+        "p10": 63,
+        "p50": 68,
+        "p90": 74
+      },
+      "finalOvr": {
+        "mean": 62.25,
+        "p10": 56,
+        "p50": 62,
+        "p90": 69
+      },
+      "retiredAge": {
+        "mean": 36.62,
+        "p10": 34,
+        "p50": 37,
+        "p90": 39,
+        "n": 25000
+      },
+      "seasons": {
+        "mean": 17.62,
+        "p10": 15,
+        "p50": 18,
+        "p90": 20
+      },
+      "injuriesPerSeason": 1.24,
+      "tier1ReachRate": 0.2371,
+      "legacyBand": {
+        "BAND-REMEMBERED": 11678,
+        "BAND-ICON": 7913,
+        "BAND-SOLID": 4689,
+        "BAND-LEGEND": 676,
+        "BAND-COMPLETE": 44
+      }
+    },
+    "DF": {
+      "peakOvr": {
+        "mean": 66.88,
+        "p10": 61,
+        "p50": 67,
+        "p90": 73
+      },
+      "finalOvr": {
+        "mean": 56.39,
+        "p10": 48,
+        "p50": 56,
+        "p90": 65
+      },
+      "retiredAge": {
+        "mean": 36.49,
+        "p10": 34,
+        "p50": 37,
+        "p90": 38,
+        "n": 25000
+      },
+      "seasons": {
+        "mean": 17.49,
+        "p10": 15,
+        "p50": 18,
+        "p90": 19
+      },
+      "injuriesPerSeason": 1.38,
+      "tier1ReachRate": 0.2577,
+      "legacyBand": {
+        "BAND-REMEMBERED": 11779,
+        "BAND-ICON": 11764,
+        "BAND-SOLID": 1414,
+        "BAND-LEGEND": 43
+      }
+    },
+    "MF": {
+      "peakOvr": {
+        "mean": 68.13,
+        "p10": 62,
+        "p50": 68,
+        "p90": 75
+      },
+      "finalOvr": {
+        "mean": 59.3,
+        "p10": 50,
+        "p50": 59,
+        "p90": 69
+      },
+      "retiredAge": {
+        "mean": 36.54,
+        "p10": 34,
+        "p50": 37,
+        "p90": 38,
+        "n": 25000
+      },
+      "seasons": {
+        "mean": 17.54,
+        "p10": 15,
+        "p50": 18,
+        "p90": 19
+      },
+      "injuriesPerSeason": 1.2,
+      "tier1ReachRate": 0.2013,
+      "legacyBand": {
+        "BAND-REMEMBERED": 9582,
+        "BAND-SOLID": 8167,
+        "BAND-ICON": 3683,
+        "BAND-LEGEND": 2954,
+        "BAND-COMPLETE": 614
+      }
+    },
+    "FW": {
+      "peakOvr": {
+        "mean": 69.54,
+        "p10": 62,
+        "p50": 70,
+        "p90": 75
+      },
+      "finalOvr": {
+        "mean": 59.54,
+        "p10": 50,
+        "p50": 60,
+        "p90": 68
+      },
+      "retiredAge": {
+        "mean": 36.57,
+        "p10": 34,
+        "p50": 37,
+        "p90": 38,
+        "n": 25000
+      },
+      "seasons": {
+        "mean": 17.57,
+        "p10": 15,
+        "p50": 18,
+        "p90": 19
+      },
+      "injuriesPerSeason": 1.31,
+      "tier1ReachRate": 0.2511,
+      "legacyBand": {
+        "BAND-REMEMBERED": 12377,
+        "BAND-SOLID": 7189,
+        "BAND-ICON": 5296,
+        "BAND-LEGEND": 109,
+        "BAND-COMPLETE": 29
+      }
+    }
+  },
+  "ovrByAge": {},
+  "tierBySeasonIndex": {}
+}

@@ -6,6 +6,7 @@ import {
   advanceUntilOffers,
   completeOnboardingAndConfirm,
   completeOnboardingThroughContract,
+  continueToPreseason,
   expectFirstContractHeading,
   fillPlayerInfo,
   fillPreseasonPlan,
@@ -69,6 +70,20 @@ async function expectNoSeriousOrCriticalViolations(page: Page, label: string): P
   }
 
   expect(seriousOrCritical).toEqual([]);
+}
+
+// PR 231 리뷰: 대시보드 헤더 탭(role=tab)과 TabsContent 패널(role=tabpanel)이 서로 다른 React
+// 서브트리라 id를 손으로 맞췄다(shared/dashboard-tabs.ts) — 실제 DOM에서 aria-controls·
+// aria-labelledby가 서로를 가리키는지 확인한다.
+async function expectTabPanelAriaWiring(page: Page, activeTabLabel: string): Promise<void> {
+  const tab = page.getByRole('tab', { name: activeTabLabel });
+  const panel = page.getByRole('tabpanel');
+  const tabId = await tab.getAttribute('id');
+  const panelId = await panel.getAttribute('id');
+  expect(tabId).not.toBeNull();
+  expect(panelId).not.toBeNull();
+  await expect(tab).toHaveAttribute('aria-controls', panelId ?? '');
+  await expect(panel).toHaveAttribute('aria-labelledby', tabId ?? '');
 }
 
 const STATIC_SCREENS = ['/legal/privacy', '/legal/terms', '/onboarding', '/settings'];
@@ -299,6 +314,9 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
   await page.getByRole('textbox', { name: '서명할 이름' }).fill('김서준');
   await page.getByRole('button', { name: '서명하고 계약 확정' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
+  // PlayerCard의 진입 opacity 애니메이션 중간 프레임은 배지와 배경을 임시 혼색한다.
+  // 최종 렌더 상태가 된 뒤 실제 색 대비를 검사한다.
+  await expect(page.locator('.os-player-card')).toHaveCSS('opacity', '1');
   await expectNoSeriousOrCriticalViolations(page, 'SCR-010 계약 완료');
   await page.getByRole('button', { name: '커리어 시작' }).click();
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
@@ -309,12 +327,32 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
   // 섞여 글자색이 흐려 보이는 것뿐). 전환이 끝난 뒤(opacity: 1) 상태 기반으로 기다린다.
   await expect(signedToast).toHaveCSS('opacity', '1');
 
+  // UX-014(2026-09-14): 커리어 상단 헤더(네이비 히어로 밴드 + 대시보드 4탭)가 고정으로 떠 있어야
+  // 한다 — 홈 버튼(하단 "허브로" 버튼과 별개 — CSS로 구분)과 OVR 표시로 존재를 확인하고, axe도 그
+  // 헤더·탭을 포함해 검사한다.
+  await expect(page.locator('.os-career-header-home')).toBeVisible();
+  await expect(page.getByText(/^OVR \d+$/)).toBeVisible();
   await expectNoSeriousOrCriticalViolations(page, 'SCR-029(일정표, 기본)');
+  // PR 231 리뷰: 헤더의 탭(role=tab)과 TabsContent 패널(role=tabpanel)이 서로 다른 React 서브트리라
+  // Radix Tabs.Root 컨텍스트로 자동 연결되지 않는다(dashboard-tabs.ts가 id를 손으로 맞춘다) —
+  // aria-controls/aria-labelledby가 실제로 서로를 가리키는지, axe aria-valid-attr-value가
+  // incomplete로도 잡히지 않는지 직접 확인한다(expectNoSeriousOrCriticalViolations는 violations만
+  // 본다 — 존재하지 않는 id를 가리키는 경우는 보통 incomplete로 잡힌다).
+  await expectTabPanelAriaWiring(page, '시즌');
+  const incompleteBeforeSwitch = (await new AxeBuilder({ page }).analyze()).incomplete.map(
+    (item) => item.id,
+  );
+  expect(incompleteBeforeSwitch).not.toContain('aria-valid-attr-value');
 
-  await page.getByRole('tab', { name: '계약' }).click();
+  await page.getByRole('tab', { name: '커리어' }).click();
   await expect(page.getByText('주급')).toBeVisible();
+  await expectTabPanelAriaWiring(page, '커리어');
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-029(휴대폰)');
+  const incompleteAfterSwitch = (await new AxeBuilder({ page }).analyze()).incomplete.map(
+    (item) => item.id,
+  );
+  expect(incompleteAfterSwitch).not.toContain('aria-valid-attr-value');
 });
 
 // T-2-007(TEST-E2E-009 접근성 체크리스트): 새 화면 4개(SCR-005·011·012·033).
@@ -336,20 +374,32 @@ test('SCR-011 시즌 준비 화면에 axe serious·critical 위반이 없다', a
   await expectNoSeriousOrCriticalViolations(page, 'SCR-011');
 });
 
+// 룰셋 1.5.0 승격 뒤에는 'e2e-season-result-01'(옛 1.4.0 seed)로 두 번째 시즌을 시작하면
+// computeRoleProposal이 KEEP(현재 포지션·스쿼드 역할과 그대로 일치)을 반환해 시즌 준비 화면이
+// ROLE_PROPOSAL을 원자적으로 자동 수락해 버린다 — /role에 실제로 도달하지 못해 이 테스트의 목적
+// (SCR-012 화면 자체의 접근성 검사)을 달성할 수 없다. 아래 seed는 dev 서버 + Playwright로 후보
+// 문자열을 여러 개 돌려 찾은, 두 번째 시즌 시작 시 POSITION_CHANGE·ROLE_CHANGE(수동 확인이 필요한
+// 실제 /role 화면)로 이어지는 것을 확인한 값이다(3회 재실행으로 결정론 확인).
+const E2E_ROLE_CHANGE_SEED = 'rc-seed-3';
+
 test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
+  test.slow();
+  await page.addInitScript((seed) => {
+    window.localStorage.setItem('offside:e2e-seed', seed);
+  }, E2E_ROLE_CHANGE_SEED);
   await completeOnboardingThroughContract(page);
-  await page.getByRole('link', { name: '계획하러 가기' }).click();
+  await planPreseason(page, '역할 집중');
+  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await resolveRoleProposal(page);
+  await advanceThroughSeasonToSettlement(page);
+  await page.getByRole('button', { name: '결산하기' }).click();
+  // "다음 시즌"은 대기 중인 시장(OFFERS)이 있으면 프리시즌 대신 그 화면부터 보낸다 —
+  // continueToPreseason이 안전 잔류를 수락해 프리시즌으로 이어간다(룰셋 승격에 따른 seed 드리프트 대비).
+  await page.getByRole('link', { name: '다음 시즌' }).click();
+  await continueToPreseason(page);
   await fillPreseasonPlan(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
-
-  // PR #103: 제안된 역할이 현재 포지션·스쿼드 역할과 완전히 같으면(KEEP) shouldAutoAcceptUnchangedRole이
-  // SCR-012를 건너뛰고 대시보드로 바로 이동한다 — 시즌 첫 역할 제안은 방금 그 위치로 계약했으므로
-  // 항상 이 KEEP 경로를 탄다. 화면 자체가 뜨지 않으면 검사할 대상이 없다.
-  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/role)?$/);
-  if (!page.url().endsWith('/role')) {
-    console.log('[a11y] SCR-012: 역할 제안이 KEEP으로 자동 수락되어 화면을 건너뛰었다.');
-    return;
-  }
+  await expect(page).toHaveURL(/\/career\/.+\/role$/);
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-012');
 });
@@ -536,6 +586,16 @@ test('T-1-013 설정: Google 병합 선택 대화상자에 axe serious·critical
   ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'T-1-013 설정: Google 병합 선택');
+});
+
+test('설정: 서비스 정책 시트(이용약관)가 열린 상태에 axe serious·critical 위반이 없다', async ({
+  page,
+}) => {
+  await page.goto('/settings');
+  await page.getByRole('button', { name: '이용약관' }).click();
+  await expect(page.getByRole('dialog', { name: '이용약관' })).toBeVisible();
+
+  await expectNoSeriousOrCriticalViolations(page, '설정: 이용약관 시트');
 });
 
 test('T-1-013 설정: 로그아웃 확인 대화상자에 axe serious·critical 위반이 없다', async ({
