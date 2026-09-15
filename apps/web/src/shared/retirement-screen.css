@@ -25,6 +25,18 @@
 .os-endgame-nav a { display: flex; min-height: var(--os-touch-min); align-items: center; justify-content: center; padding: .65rem; border: 1px solid var(--os-border); border-radius: var(--os-radius-m); color: var(--os-text); text-align: center; font: 650 var(--os-fs-caption)/var(--os-lh-caption) var(--os-font); }
 .os-endgame-nav a[aria-current='page'] { border-color: var(--os-accent); background: color-mix(in srgb, var(--os-accent) 8%, var(--os-surface)); color: var(--os-accent); }
 .os-endgame-nav .os-endgame-nav-wide { grid-column: 1 / -1; background: var(--os-surface-2); }
+.os-milestone-grid { display: grid; gap: .625rem; padding: 0; list-style: none; }
+.os-milestone-grid li { display: flex; flex-direction: column; gap: .25rem; padding: 1rem; border: 1px solid var(--os-border); border-radius: var(--os-radius-m); background: var(--os-surface-2); }
+.os-milestone-grid span, .os-retrospective-moment > p:first-child { color: var(--os-text-2); font: 600 var(--os-fs-caption)/var(--os-lh-caption) var(--os-font); }
+.os-milestone-grid strong { color: var(--os-text); font: 750 var(--os-fs-body)/var(--os-lh-body) var(--os-font); }
+.os-retrospective-progress { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .5rem 1rem; color: var(--os-text); font: 650 var(--os-fs-caption)/var(--os-lh-caption) var(--os-font); }
+.os-retrospective-progress-track { grid-column: 1 / -1; overflow: hidden; height: .35rem; border-radius: 999px; background: var(--os-surface-2); }
+.os-retrospective-progress-track span { display: block; height: 100%; border-radius: inherit; background: var(--os-accent); }
+.os-retrospective-skip { display: flex; justify-content: flex-end; }
+.os-retrospective-skip a { min-height: var(--os-touch-min); padding: .65rem; color: var(--os-text-2); text-decoration: underline; text-underline-offset: .2em; }
+.os-retrospective-moment { display: flex; min-height: 16rem; flex-direction: column; justify-content: center; gap: var(--os-space-3); }
+.os-retrospective-moment h2 { color: var(--os-text); font: 800 clamp(1.5rem, 7vw, 2.25rem)/1.1 var(--os-font); letter-spacing: -.03em; }
+.os-retrospective-moment > p:last-of-type { color: var(--os-text-2); font: 450 var(--os-fs-body)/var(--os-lh-body) var(--os-font); }
 [data-text-scale='150'] .os-endgame-stat-grid, [data-text-scale='150'] .os-endgame-nav { grid-template-columns: 1fr; }
 [data-text-scale='150'] .os-endgame-nav .os-endgame-nav-wide { grid-column: auto; }
 @media (prefers-reduced-motion: reduce) { .os-endgame-hero::after { display: none; } }
