@@ -23,6 +23,7 @@ import { SeasonTimeline } from '../shared/season-timeline.js';
 import {
   FIXED_SIMULATION_MODE,
   canPlanNextSeason,
+  isRetirementDecisionRequiredError,
   TRAINING_FOCUS_LABEL_KO,
   TRAINING_FOCUS_OPTIONS,
   type TrainingFocus,
@@ -112,6 +113,10 @@ function SeasonPrepScreen() {
         choice: { simulationMode: FIXED_SIMULATION_MODE, trainingFocus: focus },
       });
       if (!result.ok) {
+        if (isRetirementDecisionRequiredError(result.error)) {
+          void navigate({ to: '/career/$careerId/retirement', params: { careerId }, replace: true });
+          return;
+        }
         const details = result.error.details;
         const marketIsOpen =
           result.error.code === 'VALIDATION_FAILED' &&

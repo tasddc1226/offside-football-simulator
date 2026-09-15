@@ -7,7 +7,8 @@
 // domain의 `SimulationMode`·`CareerState.season.simulationMode` 필드 자체는 과거(CHAPTER로 시작한)
 // 커리어의 명령 로그 리플레이·state hash 검증을 위해 그대로 남아 있다 — 화면이 그 값을 읽어 연출을
 // 분기하는 코드(fast reveal 등)는 계속 동작해야 하므로 건드리지 않는다.
-import type { CareerState, SimulationMode, TrainingFocus } from '@offside/domain';
+import { retirementDecisionRequired, RETIREMENT_POLICY, type CareerState, type SimulationMode, type TrainingFocus } from '@offside/domain';
+import { rulesetForCareer } from '../engine/content.js';
 
 /** 사용자 결정(2026-09-13, D-77): 클라이언트는 시뮬레이션 모드를 선택하지 않고 항상 FAST로 시즌을
  * 시작한다. CREATE_CAREER·START_SEASON payload를 만드는 모든 곳이 이 상수를 쓴다. */
@@ -17,7 +18,18 @@ export type { TrainingFocus };
 
 /** 계약·임대 복귀 등의 결정을 마친 커리어만 새 시즌을 계획할 수 있다. */
 export function canPlanNextSeason(state: CareerState): boolean {
-  return state.status === 'ACTIVE' && state.contract !== null && state.season === null && state.pending === null;
+  if (state.status !== 'ACTIVE' || state.contract === null || state.season !== null || state.pending !== null) return false;
+  return !retirementDecisionRequired(state, rulesetForCareer(state).retirementRules ?? RETIREMENT_POLICY);
+}
+
+/** START_SEASON 경합에서 도메인이 반환하는 은퇴 결정 경계인지만 식별한다. */
+export function isRetirementDecisionRequiredError(error: { code: string; details?: unknown }): boolean {
+  const details = error.details;
+  return error.code === 'VALIDATION_FAILED' &&
+    typeof details === 'object' &&
+    details !== null &&
+    'reason' in details &&
+    details.reason === 'RETIREMENT_DECISION_REQUIRED';
 }
 
 export const TRAINING_FOCUS_OPTIONS: readonly TrainingFocus[] = ['ROLE', 'TECHNICAL', 'PHYSICAL', 'MENTAL'];
@@ -38,4 +50,3 @@ export const TRAINING_FOCUS_SUMMARY_KO: Record<TrainingFocus, string> = {
 
 /** SCR-005 인수 조건: 계획이 Base OVR·Expected Performance 중 무엇에 영향을 주는지 구분한다. */
 export const TRAINING_FOCUS_IMPACT_KO = '영향: Base OVR(시즌 결산 시 성장) · 경기 예상치에는 즉시 영향 없음';
-

@@ -1,7 +1,7 @@
 // 06 "내비게이션": 깊은 링크·재진입이 커리어 단계와 맞지 않을 때 이 함수가 안전한 화면을 고른다.
-import type { CareerState } from '@offside/domain';
+import { retirementDecisionRequired, RETIREMENT_POLICY, type CareerState } from '@offside/domain';
 import { SCREEN_ROUTES } from '../routes.js';
-import { contentForCareer } from '../engine/content.js';
+import { contentForCareer, rulesetForCareer } from '../engine/content.js';
 
 const PRESENTATION_SCREENS = {
   INJURY: 'SCR-022', NATIONAL_TEAM: 'SCR-032', SLUMP: 'SCR-021',
@@ -50,6 +50,9 @@ export function screenForCareer(state: CareerState): ScreenTarget {
   }
 
   if (state.status === 'ACTIVE') {
+    if (state.season === null && state.pending === null && retirementDecisionRequired(state, rulesetForCareer(state).retirementRules ?? RETIREMENT_POLICY)) {
+      return { screenId: 'SCR-025', params };
+    }
     const pending = state.pending;
     if (pending !== null && (pending.kind === 'EVENT' || pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM')) {
       const presentation = pending.kind === 'EVENT'
