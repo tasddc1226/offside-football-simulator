@@ -39,6 +39,12 @@ export {
   type EffectKind,
   type EffectStackingRule,
   type FootballSeason,
+  type FinalLeagueTable,
+  type FinalLeagueTableRow,
+  type LeagueFixture,
+  type LeagueFixtureResult,
+  type LeagueSeasonLedger,
+  type LeagueTeamSnapshot,
   type GrowthCause,
   type InjuryBodyPart,
   type InjuryEpisode,
@@ -83,6 +89,7 @@ export {
   type SimulationMode,
   type SquadRole,
   type StatGroup,
+  type StandingRow,
   type StepMatchResult,
   type StepSummary,
   type TimelineEntry,
@@ -112,6 +119,7 @@ export type {
   GrowthRules,
   InjuryRules,
   League,
+  LeagueLedgerRules,
   LeagueCalendar,
   LeagueCalendarSlot,
   LeagueCalendarStep,
@@ -253,7 +261,18 @@ export {
   type ResolveChapterResult,
   type SelectChapterInput,
 } from './chapter.js';
-export { buildSchedule, findLeague, isRivalOpponent, resolveOpponent } from './schedule.js';
+export { buildLeagueFixtures, buildLeagueRoster, buildSchedule, findLeague, isRivalOpponent, leagueStepForRound, resolveOpponent } from './schedule.js';
+export {
+  assertLeagueLedgerInvariant,
+  assertSeasonLeagueLedgerInvariant,
+  buildFinalLeagueTable,
+  completeLeagueRoundsForStep,
+  createLeagueSeasonLedger,
+  projectLeagueCompetition,
+  recordPlayerLeagueResult,
+  standingsFromLedger,
+  standingRowsFromFinalLeagueTable,
+} from './league-ledger.js';
 export { applyCompetitorFormDrift, playMatch, type PlayMatchInput, type PlayMatchResult } from './match.js';
 export {
   applyMatchToCompetitions,

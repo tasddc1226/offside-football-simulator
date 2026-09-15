@@ -59,6 +59,7 @@ import {
   ClubStintSchema,
   ContractSchema,
   EffectSchema,
+  FinalLeagueTableSchema,
   FootballSeasonSchema,
   InjuryEpisodeSchema,
   NationalityRuleStateSchema,
@@ -67,6 +68,7 @@ import {
   SeasonSummarySchema,
   SquadRoleSchema,
   TimelineEntrySchema,
+  getCareerStateInvariantIssues,
 } from './career-state.js';
 
 describe('domain 타입 동일성', () => {
@@ -368,6 +370,49 @@ describe('CareerStateSchema', () => {
     expect(result.success).toBe(true);
     const withMeeting = { ...state, clubMeeting: { seasonIndex: 1, request: 'TRANSFER', response: 'ACCEPTED', reason: 'REQUEST_ACCEPTED', teamId: 'team-1', contractId: 'contract-1', immediateEffect: { managerTrustDelta: -2, moraleDelta: 2 }, plannedRole: 'BENCH', preferredOfferKind: 'TRANSFER', preferenceStatus: 'PENDING', goal: { seasonIndex: 1, role: 'BENCH', targetMinutesShareBp: 3000, status: 'PENDING' } } };
     expect(CareerStateSchema.safeParse(withMeeting).success).toBe(true);
+    expect(getCareerStateInvariantIssues({ rulesetVersion: '1.7.0', season: { index: 1, teamId: 'team-1' } }))
+      .toContainEqual(expect.objectContaining({ path: ['season', 'leagueLedger'] }));
+    expect(getCareerStateInvariantIssues({ rulesetVersion: '1.6.0', season: { index: 1, teamId: 'team-1' } }))
+      .toEqual([]);
+    const finalTable = {
+      policyVersion: '1.0.0',
+      leagueId: 'league-1',
+      leagueName: '리그 1',
+      seasonIndex: 1,
+      teamId: 'team-1',
+      completedRounds: 2,
+      rows: [
+        [1, 'team-1', '팀 1', 2, 1, 1, 0, 3, 1, 2, 4],
+        [2, 'team-2', '팀 2', 2, 0, 1, 1, 1, 3, -2, 1],
+      ],
+    };
+    expect(FinalLeagueTableSchema.safeParse(finalTable).success).toBe(true);
+    expect(FinalLeagueTableSchema.safeParse({
+      ...finalTable,
+      rows: [{ rank: 1, teamId: 'team-1', teamName: '팀 1', played: 2, won: 1, drawn: 1, lost: 0, goalsFor: 3, goalsAgainst: 1, goalDifference: 2, points: 4 }],
+    }).success).toBe(false);
+    expect(FinalLeagueTableSchema.safeParse({ ...finalTable, rows: [[1, 'team-1']] }).success).toBe(false);
+    for (const rows of [
+      [],
+      [finalTable.rows[0]],
+      [finalTable.rows[0]!, [2, 'team-1', '중복 팀', 2, 0, 1, 1, 1, 3, -2, 1]],
+      [[2, ...finalTable.rows[0]!.slice(1)], finalTable.rows[1]],
+      [[1, 'team-1', '팀 1', 2, 2, 2, 2, 0, 9, 123, 999], finalTable.rows[1]],
+      [[1, 'team-1', '팀 1', 2, 0, 1, 1, 1, 3, -2, 1], [2, 'team-2', '팀 2', 2, 1, 1, 0, 3, 1, 2, 4]],
+    ]) {
+      expect(FinalLeagueTableSchema.safeParse({ ...finalTable, rows }).success).toBe(false);
+    }
+    expect(FinalLeagueTableSchema.safeParse({ ...finalTable, completedRounds: 1 }).success).toBe(false);
+    expect(FinalLeagueTableSchema.safeParse({ ...finalTable, rows: Array.from({ length: 17 }, () => finalTable.rows[0]) }).success).toBe(false);
+    expect(FinalLeagueTableSchema.safeParse({ ...finalTable, teamId: 'missing-team' }).success).toBe(false);
+    expect(getCareerStateInvariantIssues({
+      rulesetVersion: '1.7.0',
+      seasonHistory: [{ result: { index: 2, teamId: 'team-1', finalLeagueTable: finalTable } }],
+    })).toContainEqual(expect.objectContaining({ path: ['seasonHistory', 0, 'result', 'finalLeagueTable'] }));
+    expect(getCareerStateInvariantIssues({
+      rulesetVersion: '1.7.0',
+      seasonHistory: [{ result: { index: 1, teamId: 'team-2', finalLeagueTable: finalTable } }],
+    })).toContainEqual(expect.objectContaining({ path: ['seasonHistory', 0, 'result', 'finalLeagueTable'] }));
   });
 
   it('대표팀 기본 상태는 최소 strict shape이고 수락 여부는 callUps에서 파생한다', () => {

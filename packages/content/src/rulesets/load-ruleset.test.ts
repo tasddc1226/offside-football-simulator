@@ -4,6 +4,19 @@ import { loadRuleset, RULESET_VERSIONS } from './load-ruleset.ts';
 describe('loadRuleset', () => {
   it('exports RULESET_VERSIONS including 1.0.0', () => {
     expect(RULESET_VERSIONS).toContain('1.0.0');
+    expect(RULESET_VERSIONS).toContain('1.7.0');
+    const ledgerRuleset = loadRuleset('1.7.0');
+    const balancedRuleset = loadRuleset('1.6.1');
+    expect(ledgerRuleset.growthRules).toEqual(balancedRuleset.growthRules);
+    expect(ledgerRuleset.retirementRules).toEqual(balancedRuleset.retirementRules);
+    expect(ledgerRuleset.leagueLedgerRules).toEqual({
+      policyVersion: '1.0.0',
+      maxTeamCount: 16,
+      scoreKernel: 'MATCH_RULES_V1',
+      points: { win: 3, draw: 1, loss: 0 },
+      tieBreakers: ['POINTS', 'GOAL_DIFFERENCE', 'GOALS_FOR', 'TEAM_ID'],
+    });
+    expect(ledgerRuleset.leagues.every((league) => league.teamCount <= 16)).toBe(true);
   });
 
   it('loads and validates ruleset 1.0.0 synchronously', () => {
@@ -85,9 +98,31 @@ describe('loadRuleset: 팀 풀 12개(U-013)', () => {
 
   it('새 4팀은 K리그 실제 연고지 목록과 겹치지 않는다', () => {
     const forbidden = [
-      '서울', '수원', '전북', '울산', '포항', '인천', '대구', '광주', '대전', '강원', '제주',
-      '부산', '성남', '경남', '부천', '안양', '김천', '천안', '전남', '아산', '화성', '용인',
-      '충북', '김포', '안산',
+      '서울',
+      '수원',
+      '전북',
+      '울산',
+      '포항',
+      '인천',
+      '대구',
+      '광주',
+      '대전',
+      '강원',
+      '제주',
+      '부산',
+      '성남',
+      '경남',
+      '부천',
+      '안양',
+      '김천',
+      '천안',
+      '전남',
+      '아산',
+      '화성',
+      '용인',
+      '충북',
+      '김포',
+      '안산',
     ];
     const newTeamIds = ['geumbit-fc', 'eunha-rovers', 'gangnaru-united', 'dalbit-town-fc'];
     for (const id of newTeamIds) {

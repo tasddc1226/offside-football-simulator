@@ -1,5 +1,5 @@
 import type { CareerSnapshot, CommandLogEntry, PutCareerBody } from '@offside/contracts';
-import { ArchiveError, canonicalize, sha256Hex, type JsonValue, type DomainSnapshot, type LegacyResult, type Ruleset } from '@offside/domain';
+import { ArchiveError, assertSeasonLeagueLedgerInvariant, canonicalize, sha256Hex, type JsonValue, type DomainSnapshot, type LegacyResult, type Ruleset } from '@offside/domain';
 import { legacyVersionForResult, persistRetirementArchive, retirementArchiveKey, legacyResultKey, type RetirementArtifactsResolver, type RetirementRuntimeArtifacts } from './retirement-archive.js';
 import { decodeSnapshot, encodeSnapshot } from './snapshot.js';
 import { replayCommandLog } from './replay.js';
@@ -66,9 +66,16 @@ async function recoverLatestSnapshot(
     const candidate = snapshotsAscending[i]!;
     const decoded = decodeSnapshot(candidate);
     if (decoded.ok) {
-      start = decoded.snapshot;
-      fromRevision = candidate.revision;
-      break;
+      try {
+        if (decoded.snapshot.state.season !== null) {
+          assertSeasonLeagueLedgerInvariant(ruleset, decoded.snapshot.state.season);
+        }
+        start = decoded.snapshot;
+        fromRevision = candidate.revision;
+        break;
+      } catch {
+        // Ruleset-dependent roster/league/schedule corruption is recoverable from an earlier snapshot.
+      }
     }
   }
 
@@ -206,7 +213,15 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       if (latest !== undefined) {
         const decoded = decodeSnapshot(latest);
         if (decoded.ok) {
-          return { kind: 'ready', career, versions, snapshot: decoded.snapshot };
+          const resolved = resolveRuleset(versions.rulesetVersion);
+          try {
+            if (resolved !== null && decoded.snapshot.state.season !== null) {
+              assertSeasonLeagueLedgerInvariant(resolved, decoded.snapshot.state.season);
+            }
+            if (resolved !== null) return { kind: 'ready', career, versions, snapshot: decoded.snapshot };
+          } catch {
+            // 손상 latest는 아래 prior snapshot + command replay 복구 경로로 보낸다.
+          }
         }
       }
 
@@ -386,7 +401,15 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       if (latest !== undefined) {
         const decoded = decodeSnapshot(latest);
         if (decoded.ok) {
-          return { kind: 'healthy', career, snapshot: decoded.snapshot } as const;
+          const ruleset = resolveRuleset(career.rulesetVersion);
+          try {
+            if (ruleset !== null && decoded.snapshot.state.season !== null) {
+              assertSeasonLeagueLedgerInvariant(ruleset, decoded.snapshot.state.season);
+            }
+            if (ruleset !== null) return { kind: 'healthy', career, snapshot: decoded.snapshot } as const;
+          } catch {
+            // 손상 latest는 아래 prior snapshot + command replay 복구 경로로 보낸다.
+          }
         }
       }
 

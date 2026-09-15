@@ -426,7 +426,199 @@ export const ScheduleEntrySchema = z.strictObject({
   round: z.string().nullable(),
   opponentId: z.string().min(1),
   home: z.boolean(),
+  fixtureId: z.string().min(1).exactOptional(),
+  leagueRound: z.number().int().positive().exactOptional(),
   skipped: z.literal('ELIMINATED').exactOptional(),
+});
+
+export const LeagueTeamSnapshotSchema = z.strictObject({
+  teamId: z.string().min(1),
+  name: z.string().min(1),
+  strength: z.number().int().min(0).max(100),
+});
+
+export const LeagueFixtureResultSchema = z.tuple([
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+]);
+
+export const LeagueSeasonLedgerSchema = z.strictObject({
+  policyVersion: z.literal('1.0.0'),
+  leagueId: z.string().min(1),
+  leagueName: z.string().min(1),
+  seasonIndex: z.number().int().positive(),
+  teamId: z.string().min(1),
+  seed: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative(), z.number().int().nonnegative(), z.number().int().nonnegative()]),
+  teams: z.array(LeagueTeamSnapshotSchema).min(2).max(16).superRefine((teams, ctx) => {
+    const seen = new Set<string>();
+    for (let index = 0; index < teams.length; index += 1) {
+      const teamId = teams[index]!.teamId;
+      if (seen.has(teamId)) ctx.addIssue({ code: 'custom', path: [index, 'teamId'], message: 'teamId가 중복이다.' });
+      seen.add(teamId);
+    }
+  }),
+  results: z.array(LeagueFixtureResultSchema),
+  completedRounds: z.array(z.number().int().positive()).superRefine((rounds, ctx) => {
+    const seen = new Set<number>();
+    for (let index = 0; index < rounds.length; index += 1) {
+      const round = rounds[index]!;
+      if (seen.has(round)) ctx.addIssue({ code: 'custom', path: [index], message: '완료 round가 중복이다.' });
+      seen.add(round);
+    }
+  }),
+}).superRefine((ledger, ctx) => {
+  const teamIds = new Set(ledger.teams.map((team) => team.teamId));
+  if (!teamIds.has(ledger.teamId)) {
+    ctx.addIssue({ code: 'custom', path: ['teamId'], message: '소속 팀이 roster에 없다.' });
+  }
+  const fixtureIndexes = new Set<number>();
+  const teamCount = ledger.teams.length;
+  const fixtureCount = teamCount * (teamCount - 1);
+  const fixturesPerRound = Math.floor(teamCount / 2);
+  const totalRounds = teamCount % 2 === 0 ? 2 * (teamCount - 1) : 2 * teamCount;
+  for (let index = 0; index < ledger.results.length; index += 1) {
+    const result = ledger.results[index]!;
+    if (result[0] >= fixtureCount) {
+      ctx.addIssue({ code: 'custom', path: ['results', index, 0], message: 'fixture index가 canonical 일정 범위를 벗어났다.' });
+    }
+    if (fixtureIndexes.has(result[0])) {
+      ctx.addIssue({ code: 'custom', path: ['results', index, 0], message: 'fixture index가 중복이다.' });
+    }
+    fixtureIndexes.add(result[0]);
+  }
+  const completed = new Set(ledger.completedRounds);
+  for (let index = 0; index < ledger.completedRounds.length; index += 1) {
+    if (ledger.completedRounds[index]! > totalRounds) {
+      ctx.addIssue({ code: 'custom', path: ['completedRounds', index], message: '완료 round가 canonical 일정 범위를 벗어났다.' });
+    }
+  }
+  for (let round = 1; round <= totalRounds; round += 1) {
+    const actual = [...fixtureIndexes].filter(
+      (fixtureIndex) => Math.floor(fixtureIndex / fixturesPerRound) + 1 === round,
+    ).length;
+    if (actual !== 0 && actual !== fixturesPerRound) {
+      ctx.addIssue({ code: 'custom', path: ['results'], message: `round ${round} 결과가 부분 집합이다.` });
+    }
+    if (completed.has(round) !== (actual === fixturesPerRound)) {
+      ctx.addIssue({ code: 'custom', path: ['completedRounds'], message: `round ${round} 완료 표식과 결과가 다르다.` });
+    }
+  }
+});
+
+export const StandingRowSchema = z.strictObject({
+  rank: z.number().int().positive(),
+  teamId: z.string().min(1),
+  teamName: z.string().min(1),
+  played: z.number().int().nonnegative(),
+  won: z.number().int().nonnegative(),
+  drawn: z.number().int().nonnegative(),
+  lost: z.number().int().nonnegative(),
+  goalsFor: z.number().int().nonnegative(),
+  goalsAgainst: z.number().int().nonnegative(),
+  goalDifference: z.number().int(),
+  points: z.number().int().nonnegative(),
+});
+
+export const FinalLeagueTableRowSchema = z.tuple([
+  z.number().int().positive(),
+  z.string().min(1),
+  z.string().min(1),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int().nonnegative(),
+  z.number().int(),
+  z.number().int().nonnegative(),
+]);
+
+function compareFinalTableTeamIds(a: string, b: string): number {
+  const ai = a[Symbol.iterator]();
+  const bi = b[Symbol.iterator]();
+  for (;;) {
+    const an = ai.next();
+    const bn = bi.next();
+    if (an.done && bn.done) return 0;
+    if (an.done) return -1;
+    if (bn.done) return 1;
+    const ac = an.value.codePointAt(0) as number;
+    const bc = bn.value.codePointAt(0) as number;
+    if (ac !== bc) return ac < bc ? -1 : 1;
+  }
+}
+
+export const FinalLeagueTableSchema = z.strictObject({
+  policyVersion: z.literal('1.0.0'),
+  leagueId: z.string().min(1),
+  leagueName: z.string().min(1),
+  seasonIndex: z.number().int().positive(),
+  teamId: z.string().min(1),
+  completedRounds: z.number().int().nonnegative(),
+  rows: z.array(FinalLeagueTableRowSchema).min(2).max(16),
+}).superRefine((table, ctx) => {
+  const teamIds = new Set<string>();
+  const expectedPlayed = 2 * (table.rows.length - 1);
+  const expectedRounds = table.rows.length % 2 === 0
+    ? 2 * (table.rows.length - 1)
+    : 2 * table.rows.length;
+  let totalWon = 0;
+  let totalDrawn = 0;
+  let totalLost = 0;
+  let totalGoalsFor = 0;
+  let totalGoalsAgainst = 0;
+
+  table.rows.forEach((row, index) => {
+    const [rank, teamId, , played, won, drawn, lost, goalsFor, goalsAgainst, goalDifference, points] = row;
+    if (rank !== index + 1) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 0], message: '순위는 1부터 연속이며 행 순서와 같아야 한다.' });
+    }
+    if (teamIds.has(teamId)) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 1], message: '팀은 최종 순위표에 한 번만 나타나야 한다.' });
+    }
+    teamIds.add(teamId);
+    if (played !== won + drawn + lost) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 3], message: '경기 수는 승·무·패 합과 같아야 한다.' });
+    }
+    if (played !== expectedPlayed) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 3], message: '모든 팀은 홈·원정으로 다른 팀과 두 번 경기해야 한다.' });
+    }
+    if (goalDifference !== goalsFor - goalsAgainst) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 9], message: '득실차는 득점에서 실점을 뺀 값이어야 한다.' });
+    }
+    if (points !== won * 3 + drawn) {
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 10], message: '승점은 3×승+무와 같아야 한다.' });
+    }
+    totalWon += won;
+    totalDrawn += drawn;
+    totalLost += lost;
+    totalGoalsFor += goalsFor;
+    totalGoalsAgainst += goalsAgainst;
+    const next = table.rows[index + 1];
+    if (next !== undefined) {
+      const order = next[10] - points || next[9] - goalDifference || next[7] - goalsFor || compareFinalTableTeamIds(teamId, next[1]);
+      if (order > 0) {
+        ctx.addIssue({ code: 'custom', path: ['rows', index], message: '순위표가 승점·득실차·득점·팀 ID 순서와 일치해야 한다.' });
+      }
+    }
+  });
+
+  if (table.completedRounds !== expectedRounds) {
+    ctx.addIssue({ code: 'custom', path: ['completedRounds'], message: '완료 라운드 수가 홈·원정 전체 일정과 일치해야 한다.' });
+  }
+  if (!teamIds.has(table.teamId)) {
+    ctx.addIssue({ code: 'custom', path: ['teamId'], message: '소속 팀은 최종 순위표에 포함되어야 한다.' });
+  }
+  if (totalWon !== totalLost) {
+    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 승리와 패배 합은 같아야 한다.' });
+  }
+  if (totalGoalsFor !== totalGoalsAgainst) {
+    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 득점과 실점 합은 같아야 한다.' });
+  }
+  if (totalDrawn % 2 !== 0) {
+    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 무승부 합은 짝수여야 한다.' });
+  }
 });
 
 // T-2-001이 타입만 두었던 것을 T-2-003이 확정한다(브리프 데이터 계약 D-35).
@@ -615,6 +807,7 @@ export const FootballSeasonSchema = z.strictObject({
   // T-2-005 D-39: 이 시즌 훈련 초점.
   trainingFocus: TrainingFocusSchema,
   competitions: z.array(CompetitionRecordSchema),
+  leagueLedger: LeagueSeasonLedgerSchema.exactOptional(),
   // T-2-003 D-35: roll 없이 시즌 시작 시 확정하는 리그·컵 일정(step·order 순 정렬).
   schedule: z.array(ScheduleEntrySchema),
   matches: z.array(MatchRecordSchema),
@@ -673,6 +866,7 @@ export const SeasonResultSchema = z.strictObject({
   managerId: z.string().min(1),
   captaincyAtEnd: z.enum(['NONE', 'VICE', 'CAPTAIN']),
   competitions: z.array(CompetitionRecordSchema),
+  finalLeagueTable: FinalLeagueTableSchema.exactOptional(),
   playerStats: SeasonPlayerStatsSchema,
   selectionSummary: z.strictObject({
     squadRoleAtStart: SquadRoleSchema,
@@ -1023,6 +1217,38 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
   const hasContract = hasOwn(value, 'contract');
   const hasParentContract = hasOwn(value, 'parentContract');
   const hasClubHistory = hasOwn(value, 'clubHistory');
+  const season = value.season;
+
+  // 신규 ledger 지원은 버전별 명시 계약이다. Envelope/API load 경계는 룰셋 전체를 로드하지 않으므로
+  // 여기서는 필수 존재와 자기 binding만 확인하고, roster/league/schedule은 domain 실행 경계가 검증한다.
+  if (value.rulesetVersion === '1.7.0' && isRecord(season)) {
+    const ledger = season.leagueLedger;
+    if (!isRecord(ledger)) {
+      issues.push({ path: ['season', 'leagueLedger'], message: '지원 룰셋 활성 시즌에는 leagueLedger가 있어야 한다.' });
+    } else if (ledger.seasonIndex !== season.index || ledger.teamId !== season.teamId) {
+      issues.push({ path: ['season', 'leagueLedger'], message: 'leagueLedger가 활성 시즌 index/team과 일치해야 한다.' });
+    }
+  }
+  if (value.rulesetVersion === '1.7.0' && Array.isArray(value.seasonHistory)) {
+    value.seasonHistory.forEach((summary, index) => {
+      const result = isRecord(summary) ? summary.result : undefined;
+      const finalTable = isRecord(result) ? result.finalLeagueTable : undefined;
+      const resultIndex = isRecord(result) ? result.index : undefined;
+      const resultTeamId = isRecord(result) ? result.teamId : undefined;
+      const parsedFinalTable = FinalLeagueTableSchema.safeParse(finalTable);
+      if (!parsedFinalTable.success) {
+        issues.push({
+          path: ['seasonHistory', index, 'result', 'finalLeagueTable'],
+          message: '지원 룰셋 결산에는 compact finalLeagueTable이 있어야 한다.',
+        });
+      } else if (parsedFinalTable.data.seasonIndex !== resultIndex || parsedFinalTable.data.teamId !== resultTeamId) {
+        issues.push({
+          path: ['seasonHistory', index, 'result', 'finalLeagueTable'],
+          message: 'finalLeagueTable이 결산 result의 season index/team과 일치해야 한다.',
+        });
+      }
+    });
+  }
 
   const openStints = Array.isArray(clubHistory)
     ? clubHistory.filter((stint): stint is Record<string, unknown> => isRecord(stint) && stint.toSeasonIndex === null)

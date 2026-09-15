@@ -6,6 +6,7 @@ import ruleset140Manifest from '../rulesets/1.4.0/manifest.json' with { type: 'j
 import ruleset150Manifest from '../rulesets/1.5.0/manifest.json' with { type: 'json' };
 import ruleset160Manifest from '../rulesets/1.6.0/manifest.json' with { type: 'json' };
 import ruleset161Manifest from '../rulesets/1.6.1/manifest.json' with { type: 'json' };
+import ruleset170Manifest from '../rulesets/1.7.0/manifest.json' with { type: 'json' };
 import { loadLegacyReferencePopulation } from './legacy/load-population.ts';
 import { loadContentPack } from './packs/load-content-pack.ts';
 import { loadRuleset } from './rulesets/load-ruleset.ts';
@@ -31,6 +32,7 @@ const RULESET_MANIFESTS: Readonly<Record<string, unknown>> = Object.freeze({
   '1.5.0': ruleset150Manifest,
   '1.6.0': ruleset160Manifest,
   '1.6.1': ruleset161Manifest,
+  '1.7.0': ruleset170Manifest,
 });
 
 /** Return existing registry checksums, not a second hash dialect of parsed objects.
@@ -56,7 +58,9 @@ export function loadRetirementArtifacts(
 
   const activatesLegacy110 = rulesetVersion === '1.1.0' && contentPackVersion === '0.3.0';
   // T-7-032(D-80 1라운드 ③): 1.6.1 + 0.6.2는 Legacy 1.2.0으로 옮긴다(1.1.0 화이트리스트에서 제외).
-  const activatesLegacy120 = rulesetVersion === '1.6.1' && contentPackVersion === '0.6.2';
+  const activatesLegacy120 =
+    (rulesetVersion === '1.6.1' && contentPackVersion === '0.6.2') ||
+    (rulesetVersion === '1.7.0' && contentPackVersion === '0.6.3');
   const activatesLegacy110WithoutPopulation =
     (rulesetVersion === '1.2.0' &&
       (contentPackVersion === '0.4.0' || contentPackVersion === '0.4.1')) ||

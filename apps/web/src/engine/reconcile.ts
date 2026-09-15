@@ -1,6 +1,7 @@
 // D-20 "복구 뒤 대조". `planReconciliation`은 무엇을 지우고 무엇을 받을지만 정하는 순수 함수라
 // 엔진·API 없이 단위 테스트한다. `reconcileAfterRecovery`가 그 계획을 실제 엔진·API 호출로 실행한다.
 import type { QueryClient } from '@tanstack/react-query';
+import { loadRuleset } from '@offside/content';
 import { importCareerFromServer } from '@offside/engine-client';
 import { getRemoteCareer, listRemoteCareers } from '../api/client.js';
 import { getAppEngine } from './engine.js';
@@ -118,6 +119,7 @@ export async function reconcileAfterRecovery(
       continue;
     }
     const imported = await importCareerFromServer(engine.store, result.data, {
+      rulesetForVersion: loadRuleset,
       retirementArtifacts: (versions) =>
         loadRetirementArtifacts(versions.rulesetVersion, versions.contentPackVersion),
       now,
@@ -133,6 +135,7 @@ export async function reconcileAfterRecovery(
         continue;
       }
       const imported = await importCareerFromServer(engine.store, result.data, {
+        rulesetForVersion: loadRuleset,
         retirementArtifacts: (versions) =>
           loadRetirementArtifacts(versions.rulesetVersion, versions.contentPackVersion),
         now,

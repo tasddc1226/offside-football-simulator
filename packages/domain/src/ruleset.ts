@@ -32,7 +32,13 @@ export type Background = {
   attributeDeltas: Partial<Record<AttributeKey, number>>;
   state: { form: number; fitness: number; morale: number };
   context: { tacticalFit: number; squadStatus: number; positionProficiency: number };
-  relationships: { managerTrust: number; captain: number; rival: number; fans: number; agent: number };
+  relationships: {
+    managerTrust: number;
+    captain: number;
+    rival: number;
+    fans: number;
+    agent: number;
+  };
 };
 
 // T-2-002 D-34: 팀 확장. `leagueId`는 `League.id`, `tacticalStyleId`는 `TacticalStyle.id`를 가리킨다.
@@ -72,10 +78,24 @@ export type League = {
   promotionSlots: number;
 };
 
+/** T-7-022: 리그 전체 원장을 지원하는 신규 룰셋만 명시하는 버전 고정 정책. */
+export type LeagueLedgerRules = {
+  policyVersion: '1.0.0';
+  maxTeamCount: 16;
+  scoreKernel: 'MATCH_RULES_V1';
+  points: { win: 3; draw: 1; loss: 0 };
+  tieBreakers: ['POINTS', 'GOAL_DIFFERENCE', 'GOALS_FOR', 'TEAM_ID'];
+};
+
 // T-2-002 D-34: 컵 대회 하나. `rounds`는 항상 4라운드 고정 순서(R1 → R2 → SEMI → FINAL)다(content
 // 스키마가 정확한 값·순서를 강제한다. 여기서 튜플 타입을 쓰지 않는 이유는 JSON에서 그대로 `as Ruleset`
 // 캐스팅하는 fixture 로더들이 배열 리터럴을 튜플로 좁혀 추론하지 않기 때문이다).
-export type Cup = { id: string; name: string; tiers: Array<'YOUTH' | 1 | 2 | 3>; rounds: Array<'R1' | 'R2' | 'SEMI' | 'FINAL'> };
+export type Cup = {
+  id: string;
+  name: string;
+  tiers: Array<'YOUTH' | 1 | 2 | 3>;
+  rounds: Array<'R1' | 'R2' | 'SEMI' | 'FINAL'>;
+};
 
 // T-2-002 D-26/D-34: 팀 전술 스타일. `slots` 8포지션 합은 11, `roleWeights[position]` 합은 1.
 // `preferredArchetypeIds[position]`은 그 포지션 아키타입 중 감독이 선호하는 1~2개다.
@@ -93,8 +113,19 @@ export type TacticalStyle = {
 // T-2-002 D-34: RULE-PERF-001·RULE-SEL-001·역할 제안·경쟁자 생성이 쓰는 상수 묶음. `selection.ts`가
 // 소비한다.
 export type SelectionRules = {
-  performanceWeights: { baseOvr: number; tacticalFit: number; form: number; fitness: number; morale: number };
-  selectionWeights: { tacticalFit: number; managerTrust: number; expectedPerformance: number; squadStatus: number };
+  performanceWeights: {
+    baseOvr: number;
+    tacticalFit: number;
+    form: number;
+    fitness: number;
+    morale: number;
+  };
+  selectionWeights: {
+    tacticalFit: number;
+    managerTrust: number;
+    expectedPerformance: number;
+    squadStatus: number;
+  };
   tacticalFitWeights: { style: number; archetype: number };
   positionFamiliarity: { natural: number; trained: number; makeshift: number };
   proficiencyThresholds: { natural: number; trained: number };
@@ -128,12 +159,22 @@ export type SelectionRules = {
 
 // T-2-003 D-35: 경기 결과(diff 구간 → 승·무·패 정수 확률, 합 100). 구간은 연속이어야 한다(content
 // 스키마가 검사).
-export type ResultTableRow = { diffMin: number; diffMax: number; win: number; draw: number; loss: number };
+export type ResultTableRow = {
+  diffMin: number;
+  diffMax: number;
+  win: number;
+  draw: number;
+  loss: number;
+};
 
 // T-2-003 D-35: 득점 rollInt 2회 표. WIN은 (winnerGoals, min(loserGoalsRaw, winnerGoals-1)),
 // LOSS는 대칭(상대가 winnerGoals, 우리가 min(loserGoalsRaw, winnerGoals-1)), DRAW는 roll1(drawGoals)만
 // 쓰고 roll2(loserGoalsRaw)는 소비만 하고 버린다(RNG 순서 고정 목적, match.ts 참고).
-export type MatchScoreTable = { winnerGoals: number[]; loserGoalsRaw: number[]; drawGoals: number[] };
+export type MatchScoreTable = {
+  winnerGoals: number[];
+  loserGoalsRaw: number[];
+  drawGoals: number[];
+};
 
 // T-2-003 D-35: START 출전 시간 후보 하나(roll 1회로 이 표에서 고른다). subOut이 false면 90분,
 // true면 minute에 교체 아웃.
@@ -167,7 +208,12 @@ export type MatchRules = {
   resultTable: ResultTableRow[];
   scoreTable: MatchScoreTable;
   minutesTable: MatchMinutesTable;
-  involvement: { performanceWeight: number; opponentStrengthWeight: number; rollMin: number; rollMax: number };
+  involvement: {
+    performanceWeight: number;
+    opponentStrengthWeight: number;
+    rollMin: number;
+    rollMax: number;
+  };
   statTables: Record<StatGroup, Record<string, StatDistributionTable>>;
   /** 있으면 raw 개인 기록을 이 분 수치 기준으로 출전 시간에 비례시켜 확률 반올림한다. 1.0은 생략. */
   statExposureFullMinutes?: number;
@@ -290,8 +336,17 @@ export type MarketValueRules = {
 export type InjuryRules = {
   event: { id: string; version: number };
   severityWeights: { MINOR: number; MODERATE: number; MAJOR: number };
-  matchesOut: { MINOR: { min: number; max: number }; MODERATE: { min: number; max: number }; MAJOR: { min: number; max: number } };
-  bodyParts: Array<{ id: InjuryBodyPart; weight: number; recurrenceBaseBp: number; sequelaKeys: AttributeKey[] }>;
+  matchesOut: {
+    MINOR: { min: number; max: number };
+    MODERATE: { min: number; max: number };
+    MAJOR: { min: number; max: number };
+  };
+  bodyParts: Array<{
+    id: InjuryBodyPart;
+    weight: number;
+    recurrenceBaseBp: number;
+    sequelaKeys: AttributeKey[];
+  }>;
   recurrenceWindowMatches: number;
   recurrenceMaxChain?: number | undefined;
   rehab: Record<RehabPlan, { returnShiftMatches: number; recurrenceAddBp: number }>;
@@ -308,7 +363,12 @@ export type InjuryRules = {
 // `names`를 쓴다. 교체 판정(`changeProbability`)·선호 아키타입 수(`preferredArchetypeCount`)는 T-4-003.
 export type ManagerRules = {
   trustBase: number;
-  changeProbability: { baseBp: number; perRankGapBp: number; maxBp: number; minTenureSeasons: number };
+  changeProbability: {
+    baseBp: number;
+    perRankGapBp: number;
+    maxBp: number;
+    minTenureSeasons: number;
+  };
   preferredArchetypeCount: number;
   names: string[];
 };
@@ -338,14 +398,22 @@ export type ReputationRules = {
   initialPopularityCenti: number;
   initialMediaCenti: number;
   clampMax: number;
-  settlement: { starterSeasonCenti: number; ratingAbove70Centi: number; titleCenti: number; decayCenti: number };
+  settlement: {
+    starterSeasonCenti: number;
+    ratingAbove70Centi: number;
+    titleCenti: number;
+    decayCenti: number;
+  };
 };
 
 // T-4-001 D-51: 대표팀 차출 규칙(`packages/content` 소유). 자격 판정·pending 생성은 T-4-004.
 export type NationalTeamRules = {
   event: { id: string; version: number };
   /** EVT-NAT-001의 choice별 canonical outcome identity. 효과는 content가 아니라 domain 규칙이 결정한다. */
-  outcomeByChoice: Record<'A' | 'B' | 'C', { callUp: NationalTeamCallUp; id: string; kind: ChapterOutcomeKind; weight: number }>;
+  outcomeByChoice: Record<
+    'A' | 'B' | 'C',
+    { callUp: NationalTeamCallUp; id: string; kind: ChapterOutcomeKind; weight: number }
+  >;
   callUpStep: number;
   minOvrByTier: Record<'YOUTH' | '1' | '2' | '3', number>;
   minRatingTenths: number;
@@ -370,19 +438,24 @@ export type TransferRules = {
   loan: { seasons: 1; wageShareBp: number; buyOptionChanceBp: number; buyMinShareBp: number };
   feeByIndexBand: Array<{ maxIndexCenti: number; feeMinor: number }>;
   safeRenewal: { lengthSeasons: number; wageBp: number };
-  recovery?: {
-    youthMaxAge: number;
-    zeroMinutesConsecutiveSeasons: number;
-    opportunityTier: 3;
-    opportunityRole: SquadRole;
-  } | undefined;
+  recovery?:
+    | {
+        youthMaxAge: number;
+        zeroMinutesConsecutiveSeasons: number;
+        opportunityTier: 3;
+        opportunityRole: SquadRole;
+      }
+    | undefined;
   renewal: { lengthSeasons: number; wageBpByRole: Record<SquadRole, number> };
   /** 이슈 #148(1.4.0+): `reevaluate: true`면 LOAN_RETURN(RETURN)이 임대 시즌 결산값(출전 비율·평균
    * 평점)으로 원소속 역할 약속·squadStatus를 재평가한다(`loan-return.ts`). 키가 없으면(1.3.0 이하)
    * 종전처럼 원소속 계약의 rolePromise 기본값으로 되돌린다. 새 roll 없음. */
   loanReturn?: { reevaluate: boolean } | undefined;
   negotiation: {
-    successBp: Record<'TRANSFER' | 'FREE_AGENT' | 'LOAN' | 'RENEWAL', Record<'WAGE' | 'ROLE' | 'LENGTH', number>>;
+    successBp: Record<
+      'TRANSFER' | 'FREE_AGENT' | 'LOAN' | 'RENEWAL',
+      Record<'WAGE' | 'ROLE' | 'LENGTH', number>
+    >;
     reputationAdjustBpPerPoint: number;
     counter: { wageBp: number; lengthDelta: number };
   };
@@ -423,16 +496,28 @@ export type Ruleset = {
   calendar?: { startYear: number } | undefined;
   /** 1.1 only: market previews and season squads share this deterministic stream. */
   offerProjection?: { version: '1.1.0'; competitorSeedVersion: 'squad:season-team-v1' } | undefined;
-  clubMeetingRules?: {
-    playingTimeMinTrust: number;
-    loanMinTrust: number;
-    transferMaxTrust: number;
-    immediate: Record<'PLAYING_TIME_ACCEPTED' | 'PLAYING_TIME_REFUSED' | 'LOAN_ACCEPTED' | 'LOAN_REFUSED' | 'TRANSFER_ACCEPTED' | 'TRANSFER_REFUSED', { managerTrustDelta: number; moraleDelta: number }>;
-    goalMet: { managerTrustDelta: number; moraleDelta: number };
-  } | undefined;
+  clubMeetingRules?:
+    | {
+        playingTimeMinTrust: number;
+        loanMinTrust: number;
+        transferMaxTrust: number;
+        immediate: Record<
+          | 'PLAYING_TIME_ACCEPTED'
+          | 'PLAYING_TIME_REFUSED'
+          | 'LOAN_ACCEPTED'
+          | 'LOAN_REFUSED'
+          | 'TRANSFER_ACCEPTED'
+          | 'TRANSFER_REFUSED',
+          { managerTrustDelta: number; moraleDelta: number }
+        >;
+        goalMet: { managerTrustDelta: number; moraleDelta: number };
+      }
+    | undefined;
   /** T-7-031: 1.6.1+. 없는 룰셋(1.0.0~1.6.0)은 도메인 기본값 `RETIREMENT_POLICY`(1.0.0)를 그대로
    * 쓴다 — 필드 부재가 과거 재현성을 보장한다(D-80 1라운드 ②). */
   retirementRules?: RetirementPolicy | undefined;
+  /** 1.7.0+: 소속 리그 전체 대진·원장·실제 순위 지원 gate. */
+  leagueLedgerRules?: LeagueLedgerRules | undefined;
   positions: Position[];
   archetypes: Archetype[];
   backgrounds: Background[];
