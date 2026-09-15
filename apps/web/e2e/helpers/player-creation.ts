@@ -35,10 +35,13 @@ export async function fillPlayerInfo(
   await page.getByRole('radio', { name: /윙어/ }).click();
 }
 
-/** SCR-002 입력 → SCR-003 스타일 선택 → SCR-004 확인 화면 도착까지. */
-export async function goToConfirm(page: Page): Promise<void> {
+/**
+ * SCR-002 입력 → SCR-003 스타일 선택 → SCR-004 확인 화면 도착까지. `backgroundName`은
+ * fillPlayerInfo로 그대로 넘긴다(생략하면 기본값인 club-academy/"아카데미의 추가 평가").
+ */
+export async function goToConfirm(page: Page, backgroundName?: RegExp): Promise<void> {
   await startNewCareer(page);
-  await fillPlayerInfo(page);
+  await fillPlayerInfo(page, undefined, backgroundName ?? /아카데미의 추가 평가/);
   await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/style$/);
 
@@ -51,9 +54,12 @@ export async function goToConfirm(page: Page): Promise<void> {
 /**
  * 온보딩 → KICKOFF → SCR-002 입력 → SCR-003 스타일 선택 → SCR-004 확정(복구 코드 발급 실패로
  * 스텁 → "계속") → SCR-007/008/013 계열 도착까지. first-contract.spec.ts의 원래 정의와 동일하다.
+ * `backgroundName`은 goToConfirm으로 그대로 넘긴다(생략하면 기본값 club-academy — 그 경로는
+ * "남아 추가 평가"만으로 끝나 1.7.2/0.6.6에서도 SCR-008(입단 테스트)로 가지 않는다. SCR-008을
+ * 보려면 school/street 배경을 넘겨야 한다).
  */
-export async function completeOnboardingAndConfirm(page: Page): Promise<void> {
-  await goToConfirm(page);
+export async function completeOnboardingAndConfirm(page: Page, backgroundName?: RegExp): Promise<void> {
+  await goToConfirm(page, backgroundName);
 
   await page.route('**/v1/profile', (route) =>
     fulfillJson(route, 503, {
