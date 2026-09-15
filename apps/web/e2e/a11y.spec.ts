@@ -377,10 +377,14 @@ test('SCR-011 시즌 준비 화면에 axe serious·critical 위반이 없다', a
 // 룰셋 1.5.0 승격 뒤에는 'e2e-season-result-01'(옛 1.4.0 seed)로 두 번째 시즌을 시작하면
 // computeRoleProposal이 KEEP(현재 포지션·스쿼드 역할과 그대로 일치)을 반환해 시즌 준비 화면이
 // ROLE_PROPOSAL을 원자적으로 자동 수락해 버린다 — /role에 실제로 도달하지 못해 이 테스트의 목적
-// (SCR-012 화면 자체의 접근성 검사)을 달성할 수 없다. 아래 seed는 dev 서버 + Playwright로 후보
-// 문자열을 여러 개 돌려 찾은, 두 번째 시즌 시작 시 POSITION_CHANGE·ROLE_CHANGE(수동 확인이 필요한
-// 실제 /role 화면)로 이어지는 것을 확인한 값이다(3회 재실행으로 결정론 확인).
-const E2E_ROLE_CHANGE_SEED = 'rc-seed-3';
+// (SCR-012 화면 자체의 접근성 검사)을 달성할 수 없다. 옛 값 'rc-seed-3'은 룰셋 1.5.0 기준으로 찾은
+// seed라 1.7.2/0.6.6 승격(계약 전 사건 상한 도입)으로 온보딩 RNG 소비 경로가 달라져(seed 드리프트)
+// 더 이상 두 번째 시즌에서 POSITION_CHANGE·ROLE_CHANGE를 만들지 못한다. 아래 값은 같은 문제를
+// engine-client(@offside/domain·@offside/content)만으로 헤드리스 재생하는 임시 스크립트로 1.7.2/
+// 0.6.6 조합에 대해 다시 스윕해 찾았다 — 두 번째 START_SEASON 직후 ROLE_PROPOSAL이 ROLE_CHANGE
+// (RESERVE → STARTER, 수동 확인이 필요한 실제 /role 화면)로 이어지는 것을 확인했다(같은 스윕을
+// 재실행해도 결정론적으로 같은 결과).
+const E2E_ROLE_CHANGE_SEED = 'rc-seed-8';
 
 test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   test.slow();
@@ -456,7 +460,11 @@ test.describe('모션 감소', () => {
     // (career.$careerId.tryout.tsx:43-56, STEP_DURATION_MS=500·3단계=1500ms). 그 미만 시간 안에
     // /event/result로 넘어가면 연출이 실행되지 않았다는 뜻이다 — ResultCard 자체엔 카운트업 로직이
     // 없어(packages/ui/src/components/ResultCard.tsx) 값은 항상 첫 프레임에 최종값이다.
-    await completeOnboardingAndConfirm(page);
+    // fix-precontract-whitelist: 기본 배경(club-academy)은 "남아 추가 평가"(EVT-CON-020 A →
+    // EVT-CON-023)만으로 끝나 애초에 입단 테스트가 없는 경로다(진로_아카데미 태그, SCR-008 대상
+    // 아님). SCR-008은 "학교팀"(school) 이상 배경에서 진로_하부리그·진로_입단테스트 태그를 거쳐
+    // EVT-CON-003이 뜰 때만 존재하므로, 이 테스트는 school 배경으로 명시해 그 경로를 강제한다.
+    await completeOnboardingAndConfirm(page, /학교팀에서 만든 기록/);
 
     let reachedTryout = false;
     for (let step = 0; step < 10 && !reachedTryout; step += 1) {

@@ -11,6 +11,7 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { loadContentPack, loadRuleset } from '@offside/content';
 import type { Offer, Pending } from '@offside/domain';
+import type { ServiceSeasonCurrent } from '@offside/contracts';
 import { MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -21,6 +22,7 @@ import {
 import { createAppEngine, type AppEngine } from '../engine/engine.js';
 import { routeTree } from '../routeTree.gen.js';
 import { careerQueryOptions } from '../engine/use-career.js';
+import { FALLBACK_SERVICE_SEASON } from '../engine/versions.js';
 import { queryClient } from '../shared/query-client.js';
 import { useUiStore } from '../shared/ui-store.js';
 import {
@@ -36,6 +38,23 @@ vi.mock('../engine/engine.js', async (importOriginal) => {
   return {
     ...actual,
     getAppEngine: () => engineHolder.promise,
+  };
+});
+
+// createCareer는 setTestEngine()의 ruleset/pack이 아니라 resolveServiceSeason()(현재 서비스 시즌)의
+// 버전으로 새 커리어를 고정한다(career-actions.ts). 실제 fetch가 없는 jsdom에서는 원래
+// FALLBACK_SERVICE_SEASON(ACTIVE_RULESET_VERSION)으로 떨어지는데, 그러면 이 파일의 "preContract
+// 없는 룰셋" 테스트가 운영 승격으로 ACTIVE 자체가 preContract 있는 룰셋이 되는 순간 조용히 깨진다
+// (fixture가 아니라 전역 상수에 우연히 의존) — career-actions.test.ts의 service-season mock과 같은
+// 패턴으로 기본값은 기존 동작(FALLBACK_SERVICE_SEASON)을 유지하고, 필요한 테스트만 명시적으로
+// preContract 없는 pair로 덮어써 ACTIVE 값과 무관하게 만든다.
+const serviceSeasonHolder = vi.hoisted(() => ({ current: undefined as undefined | ServiceSeasonCurrent }));
+vi.mock('../engine/service-season.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../engine/service-season.js')>();
+  return {
+    ...actual,
+    resolveServiceSeason: () => Promise.resolve(serviceSeasonHolder.current ?? FALLBACK_SERVICE_SEASON),
+    resolveServiceSeasonId: () => Promise.resolve((serviceSeasonHolder.current ?? FALLBACK_SERVICE_SEASON).id),
   };
 });
 
@@ -131,6 +150,7 @@ async function setPending(careerId: string, pending: Pending) {
 
 beforeEach(() => {
   setTestEngine();
+  serviceSeasonHolder.current = undefined;
   queryClient.clear();
   useUiStore.setState({
     theme: 'SYSTEM',
@@ -195,12 +215,16 @@ describe('T-4-014 C9: SCR-017 전부 거절 버튼 문구는 시장 종류에 �
   });
 });
 
-// 리뷰 결함 수정(첫 계약 흐름 PR): offerRules.preContract가 없는 룰셋(1.7.1 이하, 현재 운영 활성)은
+// 리뷰 결함 수정(첫 계약 흐름 PR): offerRules.preContract가 없는 룰셋(1.7.1 이하, 승격 전 운영 활성)은
 // 첫 계약 제안 화면 eyebrow가 "스카우트 평가" 서사로 바뀌면 안 된다 — 그 서사는 1.7.2+ 브리지
-// 이벤트 가드가 실제로 켜졌을 때만 성립한다. setTestEngine()은 preContract 키가 없는 1.0.0을 쓴다.
+// 이벤트 가드가 실제로 켜졌을 때만 성립한다. createCareer는 setTestEngine()의 ruleset이 아니라
+// resolveServiceSeason()의 버전으로 새 커리어를 고정하므로(career-actions.ts), ACTIVE_RULESET_VERSION
+// 자체가 무엇이든(운영 승격으로 preContract 있는 룰셋이 되어도) 이 테스트가 "구 룰셋" 시나리오를
+// 계속 재현하도록 serviceSeasonHolder를 preContract 없는 1.0.0/0.1.0으로 명시 고정한다.
 describe('첫 계약 제안 화면 eyebrow는 룰셋 preContract 유무로 갈린다', () => {
   it('preContract가 없는 룰셋(예: 1.0.0, 1.7.1 이하와 동일 형태)에서는 기존 "새로운 유니폼"을 보여준다', async () => {
     const engine = setTestEngine();
+    serviceSeasonHolder.current = { ...FALLBACK_SERVICE_SEASON, rulesetVersion: '1.0.0', contentPackVersion: '0.1.0' };
     const careerId = await confirmedCareerId(engine);
     await queryClient.ensureQueryData(careerQueryOptions(careerId));
     await setPending(careerId, {

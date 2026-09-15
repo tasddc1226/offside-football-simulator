@@ -4,14 +4,14 @@
 import { PACK_VERSIONS, RULESET_VERSIONS } from '@offside/content';
 import type { ServiceSeasonCurrent } from '@offside/contracts';
 
-export const ACTIVE_RULESET_VERSION = '1.7.1';
-export const ACTIVE_CONTENT_PACK_VERSION = '0.6.5';
+export const ACTIVE_RULESET_VERSION = '1.7.2';
+export const ACTIVE_CONTENT_PACK_VERSION = '0.6.6';
 
 /**
  * T-2-012 D-54: 더 이상 "활성 시즌"이 아니다 — 서버가 `ACTIVE_SERVICE_SEASON_ID`(env var)로 가리키는
  * 현재 서비스 시즌을 `engine/service-season.ts`가 조회한다. 이 값은 그 조회가 실패(오프라인·API
  * 오류)하고 kv-store 캐시도 없을 때만 쓰는 최후 폴백이다. id·이름·기간은 apps/api/seeds/local.sql의
- * svc_kickoff와 같고, 룰셋·팩만 운영 승격 목표 manifest를 따른다(1.7.1/0.6.5 승격, 2026-09-15).
+ * svc_kickoff와 같고, 룰셋·팩만 운영 승격 목표 manifest를 따른다(1.7.2/0.6.6 승격, 2026-09-15).
  */
 export const FALLBACK_SERVICE_SEASON_ID = 'svc_kickoff';
 export const FALLBACK_SERVICE_SEASON: ServiceSeasonCurrent = {

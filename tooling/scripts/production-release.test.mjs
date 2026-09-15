@@ -19,7 +19,7 @@ const proposal = validateProposal({
 
 describe('production release guards', () => {
   it('keeps non-production seeds and staging expectations on the release target', () => {
-    const expectedPair = "'1.7.1', '0.6.5'";
+    const expectedPair = "'1.7.2', '0.6.6'";
     const synchronizedFiles = [
       '../../apps/api/seeds/bootstrap-non-production.sql',
       '../../apps/api/seeds/local.sql',
@@ -33,9 +33,9 @@ describe('production release guards', () => {
         expect(source, path).toContain(expectedPair);
       } else {
         expect(source, path).toMatch(/rulesetVersion|expectedRulesetVersion/);
-        expect(source, path).toContain("'1.7.1'");
+        expect(source, path).toContain("'1.7.2'");
         expect(source, path).toMatch(/contentPackVersion|expectedContentPackVersion/);
-        expect(source, path).toContain("'0.6.5'");
+        expect(source, path).toContain("'0.6.6'");
       }
     }
   });
@@ -68,12 +68,12 @@ describe('production release guards', () => {
     ]);
   });
 
-  it('targets the 1.7.1/0.6.5 manifest from the actual 1.7.0/0.6.4 predecessor', () => {
-    expect(PRODUCTION_SEASON.rulesetVersion).toBe('1.7.1');
-    expect(PRODUCTION_SEASON.contentPackVersion).toBe('0.6.5');
+  it('targets the 1.7.2/0.6.6 manifest from the actual 1.7.1/0.6.5 predecessor', () => {
+    expect(PRODUCTION_SEASON.rulesetVersion).toBe('1.7.2');
+    expect(PRODUCTION_SEASON.contentPackVersion).toBe('0.6.6');
     expect(PREVIOUS_PRODUCTION_VERSION).toEqual({
-      rulesetVersion: '1.7.0',
-      contentPackVersion: '0.6.4',
+      rulesetVersion: '1.7.1',
+      contentPackVersion: '0.6.5',
     });
   });
 
@@ -86,10 +86,10 @@ describe('production release guards', () => {
     expect(() => decideSeason([{ ...proposal, rulesetVersion: '1.0.0' }], proposal)).toThrow(
       'different ACTIVE',
     );
-    // 두 세대 전 manifest(1.5.0/0.6.0)는 더 이상 승격 출발점이 아니다.
+    // 두 세대 전 manifest(1.7.0/0.6.4)는 더 이상 승격 출발점이 아니다.
     expect(() =>
       decideSeason(
-        [{ ...proposal, rulesetVersion: '1.5.0', contentPackVersion: '0.6.0' }],
+        [{ ...proposal, rulesetVersion: '1.7.0', contentPackVersion: '0.6.4' }],
         proposal,
       ),
     ).toThrow('different ACTIVE');
@@ -105,17 +105,17 @@ describe('production release guards', () => {
     const previous = { ...proposal, ...PREVIOUS_PRODUCTION_VERSION };
     const decision = decideSeason([previous], proposal);
     expect(decision.action).toBe('activate');
-    expect(decision.sql).toContain("ruleset_version = '1.7.0'");
-    expect(decision.sql).toContain("content_pack_version = '0.6.4'");
-    expect(decision.sql).toContain("SET ruleset_version = '1.7.1', content_pack_version = '0.6.5'");
+    expect(decision.sql).toContain("ruleset_version = '1.7.1'");
+    expect(decision.sql).toContain("content_pack_version = '0.6.5'");
+    expect(decision.sql).toContain("SET ruleset_version = '1.7.2', content_pack_version = '0.6.6'");
     expect(decision.sql).toContain("starts_at = '2026-09-05T15:00:00Z'");
     expect(decision.sql).toContain('ends_at IS NULL');
     expect(decision.sql).not.toMatch(/SET (?:starts_at|ends_at|status|challenge_set_id|is_test)/);
     expect(decision.rollbackSql).toContain(
-      "SET ruleset_version = '1.7.0', content_pack_version = '0.6.4'",
+      "SET ruleset_version = '1.7.1', content_pack_version = '0.6.5'",
     );
-    expect(decision.rollbackSql).toContain("ruleset_version = '1.7.1'");
-    expect(decision.rollbackSql).toContain("content_pack_version = '0.6.5'");
+    expect(decision.rollbackSql).toContain("ruleset_version = '1.7.2'");
+    expect(decision.rollbackSql).toContain("content_pack_version = '0.6.6'");
     expect(decision.rollbackSql).toContain("starts_at = '2026-09-05T15:00:00Z'");
     expect(decision.rollbackSql).toContain('ends_at IS NULL');
     expect(() => decideSeason([{ ...previous, contentPackVersion: '0.4.0' }], proposal)).toThrow(
@@ -124,7 +124,7 @@ describe('production release guards', () => {
     // 구 룰셋과 대상 팩을 섞은 pair도 출발점으로 인정하지 않는다.
     expect(() =>
       decideSeason(
-        [{ ...previous, rulesetVersion: '1.5.0', contentPackVersion: '0.6.5' }],
+        [{ ...previous, rulesetVersion: '1.5.0', contentPackVersion: '0.6.6' }],
         proposal,
       ),
     ).toThrow('different ACTIVE');
