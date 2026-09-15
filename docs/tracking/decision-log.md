@@ -36,6 +36,7 @@
 - 10:20 러너 진단(읽기 전용): 이 맥 재부팅(약 10:08)으로 nohup 임시 러너 프로세스 종료, 등록은 유지(재가동은 `~/offside-runner-tmp/run.sh`), 사용자 맥북 러너도 offline, 큐 대기 run 없음(마지막 CI 58f3cd4 성공). 재가동은 지시 전 보류.
 - 10:37 사용자 지시로 임시 러너 재가동(`~/offside-runner-tmp/run.sh`, online, 6a16982 CI 즉시 실행). 재부팅 시 다시 죽는 구조(nohup)라 필요하면 같은 명령으로 재가동.
 - 10:45 #222(fc00e50) 독립 리뷰 → Codex 회신: 옛 룰셋 경로 불변(leagueLedgerRules 없으면 스케줄·원장·결산 옛 코드, fc00e50에서 1.5.0 200커리어 stateHash 200/200). ~~Critical: contracts 스키마 미확장~~ **10:50 철회(오탐)** — PR 파일 목록을 content·domain·tooling으로 필터해 contracts 변경(career-state.ts +226, 테스트 2파일)을 놓쳤고 스키마는 main 트리를 읽음. fc00e50 트리에는 fixtureId·leagueRound·leagueLedger·finalLeagueTable이 exactOptional로 있고 불변식 검사도 있음. 교훈: 리뷰 근거는 PR head 트리(`git show SHA:path`)만. Important: 팩 compat 1줄 병합, Legacy 게이트 공존, career-sim.ts 정책 전달 3곳 보존, 스키마 superRefine 병합.
+- 10:47 **사용자 결정(d) 확정(Codex 경유 전달): 룰셋 1.7.0은 1.6.1 밸런스(growthRules·retirementRules)를 그대로 계승하고 leagueLedgerRules를 추가.** Legacy 게이트는 (1.7.0, 최종 팩)→1.2.0. 팩 번호/compat는 최소 변경 계약 검토 후 Codex가 확정. 검증 계획(Claude): 통합 SHA에서 1.7.0 1천 커리어 집계를 1.6.1 1만과 대조 + 결정론 2회 동일 + 1.5.0 200·1.6.1 1천 회귀 불변. 2라운드 항목 (a)(b)(c)는 계속 대기.
 
 ## 2026-09-14 (D-79 — 밸런스 조정용 헤드리스 커리어 일괄 시뮬레이션 CLI, 도메인 직접 호출 방식 — 사용자 요청)
 
