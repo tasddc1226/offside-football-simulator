@@ -80,7 +80,10 @@ export function decodeSnapshot(snapshot: CareerSnapshot): DecodeResult {
   if (getCareerStateInvariantIssues(parsed).length > 0) {
     return { ok: false, reason: 'INVALID_STATE' };
   }
-  if (state.rulesetVersion === '1.7.0' && state.season?.leagueLedger !== undefined) {
+  if (
+    (state.rulesetVersion === '1.7.0' || state.rulesetVersion === '1.7.1') &&
+    state.season?.leagueLedger !== undefined
+  ) {
     try {
       // 저장된 roster snapshot만으로 복원되는 canonical fixture ordinal·whole-round 형태는
       // ruleset registry가 없는 decode/import 경계에서도 검증할 수 있다.

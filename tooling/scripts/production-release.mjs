@@ -13,15 +13,15 @@ export const PRODUCTION_SEASON = Object.freeze({
   id: 'svc_season_1',
   name: '시즌 1',
   status: 'ACTIVE',
-  rulesetVersion: '1.7.0',
-  contentPackVersion: '0.6.4',
+  rulesetVersion: '1.7.1',
+  contentPackVersion: '0.6.5',
   isTest: 0,
 });
 
 // decideSeason은 DB 행이 정확히 이 pair일 때만 PRODUCTION_SEASON으로 compare-and-set한다.
 export const PREVIOUS_PRODUCTION_VERSION = Object.freeze({
   rulesetVersion: '1.7.0',
-  contentPackVersion: '0.6.3',
+  contentPackVersion: '0.6.4',
 });
 
 function rowsFromWrangler(value) {

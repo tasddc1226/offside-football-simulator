@@ -22,8 +22,8 @@
 | 신규 운영 시즌 | `svc_season_1`, 표시명 `시즌 1`, ACTIVE, isTest=false |
 | 기간 | 2026-09-06 00:00 KST부터, 종료일 미정(`endsAt: null`) |
 | 문의 | `tasddc1569@gmail.com` |
-| 현재 신규 커리어 버전 | ruleset 1.7.0 / content pack 0.6.3 (2026-09-15 작업 입력 기준 운영 current; 기존 커리어는 생성 당시 버전 유지) |
-| 다음 승격 목표        | ruleset 1.7.0 / content pack 0.6.4 (코드·런북 준비; 배포 전에는 운영 current가 아님) |
+| 현재 신규 커리어 버전 | ruleset 1.7.0 / content pack 0.6.4 (2026-09-15 작업 입력 기준 운영 current; 기존 커리어는 생성 당시 버전 유지) |
+| 다음 승격 목표        | ruleset 1.7.1 / content pack 0.6.5 (코드·런북 준비; 배포 전에는 운영 current가 아님) |
 
 ## 최초 공개 결과
 
@@ -456,6 +456,41 @@ workflow artifact의 `season-rollback.sql`은 행이 여전히 정확한 `1.7.0/
 먼저 머지하고 fallback·seed·smoke·rehearsal도 함께 맞춘다. 그 전에는 Production Release `deploy`나
 `set-season-end`를 실행하지 않는다. DB Time Travel 복구나 사용자 기록 삭제를 manifest rollback
 대신 사용하지 않는다.
+
+## 시즌 1 manifest 6차 승격: 1.7.0/0.6.4 → 1.7.1/0.6.5 (사용자 승인 2026-09-15)
+
+운영 current `1.7.0/0.6.4`는 FAST 신규 커리어에서 EVENT 슬롯이 모두 optional이라 상황 기반
+연속 사건의 root를 열 수 없다. 이 승격은 기존 파일을 수정하지 않고, `1.7.0`을 복사한
+`1.7.1`에서 FAST 달력 step 4·5 EVENT 슬롯만 `required: true`로 바꾸며, 내용이 동일한
+`0.6.5`를 `1.7.1` 전용 pair로 등록한다. 성장·은퇴·Legacy 1.2·대표팀·리그 원장 정책과
+과거 커리어 replay는 그대로 유지한다.
+
+두 슬롯이 모두 일반 결정을 여는 것은 아니므로 시즌당 실제 추가 일반 선택 수는 `+0..2`다.
+후속은 persistent queue가 아니라 마지막 `EVENT_RESOLVED` 기록에서 파생되므로 step 5에서 처음
+root가 열리면 같은 시즌에 후속 슬롯이 없고, step 4 root 뒤 step 5 강제 부상이 먼저 열리면
+부상 해소가 마지막 기록을 덮어 후속이 중단될 수 있다. 새 follow-up queue나 저장 마이그레이션은
+이번 승격 범위에 넣지 않는다.
+
+### 실행 순서와 게이트
+
+1. Node `22.23.1`로 새 ruleset/pack checksum, FAST 자연 진행, 포지션 필터, linked follow-up,
+   같은 seed의 `1.7.0/0.6.4` zero-root 비교, 리그 원장·은퇴·과거 replay 회귀를 검증한다.
+2. PR merge 뒤 main CI가 staging `svc_line_test`를 `1.7.1/0.6.5`로 upsert하고 smoke가 current
+   manifest를 검증해야 한다. 실제 staging에서는 신규 커리어 생성부터 step 3 챕터 해소,
+   step 4·5 사건 선택·저장·새로고침과 기존 `1.7.0/0.6.4` 커리어 열림을 별도로 확인한다.
+3. Production Release `mode=preflight`, `expected_sha`=배포할 최신 main으로 실행해 운영 행이
+   고정 메타데이터와 `1.7.0/0.6.4`로 정확한지 확인한다. 실행 중 main push를 멈춘다.
+4. root만 `mode=deploy`, `confirmation=DEPLOY_PRODUCTION`, 시작
+   `2026-09-05T15:00:00Z`, 종료 비움, `challenge_set_id=cs_season_1`로 실행한다. plan은
+   쓰기 전 `activate`, CAS 뒤 재조회에서 `noop`이어야 한다.
+5. current API가 `1.7.1/0.6.5`를 반환하는지와 health·CORS·web 200을 확인하고, 360px 실제
+   신규 플레이로 사건 root/후속, PUT 200, 새로고침 뒤 동일 ID/revision/hash를 검증한다.
+
+### 롤백
+
+workflow artifact의 역 CAS는 행이 여전히 정확한 `1.7.1/0.6.5`일 때만 두 버전 필드를
+`1.7.0/0.6.4`로 돌린다. 자동 실행하지 않으며 `meta.changes` 합 1과 D1/API 재조회를 확인한다.
+롤백 뒤에도 승인 목록의 `1.7.1/0.6.5`를 제거하지 않아 이미 생성된 커리어를 보호한다.
 
 ## 공지 테이블 마이그레이션 + 운영 공지 seed 실행 (2026-09-14, notices)
 

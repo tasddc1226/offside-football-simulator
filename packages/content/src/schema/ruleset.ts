@@ -1323,10 +1323,10 @@ export const RulesetSchema = z
     marketValueRules: MarketValueRulesSchema,
   })
   .superRefine((ruleset, ctx) => {
-    if (ruleset.version === '1.7.0' && ruleset.leagueLedgerRules === undefined) {
+    if ((ruleset.version === '1.7.0' || ruleset.version === '1.7.1') && ruleset.leagueLedgerRules === undefined) {
       ctx.addIssue({
         code: 'custom',
-        message: '1.7.0 룰셋은 leagueLedgerRules를 명시해야 한다.',
+        message: '1.7.x 룰셋은 leagueLedgerRules를 명시해야 한다.',
         path: ['leagueLedgerRules'],
       });
     }

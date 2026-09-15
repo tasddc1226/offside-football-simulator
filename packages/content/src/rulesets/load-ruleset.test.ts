@@ -5,6 +5,7 @@ describe('loadRuleset', () => {
   it('exports RULESET_VERSIONS including 1.0.0', () => {
     expect(RULESET_VERSIONS).toContain('1.0.0');
     expect(RULESET_VERSIONS).toContain('1.7.0');
+    expect(RULESET_VERSIONS).toContain('1.7.1');
     const ledgerRuleset = loadRuleset('1.7.0');
     const balancedRuleset = loadRuleset('1.6.1');
     expect(ledgerRuleset.growthRules).toEqual(balancedRuleset.growthRules);
@@ -17,6 +18,20 @@ describe('loadRuleset', () => {
       tieBreakers: ['POINTS', 'GOAL_DIFFERENCE', 'GOALS_FOR', 'TEAM_ID'],
     });
     expect(ledgerRuleset.leagues.every((league) => league.teamCount <= 16)).toBe(true);
+    const eventExposureRuleset = loadRuleset('1.7.1');
+    const { version: previousVersion, leagueCalendar: previousCalendar, ...previousPolicies } = ledgerRuleset;
+    const { version: nextVersion, leagueCalendar: nextCalendar, ...nextPolicies } = eventExposureRuleset;
+    expect(previousVersion).toBe('1.7.0');
+    expect(nextVersion).toBe('1.7.1');
+    expect(nextPolicies).toEqual(previousPolicies);
+    expect(nextCalendar).toEqual({
+      ...previousCalendar,
+      steps: previousCalendar.steps.map((step) =>
+        step.index === 4 || step.index === 5
+          ? { ...step, slots: step.slots.map((slot) => ({ ...slot, required: true })) }
+          : step,
+      ),
+    });
   });
 
   it('loads and validates ruleset 1.0.0 synchronously', () => {

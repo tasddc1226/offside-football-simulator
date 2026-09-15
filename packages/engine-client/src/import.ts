@@ -58,7 +58,10 @@ export async function importCareerFromServer(
       const ruleset = meta.rulesetForVersion?.(decoded.snapshot.rulesetVersion);
       if (ruleset !== undefined) {
         assertSeasonLeagueLedgerInvariant(ruleset, decoded.snapshot.state.season);
-      } else if (decoded.snapshot.rulesetVersion === '1.7.0') {
+      } else if (
+        decoded.snapshot.rulesetVersion === '1.7.0' ||
+        decoded.snapshot.rulesetVersion === '1.7.1'
+      ) {
         throw new RangeError('지원 룰셋 import에는 ruleset registry가 필요하다.');
       }
     } catch {

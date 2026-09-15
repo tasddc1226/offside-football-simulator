@@ -296,6 +296,20 @@ function toResolveEventOutcomes(outcomes: EventDefinition['choices'][number]['ou
   });
 }
 
+function toResolveChapterOutcomes(
+  outcomes: ChapterDefinition['decisions'][number]['options'][number]['outcomes'],
+) {
+  return outcomes.map((outcome) => ({
+    id: outcome.id,
+    kind: outcome.kind,
+    weight: outcome.weight,
+    effects: outcome.effects,
+    ratingDeltaTenths: outcome.ratingDeltaTenths,
+    ...(outcome.addTags === undefined ? {} : { addTags: outcome.addTags }),
+    ...(outcome.removeTags === undefined ? {} : { removeTags: outcome.removeTags }),
+  }));
+}
+
 describe('selectChapterCandidates: 실제 1.0.0 룰셋·0.1.0 팩', () => {
   it('CHAPTER 모드로 유스 첫 시즌을 재생하면 step 3에서 데뷔전 챕터(CHP-MATCH-001)가 열린다', () => {
     const ruleset = loadRuleset('1.0.0');
@@ -495,4 +509,258 @@ describe('selectChapterCandidates: 실제 1.0.0 룰셋·0.1.0 팩', () => {
       expect(continued.snapshot.state.pending).toEqual({ kind: 'EVENT', eventId: 'EVT-REL-121', version: 1 });
     }
   });
+
+  it('1.7.1/0.6.5 FAST 신규 커리어 24개는 자연 진행으로 root와 후속 사건을 열고 포지션 조건을 지킨다', () => {
+    const rulesetVersion = '1.7.1';
+    const contentPackVersion = '0.6.5';
+    const ruleset = loadRuleset(rulesetVersion);
+    const pack = loadContentPack(contentPackVersion);
+    type PairRuntime = {
+      rulesetVersion: string;
+      contentPackVersion: string;
+      ruleset: ReturnType<typeof loadRuleset>;
+      pack: ContentPack;
+    };
+    const currentRuntime: PairRuntime = { rulesetVersion, contentPackVersion, ruleset, pack };
+
+    const execute = (
+      runtime: PairRuntime,
+      snapshot: DomainSnapshot | null,
+      type: Command['type'],
+      payload: unknown,
+    ): DomainSnapshot => {
+      const result = simulate({
+        snapshot,
+        command: buildCommand(type, snapshot?.revision ?? 0, payload),
+        ruleset: runtime.ruleset,
+        rulesetVersion: runtime.rulesetVersion,
+        contentPackVersion: runtime.contentPackVersion,
+      });
+      if (!result.ok) throw new Error(`${type} 실패: ${result.error.code} ${result.error.message}`);
+      return result.snapshot;
+    };
+
+    const resolvePendingEvent = (
+      runtime: PairRuntime,
+      snapshot: DomainSnapshot,
+    ): DomainSnapshot => {
+      const pending = snapshot.state.pending;
+      if (pending?.kind !== 'EVENT' && pending?.kind !== 'INJURY') {
+        throw new Error(`해소할 이벤트가 아니다: ${pending?.kind ?? 'none'}`);
+      }
+      const definition = runtime.pack.eventsById.get(pending.eventId);
+      if (definition === undefined) throw new Error(`팩에 이벤트 정의가 없다: ${pending.eventId}`);
+      const choice = definition.choices[0]!;
+      return execute(runtime, snapshot, 'RESOLVE_EVENT', {
+        eventId: definition.id,
+        definitionVersion: definition.version,
+        choiceId: choice.id,
+        outcomes: toResolveEventOutcomes(choice.outcomes),
+        ...(pending.kind === 'INJURY' ? { rehabPlan: choice.rehabPlan } : {}),
+      });
+    };
+
+    const resolvePendingChapter = (
+      runtime: PairRuntime,
+      snapshot: DomainSnapshot,
+    ): DomainSnapshot => {
+      const pending = snapshot.state.pending;
+      if (pending?.kind !== 'CHAPTER') throw new Error('해소할 CHAPTER pending이 없다.');
+      const definition = runtime.pack.chaptersById.get(pending.chapterId);
+      if (definition === undefined) throw new Error(`팩에 챕터 정의가 없다: ${pending.chapterId}`);
+      const resolvedIds = new Set(pending.resolved.map((entry) => entry.decisionId));
+      const decision = definition.decisions.find((candidate) => !resolvedIds.has(candidate.id));
+      const option = decision?.options[0];
+      if (decision === undefined || option === undefined)
+        throw new Error('해소할 챕터 판단/선택지가 없다.');
+      return execute(runtime, snapshot, 'RESOLVE_CHAPTER', {
+        chapterId: definition.id,
+        definitionVersion: definition.version,
+        decisionId: decision.id,
+        optionId: option.id,
+        outcomes: toResolveChapterOutcomes(option.outcomes),
+      });
+    };
+
+    const startFastCareer = (
+      seed: string,
+      position: 'W' | 'GK',
+      runtime: PairRuntime = currentRuntime,
+    ): DomainSnapshot | null => {
+      let snapshot = execute(runtime, null, 'CREATE_CAREER', {
+        careerId: `car_fast-event-${position.toLowerCase()}-${seed}`,
+        seed,
+        simulationMode: 'FAST',
+        rulesetVersion: runtime.rulesetVersion,
+        contentPackVersion: runtime.contentPackVersion,
+      });
+      snapshot = execute(runtime, snapshot, 'UPDATE_PLAYER_DRAFT', {
+        draft: {
+          name: '테스트 선수',
+          gender: 'UNSPECIFIED',
+          nationalityCode: 'KR',
+          preferredFoot: 'RIGHT',
+        },
+      });
+      snapshot = execute(runtime, snapshot, 'UPDATE_PLAYER_DRAFT', {
+        draft: {
+          position,
+          archetypeId: position === 'GK' ? 'gk-shot-stopper' : 'inside-forward',
+          backgroundId: 'club-academy',
+        },
+      });
+      snapshot = execute(runtime, snapshot, 'CONFIRM_PLAYER', {});
+
+      for (let guard = 0; guard < 30 && snapshot.state.contract === null; guard += 1) {
+        const pending = snapshot.state.pending;
+        if (pending === null) {
+          snapshot = execute(runtime, snapshot, 'ADVANCE', {
+            eligibleEvents: selectEligibleEvents(runtime.pack, snapshot.state),
+            chapterCandidates: selectChapterCandidates(runtime.pack, snapshot.state),
+          });
+        } else if (pending.kind === 'EVENT' || pending.kind === 'INJURY') {
+          snapshot = resolvePendingEvent(runtime, snapshot);
+        } else if (pending.kind === 'OFFERS') {
+          const offer = pending.offers[0];
+          if (offer === undefined) throw new Error('OFFERS pending인데 offers가 비어 있다.');
+          snapshot = execute(runtime, snapshot, 'ACCEPT_OFFER', { offerId: offer.id });
+        } else {
+          throw new Error(`계약 전 예상하지 못한 pending: ${pending.kind}`);
+        }
+      }
+      if (snapshot.state.contract === null) throw new Error('계약까지 자연 진행하지 못했다.');
+
+      snapshot = execute(runtime, snapshot, 'START_SEASON', {
+        simulationMode: 'FAST',
+        serviceSeasonId: 'svc-fast-event-integration',
+      });
+      if (snapshot.state.pending?.kind === 'ROLE_PROPOSAL') {
+        snapshot = execute(runtime, snapshot, 'RESOLVE_ROLE', { decision: 'ACCEPT' });
+      }
+
+      for (let guard = 0; guard < 12; guard += 1) {
+        const pending = snapshot.state.pending;
+        if (pending?.kind === 'EVENT' && /-120$/.test(pending.eventId)) return snapshot;
+        if ((snapshot.state.season?.currentStep ?? 0) > 5 || pending?.kind === 'CONTRACT')
+          return null;
+        if (pending === null) {
+          snapshot = execute(runtime, snapshot, 'ADVANCE', {
+            eligibleEvents: selectEligibleEvents(runtime.pack, snapshot.state),
+            chapterCandidates: selectChapterCandidates(runtime.pack, snapshot.state),
+          });
+        } else if (pending.kind === 'INJURY' || pending.kind === 'EVENT') {
+          snapshot = resolvePendingEvent(runtime, snapshot);
+        } else if (pending.kind === 'CHAPTER') {
+          snapshot = resolvePendingChapter(runtime, snapshot);
+        } else {
+          throw new Error(`root 전 예상하지 못한 pending: ${pending.kind}`);
+        }
+      }
+      return null;
+    };
+
+    const fieldRootCounts = new Map<string, number>();
+    const goalkeeperRootCounts = new Map<string, number>();
+    let linkedFollowUps = 0;
+    let injuryInterruptions = 0;
+    let lateRootWithoutFollowUpSlot = 0;
+    let noRoot = 0;
+    let representative: { root: string; followUp: string } | null = null;
+    let repeatSeed: { seed: string; position: 'W' | 'GK'; stateHash: string } | null = null;
+    const exposedSeeds: Array<{ seed: string; position: 'W' | 'GK' }> = [];
+    for (const [position, samples, counts] of [
+      ['W', 16, fieldRootCounts],
+      ['GK', 8, goalkeeperRootCounts],
+    ] as const) {
+      for (let index = 0; index < samples; index += 1) {
+        const seed = `fast-event-${position}-${index}`;
+        let snapshot = startFastCareer(seed, position);
+        if (snapshot === null) {
+          noRoot += 1;
+          continue;
+        }
+        repeatSeed ??= { seed, position, stateHash: snapshot.stateHash };
+        exposedSeeds.push({ seed, position });
+        const pending = snapshot.state.pending;
+        if (pending?.kind !== 'EVENT') throw new Error('root pending이 EVENT가 아니다.');
+        counts.set(pending.eventId, (counts.get(pending.eventId) ?? 0) + 1);
+        const definition = pack.eventsById.get(pending.eventId)!;
+        const choice = definition.choices[0]!;
+        const resolved = simulate({
+          snapshot,
+          command: buildCommand('RESOLVE_EVENT', snapshot.revision, {
+            eventId: definition.id,
+            definitionVersion: definition.version,
+            choiceId: choice.id,
+            outcomes: toResolveEventOutcomes(choice.outcomes),
+          }),
+          ruleset,
+          rulesetVersion,
+          contentPackVersion,
+        });
+        if (!resolved.ok) throw new Error(`root 해소 실패: ${resolved.error.code}`);
+        snapshot = resolved.snapshot;
+        const followUps = selectEligibleEvents(pack, snapshot.state);
+        expect(followUps).toHaveLength(1);
+        expect(followUps[0]?.eventId).toMatch(/-12[12]$/);
+        if (snapshot.state.currentStep === 5) {
+          lateRootWithoutFollowUpSlot += 1;
+          continue;
+        }
+        snapshot = execute(currentRuntime, snapshot, 'ADVANCE', {
+          eligibleEvents: followUps,
+          chapterCandidates: selectChapterCandidates(pack, snapshot.state),
+        });
+        if (snapshot.state.pending?.kind === 'INJURY') {
+          injuryInterruptions += 1;
+        } else {
+          expect(snapshot.state.pending).toMatchObject({ kind: 'EVENT' });
+          if (snapshot.state.pending?.kind === 'EVENT') {
+            expect(snapshot.state.pending.eventId).toBe(followUps[0]?.eventId);
+            linkedFollowUps += 1;
+            representative ??= { root: definition.id, followUp: snapshot.state.pending.eventId };
+          }
+        }
+      }
+    }
+
+    expect(repeatSeed).not.toBeNull();
+    if (repeatSeed !== null) {
+      expect(startFastCareer(repeatSeed.seed, repeatSeed.position)?.stateHash).toBe(
+        repeatSeed.stateHash,
+      );
+    }
+    expect([...fieldRootCounts.keys()].every((id) => /-120$/.test(id))).toBe(true);
+    expect(fieldRootCounts.size).toBeGreaterThan(1);
+    expect(Object.fromEntries([...fieldRootCounts.entries()].sort())).toEqual({
+      'EVT-MEDIA-120': 4,
+      'EVT-REL-120': 3,
+    });
+    expect(
+      [...goalkeeperRootCounts.keys()].every(
+        (id) => id === 'EVT-MEDIA-120' || id === 'EVT-CON-120',
+      ),
+    ).toBe(true);
+    expect(goalkeeperRootCounts.size).toBeGreaterThan(0);
+    expect(Object.fromEntries([...goalkeeperRootCounts.entries()].sort())).toEqual({
+      'EVT-MEDIA-120': 4,
+    });
+    expect(linkedFollowUps).toBe(6);
+    expect(injuryInterruptions).toBe(1);
+    expect(lateRootWithoutFollowUpSlot).toBe(4);
+    expect(noRoot).toBe(13);
+    expect(linkedFollowUps + injuryInterruptions + lateRootWithoutFollowUpSlot + noRoot).toBe(24);
+    expect(representative).not.toBeNull();
+
+    const baselineRuntime: PairRuntime = {
+      rulesetVersion: '1.7.0',
+      contentPackVersion: '0.6.4',
+      ruleset: loadRuleset('1.7.0'),
+      pack: loadContentPack('0.6.4'),
+    };
+    expect(exposedSeeds).toHaveLength(11);
+    for (const sample of exposedSeeds) {
+      expect(startFastCareer(sample.seed, sample.position, baselineRuntime)).toBeNull();
+    }
+  }, 60_000);
 });

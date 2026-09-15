@@ -372,6 +372,8 @@ describe('CareerStateSchema', () => {
     expect(CareerStateSchema.safeParse(withMeeting).success).toBe(true);
     expect(getCareerStateInvariantIssues({ rulesetVersion: '1.7.0', season: { index: 1, teamId: 'team-1' } }))
       .toContainEqual(expect.objectContaining({ path: ['season', 'leagueLedger'] }));
+    expect(getCareerStateInvariantIssues({ rulesetVersion: '1.7.1', season: { index: 1, teamId: 'team-1' } }))
+      .toContainEqual(expect.objectContaining({ path: ['season', 'leagueLedger'] }));
     expect(getCareerStateInvariantIssues({ rulesetVersion: '1.6.0', season: { index: 1, teamId: 'team-1' } }))
       .toEqual([]);
     const finalTable = {
@@ -411,6 +413,10 @@ describe('CareerStateSchema', () => {
     })).toContainEqual(expect.objectContaining({ path: ['seasonHistory', 0, 'result', 'finalLeagueTable'] }));
     expect(getCareerStateInvariantIssues({
       rulesetVersion: '1.7.0',
+      seasonHistory: [{ result: { index: 1, teamId: 'team-2', finalLeagueTable: finalTable } }],
+    })).toContainEqual(expect.objectContaining({ path: ['seasonHistory', 0, 'result', 'finalLeagueTable'] }));
+    expect(getCareerStateInvariantIssues({
+      rulesetVersion: '1.7.1',
       seasonHistory: [{ result: { index: 1, teamId: 'team-2', finalLeagueTable: finalTable } }],
     })).toContainEqual(expect.objectContaining({ path: ['seasonHistory', 0, 'result', 'finalLeagueTable'] }));
   });

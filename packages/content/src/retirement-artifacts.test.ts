@@ -52,6 +52,15 @@ describe('loadRetirementArtifacts', () => {
     });
     expect(varietyArtifacts.contentPackChecksum).not.toBe(ledgerArtifacts.contentPackChecksum);
     expect(varietyArtifacts.legacyReferencePopulation).toBeUndefined();
+    const exposureArtifacts = loadRetirementArtifacts('1.7.1', '0.6.5');
+    expect(exposureArtifacts).toMatchObject({
+      rulesetVersion: '1.7.1',
+      contentPackVersion: '0.6.5',
+      legacyVersion: '1.2.0',
+    });
+    expect(exposureArtifacts.rulesetChecksum).not.toBe(varietyArtifacts.rulesetChecksum);
+    expect(exposureArtifacts.contentPackChecksum).toBe(varietyArtifacts.contentPackChecksum);
+    expect(exposureArtifacts.legacyReferencePopulation).toBeUndefined();
   });
 
   it('activates the published Legacy 1.1 reference only for the 1.1/0.3 release pair', () => {

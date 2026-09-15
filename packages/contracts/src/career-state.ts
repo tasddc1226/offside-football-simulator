@@ -1221,7 +1221,7 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
 
   // 신규 ledger 지원은 버전별 명시 계약이다. Envelope/API load 경계는 룰셋 전체를 로드하지 않으므로
   // 여기서는 필수 존재와 자기 binding만 확인하고, roster/league/schedule은 domain 실행 경계가 검증한다.
-  if (value.rulesetVersion === '1.7.0' && isRecord(season)) {
+  if ((value.rulesetVersion === '1.7.0' || value.rulesetVersion === '1.7.1') && isRecord(season)) {
     const ledger = season.leagueLedger;
     if (!isRecord(ledger)) {
       issues.push({ path: ['season', 'leagueLedger'], message: '지원 룰셋 활성 시즌에는 leagueLedger가 있어야 한다.' });
@@ -1229,7 +1229,7 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
       issues.push({ path: ['season', 'leagueLedger'], message: 'leagueLedger가 활성 시즌 index/team과 일치해야 한다.' });
     }
   }
-  if (value.rulesetVersion === '1.7.0' && Array.isArray(value.seasonHistory)) {
+  if ((value.rulesetVersion === '1.7.0' || value.rulesetVersion === '1.7.1') && Array.isArray(value.seasonHistory)) {
     value.seasonHistory.forEach((summary, index) => {
       const result = isRecord(summary) ? summary.result : undefined;
       const finalTable = isRecord(result) ? result.finalLeagueTable : undefined;
