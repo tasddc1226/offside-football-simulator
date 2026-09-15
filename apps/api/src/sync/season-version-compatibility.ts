@@ -8,7 +8,7 @@ const PRODUCTION_SEASON_ID = 'svc_season_1';
  * 마지막 두 항목이 같아야 한다.
  *
  * 1.1.0/0.3.0은 2026-09-06 최초 공개 manifest다. 그 시점에 만들어져 아직 최초 sync를 하지 않은
- * 오프라인 커리어(IndexedDB 정본)가 남아 있을 수 있으므로, 이후 승격(1.4.0/0.5.1·1.5.0/0.6.0)에서도
+ * 오프라인 커리어(IndexedDB 정본)가 남아 있을 수 있으므로, 이후 승격에서도
  * 목록에서 빼지 않는다. 시즌 행이 정확한 승인 pair일 때만 다른 승인 pair를 받아들이고, mixed pair·
  * 다른 과거 버전·다른 시즌 id는 여전히 거부한다.
  */
@@ -17,6 +17,7 @@ export const APPROVED_PRODUCTION_MANIFESTS: readonly VersionPair[] = Object.free
   Object.freeze({ rulesetVersion: '1.3.0', contentPackVersion: '0.5.0' }),
   Object.freeze({ rulesetVersion: '1.4.0', contentPackVersion: '0.5.1' }),
   Object.freeze({ rulesetVersion: '1.5.0', contentPackVersion: '0.6.0' }),
+  Object.freeze({ rulesetVersion: '1.7.0', contentPackVersion: '0.6.3' }),
 ]);
 
 function sameVersion(left: VersionPair, right: VersionPair): boolean {
