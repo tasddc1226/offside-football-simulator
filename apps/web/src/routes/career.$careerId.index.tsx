@@ -73,6 +73,7 @@ import { MotionPanel, type ScreenDirection } from '../shared/screen-motion.js';
 import { buildCurrentContractSummary, MARKET_REASON_LABEL_KO } from '../shared/transfer-view.js';
 import { GamePending } from '../shared/game-presentation.js';
 import { LeagueStandingsTable, leagueStandingSummary } from '../shared/league-standings.js';
+import { buildCurrentLeagueContext, CurrentLeagueContext } from '../shared/league-context.js';
 import { buildCareerClock, type CareerClockView } from '../shared/career-clock.js';
 import {
   careerStartYear,
@@ -838,7 +839,8 @@ function CareerDashboard() {
   const hasContract = state.contract !== null;
   const season = state.season;
   const room = deriveTacticalRoom(state, ruleset);
-  const currentLeagueRows = season?.leagueLedger === undefined
+  const currentLeagueContext = buildCurrentLeagueContext(season, ruleset);
+  const currentLeagueRows = currentLeagueContext === null || season?.leagueLedger === undefined
     ? null
     : standingsFromLedger(ruleset, season.leagueLedger);
   const currentLeague = season?.leagueLedger === undefined
@@ -929,6 +931,10 @@ function CareerDashboard() {
                   clock={clock}
                   startYear={startYear}
                 />
+
+                {currentLeagueContext !== null ? (
+                  <CurrentLeagueContext careerId={careerId} view={currentLeagueContext} />
+                ) : null}
 
                 {season !== null && state.clubMeeting?.goal.seasonIndex === season.index ? (
                   <section
@@ -1435,6 +1441,9 @@ function CareerDashboard() {
               >
                 {hasContract && state.contract ? (
                   <div className="flex flex-col gap-os-3">
+                    {currentLeagueContext !== null ? (
+                      <CurrentLeagueContext careerId={careerId} view={currentLeagueContext} />
+                    ) : null}
                     {marketPending !== null ? (
                       <div className="flex flex-col gap-os-2 rounded-os-m bg-os-surface-2 p-os-3">
                         <p className="font-os text-os-text" style={BODY_STYLE}>
