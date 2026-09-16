@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadContentPack } from './load-content-pack.ts';
+import { loadContentPack, PACK_VERSIONS } from './load-content-pack.ts';
 
 describe('loadContentPack', () => {
   it('0.1.0의 이벤트 개수가 11개이고 manifest.files의 events 목록과 id가 일치한다', () => {
@@ -311,5 +311,20 @@ describe('loadContentPack: 0.6.6', () => {
         }
       }
     }
+  });
+});
+
+describe('loadContentPack: 0.6.7', () => {
+  it('0.6.6 콘텐츠를 그대로 복사하고 1.7.3과만 호환된다', () => {
+    const previous = loadContentPack('0.6.6');
+    const pack = loadContentPack('0.6.7');
+
+    expect(PACK_VERSIONS).toContain('0.6.7');
+    expect(pack.manifest.contentPackVersion).toBe('0.6.7');
+    expect(pack.manifest.compatibleRulesetVersions).toEqual(['1.7.3']);
+    expect(pack.manifest.checksum).toBe(previous.manifest.checksum);
+    expect(pack.events).toEqual(previous.events);
+    expect(pack.chapters).toEqual(previous.chapters);
+    expect(pack.narrativeTokens).toEqual(previous.narrativeTokens);
   });
 });

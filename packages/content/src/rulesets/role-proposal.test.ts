@@ -10,8 +10,11 @@ import {
   computeTacticalFit,
   findTacticalStyle,
   rankPositionForPlayer,
+  squadRoleFromSelection,
   type AttributeKey,
   type Competitor,
+  type Position,
+  type Ruleset,
 } from '@offside/domain';
 import { loadRuleset } from './load-ruleset.ts';
 
@@ -22,6 +25,190 @@ const style = findTacticalStyle(ruleset, 'possession');
 function uniformAttributes(value: number): Record<AttributeKey, number> {
   return Object.fromEntries(ATTRIBUTE_KEYS.map((key) => [key, value])) as Record<AttributeKey, number>;
 }
+
+function strongCompetitor(position: Position, id: string): Competitor {
+  return {
+    id,
+    name: id,
+    position,
+    archetypeId: `${position.toLowerCase()}-test`,
+    attributes: uniformAttributes(90),
+    baseOvr: 90,
+    form: 90,
+    fitness: 90,
+    morale: 90,
+    tacticalFit: 90,
+    managerTrust: 90,
+    squadStatus: 90,
+    rolePromise: 'STARTER',
+  };
+}
+
+function proposalFor(
+  ruleset: Ruleset,
+  styleId: string,
+  primaryPosition: Position,
+  archetypeId: string,
+  competitors: readonly Competitor[],
+  attributes = uniformAttributes(50),
+) {
+  const style = findTacticalStyle(ruleset, styleId);
+  const tacticalFit = computeTacticalFit(attributes, archetypeId, primaryPosition, style, ruleset.selectionRules);
+  const currentSelection = rankPositionForPlayer({
+    ruleset,
+    styleId,
+    position: primaryPosition,
+    playerName: '김민준',
+    baseOvr: 55,
+    tacticalFit,
+    managerTrust: 50,
+    form: 50,
+    fitness: 80,
+    morale: 60,
+    familiarity: 1,
+    squadStatus: 50,
+    competitors,
+  });
+  return computeRoleProposal({
+    ruleset,
+    styleId,
+    playerName: '김민준',
+    primaryPosition,
+    archetypeId,
+    attributes,
+    baseOvr: 55,
+    rolePromise: squadRoleFromSelection(currentSelection),
+    managerTrust: 50,
+    form: 50,
+    fitness: 80,
+    morale: 60,
+    squadStatus: 50,
+    currentSelection,
+    competitors,
+  });
+}
+
+function cmProposal(ruleset: Ruleset, styleId: string, competitors: readonly Competitor[], attributes?: Record<AttributeKey, number>) {
+  return proposalFor(ruleset, styleId, 'CM', 'cm-playmaker', competitors, attributes);
+}
+
+describe('issue #242 — 1.7.3 zero-slot adjacent fallback', () => {
+  const previous = loadRuleset('1.7.2');
+  const balanced = loadRuleset('1.7.3');
+
+  it('counter 4-2-3-1의 CM 선발 자리가 0이면 실제 순위가 나아지는 인접 DM을 제안한다', () => {
+    const oldProposal = cmProposal(previous, 'counter', []);
+    const proposal = cmProposal(balanced, 'counter', []);
+
+    expect(oldProposal).toEqual({ type: 'KEEP', position: 'CM', squadRole: 'ROTATION' });
+    expect(proposal).toMatchObject({
+      type: 'POSITION_CHANGE',
+      from: 'CM',
+      to: 'DM',
+      squadRoleAfter: 'STARTER',
+    });
+    if (proposal.type !== 'POSITION_CHANGE') throw new Error('POSITION_CHANGE expected');
+    // 이 케이스는 적합도 이득이 없다. 신규 게이트는 수치 예측이 아니라 자리+실제 ranking으로만 연다.
+    expect(proposal.tacticalFitAfter).toBe(30);
+  });
+
+  it.each(['possession', 'press'] as const)('%s formation의 AM 선발 자리가 0이면 인접 CM 기회를 제안한다', (styleId) => {
+    const proposal = proposalFor(balanced, styleId, 'AM', 'am-playmaker', []);
+    expect(findTacticalStyle(balanced, styleId).slots.AM).toBe(0);
+    expect(proposal).toMatchObject({
+      type: 'POSITION_CHANGE',
+      from: 'AM',
+      to: 'CM',
+      squadRoleAfter: 'STARTER',
+    });
+  });
+
+  it('더 뒤 후보의 projectedRole이 더 좋으면 positions 순서보다 먼저 선택한다', () => {
+    const competitors = [strongCompetitor('CM', 'CM-1'), strongCompetitor('DM', 'DM-1'), strongCompetitor('DM', 'DM-2')];
+    // CM은 RESERVE, 먼저 검토하는 DM은 ROTATION, 나중 AM은 STARTER다.
+    expect(cmProposal(balanced, 'counter', competitors)).toMatchObject({
+      type: 'POSITION_CHANGE',
+      to: 'AM',
+      squadRoleAfter: 'STARTER',
+    });
+  });
+
+  it('projectedRole이 같으면 fit이 높은 후보, fit도 같으면 기존 positions 순서를 고른다', () => {
+    const currentBlocked = [strongCompetitor('CM', 'CM-1')];
+    const equalFit = cmProposal(balanced, 'counter', currentBlocked);
+    expect(equalFit).toMatchObject({
+      type: 'POSITION_CHANGE',
+      to: 'DM',
+      squadRoleAfter: 'STARTER',
+    });
+
+    const amFitAttributes = uniformAttributes(50);
+    for (const key of ['dribbling', 'shooting', 'agility', 'firstTouch'] as const) {
+      amFitAttributes[key] = 90;
+    }
+    for (const key of ['tackling', 'strength', 'concentration'] as const) {
+      amFitAttributes[key] = 10;
+    }
+    const style = findTacticalStyle(balanced, 'counter');
+    const dmFit = computeTacticalFit(amFitAttributes, 'cm-playmaker', 'DM', style, balanced.selectionRules);
+    const amFit = computeTacticalFit(amFitAttributes, 'cm-playmaker', 'AM', style, balanced.selectionRules);
+    expect(amFit).toBeGreaterThan(dmFit);
+    expect(cmProposal(balanced, 'counter', currentBlocked, amFitAttributes)).toMatchObject({
+      type: 'POSITION_CHANGE',
+      to: 'AM',
+      squadRoleAfter: 'STARTER',
+      tacticalFitAfter: amFit,
+    });
+  });
+
+  it('인접 포지션이 모두 동률이거나 더 나쁘면 제안하지 않는다', () => {
+    const tiedAtRotation = [strongCompetitor('DM', 'DM-1'), strongCompetitor('DM', 'DM-2'), strongCompetitor('AM', 'AM-1')];
+    expect(cmProposal(balanced, 'counter', tiedAtRotation)).toEqual({
+      type: 'KEEP',
+      position: 'CM',
+      squadRole: 'ROTATION',
+    });
+
+    const noImprovement = [...tiedAtRotation, strongCompetitor('DM', 'DM-3'), strongCompetitor('AM', 'AM-2')];
+    expect(cmProposal(balanced, 'counter', noImprovement)).toEqual({
+      type: 'KEEP',
+      position: 'CM',
+      squadRole: 'ROTATION',
+    });
+  });
+
+  it('비인접 W에 자리가 있어도 DM·AM 중 개선 후보가 없으면 제안하지 않는다', () => {
+    const adjacentBlocked = [
+      strongCompetitor('DM', 'DM-1'),
+      strongCompetitor('DM', 'DM-2'),
+      strongCompetitor('DM', 'DM-3'),
+      strongCompetitor('AM', 'AM-1'),
+      strongCompetitor('AM', 'AM-2'),
+    ];
+    expect(balanced.selectionRules.positionAdjacency.CM).not.toContain('W');
+    expect(findTacticalStyle(balanced, 'counter').slots.W).toBeGreaterThan(0);
+    expect(cmProposal(balanced, 'counter', adjacentBlocked)).toEqual({
+      type: 'KEEP',
+      position: 'CM',
+      squadRole: 'ROTATION',
+    });
+  });
+
+  it('현재 CM 선발 자리가 있는 formation에서는 신규 fallback을 적용하지 않는다', () => {
+    const cmBlocked = [
+      strongCompetitor('CM', 'CM-1'),
+      strongCompetitor('CM', 'CM-2'),
+      strongCompetitor('CM', 'CM-3'),
+      strongCompetitor('CM', 'CM-4'),
+    ];
+    expect(findTacticalStyle(balanced, 'possession').slots.CM).toBeGreaterThan(0);
+    expect(cmProposal(balanced, 'possession', cmBlocked)).toEqual({
+      type: 'KEEP',
+      position: 'CM',
+      squadRole: 'RESERVE',
+    });
+  });
+});
 
 describe('computeRoleProposal — 실제 1.0.0 룰셋: POSITION_CHANGE 후보는 positionAdjacency 전부(아키타입 필터 없음)', () => {
   it('POSITION_CHANGE가 실제로 나온다: 비선호 아키타입 + 인접 포지션(ST) 스타일 점수 우위 + 그 포지션에 경쟁자가 없는 구성', () => {

@@ -214,6 +214,7 @@ export {
   deriveTacticalRoom,
   familiarityOf,
   findTacticalStyle,
+  isSquadRoleBetter,
   rankPositionForPlayer,
   rankSelection,
   squadRoleFromSelection,

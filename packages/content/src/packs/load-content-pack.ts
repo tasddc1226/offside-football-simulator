@@ -212,6 +212,9 @@ import eventCon025v066 from '../../packs/0.6.6/events/EVT-CON-025.json' with { t
 import eventCon026v066 from '../../packs/0.6.6/events/EVT-CON-026.json' with { type: 'json' };
 import eventCon027v066 from '../../packs/0.6.6/events/EVT-CON-027.json' with { type: 'json' };
 import eventCon028v066 from '../../packs/0.6.6/events/EVT-CON-028.json' with { type: 'json' };
+// Issue #242: 0.6.7 is content-identical to 0.6.6 and pairs only with ruleset 1.7.3.
+// Keep every copied source file immutable and reuse the already imported definitions at runtime.
+import manifest067 from '../../packs/0.6.7/manifest.json' with { type: 'json' };
 
 export const PACK_VERSIONS = [
   '0.1.0',
@@ -228,6 +231,7 @@ export const PACK_VERSIONS = [
   '0.6.4',
   '0.6.5',
   '0.6.6',
+  '0.6.7',
 ] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
@@ -247,7 +251,7 @@ type PackSource = {
   narrativeTokens: unknown;
 };
 
-const PACK_SOURCES: Record<PackVersion, PackSource> = {
+const PACK_SOURCES_WITHOUT_067: Record<Exclude<PackVersion, '0.6.7'>, PackSource> = {
   '0.1.0': {
     manifest: manifest010,
     events: [
@@ -1000,6 +1004,14 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       chapterNat001v040,
     ],
     narrativeTokens: narrativeTokens061,
+  },
+};
+
+const PACK_SOURCES: Record<PackVersion, PackSource> = {
+  ...PACK_SOURCES_WITHOUT_067,
+  '0.6.7': {
+    ...PACK_SOURCES_WITHOUT_067['0.6.6'],
+    manifest: manifest067,
   },
 };
 

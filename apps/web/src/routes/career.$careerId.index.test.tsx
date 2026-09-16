@@ -699,8 +699,62 @@ describe('SCR-029 다음 결정 카드 분기', () => {
   });
 
   it('pending ROLE_PROPOSAL이면 "감독 제안이 기다립니다"와 제안 보기 CTA를 보여준다', async () => {
-    const engine = setTestEngine();
-    const careerId = await startedSeasonCareerId(engine);
+    const engine = createAppEngine({
+      store: new MemoryLocalStore(),
+      simulator: inlineSimulator,
+      ruleset: loadRuleset('1.7.3'),
+      pack: loadContentPack('0.6.7'),
+      newId: makeIdGenerator('role-preview'),
+    });
+    engineHolder.promise = Promise.resolve(engine);
+    queryClient.setQueryData(serviceSeasonQueryOptions.queryKey, {
+      ...TEST_SERVICE_SEASON,
+      rulesetVersion: '1.7.3',
+      contentPackVersion: '0.6.7',
+    });
+    localStorage.setItem('offside:e2e-seed', 'issue-242-mf-1');
+
+    const created = await (async () => {
+      try {
+        return await createCareer(engine, { simulationMode: 'FAST' });
+      } finally {
+        localStorage.removeItem('offside:e2e-seed');
+      }
+    })();
+    if (!created.ok) throw new Error('createCareer 실패');
+    const careerId = created.snapshot.careerId;
+    await updateDraft(engine, careerId, {
+      name: '김민준',
+      gender: 'MALE',
+      nationalityCode: 'KR',
+      preferredFoot: 'RIGHT',
+    });
+    await updateDraft(engine, careerId, {
+      position: 'CM',
+      archetypeId: 'cm-playmaker',
+      backgroundId: 'club-academy',
+    });
+    const confirmed = await confirmPlayer(engine, careerId);
+    if (!confirmed.ok) throw new Error('confirmPlayer 실패');
+    const offered = await advanceUntilOffers(engine, careerId);
+    if (offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
+      throw new Error('제안 단계에 도달하지 못했다');
+    }
+    const rotationOffer = offered.domainSnapshot.state.pending.offers.find(
+      (offer) => offer.rolePromise === 'ROTATION',
+    );
+    if (rotationOffer === undefined) throw new Error('ROTATION 제안이 없다');
+    const accepted = await acceptOffer(engine, careerId, rotationOffer.id);
+    if (!accepted.ok) throw new Error('acceptOffer 실패');
+    const started = await startSeason(engine, careerId, { simulationMode: 'FAST', trainingFocus: 'ROLE' });
+    if (!started.ok || started.domainSnapshot.state.pending?.kind !== 'ROLE_PROPOSAL') {
+      throw new Error('역할 제안 상태를 읽지 못했다');
+    }
+    expect(started.domainSnapshot.state.pending.proposal).toMatchObject({
+      type: 'POSITION_CHANGE',
+      from: 'CM',
+      to: 'DM',
+    });
 
     const router = renderAt(`/career/${careerId}`);
 
@@ -710,6 +764,8 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/career/${careerId}/role`);
     });
+    expect(await screen.findByTestId('role-decision-preview')).toBeInTheDocument();
+    expect(screen.getByText(/출전 경기 수를 보장하지 않습니다/)).toBeInTheDocument();
   });
 
   it('시즌이 있고 pending이 없으면 "진행" 버튼이 눌려서 다음 결정으로 넘어간다', async () => {

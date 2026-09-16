@@ -154,6 +154,10 @@ export type SelectionRules = {
     /** T-7-002 D-67: 1.4.0+. ROLE_CHANGE DECLINE이 하향 제안(proposal.to가 contract.rolePromise보다
      * 나쁜 역할)이면 declineTrustDelta 대신 이 값을 쓴다(정의됐을 때만). */
     declineDowngradeTrustDelta?: number | undefined;
+    /** Issue #242: 현재 포지션의 선발 자리가 0이면, 전술 적합도 +15 조건을 넘지 않더라도
+     * 선발 자리가 있는 인접 포지션의 실제 projectedRole이 더 좋으면 변경을 제안한다.
+     * 키가 없는 과거 룰셋은 기존 제안과 해시를 그대로 보존한다. */
+    zeroSlotAdjacentFallback?: boolean | undefined;
   };
 };
 

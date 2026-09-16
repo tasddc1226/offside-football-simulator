@@ -1,0 +1,212 @@
+{
+  "id": "EVT-MEDIA-122",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "triggers": {
+    "hasTag": [
+      "career.tags",
+      "T7034_FOLLOWUP_ONLY"
+    ]
+  },
+  "exclusionTags": [
+    "T7034_PRESS_DONE"
+  ],
+  "cooldown": {
+    "steps": 12
+  },
+  "weight": 100,
+  "choices": [
+    {
+      "id": "A",
+      "label": "경기 장면과 함께 짧은 정정 답변을 낸다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "미디어 평판 회복 기회",
+          "target": "media",
+          "direction": "UP"
+        },
+        {
+          "label": "팬 관계 안정"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 72,
+          "title": "장면 근거가 오해를 차분히 바로잡았다",
+          "cause": "사실 중심의 정정",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-122.A.S0",
+              "target": "media",
+              "delta": 350,
+              "clamp": {
+                "min": 0,
+                "max": 10000
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-122_A_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-122.A.S1",
+              "target": "fans",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-122_A_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_PRESS_DONE"
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 28,
+          "title": "정정이 논쟁을 다시 키웠다",
+          "cause": "반복 노출된 제목",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-122.A.F0",
+              "target": "media",
+              "delta": -150,
+              "clamp": {
+                "min": 0,
+                "max": 10000
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-122_A_F0"
+            }
+          ],
+          "addTags": [
+            "T7034_PRESS_DONE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "인터뷰 대신 다음 경기 준비에 집중한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "폼 상승 기회",
+          "target": "form",
+          "direction": "UP"
+        },
+        {
+          "label": "팬 반응 위험",
+          "target": "fans",
+          "direction": "DOWN"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 63,
+          "title": "다음 경기의 플레이가 가장 분명한 답이 됐다",
+          "cause": "훈련으로 돌린 집중",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MEDIA-122.B.S0",
+              "target": "form",
+              "delta": 4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-122_B_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-122.B.S1",
+              "target": "managerTrust",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-122_B_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_PRESS_DONE"
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 37,
+          "title": "침묵이 오해를 인정한 것처럼 남았다",
+          "cause": "후속 설명의 부재",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-122.B.F0",
+              "target": "fans",
+              "delta": -3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-122_B_F0"
+            }
+          ],
+          "addTags": [
+            "T7034_PRESS_DONE"
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "잘린 문장이 다시 질문으로 돌아왔다. 감정적으로 반박하지 않고 맥락을 회복할 방법을 선택해야 한다."
+  }
+}

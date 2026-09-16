@@ -2,7 +2,7 @@ import { EFFECT_DEFAULTS, loadContentPack, loadRuleset } from '@offside/content'
 import type { ServiceSeasonCurrent } from '@offside/contracts';
 import { hashState } from '@offside/domain';
 import { career01, career01EngineCommands, career05Chapter, career05ChapterEngineCommands, rulesetProto } from '@offside/fixtures';
-import { encodeSnapshot, MemoryLocalStore, inlineSimulator, type ExecuteResult } from '@offside/engine-client';
+import { encodeSnapshot, MemoryLocalStore, inlineSimulator, type EngineCommand, type ExecuteResult } from '@offside/engine-client';
 import { describe, expect, it, vi } from 'vitest';
 import {
   acceptOffer,
@@ -11,8 +11,10 @@ import {
   createCareer,
   deleteCareer,
   execute,
+  rejectOffer,
   resolveChapter,
   resolveEvent,
+  resolveLoanReturn,
   resolveRole,
   settleSeason,
   shouldAutoAcceptUnchangedRole,
@@ -23,6 +25,7 @@ import {
   updateDraft,
 } from './career-actions.js';
 import { createAppEngine, type AppEngine } from './engine.js';
+import { buildRoleDecisionPreview } from '../shared/role-decision-preview.js';
 import { FALLBACK_SERVICE_SEASON, FALLBACK_SERVICE_SEASON_ID } from './versions.js';
 
 const syncHolder = vi.hoisted(() => ({ notifyCommitted: vi.fn() }));
@@ -867,6 +870,473 @@ describe('결정론: career-05-chapter 픽스처 raw 재생(합성 시나리오,
 
     expect(finalResult.domainSnapshot.stateHash).toBe(career05Chapter.golden.stateHash);
   });
+});
+
+type Issue242VersionPair = { rulesetVersion: string; contentPackVersion: string };
+type Issue242SeasonRecord = {
+  season: number;
+  matchesWithMinutes: number;
+  minutes: number;
+  ratedMatches: number;
+  rolePromise: string | null;
+  primaryPosition: string | null;
+  marketReason: string | null;
+};
+type Issue242DecisionRecord = {
+  decision: 'ACCEPT' | 'DECLINE';
+  preview: {
+    primaryPosition: string;
+    contractRole: string;
+    appearancePromiseMinutesShareBp: number;
+    managerTrustDelta: number;
+    managerTrustAfter: number;
+  };
+  actual: {
+    primaryPosition: string | null;
+    contractRole: string | null;
+    appearancePromiseMinutesShareBp: number | null;
+    managerTrustDelta: number;
+    managerTrustAfter: number;
+  };
+};
+
+const ISSUE_242_LEGACY_PAIR: Issue242VersionPair = {
+  rulesetVersion: '1.7.2',
+  contentPackVersion: '0.6.6',
+};
+const ISSUE_242_BALANCED_PAIR: Issue242VersionPair = {
+  rulesetVersion: '1.7.3',
+  contentPackVersion: '0.6.7',
+};
+const ISSUE_242_SEED = 'issue-242-mf-1';
+
+function makeIssue242Engine(seedIndex: number, versions: Issue242VersionPair): AppEngine {
+  return createAppEngine({
+    store: new MemoryLocalStore(),
+    simulator: inlineSimulator,
+    ruleset: loadRuleset(versions.rulesetVersion),
+    pack: loadContentPack(versions.contentPackVersion),
+    newId: makeIdGenerator(`issue-242-${seedIndex}`),
+  });
+}
+
+async function createIssue242Career(engine: AppEngine, careerId: string, versions: Issue242VersionPair): Promise<void> {
+  const command: EngineCommand = {
+    type: 'CREATE_CAREER',
+    commandId: engine.newId(),
+    expectedRevision: 0,
+    payload: {
+      careerId,
+      seed: ISSUE_242_SEED,
+      simulationMode: 'FAST',
+      rulesetVersion: versions.rulesetVersion,
+      contentPackVersion: versions.contentPackVersion,
+    },
+  };
+  const result = await engine.client.execute({
+    careerId,
+    command,
+    createdServiceSeasonId: FALLBACK_SERVICE_SEASON_ID,
+  });
+  if (!result.ok) throw new Error(`CREATE_CAREER: ${result.error.code} ${result.error.message}`);
+}
+
+async function reachIssue242FirstOffer(engine: AppEngine, careerId: string, trace: string[]): Promise<void> {
+  await updateDraft(engine, careerId, {
+    name: '김민준',
+    gender: 'MALE',
+    nationalityCode: 'KR',
+    preferredFoot: 'RIGHT',
+  });
+  await updateDraft(engine, careerId, {
+    position: 'CM',
+    archetypeId: 'cm-playmaker',
+    backgroundId: 'club-academy',
+  });
+  const confirmed = await confirmPlayer(engine, careerId);
+  if (!confirmed.ok) throw new Error(`CONFIRM_PLAYER: ${confirmed.error.code}`);
+
+  for (let guard = 0; guard < 10; guard += 1) {
+    const loaded = await engine.client.loadCareer(careerId);
+    if (!loaded.ok) throw new Error(`loadCareer: ${loaded.error.code}`);
+    const pending = loaded.snapshot.state.pending;
+    if (pending?.kind === 'OFFERS') return;
+    if (pending === null) {
+      const progressed = await advance(engine, careerId);
+      if (!progressed.ok) throw new Error(`ADVANCE: ${progressed.error.code}`);
+      continue;
+    }
+    if (pending.kind === 'EVENT') {
+      const choice = engine.pack.eventsById.get(pending.eventId)?.choices[0];
+      if (choice === undefined) throw new Error(`EVENT choice missing: ${pending.eventId}`);
+      trace.push(`EVENT:${pending.eventId}:${choice.id}`);
+      const resolved = await resolveEvent(engine, careerId, choice.id);
+      if (!resolved.ok) throw new Error(`RESOLVE_EVENT: ${resolved.error.code}`);
+      continue;
+    }
+    throw new Error(`Unexpected onboarding pending: ${pending.kind}`);
+  }
+  throw new Error('First offer was not reached');
+}
+
+async function prepareIssue242Scenario(
+  suffix: string,
+  trace: string[],
+  versions: Issue242VersionPair,
+): Promise<{ engine: AppEngine; careerId: string }> {
+  const engine = makeIssue242Engine(suffix.includes('accept') ? 1 : 2, versions);
+  const careerId = `car-issue-242-${versions.rulesetVersion}-${suffix}`;
+  await createIssue242Career(engine, careerId, versions);
+  trace.push('DRAFT:CM:cm-playmaker:club-academy');
+  await reachIssue242FirstOffer(engine, careerId, trace);
+  const loaded = await engine.client.loadCareer(careerId);
+  if (!loaded.ok) throw new Error(`load offers: ${loaded.error.code}`);
+  const pending = loaded.snapshot.state.pending;
+  if (pending?.kind !== 'OFFERS') throw new Error('OFFERS missing');
+  const rotationOffer = pending.offers.find((offer) => offer.rolePromise === 'ROTATION');
+  if (rotationOffer === undefined) throw new Error('ROTATION offer missing');
+  trace.push(`ACCEPT_OFFER:${rotationOffer.id}:${rotationOffer.teamId}:ROTATION`);
+  const accepted = await acceptOffer(engine, careerId, rotationOffer.id);
+  if (!accepted.ok) throw new Error(`ACCEPT_OFFER: ${accepted.error.code}`);
+  return { engine, careerId };
+}
+
+async function startIssue242Season(engine: AppEngine, careerId: string, trace: string[]): Promise<void> {
+  const loaded = await engine.client.loadCareer(careerId);
+  if (!loaded.ok) throw new Error(`load before START_SEASON: ${loaded.error.code}`);
+  const pending = loaded.snapshot.state.pending;
+  if (pending?.kind === 'OFFERS') {
+    const safeOffer = pending.offers.find((offer) => offer.id === pending.market.safeOfferId);
+    if (safeOffer === undefined) throw new Error('safe stay offer missing');
+    trace.push(`SAFE_STAY:${safeOffer.id}:${safeOffer.rolePromise}`);
+    const stayed = await acceptOffer(engine, careerId, safeOffer.id);
+    if (!stayed.ok) throw new Error(`safe stay: ${stayed.error.code}`);
+  } else if (pending !== null) {
+    throw new Error(`unexpected preseason pending: ${pending.kind}`);
+  }
+  trace.push('START_SEASON:FAST:ROLE');
+  const started = await execute(engine, careerId, {
+    type: 'START_SEASON',
+    payload: {
+      simulationMode: 'FAST',
+      serviceSeasonId: FALLBACK_SERVICE_SEASON_ID,
+      trainingFocus: 'ROLE',
+    },
+  });
+  if (!started.ok) throw new Error(`START_SEASON: ${started.error.code}`);
+}
+
+async function playIssue242Season(
+  engine: AppEngine,
+  careerId: string,
+  proposalDecision: 'ACCEPT' | 'DECLINE',
+  trace: string[],
+  decisions: Issue242DecisionRecord[],
+): Promise<Issue242SeasonRecord> {
+  for (let guard = 0; guard < 80; guard += 1) {
+    const loaded = await engine.client.loadCareer(careerId);
+    if (!loaded.ok) throw new Error(`load season: ${loaded.error.code}`);
+    const pending = loaded.snapshot.state.pending;
+    if (pending === null) {
+      const progressed = await advance(engine, careerId);
+      if (!progressed.ok) throw new Error(`ADVANCE season: ${progressed.error.code}`);
+      continue;
+    }
+    if (pending.kind === 'ROLE_PROPOSAL') {
+      const proposal = pending.proposal;
+      const decision = proposal.type === 'KEEP' ? 'ACCEPT' : proposalDecision;
+      const detail =
+        proposal.type === 'ROLE_CHANGE'
+          ? `${proposal.from}->${proposal.to}`
+          : proposal.type === 'POSITION_CHANGE'
+            ? `${proposal.from}->${proposal.to}:${proposal.squadRoleAfter}`
+            : 'KEEP';
+      trace.push(`ROLE:${proposal.type}:${detail}:${decision}`);
+      const preview = buildRoleDecisionPreview(loaded.snapshot.state, engine.ruleset, proposal);
+      const selectedPreview = decision === 'ACCEPT' ? preview.accept : preview.decline;
+      const trustBefore = loaded.snapshot.state.relationships.managerTrust;
+      const resolved = await resolveRole(engine, careerId, decision);
+      if (!resolved.ok) throw new Error(`RESOLVE_ROLE: ${resolved.error.code}`);
+      const resolvedState = resolved.domainSnapshot.state;
+      decisions.push({
+        decision,
+        preview: {
+          primaryPosition: selectedPreview.primaryPosition,
+          contractRole: selectedPreview.contractRole,
+          appearancePromiseMinutesShareBp: selectedPreview.appearancePromiseMinutesShareBp,
+          managerTrustDelta: selectedPreview.managerTrustDelta,
+          managerTrustAfter: selectedPreview.managerTrustAfter,
+        },
+        actual: {
+          primaryPosition: resolvedState.player.profile?.primaryPosition ?? null,
+          contractRole: resolvedState.contract?.rolePromise ?? null,
+          appearancePromiseMinutesShareBp: resolvedState.contract?.appearancePromise.minutesShareBp ?? null,
+          managerTrustDelta: resolvedState.relationships.managerTrust - trustBefore,
+          managerTrustAfter: resolvedState.relationships.managerTrust,
+        },
+      });
+      continue;
+    }
+    if (pending.kind === 'EVENT' || pending.kind === 'INJURY' || pending.kind === 'NATIONAL_TEAM') {
+      const choice = engine.pack.eventsById.get(pending.eventId)?.choices[0];
+      if (choice === undefined) throw new Error(`event choice missing: ${pending.eventId}`);
+      trace.push(`EVENT:${pending.eventId}:${choice.id}`);
+      const resolved = await resolveEvent(engine, careerId, choice.id);
+      if (!resolved.ok) throw new Error(`RESOLVE_EVENT: ${resolved.error.code}`);
+      continue;
+    }
+    if (pending.kind === 'CHAPTER') {
+      const chapter = engine.pack.chaptersById.get(pending.chapterId);
+      const decision = chapter?.decisions[pending.resolved.length];
+      const option = decision?.options[0];
+      if (decision === undefined || option === undefined) {
+        throw new Error(`chapter option missing: ${pending.chapterId}`);
+      }
+      trace.push(`CHAPTER:${pending.chapterId}:${decision.id}:${option.id}`);
+      const resolved = await resolveChapter(engine, careerId, decision.id, option.id);
+      if (!resolved.ok) throw new Error(`RESOLVE_CHAPTER: ${resolved.error.code}`);
+      continue;
+    }
+    if (pending.kind === 'CONTRACT') {
+      const offer = pending.offers[0];
+      if (offer === undefined) {
+        const progressed = await advance(engine, careerId);
+        if (!progressed.ok) throw new Error(`ADVANCE contract: ${progressed.error.code}`);
+      } else {
+        trace.push(`REJECT_RENEWAL:${offer.id}`);
+        const rejected = await rejectOffer(engine, careerId, offer.id);
+        if (!rejected.ok) throw new Error(`REJECT_OFFER: ${rejected.error.code}`);
+      }
+      continue;
+    }
+    if (pending.kind === 'LOAN_RETURN') {
+      const decision = pending.options[0] ?? 'RETURN';
+      trace.push(`LOAN_RETURN:${decision}`);
+      const resolved = await resolveLoanReturn(engine, careerId, decision);
+      if (!resolved.ok) throw new Error(`LOAN_RETURN: ${resolved.error.code}`);
+      continue;
+    }
+    if (pending.kind === 'OFFERS') throw new Error('market opened before settlement');
+    const settled = await settleSeason(engine, careerId);
+    if (!settled.ok) throw new Error(`SETTLE_SEASON: ${settled.error.code}`);
+    const settledState = settled.domainSnapshot.state;
+    const summary = settledState.seasonHistory.at(-1);
+    if (summary === undefined) throw new Error('settled season missing');
+    const stats = summary.result.playerStats;
+    return {
+      season: summary.index,
+      matchesWithMinutes: stats.appearances.total - stats.appearances.zeroMinute,
+      minutes: stats.minutes,
+      ratedMatches: stats.ratedMatches,
+      rolePromise: settledState.contract?.rolePromise ?? null,
+      primaryPosition: settledState.player.profile?.primaryPosition ?? null,
+      marketReason: settledState.pending?.kind === 'OFFERS' ? settledState.pending.market.reason : null,
+    };
+  }
+  throw new Error('season guard exceeded');
+}
+
+async function runIssue242TwoSeasons(versions: Issue242VersionPair, decision: 'ACCEPT' | 'DECLINE') {
+  const trace: string[] = [];
+  const { engine, careerId } = await prepareIssue242Scenario(decision.toLowerCase(), trace, versions);
+  await startIssue242Season(engine, careerId, trace);
+  const beforeRole = await engine.client.loadCareer(careerId);
+  if (!beforeRole.ok) throw new Error(`load proposal: ${beforeRole.error.code}`);
+  const firstProposal = beforeRole.snapshot.state.pending;
+  const proposalStateHash = beforeRole.snapshot.stateHash;
+  const decisions: Issue242DecisionRecord[] = [];
+  const records = [await playIssue242Season(engine, careerId, decision, trace, decisions)];
+  await startIssue242Season(engine, careerId, trace);
+  records.push(await playIssue242Season(engine, careerId, decision, trace, decisions));
+  const final = await engine.client.loadCareer(careerId);
+  if (!final.ok) throw new Error(`load final: ${final.error.code}`);
+  return {
+    records,
+    trace,
+    decisions,
+    firstProposal,
+    proposalStateHash,
+    finalStateHash: final.snapshot.stateHash,
+  };
+}
+
+function expectIssue242PreviewToMatchResolution(decisions: Issue242DecisionRecord[]): void {
+  for (const { preview, actual } of decisions) expect(preview).toEqual(actual);
+}
+
+// Issue #242: 이 스위트는 임시 seed 탐색 파일이 아니라 기존 career-actions 경로로 실제
+// CREATE_CAREER → 드래프트 → 이벤트 선택 → 제안 수락 → 2시즌을 고정한다. 원 제보 seed는 없어
+// 동일 조건을 재현하는 최신 deterministic 입력열이며, 운영 재생으로 표현하지 않는다.
+describe('career actions: issue #242 two-season zero-slot role balance', () => {
+  it('1.7.2/0.6.6의 CM 하향 제안 수락·거절이 모두 2시즌 0분인 경로와 해시를 보존한다', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const accepted = await runIssue242TwoSeasons(ISSUE_242_LEGACY_PAIR, 'ACCEPT');
+      const refused = await runIssue242TwoSeasons(ISSUE_242_LEGACY_PAIR, 'DECLINE');
+      expect(accepted.firstProposal).toMatchObject({
+        kind: 'ROLE_PROPOSAL',
+        proposal: { type: 'ROLE_CHANGE', from: 'ROTATION', to: 'RESERVE' },
+      });
+      expect(accepted.records).toEqual([
+        {
+          season: 1,
+          matchesWithMinutes: 0,
+          minutes: 0,
+          ratedMatches: 0,
+          rolePromise: 'RESERVE',
+          primaryPosition: 'CM',
+          marketReason: 'INTEREST',
+        },
+        {
+          season: 2,
+          matchesWithMinutes: 0,
+          minutes: 0,
+          ratedMatches: 0,
+          rolePromise: 'RESERVE',
+          primaryPosition: 'CM',
+          marketReason: 'INTEREST',
+        },
+      ]);
+      expect(refused.records).toEqual([
+        {
+          season: 1,
+          matchesWithMinutes: 0,
+          minutes: 0,
+          ratedMatches: 0,
+          rolePromise: 'ROTATION',
+          primaryPosition: 'CM',
+          marketReason: 'INTEREST',
+        },
+        {
+          season: 2,
+          matchesWithMinutes: 0,
+          minutes: 0,
+          ratedMatches: 0,
+          rolePromise: 'ROTATION',
+          primaryPosition: 'CM',
+          marketReason: 'INTEREST',
+        },
+      ]);
+      expectIssue242PreviewToMatchResolution(accepted.decisions);
+      expectIssue242PreviewToMatchResolution(refused.decisions);
+      expect(accepted.decisions[0]?.actual).toMatchObject({
+        primaryPosition: 'CM',
+        contractRole: 'RESERVE',
+        appearancePromiseMinutesShareBp: 0,
+        managerTrustDelta: 5,
+      });
+      expect(refused.decisions[0]?.actual).toMatchObject({
+        primaryPosition: 'CM',
+        contractRole: 'ROTATION',
+        appearancePromiseMinutesShareBp: 4000,
+        managerTrustDelta: 0,
+      });
+      expect(accepted.proposalStateHash).toBe('9e9fc7e201f541510c9c27df69286a6a23b76e056df0a2f244550b814bf790c8');
+      expect(accepted.finalStateHash).toBe('21af0dd2c7594ee2f479f93b3c7111bed63bffec1502de9719626b39edd665e6');
+      expect(refused.proposalStateHash).toBe('aa53adde0cad77aa091f7e4b4aa83526afd98e1251750dabe5fa54bb387f78e5');
+      expect(refused.finalStateHash).toBe('2915fa827b6670130dd50709ad07d87e4d3bd52ad69c9b002e9a8b42f013dc3b');
+      expect(accepted.trace.slice(0, 6)).toEqual([
+        'DRAFT:CM:cm-playmaker:club-academy',
+        'EVENT:EVT-CON-020:A',
+        'EVENT:EVT-CON-023:A',
+        'ACCEPT_OFFER:OFR-9-0:yeongwol-donggang-fc:ROTATION',
+        'START_SEASON:FAST:ROLE',
+        'ROLE:ROLE_CHANGE:ROTATION->RESERVE:ACCEPT',
+      ]);
+      expect(refused.trace.filter((step) => step.startsWith('ROLE:'))).toEqual([
+        'ROLE:ROLE_CHANGE:ROTATION->RESERVE:DECLINE',
+        'ROLE:ROLE_CHANGE:ROTATION->RESERVE:DECLINE',
+      ]);
+    } finally {
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
+  }, 120_000);
+
+  it('1.7.3/0.6.7은 DM 기회 제안을 열고 수락·거절 2시즌을 결정론적으로 재생한다', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const accepted = await runIssue242TwoSeasons(ISSUE_242_BALANCED_PAIR, 'ACCEPT');
+      const acceptedReplay = await runIssue242TwoSeasons(ISSUE_242_BALANCED_PAIR, 'ACCEPT');
+      const refused = await runIssue242TwoSeasons(ISSUE_242_BALANCED_PAIR, 'DECLINE');
+      expect(acceptedReplay).toEqual(accepted);
+      expect(accepted.firstProposal).toMatchObject({
+        kind: 'ROLE_PROPOSAL',
+        proposal: { type: 'POSITION_CHANGE', from: 'CM', to: 'DM', squadRoleAfter: 'STARTER' },
+      });
+      expect(accepted.records).toEqual([
+        {
+          season: 1,
+          matchesWithMinutes: 32,
+          minutes: 2640,
+          ratedMatches: 32,
+          rolePromise: 'ROTATION',
+          primaryPosition: 'DM',
+          marketReason: 'INTEREST',
+        },
+        {
+          season: 2,
+          matchesWithMinutes: 15,
+          minutes: 345,
+          ratedMatches: 15,
+          rolePromise: 'ROTATION',
+          primaryPosition: 'DM',
+          marketReason: 'INTEREST',
+        },
+      ]);
+      expect(refused.records).toEqual([
+        {
+          season: 1,
+          matchesWithMinutes: 0,
+          minutes: 0,
+          ratedMatches: 0,
+          rolePromise: 'ROTATION',
+          primaryPosition: 'CM',
+          marketReason: 'INTEREST',
+        },
+        {
+          season: 2,
+          matchesWithMinutes: 0,
+          minutes: 0,
+          ratedMatches: 0,
+          rolePromise: 'ROTATION',
+          primaryPosition: 'CM',
+          marketReason: 'INTEREST',
+        },
+      ]);
+      expectIssue242PreviewToMatchResolution(accepted.decisions);
+      expectIssue242PreviewToMatchResolution(refused.decisions);
+      expect(accepted.decisions[0]?.actual).toMatchObject({
+        primaryPosition: 'DM',
+        contractRole: 'ROTATION',
+        appearancePromiseMinutesShareBp: 4000,
+        managerTrustDelta: 5,
+      });
+      expect(refused.decisions[0]?.actual).toMatchObject({
+        primaryPosition: 'CM',
+        contractRole: 'ROTATION',
+        appearancePromiseMinutesShareBp: 4000,
+        managerTrustDelta: -8,
+      });
+      expect(accepted.proposalStateHash).toBe('63b3b94a9fadde5da22c19c1c2e8b6d296bd6c238743058348dcfdecbcbc1789');
+      expect(accepted.finalStateHash).toBe('c8d184c89ed38b79e1decc164f6a417113823d906621b55ced056ab5d7575681');
+      expect(refused.proposalStateHash).toBe('630d8b2d8edf8f90f0b2f67d5be09adb59e9406e5a51426db8f30b8c81e8c9d7');
+      expect(refused.finalStateHash).toBe('cf34dcbb0f12e4a9ce160982c84fa85e8399d18885080fb16cce371ba3354da7');
+      expect(accepted.trace.filter((step) => step.startsWith('ROLE:'))).toEqual([
+        'ROLE:POSITION_CHANGE:CM->DM:STARTER:ACCEPT',
+        'ROLE:KEEP:KEEP:ACCEPT',
+      ]);
+      expect(refused.trace.filter((step) => step.startsWith('ROLE:'))).toEqual([
+        'ROLE:POSITION_CHANGE:CM->DM:STARTER:DECLINE',
+        'ROLE:POSITION_CHANGE:CM->AM:ROTATION:DECLINE',
+      ]);
+    } finally {
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
+  }, 120_000);
 });
 
 describe('deleteCareer', () => {

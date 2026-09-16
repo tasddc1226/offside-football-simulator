@@ -61,6 +61,16 @@ describe('loadRetirementArtifacts', () => {
     expect(exposureArtifacts.rulesetChecksum).not.toBe(varietyArtifacts.rulesetChecksum);
     expect(exposureArtifacts.contentPackChecksum).toBe(varietyArtifacts.contentPackChecksum);
     expect(exposureArtifacts.legacyReferencePopulation).toBeUndefined();
+    const currentArtifacts = loadRetirementArtifacts('1.7.2', '0.6.6');
+    const roleBalanceArtifacts = loadRetirementArtifacts('1.7.3', '0.6.7');
+    expect(roleBalanceArtifacts).toMatchObject({
+      rulesetVersion: '1.7.3',
+      contentPackVersion: '0.6.7',
+      legacyVersion: '1.2.0',
+    });
+    expect(roleBalanceArtifacts.rulesetChecksum).not.toBe(exposureArtifacts.rulesetChecksum);
+    expect(roleBalanceArtifacts.contentPackChecksum).toBe(currentArtifacts.contentPackChecksum);
+    expect(roleBalanceArtifacts.legacyReferencePopulation).toBeUndefined();
   });
 
   it('activates the published Legacy 1.1 reference only for the 1.1/0.3 release pair', () => {

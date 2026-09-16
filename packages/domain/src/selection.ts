@@ -326,7 +326,11 @@ export type RoleProposalContext = {
 /**
  * D-34 제안 산출(결정론, roll 없음). (a) `positionAdjacency[primaryPosition]`의 인접 포지션 전부
  * (`ruleset.positions` 순서, 아키타입 필터 없음) 중 `computeTacticalFit`이 현재보다 15 이상 높으며 그
- * 포지션 projectedRole이 현재보다 좋으면 POSITION_CHANGE(첫 번째로 만족하는 후보). 아키타입 필터를
+ * 포지션 projectedRole이 현재보다 좋으면 POSITION_CHANGE(첫 번째로 만족하는 후보). Issue #242
+ * 선택 키(`zeroSlotAdjacentFallback`) 이후에는 현재 포지션의 선발 자리가 0인 경우에만, 선발 자리가 있는
+ * 인접 포지션의 실제 projectedRole이 더 좋으면 +15 적합도 게이트를 대체한다. 이는 출전을 보장하는
+ * 수치 추정이 아니라 같은 ranking 계산의 실제 자리와 순위만 사용한다. 신규 후보가 여러 개면 더 좋은
+ * projectedRole → 높은 tacticalFit → 기존 `positions` 순서로 고른다. 아키타입 필터를
  * 두지 않는 이유: archetypeId는 포지션 고유값이라 다른 포지션의 `preferredArchetypeIds`에는 애초에
  * 들어갈 수 없다 — 필터를 두면 POSITION_CHANGE가 실제 룰셋에서 영원히 나오지 않는다. 아키타입이
  * 바뀌지 않으므로 후보 포지션 fit의 아키타입 항은 항상 0(= tacticalFitWeights.archetype × 0) — 선호
@@ -350,10 +354,16 @@ export function computeRoleProposal(context: RoleProposalContext): RoleProposal 
   const candidatePositions = context.ruleset.positions.filter(
     (position) => position !== context.primaryPosition && adjacentPositions.includes(position),
   );
+  const canUseZeroSlotFallback =
+    rules.roleProposal.zeroSlotAdjacentFallback === true &&
+    style.slots[context.primaryPosition] === 0;
+  let bestZeroSlotProposal: Extract<RoleProposal, { type: 'POSITION_CHANGE' }> | null = null;
 
   for (const position of candidatePositions) {
     const candidateFit = computeTacticalFit(context.attributes, context.archetypeId, position, style, rules);
-    if (candidateFit - currentPlayer.tacticalFit < 15) continue;
+    const passesLegacyFitGate = candidateFit - currentPlayer.tacticalFit >= 15;
+    const hasPlayableStarterSlot = canUseZeroSlotFallback && style.slots[position] > 0;
+    if (!passesLegacyFitGate && !hasPlayableStarterSlot) continue;
 
     const familiarity = familiarityOf(rules.proficiencyOnChange.adjacent, rules);
     const ranking = rankPositionForPlayer({
@@ -374,7 +384,7 @@ export function computeRoleProposal(context: RoleProposalContext): RoleProposal 
     const projectedRoleCandidate = squadRoleFromSelection(ranking);
 
     if (isSquadRoleBetter(projectedRoleCandidate, projectedRoleCurrent)) {
-      return {
+      const proposal: Extract<RoleProposal, { type: 'POSITION_CHANGE' }> = {
         type: 'POSITION_CHANGE',
         from: context.primaryPosition,
         to: position,
@@ -382,8 +392,21 @@ export function computeRoleProposal(context: RoleProposalContext): RoleProposal 
         tacticalFitAfter: candidateFit,
         proficiencyAfter: rules.proficiencyOnChange.adjacent,
       };
+      // 예전 룰셋은 첫 개선 후보를 바로 반환한다. 신규 opt-in에서만 모든 유효 인접
+      // 후보를 비교해 제안 역할 우선 → fit 우선 → 기존 positions 순서를 보존한다.
+      if (!canUseZeroSlotFallback) return proposal;
+      if (
+        bestZeroSlotProposal === null ||
+        isSquadRoleBetter(proposal.squadRoleAfter, bestZeroSlotProposal.squadRoleAfter) ||
+        (proposal.squadRoleAfter === bestZeroSlotProposal.squadRoleAfter &&
+          proposal.tacticalFitAfter > bestZeroSlotProposal.tacticalFitAfter)
+      ) {
+        bestZeroSlotProposal = proposal;
+      }
     }
   }
+
+  if (bestZeroSlotProposal !== null) return bestZeroSlotProposal;
 
   if (projectedRoleCurrent !== context.rolePromise) {
     return { type: 'ROLE_CHANGE', position: context.primaryPosition, from: context.rolePromise, to: projectedRoleCurrent };
