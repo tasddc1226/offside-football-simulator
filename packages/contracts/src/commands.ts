@@ -82,6 +82,7 @@ const ChapterCandidateSchema = z.strictObject({
   importance: SlotImportanceSchema,
   trigger: ChapterTriggerSchema,
   weight: z.number().int().min(1),
+  rotationGroup: z.string().min(1).exactOptional(),
   decisionsTotal: z.number().int().min(1).max(3),
 });
 
