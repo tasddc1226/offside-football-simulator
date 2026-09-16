@@ -54,12 +54,18 @@ async function resolveEventScreenCounting(page: Page, counts: Counts): Promise<v
   counts.confirmations += 1;
 }
 
-test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 조작 시간을 측정한다', async ({ page }) => {
+test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 조작 시간을 측정한다', async ({
+  page,
+}) => {
   const counts: Counts = { screens: 0, selections: 0, textInputs: 0, confirmations: 0 };
 
   await page.route('**/v1/profile', (route) =>
     fulfillJson(route, 503, {
-      error: { code: 'SERVICE_UNAVAILABLE', message: '서비스를 이용할 수 없습니다.', retryable: true },
+      error: {
+        code: 'SERVICE_UNAVAILABLE',
+        message: '서비스를 이용할 수 없습니다.',
+        retryable: true,
+      },
       meta: META,
     }),
   );
@@ -118,11 +124,8 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
   counts.screens += 1;
 
-  // SCR-004: KICKOFF(확정) → 복구 코드 발급 실패(스텁) → "계속"(확정) → 이벤트 화면.
+  // SCR-004: KICKOFF(확정) → 비차단 복구 안내 전환 → 이벤트 화면.
   await page.getByRole('button', { name: 'KICKOFF' }).click();
-  counts.confirmations += 1;
-  await expect(page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.')).toBeVisible();
-  await page.getByRole('button', { name: '계속' }).click();
   counts.confirmations += 1;
   await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
   counts.screens += 1;
@@ -205,7 +208,9 @@ async function readRevisionAndReturn(page: Page): Promise<number> {
 }
 
 test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간(FAST 단일 측정)', () => {
-  test('FAST 시즌 1개 완주(프리시즌 계획→결산 화면): 자동화 시간·명령 수를 기록한다', async ({ page }) => {
+  test('FAST 시즌 1개 완주(프리시즌 계획→결산 화면): 자동화 시간·명령 수를 기록한다', async ({
+    page,
+  }) => {
     test.slow();
 
     await seedDeterministicChapterRun(page);
@@ -237,6 +242,9 @@ test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간(FAST �
 
     const outDir = path.join(import.meta.dirname, '..', 'test-results');
     mkdirSync(outDir, { recursive: true });
-    writeFileSync(path.join(outDir, 'session-length-fast-season.json'), JSON.stringify(result, null, 2));
+    writeFileSync(
+      path.join(outDir, 'session-length-fast-season.json'),
+      JSON.stringify(result, null, 2),
+    );
   });
 });

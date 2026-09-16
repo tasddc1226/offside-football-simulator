@@ -8,7 +8,9 @@
 import { expect, test } from '@playwright/test';
 import {
   advanceUntilOffers,
-  completeOnboardingAndConfirm,
+  fulfillJson,
+  goToConfirm,
+  META,
   signFirstOffer,
 } from './helpers/player-creation.js';
 
@@ -17,10 +19,58 @@ import {
 // reducedMotion은 PlaywrightTestOptions 최상위가 아니라 BrowserContextOptions에 있다(contextOptions로 감싸야 한다).
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
-test('온보딩부터 계약·대시보드까지: SCR-002~004 → 이벤트 → SCR-009 → SCR-010 → SCR-029', async ({ page }) => {
+test('온보딩부터 첫 계약 뒤 복구 안내·프리시즌까지: SCR-002~004 → 이벤트 → SCR-009 → SCR-010 → SCR-029', async ({
+  page,
+}) => {
   const startedAt = Date.now();
+  let profileRequests = 0;
+  let recoveryCodeRequests = 0;
+  page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path === '/v1/profile') profileRequests += 1;
+    if (path === '/v1/profile/recovery-code') recoveryCodeRequests += 1;
+  });
 
-  await completeOnboardingAndConfirm(page);
+  await goToConfirm(page);
+  const profileRequestsBeforeKickoff = profileRequests;
+  const recoveryCodeRequestsBeforeKickoff = recoveryCodeRequests;
+  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+  // 앱 부팅 시 프로필 조회가 있을 수 있으므로 KICKOFF 직전 스냅샷과 비교해 SCR-004 구간의
+  // 무호출을 검증한다.
+  expect(profileRequests).toBe(profileRequestsBeforeKickoff);
+  expect(recoveryCodeRequests).toBe(recoveryCodeRequestsBeforeKickoff);
+
+  // helper의 실패 스텁을 상태를 기억하는 성공 응답으로 바꿔 첫 계약 뒤에만 정상 발급되는 시점과,
+  // 발급 완료 뒤 새로고침 시 이미 발급된 프로필로 자동 진행하는 실제 서버 의미를 검증한다.
+  let recoveryCodeIssued = false;
+  await page.route('**/v1/profile', (route) => {
+    return fulfillJson(route, 200, {
+      data: {
+        id: 'prf_first_contract',
+        settings: {
+          reducedMotion: 'SYSTEM',
+          textScale: 100,
+          theme: 'SYSTEM',
+          defaultSimulationMode: 'FAST',
+        },
+        linked: { google: false, toss: false },
+        recoveryCodeIssuedAt: recoveryCodeIssued ? '2026-09-16T00:00:00Z' : null,
+        createdAt: '2026-09-01T00:00:00Z',
+        googleEmailMasked: null,
+        pendingMerge: null,
+      },
+      meta: META,
+    });
+  });
+  await page.route('**/v1/profile/recovery-code', (route) => {
+    recoveryCodeIssued = true;
+    return fulfillJson(route, 200, {
+      data: { code: 'OFS-ABCD-2345-EFGH', issuedAt: '2026-09-16T00:00:00Z' },
+      meta: META,
+    });
+  });
+
   await advanceUntilOffers(page);
   // 룰셋 1.7.2/팩 0.6.6 운영 승격(release-ruleset-1-7-2): 현재 운영 활성 룰셋은 offerRules.preContract가
   // 있어(진로 선택 → 스카우트 평가 브리지 1건 → 첫 제안) 이 커리어는 항상 그 서사를 겪는다 — 첫 제안
@@ -29,7 +79,26 @@ test('온보딩부터 계약·대시보드까지: SCR-002~004 → 이벤트 → 
   // ACTIVE_RULESET_VERSION과 무관하게 1.0.0/0.1.0을 명시 고정해 계속 검증한다.
   await expect(page.getByText('스카우트 평가 뒤 도착한 제안')).toBeVisible();
   await expect(page.getByText('새로운 유니폼')).not.toBeVisible();
-  await signFirstOffer(page);
+  await signFirstOffer(page, { stopAtRecovery: true });
+
+  const recoveryUrl = new URL(page.url());
+  expect(recoveryUrl.pathname).toMatch(/\/career\/.+\/confirm$/);
+  expect(recoveryUrl.searchParams.get('step')).toBe('recovery');
+  expect(recoveryUrl.searchParams.get('milestone')).toBe('first-contract');
+  await expect(page.getByText('OFS-ABCD-2345-EFGH')).toBeVisible();
+  const profileRequestsAtRecovery = profileRequests;
+  expect(profileRequestsAtRecovery).toBeGreaterThanOrEqual(1);
+  expect(recoveryCodeRequests).toBe(1);
+
+  // 정상 발급 뒤 새로고침은 GET /profile의 issuedAt을 보고 코드를 다시 만들지 않고 dashboard로 간다.
+  await page.reload();
+  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  expect(profileRequests).toBeGreaterThan(profileRequestsAtRecovery);
+  expect(recoveryCodeRequests).toBe(1);
+  await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
+  await expect(page.getByText('0 / 12')).toBeVisible();
+  await expect(page.getByText('프리시즌 계획을 세우면 일정이 열립니다.')).toBeVisible();
+  await expect(page.getByText(/step 12 · 시즌 정산/)).toHaveCount(0);
 
   // UX-014(2026-09-14): 선수 이름은 이제 대시보드 자체가 아니라 모든 /career/:id/* 화면에 고정된
   // 커리어 상단 헤더(CareerHeaderBar)가 보여준다 — 그 페이지 h1은 화면마다 다른 제목을 쓰므로 여기서는
@@ -46,4 +115,79 @@ test('온보딩부터 계약·대시보드까지: SCR-002~004 → 이벤트 → 
   const elapsedMs = Date.now() - startedAt;
   console.log(`[first-contract] 온보딩→계약·대시보드 소요 시간: ${elapsedMs}ms`);
   expect(elapsedMs).toBeLessThan(5 * 60 * 1000);
+});
+
+test('첫 계약 뒤 첫 복구 코드 발급 실패는 recovery URL 새로고침에서도 복원된다', async ({
+  page,
+}) => {
+  let profileRequests = 0;
+  let recoveryCodeRequests = 0;
+  page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path === '/v1/profile') profileRequests += 1;
+    if (path === '/v1/profile/recovery-code') recoveryCodeRequests += 1;
+  });
+
+  await goToConfirm(page);
+  const profileRequestsBeforeKickoff = profileRequests;
+  const recoveryCodeRequestsBeforeKickoff = recoveryCodeRequests;
+  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+  expect(profileRequests).toBe(profileRequestsBeforeKickoff);
+  expect(recoveryCodeRequests).toBe(recoveryCodeRequestsBeforeKickoff);
+
+  await page.route('**/v1/profile', (route) =>
+    fulfillJson(route, 200, {
+      data: {
+        id: 'prf_first_contract_failure',
+        settings: {
+          reducedMotion: 'SYSTEM',
+          textScale: 100,
+          theme: 'SYSTEM',
+          defaultSimulationMode: 'FAST',
+        },
+        linked: { google: false, toss: false },
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-09-01T00:00:00Z',
+        googleEmailMasked: null,
+        pendingMerge: null,
+      },
+      meta: META,
+    }),
+  );
+  await page.route('**/v1/profile/recovery-code', (route) =>
+    fulfillJson(route, 503, {
+      error: {
+        code: 'SERVICE_UNAVAILABLE',
+        message: '서비스를 이용할 수 없습니다.',
+        retryable: true,
+      },
+      meta: META,
+    }),
+  );
+
+  await advanceUntilOffers(page);
+  await signFirstOffer(page, { stopAtRecovery: true });
+  await expect(page).toHaveURL(
+    /\/career\/.+\/confirm\?step=recovery&milestone=first-contract$/,
+  );
+  await expect(
+    page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.'),
+  ).toBeVisible();
+  expect(profileRequests).toBeGreaterThanOrEqual(1);
+  expect(recoveryCodeRequests).toBe(1);
+
+  await page.reload();
+  await expect(page).toHaveURL(
+    /\/career\/.+\/confirm\?step=recovery&milestone=first-contract$/,
+  );
+  await expect(
+    page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.'),
+  ).toBeVisible();
+  expect(recoveryCodeRequests).toBe(2);
+
+  await page.getByRole('button', { name: '계속' }).click();
+  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expect(page.getByText('0 / 12')).toBeVisible();
+  await expect(page.getByText('프리시즌 계획을 세우면 일정이 열립니다.')).toBeVisible();
 });

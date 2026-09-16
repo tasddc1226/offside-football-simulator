@@ -78,7 +78,6 @@ export function PublicIntroduction() {
         </p>
         <div className="flex flex-col gap-os-2 sm:flex-row">
           <Link
-            aria-label="게임 시작"
             to="/onboarding"
             className={buttonClassName('primary', 'w-full')}
             style={buttonStyle}

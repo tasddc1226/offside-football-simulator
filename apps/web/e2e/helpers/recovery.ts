@@ -3,7 +3,7 @@
 // 붙는다 — E2E_WITH_API=1일 때만 쓴다.
 import { expect, type Page } from '@playwright/test';
 
-/** 온보딩 → SCR-002~004 → KICKOFF → 복구 코드 발급 → "저장했어요" → SCR-007 계열 도착까지. */
+/** 온보딩 → SCR-002~004 → KICKOFF → SCR-007 계열 → 설정에서 복구 코드 발급 → 원래 결정 복귀. */
 export async function createCareerAndIssueRecoveryCode(pageA: Page): Promise<{ codeText: string }> {
   await pageA.goto('/onboarding');
   await pageA.getByRole('button', { name: '다음' }).click();
@@ -26,15 +26,22 @@ export async function createCareerAndIssueRecoveryCode(pageA: Page): Promise<{ c
   await expect(pageA).toHaveURL(/\/career\/.+\/confirm$/);
 
   await pageA.getByRole('button', { name: 'KICKOFF' }).click();
-  await expect(pageA).toHaveURL(/\/career\/.+\/confirm\?step=recovery$/);
-  // 실제 서버로 확정 상태(revision 2)가 저장된 뒤에 코드를 발급해야 컨텍스트 B가 받는 GET이
-  // 최신 상태를 돌려준다 — 디바운스된 PUT을 기다린다.
+  await expect(pageA).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+  const decisionUrl = pageA.url();
+  // 실제 서버로 확정 상태(revision 2)가 저장된 뒤 설정에서 코드를 발급해야 컨텍스트 B가 받는 GET이
+  // 최신 상태를 돌려준다 — 디바운스된 PUT을 기다린다. 온보딩이 코드를 막지 않더라도 설정 접근은
+  // 그대로 보존돼야 한다.
   await expect(pageA.getByText('저장됨')).toBeVisible({ timeout: 15_000 });
 
+  await pageA.goto('/settings');
+  await pageA.getByText('계정 상세', { exact: true }).click();
+  await pageA.getByRole('button', { name: '발급', exact: true }).click();
+  await expect(pageA.getByRole('heading', { level: 2, name: '복구 코드' })).toBeVisible();
   const codeText = await pageA.getByText(/^OFS-/).innerText();
   expect(codeText).toMatch(/^OFS-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
 
-  await pageA.getByRole('button', { name: '저장했어요' }).click();
+  await pageA.getByRole('button', { name: '적어 두었습니다' }).click();
+  await pageA.goto(decisionUrl);
   await expect(pageA).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
 
   return { codeText };
@@ -50,7 +57,9 @@ export async function recoverProfile(pageB: Page, codeText: string): Promise<voi
   await pageB.getByLabel('다른 기기에서 발급받은 복구 코드').fill(codeText);
   await pageB.getByRole('button', { name: '복구' }).click();
 
-  await expect(pageB.getByText(/프로필을 복구했습니다\. 커리어 \d+개/)).toBeVisible({ timeout: 15_000 });
+  await expect(pageB.getByText(/프로필을 복구했습니다\. 커리어 \d+개/)).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(pageB).toHaveURL(/\/$/, { timeout: 15_000 });
   await expect(pageB.getByRole('heading', { level: 2, name: '김서준' })).toBeVisible();
 }
