@@ -3,6 +3,7 @@ import { compareCodePoints } from './canonical.js';
 import type { Ruleset, SelectionRules, TacticalStyle } from './ruleset.js';
 import {
   ATTRIBUTE_KEYS,
+  statGroupOf,
   type AttributeKey,
   type CareerState,
   type Competitor,
@@ -209,6 +210,51 @@ export function isSquadRoleBetter(a: SquadRole, b: SquadRole): boolean {
   return SQUAD_ROLE_RANK[a] < SQUAD_ROLE_RANK[b];
 }
 
+export type RoleProposalDeclineContext = {
+  ruleset: Ruleset;
+  styleId: string;
+  primaryPosition: Position;
+  contractRole: SquadRole;
+  currentSelection: SelectionRanking;
+  proposal: RoleProposal;
+};
+
+/**
+ * 역할 제안 거절에 적용할 신뢰도 delta를 계산한다. 기존 ROLE_CHANGE 하향 제안과 더불어, Issue #242
+ * opt-in이 +15 fit gate를 실제로 우회해 만든 0-slot 같은 스탯 그룹 POSITION_CHANGE가 기존 역할 약속보다
+ * 낮은 현재 역할을 보완하는 경우에도 declineDowngradeTrustDelta를 쓴다. 키가 없거나 +15 gate를 통과한
+ * 일반 POSITION_CHANGE는 기존 declineTrustDelta를 보존한다.
+ */
+export function computeRoleProposalDeclineTrustDelta(context: RoleProposalDeclineContext): number {
+  const roleRules = context.ruleset.selectionRules.roleProposal;
+  const isRoleDowngrade =
+    context.proposal.type === 'ROLE_CHANGE' && isSquadRoleBetter(context.contractRole, context.proposal.to);
+
+  let isZeroSlotFallbackDowngrade = false;
+  if (
+    context.proposal.type === 'POSITION_CHANGE' &&
+    context.proposal.from === context.primaryPosition &&
+    roleRules.zeroSlotAdjacentFallback === true
+  ) {
+    const style = findTacticalStyle(context.ruleset, context.styleId);
+    const currentPlayer = context.currentSelection.candidates.find((candidate) => candidate.id === 'PLAYER');
+    if (currentPlayer === undefined) {
+      throw new RangeError('computeRoleProposalDeclineTrustDelta: currentSelection에 PLAYER 후보가 없다.');
+    }
+    const bypassedLegacyFitGate = context.proposal.tacticalFitAfter - currentPlayer.tacticalFit < 15;
+    isZeroSlotFallbackDowngrade =
+      style.slots[context.primaryPosition] === 0 &&
+      style.slots[context.proposal.to] > 0 &&
+      statGroupOf(context.proposal.to) === statGroupOf(context.primaryPosition) &&
+      bypassedLegacyFitGate &&
+      isSquadRoleBetter(context.contractRole, squadRoleFromSelection(context.currentSelection));
+  }
+
+  return (isRoleDowngrade || isZeroSlotFallbackDowngrade) && roleRules.declineDowngradeTrustDelta !== undefined
+    ? roleRules.declineDowngradeTrustDelta
+    : roleRules.declineTrustDelta;
+}
+
 /** Competitor(저장된 raw 입력)를 판정 시점에 SelectionCandidate(score 포함)로 변환한다. 경쟁자는 항상 자기 생성 포지션에서만 평가하므로 familiarity는 natural(1.0)로 고정한다. */
 function competitorToCandidate(competitor: Competitor, rules: SelectionRules): SelectionCandidate {
   const expectedPerformance = computeExpectedPerformance(
@@ -327,10 +373,11 @@ export type RoleProposalContext = {
  * D-34 제안 산출(결정론, roll 없음). (a) `positionAdjacency[primaryPosition]`의 인접 포지션 전부
  * (`ruleset.positions` 순서, 아키타입 필터 없음) 중 `computeTacticalFit`이 현재보다 15 이상 높으며 그
  * 포지션 projectedRole이 현재보다 좋으면 POSITION_CHANGE(첫 번째로 만족하는 후보). Issue #242
- * 선택 키(`zeroSlotAdjacentFallback`) 이후에는 현재 포지션의 선발 자리가 0인 경우에만, 선발 자리가 있는
- * 인접 포지션의 실제 projectedRole이 더 좋으면 +15 적합도 게이트를 대체한다. 이는 출전을 보장하는
- * 수치 추정이 아니라 같은 ranking 계산의 실제 자리와 순위만 사용한다. 신규 후보가 여러 개면 더 좋은
- * projectedRole → 높은 tacticalFit → 기존 `positions` 순서로 고른다. 아키타입 필터를
+ * 선택 키(`zeroSlotAdjacentFallback`) 이후에는 현재 포지션의 선발 자리가 0인 경우에만, 같은 스탯
+ * 그룹이면서 선발 자리가 있는 인접 포지션의 실제 projectedRole이 더 좋으면 +15 적합도 게이트를
+ * 대체한다. 스탯 그룹을 넘는 후보는 계속 +15 gate를 통과해야 한다. 이는 출전을 보장하는 수치 추정이
+ * 아니라 같은 ranking 계산의 실제 자리와 순위만 사용한다. 신규 후보가 여러 개면 더 좋은 projectedRole
+ * → 높은 tacticalFit → 기존 `positions` 순서로 고른다. 아키타입 필터를
  * 두지 않는 이유: archetypeId는 포지션 고유값이라 다른 포지션의 `preferredArchetypeIds`에는 애초에
  * 들어갈 수 없다 — 필터를 두면 POSITION_CHANGE가 실제 룰셋에서 영원히 나오지 않는다. 아키타입이
  * 바뀌지 않으므로 후보 포지션 fit의 아키타입 항은 항상 0(= tacticalFitWeights.archetype × 0) — 선호
@@ -357,13 +404,17 @@ export function computeRoleProposal(context: RoleProposalContext): RoleProposal 
   const canUseZeroSlotFallback =
     rules.roleProposal.zeroSlotAdjacentFallback === true &&
     style.slots[context.primaryPosition] === 0;
+  const primaryStatGroup = statGroupOf(context.primaryPosition);
   let bestZeroSlotProposal: Extract<RoleProposal, { type: 'POSITION_CHANGE' }> | null = null;
 
   for (const position of candidatePositions) {
     const candidateFit = computeTacticalFit(context.attributes, context.archetypeId, position, style, rules);
     const passesLegacyFitGate = candidateFit - currentPlayer.tacticalFit >= 15;
-    const hasPlayableStarterSlot = canUseZeroSlotFallback && style.slots[position] > 0;
-    if (!passesLegacyFitGate && !hasPlayableStarterSlot) continue;
+    const hasSameGroupPlayableStarterSlot =
+      canUseZeroSlotFallback &&
+      statGroupOf(position) === primaryStatGroup &&
+      style.slots[position] > 0;
+    if (!passesLegacyFitGate && !hasSameGroupPlayableStarterSlot) continue;
 
     const familiarity = familiarityOf(rules.proficiencyOnChange.adjacent, rules);
     const ranking = rankPositionForPlayer({

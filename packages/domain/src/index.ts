@@ -208,6 +208,7 @@ export {
 export {
   computeExpectedPerformance,
   computeRoleProposal,
+  computeRoleProposalDeclineTrustDelta,
   computeSelectionScore,
   computeSquadStatus,
   computeTacticalFit,
@@ -219,6 +220,7 @@ export {
   rankSelection,
   squadRoleFromSelection,
   type RankPositionForPlayerInput,
+  type RoleProposalDeclineContext,
   type RoleProposalContext,
   type TacticalRoomView,
 } from './selection.js';
