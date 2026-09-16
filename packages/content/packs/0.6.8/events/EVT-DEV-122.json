@@ -1,0 +1,222 @@
+{
+  "id": "EVT-DEV-122",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "triggers": {
+    "hasTag": [
+      "career.tags",
+      "T7034_FOLLOWUP_ONLY"
+    ]
+  },
+  "exclusionTags": [
+    "T7034_TRAINING_DONE"
+  ],
+  "cooldown": {
+    "steps": 12
+  },
+  "weight": 100,
+  "choices": [
+    {
+      "id": "A",
+      "label": "난도를 낮추고 성공 장면부터 쌓는다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "사기 회복 기회",
+          "target": "morale",
+          "direction": "UP"
+        },
+        {
+          "label": "성장 속도는 느림"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 78,
+          "title": "쉬운 과제에서 다시 경기 감각을 연결했다",
+          "cause": "성공 경험을 먼저 만든 설계",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-122.A.S0",
+              "target": "morale",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-DEV-122_A_S0"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-122.A.S1",
+              "target": "form",
+              "delta": 3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-DEV-122_A_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_TRAINING_DONE"
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 22,
+          "title": "쉬운 과제에서도 조급함이 남았다",
+          "cause": "빨리 만회하려는 마음",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-122.A.F0",
+              "target": "form",
+              "delta": -1,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-DEV-122_A_F0"
+            }
+          ],
+          "addTags": [
+            "T7034_TRAINING_DONE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "코치와 일대일로 판단 기준을 다시 세운다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "감독 신뢰 상승 기회",
+          "target": "managerTrust",
+          "direction": "UP"
+        },
+        {
+          "label": "폼 회복 변동"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 67,
+          "title": "언제 단순하게 플레이할지가 분명해졌다",
+          "cause": "판단 기준을 말로 정리",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-DEV-122.B.S0",
+              "target": "managerTrust",
+              "delta": 4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-DEV-122_B_S0"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-122.B.S1",
+              "target": "form",
+              "delta": 4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-DEV-122_B_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_TRAINING_DONE"
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 33,
+          "title": "설명은 이해했지만 몸이 바로 따라오지 않았다",
+          "cause": "인지와 실행의 시간차",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-122.B.F0",
+              "target": "morale",
+              "delta": -2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-DEV-122_B_F0"
+            }
+          ],
+          "addTags": [
+            "T7034_TRAINING_DONE"
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "첫 선택 훈련이 뜻대로 되지 않았다. 코치는 벌 대신 훈련 설계를 다시 고르라고 했다."
+  }
+}

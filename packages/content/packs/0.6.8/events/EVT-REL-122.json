@@ -1,0 +1,234 @@
+{
+  "id": "EVT-REL-122",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "triggers": {
+    "hasTag": [
+      "career.tags",
+      "T7034_FOLLOWUP_ONLY"
+    ]
+  },
+  "exclusionTags": [
+    "T7034_RECIPROCITY_DONE"
+  ],
+  "cooldown": {
+    "steps": 12
+  },
+  "weight": 100,
+  "choices": [
+    {
+      "id": "A",
+      "label": "내 판단의 이유와 아쉬움을 인정한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "경쟁 관계 회복 기회",
+          "target": "rival",
+          "direction": "UP"
+        },
+        {
+          "label": "사기 변동"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 72,
+          "title": "경쟁자가 설명을 받아들이고 다시 공을 건넸다",
+          "cause": "책임을 피하지 않은 대화",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-122.A.S0",
+              "target": "rival",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-122_A_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-122.A.S1",
+              "target": "captain",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-122_A_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_RECIPROCITY_DONE"
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 28,
+          "title": "사과가 자신감 부족처럼 들렸다",
+          "cause": "표현 방식의 오해",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-122.A.F0",
+              "target": "morale",
+              "delta": -2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-122_A_F0"
+            }
+          ],
+          "addTags": [
+            "T7034_RECIPROCITY_DONE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "같은 조건의 일대일 승부를 제안한다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        {
+          "label": "폼 상승 기회",
+          "target": "form",
+          "direction": "UP"
+        },
+        {
+          "label": "라커룸 관계 위험",
+          "target": "captain",
+          "direction": "DOWN"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 55,
+          "title": "정면 승부 뒤 서로의 강점을 인정했다",
+          "cause": "규칙을 정한 경쟁",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-122.B.S0",
+              "target": "form",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-122_B_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-122.B.S1",
+              "target": "rival",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-122_B_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_RECIPROCITY_DONE"
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 45,
+          "title": "승부가 길어져 팀 훈련의 흐름을 끊었다",
+          "cause": "과열된 일대일",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-122.B.F0",
+              "target": "captain",
+              "delta": -3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-122_B_F0"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-122.B.F1",
+              "target": "fitness",
+              "delta": -2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-122_B_F1"
+            }
+          ],
+          "addTags": [
+            "T7034_RECIPROCITY_DONE"
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "다음 훈련 시작 전 경쟁자가 지난 장면을 다시 꺼냈다. 관계를 먼저 정리할지, 공정한 승부로 답할지 선택할 수 있다."
+  }
+}

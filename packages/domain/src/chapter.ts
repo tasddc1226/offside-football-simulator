@@ -4,7 +4,7 @@ import { applyEffects } from './effects.js';
 import { computeRatingTenths } from './match.js';
 import { rollInt } from './rng.js';
 import { isRivalOpponent } from './schedule.js';
-import type { League, Ruleset } from './ruleset.js';
+import type { ChapterSelectionRules, League, Ruleset } from './ruleset.js';
 import type {
   CareerState,
   ChapterOutcomeKind,
@@ -26,6 +26,8 @@ export type ChapterCandidateInput = {
   importance: 'MAJOR' | 'MINOR';
   trigger: ChapterTrigger;
   weight: number;
+  /** 같은 경기 의미를 공유하는 변형 묶음. 옵트인 룰셋에서만 회전에 사용한다. */
+  rotationGroup?: string;
   decisionsTotal: number;
 };
 
@@ -66,7 +68,53 @@ export type SelectChapterInput = {
   injuryReturnMatchId?: string | null;
   /** 최초 수락 뒤 유지되는 NATIONAL_DEBUT 예약. null/undefined면 대표팀 데뷔 후보를 열지 않는다. */
   nationalDebutReservation?: NationalDebutReservation | null;
+  /** 없으면 역사적 MAJOR > weight > id 선택 경로를 그대로 사용한다. */
+  chapterSelectionRules?: ChapterSelectionRules | undefined;
 };
+
+function isReservedChapterTrigger(trigger: ChapterTrigger): boolean {
+  return (
+    trigger.kind === 'NATIONAL_DEBUT' ||
+    trigger.kind === 'INJURY_RETURN' ||
+    trigger.kind === 'DEBUT'
+  );
+}
+
+function resolvedSeasonsForChapter(
+  resolvedChapterIds: readonly string[],
+  chapterId: string,
+): number[] {
+  const prefix = `${chapterId}@`;
+  return resolvedChapterIds.flatMap((resolvedId) => {
+    if (!resolvedId.startsWith(prefix)) return [];
+    const season = Number(resolvedId.slice(prefix.length));
+    return Number.isInteger(season) && season >= 1 ? [season] : [];
+  });
+}
+
+function latestResolvedSeason(
+  resolvedChapterIds: readonly string[],
+  chapterId: string,
+): number | null {
+  const seasons = resolvedSeasonsForChapter(resolvedChapterIds, chapterId);
+  return seasons.length === 0 ? null : Math.max(...seasons);
+}
+
+function isWithinChapterCooldown(
+  candidate: ChapterCandidateInput,
+  seasonIndex: number,
+  resolvedChapterIds: readonly string[],
+  rules: ChapterSelectionRules,
+): boolean {
+  if (candidate.rotationGroup === undefined || isReservedChapterTrigger(candidate.trigger))
+    return false;
+  return resolvedSeasonsForChapter(resolvedChapterIds, candidate.chapterId).some(
+    (resolvedSeason) => {
+      const delta = seasonIndex - resolvedSeason;
+      return delta >= 1 && delta <= rules.repeatCooldownSeasons;
+    },
+  );
+}
 
 function stepAllowsImportance(step: SeasonStep, importance: 'MAJOR' | 'MINOR'): boolean {
   return step.decisionSlots.some(
@@ -185,6 +233,36 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
 
   if (opened.length === 0) return null;
 
+  // Historical rulesets intentionally retain this exact no-roll comparator. The 1.7.4 policy is
+  // a separate branch so adding content cannot perturb old pair selection or RNG/state hashes.
+  if (input.chapterSelectionRules === undefined) {
+    opened.sort((a, b) => {
+      const aNationalDebut = a.candidate.trigger.kind === 'NATIONAL_DEBUT';
+      const bNationalDebut = b.candidate.trigger.kind === 'NATIONAL_DEBUT';
+      if (aNationalDebut !== bNationalDebut) return aNationalDebut ? -1 : 1;
+      if (a.candidate.importance !== b.candidate.importance)
+        return a.candidate.importance === 'MAJOR' ? -1 : 1;
+      if (a.candidate.weight !== b.candidate.weight) return b.candidate.weight - a.candidate.weight;
+      return compareCodePoints(a.candidate.chapterId, b.candidate.chapterId);
+    });
+
+    const winner = opened[0]!;
+    return {
+      chapterId: winner.candidate.chapterId,
+      version: winner.candidate.version,
+      importance: winner.candidate.importance,
+      matchId: winner.matchId,
+      decisionsTotal: winner.candidate.decisionsTotal,
+      trigger: winner.candidate.trigger.kind,
+      ...(winner.virtualOpponent === undefined ? {} : { virtualOpponent: winner.virtualOpponent }),
+    };
+  }
+
+  // Opt-in policy: first identify the winning family with the historical
+  // NATIONAL_DEBUT > importance > weight > chapterId comparator, then rotate only among eligible
+  // members of that same group/importance/weight tier. A mismatched lower-weight member cannot
+  // bypass historical weight priority. Unseen variants win, followed by the least recently
+  // resolved; no simulation RNG is consumed and a fully cooled-down group stays unavailable.
   opened.sort((a, b) => {
     const aNationalDebut = a.candidate.trigger.kind === 'NATIONAL_DEBUT';
     const bNationalDebut = b.candidate.trigger.kind === 'NATIONAL_DEBUT';
@@ -194,7 +272,38 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
     return compareCodePoints(a.candidate.chapterId, b.candidate.chapterId);
   });
 
-  const winner = opened[0]!;
+  const leader = opened[0]!;
+  const rotationGroup = leader.candidate.rotationGroup;
+  const rotationCandidates =
+    rotationGroup === undefined || isReservedChapterTrigger(leader.candidate.trigger)
+      ? [leader]
+      : opened.filter(
+          (entry) =>
+            entry.candidate.rotationGroup === rotationGroup &&
+            !isReservedChapterTrigger(entry.candidate.trigger) &&
+            entry.candidate.importance === leader.candidate.importance &&
+            entry.candidate.weight === leader.candidate.weight,
+        ).filter(
+          (entry) =>
+            !isWithinChapterCooldown(
+              entry.candidate,
+              input.seasonIndex,
+              input.resolvedChapterIds,
+              input.chapterSelectionRules!,
+            ),
+        );
+  if (rotationCandidates.length === 0) return null;
+  rotationCandidates.sort((a, b) => {
+    const aLastSeason = latestResolvedSeason(input.resolvedChapterIds, a.candidate.chapterId);
+    const bLastSeason = latestResolvedSeason(input.resolvedChapterIds, b.candidate.chapterId);
+    if (aLastSeason === null && bLastSeason !== null) return -1;
+    if (aLastSeason !== null && bLastSeason === null) return 1;
+    if (aLastSeason !== null && bLastSeason !== null && aLastSeason !== bLastSeason)
+      return aLastSeason - bLastSeason;
+    return compareCodePoints(a.candidate.chapterId, b.candidate.chapterId);
+  });
+
+  const winner = rotationCandidates[0]!;
   return {
     chapterId: winner.candidate.chapterId,
     version: winner.candidate.version,

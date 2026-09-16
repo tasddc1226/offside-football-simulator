@@ -96,6 +96,27 @@ describe('selectChapterCandidates: 필터·정렬', () => {
     ]);
   });
 
+  it('rotationGroup이 있는 새 챕터만 후보 메타데이터에 전달한다', () => {
+    const pack = makeContentPack([
+      makeChapter({
+        id: 'CHP-MATCH-008',
+        rotationGroup: 'DECIDER',
+        trigger: { kind: 'DECIDER', maxRankGap: 2 },
+      }),
+    ]);
+    expect(selectChapterCandidates(pack, buildTestState())).toEqual([
+      {
+        chapterId: 'CHP-MATCH-008',
+        version: 1,
+        importance: 'MAJOR',
+        trigger: { kind: 'DECIDER', maxRankGap: 2 },
+        weight: 100,
+        rotationGroup: 'DECIDER',
+        decisionsTotal: 1,
+      },
+    ]);
+  });
+
   it('positionGroups가 있으면 선수 포지션군(FW)과 겹칠 때만 포함된다', () => {
     // TEST_PROFILE.primaryPosition은 'W' → statGroup 'FW'.
     const matching = makeChapter({ id: 'CHP-MATCH-001', positionGroups: ['FW'] });
@@ -128,6 +149,31 @@ describe('selectChapterCandidates: 필터·정렬', () => {
     const pack = makeContentPack([makeChapter({ id: 'CHP-MATCH-004' }), makeChapter({ id: 'CHP-MATCH-001' })]);
     expect(selectChapterCandidates(pack, buildTestState()).map((c) => c.chapterId)).toEqual(['CHP-MATCH-001', 'CHP-MATCH-004']);
   });
+
+  it.each([
+    ['GK', ['CHP-MATCH-005', 'CHP-MATCH-011', 'CHP-MATCH-012']],
+    ['CB', ['CHP-MATCH-006', 'CHP-MATCH-011', 'CHP-MATCH-012']],
+    ['CM', ['CHP-MATCH-011', 'CHP-MATCH-012']],
+    ['W', ['CHP-MATCH-007', 'CHP-MATCH-011', 'CHP-MATCH-012']],
+  ] as const)(
+    '0.6.8 post-debut 후보는 %s 포지션에서 실제 eligible 변형만 전달한다',
+    (position, expectedIds) => {
+      const base = buildTestState();
+      const profile = base.player.profile;
+      if (profile === null) throw new Error('test profile missing');
+      const state = buildTestState({
+        tags: ['프로_데뷔'],
+        player: {
+          draft: { ...base.player.draft, position },
+          profile: { ...profile, preferredPosition: position, primaryPosition: position },
+        },
+      });
+      const candidates = selectChapterCandidates(loadContentPack('0.6.8'), state)
+        .filter((candidate) => candidate.rotationGroup === 'POST_DEBUT')
+        .map((candidate) => candidate.chapterId);
+      expect(candidates).toEqual(expectedIds);
+    },
+  );
 
   it('INJURY_RETURN 후보 readiness는 domain에 위임해 REHAB·RECOVERED·window 만료 상태 모두 전달한다', () => {
     const pack = makeContentPack([

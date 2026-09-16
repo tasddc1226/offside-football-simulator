@@ -278,6 +278,53 @@ describe('selectEligibleEvents: 필터(합성 이벤트)', () => {
     ]);
   });
 
+  it('0.6.8 베테랑 사건 6개는 28세 전에 노출되지 않고 28세 경계부터 조건에 맞는 사건만 열린다', () => {
+    const fullPack = loadContentPack('0.6.8');
+    const eventIds = [
+      'EVT-DEV-130',
+      'EVT-INJ-130',
+      'EVT-MEDIA-130',
+      'EVT-MGR-130',
+      'EVT-REL-130',
+      'EVT-REL-131',
+    ];
+    const pack = makeContentPack(eventIds.map((eventId) => fullPack.eventsById.get(eventId)!));
+    const contract: NonNullable<CareerState['contract']> = {
+      id: 'contract-veteran',
+      offerId: 'offer-veteran',
+      teamId: 'team-1',
+      teamName: '팀 1',
+      leagueTier: 1,
+      lengthSeasons: 2,
+      wageMinorPerWeek: 100,
+      signingBonusMinor: 1000,
+      rolePromise: 'STARTER',
+      shirtNumber: 8,
+      signatureType: 'AUTO',
+      signedAtRevision: 1,
+      kind: 'PERMANENT',
+      appearancePromise: { minutesShareBp: 5000 },
+      positionPlan: 'W',
+      suspended: false,
+      loan: null,
+      promiseBreaches: 0,
+      signedSeasonIndex: 1,
+    };
+    const base = {
+      stage: 'PRO' as const,
+      currentStep: 4,
+      seasonPhase: 'LEAGUE' as const,
+      contract,
+    };
+
+    expect(selectEligibleEvents(pack, buildTestState({ ...base, age: 27 }))).toEqual([]);
+    expect(
+      selectEligibleEvents(pack, buildTestState({ ...base, age: 28 })).map(
+        (event) => event.eventId,
+      ),
+    ).toEqual(['EVT-REL-130']);
+  });
+
   // T-4-003 D-52: INJURY/NATIONAL_TEAM/RUMOUR만 전용 pending 생성기가 소비하고 일반 슬롯에서 제외한다.
   it.each([
     { presentation: 'INJURY' as const, id: 'EVT-DEV-905' },

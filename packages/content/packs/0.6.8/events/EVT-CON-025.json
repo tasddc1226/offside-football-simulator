@@ -1,0 +1,83 @@
+{
+  "id": "EVT-CON-025",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": { "hasTag": ["career.tags", "진로_학교_성인훈련"] },
+  "exclusionTags": [],
+  "weight": 100,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "간결한 플레이로 템포에 맞춘다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "전술 적합도 상승", "target": "tacticalFit", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "성인 팀의 템포 안에서 실수를 줄였다",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-CON-025.A.A1",
+              "target": "tacticalFit",
+              "delta": 4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["진로_하부리그"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "몸싸움 뒤에도 장점을 시도한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "폼 상승", "target": "form", "direction": "UP" },
+        { "label": "회복 부담", "target": "fitness", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "한 장면의 장점과 몇 번의 늦은 판단이 함께 남았다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-CON-025.B.B1.0",
+              "target": "form",
+              "delta": 4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-CON-025.B.B1.1",
+              "target": "fitness",
+              "delta": -4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["진로_하부리그"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "성인 선수들과 부딪힌 첫 훈련. 학교 무대에서 통하던 선택을 더 빠르게 해야 한다."
+  }
+}

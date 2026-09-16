@@ -8,6 +8,7 @@ export type ChapterCandidate = {
   importance: 'MAJOR' | 'MINOR';
   trigger: ChapterTrigger;
   weight: number;
+  rotationGroup?: string;
   decisionsTotal: number;
 };
 
@@ -87,6 +88,7 @@ export function selectChapterCandidates(pack: ContentPack, state: CareerState): 
       importance: chapter.importance,
       trigger: chapter.trigger,
       weight: chapter.weight,
+      ...(chapter.rotationGroup === undefined ? {} : { rotationGroup: chapter.rotationGroup }),
       decisionsTotal: chapter.decisions.length,
     }))
     .sort(compareChapterId);

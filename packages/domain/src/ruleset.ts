@@ -87,6 +87,16 @@ export type LeagueLedgerRules = {
   tieBreakers: ['POINTS', 'GOAL_DIFFERENCE', 'GOALS_FOR', 'TEAM_ID'];
 };
 
+/**
+ * Issue #243: historical rulesets keep the original chapter comparator. New rulesets may opt in
+ * to a deterministic least-recently-used rotation without consuming the simulation RNG stream.
+ */
+export type ChapterSelectionRules = {
+  version: 'LRU_V1';
+  /** A resolution `n` seasons ago remains ineligible when `n <= repeatCooldownSeasons`. */
+  repeatCooldownSeasons: number;
+};
+
 // T-2-002 D-34: 컵 대회 하나. `rounds`는 항상 4라운드 고정 순서(R1 → R2 → SEMI → FINAL)다(content
 // 스키마가 정확한 값·순서를 강제한다. 여기서 튜플 타입을 쓰지 않는 이유는 JSON에서 그대로 `as Ruleset`
 // 캐스팅하는 fixture 로더들이 배열 리터럴을 튜플로 좁혀 추론하지 않기 때문이다).
@@ -533,6 +543,8 @@ export type Ruleset = {
   retirementRules?: RetirementPolicy | undefined;
   /** 1.7.0+: 소속 리그 전체 대진·원장·실제 순위 지원 gate. */
   leagueLedgerRules?: LeagueLedgerRules | undefined;
+  /** 1.7.4+: 반복 가능한 경기 챕터의 시즌 단위 회전. 없으면 과거 선택 순서를 그대로 쓴다. */
+  chapterSelectionRules?: ChapterSelectionRules | undefined;
   positions: Position[];
   archetypes: Archetype[];
   backgrounds: Background[];
