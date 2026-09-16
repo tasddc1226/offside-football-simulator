@@ -3,7 +3,7 @@
 // 화면마다 다르다.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import type { CareerState } from '@offside/domain';
+import type { CareerState, Ruleset } from '@offside/domain';
 import type { EventDefinition } from '@offside/content';
 import type { ExecuteSuccess } from '@offside/engine-client';
 import {
@@ -24,7 +24,12 @@ import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { archetypeName, currentTeamId } from './current-team.js';
-import { positionHeaderField, POSITION_LABELS, RISK_LABEL_KO } from './labels.js';
+import {
+  INJURY_BODY_PART_LABELS,
+  positionHeaderField,
+  POSITION_LABELS,
+  RISK_LABEL_KO,
+} from './labels.js';
 import { buildNarrativeTokens, renderNarrative, type NarrativeTokenValues } from './narrative.js';
 import { eventSituation } from './legacy-event-copy.js';
 import { PlayerBanner } from './PlayerBanner.js';
@@ -61,8 +66,67 @@ const EVENT_INTRO: Record<EventScreenId, { eyebrow: string; title: string }> = {
   'SCR-032': { eyebrow: '더 큰 무대의 부름', title: '대표팀 소집 통보' },
 };
 
+type RehabIntroContext = {
+  age: number;
+  bodyPartLabel: string;
+  hasSameBodyPartHistory: boolean;
+};
+
+const REHAB_INTRO_VARIANTS = [
+  () => ({ eyebrow: '복귀를 준비하며', title: '지금은 회복할 시간' }),
+  ({ bodyPartLabel }: RehabIntroContext) => ({
+    eyebrow: `${bodyPartLabel} 회복 계획`,
+    title: '다시 뛸 준비를 차근히',
+  }),
+  ({ age, bodyPartLabel, hasSameBodyPartHistory }: RehabIntroContext) =>
+    hasSameBodyPartHistory
+      ? {
+          eyebrow: `${bodyPartLabel} 부상 이력을 살피며`,
+          title: '이번 회복은 더 신중하게',
+        }
+      : {
+          eyebrow: `${age}세 시즌, 몸을 돌보며`,
+          title: '몸의 신호를 살필 시간',
+        },
+] as const;
+
+/** 저장된 부상 id·부위·시즌·나이만 해시한다. 화면 카피 때문에 simulation RNG를 소비하지 않는다. */
+function rehabEventIntro(state: CareerState): { eyebrow: string; title: string } {
+  const pending = state.pending;
+  if (pending?.kind !== 'INJURY') return EVENT_INTRO['SCR-022'];
+  const episode = state.health.episodes.find((candidate) => candidate.id === pending.episodeId);
+  if (episode === undefined) return EVENT_INTRO['SCR-022'];
+
+  const hasSameBodyPartHistory = state.health.episodes.some(
+    (candidate) => candidate.id !== episode.id && candidate.bodyPart === episode.bodyPart,
+  );
+  const context: RehabIntroContext = {
+    age: state.age,
+    bodyPartLabel: INJURY_BODY_PART_LABELS[episode.bodyPart],
+    hasSameBodyPartHistory,
+  };
+  const seed = [
+    state.careerId,
+    pending.eventId,
+    episode.id,
+    episode.bodyPart,
+    episode.occurredAt.seasonIndex,
+    episode.occurredAt.step,
+    state.age,
+    hasSameBodyPartHistory ? 1 : 0,
+  ].join(':');
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return REHAB_INTRO_VARIANTS[(hash >>> 0) % REHAB_INTRO_VARIANTS.length]!(context);
+}
+
 export interface EventDecisionContext {
   state: CareerState;
+  /** state.rulesetVersion으로 불러온 저장 커리어 전용 룰셋. 최신 기본값을 대신 쓰면 안 된다. */
+  ruleset?: Ruleset;
   definition: EventDefinition;
   tokens: NarrativeTokenValues;
 }
@@ -209,9 +273,10 @@ export function EventDecisionScreen({
     screenId === 'SCR-013' &&
     state.contract === null &&
     (ruleset.offerRules.preContract?.bridgeEventIds.includes(definition.id) ?? false);
+  const defaultIntro = screenId === 'SCR-022' ? rehabEventIntro(state) : EVENT_INTRO[screenId];
   const intro = isPreContractBridgeEvent
     ? { eyebrow: '스카우트 평가', title: '평가가 이어지고 있습니다' }
-    : EVENT_INTRO[screenId];
+    : defaultIntro;
 
   const choiceSection = (
     <section className="flex flex-col gap-os-3" aria-labelledby="event-choice-heading">
@@ -317,7 +382,7 @@ export function EventDecisionScreen({
           </div>
         </details>
 
-        {renderAbove?.({ state, definition, tokens })}
+        {renderAbove?.({ state, ruleset, definition, tokens })}
         {choiceSection}
         {resolutionFeedback}
       </div>
@@ -373,7 +438,7 @@ export function EventDecisionScreen({
             </p>
           </section>
 
-          {renderAbove?.({ state, definition, tokens })}
+          {renderAbove?.({ state, ruleset, definition, tokens })}
 
           {choiceSection}
           {resolutionFeedback}

@@ -24,7 +24,7 @@ import { canPlanNextSeason } from '../shared/start-season.js';
 import { platform } from '../platform/index.js';
 import { CountUp } from '../shared/countup.js';
 import { PlayerBanner } from '../shared/PlayerBanner.js';
-import { seasonResultHeadline } from '../shared/result-narrative.js';
+import { seasonResultHeadline, type SeasonResultHeadlineInput } from '../shared/result-narrative.js';
 import { SeasonCompareSection } from '../shared/season-compare.js';
 import {
   deriveSeasonResultView,
@@ -223,6 +223,33 @@ function trackCountupSkipped(field: string): void {
   platform.analytics.track('countup_skipped', { field });
 }
 
+function seasonHeadlineInput(
+  careerId: string,
+  view: SeasonResultView,
+  ruleset: Ruleset,
+  previousHeadline: string | null,
+): SeasonResultHeadlineInput {
+  const leagueRecord = view.result.competitions.find((competition) => competition.kind === 'LEAGUE') ?? null;
+  const league = leagueRecord === null ? undefined : ruleset.leagues.find((candidate) => candidate.id === (view.result.finalLeagueTable?.leagueId ?? leagueRecord.competitionId));
+  const leaguePosition = leagueRecord?.position ?? null;
+  const promoted = leaguePosition !== null && league !== undefined && league.promotionSpots > 0 && leaguePosition <= league.promotionSpots;
+  const relegated = leaguePosition !== null && league !== undefined && league.relegationSpots > 0 && leaguePosition > league.teamCount - league.relegationSpots;
+  const minutesShareBp = view.promise?.minutesShareBp;
+
+  return {
+    seed: careerId,
+    seasonIndex: view.seasonNumber,
+    promoted,
+    relegated,
+    avgRatingTenths: view.common.avgRatingTenths,
+    leaguePosition,
+    leagueTeamCount: view.result.finalLeagueTable?.rows.length ?? league?.teamCount ?? null,
+    appearanceRatePercent: typeof minutesShareBp === 'number' ? Math.round(minutesShareBp / 100) : null,
+    minutesPlayed: typeof view.common.minutes === 'number' ? view.common.minutes : null,
+    previousHeadline,
+  };
+}
+
 export type SeasonClubDisplay = {
   /** TeamBadge용 팀 id — 임대 시즌이면 임대팀 id(배지는 팀 id 기준, 이름 오버라이드 무관). */
   teamId: string;
@@ -324,24 +351,18 @@ function SeasonResultScreen() {
   const finalLeagueRows = view.result.finalLeagueTable === undefined
     ? undefined
     : standingRowsFromFinalLeagueTable(view.result.finalLeagueTable);
-  const promoted =
-    leagueRecord !== null &&
-    leagueRecord.position !== null &&
-    league !== undefined &&
-    league.promotionSpots > 0 &&
-    leagueRecord.position <= league.promotionSpots;
-  const relegated =
-    leagueRecord !== null &&
-    leagueRecord.position !== null &&
-    league !== undefined &&
-    league.relegationSpots > 0 &&
-    leagueRecord.position > league.teamCount - league.relegationSpots;
-  const headline = seasonResultHeadline({
-    seed: `${state.careerId}:${view.historyIndex}`,
-    promoted,
-    relegated,
-    avgRatingTenths: common.avgRatingTenths,
-  });
+  // 직전 문구는 별도 값을 만들지 않고 실제 저장 결산만 같은 함수에 순서대로 넣어 재구성한다.
+  let previousHeadline: string | null = null;
+  for (let historyIndex = 0; historyIndex < view.historyIndex; historyIndex += 1) {
+    const historicalView = deriveSeasonResultView(state, historyIndex, ruleset);
+    if (historicalView === null) continue;
+    previousHeadline = seasonResultHeadline(
+      seasonHeadlineInput(state.careerId, historicalView, ruleset, previousHeadline),
+    );
+  }
+  const headlineInput = seasonHeadlineInput(state.careerId, view, ruleset, previousHeadline);
+  const { promoted } = headlineInput;
+  const headline = seasonResultHeadline(headlineInput);
 
   return (
     <div className="os-screen" data-testid="season-result" data-result-hash={view.hash}>
