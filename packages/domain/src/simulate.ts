@@ -84,11 +84,11 @@ import {
 } from './season-stats.js';
 import { buildSeasonResult, hashSeasonResult } from './settlement.js';
 import {
+  computeRoleProposalDeclineTrustDelta,
   computeSquadStatus,
   computeTacticalFit,
   familiarityOf,
   findTacticalStyle,
-  isSquadRoleBetter,
   rankPositionForPlayer,
   squadRoleFromSelection,
   type RoleProposalContext,
@@ -3838,15 +3838,16 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   let contract = state.contract;
 
   if (decision === 'DECLINE') {
-    // T-7-002 D-67: 1.4.0+(declineDowngradeTrustDelta 정의)면 하향 제안(제안된 역할이 현재
-    // contract.rolePromise보다 나쁜 ROLE_CHANGE) 거절은 무벌점으로 대체한다. POSITION_CHANGE·상향
-    // 제안·1.3.0 이하(키 없음)는 기존 declineTrustDelta 그대로.
-    const isRoleDowngrade =
-      proposal.type === 'ROLE_CHANGE' && isSquadRoleBetter(contract.rolePromise, proposal.to);
-    const declineDelta =
-      isRoleDowngrade && rules.roleProposal.declineDowngradeTrustDelta !== undefined
-        ? rules.roleProposal.declineDowngradeTrustDelta
-        : rules.roleProposal.declineTrustDelta;
+    // T-7-002 D-67 + Issue #242: 기존 하향 ROLE_CHANGE와 opt-in 0-slot 보완 POSITION_CHANGE의
+    // 거절 delta를 같은 순수 판정으로 계산한다. UI preview도 이 함수를 사용한다.
+    const declineDelta = computeRoleProposalDeclineTrustDelta({
+      ruleset: input.ruleset,
+      styleId: season.styleId,
+      primaryPosition: profile.primaryPosition,
+      contractRole: contract.rolePromise,
+      currentSelection: season.selection,
+      proposal,
+    });
     managerTrust = clamp(managerTrust + declineDelta, 0, 100);
   } else if (proposal.type === 'KEEP') {
     managerTrust = clamp(managerTrust + rules.roleProposal.keepConfirmTrustDelta, 0, 100);

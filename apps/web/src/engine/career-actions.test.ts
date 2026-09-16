@@ -1318,12 +1318,12 @@ describe('career actions: issue #242 two-season zero-slot role balance', () => {
         primaryPosition: 'CM',
         contractRole: 'ROTATION',
         appearancePromiseMinutesShareBp: 4000,
-        managerTrustDelta: -8,
+        managerTrustDelta: 0,
       });
       expect(accepted.proposalStateHash).toBe('63b3b94a9fadde5da22c19c1c2e8b6d296bd6c238743058348dcfdecbcbc1789');
       expect(accepted.finalStateHash).toBe('c8d184c89ed38b79e1decc164f6a417113823d906621b55ced056ab5d7575681');
       expect(refused.proposalStateHash).toBe('630d8b2d8edf8f90f0b2f67d5be09adb59e9406e5a51426db8f30b8c81e8c9d7');
-      expect(refused.finalStateHash).toBe('cf34dcbb0f12e4a9ce160982c84fa85e8399d18885080fb16cce371ba3354da7');
+      expect(refused.finalStateHash).toBe('dd72e09e6ca5182f0d5980d8a3b151811d295c3c2e17a108d35c642ed0a1a267');
       expect(accepted.trace.filter((step) => step.startsWith('ROLE:'))).toEqual([
         'ROLE:POSITION_CHANGE:CM->DM:STARTER:ACCEPT',
         'ROLE:KEEP:KEEP:ACCEPT',

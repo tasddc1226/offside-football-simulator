@@ -1,5 +1,5 @@
 import {
-  isSquadRoleBetter,
+  computeRoleProposalDeclineTrustDelta,
   type CareerState,
   type Position,
   type RoleProposal,
@@ -44,8 +44,9 @@ export function buildRoleDecisionPreview(
 ): RoleDecisionPreview {
   const contract = state.contract;
   const profile = state.player.profile;
-  if (contract === null || profile === null) {
-    throw new RangeError('buildRoleDecisionPreview: role proposal requires contract and profile');
+  const season = state.season;
+  if (contract === null || profile === null || season === null) {
+    throw new RangeError('buildRoleDecisionPreview: role proposal requires contract, profile, and season');
   }
 
   const roleRules = ruleset.selectionRules.roleProposal;
@@ -54,12 +55,14 @@ export function buildRoleDecisionPreview(
     currentTrust,
     proposal.type === 'KEEP' ? roleRules.keepConfirmTrustDelta : roleRules.acceptTrustDelta,
   );
-  const downgrade =
-    proposal.type === 'ROLE_CHANGE' && isSquadRoleBetter(contract.rolePromise, proposal.to);
-  const configuredDeclineDelta =
-    downgrade && roleRules.declineDowngradeTrustDelta !== undefined
-      ? roleRules.declineDowngradeTrustDelta
-      : roleRules.declineTrustDelta;
+  const configuredDeclineDelta = computeRoleProposalDeclineTrustDelta({
+    ruleset,
+    styleId: season.styleId,
+    primaryPosition: profile.primaryPosition,
+    contractRole: contract.rolePromise,
+    currentSelection: season.selection,
+    proposal,
+  });
   const declineTrust = clampedTrustChange(currentTrust, configuredDeclineDelta);
 
   const acceptedContractRole =

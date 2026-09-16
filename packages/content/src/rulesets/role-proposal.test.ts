@@ -11,10 +11,12 @@ import {
   findTacticalStyle,
   rankPositionForPlayer,
   squadRoleFromSelection,
+  statGroupOf,
   type AttributeKey,
   type Competitor,
   type Position,
   type Ruleset,
+  type SquadRole,
 } from '@offside/domain';
 import { loadRuleset } from './load-ruleset.ts';
 
@@ -51,6 +53,7 @@ function proposalFor(
   archetypeId: string,
   competitors: readonly Competitor[],
   attributes = uniformAttributes(50),
+  rolePromise?: SquadRole,
 ) {
   const style = findTacticalStyle(ruleset, styleId);
   const tacticalFit = computeTacticalFit(attributes, archetypeId, primaryPosition, style, ruleset.selectionRules);
@@ -77,7 +80,7 @@ function proposalFor(
     archetypeId,
     attributes,
     baseOvr: 55,
-    rolePromise: squadRoleFromSelection(currentSelection),
+    rolePromise: rolePromise ?? squadRoleFromSelection(currentSelection),
     managerTrust: 50,
     form: 50,
     fitness: 80,
@@ -96,7 +99,7 @@ describe('issue #242 — 1.7.3 zero-slot adjacent fallback', () => {
   const previous = loadRuleset('1.7.2');
   const balanced = loadRuleset('1.7.3');
 
-  it('counter 4-2-3-1의 CM 선발 자리가 0이면 실제 순위가 나아지는 인접 DM을 제안한다', () => {
+  it('counter 4-2-3-1의 CM 선발 자리가 0이면 같은 MF 그룹의 인접 DM은 +15 없이도 제안한다', () => {
     const oldProposal = cmProposal(previous, 'counter', []);
     const proposal = cmProposal(balanced, 'counter', []);
 
@@ -110,6 +113,67 @@ describe('issue #242 — 1.7.3 zero-slot adjacent fallback', () => {
     if (proposal.type !== 'POSITION_CHANGE') throw new Error('POSITION_CHANGE expected');
     // 이 케이스는 적합도 이득이 없다. 신규 게이트는 수치 예측이 아니라 자리+실제 ranking으로만 연다.
     expect(proposal.tacticalFitAfter).toBe(30);
+    const currentFit = computeTacticalFit(
+      uniformAttributes(50),
+      'cm-playmaker',
+      'CM',
+      findTacticalStyle(balanced, 'counter'),
+      balanced.selectionRules,
+    );
+    expect(proposal.tacticalFitAfter - currentFit).toBeLessThan(15);
+    expect(statGroupOf(proposal.from)).toBe('MF');
+    expect(statGroupOf(proposal.to)).toBe('MF');
+  });
+
+  it('AM 0-slot이어도 +15를 못 넘는 cross-group W는 fallback 후보에서 제외해 기존 역할 정정을 보존한다', () => {
+    const competitors = [
+      strongCompetitor('AM', 'AM-1'),
+      strongCompetitor('CM', 'CM-1'),
+      strongCompetitor('CM', 'CM-2'),
+      strongCompetitor('CM', 'CM-3'),
+    ];
+    const style = findTacticalStyle(balanced, 'possession');
+    const attributes = uniformAttributes(50);
+    const amFit = computeTacticalFit(attributes, 'am-playmaker', 'AM', style, balanced.selectionRules);
+    const wFit = computeTacticalFit(attributes, 'am-playmaker', 'W', style, balanced.selectionRules);
+    expect(style.slots.AM).toBe(0);
+    expect(statGroupOf('AM')).toBe('MF');
+    expect(statGroupOf('W')).toBe('FW');
+    expect(wFit - amFit).toBeLessThan(15);
+
+    expect(proposalFor(balanced, 'possession', 'AM', 'am-playmaker', competitors, attributes, 'ROTATION')).toEqual({
+      type: 'ROLE_CHANGE',
+      position: 'AM',
+      from: 'ROTATION',
+      to: 'RESERVE',
+    });
+  });
+
+  it('cross-group 후보가 기존 +15 fit gate를 넘으면 과거와 opt-in 룰셋 모두 같은 POSITION_CHANGE를 제안한다', () => {
+    const attributes = uniformAttributes(50);
+    for (const key of ['pace', 'crossing', 'acceleration'] as const) attributes[key] = 95;
+    for (const key of ['passing', 'composure', 'positioning'] as const) attributes[key] = 5;
+    const competitors = [
+      strongCompetitor('CM', 'CM-1'),
+      strongCompetitor('CM', 'CM-2'),
+      strongCompetitor('CM', 'CM-3'),
+      strongCompetitor('CM', 'CM-4'),
+    ];
+    const press = findTacticalStyle(balanced, 'press');
+    const amFit = computeTacticalFit(attributes, 'am-playmaker', 'AM', press, balanced.selectionRules);
+    const wFit = computeTacticalFit(attributes, 'am-playmaker', 'W', press, balanced.selectionRules);
+    expect(wFit - amFit).toBeGreaterThanOrEqual(15);
+
+    const expected = {
+      type: 'POSITION_CHANGE',
+      from: 'AM',
+      to: 'W',
+      squadRoleAfter: 'STARTER',
+      tacticalFitAfter: wFit,
+      proficiencyAfter: balanced.selectionRules.proficiencyOnChange.adjacent,
+    } as const;
+    expect(proposalFor(previous, 'press', 'AM', 'am-playmaker', competitors, attributes)).toEqual(expected);
+    expect(proposalFor(balanced, 'press', 'AM', 'am-playmaker', competitors, attributes)).toEqual(expected);
   });
 
   it.each(['possession', 'press'] as const)('%s formation의 AM 선발 자리가 0이면 인접 CM 기회를 제안한다', (styleId) => {
