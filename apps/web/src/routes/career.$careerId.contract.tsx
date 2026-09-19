@@ -220,7 +220,12 @@ function ContractScreen() {
           title="첫 시즌으로"
           detail={`${firstContractCommit.teamName}에서 새로운 여정이 시작됩니다.`}
           onComplete={() =>
-            void navigate({ to: '/career/$careerId', params: { careerId }, search: { signed: true }, replace: true })
+            void navigate({
+              to: '/career/$careerId/confirm',
+              params: { careerId },
+              search: { step: 'recovery', milestone: 'first-contract' },
+              replace: true,
+            })
           }
           stages={['라커룸 배정 중', '훈련 일정 준비 중', '피치 입장']}
         >
@@ -335,7 +340,12 @@ function ContractScreen() {
           // this analytics write before restoring the original signed dashboard.
           await recordFunnelReached(careerId, 'CONTRACT_SIGNED');
           operationRef.current = null;
-          void navigate({ to: '/career/$careerId', params: { careerId }, search: { signed: true }, replace: true });
+          void navigate({
+            to: '/career/$careerId/confirm',
+            params: { careerId },
+            search: { step: 'recovery', milestone: 'first-contract' },
+            replace: true,
+          });
           return;
         }
         const committedRevision = recoverCommittedRevision(refreshedState, refreshed.data.record.revision, operation.offerId);

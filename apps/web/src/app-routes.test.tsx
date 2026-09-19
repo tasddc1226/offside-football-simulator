@@ -130,7 +130,7 @@ describe('SCR-001 공개 소개 → SCR-034 온보딩', () => {
     expect(screen.getByText(/유망주가 되어 훈련과 경기 사이의 선택/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
 
-    fireEvent.click(screen.getByRole('link', { name: '게임 시작' }));
+    fireEvent.click(screen.getByRole('link', { name: '내 선수 만들기' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/onboarding'));
     await skipCinematicIntro();
     expect(

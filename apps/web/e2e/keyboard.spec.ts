@@ -143,13 +143,8 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
     page.getByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' }),
   ).toBeVisible();
 
-  // SCR-004: KICKOFF → 복구 코드 발급 실패(인라인 안내, 대화상자 아님) → 계속.
+  // SCR-004: KICKOFF → 비차단 복구 안내 전환 → 첫 이벤트.
   await tabTo(page, page.getByRole('button', { name: 'KICKOFF' }));
-  await page.keyboard.press('Enter');
-  await expect(
-    page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.'),
-  ).toBeVisible();
-  await tabTo(page, page.getByRole('button', { name: '계속' }));
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
 
@@ -189,6 +184,11 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
   await tabTo(page, page.getByRole('button', { name: '커리어 시작' }));
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.'),
+  ).toBeVisible();
+  await tabTo(page, page.getByRole('button', { name: '계속' }));
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
   await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
