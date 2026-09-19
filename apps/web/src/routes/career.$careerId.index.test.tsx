@@ -31,6 +31,7 @@ import {
 } from '../engine/career-actions.js';
 import { createAppEngine, type AppEngine } from '../engine/engine.js';
 import { routeTree } from '../routeTree.gen.js';
+import * as careerContent from '../engine/content.js';
 import { careerQueryOptions } from '../engine/use-career.js';
 import { serviceSeasonQueryOptions } from '../engine/service-season.js';
 import { queryClient } from '../shared/query-client.js';
@@ -619,12 +620,76 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     });
 
     renderAt(`/career/${careerId}/event`);
-    const dialog = await screen.findByRole('dialog', { name: '지금은 회복할 시간' });
+    const dialog = await screen.findByRole('dialog', {
+      name: /^(지금은 회복할 시간|다시 뛸 준비를 차근히|몸의 신호를 살필 시간)$/,
+    });
     expect(
       within(dialog).getByRole('region', { name: '부상 진단과 복귀 계획' }),
     ).toBeInTheDocument();
     expect(within(dialog).getByText('3~6경기')).toBeInTheDocument();
     expect(within(dialog).getAllByRole('radio')).toHaveLength(3);
+  });
+
+  it('라커룸은 저장 룰셋의 주장단 기준만 안내하고 없는 옛 기준을 최신값으로 채우지 않는다', async () => {
+    const engine = setTestEngine();
+    const careerId = await confirmedCareerId(engine);
+    const loaded = await engine.client.loadCareer(careerId);
+    if (!loaded.ok) throw new Error('테스트 커리어를 읽지 못했다');
+
+    const storedRuleset = loadRuleset('1.0.0');
+    const rulesetSpy = vi.spyOn(careerContent, 'rulesetForCareer').mockReturnValue({
+      ...storedRuleset,
+      relationshipRules: {
+        ...storedRuleset.relationshipRules,
+        captainAppointment: { minCaptain: 83, minSeasons: 5 },
+      },
+    });
+    try {
+      const state = {
+        ...loaded.snapshot.state,
+        contentPackVersion: '0.6.6',
+        relationships: { ...loaded.snapshot.state.relationships, captain: 42 },
+        captaincy: 'CAPTAIN' as const,
+        captaincySeasons: 2,
+        pending: { kind: 'EVENT' as const, eventId: 'EVT-REL-010', version: 1 },
+      };
+      const domainSnapshot = {
+        ...loaded.snapshot,
+        state,
+        stateHash: hashState(state),
+        contentPackVersion: state.contentPackVersion,
+      };
+      await engine.store.transaction('readwrite', async (tx) => {
+        await tx.snapshots.put(
+          encodeSnapshot(domainSnapshot, { careerId, createdAt: loaded.career.createdAt }),
+        );
+      });
+
+      renderAt(`/career/${careerId}/event`);
+      const dialog = await screen.findByRole('dialog', { name: '라커룸의 온도' });
+      const hint = within(dialog).getByRole('region', { name: '주장단 임명 조건' });
+      expect(within(hint).getByText(/완료 0시즌 · 기준 5시즌/)).toBeInTheDocument();
+      expect(within(hint).getByText('현재 42 · 기준 83 이상')).toBeInTheDocument();
+      expect(within(hint).getByText(/주장 · 주장단으로 마친 시즌 2/)).toBeInTheDocument();
+      expect(within(hint).getByText(/현재 주장입니다/)).toBeInTheDocument();
+
+      rulesetSpy.mockReturnValue({
+        ...storedRuleset,
+        relationshipRules: {
+          ...storedRuleset.relationshipRules,
+          captainAppointment: undefined as never,
+        },
+      });
+      renderAt(`/career/${careerId}/event`);
+      const oldRulesetDialog = await screen.findByRole('dialog', { name: '라커룸의 온도' });
+      const oldRulesetHint = within(oldRulesetDialog).getByRole('region', {
+        name: '주장단 임명 조건',
+      });
+      expect(within(oldRulesetHint).getByText(/주장 임명 조건을 확인할 수 없습니다/)).toBeInTheDocument();
+      expect(within(oldRulesetHint).queryByText(/기준 70/)).not.toBeInTheDocument();
+    } finally {
+      rulesetSpy.mockRestore();
+    }
   });
 
   it('실제 NATIONAL_TEAM pending은 SCR-013에서 선택·해소되고 결과 재진입으로 복구된다', async () => {
