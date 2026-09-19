@@ -18,7 +18,8 @@
     "content:validate": "turbo run content:validate",
     "db:migrate": "turbo run db:migrate",
     "sim:career": "pnpm --filter @offside/scripts sim:career --",
-    "sim:report": "pnpm --filter @offside/scripts sim:report --"
+    "sim:report": "pnpm --filter @offside/scripts sim:report --",
+    "dev:simulator": "pnpm --filter @offside/web dev:simulator"
   },
   "devDependencies": {
     "@offside/eslint-config": "workspace:*",

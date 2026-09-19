@@ -48,6 +48,7 @@ import { ClubBadge } from '../shared/ClubBadge.js';
 import { resolveTeamName, type TeamNameOverrides } from '../shared/team-names.js';
 import { useUiStore } from '../shared/ui-store.js';
 import { GameResultReveal } from '../shared/game-presentation.js';
+import '../shared/simulator.css';
 import { LeagueStandingsTable } from '../shared/league-standings.js';
 
 type SeasonResultSearch = { season?: number };
@@ -372,24 +373,6 @@ function SeasonResultScreen() {
         description={seasonYearLabel(startYear, view.seasonNumber)}
       />
 
-      <PlayerBanner
-        name={profile.name}
-        teamName={bannerTeamName}
-        teamId={bannerTeamId}
-        position={positionHeaderField(profile.primaryPosition, profile.preferredPosition).value}
-        shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
-        age={state.age}
-        ovr={profile.baseOvr}
-      />
-      {view.result.clubMeetingGoal ? (
-        <section className="os-panel flex flex-col gap-os-2" aria-label="구단 면담 목표 결과">
-          <p className="os-eyebrow">구단 면담 목표</p>
-          <p className="font-os font-semibold text-os-text">{view.result.clubMeetingGoal.status === 'MET' ? '목표 달성' : '기준 미달 · 추가 불이익 없음'}</p>
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>시즌 출전 확인 기준 {view.result.clubMeetingGoal.targetMinutesShareBp / 100}% · 실제 {view.result.clubMeetingGoal.actualMinutesShareBp / 100}%</p>
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>적용 효과: 감독 신뢰 {view.result.clubMeetingGoal.effect.managerTrustDelta >= 0 ? '+' : ''}{view.result.clubMeetingGoal.effect.managerTrustDelta} · 사기 {view.result.clubMeetingGoal.effect.moraleDelta >= 0 ? '+' : ''}{view.result.clubMeetingGoal.effect.moraleDelta}</p>
-        </section>
-      ) : null}
-
       <GameResultReveal
         fast={state.simulationMode === 'FAST'}
         announcement={`${seasonYearLabel(startYear, view.seasonNumber)} 결과, 평균 평점 ${ratingText(common.avgRatingTenths)}`}
@@ -428,9 +411,34 @@ function SeasonResultScreen() {
         </section>
       </GameResultReveal>
 
+      <section className="sim-growth sim-season-reward" aria-label="이번 시즌 성장">
+        <div className="sim-section-heading"><div><p className="sim-kicker">SEASON DEVELOPMENT</p><h2>쌓은 경험이 실력이 됩니다</h2></div><div className="sim-ovr"><small>OVR</small><strong>{view.baseOvr.after}</strong><span data-positive={view.baseOvr.after > view.baseOvr.before}>{view.baseOvr.after >= view.baseOvr.before ? '+' : ''}{view.baseOvr.after - view.baseOvr.before}</span></div></div>
+        <div className="sim-strengths">{[...view.result.attributeDeltas].filter((item) => item.delta !== 0).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 3).map((item) => <span key={item.key}>{ATTRIBUTE_LABELS[item.key]}<strong>{item.delta > 0 ? '+' : ''}{item.delta}</strong></span>)}</div>
+        <p className="sim-caption">{view.result.attributeDeltas.some((item) => item.delta !== 0) ? '이번 시즌에 반영된 능력 변화입니다.' : '이번 시즌은 능력치를 유지했습니다. 다음 시즌의 훈련과 출전 기회를 준비하세요.'}</p>
+      </section>
+
       <details className="os-season-breakdown">
         <summary>시즌 상세 기록 보기</summary>
         <div className="mt-os-3 flex flex-col gap-os-3">
+      <PlayerBanner
+        name={profile.name}
+        teamName={bannerTeamName}
+        teamId={bannerTeamId}
+        position={positionHeaderField(profile.primaryPosition, profile.preferredPosition).value}
+        shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
+        age={state.age}
+        ovr={profile.baseOvr}
+      />
+      {view.result.clubMeetingGoal ? (
+        <section className="os-panel flex flex-col gap-os-2" aria-label="구단 면담 목표 결과">
+          <p className="os-eyebrow">구단 면담 목표</p>
+          <p className="font-os font-semibold text-os-text">{view.result.clubMeetingGoal.status === 'MET' ? '목표 달성' : '기준 미달 · 추가 불이익 없음'}</p>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>시즌 출전 확인 기준 {view.result.clubMeetingGoal.targetMinutesShareBp / 100}% · 실제 {view.result.clubMeetingGoal.actualMinutesShareBp / 100}%</p>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>적용 효과: 감독 신뢰 {view.result.clubMeetingGoal.effect.managerTrustDelta >= 0 ? '+' : ''}{view.result.clubMeetingGoal.effect.managerTrustDelta} · 사기 {view.result.clubMeetingGoal.effect.moraleDelta >= 0 ? '+' : ''}{view.result.clubMeetingGoal.effect.moraleDelta}</p>
+        </section>
+      ) : null}
+
+
           <section className="os-panel flex flex-col gap-os-4">
         <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>
           공통 지표

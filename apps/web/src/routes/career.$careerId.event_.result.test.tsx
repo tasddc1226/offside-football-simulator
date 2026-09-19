@@ -112,7 +112,7 @@ describe('SCR-014 "다음" 실패 처리', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: '선택의 결과' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('당신의 결정이 커리어에 남긴 변화를 확인하세요.')).toBeInTheDocument();
+    expect(screen.getByText('선수 · 결과 안내').closest('details')).not.toHaveAttribute('open');
     expect(screen.getByRole('button', { name: '다음' })).toBeEnabled();
     await waitFor(() => {
       expect(screen.getByTestId('event-result-announcement')).not.toBeEmptyDOMElement();

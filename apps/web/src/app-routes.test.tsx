@@ -125,9 +125,9 @@ describe('SCR-001 공개 소개 → SCR-034 온보딩', () => {
   it('첫 방문이고 커리어가 없으면 공개 소개에서 온보딩을 시작한다', async () => {
     const router = renderAt('/');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'OFFSIDE' })).toBeInTheDocument();
-    expect(screen.getByText(/이번 생은 프리미어리거!/)).toBeInTheDocument();
-    expect(screen.getByText(/유망주가 되어 훈련과 경기 사이의 선택/)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /이번 생은\s*프리미어리거\./ })).toBeInTheDocument();
+    expect(screen.getByText('19세 유망주에서, 나만의 레전드로.')).toBeInTheDocument();
+    expect(screen.getByLabelText('커리어 진행')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
 
     fireEvent.click(screen.getByRole('link', { name: '내 선수 만들기' }));

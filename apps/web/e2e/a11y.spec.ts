@@ -416,6 +416,7 @@ test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', a
 test('SCR-033 능력치 상세 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   await completeOnboardingThroughContract(page);
   await page.getByRole('tab', { name: '선수' }).click();
+  await page.getByText('선수 프로필 · 관계 · 주전 경쟁', { exact: true }).click();
   await page.getByRole('link', { name: '능력치 상세' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/attributes$/);
 

@@ -1305,6 +1305,11 @@ export const RulesetSchema = z
     leagueLedgerRules: LeagueLedgerRulesSchema.optional(),
     /** Issue #243: absent on every historical ruleset, so their selector order stays byte-stable. */
     chapterSelectionRules: ChapterSelectionRulesSchema.optional(),
+    eventSelectionRules: z.strictObject({
+      version: z.literal('FRESH_WEIGHTED_V1'),
+      repeatCooldownSeasons: z.number().int().min(1).max(10),
+      unseenWeightMultiplier: z.number().int().min(1).max(10),
+    }).optional(),
     positions: z.array(PositionSchema).min(1),
     archetypes: z.array(ArchetypeSchema),
     backgrounds: z.array(BackgroundSchema).min(1),

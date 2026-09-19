@@ -1,0 +1,210 @@
+{
+  "id": "EVT-MEDIA-121",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "triggers": {
+    "hasTag": [
+      "career.tags",
+      "T7034_FOLLOWUP_ONLY"
+    ]
+  },
+  "exclusionTags": [
+    "T7034_PRESS_DONE"
+  ],
+  "cooldown": {
+    "steps": 12
+  },
+  "weight": 100,
+  "choices": [
+    {
+      "id": "A",
+      "label": "전술 훈련 한 장면을 직접 설명한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "팬 관계 상승 기회",
+          "target": "fans",
+          "direction": "UP"
+        },
+        {
+          "label": "훈련 집중 변동"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 70,
+          "title": "설명이 팬들의 경기 이해를 도왔다",
+          "cause": "과장 없는 훈련 해설",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-121.A.S0",
+              "target": "fans",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-121_A_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-121.A.S1",
+              "target": "media",
+              "delta": 300,
+              "clamp": {
+                "min": 0,
+                "max": 10000
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-121_A_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_PRESS_DONE"
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 30,
+          "title": "촬영 동선 때문에 훈련 리듬이 끊겼다",
+          "cause": "낯선 촬영 환경",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MEDIA-121.A.F0",
+              "target": "form",
+              "delta": -2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-121_A_F0"
+            }
+          ],
+          "addTags": [
+            "T7034_PRESS_DONE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "동료를 함께 초대해 대화를 나눈다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "라커룸 관계 상승",
+          "target": "captain",
+          "direction": "UP"
+        },
+        {
+          "label": "개인 주목도는 낮음"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 84,
+          "title": "서로의 장점을 말한 대화가 좋은 반응을 얻었다",
+          "cause": "공동 출연으로 나눈 공",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-121.B.S0",
+              "target": "captain",
+              "delta": 3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-121_B_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-121.B.S1",
+              "target": "fans",
+              "delta": 3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-121_B_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_PRESS_DONE"
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 16,
+          "title": "개인 질문이 적어 콘텐츠가 짧아졌다",
+          "cause": "팀 중심 구성",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-121.B.F0",
+              "target": "media",
+              "delta": -100,
+              "clamp": {
+                "min": 0,
+                "max": 10000
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-121_B_F0"
+            }
+          ],
+          "addTags": [
+            "T7034_PRESS_DONE"
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "첫 인터뷰 뒤 구단 채널이 훈련 공개 콘텐츠를 제안했다. 팬과 가까워질 기회지만, 준비 시간도 필요하다."
+  }
+}

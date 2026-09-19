@@ -88,6 +88,7 @@ import {
   u18StatusStripItems,
   type ConditionTileItem,
 } from '../shared/status-strip.js';
+import { SeasonDashboard, GrowthSnapshot } from '../shared/simulator-hub.js';
 import { buildCareerFollowUpReceipts, CareerFollowUpReceipts } from '../shared/career-followup.js';
 
 type DashboardSearch = { signed?: boolean; view?: DashboardTab };
@@ -456,7 +457,7 @@ function NextDecisionCard({
    * 분기는 그대로 두고 시각 구조만 통일한다. */
   function hero(heading: string, detail: string | null, children: ReactNode) {
     return (
-      <Card className="os-next-action flex flex-col gap-os-4">
+      <Card className="os-next-action flex flex-col gap-os-4" role="region" aria-label="지금 할 일">
         <div className="flex flex-col gap-os-1">
           <p className="os-eyebrow">{clock.progress}</p>
           <h2 id="next-action-title" className="os-section-title">
@@ -907,7 +908,9 @@ function CareerDashboard() {
               id={dashboardPanelId('season')}
               aria-labelledby={dashboardTabId('season')}
             >
-              <section className="os-career-home" aria-label="지금 할 일">
+              <SeasonDashboard state={state} year={startYear + (season?.index ?? state.seasonHistory.length + 1) - 1} action={<NextDecisionCard careerId={careerId} state={state} clock={clock} startYear={startYear} />} />
+              <details className="sim-disclosure mt-os-3"><summary>일정 · 리그 · 시즌 상세</summary>
+              <section className="os-career-home" aria-label="시즌 상세 현황">
                 <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
                   {clock.headline} · {positionField.value}
                 </p>
@@ -927,12 +930,7 @@ function CareerDashboard() {
                     />
                   </div>
                 ) : null}
-                <NextDecisionCard
-                  careerId={careerId}
-                  state={state}
-                  clock={clock}
-                  startYear={startYear}
-                />
+
 
                 {currentLeagueContext !== null ? (
                   <CurrentLeagueContext careerId={careerId} view={currentLeagueContext} />
@@ -1159,6 +1157,7 @@ function CareerDashboard() {
                   </div>
                 )}
               </DashboardSection>
+              </details>
             </TabsContent>
 
             <TabsContent
@@ -1166,6 +1165,8 @@ function CareerDashboard() {
               id={dashboardPanelId('player')}
               aria-labelledby={dashboardTabId('player')}
             >
+              <GrowthSnapshot state={state} full />
+              <details className="sim-disclosure mt-os-3"><summary>선수 프로필 · 관계 · 주전 경쟁</summary>
               <StatusStrip items={statusItems} />
               <dl
                 className="mb-os-3 grid grid-cols-2 gap-os-2 rounded-os-m bg-os-surface-2 p-os-3 font-os text-os-text-2"
@@ -1340,6 +1341,7 @@ function CareerDashboard() {
                   </div>
                 ) : null}
               </DashboardSection>
+              </details>
             </TabsContent>
 
             {/* UX-014: "커리어" 탭은 옛 "기록"+"계약" 탭을 병합한다(사용자 결정 2026-09-14, 다이어리

@@ -14,7 +14,7 @@ describe('AccentPresetPicker', () => {
 
     expect(screen.getByRole('radiogroup', { name: '홈 색상' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '그린' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('radio', { name: '네이비(기본)' })).toHaveAttribute(
+    expect(screen.getByRole('radio', { name: '블루(기본)' })).toHaveAttribute(
       'aria-checked',
       'false',
     );
@@ -55,7 +55,7 @@ describe('AccentPresetPicker', () => {
     const onValueChange = vi.fn();
     render(<AccentPresetPicker value="DEFAULT" onValueChange={onValueChange} />);
 
-    screen.getByRole('radio', { name: '네이비(기본)' }).focus();
+    screen.getByRole('radio', { name: '블루(기본)' }).focus();
     await user.keyboard('{ArrowRight}');
     await user.keyboard(' ');
 

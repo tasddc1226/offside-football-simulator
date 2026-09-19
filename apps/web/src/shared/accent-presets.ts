@@ -1,6 +1,6 @@
 // UX-004 포인트 색상 프리셋 메타데이터 + UX-013 가상 구단 12팀 컬러 프리셋. packages/ui/src/tokens.css의
 // :root[data-accent='...'] 블록·--os-swatch-* 토큰과 id·순서를 맞춰 둔다 — 하나를 고치면 셋 다 함께
-// 고친다. 'DEFAULT'는 실제 CSS 선택자가 아니라 "data-accent 속성을 지운 상태(기본 네이비)"를 가리키는
+// 고친다. 'DEFAULT'는 실제 CSS 선택자가 아니라 "data-accent 속성을 지운 상태(기본 블루)"를 가리키는
 // 문지기 값이다.
 //
 // 이 모듈은 ui-store(초기 청크)가 import하므로 룰셋(팀 이름)을 직접 읽지 않는다 — 팀 프리셋의 표시
@@ -58,7 +58,7 @@ export interface AccentPresetOption {
    * 않기 위함(접근성). */
   label: string;
   /** UX-013 다듬기: 타일 아래 보이는 짧은 캡션. 생략하면 SwatchTilePicker가 label을 그대로 쓴다
-   * (기본 6종은 "네이비(기본)"·"그린"처럼 label 자체가 이미 짧다). 구단 프리셋은 label이
+   * (기본 6종은 "블루(기본)"·"그린"처럼 label 자체가 이미 짧다). 구단 프리셋은 label이
    * "<팀명> 컬러"라 캡션에서는 "컬러"를 떼고 팀 이름만 보여준다 — aria-label·요약줄은 label을
    * 그대로 쓰므로 접근성 이름은 바뀌지 않는다. */
   caption?: string;
@@ -75,7 +75,7 @@ export interface AccentPresetGroup {
 
 const DEFAULT_ACCENT_PRESET_OPTION: AccentPresetOption = {
   id: 'DEFAULT',
-  label: '네이비(기본)',
+  label: '블루(기본)',
   swatchVar: '--os-swatch-default',
 };
 

@@ -48,6 +48,7 @@ import { PublicIntroduction } from '../shared/public-content.js';
 import { HomeCommunity } from '../shared/home-community.js';
 import { GameCompletionTransition } from '../shared/game-presentation.js';
 import '../shared/home-hub.css';
+import '../shared/simulator.css';
 
 const HUB_TABS = ['resume', 'squad', 'retired'] as const;
 type HubTab = (typeof HUB_TABS)[number];
@@ -600,7 +601,7 @@ function HubScreen() {
         ) : null}
       </section>
 
-      <HomeCommunity />
+      <details className="sim-disclosure"><summary>소식 · 문의</summary><HomeCommunity /></details>
 
       <nav
         className="flex flex-wrap justify-center gap-os-4 border-t border-os-border pt-os-4"

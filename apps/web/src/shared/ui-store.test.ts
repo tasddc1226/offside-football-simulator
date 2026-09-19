@@ -143,7 +143,7 @@ describe('UX-001: 구단 이름 오버라이드', () => {
 });
 
 const DEFAULTS = {
-  theme: 'SYSTEM' as const,
+  theme: 'LIGHT' as const,
   reducedMotion: 'SYSTEM' as const,
   textScale: 100 as const,
   defaultSimulationMode: 'FAST' as const,

@@ -32,6 +32,7 @@ import {
 } from './labels.js';
 import { buildNarrativeTokens, renderNarrative, type NarrativeTokenValues } from './narrative.js';
 import { eventSituation } from './legacy-event-copy.js';
+import './simulator.css';
 import { PlayerBanner } from './PlayerBanner.js';
 import { u18StatusStripItems } from './status-strip.js';
 import { useUiStore } from './ui-store.js';
@@ -338,18 +339,8 @@ export function EventDecisionScreen({
 
   if (!modal) {
     return (
-      <div className="os-screen">
+      <div className="os-screen sim-event">
         <ScreenIntro {...intro} />
-
-        <PlayerBanner
-          name={tokens.name}
-          teamName={tokens.team}
-          teamId={currentTeamId(state, ruleset)}
-          position={positionField.value}
-          shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
-          age={state.age}
-          ovr={profile?.baseOvr ?? null}
-        />
 
         <section className="os-story-card" aria-label="현재 상황">
           <p className="font-os text-os-text" style={BODY_STYLE}>
@@ -391,7 +382,7 @@ export function EventDecisionScreen({
 
   return (
     <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-      <div className="os-screen">
+      <div className="os-screen sim-event">
         <ScreenIntro
           eyebrow={isPreContractBridgeEvent ? '스카우트 평가' : '새로운 사건'}
           title={isPreContractBridgeEvent ? '평가가 이어지고 있습니다' : '결정이 기다리고 있습니다'}
@@ -418,7 +409,7 @@ export function EventDecisionScreen({
       </div>
 
       <SheetContent
-        className="os-event-dialog"
+        className="os-event-dialog sim-event"
         title={intro.title}
         closeLabel="사건 선택 닫기"
         closeDisabled={resolveMutation.isPending}

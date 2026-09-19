@@ -5,11 +5,9 @@ import { useEffect, useState } from 'react';
 import { computeContractSeasonsRemaining, RETIREMENT_POLICY, type ClubMeetingRequest } from '@offside/domain';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import {
-  PlayerHeader,
   RadioGroup,
   RadioGroupItem,
   ScreenIntro,
-  StatusStrip,
   buttonClassName,
   buttonStyle,
 } from '@offside/ui';
@@ -17,8 +15,7 @@ import { rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { useServiceSeason } from '../engine/service-season.js';
 import { screenForCareer } from '../shared/career-route.js';
-import { archetypeName, currentTeamName } from '../shared/current-team.js';
-import { ATTRIBUTE_LABELS, positionHeaderField, SQUAD_ROLE_LABELS } from '../shared/labels.js';
+import { ATTRIBUTE_LABELS, SQUAD_ROLE_LABELS } from '../shared/labels.js';
 import {
   GuidanceCard,
   potentialCapNotice,
@@ -36,7 +33,7 @@ import {
   TRAINING_FOCUS_SUMMARY_KO,
   type TrainingFocus,
 } from '../shared/start-season.js';
-import { u18StatusStripItems } from '../shared/status-strip.js';
+import { GrowthSnapshot } from '../shared/simulator-hub.js';
 import { platform } from '../platform/index.js';
 
 export const Route = createFileRoute('/career/$careerId/preseason')({
@@ -89,11 +86,6 @@ function PreseasonScreen() {
     calendarStartYear: extractCalendarStartYear(ruleset.leagueCalendar),
   });
 
-  const team = ruleset.teams.find((candidate) => candidate.id === contract.teamId);
-  const style =
-    team === undefined
-      ? undefined
-      : ruleset.tacticalStyles.find((candidate) => candidate.id === team.tacticalStyleId);
   // 이슈 163·166: 직전 결산에 이미 저장된 값만 읽는 표시 전용 안내(데이터 없으면 숨김).
   const capNotice = potentialCapNotice(state);
   const pressureNotice = retirementPressureNotice(state, ruleset.retirementRules ?? RETIREMENT_POLICY);
@@ -119,28 +111,13 @@ function PreseasonScreen() {
   }
 
   return (
-    <div className="os-screen">
+    <div className="os-screen sim-training">
       <ScreenIntro
         eyebrow="PRE-SEASON"
         title="프리시즌 계획"
         description="어떤 시즌을 보낼지, 무엇에 집중할지 정해보세요."
       />
-      <PlayerHeader
-        name={profile.name}
-        team={currentTeamName(state, ruleset)}
-        position={positionHeaderField(profile.primaryPosition, profile.preferredPosition)}
-        archetype={{ label: '아키타입', value: archetypeName(ruleset, profile.archetypeId) }}
-        shirtNumber={{ label: '등번호', value: String(contract.shirtNumber) }}
-      />
-      <StatusStrip items={u18StatusStripItems(state)} />
-
-      <div className="os-panel flex flex-col gap-os-2">
-        <p className="os-eyebrow">시즌을 앞둔 라커룸</p>
-        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-          감독 전술: {style ? `${style.name} · ${style.formation}` : '—'} · 주전 경쟁: 시즌 시작 시
-          정해집니다
-        </p>
-      </div>
+      <GrowthSnapshot state={state} />
 
       {pressureNotice !== null ? (
         <GuidanceCard
@@ -207,7 +184,7 @@ function PreseasonScreen() {
       </section>
 
       {meetingEnabled ? (
-        <section className="os-panel flex flex-col gap-os-3" aria-label="구단 면담">
+        <details className="sim-disclosure" aria-label="구단 면담"><summary>구단과 시즌 계획 상담</summary><div className="flex flex-col gap-os-3">
           <div><h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>구단 면담</h2><p className="font-os text-os-text-2" style={CAPTION_STYLE}>선택 사항 · 시즌마다 한 번 구단에 계획을 요청할 수 있습니다.</p></div>
           {meeting === null ? <>
             <RadioGroup className="os-choice-grid" aria-label="구단 면담 요청" value={meetingRequest} onValueChange={(value) => setMeetingRequest(value as ClubMeetingRequest)}>
@@ -219,7 +196,7 @@ function PreseasonScreen() {
             {meetingError ? <p role="alert" className="text-os-danger">{meetingError}</p> : null}
             <button type="button" className={buttonClassName('secondary')} style={buttonStyle} disabled={meetingMutation.isPending || (meetingRequest === 'PLAYING_TIME' && playingTimeImpossible) || (meetingRequest === 'LOAN' && loanImpossible)} onClick={() => void submitMeeting()}>{meetingMutation.isPending ? '면담 중…' : '면담 요청하기'}</button>
           </> : <div className="rounded-os-m bg-os-surface-2 p-os-3"><p className="font-semibold">{requestLabels[meeting.request]} · {meeting.response === 'ACCEPTED' ? '구단 수락' : '구단 거절'}</p><p className="os-muted">즉시 변화: 감독 신뢰 {meeting.immediateEffect.managerTrustDelta >= 0 ? '+' : ''}{meeting.immediateEffect.managerTrustDelta} · 사기 {meeting.immediateEffect.moraleDelta >= 0 ? '+' : ''}{meeting.immediateEffect.moraleDelta}</p><p>시즌 출전 확인 기준: {meeting.goal.targetMinutesShareBp / 100}% · {SQUAD_ROLE_LABELS[meeting.plannedRole]}</p><p className="os-muted">실제 역할과 출전은 프리시즌 경쟁 후 조정될 수 있습니다.</p></div>}
-        </section>
+        </div></details>
       ) : null}
 
       <div className="os-action-dock">

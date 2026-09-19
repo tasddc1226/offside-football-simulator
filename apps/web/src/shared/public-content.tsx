@@ -2,6 +2,7 @@ import { buttonClassName, buttonStyle, Card } from '@offside/ui';
 import { Link } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { HomeCommunity } from './home-community.js';
+import './simulator.css';
 import { SUPPORT_EMAIL } from './home-notices.js';
 export { SUPPORT_EMAIL } from './home-notices.js';
 
@@ -60,72 +61,47 @@ export function PublicFooter() {
 
 export function PublicIntroduction() {
   return (
-    <div className="os-screen">
-      <section className="flex flex-col gap-os-4 py-os-4">
-        <p className="os-eyebrow">FOOTBALL CAREER STORY</p>
-        <h1
-          className="font-os font-bold text-os-text"
-          style={{ fontSize: 'var(--os-fs-h1)', lineHeight: 'var(--os-lh-h1)' }}
-        >
-          OFFSIDE
+    <div className="os-screen sim-welcome">
+      <section className="sim-welcome-hero">
+        <p className="sim-kicker">FOOTBALL CAREER SIMULATOR</p>
+        <h1>
+          이번 생은
+          <br />
+          프리미어리거.
         </h1>
-        <p className="font-os font-semibold text-os-text">
-          이번 생은 프리미어리거! 한 명의 선수로 데뷔부터 은퇴까지.
-        </p>
-        <p className="max-w-prose font-os text-os-text-2">
-          유망주가 되어 훈련과 경기 사이의 선택을 내리고, 시즌을 거듭하며 한 선수의 축구 인생을
-          만들어 가는 커리어 스토리 시뮬레이션입니다.
-        </p>
-        <div className="flex flex-col gap-os-2 sm:flex-row">
-          <Link
-            to="/onboarding"
-            className={buttonClassName('primary', 'w-full')}
-            style={buttonStyle}
-          >
-            내 선수 만들기
-          </Link>
-          <a href="/guide" className={buttonClassName('secondary', 'w-full')} style={buttonStyle}>
-            먼저 게임 알아보기
-          </a>
+        <p>19세 유망주에서, 나만의 레전드로.</p>
+        <div className="sim-pitch" aria-hidden="true">
+          <span>19</span>
+          <b>
+            YOUR CAREER
+            <br />
+            STARTS HERE
+          </b>
         </div>
+        <Link to="/onboarding" className={buttonClassName('primary', 'w-full')} style={buttonStyle}>
+          내 선수 만들기
+        </Link>
       </section>
-      <section aria-labelledby="career-story" className="flex flex-col gap-os-3">
-        <h2 id="career-story" className="os-section-title">
-          선택이 쌓여 선수가 됩니다
-        </h2>
-        <ol className="grid gap-os-3 border-y border-os-border py-os-3">
-          <li className="grid grid-cols-[2rem_1fr] gap-os-3">
-            <span className="os-num font-os font-bold text-os-accent">01</span>
-            <div>
-              <h3 className="font-os font-semibold text-os-text">19세 유망주 만들기</h3>
-              <p className="mt-os-1 font-os text-os-text-2">
-                이름, 성장 배경, 성별과 선호 포지션, 플레이 성향을 정하고 프로 무대를 향한 첫
-                커리어를 시작합니다.
-              </p>
-            </div>
-          </li>
-          <li className="grid grid-cols-[2rem_1fr] gap-os-3">
-            <span className="os-num font-os font-bold text-os-accent">02</span>
-            <div>
-              <h3 className="font-os font-semibold text-os-text">시즌과 경기 이야기</h3>
-              <p className="mt-os-1 font-os text-os-text-2">
-                경기 일정과 커리어 사건을 만나고, 매 순간의 선택에 따라 성장과 다음 기회가
-                달라집니다.
-              </p>
-            </div>
-          </li>
-          <li className="grid grid-cols-[2rem_1fr] gap-os-3">
-            <span className="os-num font-os font-bold text-os-accent">03</span>
-            <div>
-              <h3 className="font-os font-semibold text-os-text">이적부터 은퇴까지</h3>
-              <p className="mt-os-1 font-os text-os-text-2">
-                제안을 검토하고 팀을 옮기며 기록을 쌓아, 한 선수의 커리어를 마지막까지 완성합니다.
-              </p>
-            </div>
-          </li>
-        </ol>
-      </section>
-      <HomeCommunity compact />
+      <div className="sim-play-loop" aria-label="커리어 진행">
+        <span>
+          <b>01</b> 훈련을 고르고
+        </span>
+        <span>
+          <b>02</b> 경기를 뛰고
+        </span>
+        <span>
+          <b>03</b> 한 단계 성장
+        </span>
+      </div>
+      <p className="sim-welcome-copy">
+        같은 출발, 다른 축구 인생.
+        <br />
+        도전과 기회 사이에서 당신의 선수를 키워 보세요.
+      </p>
+      <details className="sim-disclosure">
+        <summary>소식 · 게임 안내</summary>
+        <HomeCommunity compact />
+      </details>
       <PublicFooter />
     </div>
   );
