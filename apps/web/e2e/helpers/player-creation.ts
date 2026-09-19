@@ -48,28 +48,35 @@ export async function goToConfirm(page: Page, backgroundName?: RegExp): Promise<
   await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
   await page.getByRole('button', { name: '다음' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
-  await expect(page.getByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' }),
+  ).toBeVisible();
 }
 
 /**
- * 온보딩 → KICKOFF → SCR-002 입력 → SCR-003 스타일 선택 → SCR-004 확정(복구 코드 발급 실패로
- * 스텁 → "계속") → SCR-007/008/013 계열 도착까지. first-contract.spec.ts의 원래 정의와 동일하다.
+ * 온보딩 → KICKOFF → SCR-002 입력 → SCR-003 스타일 선택 → SCR-004 확정 → 복구 코드 화면 없이
+ * SCR-007/008/013 계열 도착까지. 프로필 실패 스텁은 첫 계약 뒤 복구 안내에서 결정론적으로 쓴다.
  * `backgroundName`은 goToConfirm으로 그대로 넘긴다(생략하면 기본값 club-academy — 그 경로는
  * "남아 추가 평가"만으로 끝나 1.7.2/0.6.6에서도 SCR-008(입단 테스트)로 가지 않는다. SCR-008을
  * 보려면 school/street 배경을 넘겨야 한다).
  */
-export async function completeOnboardingAndConfirm(page: Page, backgroundName?: RegExp): Promise<void> {
+export async function completeOnboardingAndConfirm(
+  page: Page,
+  backgroundName?: RegExp,
+): Promise<void> {
   await goToConfirm(page, backgroundName);
 
   await page.route('**/v1/profile', (route) =>
     fulfillJson(route, 503, {
-      error: { code: 'SERVICE_UNAVAILABLE', message: '서비스를 이용할 수 없습니다.', retryable: true },
+      error: {
+        code: 'SERVICE_UNAVAILABLE',
+        message: '서비스를 이용할 수 없습니다.',
+        retryable: true,
+      },
       meta: META,
     }),
   );
   await page.getByRole('button', { name: 'KICKOFF' }).click();
-  await expect(page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.')).toBeVisible();
-  await page.getByRole('button', { name: '계속' }).click();
 
   await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
 }
@@ -111,7 +118,11 @@ export async function expectFirstContractHeading(page: Page): Promise<void> {
     .waitFor({ state: 'visible' });
   const offerCount = await page.locator('.os-offer-grid > article').count();
   await expect(
-    page.getByRole('heading', { level: 1, name: offerCount > 1 ? '제안 비교' : '받은 제안', exact: true }),
+    page.getByRole('heading', {
+      level: 1,
+      name: offerCount > 1 ? '제안 비교' : '받은 제안',
+      exact: true,
+    }),
   ).toBeVisible();
 }
 
@@ -121,12 +132,21 @@ export async function expectFirstContractHeading(page: Page): Promise<void> {
  * 화면을 heading/link로 먼저 구분해야 PRE_NEGOTIATION의 새 UI가 기존 시즌 진행 헬퍼에서
  * FIRST_CONTRACT로 오인되지 않는다.
  */
-export async function signFirstOffer(page: Page, options: { preferredMinLengthSeasons?: number } = {}): Promise<void> {
+export async function signFirstOffer(
+  page: Page,
+  options: { preferredMinLengthSeasons?: number; stopAtRecovery?: boolean } = {},
+): Promise<void> {
   // 이슈 #159: 제안 1건이면 "받은 제안"·"이적시장 제안", 2건 이상이면 "제안 비교"·"이적시장 제안 비교".
   // 이 헬퍼는 두 화면을 가르는 분기 탐지기라 건수와 무관하게 두 표제 모두 받는다.
-  const firstContractHeading = page.getByRole('heading', { level: 1, name: /^(제안 비교|받은 제안)$/ });
+  const firstContractHeading = page.getByRole('heading', {
+    level: 1,
+    name: /^(제안 비교|받은 제안)$/,
+  });
   const marketHeading = page.getByRole('heading', { level: 1, name: /^이적시장 제안( 비교)?$/ });
-  await firstContractHeading.or(marketHeading).first().waitFor({ state: 'visible', timeout: 60_000 });
+  await firstContractHeading
+    .or(marketHeading)
+    .first()
+    .waitFor({ state: 'visible', timeout: 60_000 });
   if (await firstContractHeading.isVisible()) {
     const offerLinks = page.getByRole('link', { name: '제안 상세·결정' });
     const offerCards = page.locator('[data-compare-layout="stacked"] > div');
@@ -134,7 +154,9 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
     if ((await offerCards.count()) > 1 && options.preferredMinLengthSeasons !== undefined) {
       // 기존 helper의 기본값은 첫 제안 수락으로 보존한다. 특정 E2E만 원하는 계약 기간을 명시한다.
       const preferredLength = options.preferredMinLengthSeasons;
-      const preferredCard = offerCards.filter({ hasText: new RegExp(`[${preferredLength}-9]시즌`) }).first();
+      const preferredCard = offerCards
+        .filter({ hasText: new RegExp(`[${preferredLength}-9]시즌`) })
+        .first();
       await expect(preferredCard).toHaveCount(1);
       targetOffer = preferredCard.getByRole('link', { name: '제안 상세·결정' });
     }
@@ -146,6 +168,17 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
 
     await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
     await page.getByRole('button', { name: '커리어 시작' }).click();
+
+    const recoveryHeading = page.getByRole('heading', {
+      level: 1,
+      name: '복구 코드를 저장하세요',
+    });
+    const signedToast = page.getByText('계약을 맺었습니다');
+    await recoveryHeading.or(signedToast).first().waitFor({ state: 'visible' });
+    if (await recoveryHeading.isVisible()) {
+      if (options.stopAtRecovery === true) return;
+      await page.getByRole('button', { name: /^(저장했어요|계속)$/ }).click();
+    }
 
     await expect(page).toHaveURL(/\/career\/[^/]+$/);
     await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
@@ -172,7 +205,8 @@ export async function signFirstOffer(page: Page, options: { preferredMinLengthSe
   // 카드에 도착한다(T-4-011). 그 외 제안도 같은 화면에 도착한다 — "대시보드로"/"새 시즌 준비"
   // 링크를 눌러야 대시보드에 닿는다. rev 뒤에 다른 시장이 붙인 &interested=K가 있을 수 있으므로
   // 쿼리 유무와 무관하게 매칭한다.
-  const transferResultOrDashboard = /(?:\/career\/.+\/transfer-result\?rev=\d+(?:&[^#]*)?|\/career\/[^/]+)$/;
+  const transferResultOrDashboard =
+    /(?:\/career\/.+\/transfer-result\?rev=\d+(?:&[^#]*)?|\/career\/[^/]+)$/;
   await expect(page).toHaveURL(transferResultOrDashboard);
   if (/\/transfer-result\?rev=\d+(?:&[^#]*)?$/.test(page.url())) {
     await page.getByRole('link', { name: /^(대시보드로|새 시즌 준비)$/ }).click();

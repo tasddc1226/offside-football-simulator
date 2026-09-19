@@ -26,7 +26,9 @@ const PRECONTRACT_SEASON: ServiceSeasonCurrent = {
   notice: null,
 };
 
-test('1.7.2/0.6.6: 진로 선택 뒤 스카우트 평가 1건만 뜨고 곧장 첫 제안이 열린다', async ({ page }) => {
+test('1.7.2/0.6.6: 진로 선택 뒤 스카우트 평가 1건만 뜨고 곧장 첫 제안이 열린다', async ({
+  page,
+}) => {
   await page.route('**/v1/service-seasons/current', (route) =>
     fulfillJson(route, 200, { data: PRECONTRACT_SEASON, meta: META }),
   );
@@ -53,17 +55,21 @@ test('1.7.2/0.6.6: 진로 선택 뒤 스카우트 평가 1건만 뜨고 곧장 �
 
   await page.route('**/v1/profile', (route) =>
     fulfillJson(route, 503, {
-      error: { code: 'SERVICE_UNAVAILABLE', message: '서비스를 이용할 수 없습니다.', retryable: true },
+      error: {
+        code: 'SERVICE_UNAVAILABLE',
+        message: '서비스를 이용할 수 없습니다.',
+        retryable: true,
+      },
       meta: META,
     }),
   );
   await page.getByRole('button', { name: 'KICKOFF' }).click();
-  await expect(page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.')).toBeVisible();
-  await page.getByRole('button', { name: '계속' }).click();
 
   // 1) SCR-007 진로 선택 — 기존 흐름 그대로(전용 화면·라벨, 사건 상한과 무관).
   await expect(page).toHaveURL(/\/career\/.+\/path$/);
-  await expect(page.getByRole('heading', { level: 1, name: '어떤 길을 걸어갈까요?' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '어떤 길을 걸어갈까요?' }),
+  ).toBeVisible();
   await page.getByRole('radio', { name: /남아 추가 평가/ }).click();
   await page.getByRole('button', { name: '확정' }).click();
   await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);

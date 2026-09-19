@@ -838,6 +838,8 @@ function CareerDashboard() {
     : { label: '포지션', value: draft.position ? POSITION_LABELS[draft.position] : '—' };
   const hasContract = state.contract !== null;
   const season = state.season;
+  const firstSeasonNotStarted =
+    state.status === 'ACTIVE' && hasContract && season === null && state.seasonHistory.length === 0;
   const room = deriveTacticalRoom(state, ruleset);
   const currentLeagueContext = buildCurrentLeagueContext(season, ruleset);
   const currentLeagueRows = currentLeagueContext === null || season?.leagueLedger === undefined
@@ -1026,22 +1028,34 @@ function CareerDashboard() {
                 description="현재 진행 상황과 다음 결정을 확인합니다."
               >
                 {season === null ? (
-                  <>
-                    <p className="font-os text-os-text" style={BODY_STYLE}>
-                      step {state.currentStep} · {SEASON_PHASE_LABEL_KO[state.seasonPhase]}
-                    </p>
-                    {state.pending === null ? (
-                      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                        다음 결정은 진행 후 열립니다.
+                  firstSeasonNotStarted ? (
+                    <>
+                      <p className="font-os text-os-text" style={BODY_STYLE}>
+                        <span className="os-num">0 / {ruleset.leagueCalendar.steps.length}</span> ·
+                        시즌 시작 전
                       </p>
-                    ) : (
-                      // UX-014: "시즌" 탭이 홈+일정을 합쳤으니 같은 화면 위쪽 NextDecisionCard가
-                      // 이미 이 결정을 보여준다(옛 "홈으로 이동" 버튼은 자기 자신을 가리키게 돼 뺐다).
                       <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                        결정이 기다립니다 — 위 카드에서 확인하세요.
+                        프리시즌 계획을 세우면 일정이 열립니다.
                       </p>
-                    )}
-                  </>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-os text-os-text" style={BODY_STYLE}>
+                        step {state.currentStep} · {SEASON_PHASE_LABEL_KO[state.seasonPhase]}
+                      </p>
+                      {state.pending === null ? (
+                        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                          다음 결정은 진행 후 열립니다.
+                        </p>
+                      ) : (
+                        // UX-014: "시즌" 탭이 홈+일정을 합쳤으니 같은 화면 위쪽 NextDecisionCard가
+                        // 이미 이 결정을 보여준다(옛 "홈으로 이동" 버튼은 자기 자신을 가리키게 돼 뺐다).
+                        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                          결정이 기다립니다 — 위 카드에서 확인하세요.
+                        </p>
+                      )}
+                    </>
+                  )
                 ) : (
                   <div className="flex flex-col gap-os-4">
                     <SeasonTimeline steps={season.steps} currentStep={season.currentStep} />

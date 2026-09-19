@@ -58,10 +58,13 @@ async function settleOneSeason(page: Page): Promise<void> {
 }
 
 test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보여주고 헤더 OVR과 일치한다', async ({ page }) => {
+  // 준비 단계의 마일스톤만 모션 감소로 진행한다. 결산 카운트업은 기본 모션으로 검증한다.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript((seed) => {
     window.localStorage.setItem('offside:e2e-seed', seed);
   }, E2E_SEASON_RESULT_SEED);
   await completeOnboardingThroughContract(page);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await settleOneSeason(page);
 
   const root = page.getByTestId('season-result');
@@ -187,6 +190,9 @@ test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그
 test('결산 PUT 응답 유실: 재시도 뒤에도 같은 result.hash로 SCR-015를 보여주고, 새로고침해도 같은 hash다', async ({
   page,
 }) => {
+  // 저장 재시도·해시 보존을 검증하는 시나리오다. 첫 계약과 시즌 시작의 연출 시간이
+  // 30초 테스트 예산을 소모하지 않도록 실제 사용자 모션 감소 경로로 진행한다.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   // 기본 e2e 모드(E2E_WITH_API 없음)는 8787에 실제 서버가 없다(playwright.config.ts) — route로
   // 가로채지 않으면 이 커리어의 모든 PUT이 처음부터 실패해 재시도 backoff(attempt)가 결산 전부터
   // 계속 쌓인다. 그 상태에서 결산 PUT만 유실시키면 그 시점의 attempt가 이미 커서(직접 확인,
