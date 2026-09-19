@@ -115,6 +115,29 @@ describe('loadRuleset: 1.7.2 offerRules.preContract(D-89)', () => {
   });
 });
 
+describe('loadRuleset: 1.7.3 issue #242 role balance', () => {
+  it('1.7.2는 불변이고 1.7.3은 zero-slot 인접 포지션 fallback만 추가한다', () => {
+    const previous = loadRuleset('1.7.2');
+    const ruleset = loadRuleset('1.7.3');
+
+    expect(RULESET_VERSIONS).toContain('1.7.3');
+    expect(previous.selectionRules.roleProposal.zeroSlotAdjacentFallback).toBeUndefined();
+    expect(ruleset.selectionRules.roleProposal.zeroSlotAdjacentFallback).toBe(true);
+
+    const { version: previousVersion, selectionRules: previousSelection, ...previousRest } = previous;
+    const { version: nextVersion, selectionRules: nextSelection, ...nextRest } = ruleset;
+    expect(previousVersion).toBe('1.7.2');
+    expect(nextVersion).toBe('1.7.3');
+    expect(nextRest).toEqual(previousRest);
+    const nextRoleProposal: Partial<typeof nextSelection.roleProposal> = {
+      ...nextSelection.roleProposal,
+    };
+    delete nextRoleProposal.zeroSlotAdjacentFallback;
+    expect(nextRoleProposal).toEqual(previousSelection.roleProposal);
+    expect({ ...nextSelection, roleProposal: previousSelection.roleProposal }).toEqual(previousSelection);
+  });
+});
+
 // T-3-006 U-013: 팀 풀 8→12(YOUTH 1·1부 3·2부 4·3부 4). 시장 다양성 확보 목적.
 describe('loadRuleset: 팀 풀 12개(U-013)', () => {
   const ruleset = loadRuleset('1.0.0');

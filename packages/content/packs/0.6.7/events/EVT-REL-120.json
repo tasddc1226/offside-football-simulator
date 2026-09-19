@@ -1,0 +1,344 @@
+{
+  "id": "EVT-REL-120",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "triggers": {
+    "all": [
+      {
+        "eq": [
+          "career.stage",
+          "PRO"
+        ]
+      },
+      {
+        "notIn": [
+          "player.positionGroup",
+          [
+            "GK"
+          ]
+        ]
+      },
+      {
+        "any": [
+          {
+            "gte": [
+              "relationships.rival",
+              50
+            ]
+          },
+          {
+            "gte": [
+              "relationships.captain",
+              55
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "exclusionTags": [
+    "T7034_RECIPROCITY_DONE"
+  ],
+  "cooldown": {
+    "steps": 8
+  },
+  "weight": 18,
+  "choices": [
+    {
+      "id": "A",
+      "label": "첫 패스를 내주고 되돌려 받는다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "동료 신뢰 기회",
+          "target": "captain",
+          "direction": "UP"
+        },
+        {
+          "label": "경쟁 관계 변동"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 74,
+          "title": "주고받는 움직임이 둘의 장점을 살렸다",
+          "cause": "패스 타이밍을 먼저 맞춘 선택",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-120.A.S0",
+              "target": "captain",
+              "delta": 4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-120_A_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-120.A.S1",
+              "target": "rival",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-120_A_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-REL-121"
+            }
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 26,
+          "title": "되돌아올 패스가 한 박자 늦었다",
+          "cause": "처음 맞춘 조합의 호흡 부족",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-120.A.F0",
+              "target": "form",
+              "delta": -2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-120_A_F0"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-REL-121"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "마지막 슈팅은 직접 마무리한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "폼 상승 기회",
+          "target": "form",
+          "direction": "UP"
+        },
+        {
+          "label": "경쟁자 반응 위험",
+          "target": "rival",
+          "direction": "DOWN"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 60,
+          "title": "과감한 마무리가 훈련의 장면이 됐다",
+          "cause": "공간을 먼저 읽은 슈팅",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-120.B.S0",
+              "target": "form",
+              "delta": 4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-120_B_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-120.B.S1",
+              "target": "fans",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-120_B_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-REL-122"
+            }
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 40,
+          "title": "패스 선택지를 외면했다는 말이 나왔다",
+          "cause": "마지막 판단의 엇갈림",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-120.B.F0",
+              "target": "rival",
+              "delta": -4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-120_B_F0"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-REL-122"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "훈련 뒤 역할을 솔직히 조율한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "경쟁 관계 완화 기회",
+          "target": "rival",
+          "direction": "UP"
+        },
+        {
+          "label": "감독 평가 변동"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "SUCCESS",
+          "weight": 66,
+          "title": "서로 원하는 움직임을 한 문장씩 맞췄다",
+          "cause": "훈련 직후 구체적으로 나눈 대화",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-120.C.S0",
+              "target": "rival",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-120_C_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-120.C.S1",
+              "target": "managerTrust",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-120_C_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-REL-121"
+            }
+          ]
+        },
+        {
+          "id": "C2",
+          "kind": "FAIL",
+          "weight": 34,
+          "title": "대화가 책임을 가리는 자리처럼 흘렀다",
+          "cause": "경기 언어가 아직 맞지 않음",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-120.C.F0",
+              "target": "managerTrust",
+              "delta": -2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-REL-120_C_F0"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-REL-122"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "훈련 미니게임에서 경쟁자와 같은 조가 됐다. 패스를 주고받으면 둘 다 살아나지만, 한 장면을 독점하면 다음 훈련의 분위기가 달라질 수 있다."
+  }
+}

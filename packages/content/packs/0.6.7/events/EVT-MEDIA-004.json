@@ -1,0 +1,76 @@
+{
+  "id": "EVT-MEDIA-004",
+  "version": 1,
+  "phases": ["IN_SEASON"],
+  "triggers": { "lt": ["season.stats.recentFormAvg", 50] },
+  "exclusionTags": [],
+  "cooldown": { "steps": 5 },
+  "weight": 16,
+  "safety": { "minorSafe": true },
+  "authoring": "PROTOTYPE",
+  "presentation": "MEDIA",
+  "choices": [
+    {
+      "id": "A",
+      "label": "즉시 사과한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "팬 반응 상승", "target": "fans", "direction": "UP" },
+        { "label": "감독 신뢰 상승", "target": "managerTrust", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 100,
+          "title": "솔직한 사과가 좋은 반응을 얻었다",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-MEDIA-004.A.A1.0", "target": "fans", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "RELATION", "sourceId": "EVT-MEDIA-004.A.A1.1", "target": "managerTrust", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "경기 내용을 차분히 설명한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [{ "label": "미디어 주목도 상승", "target": "media", "direction": "UP" }],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "NEUTRAL",
+          "weight": 100,
+          "title": "설명은 했지만 해석은 엇갈렸다",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-MEDIA-004.B.B1.0", "target": "media", "delta": 50, "clamp": { "min": 0, "max": 10000 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "아무 말도 하지 않는다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "팬 반응 하락", "target": "fans", "direction": "DOWN" },
+        { "label": "미디어 주목도 하락", "target": "media", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FAIL",
+          "weight": 100,
+          "title": "침묵이 무성의하다는 반응으로 이어졌다",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-MEDIA-004.C.C1.0", "target": "fans", "delta": -5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "RELATION", "sourceId": "EVT-MEDIA-004.C.C1.1", "target": "media", "delta": -40, "clamp": { "min": 0, "max": 10000 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "최근 경기 결과에 대한 비판적인 질문이 이어지고 있다. 어떻게 답할지 정해야 한다."
+  }
+}

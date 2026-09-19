@@ -13,6 +13,7 @@ const ledgerVersion = { rulesetVersion: '1.7.0', contentPackVersion: '0.6.3' };
 const fifthVersion = { rulesetVersion: '1.7.0', contentPackVersion: '0.6.4' };
 const previousVersion = { rulesetVersion: '1.7.1', contentPackVersion: '0.6.5' };
 const currentVersion = { rulesetVersion: '1.7.2', contentPackVersion: '0.6.6' };
+const roleBalanceVersion = { rulesetVersion: '1.7.3', contentPackVersion: '0.6.7' };
 
 describe('production season version compatibility', () => {
   // fail-closed 게이트: 승인 목록의 pair는 번들 레지스트리에 실제로 있어야 한다. 이 파일은 Production
@@ -33,9 +34,10 @@ describe('production season version compatibility', () => {
   });
 
   it('accepts every approved production pair during promotion and rollback', () => {
-    // 1.7.1/0.6.5 → 1.7.2/0.6.6 승격 전환 구간과 롤백.
-    expect(isAcceptedSeasonVersion('svc_season_1', currentVersion, previousVersion)).toBe(true);
-    expect(isAcceptedSeasonVersion('svc_season_1', previousVersion, currentVersion)).toBe(true);
+    // 다음 호환 pair(1.7.3/0.6.7)를 등록하되 운영 active pointer는 여전히
+    // 1.7.2/0.6.6에 둔다. 포인터 전환 전후의 양방향 sync만 여기서 확인한다.
+    expect(isAcceptedSeasonVersion('svc_season_1', currentVersion, roleBalanceVersion)).toBe(true);
+    expect(isAcceptedSeasonVersion('svc_season_1', roleBalanceVersion, currentVersion)).toBe(true);
     // 최초 공개부터 현재까지 어느 승격 지점으로 롤백해도 미동기화 최초 sync를 보호한다.
     const history = [
       firstVersion,
@@ -46,6 +48,7 @@ describe('production season version compatibility', () => {
       fifthVersion,
       previousVersion,
       currentVersion,
+      roleBalanceVersion,
     ];
     for (const seasonVersion of history) {
       for (const requestedVersion of history) {

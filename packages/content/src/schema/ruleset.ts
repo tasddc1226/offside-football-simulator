@@ -348,6 +348,7 @@ const RoleProposalRulesSchema = z.strictObject({
   keepConfirmTrustDelta: z.number(),
   acceptedRoleUpdatesPromise: z.boolean().optional(),
   declineDowngradeTrustDelta: z.number().int().optional(),
+  zeroSlotAdjacentFallback: z.boolean().optional(),
 });
 
 function refineSum1(
