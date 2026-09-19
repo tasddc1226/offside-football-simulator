@@ -1151,6 +1151,17 @@ describe('SCR-029 다음 결정 카드 분기', () => {
 });
 
 describe('SCR-029 일정표 구역: 시즌 중이면 SeasonTimeline과 일정 행을 보여준다', () => {
+  it('첫 계약 뒤 시즌 시작 전에는 0 / 12와 프리시즌 안내를 보여준다', async () => {
+    const engine = setTestEngine();
+    const careerId = await signedCareerId(engine);
+
+    renderAt(`/career/${careerId}`);
+
+    expect(await screen.findByText('0 / 12')).toBeInTheDocument();
+    expect(screen.getByText('프리시즌 계획을 세우면 일정이 열립니다.')).toBeInTheDocument();
+    expect(screen.queryByText(/step 12 · 시즌 정산/)).not.toBeInTheDocument();
+  });
+
   it('시즌이 있으면 step 12개의 시즌 타임라인이 보인다', async () => {
     const engine = setTestEngine();
     const careerId = await seasonActiveNoPendingCareerId(engine);

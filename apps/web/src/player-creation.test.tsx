@@ -360,7 +360,7 @@ describe('SCR-002→003: 포지션 변경 시 기존 아키타입을 자동 확�
   });
 });
 
-describe('SCR-004 확인 및 복구 코드', () => {
+describe('SCR-004 확인 및 첫 계약 뒤 복구 코드', () => {
   // UX-012: KICKOFF 확정 뒤 ScreenTransition은 3초 고정이다 — 이 통합 테스트는 실제 연출
   // 시간을 검증하는 목적이 아니므로(app-motion.spec.ts e2e가 그 역할을 한다) 모션 감소로
   // 즉시 완료시켜 findBy* 기본 타임아웃(1000ms) 안에서 끝나게 한다.
@@ -402,75 +402,69 @@ describe('SCR-004 확인 및 복구 코드', () => {
     expect(screen.queryByText(`${TEST_RULESET_VERSION} / ${TEST_CONTENT_PACK_VERSION}`)).not.toBeInTheDocument();
   });
 
-  it('선수 요약을 보여주고 KICKOFF 확정 후 복구 코드를 발급한다', async () => {
+  it('선수 요약을 보여주고 KICKOFF 확정 후 복구 발급으로 막지 않고 첫 결정으로 이동한다', async () => {
     const engine = setTestEngine();
     const careerId = await seedReadyForConfirm(engine);
-    apiHolder.getProfile.mockResolvedValue({ ok: true, data: UNISSUED_PROFILE } satisfies ApiResult<Profile>);
-    apiHolder.issueRecoveryCode.mockResolvedValue({
-      ok: true,
-      data: { code: 'OFS-ABCD-2345-EFGH', issuedAt: '2026-09-02T00:00:00Z' },
-    } satisfies ApiResult<IssueRecoveryCodeResponse>);
 
     const user = userEvent.setup();
     const router = renderAt(`/career/${careerId}/confirm`);
     await screen.findByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' });
     expect(screen.getByRole('heading', { level: 2, name: '김서준' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'KICKOFF' })).toHaveClass('whitespace-nowrap');
 
     await user.click(screen.getByRole('button', { name: 'KICKOFF' }));
-
-    expect(await screen.findByRole('heading', { level: 1, name: '복구 코드를 저장하세요' })).toBeInTheDocument();
-    expect(await screen.findByText('OFS-ABCD-2345-EFGH')).toBeInTheDocument();
-    expect(router.state.location.search).toEqual({ step: 'recovery' });
-
-    // PR 231 리뷰: CONFIRM_PLAYER 성공 직후 state.status는 이미 DRAFT를 벗어나 CareerHeaderBar가
-    // 활성 헤더(홈 버튼 포함)를 그리지만, 이 화면의 로컬 FSM(screenState)은 복구 코드 단계 내내
-    // 여전히 COMMITTING이다 — 전역 useIsMutating()만 보던 예전 로직은 여기서 홈 버튼을 활성으로
-    // 그려 이탈 방지를 우회했다. committing-guard.ts를 거쳐 비활성으로 남는지 확인한다.
-    expect(screen.getByRole('link', { name: '허브로' })).toHaveAttribute('aria-disabled', 'true');
-
-    await user.click(screen.getByRole('button', { name: '저장했어요' }));
 
     // ADVANCE로 뽑힌 첫 이벤트는 랜덤 seed에 따라 달라진다(career-actions.advance는 후보 목록만
     // 계산하고, 그중 하나를 고르는 건 도메인의 가중 랜덤이다) — screenForCareer가 매핑하는 SCR-007
     // 계열 라우트 중 하나로만 도착했는지 확인한다.
     await waitFor(() => {
-      expect(router.state.location.pathname).toMatch(new RegExp(`^/career/${careerId}/(path|tryout|event)$`));
+      expect(router.state.location.pathname).toMatch(
+        new RegExp(`^/career/${careerId}/(path|tryout|event)$`),
+      );
     });
+    expect(apiHolder.getProfile).not.toHaveBeenCalled();
+    expect(apiHolder.issueRecoveryCode).not.toHaveBeenCalled();
   });
 
-  it('이미 발급된 프로필이면 복구 코드 화면 없이 곧바로 다음으로 넘어간다', async () => {
+  it('첫 계약 뒤 이미 발급된 프로필이면 복구 코드 화면 없이 서명 완료 대시보드로 넘어간다', async () => {
     const engine = setTestEngine();
     const careerId = await seedReadyForConfirm(engine);
+    const confirmed = await confirmPlayer(engine, careerId);
+    expect(confirmed.ok).toBe(true);
+    const advanced = await advance(engine, careerId);
+    expect(advanced.ok).toBe(true);
     apiHolder.getProfile.mockResolvedValue({
       ok: true,
       data: { ...UNISSUED_PROFILE, recoveryCodeIssuedAt: '2026-08-01T00:00:00Z' },
     } satisfies ApiResult<Profile>);
 
-    const user = userEvent.setup();
-    const router = renderAt(`/career/${careerId}/confirm`);
-    await screen.findByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' });
-
-    await user.click(screen.getByRole('button', { name: 'KICKOFF' }));
+    const router = renderAt(`/career/${careerId}/confirm?step=recovery&milestone=first-contract`);
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toMatch(new RegExp(`^/career/${careerId}/(path|tryout|event)$`));
+      expect(router.state.location.pathname).toBe(`/career/${careerId}`);
     });
+    expect(await screen.findByText('계약을 맺었습니다')).toBeInTheDocument();
     expect(apiHolder.issueRecoveryCode).not.toHaveBeenCalled();
   });
 
-  it('프로필 조회가 실패하면 발급 불가 안내와 계속 버튼을 보여준다', async () => {
+  it('첫 계약 뒤 프로필 조회가 실패하면 발급 불가 안내 뒤 서명 완료 대시보드로 계속한다', async () => {
     const engine = setTestEngine();
     const careerId = await seedReadyForConfirm(engine);
+    const confirmed = await confirmPlayer(engine, careerId);
+    expect(confirmed.ok).toBe(true);
+    const advanced = await advance(engine, careerId);
+    expect(advanced.ok).toBe(true);
     apiHolder.getProfile.mockResolvedValue({
       ok: false,
-      error: { code: 'SERVICE_UNAVAILABLE', message: '서비스를 이용할 수 없습니다.', retryable: true },
+      error: {
+        code: 'SERVICE_UNAVAILABLE',
+        message: '서비스를 이용할 수 없습니다.',
+        retryable: true,
+      },
     } satisfies ApiResult<Profile>);
 
     const user = userEvent.setup();
-    const router = renderAt(`/career/${careerId}/confirm`);
-    await screen.findByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' });
-
-    await user.click(screen.getByRole('button', { name: 'KICKOFF' }));
+    const router = renderAt(`/career/${careerId}/confirm?step=recovery&milestone=first-contract`);
 
     expect(
       await screen.findByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.'),
@@ -479,11 +473,12 @@ describe('SCR-004 확인 및 복구 코드', () => {
     await user.click(screen.getByRole('button', { name: '계속' }));
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toMatch(new RegExp(`^/career/${careerId}/(path|tryout|event)$`));
+      expect(router.state.location.pathname).toBe(`/career/${careerId}`);
     });
+    expect(await screen.findByText('계약을 맺었습니다')).toBeInTheDocument();
   });
 
-  it('새로고침(?step=recovery URL 재방문)해도 복구 코드 단계를 유지한다', async () => {
+  it('첫 계약 뒤 새로고침(?step=recovery URL 재방문)해도 복구 코드 단계를 유지한다', async () => {
     const engine = setTestEngine();
     const careerId = await seedReadyForConfirm(engine);
     const confirmed = await confirmPlayer(engine, careerId);
@@ -491,15 +486,24 @@ describe('SCR-004 확인 및 복구 코드', () => {
     const advanced = await advance(engine, careerId);
     expect(advanced.ok).toBe(true);
 
-    apiHolder.getProfile.mockResolvedValue({ ok: true, data: UNISSUED_PROFILE } satisfies ApiResult<Profile>);
+    apiHolder.getProfile.mockResolvedValue({
+      ok: true,
+      data: UNISSUED_PROFILE,
+    } satisfies ApiResult<Profile>);
     apiHolder.issueRecoveryCode.mockResolvedValue({
       ok: true,
       data: { code: 'OFS-WXYZ-1234-MNOP', issuedAt: '2026-09-02T00:00:00Z' },
     } satisfies ApiResult<IssueRecoveryCodeResponse>);
 
-    renderAt(`/career/${careerId}/confirm?step=recovery`);
+    const router = renderAt(`/career/${careerId}/confirm?step=recovery&milestone=first-contract`);
 
-    expect(await screen.findByRole('heading', { level: 1, name: '복구 코드를 저장하세요' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '복구 코드를 저장하세요' }),
+    ).toBeInTheDocument();
     expect(await screen.findByText('OFS-WXYZ-1234-MNOP')).toBeInTheDocument();
+    expect(router.state.location.search).toEqual({
+      step: 'recovery',
+      milestone: 'first-contract',
+    });
   });
 });
