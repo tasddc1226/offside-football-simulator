@@ -319,6 +319,11 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
   await expect(page.locator('.os-player-card')).toHaveCSS('opacity', '1');
   await expectNoSeriousOrCriticalViolations(page, 'SCR-010 계약 완료');
   await page.getByRole('button', { name: '커리어 시작' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '복구 코드를 저장하세요' }),
+  ).toBeVisible();
+  await expectNoSeriousOrCriticalViolations(page, '첫 계약 뒤 복구 코드 안내');
+  await page.getByRole('button', { name: '계속' }).click();
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
   const signedToast = page.getByText('계약을 맺었습니다');
   await expect(signedToast).toBeVisible();

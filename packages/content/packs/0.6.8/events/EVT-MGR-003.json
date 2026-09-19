@@ -1,0 +1,84 @@
+{
+  "id": "EVT-MGR-003",
+  "version": 1,
+  "phases": ["IN_SEASON"],
+  "triggers": {
+    "all": [
+      { "gte": ["contract.promiseBreaches", 1] },
+      { "gte": ["season.step", 4] }
+    ]
+  },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 1 },
+  "weight": 20,
+  "safety": { "minorSafe": true },
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "조용히 기다린다",
+      "riskLabel": "LOW",
+      "previewEffects": [{ "label": "감독 신뢰 소폭 상승", "target": "managerTrust", "direction": "UP" }],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "묵묵히 기회를 기다리기로 했다",
+          "cause": "인내",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-MGR-003.A.A1.0", "target": "managerTrust", "delta": 1, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "데이터를 준비해 면담을 요청한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "감독 신뢰 상승", "target": "managerTrust", "direction": "UP" },
+        { "label": "스쿼드 내 입지 상승" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "구체적인 근거로 면담을 진행했다",
+          "cause": "데이터 제시",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-MGR-003.B.B1.0", "target": "managerTrust", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "CONTEXT", "sourceId": "EVT-MGR-003.B.B1.1", "target": "squadStatus", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "공개적으로 압박한다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "감독 신뢰 하락", "target": "managerTrust", "direction": "DOWN" },
+        { "label": "팬 지지 상승", "target": "fans", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "인터뷰에서 약속 이행을 공개적으로 요구했다",
+          "cause": "공개 압박",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-MGR-003.C.C1.0", "target": "managerTrust", "delta": -6, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "RELATION", "sourceId": "EVT-MGR-003.C.C1.1", "target": "fans", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ],
+          "addTags": ["언론_충돌"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "계약에 적힌 출전 약속이 이번 시즌 들어 지켜지지 않고 있다. 감독과 이 문제를 어떻게 다룰지 정해야 한다."
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadContentPack } from './load-content-pack.ts';
+import { loadContentPack, PACK_VERSIONS } from './load-content-pack.ts';
 
 describe('loadContentPack', () => {
   it('0.1.0의 이벤트 개수가 11개이고 manifest.files의 events 목록과 id가 일치한다', () => {
@@ -310,6 +310,124 @@ describe('loadContentPack: 0.6.6', () => {
           expect(nextOutcome.effects).toEqual(previousOutcome.effects);
         }
       }
+    }
+  });
+});
+
+describe('loadContentPack: 0.6.7', () => {
+  it('0.6.6 콘텐츠를 그대로 복사하고 1.7.3과만 호환된다', () => {
+    const previous = loadContentPack('0.6.6');
+    const pack = loadContentPack('0.6.7');
+
+    expect(PACK_VERSIONS).toContain('0.6.7');
+    expect(pack.manifest.contentPackVersion).toBe('0.6.7');
+    expect(pack.manifest.compatibleRulesetVersions).toEqual(['1.7.3']);
+    expect(pack.manifest.checksum).toBe(previous.manifest.checksum);
+    expect(pack.events).toEqual(previous.events);
+    expect(pack.chapters).toEqual(previous.chapters);
+    expect(pack.narrativeTokens).toEqual(previous.narrativeTokens);
+  });
+});
+
+describe('loadContentPack: 0.6.8 issue #243 event variety', () => {
+  it('0.6.7을 보존하고 새 immutable pair의 manifest 전체를 등록한다', () => {
+    const previous = loadContentPack('0.6.7');
+    const pack = loadContentPack('0.6.8');
+
+    expect(PACK_VERSIONS).toContain('0.6.8');
+    expect(previous.manifest.checksum).toBe(
+      '87b0e7e445d5aaf5cf12cd0b37120d6a46c3a778689daae006c1e3dcf084608b',
+    );
+    expect(pack.manifest).toMatchObject({
+      contentPackVersion: '0.6.8',
+      compatibleRulesetVersions: ['1.7.4'],
+      playtested: false,
+    });
+    expect(pack.manifest.checksum).not.toBe(previous.manifest.checksum);
+    expect(pack.events).toHaveLength(65);
+    expect(pack.chapters).toHaveLength(12);
+    expect(pack.events.map((event) => event.id).sort()).toEqual(
+      pack.manifest.files
+        .filter((file) => file.startsWith('events/'))
+        .map((file) => file.slice('events/'.length, -'.json'.length))
+        .sort(),
+    );
+    expect(pack.chapters.map((chapter) => chapter.id).sort()).toEqual(
+      pack.manifest.files
+        .filter((file) => file.startsWith('chapters/'))
+        .map((file) => file.slice('chapters/'.length, -'.json'.length))
+        .sort(),
+    );
+  });
+
+  it('기존 반복 챕터에는 metadata만 추가하고 새 변형 5개를 같은 weight tier에 둔다', () => {
+    const previous = loadContentPack('0.6.7');
+    const pack = loadContentPack('0.6.8');
+
+    for (const chapterId of ['CHP-MATCH-001', 'CHP-MATCH-002', 'CHP-NAT-001']) {
+      expect(pack.chaptersById.get(chapterId)).toEqual(previous.chaptersById.get(chapterId));
+    }
+    for (const chapterId of ['CHP-MATCH-004', 'CHP-MATCH-005', 'CHP-MATCH-006', 'CHP-MATCH-007']) {
+      const previousChapter = previous.chaptersById.get(chapterId)!;
+      const nextChapter = pack.chaptersById.get(chapterId)!;
+      expect({ ...nextChapter, rotationGroup: undefined }).toEqual({
+        ...previousChapter,
+        rotationGroup: undefined,
+      });
+    }
+
+    const deciders = pack.chapters.filter((chapter) => chapter.rotationGroup === 'DECIDER');
+    expect(deciders.map((chapter) => chapter.id)).toEqual([
+      'CHP-MATCH-004',
+      'CHP-MATCH-008',
+      'CHP-MATCH-009',
+      'CHP-MATCH-010',
+    ]);
+    expect(new Set(deciders.map((chapter) => chapter.weight))).toEqual(new Set([90]));
+    const postDebut = pack.chapters.filter((chapter) => chapter.rotationGroup === 'POST_DEBUT');
+    expect(postDebut.map((chapter) => chapter.id)).toEqual([
+      'CHP-MATCH-005',
+      'CHP-MATCH-006',
+      'CHP-MATCH-007',
+      'CHP-MATCH-011',
+      'CHP-MATCH-012',
+    ]);
+    expect(new Set(postDebut.map((chapter) => chapter.weight))).toEqual(new Set([70]));
+  });
+
+  it('새 사건 6개는 모두 28세 이상·FIXED 결과이고 관계 중심 4개는 주장 경로를 제공한다', () => {
+    const pack = loadContentPack('0.6.8');
+    const newIds = [
+      'EVT-DEV-130',
+      'EVT-INJ-130',
+      'EVT-MEDIA-130',
+      'EVT-MGR-130',
+      'EVT-REL-130',
+      'EVT-REL-131',
+    ];
+
+    for (const eventId of newIds) {
+      const event = pack.eventsById.get(eventId);
+      expect(event, eventId).toBeDefined();
+      expect(event!.minAge, eventId).toBeGreaterThanOrEqual(28);
+      expect(
+        event!.choices.flatMap((choice) => choice.outcomes).every((outcome) => outcome.kind === 'FIXED'),
+        eventId,
+      ).toBe(true);
+    }
+    for (const eventId of ['EVT-DEV-130', 'EVT-MEDIA-130', 'EVT-REL-130', 'EVT-REL-131']) {
+      const event = pack.eventsById.get(eventId)!;
+      expect(
+        event.choices.some((choice) =>
+          choice.outcomes.some((outcome) =>
+            outcome.effects.some(
+              (effect) =>
+                effect.kind === 'RELATION' && effect.target === 'captain' && effect.delta > 0,
+            ),
+          ),
+        ),
+        eventId,
+      ).toBe(true);
     }
   });
 });

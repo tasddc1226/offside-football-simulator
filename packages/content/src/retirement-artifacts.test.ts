@@ -61,6 +61,33 @@ describe('loadRetirementArtifacts', () => {
     expect(exposureArtifacts.rulesetChecksum).not.toBe(varietyArtifacts.rulesetChecksum);
     expect(exposureArtifacts.contentPackChecksum).toBe(varietyArtifacts.contentPackChecksum);
     expect(exposureArtifacts.legacyReferencePopulation).toBeUndefined();
+    const currentArtifacts = loadRetirementArtifacts('1.7.2', '0.6.6');
+    const roleBalanceArtifacts = loadRetirementArtifacts('1.7.3', '0.6.7');
+    expect(roleBalanceArtifacts).toMatchObject({
+      rulesetVersion: '1.7.3',
+      contentPackVersion: '0.6.7',
+      legacyVersion: '1.2.0',
+    });
+    expect(roleBalanceArtifacts.rulesetChecksum).not.toBe(exposureArtifacts.rulesetChecksum);
+    expect(roleBalanceArtifacts.contentPackChecksum).toBe(currentArtifacts.contentPackChecksum);
+    expect(roleBalanceArtifacts.rulesetChecksum).toBe(
+      'f2de9d57e11df1a5bbf8bb43ee168fa46286e8011f13bb183d330a0be53cae32',
+    );
+    expect(roleBalanceArtifacts.contentPackChecksum).toBe(
+      '87b0e7e445d5aaf5cf12cd0b37120d6a46c3a778689daae006c1e3dcf084608b',
+    );
+    expect(roleBalanceArtifacts.legacyReferencePopulation).toBeUndefined();
+    const eventVarietyArtifacts = loadRetirementArtifacts('1.7.4', '0.6.8');
+    expect(eventVarietyArtifacts).toMatchObject({
+      rulesetVersion: '1.7.4',
+      contentPackVersion: '0.6.8',
+      legacyVersion: '1.2.0',
+    });
+    expect(eventVarietyArtifacts.rulesetChecksum).not.toBe(roleBalanceArtifacts.rulesetChecksum);
+    expect(eventVarietyArtifacts.contentPackChecksum).not.toBe(
+      roleBalanceArtifacts.contentPackChecksum,
+    );
+    expect(eventVarietyArtifacts.legacyReferencePopulation).toBeUndefined();
   });
 
   it('activates the published Legacy 1.1 reference only for the 1.1/0.3 release pair', () => {

@@ -10,6 +10,8 @@ import ruleset161 from '../../rulesets/1.6.1/ruleset.json' with { type: 'json' }
 import ruleset170 from '../../rulesets/1.7.0/ruleset.json' with { type: 'json' };
 import ruleset171 from '../../rulesets/1.7.1/ruleset.json' with { type: 'json' };
 import ruleset172 from '../../rulesets/1.7.2/ruleset.json' with { type: 'json' };
+import ruleset173 from '../../rulesets/1.7.3/ruleset.json' with { type: 'json' };
+import ruleset174 from '../../rulesets/1.7.4/ruleset.json' with { type: 'json' };
 
 export const RULESET_VERSIONS = [
   '1.0.0',
@@ -23,6 +25,8 @@ export const RULESET_VERSIONS = [
   '1.7.0',
   '1.7.1',
   '1.7.2',
+  '1.7.3',
+  '1.7.4',
 ] as const;
 export type RulesetVersion = (typeof RULESET_VERSIONS)[number];
 
@@ -38,6 +42,8 @@ const RULESET_SOURCES: Record<RulesetVersion, unknown> = {
   '1.7.0': ruleset170,
   '1.7.1': ruleset171,
   '1.7.2': ruleset172,
+  '1.7.3': ruleset173,
+  '1.7.4': ruleset174,
 };
 
 /** 번들에 포함된 룰셋 JSON을 `RulesetSchema`로 검증해 동기로 돌려준다. */

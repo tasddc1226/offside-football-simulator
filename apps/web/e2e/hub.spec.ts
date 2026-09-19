@@ -2,7 +2,9 @@
 import { expect, test } from '@playwright/test';
 import { NOTICES_FIXTURE, stubNotices, stubNoticesFailure } from './helpers/notices.js';
 
-test('첫 방문은 게임 소개 페이지가 보이고, 온보딩을 건너뛰면 빈 허브가 보인다', async ({ page }) => {
+test('첫 방문은 게임 소개 페이지가 보이고, 온보딩을 건너뛰면 빈 허브가 보인다', async ({
+  page,
+}) => {
   // 사용자 결정(2026-09-14): 공지사항은 서버 API(GET /v1/notices)에서 온다 — 랜딩(PublicIntroduction)의
   // HomeCommunity가 이관된 공지 2건을 그대로 보여주는지 함께 확인한다.
   await stubNotices(page);
@@ -19,7 +21,7 @@ test('첫 방문은 게임 소개 페이지가 보이고, 온보딩을 건너뛰
     await expect(page.getByRole('button', { name: notice.title })).toBeVisible();
   }
 
-  await page.getByRole('link', { name: '게임 시작' }).click();
+  await page.getByRole('link', { name: '내 선수 만들기' }).click();
 
   await expect(page).toHaveURL(/\/onboarding$/);
   await expect(

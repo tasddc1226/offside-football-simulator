@@ -87,6 +87,16 @@ export type LeagueLedgerRules = {
   tieBreakers: ['POINTS', 'GOAL_DIFFERENCE', 'GOALS_FOR', 'TEAM_ID'];
 };
 
+/**
+ * Issue #243: historical rulesets keep the original chapter comparator. New rulesets may opt in
+ * to a deterministic least-recently-used rotation without consuming the simulation RNG stream.
+ */
+export type ChapterSelectionRules = {
+  version: 'LRU_V1';
+  /** A resolution `n` seasons ago remains ineligible when `n <= repeatCooldownSeasons`. */
+  repeatCooldownSeasons: number;
+};
+
 // T-2-002 D-34: 컵 대회 하나. `rounds`는 항상 4라운드 고정 순서(R1 → R2 → SEMI → FINAL)다(content
 // 스키마가 정확한 값·순서를 강제한다. 여기서 튜플 타입을 쓰지 않는 이유는 JSON에서 그대로 `as Ruleset`
 // 캐스팅하는 fixture 로더들이 배열 리터럴을 튜플로 좁혀 추론하지 않기 때문이다).
@@ -154,6 +164,10 @@ export type SelectionRules = {
     /** T-7-002 D-67: 1.4.0+. ROLE_CHANGE DECLINE이 하향 제안(proposal.to가 contract.rolePromise보다
      * 나쁜 역할)이면 declineTrustDelta 대신 이 값을 쓴다(정의됐을 때만). */
     declineDowngradeTrustDelta?: number | undefined;
+    /** Issue #242: 현재 포지션의 선발 자리가 0이면, 전술 적합도 +15 조건을 넘지 않더라도
+     * 선발 자리가 있는 인접 포지션의 실제 projectedRole이 더 좋으면 변경을 제안한다.
+     * 키가 없는 과거 룰셋은 기존 제안과 해시를 그대로 보존한다. */
+    zeroSlotAdjacentFallback?: boolean | undefined;
   };
 };
 
@@ -529,6 +543,8 @@ export type Ruleset = {
   retirementRules?: RetirementPolicy | undefined;
   /** 1.7.0+: 소속 리그 전체 대진·원장·실제 순위 지원 gate. */
   leagueLedgerRules?: LeagueLedgerRules | undefined;
+  /** 1.7.4+: 반복 가능한 경기 챕터의 시즌 단위 회전. 없으면 과거 선택 순서를 그대로 쓴다. */
+  chapterSelectionRules?: ChapterSelectionRules | undefined;
   positions: Position[];
   archetypes: Archetype[];
   backgrounds: Background[];

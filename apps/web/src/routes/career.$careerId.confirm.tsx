@@ -1,6 +1,7 @@
-// SCR-004 생성 완료 확인 + 복구 코드 발급 단계. KICKOFF는 로컬 CONFIRM_PLAYER → ADVANCE(EVT-CON-002
-// pending 계산)를 순서대로 실행한다. 확정 직후 DSN-LINE-001의 세 허용 순간 중 하나(오프사이드 라인 +
-// KICKOFF)를 보여준다. 복구 코드 단계는 같은 라우트의 ?step=recovery로 남아 새로고침해도 유지된다.
+// SCR-004 생성 완료 확인 + 첫 계약 뒤 복구 코드 안내 단계. KICKOFF는 로컬 CONFIRM_PLAYER →
+// ADVANCE(EVT-CON-002 pending 계산)를 순서대로 실행한 뒤 첫 이야기로 바로 이동한다. 확정 직후
+// DSN-LINE-001의 세 허용 순간 중 하나(오프사이드 라인 + KICKOFF)를 보여주며, 복구 코드 단계는 첫
+// 계약 뒤 같은 라우트의 ?step=recovery&milestone=first-contract로 남아 새로고침해도 유지된다.
 import { useEffect, useRef, useState } from 'react';
 import {
   Button,
@@ -37,9 +38,13 @@ import { PlayerCard } from '../shared/PlayerCard.js';
 import { GameCompletionTransition } from '../shared/game-presentation.js';
 import { SCREEN_ROUTES } from '../routes.js';
 
+type ConfirmSearch = { step?: 'recovery'; milestone?: 'first-contract' };
+
 export const Route = createFileRoute('/career/$careerId/confirm')({
-  validateSearch: (search: Record<string, unknown>): { step?: 'recovery' } =>
-    search.step === 'recovery' ? { step: 'recovery' } : {},
+  validateSearch: (search: Record<string, unknown>): ConfirmSearch => ({
+    ...(search.step === 'recovery' ? { step: 'recovery' as const } : {}),
+    ...(search.milestone === 'first-contract' ? { milestone: 'first-contract' as const } : {}),
+  }),
   component: ConfirmScreen,
 });
 
@@ -76,6 +81,7 @@ function ConfirmScreen() {
   const kickoffInFlightRef = useRef(false);
   const confirmCompletedRef = useRef(false);
   const advanceCompletedRef = useRef(false);
+  const postKickoffTargetRef = useRef<ReturnType<typeof screenForCareer> | null>(null);
   const isActive = query.data !== undefined && query.data.state.status !== 'DRAFT';
   const recoveryStepActive = search.step === 'recovery' || postConfirmInFlight;
   const blocked = useCareerStepGuard(query.data?.state, 'SCR-004', { recoveryStepActive });
@@ -111,6 +117,15 @@ function ConfirmScreen() {
 
   function handleContinueToNext() {
     if (query.data === undefined) return;
+    if (search.milestone === 'first-contract') {
+      void navigate({
+        to: '/career/$careerId',
+        params: { careerId },
+        search: { signed: true },
+        replace: true,
+      });
+      return;
+    }
     const target = screenForCareer(query.data.state);
     void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params });
   }
@@ -130,6 +145,15 @@ function ConfirmScreen() {
       }
       if (profileResult.data.recoveryCodeIssuedAt !== null) {
         // 이미 발급된 프로필이면 이 단계를 건너뛴다 — 화면을 그리지 않고 곧바로 다음으로 넘어간다.
+        if (search.milestone === 'first-contract') {
+          void navigate({
+            to: '/career/$careerId',
+            params: { careerId },
+            search: { signed: true },
+            replace: true,
+          });
+          return;
+        }
         const target = screenForCareer(activeState);
         void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params, replace: true });
         return;
@@ -149,7 +173,7 @@ function ConfirmScreen() {
       cancelled = true;
     };
     // query.data는 activeState로 캡처해 쓴다 — 매 리페치마다 이 검사를 다시 돌 필요는 없다.
-  }, [showRecoveryStep, careerId]);
+  }, [showRecoveryStep, careerId, search.milestone]);
 
   async function handleCopyCode(code: string) {
     try {
@@ -189,6 +213,7 @@ function ConfirmScreen() {
         );
       }
       advanceCompletedRef.current = true;
+      postKickoffTargetRef.current = screenForCareer(advanced.domainSnapshot.state);
     }
   }
 
@@ -217,12 +242,9 @@ function ConfirmScreen() {
   }
 
   async function continueAfterCeremony() {
-    await navigate({
-      to: '/career/$careerId/confirm',
-      params: { careerId },
-      search: { step: 'recovery' },
-      replace: true,
-    });
+    const target = postKickoffTargetRef.current;
+    if (target === null) return;
+    await navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params, replace: true });
   }
 
   if (blocked) {
@@ -310,7 +332,12 @@ function ConfirmScreen() {
         visual={<OffsideLine />}
         stages={['선수 정보 확정 중', '첫 이야기 준비 중', '피치 입장']}
       >
-        <DisplayWord word="KICKOFF" caption="선수가 피치에 들어섭니다" />
+        <div className="flex flex-col items-center gap-os-3 text-center">
+          <DisplayWord word="KICKOFF" caption="선수가 피치에 들어섭니다" />
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            복구 코드는 설정에서 언제든 발급할 수 있습니다.
+          </p>
+        </div>
       </GameCompletionTransition>
     );
   }
@@ -420,6 +447,7 @@ function ConfirmScreen() {
         <Button
           aria-label="KICKOFF"
           variant="primary"
+          className="whitespace-nowrap"
           onClick={() => void handleKickoff()}
           disabled={postConfirmInFlight}
         >

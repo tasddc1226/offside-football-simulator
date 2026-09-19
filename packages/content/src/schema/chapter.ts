@@ -100,6 +100,8 @@ export const ChapterDefinitionSchema = z
     importance: ImportanceSchema,
     trigger: ChapterTriggerSchema,
     weight: z.number().int().positive(),
+    /** Issue #243: variants in one semantic family rotate only for an opted-in ruleset. */
+    rotationGroup: z.string().min(1).max(100).optional(),
     positionGroups: z.array(StatGroupSchema).optional(),
     decisions: z.array(ChapterDecisionSchema).min(1).max(3),
     authoring: AuthoringKindSchema.optional(),

@@ -11,7 +11,13 @@ import {
   type CompareCardItem,
   type CompareRow,
 } from '@offside/ui';
-import { deriveTacticalRoom, type TacticalRoomView } from '@offside/domain';
+import {
+  deriveTacticalRoom,
+  type CareerState,
+  type RoleProposal,
+  type Ruleset,
+  type TacticalRoomView,
+} from '@offside/domain';
 import { rulesetForCareer } from '../engine/content.js';
 import { careerQueryOptions, useCareer, useCareerMutation } from '../engine/use-career.js';
 import { screenForCareer } from '../shared/career-route.js';
@@ -22,6 +28,12 @@ import {
   SQUAD_ROLE_LABELS,
 } from '../shared/labels.js';
 import { queryClient } from '../shared/query-client.js';
+import {
+  buildRoleDecisionPreview,
+  formatPromisePercent,
+  formatTrustDelta,
+  type RoleDecisionOutcomePreview,
+} from '../shared/role-decision-preview.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { platform } from '../platform/index.js';
 
@@ -76,6 +88,73 @@ function ProposalReason({ room, form }: { room: TacticalRoomView | null; form: n
           {gapLine}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function trustPreviewText(outcome: RoleDecisionOutcomePreview): string {
+  return outcome.managerTrustDelta === 0
+    ? `감독 신뢰 ${formatTrustDelta(outcome.managerTrustDelta)} (${outcome.managerTrustAfter} 유지)`
+    : `감독 신뢰 ${formatTrustDelta(outcome.managerTrustDelta)} → ${outcome.managerTrustAfter}`;
+}
+
+/** 같은 룰 키로 수락·거절 결과를 풀어 쓴다. 출전 경기 수는 예측·보장하지 않는다. */
+function DecisionPreview({
+  state,
+  ruleset,
+  proposal,
+}: {
+  state: CareerState;
+  ruleset: Ruleset;
+  proposal: Exclude<RoleProposal, { type: 'KEEP' }>;
+}) {
+  const preview = buildRoleDecisionPreview(state, ruleset, proposal);
+  const current = preview.decline;
+  const acceptPosition =
+    preview.accept.primaryPosition === current.primaryPosition
+      ? `${POSITION_LABELS[current.primaryPosition]} 유지`
+      : `${POSITION_LABELS[current.primaryPosition]} → ${POSITION_LABELS[preview.accept.primaryPosition]}`;
+  const acceptContract =
+    preview.accept.contractRole === current.contractRole &&
+    preview.accept.appearancePromiseMinutesShareBp === current.appearancePromiseMinutesShareBp
+      ? `계약 역할 ${SQUAD_ROLE_LABELS[current.contractRole]}·출전 약속 ${formatPromisePercent(current.appearancePromiseMinutesShareBp)} 유지`
+      : `계약 역할 ${SQUAD_ROLE_LABELS[current.contractRole]} → ${SQUAD_ROLE_LABELS[preview.accept.contractRole]}·출전 약속 ${formatPromisePercent(current.appearancePromiseMinutesShareBp)} → ${formatPromisePercent(preview.accept.appearancePromiseMinutesShareBp)}`;
+  const proposedRole =
+    proposal.type === 'POSITION_CHANGE'
+      ? `제안 계산 시 팀 역할 ${SQUAD_ROLE_LABELS[proposal.squadRoleAfter]}`
+      : null;
+
+  return (
+    <div className="os-story-card flex flex-col gap-os-3" data-testid="role-decision-preview">
+      <div className="flex flex-col gap-os-1">
+        <p className="os-eyebrow">수락하면</p>
+        <p className="font-os text-os-text" style={BODY_STYLE}>
+          포지션 {acceptPosition}
+        </p>
+        {proposedRole === null ? null : (
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            {proposedRole}
+          </p>
+        )}
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          {acceptContract} · {trustPreviewText(preview.accept)}
+        </p>
+      </div>
+      <div className="flex flex-col gap-os-1">
+        <p className="os-eyebrow">거절하면</p>
+        <p className="font-os text-os-text" style={BODY_STYLE}>
+          포지션 {POSITION_LABELS[current.primaryPosition]} 유지
+        </p>
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          계약 역할 {SQUAD_ROLE_LABELS[current.contractRole]}·출전 약속{' '}
+          {formatPromisePercent(current.appearancePromiseMinutesShareBp)} 유지 ·{' '}
+          {trustPreviewText(preview.decline)}
+        </p>
+      </div>
+      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+        제안 역할은 현재 경쟁 순위로 계산한 값입니다. 실제 순위는 결정 후와 매 경기 다시
+        산정되며, 출전 경기 수를 보장하지 않습니다.
+      </p>
     </div>
   );
 }
@@ -221,13 +300,11 @@ function RoleProposalScreen() {
             <ProposalReason room={room} form={state.state.form} />
           </div>
         ) : null}
+        <DecisionPreview state={state} ruleset={ruleset} proposal={proposal} />
         {errorMessage ? (
           <ErrorState message={errorMessage} onRetry={() => void handleDecision('ACCEPT')} />
         ) : null}
         <div className="os-action-dock flex flex-col gap-os-2">
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-            거절하면 감독 신뢰가 내려갈 수 있습니다.
-          </p>
           <div className="grid grid-cols-2 gap-os-2">
             <Button
               variant="secondary"
@@ -267,13 +344,11 @@ function RoleProposalScreen() {
         </p>
         <ProposalReason room={room} form={state.state.form} />
       </div>
+      <DecisionPreview state={state} ruleset={ruleset} proposal={proposal} />
       {errorMessage ? (
         <ErrorState message={errorMessage} onRetry={() => void handleDecision('ACCEPT')} />
       ) : null}
       <div className="os-action-dock flex flex-col gap-os-2">
-        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-          거절하면 감독 신뢰가 내려갈 수 있습니다.
-        </p>
         <div className="grid grid-cols-2 gap-os-2">
           <Button
             variant="secondary"

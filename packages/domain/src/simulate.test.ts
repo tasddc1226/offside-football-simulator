@@ -2246,6 +2246,28 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
   });
 
   describe('POSITION_CHANGE', () => {
+    const ZERO_SLOT_RULESET = {
+      ...RULESET,
+      selectionRules: {
+        ...RULESET.selectionRules,
+        roleProposal: {
+          ...RULESET.selectionRules.roleProposal,
+          declineDowngradeTrustDelta: 0,
+          zeroSlotAdjacentFallback: true,
+        },
+      },
+    } satisfies Ruleset;
+    const FLAGLESS_RULESET = {
+      ...ZERO_SLOT_RULESET,
+      selectionRules: {
+        ...ZERO_SLOT_RULESET.selectionRules,
+        roleProposal: {
+          ...ZERO_SLOT_RULESET.selectionRules.roleProposal,
+          zeroSlotAdjacentFallback: undefined,
+        },
+      },
+    } satisfies Ruleset;
+
     function positionChangeSnapshot(): DomainSnapshot {
       const base = activeSnapshotWithRolePending();
       return withRoleProposal(base, {
@@ -2256,6 +2278,61 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
         tacticalFitAfter: 88,
         proficiencyAfter: RULESET.selectionRules.proficiencyOnChange.adjacent,
       });
+    }
+
+    /** AM 0-slot에서 같은 MF 그룹 CM으로 가는 +15 미만 fallback과 STARTER 약속을 고정한다. */
+    function zeroSlotFallbackSnapshot(): DomainSnapshot {
+      const base = activeSnapshotWithRolePending();
+      const profile = base.state.player.profile!;
+      const contract = base.state.contract!;
+      const season = base.state.season!;
+      const tacticalFit = 30;
+      const selection = rankPositionForPlayer({
+        ruleset: ZERO_SLOT_RULESET,
+        styleId: 'possession',
+        position: 'AM',
+        playerName: profile.name,
+        baseOvr: profile.baseOvr,
+        tacticalFit,
+        managerTrust: base.state.relationships.managerTrust,
+        form: base.state.state.form,
+        fitness: base.state.state.fitness,
+        morale: base.state.state.morale,
+        familiarity: familiarityOf(base.state.context.positionProficiency, ZERO_SLOT_RULESET.selectionRules),
+        squadStatus: base.state.context.squadStatus,
+        competitors: [],
+      });
+      expect(squadRoleFromSelection(selection)).toBe('ROTATION');
+      const state = {
+        ...base.state,
+        player: { ...base.state.player, profile: { ...profile, primaryPosition: 'AM' as const } },
+        contract: {
+          ...contract,
+          rolePromise: 'STARTER' as const,
+          appearancePromise: {
+            minutesShareBp: ZERO_SLOT_RULESET.contractRules.promiseMinutesShareBp.STARTER,
+          },
+        },
+        context: { ...base.state.context, tacticalFit },
+        season: {
+          ...season,
+          styleId: 'possession',
+          squadRole: 'ROTATION' as const,
+          squad: { ...season.squad, competitors: [] },
+          selection,
+        },
+      };
+      return withRoleProposal(
+        { ...base, state, stateHash: hashState(state) },
+        {
+          type: 'POSITION_CHANGE',
+          from: 'AM',
+          to: 'CM',
+          squadRoleAfter: 'STARTER',
+          tacticalFitAfter: tacticalFit,
+          proficiencyAfter: ZERO_SLOT_RULESET.selectionRules.proficiencyOnChange.adjacent,
+        },
+      );
     }
 
     it('ACCEPT: primaryPosition·tacticalFit·positionProficiency·season.squadRole/selection이 제안대로 바뀐다', () => {
@@ -2327,6 +2404,71 @@ describe('simulate — RESOLVE_ROLE (T-2-002 D-34 CMD-SIM-004)', () => {
         squadRoleFromSelection(result.snapshot.state.season!.selection),
       );
       expect(result.snapshot.state.relationships.managerTrust).toBe(trustAfter);
+    });
+
+    it('opt-in 0-slot fallback ACCEPT는 기존 acceptTrustDelta와 포지션 변경을 그대로 적용한다', () => {
+      const snapshot = zeroSlotFallbackSnapshot();
+      const trustBefore = snapshot.state.relationships.managerTrust;
+      const result = simulate({
+        ...baseInput(),
+        ruleset: ZERO_SLOT_RULESET,
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'ACCEPT'),
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.snapshot.state.player.profile?.primaryPosition).toBe('CM');
+      expect(result.snapshot.state.relationships.managerTrust).toBe(
+        trustBefore + ZERO_SLOT_RULESET.selectionRules.roleProposal.acceptTrustDelta,
+      );
+    });
+
+    it('opt-in 0-slot fallback DECLINE은 낮은 현재 역할을 보완하므로 declineDowngradeTrustDelta를 적용한다', () => {
+      const snapshot = zeroSlotFallbackSnapshot();
+      const trustBefore = snapshot.state.relationships.managerTrust;
+      const result = simulate({
+        ...baseInput(),
+        ruleset: ZERO_SLOT_RULESET,
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'DECLINE'),
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.snapshot.state.player.profile?.primaryPosition).toBe('AM');
+      expect(result.snapshot.state.contract?.rolePromise).toBe('STARTER');
+      expect(result.snapshot.state.relationships.managerTrust).toBe(trustBefore);
+    });
+
+    it('같은 0-slot POSITION_CHANGE도 fallback flag가 없는 과거 룰셋은 declineTrustDelta를 보존한다', () => {
+      const snapshot = zeroSlotFallbackSnapshot();
+      const trustBefore = snapshot.state.relationships.managerTrust;
+      const result = simulate({
+        ...baseInput(),
+        ruleset: FLAGLESS_RULESET,
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'DECLINE'),
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.snapshot.state.relationships.managerTrust).toBe(
+        trustBefore + FLAGLESS_RULESET.selectionRules.roleProposal.declineTrustDelta,
+      );
+    });
+
+    it('opt-in 룰셋이어도 현재 starter slot이 있는 정상 POSITION_CHANGE 거절은 declineTrustDelta다', () => {
+      const snapshot = positionChangeSnapshot();
+      const trustBefore = snapshot.state.relationships.managerTrust;
+      const result = simulate({
+        ...baseInput(),
+        ruleset: ZERO_SLOT_RULESET,
+        snapshot,
+        command: resolveRoleCommand(snapshot.revision, 'DECLINE'),
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.snapshot.state.relationships.managerTrust).toBe(
+        trustBefore + ZERO_SLOT_RULESET.selectionRules.roleProposal.declineTrustDelta,
+      );
     });
   });
 

@@ -1,6 +1,7 @@
 import type { Command } from '@offside/domain';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
+import { PutCareerBodySchema } from './careers.js';
 import {
   AcceptOfferPayloadSchema,
   AdvancePayloadSchema,
@@ -136,6 +137,40 @@ describe('ConfirmPlayerPayloadSchema', () => {
 });
 
 describe('AdvancePayloadSchema', () => {
+  const chapterCandidate = {
+    chapterId: 'CHP-MATCH-004',
+    version: 1,
+    importance: 'MAJOR' as const,
+    trigger: { kind: 'DECIDER' as const, maxRankGap: 2 },
+    weight: 1,
+    decisionsTotal: 1,
+  };
+
+  const putCareerBody = (payload: unknown) => ({
+    baseRevision: 0,
+    snapshot: {
+      revision: 1,
+      checkpoint: 'STEP_BOUNDARY',
+      state: '{}',
+      stateHash: 'a'.repeat(64),
+      rulesetVersion: '1.7.4',
+      contentPackVersion: '0.6.8',
+      rngState: { s: [1, 2, 3, 4], draws: 0 },
+    },
+    commands: [
+      {
+        revision: 1,
+        commandId: 'cmd_advance_rotation',
+        commandType: 'ADVANCE',
+        payload,
+        resultHash: 'b'.repeat(64),
+      },
+    ],
+    createdServiceSeasonId: 'svc_rotation',
+    rulesetVersion: '1.7.4',
+    contentPackVersion: '0.6.8',
+  });
+
   it('eventId 오름차순 eligibleEvents를 받아들인다', () => {
     const result = AdvancePayloadSchema.safeParse({
       eligibleEvents: [
@@ -166,6 +201,44 @@ describe('AdvancePayloadSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('rotationGroup이 없는 기존 ADVANCE payload를 변경 없이 파싱한다', () => {
+    const payload = { eligibleEvents: [], chapterCandidates: [chapterCandidate] };
+
+    const parsedAdvance = AdvancePayloadSchema.parse(payload);
+    expect(parsedAdvance).toEqual(payload);
+    expect(parsedAdvance.chapterCandidates![0]).not.toHaveProperty('rotationGroup');
+
+    const parsedPut = PutCareerBodySchema.parse(putCareerBody(payload));
+    expect(parsedPut.commands[0]!.payload).toEqual(payload);
+  });
+
+  it('rotationGroup을 ADVANCE와 PutCareer command 경계에서 보존한다', () => {
+    const payload = {
+      eligibleEvents: [],
+      chapterCandidates: [{ ...chapterCandidate, rotationGroup: 'DECIDER' }],
+    };
+
+    const parsedAdvance = AdvancePayloadSchema.parse(payload);
+    expect(parsedAdvance.chapterCandidates![0]!.rotationGroup).toBe('DECIDER');
+
+    const parsedPut = PutCareerBodySchema.parse(putCareerBody(payload));
+    expect(parsedPut.commands[0]!.payload).toEqual(payload);
+  });
+
+  it.each([
+    ['빈 문자열', { ...chapterCandidate, rotationGroup: '' }],
+    ['100자 초과', { ...chapterCandidate, rotationGroup: 'x'.repeat(101) }],
+    ['알 수 없는 필드', { ...chapterCandidate, rotationGroup: 'DECIDER', extra: true }],
+  ])(
+    'rotationGroup 후보의 %s을 ADVANCE와 PutCareer command 경계에서 거부한다',
+    (_case, candidate) => {
+      const payload = { eligibleEvents: [], chapterCandidates: [candidate] };
+
+      expect(AdvancePayloadSchema.safeParse(payload).success).toBe(false);
+      expect(PutCareerBodySchema.safeParse(putCareerBody(payload)).success).toBe(false);
+    },
+  );
 });
 
 describe('ResolveEventPayloadSchema', () => {

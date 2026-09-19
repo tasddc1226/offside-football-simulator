@@ -348,6 +348,7 @@ const RoleProposalRulesSchema = z.strictObject({
   keepConfirmTrustDelta: z.number(),
   acceptedRoleUpdatesPromise: z.boolean().optional(),
   declineDowngradeTrustDelta: z.number().int().optional(),
+  zeroSlotAdjacentFallback: z.boolean().optional(),
 });
 
 function refineSum1(
@@ -416,6 +417,11 @@ const IntRangeSchema = z
 const PreContractRulesSchema = z.strictObject({
   maxEventsBeforeFirstOffer: z.number().int().positive(),
   bridgeEventIds: z.array(z.string().min(1)).min(1),
+});
+
+const ChapterSelectionRulesSchema = z.strictObject({
+  version: z.literal('LRU_V1'),
+  repeatCooldownSeasons: z.number().int().min(1).max(10),
 });
 
 export const OfferRulesSchema = z.strictObject({
@@ -1297,6 +1303,8 @@ export const RulesetSchema = z
       })
       .optional(),
     leagueLedgerRules: LeagueLedgerRulesSchema.optional(),
+    /** Issue #243: absent on every historical ruleset, so their selector order stays byte-stable. */
+    chapterSelectionRules: ChapterSelectionRulesSchema.optional(),
     positions: z.array(PositionSchema).min(1),
     archetypes: z.array(ArchetypeSchema),
     backgrounds: z.array(BackgroundSchema).min(1),

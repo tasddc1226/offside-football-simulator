@@ -13,6 +13,7 @@ import {
   type Ruleset,
 } from '@offside/domain';
 import ruleset170Raw from '../../content/rulesets/1.7.0/ruleset.json' with { type: 'json' };
+import ruleset174Raw from '../../content/rulesets/1.7.4/ruleset.json' with { type: 'json' };
 import { describe, expect, it } from 'vitest';
 import { createEngineClient, type EngineClient } from './engine.js';
 import { inlineSimulator, type Simulator } from './simulator/index.js';
@@ -184,6 +185,44 @@ describe('golden fixture', () => {
     });
     expect(!rejected.ok && rejected.error.code).toBe('VERSION_MISMATCH');
     expect((await engine.listCareers()).map((career) => career.id)).toEqual(['pinned-old']);
+  });
+
+  it('1.7.4/0.6.8 커리어를 저장하고 같은 고정 버전으로 snapshot 없는 복구까지 재생한다', async () => {
+    const store = new MemoryLocalStore();
+    const ruleset = ruleset174Raw as unknown as Ruleset;
+    const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset });
+    const command = makeCreateCommand('event-variety-save-load', 'event-variety-create');
+    if (command.type !== 'CREATE_CAREER') throw new Error('create command expected');
+    command.payload.rulesetVersion = '1.7.4';
+    command.payload.contentPackVersion = '0.6.8';
+
+    const created = await engine.execute({
+      careerId: 'event-variety-save-load',
+      command,
+      createdServiceSeasonId: 'svc-event-variety',
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) throw new Error(created.error.message);
+
+    const syncBody = await engine.buildSyncBody('event-variety-save-load');
+    expect(syncBody?.snapshot).toMatchObject({
+      rulesetVersion: '1.7.4',
+      contentPackVersion: '0.6.8',
+      stateHash: created.domainSnapshot.stateHash,
+    });
+    await store.transaction('readwrite', (tx) =>
+      tx.snapshots.deleteByCareer('event-variety-save-load'),
+    );
+    const restored = await engine.loadCareer('event-variety-save-load');
+    expect(restored.ok).toBe(true);
+    if (restored.ok) {
+      expect(restored.career).toMatchObject({
+        rulesetVersion: '1.7.4',
+        contentPackVersion: '0.6.8',
+      });
+      expect(restored.snapshot.stateHash).toBe(created.domainSnapshot.stateHash);
+      expect(restored.recovered).toEqual({ fromRevision: 0, replayed: 1 });
+    }
   });
 
   it('inline 시뮬레이터로 career01을 순서대로 실행하면 golden과 일치한다', async () => {

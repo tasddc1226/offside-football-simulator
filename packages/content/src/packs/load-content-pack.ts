@@ -212,6 +212,27 @@ import eventCon025v066 from '../../packs/0.6.6/events/EVT-CON-025.json' with { t
 import eventCon026v066 from '../../packs/0.6.6/events/EVT-CON-026.json' with { type: 'json' };
 import eventCon027v066 from '../../packs/0.6.6/events/EVT-CON-027.json' with { type: 'json' };
 import eventCon028v066 from '../../packs/0.6.6/events/EVT-CON-028.json' with { type: 'json' };
+// Issue #242: 0.6.7 is content-identical to 0.6.6 and pairs only with ruleset 1.7.3.
+// Keep every copied source file immutable and reuse the already imported definitions at runtime.
+import manifest067 from '../../packs/0.6.7/manifest.json' with { type: 'json' };
+// Issue #243: 0.6.8 inherits the exact 0.6.7 registry, replaces only the four existing
+// repeatable chapter definitions with rotation metadata, and adds authored variants/events.
+import manifest068 from '../../packs/0.6.8/manifest.json' with { type: 'json' };
+import eventDev130v068 from '../../packs/0.6.8/events/EVT-DEV-130.json' with { type: 'json' };
+import eventInj130v068 from '../../packs/0.6.8/events/EVT-INJ-130.json' with { type: 'json' };
+import eventMedia130v068 from '../../packs/0.6.8/events/EVT-MEDIA-130.json' with { type: 'json' };
+import eventMgr130v068 from '../../packs/0.6.8/events/EVT-MGR-130.json' with { type: 'json' };
+import eventRel130v068 from '../../packs/0.6.8/events/EVT-REL-130.json' with { type: 'json' };
+import eventRel131v068 from '../../packs/0.6.8/events/EVT-REL-131.json' with { type: 'json' };
+import chapterMatch004v068 from '../../packs/0.6.8/chapters/CHP-MATCH-004.json' with { type: 'json' };
+import chapterMatch005v068 from '../../packs/0.6.8/chapters/CHP-MATCH-005.json' with { type: 'json' };
+import chapterMatch006v068 from '../../packs/0.6.8/chapters/CHP-MATCH-006.json' with { type: 'json' };
+import chapterMatch007v068 from '../../packs/0.6.8/chapters/CHP-MATCH-007.json' with { type: 'json' };
+import chapterMatch008v068 from '../../packs/0.6.8/chapters/CHP-MATCH-008.json' with { type: 'json' };
+import chapterMatch009v068 from '../../packs/0.6.8/chapters/CHP-MATCH-009.json' with { type: 'json' };
+import chapterMatch010v068 from '../../packs/0.6.8/chapters/CHP-MATCH-010.json' with { type: 'json' };
+import chapterMatch011v068 from '../../packs/0.6.8/chapters/CHP-MATCH-011.json' with { type: 'json' };
+import chapterMatch012v068 from '../../packs/0.6.8/chapters/CHP-MATCH-012.json' with { type: 'json' };
 
 export const PACK_VERSIONS = [
   '0.1.0',
@@ -228,6 +249,8 @@ export const PACK_VERSIONS = [
   '0.6.4',
   '0.6.5',
   '0.6.6',
+  '0.6.7',
+  '0.6.8',
 ] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
@@ -247,7 +270,7 @@ type PackSource = {
   narrativeTokens: unknown;
 };
 
-const PACK_SOURCES: Record<PackVersion, PackSource> = {
+const PACK_SOURCES_THROUGH_066: Record<Exclude<PackVersion, '0.6.7' | '0.6.8'>, PackSource> = {
   '0.1.0': {
     manifest: manifest010,
     events: [
@@ -1000,6 +1023,45 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       chapterNat001v040,
     ],
     narrativeTokens: narrativeTokens061,
+  },
+};
+
+const PACK_SOURCES_WITHOUT_068: Record<Exclude<PackVersion, '0.6.8'>, PackSource> = {
+  ...PACK_SOURCES_THROUGH_066,
+  '0.6.7': {
+    ...PACK_SOURCES_THROUGH_066['0.6.6'],
+    manifest: manifest067,
+  },
+};
+
+const PACK_SOURCES: Record<PackVersion, PackSource> = {
+  ...PACK_SOURCES_WITHOUT_068,
+  '0.6.8': {
+    ...PACK_SOURCES_WITHOUT_068['0.6.7'],
+    manifest: manifest068,
+    events: [
+      ...PACK_SOURCES_WITHOUT_068['0.6.7'].events,
+      eventDev130v068,
+      eventInj130v068,
+      eventMedia130v068,
+      eventMgr130v068,
+      eventRel130v068,
+      eventRel131v068,
+    ],
+    chapters: [
+      chapterMatch001v040,
+      chapterMatch002v040,
+      chapterMatch004v068,
+      chapterMatch005v068,
+      chapterMatch006v068,
+      chapterMatch007v068,
+      chapterMatch008v068,
+      chapterMatch009v068,
+      chapterMatch010v068,
+      chapterMatch011v068,
+      chapterMatch012v068,
+      chapterNat001v040,
+    ],
   },
 };
 
