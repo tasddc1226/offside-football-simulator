@@ -13,35 +13,23 @@ test('(a) 새로고침: SCR-002 draft가 복원되고, SCR-004 확정 뒤에는 
 }) => {
   await startNewCareer(page);
   await fillPlayerInfo(page);
-  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
   await expect(page).toHaveURL(/\/career\/.+\/style$/);
 
-  // UPDATE_PLAYER_DRAFT가 저장한 값이 "이전"으로 되돌아간 SCR-002에서 새로고침해도 그대로 있다.
-  // "플레이 스타일 고르기"가 모든 필드를 도메인 draft로 커밋하며 세션 scratch를 지우므로, 새로고침
-  // 직후에는 패널 0(첫 출발점)부터 다시 보이지만 값은 도메인 draft에서 그대로 복원된다 — "다음"으로
-  // 패널을 다시 넘기며 각 패널의 값이 그대로 있는지 확인한다.
-  await page.getByRole('button', { name: '이전' }).click();
+  await page.getByRole('link', { name: '수정', exact: true }).click();
   await expect(page).toHaveURL(/\/career\/.+\/create$/);
   await page.reload();
-
-  await expect(page.getByRole('radio', { name: /아카데미의 추가 평가/ })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
-  await page.getByRole('button', { name: '다음', exact: true }).click();
-
   await expect(page.getByLabel('이름')).toHaveValue('김서준');
-  await expect(page.getByLabel('국적')).toHaveValue('KR');
-  await expect(page.getByRole('radio', { name: '왼발' })).toHaveAttribute('aria-checked', 'true');
-  await page.getByRole('button', { name: '다음', exact: true }).click();
-
-  await expect(page.getByRole('radio', { name: /윙어/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByLabel('출발 배경')).toHaveValue('club-academy');
+  await expect(page.getByRole('radio', { name: '왼발' })).toBeChecked();
+  await expect(page.getByRole('radio', { name: /윙어/ })).toBeChecked();
 
   // SCR-004까지 마저 진행해 확정한다.
-  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
   await expect(page).toHaveURL(/\/career\/.+\/style$/);
-  await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: '3장 모두 열기' }).click();
+  await page.getByRole('button', { name: '인사이드 포워드 후보 선택' }).click();
+  await page.getByRole('button', { name: /이 후보로 진행/ }).click();
   await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
 
   await page.route('**/v1/profile', (route) =>
@@ -54,7 +42,7 @@ test('(a) 새로고침: SCR-002 draft가 복원되고, SCR-004 확정 뒤에는 
       meta: META,
     }),
   );
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await page.getByRole('button', { name: /이 선수로 시작/ }).click();
   await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
 
   const eventUrl = page.url();
@@ -99,7 +87,7 @@ test('(b) 확정 버튼을 두 번 클릭해도 revision은 정확히 2(CONFIRM_
   await page.getByRole('button', { name: '이어하기' }).click();
   await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
 
-  const kickoff = page.getByRole('button', { name: 'KICKOFF' });
+  const kickoff = page.getByRole('button', { name: /이 선수로 시작/ });
   await Promise.all([
     kickoff.click({ timeout: 2000 }).catch(() => {}),
     kickoff.click({ timeout: 2000 }).catch(() => {}),
@@ -117,6 +105,20 @@ test('(b) 확정 버튼을 두 번 클릭해도 revision은 정확히 2(CONFIRM_
 test('(c) PUT 유실: 첫 요청이 실패하면 "저장 다시 시도 중"이 보이고, 같은 Idempotency-Key로 재시도해 "저장됨"이 된다', async ({
   page,
 }) => {
+  await page.route('**/v1/careers/*', async (route) => {
+    if (route.request().method() !== 'PUT') {
+      await route.continue();
+      return;
+    }
+    const body = route.request().postDataJSON();
+    await fulfillJson(route, 200, {
+      data: { revision: body.snapshot.revision, syncedAt: '2026-09-03T00:00:00Z' },
+      meta: META,
+    });
+  });
+  await goToConfirm(page);
+  await expect(page.getByText('저장됨')).toBeVisible();
+  const editUrl = page.url().replace('/confirm', '/create');
   let attempt = 0;
   const idempotencyKeys: string[] = [];
   await page.route('**/v1/careers/*', async (route) => {
@@ -131,12 +133,17 @@ test('(c) PUT 유실: 첫 요청이 실패하면 "저장 다시 시도 중"이 �
       return;
     }
     await fulfillJson(route, 200, {
-      data: { revision: 1, syncedAt: '2026-09-03T00:00:00Z' },
+      data: {
+        revision: route.request().postDataJSON().snapshot.revision,
+        syncedAt: '2026-09-03T00:00:00Z',
+      },
       meta: META,
     });
   });
 
-  await startNewCareer(page);
+  await page.goto(editUrl);
+  await page.getByLabel('이름').fill('정서준');
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
 
   await expect(page.getByText('저장 다시 시도 중')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText('저장됨')).toBeVisible({ timeout: 10_000 });
@@ -182,8 +189,8 @@ test('(d) 명령 응답 대기 중(COMMITTING) 뒤로 가기: 재진입하면 �
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 30 });
 
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
-  await expect(page.getByText('선수 카드를 등록하고 있습니다')).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: /이 선수로 시작/ }).click();
+  await expect(page.getByText('선수 등록을 완료합니다')).toBeVisible({ timeout: 10_000 });
 
   // T-1-017: COMMITTING 중 이탈 경고는 beforeunload(탭 닫기·새로고침·주소창 이동)만 연결하는 최소
   // 구현으로 남겼다 — popstate 기반 뒤로 가기 경고를 만들려면 더미 히스토리 항목이 필요한데, 그

@@ -99,7 +99,7 @@ test('빈 허브(첫 방문, 온보딩 건너뛴 뒤) 화면에 axe serious·cri
   page,
 }) => {
   await page.goto('/onboarding');
-  await page.getByRole('button', { name: '건너뛰기' }).click();
+  await page.getByRole('link', { name: '선수 생성 닫기' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(
     page.getByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),
@@ -109,23 +109,19 @@ test('빈 허브(첫 방문, 온보딩 건너뛴 뒤) 화면에 axe serious·cri
 });
 
 test('카드가 있는 허브 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
-  await page.goto('/onboarding');
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/create$/);
-  // SCR-002는 허브로 돌아가는 링크를 두지 않는다(hub.spec.ts와 같은 이유).
+  await startNewCareer(page);
+  await fillPlayerInfo(page);
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await expect(page).toHaveURL(/\/style$/);
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 2, name: '이름 없는 선수' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: '김서준' })).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, '/ (카드 있는 허브)');
 });
 
 test('SCR-002 선수 정보 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   await startNewCareer(page);
-  await expect(
-    page.getByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: '선수 생성' })).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-002');
 });
@@ -133,11 +129,10 @@ test('SCR-002 선수 정보 화면에 axe serious·critical 위반이 없다', a
 test('SCR-003 플레이 스타일 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   await startNewCareer(page);
   await fillPlayerInfo(page);
-  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
-  await expect(
-    page.getByRole('heading', { level: 1, name: '플레이 스타일을 고르세요' }),
-  ).toBeVisible();
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '세 가지 가능성' })).toBeVisible();
 
+  await page.getByRole('button', { name: '3장 모두 열기' }).click();
   await expectNoSeriousOrCriticalViolations(page, 'SCR-003');
 });
 
@@ -446,7 +441,7 @@ test('텍스트 크기 150% + 360px에서 가로 스크롤이 생기지 않는�
 
   // 텍스트 크기는 useUiStore(zustand persist)로 전역 적용된다 — 실제 게임 화면(허브)에서 확인한다.
   await page.goto('/onboarding');
-  await page.getByRole('button', { name: '건너뛰기' }).click();
+  await page.getByRole('link', { name: '선수 생성 닫기' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(
     page.getByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),

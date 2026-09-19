@@ -52,99 +52,27 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
     }),
   );
 
-  // SCR-034 온보딩: "다음" 두 번 → "KICKOFF · 새 인생 시작".
   await page.goto('/onboarding');
-  await tabTo(page, page.getByRole('button', { name: '다음' }));
-  await page.keyboard.press('Enter');
-  await tabTo(page, page.getByRole('button', { name: '다음' }));
-  await page.keyboard.press('Enter');
-  await tabTo(page, page.getByRole('button', { name: /KICKOFF · 새 인생 시작/ }));
-  await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/career\/.+\/create$/);
-
-  // SCR-002: 배경 → 이름 → 성별 → 국적 → 주발 → 포지션 구분 탭 → 포지션 → 다음. 필드 사이 Tab
-  // 한 번씩만으로 정확히 이어지는 순서를 직접 확인했다(중간에 다른 포커스 가능한 요소가 없다) —
-  // 배경·성별·주발 라디오 그룹 진입은 Radix roving-tabindex의 기본(첫) 항목에 떨어지므로 어떤
-  // 값인지는 보지 않고 Space로 확정만 한다(다른 스펙의 "선택지 자체는 안 본다"와 같은 원칙 — 이후
-  // 화면에서 특정 값에 의존하지 않는다). 포지션만은 실제 탭 전환 경로(공격수 → 윙어)로 검증한다.
-  const backgroundRadio = page.getByRole('radio').first();
-  await tabTo(page, backgroundRadio);
-  await page.keyboard.press('Space');
-  await expect(backgroundRadio).toHaveAttribute('aria-checked', 'true');
-  await tabTo(page, page.getByRole('button', { name: '다음', exact: true }));
-  await page.keyboard.press('Enter');
-
-  const nameInput = page.getByLabel('이름');
-  await tabTo(page, nameInput);
+  await tabTo(page, page.getByLabel('이름'));
   await page.keyboard.type('김서준');
-  await expect(nameInput).toHaveValue('김서준');
-
-  await page.keyboard.press('Tab');
-  const genderRadio = page.locator(':focus');
-  await expect(genderRadio).toHaveAttribute('role', 'radio');
-  await page.keyboard.press('Space');
-  await expect(genderRadio).toHaveAttribute('aria-checked', 'true');
-
-  await page.keyboard.press('Tab');
-  const nationalitySelect = page.getByLabel('국적');
-  await expect(nationalitySelect).toBeFocused();
-  // 네이티브 <select> 자체는 실제 브라우저에서 포커스 상태로 화살표 키를 누르면 값이 바뀌는,
-  // 완전히 키보드로 조작 가능한 표준 컨트롤이다 — 다만 헤드리스 Chromium은 CDP로 보낸 합성
-  // ArrowDown/Enter 키 이벤트로 OS 네이티브 select 팝업을 조작하지 못한다(Playwright·CDP의 알려진
-  // 자동화 한계이며, 이 앱의 키보드 접근성 문제가 아니다). 그래서 이 한 필드만 selectOption으로
-  // 값을 정한다(click() 아님) — 포커스는 계속 이 select에 남아 다음 Tab이 정상 진행된다.
-  await nationalitySelect.selectOption('KR');
-  await expect(nationalitySelect).toHaveValue('KR');
-  await expect(nationalitySelect).toBeFocused();
-
-  await page.keyboard.press('Tab');
-  const footRadio = page.locator(':focus');
-  await expect(footRadio).toHaveAttribute('role', 'radio');
-  await page.keyboard.press('Space');
-  await expect(footRadio).toHaveAttribute('aria-checked', 'true');
-
-  const identityNextButton = page.getByRole('button', { name: '다음', exact: true });
-  await tabTo(page, identityNextButton);
-  await page.keyboard.press('Enter');
-
-  // 포지션 구분 탭: Tab으로 도달(기본 선택된 골키퍼 트리거) → 화살표 세 번으로 공격수까지 이동
-  // (Radix Tabs 기본 activationMode="automatic"이라 포커스 이동이 곧 선택이다) → Tab으로 포지션
-  // RadioGroup 진입 → 그 그룹의 첫 항목(윙어)에 Space로 확정.
-  const gkTab = page.getByRole('tab', { name: '골키퍼' });
-  await tabTo(page, gkTab);
-  await expect(gkTab).toHaveAttribute('aria-selected', 'true');
-
+  await tabTo(page, page.getByRole('radio', { name: '오른발' }));
   await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('ArrowRight');
-  const forwardTab = page.getByRole('tab', { name: '공격수' });
-  await expect(forwardTab).toBeFocused();
-  await expect(forwardTab).toHaveAttribute('aria-selected', 'true');
-
-  await page.keyboard.press('Tab');
-  const positionRadio = page.locator(':focus');
-  await expect(positionRadio).toHaveAttribute('role', 'radio');
-  await expect(positionRadio).toContainText('윙어');
-  await page.keyboard.press('Space');
-  await expect(positionRadio).toHaveAttribute('aria-checked', 'true');
-
-  const styleButton = page.getByRole('button', { name: '플레이 스타일 고르기' });
-  await tabTo(page, styleButton);
+  await expect(page.getByRole('radio', { name: '왼발' })).toBeChecked();
+  await tabTo(page, page.getByRole('radio', { name: /스트라이커/ }));
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByRole('radio', { name: /윙어/ })).toBeChecked();
+  await tabTo(page, page.getByRole('button', { name: /다음 · 후보 카드 열기/ }));
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/career\/.+\/style$/);
-
-  // SCR-003: 아키타입 카드(어떤 것인지는 안 봄) 하나 선택 → 다음.
-  await tabTo(page, page.getByRole('radio').first());
+  await tabTo(page, page.getByRole('button', { name: '후보 1 공개' }));
   await page.keyboard.press('Space');
-  await tabTo(page, page.getByRole('button', { name: '다음' }));
+  await expect(page.getByRole('meter')).toHaveCount(6);
+  await tabTo(page, page.getByRole('button', { name: /이 후보로 진행/ }));
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
-  await expect(
-    page.getByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '이번 생의 주인공' })).toBeVisible();
 
   // SCR-004: KICKOFF → 비차단 복구 안내 전환 → 첫 이벤트.
-  await tabTo(page, page.getByRole('button', { name: 'KICKOFF' }));
+  await tabTo(page, page.getByRole('button', { name: /이 선수로 시작/ }));
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
 
@@ -212,7 +140,7 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   await page.keyboard.press('Enter');
   await expect(playerTab).toBeFocused();
   await expect(playerTab).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByText('전술 적합도', { exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: '선수 성장' })).toBeVisible();
 
   // 대화상자 포커스 트랩·복귀: 허브의 삭제 확인 대화상자(hub.spec.ts와 같은 컴포넌트)로 확인한다.
   await tabTo(page, page.getByRole('link', { name: '허브로' }));

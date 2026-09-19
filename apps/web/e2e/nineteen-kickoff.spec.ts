@@ -61,17 +61,13 @@ test('1.2/0.4 새 인생: 19세 도입과 첫 진로를 거쳐 첫 시즌 뒤 20
   });
 
   await startNewCareer(page);
-  await expect(page.getByText('새 인생 · 19세')).toBeVisible();
-  await expect(
-    page.getByText(
-      /열아홉.*아카데미의 추가 평가.*학교팀에서 만든 기록.*지역 무대에서 온 훈련 초대/,
-    ),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '선수 생성' })).toBeVisible();
   await fillPlayerInfo(page);
-  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
-  await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
-  await expect(page.getByText('1.2.0 / 0.4.0')).toBeVisible();
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await page.getByRole('button', { name: '3장 모두 열기' }).click();
+  await page.getByRole('button', { name: '인사이드 포워드 후보 선택' }).click();
+  await page.getByRole('button', { name: /이 후보로 진행/ }).click();
+  await expect(page.getByRole('region', { name: /선수 카드/ })).toHaveText(/OVR/);
 
   await page.route('**/v1/profile', (route) =>
     fulfillJson(route, 503, {
@@ -83,7 +79,7 @@ test('1.2/0.4 새 인생: 19세 도입과 첫 진로를 거쳐 첫 시즌 뒤 20
       meta: META,
     }),
   );
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await page.getByRole('button', { name: /이 선수로 시작/ }).click();
 
   await expect(page).toHaveURL(/\/career\/.+\/path$/);
   await page.getByRole('radio').first().click();
@@ -128,14 +124,13 @@ test('1.2/0.4.1 지역 무대 배경: 새로고침 뒤에도 고유 도입과 �
   await startNewCareer(page);
   await fillPlayerInfo(page, '지역출발', /지역 무대에서 온 훈련 초대/);
   await page.reload();
-  await expect(
-    page.getByRole('heading', { level: 2, name: '내가 가장 뛰고 싶은 위치' }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
-  await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
-  await expect(page.getByText('지역 무대에서 온 훈련 초대')).toBeVisible();
-  await expect(page.getByText('1.2.0 / 0.4.1')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: '선수 생성' })).toBeVisible();
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await page.getByRole('button', { name: '3장 모두 열기' }).click();
+  await page.getByRole('button', { name: '인사이드 포워드 후보 선택' }).click();
+  await page.getByRole('button', { name: /이 후보로 진행/ }).click();
+  await expect(page.getByText('동네 클럽', { exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: /선수 카드/ })).toHaveText(/OVR/);
 
   await page.route('**/v1/profile', (route) =>
     fulfillJson(route, 503, {
@@ -147,7 +142,7 @@ test('1.2/0.4.1 지역 무대 배경: 새로고침 뒤에도 고유 도입과 �
       meta: META,
     }),
   );
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await page.getByRole('button', { name: /이 선수로 시작/ }).click();
 
   await expect(page).toHaveURL(/\/career\/.+\/path$/);
   await expect(page.getByText(/지역 경기 영상을 본 지도자/)).toBeVisible();
@@ -183,10 +178,11 @@ test('1.3/0.5 새 인생: 성인 팀과 계약해 첫 시즌 뒤 20세가 된다
 
   await startNewCareer(page);
   await fillPlayerInfo(page, '성인진로', /아카데미의 추가 평가/);
-  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
-  await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
-  await expect(page.getByText('1.3.0 / 0.5.0')).toBeVisible();
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await page.getByRole('button', { name: '3장 모두 열기' }).click();
+  await page.getByRole('button', { name: '인사이드 포워드 후보 선택' }).click();
+  await page.getByRole('button', { name: /이 후보로 진행/ }).click();
+  await expect(page.getByRole('region', { name: /선수 카드/ })).toHaveText(/OVR/);
 
   await page.route('**/v1/profile', (route) =>
     fulfillJson(route, 503, {
@@ -198,7 +194,7 @@ test('1.3/0.5 새 인생: 성인 팀과 계약해 첫 시즌 뒤 20세가 된다
       meta: META,
     }),
   );
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await page.getByRole('button', { name: /이 선수로 시작/ }).click();
   await resolveCurrentEventScreen(page);
   await resolveCurrentEventScreen(page);
   await advanceUntilOffers(page);

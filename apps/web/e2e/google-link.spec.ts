@@ -37,7 +37,7 @@ test.describe('Google 연결·병합(실제 api)', () => {
       const pageB = await contextB.newPage();
       await startNewCareer(pageB);
       await fillPlayerInfo(pageB, '박은비');
-      await pageB.getByRole('button', { name: '플레이 스타일 고르기' }).click();
+      await pageB.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
       await expect(pageB).toHaveURL(/\/career\/.+\/style$/);
 
       await pageB.goto('/settings');
@@ -84,7 +84,7 @@ test.describe('Google 연결·병합(실제 api)', () => {
 
     await startNewCareer(page);
     await fillPlayerInfo(page, '재인증점검');
-    await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
+    await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
     await expect(page).toHaveURL(/\/career\/[^/]+\/style$/);
     const careerId = /\/career\/([^/]+)\/style$/.exec(new URL(page.url()).pathname)?.[1];
     if (careerId === undefined) throw new Error('careerId를 찾지 못했다');
@@ -99,9 +99,7 @@ test.describe('Google 연결·병합(실제 api)', () => {
 
     await page.goto(`/career/${careerId}/create`);
     await page.getByRole('textbox', { name: '이름', exact: true }).fill('재인증점검수정');
-    await page.getByRole('button', { name: '다음', exact: true }).click();
-    await page.getByRole('button', { name: '다음', exact: true }).click();
-    await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
+    await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
     await page.goto('/settings');
     await expect(page.getByText(/서버 저장 실패|저장되지 않은 진행/).first()).toBeVisible({
       timeout: 15_000,

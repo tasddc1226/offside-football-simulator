@@ -14,18 +14,19 @@ const WITH_PREVIEW = process.env.E2E_PREVIEW === '1';
 test.describe('허브 LCP·CLS(4G, vite preview 빌드)', () => {
   test.skip(!WITH_PREVIEW, 'E2E_PREVIEW=1일 때만 실제 빌드 대상으로 측정한다');
 
-  test('커리어 카드 3장이 있는 허브의 LCP·CLS를 4G에서 3회 측정해 중앙값을 기록한다', async ({ page }) => {
+  test('커리어 카드 3장이 있는 허브의 LCP·CLS를 4G에서 3회 측정해 중앙값을 기록한다', async ({
+    page,
+  }) => {
     // 카드 3장을 실제 UI로 만든다(로컬 IndexedDB에만 쓰인다, 네트워크 없음) — 매번 SCR-002는 허브로
     // 돌아가는 링크가 없어(hub.spec.ts와 같은 이유) 직접 이동한다.
     for (let i = 0; i < 3; i += 1) {
       await page.goto('/onboarding');
-      await page.getByRole('button', { name: '다음' }).click();
-      await page.getByRole('button', { name: '다음' }).click();
-      await page.getByRole('button', { name: 'KICKOFF' }).click();
-      await expect(page).toHaveURL(/\/career\/.+\/create$/);
+      await page.getByLabel('이름').fill('김서준');
+      await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+      await expect(page).toHaveURL(/\/career\/.+\/style$/);
     }
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 2, name: '이름 없는 선수' })).toHaveCount(3);
+    await expect(page.getByRole('heading', { level: 2, name: '김서준' })).toHaveCount(3);
 
     // LCP·layout-shift 관찰자를 페이지 생애주기 동안 계속 심어 둔다(매 goto마다 새로 실행된다).
     await page.addInitScript(() => {
@@ -35,7 +36,8 @@ test.describe('허브 LCP·CLS(4G, vite preview 빌드)', () => {
         new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
             const e = entry as PerformanceEntry & { renderTime?: number; loadTime?: number };
-            w.__perf.lcp = e.renderTime && e.renderTime > 0 ? e.renderTime : (e.loadTime ?? w.__perf.lcp);
+            w.__perf.lcp =
+              e.renderTime && e.renderTime > 0 ? e.renderTime : (e.loadTime ?? w.__perf.lcp);
           }
         }).observe({ type: 'largest-contentful-paint', buffered: true });
       } catch {
@@ -70,11 +72,13 @@ test.describe('허브 LCP·CLS(4G, vite preview 빌드)', () => {
     const clsValues: number[] = [];
     for (let run = 0; run < 3; run += 1) {
       await page.goto('/', { waitUntil: 'load' });
-      await expect(page.getByRole('heading', { level: 2, name: '이름 없는 선수' })).toHaveCount(3);
+      await expect(page.getByRole('heading', { level: 2, name: '김서준' })).toHaveCount(3);
       // LCP 후보는 페이지가 완전히 자리 잡은 뒤(폰트 로드 포함)에야 최종값이 된다 — 폰트 로드까지
       // 상태 기반으로 기다린다.
       await page.evaluate(() => document.fonts.ready);
-      const perf = await page.evaluate(() => (window as unknown as { __perf: { lcp: number; cls: number } }).__perf);
+      const perf = await page.evaluate(
+        () => (window as unknown as { __perf: { lcp: number; cls: number } }).__perf,
+      );
       lcpValues.push(perf.lcp);
       clsValues.push(perf.cls);
     }
@@ -91,7 +95,12 @@ test.describe('허브 LCP·CLS(4G, vite preview 빌드)', () => {
       return sorted[Math.floor(sorted.length / 2)]!;
     };
 
-    const result = { lcpMsRuns: lcpValues, clsRuns: clsValues, lcpMsMedian: median(lcpValues), clsMedian: median(clsValues) };
+    const result = {
+      lcpMsRuns: lcpValues,
+      clsRuns: clsValues,
+      lcpMsMedian: median(lcpValues),
+      clsMedian: median(clsValues),
+    };
     console.log(`[perf] 허브 LCP·CLS(4G, 카드 3장): ${JSON.stringify(result)}`);
     console.log(
       `[perf] T-0-013 기준선(빈 Phase 0 껍데기) 대비: LCP 2519ms → ${result.lcpMsMedian.toFixed(0)}ms, CLS 0 → ${result.clsMedian.toFixed(3)} ` +

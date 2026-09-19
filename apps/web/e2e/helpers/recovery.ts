@@ -2,30 +2,13 @@
 // "컨텍스트 A에서 발급한 복구 코드로 컨텍스트 B가 복구" 앞부분. 실제 apps/api(wrangler dev --local)에
 // 붙는다 — E2E_WITH_API=1일 때만 쓴다.
 import { expect, type Page } from '@playwright/test';
+import { goToConfirm } from './player-creation.js';
 
 /** 온보딩 → SCR-002~004 → KICKOFF → SCR-007 계열 → 설정에서 복구 코드 발급 → 원래 결정 복귀. */
 export async function createCareerAndIssueRecoveryCode(pageA: Page): Promise<{ codeText: string }> {
-  await pageA.goto('/onboarding');
-  await pageA.getByRole('button', { name: '다음' }).click();
-  await pageA.getByRole('button', { name: '다음' }).click();
-  await pageA.getByRole('button', { name: 'KICKOFF' }).click();
-  await expect(pageA).toHaveURL(/\/career\/.+\/create$/);
+  await goToConfirm(pageA);
 
-  await pageA.getByLabel('이름').fill('김서준');
-  await pageA.getByRole('radio', { name: '남성' }).click();
-  await pageA.getByLabel('국적').selectOption('KR');
-  await pageA.getByRole('radio', { name: '왼발' }).click();
-  await pageA.getByRole('tab', { name: '공격수' }).click();
-  await pageA.getByRole('radio', { name: /윙어/ }).click();
-  await pageA.getByRole('radio', { name: /클럽 아카데미/ }).click();
-  await pageA.getByRole('button', { name: '다음' }).click();
-  await expect(pageA).toHaveURL(/\/career\/.+\/style$/);
-
-  await pageA.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
-  await pageA.getByRole('button', { name: '다음' }).click();
-  await expect(pageA).toHaveURL(/\/career\/.+\/confirm$/);
-
-  await pageA.getByRole('button', { name: 'KICKOFF' }).click();
+  await pageA.getByRole('button', { name: /이 선수로 시작/ }).click();
   await expect(pageA).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
   const decisionUrl = pageA.url();
   // 실제 서버로 확정 상태(revision 2)가 저장된 뒤 설정에서 코드를 발급해야 컨텍스트 B가 받는 GET이

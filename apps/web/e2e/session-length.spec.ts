@@ -72,60 +72,28 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
 
   const startedAt = performance.now();
 
-  // SCR-034 온보딩 진입 → "건너뛰기"로 곧장 빈 허브(SCR-001)로.
   await page.goto('/onboarding');
   counts.screens += 1;
-  await page.getByRole('button', { name: '건너뛰기' }).click();
-  counts.confirmations += 1;
-  await expect(page).toHaveURL(/\/$/);
-  counts.screens += 1;
-
-  // 허브에서 "커리어 시작" → SCR-002.
-  await page.getByRole('button', { name: '커리어 시작' }).click();
-  counts.confirmations += 1;
-  await expect(page).toHaveURL(/\/career\/.+\/create$/);
-  counts.screens += 1;
-
-  // SCR-002 패널 1(첫 출발점): 배경(선택 1) → 다음.
-  await page.getByRole('radio', { name: /아카데미의 추가 평가/ }).click();
-  counts.selections += 1;
-  await page.getByRole('button', { name: '다음', exact: true }).click();
-  counts.confirmations += 1;
-  counts.screens += 1;
-
-  // SCR-002 패널 2(정체성): 이름(텍스트 입력 1) + 성별·국적·주발(선택 3) → 다음.
-  await page.getByRole('textbox', { name: '이름', exact: true }).fill('김서준');
+  await page.getByLabel('이름').fill('김서준');
   counts.textInputs += 1;
-  await page.getByRole('radio', { name: '남성' }).click();
-  counts.selections += 1;
-  await page.getByLabel('국적').selectOption('KR');
-  counts.selections += 1;
   await page.getByRole('radio', { name: '왼발' }).click();
-  counts.selections += 1;
-  await page.getByRole('button', { name: '다음', exact: true }).click();
-  counts.confirmations += 1;
-  counts.screens += 1;
-
-  // SCR-002 패널 3(선호 위치): 포지션 구분 탭·포지션(선택 2) → 플레이 스타일 고르기.
-  await page.getByRole('tab', { name: '공격수' }).click();
-  counts.selections += 1;
   await page.getByRole('radio', { name: /윙어/ }).click();
-  counts.selections += 1;
-  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
+  counts.selections += 2;
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
   counts.confirmations += 1;
-  await expect(page).toHaveURL(/\/career\/.+\/style$/);
+  await expect(page).toHaveURL(/\/style$/);
   counts.screens += 1;
-
-  // SCR-003: 아키타입 선택(선택 1).
-  await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
-  counts.selections += 1;
-  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: '3장 모두 열기' }).click();
   counts.confirmations += 1;
-  await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
+  await page.getByRole('button', { name: '인사이드 포워드 후보 선택' }).click();
+  counts.selections += 1;
+  await page.getByRole('button', { name: /이 후보로 진행/ }).click();
+  counts.confirmations += 1;
+  await expect(page).toHaveURL(/\/confirm$/);
   counts.screens += 1;
 
   // SCR-004: KICKOFF(확정) → 비차단 복구 안내 전환 → 이벤트 화면.
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await page.getByRole('button', { name: /이 선수로 시작/ }).click();
   counts.confirmations += 1;
   await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
   counts.screens += 1;
@@ -161,7 +129,9 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   await page.getByRole('button', { name: '커리어 시작' }).click();
   counts.confirmations += 1;
   await expect(page).toHaveURL(/\/confirm\?step=recovery&milestone=first-contract$/);
-  await expect(page.getByRole('heading', { name: '복구 코드를 저장하세요', level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '복구 코드를 저장하세요', level: 1 }),
+  ).toBeVisible();
   counts.screens += 1;
   await page.getByRole('button', { name: '계속', exact: true }).click();
   counts.confirmations += 1;

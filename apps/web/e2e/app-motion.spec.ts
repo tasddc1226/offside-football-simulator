@@ -6,6 +6,7 @@ import {
   fulfillJson,
   META,
   startNewCareer,
+  fillPlayerInfo,
 } from './helpers/player-creation.js';
 
 type RecordedAnimation = { animation: Animation; target: Element };
@@ -59,7 +60,10 @@ async function latestCareerRevision(page: Page): Promise<number> {
         const request = indexedDB.open('offside');
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {
-          const index = request.result.transaction('snapshots', 'readonly').objectStore('snapshots').index('careerId');
+          const index = request.result
+            .transaction('snapshots', 'readonly')
+            .objectStore('snapshots')
+            .index('careerId');
           const revisions: number[] = [];
           const cursor = index.openCursor(IDBKeyRange.only(id));
           cursor.onerror = () => reject(cursor.error);
@@ -83,7 +87,7 @@ async function clearAnimations(page: Page): Promise<void> {
 
 async function openEmptyHub(page: Page): Promise<void> {
   await page.goto('/onboarding');
-  await page.getByRole('button', { name: '건너뛰기', exact: true }).click();
+  await page.getByRole('link', { name: '선수 생성 닫기' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '커리어 허브' })).toBeVisible();
 }
 
@@ -162,32 +166,12 @@ test('키보드로 실행한 화면 이동에는 슬라이드 효과를 넣지 �
   expect(await routeAnimations(page)).toEqual([]);
 });
 
-// UX-012: 전역 화면 전환(ScreenTransition)은 프로그레스 바 연출로 3초를 채운 뒤에만 다음 화면으로
-// 넘어간다. 모션이 켜진(이 파일 beforeEach의 no-preference) 상태에서 허브 "커리어 시작"을 눌러
-// 실제 3초 연출 자체를 검증한다 — 키보드 입력 모달리티도 더 이상 스킵 조건이 아니다(D-70).
-test('허브 "커리어 시작"은 3초 고정 진행 바 연출을 보여준 뒤에만 SCR-002로 이동한다', async ({
-  page,
-}) => {
+test('허브에서 대기 연출 없이 생성 폼으로 진입한다', async ({ page }) => {
   await openEmptyHub(page);
-  const startButton = page.getByRole('button', { name: '커리어 시작' });
-  await expect(startButton).toBeVisible();
-
-  const clickedAt = Date.now();
-  await startButton.click();
-
-  const progressbar = page.getByRole('progressbar');
-  await expect(progressbar).toBeVisible();
-  await expect(progressbar).toHaveAttribute('aria-valuemin', '0');
-  await expect(progressbar).toHaveAttribute('aria-valuemax', '100');
-  await expect(page.getByText('새 인생을 준비합니다')).toBeVisible();
-
-  // 3초가 다 차기 전에는 아직 허브에 머문다(스킵 불가 — 바로 계속 버튼도, 키보드 스킵도 없다).
-  await page.waitForTimeout(1500);
-  await expect(page).toHaveURL(/\/$/);
-
-  // 그러나 3초 안팎에는 반드시 다음 화면(SCR-002 자리표시)으로 넘어간다.
-  await expect(page).toHaveURL(/\/career\/.+\/create$/, { timeout: 4000 });
-  expect(Date.now() - clickedAt).toBeGreaterThanOrEqual(2700);
+  await page.getByRole('button', { name: '커리어 시작' }).click();
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page.getByLabel('이름')).toBeVisible();
+  await expect(page.getByRole('progressbar')).toHaveCount(0);
 });
 
 for (const preference of ['OS', '앱'] as const) {
@@ -196,7 +180,7 @@ for (const preference of ['OS', '앱'] as const) {
       await page.emulateMedia({ reducedMotion: 'reduce' });
     }
     await page.goto('/settings');
-    // UX-013: 모션 감소 라디오와 "온보딩 다시 보기" 링크는 "화면·플레이 설정" 접이식 안에 있다.
+    // UX-013: 모션 감소 라디오와 "선수 생성 화면" 링크는 "화면·플레이 설정" 접이식 안에 있다.
     await page.getByText('화면·플레이 설정', { exact: true }).click();
     if (preference === '앱') {
       await page
@@ -206,11 +190,9 @@ for (const preference of ['OS', '앱'] as const) {
     }
     await expect(page.locator('html')).toHaveAttribute('data-reduced-motion', 'true');
     await clearAnimations(page);
-    await page.getByRole('link', { name: '온보딩 다시 보기', exact: true }).click();
+    await page.getByRole('link', { name: '선수 생성 화면', exact: true }).click();
     await expect(page).toHaveURL(/\/onboarding$/);
-    await expect(
-      page.getByRole('heading', { level: 1, name: '한 명의 선수로, 축구 인생 전체를 플레이하세요' }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: '선수 생성' })).toBeVisible();
     expect(await routeAnimations(page)).toEqual([]);
   });
 }
@@ -219,6 +201,9 @@ test('공통 팝업은 배경을 블러 처리하고 Escape 뒤 원래 버튼으
   page,
 }) => {
   await startNewCareer(page);
+  await fillPlayerInfo(page);
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await expect(page).toHaveURL(/\/style$/);
   await page.goto('/');
   // "최근 선수"(resume) 탭의 기본 카드는 featured=true라 상세 관리 disclosure를 두지 않는다 —
   // "선수단 관리"(squad 탭)로 이동해야 상세 관리·삭제 버튼에 닿는다.
@@ -241,50 +226,13 @@ test('공통 팝업은 배경을 블러 처리하고 Escape 뒤 원래 버튼으
   await expect(page.getByTestId('career-card')).toHaveCount(1);
 });
 
-test('온보딩은 좌우로 넘기되 마지막 장을 밀어도 커리어를 생성하지 않는다', async ({ page }) => {
+test('생성 폼을 밀어도 후보 추첨이나 커리어 생성이 실행되지 않는다', async ({ page }) => {
   await page.goto('/onboarding');
-  const surface = page.locator('.os-onboarding-motion .os-swipe-surface');
-  await expect(surface).toBeVisible();
-  await swipe(surface, -150);
-  await expect(
-    page.getByRole('heading', { level: 1, name: '선택은 되돌릴 수 없습니다' }),
-  ).toBeVisible();
-  await swipe(surface, 150);
-  await expect(
-    page.getByRole('heading', { level: 1, name: '한 명의 선수로, 축구 인생 전체를 플레이하세요' }),
-  ).toBeVisible();
-  await swipe(surface, -150);
-  await expect(
-    page.getByRole('heading', { level: 1, name: '선택은 되돌릴 수 없습니다' }),
-  ).toBeVisible();
-  await swipe(surface, -150);
-  await expect(
-    page.getByRole('heading', { level: 1, name: '커리어를 다시 찾을 방법을 준비하세요' }),
-  ).toBeVisible();
-  await swipe(surface, -150);
+  await swipe(page.locator('.creation-flow'), -150);
   await expect(page).toHaveURL(/\/onboarding$/);
-  await expect(page.getByRole('button', { name: /KICKOFF · 새 인생 시작/ })).toBeVisible();
-  await page.getByRole('button', { name: '건너뛰기', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '아직 만든 커리어가 없습니다' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '선수 생성' })).toBeVisible();
+  await page.getByRole('link', { name: '선수 생성 닫기' }).click();
   await expect(page.getByTestId('career-card')).toHaveCount(0);
-});
-
-test('세로 드래그와 버튼 위 드래그는 온보딩 단계를 바꾸지 않는다', async ({ page }) => {
-  await page.goto('/onboarding');
-  const heading = page.getByRole('heading', {
-    level: 1,
-    name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
-  });
-  const surface = page.locator('.os-onboarding-motion .os-swipe-surface');
-  await expect(surface).toBeVisible();
-  await swipe(surface, -12, 150);
-  await expect(heading).toBeVisible();
-  await swipe(page.getByRole('button', { name: '다음', exact: true }), -150);
-  await expect(heading).toBeVisible();
-  await page.getByRole('button', { name: '다음', exact: true }).click();
-  await expect(
-    page.getByRole('heading', { level: 1, name: '선택은 되돌릴 수 없습니다' }),
-  ).toBeVisible();
 });
 
 test('문서의 가장자리 뒤로 가기는 외부 방문 기록 대신 설정으로 돌아간다', async ({ page }) => {
@@ -311,7 +259,9 @@ test('대시보드 스와이프는 구역만 바꾸고 경기 진행을 실행�
     'true',
   );
   await swipe(surface, -150);
-  await expect.poll(() => page.locator('[role="tab"][aria-selected="true"]').textContent()).toBe('커리어');
+  await expect
+    .poll(() => page.locator('[role="tab"][aria-selected="true"]').textContent())
+    .toBe('커리어');
   await swipe(surface, -150);
   await expect(page.getByRole('tab', { name: '선수', exact: true })).toHaveAttribute(
     'aria-selected',

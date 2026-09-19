@@ -1,6 +1,4 @@
-// create.spec.ts·first-contract.spec.ts·resilience.spec.ts·session-length.spec.ts가 함께 쓰는 온보딩
-// → SCR-002~004 → 이벤트 화면 도착 흐름. T-1-014에서 create.spec.ts·first-contract.spec.ts의 중복
-// 정의를 이 파일로 뽑았다(브리프: "헬퍼 추출은 허용"). 기존 스펙의 동작·검증 내용은 바꾸지 않았다.
+// 공유 생성 여정: 짧은 프로필 입력 → 후보 3장 공개 → 선수 카드 확정 → 첫 결정.
 import { expect, type Page, type Route } from '@playwright/test';
 
 export const META = { requestId: 'e2e-req' };
@@ -9,13 +7,10 @@ export async function fulfillJson(route: Route, status: number, body: unknown): 
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-/** 온보딩 → KICKOFF로 SCR-002(선수 정보 입력)까지 이동한다. */
+/** 생성 폼을 연다. 실제 커리어는 폼 제출 때 만들어진다. */
 export async function startNewCareer(page: Page): Promise<void> {
   await page.goto('/onboarding');
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: /새 인생 시작/ }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/create$/);
+  await expect(page.getByRole('heading', { name: '선수 생성' })).toBeVisible();
 }
 
 /** SCR-002의 6개 필드(성별·선호 포지션 포함, PR #32/T-1-016)를 채운다. */
@@ -24,14 +19,23 @@ export async function fillPlayerInfo(
   name = '김서준',
   backgroundName: RegExp = /아카데미의 추가 평가/,
 ): Promise<void> {
-  await page.getByRole('radio', { name: backgroundName }).click();
-  await page.getByRole('button', { name: '다음', exact: true }).click();
-  await page.getByRole('textbox', { name: '이름', exact: true }).fill(name);
-  await page.getByRole('radio', { name: '남성' }).click();
+  const options = await page
+    .getByLabel('출발 배경')
+    .locator('option')
+    .evaluateAll((nodes) =>
+      nodes.map((node) => ({
+        label: node.textContent ?? '',
+        value: (node as HTMLOptionElement).value,
+      })),
+    );
+  const background = options.find((option) => backgroundName.test(option.label));
+  if (!background) throw new Error(`Unknown background: ${backgroundName}`);
+  await page.getByLabel('출발 배경').selectOption(background.value);
+  await page.getByLabel('이름', { exact: true }).fill(name);
+  await page.locator('summary').filter({ hasText: '상세 프로필' }).click();
+  await page.getByLabel('성별', { exact: true }).selectOption('MALE');
   await page.getByLabel('국적').selectOption('KR');
   await page.getByRole('radio', { name: '왼발' }).click();
-  await page.getByRole('button', { name: '다음', exact: true }).click();
-  await page.getByRole('tab', { name: '공격수' }).click();
   await page.getByRole('radio', { name: /윙어/ }).click();
 }
 
@@ -42,19 +46,18 @@ export async function fillPlayerInfo(
 export async function goToConfirm(page: Page, backgroundName?: RegExp): Promise<void> {
   await startNewCareer(page);
   await fillPlayerInfo(page, undefined, backgroundName ?? /아카데미의 추가 평가/);
-  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
   await expect(page).toHaveURL(/\/career\/.+\/style$/);
 
-  await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: '3장 모두 열기' }).click();
+  await page.getByRole('button', { name: '인사이드 포워드 후보 선택' }).click();
+  await page.getByRole('button', { name: /이 후보로 진행/ }).click();
   await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
-  await expect(
-    page.getByRole('heading', { level: 1, name: '확정 전 정보를 확인하세요' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: '이번 생의 주인공' })).toBeVisible();
 }
 
 /**
- * 온보딩 → KICKOFF → SCR-002 입력 → SCR-003 스타일 선택 → SCR-004 확정 → 복구 코드 화면 없이
+ * 프로필 입력 → 후보 선택 → 선수 카드 확정 → 복구 코드 화면 없이
  * SCR-007/008/013 계열 도착까지. 프로필 실패 스텁은 첫 계약 뒤 복구 안내에서 결정론적으로 쓴다.
  * `backgroundName`은 goToConfirm으로 그대로 넘긴다(생략하면 기본값 club-academy — 그 경로는
  * "남아 추가 평가"만으로 끝나 1.7.2/0.6.6에서도 SCR-008(입단 테스트)로 가지 않는다. SCR-008을
@@ -76,7 +79,7 @@ export async function completeOnboardingAndConfirm(
       meta: META,
     }),
   );
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await page.getByRole('button', { name: /이 선수로 시작/ }).click();
 
   await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
 }

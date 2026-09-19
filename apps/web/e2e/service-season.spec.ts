@@ -42,8 +42,12 @@ async function forceAnalyticsFlush(page: Page): Promise<void> {
   });
 }
 
-test('테스트 시즌이면 허브 배너·카드 배지가 뜨고 커리어 생성 요청에 그 시즌 id가 실린다(axe 위반 없음)', async ({ page }) => {
-  await page.route('**/v1/service-seasons/current', (route) => fulfillJson(route, 200, { data: TEST_SEASON, meta: E2E_META }));
+test('테스트 시즌이면 허브 배너·카드 배지가 뜨고 커리어 생성 요청에 그 시즌 id가 실린다(axe 위반 없음)', async ({
+  page,
+}) => {
+  await page.route('**/v1/service-seasons/current', (route) =>
+    fulfillJson(route, 200, { data: TEST_SEASON, meta: E2E_META }),
+  );
 
   let putBody: PutCareerBody | undefined;
   await page.route('**/v1/careers/**', async (route) => {
@@ -52,49 +56,69 @@ test('테스트 시즌이면 허브 배너·카드 배지가 뜨고 커리어 �
       return;
     }
     putBody = route.request().postDataJSON() as PutCareerBody;
-    await fulfillJson(route, 200, { data: { revision: putBody.snapshot.revision, syncedAt: '2026-01-01T00:00:00Z' }, meta: E2E_META });
+    await fulfillJson(route, 200, {
+      data: { revision: putBody.snapshot.revision, syncedAt: '2026-01-01T00:00:00Z' },
+      meta: E2E_META,
+    });
   });
 
   await page.goto('/onboarding');
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/create$/);
+  await page.getByLabel('이름').fill('김서준');
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/style$/);
 
   await expect.poll(() => putBody?.createdServiceSeasonId).toBe(TEST_SEASON.id);
 
   await page.goto('/');
-  await expect(page.getByTestId('service-season-banner')).toContainText(/테스트 보관함에 남고.*정식 시즌 도전에는 집계되지 않습니다/);
+  await expect(page.getByTestId('service-season-banner')).toContainText(
+    /테스트 보관함에 남고.*정식 시즌 도전에는 집계되지 않습니다/,
+  );
   await expect(page.getByTestId('career-card-test-badge')).toBeVisible();
 
   const results = await new AxeBuilder({ page }).analyze();
-  const seriousOrCritical = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  const seriousOrCritical = results.violations.filter(
+    (v) => v.impact === 'serious' || v.impact === 'critical',
+  );
   expect(seriousOrCritical).toEqual([]);
 });
 
-test('테스트 시즌이면 온보딩 첫 슬라이드에도 안내 문구가 보인다(axe 위반 없음)', async ({ page }) => {
-  await page.route('**/v1/service-seasons/current', (route) => fulfillJson(route, 200, { data: TEST_SEASON, meta: E2E_META }));
+test('테스트 시즌이면 온보딩 첫 슬라이드에도 안내 문구가 보인다(axe 위반 없음)', async ({
+  page,
+}) => {
+  await page.route('**/v1/service-seasons/current', (route) =>
+    fulfillJson(route, 200, { data: TEST_SEASON, meta: E2E_META }),
+  );
 
   await page.goto('/onboarding');
-  await expect(page.getByTestId('onboarding-service-season-notice')).toContainText(/테스트 보관함에 남고.*정식 시즌 도전에는 집계되지 않습니다/);
+  await expect(page.getByTestId('onboarding-service-season-notice')).toContainText(
+    /테스트 보관함에 남고.*정식 시즌 도전에는 집계되지 않습니다/,
+  );
 
   const results = await new AxeBuilder({ page }).analyze();
-  const seriousOrCritical = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  const seriousOrCritical = results.violations.filter(
+    (v) => v.impact === 'serious' || v.impact === 'critical',
+  );
   expect(seriousOrCritical).toEqual([]);
 });
 
 test('시즌이 LOCKED면 커리어 시작 버튼이 비활성화되고 안내 문구가 보인다', async ({ page }) => {
-  await page.route('**/v1/service-seasons/current', (route) => fulfillJson(route, 200, { data: LOCKED_SEASON, meta: E2E_META }));
+  await page.route('**/v1/service-seasons/current', (route) =>
+    fulfillJson(route, 200, { data: LOCKED_SEASON, meta: E2E_META }),
+  );
 
   await page.goto('/onboarding');
-  await page.getByRole('button', { name: '건너뛰기' }).click();
+  await page.getByRole('link', { name: '선수 생성 닫기' }).click();
   await expect(page).toHaveURL(/\/$/);
 
   await expect(page.getByRole('button', { name: '커리어 시작' })).toBeDisabled();
-  await expect(page.getByText('지금은 새 커리어를 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.')).toBeVisible();
+  await expect(
+    page.getByText('지금은 새 커리어를 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.'),
+  ).toBeVisible();
 });
 
-test('CONFIRM_PLAYER·선택지 확정이 분석 이벤트로 전송되고 본문 어디에도 선수 이름이 없다', async ({ page }) => {
+test('CONFIRM_PLAYER·선택지 확정이 분석 이벤트로 전송되고 본문 어디에도 선수 이름이 없다', async ({
+  page,
+}) => {
   const capturedEvents: AnalyticsEventsBody['events'] = [];
   const capturedRawBodies: string[] = [];
   await page.route('**/v1/analytics/events', async (route) => {
@@ -116,16 +140,24 @@ test('CONFIRM_PLAYER·선택지 확정이 분석 이벤트로 전송되고 본�
   // 큐가 FLUSH_QUEUE_SIZE(20)를 넘겨 이미 자동 flush된 배치가 있었다면 두 이벤트가 서로 다른
   // POST로 나뉠 수 있다 — 각각 독립적으로 도착을 기다린다(둘 다 같은 capturedEvents 배열에 쌓인다).
   await expect
-    .poll(() => capturedEvents.some((event) => event.name === 'funnel_reached' && event.props?.stage === 'PLAYER_CONFIRMED'))
+    .poll(() =>
+      capturedEvents.some(
+        (event) => event.name === 'funnel_reached' && event.props?.stage === 'PLAYER_CONFIRMED',
+      ),
+    )
     .toBe(true);
-  await expect.poll(() => capturedEvents.some((event) => event.name === 'choice_selected')).toBe(true);
+  await expect
+    .poll(() => capturedEvents.some((event) => event.name === 'choice_selected'))
+    .toBe(true);
   expect(capturedRawBodies.every((body) => !body.includes('김서준'))).toBe(true);
 });
 
 test.describe('실제 api로 서비스 시즌·분석 이벤트 확인', () => {
   test.skip(!WITH_API, 'E2E_WITH_API=1일 때만 실제 apps/api로 검사한다');
 
-  test('현재 서비스 시즌이 svc_kickoff이고 커리어 생성·분석 이벤트 전송이 성공한다', async ({ page }) => {
+  test('현재 서비스 시즌이 svc_kickoff이고 커리어 생성·분석 이벤트 전송이 성공한다', async ({
+    page,
+  }) => {
     // page.request는 브라우저 fetch가 아니라 Node 쪽 HTTP 클라이언트라 CORS 대상이 아니다(GET은
     // originGuard 대상도 아니다 — service-seasons.ts 주석 참고).
     const current = await page.request.get(`${API_URL}/v1/service-seasons/current`);
@@ -137,11 +169,13 @@ test.describe('실제 api로 서비스 시즌·분석 이벤트 확인', () => {
     expect(currentBody.data.contentPackVersion).toBe('0.6.6');
 
     await page.goto('/onboarding');
-    await page.getByRole('button', { name: '다음' }).click();
-    await page.getByRole('button', { name: '다음' }).click();
+    await page.getByLabel('이름').fill('김서준');
     const [putResponse] = await Promise.all([
-      page.waitForResponse((response) => response.url().includes('/v1/careers/') && response.request().method() === 'PUT'),
-      page.getByRole('button', { name: 'KICKOFF' }).click(),
+      page.waitForResponse(
+        (response) =>
+          response.url().includes('/v1/careers/') && response.request().method() === 'PUT',
+      ),
+      page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click(),
     ]);
     expect(putResponse.status()).toBe(200);
 
