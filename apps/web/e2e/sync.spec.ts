@@ -2,14 +2,14 @@
 // (a) 생성 즉시 저장 (b) 다른 기기 진행 가져오기 (c) 이 기기 진행 유지(fork) (d) 오프라인·온라인
 // (e) 401 → 로컬 전용.
 import { expect, type Page, test } from '@playwright/test';
+import { fillPlayerInfo } from './helpers/player-creation.js';
 import { E2E_META, fulfillJson, triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
 
 async function startNewCareer(page: Page): Promise<void> {
   await page.goto('/onboarding');
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/create$/);
+  await fillPlayerInfo(page);
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await expect(page).toHaveURL(/\/style$/);
 }
 
 test('(a) 커리어 생성 즉시 저장하고 배지가 "저장됨"으로 바뀐다', async ({ page }) => {
@@ -144,7 +144,7 @@ test('(d) 오프라인이면 배지가 오프라인으로, 온라인 복귀 뒤 
 
   await page.getByRole('button', { name: '다음' }).click();
   await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await page.getByRole('button', { name: /이 선수로 시작/ }).click();
   await expect(page).toHaveURL(/\/career\/.+\/create$/);
 
   await expect(page.getByText('오프라인 · 이 기기에만 저장됨')).toBeVisible();

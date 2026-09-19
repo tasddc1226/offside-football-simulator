@@ -1,3 +1,7 @@
+import eventDev201v070 from '../../packs/0.7.0/events/EVT-DEV-201.json' with { type: 'json' };
+import eventDev202v070 from '../../packs/0.7.0/events/EVT-DEV-202.json' with { type: 'json' };
+import eventDev203v070 from '../../packs/0.7.0/events/EVT-DEV-203.json' with { type: 'json' };
+import manifest070 from '../../packs/0.7.0/manifest.json' with { type: 'json' };
 import { ChapterDefinitionSchema, type ChapterDefinition } from '../schema/chapter.ts';
 import { EventDefinitionSchema, type EventDefinition } from '../schema/event.ts';
 import { PackManifestSchema, type PackManifest } from '../schema/pack.ts';
@@ -251,6 +255,7 @@ export const PACK_VERSIONS = [
   '0.6.6',
   '0.6.7',
   '0.6.8',
+  '0.7.0',
 ] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
@@ -270,7 +275,7 @@ type PackSource = {
   narrativeTokens: unknown;
 };
 
-const PACK_SOURCES_THROUGH_066: Record<Exclude<PackVersion, '0.6.7' | '0.6.8'>, PackSource> = {
+const PACK_SOURCES_THROUGH_066: Record<Exclude<PackVersion, '0.6.7' | '0.6.8' | '0.7.0'>, PackSource> = {
   '0.1.0': {
     manifest: manifest010,
     events: [
@@ -1026,7 +1031,7 @@ const PACK_SOURCES_THROUGH_066: Record<Exclude<PackVersion, '0.6.7' | '0.6.8'>, 
   },
 };
 
-const PACK_SOURCES_WITHOUT_068: Record<Exclude<PackVersion, '0.6.8'>, PackSource> = {
+const PACK_SOURCES_WITHOUT_068: Record<Exclude<PackVersion, '0.6.8' | '0.7.0'>, PackSource> = {
   ...PACK_SOURCES_THROUGH_066,
   '0.6.7': {
     ...PACK_SOURCES_THROUGH_066['0.6.6'],
@@ -1034,7 +1039,7 @@ const PACK_SOURCES_WITHOUT_068: Record<Exclude<PackVersion, '0.6.8'>, PackSource
   },
 };
 
-const PACK_SOURCES: Record<PackVersion, PackSource> = {
+const PACK_SOURCES_THROUGH_068: Record<Exclude<PackVersion, '0.7.0'>, PackSource> = {
   ...PACK_SOURCES_WITHOUT_068,
   '0.6.8': {
     ...PACK_SOURCES_WITHOUT_068['0.6.7'],
@@ -1064,6 +1069,8 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
     ],
   },
 };
+
+const PACK_SOURCES: Record<PackVersion, PackSource> = { ...PACK_SOURCES_THROUGH_068, '0.7.0': { ...PACK_SOURCES_THROUGH_068['0.6.8'], manifest: manifest070, events: [...PACK_SOURCES_THROUGH_068['0.6.8'].events, eventDev201v070, eventDev202v070, eventDev203v070] } };
 
 /**
  * 번들에 포함된 팩 JSON(manifest·이벤트 11개·챕터 4개·narrative 사전)을 스키마로 검증해 동기로

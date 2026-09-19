@@ -33,7 +33,7 @@ type StoredUiSettings = ProfileSettings & {
 export type TeamLogos = Record<string, string>;
 
 const DEFAULT_SETTINGS: StoredUiSettings = {
-  theme: 'SYSTEM',
+  theme: 'LIGHT',
   reducedMotion: 'SYSTEM',
   textScale: 100,
   // 사용자 결정(2026-09-13, D-77): 더 이상 사용자가 고르지 않는다 — contracts의 ProfileSettingsSchema가

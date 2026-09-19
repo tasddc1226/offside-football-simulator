@@ -20,6 +20,7 @@ import {
   positionHeaderField,
   REHAB_PLAN_LABELS,
 } from '../shared/labels.js';
+import '../shared/simulator.css';
 import { PlayerBanner } from '../shared/PlayerBanner.js';
 import { platform } from '../platform/index.js';
 import { queryClient } from '../shared/query-client.js';
@@ -153,16 +154,6 @@ function EventResultScreen() {
       <ScreenIntro
         eyebrow="이어지는 이야기"
         title="선택의 결과"
-        description="당신의 결정이 커리어에 남긴 변화를 확인하세요."
-      />
-      <PlayerBanner
-        name={profile?.name ?? state.player.draft.name ?? '이름 없는 선수'}
-        teamName={currentTeamName(state, ruleset, teamNameOverrides)}
-        teamId={currentTeamId(state, ruleset)}
-        position={bannerPosition}
-        shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
-        age={state.age}
-        ovr={profile?.baseOvr ?? null}
       />
       <GameResultReveal
         fast={state.simulationMode === 'FAST'}
@@ -178,9 +169,20 @@ function EventResultScreen() {
           tags={view.tags.map(eventResultTagLabel).filter((label): label is string => label !== null)}
         />
       </GameResultReveal>
+<details className="sim-disclosure"><summary>선수 · 결과 안내</summary>
+      <PlayerBanner
+        name={profile?.name ?? state.player.draft.name ?? '이름 없는 선수'}
+        teamName={currentTeamName(state, ruleset, teamNameOverrides)}
+        teamId={currentTeamId(state, ruleset)}
+        position={bannerPosition}
+        shirtNumber={state.contract ? String(state.contract.shirtNumber) : '—'}
+        age={state.age}
+        ovr={profile?.baseOvr ?? null}
+      />
       <p className="os-muted">{details.actualEffects === null
         ? '이 기기에는 당시의 상세 저장 기록이 없어 선택의 기본 효과를 표시합니다. 상한과 중복 적용에 따라 실제 변화는 달라질 수 있습니다.'
         : '선택 직전과 직후의 저장값을 비교한 실제 변화입니다. 이후 적용될 효과는 선택 안내를 참고하세요.'}</p>
+</details>
       {details.episode !== null || eventDefinition?.presentation === 'NATIONAL_TEAM' || details.nextKind !== null ? (
         <section className="os-panel flex flex-col gap-os-2" aria-label="결과 상세">
           <h2 className="font-os font-semibold text-os-text">이어지는 영향</h2>

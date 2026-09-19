@@ -18,7 +18,8 @@
     "e2e:api": "E2E_WITH_API=1 playwright test",
     "e2e:perf": "E2E_PREVIEW=1 playwright test e2e/perf.spec.ts",
     "e2e:staging": "playwright test --config playwright.staging.config.ts",
-    "e2e:install": "playwright install chromium"
+    "e2e:install": "playwright install chromium",
+    "dev:simulator": "VITE_SIMULATOR_PREVIEW=true vite --host 127.0.0.1 --port 5301"
   },
   "dependencies": {
     "@offside/contracts": "workspace:*",

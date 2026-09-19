@@ -42,11 +42,11 @@ export const TRAINING_FOCUS_LABEL_KO: Record<TrainingFocus, string> = {
 };
 
 export const TRAINING_FOCUS_SUMMARY_KO: Record<TrainingFocus, string> = {
-  ROLE: '아키타입 가중 능력 위주로 성장합니다.',
-  TECHNICAL: '슈팅·패스 등 기술 능력 위주로 성장합니다.',
-  PHYSICAL: '스피드·스태미나 등 신체 능력 위주로 성장합니다.',
-  MENTAL: '판단력·집중력 등 정신 능력 위주로 성장합니다.',
+  ROLE: '내 플레이 스타일의 강점을 키웁니다.',
+  TECHNICAL: '슈팅·패스·드리블을 가다듬습니다.',
+  PHYSICAL: '스피드와 지구력을 끌어올립니다.',
+  MENTAL: '판단력과 집중력을 기릅니다.',
 };
 
 /** SCR-005 인수 조건: 계획이 Base OVR·Expected Performance 중 무엇에 영향을 주는지 구분한다. */
-export const TRAINING_FOCUS_IMPACT_KO = '영향: Base OVR(시즌 결산 시 성장) · 경기 예상치에는 즉시 영향 없음';
+export const TRAINING_FOCUS_IMPACT_KO = '훈련의 성과는 시즌 결산 때 능력치에 반영됩니다.';

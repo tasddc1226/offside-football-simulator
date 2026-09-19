@@ -9,11 +9,11 @@
   --os-border-strong: #bdc9d6;
   --os-text: #142033;
   --os-text-2: #5d6b7e;
-  --os-accent: #123b68;
-  --os-accent-hover: #0d3158;
-  --os-accent-soft: #e7eef6;
+  --os-accent: #2454d8;
+  --os-accent-hover: #1943b8;
+  --os-accent-soft: #edf2ff;
   --os-on-accent: #fff;
-  --os-swatch-default: #123b68;
+  --os-swatch-default: #2454d8;
   --os-swatch-green: #125c3f;
   --os-swatch-violet: #3c2a7a;
   --os-swatch-crimson: #7a1f30;
@@ -94,9 +94,9 @@
   --os-neutral: #5d6b7e;
   --os-focus: #1769aa;
   --os-canvas: #edf1f5;
-  --os-hero: #102b48;
+  --os-hero: #2547b8;
   --os-on-hero: #fff;
-  --os-hero-muted: #c7d6e5;
+  --os-hero-muted: #dce5ff;
   --os-overlay: rgb(9 19 31 / 54%);
   --os-shadow-sm: 0 1px 2px rgb(20 32 51 / 5%);
   --os-shadow: 0 10px 30px rgb(20 32 51 / 7%);

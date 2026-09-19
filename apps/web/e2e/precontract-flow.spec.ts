@@ -49,9 +49,10 @@ test('1.7.2/0.6.6: 진로 선택 뒤 스카우트 평가 1건만 뜨고 곧장 �
   // followUp이 확정 연결돼 있어 RNG 없이 결정론적이다(1.7.2/0.6.6 조합 한정, 다른 배경·선택도
   // 각자 브리지 이벤트 1건으로 끝난다).
   await fillPlayerInfo(page);
-  await page.getByRole('button', { name: '플레이 스타일 고르기' }).click();
-  await page.getByRole('radio', { name: '인사이드 포워드 선택' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await page.getByRole('button', { name: '3장 모두 열기' }).click();
+  await page.getByRole('button', { name: '인사이드 포워드 후보 선택' }).click();
+  await page.getByRole('button', { name: /이 후보로 진행/ }).click();
 
   await page.route('**/v1/profile', (route) =>
     fulfillJson(route, 503, {
@@ -63,7 +64,7 @@ test('1.7.2/0.6.6: 진로 선택 뒤 스카우트 평가 1건만 뜨고 곧장 �
       meta: META,
     }),
   );
-  await page.getByRole('button', { name: 'KICKOFF' }).click();
+  await page.getByRole('button', { name: /이 선수로 시작/ }).click();
 
   // 1) SCR-007 진로 선택 — 기존 흐름 그대로(전용 화면·라벨, 사건 상한과 무관).
   await expect(page).toHaveURL(/\/career\/.+\/path$/);

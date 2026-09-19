@@ -1403,7 +1403,7 @@ function SummaryRow({ title, value }: { title: string; value?: string }) {
   );
 }
 
-/** "화면·플레이 설정" 접이식: 테마·모션 감소·텍스트 크기·온보딩 다시 보기. 사용자 결정
+/** "화면·플레이 설정" 접이식: 테마·모션 감소·텍스트 크기·선수 생성 화면. 사용자 결정
  * (2026-09-13, D-77): 시뮬레이션 기본 모드 항목은 제거됐다 — 모든 시즌은 항상 FAST로 시작한다. */
 function DisplayPlaySettings() {
   const theme = useUiStore((state) => state.theme);
@@ -1487,7 +1487,7 @@ function DisplayPlaySettings() {
                 온보딩
               </h3>
               <Link to="/onboarding" className={buttonClassName('secondary')} style={buttonStyle}>
-                온보딩 다시 보기
+                선수 생성 화면
               </Link>
             </div>
           </div>

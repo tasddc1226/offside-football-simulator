@@ -1,3 +1,4 @@
+import { freshEventPool } from './event-variety.js';
 import { selectChapter, type ChapterCandidateInput, type ChapterOpenResult } from './chapter.js';
 import { buildRenewalOffer, isRenewalWindowOpen, isYouthExitRequired } from './market.js';
 import { computeContractSeasonsRemaining } from './market-value.js';
@@ -212,7 +213,7 @@ export function selectOpenSlot(
 
   for (const slot of candidates) {
     if (slot.kind === 'EVENT') {
-      const ordinaryEvents = eligibleEvents.filter((event) => event.slot === undefined);
+      const ordinaryEvents = freshEventPool(eligibleEvents.filter((event) => event.slot === undefined), state, ruleset.eventSelectionRules);
       if (ordinaryEvents.length === 0) continue;
       let chosen = ordinaryEvents[0]!;
       let nextRngState = rngState;

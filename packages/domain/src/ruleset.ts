@@ -1,3 +1,4 @@
+import type { EventSelectionRules } from './event-variety.js';
 import type {
   AttributeKey,
   ChapterOutcomeKind,
@@ -515,6 +516,7 @@ export type LeagueCalendar = {
 
 // D-8: 룰셋 데이터는 콘텐츠 패키지가 소유하고, domain은 이 타입으로 입력만 받는다.
 export type Ruleset = {
+  eventSelectionRules?: EventSelectionRules | undefined;
   version: string;
   initialAge?: number | undefined;
   /** 1.5.0+: 커리어 시작 연도 표시용(진행 로직 미사용). */

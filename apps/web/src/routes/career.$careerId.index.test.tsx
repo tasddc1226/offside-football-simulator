@@ -393,6 +393,7 @@ describe('SCR-029 다음 결정 카드 분기', () => {
       within(nextAction).getByRole('heading', { level: 2, name: /^(다음 경기|다음 행동)$/ }),
     ).toBeInTheDocument();
 
+    fireEvent.click(screen.getByText('일정 · 리그 · 시즌 상세'));
     const leagueContext = screen.getByRole('region', { name: '현재 팀 리그 상황' });
     expect(within(leagueContext).getByText('아직 확정된 경기 없음')).toBeInTheDocument();
     expect(

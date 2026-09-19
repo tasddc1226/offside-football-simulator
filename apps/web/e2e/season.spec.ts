@@ -30,6 +30,7 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
   await expect(page.getByText('1/12 단계')).toBeVisible();
   await page.getByRole('tab', { name: '시즌' }).click();
+  await page.getByText('일정 · 리그 · 시즌 상세', { exact: true }).click();
   const seasonTimeline = page.getByLabel('시즌 진행 12 step');
   await expect(seasonTimeline).toBeVisible();
   await expect(seasonTimeline.locator('li')).toHaveCount(12);
@@ -45,10 +46,11 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
 
   // 시즌 탭(옛 일정 탭 병합): 시즌 대부분을 진행했으니 최소 한 경기는 스코어가 잡혀 있어야 한다.
   await page.getByRole('tab', { name: '시즌' }).click();
-  await expect(page.getByText(/\d+:\d+/).first()).toBeVisible();
+  await expect(page.getByLabel('최근 경기').getByText(/\d+ : \d+/).first()).toBeVisible();
 
   // 전술실 구역: 선발 순위 목록에 내 이름 행이 있다.
   await page.getByRole('tab', { name: '선수' }).click();
+  await page.getByText('선수 프로필 · 관계 · 주전 경쟁', { exact: true }).click();
   await expect(page.getByText('(나)')).toBeVisible();
 
   // SCR-033: "표시된 능력 × 가중치"가 헤더 Base OVR과 같다(인수 조건).

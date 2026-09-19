@@ -1,208 +1,212 @@
-// SCR-003 플레이 스타일·아키타입. draft 포지션의 아키타입 3개를 CompareCards로 비교하고
-// RadioGroup으로 하나 고른다. 잠재력·최종 OVR은 어디에도 보이지 않는다.
 import { useEffect, useRef, useState } from 'react';
-import {
-  Button,
-  ErrorState,
-  FootballMark,
-  RadioGroup,
-  RadioGroupItem,
-  ScreenIntro,
-  Skeleton,
-  Stepper,
-} from '@offside/ui';
-import { RETRYABLE_BY_CODE } from '@offside/contracts';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { Button } from '@offside/ui';
+import { ATTRIBUTE_KEYS } from '@offside/domain';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { rulesetForCareer } from '../engine/content.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
-import { POSITION_LABELS } from '../shared/labels.js';
-import {
-  archetypesForPosition,
-  attributeLabelList,
-  PLAYER_CREATION_CAREER_PHASE,
-  PLAYER_CREATION_STEPS,
-  topAttributeKeys,
-  relativeWeaknessAttributeKeys,
-} from '../shared/player-draft.js';
-import { useScreenState } from '../shared/screen-state.js';
+import { ATTRIBUTE_LABELS, POSITION_LABELS } from '../shared/labels.js';
+import { creationCandidates } from '../shared/creation-candidates.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
-
-export const Route = createFileRoute('/career/$careerId/style')({
-  component: StyleScreen,
-});
-
-const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
-const CAPTION_STYLE = {
-  fontSize: 'var(--os-fs-caption)',
-  lineHeight: 'var(--os-lh-caption)',
-} as const;
-
+import '../shared/creation-flow.css';
+export const Route = createFileRoute('/career/$careerId/style')({ component: StyleScreen });
 function StyleScreen() {
   const { careerId } = Route.useParams();
-  const navigate = useNavigate();
   const query = useCareer(careerId);
+  const navigate = useNavigate();
   const blocked = useCareerStepGuard(query.data?.state, 'SCR-003');
-  const updateDraftMutation = useCareerMutation('updateDraft');
-
-  const screen = useScreenState<never, Record<string, never>>({ kind: 'LOADING' });
-  const { state: screenState, toDraft, toCommitting, toError } = screen;
-
-  const [archetypeId, setArchetypeId] = useState<string>('');
-  const [error, setError] = useState<string | undefined>(undefined);
-  const seededRef = useRef(false);
-
+  const mutation = useCareerMutation('updateDraft');
   useEffect(() => {
-    platform.analytics.track('screen_viewed', {
-      screenId: 'SCR-003',
-      careerPhase: PLAYER_CREATION_CAREER_PHASE,
-    });
+    platform.analytics.track('screen_viewed', { screenId: 'SCR-003', careerPhase: 'YOUTH' });
   }, []);
-
+  const flight = useRef(false);
+  const [revealed, setRevealed] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const candidates = query.data
+    ? creationCandidates(query.data.state, rulesetForCareer(query.data.state))
+    : [];
+  const savedId = query.data?.state.player.draft.archetypeId;
+  const identity = `${careerId}:${query.data?.state.player.draft.position ?? ''}:${query.data?.state.player.draft.backgroundId ?? ''}`;
+  const candidateIds = candidates.map((candidate) => candidate.id).join(',');
   useEffect(() => {
-    if (blocked || query.data === undefined || seededRef.current) return;
-    seededRef.current = true;
-    setArchetypeId(query.data.state.player.draft.archetypeId ?? '');
-    toDraft({});
-  }, [blocked, query.data, toDraft]);
-
-  const committing = screenState.kind === 'COMMITTING';
-  const position = query.data?.state.player.draft.position;
-  const ruleset = query.data === undefined ? null : rulesetForCareer(query.data.state);
-
-  async function handleNext() {
-    if (archetypeId === '') {
-      setError('스타일을 하나 선택해 주세요.');
-      return;
-    }
-    setError(undefined);
-
-    const commandId = crypto.randomUUID();
-    toCommitting(commandId);
-
+    const validIds = candidateIds.split(',');
+    let opened: string[] = [];
+    let selection: string | null = savedId && validIds.includes(savedId) ? savedId : null;
     try {
-      const result = await updateDraftMutation.mutateAsync({ careerId, draft: { archetypeId } });
-      if (result.ok) {
-        void navigate({ to: '/career/$careerId/confirm', params: { careerId } });
-      } else {
-        toError({
-          code: result.error.code,
-          message: result.error.message,
-          retryable: RETRYABLE_BY_CODE[result.error.code],
-        });
-      }
+      const saved = JSON.parse(sessionStorage.getItem(`offside:candidates:${identity}`) ?? 'null');
+      if (Array.isArray(saved?.revealed))
+        opened = Array.from(
+          new Set(
+            saved.revealed.filter(
+              (id: unknown): id is string => typeof id === 'string' && validIds.includes(id),
+            ),
+          ),
+        );
+      if (typeof saved?.selected === 'string' && validIds.includes(saved.selected))
+        selection = saved.selected;
     } catch {
-      toError({
-        code: 'UNKNOWN',
-        message: '저장하지 못했습니다. 다시 시도해 주세요.',
-        retryable: true,
-      });
+      /* recover from the engine draft */
+    }
+    setRevealed(selection ? Array.from(new Set([...opened, selection])) : opened);
+    setSelected(selection);
+  }, [identity, savedId, candidateIds]);
+  function choose(id: string) {
+    const next = Array.from(new Set([...revealed, id]));
+    setRevealed(next);
+    setSelected(id);
+    try {
+      sessionStorage.setItem(
+        `offside:candidates:${identity}`,
+        JSON.stringify({ revealed: next, selected: id }),
+      );
+    } catch {
+      /* seed still preserves exact candidates */
     }
   }
-
-  if (blocked || screenState.kind === 'LOADING' || position === undefined || position === null) {
-    return (
-      <div className="flex flex-col gap-os-4" aria-label="불러오는 중">
-        <Skeleton className="h-os-8 w-full" />
-        <Skeleton className="h-os-8 w-full" />
-        <Skeleton className="h-os-8 w-full" />
-        <Skeleton className="h-os-8 w-full" />
-      </div>
-    );
+  function revealAll() {
+    const ids = candidates.map((c) => c.id);
+    setRevealed(ids);
+    setSelected(selected ?? ids[0]!);
+    try {
+      sessionStorage.setItem(
+        `offside:candidates:${identity}`,
+        JSON.stringify({ revealed: ids, selected: selected ?? ids[0] }),
+      );
+    } catch {
+      /* no-op */
+    }
   }
-
-  if (screenState.kind === 'ERROR') {
-    return (
-      <ErrorState
-        message={screenState.message}
-        {...(screenState.retryable ? { onRetry: () => void handleNext() } : {})}
-        recoveryAction={
-          <Button variant="secondary" onClick={() => toDraft({})}>
-            돌아가기
-          </Button>
-        }
-      />
-    );
+  async function submit() {
+    if (!selected || flight.current) return;
+    flight.current = true;
+    setError(null);
+    try {
+      const result = await mutation.mutateAsync({ careerId, draft: { archetypeId: selected } });
+      if (!result.ok) throw new Error(result.error.message);
+      await navigate({ to: '/career/$careerId/confirm', params: { careerId } });
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : '후보를 저장하지 못했습니다. 다시 시도해 주세요.',
+      );
+    } finally {
+      flight.current = false;
+    }
   }
-
-  if (ruleset === null) return null;
-  const archetypes = archetypesForPosition(ruleset, position);
-
+  if (blocked || !query.data) return <p role="status">후보를 준비하는 중…</p>;
+  const current = candidates.find((c) => c.id === selected);
+  const keys = current
+    ? ATTRIBUTE_KEYS.filter(
+        (key) => key !== 'goalkeeping' || query.data.state.player.draft.position === 'GK',
+      )
+        .slice()
+        .sort((a, b) => current.attributes[b] - current.attributes[a])
+        .slice(0, 6)
+    : [];
   return (
-    <div className="os-screen">
-      <Stepper steps={PLAYER_CREATION_STEPS} currentStepId="style" />
-      <ScreenIntro
-        eyebrow="선수 등록 · 플레이 스타일"
-        title="플레이 스타일을 고르세요"
-        description="모든 스타일에는 무기와 대가가 있습니다. 어떤 선수가 되고 싶은지 선택하세요."
-      />
-      <div className="flex items-center gap-os-3 border-y border-os-border py-os-3">
-        <div className="flex items-center gap-os-3">
-          <FootballMark className="h-os-6 w-os-6 shrink-0 text-os-accent" />
-          <div className="min-w-0 flex-1">
-            <p className="font-os font-semibold text-os-text">{query.data?.state.player.draft.name}</p>
-            <p className="os-muted" style={CAPTION_STYLE}>선호 포지션 · {POSITION_LABELS[position]}</p>
-          </div>
+    <div className="creation-flow">
+      <header className="creation-heading">
+        <div>
+          <p>SCOUT REPORT · 02</p>
+          <h1>세 가지 가능성</h1>
         </div>
-      </div>
-      <section className="flex flex-col gap-os-3" aria-labelledby="style-compare-heading">
-        <h2
-          id="style-compare-heading"
-          className="font-os font-semibold text-os-text"
-          style={H2_STYLE}
-        >
-          나의 경기 방식
-        </h2>
-        <p className="os-muted" style={CAPTION_STYLE}>
-          각 스타일의 핵심 능력과 상대적으로 약한 부분을 비교하세요. 같은 능력이 두 항목에 함께 나올 수 있습니다.
-        </p>
-
-        <RadioGroup
-          className="os-creation-style-grid"
-          aria-labelledby="style-compare-heading"
-          aria-describedby={error !== undefined ? 'style-error' : undefined}
-          value={archetypeId}
-          onValueChange={setArchetypeId}
-        >
-          {archetypes.map((archetype) => (
-            <RadioGroupItem
-              key={archetype.id}
-              value={archetype.id}
-              disabled={committing}
-              aria-label={`${archetype.name} 선택`}
-              className="os-creation-style-card"
+        <Link to="/career/$careerId/create" params={{ careerId }}>
+          수정
+        </Link>
+      </header>
+      <p className="creation-lead">
+        {query.data.state.player.draft.name} ·{' '}
+        {POSITION_LABELS[query.data.state.player.draft.position!]}
+        <br />
+        카드를 열어, 키우고 싶은 선수를 골라 보세요.
+      </p>
+      <div className="creation-candidates" aria-label="능력치 후보 3명">
+        {candidates.map((candidate, index) => {
+          const open = revealed.includes(candidate.id);
+          return (
+            <button
+              type="button"
+              key={candidate.id}
+              className="creation-candidate"
+              data-open={open}
+              aria-pressed={selected === candidate.id}
+              aria-label={open ? `${candidate.name} 후보 선택` : `후보 ${index + 1} 공개`}
+              onClick={() => choose(candidate.id)}
+              disabled={mutation.isPending}
             >
-              <span className="os-creation-style-card-title">
-                <strong>{archetype.name}</strong>
-                <span className="os-creation-selected-tag">
-                  {archetypeId === archetype.id ? '선택됨' : '선택'}
-                </span>
-              </span>
-              <p>{archetype.summary}</p>
-              <span className="os-creation-tradeoffs">
-                <span className="os-creation-tradeoff"><span>플레이 핵심</span>{attributeLabelList(topAttributeKeys(archetype, 3))}</span>
-                <span className="os-creation-tradeoff"><span>비교 열세</span>{attributeLabelList(relativeWeaknessAttributeKeys(ruleset, archetype, 2))}</span>
-              </span>
-            </RadioGroupItem>
-          ))}
-        </RadioGroup>
-        {error !== undefined ? (
-          <p id="style-error" role="alert" className="font-os text-os-danger" style={CAPTION_STYLE}>
-            {error}
-          </p>
-        ) : null}
+              <small>0{index + 1}</small>
+              <svg viewBox="0 0 72 80" aria-hidden="true">
+                <path
+                  d="M23 8 10 14 2 34 17 40 20 31 20 74 52 74 52 31 55 40 70 34 62 14 49 8Q36 22 23 8Z"
+                  fill="currentColor"
+                />
+                <text x="36" y="53" textAnchor="middle">
+                  {open ? candidate.ovr : '?'}
+                </text>
+              </svg>
+              <strong>{open ? candidate.name : '아직 모르는 나'}</strong>
+              <span>{open ? '후보 보기' : '눌러서 공개'}</span>
+            </button>
+          );
+        })}
+      </div>
+      <section className="creation-report" aria-label="후보 능력치" aria-live="polite">
+        {current ? (
+          <>
+            <div className="creation-report-heading">
+              <div>
+                <small>SCOUT REPORT</small>
+                <h2>{current.name}</h2>
+              </div>
+              <strong>
+                <small>OVR</small> {current.ovr}
+              </strong>
+            </div>
+            <p>{current.description}</p>
+            <div className="creation-bars">
+              {keys.map((key) => (
+                <div key={key}>
+                  <label htmlFor={`candidate-${key}`}>
+                    {ATTRIBUTE_LABELS[key]} <b>{current.attributes[key]}</b>
+                  </label>
+                  <meter
+                    id={`candidate-${key}`}
+                    min={0}
+                    max={100}
+                    value={current.attributes[key]}
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="creation-note">
+              실제로 시작할 능력치입니다. 같은 후보는 다시 열어도 바뀌지 않아요.
+            </p>
+          </>
+        ) : (
+          <div className="creation-empty">
+            <b>어떤 선수가 기다릴까요?</b>
+            <p>세 장의 카드에 서로 다른 강점이 담겨 있습니다.</p>
+          </div>
+        )}
+        {revealed.length < candidates.length && (
+          <button
+            type="button"
+            className="creation-open-all"
+            onClick={revealAll}
+            disabled={mutation.isPending}
+          >
+            3장 모두 열기
+          </button>
+        )}
       </section>
-
-      <div className="os-action-dock os-action-row">
-        <Button
-          variant="secondary"
-          disabled={committing}
-          onClick={() => void navigate({ to: '/career/$careerId/create', params: { careerId } })}
-        >
-          이전
-        </Button>
-        <Button variant="primary" onClick={() => void handleNext()} disabled={committing}>
-          {committing ? '저장하는 중' : '다음'}
+      {error && (
+        <p role="alert" className="creation-error">
+          {error}
+        </p>
+      )}
+      <div className="creation-action">
+        <Button onClick={() => void submit()} disabled={!current || mutation.isPending}>
+          {mutation.isPending ? '후보 저장 중…' : '이 후보로 진행 →'}
         </Button>
       </div>
     </div>

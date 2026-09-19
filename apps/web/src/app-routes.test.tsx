@@ -96,13 +96,6 @@ async function seedDraftCareer(): Promise<void> {
   await createCareer(engine, { simulationMode: 'FAST' });
 }
 
-/** UX-009: SCR-034 진입 시마다 뜨는 시네마틱 인트로를 걷어낸다. 인트로는 자체 rAF 스케줄로 자동
- * 진행되지만, 이 스킵 버튼(전체 화면 버튼, 접근성 이름 "탭하여 스킵")을 눌러 즉시 넘긴다 — jsdom의
- * requestAnimationFrame 지원 여부에 기존 슬라이드 단언들이 기대지 않게 한다. */
-async function skipCinematicIntro(): Promise<void> {
-  fireEvent.click(await screen.findByRole('button', { name: '탭하여 스킵' }));
-}
-
 async function openCareerDetails(): Promise<void> {
   fireEvent.click(screen.getByRole('link', { name: /선수단 관리/ }));
   fireEvent.click(await screen.findByText('상세 관리', { exact: true }));
@@ -110,6 +103,7 @@ async function openCareerDetails(): Promise<void> {
 }
 
 beforeEach(() => {
+  sessionStorage.clear();
   setTestEngine();
   queryClient.clear();
   useUiStore.setState({
@@ -125,18 +119,19 @@ describe('SCR-001 공개 소개 → SCR-034 온보딩', () => {
   it('첫 방문이고 커리어가 없으면 공개 소개에서 온보딩을 시작한다', async () => {
     const router = renderAt('/');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'OFFSIDE' })).toBeInTheDocument();
-    expect(screen.getByText(/이번 생은 프리미어리거!/)).toBeInTheDocument();
-    expect(screen.getByText(/유망주가 되어 훈련과 경기 사이의 선택/)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /이번 생은\s*프리미어리거\./ }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('19세 유망주에서, 나만의 레전드로.')).toBeInTheDocument();
+    expect(screen.getByLabelText('커리어 진행')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
 
     fireEvent.click(screen.getByRole('link', { name: '내 선수 만들기' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/onboarding'));
-    await skipCinematicIntro();
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
+        name: '선수 생성',
       }),
     ).toBeInTheDocument();
   });
@@ -155,107 +150,43 @@ describe('SCR-001 공개 소개 → SCR-034 온보딩', () => {
   });
 });
 
-describe('SCR-034 온보딩', () => {
-  it('"다음"으로 3장을 모두 이동하고 마지막 장에서 새 인생 시작 버튼과 복구 코드 문구를 보여준다', async () => {
+describe('SCR-034 선수 생성 입구', () => {
+  it('안내 슬라이드 없이 폼을 열고 제출 전에는 커리어를 만들지 않는다', async () => {
+    const engine = setTestEngine();
     renderAt('/onboarding');
-    await skipCinematicIntro();
-    await screen.findByRole('heading', {
-      level: 1,
-      name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: '다음' }));
-    expect(
-      await screen.findByRole('heading', { level: 1, name: '선택은 되돌릴 수 없습니다' }),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: '다음' }));
-    expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: '커리어를 다시 찾을 방법을 준비하세요',
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('커리어에는 VAR이 없다')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /새 인생 시작/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '선수 생성' })).toBeInTheDocument();
+    expect(screen.getByLabelText('이름')).toBeInTheDocument();
+    expect(await engine.client.listCareers()).toHaveLength(0);
   });
-
-  it('"건너뛰기"는 onboardingSeen을 저장하고 허브로 이동한다', async () => {
+  it('닫기는 기존 커리어를 유지하고 홈으로 돌아간다', async () => {
+    const engine = setTestEngine();
+    await seedDraftCareer();
     const router = renderAt('/onboarding');
-    await skipCinematicIntro();
-    await screen.findByRole('heading', {
-      level: 1,
-      name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: '건너뛰기' }));
-
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/');
-    });
-    expect(useUiStore.getState().onboardingSeen).toBe(true);
+    fireEvent.click(await screen.findByRole('link', { name: '선수 생성 닫기' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    expect(await engine.client.listCareers()).toHaveLength(1);
   });
-
-  it(
-    '새 인생 시작은 커리어를 한 번 만들고 브랜드 전환 뒤 SCR-002로 이동한다',
-    async () => {
-      const router = renderAt('/onboarding');
-      await skipCinematicIntro();
-      await screen.findByRole('heading', {
-        level: 1,
-        name: '한 명의 선수로, 축구 인생 전체를 플레이하세요',
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: '다음' }));
-      fireEvent.click(screen.getByRole('button', { name: '다음' }));
-      fireEvent.click(screen.getByRole('button', { name: /새 인생 시작/ }));
-
-      expect(await screen.findByText('새 인생이 시작됩니다')).toBeInTheDocument();
-
-      // UX-012: ScreenTransition은 3초 고정이다 — 실제 연출 시간을 그대로 검증하므로 기본
-      // waitFor 타임아웃(1000ms)보다 넉넉하게 잡는다.
-      await waitFor(
-        () => {
-          expect(router.state.location.pathname).toMatch(/^\/career\/.+\/create$/);
-        },
-        { timeout: 4000 },
-      );
-      expect(useUiStore.getState().onboardingSeen).toBe(true);
-      expect(
-        await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' }),
-      ).toBeInTheDocument();
-    },
-    8000,
-  );
+  it('동시 제출도 커리어 하나만 만들고 입력한 이름으로 후보 화면을 연다', async () => {
+    const engine = setTestEngine();
+    const router = renderAt('/onboarding');
+    fireEvent.change(await screen.findByLabelText('이름'), { target: { value: '김서준' } });
+    const next = screen.getByRole('button', { name: /다음 · 후보 카드 열기/ });
+    fireEvent.click(next);
+    fireEvent.click(next);
+    await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/career\/.+\/style$/));
+    expect(await engine.client.listCareers()).toHaveLength(1);
+    expect(useUiStore.getState().onboardingSeen).toBe(true);
+    expect(await screen.findByText(/김서준 ·/)).toBeInTheDocument();
+  });
 });
 
 describe('SCR-001 허브 - 빈 상태', () => {
-  beforeEach(() => {
-    useUiStore.setState({ onboardingSeen: true, reducedMotion: 'ON' });
-  });
-
-  it('"커리어 시작" 클릭 시 커리어를 만들고 SCR-002 자리표시로 이동한다', async () => {
+  it('커리어 시작은 바로 생성 폼으로 이동한다', async () => {
+    useUiStore.setState({ onboardingSeen: true });
     const router = renderAt('/');
-    await screen.findByRole('button', { name: '커리어 시작' });
-
-    fireEvent.click(screen.getByRole('button', { name: '커리어 시작' }));
-
-    await waitFor(() => {
-      expect(router.state.location.pathname).toMatch(/^\/career\/.+\/create$/);
-    });
-  });
-
-  it('같은 틱에 두 번 클릭해도 커리어를 하나만 만든다', async () => {
-    const engine = setTestEngine();
-    renderAt('/');
-    const button = await screen.findByRole('button', { name: '커리어 시작' });
-
-    fireEvent.click(button);
-    fireEvent.click(button);
-
-    await waitFor(async () => {
-      expect(await engine.client.listCareers()).toHaveLength(1);
-    });
+    fireEvent.click(await screen.findByRole('button', { name: '커리어 시작' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/onboarding'));
+    expect(await screen.findByLabelText('이름')).toBeInTheDocument();
   });
 });
 
@@ -318,7 +249,7 @@ describe('SCR-001 허브 - 카드', () => {
 
     // SCR-002를 한 번 방문해 ['career', careerId] 쿼리 캐시(staleTime 30s)를 채운다.
     renderAt(`/career/${careerId}/create`);
-    await screen.findByRole('heading', { level: 1, name: '다음 무대를 향해, 킥오프' });
+    await screen.findByRole('heading', { level: 1, name: '선수 생성' });
 
     renderAt('/');
     await screen.findByRole('heading', { level: 2, name: '이름 없는 선수' });
@@ -430,7 +361,9 @@ describe('SCR-030 설정: 서비스 정책 시트', () => {
     const router = renderAt('/settings?legal=terms');
 
     const dialog = await screen.findByRole('dialog', { name: '이용약관' });
-    expect(within(dialog).getByRole('heading', { level: 2, name: '서비스 정의' })).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('heading', { level: 2, name: '서비스 정의' }),
+    ).toBeInTheDocument();
     expect(router.state.location.search).toEqual({ legal: 'terms' });
   });
 

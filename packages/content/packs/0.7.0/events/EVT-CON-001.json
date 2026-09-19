@@ -1,0 +1,200 @@
+{
+  "id": "EVT-CON-001",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": {
+    "all": [
+      { "in": ["player.primaryPosition", ["W", "AM", "ST"]] },
+      { "eq": ["season.phase", "TRANSFER_WINDOW"] },
+      { "any": [{ "hasTag": ["career.tags", "주목받는_유망주"] }, { "gte": ["season.stats.goals", 3] }] }
+    ]
+  },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 1 },
+  "weight": 100,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "관심 표명, 잔류 협상 카드로",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "감독 신뢰 변동" },
+        { "label": "적합도 개선 가능", "target": "tacticalFit", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 50,
+          "title": "감독이 \"남으면 안쪽으로 쓰겠다\"",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-CON-001.A.A1.0",
+              "target": "tacticalFit",
+              "delta": 10,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-001.A.A1.1",
+              "target": "managerTrust",
+              "delta": 4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["협상"]
+        },
+        {
+          "id": "A2",
+          "kind": "NEUTRAL",
+          "weight": 50,
+          "title": "감독은 눈치만 챘다",
+          "cause": "딴 마음",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-001.A.A2.0",
+              "target": "managerTrust",
+              "delta": -5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-CON-001.A.A2.1",
+              "target": "morale",
+              "delta": 3,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "즉시 이적 (반 시즌 임대 형식)",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "적합도 큰 상승", "target": "tacticalFit", "direction": "UP" },
+        { "label": "신뢰·스쿼드 상태 초기화" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "새 팀, 새 감독",
+          "effects": [
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-CON-001.B.B1.0",
+              "target": "tacticalFit",
+              "delta": 80,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "REPLACE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-001.B.B1.1",
+              "target": "managerTrust",
+              "delta": 35,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "REPLACE"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-CON-001.B.B1.2",
+              "target": "squadStatus",
+              "delta": 45,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "REPLACE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-001.B.B1.3",
+              "target": "captain",
+              "delta": 50,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "REPLACE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-001.B.B1.4",
+              "target": "rival",
+              "delta": 50,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "REPLACE"
+            }
+          ],
+          "addTags": ["반시즌_임대"]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "잔류 선언",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "신뢰 상승", "target": "managerTrust", "direction": "UP" },
+        { "label": "역할 불일치 지속" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "라커룸이 반긴다",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-001.C.C1.0",
+              "target": "managerTrust",
+              "delta": 6,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-001.C.C1.1",
+              "target": "captain",
+              "delta": 5,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["원클럽_싹"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "여름 창이 열리자 다른 구단 육성팀에서 \"인사이드 포워드 자리가 비었다\"며 접근한다. 옮기면 역할은 맞지만 새 팀에서 다시 증명해야 한다."
+  }
+}

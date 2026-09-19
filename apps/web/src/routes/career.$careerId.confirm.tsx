@@ -10,7 +10,6 @@ import {
   OffsideLine,
   ScreenIntro,
   Skeleton,
-  Stepper,
   Toast,
 } from '@offside/ui';
 import { RETRYABLE_BY_CODE } from '@offside/contracts';
@@ -21,20 +20,13 @@ import { recordFunnelReached } from '../engine/funnel.js';
 import { useCareer, useCareerMutation } from '../engine/use-career.js';
 import { platform } from '../platform/index.js';
 import { GENDER_LABELS, POSITION_LABELS, PREFERRED_FOOT_LABELS } from '../shared/labels.js';
-import { currentTeamName } from '../shared/current-team.js';
-import {
-  attributeLabelList,
-  backgroundOpening,
-  PLAYER_CREATION_CAREER_PHASE,
-  PLAYER_CREATION_STEPS,
-  topAttributeKeys,
-} from '../shared/player-draft.js';
+import { PLAYER_CREATION_CAREER_PHASE } from '../shared/player-draft.js';
 import { screenForCareer } from '../shared/career-route.js';
 import { useScreenState } from '../shared/screen-state.js';
-import { useUiStore } from '../shared/ui-store.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
-import { PlayerCard } from '../shared/PlayerCard.js';
+import { creationCandidates } from '../shared/creation-candidates.js';
+import '../shared/creation-flow.css';
 import { GameCompletionTransition } from '../shared/game-presentation.js';
 import { SCREEN_ROUTES } from '../routes.js';
 
@@ -74,7 +66,6 @@ function ConfirmScreen() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const query = useCareer(careerId);
-  const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
 
   const [postConfirmInFlight, setPostConfirmInFlight] = useState(false);
   const [kickoffWaitFor, setKickoffWaitFor] = useState<Promise<void> | null>(null);
@@ -377,14 +368,11 @@ function ConfirmScreen() {
     );
   }
 
-  const { record, state } = query.data;
+  const { state } = query.data;
   const ruleset = rulesetForCareer(state);
   const draft = state.player.draft;
   const archetype = ruleset.archetypes.find((candidate) => candidate.id === draft.archetypeId);
   const background = ruleset.backgrounds.find((candidate) => candidate.id === draft.backgroundId);
-  const opening = background === undefined
-    ? undefined
-    : backgroundOpening(background.id, background.name);
 
   if (
     draft.name === null ||
@@ -397,61 +385,59 @@ function ConfirmScreen() {
     return null;
   }
 
+  const candidate = creationCandidates(state, ruleset).find(
+    (item) => item.id === draft.archetypeId,
+  );
   return (
-    <div className="os-screen">
-      <Stepper steps={PLAYER_CREATION_STEPS} currentStepId="confirm" />
-      <ScreenIntro
-        eyebrow="선수 등록 · 최종 확인"
-        title="확정 전 정보를 확인하세요"
-        description="당신이 만든 선수 카드입니다. 준비가 됐다면 첫 휘슬을 울리세요."
-      />
-
-      <PlayerCard
-        eyebrow="PLAYER PROFILE"
-        name={draft.name}
-        subtitle={`${POSITION_LABELS[draft.position]} · ${archetype.name}`}
-        rows={[
-          { label: '소속', value: currentTeamName(state, ruleset, teamNameOverrides) },
-          {
-            label: '국적',
-            value:
-              ruleset.nationalities.find((item) => item.code === draft.nationalityCode)?.name ??
-              draft.nationalityCode ??
-              '—',
-          },
-          { label: '주발', value: PREFERRED_FOOT_LABELS[draft.preferredFoot] },
-          { label: '선호 위치', value: POSITION_LABELS[draft.position] },
-          { label: '성별', value: GENDER_LABELS[draft.gender] },
-          { label: '출발 배경', value: background.name },
-          { label: '현재 상황', value: opening?.title ?? '다음 기회 준비' },
-          { label: '스타일의 주요 무기', value: attributeLabelList(topAttributeKeys(archetype, 3)) },
-          {
-            label: '룰셋 · 콘텐츠 팩',
-            value: `${record.rulesetVersion} / ${record.contentPackVersion}`,
-            numeric: true,
-          },
-        ]}
-      />
-      <p className="os-creation-note">
-        선호 포지션과 플레이 스타일은 고정된 출전 역할이나 결과를 보장하지 않습니다. 시작한 뒤에는
-        이 선수 정보를 되돌릴 수 없어요.
-      </p>
-
-      <div className="os-action-dock os-action-row">
+    <div className="creation-flow">
+      <header className="creation-heading">
+        <div>
+          <p>MY PLAYER · 03</p>
+          <h1>이번 생의 주인공</h1>
+        </div>
+        <span className="creation-ready">READY</span>
+      </header>
+      <p className="creation-lead">이제, 그라운드에서 이름을 남길 차례.</p>
+      <section className="creation-final-card" aria-label={`${draft.name} 선수 카드`}>
+        <div className="creation-final-top">
+          <span>{POSITION_LABELS[draft.position]}</span>
+          <span>
+            OVR <b>{candidate?.ovr ?? '—'}</b>
+          </span>
+        </div>
+        <div className="creation-final-jersey" aria-hidden="true">
+          {state.age}
+          <small>AGE</small>
+        </div>
+        <p>{archetype.name}</p>
+        <h2>{draft.name}</h2>
+        <div className="creation-final-facts">
+          <span>
+            {ruleset.nationalities.find((item) => item.code === draft.nationalityCode)?.name}
+          </span>
+          <span>{PREFERRED_FOOT_LABELS[draft.preferredFoot]}</span>
+          {draft.gender !== 'UNSPECIFIED' && <span>{GENDER_LABELS[draft.gender]}</span>}
+        </div>
+      </section>
+      <div className="creation-final-origin">
+        <span>나의 출발</span>
+        <strong>{background.name}</strong>
+        <p>{background.blurb}</p>
+      </div>
+      <p className="creation-note">시작하면 선수 정보와 능력치가 확정됩니다.</p>
+      <div className="creation-action creation-final-actions">
         <Button
           variant="secondary"
-          onClick={() => void navigate({ to: '/career/$careerId/create', params: { careerId } })}
+          onClick={() => void navigate({ to: '/career/$careerId/style', params: { careerId } })}
         >
-          수정
+          후보 다시 보기
         </Button>
         <Button
-          aria-label="KICKOFF"
-          variant="primary"
-          className="whitespace-nowrap"
+          aria-label="이 선수로 시작"
           onClick={() => void handleKickoff()}
           disabled={postConfirmInFlight}
         >
-          {postConfirmInFlight ? '확정하는 중' : 'KICKOFF · 커리어 시작'}
+          {postConfirmInFlight ? '시작하는 중…' : '이 선수로 시작 →'}
         </Button>
       </div>
     </div>

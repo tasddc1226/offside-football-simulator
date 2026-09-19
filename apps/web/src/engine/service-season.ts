@@ -14,6 +14,9 @@ const SERVICE_SEASON_KV_KEY = 'service-season:current';
 const STALE_TIME_MS = 5 * 60 * 1000;
 
 async function fetchServiceSeason(): Promise<ServiceSeasonCurrent> {
+  if (import.meta.env.DEV && import.meta.env.VITE_SIMULATOR_PREVIEW === 'true') {
+    return { ...FALLBACK_SERVICE_SEASON, id: 'svc_simulator_preview', name: '선수 육성 프리뷰', isTest: true, rulesetVersion: '2.0.0', contentPackVersion: '0.7.0' };
+  }
   const result = await getServiceSeasonCurrent();
   if (!result.ok) {
     throw new Error(result.error.message);

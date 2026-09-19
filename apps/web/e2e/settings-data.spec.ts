@@ -224,10 +224,13 @@ test('이 기기 데이터 삭제: 확인 → 온보딩 → 허브가 빈 상태
   });
 
   await page.goto('/onboarding');
-  await page.getByRole('button', { name: '건너뛰기' }).click();
+  await page.getByRole('link', { name: '선수 생성 닫기' }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.getByRole('button', { name: '커리어 시작' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/create$/);
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await page.getByLabel('이름').fill('김서준');
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await expect(page).toHaveURL(/\/style$/);
 
   await page.goto('/settings');
   // UX-013: 위험 작업은 맨 아래 위험 텍스트 링크다.
@@ -239,7 +242,7 @@ test('이 기기 데이터 삭제: 확인 → 온보딩 → 허브가 빈 상태
   await page.getByRole('dialog').getByRole('button', { name: '삭제' }).click();
 
   await expect(page).toHaveURL(/\/onboarding$/);
-  await page.getByRole('button', { name: '건너뛰기' }).click();
+  await page.getByRole('link', { name: '선수 생성 닫기' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(
     page.getByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),
