@@ -151,7 +151,7 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
   counts.screens += 1;
 
-  // SCR-010: 사인(확정) → 첫 계약 완료 카드 → 커리어 시작 → 대시보드.
+  // SCR-010: 사인(확정) → 첫 계약 완료 카드 → 복구 안내 → 대시보드.
   await page.getByRole('button', { name: '이름 입력' }).click();
   await page.getByRole('textbox', { name: '서명할 이름' }).fill('김서준');
   await page.getByRole('button', { name: '서명하고 계약 확정' }).click();
@@ -159,6 +159,11 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
   counts.screens += 1;
   await page.getByRole('button', { name: '커리어 시작' }).click();
+  counts.confirmations += 1;
+  await expect(page).toHaveURL(/\/confirm\?step=recovery&milestone=first-contract$/);
+  await expect(page.getByRole('heading', { name: '복구 코드를 저장하세요', level: 1 })).toBeVisible();
+  counts.screens += 1;
+  await page.getByRole('button', { name: '계속', exact: true }).click();
   counts.confirmations += 1;
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
   await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
