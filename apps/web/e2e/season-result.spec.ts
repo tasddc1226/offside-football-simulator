@@ -58,10 +58,13 @@ async function settleOneSeason(page: Page): Promise<void> {
 }
 
 test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보여주고 헤더 OVR과 일치한다', async ({ page }) => {
+  // 준비 단계의 마일스톤만 모션 감소로 진행한다. 결산 카운트업은 기본 모션으로 검증한다.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript((seed) => {
     window.localStorage.setItem('offside:e2e-seed', seed);
   }, E2E_SEASON_RESULT_SEED);
   await completeOnboardingThroughContract(page);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await settleOneSeason(page);
 
   const root = page.getByTestId('season-result');
