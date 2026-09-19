@@ -419,6 +419,11 @@ const PreContractRulesSchema = z.strictObject({
   bridgeEventIds: z.array(z.string().min(1)).min(1),
 });
 
+const ChapterSelectionRulesSchema = z.strictObject({
+  version: z.literal('LRU_V1'),
+  repeatCooldownSeasons: z.number().int().min(1).max(10),
+});
+
 export const OfferRulesSchema = z.strictObject({
   maxOffers: z.number().int().positive(),
   countBonusTags: z.array(z.string().min(1)),
@@ -1298,6 +1303,8 @@ export const RulesetSchema = z
       })
       .optional(),
     leagueLedgerRules: LeagueLedgerRulesSchema.optional(),
+    /** Issue #243: absent on every historical ruleset, so their selector order stays byte-stable. */
+    chapterSelectionRules: ChapterSelectionRulesSchema.optional(),
     positions: z.array(PositionSchema).min(1),
     archetypes: z.array(ArchetypeSchema),
     backgrounds: z.array(BackgroundSchema).min(1),

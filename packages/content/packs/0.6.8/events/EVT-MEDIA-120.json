@@ -1,0 +1,344 @@
+{
+  "id": "EVT-MEDIA-120",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "triggers": {
+    "all": [
+      {
+        "eq": [
+          "career.stage",
+          "PRO"
+        ]
+      },
+      {
+        "gte": [
+          "relationships.fans",
+          40
+        ]
+      }
+    ]
+  },
+  "exclusionTags": [
+    "T7034_PRESS_DONE"
+  ],
+  "cooldown": {
+    "steps": 8
+  },
+  "weight": 15,
+  "choices": [
+    {
+      "id": "A",
+      "label": "팀이 바꾼 흐름을 구체적으로 설명한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "팬 관계 상승 기회",
+          "target": "fans",
+          "direction": "UP"
+        },
+        {
+          "label": "미디어 반응 변동"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 76,
+          "title": "전술 설명이 경기의 맥락을 되살렸다",
+          "cause": "팀 중심의 구체적 답변",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-120.A.S0",
+              "target": "fans",
+              "delta": 4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-120_A_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-120.A.S1",
+              "target": "media",
+              "delta": 250,
+              "clamp": {
+                "min": 0,
+                "max": 10000
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-120_A_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MEDIA-121"
+            }
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 24,
+          "title": "긴 설명에서 핵심 문장이 잘려 나갔다",
+          "cause": "짧은 인터뷰 시간",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-120.A.F0",
+              "target": "media",
+              "delta": -150,
+              "clamp": {
+                "min": 0,
+                "max": 10000
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-120_A_F0"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MEDIA-122"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "내 실수를 먼저 인정하고 다음 장면을 말한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "팬 신뢰 상승 기회",
+          "target": "fans",
+          "direction": "UP"
+        },
+        {
+          "label": "사기 위험",
+          "target": "morale",
+          "direction": "DOWN"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 62,
+          "title": "솔직한 답변이 책임감으로 받아들여졌다",
+          "cause": "실수와 개선안을 함께 말함",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-120.B.S0",
+              "target": "fans",
+              "delta": 6,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-120_B_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-120.B.S1",
+              "target": "managerTrust",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-120_B_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MEDIA-121"
+            }
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 38,
+          "title": "실수 장면만 제목으로 남았다",
+          "cause": "맥락이 빠진 보도",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MEDIA-120.B.F0",
+              "target": "morale",
+              "delta": -3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-120_B_F0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-120.B.F1",
+              "target": "media",
+              "delta": -100,
+              "clamp": {
+                "min": 0,
+                "max": 10000
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-120_B_F1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MEDIA-122"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "짧게 답하고 다음 경기로 화제를 돌린다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "집중력 유지",
+          "target": "form",
+          "direction": "UP"
+        },
+        {
+          "label": "팬 반응 위험",
+          "target": "fans",
+          "direction": "DOWN"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "SUCCESS",
+          "weight": 64,
+          "title": "짧은 각오가 다음 경기의 메시지가 됐다",
+          "cause": "명확한 한 문장",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MEDIA-120.C.S0",
+              "target": "form",
+              "delta": 3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-120_C_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-120.C.S1",
+              "target": "media",
+              "delta": 100,
+              "clamp": {
+                "min": 0,
+                "max": 10000
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-120_C_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MEDIA-121"
+            }
+          ]
+        },
+        {
+          "id": "C2",
+          "kind": "FAIL",
+          "weight": 36,
+          "title": "질문을 피했다는 반응이 남았다",
+          "cause": "너무 짧았던 답변",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MEDIA-120.C.F0",
+              "target": "fans",
+              "delta": -3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MEDIA-120_C_F0"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MEDIA-122"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "접전 뒤 공동 인터뷰 요청이 들어왔다. 팬들은 투지를 묻고, 기자는 한 장면의 책임을 선수 개인에게 돌리려 한다."
+  }
+}

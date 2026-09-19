@@ -452,6 +452,7 @@ export function walkToNextDecision(
       // An injury discovered after the match must preserve the persistent debut reservation;
       // it cannot open a NATIONAL_DEBUT chapter on an unavailable appearance.
       nationalDebutReservation: injuryUnavailable ? null : nationalTeamState.pendingDebut,
+      chapterSelectionRules: ruleset.chapterSelectionRules,
     });
     matchesSoFar = [...matchesSoFar, ...matchResult.records];
     // T-3-001: MarketSummary.seasonIndex는 "시장이 열린 시점의 seasonHistory.length"(D-43) — season.index

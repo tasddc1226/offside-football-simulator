@@ -1,0 +1,91 @@
+{
+  "id": "EVT-INJ-130",
+  "version": 1,
+  "phases": ["IN_SEASON"],
+  "triggers": {
+    "all": [
+      { "eq": ["career.stage", "PRO"] },
+      { "eq": ["health.injuryEpisode", "0"] },
+      { "gte": ["health.majorInjuries", 1] },
+      { "lte": ["state.fitness", 80] }
+    ]
+  },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 2 },
+  "weight": 34,
+  "minAge": 28,
+  "safety": { "minorSafe": true },
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "회복 루틴을 먼저 점검한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "체력 상승", "target": "fitness", "direction": "UP" },
+        { "label": "폼 소폭 하락", "target": "form", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "회복 시간을 확보해 몸 상태를 정돈했다",
+          "cause": "회복 루틴 점검",
+          "effects": [
+            { "kind": "CURRENT", "sourceId": "EVT-INJ-130.A.A1.0", "target": "fitness", "delta": 6, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" },
+            { "kind": "CURRENT", "sourceId": "EVT-INJ-130.A.A1.1", "target": "form", "delta": -2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 1 }, "stackingRule": "SUM" }
+          ],
+          "addTags": ["베테랑_회복루틴"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "의료진과 움직임 영상을 확인한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "폼 상승", "target": "form", "direction": "UP" },
+        { "label": "사기 소폭 상승", "target": "morale", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "몸에 부담을 주는 움직임을 찾아냈다",
+          "cause": "움직임 점검",
+          "effects": [
+            { "kind": "CURRENT", "sourceId": "EVT-INJ-130.B.B1.0", "target": "form", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" },
+            { "kind": "CURRENT", "sourceId": "EVT-INJ-130.B.B1.1", "target": "morale", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "평소 준비 과정을 그대로 유지한다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "감독 신뢰 소폭 상승", "target": "managerTrust", "direction": "UP" },
+        { "label": "체력 소폭 하락", "target": "fitness", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "준비 리듬을 유지하며 훈련을 마쳤다",
+          "cause": "기존 루틴 유지",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-INJ-130.C.C1.0", "target": "managerTrust", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" },
+            { "kind": "CURRENT", "sourceId": "EVT-INJ-130.C.C1.1", "target": "fitness", "delta": -2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 1 }, "stackingRule": "SUM" }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "현재 치료 중인 부상은 없지만 의료진이 과거 큰 부상 기록과 최근 체력 수치를 함께 살펴보자고 한다. 이번 주 몸 관리 방식을 정할 차례다."
+  }
+}

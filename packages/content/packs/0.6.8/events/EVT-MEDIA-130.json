@@ -1,0 +1,90 @@
+{
+  "id": "EVT-MEDIA-130",
+  "version": 1,
+  "phases": ["IN_SEASON"],
+  "triggers": {
+    "all": [
+      { "eq": ["career.stage", "PRO"] },
+      { "gte": ["career.proSeasons", 7] }
+    ]
+  },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 2 },
+  "weight": 30,
+  "minAge": 31,
+  "safety": { "minorSafe": true },
+  "presentation": "MEDIA",
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "팀의 기준을 세우는 역할을 말한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "주장 관계 상승", "target": "captain", "direction": "UP" },
+        { "label": "팬 지지 상승", "target": "fans", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "팀을 먼저 말하는 답변이 신뢰를 얻었다",
+          "cause": "팀 역할 강조",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-MEDIA-130.A.A1.0", "target": "captain", "delta": 5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM", "reasonTag": "VETERAN_TEAM_ROLE" },
+            { "kind": "RELATION", "sourceId": "EVT-MEDIA-130.A.A1.1", "target": "fans", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+          ],
+          "addTags": ["베테랑_팀우선"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "지금도 경기력으로 평가받겠다고 답한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "폼 상승", "target": "form", "direction": "UP" },
+        { "label": "감독 신뢰 상승", "target": "managerTrust", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "현재의 경쟁력에 초점을 맞췄다",
+          "cause": "경기력 강조",
+          "effects": [
+            { "kind": "CURRENT", "sourceId": "EVT-MEDIA-130.B.B1.0", "target": "form", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" },
+            { "kind": "RELATION", "sourceId": "EVT-MEDIA-130.B.B1.1", "target": "managerTrust", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "후배들이 편하게 성장할 환경을 말한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "주장 관계 상승", "target": "captain", "direction": "UP" },
+        { "label": "사기 상승", "target": "morale", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "후배를 향한 책임감이 팀에 전달됐다",
+          "cause": "성장 환경 강조",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-MEDIA-130.C.C1.0", "target": "captain", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" },
+            { "kind": "CURRENT", "sourceId": "EVT-MEDIA-130.C.C1.1", "target": "morale", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "인터뷰에서 오랜 경험을 가진 선수로서 경기 외에 어떤 역할을 맡고 싶은지 묻는다. 질문은 지금 팀에서의 책임에 초점이 맞춰져 있다."
+  }
+}

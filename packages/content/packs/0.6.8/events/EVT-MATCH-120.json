@@ -1,0 +1,346 @@
+{
+  "id": "EVT-MATCH-120",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "triggers": {
+    "all": [
+      {
+        "eq": [
+          "career.stage",
+          "PRO"
+        ]
+      },
+      {
+        "notIn": [
+          "player.positionGroup",
+          [
+            "GK"
+          ]
+        ]
+      },
+      {
+        "in": [
+          "career.currentRole",
+          [
+            "BENCH",
+            "RESERVE"
+          ]
+        ]
+      },
+      {
+        "gte": [
+          "state.fitness",
+          55
+        ]
+      }
+    ]
+  },
+  "exclusionTags": [
+    "T7034_COMEBACK_DONE"
+  ],
+  "cooldown": {
+    "steps": 8
+  },
+  "weight": 20,
+  "choices": [
+    {
+      "id": "A",
+      "label": "첫 두 번의 수비 전환에 집중한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "감독 신뢰 상승 기회",
+          "target": "managerTrust",
+          "direction": "UP"
+        },
+        {
+          "label": "공격 인상은 제한적"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 76,
+          "title": "투입 직후 두 번의 전환을 정확히 막았다",
+          "cause": "우선순위를 좁힌 준비",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MATCH-120.A.S0",
+              "target": "managerTrust",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-120_A_S0"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MATCH-120.A.S1",
+              "target": "squadStatus",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-120_A_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MATCH-121"
+            }
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 24,
+          "title": "수비에 힘을 쓴 뒤 공격 전환이 늦었다",
+          "cause": "짧은 출전 시간의 체력 배분",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MATCH-120.A.F0",
+              "target": "fitness",
+              "delta": -2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-120_A_F0"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MATCH-122"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "공을 받으면 곧바로 전진 패스를 노린다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "폼 상승 기회",
+          "target": "form",
+          "direction": "UP"
+        },
+        {
+          "label": "감독 평가 위험",
+          "target": "managerTrust",
+          "direction": "DOWN"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 61,
+          "title": "첫 전진 패스가 경기의 속도를 바꿨다",
+          "cause": "준비한 빠른 판단",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MATCH-120.B.S0",
+              "target": "form",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-120_B_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MATCH-120.B.S1",
+              "target": "fans",
+              "delta": 3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-120_B_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MATCH-121"
+            }
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 39,
+          "title": "무리한 패스가 곧바로 역습으로 이어졌다",
+          "cause": "첫 장면의 높은 위험",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MATCH-120.B.F0",
+              "target": "managerTrust",
+              "delta": -3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-120_B_F0"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MATCH-122"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "동료에게 필요한 움직임을 먼저 묻는다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "동료 관계 상승",
+          "target": "captain",
+          "direction": "UP"
+        },
+        {
+          "label": "개인 임팩트는 불확실"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "SUCCESS",
+          "weight": 79,
+          "title": "교체 전 약속한 움직임이 연결 장면을 만들었다",
+          "cause": "동료와 맞춘 역할",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-MATCH-120.C.S0",
+              "target": "captain",
+              "delta": 4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-120_C_S0"
+            },
+            {
+              "kind": "CONTEXT",
+              "sourceId": "EVT-MATCH-120.C.S1",
+              "target": "tacticalFit",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-120_C_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MATCH-121"
+            }
+          ]
+        },
+        {
+          "id": "C2",
+          "kind": "FAIL",
+          "weight": 21,
+          "title": "상황이 바뀌어 준비한 움직임을 쓰지 못했다",
+          "cause": "교체 직전 전술 변화",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-MATCH-120.C.F0",
+              "target": "morale",
+              "delta": -2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-MATCH-120_C_F0"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-MATCH-122"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "벤치에서 준비하던 중 코치가 후반 투입 상황을 세 가지로 나눠 설명했다. 짧은 시간에 무엇을 먼저 보여줄지 선택해야 한다."
+  }
+}

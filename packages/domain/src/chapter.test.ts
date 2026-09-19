@@ -299,6 +299,222 @@ describe('selectChapter', () => {
     const tieWinner = selectChapter(baseSelectInput({ candidates: [majorTieA, majorTieB] }));
     expect(tieWinner?.chapterId).toBe('CHP-A');
   });
+
+  it('과거 룰셋은 이전 시즌 해소 이력이 있어도 기존 weight > chapterId 순서를 그대로 쓴다', () => {
+    const candidates = [
+      makeCandidate({
+        chapterId: 'CHP-B',
+        trigger: { kind: 'TAG', tag: '프로_데뷔' },
+        weight: 70,
+        rotationGroup: 'POST_DEBUT',
+      }),
+      makeCandidate({
+        chapterId: 'CHP-A',
+        trigger: { kind: 'TAG', tag: '프로_데뷔' },
+        weight: 70,
+        rotationGroup: 'POST_DEBUT',
+      }),
+    ];
+    const winner = selectChapter(
+      baseSelectInput({
+        seasonIndex: 2,
+        tags: ['프로_데뷔'],
+        candidates,
+        resolvedChapterIds: ['CHP-A@1'],
+      }),
+    );
+    expect(winner?.chapterId).toBe('CHP-A');
+  });
+
+  it('LRU_V1은 DECIDER 변형을 모두 고른 뒤 오래전에 고른 순서로 회전하고 직전 시즌 반복을 막는다', () => {
+    const candidates = ['004', '008', '009', '010'].map((suffix) =>
+      makeCandidate({
+        chapterId: `CHP-MATCH-${suffix}`,
+        trigger: { kind: 'DECIDER', maxRankGap: 2 },
+        weight: 90,
+        rotationGroup: 'DECIDER',
+      }),
+    );
+    const nearPromotion: CompetitionRecord = {
+      competitionId: 'LEAGUE',
+      kind: 'LEAGUE',
+      played: 10,
+      won: 5,
+      drawn: 2,
+      lost: 3,
+      goalsFor: 10,
+      goalsAgainst: 8,
+      position: 2,
+      cupRound: null,
+    };
+    const rules = { version: 'LRU_V1', repeatCooldownSeasons: 1 } as const;
+    const resolvedChapterIds: string[] = [];
+    const selected: string[] = [];
+
+    for (let seasonIndex = 1; seasonIndex <= 8; seasonIndex += 1) {
+      const winner = selectChapter(
+        baseSelectInput({
+          seasonIndex,
+          candidates,
+          competitions: [nearPromotion],
+          resolvedChapterIds,
+          chapterSelectionRules: rules,
+        }),
+      );
+      expect(winner, `season ${seasonIndex}`).not.toBeNull();
+      selected.push(winner!.chapterId);
+      resolvedChapterIds.push(`${winner!.chapterId}@${seasonIndex}`);
+    }
+
+    expect(selected).toEqual([
+      'CHP-MATCH-004',
+      'CHP-MATCH-008',
+      'CHP-MATCH-009',
+      'CHP-MATCH-010',
+      'CHP-MATCH-004',
+      'CHP-MATCH-008',
+      'CHP-MATCH-009',
+      'CHP-MATCH-010',
+    ]);
+    expect(
+      selected.every((chapterId, index) => index === 0 || chapterId !== selected[index - 1]),
+    ).toBe(true);
+  });
+
+  it('LRU_V1은 선두 회전 그룹이 모두 cooldown이면 낮은 weight 후보로 우회하지 않고 null을 돌려준다', () => {
+    const candidate = makeCandidate({
+      chapterId: 'CHP-MATCH-008',
+      trigger: { kind: 'TAG', tag: '프로_데뷔' },
+      weight: 70,
+      rotationGroup: 'POST_DEBUT',
+    });
+    const lowerWeightFallback = makeCandidate({
+      chapterId: 'CHP-MATCH-099',
+      trigger: { kind: 'TAG', tag: '프로_데뷔' },
+      weight: 60,
+    });
+    expect(
+      selectChapter(
+        baseSelectInput({
+          seasonIndex: 2,
+          tags: ['프로_데뷔'],
+          candidates: [candidate, lowerWeightFallback],
+          resolvedChapterIds: ['CHP-MATCH-008@1'],
+          chapterSelectionRules: { version: 'LRU_V1', repeatCooldownSeasons: 1 },
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it('LRU_V1에서도 NATIONAL_DEBUT 우선과 DEBUT/INJURY_RETURN의 기존 weight/id 순서를 보존한다', () => {
+    const nationalReservation = { opponentId: 'nat-a', opponentName: '대표팀 A' };
+    const common = {
+      chapterSelectionRules: { version: 'LRU_V1', repeatCooldownSeasons: 1 } as const,
+      injuryReturnMatchId: 'm1',
+      nationalDebutReservation: nationalReservation,
+    };
+    const debut = makeCandidate({
+      chapterId: 'CHP-MATCH-001',
+      trigger: { kind: 'DEBUT' },
+      weight: 100,
+    });
+    const injury = makeCandidate({
+      chapterId: 'CHP-MATCH-003',
+      trigger: { kind: 'INJURY_RETURN' },
+      weight: 10,
+    });
+    const national = makeCandidate({
+      chapterId: 'CHP-NAT-001',
+      trigger: { kind: 'NATIONAL_DEBUT' },
+      weight: 1,
+    });
+
+    expect(
+      selectChapter(baseSelectInput({ ...common, candidates: [debut, injury, national] }))
+        ?.chapterId,
+    ).toBe('CHP-NAT-001');
+    expect(
+      selectChapter(
+        baseSelectInput({ ...common, nationalDebutReservation: null, candidates: [debut, injury] }),
+      )?.chapterId,
+    ).toBe('CHP-MATCH-001');
+    expect(
+      selectChapter(
+        baseSelectInput({ ...common, nationalDebutReservation: null, candidates: [injury] }),
+      )?.chapterId,
+    ).toBe('CHP-MATCH-003');
+  });
+
+  it('LRU_V1은 그룹 안에서도 기존 weight tier를 섞지 않는다', () => {
+    const candidates = [
+      makeCandidate({
+        chapterId: 'CHP-MATCH-008',
+        trigger: { kind: 'TAG', tag: '프로_데뷔' },
+        rotationGroup: 'POST_DEBUT',
+        weight: 80,
+      }),
+      makeCandidate({
+        chapterId: 'CHP-MATCH-009',
+        trigger: { kind: 'TAG', tag: '프로_데뷔' },
+        rotationGroup: 'POST_DEBUT',
+        weight: 70,
+      }),
+    ];
+    const winner = selectChapter(
+      baseSelectInput({
+        seasonIndex: 3,
+        tags: ['프로_데뷔'],
+        candidates,
+        resolvedChapterIds: ['CHP-MATCH-008@1'],
+        chapterSelectionRules: { version: 'LRU_V1', repeatCooldownSeasons: 1 },
+      }),
+    );
+    expect(winner?.chapterId).toBe('CHP-MATCH-008');
+  });
+
+  it('LRU_V1 회전 그룹에 잘못 섞인 reserved trigger는 일반 멤버 LRU에 포함하지 않는다', () => {
+    const candidates = [
+      makeCandidate({
+        chapterId: 'CHP-MATCH-008',
+        trigger: { kind: 'TAG', tag: '프로_데뷔' },
+        rotationGroup: 'POST_DEBUT',
+        weight: 100,
+      }),
+      makeCandidate({
+        chapterId: 'CHP-MATCH-099',
+        trigger: { kind: 'DEBUT' },
+        rotationGroup: 'POST_DEBUT',
+        weight: 100,
+      }),
+    ];
+    const winner = selectChapter(
+      baseSelectInput({
+        tags: ['프로_데뷔'],
+        candidates,
+        chapterSelectionRules: { version: 'LRU_V1', repeatCooldownSeasons: 1 },
+      }),
+    );
+    expect(winner?.chapterId).toBe('CHP-MATCH-008');
+  });
+
+  it('LRU_V1 cooldown=2는 두 시즌을 막고 세 번째 시즌 경계에서 다시 허용한다', () => {
+    const candidate = makeCandidate({
+      chapterId: 'CHP-MATCH-008',
+      trigger: { kind: 'TAG', tag: '프로_데뷔' },
+      rotationGroup: 'POST_DEBUT',
+    });
+    const common = {
+      tags: ['프로_데뷔'],
+      candidates: [candidate],
+      resolvedChapterIds: ['CHP-MATCH-008@1'],
+      chapterSelectionRules: { version: 'LRU_V1', repeatCooldownSeasons: 2 } as const,
+    };
+    expect(selectChapter(baseSelectInput({ ...common, seasonIndex: 2 }))).toBeNull();
+    expect(selectChapter(baseSelectInput({ ...common, seasonIndex: 3 }))).toBeNull();
+    expect(selectChapter(baseSelectInput({ ...common, seasonIndex: 4 }))?.chapterId).toBe(
+      'CHP-MATCH-008',
+    );
+  });
 });
 
 function makePendingChapter(overrides: Partial<Extract<Pending, { kind: 'CHAPTER' }>> = {}): Extract<Pending, { kind: 'CHAPTER' }> {

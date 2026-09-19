@@ -138,6 +138,27 @@ describe('loadRuleset: 1.7.3 issue #242 role balance', () => {
   });
 });
 
+describe('loadRuleset: 1.7.4 issue #243 chapter rotation', () => {
+  it('1.7.3을 보존하고 1.7.4에만 LRU_V1 opt-in을 추가한다', () => {
+    const previous = loadRuleset('1.7.3');
+    const ruleset = loadRuleset('1.7.4');
+
+    expect(RULESET_VERSIONS).toContain('1.7.4');
+    expect(previous.chapterSelectionRules).toBeUndefined();
+    expect(ruleset.chapterSelectionRules).toEqual({
+      version: 'LRU_V1',
+      repeatCooldownSeasons: 1,
+    });
+
+    const { version: previousVersion, ...previousRest } = previous;
+    const { version: nextVersion, chapterSelectionRules, ...nextRest } = ruleset;
+    expect(previousVersion).toBe('1.7.3');
+    expect(nextVersion).toBe('1.7.4');
+    expect(chapterSelectionRules).toBeDefined();
+    expect(nextRest).toEqual(previousRest);
+  });
+});
+
 // T-3-006 U-013: 팀 풀 8→12(YOUTH 1·1부 3·2부 4·3부 4). 시장 다양성 확보 목적.
 describe('loadRuleset: 팀 풀 12개(U-013)', () => {
   const ruleset = loadRuleset('1.0.0');

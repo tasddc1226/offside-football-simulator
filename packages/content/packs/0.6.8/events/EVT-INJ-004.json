@@ -1,0 +1,90 @@
+{
+  "id": "EVT-INJ-004",
+  "version": 1,
+  "phases": ["IN_SEASON"],
+  "triggers": {
+    "all": [
+      { "eq": ["career.stage", "PRO"] },
+      { "eq": ["health.injuryEpisode", "0"] },
+      { "gte": ["health.majorInjuries", 1] }
+    ]
+  },
+  "exclusionTags": [],
+  "cooldown": { "steps": 4 },
+  "weight": 20,
+  "safety": { "minorSafe": true },
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "완전히 쉰다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "체력 회복", "target": "fitness", "direction": "UP" },
+        { "label": "폼 소폭 하락", "target": "form", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "충분히 쉬고 몸을 회복했다",
+          "cause": "완전 휴식",
+          "effects": [
+            { "kind": "CURRENT", "sourceId": "EVT-INJ-004.A.A1.0", "target": "fitness", "delta": 8, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "CURRENT", "sourceId": "EVT-INJ-004.A.A1.1", "target": "form", "delta": -2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "ONCE_PER_SOURCE" }
+          ],
+          "addTags": ["재발_위험_관리"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "출전 시간을 제한한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "체력 소폭 회복", "target": "fitness", "direction": "UP" },
+        { "label": "폼 소폭 상승", "target": "form", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "제한된 시간만 뛰며 균형을 맞췄다",
+          "cause": "제한 출전",
+          "effects": [
+            { "kind": "CURRENT", "sourceId": "EVT-INJ-004.B.B1.0", "target": "fitness", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "CURRENT", "sourceId": "EVT-INJ-004.B.B1.1", "target": "form", "delta": 1, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "완전 출전을 강행한다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "체력 하락", "target": "fitness", "direction": "DOWN" },
+        { "label": "폼 크게 상승", "target": "form", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "무리해서 전 경기를 소화했다",
+          "cause": "완전 출전 강행",
+          "effects": [
+            { "kind": "CURRENT", "sourceId": "EVT-INJ-004.C.C1.0", "target": "fitness", "delta": -5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 3 }, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "CURRENT", "sourceId": "EVT-INJ-004.C.C1.1", "target": "form", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "ONCE_PER_SOURCE" }
+          ],
+          "addTags": ["재발_위험_방치"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "지난 부상 부위에서 다시 불편함이 느껴진다. 재발 위험을 감수하는 정도에 따라 이번 주 몸 관리 방식을 정해야 한다."
+  }
+}
