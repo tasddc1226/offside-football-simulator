@@ -92,7 +92,16 @@ export async function resolveCurrentEventScreen(
 ): Promise<void> {
   const firstChoice = page.getByRole('radio').first();
   await firstChoice.waitFor({ state: 'visible' });
-  options.onScreen?.((await page.getByRole('heading', { level: 1 }).first().innerText()).trim());
+  if (options.onScreen) {
+    // 사건 선택 시트가 열리면 배경 h1은 접근성 트리에서 숨겨진다.
+    const title = page
+      .getByRole('dialog')
+      .getByRole('heading')
+      .first()
+      .or(page.getByRole('heading', { level: 1 }))
+      .first();
+    options.onScreen((await title.innerText()).trim());
+  }
   await firstChoice.click();
   await page.getByRole('button', { name: '확정' }).click();
 
@@ -180,7 +189,19 @@ export async function signFirstOffer(
     await recoveryHeading.or(signedToast).first().waitFor({ state: 'visible' });
     if (await recoveryHeading.isVisible()) {
       if (options.stopAtRecovery === true) return;
-      await page.getByRole('button', { name: /^(저장했어요|계속)$/ }).click();
+      // 이미 복구 코드를 발급한 실제 프로필은 조회가 끝나면 이 화면을 자동 통과한다.
+      // 제목의 첫 렌더만 보고 버튼을 기다리면 이미 도착한 대시보드에서 멈춘다.
+      const dashboardUrl = /\/career\/[^/]+$/;
+      const continueButton = page.getByRole('button', { name: /^(저장했어요|계속)$/ });
+      await Promise.race([
+        page.waitForURL(dashboardUrl),
+        continueButton.waitFor({ state: 'visible' }),
+      ]);
+      if (!dashboardUrl.test(page.url())) {
+        await continueButton.click({ timeout: 5_000 }).catch((error: unknown) => {
+          if (!dashboardUrl.test(page.url())) throw error;
+        });
+      }
     }
 
     await expect(page).toHaveURL(/\/career\/[^/]+$/);
