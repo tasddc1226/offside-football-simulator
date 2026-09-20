@@ -338,7 +338,7 @@ function closePending(
     // 심사가 걸렸는데 마지막 계약 옵션(LAST_CONTRACT·LOWER_LEAGUE)이 있으면 그걸 받아 이어가고,
     // 없으면 기존 제안 처리로 넘어간다(그 뒤 시즌 경계에서 RETIRE된다).
     if (options.toRetirement && retirementDecisionRequired(state, runtime.ruleset.retirementRules ?? RETIREMENT_POLICY)) {
-      const continuation = retirementContinuationOptions(state)[0];
+      const continuation = retirementContinuationOptions(state, runtime.ruleset.retirementRules)[0];
       if (continuation !== undefined) {
         return doCommand(
           snapshot,

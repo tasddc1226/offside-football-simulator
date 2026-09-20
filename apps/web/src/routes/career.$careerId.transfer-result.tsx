@@ -40,11 +40,16 @@ export const Route = createFileRoute('/career/$careerId/transfer-result')({
   validateSearch: (search: Record<string, unknown>): TransferResultSearch => {
     const rev = parseRevision(search.rev);
     const interested = parseInterestedClubCount(search.interested);
-    return { ...(rev === undefined ? {} : { rev }), ...(interested === undefined ? {} : { interested }) };
+    return {
+      ...(rev === undefined ? {} : { rev }),
+      ...(interested === undefined ? {} : { interested }),
+    };
   },
   loaderDeps: ({ search }) => ({ rev: search.rev }),
   loader: async ({ params, deps }) => {
-    const { record, state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
+    const { record, state } = await queryClient.ensureQueryData(
+      careerQueryOptions(params.careerId),
+    );
     if (state.pending?.kind === 'LOAN_RETURN') return;
     const revision = deps.rev ?? latestTransferRevision(state);
     if (
@@ -61,7 +66,10 @@ export const Route = createFileRoute('/career/$careerId/transfer-result')({
 
 const H2_STYLE = { fontSize: 'var(--os-fs-h2)', lineHeight: 'var(--os-lh-h2)' } as const;
 const BODY_STYLE = { fontSize: 'var(--os-fs-body)', lineHeight: 'var(--os-lh-body)' } as const;
-const CAPTION_STYLE = { fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' } as const;
+const CAPTION_STYLE = {
+  fontSize: 'var(--os-fs-caption)',
+  lineHeight: 'var(--os-lh-caption)',
+} as const;
 
 /** 이슈 148: 복귀 후 역할 약속이 어떻게 정해지는지 한 줄. 도메인 판정값(`evaluateLoanReturnRole`)만 문구로 옮긴다. */
 function loanReturnRoleReason(evaluation: LoanReturnEvaluation, parentTier: string): string {
@@ -106,9 +114,15 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
   const loanTeamName =
     evaluation === null
       ? null
-      : (resolveTeamName(ruleset, evaluation.loanSeason.teamId, teamNameOverrides) ?? state.contract?.teamName ?? '임대 구단');
-  const parentTeamName = parent === null ? '' : (resolveTeamName(ruleset, parent.teamId, teamNameOverrides) ?? parent.teamName);
-  const parentTierLabel = parent === null ? '' : LEAGUE_TIER_LABEL_KO[parent.leagueTier];
+      : (resolveTeamName(ruleset, evaluation.loanSeason.teamId, teamNameOverrides) ??
+        state.contract?.teamName ??
+        '임대 구단');
+  const parentTeamName =
+    parent === null
+      ? ''
+      : (resolveTeamName(ruleset, parent.teamId, teamNameOverrides) ?? parent.teamName);
+  const parentTierLabel =
+    parent === null ? '' : (parent.leagueName ?? LEAGUE_TIER_LABEL_KO[parent.leagueTier]);
 
   async function recoverAfterResponseLoss(): Promise<number | null> {
     const refreshed = await query.refetch();
@@ -120,9 +134,17 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
     try {
       const refreshed = await query.refetch();
       if (refreshed.data?.state.pending?.kind !== 'LOAN_RETURN') {
-        const committedRevision = refreshed.data === undefined ? null : committedTransferRevision(refreshed.data.state, refreshed.data.record.revision);
+        const committedRevision =
+          refreshed.data === undefined
+            ? null
+            : committedTransferRevision(refreshed.data.state, refreshed.data.record.revision);
         if (committedRevision !== null) {
-          void navigate({ to: '/career/$careerId/transfer-result', params: { careerId }, search: { rev: committedRevision }, replace: true });
+          void navigate({
+            to: '/career/$careerId/transfer-result',
+            params: { careerId },
+            search: { rev: committedRevision },
+            replace: true,
+          });
           return;
         }
       }
@@ -145,11 +167,21 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
         return;
       }
       // 성공 응답이 오지 않은 경우에도 catch에서 refetch만 수행한다. decision을 바꿔 재전송하지 않는다.
-      void navigate({ to: '/career/$careerId/transfer-result', params: { careerId }, search: { rev: result.domainSnapshot.revision }, replace: true });
+      void navigate({
+        to: '/career/$careerId/transfer-result',
+        params: { careerId },
+        search: { rev: result.domainSnapshot.revision },
+        replace: true,
+      });
     } catch {
       const committedRevision = await recoverAfterResponseLoss().catch(() => null);
       if (committedRevision !== null) {
-        void navigate({ to: '/career/$careerId/transfer-result', params: { careerId }, search: { rev: committedRevision }, replace: true });
+        void navigate({
+          to: '/career/$careerId/transfer-result',
+          params: { careerId },
+          search: { rev: committedRevision },
+          replace: true,
+        });
         return;
       }
       setErrorMessage('응답을 확인하지 못했습니다. 저장 상태를 확인해 주세요.');
@@ -184,12 +216,15 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
             <div>
               <dt>출전 시간</dt>
               <dd className="os-num text-os-text">
-                {evaluation.loanSeason.minutes}분 ({Math.round(evaluation.loanSeason.minutesShareBp / 100)}%)
+                {evaluation.loanSeason.minutes}분 (
+                {Math.round(evaluation.loanSeason.minutesShareBp / 100)}%)
               </dd>
             </div>
             <div>
               <dt>평균 평점</dt>
-              <dd className="os-num text-os-text">{ratingText(evaluation.loanSeason.avgRatingTenths)}</dd>
+              <dd className="os-num text-os-text">
+                {ratingText(evaluation.loanSeason.avgRatingTenths)}
+              </dd>
             </div>
             {evaluation.loanSeason.goals !== null || evaluation.loanSeason.assists !== null ? (
               <div>
@@ -202,8 +237,13 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
           </dl>
           <div className="flex flex-col gap-os-1">
             <p className="os-eyebrow">복귀 후 역할</p>
-            <p className="font-os text-os-text" style={BODY_STYLE} data-testid="loan-return-role-reason">
-              원소속 {parentTeamName}({parentTierLabel}) · 역할 약속 {SQUAD_ROLE_LABELS[evaluation.parentRolePromise]}
+            <p
+              className="font-os text-os-text"
+              style={BODY_STYLE}
+              data-testid="loan-return-role-reason"
+            >
+              원소속 {parentTeamName}({parentTierLabel}) · 역할 약속{' '}
+              {SQUAD_ROLE_LABELS[evaluation.parentRolePromise]}
               {evaluation.applies ? ` → ${SQUAD_ROLE_LABELS[evaluation.reevaluatedRole]}` : ' 유지'}
             </p>
             <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
@@ -220,13 +260,27 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
           {loanPending.buyOptionMinor === null ? '없음' : formatKrw(loanPending.buyOptionMinor)}
         </p>
       </Card>
-      {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void refreshDecisionState()} retryLabel="저장 상태 다시 확인" /> : null}
+      {errorMessage ? (
+        <ErrorState
+          message={errorMessage}
+          onRetry={() => void refreshDecisionState()}
+          retryLabel="저장 상태 다시 확인"
+        />
+      ) : null}
       <div className="os-action-dock">
-        <Button variant="secondary" onClick={() => void decide('RETURN')} disabled={mutation.isPending}>
+        <Button
+          variant="secondary"
+          onClick={() => void decide('RETURN')}
+          disabled={mutation.isPending}
+        >
           원소속으로 복귀
         </Button>
         {loanPending.options.includes('PERMANENT') ? (
-          <Button variant="primary" onClick={() => void decide('PERMANENT')} disabled={mutation.isPending}>
+          <Button
+            variant="primary"
+            onClick={() => void decide('PERMANENT')}
+            disabled={mutation.isPending}
+          >
             임대 구단에 남기
           </Button>
         ) : null}
@@ -235,7 +289,15 @@ function LoanReturnDecision({ careerId }: { careerId: string }) {
   );
 }
 
-function ContractResult({ view, careerId, state }: { view: TransferResultView; careerId: string; state: Parameters<typeof transferResultNextScreen>[0] }) {
+function ContractResult({
+  view,
+  careerId,
+  state,
+}: {
+  view: TransferResultView;
+  careerId: string;
+  state: Parameters<typeof transferResultNextScreen>[0];
+}) {
   const ctaToPreseason = view.contract !== null && transferResultNextScreen(state) === 'PRESEASON';
   return (
     <div
@@ -263,7 +325,9 @@ function ContractResult({ view, careerId, state }: { view: TransferResultView; c
           </div>
           <div>
             <dt>Base OVR</dt>
-            <dd className="os-num text-os-text">{view.baseOvr.before} → {view.baseOvr.after}</dd>
+            <dd className="os-num text-os-text">
+              {view.baseOvr.before} → {view.baseOvr.after}
+            </dd>
           </div>
         </dl>
       </Card>
@@ -344,13 +408,19 @@ function TransferResultScreen() {
   const [announcement, setAnnouncement] = useState('');
 
   useEffect(() => {
-    platform.analytics.track('screen_viewed', { screenId: 'SCR-020', careerPhase: query.data?.state.seasonPhase ?? 'NONE' });
+    platform.analytics.track('screen_viewed', {
+      screenId: 'SCR-020',
+      careerPhase: query.data?.state.seasonPhase ?? 'NONE',
+    });
   }, []);
 
   const state = query.data?.state;
-  const revision = state === undefined ? null : rev ?? latestTransferRevision(state);
+  const revision = state === undefined ? null : (rev ?? latestTransferRevision(state));
   const view =
-    state === undefined || revision === null || query.data === undefined || !isCurrentTransferResultRevision(state, query.data.record.revision, revision)
+    state === undefined ||
+    revision === null ||
+    query.data === undefined ||
+    !isCurrentTransferResultRevision(state, query.data.record.revision, revision)
       ? null
       : resolveTransferResultView(state, revision, interested);
 
@@ -367,7 +437,8 @@ function TransferResultScreen() {
     );
   }
   const loadedState = query.data.state;
-  if (loadedState.pending?.kind === 'LOAN_RETURN') return <LoanReturnDecision careerId={careerId} />;
+  if (loadedState.pending?.kind === 'LOAN_RETURN')
+    return <LoanReturnDecision careerId={careerId} />;
   if (view === null) return null;
 
   return (

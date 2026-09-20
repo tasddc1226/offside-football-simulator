@@ -3,6 +3,7 @@ import { ATTRIBUTE_KEYS, type CareerState } from '@offside/domain';
 import { ATTRIBUTE_LABELS, SQUAD_ROLE_LABELS } from './labels.js';
 import { TRAINING_FOCUS_LABEL_KO } from './start-season.js';
 import './simulator.css';
+import { rulesetForCareer } from '../engine/content.js';
 
 export function careerMilestones(state: CareerState) {
   const records = state.seasonHistory.map((season) => season.result.playerStats);
@@ -116,6 +117,28 @@ export function SeasonDashboard({
   action: ReactNode;
 }) {
   const season = state.season;
+  const careerLength = rulesetForCareer(state).retirementRules?.maxCareerSeasons;
+  const years = state.seasonHistory.length;
+  const chapter =
+    years < 3
+      ? '가능성을 발견하다'
+      : years < 6
+        ? '나만의 무대를 찾다'
+        : years < 9
+          ? '전성기를 만들다'
+          : '무엇을 남길 것인가';
+  const developmentIdentity = [
+    ['육성_기술', '기술을 갈고닦는 선수'],
+    ['육성_몸', '체력으로 승부하는 선수'],
+    ['육성_판단', '경기를 읽는 선수'],
+    ['해외_경험', '낯선 무대를 경험한 선수'],
+    ['국내_정착', '내 팀에서 뿌리내리는 선수'],
+    ['재도전_준비', '다시 기회를 찾는 선수'],
+  ]
+    .filter(([tag]) => state.tags.includes(tag!))
+    .map(([, label]) => label)
+    .slice(0, 2)
+    .join(' · ');
   const stats = season?.playerStats;
   const recent = season?.matches.slice(-3).reverse() ?? [];
   const totals = stats?.totals;
@@ -139,6 +162,25 @@ export function SeasonDashboard({
       data-ruleset-version={state.rulesetVersion}
       data-content-pack-version={state.contentPackVersion}
     >
+      {careerLength !== undefined && (
+        <section className="sim-career-journey" aria-label="엔딩까지의 여정">
+          <div>
+            <p className="sim-kicker">MY FOOTBALL LIFE</p>
+            <h2>{chapter}</h2>
+          </div>
+          <strong>
+            {Math.min(years + 1, careerLength)} / {careerLength}
+            <small> 시즌</small>
+          </strong>
+          <progress max={careerLength} value={years} aria-label="완주한 커리어 시즌" />
+          {developmentIdentity && <p>{developmentIdentity}</p>}
+          <p>
+            {years >= careerLength
+              ? '마지막 선택을 하고 나의 축구 인생을 돌아보세요.'
+              : `엔딩까지 ${careerLength - years}시즌 · 중요한 순간은 직접 선택하세요.`}
+          </p>
+        </section>
+      )}
       <section className="sim-season-card" aria-label="이번 시즌 기록">
         <div className="sim-section-heading">
           <div>

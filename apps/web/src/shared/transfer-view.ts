@@ -31,7 +31,10 @@ export const MARKET_REASON_LABEL_KO: Record<
 
 export type CurrentContractSummary = { label: string; value: string };
 
-type ContractStintRange = Pick<CareerState['clubHistory'][number], 'contractId' | 'fromSeasonIndex' | 'toSeasonIndex'>;
+type ContractStintRange = Pick<
+  CareerState['clubHistory'][number],
+  'contractId' | 'fromSeasonIndex' | 'toSeasonIndex'
+>;
 
 function isRecordValue(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -42,7 +45,12 @@ function isPositiveSeasonIndex(value: unknown): value is number {
 }
 
 function isContractStintRange(value: unknown): value is ContractStintRange {
-  if (!isRecordValue(value) || typeof value.contractId !== 'string' || value.contractId.length === 0) return false;
+  if (
+    !isRecordValue(value) ||
+    typeof value.contractId !== 'string' ||
+    value.contractId.length === 0
+  )
+    return false;
   if (!isPositiveSeasonIndex(value.fromSeasonIndex)) return false;
   return value.toSeasonIndex === null || isPositiveSeasonIndex(value.toSeasonIndex);
 }
@@ -55,7 +63,11 @@ function isSeasonInCurrentContract(
 ): boolean | null {
   // decodeSnapshot은 state envelope만 검사하므로 구형/부분 snapshot이 런타임에 들어올 수 있다.
   // 귀속 메타가 없으면 전체 seasonHistory를 현재 계약으로 간주하지 않고 닫힌 값으로 처리한다.
-  if (typeof contract.id !== 'string' || contract.id.length === 0 || !isPositiveSeasonIndex(contract.signedSeasonIndex)) {
+  if (
+    typeof contract.id !== 'string' ||
+    contract.id.length === 0 ||
+    !isPositiveSeasonIndex(contract.signedSeasonIndex)
+  ) {
     return null;
   }
   if (!isPositiveSeasonIndex(seasonIndex)) return null;
@@ -64,10 +76,12 @@ function isSeasonInCurrentContract(
   if (!Array.isArray(rawClubHistory)) return null;
 
   const contractStints = rawClubHistory.filter(
-    (stint): stint is ContractStintRange => isContractStintRange(stint) && stint.contractId === contract.id,
+    (stint): stint is ContractStintRange =>
+      isContractStintRange(stint) && stint.contractId === contract.id,
   );
   const hasMalformedMatchingStint = rawClubHistory.some(
-    (stint) => isRecordValue(stint) && stint.contractId === contract.id && !isContractStintRange(stint),
+    (stint) =>
+      isRecordValue(stint) && stint.contractId === contract.id && !isContractStintRange(stint),
   );
   if (contractStints.length === 0 || hasMalformedMatchingStint) return null;
 
@@ -75,7 +89,9 @@ function isSeasonInCurrentContract(
   // 늦은 signedSeasonIndex를 함께 적용해야 갱신 전 시즌을 새 계약에 섞지 않는다.
   if (seasonIndex < contract.signedSeasonIndex) return false;
   return contractStints.some(
-    (stint) => seasonIndex >= stint.fromSeasonIndex && (stint.toSeasonIndex === null || seasonIndex <= stint.toSeasonIndex),
+    (stint) =>
+      seasonIndex >= stint.fromSeasonIndex &&
+      (stint.toSeasonIndex === null || seasonIndex <= stint.toSeasonIndex),
   );
 }
 
@@ -89,18 +105,22 @@ function fulfilledPromisesForCurrentContract(
   let fulfilledPromises = 0;
   for (const rawSummary of rawSeasonHistory) {
     if (!isRecordValue(rawSummary) || !isPositiveSeasonIndex(rawSummary.index)) return null;
-    if (!isRecordValue(rawSummary.result) || !isRecordValue(rawSummary.result.promiseFulfilment)) return null;
+    if (!isRecordValue(rawSummary.result) || !isRecordValue(rawSummary.result.promiseFulfilment))
+      return null;
     if (typeof rawSummary.result.promiseFulfilment.fulfilled !== 'boolean') return null;
 
     const belongsToCurrentContract = isSeasonInCurrentContract(state, contract, rawSummary.index);
     if (belongsToCurrentContract === null) return null;
-    if (belongsToCurrentContract && rawSummary.result.promiseFulfilment.fulfilled) fulfilledPromises += 1;
+    if (belongsToCurrentContract && rawSummary.result.promiseFulfilment.fulfilled)
+      fulfilledPromises += 1;
   }
   return fulfilledPromises;
 }
 
 function formatPromiseBreaches(contract: NonNullable<CareerState['contract']>): string {
-  return Number.isInteger(contract.promiseBreaches) && contract.promiseBreaches >= 0 ? `${contract.promiseBreaches}회` : '—';
+  return Number.isInteger(contract.promiseBreaches) && contract.promiseBreaches >= 0
+    ? `${contract.promiseBreaches}회`
+    : '—';
 }
 
 /** SCR-017 상단·SCR-029 휴대폰이 공유하는 현재 계약 공개 요약. */
@@ -109,12 +129,16 @@ export function buildCurrentContractSummary(state: CareerState): CurrentContract
   if (contract === null || contract === undefined) return [];
   const fulfilledPromises = fulfilledPromisesForCurrentContract(state, contract);
   const fulfilmentValue = fulfilledPromises === null ? '이행 —' : `이행 ${fulfilledPromises}회`;
-  const remainingSeasons = computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline);
+  const remainingSeasons = computeContractSeasonsRemaining(
+    contract.lengthSeasons,
+    contract.signedAtRevision,
+    state.timeline,
+  );
   return [
     // SCR-029 휴대폰의 기존 "팀"·"기간" 문구를 유지한다. SCR-017은 값의 의미로 현재
     // 계약을 설명하므로 별도 raw enum/내부 id 없이 같은 view-model을 재사용한다.
     { label: '팀', value: contract.teamName },
-    { label: '리그', value: LEAGUE_TIER_LABEL_KO[contract.leagueTier] },
+    { label: '리그', value: contract.leagueName ?? LEAGUE_TIER_LABEL_KO[contract.leagueTier] },
     { label: '기간', value: `${contract.lengthSeasons}시즌` },
     { label: '현재 역할', value: SQUAD_ROLE_LABELS[contract.rolePromise] },
     {
@@ -122,7 +146,10 @@ export function buildCurrentContractSummary(state: CareerState): CurrentContract
       value: remainingSeasons === 0 ? '현재 계약의 마지막 시즌' : `${remainingSeasons}시즌`,
     },
     { label: '현재 주급', value: formatKrw(contract.wageMinorPerWeek) },
-    { label: '출전 약속 이행/위반', value: `${fulfilmentValue} · 위반 ${formatPromiseBreaches(contract)}` },
+    {
+      label: '출전 약속 이행/위반',
+      value: `${fulfilmentValue} · 위반 ${formatPromiseBreaches(contract)}`,
+    },
   ];
 }
 
@@ -155,7 +182,11 @@ export function offerStatus(offer: Offer, revision: number): OfferStatus {
   return 'OPEN';
 }
 
-export function offerStatusLabel(offer: Offer, revision: number, safeOfferId: string | null): string {
+export function offerStatusLabel(
+  offer: Offer,
+  revision: number,
+  safeOfferId: string | null,
+): string {
   const status = offerStatus(offer, revision);
   if (status === 'WITHDRAWN') return '철회됨';
   if (status === 'EXPIRED') return '만료됨';
@@ -168,8 +199,15 @@ export function offerStatusLabel(offer: Offer, revision: number, safeOfferId: st
  * applied at its next revision, where domain `prepareMarketOffers` expires
  * offers before looking up the requested offer.
  */
-export function canNegotiateOffer(offer: Offer, recordRevision: number, ask: NegotiationAsk): boolean {
-  return offerStatus(offer, actionableRevision(recordRevision)) === 'OPEN' && offer.negotiable[negotiationKey(ask)];
+export function canNegotiateOffer(
+  offer: Offer,
+  recordRevision: number,
+  ask: NegotiationAsk,
+): boolean {
+  return (
+    offerStatus(offer, actionableRevision(recordRevision)) === 'OPEN' &&
+    offer.negotiable[negotiationKey(ask)]
+  );
 }
 
 /**
@@ -180,7 +218,11 @@ export function canNegotiateOffer(offer: Offer, recordRevision: number, ask: Neg
  * (운영 QA 141: WG·CM·ST에서 "역할 협상" 클릭 뒤 결과 없이 disabled). `canNegotiateOffer`는 그대로 두고
  * 호출부에서 두 함수를 함께 쓴다(이 함수가 null일 때만 활성).
  */
-export function negotiationDisabledReason(offer: Offer, recordRevision: number, ask: NegotiationAsk): string | null {
+export function negotiationDisabledReason(
+  offer: Offer,
+  recordRevision: number,
+  ask: NegotiationAsk,
+): string | null {
   if (offerStatus(offer, actionableRevision(recordRevision)) !== 'OPEN') {
     return '이 제안은 더 이상 열려 있지 않습니다';
   }
@@ -266,7 +308,9 @@ function negotiationValue(offer: Offer, ask: NegotiationAsk): string {
   }
 }
 
-function parseNegotiationRef(refId: string | null): { offerId: string; ask: NegotiationAsk; outcome: NegotiationOutcome } | null {
+function parseNegotiationRef(
+  refId: string | null,
+): { offerId: string; ask: NegotiationAsk; outcome: NegotiationOutcome } | null {
   if (refId === null) return null;
   const [offerId, ask, outcome] = refId.split(':');
   if (
@@ -291,7 +335,12 @@ export function buildNegotiationResultView(
 ): NegotiationResultView | null {
   const entry = [...snapshot.state.timeline]
     .reverse()
-    .find((candidate) => candidate.kind === 'NEGOTIATED' && candidate.revision === snapshot.revision && candidate.refId?.startsWith(`${beforeOffer.id}:`));
+    .find(
+      (candidate) =>
+        candidate.kind === 'NEGOTIATED' &&
+        candidate.revision === snapshot.revision &&
+        candidate.refId?.startsWith(`${beforeOffer.id}:`),
+    );
   const parsed = parseNegotiationRef(entry?.refId ?? null);
   if (parsed === null || parsed.offerId !== beforeOffer.id) return null;
 
@@ -306,7 +355,11 @@ export function buildNegotiationResultView(
     nextPending?.kind === 'OFFERS' || nextPending?.kind === 'CONTRACT'
       ? nextPending.offers
           .filter((candidate) => candidate.id !== beforeOffer.id)
-          .map((candidate) => ({ id: candidate.id, teamName: candidate.teamName, kind: OFFER_KIND_LABEL_KO[candidate.kind] }))
+          .map((candidate) => ({
+            id: candidate.id,
+            teamName: candidate.teamName,
+            kind: OFFER_KIND_LABEL_KO[candidate.kind],
+          }))
       : [];
 
   return {
@@ -327,7 +380,10 @@ export function buildNegotiationResultView(
 
 function formatCompetitorSummary(offer: Offer): string {
   if (offer.competitorSummary === null) return '—';
-  const gap = offer.competitorSummary.ovrGap > 0 ? `+${offer.competitorSummary.ovrGap}` : String(offer.competitorSummary.ovrGap);
+  const gap =
+    offer.competitorSummary.ovrGap > 0
+      ? `+${offer.competitorSummary.ovrGap}`
+      : String(offer.competitorSummary.ovrGap);
   return `${offer.competitorSummary.rank}위 · OVR 차이 ${gap} (내 선수 기준)`;
 }
 
@@ -344,11 +400,18 @@ export function offerProjectionNotice(
 
 function formatLoan(offer: Offer, parentTeamName: string | null): string {
   if (offer.loan === null) return '—';
-  const buy = offer.loan.buyOptionMinor === null ? '매입 옵션 없음' : `매입 ${formatKrw(offer.loan.buyOptionMinor)}`;
+  const buy =
+    offer.loan.buyOptionMinor === null
+      ? '매입 옵션 없음'
+      : `매입 ${formatKrw(offer.loan.buyOptionMinor)}`;
   return `${parentTeamName ?? '원소속'}에서 ${offer.loan.seasons}시즌 · 임금 ${formatMinutesShare(offer.loan.wageShareBp)} · ${buy}`;
 }
 
-function cellsFor<T>(offers: readonly Offer[], value: (offer: Offer) => T, render: (value: T) => string = String) {
+function cellsFor<T>(
+  offers: readonly Offer[],
+  value: (offer: Offer) => T,
+  render: (value: T) => string = String,
+) {
   const values = offers.map((offer) => render(value(offer)));
   const distinct = new Set(values);
   return values.map((text) => ({ value: text, highlighted: distinct.size > 1 && text !== '—' }));
@@ -363,25 +426,78 @@ export function buildOfferRows(
 ): CompareRow[] {
   const revision = actionableRevision(recordRevision);
   return [
-    { id: 'kind', label: '제안 종류', cells: cellsFor(offers, (offer) => OFFER_KIND_LABEL_KO[offer.kind]) },
-    { id: 'status', label: '상태', cells: cellsFor(offers, (offer) => offerStatusLabel(offer, revision, safeOfferId)) },
+    {
+      id: 'kind',
+      label: '제안 종류',
+      cells: cellsFor(offers, (offer) => OFFER_KIND_LABEL_KO[offer.kind]),
+    },
+    {
+      id: 'status',
+      label: '상태',
+      cells: cellsFor(offers, (offer) => offerStatusLabel(offer, revision, safeOfferId)),
+    },
     { id: 'team', label: '팀', cells: cellsFor(offers, (offer) => offer.teamName) },
-    { id: 'league', label: '리그', cells: cellsFor(offers, (offer) => LEAGUE_TIER_LABEL_KO[offer.leagueTier]) },
-    { id: 'length', label: '기간', cells: cellsFor(offers, (offer) => `${offer.lengthSeasons}시즌`) },
-    { id: 'wage', label: '주급', cells: cellsFor(offers, (offer) => formatKrw(offer.wageMinorPerWeek)) },
-    { id: 'bonus', label: '계약금', cells: cellsFor(offers, (offer) => formatKrw(offer.signingBonusMinor)) },
-    { id: 'transferFee', label: '이적료', cells: cellsFor(offers, (offer) => formatOptionalKrw(offer.transferFeeMinor)) },
-    { id: 'role', label: '역할 약속', cells: cellsFor(offers, (offer) => SQUAD_ROLE_LABELS[offer.rolePromise]) },
-    { id: 'appearance', label: '출전 약속', cells: cellsFor(offers, (offer) => formatMinutesShare(offer.appearancePromise.minutesShareBp)) },
-    { id: 'position', label: '포지션 계획', cells: cellsFor(offers, (offer) => POSITION_LABELS[offer.positionPlan]) },
-    { id: 'fit', label: '전술 적합도', cells: cellsFor(offers, (offer) => String(offer.tacticalFitEstimate)) },
+    {
+      id: 'league',
+      label: '리그',
+      cells: cellsFor(
+        offers,
+        (offer) => offer.leagueName ?? LEAGUE_TIER_LABEL_KO[offer.leagueTier],
+      ),
+    },
+    {
+      id: 'length',
+      label: '기간',
+      cells: cellsFor(offers, (offer) => `${offer.lengthSeasons}시즌`),
+    },
+    {
+      id: 'wage',
+      label: '주급',
+      cells: cellsFor(offers, (offer) => formatKrw(offer.wageMinorPerWeek)),
+    },
+    {
+      id: 'bonus',
+      label: '계약금',
+      cells: cellsFor(offers, (offer) => formatKrw(offer.signingBonusMinor)),
+    },
+    {
+      id: 'transferFee',
+      label: '이적료',
+      cells: cellsFor(offers, (offer) => formatOptionalKrw(offer.transferFeeMinor)),
+    },
+    {
+      id: 'role',
+      label: '역할 약속',
+      cells: cellsFor(offers, (offer) => SQUAD_ROLE_LABELS[offer.rolePromise]),
+    },
+    {
+      id: 'appearance',
+      label: '출전 약속',
+      cells: cellsFor(offers, (offer) =>
+        formatMinutesShare(offer.appearancePromise.minutesShareBp),
+      ),
+    },
+    {
+      id: 'position',
+      label: '포지션 계획',
+      cells: cellsFor(offers, (offer) => POSITION_LABELS[offer.positionPlan]),
+    },
+    {
+      id: 'fit',
+      label: '전술 적합도',
+      cells: cellsFor(offers, (offer) => String(offer.tacticalFitEstimate)),
+    },
     { id: 'competitor', label: '경쟁자 요약', cells: cellsFor(offers, formatCompetitorSummary) },
     {
       id: 'validity',
       label: '유효 기간',
       cells: cellsFor(offers, (offer) => formatOfferValidity(offer, recordRevision, revision)),
     },
-    { id: 'loan', label: '임대 조건', cells: cellsFor(offers, (offer) => formatLoan(offer, parentTeamName)) },
+    {
+      id: 'loan',
+      label: '임대 조건',
+      cells: cellsFor(offers, (offer) => formatLoan(offer, parentTeamName)),
+    },
   ];
 }
 
@@ -395,7 +511,7 @@ export function offerDetailRows(
   return [
     { label: '제안 종류', value: OFFER_KIND_LABEL_KO[offer.kind] },
     { label: '상태', value: offerStatusLabel(offer, revision, safeOfferId) },
-    { label: '리그', value: LEAGUE_TIER_LABEL_KO[offer.leagueTier] },
+    { label: '리그', value: offer.leagueName ?? LEAGUE_TIER_LABEL_KO[offer.leagueTier] },
     { label: '기간', value: `${offer.lengthSeasons}시즌` },
     { label: '주급', value: formatKrw(offer.wageMinorPerWeek) },
     { label: '계약금', value: formatKrw(offer.signingBonusMinor) },

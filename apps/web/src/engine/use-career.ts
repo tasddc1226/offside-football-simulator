@@ -1,11 +1,24 @@
 // React 훅(TanStack Query). 쿼리 키는 ['careers'] · ['career', careerId]다.
-import { queryOptions, useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
-import type { CareerState, ClubMeetingRequest, NegotiationAsk, PlayerDraft, SimulationMode } from '@offside/domain';
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+} from '@tanstack/react-query';
+import type {
+  CareerState,
+  ClubMeetingRequest,
+  NegotiationAsk,
+  PlayerDraft,
+  SimulationMode,
+} from '@offside/domain';
 import type { LocalCareerRecord } from '@offside/engine-client';
 import type { StartSeasonChoice } from './career-actions.js';
 import {
   acceptOffer,
   advance,
+  advanceToDecision,
   confirmPlayer,
   createCareer,
   deleteCareer,
@@ -73,6 +86,7 @@ export type CareerMutationKind =
   | 'updateDraft'
   | 'confirm'
   | 'advance'
+  | 'advanceToDecision'
   | 'delete'
   | 'resolveEvent'
   | 'acceptOffer'
@@ -109,6 +123,8 @@ async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
     }
     case 'confirm':
       return confirmPlayer(engine, (variables as CareerIdVariables).careerId);
+    case 'advanceToDecision':
+      return advanceToDecision(engine, (variables as CareerIdVariables).careerId);
     case 'advance':
       return advance(engine, (variables as CareerIdVariables).careerId);
     case 'delete':
@@ -166,6 +182,7 @@ type MutationDataFor<K extends CareerMutationKind> = K extends 'create'
     : K extends
           | 'confirm'
           | 'advance'
+          | 'advanceToDecision'
           | 'resolveEvent'
           | 'acceptOffer'
           | 'negotiateOffer'
@@ -199,9 +216,9 @@ type MutationVariablesFor<K extends CareerMutationKind> = K extends 'create'
                   ? ResolveRoleVariables
                   : K extends 'requestClubMeeting'
                     ? RequestClubMeetingVariables
-                  : K extends 'resolveChapter'
-                    ? ResolveChapterVariables
-                    : CareerIdVariables;
+                    : K extends 'resolveChapter'
+                      ? ResolveChapterVariables
+                      : CareerIdVariables;
 
 /**
  * 액션 실행 후 ['careers']와(있다면) ['career', careerId] 쿼리를 무효화한다. 'delete'는

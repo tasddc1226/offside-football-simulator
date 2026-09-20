@@ -46,6 +46,7 @@ export type Background = {
 // `squadStrength`는 주전 평균 Base OVR 목표(40~90)로, 경쟁자 Base OVR을 `squadStrength ± ovrSpread`
 // 안에 맞추는 기준값이다.
 export type Team = {
+  countryCode?: string | undefined;
   id: string;
   name: string;
   leagueTier: 'YOUTH' | 1 | 2 | 3;

@@ -13,15 +13,15 @@ export const PRODUCTION_SEASON = Object.freeze({
   id: 'svc_season_1',
   name: '시즌 1',
   status: 'ACTIVE',
-  rulesetVersion: '2.0.0',
-  contentPackVersion: '0.7.0',
+  rulesetVersion: '2.1.0',
+  contentPackVersion: '0.8.0',
   isTest: 0,
 });
 
 // decideSeason은 DB 행이 정확히 이 pair일 때만 PRODUCTION_SEASON으로 compare-and-set한다.
 export const PREVIOUS_PRODUCTION_VERSION = Object.freeze({
-  rulesetVersion: '1.7.2',
-  contentPackVersion: '0.6.6',
+  rulesetVersion: '2.0.0',
+  contentPackVersion: '0.7.0',
 });
 
 function rowsFromWrangler(value) {
@@ -142,15 +142,7 @@ export function decideSeason(candidateRows, proposal) {
     const actual = activeRows[0];
     const equal = Object.entries(proposal).every(([key, value]) => actual[key] === value);
     if (equal) return { action: 'noop', sql: null, rollbackSql: null };
-    const fixedKeys = [
-      'id',
-      'name',
-      'status',
-      'startsAt',
-      'endsAt',
-      'challengeSetId',
-      'isTest',
-    ];
+    const fixedKeys = ['id', 'name', 'status', 'startsAt', 'endsAt', 'challengeSetId', 'isTest'];
     const isExactPrevious =
       fixedKeys.every((key) => actual[key] === proposal[key]) &&
       actual.rulesetVersion === PREVIOUS_PRODUCTION_VERSION.rulesetVersion &&

@@ -230,6 +230,7 @@ export type Offer = {
   teamName: string;
   fromTeamId: string | null; // RENEWAL이면 현 구단 id, 그 외 null
   leagueTier: 'YOUTH' | 1 | 2 | 3;
+  leagueName?: string | undefined;
   lengthSeasons: number;
   wageMinorPerWeek: number;
   signingBonusMinor: number;
@@ -256,6 +257,7 @@ export type Contract = {
   teamId: string;
   teamName: string;
   leagueTier: 'YOUTH' | 1 | 2 | 3;
+  leagueName?: string | undefined;
   lengthSeasons: number;
   wageMinorPerWeek: number;
   signingBonusMinor: number;

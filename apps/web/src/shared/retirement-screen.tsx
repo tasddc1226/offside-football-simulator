@@ -18,7 +18,15 @@ import {
   type CareerArchiveCore,
   type LegacyResult,
 } from '@offside/domain';
-import { Button, Dialog, DialogContent, DialogTrigger, ScreenIntro, buttonClassName, buttonStyle } from '@offside/ui';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  ScreenIntro,
+  buttonClassName,
+  buttonStyle,
+} from '@offside/ui';
 import { LegacyScoreCard } from './legacy-score-card.js';
 import { GameResultReveal } from './game-presentation.js';
 import { getAppEngine } from '../engine/engine.js';
@@ -521,9 +529,7 @@ function TimelineRevision({
             {tournament.matches.length}경기 ·{' '}
             {tournament.medal === null
               ? '메달 없음'
-              : { GOLD: '금메달', SILVER: '은메달', BRONZE: '동메달' }[
-                  tournament.medal
-                ]}
+              : { GOLD: '금메달', SILVER: '은메달', BRONZE: '동메달' }[tournament.medal]}
           </p>
         ))}
     </li>
@@ -554,7 +560,12 @@ function TimelineList({
     <div className="os-endgame-stack">
       <ol className="os-endgame-timeline" aria-label="커리어 연대기">
         {primaryRevisions.map((revision) => (
-          <TimelineRevision state={state} revision={revision} startYear={startYear} key={revision} />
+          <TimelineRevision
+            state={state}
+            revision={revision}
+            startYear={startYear}
+            key={revision}
+          />
         ))}
       </ol>
       {routineRevisions.length ? (
@@ -562,7 +573,12 @@ function TimelineList({
           <summary>일상적인 시즌 진행 {routineRevisions.length}개 보기</summary>
           <ol className="os-endgame-timeline mt-os-3" aria-label="일상적인 시즌 진행 기록">
             {routineRevisions.map((revision) => (
-              <TimelineRevision state={state} revision={revision} startYear={startYear} key={revision} />
+              <TimelineRevision
+                state={state}
+                revision={revision}
+                startYear={startYear}
+                key={revision}
+              />
             ))}
           </ol>
         </details>
@@ -802,6 +818,9 @@ export function RetirementScreen({
   const terminal = state.status === 'RETIRED' || state.status === 'ARCHIVED';
   const profile = state.player.profile === null ? null : toPlayerPublic(state.player.profile);
   const retirementPolicy = rulesetForCareer(state).retirementRules ?? RETIREMENT_POLICY;
+  const journeyComplete =
+    retirementPolicy.maxCareerSeasons !== undefined &&
+    state.seasonHistory.length >= retirementPolicy.maxCareerSeasons;
   const assessment = assessCareerRetirement(state, 'UNDECIDED', retirementPolicy);
   const nationality = nationalityForCareer(state);
   const careerId = state.careerId;
@@ -833,7 +852,10 @@ export function RetirementScreen({
       })),
   );
   const retirementEntry = state.timeline.findLast((entry) => entry.kind === 'RETIRED');
-  const finalChoice = retirementEntry?.refId === 'COACH_EPILOGUE' ? '지도자로 이어지는 마지막 휘슬' : '선수로서 맞은 마지막 휘슬';
+  const finalChoice =
+    retirementEntry?.refId === 'COACH_EPILOGUE'
+      ? '지도자로 이어지는 마지막 휘슬'
+      : '선수로서 맞은 마지막 휘슬';
   const bestMoment = result?.sources.find((source) => source.sourceId === result.bestMomentRef);
   const milestones = archive === undefined ? [] : buildCareerMilestones(state, archive);
   const retrospectiveHighlights =
@@ -849,24 +871,28 @@ export function RetirementScreen({
             ? '커리어 돌아보기'
             : mode === 'retirement'
               ? terminal
-              ? '커리어 회고'
-              : '다음 시즌을 앞두고'
-            : mode === 'legacy'
-              ? 'Legacy Score'
-              : mode === 'timeline'
-                ? '커리어 연대기'
-                : '최종 프로필'
+                ? '커리어 회고'
+                : journeyComplete
+                  ? '나의 축구 인생, 마지막 선택'
+                  : '다음 시즌을 앞두고'
+              : mode === 'legacy'
+                ? 'Legacy Score'
+                : mode === 'timeline'
+                  ? '커리어 연대기'
+                  : '최종 프로필'
         }
         description={
           terminal
             ? '마지막 선택과 실제 커리어 기록을 차례로 돌아봅니다.'
-            : '다음 시즌을 시작하거나, 지금까지의 선수 생활을 마무리할 수 있습니다.'
+            : journeyComplete
+              ? `${state.seasonHistory.length}시즌의 여정을 완주했습니다. 선수로 마무리할지, 지도자의 길로 이어갈지 선택하세요.`
+              : '다음 시즌을 시작하거나, 지금까지의 선수 생활을 마무리할 수 있습니다.'
         }
       />
       {(error ?? localError) ? <p role="alert">{error ?? localError}</p> : null}
       {!terminal && mode === 'retirement' ? (
         <>
-          {assessment === null ? null : (
+          {assessment === null || journeyComplete ? null : (
             <section className="os-panel os-endgame-section">
               <h2>선수 생활을 돌아볼 때</h2>
               <p className="os-endgame-callout">
@@ -884,7 +910,17 @@ export function RetirementScreen({
                   <dl className="os-endgame-stat-grid mt-os-3">
                     {Object.entries(assessment.factors).map(([key, value]) => (
                       <div className="os-endgame-stat" key={key}>
-                        <dt>{{ age: '연령', injury: '몸 상태', market: '시장 수요', opportunity: '출전 기회', intent: '은퇴 의향' }[key]}</dt>
+                        <dt>
+                          {
+                            {
+                              age: '연령',
+                              injury: '몸 상태',
+                              market: '시장 수요',
+                              opportunity: '출전 기회',
+                              intent: '은퇴 의향',
+                            }[key]
+                          }
+                        </dt>
                         <dd>{value}</dd>
                       </div>
                     ))}
@@ -893,42 +929,45 @@ export function RetirementScreen({
               ) : null}
             </section>
           )}
-          <section className="os-panel os-endgame-section">
-            <h2>커리어의 다른 선택</h2>
-            <p>복무 상태: {SERVICE_LABEL[nationality.serviceStatus]}</p>
-            <p>
-              게임용 단순화입니다. 축구 병행 경로는 현재 소속을 유지하며, 휴식 경로는 두 시즌 출전과
-              급여를 중단합니다. 메달에 따른 체육요원 경로도 실제 병역 자격을 판정하지 않습니다.
-            </p>
-            <div className="os-endgame-choice-grid">
-            {careerEventChoices(state, retirementPolicy).map((choice) => (
+          {!journeyComplete && (
+            <section className="os-panel os-endgame-section">
+              <h2>커리어의 다른 선택</h2>
+              <p>복무 상태: {SERVICE_LABEL[nationality.serviceStatus]}</p>
+              <p>
+                게임용 단순화입니다. 축구 병행 경로는 현재 소속을 유지하며, 휴식 경로는 두 시즌
+                출전과 급여를 중단합니다. 메달에 따른 체육요원 경로도 실제 병역 자격을 판정하지
+                않습니다.
+              </p>
+              <div className="os-endgame-choice-grid">
+                {careerEventChoices(state, retirementPolicy).map((choice) => (
+                  <Button
+                    key={choice}
+                    variant="secondary"
+                    disabled={pending || onCommand === undefined}
+                    onClick={() => void run({ type: 'CAREER_EVENT', payload: { choice } })}
+                  >
+                    {CHOICE_LABEL[choice]}
+                  </Button>
+                ))}
+              </div>
+            </section>
+          )}
+          <div className="os-endgame-choice-grid">
+            {retirementContinuationOptions(state, retirementPolicy).map((option) => (
               <Button
-                key={choice}
-                variant="secondary"
+                key={option.offerId}
                 disabled={pending || onCommand === undefined}
-                onClick={() => void run({ type: 'CAREER_EVENT', payload: { choice } })}
+                onClick={() =>
+                  void run({
+                    type: 'RETIRE',
+                    payload: { choice: option.choice, offerId: option.offerId },
+                  })
+                }
               >
-                {CHOICE_LABEL[choice]}
+                {option.teamName}에서 마지막 한 시즌
+                {option.choice === 'LOWER_LEAGUE' ? ' — 하부리그 도전' : ''}
               </Button>
             ))}
-            </div>
-          </section>
-          <div className="os-endgame-choice-grid">
-          {retirementContinuationOptions(state).map((option) => (
-            <Button
-              key={option.offerId}
-              disabled={pending || onCommand === undefined}
-              onClick={() =>
-                void run({
-                  type: 'RETIRE',
-                  payload: { choice: option.choice, offerId: option.offerId },
-                })
-              }
-            >
-              {option.teamName}에서 마지막 한 시즌
-              {option.choice === 'LOWER_LEAGUE' ? ' — 하부리그 도전' : ''}
-            </Button>
-          ))}
           </div>
           {state.seasonHistory.length > 0 &&
           state.season === null &&
@@ -980,33 +1019,91 @@ export function RetirementScreen({
         </>
       ) : null}
       {terminal && mode === 'retirement' && archive && result && retrospective === undefined ? (
-        <GameResultReveal fast={state.simulationMode === 'FAST'} announcement={`${profile?.name ?? '선수'}의 커리어 기록이 확정되었습니다`}>
+        <GameResultReveal
+          fast={state.simulationMode === 'FAST'}
+          announcement={`${profile?.name ?? '선수'}의 커리어 기록이 확정되었습니다`}
+        >
           <div className="os-endgame-stack">
             <section className="os-endgame-hero" aria-labelledby="career-recap-heading">
-              <p>FULL TIME · {retirementYear}년 · {state.age}세</p>
+              <p>
+                FULL TIME · {retirementYear}년 · {state.age}세
+              </p>
               <h2 id="career-recap-heading">{profile?.name}의 축구 인생</h2>
               <p>{finalChoice}. 기록은 변경되지 않는 커리어 보관 자료로 남습니다.</p>
             </section>
             <section className="os-panel os-endgame-section">
               <h2>통산 기록</h2>
               <dl className="os-endgame-stat-grid">
-                <div className="os-endgame-stat"><dt>시즌</dt><dd>{totalSeasonsPeriodLabel(startYear, archive.records.totals.seasons)}</dd></div>
-                <div className="os-endgame-stat"><dt>출전</dt><dd>{archive.records.totals.playedMatches}경기</dd></div>
-                <div className="os-endgame-stat"><dt>출전 시간</dt><dd>{archive.records.totals.minutes.toLocaleString('ko-KR')}분</dd></div>
-                <div className="os-endgame-stat"><dt>평균 평점</dt><dd>{archive.records.totals.averageRatingTenths === null ? '미집계' : (archive.records.totals.averageRatingTenths / 10).toFixed(1)}</dd></div>
+                <div className="os-endgame-stat">
+                  <dt>시즌</dt>
+                  <dd>{totalSeasonsPeriodLabel(startYear, archive.records.totals.seasons)}</dd>
+                </div>
+                <div className="os-endgame-stat">
+                  <dt>출전</dt>
+                  <dd>{archive.records.totals.playedMatches}경기</dd>
+                </div>
+                <div className="os-endgame-stat">
+                  <dt>출전 시간</dt>
+                  <dd>{archive.records.totals.minutes.toLocaleString('ko-KR')}분</dd>
+                </div>
+                <div className="os-endgame-stat">
+                  <dt>평균 평점</dt>
+                  <dd>
+                    {archive.records.totals.averageRatingTenths === null
+                      ? '미집계'
+                      : (archive.records.totals.averageRatingTenths / 10).toFixed(1)}
+                  </dd>
+                </div>
               </dl>
-              {bestMoment ? <button type="button" className="os-endgame-callout text-left" onClick={() => onSourceClick?.(bestMoment.sourceId)}>대표 장면 · {bestMoment.seasonIndex === null ? '마지막 선택' : seasonYearLabel(startYear, bestMoment.seasonIndex)} 기록 보기</button> : null}
+              {bestMoment ? (
+                <button
+                  type="button"
+                  className="os-endgame-callout text-left"
+                  onClick={() => onSourceClick?.(bestMoment.sourceId)}
+                >
+                  대표 장면 ·{' '}
+                  {bestMoment.seasonIndex === null
+                    ? '마지막 선택'
+                    : seasonYearLabel(startYear, bestMoment.seasonIndex)}{' '}
+                  기록 보기
+                </button>
+              ) : null}
             </section>
             <section className="os-panel os-endgame-section">
               <h2>가장 빛난 시즌</h2>
-              <p>{bestSeason ? `${seasonYearLabel(startYear, bestSeason.index)} · 평균 평점 ${(bestSeason.result.playerStats.ratingSumTenths / bestSeason.result.playerStats.ratedMatches / 10).toFixed(1)} · ${bestSeason.result.playerStats.minutes.toLocaleString('ko-KR')}분` : '10경기 이상 평점이 기록된 시즌이 없습니다.'}</p>
+              <p>
+                {bestSeason
+                  ? `${seasonYearLabel(startYear, bestSeason.index)} · 평균 평점 ${(bestSeason.result.playerStats.ratingSumTenths / bestSeason.result.playerStats.ratedMatches / 10).toFixed(1)} · ${bestSeason.result.playerStats.minutes.toLocaleString('ko-KR')}분`
+                  : '10경기 이상 평점이 기록된 시즌이 없습니다.'}
+              </p>
               <details>
                 <summary>구단·트로피·대표팀 기록</summary>
                 <div className="os-endgame-section mt-os-3">
-                  <ul>{archive.records.clubs.map((club) => <li key={club.teamId}>{state.clubHistory.find((stint) => stint.teamId === club.teamId)?.teamName ?? club.teamId} · {club.totals.seasons}시즌 · {club.totals.playedMatches}경기</li>)}</ul>
+                  <ul>
+                    {archive.records.clubs.map((club) => (
+                      <li key={club.teamId}>
+                        {state.clubHistory.find((stint) => stint.teamId === club.teamId)
+                          ?.teamName ?? club.teamId}{' '}
+                        · {club.totals.seasons}시즌 · {club.totals.playedMatches}경기
+                      </li>
+                    ))}
+                  </ul>
                   <h3>트로피 {trophies.length}개</h3>
-                  {trophies.length ? <ul>{trophies.map((trophy) => <li key={`${trophy.season}:${trophy.id}`}>{seasonYearLabel(startYear, trophy.season)} · {trophy.name}</li>)}</ul> : <p>기록된 우승이 없습니다.</p>}
-                  <p>성인 대표팀 {result.international.seniorCaps}회 · U23 {result.international.youthAppearances}회 (별도 집계)</p>
+                  {trophies.length ? (
+                    <ul>
+                      {trophies.map((trophy) => (
+                        <li key={`${trophy.season}:${trophy.id}`}>
+                          {seasonYearLabel(startYear, trophy.season)} · {trophy.name}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>기록된 우승이 없습니다.</p>
+                  )}
+                  <p>
+                    성인 대표팀 {result.international.seniorCaps}회 · U23{' '}
+                    {result.international.youthAppearances}회 (별도 집계)
+                  </p>
                   <p>복무 경로 · {SERVICE_LABEL[result.nationality.serviceStatus]}</p>
                   <p>
                     커리어 수입 · 게임 화폐 최소 단위:{' '}
@@ -1019,14 +1116,20 @@ export function RetirementScreen({
                 </div>
               </details>
             </section>
-            <section className="os-panel os-endgame-section" aria-labelledby="career-milestones-heading">
+            <section
+              className="os-panel os-endgame-section"
+              aria-labelledby="career-milestones-heading"
+            >
               <h2 id="career-milestones-heading">커리어 마일스톤</h2>
               {milestones.length > 0 ? (
                 <ul className="os-milestone-grid">
                   {milestones.map((milestone) => (
                     <li key={milestone.id}>
                       <span>{seasonYearLabel(startYear, milestone.seasonIndex)} 달성</span>
-                      <strong>{milestone.label} {milestone.value}{milestone.unit}</strong>
+                      <strong>
+                        {milestone.label} {milestone.value}
+                        {milestone.unit}
+                      </strong>
                     </li>
                   ))}
                 </ul>
@@ -1057,7 +1160,14 @@ export function RetirementScreen({
                 최종 기록 바로 보기
               </Link>
             </div>
-            <Link className={buttonClassName('primary')} style={buttonStyle} to="/career/$careerId/legacy" params={{ careerId }}>Legacy 평가 보기</Link>
+            <Link
+              className={buttonClassName('primary')}
+              style={buttonStyle}
+              to="/career/$careerId/legacy"
+              params={{ careerId }}
+            >
+              Legacy 평가 보기
+            </Link>
           </div>
         </GameResultReveal>
       ) : null}
@@ -1092,19 +1202,37 @@ export function RetirementScreen({
       ) : null}
       {terminal ? (
         <nav aria-label="은퇴 결과" className="os-panel os-endgame-nav">
-          <Link aria-current={mode === 'retirement' ? 'page' : undefined} to="/career/$careerId/retirement" params={{ careerId }}>
+          <Link
+            aria-current={mode === 'retirement' ? 'page' : undefined}
+            to="/career/$careerId/retirement"
+            params={{ careerId }}
+          >
             통산 기록
           </Link>
-          <Link aria-current={mode === 'legacy' ? 'page' : undefined} to="/career/$careerId/legacy" params={{ careerId }}>
+          <Link
+            aria-current={mode === 'legacy' ? 'page' : undefined}
+            to="/career/$careerId/legacy"
+            params={{ careerId }}
+          >
             Legacy Score
           </Link>
-          <Link aria-current={mode === 'timeline' ? 'page' : undefined} to="/career/$careerId/timeline" params={{ careerId }}>
+          <Link
+            aria-current={mode === 'timeline' ? 'page' : undefined}
+            to="/career/$careerId/timeline"
+            params={{ careerId }}
+          >
             연대기
           </Link>
-          <Link aria-current={mode === 'final-profile' ? 'page' : undefined} to="/career/$careerId/final-profile" params={{ careerId }}>
+          <Link
+            aria-current={mode === 'final-profile' ? 'page' : undefined}
+            to="/career/$careerId/final-profile"
+            params={{ careerId }}
+          >
             최종 프로필
           </Link>
-          <Link className="os-endgame-nav-wide" to="/">선수 보관함 · 새 커리어</Link>
+          <Link className="os-endgame-nav-wide" to="/">
+            선수 보관함 · 새 커리어
+          </Link>
         </nav>
       ) : null}
     </div>

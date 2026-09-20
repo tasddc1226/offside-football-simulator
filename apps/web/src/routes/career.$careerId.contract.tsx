@@ -60,7 +60,9 @@ export const Route = createFileRoute('/career/$careerId/contract')({
   }),
   loaderDeps: ({ search }) => ({ offerId: search.offerId }),
   loader: async ({ params, deps }) => {
-    const { record, state } = await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
+    const { record, state } = await queryClient.ensureQueryData(
+      careerQueryOptions(params.careerId),
+    );
     const pending = state.pending;
     const offer =
       pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT'
@@ -112,7 +114,12 @@ function NegotiationResultPanel({
         <h2 className="font-os font-semibold text-os-text" style={BODY_STYLE}>
           협상 결과
         </h2>
-        <p className="font-os text-os-text" style={BODY_STYLE} aria-live="polite" data-testid="negotiation-result-live">
+        <p
+          className="font-os text-os-text"
+          style={BODY_STYLE}
+          aria-live="polite"
+          data-testid="negotiation-result-live"
+        >
           {view.reason}
         </p>
         <dl className="grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
@@ -130,7 +137,9 @@ function NegotiationResultPanel({
           </div>
           <div>
             <dt>상태</dt>
-            <dd className="text-os-text">{view.outcome === 'COUNTERED' ? '협상된 제안' : '철회됨'}</dd>
+            <dd className="text-os-text">
+              {view.outcome === 'COUNTERED' ? '협상된 제안' : '철회됨'}
+            </dd>
           </div>
         </dl>
         <div>
@@ -138,7 +147,11 @@ function NegotiationResultPanel({
             남은 대안
           </h3>
           {view.remainingOffers.length > 0 ? (
-            <ul className="flex flex-col gap-os-1 font-os text-os-text-2" style={CAPTION_STYLE} aria-label="남은 대안">
+            <ul
+              className="flex flex-col gap-os-1 font-os text-os-text-2"
+              style={CAPTION_STYLE}
+              aria-label="남은 대안"
+            >
               {view.remainingOffers.map((candidate) => (
                 <li key={candidate.id}>
                   {candidate.teamName} · {candidate.kind}
@@ -187,7 +200,8 @@ function ContractScreen() {
   const [readySignatureFingerprint, setReadySignatureFingerprint] = useState<string | null>(null);
   const operationRef = useRef<PendingOperation | null>(null);
   const negotiationPanelRef = useRef<HTMLDivElement>(null);
-  const committing = acceptMutation.isPending || negotiateMutation.isPending || rejectMutation.isPending;
+  const committing =
+    acceptMutation.isPending || negotiateMutation.isPending || rejectMutation.isPending;
 
   useCommittingExitGuard(committing);
 
@@ -195,8 +209,14 @@ function ContractScreen() {
     if (query.data === undefined) return;
     const pending = query.data.state.pending;
     const screenId =
-      (pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT') && pending.market.reason === 'FIRST_CONTRACT' ? 'SCR-010' : 'SCR-017';
-    platform.analytics.track('screen_viewed', { screenId, careerPhase: query.data.state.seasonPhase });
+      (pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT') &&
+      pending.market.reason === 'FIRST_CONTRACT'
+        ? 'SCR-010'
+        : 'SCR-017';
+    platform.analytics.track('screen_viewed', {
+      screenId,
+      careerPhase: query.data.state.seasonPhase,
+    });
   }, [query.data?.record.revision, query.data?.state.pending?.kind]);
 
   // D-69: 협상 결과가 새로 생기면(성공·실패·철회 모두) 패널로 시선을 옮긴다. tabIndex=-1 노드로만
@@ -235,7 +255,11 @@ function ContractScreen() {
     }
     return (
       <div className="os-screen" aria-live="polite">
-        <ScreenIntro eyebrow="계약 체결 완료" title="프로의 첫 유니폼" description={`${firstContractCommit.playerName} 선수의 첫 프로 계약이 저장되었습니다.`} />
+        <ScreenIntro
+          eyebrow="계약 체결 완료"
+          title="프로의 첫 유니폼"
+          description={`${firstContractCommit.playerName} 선수의 첫 프로 계약이 저장되었습니다.`}
+        />
         <PlayerCard
           eyebrow="WELCOME TO"
           name={firstContractCommit.playerName}
@@ -248,9 +272,13 @@ function ContractScreen() {
             { label: '기간', value: `${firstContractCommit.seasons}시즌`, numeric: true },
           ]}
         />
-        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>확정된 계약 내용은 커리어 기록에 그대로 남습니다.</p>
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          확정된 계약 내용은 커리어 기록에 그대로 남습니다.
+        </p>
         <div className="os-action-dock">
-          <Button variant="primary" onClick={() => setStartingFirstSeason(true)}>커리어 시작</Button>
+          <Button variant="primary" onClick={() => setStartingFirstSeason(true)}>
+            커리어 시작
+          </Button>
         </div>
       </div>
     );
@@ -289,7 +317,9 @@ function ContractScreen() {
   // TS가 pending의 null 좁힘을 유지하지 않으므로 여기서(narrowing이 되는 최상위 스코프) 미리 센다.
   const marketOfferCount = pending.offers.length;
   const firstContract = pending.market.reason === 'FIRST_CONTRACT';
-  const requiresSignature = !(pending.market.reason === 'INTEREST' && offer.id === pending.market.safeOfferId);
+  const requiresSignature = !(
+    pending.market.reason === 'INTEREST' && offer.id === pending.market.safeOfferId
+  );
   const signatureFingerprint = JSON.stringify({ careerId, revision: record.revision, offer });
   const signatureReady = readySignatureFingerprint === signatureFingerprint;
   const projectionNotice = offerProjectionNotice(state.rulesetVersion, pending.market.reason);
@@ -305,7 +335,10 @@ function ContractScreen() {
     void navigate({
       to: '/career/$careerId/transfer-result',
       params: { careerId },
-      search: interestedClubCount === undefined ? { rev: revision } : { rev: revision, interested: interestedClubCount },
+      search:
+        interestedClubCount === undefined
+          ? { rev: revision }
+          : { rev: revision, interested: interestedClubCount },
       replace: true,
     });
   }
@@ -333,7 +366,10 @@ function ContractScreen() {
           refreshedState.contract?.offerId === operation.offerId &&
           refreshedState.contract.signedAtRevision === refreshed.data.record.revision &&
           refreshedState.timeline.some(
-            (entry) => entry.revision === refreshed.data.record.revision && entry.kind === 'CONTRACT_SIGNED' && entry.refId === refreshedState.contract?.id,
+            (entry) =>
+              entry.revision === refreshed.data.record.revision &&
+              entry.kind === 'CONTRACT_SIGNED' &&
+              entry.refId === refreshedState.contract?.id,
           );
         if (firstContractCommitted) {
           // recordFunnelReached is idempotent; a lost response can safely retry only
@@ -348,7 +384,11 @@ function ContractScreen() {
           });
           return;
         }
-        const committedRevision = recoverCommittedRevision(refreshedState, refreshed.data.record.revision, operation.offerId);
+        const committedRevision = recoverCommittedRevision(
+          refreshedState,
+          refreshed.data.record.revision,
+          operation.offerId,
+        );
         if (committedRevision !== null && !firstContract) {
           goToResult(committedRevision);
           return;
@@ -363,14 +403,22 @@ function ContractScreen() {
           refreshedState.pending?.kind === 'OFFERS' || refreshedState.pending?.kind === 'CONTRACT'
             ? refreshedState.pending.offers.find((candidate) => candidate.id === operation.offerId)
             : undefined;
-        if (latestOffer === undefined || latestOffer.negotiationState !== operation.beforeNegotiationState) {
+        if (
+          latestOffer === undefined ||
+          latestOffer.negotiationState !== operation.beforeNegotiationState
+        ) {
           const resultView =
             operation.beforeOffer === undefined
               ? null
-              : buildNegotiationResultView(operation.beforeOffer, { revision: refreshed.data.record.revision, state: refreshedState });
+              : buildNegotiationResultView(operation.beforeOffer, {
+                  revision: refreshed.data.record.revision,
+                  state: refreshedState,
+                });
           if (resultView !== null) {
             setNegotiationResult(resultView);
-            setAnnouncement(`${resultView.teamName} ${resultView.askLabel} 협상 결과: ${resultView.before} → ${resultView.after}`);
+            setAnnouncement(
+              `${resultView.teamName} ${resultView.askLabel} 협상 결과: ${resultView.before} → ${resultView.after}`,
+            );
             operationRef.current = null;
             setErrorMessage(null);
             return;
@@ -389,16 +437,27 @@ function ContractScreen() {
           return;
         }
       }
-      setErrorMessage('저장 상태를 확인했지만 아직 결정이 반영되지 않았습니다. 제안 목록에서 다시 확인해 주세요.');
+      setErrorMessage(
+        '저장 상태를 확인했지만 아직 결정이 반영되지 않았습니다. 제안 목록에서 다시 확인해 주세요.',
+      );
     } catch {
       setErrorMessage('저장 상태를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
     }
   }
 
   async function handleAccept() {
-    if (submittingRef.current || !canAcceptOffer(selectedOffer, record.revision) || (requiresSignature && !signatureReady)) return;
+    if (
+      submittingRef.current ||
+      !canAcceptOffer(selectedOffer, record.revision) ||
+      (requiresSignature && !signatureReady)
+    )
+      return;
     submittingRef.current = true;
-    operationRef.current = { kind: 'accept', offerId, beforeNegotiationState: selectedOffer.negotiationState };
+    operationRef.current = {
+      kind: 'accept',
+      offerId,
+      beforeNegotiationState: selectedOffer.negotiationState,
+    };
     // INTEREST 시장 안전 잔류(안전 offerId 수락)는 결과 화면에 "관심을 보인 구단 N곳"을 보여준다.
     // buildStayState가 pending을 지워 도메인이 이 개수를 저장하지 않으므로, 수락 전 이 렌더의
     // pending에서 직접 센다(mutation 응답이 아니라 이미 로드된 조회 데이터라 유실 걱정이 없다).
@@ -418,13 +477,15 @@ function ContractScreen() {
         await recordFunnelReached(careerId, 'CONTRACT_SIGNED');
         const committed = result.domainSnapshot.state.contract;
         if (committed === null) {
-          setErrorMessage('계약은 처리됐지만 확정 내용을 불러오지 못했습니다. 저장 상태를 확인해 주세요.');
+          setErrorMessage(
+            '계약은 처리됐지만 확정 내용을 불러오지 못했습니다. 저장 상태를 확인해 주세요.',
+          );
           return;
         }
         setFirstContractCommit({
           teamId: committed.teamId,
           teamName: committed.teamName,
-          league: LEAGUE_TIER_LABEL_KO[committed.leagueTier],
+          league: committed.leagueName ?? LEAGUE_TIER_LABEL_KO[committed.leagueTier],
           role: SQUAD_ROLE_LABELS[committed.rolePromise],
           wage: formatKrw(committed.wageMinorPerWeek),
           seasons: committed.lengthSeasons,
@@ -481,7 +542,9 @@ function ContractScreen() {
         return;
       }
       setNegotiationResult(resultView);
-      setAnnouncement(`${resultView.teamName} ${resultView.askLabel} 협상 결과: ${resultView.before} → ${resultView.after}`);
+      setAnnouncement(
+        `${resultView.teamName} ${resultView.askLabel} 협상 결과: ${resultView.before} → ${resultView.after}`,
+      );
       operationRef.current = null;
     } catch {
       setErrorMessage('협상 응답을 확인하지 못했습니다. 새로고침 후 상태를 확인해 주세요.');
@@ -492,9 +555,19 @@ function ContractScreen() {
   }
 
   async function handleReject() {
-    if (submittingRef.current || selectedOffer.id === safeOfferId || status === 'EXPIRED' || status === 'WITHDRAWN') return;
+    if (
+      submittingRef.current ||
+      selectedOffer.id === safeOfferId ||
+      status === 'EXPIRED' ||
+      status === 'WITHDRAWN'
+    )
+      return;
     submittingRef.current = true;
-    operationRef.current = { kind: 'reject', offerId, beforeNegotiationState: selectedOffer.negotiationState };
+    operationRef.current = {
+      kind: 'reject',
+      offerId,
+      beforeNegotiationState: selectedOffer.negotiationState,
+    };
     setErrorMessage(null);
     setNegotiateInlineError(null);
     setAnnouncement('거절 처리 중');
@@ -532,11 +605,17 @@ function ContractScreen() {
           description="함께 뛸 팀과 약속할 조건을 마지막으로 확인하세요."
         />
 
-        <section className="os-panel flex flex-col gap-os-5" aria-labelledby="contract-terms-heading">
+        <section
+          className="os-panel flex flex-col gap-os-5"
+          aria-labelledby="contract-terms-heading"
+        >
           <div className="flex items-center justify-between gap-os-3 border-b border-os-border pb-os-4">
             <div className="flex flex-col gap-os-1">
               <p className="os-eyebrow">계약 조건</p>
-              <h2 id="contract-terms-heading" className="os-section-title flex items-center gap-os-2">
+              <h2
+                id="contract-terms-heading"
+                className="os-section-title flex items-center gap-os-2"
+              >
                 <ClubBadge teamId={offer.teamId} size="m" />
                 {offer.teamName}
               </h2>
@@ -551,7 +630,9 @@ function ContractScreen() {
           <dl className="grid grid-cols-2 gap-os-4 font-os text-os-text-2" style={CAPTION_STYLE}>
             <div className="flex flex-col gap-os-1">
               <dt>리그</dt>
-              <dd className="font-semibold text-os-text">{LEAGUE_TIER_LABEL_KO[offer.leagueTier]}</dd>
+              <dd className="font-semibold text-os-text">
+                {offer.leagueName ?? LEAGUE_TIER_LABEL_KO[offer.leagueTier]}
+              </dd>
             </div>
             <div className="flex flex-col gap-os-1">
               <dt>기간</dt>
@@ -587,12 +668,21 @@ function ContractScreen() {
           <p className="font-os text-os-text" style={BODY_STYLE}>
             {ROLE_PROMISE_SENTENCE[offer.rolePromise]}
           </p>
-          {projectionNotice ? <p className="mt-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>{projectionNotice}</p> : null}
+          {projectionNotice ? (
+            <p className="mt-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+              {projectionNotice}
+            </p>
+          ) : null}
         </section>
 
         <details className="os-panel">
-          <summary className="cursor-pointer font-os font-semibold text-os-text">전체 제안 조건 확인</summary>
-          <dl className="mt-os-3 grid grid-cols-2 gap-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
+          <summary className="cursor-pointer font-os font-semibold text-os-text">
+            전체 제안 조건 확인
+          </summary>
+          <dl
+            className="mt-os-3 grid grid-cols-2 gap-os-3 font-os text-os-text-2"
+            style={CAPTION_STYLE}
+          >
             {firstContractDetailRows.map((row) => (
               <div key={row.label}>
                 <dt>{row.label}</dt>
@@ -602,7 +692,8 @@ function ContractScreen() {
           </dl>
           {state.rulesetVersion === '1.0.0' ? (
             <p className="mt-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
-              전술 적합도와 경쟁자 정보는 1.0 커리어의 기존 산정값을 보여 주는 참고 정보이며, 실제 출전 선택을 예측하지 않습니다.
+              전술 적합도와 경쟁자 정보는 1.0 커리어의 기존 산정값을 보여 주는 참고 정보이며, 실제
+              출전 선택을 예측하지 않습니다.
             </p>
           ) : null}
         </details>
@@ -612,10 +703,14 @@ function ContractScreen() {
           signerName={playerName}
           fingerprint={signatureFingerprint}
           disabled={acceptMutation.isPending}
-          onReadyChange={(ready) => setReadySignatureFingerprint(ready ? signatureFingerprint : null)}
+          onReadyChange={(ready) =>
+            setReadySignatureFingerprint(ready ? signatureFingerprint : null)
+          }
         />
 
-        {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void recoverFromError()} /> : null}
+        {errorMessage ? (
+          <ErrorState message={errorMessage} onRetry={() => void recoverFromError()} />
+        ) : null}
 
         <div className="os-action-dock os-action-row">
           <Button
@@ -630,7 +725,9 @@ function ContractScreen() {
             variant="primary"
             className="basis-2/3"
             onClick={() => void handleAccept()}
-            disabled={acceptMutation.isPending || !canAcceptOffer(offer, record.revision) || !signatureReady}
+            disabled={
+              acceptMutation.isPending || !canAcceptOffer(offer, record.revision) || !signatureReady
+            }
           >
             서명하고 계약 확정
           </Button>
@@ -671,7 +768,9 @@ function ContractScreen() {
         <NegotiationResultPanel
           view={negotiationResult}
           panelRef={negotiationPanelRef}
-          onBack={() => void navigate({ to: '/career/$careerId/offers', params: { careerId }, replace: true })}
+          onBack={() =>
+            void navigate({ to: '/career/$careerId/offers', params: { careerId }, replace: true })
+          }
         />
       ) : null}
 
@@ -681,13 +780,25 @@ function ContractScreen() {
           {SQUAD_ROLE_LABELS[offer.rolePromise]} · 주급 {formatKrw(offer.wageMinorPerWeek)}
         </h2>
         <p className="font-os text-os-text" style={BODY_STYLE}>
-          {offer.lengthSeasons}시즌 · {LEAGUE_TIER_LABEL_KO[offer.leagueTier]} · 등번호 {offer.shirtNumber}
+          {offer.lengthSeasons}시즌 · {offer.leagueName ?? LEAGUE_TIER_LABEL_KO[offer.leagueTier]} ·
+          등번호 {offer.shirtNumber}
         </p>
-        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{ROLE_PROMISE_SENTENCE[offer.rolePromise]}</p>
-        {projectionNotice ? <p className="font-os text-os-text-2" style={CAPTION_STYLE}>{projectionNotice}</p> : null}
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          {ROLE_PROMISE_SENTENCE[offer.rolePromise]}
+        </p>
+        {projectionNotice ? (
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            {projectionNotice}
+          </p>
+        ) : null}
         <details className="border-t border-os-border pt-os-3">
-          <summary className="cursor-pointer font-os font-semibold text-os-text">전체 공개 조건</summary>
-          <dl className="mt-os-3 grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={CAPTION_STYLE}>
+          <summary className="cursor-pointer font-os font-semibold text-os-text">
+            전체 공개 조건
+          </summary>
+          <dl
+            className="mt-os-3 grid grid-cols-2 gap-os-2 font-os text-os-text-2"
+            style={CAPTION_STYLE}
+          >
             {detailRows.map((row) => (
               <div key={row.label}>
                 <dt>{row.label}</dt>
@@ -704,7 +815,9 @@ function ContractScreen() {
           signerName={state.player.profile?.name ?? state.player.draft.name ?? '선수'}
           fingerprint={signatureFingerprint}
           disabled={committing}
-          onReadyChange={(ready) => setReadySignatureFingerprint(ready ? signatureFingerprint : null)}
+          onReadyChange={(ready) =>
+            setReadySignatureFingerprint(ready ? signatureFingerprint : null)
+          }
         />
       ) : (
         <p className="os-muted">현재 팀 잔류 선택에는 별도 서명이 필요하지 않습니다.</p>
@@ -723,7 +836,9 @@ function ContractScreen() {
               key={ask}
               variant="secondary"
               onClick={() => void handleNegotiate(ask)}
-              disabled={committing || !canNegotiateOffer(offer, record.revision, ask) || reason !== null}
+              disabled={
+                committing || !canNegotiateOffer(offer, record.revision, ask) || reason !== null
+              }
               aria-label={`${ASK_LABELS[ask]} 협상`}
               aria-describedby={reason !== null ? `negotiate-reason-${ask}` : undefined}
             >
@@ -737,7 +852,12 @@ function ContractScreen() {
           negotiationReasons
             .filter((entry) => entry.reason !== null)
             .map(({ ask, reason }) => (
-              <p key={ask} id={`negotiate-reason-${ask}`} className="os-muted" style={CAPTION_STYLE}>
+              <p
+                key={ask}
+                id={`negotiate-reason-${ask}`}
+                className="os-muted"
+                style={CAPTION_STYLE}
+              >
                 {reason}
               </p>
             ))
@@ -750,16 +870,41 @@ function ContractScreen() {
         {negotiateInlineError ? <ErrorState message={negotiateInlineError} /> : null}
       </Card>
 
-      {errorMessage ? <ErrorState message={errorMessage} onRetry={() => void recoverFromError()} retryLabel="저장 상태 다시 확인" /> : null}
+      {errorMessage ? (
+        <ErrorState
+          message={errorMessage}
+          onRetry={() => void recoverFromError()}
+          retryLabel="저장 상태 다시 확인"
+        />
+      ) : null}
 
       <div className="os-action-dock flex flex-col gap-os-2">
         <div className="grid grid-cols-2 gap-os-2">
-          <Button variant="secondary" onClick={handleBack} disabled={committing}>목록으로</Button>
-          <Button variant="secondary" onClick={() => void handleReject()} disabled={committing || offer.id === safeOfferId || status === 'EXPIRED' || status === 'WITHDRAWN'}>
+          <Button variant="secondary" onClick={handleBack} disabled={committing}>
+            목록으로
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => void handleReject()}
+            disabled={
+              committing ||
+              offer.id === safeOfferId ||
+              status === 'EXPIRED' ||
+              status === 'WITHDRAWN'
+            }
+          >
             제안 거절
           </Button>
         </div>
-        <Button variant="primary" onClick={() => void handleAccept()} disabled={committing || !canAcceptOffer(offer, record.revision) || (requiresSignature && !signatureReady)}>
+        <Button
+          variant="primary"
+          onClick={() => void handleAccept()}
+          disabled={
+            committing ||
+            !canAcceptOffer(offer, record.revision) ||
+            (requiresSignature && !signatureReady)
+          }
+        >
           {requiresSignature ? '서명하고 계약 확정' : '현재 팀 잔류 확정'}
         </Button>
       </div>

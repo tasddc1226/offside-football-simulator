@@ -1,12 +1,25 @@
 import { EFFECT_DEFAULTS, loadContentPack, loadRuleset } from '@offside/content';
 import type { ServiceSeasonCurrent } from '@offside/contracts';
 import { hashState } from '@offside/domain';
-import { career01, career01EngineCommands, career05Chapter, career05ChapterEngineCommands, rulesetProto } from '@offside/fixtures';
-import { encodeSnapshot, MemoryLocalStore, inlineSimulator, type EngineCommand, type ExecuteResult } from '@offside/engine-client';
+import {
+  career01,
+  career01EngineCommands,
+  career05Chapter,
+  career05ChapterEngineCommands,
+  rulesetProto,
+} from '@offside/fixtures';
+import {
+  encodeSnapshot,
+  MemoryLocalStore,
+  inlineSimulator,
+  type EngineCommand,
+  type ExecuteResult,
+} from '@offside/engine-client';
 import { describe, expect, it, vi } from 'vitest';
 import {
   acceptOffer,
   advance,
+  advanceToDecision,
   confirmPlayer,
   createCareer,
   deleteCareer,
@@ -43,10 +56,14 @@ vi.mock('./sync.js', () => ({
 
 // service-season.ts는 네트워크(TanStack Query)를 거친다 — 이 테스트는 시즌 id 주입 자체가 아니라
 // createCareer·startSeason의 명령 조립·재생을 본다(폴백 순서는 service-season.test.ts가 본다).
-const serviceSeasonHolder = vi.hoisted(() => ({ current: undefined as undefined | ServiceSeasonCurrent }));
+const serviceSeasonHolder = vi.hoisted(() => ({
+  current: undefined as undefined | ServiceSeasonCurrent,
+}));
 vi.mock('./service-season.js', () => ({
-  resolveServiceSeason: () => Promise.resolve(serviceSeasonHolder.current ?? FALLBACK_SERVICE_SEASON),
-  resolveServiceSeasonId: () => Promise.resolve(serviceSeasonHolder.current?.id ?? FALLBACK_SERVICE_SEASON_ID),
+  resolveServiceSeason: () =>
+    Promise.resolve(serviceSeasonHolder.current ?? FALLBACK_SERVICE_SEASON),
+  resolveServiceSeasonId: () =>
+    Promise.resolve(serviceSeasonHolder.current?.id ?? FALLBACK_SERVICE_SEASON_ID),
 }));
 
 function makeIdGenerator(prefix: string): () => string {
@@ -123,23 +140,26 @@ describe('createCareer', () => {
   it.each([
     ['지원하지 않는 버전', '9.9.9', '0.3.0'],
     ['호환되지 않는 룰셋·팩', '1.1.0', '0.1.0'],
-  ])('%s이면 CREATE_CAREER를 실행하기 전에 실패한다', async (_label, rulesetVersion, contentPackVersion) => {
-    serviceSeasonHolder.current = {
-      ...FALLBACK_SERVICE_SEASON,
-      id: 'svc_invalid',
-      rulesetVersion,
-      contentPackVersion,
-    };
-    const engine = makeTestEngine();
-    const executeSpy = vi.spyOn(engine.client, 'execute');
-    try {
-      await expect(createCareer(engine, { simulationMode: 'FAST' })).rejects.toThrow();
-      expect(executeSpy).not.toHaveBeenCalled();
-      expect(await engine.client.listCareers()).toEqual([]);
-    } finally {
-      serviceSeasonHolder.current = undefined;
-    }
-  });
+  ])(
+    '%s이면 CREATE_CAREER를 실행하기 전에 실패한다',
+    async (_label, rulesetVersion, contentPackVersion) => {
+      serviceSeasonHolder.current = {
+        ...FALLBACK_SERVICE_SEASON,
+        id: 'svc_invalid',
+        rulesetVersion,
+        contentPackVersion,
+      };
+      const engine = makeTestEngine();
+      const executeSpy = vi.spyOn(engine.client, 'execute');
+      try {
+        await expect(createCareer(engine, { simulationMode: 'FAST' })).rejects.toThrow();
+        expect(executeSpy).not.toHaveBeenCalled();
+        expect(await engine.client.listCareers()).toEqual([]);
+      } finally {
+        serviceSeasonHolder.current = undefined;
+      }
+    },
+  );
 });
 
 describe('updateDraft·confirmPlayer', () => {
@@ -150,7 +170,12 @@ describe('updateDraft·confirmPlayer', () => {
     if (!created.ok) throw new Error('unreachable');
     const careerId = created.snapshot.careerId;
 
-    await updateDraft(engine, careerId, { name: '김서준', gender: 'UNSPECIFIED', nationalityCode: 'KR', preferredFoot: 'LEFT' });
+    await updateDraft(engine, careerId, {
+      name: '김서준',
+      gender: 'UNSPECIFIED',
+      nationalityCode: 'KR',
+      preferredFoot: 'LEFT',
+    });
     const secondDraft = await updateDraft(engine, careerId, {
       position: 'W',
       archetypeId: 'inside-forward',
@@ -208,7 +233,9 @@ describe('advance: selectEligibleEvents 배선', () => {
         ...engine.client,
         execute: (request) => {
           if (request.command.type === 'ADVANCE') {
-            capturedPayloads.push(request.command.payload as { eligibleEvents: Array<{ eventId: string }> });
+            capturedPayloads.push(
+              request.command.payload as { eligibleEvents: Array<{ eventId: string }> },
+            );
           }
           return engine.client.execute(request);
         },
@@ -219,7 +246,9 @@ describe('advance: selectEligibleEvents 배선', () => {
 
     expect(result.ok).toBe(true);
     expect(capturedPayloads).toHaveLength(1);
-    expect(capturedPayloads[0]?.eligibleEvents.some((event) => event.eventId === 'EVT-CON-002')).toBe(true);
+    expect(
+      capturedPayloads[0]?.eligibleEvents.some((event) => event.eventId === 'EVT-CON-002'),
+    ).toBe(true);
   });
 });
 
@@ -257,8 +286,17 @@ describe('T-7-036 fix-precontract-whitelist: 1.7.2/0.6.6 입단 테스트 경로
       if (!created.ok) throw new Error('unreachable');
       const careerId = created.snapshot.careerId;
 
-      await updateDraft(engine, careerId, { name: '김서준', gender: 'MALE', nationalityCode: 'KR', preferredFoot: 'LEFT' });
-      const draft2 = await updateDraft(engine, careerId, { position: 'W', archetypeId: 'inside-forward', backgroundId: 'school' });
+      await updateDraft(engine, careerId, {
+        name: '김서준',
+        gender: 'MALE',
+        nationalityCode: 'KR',
+        preferredFoot: 'LEFT',
+      });
+      const draft2 = await updateDraft(engine, careerId, {
+        position: 'W',
+        archetypeId: 'inside-forward',
+        backgroundId: 'school',
+      });
       expect(draft2.ok).toBe(true);
       const confirmed = await confirmPlayer(engine, careerId);
       expect(confirmed.ok).toBe(true);
@@ -266,7 +304,8 @@ describe('T-7-036 fix-precontract-whitelist: 1.7.2/0.6.6 입단 테스트 경로
       let sawTryout = false;
       let current = confirmed as ExecuteResult;
       for (let step = 0; step < 10; step += 1) {
-        if (!current.ok) throw new Error(`재생 실패: ${current.error.code} ${current.error.message}`);
+        if (!current.ok)
+          throw new Error(`재생 실패: ${current.error.code} ${current.error.message}`);
         const pending = current.domainSnapshot.state.pending;
         if (pending?.kind === 'OFFERS') break;
         if (pending === null) {
@@ -304,7 +343,8 @@ async function replayToConfirmed(engine: AppEngine): Promise<string> {
       command,
       ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc_kickoff' } : {}),
     });
-    if (!result.ok) throw new Error(`재생 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+    if (!result.ok)
+      throw new Error(`재생 실패: ${command.type} ${result.error.code} ${result.error.message}`);
   }
   return careerId;
 }
@@ -333,15 +373,27 @@ describe('toStartSeasonPayload', () => {
     const command = toStartSeasonPayload({ simulationMode: 'FAST' }, FALLBACK_SERVICE_SEASON_ID);
     expect(command).toEqual({
       type: 'START_SEASON',
-      payload: { simulationMode: 'FAST', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID, legacyLedger: true },
+      payload: {
+        simulationMode: 'FAST',
+        serviceSeasonId: FALLBACK_SERVICE_SEASON_ID,
+        legacyLedger: true,
+      },
     });
   });
 
   it('trainingFocus를 고르면 payload에 함께 싣는다(T-2-005 접점, PR #40 머지 확인)', () => {
-    const command = toStartSeasonPayload({ simulationMode: 'CHAPTER', trainingFocus: 'TECHNICAL' }, FALLBACK_SERVICE_SEASON_ID);
+    const command = toStartSeasonPayload(
+      { simulationMode: 'CHAPTER', trainingFocus: 'TECHNICAL' },
+      FALLBACK_SERVICE_SEASON_ID,
+    );
     expect(command).toEqual({
       type: 'START_SEASON',
-      payload: { simulationMode: 'CHAPTER', serviceSeasonId: FALLBACK_SERVICE_SEASON_ID, trainingFocus: 'TECHNICAL', legacyLedger: true },
+      payload: {
+        simulationMode: 'CHAPTER',
+        serviceSeasonId: FALLBACK_SERVICE_SEASON_ID,
+        trainingFocus: 'TECHNICAL',
+        legacyLedger: true,
+      },
     });
   });
 });
@@ -404,14 +456,24 @@ describe('startSeason', () => {
       pending: {
         kind: 'ROLE_PROPOSAL' as const,
         step: 1,
-        proposal: { type: 'KEEP' as const, position: profile.primaryPosition, squadRole: season.squadRole },
+        proposal: {
+          type: 'KEEP' as const,
+          position: profile.primaryPosition,
+          squadRole: season.squadRole,
+        },
       },
     };
     expect(shouldAutoAcceptUnchangedRole(unchanged)).toBe(true);
     expect(
       shouldAutoAcceptUnchangedRole({
         ...unchanged,
-        pending: { ...unchanged.pending, proposal: { ...unchanged.pending.proposal, position: profile.primaryPosition === 'GK' ? 'ST' : 'GK' } },
+        pending: {
+          ...unchanged.pending,
+          proposal: {
+            ...unchanged.pending.proposal,
+            position: profile.primaryPosition === 'GK' ? 'ST' : 'GK',
+          },
+        },
       }),
     ).toBe(false);
   });
@@ -448,14 +510,23 @@ describe('settleSeason', () => {
     // 실리면(T-2-008) FAST 모드에서도 MAJOR 챕터(예: 데뷔전)가 실제로 열린다 — 첫 옵션으로 확정해
     // 넘긴다. 안전 상한 20회.
     let current = roleResolved;
-    for (let step = 0; step < 20 && current.domainSnapshot.state.pending?.kind !== 'SETTLEMENT'; step += 1) {
+    for (
+      let step = 0;
+      step < 20 && current.domainSnapshot.state.pending?.kind !== 'SETTLEMENT';
+      step += 1
+    ) {
       const pending = current.domainSnapshot.state.pending;
       if (pending?.kind === 'CHAPTER') {
         const definition = engine.pack.chaptersById.get(pending.chapterId);
         if (!definition) throw new Error(`팩에 챕터 정의가 없다: ${pending.chapterId}`);
         const decision = definition.decisions[pending.resolved.length];
         if (!decision) throw new Error('이미 모든 판단이 끝났다');
-        const resolved = await resolveChapter(engine, careerId, decision.id, decision.options[0]!.id);
+        const resolved = await resolveChapter(
+          engine,
+          careerId,
+          decision.id,
+          decision.options[0]!.id,
+        );
         if (!resolved.ok) throw new Error(`resolveChapter 실패: ${resolved.error.message}`);
         current = resolved;
         continue;
@@ -473,7 +544,9 @@ describe('settleSeason', () => {
     expect(result.domainSnapshot.state.season).toBeNull();
     expect(result.domainSnapshot.state.pending).toBeNull();
     expect(result.domainSnapshot.state.seasonHistory).toHaveLength(1);
-    expect(result.domainSnapshot.state.timeline).toContainEqual(expect.objectContaining({ kind: 'SEASON_SETTLED' }));
+    expect(result.domainSnapshot.state.timeline).toContainEqual(
+      expect.objectContaining({ kind: 'SEASON_SETTLED' }),
+    );
   });
 });
 
@@ -546,7 +619,13 @@ describe('resolveEvent', () => {
     const state = {
       ...loaded.snapshot.state,
       health: { episodes: [episode] },
-      pending: { kind: 'INJURY' as const, step: 1, episodeId: episode.id, eventId: 'EVT-INJ-001', version: 1 },
+      pending: {
+        kind: 'INJURY' as const,
+        step: 1,
+        episodeId: episode.id,
+        eventId: 'EVT-INJ-001',
+        version: 1,
+      },
     };
     const pendingSnapshot = { ...loaded.snapshot, state, stateHash: hashState(state) };
     let capturedCommand: Parameters<AppEngine['client']['execute']>[0]['command'] | null = null;
@@ -559,7 +638,10 @@ describe('resolveEvent', () => {
           capturedCommand = request.command;
           return {
             ok: true,
-            snapshot: encodeSnapshot(pendingSnapshot, { careerId, createdAt: '2026-09-05T00:00:00.000Z' }),
+            snapshot: encodeSnapshot(pendingSnapshot, {
+              careerId,
+              createdAt: '2026-09-05T00:00:00.000Z',
+            }),
             domainSnapshot: pendingSnapshot,
             nextAction: 'ADVANCE',
             appliedEffects: [],
@@ -574,7 +656,12 @@ describe('resolveEvent', () => {
     expect(result.ok).toBe(true);
     expect(capturedCommand).toMatchObject({
       type: 'RESOLVE_EVENT',
-      payload: { eventId: 'EVT-INJ-001', definitionVersion: 1, choiceId: 'A', rehabPlan: 'STANDARD' },
+      payload: {
+        eventId: 'EVT-INJ-001',
+        definitionVersion: 1,
+        choiceId: 'A',
+        rehabPlan: 'STANDARD',
+      },
     });
   });
 
@@ -650,21 +737,30 @@ describe('결정론: 픽스처 재생 vs 액션 경로', () => {
         command,
         ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc_kickoff' } : {}),
       });
-      if (!result.ok) throw new Error(`fixture 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+      if (!result.ok)
+        throw new Error(
+          `fixture 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`,
+        );
       fixtureFinalHash = result.domainSnapshot.stateHash;
     }
     expect(fixtureFinalHash).toBe(career01.golden.stateHash);
 
     const actionEngine = makeTestEngine();
     const actionCommands = career01EngineCommands(makeIdGenerator('action'));
-    const [firstAdvance, secondAdvance, thirdAdvance] = [actionCommands[4]!, actionCommands[6]!, actionCommands[8]!];
+    const [firstAdvance, secondAdvance, thirdAdvance] = [
+      actionCommands[4]!,
+      actionCommands[6]!,
+      actionCommands[8]!,
+    ];
 
     await replayToConfirmed(actionEngine);
     const advanced1 = await actionEngine.client.execute({ careerId, command: firstAdvance });
-    if (!advanced1.ok) throw new Error(`ADVANCE#1 실패: ${advanced1.error.code} ${advanced1.error.message}`);
+    if (!advanced1.ok)
+      throw new Error(`ADVANCE#1 실패: ${advanced1.error.code} ${advanced1.error.message}`);
     await resolveEvent(actionEngine, careerId, 'A');
     const advanced2 = await actionEngine.client.execute({ careerId, command: secondAdvance });
-    if (!advanced2.ok) throw new Error(`ADVANCE#2 실패: ${advanced2.error.code} ${advanced2.error.message}`);
+    if (!advanced2.ok)
+      throw new Error(`ADVANCE#2 실패: ${advanced2.error.code} ${advanced2.error.message}`);
     await resolveEvent(actionEngine, careerId, 'B');
     const offered = await actionEngine.client.execute({ careerId, command: thirdAdvance });
     if (!offered.ok || offered.domainSnapshot.state.pending?.kind !== 'OFFERS') {
@@ -790,45 +886,54 @@ describe('resolveChapter', () => {
     expect(result.domainSnapshot.state.season?.chapters.at(-1)?.chapterId).toBe('CHP-MATCH-001');
   });
 
-  it('결정론(실제 팩 자기 일관성): raw execute로 만든 RESOLVE_CHAPTER 명령과 resolveChapter() 액션이 같은 stateHash를 만든다. ' +
-    'career-05-chapter 골든 픽스처는 이 팩의 실제 형태(D1 판단 1개, 옵션 SAFE/ROLE/BOLD)와 다른 합성 시나리오(판단 D1·D2, 옵션 OPT-CONFIDENT/OPT-SIMPLE)라 ' +
-    '이 액션 경로로는 그 골든을 재현할 수 없다(PR 본문 "범위 밖 발견 사항" 참고) — 대신 실제 팩으로 raw 경로와 액션 경로가 서로 일치하는지만 본다.', async () => {
-    const rawEngine = makeTestEngine();
-    const rawCareerId = await reachDebutChapter(rawEngine);
-    const rawLoad = await rawEngine.client.loadCareer(rawCareerId);
-    if (!rawLoad.ok) throw new Error('loadCareer 실패');
-    const rawPending = rawLoad.snapshot.state.pending;
-    if (rawPending === null || rawPending.kind !== 'CHAPTER') throw new Error('CHAPTER pending이 아니다');
-    expect(rawPending.chapterId).toBe('CHP-MATCH-001');
+  it(
+    '결정론(실제 팩 자기 일관성): raw execute로 만든 RESOLVE_CHAPTER 명령과 resolveChapter() 액션이 같은 stateHash를 만든다. ' +
+      'career-05-chapter 골든 픽스처는 이 팩의 실제 형태(D1 판단 1개, 옵션 SAFE/ROLE/BOLD)와 다른 합성 시나리오(판단 D1·D2, 옵션 OPT-CONFIDENT/OPT-SIMPLE)라 ' +
+      '이 액션 경로로는 그 골든을 재현할 수 없다(PR 본문 "범위 밖 발견 사항" 참고) — 대신 실제 팩으로 raw 경로와 액션 경로가 서로 일치하는지만 본다.',
+    async () => {
+      const rawEngine = makeTestEngine();
+      const rawCareerId = await reachDebutChapter(rawEngine);
+      const rawLoad = await rawEngine.client.loadCareer(rawCareerId);
+      if (!rawLoad.ok) throw new Error('loadCareer 실패');
+      const rawPending = rawLoad.snapshot.state.pending;
+      if (rawPending === null || rawPending.kind !== 'CHAPTER')
+        throw new Error('CHAPTER pending이 아니다');
+      expect(rawPending.chapterId).toBe('CHP-MATCH-001');
 
-    const definition = rawEngine.pack.chaptersById.get('CHP-MATCH-001')!;
-    const decision = definition.decisions[0]!;
-    const option = decision.options.find((candidate) => candidate.id === 'SAFE')!;
+      const definition = rawEngine.pack.chaptersById.get('CHP-MATCH-001')!;
+      const decision = definition.decisions[0]!;
+      const option = decision.options.find((candidate) => candidate.id === 'SAFE')!;
 
-    const rawResult = await rawEngine.client.execute({
-      careerId: rawCareerId,
-      command: {
-        type: 'RESOLVE_CHAPTER',
-        commandId: 'raw-resolve-chapter',
-        expectedRevision: rawLoad.snapshot.revision,
-        payload: {
-          chapterId: definition.id,
-          definitionVersion: definition.version,
-          decisionId: decision.id,
-          optionId: option.id,
-          outcomes: toResolveChapterOutcomes(option.outcomes),
+      const rawResult = await rawEngine.client.execute({
+        careerId: rawCareerId,
+        command: {
+          type: 'RESOLVE_CHAPTER',
+          commandId: 'raw-resolve-chapter',
+          expectedRevision: rawLoad.snapshot.revision,
+          payload: {
+            chapterId: definition.id,
+            definitionVersion: definition.version,
+            decisionId: decision.id,
+            optionId: option.id,
+            outcomes: toResolveChapterOutcomes(option.outcomes),
+          },
         },
-      },
-    });
-    if (!rawResult.ok) throw new Error(`raw RESOLVE_CHAPTER 실패: ${rawResult.error.message}`);
+      });
+      if (!rawResult.ok) throw new Error(`raw RESOLVE_CHAPTER 실패: ${rawResult.error.message}`);
 
-    const actionEngine = makeTestEngine();
-    const actionCareerId = await reachDebutChapter(actionEngine);
-    const actionResult = await resolveChapter(actionEngine, actionCareerId, decision.id, option.id);
-    if (!actionResult.ok) throw new Error(`resolveChapter 실패: ${actionResult.error.message}`);
+      const actionEngine = makeTestEngine();
+      const actionCareerId = await reachDebutChapter(actionEngine);
+      const actionResult = await resolveChapter(
+        actionEngine,
+        actionCareerId,
+        decision.id,
+        option.id,
+      );
+      if (!actionResult.ok) throw new Error(`resolveChapter 실패: ${actionResult.error.message}`);
 
-    expect(actionResult.domainSnapshot.stateHash).toBe(rawResult.domainSnapshot.stateHash);
-  });
+      expect(actionResult.domainSnapshot.stateHash).toBe(rawResult.domainSnapshot.stateHash);
+    },
+  );
 });
 
 describe('결정론: career-05-chapter 픽스처 raw 재생(합성 시나리오, 액션 경로와는 무관)', () => {
@@ -843,7 +948,10 @@ describe('결정론: career-05-chapter 픽스처 raw 재생(합성 시나리오,
         command,
         ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'svc_kickoff' } : {}),
       });
-      if (!result.ok) throw new Error(`career01 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+      if (!result.ok)
+        throw new Error(
+          `career01 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`,
+        );
     }
 
     const chapterCommands = career05ChapterEngineCommands(newId, career01.golden.revision);
@@ -852,7 +960,10 @@ describe('결정론: career-05-chapter 픽스처 raw 재생(합성 시나리오,
     let lastResult: ExecuteResult | null = null;
     for (const command of pendingCommands) {
       const result = await engine.client.execute({ careerId, command });
-      if (!result.ok) throw new Error(`career-05-chapter 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+      if (!result.ok)
+        throw new Error(
+          `career-05-chapter 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`,
+        );
       lastResult = result;
     }
     if (lastResult === null || !lastResult.ok) throw new Error('unreachable');
@@ -863,7 +974,10 @@ describe('결정론: career-05-chapter 픽스처 raw 재생(합성 시나리오,
     let finalResult: ExecuteResult | null = null;
     for (const command of remainingCommands) {
       const result = await engine.client.execute({ careerId, command });
-      if (!result.ok) throw new Error(`career-05-chapter 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+      if (!result.ok)
+        throw new Error(
+          `career-05-chapter 재생 실패: ${command.type} ${result.error.code} ${result.error.message}`,
+        );
       finalResult = result;
     }
     if (finalResult === null || !finalResult.ok) throw new Error('unreachable');
@@ -920,7 +1034,11 @@ function makeIssue242Engine(seedIndex: number, versions: Issue242VersionPair): A
   });
 }
 
-async function createIssue242Career(engine: AppEngine, careerId: string, versions: Issue242VersionPair): Promise<void> {
+async function createIssue242Career(
+  engine: AppEngine,
+  careerId: string,
+  versions: Issue242VersionPair,
+): Promise<void> {
   const command: EngineCommand = {
     type: 'CREATE_CAREER',
     commandId: engine.newId(),
@@ -941,7 +1059,11 @@ async function createIssue242Career(engine: AppEngine, careerId: string, version
   if (!result.ok) throw new Error(`CREATE_CAREER: ${result.error.code} ${result.error.message}`);
 }
 
-async function reachIssue242FirstOffer(engine: AppEngine, careerId: string, trace: string[]): Promise<void> {
+async function reachIssue242FirstOffer(
+  engine: AppEngine,
+  careerId: string,
+  trace: string[],
+): Promise<void> {
   await updateDraft(engine, careerId, {
     name: '김민준',
     gender: 'MALE',
@@ -1001,7 +1123,11 @@ async function prepareIssue242Scenario(
   return { engine, careerId };
 }
 
-async function startIssue242Season(engine: AppEngine, careerId: string, trace: string[]): Promise<void> {
+async function startIssue242Season(
+  engine: AppEngine,
+  careerId: string,
+  trace: string[],
+): Promise<void> {
   const loaded = await engine.client.loadCareer(careerId);
   if (!loaded.ok) throw new Error(`load before START_SEASON: ${loaded.error.code}`);
   const pending = loaded.snapshot.state.pending;
@@ -1070,7 +1196,8 @@ async function playIssue242Season(
         actual: {
           primaryPosition: resolvedState.player.profile?.primaryPosition ?? null,
           contractRole: resolvedState.contract?.rolePromise ?? null,
-          appearancePromiseMinutesShareBp: resolvedState.contract?.appearancePromise.minutesShareBp ?? null,
+          appearancePromiseMinutesShareBp:
+            resolvedState.contract?.appearancePromise.minutesShareBp ?? null,
           managerTrustDelta: resolvedState.relationships.managerTrust - trustBefore,
           managerTrustAfter: resolvedState.relationships.managerTrust,
         },
@@ -1130,15 +1257,23 @@ async function playIssue242Season(
       ratedMatches: stats.ratedMatches,
       rolePromise: settledState.contract?.rolePromise ?? null,
       primaryPosition: settledState.player.profile?.primaryPosition ?? null,
-      marketReason: settledState.pending?.kind === 'OFFERS' ? settledState.pending.market.reason : null,
+      marketReason:
+        settledState.pending?.kind === 'OFFERS' ? settledState.pending.market.reason : null,
     };
   }
   throw new Error('season guard exceeded');
 }
 
-async function runIssue242TwoSeasons(versions: Issue242VersionPair, decision: 'ACCEPT' | 'DECLINE') {
+async function runIssue242TwoSeasons(
+  versions: Issue242VersionPair,
+  decision: 'ACCEPT' | 'DECLINE',
+) {
   const trace: string[] = [];
-  const { engine, careerId } = await prepareIssue242Scenario(decision.toLowerCase(), trace, versions);
+  const { engine, careerId } = await prepareIssue242Scenario(
+    decision.toLowerCase(),
+    trace,
+    versions,
+  );
   await startIssue242Season(engine, careerId, trace);
   const beforeRole = await engine.client.loadCareer(careerId);
   if (!beforeRole.ok) throw new Error(`load proposal: ${beforeRole.error.code}`);
@@ -1232,10 +1367,18 @@ describe('career actions: issue #242 two-season zero-slot role balance', () => {
         appearancePromiseMinutesShareBp: 4000,
         managerTrustDelta: 0,
       });
-      expect(accepted.proposalStateHash).toBe('9e9fc7e201f541510c9c27df69286a6a23b76e056df0a2f244550b814bf790c8');
-      expect(accepted.finalStateHash).toBe('21af0dd2c7594ee2f479f93b3c7111bed63bffec1502de9719626b39edd665e6');
-      expect(refused.proposalStateHash).toBe('aa53adde0cad77aa091f7e4b4aa83526afd98e1251750dabe5fa54bb387f78e5');
-      expect(refused.finalStateHash).toBe('2915fa827b6670130dd50709ad07d87e4d3bd52ad69c9b002e9a8b42f013dc3b');
+      expect(accepted.proposalStateHash).toBe(
+        '9e9fc7e201f541510c9c27df69286a6a23b76e056df0a2f244550b814bf790c8',
+      );
+      expect(accepted.finalStateHash).toBe(
+        '21af0dd2c7594ee2f479f93b3c7111bed63bffec1502de9719626b39edd665e6',
+      );
+      expect(refused.proposalStateHash).toBe(
+        'aa53adde0cad77aa091f7e4b4aa83526afd98e1251750dabe5fa54bb387f78e5',
+      );
+      expect(refused.finalStateHash).toBe(
+        '2915fa827b6670130dd50709ad07d87e4d3bd52ad69c9b002e9a8b42f013dc3b',
+      );
       expect(accepted.trace.slice(0, 6)).toEqual([
         'DRAFT:CM:cm-playmaker:club-academy',
         'EVENT:EVT-CON-020:A',
@@ -1320,10 +1463,18 @@ describe('career actions: issue #242 two-season zero-slot role balance', () => {
         appearancePromiseMinutesShareBp: 4000,
         managerTrustDelta: 0,
       });
-      expect(accepted.proposalStateHash).toBe('63b3b94a9fadde5da22c19c1c2e8b6d296bd6c238743058348dcfdecbcbc1789');
-      expect(accepted.finalStateHash).toBe('c8d184c89ed38b79e1decc164f6a417113823d906621b55ced056ab5d7575681');
-      expect(refused.proposalStateHash).toBe('630d8b2d8edf8f90f0b2f67d5be09adb59e9406e5a51426db8f30b8c81e8c9d7');
-      expect(refused.finalStateHash).toBe('dd72e09e6ca5182f0d5980d8a3b151811d295c3c2e17a108d35c642ed0a1a267');
+      expect(accepted.proposalStateHash).toBe(
+        '63b3b94a9fadde5da22c19c1c2e8b6d296bd6c238743058348dcfdecbcbc1789',
+      );
+      expect(accepted.finalStateHash).toBe(
+        'c8d184c89ed38b79e1decc164f6a417113823d906621b55ced056ab5d7575681',
+      );
+      expect(refused.proposalStateHash).toBe(
+        '630d8b2d8edf8f90f0b2f67d5be09adb59e9406e5a51426db8f30b8c81e8c9d7',
+      );
+      expect(refused.finalStateHash).toBe(
+        'dd72e09e6ca5182f0d5980d8a3b151811d295c3c2e17a108d35c642ed0a1a267',
+      );
       expect(accepted.trace.filter((step) => step.startsWith('ROLE:'))).toEqual([
         'ROLE:POSITION_CHANGE:CM->DM:STARTER:ACCEPT',
         'ROLE:KEEP:KEEP:ACCEPT',
@@ -1364,7 +1515,10 @@ describe('notifySync 게이팅: ok:true·replayed:false일 때만 notifyCommitte
     if (!result.ok) throw new Error('unreachable');
 
     await vi.waitFor(() => expect(syncHolder.notifyCommitted).toHaveBeenCalledTimes(1));
-    expect(syncHolder.notifyCommitted).toHaveBeenCalledWith(result.snapshot.careerId, result.domainSnapshot);
+    expect(syncHolder.notifyCommitted).toHaveBeenCalledWith(
+      result.snapshot.careerId,
+      result.domainSnapshot,
+    );
   });
 
   it('ok:true·replayed:true(재생)면 notifyCommitted를 부르지 않는다', async () => {
@@ -1382,9 +1536,15 @@ describe('notifySync 게이팅: ok:true·replayed:false일 때만 notifyCommitte
     // execute만 스크립트한다(존재하지 않는 careerId면 execute() 래퍼가 loadCareer에서
     // CAREER_NOT_FOUND로 먼저 끝나 execute를 아예 안 부른다).
     const replayedResult: ExecuteResult = { ...created, replayed: true };
-    const scriptedEngine: AppEngine = { ...seedEngine, client: { ...seedEngine.client, execute: async () => replayedResult } };
+    const scriptedEngine: AppEngine = {
+      ...seedEngine,
+      client: { ...seedEngine.client, execute: async () => replayedResult },
+    };
 
-    await execute(scriptedEngine, created.snapshot.careerId, { type: 'ADVANCE', payload: { eligibleEvents: [] } });
+    await execute(scriptedEngine, created.snapshot.careerId, {
+      type: 'ADVANCE',
+      payload: { eligibleEvents: [] },
+    });
 
     // 마이크로태스크가 도는 동안 실제로 안 불렸는지 확인하려고 짧게 양보한다.
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -1400,12 +1560,55 @@ describe('notifySync 게이팅: ok:true·replayed:false일 때만 notifyCommitte
     await vi.waitFor(() => expect(syncHolder.notifyCommitted).toHaveBeenCalledTimes(1));
     syncHolder.notifyCommitted.mockClear();
 
-    const failedResult: ExecuteResult = { ok: false, error: { code: 'VALIDATION_FAILED', message: '실패' } };
-    const scriptedEngine: AppEngine = { ...seedEngine, client: { ...seedEngine.client, execute: async () => failedResult } };
+    const failedResult: ExecuteResult = {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: '실패' },
+    };
+    const scriptedEngine: AppEngine = {
+      ...seedEngine,
+      client: { ...seedEngine.client, execute: async () => failedResult },
+    };
 
-    await execute(scriptedEngine, created.snapshot.careerId, { type: 'ADVANCE', payload: { eligibleEvents: [] } });
+    await execute(scriptedEngine, created.snapshot.careerId, {
+      type: 'ADVANCE',
+      payload: { eligibleEvents: [] },
+    });
 
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(syncHolder.notifyCommitted).not.toHaveBeenCalled();
   });
+});
+
+it('routine advance reaches a saved decision without choosing it for the player', async () => {
+  const engine = createAppEngine({
+    store: new MemoryLocalStore(),
+    simulator: inlineSimulator,
+    ruleset: loadRuleset('2.1.0'),
+    pack: loadContentPack('0.8.0'),
+    newId: makeIdGenerator('journey'),
+  });
+  const created = await createCareer(engine, { simulationMode: 'FAST' });
+  if (!created.ok) throw new Error(created.error.message);
+  const careerId = created.snapshot.careerId;
+  await reachIssue242FirstOffer(engine, careerId, []);
+  const offered = await engine.client.loadCareer(careerId);
+  if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS')
+    throw new Error('Missing first offers');
+  await acceptOffer(engine, careerId, offered.snapshot.state.pending.offers[0]!.id);
+  await startSeason(engine, careerId, { simulationMode: 'FAST' });
+  const started = await engine.client.loadCareer(careerId);
+  if (!started.ok) throw new Error('Missing started season');
+  if (started.snapshot.state.pending?.kind === 'ROLE_PROPOSAL')
+    await resolveRole(engine, careerId, 'ACCEPT');
+  const before = await engine.client.loadCareer(careerId);
+  if (!before.ok) throw new Error('Missing boundary');
+  const result = await advanceToDecision(engine, careerId);
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw new Error(result.error.message);
+  expect(result.domainSnapshot.revision).toBeGreaterThan(before.snapshot.revision);
+  expect(result.domainSnapshot.state.pending).not.toBeNull();
+  expect(result.domainSnapshot.state.seasonHistory).toHaveLength(0);
+  const saved = await engine.client.loadCareer(careerId);
+  if (!saved.ok) throw new Error('Missing saved decision');
+  expect(saved.snapshot.stateHash).toBe(result.domainSnapshot.stateHash);
 });

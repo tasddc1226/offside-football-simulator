@@ -1,3 +1,15 @@
+import manifest080 from '../../packs/0.8.0/manifest.json' with { type: 'json' };
+import rel008v080 from '../../packs/0.8.0/events/EVT-REL-008.json' with { type: 'json' };
+import life001 from '../../packs/0.8.0/events/EVT-DEV-301.json' with { type: 'json' };
+import life002 from '../../packs/0.8.0/events/EVT-DEV-302.json' with { type: 'json' };
+import life003 from '../../packs/0.8.0/events/EVT-DEV-303.json' with { type: 'json' };
+import life004 from '../../packs/0.8.0/events/EVT-DEV-304.json' with { type: 'json' };
+import life010 from '../../packs/0.8.0/events/EVT-CON-310.json' with { type: 'json' };
+import life011 from '../../packs/0.8.0/events/EVT-REL-311.json' with { type: 'json' };
+import life012 from '../../packs/0.8.0/events/EVT-REL-312.json' with { type: 'json' };
+import life013 from '../../packs/0.8.0/events/EVT-REL-313.json' with { type: 'json' };
+import life020 from '../../packs/0.8.0/events/EVT-REL-320.json' with { type: 'json' };
+import life030 from '../../packs/0.8.0/events/EVT-DEV-330.json' with { type: 'json' };
 import eventDev201v070 from '../../packs/0.7.0/events/EVT-DEV-201.json' with { type: 'json' };
 import eventDev202v070 from '../../packs/0.7.0/events/EVT-DEV-202.json' with { type: 'json' };
 import eventDev203v070 from '../../packs/0.7.0/events/EVT-DEV-203.json' with { type: 'json' };
@@ -256,6 +268,7 @@ export const PACK_VERSIONS = [
   '0.6.7',
   '0.6.8',
   '0.7.0',
+  '0.8.0',
 ] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
@@ -275,7 +288,10 @@ type PackSource = {
   narrativeTokens: unknown;
 };
 
-const PACK_SOURCES_THROUGH_066: Record<Exclude<PackVersion, '0.6.7' | '0.6.8' | '0.7.0'>, PackSource> = {
+const PACK_SOURCES_THROUGH_066: Record<
+  Exclude<PackVersion, '0.8.0' | '0.6.7' | '0.6.8' | '0.7.0'>,
+  PackSource
+> = {
   '0.1.0': {
     manifest: manifest010,
     events: [
@@ -1031,7 +1047,10 @@ const PACK_SOURCES_THROUGH_066: Record<Exclude<PackVersion, '0.6.7' | '0.6.8' | 
   },
 };
 
-const PACK_SOURCES_WITHOUT_068: Record<Exclude<PackVersion, '0.6.8' | '0.7.0'>, PackSource> = {
+const PACK_SOURCES_WITHOUT_068: Record<
+  Exclude<PackVersion, '0.8.0' | '0.6.8' | '0.7.0'>,
+  PackSource
+> = {
   ...PACK_SOURCES_THROUGH_066,
   '0.6.7': {
     ...PACK_SOURCES_THROUGH_066['0.6.6'],
@@ -1039,7 +1058,7 @@ const PACK_SOURCES_WITHOUT_068: Record<Exclude<PackVersion, '0.6.8' | '0.7.0'>, 
   },
 };
 
-const PACK_SOURCES_THROUGH_068: Record<Exclude<PackVersion, '0.7.0'>, PackSource> = {
+const PACK_SOURCES_THROUGH_068: Record<Exclude<PackVersion, '0.8.0' | '0.7.0'>, PackSource> = {
   ...PACK_SOURCES_WITHOUT_068,
   '0.6.8': {
     ...PACK_SOURCES_WITHOUT_068['0.6.7'],
@@ -1070,7 +1089,43 @@ const PACK_SOURCES_THROUGH_068: Record<Exclude<PackVersion, '0.7.0'>, PackSource
   },
 };
 
-const PACK_SOURCES: Record<PackVersion, PackSource> = { ...PACK_SOURCES_THROUGH_068, '0.7.0': { ...PACK_SOURCES_THROUGH_068['0.6.8'], manifest: manifest070, events: [...PACK_SOURCES_THROUGH_068['0.6.8'].events, eventDev201v070, eventDev202v070, eventDev203v070] } };
+const PACK_SOURCES_THROUGH_070: Record<Exclude<PackVersion, '0.8.0'>, PackSource> = {
+  ...PACK_SOURCES_THROUGH_068,
+  '0.7.0': {
+    ...PACK_SOURCES_THROUGH_068['0.6.8'],
+    manifest: manifest070,
+    events: [
+      ...PACK_SOURCES_THROUGH_068['0.6.8'].events,
+      eventDev201v070,
+      eventDev202v070,
+      eventDev203v070,
+    ],
+  },
+};
+
+const PACK_SOURCES: Record<PackVersion, PackSource> = {
+  ...PACK_SOURCES_THROUGH_070,
+  '0.8.0': {
+    ...PACK_SOURCES_THROUGH_070['0.7.0'],
+    manifest: manifest080,
+    events: [
+      ...PACK_SOURCES_THROUGH_070['0.7.0'].events.filter(
+        (e) => (e as { id: string }).id !== 'EVT-REL-008',
+      ),
+      rel008v080,
+      life001,
+      life002,
+      life003,
+      life004,
+      life010,
+      life011,
+      life012,
+      life013,
+      life020,
+      life030,
+    ],
+  },
+};
 
 /**
  * 번들에 포함된 팩 JSON(manifest·이벤트 11개·챕터 4개·narrative 사전)을 스키마로 검증해 동기로

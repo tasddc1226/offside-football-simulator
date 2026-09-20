@@ -117,7 +117,7 @@ export function CreationForm({
           ✕
         </Link>
       </header>
-      <p className="creation-lead">이름을 정하고, 당신의 가능성을 열어 보세요.</p>
+      <p className="creation-lead">12시즌에 담을 나만의 축구 인생. 이름부터 정해 보세요.</p>
       <div className="creation-identity">
         <label htmlFor="draft-name">이름</label>
         <button

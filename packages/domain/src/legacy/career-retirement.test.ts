@@ -4,13 +4,21 @@ import { runSettledFixture } from '../__fixtures__/career-06-settled.js';
 import { rulesetProto } from '../__fixtures__/career-01.js';
 import { hashState } from '../hash.js';
 import { simulate } from '../simulate.js';
-import { assessCareerRetirement, retirementContinuationOptions, retirementDecisionRequired, RETIREMENT_POLICY } from './career-retirement.js';
+import {
+  assessCareerRetirement,
+  retirementContinuationOptions,
+  retirementDecisionRequired,
+  RETIREMENT_POLICY,
+} from './career-retirement.js';
 import { careerEventChoices } from './career-event.js';
 import { initializeNationalityModule, resolveNationalityChoice } from './nationality.js';
 import type { DomainSnapshot } from '../types.js';
 import type { Command } from '../simulate.js';
 
-const seasonFixture = seasonRaw as { startSeason: { simulationMode: 'FAST'; serviceSeasonId: string }; commands: Array<{ type: Command['type']; payload: unknown }> };
+const seasonFixture = seasonRaw as {
+  startSeason: { simulationMode: 'FAST'; serviceSeasonId: string };
+  commands: Array<{ type: Command['type']; payload: unknown }>;
+};
 type EngineCommand = Command & { commandId: string; expectedRevision: number };
 
 function runSeason(snapshot: DomainSnapshot): DomainSnapshot {
@@ -18,15 +26,85 @@ function runSeason(snapshot: DomainSnapshot): DomainSnapshot {
   for (let n = 0; n < 150; n += 1) {
     const pending = current.state.pending;
     let command: EngineCommand;
-    if (pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT') command = { type: 'REJECT_OFFER', payload: { offerId: null }, commandId: `retirement-season-${n}-market`, expectedRevision: current.revision } as EngineCommand;
-    else if (pending?.kind === 'INJURY') command = { type: 'RESOLVE_EVENT', payload: { eventId: pending.eventId, definitionVersion: pending.version, choiceId: 'A', outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }], rehabPlan: 'STANDARD' }, commandId: `retirement-season-${n}-injury`, expectedRevision: current.revision } as EngineCommand;
-    else if (pending?.kind === 'NATIONAL_TEAM') command = { type: 'RESOLVE_EVENT', payload: { eventId: pending.eventId, definitionVersion: pending.version, choiceId: 'C', outcomes: [{ id: 'C1', kind: 'FIXED', weight: 100, effects: [] }], callUp: 'DECLINE' }, commandId: `retirement-season-${n}-national`, expectedRevision: current.revision } as EngineCommand;
-    else if (pending?.kind === 'ROLE_PROPOSAL') command = { type: 'RESOLVE_ROLE', payload: { decision: 'ACCEPT' }, commandId: `retirement-season-${n}-role`, expectedRevision: current.revision } as EngineCommand;
-    else if (pending?.kind === 'EVENT') command = { type: 'RESOLVE_EVENT', payload: { eventId: pending.eventId, definitionVersion: pending.version, choiceId: 'A', outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }] }, commandId: `retirement-season-${n}-event`, expectedRevision: current.revision } as EngineCommand;
-    else if (pending?.kind === 'SETTLEMENT') command = { type: 'SETTLE_SEASON', payload: {}, commandId: `retirement-season-${n}-settle`, expectedRevision: current.revision } as EngineCommand;
-    else command = { type: 'ADVANCE', payload: seasonFixture.commands.find((item) => item.type === 'ADVANCE')?.payload ?? { eligibleEvents: [] }, commandId: `retirement-season-${n}-advance`, expectedRevision: current.revision } as EngineCommand;
-    const result = simulate({ snapshot: current, command, ruleset: rulesetProto, rulesetVersion: current.rulesetVersion, contentPackVersion: current.contentPackVersion });
-    if (!result.ok) throw new Error(`${command.type} failed: ${result.error.message}; pending=${current.state.pending?.kind ?? 'none'}`);
+    if (pending?.kind === 'OFFERS' || pending?.kind === 'CONTRACT')
+      command = {
+        type: 'REJECT_OFFER',
+        payload: { offerId: null },
+        commandId: `retirement-season-${n}-market`,
+        expectedRevision: current.revision,
+      } as EngineCommand;
+    else if (pending?.kind === 'INJURY')
+      command = {
+        type: 'RESOLVE_EVENT',
+        payload: {
+          eventId: pending.eventId,
+          definitionVersion: pending.version,
+          choiceId: 'A',
+          outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
+          rehabPlan: 'STANDARD',
+        },
+        commandId: `retirement-season-${n}-injury`,
+        expectedRevision: current.revision,
+      } as EngineCommand;
+    else if (pending?.kind === 'NATIONAL_TEAM')
+      command = {
+        type: 'RESOLVE_EVENT',
+        payload: {
+          eventId: pending.eventId,
+          definitionVersion: pending.version,
+          choiceId: 'C',
+          outcomes: [{ id: 'C1', kind: 'FIXED', weight: 100, effects: [] }],
+          callUp: 'DECLINE',
+        },
+        commandId: `retirement-season-${n}-national`,
+        expectedRevision: current.revision,
+      } as EngineCommand;
+    else if (pending?.kind === 'ROLE_PROPOSAL')
+      command = {
+        type: 'RESOLVE_ROLE',
+        payload: { decision: 'ACCEPT' },
+        commandId: `retirement-season-${n}-role`,
+        expectedRevision: current.revision,
+      } as EngineCommand;
+    else if (pending?.kind === 'EVENT')
+      command = {
+        type: 'RESOLVE_EVENT',
+        payload: {
+          eventId: pending.eventId,
+          definitionVersion: pending.version,
+          choiceId: 'A',
+          outcomes: [{ id: 'A1', kind: 'FIXED', weight: 100, effects: [] }],
+        },
+        commandId: `retirement-season-${n}-event`,
+        expectedRevision: current.revision,
+      } as EngineCommand;
+    else if (pending?.kind === 'SETTLEMENT')
+      command = {
+        type: 'SETTLE_SEASON',
+        payload: {},
+        commandId: `retirement-season-${n}-settle`,
+        expectedRevision: current.revision,
+      } as EngineCommand;
+    else
+      command = {
+        type: 'ADVANCE',
+        payload: seasonFixture.commands.find((item) => item.type === 'ADVANCE')?.payload ?? {
+          eligibleEvents: [],
+        },
+        commandId: `retirement-season-${n}-advance`,
+        expectedRevision: current.revision,
+      } as EngineCommand;
+    const result = simulate({
+      snapshot: current,
+      command,
+      ruleset: rulesetProto,
+      rulesetVersion: current.rulesetVersion,
+      contentPackVersion: current.contentPackVersion,
+    });
+    if (!result.ok)
+      throw new Error(
+        `${command.type} failed: ${result.error.message}; pending=${current.state.pending?.kind ?? 'none'}`,
+      );
     current = result.snapshot;
     if (current.state.season === null && n > 0) return current;
   }
@@ -36,12 +114,22 @@ function runSeason(snapshot: DomainSnapshot): DomainSnapshot {
 function singleOfferBoundary(): DomainSnapshot {
   const source = runSettledFixture().snapshot;
   if (source.state.pending?.kind !== 'OFFERS' || source.state.pending.offers[0] === undefined) {
-    throw new Error(`fixture must expose OFFERS at retirement boundary; pending=${source.state.pending?.kind ?? 'none'}`);
+    throw new Error(
+      `fixture must expose OFFERS at retirement boundary; pending=${source.state.pending?.kind ?? 'none'}`,
+    );
   }
   const state = {
     ...source.state,
-    pending: { ...source.state.pending, offers: [{ ...source.state.pending.offers[0], lengthSeasons: 1 }] },
-    retirement: { policyVersion: '1.0.0' as const, marketOffers: 1, lastChanceConsumed: false, lastChanceSeasonIndex: null },
+    pending: {
+      ...source.state.pending,
+      offers: [{ ...source.state.pending.offers[0], lengthSeasons: 1 }],
+    },
+    retirement: {
+      policyVersion: '1.0.0' as const,
+      marketOffers: 1,
+      lastChanceConsumed: false,
+      lastChanceSeasonIndex: null,
+    },
   };
   return { ...source, state, stateHash: hashState(state) };
 }
@@ -51,12 +139,18 @@ function retireContinuation(snapshot: DomainSnapshot) {
   if (option === undefined) throw new Error('fixture offer is not eligible for continuation');
   const result = simulate({
     snapshot,
-    command: { type: 'RETIRE', commandId: `last-chance-${option.offerId}`, expectedRevision: snapshot.revision, payload: { choice: option.choice, offerId: option.offerId } },
+    command: {
+      type: 'RETIRE',
+      commandId: `last-chance-${option.offerId}`,
+      expectedRevision: snapshot.revision,
+      payload: { choice: option.choice, offerId: option.offerId },
+    },
     ruleset: rulesetProto,
     rulesetVersion: snapshot.rulesetVersion,
     contentPackVersion: snapshot.contentPackVersion,
   });
-  if (!result.ok) throw new Error(`continuation failed: ${result.error.code} ${result.error.message}`);
+  if (!result.ok)
+    throw new Error(`continuation failed: ${result.error.code} ${result.error.message}`);
   return { option, snapshot: result.snapshot };
 }
 
@@ -69,7 +163,10 @@ describe('career retirement continuation', () => {
     expect(snapshot.checkpoint).not.toBe('RETIREMENT');
     expect(snapshot.checkpoint).toBe('CONTRACT_CONFIRMED');
     expect(snapshot.state.contract).not.toBeNull();
-    expect(snapshot.state.retirement).toMatchObject({ lastChanceConsumed: true, lastChanceSeasonIndex: prepared.state.seasonHistory.length + 1 });
+    expect(snapshot.state.retirement).toMatchObject({
+      lastChanceConsumed: true,
+      lastChanceSeasonIndex: prepared.state.seasonHistory.length + 1,
+    });
     expect(snapshot.state.pending).toBeNull();
   });
 
@@ -79,7 +176,12 @@ describe('career retirement continuation', () => {
     expect(retirementDecisionRequired(snapshot.state)).toBe(false);
     const nextStart = simulate({
       snapshot,
-      command: { type: 'START_SEASON', commandId: 'last-chance-start', expectedRevision: snapshot.revision, payload: { simulationMode: 'FAST', serviceSeasonId: 'last-chance-season' } },
+      command: {
+        type: 'START_SEASON',
+        commandId: 'last-chance-start',
+        expectedRevision: snapshot.revision,
+        payload: { simulationMode: 'FAST', serviceSeasonId: 'last-chance-season' },
+      },
       ruleset: rulesetProto,
       rulesetVersion: snapshot.rulesetVersion,
       contentPackVersion: snapshot.contentPackVersion,
@@ -88,8 +190,22 @@ describe('career retirement continuation', () => {
     const finished = runSeason(nextStart.ok ? nextStart.snapshot : snapshot);
     expect(finished.state.seasonHistory.length).toBe(snapshot.state.seasonHistory.length + 1);
     expect(retirementDecisionRequired(finished.state)).toBe(true);
-    const blocked = simulate({ snapshot: finished, command: { type: 'START_SEASON', commandId: 'retirement-blocked', expectedRevision: finished.revision, payload: { simulationMode: 'FAST', serviceSeasonId: 'blocked' } }, ruleset: rulesetProto, rulesetVersion: finished.rulesetVersion, contentPackVersion: finished.contentPackVersion });
-    expect(blocked).toMatchObject({ ok: false, error: { details: { reason: 'RETIREMENT_DECISION_REQUIRED' } } });
+    const blocked = simulate({
+      snapshot: finished,
+      command: {
+        type: 'START_SEASON',
+        commandId: 'retirement-blocked',
+        expectedRevision: finished.revision,
+        payload: { simulationMode: 'FAST', serviceSeasonId: 'blocked' },
+      },
+      ruleset: rulesetProto,
+      rulesetVersion: finished.rulesetVersion,
+      contentPackVersion: finished.contentPackVersion,
+    });
+    expect(blocked).toMatchObject({
+      ok: false,
+      error: { details: { reason: 'RETIREMENT_DECISION_REQUIRED' } },
+    });
     const reused = retirementContinuationOptions(snapshot.state);
     expect(reused).toHaveLength(0);
   });
@@ -119,7 +235,12 @@ describe('career retirement continuation', () => {
     const { snapshot } = retireContinuation(prepared);
     const started = simulate({
       snapshot,
-      command: { type: 'START_SEASON', commandId: 'target-season-start', expectedRevision: snapshot.revision, payload: { simulationMode: 'FAST', serviceSeasonId: 'target-season' } },
+      command: {
+        type: 'START_SEASON',
+        commandId: 'target-season-start',
+        expectedRevision: snapshot.revision,
+        payload: { simulationMode: 'FAST', serviceSeasonId: 'target-season' },
+      },
       ruleset: rulesetProto,
       rulesetVersion: snapshot.rulesetVersion,
       contentPackVersion: snapshot.contentPackVersion,
@@ -145,7 +266,12 @@ describe('career retirement continuation', () => {
       ...source.state,
       age: 38,
       nationalityRuleState: service,
-      retirement: { policyVersion: '1.0.0' as const, marketOffers: 0, lastChanceConsumed: false, lastChanceSeasonIndex: null },
+      retirement: {
+        policyVersion: '1.0.0' as const,
+        marketOffers: 0,
+        lastChanceConsumed: false,
+        lastChanceSeasonIndex: null,
+      },
     };
     expect(retirementDecisionRequired(state)).toBe(false);
   });
@@ -169,7 +295,16 @@ describe('career retirement continuation', () => {
 
   it('does not infer review from age alone or absent market evidence', () => {
     const source = runSettledFixture().snapshot;
-    const state = { ...source.state, age: 100, retirement: { policyVersion: '1.0.0' as const, marketOffers: null, lastChanceConsumed: false, lastChanceSeasonIndex: null } };
+    const state = {
+      ...source.state,
+      age: 100,
+      retirement: {
+        policyVersion: '1.0.0' as const,
+        marketOffers: null,
+        lastChanceConsumed: false,
+        lastChanceSeasonIndex: null,
+      },
+    };
     expect(retirementDecisionRequired(state)).toBe(false);
   });
 
@@ -189,7 +324,16 @@ describe('career retirement continuation', () => {
     const { snapshot } = retireContinuation(prepared);
     const started = simulate({
       snapshot,
-      command: { type: 'START_SEASON', commandId: 'target-season-start-policy', expectedRevision: snapshot.revision, payload: { simulationMode: 'FAST', serviceSeasonId: 'target-season-policy', legacyLedger: true } },
+      command: {
+        type: 'START_SEASON',
+        commandId: 'target-season-start-policy',
+        expectedRevision: snapshot.revision,
+        payload: {
+          simulationMode: 'FAST',
+          serviceSeasonId: 'target-season-policy',
+          legacyLedger: true,
+        },
+      },
       ruleset: rulesetProto,
       rulesetVersion: snapshot.rulesetVersion,
       contentPackVersion: snapshot.contentPackVersion,
@@ -201,7 +345,12 @@ describe('career retirement continuation', () => {
     const targetState = {
       ...finished.state,
       pending: null,
-      retirement: { policyVersion: '1.0.0' as const, marketOffers: 0, lastChanceConsumed: false, lastChanceSeasonIndex: null },
+      retirement: {
+        policyVersion: '1.0.0' as const,
+        marketOffers: 0,
+        lastChanceConsumed: false,
+        lastChanceSeasonIndex: null,
+      },
     };
     // Baseline: the default policy (no argument) does not require review for this evidence.
     const baseline = assessCareerRetirement(targetState);
@@ -210,10 +359,41 @@ describe('career retirement continuation', () => {
     expect(retirementDecisionRequired(targetState)).toBe(false);
     // A stricter policy (lower reviewThreshold, same weights so age/injury alone still can't force
     // review) passed explicitly must flip the same evidence to REVIEW.
-    const stricterPolicy = { ...RETIREMENT_POLICY, version: 'test-strict', watchThreshold: 20, reviewThreshold: 26 };
+    const stricterPolicy = {
+      ...RETIREMENT_POLICY,
+      version: 'test-strict',
+      watchThreshold: 20,
+      reviewThreshold: 26,
+    };
     const assessment = assessCareerRetirement(targetState, 'UNDECIDED', stricterPolicy);
     expect(assessment?.policyVersion).toBe('test-strict');
     expect(assessment?.status).toBe('REVIEW');
     expect(retirementDecisionRequired(targetState, stricterPolicy)).toBe(true);
   });
+});
+
+it('finishes the bounded journey at twelve seasons without another contract or season', () => {
+  const prepared = singleOfferBoundary();
+  const policy = { ...RETIREMENT_POLICY, maxCareerSeasons: 12 };
+  const state = {
+    ...prepared.state,
+    seasonHistory: Array.from({ length: 12 }, () => prepared.state.seasonHistory[0]!),
+  };
+  expect(retirementDecisionRequired(state, policy)).toBe(true);
+  expect(retirementContinuationOptions(state, policy)).toEqual([]);
+  expect(retirementContinuationOptions(state)).not.toEqual([]);
+  const ready = { ...state, pending: null };
+  const result = simulate({
+    snapshot: { ...prepared, state: ready, stateHash: hashState(ready) },
+    command: {
+      type: 'START_SEASON',
+      commandId: 'journey-completed',
+      expectedRevision: prepared.revision,
+      payload: { simulationMode: 'FAST', serviceSeasonId: 'test' },
+    },
+    ruleset: { ...rulesetProto, retirementRules: policy },
+    rulesetVersion: prepared.rulesetVersion,
+    contentPackVersion: prepared.contentPackVersion,
+  });
+  expect(result.ok).toBe(false);
 });

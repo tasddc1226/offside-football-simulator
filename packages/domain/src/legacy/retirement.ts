@@ -22,6 +22,8 @@ export type RetirementFacts = Readonly<{
 /** Caller supplies a versioned policy; there is deliberately no production default. */
 export type RetirementPolicy = Readonly<{
   version: string;
+  /** Opt-in finite career; historical policies have no cap. */
+  maxCareerSeasons?: number | undefined;
   ageBands: ReadonlyArray<Readonly<{ fromAge: number; pressure: number }>>;
   weights: Readonly<FactorScores>;
   injuryAbsenceWeight: number;
@@ -63,6 +65,8 @@ function percentage(part: number, whole: number): number {
 
 function validatePolicy(policy: RetirementPolicy): void {
   identifier(policy.version);
+  if (policy.maxCareerSeasons !== undefined)
+    integer(policy.maxCareerSeasons, 'career seasons', 4, 30);
   for (const key of FACTORS) integer(policy.weights[key], `weight ${key}`, 0, 100);
   if (FACTORS.reduce((sum, key) => sum + policy.weights[key], 0) !== 100)
     throw new RangeError('Retirement: weights must sum to 100.');

@@ -15,14 +15,23 @@ const STALE_TIME_MS = 5 * 60 * 1000;
 
 async function fetchServiceSeason(): Promise<ServiceSeasonCurrent> {
   if (import.meta.env.DEV && import.meta.env.VITE_SIMULATOR_PREVIEW === 'true') {
-    return { ...FALLBACK_SERVICE_SEASON, id: 'svc_simulator_preview', name: '선수 육성 프리뷰', isTest: true, rulesetVersion: '2.0.0', contentPackVersion: '0.7.0' };
+    return {
+      ...FALLBACK_SERVICE_SEASON,
+      id: 'svc_simulator_preview',
+      name: '선수 육성 프리뷰',
+      isTest: true,
+      rulesetVersion: '2.1.0',
+      contentPackVersion: '0.8.0',
+    };
   }
   const result = await getServiceSeasonCurrent();
   if (!result.ok) {
     throw new Error(result.error.message);
   }
   const engine = await getAppEngine();
-  await engine.store.transaction('readwrite', (tx) => tx.kv.put(SERVICE_SEASON_KV_KEY, result.data));
+  await engine.store.transaction('readwrite', (tx) =>
+    tx.kv.put(SERVICE_SEASON_KV_KEY, result.data),
+  );
   return result.data;
 }
 
@@ -50,7 +59,9 @@ export async function resolveServiceSeason(): Promise<ServiceSeasonCurrent> {
     return data;
   } catch {
     const engine = await getAppEngine();
-    const cached = await engine.store.transaction('readonly', (tx) => tx.kv.get<ServiceSeasonCurrent>(SERVICE_SEASON_KV_KEY));
+    const cached = await engine.store.transaction('readonly', (tx) =>
+      tx.kv.get<ServiceSeasonCurrent>(SERVICE_SEASON_KV_KEY),
+    );
     return cached ?? FALLBACK_SERVICE_SEASON;
   }
 }

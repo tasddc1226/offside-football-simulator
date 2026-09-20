@@ -441,7 +441,7 @@ function NextDecisionCard({
   startYear: number;
 }) {
   const navigate = useNavigate();
-  const advanceMutation = useCareerMutation('advance');
+  const advanceMutation = useCareerMutation('advanceToDecision');
   const settleSeasonMutation = useCareerMutation('settleSeason');
   const teamNameOverrides = useUiStore((uiState) => uiState.teamNameOverrides);
   const [nothingToAdvance, setNothingToAdvance] = useState(false);
@@ -687,7 +687,7 @@ function NextDecisionCard({
         onClick={() => void handleAdvance()}
         disabled={nothingToAdvance || advanceMutation.isPending}
       >
-        {advancing ? '진행 중' : '진행'}
+        {advancing ? '다음 장면을 준비하는 중' : rulesetForCareer(state).retirementRules?.maxCareerSeasons ? '다음 중요한 순간까지' : '진행'}
       </Button>
       {advancing ? (
         <GamePending

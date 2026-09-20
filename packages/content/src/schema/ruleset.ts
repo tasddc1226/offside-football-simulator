@@ -177,6 +177,10 @@ const WageBandIdSchema = z.enum(WAGE_BAND_IDS);
 export const TeamSchema = z.strictObject({
   id: z.string().min(1),
   name: z.string().min(1),
+  countryCode: z
+    .string()
+    .regex(/^[A-Z]{2}$/)
+    .optional(),
   leagueTier: LeagueTierSchema,
   reputation: z.number().int().min(1).max(5),
   wageBandId: WageBandIdSchema,
@@ -1218,6 +1222,7 @@ export const RulesetSchema = z
     retirementRules: z
       .strictObject({
         version: z.string().min(1).max(200),
+        maxCareerSeasons: z.number().int().min(4).max(30).optional(),
         ageBands: z
           .array(
             z.strictObject({
@@ -1305,11 +1310,14 @@ export const RulesetSchema = z
     leagueLedgerRules: LeagueLedgerRulesSchema.optional(),
     /** Issue #243: absent on every historical ruleset, so their selector order stays byte-stable. */
     chapterSelectionRules: ChapterSelectionRulesSchema.optional(),
-    eventSelectionRules: z.strictObject({
-      version: z.literal('FRESH_WEIGHTED_V1'),
-      repeatCooldownSeasons: z.number().int().min(1).max(10),
-      unseenWeightMultiplier: z.number().int().min(1).max(10),
-    }).optional(),
+    eventSelectionRules: z
+      .strictObject({
+        version: z.literal('FRESH_WEIGHTED_V1'),
+        maxEventsPerSeason: z.number().int().min(1).max(6).optional(),
+        repeatCooldownSeasons: z.number().int().min(1).max(10),
+        unseenWeightMultiplier: z.number().int().min(1).max(10),
+      })
+      .optional(),
     positions: z.array(PositionSchema).min(1),
     archetypes: z.array(ArchetypeSchema),
     backgrounds: z.array(BackgroundSchema).min(1),
@@ -1344,7 +1352,10 @@ export const RulesetSchema = z
     marketValueRules: MarketValueRulesSchema,
   })
   .superRefine((ruleset, ctx) => {
-    if ((ruleset.version === '1.7.0' || ruleset.version === '1.7.1') && ruleset.leagueLedgerRules === undefined) {
+    if (
+      (ruleset.version === '1.7.0' || ruleset.version === '1.7.1') &&
+      ruleset.leagueLedgerRules === undefined
+    ) {
       ctx.addIssue({
         code: 'custom',
         message: '1.7.x 룰셋은 leagueLedgerRules를 명시해야 한다.',

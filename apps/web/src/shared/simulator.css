@@ -487,3 +487,53 @@
   color: var(--os-accent);
   font-variant-numeric: tabular-nums;
 }
+
+.sim-career-journey {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 16px;
+  padding: 18px;
+  border: 1px solid var(--os-border);
+  border-radius: 18px;
+  background: linear-gradient(120deg, var(--os-surface), var(--os-accent-soft));
+  color: var(--os-text);
+}
+.sim-career-journey h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.sim-career-journey > strong {
+  align-self: center;
+  font-size: 22px;
+}
+.sim-career-journey small {
+  font-size: 12px;
+  font-weight: 400;
+}
+.sim-career-journey progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--os-accent);
+  grid-column: 1/-1;
+}
+.sim-career-journey > p {
+  margin: 0;
+  grid-column: 1/-1;
+  font-size: 12px;
+  color: var(--os-text-2);
+}
+.sim-career-journey progress {
+  appearance: none;
+  border: none;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.sim-career-journey progress::-webkit-progress-bar {
+  background: var(--os-border);
+}
+.sim-career-journey progress::-webkit-progress-value {
+  background: var(--os-accent);
+}
+.sim-career-journey progress::-moz-progress-bar {
+  background: var(--os-accent);
+}

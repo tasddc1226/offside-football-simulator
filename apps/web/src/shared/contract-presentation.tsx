@@ -3,8 +3,20 @@ import { buttonClassName, buttonStyle } from '@offside/ui';
 import { Link } from '@tanstack/react-router';
 import { ClubBadge } from './ClubBadge.js';
 import { formatKrw } from './format.js';
-import { LEAGUE_TIER_LABEL_KO, POSITION_LABELS, ROLE_PROMISE_SENTENCE, SQUAD_ROLE_LABELS } from './labels.js';
-import { actionableRevision, OFFER_KIND_LABEL_KO, offerDecisionDeadlineLabel, offerDetailRows, offerProjectionNotice, offerStatusLabel } from './transfer-view.js';
+import {
+  LEAGUE_TIER_LABEL_KO,
+  POSITION_LABELS,
+  ROLE_PROMISE_SENTENCE,
+  SQUAD_ROLE_LABELS,
+} from './labels.js';
+import {
+  actionableRevision,
+  OFFER_KIND_LABEL_KO,
+  offerDecisionDeadlineLabel,
+  offerDetailRows,
+  offerProjectionNotice,
+  offerStatusLabel,
+} from './transfer-view.js';
 
 function signedDelta(value: number, current: number): string {
   const delta = value - current;
@@ -18,12 +30,24 @@ function signedDelta(value: number, current: number): string {
  * 풀어 쓸 뿐). 스카우트 평가 뒤 도착한 제안이라는 맥락을 이어준다.
  */
 export function offerRationale(offer: Offer): string {
-  return `${LEAGUE_TIER_LABEL_KO[offer.leagueTier]} ${offer.teamName}이(가) ${POSITION_LABELS[offer.positionPlan]} 자리를 보고 제안했습니다. ${ROLE_PROMISE_SENTENCE[offer.rolePromise]}`;
+  return `${offer.leagueName ?? LEAGUE_TIER_LABEL_KO[offer.leagueTier]} ${offer.teamName}이(가) ${POSITION_LABELS[offer.positionPlan]} 자리를 보고 제안했습니다. ${ROLE_PROMISE_SENTENCE[offer.rolePromise]}`;
 }
 
-export function offerHeadlineRows(offer: Offer, state: CareerState, recordRevision: number, safeOfferId: string | null) {
+export function offerHeadlineRows(
+  offer: Offer,
+  state: CareerState,
+  recordRevision: number,
+  safeOfferId: string | null,
+) {
   const current = state.contract;
-  const remaining = current === null ? null : computeContractSeasonsRemaining(current.lengthSeasons, current.signedAtRevision, state.timeline);
+  const remaining =
+    current === null
+      ? null
+      : computeContractSeasonsRemaining(
+          current.lengthSeasons,
+          current.signedAtRevision,
+          state.timeline,
+        );
   const deadline = offerDecisionDeadlineLabel(offer, recordRevision);
   return [
     // 이슈 188: "완전 이적 · 안전 잔류 제안"처럼 한 값으로 붙이면 360px 2열 그리드에서 카드마다
@@ -34,7 +58,7 @@ export function offerHeadlineRows(offer: Offer, state: CareerState, recordRevisi
       value: OFFER_KIND_LABEL_KO[offer.kind],
       delta: offerStatusLabel(offer, actionableRevision(recordRevision), safeOfferId),
     },
-    { label: '리그', value: LEAGUE_TIER_LABEL_KO[offer.leagueTier] },
+    { label: '리그', value: offer.leagueName ?? LEAGUE_TIER_LABEL_KO[offer.leagueTier] },
     {
       label: '역할 · 출전 약속',
       value: `${SQUAD_ROLE_LABELS[offer.rolePromise]} · ${Math.round(offer.appearancePromise.minutesShareBp / 100)}%`,
@@ -42,7 +66,10 @@ export function offerHeadlineRows(offer: Offer, state: CareerState, recordRevisi
     {
       label: '주급',
       value: formatKrw(offer.wageMinorPerWeek),
-      delta: current === null ? '첫 프로 계약' : signedDelta(offer.wageMinorPerWeek, current.wageMinorPerWeek),
+      delta:
+        current === null
+          ? '첫 프로 계약'
+          : signedDelta(offer.wageMinorPerWeek, current.wageMinorPerWeek),
     },
     {
       label: '기간',
@@ -52,9 +79,9 @@ export function offerHeadlineRows(offer: Offer, state: CareerState, recordRevisi
           ? '첫 프로 계약'
           : remaining === 0
             ? `현재 계약의 마지막 시즌 · 갱신 +${offer.lengthSeasons}시즌`
-          : offer.lengthSeasons === (remaining ?? 0)
-            ? '현재와 같음'
-            : `남은 ${remaining ?? 0}시즌 대비 ${offer.lengthSeasons > (remaining ?? 0) ? '+' : '−'}${Math.abs(offer.lengthSeasons - (remaining ?? 0))}시즌`,
+            : offer.lengthSeasons === (remaining ?? 0)
+              ? '현재와 같음'
+              : `남은 ${remaining ?? 0}시즌 대비 ${offer.lengthSeasons > (remaining ?? 0) ? '+' : '−'}${Math.abs(offer.lengthSeasons - (remaining ?? 0))}시즌`,
     },
     { label: '결정 기한', value: deadline },
   ];
@@ -78,7 +105,11 @@ export function CompactOfferCard({
   const headline = offerHeadlineRows(offer, state, recordRevision, safeOfferId);
   const headlineLabels = new Set(headline.map((row) => row.label));
   const details = offerDetailRows(offer, recordRevision, safeOfferId, parentTeamName).filter(
-    (row) => !headlineLabels.has(row.label) && row.label !== '제안 종류' && row.label !== '상태' && row.label !== '유효 기간',
+    (row) =>
+      !headlineLabels.has(row.label) &&
+      row.label !== '제안 종류' &&
+      row.label !== '상태' &&
+      row.label !== '유효 기간',
   );
   const pending = state.pending;
   const projectionNotice =
@@ -98,7 +129,10 @@ export function CompactOfferCard({
           {offer.teamName}
         </h2>
         {isFirstContractOffer ? (
-          <p className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
+          <p
+            className="font-os text-os-text-2"
+            style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+          >
             {offerRationale(offer)}
           </p>
         ) : null}
@@ -109,19 +143,49 @@ export function CompactOfferCard({
             <dt className="os-eyebrow">{row.label}</dt>
             <dd className="flex flex-col gap-os-1">
               <span className="font-os font-semibold text-os-text">{row.value}</span>
-              {'delta' in row ? <span className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)' }}>{row.delta}</span> : null}
+              {'delta' in row ? (
+                <span
+                  className="font-os text-os-text-2"
+                  style={{ fontSize: 'var(--os-fs-caption)' }}
+                >
+                  {row.delta}
+                </span>
+              ) : null}
             </dd>
           </div>
         ))}
       </dl>
       <details>
-        <summary className="cursor-pointer font-os font-semibold text-os-text">나머지 조건 {details.length}개</summary>
-        <dl className="mt-os-2 grid grid-cols-2 gap-os-2 font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>
-          {details.map((row) => <div key={row.label}><dt>{row.label}</dt><dd className="text-os-text">{row.value}</dd></div>)}
+        <summary className="cursor-pointer font-os font-semibold text-os-text">
+          나머지 조건 {details.length}개
+        </summary>
+        <dl
+          className="mt-os-2 grid grid-cols-2 gap-os-2 font-os text-os-text-2"
+          style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+        >
+          {details.map((row) => (
+            <div key={row.label}>
+              <dt>{row.label}</dt>
+              <dd className="text-os-text">{row.value}</dd>
+            </div>
+          ))}
         </dl>
       </details>
-      {projectionNotice ? <p className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}>{projectionNotice}</p> : null}
-      <Link to="/career/$careerId/contract" params={{ careerId }} search={{ offerId: offer.id }} className={buttonClassName('primary', 'w-full justify-center')} style={buttonStyle}>
+      {projectionNotice ? (
+        <p
+          className="font-os text-os-text-2"
+          style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
+        >
+          {projectionNotice}
+        </p>
+      ) : null}
+      <Link
+        to="/career/$careerId/contract"
+        params={{ careerId }}
+        search={{ offerId: offer.id }}
+        className={buttonClassName('primary', 'w-full justify-center')}
+        style={buttonStyle}
+      >
         제안 상세·결정
       </Link>
     </article>

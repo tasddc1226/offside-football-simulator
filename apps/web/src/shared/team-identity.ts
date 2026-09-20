@@ -29,6 +29,10 @@ function initialsFromName(name: string): string {
 }
 
 const TEAM_IDENTITY: Record<string, TeamIdentity> = {
+  'osaka-harbor': { initials: '오사', colorVar: 'var(--os-team-ulsan-pado-fc)' },
+  'yokohama-blue': { initials: '요코', colorVar: 'var(--os-team-incheon-gaetbeol-fc)' },
+  'porto-atlantico': { initials: '포르', colorVar: 'var(--os-team-suwon-hwahong-fc)' },
+  'lisboa-estrela': { initials: '리스', colorVar: 'var(--os-team-jeonju-deulnyeok-united)' },
   // 1.0.0~1.4.0
   'hangang-u18': { initials: '한강', colorVar: 'var(--os-team-hangang-u18)' },
   'seorabeol-united': { initials: '서라', colorVar: 'var(--os-team-seorabeol-united)' },
@@ -48,7 +52,10 @@ const TEAM_IDENTITY: Record<string, TeamIdentity> = {
   'seoul-hangang-fc': { initials: '한강', colorVar: 'var(--os-team-seoul-hangang-fc)' },
   'suwon-hwahong-fc': { initials: '화홍', colorVar: 'var(--os-team-suwon-hwahong-fc)' },
   'incheon-gaetbeol-fc': { initials: '갯벌', colorVar: 'var(--os-team-incheon-gaetbeol-fc)' },
-  'jeonju-deulnyeok-united': { initials: '들녘', colorVar: 'var(--os-team-jeonju-deulnyeok-united)' },
+  'jeonju-deulnyeok-united': {
+    initials: '들녘',
+    colorVar: 'var(--os-team-jeonju-deulnyeok-united)',
+  },
   'ulsan-pado-fc': { initials: '파도', colorVar: 'var(--os-team-ulsan-pado-fc)' },
   'pohang-donghae-fc': { initials: '동해', colorVar: 'var(--os-team-pohang-donghae-fc)' },
   'daegu-palgong-fc': { initials: '팔공', colorVar: 'var(--os-team-daegu-palgong-fc)' },
@@ -62,7 +69,10 @@ const TEAM_IDENTITY: Record<string, TeamIdentity> = {
   'bucheon-wonmi-fc': { initials: '원미', colorVar: 'var(--os-team-bucheon-wonmi-fc)' },
   'seongnam-tancheon-fc': { initials: '탄천', colorVar: 'var(--os-team-seongnam-tancheon-fc)' },
   'gimpo-pyeongya-fc': { initials: '평야', colorVar: 'var(--os-team-gimpo-pyeongya-fc)' },
-  'cheonan-heungtaryeong-fc': { initials: '흥타', colorVar: 'var(--os-team-cheonan-heungtaryeong-fc)' },
+  'cheonan-heungtaryeong-fc': {
+    initials: '흥타',
+    colorVar: 'var(--os-team-cheonan-heungtaryeong-fc)',
+  },
   'asan-oncheon-fc': { initials: '온천', colorVar: 'var(--os-team-asan-oncheon-fc)' },
   'cheongju-jikji-fc': { initials: '직지', colorVar: 'var(--os-team-cheongju-jikji-fc)' },
   'changwon-jinhae-fc': { initials: '진해', colorVar: 'var(--os-team-changwon-jinhae-fc)' },

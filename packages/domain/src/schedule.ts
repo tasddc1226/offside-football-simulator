@@ -69,7 +69,9 @@ export function resolveOpponent(
     }
   }
 
-  throw new RangeError(`resolveOpponent: opponentId '${opponentId}'를 어느 상대로도 해석할 수 없다.`);
+  throw new RangeError(
+    `resolveOpponent: opponentId '${opponentId}'를 어느 상대로도 해석할 수 없다.`,
+  );
 }
 
 type RoundEntry = { round: number; step: number; opponentId: string; home: boolean };
@@ -120,7 +122,11 @@ function buildLeagueRounds(ruleset: Ruleset, team: Team, league: League): RoundE
 }
 
 /** T-7-022: 신규 원장용 참가팀 snapshot. 실제 소속 팀을 포함하고 합성 ID 충돌을 건너뛴다. */
-export function buildLeagueRoster(ruleset: Ruleset, team: Team, league: League): LeagueTeamSnapshot[] {
+export function buildLeagueRoster(
+  ruleset: Ruleset,
+  team: Team,
+  league: League,
+): LeagueTeamSnapshot[] {
   const named = ruleset.teams
     .filter((candidate) => candidate.leagueId === league.id)
     .sort((a, b) => compareCodePoints(a.id, b.id));
@@ -128,7 +134,9 @@ export function buildLeagueRoster(ruleset: Ruleset, team: Team, league: League):
     throw new RangeError(`buildLeagueRoster: 소속 팀 '${team.id}'이 league '${league.id}'에 없다.`);
   }
   if (named.length > league.teamCount) {
-    throw new RangeError(`buildLeagueRoster: 이름 있는 팀 ${named.length}개가 teamCount ${league.teamCount}를 초과한다.`);
+    throw new RangeError(
+      `buildLeagueRoster: 이름 있는 팀 ${named.length}개가 teamCount ${league.teamCount}를 초과한다.`,
+    );
   }
 
   const allNamedIds = new Set(ruleset.teams.map((candidate) => candidate.id));
@@ -139,7 +147,8 @@ export function buildLeagueRoster(ruleset: Ruleset, team: Team, league: League):
   }));
   for (let n = 1; roster.length < league.teamCount; n++) {
     const teamId = `${league.id}-opp-${n}`;
-    if (allNamedIds.has(teamId) || roster.some((candidate) => candidate.teamId === teamId)) continue;
+    if (allNamedIds.has(teamId) || roster.some((candidate) => candidate.teamId === teamId))
+      continue;
     const opponent = resolveOpponent(ruleset, league, teamId);
     roster.push({ teamId, name: opponent.name, strength: opponent.strength });
   }
@@ -210,7 +219,10 @@ export function buildLeagueFixtures(
     };
   });
   return [...firstLeg, ...secondLeg].sort(
-    (a, b) => a.round - b.round || compareCodePoints(a.homeTeamId, b.homeTeamId) || compareCodePoints(a.awayTeamId, b.awayTeamId),
+    (a, b) =>
+      a.round - b.round ||
+      compareCodePoints(a.homeTeamId, b.homeTeamId) ||
+      compareCodePoints(a.awayTeamId, b.awayTeamId),
   );
 }
 
@@ -231,7 +243,10 @@ export function buildSchedule(ruleset: Ruleset, team: Team, seasonIndex = 1): Sc
   const league = findLeague(ruleset, team.leagueId);
   const leagueRounds = buildLeagueRounds(ruleset, team, league);
 
-  const eligibleCup = ruleset.cups.find((cup) => cup.tiers.includes(team.leagueTier));
+  const eligibleCup =
+    team.countryCode !== undefined && team.countryCode !== 'KR'
+      ? undefined
+      : ruleset.cups.find((cup) => cup.tiers.includes(team.leagueTier));
 
   const byStep = new Map<number, ScheduleEntry[]>();
   const pushEntry = (step: number, entry: ScheduleEntry): void => {
@@ -255,7 +270,9 @@ export function buildSchedule(ruleset: Ruleset, team: Team, seasonIndex = 1): Sc
   } else {
     const roster = buildLeagueRoster(ruleset, team, league);
     if (roster.length > ruleset.leagueLedgerRules.maxTeamCount) {
-      throw new RangeError(`buildSchedule: ledger teamCount ${roster.length}가 최대 ${ruleset.leagueLedgerRules.maxTeamCount}를 초과한다.`);
+      throw new RangeError(
+        `buildSchedule: ledger teamCount ${roster.length}가 최대 ${ruleset.leagueLedgerRules.maxTeamCount}를 초과한다.`,
+      );
     }
     for (const fixture of buildLeagueFixtures(seasonIndex, league.id, roster)) {
       if (fixture.homeTeamId !== team.id && fixture.awayTeamId !== team.id) continue;

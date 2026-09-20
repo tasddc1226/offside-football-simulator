@@ -58,8 +58,13 @@ export function assessCareerRetirement(
   );
 }
 
-export function retirementContinuationOptions(state: CareerState) {
+export function retirementContinuationOptions(
+  state: CareerState,
+  policy: RetirementPolicy = RETIREMENT_POLICY,
+) {
   if (
+    (policy.maxCareerSeasons !== undefined &&
+      state.seasonHistory.length >= policy.maxCareerSeasons) ||
     state.status !== 'ACTIVE' ||
     state.season !== null ||
     ('serviceStatus' in state.nationalityRuleState &&
@@ -85,6 +90,11 @@ export function retirementDecisionRequired(
   state: CareerState,
   policy: RetirementPolicy = RETIREMENT_POLICY,
 ): boolean {
+  if (
+    policy.maxCareerSeasons !== undefined &&
+    state.seasonHistory.length >= policy.maxCareerSeasons
+  )
+    return true;
   if (
     state.retirement?.lastChanceConsumed === true &&
     state.retirement.lastChanceSeasonIndex !== null

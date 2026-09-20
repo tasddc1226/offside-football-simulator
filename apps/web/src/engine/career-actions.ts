@@ -1,7 +1,22 @@
 // EngineClient 위의 순수 함수(React 없음). 06 "분석 이벤트": 실행마다 command_submitted ·
 // command_resolved(outcomeClass = nextAction) · command_failed를 보낸다.
-import type { CareerState, ChapterOutcomeKind, Command, Effect, NegotiationAsk, PlayerDraft, SimulationMode } from '@offside/domain';
-import { loadContentPack, loadRuleset, selectChapterCandidates, selectEligibleEvents, type ChapterDefinition, type EventDefinition } from '@offside/content';
+import type {
+  CareerState,
+  ChapterOutcomeKind,
+  Command,
+  Effect,
+  NegotiationAsk,
+  PlayerDraft,
+  SimulationMode,
+} from '@offside/domain';
+import {
+  loadContentPack,
+  loadRuleset,
+  selectChapterCandidates,
+  selectEligibleEvents,
+  type ChapterDefinition,
+  type EventDefinition,
+} from '@offside/content';
 import type { EngineCommand, ExecuteResult, LoadResult } from '@offside/engine-client';
 import { deleteCareerOnServer } from '../api/client.js';
 import { platform } from '../platform/index.js';
@@ -54,7 +69,12 @@ function notifySync(careerId: string, result: ExecuteResult): void {
 }
 
 /** 이미 읽은 revision으로 명령을 만들어 실행하고, submit/resolve/fail 분석 이벤트를 함께 보낸다. */
-async function commit(engine: AppEngine, careerId: string, expectedRevision: number, command: Command): Promise<ExecuteResult> {
+async function commit(
+  engine: AppEngine,
+  careerId: string,
+  expectedRevision: number,
+  command: Command,
+): Promise<ExecuteResult> {
   const startedAt = Date.now();
   trackSubmitted(command.type);
 
@@ -67,7 +87,11 @@ async function commit(engine: AppEngine, careerId: string, expectedRevision: num
 }
 
 /** 공통 실행기: loadCareer로 최신 revision을 읽어 expectedRevision을 채운 뒤 commit한다. */
-export async function execute(engine: AppEngine, careerId: string, command: Command): Promise<ExecuteResult> {
+export async function execute(
+  engine: AppEngine,
+  careerId: string,
+  command: Command,
+): Promise<ExecuteResult> {
   const load: LoadResult = await engine.client.loadCareer(careerId);
   if (!load.ok) {
     return { ok: false, error: load.error };
@@ -82,7 +106,11 @@ export async function execute(engine: AppEngine, careerId: string, command: Comm
 const E2E_SEED_STORAGE_KEY = 'offside:e2e-seed';
 
 function newCareerSeed(): string {
-  if (import.meta.env.DEV && typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
+  if (
+    import.meta.env.DEV &&
+    typeof localStorage !== 'undefined' &&
+    typeof localStorage.getItem === 'function'
+  ) {
     const override = localStorage.getItem(E2E_SEED_STORAGE_KEY);
     if (override !== null) return override;
   }
@@ -101,7 +129,9 @@ export async function createCareer(
   const ruleset = loadRuleset(serviceSeason.rulesetVersion);
   const pack = loadContentPack(serviceSeason.contentPackVersion);
   if (!pack.manifest.compatibleRulesetVersions.includes(ruleset.version)) {
-    throw new Error(`서비스 시즌의 콘텐츠 팩 ${pack.manifest.contentPackVersion}과 룰셋 ${ruleset.version}이 호환되지 않습니다.`);
+    throw new Error(
+      `서비스 시즌의 콘텐츠 팩 ${pack.manifest.contentPackVersion}과 룰셋 ${ruleset.version}이 호환되지 않습니다.`,
+    );
   }
 
   const command: Command = {
@@ -118,7 +148,11 @@ export async function createCareer(
   const startedAt = Date.now();
   trackSubmitted(command.type);
 
-  const engineCommand: EngineCommand = { ...command, commandId: engine.newId(), expectedRevision: 0 };
+  const engineCommand: EngineCommand = {
+    ...command,
+    commandId: engine.newId(),
+    expectedRevision: 0,
+  };
   const result = await engine.client.execute({
     careerId,
     command: engineCommand,
@@ -133,7 +167,11 @@ export async function createCareer(
   return result;
 }
 
-export function updateDraft(engine: AppEngine, careerId: string, draft: Partial<PlayerDraft>): Promise<ExecuteResult> {
+export function updateDraft(
+  engine: AppEngine,
+  careerId: string,
+  draft: Partial<PlayerDraft>,
+): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'UPDATE_PLAYER_DRAFT', payload: { draft } });
 }
 
@@ -158,6 +196,29 @@ export async function advance(engine: AppEngine, careerId: string): Promise<Exec
     type: 'ADVANCE',
     payload: { eligibleEvents, chapterCandidates },
   });
+}
+
+/** Play routine fixtures until the next real choice; every step remains a saved command. */
+export async function advanceToDecision(
+  engine: AppEngine,
+  careerId: string,
+): Promise<ExecuteResult> {
+  let result = await advance(engine, careerId);
+  for (let steps = 1; steps < 24 && result.ok; steps += 1) {
+    const state = result.domainSnapshot.state;
+    const rules = loadRuleset(state.rulesetVersion);
+    if (
+      rules.retirementRules?.maxCareerSeasons === undefined ||
+      state.status !== 'ACTIVE' ||
+      (state.pending !== null &&
+        !(state.pending.kind === 'CONTRACT' && state.pending.offers.length === 0)) ||
+      state.season === null ||
+      state.season.currentStep >= state.season.steps.length
+    )
+      break;
+    result = await advance(engine, careerId);
+  }
+  return result;
 }
 
 /**
@@ -212,41 +273,63 @@ export function toResolveEventOutcomes(
  * choice의 callUp을 함께 요구한다(전용 UI 없이 기존 이벤트 adapter만 확장한다). pending이 없거나
  * 팩에 정의·선택지가 없으면(딥링크 오용 등) 커밋 없이 VALIDATION_FAILED를 돌려준다.
  */
-export async function resolveEvent(engine: AppEngine, careerId: string, choiceId: string): Promise<ExecuteResult> {
+export async function resolveEvent(
+  engine: AppEngine,
+  careerId: string,
+  choiceId: string,
+): Promise<ExecuteResult> {
   const load: LoadResult = await engine.client.loadCareer(careerId);
   if (!load.ok) {
     return { ok: false, error: load.error };
   }
 
   const pending = load.snapshot.state.pending;
-  if (pending === null || (pending.kind !== 'EVENT' && pending.kind !== 'INJURY' && pending.kind !== 'NATIONAL_TEAM')) {
-    return { ok: false, error: { code: 'VALIDATION_FAILED', message: 'resolveEvent: 해소할 pending 이벤트가 없다.' } };
+  if (
+    pending === null ||
+    (pending.kind !== 'EVENT' && pending.kind !== 'INJURY' && pending.kind !== 'NATIONAL_TEAM')
+  ) {
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: 'resolveEvent: 해소할 pending 이벤트가 없다.' },
+    };
   }
 
   const definition = contentForCareer(load.snapshot.state).eventsById.get(pending.eventId);
   if (definition === undefined) {
     return {
       ok: false,
-      error: { code: 'VALIDATION_FAILED', message: `resolveEvent: 팩에 이벤트 정의가 없다: ${pending.eventId}` },
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: `resolveEvent: 팩에 이벤트 정의가 없다: ${pending.eventId}`,
+      },
     };
   }
 
   if (pending.kind === 'INJURY' && definition.presentation !== 'INJURY') {
     return {
       ok: false,
-      error: { code: 'VALIDATION_FAILED', message: `resolveEvent: INJURY pending에 맞는 이벤트 정의가 아니다: ${pending.eventId}` },
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: `resolveEvent: INJURY pending에 맞는 이벤트 정의가 아니다: ${pending.eventId}`,
+      },
     };
   }
   if (pending.kind === 'EVENT' && definition.presentation === 'INJURY') {
     return {
       ok: false,
-      error: { code: 'VALIDATION_FAILED', message: `resolveEvent: INJURY 이벤트는 INJURY pending에서만 해소할 수 있다: ${pending.eventId}` },
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: `resolveEvent: INJURY 이벤트는 INJURY pending에서만 해소할 수 있다: ${pending.eventId}`,
+      },
     };
   }
   if (pending.kind === 'NATIONAL_TEAM' && definition.presentation !== 'NATIONAL_TEAM') {
     return {
       ok: false,
-      error: { code: 'VALIDATION_FAILED', message: `NATIONAL_TEAM pending에 맞는 이벤트 정의가 아니다: ${pending.eventId}` },
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: `NATIONAL_TEAM pending에 맞는 이벤트 정의가 아니다: ${pending.eventId}`,
+      },
     };
   }
 
@@ -254,7 +337,10 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
   if (choice === undefined) {
     return {
       ok: false,
-      error: { code: 'VALIDATION_FAILED', message: `resolveEvent: 정의에 없는 choiceId: ${choiceId}` },
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: `resolveEvent: 정의에 없는 choiceId: ${choiceId}`,
+      },
     };
   }
 
@@ -262,7 +348,10 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
   if (pending.kind === 'INJURY' && rehabPlan === undefined) {
     return {
       ok: false,
-      error: { code: 'VALIDATION_FAILED', message: `resolveEvent: 재활 계획이 없는 INJURY choice다: ${choiceId}` },
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: `resolveEvent: 재활 계획이 없는 INJURY choice다: ${choiceId}`,
+      },
     };
   }
 
@@ -270,7 +359,10 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
   if (pending.kind === 'NATIONAL_TEAM' && callUp === undefined) {
     return {
       ok: false,
-      error: { code: 'VALIDATION_FAILED', message: `callUp이 없는 NATIONAL_TEAM choice다: ${choiceId}` },
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: `callUp이 없는 NATIONAL_TEAM choice다: ${choiceId}`,
+      },
     };
   }
 
@@ -289,7 +381,11 @@ export async function resolveEvent(engine: AppEngine, careerId: string, choiceId
   return commit(engine, careerId, load.snapshot.revision, command);
 }
 
-export function acceptOffer(engine: AppEngine, careerId: string, offerId: string): Promise<ExecuteResult> {
+export function acceptOffer(
+  engine: AppEngine,
+  careerId: string,
+  offerId: string,
+): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'ACCEPT_OFFER', payload: { offerId } });
 }
 
@@ -304,7 +400,11 @@ export function negotiateOffer(
 }
 
 /** 개별 offerId 또는 null(전체 거절 → 안전 잔류)을 domain 명령으로 그대로 전달한다. */
-export function rejectOffer(engine: AppEngine, careerId: string, offerId: string | null): Promise<ExecuteResult> {
+export function rejectOffer(
+  engine: AppEngine,
+  careerId: string,
+  offerId: string | null,
+): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'REJECT_OFFER', payload: { offerId } });
 }
 
@@ -336,12 +436,20 @@ export function toStartSeasonPayload(choice: StartSeasonChoice, serviceSeasonId:
   };
 }
 
-export async function startSeason(engine: AppEngine, careerId: string, choice: StartSeasonChoice): Promise<ExecuteResult> {
+export async function startSeason(
+  engine: AppEngine,
+  careerId: string,
+  choice: StartSeasonChoice,
+): Promise<ExecuteResult> {
   const serviceSeasonId = await resolveServiceSeasonId();
   return execute(engine, careerId, toStartSeasonPayload(choice, serviceSeasonId));
 }
 
-export function resolveRole(engine: AppEngine, careerId: string, decision: 'ACCEPT' | 'DECLINE'): Promise<ExecuteResult> {
+export function resolveRole(
+  engine: AppEngine,
+  careerId: string,
+  decision: 'ACCEPT' | 'DECLINE',
+): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'RESOLVE_ROLE', payload: { decision } });
 }
 
@@ -361,7 +469,11 @@ export function shouldAutoAcceptUnchangedRole(state: CareerState): boolean {
 export function settleSeason(engine: AppEngine, careerId: string): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'SETTLE_SEASON', payload: {} });
 }
-export function requestClubMeeting(engine: AppEngine, careerId: string, request: 'PLAYING_TIME' | 'LOAN' | 'TRANSFER'): Promise<ExecuteResult> {
+export function requestClubMeeting(
+  engine: AppEngine,
+  careerId: string,
+  request: 'PLAYING_TIME' | 'LOAN' | 'TRANSFER',
+): Promise<ExecuteResult> {
   return execute(engine, careerId, { type: 'REQUEST_CLUB_MEETING', payload: { request } });
 }
 
@@ -415,14 +527,20 @@ export async function resolveChapter(
 
   const pending = load.snapshot.state.pending;
   if (pending === null || pending.kind !== 'CHAPTER') {
-    return { ok: false, error: { code: 'VALIDATION_FAILED', message: 'resolveChapter: 해소할 pending 챕터가 없다.' } };
+    return {
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: 'resolveChapter: 해소할 pending 챕터가 없다.' },
+    };
   }
 
   const definition = contentForCareer(load.snapshot.state).chaptersById.get(pending.chapterId);
   if (definition === undefined) {
     return {
       ok: false,
-      error: { code: 'VALIDATION_FAILED', message: `resolveChapter: 팩에 챕터 정의가 없다: ${pending.chapterId}` },
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: `resolveChapter: 팩에 챕터 정의가 없다: ${pending.chapterId}`,
+      },
     };
   }
 
@@ -430,7 +548,10 @@ export async function resolveChapter(
   if (decision === undefined) {
     return {
       ok: false,
-      error: { code: 'VALIDATION_FAILED', message: `resolveChapter: 정의에 없는 decisionId: ${decisionId}` },
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: `resolveChapter: 정의에 없는 decisionId: ${decisionId}`,
+      },
     };
   }
 
@@ -438,7 +559,10 @@ export async function resolveChapter(
   if (option === undefined) {
     return {
       ok: false,
-      error: { code: 'VALIDATION_FAILED', message: `resolveChapter: 정의에 없는 optionId: ${optionId}` },
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: `resolveChapter: 정의에 없는 optionId: ${optionId}`,
+      },
     };
   }
 

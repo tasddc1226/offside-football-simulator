@@ -2788,6 +2788,7 @@ function acceptFirstContractOffer(
     teamId: offer.teamId,
     teamName: offer.teamName,
     leagueTier: offer.leagueTier,
+    ...(offer.leagueName === undefined ? {} : { leagueName: offer.leagueName }),
     lengthSeasons: offer.lengthSeasons,
     wageMinorPerWeek: offer.wageMinorPerWeek,
     signingBonusMinor: offer.signingBonusMinor,
@@ -2870,6 +2871,7 @@ function acceptRenewalOffer(
     teamId: offer.teamId,
     teamName: offer.teamName,
     leagueTier: offer.leagueTier,
+    ...(offer.leagueName === undefined ? {} : { leagueName: offer.leagueName }),
     lengthSeasons: offer.lengthSeasons,
     wageMinorPerWeek: offer.wageMinorPerWeek,
     signingBonusMinor: offer.signingBonusMinor,
@@ -2947,6 +2949,7 @@ function acceptNewClubOffer(
     teamId: offer.teamId,
     teamName: offer.teamName,
     leagueTier: offer.leagueTier,
+    ...(offer.leagueName === undefined ? {} : { leagueName: offer.leagueName }),
     lengthSeasons: offer.lengthSeasons,
     wageMinorPerWeek: offer.wageMinorPerWeek,
     signingBonusMinor: offer.signingBonusMinor,
@@ -3030,6 +3033,7 @@ function acceptLoanOffer(
     teamId: offer.teamId,
     teamName: offer.teamName,
     leagueTier: offer.leagueTier,
+    ...(offer.leagueName === undefined ? {} : { leagueName: offer.leagueName }),
     lengthSeasons: 1,
     wageMinorPerWeek: offer.wageMinorPerWeek,
     signingBonusMinor: offer.signingBonusMinor,
@@ -4086,7 +4090,7 @@ function retireCareer(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   const { state } = snapshot;
   if (command.payload.choice === 'LAST_CONTRACT' || command.payload.choice === 'LOWER_LEAGUE') {
     const choice = command.payload;
-    if (!retirementContinuationOptions(state).some((option) => option.choice === choice.choice && option.offerId === choice.offerId)) return fail('VALIDATION_FAILED', '사용할 수 없는 마지막 계약 제안이다.');
+    if (!retirementContinuationOptions(state, input.ruleset.retirementRules).some((option) => option.choice === choice.choice && option.offerId === choice.offerId)) return fail('VALIDATION_FAILED', '사용할 수 없는 마지막 계약 제안이다.');
     const accepted = acceptOffer({ ...input, command: { ...command, type: 'ACCEPT_OFFER', payload: { offerId: choice.offerId } } }, snapshot);
     if (!accepted.ok) return accepted;
     const continued: CareerState = { ...accepted.snapshot.state, retirement: { policyVersion: '1.0.0', marketOffers: state.retirement?.marketOffers ?? null, lastChanceConsumed: true, lastChanceSeasonIndex: state.seasonHistory.length + 1 } };

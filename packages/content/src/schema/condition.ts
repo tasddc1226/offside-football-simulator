@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import type { AttributeKey, CareerPhase, SeasonPhase, SimulationMode, SquadRole } from '@offside/domain';
+import type {
+  AttributeKey,
+  CareerPhase,
+  SeasonPhase,
+  SimulationMode,
+  SquadRole,
+} from '@offside/domain';
 
 /**
  * `@offside/domain`은 devDependency(타입 전용)이므로 여기서 런타임 값을 import할 수 없다.
@@ -84,6 +90,7 @@ export type ConditionFieldSpec = {
  */
 export const CONDITION_FIELDS: readonly ConditionFieldSpec[] = [
   { path: 'career.age', type: 'int' },
+  { path: 'contract.teamId', type: 'string' },
   { path: 'career.stage', type: 'enum', values: Object.keys(CAREER_STAGE_SET) },
   { path: 'career.currentRole', type: 'enum', values: Object.keys(SQUAD_ROLE_SET) },
   { path: 'career.tags', type: 'tags' },
@@ -229,7 +236,11 @@ function checkLeafValue(
     }
     return;
   }
-  ctx.addIssue({ code: 'custom', message: `필드 ${spec.path}(tags)는 hasTag에만 쓸 수 있다.`, path });
+  ctx.addIssue({
+    code: 'custom',
+    message: `필드 ${spec.path}(tags)는 hasTag에만 쓸 수 있다.`,
+    path,
+  });
 }
 
 function validateLeaf(
@@ -239,42 +250,69 @@ function validateLeaf(
 ): ConditionFieldSpec | undefined {
   const spec = resolveConditionField(field);
   if (!spec) {
-    ctx.addIssue({ code: 'custom', message: `화이트리스트에 없는 조건 필드: ${field}`, path: [operator, 0] });
+    ctx.addIssue({
+      code: 'custom',
+      message: `화이트리스트에 없는 조건 필드: ${field}`,
+      path: [operator, 0],
+    });
     return undefined;
   }
   if (operator === 'hasTag' && spec.type !== 'tags') {
-    ctx.addIssue({ code: 'custom', message: `hasTag는 tags 필드에만 쓸 수 있다: ${field}`, path: [operator, 0] });
+    ctx.addIssue({
+      code: 'custom',
+      message: `hasTag는 tags 필드에만 쓸 수 있다: ${field}`,
+      path: [operator, 0],
+    });
   }
-  if ((operator === 'gt' || operator === 'gte' || operator === 'lt' || operator === 'lte') && spec.type !== 'int') {
-    ctx.addIssue({ code: 'custom', message: `${operator}는 int 필드에만 쓸 수 있다: ${field}`, path: [operator, 0] });
+  if (
+    (operator === 'gt' || operator === 'gte' || operator === 'lt' || operator === 'lte') &&
+    spec.type !== 'int'
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      message: `${operator}는 int 필드에만 쓸 수 있다: ${field}`,
+      path: [operator, 0],
+    });
   }
   return spec;
 }
 
-const EqSchema = z.strictObject({ eq: z.tuple([z.string(), ComparisonValueSchema]) }).superRefine((node, ctx) => {
-  const [field, value] = node.eq;
-  const spec = validateLeaf('eq', field, ctx);
-  if (spec && spec.type !== 'tags') checkLeafValue(spec, value, ctx, ['eq', 1]);
-});
+const EqSchema = z
+  .strictObject({ eq: z.tuple([z.string(), ComparisonValueSchema]) })
+  .superRefine((node, ctx) => {
+    const [field, value] = node.eq;
+    const spec = validateLeaf('eq', field, ctx);
+    if (spec && spec.type !== 'tags') checkLeafValue(spec, value, ctx, ['eq', 1]);
+  });
 
-const NeqSchema = z.strictObject({ neq: z.tuple([z.string(), ComparisonValueSchema]) }).superRefine((node, ctx) => {
-  const [field, value] = node.neq;
-  const spec = validateLeaf('neq', field, ctx);
-  if (spec && spec.type !== 'tags') checkLeafValue(spec, value, ctx, ['neq', 1]);
-});
+const NeqSchema = z
+  .strictObject({ neq: z.tuple([z.string(), ComparisonValueSchema]) })
+  .superRefine((node, ctx) => {
+    const [field, value] = node.neq;
+    const spec = validateLeaf('neq', field, ctx);
+    if (spec && spec.type !== 'tags') checkLeafValue(spec, value, ctx, ['neq', 1]);
+  });
 
-const GtSchema = z.strictObject({ gt: z.tuple([z.string(), z.number()]) }).superRefine((node, ctx) => {
-  validateLeaf('gt', node.gt[0], ctx);
-});
-const GteSchema = z.strictObject({ gte: z.tuple([z.string(), z.number()]) }).superRefine((node, ctx) => {
-  validateLeaf('gte', node.gte[0], ctx);
-});
-const LtSchema = z.strictObject({ lt: z.tuple([z.string(), z.number()]) }).superRefine((node, ctx) => {
-  validateLeaf('lt', node.lt[0], ctx);
-});
-const LteSchema = z.strictObject({ lte: z.tuple([z.string(), z.number()]) }).superRefine((node, ctx) => {
-  validateLeaf('lte', node.lte[0], ctx);
-});
+const GtSchema = z
+  .strictObject({ gt: z.tuple([z.string(), z.number()]) })
+  .superRefine((node, ctx) => {
+    validateLeaf('gt', node.gt[0], ctx);
+  });
+const GteSchema = z
+  .strictObject({ gte: z.tuple([z.string(), z.number()]) })
+  .superRefine((node, ctx) => {
+    validateLeaf('gte', node.gte[0], ctx);
+  });
+const LtSchema = z
+  .strictObject({ lt: z.tuple([z.string(), z.number()]) })
+  .superRefine((node, ctx) => {
+    validateLeaf('lt', node.lt[0], ctx);
+  });
+const LteSchema = z
+  .strictObject({ lte: z.tuple([z.string(), z.number()]) })
+  .superRefine((node, ctx) => {
+    validateLeaf('lte', node.lte[0], ctx);
+  });
 
 const InSchema = z
   .strictObject({ in: z.tuple([z.string(), z.array(ComparisonValueSchema).min(1)]) })
@@ -282,7 +320,11 @@ const InSchema = z
     const [field, values] = node.in;
     const spec = validateLeaf('in', field, ctx);
     if (spec && spec.type === 'tags') {
-      ctx.addIssue({ code: 'custom', message: `in은 tags 필드에 쓸 수 없다: ${field}`, path: ['in', 0] });
+      ctx.addIssue({
+        code: 'custom',
+        message: `in은 tags 필드에 쓸 수 없다: ${field}`,
+        path: ['in', 0],
+      });
     } else if (spec) {
       values.forEach((value, index) => checkLeafValue(spec, value, ctx, ['in', 1, index]));
     }
@@ -294,16 +336,22 @@ const NotInSchema = z
     const [field, values] = node.notIn;
     const spec = validateLeaf('notIn', field, ctx);
     if (spec && spec.type === 'tags') {
-      ctx.addIssue({ code: 'custom', message: `notIn은 tags 필드에 쓸 수 없다: ${field}`, path: ['notIn', 0] });
+      ctx.addIssue({
+        code: 'custom',
+        message: `notIn은 tags 필드에 쓸 수 없다: ${field}`,
+        path: ['notIn', 0],
+      });
     } else if (spec) {
       values.forEach((value, index) => checkLeafValue(spec, value, ctx, ['notIn', 1, index]));
     }
   });
 
-const HasTagSchema = z.strictObject({ hasTag: z.tuple([z.string(), z.string()]) }).superRefine((node, ctx) => {
-  const [field] = node.hasTag;
-  validateLeaf('hasTag', field, ctx);
-});
+const HasTagSchema = z
+  .strictObject({ hasTag: z.tuple([z.string(), z.string()]) })
+  .superRefine((node, ctx) => {
+    const [field] = node.hasTag;
+    validateLeaf('hasTag', field, ctx);
+  });
 
 const LeafSchema = z.union([
   EqSchema,

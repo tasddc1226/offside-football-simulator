@@ -1,4 +1,10 @@
-import type { CareerState, Contract, Position, PositionStatsTotals, TimelineEntry } from '@offside/domain';
+import type {
+  CareerState,
+  Contract,
+  Position,
+  PositionStatsTotals,
+  TimelineEntry,
+} from '@offside/domain';
 import type { ConditionContext, SeasonStat } from '../schema/condition.ts';
 import { SEASON_STATS } from '../schema/condition.ts';
 import { ATTRIBUTE_KEYS } from '../schema/ruleset.ts';
@@ -73,7 +79,9 @@ function computeSeasonsRemaining(contract: Contract, timeline: readonly Timeline
  * ACTIVE 또는 REHAB인 것 중 배열 마지막 항목)을 content가 domain 런타임을 import할 수 없어(ADR-005)
  * 여기서 다시 복제한다.
  */
-function findActiveEpisode(episodes: CareerState['health']['episodes']): CareerState['health']['episodes'][number] | null {
+function findActiveEpisode(
+  episodes: CareerState['health']['episodes'],
+): CareerState['health']['episodes'][number] | null {
   for (let i = episodes.length - 1; i >= 0; i--) {
     const episode = episodes[i]!;
     if (episode.status === 'ACTIVE' || episode.status === 'REHAB') return episode;
@@ -114,7 +122,16 @@ function seasonStatAssists(totals: PositionStatsTotals): number {
 function computeSeasonStats(state: CareerState): Record<SeasonStat, number> {
   const stats = state.season?.playerStats;
   if (!stats) {
-    return { goals: 0, assists: 0, appearances: 0, starts: 0, minutes: 0, rating: 0, yellowCards: 0, redCards: 0 };
+    return {
+      goals: 0,
+      assists: 0,
+      appearances: 0,
+      starts: 0,
+      minutes: 0,
+      rating: 0,
+      yellowCards: 0,
+      redCards: 0,
+    };
   }
   return {
     goals: seasonStatGoals(stats.totals),
@@ -130,7 +147,9 @@ function computeSeasonStats(state: CareerState): Record<SeasonStat, number> {
 
 function proSeasonCount(state: CareerState): number {
   return state.seasonHistory.filter((summary) =>
-    state.clubHistory.some((stint) => stint.teamId === summary.teamId && stint.leagueTier !== 'YOUTH'),
+    state.clubHistory.some(
+      (stint) => stint.teamId === summary.teamId && stint.leagueTier !== 'YOUTH',
+    ),
   ).length;
 }
 
@@ -138,20 +157,25 @@ function proSeasonCount(state: CareerState): number {
 export function buildConditionContext(state: CareerState): ConditionContext {
   const profile = state.player.profile;
   const contract = state.contract;
-  const seasonsRemaining = contract ? computeSeasonsRemaining(contract, state.timeline) : NOT_MODELED_INT;
+  const seasonsRemaining = contract
+    ? computeSeasonsRemaining(contract, state.timeline)
+    : NOT_MODELED_INT;
   const activeEpisode = findActiveEpisode(state.health.episodes);
   const recentRatingsSample = recentRatings(state);
 
   const context: ConditionContext = {
     'career.age': state.age,
     'career.stage': state.stage,
+    'contract.teamId': state.contract?.teamId ?? '',
     'career.currentRole': state.contract?.rolePromise ?? 'RESERVE',
     'career.tags': state.tags,
     'career.proSeasons': proSeasonCount(state),
 
     'player.primaryPosition': profile?.primaryPosition ?? NOT_MODELED_STRING,
     'player.backgroundId': profile?.backgroundId ?? NOT_MODELED_STRING,
-    'player.positionGroup': profile ? resolvePositionGroup(profile.primaryPosition) : NOT_MODELED_STRING,
+    'player.positionGroup': profile
+      ? resolvePositionGroup(profile.primaryPosition)
+      : NOT_MODELED_STRING,
     'player.archetypeId': profile?.archetypeId ?? NOT_MODELED_STRING,
     'player.baseOvr': profile?.baseOvr ?? NOT_MODELED_INT,
 
@@ -188,18 +212,22 @@ export function buildConditionContext(state: CareerState): ConditionContext {
     // 항상 0이고, 그때는 contract.seasonsRemaining으로 판단한다.
     'contract.kind': contract?.kind ?? NOT_MODELED_STRING,
     'contract.seasonsRemaining': seasonsRemaining,
-    'contract.isLastSeason': state.season !== null && contract !== null && seasonsRemaining === 0 ? 1 : 0,
+    'contract.isLastSeason':
+      state.season !== null && contract !== null && seasonsRemaining === 0 ? 1 : 0,
     'contract.promiseBreaches': contract?.promiseBreaches ?? NOT_MODELED_INT,
     'contract.onLoan': contract?.kind === 'LOAN' ? 1 : 0,
     'contract.leagueTier': contract ? String(contract.leagueTier) : NOT_MODELED_STRING,
-    'career.permanentTransfers': state.clubHistory.filter((stint) => stint.endReason === 'TRANSFERRED').length,
+    'career.permanentTransfers': state.clubHistory.filter(
+      (stint) => stint.endReason === 'TRANSFERRED',
+    ).length,
     'career.clubsCount': new Set(state.clubHistory.map((stint) => stint.teamId)).size,
 
     // T-3-001 D-53 예약. 부상·감독 교체 필드는 현재 상태에서 읽고, 최근 폼은 저장하지 않는
     // 활성 시즌 경기 rating의 파생값으로 계산한다.
     'health.activeSeverity': activeEpisode?.severity ?? NOT_MODELED_STRING,
     'health.recurrenceRiskBp': activeEpisode?.recurrenceRiskBp ?? NOT_MODELED_INT,
-    'health.majorInjuries': state.health.episodes.filter((episode) => episode.severity === 'MAJOR').length,
+    'health.majorInjuries': state.health.episodes.filter((episode) => episode.severity === 'MAJOR')
+      .length,
     'reputation.popularityCenti': state.reputation.popularityCenti,
     'season.manager.tenureSeasons': state.season?.manager?.tenureSeasons ?? NOT_MODELED_INT,
     'season.manager.id': state.season?.manager?.id ?? NOT_MODELED_STRING,

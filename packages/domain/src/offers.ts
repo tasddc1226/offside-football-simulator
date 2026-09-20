@@ -9,7 +9,10 @@ import type { Offer, Position, SquadRole } from './types.js';
  * D-9: `branches` 배열 순서대로 첫 일치 분기를 고른다. `requireTags`는 전부 있어야 하고
  * `forbidTags`는 하나도 없어야 한다.
  */
-export function findMatchingOfferBranch(rules: OfferRules, tags: readonly string[]): OfferBranch | null {
+export function findMatchingOfferBranch(
+  rules: OfferRules,
+  tags: readonly string[],
+): OfferBranch | null {
   const tagSet = new Set(tags);
   for (const branch of rules.branches) {
     if (!branch.requireTags.every((tag) => tagSet.has(tag))) continue;
@@ -19,31 +22,51 @@ export function findMatchingOfferBranch(rules: OfferRules, tags: readonly string
   return null;
 }
 
-function computeOfferCount(rules: OfferRules, branch: OfferBranch, tags: readonly string[]): number {
+function computeOfferCount(
+  rules: OfferRules,
+  branch: OfferBranch,
+  tags: readonly string[],
+): number {
   if (branch.fixedCount !== undefined) return branch.fixedCount;
   const tagSet = new Set(tags);
   const bonus = rules.countBonusTags.filter((tag) => tagSet.has(tag)).length;
   return clamp(1 + bonus, 1, rules.maxOffers);
 }
 
-function buildTeamPool(ruleset: Ruleset, branch: OfferBranch, age?: number): { pool: Team[]; fixed: boolean } {
+function buildTeamPool(
+  ruleset: Ruleset,
+  branch: OfferBranch,
+  age?: number,
+): { pool: Team[]; fixed: boolean } {
   if (branch.fixedTeamId !== undefined) {
     const team = ruleset.teams.find((candidate) => candidate.id === branch.fixedTeamId);
     if (team === undefined) {
       throw new RangeError(`buildTeamPool: 룰셋에 fixedTeamId '${branch.fixedTeamId}'가 없다.`);
     }
     const recovery = ruleset.transferRules.recovery;
-    if (team.leagueTier === 'YOUTH' && age !== undefined && recovery !== undefined && age > recovery.youthMaxAge) {
+    if (
+      team.leagueTier === 'YOUTH' &&
+      age !== undefined &&
+      recovery !== undefined &&
+      age > recovery.youthMaxAge
+    ) {
       const adultTeam = ruleset.teams
         .filter((candidate) => candidate.leagueTier === recovery.opportunityTier)
         .sort((a, b) => a.squadStrength - b.squadStrength || compareCodePoints(a.id, b.id))[0];
-      if (adultTeam === undefined) throw new RangeError(`buildTeamPool: tier ${recovery.opportunityTier} recovery team is missing.`);
+      if (adultTeam === undefined)
+        throw new RangeError(
+          `buildTeamPool: tier ${recovery.opportunityTier} recovery team is missing.`,
+        );
       return { pool: [adultTeam], fixed: true };
     }
     return { pool: [team], fixed: true };
   }
   const pool = ruleset.teams
-    .filter((team) => branch.tiers.includes(team.leagueTier))
+    .filter(
+      (team) =>
+        (team.countryCode === undefined || team.countryCode === 'KR') &&
+        branch.tiers.includes(team.leagueTier),
+    )
     .slice()
     .sort((a, b) => compareCodePoints(a.id, b.id));
   return { pool, fixed: false };
@@ -58,10 +81,17 @@ export function findOvrBand(rules: ContractRules, baseOvr: number): { id: string
   return band;
 }
 
-export function lookupBandAmount(table: Record<string, Record<string, number>>, wageBandId: string, bandId: string, label: string): number {
+export function lookupBandAmount(
+  table: Record<string, Record<string, number>>,
+  wageBandId: string,
+  bandId: string,
+  label: string,
+): number {
   const amount = table[wageBandId]?.[bandId];
   if (amount === undefined) {
-    throw new RangeError(`lookupBandAmount: ${label}에 wageBandId '${wageBandId}'·band '${bandId}' 조합이 없다.`);
+    throw new RangeError(
+      `lookupBandAmount: ${label}에 wageBandId '${wageBandId}'·band '${bandId}' 조합이 없다.`,
+    );
   }
   return amount;
 }
@@ -94,7 +124,8 @@ export function generateOffers(
   const { pool, fixed } = buildTeamPool(ruleset, branch, age);
   const count = Math.min(desiredCount, pool.length);
   const band = findOvrBand(ruleset.contractRules, baseOvr);
-  const useTopTierFirst = !fixed && branch.topTierMinOvr !== undefined && baseOvr >= branch.topTierMinOvr;
+  const useTopTierFirst =
+    !fixed && branch.topTierMinOvr !== undefined && baseOvr >= branch.topTierMinOvr;
 
   let remainingPool = pool;
   let state = rng;
@@ -135,8 +166,18 @@ export function generateOffers(
         : null;
     if (fitRoll !== null) state = fitRoll.state;
 
-    const wage = lookupBandAmount(ruleset.contractRules.wageBands, team.wageBandId, band.id, 'wageBands');
-    const signingBonus = lookupBandAmount(ruleset.contractRules.signingBonus, team.wageBandId, band.id, 'signingBonus');
+    const wage = lookupBandAmount(
+      ruleset.contractRules.wageBands,
+      team.wageBandId,
+      band.id,
+      'wageBands',
+    );
+    const signingBonus = lookupBandAmount(
+      ruleset.contractRules.signingBonus,
+      team.wageBandId,
+      band.id,
+      'signingBonus',
+    );
 
     offers.push({
       id: `OFR-${revision}-${index}`,
@@ -150,7 +191,9 @@ export function generateOffers(
       signingBonusMinor: signingBonus,
       transferFeeMinor: null,
       rolePromise,
-      appearancePromise: { minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[rolePromise] },
+      appearancePromise: {
+        minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[rolePromise],
+      },
       positionPlan: primaryPosition,
       shirtNumber: shirtRoll.value,
       tacticalFitEstimate: fitRoll?.value ?? rules.tacticalFitEstimate.min,

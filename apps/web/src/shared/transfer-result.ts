@@ -1,10 +1,16 @@
 // T-3-005 SCR-020: 성공한 계약/임대 전환을 저장된 Snapshot의 timeline·clubHistory에서 재구성한다.
 // mutation 응답의 휘발성 payload에 의존하지 않으므로 새로고침·응답 유실·뒤로가기에 안전하다.
-import { computeContractSeasonsRemaining, type CareerState, type Contract, type TimelineEntry } from '@offside/domain';
+import {
+  computeContractSeasonsRemaining,
+  type CareerState,
+  type Contract,
+  type TimelineEntry,
+} from '@offside/domain';
 import { LEAGUE_TIER_LABEL_KO, POSITION_LABELS, SQUAD_ROLE_LABELS } from './labels.js';
 import { MARKET_REASON_LABEL_KO, OFFER_KIND_LABEL_KO } from './transfer-view.js';
 
-export type TransferResultKind = 'RENEWAL' | 'TRANSFER' | 'FREE_AGENT' | 'LOAN' | 'RETURN' | 'PERMANENT' | 'STAY';
+export type TransferResultKind =
+  'RENEWAL' | 'TRANSFER' | 'FREE_AGENT' | 'LOAN' | 'RETURN' | 'PERMANENT' | 'STAY';
 
 export type TransferResultView = {
   revision: number;
@@ -52,7 +58,9 @@ const TRANSITION_KINDS = new Set<TimelineEntry['kind']>([
 ]);
 
 function isTransitionEntry(entry: TimelineEntry): boolean {
-  return TRANSITION_KINDS.has(entry.kind) && (entry.kind !== 'OFFER_REJECTED' || entry.refId === 'ALL');
+  return (
+    TRANSITION_KINDS.has(entry.kind) && (entry.kind !== 'OFFER_REJECTED' || entry.refId === 'ALL')
+  );
 }
 
 function transitionEntriesAtRevision(state: CareerState, revision: number): TimelineEntry[] {
@@ -66,7 +74,11 @@ export function latestTransferRevision(state: CareerState): number | null {
 }
 
 /** 결과 URL이 가리키는 transition이 현재 저장 snapshot의 revision인지 검증한다. */
-export function isCurrentTransferResultRevision(state: CareerState, recordRevision: number, revision: number): boolean {
+export function isCurrentTransferResultRevision(
+  state: CareerState,
+  recordRevision: number,
+  revision: number,
+): boolean {
   return recordRevision === revision && resolveTransferResultView(state, revision) !== null;
 }
 
@@ -74,7 +86,11 @@ export function isCurrentTransferResultRevision(state: CareerState, recordRevisi
  * 결정 라우트가 응답 유실 뒤 재진입했을 때만 결과로 복구할 revision을 돌려준다. offerId가 있으면
  * 현재 계약과 연결되는지 확인해 오래된 /contract 링크가 과거 결과로 잘못 점프하지 않게 한다.
  */
-export function committedTransferRevision(state: CareerState, currentRevision: number, offerId?: string): number | null {
+export function committedTransferRevision(
+  state: CareerState,
+  currentRevision: number,
+  offerId?: string,
+): number | null {
   const revision = latestTransferRevision(state);
   // 결정 응답이 유실된 직후의 저장 상태만 복구한다. 이후 명령이 한 번이라도 적용됐다면 과거
   // 결과를 stale deep-link에 재투영하지 않고 caller가 screenForCareer로 정상 복구한다.
@@ -85,7 +101,10 @@ export function committedTransferRevision(state: CareerState, currentRevision: n
   return revision;
 }
 
-function resultKind(state: CareerState, entries: readonly TimelineEntry[]): TransferResultKind | null {
+function resultKind(
+  state: CareerState,
+  entries: readonly TimelineEntry[],
+): TransferResultKind | null {
   const returned = entries.find((entry) => entry.kind === 'LOAN_RETURNED');
   if (returned?.refId === 'RETURN') return 'RETURN';
   if (returned?.refId === 'PERMANENT') return 'PERMANENT';
@@ -119,7 +138,10 @@ function kindLabel(kind: TransferResultKind): string {
   }
 }
 
-function currentAndPreviousTeams(state: CareerState, kind: TransferResultKind): { previousTeam: string; newTeam: string } {
+function currentAndPreviousTeams(
+  state: CareerState,
+  kind: TransferResultKind,
+): { previousTeam: string; newTeam: string } {
   const current = state.clubHistory.at(-1);
   const previous = state.clubHistory.at(-2);
   if (kind === 'RENEWAL' || kind === 'STAY') {
@@ -134,21 +156,27 @@ function currentAndPreviousTeams(state: CareerState, kind: TransferResultKind): 
 
 function competitionStatus(state: CareerState, contract: Contract | null): string {
   const season = state.season;
-  if (contract === null || season === null || season.teamId !== contract.teamId) return '프리시즌에서 확정';
+  if (contract === null || season === null || season.teamId !== contract.teamId)
+    return '프리시즌에서 확정';
   const player = season.selection.candidates.find((candidate) => candidate.id === 'PLAYER');
   if (player === undefined) return '프리시즌에서 확정';
-  const appearance = player.appearance === 'START' ? '주전' : player.appearance === 'SUB' ? '교체' : '결장';
+  const appearance =
+    player.appearance === 'START' ? '주전' : player.appearance === 'SUB' ? '교체' : '결장';
   return `현재 선발 경쟁 ${player.rank}위 · ${appearance}`;
 }
 
-function contractView(state: CareerState, kind: TransferResultKind, entries: readonly TimelineEntry[]): TransferResultView['contract'] {
+function contractView(
+  state: CareerState,
+  kind: TransferResultKind,
+  entries: readonly TimelineEntry[],
+): TransferResultView['contract'] {
   const transitionContractId = entries.find((entry) => entry.kind === 'CONTRACT_RENEWED')?.refId;
   const futureRenewal = kind === 'RENEWAL' && state.nextContract?.id === transitionContractId;
-  const contract = futureRenewal ? state.nextContract ?? null : state.contract;
+  const contract = futureRenewal ? (state.nextContract ?? null) : state.contract;
   if (contract === null) return null;
   return {
     kind: contract.kind,
-    league: LEAGUE_TIER_LABEL_KO[contract.leagueTier],
+    league: contract.leagueName ?? LEAGUE_TIER_LABEL_KO[contract.leagueTier],
     lengthSeasons: contract.lengthSeasons,
     wageMinorPerWeek: contract.wageMinorPerWeek,
     role: SQUAD_ROLE_LABELS[contract.rolePromise],
@@ -187,11 +215,19 @@ export function resolveTransferResultView(
   const teams = currentAndPreviousTeams(state, kind);
   const contract = contractView(state, kind, entries);
   const renewalContractId = entries.find((entry) => entry.kind === 'CONTRACT_RENEWED')?.refId;
-  const resultContract = kind === 'RENEWAL' && state.nextContract?.id === renewalContractId ? state.nextContract : state.contract;
+  const resultContract =
+    kind === 'RENEWAL' && state.nextContract?.id === renewalContractId
+      ? state.nextContract
+      : state.contract;
   const contractOfferId = resultContract?.offerId ?? null;
   // relationshipLog는 이 전환과 revision으로 연결되지 않을 수 있다. 과거 이벤트의 reasonTag를
   // 새 이적 사유처럼 보이지 않게 하고, timeline transition kind에서 확인 가능한 사실만 문장화한다.
-  const reasonTag = transitionReason(kind, state, contract?.competition ?? '프리시즌에서 확정', interestedClubCount);
+  const reasonTag = transitionReason(
+    kind,
+    state,
+    contract?.competition ?? '프리시즌에서 확정',
+    interestedClubCount,
+  );
   const baseOvr = state.player.profile?.baseOvr ?? 0;
   const title =
     kind === 'STAY'
@@ -223,11 +259,22 @@ export function resolveTransferResultView(
   };
 }
 
-function transitionReason(kind: TransferResultKind, state: CareerState, competition: string, interestedClubCount?: number): string {
+function transitionReason(
+  kind: TransferResultKind,
+  state: CareerState,
+  competition: string,
+  interestedClubCount?: number,
+): string {
   if (kind === 'STAY') {
     const contract = state.contract;
     const remainingSeasons =
-      contract === null ? 0 : computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline);
+      contract === null
+        ? 0
+        : computeContractSeasonsRemaining(
+            contract.lengthSeasons,
+            contract.signedAtRevision,
+            state.timeline,
+          );
     const interestPhrase =
       interestedClubCount === undefined
         ? '관심을 보인 구단들의 제안'

@@ -57,7 +57,10 @@ describe('judgeMarketReason', () => {
     // 태그 없음 — 순수 지수발 INTEREST다.
     expect(base.tags).not.toContain('이적_희망');
     expect(base.season?.squadRole).not.toBe('STARTER');
-    const index = computeMarketValueIndex(buildMarketValueInput(base, rulesetProto), rulesetProto.marketValueRules).indexCenti;
+    const index = computeMarketValueIndex(
+      buildMarketValueInput(base, rulesetProto),
+      rulesetProto.marketValueRules,
+    ).indexCenti;
     expect(index).toBeGreaterThanOrEqual(rulesetProto.transferRules.interest.minIndexCenti);
     expect(judgeMarketReason(base, rulesetProto)).toBe('INTEREST');
   });
@@ -68,7 +71,10 @@ describe('judgeMarketReason', () => {
   ])('시장가치 지수 $target/$expected 경계를 정확히 평가한다', ({ target, expected }) => {
     const state = stateAtMarketIndex(target);
     expect(
-      computeMarketValueIndex(buildMarketValueInput(state, rulesetProto), rulesetProto.marketValueRules).indexCenti,
+      computeMarketValueIndex(
+        buildMarketValueInput(state, rulesetProto),
+        rulesetProto.marketValueRules,
+      ).indexCenti,
     ).toBe(target);
     expect(judgeMarketReason(state, rulesetProto)).toBe(expected);
   });
@@ -76,7 +82,15 @@ describe('judgeMarketReason', () => {
   // 지수발 INTEREST를 걷어내려고 baseOvr·scoutedPotential을 낮춘 공통 베이스(index 5535 < 7000).
   const lowIndexBase: CareerState = {
     ...base,
-    player: { ...base.player, profile: { ...base.player.profile!, baseOvr: 35, scoutedPotentialMin: 30, scoutedPotentialMax: 45 } },
+    player: {
+      ...base.player,
+      profile: {
+        ...base.player.profile!,
+        baseOvr: 35,
+        scoutedPotentialMin: 30,
+        scoutedPotentialMax: 45,
+      },
+    },
   };
 
   it('이적_희망 태그가 있으면 INTEREST(지수·평점과 무관)', () => {
@@ -87,7 +101,15 @@ describe('judgeMarketReason', () => {
   it('STARTER이고 시즌 평균 평점이 임계값 이상이면 INTEREST', () => {
     const state: CareerState = {
       ...lowIndexBase,
-      season: { ...lowIndexBase.season!, squadRole: 'STARTER', playerStats: { ...lowIndexBase.season!.playerStats, ratingSumTenths: 700, ratedMatches: 10 } },
+      season: {
+        ...lowIndexBase.season!,
+        squadRole: 'STARTER',
+        playerStats: {
+          ...lowIndexBase.season!.playerStats,
+          ratingSumTenths: 700,
+          ratedMatches: 10,
+        },
+      },
     };
     expect(judgeMarketReason(state, rulesetProto)).toBe('INTEREST');
   });
@@ -95,7 +117,15 @@ describe('judgeMarketReason', () => {
   it('STARTER여도 평균 평점이 임계값 미만이면 INTEREST가 아니다', () => {
     const state: CareerState = {
       ...lowIndexBase,
-      season: { ...lowIndexBase.season!, squadRole: 'STARTER', playerStats: { ...lowIndexBase.season!.playerStats, ratingSumTenths: 650, ratedMatches: 10 } },
+      season: {
+        ...lowIndexBase.season!,
+        squadRole: 'STARTER',
+        playerStats: {
+          ...lowIndexBase.season!.playerStats,
+          ratingSumTenths: 650,
+          ratedMatches: 10,
+        },
+      },
     };
     expect(judgeMarketReason(state, rulesetProto)).toBeNull();
   });
@@ -136,10 +166,23 @@ describe('judgeMarketReason·generateMarket — 결산 뒤 상태(season null)�
     ...snapshot.state,
     rngState: beforeSettlementState.rngState,
     pending: null,
-    player: { ...snapshot.state.player, profile: { ...snapshot.state.player.profile!, baseOvr: 35, scoutedPotentialMin: 30, scoutedPotentialMax: 45 } },
+    player: {
+      ...snapshot.state.player,
+      profile: {
+        ...snapshot.state.player.profile!,
+        baseOvr: 35,
+        scoutedPotentialMin: 30,
+        scoutedPotentialMax: 45,
+      },
+    },
   };
 
-  function withLastSeasonSquadRole(state: CareerState, squadRole: SquadRole, ratingSumTenths: number, ratedMatches: number): CareerState {
+  function withLastSeasonSquadRole(
+    state: CareerState,
+    squadRole: SquadRole,
+    ratingSumTenths: number,
+    ratedMatches: number,
+  ): CareerState {
     const lastIndex = state.seasonHistory.length - 1;
     const seasonHistory = state.seasonHistory.map((summary, index) =>
       index === lastIndex
@@ -201,10 +244,26 @@ describe('generateMarket', () => {
   const settled = snapshot.state; // season === null(결산 뒤) — 골든 3종과 같은 베이스.
 
   it('(a) 안전 잔류 제안은 항상 index 0이고 validUntilRevision null·negotiable 전부 false, market.safeOfferId와 id가 같다', () => {
-    const expiredState: CareerState = { ...settled, tags: [], contract: { ...contractOf(settled), lengthSeasons: 1 } };
-    const expired = generateMarket({ state: expiredState, ruleset: marketFixtureRuleset, reason: 'EXPIRED', revision: 30, rng: expiredState.rngState });
+    const expiredState: CareerState = {
+      ...settled,
+      tags: [],
+      contract: { ...contractOf(settled), lengthSeasons: 1 },
+    };
+    const expired = generateMarket({
+      state: expiredState,
+      ruleset: marketFixtureRuleset,
+      reason: 'EXPIRED',
+      revision: 30,
+      rng: expiredState.rngState,
+    });
     const interestState: CareerState = { ...settled, tags: ['이적_희망'] };
-    const interest = generateMarket({ state: interestState, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 30, rng: interestState.rngState });
+    const interest = generateMarket({
+      state: interestState,
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 30,
+      rng: interestState.rngState,
+    });
 
     for (const generated of [expired, interest]) {
       const safeOffer = generated.pending.offers[0]!;
@@ -221,23 +280,51 @@ describe('generateMarket', () => {
 
   it('(b) 제안 수 = clamp(1 + interest + agent, 1, 4) — 후보가 충분하면 그대로 나온다', () => {
     // EXPIRED·태그 없음: interest=0(reason이 INTEREST가 아니다)·agent=0 → 1.
-    const none: CareerState = { ...settled, tags: [], contract: { ...contractOf(settled), lengthSeasons: 1 } };
-    const noneResult = generateMarket({ state: none, ruleset: marketFixtureRuleset, reason: 'EXPIRED', revision: 40, rng: none.rngState });
+    const none: CareerState = {
+      ...settled,
+      tags: [],
+      contract: { ...contractOf(settled), lengthSeasons: 1 },
+    };
+    const noneResult = generateMarket({
+      state: none,
+      ruleset: marketFixtureRuleset,
+      reason: 'EXPIRED',
+      revision: 40,
+      rng: none.rngState,
+    });
     expect(noneResult.pending.offers).toHaveLength(1 + 1);
 
     // INTEREST·태그 없음: interest=1(reason만으로)·agent=0 → 2.
     const reasonOnly: CareerState = { ...settled, tags: [] };
-    const reasonOnlyResult = generateMarket({ state: reasonOnly, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 40, rng: reasonOnly.rngState });
+    const reasonOnlyResult = generateMarket({
+      state: reasonOnly,
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 40,
+      rng: reasonOnly.rngState,
+    });
     expect(reasonOnlyResult.pending.offers).toHaveLength(2 + 1);
 
     // 이적_희망: interest=2·agent=0 → 3.
     const wantsMove: CareerState = { ...settled, tags: ['이적_희망'] };
-    const wantsMoveResult = generateMarket({ state: wantsMove, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 40, rng: wantsMove.rngState });
+    const wantsMoveResult = generateMarket({
+      state: wantsMove,
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 40,
+      rng: wantsMove.rngState,
+    });
     expect(wantsMoveResult.pending.offers).toHaveLength(3 + 1);
 
     // 이적_희망 + 에이전트_계약: interest=2·agent=1 → 4(상한).
     const both: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'] };
-    const bothResult = generateMarket({ state: both, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 40, rng: both.rngState });
+    const bothResult = generateMarket({
+      state: both,
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 40,
+      rng: both.rngState,
+    });
     expect(bothResult.pending.offers).toHaveLength(4 + 1);
   });
 
@@ -247,17 +334,63 @@ describe('generateMarket', () => {
     // busan-tier2(tier2) 1개뿐(daejeon-tier3은 tier3라 밴드 밖). desiredCount 4를 요청해도 1로
     // 줄어든다.
     const both: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'] };
-    const result = generateMarket({ state: both, ruleset: rulesetProto, reason: 'INTEREST', revision: 40, rng: both.rngState });
+    const result = generateMarket({
+      state: both,
+      ruleset: rulesetProto,
+      reason: 'INTEREST',
+      revision: 40,
+      rng: both.rngState,
+    });
     expect(result.pending.offers).toHaveLength(1 + 1);
     expect(result.pending.offers[1]!.teamId).toBe('busan-tier2');
   });
 
   it('(c) 후보 구단은 현 구단·YOUTH를 제외하고 demandBands 4개 각각 적어도 1팀에 도달한다(8팀 풀)', () => {
-    const bandScenarios: Array<{ label: string; baseOvr: number; scoutedMin: number; scoutedMax: number; form: number; leagueTier: 1 | 2 | 3; expectedTiers: number[] }> = [
-      { label: 'band1(<=3499)→tier3만', baseOvr: 10, scoutedMin: 5, scoutedMax: 15, form: 0, leagueTier: 3, expectedTiers: [3] },
-      { label: 'band2(3500-5499)→tier2·3', baseOvr: 10, scoutedMin: 5, scoutedMax: 20, form: 50, leagueTier: 1, expectedTiers: [2, 3] },
-      { label: 'band3(5500-7499)→tier1·2', baseOvr: 35, scoutedMin: 30, scoutedMax: 45, form: 50, leagueTier: 1, expectedTiers: [1, 2] },
-      { label: 'band4(7500-10000)→tier1·2', baseOvr: 75, scoutedMin: 70, scoutedMax: 85, form: 50, leagueTier: 1, expectedTiers: [1, 2] },
+    const bandScenarios: Array<{
+      label: string;
+      baseOvr: number;
+      scoutedMin: number;
+      scoutedMax: number;
+      form: number;
+      leagueTier: 1 | 2 | 3;
+      expectedTiers: number[];
+    }> = [
+      {
+        label: 'band1(<=3499)→tier3만',
+        baseOvr: 10,
+        scoutedMin: 5,
+        scoutedMax: 15,
+        form: 0,
+        leagueTier: 3,
+        expectedTiers: [3],
+      },
+      {
+        label: 'band2(3500-5499)→tier2·3',
+        baseOvr: 10,
+        scoutedMin: 5,
+        scoutedMax: 20,
+        form: 50,
+        leagueTier: 1,
+        expectedTiers: [2, 3],
+      },
+      {
+        label: 'band3(5500-7499)→tier1·2',
+        baseOvr: 35,
+        scoutedMin: 30,
+        scoutedMax: 45,
+        form: 50,
+        leagueTier: 1,
+        expectedTiers: [1, 2],
+      },
+      {
+        label: 'band4(7500-10000)→tier1·2',
+        baseOvr: 75,
+        scoutedMin: 70,
+        scoutedMax: 85,
+        form: 50,
+        leagueTier: 1,
+        expectedTiers: [1, 2],
+      },
     ];
 
     for (const scenario of bandScenarios) {
@@ -267,11 +400,22 @@ describe('generateMarket', () => {
         state: { ...settled.state, form: scenario.form },
         player: {
           ...settled.player,
-          profile: { ...settled.player.profile!, baseOvr: scenario.baseOvr, scoutedPotentialMin: scenario.scoutedMin, scoutedPotentialMax: scenario.scoutedMax },
+          profile: {
+            ...settled.player.profile!,
+            baseOvr: scenario.baseOvr,
+            scoutedPotentialMin: scenario.scoutedMin,
+            scoutedPotentialMax: scenario.scoutedMax,
+          },
         },
         contract: { ...contractOf(settled), leagueTier: scenario.leagueTier },
       };
-      const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 50, rng: state.rngState });
+      const result = generateMarket({
+        state,
+        ruleset: marketFixtureRuleset,
+        reason: 'INTEREST',
+        revision: 50,
+        rng: state.rngState,
+      });
       const drawnTeamIds = result.pending.offers.slice(1).map((offer) => offer.teamId);
       expect(drawnTeamIds.length).toBeGreaterThan(0);
       expect(drawnTeamIds).not.toContain(state.contract!.teamId);
@@ -283,23 +427,58 @@ describe('generateMarket', () => {
   });
 
   it('(d) EXPIRED면 전부 FREE_AGENT다', () => {
-    const state: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'], contract: { ...contractOf(settled), lengthSeasons: 1 } };
-    const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'EXPIRED', revision: 60, rng: state.rngState });
+    const state: CareerState = {
+      ...settled,
+      tags: ['이적_희망', '에이전트_계약'],
+      contract: { ...contractOf(settled), lengthSeasons: 1 },
+    };
+    const result = generateMarket({
+      state,
+      ruleset: marketFixtureRuleset,
+      reason: 'EXPIRED',
+      revision: 60,
+      rng: state.rngState,
+    });
     for (const offer of result.pending.offers.slice(1)) {
       expect(offer.kind).toBe('FREE_AGENT');
     }
   });
 
   it('(d) INTEREST면 역할별 TRANSFER/LOAN 가중이 결정론적으로 갈리고(같은 시드 반복), 다른 시드에서는 두 종류가 다 나온다', () => {
-    const state: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'], contract: { ...contractOf(settled), rolePromise: 'STARTER' } };
-    const first = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 70, rng: state.rngState });
-    const second = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 70, rng: state.rngState });
+    const state: CareerState = {
+      ...settled,
+      tags: ['이적_희망', '에이전트_계약'],
+      contract: { ...contractOf(settled), rolePromise: 'STARTER' },
+    };
+    const first = generateMarket({
+      state,
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 70,
+      rng: state.rngState,
+    });
+    const second = generateMarket({
+      state,
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 70,
+      rng: state.rngState,
+    });
     expect(second.pending.offers).toEqual(first.pending.offers);
 
     const kinds = new Set<string>();
     for (let seed = 0; seed < 10; seed++) {
-      const seeded: CareerState = { ...state, rngState: seedRng(`market-kind-distribution-${seed}`) };
-      const result = generateMarket({ state: seeded, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 70, rng: seeded.rngState });
+      const seeded: CareerState = {
+        ...state,
+        rngState: seedRng(`market-kind-distribution-${seed}`),
+      };
+      const result = generateMarket({
+        state: seeded,
+        ruleset: marketFixtureRuleset,
+        reason: 'INTEREST',
+        revision: 70,
+        rng: seeded.rngState,
+      });
       for (const offer of result.pending.offers.slice(1)) kinds.add(offer.kind);
     }
     expect(kinds.has('TRANSFER')).toBe(true);
@@ -307,8 +486,18 @@ describe('generateMarket', () => {
   });
 
   it('(e) LOAN 제안은 loan·lengthSeasons 1을 갖고, TRANSFER 제안은 지수 밴드의 feeMinor를 담는다', () => {
-    const state: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'], contract: { ...contractOf(settled), rolePromise: 'BENCH' } };
-    const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 80, rng: state.rngState });
+    const state: CareerState = {
+      ...settled,
+      tags: ['이적_희망', '에이전트_계약'],
+      contract: { ...contractOf(settled), rolePromise: 'BENCH' },
+    };
+    const result = generateMarket({
+      state,
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 80,
+      rng: state.rngState,
+    });
     const drawn = result.pending.offers.slice(1);
     expect(drawn.some((offer) => offer.kind === 'LOAN')).toBe(true);
     for (const offer of drawn) {
@@ -324,8 +513,13 @@ describe('generateMarket', () => {
       }
       if (offer.kind === 'TRANSFER') {
         expect(offer.loan).toBeNull();
-        const indexCenti = computeMarketValueIndex(buildMarketValueInput(state, marketFixtureRuleset), marketFixtureRuleset.marketValueRules).indexCenti;
-        const band = marketFixtureRuleset.transferRules.feeByIndexBand.find((candidate) => indexCenti <= candidate.maxIndexCenti)!;
+        const indexCenti = computeMarketValueIndex(
+          buildMarketValueInput(state, marketFixtureRuleset),
+          marketFixtureRuleset.marketValueRules,
+        ).indexCenti;
+        const band = marketFixtureRuleset.transferRules.feeByIndexBand.find(
+          (candidate) => indexCenti <= candidate.maxIndexCenti,
+        )!;
         expect(offer.transferFeeMinor).toBe(band.feeMinor);
       }
     }
@@ -334,39 +528,85 @@ describe('generateMarket', () => {
   it('(f) 추첨 제안의 validUntilRevision = revision + offerValidityRevisions', () => {
     const state: CareerState = { ...settled, tags: ['이적_희망'] };
     const revision = 123;
-    const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision, rng: state.rngState });
+    const result = generateMarket({
+      state,
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision,
+      rng: state.rngState,
+    });
     for (const offer of result.pending.offers.slice(1)) {
-      expect(offer.validUntilRevision).toBe(revision + marketFixtureRuleset.transferRules.offerValidityRevisions);
+      expect(offer.validUntilRevision).toBe(
+        revision + marketFixtureRuleset.transferRules.offerValidityRevisions,
+      );
     }
   });
 
   it('(g) competitorSummary는 파생 시드로 계산되어 결정 스트림 draws를 늘리지 않는다', () => {
     // FREE_AGENT(EXPIRED)는 제안당 정확히 5draws(팀·기간·역할·등번호·적합도, 종류 roll 없음)를 쓴다 —
     // competitorSummary가 이 스트림을 썼다면 이보다 늘어난다.
-    const state: CareerState = { ...settled, tags: [], contract: { ...contractOf(settled), lengthSeasons: 1 } };
+    const state: CareerState = {
+      ...settled,
+      tags: [],
+      contract: { ...contractOf(settled), lengthSeasons: 1 },
+    };
     const before = state.rngState.draws;
-    const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'EXPIRED', revision: 90, rng: state.rngState });
+    const result = generateMarket({
+      state,
+      ruleset: marketFixtureRuleset,
+      reason: 'EXPIRED',
+      revision: 90,
+      rng: state.rngState,
+    });
     const drawnCount = result.pending.offers.length - 1;
     expect(result.rngState.draws - before).toBe(drawnCount * 5);
-    expect(result.pending.offers.slice(1).every((offer) => offer.competitorSummary !== null)).toBe(true);
+    expect(result.pending.offers.slice(1).every((offer) => offer.competitorSummary !== null)).toBe(
+      true,
+    );
   });
 
   it('(h) rng 소비 순서: 제안당 draws 증가량 — EXPIRED(FREE_AGENT) 5, TRANSFER 6, LOAN 6', () => {
     // 팀(1) → 종류(1, EXPIRED면 생략) → (LOAN이면 바이아웃 1) → 기간(1, LOAN이면 생략) → 역할(1) →
     // 등번호(1) → 적합도(1). EXPIRED: 5(팀·기간·역할·등번호·적합도). TRANSFER: 6(+종류). LOAN: 6(종류
     // 대신 바이아웃, 기간 생략 — 순증감 0).
-    const expiredState: CareerState = { ...settled, tags: [], contract: { ...contractOf(settled), lengthSeasons: 1 } };
-    const expired = generateMarket({ state: expiredState, ruleset: marketFixtureRuleset, reason: 'EXPIRED', revision: 100, rng: expiredState.rngState });
-    expect(expired.rngState.draws - expiredState.rngState.draws).toBe((expired.pending.offers.length - 1) * 5);
+    const expiredState: CareerState = {
+      ...settled,
+      tags: [],
+      contract: { ...contractOf(settled), lengthSeasons: 1 },
+    };
+    const expired = generateMarket({
+      state: expiredState,
+      ruleset: marketFixtureRuleset,
+      reason: 'EXPIRED',
+      revision: 100,
+      rng: expiredState.rngState,
+    });
+    expect(expired.rngState.draws - expiredState.rngState.draws).toBe(
+      (expired.pending.offers.length - 1) * 5,
+    );
 
     const interestState: CareerState = { ...settled, tags: ['이적_희망', '에이전트_계약'] };
-    const interest = generateMarket({ state: interestState, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 100, rng: interestState.rngState });
-    expect(interest.rngState.draws - interestState.rngState.draws).toBe((interest.pending.offers.length - 1) * 6);
+    const interest = generateMarket({
+      state: interestState,
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 100,
+      rng: interestState.rngState,
+    });
+    expect(interest.rngState.draws - interestState.rngState.draws).toBe(
+      (interest.pending.offers.length - 1) * 6,
+    );
   });
 
   it('market.openedAtRevision·seasonIndex·reason·safeOfferId이 정확하다', () => {
     const state: CareerState = { ...settled, tags: ['이적_희망'] };
-    const result = generateMarket({ state, ruleset: marketFixtureRuleset, reason: 'INTEREST', revision: 111, rng: state.rngState });
+    const result = generateMarket({
+      state,
+      ruleset: marketFixtureRuleset,
+      reason: 'INTEREST',
+      revision: 111,
+      rng: state.rngState,
+    });
     expect(result.pending.market).toEqual({
       openedAtRevision: 111,
       seasonIndex: state.seasonHistory.length,
@@ -388,7 +628,9 @@ describe('buildRenewalOffer', () => {
     expect(offer.fromTeamId).toBe(contract.teamId);
     expect(offer.lengthSeasons).toBe(rulesetProto.transferRules.renewal.lengthSeasons);
     expect(offer.rolePromise).toBe(base.season!.squadRole);
-    expect(offer.appearancePromise).toEqual({ minutesShareBp: rulesetProto.contractRules.promiseMinutesShareBp[base.season!.squadRole] });
+    expect(offer.appearancePromise).toEqual({
+      minutesShareBp: rulesetProto.contractRules.promiseMinutesShareBp[base.season!.squadRole],
+    });
     expect(offer.positionPlan).toBe(contract.positionPlan);
     expect(offer.shirtNumber).toBe(contract.shirtNumber);
     expect(offer.tacticalFitEstimate).toBe(base.context.tacticalFit);
@@ -409,11 +651,15 @@ describe('buildRenewalOffer', () => {
   });
 
   it('season이 없으면 throw한다(step 7은 시즌 진행 중에만 연다)', () => {
-    expect(() => buildRenewalOffer({ ...base, season: null }, rulesetProto, 20)).toThrow(RangeError);
+    expect(() => buildRenewalOffer({ ...base, season: null }, rulesetProto, 20)).toThrow(
+      RangeError,
+    );
   });
 
   it('contract가 없으면 throw한다', () => {
-    expect(() => buildRenewalOffer({ ...base, contract: null }, rulesetProto, 20)).toThrow(RangeError);
+    expect(() => buildRenewalOffer({ ...base, contract: null }, rulesetProto, 20)).toThrow(
+      RangeError,
+    );
   });
 });
 
@@ -425,23 +671,88 @@ describe('bounded career recovery policy', () => {
       ...settledState,
       age: 19,
       pending: null,
-      contract: { ...settledState.contract!, teamId: youth.id, teamName: youth.name, leagueTier: 'YOUTH', lengthSeasons: 1 },
+      contract: {
+        ...settledState.contract!,
+        teamId: youth.id,
+        teamName: youth.name,
+        leagueTier: 'YOUTH',
+        lengthSeasons: 1,
+      },
     };
-    const ruleset = { ...marketFixtureRuleset, transferRules: { ...marketFixtureRuleset.transferRules, recovery: { youthMaxAge: 18, zeroMinutesConsecutiveSeasons: 2, opportunityTier: 3 as const, opportunityRole: 'ROTATION' as const } } };
-    const result = generateMarket({ state, ruleset, reason: 'EXPIRED', revision: 119, rng: state.rngState });
-    expect(result.pending.offers[0]).toMatchObject({ kind: 'FREE_AGENT', leagueTier: 3, fromTeamId: null });
-    expect(result.pending.offers.some((offer) => offer.kind === 'RENEWAL' && offer.leagueTier === 'YOUTH')).toBe(false);
+    const ruleset = {
+      ...marketFixtureRuleset,
+      transferRules: {
+        ...marketFixtureRuleset.transferRules,
+        recovery: {
+          youthMaxAge: 18,
+          zeroMinutesConsecutiveSeasons: 2,
+          opportunityTier: 3 as const,
+          opportunityRole: 'ROTATION' as const,
+        },
+      },
+    };
+    const result = generateMarket({
+      state,
+      ruleset,
+      reason: 'EXPIRED',
+      revision: 119,
+      rng: state.rngState,
+    });
+    expect(result.pending.offers[0]).toMatchObject({
+      kind: 'FREE_AGENT',
+      leagueTier: 3,
+      fromTeamId: null,
+    });
+    expect(
+      result.pending.offers.some(
+        (offer) => offer.kind === 'RENEWAL' && offer.leagueTier === 'YOUTH',
+      ),
+    ).toBe(false);
   });
 
   it('two consecutive zero-minute seasons add a tier-3 opportunity without removing the safe option or guaranteeing minutes', () => {
     const settledState = runSettledFixture().snapshot.state;
-    const zero = { ...settledState.seasonHistory.at(-1)!, result: { ...settledState.seasonHistory.at(-1)!.result, playerStats: { ...settledState.seasonHistory.at(-1)!.result.playerStats, minutes: 0 } } };
-    const state: CareerState = { ...settledState, pending: null, seasonHistory: [zero, { ...zero, index: zero.index + 1 }] };
-    const ruleset = { ...marketFixtureRuleset, transferRules: { ...marketFixtureRuleset.transferRules, recovery: { youthMaxAge: 18, zeroMinutesConsecutiveSeasons: 2, opportunityTier: 3 as const, opportunityRole: 'ROTATION' as const } } };
-    const result = generateMarket({ state, ruleset, reason: 'INTEREST', revision: 120, rng: state.rngState });
+    const zero = {
+      ...settledState.seasonHistory.at(-1)!,
+      result: {
+        ...settledState.seasonHistory.at(-1)!.result,
+        playerStats: { ...settledState.seasonHistory.at(-1)!.result.playerStats, minutes: 0 },
+      },
+    };
+    const state: CareerState = {
+      ...settledState,
+      pending: null,
+      seasonHistory: [zero, { ...zero, index: zero.index + 1 }],
+    };
+    const ruleset = {
+      ...marketFixtureRuleset,
+      transferRules: {
+        ...marketFixtureRuleset.transferRules,
+        recovery: {
+          youthMaxAge: 18,
+          zeroMinutesConsecutiveSeasons: 2,
+          opportunityTier: 3 as const,
+          opportunityRole: 'ROTATION' as const,
+        },
+      },
+    };
+    const result = generateMarket({
+      state,
+      ruleset,
+      reason: 'INTEREST',
+      revision: 120,
+      rng: state.rngState,
+    });
     expect(result.pending.offers[0]!.teamId).toBe(state.contract!.teamId);
-    expect(result.pending.offers[1]).toMatchObject({ kind: 'LOAN', leagueTier: 3, rolePromise: 'ROTATION', fromTeamId: state.contract!.teamId });
-    expect(result.pending.offers[1]!.appearancePromise.minutesShareBp).toBe(ruleset.contractRules.promiseMinutesShareBp.ROTATION);
+    expect(result.pending.offers[1]).toMatchObject({
+      kind: 'LOAN',
+      leagueTier: 3,
+      rolePromise: 'ROTATION',
+      fromTeamId: state.contract!.teamId,
+    });
+    expect(result.pending.offers[1]!.appearancePromise.minutesShareBp).toBe(
+      ruleset.contractRules.promiseMinutesShareBp.ROTATION,
+    );
   });
 
   // T-7-002 D-67(이슈 #140): recovery.zeroMinutesConsecutiveSeasons는 이미 데이터로만 읽힌다
@@ -456,7 +767,15 @@ describe('bounded career recovery policy', () => {
       ...snapshot.state,
       rngState: beforeSettlementState.rngState,
       pending: null,
-      player: { ...snapshot.state.player, profile: { ...snapshot.state.player.profile!, baseOvr: 35, scoutedPotentialMin: 30, scoutedPotentialMax: 45 } },
+      player: {
+        ...snapshot.state.player,
+        profile: {
+          ...snapshot.state.player.profile!,
+          baseOvr: 35,
+          scoutedPotentialMin: 30,
+          scoutedPotentialMax: 45,
+        },
+      },
     };
     const zeroMinuteLastSeason = {
       ...settledLowIndex.seasonHistory.at(-1)!,
@@ -465,14 +784,22 @@ describe('bounded career recovery policy', () => {
         playerStats: { ...settledLowIndex.seasonHistory.at(-1)!.result.playerStats, minutes: 0 },
       },
     };
-    const oneZeroMinuteSeasonState: CareerState = { ...settledLowIndex, seasonHistory: [zeroMinuteLastSeason] };
+    const oneZeroMinuteSeasonState: CareerState = {
+      ...settledLowIndex,
+      seasonHistory: [zeroMinuteLastSeason],
+    };
 
     function rulesetWithRecovery(zeroMinutesConsecutiveSeasons: number) {
       return {
         ...marketFixtureRuleset,
         transferRules: {
           ...marketFixtureRuleset.transferRules,
-          recovery: { youthMaxAge: 18, zeroMinutesConsecutiveSeasons, opportunityTier: 3 as const, opportunityRole: 'ROTATION' as const },
+          recovery: {
+            youthMaxAge: 18,
+            zeroMinutesConsecutiveSeasons,
+            opportunityTier: 3 as const,
+            opportunityRole: 'ROTATION' as const,
+          },
         },
       };
     }
@@ -486,7 +813,10 @@ describe('bounded career recovery policy', () => {
       expect(result.state.pending.market.reason).toBe('INTEREST');
       expect(
         result.state.pending.offers.some(
-          (offer) => offer.leagueTier === 3 && offer.rolePromise === 'ROTATION' && offer.fromTeamId === oneZeroMinuteSeasonState.contract!.teamId,
+          (offer) =>
+            offer.leagueTier === 3 &&
+            offer.rolePromise === 'ROTATION' &&
+            offer.fromTeamId === oneZeroMinuteSeasonState.contract!.teamId,
         ),
       ).toBe(true);
     });
@@ -500,12 +830,32 @@ describe('bounded career recovery policy', () => {
 
 describe('step 7 CONTRACT 슬롯(season.ts의 selectOpenSlot) 통합', () => {
   const { beforeSettlementState: base } = runSettledFixture();
-  const contractStep: SeasonStep = { index: 7, phase: 'LEAGUE', windowOpen: true, decisionSlots: [{ kind: 'CONTRACT', required: false }], summary: null };
+  const contractStep: SeasonStep = {
+    index: 7,
+    phase: 'LEAGUE',
+    windowOpen: true,
+    decisionSlots: [{ kind: 'CONTRACT', required: false }],
+    summary: null,
+  };
   const rng = seedRng('market-test-select-open-slot-contract');
 
   it('계약 마지막 시즌이면 RENEWAL 제안 1건을 연다', () => {
-    const lastSeason: CareerState = { ...base, contract: { ...contractOf(base), lengthSeasons: 1 } };
-    const result = selectOpenSlot(contractStep, 'FAST', [], rng, null, null, 20, 1, lastSeason, rulesetProto);
+    const lastSeason: CareerState = {
+      ...base,
+      contract: { ...contractOf(base), lengthSeasons: 1 },
+    };
+    const result = selectOpenSlot(
+      contractStep,
+      'FAST',
+      [],
+      rng,
+      null,
+      null,
+      20,
+      1,
+      lastSeason,
+      rulesetProto,
+    );
     expect(result.opened).toBe(true);
     if (result.opened && result.pending?.kind === 'CONTRACT') {
       expect(result.pending.offers).toHaveLength(1);
@@ -517,7 +867,18 @@ describe('step 7 CONTRACT 슬롯(season.ts의 selectOpenSlot) 통합', () => {
   });
 
   it('계약 잔여 시즌이 있으면 offers: []로 자동 통과 대상만 연다', () => {
-    const result = selectOpenSlot(contractStep, 'FAST', [], rng, null, null, 20, 1, base, rulesetProto);
+    const result = selectOpenSlot(
+      contractStep,
+      'FAST',
+      [],
+      rng,
+      null,
+      null,
+      20,
+      1,
+      base,
+      rulesetProto,
+    );
     expect(result.opened).toBe(true);
     if (result.opened && result.pending?.kind === 'CONTRACT') {
       expect(result.pending.offers).toEqual([]);
@@ -527,8 +888,22 @@ describe('step 7 CONTRACT 슬롯(season.ts의 selectOpenSlot) 통합', () => {
   });
 
   it('임대 계약이면 마지막 시즌이어도 RENEWAL을 열지 않는다', () => {
-    const loanLastSeason: CareerState = { ...base, contract: { ...contractOf(base), kind: 'LOAN', lengthSeasons: 1 } };
-    const result = selectOpenSlot(contractStep, 'FAST', [], rng, null, null, 20, 1, loanLastSeason, rulesetProto);
+    const loanLastSeason: CareerState = {
+      ...base,
+      contract: { ...contractOf(base), kind: 'LOAN', lengthSeasons: 1 },
+    };
+    const result = selectOpenSlot(
+      contractStep,
+      'FAST',
+      [],
+      rng,
+      null,
+      null,
+      20,
+      1,
+      loanLastSeason,
+      rulesetProto,
+    );
     expect(result.opened).toBe(true);
     if (result.opened && result.pending?.kind === 'CONTRACT') {
       expect(result.pending.offers).toEqual([]);
@@ -567,8 +942,20 @@ describe('step 7 CONTRACT 슬롯(season.ts의 selectOpenSlot) 통합', () => {
     }
 
     function openedOffers(state: CareerState, ruleset: typeof rulesetProto) {
-      const result = selectOpenSlot(contractStep, 'FAST', [], rng, null, null, 20, 1, state, ruleset);
-      if (!(result.opened && result.pending?.kind === 'CONTRACT')) throw new Error('CONTRACT pending이 아니다.');
+      const result = selectOpenSlot(
+        contractStep,
+        'FAST',
+        [],
+        rng,
+        null,
+        null,
+        20,
+        1,
+        state,
+        ruleset,
+      );
+      if (!(result.opened && result.pending?.kind === 'CONTRACT'))
+        throw new Error('CONTRACT pending이 아니다.');
       return result.pending.offers;
     }
 
@@ -637,7 +1024,9 @@ describe('step 7 CONTRACT 응답 필수 통합(simulate.ts의 ADVANCE) — caree
     // 자동 통과하지 않으므로(응답 필수), fixture(runGkFixture)가 REJECT_OFFER({ offerId: null })로
     // 자동 응답한다 — 이 fixture의 golden hash·revision이 이 PR에서 바뀐 이유이기도 하다.
     const { snapshot } = runGkFixture();
-    const expiredEntries = snapshot.state.timeline.filter((entry) => entry.kind === 'OFFER_EXPIRED');
+    const expiredEntries = snapshot.state.timeline.filter(
+      (entry) => entry.kind === 'OFFER_EXPIRED',
+    );
     expect(expiredEntries).toHaveLength(0);
     const rejectedAllAtStep7 = snapshot.state.timeline.filter(
       (entry) => entry.kind === 'OFFER_REJECTED' && entry.refId === 'ALL' && entry.step === 7,
@@ -651,7 +1040,9 @@ describe('step 7 CONTRACT 응답 필수 통합(simulate.ts의 ADVANCE) — caree
   it('계약 잔여 시즌이 있으면(career-01) step 7에서 OFFER_EXPIRED가 없다', () => {
     const snapshot = runCareerFixture();
     expect(snapshot.state.contract!.lengthSeasons).toBeGreaterThan(1);
-    const expiredEntries = snapshot.state.timeline.filter((entry) => entry.kind === 'OFFER_EXPIRED');
+    const expiredEntries = snapshot.state.timeline.filter(
+      (entry) => entry.kind === 'OFFER_EXPIRED',
+    );
     expect(expiredEntries).toHaveLength(0);
   });
 });
@@ -662,7 +1053,15 @@ describe('openMarketAfterSettlement', () => {
     const state: CareerState = {
       ...snapshot.state,
       tags: [],
-      player: { ...snapshot.state.player, profile: { ...snapshot.state.player.profile!, baseOvr: 35, scoutedPotentialMin: 30, scoutedPotentialMax: 45 } },
+      player: {
+        ...snapshot.state.player,
+        profile: {
+          ...snapshot.state.player.profile!,
+          baseOvr: 35,
+          scoutedPotentialMin: 30,
+          scoutedPotentialMax: 45,
+        },
+      },
     };
     expect(judgeMarketReason(state, rulesetProto)).toBeNull();
     const result = openMarketAfterSettlement(state, rulesetProto, 20);
@@ -705,26 +1104,101 @@ describe('openMarketAfterSettlement', () => {
         status: 'PENDING' as const,
       },
     };
-    const preferred = openMarketAfterSettlement({ ...state, clubMeeting: meeting }, rulesetProto, 20);
+    const preferred = openMarketAfterSettlement(
+      { ...state, clubMeeting: meeting },
+      rulesetProto,
+      20,
+    );
     expect(preferred.state.clubMeeting?.preferenceStatus).toBe('OFFERED');
     const preferredPending = preferred.state.pending;
-    if (preferredPending?.kind !== 'OFFERS') throw new Error('setup: preferred market가 열리지 않았다');
-    const requested = preferredPending.offers.find((offer) => offer.id !== preferredPending.market.safeOfferId);
+    if (preferredPending?.kind !== 'OFFERS')
+      throw new Error('setup: preferred market가 열리지 않았다');
+    const requested = preferredPending.offers.find(
+      (offer) => offer.id !== preferredPending.market.safeOfferId,
+    );
     expect(requested?.kind).toBe('LOAN');
 
     const noCandidateRules = {
       ...rulesetProto,
       teams: rulesetProto.teams.filter((team) => team.id === contract.teamId),
     };
-    const noCandidate = openMarketAfterSettlement({ ...state, clubMeeting: meeting }, noCandidateRules, 20);
+    const noCandidate = openMarketAfterSettlement(
+      { ...state, clubMeeting: meeting },
+      noCandidateRules,
+      20,
+    );
     expect(noCandidate.state.clubMeeting?.preferenceStatus).toBe('NO_CANDIDATE');
 
     const expiredContract = { ...contract, lengthSeasons: 1 };
     const expired = openMarketAfterSettlement(
-      { ...state, contract: expiredContract, clubMeeting: { ...meeting, contractId: expiredContract.id } },
+      {
+        ...state,
+        contract: expiredContract,
+        clubMeeting: { ...meeting, contractId: expiredContract.id },
+      },
       rulesetProto,
       20,
     );
     expect(expired.state.clubMeeting?.preferenceStatus).toBe('CANCELLED');
   });
+});
+
+it('overseas offers require experience and intent; returning home removes foreign candidates', () => {
+  const source = runSettledFixture().snapshot.state;
+  const candidate = generateMarket({
+    state: source,
+    ruleset: rulesetProto,
+    reason: 'EXPIRED',
+    revision: 999,
+    rng: seedRng('candidate'),
+  }).pending.offers.find((o) => o.teamId !== source.contract!.teamId)!;
+  const foreign = {
+    ...rulesetProto.teams.find((t) => t.id === candidate.teamId)!,
+    id: 'foreign-test',
+    countryCode: 'JP',
+    name: 'Overseas Test',
+  };
+  const ruleset = { ...rulesetProto, teams: [...rulesetProto.teams, foreign] };
+  const experienced = {
+    ...source,
+    seasonHistory: [source.seasonHistory[0]!, source.seasonHistory[0]!],
+  };
+  const offers = (state: CareerState) =>
+    generateMarket({
+      state,
+      ruleset,
+      reason: 'INTEREST',
+      revision: 999,
+      rng: seedRng('overseas-test'),
+    }).pending.offers;
+  expect(
+    offers({ ...experienced, tags: ['해외_도전', '이적_희망'] }).some(
+      (o) => o.teamId === foreign.id,
+    ),
+  ).toBe(true);
+  expect(offers({ ...experienced, tags: ['이적_희망'] }).some((o) => o.teamId === foreign.id)).toBe(
+    false,
+  );
+  expect(
+    offers({ ...source, tags: ['해외_도전', '이적_희망'] }).some((o) => o.teamId === foreign.id),
+  ).toBe(false);
+});
+
+it('does not open a new market after the final season of a bounded journey', () => {
+  const source = runSettledFixture().snapshot.state;
+  const state = {
+    ...source,
+    pending: null,
+    seasonHistory: Array.from({ length: 12 }, () => source.seasonHistory[0]!),
+  };
+  expect(
+    openMarketAfterSettlement(
+      state,
+      {
+        ...rulesetProto,
+        retirementRules: { ...rulesetProto.retirementRules!, maxCareerSeasons: 12 },
+      },
+      999,
+    ),
+  ).toEqual({ state, opened: false });
 });

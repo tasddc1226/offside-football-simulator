@@ -100,3 +100,24 @@ describe('simulator event variety', () => {
     expect(winners.size).toBe(2);
   });
 });
+
+it('caps ordinary interruptions separately from mandatory decisions and resets each season', () => {
+  const bounded = { ...policy, maxEventsPerSeason: 2 };
+  const mandatory = [
+    entry('SEASON_STARTED', null),
+    entry('EVENT_RESOLVED', 'EVT-INJ-001:A:A1'),
+    entry('EVENT_RESOLVED', 'EVT-NAT-001:A:A1'),
+  ];
+  expect(freshEventPool(pool, { timeline: mandatory, resolvedEventIds: [] }, bounded)).toHaveLength(
+    2,
+  );
+  const full = [...mandatory, entry('EVENT_RESOLVED', 'C:A:A1'), entry('EVENT_RESOLVED', 'D:A:A1')];
+  expect(freshEventPool(pool, { timeline: full, resolvedEventIds: [] }, bounded)).toEqual([]);
+  expect(
+    freshEventPool(
+      pool,
+      { timeline: [...full, entry('SEASON_STARTED', null)], resolvedEventIds: [] },
+      bounded,
+    ),
+  ).toHaveLength(2);
+});
