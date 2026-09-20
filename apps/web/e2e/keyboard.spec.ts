@@ -108,6 +108,8 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   await tabTo(page, page.getByRole('textbox', { name: '서명할 이름' }));
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type('김서준');
+  await tabTo(page, page.getByRole('button', { name: '서명 적용', exact: true }));
+  await page.keyboard.press('Enter');
   await tabTo(page, page.getByRole('button', { name: '서명하고 계약 확정' }));
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();

@@ -122,6 +122,7 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   // SCR-010: 사인(확정) → 첫 계약 완료 카드 → 복구 안내 → 대시보드.
   await page.getByRole('button', { name: '이름 입력' }).click();
   await page.getByRole('textbox', { name: '서명할 이름' }).fill('김서준');
+  await page.getByRole('button', { name: '서명 적용', exact: true }).click();
   await page.getByRole('button', { name: '서명하고 계약 확정' }).click();
   counts.confirmations += 1;
   await expect(page.getByRole('heading', { level: 1, name: '프로의 첫 유니폼' })).toBeVisible();
