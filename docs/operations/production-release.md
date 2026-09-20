@@ -22,8 +22,8 @@
 | 신규 운영 시즌 | `svc_season_1`, 표시명 `시즌 1`, ACTIVE, isTest=false |
 | 기간 | 2026-09-06 00:00 KST부터, 종료일 미정(`endsAt: null`) |
 | 문의 | `tasddc1569@gmail.com` |
-| 현재 신규 커리어 버전 | ruleset 1.7.1 / content pack 0.6.5 (2026-09-15 작업 입력 기준 운영 current; 기존 커리어는 생성 당시 버전 유지) |
-| 다음 승격 목표        | ruleset 1.7.2 / content pack 0.6.6 (첫 계약 흐름 단축, 코드·런북 준비; 배포 전에는 운영 current가 아님) |
+| 현재 신규 커리어 버전 | ruleset 2.0.0 / content pack 0.7.0 (2026-09-20 운영 적용 확인; 기존 커리어는 생성 당시 버전 유지) |
+| 다음 승격 목표 | 별도 미정 |
 
 ## 최초 공개 결과
 
@@ -616,4 +616,17 @@ GitHub Actions의 **Production Release → Run workflow**에서 `main`과 정확
 배포 직전 D1 복구 bookmark와 정확한 1.7.2/0.6.6 복원 SQL은 workflow artifact에 보존한다.
 
 릴리스 정본, 승인 manifest 목록, 오프라인 폴백, staging/local seed와 검증 기대값을 함께 갱신했다.
-검증과 실제 배포 결과는 완료 후 아래에 기록한다.
+### 배포 완료 · 2026-09-20 19:29 KST
+
+- 배포 source: `e5cbb9696c3d65717f0401f9dbf24ab128e7d958`. 승격 PR [#268](https://github.com/tasddc1226/offside-football-simulator/pull/268), 실제 서버 테스트 보정 PR [#269](https://github.com/tasddc1226/offside-football-simulator/pull/269).
+- 최종 [staging CI 35504899173](https://github.com/tasddc1226/offside-football-simulator/actions/runs/35504899173), [운영 preflight 35504901082](https://github.com/tasddc1226/offside-football-simulator/actions/runs/35504901082), [운영 deploy 35505106193](https://github.com/tasddc1226/offside-football-simulator/actions/runs/35505106193) 모두 성공.
+- API Worker `288fbb98-700e-4024-a9fd-b4ea0f38bf3d`, web Worker `3ac58dc8-9192-4588-b543-e4bef4c75534`.
+- 신규 DB migration 없음. 배포 전후 11개 테이블 집계 동일. 시즌 CAS의 실제 이전 값은 1.7.2/0.6.6, 적용 후는 2.0.0/0.7.0이며 재조회 plan=noop 통과. 복구 bookmark와 rollback SQL은 배포 artifact에 보관했다.
+- 운영 current API: `svc_season_1`, ACTIVE/non-test, 시작 `2026-09-05T15:00:00Z`, 종료일 null, **2.0.0/0.7.0**. health·정확한 운영 CORS 허용·다른 origin 거부·web 200 통과.
+- 로컬 전체 설치·lint·lint:deps·typecheck·패키지 테스트(API 230, web 672 포함)·build·bundle 통과. 초기 JS 105.20 KB gzip / 300 KB 예산. 생성·새 규칙 시즌 완주 E2E 6개 통과.
+- 실제 staging 서버에서 생성·저장·복구 코드 발급·첫 계약·한 시즌 완주·결산 새로고침 hash 보존 통과(1분 45초). 표본 career `b6e6acaa-f92e-4766-b5a4-a99cb76f13b9`. 이전 실패는 테스트의 복구 화면 자동 전환·모달 뒤 숨겨진 제목 처리 및 원격 smoke 전체 제한 시간이 원인이었고 #269로 보정했다.
+- ego-browser 운영 360px 확인: 프로필 → 후보 3장 공개/선택 → 최종 선수 카드(OVR 59) → 확정 → 첫 결정 → 서버 저장 → 새로고침. 신규 QA career `53b5f038-6609-43bc-a2ff-4f84075daa87`, snapshot GET 200, revision 6, **2.0.0/0.7.0**, hash `e83da974bd34f8f5fedf6a4d87ed4e3c8558f2b3e1a6c3753362a849f8f6394e` 보존.
+- 기존 QA career `7409859f-dc7e-4276-ba9c-902f455c4a47`는 배포 전후 revision 10, **1.3.0/0.5.0**, hash `09a2af06ec6c662798b4c137844e5882ef375fb642857316c023934141e86b4f`가 동일했고 새 허브로 정상 열렸다.
+- QA 표본은 삭제하지 않았으며 운영 인수 표본으로 구분한다. 복구 코드·쿠키는 기록하지 않았다. 실제 운영 전체 시즌 완주나 Google 재로그인까지 이번에 재검증했다는 의미는 아니다.
+
+화면 증거: [운영 선수 카드](../qa/simulator-rebuild/production-player-card-2026-09-20.png).
