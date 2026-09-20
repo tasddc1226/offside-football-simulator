@@ -4,14 +4,14 @@
 import { PACK_VERSIONS, RULESET_VERSIONS } from '@offside/content';
 import type { ServiceSeasonCurrent } from '@offside/contracts';
 
-export const ACTIVE_RULESET_VERSION = '1.7.2';
-export const ACTIVE_CONTENT_PACK_VERSION = '0.6.6';
+export const ACTIVE_RULESET_VERSION = '2.0.0';
+export const ACTIVE_CONTENT_PACK_VERSION = '0.7.0';
 
 /**
  * T-2-012 D-54: 더 이상 "활성 시즌"이 아니다 — 서버가 `ACTIVE_SERVICE_SEASON_ID`(env var)로 가리키는
  * 현재 서비스 시즌을 `engine/service-season.ts`가 조회한다. 이 값은 그 조회가 실패(오프라인·API
  * 오류)하고 kv-store 캐시도 없을 때만 쓰는 최후 폴백이다. id·이름·기간은 apps/api/seeds/local.sql의
- * svc_kickoff와 같고, 룰셋·팩만 운영 승격 목표 manifest를 따른다(1.7.2/0.6.6 승격, 2026-09-15).
+ * svc_kickoff와 같고, 룰셋·팩만 운영 승격 목표 manifest를 따른다(2.0.0/0.7.0 승격, 2026-09-20).
  */
 export const FALLBACK_SERVICE_SEASON_ID = 'svc_kickoff';
 export const FALLBACK_SERVICE_SEASON: ServiceSeasonCurrent = {
@@ -40,10 +40,15 @@ export const E2E_RULESET_STORAGE_KEY = 'offside:e2e-ruleset';
 
 /** 신규 규칙 검증은 명시적 QA에서만 허용한다. 저장된 커리어의 버전은 바꾸지 않는다. */
 export function resolveActiveRulesetVersion(): string {
-  const dev = import.meta.env.DEV && typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function'
-    ? localStorage.getItem(E2E_RULESET_STORAGE_KEY) : undefined;
+  const dev =
+    import.meta.env.DEV &&
+    typeof localStorage !== 'undefined' &&
+    typeof localStorage.getItem === 'function'
+      ? localStorage.getItem(E2E_RULESET_STORAGE_KEY)
+      : undefined;
   return dev && (RULESET_VERSIONS as readonly string[]).includes(dev)
-    ? dev : ACTIVE_RULESET_VERSION;
+    ? dev
+    : ACTIVE_RULESET_VERSION;
 }
 
 export function selectContentPackVersion(input: {
