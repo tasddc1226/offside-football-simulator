@@ -1,8 +1,15 @@
 # 진행 보드
 
-갱신: 2026-09-19 (Codex, PR #261–#264 통합 검증·main 병합 반영). 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
+갱신: 2026-09-20 (Codex, 시뮬레이터 전면 개편 운영 반영·계약 서명 팝업·Jev 검토). 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
 
-## 최신 상태 (2026-09-19)
+## 최신 상태 (2026-09-20)
+
+시뮬레이터 전면 개편(PR #266~#269)은 운영에 반영됐고 신규 커리어는 **2.0.0/0.7.0**을 사용한다. 기존 커리어는 생성 당시 버전을 보존한다. [운영 검증 기록](../operations/production-release.md#2026-09-20-시뮬레이터-전면-개편-승격)이 아래 과거 운영 상태보다 우선한다.
+
+- **T-7-037**: 계약 서명 팝업과 빠른 필기 획 보존, 터치 스크롤 방지, 적용/취소 흐름. PR [#270](https://github.com/tasddc1226/offside-football-simulator/pull/270), main `38c8143`. 설치·정적 검사·패키지 테스트·build/bundle·서명/첫 계약/키보드 E2E 5개와 staging CI 통과. 운영 deploy [35506987694](https://github.com/tasddc1226/offside-football-simulator/actions/runs/35506987694) 성공. 운영 360px 다크 팝업의 마우스·터치 필기·계약 확정·새로고침 복원까지 통과.
+- **Jev 검토 완료**: [공식 자료·코드 대조 분석](../research/jev-offside-assessment-2026-09-20.md). 감독 반응 선택을 별도 실험 도구에서 기존 규칙과 비교하는 방안을 권고했다. API 실험·유료 사용·운영 연동은 하지 않았다.
+
+## 이전 상태 (2026-09-19)
 
 **구현 PR #261·#263·#262·#264가 검증 후 main에 병합됐다.** 이 절이 아래 09-16 및 이전 진행 이력보다 우선한다. [통합 검증 기록](../qa/pr-integration-2026-09-19.md)에 정확한 SHA·명령·테스트 결과·남은 범위를 정리했다.
 

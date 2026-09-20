@@ -630,3 +630,15 @@ GitHub Actions의 **Production Release → Run workflow**에서 `main`과 정확
 - QA 표본은 삭제하지 않았으며 운영 인수 표본으로 구분한다. 복구 코드·쿠키는 기록하지 않았다. 실제 운영 전체 시즌 완주나 Google 재로그인까지 이번에 재검증했다는 의미는 아니다.
 
 화면 증거: [운영 선수 카드](../qa/simulator-rebuild/production-player-card-2026-09-20.png).
+
+
+## 2026-09-20 계약 서명 팝업 핫픽스
+
+- 사용자 요청: 직접 쓰기 선이 제대로 남지 않는 문제 수정 및 서명을 원작처럼 팝업에서 입력. main·운영 반영은 기존 사용자 승인 범위에 따른다.
+- PR [#270](https://github.com/tasddc1226/offside-football-simulator/pull/270), 배포 source `38c81433b10286643ebb899ff92ea152bc4e6541`.
+- [staging CI 35506806435](https://github.com/tasddc1226/offside-football-simulator/actions/runs/35506806435), [preflight 35506815083](https://github.com/tasddc1226/offside-football-simulator/actions/runs/35506815083), [deploy 35506987694](https://github.com/tasddc1226/offside-football-simulator/actions/runs/35506987694) 성공.
+- popup 직접 쓰기·이름 입력, 적용/취소·계약 조건 변경 시 서명 초기화, pointerup 끝점 보존·capture 해제 순서 보정·터치 스크롤 차단. 게임 상태·저장 형식·콘텐츠 규칙 변경 없음.
+- 로컬 설치·lint·lint:deps·typecheck·패키지 테스트(API 230, web 672 포함) 완료. web 색상 직접 지정 검사 1건은 공통 토큰으로 옮겨 해당 검사 및 서명 테스트 재실행 통과. UI 108, SEO, build·bundle 통과. 초기 JS 105.20KB gzip. 마우스·실제 touch·axe·첫 계약·키보드 E2E 5개 통과.
+- 배포 전후 DB 집계 동일, 시즌 `svc_season_1` ACTIVE/non-test, 기간·챌린지·2.0.0/0.7.0 그대로이며 manifest noop. 복구 bookmark와 집계는 deploy artifact 보관. 배포 health·CORS·web 검사 통과.
+- ego-browser 운영 QA career `53b5f038-6609-43bc-a2ff-4f84075daa87`: 데스크톱 마우스 획 보존·닫기 취소, 360×780 다크 터치 획 보존(6점)·배경 스크롤 고정·가로 넘침 없음, 서명 적용·계약 확정 후 첫 프로 계약 화면과 저장 완료 확인. 새로고침에서는 완료된 제안 화면에서 대시보드로 이동했으며 새 소속·주전 역할·프리시즌 준비 상태가 복원됐다. QA 선수만 진행했다.
+- [운영 터치 서명 팝업 화면](../qa/simulator-rebuild/production-signature-popup-2026-09-20.png). 실기기 iOS Safari 검증은 포함하지 않는다.
