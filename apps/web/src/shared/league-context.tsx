@@ -111,7 +111,8 @@ export function CurrentLeagueContext({
       <Link
         to="/career/$careerId"
         params={{ careerId }}
-        search={{}}
+        search={{ view: 'career' }}
+        hash="league-standings"
         className={buttonClassName('secondary')}
         style={buttonStyle}
       >

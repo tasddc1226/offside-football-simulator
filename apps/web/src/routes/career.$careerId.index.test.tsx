@@ -393,7 +393,9 @@ describe('SCR-029 다음 결정 카드 분기', () => {
       within(nextAction).getByRole('heading', { level: 2, name: /^(다음 경기|다음 행동)$/ }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('일정 · 리그 · 시즌 상세'));
+    expect(screen.queryByText('전체 일정과 경기 결과')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '일정 · 경기 기록 보기' }));
+    await screen.findByText('전체 일정과 경기 결과');
     const leagueContext = screen.getByRole('region', { name: '현재 팀 리그 상황' });
     expect(within(leagueContext).getByText('아직 확정된 경기 없음')).toBeInTheDocument();
     expect(
@@ -401,7 +403,7 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     ).toBeInTheDocument();
     expect(within(leagueContext).getByRole('link', { name: '순위표 보기' })).toHaveAttribute(
       'href',
-      `/career/${careerId}`,
+      `/career/${careerId}?view=career#league-standings`,
     );
     fireEvent.click(screen.getByRole('tab', { name: '커리어' }));
     await screen.findByText('현재 역할');
@@ -409,9 +411,9 @@ describe('SCR-029 다음 결정 카드 분기', () => {
     fireEvent.click(within(careerLeagueContext).getByRole('link', { name: '순위표 보기' }));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/career/${careerId}`);
-      expect(router.state.location.search).not.toHaveProperty('view');
+      expect(router.state.location.search).toHaveProperty('view', 'career');
     });
-    expect(screen.getByRole('tab', { name: '시즌' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: '커리어' })).toHaveAttribute('aria-selected', 'true');
 
     const loaded = await engine.client.loadCareer(careerId);
     if (!loaded.ok || loaded.snapshot.state.season?.leagueLedger === undefined)
@@ -1212,7 +1214,7 @@ describe('SCR-029 일정표 구역: 시즌 중이면 SeasonTimeline과 일정 �
     const engine = setTestEngine();
     const careerId = await signedCareerId(engine);
 
-    renderAt(`/career/${careerId}`);
+    renderAt(`/career/${careerId}?view=career`);
 
     expect(await screen.findByText('0 / 12')).toBeInTheDocument();
     expect(screen.getByText('프리시즌 계획을 세우면 일정이 열립니다.')).toBeInTheDocument();
@@ -1223,9 +1225,9 @@ describe('SCR-029 일정표 구역: 시즌 중이면 SeasonTimeline과 일정 �
     const engine = setTestEngine();
     const careerId = await seasonActiveNoPendingCareerId(engine);
 
-    renderAt(`/career/${careerId}`);
+    renderAt(`/career/${careerId}?view=career`);
 
-    fireEvent.click(await screen.findByRole('tab', { name: '시즌' }));
+    fireEvent.click(await screen.findByRole('tab', { name: '커리어' }));
 
     const timeline = await screen.findByLabelText('시즌 진행 12 step');
     expect(timeline.querySelectorAll('li')).toHaveLength(12);

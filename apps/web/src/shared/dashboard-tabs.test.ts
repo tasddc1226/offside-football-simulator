@@ -13,7 +13,7 @@ describe('normalizeDashboardTab', () => {
 
   it('옛 5탭 값(북마크·공유 링크)을 새 4탭으로 되돌린다', () => {
     expect(normalizeDashboardTab('home')).toBe('season');
-    expect(normalizeDashboardTab('schedule')).toBe('season');
+    expect(normalizeDashboardTab('schedule')).toBe('career');
     expect(normalizeDashboardTab('contract')).toBe('career');
     expect(normalizeDashboardTab('records')).toBe('career');
   });

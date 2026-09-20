@@ -1,16 +1,15 @@
 import { useState, type ReactNode } from 'react';
 import { developmentBlock, overseasJourney, type CareerState } from '@offside/domain';
 import { ATTRIBUTE_LABELS, SQUAD_ROLE_LABELS } from './labels.js';
-import { DevelopmentReceipt, DRILL_LABEL, BLOCK_LABEL } from './development-workshop.js';
+import { DevelopmentReceipt, DRILL_LABEL } from './development-workshop.js';
 import './player-life.css';
 
 export function PlayerLife({ state, action }: { state: CareerState; action: ReactNode }) {
-  const [room, setRoom] = useState<'MATCH' | 'PLAYER' | 'PEOPLE'>('MATCH');
+  const [room, setRoom] = useState<'PLAYER' | 'PEOPLE' | null>(null);
   const journey = state.rulesetVersion === '3.1.0' ? overseasJourney(state) : null;
   const season = state.season;
   const block = developmentBlock(season?.currentStep ?? 1);
   const completed = state.seasonHistory.length;
-  const current = season?.playerStats;
   const sessions = state.development?.sessions ?? [];
   const latest = sessions.at(-1);
   const rival = season?.squad.competitors.find(
@@ -54,7 +53,7 @@ export function PlayerLife({ state, action }: { state: CareerState; action: Reac
           <small>/12 시즌</small>
         </strong>
         <div className="life-blocks">
-          {BLOCK_LABEL.map((label, i) => (
+          {['시즌 초반', '주전 경쟁', '마지막 승부'].map((label, i) => (
             <span
               key={label}
               data-active={season !== null && i + 1 === block}
@@ -90,61 +89,20 @@ export function PlayerLife({ state, action }: { state: CareerState; action: Reac
       <div className="life-room-switch" role="group" aria-label="내 선수 살펴보기">
         {(
           [
-            ['MATCH', '매치데이'],
             ['PLAYER', '성장 노트'],
             ['PEOPLE', '라커룸'],
           ] as const
         ).map(([key, label]) => (
-          <button type="button" key={key} aria-pressed={room === key} onClick={() => setRoom(key)}>
+          <button
+            type="button"
+            key={key}
+            aria-expanded={room === key}
+            onClick={() => setRoom(room === key ? null : key)}
+          >
             {label}
           </button>
         ))}
       </div>
-      {room === 'MATCH' && (
-        <section className="life-room" aria-label="매치데이">
-          <div className="life-section-heading">
-            <h2>경기로 증명하는 나</h2>
-            <span>
-              {current?.appearances.total ?? 0}경기 · {current?.minutes ?? 0}분
-            </span>
-          </div>
-          {season?.matches.length ? (
-            <div className="life-fixtures">
-              {season.matches
-                .slice(-3)
-                .reverse()
-                .map((match) => (
-                  <div key={match.id}>
-                    <strong>
-                      {match.result.goalsFor}:{match.result.goalsAgainst}
-                    </strong>
-                    <span>{match.opponent.name}</span>
-                    <small>
-                      {match.minutes}분 ·{' '}
-                      {match.ratingTenths === null
-                        ? '평점 없음'
-                        : (match.ratingTenths / 10).toFixed(1)}
-                    </small>
-                  </div>
-                ))}
-            </div>
-          ) : (
-            <p>
-              첫 경기를 준비하세요. 훈련한 능력과 주변의 신뢰가 중요한 순간의 선택에 영향을 줍니다.
-            </p>
-          )}
-          {state.development?.duels.at(-1) && (
-            <p className="life-hint">
-              최근 중요한 장면 · {DRILL_LABEL[state.development.duels.at(-1)!.tactic]} ·{' '}
-              {state.development.duels.at(-1)!.result === 'SUCCESS'
-                ? '준비한 플레이가 통했다'
-                : state.development.duels.at(-1)!.result === 'FAIL'
-                  ? '실패에서 다음 플레이를 배웠다'
-                  : '경험을 하나 더 쌓았다'}
-            </p>
-          )}
-        </section>
-      )}
       {room === 'PLAYER' && (
         <section className="life-room" aria-label="성장 노트">
           <h2>반복한 훈련이 내 무기가 된다</h2>

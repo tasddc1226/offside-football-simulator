@@ -465,7 +465,7 @@ function NextDecisionCard({
     return (
       <Card className="os-next-action flex flex-col gap-os-4" role="region" aria-label="지금 할 일">
         <div className="flex flex-col gap-os-1">
-          <p className="os-eyebrow">{clock.progress}</p>
+          <p className="os-eyebrow">{state.season ? (state.season.currentStep <= 4 ? "시즌 초반" : state.season.currentStep <= 8 ? "주전 경쟁" : "마지막 승부") : clock.progress}</p>
           <h2 id="next-action-title" className="os-section-title">
             {heading}
           </h2>
@@ -907,263 +907,17 @@ function CareerDashboard() {
               if (next) changeTab(next);
             }}
           >
-            {/* UX-014: "시즌" 탭은 옛 "홈"+"일정" 탭을 병합한다(사용자 결정 2026-09-14) — 원작
-                4탭 구조에 맞춘다. */}
+            {/* 시즌은 현재 선택에 집중하고, 전체 일정은 커리어 기록에서 확인한다. */}
             <TabsContent
               value="season"
               id={dashboardPanelId('season')}
               aria-labelledby={dashboardTabId('season')}
             >
               <SeasonDashboard state={state} year={startYear + (season?.index ?? state.seasonHistory.length + 1) - 1} action={<NextDecisionCard careerId={careerId} state={state} clock={clock} startYear={startYear} />} />
-              <details className="sim-disclosure mt-os-3"><summary>일정 · 리그 · 시즌 상세</summary>
-              <section className="os-career-home" aria-label="시즌 상세 현황">
-                <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                  {clock.headline} · {positionField.value}
-                </p>
-                {season ? (
-                  <div
-                    className="os-career-progress"
-                    role="progressbar"
-                    aria-label={`시즌 진행 ${season.currentStep} / ${season.steps.length}`}
-                    aria-valuenow={season.currentStep}
-                    aria-valuemin={0}
-                    aria-valuemax={season.steps.length}
-                  >
-                    <span
-                      style={{
-                        width: `${Math.min(100, (season.currentStep / season.steps.length) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                ) : null}
+              <Button variant="secondary" className="mt-os-3 w-full" onClick={() => changeTab('career')}>
+                일정 · 경기 기록 보기
+              </Button>
 
-
-                {currentLeagueContext !== null ? (
-                  <CurrentLeagueContext careerId={careerId} view={currentLeagueContext} />
-                ) : null}
-
-                {season !== null && state.clubMeeting?.goal.seasonIndex === season.index ? (
-                  <section
-                    className="os-panel flex flex-col gap-os-1"
-                    aria-label="이번 시즌 구단 면담 목표"
-                  >
-                    <p className="os-eyebrow">이번 시즌 목표</p>
-                    <p>시즌 출전 확인 기준 {state.clubMeeting.goal.targetMinutesShareBp / 100}%</p>
-                    <p className="os-muted">선발 보장이 아닌 시즌 종료 후 확인 기준입니다.</p>
-                  </section>
-                ) : null}
-
-                <ConditionTiles items={conditionItems} />
-
-                {season !== null && season.competitions.length > 0 ? (
-                  <DashboardSection title="이번 시즌 요약" description="현재 리그·컵 성적입니다.">
-                    <div className="flex flex-col gap-os-1">
-                      {currentLeagueRows === null ? (
-                        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                          {ruleset.leagueLedgerRules === undefined
-                            ? `룰셋 ${state.rulesetVersion}에서는 전체 리그 순위 기록을 지원하지 않습니다.`
-                            : `룰셋 ${state.rulesetVersion} 시즌의 리그 원장 데이터가 없습니다. 저장 복구를 확인해 주세요.`}
-                        </p>
-                      ) : (
-                        <p className="os-num font-os font-semibold text-os-text" style={BODY_STYLE}>
-                          {leagueStandingSummary(currentLeagueRows, season.teamId)}
-                        </p>
-                      )}
-                      {season.competitions.map((record) => (
-                        <p
-                          key={record.competitionId}
-                          className="os-num font-os text-os-text"
-                          style={BODY_STYLE}
-                        >
-                          {competitionSummaryLine(record, season, ruleset)}
-                        </p>
-                      ))}
-                    </div>
-                  </DashboardSection>
-                ) : null}
-
-                {recentChronicleItems.length > 0 ? (
-                  <DashboardSection title="최근 소식" description="최근 커리어 진행 상황입니다.">
-                    <ul className="flex flex-col gap-os-1">
-                      {recentChronicleItems.map((item) => (
-                        <li key={item.id} className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                          {item.sentence}
-                        </li>
-                      ))}
-                    </ul>
-                  </DashboardSection>
-                ) : null}
-
-                {followUpReceipts.length > 0 ? (
-                  <DashboardSection
-                    title="선택 후속 결과"
-                    description="저장된 응답과 이후 결과를 이어서 확인합니다."
-                  >
-                    <CareerFollowUpReceipts receipts={followUpReceipts} limit={2} />
-                  </DashboardSection>
-                ) : null}
-
-                {state.status === 'ACTIVE' &&
-                state.season === null &&
-                state.seasonHistory.length > 0 ? (
-                  <Link
-                    to="/career/$careerId/retirement"
-                    params={{ careerId }}
-                    className={buttonClassName('secondary')}
-                    style={buttonStyle}
-                  >
-                    커리어의 다음 선택
-                  </Link>
-                ) : null}
-                {state.status === 'RETIRED' || state.status === 'ARCHIVED' ? (
-                  <Link
-                    to="/career/$careerId/retirement"
-                    params={{ careerId }}
-                    className={buttonClassName('secondary')}
-                    style={buttonStyle}
-                  >
-                    통산 기록 보기
-                  </Link>
-                ) : null}
-              </section>
-
-              <DashboardSection
-                title="일정표"
-                description="현재 진행 상황과 다음 결정을 확인합니다."
-              >
-                {season === null ? (
-                  firstSeasonNotStarted ? (
-                    <>
-                      <p className="font-os text-os-text" style={BODY_STYLE}>
-                        <span className="os-num">0 / {ruleset.leagueCalendar.steps.length}</span> ·
-                        시즌 시작 전
-                      </p>
-                      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                        프리시즌 계획을 세우면 일정이 열립니다.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-os text-os-text" style={BODY_STYLE}>
-                        step {state.currentStep} · {SEASON_PHASE_LABEL_KO[state.seasonPhase]}
-                      </p>
-                      {state.pending === null ? (
-                        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                          다음 결정은 진행 후 열립니다.
-                        </p>
-                      ) : (
-                        // UX-014: "시즌" 탭이 홈+일정을 합쳤으니 같은 화면 위쪽 NextDecisionCard가
-                        // 이미 이 결정을 보여준다(옛 "홈으로 이동" 버튼은 자기 자신을 가리키게 돼 뺐다).
-                        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                          결정이 기다립니다 — 위 카드에서 확인하세요.
-                        </p>
-                      )}
-                    </>
-                  )
-                ) : (
-                  <div className="flex flex-col gap-os-4">
-                    <SeasonTimeline steps={season.steps} currentStep={season.currentStep} />
-                    {season.availability?.kind === 'INJURY' ? (
-                      <dl
-                        className="grid grid-cols-2 gap-os-3 rounded-os-m bg-os-surface-2 p-os-3"
-                        aria-label="부상 상태"
-                      >
-                        <div>
-                          <dt className="text-os-text-2">결장 잔여</dt>
-                          <dd className="os-num font-semibold text-os-text">
-                            {season.availability.matchesRemaining}경기
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-os-text-2">부상 상태</dt>
-                          <dd className="font-semibold text-os-text">회복 중</dd>
-                        </div>
-                      </dl>
-                    ) : null}
-                    {state.health.episodes
-                      .filter(
-                        (episode) =>
-                          episode.status === 'RECOVERED' && episode.recurrenceChecksRemaining > 0,
-                      )
-                      .map((episode) => (
-                        <p
-                          key={episode.id}
-                          className="rounded-os-m bg-os-surface-2 p-os-3 text-os-text-2"
-                          aria-label="부상 재발 판정 잔여"
-                        >
-                          회복한 부상의 재발 판정이 {episode.recurrenceChecksRemaining}경기 남아
-                          있습니다.
-                        </p>
-                      ))}
-                    {state.nationalTeam.callUps.some(
-                      (entry) => entry.seasonIndex === season.index && entry.reason === 'INJURY',
-                    ) ? (
-                      <p
-                        className="rounded-os-m bg-os-surface-2 p-os-3 text-os-text-2"
-                        aria-label="대표팀 자동 사양 사유"
-                      >
-                        부상으로 대표팀 소집을 자동 사양했습니다.
-                      </p>
-                    ) : null}
-                    {hasContract && state.contract ? (
-                      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-                        시즌 목표: {ROLE_PROMISE_SENTENCE[state.contract.rolePromise]}
-                      </p>
-                    ) : null}
-                    <div className="flex flex-col gap-os-2 rounded-os-m bg-os-surface-2 p-os-3">
-                      {season.competitions.map((record) => (
-                        <p
-                          key={record.competitionId}
-                          className="os-num font-os text-os-text-2"
-                          style={CAPTION_STYLE}
-                        >
-                          {competitionSummaryLine(record, season, ruleset)}
-                        </p>
-                      ))}
-                    </div>
-                    {currentLeagueRows === null || season.leagueLedger === undefined || currentLeague === undefined ? (
-                      <p className="rounded-os-m bg-os-surface-2 p-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
-                        {ruleset.leagueLedgerRules === undefined
-                          ? `룰셋 ${state.rulesetVersion}에서는 전체 리그 순위 기록을 지원하지 않습니다.`
-                          : `룰셋 ${state.rulesetVersion} 시즌의 리그 원장 데이터가 올바르지 않습니다. 저장 복구를 확인해 주세요.`}
-                      </p>
-                    ) : (
-                      <LeagueStandingsTable
-                        rows={currentLeagueRows}
-                        teamId={season.teamId}
-                        leagueName={season.leagueLedger.leagueName}
-                        completedRounds={season.leagueLedger.completedRounds.at(-1) ?? 0}
-                        ruleset={ruleset}
-                        teamNameOverrides={teamNameOverrides}
-                        promotionSpots={currentLeague.promotionSpots}
-                        relegationSpots={currentLeague.relegationSpots}
-                      />
-                    )}
-                    <div className="flex flex-col gap-os-2">
-                      {buildScheduleRows(season, ruleset, teamNameOverrides).map((row) => (
-                        <div
-                          key={`${row.step}-${row.order}`}
-                          className="flex min-w-0 flex-col gap-os-1 rounded-os-m border border-os-border px-os-3 py-os-3 font-os text-os-text-2"
-                          style={CAPTION_STYLE}
-                        >
-                          <span className="break-words">
-                            step {row.step} · {row.competitionLabel} · {row.home ? '홈' : '원정'} ·{' '}
-                            {row.opponentName}
-                          </span>
-                          <span className="os-num font-semibold text-os-text">
-                            {row.eliminated
-                              ? '탈락'
-                              : row.match === null
-                                ? '—'
-                                : `${row.match.scoreText} · ${row.match.appearanceLabel} · ${row.match.minutes}분 · ${row.match.ratingText}`}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </DashboardSection>
-              </details>
             </TabsContent>
 
             <TabsContent
@@ -1357,6 +1111,246 @@ function CareerDashboard() {
               id={dashboardPanelId('career')}
               aria-labelledby={dashboardTabId('career')}
             >
+              <details className="sim-disclosure" open><summary>이번 시즌 일정 · 경기 기록</summary>
+              <section className="os-career-home" aria-label="시즌 상세 현황">
+                <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                  {clock.headline} · {positionField.value}
+                </p>
+                {season ? (
+                  <div
+                    className="os-career-progress"
+                    role="progressbar"
+                    aria-label={`시즌 진행 ${season.currentStep} / ${season.steps.length}`}
+                    aria-valuenow={season.currentStep}
+                    aria-valuemin={0}
+                    aria-valuemax={season.steps.length}
+                  >
+                    <span
+                      style={{
+                        width: `${Math.min(100, (season.currentStep / season.steps.length) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                ) : null}
+
+
+
+
+                {season !== null && state.clubMeeting?.goal.seasonIndex === season.index ? (
+                  <section
+                    className="os-panel flex flex-col gap-os-1"
+                    aria-label="이번 시즌 구단 면담 목표"
+                  >
+                    <p className="os-eyebrow">이번 시즌 목표</p>
+                    <p>시즌 출전 확인 기준 {state.clubMeeting.goal.targetMinutesShareBp / 100}%</p>
+                    <p className="os-muted">선발 보장이 아닌 시즌 종료 후 확인 기준입니다.</p>
+                  </section>
+                ) : null}
+
+                <ConditionTiles items={conditionItems} />
+
+                {season !== null && season.competitions.length > 0 ? (
+                  <DashboardSection title="이번 시즌 요약" description="현재 리그·컵 성적입니다.">
+                    <div className="flex flex-col gap-os-1">
+                      {currentLeagueRows === null ? (
+                        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                          {ruleset.leagueLedgerRules === undefined
+                            ? `룰셋 ${state.rulesetVersion}에서는 전체 리그 순위 기록을 지원하지 않습니다.`
+                            : `룰셋 ${state.rulesetVersion} 시즌의 리그 원장 데이터가 없습니다. 저장 복구를 확인해 주세요.`}
+                        </p>
+                      ) : (
+                        <p className="os-num font-os font-semibold text-os-text" style={BODY_STYLE}>
+                          {leagueStandingSummary(currentLeagueRows, season.teamId)}
+                        </p>
+                      )}
+                      {season.competitions.map((record) => (
+                        <p
+                          key={record.competitionId}
+                          className="os-num font-os text-os-text"
+                          style={BODY_STYLE}
+                        >
+                          {competitionSummaryLine(record, season, ruleset)}
+                        </p>
+                      ))}
+                    </div>
+                  </DashboardSection>
+                ) : null}
+
+                {recentChronicleItems.length > 0 ? (
+                  <DashboardSection title="최근 소식" description="최근 커리어 진행 상황입니다.">
+                    <ul className="flex flex-col gap-os-1">
+                      {recentChronicleItems.map((item) => (
+                        <li key={item.id} className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                          {item.sentence}
+                        </li>
+                      ))}
+                    </ul>
+                  </DashboardSection>
+                ) : null}
+
+
+
+                {state.status === 'ACTIVE' &&
+                state.season === null &&
+                state.seasonHistory.length > 0 ? (
+                  <Link
+                    to="/career/$careerId/retirement"
+                    params={{ careerId }}
+                    className={buttonClassName('secondary')}
+                    style={buttonStyle}
+                  >
+                    커리어의 다음 선택
+                  </Link>
+                ) : null}
+                {state.status === 'RETIRED' || state.status === 'ARCHIVED' ? (
+                  <Link
+                    to="/career/$careerId/retirement"
+                    params={{ careerId }}
+                    className={buttonClassName('secondary')}
+                    style={buttonStyle}
+                  >
+                    통산 기록 보기
+                  </Link>
+                ) : null}
+              </section>
+
+              <DashboardSection
+                title="전체 일정과 경기 결과"
+                description="지난 경기 결과와 남은 일정을 모아 봅니다."
+              >
+                {season === null ? (
+                  firstSeasonNotStarted ? (
+                    <>
+                      <p className="font-os text-os-text" style={BODY_STYLE}>
+                        <span className="os-num">0 / {ruleset.leagueCalendar.steps.length}</span> ·
+                        시즌 시작 전
+                      </p>
+                      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                        프리시즌 계획을 세우면 일정이 열립니다.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-os text-os-text" style={BODY_STYLE}>
+                        step {state.currentStep} · {SEASON_PHASE_LABEL_KO[state.seasonPhase]}
+                      </p>
+                      {state.pending === null ? (
+                        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                          다음 결정은 진행 후 열립니다.
+                        </p>
+                      ) : (
+                        // UX-014: "시즌" 탭이 홈+일정을 합쳤으니 같은 화면 위쪽 NextDecisionCard가
+                        // 이미 이 결정을 보여준다(옛 "홈으로 이동" 버튼은 자기 자신을 가리키게 돼 뺐다).
+                        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                          시즌 화면에서 기다리는 선택을 이어가세요.
+                        </p>
+                      )}
+                    </>
+                  )
+                ) : (
+                  <div className="flex flex-col gap-os-4">
+                    <SeasonTimeline steps={season.steps} currentStep={season.currentStep} />
+                    {season.availability?.kind === 'INJURY' ? (
+                      <dl
+                        className="grid grid-cols-2 gap-os-3 rounded-os-m bg-os-surface-2 p-os-3"
+                        aria-label="부상 상태"
+                      >
+                        <div>
+                          <dt className="text-os-text-2">결장 잔여</dt>
+                          <dd className="os-num font-semibold text-os-text">
+                            {season.availability.matchesRemaining}경기
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-os-text-2">부상 상태</dt>
+                          <dd className="font-semibold text-os-text">회복 중</dd>
+                        </div>
+                      </dl>
+                    ) : null}
+                    {state.health.episodes
+                      .filter(
+                        (episode) =>
+                          episode.status === 'RECOVERED' && episode.recurrenceChecksRemaining > 0,
+                      )
+                      .map((episode) => (
+                        <p
+                          key={episode.id}
+                          className="rounded-os-m bg-os-surface-2 p-os-3 text-os-text-2"
+                          aria-label="부상 재발 판정 잔여"
+                        >
+                          회복한 부상의 재발 판정이 {episode.recurrenceChecksRemaining}경기 남아
+                          있습니다.
+                        </p>
+                      ))}
+                    {state.nationalTeam.callUps.some(
+                      (entry) => entry.seasonIndex === season.index && entry.reason === 'INJURY',
+                    ) ? (
+                      <p
+                        className="rounded-os-m bg-os-surface-2 p-os-3 text-os-text-2"
+                        aria-label="대표팀 자동 사양 사유"
+                      >
+                        부상으로 대표팀 소집을 자동 사양했습니다.
+                      </p>
+                    ) : null}
+                    {hasContract && state.contract ? (
+                      <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                        시즌 목표: {ROLE_PROMISE_SENTENCE[state.contract.rolePromise]}
+                      </p>
+                    ) : null}
+                    <div className="flex flex-col gap-os-2 rounded-os-m bg-os-surface-2 p-os-3">
+                      {season.competitions.map((record) => (
+                        <p
+                          key={record.competitionId}
+                          className="os-num font-os text-os-text-2"
+                          style={CAPTION_STYLE}
+                        >
+                          {competitionSummaryLine(record, season, ruleset)}
+                        </p>
+                      ))}
+                    </div>
+                    {currentLeagueRows === null || season.leagueLedger === undefined || currentLeague === undefined ? (
+                      <p className="rounded-os-m bg-os-surface-2 p-os-3 font-os text-os-text-2" style={CAPTION_STYLE}>
+                        {ruleset.leagueLedgerRules === undefined
+                          ? `룰셋 ${state.rulesetVersion}에서는 전체 리그 순위 기록을 지원하지 않습니다.`
+                          : `룰셋 ${state.rulesetVersion} 시즌의 리그 원장 데이터가 올바르지 않습니다. 저장 복구를 확인해 주세요.`}
+                      </p>
+                    ) : (
+                      <div id="league-standings"><LeagueStandingsTable
+                        rows={currentLeagueRows}
+                        teamId={season.teamId}
+                        leagueName={season.leagueLedger.leagueName}
+                        completedRounds={season.leagueLedger.completedRounds.at(-1) ?? 0}
+                        ruleset={ruleset}
+                        teamNameOverrides={teamNameOverrides}
+                        promotionSpots={currentLeague.promotionSpots}
+                        relegationSpots={currentLeague.relegationSpots}
+                      /></div>
+                    )}
+                    <div className="flex flex-col gap-os-2">
+                      {buildScheduleRows(season, ruleset, teamNameOverrides).map((row) => (
+                        <div
+                          key={`${row.step}-${row.order}`}
+                          className="flex min-w-0 flex-col gap-os-1 rounded-os-m border border-os-border px-os-3 py-os-3 font-os text-os-text-2"
+                          style={CAPTION_STYLE}
+                        >
+                          <span className="break-words">
+                            step {row.step} · {row.competitionLabel} · {row.home ? '홈' : '원정'} ·{' '}
+                            {row.opponentName}
+                          </span>
+                          <span className="os-num font-semibold text-os-text">
+                            {row.eliminated
+                              ? '탈락'
+                              : row.match === null
+                                ? '—'
+                                : `${row.match.scoreText} · ${row.match.appearanceLabel} · ${row.match.minutes}분 · ${row.match.ratingText}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </DashboardSection>
+              </details>
               <DashboardSection title="다이어리" description="이번 커리어의 연대기입니다.">
                 <div className="flex flex-col gap-os-4">
                   <div className="flex flex-col gap-os-2">

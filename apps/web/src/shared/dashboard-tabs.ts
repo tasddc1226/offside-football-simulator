@@ -1,5 +1,5 @@
-// 사용자 결정(2026-09-14): 커리어 대시보드(SCR-029)를 원작처럼 4탭으로 재편한다 — 시즌(홈+일정
-// 병합) · 커리어(기록+계약 병합) · 선수 · 우승 연혁. 값 하나만 이 파일에 두고 index.tsx(패널 내용)와
+// 커리어 대시보드: 시즌(현재 선택) · 커리어(일정·기록·계약) · 선수 · 우승 연혁.
+// 2026-09-21: 전체 일정은 시즌 화면에서 커리어 기록으로 이동했다. 값 하나만 이 파일에 두고 index.tsx(패널 내용)와
 // CareerHeaderBar(상단 헤더 탭 바)가 함께 참조해 라벨·순서·옛 값 호환 매핑이 어긋나지 않게 한다.
 export const DASHBOARD_TABS = ['season', 'career', 'player', 'trophies'] as const;
 export type DashboardTab = (typeof DASHBOARD_TABS)[number];
@@ -39,7 +39,7 @@ export const DASHBOARD_TAB_ITEMS: ReadonlyArray<{
  * 옛 딥링크 대비 방어적으로 같이 매핑한다. */
 const LEGACY_DASHBOARD_VIEW_MAP: Readonly<Record<string, DashboardTab>> = {
   home: 'season',
-  schedule: 'season',
+  schedule: 'career',
   contract: 'career',
   records: 'career',
 };

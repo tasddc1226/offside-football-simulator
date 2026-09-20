@@ -142,7 +142,6 @@ export function SeasonDashboard({
     .slice(0, 2)
     .join(' · ');
   const stats = season?.playerStats;
-  const recent = season?.matches.slice(-3).reverse() ?? [];
   const totals = stats?.totals;
   const impact =
     totals && 'saves' in totals
@@ -251,31 +250,6 @@ export function SeasonDashboard({
           {achievements[0]!.value} / {achievements[0]!.target}
         </span>
       </p>
-      {recent.length > 0 && (
-        <section className="sim-recent" aria-label="최근 경기">
-          <div className="sim-section-heading">
-            <h2>경기 리포트</h2>
-            <span className="sim-caption">최근 {recent.length}경기</span>
-          </div>
-          {recent.map((match) => (
-            <div className="sim-match-row" key={match.id}>
-              <b className="sim-result" data-result={match.result.outcome}>
-                {({ WIN: '승', DRAW: '무', LOSS: '패' } as const)[match.result.outcome]}
-              </b>
-              <span>{match.opponent.name}</span>
-              <strong>
-                {match.result.goalsFor} : {match.result.goalsAgainst}
-              </strong>
-              <small>
-                {match.minutes > 0
-                  ? `${match.minutes}분 · ${match.ratingTenths === null ? '—' : match.ratingTenths / 10}`
-                  : '결장'}
-              </small>
-            </div>
-          ))}
-        </section>
-      )}
-      <GrowthSnapshot state={state} />
       <details className="sim-disclosure sim-milestones">
         <summary>
           커리어 목표{' '}
