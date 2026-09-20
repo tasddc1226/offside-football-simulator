@@ -14,6 +14,7 @@ const fifthVersion = { rulesetVersion: '1.7.0', contentPackVersion: '0.6.4' };
 const previousVersion = { rulesetVersion: '1.7.1', contentPackVersion: '0.6.5' };
 const currentVersion = { rulesetVersion: '1.7.2', contentPackVersion: '0.6.6' };
 const roleBalanceVersion = { rulesetVersion: '1.7.3', contentPackVersion: '0.6.7' };
+const simulatorVersion = { rulesetVersion: '2.0.0', contentPackVersion: '0.7.0' };
 const eventVarietyVersion = { rulesetVersion: '1.7.4', contentPackVersion: '0.6.8' };
 
 describe('production season version compatibility', () => {
@@ -35,8 +36,7 @@ describe('production season version compatibility', () => {
   });
 
   it('accepts every approved production pair during promotion and rollback', () => {
-    // 예약 호환 pair(1.7.3/0.6.7, 1.7.4/0.6.8)를 등록하되 운영 active pointer는 여전히
-    // 1.7.2/0.6.6에 둔다. 포인터 전환 전후의 양방향 sync만 여기서 확인한다.
+    // 과거 manifest와 새 2.0.0/0.7.0의 포인터 전환·롤백 양방향 동기화를 보존한다.
     expect(isAcceptedSeasonVersion('svc_season_1', currentVersion, roleBalanceVersion)).toBe(true);
     expect(isAcceptedSeasonVersion('svc_season_1', roleBalanceVersion, currentVersion)).toBe(true);
     expect(isAcceptedSeasonVersion('svc_season_1', roleBalanceVersion, eventVarietyVersion)).toBe(
@@ -57,6 +57,7 @@ describe('production season version compatibility', () => {
       currentVersion,
       roleBalanceVersion,
       eventVarietyVersion,
+      simulatorVersion,
     ];
     for (const seasonVersion of history) {
       for (const requestedVersion of history) {
@@ -70,6 +71,13 @@ describe('production season version compatibility', () => {
 
   it('rejects other seasons, mixed pairs, and unapproved historical manifests', () => {
     expect(isAcceptedSeasonVersion('svc_other', currentVersion, previousVersion)).toBe(false);
+    expect(isAcceptedSeasonVersion('svc_other', simulatorVersion, currentVersion)).toBe(false);
+    expect(
+      isAcceptedSeasonVersion('svc_season_1', simulatorVersion, {
+        rulesetVersion: '2.0.0',
+        contentPackVersion: '0.6.6',
+      }),
+    ).toBe(false);
     expect(
       isAcceptedSeasonVersion('svc_season_1', currentVersion, {
         rulesetVersion: '1.7.0',
