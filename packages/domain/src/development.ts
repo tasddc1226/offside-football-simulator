@@ -1,3 +1,4 @@
+import { compareCodePoints } from './canonical.js';
 import { clamp } from './clamp.js';
 import { computeBaseOvr } from './player.js';
 import { rollInt } from './rng.js';
@@ -173,6 +174,7 @@ export function developPlayer(
   };
   return {
     ...state,
+    tags: [...new Set([...state.tags, {CONTROL:'육성_기술', ENGINE:'육성_몸', VISION:'육성_판단'}[plan.drill]])].sort(compareCodePoints),
     attributes,
     relationships,
     player: {

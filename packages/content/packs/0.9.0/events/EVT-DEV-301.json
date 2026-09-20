@@ -20,7 +20,11 @@
       }
     ]
   },
-  "exclusionTags": [],
+  "exclusionTags": [
+    "육성_기술",
+    "육성_몸",
+    "육성_판단"
+  ],
   "weight": 180,
   "safety": {
     "minorSafe": true

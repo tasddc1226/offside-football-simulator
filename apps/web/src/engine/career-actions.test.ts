@@ -1637,10 +1637,12 @@ it('player-life season persists all three camps, stops auto-advance, and preserv
       const blocked=await advance(engine,id); expect(blocked.ok).toBe(false);
       result=await develop(engine,id,{drill:'VISION',load:'RECOVERY',partner:'CAPTAIN'});
       expect(result.ok).toBe(true);
+      if (result.ok) expect(result.domainSnapshot.state.tags).toContain('육성_판단');
       const duplicate=await develop(engine,id,{drill:'VISION',load:'RECOVERY',partner:'CAPTAIN'});
       expect(duplicate.ok).toBe(false);
     } else if(pending?.kind==='ROLE_PROPOSAL') result=await resolveRole(engine,id,'ACCEPT');
     else if(pending?.kind==='EVENT'||pending?.kind==='INJURY'||pending?.kind==='NATIONAL_TEAM') {
+      expect(pending.eventId).not.toBe('EVT-DEV-301');
       const choice=engine.pack.eventsById.get(pending.eventId)!.choices[0]!;
       result=await resolveEvent(engine,id,choice.id);
     } else if(pending?.kind==='CHAPTER') {
