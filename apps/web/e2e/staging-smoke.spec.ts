@@ -58,6 +58,8 @@ test('staging health와 current service-season manifest/CORS가 실제 Worker �
 test('staging 선수 생성이 입력을 복원하고 pageerror 없이 후보 카드를 공개한다', async ({
   page,
 }, testInfo) => {
+  // 실제 Worker의 초기 로드와 reload를 모두 포함한다. 개별 UI 단언의 5초 제한은 유지한다.
+  test.setTimeout(60_000);
   const smoke = smokeMetadata(testInfo);
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
