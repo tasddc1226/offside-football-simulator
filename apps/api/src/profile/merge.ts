@@ -4,7 +4,7 @@ import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { listCareerIdsByOwner } from '../db/repos/careers.js';
 import { runBatch } from '../db/repos/batch.js';
-import { auditLog, careers, sessions } from '../db/schema.js';
+import { auditLog, careers, sessions, lockerTeams } from '../db/schema.js';
 
 export type MoveCareersAndRebindInput = {
   fromProfileId: string;
@@ -29,6 +29,10 @@ export async function moveCareersAndRebind(
       .update(careers)
       .set({ ownerProfileId: input.toProfileId, updatedAt: input.now })
       .where(eq(careers.ownerProfileId, input.fromProfileId)),
+    db
+      .update(lockerTeams)
+      .set({ ownerProfileId: input.toProfileId, updatedAt: input.now })
+      .where(eq(lockerTeams.ownerProfileId, input.fromProfileId)),
     db.insert(auditLog).values({
       id: newId('aud'),
       kind: 'PROFILE_MERGED',
@@ -67,6 +71,10 @@ export async function moveCareersAndRotateWebSession(
       .update(careers)
       .set({ ownerProfileId: input.toProfileId, updatedAt: input.now })
       .where(eq(careers.ownerProfileId, input.fromProfileId)),
+    db
+      .update(lockerTeams)
+      .set({ ownerProfileId: input.toProfileId, updatedAt: input.now })
+      .where(eq(lockerTeams.ownerProfileId, input.fromProfileId)),
     db.insert(auditLog).values({
       id: newId('aud'),
       kind: 'PROFILE_MERGED',

@@ -1,4 +1,11 @@
-import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
 export const profiles = sqliteTable(
@@ -78,7 +85,10 @@ export const careers = sqliteTable(
   },
   (table) => [
     index('careers_owner_profile_id_updated_at_idx').on(table.ownerProfileId, table.updatedAt),
-    index('careers_created_service_season_id_status_idx').on(table.createdServiceSeasonId, table.status),
+    index('careers_created_service_season_id_status_idx').on(
+      table.createdServiceSeasonId,
+      table.status,
+    ),
   ],
 );
 
@@ -99,7 +109,9 @@ export const snapshots = sqliteTable(
     rngStateJson: text('rng_state_json').notNull(),
     createdAt: text('created_at').notNull(),
   },
-  (table) => [uniqueIndex('snapshots_career_id_revision_unique').on(table.careerId, table.revision)],
+  (table) => [
+    uniqueIndex('snapshots_career_id_revision_unique').on(table.careerId, table.revision),
+  ],
 );
 
 /** 02 `CommandLogEntry`. PK가 같은 revision 재삽입을 막아 원자성을 준다(설계 결정 2). */
@@ -152,7 +164,9 @@ export const authAttempts = sqliteTable(
     id: text('id').primaryKey(),
     // T-2-012: ANALYTICS_EVENTS(분당 60회/clientId, D-55)가 추가한 kind. text 컬럼이라 마이그레이션은
     // 필요 없다(SQLite는 이 enum을 CHECK 제약으로 만들지 않는다 — TS 타입에서만 강제).
-    kind: text('kind', { enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START', 'ANALYTICS_EVENTS'] }).notNull(),
+    kind: text('kind', {
+      enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START', 'ANALYTICS_EVENTS'],
+    }).notNull(),
     subject: text('subject').notNull(),
     windowStart: text('window_start').notNull(),
     count: integer('count').notNull(),
@@ -166,7 +180,13 @@ export const auditLog = sqliteTable(
   {
     id: text('id').primaryKey(),
     kind: text('kind', {
-      enum: ['PROFILE_MERGED', 'PROFILE_DELETED', 'RECOVERY_CODE_ISSUED', 'GOOGLE_LINKED', 'GOOGLE_UNLINKED'],
+      enum: [
+        'PROFILE_MERGED',
+        'PROFILE_DELETED',
+        'RECOVERY_CODE_ISSUED',
+        'GOOGLE_LINKED',
+        'GOOGLE_UNLINKED',
+      ],
     }).notNull(),
     profileId: text('profile_id').notNull(),
     payloadJson: text('payload_json').notNull(),
@@ -226,12 +246,16 @@ export const notices = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => [index('notices_is_published_published_at_idx').on(table.isPublished, table.publishedAt)],
+  (table) => [
+    index('notices_is_published_published_at_idx').on(table.isPublished, table.publishedAt),
+  ],
 );
 
 /** Private immutable retirement evidence; deleting the owning career cascades to its archive. */
 export const careerArchives = sqliteTable('career_archives', {
-  careerId: text('career_id').primaryKey().references(() => careers.id, { onDelete: 'cascade' }),
+  careerId: text('career_id')
+    .primaryKey()
+    .references(() => careers.id, { onDelete: 'cascade' }),
   retirementRevision: integer('retirement_revision').notNull(),
   archiveHash: text('archive_hash').notNull(),
   archiveJson: text('archive_json').notNull(),
@@ -239,3 +263,21 @@ export const careerArchives = sqliteTable('career_archives', {
   legacyJson: text('legacy_json').notNull(),
   createdAt: text('created_at').notNull(),
 });
+
+/** Account-owned lineups; career simulation state is never mutated by team editing. */
+export const lockerTeams = sqliteTable(
+  'locker_teams',
+  {
+    id: text('id').primaryKey(),
+    ownerProfileId: text('owner_profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    formation: text('formation').notNull(),
+    lineupJson: text('lineup_json').notNull(),
+    revision: integer('revision').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [index('locker_teams_owner_idx').on(table.ownerProfileId)],
+);

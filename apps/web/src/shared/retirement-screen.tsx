@@ -779,6 +779,9 @@ function FinalProfileView({
         )}
         <p>보관된 기록은 새 플레이의 성장 수치에 더하지 않습니다.</p>
       </div>
+      <Link className={buttonClassName('secondary')} style={buttonStyle} to="/locker-room">
+        라커룸에서 팀 꾸리기
+      </Link>
       <Link className={buttonClassName('primary')} style={buttonStyle} to="/">
         새 선수로 시작하기
       </Link>
@@ -1229,6 +1232,9 @@ export function RetirementScreen({
             params={{ careerId }}
           >
             최종 프로필
+          </Link>
+          <Link className="os-endgame-nav-wide" to="/locker-room">
+            내 라커룸 · 팀 꾸리기
           </Link>
           <Link className="os-endgame-nav-wide" to="/">
             선수 보관함 · 새 커리어

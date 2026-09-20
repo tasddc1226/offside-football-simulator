@@ -57,6 +57,13 @@
       "when": 1789391600616,
       "tag": "0007_smart_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789919464250,
+      "tag": "0008_illegal_silverclaw",
+      "breakpoints": true
     }
   ]
 }

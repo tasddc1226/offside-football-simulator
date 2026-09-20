@@ -115,8 +115,8 @@ jobs:
         run: |
           pnpm --filter @offside/domain exec vitest run src/season-determinism.test.ts src/career-13-integration-determinism.test.ts
           pnpm --filter @offside/engine-client exec vitest run src/engine.test.ts src/snapshot.test.ts src/import.test.ts
-          pnpm --filter @offside/api exec vitest run src/sync/season-sync.test.ts src/sync/verify-snapshot.test.ts src/routes/profile-recovery.test.ts src/db/migrations.test.ts
-          pnpm --filter @offside/web exec vitest run src/engine/versions.test.ts
+          pnpm --filter @offside/api exec vitest run src/sync/season-sync.test.ts src/sync/verify-snapshot.test.ts src/routes/profile-recovery.test.ts src/routes/locker-room.test.ts src/db/migrations.test.ts
+          pnpm --filter @offside/web exec vitest run src/engine/versions.test.ts src/routes/locker-room.test.tsx
       - name: Build before remote writes
         if: steps.scope.outputs.code_changed == 'true'
         run: |

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as GuideRouteImport } from './routes/guide'
+import { Route as LockerRoomRouteImport } from './routes/locker-room'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as CareerCareerIdRouteImport } from './routes/career.$careerId'
@@ -52,6 +53,11 @@ const FaqRoute = FaqRouteImport.update({
 const GuideRoute = GuideRouteImport.update({
   id: '/guide',
   path: '/guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LockerRoomRoute = LockerRoomRouteImport.update({
+  id: '/locker-room',
+  path: '/locker-room',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
   '/guide': typeof GuideRoute
+  '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/career/$careerId': typeof CareerCareerIdRouteWithChildren
@@ -227,6 +234,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
   '/guide': typeof GuideRoute
+  '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/legal/privacy': typeof LegalPrivacyRoute
@@ -258,6 +266,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
   '/guide': typeof GuideRoute
+  '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/career/$careerId': typeof CareerCareerIdRouteWithChildren
@@ -291,6 +300,7 @@ export interface FileRouteTypes {
     | '/'
     | '/faq'
     | '/guide'
+    | '/locker-room'
     | '/onboarding'
     | '/settings'
     | '/career/$careerId'
@@ -322,6 +332,7 @@ export interface FileRouteTypes {
     | '/'
     | '/faq'
     | '/guide'
+    | '/locker-room'
     | '/onboarding'
     | '/settings'
     | '/legal/privacy'
@@ -352,6 +363,7 @@ export interface FileRouteTypes {
     | '/'
     | '/faq'
     | '/guide'
+    | '/locker-room'
     | '/onboarding'
     | '/settings'
     | '/career/$careerId'
@@ -384,6 +396,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   FaqRoute: typeof FaqRoute
   GuideRoute: typeof GuideRoute
+  LockerRoomRoute: typeof LockerRoomRoute
   OnboardingRoute: typeof OnboardingRoute
   SettingsRoute: typeof SettingsRoute
   CareerCareerIdRoute: typeof CareerCareerIdRouteWithChildren
@@ -412,6 +425,13 @@ declare module '@tanstack/react-router' {
       path: '/guide'
       fullPath: '/guide'
       preLoaderRoute: typeof GuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/locker-room': {
+      id: '/locker-room'
+      path: '/locker-room'
+      fullPath: '/locker-room'
+      preLoaderRoute: typeof LockerRoomRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -655,6 +675,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FaqRoute: FaqRoute,
   GuideRoute: GuideRoute,
+  LockerRoomRoute: LockerRoomRoute,
   OnboardingRoute: OnboardingRoute,
   SettingsRoute: SettingsRoute,
   CareerCareerIdRoute: CareerCareerIdRouteWithChildren,

@@ -505,6 +505,10 @@ function HubScreen() {
           바로가기
         </h2>
         <nav className="os-home-tools" aria-label="커리어 관리">
+          <Link to="/locker-room" className="os-home-tool">
+            <strong>내 라커룸 · 팀 꾸리기</strong>
+            <span>키운 선수들을 모아 나만의 팀 편성</span>
+          </Link>
           <Link to="/" search={{ tab: 'squad' }} className="os-home-tool">
             <strong>선수단 관리</strong>
             <span>현역 선수와 다른 커리어 보기</span>

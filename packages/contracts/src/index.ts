@@ -199,3 +199,5 @@ export {
   type AnalyticsEventInput,
   type AnalyticsEventsBody,
 } from './analytics.js';
+
+export * from './locker-room.js';
