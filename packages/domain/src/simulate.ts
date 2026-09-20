@@ -1,3 +1,4 @@
+import { developPlayer, needsDevelopment, type DevelopmentPlan } from './development.js';
 import { compareCodePoints, type JsonValue } from './canonical.js';
 import { clamp } from './clamp.js';
 import { resolveChapter, type ChapterCandidateInput } from './chapter.js';
@@ -131,6 +132,7 @@ import {
 } from './types.js';
 
 export type Command =
+  | { type: 'DEVELOP'; payload: DevelopmentPlan }
   | {
       type: 'CREATE_CAREER';
       payload: {
@@ -1378,7 +1380,7 @@ function applyPreContractEventGuard(
 /** T-2-001 RULE-TIME-002: pending 종류에 따라 다음에 클라이언트가 보낼 명령을 알려준다. */
 function nextActionForPending(pending: Pending): 'DECISION' | 'ADVANCE' | 'SETTLEMENT' {
   if (pending === null) {
-    throw new RangeError('nextActionForPending: pending이 null이다.');
+    return 'ADVANCE';
   }
   switch (pending.kind) {
     case 'EVENT':
@@ -1418,6 +1420,7 @@ function advanceInSeason(
   const profile = state.player.profile;
   if (profile === null) throw new RangeError('advanceInSeason: player.profile이 null이다.');
   if (state.contract === null) throw new RangeError('advanceInSeason: contract가 null이다.');
+  if (needsDevelopment(state, input.ruleset)) return fail('VALIDATION_FAILED', '훈련장에서 이번 구간의 계획을 먼저 정해 주세요.', { reason: 'DEVELOPMENT_REQUIRED' });
   const eligibleEvents: EligibleEvent[] = command.payload.eligibleEvents;
 
   if (eligibleEvents.length > 0) {
@@ -1495,7 +1498,7 @@ function advanceInSeason(
     currentStep.summary === null &&
     (lastTimelineEntry?.kind === 'NATIONAL_TEAM_CALLED' || lastTimelineEntry?.kind === 'NATIONAL_TEAM_DECLINED') &&
     lastTimelineEntry.step === currentStepIndex;
-  const resumesSameStep = resumesInjuryStep || resumesNationalTeamStep;
+  const resumesSameStep = resumesInjuryStep || resumesNationalTeamStep || (currentStepIndex > 1 && input.ruleset.developmentRules !== undefined && lastTimelineEntry?.kind === 'DEVELOPMENT_COMPLETED' && lastTimelineEntry.step === currentStepIndex);
   // 현재 시즌 시작 뒤의 타임라인만 세어 이전 시즌 같은 step의 결정을 섞지 않는다. REHAB_CHOSEN과
   // NATIONAL_TEAM_CALLED/DECLINED는 이미 열린 결정 수를 보존해 resume 뒤 summary에 반영한다.
   const currentSeasonStartRevision = [...state.timeline].reverse().find((entry) => entry.kind === 'SEASON_STARTED')?.revision;
@@ -2277,7 +2280,7 @@ function resolveChapterCommand(input: SimulationInput, snapshot: DomainSnapshot)
 }
 
 /**
- * `RESOLVE_CHAPTER`는 `nextActionForPending`(pending이 null이면 throw)과 달리 pending이 null(마지막
+ * `RESOLVE_CHAPTER`는 `nextActionForPending`과 달리 pending이 null(마지막
  * 판단 확정)인 경우도 유효해서 별도 함수로 뺐다 — null이면 다음 경기로 ADVANCE, 아니면(같은 챕터의
  * 다음 판단) DECISION이다.
  */
@@ -4058,6 +4061,12 @@ export function simulate(input: SimulationInput): SimulationResult {
       return updatePlayerDraft(input, snapshot);
     case 'CONFIRM_PLAYER':
       return confirmPlayer(input, snapshot);
+    case 'DEVELOP': {
+      try {
+        const nextState = developPlayer(snapshot.state, command.payload, input.ruleset, snapshot.revision + 1);
+        return { ok: true, snapshot: buildSnapshot(nextState, snapshot.revision + 1, 'STEP_BOUNDARY'), appliedEffects: [], nextAction: 'ADVANCE' };
+      } catch (error) { return fail('VALIDATION_FAILED', error instanceof Error ? error.message : '훈련 계획을 확인해 주세요.'); }
+    }
     case 'START_SEASON':
       return startSeason(input, snapshot);
     case 'ADVANCE':

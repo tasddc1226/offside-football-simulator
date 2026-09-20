@@ -1,6 +1,6 @@
 import { EFFECT_DEFAULTS, loadContentPack, loadRuleset } from '@offside/content';
 import type { ServiceSeasonCurrent } from '@offside/contracts';
-import { hashState } from '@offside/domain';
+import { hashState, needsDevelopment } from '@offside/domain';
 import {
   career01,
   career01EngineCommands,
@@ -23,6 +23,7 @@ import {
   confirmPlayer,
   createCareer,
   deleteCareer,
+  develop,
   execute,
   rejectOffer,
   resolveChapter,
@@ -1587,7 +1588,9 @@ it('routine advance reaches a saved decision without choosing it for the player'
     pack: loadContentPack('0.8.0'),
     newId: makeIdGenerator('journey'),
   });
+  serviceSeasonHolder.current = {...FALLBACK_SERVICE_SEASON,rulesetVersion:'2.1.0',contentPackVersion:'0.8.0'};
   const created = await createCareer(engine, { simulationMode: 'FAST' });
+  serviceSeasonHolder.current = undefined;
   if (!created.ok) throw new Error(created.error.message);
   const careerId = created.snapshot.careerId;
   await reachIssue242FirstOffer(engine, careerId, []);
@@ -1612,3 +1615,50 @@ it('routine advance reaches a saved decision without choosing it for the player'
   if (!saved.ok) throw new Error('Missing saved decision');
   expect(saved.snapshot.stateHash).toBe(result.domainSnapshot.stateHash);
 });
+
+
+it('player-life season persists all three camps, stops auto-advance, and preserves every fixture', async () => {
+  const engine = createAppEngine({store:new MemoryLocalStore(),simulator:inlineSimulator,ruleset:loadRuleset('3.0.0'),pack:loadContentPack('0.9.0'),newId:makeIdGenerator('life')});
+  const created=await createCareer(engine,{simulationMode:'FAST'});
+  if (!created.ok) throw new Error(created.error.message);
+  const id=created.snapshot.careerId;
+  await reachIssue242FirstOffer(engine,id,[]);
+  let loaded=await engine.client.loadCareer(id);
+  if (!loaded.ok || loaded.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('missing offers');
+  await acceptOffer(engine,id,loaded.snapshot.state.pending.offers[0]!.id);
+  await startSeason(engine,id,{simulationMode:'FAST'});
+  for(let turn=0;turn<60;turn++) {
+    loaded=await engine.client.loadCareer(id);
+    if(!loaded.ok) throw new Error('missing state');
+    const state=loaded.snapshot.state; const pending=state.pending;
+    if(pending?.kind==='SETTLEMENT') break;
+    let result: ExecuteResult;
+    if(needsDevelopment(state,engine.ruleset)) {
+      const blocked=await advance(engine,id); expect(blocked.ok).toBe(false);
+      result=await develop(engine,id,{drill:'VISION',load:'RECOVERY',partner:'CAPTAIN'});
+      expect(result.ok).toBe(true);
+      const duplicate=await develop(engine,id,{drill:'VISION',load:'RECOVERY',partner:'CAPTAIN'});
+      expect(duplicate.ok).toBe(false);
+    } else if(pending?.kind==='ROLE_PROPOSAL') result=await resolveRole(engine,id,'ACCEPT');
+    else if(pending?.kind==='EVENT'||pending?.kind==='INJURY'||pending?.kind==='NATIONAL_TEAM') {
+      const choice=engine.pack.eventsById.get(pending.eventId)!.choices[0]!;
+      result=await resolveEvent(engine,id,choice.id);
+    } else if(pending?.kind==='CHAPTER') {
+      const decision=engine.pack.chaptersById.get(pending.chapterId)!.decisions[pending.resolved.length]!;
+      result=await resolveChapter(engine,id,decision.id,decision.options[0]!.id);
+    } else if ((pending?.kind==='CONTRACT'||pending?.kind==='OFFERS') && pending.offers.length>0) result=await rejectOffer(engine,id,pending.offers[0]!.id);
+    else result=await advanceToDecision(engine,id);
+    if(!result.ok) throw new Error(result.error.message);
+    const saved=await engine.client.loadCareer(id);
+    if(!saved.ok) throw new Error('missing saved state');
+    expect(saved.snapshot.stateHash).toBe(result.domainSnapshot.stateHash);
+  }
+  loaded=await engine.client.loadCareer(id);
+  if(!loaded.ok) throw new Error('missing season');
+  expect(loaded.snapshot.state.pending?.kind).toBe('SETTLEMENT');
+  expect(loaded.snapshot.state.development!.sessions.map(s=>s.block)).toEqual([1,2,3]);
+  const season=loaded.snapshot.state.season!;
+  expect(new Set(season.matches.map(m=>m.id)).size).toBe(season.matches.length);
+  expect(season.matches.filter(m=>m.kind==='LEAGUE').length).toBeGreaterThanOrEqual(14);
+  expect((await settleSeason(engine,id)).ok).toBe(true);
+},30000);

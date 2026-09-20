@@ -1,3 +1,4 @@
+import manifest090 from '../../packs/0.9.0/manifest.json' with { type: 'json' };
 import manifest080 from '../../packs/0.8.0/manifest.json' with { type: 'json' };
 import rel008v080 from '../../packs/0.8.0/events/EVT-REL-008.json' with { type: 'json' };
 import life001 from '../../packs/0.8.0/events/EVT-DEV-301.json' with { type: 'json' };
@@ -269,6 +270,7 @@ export const PACK_VERSIONS = [
   '0.6.8',
   '0.7.0',
   '0.8.0',
+  '0.9.0',
 ] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
@@ -289,7 +291,7 @@ type PackSource = {
 };
 
 const PACK_SOURCES_THROUGH_066: Record<
-  Exclude<PackVersion, '0.8.0' | '0.6.7' | '0.6.8' | '0.7.0'>,
+  Exclude<PackVersion, '0.9.0' | '0.8.0' | '0.6.7' | '0.6.8' | '0.7.0'>,
   PackSource
 > = {
   '0.1.0': {
@@ -1048,7 +1050,7 @@ const PACK_SOURCES_THROUGH_066: Record<
 };
 
 const PACK_SOURCES_WITHOUT_068: Record<
-  Exclude<PackVersion, '0.8.0' | '0.6.8' | '0.7.0'>,
+  Exclude<PackVersion, '0.9.0' | '0.8.0' | '0.6.8' | '0.7.0'>,
   PackSource
 > = {
   ...PACK_SOURCES_THROUGH_066,
@@ -1058,7 +1060,7 @@ const PACK_SOURCES_WITHOUT_068: Record<
   },
 };
 
-const PACK_SOURCES_THROUGH_068: Record<Exclude<PackVersion, '0.8.0' | '0.7.0'>, PackSource> = {
+const PACK_SOURCES_THROUGH_068: Record<Exclude<PackVersion, '0.9.0' | '0.8.0' | '0.7.0'>, PackSource> = {
   ...PACK_SOURCES_WITHOUT_068,
   '0.6.8': {
     ...PACK_SOURCES_WITHOUT_068['0.6.7'],
@@ -1089,7 +1091,7 @@ const PACK_SOURCES_THROUGH_068: Record<Exclude<PackVersion, '0.8.0' | '0.7.0'>, 
   },
 };
 
-const PACK_SOURCES_THROUGH_070: Record<Exclude<PackVersion, '0.8.0'>, PackSource> = {
+const PACK_SOURCES_THROUGH_070: Record<Exclude<PackVersion, '0.9.0' | '0.8.0'>, PackSource> = {
   ...PACK_SOURCES_THROUGH_068,
   '0.7.0': {
     ...PACK_SOURCES_THROUGH_068['0.6.8'],
@@ -1103,7 +1105,7 @@ const PACK_SOURCES_THROUGH_070: Record<Exclude<PackVersion, '0.8.0'>, PackSource
   },
 };
 
-const PACK_SOURCES: Record<PackVersion, PackSource> = {
+const PACK_SOURCES_THROUGH_080: Record<Exclude<PackVersion, '0.9.0'>, PackSource> = {
   ...PACK_SOURCES_THROUGH_070,
   '0.8.0': {
     ...PACK_SOURCES_THROUGH_070['0.7.0'],
@@ -1132,6 +1134,8 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
  * 돌려준다. `loadRuleset`과 같은 방식(정적 JSON import)이라 Node `fs` 없이 브라우저에서도 쓸 수
  * 있다. CLI 전용 `cli/load-pack.ts`(디렉터리를 `readdirSync`로 스캔)와는 별개다.
  */
+const PACK_SOURCES: Record<PackVersion, PackSource> = { ...PACK_SOURCES_THROUGH_080, '0.9.0': { ...PACK_SOURCES_THROUGH_080['0.8.0'], manifest: manifest090 } };
+
 export function loadContentPack(version: string): ContentPack {
   if (!(PACK_VERSIONS as readonly string[]).includes(version)) {
     throw new Error(`알 수 없는 contentPackVersion: ${version}`);

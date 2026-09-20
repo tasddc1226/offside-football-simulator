@@ -2971,6 +2971,7 @@ describe('Command 타입', () => {
       | 'RETIRE'
       | 'CAREER_EVENT'
       | 'REQUEST_CLUB_MEETING'
+      | 'DEVELOP'
     >();
   });
 });

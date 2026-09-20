@@ -257,6 +257,7 @@ export const TimelineEntrySchema = z.strictObject({
     'CAREER_CONFIRMED',
     'EVENT_RESOLVED',
     'CONTRACT_SIGNED',
+    'DEVELOPMENT_COMPLETED',
     'SEASON_STARTED',
     'STEP_PASSED',
     'SEASON_SETTLED',
@@ -1000,6 +1001,23 @@ const attributesShape = Object.fromEntries(
 /** 20개 능력 키 전부 필수 정수. */
 export const AttributesSchema = z.strictObject(attributesShape);
 
+export const DevelopmentPlanSchema = z.strictObject({
+  drill: z.enum(['CONTROL', 'ENGINE', 'VISION']),
+  load: z.enum(['RECOVERY', 'BALANCED', 'PUSH']),
+  partner: z.enum(['COACH', 'CAPTAIN', 'RIVAL']),
+});
+export const DevelopmentStateSchema = z.strictObject({
+  mastery: z.strictObject({ CONTROL: z.number().int().min(0).max(100), ENGINE: z.number().int().min(0).max(100), VISION: z.number().int().min(0).max(100) }),
+  sessions: z.array(DevelopmentPlanSchema.extend({
+    season: z.number().int().min(1), block: z.number().int().min(1).max(3),
+    gains: z.array(z.strictObject({ attribute: AttributesSchema.keyof(), delta: z.number().int().min(0).max(3) })),
+    fitnessDelta: z.number().int(), relationDelta: z.number().int(),
+    response: z.enum(['SUPPORT', 'CHALLENGE', 'DISTANCE']), breakthrough: z.boolean(),
+  })).max(36),
+  duels: z.array(z.strictObject({ season: z.number().int().min(1), matchId: z.string(), optionId: z.string(), tactic: z.enum(['CONTROL', 'ENGINE', 'VISION']), successBp: z.number().int().min(0).max(10000), result: ChapterOutcomeKindSchema })).max(36),
+});
+
+
 // T-4-002 D-49: domain `InjurySeverity`·`InjuryBodyPart`·`RehabPlan`과 동일.
 export const InjurySeveritySchema = z.enum(['MINOR', 'MODERATE', 'MAJOR']);
 export const InjuryBodyPartSchema = z.enum(['KNEE', 'ANKLE', 'HAMSTRING', 'SHOULDER', 'HEAD']);
@@ -1111,6 +1129,7 @@ const CareerStateShapeSchema = z.strictObject({
   currentStep: z.number().int(),
   seasonPhase: SeasonPhaseSchema,
   simulationMode: SimulationModeSchema,
+  development: DevelopmentStateSchema.optional(),
   attributes: AttributesSchema,
   // T-2-005 D-39: 성장식 이월(정수 centi, 1/100). 결산 시 매번 갱신된다.
   growthCarryCenti: AttributesSchema,

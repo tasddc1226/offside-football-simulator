@@ -1,3 +1,4 @@
+import ruleset300Manifest from '../rulesets/3.0.0/manifest.json' with { type: 'json' };
 import ruleset210Manifest from '../rulesets/2.1.0/manifest.json' with { type: 'json' };
 import ruleset200Manifest from '../rulesets/2.0.0/manifest.json' with { type: 'json' };
 import ruleset100Manifest from '../rulesets/1.0.0/manifest.json' with { type: 'json' };
@@ -45,6 +46,7 @@ const RULESET_MANIFESTS: Readonly<Record<string, unknown>> = Object.freeze({
   '1.7.4': ruleset174Manifest,
   '2.0.0': ruleset200Manifest,
   '2.1.0': ruleset210Manifest,
+  '3.0.0': ruleset300Manifest,
 });
 
 /** Return existing registry checksums, not a second hash dialect of parsed objects.
@@ -79,7 +81,8 @@ export function loadRetirementArtifacts(
     (rulesetVersion === '1.7.3' && contentPackVersion === '0.6.7') ||
     (rulesetVersion === '1.7.4' && contentPackVersion === '0.6.8') ||
     (rulesetVersion === '2.0.0' && contentPackVersion === '0.7.0') ||
-    (rulesetVersion === '2.1.0' && contentPackVersion === '0.8.0');
+    (rulesetVersion === '2.1.0' && contentPackVersion === '0.8.0') ||
+    (rulesetVersion === '3.0.0' && contentPackVersion === '0.9.0');
   const activatesLegacy110WithoutPopulation =
     (rulesetVersion === '1.2.0' &&
       (contentPackVersion === '0.4.0' || contentPackVersion === '0.4.1')) ||

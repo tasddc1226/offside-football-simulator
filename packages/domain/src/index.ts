@@ -295,3 +295,5 @@ export { initializeNationalityModule, assessNationalityAtSeasonBoundary, resolve
 export { careerEventChoices, nationalityForCareer, type CareerEventChoice } from './legacy/career-event.js';
 export { assessCareerRetirement, retirementContinuationOptions, retirementDecisionRequired, RETIREMENT_POLICY } from './legacy/career-retirement.js';
 export type { RetirementPolicy } from './legacy/retirement.js';
+
+export { needsDevelopment, developmentBlock, developmentPrepared, developPlayer, developmentTargets, initialDevelopment, matchReadiness, matchTactic, weightMatchOutcomes, DEVELOPMENT_DEFAULT, type DevelopmentPlan, type DevelopmentState, type DevelopmentSession, type MatchTactic } from './development.js';

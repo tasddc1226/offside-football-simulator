@@ -7,6 +7,7 @@ import {
   RehabPlanSchema,
   SlotImportanceSchema,
   TrainingFocusSchema,
+  DevelopmentPlanSchema,
 } from './career-state.js';
 import { successEnvelope } from './envelope.js';
 import { PlayerDraftSchema } from './player.js';
@@ -37,6 +38,7 @@ export const COMMAND_TYPES = [
   'RETIRE',
   'CAREER_EVENT',
   'REQUEST_CLUB_MEETING',
+  'DEVELOP',
 ] as const;
 
 export const CommandTypeSchema = z.enum(COMMAND_TYPES);
@@ -232,6 +234,7 @@ export const COMMAND_PAYLOAD_SCHEMAS = {
   RETIRE: RetirePayloadSchema,
   CAREER_EVENT: CareerEventPayloadSchema,
   REQUEST_CLUB_MEETING: RequestClubMeetingPayloadSchema,
+  DEVELOP: DevelopmentPlanSchema,
 } as const satisfies Record<CommandType, z.ZodTypeAny>;
 
 export type CommandPayloadByType = {
@@ -264,6 +267,7 @@ export const CommandRequestSchema = z.discriminatedUnion('type', [
   commandRequestMember('RETIRE', COMMAND_PAYLOAD_SCHEMAS.RETIRE),
   commandRequestMember('CAREER_EVENT', COMMAND_PAYLOAD_SCHEMAS.CAREER_EVENT),
   commandRequestMember('REQUEST_CLUB_MEETING', COMMAND_PAYLOAD_SCHEMAS.REQUEST_CLUB_MEETING),
+  commandRequestMember('DEVELOP', COMMAND_PAYLOAD_SCHEMAS.DEVELOP),
 ]);
 
 export type CommandRequest = z.infer<typeof CommandRequestSchema>;

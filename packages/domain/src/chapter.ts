@@ -1,3 +1,4 @@
+import { weightMatchOutcomes, recordMatchLesson } from './development.js';
 import { compareCodePoints } from './canonical.js';
 import { clamp } from './clamp.js';
 import { applyEffects } from './effects.js';
@@ -366,7 +367,7 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
     return { ok: false, message: '이미 확정된 판단이다.', reason: 'DECISION_ALREADY_RESOLVED' };
   }
 
-  const outcomes = input.outcomes;
+  const outcomes = weightMatchOutcomes(state, input.optionId, input.outcomes, input.ruleset);
   const weightSum = outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
   // resolveEvent(simulate.ts)와 같은 검사·같은 규칙(reason 없이 message만) — rollInt가
   // maxExclusive를 1 이상의 정수로 요구하는 프로그래밍 오류 가정을 여기서 미리 걸러낸다.
@@ -388,7 +389,8 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
     return { ok: false, message: 'outcomes가 비어 있다.' };
   }
 
-  const effectResult = applyEffects(state, chosen.effects, { step: state.currentStep }, input.ruleset.relationshipRules);
+  const lessonState = input.ruleset.developmentRules === undefined ? state : recordMatchLesson(state, input.optionId, outcomes, chosen.kind);
+  const effectResult = applyEffects(lessonState, chosen.effects, { step: state.currentStep }, input.ruleset.relationshipRules);
 
   let tags = effectResult.state.tags;
   if (chosen.addTags && chosen.addTags.length > 0) tags = [...tags, ...chosen.addTags];

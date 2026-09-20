@@ -1,9 +1,11 @@
+import { LifeSeasonEntry } from '../shared/development-workshop.js';
+import '../shared/player-life.css';
 // SCR-005 프리시즌 계획: 훈련 계획을 고르고 선택을 search 파라미터로 SCR-011에 넘긴다(명령 없음).
 // 새로고침·뒤로 가기에도 선택이 유지되도록 URL에 싣는다. 시뮬레이션 모드는 더 이상 고르지 않는다
 // (사용자 결정 2026-09-13, D-77) — 모든 시즌은 항상 FIXED_SIMULATION_MODE(FAST)로 시작한다.
 import { useEffect, useState } from 'react';
 import { computeContractSeasonsRemaining, RETIREMENT_POLICY, type ClubMeetingRequest } from '@offside/domain';
-import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
 import {
   RadioGroup,
   RadioGroupItem,
@@ -56,6 +58,7 @@ const CAPTION_STYLE = {
 } as const;
 
 function PreseasonScreen() {
+  const navigate = useNavigate();
   const { careerId } = Route.useParams();
   const query = useCareer(careerId);
   const serviceSeasonQuery = useServiceSeason();
@@ -79,6 +82,7 @@ function PreseasonScreen() {
   const contract = state.contract;
   if (profile === null || contract === null) return null; // 라우트 loader가 보장한다. 방어적 fallback.
   const ruleset = rulesetForCareer(state);
+  if (ruleset.developmentRules !== undefined) return <LifeSeasonEntry state={state} onStarted={() => void navigate({to:'/career/$careerId',params:{careerId}})} />;
   // 사용자 결정(2026-09-13): 1시즌 = 1년, 커리어 시작 연도부터 "2026 시즌"으로 표기(season-year.ts).
   const startYear = careerStartYear({
     seasonServiceSeasonId: state.season?.serviceSeasonId ?? null,

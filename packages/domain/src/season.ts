@@ -1,3 +1,4 @@
+import { developmentPrepared } from './development.js';
 import { freshEventPool } from './event-variety.js';
 import { selectChapter, type ChapterCandidateInput, type ChapterOpenResult } from './chapter.js';
 import { buildRenewalOffer, isRenewalWindowOpen, isYouthExitRequired } from './market.js';
@@ -423,6 +424,7 @@ export function walkToNextDecision(
   let autoDecisionsThisStep = 0;
 
   while (currentStepIndex < 12) {
+    if (currentStepIndex > 1 && ruleset.developmentRules !== undefined && !developmentPrepared(state, currentStepIndex)) break;
     const step = findSeasonStep(nextSteps, currentStepIndex);
     const matchResult = playStepMatches(currentStepIndex);
 

@@ -1,3 +1,4 @@
+import { needsDevelopment, type DevelopmentPlan } from '@offside/domain';
 // EngineClient 위의 순수 함수(React 없음). 06 "분석 이벤트": 실행마다 command_submitted ·
 // command_resolved(outcomeClass = nextAction) · command_failed를 보낸다.
 import type {
@@ -208,6 +209,7 @@ export async function advanceToDecision(
     const state = result.domainSnapshot.state;
     const rules = loadRuleset(state.rulesetVersion);
     if (
+      needsDevelopment(state, rules) ||
       rules.retirementRules?.maxCareerSeasons === undefined ||
       state.status !== 'ACTIVE' ||
       (state.pending !== null &&
@@ -579,3 +581,5 @@ export async function resolveChapter(
 
   return commit(engine, careerId, load.snapshot.revision, command);
 }
+
+export function develop(engine: AppEngine, careerId: string, plan: DevelopmentPlan): Promise<ExecuteResult> { return execute(engine, careerId, { type: 'DEVELOP', payload: plan }); }

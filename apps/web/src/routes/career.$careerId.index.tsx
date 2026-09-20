@@ -1,3 +1,5 @@
+import { needsDevelopment } from '@offside/domain';
+import { DevelopmentWorkshop } from '../shared/development-workshop.js';
 // SCR-029 커리어 대시보드. 다섯 구역 탭 + "다음 결정" 카드. 대시보드에서는 어떤 명령도 확정하지
 // 않는다 — advance/settleSeason은 결정이 아니라 "진행"이며(다음에 뭐가 뜰지는 도메인이 정한다),
 // 결정 확정은 전용 화면(SCR-007·008·009·010·012·013·014)에서만 일어난다.
@@ -169,6 +171,8 @@ function timelineSentence(entry: TimelineEntry, state: CareerState): string {
       return state.contract !== null && entry.refId === state.contract.id
         ? `${state.contract.teamName}과 계약`
         : '계약';
+    case 'DEVELOPMENT_COMPLETED':
+      return '훈련과 대화로 다음 경기를 준비하다';
     case 'SEASON_STARTED':
       return '시즌 시작';
     case 'STEP_PASSED':
@@ -452,6 +456,8 @@ function NextDecisionCard({
   const advancing = advanceMutation.isPending;
   const settling = settleSeasonMutation.isPending;
   const ruleset = rulesetForCareer(state);
+
+  if (needsDevelopment(state, ruleset)) return <DevelopmentWorkshop key={`${state.season!.index}-${state.season!.currentStep}`} state={state} />;
 
   /** UX-007: 맥락(eyebrow+제목+선택 설명)과 CTA를 한 프레임 안에 묶는다(이중 프레임 제거) — 상태별
    * 분기는 그대로 두고 시각 구조만 통일한다. */

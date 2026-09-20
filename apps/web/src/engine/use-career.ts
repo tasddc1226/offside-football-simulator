@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-query';
 import type {
   CareerState,
+  DevelopmentPlan,
   ClubMeetingRequest,
   NegotiationAsk,
   PlayerDraft,
@@ -17,6 +18,7 @@ import type { LocalCareerRecord } from '@offside/engine-client';
 import type { StartSeasonChoice } from './career-actions.js';
 import {
   acceptOffer,
+  develop,
   advance,
   advanceToDecision,
   confirmPlayer,
@@ -82,6 +84,7 @@ export function useCareer(careerId: string) {
 }
 
 export type CareerMutationKind =
+  | 'develop'
   | 'create'
   | 'updateDraft'
   | 'confirm'
@@ -115,6 +118,7 @@ type RequestClubMeetingVariables = { careerId: string; request: ClubMeetingReque
 async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
   const engine = await getAppEngine();
   switch (kind) {
+    case 'develop': { const { careerId, plan } = variables as { careerId: string; plan: DevelopmentPlan }; return develop(engine, careerId, plan); }
     case 'create':
       return createCareer(engine, variables as CreateVariables);
     case 'updateDraft': {
@@ -180,6 +184,7 @@ type MutationDataFor<K extends CareerMutationKind> = K extends 'create'
   : K extends 'updateDraft'
     ? Awaited<ReturnType<typeof updateDraft>>
     : K extends
+          | 'develop'
           | 'confirm'
           | 'advance'
           | 'advanceToDecision'
@@ -196,7 +201,7 @@ type MutationDataFor<K extends CareerMutationKind> = K extends 'create'
       ? Awaited<ReturnType<typeof confirmPlayer>>
       : void;
 
-type MutationVariablesFor<K extends CareerMutationKind> = K extends 'create'
+type MutationVariablesFor<K extends CareerMutationKind> = K extends 'develop' ? { careerId: string; plan: DevelopmentPlan } : K extends 'create'
   ? CreateVariables
   : K extends 'updateDraft'
     ? UpdateDraftVariables

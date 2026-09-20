@@ -1,3 +1,4 @@
+import { needsDevelopment, type DevelopmentPlan } from '../../packages/domain/src/development.ts';
 // T-7-017 D-79: UI·브라우저·서버 없이 도메인 simulate()를 직접 호출해 커리어 N개를 seed별로
 // 재생하는 헤드리스 CLI. 명령 실행·pending 정책은 tooling/scripts/legacy-population.ts와
 // legacy-population-choices.ts의 선례(Phase 5 모집단 생성기)를 따르되, 이 파일은 그 파일들을
@@ -577,6 +578,12 @@ function runOneCareer(
       if (state.status !== 'ACTIVE') {
         status = state.status;
         break;
+      }
+      if (needsDevelopment(state, runtime.ruleset)) {
+        const drill = (['CONTROL','ENGINE','VISION'] as const)[chooseDeterministicIndex(seed, `drill:${step}`, 3)]!;
+        const load: DevelopmentPlan['load'] = state.state.fitness < 55 || state.health.episodes.some(e => e.status === 'REHAB' || e.status === 'ACTIVE') ? 'RECOVERY' : (['BALANCED','PUSH'] as const)[chooseDeterministicIndex(seed, `load:${step}`, 2)]!;
+        const partner = (['COACH','CAPTAIN','RIVAL'] as const)[chooseDeterministicIndex(seed, `partner:${step}`, 3)]!;
+        snapshot = command(snapshot, 'DEVELOP', { drill, load, partner }, `${seed}-development-${step}`); step += 1; continue;
       }
       if (state.pending !== null) {
         if (state.pending.kind === 'SETTLEMENT') {

@@ -1,0 +1,101 @@
+{
+  "id": "CHP-MATCH-009",
+  "version": 1,
+  "importance": "MAJOR",
+  "trigger": { "kind": "DECIDER", "maxRankGap": 2 },
+  "weight": 90,
+  "rotationGroup": "DECIDER",
+  "authoring": "PROTOTYPE",
+  "decisions": [
+    {
+      "id": "D1",
+      "prompt": "마지막 리그 경기의 압박이 커진다. 다음 플레이의 기준을 어디에 둘까?",
+      "options": [
+        {
+          "id": "READ",
+          "label": "상대 움직임을 한 번 더 읽는다",
+          "riskLabel": "LOW",
+          "priorProbability": null,
+          "previewEffects": [
+            { "label": "폼 소폭 상승", "target": "form", "direction": "UP" },
+            { "label": "감독 신뢰 상승", "target": "managerTrust", "direction": "UP" }
+          ],
+          "outcomes": [
+            {
+              "id": "READ-FIXED",
+              "kind": "FIXED",
+              "weight": 100,
+              "title": "급해지지 않고 빈 공간을 골랐다",
+              "ratingDeltaTenths": 3,
+              "effects": [
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-009.D1.READ-FIXED.0", "target": "form", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" },
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-009.D1.READ-FIXED.1", "target": "managerTrust", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "시야를 넓힌 뒤 가장 안전한 전진 경로를 찾았다." }
+            }
+          ]
+        },
+        {
+          "id": "PRESS",
+          "label": "한 발 먼저 압박을 시작한다",
+          "riskLabel": "MEDIUM",
+          "priorProbability": { "successBp": 5500 },
+          "previewEffects": [
+            { "label": "성공하면 감독 신뢰 상승", "target": "managerTrust", "direction": "UP" },
+            { "label": "실패하면 체력·폼 하락" }
+          ],
+          "outcomes": [
+            {
+              "id": "PRESS-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 55,
+              "title": "선제 압박으로 상대 선택을 제한했다",
+              "ratingDeltaTenths": 7,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-009.D1.PRESS-SUCCESS.0", "target": "managerTrust", "delta": 5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" },
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-009.D1.PRESS-SUCCESS.1", "target": "form", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "첫 움직임이 맞아떨어져 상대의 전개 방향을 좁혔다." }
+            },
+            {
+              "id": "PRESS-FAIL",
+              "kind": "FAIL",
+              "weight": 45,
+              "title": "압박 시점이 어긋나 공간을 내줬다",
+              "ratingDeltaTenths": -5,
+              "effects": [
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-009.D1.PRESS-FAIL.0", "target": "fitness", "delta": -3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" },
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-009.D1.PRESS-FAIL.1", "target": "form", "delta": -2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "혼자 먼저 나간 압박 뒤로 상대가 빠르게 빠져나갔다." }
+            }
+          ]
+        },
+        {
+          "id": "LINK",
+          "label": "주장과 신호를 맞춰 팀의 간격을 잡는다",
+          "riskLabel": "LOW",
+          "priorProbability": null,
+          "previewEffects": [
+            { "label": "주장 관계 상승", "target": "captain", "direction": "UP" },
+            { "label": "사기 상승", "target": "morale", "direction": "UP" }
+          ],
+          "outcomes": [
+            {
+              "id": "LINK-FIXED",
+              "kind": "FIXED",
+              "weight": 100,
+              "title": "짧은 신호로 팀의 간격을 정리했다",
+              "ratingDeltaTenths": 4,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-009.D1.LINK-FIXED.0", "target": "captain", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" },
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-009.D1.LINK-FIXED.1", "target": "morale", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "주장과 주고받은 신호가 동료들에게 차분히 전달됐다." }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

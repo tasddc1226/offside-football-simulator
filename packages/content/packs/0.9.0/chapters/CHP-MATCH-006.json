@@ -1,0 +1,113 @@
+{
+  "id": "CHP-MATCH-006",
+  "version": 1,
+  "importance": "MAJOR",
+  "trigger": { "kind": "TAG", "tag": "프로_데뷔" },
+  "weight": 70,
+  "rotationGroup": "POST_DEBUT",
+  "positionGroups": ["DF"],
+  "authoring": "PROTOTYPE",
+  "decisions": [
+    {
+      "id": "D1",
+      "prompt": "상대 공격이 이어지는 상황, 수비 라인을 어떻게 운영할까?",
+      "options": [
+        {
+          "id": "HOLD_LINE",
+          "label": "라인을 높게 유지한다",
+          "riskLabel": "MEDIUM",
+          "priorProbability": { "successBp": 5000 },
+          "previewEffects": [{ "label": "감독 신뢰 변동", "target": "managerTrust" }],
+          "outcomes": [
+            {
+              "id": "HOLD_LINE-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 50,
+              "title": "오프사이드 트랩이 성공했다",
+              "ratingDeltaTenths": 7,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-006.D1.HOLD_LINE-SUCCESS.0", "target": "managerTrust", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "타이밍을 맞춘 라인이 그대로 오프사이드를 만들었다." }
+            },
+            {
+              "id": "HOLD_LINE-FAIL",
+              "kind": "FAIL",
+              "weight": 50,
+              "title": "라인이 깨지며 실점 위기를 내줬다",
+              "ratingDeltaTenths": -6,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-006.D1.HOLD_LINE-FAIL.0", "target": "managerTrust", "delta": -4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "타이밍이 어긋나며 상대에게 결정적인 공간을 내줬다." }
+            }
+          ]
+        },
+        {
+          "id": "DROP_DEEP",
+          "label": "내려서 공간을 지운다",
+          "riskLabel": "LOW",
+          "priorProbability": { "successBp": 7000 },
+          "previewEffects": [{ "label": "폼 소폭 상승", "target": "form", "direction": "UP" }],
+          "outcomes": [
+            {
+              "id": "DROP_DEEP-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 70,
+              "title": "안정적으로 위험을 지웠다",
+              "ratingDeltaTenths": 3,
+              "effects": [
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-006.D1.DROP_DEEP-SUCCESS.0", "target": "form", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "무리하지 않고 공간을 지우며 위험을 없앴다." }
+            },
+            {
+              "id": "DROP_DEEP-NEUTRAL",
+              "kind": "NEUTRAL",
+              "weight": 30,
+              "title": "실점 없이 지나갔다",
+              "ratingDeltaTenths": 0,
+              "effects": [],
+              "narrative": { "situation": "특별한 장면 없이 안전하게 막아냈다." }
+            }
+          ]
+        },
+        {
+          "id": "TACKLE_RISK",
+          "label": "거칠게 끊는다",
+          "riskLabel": "HIGH",
+          "priorProbability": { "successBp": 3500 },
+          "previewEffects": [
+            { "label": "잘되면 팬 지지 상승", "target": "fans", "direction": "UP" },
+            { "label": "카드 위험" }
+          ],
+          "outcomes": [
+            {
+              "id": "TACKLE_RISK-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 35,
+              "title": "결정적으로 끊어냈다",
+              "ratingDeltaTenths": 9,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-006.D1.TACKLE_RISK-SUCCESS.0", "target": "fans", "delta": 5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+              ],
+              "addTags": ["수비_영웅"],
+              "narrative": { "situation": "몸을 던진 태클이 정확히 공만 걷어냈다." }
+            },
+            {
+              "id": "TACKLE_RISK-FAIL",
+              "kind": "FAIL",
+              "weight": 65,
+              "title": "파울로 카드 위험을 자초했다",
+              "ratingDeltaTenths": -8,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-006.D1.TACKLE_RISK-FAIL.0", "target": "managerTrust", "delta": -3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "거친 태클이 그대로 파울로 이어졌다." }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

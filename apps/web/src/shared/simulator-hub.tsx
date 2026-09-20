@@ -1,3 +1,4 @@
+import { PlayerLife } from './player-life.js';
 import type { ReactNode } from 'react';
 import { ATTRIBUTE_KEYS, type CareerState } from '@offside/domain';
 import { ATTRIBUTE_LABELS, SQUAD_ROLE_LABELS } from './labels.js';
@@ -116,6 +117,7 @@ export function SeasonDashboard({
   year: number;
   action: ReactNode;
 }) {
+  if (rulesetForCareer(state).developmentRules !== undefined) return <PlayerLife state={state} action={action} />;
   const season = state.season;
   const careerLength = rulesetForCareer(state).retirementRules?.maxCareerSeasons;
   const years = state.seasonHistory.length;

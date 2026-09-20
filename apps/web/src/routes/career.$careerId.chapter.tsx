@@ -1,3 +1,6 @@
+import { matchReadiness, weightMatchOutcomes, type CareerState } from '@offside/domain';
+import { DRILL_LABEL } from '../shared/development-workshop.js';
+import '../shared/player-life.css';
 // SCR-031 핵심 경기 챕터. 한 라우트 안에서 경기 전 맥락(상단 고정) → 판단 1~3개(ChoiceCard,
 // RESOLVE_CHAPTER) → 경기 결과까지 이동 없이 이어진다. 서버 상태(pending.resolved · season.chapters ·
 // timeline)만으로 화면을 그리므로(chapter-state.ts) 새로고침·뒤로 가기는 확정된 판단까지만 재생하고
@@ -214,13 +217,14 @@ function chapterOutcomeTone(chapterRecord: ChapterView['chapterRecord']): Chapte
 }
 
 interface DecisionInputProps {
+  state: CareerState;
   decision: ChapterDefinition['decisions'][number];
   submitting: boolean;
   errorMessage: string | null;
   onConfirm: (optionId: string) => void;
 }
 
-function DecisionInput({ decision, submitting, errorMessage, onConfirm }: DecisionInputProps) {
+function DecisionInput({ state, decision, submitting, errorMessage, onConfirm }: DecisionInputProps) {
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
   function confirmSelected() {
@@ -242,8 +246,13 @@ function DecisionInput({ decision, submitting, errorMessage, onConfirm }: Decisi
         className="flex flex-col gap-os-3"
       >
         {decision.options.map((option) => {
+          const life = rulesetForCareer(state).developmentRules !== undefined;
+          const readiness = matchReadiness(state, option.id);
+          const weights = weightMatchOutcomes(state, option.id, option.outcomes, rulesetForCareer(state));
+          const probability = Math.round(weights.filter(o=>o.kind === 'SUCCESS').reduce((n,o)=>n+o.weight,0) * 100 / weights.reduce((n,o)=>n+o.weight,0));
           const effects = [
-            ...(option.priorProbability !== null
+            ...(life ? [`현재 성공 가능성 ${probability}% · ${DRILL_LABEL[readiness.tactic]}`, `능력 ${readiness.skill} · 숙련 ${readiness.mastery} · 신뢰 ${readiness.support} · ${readiness.tactic === 'ENGINE' ? '체력' : '사기'} ${readiness.condition}`] : []),
+            ...(!life && option.priorProbability !== null
               ? [`성공 확률 약 ${Math.round(option.priorProbability.successBp / 100)}%`]
               : []),
             ...option.previewEffects.map((preview) => preview.label),
@@ -452,7 +461,7 @@ function ChapterScreen() {
   const positionField = positionHeaderField(profile.primaryPosition, profile.preferredPosition);
 
   return (
-    <div className="os-screen">
+    <div className={ruleset.developmentRules ? "os-screen life-match-screen" : "os-screen"}>
       <p className="sr-only" aria-live="polite" data-testid="chapter-announcement">
         {announcement}
       </p>
@@ -468,6 +477,7 @@ function ChapterScreen() {
         </p>
       ) : null}
 
+      {ruleset.developmentRules === undefined && <>
       <PlayerBanner
         name={profile.name}
         teamName={currentTeamName(state, ruleset, teamNameOverrides)}
@@ -478,7 +488,14 @@ function ChapterScreen() {
         ovr={profile.baseOvr}
       />
       <StatusStrip items={proStatusStripItems(state)} />
+      </>}
 
+      {ruleset.developmentRules !== undefined ? (
+        <section className="life-match-context" aria-label="경기 맥락">
+          <div><p className="sim-kicker">{isNationalTeam ? '국가대표' : cursor >= decisionsTotal ? 'FULL TIME' : decisionTimeLabel(displayDecisionNumber)}</p><strong>{chapterContextLabel(view, ruleset, teamNameOverrides)}</strong><p>{APPEARANCE_CONTEXT_LABEL[view.match.appearance]} · 체력 {state.state.fitness}{room ? ` · ${room.styleName}` : ''}</p></div>
+          {!isNationalTeam && <span className="life-match-score" aria-label={`스코어 ${(cursor >= decisionsTotal ? view.match.result.goalsFor : score.for)} 대 ${(cursor >= decisionsTotal ? view.match.result.goalsAgainst : score.against)}`}>{cursor >= decisionsTotal ? view.match.result.goalsFor : score.for}:{cursor >= decisionsTotal ? view.match.result.goalsAgainst : score.against}</span>}
+        </section>
+      ) : <>
       <section className="os-panel flex flex-col gap-os-2" aria-label="경기 맥락">
         <p className="os-eyebrow">오늘의 경기</p>
         {opponentTeamId !== null ? (
@@ -515,6 +532,8 @@ function ChapterScreen() {
         </div>
       ) : null}
 
+      </>}
+
       {view.resolved.slice(0, cursor).map((resolved, index) => (
         <CollapsibleDecisionResult
           key={resolved.entry.decisionId}
@@ -537,6 +556,7 @@ function ChapterScreen() {
         ) : (
           <>
             <DecisionInput
+              state={state}
               decision={view.definition.decisions[cursor]!}
               submitting={resolveMutation.isPending}
               errorMessage={errorMessage}

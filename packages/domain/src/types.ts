@@ -1,3 +1,4 @@
+import type { DevelopmentState } from './development.js';
 import type { RngState } from './rng.js';
 
 export type CareerPhase =
@@ -359,6 +360,7 @@ export type TimelineEntry = {
     | 'CAREER_CONFIRMED'
     | 'EVENT_RESOLVED'
     | 'CONTRACT_SIGNED'
+    | 'DEVELOPMENT_COMPLETED'
     | 'SEASON_STARTED'
     | 'STEP_PASSED'
     | 'SEASON_SETTLED'
@@ -899,6 +901,7 @@ export type SeasonManager = {
 };
 
 export type CareerState = {
+  development?: DevelopmentState | undefined;
   /** Optional to preserve pre-Phase-5 snapshots and their command-log hashes. */
   legacyEvents?: { policyVersion: '1.0.0'; tournaments: CareerTournament[]; mentoredSeasonIndices: number[] };
   retirement?: { policyVersion: '1.0.0'; marketOffers: number | null; lastChanceConsumed: boolean; lastChanceSeasonIndex: number | null };
