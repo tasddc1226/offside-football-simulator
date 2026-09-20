@@ -206,14 +206,13 @@ export function selectEligibleEvents(pack: ContentPack, state: CareerState): Eli
           state.tags.includes('테스트_보통') ||
           state.tags.includes('테스트_실패'))));
   if (firstContractRouteReady && followUpCandidates.length === 0) return [];
-  const openingEventId =
-    usesBackgroundOpening
-      ? ({ 'club-academy': 'EVT-CON-020', school: 'EVT-CON-021', street: 'EVT-CON-022' } as const)[
-          state.player.profile?.backgroundId as 'club-academy' | 'school' | 'street'
-        ]
-      : pack.manifest.contentPackVersion === '0.4.0'
-        ? 'EVT-CON-002'
-        : undefined;
+  const openingEventId = usesBackgroundOpening
+    ? ({ 'club-academy': 'EVT-CON-020', school: 'EVT-CON-021', street: 'EVT-CON-022' } as const)[
+        state.player.profile?.backgroundId as 'club-academy' | 'school' | 'street'
+      ]
+    : pack.manifest.contentPackVersion === '0.4.0'
+      ? 'EVT-CON-002'
+      : undefined;
   const openingPath =
     openingEventId !== undefined && state.contract === null && state.seasonHistory.length === 0
       ? triggered.find((event) => event.id === openingEventId)
@@ -221,7 +220,11 @@ export function selectEligibleEvents(pack: ContentPack, state: CareerState): Eli
   const pool =
     followUpCandidates.length > 0 ? followUpCandidates : openingPath ? [openingPath] : triggered;
 
-  return pool
+  const localStories =
+    pack.manifest.contentPackVersion === '0.10.0'
+      ? pool.filter((event) => /^EVT-REL-4[0-2][0-9]$/.test(event.id) || event.id === 'EVT-CON-310')
+      : [];
+  return (localStories.length > 0 ? localStories : pool)
     .map((event) => ({
       eventId: event.id,
       version: event.version,

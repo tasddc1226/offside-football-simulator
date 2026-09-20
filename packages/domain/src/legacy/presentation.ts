@@ -13,6 +13,22 @@ export type LegacyBandPresentation = Readonly<{
 const endingCatalog: Record<LegacyEndingId, LegacyEndingPresentation> = Object.assign(
   Object.create(null) as Record<LegacyEndingId, LegacyEndingPresentation>,
   {
+    'END-WORLD-PIONEER': Object.freeze({
+      title: '세계 무대에 남긴 이름',
+      sentence: '낯선 리그의 벤치를 지나 빅리그에서 두 시즌 이상 자신의 자리를 증명했다',
+    }),
+    'END-SECOND-HOME': Object.freeze({
+      title: '두 번째 고향',
+      sentence: '세 시즌 넘게 쌓은 해외의 일상은 어느새 돌아갈 집이 되었다',
+    }),
+    'END-HOMECOMING': Object.freeze({
+      title: '돌아온 개척자',
+      sentence: '바다 건너 배운 축구를 품고 돌아와 국내 그라운드를 다시 밟았다',
+    }),
+    'END-OVERSEAS-CHALLENGER': Object.freeze({
+      title: '국경을 넘은 도전자',
+      sentence: '낯선 나라의 그라운드에 남긴 발자국은 순위표로 끝나지 않았다',
+    }),
     'END-ONE-CLUB-LEGEND': Object.freeze({
       title: '원클럽 레전드',
       sentence: '한 구단의 유니폼만 입고 라인을 지켰다',

@@ -1,3 +1,26 @@
+import world00 from '../../packs/0.10.0/events/EVT-REL-400.json' with { type: 'json' };
+import world01 from '../../packs/0.10.0/events/EVT-REL-401.json' with { type: 'json' };
+import world02 from '../../packs/0.10.0/events/EVT-REL-402.json' with { type: 'json' };
+import world10 from '../../packs/0.10.0/events/EVT-REL-403.json' with { type: 'json' };
+import world11 from '../../packs/0.10.0/events/EVT-REL-404.json' with { type: 'json' };
+import world12 from '../../packs/0.10.0/events/EVT-REL-405.json' with { type: 'json' };
+import world20 from '../../packs/0.10.0/events/EVT-REL-406.json' with { type: 'json' };
+import world21 from '../../packs/0.10.0/events/EVT-REL-407.json' with { type: 'json' };
+import world22 from '../../packs/0.10.0/events/EVT-REL-408.json' with { type: 'json' };
+import world30 from '../../packs/0.10.0/events/EVT-REL-409.json' with { type: 'json' };
+import world31 from '../../packs/0.10.0/events/EVT-REL-410.json' with { type: 'json' };
+import world32 from '../../packs/0.10.0/events/EVT-REL-411.json' with { type: 'json' };
+import world40 from '../../packs/0.10.0/events/EVT-REL-412.json' with { type: 'json' };
+import world41 from '../../packs/0.10.0/events/EVT-REL-413.json' with { type: 'json' };
+import world42 from '../../packs/0.10.0/events/EVT-REL-414.json' with { type: 'json' };
+import world50 from '../../packs/0.10.0/events/EVT-REL-415.json' with { type: 'json' };
+import world51 from '../../packs/0.10.0/events/EVT-REL-416.json' with { type: 'json' };
+import world52 from '../../packs/0.10.0/events/EVT-REL-417.json' with { type: 'json' };
+import world60 from '../../packs/0.10.0/events/EVT-REL-418.json' with { type: 'json' };
+import world61 from '../../packs/0.10.0/events/EVT-REL-419.json' with { type: 'json' };
+import world62 from '../../packs/0.10.0/events/EVT-REL-420.json' with { type: 'json' };
+import manifest0100 from '../../packs/0.10.0/manifest.json' with { type: 'json' };
+import intent0100 from '../../packs/0.10.0/events/EVT-CON-310.json' with { type: 'json' };
 import lifePlan090 from '../../packs/0.9.0/events/EVT-DEV-301.json' with { type: 'json' };
 import manifest090 from '../../packs/0.9.0/manifest.json' with { type: 'json' };
 import manifest080 from '../../packs/0.8.0/manifest.json' with { type: 'json' };
@@ -272,6 +295,7 @@ export const PACK_VERSIONS = [
   '0.7.0',
   '0.8.0',
   '0.9.0',
+  '0.10.0',
 ] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
@@ -292,7 +316,7 @@ type PackSource = {
 };
 
 const PACK_SOURCES_THROUGH_066: Record<
-  Exclude<PackVersion, '0.9.0' | '0.8.0' | '0.6.7' | '0.6.8' | '0.7.0'>,
+  Exclude<PackVersion, '0.10.0' | '0.9.0' | '0.8.0' | '0.6.7' | '0.6.8' | '0.7.0'>,
   PackSource
 > = {
   '0.1.0': {
@@ -1051,7 +1075,7 @@ const PACK_SOURCES_THROUGH_066: Record<
 };
 
 const PACK_SOURCES_WITHOUT_068: Record<
-  Exclude<PackVersion, '0.9.0' | '0.8.0' | '0.6.8' | '0.7.0'>,
+  Exclude<PackVersion, '0.10.0' | '0.9.0' | '0.8.0' | '0.6.8' | '0.7.0'>,
   PackSource
 > = {
   ...PACK_SOURCES_THROUGH_066,
@@ -1061,7 +1085,10 @@ const PACK_SOURCES_WITHOUT_068: Record<
   },
 };
 
-const PACK_SOURCES_THROUGH_068: Record<Exclude<PackVersion, '0.9.0' | '0.8.0' | '0.7.0'>, PackSource> = {
+const PACK_SOURCES_THROUGH_068: Record<
+  Exclude<PackVersion, '0.10.0' | '0.9.0' | '0.8.0' | '0.7.0'>,
+  PackSource
+> = {
   ...PACK_SOURCES_WITHOUT_068,
   '0.6.8': {
     ...PACK_SOURCES_WITHOUT_068['0.6.7'],
@@ -1092,7 +1119,10 @@ const PACK_SOURCES_THROUGH_068: Record<Exclude<PackVersion, '0.9.0' | '0.8.0' | 
   },
 };
 
-const PACK_SOURCES_THROUGH_070: Record<Exclude<PackVersion, '0.9.0' | '0.8.0'>, PackSource> = {
+const PACK_SOURCES_THROUGH_070: Record<
+  Exclude<PackVersion, '0.10.0' | '0.9.0' | '0.8.0'>,
+  PackSource
+> = {
   ...PACK_SOURCES_THROUGH_068,
   '0.7.0': {
     ...PACK_SOURCES_THROUGH_068['0.6.8'],
@@ -1106,7 +1136,7 @@ const PACK_SOURCES_THROUGH_070: Record<Exclude<PackVersion, '0.9.0' | '0.8.0'>, 
   },
 };
 
-const PACK_SOURCES_THROUGH_080: Record<Exclude<PackVersion, '0.9.0'>, PackSource> = {
+const PACK_SOURCES_THROUGH_080: Record<Exclude<PackVersion, '0.10.0' | '0.9.0'>, PackSource> = {
   ...PACK_SOURCES_THROUGH_070,
   '0.8.0': {
     ...PACK_SOURCES_THROUGH_070['0.7.0'],
@@ -1135,7 +1165,53 @@ const PACK_SOURCES_THROUGH_080: Record<Exclude<PackVersion, '0.9.0'>, PackSource
  * 돌려준다. `loadRuleset`과 같은 방식(정적 JSON import)이라 Node `fs` 없이 브라우저에서도 쓸 수
  * 있다. CLI 전용 `cli/load-pack.ts`(디렉터리를 `readdirSync`로 스캔)와는 별개다.
  */
-const PACK_SOURCES: Record<PackVersion, PackSource> = { ...PACK_SOURCES_THROUGH_080, '0.9.0': { ...PACK_SOURCES_THROUGH_080['0.8.0'], manifest: manifest090, events: PACK_SOURCES_THROUGH_080['0.8.0'].events.map(event => (event as {id: string}).id === 'EVT-DEV-301' ? lifePlan090 : event) } };
+const PACK_SOURCES_THROUGH_090: Record<Exclude<PackVersion, '0.10.0'>, PackSource> = {
+  ...PACK_SOURCES_THROUGH_080,
+  '0.9.0': {
+    ...PACK_SOURCES_THROUGH_080['0.8.0'],
+    manifest: manifest090,
+    events: PACK_SOURCES_THROUGH_080['0.8.0'].events.map((event) =>
+      (event as { id: string }).id === 'EVT-DEV-301' ? lifePlan090 : event,
+    ),
+  },
+};
+const PACK_SOURCES: Record<PackVersion, PackSource> = {
+  ...PACK_SOURCES_THROUGH_090,
+  '0.10.0': {
+    ...PACK_SOURCES_THROUGH_090['0.9.0'],
+    manifest: manifest0100,
+    events: [
+      ...PACK_SOURCES_THROUGH_090['0.9.0'].events.filter(
+        (e) =>
+          !['EVT-REL-311', 'EVT-REL-312', 'EVT-REL-313', 'EVT-CON-310'].includes(
+            (e as { id: string }).id,
+          ),
+      ),
+      intent0100,
+      world00,
+      world01,
+      world02,
+      world10,
+      world11,
+      world12,
+      world20,
+      world21,
+      world22,
+      world30,
+      world31,
+      world32,
+      world40,
+      world41,
+      world42,
+      world50,
+      world51,
+      world52,
+      world60,
+      world61,
+      world62,
+    ],
+  },
+};
 
 export function loadContentPack(version: string): ContentPack {
   if (!(PACK_VERSIONS as readonly string[]).includes(version)) {

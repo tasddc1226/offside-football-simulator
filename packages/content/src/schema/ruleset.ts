@@ -1184,6 +1184,7 @@ export const MatchRulesSchema = z
 export const RulesetSchema = z
   .strictObject({
     version: SemverSchema,
+    overseasRules: z.strictObject({ version: z.literal('WORLD_JOURNEY_V1') }).optional(),
     developmentRules: z.strictObject({ version: z.literal('PLAYER_LIFE_V1') }).optional(),
     /** 신규 커리어의 시작 나이. 필드가 없는 과거 룰셋은 도메인의 17세 폴백을 유지한다. */
     initialAge: z.number().int().min(15).max(30).optional(),

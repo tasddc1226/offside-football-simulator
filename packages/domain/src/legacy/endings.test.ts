@@ -9,8 +9,8 @@ import {
 describe('Phase 5 — eligible ending resolution (RULE-LEG-006)', () => {
   const ids = Object.keys(LEGACY_ENDING_PRIORITIES) as LegacyEndingId[];
 
-  it('keeps all 14 catalog IDs but does not infer eligibility', () => {
-    expect(ids).toHaveLength(14);
+  it('keeps all 18 catalog IDs but does not infer eligibility', () => {
+    expect(ids).toHaveLength(18);
     expect(Object.isFrozen(LEGACY_ENDING_PRIORITIES)).toBe(true);
     expect(resolveLegacyEndings([])).toEqual({
       endingId: 'END-COMPLETE-SHORT',
@@ -24,8 +24,8 @@ describe('Phase 5 — eligible ending resolution (RULE-LEG-006)', () => {
 
   it('uses priority and limits additional candidates to two, excluding fallback', () => {
     expect(resolveLegacyEndings([...ids].reverse())).toEqual({
-      endingId: 'END-ONE-CLUB-LEGEND',
-      endingCandidates: ['END-NATIONAL-HERO', 'END-UNCROWNED-KING'],
+      endingId: 'END-WORLD-PIONEER',
+      endingCandidates: ['END-SECOND-HOME', 'END-HOMECOMING'],
     });
   });
 

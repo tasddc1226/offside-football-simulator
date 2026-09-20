@@ -19,7 +19,8 @@ function resolveOut(out: string): string {
 
 // T-7-020: Node crypto의 SHA-256을 도메인에 주입한다(값은 순수 구현과 동일해야 한다 — hash.ts
 // JSDoc·hash.test.ts가 그 동등성 검증 책임을 진다). `--pure-hash`로 끌 수 있다(동등성 검증·회귀용).
-const NODE_SHA256_PROVIDER: Sha256Provider = (input) => createHash('sha256').update(input, 'utf8').digest('hex');
+const NODE_SHA256_PROVIDER: Sha256Provider = (input) =>
+  createHash('sha256').update(input, 'utf8').digest('hex');
 
 function applyHashProvider(pureHash: boolean): void {
   setSha256Provider(pureHash ? null : NODE_SHA256_PROVIDER);
@@ -61,7 +62,7 @@ import type { Ruleset } from '../../packages/content/src/schema/ruleset.ts';
 // CLI 타입
 // ---------------------------------------------------------------------------
 
-export type Policy = 'first' | 'random' | 'opportunity';
+export type Policy = 'first' | 'random' | 'opportunity' | 'world';
 export type PositionArg = 'GK' | 'DF' | 'MF' | 'FW' | 'all';
 export type Mode = 'CHAPTER' | 'FAST';
 const POSITIONS = ['GK', 'DF', 'MF', 'FW'] as const satisfies readonly StatGroup[];
@@ -118,31 +119,97 @@ export type CareerSimResult = CareerSimSuccess | { ok: false; error: CareerSimEr
 // ---------------------------------------------------------------------------
 
 export const CAREERS_CSV_HEADER = [
-  'seed', 'index', 'position', 'primaryPosition', 'archetypeId', 'backgroundId', 'mode', 'policy',
-  'truePotential', 'baseOvrStart', 'peakOvr', 'peakOvrAge', 'finalOvr', 'seasons', 'retiredAge',
-  'status', 'finalChoice', 'retireReason', 'clubs', 'firstTier', 'bestTier', 'seasonsInTier1',
-  'seasonsInTier2', 'seasonsInTier3', 'totalApps', 'totalMinutes', 'totalGoals', 'totalAssists',
-  'avgRatingTenths', 'injuries', 'severeInjuries', 'contracts', 'peakWageMinorPerWeek',
-  'totalIncomeMinor', 'nationalCallUps', 'captainSeasons', 'legacyScore', 'legacyBandId',
-  'legacyEndingId', 'commands', 'stateHash',
+  'seed',
+  'index',
+  'position',
+  'primaryPosition',
+  'archetypeId',
+  'backgroundId',
+  'mode',
+  'policy',
+  'truePotential',
+  'baseOvrStart',
+  'peakOvr',
+  'peakOvrAge',
+  'finalOvr',
+  'seasons',
+  'retiredAge',
+  'status',
+  'finalChoice',
+  'retireReason',
+  'clubs',
+  'firstTier',
+  'bestTier',
+  'seasonsInTier1',
+  'seasonsInTier2',
+  'seasonsInTier3',
+  'totalApps',
+  'totalMinutes',
+  'totalGoals',
+  'totalAssists',
+  'avgRatingTenths',
+  'injuries',
+  'severeInjuries',
+  'contracts',
+  'peakWageMinorPerWeek',
+  'totalIncomeMinor',
+  'nationalCallUps',
+  'captainSeasons',
+  'legacyScore',
+  'legacyBandId',
+  'legacyEndingId',
+  'commands',
+  'stateHash',
 ] as const;
 
 export const CAREERS_STORAGE_CSV_HEADER = [
   ...CAREERS_CSV_HEADER.slice(0, -1),
-  'peakStateBytes', 'peakPutBodyBytes', 'season20ActiveStateBytes',
-  'season20ActivePutBodyBytes', 'stateHash',
+  'peakStateBytes',
+  'peakPutBodyBytes',
+  'season20ActiveStateBytes',
+  'season20ActivePutBodyBytes',
+  'stateHash',
 ] as const;
 
 export const SEASONS_CSV_HEADER = [
-  'seed', 'index', 'seasonIndex', 'age', 'teamId', 'teamName', 'leagueTier', 'contractKind',
-  'squadRoleAtStart', 'squadRoleAtEnd', 'finalRank', 'apps', 'started', 'minutes',
-  'possibleMinutes', 'goals', 'assists', 'avgRatingTenths', 'injuries', 'ovrBefore', 'ovrAfter',
-  'formAfter', 'fitnessAfter', 'moraleAfter', 'managerTrustAfter', 'wageMinorPerWeek',
-  'promiseFulfilled', 'captaincyAtEnd',
+  'seed',
+  'index',
+  'seasonIndex',
+  'age',
+  'teamId',
+  'teamName',
+  'leagueTier',
+  'contractKind',
+  'squadRoleAtStart',
+  'squadRoleAtEnd',
+  'finalRank',
+  'apps',
+  'started',
+  'minutes',
+  'possibleMinutes',
+  'goals',
+  'assists',
+  'avgRatingTenths',
+  'injuries',
+  'ovrBefore',
+  'ovrAfter',
+  'formAfter',
+  'fitnessAfter',
+  'moraleAfter',
+  'managerTrustAfter',
+  'wageMinorPerWeek',
+  'promiseFulfilled',
+  'captaincyAtEnd',
 ] as const;
 
 export const FAILURES_CSV_HEADER = [
-  'seed', 'index', 'seasonIndex', 'commandIndex', 'pendingKind', 'commandType', 'errorCode',
+  'seed',
+  'index',
+  'seasonIndex',
+  'commandIndex',
+  'pendingKind',
+  'commandType',
+  'errorCode',
   'message',
 ] as const;
 
@@ -153,18 +220,56 @@ export const FAILURES_CSV_HEADER = [
 // leagueTier="2" 같은 값이 Number(2)가 되어 buildSummary의 문자열 비교(`tier === '2'`)가 항상
 // 거짓이 된다(--jobs 1 vs --jobs 3 summary.json 불일치의 원인).
 const CAREERS_NUMERIC_COLUMNS = new Set<string>([
-  'index', 'truePotential', 'baseOvrStart', 'peakOvr', 'peakOvrAge', 'finalOvr', 'seasons',
-  'retiredAge', 'clubs', 'seasonsInTier1', 'seasonsInTier2', 'seasonsInTier3', 'totalApps',
-  'totalMinutes', 'totalGoals', 'totalAssists', 'avgRatingTenths', 'injuries', 'severeInjuries',
-  'contracts', 'peakWageMinorPerWeek', 'totalIncomeMinor', 'nationalCallUps', 'captainSeasons',
-  'legacyScore', 'commands', 'peakStateBytes', 'peakPutBodyBytes', 'season20ActiveStateBytes',
+  'index',
+  'truePotential',
+  'baseOvrStart',
+  'peakOvr',
+  'peakOvrAge',
+  'finalOvr',
+  'seasons',
+  'retiredAge',
+  'clubs',
+  'seasonsInTier1',
+  'seasonsInTier2',
+  'seasonsInTier3',
+  'totalApps',
+  'totalMinutes',
+  'totalGoals',
+  'totalAssists',
+  'avgRatingTenths',
+  'injuries',
+  'severeInjuries',
+  'contracts',
+  'peakWageMinorPerWeek',
+  'totalIncomeMinor',
+  'nationalCallUps',
+  'captainSeasons',
+  'legacyScore',
+  'commands',
+  'peakStateBytes',
+  'peakPutBodyBytes',
+  'season20ActiveStateBytes',
   'season20ActivePutBodyBytes',
 ]);
 
 const SEASONS_NUMERIC_COLUMNS = new Set<string>([
-  'index', 'seasonIndex', 'age', 'finalRank', 'apps', 'started', 'minutes',
-  'possibleMinutes', 'avgRatingTenths', 'injuries', 'ovrBefore', 'ovrAfter', 'formAfter',
-  'fitnessAfter', 'moraleAfter', 'managerTrustAfter', 'wageMinorPerWeek',
+  'index',
+  'seasonIndex',
+  'age',
+  'finalRank',
+  'apps',
+  'started',
+  'minutes',
+  'possibleMinutes',
+  'avgRatingTenths',
+  'injuries',
+  'ovrBefore',
+  'ovrAfter',
+  'formAfter',
+  'fitnessAfter',
+  'moraleAfter',
+  'managerTrustAfter',
+  'wageMinorPerWeek',
 ]);
 
 const FAILURES_NUMERIC_COLUMNS = new Set<string>(['index', 'seasonIndex', 'commandIndex']);
@@ -328,17 +433,24 @@ function closePending(
   const state = snapshot.state;
   const pending = state.pending;
   const seed = state.careerId;
-  if (pending === null) throw new SimStepError('CLOSE_PENDING', 'NO_PENDING', 'pending이 없다', 'NONE');
+  if (pending === null)
+    throw new SimStepError('CLOSE_PENDING', 'NO_PENDING', 'pending이 없다', 'NONE');
 
   const registered =
-    policy === 'first' ? firstCommandForPending(state, pack) : commandForPending(state, pack, seed);
-  if (registered !== undefined) return doCommand(snapshot, registered.type, registered.payload, id, runtime);
+    policy === 'first' || policy === 'world'
+      ? firstCommandForPending(state, pack)
+      : commandForPending(state, pack, seed);
+  if (registered !== undefined)
+    return doCommand(snapshot, registered.type, registered.payload, id, runtime);
 
   if (pending.kind === 'OFFERS' || pending.kind === 'CONTRACT') {
     // D-79 후속 수정: --to-retirement는 "심사가 걸려도 이어갈 수 있으면 이어간다"는 뜻이다.
     // 심사가 걸렸는데 마지막 계약 옵션(LAST_CONTRACT·LOWER_LEAGUE)이 있으면 그걸 받아 이어가고,
     // 없으면 기존 제안 처리로 넘어간다(그 뒤 시즌 경계에서 RETIRE된다).
-    if (options.toRetirement && retirementDecisionRequired(state, runtime.ruleset.retirementRules ?? RETIREMENT_POLICY)) {
+    if (
+      options.toRetirement &&
+      retirementDecisionRequired(state, runtime.ruleset.retirementRules ?? RETIREMENT_POLICY)
+    ) {
       const continuation = retirementContinuationOptions(state, runtime.ruleset.retirementRules)[0];
       if (continuation !== undefined) {
         return doCommand(
@@ -358,6 +470,18 @@ function closePending(
     let offer: (typeof offers)[number] | undefined;
     if (policy === 'first') {
       offer = offers[0];
+    } else if (policy === 'world') {
+      const stage = (offer: Offer) => {
+        const country = runtime.ruleset.teams.find((t) => t.id === offer.teamId)?.countryCode;
+        return !country || country === 'KR' ? 0 : country === 'JP' ? 1 : country === 'PT' ? 2 : 3;
+      };
+      offer = [...offers]
+        .filter((o) => pending.kind !== 'CONTRACT' || o.teamId !== state.contract?.teamId)
+        .sort(
+          (a, b) =>
+            stage(b) - stage(a) ||
+            (a.competitorSummary?.rank ?? 99) - (b.competitorSummary?.rank ?? 99),
+        )[0];
     } else if (policy === 'opportunity') {
       offer = opportunityOffer(offers, state.contract?.teamId);
     } else {
@@ -381,9 +505,15 @@ function closePending(
     if (policy === 'first') accept = true;
     else if (pending.proposal.type === 'KEEP') accept = true;
     else if (crossesGroup) accept = false;
-    else if (policy === 'opportunity') accept = true;
+    else if (policy === 'opportunity' || policy === 'world') accept = true;
     else accept = chooseDeterministicIndex(seed, `role:${snapshot.revision}`, 2) === 0;
-    return doCommand(snapshot, 'RESOLVE_ROLE', { decision: accept ? 'ACCEPT' : 'DECLINE' }, id, runtime);
+    return doCommand(
+      snapshot,
+      'RESOLVE_ROLE',
+      { decision: accept ? 'ACCEPT' : 'DECLINE' },
+      id,
+      runtime,
+    );
   }
 
   if (pending.kind === 'LOAN_RETURN') {
@@ -397,7 +527,12 @@ function closePending(
   }
 
   if (pending.kind === 'SETTLEMENT') return snapshot;
-  throw new SimStepError('CLOSE_PENDING', 'UNHANDLED_PENDING', `unhandled pending ${pending.kind}`, pending.kind);
+  throw new SimStepError(
+    'CLOSE_PENDING',
+    'UNHANDLED_PENDING',
+    `unhandled pending ${pending.kind}`,
+    pending.kind,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -440,7 +575,12 @@ function runOneCareer(
   runtime: Runtime,
   pack: ContentPack,
   legacyVersion: LegacyVersion,
-  artifacts: { rulesetVersion: string; rulesetChecksum: string; contentPackVersion: string; contentPackChecksum: string },
+  artifacts: {
+    rulesetVersion: string;
+    rulesetChecksum: string;
+    contentPackVersion: string;
+    contentPackChecksum: string;
+  },
 ): { career: CareerRow; seasons: SeasonRow[]; failure?: FailureRow; ms: number } {
   const seed = `${options.seedPrefix}:${position}:${index}`;
   const careerId = `career-sim-${position}-${index}`;
@@ -485,22 +625,25 @@ function runOneCareer(
       });
       const state = canonicalize(next.state as unknown as JsonValue);
       const stateBytes = Buffer.byteLength(state, 'utf8');
-      const putBodyBytes = Buffer.byteLength(JSON.stringify({
-        baseRevision: 0,
-        snapshot: {
-          revision: next.revision,
-          checkpoint: next.checkpoint,
-          state,
-          stateHash: next.stateHash,
-          rulesetVersion: next.rulesetVersion,
-          contentPackVersion: next.contentPackVersion,
-          rngState: { s: [...next.state.rngState.s], draws: next.state.rngState.draws },
-        },
-        commands: syncCommands,
-        createdServiceSeasonId,
-        rulesetVersion: runtime.rulesetVersion,
-        contentPackVersion: runtime.contentPackVersion,
-      }), 'utf8');
+      const putBodyBytes = Buffer.byteLength(
+        JSON.stringify({
+          baseRevision: 0,
+          snapshot: {
+            revision: next.revision,
+            checkpoint: next.checkpoint,
+            state,
+            stateHash: next.stateHash,
+            rulesetVersion: next.rulesetVersion,
+            contentPackVersion: next.contentPackVersion,
+            rngState: { s: [...next.state.rngState.s], draws: next.state.rngState.draws },
+          },
+          commands: syncCommands,
+          createdServiceSeasonId,
+          rulesetVersion: runtime.rulesetVersion,
+          contentPackVersion: runtime.contentPackVersion,
+        }),
+        'utf8',
+      );
       peakStateBytes = Math.max(peakStateBytes, stateBytes);
       peakPutBodyBytes = Math.max(peakPutBodyBytes, putBodyBytes);
       if (next.state.season !== null && next.state.seasonHistory.length === 19) {
@@ -512,7 +655,9 @@ function runOneCareer(
   };
 
   try {
-    const archetypes = runtime.ruleset.archetypes.filter((a) => statGroupOf(a.position) === position);
+    const archetypes = runtime.ruleset.archetypes.filter(
+      (a) => statGroupOf(a.position) === position,
+    );
     const archetype =
       (options.archetypeId !== undefined
         ? archetypes.find((a) => a.id === options.archetypeId)
@@ -545,7 +690,9 @@ function runOneCareer(
           name: `표본 ${position} ${index}`,
           gender: chooseDeterministicIndex(seed, 'gender', 2) === 0 ? 'MALE' : 'FEMALE',
           nationalityCode: 'KR',
-          preferredFoot: (['LEFT', 'RIGHT', 'BOTH'] as const)[chooseDeterministicIndex(seed, 'foot', 3)],
+          preferredFoot: (['LEFT', 'RIGHT', 'BOTH'] as const)[
+            chooseDeterministicIndex(seed, 'foot', 3)
+          ],
         },
       },
       `${seed}-draft-1`,
@@ -553,7 +700,13 @@ function runOneCareer(
     snapshot = command(
       snapshot,
       'UPDATE_PLAYER_DRAFT',
-      { draft: { position: archetype.position, archetypeId: archetype.id, backgroundId: background.id } },
+      {
+        draft: {
+          position: archetype.position,
+          archetypeId: archetype.id,
+          backgroundId: background.id,
+        },
+      },
       `${seed}-draft-2`,
     );
     snapshot = command(snapshot, 'CONFIRM_PLAYER', {}, `${seed}-confirm`);
@@ -580,10 +733,25 @@ function runOneCareer(
         break;
       }
       if (needsDevelopment(state, runtime.ruleset)) {
-        const drill = (['CONTROL','ENGINE','VISION'] as const)[chooseDeterministicIndex(seed, `drill:${step}`, 3)]!;
-        const load: DevelopmentPlan['load'] = state.state.fitness < 55 || state.health.episodes.some(e => e.status === 'REHAB' || e.status === 'ACTIVE') ? 'RECOVERY' : (['BALANCED','PUSH'] as const)[chooseDeterministicIndex(seed, `load:${step}`, 2)]!;
-        const partner = (['COACH','CAPTAIN','RIVAL'] as const)[chooseDeterministicIndex(seed, `partner:${step}`, 3)]!;
-        snapshot = command(snapshot, 'DEVELOP', { drill, load, partner }, `${seed}-development-${step}`); step += 1; continue;
+        const drill = (['CONTROL', 'ENGINE', 'VISION'] as const)[
+          chooseDeterministicIndex(seed, `drill:${step}`, 3)
+        ]!;
+        const load: DevelopmentPlan['load'] =
+          state.state.fitness < 55 ||
+          state.health.episodes.some((e) => e.status === 'REHAB' || e.status === 'ACTIVE')
+            ? 'RECOVERY'
+            : (['BALANCED', 'PUSH'] as const)[chooseDeterministicIndex(seed, `load:${step}`, 2)]!;
+        const partner = (['COACH', 'CAPTAIN', 'RIVAL'] as const)[
+          chooseDeterministicIndex(seed, `partner:${step}`, 3)
+        ]!;
+        snapshot = command(
+          snapshot,
+          'DEVELOP',
+          { drill, load, partner },
+          `${seed}-development-${step}`,
+        );
+        step += 1;
+        continue;
       }
       if (state.pending !== null) {
         if (state.pending.kind === 'SETTLEMENT') {
@@ -605,7 +773,10 @@ function runOneCareer(
         // 은퇴 심사(REVIEW)가 걸리면 --to-retirement 여부와 무관하게 시즌 경계에서 강제 RETIRE된다
         // (packages/domain/src/simulate.ts의 startSeason이 RETIREMENT_DECISION_REQUIRED로 거부한다).
         // 시즌 상한(CAP)으로 강제 은퇴시키는 것은 이 도구의 인공물일 뿐 도메인 관찰이 아니다.
-        const reviewRequired = retirementDecisionRequired(state, runtime.ruleset.retirementRules ?? RETIREMENT_POLICY);
+        const reviewRequired = retirementDecisionRequired(
+          state,
+          runtime.ruleset.retirementRules ?? RETIREMENT_POLICY,
+        );
         const atSeasonCap = state.seasonHistory.length >= options.seasons;
         if (reviewRequired || atSeasonCap) {
           snapshot = command(snapshot, 'RETIRE', { choice: 'RETIRE' }, `${seed}-retire`);
@@ -614,11 +785,15 @@ function runOneCareer(
           continue;
         }
         for (let decision = 0; decision < 3; decision += 1) {
-          const choices = careerEventChoices(snapshot.state, runtime.ruleset.retirementRules ?? RETIREMENT_POLICY);
+          const choices = careerEventChoices(
+            snapshot.state,
+            runtime.ruleset.retirementRules ?? RETIREMENT_POLICY,
+          );
           const eligible = choices.filter(
             (choice) =>
               choice !== 'MENTOR' ||
-              chooseDeterministicIndex(seed, `mentor:${snapshot.state.seasonHistory.length}`, 2) === 0,
+              chooseDeterministicIndex(seed, `mentor:${snapshot.state.seasonHistory.length}`, 2) ===
+                0,
           );
           if (eligible.length === 0) break;
           const choice = eligible.includes('INTERNATIONAL')
@@ -707,7 +882,9 @@ function runOneCareer(
       finalOvr = r.baseOvr.after;
       totalApps += r.playerStats.appearances.total;
       totalMinutes += r.selectionSummary.minutes;
-      const ga = groupGoalsAssists(r.playerStats.totals as { group: StatGroup } & Record<string, unknown>);
+      const ga = groupGoalsAssists(
+        r.playerStats.totals as { group: StatGroup } & Record<string, unknown>,
+      );
       totalGoals += ga.goals === '' ? 0 : Number(ga.goals);
       totalAssists += ga.assists === '' ? 0 : Number(ga.assists);
       ratingSum += r.playerStats.ratingSumTenths;
@@ -755,7 +932,9 @@ function runOneCareer(
       });
     }
 
-    const tiers = finalState.clubHistory.map((stint) => stint.leagueTier).filter((t) => typeof t === 'number');
+    const tiers = finalState.clubHistory
+      .map((stint) => stint.leagueTier)
+      .filter((t) => typeof t === 'number');
     const firstTier = finalState.clubHistory[0]?.leagueTier ?? '';
     const bestTier = tiers.length > 0 ? Math.min(...(tiers as number[])) : '';
 
@@ -800,12 +979,14 @@ function runOneCareer(
       legacyBandId,
       legacyEndingId,
       commands,
-      ...(options.measureStorage === true ? {
-        peakStateBytes,
-        peakPutBodyBytes,
-        season20ActiveStateBytes,
-        season20ActivePutBodyBytes,
-      } : {}),
+      ...(options.measureStorage === true
+        ? {
+            peakStateBytes,
+            peakPutBodyBytes,
+            season20ActiveStateBytes,
+            season20ActivePutBodyBytes,
+          }
+        : {}),
       stateHash: finalSnapshot.stateHash,
     };
     return { career, seasons: seasonRows, ms: Date.now() - startedAt };
@@ -852,12 +1033,14 @@ function runOneCareer(
       legacyBandId: '',
       legacyEndingId: '',
       commands,
-      ...(options.measureStorage === true ? {
-        peakStateBytes,
-        peakPutBodyBytes,
-        season20ActiveStateBytes,
-        season20ActivePutBodyBytes,
-      } : {}),
+      ...(options.measureStorage === true
+        ? {
+            peakStateBytes,
+            peakPutBodyBytes,
+            season20ActiveStateBytes,
+            season20ActivePutBodyBytes,
+          }
+        : {}),
       stateHash: '',
     };
     const failure: FailureRow = {
@@ -902,20 +1085,18 @@ export function simulateRange(options: CareerSimOptions): CareerSimBatch {
   for (let index = start; index < end; index += 1) {
     const position: StatGroup =
       options.position === 'all' ? POSITIONS[index % 4]! : (options.position as StatGroup);
-    const { career, seasons: seasonRows, failure, ms } = runOneCareer(
-      position,
-      index,
-      options,
-      runtime,
-      pack,
-      legacyVersion,
-      artifacts,
-    );
+    const {
+      career,
+      seasons: seasonRows,
+      failure,
+      ms,
+    } = runOneCareer(position, index, options, runtime, pack, legacyVersion, artifacts);
     careers.push(career);
     seasons.push(...seasonRows);
     if (failure !== undefined) failures.push(failure);
     msValues.push(ms);
-    if ((index + 1) % 10 === 0) process.stderr.write(`career-sim: ${index + 1}/${end} (범위 ${start}-${end})\n`);
+    if ((index + 1) % 10 === 0)
+      process.stderr.write(`career-sim: ${index + 1}/${end} (범위 ${start}-${end})\n`);
   }
   return { careers, seasons, failures, msValues };
 }
@@ -930,7 +1111,10 @@ function csvEscape(value: string | number): string {
   return s;
 }
 
-function toCsv(header: readonly string[], rows: readonly Record<string, string | number>[]): string {
+function toCsv(
+  header: readonly string[],
+  rows: readonly Record<string, string | number>[],
+): string {
   const lines = [header.join(',')];
   for (const row of rows) lines.push(header.map((key) => csvEscape(row[key] ?? '')).join(','));
   return `${lines.join('\n')}\n`;
@@ -942,16 +1126,32 @@ function quantile(sorted: readonly number[], p: number): number {
   return Math.round(sorted[rank]! * 100) / 100;
 }
 
-function numericStats(values: readonly number[]): { mean: number; p10: number; p50: number; p90: number } {
+function numericStats(values: readonly number[]): {
+  mean: number;
+  p10: number;
+  p50: number;
+  p90: number;
+} {
   if (values.length === 0) return { mean: 0, p10: 0, p50: 0, p90: 0 };
   const sorted = [...values].sort((a, b) => a - b);
   const mean = Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100;
-  return { mean, p10: quantile(sorted, 0.1), p50: quantile(sorted, 0.5), p90: quantile(sorted, 0.9) };
+  return {
+    mean,
+    p10: quantile(sorted, 0.1),
+    p50: quantile(sorted, 0.5),
+    p90: quantile(sorted, 0.9),
+  };
 }
 
 // 시즌 상한(CAP)으로 강제 은퇴시킨 커리어가 상한 나이에 뭉치는 것은 도구의 인공물이지 도메인
 // 관찰이 아니다 — retiredAge 통계는 실제 은퇴 심사(REVIEW)로 은퇴한 커리어만 대상으로 한다.
-function retiredAgeStats(careers: readonly CareerRow[]): { mean: number | null; p10: number | null; p50: number | null; p90: number | null; n: number } {
+function retiredAgeStats(careers: readonly CareerRow[]): {
+  mean: number | null;
+  p10: number | null;
+  p50: number | null;
+  p90: number | null;
+  n: number;
+} {
   const ages = careers
     .filter((c) => c.retireReason === 'REVIEW')
     .map((c) => c.retiredAge)
@@ -970,9 +1170,11 @@ function computeGroupSummary(careers: readonly CareerRow[]) {
   const seasons = numericStats(numeric('seasons'));
   const totalInjuries = numeric('injuries').reduce((a, b) => a + b, 0);
   const totalSeasons = numeric('seasons').reduce((a, b) => a + b, 0);
-  const injuriesPerSeason = totalSeasons > 0 ? Math.round((totalInjuries / totalSeasons) * 100) / 100 : 0;
+  const injuriesPerSeason =
+    totalSeasons > 0 ? Math.round((totalInjuries / totalSeasons) * 100) / 100 : 0;
   const tier1Reach = careers.filter((c) => Number(c.seasonsInTier1) > 0).length;
-  const tier1ReachRate = careers.length > 0 ? Math.round((tier1Reach / careers.length) * 10000) / 10000 : 0;
+  const tier1ReachRate =
+    careers.length > 0 ? Math.round((tier1Reach / careers.length) * 10000) / 10000 : 0;
   const legacyBand: Record<string, number> = {};
   for (const c of careers) {
     const band = String(c.legacyBandId || '');
@@ -1071,9 +1273,21 @@ export async function runCareerSim(rawOptions: CareerSimOptions): Promise<Career
   const started = Date.now();
   try {
     if (!(RULESET_VERSIONS as readonly string[]).includes(options.rulesetVersion))
-      return { ok: false, error: { code: 'UNKNOWN_RULESET', message: `알 수 없는 --ruleset: ${options.rulesetVersion}` } };
+      return {
+        ok: false,
+        error: {
+          code: 'UNKNOWN_RULESET',
+          message: `알 수 없는 --ruleset: ${options.rulesetVersion}`,
+        },
+      };
     if (!(PACK_VERSIONS as readonly string[]).includes(options.contentPackVersion))
-      return { ok: false, error: { code: 'UNKNOWN_PACK', message: `알 수 없는 --pack: ${options.contentPackVersion}` } };
+      return {
+        ok: false,
+        error: {
+          code: 'UNKNOWN_PACK',
+          message: `알 수 없는 --pack: ${options.contentPackVersion}`,
+        },
+      };
     // 팩·룰셋 호환성은 loadRetirementArtifacts가 검증한다(비호환이면 예외).
     loadRetirementArtifacts(options.rulesetVersion, options.contentPackVersion);
   } catch (error) {
@@ -1094,7 +1308,13 @@ export async function runCareerSim(rawOptions: CareerSimOptions): Promise<Career
   }
 
   if (options.verify) {
-    const verifyOptions: CareerSimOptions = { ...options, seeds: 3, jobs: 1, rangeStart: 0, rangeEnd: 3 };
+    const verifyOptions: CareerSimOptions = {
+      ...options,
+      seeds: 3,
+      jobs: 1,
+      rangeStart: 0,
+      rangeEnd: 3,
+    };
     const first = simulateRange(verifyOptions);
     const second = simulateRange(verifyOptions);
     const firstHashes = first.careers.map((c) => c.stateHash).join(',');
@@ -1102,14 +1322,23 @@ export async function runCareerSim(rawOptions: CareerSimOptions): Promise<Career
     if (firstHashes !== secondHashes) {
       return {
         ok: false,
-        error: { code: 'NONDETERMINISTIC', message: `--verify 실패: ${firstHashes} !== ${secondHashes}` },
+        error: {
+          code: 'NONDETERMINISTIC',
+          message: `--verify 실패: ${firstHashes} !== ${secondHashes}`,
+        },
       };
     }
 
     // T-7-020: seed 1개(범위 [0,1))를 순수 구현과 Node crypto 주입 각각으로 돌려 stateHash가
     // 같은지 확인한다(같은 프로세스에서 provider를 켰다 끄면 된다). 끝나면 options.pureHash에
     // 맞는 상태로 되돌린다.
-    const singleSeedOptions: CareerSimOptions = { ...options, seeds: 1, jobs: 1, rangeStart: 0, rangeEnd: 1 };
+    const singleSeedOptions: CareerSimOptions = {
+      ...options,
+      seeds: 1,
+      jobs: 1,
+      rangeStart: 0,
+      rangeEnd: 1,
+    };
     applyHashProvider(true);
     const pureRun = simulateRange(singleSeedOptions);
     applyHashProvider(false);
@@ -1132,11 +1361,24 @@ export async function runCareerSim(rawOptions: CareerSimOptions): Promise<Career
   const summary = buildSummary(options, batch, startedAt, elapsedMs);
 
   await mkdir(options.out, { recursive: true });
-  const careersHeader = options.measureStorage === true ? CAREERS_STORAGE_CSV_HEADER : CAREERS_CSV_HEADER;
+  const careersHeader =
+    options.measureStorage === true ? CAREERS_STORAGE_CSV_HEADER : CAREERS_CSV_HEADER;
   await writeFile(resolve(options.out, 'careers.csv'), toCsv(careersHeader, batch.careers), 'utf8');
-  await writeFile(resolve(options.out, 'seasons.csv'), toCsv(SEASONS_CSV_HEADER, batch.seasons), 'utf8');
-  await writeFile(resolve(options.out, 'failures.csv'), toCsv(FAILURES_CSV_HEADER, batch.failures), 'utf8');
-  await writeFile(resolve(options.out, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+  await writeFile(
+    resolve(options.out, 'seasons.csv'),
+    toCsv(SEASONS_CSV_HEADER, batch.seasons),
+    'utf8',
+  );
+  await writeFile(
+    resolve(options.out, 'failures.csv'),
+    toCsv(FAILURES_CSV_HEADER, batch.failures),
+    'utf8',
+  );
+  await writeFile(
+    resolve(options.out, 'summary.json'),
+    `${JSON.stringify(summary, null, 2)}\n`,
+    'utf8',
+  );
   // 병렬 실행(runParallel)이 shard의 careers.csv(ms 컬럼 없음)만으로는 msPerCareer를 다시 계산할
   // 수 없어, 자식 프로세스(--range-start 지정)일 때만 원시 ms 배열을 내부용 파일로 남긴다.
   // partDir 전체가 병합 뒤 삭제되므로 최종 --out 디렉터리에는 남지 않는다.
@@ -1158,7 +1400,9 @@ function runChild(tsxBin: string, args: string[]): Promise<void> {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(tsxBin, args, { stdio: 'inherit' });
     child.once('error', reject);
-    child.once('exit', (code) => (code === 0 ? resolvePromise() : reject(new Error(`child exited with ${code}`))));
+    child.once('exit', (code) =>
+      code === 0 ? resolvePromise() : reject(new Error(`child exited with ${code}`)),
+    );
   });
 }
 
@@ -1179,23 +1423,35 @@ async function runParallel(options: CareerSimOptions): Promise<CareerSimBatch> {
     ranges.map(({ start, end, dir }) =>
       runChild(tsxBin, [
         script,
-        '--ruleset', options.rulesetVersion,
-        '--pack', options.contentPackVersion,
-        '--seeds', String(options.seeds),
-        '--seed-prefix', options.seedPrefix,
-        '--seasons', String(options.seasons),
+        '--ruleset',
+        options.rulesetVersion,
+        '--pack',
+        options.contentPackVersion,
+        '--seeds',
+        String(options.seeds),
+        '--seed-prefix',
+        options.seedPrefix,
+        '--seasons',
+        String(options.seasons),
         ...(options.toRetirement ? ['--to-retirement'] : []),
-        '--policy', options.policy,
-        '--position', options.position,
+        '--policy',
+        options.policy,
+        '--position',
+        options.position,
         ...(options.archetypeId !== undefined ? ['--archetype', options.archetypeId] : []),
         ...(options.backgroundId !== undefined ? ['--background', options.backgroundId] : []),
-        '--mode', options.mode,
+        '--mode',
+        options.mode,
         ...(options.pureHash === true ? ['--pure-hash'] : []),
         ...(options.measureStorage === true ? ['--measure-storage'] : []),
-        '--jobs', '1',
-        '--out', dir,
-        '--range-start', String(start),
-        '--range-end', String(end),
+        '--jobs',
+        '1',
+        '--out',
+        dir,
+        '--range-start',
+        String(start),
+        '--range-end',
+        String(end),
       ]),
     ),
   );
@@ -1222,7 +1478,8 @@ async function runParallel(options: CareerSimOptions): Promise<CareerSimBatch> {
         readFile(resolve(dir, 'failures.csv'), 'utf8'),
         readFile(resolve(dir, 'ms.json'), 'utf8'),
       ]);
-      const careersHeader = options.measureStorage === true ? CAREERS_STORAGE_CSV_HEADER : CAREERS_CSV_HEADER;
+      const careersHeader =
+        options.measureStorage === true ? CAREERS_STORAGE_CSV_HEADER : CAREERS_CSV_HEADER;
       careers.push(...parseCsv(careersCsv, careersHeader, CAREERS_NUMERIC_COLUMNS));
       seasons.push(...parseCsv(seasonsCsv, SEASONS_CSV_HEADER, SEASONS_NUMERIC_COLUMNS));
       failures.push(...parseCsv(failuresCsv, FAILURES_CSV_HEADER, FAILURES_NUMERIC_COLUMNS));
@@ -1231,7 +1488,10 @@ async function runParallel(options: CareerSimOptions): Promise<CareerSimBatch> {
       anyFailed = true;
     }
   }
-  careers.sort((a, b) => Number(a.index) - Number(b.index) || String(a.position).localeCompare(String(b.position)));
+  careers.sort(
+    (a, b) =>
+      Number(a.index) - Number(b.index) || String(a.position).localeCompare(String(b.position)),
+  );
   await rm(partDir, { recursive: true, force: true });
   if (anyFailed && careers.length === 0) throw new Error('모든 자식 프로세스가 실패했다');
   return { careers, seasons, failures, msValues };
@@ -1308,7 +1568,7 @@ const HELP_TEXT = `career-sim: 헤드리스 커리어 일괄 시뮬레이션 CLI
   --seed-prefix <text>      기본 career-sim
   --seasons <n>             시즌 상한, 기본 20
   --to-retirement           시즌 경계에서 은퇴 조건이면 RETIRE
-  --policy first|random|opportunity  기본 opportunity
+  --policy first|random|opportunity|world  기본 opportunity
   --position GK|DF|MF|FW|all         기본 all
   --archetype <id>          고정 archetype(선택)
   --background <id>         고정 background(선택)
@@ -1359,8 +1619,8 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
     process.stderr.write('career-sim: --out은 필수다.\n');
     return 1;
   }
-  if (!['first', 'random', 'opportunity'].includes(parsed.policy)) {
-    process.stderr.write('career-sim: --policy는 first|random|opportunity 중 하나다.\n');
+  if (!['first', 'random', 'opportunity', 'world'].includes(parsed.policy)) {
+    process.stderr.write('career-sim: --policy는 first|random|opportunity|world 중 하나다.\n');
     return 1;
   }
   if (!['GK', 'DF', 'MF', 'FW', 'all'].includes(parsed.position)) {
@@ -1374,7 +1634,9 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
   }
   const failedCount = result.batch.careers.filter((c) => c.status === 'FAILED').length;
   const overall = result.summary.overall as Record<string, unknown>;
-  process.stdout.write(`career-sim: 커리어 ${result.batch.careers.length}개, 실패 ${failedCount}개\n`);
+  process.stdout.write(
+    `career-sim: 커리어 ${result.batch.careers.length}개, 실패 ${failedCount}개\n`,
+  );
   process.stdout.write(`career-sim: 소요 시간 ${result.elapsedMs}ms\n`);
   process.stdout.write(`career-sim: peakOvr ${JSON.stringify(overall.peakOvr)}\n`);
   process.stdout.write(`career-sim: finalOvr ${JSON.stringify(overall.finalOvr)}\n`);

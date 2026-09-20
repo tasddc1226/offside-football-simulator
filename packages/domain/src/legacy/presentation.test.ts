@@ -9,7 +9,7 @@ import {
 
 describe('legacy presentation catalog', () => {
   it('contains every documented ending title and sentence', () => {
-    expect(Object.keys(LEGACY_ENDING_PRESENTATIONS)).toHaveLength(14);
+    expect(Object.keys(LEGACY_ENDING_PRESENTATIONS)).toHaveLength(18);
     expect(Object.keys(LEGACY_ENDING_PRESENTATIONS).sort()).toEqual(
       Object.keys(LEGACY_ENDING_PRIORITIES).sort(),
     );

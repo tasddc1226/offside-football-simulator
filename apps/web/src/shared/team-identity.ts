@@ -29,6 +29,16 @@ function initialsFromName(name: string): string {
 }
 
 const TEAM_IDENTITY: Record<string, TeamIdentity> = {
+  'london-riverside': { initials: '런던', colorVar: 'var(--os-team-suwon-hwahong-fc)' },
+  'manchester-foundry': { initials: '맨체', colorVar: 'var(--os-team-seoul-hangang-fc)' },
+  'valencia-sol': { initials: '발렌', colorVar: 'var(--os-team-jeju-halla-city)' },
+  'sevilla-luz': { initials: '세비', colorVar: 'var(--os-team-pohang-donghae-fc)' },
+  'rhein-adler': { initials: '라인', colorVar: 'var(--os-team-gangneung-haesol-fc)' },
+  'berlin-unionist': { initials: '베를', colorVar: 'var(--os-team-daegu-palgong-fc)' },
+  'torino-stella': { initials: '토리', colorVar: 'var(--os-team-gwangju-mudeung-fc)' },
+  'napoli-mare': { initials: '나폴', colorVar: 'var(--os-team-ulsan-pado-fc)' },
+  'lyon-lumiere': { initials: '리옹', colorVar: 'var(--os-team-daejeon-gapcheon-fc)' },
+  'marseille-port': { initials: '마르', colorVar: 'var(--os-team-incheon-gaetbeol-fc)' },
   'osaka-harbor': { initials: '오사', colorVar: 'var(--os-team-ulsan-pado-fc)' },
   'yokohama-blue': { initials: '요코', colorVar: 'var(--os-team-incheon-gaetbeol-fc)' },
   'porto-atlantico': { initials: '포르', colorVar: 'var(--os-team-suwon-hwahong-fc)' },

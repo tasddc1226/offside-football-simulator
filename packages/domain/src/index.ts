@@ -1,14 +1,23 @@
 export const DOMAIN_VERSION = '0.1.0';
 
 export {
-  ArchiveError, createCareerArchiveCore, verifyCareerArchiveCore, planCareerArchiveWrite,
-  type ArchiveArtifacts, type ArchiveContext, type CareerArchiveCore,
+  ArchiveError,
+  createCareerArchiveCore,
+  verifyCareerArchiveCore,
+  planCareerArchiveWrite,
+  type ArchiveArtifacts,
+  type ArchiveContext,
+  type CareerArchiveCore,
 } from './legacy/archive.js';
 
 export { clamp } from './clamp.js';
 export { canonicalize, compareCodePoints, utf8Encode, type JsonValue } from './canonical.js';
 export { sha256Hex, hashState, setSha256Provider, type Sha256Provider } from './hash.js';
-export { projectOfferSelection, seasonSquadSeed, type OfferProjection } from './offer-projection.js';
+export {
+  projectOfferSelection,
+  seasonSquadSeed,
+  type OfferProjection,
+} from './offer-projection.js';
 export { seedRng, nextUint32, rollInt, roll100, type RngState } from './rng.js';
 export { rollRange } from './roll-range.js';
 export {
@@ -168,7 +177,12 @@ export {
   type MarketValueInput,
   type MarketValueResult,
 } from './market-value.js';
-export { canNegotiate, expireOffers, isOfferExpired, type ExpireOffersResult } from './negotiation.js';
+export {
+  canNegotiate,
+  expireOffers,
+  isOfferExpired,
+  type ExpireOffersResult,
+} from './negotiation.js';
 export {
   buildRenewalOffer,
   countContractMatchesPlayed,
@@ -180,13 +194,23 @@ export {
   type GeneratedMarket,
   type OpenMarketResult,
 } from './market.js';
-export { evaluateLoanReturnRole, type EvaluateLoanReturnRoleArgs, type LoanReturnEvaluation } from './loan-return.js';
+export {
+  evaluateLoanReturnRole,
+  type EvaluateLoanReturnRoleArgs,
+  type LoanReturnEvaluation,
+} from './loan-return.js';
 export {
   computeAppearancePromiseOutlook,
   type AppearancePromiseOutlook,
   type AppearancePromiseOutlookStatus,
 } from './promise-outlook.js';
-export { attributeGroupOf, computeGrowth, type GrowthAttributeDelta, type GrowthInput, type GrowthResult } from './growth.js';
+export {
+  attributeGroupOf,
+  computeGrowth,
+  type GrowthAttributeDelta,
+  type GrowthInput,
+  type GrowthResult,
+} from './growth.js';
 export { applyCondition, type ConditionState } from './condition.js';
 export {
   buildSeasonResult,
@@ -194,7 +218,12 @@ export {
   hashSeasonResult,
   type BuildSeasonResultInput,
 } from './settlement.js';
-export { computeBaseOvr, generatePlayerProfile, type ConfirmedPlayerDraft, type GeneratedPlayer } from './player.js';
+export {
+  computeBaseOvr,
+  generatePlayerProfile,
+  type ConfirmedPlayerDraft,
+  type GeneratedPlayer,
+} from './player.js';
 export {
   buildInitialCompetitions,
   buildSeasonSteps,
@@ -237,7 +266,12 @@ export {
   syncInjuryRemaining,
 } from './injury.js';
 export { findInjuryReturnMatchId } from './injury-return.js';
-export { buildDefaultManager, buildReplacementManager, codePointSum, managerTenureSeasons } from './manager.js';
+export {
+  buildDefaultManager,
+  buildReplacementManager,
+  codePointSum,
+  managerTenureSeasons,
+} from './manager.js';
 export { onSettlementRelations } from './relationships.js';
 export { appendRelationshipLog } from './effects.js';
 export {
@@ -265,7 +299,15 @@ export {
   type ResolveChapterResult,
   type SelectChapterInput,
 } from './chapter.js';
-export { buildLeagueFixtures, buildLeagueRoster, buildSchedule, findLeague, isRivalOpponent, leagueStepForRound, resolveOpponent } from './schedule.js';
+export {
+  buildLeagueFixtures,
+  buildLeagueRoster,
+  buildSchedule,
+  findLeague,
+  isRivalOpponent,
+  leagueStepForRound,
+  resolveOpponent,
+} from './schedule.js';
 export {
   assertLeagueLedgerInvariant,
   assertSeasonLeagueLedgerInvariant,
@@ -277,7 +319,12 @@ export {
   standingsFromLedger,
   standingRowsFromFinalLeagueTable,
 } from './league-ledger.js';
-export { applyCompetitorFormDrift, playMatch, type PlayMatchInput, type PlayMatchResult } from './match.js';
+export {
+  applyCompetitorFormDrift,
+  playMatch,
+  type PlayMatchInput,
+  type PlayMatchResult,
+} from './match.js';
 export {
   applyMatchToCompetitions,
   applyMatchToPlayerStats,
@@ -288,12 +335,65 @@ export {
   stepMatchResultsFor,
   type SeasonMatchBooks,
 } from './season-stats.js';
-export { createLegacyResult, deriveLegacyEvidence, deriveRetirementTags, LEGACY_POLICY, LEGACY_POLICY_110, LEGACY_POLICY_120, LEGACY_VERSIONS, legacyPolicyForVersion, type LegacyVersion, type LegacyResult, type LegacyReferencePopulation, type LegacyFactor, type LegacySource } from './legacy/result.js';
+export {
+  createLegacyResult,
+  deriveLegacyEvidence,
+  deriveRetirementTags,
+  LEGACY_POLICY,
+  LEGACY_POLICY_110,
+  LEGACY_POLICY_120,
+  LEGACY_VERSIONS,
+  legacyPolicyForVersion,
+  type LegacyVersion,
+  type LegacyResult,
+  type LegacyReferencePopulation,
+  type LegacyFactor,
+  type LegacySource,
+} from './legacy/result.js';
 export { legacyEndingPresentation, legacyBandPresentation } from './legacy/presentation.js';
 export { selectLegacyDisplayEnding, type LegacyEndingId } from './legacy/endings.js';
-export { initializeNationalityModule, assessNationalityAtSeasonBoundary, resolveNationalityChoice, grantTournamentException, isU23Eligible, type NationalityState } from './legacy/nationality.js';
-export { careerEventChoices, nationalityForCareer, type CareerEventChoice } from './legacy/career-event.js';
-export { assessCareerRetirement, retirementContinuationOptions, retirementDecisionRequired, RETIREMENT_POLICY } from './legacy/career-retirement.js';
+export {
+  initializeNationalityModule,
+  assessNationalityAtSeasonBoundary,
+  resolveNationalityChoice,
+  grantTournamentException,
+  isU23Eligible,
+  type NationalityState,
+} from './legacy/nationality.js';
+export {
+  careerEventChoices,
+  nationalityForCareer,
+  type CareerEventChoice,
+} from './legacy/career-event.js';
+export {
+  assessCareerRetirement,
+  retirementContinuationOptions,
+  retirementDecisionRequired,
+  RETIREMENT_POLICY,
+} from './legacy/career-retirement.js';
 export type { RetirementPolicy } from './legacy/retirement.js';
 
-export { needsDevelopment, developmentBlock, developmentPrepared, developPlayer, developmentTargets, initialDevelopment, matchReadiness, matchTactic, weightMatchOutcomes, DEVELOPMENT_DEFAULT, type DevelopmentPlan, type DevelopmentState, type DevelopmentSession, type MatchTactic } from './development.js';
+export {
+  needsDevelopment,
+  developmentBlock,
+  developmentPrepared,
+  developPlayer,
+  developmentTargets,
+  initialDevelopment,
+  matchReadiness,
+  matchTactic,
+  weightMatchOutcomes,
+  DEVELOPMENT_DEFAULT,
+  type DevelopmentPlan,
+  type DevelopmentState,
+  type DevelopmentSession,
+  type MatchTactic,
+} from './development.js';
+
+export {
+  overseasJourney,
+  overseasRecord,
+  WORLD_CLUBS,
+  WORLD_COUNTRIES,
+  canScoutOverseas,
+} from './overseas.js';

@@ -1,0 +1,111 @@
+{
+  "id": "CHP-MATCH-007",
+  "version": 1,
+  "importance": "MAJOR",
+  "trigger": { "kind": "TAG", "tag": "프로_데뷔" },
+  "weight": 70,
+  "rotationGroup": "POST_DEBUT",
+  "positionGroups": ["FW"],
+  "authoring": "PROTOTYPE",
+  "decisions": [
+    {
+      "id": "D1",
+      "prompt": "역습 기회, 어떻게 마무리할까?",
+      "options": [
+        {
+          "id": "SOLO",
+          "label": "직접 돌파한다",
+          "riskLabel": "HIGH",
+          "priorProbability": { "successBp": 3500 },
+          "previewEffects": [
+            { "label": "잘되면 팬 지지 상승", "target": "fans", "direction": "UP" },
+            { "label": "실패하면 폼 하락" }
+          ],
+          "outcomes": [
+            {
+              "id": "SOLO-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 35,
+              "title": "혼자 힘으로 마무리했다",
+              "ratingDeltaTenths": 10,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-007.D1.SOLO-SUCCESS.0", "target": "fans", "delta": 6, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+              ],
+              "addTags": ["돌파_성공"],
+              "narrative": { "situation": "혼자 힘으로 만든 장면이 그대로 골로 이어졌다." }
+            },
+            {
+              "id": "SOLO-FAIL",
+              "kind": "FAIL",
+              "weight": 65,
+              "title": "무리한 돌파가 끊겼다",
+              "ratingDeltaTenths": -7,
+              "effects": [
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-007.D1.SOLO-FAIL.0", "target": "form", "delta": -5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "무리하게 끌고 가다 수비에게 그대로 끊겼다." }
+            }
+          ]
+        },
+        {
+          "id": "LINK",
+          "label": "동료에게 연결한다",
+          "riskLabel": "MEDIUM",
+          "priorProbability": { "successBp": 5500 },
+          "previewEffects": [{ "label": "감독 신뢰 상승", "target": "managerTrust", "direction": "UP" }],
+          "outcomes": [
+            {
+              "id": "LINK-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 55,
+              "title": "정확한 연결이 기회를 살렸다",
+              "ratingDeltaTenths": 6,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-007.D1.LINK-SUCCESS.0", "target": "managerTrust", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "타이밍 좋은 연결이 동료의 기회로 이어졌다." }
+            },
+            {
+              "id": "LINK-NEUTRAL",
+              "kind": "NEUTRAL",
+              "weight": 45,
+              "title": "연결은 됐지만 마무리가 아쉬웠다",
+              "ratingDeltaTenths": 0,
+              "effects": [],
+              "narrative": { "situation": "패스는 정확했지만 이어지는 마무리가 빗나갔다." }
+            }
+          ]
+        },
+        {
+          "id": "SPACE",
+          "label": "공간을 만들며 늦춘다",
+          "riskLabel": "LOW",
+          "priorProbability": { "successBp": 7000 },
+          "previewEffects": [{ "label": "폼 소폭 상승", "target": "form", "direction": "UP" }],
+          "outcomes": [
+            {
+              "id": "SPACE-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 70,
+              "title": "침착하게 공간을 열었다",
+              "ratingDeltaTenths": 4,
+              "effects": [
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-007.D1.SPACE-SUCCESS.0", "target": "form", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "서두르지 않고 만든 공간이 다음 기회로 이어졌다." }
+            },
+            {
+              "id": "SPACE-NEUTRAL",
+              "kind": "NEUTRAL",
+              "weight": 30,
+              "title": "안전하게 지나갔다",
+              "ratingDeltaTenths": 0,
+              "effects": [],
+              "narrative": { "situation": "위험 없이 지나갔지만 특별한 장면은 없었다." }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

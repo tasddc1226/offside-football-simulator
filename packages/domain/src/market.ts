@@ -1,3 +1,4 @@
+import { canScoutOverseas } from './overseas.js';
 import { clamp } from './clamp.js';
 import { compareCodePoints } from './canonical.js';
 import { generateCompetitors } from './competitors.js';
@@ -82,6 +83,7 @@ export function judgeMarketReason(
   if (remaining === 0) return 'EXPIRED';
 
   if (needsRecoveryOpportunity(state, ruleset)) return 'INTEREST';
+  if (ruleset.overseasRules && state.tags.includes('해외_도전')) return 'INTEREST';
   if (state.tags.includes('잔류_선언')) return null;
   if (state.tags.includes('이적_희망')) return 'INTEREST';
 
@@ -261,12 +263,11 @@ function computeCandidateTeams(
     ruleset.teams
       .filter(
         (team) =>
-          (team.countryCode === undefined ||
-            team.countryCode === 'KR' ||
-            (state.seasonHistory.length >= 2 && state.tags.includes('해외_도전'))) &&
+          canScoutOverseas(state, team, ruleset) &&
           team.id !== currentTeamId &&
           team.leagueTier !== 'YOUTH' &&
-          tiers.has(team.leagueTier),
+          (tiers.has(team.leagueTier) ||
+            (ruleset.overseasRules !== undefined && ['JP', 'PT'].includes(team.countryCode ?? ''))),
       )
       .sort((a, b) => compareCodePoints(a.id, b.id));
 
@@ -480,7 +481,13 @@ export function generateMarket(args: GenerateMarketArgs): GeneratedMarket {
     const overseas = remainingPool.filter(
       (team) => team.countryCode !== undefined && team.countryCode !== 'KR',
     );
-    const drawPool = index === 0 && overseas.length > 0 ? overseas : remainingPool;
+    const stage = (team: Team) =>
+      team.countryCode === 'JP' ? 1 : team.countryCode === 'PT' ? 2 : 3;
+    const highest = Math.max(0, ...overseas.map(stage));
+    const scouted = ruleset.overseasRules
+      ? overseas.filter((team) => stage(team) === highest)
+      : overseas;
+    const drawPool = index === 0 && scouted.length > 0 ? scouted : remainingPool;
     const teamRoll = rollInt(rngState, drawPool.length);
     rngState = teamRoll.state;
     const team = drawPool[teamRoll.value]!;

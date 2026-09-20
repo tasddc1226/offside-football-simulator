@@ -2,6 +2,10 @@ import { compareCodePoints } from '../canonical.js';
 
 /** RULE-LEG-006 ordering only. eligibility.ts establishes eligibility from result.ts evidence. */
 export const LEGACY_ENDING_PRIORITIES = Object.freeze({
+  'END-WORLD-PIONEER': 5,
+  'END-SECOND-HOME': 6,
+  'END-HOMECOMING': 7,
+  'END-OVERSEAS-CHALLENGER': 70,
   'END-ONE-CLUB-LEGEND': 10,
   'END-NATIONAL-HERO': 15,
   'END-UNCROWNED-KING': 20,

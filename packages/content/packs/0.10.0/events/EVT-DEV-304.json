@@ -1,0 +1,140 @@
+{
+  "id": "EVT-DEV-304",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "triggers": {
+    "all": [
+      {
+        "eq": [
+          "career.stage",
+          "PRO"
+        ]
+      },
+      {
+        "hasTag": [
+          "career.tags",
+          "육성_판단"
+        ]
+      }
+    ]
+  },
+  "exclusionTags": [],
+  "weight": 120,
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "근거를 정리해 코치에게 제안한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "감독 신뢰 +5, 위치 선정 +1"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "감독 신뢰 +5, 위치 선정 +1",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-DEV-304.A.0.0",
+              "target": "managerTrust",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-DEV-304.A.0.1",
+              "target": "positioning",
+              "delta": 1,
+              "clamp": {
+                "min": 1,
+                "max": 99
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": [
+            "육성_전술"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "동료와 움직임을 맞춰 본다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "주장 신뢰 +5, 패스 +1"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "주장 신뢰 +5, 패스 +1",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-DEV-304.B.0.0",
+              "target": "captain",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-DEV-304.B.0.1",
+              "target": "passing",
+              "delta": 1,
+              "clamp": {
+                "min": 1,
+                "max": 99
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": [
+            "육성_연결"
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "영상에서 찾은 상대의 빈틈이 경기에서도 보인다. 직접 코치에게 제안할지, 동료와 조용히 맞춰 볼지 결정해야 한다."
+  }
+}

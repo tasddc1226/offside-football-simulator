@@ -1,0 +1,100 @@
+{
+  "id": "CHP-MATCH-010",
+  "version": 1,
+  "importance": "MAJOR",
+  "trigger": { "kind": "DECIDER", "maxRankGap": 2 },
+  "weight": 90,
+  "rotationGroup": "DECIDER",
+  "authoring": "PROTOTYPE",
+  "decisions": [
+    {
+      "id": "D1",
+      "prompt": "시즌의 향방을 가를 경기에서 팀이 전진과 안정 사이의 결정을 기다린다.",
+      "options": [
+        {
+          "id": "TEMPO",
+          "label": "템포를 높여 먼저 변화를 만든다",
+          "riskLabel": "HIGH",
+          "priorProbability": { "successBp": 4500 },
+          "previewEffects": [
+            { "label": "성공하면 팬 지지·폼 상승", "target": "fans", "direction": "UP" },
+            { "label": "실패하면 폼 하락", "target": "form", "direction": "DOWN" }
+          ],
+          "outcomes": [
+            {
+              "id": "TEMPO-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 45,
+              "title": "빠른 전환으로 경기의 박자를 가져왔다",
+              "ratingDeltaTenths": 9,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-010.D1.TEMPO-SUCCESS.0", "target": "fans", "delta": 6, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" },
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-010.D1.TEMPO-SUCCESS.1", "target": "form", "delta": 5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "주저하지 않은 전환이 상대보다 한발 빠른 장면을 만들었다." }
+            },
+            {
+              "id": "TEMPO-FAIL",
+              "kind": "FAIL",
+              "weight": 55,
+              "title": "속도를 올리다 연결이 끊겼다",
+              "ratingDeltaTenths": -6,
+              "effects": [
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-010.D1.TEMPO-FAIL.0", "target": "form", "delta": -4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "서두른 연결이 동료의 발보다 앞서 나가 공격권을 잃었다." }
+            }
+          ]
+        },
+        {
+          "id": "SHAPE",
+          "label": "대형을 유지하며 다음 기회를 기다린다",
+          "riskLabel": "LOW",
+          "priorProbability": null,
+          "previewEffects": [
+            { "label": "감독 신뢰 상승", "target": "managerTrust", "direction": "UP" },
+            { "label": "체력 소폭 회복", "target": "fitness", "direction": "UP" }
+          ],
+          "outcomes": [
+            {
+              "id": "SHAPE-FIXED",
+              "kind": "FIXED",
+              "weight": 100,
+              "title": "간격을 유지해 팀의 균형을 지켰다",
+              "ratingDeltaTenths": 3,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-010.D1.SHAPE-FIXED.0", "target": "managerTrust", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" },
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-010.D1.SHAPE-FIXED.1", "target": "fitness", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "위험한 공간을 먼저 닫으며 팀이 다시 호흡할 시간을 벌었다." }
+            }
+          ]
+        },
+        {
+          "id": "VOICE",
+          "label": "주장과 역할을 나눠 동료를 정돈한다",
+          "riskLabel": "MEDIUM",
+          "priorProbability": null,
+          "previewEffects": [
+            { "label": "주장 관계 상승", "target": "captain", "direction": "UP" },
+            { "label": "사기 상승", "target": "morale", "direction": "UP" }
+          ],
+          "outcomes": [
+            {
+              "id": "VOICE-FIXED",
+              "kind": "FIXED",
+              "weight": 100,
+              "title": "역할을 나눠 팀의 판단을 빠르게 만들었다",
+              "ratingDeltaTenths": 5,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-010.D1.VOICE-FIXED.0", "target": "captain", "delta": 5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" },
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-010.D1.VOICE-FIXED.1", "target": "morale", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "주장과 구역을 나눠 전달하자 동료들의 선택이 빨라졌다." }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

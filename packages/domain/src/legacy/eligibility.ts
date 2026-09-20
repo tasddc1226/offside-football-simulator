@@ -6,6 +6,7 @@ import { resolveLegacyEndings, type LegacyEndingResolution } from './endings.js'
  * This module does not calculate scores, mutate an Archive, or introduce new tags.
  */
 export type LegacyEndingFacts = Readonly<{
+  overseas?: { foreignSeasons: number; bigSeasons: number; settled: boolean; returned: boolean };
   oneClubSeasons: number;
   fans: number;
   nationalCaps: number;
@@ -49,6 +50,12 @@ function integer(value: unknown, label: string, max = 100): asserts value is num
 function validateFacts(facts: LegacyEndingFacts): void {
   if (facts === null || typeof facts !== 'object')
     throw new RangeError('Legacy eligibility: facts required.');
+  if (facts.overseas) {
+    integer(facts.overseas.foreignSeasons, 'foreignSeasons', Number.MAX_SAFE_INTEGER);
+    integer(facts.overseas.bigSeasons, 'bigSeasons', Number.MAX_SAFE_INTEGER);
+    if (typeof facts.overseas.settled !== 'boolean' || typeof facts.overseas.returned !== 'boolean')
+      throw new RangeError('Invalid overseas facts');
+  }
   integer(facts.oneClubSeasons, 'oneClubSeasons', Number.MAX_SAFE_INTEGER);
   integer(facts.fans, 'fans');
   integer(facts.nationalCaps, 'nationalCaps', Number.MAX_SAFE_INTEGER);
@@ -81,6 +88,13 @@ export function evaluateLegacyEndings(facts: LegacyEndingFacts): LegacyEndingRes
   validateFacts(facts);
   const eligible: Array<Parameters<typeof resolveLegacyEndings>[0][number]> = [];
 
+  if (facts.overseas) {
+    const o = facts.overseas;
+    if (o.bigSeasons >= 2) eligible.push('END-WORLD-PIONEER');
+    if (o.foreignSeasons >= 3 && o.settled && !o.returned) eligible.push('END-SECOND-HOME');
+    if (o.foreignSeasons >= 1 && o.returned) eligible.push('END-HOMECOMING');
+    if (o.foreignSeasons >= 1) eligible.push('END-OVERSEAS-CHALLENGER');
+  }
   if (hasTag(facts, 'TAG-ONE-CLUB') && facts.oneClubSeasons >= 10 && facts.fans >= 80)
     eligible.push('END-ONE-CLUB-LEGEND');
   if (facts.nationalCaps >= 30 || facts.decisiveInternational) eligible.push('END-NATIONAL-HERO');

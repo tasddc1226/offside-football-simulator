@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react';
-import { developmentBlock, type CareerState } from '@offside/domain';
+import { developmentBlock, overseasJourney, type CareerState } from '@offside/domain';
 import { ATTRIBUTE_LABELS, SQUAD_ROLE_LABELS } from './labels.js';
 import { DevelopmentReceipt, DRILL_LABEL, BLOCK_LABEL } from './development-workshop.js';
 import './player-life.css';
 
 export function PlayerLife({ state, action }: { state: CareerState; action: ReactNode }) {
   const [room, setRoom] = useState<'MATCH' | 'PLAYER' | 'PEOPLE'>('MATCH');
+  const journey = state.rulesetVersion === '3.1.0' ? overseasJourney(state) : null;
   const season = state.season;
   const block = developmentBlock(season?.currentStep ?? 1);
   const completed = state.seasonHistory.length;
@@ -163,6 +164,19 @@ export function PlayerLife({ state, action }: { state: CareerState; action: Reac
               </div>
             ))}
           </div>
+          {journey && (
+            <section aria-label="세계로 가는 여정">
+              <h3>
+                {journey.country} · {journey.stage}
+              </h3>
+              <p>국내 → 일본 → 포르투갈 → 빅리그</p>
+              <p>{journey.next}</p>
+              <small>
+                해외 {journey.foreignSeasons}시즌 · 빅리그 주전 경쟁 {journey.bigSeasons}시즌 ·{' '}
+                {journey.countries.length}개국 출전
+              </small>
+            </section>
+          )}
           <DevelopmentReceipt state={state} />
           {!latest && <p>첫 훈련에서 당신의 플레이 스타일이 시작됩니다.</p>}
           <details>

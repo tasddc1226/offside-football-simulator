@@ -1,3 +1,4 @@
+import { overseasRecord, WORLD_CLUBS } from '../overseas.js';
 import { canonicalize, compareCodePoints, type JsonValue } from '../canonical.js';
 import { CAREER_TAGS } from '../career-tags.js';
 import { sha256Hex } from '../hash.js';
@@ -165,7 +166,9 @@ function performance(summary: SeasonSummary, version: LegacyVersion = '1.0.0'): 
           ? total.chancesCreated + total.progressivePasses + total.ballRecoveries
           : total.goals + total.assists;
   const performancePer90Centi =
-    version === '1.2.0' ? LEGACY_POLICY_120.performancePer90Centi : LEGACY_POLICY.performancePer90Centi;
+    version === '1.2.0'
+      ? LEGACY_POLICY_120.performancePer90Centi
+      : LEGACY_POLICY.performancePer90Centi;
   // Rate and exposure are separate: one excellent minute cannot produce a full contribution score.
   return score(
     ratio(value * 90 * 100, stats.minutes * performancePer90Centi[stats.group]) *
@@ -483,6 +486,21 @@ export function deriveLegacyEvidence(archive: CareerArchiveCore, version: Legacy
       ? ('COACH_EPILOGUE' as const)
       : ('RETIRE' as const);
   const facts: LegacyEndingFacts = {
+    ...(state.rulesetVersion === '3.1.0'
+      ? {
+          overseas: {
+            ...overseasRecord(state),
+            settled:
+              state.tags.includes(`세계_${WORLD_CLUBS[state.contract?.teamId ?? '']}_1_완료`) &&
+              state.seasonHistory.filter(
+                (s) =>
+                  WORLD_CLUBS[s.teamId] !== undefined &&
+                  WORLD_CLUBS[s.teamId] === WORLD_CLUBS[state.contract?.teamId ?? ''] &&
+                  s.result.playerStats.minutes > 0,
+              ).length >= 3,
+          },
+        }
+      : {}),
     oneClubSeasons,
     fans: state.relationships.fans,
     nationalCaps,

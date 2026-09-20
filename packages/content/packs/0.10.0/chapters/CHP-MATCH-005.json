@@ -1,0 +1,115 @@
+{
+  "id": "CHP-MATCH-005",
+  "version": 1,
+  "importance": "MAJOR",
+  "trigger": { "kind": "TAG", "tag": "프로_데뷔" },
+  "weight": 70,
+  "rotationGroup": "POST_DEBUT",
+  "positionGroups": ["GK"],
+  "authoring": "PROTOTYPE",
+  "decisions": [
+    {
+      "id": "D1",
+      "prompt": "상대의 압박이 시작되는 순간, 빌드업을 어떻게 풀어낼까?",
+      "options": [
+        {
+          "id": "SHORT",
+          "label": "짧게 돌려 잇는다",
+          "riskLabel": "LOW",
+          "priorProbability": { "successBp": 7000 },
+          "previewEffects": [{ "label": "폼 소폭 상승", "target": "form", "direction": "UP" }],
+          "outcomes": [
+            {
+              "id": "SHORT-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 70,
+              "title": "정확한 연결로 압박을 벗어났다",
+              "ratingDeltaTenths": 4,
+              "effects": [
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-005.D1.SHORT-SUCCESS.0", "target": "form", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "addTags": ["빌드업_안정"],
+              "narrative": { "situation": "짧은 패스로 압박을 그대로 흘려보냈다." }
+            },
+            {
+              "id": "SHORT-NEUTRAL",
+              "kind": "NEUTRAL",
+              "weight": 30,
+              "title": "위험 없이 흘러갔다",
+              "ratingDeltaTenths": 0,
+              "effects": [],
+              "narrative": { "situation": "안전하게 넘겼지만 특별한 장면은 없었다." }
+            }
+          ]
+        },
+        {
+          "id": "LONG",
+          "label": "길게 걷어 전방으로 보낸다",
+          "riskLabel": "MEDIUM",
+          "priorProbability": { "successBp": 5000 },
+          "previewEffects": [{ "label": "감독 신뢰 변동", "target": "managerTrust" }],
+          "outcomes": [
+            {
+              "id": "LONG-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 50,
+              "title": "정확한 롱킥이 공격 기회를 만들었다",
+              "ratingDeltaTenths": 6,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-005.D1.LONG-SUCCESS.0", "target": "managerTrust", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "정확히 떨어진 롱킥이 그대로 기회로 이어졌다." }
+            },
+            {
+              "id": "LONG-FAIL",
+              "kind": "FAIL",
+              "weight": 50,
+              "title": "부정확한 킥이 공을 내줬다",
+              "ratingDeltaTenths": -5,
+              "effects": [
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-005.D1.LONG-FAIL.0", "target": "managerTrust", "delta": -3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "힘이 과하게 들어간 킥이 그대로 상대에게 넘어갔다." }
+            }
+          ]
+        },
+        {
+          "id": "RISKY",
+          "label": "수비수를 걸고 짧게 연결한다",
+          "riskLabel": "HIGH",
+          "priorProbability": { "successBp": 3500 },
+          "previewEffects": [
+            { "label": "잘되면 폼·팬 상승", "target": "form", "direction": "UP" },
+            { "label": "실패하면 폼 하락" }
+          ],
+          "outcomes": [
+            {
+              "id": "RISKY-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 35,
+              "title": "과감한 연결이 그대로 공격으로 이어졌다",
+              "ratingDeltaTenths": 9,
+              "effects": [
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-005.D1.RISKY-SUCCESS.0", "target": "form", "delta": 6, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" },
+                { "kind": "RELATION", "sourceId": "CHP-MATCH-005.D1.RISKY-SUCCESS.1", "target": "fans", "delta": 5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+              ],
+              "addTags": ["빌드업_모험"],
+              "narrative": { "situation": "수비수를 걸고 나온 짧은 연결이 그대로 통했다." }
+            },
+            {
+              "id": "RISKY-FAIL",
+              "kind": "FAIL",
+              "weight": 65,
+              "title": "무리한 시도가 실점 위기로 이어졌다",
+              "ratingDeltaTenths": -8,
+              "effects": [
+                { "kind": "CURRENT", "sourceId": "CHP-MATCH-005.D1.RISKY-FAIL.0", "target": "form", "delta": -5, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+              ],
+              "narrative": { "situation": "무리한 시도가 곧바로 실점 위기로 이어졌다." }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
