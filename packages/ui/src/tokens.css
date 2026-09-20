@@ -1,5 +1,10 @@
 /* OFFSIDE interface tokens. Independently authored; no third-party UI-kit assets. */
 :root {
+  /* Signing paper stays light in both themes so handwriting retains ink contrast. */
+  --os-signature-paper: #fffdf5;
+  --os-signature-ink: #243144;
+  --os-signature-rule: #d5cebd;
+  --os-signature-hint: #746d60;
   color-scheme: light;
   --os-bg: #f6f8fb;
   --os-surface: #fff;

@@ -241,6 +241,7 @@ export async function signFirstOffer(
 export async function enterTypedSignature(page: Page, name = '김서준'): Promise<void> {
   await page.getByRole('button', { name: '이름 입력' }).click();
   await page.getByRole('textbox', { name: '서명할 이름' }).fill(name);
+  await page.getByRole('button', { name: '서명 적용', exact: true }).click();
 }
 
 /** 온보딩부터 첫 프로 계약 체결까지(대시보드 도착) 전 구간. first-contract.spec.ts·season.spec.ts가

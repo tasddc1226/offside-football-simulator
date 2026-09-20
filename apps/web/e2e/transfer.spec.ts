@@ -226,6 +226,7 @@ test('TEST-E2E-003(a): 3개 이상 제안 비교→협상→FREE_AGENT 확정→
 
   await page.getByRole('button', { name: '이름 입력' }).click();
   await page.getByRole('textbox', { name: '서명할 이름' }).fill('김서준');
+  await page.getByRole('button', { name: '서명 적용', exact: true }).click();
   const accept = page.getByRole('button', { name: '서명하고 계약 확정' });
   await expect(accept).toBeEnabled();
   const beforeAccept = await readSavedCareer(page, careerId);
@@ -291,6 +292,7 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
 
   await page.getByRole('button', { name: '이름 입력' }).click();
   await page.getByRole('textbox', { name: '서명할 이름' }).fill('김서준');
+  await page.getByRole('button', { name: '서명 적용', exact: true }).click();
   const loanAccept = page.getByRole('button', { name: '서명하고 계약 확정' });
   await expect(loanAccept).toBeEnabled();
   const careerId = loanCareerId;
