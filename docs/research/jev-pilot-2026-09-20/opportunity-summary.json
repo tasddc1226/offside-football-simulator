@@ -1,0 +1,301 @@
+{
+  "runtime": {
+    "rulesetVersion": "2.0.0",
+    "contentPackVersion": "0.7.0",
+    "policy": "opportunity",
+    "mode": "FAST",
+    "seeds": 40,
+    "seasonsCap": 10,
+    "toRetirement": false,
+    "jobs": 2,
+    "hashProvider": "node-crypto",
+    "startedAt": "2026-09-20T11:18:22.575Z",
+    "elapsedMs": 15152,
+    "msPerCareer": {
+      "mean": 503.45,
+      "p50": 480,
+      "p90": 643
+    }
+  },
+  "careers": {
+    "count": 40,
+    "failed": 0
+  },
+  "overall": {
+    "peakOvr": {
+      "mean": 68.83,
+      "p10": 62,
+      "p50": 68,
+      "p90": 76
+    },
+    "finalOvr": {
+      "mean": 68.7,
+      "p10": 62,
+      "p50": 68,
+      "p90": 76
+    },
+    "retiredAge": {
+      "mean": null,
+      "p10": null,
+      "p50": null,
+      "p90": null,
+      "n": 0
+    },
+    "seasons": {
+      "mean": 10,
+      "p10": 10,
+      "p50": 10,
+      "p90": 10
+    },
+    "injuriesPerSeason": 1.36,
+    "tier1ReachRate": 0.1,
+    "legacyBand": {
+      "BAND-REMEMBERED": 13,
+      "BAND-SOLID": 25,
+      "BAND-COMPLETE": 2
+    },
+    "tier1ReachBySeason": {
+      "5": 0.1,
+      "10": 0.1
+    }
+  },
+  "byPosition": {
+    "GK": {
+      "peakOvr": {
+        "mean": 66.2,
+        "p10": 62,
+        "p50": 66,
+        "p90": 68
+      },
+      "finalOvr": {
+        "mean": 66.2,
+        "p10": 62,
+        "p50": 66,
+        "p90": 68
+      },
+      "retiredAge": {
+        "mean": null,
+        "p10": null,
+        "p50": null,
+        "p90": null,
+        "n": 0
+      },
+      "seasons": {
+        "mean": 10,
+        "p10": 10,
+        "p50": 10,
+        "p90": 10
+      },
+      "injuriesPerSeason": 1.17,
+      "tier1ReachRate": 0,
+      "legacyBand": {
+        "BAND-REMEMBERED": 3,
+        "BAND-SOLID": 5,
+        "BAND-COMPLETE": 2
+      }
+    },
+    "DF": {
+      "peakOvr": {
+        "mean": 66.9,
+        "p10": 58,
+        "p50": 68,
+        "p90": 72
+      },
+      "finalOvr": {
+        "mean": 66.6,
+        "p10": 58,
+        "p50": 68,
+        "p90": 72
+      },
+      "retiredAge": {
+        "mean": null,
+        "p10": null,
+        "p50": null,
+        "p90": null,
+        "n": 0
+      },
+      "seasons": {
+        "mean": 10,
+        "p10": 10,
+        "p50": 10,
+        "p90": 10
+      },
+      "injuriesPerSeason": 1.6,
+      "tier1ReachRate": 0.2,
+      "legacyBand": {
+        "BAND-SOLID": 5,
+        "BAND-REMEMBERED": 5
+      }
+    },
+    "MF": {
+      "peakOvr": {
+        "mean": 68.4,
+        "p10": 61,
+        "p50": 64,
+        "p90": 77
+      },
+      "finalOvr": {
+        "mean": 68.4,
+        "p10": 61,
+        "p50": 64,
+        "p90": 77
+      },
+      "retiredAge": {
+        "mean": null,
+        "p10": null,
+        "p50": null,
+        "p90": null,
+        "n": 0
+      },
+      "seasons": {
+        "mean": 10,
+        "p10": 10,
+        "p50": 10,
+        "p90": 10
+      },
+      "injuriesPerSeason": 1.31,
+      "tier1ReachRate": 0.2,
+      "legacyBand": {
+        "BAND-REMEMBERED": 2,
+        "BAND-SOLID": 8
+      }
+    },
+    "FW": {
+      "peakOvr": {
+        "mean": 73.8,
+        "p10": 65,
+        "p50": 74,
+        "p90": 77
+      },
+      "finalOvr": {
+        "mean": 73.6,
+        "p10": 65,
+        "p50": 74,
+        "p90": 77
+      },
+      "retiredAge": {
+        "mean": null,
+        "p10": null,
+        "p50": null,
+        "p90": null,
+        "n": 0
+      },
+      "seasons": {
+        "mean": 10,
+        "p10": 10,
+        "p50": 10,
+        "p90": 10
+      },
+      "injuriesPerSeason": 1.34,
+      "tier1ReachRate": 0,
+      "legacyBand": {
+        "BAND-SOLID": 7,
+        "BAND-REMEMBERED": 3
+      }
+    }
+  },
+  "ovrByAge": {
+    "19": {
+      "mean": 62.08,
+      "p50": 62,
+      "n": 40
+    },
+    "20": {
+      "mean": 63.68,
+      "p50": 64,
+      "n": 40
+    },
+    "21": {
+      "mean": 65.25,
+      "p50": 65,
+      "n": 40
+    },
+    "22": {
+      "mean": 66.08,
+      "p50": 66,
+      "n": 40
+    },
+    "23": {
+      "mean": 66.8,
+      "p50": 67,
+      "n": 40
+    },
+    "24": {
+      "mean": 67.47,
+      "p50": 67,
+      "n": 40
+    },
+    "25": {
+      "mean": 67.95,
+      "p50": 68,
+      "n": 40
+    },
+    "26": {
+      "mean": 68.3,
+      "p50": 68,
+      "n": 40
+    },
+    "27": {
+      "mean": 68.65,
+      "p50": 68,
+      "n": 40
+    },
+    "28": {
+      "mean": 68.7,
+      "p50": 68,
+      "n": 40
+    }
+  },
+  "tierBySeasonIndex": {
+    "1": {
+      "1": 0,
+      "2": 25,
+      "3": 15
+    },
+    "2": {
+      "1": 1,
+      "2": 19,
+      "3": 20
+    },
+    "3": {
+      "1": 0,
+      "2": 23,
+      "3": 17
+    },
+    "4": {
+      "1": 0,
+      "2": 21,
+      "3": 19
+    },
+    "5": {
+      "1": 0,
+      "2": 20,
+      "3": 20
+    },
+    "6": {
+      "1": 0,
+      "2": 19,
+      "3": 21
+    },
+    "7": {
+      "1": 2,
+      "2": 19,
+      "3": 19
+    },
+    "8": {
+      "1": 1,
+      "2": 18,
+      "3": 21
+    },
+    "9": {
+      "1": 1,
+      "2": 20,
+      "3": 19
+    },
+    "10": {
+      "1": 1,
+      "2": 21,
+      "3": 18
+    }
+  }
+}

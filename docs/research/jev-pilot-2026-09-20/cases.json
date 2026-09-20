@@ -1,0 +1,4942 @@
+[
+  {
+    "id": "promise-supportive-0-0",
+    "pairId": "promise-supportive-0",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-supportive-0-1",
+    "pairId": "promise-supportive-0",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-supportive-1-0",
+    "pairId": "promise-supportive-1",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-supportive-1-1",
+    "pairId": "promise-supportive-1",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-supportive-2-0",
+    "pairId": "promise-supportive-2",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-supportive-2-1",
+    "pairId": "promise-supportive-2",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-supportive-3-0",
+    "pairId": "promise-supportive-3",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-supportive-3-1",
+    "pairId": "promise-supportive-3",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-supportive-4-0",
+    "pairId": "promise-supportive-4",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-supportive-4-1",
+    "pairId": "promise-supportive-4",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-strict-0-0",
+    "pairId": "promise-strict-0",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-strict-0-1",
+    "pairId": "promise-strict-0",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-strict-1-0",
+    "pairId": "promise-strict-1",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-strict-1-1",
+    "pairId": "promise-strict-1",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-strict-2-0",
+    "pairId": "promise-strict-2",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-strict-2-1",
+    "pairId": "promise-strict-2",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-strict-3-0",
+    "pairId": "promise-strict-3",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-strict-3-1",
+    "pairId": "promise-strict-3",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-strict-4-0",
+    "pairId": "promise-strict-4",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-strict-4-1",
+    "pairId": "promise-strict-4",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-tactical-0-0",
+    "pairId": "promise-tactical-0",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-tactical-0-1",
+    "pairId": "promise-tactical-0",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-tactical-1-0",
+    "pairId": "promise-tactical-1",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-tactical-1-1",
+    "pairId": "promise-tactical-1",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-tactical-2-0",
+    "pairId": "promise-tactical-2",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-tactical-2-1",
+    "pairId": "promise-tactical-2",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-tactical-3-0",
+    "pairId": "promise-tactical-3",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-tactical-3-1",
+    "pairId": "promise-tactical-3",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-tactical-4-0",
+    "pairId": "promise-tactical-4",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-tactical-4-1",
+    "pairId": "promise-tactical-4",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-youth_developer-0-0",
+    "pairId": "promise-youth_developer-0",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-youth_developer-0-1",
+    "pairId": "promise-youth_developer-0",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-youth_developer-1-0",
+    "pairId": "promise-youth_developer-1",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-youth_developer-1-1",
+    "pairId": "promise-youth_developer-1",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-youth_developer-2-0",
+    "pairId": "promise-youth_developer-2",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-youth_developer-2-1",
+    "pairId": "promise-youth_developer-2",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-youth_developer-3-0",
+    "pairId": "promise-youth_developer-3",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-youth_developer-3-1",
+    "pairId": "promise-youth_developer-3",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-youth_developer-4-0",
+    "pairId": "promise-youth_developer-4",
+    "family": "promise",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "promise-youth_developer-4-1",
+    "pairId": "promise-youth_developer-4",
+    "family": "promise",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "broken",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-supportive-0-0",
+    "pairId": "injury-supportive-0",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-supportive-0-1",
+    "pairId": "injury-supportive-0",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 19,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-supportive-1-0",
+    "pairId": "injury-supportive-1",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-supportive-1-1",
+    "pairId": "injury-supportive-1",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 20,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-supportive-2-0",
+    "pairId": "injury-supportive-2",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-supportive-2-1",
+    "pairId": "injury-supportive-2",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 21,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-supportive-3-0",
+    "pairId": "injury-supportive-3",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-supportive-3-1",
+    "pairId": "injury-supportive-3",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 22,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-supportive-4-0",
+    "pairId": "injury-supportive-4",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-supportive-4-1",
+    "pairId": "injury-supportive-4",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 23,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-strict-0-0",
+    "pairId": "injury-strict-0",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-strict-0-1",
+    "pairId": "injury-strict-0",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 19,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-strict-1-0",
+    "pairId": "injury-strict-1",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-strict-1-1",
+    "pairId": "injury-strict-1",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 20,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-strict-2-0",
+    "pairId": "injury-strict-2",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-strict-2-1",
+    "pairId": "injury-strict-2",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 21,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-strict-3-0",
+    "pairId": "injury-strict-3",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-strict-3-1",
+    "pairId": "injury-strict-3",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 22,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-strict-4-0",
+    "pairId": "injury-strict-4",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-strict-4-1",
+    "pairId": "injury-strict-4",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 23,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-tactical-0-0",
+    "pairId": "injury-tactical-0",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-tactical-0-1",
+    "pairId": "injury-tactical-0",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 19,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-tactical-1-0",
+    "pairId": "injury-tactical-1",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-tactical-1-1",
+    "pairId": "injury-tactical-1",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 20,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-tactical-2-0",
+    "pairId": "injury-tactical-2",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-tactical-2-1",
+    "pairId": "injury-tactical-2",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 21,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-tactical-3-0",
+    "pairId": "injury-tactical-3",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-tactical-3-1",
+    "pairId": "injury-tactical-3",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 22,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-tactical-4-0",
+    "pairId": "injury-tactical-4",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-tactical-4-1",
+    "pairId": "injury-tactical-4",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 23,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-youth_developer-0-0",
+    "pairId": "injury-youth_developer-0",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-youth_developer-0-1",
+    "pairId": "injury-youth_developer-0",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 19,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-youth_developer-1-0",
+    "pairId": "injury-youth_developer-1",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-youth_developer-1-1",
+    "pairId": "injury-youth_developer-1",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 20,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-youth_developer-2-0",
+    "pairId": "injury-youth_developer-2",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-youth_developer-2-1",
+    "pairId": "injury-youth_developer-2",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 21,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-youth_developer-3-0",
+    "pairId": "injury-youth_developer-3",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-youth_developer-3-1",
+    "pairId": "injury-youth_developer-3",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 22,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "injury-youth_developer-4-0",
+    "pairId": "injury-youth_developer-4",
+    "family": "injury",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "injury-youth_developer-4-1",
+    "pairId": "injury-youth_developer-4",
+    "family": "injury",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 23,
+      "fitness": "injured",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "OPPORTUNITY",
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW"
+    ]
+  },
+  {
+    "id": "tactics-supportive-0-0",
+    "pairId": "tactics-supportive-0",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-supportive-0-1",
+    "pairId": "tactics-supportive-0",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-supportive-1-0",
+    "pairId": "tactics-supportive-1",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-supportive-1-1",
+    "pairId": "tactics-supportive-1",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-supportive-2-0",
+    "pairId": "tactics-supportive-2",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-supportive-2-1",
+    "pairId": "tactics-supportive-2",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-supportive-3-0",
+    "pairId": "tactics-supportive-3",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-supportive-3-1",
+    "pairId": "tactics-supportive-3",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-supportive-4-0",
+    "pairId": "tactics-supportive-4",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-supportive-4-1",
+    "pairId": "tactics-supportive-4",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-strict-0-0",
+    "pairId": "tactics-strict-0",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-strict-0-1",
+    "pairId": "tactics-strict-0",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-strict-1-0",
+    "pairId": "tactics-strict-1",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-strict-1-1",
+    "pairId": "tactics-strict-1",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-strict-2-0",
+    "pairId": "tactics-strict-2",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-strict-2-1",
+    "pairId": "tactics-strict-2",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-strict-3-0",
+    "pairId": "tactics-strict-3",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-strict-3-1",
+    "pairId": "tactics-strict-3",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-strict-4-0",
+    "pairId": "tactics-strict-4",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-strict-4-1",
+    "pairId": "tactics-strict-4",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-tactical-0-0",
+    "pairId": "tactics-tactical-0",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-tactical-0-1",
+    "pairId": "tactics-tactical-0",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-tactical-1-0",
+    "pairId": "tactics-tactical-1",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-tactical-1-1",
+    "pairId": "tactics-tactical-1",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-tactical-2-0",
+    "pairId": "tactics-tactical-2",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-tactical-2-1",
+    "pairId": "tactics-tactical-2",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-tactical-3-0",
+    "pairId": "tactics-tactical-3",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-tactical-3-1",
+    "pairId": "tactics-tactical-3",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-tactical-4-0",
+    "pairId": "tactics-tactical-4",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-tactical-4-1",
+    "pairId": "tactics-tactical-4",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-youth_developer-0-0",
+    "pairId": "tactics-youth_developer-0",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-youth_developer-0-1",
+    "pairId": "tactics-youth_developer-0",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-youth_developer-1-0",
+    "pairId": "tactics-youth_developer-1",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-youth_developer-1-1",
+    "pairId": "tactics-youth_developer-1",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-youth_developer-2-0",
+    "pairId": "tactics-youth_developer-2",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-youth_developer-2-1",
+    "pairId": "tactics-youth_developer-2",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-youth_developer-3-0",
+    "pairId": "tactics-youth_developer-3",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-youth_developer-3-1",
+    "pairId": "tactics-youth_developer-3",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-youth_developer-4-0",
+    "pairId": "tactics-youth_developer-4",
+    "family": "tactics",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "tactics-youth_developer-4-1",
+    "pairId": "tactics-youth_developer-4",
+    "family": "tactics",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "poor",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-supportive-0-0",
+    "pairId": "discipline-supportive-0",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-supportive-0-1",
+    "pairId": "discipline-supportive-0",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-supportive-1-0",
+    "pairId": "discipline-supportive-1",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-supportive-1-1",
+    "pairId": "discipline-supportive-1",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-supportive-2-0",
+    "pairId": "discipline-supportive-2",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-supportive-2-1",
+    "pairId": "discipline-supportive-2",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-supportive-3-0",
+    "pairId": "discipline-supportive-3",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-supportive-3-1",
+    "pairId": "discipline-supportive-3",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-supportive-4-0",
+    "pairId": "discipline-supportive-4",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-supportive-4-1",
+    "pairId": "discipline-supportive-4",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-strict-0-0",
+    "pairId": "discipline-strict-0",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-strict-0-1",
+    "pairId": "discipline-strict-0",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-strict-1-0",
+    "pairId": "discipline-strict-1",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-strict-1-1",
+    "pairId": "discipline-strict-1",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-strict-2-0",
+    "pairId": "discipline-strict-2",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-strict-2-1",
+    "pairId": "discipline-strict-2",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-strict-3-0",
+    "pairId": "discipline-strict-3",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-strict-3-1",
+    "pairId": "discipline-strict-3",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-strict-4-0",
+    "pairId": "discipline-strict-4",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-strict-4-1",
+    "pairId": "discipline-strict-4",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-tactical-0-0",
+    "pairId": "discipline-tactical-0",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-tactical-0-1",
+    "pairId": "discipline-tactical-0",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-tactical-1-0",
+    "pairId": "discipline-tactical-1",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-tactical-1-1",
+    "pairId": "discipline-tactical-1",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-tactical-2-0",
+    "pairId": "discipline-tactical-2",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-tactical-2-1",
+    "pairId": "discipline-tactical-2",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-tactical-3-0",
+    "pairId": "discipline-tactical-3",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-tactical-3-1",
+    "pairId": "discipline-tactical-3",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-tactical-4-0",
+    "pairId": "discipline-tactical-4",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-tactical-4-1",
+    "pairId": "discipline-tactical-4",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-youth_developer-0-0",
+    "pairId": "discipline-youth_developer-0",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-youth_developer-0-1",
+    "pairId": "discipline-youth_developer-0",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-youth_developer-1-0",
+    "pairId": "discipline-youth_developer-1",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-youth_developer-1-1",
+    "pairId": "discipline-youth_developer-1",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-youth_developer-2-0",
+    "pairId": "discipline-youth_developer-2",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-youth_developer-2-1",
+    "pairId": "discipline-youth_developer-2",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-youth_developer-3-0",
+    "pairId": "discipline-youth_developer-3",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-youth_developer-3-1",
+    "pairId": "discipline-youth_developer-3",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-youth_developer-4-0",
+    "pairId": "discipline-youth_developer-4",
+    "family": "discipline",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "discipline-youth_developer-4-1",
+    "pairId": "discipline-youth_developer-4",
+    "family": "discipline",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "documented_problem",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-supportive-0-0",
+    "pairId": "cadence-supportive-0",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-supportive-0-1",
+    "pairId": "cadence-supportive-0",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-supportive-1-0",
+    "pairId": "cadence-supportive-1",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-supportive-1-1",
+    "pairId": "cadence-supportive-1",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-supportive-2-0",
+    "pairId": "cadence-supportive-2",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-supportive-2-1",
+    "pairId": "cadence-supportive-2",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-supportive-3-0",
+    "pairId": "cadence-supportive-3",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-supportive-3-1",
+    "pairId": "cadence-supportive-3",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-supportive-4-0",
+    "pairId": "cadence-supportive-4",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-supportive-4-1",
+    "pairId": "cadence-supportive-4",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "supportive",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-strict-0-0",
+    "pairId": "cadence-strict-0",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-strict-0-1",
+    "pairId": "cadence-strict-0",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-strict-1-0",
+    "pairId": "cadence-strict-1",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-strict-1-1",
+    "pairId": "cadence-strict-1",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-strict-2-0",
+    "pairId": "cadence-strict-2",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-strict-2-1",
+    "pairId": "cadence-strict-2",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-strict-3-0",
+    "pairId": "cadence-strict-3",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-strict-3-1",
+    "pairId": "cadence-strict-3",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-strict-4-0",
+    "pairId": "cadence-strict-4",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "strict",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-strict-4-1",
+    "pairId": "cadence-strict-4",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "strict",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-tactical-0-0",
+    "pairId": "cadence-tactical-0",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-tactical-0-1",
+    "pairId": "cadence-tactical-0",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-tactical-1-0",
+    "pairId": "cadence-tactical-1",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-tactical-1-1",
+    "pairId": "cadence-tactical-1",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-tactical-2-0",
+    "pairId": "cadence-tactical-2",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-tactical-2-1",
+    "pairId": "cadence-tactical-2",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-tactical-3-0",
+    "pairId": "cadence-tactical-3",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-tactical-3-1",
+    "pairId": "cadence-tactical-3",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-tactical-4-0",
+    "pairId": "cadence-tactical-4",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-tactical-4-1",
+    "pairId": "cadence-tactical-4",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "tactical",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-youth_developer-0-0",
+    "pairId": "cadence-youth_developer-0",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-youth_developer-0-1",
+    "pairId": "cadence-youth_developer-0",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 19,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-youth_developer-1-0",
+    "pairId": "cadence-youth_developer-1",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-youth_developer-1-1",
+    "pairId": "cadence-youth_developer-1",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 20,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-youth_developer-2-0",
+    "pairId": "cadence-youth_developer-2",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-youth_developer-2-1",
+    "pairId": "cadence-youth_developer-2",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 21,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-youth_developer-3-0",
+    "pairId": "cadence-youth_developer-3",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-youth_developer-3-1",
+    "pairId": "cadence-youth_developer-3",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 22,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-youth_developer-4-0",
+    "pairId": "cadence-youth_developer-4",
+    "family": "cadence",
+    "variant": 0,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 5,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  },
+  {
+    "id": "cadence-youth_developer-4-1",
+    "pairId": "cadence-youth_developer-4",
+    "family": "cadence",
+    "variant": 1,
+    "state": {
+      "managerStyle": "youth_developer",
+      "age": 23,
+      "fitness": "healthy",
+      "morale": "neutral",
+      "playingTime": "low",
+      "training": "good",
+      "promise": "none",
+      "tacticalFit": "good",
+      "discipline": "good",
+      "stepsSinceLastMeeting": 0,
+      "criticalChange": false
+    },
+    "forbidden": [
+      "PROMISE_MEETING",
+      "WARNING",
+      "ROLE_REVIEW",
+      "RECOVERY"
+    ]
+  }
+]

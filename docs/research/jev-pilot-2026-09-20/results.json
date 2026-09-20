@@ -1,0 +1,180 @@
+{
+  "engine": {
+    "ruleset": "2.0.0",
+    "pack": "0.7.0",
+    "seedPrefix": "jev-pilot-20260920",
+    "seeds": 40,
+    "seasons": 10,
+    "mode": "FAST"
+  },
+  "policies": {
+    "random": {
+      "careers": {
+        "count": 40,
+        "failed": 0
+      },
+      "peakOvr": {
+        "mean": 68.33,
+        "p10": 61,
+        "p50": 68,
+        "p90": 76
+      },
+      "finalOvr": {
+        "mean": 68.25,
+        "p10": 61,
+        "p50": 68,
+        "p90": 76
+      },
+      "retiredAge": {
+        "mean": null,
+        "p10": null,
+        "p50": null,
+        "p90": null,
+        "n": 0
+      },
+      "seasons": {
+        "mean": 10,
+        "p10": 10,
+        "p50": 10,
+        "p90": 10
+      },
+      "injuriesPerSeason": 1.06,
+      "tier1ReachRate": 0.625,
+      "legacyBand": {
+        "BAND-SOLID": 29,
+        "BAND-COMPLETE": 6,
+        "BAND-REMEMBERED": 5
+      },
+      "tier1ReachBySeason": {
+        "5": 0.625,
+        "10": 0.625
+      }
+    },
+    "opportunity": {
+      "careers": {
+        "count": 40,
+        "failed": 0
+      },
+      "peakOvr": {
+        "mean": 68.83,
+        "p10": 62,
+        "p50": 68,
+        "p90": 76
+      },
+      "finalOvr": {
+        "mean": 68.7,
+        "p10": 62,
+        "p50": 68,
+        "p90": 76
+      },
+      "retiredAge": {
+        "mean": null,
+        "p10": null,
+        "p50": null,
+        "p90": null,
+        "n": 0
+      },
+      "seasons": {
+        "mean": 10,
+        "p10": 10,
+        "p50": 10,
+        "p90": 10
+      },
+      "injuriesPerSeason": 1.36,
+      "tier1ReachRate": 0.1,
+      "legacyBand": {
+        "BAND-REMEMBERED": 13,
+        "BAND-SOLID": 25,
+        "BAND-COMPLETE": 2
+      },
+      "tier1ReachBySeason": {
+        "5": 0.1,
+        "10": 0.1
+      }
+    },
+    "per-visit": {
+      "careers": {
+        "count": 40,
+        "failed": 0
+      },
+      "peakOvr": {
+        "mean": 68,
+        "p10": 61,
+        "p50": 68,
+        "p90": 76
+      },
+      "finalOvr": {
+        "mean": 67.9,
+        "p10": 61,
+        "p50": 67,
+        "p90": 76
+      },
+      "retiredAge": {
+        "mean": null,
+        "p10": null,
+        "p50": null,
+        "p90": null,
+        "n": 0
+      },
+      "seasons": {
+        "mean": 10,
+        "p10": 10,
+        "p50": 10,
+        "p90": 10
+      },
+      "injuriesPerSeason": 0.95,
+      "tier1ReachRate": 0.5,
+      "legacyBand": {
+        "BAND-REMEMBERED": 5,
+        "BAND-SOLID": 29,
+        "BAND-COMPLETE": 6
+      },
+      "tier1ReachBySeason": {
+        "5": 0.5,
+        "10": 0.5
+      }
+    }
+  },
+  "pairedPeakOvrDifference": {
+    "mean": 0.5,
+    "bootstrap95": [
+      0.075,
+      0.95
+    ],
+    "method": "paired percentile bootstrap 5000 resamples, seed 20260920; exploratory"
+  },
+  "trace": {
+    "resolvedEvents": 916,
+    "uniqueEventIds": 51,
+    "repeatedEventOccurrences": 382,
+    "nonInjuryNonNationalOccurrences": 567,
+    "nonInjuryNonNationalRepeatedOccurrences": 115,
+    "agentDiscontentOccurrences": 104,
+    "agentDiscontentCareers": 25,
+    "agentDiscontentRepeated": 79,
+    "agentDiscontentRepeatedWithRelationshipChange": 0,
+    "agentDiscontentRepeatedWithoutRelationshipChange": 79,
+    "emptyManagerMemory": 266,
+    "observerHashesEqual": true
+  },
+  "perVisitIntervention": {
+    "resolvedEvents": 901,
+    "uniqueEventIds": 50,
+    "repeatedEventOccurrences": 380,
+    "nonInjuryNonNationalOccurrences": 574,
+    "nonInjuryNonNationalRepeatedOccurrences": 128,
+    "agentDiscontentOccurrences": 104,
+    "agentDiscontentCareers": 25,
+    "agentDiscontentRepeated": 79,
+    "agentDiscontentRepeatedWithRelationshipChange": 38,
+    "agentDiscontentRepeatedWithoutRelationshipChange": 41,
+    "emptyManagerMemory": 277,
+    "choiceChangedOnlyInCopiedCLI": true
+  },
+  "jev": {
+    "status": "NOT_RUN",
+    "reason": "TYPESAFE_API_KEY unavailable",
+    "requests": 0,
+    "measuredCost": 0
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "model": "jev-1.13.0",
+  "state": {
+    "managerStyle": "supportive",
+    "age": 19,
+    "fitness": "healthy",
+    "morale": "neutral",
+    "playingTime": "low",
+    "training": "good",
+    "promise": "broken",
+    "tacticalFit": "good",
+    "discipline": "good",
+    "stepsSinceLastMeeting": 5,
+    "criticalChange": false
+  },
+  "questions": {
+    "reaction": {
+      "type": "choice",
+      "instructions": "Choose the next manager reaction fitting the manager style and player situation. Never offer play to an injured player. Do not invent problems or promises. Avoid repeated intervention after a recent meeting without an urgent reason. Respect player agency.",
+      "criteria": {
+        "NONE": "Do not interrupt the player; allow ordinary training to continue.",
+        "ENCOURAGE": "Privately encourage a discouraged player without promising selection.",
+        "WARNING": "Privately address a documented discipline problem.",
+        "OPPORTUNITY": "Offer an eligible, healthy player a limited playing opportunity.",
+        "PROMISE_MEETING": "Acknowledge an unmet playing-time promise and discuss a realistic plan.",
+        "ROLE_REVIEW": "Discuss a concrete tactical-role mismatch.",
+        "RECOVERY": "Protect an injured player with a recovery discussion."
+      }
+    }
+  }
+}

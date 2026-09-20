@@ -1,0 +1,72 @@
+{
+  "contextFreeControl": {
+    "n": 200,
+    "forbidden": 103,
+    "counts": {
+      "WARNING": 30,
+      "NONE": 38,
+      "RECOVERY": 28,
+      "OPPORTUNITY": 36,
+      "PROMISE_MEETING": 30,
+      "ENCOURAGE": 16,
+      "ROLE_REVIEW": 22
+    },
+    "pairedChoiceChanges": {
+      "promise": {
+        "changed": 0,
+        "pairs": 20
+      },
+      "injury": {
+        "changed": 0,
+        "pairs": 20
+      },
+      "tactics": {
+        "changed": 0,
+        "pairs": 20
+      },
+      "discipline": {
+        "changed": 0,
+        "pairs": 20
+      },
+      "cadence": {
+        "changed": 0,
+        "pairs": 20
+      }
+    }
+  },
+  "proposedRules": {
+    "n": 200,
+    "forbidden": 0,
+    "counts": {
+      "ENCOURAGE": 25,
+      "PROMISE_MEETING": 20,
+      "NONE": 70,
+      "OPPORTUNITY": 25,
+      "RECOVERY": 20,
+      "ROLE_REVIEW": 20,
+      "WARNING": 20
+    },
+    "pairedChoiceChanges": {
+      "promise": {
+        "changed": 20,
+        "pairs": 20
+      },
+      "injury": {
+        "changed": 20,
+        "pairs": 20
+      },
+      "tactics": {
+        "changed": 20,
+        "pairs": 20
+      },
+      "discipline": {
+        "changed": 20,
+        "pairs": 20
+      },
+      "cadence": {
+        "changed": 10,
+        "pairs": 20
+      }
+    }
+  }
+}

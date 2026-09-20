@@ -8,6 +8,7 @@
 
 - **T-7-037**: 계약 서명 팝업과 빠른 필기 획 보존, 터치 스크롤 방지, 적용/취소 흐름. PR [#270](https://github.com/tasddc1226/offside-football-simulator/pull/270), main `38c8143`. 설치·정적 검사·패키지 테스트·build/bundle·서명/첫 계약/키보드 E2E 5개와 staging CI 통과. 운영 deploy [35506987694](https://github.com/tasddc1226/offside-football-simulator/actions/runs/35506987694) 성공. 운영 360px 다크 팝업의 마우스·터치 필기·계약 확정·새로고침 복원까지 통과.
 - **Jev 검토 완료**: [공식 자료·코드 대조 분석](../research/jev-offside-assessment-2026-09-20.md). 감독 반응 선택을 별도 실험 도구에서 기존 규칙과 비교하는 방안을 권고했다. API 실험·유료 사용·운영 연동은 하지 않았다.
+- **Jev 파일럿 일부 완료**: [로컬 실험 결과](../research/jev-pilot-2026-09-20/README.md). 40개 시드 × 10시즌의 기존 정책 2종 비교, 관측 해시 40/40 일치, 방문별 선택 민감도 실험, 합성 감독 반응 200개·실행기 준비. 반복 에이전트 사건의 수치 효과 소진을 확인했다. Jev API 키가 없어 실제 모델 호출·한국어/지연 비교는 미실행.
 
 ## 이전 상태 (2026-09-19)
 
