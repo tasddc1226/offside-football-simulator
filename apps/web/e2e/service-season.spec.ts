@@ -17,8 +17,8 @@ const TEST_SEASON: ServiceSeasonCurrent = {
   isTest: true,
   startsAt: '2026-09-08T00:00:00Z',
   endsAt: '2026-10-31T00:00:00Z',
-  rulesetVersion: '1.0.0',
-  contentPackVersion: '0.1.0',
+  rulesetVersion: '3.4.0',
+  contentPackVersion: '0.13.0',
   notice: 'LINE_TEST',
 };
 
@@ -170,8 +170,8 @@ test.describe('실제 api로 서비스 시즌·분석 이벤트 확인', () => {
     const currentBody = (await current.json()) as { data: ServiceSeasonCurrent };
     expect(currentBody.data.id).toBe('svc_kickoff');
     expect(currentBody.data.isTest).toBe(false);
-    expect(currentBody.data.rulesetVersion).toBe('3.3.0');
-    expect(currentBody.data.contentPackVersion).toBe('0.12.0');
+    expect(currentBody.data.rulesetVersion).toBe('3.4.0');
+    expect(currentBody.data.contentPackVersion).toBe('0.13.0');
 
     await page.goto('/onboarding');
     await page.getByLabel('이름').fill('김서준');

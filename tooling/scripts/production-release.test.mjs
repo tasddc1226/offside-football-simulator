@@ -19,7 +19,7 @@ const proposal = validateProposal({
 
 describe('production release guards', () => {
   it('keeps non-production seeds and staging expectations on the release target', () => {
-    const expectedPair = "'3.3.0', '0.12.0'";
+    const expectedPair = "'3.4.0', '0.13.0'";
     const synchronizedFiles = [
       '../../apps/api/seeds/bootstrap-non-production.sql',
       '../../apps/api/seeds/local.sql',
@@ -33,9 +33,9 @@ describe('production release guards', () => {
         expect(source, path).toContain(expectedPair);
       } else {
         expect(source, path).toMatch(/rulesetVersion|expectedRulesetVersion/);
-        expect(source, path).toContain("'3.3.0'");
+        expect(source, path).toContain("'3.4.0'");
         expect(source, path).toMatch(/contentPackVersion|expectedContentPackVersion/);
-        expect(source, path).toContain("'0.12.0'");
+        expect(source, path).toContain("'0.13.0'");
       }
     }
   });
@@ -68,12 +68,12 @@ describe('production release guards', () => {
     ]);
   });
 
-  it('targets the 3.3.0/0.12.0 manifest from the actual 3.1.0/0.10.0 predecessor', () => {
-    expect(PRODUCTION_SEASON.rulesetVersion).toBe('3.3.0');
-    expect(PRODUCTION_SEASON.contentPackVersion).toBe('0.12.0');
+  it('targets the 3.4.0/0.13.0 manifest from the actual 3.3.0/0.12.0 predecessor', () => {
+    expect(PRODUCTION_SEASON.rulesetVersion).toBe('3.4.0');
+    expect(PRODUCTION_SEASON.contentPackVersion).toBe('0.13.0');
     expect(PREVIOUS_PRODUCTION_VERSION).toEqual({
-      rulesetVersion: '3.1.0',
-      contentPackVersion: '0.10.0',
+      rulesetVersion: '3.3.0',
+      contentPackVersion: '0.12.0',
     });
   });
 
@@ -105,19 +105,19 @@ describe('production release guards', () => {
     const previous = { ...proposal, ...PREVIOUS_PRODUCTION_VERSION };
     const decision = decideSeason([previous], proposal);
     expect(decision.action).toBe('activate');
-    expect(decision.sql).toContain("ruleset_version = '3.1.0'");
-    expect(decision.sql).toContain("content_pack_version = '0.10.0'");
+    expect(decision.sql).toContain("ruleset_version = '3.3.0'");
+    expect(decision.sql).toContain("content_pack_version = '0.12.0'");
     expect(decision.sql).toContain(
-      "SET ruleset_version = '3.3.0', content_pack_version = '0.12.0'",
+      "SET ruleset_version = '3.4.0', content_pack_version = '0.13.0'",
     );
     expect(decision.sql).toContain("starts_at = '2026-09-05T15:00:00Z'");
     expect(decision.sql).toContain('ends_at IS NULL');
     expect(decision.sql).not.toMatch(/SET (?:starts_at|ends_at|status|challenge_set_id|is_test)/);
     expect(decision.rollbackSql).toContain(
-      "SET ruleset_version = '3.1.0', content_pack_version = '0.10.0'",
+      "SET ruleset_version = '3.3.0', content_pack_version = '0.12.0'",
     );
-    expect(decision.rollbackSql).toContain("ruleset_version = '3.3.0'");
-    expect(decision.rollbackSql).toContain("content_pack_version = '0.12.0'");
+    expect(decision.rollbackSql).toContain("ruleset_version = '3.4.0'");
+    expect(decision.rollbackSql).toContain("content_pack_version = '0.13.0'");
     expect(decision.rollbackSql).toContain("starts_at = '2026-09-05T15:00:00Z'");
     expect(decision.rollbackSql).toContain('ends_at IS NULL');
     expect(() => decideSeason([{ ...previous, contentPackVersion: '0.4.0' }], proposal)).toThrow(
