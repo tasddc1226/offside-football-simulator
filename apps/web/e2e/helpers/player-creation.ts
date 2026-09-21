@@ -88,7 +88,7 @@ export async function fillPlayerInfo(
   await page.getByLabel('이름', { exact: true }).fill(name);
   await page.locator('summary').filter({ hasText: '상세 프로필' }).click();
   await page.getByLabel('성별', { exact: true }).selectOption('MALE');
-  await page.getByLabel('국적').selectOption('KR');
+  await page.getByLabel('국적', { exact: true }).selectOption('KR');
   await page.getByRole('radio', { name: '왼발' }).click();
   await page.getByRole('radio', { name: /윙어/ }).click();
 }
