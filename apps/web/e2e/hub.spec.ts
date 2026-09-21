@@ -154,6 +154,7 @@ test('공지 API가 실패하면(캐시 없음) 빈 목록 문구로 대체된�
   await page.goto('/');
 
   await expectRoute(page, /\/$/);
+  await page.getByText('소식 · 게임 안내', { exact: true }).click();
   await expect(page.getByText('아직 공지가 없습니다.')).toBeVisible();
   await expect(page.getByText('0개')).toBeVisible();
 });
