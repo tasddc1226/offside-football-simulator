@@ -15,6 +15,9 @@ const PUBLIC_PATHS = new Set([
   '/faq/index.html',
 ]);
 const APP_PATHS = [
+  /^\/locker-room\/?$/,
+  /^\/friendlies\/?$/,
+  /^\/articles\/[^/]+\/?$/,
   /^\/onboarding\/?$/,
   /^\/settings\/?$/,
   /^\/legal\/(terms|privacy)\/?$/,

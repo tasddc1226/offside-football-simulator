@@ -40,8 +40,33 @@ describe('public web worker route policy', () => {
     expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow');
     expect(await response.text()).not.toContain('canonical');
   });
+  it.each([
+    '/locker-room',
+    '/locker-room/',
+    '/friendlies',
+    '/friendlies/',
+    '/articles/article-id',
+    '/articles/article-id/',
+    '/articles/article-id?utm_source=share',
+  ])('serves the growth route %s as a noindex app shell', async (path) => {
+    const response = await worker.fetch(
+      new Request(`https://example.test${path}`),
+      environment(true),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow');
+    expect(await response.text()).toContain('shell');
+  });
   it('returns real noindex 404s for disabled sitemap and unknown routes', async () => {
-    for (const path of ['/sitemap.xml', '/not-a-route']) {
+    for (const path of [
+      '/sitemap.xml',
+      '/not-a-route',
+      '/articles',
+      '/articles/',
+      '/articles/article-id/extra',
+      '/friendlies/extra',
+      '/locker-room/extra',
+    ]) {
       const response = await worker.fetch(
         new Request(`https://example.test${path}`),
         environment(),
