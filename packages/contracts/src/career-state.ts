@@ -1137,6 +1137,26 @@ export const InjuryEpisodeSchema = z
 export const RelationTargetSchema = z.enum(['managerTrust', 'captain', 'rival', 'fans', 'agent']);
 
 // T-4-001 D-50: 관계 변화 감사 로그 항목 하나. domain `RelationshipLogEntry`와 동일.
+const CoachActorSchema = z.strictObject({ id: z.string().min(1), name: z.string().min(1), teamId: z.string().min(1) });
+const CoachScoreSchema = z.strictObject({ goalsFor: z.number().int().nonnegative(), goalsAgainst: z.number().int().nonnegative() });
+export const CoachChoiceMemorySchema = z.strictObject({
+  id: z.string().min(1), actor: CoachActorSchema, seasonIndex: z.number().int().positive(), step: z.number().int().min(1).max(12),
+  matchId: z.string().min(1), chapterId: z.string().min(1), decisionId: z.string().min(1), optionId: z.string().min(1),
+  action: z.enum(['SHOT', 'PASS', 'BLOCK', 'SAVE']), outcomeKind: ChapterOutcomeKindSchema, before: CoachScoreSchema, after: CoachScoreSchema, trustDelta: z.number().int().min(-100).max(100),
+});
+export const CoachMemoryReactionSchema = z.strictObject({
+  id: z.string().min(1), kind: z.enum(['FOLLOW_UP', 'REUNION']), seasonIndex: z.number().int().positive(), actor: CoachActorSchema, memory: CoachChoiceMemorySchema,
+  trustBefore: z.number().int().min(0).max(100), trustAfter: z.number().int().min(0).max(100), trustDelta: z.number().int().min(-100).max(100),
+});
+export const CoachMemoryStateSchema = z.strictObject({ version: z.literal('COACH_MEMORY_V1'), memories: z.array(CoachChoiceMemorySchema).max(256), reactions: z.array(CoachMemoryReactionSchema).max(128), consumed: z.array(z.strictObject({ memoryId: z.string().min(1), kind: z.enum(['FOLLOW_UP', 'REUNION']) })).max(512) }).superRefine((value, ctx) => {
+  const unique = (ids: string[]) => new Set(ids).size === ids.length;
+  if (!unique(value.memories.map((entry) => entry.id)) || !unique(value.reactions.map((entry) => entry.id)) || !unique(value.consumed.map((entry) => `${entry.memoryId}:${entry.kind}`))) ctx.addIssue({ code: 'custom', message: 'Duplicate coach memory receipt' });
+  for (const entry of value.reactions) {
+    if (entry.actor.id !== entry.memory.actor.id || entry.actor.name !== entry.memory.actor.name || entry.actor.teamId !== entry.memory.actor.teamId || entry.seasonIndex <= entry.memory.seasonIndex || entry.trustAfter - entry.trustBefore !== entry.trustDelta) ctx.addIssue({ code: 'custom', message: 'Inconsistent coach reaction provenance' });
+  }
+  for (const entry of value.consumed) if (!value.memories.some((memory) => memory.id === entry.memoryId)) ctx.addIssue({ code: 'custom', message: 'Unknown consumed coach memory' });
+});
+
 export const RelationshipLogEntrySchema = z.strictObject({
   target: RelationTargetSchema,
   delta: z.number().int(),
@@ -1279,6 +1299,7 @@ const CareerStateShapeSchema = z.strictObject({
   health: z.strictObject({ episodes: z.array(InjuryEpisodeSchema) }),
   // T-4-001 D-50: 관계 변화 감사 로그(최대 길이는 룰셋 relationshipRules.logMax).
   relationshipLog: z.array(RelationshipLogEntrySchema),
+  characterMemory: CoachMemoryStateSchema.optional(),
   // T-4-001 D-50: 대상별 기억 태그(축당 최대 relationshipRules.memoryTagsMax).
   memoryTags: z.strictObject({
     managerTrust: z.array(z.string()),

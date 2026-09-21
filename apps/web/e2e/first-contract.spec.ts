@@ -5,19 +5,37 @@
 // 전 서사 이벤트(EVT-CON-002·003 및 상시 조건의 EVT-REL-001 등)가 도메인 가중 랜덤으로 몇 차례
 // 뜨고 소진된 뒤에야 제안(OFFERS)이 열린다. 그래서 특정 이벤트·화면을 고정하지 않고, "이벤트 화면
 // (SCR-007/008/013)이면 첫 선택지를 확정하고 결과를 다음으로 넘긴다"를 offers 도착까지 반복한다.
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
   advanceUntilOffers,
   fulfillJson,
   goToConfirm,
   META,
   signFirstOffer,
+  readCurrentCareerState,
 } from './helpers/player-creation.js';
 
 // SCR-008 입단 테스트의 진행 연출(Stepper)을 건너뛰어 결정론적으로 만든다 — useReducedMotion()이
 // OS 미디어쿼리(SYSTEM 기본값)를 구독하므로, 브라우저 컨텍스트 자체를 reduced-motion으로 연다.
 // reducedMotion은 PlaywrightTestOptions 최상위가 아니라 BrowserContextOptions에 있다(contextOptions로 감싸야 한다).
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
+
+/** The player-life dashboard shows the first unstarted season, not the retired legacy progressbar. */
+async function expectFirstPreseasonReady(page: Page): Promise<void> {
+  const progress = page.getByRole('region', { name: '선수 인생 진행' });
+  await expect(progress).toBeVisible();
+  await expect(progress.locator('strong')).toHaveText('1/12 시즌');
+  for (const label of ['1. 시즌 초반', '2. 주전 경쟁', '3. 마지막 승부']) {
+    await expect(progress.getByText(label, { exact: true })).toHaveAttribute('data-active', 'false');
+    await expect(progress.getByText(label, { exact: true })).toHaveAttribute('data-complete', 'false');
+  }
+  const saved = await readCurrentCareerState(page);
+  expect(saved.season).toBeNull();
+  expect(saved.seasonHistory).toHaveLength(0);
+  expect(saved.pending).toBeNull();
+  expect(saved.contract).not.toBeNull();
+  await expect(page.getByRole('region', { name: '지금 할 일' }).getByRole('heading', { name: '프리시즌 계획' })).toBeVisible();
+}
 
 test('온보딩부터 첫 계약 뒤 복구 안내·프리시즌까지: SCR-002~004 → 이벤트 → SCR-009 → SCR-010 → SCR-029', async ({
   page,
@@ -96,10 +114,7 @@ test('온보딩부터 첫 계약 뒤 복구 안내·프리시즌까지: SCR-002~
   expect(profileRequests).toBeGreaterThan(profileRequestsAtRecovery);
   expect(recoveryCodeRequests).toBe(1);
   await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
-  await expect(page.getByRole('progressbar', { name: '시즌 진행' })).toHaveAttribute(
-    'aria-valuenow',
-    '0',
-  );
+  await expectFirstPreseasonReady(page);
   await expect(page.getByRole('link', { name: '계획하러 가기' })).toBeVisible();
   await expect(page.getByText(/step 12 · 시즌 정산/)).toHaveCount(0);
 
@@ -187,9 +202,6 @@ test('첫 계약 뒤 첫 복구 코드 발급 실패는 recovery URL 새로고�
 
   await page.getByRole('button', { name: '계속' }).click();
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
-  await expect(page.getByRole('progressbar', { name: '시즌 진행' })).toHaveAttribute(
-    'aria-valuenow',
-    '0',
-  );
+  await expectFirstPreseasonReady(page);
   await expect(page.getByRole('link', { name: '계획하러 가기' })).toBeVisible();
 });

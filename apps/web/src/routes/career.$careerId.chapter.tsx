@@ -1,5 +1,6 @@
 import { matchReadiness, weightMatchOutcomes, type CareerState } from '@offside/domain';
 import { DRILL_LABEL } from '../shared/development-workshop.js';
+import { CharacterMemoryPanel, characterChoiceTrustDelta, hasCharacterChoiceMemory } from '../shared/character-memory.js';
 import '../shared/player-life.css';
 // SCR-031 핵심 경기 챕터. 한 라우트 안에서 경기 전 맥락(상단 고정) → 판단 1~3개(ChoiceCard,
 // RESOLVE_CHAPTER) → 경기 결과까지 이동 없이 이어진다. 서버 상태(pending.resolved · season.chapters ·
@@ -194,12 +195,16 @@ function formatSignedTenths(tenths: number): string {
 
 function aggregateEffectDeltas(
   resolved: ResolvedChapterDecision[],
+  actualTrustDelta: (decisionId: string) => number | null = () => null,
 ): Array<{ target: string; delta: number }> {
   const totals = new Map<string, number>();
-  for (const { outcome } of resolved) {
+  for (const { outcome, entry } of resolved) {
+    const actual = actualTrustDelta(entry.decisionId);
     for (const effect of outcome.effects) {
+      if (actual !== null && effect.target === 'managerTrust') continue;
       totals.set(effect.target, (totals.get(effect.target) ?? 0) + effect.delta);
     }
+    if (actual !== null) totals.set('managerTrust', (totals.get('managerTrust') ?? 0) + actual);
   }
   return Array.from(totals.entries()).map(([target, delta]) => ({ target, delta }));
 }
@@ -299,6 +304,7 @@ interface DecisionResultProps {
 function decisionResultCardProps(
   resolved: DecisionResultProps['resolved'],
   tokens: DecisionResultProps['tokens'],
+  actualTrustDelta: number | null = null,
 ) {
   const { option, outcome } = resolved;
   return {
@@ -306,7 +312,10 @@ function decisionResultCardProps(
     kindLabel: OUTCOME_KIND_LABEL_KO[outcome.kind],
     title: outcome.title,
     body: `${option.label} — ${renderNarrative(outcome.narrative.situation, tokens)}`,
-    effects: outcome.effects.map(formatEffectSummary),
+    effects: [
+      ...outcome.effects.filter((effect) => actualTrustDelta === null || effect.target !== 'managerTrust').map(formatEffectSummary),
+      ...(actualTrustDelta === null ? [] : [`감독 신뢰 실제 변화 ${actualTrustDelta > 0 ? '+' : ''}${actualTrustDelta}`]),
+    ],
     tags: resultTagLabels(outcome.addTags ?? []),
   };
 }
@@ -318,7 +327,8 @@ function CollapsibleDecisionResult({
   resolved,
   tokens,
   timeLabel,
-}: DecisionResultProps & { index: number; timeLabel?: string }) {
+  actualTrustDelta,
+}: DecisionResultProps & { index: number; timeLabel?: string; actualTrustDelta: number | null }) {
   const [expanded, setExpanded] = useState(false);
   const { option, outcome } = resolved;
 
@@ -343,7 +353,7 @@ function CollapsibleDecisionResult({
 
   return (
     <div className="flex flex-col gap-os-1">
-      <ResultCard {...decisionResultCardProps(resolved, tokens)} />
+      <ResultCard {...decisionResultCardProps(resolved, tokens, actualTrustDelta)} />
       <button
         type="button"
         onClick={() => setExpanded(false)}
@@ -576,6 +586,7 @@ function ChapterScreen() {
           index={index}
           resolved={resolved}
           tokens={tokens}
+          actualTrustDelta={characterChoiceTrustDelta(state, view.match.id, resolved.entry.decisionId)}
           {...(causal
             ? { timeLabel: `${view.match.decisionWindow?.minute ?? view.match.minutes}분` }
             : {})}
@@ -585,7 +596,8 @@ function ChapterScreen() {
       {cursor < decisionsTotal ? (
         view.resolved.length > cursor ? (
           <div className="flex flex-col gap-os-3">
-            <ResultCard {...decisionResultCardProps(view.resolved[cursor]!, tokens)} />
+            <ResultCard {...decisionResultCardProps(view.resolved[cursor]!, tokens, characterChoiceTrustDelta(state, view.match.id, view.resolved[cursor]!.entry.decisionId))} />
+            <CharacterMemoryPanel state={state} matchId={view.match.id} decisionId={view.definition.decisions[cursor]!.id} />
             <div className="os-action-dock">
               <Button variant="primary" onClick={() => setCursor((current) => current + 1)}>
                 {cursor + 1 < decisionsTotal ? '다음 판단' : '경기 결과'}
@@ -618,7 +630,7 @@ function ChapterScreen() {
             ? '대표팀 데뷔 결과가 확정되었습니다'
             : `경기 결과 ${view.match.result.goalsFor} 대 ${view.match.result.goalsAgainst}, 평점 ${ratingText(view.match.ratingTenths)}`}
         >
-          <ChapterResultSection view={view} careerId={careerId} promiseOutlook={promiseOutlook} />
+          <ChapterResultSection state={state} view={view} careerId={careerId} promiseOutlook={promiseOutlook} />
         </GameResultReveal>
       )}
 
@@ -634,10 +646,12 @@ function ChapterScreen() {
 }
 
 function ChapterResultSection({
+  state,
   view,
   careerId,
   promiseOutlook,
 }: {
+  state: CareerState;
   view: ChapterView;
   careerId: string;
   promiseOutlook: AppearancePromiseOutlook | null;
@@ -646,7 +660,7 @@ function ChapterResultSection({
   const isNationalTeam = view.context.kind === 'NATIONAL_TEAM';
   const nationalSummary = deriveNationalTeamResultSummary(view);
   const stats = positionStatEntries(match.stats);
-  const changeLines = aggregateEffectDeltas(view.resolved).map(({ target, delta }) => {
+  const changeLines = aggregateEffectDeltas(view.resolved, (decisionId) => characterChoiceTrustDelta(state, match.id, decisionId)).map(({ target, delta }) => {
     const label = (EFFECT_TARGET_LABEL_KO as Record<string, string | undefined>)[target] ?? target;
     const sign = delta > 0 ? '+' : '';
     return `${label} ${sign}${delta}`;
@@ -715,7 +729,7 @@ function ChapterResultSection({
                   {receipt.before.goalsFor}:{receipt.before.goalsAgainst} → {receipt.after.goalsFor}
                   :{receipt.after.goalsAgainst}
                 </p>
-                <p>
+                {!hasCharacterChoiceMemory(state, match.id, receipt.decisionId) && <p>
                   {receipt.managerTrustDelta > 0
                     ? '감독이 엄지를 들어 보였다.'
                     : receipt.managerTrustDelta < 0
@@ -723,12 +737,14 @@ function ChapterResultSection({
                       : '감독이 다음 플레이를 지켜본다.'}{' '}
                   감독 신뢰 {receipt.managerTrustDelta > 0 ? '+' : ''}
                   {receipt.managerTrustDelta}
-                </p>
+                </p>}
               </div>
             );
           })}
         </section>
       )}
+
+      {!isNationalTeam && <CharacterMemoryPanel state={state} matchId={match.id} />}
 
       {nationalSummary !== null ? (
         <>

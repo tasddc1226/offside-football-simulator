@@ -51,6 +51,7 @@ const RULESET_MANIFESTS: Readonly<Record<string, unknown>> = Object.freeze({
   '3.0.0': ruleset300Manifest,
   '3.1.0': ruleset310Manifest,
   '3.2.0': ruleset320Manifest,
+  '3.3.0': ruleset330Manifest,
 });
 
 /** Return existing registry checksums, not a second hash dialect of parsed objects.
@@ -87,6 +88,7 @@ export function loadRetirementArtifacts(
     (rulesetVersion === '2.0.0' && contentPackVersion === '0.7.0') ||
     (rulesetVersion === '2.1.0' && contentPackVersion === '0.8.0') ||
     (rulesetVersion === '3.2.0' && contentPackVersion === '0.11.0') ||
+    (rulesetVersion === '3.3.0' && contentPackVersion === '0.12.0') ||
     (rulesetVersion === '3.1.0' && contentPackVersion === '0.10.0') ||
     (rulesetVersion === '3.0.0' && contentPackVersion === '0.9.0');
   const activatesLegacy110WithoutPopulation =
@@ -120,3 +122,4 @@ export function loadRetirementArtifacts(
           }),
   });
 }
+import ruleset330Manifest from '../rulesets/3.3.0/manifest.json' with { type: 'json' };

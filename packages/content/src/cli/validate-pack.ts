@@ -31,6 +31,10 @@ export function validatePack(
 ): PackValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
+  if (pack.fileContents.has('narrative/coach-memory.json')) {
+    const parsed = CharacterMemoryCopySchema.safeParse(pack.fileContents.get('narrative/coach-memory.json'));
+    if (!parsed.success) errors.push(...formatZodError('narrative/coach-memory.json', parsed.error));
+  }
 
   const manifestResult = PackManifestSchema.safeParse(pack.manifestRaw);
   if (!manifestResult.success) {
@@ -453,3 +457,4 @@ function checkInjuryPreview(
     }
   }
 }
+import { CharacterMemoryCopySchema } from '../character-memory.ts';

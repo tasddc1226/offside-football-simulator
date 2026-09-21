@@ -50,6 +50,8 @@ export function loadPack(dir: string): LoadedPack {
   for (const event of events) fileContents.set(event.file, event.raw);
   for (const chapter of chapters) fileContents.set(chapter.file, chapter.raw);
   fileContents.set(narrativeTokensFile, narrativeTokensRaw);
+  const coachMemoryFile = 'narrative/coach-memory.json';
+  if (existsSync(join(dir, coachMemoryFile))) fileContents.set(coachMemoryFile, parseJsonFile(join(dir, coachMemoryFile)));
 
   return { dir, manifestPath, manifestRaw, events, chapters, narrativeTokensFile, narrativeTokensRaw, fileContents };
 }

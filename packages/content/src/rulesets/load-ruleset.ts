@@ -37,6 +37,7 @@ export const RULESET_VERSIONS = [
   '3.0.0',
   '3.1.0',
   '3.2.0',
+  '3.3.0',
 ] as const;
 export type RulesetVersion = (typeof RULESET_VERSIONS)[number];
 
@@ -59,6 +60,7 @@ const RULESET_SOURCES: Record<RulesetVersion, unknown> = {
   '3.0.0': ruleset300,
   '3.1.0': ruleset310,
   '3.2.0': ruleset320,
+  '3.3.0': ruleset330,
 };
 
 /** 번들에 포함된 룰셋 JSON을 `RulesetSchema`로 검증해 동기로 돌려준다. */
@@ -68,3 +70,4 @@ export function loadRuleset(version: string): Ruleset {
   }
   return RulesetSchema.parse(RULESET_SOURCES[version as RulesetVersion]);
 }
+import ruleset330 from '../../rulesets/3.3.0/ruleset.json' with { type: 'json' };

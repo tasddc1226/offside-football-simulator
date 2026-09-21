@@ -1133,7 +1133,8 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   const managerChanged =
     reservedManagerBelongsToTeam &&
     (reservedManager?.id !== previousManagerId || previousTeamId !== state.contract.teamId);
-  const managerTrust = managerChanged ? manager.trustBase : state.relationships.managerTrust;
+  const coachReaction = reactToCoachMemory(state, ruleset, manager, team.id, managerChanged ? manager.trustBase : state.relationships.managerTrust);
+  const managerTrust = coachReaction.managerTrust;
 
   const generatedCompetitors = generateCompetitors(
     ruleset,
@@ -1176,6 +1177,7 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
 
   const stateAfterSelection: CareerState = {
     ...state,
+    ...(coachReaction.characterMemory === undefined ? {} : { characterMemory: coachReaction.characterMemory }),
     nextManager: null,
     context: { ...state.context, tacticalFit, squadStatus },
     relationships: { ...state.relationships, managerTrust },
@@ -4383,3 +4385,4 @@ export function verifySnapshot(
 
   return { ok: true };
 }
+import { reactToCoachMemory } from './character-memory.js';

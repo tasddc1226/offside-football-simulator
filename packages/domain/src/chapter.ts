@@ -555,6 +555,8 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
     season: { ...season, matches, playerStats, lastRatingTenths, chapters },
   };
 
-  return { ok: true, state: affectsMatch ? reconcileMatchDecision(nextState, input.ruleset) : nextState, roll: rolled.value, outcomeId: chosen.id, appliedEffects: effectResult.applied,
+  const remembered = affectsMatch ? rememberCoachChoice(nextState, input.ruleset, { chapterId: pending.chapterId, decisionId: input.decisionId, optionId: input.optionId, match }) : nextState;
+  return { ok: true, state: affectsMatch ? reconcileMatchDecision(remembered, input.ruleset) : remembered, roll: rolled.value, outcomeId: chosen.id, appliedEffects: effectResult.applied,
   };
 }
+import { rememberCoachChoice } from './character-memory.js';

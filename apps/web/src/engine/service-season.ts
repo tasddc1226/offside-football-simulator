@@ -20,8 +20,8 @@ async function fetchServiceSeason(): Promise<ServiceSeasonCurrent> {
       id: 'svc_simulator_preview',
       name: '선수 육성 프리뷰',
       isTest: true,
-      rulesetVersion: '3.2.0',
-      contentPackVersion: '0.11.0',
+      rulesetVersion: '3.3.0',
+      contentPackVersion: '0.12.0',
     };
   }
   const result = await getServiceSeasonCurrent();

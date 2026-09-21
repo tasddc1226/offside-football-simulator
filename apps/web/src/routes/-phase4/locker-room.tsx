@@ -1,6 +1,7 @@
 import type { EventDecisionContext } from '../../shared/event-screen.js';
 import { relationshipReasonLabel, relationTierLabel, relationshipDirectionArrow, SQUAD_ROLE_LABELS } from '../../shared/labels.js';
 import type { CareerState, RelationTarget, Ruleset } from '@offside/domain';
+import { CharacterMemoryPanel } from '../../shared/character-memory.js';
 
 const RELATIONS: readonly { target: RelationTarget; label: string }[] = [
   { target: 'managerTrust', label: '감독 신뢰' },
@@ -59,6 +60,7 @@ export function LockerRoomContext({ state, ruleset }: EventDecisionContext) {
           </>
         )}
       </section>
+      <CharacterMemoryPanel state={state} />
       <div className="grid grid-cols-1 gap-os-2 sm:grid-cols-2" aria-label="관계 5축">
         {RELATIONS.map(({ target, label }) => (
           <div key={target} className="rounded-os-m bg-os-surface-2 p-os-3">

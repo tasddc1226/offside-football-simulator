@@ -935,7 +935,42 @@ export type SeasonManager = {
   trustBase: number;
 };
 
+export type CoachActor = { id: string; name: string; teamId: string };
+export type CoachChoiceMemory = {
+  id: string;
+  actor: CoachActor;
+  seasonIndex: number;
+  step: number;
+  matchId: string;
+  chapterId: string;
+  decisionId: string;
+  optionId: string;
+  action: 'SHOT' | 'PASS' | 'BLOCK' | 'SAVE';
+  outcomeKind: ChapterOutcomeKind;
+  before: { goalsFor: number; goalsAgainst: number };
+  after: { goalsFor: number; goalsAgainst: number };
+  trustDelta: number;
+};
+export type CoachMemoryReaction = {
+  id: string;
+  kind: 'FOLLOW_UP' | 'REUNION';
+  seasonIndex: number;
+  actor: CoachActor;
+  memory: CoachChoiceMemory;
+  trustBefore: number;
+  trustAfter: number;
+  trustDelta: number;
+};
+export type CoachMemoryState = {
+  version: 'COACH_MEMORY_V1';
+  memories: CoachChoiceMemory[];
+  reactions: CoachMemoryReaction[];
+  consumed: Array<{ memoryId: string; kind: 'FOLLOW_UP' | 'REUNION' }>;
+};
+
 export type CareerState = {
+  /** Opt-in actor snapshots; absent on historical careers, never inferred from generic relation logs. */
+  characterMemory?: CoachMemoryState | undefined;
   development?: DevelopmentState | undefined;
   /** Optional to preserve pre-Phase-5 snapshots and their command-log hashes. */
   legacyEvents?: { policyVersion: '1.0.0'; tournaments: CareerTournament[]; mentoredSeasonIndices: number[];

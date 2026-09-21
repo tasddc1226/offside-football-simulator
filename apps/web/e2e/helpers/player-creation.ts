@@ -327,7 +327,7 @@ export async function fillPreseasonPlan(page: Page, focusLabel: string): Promise
   await expect(lifeHeading.or(legacyHeading)).toBeVisible();
   if (await lifeHeading.isVisible()) {
     const state = await readCurrentCareerState(page);
-    expect(['3.0.0', '3.1.0', '3.2.0']).toContain(state.rulesetVersion);
+    expect(['3.0.0', '3.1.0', '3.2.0', '3.3.0']).toContain(state.rulesetVersion);
     await expect(
       page.getByRole('button', { name: '새 시즌 훈련장으로', exact: true }),
     ).toBeVisible();

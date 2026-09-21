@@ -1,0 +1,90 @@
+{
+  "id": "EVT-REL-130",
+  "version": 1,
+  "phases": ["IN_SEASON"],
+  "triggers": {
+    "all": [
+      { "eq": ["career.stage", "PRO"] },
+      { "neq": ["contract.kind", ""] }
+    ]
+  },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 2 },
+  "weight": 42,
+  "minAge": 28,
+  "safety": { "minorSafe": true },
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "훈련 뒤 직접 경험을 나눈다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "주장 관계 상승", "target": "captain", "direction": "UP" },
+        { "label": "사기 상승", "target": "morale", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "후배가 다음 훈련의 기준을 잡았다",
+          "cause": "경험 공유",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-REL-130.A.A1.0", "target": "captain", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM", "reasonTag": "VETERAN_MENTORING" },
+            { "kind": "CURRENT", "sourceId": "EVT-REL-130.A.A1.1", "target": "morale", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" }
+          ],
+          "addTags": ["베테랑_경험공유"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "주장과 함께 짧은 훈련을 준비한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "주장 관계 크게 상승", "target": "captain", "direction": "UP" },
+        { "label": "체력 소폭 하락", "target": "fitness", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "주장과 역할을 나눠 후배의 훈련을 도왔다",
+          "cause": "공동 멘토링",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-REL-130.B.B1.0", "target": "captain", "delta": 7, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM", "reasonTag": "CAPTAIN_MENTORING" },
+            { "kind": "CURRENT", "sourceId": "EVT-REL-130.B.B1.1", "target": "fitness", "delta": -2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 1 }, "stackingRule": "SUM" }
+          ],
+          "addTags": ["주장과_멘토링"]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "오늘은 내 준비에 집중한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "폼 상승", "target": "form", "direction": "UP" },
+        { "label": "주장 관계 소폭 하락", "target": "captain", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "개인 훈련의 완성도를 높였다",
+          "cause": "개인 준비 우선",
+          "effects": [
+            { "kind": "CURRENT", "sourceId": "EVT-REL-130.C.C1.0", "target": "form", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 }, "stackingRule": "SUM" },
+            { "kind": "RELATION", "sourceId": "EVT-REL-130.C.C1.1", "target": "captain", "delta": -2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "훈련을 마친 어린 동료가 다가와 경기 준비 루틴을 묻는다. 이제는 당신의 경험도 팀 안에서 하나의 기준이 되고 있다."
+  }
+}

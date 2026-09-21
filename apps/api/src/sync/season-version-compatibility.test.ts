@@ -62,6 +62,7 @@ describe('production season version compatibility', () => {
       { rulesetVersion: '3.0.0', contentPackVersion: '0.9.0' },
       { rulesetVersion: '3.1.0', contentPackVersion: '0.10.0' },
       { rulesetVersion: '3.2.0', contentPackVersion: '0.11.0' },
+      { rulesetVersion: '3.3.0', contentPackVersion: '0.12.0' },
     ];
     for (const seasonVersion of history) {
       for (const requestedVersion of history) {

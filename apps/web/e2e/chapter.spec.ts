@@ -75,8 +75,9 @@ async function readLatestRngDraws(page: Page): Promise<number> {
 }
 
 for (const version of [
-  { rules: '1.7.2', pack: '0.6.6', causal: false },
-  { rules: '3.2.0', pack: '0.11.0', causal: true },
+  { rules: '1.7.2', pack: '0.6.6', causal: false, characterMemory: false },
+  { rules: '3.2.0', pack: '0.11.0', causal: true, characterMemory: false },
+  { rules: '3.3.0', pack: '0.12.0', causal: true, characterMemory: true },
 ]) {
   test(`${version.rules} 데뷔전: 경기 전 맥락 → 판단 확정 → 경기 결과 → 대시보드, 새로고침·뒤로 가기가 재생만 한다`, async ({
     page,
@@ -119,6 +120,7 @@ for (const version of [
       await expect(page.getByRole('radio', { name: /과감한 존재감/ })).toBeVisible();
     }
 
+    const beforeDecision = await readCurrentCareerState(page);
     await page.getByRole('radio').first().click();
     await page.getByRole('button', { name: '확정' }).click();
 
@@ -131,7 +133,8 @@ for (const version of [
     // 다시 소비했다면 스코어·평점이 실행마다 달라질 것이다(아래에서 대조). TEST-E2E-010: 화면 스코어
     // 일치만으로는 우연의 일치를 배제할 수 없으므로 rngState.draws 자체도 새로고침 전후로 비교한다.
     const rngDrawsBeforeReload = await readLatestRngDraws(page);
-    const resolvedMatches = (await readCurrentCareerState(page)).season?.matches;
+    const resolvedState = await readCurrentCareerState(page);
+    const resolvedMatches = resolvedState.season?.matches;
     if (version.causal) {
       const match = resolvedMatches?.find((match) => match.decisionImpact !== undefined);
       expect(match?.decisionWindow?.phase).toBe('FINAL');
@@ -140,7 +143,19 @@ for (const version of [
         goalsFor: match?.result.goalsFor,
         goalsAgainst: match?.result.goalsAgainst,
       });
+      if (version.characterMemory) {
+        const receipt = match!.decisionImpact!.receipts[0]!;
+        const captured = resolvedState.characterMemory?.memories.find((memory) => memory.matchId === match!.id && memory.decisionId === receipt.decisionId);
+        expect(captured).toMatchObject({
+          actor: { id: beforeDecision.season!.manager!.id, name: beforeDecision.season!.manager!.name, teamId: beforeDecision.season!.teamId },
+          action: receipt.action, outcomeKind: receipt.outcomeKind,
+          before: receipt.before, after: receipt.after, trustDelta: receipt.managerTrustDelta,
+        });
+        await expect(page.getByRole('article', { name: `${captured!.actor.name} 감독이 기억한 선택` })).toBeVisible();
+        await expect(page.getByText(`선택 당시 감독 신뢰 변화 ${captured!.trustDelta > 0 ? '+' : ''}${captured!.trustDelta}`, { exact: true })).toBeVisible();
+      }
     }
+    if (!version.characterMemory) expect(resolvedState.characterMemory).toBeUndefined();
     await page.reload();
     await expect(page.getByRole('heading', { level: 2, name: '경기 결과' })).toBeVisible();
     await expect(page.getByRole('radio')).toHaveCount(0);
@@ -148,12 +163,15 @@ for (const version of [
     const finalScore = await page.locator('[aria-label^="최종 스코어"]').textContent();
     expect(await readLatestRngDraws(page)).toBe(rngDrawsBeforeReload);
     expect((await readCurrentCareerState(page)).season?.matches).toEqual(resolvedMatches);
+    expect((await readCurrentCareerState(page)).characterMemory).toEqual(resolvedState.characterMemory);
+    if (version.characterMemory) await expect(page.getByRole('region', { name: '함께한 인물의 기억' })).toBeVisible();
 
     // 한 번 더 새로고침해도 같은 값이다(결정론).
     await page.reload();
     await expect(page.getByRole('heading', { level: 2, name: '경기 결과' })).toBeVisible();
     expect(await page.locator('[aria-label^="최종 스코어"]').textContent()).toBe(finalScore);
     expect(await readLatestRngDraws(page)).toBe(rngDrawsBeforeReload);
+    expect((await readCurrentCareerState(page)).characterMemory).toEqual(resolvedState.characterMemory);
 
     // "다음"은 advance()를 부르지 않고 대시보드로만 이동한다(브리프 — pending은 이미 null).
     await page.getByRole('button', { name: '다음' }).click();
