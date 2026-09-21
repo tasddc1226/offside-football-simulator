@@ -1314,7 +1314,9 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       veteranContext125,
     ],
     events: [
-      ...PACK_SOURCES_THROUGH_0110['0.11.0'].events.filter((event) => event.id !== 'EVT-REL-131'),
+      ...PACK_SOURCES_THROUGH_0110['0.11.0'].events.filter(
+        (event) => (event as { id?: string }).id !== 'EVT-REL-131',
+      ),
       eventRel131v013,
       injury131v013,
       injury132v013,
