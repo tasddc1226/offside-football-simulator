@@ -9,7 +9,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { deleteCareerCascade } from '../db/repos/careers.js';
 import { upsertServiceSeason } from '../db/repos/serviceSeasons.js';
-import { careers, lockerPlayerNotes, lockerTeams, sessions, snapshots } from '../db/schema.js';
+import {
+  careers,
+  careerPublications,
+  lockerPlayerNotes,
+  lockerTeams,
+  sessions,
+  snapshots,
+} from '../db/schema.js';
 import { moveCareersAndRebind, moveCareersAndRotateWebSession } from '../profile/merge.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -164,6 +171,92 @@ describe('account locker room', () => {
       bestSeasonIndex: 2,
       note: null,
     });
+  });
+  it('isolates note lifecycle by owner, validates input, and leaves snapshots/public articles unchanged', async () => {
+    const a = await account();
+    const b = await account();
+    await player(a.id, 'owned');
+    await player(b.id, 'foreign');
+    const before = await ctx.db.select().from(snapshots).where(eq(snapshots.careerId, 'owned'));
+    expect((await request('', 'GET', '/v1/locker-room')).status).toBe(401);
+    expect(
+      (await request('', 'PUT', '/v1/locker-room/players/owned/note', { note: 'x' })).status,
+    ).toBe(401);
+    expect((await request('', 'DELETE', '/v1/locker-room/players/owned/note')).status).toBe(401);
+    expect(
+      (await request(b.cookie, 'PUT', '/v1/locker-room/players/owned/note', { note: '외부 메모' }))
+        .status,
+    ).toBe(404);
+    expect((await request(b.cookie, 'DELETE', '/v1/locker-room/players/owned/note')).status).toBe(
+      204,
+    );
+    expect(
+      (await request(a.cookie, 'PUT', '/v1/locker-room/players/owned/note', { note: '' })).status,
+    ).toBe(400);
+    expect(
+      (
+        await request(a.cookie, 'PUT', '/v1/locker-room/players/owned/note', {
+          note: 'x'.repeat(141),
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await request(a.cookie, 'PUT', '/v1/locker-room/players/owned/note', {
+          note: '비공개 메모',
+        })
+      ).status,
+    ).toBe(200);
+    expect((await room(a.cookie)).players.find((p) => p.careerId === 'owned')?.note).toBe(
+      '비공개 메모',
+    );
+    expect(await ctx.db.select().from(snapshots).where(eq(snapshots.careerId, 'owned'))).toEqual(
+      before,
+    );
+    await ctx.db.insert(careerPublications).values({
+      id: '00000000-0000-4000-8000-000000000001',
+      careerId: 'owned',
+      articleJson: JSON.stringify({
+        id: '00000000-0000-4000-8000-000000000001',
+        playerName: 'owned',
+        initialPosition: 'ST',
+        seasons: 1,
+        playedMatches: 1,
+        minutes: 90,
+        averageRatingTenths: null,
+        clubCount: 1,
+        highlights: [],
+        publishedAt: now,
+        challenge: {
+          seed: 'seed',
+          rulesetVersion: '3.1.0',
+          contentPackVersion: '0.10.0',
+          simulationMode: 'FAST',
+          draft: {
+            gender: 'MALE',
+            nationalityCode: 'KR',
+            preferredFoot: 'RIGHT',
+            position: 'ST',
+            archetypeId: 'poacher',
+            backgroundId: 'ACADEMY',
+          },
+        },
+      }),
+      createdAt: now,
+    });
+    const article = await app.request(
+      '/v1/articles/00000000-0000-4000-8000-000000000001',
+      {},
+      ctx.env,
+    );
+    expect(await article.text()).not.toContain('비공개 메모');
+    expect((await request(a.cookie, 'DELETE', '/v1/locker-room/players/owned/note')).status).toBe(
+      204,
+    );
+    expect((await request(a.cookie, 'DELETE', '/v1/locker-room/players/owned/note')).status).toBe(
+      204,
+    );
+    expect((await room(a.cookie)).players.find((p) => p.careerId === 'owned')?.note).toBeNull();
   });
   it('saves partial teams idempotently, rejects stale updates, and isolates all mutations by owner', async () => {
     const a = await account();

@@ -102,7 +102,22 @@ export function LockerRoomScreen() {
             은퇴 시점 능력치를 사용합니다.
           </p>
           <div hidden={tab !== 'PLAYERS'}>
-            <PlayerCollection players={room.data.players} onBuild={() => setTab('TEAM')} />
+            <PlayerCollection
+              players={room.data.players}
+              onBuild={() => setTab('TEAM')}
+              onNoteChange={(careerId, note) => {
+                cache.setQueryData<LockerRoom>(key, (old) =>
+                  old
+                    ? {
+                        ...old,
+                        players: old.players.map((player) =>
+                          player.careerId === careerId ? { ...player, note } : player,
+                        ),
+                      }
+                    : old,
+                );
+              }}
+            />
           </div>
           <div hidden={tab !== 'TEAM'}>
             <TeamEditor
@@ -131,7 +146,15 @@ export function LockerRoomScreen() {
     </main>
   );
 }
-function PlayerCollection({ players, onBuild }: { players: LockerPlayer[]; onBuild: () => void }) {
+export function PlayerCollection({
+  players,
+  onBuild,
+  onNoteChange,
+}: {
+  players: LockerPlayer[];
+  onBuild: () => void;
+  onNoteChange: (careerId: string, note: string | null) => void;
+}) {
   const [filter, setFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [order, setOrder] = useState('RECENT');
@@ -207,7 +230,7 @@ function PlayerCollection({ players, onBuild }: { players: LockerPlayer[]; onBui
               </dl>
               <small>최고 시즌은 평점이 기록된 10경기 이상 시즌만 표시합니다.</small>
               {p.isTest && <small>테스트 시즌 선수</small>}
-              <PlayerNoteEditor player={p} />
+              <PlayerNoteEditor player={p} onNoteChange={onNoteChange} />
               <div className="locker-card-actions">
                 <Link to="/career/$careerId" params={{ careerId: p.careerId }}>
                   커리어 보기
@@ -222,7 +245,13 @@ function PlayerCollection({ players, onBuild }: { players: LockerPlayer[]; onBui
   );
 }
 
-function PlayerNoteEditor({ player }: { player: LockerPlayer }) {
+function PlayerNoteEditor({
+  player,
+  onNoteChange,
+}: {
+  player: LockerPlayer;
+  onNoteChange: (careerId: string, note: string | null) => void;
+}) {
   const [value, setValue] = useState(player.note ?? '');
   const [savedNote, setSavedNote] = useState(player.note ?? '');
   const [busy, setBusy] = useState(false);
@@ -249,6 +278,7 @@ function PlayerNoteEditor({ player }: { player: LockerPlayer }) {
     }
     setValue(result.data.note);
     setSavedNote(result.data.note);
+    onNoteChange(player.careerId, result.data.note);
     setFeedback('이 기념 메모를 계정에 저장했습니다.');
   }
 
@@ -266,6 +296,7 @@ function PlayerNoteEditor({ player }: { player: LockerPlayer }) {
     }
     setValue('');
     setSavedNote('');
+    onNoteChange(player.careerId, null);
     setFeedback('기념 메모를 삭제했습니다.');
   }
 
@@ -296,7 +327,15 @@ function PlayerNoteEditor({ player }: { player: LockerPlayer }) {
           </button>
         ) : null}
       </div>
-      <small role={feedback?.includes('저장') || feedback?.includes('삭제') ? 'status' : undefined}>
+      <small
+        role={
+          feedback
+            ? feedback.includes('저장') || feedback.includes('삭제')
+              ? 'status'
+              : 'alert'
+            : undefined
+        }
+      >
         {feedback ?? `${value.length}/${maxLength}`}
       </small>
     </div>
