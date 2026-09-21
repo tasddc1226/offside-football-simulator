@@ -165,7 +165,7 @@ export const authAttempts = sqliteTable(
     // T-2-012: ANALYTICS_EVENTS(분당 60회/clientId, D-55)가 추가한 kind. text 컬럼이라 마이그레이션은
     // 필요 없다(SQLite는 이 enum을 CHECK 제약으로 만들지 않는다 — TS 타입에서만 강제).
     kind: text('kind', {
-      enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START', 'ANALYTICS_EVENTS'],
+      enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START', 'ANALYTICS_EVENTS', 'CAREER_PUBLICATION', 'FRIENDLY_START'],
     }).notNull(),
     subject: text('subject').notNull(),
     windowStart: text('window_start').notNull(),
@@ -264,6 +264,22 @@ export const careerArchives = sqliteTable('career_archives', {
   createdAt: text('created_at').notNull(),
 });
 
+/** Explicitly published whitelist. Ownership follows careers through profile merges. */
+export const careerPublications = sqliteTable('career_publications', {
+  id: text('id').primaryKey(),
+  careerId: text('career_id').notNull().unique().references(() => careers.id, { onDelete: 'cascade' }),
+  articleJson: text('article_json').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+/** Atomic challenge replay guard; follows child career deletion, not source publication. */
+export const careerChallengeAdmissions = sqliteTable('career_challenge_admissions', {
+  keyHash: text('key_hash').primaryKey(),
+  careerId: text('career_id').notNull().references(() => careers.id, { onDelete: 'cascade' }),
+  requestHash: text('request_hash').notNull(),
+  responseJson: text('response_json').notNull(),
+});
+
 /** Account-owned lineups; career simulation state is never mutated by team editing. */
 export const lockerTeams = sqliteTable(
   'locker_teams',
@@ -281,3 +297,13 @@ export const lockerTeams = sqliteTable(
   },
   (table) => [index('locker_teams_owner_idx').on(table.ownerProfileId)],
 );
+
+/** Private immutable friendly receipts survive team/career deletion, but never profile deletion. */
+export const friendlyMatches = sqliteTable('friendly_matches', {
+  id: text('id').primaryKey(),
+  ownerProfileId: text('owner_profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  requestKeyHash: text('request_key_hash').notNull().unique(),
+  requestHash: text('request_hash').notNull(),
+  receiptJson: text('receipt_json').notNull(),
+  createdAt: text('created_at').notNull(),
+}, (table) => [index('friendly_matches_owner_idx').on(table.ownerProfileId, table.createdAt)]);

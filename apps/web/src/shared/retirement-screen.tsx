@@ -46,6 +46,7 @@ import {
   seasonYearRangeLabel,
 } from './season-year.js';
 import './retirement-screen.css';
+import { CareerPublication } from './career-publication.js';
 
 type Mode = 'retirement' | 'legacy' | 'timeline' | 'final-profile';
 export type RetirementRetrospectiveStep = `moment-${number}` | 'legacy' | 'final';
@@ -156,6 +157,7 @@ export function RetirementPage({
     calendarStartYear: extractCalendarStartYear(rulesetForCareer(state).leagueCalendar),
   });
   return (
+    <>
     <RetirementScreen
       state={state}
       mode={mode}
@@ -178,6 +180,8 @@ export function RetirementPage({
           });
       }}
     />
+    {archive !== null && <CareerPublication careerId={careerId} />}
+    </>
   );
 }
 

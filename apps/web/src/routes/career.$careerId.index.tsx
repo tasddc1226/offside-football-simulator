@@ -1,5 +1,6 @@
 import { needsDevelopment } from '@offside/domain';
 import { DevelopmentWorkshop } from '../shared/development-workshop.js';
+import { CharacterMemoryPanel } from '../shared/character-memory.js';
 // SCR-029 커리어 대시보드. 다섯 구역 탭 + "다음 결정" 카드. 대시보드에서는 어떤 명령도 확정하지
 // 않는다 — advance/settleSeason은 결정이 아니라 "진행"이며(다음에 뭐가 뜰지는 도메인이 정한다),
 // 결정 확정은 전용 화면(SCR-007·008·009·010·012·013·014)에서만 일어난다.
@@ -914,6 +915,7 @@ function CareerDashboard() {
               aria-labelledby={dashboardTabId('season')}
             >
               <SeasonDashboard state={state} year={startYear + (season?.index ?? state.seasonHistory.length + 1) - 1} action={<NextDecisionCard careerId={careerId} state={state} clock={clock} startYear={startYear} />} />
+              <CharacterMemoryPanel state={state} currentSeasonOnly />
               <Button variant="secondary" className="mt-os-3 w-full" onClick={() => changeTab('career')}>
                 일정 · 경기 기록 보기
               </Button>
@@ -954,6 +956,7 @@ function CareerDashboard() {
                 title="라커룸"
                 description="감독·주장·경쟁자·동료 관계의 최근 기억입니다."
               >
+                <CharacterMemoryPanel state={state} />
                 {lockerRoomTagLabels.length === 0 ? (
                   <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
                     아직 기억 태그가 없습니다.

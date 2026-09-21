@@ -11,10 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FaqRouteImport } from './routes/faq'
+import { Route as FriendliesRouteImport } from './routes/friendlies'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as LockerRoomRouteImport } from './routes/locker-room'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ArticlesArticleIdRouteImport } from './routes/articles.$articleId'
 import { Route as CareerCareerIdRouteImport } from './routes/career.$careerId'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
@@ -50,6 +52,11 @@ const FaqRoute = FaqRouteImport.update({
   path: '/faq',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FriendliesRoute = FriendliesRouteImport.update({
+  id: '/friendlies',
+  path: '/friendlies',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GuideRoute = GuideRouteImport.update({
   id: '/guide',
   path: '/guide',
@@ -68,6 +75,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArticlesArticleIdRoute = ArticlesArticleIdRouteImport.update({
+  id: '/articles/$articleId',
+  path: '/articles/$articleId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CareerCareerIdRoute = CareerCareerIdRouteImport.update({
@@ -201,10 +213,12 @@ const CareerCareerIdEventResultRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
+  '/friendlies': typeof FriendliesRoute
   '/guide': typeof GuideRoute
   '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
+  '/articles/$articleId': typeof ArticlesArticleIdRoute
   '/career/$careerId': typeof CareerCareerIdRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
@@ -233,10 +247,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
+  '/friendlies': typeof FriendliesRoute
   '/guide': typeof GuideRoute
   '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
+  '/articles/$articleId': typeof ArticlesArticleIdRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/career/$careerId/attributes': typeof CareerCareerIdAttributesRoute
@@ -265,10 +281,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
+  '/friendlies': typeof FriendliesRoute
   '/guide': typeof GuideRoute
   '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
+  '/articles/$articleId': typeof ArticlesArticleIdRoute
   '/career/$careerId': typeof CareerCareerIdRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
@@ -299,10 +317,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/faq'
+    | '/friendlies'
     | '/guide'
     | '/locker-room'
     | '/onboarding'
     | '/settings'
+    | '/articles/$articleId'
     | '/career/$careerId'
     | '/legal/privacy'
     | '/legal/terms'
@@ -331,10 +351,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/faq'
+    | '/friendlies'
     | '/guide'
     | '/locker-room'
     | '/onboarding'
     | '/settings'
+    | '/articles/$articleId'
     | '/legal/privacy'
     | '/legal/terms'
     | '/career/$careerId/attributes'
@@ -362,10 +384,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/faq'
+    | '/friendlies'
     | '/guide'
     | '/locker-room'
     | '/onboarding'
     | '/settings'
+    | '/articles/$articleId'
     | '/career/$careerId'
     | '/legal/privacy'
     | '/legal/terms'
@@ -395,10 +419,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   FaqRoute: typeof FaqRoute
+  FriendliesRoute: typeof FriendliesRoute
   GuideRoute: typeof GuideRoute
   LockerRoomRoute: typeof LockerRoomRoute
   OnboardingRoute: typeof OnboardingRoute
   SettingsRoute: typeof SettingsRoute
+  ArticlesArticleIdRoute: typeof ArticlesArticleIdRoute
   CareerCareerIdRoute: typeof CareerCareerIdRouteWithChildren
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
@@ -418,6 +444,13 @@ declare module '@tanstack/react-router' {
       path: '/faq'
       fullPath: '/faq'
       preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/friendlies': {
+      id: '/friendlies'
+      path: '/friendlies'
+      fullPath: '/friendlies'
+      preLoaderRoute: typeof FriendliesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guide': {
@@ -446,6 +479,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/articles/$articleId': {
+      id: '/articles/$articleId'
+      path: '/articles/$articleId'
+      fullPath: '/articles/$articleId'
+      preLoaderRoute: typeof ArticlesArticleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/career/$careerId': {
@@ -674,10 +714,12 @@ const CareerCareerIdRouteWithChildren = CareerCareerIdRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FaqRoute: FaqRoute,
+  FriendliesRoute: FriendliesRoute,
   GuideRoute: GuideRoute,
   LockerRoomRoute: LockerRoomRoute,
   OnboardingRoute: OnboardingRoute,
   SettingsRoute: SettingsRoute,
+  ArticlesArticleIdRoute: ArticlesArticleIdRoute,
   CareerCareerIdRoute: CareerCareerIdRouteWithChildren,
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,

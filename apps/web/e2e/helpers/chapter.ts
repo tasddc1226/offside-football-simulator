@@ -1,8 +1,13 @@
 // SCR-031(핵심 경기 챕터) 도달 헬퍼. chapter.spec.ts·a11y.spec.ts가 공유한다(T-1-014 player-creation.ts와
 // 같은 관례: "헬퍼 추출은 허용").
 import { expect, type Page } from '@playwright/test';
-import { resolveCurrentEventScreen } from './player-creation.js';
+import {
+  readCurrentCareerState,
+  resolveCurrentEventScreen,
+  resolveRoleProposal,
+} from './player-creation.js';
 import { currentRoute, expectRoute, waitForRoute } from './route.js';
+export { resolveRoleProposal } from './player-creation.js';
 
 /** e2e 결정론 시드(README "e2e 결정론 시드 오버라이드" 참고). DEBUT 트리거
  * (seasonIndex===1 && isFirstCareerAppearance && minutes>0)가 몇 번째 "진행"에 열리는지는 시드에
@@ -23,17 +28,6 @@ export async function seedDeterministicChapterRun(page: Page): Promise<void> {
   }, E2E_DEBUT_CHAPTER_SEED);
 }
 
-/** SCR-012 역할 제안을 받아들인다. */
-export async function resolveRoleProposal(page: Page): Promise<void> {
-  await expectRoute(page, /\/career\/.+\/role$/);
-  // KEEP은 "확인" 하나, POSITION_CHANGE·ROLE_CHANGE는 "거절"·"수락" 둘을 보여준다 — 어느 쪽이든
-  // 받아들이는 버튼을 하나의 locator로 묶어 렌더 경합 없이 기다린다(count() 스냅샷은 로더 직후
-  // 첫 렌더 전에 0을 읽을 수 있다).
-  const acceptButton = page.getByRole('button', { name: /^(확인|수락)$/ });
-  await acceptButton.first().waitFor({ state: 'visible' });
-  await acceptButton.first().click();
-}
-
 /** SCR-029에서 "진행"을 반복해(EVENT는 첫 선택지로 흘려보낸다) SCR-031(핵심 경기 챕터)에 도달한다.
  * 안전 상한 20회(season.spec.ts의 advanceThroughSeasonToSettlement와 같은 관례).
  *
@@ -50,13 +44,23 @@ export async function resolveRoleProposal(page: Page): Promise<void> {
  * step에서 mutateAsync가 아직 안 끝난 채 두 번째 클릭 판정을 내리는 TOCTOU)이 여기도 있다.
  */
 export async function advanceToChapter(page: Page): Promise<void> {
-  const nextButton = page.getByRole('button', { name: '진행', exact: true });
-  const stepCaption = page.getByText(/\d+\/12 단계/);
+  const nextButton = page.getByRole('button', { name: /^(진행|다음 중요한 순간까지)$/ });
   for (let step = 0; step < 20; step += 1) {
     const pathnameBefore = (await currentRoute(page)).split('?')[0]!;
     if (pathnameBefore.endsWith('/chapter')) return;
+    if (pathnameBefore.endsWith('/role')) {
+      await resolveRoleProposal(page);
+      await expectRoute(page, /\/career\/[^/]+$/);
+      continue;
+    }
     if (pathnameBefore.endsWith('/event')) {
       await resolveCurrentEventScreen(page);
+      continue;
+    }
+    const training = page.getByRole('button', { name: '이 계획으로 훈련하기', exact: true });
+    if (await training.isVisible()) {
+      await training.click();
+      await expect(page.getByLabel('훈련과 대화의 결과')).toBeVisible();
       continue;
     }
     // 병렬 워커로 같이 도는 다른 테스트와 CPU를 나눠 쓰면 mutateAsync가 기본 5s보다 오래 걸릴 수
@@ -66,7 +70,7 @@ export async function advanceToChapter(page: Page): Promise<void> {
       expect(nextButton).toBeEnabled({ timeout: 60_000 }),
     ]);
     if ((await currentRoute(page)).split('?')[0]! !== pathnameBefore) continue;
-    const stepTextBefore = await stepCaption.textContent();
+    const stepBefore = (await readCurrentCareerState(page)).season?.currentStep;
     // 클릭 액션 자체의 actionability 재확인 도중에도(디스패치 전) advance 성공→화면 전환이 끼어들어
     // 버튼이 사라질 수 있다 — 그 detach는 실패로 삼키고(클릭이 실제로 먹혔는지는 다음 스텝 진입 시
     // 위 Promise.race·pathname 재검사가 가린다), 여기서 무한정(테스트 전체 타임아웃까지) 기다리지
@@ -74,7 +78,11 @@ export async function advanceToChapter(page: Page): Promise<void> {
     await nextButton.click({ timeout: 15_000 }).catch(() => {});
     await Promise.race([
       waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
-      expect(stepCaption).not.toHaveText(stepTextBefore ?? '', { timeout: 60_000 }),
+      expect
+        .poll(async () => (await readCurrentCareerState(page)).season?.currentStep, {
+          timeout: 60_000,
+        })
+        .not.toBe(stepBefore),
     ]);
   }
   throw new Error('핵심 경기 챕터(SCR-031)에 도달하지 못했다(최대 20회 시도)');

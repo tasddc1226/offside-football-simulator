@@ -58,6 +58,11 @@ describe('production season version compatibility', () => {
       roleBalanceVersion,
       eventVarietyVersion,
       simulatorVersion,
+      { rulesetVersion: '2.1.0', contentPackVersion: '0.8.0' },
+      { rulesetVersion: '3.0.0', contentPackVersion: '0.9.0' },
+      { rulesetVersion: '3.1.0', contentPackVersion: '0.10.0' },
+      { rulesetVersion: '3.2.0', contentPackVersion: '0.11.0' },
+      { rulesetVersion: '3.3.0', contentPackVersion: '0.12.0' },
     ];
     for (const seasonVersion of history) {
       for (const requestedVersion of history) {
@@ -70,6 +75,19 @@ describe('production season version compatibility', () => {
   });
 
   it('rejects other seasons, mixed pairs, and unapproved historical manifests', () => {
+    const agencyVersion = { rulesetVersion: '3.2.0', contentPackVersion: '0.11.0' };
+    expect(
+      isAcceptedSeasonVersion('svc_kickoff', agencyVersion, {
+        rulesetVersion: '3.1.0',
+        contentPackVersion: '0.10.0',
+      }),
+    ).toBe(false);
+    expect(
+      isAcceptedSeasonVersion('svc_season_1', agencyVersion, {
+        rulesetVersion: '3.2.0',
+        contentPackVersion: '0.10.0',
+      }),
+    ).toBe(false);
     expect(isAcceptedSeasonVersion('svc_other', currentVersion, previousVersion)).toBe(false);
     expect(isAcceptedSeasonVersion('svc_other', simulatorVersion, currentVersion)).toBe(false);
     expect(

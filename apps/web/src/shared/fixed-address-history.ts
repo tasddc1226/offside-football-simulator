@@ -16,6 +16,13 @@ export const LAST_LOCATION_STORAGE_KEY = 'offside:last-location';
 /** 브리프 3번: 주소창에 그대로 비추는 공개 화면 — SEO canonical·공유 링크 유지 대상. */
 const PUBLIC_ALLOWLIST_PATHNAMES = ['/', '/guide', '/faq', '/legal/terms', '/legal/privacy'];
 
+/** T-7-038(#271) 후속: 공개 커리어 기사(`/articles/$articleId`) — 공유 링크가
+ * `${window.location.origin}/articles/${article.id}`로 만들어지므로(career-publication.tsx) 주소창을
+ * 그대로 유지해야 새로고침·직접 붙여넣기로도 같은 기사에 도착한다. 정확히 한 세그먼트만
+ * 허용한다(`/articles`·`/articles/a/b`는 대상이 아니다) — articles.$articleId.tsx 라우트 자체가
+ * `$articleId` 하나만 받는다. */
+const ARTICLE_SHARE_PATHNAME = /^\/articles\/[^/]+$/;
+
 /** 허용 목록 비교용: 끝 슬래시가 있어도(예: `/guide/`) 같은 경로로 취급한다(표시용 원본은 안 건든다). */
 function normalizePathnameForAllowlist(pathname: string): string {
   if (pathname.length > 1 && pathname.endsWith('/')) return pathname.slice(0, -1);
@@ -23,7 +30,8 @@ function normalizePathnameForAllowlist(pathname: string): string {
 }
 
 export function isPublicAllowlistedPathname(pathname: string): boolean {
-  return PUBLIC_ALLOWLIST_PATHNAMES.includes(normalizePathnameForAllowlist(pathname));
+  const normalized = normalizePathnameForAllowlist(pathname);
+  return PUBLIC_ALLOWLIST_PATHNAMES.includes(normalized) || ARTICLE_SHARE_PATHNAME.test(normalized);
 }
 
 export interface FixedAddressLocation {

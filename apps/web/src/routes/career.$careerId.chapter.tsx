@@ -1,5 +1,6 @@
 import { matchReadiness, weightMatchOutcomes, type CareerState } from '@offside/domain';
 import { DRILL_LABEL } from '../shared/development-workshop.js';
+import { CharacterMemoryPanel, characterChoiceTrustDelta, hasCharacterChoiceMemory } from '../shared/character-memory.js';
 import '../shared/player-life.css';
 // SCR-031 핵심 경기 챕터. 한 라우트 안에서 경기 전 맥락(상단 고정) → 판단 1~3개(ChoiceCard,
 // RESOLVE_CHAPTER) → 경기 결과까지 이동 없이 이어진다. 서버 상태(pending.resolved · season.chapters ·
@@ -70,6 +71,7 @@ import { useUiStore } from '../shared/ui-store.js';
 import { queryClient } from '../shared/query-client.js';
 import { SCREEN_ROUTES } from '../routes.js';
 import { platform } from '../platform/index.js';
+import { recordFunnelReached } from '../engine/funnel.js';
 import { useCommittingExitGuard } from '../shared/use-committing-exit-guard.js';
 import { GamePending, GameResultReveal, useDelayedReveal } from '../shared/game-presentation.js';
 
@@ -193,12 +195,16 @@ function formatSignedTenths(tenths: number): string {
 
 function aggregateEffectDeltas(
   resolved: ResolvedChapterDecision[],
+  actualTrustDelta: (decisionId: string) => number | null = () => null,
 ): Array<{ target: string; delta: number }> {
   const totals = new Map<string, number>();
-  for (const { outcome } of resolved) {
+  for (const { outcome, entry } of resolved) {
+    const actual = actualTrustDelta(entry.decisionId);
     for (const effect of outcome.effects) {
+      if (actual !== null && effect.target === 'managerTrust') continue;
       totals.set(effect.target, (totals.get(effect.target) ?? 0) + effect.delta);
     }
+    if (actual !== null) totals.set('managerTrust', (totals.get('managerTrust') ?? 0) + actual);
   }
   return Array.from(totals.entries()).map(([target, delta]) => ({ target, delta }));
 }
@@ -224,7 +230,8 @@ interface DecisionInputProps {
   onConfirm: (optionId: string) => void;
 }
 
-function DecisionInput({ state, decision, submitting, errorMessage, onConfirm }: DecisionInputProps) {
+function DecisionInput({ state, decision, submitting, errorMessage, onConfirm,
+}: DecisionInputProps) {
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
   function confirmSelected() {
@@ -248,10 +255,14 @@ function DecisionInput({ state, decision, submitting, errorMessage, onConfirm }:
         {decision.options.map((option) => {
           const life = rulesetForCareer(state).developmentRules !== undefined;
           const readiness = matchReadiness(state, option.id);
-          const weights = weightMatchOutcomes(state, option.id, option.outcomes, rulesetForCareer(state));
-          const probability = Math.round(weights.filter(o=>o.kind === 'SUCCESS').reduce((n,o)=>n+o.weight,0) * 100 / weights.reduce((n,o)=>n+o.weight,0));
+          const weights = weightMatchOutcomes(state, option.id, option.outcomes, rulesetForCareer(state),
+          );
+          const probability = Math.round(
+            (weights.filter((o) =>o.kind === 'SUCCESS').reduce((n,o)=>n+o.weight,0) * 100) / weights.reduce((n,o)=>n+o.weight,0),
+          );
           const effects = [
-            ...(life ? [`현재 성공 가능성 ${probability}% · ${DRILL_LABEL[readiness.tactic]}`, `능력 ${readiness.skill} · 숙련 ${readiness.mastery} · 신뢰 ${readiness.support} · ${readiness.tactic === 'ENGINE' ? '체력' : '사기'} ${readiness.condition}`] : []),
+            ...(life ? [`현재 성공 가능성 ${probability}% · ${DRILL_LABEL[readiness.tactic]}`, `능력 ${readiness.skill} · 숙련 ${readiness.mastery} · 신뢰 ${readiness.support} · ${readiness.tactic === 'ENGINE' ? '체력' : '사기'} ${readiness.condition}`,
+                ] : []),
             ...(!life && option.priorProbability !== null
               ? [`성공 확률 약 ${Math.round(option.priorProbability.successBp / 100)}%`]
               : []),
@@ -293,6 +304,7 @@ interface DecisionResultProps {
 function decisionResultCardProps(
   resolved: DecisionResultProps['resolved'],
   tokens: DecisionResultProps['tokens'],
+  actualTrustDelta: number | null = null,
 ) {
   const { option, outcome } = resolved;
   return {
@@ -300,7 +312,10 @@ function decisionResultCardProps(
     kindLabel: OUTCOME_KIND_LABEL_KO[outcome.kind],
     title: outcome.title,
     body: `${option.label} — ${renderNarrative(outcome.narrative.situation, tokens)}`,
-    effects: outcome.effects.map(formatEffectSummary),
+    effects: [
+      ...outcome.effects.filter((effect) => actualTrustDelta === null || effect.target !== 'managerTrust').map(formatEffectSummary),
+      ...(actualTrustDelta === null ? [] : [`감독 신뢰 실제 변화 ${actualTrustDelta > 0 ? '+' : ''}${actualTrustDelta}`]),
+    ],
     tags: resultTagLabels(outcome.addTags ?? []),
   };
 }
@@ -311,7 +326,9 @@ function CollapsibleDecisionResult({
   index,
   resolved,
   tokens,
-}: DecisionResultProps & { index: number }) {
+  timeLabel,
+  actualTrustDelta,
+}: DecisionResultProps & { index: number; timeLabel?: string; actualTrustDelta: number | null }) {
   const [expanded, setExpanded] = useState(false);
   const { option, outcome } = resolved;
 
@@ -325,7 +342,7 @@ function CollapsibleDecisionResult({
         aria-expanded={false}
       >
         <span>
-          {decisionTimeLabel(index + 1)} · {option.label} → {outcome.title}
+          {timeLabel ?? decisionTimeLabel(index + 1)} · {option.label} → {outcome.title}
         </span>
         <span className="shrink-0" aria-hidden="true">
           펼치기 +
@@ -336,7 +353,7 @@ function CollapsibleDecisionResult({
 
   return (
     <div className="flex flex-col gap-os-1">
-      <ResultCard {...decisionResultCardProps(resolved, tokens)} />
+      <ResultCard {...decisionResultCardProps(resolved, tokens, actualTrustDelta)} />
       <button
         type="button"
         onClick={() => setExpanded(false)}
@@ -344,7 +361,7 @@ function CollapsibleDecisionResult({
         style={{ ...CAPTION_STYLE, minHeight: 'var(--os-touch-min)' }}
         aria-expanded={true}
       >
-        접기 · {decisionTimeLabel(index + 1)}
+        접기 · {timeLabel ?? decisionTimeLabel(index + 1)}
       </button>
     </div>
   );
@@ -364,7 +381,9 @@ function ChapterScreen() {
   // 초기화하고(로더가 이미 최신 상태를 캐시에 채웠다), 새로고침하면 다시 서버 값으로 시작한다.
   const [cursor, setCursor] = useState<number>(() => {
     if (query.data === undefined) return 0;
-    return deriveChapterView(query.data.state, contentForCareer(query.data.state))?.currentDecisionIndex ?? 0;
+    return (
+      deriveChapterView(query.data.state, contentForCareer(query.data.state))?.currentDecisionIndex ?? 0
+    );
   });
 
   useCommittingExitGuard(resolveMutation.isPending);
@@ -376,6 +395,16 @@ function ChapterScreen() {
     });
     // 마운트 시 1회만(로더가 이미 캐시를 채웠다).
   }, []);
+
+  useEffect(() => {
+    const state = query.data?.state;
+    if (!state || rulesetForCareer(state).matchDecisionRules === undefined) return;
+    const current = deriveChapterView(state, contentForCareer(state));
+    if (current?.definition.trigger.kind !== 'DEBUT') return;
+    void recordFunnelReached(careerId, 'FIRST_MATCH_DECISION').catch(() => undefined);
+    if (current.chapterRecord !== null && cursor >= current.decisionsTotal)
+      void recordFunnelReached(careerId, 'FIRST_MATCH_COMPLETED').catch(() => undefined);
+  }, [careerId, cursor, query.data]);
 
   if (query.isPending) {
     return (
@@ -408,7 +437,10 @@ function ChapterScreen() {
   const displayDecisionNumber = Math.min(cursor + 1, decisionsTotal);
   const minute = decisionMinute(displayDecisionNumber, decisionsTotal);
   const isNationalTeam = view.context.kind === 'NATIONAL_TEAM';
-  const score = scoreAtDecision(view.match.result.goalsFor, view.match.result.goalsAgainst, minute);
+  const causal = ruleset.matchDecisionRules !== undefined && !isNationalTeam;
+  const score = causal
+    ? { for: view.match.result.goalsFor, against: view.match.result.goalsAgainst }
+    : scoreAtDecision(view.match.result.goalsFor, view.match.result.goalsAgainst, minute);
   const tokens = buildNarrativeTokens(state, contentPack, ruleset, teamNameOverrides);
   const room = isNationalTeam ? null : deriveTacticalRoom(state, ruleset);
   const reasonText = playerReasonText(season.selection.playerReason);
@@ -461,23 +493,29 @@ function ChapterScreen() {
   const positionField = positionHeaderField(profile.primaryPosition, profile.preferredPosition);
 
   return (
-    <div className={ruleset.developmentRules ? "os-screen life-match-screen" : "os-screen"}>
+    <div className={ruleset.developmentRules ? 'os-screen life-match-screen' : 'os-screen'}>
       <p className="sr-only" aria-live="polite" data-testid="chapter-announcement">
         {announcement}
       </p>
 
       <ScreenIntro
         eyebrow="MATCH DAY"
-        title={chapterTriggerLabel(view.definition.trigger)}
+        title={
+          causal && view.definition.trigger.kind === 'DEBUT'
+            ? '첫 승부처'
+            : chapterTriggerLabel(view.definition.trigger)}
         description="중요한 순간, 당신의 플레이를 선택해요."
       />
       {view.definition.positionGroups && view.definition.positionGroups.length > 0 ? (
         <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-          포지션 맥락 · {view.definition.positionGroups.map((group) => ({ GK: '골키퍼', DF: '수비수', MF: '미드필더', FW: '공격수' })[group]).join(' · ')} 판단 · 현재 {POSITION_GROUP_LABELS[positionGroupOf(profile.primaryPosition)]}
+          포지션 맥락 · {' '}
+          {view.definition.positionGroups.map((group) => ({ GK: '골키퍼', DF: '수비수', MF: '미드필더', FW: '공격수' })[group]).join(' · ')}{' '}
+          판단 · 현재 {POSITION_GROUP_LABELS[positionGroupOf(profile.primaryPosition)]}
         </p>
       ) : null}
 
-      {ruleset.developmentRules === undefined && <>
+      {ruleset.developmentRules === undefined && (
+        <>
       <PlayerBanner
         name={profile.name}
         teamName={currentTeamName(state, ruleset, teamNameOverrides)}
@@ -488,14 +526,21 @@ function ChapterScreen() {
         ovr={profile.baseOvr}
       />
       <StatusStrip items={proStatusStripItems(state)} />
-      </>}
+      </>
+      )}
 
       {ruleset.developmentRules !== undefined ? (
         <section className="life-match-context" aria-label="경기 맥락">
-          <div><p className="sim-kicker">{isNationalTeam ? '국가대표' : cursor >= decisionsTotal ? 'FULL TIME' : decisionTimeLabel(displayDecisionNumber)}</p><strong>{chapterContextLabel(view, ruleset, teamNameOverrides)}</strong><p>{APPEARANCE_CONTEXT_LABEL[view.match.appearance]} · 체력 {state.state.fitness}{room ? ` · ${room.styleName}` : ''}</p></div>
-          {!isNationalTeam && <span className="life-match-score" aria-label={`스코어 ${(cursor >= decisionsTotal ? view.match.result.goalsFor : score.for)} 대 ${(cursor >= decisionsTotal ? view.match.result.goalsAgainst : score.against)}`}>{cursor >= decisionsTotal ? view.match.result.goalsFor : score.for}:{cursor >= decisionsTotal ? view.match.result.goalsAgainst : score.against}</span>}
+          <div><p className="sim-kicker">{isNationalTeam ? '국가대표' : cursor >= decisionsTotal ? 'FULL TIME'
+                  : causal
+                    ? `${view.match.decisionWindow?.minute ?? view.match.minutes}분 · 당신의 마지막 플레이`
+                    : decisionTimeLabel(displayDecisionNumber)}</p><strong>{chapterContextLabel(view, ruleset, teamNameOverrides)}</strong><p>{APPEARANCE_CONTEXT_LABEL[view.match.appearance]} · 체력 {state.state.fitness}{room ? ` · ${room.styleName}` : ''}</p></div>
+          {!isNationalTeam && (
+            <span className="life-match-score" aria-label={`스코어 ${cursor >= decisionsTotal ? view.match.result.goalsFor : score.for} 대 ${cursor >= decisionsTotal ? view.match.result.goalsAgainst : score.against}`}>{cursor >= decisionsTotal ? view.match.result.goalsFor : score.for}:{cursor >= decisionsTotal ? view.match.result.goalsAgainst : score.against}</span>
+          )}
         </section>
-      ) : <>
+      ) : (
+        <>
       <section className="os-panel flex flex-col gap-os-2" aria-label="경기 맥락">
         <p className="os-eyebrow">오늘의 경기</p>
         {opponentTeamId !== null ? (
@@ -532,7 +577,8 @@ function ChapterScreen() {
         </div>
       ) : null}
 
-      </>}
+      </>
+      )}
 
       {view.resolved.slice(0, cursor).map((resolved, index) => (
         <CollapsibleDecisionResult
@@ -540,13 +586,18 @@ function ChapterScreen() {
           index={index}
           resolved={resolved}
           tokens={tokens}
+          actualTrustDelta={characterChoiceTrustDelta(state, view.match.id, resolved.entry.decisionId)}
+          {...(causal
+            ? { timeLabel: `${view.match.decisionWindow?.minute ?? view.match.minutes}분` }
+            : {})}
         />
       ))}
 
       {cursor < decisionsTotal ? (
         view.resolved.length > cursor ? (
           <div className="flex flex-col gap-os-3">
-            <ResultCard {...decisionResultCardProps(view.resolved[cursor]!, tokens)} />
+            <ResultCard {...decisionResultCardProps(view.resolved[cursor]!, tokens, characterChoiceTrustDelta(state, view.match.id, view.resolved[cursor]!.entry.decisionId))} />
+            <CharacterMemoryPanel state={state} matchId={view.match.id} decisionId={view.definition.decisions[cursor]!.id} />
             <div className="os-action-dock">
               <Button variant="primary" onClick={() => setCursor((current) => current + 1)}>
                 {cursor + 1 < decisionsTotal ? '다음 판단' : '경기 결과'}
@@ -566,7 +617,7 @@ function ChapterScreen() {
             />
             {resolveMutation.isPending ? (
               <GamePending
-                title={`${decisionTimeLabel(displayDecisionNumber)} 판단을 확정하고 있습니다`}
+                title={`${causal ? `${view.match.decisionWindow?.minute ?? view.match.minutes}분` : decisionTimeLabel(displayDecisionNumber)} 판단을 확정하고 있습니다`}
                 detail="경기 결과에 반영될 실제 판정을 저장하고 있습니다."
               />
             ) : null}
@@ -579,7 +630,7 @@ function ChapterScreen() {
             ? '대표팀 데뷔 결과가 확정되었습니다'
             : `경기 결과 ${view.match.result.goalsFor} 대 ${view.match.result.goalsAgainst}, 평점 ${ratingText(view.match.ratingTenths)}`}
         >
-          <ChapterResultSection view={view} careerId={careerId} promiseOutlook={promiseOutlook} />
+          <ChapterResultSection state={state} view={view} careerId={careerId} promiseOutlook={promiseOutlook} />
         </GameResultReveal>
       )}
 
@@ -595,10 +646,12 @@ function ChapterScreen() {
 }
 
 function ChapterResultSection({
+  state,
   view,
   careerId,
   promiseOutlook,
 }: {
+  state: CareerState;
   view: ChapterView;
   careerId: string;
   promiseOutlook: AppearancePromiseOutlook | null;
@@ -607,7 +660,7 @@ function ChapterResultSection({
   const isNationalTeam = view.context.kind === 'NATIONAL_TEAM';
   const nationalSummary = deriveNationalTeamResultSummary(view);
   const stats = positionStatEntries(match.stats);
-  const changeLines = aggregateEffectDeltas(view.resolved).map(({ target, delta }) => {
+  const changeLines = aggregateEffectDeltas(view.resolved, (decisionId) => characterChoiceTrustDelta(state, match.id, decisionId)).map(({ target, delta }) => {
     const label = (EFFECT_TARGET_LABEL_KO as Record<string, string | undefined>)[target] ?? target;
     const sign = delta > 0 ? '+' : '';
     return `${label} ${sign}${delta}`;
@@ -648,6 +701,50 @@ function ChapterResultSection({
         </p>
       </div>
       )}
+
+      {!isNationalTeam && match.decisionImpact !== undefined && (
+        <section aria-label="내 선택이 바꾼 경기" className="flex flex-col gap-os-2">
+          <h3 className="font-semibold">내 선택이 바꾼 경기</h3>
+          {match.decisionImpact.receipts.map((receipt) => {
+            const action = { SHOT: '슈팅', PASS: '마지막 패스', BLOCK: '슈팅 차단', SAVE: '선방' }[
+              receipt.action
+            ];
+            const scored = receipt.after.goalsFor > receipt.before.goalsFor;
+            const conceded = receipt.after.goalsAgainst > receipt.before.goalsAgainst;
+            const result = scored
+              ? receipt.action === 'SHOT'
+                ? '직접 득점'
+                : '동료의 득점을 도움'
+              : conceded
+                ? '막지 못한 슈팅이 실점으로 연결'
+                : receipt.outcomeKind === 'SUCCESS'
+                  ? '실점을 막아 스코어를 지킴'
+                  : '득점으로 이어지지 않음';
+            return (
+              <div key={receipt.decisionId} className="rounded-os-m bg-os-surface-2 p-os-3">
+                <p>
+                  {action} → {result}
+                </p>
+                <p>
+                  {receipt.before.goalsFor}:{receipt.before.goalsAgainst} → {receipt.after.goalsFor}
+                  :{receipt.after.goalsAgainst}
+                </p>
+                {!hasCharacterChoiceMemory(state, match.id, receipt.decisionId) && <p>
+                  {receipt.managerTrustDelta > 0
+                    ? '감독이 엄지를 들어 보였다.'
+                    : receipt.managerTrustDelta < 0
+                      ? '감독이 다음 플레이의 타이밍을 짚어 주었다.'
+                      : '감독이 다음 플레이를 지켜본다.'}{' '}
+                  감독 신뢰 {receipt.managerTrustDelta > 0 ? '+' : ''}
+                  {receipt.managerTrustDelta}
+                </p>}
+              </div>
+            );
+          })}
+        </section>
+      )}
+
+      {!isNationalTeam && <CharacterMemoryPanel state={state} matchId={match.id} />}
 
       {nationalSummary !== null ? (
         <>

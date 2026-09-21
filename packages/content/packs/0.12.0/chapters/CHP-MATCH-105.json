@@ -1,0 +1,169 @@
+{
+  "id": "CHP-MATCH-105",
+  "version": 1,
+  "importance": "MAJOR",
+  "trigger": {
+    "kind": "DERBY"
+  },
+  "weight": 100,
+  "positionGroups": [
+    "MF"
+  ],
+  "rotationGroup": "DERBY",
+  "decisions": [
+    {
+      "id": "D1",
+      "prompt": "라이벌과 맞선 경기, 관중의 함성이 커진다. 당신에게 온 마지막 플레이. 동료가 공간으로 움직인다. 어떻게 마무리할까?",
+      "options": [
+        {
+          "id": "LINK",
+          "label": "동료의 발 앞에 패스한다",
+          "riskLabel": "LOW",
+          "priorProbability": {
+            "successBp": 6500
+          },
+          "previewEffects": [
+            {
+              "label": "성공하면 우리 팀 득점과 개인 기록에 반영",
+              "target": "managerTrust"
+            },
+            {
+              "label": "성공하면 감독 신뢰 +3 · 실패하면 -2",
+              "target": "managerTrust"
+            }
+          ],
+          "outcomes": [
+            {
+              "id": "LINK-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 65,
+              "title": "동료의 득점을 도왔다",
+              "ratingDeltaTenths": 0,
+              "effects": [
+                {
+                  "kind": "RELATION",
+                  "sourceId": "CHP-MATCH-105.D1.LINK.SUCCESS",
+                  "target": "managerTrust",
+                  "delta": 3,
+                  "clamp": {
+                    "min": 0,
+                    "max": 100
+                  },
+                  "appliesAt": {
+                    "kind": "IMMEDIATE"
+                  },
+                  "expiresAt": null,
+                  "stackingRule": "SUM"
+                }
+              ],
+              "narrative": {
+                "situation": "동료의 득점을 도왔다. 라이벌전 벤치에서 감독이 엄지를 들어 보인다."
+              }
+            },
+            {
+              "id": "LINK-FAIL",
+              "kind": "FAIL",
+              "weight": 35,
+              "title": "마지막 패스가 끊겼다",
+              "ratingDeltaTenths": 0,
+              "effects": [
+                {
+                  "kind": "RELATION",
+                  "sourceId": "CHP-MATCH-105.D1.LINK.FAIL",
+                  "target": "managerTrust",
+                  "delta": -2,
+                  "clamp": {
+                    "min": 0,
+                    "max": 100
+                  },
+                  "appliesAt": {
+                    "kind": "IMMEDIATE"
+                  },
+                  "expiresAt": null,
+                  "stackingRule": "SUM"
+                }
+              ],
+              "narrative": {
+                "situation": "마지막 패스가 끊겼다. 라이벌전 벤치에서 감독이 다음에는 타이밍을 바꿔 보자고 손짓한다."
+              }
+            }
+          ]
+        },
+        {
+          "id": "BOLD",
+          "label": "수비 사이로 패스를 찌른다",
+          "riskLabel": "HIGH",
+          "priorProbability": {
+            "successBp": 4500
+          },
+          "previewEffects": [
+            {
+              "label": "성공하면 우리 팀 득점과 개인 기록에 반영",
+              "target": "managerTrust"
+            },
+            {
+              "label": "성공하면 감독 신뢰 +6 · 실패하면 -2",
+              "target": "managerTrust"
+            }
+          ],
+          "outcomes": [
+            {
+              "id": "BOLD-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 45,
+              "title": "수비를 가른 패스가 득점으로 이어졌다",
+              "ratingDeltaTenths": 0,
+              "effects": [
+                {
+                  "kind": "RELATION",
+                  "sourceId": "CHP-MATCH-105.D1.BOLD.SUCCESS",
+                  "target": "managerTrust",
+                  "delta": 6,
+                  "clamp": {
+                    "min": 0,
+                    "max": 100
+                  },
+                  "appliesAt": {
+                    "kind": "IMMEDIATE"
+                  },
+                  "expiresAt": null,
+                  "stackingRule": "SUM"
+                }
+              ],
+              "narrative": {
+                "situation": "수비를 가른 패스가 득점으로 이어졌다. 라이벌전 벤치에서 감독이 엄지를 들어 보인다."
+              }
+            },
+            {
+              "id": "BOLD-FAIL",
+              "kind": "FAIL",
+              "weight": 55,
+              "title": "수비가 패스를 읽었다",
+              "ratingDeltaTenths": 0,
+              "effects": [
+                {
+                  "kind": "RELATION",
+                  "sourceId": "CHP-MATCH-105.D1.BOLD.FAIL",
+                  "target": "managerTrust",
+                  "delta": -2,
+                  "clamp": {
+                    "min": 0,
+                    "max": 100
+                  },
+                  "appliesAt": {
+                    "kind": "IMMEDIATE"
+                  },
+                  "expiresAt": null,
+                  "stackingRule": "SUM"
+                }
+              ],
+              "narrative": {
+                "situation": "수비가 패스를 읽었다. 라이벌전 벤치에서 감독이 다음에는 타이밍을 바꿔 보자고 손짓한다."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

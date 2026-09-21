@@ -85,13 +85,27 @@ describe('isPublicAllowlistedPathname / mirroredAddressHref', () => {
     expect(mirroredAddressHref({ pathname: '/guide/', search: '', hash: '' })).toBe('/guide/');
   });
 
-  it.each(['/career/abc/style', '/settings', '/onboarding', '/locker-room'])(
-    '그 밖의 라우트 %s는 검색·해시를 지우고 /로 고정한다',
+  // T-7-038(#271) 후속: 공개 커리어 기사 공유 링크(`/articles/$articleId`) — 정확히 한 세그먼트만
+  // 허용한다.
+  it.each(['/articles/abc', '/articles/abc/'])(
+    '공개 기사 %s는 허용 목록으로 취급하고 원본 그대로 비춘다',
     (pathname) => {
-      expect(isPublicAllowlistedPathname(pathname)).toBe(false);
-      expect(mirroredAddressHref({ pathname, search: '?legal=terms', hash: '#x' })).toBe('/');
+      expect(isPublicAllowlistedPathname(pathname)).toBe(true);
+      expect(mirroredAddressHref({ pathname, search: '', hash: '' })).toBe(pathname);
     },
   );
+
+  it.each([
+    '/career/abc/style',
+    '/settings',
+    '/onboarding',
+    '/locker-room',
+    '/articles',
+    '/articles/a/b',
+  ])('그 밖의 라우트 %s는 검색·해시를 지우고 /로 고정한다', (pathname) => {
+    expect(isPublicAllowlistedPathname(pathname)).toBe(false);
+    expect(mirroredAddressHref({ pathname, search: '?legal=terms', hash: '#x' })).toBe('/');
+  });
 });
 
 describe('routeDatasetValue', () => {

@@ -1,4 +1,5 @@
 export const DOMAIN_VERSION = '0.1.0';
+export * from './friendly-match.js';
 
 export {
   ArchiveError,
@@ -29,6 +30,10 @@ export {
   type CareerPhase,
   type CareerStage,
   type CareerState,
+  type CoachActor,
+  type CoachChoiceMemory,
+  type CoachMemoryReaction,
+  type CoachMemoryState,
   type CareerStatus,
   type CareerTagGrant,
   type ChapterOutcomeKind,
