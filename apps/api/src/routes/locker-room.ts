@@ -86,6 +86,23 @@ export async function lockerPlayers(
 
 type PlayerEvidence = Pick<LockerPlayer, 'peakOvr' | 'peakAge' | 'bestSeasonIndex'>;
 
+// Keep the original response contract for clients that have not opted into the
+// recognition/evidence presentation fields. The full internal player is still
+// validated before projection so ownership and stored-state checks are shared.
+const LegacyLockerPlayerSchema = LockerPlayerSchema.pick({
+  careerId: true,
+  name: true,
+  position: true,
+  ovr: true,
+  age: true,
+  status: true,
+  seasons: true,
+  isTest: true,
+});
+const LegacyLockerRoomSchema = LockerRoomSchema.extend({
+  players: LegacyLockerPlayerSchema.array(),
+});
+
 /** Derive only values explicitly present in stored season results; missing/legacy data stays unknown. */
 function playerEvidence(stateJson: string): PlayerEvidence {
   try {
@@ -184,18 +201,32 @@ export function registerLockerRoomRoutes(app: Hono<AppEnv>) {
   app.get('/v1/locker-room', requireProfile, async (c) => {
     const db = getDb(c);
     const owner = getSessionOrThrow(c).profileId;
-    const players = await lockerPlayers(db, owner, c.req.query('includeRecognition') === '1');
+    const includeRecognition = c.req.query('includeRecognition') === '1';
+    const players = await lockerPlayers(db, owner, includeRecognition);
     const rows = await db
       .select()
       .from(lockerTeams)
       .where(eq(lockerTeams.ownerProfileId, owner))
       .orderBy(asc(lockerTeams.createdAt), asc(lockerTeams.id));
+    const teams = rows.map((row) => teamView(row, players));
+    const data = includeRecognition
+      ? LockerRoomSchema.parse({ profileId: owner, players, teams })
+      : LegacyLockerRoomSchema.parse({
+          profileId: owner,
+          players: players.map(({ careerId, name, position, ovr, age, status, seasons, isTest }) => ({
+            careerId,
+            name,
+            position,
+            ovr,
+            age,
+            status,
+            seasons,
+            isTest,
+          })),
+          teams,
+        });
     return c.json({
-      data: LockerRoomSchema.parse({
-        profileId: owner,
-        players,
-        teams: rows.map((row) => teamView(row, players)),
-      }),
+      data,
       meta: { requestId: c.get('requestId') },
     });
   });

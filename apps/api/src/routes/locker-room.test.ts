@@ -95,7 +95,7 @@ const input = (id: string | null = null) => ({
   lineup: Array.from({ length: 18 }, (_, i) => (i === 9 ? id : null)),
 });
 async function room(cookie: string) {
-  const res = await request(cookie, 'GET', '/v1/locker-room');
+  const res = await request(cookie, 'GET', '/v1/locker-room?includeRecognition=1');
   expect(res.status).toBe(200);
   return successEnvelope(LockerRoomSchema).parse(await res.json()).data;
 }
@@ -133,7 +133,7 @@ describe('account locker room', () => {
     expect(data.players.map((p) => p.careerId)).toEqual(['active', 'retired']);
     expect(data.players.every((p) => p.ovr === 77 && p.age === 25 && p.seasons === 2)).toBe(true);
     expect(data.players[1]?.status).toBe('RETIRED');
-    expect(data.players.every((p) => p.awardCount === undefined && p.milestoneCount === undefined)).toBe(true);
+    expect(data.players.every((p) => p.awardCount === 0 && p.milestoneCount === 0)).toBe(true);
     const recognition = await request(a.cookie, 'GET', '/v1/locker-room?includeRecognition=1');
     const recognitionData = successEnvelope(LockerRoomSchema).parse(await recognition.json()).data;
     expect(recognitionData.players.every((p) => p.awardCount === 0 && p.milestoneCount === 0)).toBe(true);
@@ -151,6 +151,23 @@ describe('account locker room', () => {
     const awardedResponse = await request(a.cookie, 'GET', '/v1/locker-room?includeRecognition=1');
     const awardedData = successEnvelope(LockerRoomSchema).parse(await awardedResponse.json()).data;
     expect(awardedData.players.find((p) => p.careerId === 'awarded')).toMatchObject({ awardCount: 1, milestoneCount: 1 });
+  });
+  it('keeps the legacy default response to the original eight player keys', async () => {
+    const a = await account();
+    await player(a.id, 'legacy');
+    const response = await request(a.cookie, 'GET', '/v1/locker-room');
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as { data: { players: Array<Record<string, unknown>> } };
+    expect(payload.data.players[0]).toEqual({
+      careerId: 'legacy',
+      name: 'legacy',
+      position: 'ST',
+      ovr: 77,
+      age: 25,
+      status: 'ACTIVE',
+      seasons: 2,
+      isTest: false,
+    });
   });
   it('exposes peak evidence only from stored season results and leaves unsupported fields unknown', async () => {
     const a = await account();
