@@ -17,6 +17,10 @@ This integration branch combines the accepted reliability, presentation, gamepla
 
 | Issue(s) | Outcome |
 |---|---|
+| #242 | Bounded healthy rookie reserve/sub-trial minutes use actual-match evidence; historical role/replay coverage remains preserved. |
+| #243 | Six new major chapters are integrated with bounded repeat-diversity evaluation and historical chapter selection preserved. |
+| #246 | Rehabilitation wording is age/body appropriate without changing historical content assets. |
+| #169 | Earlier captain relationship unlock and truthful eligibility hints are integrated. |
 | #248 | Player award calculation and deterministic recipient identity are integrated; domain award tests pass 8/8. |
 | #249 | K3/team-name candidate data is integrated; settings/team-name focused coverage remains green. |
 | #251, #254 | Career chronicle and milestone/award dashboard summary are integrated; career index focused test passes 32/32. |
