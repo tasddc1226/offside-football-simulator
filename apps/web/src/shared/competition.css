@@ -100,13 +100,19 @@
 }
 .competition-ranking li {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   padding: 10px 0;
   border-top: 1px solid var(--os-border);
 }
+.competition-ranking strong {
+  white-space: nowrap;
+}
 .competition-ranking span {
   color: var(--os-text-2);
+  flex: 1 1 140px;
+  min-width: 0;
   font-size: 13px;
   text-align: right;
 }

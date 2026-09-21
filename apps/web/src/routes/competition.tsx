@@ -93,14 +93,14 @@ export function CompetitionScreen() {
       void cache.invalidateQueries({ queryKey: ['competition-history'] });
     },
   });
-  if (daily.isPending) return <main className="competition" role="status">오늘의 도전을 불러오는 중…</main>;
-  if (daily.isError) return <main className="competition" role="alert"><h1>오늘의 도전을 열 수 없습니다</h1><p>{daily.error.message}</p><Button onClick={() => void daily.refetch()}>다시 불러오기</Button></main>;
+  if (daily.isPending) return <section className="competition" role="status">오늘의 도전을 불러오는 중…</section>;
+  if (daily.isError) return <section className="competition" role="alert"><h1>오늘의 도전을 열 수 없습니다</h1><p>{daily.error.message}</p><Button onClick={() => void daily.refetch()}>다시 불러오기</Button></section>;
   const challenge = daily.data.challenge;
   const entry = daily.data.entry;
   const stepIndex = entry?.revision ?? 0;
   const currentStep = challenge.scenario.steps[stepIndex];
   return (
-    <main className="competition">
+    <section className="competition">
       <header>
         <p className="os-eyebrow">DAILY MATCH IQ</p>
         <h1>{challenge.scenario.title}</h1>
@@ -155,8 +155,8 @@ export function CompetitionScreen() {
         <h2>내 최근 기록</h2>
         {history.isError && <p role="alert">{history.error.message}</p>}
         {history.data?.entries.length === 0 && <p className="competition-note">아직 완료한 도전이 없습니다.</p>}
-        {history.data && history.data.entries.length > 0 && <ul className="competition-ranking">{history.data.entries.slice(0, 7).map((item) => <li key={`${item.challengeId}:${item.revision}`}><strong>{item.dayKey}</strong><span>{item.score ?? '진행 중'}{item.evidence ? ` · ${item.evidence.minutes}분 · ${item.evidence.outcome}` : ''}</span></li>)}</ul>}
+        {history.data && history.data.entries.length > 0 && <ul className="competition-ranking">{history.data.entries.slice(0, 7).map((item) => <li key={`${item.challengeId}:${item.revision}`}><strong>{item.dayKey}</strong><span>{item.score ?? '진행 중'}{item.evidence ? ` · ${item.evidence.minutes}분 · ${outcomeLabels[item.evidence.outcome]}` : ''}</span></li>)}</ul>}
       </section>
-    </main>
+    </section>
   );
 }

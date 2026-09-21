@@ -28,15 +28,17 @@ const challenge = {
 
 let failNextPost = false;
 let completedEntry = false;
+let historyEntries: Array<Record<string, unknown>> = [];
 
 beforeEach(() => {
   failNextPost = false;
   completedEntry = false;
+  historyEntries = [];
   vi.clearAllMocks();
   vi.mocked(apiFetch).mockImplementation(async (path, init) => {
     if (path === '/v1/competition/daily') return { ok: true, data: { challenge, entry: completedEntry ? { challengeId: challenge.id, dayKey: challenge.dayKey, weekKey: challenge.weekKey, actionIds: ['PRESS_HIGH', 'SHARPEN', 'PLAY_THROUGH'], revision: 3, completed: true, score: 212, maxScore: 400, verificationStatus: 'VERIFIED', resultHash: 'a'.repeat(64), publicOptIn: false, submittedAt: challenge.endsAt, evidence: { appearance: 'START', minutes: 90, ratingTenths: 76, outcome: 'WIN', scoreline: { goalsFor: 2, goalsAgainst: 1 }, positionContribution: 82, statLines: [{ label: '득점', value: '1' }], positionStats: { group: 'MF', assists: 1 } }, proof: { method: 'SERVER_MATCH', rulesetVersion: '3.3.0', contentPackVersion: '0.12.0', scoringPolicyVersion: 'MATCH_EVIDENCE_V1' } } : null } };
     if (path === '/v1/competition/weekly') return { ok: true, data: { weekKey: challenge.weekKey, rows: [] } };
-    if (path === '/v1/competition/history') return { ok: true, data: { entries: [] } };
+    if (path === '/v1/competition/history') return { ok: true, data: { entries: historyEntries } };
     if (init?.method === 'POST') {
       if (failNextPost) { failNextPost = false; return { ok: false, error: { code: 'CAREER_REVISION_CONFLICT', message: '도전 상태가 바뀌었습니다.', retryable: true } }; }
       return { ok: true, data: { entry: { challengeId: challenge.id, dayKey: challenge.dayKey, weekKey: challenge.weekKey, actionIds: ['PRESS_HIGH'], revision: 1, completed: false, score: null, maxScore: null, verificationStatus: 'IN_PROGRESS', resultHash: null, publicOptIn: false, submittedAt: null, evidence: null, proof: { method: 'SERVER_MATCH', rulesetVersion: '3.3.0', contentPackVersion: '0.12.0', scoringPolicyVersion: 'MATCH_EVIDENCE_V1' } }, nextStepIndex: 1 } };
@@ -76,5 +78,12 @@ describe('daily competition screen', () => {
     expect(screen.getByText(/득점 1/)).toBeInTheDocument();
     expect(screen.queryByText('WIN')).not.toBeInTheDocument();
     expect(screen.queryByText('assists')).not.toBeInTheDocument();
+  });
+
+  it('localizes recent-history outcome labels', async () => {
+    historyEntries = [{ challengeId: challenge.id, dayKey: challenge.dayKey, revision: 3, score: 181, evidence: { minutes: 90, outcome: 'DRAW' } }];
+    render(<QueryClientProvider client={new QueryClient()}><CompetitionScreen /></QueryClientProvider>);
+    expect(await screen.findByText(/무승부/)).toBeInTheDocument();
+    expect(screen.queryByText(/DRAW/)).not.toBeInTheDocument();
   });
 });
