@@ -163,6 +163,51 @@ describe('daily match competition and weekly public projection', () => {
     expect(await ctx.db.select().from(competitionEntries)).toHaveLength(1);
   });
 
+  it('rejects an action whose entry read is interleaved with merge before its CAS batch', async () => {
+    const from = await account();
+    const to = await account();
+    // Provision the immutable challenge before installing the batch gate.
+    await request(from.cookie, 'GET', '/v1/competition/daily');
+    const [fromSession] = await ctx.db.select().from(sessions).where(eq(sessions.profileId, from.id));
+    const environmentDatabase = ctx.env.DB;
+    const originalBatch = environmentDatabase.batch.bind(environmentDatabase);
+    let release!: () => void;
+    let entered!: () => void;
+    const batchEntered = new Promise<void>((resolve) => { entered = resolve; });
+    const releaseBatch = new Promise<void>((resolve) => { release = resolve; });
+    let pauseNext = true;
+    const gatedDatabase = new Proxy(environmentDatabase, {
+      get(target, property, receiver) {
+        if (property === 'batch') return async (statements: D1PreparedStatement[]) => {
+          if (pauseNext) {
+            pauseNext = false;
+            entered();
+            await releaseBatch;
+          }
+          return originalBatch(statements as Parameters<D1Database['batch']>[0]);
+        };
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    ctx.env.DB = gatedDatabase;
+    try {
+      const actionPromise = request(from.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: actions[0], expectedRevision: 0 }, 'interleaved-merge-action');
+      await batchEntered;
+      await moveCareersAndRebind(ctx.db, { fromProfileId: from.id, toProfileId: to.id, sessionId: fromSession!.id, now: KST_MIDDAY });
+      release();
+      const response = await actionPromise;
+      expect(response.status).toBe(409);
+      const [transferred] = await ctx.db.select().from(competitionEntries).where(eq(competitionEntries.ownerProfileId, to.id));
+      expect(transferred).toBeDefined();
+      expect(transferred!.revision).toBe(0);
+      expect(JSON.parse(transferred!.actionIdsJson)).toEqual([]);
+      expect(await ctx.db.select().from(competitionActions)).toHaveLength(0);
+    } finally {
+      release();
+      ctx.env.DB = environmentDatabase;
+    }
+  });
+
   it('does not resurrect a deleted entry when an old action request arrives', async () => {
     const a = await account();
     await submitAll(a.cookie, [actions[0]]);
