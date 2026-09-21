@@ -99,3 +99,4 @@ export { buildConditionContext } from './runtime/condition-context.ts';
 export { selectEligibleEvents, type EligibleEvent } from './runtime/select-eligible-events.ts';
 
 export { selectChapterCandidates, type ChapterCandidate } from './runtime/select-chapter-candidates.ts';
+export { loadCharacterMemoryCopy, type CharacterMemoryCopy } from './character-memory.ts';

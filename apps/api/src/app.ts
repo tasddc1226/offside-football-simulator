@@ -1,4 +1,6 @@
 import { registerLockerRoomRoutes } from './routes/locker-room.js';
+import { registerFriendlyRoutes } from './routes/friendlies.js';
+import { registerCareerPublicationRoutes } from './routes/career-publications.js';
 import { Hono } from 'hono';
 import type { AppEnv } from './env.js';
 import { errorHandler, notFoundHandler } from './errors.js';
@@ -35,7 +37,9 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
 
   registerProfileRoutes(app);
   registerLockerRoomRoutes(app);
+  registerFriendlyRoutes(app);
   registerCareerRoutes(app);
+  registerCareerPublicationRoutes(app);
   registerAuthRoutes(app);
   registerServiceSeasonRoutes(app);
   registerAnalyticsRoutes(app);

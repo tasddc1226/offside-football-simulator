@@ -201,3 +201,5 @@ export {
 } from './analytics.js';
 
 export * from './locker-room.js';
+export * from './career-publications.js';
+export * from './friendly-match.js';

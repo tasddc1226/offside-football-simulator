@@ -1,6 +1,12 @@
 import { EFFECT_DEFAULTS, loadContentPack, loadRuleset } from '@offside/content';
-import type { ServiceSeasonCurrent } from '@offside/contracts';
-import { hashState, needsDevelopment } from '@offside/domain';
+import { CareerStateSchema, type ServiceSeasonCurrent } from '@offside/contracts';
+import { hashState, needsDevelopment,
+  assertSeasonLeagueLedgerInvariant,
+  applyMatchToPlayerStats,
+  initialSeasonPlayerStats,
+  applyCondition,
+  type Position,
+} from '@offside/domain';
 import {
   career01,
   career01EngineCommands,
@@ -12,6 +18,7 @@ import {
   encodeSnapshot,
   MemoryLocalStore,
   inlineSimulator,
+  replayCommandLog,
   type EngineCommand,
   type ExecuteResult,
 } from '@offside/engine-client';
@@ -1064,6 +1071,8 @@ async function reachIssue242FirstOffer(
   engine: AppEngine,
   careerId: string,
   trace: string[],
+  position: Position = 'CM',
+  archetypeId = 'cm-playmaker',
 ): Promise<void> {
   await updateDraft(engine, careerId, {
     name: '김민준',
@@ -1072,8 +1081,8 @@ async function reachIssue242FirstOffer(
     preferredFoot: 'RIGHT',
   });
   await updateDraft(engine, careerId, {
-    position: 'CM',
-    archetypeId: 'cm-playmaker',
+    position,
+    archetypeId,
     backgroundId: 'club-academy',
   });
   const confirmed = await confirmPlayer(engine, careerId);
@@ -1588,7 +1597,8 @@ it('routine advance reaches a saved decision without choosing it for the player'
     pack: loadContentPack('0.8.0'),
     newId: makeIdGenerator('journey'),
   });
-  serviceSeasonHolder.current = {...FALLBACK_SERVICE_SEASON,rulesetVersion:'2.1.0',contentPackVersion:'0.8.0'};
+  serviceSeasonHolder.current = {...FALLBACK_SERVICE_SEASON,rulesetVersion:'2.1.0',contentPackVersion:'0.8.0',
+  };
   const created = await createCareer(engine, { simulationMode: 'FAST' });
   serviceSeasonHolder.current = undefined;
   if (!created.ok) throw new Error(created.error.message);
@@ -1617,12 +1627,31 @@ it('routine advance reaches a saved decision without choosing it for the player'
 });
 
 
-it('player-life season persists all three camps, stops auto-advance, and preserves every fixture', async () => {
-  const engine = createAppEngine({store:new MemoryLocalStore(),simulator:inlineSimulator,ruleset:loadRuleset('3.0.0'),pack:loadContentPack('0.9.0'),newId:makeIdGenerator('life')});
+it.each([
+  ['3.0.0', '0.9.0', 'CM', 'cm-playmaker'],
+  ['3.2.0', '0.11.0', 'GK', 'gk-shot-stopper'],
+  ['3.2.0', '0.11.0', 'CB', 'cb-stopper'],
+  ['3.2.0', '0.11.0', 'CM', 'cm-playmaker'],
+  ['3.2.0', '0.11.0', 'ST', 'st-poacher'],
+] as const)(
+  'player-life season %s %s %s persists camps, causal decisions and every fixture',
+  async (version, packVersion, position, archetype) => {
+  const engine = createAppEngine({store:new MemoryLocalStore(),simulator:inlineSimulator,ruleset:loadRuleset(version),pack:loadContentPack(packVersion),newId:makeIdGenerator('life'),
+    });
+    serviceSeasonHolder.current = {
+      ...FALLBACK_SERVICE_SEASON,
+      rulesetVersion: version,
+      contentPackVersion: packVersion,
+    };
+    localStorage.setItem('offside:e2e-seed', 'causal-first-season-1');
   const created=await createCareer(engine,{simulationMode:'FAST'});
+    serviceSeasonHolder.current = undefined;
+    localStorage.removeItem('offside:e2e-seed');
   if (!created.ok) throw new Error(created.error.message);
   const id=created.snapshot.careerId;
-  await reachIssue242FirstOffer(engine,id,[]);
+  await reachIssue242FirstOffer(engine,id,[], position, archetype);
+    let causalChapters = 0;
+    let firstChapterStep: number | null = null;
   let loaded=await engine.client.loadCareer(id);
   if (!loaded.ok || loaded.snapshot.state.pending?.kind !== 'OFFERS') throw new Error('missing offers');
   await acceptOffer(engine,id,loaded.snapshot.state.pending.offers[0]!.id);
@@ -1635,10 +1664,12 @@ it('player-life season persists all three camps, stops auto-advance, and preserv
     let result: ExecuteResult;
     if(needsDevelopment(state,engine.ruleset)) {
       const blocked=await advance(engine,id); expect(blocked.ok).toBe(false);
-      result=await develop(engine,id,{drill:'VISION',load:'RECOVERY',partner:'CAPTAIN'});
+      result=await develop(engine,id,{drill:'VISION',load:'RECOVERY',partner:'CAPTAIN',
+        });
       expect(result.ok).toBe(true);
       if (result.ok) expect(result.domainSnapshot.state.tags).toContain('육성_판단');
-      const duplicate=await develop(engine,id,{drill:'VISION',load:'RECOVERY',partner:'CAPTAIN'});
+      const duplicate=await develop(engine,id,{drill:'VISION',load:'RECOVERY',partner:'CAPTAIN',
+        });
       expect(duplicate.ok).toBe(false);
     } else if(pending?.kind==='ROLE_PROPOSAL') result=await resolveRole(engine,id,'ACCEPT');
     else if(pending?.kind==='EVENT'||pending?.kind==='INJURY'||pending?.kind==='NATIONAL_TEAM') {
@@ -1647,8 +1678,93 @@ it('player-life season persists all three camps, stops auto-advance, and preserv
       result=await resolveEvent(engine,id,choice.id);
     } else if(pending?.kind==='CHAPTER') {
       const decision=engine.pack.chaptersById.get(pending.chapterId)!.decisions[pending.resolved.length]!;
-      result=await resolveChapter(engine,id,decision.id,decision.options[0]!.id);
-    } else if ((pending?.kind==='CONTRACT'||pending?.kind==='OFFERS') && pending.offers.length>0) result=await rejectOffer(engine,id,pending.offers[0]!.id);
+        if (version === '3.2.0') {
+          const payload = {
+            chapterId: pending.chapterId,
+            definitionVersion: pending.version,
+            decisionId: decision.id,
+            optionId: decision.options[0]!.id,
+            outcomes: toResolveChapterOutcomes(decision.options[0]!.outcomes),
+          };
+          expect(
+            (
+              await execute(engine, id, {
+                type: 'RESOLVE_CHAPTER',
+                payload: { ...payload, optionId: 'UNKNOWN' },
+              })
+            ).ok,
+          ).toBe(false);
+          expect(
+            (
+              await execute(engine, id, {
+                type: 'RESOLVE_CHAPTER',
+                payload: {
+                  ...payload,
+                  outcomes: payload.outcomes.filter((o) => o.kind === 'SUCCESS'),
+                },
+              })
+            ).ok,
+          ).toBe(false);
+        }
+        result=await resolveChapter(engine,id,decision.id,decision.options[0]!.id);
+        if (version === '3.2.0' && pending.trigger !== 'NATIONAL_DEBUT' && result.ok) {
+          causalChapters += 1;
+          firstChapterStep ??= state.currentStep;
+          const before = state.season!.matches.find((m) => m.id === pending.matchId)!;
+          expect(before.decisionWindow).toEqual({
+            minute: before.appearance === 'START' ? before.minutes : 90,
+            phase: 'PENDING',
+            backgroundScore: {
+              goalsFor: before.result.goalsFor,
+              goalsAgainst: before.result.goalsAgainst,
+            },
+          });
+          expect(before.injuredOff || before.cards.red).toBe(false);
+          expect(state.season!.matches.at(-1)!.id).toBe(before.id);
+          const afterState = result.domainSnapshot.state;
+          expect(CareerStateSchema.parse(JSON.parse(JSON.stringify(afterState)))).toEqual(
+            afterState,
+          );
+          const after = afterState.season!.matches.find((m) => m.id === pending.matchId)!;
+          expect(after.decisionWindow).toEqual({ ...before.decisionWindow, phase: 'FINAL' });
+          const receipt = after.decisionImpact!.receipts.at(-1)!;
+          expect(receipt.before).toEqual({
+            goalsFor: before.result.goalsFor,
+            goalsAgainst: before.result.goalsAgainst,
+          });
+          expect(receipt.after).toEqual({
+            goalsFor: after.result.goalsFor,
+            goalsAgainst: after.result.goalsAgainst,
+          });
+          const defensive = before.stats.group === 'GK' || before.stats.group === 'DF';
+          expect(after.result.goalsFor - before.result.goalsFor).toBe(
+            !defensive && receipt.outcomeKind === 'SUCCESS' ? 1 : 0,
+          );
+          expect(after.result.goalsAgainst - before.result.goalsAgainst).toBe(
+            defensive && receipt.outcomeKind === 'FAIL' ? 1 : 0,
+          );
+          expect(afterState.relationships.managerTrust - state.relationships.managerTrust).toBe(
+            receipt.managerTrustDelta,
+          );
+          assertSeasonLeagueLedgerInvariant(engine.ruleset, afterState.season!);
+          const retry = await resolveChapter(engine, id, decision.id, decision.options[0]!.id);
+          expect(retry.ok).toBe(false);
+          // One explicit continuation: condition uses the final match once, including remaining
+          // same-step fixtures. Subsequent paused chapters/injuries and unprepared camps defer it.
+          const continued = await advance(engine,id);
+          if(!continued.ok) throw new Error(continued.error.message);
+          const continuation = continued.domainSnapshot.state;
+          let expectedCondition = {form:afterState.state.form,fitness:afterState.state.fitness,morale:afterState.state.morale};
+          for(let step=afterState.currentStep;step<=continuation.currentStep && step<12;step++) {
+            const deferred = step===continuation.currentStep &&
+              (continuation.pending?.kind==='CHAPTER'||continuation.pending?.kind==='INJURY'||needsDevelopment(continuation,engine.ruleset));
+            if(!deferred) expectedCondition=applyCondition(expectedCondition,continuation.season!.matches.filter(m=>m.step===step),
+              engine.ruleset.conditionRules,engine.ruleset.seasonBoundaryReset.form);
+          }
+          expect(continuation.state).toEqual(expectedCondition);
+          result=continued;
+        }
+      } else if ((pending?.kind==='CONTRACT'||pending?.kind==='OFFERS') && pending.offers.length>0) result=await rejectOffer(engine,id,pending.offers[0]!.id);
     else result=await advanceToDecision(engine,id);
     if(!result.ok) throw new Error(result.error.message);
     const saved=await engine.client.loadCareer(id);
@@ -1658,9 +1774,60 @@ it('player-life season persists all three camps, stops auto-advance, and preserv
   loaded=await engine.client.loadCareer(id);
   if(!loaded.ok) throw new Error('missing season');
   expect(loaded.snapshot.state.pending?.kind).toBe('SETTLEMENT');
-  expect(loaded.snapshot.state.development!.sessions.map(s=>s.block)).toEqual([1,2,3]);
+  expect(loaded.snapshot.state.development!.sessions.map((s) =>s.block)).toEqual([1,2,3]);
   const season=loaded.snapshot.state.season!;
-  expect(new Set(season.matches.map(m=>m.id)).size).toBe(season.matches.length);
-  expect(season.matches.filter(m=>m.kind==='LEAGUE').length).toBeGreaterThanOrEqual(14);
+    if (version === '3.2.0') {
+      expect(causalChapters).toBeGreaterThan(0);
+      expect(firstChapterStep).toBeLessThanOrEqual(3);
+      assertSeasonLeagueLedgerInvariant(engine.ruleset, season);
+      expect(season.playerStats).toEqual(
+        season.matches.reduce(
+          applyMatchToPlayerStats,
+          initialSeasonPlayerStats(season.playerStats.group),
+        ),
+      );
+      for (const entry of season.schedule.filter((e) => e.skipped === undefined))
+        expect(
+          season.matches.filter((m) => m.step === entry.step && m.order === entry.order),
+        ).toHaveLength(1);
+      for (const step of season.steps.filter((s) => s.summary !== null))
+        expect(step.summary!.matchesPlayed).toBe(
+          season.matches.filter((m) => m.step === step.index).length,
+        );
+      const logs = await engine.store.transaction('readonly', (tx) =>
+        tx.commandLog.listSince(id, 0),
+      );
+      const replayed = await replayCommandLog(
+        inlineSimulator,
+        null,
+        logs,
+        { rulesetVersion: version, contentPackVersion: packVersion },
+        engine.ruleset,
+      );
+      expect(replayed.ok).toBe(true);
+      if (replayed.ok) expect(replayed.snapshot.stateHash).toBe(loaded.snapshot.stateHash);
+      const last = logs.at(-1)!;
+      const resumed = createAppEngine({
+        store: engine.store,
+        simulator: inlineSimulator,
+        ruleset: engine.ruleset,
+        pack: engine.pack,
+      });
+      const repeated = await resumed.client.execute({
+        careerId: id,
+        command: {
+          type: last.commandType,
+          payload: last.payload,
+          commandId: last.commandId,
+          expectedRevision: last.revision - 1,
+        } as EngineCommand,
+      });
+      expect(repeated.ok && repeated.replayed).toBe(true);
+      const afterRetry = await resumed.client.loadCareer(id);
+      expect(afterRetry.ok && afterRetry.snapshot.stateHash).toBe(loaded.snapshot.stateHash);
+    }
+    expect(new Set(season.matches.map((m) =>m.id)).size).toBe(season.matches.length);
+  expect(season.matches.filter((m) =>m.kind==='LEAGUE').length).toBeGreaterThanOrEqual(14);
   expect((await settleSeason(engine,id)).ok).toBe(true);
-},30000);
+},30000,
+);

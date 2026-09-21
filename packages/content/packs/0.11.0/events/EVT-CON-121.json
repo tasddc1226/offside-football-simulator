@@ -1,0 +1,210 @@
+{
+  "id": "EVT-CON-121",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "triggers": {
+    "hasTag": [
+      "career.tags",
+      "T7034_FOLLOWUP_ONLY"
+    ]
+  },
+  "exclusionTags": [
+    "T7034_LOYALTY_DONE"
+  ],
+  "cooldown": {
+    "steps": 12
+  },
+  "weight": 100,
+  "choices": [
+    {
+      "id": "A",
+      "label": "이번 시즌 함께 만든 장면을 돌아본다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "팬 관계 상승 기회",
+          "target": "fans",
+          "direction": "UP"
+        },
+        {
+          "label": "거취 언급 없음"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 81,
+          "title": "구체적인 기억이 팬과 선수의 시간을 연결했다",
+          "cause": "공유한 장면을 고른 메시지",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-121.A.S0",
+              "target": "fans",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-121_A_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-121.A.S1",
+              "target": "popularity",
+              "delta": 200,
+              "clamp": {
+                "min": 0,
+                "max": 10000
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-121_A_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_LOYALTY_DONE"
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 19,
+          "title": "거취를 말하지 않았다는 질문이 다시 나왔다",
+          "cause": "미래 언급 없는 구성",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-121.A.F0",
+              "target": "media",
+              "delta": -100,
+              "clamp": {
+                "min": 0,
+                "max": 10000
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-121_A_F0"
+            }
+          ],
+          "addTags": [
+            "T7034_LOYALTY_DONE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "마지막 경기까지 역할을 다하겠다고 말한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "감독 신뢰 상승 기회",
+          "target": "managerTrust",
+          "direction": "UP"
+        },
+        {
+          "label": "팬 기대 부담"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 70,
+          "title": "현재 계약의 책임을 강조한 말이 힘을 얻었다",
+          "cause": "범위를 분명히 한 약속",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-121.B.S0",
+              "target": "managerTrust",
+              "delta": 4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-121_B_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-121.B.S1",
+              "target": "fans",
+              "delta": 3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-121_B_S1"
+            }
+          ],
+          "addTags": [
+            "T7034_LOYALTY_DONE"
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 30,
+          "title": "강한 표현이 스스로에게 부담으로 남았다",
+          "cause": "높아진 기대",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-CON-121.B.F0",
+              "target": "morale",
+              "delta": -2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": {
+                "kind": "STEPS_AFTER",
+                "steps": 2
+              },
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-121_B_F0"
+            }
+          ],
+          "addTags": [
+            "T7034_LOYALTY_DONE"
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "행사 뒤 팬 대표가 시즌 마지막 홈경기에 전할 짧은 메시지를 부탁했다. 진심을 전하면서도 확정되지 않은 미래를 약속하지 않아야 한다."
+  }
+}

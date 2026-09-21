@@ -118,6 +118,9 @@ export function LockerRoomScreen() {
             />
           </div>
           <p className="locker-note">
+            <Link to="/friendlies">은퇴 선수로 친선 경기 시작하기 · 경기 기록 보기</Link>
+          </p>
+          <p className="locker-note">
             다른 기기에서도 이어가려면{' '}
             <Link to="/settings">설정에서 계정을 연결하거나 복구 코드</Link>를 보관하세요. 아직
             동기화되지 않은 선수는 저장이 완료된 뒤 나타납니다.
@@ -387,8 +390,8 @@ export function TeamEditor({
         <p role="alert">{save.error?.message ?? remove.error?.message}</p>
       )}
       <p className="locker-note">
-        지금은 팀 편성과 보관을 지원합니다. 팀 간 경기는 아직 제공하지 않습니다. 편성은 선수의 개인
-        커리어에 영향을 주지 않습니다.
+        저장한 팀의 은퇴 선수로 연습팀과 친선 경기를 할 수 있습니다. 실시간 팀 간 대전은 제공하지
+        않습니다. 편성과 친선 기록은 선수의 개인 커리어에 영향을 주지 않습니다.
       </p>
       {team && (
         <Button variant="ghost" disabled={pending} onClick={() => setDeleteOpen(true)}>

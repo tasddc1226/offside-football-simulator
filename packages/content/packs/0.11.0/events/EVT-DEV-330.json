@@ -1,0 +1,140 @@
+{
+  "id": "EVT-DEV-330",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "triggers": {
+    "all": [
+      {
+        "eq": [
+          "career.stage",
+          "PRO"
+        ]
+      },
+      {
+        "gte": [
+          "career.proSeasons",
+          8
+        ]
+      }
+    ]
+  },
+  "exclusionTags": [],
+  "weight": 180,
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "내가 배운 것을 후배에게 전한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "리더십 +2 · 다음 세대에 남기는 흔적"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "리더십 +2 · 다음 세대에 남기는 흔적",
+          "effects": [
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-DEV-330.A.0.0",
+              "target": "leadership",
+              "delta": 2,
+              "clamp": {
+                "min": 1,
+                "max": 99
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-DEV-330.A.0.1",
+              "target": "captain",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": [
+            "마지막_전수"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "끝까지 나의 최고 경기를 노린다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "집중력 +2, 체력 −4 · 마지막 전성기를 향해"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "집중력 +2, 체력 −4 · 마지막 전성기를 향해",
+          "effects": [
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-DEV-330.B.0.0",
+              "target": "concentration",
+              "delta": 2,
+              "clamp": {
+                "min": 1,
+                "max": 99
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-330.B.0.1",
+              "target": "fitness",
+              "delta": -4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": [
+            "마지막_도전"
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "몇 시즌 전의 나는 무엇을 잘하는지도 몰랐다. 이제 후배가 너의 준비 과정을 따라 하고 있다. 남은 선수 생활에 무엇을 더 남기고 싶은가?"
+  }
+}

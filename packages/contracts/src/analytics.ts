@@ -18,6 +18,7 @@ export const ANALYTICS_EVENT_NAMES = [
   'step_passed',
   'season_settled',
   'career_abandoned_hint',
+  'growth_action',
 ] as const;
 
 export const AnalyticsEventNameSchema = z.enum(ANALYTICS_EVENT_NAMES);
@@ -26,7 +27,8 @@ export type AnalyticsEventName = z.infer<typeof AnalyticsEventNameSchema>;
 const ScreenIdSchema = z.string().regex(/^SCR-\d{3}$/, 'SCR-000 형식이어야 한다.');
 /** `screen_viewed.careerPhase`: 커리어 없음('NONE')·선수 생성 중(`PLAYER_CREATION_CAREER_PHASE`='YOUTH')·
  * 아니면 `state.seasonPhase`(도메인 `SeasonPhase`) 그대로다(apps/web의 기존 30여 호출부 기준). */
-const CareerPhaseSchema = z.enum(['NONE', 'YOUTH', 'PRESEASON', 'LEAGUE', 'CUP', 'TRANSFER_WINDOW', 'SETTLEMENT']);
+const CareerPhaseSchema = z.enum(['NONE', 'YOUTH', 'PRESEASON', 'LEAGUE', 'CUP', 'TRANSFER_WINDOW', 'SETTLEMENT',
+]);
 /** `career_abandoned_hint.seasonPhase`: 도메인 `SeasonPhase` 그대로(커리어에는 항상 값이 있다, NONE 없음). */
 const SeasonPhaseSchema = z.enum(['PRESEASON', 'LEAGUE', 'CUP', 'TRANSFER_WINDOW', 'SETTLEMENT']);
 const RiskLabelSchema = z.enum(['HIGH', 'MEDIUM', 'LOW']);
@@ -34,7 +36,11 @@ const RoleProposalTypeSchema = z.enum(['KEEP', 'POSITION_CHANGE', 'ROLE_CHANGE']
 const RoleDecisionSchema = z.enum(['ACCEPT', 'DECLINE']);
 const OutcomeClassSchema = z.enum(['DECISION', 'ADVANCE', 'SETTLEMENT']);
 const LatencyBucketSchema = z.enum(['<100ms', '<500ms', '<2s', '>=2s']);
-const FunnelStageSchema = z.enum(['ONBOARDING_STARTED', 'PLAYER_CONFIRMED', 'CONTRACT_SIGNED', 'SEASON_STARTED', 'SEASON_SETTLED']);
+const FunnelStageSchema = z.enum(['ONBOARDING_STARTED', 'PLAYER_CONFIRMED', 'CONTRACT_SIGNED', 'SEASON_STARTED',
+  'FIRST_MATCH_DECISION',
+  'FIRST_MATCH_COMPLETED',
+  'SEASON_SETTLED',
+]);
 const ElapsedSecBucketSchema = z.enum(['<60', '<180', '<360', '<720', '<1800', '>=1800']);
 /** T-4-024: 실사용자 플레이 시간 측정용 초 단위 경과(bucket과 별개). 상한 2시간(7200초). */
 const ElapsedSecSchema = z.number().int().nonnegative().max(7200);
@@ -44,8 +50,10 @@ const SeasonIndexSchema = z.number().int().nonnegative();
 
 /** 이름별 props 스키마. 화이트리스트 자체이기도 하다 — 여기 없는 이름은 서버가 통째로 버린다. */
 export const ANALYTICS_EVENT_PROPS_SCHEMAS = {
+  growth_action: z.strictObject({ action: z.enum(['ARTICLE_VIEWED', 'ARTICLE_PUBLISHED', 'ARTICLE_REVOKED', 'CHALLENGE_STARTED', 'FRIENDLY_STARTED', 'FRIENDLY_REPLAYED']) }),
   screen_viewed: z.strictObject({ screenId: ScreenIdSchema, careerPhase: CareerPhaseSchema }),
-  choice_previewed: z.strictObject({ eventId: z.string().min(1).max(64), choiceId: z.string().min(1).max(64) }),
+  choice_previewed: z.strictObject({ eventId: z.string().min(1).max(64), choiceId: z.string().min(1).max(64),
+  }),
   choice_selected: z.strictObject({
     eventId: z.string().min(1).max(64),
     choiceId: z.string().min(1).max(64),
@@ -57,7 +65,8 @@ export const ANALYTICS_EVENT_PROPS_SCHEMAS = {
     optionId: z.string().min(1).max(64),
     outcomeKind: ChapterOutcomeKindSchema,
   }),
-  role_proposal_resolved: z.strictObject({ type: RoleProposalTypeSchema, decision: RoleDecisionSchema }),
+  role_proposal_resolved: z.strictObject({ type: RoleProposalTypeSchema, decision: RoleDecisionSchema,
+  }),
   command_submitted: z.strictObject({ commandType: CommandTypeSchema }),
   command_resolved: z.strictObject({
     commandType: CommandTypeSchema,

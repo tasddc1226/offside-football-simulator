@@ -96,7 +96,8 @@ export const CAREER_TAG_IDS = [
 export type CareerTagId = (typeof CAREER_TAG_IDS)[number];
 
 // T-2-014 D-42: 태그 하나가 부여된 기록.
-export type CareerTagGrant = { tagId: CareerTagId; seasonIndex: number; atRevision: number; sourceRefId: string };
+export type CareerTagGrant = { tagId: CareerTagId; seasonIndex: number; atRevision: number; sourceRefId: string;
+};
 
 // T-4-001 D-49: HEALTH는 activeEffects에 저장되지 않는 즉발 효과 kind다(applyEffects 참고).
 export type EffectKind = 'PERMANENT' | 'CURRENT' | 'CONTEXT' | 'RELATION' | 'DEFERRED' | 'HEALTH';
@@ -246,7 +247,8 @@ export type Offer = {
   negotiable: { wage: boolean; role: boolean; length: boolean }; // Phase 1: 전부 false
   negotiationState: NegotiationState; // 생성 시 'OPEN'
   negotiatedAsk: NegotiationAsk | null; // NEGOTIATE 뒤 T-3-003이 기록, 생성 시 null
-  loan: { parentTeamId: string; seasons: 1; wageShareBp: number; buyOptionMinor: number | null } | null;
+  loan: { parentTeamId: string; seasons: 1; wageShareBp: number; buyOptionMinor: number | null;
+  } | null;
 };
 
 // T-3-001 D-44/D-46: Phase 1은 항상 'PERMANENT'. 'LOAN'은 임대 계약(T-3-003이 생성).
@@ -336,7 +338,8 @@ export type Pending =
       // T-2-014 D-42: 이 챕터를 연 trigger의 kind(전체 ChapterTrigger가 아니라 판별 리터럴만 —
       // ChapterRecord.trigger와 TAG-DERBY-HERO 같은 평가기가 이 값으로 필터한다).
       trigger: ChapterTrigger['kind'];
-      resolved: Array<{ decisionId: string; optionId: string; outcomeId: string; roll: number; outcomeKind: ChapterOutcomeKind }>;
+      resolved: Array<{ decisionId: string; optionId: string; outcomeId: string; roll: number; outcomeKind: ChapterOutcomeKind;
+      }>;
       /** NATIONAL_DEBUT이면 가상 상대 메타데이터를 남긴다. 실제 클럽 경기/일정은 만들지 않는다. */
       virtualOpponent?: NationalDebutReservation;
     }
@@ -416,7 +419,8 @@ export type OutReason = null | 'NOT_SELECTED' | 'UNUSED_SUB' | 'INJURY' | 'SUSPE
 // T-2-003 D-35 데이터 계약: 포지션군별 필수 통계(03 "포지션별 결과"). 전환율(FW)은 goals/shots
 // 파생값이라 저장하지 않는다.
 export type PositionStats =
-  | { group: 'FW'; goals: number; assists: number; xgCenti: number; shots: number; offsides: number }
+  | { group: 'FW'; goals: number; assists: number; xgCenti: number; shots: number; offsides: number;
+    }
   | {
       group: 'MF';
       assists: number;
@@ -426,8 +430,10 @@ export type PositionStats =
       passesCompleted: number;
       ballRecoveries: number;
     }
-  | { group: 'DF'; tackles: number; interceptions: number; aerialsWon: number; goalsConcededInvolved: number; cleanSheet: boolean }
-  | { group: 'GK'; saves: number; psxgMinusGoalsCenti: number; cleanSheet: boolean; crossesClaimed: number; buildUpPasses: number };
+  | { group: 'DF'; tackles: number; interceptions: number; aerialsWon: number; goalsConcededInvolved: number; cleanSheet: boolean;
+    }
+  | { group: 'GK'; saves: number; psxgMinusGoalsCenti: number; cleanSheet: boolean; crossesClaimed: number; buildUpPasses: number;
+    };
 
 // PositionStats.group의 리터럴은 StatGroup과 같은 값이다(선언은 각 분기 리터럴로 유지 — 판별
 // 유니온의 narrowing이 `group: StatGroup`보다 `group: 'FW'` 같은 리터럴에서 더 잘 동작한다).
@@ -437,7 +443,8 @@ export type PositionStats =
  * 같은 항목이지만 `cleanSheet: boolean` 자리가 시즌 누적 횟수(number)로 바뀐다.
  */
 export type PositionStatsTotals =
-  | { group: 'FW'; goals: number; assists: number; xgCenti: number; shots: number; offsides: number }
+  | { group: 'FW'; goals: number; assists: number; xgCenti: number; shots: number; offsides: number;
+    }
   | {
       group: 'MF';
       assists: number;
@@ -447,8 +454,10 @@ export type PositionStatsTotals =
       passesCompleted: number;
       ballRecoveries: number;
     }
-  | { group: 'DF'; tackles: number; interceptions: number; aerialsWon: number; goalsConcededInvolved: number; cleanSheet: number }
-  | { group: 'GK'; saves: number; psxgMinusGoalsCenti: number; cleanSheet: number; crossesClaimed: number; buildUpPasses: number };
+  | { group: 'DF'; tackles: number; interceptions: number; aerialsWon: number; goalsConcededInvolved: number; cleanSheet: number;
+    }
+  | { group: 'GK'; saves: number; psxgMinusGoalsCenti: number; cleanSheet: number; crossesClaimed: number; buildUpPasses: number;
+    };
 
 export type StepMatchResult = {
   matchId: string;
@@ -589,6 +598,24 @@ export type MatchRecord = {
   cards: { yellow: 0 | 1 | 2; red: boolean };
   injuredOff: boolean;
   chapterId: string | null;
+  /** Background play is sampled before this personal last involvement; remainder has no further goals. */
+  decisionWindow?: {
+    minute: number;
+    phase: 'PENDING' | 'FINAL';
+    backgroundScore: { goalsFor: number; goalsAgainst: number };
+  };
+  /** Opt-in late-match sequence. Scores are actual persisted scores, not presentation estimates. */
+  decisionImpact?: {
+    originalRatingTenths: number | null;
+    receipts: Array<{
+      decisionId: string;
+      action: 'SHOT' | 'PASS' | 'BLOCK' | 'SAVE';
+      outcomeKind: ChapterOutcomeKind;
+      before: { goalsFor: number; goalsAgainst: number };
+      after: { goalsFor: number; goalsAgainst: number };
+      managerTrustDelta: number;
+    }>;
+  };
 };
 
 // T-2-003 D-35: 시즌 누계(결산 이전 진행 중 값). `totals`의 boolean 필드는 누적 횟수(count)다.
@@ -606,7 +633,8 @@ export type SeasonPlayerStats = {
 
 // T-2-003 D-35: 부상·정지만 표현한다(능력치·재활은 Phase 4). `excluded`(SelectionCandidate)와 같은
 // 문자열('INJURY' | 'SUSPENSION')을 쓴다.
-export type Availability = null | { kind: 'INJURY' | 'SUSPENSION' | 'SERVICE'; matchesRemaining: number; sinceMatchId: string };
+export type Availability = null | { kind: 'INJURY' | 'SUSPENSION' | 'SERVICE'; matchesRemaining: number; sinceMatchId: string;
+};
 
 // T-2-002 D-26/D-34: 시즌 시작 시 포지션마다 생성하는 주전 경쟁자. `expectedPerformance`·`score`는
 // 저장하지 않고 판정마다 `selection.ts`가 다시 계산한다(RULE-SEL-001은 "매 판정마다").
@@ -660,7 +688,8 @@ export type SelectionRanking = {
 // `teamId`가 속한 팀의 `tacticalStyleId` 스냅샷이다.
 export type FootballSeason = {
   /** Phase 5 opt-in ledger; absent in historical command logs (do not synthesize old income). */
-  legacyContext?: { policyVersion: '1.0.0'; wageMinorPerWeek: number; signingBonusMinor: number; contractId: string };
+  legacyContext?: { policyVersion: '1.0.0'; wageMinorPerWeek: number; signingBonusMinor: number; contractId: string;
+  };
   index: number;
   serviceSeasonId: string;
   simulationMode: SimulationMode;
@@ -727,7 +756,8 @@ export type ChapterRecord = {
   importance: 'MAJOR' | 'MINOR';
   // T-2-014 D-42: 이 챕터를 연 trigger의 kind(`pending.trigger`에서 그대로 옮긴다).
   trigger: ChapterTrigger['kind'];
-  decisions: Array<{ decisionId: string; optionId: string; outcomeId: string; outcomeKind: ChapterOutcomeKind }>;
+  decisions: Array<{ decisionId: string; optionId: string; outcomeId: string; outcomeKind: ChapterOutcomeKind;
+  }>;
   ratingDeltaTenths: number;
   /** NATIONAL_DEBUT이면 예약에서 소비한 가상 상대를 기록한다. */
   virtualOpponent?: NationalDebutReservation;
@@ -768,7 +798,8 @@ export type ClubMeetingState = {
 // 적었지만 이 브리프(D-39)가 "결산은 항상 result를 만든다"로 확정해 필수 필드로 둔다. T-2-004 머지로
 // `chapters`는 이제 실제 `ChapterRecord`(placeholder `{id, step}`이 아니다).
 export type SeasonResult = {
-  legacy?: { policyVersion: '1.0.0'; incomeMinor: number; contractId: string; relationships: CareerState['relationships']; promotion: boolean; ageAtStart: number; injuryMissedMatches?: number };
+  legacy?: { policyVersion: '1.0.0'; incomeMinor: number; contractId: string; relationships: CareerState['relationships']; promotion: boolean; ageAtStart: number; injuryMissedMatches?: number;
+  };
   index: number;
   simulationMode: SimulationMode;
   teamId: string;
@@ -792,9 +823,11 @@ export type SeasonResult = {
     finalRank: number;
   };
   roleChanges: Array<{ step: number; type: RoleProposal['type']; decision: 'ACCEPT' | 'DECLINE' }>;
-  promiseFulfilment: { promised: SquadRole; delivered: SquadRole; fulfilled: boolean; minutesShareBp: number };
+  promiseFulfilment: { promised: SquadRole; delivered: SquadRole; fulfilled: boolean; minutesShareBp: number;
+  };
   clubMeetingGoal?: ClubMeetingGoalResult;
-  attributeDeltas: Array<{ key: AttributeKey; delta: number; causes: Array<{ cause: GrowthCause; centi: number }> }>;
+  attributeDeltas: Array<{ key: AttributeKey; delta: number; causes: Array<{ cause: GrowthCause; centi: number }>;
+  }>;
   baseOvr: { before: number; after: number };
   stateDeltas: {
     form: { before: number; after: number };
@@ -806,7 +839,8 @@ export type SeasonResult = {
   // T-3-001(PR #45 후속): 결산 뒤 `season`이 null이 되며 사라지던 다이어리 step 요약을 보존한다.
   // `settleSeason`이 `season.steps[].summary`에서 채운다(이 작업의 유일한 로직 변경). SETTLEMENT
   // step(12)은 결산 자체라 요약이 없다 — 포함되지 않는다(길이 11, PR #48 리뷰로 확정).
-  stepSummaries: Array<{ step: number; phase: SeasonPhase; matchesPlayed: number; decisionsOpened: number; passedAtRevision: number }>;
+  stepSummaries: Array<{ step: number; phase: SeasonPhase; matchesPlayed: number; decisionsOpened: number; passedAtRevision: number;
+  }>;
   hash: string;
 };
 
@@ -858,7 +892,8 @@ export type RelationshipLogEntry = {
 export type NationalTeamCallUp = 'ACCEPT' | 'DECLINE' | 'CONDITIONAL';
 
 /** T-4-004: nationality module은 기본 모듈 id와 예외 목록만 보존한다. 특례 의미는 이 티켓에서 모델링하지 않는다. */
-export type NationalityRuleState = {
+export type NationalityRuleState =
+  | {
   moduleId: 'DEFAULT';
   exceptions: [];
 } | import('./legacy/nationality.js').NationalityState;
@@ -900,11 +935,48 @@ export type SeasonManager = {
   trustBase: number;
 };
 
+export type CoachActor = { id: string; name: string; teamId: string };
+export type CoachChoiceMemory = {
+  id: string;
+  actor: CoachActor;
+  seasonIndex: number;
+  step: number;
+  matchId: string;
+  chapterId: string;
+  decisionId: string;
+  optionId: string;
+  action: 'SHOT' | 'PASS' | 'BLOCK' | 'SAVE';
+  outcomeKind: ChapterOutcomeKind;
+  before: { goalsFor: number; goalsAgainst: number };
+  after: { goalsFor: number; goalsAgainst: number };
+  trustDelta: number;
+};
+export type CoachMemoryReaction = {
+  id: string;
+  kind: 'FOLLOW_UP' | 'REUNION';
+  seasonIndex: number;
+  actor: CoachActor;
+  memory: CoachChoiceMemory;
+  trustBefore: number;
+  trustAfter: number;
+  trustDelta: number;
+};
+export type CoachMemoryState = {
+  version: 'COACH_MEMORY_V1';
+  memories: CoachChoiceMemory[];
+  reactions: CoachMemoryReaction[];
+  consumed: Array<{ memoryId: string; kind: 'FOLLOW_UP' | 'REUNION' }>;
+};
+
 export type CareerState = {
+  /** Opt-in actor snapshots; absent on historical careers, never inferred from generic relation logs. */
+  characterMemory?: CoachMemoryState | undefined;
   development?: DevelopmentState | undefined;
   /** Optional to preserve pre-Phase-5 snapshots and their command-log hashes. */
-  legacyEvents?: { policyVersion: '1.0.0'; tournaments: CareerTournament[]; mentoredSeasonIndices: number[] };
-  retirement?: { policyVersion: '1.0.0'; marketOffers: number | null; lastChanceConsumed: boolean; lastChanceSeasonIndex: number | null };
+  legacyEvents?: { policyVersion: '1.0.0'; tournaments: CareerTournament[]; mentoredSeasonIndices: number[];
+  };
+  retirement?: { policyVersion: '1.0.0'; marketOffers: number | null; lastChanceConsumed: boolean; lastChanceSeasonIndex: number | null;
+  };
   schemaVersion: 1;
   careerId: string;
   status: CareerStatus;
@@ -918,7 +990,8 @@ export type CareerState = {
   growthCarryCenti: Record<AttributeKey, number>;
   state: { form: number; fitness: number; morale: number };
   context: { tacticalFit: number; squadStatus: number; positionProficiency: number };
-  relationships: { managerTrust: number; captain: number; rival: number; fans: number; agent: number };
+  relationships: { managerTrust: number; captain: number; rival: number; fans: number; agent: number;
+  };
   tags: string[];
   appliedSourceIds: string[];
   activeEffects: Effect[];

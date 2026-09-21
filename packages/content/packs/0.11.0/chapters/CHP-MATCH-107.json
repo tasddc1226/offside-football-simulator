@@ -1,0 +1,169 @@
+{
+  "id": "CHP-MATCH-107",
+  "version": 1,
+  "importance": "MAJOR",
+  "trigger": {
+    "kind": "DERBY"
+  },
+  "weight": 100,
+  "positionGroups": [
+    "GK"
+  ],
+  "rotationGroup": "DERBY",
+  "decisions": [
+    {
+      "id": "D1",
+      "prompt": "라이벌과 맞선 경기, 관중의 함성이 커진다. 당신에게 온 마지막 플레이. 상대가 슈팅 기회를 잡았다. 어떻게 막을까?",
+      "options": [
+        {
+          "id": "ROLE",
+          "label": "슈팅을 보고 반응한다",
+          "riskLabel": "LOW",
+          "priorProbability": {
+            "successBp": 6500
+          },
+          "previewEffects": [
+            {
+              "label": "성공하면 실점 방어 · 실패하면 상대 득점",
+              "target": "managerTrust"
+            },
+            {
+              "label": "성공하면 감독 신뢰 +3 · 실패하면 -2",
+              "target": "managerTrust"
+            }
+          ],
+          "outcomes": [
+            {
+              "id": "ROLE-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 65,
+              "title": "선방으로 스코어를 지켰다",
+              "ratingDeltaTenths": 0,
+              "effects": [
+                {
+                  "kind": "RELATION",
+                  "sourceId": "CHP-MATCH-107.D1.ROLE.SUCCESS",
+                  "target": "managerTrust",
+                  "delta": 3,
+                  "clamp": {
+                    "min": 0,
+                    "max": 100
+                  },
+                  "appliesAt": {
+                    "kind": "IMMEDIATE"
+                  },
+                  "expiresAt": null,
+                  "stackingRule": "SUM"
+                }
+              ],
+              "narrative": {
+                "situation": "선방으로 스코어를 지켰다. 라이벌전 벤치에서 감독이 엄지를 들어 보인다."
+              }
+            },
+            {
+              "id": "ROLE-FAIL",
+              "kind": "FAIL",
+              "weight": 35,
+              "title": "손끝을 지나간 공이 골망을 흔들었다",
+              "ratingDeltaTenths": 0,
+              "effects": [
+                {
+                  "kind": "RELATION",
+                  "sourceId": "CHP-MATCH-107.D1.ROLE.FAIL",
+                  "target": "managerTrust",
+                  "delta": -2,
+                  "clamp": {
+                    "min": 0,
+                    "max": 100
+                  },
+                  "appliesAt": {
+                    "kind": "IMMEDIATE"
+                  },
+                  "expiresAt": null,
+                  "stackingRule": "SUM"
+                }
+              ],
+              "narrative": {
+                "situation": "손끝을 지나간 공이 골망을 흔들었다. 라이벌전 벤치에서 감독이 다음에는 타이밍을 바꿔 보자고 손짓한다."
+              }
+            }
+          ]
+        },
+        {
+          "id": "BOLD",
+          "label": "앞으로 나와 각도를 좁힌다",
+          "riskLabel": "HIGH",
+          "priorProbability": {
+            "successBp": 4500
+          },
+          "previewEffects": [
+            {
+              "label": "성공하면 실점 방어 · 실패하면 상대 득점",
+              "target": "managerTrust"
+            },
+            {
+              "label": "성공하면 감독 신뢰 +6 · 실패하면 -2",
+              "target": "managerTrust"
+            }
+          ],
+          "outcomes": [
+            {
+              "id": "BOLD-SUCCESS",
+              "kind": "SUCCESS",
+              "weight": 45,
+              "title": "일대일 선방에 성공했다",
+              "ratingDeltaTenths": 0,
+              "effects": [
+                {
+                  "kind": "RELATION",
+                  "sourceId": "CHP-MATCH-107.D1.BOLD.SUCCESS",
+                  "target": "managerTrust",
+                  "delta": 6,
+                  "clamp": {
+                    "min": 0,
+                    "max": 100
+                  },
+                  "appliesAt": {
+                    "kind": "IMMEDIATE"
+                  },
+                  "expiresAt": null,
+                  "stackingRule": "SUM"
+                }
+              ],
+              "narrative": {
+                "situation": "일대일 선방에 성공했다. 라이벌전 벤치에서 감독이 엄지를 들어 보인다."
+              }
+            },
+            {
+              "id": "BOLD-FAIL",
+              "kind": "FAIL",
+              "weight": 55,
+              "title": "키를 넘긴 슈팅에 실점했다",
+              "ratingDeltaTenths": 0,
+              "effects": [
+                {
+                  "kind": "RELATION",
+                  "sourceId": "CHP-MATCH-107.D1.BOLD.FAIL",
+                  "target": "managerTrust",
+                  "delta": -2,
+                  "clamp": {
+                    "min": 0,
+                    "max": 100
+                  },
+                  "appliesAt": {
+                    "kind": "IMMEDIATE"
+                  },
+                  "expiresAt": null,
+                  "stackingRule": "SUM"
+                }
+              ],
+              "narrative": {
+                "situation": "키를 넘긴 슈팅에 실점했다. 라이벌전 벤치에서 감독이 다음에는 타이밍을 바꿔 보자고 손짓한다."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

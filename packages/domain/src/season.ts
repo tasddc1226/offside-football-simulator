@@ -79,7 +79,8 @@ function applyCut(steps: SeasonStep[], toCut: readonly SlotLocation[]): SeasonSt
 function buildSlot(calendarSlot: LeagueCalendarSlot): DecisionSlot {
   return calendarSlot.importance === undefined
     ? { kind: calendarSlot.kind, required: calendarSlot.required }
-    : { kind: calendarSlot.kind, required: calendarSlot.required, importance: calendarSlot.importance };
+    : { kind: calendarSlot.kind, required: calendarSlot.required, importance: calendarSlot.importance,
+      };
 }
 
 /**
@@ -101,7 +102,8 @@ export function buildSeasonSteps(calendar: LeagueCalendar, mode: SimulationMode)
 
   const isBudgetedInMode = (slot: DecisionSlot): boolean => mode === 'CHAPTER' || isOpenableInFastMode(slot);
 
-  const chapterCandidates = collectCuttable(steps, (slot) => slot.kind === 'CHAPTER' && isBudgetedInMode(slot));
+  const chapterCandidates = collectCuttable(steps, (slot) => slot.kind === 'CHAPTER' && isBudgetedInMode(slot),
+  );
   if (chapterCandidates.length > CHAPTER_BUDGET_CAP) {
     const excess = chapterCandidates.length - CHAPTER_BUDGET_CAP;
     steps = applyCut(steps, orderForCut(chapterCandidates).slice(0, excess));
@@ -174,7 +176,8 @@ function slotPriority(kind: DecisionSlot['kind']): number {
   }
 }
 
-export type EligibleEvent = { eventId: string; version: number; weight: number; slot?: 'TRANSFER_WINDOW' };
+export type EligibleEvent = { eventId: string; version: number; weight: number; slot?: 'TRANSFER_WINDOW';
+};
 
 export type SlotOpenResult =
   | { opened: false; nationalTeamAutoDecline?: NationalTeamCallUpRecord }
@@ -210,11 +213,19 @@ export function selectOpenSlot(
     .filter((slot) => !slot.skippedByBudget)
     .filter((slot) => mode === 'CHAPTER' || isOpenableInFastMode(slot))
     .slice()
-    .sort((a, b) => slotPriority(a.kind) - slotPriority(b.kind));
+    .sort((a, b) =>
+        (ruleset.matchDecisionRules !== undefined && a.kind === 'CHAPTER'
+          ? 0.5
+          : slotPriority(a.kind)) -
+        (ruleset.matchDecisionRules !== undefined && b.kind === 'CHAPTER'
+          ? 0.5
+          : slotPriority(b.kind)),
+    );
 
   for (const slot of candidates) {
     if (slot.kind === 'EVENT') {
-      const ordinaryEvents = freshEventPool(eligibleEvents.filter((event) => event.slot === undefined), state, ruleset.eventSelectionRules);
+      const ordinaryEvents = freshEventPool(eligibleEvents.filter((event) => event.slot === undefined), state, ruleset.eventSelectionRules,
+      );
       if (ordinaryEvents.length === 0) continue;
       let chosen = ordinaryEvents[0]!;
       let nextRngState = rngState;
@@ -268,7 +279,8 @@ export function selectOpenSlot(
         throw new RangeError('selectOpenSlot: ROLE 슬롯을 열려는데 roleContext가 없다.');
       }
       const proposal = computeRoleProposal(roleContext);
-      return { opened: true, pending: { kind: 'ROLE_PROPOSAL', step: step.index, proposal }, rngState };
+      return { opened: true, pending: { kind: 'ROLE_PROPOSAL', step: step.index, proposal }, rngState,
+      };
     }
 
     if (slot.kind === 'CONTRACT') {
@@ -282,19 +294,23 @@ export function selectOpenSlot(
       }
       const isLastSeason =
         contract.kind !== 'LOAN' &&
-        computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline) === 0;
+        computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline,
+        ) === 0;
       const offers =
         isLastSeason && !isYouthExitRequired(state, ruleset) && isRenewalWindowOpen(state, ruleset)
           ? [buildRenewalOffer(state, ruleset, revision)]
           : [];
-      const market: MarketSummary = { openedAtRevision: revision, seasonIndex, reason: 'PRE_NEGOTIATION', safeOfferId: null };
-      return { opened: true, pending: { kind: 'CONTRACT', step: step.index, offers, market }, rngState };
+      const market: MarketSummary = { openedAtRevision: revision, seasonIndex, reason: 'PRE_NEGOTIATION', safeOfferId: null,
+      };
+      return { opened: true, pending: { kind: 'CONTRACT', step: step.index, offers, market }, rngState,
+      };
     }
 
     if (slot.kind === 'INJURY') {
       // T-3-001 D-52 예약: 생성기(T-4-002)가 없는 지금은 값 없이 형태만 채운다(현재 룰셋에 INJURY
       // 슬롯이 없어 이 분기는 실제로 도달하지 않는다).
-      return { opened: true, pending: { kind: 'INJURY', step: step.index, episodeId: '', eventId: '', version: 0 }, rngState };
+      return { opened: true, pending: { kind: 'INJURY', step: step.index, episodeId: '', eventId: '', version: 0 }, rngState,
+      };
     }
 
     // slot.kind === 'NATIONAL_TEAM'. qualification/auto-decline은 모두 RNG 0이다.
@@ -353,6 +369,8 @@ export type SeasonWalkResult = {
  * `selectChapter`가 이 둘을 쓴다.
  */
 export type PlayStepMatches = (stepIndex: number) => {
+  /** Exact causal chapter chosen before any subsequent fixture is simulated. */
+  pausedChapter?: ChapterOpenResult | null;
   results: StepMatchResult[];
   records: MatchRecord[];
   competitions: readonly CompetitionRecord[];
@@ -437,15 +455,24 @@ export function walkToNextDecision(
     const injuryUnavailable =
       matchResult.injuryUnavailable ?? matchResult.records.some((match) => match.injuredOff);
 
-    const chapterOpen = selectChapter({
+    const causalChapter = ruleset.matchDecisionRules !== undefined;
+    const chapterAlreadyPlayed =
+      causalChapter && state.season?.chapters.some((chapter) => chapter.step === currentStepIndex);
+    const chapterOpen = causalChapter
+      ? (matchResult.pausedChapter ?? null)
+      : selectChapter({
       step,
       steps: nextSteps,
       seasonIndex: chapterContext.seasonIndex,
       mode,
-      matchesThisStep: matchResult.records,
-      matchesBeforeThisStep: matchesSoFar,
+      matchesThisStep: causalChapter
+            ? matchResult.records.slice(-1).filter((match) => !match.injuredOff)
+            : matchResult.records,
+      matchesBeforeThisStep: causalChapter
+            ? [...matchesSoFar, ...matchResult.records.slice(0, -1)]
+            : matchesSoFar,
       competitions: matchResult.competitions,
-      candidates: chapterContext.chapterCandidates,
+      candidates: chapterAlreadyPlayed ? [] : chapterContext.chapterCandidates,
       tags: chapterContext.tags,
       resolvedChapterIds: chapterContext.resolvedChapterIds,
       existingChapterIds: chapterContext.existingChapterIds,
@@ -520,7 +547,8 @@ export function walkToNextDecision(
     }
     const decisionsOpened =
       (currentStepIndex === startStepIndex ? decisionsAlreadyOpenedForStartStep : 0) + autoDecisionsThisStep;
-    nextSteps = markStepPassed(nextSteps, currentStepIndex, revision, decisionsOpened, matchResult.results);
+    nextSteps = markStepPassed(nextSteps, currentStepIndex, revision, decisionsOpened, matchResult.results,
+    );
     passedStepIndexes.push(currentStepIndex);
     currentStepIndex += 1;
     autoDecisionsThisStep = 0;
@@ -565,7 +593,9 @@ export function markStepPassed(
 ): SeasonStep[] {
   return steps.map((step) =>
     step.index === stepIndex
-      ? { ...step, summary: { passedAtRevision: revision, decisionsOpened, matchesPlayed: results.length, results } }
+      ? { ...step, summary: { passedAtRevision: revision, decisionsOpened, matchesPlayed: results.length, results,
+          },
+        }
       : step,
   );
 }

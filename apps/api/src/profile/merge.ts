@@ -4,7 +4,7 @@ import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { listCareerIdsByOwner } from '../db/repos/careers.js';
 import { runBatch } from '../db/repos/batch.js';
-import { auditLog, careers, sessions, lockerTeams } from '../db/schema.js';
+import { auditLog, careers, sessions, lockerTeams, friendlyMatches } from '../db/schema.js';
 
 export type MoveCareersAndRebindInput = {
   fromProfileId: string;
@@ -25,6 +25,7 @@ export async function moveCareersAndRebind(
 ): Promise<void> {
   const careerIds = await listCareerIdsByOwner(db, input.fromProfileId);
   await runBatch(db, [
+    db.update(friendlyMatches).set({ ownerProfileId: input.toProfileId }).where(eq(friendlyMatches.ownerProfileId, input.fromProfileId)),
     db
       .update(careers)
       .set({ ownerProfileId: input.toProfileId, updatedAt: input.now })
@@ -67,6 +68,7 @@ export async function moveCareersAndRotateWebSession(
     now: input.now,
   });
   await runBatch(db, [
+    db.update(friendlyMatches).set({ ownerProfileId: input.toProfileId }).where(eq(friendlyMatches.ownerProfileId, input.fromProfileId)),
     db
       .update(careers)
       .set({ ownerProfileId: input.toProfileId, updatedAt: input.now })

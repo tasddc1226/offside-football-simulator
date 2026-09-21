@@ -15,13 +15,15 @@ import { SemverSchema } from './versions.js';
 export const SquadRoleSchema = z.enum(['STARTER', 'ROTATION', 'BENCH', 'RESERVE']);
 
 // domain `SeasonPhase`와 동일.
-export const SeasonPhaseSchema = z.enum(['PRESEASON', 'LEAGUE', 'CUP', 'TRANSFER_WINDOW', 'SETTLEMENT']);
+export const SeasonPhaseSchema = z.enum(['PRESEASON', 'LEAGUE', 'CUP', 'TRANSFER_WINDOW', 'SETTLEMENT',
+]);
 
 // domain `SimulationMode`와 동일.
 export const SimulationModeSchema = z.enum(['FAST', 'CHAPTER']);
 
 // D-9: 팀 리그 등급. 유스는 'YOUTH', 그 외는 1~3부 숫자 리터럴이다(domain `LeagueTier`와 같은 값).
-export const LeagueTierSchema = z.union([z.literal('YOUTH'), z.literal(1), z.literal(2), z.literal(3)]);
+export const LeagueTierSchema = z.union([z.literal('YOUTH'), z.literal(1), z.literal(2), z.literal(3),
+]);
 
 // T-3-001 D-44: domain `OfferKind`·`NegotiationAsk`·`NegotiationState`와 동일.
 export const OfferKindSchema = z.enum(['RENEWAL', 'TRANSFER', 'LOAN', 'FREE_AGENT']);
@@ -91,7 +93,8 @@ export const ContractSchema = z.strictObject({
 });
 
 // T-3-001 D-45: domain `ClubStintEndReason`·`ClubStint`와 동일. `toSeasonIndex: null`이면 현재 소속.
-export const ClubStintEndReasonSchema = z.enum(['EXPIRED', 'TRANSFERRED', 'LOANED', 'RETURNED', 'RENEWED']);
+export const ClubStintEndReasonSchema = z.enum(['EXPIRED', 'TRANSFERRED', 'LOANED', 'RETURNED', 'RENEWED',
+]);
 
 export const ClubStintSchema = z.strictObject({
   teamId: z.string().min(1),
@@ -113,7 +116,8 @@ export const MarketSummarySchema = z.strictObject({
 });
 
 // T-2-001 RULE-TIME-002: step 안 결정 슬롯 종류. domain `DecisionSlot.kind`와 동일.
-export const DecisionSlotKindSchema = z.enum(['EVENT', 'CHAPTER', 'CONTRACT', 'ROLE', 'INJURY', 'NATIONAL_TEAM', 'SETTLEMENT']);
+export const DecisionSlotKindSchema = z.enum(['EVENT', 'CHAPTER', 'CONTRACT', 'ROLE', 'INJURY', 'NATIONAL_TEAM', 'SETTLEMENT',
+]);
 export const SlotImportanceSchema = z.enum(['MAJOR', 'MINOR']);
 
 // T-2-004 D-38: 핵심 경기 챕터 후보가 이 step의 경기에 맞는지 판정하는 조건. domain `ChapterTrigger`와
@@ -130,7 +134,8 @@ export const ChapterTriggerSchema = z.discriminatedUnion('kind', [
 
 // T-2-014 D-42: `ChapterTrigger['kind']` 리터럴만 뽑은 스키마. `ChapterRecord.trigger`·
 // `Pending`(CHAPTER).trigger가 판별 유니온 전체가 아니라 kind 하나만 저장하므로 따로 둔다.
-export const ChapterTriggerKindSchema = z.enum(['DEBUT', 'DERBY', 'CUP_FINAL', 'DECIDER', 'INJURY_RETURN', 'NATIONAL_DEBUT', 'TAG']) satisfies z.ZodType<
+export const ChapterTriggerKindSchema = z.enum(['DEBUT', 'DERBY', 'CUP_FINAL', 'DECIDER', 'INJURY_RETURN', 'NATIONAL_DEBUT', 'TAG',
+]) satisfies z.ZodType<
   ChapterTrigger['kind']
 >;
 
@@ -187,7 +192,8 @@ export const RoleProposalSchema = z.discriminatedUnion('type', [
     tacticalFitAfter: z.number().int(),
     proficiencyAfter: z.number().int(),
   }),
-  z.strictObject({ type: z.literal('ROLE_CHANGE'), position: PositionSchema, from: SquadRoleSchema, to: SquadRoleSchema }),
+  z.strictObject({ type: z.literal('ROLE_CHANGE'), position: PositionSchema, from: SquadRoleSchema, to: SquadRoleSchema,
+  }),
 ]);
 
 // D-10 + T-2-001/T-2-002/T-2-004: `pending`은 판별 유니온. `null`(대기 없음), `EVENT`(RESOLVE_EVENT
@@ -197,9 +203,11 @@ export const RoleProposalSchema = z.discriminatedUnion('type', [
 // CHAPTER·CONTRACT·INJURY·NATIONAL_TEAM. ROLE_PROPOSAL·SETTLEMENT는 아니다).
 export const PendingSchema = z
   .discriminatedUnion('kind', [
-    z.strictObject({ kind: z.literal('EVENT'), eventId: z.string().min(1), version: z.number().int().positive() }),
+    z.strictObject({ kind: z.literal('EVENT'), eventId: z.string().min(1), version: z.number().int().positive(),
+    }),
     // T-3-001 D-43/D-44: Phase 1 `generateOffers` 경로가 `market.reason: 'FIRST_CONTRACT'`를 채운다.
-    z.strictObject({ kind: z.literal('OFFERS'), offers: z.array(OfferSchema), market: MarketSummarySchema }),
+    z.strictObject({ kind: z.literal('OFFERS'), offers: z.array(OfferSchema), market: MarketSummarySchema,
+    }),
     z.strictObject({
       kind: z.literal('CHAPTER'),
       step: z.number().int().min(1).max(12),
@@ -223,7 +231,8 @@ export const PendingSchema = z
       offers: z.array(OfferSchema),
       market: MarketSummarySchema,
     }),
-    z.strictObject({ kind: z.literal('ROLE_PROPOSAL'), step: z.number().int().min(1).max(12), proposal: RoleProposalSchema }),
+    z.strictObject({ kind: z.literal('ROLE_PROPOSAL'), step: z.number().int().min(1).max(12), proposal: RoleProposalSchema,
+    }),
     // T-4-002 D-49: 중증 부상은 이 pending으로 RESOLVE_EVENT를 요구한다.
     z.strictObject({
       kind: z.literal('INJURY'),
@@ -452,12 +461,14 @@ export const LeagueSeasonLedgerSchema = z.strictObject({
   leagueName: z.string().min(1),
   seasonIndex: z.number().int().positive(),
   teamId: z.string().min(1),
-  seed: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative(), z.number().int().nonnegative(), z.number().int().nonnegative()]),
+  seed: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative(), z.number().int().nonnegative(), z.number().int().nonnegative(),
+    ]),
   teams: z.array(LeagueTeamSnapshotSchema).min(2).max(16).superRefine((teams, ctx) => {
     const seen = new Set<string>();
     for (let index = 0; index < teams.length; index += 1) {
       const teamId = teams[index]!.teamId;
-      if (seen.has(teamId)) ctx.addIssue({ code: 'custom', path: [index, 'teamId'], message: 'teamId가 중복이다.' });
+      if (seen.has(teamId)) ctx.addIssue({ code: 'custom', path: [index, 'teamId'], message: 'teamId가 중복이다.',
+            });
       seen.add(teamId);
     }
   }),
@@ -483,17 +494,20 @@ export const LeagueSeasonLedgerSchema = z.strictObject({
   for (let index = 0; index < ledger.results.length; index += 1) {
     const result = ledger.results[index]!;
     if (result[0] >= fixtureCount) {
-      ctx.addIssue({ code: 'custom', path: ['results', index, 0], message: 'fixture index가 canonical 일정 범위를 벗어났다.' });
+      ctx.addIssue({ code: 'custom', path: ['results', index, 0], message: 'fixture index가 canonical 일정 범위를 벗어났다.',
+        });
     }
     if (fixtureIndexes.has(result[0])) {
-      ctx.addIssue({ code: 'custom', path: ['results', index, 0], message: 'fixture index가 중복이다.' });
+      ctx.addIssue({ code: 'custom', path: ['results', index, 0], message: 'fixture index가 중복이다.',
+        });
     }
     fixtureIndexes.add(result[0]);
   }
   const completed = new Set(ledger.completedRounds);
   for (let index = 0; index < ledger.completedRounds.length; index += 1) {
     if (ledger.completedRounds[index]! > totalRounds) {
-      ctx.addIssue({ code: 'custom', path: ['completedRounds', index], message: '완료 round가 canonical 일정 범위를 벗어났다.' });
+      ctx.addIssue({ code: 'custom', path: ['completedRounds', index], message: '완료 round가 canonical 일정 범위를 벗어났다.',
+        });
     }
   }
   for (let round = 1; round <= totalRounds; round += 1) {
@@ -501,10 +515,12 @@ export const LeagueSeasonLedgerSchema = z.strictObject({
       (fixtureIndex) => Math.floor(fixtureIndex / fixturesPerRound) + 1 === round,
     ).length;
     if (actual !== 0 && actual !== fixturesPerRound) {
-      ctx.addIssue({ code: 'custom', path: ['results'], message: `round ${round} 결과가 부분 집합이다.` });
+      ctx.addIssue({ code: 'custom', path: ['results'], message: `round ${round} 결과가 부분 집합이다.`,
+        });
     }
     if (completed.has(round) !== (actual === fixturesPerRound)) {
-      ctx.addIssue({ code: 'custom', path: ['completedRounds'], message: `round ${round} 완료 표식과 결과가 다르다.` });
+      ctx.addIssue({ code: 'custom', path: ['completedRounds'], message: `round ${round} 완료 표식과 결과가 다르다.`,
+        });
     }
   }
 });
@@ -573,25 +589,32 @@ export const FinalLeagueTableSchema = z.strictObject({
   let totalGoalsAgainst = 0;
 
   table.rows.forEach((row, index) => {
-    const [rank, teamId, , played, won, drawn, lost, goalsFor, goalsAgainst, goalDifference, points] = row;
+    const [rank, teamId, , played, won, drawn, lost, goalsFor, goalsAgainst, goalDifference, points,
+      ] = row;
     if (rank !== index + 1) {
-      ctx.addIssue({ code: 'custom', path: ['rows', index, 0], message: '순위는 1부터 연속이며 행 순서와 같아야 한다.' });
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 0], message: '순위는 1부터 연속이며 행 순서와 같아야 한다.',
+        });
     }
     if (teamIds.has(teamId)) {
-      ctx.addIssue({ code: 'custom', path: ['rows', index, 1], message: '팀은 최종 순위표에 한 번만 나타나야 한다.' });
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 1], message: '팀은 최종 순위표에 한 번만 나타나야 한다.',
+        });
     }
     teamIds.add(teamId);
     if (played !== won + drawn + lost) {
-      ctx.addIssue({ code: 'custom', path: ['rows', index, 3], message: '경기 수는 승·무·패 합과 같아야 한다.' });
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 3], message: '경기 수는 승·무·패 합과 같아야 한다.',
+        });
     }
     if (played !== expectedPlayed) {
-      ctx.addIssue({ code: 'custom', path: ['rows', index, 3], message: '모든 팀은 홈·원정으로 다른 팀과 두 번 경기해야 한다.' });
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 3], message: '모든 팀은 홈·원정으로 다른 팀과 두 번 경기해야 한다.',
+        });
     }
     if (goalDifference !== goalsFor - goalsAgainst) {
-      ctx.addIssue({ code: 'custom', path: ['rows', index, 9], message: '득실차는 득점에서 실점을 뺀 값이어야 한다.' });
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 9], message: '득실차는 득점에서 실점을 뺀 값이어야 한다.',
+        });
     }
     if (points !== won * 3 + drawn) {
-      ctx.addIssue({ code: 'custom', path: ['rows', index, 10], message: '승점은 3×승+무와 같아야 한다.' });
+      ctx.addIssue({ code: 'custom', path: ['rows', index, 10], message: '승점은 3×승+무와 같아야 한다.',
+        });
     }
     totalWon += won;
     totalDrawn += drawn;
@@ -602,25 +625,31 @@ export const FinalLeagueTableSchema = z.strictObject({
     if (next !== undefined) {
       const order = next[10] - points || next[9] - goalDifference || next[7] - goalsFor || compareFinalTableTeamIds(teamId, next[1]);
       if (order > 0) {
-        ctx.addIssue({ code: 'custom', path: ['rows', index], message: '순위표가 승점·득실차·득점·팀 ID 순서와 일치해야 한다.' });
+        ctx.addIssue({ code: 'custom', path: ['rows', index], message: '순위표가 승점·득실차·득점·팀 ID 순서와 일치해야 한다.',
+          });
       }
     }
   });
 
   if (table.completedRounds !== expectedRounds) {
-    ctx.addIssue({ code: 'custom', path: ['completedRounds'], message: '완료 라운드 수가 홈·원정 전체 일정과 일치해야 한다.' });
+    ctx.addIssue({ code: 'custom', path: ['completedRounds'], message: '완료 라운드 수가 홈·원정 전체 일정과 일치해야 한다.',
+      });
   }
   if (!teamIds.has(table.teamId)) {
-    ctx.addIssue({ code: 'custom', path: ['teamId'], message: '소속 팀은 최종 순위표에 포함되어야 한다.' });
+    ctx.addIssue({ code: 'custom', path: ['teamId'], message: '소속 팀은 최종 순위표에 포함되어야 한다.',
+      });
   }
   if (totalWon !== totalLost) {
-    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 승리와 패배 합은 같아야 한다.' });
+    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 승리와 패배 합은 같아야 한다.',
+      });
   }
   if (totalGoalsFor !== totalGoalsAgainst) {
-    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 득점과 실점 합은 같아야 한다.' });
+    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 득점과 실점 합은 같아야 한다.',
+      });
   }
   if (totalDrawn % 2 !== 0) {
-    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 무승부 합은 짝수여야 한다.' });
+    ctx.addIssue({ code: 'custom', path: ['rows'], message: '리그 전체 무승부 합은 짝수여야 한다.',
+      });
   }
 });
 
@@ -632,7 +661,8 @@ export const MatchRecordSchema = z.strictObject({
   competitionId: z.string().min(1),
   kind: z.enum(['LEAGUE', 'CUP']),
   round: z.string().nullable(),
-  opponent: z.strictObject({ id: z.string().min(1), name: z.string().min(1), strength: z.number().int().min(0).max(100) }),
+  opponent: z.strictObject({ id: z.string().min(1), name: z.string().min(1), strength: z.number().int().min(0).max(100),
+  }),
   home: z.boolean(),
   result: z.strictObject({
     goalsFor: z.number().int().nonnegative(),
@@ -645,9 +675,41 @@ export const MatchRecordSchema = z.strictObject({
   involvement: z.number().int().min(0).max(100),
   stats: PositionStatsSchema,
   ratingTenths: z.number().int().min(40).max(100).nullable(),
-  cards: z.strictObject({ yellow: z.union([z.literal(0), z.literal(1), z.literal(2)]), red: z.boolean() }),
+  cards: z.strictObject({ yellow: z.union([z.literal(0), z.literal(1), z.literal(2)]), red: z.boolean(),
+  }),
   injuredOff: z.boolean(),
   chapterId: z.string().nullable(),
+  decisionWindow: z
+    .strictObject({
+      minute: z.number().int().min(1).max(90),
+      phase: z.enum(['PENDING', 'FINAL']),
+      backgroundScore: z.strictObject({
+        goalsFor: z.number().int().nonnegative(),
+        goalsAgainst: z.number().int().nonnegative(),
+      }),
+    })
+    .optional(),
+  decisionImpact: z
+    .strictObject({
+      originalRatingTenths: z.number().int().min(40).max(100).nullable(),
+      receipts: z.array(
+        z.strictObject({
+          decisionId: z.string().min(1),
+          action: z.enum(['SHOT', 'PASS', 'BLOCK', 'SAVE']),
+          outcomeKind: ChapterOutcomeKindSchema,
+          before: z.strictObject({
+            goalsFor: z.number().int().nonnegative(),
+            goalsAgainst: z.number().int().nonnegative(),
+          }),
+          after: z.strictObject({
+            goalsFor: z.number().int().nonnegative(),
+            goalsAgainst: z.number().int().nonnegative(),
+          }),
+          managerTrustDelta: z.number().int().min(-100).max(100),
+        }),
+      ),
+    })
+    .optional(),
 });
 
 // T-2-003 D-35: 시즌 누계(결산 이전 진행 중 값). domain `SeasonPlayerStats`와 동일.
@@ -727,7 +789,8 @@ export const SelectionCandidateSchema = z.strictObject({
 // 타입이 평평한 단일 object로 추론되어 domain의 교차 타입과 `expectTypeOf().toEqualTypeOf()`가
 // 구조적으로는 같아도 표현 형태가 달라 불일치로 본다 — `.and()`로 실제 교차 타입을 만들어 맞춘다.
 const RankedSelectionCandidateSchema = SelectionCandidateSchema.and(
-  z.strictObject({ rank: z.number().int().positive(), appearance: z.enum(['START', 'SUB', 'OUT']) }),
+  z.strictObject({ rank: z.number().int().positive(), appearance: z.enum(['START', 'SUB', 'OUT']),
+  }),
 );
 
 export const SelectionRankingSchema = z.strictObject({
@@ -837,12 +900,14 @@ export const FootballSeasonSchema = z.strictObject({
 });
 
 // T-2-005 D-39: domain `GrowthCause`와 동일.
-export const GrowthCauseSchema = z.enum(['TRAINING', 'MINUTES', 'EXPERIENCE', 'AGE_DECLINE', 'POTENTIAL_CAP']);
+export const GrowthCauseSchema = z.enum(['TRAINING', 'MINUTES', 'EXPERIENCE', 'AGE_DECLINE', 'POTENTIAL_CAP',
+]);
 
 // domain `RoleProposal['type']`과 동일.
 const RoleProposalTypeSchema = z.enum(['KEEP', 'POSITION_CHANGE', 'ROLE_CHANGE']);
 export const ClubMeetingRequestSchema = z.enum(['PLAYING_TIME', 'LOAN', 'TRANSFER']);
-const ClubMeetingEffectSchema = z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int() });
+const ClubMeetingEffectSchema = z.strictObject({ managerTrustDelta: z.number().int(), moraleDelta: z.number().int(),
+});
 const ClubMeetingGoalResultSchema = z.strictObject({
   request: ClubMeetingRequestSchema, response: z.enum(['ACCEPTED', 'REFUSED']), reason: z.string().min(1),
   role: SquadRoleSchema, targetMinutesShareBp: z.number().int().min(0).max(10000), actualMinutesShareBp: z.number().int().min(0).max(10000),
@@ -852,14 +917,16 @@ const ClubMeetingStateSchema = z.strictObject({
   seasonIndex: z.number().int().positive(), request: ClubMeetingRequestSchema, response: z.enum(['ACCEPTED', 'REFUSED']), reason: z.string().min(1),
   teamId: z.string().min(1), contractId: z.string().min(1), immediateEffect: ClubMeetingEffectSchema, plannedRole: SquadRoleSchema,
   preferredOfferKind: z.enum(['LOAN', 'TRANSFER']).nullable(), preferenceStatus: z.enum(['PENDING', 'OFFERED', 'NO_CANDIDATE', 'CANCELLED']).nullable(),
-  goal: z.strictObject({ seasonIndex: z.number().int().positive(), role: SquadRoleSchema, targetMinutesShareBp: z.number().int().min(0).max(10000), status: z.literal('PENDING') }),
+  goal: z.strictObject({ seasonIndex: z.number().int().positive(), role: SquadRoleSchema, targetMinutesShareBp: z.number().int().min(0).max(10000), status: z.literal('PENDING'),
+  }),
 });
 
 // T-2-005 D-39: SETTLE_SEASON이 만드는 시즌 결산 결과. domain `SeasonResult`와 동일.
 export const SeasonResultSchema = z.strictObject({
   legacy: z.strictObject({
     policyVersion: z.literal('1.0.0'), incomeMinor: z.number().int().nonnegative(), contractId: z.string().min(1),
-    relationships: z.strictObject({ managerTrust: z.number().int().min(0).max(100), captain: z.number().int().min(0).max(100), rival: z.number().int().min(0).max(100), fans: z.number().int().min(0).max(100), agent: z.number().int().min(0).max(100) }),
+    relationships: z.strictObject({ managerTrust: z.number().int().min(0).max(100), captain: z.number().int().min(0).max(100), rival: z.number().int().min(0).max(100), fans: z.number().int().min(0).max(100), agent: z.number().int().min(0).max(100),
+      }),
     promotion: z.boolean(), ageAtStart: z.number().int().min(0).max(120), injuryMissedMatches: z.number().int().nonnegative().exactOptional(),
   }).exactOptional(),
   index: z.number().int().positive(),
@@ -1007,14 +1074,20 @@ export const DevelopmentPlanSchema = z.strictObject({
   partner: z.enum(['COACH', 'CAPTAIN', 'RIVAL']),
 });
 export const DevelopmentStateSchema = z.strictObject({
-  mastery: z.strictObject({ CONTROL: z.number().int().min(0).max(100), ENGINE: z.number().int().min(0).max(100), VISION: z.number().int().min(0).max(100) }),
+  mastery: z.strictObject({ CONTROL: z.number().int().min(0).max(100), ENGINE: z.number().int().min(0).max(100), VISION: z.number().int().min(0).max(100),
+  }),
   sessions: z.array(DevelopmentPlanSchema.extend({
     season: z.number().int().min(1), block: z.number().int().min(1).max(3),
-    gains: z.array(z.strictObject({ attribute: AttributesSchema.keyof(), delta: z.number().int().min(0).max(3) })),
+    gains: z.array(z.strictObject({ attribute: AttributesSchema.keyof(), delta: z.number().int().min(0).max(3),
+          }),
+        ),
     fitnessDelta: z.number().int(), relationDelta: z.number().int(),
     response: z.enum(['SUPPORT', 'CHALLENGE', 'DISTANCE']), breakthrough: z.boolean(),
-  })).max(36),
-  duels: z.array(z.strictObject({ season: z.number().int().min(1), matchId: z.string(), optionId: z.string(), tactic: z.enum(['CONTROL', 'ENGINE', 'VISION']), successBp: z.number().int().min(0).max(10000), result: ChapterOutcomeKindSchema })).max(36),
+  }),
+    ).max(36),
+  duels: z.array(z.strictObject({ season: z.number().int().min(1), matchId: z.string(), optionId: z.string(), tactic: z.enum(['CONTROL', 'ENGINE', 'VISION']), successBp: z.number().int().min(0).max(10000), result: ChapterOutcomeKindSchema,
+      }),
+    ).max(36),
 });
 
 
@@ -1064,6 +1137,26 @@ export const InjuryEpisodeSchema = z
 export const RelationTargetSchema = z.enum(['managerTrust', 'captain', 'rival', 'fans', 'agent']);
 
 // T-4-001 D-50: 관계 변화 감사 로그 항목 하나. domain `RelationshipLogEntry`와 동일.
+const CoachActorSchema = z.strictObject({ id: z.string().min(1), name: z.string().min(1), teamId: z.string().min(1) });
+const CoachScoreSchema = z.strictObject({ goalsFor: z.number().int().nonnegative(), goalsAgainst: z.number().int().nonnegative() });
+export const CoachChoiceMemorySchema = z.strictObject({
+  id: z.string().min(1), actor: CoachActorSchema, seasonIndex: z.number().int().positive(), step: z.number().int().min(1).max(12),
+  matchId: z.string().min(1), chapterId: z.string().min(1), decisionId: z.string().min(1), optionId: z.string().min(1),
+  action: z.enum(['SHOT', 'PASS', 'BLOCK', 'SAVE']), outcomeKind: ChapterOutcomeKindSchema, before: CoachScoreSchema, after: CoachScoreSchema, trustDelta: z.number().int().min(-100).max(100),
+});
+export const CoachMemoryReactionSchema = z.strictObject({
+  id: z.string().min(1), kind: z.enum(['FOLLOW_UP', 'REUNION']), seasonIndex: z.number().int().positive(), actor: CoachActorSchema, memory: CoachChoiceMemorySchema,
+  trustBefore: z.number().int().min(0).max(100), trustAfter: z.number().int().min(0).max(100), trustDelta: z.number().int().min(-100).max(100),
+});
+export const CoachMemoryStateSchema = z.strictObject({ version: z.literal('COACH_MEMORY_V1'), memories: z.array(CoachChoiceMemorySchema).max(256), reactions: z.array(CoachMemoryReactionSchema).max(128), consumed: z.array(z.strictObject({ memoryId: z.string().min(1), kind: z.enum(['FOLLOW_UP', 'REUNION']) })).max(512) }).superRefine((value, ctx) => {
+  const unique = (ids: string[]) => new Set(ids).size === ids.length;
+  if (!unique(value.memories.map((entry) => entry.id)) || !unique(value.reactions.map((entry) => entry.id)) || !unique(value.consumed.map((entry) => `${entry.memoryId}:${entry.kind}`))) ctx.addIssue({ code: 'custom', message: 'Duplicate coach memory receipt' });
+  for (const entry of value.reactions) {
+    if (entry.actor.id !== entry.memory.actor.id || entry.actor.name !== entry.memory.actor.name || entry.actor.teamId !== entry.memory.actor.teamId || entry.seasonIndex <= entry.memory.seasonIndex || entry.trustAfter - entry.trustBefore !== entry.trustDelta) ctx.addIssue({ code: 'custom', message: 'Inconsistent coach reaction provenance' });
+  }
+  for (const entry of value.consumed) if (!value.memories.some((memory) => memory.id === entry.memoryId)) ctx.addIssue({ code: 'custom', message: 'Unknown consumed coach memory' });
+});
+
 export const RelationshipLogEntrySchema = z.strictObject({
   target: RelationTargetSchema,
   delta: z.number().int(),
@@ -1089,10 +1182,12 @@ export const NationalityRuleStateSchema = z.union([z.strictObject({
   exceptions: z.tuple([]),
 }), z.strictObject({
   moduleId: z.enum(['DEFAULT', 'KOREA']), exceptions: z.array(z.string().min(1)).readonly(),
-  serviceStatus: z.enum(['NOT_APPLICABLE', 'PENDING', 'SERVING', 'COMPLETED', 'SPECIAL_SERVICE']),
+  serviceStatus: z.enum(['NOT_APPLICABLE', 'PENDING', 'SERVING', 'COMPLETED', 'SPECIAL_SERVICE',
+      ]),
   route: z.enum(['MILITARY_CLUB', 'CAREER_BREAK', 'SPORTS_SERVICE']).nullable(),
   startSeasonIndex: z.number().int().nonnegative().nullable(), completedSeasonIndex: z.number().int().nonnegative().nullable(),
-}).readonly()]) satisfies z.ZodType<NationalityRuleState>;
+}).readonly(),
+]) satisfies z.ZodType<NationalityRuleState>;
 
 export const NationalTeamCallUpRecordSchema = z.strictObject({
   seasonIndex: z.number().int().positive(),
@@ -1186,20 +1281,25 @@ const CareerStateShapeSchema = z.strictObject({
   controversyFailures: z.number().int().nonnegative(),
   // T-4-004: strict additive national-team state.
   nationalityRuleState: NationalityRuleStateSchema,
-  retirement: z.strictObject({ policyVersion: z.literal('1.0.0'), marketOffers: z.number().int().nonnegative().nullable(), lastChanceConsumed: z.boolean(), lastChanceSeasonIndex: z.number().int().positive().nullable() }).exactOptional(),
+  retirement: z.strictObject({ policyVersion: z.literal('1.0.0'), marketOffers: z.number().int().nonnegative().nullable(), lastChanceConsumed: z.boolean(), lastChanceSeasonIndex: z.number().int().positive().nullable(),
+    }).exactOptional(),
   legacyEvents: z.strictObject({
     policyVersion: z.literal('1.0.0'), mentoredSeasonIndices: z.array(z.number().int().positive()),
     tournaments: z.array(z.strictObject({
       sourceId: z.string().min(1), seasonIndex: z.number().int().positive(), age: z.number().int().min(18).max(23),
       tournament: z.enum(['ASIAN_GAMES', 'OLYMPICS']), medal: z.enum(['GOLD', 'SILVER', 'BRONZE']).nullable(),
-      matches: z.array(z.strictObject({ index: z.number().int().min(1).max(6), roll: z.number().int().min(1).max(100), won: z.boolean(), minutes: z.number().int().min(0).max(90) })).length(6),
-    })),
+      matches: z.array(z.strictObject({ index: z.number().int().min(1).max(6), roll: z.number().int().min(1).max(100), won: z.boolean(), minutes: z.number().int().min(0).max(90),
+              }),
+            ).length(6),
+    }),
+      ),
   }).exactOptional(),
   nationalTeam: NationalTeamStateSchema,
   // T-4-001 D-49: 부상 에피소드 이력.
   health: z.strictObject({ episodes: z.array(InjuryEpisodeSchema) }),
   // T-4-001 D-50: 관계 변화 감사 로그(최대 길이는 룰셋 relationshipRules.logMax).
   relationshipLog: z.array(RelationshipLogEntrySchema),
+  characterMemory: CoachMemoryStateSchema.optional(),
   // T-4-001 D-50: 대상별 기억 태그(축당 최대 relationshipRules.memoryTagsMax).
   memoryTags: z.strictObject({
     managerTrust: z.array(z.string()),
@@ -1247,9 +1347,11 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
   if ((value.rulesetVersion === '1.7.0' || value.rulesetVersion === '1.7.1') && isRecord(season)) {
     const ledger = season.leagueLedger;
     if (!isRecord(ledger)) {
-      issues.push({ path: ['season', 'leagueLedger'], message: '지원 룰셋 활성 시즌에는 leagueLedger가 있어야 한다.' });
+      issues.push({ path: ['season', 'leagueLedger'], message: '지원 룰셋 활성 시즌에는 leagueLedger가 있어야 한다.',
+      });
     } else if (ledger.seasonIndex !== season.index || ledger.teamId !== season.teamId) {
-      issues.push({ path: ['season', 'leagueLedger'], message: 'leagueLedger가 활성 시즌 index/team과 일치해야 한다.' });
+      issues.push({ path: ['season', 'leagueLedger'], message: 'leagueLedger가 활성 시즌 index/team과 일치해야 한다.',
+      });
     }
   }
   if ((value.rulesetVersion === '1.7.0' || value.rulesetVersion === '1.7.1') && Array.isArray(value.seasonHistory)) {
@@ -1274,11 +1376,13 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
   }
 
   const openStints = Array.isArray(clubHistory)
-    ? clubHistory.filter((stint): stint is Record<string, unknown> => isRecord(stint) && stint.toSeasonIndex === null)
+    ? clubHistory.filter((stint): stint is Record<string, unknown> => isRecord(stint) && stint.toSeasonIndex === null,
+      )
     : [];
 
   if (Array.isArray(clubHistory) && openStints.length > 1) {
-    issues.push({ path: ['clubHistory'], message: 'clubHistory에는 열린 stint가 하나만 있어야 한다.' });
+    issues.push({ path: ['clubHistory'], message: 'clubHistory에는 열린 stint가 하나만 있어야 한다.',
+    });
   }
   if (Array.isArray(clubHistory)) {
     for (const [index, stint] of clubHistory.entries()) {
@@ -1286,7 +1390,8 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
       const from = stint.fromSeasonIndex;
       const to = stint.toSeasonIndex;
       if (typeof from === 'number' && typeof to === 'number' && to < from) {
-        issues.push({ path: ['clubHistory', index, 'toSeasonIndex'], message: 'stint 종료 시즌은 시작 시즌보다 작을 수 없다.' });
+        issues.push({ path: ['clubHistory', index, 'toSeasonIndex'], message: 'stint 종료 시즌은 시작 시즌보다 작을 수 없다.',
+        });
       }
     }
   }
@@ -1305,23 +1410,28 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
           hasOwn(contract, 'teamId') && hasOwn(currentStint, 'teamId') && contract.teamId !== currentStint.teamId;
         const kindMismatch = hasOwn(contract, 'kind') && hasOwn(currentStint, 'kind') && contract.kind !== currentStint.kind;
         if (contractIdMismatch || teamIdMismatch || kindMismatch) {
-          issues.push({ path: ['clubHistory'], message: '열린 stint가 현재 계약과 일치해야 한다.' });
+          issues.push({ path: ['clubHistory'], message: '열린 stint가 현재 계약과 일치해야 한다.',
+          });
         }
       }
     }
 
     if (contract.kind === 'LOAN') {
       if (!isRecord(contract.loan)) {
-        issues.push({ path: ['contract', 'loan'], message: 'LOAN 계약에는 loan 정보가 있어야 한다.' });
+        issues.push({ path: ['contract', 'loan'], message: 'LOAN 계약에는 loan 정보가 있어야 한다.',
+        });
       }
       if (!isRecord(parentContract)) {
-        issues.push({ path: ['parentContract'], message: 'LOAN 계약에는 parentContract가 있어야 한다.' });
+        issues.push({ path: ['parentContract'], message: 'LOAN 계약에는 parentContract가 있어야 한다.',
+        });
       } else {
         if (parentContract.kind !== 'PERMANENT') {
-          issues.push({ path: ['parentContract', 'kind'], message: 'parentContract는 PERMANENT여야 한다.' });
+          issues.push({ path: ['parentContract', 'kind'], message: 'parentContract는 PERMANENT여야 한다.',
+          });
         }
         if (parentContract.suspended !== true) {
-          issues.push({ path: ['parentContract', 'suspended'], message: '임대 중 parentContract는 suspended여야 한다.' });
+          issues.push({ path: ['parentContract', 'suspended'], message: '임대 중 parentContract는 suspended여야 한다.',
+          });
         }
         if (
           isRecord(contract.loan) &&
@@ -1329,14 +1439,17 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
           hasOwn(parentContract, 'teamId') &&
           contract.loan.parentTeamId !== parentContract.teamId
         ) {
-          issues.push({ path: ['parentContract', 'teamId'], message: 'parentContract가 loan의 원소속과 일치해야 한다.' });
+          issues.push({ path: ['parentContract', 'teamId'], message: 'parentContract가 loan의 원소속과 일치해야 한다.',
+          });
         }
       }
     } else if (hasParentContract && parentContract !== null) {
-      issues.push({ path: ['parentContract'], message: '비임대 계약에는 parentContract가 없어야 한다.' });
+      issues.push({ path: ['parentContract'], message: '비임대 계약에는 parentContract가 없어야 한다.',
+      });
     }
   } else if (hasParentContract && parentContract !== null) {
-    issues.push({ path: ['parentContract'], message: '계약이 없으면 parentContract가 없어야 한다.' });
+    issues.push({ path: ['parentContract'], message: '계약이 없으면 parentContract가 없어야 한다.',
+    });
   }
 
   if (hasContract && contract === null && hasClubHistory && openStints.length > 0) {
@@ -1344,7 +1457,8 @@ export function getCareerStateInvariantIssues(value: unknown): CareerStateInvari
   }
 
   if (hasOwn(value, 'nextContract') && value.nextContract !== null && value.nextContract !== undefined && !isRecord(value.nextContract)) {
-    issues.push({ path: ['nextContract'], message: 'nextContract는 계약 객체 또는 null이어야 한다.' });
+    issues.push({ path: ['nextContract'], message: 'nextContract는 계약 객체 또는 null이어야 한다.',
+    });
   }
 
   return issues;

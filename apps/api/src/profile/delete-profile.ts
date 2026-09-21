@@ -13,6 +13,7 @@ import {
   sessions,
   snapshots,
   lockerTeams,
+  friendlyMatches,
 } from '../db/schema.js';
 import { AppError } from '../errors.js';
 
@@ -83,6 +84,7 @@ export async function executeProfileDeletion(
         ]
       : []),
     db.delete(lockerTeams).where(eq(lockerTeams.ownerProfileId, input.profileId)),
+    db.delete(friendlyMatches).where(eq(friendlyMatches.ownerProfileId, input.profileId)),
     db.delete(careers).where(eq(careers.ownerProfileId, input.profileId)),
     db.delete(idempotency).where(eq(idempotency.ownerProfileId, input.profileId)),
     db

@@ -1,0 +1,132 @@
+.friendlies {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: grid;
+  gap: 24px;
+  color: var(--os-text);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.friendlies header,
+.friendly-card {
+  display: grid;
+  gap: 14px;
+}
+.friendlies h1 {
+  font-size: 26px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+.friendlies h2 {
+  font-size: 20px;
+  font-weight: 700;
+}
+.friendlies h3,
+.friendlies legend {
+  font-size: 16px;
+  font-weight: 700;
+}
+.friendlies a {
+  color: var(--os-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.friendly-card {
+  padding: 18px;
+  border: 1px solid var(--os-border);
+  border-radius: 16px;
+  background: var(--os-surface);
+  min-width: 0;
+}
+.friendly-note {
+  color: var(--os-text-2);
+  font-size: 13px;
+}
+.friendly-field {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+.friendly-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  color: var(--os-text);
+  background: var(--os-surface);
+}
+.friendlies fieldset {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.friendlies legend {
+  margin-bottom: 8px;
+}
+.friendly-tactic {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--os-border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.friendly-tactic:has(input:checked) {
+  border-color: var(--os-accent);
+  background: var(--os-surface-2);
+}
+.friendly-tactic input {
+  appearance: auto;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-top: 4px;
+  accent-color: var(--os-accent);
+}
+.friendly-tactic span,
+.friendly-history span,
+.friendly-players span,
+.friendly-timeline span {
+  display: block;
+}
+.friendly-tactic span span {
+  font-size: 13px;
+  color: var(--os-text-2);
+}
+.friendlies :focus-visible {
+  outline: 2px solid var(--os-accent);
+  outline-offset: 3px;
+}
+.friendly-history,
+.friendly-players,
+.friendly-timeline {
+  display: grid;
+  gap: 10px;
+}
+.friendly-history button {
+  width: 100%;
+  min-height: 44px;
+  text-align: left;
+  padding: 12px;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+}
+.friendly-history span {
+  color: var(--os-text-2);
+  font-size: 12px;
+}
+.friendly-score {
+  font-size: 42px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.friendly-players li,
+.friendly-timeline li {
+  border-top: 1px solid var(--os-border);
+  padding-top: 10px;
+  font-size: 14px;
+}

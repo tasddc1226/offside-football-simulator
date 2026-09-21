@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import type { AnalyticsEventsBody, PutCareerBody, ServiceSeasonCurrent } from '@offside/contracts';
 import { E2E_META, fulfillJson } from './helpers/sync-conflict.js';
-import { completeOnboardingAndConfirm } from './helpers/player-creation.js';
+import { completeOnboardingAndConfirm, readCurrentCareerState } from './helpers/player-creation.js';
 
 const WITH_API = process.env.E2E_WITH_API === '1';
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8787';
@@ -82,7 +82,7 @@ test('테스트 시즌이면 허브 배너·카드 배지가 뜨고 커리어 �
   expect(seriousOrCritical).toEqual([]);
 });
 
-test('테스트 시즌이면 온보딩 첫 슬라이드에도 안내 문구가 보인다(axe 위반 없음)', async ({
+test('현재 선수 생성 폼은 서비스 시즌의 역사 버전으로 커리어를 생성한다(axe 위반 없음)', async ({
   page,
 }) => {
   await page.route('**/v1/service-seasons/current', (route) =>
@@ -90,15 +90,19 @@ test('테스트 시즌이면 온보딩 첫 슬라이드에도 안내 문구가 �
   );
 
   await page.goto('/onboarding');
-  await expect(page.getByTestId('onboarding-service-season-notice')).toContainText(
-    /테스트 보관함에 남고.*정식 시즌 도전에는 집계되지 않습니다/,
-  );
+  await expect(page.getByRole('heading', { name: '선수 생성', exact: true })).toBeVisible();
+  await page.getByLabel('이름', { exact: true }).fill('버전확인');
 
   const results = await new AxeBuilder({ page }).analyze();
   const seriousOrCritical = results.violations.filter(
     (v) => v.impact === 'serious' || v.impact === 'critical',
   );
   expect(seriousOrCritical).toEqual([]);
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await expect(page).toHaveURL(/\/career\/.+\/style$/);
+  const state = await readCurrentCareerState(page);
+  expect(state.rulesetVersion).toBe(TEST_SEASON.rulesetVersion);
+  expect(state.contentPackVersion).toBe(TEST_SEASON.contentPackVersion);
 });
 
 test('시즌이 LOCKED면 커리어 시작 버튼이 비활성화되고 안내 문구가 보인다', async ({ page }) => {
@@ -165,8 +169,8 @@ test.describe('실제 api로 서비스 시즌·분석 이벤트 확인', () => {
     const currentBody = (await current.json()) as { data: ServiceSeasonCurrent };
     expect(currentBody.data.id).toBe('svc_kickoff');
     expect(currentBody.data.isTest).toBe(false);
-    expect(currentBody.data.rulesetVersion).toBe('3.1.0');
-    expect(currentBody.data.contentPackVersion).toBe('0.10.0');
+    expect(currentBody.data.rulesetVersion).toBe('3.3.0');
+    expect(currentBody.data.contentPackVersion).toBe('0.12.0');
 
     await page.goto('/onboarding');
     await page.getByLabel('이름').fill('김서준');

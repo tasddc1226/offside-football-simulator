@@ -8,7 +8,11 @@ import { platform } from '../platform/index.js';
 import type { AppEngine } from './engine.js';
 import { getAppEngine } from './engine.js';
 
-export type FunnelStage = 'ONBOARDING_STARTED' | 'PLAYER_CONFIRMED' | 'CONTRACT_SIGNED' | 'SEASON_STARTED' | 'SEASON_SETTLED';
+export type FunnelStage =
+  | 'ONBOARDING_STARTED' | 'PLAYER_CONFIRMED' | 'CONTRACT_SIGNED' | 'SEASON_STARTED'
+  | 'FIRST_MATCH_DECISION'
+  | 'FIRST_MATCH_COMPLETED'
+  | 'SEASON_SETTLED';
 type ElapsedSecBucket = '<60' | '<180' | '<360' | '<720' | '<1800' | '>=1800';
 
 type FunnelRecord = {
@@ -48,7 +52,8 @@ function clampElapsedSec(elapsedMs: number): number {
 /** 온보딩(SCR-034) 마운트 시 호출 — 아직 careerId가 없으니 기기 단위로 "대기 중" 시각만 남긴다. */
 export async function markOnboardingPending(): Promise<void> {
   const engine = await getAppEngine();
-  await engine.store.transaction('readwrite', (tx) => tx.kv.put(PENDING_ONBOARDING_KV_KEY, Date.now()));
+  await engine.store.transaction('readwrite', (tx) => tx.kv.put(PENDING_ONBOARDING_KV_KEY, Date.now()),
+  );
 }
 
 /**
@@ -132,11 +137,13 @@ export type SeasonSettledProps = {
 };
 
 /** SETTLE_SEASON 성공 시 funnel_reached(SEASON_SETTLED)와 season_settled를 함께 보낸다. */
-export async function recordSeasonSettled(careerId: string, props: SeasonSettledProps): Promise<void> {
+export async function recordSeasonSettled(careerId: string, props: SeasonSettledProps,
+): Promise<void> {
   await recordFunnelReached(careerId, 'SEASON_SETTLED');
 
   const engine = await getAppEngine();
-  const record = await engine.store.transaction('readonly', (tx) => tx.kv.get<FunnelRecord>(funnelRecordKey(careerId)));
+  const record = await engine.store.transaction('readonly', (tx) => tx.kv.get<FunnelRecord>(funnelRecordKey(careerId)),
+  );
   const baseline = record?.seasonStartedAt ?? record?.onboardingStartedAt;
   if (baseline === undefined) return;
 
@@ -161,14 +168,16 @@ export function trackStepPassed(
   season: { index: number; currentStep: number; simulationMode: SimulationMode },
   careerId?: string,
 ): void {
-  const baseProps = { seasonIndex: season.index, step: season.currentStep, simulationMode: season.simulationMode };
+  const baseProps = { seasonIndex: season.index, step: season.currentStep, simulationMode: season.simulationMode,
+  };
   if (careerId === undefined) {
     platform.analytics.track('step_passed', baseProps);
     return;
   }
   void (async () => {
     const engine = await getAppEngine();
-    const record = await engine.store.transaction('readonly', (tx) => tx.kv.get<FunnelRecord>(funnelRecordKey(careerId)));
+    const record = await engine.store.transaction('readonly', (tx) => tx.kv.get<FunnelRecord>(funnelRecordKey(careerId)),
+    );
     const baseline = record?.seasonStartedAt ?? record?.onboardingStartedAt;
     platform.analytics.track('step_passed', {
       ...baseProps,
@@ -182,7 +191,8 @@ export function trackStepPassed(
 }
 
 /** 커리어 삭제 확인(2단계 다이얼로그의 "삭제 확정") 시 호출한다. */
-export function trackCareerAbandonedHint(state: Pick<CareerState, 'currentStep' | 'seasonPhase' | 'season'>): void {
+export function trackCareerAbandonedHint(state: Pick<CareerState, 'currentStep' | 'seasonPhase' | 'season'>,
+): void {
   platform.analytics.track('career_abandoned_hint', {
     seasonIndex: state.season?.index ?? 0,
     step: state.currentStep,

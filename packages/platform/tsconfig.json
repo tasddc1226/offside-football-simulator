@@ -2,7 +2,8 @@
   "extends": "@offside/tsconfig/browser.json",
   "compilerOptions": {
     "rootDir": "src",
-    "baseUrl": "."
+    "baseUrl": ".",
+    "allowImportingTsExtensions": true
   },
   "include": ["src"]
 }

@@ -1,0 +1,80 @@
+{
+  "id": "EVT-CON-021",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": {
+    "all": [{ "eq": ["career.age", 19] }, { "eq": ["player.backgroundId", "school"] }]
+  },
+  "exclusionTags": [],
+  "weight": 100,
+  "minAge": 19,
+  "maxAge": 19,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "성인 하부리그 훈련에 참가한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "성인 무대의 몸싸움을 경험함" },
+        { "label": "회복 부담이 생김", "target": "fitness", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "첫 성인 팀 훈련 날짜를 잡았다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-CON-021.A.A1",
+              "target": "fitness",
+              "delta": -8,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["진로_학교_성인훈련"],
+          "followUps": [{ "eventId": "EVT-CON-025" }]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "상위 팀 테스트를 준비한다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "기술을 보여줄 시간을 확보함" },
+        { "label": "확실한 제안 없이 준비 기간을 씀", "target": "morale", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "평가서와 경기 영상을 다시 정리했다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-CON-021.B.B1",
+              "target": "morale",
+              "delta": -6,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["진로_학교_상위테스트"],
+          "followUps": [{ "eventId": "EVT-CON-026" }]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "학교팀의 마지막 대회가 끝났다. 관심을 보인 팀들은 같은 영상을 보고도 즉시 전력과 장기 관찰이라는 서로 다른 말을 꺼냈다."
+  }
+}

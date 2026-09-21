@@ -1,7 +1,60 @@
 // 공유 생성 여정: 짧은 프로필 입력 → 후보 3장 공개 → 선수 카드 확정 → 첫 결정.
 import { expect, type Page, type Route } from '@playwright/test';
+import type { CareerState } from '@offside/domain';
 
 export const META = { requestId: 'e2e-req' };
+
+/** Version-sensitive mechanics tests pin the service response, not just the engine debug default. */
+export async function pinServiceSeasonPair(
+  page: Page,
+  rulesetVersion: string,
+  contentPackVersion: string,
+): Promise<void> {
+  await page.route('**/v1/service-seasons/current', (route) =>
+    fulfillJson(route, 200, {
+      data: {
+        id: 'svc_kickoff',
+        name: 'Kickoff',
+        status: 'ACTIVE',
+        isTest: false,
+        startsAt: '2026-09-01T00:00:00Z',
+        endsAt: '2026-12-31T23:59:59Z',
+        rulesetVersion,
+        contentPackVersion,
+        notice: null,
+      },
+      meta: META,
+    }),
+  );
+}
+
+/** Read-only persistence evidence; never constructs or edits a simulated state. */
+export async function readCurrentCareerState(page: Page): Promise<CareerState> {
+  const careerId = /\/career\/([^/]+)/.exec(page.url())?.[1];
+  if (!careerId) throw new Error('Expected career URL');
+  return page.evaluate(
+    (cid) =>
+      new Promise<CareerState>((resolve, reject) => {
+        const req = indexedDB.open('offside');
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction('snapshots', 'readonly');
+          const get = tx.objectStore('snapshots').index('careerId').getAll(cid);
+          get.onerror = () => reject(get.error);
+          get.onsuccess = () => {
+            const records = get.result as Array<{ revision: number; state: string }>;
+            records.sort((a, b) => a.revision - b.revision);
+            const last = records.at(-1);
+            db.close();
+            if (!last) reject(new Error('Missing snapshot'));
+            else resolve(JSON.parse(last.state) as CareerState);
+          };
+        };
+      }),
+    careerId,
+  );
+}
 
 export async function fulfillJson(route: Route, status: number, body: unknown): Promise<void> {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -265,6 +318,24 @@ export async function planPreseason(page: Page, focusLabel: string): Promise<voi
 /** 이미 SCR-005 프리시즌 화면에 있는 경우의 입력 경로. 결과 화면 CTA가 프리시즌으로 이동한
  * 뒤에는 `계획하러 가기`가 없으므로 planPreseason과 분리해 같은 저장·진행 검증을 재사용한다. */
 export async function fillPreseasonPlan(page: Page, focusLabel: string): Promise<void> {
+  const lifeHeading = page.getByRole('heading', {
+    level: 1,
+    name: '이번 시즌, 어떤 선수가 될까?',
+    exact: true,
+  });
+  const legacyHeading = page.getByRole('heading', { level: 1, name: '프리시즌 계획', exact: true });
+  await expect(lifeHeading.or(legacyHeading)).toBeVisible();
+  if (await lifeHeading.isVisible()) {
+    const state = await readCurrentCareerState(page);
+    expect(['3.0.0', '3.1.0', '3.2.0', '3.3.0']).toContain(state.rulesetVersion);
+    await expect(
+      page.getByRole('button', { name: '새 시즌 훈련장으로', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('시즌을 세 구간으로 나눠 훈련과 함께할 사람을 고릅니다.', { exact: false }),
+    ).toBeVisible();
+    return;
+  }
   await expect(page.getByRole('heading', { level: 1, name: '프리시즌 계획' })).toBeVisible();
 
   // 사용자 결정(2026-09-13, D-77): 시뮬레이션 모드 라디오는 더 이상 없다.
@@ -278,6 +349,15 @@ export async function fillPreseasonPlan(page: Page, focusLabel: string): Promise
   await expect(page.getByRole('heading', { level: 1, name: '시즌 준비' })).toBeVisible();
   // SCR-011 인수 조건: 훈련 계획은 시즌 결산 때 능력에 반영된다.
   await expect(page.getByText('훈련 계획은 시즌 결산 때 능력에 반영됩니다.')).toBeVisible();
+}
+
+export async function startPlannedSeason(page: Page): Promise<void> {
+  if (new URL(page.url()).pathname.endsWith('/preseason')) {
+    await page.getByRole('button', { name: '새 시즌 훈련장으로', exact: true }).click();
+  } else {
+    await expect(page).toHaveURL(/\/season-prep\b/);
+    await page.getByRole('button', { name: '시즌 시작', exact: true }).click();
+  }
 }
 
 /** SCR-015의 "다음 시즌" CTA는 항상 SCR-005(프리시즌 계획)로 가지는 않는다 — 링크가 가리키는
@@ -384,7 +464,7 @@ export async function advanceThroughSeasonToSettlement(
 ): Promise<void> {
   const progressButton = page.getByRole('button', { name: '진행', exact: true });
   const settleButton = page.getByRole('button', { name: '결산하기', exact: true });
-  const currentStepCaption = page.getByText(/\d+\/12 단계/);
+  const currentStepCaption = page.getByRole('progressbar', { name: '시즌 진행', exact: true });
   for (let step = 0; step < 20; step += 1) {
     const pathnameBefore = new URL(page.url()).pathname;
     if (pathnameBefore.endsWith('/chapter')) {
@@ -412,7 +492,7 @@ export async function advanceThroughSeasonToSettlement(
     ]);
     if (new URL(page.url()).pathname !== pathnameBefore) continue;
     if (await settleButton.isVisible()) return;
-    const stepTextBefore = await currentStepCaption.textContent();
+    const stepTextBefore = await currentStepCaption.getAttribute('aria-valuenow');
     // 클릭 액션 자체의 actionability 재확인 도중에도(디스패치 전) advance 성공→화면 전환이 끼어들어
     // 버튼이 사라질 수 있다 — 그 detach는 실패로 삼키고(클릭이 실제로 먹혔는지는 다음 스텝 진입 시
     // 위 pathname·step 텍스트 재검사가 가린다), 여기서 무한정(테스트 전체 타임아웃까지) 기다리지
@@ -420,7 +500,9 @@ export async function advanceThroughSeasonToSettlement(
     await progressButton.click({ timeout: 15_000 }).catch(() => {});
     await Promise.race([
       page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
-      expect(currentStepCaption).not.toHaveText(stepTextBefore ?? '', { timeout: 60_000 }),
+      expect(currentStepCaption).not.toHaveAttribute('aria-valuenow', stepTextBefore ?? '', {
+        timeout: 60_000,
+      }),
     ]);
   }
   throw new Error('SETTLEMENT(결산하기)에 도달하지 못했다(최대 20회 시도)');

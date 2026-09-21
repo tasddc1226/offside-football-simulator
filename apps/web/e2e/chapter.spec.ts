@@ -6,8 +6,18 @@
 // 새로고침·뒤로 가기가 이미 확정된 판단을 다시 묻지 않고(roll을 다시 소비하지 않고) 같은 결과를
 // 재생하는지 표시된 최종 스코어·revision으로 확인한다.
 import { expect, test, type Page } from '@playwright/test';
-import { completeOnboardingThroughContract, planPreseason } from './helpers/player-creation.js';
-import { advanceToChapter, resolveRoleProposal, seedDeterministicChapterRun } from './helpers/chapter.js';
+import {
+  completeOnboardingThroughContract,
+  planPreseason,
+  pinServiceSeasonPair,
+  startPlannedSeason,
+  readCurrentCareerState,
+} from './helpers/player-creation.js';
+import {
+  advanceToChapter,
+  resolveRoleProposal,
+  seedDeterministicChapterRun,
+} from './helpers/chapter.js';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
@@ -28,7 +38,8 @@ async function readRevisionAndReturn(page: Page): Promise<number> {
  */
 async function readLatestRngDraws(page: Page): Promise<number> {
   const match = /\/career\/([^/]+)/.exec(page.url());
-  if (match === null) throw new Error(`readLatestRngDraws: URL에서 careerId를 찾지 못했다(${page.url()})`);
+  if (match === null)
+    throw new Error(`readLatestRngDraws: URL에서 careerId를 찾지 못했다(${page.url()})`);
   const careerId = match[1];
 
   return page.evaluate(
@@ -63,79 +74,124 @@ async function readLatestRngDraws(page: Page): Promise<number> {
   );
 }
 
-test('데뷔전: 경기 전 맥락 → 판단 확정 → 경기 결과 → 대시보드, 새로고침·뒤로 가기가 재생만 한다', async ({
-  page,
-}) => {
-  // DEBUT 트리거(matchesTrigger: seasonIndex===1 && isFirstCareerAppearance && minutes>0)까지 몇 번의
-  // "진행"이 필요한지는 시드에 달렸다(career-actions.ts createCareer) — 매 실행 crypto.getRandomValues로
-  // 새 시드를 뽑으면 시즌 12 step 내내 한 번도 안 맞는 시드가 걸릴 수 있다. seedDeterministicChapterRun이
-  // "진행" 1회 만에 데뷔 챕터가 열리는 것을 확인해 둔 시드(helpers/chapter.ts)를 강제해 결정론으로
-  // 만든다 — 그래도 병렬 워커로 CPU를 나눠 쓰면 mutateAsync가 느려질 수 있어 넉넉히 기다린다.
-  test.slow();
-  const startedAt = Date.now();
+for (const version of [
+  { rules: '1.7.2', pack: '0.6.6', causal: false, characterMemory: false },
+  { rules: '3.2.0', pack: '0.11.0', causal: true, characterMemory: false },
+  { rules: '3.3.0', pack: '0.12.0', causal: true, characterMemory: true },
+]) {
+  test(`${version.rules} 데뷔전: 경기 전 맥락 → 판단 확정 → 경기 결과 → 대시보드, 새로고침·뒤로 가기가 재생만 한다`, async ({
+    page,
+  }) => {
+    // DEBUT 트리거(matchesTrigger: seasonIndex===1 && isFirstCareerAppearance && minutes>0)까지 몇 번의
+    // "진행"이 필요한지는 시드에 달렸다(career-actions.ts createCareer) — 매 실행 crypto.getRandomValues로
+    // 새 시드를 뽑으면 시즌 12 step 내내 한 번도 안 맞는 시드가 걸릴 수 있다. seedDeterministicChapterRun이
+    // "진행" 1회 만에 데뷔 챕터가 열리는 것을 확인해 둔 시드(helpers/chapter.ts)를 강제해 결정론으로
+    // 만든다 — 그래도 병렬 워커로 CPU를 나눠 쓰면 mutateAsync가 느려질 수 있어 넉넉히 기다린다.
+    test.slow();
+    const startedAt = Date.now();
 
-  await seedDeterministicChapterRun(page);
-  await completeOnboardingThroughContract(page);
-  await planPreseason(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
-  await resolveRoleProposal(page);
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+    await seedDeterministicChapterRun(page);
+    await pinServiceSeasonPair(page, version.rules, version.pack);
+    await completeOnboardingThroughContract(page);
+    await planPreseason(page, '역할 집중');
+    await startPlannedSeason(page);
+    await resolveRoleProposal(page);
+    await expect(page).toHaveURL(/\/career\/[^/]+$/);
 
-  const revisionBeforeChapter = await readRevisionAndReturn(page);
-  await advanceToChapter(page);
+    const revisionBeforeChapter = await readRevisionAndReturn(page);
+    await advanceToChapter(page);
 
-  // 경기 전 맥락(상단 고정): 데뷔전 라벨·스코어보드·출전 여부.
-  await expect(page.getByRole('heading', { level: 1, name: '프로 데뷔전' })).toBeVisible();
-  await expect(page.getByTestId('chapter-time-label')).toBeVisible();
-  await expect(page.getByTestId('chapter-score')).toBeVisible();
+    // 경기 전 맥락(상단 고정): 데뷔전 라벨·스코어보드·출전 여부.
+    await expect(
+      page.getByRole('heading', { level: 1, name: version.causal ? '첫 승부처' : '프로 데뷔전' }),
+    ).toBeVisible();
 
-  // D1의 세 선택지(SAFE·ROLE·BOLD)가 보인다.
-  await expect(page.getByRole('radio', { name: /안전한 첫 플레이/ })).toBeVisible();
-  await expect(page.getByRole('radio', { name: /역할 수행/ })).toBeVisible();
-  await expect(page.getByRole('radio', { name: /과감한 존재감/ })).toBeVisible();
+    // D1의 세 선택지(SAFE·ROLE·BOLD)가 보인다.
+    if (version.causal) {
+      await expect(page.getByRole('radio', { name: /직접 슈팅한다/ })).toBeVisible();
+      await expect(page.getByRole('radio', { name: /빈 동료에게 패스한다/ })).toBeVisible();
+      await expect(page.getByText(/^\d+분 · 당신의 마지막 플레이$/)).toBeVisible();
+      await expect(page.getByLabel(/^스코어 \d+ 대 \d+$/)).toBeVisible();
+    } else {
+      await expect(page.getByTestId('chapter-time-label')).toBeVisible();
+      await expect(page.getByTestId('chapter-score')).toBeVisible();
+      await expect(page.getByRole('radio', { name: /안전한 첫 플레이/ })).toBeVisible();
+      await expect(page.getByRole('radio', { name: /역할 수행/ })).toBeVisible();
+      await expect(page.getByRole('radio', { name: /과감한 존재감/ })).toBeVisible();
+    }
 
-  await page.getByRole('radio').first().click();
-  await page.getByRole('button', { name: '확정' }).click();
+    const beforeDecision = await readCurrentCareerState(page);
+    await page.getByRole('radio').first().click();
+    await page.getByRole('button', { name: '확정' }).click();
 
-  // CHP-MATCH-001은 판단이 1개뿐이라 확정 즉시 pending이 닫힌다(nextAction ADVANCE) — "다음 판단"이
-  // 아니라 "경기 결과" 버튼이 뜬다.
-  await expect(page.getByRole('button', { name: '경기 결과' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '다음 판단' })).toHaveCount(0);
+    // CHP-MATCH-001은 판단이 1개뿐이라 확정 즉시 pending이 닫힌다(nextAction ADVANCE) — "다음 판단"이
+    // 아니라 "경기 결과" 버튼이 뜬다.
+    await expect(page.getByRole('button', { name: '경기 결과' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '다음 판단' })).toHaveCount(0);
 
-  // mid-flow 새로고침(경기 결과로 넘어가기 전): 판단을 다시 묻지 않고 곧장 결과로 간다 — roll을
-  // 다시 소비했다면 스코어·평점이 실행마다 달라질 것이다(아래에서 대조). TEST-E2E-010: 화면 스코어
-  // 일치만으로는 우연의 일치를 배제할 수 없으므로 rngState.draws 자체도 새로고침 전후로 비교한다.
-  const rngDrawsBeforeReload = await readLatestRngDraws(page);
-  await page.reload();
-  await expect(page.getByRole('heading', { level: 2, name: '경기 결과' })).toBeVisible();
-  await expect(page.getByRole('radio')).toHaveCount(0);
-  const finalScore = await page.locator('[aria-label^="최종 스코어"]').textContent();
-  expect(await readLatestRngDraws(page)).toBe(rngDrawsBeforeReload);
+    // mid-flow 새로고침(경기 결과로 넘어가기 전): 판단을 다시 묻지 않고 곧장 결과로 간다 — roll을
+    // 다시 소비했다면 스코어·평점이 실행마다 달라질 것이다(아래에서 대조). TEST-E2E-010: 화면 스코어
+    // 일치만으로는 우연의 일치를 배제할 수 없으므로 rngState.draws 자체도 새로고침 전후로 비교한다.
+    const rngDrawsBeforeReload = await readLatestRngDraws(page);
+    const resolvedState = await readCurrentCareerState(page);
+    const resolvedMatches = resolvedState.season?.matches;
+    if (version.causal) {
+      const match = resolvedMatches?.find((match) => match.decisionImpact !== undefined);
+      expect(match?.decisionWindow?.phase).toBe('FINAL');
+      expect(match?.decisionImpact?.receipts).toHaveLength(1);
+      expect(match?.decisionImpact?.receipts[0]?.after).toEqual({
+        goalsFor: match?.result.goalsFor,
+        goalsAgainst: match?.result.goalsAgainst,
+      });
+      if (version.characterMemory) {
+        const receipt = match!.decisionImpact!.receipts[0]!;
+        const captured = resolvedState.characterMemory?.memories.find((memory) => memory.matchId === match!.id && memory.decisionId === receipt.decisionId);
+        expect(captured).toMatchObject({
+          actor: { id: beforeDecision.season!.manager!.id, name: beforeDecision.season!.manager!.name, teamId: beforeDecision.season!.teamId },
+          action: receipt.action, outcomeKind: receipt.outcomeKind,
+          before: receipt.before, after: receipt.after, trustDelta: receipt.managerTrustDelta,
+        });
+        await expect(page.getByRole('article', { name: `${captured!.actor.name} 감독이 기억한 선택` })).toBeVisible();
+        await expect(page.getByText(`선택 당시 감독 신뢰 변화 ${captured!.trustDelta > 0 ? '+' : ''}${captured!.trustDelta}`, { exact: true })).toBeVisible();
+      }
+    }
+    if (!version.characterMemory) expect(resolvedState.characterMemory).toBeUndefined();
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 2, name: '경기 결과' })).toBeVisible();
+    await expect(page.getByRole('radio')).toHaveCount(0);
+    if (version.causal) await expect(page.getByLabel('내 선택이 바꾼 경기')).toBeVisible();
+    const finalScore = await page.locator('[aria-label^="최종 스코어"]').textContent();
+    expect(await readLatestRngDraws(page)).toBe(rngDrawsBeforeReload);
+    expect((await readCurrentCareerState(page)).season?.matches).toEqual(resolvedMatches);
+    expect((await readCurrentCareerState(page)).characterMemory).toEqual(resolvedState.characterMemory);
+    if (version.characterMemory) await expect(page.getByRole('region', { name: '함께한 인물의 기억' })).toBeVisible();
 
-  // 한 번 더 새로고침해도 같은 값이다(결정론).
-  await page.reload();
-  await expect(page.getByRole('heading', { level: 2, name: '경기 결과' })).toBeVisible();
-  expect(await page.locator('[aria-label^="최종 스코어"]').textContent()).toBe(finalScore);
-  expect(await readLatestRngDraws(page)).toBe(rngDrawsBeforeReload);
+    // 한 번 더 새로고침해도 같은 값이다(결정론).
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 2, name: '경기 결과' })).toBeVisible();
+    expect(await page.locator('[aria-label^="최종 스코어"]').textContent()).toBe(finalScore);
+    expect(await readLatestRngDraws(page)).toBe(rngDrawsBeforeReload);
+    expect((await readCurrentCareerState(page)).characterMemory).toEqual(resolvedState.characterMemory);
 
-  // "다음"은 advance()를 부르지 않고 대시보드로만 이동한다(브리프 — pending은 이미 null).
-  await page.getByRole('button', { name: '다음' }).click();
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+    // "다음"은 advance()를 부르지 않고 대시보드로만 이동한다(브리프 — pending은 이미 null).
+    await page.getByRole('button', { name: '다음' }).click();
+    await expect(page).toHaveURL(/\/career\/[^/]+$/);
 
-  // 뒤로 가기: 챕터 결과 화면이 재생만 한다(판단을 다시 묻지 않고, 같은 결과).
-  await page.goBack();
-  await expect(page.getByRole('heading', { level: 2, name: '경기 결과' })).toBeVisible();
-  await expect(page.getByRole('radio')).toHaveCount(0);
-  expect(await page.locator('[aria-label^="최종 스코어"]').textContent()).toBe(finalScore);
+    // 뒤로 가기: 챕터 결과 화면이 재생만 한다(판단을 다시 묻지 않고, 같은 결과).
+    await page.goBack();
+    await expect(page.getByRole('heading', { level: 2, name: '경기 결과' })).toBeVisible();
+    await expect(page.getByRole('radio')).toHaveCount(0);
+    expect(await page.locator('[aria-label^="최종 스코어"]').textContent()).toBe(finalScore);
 
-  const revisionAfterChapter = await readRevisionAndReturn(page);
-  // START_SEASON + RESOLVE_ROLE + (advanceToChapter가 쓴 ADVANCE·RESOLVE_EVENT 수, 실행마다 다를 수
-  // 있다) + RESOLVE_CHAPTER 1건 — 정확한 상한은 모르지만 최소 하나는 늘어야 한다.
-  expect(revisionAfterChapter).toBeGreaterThan(revisionBeforeChapter);
-  // 새로고침 2회·뒤로 가기 1회가 명령을 하나도 만들지 않았는지(재생 결정성) 다시 읽어 대조한다.
-  const revisionSecondCheck = await readRevisionAndReturn(page);
-  expect(revisionSecondCheck).toBe(revisionAfterChapter);
+    const revisionAfterChapter = await readRevisionAndReturn(page);
+    // START_SEASON + RESOLVE_ROLE + (advanceToChapter가 쓴 ADVANCE·RESOLVE_EVENT 수, 실행마다 다를 수
+    // 있다) + RESOLVE_CHAPTER 1건 — 정확한 상한은 모르지만 최소 하나는 늘어야 한다.
+    expect(revisionAfterChapter).toBeGreaterThan(revisionBeforeChapter);
+    // 새로고침 2회·뒤로 가기 1회가 명령을 하나도 만들지 않았는지(재생 결정성) 다시 읽어 대조한다.
+    const revisionSecondCheck = await readRevisionAndReturn(page);
+    expect(revisionSecondCheck).toBe(revisionAfterChapter);
 
-  const elapsedMs = Date.now() - startedAt;
-  console.log(`[chapter] 계약 뒤 시즌 시작→데뷔전 챕터 확정→대시보드 소요 시간: ${elapsedMs}ms`);
-});
+    const elapsedMs = Date.now() - startedAt;
+    console.log(`[chapter] 계약 뒤 시즌 시작→데뷔전 챕터 확정→대시보드 소요 시간: ${elapsedMs}ms`);
+  });
+}

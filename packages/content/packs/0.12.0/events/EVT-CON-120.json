@@ -1,0 +1,329 @@
+{
+  "id": "EVT-CON-120",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "triggers": {
+    "all": [
+      {
+        "eq": [
+          "career.stage",
+          "PRO"
+        ]
+      },
+      {
+        "any": [
+          {
+            "gte": [
+              "career.permanentTransfers",
+              1
+            ]
+          },
+          {
+            "eq": [
+              "contract.isLastSeason",
+              1
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "exclusionTags": [
+    "T7034_LOYALTY_DONE"
+  ],
+  "cooldown": {
+    "steps": 8
+  },
+  "weight": 14,
+  "minAge": 19,
+  "choices": [
+    {
+      "id": "A",
+      "label": "남은 시즌의 책임부터 분명히 말한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "팬 관계 상승",
+          "target": "fans",
+          "direction": "UP"
+        },
+        {
+          "label": "미래 계약 약속은 하지 않음"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 79,
+          "title": "현재에 집중하겠다는 말이 신뢰를 얻었다",
+          "cause": "지킬 수 있는 범위의 약속",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-120.A.S0",
+              "target": "fans",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-120_A_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-120.A.S1",
+              "target": "managerTrust",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-120_A_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-CON-121"
+            }
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 21,
+          "title": "거취 답변을 피했다는 제목이 붙었다",
+          "cause": "현재형 답변의 해석 차이",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-120.A.F0",
+              "target": "media",
+              "delta": -100,
+              "clamp": {
+                "min": 0,
+                "max": 10000
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-120_A_F0"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-CON-122"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "팀에 남고 싶은 조건을 솔직히 설명한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "팬 관계 변동"
+        },
+        {
+          "label": "에이전트 관계 상승 기회",
+          "target": "agent",
+          "direction": "UP"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 63,
+          "title": "솔직한 조건이 현실적인 대화로 받아들여졌다",
+          "cause": "구체적이되 확정하지 않은 설명",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-120.B.S0",
+              "target": "agent",
+              "delta": 4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-120_B_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-120.B.S1",
+              "target": "fans",
+              "delta": 3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-120_B_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-CON-121"
+            }
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 37,
+          "title": "조건을 앞세운다는 반응이 나왔다",
+          "cause": "일부만 전달된 답변",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-120.B.F0",
+              "target": "fans",
+              "delta": -4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-120_B_F0"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-CON-122"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "거취보다 팀 동료의 도움을 이야기한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "라커룸 관계 상승",
+          "target": "captain",
+          "direction": "UP"
+        },
+        {
+          "label": "개인 입장은 덜 드러남"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "SUCCESS",
+          "weight": 82,
+          "title": "동료에게 돌린 공이 팀의 메시지가 됐다",
+          "cause": "관계를 앞세운 답변",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-120.C.S0",
+              "target": "captain",
+              "delta": 4,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-120_C_S0"
+            },
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-120.C.S1",
+              "target": "fans",
+              "delta": 2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-120_C_S1"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-CON-121"
+            }
+          ]
+        },
+        {
+          "id": "C2",
+          "kind": "FAIL",
+          "weight": 18,
+          "title": "에이전트는 협상 메시지가 흐려졌다고 봤다",
+          "cause": "개인 입장을 유보한 선택",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-CON-120.C.F0",
+              "target": "agent",
+              "delta": -2,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE",
+              "reasonTag": "EVT-CON-120_C_F0"
+            }
+          ],
+          "followUps": [
+            {
+              "eventId": "EVT-CON-122"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "시즌 중 구단 행사에서 오래 팀을 지켜 본 팬과 이야기를 나눴다. 미래를 확정할 자리는 아니지만, 지금 팀에 대한 태도는 선택할 수 있다."
+  }
+}

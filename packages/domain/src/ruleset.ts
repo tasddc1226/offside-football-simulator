@@ -519,6 +519,8 @@ export type LeagueCalendar = {
 export type Ruleset = {
   overseasRules?: { version: 'WORLD_JOURNEY_V1' } | undefined;
   developmentRules?: { version: 'PLAYER_LIFE_V1' } | undefined;
+  matchDecisionRules?: { version: 'LATE_MATCH_V1' } | undefined;
+  characterMemoryRules?: { version: 'COACH_MEMORY_V1'; memoryMax: number; reactionMax: number; successTrustDelta: number; failTrustDelta: number } | undefined;
   eventSelectionRules?: EventSelectionRules | undefined;
   version: string;
   initialAge?: number | undefined;

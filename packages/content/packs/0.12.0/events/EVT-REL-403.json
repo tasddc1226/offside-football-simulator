@@ -1,0 +1,156 @@
+{
+  "id": "EVT-REL-403",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "triggers": {
+    "all": [
+      {
+        "eq": [
+          "career.stage",
+          "PRO"
+        ]
+      },
+      {
+        "any": [
+          {
+            "eq": [
+              "contract.teamId",
+              "porto-atlantico"
+            ]
+          },
+          {
+            "eq": [
+              "contract.teamId",
+              "lisboa-estrela"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "exclusionTags": [
+    "세계_PT_0_완료"
+  ],
+  "weight": 500,
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "도움을 청하고 포르투갈어 표현도 배운다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "주장 신뢰 +8 · 사기 +3"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "주장 신뢰 +8 · 사기 +3",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-403.A.0.0",
+              "target": "captain",
+              "delta": 8,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-403.A.0.1",
+              "target": "morale",
+              "delta": 3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": [
+            "세계_PT_0_완료",
+            "해외_경험",
+            "세계_PT_정착"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "구단 담당자에게 맡기고 전술 노트를 정리한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "집중력 +2 · 체력 −5"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "집중력 +2 · 체력 −5",
+          "effects": [
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-REL-403.B.0.0",
+              "target": "concentration",
+              "delta": 2,
+              "clamp": {
+                "min": 1,
+                "max": 99
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-403.B.0.1",
+              "target": "fitness",
+              "delta": -5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": [
+            "세계_PT_0_완료",
+            "해외_경험",
+            "세계_PT_도전"
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "포르투갈에 도착한 첫 주, 집 계약과 훈련 시간표가 한꺼번에 쌓였다. 동료가 가까운 카페에서 서류를 같이 보자고 한다."
+  }
+}
