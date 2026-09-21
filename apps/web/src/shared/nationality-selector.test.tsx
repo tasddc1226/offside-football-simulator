@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { NationalitySelector } from './nationality-selector.js';
 
-describe('NationalitySelector (#161/#162)', () => {
+describe('NationalitySelector search behavior', () => {
   it('keeps Korea first and filters by code/name without changing the selected value', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
