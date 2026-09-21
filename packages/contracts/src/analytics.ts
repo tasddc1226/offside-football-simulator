@@ -50,7 +50,7 @@ const SeasonIndexSchema = z.number().int().nonnegative();
 
 /** 이름별 props 스키마. 화이트리스트 자체이기도 하다 — 여기 없는 이름은 서버가 통째로 버린다. */
 export const ANALYTICS_EVENT_PROPS_SCHEMAS = {
-  growth_action: z.strictObject({ action: z.enum(['ARTICLE_VIEWED', 'ARTICLE_PUBLISHED', 'ARTICLE_REVOKED', 'CHALLENGE_STARTED']) }),
+  growth_action: z.strictObject({ action: z.enum(['ARTICLE_VIEWED', 'ARTICLE_PUBLISHED', 'ARTICLE_REVOKED', 'CHALLENGE_STARTED', 'FRIENDLY_STARTED', 'FRIENDLY_REPLAYED']) }),
   screen_viewed: z.strictObject({ screenId: ScreenIdSchema, careerPhase: CareerPhaseSchema }),
   choice_previewed: z.strictObject({ eventId: z.string().min(1).max(64), choiceId: z.string().min(1).max(64),
   }),

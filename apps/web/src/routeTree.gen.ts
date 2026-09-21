@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FaqRouteImport } from './routes/faq'
+import { Route as FriendliesRouteImport } from './routes/friendlies'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as LockerRoomRouteImport } from './routes/locker-room'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -49,6 +50,11 @@ const IndexRoute = IndexRouteImport.update({
 const FaqRoute = FaqRouteImport.update({
   id: '/faq',
   path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FriendliesRoute = FriendliesRouteImport.update({
+  id: '/friendlies',
+  path: '/friendlies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuideRoute = GuideRouteImport.update({
@@ -207,6 +213,7 @@ const CareerCareerIdEventResultRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
+  '/friendlies': typeof FriendliesRoute
   '/guide': typeof GuideRoute
   '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
+  '/friendlies': typeof FriendliesRoute
   '/guide': typeof GuideRoute
   '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
@@ -273,6 +281,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/faq': typeof FaqRoute
+  '/friendlies': typeof FriendliesRoute
   '/guide': typeof GuideRoute
   '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
@@ -308,6 +317,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/faq'
+    | '/friendlies'
     | '/guide'
     | '/locker-room'
     | '/onboarding'
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/faq'
+    | '/friendlies'
     | '/guide'
     | '/locker-room'
     | '/onboarding'
@@ -373,6 +384,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/faq'
+    | '/friendlies'
     | '/guide'
     | '/locker-room'
     | '/onboarding'
@@ -407,6 +419,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   FaqRoute: typeof FaqRoute
+  FriendliesRoute: typeof FriendliesRoute
   GuideRoute: typeof GuideRoute
   LockerRoomRoute: typeof LockerRoomRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -431,6 +444,13 @@ declare module '@tanstack/react-router' {
       path: '/faq'
       fullPath: '/faq'
       preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/friendlies': {
+      id: '/friendlies'
+      path: '/friendlies'
+      fullPath: '/friendlies'
+      preLoaderRoute: typeof FriendliesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guide': {
@@ -694,6 +714,7 @@ const CareerCareerIdRouteWithChildren = CareerCareerIdRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FaqRoute: FaqRoute,
+  FriendliesRoute: FriendliesRoute,
   GuideRoute: GuideRoute,
   LockerRoomRoute: LockerRoomRoute,
   OnboardingRoute: OnboardingRoute,
