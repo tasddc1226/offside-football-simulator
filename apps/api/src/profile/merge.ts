@@ -1,4 +1,4 @@
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, ne, sql } from 'drizzle-orm';
 import { prepareWebSessionRotation } from '../auth/session.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
@@ -79,6 +79,12 @@ export async function moveCareersAndRebind(
         pendingMergeExpiresAt: null,
       })
       .where(eq(sessions.id, input.sessionId)),
+    // Every other source session becomes invalid at the same ownership boundary; otherwise a
+    // request already holding an old cookie could admit a fresh source entry after this batch.
+    db
+      .update(sessions)
+      .set({ revokedAt: input.now, pendingMergeProfileId: null, pendingMergeExpiresAt: null })
+      .where(and(eq(sessions.profileId, input.fromProfileId), ne(sessions.id, input.sessionId))),
   ]);
 }
 
@@ -132,6 +138,10 @@ export async function moveCareersAndRotateWebSession(
       createdAt: input.now,
     }),
     ...rotation.statements,
+    db
+      .update(sessions)
+      .set({ revokedAt: input.now, pendingMergeProfileId: null, pendingMergeExpiresAt: null })
+      .where(and(eq(sessions.profileId, input.fromProfileId), ne(sessions.id, input.sessionId))),
   ]);
   return rotation.token;
 }

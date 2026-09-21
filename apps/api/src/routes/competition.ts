@@ -22,7 +22,7 @@ import {
   type CompetitionMatchDefinition,
 } from '@offside/domain';
 import { loadRuleset } from '@offside/content';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { competitionActions, competitionChallengeVersions, competitionEntries } from '../db/schema.js';
 import { runBatch } from '../db/repos/batch.js';
@@ -86,11 +86,39 @@ function challengeView(row: typeof competitionChallengeVersions.$inferSelect) {
   });
 }
 
+type MatchStats = Record<string, string | number | boolean> & { group: 'FW' | 'MF' | 'DF' | 'GK' };
+
+function statLines(stats: MatchStats): Array<{ label: string; value: string }> {
+  const number = (value: unknown) => typeof value === 'number' ? String(value) : '';
+  switch (stats.group) {
+    case 'FW': return [
+      { label: '득점', value: number(stats.goals) }, { label: '도움', value: number(stats.assists) },
+      { label: '기대득점', value: `${(Number(stats.xgCenti) / 100).toFixed(2)}` },
+      { label: '슈팅', value: number(stats.shots) }, { label: '오프사이드', value: number(stats.offsides) },
+    ];
+    case 'MF': return [
+      { label: '도움', value: number(stats.assists) }, { label: '찬스 창출', value: number(stats.chancesCreated) },
+      { label: '전진 패스', value: number(stats.progressivePasses) }, { label: '패스 성공', value: number(stats.passesCompleted) },
+      { label: '볼 회수', value: number(stats.ballRecoveries) },
+    ];
+    case 'DF': return [
+      { label: '태클', value: number(stats.tackles) }, { label: '가로채기', value: number(stats.interceptions) },
+      { label: '공중볼 승리', value: number(stats.aerialsWon) }, { label: '클린시트', value: stats.cleanSheet ? '달성' : '미달성' },
+      { label: '관여 실점', value: number(stats.goalsConcededInvolved) },
+    ];
+    case 'GK': return [
+      { label: '선방', value: number(stats.saves) }, { label: '선방 기대값 대비', value: `${(Number(stats.psxgMinusGoalsCenti) / 100).toFixed(2)}` },
+      { label: '크로스 처리', value: number(stats.crossesClaimed) }, { label: '빌드업 패스', value: number(stats.buildUpPasses) },
+      { label: '클린시트', value: stats.cleanSheet ? '달성' : '미달성' },
+    ];
+  }
+}
+
 function entryView(
   row: typeof competitionEntries.$inferSelect,
   challenge: typeof competitionChallengeVersions.$inferSelect,
 ): CompetitionEntry {
-  const result = row.resultJson ? (JSON.parse(row.resultJson) as { match?: { appearance: 'START' | 'SUB' | 'OUT'; minutes: number; ratingTenths: number | null; result: { outcome: 'WIN' | 'DRAW' | 'LOSS' }; stats: Record<string, string | number | boolean> } }) : null;
+  const result = row.resultJson ? (JSON.parse(row.resultJson) as { match?: { appearance: 'START' | 'SUB' | 'OUT'; minutes: number; ratingTenths: number | null; result: { goalsFor: number; goalsAgainst: number; outcome: 'WIN' | 'DRAW' | 'LOSS' }; stats: MatchStats }; positionContribution?: number }) : null;
   const match = result?.match;
   return CompetitionEntrySchema.parse({
     challengeId: challenge.id,
@@ -105,7 +133,7 @@ function entryView(
     resultHash: row.resultHash,
     publicOptIn: row.publicOptIn === 1,
     submittedAt: row.submittedAt,
-    evidence: match ? { appearance: match.appearance, minutes: match.minutes, ratingTenths: match.ratingTenths, outcome: match.result.outcome, positionStats: match.stats } : null,
+    evidence: match ? { appearance: match.appearance, minutes: match.minutes, ratingTenths: match.ratingTenths, outcome: match.result.outcome, scoreline: { goalsFor: match.result.goalsFor, goalsAgainst: match.result.goalsAgainst }, positionContribution: result?.positionContribution ?? 0, statLines: statLines(match.stats), positionStats: match.stats } : null,
     proof: {
       method: 'SERVER_MATCH',
       rulesetVersion: challenge.rulesetVersion,
@@ -189,6 +217,8 @@ async function ensureDailyChallenge(
 async function ensureEntry(
   db: ReturnType<typeof getDb>,
   owner: string,
+  sessionId: string,
+  now: string,
   challenge: typeof competitionChallengeVersions.$inferSelect,
   definition: CompetitionMatchDefinition,
 ) {
@@ -197,26 +227,15 @@ async function ensureEntry(
     .from(competitionEntries)
     .where(and(eq(competitionEntries.ownerProfileId, owner), eq(competitionEntries.challengeVersionId, challenge.id)));
   if (existing) return existing;
-  try {
-    await db.insert(competitionEntries).values({
-      id: crypto.randomUUID(),
-      challengeVersionId: challenge.id,
-      ownerProfileId: owner,
-      actionIdsJson: '[]',
-      revision: 0,
-      stateJson: JSON.stringify(initialCompetitionActionState(definition)),
-      resultJson: null,
-      resultHash: null,
-      score: null,
-      maxScore: null,
-      verificationStatus: 'IN_PROGRESS',
-      publicOptIn: 0,
-      publicAlias: await publicAlias(owner, challenge.weekKey),
-      submittedAt: null,
-    });
-  } catch {
-    // The profile/day unique index is the admission lock; read its deterministic winner.
-  }
+  const id = crypto.randomUUID();
+  const alias = await publicAlias(owner, challenge.weekKey);
+  await db.run(sql`INSERT INTO competition_entries
+    (id, challenge_version_id, owner_profile_id, action_ids_json, revision, state_json, result_json, result_hash, score, max_score, verification_status, public_opt_in, public_alias, submitted_at)
+    SELECT ${id}, ${challenge.id}, ${owner}, '[]', 0, ${JSON.stringify(initialCompetitionActionState(definition))}, NULL, NULL, NULL, NULL, 'IN_PROGRESS', 0, ${alias}, NULL
+    WHERE EXISTS (SELECT 1 FROM sessions current_session INNER JOIN profiles current_profile ON current_profile.id = current_session.profile_id
+      WHERE current_session.id = ${sessionId} AND current_session.profile_id = ${owner} AND current_session.revoked_at IS NULL
+        AND current_session.expires_at > ${now} AND current_profile.deleted_at IS NULL)
+    ON CONFLICT(owner_profile_id, challenge_version_id) DO NOTHING`);
   const [created] = await db
     .select()
     .from(competitionEntries)
@@ -225,17 +244,21 @@ async function ensureEntry(
   return created;
 }
 
-async function replayAction(db: ReturnType<typeof getDb>, requestKeyHash: string, requestHash: string) {
-  const [saved] = await db.select().from(competitionActions).where(eq(competitionActions.requestKeyHash, requestKeyHash));
-  if (!saved) return null;
-  if (saved.requestHash !== requestHash) invalid('같은 요청 키로 다른 행동을 제출할 수 없습니다.', 409);
-  return CompetitionActionResponseSchema.parse(JSON.parse(saved.responseJson));
+async function replayAction(db: ReturnType<typeof getDb>, requestKeyHash: string, requestHash: string, owner: string, sessionId: string, now: string) {
+  const [saved] = await db.select({ action: competitionActions }).from(competitionActions)
+    .innerJoin(competitionEntries, eq(competitionEntries.id, competitionActions.entryId))
+    .where(and(eq(competitionActions.requestKeyHash, requestKeyHash), eq(competitionEntries.ownerProfileId, owner), sql`EXISTS (SELECT 1 FROM sessions current_session INNER JOIN profiles current_profile ON current_profile.id = current_session.profile_id WHERE current_session.id = ${sessionId} AND current_session.profile_id = ${owner} AND current_session.revoked_at IS NULL AND current_session.expires_at > ${now} AND current_profile.deleted_at IS NULL)`));
+  const savedAction = saved?.action;
+  if (!savedAction) return null;
+  if (savedAction.requestHash !== requestHash) invalid('같은 요청 키로 다른 행동을 제출할 수 없습니다.', 409);
+  return CompetitionActionResponseSchema.parse(JSON.parse(savedAction.responseJson));
 }
 
 export function registerCompetitionRoutes(app: Hono<AppEnv>) {
   app.get('/v1/competition/daily', requireProfile, async (c) => {
     const db = getDb(c);
-    const owner = getSessionOrThrow(c).profileId;
+    const session = getSessionOrThrow(c);
+    const owner = session.profileId;
     const now = new Date();
     const requestedDay = c.req.query('dayKey');
     const dayKey = requestedDay ?? kstDayKey(now);
@@ -254,7 +277,8 @@ export function registerCompetitionRoutes(app: Hono<AppEnv>) {
   });
 
   app.get('/v1/competition/history', requireProfile, async (c) => {
-    const owner = getSessionOrThrow(c).profileId;
+    const session = getSessionOrThrow(c);
+    const owner = session.profileId;
     const db = getDb(c);
     const rows = await db
       .select({ entry: competitionEntries, challenge: competitionChallengeVersions })
@@ -271,7 +295,8 @@ export function registerCompetitionRoutes(app: Hono<AppEnv>) {
     if (!requestKey || !/^[A-Za-z0-9_-]{8,128}$/.test(requestKey)) invalid('Idempotency-Key가 필요합니다.');
     const input = parseWithAppError(SubmitCompetitionActionSchema, JSON.parse(c.get('rawBody') ?? '{}'));
     const db = getDb(c);
-    const owner = getSessionOrThrow(c).profileId;
+    const session = getSessionOrThrow(c);
+    const owner = session.profileId;
     const now = new Date();
     let [challenge] = await db.select().from(competitionChallengeVersions).where(eq(competitionChallengeVersions.id, c.req.param('challengeId')));
     if (!challenge && c.req.param('challengeId') === `daily-${kstDayKey(now)}`) {
@@ -282,10 +307,10 @@ export function registerCompetitionRoutes(app: Hono<AppEnv>) {
     const stored = parseStoredChallenge(challenge.scenarioJson);
     const requestKeyHash = await sha256Hex(JSON.stringify(['COMPETITION_MATCH_V1', owner, challenge.id, requestKey]));
     const requestHash = await sha256Hex(JSON.stringify([challenge.id, input]));
-    const replay = await replayAction(db, requestKeyHash, requestHash);
+    const replay = await replayAction(db, requestKeyHash, requestHash, owner, session.id, now.toISOString());
     if (replay) return c.json({ data: replay, meta: { requestId: c.get('requestId') } }, 200);
     await rateLimit(db, owner, now.toISOString());
-    const entry = await ensureEntry(db, owner, challenge, stored.definition);
+    const entry = await ensureEntry(db, owner, session.id, now.toISOString(), challenge, stored.definition);
     if (entry.verificationStatus === 'VERIFIED') invalid('오늘의 도전은 이미 제출했습니다.', 409);
     if (entry.revision !== input.expectedRevision) {
       throw new AppError({ code: 'CAREER_REVISION_CONFLICT', status: 409, message: '도전 상태가 바뀌었습니다.', details: { serverRevision: entry.revision, expectedRevision: input.expectedRevision } });
@@ -308,7 +333,7 @@ export function registerCompetitionRoutes(app: Hono<AppEnv>) {
       const result = playCompetitionMatch(loadRuleset(challenge.rulesetVersion), stored.definition, nextState);
       score = result.score;
       maxScore = result.maxScore;
-      resultJson = JSON.stringify({ actionIds, match: result.match, score, maxScore });
+      resultJson = JSON.stringify({ actionIds, match: result.match, score, maxScore, positionContribution: result.positionContribution });
       resultHash = await sha256Hex(resultJson);
       submittedAt = now.toISOString();
     }
@@ -329,7 +354,7 @@ export function registerCompetitionRoutes(app: Hono<AppEnv>) {
       nextStepIndex: complete ? stored.scenario.steps.length : nextRevision,
     };
     try {
-      await runBatch(db, [
+      const results = await runBatch(db, [
         db.update(competitionEntries).set({
           revision: nextRevision,
           actionIdsJson: JSON.stringify(actionIds),
@@ -340,21 +365,30 @@ export function registerCompetitionRoutes(app: Hono<AppEnv>) {
           maxScore,
           verificationStatus: complete ? 'VERIFIED' : 'IN_PROGRESS',
           submittedAt,
-        }).where(and(eq(competitionEntries.id, entry.id), eq(competitionEntries.revision, input.expectedRevision))),
-        db.insert(competitionActions).values({
-          id: crypto.randomUUID(),
-          entryId: entry.id,
-          revision: nextRevision,
-          actionId: input.actionId,
-          expectedRevision: input.expectedRevision,
-          requestKeyHash,
-          requestHash,
-          responseJson: JSON.stringify(response),
-          createdAt: now.toISOString(),
-        }),
+        }).where(and(eq(competitionEntries.id, entry.id), eq(competitionEntries.revision, input.expectedRevision), eq(competitionEntries.ownerProfileId, owner), sql`EXISTS (SELECT 1 FROM sessions current_session INNER JOIN profiles current_profile ON current_profile.id = current_session.profile_id WHERE current_session.id = ${session.id} AND current_session.profile_id = ${owner} AND current_session.revoked_at IS NULL AND current_session.expires_at > ${now.toISOString()} AND current_profile.deleted_at IS NULL)`)).returning({ id: competitionEntries.id }),
+        db.insert(competitionActions).select(
+          db.select({
+            id: sql<string>`${crypto.randomUUID()}`.as('id'),
+            entryId: sql<string>`${entry.id}`.as('entry_id'),
+            revision: sql<number>`${nextRevision}`.as('revision'),
+            actionId: sql<string>`${input.actionId}`.as('action_id'),
+            expectedRevision: sql<number>`${input.expectedRevision}`.as('expected_revision'),
+            requestKeyHash: sql<string>`${requestKeyHash}`.as('request_key_hash'),
+            requestHash: sql<string>`${requestHash}`.as('request_hash'),
+            responseJson: sql<string>`${JSON.stringify(response)}`.as('response_json'),
+            createdAt: sql<string>`${now.toISOString()}`.as('created_at'),
+          }).from(competitionEntries).where(and(
+            eq(competitionEntries.id, entry.id),
+            eq(competitionEntries.ownerProfileId, owner),
+            eq(competitionEntries.revision, nextRevision),
+            sql`EXISTS (SELECT 1 FROM sessions current_session INNER JOIN profiles current_profile ON current_profile.id = current_session.profile_id WHERE current_session.id = ${session.id} AND current_session.profile_id = ${owner} AND current_session.revoked_at IS NULL AND current_session.expires_at > ${now.toISOString()} AND current_profile.deleted_at IS NULL)`,
+          )),
+        ).returning({ id: competitionActions.id }),
       ]);
+      const changed = (value: unknown) => Array.isArray(value) ? value.length === 1 : typeof value === 'object' && value !== null && 'meta' in value && Number((value as { meta?: { changes?: number } }).meta?.changes ?? 0) === 1;
+      if (!changed(results[0]) || !changed(results[1])) throw new Error('competition CAS did not advance');
     } catch {
-      const retry = await replayAction(db, requestKeyHash, requestHash);
+      const retry = await replayAction(db, requestKeyHash, requestHash, owner, session.id, now.toISOString());
       if (retry) return c.json({ data: retry, meta: { requestId: c.get('requestId') } }, 200);
       throw new AppError({ code: 'CAREER_REVISION_CONFLICT', status: 409, message: '동시에 제출된 다른 행동이 먼저 반영되었습니다.' });
     }
@@ -390,8 +424,10 @@ export function registerCompetitionRoutes(app: Hono<AppEnv>) {
 
   app.put('/v1/competition/leaderboard/visibility', requireProfile, idempotency, async (c) => {
     const input = parseWithAppError(CompetitionVisibilitySchema, JSON.parse(c.get('rawBody') ?? '{}'));
-    const owner = getSessionOrThrow(c).profileId;
-    await getDb(c).update(competitionEntries).set({ publicOptIn: input.publicOptIn ? 1 : 0 }).where(eq(competitionEntries.ownerProfileId, owner));
+    const session = getSessionOrThrow(c);
+    const owner = session.profileId;
+    const now = new Date().toISOString();
+    await getDb(c).update(competitionEntries).set({ publicOptIn: input.publicOptIn ? 1 : 0 }).where(and(eq(competitionEntries.ownerProfileId, owner), sql`EXISTS (SELECT 1 FROM sessions current_session INNER JOIN profiles current_profile ON current_profile.id = current_session.profile_id WHERE current_session.id = ${session.id} AND current_session.profile_id = ${owner} AND current_session.revoked_at IS NULL AND current_session.expires_at > ${now} AND current_profile.deleted_at IS NULL)`));
     return c.json({ data: input, meta: { requestId: c.get('requestId') } });
   });
 }

@@ -150,7 +150,7 @@ export function initialCompetitionActionState(definition: CompetitionMatchDefini
   };
 }
 
-export function scoreCompetitionMatch(match: MatchRecord): { score: number; maxScore: number } {
+export function scoreCompetitionMatch(match: MatchRecord): { score: number; maxScore: number; positionContribution: number } {
   let evidence = 0;
   switch (match.stats.group) {
     case 'FW':
@@ -167,13 +167,14 @@ export function scoreCompetitionMatch(match: MatchRecord): { score: number; maxS
       break;
   }
   const score = Math.max(0, Math.min(COMPETITION_MAX_SCORE, (match.minutes ?? 0) + (match.ratingTenths ?? 0) + evidence));
-  return { score, maxScore: COMPETITION_MAX_SCORE };
+  return { score, maxScore: COMPETITION_MAX_SCORE, positionContribution: Math.max(0, evidence) };
 }
 
 export type CompetitionMatchResult = {
   match: MatchRecord;
   score: number;
   maxScore: number;
+  positionContribution: number;
   definition: CompetitionMatchDefinition;
 };
 

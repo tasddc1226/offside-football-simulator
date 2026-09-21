@@ -12,6 +12,7 @@ import { createApp } from '../app.js';
 import { competitionActions, competitionEntries, sessions } from '../db/schema.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
 import { moveCareersAndRebind } from '../profile/merge.js';
+import { issueSession, sessionCookie } from '../auth/session.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 
 const app = createApp();
@@ -98,6 +99,27 @@ describe('daily match competition and weekly public projection', () => {
     expect(daily.entry?.revision).toBe(1);
   });
 
+  it('allows only one of different actions with different keys at one revision', async () => {
+    const a = await account();
+    const responses = await Promise.all([
+      request(a.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: actions[0], expectedRevision: 0 }, 'different-key-a'),
+      request(a.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: 'HOLD_SHAPE', expectedRevision: 0 }, 'different-key-b'),
+    ]);
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    const rows = await ctx.db.select().from(competitionActions);
+    expect(rows).toHaveLength(1);
+    expect(JSON.parse(rows[0]!.responseJson)).toHaveProperty('entry.revision', 1);
+  });
+
+  it('rejects a reused idempotency key with a different body', async () => {
+    const a = await account();
+    const first = await request(a.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: actions[0], expectedRevision: 0 }, 'same-key-body');
+    const second = await request(a.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: actions[1], expectedRevision: 0 }, 'same-key-body');
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(400);
+    expect(await ctx.db.select().from(competitionActions)).toHaveLength(1);
+  });
+
   it('keeps private history isolated, supports safe alias opt-in/withdrawal, and merge/delete', async () => {
     const from = await account();
     const to = await account();
@@ -110,6 +132,8 @@ describe('daily match competition and weekly public projection', () => {
     expect(weekly.rows).toHaveLength(1);
     expect(JSON.stringify(weekly)).not.toContain(from.id);
     expect(weekly.rows[0]!.proof.method).toBe('SERVER_MATCH');
+    await request(from.cookie, 'PUT', '/v1/competition/leaderboard/visibility', { publicOptIn: false }, 'visibility-off');
+    expect(successEnvelope(CompetitionWeeklyResponseSchema).parse(await (await app.request('/v1/competition/weekly', {}, ctx.env)).json()).data.rows).toHaveLength(0);
     const history = successEnvelope(CompetitionHistoryResponseSchema).parse(await (await request(from.cookie, 'GET', '/v1/competition/history')).json()).data;
     expect(history.entries).toHaveLength(1);
     const [fromSession] = await ctx.db.select().from(sessions).where(eq(sessions.profileId, from.id));
@@ -119,6 +143,36 @@ describe('daily match competition and weekly public projection', () => {
     const confirm = await issueDeleteConfirmToken({ sessionId: toSession!.id, sessionTokenHash: toSession!.tokenHash, now: KST_MIDDAY });
     await executeProfileDeletion(ctx.db, { profileId: to.id, sessionId: toSession!.id, sessionTokenHash: toSession!.tokenHash, confirmToken: confirm.confirmToken, now: KST_MIDDAY });
     expect(await ctx.db.select().from(competitionEntries).where(eq(competitionEntries.ownerProfileId, to.id))).toHaveLength(0);
+    expect(await ctx.db.select().from(competitionActions)).toHaveLength(0);
+  });
+
+  it('keeps the target entry when both profiles entered the same day and revokes stale source sessions', async () => {
+    const from = await account();
+    const to = await account();
+    await submitAll(from.cookie, [actions[0]]);
+    await submitAll(to.cookie, ['HOLD_SHAPE']);
+    const oldSession = await issueSession(ctx.db, { profileId: from.id, channel: 'web', now: KST_MIDDAY });
+    const [fromSession] = await ctx.db.select().from(sessions).where(eq(sessions.profileId, from.id));
+    await moveCareersAndRebind(ctx.db, { fromProfileId: from.id, toProfileId: to.id, sessionId: fromSession!.id, now: KST_MIDDAY });
+    const owned = await ctx.db.select().from(competitionEntries).where(eq(competitionEntries.ownerProfileId, to.id));
+    expect(owned).toHaveLength(1);
+    expect(JSON.parse(owned[0]!.actionIdsJson)).toEqual(['HOLD_SHAPE']);
+    expect(await ctx.db.select().from(competitionEntries).where(eq(competitionEntries.ownerProfileId, from.id))).toHaveLength(0);
+    const stale = await request(sessionCookie(oldSession.token), 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: actions[2], expectedRevision: 1 }, 'stale-source-after-merge');
+    expect(stale.status).toBe(401);
+    expect(await ctx.db.select().from(competitionEntries)).toHaveLength(1);
+  });
+
+  it('does not resurrect a deleted entry when an old action request arrives', async () => {
+    const a = await account();
+    await submitAll(a.cookie, [actions[0]]);
+    const stale = await issueSession(ctx.db, { profileId: a.id, channel: 'web', now: KST_MIDDAY });
+    const [active] = await ctx.db.select().from(sessions).where(eq(sessions.profileId, a.id));
+    const confirm = await issueDeleteConfirmToken({ sessionId: active!.id, sessionTokenHash: active!.tokenHash, now: KST_MIDDAY });
+    await executeProfileDeletion(ctx.db, { profileId: a.id, sessionId: active!.id, sessionTokenHash: active!.tokenHash, confirmToken: confirm.confirmToken, now: KST_MIDDAY });
+    const response = await request(sessionCookie(stale.token), 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: 'HOLD_SHAPE', expectedRevision: 1 }, 'deleted-profile-action');
+    expect(response.status).toBe(401);
+    expect(await ctx.db.select().from(competitionEntries)).toHaveLength(0);
     expect(await ctx.db.select().from(competitionActions)).toHaveLength(0);
   });
 

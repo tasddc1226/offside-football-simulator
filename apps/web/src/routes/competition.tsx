@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
   CompetitionActionResponseSchema,
@@ -12,13 +13,21 @@ import '../shared/competition.css';
 
 export const Route = createFileRoute('/competition')({ component: CompetitionScreen });
 
+class CompetitionRequestError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) { super(message); this.code = code; }
+}
+
+const outcomeLabels = { WIN: '승리', DRAW: '무승부', LOSS: '패배' } as const;
+
 export function CompetitionScreen() {
   const cache = useQueryClient();
+  const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const daily = useQuery({
     queryKey: ['competition-daily'],
     queryFn: async () => {
       const response = await apiFetch('/v1/competition/daily', {}, CompetitionDailyResponseSchema);
-      if (!response.ok) throw new Error(response.error.message);
+      if (!response.ok) throw new CompetitionRequestError(response.error.code, response.error.message);
       return response.data;
     },
   });
@@ -26,7 +35,7 @@ export function CompetitionScreen() {
     queryKey: ['competition-weekly'],
     queryFn: async () => {
       const response = await apiFetch('/v1/competition/weekly', {}, CompetitionWeeklyResponseSchema);
-      if (!response.ok) throw new Error(response.error.message);
+      if (!response.ok) throw new CompetitionRequestError(response.error.code, response.error.message);
       return response.data;
     },
   });
@@ -48,14 +57,23 @@ export function CompetitionScreen() {
         },
         CompetitionActionResponseSchema,
       );
-      if (!response.ok) throw new Error(response.error.message);
+      if (!response.ok) throw new CompetitionRequestError(response.error.code, response.error.message);
       return response.data;
     },
     onSuccess: (result) => {
+      setSelectedAction(null);
       cache.setQueryData(['competition-daily'], (old: typeof daily.data | undefined) =>
         old ? { ...old, entry: result.entry } : old,
       );
-      if (result.entry.completed) void cache.invalidateQueries({ queryKey: ['competition-weekly'] });
+      if (result.entry.completed) {
+        void cache.invalidateQueries({ queryKey: ['competition-weekly'] });
+        void cache.invalidateQueries({ queryKey: ['competition-history'] });
+      }
+    },
+    onError: (error) => {
+      if (error instanceof CompetitionRequestError && error.code === 'CAREER_REVISION_CONFLICT') {
+        void cache.invalidateQueries({ queryKey: ['competition-daily'] });
+      }
     },
   });
   const visibility = useMutation({
@@ -72,6 +90,7 @@ export function CompetitionScreen() {
         old && old.entry ? { ...old, entry: { ...old.entry, publicOptIn: next } } : old,
       );
       void cache.invalidateQueries({ queryKey: ['competition-weekly'] });
+      void cache.invalidateQueries({ queryKey: ['competition-history'] });
     },
   });
   if (daily.isPending) return <main className="competition" role="status">오늘의 도전을 불러오는 중…</main>;
@@ -86,16 +105,17 @@ export function CompetitionScreen() {
         <p className="os-eyebrow">DAILY MATCH IQ</p>
         <h1>{challenge.scenario.title}</h1>
         <p>{challenge.scenario.intro}</p>
-        <p className="competition-note">{challenge.dayKey} KST · {challenge.scenario.position} 포지션 · {challenge.scenario.opponentName} 상대 · {challenge.rulesetVersion}/{challenge.contentPackVersion} 고정</p>
+        <p className="competition-note">{challenge.dayKey} KST · {challenge.scenario.position} 포지션 · {challenge.scenario.opponentName} 상대</p>
         <Link to="/">홈으로</Link>
       </header>
       {entry?.completed ? (
         <section className="competition-card" aria-label="오늘의 제출 결과">
           <h2>오늘의 기록</h2>
           <p className="competition-score">{entry.score} <small>/ {entry.maxScore}점</small></p>
-          <p>실제 경기 기록 · {entry.evidence?.minutes ?? 0}분 · 평점 {entry.evidence?.ratingTenths === null || entry.evidence?.ratingTenths === undefined ? '미산정' : (entry.evidence.ratingTenths / 10).toFixed(1)} · {entry.evidence?.outcome ?? '기록 없음'}</p>
-          {entry.evidence?.positionStats ? <p className="competition-note">{Object.entries(entry.evidence.positionStats).filter(([key]) => key !== 'group').map(([key, value]) => `${key} ${String(value)}`).join(' · ')}</p> : null}
-          <details><summary>검증 상세</summary><p className="competition-note">서버가 실제 경기 기록으로 검증했습니다. 결과 증명 {entry.resultHash?.slice(0, 12)}…</p></details>
+          <p>실제 경기 기록 · {entry.evidence?.scoreline.goalsFor ?? 0}:{entry.evidence?.scoreline.goalsAgainst ?? 0} · {entry.evidence?.minutes ?? 0}분 · 평점 {entry.evidence?.ratingTenths === null || entry.evidence?.ratingTenths === undefined ? '미산정' : (entry.evidence.ratingTenths / 10).toFixed(1)} · {entry.evidence?.outcome ? outcomeLabels[entry.evidence.outcome] : '기록 없음'}</p>
+          {entry.evidence?.statLines.length ? <p className="competition-note">{entry.evidence.statLines.map((line) => `${line.label} ${line.value}`).join(' · ')}</p> : null}
+          {entry.evidence && <p className="competition-note">포지션 기여 {entry.evidence.positionContribution}점</p>}
+          <details><summary>검증 상세</summary><p className="competition-note">고정된 경기 규칙과 입력으로 서버가 실제 경기 기록을 계산했습니다. 규칙 {challenge.rulesetVersion}/{challenge.contentPackVersion}, 결과 증명 {entry.resultHash?.slice(0, 12)}…</p></details>
           <p className="competition-note">하루 한 번만 제출할 수 있습니다. 선택 기록과 경기 원본은 비공개입니다.</p>
           <Button variant="secondary" disabled={visibility.isPending} onClick={() => visibility.mutate(!entry.publicOptIn)}>
             {entry.publicOptIn ? '주간 랭킹에서 숨기기' : '주간 랭킹에 공개하기'}
@@ -104,7 +124,7 @@ export function CompetitionScreen() {
         </section>
       ) : (
         <section className="competition-card" aria-label="오늘의 도전">
-          <h2>세 장면, 서버가 한 단계씩 반영</h2>
+          <h2>세 장면으로 경기 계획 세우기</h2>
           {entry && entry.actionIds.length > 0 && <p className="competition-note">앞선 {entry.actionIds.length}개 행동은 저장되었습니다. 다음 행동만 제출할 수 있습니다.</p>}
           {currentStep ? (
             <fieldset disabled={submit.isPending}>
@@ -112,13 +132,14 @@ export function CompetitionScreen() {
               <p>{currentStep.prompt}</p>
               {currentStep.choices.map((choice) => (
                 <label className="competition-choice" key={choice.id}>
-                  <input type="radio" name={currentStep.id} disabled={submit.isPending} onChange={() => submit.mutate({ actionId: choice.id, expectedRevision: stepIndex })} />
+                  <input type="radio" name={currentStep.id} checked={selectedAction === choice.id} disabled={submit.isPending} onChange={() => setSelectedAction(choice.id)} />
                   <span><strong>{choice.label}</strong><small>{choice.description}</small></span>
                 </label>
               ))}
             </fieldset>
           ) : null}
-          {submit.isError && <p role="alert">{submit.error.message}</p>}
+          {selectedAction && <Button disabled={submit.isPending} onClick={() => submit.mutate({ actionId: selectedAction, expectedRevision: stepIndex })}>{submit.isError ? '다시 제출하기' : '선택 확정'}</Button>}
+          {submit.isError && <p role="alert">{submit.error.message} 선택을 바꾸거나 다시 제출해 주세요.</p>}
           <p className="competition-note">{challenge.scenario.scorePolicy.description}</p>
           <p className="competition-note">완료 후 안전한 별칭으로 주간 랭킹 공개 여부를 선택할 수 있습니다.</p>
         </section>

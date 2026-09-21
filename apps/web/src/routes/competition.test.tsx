@@ -26,13 +26,21 @@ const challenge = {
   },
 };
 
+let failNextPost = false;
+let completedEntry = false;
+
 beforeEach(() => {
+  failNextPost = false;
+  completedEntry = false;
   vi.clearAllMocks();
   vi.mocked(apiFetch).mockImplementation(async (path, init) => {
-    if (path === '/v1/competition/daily') return { ok: true, data: { challenge, entry: null } };
+    if (path === '/v1/competition/daily') return { ok: true, data: { challenge, entry: completedEntry ? { challengeId: challenge.id, dayKey: challenge.dayKey, weekKey: challenge.weekKey, actionIds: ['PRESS_HIGH', 'SHARPEN', 'PLAY_THROUGH'], revision: 3, completed: true, score: 212, maxScore: 400, verificationStatus: 'VERIFIED', resultHash: 'a'.repeat(64), publicOptIn: false, submittedAt: challenge.endsAt, evidence: { appearance: 'START', minutes: 90, ratingTenths: 76, outcome: 'WIN', scoreline: { goalsFor: 2, goalsAgainst: 1 }, positionContribution: 82, statLines: [{ label: '득점', value: '1' }], positionStats: { group: 'MF', assists: 1 } }, proof: { method: 'SERVER_MATCH', rulesetVersion: '3.3.0', contentPackVersion: '0.12.0', scoringPolicyVersion: 'MATCH_EVIDENCE_V1' } } : null } };
     if (path === '/v1/competition/weekly') return { ok: true, data: { weekKey: challenge.weekKey, rows: [] } };
     if (path === '/v1/competition/history') return { ok: true, data: { entries: [] } };
-    if (init?.method === 'POST') return { ok: true, data: { entry: { challengeId: challenge.id, dayKey: challenge.dayKey, weekKey: challenge.weekKey, actionIds: ['PRESS_HIGH'], revision: 1, completed: false, score: null, maxScore: null, verificationStatus: 'IN_PROGRESS', resultHash: null, publicOptIn: false, submittedAt: null, evidence: null, proof: { method: 'SERVER_MATCH', rulesetVersion: '3.3.0', contentPackVersion: '0.12.0', scoringPolicyVersion: 'MATCH_EVIDENCE_V1' } }, nextStepIndex: 1 } };
+    if (init?.method === 'POST') {
+      if (failNextPost) { failNextPost = false; return { ok: false, error: { code: 'CAREER_REVISION_CONFLICT', message: '도전 상태가 바뀌었습니다.', retryable: true } }; }
+      return { ok: true, data: { entry: { challengeId: challenge.id, dayKey: challenge.dayKey, weekKey: challenge.weekKey, actionIds: ['PRESS_HIGH'], revision: 1, completed: false, score: null, maxScore: null, verificationStatus: 'IN_PROGRESS', resultHash: null, publicOptIn: false, submittedAt: null, evidence: null, proof: { method: 'SERVER_MATCH', rulesetVersion: '3.3.0', contentPackVersion: '0.12.0', scoringPolicyVersion: 'MATCH_EVIDENCE_V1' } }, nextStepIndex: 1 } };
+    }
     return { ok: true, data: { publicOptIn: false } };
   });
 });
@@ -44,6 +52,29 @@ describe('daily competition screen', () => {
     expect(screen.getByText(/실제 출전 시간/)).toBeInTheDocument();
     expect(screen.queryByText(/점$/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('전방 압박'));
+    expect(screen.getByRole('radio', { name: /전방 압박/ })).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: '선택 확정' }));
     await waitFor(() => expect(apiFetch).toHaveBeenCalledWith(`/v1/competition/challenges/${challenge.id}/actions`, expect.objectContaining({ method: 'POST', body: JSON.stringify({ actionId: 'PRESS_HIGH', expectedRevision: 0 }) }), expect.anything()));
+  });
+
+  it('keeps the choice checked on conflict and permits an explicit retry', async () => {
+    render(<QueryClientProvider client={new QueryClient()}><CompetitionScreen /></QueryClientProvider>);
+    await screen.findByRole('heading', { name: '오늘의 경기 운영' });
+    fireEvent.click(screen.getByText('전방 압박'));
+    failNextPost = true;
+    fireEvent.click(screen.getByRole('button', { name: '선택 확정' }));
+    await screen.findByRole('alert');
+    expect(screen.getByRole('radio', { name: /전방 압박/ })).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: '다시 제출하기' }));
+    await waitFor(() => expect(screen.getByText(/앞선 1개 행동/)).toBeInTheDocument());
+  });
+
+  it('renders localized match evidence without raw state keys or WIN tokens', async () => {
+    completedEntry = true;
+    render(<QueryClientProvider client={new QueryClient()}><CompetitionScreen /></QueryClientProvider>);
+    expect(await screen.findByText(/2:1/)).toBeInTheDocument();
+    expect(screen.getByText(/득점 1/)).toBeInTheDocument();
+    expect(screen.queryByText('WIN')).not.toBeInTheDocument();
+    expect(screen.queryByText('assists')).not.toBeInTheDocument();
   });
 });
