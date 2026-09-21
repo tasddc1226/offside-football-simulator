@@ -10,11 +10,16 @@ import {
   planPreseason,
   resolveRoleProposal,
   signFirstOffer,
+  pinServiceSeasonPair,
 } from './helpers/player-creation.js';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
+// These legacy season/INTEREST fixtures were calibrated against this historical pair.
+test.beforeEach(async ({ page }) => pinServiceSeasonPair(page, '1.7.2', '0.6.6'));
 
-test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제안 → 진행 반복 → 시즌 결산 → 다음 시즌', async ({ page }) => {
+test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제안 → 진행 반복 → 시즌 결산 → 다음 시즌', async ({
+  page,
+}) => {
   // 12 step 전체 시즌을 결산까지 미는 데다(T-2-008: FAST 모드에서도 MAJOR 챕터가 열려 판단까지 거칠
   // 수 있다) 매 실행 새 시드(crypto.getRandomValues)로 필요한 "진행" 횟수가 달라진다 — 기본 30s
   // 테스트 타임아웃은 그 편차를 흡수하기엔 빠듯하다.
@@ -28,9 +33,11 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
   await resolveRoleProposal(page);
 
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
-  await expect(page.getByText('1/12 단계')).toBeVisible();
-  await page.getByRole('tab', { name: '시즌' }).click();
-  await page.getByText('일정 · 리그 · 시즌 상세', { exact: true }).click();
+  await expect(page.getByRole('progressbar', { name: '시즌 진행', exact: true })).toHaveAttribute(
+    'aria-valuenow',
+    '1',
+  );
+  await page.getByRole('tab', { name: '커리어' }).click();
   const seasonTimeline = page.getByLabel('시즌 진행 12 step');
   await expect(seasonTimeline).toBeVisible();
   await expect(seasonTimeline.locator('li')).toHaveCount(12);
@@ -40,13 +47,24 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
   // 로컬 우선 — ADR-002).
   await page.getByRole('tab', { name: '시즌' }).click();
   await page.reload();
-  await expect(page.getByText('1/12 단계')).toBeVisible();
+  await expect(page.getByRole('progressbar', { name: '시즌 진행', exact: true })).toHaveAttribute(
+    'aria-valuenow',
+    '1',
+  );
 
   await advanceThroughSeasonToSettlement(page);
 
   // 시즌 탭(옛 일정 탭 병합): 시즌 대부분을 진행했으니 최소 한 경기는 스코어가 잡혀 있어야 한다.
-  await page.getByRole('tab', { name: '시즌' }).click();
-  await expect(page.getByLabel('최근 경기').getByText(/\d+ : \d+/).first()).toBeVisible();
+  await page.getByRole('tab', { name: '커리어' }).click();
+  await expect(
+    page
+      .locator('details')
+      .filter({
+        has: page.locator('summary').getByText('이번 시즌 일정 · 경기 기록', { exact: true }),
+      })
+      .getByText(/\d+:\d+ · (선발|교체|결장|부상)/)
+      .first(),
+  ).toBeVisible();
 
   // 전술실 구역: 선발 순위 목록에 내 이름 행이 있다.
   await page.getByRole('tab', { name: '선수' }).click();
@@ -58,7 +76,9 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
   await expect(page).toHaveURL(/\/career\/.+\/attributes$/);
   const headerText = await page.getByText(/^Base OVR \d+$/).textContent();
   const computedText = await page.getByText(/^표시된 능력 × 가중치 = \d+$/).textContent();
-  expect(computedText?.replace('표시된 능력 × 가중치 = ', '')).toBe(headerText?.replace('Base OVR ', ''));
+  expect(computedText?.replace('표시된 능력 × 가중치 = ', '')).toBe(
+    headerText?.replace('Base OVR ', ''),
+  );
   // 진짜 잠재력은 이 화면 어디에도 없다(정찰 범위만 보인다).
   await expect(page.getByText('정찰 범위')).toBeVisible();
 
@@ -89,14 +109,20 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
   }
 
   const elapsedMs = Date.now() - startedAt;
-  console.log(`[season] 계약 뒤 시즌 1 전체(프리시즌 계획→결산)→시즌 2 프리시즌 계획 소요 시간: ${elapsedMs}ms`);
+  console.log(
+    `[season] 계약 뒤 시즌 1 전체(프리시즌 계획→결산)→시즌 2 프리시즌 계획 소요 시간: ${elapsedMs}ms`,
+  );
 });
 
-test('SCR-011에서 시즌을 시작한 뒤 뒤로 가기로 재진입해도 시즌을 두 번 시작하지 않는다', async ({ page }) => {
+test('SCR-011에서 시즌을 시작한 뒤 뒤로 가기로 재진입해도 시즌을 두 번 시작하지 않는다', async ({
+  page,
+}) => {
   await completeOnboardingThroughContract(page);
 
   await page.goto('/');
-  const revisionBeforeStart = Number(await page.getByTestId('career-card').getAttribute('data-revision'));
+  const revisionBeforeStart = Number(
+    await page.getByTestId('career-card').getAttribute('data-revision'),
+  );
   await page.getByRole('button', { name: '이어하기' }).click();
 
   await planPreseason(page, '역할 집중');
@@ -105,7 +131,9 @@ test('SCR-011에서 시즌을 시작한 뒤 뒤로 가기로 재진입해도 시
   await expect(page).toHaveURL(/\/career\/[^/]+$/);
 
   await page.goto('/');
-  const revisionAfterStart = Number(await page.getByTestId('career-card').getAttribute('data-revision'));
+  const revisionAfterStart = Number(
+    await page.getByTestId('career-card').getAttribute('data-revision'),
+  );
   // START_SEASON + RESOLVE_ROLE(resolveRoleProposal) = 명령 2개.
   expect(revisionAfterStart).toBe(revisionBeforeStart + 2);
 
@@ -135,8 +163,13 @@ test('SCR-011에서 시즌을 시작한 뒤 뒤로 가기로 재진입해도 시
  * 대해 다시 스윕해 찾았다. */
 const E2E_INTEREST_MARKET_SEED = 't4010-interest-172-2';
 
-test('시즌 1 결산 뒤 INTEREST 시장이 열리면 안전 잔류 제안을 수락하고 새 시즌 준비로 이동한다', async ({ page }) => {
-  await page.addInitScript((seed) => window.localStorage.setItem('offside:e2e-seed', seed), E2E_INTEREST_MARKET_SEED);
+test('시즌 1 결산 뒤 INTEREST 시장이 열리면 안전 잔류 제안을 수락하고 새 시즌 준비로 이동한다', async ({
+  page,
+}) => {
+  await page.addInitScript(
+    (seed) => window.localStorage.setItem('offside:e2e-seed', seed),
+    E2E_INTEREST_MARKET_SEED,
+  );
   await completeOnboardingThroughContract(page);
 
   await planPreseason(page, '역할 집중');
