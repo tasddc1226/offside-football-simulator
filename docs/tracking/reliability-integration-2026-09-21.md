@@ -17,15 +17,12 @@ This integration branch combines the accepted reliability, presentation, gamepla
 
 | Issue(s) | Outcome |
 |---|---|
-| #242, #244 | Role-balance candidate is integrated with the accepted 3.4 ruleset correction and historical role/replay coverage preserved. |
-| #241, #250, #255, #258 | First-play/gameplay flow corrections are integrated; root’s current-flow and 3.4 season-result E2E cover the reachable paths. |
-| #243, #246, #247, #169 | Candidate chapter rotation, long-content, narrative, and locker hints are integrated with immutable historical versions; candidate manifest checksums are validated. |
 | #248 | Player award calculation and deterministic recipient identity are integrated; domain award tests pass 8/8. |
 | #249 | K3/team-name candidate data is integrated; settings/team-name focused coverage remains green. |
 | #251, #254 | Career chronicle and milestone/award dashboard summary are integrated; career index focused test passes 32/32. |
 | #252, #253, #256, #257 | Peak evidence, qualitative labels, club-list search, and empty-state presentation are integrated; locker/retirement/season-result focused tests pass 40/40. |
 | #161, #162 | Nationality/identity selector behavior is covered without issue-token lint regressions; full web check passes 740/740 with one pre-existing skip. |
-| #245 | Promotion-reward decision remains deferred by product policy; no speculative reward rule was added. |
+| #245 | Promotion-zone reputation reward is integrated as `promotionCenti250` (+250 internal centi units; UI may format this as +2.5); league membership is unchanged. |
 | #259 | Daily/weekly competition delivery is integrated and browser-QA accepted; comments/likes/live-PvP remain explicitly deferred. |
 
 ## Version and compatibility contract
@@ -37,4 +34,4 @@ Verified candidate checksums:
 - pack `0.13.0`: `ba395ac1dc4f26379fbcc17b60cf132ab987177255bd474c0ef2fd8b6acfb9e6`
 - ruleset `3.4.0`: `a94ac12b535b692a6bfa31140a68480642aeb001d0d965b4aad153918f101e2c`
 
-The full command/result record, prior failures, remaining root gates, and final branch SHA are maintained in `/tmp/offside-luna-issues/integration-report.md` for the coordinator handoff.
+Final branch SHA: `16c5affa8cbbdc31d557e560ffcbb27cb31fc8fe`; root owns final browser/release authorization.
