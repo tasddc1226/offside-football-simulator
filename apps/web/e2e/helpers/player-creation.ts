@@ -377,6 +377,13 @@ export async function startSeasonForCurrentFlow(page: Page): Promise<void> {
       page.getByRole('link', { name: '감독 제안 보기', exact: true }).waitFor({ state: 'visible' }),
     ]);
   }
+  // 3.3 keeps the proposal CTA on the dashboard after the final development
+  // block; the next screen is not opened until this explicit user action.
+  const proposalLink = page.getByRole('link', { name: '제안 보기', exact: true });
+  if (await proposalLink.isVisible()) {
+    await proposalLink.click();
+    await expectRoute(page, /\/career\/[^/]+\/role$/);
+  }
 }
 
 export async function startPlannedSeason(page: Page): Promise<void> {
@@ -565,10 +572,14 @@ export async function advanceThroughSeasonToSettlement(
       waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect(progressButton).toBeEnabled({ timeout: 60_000 }),
       importantMomentButton.waitFor({ state: 'visible', timeout: 60_000 }),
+      developButton.waitFor({ state: 'visible', timeout: 60_000 }),
+      roleProposalLink.waitFor({ state: 'visible', timeout: 60_000 }),
       settleButton.waitFor({ state: 'visible', timeout: 60_000 }),
     ]);
     if ((await currentRoute(page)).split('?')[0]! !== pathnameBefore) continue;
     if (await importantMomentButton.isVisible()) continue;
+    if (await developButton.isVisible()) continue;
+    if (await roleProposalLink.isVisible()) continue;
     if (await settleButton.isVisible()) return;
     const stepTextBefore = await currentStepCaption.getAttribute('aria-valuenow');
     // 클릭 액션 자체의 actionability 재확인 도중에도(디스패치 전) advance 성공→화면 전환이 끼어들어

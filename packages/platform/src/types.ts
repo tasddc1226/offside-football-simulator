@@ -41,6 +41,8 @@ export interface Platform {
   };
   lifecycle: {
     onBackPressed(handler: () => boolean): () => void;
+    /** Notify the web lifecycle that app navigation created a new back boundary. */
+    onNavigation?(): void;
     confirmExit(): Promise<boolean>;
   };
   insets(): { top: number; bottom: number };

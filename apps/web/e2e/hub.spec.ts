@@ -105,16 +105,47 @@ test('T-7-039: 커리어 화면에서 주소창은 `/`로 고정되고, 새로�
       .or(page.getByRole('heading', { level: 2, name: '김서준' })),
   ).toBeVisible();
 
-  // T-7-039 regression: once the first guard pop reaches home, a later
-  // in-app transition must re-arm the guard so browser Back still returns to
-  // home instead of becoming an external/document exit.
-  const startCareer = page.getByRole('button', { name: '커리어 시작' });
-  if (await startCareer.isVisible()) {
-    await startCareer.click();
-    await expectRoute(page, /\/onboarding$/);
-    await page.goBack();
-    await expectRoute(page, /^\/$/);
-  }
+  // T-7-039 regression: consume the root guard and leave the document, then
+  // return with Forward.  A later in-app transition must re-arm the guard so
+  // browser Back still returns to home instead of becoming an external exit.
+  await page.goBack();
+  await expect(page).toHaveURL('about:blank');
+  await page.goForward();
+  await expectRoute(page, /^\/$/);
+
+  // The draft created above is the known next-navigation CTA after returning
+  // to the app; this assertion must remain mandatory so the regression cannot
+  // silently pass by skipping the transition.
+  const continueCareer = page.getByRole('button', { name: '이어하기', exact: true });
+  await expect(continueCareer).toBeVisible();
+  await continueCareer.click();
+  await expectRoute(page, /\/career\/.+/);
+  await page.goBack();
+  await expectRoute(page, /^\/$/);
+});
+
+test('T-7-039: 네이티브 히스토리가 소진된 홈에서도 다음 앱 이동 뒤 뒤로가기를 보장한다', async ({
+  page,
+  context,
+}) => {
+  // Direct entry can arrive at onboarding and then return to home while the
+  // browser has no prior same-document entry to provide another popstate.
+  await page.goto('/onboarding');
+  await expect(page.getByRole('heading', { level: 1, name: '선수 생성' })).toBeVisible();
+  await page.getByRole('link', { name: '선수 생성 닫기' }).click();
+  await expectRoute(page, /^\/$/);
+
+  // CDP gives this test the real browser condition: one native document entry
+  // only.  Clearing the marker models the exhausted root entry after the
+  // attempted native Back; the next in-app route must establish a new guard.
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Page.resetNavigationHistory');
+  await page.evaluate(() => window.history.replaceState(null, '', window.location.href));
+
+  await page.getByRole('button', { name: '커리어 시작' }).click();
+  await expectRoute(page, /\/onboarding$/);
+  await page.goBack();
+  await expectRoute(page, /^\/$/);
 });
 
 test('공지 API가 실패하면(캐시 없음) 빈 목록 문구로 대체된다', async ({ page }) => {

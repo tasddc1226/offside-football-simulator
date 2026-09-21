@@ -47,14 +47,18 @@ async function settleOneSeason(page: Page): Promise<void> {
   // 결산 전 일정의 실제 분 수를 독립 기준으로 삼는다. 저장 집계의 잘못된 total을
   // 기대값으로 재사용하면 같은 오류를 화면과 테스트가 함께 통과시킬 수 있다.
   // UX-014(2026-09-14): 일정표는 "시즌" 탭 안이다(기본 탭이라 이미 열려 있지만, 명시적으로 클릭해
-  // 둔다) — span.os-num을 읽기 전에 확인.
+  // 둔다) — 현재 3.3에서는 일정표가 접힌 보조 패널이므로 먼저 연다.
   await page.getByRole('tab', { name: '시즌' }).click();
-  const scheduleTexts = await page.locator('span.os-num').allTextContents();
+  await page.getByRole('button', { name: '일정 · 경기 기록 보기' }).click();
+  const careerPanel = page.getByRole('tabpanel', { name: '커리어' });
+  await expect(careerPanel).toBeVisible();
+  const scheduleTexts = await careerPanel.locator('span.os-num').allTextContents();
   const matches = scheduleTexts.flatMap((text) => {
-    const match = /^\d+:\d+ · (.+) · (\d+)분 · /.exec(text);
+    const match = / · (.+) · (\d+)분 · /.exec(text);
     return match === null ? [] : [{ appearance: match[1], minutes: Number(match[2]) }];
   });
   expect(matches.length).toBeGreaterThan(0);
+  await page.getByRole('tab', { name: '시즌' }).click();
   await page.getByRole('button', { name: '결산하기' }).click();
   await expectRoute(page, /\/career\/.+\/season-result$/);
   expect(await countUpValue(page, '출전')).toBe(
@@ -140,7 +144,11 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   // (continueToPreseason, 룰셋 승격에 따른 seed 드리프트에도 견딘다).
   await page.getByRole('link', { name: '다음 시즌' }).click();
   await continueToPreseason(page);
-  await expect(page.getByRole('heading', { level: 1, name: '프리시즌 계획' })).toBeVisible();
+  await expect(
+    page
+      .getByRole('heading', { level: 1, name: '프리시즌 계획' })
+      .or(page.getByRole('heading', { level: 1, name: '이번 시즌, 어떤 선수가 될까?' })),
+  ).toBeVisible();
 
   // 대시보드로 돌아가 헤더 OVR이 결산 after와 같은지 확인한다(홈 탭에는 StatusStrip OVR이 없다).
   await page.goto((await currentRoute(page)).replace(/\/preseason.*$/, ''));

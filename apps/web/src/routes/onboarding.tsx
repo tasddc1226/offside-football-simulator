@@ -9,7 +9,6 @@ import { useUiStore } from '../shared/ui-store.js';
 import { CreationForm, type CreationValues } from '../shared/creation-form.js';
 import { platform } from '../platform/index.js';
 import { FIXED_SIMULATION_MODE } from '../shared/start-season.js';
-import { useTabScopedStorageKey } from '../shared/tab-scoped-storage.js';
 
 export const Route = createFileRoute('/onboarding')({ component: OnboardingScreen });
 function OnboardingScreen() {
@@ -17,7 +16,6 @@ function OnboardingScreen() {
   const service = useServiceSeason();
   const create = useCareerMutation('create');
   const update = useCareerMutation('updateDraft');
-  const storageKey = useTabScopedStorageKey('offside:new-player');
   const inFlight = useRef(false);
   const createdId = useRef<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -46,7 +44,7 @@ function OnboardingScreen() {
       if (!result.ok) throw new Error(result.error.message);
       useUiStore.getState().setOnboardingSeen(true);
       try {
-        sessionStorage.removeItem(storageKey);
+        sessionStorage.removeItem('offside:new-player');
       } catch {
         /* no-op */
       }
@@ -62,9 +60,8 @@ function OnboardingScreen() {
   }
   return (
     <CreationForm
-      key={storageKey}
       ruleset={ruleset}
-      storageKey={storageKey}
+      storageKey="offside:new-player"
       busy={busy}
       error={error}
       onSubmit={(values) => void submit(values)}

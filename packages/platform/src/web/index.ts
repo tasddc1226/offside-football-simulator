@@ -130,6 +130,15 @@ export function createWebPlatform(options: { analyticsEndpoint: string; dev?: bo
         backHandlers.add(handler);
         return () => backHandlers.delete(handler);
       },
+      onNavigation() {
+        // The browser can have no prior document entry (for example after a
+        // direct-entry tab reaches home).  A root back then exhausts native
+        // history without another popstate.  Every later in-app navigation is
+        // a new boundary, so make sure its guard entry exists again.
+        const host = createWindowBackGuardHost();
+        armBackGuard(host);
+        backGuardArmed = true;
+      },
       async confirmExit() {
         return true;
       },

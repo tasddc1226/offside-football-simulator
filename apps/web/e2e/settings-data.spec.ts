@@ -215,8 +215,9 @@ test('프로필 삭제: 1단계 → 확인 대화상자 → 2단계 → 온보�
 test('이 기기 데이터 삭제: 확인 → 온보딩 → 허브가 빈 상태로 돌아온다', async ({ page }) => {
   await page.route('**/v1/careers/*', async (route) => {
     if (route.request().method() === 'PUT') {
+      const baseRevision = Number(route.request().headers()['if-match'] ?? 0);
       await fulfillJson(route, 200, {
-        data: { revision: 1, syncedAt: '2026-09-03T00:00:00Z' },
+        data: { revision: baseRevision + 1, syncedAt: '2026-09-03T00:00:00Z' },
         meta: E2E_META,
       });
       return;

@@ -12,6 +12,7 @@ import {
   fulfillJson,
   goToConfirm,
   META,
+  readCurrentCareerState,
   startNewCareer,
 } from './helpers/player-creation.js';
 
@@ -118,28 +119,24 @@ test('SCR-002: 저장한 뒤 새로고침해도 draft가 그대로 보인다', a
   await expect(page.getByRole('radio', { name: /윙어/ })).toBeChecked();
 });
 
-test('같은 커리어를 복제한 두 탭은 선수 생성 draft를 서로 덮어쓰지 않는다', async ({ page }) => {
-  await goToConfirm(page);
-  await page.goBack();
-  await expectRoute(page, /\/career\/.+\/style$/);
-  await page.getByRole('link', { name: '수정', exact: true }).click();
-  await expectRoute(page, /\/career\/.+\/create$/);
-
-  const route = await currentRoute(page);
-  const incumbentScope = await page.evaluate(() => sessionStorage.getItem('offside:tab-scope'));
-  if (incumbentScope === null) throw new Error('tab scope was not initialized');
-
-  // Same browser context shares the career database/localStorage, while the
-  // init script models a duplicate tab cloning sessionStorage.
+test('동시 온보딩 탭은 서로 다른 careerId와 draft를 유지한다', async ({ page }) => {
+  await startNewCareer(page);
   const duplicate = await page.context().newPage();
-  await duplicate.addInitScript((scope) => {
-    sessionStorage.setItem('offside:tab-scope', scope);
-  }, incumbentScope);
-  await duplicate.goto(route);
-  await expectRoute(duplicate, /\/career\/.+\/create$/);
-  await duplicate.getByLabel('이름', { exact: true }).fill('이하준');
+  await duplicate.goto('/onboarding');
+  await expect(duplicate.getByRole('heading', { name: '선수 생성' })).toBeVisible();
 
-  await expect(page.getByLabel('이름', { exact: true })).toHaveValue('김서준');
-  await expect(duplicate.getByLabel('이름', { exact: true })).toHaveValue('이하준');
+  await fillPlayerInfo(page, '김서준');
+  await fillPlayerInfo(duplicate, '이하준');
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await duplicate.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await Promise.all([
+    expectRoute(page, /\/career\/.+\/style$/),
+    expectRoute(duplicate, /\/career\/.+\/style$/),
+  ]);
+  const routeA = await currentRoute(page);
+  const routeB = await currentRoute(duplicate);
+  expect(routeA).not.toBe(routeB);
+  expect((await readCurrentCareerState(page)).player.draft.name).toBe('김서준');
+  expect((await readCurrentCareerState(duplicate)).player.draft.name).toBe('이하준');
   await duplicate.close();
 });

@@ -110,7 +110,8 @@ const TARGETS: Target[] = [
 // --presentation NATIONAL_TEAM 탐색의 가장 이른 hit).  This path is intentionally
 // opt-in: it replays 20 seasons and is a reachability audit, not part of the
 // default fast unit-test budget.  It remains independently runnable with
-// OFFSIDE_SLOW_TESTS=1 (or in CI).
+// OFFSIDE_SLOW_TESTS=1. CI keeps this audit explicit so the default suite does
+// not spend nearly a minute replaying twenty seasons on every change.
 const NATIONAL_TEAM_TARGET: Target = {
   presentation: 'NATIONAL_TEAM',
   packVersion: '0.3.0',
@@ -395,7 +396,7 @@ describe('T-4-009 §3: phase4-seeds.ts가 실제 engine 경로(career-actions.ts
     (target) => assertReachability(target),
   );
 
-  const runSlowReachability = process.env.CI === 'true' || process.env.OFFSIDE_SLOW_TESTS === '1';
+  const runSlowReachability = process.env.OFFSIDE_SLOW_TESTS === '1';
   it.skipIf(!runSlowReachability)(
     'NATIONAL_TEAM (0.3.0): seed "offside-nat-search-0" → season 20 step 8에서 EVT-NAT-001이 열린다',
     async () => assertReachability(NATIONAL_TEAM_TARGET),

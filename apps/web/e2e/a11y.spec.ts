@@ -381,17 +381,11 @@ test('SCR-011 시즌 준비 화면에 axe serious·critical 위반이 없다', a
   await expectNoSeriousOrCriticalViolations(page, 'SCR-011');
 });
 
-// 룰셋 1.5.0 승격 뒤에는 'e2e-season-result-01'(옛 1.4.0 seed)로 두 번째 시즌을 시작하면
-// computeRoleProposal이 KEEP(현재 포지션·스쿼드 역할과 그대로 일치)을 반환해 시즌 준비 화면이
-// ROLE_PROPOSAL을 원자적으로 자동 수락해 버린다 — /role에 실제로 도달하지 못해 이 테스트의 목적
-// (SCR-012 화면 자체의 접근성 검사)을 달성할 수 없다. 옛 값 'rc-seed-3'은 룰셋 1.5.0 기준으로 찾은
-// seed라 1.7.2/0.6.6 승격(계약 전 사건 상한 도입)으로 온보딩 RNG 소비 경로가 달라져(seed 드리프트)
-// 더 이상 두 번째 시즌에서 POSITION_CHANGE·ROLE_CHANGE를 만들지 못한다. 아래 값은 같은 문제를
-// engine-client(@offside/domain·@offside/content)만으로 헤드리스 재생하는 임시 스크립트로 1.7.2/
-// 0.6.6 조합에 대해 다시 스윕해 찾았다 — 두 번째 START_SEASON 직후 ROLE_PROPOSAL이 ROLE_CHANGE
-// (RESERVE → STARTER, 수동 확인이 필요한 실제 /role 화면)로 이어지는 것을 확인했다(같은 스윕을
-// 재실행해도 결정론적으로 같은 결과).
-const E2E_ROLE_CHANGE_SEED = 'rc-seed-8';
+// This fixture was found by replaying the actual current 3.3.0/0.12.0 FAST
+// engine path (including FAST onboarding, training blocks, and two season starts). The
+// second START_SEASON deterministically opens ROLE_CHANGE (RESERVE → STARTER),
+// so this test exercises the real /role screen rather than a KEEP auto-accept.
+const E2E_ROLE_CHANGE_SEED = 'rc-fast-create-search-6';
 
 test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   test.slow();
