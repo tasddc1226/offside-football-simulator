@@ -48,6 +48,12 @@ import {
 } from '../shared/dashboard-tabs.js';
 import { buildTrophyList } from '../shared/trophies.js';
 import {
+  careerMilestones as recognitionMilestones,
+  MILESTONE_LABELS_KO,
+  playerAwards,
+  SEASON_AWARD_LABELS_KO,
+} from '../shared/awards-presentation.js';
+import {
   positionHeaderField,
   POSITION_LABELS,
   ROLE_DECISION_LABEL_KO,
@@ -908,6 +914,20 @@ function CareerDashboard() {
   const injuryFollowUpReceipts = followUpReceipts.filter((receipt) => receipt.kind === 'INJURY');
   // UX-014 "우승 연혁" 탭(사용자 결정 2026-09-14): 리그 1위·컵 우승만 골라 보여준다(트로피스.ts).
   const trophies = buildTrophyList(state, ruleset);
+  const recognitionAwards = state.seasonHistory.flatMap((summary) => playerAwards(summary.result));
+  const recognitionMilestoneItems = recognitionMilestones(state.seasonHistory);
+  const recognitionAwardCounts = [...new Set(recognitionAwards.map((award) => award.awardId))].map(
+    (awardId) => ({
+      label: SEASON_AWARD_LABELS_KO[awardId],
+      count: recognitionAwards.filter((award) => award.awardId === awardId).length,
+    }),
+  );
+  const recognitionMilestoneCounts = [...new Set(recognitionMilestoneItems.map((milestone) => milestone.milestoneId))].map(
+    (milestoneId) => ({
+      label: MILESTONE_LABELS_KO[milestoneId],
+      count: recognitionMilestoneItems.filter((milestone) => milestone.milestoneId === milestoneId).length,
+    }),
+  );
 
   return (
     <div className="os-screen">
@@ -1645,6 +1665,28 @@ function CareerDashboard() {
                       <li key={trophy.id} className="font-os text-os-text" style={BODY_STYLE}>
                         {seasonYearLabelWithOrdinal(startYear, trophy.seasonNumber)} ·{' '}
                         {trophy.label}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </DashboardSection>
+              <DashboardSection
+                title="수상·마일스톤"
+                description="시즌 결산에 저장된 개인 수상과 커리어 기록입니다."
+              >
+                {state.seasonHistory.length === 0 ? (
+                  <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                    첫 시즌 결산 뒤 확정된 수상과 마일스톤이 여기에 기록됩니다.
+                  </p>
+                ) : recognitionAwardCounts.length === 0 && recognitionMilestoneCounts.length === 0 ? (
+                  <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                    저장된 개인 수상이나 마일스톤 기록이 없습니다.
+                  </p>
+                ) : (
+                  <ul className="flex flex-col gap-os-1 font-os text-os-text" style={BODY_STYLE}>
+                    {[...recognitionAwardCounts, ...recognitionMilestoneCounts].map((item) => (
+                      <li key={item.label}>
+                        {item.label} · {item.count}회
                       </li>
                     ))}
                   </ul>

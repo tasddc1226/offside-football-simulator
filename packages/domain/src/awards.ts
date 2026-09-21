@@ -249,6 +249,23 @@ type NpcCandidate = {
   score: number;
 };
 
+/** Stable identity shared by every award category that models the same NPC player. */
+function npcIdentity(
+  ruleset: Ruleset,
+  leagueId: string,
+  seasonIndex: number,
+  teamId: string,
+  group: StatGroup,
+  fallback: string,
+): Pick<NpcCandidate, 'recipientId' | 'recipientName'> {
+  const names = ruleset.competitorNames;
+  const nameIndex = names.length === 0 ? 0 : hashNumber(`${teamId}|${group}|${seasonIndex}`) % names.length;
+  return {
+    recipientId: `NPC:${leagueId}:${seasonIndex}:${teamId}:${group}`,
+    recipientName: names[nameIndex] ?? fallback,
+  };
+}
+
 function npcCandidates(
   ruleset: Ruleset,
   result: RecognitionResult,
@@ -256,17 +273,15 @@ function npcCandidates(
 ): NpcCandidate[] {
   const rows = leagueRows(result);
   const leagueId = result.finalLeagueTable?.leagueId ?? 'league-unknown';
-  const names = ruleset.competitorNames;
   return rows.map((row) => {
     const team = ruleset.teams.find((candidate) => candidate.id === row[1]);
     const strength = team?.squadStrength ?? 60;
     const seed = `${leagueId}|${result.index}|${row[1]}|${group}`;
     const line = npcLine(row, group, seed, strength);
     const base = performanceScore(line, Math.max(0, rows.length - row[0]) * 10);
-    const nameIndex = names.length === 0 ? 0 : hashNumber(`${row[1]}|${group}|${result.index}`) % names.length;
+    const identity = npcIdentity(ruleset, leagueId, result.index, row[1], group, `League contender ${row[0]}`);
     return {
-      recipientId: `NPC:${leagueId}:${result.index}:${row[1]}:${group}`,
-      recipientName: names[nameIndex] ?? `League contender ${row[0]}`,
+      ...identity,
       recipientGroup: group,
       score: base,
     };
@@ -375,8 +390,14 @@ export function evaluateSeasonAwards(
     const line = npcLine(row, 'FW', `${result.finalLeagueTable?.leagueId ?? 'league-unknown'}|${result.index}|${row[1]}|FW`, team?.squadStrength ?? 60);
     const goals = line.goals;
     return {
-      recipientId: `NPC:${result.finalLeagueTable?.leagueId ?? 'league-unknown'}:${result.index}:${row[1]}:FW`,
-      recipientName: ruleset.competitorNames[hashNumber(`${row[1]}|SCORING|${result.index}`) % Math.max(1, ruleset.competitorNames.length)] ?? `League striker ${row[0]}`,
+      ...npcIdentity(
+        ruleset,
+        result.finalLeagueTable?.leagueId ?? 'league-unknown',
+        result.index,
+        row[1],
+        'FW',
+        `League striker ${row[0]}`,
+      ),
       recipientGroup: 'FW' as const,
       score: goals,
     };

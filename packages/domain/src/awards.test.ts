@@ -98,6 +98,20 @@ describe('candidate 3.4.0 recognition', () => {
     expect(awards.every((award) => award.criteria.playerMinutes === 1080)).toBe(true);
   });
 
+  it('keeps one deterministic NPC identity name across award categories', () => {
+    const awards = evaluateSeasonAwards(state([], 'FW'), ruleset(), result('FW'));
+    const namesById = new Map<string, Set<string>>();
+    for (const award of awards) {
+      if (!award.recipientId.startsWith('NPC:')) continue;
+      const names = namesById.get(award.recipientId) ?? new Set<string>();
+      names.add(award.recipientName);
+      namesById.set(award.recipientId, names);
+    }
+    const duplicateIdentity = [...namesById.values()].find((names) => names.size > 1);
+    expect(namesById.size).toBeGreaterThan(0);
+    expect(duplicateIdentity).toBeUndefined();
+  });
+
   it('uses league-only persisted match goals for scoring leader and remains replay deterministic', () => {
     const current = result('FW');
     const leagueGoals = 25;
