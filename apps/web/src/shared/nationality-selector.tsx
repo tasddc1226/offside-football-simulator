@@ -24,7 +24,7 @@ export function NationalitySelector({
       }),
     [options],
   );
-  const filtered = ordered.filter((option) => {
+  const matching = ordered.filter((option) => {
     const needle = query.trim().toLocaleLowerCase();
     return (
       needle === '' ||
@@ -32,6 +32,10 @@ export function NationalitySelector({
       option.code.toLocaleLowerCase().includes(needle)
     );
   });
+  const selected = ordered.find((option) => option.code === value);
+  const filtered = selected && !matching.some((option) => option.code === selected.code)
+    ? [selected, ...matching]
+    : matching;
   return (
     <div className="creation-nationality-selector">
       <input
@@ -50,10 +54,13 @@ export function NationalitySelector({
       >
         {filtered.map((option) => (
           <option value={option.code} key={option.code}>
-            {option.name}
+            {option.name}{option.code === value && query.trim() !== '' && !matching.some((match) => match.code === option.code) ? ' (현재 선택)' : ''}
           </option>
         ))}
       </select>
+      {query.trim() !== '' && matching.length === 0 && (
+        <p role="status">검색 결과가 없습니다. 현재 선택은 {selected?.name ?? '없음'}입니다.</p>
+      )}
     </div>
   );
 }

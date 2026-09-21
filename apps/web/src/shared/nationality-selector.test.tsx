@@ -25,8 +25,29 @@ describe('NationalitySelector (#161/#162)', () => {
 
     await user.type(screen.getByRole('searchbox', { name: '국적 검색' }), 'JP');
     expect(screen.getByRole('option', { name: '일본' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: '대한민국' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '대한민국 (현재 선택)' })).toBeInTheDocument();
+    expect(select).toHaveValue('KR');
     await user.selectOptions(select, 'JP');
     expect(onChange).toHaveBeenCalledWith('JP');
+  });
+
+  it('keeps the selected value visible and reports empty searches without changing it', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <NationalitySelector
+        options={[{ code: 'KR', name: '대한민국' }, { code: 'BR', name: '브라질' }]}
+        value="KR"
+        onChange={onChange}
+      />,
+    );
+
+    const search = screen.getByRole('searchbox', { name: '국적 검색' });
+    const select = screen.getByRole('combobox', { name: '국적' });
+    await user.type(search, '없는나라');
+    expect(screen.getByRole('status')).toHaveTextContent('검색 결과가 없습니다');
+    expect(screen.getByRole('option', { name: '대한민국 (현재 선택)' })).toBeInTheDocument();
+    expect(select).toHaveValue('KR');
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
