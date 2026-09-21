@@ -1,9 +1,11 @@
 # 진행 보드
 
-갱신: 2026-09-21 (Codex, T-7-038 반복 플레이 4단계 구현·독립 인수 완료). 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
+갱신: 2026-09-21 (오케스트레이터, T-7-039 머지·#271 운영 배포 사실 반영; 직전 Codex, T-7-038 반복 플레이 4단계 구현·독립 인수 완료). 상태는 `todo`, `in-progress`, `in-review`, `blocked`, `deferred`(사용자 결정 전 보류), `completed`.
 
 ## 현재 작업 (2026-09-21)
 
+- **T-7-039: completed** — 주소 고정 내비게이션(원작과 같은 방식). 라우트·`navigate`는 그대로 두고 히스토리만 메모리 히스토리로 교체. 주소창은 `/`, `/guide`, `/faq`, `/legal/*`, `/articles/<id>`만 그대로 비추고 나머지 화면은 `/` 고정, 새로고침·back_forward만 sessionStorage로 마지막 화면 복원, 뒤로가기 가드는 `platform.lifecycle.onBackPressed` web 구현 소유. e2e 주소 단언 약 240곳을 `document.documentElement.dataset.route` 기반 `e2e/helpers/route.ts`로 이관. PR [#272](https://github.com/tasddc1226/offside-football-simulator/pull/272), main `c90d1fd`(#271 `44029ec` 병합 후 머지). lint·의존 방향·typecheck·test 10/10·build·bundle 112.29KB 통과, staging CI [35570383748](https://github.com/tasddc1226/offside-football-simulator/actions/runs/35570383748) 성공, staging 실브라우저에서 딥링크·새로고침 복원·뒤로가기·공유 주소 유지 확인. **운영 미배포.** e2e는 main `44029ec` 기준선과 같은 조건으로 비교해 브랜치 전용 실패 0건(기준선·브랜치 모두 88개 중 27개 실패 — 기존 실패는 범위 밖, 별도 복구 작업 필요). 알려진 한계: 앞 엔트리 없는 탭에서 홈까지 뒤로 간 뒤에는 가드가 재적재되지 않는다.
+- **T-7-038 후속 사실(오케스트레이터 기록)**: PR [#271](https://github.com/tasddc1226/offside-football-simulator/pull/271)은 2026-09-21 14:35 KST main `44029ec`로 머지됐고, 운영 deploy [35565491926](https://github.com/tasddc1226/offside-football-simulator/actions/runs/35565491926)(14:41~14:43 KST) 성공으로 `svc_season_1`이 **3.3.0/0.12.0**이 됐다(마이그레이션 0009~0011 적용). 아래 T-7-038 항목의 `in-review`는 머지 전 시점 기록이다.
 - **[T-7-038](briefs/T-7-038.md): in-review** — 승인된 **4/4 단계 구현·독립 인수 완료**: 실제 경기 선택·결과 → 사실 기반 공개 기사·동일 조건 독립 도전 → 은퇴 선수의 비공개 AI 친선 → 저장된 감독 선택 기억·후속 반응·재회. 기준 main `6a2e942`, 브랜치 `T-7-038-growth-loop`, 최종 신규 후보 `3.3.0/0.12.0`. frozen install·lint 10/10·의존 방향·typecheck 9/9·build 2/2·초기 bundle 111.54KB 통과. 순차 suite 및 maxWorkers=2 조건의 전체 테스트 3,019개 통과, 관련 E2E 최종 16개 통과·실제 API 전용 1개 명시적 skip(통과로 세지 않음). E2E 첫 실행의 helper/기준선 selector 실패 3개는 테스트만 교정하고 전체 재실행했다. 360px·키보드·모션 감소 및 원본 저장 보존을 확인했다. 수동 신규 ST 첫 시즌은 출전·부상으로 챕터가 없었으므로 첫 선택의 보편적 노출을 보증하지 않는다. 자연 명령 80개를 정상 sync/reconcile로 복원한 실제 감독 재회 화면은 관찰했으며 anti-cheat 인증이나 전 명령 수동 클릭으로 표현하지 않는다. 세부 증거·이전 실패·잔여 engine 청크 경고는 브리프 참조. draft PR 전달 준비, main 병합·운영 배포는 범위 밖이다. 아래 운영 이력은 해당 날짜의 기록이다.
 
 ## 최신 상태 (2026-09-20)
