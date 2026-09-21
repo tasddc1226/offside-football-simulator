@@ -4,6 +4,7 @@
 // helpers/recovery.ts를 공유한다.
 import { expect, test } from '@playwright/test';
 import { advanceOneStep, createCareerAndIssueRecoveryCode, recoverProfile } from './helpers/recovery.js';
+import { expectRoute } from './helpers/route.js';
 
 const WITH_API = process.env.E2E_WITH_API === '1';
 
@@ -35,7 +36,7 @@ test.describe('복구 코드 왕복 뒤 진행 충돌(실제 api)', () => {
       await pageA.getByRole('button', { name: '다른 기기 진행 가져오기' }).click();
 
       await expect(pageA.getByText('다른 기기의 진행을 가져왔습니다')).toBeVisible();
-      await expect(pageA).toHaveURL(new RegExp(`${bPath}$`));
+      await expectRoute(pageA, new RegExp(`${bPath}$`));
       await expect(pageA.getByText('저장됨')).toBeVisible({ timeout: 15_000 });
 
       await pageA.goto('/');

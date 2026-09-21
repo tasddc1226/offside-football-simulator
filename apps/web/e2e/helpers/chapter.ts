@@ -2,6 +2,7 @@
 // 같은 관례: "헬퍼 추출은 허용").
 import { expect, type Page } from '@playwright/test';
 import { resolveCurrentEventScreen } from './player-creation.js';
+import { currentRoute, expectRoute, waitForRoute } from './route.js';
 
 /** e2e 결정론 시드(README "e2e 결정론 시드 오버라이드" 참고). DEBUT 트리거
  * (seasonIndex===1 && isFirstCareerAppearance && minutes>0)가 몇 번째 "진행"에 열리는지는 시드에
@@ -24,7 +25,7 @@ export async function seedDeterministicChapterRun(page: Page): Promise<void> {
 
 /** SCR-012 역할 제안을 받아들인다. */
 export async function resolveRoleProposal(page: Page): Promise<void> {
-  await expect(page).toHaveURL(/\/career\/.+\/role$/);
+  await expectRoute(page, /\/career\/.+\/role$/);
   // KEEP은 "확인" 하나, POSITION_CHANGE·ROLE_CHANGE는 "거절"·"수락" 둘을 보여준다 — 어느 쪽이든
   // 받아들이는 버튼을 하나의 locator로 묶어 렌더 경합 없이 기다린다(count() 스냅샷은 로더 직후
   // 첫 렌더 전에 0을 읽을 수 있다).
@@ -52,7 +53,7 @@ export async function advanceToChapter(page: Page): Promise<void> {
   const nextButton = page.getByRole('button', { name: '진행', exact: true });
   const stepCaption = page.getByText(/\d+\/12 단계/);
   for (let step = 0; step < 20; step += 1) {
-    const pathnameBefore = new URL(page.url()).pathname;
+    const pathnameBefore = (await currentRoute(page)).split('?')[0]!;
     if (pathnameBefore.endsWith('/chapter')) return;
     if (pathnameBefore.endsWith('/event')) {
       await resolveCurrentEventScreen(page);
@@ -61,10 +62,10 @@ export async function advanceToChapter(page: Page): Promise<void> {
     // 병렬 워커로 같이 도는 다른 테스트와 CPU를 나눠 쓰면 mutateAsync가 기본 5s보다 오래 걸릴 수
     // 있다 — 넉넉히 기다린다.
     await Promise.race([
-      page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
+      waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect(nextButton).toBeEnabled({ timeout: 60_000 }),
     ]);
-    if (new URL(page.url()).pathname !== pathnameBefore) continue;
+    if ((await currentRoute(page)).split('?')[0]! !== pathnameBefore) continue;
     const stepTextBefore = await stepCaption.textContent();
     // 클릭 액션 자체의 actionability 재확인 도중에도(디스패치 전) advance 성공→화면 전환이 끼어들어
     // 버튼이 사라질 수 있다 — 그 detach는 실패로 삼키고(클릭이 실제로 먹혔는지는 다음 스텝 진입 시
@@ -72,7 +73,7 @@ export async function advanceToChapter(page: Page): Promise<void> {
     // 않는다.
     await nextButton.click({ timeout: 15_000 }).catch(() => {});
     await Promise.race([
-      page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
+      waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect(stepCaption).not.toHaveText(stepTextBefore ?? '', { timeout: 60_000 }),
     ]);
   }

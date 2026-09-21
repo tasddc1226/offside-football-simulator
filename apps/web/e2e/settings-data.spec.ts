@@ -8,6 +8,7 @@
 // (e) 이 기기 데이터 삭제 → 온보딩 → 허브 빈 상태
 import { expect, test } from '@playwright/test';
 import { E2E_META, fulfillJson } from './helpers/sync-conflict.js';
+import { expectRoute } from './helpers/route.js';
 
 test('복구 코드 재발급: 확인 → 코드 대화상자 → 복사 → 닫힘, 발급일이 갱신된다', async ({
   page,
@@ -207,7 +208,7 @@ test('프로필 삭제: 1단계 → 확인 대화상자 → 2단계 → 온보�
 
   await page.getByRole('dialog').getByRole('button', { name: '삭제' }).click();
 
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await expectRoute(page, /\/onboarding$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 
@@ -225,12 +226,12 @@ test('이 기기 데이터 삭제: 확인 → 온보딩 → 허브가 빈 상태
 
   await page.goto('/onboarding');
   await page.getByRole('link', { name: '선수 생성 닫기' }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expectRoute(page, /\/$/);
   await page.getByRole('button', { name: '커리어 시작' }).click();
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await expectRoute(page, /\/onboarding$/);
   await page.getByLabel('이름').fill('김서준');
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-  await expect(page).toHaveURL(/\/style$/);
+  await expectRoute(page, /\/style$/);
 
   await page.goto('/settings');
   // UX-013: 위험 작업은 맨 아래 위험 텍스트 링크다.
@@ -241,9 +242,9 @@ test('이 기기 데이터 삭제: 확인 → 온보딩 → 허브가 빈 상태
 
   await page.getByRole('dialog').getByRole('button', { name: '삭제' }).click();
 
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await expectRoute(page, /\/onboarding$/);
   await page.getByRole('link', { name: '선수 생성 닫기' }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expectRoute(page, /\/$/);
   await expect(
     page.getByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),
   ).toBeVisible();
@@ -258,12 +259,12 @@ test('서비스 정책 시트: 이용약관 행을 클릭해 열고, 뒤로가�
   await row.click();
 
   await expect(page.getByRole('dialog', { name: '이용약관' })).toBeVisible();
-  await expect(page).toHaveURL(/\?legal=terms$/);
+  await expectRoute(page, /\?legal=terms$/);
 
   await page.goBack();
 
   await expect(page.getByRole('dialog')).toBeHidden();
-  await expect(page).toHaveURL(/\/settings$/);
+  await expectRoute(page, /\/settings$/);
 });
 
 test('서비스 정책 시트: 닫기 버튼을 누르면 파라미터가 사라지고 포커스가 여는 행으로 돌아온다', async ({
@@ -277,7 +278,7 @@ test('서비스 정책 시트: 닫기 버튼을 누르면 파라미터가 사라
   await page.getByRole('dialog').getByRole('button', { name: '닫기' }).click();
 
   await expect(page.getByRole('dialog')).toBeHidden();
-  await expect(page).toHaveURL(/\/settings$/);
+  await expectRoute(page, /\/settings$/);
   await expect(row).toBeFocused();
 });
 

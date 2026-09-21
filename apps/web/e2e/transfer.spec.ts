@@ -2,6 +2,7 @@
 // 끝까지 재생한다. 커리어 상태는 DEV seed로 도달시키고, IndexedDB는 마지막 저장 검증에만 읽는다.
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { currentRoute, expectRoute, waitForRoute } from './helpers/route.js';
 import {
   completeOnboardingAndConfirm,
   expectFirstContractHeading,
@@ -87,9 +88,10 @@ async function readSavedCareer(page: Page, careerId: string): Promise<SavedCaree
   );
 }
 
-function careerIdFromUrl(page: Page): string {
-  const careerId = new URL(page.url()).pathname.split('/')[2];
-  if (careerId === undefined) throw new Error(`URL에서 careerId를 찾지 못했다: ${page.url()}`);
+async function careerIdFromUrl(page: Page): Promise<string> {
+  const route = await currentRoute(page);
+  const careerId = route.split('?')[0]!.split('/')[2];
+  if (careerId === undefined) throw new Error(`라우트에서 careerId를 찾지 못했다: ${route}`);
   return careerId;
 }
 
@@ -98,8 +100,8 @@ function careerIdFromUrl(page: Page): string {
 async function reachFirstContractOffers(page: Page): Promise<void> {
   await completeOnboardingAndConfirm(page);
   for (let step = 0; step < 10; step += 1) {
-    await page.waitForURL(/\/career\/.+\/(path|tryout|event|offers)$/);
-    if (new URL(page.url()).pathname.endsWith('/offers')) return;
+    await waitForRoute(page, /\/career\/.+\/(path|tryout|event|offers)$/);
+    if ((await currentRoute(page)).split('?')[0]!.endsWith('/offers')) return;
 
     const pathChoice = page.getByRole('radio', { name: /프로 직행, 입단 테스트/ });
     const tryoutChoice = page.getByRole('radio', { name: /감독 지시대로 안정적으로/ });
@@ -109,7 +111,7 @@ async function reachFirstContractOffers(page: Page): Promise<void> {
     else if (await tryoutChoice.isVisible()) await tryoutChoice.click();
     else await anyChoice.click();
     await page.getByRole('button', { name: '확정' }).click();
-    await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+    await expectRoute(page, /\/event\/result\?rev=\d+$/);
     await page.getByRole('button', { name: '다음' }).click();
   }
   throw new Error('첫 계약 제안에 도달하지 못했다(최대 10회 시도)');
@@ -121,7 +123,7 @@ async function advanceToSettlementRejectingRenewal(page: Page): Promise<void> {
   const settleButton = page.getByRole('button', { name: '결산하기', exact: true });
   const stepCaption = page.getByText(/\d+\/12 단계/);
   for (let step = 0; step < 20; step += 1) {
-    const pathnameBefore = new URL(page.url()).pathname;
+    const pathnameBefore = (await currentRoute(page)).split('?')[0]!;
     if (pathnameBefore.endsWith('/chapter')) {
       await resolveCurrentChapterScreen(page);
       continue;
@@ -134,21 +136,21 @@ async function advanceToSettlementRejectingRenewal(page: Page): Promise<void> {
       // 이슈 #159: step 7 PRE_NEGOTIATION은 재계약 제안 1건뿐이라 "비교" 없는 표제를 쓴다.
       await expect(page.getByRole('heading', { level: 1, name: '이적시장 제안' })).toBeVisible();
       await page.getByRole('button', { name: '제안 모두 거절하고 잔류' }).click();
-      await expect(page).toHaveURL(/\/career\/[^/]+$/);
+      await expectRoute(page, /\/career\/[^/]+$/);
       continue;
     }
     if (await settleButton.isVisible()) return;
     const before = await stepCaption.textContent();
     await Promise.race([
-      page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
+      waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect(progressButton).toBeEnabled({ timeout: 60_000 }),
       settleButton.waitFor({ state: 'visible', timeout: 60_000 }),
     ]);
-    if (new URL(page.url()).pathname !== pathnameBefore) continue;
+    if ((await currentRoute(page)).split('?')[0]! !== pathnameBefore) continue;
     if (await settleButton.isVisible()) return;
     await progressButton.click({ timeout: 15_000 }).catch(() => {});
     await Promise.race([
-      page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
+      waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect(stepCaption).not.toHaveText(before ?? '', { timeout: 60_000 }),
     ]);
   }
@@ -157,11 +159,11 @@ async function advanceToSettlementRejectingRenewal(page: Page): Promise<void> {
 
 async function settleAndOpenOffers(page: Page): Promise<void> {
   await page.getByRole('button', { name: '결산하기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expectRoute(page, /\/career\/.+\/season-result$/);
   await page.getByRole('link', { name: '대시보드' }).click();
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
   await page.getByRole('link', { name: '제안 보기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/offers$/);
+  await expectRoute(page, /\/career\/.+\/offers$/);
 }
 
 async function resultBaseOvr(page: Page): Promise<{ before: number; after: number }> {
@@ -186,7 +188,7 @@ test('TEST-E2E-003(a): 3개 이상 제안 비교→협상→FREE_AGENT 확정→
   await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
   await advanceToSettlementRejectingRenewal(page);
   await settleAndOpenOffers(page);
 
@@ -197,7 +199,7 @@ test('TEST-E2E-003(a): 3개 이상 제안 비교→협상→FREE_AGENT 확정→
   // `<article class="os-panel" aria-labelledby="offer-{id}">`다.
   const marketCards = page.locator('.os-offer-grid > article');
   await expect(marketCards).toHaveCount(3);
-  const careerId = careerIdFromUrl(page);
+  const careerId = await careerIdFromUrl(page);
   const marketBeforeReload = await readSavedCareer(page, careerId);
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: '이적시장 제안 비교' })).toBeVisible();
@@ -212,7 +214,7 @@ test('TEST-E2E-003(a): 3개 이상 제안 비교→협상→FREE_AGENT 확정→
   const detailLink = transferCard.getByRole('link', { name: '제안 상세·결정' });
   await detailLink.focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+  await expectRoute(page, /\/career\/.+\/contract\?offerId=.+$/);
   await expectNoSeriousOrCriticalViolations(page, 'SCR-017 offer detail');
 
   const negotiateWage = page.getByRole('button', { name: '주급 협상' });
@@ -232,7 +234,7 @@ test('TEST-E2E-003(a): 3개 이상 제안 비교→협상→FREE_AGENT 확정→
   const beforeAccept = await readSavedCareer(page, careerId);
   await accept.focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/career\/.+\/transfer-result\?rev=\d+$/);
+  await expectRoute(page, /\/career\/.+\/transfer-result\?rev=\d+$/);
   const afterAccept = await readSavedCareer(page, careerId);
   expect(afterAccept.recordRevision).toBe(beforeAccept.recordRevision + 1);
   expect(afterAccept.snapshotRevision).toBe(afterAccept.recordRevision);
@@ -246,7 +248,7 @@ test('TEST-E2E-003(a): 3개 이상 제안 비교→협상→FREE_AGENT 확정→
   expect(ovr.before).toBe(beforeAccept.baseOvr);
   expect(ovr.after).toBe(afterAccept.baseOvr);
   await page.getByRole('link', { name: '새 시즌 준비' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
+  await expectRoute(page, /\/career\/.+\/preseason$/);
   const saved = await readSavedCareer(page, careerId);
   expectSavedAuditUnchanged(afterAccept, saved, 'transfer result to preseason');
   expect(saved.recordRevision).toBe(saved.snapshotRevision);
@@ -263,7 +265,7 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
 
   await reachFirstContractOffers(page);
   await signFirstOffer(page, { preferredMinLengthSeasons: 3 });
-  const loanCareerId = careerIdFromUrl(page);
+  const loanCareerId = await careerIdFromUrl(page);
   await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
@@ -283,7 +285,7 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   const loanDetail = loanCard.getByRole('link', { name: '제안 상세·결정' });
   await loanDetail.focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+  await expectRoute(page, /\/career\/.+\/contract\?offerId=.+$/);
   // 시장 제안 계약 화면은 "임대 조건"을 포함한 나머지 조건을 <details><summary>전체 공개 조건
   // </summary>로 접어 둔다 — 펼쳐야 보인다.
   await page.getByText('전체 공개 조건').click();
@@ -298,7 +300,7 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   const careerId = loanCareerId;
   const beforeLoanAccept = await readSavedCareer(page, careerId);
   await loanAccept.dblclick({ delay: 0 });
-  await expect(page).toHaveURL(/\/career\/.+\/transfer-result\?rev=\d+$/);
+  await expectRoute(page, /\/career\/.+\/transfer-result\?rev=\d+$/);
   const afterLoanAccept = await readSavedCareer(page, careerId);
   expect(afterLoanAccept.recordRevision).toBe(beforeLoanAccept.recordRevision + 1);
   expect(afterLoanAccept.snapshotRevision).toBe(afterLoanAccept.recordRevision);
@@ -309,14 +311,14 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   expect(loanOvr.before).toBe(beforeLoanAccept.baseOvr);
   expect(loanOvr.after).toBe(afterLoanAccept.baseOvr);
   const loanResultBeforeReload = await readSavedCareer(page, careerId);
-  const loanResultUrl = page.url();
+  const loanResultRoute = await currentRoute(page);
   await page.reload();
-  await expect(page).toHaveURL(loanResultUrl);
+  await expectRoute(page, loanResultRoute);
   await expect(page.getByTestId('transfer-result')).toBeVisible();
   const loanResultAfterReload = await readSavedCareer(page, careerId);
   expectSavedAuditUnchanged(loanResultBeforeReload, loanResultAfterReload, 'loan SCR-020 reload');
   await page.getByRole('link', { name: '새 시즌 준비' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
+  await expectRoute(page, /\/career\/.+\/preseason$/);
 
   await fillPreseasonPlan(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
@@ -324,7 +326,7 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   await advanceToSettlementRejectingRenewal(page);
   await settleAndOpenLoanReturn(page);
 
-  await expect(page).toHaveURL(/\/career\/.+\/transfer-result$/);
+  await expectRoute(page, /\/career\/.+\/transfer-result$/);
   await expect(page.getByRole('heading', { level: 1, name: '임대 복귀 결정' })).toBeVisible();
   await expectNoSeriousOrCriticalViolations(page, 'SCR-020 loan return decision');
   const permanent = page.getByRole('button', { name: '임대 구단에 남기' });
@@ -334,7 +336,7 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   const beforeReturn = await readSavedCareer(page, careerId);
   await returnButton.focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/career\/.+\/transfer-result\?rev=\d+$/);
+  await expectRoute(page, /\/career\/.+\/transfer-result\?rev=\d+$/);
   const afterReturn = await readSavedCareer(page, careerId);
   expect(afterReturn.recordRevision).toBe(beforeReturn.recordRevision + 1);
   expect(afterReturn.snapshotRevision).toBe(afterReturn.recordRevision);
@@ -346,7 +348,7 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   expect(returnOvr.before).toBe(beforeReturn.baseOvr);
   expect(returnOvr.after).toBe(afterReturn.baseOvr);
   await page.getByRole('link', { name: '새 시즌 준비' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
+  await expectRoute(page, /\/career\/.+\/preseason$/);
   const saved = await readSavedCareer(page, careerId);
   expectSavedAuditUnchanged(afterReturn, saved, 'return result to preseason');
   expect(saved.recordRevision).toBe(saved.snapshotRevision);
@@ -357,9 +359,9 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
 
 async function settleAndOpenLoanReturn(page: Page): Promise<void> {
   await page.getByRole('button', { name: '결산하기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expectRoute(page, /\/career\/.+\/season-result$/);
   await page.getByRole('link', { name: '대시보드' }).click();
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
   await page.getByRole('link', { name: '복귀 조건 보기' }).click();
 }
 
@@ -379,11 +381,11 @@ test('TEST-E2E-003(c): INTEREST 시장 안전 잔류(STAY) 수락 → SCR-020 �
   await reachFirstContractOffers(page);
   await expectFirstContractHeading(page);
   await signFirstOffer(page);
-  const careerId = careerIdFromUrl(page);
+  const careerId = await careerIdFromUrl(page);
   await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
   await advanceToSettlementRejectingRenewal(page);
   await settleAndOpenOffers(page);
 
@@ -394,7 +396,7 @@ test('TEST-E2E-003(c): INTEREST 시장 안전 잔류(STAY) 수락 → SCR-020 �
   await expect(safeCard).toBeVisible();
   const beforeStay = await readSavedCareer(page, careerId);
   await safeCard.getByRole('link', { name: '제안 상세·결정' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+  await expectRoute(page, /\/career\/.+\/contract\?offerId=.+$/);
   const stayAccept = page.getByRole('button', { name: '현재 팀 잔류 확정' });
   await expect(stayAccept).toBeEnabled();
   await stayAccept.click();
@@ -402,7 +404,7 @@ test('TEST-E2E-003(c): INTEREST 시장 안전 잔류(STAY) 수락 → SCR-020 �
   // T-4-010 원인 2: 고치기 전에는 buildStayState(OFFER_REJECTED ALL만 남김) 뒤 transfer-result의
   // loader가 전환 엔트리를 찾지 못해 대시보드로 튕겨냈다. 이 assertion이 그 회귀를 고정한다.
   // "관심을 보인 구단 N곳"을 위해 goToResult가 interested 검색 파라미터를 함께 붙이므로 $ 앵커 없이 확인한다.
-  await expect(page).toHaveURL(/\/career\/.+\/transfer-result\?rev=\d+/);
+  await expectRoute(page, /\/career\/.+\/transfer-result\?rev=\d+/);
   const stayResult = page.getByTestId('transfer-result');
   await expect(stayResult).toBeVisible();
   await expect(stayResult).toHaveAttribute('data-result-kind', 'STAY');
@@ -421,7 +423,7 @@ test('TEST-E2E-003(c): INTEREST 시장 안전 잔류(STAY) 수락 → SCR-020 �
   expect(stayOvr.before).toBe(beforeStay.baseOvr);
 
   await page.getByRole('link', { name: /^(대시보드로|새 시즌 준비)$/ }).click();
-  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/preseason)?$/);
+  await expectRoute(page, /\/career\/[^/]+(?:\/preseason)?$/);
   const saved = await readSavedCareer(page, careerId);
   expectSavedAuditUnchanged(afterStay, saved, 'STAY result to next screen');
 });

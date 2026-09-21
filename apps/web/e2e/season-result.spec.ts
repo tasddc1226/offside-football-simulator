@@ -3,6 +3,7 @@
 // after 일치, 다이어리 연대기·다음 시즌 이동. 두 번째 테스트는 결산 PUT 응답 유실 복구
 // (resilience.spec.ts (c)와 같은 방식)로 같은 result.hash를 확인한다.
 import { expect, test, type Page } from '@playwright/test';
+import { currentRoute, expectRoute } from './helpers/route.js';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
@@ -51,7 +52,7 @@ async function settleOneSeason(page: Page): Promise<void> {
   });
   expect(matches.length).toBeGreaterThan(0);
   await page.getByRole('button', { name: '결산하기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expectRoute(page, /\/career\/.+\/season-result$/);
   expect(await countUpValue(page, '출전')).toBe(matches.filter((match) => match.minutes > 0).length);
   expect(await statValue(page, '교체')).toBe(matches.filter((match) => match.appearance === '교체' && match.minutes > 0).length);
   expect(await statValue(page, '0분')).toBe(matches.filter((match) => match.minutes === 0).length);
@@ -132,7 +133,7 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   await expect(page.getByRole('heading', { level: 1, name: '프리시즌 계획' })).toBeVisible();
 
   // 대시보드로 돌아가 헤더 OVR이 결산 after와 같은지 확인한다(홈 탭에는 StatusStrip OVR이 없다).
-  await page.goto(page.url().replace(/\/preseason.*$/, ''));
+  await page.goto((await currentRoute(page)).replace(/\/preseason.*$/, ''));
   const headerOvrText = await page.locator('header').getByText(/^OVR \d+$/).textContent();
   expect(headerOvrText?.replace(/^OVR /, '').trim()).toBe(afterOvrValue);
 
@@ -142,7 +143,7 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   const settledLink = page.getByRole('link', { name: /시즌 정산$/ });
   await expect(settledLink).toBeVisible();
   await settledLink.click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-result\?season=0$/);
+  await expectRoute(page, /\/career\/.+\/season-result\?season=0$/);
   await expect(page.getByTestId('season-result')).toHaveAttribute('data-result-hash', /.+/);
 });
 
@@ -166,7 +167,7 @@ test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expectRoute(page, /\/career\/.+\/season-result$/);
 
   // T-7-005(#175): 비교 섹션도 <details class="os-season-breakdown">(요약 "시즌 상세 기록 보기") 안이다.
   await page.getByText('시즌 상세 기록 보기').click();
@@ -235,7 +236,7 @@ test('결산 PUT 응답 유실: 재시도 뒤에도 같은 result.hash로 SCR-01
     .getByRole('button', { name: '결산하기' })
     .click({ timeout: 5_000 })
     .catch(() => {});
-  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expectRoute(page, /\/career\/.+\/season-result$/);
 
   const hash = await page.getByTestId('season-result').getAttribute('data-result-hash');
   expect(hash).toBeTruthy();
@@ -250,6 +251,6 @@ test('결산 PUT 응답 유실: 재시도 뒤에도 같은 result.hash로 SCR-01
 
   // 새로고침해도 seasonHistory가 이미 늘어난 상태를 읽어 SCR-015가 바로 열리고 같은 hash를 보여준다.
   await page.reload();
-  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expectRoute(page, /\/career\/.+\/season-result$/);
   await expect(page.getByTestId('season-result')).toHaveAttribute('data-result-hash', hash ?? '');
 });

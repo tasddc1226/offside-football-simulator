@@ -6,13 +6,70 @@ export type { Platform };
 
 const backHandlers = new Set<() => boolean>();
 
-function handlePopState(): void {
-  for (const handler of Array.from(backHandlers)) {
-    if (handler()) return;
+/**
+ * T-7-039 뒤로가기 가드. 라우터가 메모리 히스토리로 바뀌면서 브라우저 뒤로가기는 더 이상 라우터를
+ * 거치지 않고 곧장 사이트를 벗어난다 — 원작(slbcareer.com)처럼 브라우저 히스토리에 "가드 엔트리"를
+ * 하나 쌓아 두고, 그게 소비될 때마다 다시 쌓는 트릭으로 막는다. 이 파일이 가드 엔트리 적재·재적재를
+ * 맡고, 앱(`apps/web`)은 `lifecycle.onBackPressed(handler)`로 "라우터가 뒤로 갔거나 홈으로
+ * 보냈으면 true"만 돌려주는 핸들러를 등록한다. 등록된 핸들러가 전부 false면(=이미 앱의 첫 화면)
+ * 가드를 다시 쌓지 않고 실제로 한 번 더 뒤로 가 사용자가 나가게 둔다.
+ *
+ * 순수 로직(armBackGuard/handleBackGuardPopState)은 `window`/`document` 없이도(노드 vitest
+ * 환경) 테스트할 수 있도록 `BackGuardHost`로 주입받는다 — `platform.test.ts` 참고.
+ */
+export interface BackGuardHost {
+  getState(): unknown;
+  getHref(): string;
+  pushState(state: unknown, href: string): void;
+  back(): void;
+}
+
+const BACK_GUARD_FLAG = 'offsideBackGuard';
+
+export function isBackGuardState(state: unknown): boolean {
+  return (
+    typeof state === 'object' && state !== null && (state as Record<string, unknown>)[BACK_GUARD_FLAG] === true
+  );
+}
+
+/** 이미 가드 엔트리 위에 있으면(React StrictMode·HMR로 이 모듈이 다시 실행돼도) 다시 쌓지 않는다. */
+export function armBackGuard(host: BackGuardHost): void {
+  const currentState = host.getState();
+  if (isBackGuardState(currentState)) return;
+  const nextState =
+    typeof currentState === 'object' && currentState !== null
+      ? { ...(currentState as Record<string, unknown>), [BACK_GUARD_FLAG]: true }
+      : { [BACK_GUARD_FLAG]: true };
+  host.pushState(nextState, host.getHref());
+}
+
+/** popstate마다: 등록된 핸들러 중 하나라도 처리했으면(true) 가드를 재적재하고, 전부 false면
+ * 가드를 다시 쌓지 않고 한 번 더 물러나 실제로 나가게 둔다. */
+export function handleBackGuardPopState(host: BackGuardHost, handlers: Iterable<() => boolean>): void {
+  for (const handler of Array.from(handlers)) {
+    if (handler()) {
+      armBackGuard(host);
+      return;
+    }
   }
+  host.back();
+}
+
+function createWindowBackGuardHost(): BackGuardHost {
+  return {
+    getState: () => window.history.state,
+    getHref: () => window.location.href,
+    pushState: (state, href) => window.history.pushState(state, '', href),
+    back: () => window.history.back(),
+  };
+}
+
+function handlePopState(): void {
+  handleBackGuardPopState(createWindowBackGuardHost(), backHandlers);
 }
 
 if (typeof window !== 'undefined') {
+  armBackGuard(createWindowBackGuardHost());
   window.addEventListener('popstate', handlePopState);
 }
 

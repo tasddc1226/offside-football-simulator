@@ -18,16 +18,9 @@ import { useIsCommittingGuardActive } from './committing-guard.js';
 import { currentTeamId, currentTeamName } from './current-team.js';
 import { DASHBOARD_TAB_ITEMS, normalizeDashboardTab, type DashboardTab } from './dashboard-tabs.js';
 import { isCareerDashboardPathname } from './career-pathname.js';
+import { SkipLink } from './SkipLink.js';
 import { useUiStore } from './ui-store.js';
 import './career-header.css';
-
-function SkipLink() {
-  return (
-    <a href="#game-content" className="os-skip-link">
-      본문으로 건너뛰기
-    </a>
-  );
-}
 
 /** DRAFT 단계·아직 로드 전: 루트 GameNavigation이 기존에 쓰던 것과 같은 최소 내비(브랜드 링크
  * 없이 텍스트만 — "선수 생성 단계 화면은 안전한 뒤로가기 흐름을 스스로 관리한다"는 기존 정책을

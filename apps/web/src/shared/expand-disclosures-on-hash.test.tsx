@@ -4,9 +4,10 @@ import { useExpandDisclosuresOnHash } from './expand-disclosures-on-hash.js';
 
 afterEach(() => {
   document.body.innerHTML = '';
-  window.location.hash = '';
 });
 
+// T-7-039: 이 훅은 이제 실제 주소창 hash가 아니라 호출부(settings.tsx)가 라우터 위치에서 읽어
+// 넘기는 hash 문자열을 인자로 받는다.
 describe('useExpandDisclosuresOnHash', () => {
   it('opens every details inside the element the current hash targets', () => {
     render(
@@ -17,9 +18,8 @@ describe('useExpandDisclosuresOnHash', () => {
         </details>
       </section>,
     );
-    window.location.hash = '#settings-account';
 
-    renderHook(() => useExpandDisclosuresOnHash());
+    renderHook(() => useExpandDisclosuresOnHash('#settings-account'));
 
     expect(document.querySelector('details')).toHaveAttribute('open');
   });
@@ -31,9 +31,8 @@ describe('useExpandDisclosuresOnHash', () => {
         <div id="settings-play">본문</div>
       </details>,
     );
-    window.location.hash = '#settings-play';
 
-    renderHook(() => useExpandDisclosuresOnHash());
+    renderHook(() => useExpandDisclosuresOnHash('#settings-play'));
 
     expect(document.querySelector('details')).toHaveAttribute('open');
   });
@@ -48,7 +47,7 @@ describe('useExpandDisclosuresOnHash', () => {
       </section>,
     );
 
-    renderHook(() => useExpandDisclosuresOnHash());
+    renderHook(() => useExpandDisclosuresOnHash(''));
 
     expect(document.querySelector('details')).not.toHaveAttribute('open');
   });

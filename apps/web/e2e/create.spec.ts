@@ -6,6 +6,7 @@
 // 그래서 도착 지점은 screenForCareer가 매핑하는 SCR-007 계열 라우트(path·tryout·event) 중
 // 하나인지로 검증한다.
 import { expect, test } from '@playwright/test';
+import { expectRoute } from './helpers/route.js';
 import {
   fillPlayerInfo,
   fulfillJson,
@@ -49,7 +50,7 @@ test('SCR-002→003→004 KICKOFF는 복구 API를 호출하지 않고 SCR-007 �
 
   await page.getByRole('button', { name: /이 선수로 시작/ }).click();
 
-  await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+  await expectRoute(page, /\/career\/.+\/(path|tryout|event)$/);
   expect(profileCalls).toBe(0);
   expect(recoveryCodeCalls).toBe(0);
   await expect(page.getByRole('heading', { level: 1, name: '복구 코드를 저장하세요' })).toHaveCount(
@@ -73,7 +74,7 @@ test('프로필 API 실패 스텁이 있어도 KICKOFF 직후 흐름은 막히�
 
   await page.getByRole('button', { name: /이 선수로 시작/ }).click();
 
-  await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+  await expectRoute(page, /\/career\/.+\/(path|tryout|event)$/);
   await expect(
     page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.'),
   ).toHaveCount(0);
@@ -97,7 +98,7 @@ test('SCR-002: 저장한 뒤 새로고침해도 draft가 그대로 보인다', a
   await page.reload();
   await expect(page.getByLabel('이름')).toHaveValue('김서준');
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/style$/);
+  await expectRoute(page, /\/career\/.+\/style$/);
   await page.getByRole('button', { name: '후보 2 공개' }).click();
   const stats = await page
     .getByRole('meter')

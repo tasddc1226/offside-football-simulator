@@ -9,6 +9,7 @@
 import { expect, test } from '@playwright/test';
 import { fillPlayerInfo, startNewCareer } from './helpers/player-creation.js';
 import { E2E_META, fulfillJson } from './helpers/sync-conflict.js';
+import { currentRoute, expectRoute } from './helpers/route.js';
 
 const WITH_API = process.env.E2E_WITH_API === '1';
 
@@ -25,7 +26,7 @@ test.describe('Google 연결·병합(실제 api)', () => {
       const pageA = await contextA.newPage();
       await pageA.goto('/settings');
       await pageA.getByRole('button', { name: 'Google로 연결' }).click();
-      await expect(pageA).toHaveURL(/\/settings(\?google=.*)?$/, { timeout: 15_000 });
+      await expectRoute(pageA, /\/settings(\?google=.*)?$/, { timeout: 15_000 });
       // UX-013: 연결되면 계정 카드 머리에 "로그아웃"이 뜨고, "연결 해제"는 "계정 상세" 접이식 안에
       // 있다 — OAuth 왕복이 끝나 연결 상태가 그려진 뒤에 접이식을 연다.
       await expect(pageA.getByRole('button', { name: '로그아웃', exact: true })).toBeVisible({
@@ -38,7 +39,7 @@ test.describe('Google 연결·병합(실제 api)', () => {
       await startNewCareer(pageB);
       await fillPlayerInfo(pageB, '박은비');
       await pageB.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-      await expect(pageB).toHaveURL(/\/career\/.+\/style$/);
+      await expectRoute(pageB, /\/career\/.+\/style$/);
 
       await pageB.goto('/settings');
       // prepareGoogleConnect가 OAuth 이동 직전에 이 커리어의 디바운스된 저장까지 flush한다.
@@ -85,8 +86,10 @@ test.describe('Google 연결·병합(실제 api)', () => {
     await startNewCareer(page);
     await fillPlayerInfo(page, '재인증점검');
     await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-    await expect(page).toHaveURL(/\/career\/[^/]+\/style$/);
-    const careerId = /\/career\/([^/]+)\/style$/.exec(new URL(page.url()).pathname)?.[1];
+    await expectRoute(page, /\/career\/[^/]+\/style$/);
+    const careerId = /\/career\/([^/]+)\/style$/.exec(
+      (await currentRoute(page)).split('?')[0]!,
+    )?.[1];
     if (careerId === undefined) throw new Error('careerId를 찾지 못했다');
 
     await page.goto('/settings');
@@ -181,5 +184,5 @@ test('Google 병합(스텁): ?google=merge_required 진입 시 대화상자가 �
     .click();
 
   await expect.poll(() => mergeBody?.mergeChoice).toBe('MOVE_TO_LINKED');
-  await expect(page).toHaveURL(/\/settings$/);
+  await expectRoute(page, /\/settings$/);
 });

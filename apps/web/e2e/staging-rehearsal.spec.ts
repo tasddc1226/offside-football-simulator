@@ -2,6 +2,7 @@
 // 기본 `pnpm e2e`·CI에는 포함되지 않는다.
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { createCareerAndIssueRecoveryCode } from './helpers/recovery.js';
+import { currentRoute, expectRoute, waitForRoute } from './helpers/route.js';
 import {
   advanceThroughSeasonToSettlement,
   advanceUntilOffers,
@@ -98,8 +99,8 @@ test(`staging 리허설: ${profile} 온보딩 → 첫 계약 → ${REHEARSAL_MOD
 
   // 새 브라우저 context부터 실제 Worker만 사용한다. 이 파일은 page.route로 API를 대체하지 않는다.
   await page.goto('/');
-  await page.waitForURL(/\/(onboarding)?$/);
-  const landedPath = new URL(page.url()).pathname;
+  await waitForRoute(page, /\/(onboarding)?$/);
+  const landedPath = (await currentRoute(page)).split('?')[0]!;
   console.log(`[rehearsal:${REHEARSAL_MODE}] fresh device landed on ${landedPath}`);
 
   if (landedPath === '/onboarding') {
@@ -110,7 +111,8 @@ test(`staging 리허설: ${profile} 온보딩 → 첫 계약 → ${REHEARSAL_MOD
 
   // 헬퍼가 발급 형식까지 검증한다. 원문 복구 코드는 로그와 attachment에 남기지 않는다.
   await createCareerAndIssueRecoveryCode(page);
-  const careerId = new URL(page.url()).pathname.match(/^\/career\/([^/]+)\//)?.[1] ?? 'unknown';
+  const careerId =
+    (await currentRoute(page)).split('?')[0]!.match(/^\/career\/([^/]+)\//)?.[1] ?? 'unknown';
   console.log(`[rehearsal:${REHEARSAL_MODE}] careerId=${careerId} recoveryCode=(redacted)`);
 
   await advanceUntilOffers(page);
@@ -120,7 +122,7 @@ test(`staging 리허설: ${profile} 온보딩 → 첫 계약 → ${REHEARSAL_MOD
   await planPreseason(page, '기술');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
   await expect(page.getByRole('progressbar', { name: '시즌 진행', exact: true })).toBeVisible();
   await expect(page.locator('.sim-hub')).toHaveAttribute(
     'data-ruleset-version',
@@ -137,7 +139,7 @@ test(`staging 리허설: ${profile} 온보딩 → 첫 계약 → ${REHEARSAL_MOD
     onEventScreen: (title) => eventScreens.push(title),
   });
   await page.getByRole('button', { name: '결산하기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expectRoute(page, /\/career\/.+\/season-result$/);
   await expect(page.getByRole('heading', { level: 1, name: '프로 시즌 결과' })).toBeVisible();
   await expect(page.getByText('저장됨', { exact: true })).toBeVisible({ timeout: 15_000 });
   const resultHash = await page.getByTestId('season-result').getAttribute('data-result-hash');

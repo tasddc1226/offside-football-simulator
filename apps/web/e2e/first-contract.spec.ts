@@ -6,6 +6,7 @@
 // 뜨고 소진된 뒤에야 제안(OFFERS)이 열린다. 그래서 특정 이벤트·화면을 고정하지 않고, "이벤트 화면
 // (SCR-007/008/013)이면 첫 선택지를 확정하고 결과를 다음으로 넘긴다"를 offers 도착까지 반복한다.
 import { expect, test } from '@playwright/test';
+import { currentRoute, expectRoute } from './helpers/route.js';
 import {
   advanceUntilOffers,
   fulfillJson,
@@ -35,7 +36,7 @@ test('온보딩부터 첫 계약 뒤 복구 안내·프리시즌까지: SCR-002~
   const profileRequestsBeforeKickoff = profileRequests;
   const recoveryCodeRequestsBeforeKickoff = recoveryCodeRequests;
   await page.getByRole('button', { name: /이 선수로 시작/ }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+  await expectRoute(page, /\/career\/.+\/(path|tryout|event)$/);
   // 앱 부팅 시 프로필 조회가 있을 수 있으므로 KICKOFF 직전 스냅샷과 비교해 SCR-004 구간의
   // 무호출을 검증한다.
   expect(profileRequests).toBe(profileRequestsBeforeKickoff);
@@ -81,7 +82,7 @@ test('온보딩부터 첫 계약 뒤 복구 안내·프리시즌까지: SCR-002~
   await expect(page.getByText('새로운 유니폼')).not.toBeVisible();
   await signFirstOffer(page, { stopAtRecovery: true });
 
-  const recoveryUrl = new URL(page.url());
+  const recoveryUrl = new URL(await currentRoute(page), 'http://e2e.invalid');
   expect(recoveryUrl.pathname).toMatch(/\/career\/.+\/confirm$/);
   expect(recoveryUrl.searchParams.get('step')).toBe('recovery');
   expect(recoveryUrl.searchParams.get('milestone')).toBe('first-contract');
@@ -92,7 +93,7 @@ test('온보딩부터 첫 계약 뒤 복구 안내·프리시즌까지: SCR-002~
 
   // 정상 발급 뒤 새로고침은 GET /profile의 issuedAt을 보고 코드를 다시 만들지 않고 dashboard로 간다.
   await page.reload();
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
   expect(profileRequests).toBeGreaterThan(profileRequestsAtRecovery);
   expect(recoveryCodeRequests).toBe(1);
   await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
@@ -135,7 +136,7 @@ test('첫 계약 뒤 첫 복구 코드 발급 실패는 recovery URL 새로고�
   const profileRequestsBeforeKickoff = profileRequests;
   const recoveryCodeRequestsBeforeKickoff = recoveryCodeRequests;
   await page.getByRole('button', { name: /이 선수로 시작/ }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+  await expectRoute(page, /\/career\/.+\/(path|tryout|event)$/);
   expect(profileRequests).toBe(profileRequestsBeforeKickoff);
   expect(recoveryCodeRequests).toBe(recoveryCodeRequestsBeforeKickoff);
 
@@ -171,7 +172,7 @@ test('첫 계약 뒤 첫 복구 코드 발급 실패는 recovery URL 새로고�
 
   await advanceUntilOffers(page);
   await signFirstOffer(page, { stopAtRecovery: true });
-  await expect(page).toHaveURL(/\/career\/.+\/confirm\?step=recovery&milestone=first-contract$/);
+  await expectRoute(page, /\/career\/.+\/confirm\?step=recovery&milestone=first-contract$/);
   await expect(
     page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.'),
   ).toBeVisible();
@@ -179,14 +180,14 @@ test('첫 계약 뒤 첫 복구 코드 발급 실패는 recovery URL 새로고�
   expect(recoveryCodeRequests).toBe(1);
 
   await page.reload();
-  await expect(page).toHaveURL(/\/career\/.+\/confirm\?step=recovery&milestone=first-contract$/);
+  await expectRoute(page, /\/career\/.+\/confirm\?step=recovery&milestone=first-contract$/);
   await expect(
     page.getByText('지금은 발급할 수 없습니다. 설정에서 나중에 발급할 수 있습니다.'),
   ).toBeVisible();
   expect(recoveryCodeRequests).toBe(2);
 
   await page.getByRole('button', { name: '계속' }).click();
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
   await expect(page.getByRole('progressbar', { name: '시즌 진행' })).toHaveAttribute(
     'aria-valuenow',
     '0',

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { PutCareerBody, ServiceSeasonCurrent } from '@offside/contracts';
+import { expectRoute } from './helpers/route.js';
 import {
   advanceThroughSeasonToSettlement,
   advanceUntilOffers,
@@ -81,10 +82,10 @@ test('1.2/0.4 새 인생: 19세 도입과 첫 진로를 거쳐 첫 시즌 뒤 20
   );
   await page.getByRole('button', { name: /이 선수로 시작/ }).click();
 
-  await expect(page).toHaveURL(/\/career\/.+\/path$/);
+  await expectRoute(page, /\/career\/.+\/path$/);
   await page.getByRole('radio').first().click();
   await page.getByRole('button', { name: '확정' }).click();
-  await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+  await expectRoute(page, /\/event\/result\?rev=\d+$/);
   await page.getByRole('button', { name: '다음' }).click();
 
   await advanceUntilOffers(page);
@@ -94,7 +95,7 @@ test('1.2/0.4 새 인생: 19세 도입과 첫 진로를 거쳐 첫 시즌 뒤 20
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expectRoute(page, /\/career\/.+\/season-result$/);
   await page.getByRole('link', { name: '대시보드' }).click();
   await expect(page.getByText(/^20세 ·/)).toBeVisible();
 });
@@ -144,10 +145,10 @@ test('1.2/0.4.1 지역 무대 배경: 새로고침 뒤에도 고유 도입과 �
   );
   await page.getByRole('button', { name: /이 선수로 시작/ }).click();
 
-  await expect(page).toHaveURL(/\/career\/.+\/path$/);
+  await expectRoute(page, /\/career\/.+\/path$/);
   await expect(page.getByText(/지역 경기 영상을 본 지도자/)).toBeVisible();
   await resolveCurrentEventScreen(page);
-  await expect(page).toHaveURL(/\/career\/.+\/event$/);
+  await expectRoute(page, /\/career\/.+\/event$/);
   await expect(
     page.getByText(/준비해 온 관찰전이 끝났다.*아직 계약이나 역할이 확정된 것은 아니다/),
   ).toBeVisible();

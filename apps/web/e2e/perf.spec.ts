@@ -8,6 +8,7 @@
 // 로컬 IndexedDB(엔진의 로컬 스토어)에만 쓴다 — 백그라운드 동기화가 실패해도(로컬 8787 미기동,
 // connection refused) UI를 막지 않는다(SyncBadge가 RETRYING/OFFLINE으로 표시할 뿐).
 import { expect, test } from '@playwright/test';
+import { expectRoute } from './helpers/route.js';
 
 const WITH_PREVIEW = process.env.E2E_PREVIEW === '1';
 
@@ -23,7 +24,7 @@ test.describe('허브 LCP·CLS(4G, vite preview 빌드)', () => {
       await page.goto('/onboarding');
       await page.getByLabel('이름').fill('김서준');
       await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-      await expect(page).toHaveURL(/\/career\/.+\/style$/);
+      await expectRoute(page, /\/career\/.+\/style$/);
     }
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 2, name: '김서준' })).toHaveCount(3);

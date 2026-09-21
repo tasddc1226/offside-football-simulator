@@ -4,12 +4,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import { fillPlayerInfo } from './helpers/player-creation.js';
 import { E2E_META, fulfillJson, triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
+import { expectRoute } from './helpers/route.js';
 
 async function startNewCareer(page: Page): Promise<void> {
   await page.goto('/onboarding');
   await fillPlayerInfo(page);
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-  await expect(page).toHaveURL(/\/style$/);
+  await expectRoute(page, /\/style$/);
 }
 
 test('(a) 커리어 생성 즉시 저장하고 배지가 "저장됨"으로 바뀐다', async ({ page }) => {
@@ -53,7 +54,7 @@ test('(b) "다른 기기 진행 가져오기": 로컬을 서버 상태로 덮고
 
   await expect(page.getByText('다른 기기의 진행을 가져왔습니다')).toBeVisible();
   // "다른 기기"는 CREATE_CAREER만 저장한 빈 draft라 screenForCareer가 SCR-002로 보낸다.
-  await expect(page).toHaveURL(new RegExp(`/career/${careerId}/create$`));
+  await expectRoute(page, new RegExp(`/career/${careerId}/create$`));
   await expect(page.getByText('저장됨')).toBeVisible();
 });
 
@@ -95,14 +96,14 @@ test('(c) "이 기기 진행 유지": 포크된 새 커리어가 생기고 baseR
       '이 기기의 진행을 새 커리어로 복사했습니다. 원래 커리어는 다른 기기의 진행을 따릅니다',
     ),
   ).toBeVisible();
-  await expect(page).not.toHaveURL(new RegExp(`/career/${careerId}/`));
+  await expectRoute(page, new RegExp(`/career/${careerId}/`), { negate: true });
 
   await page.goto('/');
   // 허브 기본 탭("최근 선수")은 가장 최근에 갱신된 커리어 하나만 "이어하기" 카드로 보여준다
   // (UX-006 개편) — 포크로 생긴 두 커리어(원본·새 커리어) 모두를 보려면 "선수단 관리"
   // 바로가기로 "다른 선수" 탭(?tab=squad)으로 가야 한다.
   await page.getByRole('link', { name: '선수단 관리' }).click();
-  await expect(page).toHaveURL(/\?tab=squad$/);
+  await expectRoute(page, /\?tab=squad$/);
   await expect(page.getByTestId('career-card')).toHaveCount(2);
 
   await expect.poll(() => putBodies.some((body) => body.baseRevision === 0)).toBe(true);
@@ -145,7 +146,7 @@ test('(d) 오프라인이면 배지가 오프라인으로, 온라인 복귀 뒤 
   await page.getByRole('button', { name: '다음' }).click();
   await page.getByRole('button', { name: '다음' }).click();
   await page.getByRole('button', { name: /이 선수로 시작/ }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/create$/);
+  await expectRoute(page, /\/career\/.+\/create$/);
 
   await expect(page.getByText('오프라인 · 이 기기에만 저장됨')).toBeVisible();
   expect(putCount).toBe(0);

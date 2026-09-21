@@ -5,6 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 import type { AnalyticsEventsBody, PutCareerBody, ServiceSeasonCurrent } from '@offside/contracts';
 import { E2E_META, fulfillJson } from './helpers/sync-conflict.js';
 import { completeOnboardingAndConfirm } from './helpers/player-creation.js';
+import { expectRoute } from './helpers/route.js';
 
 const WITH_API = process.env.E2E_WITH_API === '1';
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8787';
@@ -65,7 +66,7 @@ test('테스트 시즌이면 허브 배너·카드 배지가 뜨고 커리어 �
   await page.goto('/onboarding');
   await page.getByLabel('이름').fill('김서준');
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/style$/);
+  await expectRoute(page, /\/career\/.+\/style$/);
 
   await expect.poll(() => putBody?.createdServiceSeasonId).toBe(TEST_SEASON.id);
 
@@ -108,7 +109,7 @@ test('시즌이 LOCKED면 커리어 시작 버튼이 비활성화되고 안내 �
 
   await page.goto('/onboarding');
   await page.getByRole('link', { name: '선수 생성 닫기' }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expectRoute(page, /\/$/);
 
   await expect(page.getByRole('button', { name: '커리어 시작' })).toBeDisabled();
   await expect(
@@ -133,7 +134,7 @@ test('CONFIRM_PLAYER·선택지 확정이 분석 이벤트로 전송되고 본�
 
   await page.getByRole('radio').first().click();
   await page.getByRole('button', { name: '확정' }).click(); // choice_selected를 큐에 넣는다(RESOLVE_EVENT 제출 직전).
-  await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+  await expectRoute(page, /\/event\/result\?rev=\d+$/);
 
   await forceAnalyticsFlush(page);
 

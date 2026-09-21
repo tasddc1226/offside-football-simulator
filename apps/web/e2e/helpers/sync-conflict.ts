@@ -3,6 +3,7 @@
 // Node 쪽에서 만들어, `/v1/careers/{id}`를 page.route로 스텁한다.
 import type { CareerSnapshot } from '@offside/contracts';
 import { loadRuleset } from '@offside/content';
+import { currentRoute, waitForRoute } from './route.js';
 import {
   createEngineClient,
   inlineSimulator,
@@ -119,11 +120,11 @@ export async function triggerConflictAndOpenDialog(
   await startNewCareer(page);
   await fillPlayerInfo(page);
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-  await page.waitForURL(/\/career\/.+\/style$/);
+  await waitForRoute(page, /\/career\/.+\/style$/);
 
-  const match = page.url().match(/\/career\/([^/]+)\/style/);
+  const match = (await currentRoute(page)).match(/\/career\/([^/]+)\/style/);
   const careerId = match?.[1];
-  if (careerId === undefined) throw new Error('e2e: careerId를 URL에서 찾지 못했다');
+  if (careerId === undefined) throw new Error('e2e: careerId를 라우트에서 찾지 못했다');
 
   const serverSnapshot = await buildForeignDeviceSnapshot(careerId);
   await stubRevisionConflict(page, careerId, serverSnapshot);
