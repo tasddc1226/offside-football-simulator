@@ -1,6 +1,7 @@
 import {
+  CompetitionActionResponseSchema,
   CompetitionDailyResponseSchema,
-  CompetitionEntrySchema,
+  CompetitionHistoryResponseSchema,
   CompetitionWeeklyResponseSchema,
   ProfileSchema,
   successEnvelope,
@@ -8,244 +9,127 @@ import {
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
-import { competitionChallengeVersions, competitionEntries, sessions } from '../db/schema.js';
-import { moveCareersAndRebind } from '../profile/merge.js';
+import { competitionActions, competitionEntries, sessions } from '../db/schema.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
+import { moveCareersAndRebind } from '../profile/merge.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 
 const app = createApp();
 const KST_MIDDAY = '2026-09-21T03:00:00.000Z';
+const actions = ['PRESS_HIGH', 'SHARPEN', 'PLAY_THROUGH'] as const;
 let ctx: TestD1;
 
 async function account() {
   const response = await app.request('/v1/profile', {}, ctx.env);
-  return {
-    id: successEnvelope(ProfileSchema).parse(await response.json()).data.id,
-    cookie: response.headers.get('set-cookie')!.split(';')[0]!,
-  };
+  return { id: successEnvelope(ProfileSchema).parse(await response.json()).data.id, cookie: response.headers.get('set-cookie')!.split(';')[0]! };
 }
-function request(
-  cookie: string,
-  method: string,
-  path: string,
-  body?: unknown,
-  key = crypto.randomUUID(),
-) {
-  return app.request(
-    path,
-    {
-      method,
-      headers: {
-        Cookie: cookie,
-        Origin: 'http://localhost:5173',
-        'Content-Type': 'application/json',
-        'Idempotency-Key': key,
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    },
-    ctx.env,
-  );
+function request(cookie: string, method: string, path: string, body?: unknown, key = crypto.randomUUID()) {
+  return app.request(path, { method, headers: { Cookie: cookie, Origin: 'http://localhost:5173', 'Content-Type': 'application/json', 'Idempotency-Key': key }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }, ctx.env);
 }
-const actions = ['PRESS', 'FIRST_TOUCH', 'COMPACT'];
+async function submitAll(cookie: string, selected: readonly string[] = actions, startRevision = 0) {
+  let revision = startRevision;
+  let response: Response | undefined;
+  for (const [index, actionId] of selected.entries()) {
+    response = await request(cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId, expectedRevision: revision }, `action-${index}-${crypto.randomUUID()}`);
+    if (response.status >= 400) return response;
+    revision += 1;
+  }
+  return response!;
+}
 
 beforeEach(async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(KST_MIDDAY));
   ctx = await createTestD1();
 });
-afterEach(async () => {
-  vi.useRealTimers();
-  await ctx.dispose();
-});
+afterEach(async () => { vi.useRealTimers(); await ctx.dispose(); });
 
-describe('daily authored competition and weekly public projection', () => {
-  it('uses KST boundaries and pins immutable 3.3/.12 challenge proof', async () => {
+describe('daily match competition and weekly public projection', () => {
+  it('provisions each KST day atomically, rotates positions, and preserves old definitions', async () => {
     const a = await account();
-    const response = await request(a.cookie, 'GET', '/v1/competition/daily');
-    expect(response.status).toBe(200);
-    const daily = successEnvelope(CompetitionDailyResponseSchema).parse(await response.json()).data;
-    expect(daily.challenge.id).toBe('daily-2026-09-21');
-    expect(daily.challenge.rulesetVersion).toBe('3.3.0');
-    expect(daily.challenge.contentPackVersion).toBe('0.12.0');
-    expect(daily.entry).toBeNull();
-    const { kstDayKey } = await import('./competition.js');
-    expect(kstDayKey(new Date('2026-09-20T14:59:59.999Z'))).toBe('2026-09-20');
-    expect(kstDayKey(new Date('2026-09-20T15:00:00.000Z'))).toBe('2026-09-21');
+    const first = successEnvelope(CompetitionDailyResponseSchema).parse(await (await request(a.cookie, 'GET', '/v1/competition/daily')).json()).data;
+    expect(first.challenge.rulesetVersion).toBe('3.3.0');
+    expect(first.challenge.contentPackVersion).toBe('0.12.0');
+    expect(first.challenge.scenario.steps[0]!.choices[0]).not.toHaveProperty('points');
+    expect(first.challenge.scenario.steps[0]!.choices[0]).not.toHaveProperty('outcome');
+    expect((await request(a.cookie, 'GET', '/v1/competition/daily?dayKey=2026-09-22')).status).toBe(409);
+    vi.setSystemTime(new Date('2026-09-22T03:00:00.000Z'));
+    const second = successEnvelope(CompetitionDailyResponseSchema).parse(await (await request(a.cookie, 'GET', '/v1/competition/daily')).json()).data;
+    expect(second.challenge.dayKey).toBe('2026-09-22');
+    expect(second.challenge.scenario.position).not.toBe(first.challenge.scenario.position);
+    const { kstWeekKey } = await import('./competition.js');
+    expect(kstWeekKey('2026-09-21')).toBe('2026-09-21');
+    expect(kstWeekKey('2026-09-22')).toBe('2026-09-21');
+    expect((await request(a.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: actions[0], expectedRevision: 0 }, 'stale-day-action')).status).toBe(409);
+    vi.setSystemTime(new Date('2026-09-23T03:00:00.000Z'));
+    const past = successEnvelope(CompetitionDailyResponseSchema).parse(await (await request(a.cookie, 'GET', '/v1/competition/daily?dayKey=2026-09-21')).json()).data;
+    expect(past.challenge.id).toBe(first.challenge.id);
   });
 
-  it('replays allowed actions on the server, rejects forged score and enforces one entry atomically', async () => {
+  it('accepts only actionId plus expectedRevision and derives final evidence from actual match', async () => {
     const a = await account();
-    const key = 'daily-entry-key';
-    const forged = await request(
-      a.cookie,
-      'POST',
-      '/v1/competition/challenges/daily-2026-09-21/entries',
-      { actionIds: actions, publicOptIn: false, score: 999 },
-      key,
-    );
+    const forged = await request(a.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: actions[0], expectedRevision: 0, score: 999 }, 'forged-action');
     expect(forged.status).toBe(400);
+    const first = await request(a.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: actions[0], expectedRevision: 0 }, 'first-action');
+    expect(first.status).toBe(200);
+    const firstBody = (await first.json()) as { data: unknown };
+    expect(CompetitionActionResponseSchema.parse(firstBody.data).entry.revision).toBe(1);
+    const stale = await request(a.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: actions[1], expectedRevision: 0 }, 'stale-action');
+    expect(stale.status).toBe(409);
+    const final = await submitAll(a.cookie, [actions[1], actions[2]], 1);
+    const finalBody = (await final.json()) as { data: unknown };
+    const result = CompetitionActionResponseSchema.parse(finalBody.data);
+    expect(final.status).toBe(201);
+    expect(result.entry.verificationStatus).toBe('VERIFIED');
+    expect(result.entry.proof.method).toBe('SERVER_MATCH');
+    expect(result.entry.resultHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(await ctx.db.select().from(competitionActions)).toHaveLength(3);
+  });
+
+  it('allows one body-bound action replay but only one concurrent revision advances', async () => {
+    const a = await account();
     const responses = await Promise.all([
-      request(
-        a.cookie,
-        'POST',
-        '/v1/competition/challenges/daily-2026-09-21/entries',
-        { actionIds: actions, publicOptIn: false },
-        key,
-      ),
-      request(
-        a.cookie,
-        'POST',
-        '/v1/competition/challenges/daily-2026-09-21/entries',
-        { actionIds: actions, publicOptIn: false },
-        key,
-      ),
+      request(a.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: actions[0], expectedRevision: 0 }, 'same-action-key'),
+      request(a.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/actions', { actionId: actions[0], expectedRevision: 0 }, 'same-action-key'),
     ]);
-    expect(responses.map((response) => response.status)).toEqual([201, 201]);
-    const entries = await Promise.all(
-      responses.map(async (response) => (await response.json()) as { data: unknown }),
-    );
-    expect(entries[0]!.data).toEqual(entries[1]!.data);
-    expect(CompetitionEntrySchema.parse(entries[0]!.data).verificationStatus).toBe('VERIFIED');
-    expect(await ctx.db.select().from(competitionEntries)).toHaveLength(1);
-    expect(
-      (
-        await request(
-          a.cookie,
-          'POST',
-          '/v1/competition/challenges/daily-2026-09-21/entries',
-          { actionIds: actions, publicOptIn: false },
-          'different-key',
-        )
-      ).status,
-    ).toBe(409);
-    const daily = successEnvelope(CompetitionDailyResponseSchema).parse(
-      await (await request(a.cookie, 'GET', '/v1/competition/daily')).json(),
-    ).data;
-    expect(daily.entry?.verificationStatus).toBe('VERIFIED');
-    expect(daily.entry?.proof.method).toBe('SERVER_REPLAY');
-    expect(daily.entry?.score).toBe(110);
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 200]);
+    expect(await ctx.db.select().from(competitionActions)).toHaveLength(1);
+    const daily = successEnvelope(CompetitionDailyResponseSchema).parse(await (await request(a.cookie, 'GET', '/v1/competition/daily')).json()).data;
+    expect(daily.entry?.revision).toBe(1);
   });
 
-  it('keeps entries private by default, supports opt-in withdrawal, and exposes only safe proof rows', async () => {
-    const a = await account();
-    const b = await account();
-    const submit = await request(
-      a.cookie,
-      'POST',
-      '/v1/competition/challenges/daily-2026-09-21/entries',
-      { actionIds: actions, publicOptIn: false },
-    );
-    expect(submit.status).toBe(201);
-    const foreignDaily = successEnvelope(CompetitionDailyResponseSchema).parse(
-      await (await request(b.cookie, 'GET', '/v1/competition/daily')).json(),
-    ).data;
-    expect(foreignDaily.entry).toBeNull();
-    expect(
-      successEnvelope(CompetitionWeeklyResponseSchema).parse(
-        await (await app.request('/v1/competition/weekly', {}, ctx.env)).json(),
-      ).data.rows,
-    ).toHaveLength(0);
-    expect(
-      (
-        await request(a.cookie, 'PUT', '/v1/competition/leaderboard/visibility', {
-          publicOptIn: true,
-        })
-      ).status,
-    ).toBe(200);
-    const weekly = successEnvelope(CompetitionWeeklyResponseSchema).parse(
-      await (await app.request('/v1/competition/weekly', {}, ctx.env)).json(),
-    ).data;
-    expect(weekly.rows).toHaveLength(1);
-    expect(weekly.rows[0]).toMatchObject({
-      score: 110,
-      challengeDays: 1,
-      proof: { method: 'SERVER_REPLAY', rulesetVersion: '3.3.0', contentPackVersion: '0.12.0' },
-    });
-    expect(JSON.stringify(weekly)).not.toContain(a.id);
-    expect(JSON.stringify(weekly)).not.toContain('PRESS');
-    expect(
-      (
-        await request(a.cookie, 'PUT', '/v1/competition/leaderboard/visibility', {
-          publicOptIn: false,
-        })
-      ).status,
-    ).toBe(200);
-    expect(
-      successEnvelope(CompetitionWeeklyResponseSchema).parse(
-        await (await app.request('/v1/competition/weekly', {}, ctx.env)).json(),
-      ).data.rows,
-    ).toHaveLength(0);
-  });
-
-  it('rejects stale challenge versions after the KST day changes', async () => {
-    const [today] = await ctx.db
-      .select()
-      .from(competitionChallengeVersions)
-      .where(eq(competitionChallengeVersions.id, 'daily-2026-09-21'));
-    await ctx.db.insert(competitionChallengeVersions).values({
-      ...today!,
-      id: 'daily-2026-09-20',
-      dayKey: '2026-09-20',
-      weekKey: '2026-09-14',
-      startsAt: '2026-09-19T15:00:00.000Z',
-      endsAt: '2026-09-20T15:00:00.000Z',
-    });
-    const a = await account();
-    expect(
-      (
-        await request(a.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-20/entries', {
-          actionIds: actions,
-          publicOptIn: false,
-        })
-      ).status,
-    ).toBe(409);
-  });
-
-  it('moves entries safely on merge and removes them on profile deletion', async () => {
+  it('keeps private history isolated, supports safe alias opt-in/withdrawal, and merge/delete', async () => {
     const from = await account();
     const to = await account();
-    expect(
-      (
-        await request(from.cookie, 'POST', '/v1/competition/challenges/daily-2026-09-21/entries', {
-          actionIds: actions,
-          publicOptIn: true,
-        })
-      ).status,
-    ).toBe(201);
-    const [session] = await ctx.db.select().from(sessions).where(eq(sessions.profileId, from.id));
-    await moveCareersAndRebind(ctx.db, {
-      fromProfileId: from.id,
-      toProfileId: to.id,
-      sessionId: session!.id,
-      now: KST_MIDDAY,
-    });
-    expect(
-      await ctx.db
-        .select()
-        .from(competitionEntries)
-        .where(eq(competitionEntries.ownerProfileId, to.id)),
-    ).toHaveLength(1);
-    const [targetSession] = await ctx.db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.profileId, to.id));
-    const confirm = await issueDeleteConfirmToken({
-      sessionId: targetSession!.id,
-      sessionTokenHash: targetSession!.tokenHash,
-      now: KST_MIDDAY,
-    });
-    await executeProfileDeletion(ctx.db, {
-      profileId: to.id,
-      sessionId: targetSession!.id,
-      sessionTokenHash: targetSession!.tokenHash,
-      confirmToken: confirm.confirmToken,
-      now: KST_MIDDAY,
-    });
-    expect(
-      await ctx.db
-        .select()
-        .from(competitionEntries)
-        .where(eq(competitionEntries.ownerProfileId, to.id)),
-    ).toHaveLength(0);
+    await submitAll(from.cookie);
+    const foreign = successEnvelope(CompetitionDailyResponseSchema).parse(await (await request(to.cookie, 'GET', '/v1/competition/daily')).json()).data;
+    expect(foreign.entry).toBeNull();
+    expect(successEnvelope(CompetitionWeeklyResponseSchema).parse(await (await app.request('/v1/competition/weekly', {}, ctx.env)).json()).data.rows).toHaveLength(0);
+    await request(from.cookie, 'PUT', '/v1/competition/leaderboard/visibility', { publicOptIn: true }, 'visibility-on');
+    const weekly = successEnvelope(CompetitionWeeklyResponseSchema).parse(await (await app.request('/v1/competition/weekly', {}, ctx.env)).json()).data;
+    expect(weekly.rows).toHaveLength(1);
+    expect(JSON.stringify(weekly)).not.toContain(from.id);
+    expect(weekly.rows[0]!.proof.method).toBe('SERVER_MATCH');
+    const history = successEnvelope(CompetitionHistoryResponseSchema).parse(await (await request(from.cookie, 'GET', '/v1/competition/history')).json()).data;
+    expect(history.entries).toHaveLength(1);
+    const [fromSession] = await ctx.db.select().from(sessions).where(eq(sessions.profileId, from.id));
+    await moveCareersAndRebind(ctx.db, { fromProfileId: from.id, toProfileId: to.id, sessionId: fromSession!.id, now: KST_MIDDAY });
+    expect(await ctx.db.select().from(competitionEntries).where(eq(competitionEntries.ownerProfileId, to.id))).toHaveLength(1);
+    const [toSession] = await ctx.db.select().from(sessions).where(eq(sessions.profileId, to.id));
+    const confirm = await issueDeleteConfirmToken({ sessionId: toSession!.id, sessionTokenHash: toSession!.tokenHash, now: KST_MIDDAY });
+    await executeProfileDeletion(ctx.db, { profileId: to.id, sessionId: toSession!.id, sessionTokenHash: toSession!.tokenHash, confirmToken: confirm.confirmToken, now: KST_MIDDAY });
+    expect(await ctx.db.select().from(competitionEntries).where(eq(competitionEntries.ownerProfileId, to.id))).toHaveLength(0);
+    expect(await ctx.db.select().from(competitionActions)).toHaveLength(0);
+  });
+
+  it('keeps a shared rank for three equal verified scores', async () => {
+    const accounts = await Promise.all([account(), account(), account()]);
+    for (const [index, user] of accounts.entries()) {
+      await submitAll(user.cookie);
+      await request(user.cookie, 'PUT', '/v1/competition/leaderboard/visibility', { publicOptIn: true }, `tie-visibility-${index}`);
+    }
+    const weekly = successEnvelope(CompetitionWeeklyResponseSchema).parse(await (await app.request('/v1/competition/weekly', {}, ctx.env)).json()).data;
+    expect(weekly.rows).toHaveLength(3);
+    expect(weekly.rows.map((row) => row.rank)).toEqual([1, 1, 1]);
   });
 });

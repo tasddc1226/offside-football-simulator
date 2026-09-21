@@ -1,5 +1,19 @@
 export const DOMAIN_VERSION = '0.1.0';
 export * from './friendly-match.js';
+export {
+  COMPETITION_CHOICE_CATALOG,
+  COMPETITION_CHOICE_STEPS,
+  COMPETITION_MATCH_VERSION,
+  COMPETITION_MAX_SCORE,
+  applyCompetitionAction,
+  buildCompetitionMatchDefinition,
+  initialCompetitionActionState,
+  playCompetitionMatch,
+  scoreCompetitionMatch,
+  type CompetitionActionState,
+  type CompetitionMatchDefinition,
+  type CompetitionMatchResult,
+} from './competition-match.js';
 
 export {
   ArchiveError,

@@ -337,7 +337,7 @@ export const friendlyMatches = sqliteTable(
   (table) => [index('friendly_matches_owner_idx').on(table.ownerProfileId, table.createdAt)],
 );
 
-/** Immutable authored daily scenarios. The pinned rules/content versions are part of the public proof. */
+/** Immutable daily definitions. `scenario_json` includes the private match inputs; routes project it safely. */
 export const competitionChallengeVersions = sqliteTable(
   'competition_challenge_versions',
   {
@@ -355,7 +355,7 @@ export const competitionChallengeVersions = sqliteTable(
   (table) => [uniqueIndex('competition_challenge_versions_day_unique').on(table.dayKey)],
 );
 
-/** One immutable, server-replayed entry per profile and challenge version. */
+/** One server-owned, revisioned entry per profile and challenge version. */
 export const competitionEntries = sqliteTable(
   'competition_entries',
   {
@@ -366,17 +366,17 @@ export const competitionEntries = sqliteTable(
     ownerProfileId: text('owner_profile_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    requestKeyHash: text('request_key_hash').notNull().unique(),
-    requestHash: text('request_hash').notNull(),
     actionIdsJson: text('action_ids_json').notNull(),
-    resultJson: text('result_json').notNull(),
-    resultHash: text('result_hash').notNull(),
-    score: integer('score').notNull(),
-    maxScore: integer('max_score').notNull(),
-    verificationStatus: text('verification_status', { enum: ['VERIFIED', 'REJECTED'] }).notNull(),
+    revision: integer('revision').notNull().default(0),
+    stateJson: text('state_json').notNull(),
+    resultJson: text('result_json'),
+    resultHash: text('result_hash'),
+    score: integer('score'),
+    maxScore: integer('max_score'),
+    verificationStatus: text('verification_status', { enum: ['IN_PROGRESS', 'VERIFIED'] }).notNull(),
     publicOptIn: integer('public_opt_in').notNull().default(0),
     publicAlias: text('public_alias').notNull(),
-    submittedAt: text('submitted_at').notNull(),
+    submittedAt: text('submitted_at'),
   },
   (table) => [
     uniqueIndex('competition_entries_profile_challenge_unique').on(
@@ -389,5 +389,27 @@ export const competitionEntries = sqliteTable(
       table.publicOptIn,
       table.score,
     ),
+  ],
+);
+
+/** Body-bound action idempotency and immutable per-revision audit trail. */
+export const competitionActions = sqliteTable(
+  'competition_actions',
+  {
+    id: text('id').primaryKey(),
+    entryId: text('entry_id')
+      .notNull()
+      .references(() => competitionEntries.id, { onDelete: 'cascade' }),
+    revision: integer('revision').notNull(),
+    actionId: text('action_id').notNull(),
+    expectedRevision: integer('expected_revision').notNull(),
+    requestKeyHash: text('request_key_hash').notNull().unique(),
+    requestHash: text('request_hash').notNull(),
+    responseJson: text('response_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('competition_actions_entry_revision_unique').on(table.entryId, table.revision),
+    index('competition_actions_entry_idx').on(table.entryId, table.revision),
   ],
 );

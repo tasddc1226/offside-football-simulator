@@ -37,7 +37,7 @@ const TEAM_NAME_MAX_LENGTH = 16;
 
 type TeamToast = { variant: 'success' | 'error'; message: string };
 
-function groupTeamsByLeague(
+export function groupTeamsByLeague(
   teams: readonly Team[],
   search: string,
   overrides: Record<string, string>,
@@ -54,7 +54,10 @@ function groupTeamsByLeague(
         if (normalized.length === 0) return true;
         const displayName = overrides[team.id] ?? team.name;
         const flavor = TEAM_FLAVOR_TEXT[team.id] ?? '';
-        return `${team.name} ${displayName} ${flavor}`.toLocaleLowerCase().includes(normalized);
+        const leagueText = `${league.name} ${league.id}`;
+        return `${team.name} ${displayName} ${flavor} ${leagueText}`
+          .toLocaleLowerCase()
+          .includes(normalized);
       }),
     }))
     .filter((group) => group.teams.length > 0);

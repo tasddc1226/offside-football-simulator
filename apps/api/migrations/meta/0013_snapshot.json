@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1b4455f7-e79f-4526-8529-7f295a568567",
+  "id": "484bc708-0b1a-4751-864c-66f6242e47a8",
   "prevId": "ca79cb97-c5bc-4424-bd3b-6753c8cdd9a1",
   "tables": {
     "analytics_events": {
@@ -592,6 +592,117 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "competition_actions": {
+      "name": "competition_actions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entry_id": {
+          "name": "entry_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "action_id": {
+          "name": "action_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expected_revision": {
+          "name": "expected_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_key_hash": {
+          "name": "request_key_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_hash": {
+          "name": "request_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "response_json": {
+          "name": "response_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "competition_actions_request_key_hash_unique": {
+          "name": "competition_actions_request_key_hash_unique",
+          "columns": [
+            "request_key_hash"
+          ],
+          "isUnique": true
+        },
+        "competition_actions_entry_revision_unique": {
+          "name": "competition_actions_entry_revision_unique",
+          "columns": [
+            "entry_id",
+            "revision"
+          ],
+          "isUnique": true
+        },
+        "competition_actions_entry_idx": {
+          "name": "competition_actions_entry_idx",
+          "columns": [
+            "entry_id",
+            "revision"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "competition_actions_entry_id_competition_entries_id_fk": {
+          "name": "competition_actions_entry_id_competition_entries_id_fk",
+          "tableFrom": "competition_actions",
+          "tableTo": "competition_entries",
+          "columnsFrom": [
+            "entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "competition_challenge_versions": {
       "name": "competition_challenge_versions",
       "columns": {
@@ -704,22 +815,23 @@
           "notNull": true,
           "autoincrement": false
         },
-        "request_key_hash": {
-          "name": "request_key_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "request_hash": {
-          "name": "request_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "action_ids_json": {
           "name": "action_ids_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "state_json": {
+          "name": "state_json",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -729,28 +841,28 @@
           "name": "result_json",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "result_hash": {
           "name": "result_hash",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "score": {
           "name": "score",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "max_score": {
           "name": "max_score",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "verification_status": {
@@ -779,18 +891,11 @@
           "name": "submitted_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         }
       },
       "indexes": {
-        "competition_entries_request_key_hash_unique": {
-          "name": "competition_entries_request_key_hash_unique",
-          "columns": [
-            "request_key_hash"
-          ],
-          "isUnique": true
-        },
         "competition_entries_profile_challenge_unique": {
           "name": "competition_entries_profile_challenge_unique",
           "columns": [

@@ -6,137 +6,23 @@ import { CompetitionScreen } from './competition.js';
 import { apiFetch } from '../api/client.js';
 
 vi.mock('@tanstack/react-router', async () => {
-  const actual =
-    await vi.importActual<typeof import('@tanstack/react-router')>('@tanstack/react-router');
-  return {
-    ...actual,
-    Link: ({ children }: { children?: ReactNode; [key: string]: unknown }) => (
-      <a href="#">{children}</a>
-    ),
-  };
+  const actual = await vi.importActual<typeof import('@tanstack/react-router')>('@tanstack/react-router');
+  return { ...actual, Link: ({ children }: { children?: ReactNode; [key: string]: unknown }) => <a href="#">{children}</a> };
 });
 vi.mock('../api/client.js', () => ({ apiFetch: vi.fn() }));
 
 const challenge = {
-  id: 'daily-2026-09-21',
-  dayKey: '2026-09-21',
-  weekKey: '2026-09-21',
-  startsAt: '2026-09-20T15:00:00.000Z',
-  endsAt: '2026-09-21T15:00:00.000Z',
-  rulesetVersion: '3.3.0',
-  contentPackVersion: '0.12.0',
-  scoringPolicyVersion: 'SUM_ACTION_POINTS_V1',
+  id: 'daily-2026-09-21', dayKey: '2026-09-21', weekKey: '2026-09-21',
+  startsAt: '2026-09-20T15:00:00.000Z', endsAt: '2026-09-21T15:00:00.000Z',
+  rulesetVersion: '3.3.0', contentPackVersion: '0.12.0', scoringPolicyVersion: 'MATCH_EVIDENCE_V1',
   scenario: {
-    title: '오늘의 경기 운영',
-    intro: '세 번의 판단으로 흐름을 바꿔 보세요.',
+    title: '오늘의 경기 운영', intro: '세 번의 판단으로 실제 경기를 치릅니다.', position: 'CM', opponentName: '상대팀',
     steps: [
-      {
-        id: 'opening',
-        title: '첫 압박',
-        prompt: '첫 대응은?',
-        choices: [
-          {
-            id: 'PRESS',
-            label: '전방 압박',
-            description: '선택지를 줄입니다.',
-            points: 35,
-            outcome: '늦췄습니다.',
-          },
-          {
-            id: 'HOLD',
-            label: '대형 유지',
-            description: '간격을 지킵니다.',
-            points: 25,
-            outcome: '안정됐습니다.',
-          },
-          {
-            id: 'COUNTER',
-            label: '역습 대기',
-            description: '전환을 노립니다.',
-            points: 30,
-            outcome: '준비했습니다.',
-          },
-        ],
-      },
-      {
-        id: 'chance',
-        title: '결정적 기회',
-        prompt: '마무리는?',
-        choices: [
-          {
-            id: 'FIRST_TOUCH',
-            label: '첫 터치 슈팅',
-            description: '바로 마무리합니다.',
-            points: 40,
-            outcome: '슈팅했습니다.',
-          },
-          {
-            id: 'CUTBACK',
-            label: '뒤로 내주기',
-            description: '동료를 찾습니다.',
-            points: 30,
-            outcome: '찾았습니다.',
-          },
-          {
-            id: 'RECYCLE',
-            label: '공 소유 유지',
-            description: '공격을 다시 만듭니다.',
-            points: 20,
-            outcome: '설계했습니다.',
-          },
-        ],
-      },
-      {
-        id: 'closing',
-        title: '마지막 수비',
-        prompt: '마지막 지시는?',
-        choices: [
-          {
-            id: 'COMPACT',
-            label: '중앙 봉쇄',
-            description: '위험 지역을 닫습니다.',
-            points: 35,
-            outcome: '차단했습니다.',
-          },
-          {
-            id: 'STEP',
-            label: '한 발 전진',
-            description: '라인을 올립니다.',
-            points: 30,
-            outcome: '줄였습니다.',
-          },
-          {
-            id: 'WIDE',
-            label: '측면 유도',
-            description: '바깥으로 몰아냅니다.',
-            points: 25,
-            outcome: '돌렸습니다.',
-          },
-        ],
-      },
+      { id: 'approach', title: '경기 접근', prompt: '첫 대응은?', choices: [{ id: 'PRESS_HIGH', label: '전방 압박', description: '체력을 더 씁니다.' }, { id: 'HOLD_SHAPE', label: '간격 유지', description: '안정적으로 지킵니다.' }, { id: 'COUNTER_SPACE', label: '역습 공간', description: '전환을 노립니다.' }] },
+      { id: 'training', title: '짧은 훈련', prompt: '어디에 쓸까요?', choices: [{ id: 'RECOVER', label: '회복 우선', description: '체력을 보존합니다.' }, { id: 'SHARPEN', label: '마무리 훈련', description: '숙련을 높입니다.' }, { id: 'STUDY', label: '상대 분석', description: '전술을 읽습니다.' }] },
+      { id: 'final-plan', title: '마지막 계획', prompt: '실행 계획은?', choices: [{ id: 'ATTACK_WIDE', label: '측면 전개', description: '전환을 늘립니다.' }, { id: 'PLAY_THROUGH', label: '중앙 연계', description: '연계를 택합니다.' }, { id: 'SET_PIECES', label: '세트피스', description: '역할을 다듬습니다.' }] },
     ],
-    scorePolicy: {
-      version: 'SUM_ACTION_POINTS_V1',
-      description: '선택 점수 합산',
-    },
-  },
-};
-const entry = {
-  challengeId: challenge.id,
-  dayKey: challenge.dayKey,
-  weekKey: challenge.weekKey,
-  actionIds: ['PRESS', 'FIRST_TOUCH', 'COMPACT'],
-  score: 110,
-  maxScore: 110,
-  verificationStatus: 'VERIFIED' as const,
-  resultHash: 'a'.repeat(64),
-  publicOptIn: false,
-  submittedAt: '2026-09-21T03:00:00.000Z',
-  proof: {
-    method: 'SERVER_REPLAY' as const,
-    rulesetVersion: '3.3.0',
-    contentPackVersion: '0.12.0',
-    scoringPolicyVersion: 'SUM_ACTION_POINTS_V1',
+    scorePolicy: { version: 'MATCH_EVIDENCE_V1', description: '실제 출전 시간·평점·포지션 기록으로 계산합니다.' },
   },
 };
 
@@ -144,36 +30,20 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(apiFetch).mockImplementation(async (path, init) => {
     if (path === '/v1/competition/daily') return { ok: true, data: { challenge, entry: null } };
-    if (path === '/v1/competition/weekly')
-      return { ok: true, data: { weekKey: challenge.weekKey, rows: [] } };
-    if (init?.method === 'POST') return { ok: true, data: entry };
+    if (path === '/v1/competition/weekly') return { ok: true, data: { weekKey: challenge.weekKey, rows: [] } };
+    if (path === '/v1/competition/history') return { ok: true, data: { entries: [] } };
+    if (init?.method === 'POST') return { ok: true, data: { entry: { challengeId: challenge.id, dayKey: challenge.dayKey, weekKey: challenge.weekKey, actionIds: ['PRESS_HIGH'], revision: 1, completed: false, score: null, maxScore: null, verificationStatus: 'IN_PROGRESS', resultHash: null, publicOptIn: false, submittedAt: null, evidence: null, proof: { method: 'SERVER_MATCH', rulesetVersion: '3.3.0', contentPackVersion: '0.12.0', scoringPolicyVersion: 'MATCH_EVIDENCE_V1' } }, nextStepIndex: 1 } };
     return { ok: true, data: { publicOptIn: false } };
   });
 });
 
 describe('daily competition screen', () => {
-  it('submits the selected equal-condition actions and explains server proof', async () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <CompetitionScreen />
-      </QueryClientProvider>,
-    );
+  it('submits one action with a revision and does not expose answer points', async () => {
+    render(<QueryClientProvider client={new QueryClient()}><CompetitionScreen /></QueryClientProvider>);
     expect(await screen.findByRole('heading', { name: '오늘의 경기 운영' })).toBeInTheDocument();
-    expect(screen.getByText(/서버가 선택과 점수를 다시 계산합니다/)).toBeInTheDocument();
+    expect(screen.getByText(/실제 출전 시간/)).toBeInTheDocument();
+    expect(screen.queryByText(/점$/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('전방 압박'));
-    fireEvent.click(screen.getByText('첫 터치 슈팅'));
-    fireEvent.click(screen.getByText('중앙 봉쇄'));
-    fireEvent.click(screen.getByRole('button', { name: '기록 제출' }));
-    await waitFor(() =>
-      expect(apiFetch).toHaveBeenCalledWith(
-        `/v1/competition/challenges/${challenge.id}/entries`,
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ actionIds: entry.actionIds, publicOptIn: false }),
-        }),
-        expect.anything(),
-      ),
-    );
-    expect(await screen.findByText(/서버 재경기 검증 완료/)).toBeInTheDocument();
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith(`/v1/competition/challenges/${challenge.id}/actions`, expect.objectContaining({ method: 'POST', body: JSON.stringify({ actionId: 'PRESS_HIGH', expectedRevision: 0 }) }), expect.anything()));
   });
 });
