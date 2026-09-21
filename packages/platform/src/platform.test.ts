@@ -1,6 +1,35 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createWebPlatform } from './web/index.js';
+import {
+  armBackGuard,
+  createWebPlatform,
+  handleBackGuardPopState,
+  isBackGuardState,
+  type BackGuardHost,
+} from './web/index.js';
 import { tossPlatform } from './toss/index.js';
+
+/**
+ * 실제 window 없이(이 패키지 vitest 환경은 'node') 뒤로가기 가드를 검증하기 위한 가짜 host.
+ * `simulateBrowserBack`은 실제 브라우저가 물리 뒤로가기에서 popstate를 쏘기 전에 이미 이전
+ * 엔트리로 옮겨 가 있는 상태(=가드 엔트리 소비)를 흉내 낸다.
+ */
+function createFakeBackGuardHost(initialHref: string) {
+  const state = { entries: [null] as unknown[], backCalls: 0 };
+  const host: BackGuardHost = {
+    getState: () => state.entries[state.entries.length - 1],
+    getHref: () => initialHref,
+    pushState: (nextState) => {
+      state.entries.push(nextState);
+    },
+    back: () => {
+      state.backCalls += 1;
+    },
+  };
+  const simulateBrowserBack = () => {
+    if (state.entries.length > 1) state.entries.pop();
+  };
+  return { host, state, simulateBrowserBack };
+}
 
 const webPlatform = createWebPlatform({ analyticsEndpoint: 'https://example.com/v1/analytics/events' });
 
@@ -83,5 +112,64 @@ describe('platform adapters', () => {
     const value = await fresh.transaction('readonly', (tx) => tx.kv.get<string>('profile:id'));
     expect(value).toBeUndefined();
     await fresh.close();
+  });
+
+  describe('T-7-039 web 뒤로가기 가드', () => {
+    it('isBackGuardState: 가드 엔트리만 true다', () => {
+      expect(isBackGuardState({ offsideBackGuard: true })).toBe(true);
+      expect(isBackGuardState({ offsideBackGuard: false })).toBe(false);
+      expect(isBackGuardState(null)).toBe(false);
+      expect(isBackGuardState(undefined)).toBe(false);
+    });
+
+    it('armBackGuard: 아직 가드 위가 아니면 엔트리를 하나 쌓는다', () => {
+      const { host, state } = createFakeBackGuardHost('/');
+      armBackGuard(host);
+      expect(state.entries).toHaveLength(2);
+      expect(isBackGuardState(host.getState())).toBe(true);
+    });
+
+    it('armBackGuard: 이미 가드 위면(StrictMode·HMR 재실행) 다시 쌓지 않는다', () => {
+      const { host, state } = createFakeBackGuardHost('/');
+      armBackGuard(host);
+      armBackGuard(host);
+      expect(state.entries).toHaveLength(2);
+    });
+
+    it('popstate: 핸들러가 처리했다고(true) 하면 가드를 재적재하고 실제로는 물러나지 않는다', () => {
+      const { host, state, simulateBrowserBack } = createFakeBackGuardHost('/');
+      armBackGuard(host);
+      simulateBrowserBack(); // 물리 뒤로가기가 가드 엔트리를 이미 소비한 상태
+      const handled = vi.fn(() => true);
+      handleBackGuardPopState(host, [handled]);
+      expect(handled).toHaveBeenCalledOnce();
+      expect(state.backCalls).toBe(0);
+      expect(state.entries).toHaveLength(2); // 소비된 엔트리 자리에 새 가드를 다시 쌓았다
+      expect(isBackGuardState(host.getState())).toBe(true);
+    });
+
+    it('popstate: 등록된 핸들러가 전부 false면(이미 첫 화면) 가드를 다시 쌓지 않고 한 번 더 물러난다', () => {
+      const { host, state, simulateBrowserBack } = createFakeBackGuardHost('/');
+      armBackGuard(host);
+      simulateBrowserBack();
+      handleBackGuardPopState(host, [() => false, () => false]);
+      expect(state.backCalls).toBe(1);
+      expect(state.entries).toHaveLength(1); // 재적재하지 않음
+    });
+
+    it('popstate: 핸들러가 하나도 없어도 전부 false와 같이 처리해 물러난다', () => {
+      const { host, state, simulateBrowserBack } = createFakeBackGuardHost('/');
+      armBackGuard(host);
+      simulateBrowserBack();
+      handleBackGuardPopState(host, []);
+      expect(state.backCalls).toBe(1);
+    });
+
+    it('web 채널 lifecycle.onBackPressed: 등록·해제가 가능하다(실제 popstate 연결은 web/index.ts 모듈 로드가 맡는다)', () => {
+      const handler = () => true;
+      const unsubscribe = webPlatform.lifecycle.onBackPressed(handler);
+      expect(typeof unsubscribe).toBe('function');
+      unsubscribe();
+    });
   });
 });

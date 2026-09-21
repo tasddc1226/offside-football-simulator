@@ -25,7 +25,7 @@ import {
   type MergeChoice,
   type Profile,
 } from '@offside/contracts';
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate, useRouter, useRouterState } from '@tanstack/react-router';
 import {
   API_BASE_URL,
   confirmProfileDeletion,
@@ -1540,16 +1540,17 @@ function PersonalizationSection() {
  * 서비스 정책 시트의 열림 상태는 `/settings` 검색 파라미터 `legal`로 표현한다. 여는 동작은 새
  * history 엔트리를 쌓는다(`push`, replace 아님) — 그래야 모바일 뒤로가기 제스처가 그대로 시트를
  * 닫는다. 반대로 X·ESC·배경 클릭으로 닫을 때는 "이 세션에서 직접 열어 그 엔트리를 쌓았는지"를
- * openedByPushRef로 기억해 뒀다가, 그 경우에만 같은 엔트리를 되감는다(`window.history.back()`) —
+ * openedByPushRef로 기억해 뒀다가, 그 경우에만 같은 엔트리를 되감는다(`router.history.back()`) —
  * 그래야 시트를 닫은 뒤 다시 뒤로가기를 누르면 설정 진입 전 페이지로 곧장 돌아간다(엔트리가 남지
  * 않는다). 반면 `?legal=`로 바로 들어온 딥링크처럼 이 세션이 쌓은 엔트리가 없을 때 back()을 쓰면
  * 앱 밖으로 나가거나 원치 않는 화면을 되살릴 수 있어(career.$careerId.attributes.tsx의 handleBack과
- * 같은 이유 — window.history.length로 안전을 한 번 더 확인한다) 대신 파라미터만 지우는 replace로
- * 닫는다.
+ * 같은 이유 — router.history.canGoBack()으로 안전을 한 번 더 확인한다) 대신 파라미터만 지우는
+ * replace로 닫는다. T-7-039: 브라우저 히스토리가 아니라 라우터(메모리) 히스토리를 본다.
  */
 function useLegalSheet(kind: LegalDocumentKind) {
   const search = Route.useSearch();
   const navigate = useNavigate();
+  const router = useRouter();
   const isOpen = search.legal === kind;
   const openedByPushRef = useRef(false);
 
@@ -1563,11 +1564,10 @@ function useLegalSheet(kind: LegalDocumentKind) {
   }
 
   function closeSheet() {
-    const canStepBack =
-      openedByPushRef.current && typeof window !== 'undefined' && window.history.length > 1;
+    const canStepBack = openedByPushRef.current && router.history.canGoBack();
     openedByPushRef.current = false;
     if (canStepBack) {
-      window.history.back();
+      router.history.back();
       return;
     }
     void navigate({ to: '/settings', search: withoutLegal, replace: true });
@@ -1643,7 +1643,10 @@ function SettingsScreen() {
     platform.analytics.track('screen_viewed', { screenId: 'SCR-030', careerPhase: 'NONE' });
   }, []);
   // 딥링크(`#settings-account` 등)로 들어오면 그 섹션 안의 접힌 Disclosure를 자동으로 펼친다.
-  useExpandDisclosuresOnHash();
+  // T-7-039: 실제 주소창의 hash가 아니라 라우터 위치의 hash를 본다(메모리 히스토리라 실제 주소창은
+  // 대부분 `/`로 고정돼 있다).
+  const hash = useRouterState({ select: (state) => state.location.hash });
+  useExpandDisclosuresOnHash(hash);
 
   return (
     <div className="os-screen os-settings">

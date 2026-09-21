@@ -2,6 +2,7 @@
 // event 화면으로 열고, 재활 선택 뒤 시즌 진행이 재개되는지 확인한다. seed는 부상을 억제하기 위한
 // 우회가 아니라 packages/domain career-12 fixture와 같은 고정 발생 경로를 재현하기 위한 입력이다.
 import { expect, test, type Page } from '@playwright/test';
+import { currentRoute, expectRoute, waitForRoute } from './helpers/route.js';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
@@ -33,8 +34,9 @@ type StoredCareerSnapshot = {
 
 /** 기존 CHAPTER E2E와 같은 IndexedDB snapshots read-only 패턴으로 최신 domain state를 확인한다. */
 async function readLatestCareerSnapshot(page: Page): Promise<StoredCareerSnapshot> {
-  const match = /\/career\/([^/]+)/.exec(page.url());
-  if (match === null) throw new Error(`readLatestCareerSnapshot: URL에서 careerId를 찾지 못했다(${page.url()})`);
+  const route = await currentRoute(page);
+  const match = /\/career\/([^/]+)/.exec(route);
+  if (match === null) throw new Error(`readLatestCareerSnapshot: 라우트에서 careerId를 찾지 못했다(${route})`);
   const careerId = match[1]!;
 
   return page.evaluate(
@@ -76,10 +78,10 @@ async function reachForcedInjury(page: Page): Promise<void> {
   const stepCaption = page.getByText(/\d+\/12 단계/);
 
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    const pathname = new URL(page.url()).pathname;
+    const pathname = (await currentRoute(page)).split('?')[0]!;
     if (pathname.endsWith('/chapter')) {
       await resolveCurrentChapterScreen(page);
-      await expect(page).toHaveURL(/\/career\/[^/]+$/, { timeout: 60_000 });
+      await expectRoute(page, /\/career\/[^/]+$/, { timeout: 60_000 });
       continue;
     }
     if (/\/(event|path|tryout)$/.test(pathname)) {
@@ -91,7 +93,7 @@ async function reachForcedInjury(page: Page): Promise<void> {
         return;
       }
       await resolveCurrentEventScreen(page);
-      await expect(page).toHaveURL(/\/career\/[^/]+$/, { timeout: 60_000 });
+      await expectRoute(page, /\/career\/[^/]+$/, { timeout: 60_000 });
       continue;
     }
     if (pathname.endsWith('/offers')) {
@@ -104,17 +106,17 @@ async function reachForcedInjury(page: Page): Promise<void> {
     // 전환되는 동안 대시보드 locator만 기다리면 정상 화면을 놓치고 60초를 소비하므로,
     // 경로 전환과 진행 버튼 활성화를 함께 기다린다.
     await Promise.race([
-      page.waitForURL((url) => url.pathname !== pathname, { timeout: 60_000 }),
+      waitForRoute(page, (route) => route.split('?')[0]! !== pathname, { timeout: 60_000 }),
       expect(progressButton).toBeEnabled({ timeout: 60_000 }),
     ]);
-    if (new URL(page.url()).pathname !== pathname) continue;
+    if ((await currentRoute(page)).split('?')[0]! !== pathname) continue;
     // advance가 먼저 커밋되어 화면을 교체하는 틱과 Playwright click의 actionability 재확인이
     // 겹칠 수 있다. 클릭이 이미 디스패치된 뒤의 detach는 다음 상태 관찰로 판정한다.
     await progressButton.click({ timeout: 15_000 }).catch(() => {});
     await expect
       .poll(
         async () => {
-          if (new URL(page.url()).pathname !== pathname) return true;
+          if ((await currentRoute(page)).split('?')[0]! !== pathname) return true;
           return (await stepCaption.textContent({ timeout: 1_000 }).catch(() => null)) !== before;
         },
         { timeout: 60_000 },
@@ -145,7 +147,7 @@ test('career-12 고정 seed의 실제 forced INJURY pending은 generic event에�
   await resolveRoleProposal(page);
 
   await reachForcedInjury(page);
-  await expect(page).toHaveURL(/\/career\/.+\/event$/);
+  await expectRoute(page, /\/career\/.+\/event$/);
   const forcedSnapshot = await readLatestCareerSnapshot(page);
   const forcedPending = forcedSnapshot.state.pending;
   expect(forcedPending).toMatchObject({ kind: 'INJURY', eventId: 'EVT-INJ-001', version: 1 });
@@ -156,9 +158,9 @@ test('career-12 고정 seed의 실제 forced INJURY pending은 generic event에�
   expect(forcedEpisode?.occurredAt.matchId).toMatch(/^\d+-\d+-\d+$/);
   await page.getByRole('radio', { name: '표준 재활' }).click();
   await page.getByRole('button', { name: '확정' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/event\/result\?rev=\d+$/);
+  await expectRoute(page, /\/career\/.+\/event\/result\?rev=\d+$/);
   await page.getByRole('button', { name: '다음' }).click();
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
 
   // 첫 forced pending을 닫은 뒤 같은 시즌의 일반 진행이 계속되어야 한다.
   await advanceThroughSeasonToSettlement(page);

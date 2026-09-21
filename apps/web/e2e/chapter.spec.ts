@@ -8,16 +8,17 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
   completeOnboardingThroughContract,
-  planPreseason,
   pinServiceSeasonPair,
-  startPlannedSeason,
+  planPreseason,
   readCurrentCareerState,
+  startPlannedSeason,
 } from './helpers/player-creation.js';
 import {
   advanceToChapter,
   resolveRoleProposal,
   seedDeterministicChapterRun,
 } from './helpers/chapter.js';
+import { currentRoute, expectRoute } from './helpers/route.js';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
@@ -37,9 +38,9 @@ async function readRevisionAndReturn(page: Page): Promise<number> {
  * 읽는다 — CareerSnapshot.rngState는 state 문자열과 별개인 최상위 필드라 파싱 없이 바로 읽힌다.
  */
 async function readLatestRngDraws(page: Page): Promise<number> {
-  const match = /\/career\/([^/]+)/.exec(page.url());
-  if (match === null)
-    throw new Error(`readLatestRngDraws: URL에서 careerId를 찾지 못했다(${page.url()})`);
+  const route = await currentRoute(page);
+  const match = /\/career\/([^/]+)/.exec(route);
+  if (match === null) throw new Error(`readLatestRngDraws: 라우트에서 careerId를 찾지 못했다(${route})`);
   const careerId = match[1];
 
   return page.evaluate(
@@ -96,7 +97,7 @@ for (const version of [
     await planPreseason(page, '역할 집중');
     await startPlannedSeason(page);
     await resolveRoleProposal(page);
-    await expect(page).toHaveURL(/\/career\/[^/]+$/);
+    await expectRoute(page, /\/career\/[^/]+$/);
 
     const revisionBeforeChapter = await readRevisionAndReturn(page);
     await advanceToChapter(page);
@@ -175,7 +176,7 @@ for (const version of [
 
     // "다음"은 advance()를 부르지 않고 대시보드로만 이동한다(브리프 — pending은 이미 null).
     await page.getByRole('button', { name: '다음' }).click();
-    await expect(page).toHaveURL(/\/career\/[^/]+$/);
+    await expectRoute(page, /\/career\/[^/]+$/);
 
     // 뒤로 가기: 챕터 결과 화면이 재생만 한다(판단을 다시 묻지 않고, 같은 결과).
     await page.goBack();

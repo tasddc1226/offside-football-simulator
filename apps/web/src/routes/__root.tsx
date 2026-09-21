@@ -8,6 +8,7 @@ import { AppMotionFrame } from '../shared/app-motion-frame.js';
 import { NotFoundScreen } from '../shared/NotFoundScreen.js';
 import { LivePresenceBadge } from '../shared/LivePresenceBadge.js';
 import { CareerHeaderBar } from '../shared/CareerHeaderBar.js';
+import { SkipLink } from '../shared/SkipLink.js';
 import { careerIdFromPathname } from '../shared/career-pathname.js';
 import { useLivePresence, usePresenceHeartbeat } from '../engine/presence.js';
 import { useEffect } from 'react';
@@ -128,9 +129,7 @@ function GameNavigation({ playingNow }: { playingNow: number | undefined }) {
 
   return (
     <>
-      <a href="#game-content" className="os-skip-link">
-        본문으로 건너뛰기
-      </a>
+      <SkipLink />
       <nav className="os-app-nav" aria-label="게임 메뉴">
         {inPublicInfo ? (
           <a href="/" className="os-brand" aria-label="오프사이드 홈">

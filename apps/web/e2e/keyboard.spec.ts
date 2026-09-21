@@ -14,6 +14,7 @@
 // 눌러서 닫는다.
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { expectFirstContractHeading, fulfillJson, META } from './helpers/player-creation.js';
+import { currentRoute, expectRoute, waitForRoute } from './helpers/route.js';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
@@ -53,6 +54,16 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   );
 
   await page.goto('/onboarding');
+
+  // T-7-039 후속(스킵 링크 접근성 회귀 수정): 스킵 링크는 라우터 이동이 아니라 순수 앵커 +
+  // preventDefault·focus()다 — 활성화하면 포커스가 #game-content로 옮겨가고, 실제 주소창(hash
+  // 포함)은 그대로다.
+  const beforeSkipLinkUrl = page.url();
+  await tabTo(page, page.getByRole('link', { name: '본문으로 건너뛰기' }));
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#game-content')).toBeFocused();
+  expect(page.url()).toBe(beforeSkipLinkUrl);
+
   await tabTo(page, page.getByLabel('이름'));
   await page.keyboard.type('김서준');
   await tabTo(page, page.getByRole('radio', { name: '오른발' }));
@@ -63,7 +74,7 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   await expect(page.getByRole('radio', { name: /윙어/ })).toBeChecked();
   await tabTo(page, page.getByRole('button', { name: /다음 · 후보 카드 열기/ }));
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/career\/.+\/style$/);
+  await expectRoute(page, /\/career\/.+\/style$/);
   await tabTo(page, page.getByRole('button', { name: '후보 1 공개' }));
   await page.keyboard.press('Space');
   await expect(page.getByRole('meter')).toHaveCount(6);
@@ -74,13 +85,13 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   // SCR-004: KICKOFF → 비차단 복구 안내 전환 → 첫 이벤트.
   await tabTo(page, page.getByRole('button', { name: /이 선수로 시작/ }));
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+  await expectRoute(page, /\/career\/.+\/(path|tryout|event)$/);
 
   // SCR-007/008/013(반복) → SCR-014 → ... → SCR-009. 안전 상한 10회(first-contract.spec.ts와 동일).
   let reachedOffers = false;
   for (let step = 0; step < 10 && !reachedOffers; step += 1) {
-    await page.waitForURL(/\/career\/.+\/(path|tryout|event|offers)$/);
-    if (new URL(page.url()).pathname.endsWith('/offers')) {
+    await waitForRoute(page, /\/career\/.+\/(path|tryout|event|offers)$/);
+    if ((await currentRoute(page)).split('?')[0]!.endsWith('/offers')) {
       reachedOffers = true;
       break;
     }
@@ -88,7 +99,7 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
     await page.keyboard.press('Space');
     await tabTo(page, page.getByRole('button', { name: '확정' }));
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+    await expectRoute(page, /\/event\/result\?rev=\d+$/);
     await tabTo(page, page.getByRole('button', { name: '다음' }));
     await page.keyboard.press('Enter');
   }
@@ -100,7 +111,7 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   const offerLink = page.getByRole('link', { name: '제안 상세·결정' }).first();
   await tabTo(page, offerLink);
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+  await expectRoute(page, /\/career\/.+\/contract\?offerId=.+$/);
 
   // SCR-010: 키보드 대체 서명 → 계약 확정 → 첫 계약 완료 카드.
   await tabTo(page, page.getByRole('button', { name: '이름 입력' }));
@@ -120,7 +131,7 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   ).toBeVisible();
   await tabTo(page, page.getByRole('button', { name: '계속' }));
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
   await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
 
   // UX-014(2026-09-14): 대시보드 탭은 이제 상단 커리어 헤더(레이아웃 라우트)의 독립 tablist다 —
@@ -147,13 +158,13 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
   // 대화상자 포커스 트랩·복귀: 허브의 삭제 확인 대화상자(hub.spec.ts와 같은 컴포넌트)로 확인한다.
   await tabTo(page, page.getByRole('link', { name: '허브로' }));
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/$/);
+  await expectRoute(page, /\/$/);
 
   // "최근 선수"(resume) 탭의 기본 카드는 featured=true라 상세 관리 disclosure를 두지 않는다 —
   // "선수단 관리"(squad 탭)로 이동해야 상세 관리·삭제 버튼에 닿는다.
   await tabTo(page, page.getByRole('link', { name: '선수단 관리' }));
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\?tab=squad$/);
+  await expectRoute(page, /\?tab=squad$/);
 
   const detailSummary = page.locator('summary').filter({ hasText: '상세 관리' });
   await tabTo(page, detailSummary);

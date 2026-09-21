@@ -1,6 +1,7 @@
 // Native-like presentation checks use fresh browser contexts and a stub API. The animation
 // recorder observes real Web Animations rather than replacing them or racing their short duration.
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { currentRoute, expectRoute } from './helpers/route.js';
 import {
   completeOnboardingThroughContract,
   fulfillJson,
@@ -52,8 +53,8 @@ async function routeAnimations(page: Page) {
 }
 
 async function latestCareerRevision(page: Page): Promise<number> {
-  const careerId = /\/career\/([^/?]+)/.exec(page.url())?.[1];
-  if (!careerId) throw new Error('현재 URL에서 careerId를 찾지 못했다');
+  const careerId = /\/career\/([^/?]+)/.exec(await currentRoute(page))?.[1];
+  if (!careerId) throw new Error('현재 라우트에서 careerId를 찾지 못했다');
   return page.evaluate(
     (id) =>
       new Promise<number>((resolve, reject) => {
@@ -139,7 +140,7 @@ test('페이지 이동은 방향 있는 짧은 모션을 쓰고 공통 레이어
   await layer.evaluate((element) => element.setAttribute('data-persistent-check', 'same-layer'));
   await clearAnimations(page);
   await page.getByRole('link', { name: '게임 설정', exact: true }).click();
-  await expect(page).toHaveURL(/\/settings$/);
+  await expectRoute(page, /\/settings$/);
   await expect(layer).toHaveAttribute('data-direction', 'forward');
   await expect.poll(async () => (await routeAnimations(page)).length).toBe(1);
   const forward = (await routeAnimations(page))[0]!;
@@ -161,7 +162,7 @@ test('키보드로 실행한 화면 이동에는 슬라이드 효과를 넣지 �
   await clearAnimations(page);
   await page.getByRole('link', { name: '게임 설정', exact: true }).focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/settings$/);
+  await expectRoute(page, /\/settings$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   expect(await routeAnimations(page)).toEqual([]);
 });
@@ -169,7 +170,7 @@ test('키보드로 실행한 화면 이동에는 슬라이드 효과를 넣지 �
 test('허브에서 대기 연출 없이 생성 폼으로 진입한다', async ({ page }) => {
   await openEmptyHub(page);
   await page.getByRole('button', { name: '커리어 시작' }).click();
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await expectRoute(page, /\/onboarding$/);
   await expect(page.getByLabel('이름')).toBeVisible();
   await expect(page.getByRole('progressbar')).toHaveCount(0);
 });
@@ -191,7 +192,7 @@ for (const preference of ['OS', '앱'] as const) {
     await expect(page.locator('html')).toHaveAttribute('data-reduced-motion', 'true');
     await clearAnimations(page);
     await page.getByRole('link', { name: '선수 생성 화면', exact: true }).click();
-    await expect(page).toHaveURL(/\/onboarding$/);
+    await expectRoute(page, /\/onboarding$/);
     await expect(page.getByRole('heading', { level: 1, name: '선수 생성' })).toBeVisible();
     expect(await routeAnimations(page)).toEqual([]);
   });
@@ -203,12 +204,12 @@ test('공통 팝업은 배경을 블러 처리하고 Escape 뒤 원래 버튼으
   await startNewCareer(page);
   await fillPlayerInfo(page);
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-  await expect(page).toHaveURL(/\/style$/);
+  await expectRoute(page, /\/style$/);
   await page.goto('/');
   // "최근 선수"(resume) 탭의 기본 카드는 featured=true라 상세 관리 disclosure를 두지 않는다 —
   // "선수단 관리"(squad 탭)로 이동해야 상세 관리·삭제 버튼에 닿는다.
   await page.getByRole('link', { name: '선수단 관리' }).click();
-  await expect(page).toHaveURL(/\?tab=squad$/);
+  await expectRoute(page, /\?tab=squad$/);
   await page.getByText('상세 관리').click();
   const trigger = page.getByRole('button', { name: '커리어 삭제' });
   await trigger.click();
@@ -229,7 +230,7 @@ test('공통 팝업은 배경을 블러 처리하고 Escape 뒤 원래 버튼으
 test('생성 폼을 밀어도 후보 추첨이나 커리어 생성이 실행되지 않는다', async ({ page }) => {
   await page.goto('/onboarding');
   await swipe(page.locator('.creation-flow'), -150);
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await expectRoute(page, /\/onboarding$/);
   await expect(page.getByRole('heading', { name: '선수 생성' })).toBeVisible();
   await page.getByRole('link', { name: '선수 생성 닫기' }).click();
   await expect(page.getByTestId('career-card')).toHaveCount(0);
@@ -239,7 +240,7 @@ test('문서의 가장자리 뒤로 가기는 외부 방문 기록 대신 설정
   await page.goto('/legal/privacy');
   await expect(page.getByRole('heading', { level: 1, name: '개인정보 처리방침' })).toBeVisible();
   await swipe(page.locator('.os-route-motion > .os-swipe-surface'), 170, 0, true);
-  await expect(page).toHaveURL(/\/settings$/);
+  await expectRoute(page, /\/settings$/);
   await expect(page.locator('.os-route-motion')).toHaveAttribute('data-direction', 'back');
 });
 
@@ -250,7 +251,7 @@ test('대시보드 스와이프는 구역만 바꾸고 경기 진행을 실행�
     window.localStorage.setItem('offside:e2e-seed', 'e2e-season-result-01'),
   );
   await completeOnboardingThroughContract(page);
-  const pathname = new URL(page.url()).pathname;
+  const pathname = (await currentRoute(page)).split('?')[0]!;
   const revision = await latestCareerRevision(page);
   const surface = page.locator('.os-dashboard-tabs-motion .os-swipe-surface');
   await expect(surface).toBeVisible();
@@ -267,7 +268,11 @@ test('대시보드 스와이프는 구역만 바꾸고 경기 진행을 실행�
     'aria-selected',
     'true',
   );
-  await expect.poll(() => new URL(page.url()).pathname).toBe(pathname);
-  await expect.poll(() => new URL(page.url()).searchParams.get('view')).toBe('player');
+  await expect.poll(async () => (await currentRoute(page)).split('?')[0]!).toBe(pathname);
+  await expect
+    .poll(async () =>
+      new URL(await currentRoute(page), 'http://e2e.invalid').searchParams.get('view'),
+    )
+    .toBe('player');
   await expect.poll(() => latestCareerRevision(page)).toBe(revision);
 });

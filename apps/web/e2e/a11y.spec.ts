@@ -1,6 +1,7 @@
 // TEST-E2E-009(접근성 기준): 허브·온보딩·설정·법적 문서 화면에 axe serious·critical 위반이 없다.
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
+import { currentRoute, expectRoute, waitForRoute } from './helpers/route.js';
 import {
   advanceThroughSeasonToSettlement,
   advanceUntilOffers,
@@ -100,7 +101,7 @@ test('빈 허브(첫 방문, 온보딩 건너뛴 뒤) 화면에 axe serious·cri
 }) => {
   await page.goto('/onboarding');
   await page.getByRole('link', { name: '선수 생성 닫기' }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expectRoute(page, /\/$/);
   await expect(
     page.getByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),
   ).toBeVisible();
@@ -112,7 +113,7 @@ test('카드가 있는 허브 화면에 axe serious·critical 위반이 없다',
   await startNewCareer(page);
   await fillPlayerInfo(page);
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-  await expect(page).toHaveURL(/\/style$/);
+  await expectRoute(page, /\/style$/);
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 2, name: '김서준' })).toBeVisible();
 
@@ -262,8 +263,8 @@ test('SCR-007/008/013 이벤트 화면·SCR-014 결과 화면에 axe serious·cr
   let reachedOffers = false;
   const seenScreenIds = new Set<string>();
   for (let step = 0; step < 10 && !reachedOffers; step += 1) {
-    await page.waitForURL(/\/career\/.+\/(path|tryout|event|offers)$/);
-    const pathname = new URL(page.url()).pathname;
+    await waitForRoute(page, /\/career\/.+\/(path|tryout|event|offers)$/);
+    const pathname = (await currentRoute(page)).split('?')[0]!;
     if (pathname.endsWith('/offers')) {
       reachedOffers = true;
       break;
@@ -278,7 +279,7 @@ test('SCR-007/008/013 이벤트 화면·SCR-014 결과 화면에 axe serious·cr
 
     await page.getByRole('radio').first().click();
     await page.getByRole('button', { name: '확정' }).click();
-    await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+    await expectRoute(page, /\/event\/result\?rev=\d+$/);
     seenScreenIds.add('SCR-014');
     await expectNoSeriousOrCriticalViolations(page, 'SCR-014(/event/result)');
     await page.getByRole('button', { name: '다음' }).click();
@@ -301,7 +302,7 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
   await completeOnboardingAndConfirm(page);
   await advanceUntilOffers(page);
   await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
-  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+  await expectRoute(page, /\/career\/.+\/contract\?offerId=.+$/);
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-010');
 
@@ -320,7 +321,7 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
   ).toBeVisible();
   await expectNoSeriousOrCriticalViolations(page, '첫 계약 뒤 복구 코드 안내');
   await page.getByRole('button', { name: '계속' }).click();
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
   const signedToast = page.getByText('계약을 맺었습니다');
   await expect(signedToast).toBeVisible();
   // Toast는 마운트 뒤 opacity-0→opacity-100로 200ms 전환한다(packages/ui/src/components/Toast.tsx) —
@@ -404,7 +405,7 @@ test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', a
   await continueToPreseason(page);
   await fillPreseasonPlan(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/role$/);
+  await expectRoute(page, /\/career\/.+\/role$/);
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-012');
 });
@@ -414,7 +415,7 @@ test('SCR-033 능력치 상세 화면에 axe serious·critical 위반이 없다'
   await page.getByRole('tab', { name: '선수' }).click();
   await page.getByText('선수 프로필 · 관계 · 주전 경쟁', { exact: true }).click();
   await page.getByRole('link', { name: '능력치 상세' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/attributes$/);
+  await expectRoute(page, /\/career\/.+\/attributes$/);
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-033');
 });
@@ -428,7 +429,7 @@ test('SCR-015 프로 시즌 결과 화면에 axe serious·critical 위반이 없
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expectRoute(page, /\/career\/.+\/season-result$/);
   await expect(page.getByRole('heading', { level: 1, name: '프로 시즌 결과' })).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-015');
@@ -443,7 +444,7 @@ test('텍스트 크기 150% + 360px에서 가로 스크롤이 생기지 않는�
   // 텍스트 크기는 useUiStore(zustand persist)로 전역 적용된다 — 실제 게임 화면(허브)에서 확인한다.
   await page.goto('/onboarding');
   await page.getByRole('link', { name: '선수 생성 닫기' }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expectRoute(page, /\/$/);
   await expect(
     page.getByRole('heading', { level: 2, name: '아직 만든 커리어가 없습니다' }),
   ).toBeVisible();
@@ -470,15 +471,15 @@ test.describe('모션 감소', () => {
 
     let reachedTryout = false;
     for (let step = 0; step < 10 && !reachedTryout; step += 1) {
-      await page.waitForURL(/\/career\/.+\/(path|tryout|event)$/);
-      const pathname = new URL(page.url()).pathname;
+      await waitForRoute(page, /\/career\/.+\/(path|tryout|event)$/);
+      const pathname = (await currentRoute(page)).split('?')[0]!;
       if (pathname.endsWith('/tryout')) {
         reachedTryout = true;
         break;
       }
       await page.getByRole('radio').first().click();
       await page.getByRole('button', { name: '확정' }).click();
-      await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+      await expectRoute(page, /\/event\/result\?rev=\d+$/);
       await page.getByRole('button', { name: '다음' }).click();
     }
     if (!reachedTryout)
@@ -493,7 +494,7 @@ test.describe('모션 감소', () => {
 
     // 연출 텍스트가 뜬 적이 아예 없어야 한다(폴링이 아니라, 연출 분기가 렌더된 적이 있는지 확인).
     await expect(page.getByText('평가는 자동으로 진행되며 다시 볼 수 없습니다.')).toHaveCount(0);
-    await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/, { timeout: 1500 });
+    await expectRoute(page, /\/event\/result\?rev=\d+$/, { timeout: 1500 });
     await expect(page.getByText('평가는 자동으로 진행되며 다시 볼 수 없습니다.')).toHaveCount(0);
   });
 });
@@ -506,7 +507,7 @@ test('결과 확정 시 aria-live 영역이 정확히 한 번 갱신된다(08 �
   // 뒤 결과가 정해지면 텍스트를 한 번만 바꾼다(T-1-017) — MutationObserver로 실제 갱신 횟수를 세어
   // 정확히 1건임을 확인한다.
   await completeOnboardingAndConfirm(page);
-  await page.waitForURL(/\/career\/.+\/(path|tryout|event)$/);
+  await waitForRoute(page, /\/career\/.+\/(path|tryout|event)$/);
 
   await page.evaluate(() => {
     (window as unknown as { __liveMutations: number }).__liveMutations = 0;
@@ -525,7 +526,7 @@ test('결과 확정 시 aria-live 영역이 정확히 한 번 갱신된다(08 �
 
   await page.getByRole('radio').first().click();
   await page.getByRole('button', { name: '확정' }).click();
-  await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+  await expectRoute(page, /\/event\/result\?rev=\d+$/);
 
   // 낭독 문구는 마운트 뒤 effect에서 한 번 채워진다(빈 문자열로 먼저 마운트해야 실제 텍스트 변경이
   // characterData 변형으로 잡힌다) — URL이 바뀐 시점과 effect 실행 시점 사이에 짧은 간극이 있어,
@@ -644,7 +645,7 @@ test.describe('SCR-031 핵심 경기 챕터', () => {
     await planPreseason(page, '역할 집중');
     await page.getByRole('button', { name: '시즌 시작' }).click();
     await resolveRoleProposal(page);
-    await expect(page).toHaveURL(/\/career\/[^/]+$/);
+    await expectRoute(page, /\/career\/[^/]+$/);
 
     await advanceToChapter(page);
     await expect(page.getByRole('radio').first()).toBeVisible();

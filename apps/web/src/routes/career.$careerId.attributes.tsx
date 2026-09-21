@@ -2,7 +2,7 @@
 // 숙련도·정찰 범위·시즌 변화 원인을 본다. 계약 전에도 열린다(전술실 링크만 계약 뒤). 진짜 잠재력은
 // 어디에도 쓰지 않는다.
 import { useEffect } from 'react';
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, redirect, useNavigate, useRouter } from '@tanstack/react-router';
 import { Button, ScreenIntro, Tabs, TabsContent, TabsList, TabsTrigger } from '@offside/ui';
 import { computeBaseOvr } from '@offside/domain';
 import { rulesetForCareer } from '../engine/content.js';
@@ -46,6 +46,7 @@ const CAPTION_STYLE = {
 function AttributesScreen() {
   const { careerId } = Route.useParams();
   const navigate = useNavigate();
+  const router = useRouter();
   const query = useCareer(careerId);
 
   useEffect(() => {
@@ -87,9 +88,11 @@ function AttributesScreen() {
     return `${sign}${entry.delta} (${causes})`;
   }
 
+  // T-7-039: 브라우저 히스토리 대신 라우터(메모리) 히스토리로 되감는다 — 직접 쌓은 엔트리가 있으면
+  // 그걸로 되감고, 없으면(딥링크 등) 커리어 대시보드로 이동한다(기존 의도 그대로).
   function handleBack() {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      window.history.back();
+    if (router.history.canGoBack()) {
+      router.history.back();
       return;
     }
     void navigate({ to: '/career/$careerId', params: { careerId } });

@@ -11,6 +11,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { expect, type Page, test } from '@playwright/test';
+import { currentRoute, expectRoute, waitForRoute } from './helpers/route.js';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
@@ -47,7 +48,7 @@ async function resolveEventScreenCounting(page: Page, counts: Counts): Promise<v
   await page.getByRole('button', { name: '확정' }).click();
   counts.confirmations += 1;
 
-  await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+  await expectRoute(page, /\/event\/result\?rev=\d+$/);
   counts.screens += 1; // SCR-014
 
   await page.getByRole('button', { name: '다음' }).click();
@@ -81,7 +82,7 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   counts.selections += 2;
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
   counts.confirmations += 1;
-  await expect(page).toHaveURL(/\/style$/);
+  await expectRoute(page, /\/style$/);
   counts.screens += 1;
   await page.getByRole('button', { name: '3장 모두 열기' }).click();
   counts.confirmations += 1;
@@ -89,20 +90,20 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   counts.selections += 1;
   await page.getByRole('button', { name: /이 후보로 진행/ }).click();
   counts.confirmations += 1;
-  await expect(page).toHaveURL(/\/confirm$/);
+  await expectRoute(page, /\/confirm$/);
   counts.screens += 1;
 
   // SCR-004: KICKOFF(확정) → 비차단 복구 안내 전환 → 이벤트 화면.
   await page.getByRole('button', { name: /이 선수로 시작/ }).click();
   counts.confirmations += 1;
-  await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+  await expectRoute(page, /\/career\/.+\/(path|tryout|event)$/);
   counts.screens += 1;
 
   // SCR-007/008/013(반복) → SCR-014 → ... → SCR-009. 안전 상한 10회(first-contract.spec.ts와 동일).
   let reachedOffers = false;
   for (let step = 0; step < 10 && !reachedOffers; step += 1) {
-    await page.waitForURL(/\/career\/.+\/(path|tryout|event|offers)$/);
-    if (new URL(page.url()).pathname.endsWith('/offers')) {
+    await waitForRoute(page, /\/career\/.+\/(path|tryout|event|offers)$/);
+    if ((await currentRoute(page)).split('?')[0]!.endsWith('/offers')) {
       reachedOffers = true;
       break;
     }
@@ -116,7 +117,7 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   // SCR-009: 제안 선택(확정) → SCR-010.
   await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
   counts.confirmations += 1;
-  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+  await expectRoute(page, /\/career\/.+\/contract\?offerId=.+$/);
   counts.screens += 1;
 
   // SCR-010: 사인(확정) → 첫 계약 완료 카드 → 복구 안내 → 대시보드.
@@ -129,14 +130,14 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
   counts.screens += 1;
   await page.getByRole('button', { name: '커리어 시작' }).click();
   counts.confirmations += 1;
-  await expect(page).toHaveURL(/\/confirm\?step=recovery&milestone=first-contract$/);
+  await expectRoute(page, /\/confirm\?step=recovery&milestone=first-contract$/);
   await expect(
     page.getByRole('heading', { name: '복구 코드를 저장하세요', level: 1 }),
   ).toBeVisible();
   counts.screens += 1;
   await page.getByRole('button', { name: '계속', exact: true }).click();
   counts.confirmations += 1;
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
   await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
 
   const automationMs = performance.now() - startedAt;
@@ -197,7 +198,7 @@ test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간(FAST �
     await planPreseason(page, '역할 집중');
     await page.getByRole('button', { name: '시즌 시작' }).click();
     await resolveRoleProposal(page);
-    await expect(page).toHaveURL(/\/career\/[^/]+$/);
+    await expectRoute(page, /\/career\/[^/]+$/);
 
     const revisionAtSeasonStart = await readRevisionAndReturn(page);
 
@@ -205,7 +206,7 @@ test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간(FAST �
     const revisionBeforeSettle = await readRevisionAndReturn(page);
 
     await page.getByRole('button', { name: '결산하기', exact: true }).click();
-    await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+    await expectRoute(page, /\/career\/.+\/season-result$/);
     await expect(page.getByRole('heading', { level: 1, name: '프로 시즌 결과' })).toBeVisible();
 
     const automationMs = performance.now() - startedAt;

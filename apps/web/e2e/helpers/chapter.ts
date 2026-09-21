@@ -2,10 +2,11 @@
 // 같은 관례: "헬퍼 추출은 허용").
 import { expect, type Page } from '@playwright/test';
 import {
+  readCurrentCareerState,
   resolveCurrentEventScreen,
   resolveRoleProposal,
-  readCurrentCareerState,
 } from './player-creation.js';
+import { currentRoute, expectRoute, waitForRoute } from './route.js';
 export { resolveRoleProposal } from './player-creation.js';
 
 /** e2e 결정론 시드(README "e2e 결정론 시드 오버라이드" 참고). DEBUT 트리거
@@ -27,8 +28,6 @@ export async function seedDeterministicChapterRun(page: Page): Promise<void> {
   }, E2E_DEBUT_CHAPTER_SEED);
 }
 
-/** SCR-012 역할 제안을 받아들인다. */
-
 /** SCR-029에서 "진행"을 반복해(EVENT는 첫 선택지로 흘려보낸다) SCR-031(핵심 경기 챕터)에 도달한다.
  * 안전 상한 20회(season.spec.ts의 advanceThroughSeasonToSettlement와 같은 관례).
  *
@@ -47,11 +46,11 @@ export async function seedDeterministicChapterRun(page: Page): Promise<void> {
 export async function advanceToChapter(page: Page): Promise<void> {
   const nextButton = page.getByRole('button', { name: /^(진행|다음 중요한 순간까지)$/ });
   for (let step = 0; step < 20; step += 1) {
-    const pathnameBefore = new URL(page.url()).pathname;
+    const pathnameBefore = (await currentRoute(page)).split('?')[0]!;
     if (pathnameBefore.endsWith('/chapter')) return;
     if (pathnameBefore.endsWith('/role')) {
       await resolveRoleProposal(page);
-      await expect(page).toHaveURL(/\/career\/[^/]+$/);
+      await expectRoute(page, /\/career\/[^/]+$/);
       continue;
     }
     if (pathnameBefore.endsWith('/event')) {
@@ -67,10 +66,10 @@ export async function advanceToChapter(page: Page): Promise<void> {
     // 병렬 워커로 같이 도는 다른 테스트와 CPU를 나눠 쓰면 mutateAsync가 기본 5s보다 오래 걸릴 수
     // 있다 — 넉넉히 기다린다.
     await Promise.race([
-      page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
+      waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect(nextButton).toBeEnabled({ timeout: 60_000 }),
     ]);
-    if (new URL(page.url()).pathname !== pathnameBefore) continue;
+    if ((await currentRoute(page)).split('?')[0]! !== pathnameBefore) continue;
     const stepBefore = (await readCurrentCareerState(page)).season?.currentStep;
     // 클릭 액션 자체의 actionability 재확인 도중에도(디스패치 전) advance 성공→화면 전환이 끼어들어
     // 버튼이 사라질 수 있다 — 그 detach는 실패로 삼키고(클릭이 실제로 먹혔는지는 다음 스텝 진입 시
@@ -78,7 +77,7 @@ export async function advanceToChapter(page: Page): Promise<void> {
     // 않는다.
     await nextButton.click({ timeout: 15_000 }).catch(() => {});
     await Promise.race([
-      page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
+      waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect
         .poll(async () => (await readCurrentCareerState(page)).season?.currentStep, {
           timeout: 60_000,

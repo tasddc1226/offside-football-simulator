@@ -1,6 +1,7 @@
 // 공유 생성 여정: 짧은 프로필 입력 → 후보 3장 공개 → 선수 카드 확정 → 첫 결정.
 import { expect, type Page, type Route } from '@playwright/test';
 import type { CareerState } from '@offside/domain';
+import { currentRoute, expectRoute, waitForRoute } from './route.js';
 
 export const META = { requestId: 'e2e-req' };
 
@@ -30,7 +31,7 @@ export async function pinServiceSeasonPair(
 
 /** Read-only persistence evidence; never constructs or edits a simulated state. */
 export async function readCurrentCareerState(page: Page): Promise<CareerState> {
-  const careerId = /\/career\/([^/]+)/.exec(page.url())?.[1];
+  const careerId = /\/career\/([^/]+)/.exec(await currentRoute(page))?.[1];
   if (!careerId) throw new Error('Expected career URL');
   return page.evaluate(
     (cid) =>
@@ -100,12 +101,12 @@ export async function goToConfirm(page: Page, backgroundName?: RegExp): Promise<
   await startNewCareer(page);
   await fillPlayerInfo(page, undefined, backgroundName ?? /아카데미의 추가 평가/);
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/style$/);
+  await expectRoute(page, /\/career\/.+\/style$/);
 
   await page.getByRole('button', { name: '3장 모두 열기' }).click();
   await page.getByRole('button', { name: '인사이드 포워드 후보 선택' }).click();
   await page.getByRole('button', { name: /이 후보로 진행/ }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
+  await expectRoute(page, /\/career\/.+\/confirm$/);
   await expect(page.getByRole('heading', { level: 1, name: '이번 생의 주인공' })).toBeVisible();
 }
 
@@ -134,7 +135,7 @@ export async function completeOnboardingAndConfirm(
   );
   await page.getByRole('button', { name: /이 선수로 시작/ }).click();
 
-  await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+  await expectRoute(page, /\/career\/.+\/(path|tryout|event)$/);
 }
 
 /** 지금 뜬 이벤트 화면(SCR-007·008·013 공통 본문)에서 첫 선택지를 확정하고, SCR-014 결과 카드를
@@ -158,15 +159,15 @@ export async function resolveCurrentEventScreen(
   await firstChoice.click();
   await page.getByRole('button', { name: '확정' }).click();
 
-  await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+  await expectRoute(page, /\/event\/result\?rev=\d+$/);
   await page.getByRole('button', { name: '다음' }).click();
 }
 
 /** OFFERS(SCR-009)에 도착할 때까지 이벤트 화면을 반복해서 넘긴다. 안전 상한 10회. */
 export async function advanceUntilOffers(page: Page): Promise<void> {
   for (let step = 0; step < 10; step += 1) {
-    await page.waitForURL(/\/career\/.+\/(path|tryout|event|offers)$/);
-    if (new URL(page.url()).pathname.endsWith('/offers')) return;
+    await waitForRoute(page, /\/career\/.+\/(path|tryout|event|offers)$/);
+    if ((await currentRoute(page)).split('?')[0]!.endsWith('/offers')) return;
     await resolveCurrentEventScreen(page);
   }
   throw new Error('offers 화면에 도달하지 못했다(최대 10회 시도)');
@@ -227,7 +228,7 @@ export async function signFirstOffer(
     }
     await targetOffer.click();
 
-    await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+    await expectRoute(page, /\/career\/.+\/contract\?offerId=.+$/);
     await enterTypedSignature(page);
     await page.getByRole('button', { name: '서명하고 계약 확정' }).click();
 
@@ -247,24 +248,24 @@ export async function signFirstOffer(
       const dashboardUrl = /\/career\/[^/]+$/;
       const continueButton = page.getByRole('button', { name: /^(저장했어요|계속)$/ });
       await Promise.race([
-        page.waitForURL(dashboardUrl),
+        waitForRoute(page, dashboardUrl),
         continueButton.waitFor({ state: 'visible' }),
       ]);
-      if (!dashboardUrl.test(page.url())) {
-        await continueButton.click({ timeout: 5_000 }).catch((error: unknown) => {
-          if (!dashboardUrl.test(page.url())) throw error;
+      if (!dashboardUrl.test(await currentRoute(page))) {
+        await continueButton.click({ timeout: 5_000 }).catch(async (error: unknown) => {
+          if (!dashboardUrl.test(await currentRoute(page))) throw error;
         });
       }
     }
 
-    await expect(page).toHaveURL(/\/career\/[^/]+$/);
+    await expectRoute(page, /\/career\/[^/]+$/);
     await expect(page.getByText('계약을 맺었습니다')).toBeVisible();
     return;
   }
 
   await expect(marketHeading).toBeVisible();
   await page.getByRole('link', { name: '제안 상세·결정' }).first().click();
-  await expect(page).toHaveURL(/\/career\/.+\/contract\?offerId=.+$/);
+  await expectRoute(page, /\/career\/.+\/contract\?offerId=.+$/);
   const signedAccept = page.getByRole('button', { name: '서명하고 계약 확정' });
   const stayConfirm = page.getByRole('button', { name: '현재 팀 잔류 확정' });
   // isVisible()은 스냅샷 한 번뿐이라 URL이 바뀐 직후(라우트 전환 렌더가 아직 안 끝난 시점)에
@@ -284,11 +285,11 @@ export async function signFirstOffer(
   // 쿼리 유무와 무관하게 매칭한다.
   const transferResultOrDashboard =
     /(?:\/career\/.+\/transfer-result\?rev=\d+(?:&[^#]*)?|\/career\/[^/]+)$/;
-  await expect(page).toHaveURL(transferResultOrDashboard);
-  if (/\/transfer-result\?rev=\d+(?:&[^#]*)?$/.test(page.url())) {
+  await expectRoute(page, transferResultOrDashboard);
+  if (/\/transfer-result\?rev=\d+(?:&[^#]*)?$/.test(await currentRoute(page))) {
     await page.getByRole('link', { name: /^(대시보드로|새 시즌 준비)$/ }).click();
   }
-  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/preseason)?$/);
+  await expectRoute(page, /\/career\/[^/]+(?:\/preseason)?$/);
 }
 
 export async function enterTypedSignature(page: Page, name = '김서준'): Promise<void> {
@@ -311,7 +312,7 @@ export async function completeOnboardingThroughContract(page: Page): Promise<voi
  * a11y.spec.ts와 공유한다. */
 export async function planPreseason(page: Page, focusLabel: string): Promise<void> {
   await page.getByRole('link', { name: '계획하러 가기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/preseason$/);
+  await expectRoute(page, /\/career\/.+\/preseason$/);
   await fillPreseasonPlan(page, focusLabel);
 }
 
@@ -343,8 +344,8 @@ export async function fillPreseasonPlan(page: Page, focusLabel: string): Promise
   await page.getByRole('radio', { name: new RegExp(`^${focusLabel}`) }).click();
   await page.getByRole('link', { name: '다음' }).click();
 
-  await expect(page).toHaveURL(/\/career\/.+\/season-prep\b/);
-  const url = new URL(page.url());
+  await expectRoute(page, /\/career\/.+\/season-prep\b/);
+  const url = new URL(await currentRoute(page), 'http://e2e.invalid');
   expect(url.searchParams.has('mode')).toBe(false);
   await expect(page.getByRole('heading', { level: 1, name: '시즌 준비' })).toBeVisible();
   // SCR-011 인수 조건: 훈련 계획은 시즌 결산 때 능력에 반영된다.
@@ -352,10 +353,10 @@ export async function fillPreseasonPlan(page: Page, focusLabel: string): Promise
 }
 
 export async function startPlannedSeason(page: Page): Promise<void> {
-  if (new URL(page.url()).pathname.endsWith('/preseason')) {
+  if ((await currentRoute(page)).split('?')[0]!.endsWith('/preseason')) {
     await page.getByRole('button', { name: '새 시즌 훈련장으로', exact: true }).click();
   } else {
-    await expect(page).toHaveURL(/\/season-prep\b/);
+    await expectRoute(page, /\/season-prep\b/);
     await page.getByRole('button', { name: '시즌 시작', exact: true }).click();
   }
 }
@@ -366,18 +367,18 @@ export async function startPlannedSeason(page: Page): Promise<void> {
  * 달라져도 테스트가 깨지지 않도록, offers 화면이면 안전 잔류(offers[0], signFirstOffer)를 수락해
  * 프리시즌으로 이어가고, 이미 프리시즌이면 그대로 둔다(season.spec.ts의 동일 처리를 공용화했다). */
 export async function continueToPreseason(page: Page): Promise<void> {
-  if (/\/offers$/.test(page.url())) {
+  if (/\/offers$/.test(await currentRoute(page))) {
     await signFirstOffer(page);
   }
-  await expect(page).toHaveURL(/\/preseason$/);
+  await expectRoute(page, /\/preseason$/);
 }
 
 /** SCR-012의 POSITION_CHANGE·ROLE_CHANGE를 승낙한다. 현재 역할과 완전히 같은 KEEP은 시즌 준비
  * 화면이 원자적으로 수락하고 대시보드로 바로 이동하므로, 그 경로에서는 할 일이 없다. KEEP 자동
  * 수락의 두 번째 명령이 실패한 경우에는 복구용 /role이 남아 이 함수가 "확인"으로 마무리한다. */
 export async function resolveRoleProposal(page: Page): Promise<void> {
-  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/role)?$/);
-  if (!page.url().endsWith('/role')) return;
+  await expectRoute(page, /\/career\/[^/]+(?:\/role)?$/);
+  if (!(await currentRoute(page)).endsWith('/role')) return;
   // KEEP은 "확인" 하나, POSITION_CHANGE·ROLE_CHANGE는 "거절"·"수락" 둘을 보여준다 — 어느 쪽이든
   // 받아들이는 버튼을 하나의 locator로 묶어 렌더 경합 없이 기다린다(count() 스냅샷은 로더 직후
   // 첫 렌더 전에 0을 읽을 수 있다).
@@ -466,7 +467,7 @@ export async function advanceThroughSeasonToSettlement(
   const settleButton = page.getByRole('button', { name: '결산하기', exact: true });
   const currentStepCaption = page.getByRole('progressbar', { name: '시즌 진행', exact: true });
   for (let step = 0; step < 20; step += 1) {
-    const pathnameBefore = new URL(page.url()).pathname;
+    const pathnameBefore = (await currentRoute(page)).split('?')[0]!;
     if (pathnameBefore.endsWith('/chapter')) {
       await resolveCurrentChapterScreen(page);
       continue;
@@ -486,11 +487,11 @@ export async function advanceThroughSeasonToSettlement(
     // 병렬 워커로 같이 도는 다른 테스트와 CPU를 나눠 쓰면 mutateAsync가 기본 5s보다 오래 걸릴 수
     // 있다 — 넉넉히 기다린다.
     await Promise.race([
-      page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
+      waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect(progressButton).toBeEnabled({ timeout: 60_000 }),
       settleButton.waitFor({ state: 'visible', timeout: 60_000 }),
     ]);
-    if (new URL(page.url()).pathname !== pathnameBefore) continue;
+    if ((await currentRoute(page)).split('?')[0]! !== pathnameBefore) continue;
     if (await settleButton.isVisible()) return;
     const stepTextBefore = await currentStepCaption.getAttribute('aria-valuenow');
     // 클릭 액션 자체의 actionability 재확인 도중에도(디스패치 전) advance 성공→화면 전환이 끼어들어
@@ -499,7 +500,7 @@ export async function advanceThroughSeasonToSettlement(
     // 않는다.
     await progressButton.click({ timeout: 15_000 }).catch(() => {});
     await Promise.race([
-      page.waitForURL((url) => url.pathname !== pathnameBefore, { timeout: 60_000 }),
+      waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect(currentStepCaption).not.toHaveAttribute('aria-valuenow', stepTextBefore ?? '', {
         timeout: 60_000,
       }),

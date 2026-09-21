@@ -4,10 +4,15 @@
 // 자신을 담고 있는 조상 details(예: settings-play처럼 id가 Disclosure 안에 있는 경우)도 전부
 // 열어야 한다. 조상이 닫혀 있었다면 브라우저의 자동 앵커 스크롤이 이미 실패했을 수 있으므로 연
 // 뒤 다시 스크롤한다.
+//
+// T-7-039: 메모리 히스토리로 바뀌면서 실제 주소창의 hash(`window.location.hash`)는 더 이상 화면
+// 상태를 반영하지 않는다(대부분 `/`로 고정) — 호출부(settings.tsx)가 라우터 위치의 hash
+// (`useRouterState`)를 읽어 넘겨준다. 그래서 `hashchange` 구독도 없앴다: hash가 prop으로 바뀌면
+// useEffect 의존성이 그 역할을 대신한다.
 import { useEffect } from 'react';
 
-function expandDisclosuresForCurrentHash() {
-  const id = window.location.hash.slice(1);
+function expandDisclosuresForHash(hash: string) {
+  const id = hash.startsWith('#') ? hash.slice(1) : hash;
   if (!id) return;
   const target = document.getElementById(id);
   if (!target) return;
@@ -27,11 +32,9 @@ function expandDisclosuresForCurrentHash() {
   target.scrollIntoView?.();
 }
 
-/** 마운트 시 한 번, 이후 해시가 바뀔 때마다(앵커 클릭) 대상 안팎의 details를 열고 스크롤한다. */
-export function useExpandDisclosuresOnHash(): void {
+/** 마운트 시, 이후 라우터 위치의 hash가 바뀔 때마다(앵커 클릭) 대상 안팎의 details를 열고 스크롤한다. */
+export function useExpandDisclosuresOnHash(hash: string): void {
   useEffect(() => {
-    expandDisclosuresForCurrentHash();
-    window.addEventListener('hashchange', expandDisclosuresForCurrentHash);
-    return () => window.removeEventListener('hashchange', expandDisclosuresForCurrentHash);
-  }, []);
+    expandDisclosuresForHash(hash);
+  }, [hash]);
 }

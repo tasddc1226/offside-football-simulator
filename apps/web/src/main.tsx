@@ -12,8 +12,19 @@ import { getSyncClient } from './engine/sync.js';
 import { queryClient } from './shared/query-client.js';
 import { hydrateUiStore } from './shared/ui-store.js';
 import { isLegacyProductionHost } from './api/base-url.js';
+import {
+  createFixedAddressHistory,
+  wireBackButtonGuard,
+  wireFixedAddressHistory,
+} from './shared/fixed-address-history.js';
 
-const router = createRouter({ routeTree });
+// T-7-039: 주소 고정 내비게이션. 히스토리 계층은 브라우저 히스토리 대신 실제 주소를 시드로 한
+// 메모리 히스토리다(라우트·`navigate` 호출부는 그대로). 조립만 여기서 하고 나머지 로직은
+// shared/fixed-address-history.ts에 있다.
+const fixedAddressHistory = createFixedAddressHistory();
+const router = createRouter({ routeTree, history: fixedAddressHistory });
+wireFixedAddressHistory(fixedAddressHistory);
+wireBackButtonGuard(fixedAddressHistory);
 
 declare module '@tanstack/react-router' {
   interface Register {

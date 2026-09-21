@@ -4,6 +4,7 @@
 // 제안이 있으면 더 이상 자동 통과하지 않는다) — 그래도 만약을 대비해 이벤트 화면이 뜨면 첫 선택지로
 // 넘기도록 대비한다(first-contract.spec.ts와 같은 관례).
 import { expect, test } from '@playwright/test';
+import { currentRoute, expectRoute } from './helpers/route.js';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
@@ -32,7 +33,7 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
 
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
   await expect(page.getByRole('progressbar', { name: '시즌 진행', exact: true })).toHaveAttribute(
     'aria-valuenow',
     '1',
@@ -73,7 +74,7 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
 
   // SCR-033: "표시된 능력 × 가중치"가 헤더 Base OVR과 같다(인수 조건).
   await page.getByRole('link', { name: '능력치 상세' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/attributes$/);
+  await expectRoute(page, /\/career\/.+\/attributes$/);
   const headerText = await page.getByText(/^Base OVR \d+$/).textContent();
   const computedText = await page.getByText(/^표시된 능력 × 가중치 = \d+$/).textContent();
   expect(computedText?.replace('표시된 능력 × 가중치 = ', '')).toBe(
@@ -83,15 +84,15 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
   await expect(page.getByText('정찰 범위')).toBeVisible();
 
   await page.goBack();
-  await expect(page).toHaveURL(/\/career\/[^/]+\?view=player$/);
+  await expectRoute(page, /\/career\/[^/]+\?view=player$/);
 
   await page.getByRole('tab', { name: '시즌' }).click();
   await page.getByRole('button', { name: '결산하기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expectRoute(page, /\/career\/.+\/season-result$/);
   await expect(page.getByRole('heading', { level: 1, name: '프로 시즌 결과' })).toBeVisible();
 
   await page.getByRole('link', { name: '대시보드' }).click();
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
 
   // T-3-003 §5: 결산 뒤 계약이 만료·관심 조건에 걸리면 시장이 자동으로 열려, "프리시즌 계획" 대신
   // 제안 카드가 먼저 뜰 수 있다 — 그러면 안전 잔류(첫 제안)를 수락하고 진짜 "프리시즌 계획"으로 간다.
@@ -104,7 +105,7 @@ test('시즌 전체 흐름: 프리시즌 계획 → 시즌 준비 → 역할 제
     await offersCta.click();
     await signFirstOffer(page);
   }
-  if (!/\/preseason$/.test(page.url())) {
+  if (!/\/preseason$/.test(await currentRoute(page))) {
     await expect(planCta).toBeVisible();
   }
 
@@ -128,7 +129,7 @@ test('SCR-011에서 시즌을 시작한 뒤 뒤로 가기로 재진입해도 시
   await planPreseason(page, '역할 집중');
   await page.getByRole('button', { name: '시즌 시작' }).click();
   await resolveRoleProposal(page);
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
+  await expectRoute(page, /\/career\/[^/]+$/);
 
   await page.goto('/');
   const revisionAfterStart = Number(
@@ -142,9 +143,11 @@ test('SCR-011에서 시즌을 시작한 뒤 뒤로 가기로 재진입해도 시
   // `mode=FAST`는 사용자 결정(2026-09-13, D-77) 이전의 옛 딥링크·북마크를 흉내낸다 — validateSearch가
   // 무시하므로 있어도 없어도 이 리다이렉트 동작은 같다.
   await page.getByRole('button', { name: '이어하기' }).click();
-  await expect(page).toHaveURL(/\/career\/[^/]+$/);
-  await page.goto(`${page.url()}/season-prep?mode=FAST&focus=ROLE`);
-  await expect(page).not.toHaveURL(/\/season-prep/);
+  await expectRoute(page, /\/career\/[^/]+$/);
+  // T-7-039: 주소창이 고정돼 page.url()은 더 이상 실제 화면 경로를 담지 않는다 — 라우터가 기록한
+  // 실제 경로(currentRoute)를 기준으로 옛 딥링크·북마크를 흉내낸다(상대 경로라 baseURL로 풀린다).
+  await page.goto(`${await currentRoute(page)}/season-prep?mode=FAST&focus=ROLE`);
+  await expectRoute(page, /\/season-prep/, { negate: true });
   await expect(page.getByRole('button', { name: '시즌 시작' })).not.toBeVisible();
 
   await page.goto('/');
@@ -178,7 +181,7 @@ test('시즌 1 결산 뒤 INTEREST 시장이 열리면 안전 잔류 제안을 �
   await advanceThroughSeasonToSettlement(page);
 
   await page.getByRole('button', { name: '결산하기' }).click();
-  await expect(page).toHaveURL(/\/career\/.+\/season-result$/);
+  await expectRoute(page, /\/career\/.+\/season-result$/);
 
   // 결산 화면의 다음 시즌 CTA가 최신 pending 시장 상태를 직접 가리킨다.
   const offersCta = page.getByRole('link', { name: '다음 시즌' });
@@ -189,5 +192,5 @@ test('시즌 1 결산 뒤 INTEREST 시장이 열리면 안전 잔류 제안을 �
   // signFirstOffer는 offers[0](안전 잔류)을 수락한다 — STAY 결과 카드에 도착해 "새 시즌 준비"로
   // 프리시즌에 닿는다(state.season === null이면 ctaToPreseason이 그리로 보낸다, PR #76).
   await signFirstOffer(page);
-  await expect(page).toHaveURL(/\/career\/[^/]+(?:\/preseason)?$/);
+  await expectRoute(page, /\/career\/[^/]+(?:\/preseason)?$/);
 });

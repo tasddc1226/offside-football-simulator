@@ -1,6 +1,7 @@
 // Presentation-only regression coverage. Every test uses Playwright's isolated browser context,
 // mocked API responses and fresh local career data; it never touches the user's running session.
 import { expect, type Page, test, type TestInfo } from '@playwright/test';
+import { expectRoute } from './helpers/route.js';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
@@ -248,12 +249,12 @@ test('허브 삭제 대화상자는 프레임 위에 표시되고 Escape로 포�
   await startNewCareer(page);
   await fillPlayerInfo(page);
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
-  await expect(page).toHaveURL(/\/style$/);
+  await expectRoute(page, /\/style$/);
   await page.goto('/');
   // "최근 선수"(resume) 탭의 기본 카드는 featured=true라 상세 관리 disclosure를 두지 않는다 —
   // "선수단 관리"(squad 탭)로 이동해야 상세 관리·삭제 버튼에 닿는다.
   await page.getByRole('link', { name: '선수단 관리' }).click();
-  await expect(page).toHaveURL(/\?tab=squad$/);
+  await expectRoute(page, /\?tab=squad$/);
   await page.getByText('상세 관리').click();
   const trigger = page.getByRole('button', { name: '커리어 삭제' });
   await trigger.click();

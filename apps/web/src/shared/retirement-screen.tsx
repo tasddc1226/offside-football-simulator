@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { loadRetirementArtifacts } from '@offside/content';
 import { loadLocalCareerArchive, loadLocalLegacyResult } from '@offside/engine-client';
@@ -552,13 +552,16 @@ function TimelineList({
   startYear: number;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
+  // T-7-039: 메모리 히스토리에서는 실제 주소창 hash가 화면 상태를 반영하지 않는다 — 라우터 위치의
+  // hash를 본다.
+  const hash = useRouterState({ select: (state) => state.location.hash });
   useEffect(() => {
-    const targetId = window.location.hash.slice(1);
+    const targetId = hash.startsWith('#') ? hash.slice(1) : hash;
     if (!targetId) return;
     const revision = Number(targetId.replace('revision-', ''));
     if (routineRevisions.includes(revision)) detailsRef.current?.setAttribute('open', '');
     requestAnimationFrame(() => document.getElementById(targetId)?.focus());
-  }, [routineRevisions]);
+  }, [routineRevisions, hash]);
 
   return (
     <div className="os-endgame-stack">

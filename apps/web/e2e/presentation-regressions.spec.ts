@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { currentRoute, expectRoute, waitForRoute } from './helpers/route.js';
 import {
   advanceUntilOffers,
   completeOnboardingAndConfirm,
@@ -24,8 +25,8 @@ for (const choice of [0, 2]) {
     let sawPath = false;
     let sawTryout = false;
     for (let step = 0; step < 10; step += 1) {
-      await page.waitForURL(/\/career\/.+\/(path|tryout|event|offers)$/);
-      const pathname = new URL(page.url()).pathname;
+      await waitForRoute(page, /\/career\/.+\/(path|tryout|event|offers)$/);
+      const pathname = (await currentRoute(page)).split('?')[0]!;
       if (pathname.endsWith('/offers')) break;
       if (pathname.endsWith('/path')) {
         sawPath = true;
@@ -35,7 +36,7 @@ for (const choice of [0, 2]) {
         await expect(page.getByText(/각 경로는 서로 다른 기회/)).toBeVisible();
         await page.getByRole('radio').nth(choice).click();
         await page.getByRole('button', { name: '확정' }).click();
-        await expect(page).toHaveURL(/\/event\/result\?rev=\d+$/);
+        await expectRoute(page, /\/event\/result\?rev=\d+$/);
         const title =
           choice === 0 ? '프로 입단 테스트에 도전한다' : '하부리그에서 첫 기회를 찾는다';
         await expect(page.getByText(title, { exact: true })).toBeVisible();
@@ -54,7 +55,7 @@ for (const choice of [0, 2]) {
     }
     expect(sawPath).toBe(true);
     expect(sawTryout).toBe(true);
-    await expect(page).toHaveURL(/\/offers$/);
+    await expectRoute(page, /\/offers$/);
   });
 }
 
@@ -86,14 +87,14 @@ test.describe('저장 성공 전환', () => {
     await expect(page.getByText('선수 등록을 완료합니다')).toBeVisible();
     await expect(page.getByText('복구 코드는 설정에서 언제든 발급할 수 있습니다.')).toBeVisible();
     await expect(page.getByRole('progressbar')).toBeVisible();
-    await expect(page).toHaveURL(/\/career\/.+\/confirm$/);
-    await expect(page).toHaveURL(/\/career\/.+\/(path|tryout|event)$/);
+    await expectRoute(page, /\/career\/.+\/confirm$/);
+    await expectRoute(page, /\/career\/.+\/(path|tryout|event)$/);
     await advanceUntilOffers(page);
     await signFirstOffer(page);
     await planPreseason(page, '역할 집중');
 
     await page.getByRole('button', { name: '시즌 시작' }).click();
     await expect(page.getByText('시즌 준비 완료')).toBeVisible();
-    await expect(page).toHaveURL(/\/career\/[^/]+(?:\/role)?$/);
+    await expectRoute(page, /\/career\/[^/]+(?:\/role)?$/);
   });
 });
