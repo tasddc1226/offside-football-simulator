@@ -1,0 +1,162 @@
+{
+  "id": "EVT-REL-416",
+  "version": 1,
+  "phases": [
+    "IN_SEASON"
+  ],
+  "triggers": {
+    "all": [
+      {
+        "eq": [
+          "career.stage",
+          "PRO"
+        ]
+      },
+      {
+        "any": [
+          {
+            "eq": [
+              "contract.teamId",
+              "torino-stella"
+            ]
+          },
+          {
+            "eq": [
+              "contract.teamId",
+              "napoli-mare"
+            ]
+          }
+        ]
+      },
+      {
+        "hasTag": [
+          "career.tags",
+          "세계_IT_정착"
+        ]
+      }
+    ]
+  },
+  "exclusionTags": [
+    "세계_IT_1_완료"
+  ],
+  "weight": 500,
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "동네 사람들에게 먼저 인사를 건넨다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "주장 신뢰 +8 · 사기 +3"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "주장 신뢰 +8 · 사기 +3",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-REL-416.A.0.0",
+              "target": "captain",
+              "delta": 8,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-416.A.0.1",
+              "target": "morale",
+              "delta": 3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": [
+            "세계_IT_1_완료",
+            "해외_경험",
+            "해외_소속감"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "동료에게 고마움을 전하며 회복한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "집중력 +2 · 체력 −5"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "집중력 +2 · 체력 −5",
+          "effects": [
+            {
+              "kind": "PERMANENT",
+              "sourceId": "EVT-REL-416.B.0.0",
+              "target": "concentration",
+              "delta": 2,
+              "clamp": {
+                "min": 1,
+                "max": 99
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            },
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-REL-416.B.0.1",
+              "target": "fitness",
+              "delta": -5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": [
+            "세계_IT_1_완료",
+            "해외_경험",
+            "해외_소속감"
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "늘 인사하던 이웃이 패배한 다음 날에도 커피를 건넨다. 경기장 밖에도 내 편이 있다는 생각이 든다."
+  }
+}

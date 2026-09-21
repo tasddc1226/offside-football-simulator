@@ -29,7 +29,12 @@ function makeResult(overrides: Partial<SeasonResult> = {}): SeasonResult {
       finalRank: 1,
     },
     roleChanges: [],
-    promiseFulfilment: { promised: 'ROTATION', delivered: 'ROTATION', fulfilled: true, minutesShareBp: 0 },
+    promiseFulfilment: {
+      promised: 'ROTATION',
+      delivered: 'ROTATION',
+      fulfilled: true,
+      minutesShareBp: 0,
+    },
     attributeDeltas: [],
     baseOvr: { before: 60, after: 60 },
     stateDeltas: {
@@ -71,7 +76,9 @@ describe('settlement reputation pure functions', () => {
   });
 
   it('STARTER 시즌은 starterSeasonCenti를 더한다', () => {
-    const result = makeResult({ selectionSummary: { ...makeResult().selectionSummary, squadRoleAtEnd: 'STARTER' } });
+    const result = makeResult({
+      selectionSummary: { ...makeResult().selectionSummary, squadRoleAtEnd: 'STARTER' },
+    });
     expect(computeSettlementPopularityDelta(result, rulesetProto.reputationRules)).toBe(200);
   });
 
@@ -91,6 +98,29 @@ describe('settlement reputation pure functions', () => {
     expect(seasonWonTitle(cupWinner)).toBe(true);
     expect(computeSettlementPopularityDelta(leagueWinner, rulesetProto.reputationRules)).toBe(400);
     expect(computeSettlementPopularityDelta(cupWinner, rulesetProto.reputationRules)).toBe(400);
+  });
+
+  it('promotion zone은 실제 승격 이동 없이 후보 ruleset의 평판 보상만 더한다', () => {
+    const candidateRuleset = {
+      ...rulesetProto,
+      reputationRules: {
+        ...rulesetProto.reputationRules,
+        settlement: { ...rulesetProto.reputationRules.settlement, promotionCenti: 250 },
+      },
+    };
+    const zone = makeResult({
+      competitions: [competition({ competitionId: 'league-tier2', position: 2 })],
+    });
+    const outside = makeResult({
+      competitions: [competition({ competitionId: 'league-tier2', position: 3 })],
+    });
+    const base = computeSettlementPopularityDelta(zone, rulesetProto.reputationRules);
+    expect(
+      computeSettlementPopularityDelta(zone, candidateRuleset.reputationRules, candidateRuleset),
+    ).toBe(base + 250);
+    expect(
+      computeSettlementPopularityDelta(outside, candidateRuleset.reputationRules, candidateRuleset),
+    ).toBe(computeSettlementPopularityDelta(outside, rulesetProto.reputationRules));
   });
 
   it('결산 적용은 popularity만 clamp하고 media를 불변으로 둔다', () => {

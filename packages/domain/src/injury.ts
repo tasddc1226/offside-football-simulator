@@ -54,7 +54,9 @@ export function injuryAvailabilityFromHealth(health: CareerState['health']): Ava
     const episode = health.episodes[i]!;
     if (episode.status !== 'ACTIVE' && episode.status !== 'REHAB') continue;
     if (episode.remainingMatches === undefined) {
-      throw new RangeError(`injuryAvailabilityFromHealth: ${episode.id}에 remainingMatches가 없다.`);
+      throw new RangeError(
+        `injuryAvailabilityFromHealth: ${episode.id}에 remainingMatches가 없다.`,
+      );
     }
     if (episode.remainingMatches > 0) {
       return {
@@ -94,8 +96,14 @@ function applySequela(
   episode: InjuryEpisode,
   ruleset: Ruleset,
   magnitude: number,
-): { episode: InjuryEpisode; attributes: CareerState['attributes']; profile: PlayerProfile | null } {
-  const bodyPart = ruleset.injuryRules.bodyParts.find((candidate) => candidate.id === episode.bodyPart);
+): {
+  episode: InjuryEpisode;
+  attributes: CareerState['attributes'];
+  profile: PlayerProfile | null;
+} {
+  const bodyPart = ruleset.injuryRules.bodyParts.find(
+    (candidate) => candidate.id === episode.bodyPart,
+  );
   const key = bodyPart?.sequelaKeys[0] as AttributeKey | undefined;
   if (key === undefined || magnitude === 0) {
     return {
@@ -119,7 +127,10 @@ function applySequela(
  * 선수 상태가 부상 심각도 분포에 반영하는 위험 보정값을 계산한다.
  * 감소한 MINOR 가중치는 MODERATE(3/4)와 MAJOR(1/4)로 이동하며, 합은 항상 10000이다.
  */
-export function adjustedSeverityWeights(rules: InjuryRules, state: CareerState): InjuryRules['severityWeights'] {
+export function adjustedSeverityWeights(
+  rules: InjuryRules,
+  state: CareerState,
+): InjuryRules['severityWeights'] {
   const base = rules.severityWeights;
   const durability = state.attributes.durability;
   const riskAdjustment = clamp(
@@ -138,7 +149,10 @@ export function adjustedSeverityWeights(rules: InjuryRules, state: CareerState):
   };
 }
 
-function rollSeverity(state: RngState, weights: InjuryRules['severityWeights']): { severity: InjurySeverity; state: RngState } {
+function rollSeverity(
+  state: RngState,
+  weights: InjuryRules['severityWeights'],
+): { severity: InjurySeverity; state: RngState } {
   const rolled = rollInt(state, 10000);
   const moderateBoundary = weights.MINOR + weights.MODERATE;
   const severity: InjurySeverity =
@@ -146,7 +160,10 @@ function rollSeverity(state: RngState, weights: InjuryRules['severityWeights']):
   return { severity, state: rolled.state };
 }
 
-function rollBodyPart(state: RngState, rules: InjuryRules): { bodyPart: InjuryRules['bodyParts'][number]; state: RngState } {
+function rollBodyPart(
+  state: RngState,
+  rules: InjuryRules,
+): { bodyPart: InjuryRules['bodyParts'][number]; state: RngState } {
   const total = rules.bodyParts.reduce((sum, bodyPart) => sum + bodyPart.weight, 0);
   const rolled = rollInt(state, total);
   let cumulative = 0;
@@ -162,7 +179,9 @@ function injuryRange(rules: InjuryRules, severity: InjurySeverity): { min: numbe
 }
 
 function nextEpisodeId(state: CareerState, seasonIndex: number, step: number): string {
-  const sequence = state.health.episodes.filter((episode) => episode.occurredAt.seasonIndex === seasonIndex).length + 1;
+  const sequence =
+    state.health.episodes.filter((episode) => episode.occurredAt.seasonIndex === seasonIndex)
+      .length + 1;
   return `INJ-${seasonIndex}-${step}-${sequence}`;
 }
 
@@ -175,8 +194,33 @@ function shouldForce(
   return severity !== 'MINOR' && allowForcedPending && injuryCount < rules.maxForcedPerSeason;
 }
 
-function forcedPending(episode: InjuryEpisode, step: number, rules: InjuryRules): InjuryPending {
-  return { kind: 'INJURY', step, episodeId: episode.id, eventId: rules.event.id, version: rules.event.version };
+function injuryEventReference(
+  episode: InjuryEpisode,
+  state: CareerState,
+  rules: InjuryRules,
+  recurrence = false,
+): { id: string; version: number } {
+  const contextual = rules.contextualEvents;
+  if (contextual === undefined) return rules.event;
+  if (recurrence && contextual.recurrence !== undefined) return contextual.recurrence;
+  const byBodyPart = contextual.byBodyPart?.[episode.bodyPart];
+  if (byBodyPart !== undefined) return byBodyPart;
+  const ageEvent = contextual.byAgeFrom
+    ?.slice()
+    .sort((a, b) => b.age - a.age)
+    .find((candidate) => state.age >= candidate.age)?.event;
+  return ageEvent ?? rules.event;
+}
+
+function forcedPending(
+  episode: InjuryEpisode,
+  step: number,
+  rules: InjuryRules,
+  state: CareerState,
+  recurrence = false,
+): InjuryPending {
+  const event = injuryEventReference(episode, state, rules, recurrence);
+  return { kind: 'INJURY', step, episodeId: episode.id, eventId: event.id, version: event.version };
 }
 
 function identityHook(input: {
@@ -211,7 +255,10 @@ function closeOpenRecurrenceWindows(episodes: readonly InjuryEpisode[]): InjuryE
 }
 
 /** Counts only the current same-body recurrence chain; an unrelated fresh injury starts over. */
-export function recurrenceChainLength(episodes: readonly InjuryEpisode[], episodeId: string): number {
+export function recurrenceChainLength(
+  episodes: readonly InjuryEpisode[],
+  episodeId: string,
+): number {
   const index = episodes.findIndex((episode) => episode.id === episodeId);
   if (index < 0) return 0;
   const bodyPart = episodes[index]!.bodyPart;
@@ -271,13 +318,17 @@ export function onMatchInjury(input: {
   const priorEpisodes = closeOpenRecurrenceWindows(input.state.health.episodes);
   return {
     health: { episodes: [...priorEpisodes, episode] },
-    availability: { kind: 'INJURY', matchesRemaining: durationResult.value, sinceMatchId: input.match.id },
+    availability: {
+      kind: 'INJURY',
+      matchesRemaining: durationResult.value,
+      sinceMatchId: input.match.id,
+    },
     injuryCount: forced ? input.injuryCount + 1 : input.injuryCount,
     timeline: [timelineEntry(timelineRevision, 'INJURED', episode.id, input.state, input.step)],
     rng: state,
     attributes: input.state.attributes,
     profile: input.state.player.profile,
-    forcedPending: forced ? forcedPending(episode, input.step, rules) : null,
+    forcedPending: forced ? forcedPending(episode, input.step, rules, input.state) : null,
   };
 }
 
@@ -292,14 +343,25 @@ export function onInjuryRecovered(input: {
   rng: RngState;
 }): InjuryHookResult {
   if (input.availability === null || input.availability.kind !== 'INJURY') {
-    return identityHook({ state: input.state, availability: input.availability, injuryCount: input.state.season?.injuryCount ?? 0, rng: input.rng });
+    return identityHook({
+      state: input.state,
+      availability: input.availability,
+      injuryCount: input.state.season?.injuryCount ?? 0,
+      rng: input.rng,
+    });
   }
   const injuryAvailability = input.availability;
   const index = input.state.health.episodes.findIndex(
-    (episode) => episode.status === 'REHAB' && episode.occurredAt.matchId === injuryAvailability.sinceMatchId,
+    (episode) =>
+      episode.status === 'REHAB' && episode.occurredAt.matchId === injuryAvailability.sinceMatchId,
   );
   if (index < 0) {
-    return identityHook({ state: input.state, availability: null, injuryCount: input.state.season?.injuryCount ?? 0, rng: input.rng });
+    return identityHook({
+      state: input.state,
+      availability: null,
+      injuryCount: input.state.season?.injuryCount ?? 0,
+      rng: input.rng,
+    });
   }
   const episode = input.state.health.episodes[index]!;
   // 후유증은 최초 MAJOR 회복에서만 확정한다. 재발 episode는 성공 순간 이미
@@ -318,7 +380,11 @@ export function onInjuryRecovered(input: {
   };
   const timelineRevision = input.revision ?? 1;
   return {
-    health: { episodes: input.state.health.episodes.map((candidate, i) => (i === index ? recovered : candidate)) },
+    health: {
+      episodes: input.state.health.episodes.map((candidate, i) =>
+        i === index ? recovered : candidate,
+      ),
+    },
     availability: null,
     injuryCount: input.state.season?.injuryCount ?? 0,
     timeline: [timelineEntry(timelineRevision, 'RECOVERED', recovered.id, input.state, input.step)],
@@ -330,10 +396,18 @@ export function onInjuryRecovered(input: {
 }
 
 /** 재발 검사를 실패로 끝내고 남은 검사 횟수만 감소시킨다(roll은 호출자가 이미 소비했다). */
-export function onRecurrenceCheckFailed(state: CareerState, episodeId: string): CareerState['health'] {
+export function onRecurrenceCheckFailed(
+  state: CareerState,
+  episodeId: string,
+): CareerState['health'] {
   return {
     episodes: state.health.episodes.map((episode) =>
-      episode.id === episodeId ? { ...episode, recurrenceChecksRemaining: Math.max(0, episode.recurrenceChecksRemaining - 1) } : episode,
+      episode.id === episodeId
+        ? {
+            ...episode,
+            recurrenceChecksRemaining: Math.max(0, episode.recurrenceChecksRemaining - 1),
+          }
+        : episode,
     ),
   };
 }
@@ -352,12 +426,21 @@ export function onMatchRecurrence(input: {
   allowForcedPending?: boolean;
 }): InjuryHookResult {
   const rules = input.ruleset.injuryRules;
-  const originalIndex = input.state.health.episodes.findIndex((episode) => episode.id === input.episodeId);
-  if (originalIndex < 0) return identityHook({ state: input.state, availability: null, injuryCount: input.injuryCount, rng: input.rng });
+  const originalIndex = input.state.health.episodes.findIndex(
+    (episode) => episode.id === input.episodeId,
+  );
+  if (originalIndex < 0)
+    return identityHook({
+      state: input.state,
+      availability: null,
+      injuryCount: input.injuryCount,
+      rng: input.rng,
+    });
   const original = input.state.health.episodes[originalIndex]!;
   const severity: InjurySeverity = original.severity === 'MINOR' ? 'MODERATE' : 'MAJOR';
   const bodyPart = rules.bodyParts.find((candidate) => candidate.id === original.bodyPart);
-  if (bodyPart === undefined) throw new RangeError(`onMatchRecurrence: bodyPart '${original.bodyPart}'가 없다.`);
+  if (bodyPart === undefined)
+    throw new RangeError(`onMatchRecurrence: bodyPart '${original.bodyPart}'가 없다.`);
   const range = injuryRange(rules, severity);
   const durationResult = rollRange(input.rng, range.min, range.max);
   const forced = shouldForce(severity, input.injuryCount, rules, input.allowForcedPending ?? true);
@@ -398,18 +481,28 @@ export function onMatchRecurrence(input: {
   const timelineRevision = input.revision ?? 1;
   return {
     health,
-    availability: { kind: 'INJURY', matchesRemaining: durationResult.value, sinceMatchId: input.match.id },
+    availability: {
+      kind: 'INJURY',
+      matchesRemaining: durationResult.value,
+      sinceMatchId: input.match.id,
+    },
     injuryCount: forced ? input.injuryCount + 1 : input.injuryCount,
-    timeline: [timelineEntry(timelineRevision, 'INJURY_RECURRED', episode.id, input.state, input.step)],
+    timeline: [
+      timelineEntry(timelineRevision, 'INJURY_RECURRED', episode.id, input.state, input.step),
+    ],
     rng: durationResult.state,
     attributes: sequela.attributes,
     profile: sequela.profile,
-    forcedPending: forced ? forcedPending(episode, input.step, rules) : null,
+    forcedPending: forced ? forcedPending(episode, input.step, rules, input.state, true) : null,
   };
 }
 
 /** RESOLVE_EVENT가 INJURY pending을 닫을 때 고른 재활 계획을 에피소드에 적용한다. */
-export function applyRehabPlan(episode: InjuryEpisode, plan: RehabPlan, injuryRules: InjuryRules): InjuryEpisode {
+export function applyRehabPlan(
+  episode: InjuryEpisode,
+  plan: RehabPlan,
+  injuryRules: InjuryRules,
+): InjuryEpisode {
   const rehabRule = injuryRules.rehab[plan];
   const shiftedRange = rehabDurationRange(episode, plan, injuryRules);
   const returnMatches =

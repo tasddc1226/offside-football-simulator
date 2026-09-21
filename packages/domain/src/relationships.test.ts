@@ -307,7 +307,10 @@ describe('onSettlementRelations', () => {
     });
     const inputRngBytes = JSON.stringify(state.rngState);
     const directRoll = rollInt(state.rngState, 10000);
-    const managerRoll = rollInt(seedRng(`manager:${makeSeason(makeManager()).index}:${state.rngState.s.join(',')}`), 10000);
+    const managerRoll = rollInt(
+      seedRng(`manager:${makeSeason(makeManager()).index}:${state.rngState.s.join(',')}`),
+      10000,
+    );
     expect(managerRoll.value).not.toBe(directRoll.value);
     const result = onSettlementRelations({
       state,
@@ -395,5 +398,42 @@ describe('onSettlementRelations', () => {
       revision: 11,
       refId: 'CAPTAIN',
     });
+  });
+
+  it('후보 ruleset은 3시즌 이상 뛴 STARTER에게만 주장 관계를 점진적으로 열고 BENCH에는 적용하지 않는다', () => {
+    const candidateRuleset = {
+      ...rulesetProto,
+      relationshipRules: { ...rulesetProto.relationshipRules, captainSeasonStarterDelta: 4 },
+    };
+    const established = makeState({
+      relationships: { ...makeState().relationships, captain: 69 },
+      seasonHistory: [makeSummary(1), makeSummary(2), makeSummary(3)],
+      captaincy: 'NONE',
+      captaincySeasons: 0,
+    });
+    const promoted = onSettlementRelations({
+      state: established,
+      season: makeSeason(),
+      result: makeResult({ captaincyAtEnd: 'NONE' }),
+      ruleset: candidateRuleset,
+      rng: established.rngState,
+      timelineRevision: 10,
+    });
+    expect(promoted.state.relationships.captain).toBe(73);
+    expect(promoted.state.captaincy).toBe('VICE');
+
+    const bench = onSettlementRelations({
+      state: established,
+      season: makeSeason(),
+      result: makeResult({
+        captaincyAtEnd: 'NONE',
+        selectionSummary: { ...makeResult().selectionSummary, squadRoleAtEnd: 'BENCH' },
+      }),
+      ruleset: candidateRuleset,
+      rng: established.rngState,
+      timelineRevision: 10,
+    });
+    expect(bench.state.relationships.captain).toBe(69);
+    expect(bench.state.captaincy).toBe('NONE');
   });
 });

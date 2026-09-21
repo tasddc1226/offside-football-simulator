@@ -19,8 +19,16 @@ describe('loadRuleset', () => {
     });
     expect(ledgerRuleset.leagues.every((league) => league.teamCount <= 16)).toBe(true);
     const eventExposureRuleset = loadRuleset('1.7.1');
-    const { version: previousVersion, leagueCalendar: previousCalendar, ...previousPolicies } = ledgerRuleset;
-    const { version: nextVersion, leagueCalendar: nextCalendar, ...nextPolicies } = eventExposureRuleset;
+    const {
+      version: previousVersion,
+      leagueCalendar: previousCalendar,
+      ...previousPolicies
+    } = ledgerRuleset;
+    const {
+      version: nextVersion,
+      leagueCalendar: nextCalendar,
+      ...nextPolicies
+    } = eventExposureRuleset;
     expect(previousVersion).toBe('1.7.0');
     expect(nextVersion).toBe('1.7.1');
     expect(nextPolicies).toEqual(previousPolicies);
@@ -124,7 +132,11 @@ describe('loadRuleset: 1.7.3 issue #242 role balance', () => {
     expect(previous.selectionRules.roleProposal.zeroSlotAdjacentFallback).toBeUndefined();
     expect(ruleset.selectionRules.roleProposal.zeroSlotAdjacentFallback).toBe(true);
 
-    const { version: previousVersion, selectionRules: previousSelection, ...previousRest } = previous;
+    const {
+      version: previousVersion,
+      selectionRules: previousSelection,
+      ...previousRest
+    } = previous;
     const { version: nextVersion, selectionRules: nextSelection, ...nextRest } = ruleset;
     expect(previousVersion).toBe('1.7.2');
     expect(nextVersion).toBe('1.7.3');
@@ -134,7 +146,9 @@ describe('loadRuleset: 1.7.3 issue #242 role balance', () => {
     };
     delete nextRoleProposal.zeroSlotAdjacentFallback;
     expect(nextRoleProposal).toEqual(previousSelection.roleProposal);
-    expect({ ...nextSelection, roleProposal: previousSelection.roleProposal }).toEqual(previousSelection);
+    expect({ ...nextSelection, roleProposal: previousSelection.roleProposal }).toEqual(
+      previousSelection,
+    );
   });
 });
 
@@ -156,6 +170,47 @@ describe('loadRuleset: 1.7.4 issue #243 chapter rotation', () => {
     expect(nextVersion).toBe('1.7.4');
     expect(chapterSelectionRules).toBeDefined();
     expect(nextRest).toEqual(previousRest);
+  });
+});
+
+describe('loadRuleset: 3.4.0 unpublished gameplay/content candidate', () => {
+  it('registers the candidate without changing the published 3.3 policy', () => {
+    const published = loadRuleset('3.3.0');
+    const candidate = loadRuleset('3.4.0');
+    expect(RULESET_VERSIONS).toContain('3.4.0');
+    expect(published.version).toBe('3.3.0');
+    expect(candidate.version).toBe('3.4.0');
+    expect(candidate.selectionRules.roleProposal.earlyOpportunity).toEqual({
+      version: 'ROOKIE_TRIAL_V1',
+      maxAge: 21,
+      maxSeason: 1,
+      maxMatchesWithoutMinutes: 3,
+      eligibleRoles: ['STARTER', 'ROTATION', 'BENCH'],
+    });
+    expect(candidate.chapterSelectionRules).toEqual({
+      version: 'LRU_V1',
+      repeatCooldownSeasons: 1,
+      allowResolvedChapterRepeat: true,
+    });
+    expect(candidate.nationalities).toHaveLength(32);
+    expect(candidate.nationalities[0]).toEqual({ code: 'KR', name: '대한민국' });
+    expect(new Set(candidate.nationalities.map((entry) => entry.code)).size).toBe(32);
+    expect(candidate.teams.filter((team) => team.leagueTier === 3)).toHaveLength(16);
+    expect(
+      candidate.teams
+        .filter((team) => team.leagueTier === 3)
+        .every((team) => team.name !== undefined),
+    ).toBe(true);
+    expect(candidate.reputationRules.settlement.promotionCenti).toBe(250);
+    expect(candidate.relationshipRules.captainSeasonStarterDelta).toBe(4);
+    expect(candidate.injuryRules.contextualEvents).toEqual({
+      byBodyPart: {
+        KNEE: { id: 'EVT-INJ-131', version: 1 },
+        HAMSTRING: { id: 'EVT-INJ-132', version: 1 },
+      },
+      byAgeFrom: [{ age: 30, event: { id: 'EVT-INJ-132', version: 1 } }],
+      recurrence: { id: 'EVT-INJ-133', version: 1 },
+    });
   });
 });
 

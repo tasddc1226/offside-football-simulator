@@ -5,6 +5,7 @@ import { Link } from '@tanstack/react-router';
 import { useUiStore } from './ui-store.js';
 import { GENDER_LABELS, POSITION_LABELS, PREFERRED_FOOT_LABELS } from './labels.js';
 import { backgroundOpening, validateDraftName } from './player-draft.js';
+import { NationalitySelector } from './nationality-selector.js';
 import './creation-flow.css';
 
 export type CreationValues = {
@@ -208,18 +209,12 @@ export function CreationForm({
         <div className="creation-two">
           <label>
             국적
-            <select
-              aria-label="국적"
+            <NationalitySelector
+              options={ruleset.nationalities}
               disabled={busy}
               value={form.nationalityCode}
-              onChange={(e) => update('nationalityCode', e.target.value)}
-            >
-              {ruleset.nationalities.map((n) => (
-                <option value={n.code} key={n.code}>
-                  {n.name}
-                </option>
-              ))}
-            </select>
+              onChange={(code) => update('nationalityCode', code)}
+            />
           </label>
           <label>
             성별

@@ -1,0 +1,53 @@
+{
+  "id": "EVT-INJ-131",
+  "version": 1,
+  "authoring": "PROTOTYPE",
+  "phases": ["YOUTH"],
+  "triggers": { "any": [{ "lte": ["rng.injuryRoll", 35] }, { "hasTag": ["season.tags", "무리한_돌파"] }] },
+  "exclusionTags": [],
+  "cooldown": { "steps": 4 },
+  "weight": 100,
+  "safety": { "minorSafe": true },
+  "presentation": "INJURY",
+  "choices": [
+    {
+      "id": "A",
+      "label": "표준 재활",
+      "riskLabel": "MEDIUM",
+      "rehabPlan": "STANDARD",
+      "previewEffects": [
+        { "label": "복귀 경기 범위 이동: 0경기 (중간값)" },
+        { "label": "재발 위험: 0bp 변화" },
+        { "label": "출전 기회: 중간 수준 상실" }
+      ],
+      "outcomes": [{ "id": "A1", "kind": "FIXED", "weight": 100, "title": "예정대로 복귀", "cause": "표준 재활", "effects": [] }]
+    },
+    {
+      "id": "B",
+      "label": "조기 복귀",
+      "riskLabel": "HIGH",
+      "rehabPlan": "EARLY",
+      "previewEffects": [
+        { "label": "복귀 경기 범위 이동: -2경기 (최소값)" },
+        { "label": "재발 위험: +1500bp" },
+        { "label": "출전 기회: 가장 적게 상실" }
+      ],
+      "outcomes": [{ "id": "B1", "kind": "FIXED", "weight": 100, "title": "빠르게 복귀", "cause": "조기 재활", "effects": [] }]
+    },
+    {
+      "id": "C",
+      "label": "보수 재활",
+      "riskLabel": "LOW",
+      "rehabPlan": "CONSERVATIVE",
+      "previewEffects": [
+        { "label": "복귀 경기 범위 이동: +2경기 (최대값)" },
+        { "label": "재발 위험: -1000bp" },
+        { "label": "출전 기회: 가장 많이 상실" }
+      ],
+      "outcomes": [{ "id": "C1", "kind": "FIXED", "weight": 100, "title": "완전히 회복", "cause": "보수 재활", "effects": [] }]
+    }
+  ],
+  "narrative": {
+    "situation": "무릎에 충격이 남았다. 진단 범위와 다음 훈련 복귀 시점을 확인하고, 무릎을 보호할 재활 계획을 선택해야 한다."
+  }
+}

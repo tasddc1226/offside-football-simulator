@@ -26,6 +26,23 @@ describe('loadContentPack', () => {
   });
 });
 
+describe('loadContentPack: 0.13.0 unpublished candidate', () => {
+  it('registers the candidate injury narratives and keeps them compatible only with ruleset 3.4.0', () => {
+    const published = loadContentPack('0.12.0');
+    const candidate = loadContentPack('0.13.0');
+    expect(PACK_VERSIONS).toContain('0.13.0');
+    expect(candidate.manifest.compatibleRulesetVersions).toEqual(['3.4.0']);
+    expect(candidate.eventsById.get('EVT-INJ-131')?.narrative.situation).toContain('무릎');
+    expect(candidate.eventsById.get('EVT-INJ-132')?.narrative.situation).toContain('햄스트링');
+    expect(candidate.eventsById.get('EVT-INJ-133')?.narrative.situation).toContain('재발');
+    expect(candidate.eventsById.get('EVT-INJ-131')?.choices).toEqual(
+      candidate.eventsById.get('EVT-INJ-001')?.choices,
+    );
+    expect(candidate.manifest.checksum).not.toBe(published.manifest.checksum);
+    expect(published.manifest.contentPackVersion).toBe('0.12.0');
+  });
+});
+
 // T-3-006/T-4-003/T-4-004: 팩 0.2.0은 0.1.0의 정의와 대표팀 정의를 품고 prototype 문구를 더한다.
 describe('loadContentPack: 0.2.0', () => {
   it('0.2.0의 이벤트 개수가 20개이고 manifest.files의 events 목록과 id가 일치한다', () => {
@@ -295,15 +312,25 @@ describe('loadContentPack: 0.6.6', () => {
 
     // EVT-CON-024~028: 0.6.5와 트리거·choices 구조는 같고, 각 outcome의 addTags에서
     // `입단테스트_완료`만 빠졌다(진로 태그·테스트_보통 힌트는 그대로).
-    for (const eventId of ['EVT-CON-024', 'EVT-CON-025', 'EVT-CON-026', 'EVT-CON-027', 'EVT-CON-028']) {
+    for (const eventId of [
+      'EVT-CON-024',
+      'EVT-CON-025',
+      'EVT-CON-026',
+      'EVT-CON-027',
+      'EVT-CON-028',
+    ]) {
       const previousEvent = previous.eventsById.get(eventId)!;
       const nextEvent = pack.eventsById.get(eventId)!;
       expect(nextEvent.triggers).toEqual(previousEvent.triggers);
-      expect(nextEvent.choices.map((choice) => choice.id)).toEqual(previousEvent.choices.map((choice) => choice.id));
+      expect(nextEvent.choices.map((choice) => choice.id)).toEqual(
+        previousEvent.choices.map((choice) => choice.id),
+      );
       for (const previousChoice of previousEvent.choices) {
         const nextChoice = nextEvent.choices.find((choice) => choice.id === previousChoice.id)!;
         for (const previousOutcome of previousChoice.outcomes) {
-          const nextOutcome = nextChoice.outcomes.find((outcome) => outcome.id === previousOutcome.id)!;
+          const nextOutcome = nextChoice.outcomes.find(
+            (outcome) => outcome.id === previousOutcome.id,
+          )!;
           expect(nextOutcome.addTags).toEqual(
             (previousOutcome.addTags ?? []).filter((tag) => tag !== '입단테스트_완료'),
           );
@@ -411,7 +438,9 @@ describe('loadContentPack: 0.6.8 issue #243 event variety', () => {
       expect(event, eventId).toBeDefined();
       expect(event!.minAge, eventId).toBeGreaterThanOrEqual(28);
       expect(
-        event!.choices.flatMap((choice) => choice.outcomes).every((outcome) => outcome.kind === 'FIXED'),
+        event!.choices
+          .flatMap((choice) => choice.outcomes)
+          .every((outcome) => outcome.kind === 'FIXED'),
         eventId,
       ).toBe(true);
     }
