@@ -172,6 +172,7 @@ export const authAttempts = sqliteTable(
         'ANALYTICS_EVENTS',
         'CAREER_PUBLICATION',
         'FRIENDLY_START',
+        'COMPETITION_ENTRY',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -334,4 +335,59 @@ export const friendlyMatches = sqliteTable(
     createdAt: text('created_at').notNull(),
   },
   (table) => [index('friendly_matches_owner_idx').on(table.ownerProfileId, table.createdAt)],
+);
+
+/** Immutable authored daily scenarios. The pinned rules/content versions are part of the public proof. */
+export const competitionChallengeVersions = sqliteTable(
+  'competition_challenge_versions',
+  {
+    id: text('id').primaryKey(),
+    dayKey: text('day_key').notNull(),
+    weekKey: text('week_key').notNull(),
+    startsAt: text('starts_at').notNull(),
+    endsAt: text('ends_at').notNull(),
+    rulesetVersion: text('ruleset_version').notNull(),
+    contentPackVersion: text('content_pack_version').notNull(),
+    scoringPolicyVersion: text('scoring_policy_version').notNull(),
+    scenarioJson: text('scenario_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [uniqueIndex('competition_challenge_versions_day_unique').on(table.dayKey)],
+);
+
+/** One immutable, server-replayed entry per profile and challenge version. */
+export const competitionEntries = sqliteTable(
+  'competition_entries',
+  {
+    id: text('id').primaryKey(),
+    challengeVersionId: text('challenge_version_id')
+      .notNull()
+      .references(() => competitionChallengeVersions.id, { onDelete: 'cascade' }),
+    ownerProfileId: text('owner_profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    requestKeyHash: text('request_key_hash').notNull().unique(),
+    requestHash: text('request_hash').notNull(),
+    actionIdsJson: text('action_ids_json').notNull(),
+    resultJson: text('result_json').notNull(),
+    resultHash: text('result_hash').notNull(),
+    score: integer('score').notNull(),
+    maxScore: integer('max_score').notNull(),
+    verificationStatus: text('verification_status', { enum: ['VERIFIED', 'REJECTED'] }).notNull(),
+    publicOptIn: integer('public_opt_in').notNull().default(0),
+    publicAlias: text('public_alias').notNull(),
+    submittedAt: text('submitted_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('competition_entries_profile_challenge_unique').on(
+      table.ownerProfileId,
+      table.challengeVersionId,
+    ),
+    index('competition_entries_challenge_public_idx').on(
+      table.challengeVersionId,
+      table.verificationStatus,
+      table.publicOptIn,
+      table.score,
+    ),
+  ],
 );

@@ -17,6 +17,7 @@ import { registerNoticeRoutes } from './routes/notices.js';
 import { registerPresenceRoutes } from './routes/presence.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { registerServiceSeasonRoutes } from './routes/service-seasons.js';
+import { registerCompetitionRoutes } from './routes/competition.js';
 
 export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -45,6 +46,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerAnalyticsRoutes(app);
   registerPresenceRoutes(app);
   registerNoticeRoutes(app);
+  registerCompetitionRoutes(app);
 
   if (options.testRoutes) {
     app.get('/v1/test/throw', () => {

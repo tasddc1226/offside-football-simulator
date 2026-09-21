@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CompetitionRouteImport } from './routes/competition'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as FriendliesRouteImport } from './routes/friendlies'
 import { Route as GuideRouteImport } from './routes/guide'
@@ -45,6 +46,11 @@ import { Route as CareerCareerIdEventResultRouteImport } from './routes/career.$
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompetitionRoute = CompetitionRouteImport.update({
+  id: '/competition',
+  path: '/competition',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FaqRoute = FaqRouteImport.update({
@@ -212,6 +218,7 @@ const CareerCareerIdEventResultRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/competition': typeof CompetitionRoute
   '/faq': typeof FaqRoute
   '/friendlies': typeof FriendliesRoute
   '/guide': typeof GuideRoute
@@ -246,6 +253,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/competition': typeof CompetitionRoute
   '/faq': typeof FaqRoute
   '/friendlies': typeof FriendliesRoute
   '/guide': typeof GuideRoute
@@ -280,6 +288,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/competition': typeof CompetitionRoute
   '/faq': typeof FaqRoute
   '/friendlies': typeof FriendliesRoute
   '/guide': typeof GuideRoute
@@ -316,6 +325,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/competition'
     | '/faq'
     | '/friendlies'
     | '/guide'
@@ -350,6 +360,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/competition'
     | '/faq'
     | '/friendlies'
     | '/guide'
@@ -383,6 +394,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/competition'
     | '/faq'
     | '/friendlies'
     | '/guide'
@@ -418,6 +430,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CompetitionRoute: typeof CompetitionRoute
   FaqRoute: typeof FaqRoute
   FriendliesRoute: typeof FriendliesRoute
   GuideRoute: typeof GuideRoute
@@ -437,6 +450,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/competition': {
+      id: '/competition'
+      path: '/competition'
+      fullPath: '/competition'
+      preLoaderRoute: typeof CompetitionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/faq': {
@@ -713,6 +733,7 @@ const CareerCareerIdRouteWithChildren = CareerCareerIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CompetitionRoute: CompetitionRoute,
   FaqRoute: FaqRoute,
   FriendliesRoute: FriendliesRoute,
   GuideRoute: GuideRoute,

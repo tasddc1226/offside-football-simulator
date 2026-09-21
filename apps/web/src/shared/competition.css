@@ -1,0 +1,122 @@
+.competition {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: grid;
+  gap: 20px;
+  color: var(--os-text);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.competition header {
+  display: grid;
+  gap: 10px;
+}
+.competition h1 {
+  font-size: 26px;
+  line-height: 1.3;
+}
+.competition h2 {
+  font-size: 20px;
+}
+.competition a {
+  color: var(--os-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.competition-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--os-border);
+  border-radius: 16px;
+  background: var(--os-surface);
+}
+.competition-card fieldset {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+.competition-card legend {
+  font-weight: 700;
+}
+.competition-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--os-border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.competition-choice:has(input:checked) {
+  border-color: var(--os-accent);
+  background: var(--os-surface-2);
+}
+.competition-choice input {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: var(--os-accent);
+}
+.competition-choice span {
+  display: grid;
+  gap: 2px;
+}
+.competition-choice small,
+.competition-note {
+  color: var(--os-text-2);
+  font-size: 13px;
+}
+.competition-opt-in {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 14px;
+}
+.competition-opt-in input {
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+.competition-score {
+  font-size: 42px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.competition-score small {
+  font-size: 16px;
+  font-weight: 600;
+}
+.competition-ranking {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.competition-ranking li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--os-border);
+}
+.competition-ranking span {
+  color: var(--os-text-2);
+  font-size: 13px;
+  text-align: right;
+}
+.competition :focus-visible {
+  outline: 2px solid var(--os-accent);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .competition * {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+  }
+}

@@ -1,10 +1,17 @@
-import { eq } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { prepareWebSessionRotation } from '../auth/session.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { listCareerIdsByOwner } from '../db/repos/careers.js';
 import { runBatch } from '../db/repos/batch.js';
-import { auditLog, careers, sessions, lockerTeams, friendlyMatches } from '../db/schema.js';
+import {
+  auditLog,
+  careers,
+  sessions,
+  lockerTeams,
+  friendlyMatches,
+  competitionEntries,
+} from '../db/schema.js';
 
 export type MoveCareersAndRebindInput = {
   fromProfileId: string;
@@ -25,6 +32,22 @@ export async function moveCareersAndRebind(
 ): Promise<void> {
   const careerIds = await listCareerIdsByOwner(db, input.fromProfileId);
   await runBatch(db, [
+    // If both accounts entered the same immutable challenge, keep the target's entry;
+    // otherwise transfer the source entry without changing its server proof or alias.
+    db.delete(competitionEntries).where(
+      and(
+        eq(competitionEntries.ownerProfileId, input.fromProfileId),
+        sql`EXISTS (
+          SELECT 1 FROM competition_entries target
+          WHERE target.owner_profile_id = ${input.toProfileId}
+            AND target.challenge_version_id = competition_entries.challenge_version_id
+        )`,
+      ),
+    ),
+    db
+      .update(competitionEntries)
+      .set({ ownerProfileId: input.toProfileId })
+      .where(eq(competitionEntries.ownerProfileId, input.fromProfileId)),
     db
       .update(friendlyMatches)
       .set({ ownerProfileId: input.toProfileId })
@@ -71,6 +94,20 @@ export async function moveCareersAndRotateWebSession(
     now: input.now,
   });
   await runBatch(db, [
+    db.delete(competitionEntries).where(
+      and(
+        eq(competitionEntries.ownerProfileId, input.fromProfileId),
+        sql`EXISTS (
+          SELECT 1 FROM competition_entries target
+          WHERE target.owner_profile_id = ${input.toProfileId}
+            AND target.challenge_version_id = competition_entries.challenge_version_id
+        )`,
+      ),
+    ),
+    db
+      .update(competitionEntries)
+      .set({ ownerProfileId: input.toProfileId })
+      .where(eq(competitionEntries.ownerProfileId, input.fromProfileId)),
     db
       .update(friendlyMatches)
       .set({ ownerProfileId: input.toProfileId })

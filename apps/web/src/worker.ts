@@ -17,6 +17,7 @@ const PUBLIC_PATHS = new Set([
 const APP_PATHS = [
   /^\/locker-room\/?$/,
   /^\/friendlies\/?$/,
+  /^\/competition\/?$/,
   /^\/articles\/[^/]+\/?$/,
   /^\/onboarding\/?$/,
   /^\/settings\/?$/,
