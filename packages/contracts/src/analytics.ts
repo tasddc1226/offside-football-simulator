@@ -18,6 +18,7 @@ export const ANALYTICS_EVENT_NAMES = [
   'step_passed',
   'season_settled',
   'career_abandoned_hint',
+  'growth_action',
 ] as const;
 
 export const AnalyticsEventNameSchema = z.enum(ANALYTICS_EVENT_NAMES);
@@ -49,6 +50,7 @@ const SeasonIndexSchema = z.number().int().nonnegative();
 
 /** 이름별 props 스키마. 화이트리스트 자체이기도 하다 — 여기 없는 이름은 서버가 통째로 버린다. */
 export const ANALYTICS_EVENT_PROPS_SCHEMAS = {
+  growth_action: z.strictObject({ action: z.enum(['ARTICLE_VIEWED', 'ARTICLE_PUBLISHED', 'ARTICLE_REVOKED', 'CHALLENGE_STARTED']) }),
   screen_viewed: z.strictObject({ screenId: ScreenIdSchema, careerPhase: CareerPhaseSchema }),
   choice_previewed: z.strictObject({ eventId: z.string().min(1).max(64), choiceId: z.string().min(1).max(64),
   }),

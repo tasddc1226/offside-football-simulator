@@ -64,6 +64,20 @@
       "when": 1789919464250,
       "tag": "0008_illegal_silverclaw",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1789960537784,
+      "tag": "0009_rare_komodo",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1789960765660,
+      "tag": "0010_adorable_the_executioner",
+      "breakpoints": true
     }
   ]
 }

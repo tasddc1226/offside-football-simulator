@@ -15,6 +15,7 @@ import { Route as GuideRouteImport } from './routes/guide'
 import { Route as LockerRoomRouteImport } from './routes/locker-room'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ArticlesArticleIdRouteImport } from './routes/articles.$articleId'
 import { Route as CareerCareerIdRouteImport } from './routes/career.$careerId'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
@@ -68,6 +69,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArticlesArticleIdRoute = ArticlesArticleIdRouteImport.update({
+  id: '/articles/$articleId',
+  path: '/articles/$articleId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CareerCareerIdRoute = CareerCareerIdRouteImport.update({
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
+  '/articles/$articleId': typeof ArticlesArticleIdRoute
   '/career/$careerId': typeof CareerCareerIdRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
@@ -237,6 +244,7 @@ export interface FileRoutesByTo {
   '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
+  '/articles/$articleId': typeof ArticlesArticleIdRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/career/$careerId/attributes': typeof CareerCareerIdAttributesRoute
@@ -269,6 +277,7 @@ export interface FileRoutesById {
   '/locker-room': typeof LockerRoomRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
+  '/articles/$articleId': typeof ArticlesArticleIdRoute
   '/career/$careerId': typeof CareerCareerIdRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
@@ -303,6 +312,7 @@ export interface FileRouteTypes {
     | '/locker-room'
     | '/onboarding'
     | '/settings'
+    | '/articles/$articleId'
     | '/career/$careerId'
     | '/legal/privacy'
     | '/legal/terms'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/locker-room'
     | '/onboarding'
     | '/settings'
+    | '/articles/$articleId'
     | '/legal/privacy'
     | '/legal/terms'
     | '/career/$careerId/attributes'
@@ -366,6 +377,7 @@ export interface FileRouteTypes {
     | '/locker-room'
     | '/onboarding'
     | '/settings'
+    | '/articles/$articleId'
     | '/career/$careerId'
     | '/legal/privacy'
     | '/legal/terms'
@@ -399,6 +411,7 @@ export interface RootRouteChildren {
   LockerRoomRoute: typeof LockerRoomRoute
   OnboardingRoute: typeof OnboardingRoute
   SettingsRoute: typeof SettingsRoute
+  ArticlesArticleIdRoute: typeof ArticlesArticleIdRoute
   CareerCareerIdRoute: typeof CareerCareerIdRouteWithChildren
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
@@ -446,6 +459,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/articles/$articleId': {
+      id: '/articles/$articleId'
+      path: '/articles/$articleId'
+      fullPath: '/articles/$articleId'
+      preLoaderRoute: typeof ArticlesArticleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/career/$careerId': {
@@ -678,6 +698,7 @@ const rootRouteChildren: RootRouteChildren = {
   LockerRoomRoute: LockerRoomRoute,
   OnboardingRoute: OnboardingRoute,
   SettingsRoute: SettingsRoute,
+  ArticlesArticleIdRoute: ArticlesArticleIdRoute,
   CareerCareerIdRoute: CareerCareerIdRouteWithChildren,
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,

@@ -68,6 +68,8 @@ export type Mode = 'CHAPTER' | 'FAST';
 const POSITIONS = ['GK', 'DF', 'MF', 'FW'] as const satisfies readonly StatGroup[];
 
 export type CareerSimOptions = {
+  /** Local QA export only: keep separate runs from colliding in an ordinary API owner namespace. */
+  careerIdPrefix?: string;
   rulesetVersion: string;
   contentPackVersion: string;
   seeds: number;
@@ -292,7 +294,8 @@ class SimStepError extends Error {
   }
 }
 
-type Runtime = { ruleset: Ruleset; rulesetVersion: string; contentPackVersion: string };
+export type CareerCommandObserver = (command: Command & { commandId: string; expectedRevision: number }, snapshot: DomainSnapshot) => void;
+type Runtime = { ruleset: Ruleset; rulesetVersion: string; contentPackVersion: string; observeCommand?: CareerCommandObserver };
 
 function doCommand(
   snapshot: DomainSnapshot | null,
@@ -321,6 +324,7 @@ function doCommand(
       snapshot?.state.pending?.kind ?? 'NONE',
     );
   }
+  runtime.observeCommand?.({ type, payload, commandId: id, expectedRevision: snapshot?.revision ?? 0 } as Command & { commandId: string; expectedRevision: number }, result.snapshot);
   return result.snapshot;
 }
 
@@ -583,7 +587,7 @@ function runOneCareer(
   },
 ): { career: CareerRow; seasons: SeasonRow[]; failure?: FailureRow; ms: number } {
   const seed = `${options.seedPrefix}:${position}:${index}`;
-  const careerId = `career-sim-${position}-${index}`;
+  const careerId = `${options.careerIdPrefix ?? 'career-sim'}-${position}-${index}`;
   const startedAt = Date.now();
   let commands = 0;
   let lastSeasonIndex = 0;
@@ -1061,11 +1065,12 @@ function runOneCareer(
 // 배치 실행(단일 프로세스, seed 범위 [rangeStart,rangeEnd))
 // ---------------------------------------------------------------------------
 
-export function simulateRange(options: CareerSimOptions): CareerSimBatch {
+export function simulateRange(options: CareerSimOptions, observeCommand?: CareerCommandObserver): CareerSimBatch {
   const runtime: Runtime = {
     ruleset: loadRuleset(options.rulesetVersion),
     rulesetVersion: options.rulesetVersion,
     contentPackVersion: options.contentPackVersion,
+    ...(observeCommand === undefined ? {} : { observeCommand }),
   };
   const pack = loadContentPack(options.contentPackVersion);
   const rawArtifacts = loadRetirementArtifacts(options.rulesetVersion, options.contentPackVersion);
