@@ -44,6 +44,8 @@ export const LockerPlayerSchema = z.strictObject({
   age: z.number().int().nonnegative(),
   status: z.enum(['ACTIVE', 'RETIRED', 'ARCHIVED']),
   seasons: z.number().int().nonnegative(),
+  awardCount: z.number().int().nonnegative().exactOptional(),
+  milestoneCount: z.number().int().nonnegative().exactOptional(),
   isTest: z.boolean(),
   peakOvr: z.number().int().min(1).max(99).nullable(),
   peakAge: z.number().int().nonnegative().nullable(),

@@ -26,6 +26,12 @@ export {
 } from './legacy/archive.js';
 
 export { clamp } from './clamp.js';
+export {
+  evaluateCareerMilestones,
+  evaluateSeasonAwards,
+  recognitionEnabled,
+  realAppearances,
+} from './awards.js';
 export { canonicalize, compareCodePoints, utf8Encode, type JsonValue } from './canonical.js';
 export { sha256Hex, hashState, setSha256Provider, type Sha256Provider } from './hash.js';
 export {
@@ -107,6 +113,8 @@ export {
   type SeasonManager,
   type SeasonPhase,
   type SeasonPlayerStats,
+  type SeasonAward,
+  type CareerMilestone,
   type SeasonResult,
   type SeasonStep,
   type SeasonSummary,

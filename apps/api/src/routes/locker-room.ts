@@ -24,7 +24,11 @@ import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 
-export async function lockerPlayers(db: Db, owner: string): Promise<LockerPlayer[]> {
+export async function lockerPlayers(
+  db: Db,
+  owner: string,
+  includeRecognition = false,
+): Promise<LockerPlayer[]> {
   const rows = await db
     .select({
       careerId: careers.id,
@@ -55,6 +59,15 @@ export async function lockerPlayers(db: Db, owner: string): Promise<LockerPlayer
     .orderBy(asc(careers.createdAt), asc(careers.id));
   return rows.map((row) => {
     const evidence = playerEvidence(row.stateJson);
+    const source = JSON.parse(row.stateJson) as {
+      seasonHistory?: Array<{ result?: { awards?: Array<{ recipientId?: string }>; milestones?: unknown[] } }>;
+    };
+    const seasons = source.seasonHistory ?? [];
+    const awardCount = seasons.reduce(
+      (count, season) => count + (season.result?.awards ?? []).filter((award) => award.recipientId === 'PLAYER').length,
+      0,
+    );
+    const milestoneCount = seasons.reduce((count, season) => count + (season.result?.milestones ?? []).length, 0);
     return LockerPlayerSchema.parse({
       careerId: row.careerId,
       status: row.status,
@@ -65,6 +78,7 @@ export async function lockerPlayers(db: Db, owner: string): Promise<LockerPlayer
       seasons: row.seasons,
       isTest: row.isTest === 1,
       ...evidence,
+      ...(includeRecognition ? { awardCount, milestoneCount } : {}),
       note: row.note ?? null,
     });
   });
@@ -170,7 +184,7 @@ export function registerLockerRoomRoutes(app: Hono<AppEnv>) {
   app.get('/v1/locker-room', requireProfile, async (c) => {
     const db = getDb(c);
     const owner = getSessionOrThrow(c).profileId;
-    const players = await lockerPlayers(db, owner);
+    const players = await lockerPlayers(db, owner, c.req.query('includeRecognition') === '1');
     const rows = await db
       .select()
       .from(lockerTeams)

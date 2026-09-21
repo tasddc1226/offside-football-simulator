@@ -48,6 +48,12 @@ import {
 import './retirement-screen.css';
 import { CareerPublication } from './career-publication.js';
 import { buildCareerSeasonNarratives } from './career-season-narrative.js';
+import {
+  careerMilestones as recognitionMilestones,
+  MILESTONE_LABELS_KO,
+  playerAwards,
+  SEASON_AWARD_LABELS_KO,
+} from './awards-presentation.js';
 
 type Mode = 'retirement' | 'legacy' | 'timeline' | 'final-profile';
 export type RetirementRetrospectiveStep = `moment-${number}` | 'legacy' | 'final';
@@ -892,6 +898,13 @@ export function RetirementScreen({
   const milestones = archive === undefined ? [] : buildCareerMilestones(state, archive);
   const retrospectiveHighlights =
     result === undefined ? [] : buildRetrospectiveHighlights(state, result, startYear);
+  const recognitionAwards = state.seasonHistory.flatMap((season) => playerAwards(season.result));
+  const recognitionBadges = recognitionMilestones(state.seasonHistory);
+  const recognitionAwardCounts = [...new Set(recognitionAwards.map((award) => award.awardId))].map((awardId) => ({
+    awardId,
+    count: recognitionAwards.filter((award) => award.awardId === awardId).length,
+  }));
+  const recognitionBadgeLabels = [...new Set(recognitionBadges.map((milestone) => MILESTONE_LABELS_KO[milestone.milestoneId]))];
   // 은퇴 연도: 마지막으로 완주한 시즌의 해(완주한 시즌이 없으면 커리어 시작 연도 그대로).
   const retirementYear = seasonYear(startYear, Math.max(state.seasonHistory.length, 1));
   return (
@@ -922,6 +935,28 @@ export function RetirementScreen({
         }
       />
       {(error ?? localError) ? <p role="alert">{error ?? localError}</p> : null}
+      <section className="os-panel os-endgame-section" aria-label="커리어 수상과 마일스톤">
+        <h2>수상과 마일스톤</h2>
+        {recognitionAwards.length === 0 && recognitionBadges.length === 0 ? (
+          <p>저장된 개인 수상이나 마일스톤 기록이 없습니다. 0분 기록은 배지에 포함하지 않습니다.</p>
+        ) : (
+          <>
+            {recognitionAwards.length > 0 ? (
+              <p>
+                개인 수상 {recognitionAwards.length}개 ·{' '}
+                {recognitionAwardCounts.map((award) => `${SEASON_AWARD_LABELS_KO[award.awardId]} ${award.count}회`).join(' · ')}
+              </p>
+            ) : null}
+            {recognitionBadges.length > 0 ? (
+              <p>
+                마일스톤 {recognitionBadges.length}개 ·{' '}
+                {recognitionBadgeLabels.join(' · ')}
+              </p>
+            ) : null}
+          </>
+        )}
+        <p className="os-muted">결산에 저장된 실제 출전·포지션 기록으로 확정한 값이며, 같은 배지는 다시 수여하지 않습니다.</p>
+      </section>
       {!terminal && mode === 'retirement' ? (
         <>
           {assessment === null || journeyComplete ? null : (

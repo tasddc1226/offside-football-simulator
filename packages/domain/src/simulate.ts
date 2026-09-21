@@ -8,6 +8,7 @@ import {
   type ChapterOpenResult,
 } from './chapter.js';
 import { applyCondition, type ConditionState } from './condition.js';
+import { evaluateCareerMilestones, evaluateSeasonAwards, recognitionEnabled } from './awards.js';
 import { generateCompetitors } from './competitors.js';
 import {
   appendRelationshipLog,
@@ -3926,7 +3927,20 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     }),
     ...(goalResult === undefined ? {} : { clubMeetingGoal: goalResult }),
   };
-  const result: SeasonResult = { ...resultWithoutHash, hash: hashSeasonResult(resultWithoutHash) };
+  const candidateRecognition = recognitionEnabled(goalApplied)
+    ? {
+        awards: evaluateSeasonAwards(goalApplied, input.ruleset, resultWithoutHash),
+        milestones: evaluateCareerMilestones(goalApplied, resultWithoutHash),
+      }
+    : {};
+  const recognizedResultWithoutHash = {
+    ...resultWithoutHash,
+    ...candidateRecognition,
+  };
+  const result: SeasonResult = {
+    ...recognizedResultWithoutHash,
+    hash: hashSeasonResult(recognizedResultWithoutHash),
+  };
 
   const summary: SeasonSummary = {
     index: season.index,

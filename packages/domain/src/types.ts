@@ -631,6 +631,39 @@ export type SeasonPlayerStats = {
   totals: PositionStatsTotals;
 };
 
+/** Candidate 3.4.0/0.13.0 recognition record. NPC recipients are deterministic
+ * comparison entries, not additions to the player's match history. */
+export type SeasonAward = {
+  awardId: 'SEASON_MVP' | 'BEST_XI' | 'POSITION_LEADER' | 'SCORING_LEADER' | 'ROOKIE_OF_SEASON';
+  recipientId: string;
+  recipientName: string;
+  recipientGroup: StatGroup;
+  score: number;
+  criteria: {
+    eligibility: 'REAL_APPEARANCE' | 'POSITION_STATS' | 'GOALS';
+    comparison: 'PLAYER_ACTUAL' | 'NPC_LEAGUE_MODEL';
+    playerMinutes: number;
+    playerScore: number;
+    winningScore: number;
+    contenderCount: number;
+    minimumAppearances: number;
+    minimumMinutes: number;
+  };
+};
+
+/** Candidate 3.4.0/0.13.0 one-time career recognition. */
+export type CareerMilestone = {
+  milestoneId:
+    | 'FIRST_APPEARANCE'
+    | 'HUNDRED_APPEARANCES'
+    | 'FIFTY_GOALS'
+    | 'FIRST_TITLE'
+    | 'FIVE_SEASON_ONE_CLUB'
+    | 'NATIONAL_DEBUT';
+  seasonIndex: number;
+  criteria: { realAppearances: number; goals: number; teamId: string };
+};
+
 // T-2-003 D-35: 부상·정지만 표현한다(능력치·재활은 Phase 4). `excluded`(SelectionCandidate)와 같은
 // 문자열('INJURY' | 'SUSPENSION')을 쓴다.
 export type Availability = null | { kind: 'INJURY' | 'SUSPENSION' | 'SERVICE'; matchesRemaining: number; sinceMatchId: string;
@@ -841,6 +874,9 @@ export type SeasonResult = {
     managerTrust: { before: number; after: number };
   };
   chapters: ChapterRecord[];
+  /** Candidate-only additive fields; omitted in published historical results. */
+  awards?: SeasonAward[];
+  milestones?: CareerMilestone[];
   // T-3-001(PR #45 후속): 결산 뒤 `season`이 null이 되며 사라지던 다이어리 step 요약을 보존한다.
   // `settleSeason`이 `season.steps[].summary`에서 채운다(이 작업의 유일한 로직 변경). SETTLEMENT
   // step(12)은 결산 자체라 요약이 없다 — 포함되지 않는다(길이 11, PR #48 리뷰로 확정).

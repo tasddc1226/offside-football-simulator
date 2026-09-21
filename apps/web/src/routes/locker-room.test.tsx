@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LockerPlayer, LockerTeam } from '@offside/contracts';
-import { PlayerCollection, TeamEditor } from './locker-room.js';
+import { PlayerCollection, recognitionSummary, TeamEditor } from './locker-room.js';
 import { apiFetch } from '../api/client.js';
 vi.mock('@tanstack/react-router', async () => {
   const actual =
@@ -187,5 +187,12 @@ describe('locker player notes', () => {
     fireEvent.click(screen.getByRole('button', { name: '메모 저장' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('연결을 확인해 주세요.');
     expect(screen.getByRole('textbox', { name: /추억 한 줄/ })).toHaveValue('저장 전 초안');
+  });
+});
+
+describe('locker recognition summary', () => {
+  it('shows persisted award and milestone counts when the opt-in projection includes them', () => {
+    expect(recognitionSummary({ awardCount: 2, milestoneCount: 3 })).toBe('수상 2 · 마일스톤 3');
+    expect(recognitionSummary({ awardCount: 0, milestoneCount: 0 })).toBeNull();
   });
 });

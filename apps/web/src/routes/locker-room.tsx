@@ -45,7 +45,7 @@ export function LockerRoomScreen() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     queryFn: async () => {
-      const r = await apiFetch('/v1/locker-room', {}, LockerRoomSchema);
+      const r = await apiFetch('/v1/locker-room?includeRecognition=1', {}, LockerRoomSchema);
       if (!r.ok) throw new Error(r.error.message);
       return r.data;
     },
@@ -146,6 +146,14 @@ export function LockerRoomScreen() {
     </main>
   );
 }
+export function recognitionSummary(
+  player: Pick<LockerPlayer, 'awardCount' | 'milestoneCount'>,
+): string | null {
+  const awardCount = player.awardCount ?? 0;
+  const milestoneCount = player.milestoneCount ?? 0;
+  return awardCount > 0 || milestoneCount > 0 ? `수상 ${awardCount} · 마일스톤 ${milestoneCount}` : null;
+}
+
 export function PlayerCollection({
   players,
   onBuild,
@@ -229,6 +237,7 @@ export function PlayerCollection({
                 </div>
               </dl>
               <small>최고 시즌은 평점이 기록된 10경기 이상 시즌만 표시합니다.</small>
+              {recognitionSummary(p) ? <p className="locker-note">{recognitionSummary(p)}</p> : null}
               {p.isTest && <small>테스트 시즌 선수</small>}
               <PlayerNoteEditor player={p} onNoteChange={onNoteChange} />
               <div className="locker-card-actions">

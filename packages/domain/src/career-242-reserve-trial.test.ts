@@ -100,6 +100,8 @@ describe('candidate 3.4 #242 reserve trial', () => {
     expect(first?.playerStats.minutes).toBeGreaterThan(0);
     expect(first?.selectionSummary.sub).toBeGreaterThan(0);
     expect(first?.playerStats.injuries).toBe(0);
+    expect(first?.awards?.length).toBeGreaterThan(0);
+    expect(first?.milestones?.map((milestone) => milestone.milestoneId)).toContain('FIRST_APPEARANCE');
 
     snapshot = settled;
     if (snapshot.state.pending?.kind === 'OFFERS') {
@@ -116,5 +118,6 @@ describe('candidate 3.4 #242 reserve trial', () => {
     expect(secondSettled.state.seasonHistory).toHaveLength(2);
     expect(secondSettled.state.seasonHistory[1]?.result.playerStats.minutes).toBeGreaterThan(0);
     expect(secondSettled.state.seasonHistory[1]?.result.selectionSummary.sub).toBeGreaterThan(0);
+    expect(secondSettled.state.seasonHistory[1]?.result.milestones?.map((milestone) => milestone.milestoneId)).not.toContain('FIRST_APPEARANCE');
   });
 });

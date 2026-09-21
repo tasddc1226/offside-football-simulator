@@ -133,6 +133,24 @@ describe('account locker room', () => {
     expect(data.players.map((p) => p.careerId)).toEqual(['active', 'retired']);
     expect(data.players.every((p) => p.ovr === 77 && p.age === 25 && p.seasons === 2)).toBe(true);
     expect(data.players[1]?.status).toBe('RETIRED');
+    expect(data.players.every((p) => p.awardCount === undefined && p.milestoneCount === undefined)).toBe(true);
+    const recognition = await request(a.cookie, 'GET', '/v1/locker-room?includeRecognition=1');
+    const recognitionData = successEnvelope(LockerRoomSchema).parse(await recognition.json()).data;
+    expect(recognitionData.players.every((p) => p.awardCount === 0 && p.milestoneCount === 0)).toBe(true);
+    await player(a.id, 'awarded');
+    await ctx.db
+      .update(snapshots)
+      .set({
+        state: JSON.stringify({
+          age: 25,
+          seasonHistory: [{ result: { awards: [{ recipientId: 'PLAYER' }, { recipientId: 'NPC' }], milestones: [{}] } }],
+          player: { profile: { name: 'awarded', primaryPosition: 'ST', baseOvr: 77 } },
+        }),
+      })
+      .where(eq(snapshots.id, 'awarded:2'));
+    const awardedResponse = await request(a.cookie, 'GET', '/v1/locker-room?includeRecognition=1');
+    const awardedData = successEnvelope(LockerRoomSchema).parse(await awardedResponse.json()).data;
+    expect(awardedData.players.find((p) => p.careerId === 'awarded')).toMatchObject({ awardCount: 1, milestoneCount: 1 });
   });
   it('exposes peak evidence only from stored season results and leaves unsupported fields unknown', async () => {
     const a = await account();
