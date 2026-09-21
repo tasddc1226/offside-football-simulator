@@ -1,7 +1,11 @@
 import { developPlayer, needsDevelopment, type DevelopmentPlan } from './development.js';
 import { compareCodePoints, type JsonValue } from './canonical.js';
 import { clamp } from './clamp.js';
-import { resolveChapter, type ChapterCandidateInput } from './chapter.js';
+import { resolveChapter,
+  selectChapter,
+  type ChapterCandidateInput,
+  type ChapterOpenResult,
+} from './chapter.js';
 import { applyCondition, type ConditionState } from './condition.js';
 import { generateCompetitors } from './competitors.js';
 import {
@@ -15,7 +19,8 @@ import { evaluateCareerTags, grantCareerTag } from './career-tags.js';
 import { computeGrowth } from './growth.js';
 import { hashState } from './hash.js';
 import { aggregateCareerRecords } from './legacy/career-records.js';
-import { resolveCareerEvent, settleNationality, nationalityForCareer, type CareerEventChoice } from './legacy/career-event.js';
+import { resolveCareerEvent, settleNationality, nationalityForCareer, type CareerEventChoice,
+} from './legacy/career-event.js';
 import { deriveRetirementTags } from './legacy/result.js';
 import {
   retirementContinuationOptions,
@@ -71,6 +76,7 @@ import {
   findSeasonStep,
   isAutoPassablePending,
   markStepPassed,
+  selectOpenSlot,
   walkToNextDecision,
   type ChapterWalkContext,
   type EligibleEvent,
@@ -110,6 +116,7 @@ import {
   type DomainSnapshot,
   type Effect,
   type FootballSeason,
+  type CompetitionRecord,
   type LeagueSeasonLedger,
   type MatchRecord,
   type NationalTeamCallUp,
@@ -216,7 +223,9 @@ export type Command =
   | { type: 'NEGOTIATE'; payload: { offerId: string; ask: NegotiationAsk } }
   | { type: 'REJECT_OFFER'; payload: { offerId: string | null } } // null = 전부 거절 → 잔류
   | { type: 'LOAN_RETURN'; payload: { decision: 'RETURN' | 'PERMANENT' } }
-  | { type: 'RETIRE'; payload: { choice: 'RETIRE' | 'COACH_EPILOGUE' } | { choice: 'LAST_CONTRACT' | 'LOWER_LEAGUE'; offerId: string } }
+  | { type: 'RETIRE'; payload:
+        | { choice: 'RETIRE' | 'COACH_EPILOGUE' } | { choice: 'LAST_CONTRACT' | 'LOWER_LEAGUE'; offerId: string };
+    }
   | { type: 'CAREER_EVENT'; payload: { choice: CareerEventChoice } }
   | { type: 'REQUEST_CLUB_MEETING'; payload: { request: ClubMeetingRequest } };
 
@@ -752,6 +761,12 @@ function createStepMatchWiring(
   initial: StepMatchWiringInitial,
   /** 이미 완료된 동일-step 조건 갱신을 재개 walk에서 다시 적용하지 않는다. */
   conditionAlreadyAppliedSteps: readonly number[] = [],
+  pauseForChapter?: (
+    records: MatchRecord[],
+    competitions: CompetitionRecord[],
+    injuryReturnMatchId: string | null,
+    liveState: CareerState,
+  ) => ChapterOpenResult | null,
 ): StepMatchWiring {
   let matches = initial.matches;
   let competitions = initial.competitions;
@@ -776,6 +791,7 @@ function createStepMatchWiring(
   let injuryTimeline: TimelineEntry[] = [];
 
   const playStepMatches: PlayStepMatches = (stepIndex) => {
+    let pausedChapter: ChapterOpenResult | null = null;
     let injuryReturnMatchId: string | null = null;
     const playedMatchIds = new Set(matches.map((match) => match.id));
     const entries = schedule.filter(
@@ -802,7 +818,8 @@ function createStepMatchWiring(
       const availabilityBefore = availability;
       const nationality = nationalityForCareer(careerState);
       if (nationality.serviceStatus === 'SERVING' && nationality.route === 'CAREER_BREAK') {
-        availability = { kind: 'SERVICE', matchesRemaining: 1, sinceMatchId: `service:${seasonIndex}` };
+        availability = { kind: 'SERVICE', matchesRemaining: 1, sinceMatchId: `service:${seasonIndex}`,
+        };
       }
       const result = playMatch({
         ruleset,
@@ -947,6 +964,35 @@ function createStepMatchWiring(
       // 경기 직후 열리는 forced INJURY는 같은 step의 다음 경기보다 우선한다. 여기서 멈추지 않으면
       // RESOLVE_EVENT 전에 후속 경기들이 새 availability를 차감해 진단 전 상태와 섞인다.
       if (forcedPending !== null) break;
+      const liveState = hookState();
+      pausedChapter =
+        pauseForChapter?.(matches, competitions, injuryReturnMatchId, {
+          ...liveState,
+          season:
+            liveState.season === null
+              ? null
+              : { ...liveState.season, squadRole, playerStats, availability },
+        }) ?? null;
+      if (pausedChapter !== null) {
+        if (pausedChapter.trigger !== 'NATIONAL_DEBUT') {
+          matches = matches.map((match) =>
+            match.id !== pausedChapter!.matchId
+              ? match
+              : {
+                  ...match,
+                  decisionWindow: {
+                    minute: match.appearance === 'START' ? match.minutes : 90,
+                    phase: 'PENDING',
+                    backgroundScore: {
+                      goalsFor: match.result.goalsFor,
+                      goalsAgainst: match.result.goalsAgainst,
+                    },
+                  },
+                },
+          );
+        }
+        break;
+      }
     }
     const stepRecords = matches.filter((match) => match.step === stepIndex);
     // 선수 BYE round도 타팀 결과를 확정한다. 강제 pending으로 아직 선수 경기를 치르지 않은 round는
@@ -958,17 +1004,20 @@ function createStepMatchWiring(
 
     // pending이 열려 있는 동안에는 step을 닫지 않는다. 다음 ADVANCE가 남은 경기까지 처리한 뒤 한 번만
     // applyCondition을 호출해야, 중단된 경기 묶음이 재활 해소 후 중복 적용되지 않는다.
-    if (forcedPending === null && !conditionAppliedSteps.has(stepIndex)) {
-      playerCondition = applyCondition(playerCondition, stepRecords, ruleset.conditionRules, ruleset.seasonBoundaryReset.form);
+    if (forcedPending === null && pausedChapter === null && !conditionAppliedSteps.has(stepIndex)) {
+      playerCondition = applyCondition(playerCondition, stepRecords, ruleset.conditionRules, ruleset.seasonBoundaryReset.form,
+      );
       conditionAppliedSteps.add(stepIndex);
     }
     return {
+      ...(ruleset.matchDecisionRules === undefined ? {} : { pausedChapter }),
       results: stepMatchResultsFor(matches, stepIndex),
       records: stepRecords,
       competitions,
       forcedPending,
       injuryReturnMatchId,
-      injuryUnavailable: availability?.kind === 'INJURY' || health.episodes.some((episode) => episode.status === 'ACTIVE' || episode.status === 'REHAB'),
+      injuryUnavailable: availability?.kind === 'INJURY' || health.episodes.some((episode) => episode.status === 'ACTIVE' || episode.status === 'REHAB',
+        ),
       squadRole,
       playerStats,
       availability,
@@ -1025,7 +1074,8 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     );
   }
   if (retirementDecisionRequired(state, input.ruleset.retirementRules ?? RETIREMENT_POLICY))
-    return fail('VALIDATION_FAILED', '마지막 커리어 선택을 먼저 확인해야 한다.', { reason: 'RETIREMENT_DECISION_REQUIRED' });
+    return fail('VALIDATION_FAILED', '마지막 커리어 선택을 먼저 확인해야 한다.', { reason: 'RETIREMENT_DECISION_REQUIRED',
+    });
   if (state.season !== null) {
     return fail('VALIDATION_FAILED', '이미 활성 시즌이 있다.', { reason: 'SEASON_ALREADY_ACTIVE' });
   }
@@ -1180,7 +1230,8 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
       wageMinorPerWeek: state.contract.wageMinorPerWeek,
       signingBonusMinor: state.contract.signedSeasonIndex === state.seasonHistory.length + 1 ? state.contract.signingBonusMinor : 0,
       contractId: state.contract.id,
-    } } : {}),
+    },
+        } : {}),
     index: state.seasonHistory.length + 1,
     serviceSeasonId: command.payload.serviceSeasonId,
     simulationMode: mode,
@@ -1212,7 +1263,9 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   };
   const stateBeforeWalk: CareerState = {
     ...stateAfterSelection,
-    ...(command.payload.legacyLedger === true ? { retirement: state.retirement ?? { policyVersion: '1.0.0' as const, marketOffers: null, lastChanceConsumed: false, lastChanceSeasonIndex: null } } : {}),
+    ...(command.payload.legacyLedger === true ? { retirement: state.retirement ?? { policyVersion: '1.0.0' as const, marketOffers: null, lastChanceConsumed: false, lastChanceSeasonIndex: null,
+          },
+        } : {}),
     deferredEffects: [],
     season: initialSeason,
   };
@@ -1354,8 +1407,7 @@ function isEligibleEventsSorted(events: ReadonlyArray<{ eventId: string }>): boo
 
 function hasReservedNationalTeamEvent(
   events: readonly EligibleEvent[],
-  ruleset: Ruleset,
-): boolean {
+  ruleset: Ruleset): boolean {
   return events.some((event) => event.eventId === ruleset.nationalTeamRules.event.id);
 }
 
@@ -1420,7 +1472,8 @@ function advanceInSeason(
   const profile = state.player.profile;
   if (profile === null) throw new RangeError('advanceInSeason: player.profile이 null이다.');
   if (state.contract === null) throw new RangeError('advanceInSeason: contract가 null이다.');
-  if (needsDevelopment(state, input.ruleset)) return fail('VALIDATION_FAILED', '훈련장에서 이번 구간의 계획을 먼저 정해 주세요.', { reason: 'DEVELOPMENT_REQUIRED' });
+  if (needsDevelopment(state, input.ruleset)) return fail('VALIDATION_FAILED', '훈련장에서 이번 구간의 계획을 먼저 정해 주세요.', { reason: 'DEVELOPMENT_REQUIRED',
+    });
   const eligibleEvents: EligibleEvent[] = command.payload.eligibleEvents;
 
   if (eligibleEvents.length > 0) {
@@ -1465,7 +1518,8 @@ function advanceInSeason(
     let chosen = windowEvents[0]!;
     let nextRngState = state.rngState;
     if (windowEvents.length > 1) {
-      const rolled = rollRange(nextRngState, 1, windowEvents.reduce((sum, event) => sum + event.weight, 0));
+      const rolled = rollRange(nextRngState, 1, windowEvents.reduce((sum, event) => sum + event.weight, 0),
+      );
       nextRngState = rolled.state;
       let cumulative = 0;
       for (const event of windowEvents) {
@@ -1477,7 +1531,8 @@ function advanceInSeason(
       ok: true,
       snapshot: buildSnapshot({ ...state, rngState: nextRngState,
         pending: { kind: 'EVENT', eventId: chosen.eventId, version: chosen.version },
-      }, nextRevision, 'EVENT_OFFERED'),
+      }, nextRevision, 'EVENT_OFFERED',
+      ),
       appliedEffects: [],
       nextAction: 'DECISION',
     };
@@ -1498,7 +1553,19 @@ function advanceInSeason(
     currentStep.summary === null &&
     (lastTimelineEntry?.kind === 'NATIONAL_TEAM_CALLED' || lastTimelineEntry?.kind === 'NATIONAL_TEAM_DECLINED') &&
     lastTimelineEntry.step === currentStepIndex;
-  const resumesSameStep = resumesInjuryStep || resumesNationalTeamStep || (currentStepIndex > 1 && input.ruleset.developmentRules !== undefined && lastTimelineEntry?.kind === 'DEVELOPMENT_COMPLETED' && lastTimelineEntry.step === currentStepIndex);
+  const resumesChapterStep =
+    input.ruleset.matchDecisionRules !== undefined &&
+    state.pending === null &&
+    currentStep.summary === null &&
+    lastTimelineEntry?.kind === 'CHAPTER_RESOLVED' &&
+    lastTimelineEntry.step === currentStepIndex;
+  const resumesSameStep =
+    resumesChapterStep ||
+    resumesInjuryStep || resumesNationalTeamStep || (currentStepIndex > 1 && input.ruleset.developmentRules !== undefined && lastTimelineEntry?.kind === 'DEVELOPMENT_COMPLETED' && lastTimelineEntry.step === currentStepIndex);
+  const resolvedChapterDecisions =
+    input.ruleset.matchDecisionRules === undefined
+      ? 0
+      : season.chapters.filter((chapter) => chapter.step === currentStepIndex).length;
   // 현재 시즌 시작 뒤의 타임라인만 세어 이전 시즌 같은 step의 결정을 섞지 않는다. REHAB_CHOSEN과
   // NATIONAL_TEAM_CALLED/DECLINED는 이미 열린 결정 수를 보존해 resume 뒤 summary에 반영한다.
   const currentSeasonStartRevision = [...state.timeline].reverse().find((entry) => entry.kind === 'SEASON_STARTED')?.revision;
@@ -1524,7 +1591,7 @@ function advanceInSeason(
       steps,
       currentStepIndex,
       nextRevision,
-      1 + resolvedForcedInjuryDecisions + resolvedNationalTeamDecisions,
+      1 + resolvedForcedInjuryDecisions + resolvedNationalTeamDecisions + resolvedChapterDecisions,
       stepMatchResultsFor(season.matches, currentStepIndex),
     );
     timeline = [
@@ -1583,6 +1650,61 @@ function advanceInSeason(
       injuryCount: season.injuryCount,
     },
     resumesNationalTeamStep ? [season.currentStep] : [],
+    ruleset.matchDecisionRules === undefined
+      ? undefined
+      : (matches, competitions, injuryReturnMatchId, liveState) => {
+          const match = matches[matches.length - 1]!;
+          if (
+            match.injuredOff ||
+            match.cards.red ||
+            season.chapters.some((chapter) => chapter.step === match.step)
+          )
+            return null;
+          const injuryUnavailable =
+            liveState.season?.availability?.kind === 'INJURY' ||
+            liveState.health.episodes.some(
+              (episode) => episode.status === 'ACTIVE' || episode.status === 'REHAB',
+            );
+          const step = findSeasonStep(steps, match.step);
+          const selected = selectChapter({
+            step,
+            steps,
+            seasonIndex: season.index,
+            mode: season.simulationMode,
+            matchesThisStep: [match],
+            matchesBeforeThisStep: matches.slice(0, -1),
+            competitions,
+            candidates: command.payload.chapterCandidates ?? [],
+            tags: state.tags,
+            resolvedChapterIds: state.resolvedChapterIds,
+            existingChapterIds: season.chapters.map((chapter) => chapter.chapterId),
+            league,
+            rivalTeamId: team.rivalTeamId,
+            injuryReturnMatchId,
+            firstMeaningfulAppearance: !season.chapters.some(
+              (chapter) => chapter.trigger === 'DEBUT',
+            ),
+            nationalDebutReservation: injuryUnavailable
+              ? null
+              : liveState.nationalTeam.pendingDebut,
+            chapterSelectionRules: ruleset.chapterSelectionRules,
+          });
+          if (selected === null) return null;
+          const opened = selectOpenSlot(
+            step,
+            season.simulationMode,
+            eligibleEvents,
+            state.rngState,
+            roleContext,
+            selected,
+            nextRevision,
+            season.index - 1,
+            liveState,
+            ruleset,
+            injuryUnavailable,
+          );
+          return opened.opened && opened.pending?.kind === 'CHAPTER' ? selected : null;
+        },
   );
 
   // 강제 부상 pending을 먼저 닫은 뒤에는 같은 step의 일반 슬롯을 이어서 연다. wiring은 이미 기록된
@@ -1625,11 +1747,9 @@ function advanceInSeason(
     chapterContext,
     state,
     ruleset,
-    resumesInjuryStep
-      ? resolvedForcedInjuryDecisions
-      : resumesNationalTeamStep
-        ? resolvedForcedInjuryDecisions + resolvedNationalTeamDecisions
-        : 0,
+    resumesSameStep
+      ? resolvedForcedInjuryDecisions + resolvedNationalTeamDecisions + resolvedChapterDecisions
+      : 0,
   );
   const expiredState = advanceEffectsThroughWalk(state, walked, ruleset.relationshipRules);
   if (expiredState.season === null) {
@@ -1715,7 +1835,8 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
     } catch (error) {
       return fail('VALIDATION_FAILED', error instanceof Error ? error.message : '리그 원장을 검증할 수 없다.', {
         reason: 'INVALID_LEAGUE_LEDGER',
-      });
+      },
+      );
     }
   }
   const canAutoPassPending = state.season !== null && isAutoPassablePending(state.pending);
@@ -2003,7 +2124,8 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     if (!Array.isArray(outcomes) || outcomes.length !== 1 || outcomes[0]?.id !== canonicalOutcome?.id) {
       return fail('VALIDATION_FAILED', 'NATIONAL_TEAM outcome가 선택한 canonical choice와 일치하지 않는다.', {
         reason: 'OUTCOME_MISMATCH',
-      });
+      },
+      );
     }
     if (outcomes.some((outcome) => !isChapterOutcomeKind(outcome.kind))) {
       return fail('VALIDATION_FAILED', 'RESOLVE_EVENT outcome에는 kind이 필요하다.', {
@@ -2028,7 +2150,8 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     ) {
       return fail('VALIDATION_FAILED', 'NATIONAL_TEAM outcome가 선택한 canonical choice와 일치하지 않는다.', {
         reason: 'OUTCOME_MISMATCH',
-      });
+      },
+      );
     }
 
     const effects = nationalTeamEffects(input.ruleset, pending.eventId, callUp);
@@ -2609,7 +2732,9 @@ function negotiateOffer(input: SimulationInput, snapshot: DomainSnapshot): Simul
         step: state.currentStep,
       },
       ...(nextOffers.length === 0
-        ? [{ revision: nextRevision, kind: 'OFFER_REJECTED' as const, refId: 'ALL', age: state.age, step: state.currentStep }]
+        ? [{ revision: nextRevision, kind: 'OFFER_REJECTED' as const, refId: 'ALL', age: state.age, step: state.currentStep,
+            },
+          ]
         : []),
     ],
   };
@@ -2694,7 +2819,9 @@ function rejectOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
           step: state.currentStep,
         },
         ...(nextOffers.length === 0
-          ? [{ revision: nextRevision, kind: 'OFFER_REJECTED' as const, refId: 'ALL', age: state.age, step: state.currentStep }]
+          ? [{ revision: nextRevision, kind: 'OFFER_REJECTED' as const, refId: 'ALL', age: state.age, step: state.currentStep,
+              },
+            ]
           : []),
       ],
     };
@@ -2717,7 +2844,8 @@ function rejectOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
     if (pending.market.reason === 'EXPIRED') {
       const safeOffer = kept.find((offer) => offer.id === pending.market.safeOfferId);
       if (safeOffer === undefined || safeOffer.kind !== 'RENEWAL') {
-        return fail('VALIDATION_FAILED', '만료 시장의 안전 잔류 제안을 찾을 수 없다.', { reason: 'SAFE_OFFER' });
+        return fail('VALIDATION_FAILED', '만료 시장의 안전 잔류 제안을 찾을 수 없다.', { reason: 'SAFE_OFFER',
+        });
       }
       const renewed = acceptRenewalOffer(stateWithExpiry, safeOffer, nextRevision);
       if (!renewed.ok) return renewed;
@@ -2725,10 +2853,12 @@ function rejectOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
         ...renewed.snapshot.state,
         timeline: [
           ...renewed.snapshot.state.timeline,
-          { revision: nextRevision, kind: 'OFFER_REJECTED' as const, refId: 'ALL', age: state.age, step: state.currentStep },
+          { revision: nextRevision, kind: 'OFFER_REJECTED' as const, refId: 'ALL', age: state.age, step: state.currentStep,
+          },
         ],
       };
-      return { ...renewed, snapshot: buildSnapshot(renewedState, nextRevision, 'CONTRACT_CONFIRMED') };
+      return { ...renewed, snapshot: buildSnapshot(renewedState, nextRevision, 'CONTRACT_CONFIRMED'),
+      };
     }
     const nextState = buildStayState(stateWithExpiry, nextRevision);
     return {
@@ -3190,7 +3320,8 @@ function acceptOffer(input: SimulationInput, snapshot: DomainSnapshot): Simulati
  * 원소속 stint를 새로 연다. 관계·context 복원은 아래 `restoreParentClubState`가 명시적 RETURN과
  * 결산 중 자동 FA 분기에서 함께 적용한다.
  */
-function restoreParentContractAndStint(state: CareerState, nextRevision: number, reopenStint = true): CareerState {
+function restoreParentContractAndStint(state: CareerState, nextRevision: number, reopenStint = true,
+): CareerState {
   const parent = state.parentContract;
   if (parent === null) {
     throw new RangeError('restoreParentContractAndStint: parentContract가 null이다.');
@@ -3232,7 +3363,8 @@ function restoreParentContractAndStint(state: CareerState, nextRevision: number,
  * 버리고, 원소속 계약 기준으로 재설정한다. positionProficiency는 명시적 RETURN과 동일하게 원래
  * 포지션 계획이면 현재 값을 유지하고, 아니면 룰셋의 강제값을 쓴다.
  */
-function restoreParentClubState(state: CareerState, ruleset: Ruleset, carryFans = true): CareerState {
+function restoreParentClubState(state: CareerState, ruleset: Ruleset, carryFans = true,
+): CareerState {
   const parent = state.contract;
   const profile = state.player.profile;
   if (parent === null || profile === null) {
@@ -3383,7 +3515,8 @@ function loanReturn(input: SimulationInput, snapshot: DomainSnapshot): Simulatio
             contract: {
               ...parent,
               rolePromise: reevaluation.reevaluatedRole,
-              appearancePromise: { minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[reevaluation.reevaluatedRole] },
+              appearancePromise: { minutesShareBp: ruleset.contractRules.promiseMinutesShareBp[reevaluation.reevaluatedRole],
+              },
             },
             context: { ...restored.context, squadStatus: reevaluation.squadStatus },
             pending: null,
@@ -3535,7 +3668,8 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   } catch (error) {
     return fail('VALIDATION_FAILED', error instanceof Error ? error.message : '리그 원장을 검증할 수 없다.', {
       reason: 'INVALID_LEAGUE_LEDGER',
-    });
+    },
+    );
   }
 
   const nextRevision = snapshot.revision + 1;
@@ -3583,21 +3717,26 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   const pendingGoal = meeting?.goal.seasonIndex === season.index && meeting.goal.status === 'PENDING' ? meeting : null;
   const goalMet = pendingGoal !== null && baseResultWithoutHash.promiseFulfilment.minutesShareBp >= pendingGoal.goal.targetMinutesShareBp;
   const goalConfigured = goalMet ? input.ruleset.clubMeetingRules?.goalMet : undefined;
-  const boundaryState: CareerState = { ...expiredState, state: { form: reset.form, fitness: reset.fitness, morale: reset.morale } };
+  const boundaryState: CareerState = { ...expiredState, state: { form: reset.form, fitness: reset.fitness, morale: reset.morale },
+  };
   const goalApplied = goalConfigured === undefined
     ? boundaryState
-    : applyEffects(boundaryState, clubMeetingEffects(`CLUB_MEETING_GOAL:${season.index}`, goalConfigured), { step: 12 }, input.ruleset.relationshipRules).state;
-  const goalEffect = { managerTrustDelta: goalApplied.relationships.managerTrust - boundaryState.relationships.managerTrust, moraleDelta: goalApplied.state.morale - boundaryState.state.morale };
-  stateDeltas = { ...stateDeltas, morale: { ...stateDeltas.morale, after: goalApplied.state.morale }, managerTrust: { ...stateDeltas.managerTrust, after: goalApplied.relationships.managerTrust } };
+    : applyEffects(boundaryState, clubMeetingEffects(`CLUB_MEETING_GOAL:${season.index}`, goalConfigured), { step: 12 }, input.ruleset.relationshipRules,
+        ).state;
+  const goalEffect = { managerTrustDelta: goalApplied.relationships.managerTrust - boundaryState.relationships.managerTrust, moraleDelta: goalApplied.state.morale - boundaryState.state.morale,
+  };
+  stateDeltas = { ...stateDeltas, morale: { ...stateDeltas.morale, after: goalApplied.state.morale }, managerTrust: { ...stateDeltas.managerTrust, after: goalApplied.relationships.managerTrust },
+  };
   const goalResult = pendingGoal === null ? undefined : {
     request: pendingGoal.request, response: pendingGoal.response, reason: pendingGoal.reason, role: pendingGoal.goal.role,
     targetMinutesShareBp: pendingGoal.goal.targetMinutesShareBp,
     actualMinutesShareBp: baseResultWithoutHash.promiseFulfilment.minutesShareBp,
-    status: goalMet ? 'MET' as const : 'MISSED' as const,
+    status: goalMet ? ('MET' as const) : ('MISSED' as const),
     effect: goalMet ? goalEffect : { managerTrustDelta: 0, moraleDelta: 0 },
   };
   const resultWithoutHash = {
-    ...buildSeasonResult({ state: goalApplied, ruleset: input.ruleset, attributeDeltas: growth.attributeDeltas, baseOvr: growth.baseOvr, stateDeltas }),
+    ...buildSeasonResult({ state: goalApplied, ruleset: input.ruleset, attributeDeltas: growth.attributeDeltas, baseOvr: growth.baseOvr, stateDeltas,
+    }),
     ...(goalResult === undefined ? {} : { clubMeetingGoal: goalResult }),
   };
   const result: SeasonResult = { ...resultWithoutHash, hash: hashSeasonResult(resultWithoutHash) };
@@ -3631,7 +3770,9 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     timeline: [
       ...goalApplied.timeline,
       { revision: nextRevision, kind: 'SEASON_SETTLED', refId: null, age: nextAge, step: 12 },
-      ...(goalResult === undefined ? [] : [{ revision: nextRevision, kind: 'CLUB_MEETING_GOAL_EVALUATED' as const, refId: `${goalResult.request}:${goalResult.status}`, age: nextAge, step: 12 }]),
+      ...(goalResult === undefined ? [] : [{ revision: nextRevision, kind: 'CLUB_MEETING_GOAL_EVALUATED' as const, refId: `${goalResult.request}:${goalResult.status}`, age: nextAge, step: 12,
+            },
+          ]),
     ],
   };
 
@@ -3777,11 +3918,15 @@ function settleSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     marketReadyState.contract !== null && marketReadyState.contract.kind === 'LOAN'
       ? settleLoanSeason(marketReadyState, input.ruleset, finalizedResult, nextRevision)
       : openMarketAfterSettlement(marketReadyState, input.ruleset, nextRevision).state;
-  const assessedState: CareerState = finalState.retirement === undefined ? finalState : { ...finalState, retirement: { ...finalState.retirement, marketOffers: finalState.pending?.kind === 'OFFERS' ? finalState.pending.offers.filter((offer) => offer.negotiationState !== 'WITHDRAWN').length : finalState.pending?.kind === 'LOAN_RETURN' ? null : 0 } };
+  const assessedState: CareerState = finalState.retirement === undefined ? finalState : { ...finalState, retirement: { ...finalState.retirement, marketOffers: finalState.pending?.kind === 'OFFERS' ? finalState.pending.offers.filter((offer) => offer.negotiationState !== 'WITHDRAWN',
+                  ).length : finalState.pending?.kind === 'LOAN_RETURN' ? null : 0,
+          },
+        };
 
   return {
     ok: true,
-    snapshot: buildSnapshot(settleNationality(assessedState, nextRevision), nextRevision, 'SEASON_SETTLED'),
+    snapshot: buildSnapshot(settleNationality(assessedState, nextRevision), nextRevision, 'SEASON_SETTLED',
+    ),
     appliedEffects: [],
     // 결산 다음은 새 시즌을 열지 말지 결정하는 화면(START_SEASON, SCR-005)이거나 시장·임대 복귀
     // 결정이라 'ADVANCE'가 아니라 'DECISION'이다 — season이 null인 채로 'ADVANCE'를 보내면 seasonPhase가
@@ -3886,7 +4031,8 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
       contract = {
         ...contract,
         rolePromise: proposal.to,
-        appearancePromise: { minutesShareBp: input.ruleset.contractRules.promiseMinutesShareBp[proposal.to] },
+        appearancePromise: { minutesShareBp: input.ruleset.contractRules.promiseMinutesShareBp[proposal.to],
+        },
       };
     }
   }
@@ -3943,12 +4089,16 @@ function resolveRole(input: SimulationInput, snapshot: DomainSnapshot): Simulati
   };
 }
 
-const BETTER_ROLE: Record<SquadRole, SquadRole> = { STARTER: 'STARTER', ROTATION: 'STARTER', BENCH: 'ROTATION', RESERVE: 'BENCH' };
+const BETTER_ROLE: Record<SquadRole, SquadRole> = { STARTER: 'STARTER', ROTATION: 'STARTER', BENCH: 'ROTATION', RESERVE: 'BENCH',
+};
 
-function clubMeetingEffects(prefix: string, effect: { managerTrustDelta: number; moraleDelta: number }): Effect[] {
+function clubMeetingEffects(prefix: string, effect: { managerTrustDelta: number; moraleDelta: number },
+): Effect[] {
   return [
-    { kind: 'RELATION', sourceId: `${prefix}:TRUST`, target: 'managerTrust', delta: effect.managerTrustDelta, clamp: { min: 0, max: 100 }, appliesAt: { kind: 'IMMEDIATE' }, expiresAt: null, stackingRule: 'ONCE_PER_SOURCE', reasonTag: 'CLUB_MEETING' },
-    { kind: 'CURRENT', sourceId: `${prefix}:MORALE`, target: 'morale', delta: effect.moraleDelta, clamp: { min: 0, max: 100 }, appliesAt: { kind: 'IMMEDIATE' }, expiresAt: null, stackingRule: 'ONCE_PER_SOURCE' },
+    { kind: 'RELATION', sourceId: `${prefix}:TRUST`, target: 'managerTrust', delta: effect.managerTrustDelta, clamp: { min: 0, max: 100 }, appliesAt: { kind: 'IMMEDIATE' }, expiresAt: null, stackingRule: 'ONCE_PER_SOURCE', reasonTag: 'CLUB_MEETING',
+    },
+    { kind: 'CURRENT', sourceId: `${prefix}:MORALE`, target: 'morale', delta: effect.moraleDelta, clamp: { min: 0, max: 100 }, appliesAt: { kind: 'IMMEDIATE' }, expiresAt: null, stackingRule: 'ONCE_PER_SOURCE',
+    },
   ];
 }
 
@@ -3958,16 +4108,20 @@ function requestClubMeeting(input: SimulationInput, snapshot: DomainSnapshot): S
   const state = snapshot.state;
   const rules = input.ruleset.clubMeetingRules;
   const contract = state.contract;
-  if (rules === undefined) return fail('VALIDATION_FAILED', '이 룰셋은 구단 면담을 지원하지 않는다.', { reason: 'FEATURE_UNAVAILABLE' });
+  if (rules === undefined) return fail('VALIDATION_FAILED', '이 룰셋은 구단 면담을 지원하지 않는다.', { reason: 'FEATURE_UNAVAILABLE',
+    });
   if (state.status !== 'ACTIVE' || state.stage !== 'PRO' || state.season !== null || state.pending !== null || contract === null || contract.kind !== 'PERMANENT') {
-    return fail('VALIDATION_FAILED', '현재 구단 면담을 요청할 수 없다.', { reason: 'CLUB_MEETING_UNAVAILABLE' });
+    return fail('VALIDATION_FAILED', '현재 구단 면담을 요청할 수 없다.', { reason: 'CLUB_MEETING_UNAVAILABLE',
+    });
   }
   const seasonIndex = state.seasonHistory.length + 1;
   if (state.clubMeeting?.seasonIndex === seasonIndex) return fail('COMMAND_ALREADY_RESOLVED', '이번 시즌 면담은 이미 완료했다.');
   const request = command.payload.request;
-  const remaining = computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline);
+  const remaining = computeContractSeasonsRemaining(contract.lengthSeasons, contract.signedAtRevision, state.timeline,
+  );
   if ((request === 'PLAYING_TIME' && contract.rolePromise === 'STARTER') || (request === 'LOAN' && remaining < 2)) {
-    return fail('VALIDATION_FAILED', '이 요청은 현재 계약에서 선택할 수 없다.', { reason: request === 'LOAN' ? 'CONTRACT_EXPIRES_BEFORE_MARKET' : 'ALREADY_STARTER' });
+    return fail('VALIDATION_FAILED', '이 요청은 현재 계약에서 선택할 수 없다.', { reason: request === 'LOAN' ? 'CONTRACT_EXPIRES_BEFORE_MARKET' : 'ALREADY_STARTER',
+    });
   }
   const accepted = request === 'PLAYING_TIME'
     ? state.relationships.managerTrust >= rules.playingTimeMinTrust
@@ -3979,9 +4133,13 @@ function requestClubMeeting(input: SimulationInput, snapshot: DomainSnapshot): S
   const plannedRole = request === 'PLAYING_TIME' && accepted ? BETTER_ROLE[contract.rolePromise] : contract.rolePromise;
   const nextRevision = snapshot.revision + 1;
   const prefix = `CLUB_MEETING:${seasonIndex}:${request}`;
-  const applied = applyEffects(state, clubMeetingEffects(prefix, configured), { step: 0 }, input.ruleset.relationshipRules).state;
-  const actualEffect = { managerTrustDelta: applied.relationships.managerTrust - state.relationships.managerTrust, moraleDelta: applied.state.morale - state.state.morale };
-  const nextContract = request === 'PLAYING_TIME' && accepted ? { ...contract, rolePromise: plannedRole, appearancePromise: { minutesShareBp: input.ruleset.contractRules.promiseMinutesShareBp[plannedRole] } } : contract;
+  const applied = applyEffects(state, clubMeetingEffects(prefix, configured), { step: 0 }, input.ruleset.relationshipRules,
+  ).state;
+  const actualEffect = { managerTrustDelta: applied.relationships.managerTrust - state.relationships.managerTrust, moraleDelta: applied.state.morale - state.state.morale,
+  };
+  const nextContract = request === 'PLAYING_TIME' && accepted ? { ...contract, rolePromise: plannedRole, appearancePromise: { minutesShareBp: input.ruleset.contractRules.promiseMinutesShareBp[plannedRole],
+          },
+        } : contract;
   const reason = accepted ? 'REQUEST_ACCEPTED' : request === 'PLAYING_TIME' ? 'TRUST_TOO_LOW' : request === 'LOAN' ? 'ROLE_OR_TRUST' : 'RELATIONSHIP_STABLE';
   const nextState: CareerState = {
     ...applied,
@@ -3992,11 +4150,15 @@ function requestClubMeeting(input: SimulationInput, snapshot: DomainSnapshot): S
       teamId: contract.teamId, contractId: contract.id, immediateEffect: actualEffect, plannedRole,
       preferredOfferKind: accepted && request !== 'PLAYING_TIME' ? request : null,
       preferenceStatus: accepted && request !== 'PLAYING_TIME' ? 'PENDING' : null,
-      goal: { seasonIndex, role: plannedRole, targetMinutesShareBp: input.ruleset.contractRules.promiseMinutesShareBp[plannedRole], status: 'PENDING' },
+      goal: { seasonIndex, role: plannedRole, targetMinutesShareBp: input.ruleset.contractRules.promiseMinutesShareBp[plannedRole], status: 'PENDING',
+      },
     },
-    timeline: [...applied.timeline, { revision: nextRevision, kind: 'CLUB_MEETING_RESOLVED', refId: `${request}:${accepted ? 'ACCEPTED' : 'REFUSED'}`, age: state.age, step: 0 }],
+    timeline: [...applied.timeline, { revision: nextRevision, kind: 'CLUB_MEETING_RESOLVED', refId: `${request}:${accepted ? 'ACCEPTED' : 'REFUSED'}`, age: state.age, step: 0,
+      },
+    ],
   };
-  return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'STEP_BOUNDARY'), appliedEffects: clubMeetingEffects(prefix, configured), nextAction: 'DECISION' };
+  return { ok: true, snapshot: buildSnapshot(nextState, nextRevision, 'STEP_BOUNDARY'), appliedEffects: clubMeetingEffects(prefix, configured), nextAction: 'DECISION',
+  };
 }
 
 /**
@@ -4050,7 +4212,8 @@ export function simulate(input: SimulationInput): SimulationResult {
           revision,
           input.ruleset.retirementRules ?? RETIREMENT_POLICY,
         );
-        return { ok: true, snapshot: buildSnapshot(state, revision, 'EVENT_RESOLVED'), appliedEffects: [], nextAction: 'DECISION' };
+        return { ok: true, snapshot: buildSnapshot(state, revision, 'EVENT_RESOLVED'), appliedEffects: [], nextAction: 'DECISION',
+        };
       } catch {
         return fail('VALIDATION_FAILED', '현재 선택할 수 없는 커리어 이벤트다.');
       }
@@ -4063,9 +4226,12 @@ export function simulate(input: SimulationInput): SimulationResult {
       return confirmPlayer(input, snapshot);
     case 'DEVELOP': {
       try {
-        const nextState = developPlayer(snapshot.state, command.payload, input.ruleset, snapshot.revision + 1);
-        return { ok: true, snapshot: buildSnapshot(nextState, snapshot.revision + 1, 'STEP_BOUNDARY'), appliedEffects: [], nextAction: 'ADVANCE' };
-      } catch (error) { return fail('VALIDATION_FAILED', error instanceof Error ? error.message : '훈련 계획을 확인해 주세요.'); }
+        const nextState = developPlayer(snapshot.state, command.payload, input.ruleset, snapshot.revision + 1,
+        );
+        return { ok: true, snapshot: buildSnapshot(nextState, snapshot.revision + 1, 'STEP_BOUNDARY'), appliedEffects: [], nextAction: 'ADVANCE',
+        };
+      } catch (error) { return fail('VALIDATION_FAILED', error instanceof Error ? error.message : '훈련 계획을 확인해 주세요.',
+        ); }
     }
     case 'START_SEASON':
       return startSeason(input, snapshot);
@@ -4099,11 +4265,18 @@ function retireCareer(input: SimulationInput, snapshot: DomainSnapshot): Simulat
   const { state } = snapshot;
   if (command.payload.choice === 'LAST_CONTRACT' || command.payload.choice === 'LOWER_LEAGUE') {
     const choice = command.payload;
-    if (!retirementContinuationOptions(state, input.ruleset.retirementRules).some((option) => option.choice === choice.choice && option.offerId === choice.offerId)) return fail('VALIDATION_FAILED', '사용할 수 없는 마지막 계약 제안이다.');
-    const accepted = acceptOffer({ ...input, command: { ...command, type: 'ACCEPT_OFFER', payload: { offerId: choice.offerId } } }, snapshot);
+    if (!retirementContinuationOptions(state, input.ruleset.retirementRules).some((option) => option.choice === choice.choice && option.offerId === choice.offerId,
+      )) return fail('VALIDATION_FAILED', '사용할 수 없는 마지막 계약 제안이다.');
+    const accepted = acceptOffer({ ...input, command: { ...command, type: 'ACCEPT_OFFER', payload: { offerId: choice.offerId } },
+      },
+      snapshot,
+    );
     if (!accepted.ok) return accepted;
-    const continued: CareerState = { ...accepted.snapshot.state, retirement: { policyVersion: '1.0.0', marketOffers: state.retirement?.marketOffers ?? null, lastChanceConsumed: true, lastChanceSeasonIndex: state.seasonHistory.length + 1 } };
-    return { ...accepted, snapshot: buildSnapshot(continued, accepted.snapshot.revision, accepted.snapshot.checkpoint) };
+    const continued: CareerState = { ...accepted.snapshot.state, retirement: { policyVersion: '1.0.0', marketOffers: state.retirement?.marketOffers ?? null, lastChanceConsumed: true, lastChanceSeasonIndex: state.seasonHistory.length + 1,
+      },
+    };
+    return { ...accepted, snapshot: buildSnapshot(continued, accepted.snapshot.revision, accepted.snapshot.checkpoint),
+    };
   }
   if (command.payload.choice !== 'RETIRE' && command.payload.choice !== 'COACH_EPILOGUE') {
     return fail('VALIDATION_FAILED', '은퇴 또는 지도자 에필로그를 명시적으로 선택해야 한다.');
@@ -4128,14 +4301,19 @@ function retireCareer(input: SimulationInput, snapshot: DomainSnapshot): Simulat
     return fail('VALIDATION_FAILED', '확정 시즌 기록을 검증할 수 없다.');
   }
   const revision = snapshot.revision + 1;
-  const tagged = deriveRetirementTags(state).reduce((acc, tagId) => grantCareerTag(acc, tagId, { seasonIndex: state.seasonHistory.length, revision, refId: 'RETIRE' }), state);
+  const tagged = deriveRetirementTags(state).reduce((acc, tagId) => grantCareerTag(acc, tagId, { seasonIndex: state.seasonHistory.length, revision, refId: 'RETIRE',
+      }),
+    state,
+  );
   const retired: CareerState = {
     ...tagged,
     status: 'RETIRED',
-    timeline: [...state.timeline, ...tagged.careerTags.filter((tag) => !state.careerTags.includes(tag)).map((tag) => ({ revision, kind: 'CAREER_TAG_GRANTED' as const, refId: tag, age: state.age, step: state.currentStep })), {
+    timeline: [...state.timeline, ...tagged.careerTags.filter((tag) => !state.careerTags.includes(tag)).map((tag) => ({ revision, kind: 'CAREER_TAG_GRANTED' as const, refId: tag, age: state.age, step: state.currentStep,
+        })), {
       revision, kind: 'RETIRED', refId: command.payload.choice,
       age: state.age, step: state.currentStep,
-    }],
+    },
+    ],
   };
   return {
     ok: true,

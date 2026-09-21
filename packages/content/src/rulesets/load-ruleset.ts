@@ -1,3 +1,4 @@
+import ruleset320 from '../../rulesets/3.2.0/ruleset.json' with { type: 'json' };
 import ruleset310 from '../../rulesets/3.1.0/ruleset.json' with { type: 'json' };
 import ruleset300 from '../../rulesets/3.0.0/ruleset.json' with { type: 'json' };
 import ruleset210 from '../../rulesets/2.1.0/ruleset.json' with { type: 'json' };
@@ -35,6 +36,7 @@ export const RULESET_VERSIONS = [
   '2.1.0',
   '3.0.0',
   '3.1.0',
+  '3.2.0',
 ] as const;
 export type RulesetVersion = (typeof RULESET_VERSIONS)[number];
 
@@ -56,6 +58,7 @@ const RULESET_SOURCES: Record<RulesetVersion, unknown> = {
   '2.1.0': ruleset210,
   '3.0.0': ruleset300,
   '3.1.0': ruleset310,
+  '3.2.0': ruleset320,
 };
 
 /** 번들에 포함된 룰셋 JSON을 `RulesetSchema`로 검증해 동기로 돌려준다. */

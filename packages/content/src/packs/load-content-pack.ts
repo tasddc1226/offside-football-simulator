@@ -1,3 +1,24 @@
+import manifest0110 from '../../packs/0.11.0/manifest.json' with { type: 'json' };
+import causal0 from '../../packs/0.11.0/chapters/CHP-MATCH-100.json' with { type: 'json' };
+import causal1 from '../../packs/0.11.0/chapters/CHP-MATCH-101.json' with { type: 'json' };
+import causal2 from '../../packs/0.11.0/chapters/CHP-MATCH-102.json' with { type: 'json' };
+import causal3 from '../../packs/0.11.0/chapters/CHP-MATCH-103.json' with { type: 'json' };
+import causal4 from '../../packs/0.11.0/chapters/CHP-MATCH-104.json' with { type: 'json' };
+import causal5 from '../../packs/0.11.0/chapters/CHP-MATCH-105.json' with { type: 'json' };
+import causal6 from '../../packs/0.11.0/chapters/CHP-MATCH-106.json' with { type: 'json' };
+import causal7 from '../../packs/0.11.0/chapters/CHP-MATCH-107.json' with { type: 'json' };
+import causal8 from '../../packs/0.11.0/chapters/CHP-MATCH-108.json' with { type: 'json' };
+import causal9 from '../../packs/0.11.0/chapters/CHP-MATCH-109.json' with { type: 'json' };
+import causal10 from '../../packs/0.11.0/chapters/CHP-MATCH-110.json' with { type: 'json' };
+import causal11 from '../../packs/0.11.0/chapters/CHP-MATCH-111.json' with { type: 'json' };
+import causal12 from '../../packs/0.11.0/chapters/CHP-MATCH-112.json' with { type: 'json' };
+import causal13 from '../../packs/0.11.0/chapters/CHP-MATCH-113.json' with { type: 'json' };
+import causal14 from '../../packs/0.11.0/chapters/CHP-MATCH-114.json' with { type: 'json' };
+import causal15 from '../../packs/0.11.0/chapters/CHP-MATCH-115.json' with { type: 'json' };
+import causal16 from '../../packs/0.11.0/chapters/CHP-MATCH-116.json' with { type: 'json' };
+import causal17 from '../../packs/0.11.0/chapters/CHP-MATCH-117.json' with { type: 'json' };
+import causal18 from '../../packs/0.11.0/chapters/CHP-MATCH-118.json' with { type: 'json' };
+import causal19 from '../../packs/0.11.0/chapters/CHP-MATCH-119.json' with { type: 'json' };
 import world00 from '../../packs/0.10.0/events/EVT-REL-400.json' with { type: 'json' };
 import world01 from '../../packs/0.10.0/events/EVT-REL-401.json' with { type: 'json' };
 import world02 from '../../packs/0.10.0/events/EVT-REL-402.json' with { type: 'json' };
@@ -296,6 +317,7 @@ export const PACK_VERSIONS = [
   '0.8.0',
   '0.9.0',
   '0.10.0',
+  '0.11.0',
 ] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
@@ -316,7 +338,7 @@ type PackSource = {
 };
 
 const PACK_SOURCES_THROUGH_066: Record<
-  Exclude<PackVersion, '0.10.0' | '0.9.0' | '0.8.0' | '0.6.7' | '0.6.8' | '0.7.0'>,
+  Exclude<PackVersion, '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0' | '0.6.7' | '0.6.8' | '0.7.0'>,
   PackSource
 > = {
   '0.1.0': {
@@ -1075,7 +1097,7 @@ const PACK_SOURCES_THROUGH_066: Record<
 };
 
 const PACK_SOURCES_WITHOUT_068: Record<
-  Exclude<PackVersion, '0.10.0' | '0.9.0' | '0.8.0' | '0.6.8' | '0.7.0'>,
+  Exclude<PackVersion, '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0' | '0.6.8' | '0.7.0'>,
   PackSource
 > = {
   ...PACK_SOURCES_THROUGH_066,
@@ -1086,7 +1108,7 @@ const PACK_SOURCES_WITHOUT_068: Record<
 };
 
 const PACK_SOURCES_THROUGH_068: Record<
-  Exclude<PackVersion, '0.10.0' | '0.9.0' | '0.8.0' | '0.7.0'>,
+  Exclude<PackVersion, '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0' | '0.7.0'>,
   PackSource
 > = {
   ...PACK_SOURCES_WITHOUT_068,
@@ -1120,7 +1142,7 @@ const PACK_SOURCES_THROUGH_068: Record<
 };
 
 const PACK_SOURCES_THROUGH_070: Record<
-  Exclude<PackVersion, '0.10.0' | '0.9.0' | '0.8.0'>,
+  Exclude<PackVersion, '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0'>,
   PackSource
 > = {
   ...PACK_SOURCES_THROUGH_068,
@@ -1136,7 +1158,7 @@ const PACK_SOURCES_THROUGH_070: Record<
   },
 };
 
-const PACK_SOURCES_THROUGH_080: Record<Exclude<PackVersion, '0.10.0' | '0.9.0'>, PackSource> = {
+const PACK_SOURCES_THROUGH_080: Record<Exclude<PackVersion, '0.11.0' | '0.10.0' | '0.9.0'>, PackSource> = {
   ...PACK_SOURCES_THROUGH_070,
   '0.8.0': {
     ...PACK_SOURCES_THROUGH_070['0.7.0'],
@@ -1165,7 +1187,7 @@ const PACK_SOURCES_THROUGH_080: Record<Exclude<PackVersion, '0.10.0' | '0.9.0'>,
  * 돌려준다. `loadRuleset`과 같은 방식(정적 JSON import)이라 Node `fs` 없이 브라우저에서도 쓸 수
  * 있다. CLI 전용 `cli/load-pack.ts`(디렉터리를 `readdirSync`로 스캔)와는 별개다.
  */
-const PACK_SOURCES_THROUGH_090: Record<Exclude<PackVersion, '0.10.0'>, PackSource> = {
+const PACK_SOURCES_THROUGH_090: Record<Exclude<PackVersion, '0.11.0' | '0.10.0'>, PackSource> = {
   ...PACK_SOURCES_THROUGH_080,
   '0.9.0': {
     ...PACK_SOURCES_THROUGH_080['0.8.0'],
@@ -1175,7 +1197,7 @@ const PACK_SOURCES_THROUGH_090: Record<Exclude<PackVersion, '0.10.0'>, PackSourc
     ),
   },
 };
-const PACK_SOURCES: Record<PackVersion, PackSource> = {
+const PACK_SOURCES_THROUGH_0100: Record<Exclude<PackVersion, '0.11.0'>, PackSource> = {
   ...PACK_SOURCES_THROUGH_090,
   '0.10.0': {
     ...PACK_SOURCES_THROUGH_090['0.9.0'],
@@ -1209,6 +1231,39 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       world60,
       world61,
       world62,
+    ],
+  },
+};
+
+const PACK_SOURCES: Record<PackVersion, PackSource> = {
+  ...PACK_SOURCES_THROUGH_0100,
+  '0.11.0': {
+    ...PACK_SOURCES_THROUGH_0100['0.10.0'],
+    manifest: manifest0110,
+    chapters: [
+      causal0,
+      causal1,
+      causal2,
+      causal3,
+      causal4,
+      causal5,
+      causal6,
+      causal7,
+      causal8,
+      causal9,
+      causal10,
+      causal11,
+      causal12,
+      causal13,
+      causal14,
+      causal15,
+      causal16,
+      causal17,
+      causal18,
+      causal19,
+      ...PACK_SOURCES_THROUGH_0100['0.10.0'].chapters.filter((chapter) =>
+        (chapter as { id: string }).id.startsWith('CHP-NAT'),
+      ),
     ],
   },
 };

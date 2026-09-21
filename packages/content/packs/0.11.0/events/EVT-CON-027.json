@@ -1,0 +1,60 @@
+{
+  "id": "EVT-CON-027",
+  "version": 1,
+  "phases": ["YOUTH"],
+  "triggers": { "hasTag": ["career.tags", "진로_지역_준비"] },
+  "exclusionTags": [],
+  "weight": 100,
+  "safety": { "minorSafe": true },
+  "choices": [
+    {
+      "id": "A",
+      "label": "경기 영상에서 판단 장면을 정리한다",
+      "riskLabel": "LOW",
+      "previewEffects": [{ "label": "전술 이해를 설명할 준비" }],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "기술뿐 아니라 선택을 설명할 자료가 생겼다",
+          "effects": [],
+          "addTags": ["진로_입단테스트", "테스트_보통"]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "지역 팀과 실전 감각을 유지한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "폼 상승", "target": "form", "direction": "UP" },
+        { "label": "관찰 준비 시간 감소" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "경기 감각을 지킨 채 다음 관찰전에 들어간다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-CON-027.B.B1",
+              "target": "form",
+              "delta": 4,
+              "clamp": { "min": 0, "max": 100 },
+              "appliesAt": { "kind": "IMMEDIATE" },
+              "expiresAt": { "kind": "STEPS_AFTER", "steps": 2 },
+              "stackingRule": "ONCE_PER_SOURCE"
+            }
+          ],
+          "addTags": ["진로_하부리그"]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "준비해 온 관찰전이 끝났다. 지도자는 경기 장면을 확인했지만, 아직 계약이나 역할이 확정된 것은 아니다."
+  }
+}

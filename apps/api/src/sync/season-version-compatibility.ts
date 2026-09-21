@@ -27,6 +27,7 @@ export const APPROVED_PRODUCTION_MANIFESTS: readonly VersionPair[] = Object.free
   Object.freeze({ rulesetVersion: '2.1.0', contentPackVersion: '0.8.0' }),
   Object.freeze({ rulesetVersion: '3.0.0', contentPackVersion: '0.9.0' }),
   Object.freeze({ rulesetVersion: '3.1.0', contentPackVersion: '0.10.0' }),
+  Object.freeze({ rulesetVersion: '3.2.0', contentPackVersion: '0.11.0' }),
 ]);
 
 function sameVersion(left: VersionPair, right: VersionPair): boolean {

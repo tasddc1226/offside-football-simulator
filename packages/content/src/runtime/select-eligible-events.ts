@@ -220,9 +220,8 @@ export function selectEligibleEvents(pack: ContentPack, state: CareerState): Eli
   const pool =
     followUpCandidates.length > 0 ? followUpCandidates : openingPath ? [openingPath] : triggered;
 
-  const localStories =
-    pack.manifest.contentPackVersion === '0.10.0'
-      ? pool.filter((event) => /^EVT-REL-4[0-2][0-9]$/.test(event.id) || event.id === 'EVT-CON-310')
+  const localStories = ['0.10.0', '0.11.0'].includes(pack.manifest.contentPackVersion)
+    ? pool.filter((event) => /^EVT-REL-4[0-2][0-9]$/.test(event.id) || event.id === 'EVT-CON-310')
       : [];
   return (localStories.length > 0 ? localStories : pool)
     .map((event) => ({

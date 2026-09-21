@@ -183,7 +183,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
   // 블록의 기존 기대값(offers: [])에 영향을 주지 않는다.
   const testState = runCareerFixture().state;
 
-  it('같은 step에 CONTRACT·EVENT·CHAPTER가 있으면 CONTRACT가 먼저 열린다', () => {
+  it.each([false, true])('같은 step에 CONTRACT·EVENT·CHAPTER가 있으면 CONTRACT가 먼저 열린다: causal=%s', (causal) => {
     const step: SeasonStep = {
       index: 7,
       phase: 'LEAGUE',
@@ -195,9 +195,14 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       ],
       summary: null,
     };
-    const result = selectOpenSlot(step, 'CHAPTER', [{ eventId: 'EVT-X', version: 1, weight: 1 }], rng, null, null, 1, 0, testState, rulesetProto);
+    const ruleset = causal ? { ...rulesetProto, matchDecisionRules: { version: 'LATE_MATCH_V1' as const } } : rulesetProto;
+    const chapter = { chapterId:'CHP-MATCH-100',version:1,importance:'MAJOR' as const,matchId:'m1',decisionsTotal:1,trigger:'DEBUT' as const };
+    const result = selectOpenSlot(step, 'CHAPTER', [{ eventId: 'EVT-X', version: 1, weight: 1 }], rng, null, chapter, 1, 0, testState, ruleset);
     expect(result.opened).toBe(true);
     if (result.opened) expect(result.pending?.kind).toBe('CONTRACT');
+    const withoutContract = { ...step, decisionSlots:step.decisionSlots.filter(slot=>slot.kind!=='CONTRACT') };
+    const next = selectOpenSlot(withoutContract,'CHAPTER',[{eventId:'EVT-X',version:1,weight:1}],rng,null,chapter,1,0,testState,ruleset);
+    expect(next.opened && next.pending?.kind).toBe(causal ? 'CHAPTER' : 'EVENT');
   });
 
   it('EVENT는 eligibleEvents가 비어 있으면 열지 않는다(roll 없음)', () => {
@@ -257,7 +262,7 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
     expect(selectOpenSlot(step, 'CHAPTER', [], rng, null, null, 1, 0, testState, rulesetProto)).toEqual({ opened: false });
   });
 
-  it('forced INJURY는 같은 step의 일반 슬롯보다 먼저 열리고 경기 처리를 즉시 멈춘다', () => {
+  it.each([false, true])('forced INJURY는 같은 step의 일반 슬롯보다 먼저 열리고 경기 처리를 즉시 멈춘다: causal=%s', (causal) => {
     const forcedPending: Extract<Pending, { kind: 'INJURY' }> = {
       kind: 'INJURY',
       step: 5,
@@ -287,12 +292,13 @@ describe('selectOpenSlot: RULE-TIME-002/003', () => {
       null,
       (stepIndex) => {
         playCalls.push(stepIndex);
-        return { results: [], records: [], competitions: [], forcedPending, injuryReturnMatchId: null };
+        return { results: [], records: [], competitions: [], forcedPending, injuryReturnMatchId: null,
+          pausedChapter:{chapterId:'CHP-MATCH-100',version:1,importance:'MAJOR',matchId:'m1',decisionsTotal:1,trigger:'DEBUT'} };
       },
       [],
       { chapterCandidates: [], tags: [], resolvedChapterIds: [], existingChapterIds: [], league: rulesetProto.leagues[0]!, seasonIndex: 1 },
       testState,
-      rulesetProto,
+      causal ? {...rulesetProto,matchDecisionRules:{version:'LATE_MATCH_V1'}} : rulesetProto,
     );
 
     expect(walked.pending).toEqual(forcedPending);
