@@ -3,6 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   LockerRoomSchema,
+  PlayerNoteResponseSchema,
   LockerTeamSchema,
   TEAM_FORMATIONS,
   TeamInputSchema,
@@ -190,7 +191,23 @@ function PlayerCollection({ players, onBuild }: { players: LockerPlayer[]; onBui
               <p>
                 {statusLabel(p)} · {p.age}세 · {p.seasons}시즌
               </p>
+              <dl className="locker-player-evidence">
+                <div>
+                  <dt>전성기 OVR</dt>
+                  <dd>{p.peakOvr === null ? '확인 불가' : p.peakOvr}</dd>
+                </div>
+                <div>
+                  <dt>정점 시즌 시작 나이</dt>
+                  <dd>{p.peakAge === null ? '확인 불가' : `${p.peakAge}세`}</dd>
+                </div>
+                <div>
+                  <dt>최고 시즌</dt>
+                  <dd>{p.bestSeasonIndex === null ? '확인 불가' : `${p.bestSeasonIndex}시즌`}</dd>
+                </div>
+              </dl>
+              <small>최고 시즌은 평점이 기록된 10경기 이상 시즌만 표시합니다.</small>
               {p.isTest && <small>테스트 시즌 선수</small>}
+              <PlayerNoteEditor player={p} />
               <div className="locker-card-actions">
                 <Link to="/career/$careerId" params={{ careerId: p.careerId }}>
                   커리어 보기
@@ -202,6 +219,87 @@ function PlayerCollection({ players, onBuild }: { players: LockerPlayer[]; onBui
         </div>
       )}
     </section>
+  );
+}
+
+function PlayerNoteEditor({ player }: { player: LockerPlayer }) {
+  const [value, setValue] = useState(player.note ?? '');
+  const [savedNote, setSavedNote] = useState(player.note ?? '');
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const maxLength = 140;
+
+  async function save() {
+    const note = value.trim();
+    if (note.length < 1 || note.length > maxLength) {
+      setFeedback(`추억 한 줄은 1~${maxLength}자로 입력해 주세요.`);
+      return;
+    }
+    setBusy(true);
+    setFeedback(null);
+    const result = await apiFetch(
+      `/v1/locker-room/players/${encodeURIComponent(player.careerId)}/note`,
+      { method: 'PUT', body: JSON.stringify({ note }) },
+      PlayerNoteResponseSchema,
+    );
+    setBusy(false);
+    if (!result.ok) {
+      setFeedback(result.error.message);
+      return;
+    }
+    setValue(result.data.note);
+    setSavedNote(result.data.note);
+    setFeedback('이 기념 메모를 계정에 저장했습니다.');
+  }
+
+  async function remove() {
+    setBusy(true);
+    setFeedback(null);
+    const result = await apiFetch(
+      `/v1/locker-room/players/${encodeURIComponent(player.careerId)}/note`,
+      { method: 'DELETE' },
+    );
+    setBusy(false);
+    if (!result.ok) {
+      setFeedback(result.error.message);
+      return;
+    }
+    setValue('');
+    setSavedNote('');
+    setFeedback('기념 메모를 삭제했습니다.');
+  }
+
+  return (
+    <div className="locker-player-note">
+      <label>
+        추억 한 줄 <span>(나만 보기)</span>
+        <textarea
+          value={value}
+          maxLength={maxLength}
+          rows={2}
+          placeholder="이 선수와의 순간을 짧게 남겨 보세요."
+          onChange={(event) => setValue(event.target.value)}
+          disabled={busy}
+        />
+      </label>
+      <div className="locker-card-actions">
+        <button
+          type="button"
+          onClick={() => void save()}
+          disabled={busy || value.trim() === savedNote}
+        >
+          {busy ? '저장 중…' : '메모 저장'}
+        </button>
+        {savedNote ? (
+          <button type="button" onClick={() => void remove()} disabled={busy}>
+            삭제
+          </button>
+        ) : null}
+      </div>
+      <small role={feedback?.includes('저장') || feedback?.includes('삭제') ? 'status' : undefined}>
+        {feedback ?? `${value.length}/${maxLength}`}
+      </small>
+    </div>
   );
 }
 export function TeamEditor({

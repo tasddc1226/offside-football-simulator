@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { deleteCareerCascade } from '../db/repos/careers.js';
 import { upsertServiceSeason } from '../db/repos/serviceSeasons.js';
-import { careers, lockerTeams, sessions, snapshots } from '../db/schema.js';
+import { careers, lockerPlayerNotes, lockerTeams, sessions, snapshots } from '../db/schema.js';
 import { moveCareersAndRebind, moveCareersAndRotateWebSession } from '../profile/merge.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -28,41 +28,37 @@ async function player(
   status: 'ACTIVE' | 'RETIRED' | 'DRAFT' = 'ACTIVE',
   position = 'ST',
 ) {
-  await ctx.db
-    .insert(careers)
-    .values({
-      id,
-      ownerProfileId: owner,
-      status,
-      revision: 2,
-      createdServiceSeasonId: 'svc_test',
+  await ctx.db.insert(careers).values({
+    id,
+    ownerProfileId: owner,
+    status,
+    revision: 2,
+    createdServiceSeasonId: 'svc_test',
+    rulesetVersion: '3.1.0',
+    contentPackVersion: '0.10.0',
+    lastSyncedAt: now,
+    createdAt: now,
+    updatedAt: now,
+  });
+  for (const revision of [1, 2])
+    await ctx.db.insert(snapshots).values({
+      id: `${id}:${revision}`,
+      careerId: id,
+      revision,
+      checkpoint: 'STEP_BOUNDARY',
+      state: JSON.stringify({
+        age: 25,
+        seasonHistory: [{}, {}],
+        player: {
+          profile: { name: id, primaryPosition: position, baseOvr: revision === 2 ? 77 : 60 },
+        },
+      }),
+      stateHash: 'test',
+      rngStateJson: '{}',
       rulesetVersion: '3.1.0',
       contentPackVersion: '0.10.0',
-      lastSyncedAt: now,
       createdAt: now,
-      updatedAt: now,
     });
-  for (const revision of [1, 2])
-    await ctx.db
-      .insert(snapshots)
-      .values({
-        id: `${id}:${revision}`,
-        careerId: id,
-        revision,
-        checkpoint: 'STEP_BOUNDARY',
-        state: JSON.stringify({
-          age: 25,
-          seasonHistory: [{}, {}],
-          player: {
-            profile: { name: id, primaryPosition: position, baseOvr: revision === 2 ? 77 : 60 },
-          },
-        }),
-        stateHash: 'test',
-        rngStateJson: '{}',
-        rulesetVersion: '3.1.0',
-        contentPackVersion: '0.10.0',
-        createdAt: now,
-      });
 }
 function request(
   cookie: string,
@@ -131,6 +127,44 @@ describe('account locker room', () => {
     expect(data.players.every((p) => p.ovr === 77 && p.age === 25 && p.seasons === 2)).toBe(true);
     expect(data.players[1]?.status).toBe('RETIRED');
   });
+  it('exposes peak evidence only from stored season results and leaves unsupported fields unknown', async () => {
+    const a = await account();
+    await player(a.id, 'evidence');
+    await ctx.db
+      .update(snapshots)
+      .set({
+        state: JSON.stringify({
+          age: 28,
+          seasonHistory: [
+            {
+              index: 1,
+              result: {
+                baseOvr: { before: 70, after: 78 },
+                legacy: { ageAtStart: 20 },
+                playerStats: { ratedMatches: 9, ratingSumTenths: 720, minutes: 700 },
+              },
+            },
+            {
+              index: 2,
+              result: {
+                baseOvr: { before: 78, after: 84 },
+                legacy: { ageAtStart: 21 },
+                playerStats: { ratedMatches: 10, ratingSumTenths: 760, minutes: 900 },
+              },
+            },
+          ],
+          player: { profile: { name: 'evidence', primaryPosition: 'ST', baseOvr: 84 } },
+        }),
+      })
+      .where(eq(snapshots.id, 'evidence:2'));
+    const data = await room(a.cookie);
+    expect(data.players[0]).toMatchObject({
+      peakOvr: 84,
+      peakAge: 21,
+      bestSeasonIndex: 2,
+      note: null,
+    });
+  });
   it('saves partial teams idempotently, rejects stale updates, and isolates all mutations by owner', async () => {
     const a = await account();
     const b = await account();
@@ -193,6 +227,13 @@ describe('account locker room', () => {
       const a = await account();
       const b = await account();
       await player(a.id, 'striker');
+      expect(
+        (
+          await request(a.cookie, 'PUT', '/v1/locker-room/players/striker/note', {
+            note: '첫 경기의 기억',
+          })
+        ).status,
+      ).toBe(200);
       const original = await team(a.cookie, 'striker');
       await team(b.cookie);
       const [session] = await ctx.db.select().from(sessions).where(eq(sessions.profileId, a.id));
@@ -206,6 +247,7 @@ describe('account locker room', () => {
       else await moveCareersAndRotateWebSession(ctx.db, args);
       const data = await room(b.cookie);
       expect(data.players).toHaveLength(1);
+      expect(data.players[0]?.note).toBe('첫 경기의 기억');
       expect(data.teams).toHaveLength(2);
       expect(data.teams.find((t) => t.id === original.id)?.lineup[9]).toBe('striker');
       expect(
@@ -216,6 +258,14 @@ describe('account locker room', () => {
   it('erases teams with account deletion while preserving other accounts', async () => {
     const a = await account();
     const b = await account();
+    await player(a.id, 'noted-player');
+    expect(
+      (
+        await request(a.cookie, 'PUT', '/v1/locker-room/players/noted-player/note', {
+          note: '비공개 메모',
+        })
+      ).status,
+    ).toBe(200);
     await team(a.cookie);
     await team(b.cookie);
     const [session] = await ctx.db.select().from(sessions).where(eq(sessions.profileId, a.id));
@@ -229,6 +279,12 @@ describe('account locker room', () => {
     await executeProfileDeletion(ctx.db, { ...args, confirmToken });
     expect(
       await ctx.db.select().from(lockerTeams).where(eq(lockerTeams.ownerProfileId, a.id)),
+    ).toHaveLength(0);
+    expect(
+      await ctx.db
+        .select()
+        .from(lockerPlayerNotes)
+        .where(eq(lockerPlayerNotes.careerId, 'noted-player')),
     ).toHaveLength(0);
     expect((await room(b.cookie)).teams).toHaveLength(1);
   });

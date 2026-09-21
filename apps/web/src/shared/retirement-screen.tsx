@@ -47,6 +47,7 @@ import {
 } from './season-year.js';
 import './retirement-screen.css';
 import { CareerPublication } from './career-publication.js';
+import { buildCareerSeasonNarratives } from './career-season-narrative.js';
 
 type Mode = 'retirement' | 'legacy' | 'timeline' | 'final-profile';
 export type RetirementRetrospectiveStep = `moment-${number}` | 'legacy' | 'final';
@@ -158,29 +159,29 @@ export function RetirementPage({
   });
   return (
     <>
-    <RetirementScreen
-      state={state}
-      mode={mode}
-      {...(retrospective === undefined ? {} : { retrospective })}
-      startYear={startYear}
-      {...(archive === null ? {} : { archive })}
-      {...(result === null ? {} : { result })}
-      busy={mutation.isPending}
-      {...(mutation.error === null ? {} : { error: mutation.error.message })}
-      onCommand={async (command) => {
-        await mutation.mutateAsync(command);
-      }}
-      onSourceClick={(sourceId) => {
-        const source = result?.sources.find((item) => item.sourceId === sourceId);
-        if (source)
-          void navigate({
-            to: '/career/$careerId/timeline',
-            params: { careerId },
-            hash: `revision-${source.revision}`,
-          });
-      }}
-    />
-    {archive !== null && <CareerPublication careerId={careerId} />}
+      <RetirementScreen
+        state={state}
+        mode={mode}
+        {...(retrospective === undefined ? {} : { retrospective })}
+        startYear={startYear}
+        {...(archive === null ? {} : { archive })}
+        {...(result === null ? {} : { result })}
+        busy={mutation.isPending}
+        {...(mutation.error === null ? {} : { error: mutation.error.message })}
+        onCommand={async (command) => {
+          await mutation.mutateAsync(command);
+        }}
+        onSourceClick={(sourceId) => {
+          const source = result?.sources.find((item) => item.sourceId === sourceId);
+          if (source)
+            void navigate({
+              to: '/career/$careerId/timeline',
+              params: { careerId },
+              hash: `revision-${source.revision}`,
+            });
+        }}
+      />
+      {archive !== null && <CareerPublication careerId={careerId} />}
     </>
   );
 }
@@ -542,16 +543,19 @@ function TimelineRevision({
 
 function TimelineList({
   state,
+  ruleset,
   primaryRevisions,
   routineRevisions,
   startYear,
 }: {
   state: CareerState;
+  ruleset: ReturnType<typeof rulesetForCareer>;
   primaryRevisions: number[];
   routineRevisions: number[];
   startYear: number;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
+  const rawDetailsRef = useRef<HTMLDetailsElement>(null);
   // T-7-039: 메모리 히스토리에서는 실제 주소창 hash가 화면 상태를 반영하지 않는다 — 라우터 위치의
   // hash를 본다.
   const hash = useRouterState({ select: (state) => state.location.hash });
@@ -560,21 +564,39 @@ function TimelineList({
     if (!targetId) return;
     const revision = Number(targetId.replace('revision-', ''));
     if (routineRevisions.includes(revision)) detailsRef.current?.setAttribute('open', '');
+    if (primaryRevisions.includes(revision)) rawDetailsRef.current?.setAttribute('open', '');
     requestAnimationFrame(() => document.getElementById(targetId)?.focus());
-  }, [routineRevisions, hash]);
+  }, [primaryRevisions, routineRevisions, hash]);
 
   return (
     <div className="os-endgame-stack">
-      <ol className="os-endgame-timeline" aria-label="커리어 연대기">
-        {primaryRevisions.map((revision) => (
-          <TimelineRevision
-            state={state}
-            revision={revision}
-            startYear={startYear}
-            key={revision}
-          />
-        ))}
-      </ol>
+      <section className="os-panel os-endgame-section" aria-labelledby="season-narrative-heading">
+        <h2 id="season-narrative-heading">연도별 커리어 기록</h2>
+        {buildCareerSeasonNarratives(state, ruleset, startYear).length > 0 ? (
+          <ol className="flex flex-col gap-os-2" aria-label="연도별 커리어 기록">
+            {buildCareerSeasonNarratives(state, ruleset, startYear).map((narrative) => (
+              <li key={narrative.id} className="rounded-os-m bg-os-surface-2 px-os-3 py-os-2">
+                {narrative.sentence}
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p>확정된 시즌 결과가 없어 연도별 기록을 만들 수 없습니다.</p>
+        )}
+      </section>
+      <details className="os-panel os-endgame-routine" ref={rawDetailsRef}>
+        <summary>원본 타임라인 기록 보기</summary>
+        <ol className="os-endgame-timeline mt-os-3" aria-label="커리어 연대기">
+          {primaryRevisions.map((revision) => (
+            <TimelineRevision
+              state={state}
+              revision={revision}
+              startYear={startYear}
+              key={revision}
+            />
+          ))}
+        </ol>
+      </details>
       {routineRevisions.length ? (
         <details className="os-panel os-endgame-routine" ref={detailsRef}>
           <summary>일상적인 시즌 진행 {routineRevisions.length}개 보기</summary>
@@ -1197,6 +1219,7 @@ export function RetirementScreen({
       {mode === 'timeline' && terminal ? (
         <TimelineList
           state={state}
+          ruleset={rulesetForCareer(state)}
           primaryRevisions={primaryTimelineRevisions}
           routineRevisions={routineTimelineRevisions}
           startYear={startYear}

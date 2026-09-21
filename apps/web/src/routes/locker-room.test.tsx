@@ -15,6 +15,10 @@ const players: LockerPlayer[] = [
     status: 'RETIRED',
     seasons: 8,
     isTest: false,
+    peakOvr: 84,
+    peakAge: 24,
+    bestSeasonIndex: 5,
+    note: null,
   },
   {
     careerId: 'keeper',
@@ -25,6 +29,10 @@ const players: LockerPlayer[] = [
     status: 'ACTIVE',
     seasons: 2,
     isTest: false,
+    peakOvr: null,
+    peakAge: null,
+    bestSeasonIndex: null,
+    note: null,
   },
 ];
 function editor(team?: LockerTeam) {

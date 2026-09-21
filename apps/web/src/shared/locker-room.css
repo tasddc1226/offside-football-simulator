@@ -111,6 +111,46 @@
 .locker-player-top > strong {
   font-size: 24px;
 }
+.locker-player-evidence {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 12px 0 0;
+  color: var(--os-text-2);
+  font-size: 12px;
+}
+.locker-player-evidence div {
+  min-width: 0;
+  padding: 7px;
+  border-radius: 8px;
+  background: var(--os-surface-2);
+}
+.locker-player-evidence dd {
+  margin-top: 3px;
+  color: var(--os-text);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.locker-player-note {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--os-border);
+  font-size: 12px;
+}
+.locker-player-note label span {
+  color: var(--os-text-2);
+}
+.locker-player-note textarea {
+  min-height: 64px;
+  resize: vertical;
+  font: inherit;
+}
+.locker-player-note .locker-card-actions {
+  margin-top: 0;
+  gap: 8px;
+}
 .locker-card-actions {
   display: flex;
   flex-wrap: wrap;
@@ -163,7 +203,13 @@
   padding: 20px 8px;
   border: 1px solid var(--os-pitch-border);
   border-radius: 18px;
-  background: repeating-linear-gradient(0deg, var(--os-pitch-grass) 0, var(--os-pitch-grass) 80px, var(--os-pitch-stripe) 80px, var(--os-pitch-stripe) 160px);
+  background: repeating-linear-gradient(
+    0deg,
+    var(--os-pitch-grass) 0,
+    var(--os-pitch-grass) 80px,
+    var(--os-pitch-stripe) 80px,
+    var(--os-pitch-stripe) 160px
+  );
 }
 .locker-pitch-row {
   display: flex;

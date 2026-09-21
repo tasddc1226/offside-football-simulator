@@ -25,7 +25,10 @@ export async function moveCareersAndRebind(
 ): Promise<void> {
   const careerIds = await listCareerIdsByOwner(db, input.fromProfileId);
   await runBatch(db, [
-    db.update(friendlyMatches).set({ ownerProfileId: input.toProfileId }).where(eq(friendlyMatches.ownerProfileId, input.fromProfileId)),
+    db
+      .update(friendlyMatches)
+      .set({ ownerProfileId: input.toProfileId })
+      .where(eq(friendlyMatches.ownerProfileId, input.fromProfileId)),
     db
       .update(careers)
       .set({ ownerProfileId: input.toProfileId, updatedAt: input.now })
@@ -68,7 +71,10 @@ export async function moveCareersAndRotateWebSession(
     now: input.now,
   });
   await runBatch(db, [
-    db.update(friendlyMatches).set({ ownerProfileId: input.toProfileId }).where(eq(friendlyMatches.ownerProfileId, input.fromProfileId)),
+    db
+      .update(friendlyMatches)
+      .set({ ownerProfileId: input.toProfileId })
+      .where(eq(friendlyMatches.ownerProfileId, input.fromProfileId)),
     db
       .update(careers)
       .set({ ownerProfileId: input.toProfileId, updatedAt: input.now })

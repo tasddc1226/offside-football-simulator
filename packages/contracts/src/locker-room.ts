@@ -22,6 +22,13 @@ export const TeamInputSchema = z.strictObject({
   lineup: LineupSchema,
 });
 export const SaveTeamSchema = TeamInputSchema.extend({ revision: z.number().int().nonnegative() });
+export const PlayerNoteSchema = z.string().trim().min(1).max(140);
+export const SavePlayerNoteSchema = z.strictObject({ note: PlayerNoteSchema });
+export type SavePlayerNote = z.infer<typeof SavePlayerNoteSchema>;
+export const PlayerNoteResponseSchema = z.strictObject({
+  careerId: z.string(),
+  note: PlayerNoteSchema,
+});
 export const LockerTeamSchema = TeamInputSchema.extend({
   id: z.string(),
   revision: z.number().int().positive(),
@@ -38,6 +45,10 @@ export const LockerPlayerSchema = z.strictObject({
   status: z.enum(['ACTIVE', 'RETIRED', 'ARCHIVED']),
   seasons: z.number().int().nonnegative(),
   isTest: z.boolean(),
+  peakOvr: z.number().int().min(1).max(99).nullable(),
+  peakAge: z.number().int().nonnegative().nullable(),
+  bestSeasonIndex: z.number().int().positive().nullable(),
+  note: z.string().max(140).nullable(),
 });
 export type LockerPlayer = z.infer<typeof LockerPlayerSchema>;
 export const LockerRoomSchema = z.strictObject({

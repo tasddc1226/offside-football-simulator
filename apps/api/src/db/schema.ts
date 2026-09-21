@@ -165,7 +165,14 @@ export const authAttempts = sqliteTable(
     // T-2-012: ANALYTICS_EVENTS(분당 60회/clientId, D-55)가 추가한 kind. text 컬럼이라 마이그레이션은
     // 필요 없다(SQLite는 이 enum을 CHECK 제약으로 만들지 않는다 — TS 타입에서만 강제).
     kind: text('kind', {
-      enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START', 'ANALYTICS_EVENTS', 'CAREER_PUBLICATION', 'FRIENDLY_START'],
+      enum: [
+        'RECOVERY_ISSUE',
+        'RECOVERY_REDEEM',
+        'GOOGLE_START',
+        'ANALYTICS_EVENTS',
+        'CAREER_PUBLICATION',
+        'FRIENDLY_START',
+      ],
     }).notNull(),
     subject: text('subject').notNull(),
     windowStart: text('window_start').notNull(),
@@ -267,7 +274,10 @@ export const careerArchives = sqliteTable('career_archives', {
 /** Explicitly published whitelist. Ownership follows careers through profile merges. */
 export const careerPublications = sqliteTable('career_publications', {
   id: text('id').primaryKey(),
-  careerId: text('career_id').notNull().unique().references(() => careers.id, { onDelete: 'cascade' }),
+  careerId: text('career_id')
+    .notNull()
+    .unique()
+    .references(() => careers.id, { onDelete: 'cascade' }),
   articleJson: text('article_json').notNull(),
   createdAt: text('created_at').notNull(),
 });
@@ -275,7 +285,9 @@ export const careerPublications = sqliteTable('career_publications', {
 /** Atomic challenge replay guard; follows child career deletion, not source publication. */
 export const careerChallengeAdmissions = sqliteTable('career_challenge_admissions', {
   keyHash: text('key_hash').primaryKey(),
-  careerId: text('career_id').notNull().references(() => careers.id, { onDelete: 'cascade' }),
+  careerId: text('career_id')
+    .notNull()
+    .references(() => careers.id, { onDelete: 'cascade' }),
   requestHash: text('request_hash').notNull(),
   responseJson: text('response_json').notNull(),
 });
@@ -298,12 +310,28 @@ export const lockerTeams = sqliteTable(
   (table) => [index('locker_teams_owner_idx').on(table.ownerProfileId)],
 );
 
+/** Private account-owned player note; the career FK keeps it out of public career articles and
+ * profile deletion/merge moves it with the owning account. */
+export const lockerPlayerNotes = sqliteTable('locker_player_notes', {
+  careerId: text('career_id')
+    .primaryKey()
+    .references(() => careers.id, { onDelete: 'cascade' }),
+  note: text('note').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
 /** Private immutable friendly receipts survive team/career deletion, but never profile deletion. */
-export const friendlyMatches = sqliteTable('friendly_matches', {
-  id: text('id').primaryKey(),
-  ownerProfileId: text('owner_profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
-  requestKeyHash: text('request_key_hash').notNull().unique(),
-  requestHash: text('request_hash').notNull(),
-  receiptJson: text('receipt_json').notNull(),
-  createdAt: text('created_at').notNull(),
-}, (table) => [index('friendly_matches_owner_idx').on(table.ownerProfileId, table.createdAt)]);
+export const friendlyMatches = sqliteTable(
+  'friendly_matches',
+  {
+    id: text('id').primaryKey(),
+    ownerProfileId: text('owner_profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    requestKeyHash: text('request_key_hash').notNull().unique(),
+    requestHash: text('request_hash').notNull(),
+    receiptJson: text('receipt_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('friendly_matches_owner_idx').on(table.ownerProfileId, table.createdAt)],
+);
