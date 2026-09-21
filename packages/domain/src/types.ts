@@ -670,7 +670,12 @@ export type SelectionCandidate = {
 
 export type SelectionAppearance = 'START' | 'SUB' | 'OUT';
 
-export type SelectionReasonComponent = 'TACTICAL_FIT' | 'MANAGER_TRUST' | 'EXPECTED_PERFORMANCE' | 'SQUAD_STATUS';
+export type SelectionReasonComponent =
+  | 'TACTICAL_FIT'
+  | 'MANAGER_TRUST'
+  | 'EXPECTED_PERFORMANCE'
+  | 'SQUAD_STATUS'
+  | 'EARLY_OPPORTUNITY';
 
 // T-2-002 D-26/D-34: `rankSelection`의 결과. `playerReason`은 선수(id 'PLAYER')와 경계 후보의 가중
 // 차이가 가장 큰 구성 요소다(선수가 없거나 제외됐으면 null).

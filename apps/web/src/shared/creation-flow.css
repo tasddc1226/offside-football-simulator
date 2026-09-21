@@ -170,6 +170,25 @@
 .creation-two select {
   margin-top: 8px;
 }
+.creation-nationality-selector {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  min-width: 0;
+}
+.creation-nationality-selector input,
+.creation-nationality-selector select {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.875rem;
+  padding: 9px 8px;
+}
+@media (max-width: 480px) {
+  .creation-two {
+    grid-template-columns: 1fr;
+  }
+}
 .creation-error {
   color: var(--os-danger);
   font-size: 0.8125rem;

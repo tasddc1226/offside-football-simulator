@@ -35,6 +35,13 @@ describe('loadContentPack: 0.13.0 unpublished candidate', () => {
     expect(candidate.eventsById.get('EVT-INJ-131')?.narrative.situation).toContain('무릎');
     expect(candidate.eventsById.get('EVT-INJ-132')?.narrative.situation).toContain('햄스트링');
     expect(candidate.eventsById.get('EVT-INJ-133')?.narrative.situation).toContain('재발');
+    expect(candidate.eventsById.get('EVT-INJ-134')?.narrative.situation).not.toContain('햄스트링');
+    expect(candidate.eventsById.get('EVT-INJ-134')?.narrative.situation).not.toContain('무릎');
+    expect(candidate.chapters.filter((chapter) => chapter.id >= 'CHP-MATCH-120' && chapter.id <= 'CHP-MATCH-125')).toHaveLength(6);
+    expect(candidate.chapters.find((chapter) => chapter.id === 'CHP-MATCH-125')?.trigger).toEqual({
+      kind: 'TAG',
+      tag: '마지막_전수',
+    });
     expect(candidate.eventsById.get('EVT-INJ-131')?.choices).toEqual(
       candidate.eventsById.get('EVT-INJ-001')?.choices,
     );

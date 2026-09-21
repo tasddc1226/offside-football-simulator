@@ -184,6 +184,9 @@ function chapterContextLabel(
 
 function playerReasonText(reason: SelectionRanking['playerReason']): string | null {
   if (reason === null) return null;
+  if (reason.component === 'EARLY_OPPORTUNITY') {
+    return '건강한 신인에게 제한된 벤치 시험 기회';
+  }
   const sign = reason.delta > 0 ? '+' : '';
   return `${SELECTION_REASON_LABEL_KO[reason.component]} 차이 ${sign}${reason.delta}`;
 }

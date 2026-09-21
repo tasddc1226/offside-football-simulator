@@ -57,6 +57,9 @@ export type TeamRecordView = {
   goalsAgainst: number;
   /** 리그면 "N위/M팀"(순위 미확정 "—"), 컵이면 라운드 라벨("—"는 기록 없음). */
   standingText: string;
+  /** 후보 룰셋에서만 리그 승격권 보상을 표시한다. 실제 클럽 승격을 뜻하지 않는다. */
+  promotionZone?: boolean;
+  promotionRewardCenti?: number | null;
 };
 
 export type AttributeDeltaGroupView = {
@@ -114,6 +117,8 @@ function buildTeamRecords(result: SeasonResult, ruleset: Ruleset): TeamRecordVie
     if (record.kind === 'LEAGUE') {
       const league = team === undefined ? undefined : ruleset.leagues.find((candidate) => candidate.id === team.leagueId);
       const standingText = record.position === null ? '—' : `${record.position}위/${league?.teamCount ?? '—'}팀`;
+      const promotionZone =
+        record.position !== null && league !== undefined && league.promotionSpots > 0 && record.position <= league.promotionSpots;
       return {
         competitionId: record.competitionId,
         kind: 'LEAGUE',
@@ -124,6 +129,8 @@ function buildTeamRecords(result: SeasonResult, ruleset: Ruleset): TeamRecordVie
         goalsFor: record.goalsFor,
         goalsAgainst: record.goalsAgainst,
         standingText,
+        promotionZone,
+        promotionRewardCenti: promotionZone ? ruleset.reputationRules.settlement.promotionCenti ?? null : null,
       };
     }
     const cup = team === undefined ? undefined : ruleset.cups.find((candidate) => candidate.tiers.includes(team.leagueTier));

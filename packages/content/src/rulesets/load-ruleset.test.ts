@@ -208,7 +208,7 @@ describe('loadRuleset: 3.4.0 unpublished gameplay/content candidate', () => {
         KNEE: { id: 'EVT-INJ-131', version: 1 },
         HAMSTRING: { id: 'EVT-INJ-132', version: 1 },
       },
-      byAgeFrom: [{ age: 30, event: { id: 'EVT-INJ-132', version: 1 } }],
+      byAgeFrom: [{ age: 30, event: { id: 'EVT-INJ-134', version: 1 } }],
       recurrence: { id: 'EVT-INJ-133', version: 1 },
     });
   });

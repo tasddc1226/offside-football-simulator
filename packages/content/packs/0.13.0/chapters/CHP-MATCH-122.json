@@ -1,0 +1,16 @@
+{
+  "id": "CHP-MATCH-122",
+  "version": 1,
+  "importance": "MAJOR",
+  "trigger": { "kind": "TAG", "tag": "해외_도전" },
+  "weight": 100,
+  "rotationGroup": "OVERSEAS_CONTEXT",
+  "decisions": [{
+    "id": "D1",
+    "prompt": "해외에서 얻은 야망이 마지막 공격을 재촉한다. 팀을 위한 한 번과 자신을 증명할 한 번 사이에서 선택한다.",
+    "options": [
+      { "id": "PATIENT", "label": "한 번 더 패스를 기다린다", "riskLabel": "LOW", "priorProbability": null, "previewEffects": [{ "label": "감독 신뢰 +2", "target": "managerTrust" }, { "label": "집중력 부담: 체력 -2", "target": "fitness" }], "outcomes": [{ "id": "PATIENT-FIXED", "kind": "FIXED", "weight": 100, "title": "기다림이 공간을 열었다", "ratingDeltaTenths": 0, "effects": [{ "kind": "RELATION", "sourceId": "CHP-MATCH-122.D1.PATIENT.FIXED", "target": "managerTrust", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }, { "kind": "CURRENT", "sourceId": "CHP-MATCH-122.D1.PATIENT.FIXED.FITNESS", "target": "fitness", "delta": -2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }], "narrative": { "situation": "기다림이 공간을 열었다. 야망은 서두르지 않고 팀의 마지막 선택을 돕는 힘이 됐지만, 집중한 만큼 체력이 줄었다." } }] },
+      { "id": "SELF", "label": "내가 먼저 결정을 내린다", "riskLabel": "HIGH", "priorProbability": null, "previewEffects": [{ "label": "감독 신뢰 +1", "target": "managerTrust" }, { "label": "짧게 끝내 체력 +2", "target": "fitness" }], "outcomes": [{ "id": "SELF-FIXED", "kind": "FIXED", "weight": 100, "title": "결정의 무게를 받아냈다", "ratingDeltaTenths": 0, "effects": [{ "kind": "RELATION", "sourceId": "CHP-MATCH-122.D1.SELF.FIXED", "target": "managerTrust", "delta": 1, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }, { "kind": "CURRENT", "sourceId": "CHP-MATCH-122.D1.SELF.FIXED.FITNESS", "target": "fitness", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }], "narrative": { "situation": "결정의 무게를 받아냈다. 해외에서 키운 야망이 다음 도전을 향한 발판으로 남았고, 몸도 다음 경기를 준비했다." } }] }
+    ]
+  }]
+}

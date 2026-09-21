@@ -109,7 +109,7 @@ function TeamRow({ team, onToast }: { team: Team; onToast: (toast: TeamToast) =>
   return (
     <div className="flex flex-col gap-os-2">
       <div className="flex items-center gap-os-2">
-        <ClubBadge teamId={team.id} size="m" />
+        <ClubBadge teamId={team.id} teamName={team.name} size="m" />
         <label htmlFor={inputId} className="font-os font-semibold text-os-text" style={H2_STYLE}>
           {displayName}
         </label>

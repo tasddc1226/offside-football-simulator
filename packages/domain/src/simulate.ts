@@ -237,6 +237,13 @@ export type Command =
   | { type: 'CAREER_EVENT'; payload: { choice: CareerEventChoice } }
   | { type: 'REQUEST_CLUB_MEETING'; payload: { request: ClubMeetingRequest } };
 
+/** A healthy trial chance is an actual unused bench appearance, never an injury,
+ * suspension, service absence, or fabricated minutes record. Deriving this from
+ * persisted matches keeps the bounded candidate window stable across command boundaries. */
+export function countHealthyTrialChances(matches: readonly MatchRecord[]): number {
+  return matches.filter((match) => match.outReason === 'UNUSED_SUB').length;
+}
+
 export type SimulationInput = {
   snapshot: DomainSnapshot | null;
   command: Command & { commandId: string; expectedRevision: number };
@@ -835,6 +842,14 @@ function createStepMatchWiring(
           sinceMatchId: `service:${seasonIndex}`,
         };
       }
+      const earlyOpportunity =
+        rookieTrialRules !== undefined &&
+        seasonIndex <= rookieTrialRules.maxSeason &&
+        careerState.age <= rookieTrialRules.maxAge &&
+        rookieTrialRules.eligibleRoles.includes(rolePromise) &&
+        availability === null &&
+        countHealthyTrialChances(matches) < rookieTrialRules.maxMatchesWithoutMinutes &&
+        !matches.some((match) => match.minutes > 0);
       const result = playMatch({
         ruleset,
         rngState: matchRngState,
@@ -857,14 +872,7 @@ function createStepMatchWiring(
         rolePromise,
         competitors,
         availability,
-        earlyOpportunity:
-          rookieTrialRules !== undefined &&
-          seasonIndex <= rookieTrialRules.maxSeason &&
-          careerState.age <= rookieTrialRules.maxAge &&
-          rookieTrialRules.eligibleRoles.includes(rolePromise) &&
-          availability === null &&
-          matches.length < rookieTrialRules.maxMatchesWithoutMinutes &&
-          !matches.some((match) => match.minutes > 0),
+        earlyOpportunity,
         seasonYellowCount: yellowSuspensionCount,
         lastRatingTenths,
         ...(recurrenceCheck === undefined ? {} : { recurrenceCheck }),

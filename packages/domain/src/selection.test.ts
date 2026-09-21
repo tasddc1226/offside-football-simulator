@@ -10,7 +10,7 @@ import {
   rankSelection,
   rankPositionForPlayer,
 } from './selection.js';
-import { simulate, type Command } from './simulate.js';
+import { countHealthyTrialChances, simulate, type Command } from './simulate.js';
 import { compareCodePoints } from './canonical.js';
 import {
   ATTRIBUTE_KEYS,
@@ -393,6 +393,82 @@ describe('ROOKIE_TRIAL_V1 — 건강한 루키의 제한된 벤치 기회(#242)'
     expect(player.appearance).toBe('SUB');
     expect(player.rank).toBeGreaterThan(ranking.slots);
     expect(player.excluded).toBeNull();
+    expect(ranking.candidates.filter((candidate) => candidate.appearance === 'SUB')).toHaveLength(
+      ranking.benchSlots,
+    );
+    expect(ranking.playerReason).toEqual({ component: 'EARLY_OPPORTUNITY', delta: 0 });
+    expect(ranking.candidates.filter((candidate) => candidate.appearance === 'START')).toHaveLength(
+      ranking.slots,
+    );
+  });
+
+  it.each(['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST'] as const)(
+    'keeps one real bench slot for %s when a trial displaces the boundary candidate',
+    (position) => {
+      const makeCandidate = (id: string, score: number) => ({
+        id,
+        name: id,
+        baseOvr: score,
+        tacticalFit: score,
+        managerTrust: score,
+        expectedPerformance: score,
+        squadStatus: score,
+        score,
+        excluded: null,
+      });
+      const ranking = rankSelection(
+        [makeCandidate('RIVAL-START', 90), makeCandidate('RIVAL-BENCH', 80), makeCandidate('PLAYER', 10)],
+        position,
+        1,
+        1,
+        rules,
+        true,
+      );
+      expect(ranking.candidates.filter((candidate) => candidate.appearance === 'START')).toHaveLength(1);
+      expect(ranking.candidates.filter((candidate) => candidate.appearance === 'SUB')).toHaveLength(1);
+      expect(ranking.candidates.find((candidate) => candidate.id === 'PLAYER')?.appearance).toBe('SUB');
+      expect(ranking.playerReason).toEqual({ component: 'EARLY_OPPORTUNITY', delta: 0 });
+    },
+  );
+
+  it('does not invent a trial slot when the position has no bench capacity', () => {
+    const ranking = rankPositionForPlayer({
+      ruleset: RULESET,
+      styleId,
+      position: 'W',
+      playerName: 'No-bench rookie',
+      baseOvr: 40,
+      tacticalFit: 20,
+      managerTrust: 20,
+      form: 40,
+      fitness: 90,
+      morale: 50,
+      familiarity: 1,
+      squadStatus: 20,
+      competitors: Array.from({ length: 8 }, (_, index) => ({ ...rival, id: `RIVAL-${index}` })),
+      earlyOpportunity: true,
+    });
+    // The real style has a bench, so this assertion is covered by direct rankSelection above;
+    // a zero-capacity call must always remain OUT regardless of the opportunity flag.
+    const zeroBench = rankSelection(
+      ranking.candidates.map(({ rank: _rank, appearance: _appearance, ...candidate }) => candidate),
+      'W',
+      ranking.slots,
+      0,
+      rules,
+      true,
+    );
+    expect(zeroBench.candidates.find((candidate) => candidate.id === 'PLAYER')?.appearance).toBe('OUT');
+    expect(zeroBench.playerReason?.component).not.toBe('EARLY_OPPORTUNITY');
+  });
+
+  it('derives the bounded window from persisted healthy unused-sub facts across command boundaries', () => {
+    const match = (outReason: 'UNUSED_SUB' | 'INJURY' | 'SUSPENSION' | 'SERVICE') =>
+      ({ outReason }) as import('./types.js').MatchRecord;
+    expect(countHealthyTrialChances([match('UNUSED_SUB'), match('INJURY'), match('SUSPENSION')])).toBe(1);
+    expect(
+      countHealthyTrialChances([match('UNUSED_SUB'), match('INJURY'), match('UNUSED_SUB'), match('SERVICE')]),
+    ).toBe(2);
   });
 
   it('never places an injured or suspended rookie into the trial bench', () => {

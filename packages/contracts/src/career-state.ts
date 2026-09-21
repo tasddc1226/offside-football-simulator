@@ -800,7 +800,13 @@ export const SelectionRankingSchema = z.strictObject({
   candidates: z.array(RankedSelectionCandidateSchema),
   playerReason: z
     .strictObject({
-      component: z.enum(['TACTICAL_FIT', 'MANAGER_TRUST', 'EXPECTED_PERFORMANCE', 'SQUAD_STATUS']),
+      component: z.enum([
+        'TACTICAL_FIT',
+        'MANAGER_TRUST',
+        'EXPECTED_PERFORMANCE',
+        'SQUAD_STATUS',
+        'EARLY_OPPORTUNITY',
+      ]),
       delta: z.number().int(),
     })
     .nullable(),

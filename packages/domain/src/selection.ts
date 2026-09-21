@@ -210,15 +210,14 @@ export function rankSelection(
     return compareCodePoints(a.id, b.id);
   });
 
-  const ranked: RankedCandidate[] = sorted.map((candidate, index) => {
+  let ranked: RankedCandidate[] = sorted.map((candidate, index) => {
     const rank = index + 1;
     const appearance: 'START' | 'SUB' | 'OUT' =
       candidate.excluded !== null
         ? 'OUT'
         : rank <= slots
           ? 'START'
-          : rank <= slots + benchSlots ||
-              (earlyOpportunity && candidate.id === 'PLAYER' && benchSlots > 0)
+          : rank <= slots + benchSlots
             ? 'SUB'
             : 'OUT';
     return { ...candidate, rank, appearance };
@@ -226,10 +225,34 @@ export function rankSelection(
 
   const playerIndex = ranked.findIndex((candidate) => candidate.id === 'PLAYER');
   const player = playerIndex === -1 ? null : ranked[playerIndex]!;
-  const playerReason =
+  let playerReason =
     player === null || player.excluded !== null
       ? null
       : computePlayerReason(ranked, playerIndex, slots, rules);
+
+  // A bounded rookie trial may displace the last normal bench candidate, but never
+  // creates a second bench slot. The rank remains the score rank; the reason makes
+  // the capacity-preserving exception explicit to the UI.
+  if (earlyOpportunity && player !== null && player.excluded === null && player.appearance === 'OUT') {
+    let displacedIndex = -1;
+    for (let index = ranked.length - 1; index >= 0; index -= 1) {
+      const candidate = ranked[index]!;
+      if (candidate.appearance === 'SUB' && candidate.id !== 'PLAYER') {
+        displacedIndex = index;
+        break;
+      }
+    }
+    if (displacedIndex >= 0) {
+      ranked = ranked.map((candidate, index) =>
+        index === displacedIndex
+          ? { ...candidate, appearance: 'OUT' }
+          : index === playerIndex
+            ? { ...candidate, appearance: 'SUB' }
+            : candidate,
+      );
+      playerReason = { component: 'EARLY_OPPORTUNITY', delta: 0 };
+    }
+  }
 
   return { position, slots, benchSlots, candidates: ranked, playerReason };
 }

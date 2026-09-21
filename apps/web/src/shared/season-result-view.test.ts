@@ -298,6 +298,22 @@ describe('deriveSeasonResultView', () => {
     expect(withView?.teamRecords[0]?.standingText).toBe(`2위/${ruleset.leagues.find((l) => l.id === 'league-tier1')?.teamCount}팀`);
   });
 
+  it('승격권 보상은 실제 리그 순위에만 표시하고 소속 리그는 바꾸지 않는다', () => {
+    const candidateRuleset = {
+      ...ruleset,
+      leagues: ruleset.leagues.map((league) =>
+        league.id === 'league-tier1' ? { ...league, promotionSpots: 2 } : league,
+      ),
+      reputationRules: {
+        ...ruleset.reputationRules,
+        settlement: { ...ruleset.reputationRules.settlement, promotionCenti: 250 },
+      },
+    };
+    const view = deriveSeasonResultView(baseState({ seasonHistory: [summary(seasonResult())] }), 0, candidateRuleset);
+    expect(view?.teamRecords[0]).toMatchObject({ promotionZone: true, promotionRewardCenti: 250 });
+    expect(view?.teamId).toBe(seasonResult().teamId);
+  });
+
   it('컵 라운드는 한글 라벨로 보여준다(R2 → "2라운드")', () => {
     const state = baseState({ seasonHistory: [summary(seasonResult())] });
     const view = deriveSeasonResultView(state, 0, ruleset);

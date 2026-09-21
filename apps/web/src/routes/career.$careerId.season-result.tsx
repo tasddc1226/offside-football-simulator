@@ -400,6 +400,11 @@ function SeasonResultScreen() {
               ? `${headlineTeamResult.label} ${headlineTeamResult.standingText}`
               : `${SQUAD_ROLE_LABELS[selection.roleAtStart]}에서 ${SQUAD_ROLE_LABELS[selection.roleAtEnd]}로 시즌을 마쳤습니다.`}
           </p>
+          {headlineTeamResult?.promotionRewardCenti !== null && headlineTeamResult?.promotionRewardCenti !== undefined ? (
+            <p className="font-os text-os-accent" style={CAPTION_STYLE}>
+              승격권 보상: 커리어 평판 +{headlineTeamResult.promotionRewardCenti} · 실제 소속 리그는 바뀌지 않습니다.
+            </p>
+          ) : null}
           {view.baseOvr.before !== view.baseOvr.after ? (
             <p className="flex flex-wrap items-baseline gap-os-2 font-os font-bold text-os-accent" style={H2_STYLE}>
               <span className="os-num">{view.baseOvr.before}</span>
@@ -561,6 +566,11 @@ function SeasonResultScreen() {
                 <p className="font-os text-os-text" style={BODY_STYLE}>
                   {record.label} · {record.standingText}
                 </p>
+                {record.promotionRewardCenti !== null && record.promotionRewardCenti !== undefined ? (
+                  <p className="font-os text-os-accent" style={CAPTION_STYLE}>
+                    승격권 보상: 커리어 평판 +{record.promotionRewardCenti} · 실제 소속 리그는 바뀌지 않습니다.
+                  </p>
+                ) : null}
                 <p className="os-num font-os text-os-text-2" style={CAPTION_STYLE}>
                   {record.won}승 {record.drawn}무 {record.lost}패 · 득실 {record.goalsFor}:
                   {record.goalsAgainst}

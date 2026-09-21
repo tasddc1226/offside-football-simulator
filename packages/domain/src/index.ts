@@ -286,6 +286,7 @@ export {
   seasonWonTitle,
 } from './reputation.js';
 export {
+  countHealthyTrialChances,
   simulate,
   verifySnapshot,
   type Command,
