@@ -6,12 +6,13 @@
 // 그래서 도착 지점은 screenForCareer가 매핑하는 SCR-007 계열 라우트(path·tryout·event) 중
 // 하나인지로 검증한다.
 import { expect, test } from '@playwright/test';
-import { expectRoute } from './helpers/route.js';
+import { currentRoute, expectRoute } from './helpers/route.js';
 import {
   fillPlayerInfo,
   fulfillJson,
   goToConfirm,
   META,
+  readCurrentCareerState,
   startNewCareer,
 } from './helpers/player-creation.js';
 
@@ -116,4 +117,26 @@ test('SCR-002: 저장한 뒤 새로고침해도 draft가 그대로 보인다', a
   await expect(page.getByLabel('출발 배경')).toHaveValue('club-academy');
   await expect(page.getByRole('radio', { name: '왼발' })).toBeChecked();
   await expect(page.getByRole('radio', { name: /윙어/ })).toBeChecked();
+});
+
+test('동시 온보딩 탭은 서로 다른 careerId와 draft를 유지한다', async ({ page }) => {
+  await startNewCareer(page);
+  const duplicate = await page.context().newPage();
+  await duplicate.goto('/onboarding');
+  await expect(duplicate.getByRole('heading', { name: '선수 생성' })).toBeVisible();
+
+  await fillPlayerInfo(page, '김서준');
+  await fillPlayerInfo(duplicate, '이하준');
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await duplicate.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await Promise.all([
+    expectRoute(page, /\/career\/.+\/style$/),
+    expectRoute(duplicate, /\/career\/.+\/style$/),
+  ]);
+  const routeA = await currentRoute(page);
+  const routeB = await currentRoute(duplicate);
+  expect(routeA).not.toBe(routeB);
+  expect((await readCurrentCareerState(page)).player.draft.name).toBe('김서준');
+  expect((await readCurrentCareerState(duplicate)).player.draft.name).toBe('이하준');
+  await duplicate.close();
 });

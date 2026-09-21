@@ -50,6 +50,12 @@ import { useUiStore } from '../shared/ui-store.js';
 import { GameResultReveal } from '../shared/game-presentation.js';
 import '../shared/simulator.css';
 import { LeagueStandingsTable } from '../shared/league-standings.js';
+import {
+  careerMilestones,
+  MILESTONE_LABELS_KO,
+  playerAwards,
+  SEASON_AWARD_LABELS_KO,
+} from '../shared/awards-presentation.js';
 
 type SeasonResultSearch = { season?: number };
 
@@ -364,6 +370,8 @@ function SeasonResultScreen() {
   const headlineInput = seasonHeadlineInput(state.careerId, view, ruleset, previousHeadline);
   const { promoted } = headlineInput;
   const headline = seasonResultHeadline(headlineInput);
+  const earnedAwards = playerAwards(view.result);
+  const earnedMilestones = careerMilestones(state.seasonHistory);
 
   return (
     <div className="os-screen" data-testid="season-result" data-result-hash={view.hash}>
@@ -400,6 +408,11 @@ function SeasonResultScreen() {
               ? `${headlineTeamResult.label} ${headlineTeamResult.standingText}`
               : `${SQUAD_ROLE_LABELS[selection.roleAtStart]}에서 ${SQUAD_ROLE_LABELS[selection.roleAtEnd]}로 시즌을 마쳤습니다.`}
           </p>
+          {headlineTeamResult?.promotionRewardCenti !== null && headlineTeamResult?.promotionRewardCenti !== undefined ? (
+            <p className="font-os text-os-accent" style={CAPTION_STYLE}>
+              승격권 보상: 커리어 평판 +{headlineTeamResult.promotionRewardCenti} · 실제 소속 리그는 바뀌지 않습니다.
+            </p>
+          ) : null}
           {view.baseOvr.before !== view.baseOvr.after ? (
             <p className="flex flex-wrap items-baseline gap-os-2 font-os font-bold text-os-accent" style={H2_STYLE}>
               <span className="os-num">{view.baseOvr.before}</span>
@@ -410,6 +423,50 @@ function SeasonResultScreen() {
           ) : null}
         </section>
       </GameResultReveal>
+
+      <section className="os-panel flex flex-col gap-os-3" aria-label="시즌 수상과 커리어 마일스톤" data-testid="season-recognition">
+        <h2 className="font-os font-semibold text-os-text" style={H2_STYLE}>수상과 마일스톤</h2>
+        {earnedAwards.length === 0 && (view.result.milestones ?? []).length === 0 ? (
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            실제 출전 시간과 포지션별 시즌 기록을 비교해 확정한 수상은 없습니다. 0분 기록은 출전·마일스톤으로 계산하지 않습니다.
+          </p>
+        ) : null}
+        {earnedAwards.length > 0 ? (
+          <ul className="flex flex-col gap-os-2 font-os text-os-text" style={BODY_STYLE}>
+            {earnedAwards.map((award) => (
+              <li key={`${award.awardId}-${award.recipientGroup}`} className="rounded-os-m bg-os-surface-2 p-os-3">
+                <p className="font-semibold">{SEASON_AWARD_LABELS_KO[award.awardId]} · {award.recipientGroup}</p>
+                <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                  실제 {award.criteria.playerMinutes}분과 {award.criteria.comparison === 'NPC_LEAGUE_MODEL' ? '동일 리그의 결정론적 경쟁자 비교' : '저장된 실제 기록'}로 확정했습니다.
+                </p>
+                <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                  최소 기준 {award.criteria.minimumAppearances}회 · {award.criteria.minimumMinutes}분
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {(view.result.milestones ?? []).length > 0 ? (
+          <ul className="flex flex-col gap-os-2 font-os text-os-text" style={BODY_STYLE}>
+            {(view.result.milestones ?? []).map((milestone) => (
+              <li key={milestone.milestoneId} className="rounded-os-m bg-os-surface-2 p-os-3">
+                <p className="font-semibold">배지 · {MILESTONE_LABELS_KO[milestone.milestoneId]}</p>
+                <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+                  시즌 {milestone.seasonIndex}에 처음 충족한 실제 커리어 기록입니다.
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {earnedMilestones.length > 0 ? (
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            커리어 누적 배지 {earnedMilestones.length}개 · 이미 받은 배지는 다시 수여하지 않습니다.
+          </p>
+        ) : null}
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          수상은 이 시즌 결산에 저장되며, 실제 출전·포지션 통계와 비교 기준을 함께 보존합니다.
+        </p>
+      </section>
 
       <section className="sim-growth sim-season-reward" aria-label="이번 시즌 성장">
         <div className="sim-section-heading"><div><p className="sim-kicker">SEASON DEVELOPMENT</p><h2>쌓은 경험이 실력이 됩니다</h2></div><div className="sim-ovr"><small>OVR</small><strong>{view.baseOvr.after}</strong><span data-positive={view.baseOvr.after > view.baseOvr.before}>{view.baseOvr.after >= view.baseOvr.before ? '+' : ''}{view.baseOvr.after - view.baseOvr.before}</span></div></div>
@@ -561,6 +618,11 @@ function SeasonResultScreen() {
                 <p className="font-os text-os-text" style={BODY_STYLE}>
                   {record.label} · {record.standingText}
                 </p>
+                {record.promotionRewardCenti !== null && record.promotionRewardCenti !== undefined ? (
+                  <p className="font-os text-os-accent" style={CAPTION_STYLE}>
+                    승격권 보상: 커리어 평판 +{record.promotionRewardCenti} · 실제 소속 리그는 바뀌지 않습니다.
+                  </p>
+                ) : null}
                 <p className="os-num font-os text-os-text-2" style={CAPTION_STYLE}>
                   {record.won}승 {record.drawn}무 {record.lost}패 · 득실 {record.goalsFor}:
                   {record.goalsAgainst}

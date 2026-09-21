@@ -1,5 +1,19 @@
 export const DOMAIN_VERSION = '0.1.0';
 export * from './friendly-match.js';
+export {
+  COMPETITION_CHOICE_CATALOG,
+  COMPETITION_CHOICE_STEPS,
+  COMPETITION_MATCH_VERSION,
+  COMPETITION_MAX_SCORE,
+  applyCompetitionAction,
+  buildCompetitionMatchDefinition,
+  initialCompetitionActionState,
+  playCompetitionMatch,
+  scoreCompetitionMatch,
+  type CompetitionActionState,
+  type CompetitionMatchDefinition,
+  type CompetitionMatchResult,
+} from './competition-match.js';
 
 export {
   ArchiveError,
@@ -12,6 +26,12 @@ export {
 } from './legacy/archive.js';
 
 export { clamp } from './clamp.js';
+export {
+  evaluateCareerMilestones,
+  evaluateSeasonAwards,
+  recognitionEnabled,
+  realAppearances,
+} from './awards.js';
 export { canonicalize, compareCodePoints, utf8Encode, type JsonValue } from './canonical.js';
 export { sha256Hex, hashState, setSha256Provider, type Sha256Provider } from './hash.js';
 export {
@@ -93,6 +113,8 @@ export {
   type SeasonManager,
   type SeasonPhase,
   type SeasonPlayerStats,
+  type SeasonAward,
+  type CareerMilestone,
   type SeasonResult,
   type SeasonStep,
   type SeasonSummary,
@@ -286,6 +308,7 @@ export {
   seasonWonTitle,
 } from './reputation.js';
 export {
+  countHealthyTrialChances,
   simulate,
   verifySnapshot,
   type Command,

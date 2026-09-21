@@ -1,5 +1,7 @@
 import {
   LockerPlayerSchema,
+  PlayerNoteSchema,
+  SavePlayerNoteSchema,
   LockerRoomSchema,
   LockerTeamSchema,
   SaveTeamSchema,
@@ -7,16 +9,26 @@ import {
   type LockerPlayer,
   type TeamInput,
 } from '@offside/contracts';
-import { and, asc, eq, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import type { Db } from '../db/client.js';
-import { careers, lockerTeams, serviceSeasons, snapshots } from '../db/schema.js';
+import {
+  careers,
+  lockerPlayerNotes,
+  lockerTeams,
+  serviceSeasons,
+  snapshots,
+} from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 
-export async function lockerPlayers(db: Db, owner: string): Promise<LockerPlayer[]> {
+export async function lockerPlayers(
+  db: Db,
+  owner: string,
+  includeRecognition = false,
+): Promise<LockerPlayer[]> {
   const rows = await db
     .select({
       careerId: careers.id,
@@ -27,6 +39,8 @@ export async function lockerPlayers(db: Db, owner: string): Promise<LockerPlayer
       age: sql<number>`json_extract(${snapshots.state}, '$.age')`,
       seasons: sql<number>`json_array_length(${snapshots.state}, '$.seasonHistory')`,
       isTest: serviceSeasons.isTest,
+      stateJson: snapshots.state,
+      note: lockerPlayerNotes.note,
     })
     .from(careers)
     .innerJoin(
@@ -34,6 +48,7 @@ export async function lockerPlayers(db: Db, owner: string): Promise<LockerPlayer
       and(eq(snapshots.careerId, careers.id), eq(snapshots.revision, careers.revision)),
     )
     .innerJoin(serviceSeasons, eq(serviceSeasons.id, careers.createdServiceSeasonId))
+    .leftJoin(lockerPlayerNotes, eq(lockerPlayerNotes.careerId, careers.id))
     .where(
       and(
         eq(careers.ownerProfileId, owner),
@@ -42,7 +57,103 @@ export async function lockerPlayers(db: Db, owner: string): Promise<LockerPlayer
       ),
     )
     .orderBy(asc(careers.createdAt), asc(careers.id));
-  return rows.map((row) => LockerPlayerSchema.parse({ ...row, isTest: row.isTest === 1 }));
+  return rows.map((row) => {
+    const evidence = playerEvidence(row.stateJson);
+    const source = JSON.parse(row.stateJson) as {
+      seasonHistory?: Array<{ result?: { awards?: Array<{ recipientId?: string }>; milestones?: unknown[] } }>;
+    };
+    const seasons = source.seasonHistory ?? [];
+    const awardCount = seasons.reduce(
+      (count, season) => count + (season.result?.awards ?? []).filter((award) => award.recipientId === 'PLAYER').length,
+      0,
+    );
+    const milestoneCount = seasons.reduce((count, season) => count + (season.result?.milestones ?? []).length, 0);
+    return LockerPlayerSchema.parse({
+      careerId: row.careerId,
+      status: row.status,
+      name: row.name,
+      position: row.position,
+      ovr: row.ovr,
+      age: row.age,
+      seasons: row.seasons,
+      isTest: row.isTest === 1,
+      ...evidence,
+      ...(includeRecognition ? { awardCount, milestoneCount } : {}),
+      note: row.note ?? null,
+    });
+  });
+}
+
+type PlayerEvidence = Pick<LockerPlayer, 'peakOvr' | 'peakAge' | 'bestSeasonIndex'>;
+
+// Keep the original response contract for clients that have not opted into the
+// recognition/evidence presentation fields. The full internal player is still
+// validated before projection so ownership and stored-state checks are shared.
+const LegacyLockerPlayerSchema = LockerPlayerSchema.pick({
+  careerId: true,
+  name: true,
+  position: true,
+  ovr: true,
+  age: true,
+  status: true,
+  seasons: true,
+  isTest: true,
+});
+const LegacyLockerRoomSchema = LockerRoomSchema.extend({
+  players: LegacyLockerPlayerSchema.array(),
+});
+
+/** Derive only values explicitly present in stored season results; missing/legacy data stays unknown. */
+function playerEvidence(stateJson: string): PlayerEvidence {
+  try {
+    const state = JSON.parse(stateJson) as {
+      seasonHistory?: Array<{
+        index?: unknown;
+        result?: {
+          baseOvr?: { after?: unknown };
+          playerStats?: { ratedMatches?: unknown; ratingSumTenths?: unknown; minutes?: unknown };
+          legacy?: { ageAtStart?: unknown };
+        };
+      }>;
+    };
+    const seasons = Array.isArray(state.seasonHistory) ? state.seasonHistory : [];
+    const ovrRows = seasons.flatMap((season) => {
+      const value = season.result?.baseOvr?.after;
+      const index = season.index;
+      return typeof value === 'number' && Number.isInteger(value) && typeof index === 'number'
+        ? [{ value, index: index as number, age: season.result?.legacy?.ageAtStart }]
+        : [];
+    });
+    const peak = ovrRows.toSorted((a, b) => b.value - a.value || a.index - b.index)[0];
+    const ratedRows = seasons.flatMap((season) => {
+      const stats = season.result?.playerStats;
+      const index = season.index;
+      if (
+        typeof index !== 'number' ||
+        typeof stats?.ratedMatches !== 'number' ||
+        typeof stats.ratingSumTenths !== 'number' ||
+        stats.ratedMatches < 10
+      )
+        return [];
+      return [
+        {
+          index: index as number,
+          average: stats.ratingSumTenths / stats.ratedMatches,
+          minutes: typeof stats.minutes === 'number' ? stats.minutes : 0,
+        },
+      ];
+    });
+    const best = ratedRows.toSorted(
+      (a, b) => b.average - a.average || b.minutes - a.minutes || a.index - b.index,
+    )[0];
+    return {
+      peakOvr: peak?.value ?? null,
+      peakAge: typeof peak?.age === 'number' ? peak.age : null,
+      bestSeasonIndex: best?.index ?? null,
+    };
+  } catch {
+    return { peakOvr: null, peakAge: null, bestSeasonIndex: null };
+  }
 }
 
 function teamView(row: typeof lockerTeams.$inferSelect, players: readonly LockerPlayer[]) {
@@ -90,20 +201,84 @@ export function registerLockerRoomRoutes(app: Hono<AppEnv>) {
   app.get('/v1/locker-room', requireProfile, async (c) => {
     const db = getDb(c);
     const owner = getSessionOrThrow(c).profileId;
-    const players = await lockerPlayers(db, owner);
+    const includeRecognition = c.req.query('includeRecognition') === '1';
+    const players = await lockerPlayers(db, owner, includeRecognition);
     const rows = await db
       .select()
       .from(lockerTeams)
       .where(eq(lockerTeams.ownerProfileId, owner))
       .orderBy(asc(lockerTeams.createdAt), asc(lockerTeams.id));
+    const teams = rows.map((row) => teamView(row, players));
+    const data = includeRecognition
+      ? LockerRoomSchema.parse({ profileId: owner, players, teams })
+      : LegacyLockerRoomSchema.parse({
+          profileId: owner,
+          players: players.map(({ careerId, name, position, ovr, age, status, seasons, isTest }) => ({
+            careerId,
+            name,
+            position,
+            ovr,
+            age,
+            status,
+            seasons,
+            isTest,
+          })),
+          teams,
+        });
     return c.json({
-      data: LockerRoomSchema.parse({
-        profileId: owner,
-        players,
-        teams: rows.map((row) => teamView(row, players)),
-      }),
+      data,
       meta: { requestId: c.get('requestId') },
     });
+  });
+  app.put('/v1/locker-room/players/:careerId/note', requireProfile, idempotency, async (c) => {
+    const db = getDb(c);
+    const owner = getSessionOrThrow(c).profileId;
+    const careerId = c.req.param('careerId');
+    const input = parseWithAppError(SavePlayerNoteSchema, jsonBody(c.get('rawBody')));
+    const now = new Date().toISOString();
+    const note = PlayerNoteSchema.parse(input.note);
+    // Ownership is part of the single SQLite statement. This avoids a stale owner SELECT
+    // racing a profile merge or deletion between validation and upsert.
+    const written = await db.$client
+      .prepare(
+        `INSERT INTO locker_player_notes (career_id, note, updated_at)
+         SELECT ?, ?, ?
+         WHERE EXISTS (
+           SELECT 1 FROM careers
+           WHERE id = ? AND owner_profile_id = ? AND status <> 'DRAFT'
+         )
+         ON CONFLICT(career_id) DO UPDATE SET note = excluded.note, updated_at = excluded.updated_at
+         WHERE EXISTS (
+           SELECT 1 FROM careers
+           WHERE id = ? AND owner_profile_id = ? AND status <> 'DRAFT'
+         )`,
+      )
+      .bind(careerId, note, now, careerId, owner, careerId, owner)
+      .run();
+    if ((written.meta.changes ?? 0) < 1)
+      throw new AppError({
+        code: 'VALIDATION_FAILED',
+        status: 404,
+        message: '내 라커룸의 선수를 찾을 수 없습니다.',
+      });
+    return c.json({
+      data: { careerId, note: input.note.trim() },
+      meta: { requestId: c.get('requestId') },
+    });
+  });
+  app.delete('/v1/locker-room/players/:careerId/note', requireProfile, idempotency, async (c) => {
+    const db = getDb(c);
+    const owner = getSessionOrThrow(c).profileId;
+    await db.delete(lockerPlayerNotes).where(
+      inArray(
+        lockerPlayerNotes.careerId,
+        db
+          .select({ id: careers.id })
+          .from(careers)
+          .where(and(eq(careers.id, c.req.param('careerId')), eq(careers.ownerProfileId, owner))),
+      ),
+    );
+    return c.body(null, 204);
   });
   app.post('/v1/locker-room/teams', requireProfile, idempotency, async (c) => {
     const db = getDb(c);

@@ -1,4 +1,4 @@
-import { hashState, seedRng, simulate, type DomainSnapshot, type Command } from '@offside/domain';
+import { hashState, seedRng, simulate, verifySnapshot, type DomainSnapshot, type Command } from '@offside/domain';
 import { buildTestState } from './build-test-state.ts';
 import { describe, expect, it } from 'vitest';
 import { loadRuleset } from '../rulesets/load-ruleset.ts';
@@ -37,6 +37,60 @@ describe('simulator 2.0.0 / 0.7.0', () => {
       expect(event.choices[2]!.outcomes).toHaveLength(1);
       expect(loadContentPack('0.6.8').eventsById.has(id)).toBe(false);
     }
+  });
+});
+
+describe('simulator 3.4.0 / 0.13.0 injury candidate', () => {
+  it('resolves the neutral age-context injury through the real candidate command and replays it', () => {
+    const rulesetVersion = '3.4.0';
+    const contentPackVersion = '0.13.0';
+    const ruleset = loadRuleset(rulesetVersion);
+    const pack = loadContentPack(contentPackVersion);
+    const definition = pack.eventsById.get('EVT-INJ-134');
+    expect(definition?.narrative.situation).not.toMatch(/무릎|햄스트링/);
+    if (definition === undefined) throw new Error('candidate injury definition missing');
+    const episode = {
+      id: 'INJ-1-3-1',
+      severity: 'MODERATE' as const,
+      bodyPart: 'SHOULDER' as const,
+      occurredAt: { seasonIndex: 1, step: 3, matchId: 'm1' },
+      diagnosisRange: { minMatches: 3, maxMatches: 6 },
+      rehab: null,
+      recurrenceRiskBp: 3000,
+      recurrenceChecksRemaining: 0,
+      status: 'ACTIVE' as const,
+      permanentDelta: null,
+      remainingMatches: 3,
+    };
+    const base = buildTestState({
+      rulesetVersion,
+      contentPackVersion,
+      age: 31,
+      health: { episodes: [episode] },
+      pending: { kind: 'INJURY', step: 3, episodeId: episode.id, eventId: definition.id, version: definition.version },
+    });
+    const snapshot = { revision: 1, checkpoint: 'EVENT_OFFERED' as const, state: base, stateHash: hashState(base), rulesetVersion, contentPackVersion };
+    const choice = definition.choices[0]!;
+    const command: Command & { commandId: string; expectedRevision: number } = {
+      type: 'RESOLVE_EVENT',
+      commandId: 'candidate-injury-neutral-age',
+      expectedRevision: 1,
+      payload: {
+        eventId: definition.id,
+        definitionVersion: definition.version,
+        choiceId: choice.id,
+        ...(choice.rehabPlan === undefined ? {} : { rehabPlan: choice.rehabPlan }),
+        outcomes: choice.outcomes.map(({ id, kind, weight, effects }) => ({ id, kind, weight, effects })),
+      },
+    };
+    const input = { snapshot, command, ruleset, rulesetVersion, contentPackVersion };
+    const result = simulate(input);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.state.pending).toBeNull();
+    expect(result.snapshot.state.health.episodes[0]?.rehab).toBe(choice.rehabPlan);
+    expect(verifySnapshot(result.snapshot)).toEqual({ ok: true });
+    expect(simulate(input)).toEqual(result);
   });
 });
 

@@ -68,7 +68,9 @@ function applyManagerDecision(input: SettlementRelationsInput): SettlementRelati
     // Derive a separate stream from the season and decision-stream state. The
     // main stream is intentionally untouched, while the manager roll no longer
     // shares its first word with market/match decisions.
-    const managerStream: RngState = seedRng(`manager:${input.season.index}:${input.rng.s.join(',')}`);
+    const managerStream: RngState = seedRng(
+      `manager:${input.season.index}:${input.rng.s.join(',')}`,
+    );
     const rolled = rollInt(managerStream, 10000);
     managerDecisionRng = rolled.state;
     const probabilityBp = Math.min(
@@ -137,6 +139,20 @@ export function onSettlementRelations(input: SettlementRelationsInput): Settleme
   // 시즌만 다음 직책 승격을 위한 누적에 포함한다.
   let captaincy = input.result.captaincyAtEnd;
   const captaincySeasons = captaincy === 'NONE' ? 0 : state.captaincySeasons + 1;
+  const captainSeasonStarterDelta = input.ruleset.relationshipRules.captainSeasonStarterDelta ?? 0;
+  if (
+    captainSeasonStarterDelta > 0 &&
+    proSeasons >= captainRules.minSeasons &&
+    input.result.selectionSummary.squadRoleAtEnd === 'STARTER'
+  ) {
+    state = {
+      ...state,
+      relationships: {
+        ...state.relationships,
+        captain: Math.min(100, state.relationships.captain + captainSeasonStarterDelta),
+      },
+    };
+  }
   const canAdvanceCaptaincy =
     proSeasons >= captainRules.minSeasons &&
     input.result.selectionSummary.squadRoleAtEnd === 'STARTER' &&

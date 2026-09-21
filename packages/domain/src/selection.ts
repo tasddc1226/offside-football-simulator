@@ -58,7 +58,10 @@ export function computeTacticalFit(
     }
   }
   const archetypeScore = preferredArchetypeIds.includes(archetypeId) ? 100 : 0;
-  return Math.round(styleScore * rules.tacticalFitWeights.style + archetypeScore * rules.tacticalFitWeights.archetype);
+  return Math.round(
+    styleScore * rules.tacticalFitWeights.style +
+      archetypeScore * rules.tacticalFitWeights.archetype,
+  );
 }
 
 /** D-34: `proficiencyThresholds`로 등급을 판정해 `positionFamiliarity`를 돌려준다. */
@@ -70,7 +73,14 @@ export function familiarityOf(proficiency: number, rules: SelectionRules): numbe
 
 /** RULE-PERF-001: `performanceWeights` 키 순서(baseOvr·tacticalFit·form·fitness·morale)로 더한 뒤 familiarity를 곱하고 정수로 반올림한다. */
 export function computeExpectedPerformance(
-  input: { baseOvr: number; tacticalFit: number; form: number; fitness: number; morale: number; familiarity: number },
+  input: {
+    baseOvr: number;
+    tacticalFit: number;
+    form: number;
+    fitness: number;
+    morale: number;
+    familiarity: number;
+  },
   rules: SelectionRules,
 ): number {
   const w = rules.performanceWeights;
@@ -90,7 +100,11 @@ export function computeExpectedPerformance(
  * 이미 소유하고 있어서다(표 중복 방지).
  */
 export function computeSquadStatus(
-  input: { rolePromise: SquadRole; captaincy: 'NONE' | 'VICE' | 'CAPTAIN'; lastRating: number | null },
+  input: {
+    rolePromise: SquadRole;
+    captaincy: 'NONE' | 'VICE' | 'CAPTAIN';
+    lastRating: number | null;
+  },
   rules: SelectionRules,
   squadStatusByRole: Record<SquadRole, number>,
 ): number {
@@ -100,7 +114,10 @@ export function computeSquadStatus(
     input.lastRating === null
       ? 0
       : clamp(
-          Math.round((input.lastRating - rules.squadStatusRule.ratingNeutral) * rules.squadStatusRule.ratingScale),
+          Math.round(
+            (input.lastRating - rules.squadStatusRule.ratingNeutral) *
+              rules.squadStatusRule.ratingScale,
+          ),
           -rules.squadStatusRule.ratingAdjMax,
           rules.squadStatusRule.ratingAdjMax,
         );
@@ -109,7 +126,12 @@ export function computeSquadStatus(
 
 /** RULE-SEL-001: selectionWeights 키 순서(tacticalFit·managerTrust·expectedPerformance·squadStatus)로 더하고 정수로 반올림한다. */
 export function computeSelectionScore(
-  input: { tacticalFit: number; managerTrust: number; expectedPerformance: number; squadStatus: number },
+  input: {
+    tacticalFit: number;
+    managerTrust: number;
+    expectedPerformance: number;
+    squadStatus: number;
+  },
   rules: SelectionRules,
 ): number {
   const w = rules.selectionWeights;
@@ -139,13 +161,24 @@ function computePlayerReason(
   // 항상 같은 값이도록).
   const w = rules.selectionWeights;
   const components: Array<{ component: SelectionReasonComponent; delta: number }> = [
-    { component: 'TACTICAL_FIT', delta: roundToInt(w.tacticalFit * (player.tacticalFit - boundary.tacticalFit)) },
-    { component: 'MANAGER_TRUST', delta: roundToInt(w.managerTrust * (player.managerTrust - boundary.managerTrust)) },
+    {
+      component: 'TACTICAL_FIT',
+      delta: roundToInt(w.tacticalFit * (player.tacticalFit - boundary.tacticalFit)),
+    },
+    {
+      component: 'MANAGER_TRUST',
+      delta: roundToInt(w.managerTrust * (player.managerTrust - boundary.managerTrust)),
+    },
     {
       component: 'EXPECTED_PERFORMANCE',
-      delta: roundToInt(w.expectedPerformance * (player.expectedPerformance - boundary.expectedPerformance)),
+      delta: roundToInt(
+        w.expectedPerformance * (player.expectedPerformance - boundary.expectedPerformance),
+      ),
     },
-    { component: 'SQUAD_STATUS', delta: roundToInt(w.squadStatus * (player.squadStatus - boundary.squadStatus)) },
+    {
+      component: 'SQUAD_STATUS',
+      delta: roundToInt(w.squadStatus * (player.squadStatus - boundary.squadStatus)),
+    },
   ];
 
   let best = components[0]!;
@@ -166,6 +199,7 @@ export function rankSelection(
   slots: number,
   benchSlots: number,
   rules: SelectionRules,
+  earlyOpportunity = false,
 ): SelectionRanking {
   const sorted = [...candidates].sort((a, b) => {
     const aExcluded = a.excluded !== null;
@@ -176,17 +210,49 @@ export function rankSelection(
     return compareCodePoints(a.id, b.id);
   });
 
-  const ranked: RankedCandidate[] = sorted.map((candidate, index) => {
+  let ranked: RankedCandidate[] = sorted.map((candidate, index) => {
     const rank = index + 1;
     const appearance: 'START' | 'SUB' | 'OUT' =
-      candidate.excluded !== null ? 'OUT' : rank <= slots ? 'START' : rank <= slots + benchSlots ? 'SUB' : 'OUT';
+      candidate.excluded !== null
+        ? 'OUT'
+        : rank <= slots
+          ? 'START'
+          : rank <= slots + benchSlots
+            ? 'SUB'
+            : 'OUT';
     return { ...candidate, rank, appearance };
   });
 
   const playerIndex = ranked.findIndex((candidate) => candidate.id === 'PLAYER');
   const player = playerIndex === -1 ? null : ranked[playerIndex]!;
-  const playerReason =
-    player === null || player.excluded !== null ? null : computePlayerReason(ranked, playerIndex, slots, rules);
+  let playerReason =
+    player === null || player.excluded !== null
+      ? null
+      : computePlayerReason(ranked, playerIndex, slots, rules);
+
+  // A bounded rookie trial may displace the last normal bench candidate, but never
+  // creates a second bench slot. The rank remains the score rank; the reason makes
+  // the capacity-preserving exception explicit to the UI.
+  if (earlyOpportunity && player !== null && player.excluded === null && player.appearance === 'OUT') {
+    let displacedIndex = -1;
+    for (let index = ranked.length - 1; index >= 0; index -= 1) {
+      const candidate = ranked[index]!;
+      if (candidate.appearance === 'SUB' && candidate.id !== 'PLAYER') {
+        displacedIndex = index;
+        break;
+      }
+    }
+    if (displacedIndex >= 0) {
+      ranked = ranked.map((candidate, index) =>
+        index === displacedIndex
+          ? { ...candidate, appearance: 'OUT' }
+          : index === playerIndex
+            ? { ...candidate, appearance: 'SUB' }
+            : candidate,
+      );
+      playerReason = { component: 'EARLY_OPPORTUNITY', delta: 0 };
+    }
+  }
 
   return { position, slots, benchSlots, candidates: ranked, playerReason };
 }
@@ -198,11 +264,17 @@ export function squadRoleFromSelection(selection: SelectionRanking): SquadRole {
     throw new RangeError('squadRoleFromSelection: selection에 PLAYER 후보가 없다.');
   }
   if (player.appearance === 'START') return 'STARTER';
-  if (player.appearance === 'SUB') return player.rank === selection.slots + 1 ? 'ROTATION' : 'BENCH';
+  if (player.appearance === 'SUB')
+    return player.rank === selection.slots + 1 ? 'ROTATION' : 'BENCH';
   return 'RESERVE';
 }
 
-const SQUAD_ROLE_RANK: Record<SquadRole, number> = { STARTER: 0, ROTATION: 1, BENCH: 2, RESERVE: 3 };
+const SQUAD_ROLE_RANK: Record<SquadRole, number> = {
+  STARTER: 0,
+  ROTATION: 1,
+  BENCH: 2,
+  RESERVE: 3,
+};
 
 /** 숫자가 작을수록(=STARTER에 가까울수록) 좋은 역할이다. T-7-002 D-67: simulate.ts의 resolveRole
  * DECLINE 분기가 하향 제안 여부(SQUAD_ROLE_RANK 비교)를 판정하는 데도 이 함수를 그대로 쓴다. */
@@ -228,7 +300,8 @@ export type RoleProposalDeclineContext = {
 export function computeRoleProposalDeclineTrustDelta(context: RoleProposalDeclineContext): number {
   const roleRules = context.ruleset.selectionRules.roleProposal;
   const isRoleDowngrade =
-    context.proposal.type === 'ROLE_CHANGE' && isSquadRoleBetter(context.contractRole, context.proposal.to);
+    context.proposal.type === 'ROLE_CHANGE' &&
+    isSquadRoleBetter(context.contractRole, context.proposal.to);
 
   let isZeroSlotFallbackDowngrade = false;
   if (
@@ -237,11 +310,16 @@ export function computeRoleProposalDeclineTrustDelta(context: RoleProposalDeclin
     roleRules.zeroSlotAdjacentFallback === true
   ) {
     const style = findTacticalStyle(context.ruleset, context.styleId);
-    const currentPlayer = context.currentSelection.candidates.find((candidate) => candidate.id === 'PLAYER');
+    const currentPlayer = context.currentSelection.candidates.find(
+      (candidate) => candidate.id === 'PLAYER',
+    );
     if (currentPlayer === undefined) {
-      throw new RangeError('computeRoleProposalDeclineTrustDelta: currentSelection에 PLAYER 후보가 없다.');
+      throw new RangeError(
+        'computeRoleProposalDeclineTrustDelta: currentSelection에 PLAYER 후보가 없다.',
+      );
     }
-    const bypassedLegacyFitGate = context.proposal.tacticalFitAfter - currentPlayer.tacticalFit < 15;
+    const bypassedLegacyFitGate =
+      context.proposal.tacticalFitAfter - currentPlayer.tacticalFit < 15;
     isZeroSlotFallbackDowngrade =
       style.slots[context.primaryPosition] === 0 &&
       style.slots[context.proposal.to] > 0 &&
@@ -250,7 +328,8 @@ export function computeRoleProposalDeclineTrustDelta(context: RoleProposalDeclin
       isSquadRoleBetter(context.contractRole, squadRoleFromSelection(context.currentSelection));
   }
 
-  return (isRoleDowngrade || isZeroSlotFallbackDowngrade) && roleRules.declineDowngradeTrustDelta !== undefined
+  return (isRoleDowngrade || isZeroSlotFallbackDowngrade) &&
+    roleRules.declineDowngradeTrustDelta !== undefined
     ? roleRules.declineDowngradeTrustDelta
     : roleRules.declineTrustDelta;
 }
@@ -306,6 +385,8 @@ export type RankPositionForPlayerInput = {
   competitors: readonly Competitor[];
   /** T-2-003: 부상·정지 중이면 판정 전 후보에서 제외한다(기본 null). */
   excluded?: SelectionCandidate['excluded'];
+  /** Put an eligible, healthy rookie on the bench for a bounded trial window. */
+  earlyOpportunity?: boolean | undefined;
 };
 
 /** 선수를 특정 포지션(현재 포지션이든 역할 제안이 검토하는 후보 포지션이든)에서 그 포지션 경쟁자와 함께 줄 세운다. */
@@ -332,7 +413,12 @@ export function rankPositionForPlayer(input: RankPositionForPlayerInput): Select
     expectedPerformance,
     squadStatus: input.squadStatus,
     score: computeSelectionScore(
-      { tacticalFit: input.tacticalFit, managerTrust: input.managerTrust, expectedPerformance, squadStatus: input.squadStatus },
+      {
+        tacticalFit: input.tacticalFit,
+        managerTrust: input.managerTrust,
+        expectedPerformance,
+        squadStatus: input.squadStatus,
+      },
       rules,
     ),
     excluded: input.excluded ?? null,
@@ -347,6 +433,7 @@ export function rankPositionForPlayer(input: RankPositionForPlayerInput): Select
     style.slots[input.position],
     style.benchSlots[input.position],
     rules,
+    input.earlyOpportunity === true,
   );
 }
 
@@ -392,7 +479,9 @@ export function computeRoleProposal(context: RoleProposalContext): RoleProposal 
   const style = findTacticalStyle(context.ruleset, context.styleId);
   const projectedRoleCurrent = squadRoleFromSelection(context.currentSelection);
 
-  const currentPlayer = context.currentSelection.candidates.find((candidate) => candidate.id === 'PLAYER');
+  const currentPlayer = context.currentSelection.candidates.find(
+    (candidate) => candidate.id === 'PLAYER',
+  );
   if (currentPlayer === undefined) {
     throw new RangeError('computeRoleProposal: currentSelection에 PLAYER 후보가 없다.');
   }
@@ -408,7 +497,13 @@ export function computeRoleProposal(context: RoleProposalContext): RoleProposal 
   let bestZeroSlotProposal: Extract<RoleProposal, { type: 'POSITION_CHANGE' }> | null = null;
 
   for (const position of candidatePositions) {
-    const candidateFit = computeTacticalFit(context.attributes, context.archetypeId, position, style, rules);
+    const candidateFit = computeTacticalFit(
+      context.attributes,
+      context.archetypeId,
+      position,
+      style,
+      rules,
+    );
     const passesLegacyFitGate = candidateFit - currentPlayer.tacticalFit >= 15;
     const hasSameGroupPlayableStarterSlot =
       canUseZeroSlotFallback &&
@@ -460,7 +555,12 @@ export function computeRoleProposal(context: RoleProposalContext): RoleProposal 
   if (bestZeroSlotProposal !== null) return bestZeroSlotProposal;
 
   if (projectedRoleCurrent !== context.rolePromise) {
-    return { type: 'ROLE_CHANGE', position: context.primaryPosition, from: context.rolePromise, to: projectedRoleCurrent };
+    return {
+      type: 'ROLE_CHANGE',
+      position: context.primaryPosition,
+      from: context.rolePromise,
+      to: projectedRoleCurrent,
+    };
   }
 
   return { type: 'KEEP', position: context.primaryPosition, squadRole: projectedRoleCurrent };

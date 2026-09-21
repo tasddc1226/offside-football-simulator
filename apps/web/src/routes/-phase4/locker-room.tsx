@@ -30,6 +30,7 @@ export function LockerRoomContext({ state, ruleset }: EventDecisionContext) {
   const activeProSeason = ruleset !== undefined && state.season !== null && isProTeam(ruleset, state.season.teamId);
   const proSeasonsAtSettlement = completedProSeasons + (activeProSeason ? 1 : 0);
   const currentRole = state.season?.squadRole ?? null;
+  const hasCandidateCaptainInterventionHint = ruleset?.version === '3.4.0' && state.contentPackVersion === '0.13.0';
 
   return (
     <section className="os-panel flex flex-col gap-os-4" aria-label="라커룸 관계 맥락">
@@ -57,6 +58,7 @@ export function LockerRoomContext({ state, ruleset }: EventDecisionContext) {
               <div><dt>현재 주장단</dt><dd>{captaincyLabel(state.captaincy)} · 주장단으로 마친 시즌 {state.captaincySeasons}</dd></div>
             </dl>
             <p className="os-muted">주장 임명은 시즌 결산 때 프로 경력·시즌 종료 역할·주장과의 관계로 결정됩니다.</p>
+            {hasCandidateCaptainInterventionHint ? <p className="os-muted">주장과의 기억·중재 장면은 임명을 보장하지 않습니다. 만 23세 이후 시즌이 진행되면 주장과 팀 문제를 조율할 기회가 생길 수 있고, 약속을 어기거나 감독 신뢰가 낮아지면 중재를 받을 수도 있습니다. 장면은 쿨다운과 다른 사건 후보 경쟁을 거치며, 선택 결과만 관계 기억에 남습니다.</p> : null}
           </>
         )}
       </section>

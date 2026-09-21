@@ -731,6 +731,43 @@ export const SeasonPlayerStatsSchema = z.strictObject({
   totals: PositionStatsTotalsSchema,
 });
 
+// Candidate 3.4.0/0.13.0 recognition. These additive fields are exact-optional so
+// published snapshots and old golden results keep their original shape.
+const SeasonAwardSchema = z.strictObject({
+  awardId: z.enum(['SEASON_MVP', 'BEST_XI', 'POSITION_LEADER', 'SCORING_LEADER', 'ROOKIE_OF_SEASON']),
+  recipientId: z.string().min(1),
+  recipientName: z.string().min(1),
+  recipientGroup: z.enum(['GK', 'DF', 'MF', 'FW']),
+  score: z.number().int(),
+  criteria: z.strictObject({
+    eligibility: z.enum(['REAL_APPEARANCE', 'POSITION_STATS', 'GOALS']),
+    comparison: z.enum(['PLAYER_ACTUAL', 'NPC_LEAGUE_MODEL']),
+    playerMinutes: z.number().int().nonnegative(),
+    playerScore: z.number().int(),
+    winningScore: z.number().int(),
+    contenderCount: z.number().int().nonnegative(),
+    minimumAppearances: z.number().int().nonnegative(),
+    minimumMinutes: z.number().int().nonnegative(),
+  }),
+});
+
+const CareerMilestoneSchema = z.strictObject({
+  milestoneId: z.enum([
+    'FIRST_APPEARANCE',
+    'HUNDRED_APPEARANCES',
+    'FIFTY_GOALS',
+    'FIRST_TITLE',
+    'FIVE_SEASON_ONE_CLUB',
+    'NATIONAL_DEBUT',
+  ]),
+  seasonIndex: z.number().int().positive(),
+  criteria: z.strictObject({
+    realAppearances: z.number().int().nonnegative(),
+    goals: z.number().int().nonnegative(),
+    teamId: z.string().min(1),
+  }),
+});
+
 // T-2-003 D-35: 부상·정지만 표현한다(능력치·재활은 Phase 4). domain `Availability`와 동일.
 export const AvailabilitySchema = z
   .strictObject({
@@ -800,7 +837,13 @@ export const SelectionRankingSchema = z.strictObject({
   candidates: z.array(RankedSelectionCandidateSchema),
   playerReason: z
     .strictObject({
-      component: z.enum(['TACTICAL_FIT', 'MANAGER_TRUST', 'EXPECTED_PERFORMANCE', 'SQUAD_STATUS']),
+      component: z.enum([
+        'TACTICAL_FIT',
+        'MANAGER_TRUST',
+        'EXPECTED_PERFORMANCE',
+        'SQUAD_STATUS',
+        'EARLY_OPPORTUNITY',
+      ]),
       delta: z.number().int(),
     })
     .nullable(),
@@ -978,6 +1021,8 @@ export const SeasonResultSchema = z.strictObject({
     managerTrust: z.strictObject({ before: z.number().int(), after: z.number().int() }),
   }),
   chapters: z.array(ChapterRecordSchema),
+  awards: z.array(SeasonAwardSchema).exactOptional(),
+  milestones: z.array(CareerMilestoneSchema).exactOptional(),
   // T-3-001(PR #45 후속): 결산 뒤 `season`이 null이 되며 사라지던 다이어리 step 요약을 보존한다.
   stepSummaries: z.array(
     z.strictObject({

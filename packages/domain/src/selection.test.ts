@@ -8,10 +8,17 @@ import {
   deriveTacticalRoom,
   familiarityOf,
   rankSelection,
+  rankPositionForPlayer,
 } from './selection.js';
-import { simulate, type Command } from './simulate.js';
+import { countHealthyTrialChances, simulate, type Command } from './simulate.js';
 import { compareCodePoints } from './canonical.js';
-import { ATTRIBUTE_KEYS, type AttributeKey, type DomainSnapshot, type Position, type SelectionCandidate } from './types.js';
+import {
+  ATTRIBUTE_KEYS,
+  type AttributeKey,
+  type DomainSnapshot,
+  type Position,
+  type SelectionCandidate,
+} from './types.js';
 import type { TacticalStyle } from './ruleset.js';
 
 const RULESET_VERSION = '1.0.0';
@@ -53,7 +60,12 @@ function updateDraft(snapshot: DomainSnapshot, draft: Record<string, unknown>): 
 }
 
 function confirmPlayerCommand(expectedRevision: number): EngineCommand {
-  return { type: 'CONFIRM_PLAYER', commandId: `cmd-confirm-${expectedRevision}`, expectedRevision, payload: {} };
+  return {
+    type: 'CONFIRM_PLAYER',
+    commandId: `cmd-confirm-${expectedRevision}`,
+    expectedRevision,
+    payload: {},
+  };
 }
 
 function startSeasonCommand(expectedRevision: number): EngineCommand {
@@ -70,19 +82,42 @@ function confirmedActiveSnapshot(): DomainSnapshot {
   const snapshot = simulate({ ...baseInput(), snapshot: null, command: createCareerCommand() });
   if (!snapshot.ok) throw new Error('setup: CREATE_CAREER 실패');
   let s = snapshot.snapshot;
-  s = updateDraft(s, { name: '김서준', gender: 'UNSPECIFIED', nationalityCode: 'KR', preferredFoot: 'LEFT' });
-  s = updateDraft(s, { position: 'W', archetypeId: 'inside-forward', backgroundId: 'club-academy' });
-  const confirmed = simulate({ ...baseInput(), snapshot: s, command: confirmPlayerCommand(s.revision) });
+  s = updateDraft(s, {
+    name: '김서준',
+    gender: 'UNSPECIFIED',
+    nationalityCode: 'KR',
+    preferredFoot: 'LEFT',
+  });
+  s = updateDraft(s, {
+    position: 'W',
+    archetypeId: 'inside-forward',
+    backgroundId: 'club-academy',
+  });
+  const confirmed = simulate({
+    ...baseInput(),
+    snapshot: s,
+    command: confirmPlayerCommand(s.revision),
+  });
   if (!confirmed.ok) throw new Error(`setup: CONFIRM_PLAYER 실패 ${confirmed.error.code}`);
   return confirmed.snapshot;
 }
 
 function advanceCommand(expectedRevision: number): EngineCommand {
-  return { type: 'ADVANCE', commandId: `cmd-advance-${expectedRevision}`, expectedRevision, payload: { eligibleEvents: [] } };
+  return {
+    type: 'ADVANCE',
+    commandId: `cmd-advance-${expectedRevision}`,
+    expectedRevision,
+    payload: { eligibleEvents: [] },
+  };
 }
 
 function acceptOfferCommand(expectedRevision: number, offerId: string): EngineCommand {
-  return { type: 'ACCEPT_OFFER', commandId: `cmd-accept-${expectedRevision}`, expectedRevision, payload: { offerId } };
+  return {
+    type: 'ACCEPT_OFFER',
+    commandId: `cmd-accept-${expectedRevision}`,
+    expectedRevision,
+    payload: { offerId },
+  };
 }
 
 function withTags(snapshot: DomainSnapshot, tags: string[]): DomainSnapshot {
@@ -92,14 +127,26 @@ function withTags(snapshot: DomainSnapshot, tags: string[]): DomainSnapshot {
 /** ACTIVE + 계약 체결 + START_SEASON까지 마쳐 season(styleId·squad·selection)이 채워진 snapshot. */
 function activeSnapshotWithSeason(): DomainSnapshot {
   const active = withTags(confirmedActiveSnapshot(), ['진로_아카데미']);
-  const offered = simulate({ ...baseInput(), snapshot: active, command: advanceCommand(active.revision) });
+  const offered = simulate({
+    ...baseInput(),
+    snapshot: active,
+    command: advanceCommand(active.revision),
+  });
   if (!offered.ok || offered.snapshot.state.pending?.kind !== 'OFFERS') {
     throw new Error('setup: OFFERS pending 실패');
   }
   const offer = offered.snapshot.state.pending.offers[0]!;
-  const accepted = simulate({ ...baseInput(), snapshot: offered.snapshot, command: acceptOfferCommand(offered.snapshot.revision, offer.id) });
+  const accepted = simulate({
+    ...baseInput(),
+    snapshot: offered.snapshot,
+    command: acceptOfferCommand(offered.snapshot.revision, offer.id),
+  });
   if (!accepted.ok) throw new Error(`setup: ACCEPT_OFFER 실패 ${accepted.error.code}`);
-  const started = simulate({ ...baseInput(), snapshot: accepted.snapshot, command: startSeasonCommand(accepted.snapshot.revision) });
+  const started = simulate({
+    ...baseInput(),
+    snapshot: accepted.snapshot,
+    command: startSeasonCommand(accepted.snapshot.revision),
+  });
   if (!started.ok) throw new Error(`setup: START_SEASON 실패 ${started.error.code}`);
   return started.snapshot;
 }
@@ -111,34 +158,85 @@ describe('RULE-SEL-001/RULE-PERF-001 — A/B 골든 벡터 (문서 03 예시 표
   // (roundToInt)을 쓰므로, 아래 골든 값은 `actualRoundToIntGolden`(직접 실행해 얻은 값)이다. B의
   // 예상치는 부동소수점 오차로 raw가 77.49999999999999가 되어 77로 내려간다(round1은 ×10 반올림이
   // 우연히 오차를 상쇄해 77.5를 보존하지만 정수 반올림은 그대로 드러낸다) — PR 본문에 기록한다.
-  const A = { baseOvr: 80, tacticalFit: 50, managerTrust: 45, form: 70, fitness: 60, morale: 70, familiarity: 1.0 };
-  const B = { baseOvr: 74, tacticalFit: 88, managerTrust: 70, form: 85, fitness: 85, morale: 81, familiarity: 1.0 };
+  const A = {
+    baseOvr: 80,
+    tacticalFit: 50,
+    managerTrust: 45,
+    form: 70,
+    fitness: 60,
+    morale: 70,
+    familiarity: 1.0,
+  };
+  const B = {
+    baseOvr: 74,
+    tacticalFit: 88,
+    managerTrust: 70,
+    form: 85,
+    fitness: 85,
+    morale: 81,
+    familiarity: 1.0,
+  };
   const squadStatusByRole = RULESET.contractRules.squadStatusByRole;
 
   it('선수 A의 예상치·Squad Status·Selection Score는 74/40/54다', () => {
     const expectedPerformance = computeExpectedPerformance(A, rules);
     expect(expectedPerformance).toBe(74);
-    const squadStatus = computeSquadStatus({ rolePromise: 'BENCH', captaincy: 'NONE', lastRating: null }, rules, squadStatusByRole);
+    const squadStatus = computeSquadStatus(
+      { rolePromise: 'BENCH', captaincy: 'NONE', lastRating: null },
+      rules,
+      squadStatusByRole,
+    );
     expect(squadStatus).toBe(40);
-    const score = computeSelectionScore({ tacticalFit: A.tacticalFit, managerTrust: A.managerTrust, expectedPerformance, squadStatus }, rules);
+    const score = computeSelectionScore(
+      {
+        tacticalFit: A.tacticalFit,
+        managerTrust: A.managerTrust,
+        expectedPerformance,
+        squadStatus,
+      },
+      rules,
+    );
     expect(score).toBe(54);
   });
 
   it('선수 B의 예상치·Squad Status·Selection Score는 77/60/78이며, Base OVR이 6 낮아도 A보다 점수가 높다', () => {
     const expectedPerformance = computeExpectedPerformance(B, rules);
     expect(expectedPerformance).toBe(77);
-    const squadStatus = computeSquadStatus({ rolePromise: 'ROTATION', captaincy: 'NONE', lastRating: null }, rules, squadStatusByRole);
+    const squadStatus = computeSquadStatus(
+      { rolePromise: 'ROTATION', captaincy: 'NONE', lastRating: null },
+      rules,
+      squadStatusByRole,
+    );
     expect(squadStatus).toBe(60);
-    const score = computeSelectionScore({ tacticalFit: B.tacticalFit, managerTrust: B.managerTrust, expectedPerformance, squadStatus }, rules);
+    const score = computeSelectionScore(
+      {
+        tacticalFit: B.tacticalFit,
+        managerTrust: B.managerTrust,
+        expectedPerformance,
+        squadStatus,
+      },
+      rules,
+    );
     expect(score).toBe(78);
     expect(score).toBeGreaterThan(54);
   });
 
-  function candidates(lastRatingA: number | null, lastRatingB: number | null): SelectionCandidate[] {
+  function candidates(
+    lastRatingA: number | null,
+    lastRatingB: number | null,
+  ): SelectionCandidate[] {
     const aExpected = computeExpectedPerformance(A, rules);
     const bExpected = computeExpectedPerformance(B, rules);
-    const aStatus = computeSquadStatus({ rolePromise: 'BENCH', captaincy: 'NONE', lastRating: lastRatingA }, rules, squadStatusByRole);
-    const bStatus = computeSquadStatus({ rolePromise: 'ROTATION', captaincy: 'NONE', lastRating: lastRatingB }, rules, squadStatusByRole);
+    const aStatus = computeSquadStatus(
+      { rolePromise: 'BENCH', captaincy: 'NONE', lastRating: lastRatingA },
+      rules,
+      squadStatusByRole,
+    );
+    const bStatus = computeSquadStatus(
+      { rolePromise: 'ROTATION', captaincy: 'NONE', lastRating: lastRatingB },
+      rules,
+      squadStatusByRole,
+    );
     const candidateA: SelectionCandidate = {
       id: 'RIVAL-A',
       name: 'RIVAL-A',
@@ -147,7 +245,15 @@ describe('RULE-SEL-001/RULE-PERF-001 — A/B 골든 벡터 (문서 03 예시 표
       managerTrust: A.managerTrust,
       expectedPerformance: aExpected,
       squadStatus: aStatus,
-      score: computeSelectionScore({ tacticalFit: A.tacticalFit, managerTrust: A.managerTrust, expectedPerformance: aExpected, squadStatus: aStatus }, rules),
+      score: computeSelectionScore(
+        {
+          tacticalFit: A.tacticalFit,
+          managerTrust: A.managerTrust,
+          expectedPerformance: aExpected,
+          squadStatus: aStatus,
+        },
+        rules,
+      ),
       excluded: null,
     };
     const candidateB: SelectionCandidate = {
@@ -158,7 +264,15 @@ describe('RULE-SEL-001/RULE-PERF-001 — A/B 골든 벡터 (문서 03 예시 표
       managerTrust: B.managerTrust,
       expectedPerformance: bExpected,
       squadStatus: bStatus,
-      score: computeSelectionScore({ tacticalFit: B.tacticalFit, managerTrust: B.managerTrust, expectedPerformance: bExpected, squadStatus: bStatus }, rules),
+      score: computeSelectionScore(
+        {
+          tacticalFit: B.tacticalFit,
+          managerTrust: B.managerTrust,
+          expectedPerformance: bExpected,
+          squadStatus: bStatus,
+        },
+        rules,
+      ),
       excluded: null,
     };
     return [candidateA, candidateB];
@@ -192,26 +306,220 @@ describe('RULE-SEL-001/RULE-PERF-001 — A/B 골든 벡터 (문서 03 예시 표
 
 describe('computeTacticalFit — 아키타입 선호 가산(D-34)', () => {
   const POSITIONS: Position[] = ['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST'];
-  const ZERO_ATTRS = Object.fromEntries(ATTRIBUTE_KEYS.map((key) => [key, 0])) as Record<AttributeKey, number>;
+  const ZERO_ATTRS = Object.fromEntries(ATTRIBUTE_KEYS.map((key) => [key, 0])) as Record<
+    AttributeKey,
+    number
+  >;
 
   function buildStyle(preferredForW: string[]): TacticalStyle {
     const roleWeights = Object.fromEntries(
       POSITIONS.map((p) => [p, p === 'W' ? { pace: 0.5, dribbling: 0.5 } : {}]),
     ) as TacticalStyle['roleWeights'];
-    const preferredArchetypeIds = Object.fromEntries(POSITIONS.map((p) => [p, p === 'W' ? preferredForW : []])) as TacticalStyle['preferredArchetypeIds'];
+    const preferredArchetypeIds = Object.fromEntries(
+      POSITIONS.map((p) => [p, p === 'W' ? preferredForW : []]),
+    ) as TacticalStyle['preferredArchetypeIds'];
     const slots = Object.fromEntries(POSITIONS.map((p) => [p, 1])) as TacticalStyle['slots'];
-    const benchSlots = Object.fromEntries(POSITIONS.map((p) => [p, 1])) as TacticalStyle['benchSlots'];
-    return { id: 'test-style', name: 'test', summary: '', formation: '4-4-2', slots, benchSlots, roleWeights, preferredArchetypeIds };
+    const benchSlots = Object.fromEntries(
+      POSITIONS.map((p) => [p, 1]),
+    ) as TacticalStyle['benchSlots'];
+    return {
+      id: 'test-style',
+      name: 'test',
+      summary: '',
+      formation: '4-4-2',
+      slots,
+      benchSlots,
+      roleWeights,
+      preferredArchetypeIds,
+    };
   }
 
   it('선호 아키타입이면 정확히 +40, styleScore는 동일하다', () => {
     const attrs = { ...ZERO_ATTRS, pace: 60, dribbling: 40 };
-    const withPref = computeTacticalFit(attrs, 'inside-forward', 'W', buildStyle(['inside-forward']), rules);
+    const withPref = computeTacticalFit(
+      attrs,
+      'inside-forward',
+      'W',
+      buildStyle(['inside-forward']),
+      rules,
+    );
     const withoutPref = computeTacticalFit(attrs, 'inside-forward', 'W', buildStyle([]), rules);
     expect(withPref - withoutPref).toBe(40);
     // styleScore = 60*0.5 + 40*0.5 = 50, ×tacticalFitWeights.style(0.6) = 30
     expect(withoutPref).toBe(30);
     expect(withPref).toBe(70);
+  });
+});
+
+describe('ROOKIE_TRIAL_V1 — 건강한 루키의 제한된 벤치 기회(#242)', () => {
+  const styleId = RULESET.tacticalStyles[0]!.id;
+  const rival = {
+    id: 'RIVAL',
+    name: 'Rival',
+    position: 'W' as const,
+    archetypeId: 'inside-forward',
+    attributes: Object.fromEntries(ATTRIBUTE_KEYS.map((key) => [key, 90])) as Record<
+      AttributeKey,
+      number
+    >,
+    baseOvr: 90,
+    form: 90,
+    fitness: 90,
+    morale: 90,
+    tacticalFit: 90,
+    managerTrust: 90,
+    squadStatus: 90,
+    rolePromise: 'STARTER' as const,
+  };
+
+  it('does not fabricate a start, but gives an eligible healthy rookie a SUB slot', () => {
+    const ranking = rankPositionForPlayer({
+      ruleset: RULESET,
+      styleId,
+      position: 'W',
+      playerName: 'Rookie',
+      baseOvr: 40,
+      tacticalFit: 20,
+      managerTrust: 20,
+      form: 40,
+      fitness: 90,
+      morale: 50,
+      familiarity: 1,
+      squadStatus: 20,
+      competitors: Array.from({ length: 8 }, (_, index) => ({ ...rival, id: `RIVAL-${index}` })),
+      earlyOpportunity: true,
+    });
+    const player = ranking.candidates.find((candidate) => candidate.id === 'PLAYER')!;
+    expect(player.appearance).toBe('SUB');
+    expect(player.rank).toBeGreaterThan(ranking.slots);
+    expect(player.excluded).toBeNull();
+    expect(ranking.candidates.filter((candidate) => candidate.appearance === 'SUB')).toHaveLength(
+      ranking.benchSlots,
+    );
+    expect(ranking.playerReason).toEqual({ component: 'EARLY_OPPORTUNITY', delta: 0 });
+    expect(ranking.candidates.filter((candidate) => candidate.appearance === 'START')).toHaveLength(
+      ranking.slots,
+    );
+  });
+
+  it.each(['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST'] as const)(
+    'keeps one real bench slot for %s when a trial displaces the boundary candidate',
+    (position) => {
+      const makeCandidate = (id: string, score: number) => ({
+        id,
+        name: id,
+        baseOvr: score,
+        tacticalFit: score,
+        managerTrust: score,
+        expectedPerformance: score,
+        squadStatus: score,
+        score,
+        excluded: null,
+      });
+      const ranking = rankSelection(
+        [makeCandidate('RIVAL-START', 90), makeCandidate('RIVAL-BENCH', 80), makeCandidate('PLAYER', 10)],
+        position,
+        1,
+        1,
+        rules,
+        true,
+      );
+      expect(ranking.candidates.filter((candidate) => candidate.appearance === 'START')).toHaveLength(1);
+      expect(ranking.candidates.filter((candidate) => candidate.appearance === 'SUB')).toHaveLength(1);
+      expect(ranking.candidates.find((candidate) => candidate.id === 'PLAYER')?.appearance).toBe('SUB');
+      expect(ranking.playerReason).toEqual({ component: 'EARLY_OPPORTUNITY', delta: 0 });
+    },
+  );
+
+  it('자연 포지션 선발 자리가 0이어도 실제 벤치 1자리를 보존한 채 RESERVE 루키를 SUB로 올린다', () => {
+    const makeCandidate = (id: string, score: number) => ({
+      id,
+      name: id,
+      baseOvr: score,
+      tacticalFit: score,
+      managerTrust: score,
+      expectedPerformance: score,
+      squadStatus: score,
+      score,
+      excluded: null,
+    });
+    const ranking = rankSelection(
+      [makeCandidate('RIVAL-START', 90), makeCandidate('RIVAL-BENCH', 80), makeCandidate('PLAYER', 10)],
+      'CM',
+      0,
+      1,
+      rules,
+      true,
+    );
+    expect(ranking.candidates.filter((candidate) => candidate.appearance === 'START')).toHaveLength(0);
+    expect(ranking.candidates.filter((candidate) => candidate.appearance === 'SUB')).toHaveLength(1);
+    expect(ranking.candidates.find((candidate) => candidate.id === 'PLAYER')?.appearance).toBe('SUB');
+    expect(ranking.playerReason).toEqual({ component: 'EARLY_OPPORTUNITY', delta: 0 });
+  });
+
+  it('does not invent a trial slot when the position has no bench capacity', () => {
+    const ranking = rankPositionForPlayer({
+      ruleset: RULESET,
+      styleId,
+      position: 'W',
+      playerName: 'No-bench rookie',
+      baseOvr: 40,
+      tacticalFit: 20,
+      managerTrust: 20,
+      form: 40,
+      fitness: 90,
+      morale: 50,
+      familiarity: 1,
+      squadStatus: 20,
+      competitors: Array.from({ length: 8 }, (_, index) => ({ ...rival, id: `RIVAL-${index}` })),
+      earlyOpportunity: true,
+    });
+    // The real style has a bench, so this assertion is covered by direct rankSelection above;
+    // a zero-capacity call must always remain OUT regardless of the opportunity flag.
+    const zeroBench = rankSelection(
+      ranking.candidates.map(({ rank: _rank, appearance: _appearance, ...candidate }) => candidate),
+      'W',
+      ranking.slots,
+      0,
+      rules,
+      true,
+    );
+    expect(zeroBench.candidates.find((candidate) => candidate.id === 'PLAYER')?.appearance).toBe('OUT');
+    expect(zeroBench.playerReason?.component).not.toBe('EARLY_OPPORTUNITY');
+  });
+
+  it('derives the bounded window from persisted healthy unused-sub facts across command boundaries', () => {
+    const match = (outReason: 'UNUSED_SUB' | 'INJURY' | 'SUSPENSION' | 'SERVICE') =>
+      ({ outReason }) as import('./types.js').MatchRecord;
+    expect(countHealthyTrialChances([match('UNUSED_SUB'), match('INJURY'), match('SUSPENSION')])).toBe(1);
+    expect(
+      countHealthyTrialChances([match('UNUSED_SUB'), match('INJURY'), match('UNUSED_SUB'), match('SERVICE')]),
+    ).toBe(2);
+  });
+
+  it('never places an injured or suspended rookie into the trial bench', () => {
+    for (const excluded of ['INJURY', 'SUSPENSION'] as const) {
+      const ranking = rankPositionForPlayer({
+        ruleset: RULESET,
+        styleId,
+        position: 'W',
+        playerName: 'Unavailable rookie',
+        baseOvr: 40,
+        tacticalFit: 20,
+        managerTrust: 20,
+        form: 40,
+        fitness: 90,
+        morale: 50,
+        familiarity: 1,
+        squadStatus: 20,
+        competitors: Array.from({ length: 8 }, (_, index) => ({ ...rival, id: `RIVAL-${index}` })),
+        excluded,
+        earlyOpportunity: true,
+      });
+      expect(ranking.candidates.find((candidate) => candidate.id === 'PLAYER')?.appearance).toBe(
+        'OUT',
+      );
+    }
   });
 });
 
@@ -231,19 +539,32 @@ describe('computeSquadStatus — 주장 보너스·평점 보정(D-34)', () => {
   const squadStatusByRole = RULESET.contractRules.squadStatusByRole;
 
   it('주장 보너스와 평점 보정이 더해진다', () => {
-    const status = computeSquadStatus({ rolePromise: 'BENCH', captaincy: 'VICE', lastRating: null }, rules, squadStatusByRole);
+    const status = computeSquadStatus(
+      { rolePromise: 'BENCH', captaincy: 'VICE', lastRating: null },
+      rules,
+      squadStatusByRole,
+    );
     expect(status).toBe(squadStatusByRole.BENCH + rules.squadStatusRule.captainBonus.VICE);
   });
 
   it('평점 보정은 ratingAdjMax로 clamp된다(주장 보너스가 상한을 넘겨도 squadStatus 자체는 0~100)', () => {
-    const status = computeSquadStatus({ rolePromise: 'STARTER', captaincy: 'CAPTAIN', lastRating: 9.5 }, rules, squadStatusByRole);
+    const status = computeSquadStatus(
+      { rolePromise: 'STARTER', captaincy: 'CAPTAIN', lastRating: 9.5 },
+      rules,
+      squadStatusByRole,
+    );
     const expectedRatingAdj = rules.squadStatusRule.ratingAdjMax;
-    const raw = squadStatusByRole.STARTER + rules.squadStatusRule.captainBonus.CAPTAIN + expectedRatingAdj;
+    const raw =
+      squadStatusByRole.STARTER + rules.squadStatusRule.captainBonus.CAPTAIN + expectedRatingAdj;
     expect(status).toBe(Math.min(100, raw));
   });
 
   it('낮은 평점은 ratingAdjMax 하한으로 clamp된다', () => {
-    const status = computeSquadStatus({ rolePromise: 'RESERVE', captaincy: 'NONE', lastRating: 0 }, rules, squadStatusByRole);
+    const status = computeSquadStatus(
+      { rolePromise: 'RESERVE', captaincy: 'NONE', lastRating: 0 },
+      rules,
+      squadStatusByRole,
+    );
     expect(status).toBe(squadStatusByRole.RESERVE - rules.squadStatusRule.ratingAdjMax);
   });
 });
@@ -268,6 +589,10 @@ describe('deriveTacticalRoom — 화면 선택자(D-34)', () => {
     expect(view.managerTrust).toBe(state.relationships.managerTrust);
     expect(view.ranking).toEqual(state.season.selection);
     expect(Number.isInteger(view.expectedPerformance)).toBe(true);
-    expect([rules.positionFamiliarity.natural, rules.positionFamiliarity.trained, rules.positionFamiliarity.makeshift]).toContain(view.familiarity);
+    expect([
+      rules.positionFamiliarity.natural,
+      rules.positionFamiliarity.trained,
+      rules.positionFamiliarity.makeshift,
+    ]).toContain(view.familiarity);
   });
 });

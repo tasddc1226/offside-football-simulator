@@ -15,6 +15,9 @@ export interface CareerHeaderProps {
   teamId: string | null;
   roleLabel: string;
   age: number;
+  /** Stable identity context shown after profile confirmation. */
+  nationalityName?: string | undefined;
+  genderLabel?: string | undefined;
   /** 프로필 확정 전(드래프트 단계)이면 null — "OVR —"로 표시한다. */
   ovr: number | null;
   /** T-7-015 실시간 플레이 중 인원 — 없거나 0이면 표시하지 않는다. exactOptionalPropertyTypes라
@@ -60,6 +63,8 @@ export function CareerHeader({
   teamId,
   roleLabel,
   age,
+  nationalityName,
+  genderLabel,
   ovr,
   playingNow,
   homeDisabled,
@@ -96,7 +101,8 @@ export function CareerHeader({
             {name}
           </p>
           <p className="os-career-header-meta" style={CAPTION_STYLE}>
-            {roleLabel} {age}세
+            {roleLabel} {age}세{nationalityName !== undefined ? ` · ${nationalityName}` : ''}
+            {genderLabel !== undefined ? ` · ${genderLabel}` : ''}
           </p>
         </div>
         <div className="os-career-header-ovr">

@@ -1,13 +1,14 @@
-// UX-001 → UX-013: 설정 "구단 이름·로고 변경" 접이식의 본문. 활성 룰셋(activeRuleset)의 12개 구단을
-// 리그 등급별로 묶어 보여주고, 각 구단마다 기본 이름 placeholder가 있는 텍스트 인풋 + 플레이버 텍스트
+// UX-001 → UX-013: 설정 "구단 이름·로고 변경" 접이식의 본문. 활성 룰셋(activeRuleset)의 구단을
+// 실제 리그별로 묶어 보여주고, 각 구단마다 기본 이름 placeholder가 있는 텍스트 인풋 + 플레이버 텍스트
 // 한 줄 + 로고 변경(file input)·기본 로고 복원 버튼을 둔다. 저장은 기기 로컬(ui-store.ts의
 // teamNameOverrides·teamLogos)뿐이라 다른 기기·서버 프로필과는 동기화되지 않는다 — SLB(야구 게임)의
 // "TEAM SETTINGS"와 같은 로컬 전용 커스터마이즈다. 바깥 섹션·h2·Disclosure는 settings.tsx가 그린다
 // (헤딩 계층 h1 배너 → h2 섹션 → 여기 리그 등급 h3).
-import { useState, type ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import type { Team } from '@offside/domain';
 import { Button, Toast, buttonClassName, buttonStyle } from '@offside/ui';
 import { activeRuleset } from '../engine/content.js';
+import { useCareerList } from '../engine/use-career.js';
 import { ClubBadge } from './ClubBadge.js';
 import { LEAGUE_TIER_LABEL_KO } from './labels.js';
 import './settings-screen.css';
@@ -34,30 +35,46 @@ const LOGO_LABEL_CLASS =
 /** 이름 규칙: 트림 후 1~16자. store의 setTeamNameOverride가 같은 규칙으로 다시 한번 정리한다. */
 const TEAM_NAME_MAX_LENGTH = 16;
 
-const LEAGUE_TIER_ORDER: readonly Team['leagueTier'][] = ['YOUTH', 1, 2, 3];
-
 type TeamToast = { variant: 'success' | 'error'; message: string };
 
-function groupTeamsByTier(
+export function groupTeamsByLeague(
   teams: readonly Team[],
-): Array<{ tier: Team['leagueTier']; teams: Team[] }> {
-  return LEAGUE_TIER_ORDER.map((tier) => ({
-    tier,
-    teams: teams.filter((team) => team.leagueTier === tier),
-  })).filter((group) => group.teams.length > 0);
+  search: string,
+  overrides: Record<string, string>,
+  leagues: readonly { id: string; tier: Team['leagueTier']; name: string }[],
+): Array<{ id: string; tier: Team['leagueTier']; name: string; teams: Team[] }> {
+  const normalized = search.trim().toLocaleLowerCase();
+  return leagues
+    .map((league) => ({
+      id: league.id,
+      tier: league.tier,
+      name: league.name,
+      teams: teams.filter((team) => {
+        if (team.leagueId !== league.id) return false;
+        if (normalized.length === 0) return true;
+        const displayName = overrides[team.id] ?? team.name;
+        const flavor = TEAM_FLAVOR_TEXT[team.id] ?? '';
+        const leagueText = `${league.name} ${league.id}`;
+        return `${team.name} ${displayName} ${flavor} ${leagueText}`
+          .toLocaleLowerCase()
+          .includes(normalized);
+      }),
+    }))
+    .filter((group) => group.teams.length > 0);
 }
 
 /**
- * K리그식 구조 PR 리뷰 후속: 이 화면(구단 이름·로고)의 그룹 헤딩만 활성 룰셋의 `leagues[].name`(1.5.0
- * R리그·K1 리그·K2 리그·K3 리그)으로 표시한다 — 룰셋에 그 tier의 리그가 없으면(방어적 폴백)
+ * 실제 리그 identity를 보존하는 화면: 그룹 헤딩은 활성 룰셋의 `leagues[].name`으로 표시한다.
+ * 구버전에서 leagueId를 찾지 못하면(방어적 폴백)
  * 기존 `LEAGUE_TIER_LABEL_KO`("유스/1부/2부/3부")를 그대로 쓴다. 다른 화면(계약·이적 등)의
  * 티어 라벨은 `LEAGUE_TIER_LABEL_KO`를 그대로 쓰므로 건드리지 않는다.
  */
-function teamGroupHeadingLabel(
-  tier: Team['leagueTier'],
-  leagues: readonly { tier: Team['leagueTier']; name: string }[],
-): string {
-  return leagues.find((league) => league.tier === tier)?.name ?? LEAGUE_TIER_LABEL_KO[tier];
+function teamGroupHeadingLabel(group: {
+  id: string;
+  tier: Team['leagueTier'];
+  name: string;
+}): string {
+  return group.name || LEAGUE_TIER_LABEL_KO[group.tier];
 }
 
 function TeamRow({ team, onToast }: { team: Team; onToast: (toast: TeamToast) => void }) {
@@ -69,6 +86,7 @@ function TeamRow({ team, onToast }: { team: Team; onToast: (toast: TeamToast) =>
   const [busy, setBusy] = useState(false);
   const inputId = `team-name-${team.id}`;
   const fileId = `team-logo-${team.id}`;
+  const displayName = override ?? team.name;
 
   async function handleLogoFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -94,9 +112,9 @@ function TeamRow({ team, onToast }: { team: Team; onToast: (toast: TeamToast) =>
   return (
     <div className="flex flex-col gap-os-2">
       <div className="flex items-center gap-os-2">
-        <ClubBadge teamId={team.id} size="m" />
+        <ClubBadge teamId={team.id} teamName={team.name} size="m" />
         <label htmlFor={inputId} className="font-os font-semibold text-os-text" style={H2_STYLE}>
-          {team.name}
+          {displayName}
         </label>
       </div>
       <input
@@ -104,6 +122,7 @@ function TeamRow({ team, onToast }: { team: Team; onToast: (toast: TeamToast) =>
         type="text"
         autoComplete="off"
         placeholder={team.name}
+        aria-label={`${team.name} 표시 이름`}
         maxLength={TEAM_NAME_MAX_LENGTH}
         value={override ?? ''}
         onChange={(event) => setTeamNameOverride(team.id, event.target.value)}
@@ -145,16 +164,60 @@ function TeamRow({ team, onToast }: { team: Team; onToast: (toast: TeamToast) =>
 }
 
 export function TeamNamesSettings() {
+  const careers = useCareerList();
   const resetTeamNameOverrides = useUiStore((state) => state.resetTeamNameOverrides);
   const resetTeamLogos = useUiStore((state) => state.resetTeamLogos);
+  const overrides = useUiStore((state) => state.teamNameOverrides);
   const [toast, setToast] = useState<TeamToast | null>(null);
-  const tierGroups = groupTeamsByTier(activeRuleset.teams);
+  const [search, setSearch] = useState('');
+  const activeTeamId = careers.data
+    ?.filter((career) => career.state.status === 'ACTIVE')
+    .map((career) => career.state.contract?.teamId ?? career.state.season?.teamId)
+    .find((teamId): teamId is string => teamId !== undefined);
+  const currentLeagueId = activeRuleset.teams.find((team) => team.id === activeTeamId)?.leagueId;
+  const tierGroups = groupTeamsByLeague(
+    activeRuleset.teams,
+    search,
+    overrides,
+    activeRuleset.leagues,
+  );
+  const fallbackLeagueId = tierGroups[0]?.id;
+  const [openTiers, setOpenTiers] = useState<Set<string>>(
+    () => new Set([currentLeagueId ?? fallbackLeagueId ?? 'league-youth']),
+  );
+  const [accordionTouched, setAccordionTouched] = useState(false);
+  useEffect(() => {
+    if (accordionTouched || currentLeagueId === undefined) return;
+    setOpenTiers(new Set([currentLeagueId]));
+  }, [accordionTouched, currentLeagueId]);
+
+  function toggleTier(tier: string) {
+    setAccordionTouched(true);
+    setOpenTiers((previous) => {
+      const next = new Set(previous);
+      if (next.has(tier)) next.delete(tier);
+      else next.add(tier);
+      return next;
+    });
+  }
 
   return (
     <div className="flex flex-col gap-os-5">
       <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
         게임 속 구단 이름과 로고를 원하는 대로 바꿔보세요. 이름·로고 변경은 이 기기에만 적용됩니다.
       </p>
+      <label className="flex flex-col gap-os-1 font-os text-os-text" style={CAPTION_STYLE}>
+        구단 찾기
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="구단 이름 또는 리그"
+          aria-label="구단 찾기"
+          className={FIELD_CLASS}
+          style={FIELD_STYLE}
+        />
+      </label>
       <div className="flex flex-wrap gap-os-2">
         <Button variant="secondary" onClick={resetTeamNameOverrides}>
           이름 기본값
@@ -164,26 +227,39 @@ export function TeamNamesSettings() {
         </Button>
       </div>
 
-      {tierGroups.map((group) => (
-        <section
-          key={group.tier}
-          className="flex flex-col gap-os-3"
-          aria-labelledby={`settings-team-tier-${group.tier}`}
-        >
-          <h3
-            id={`settings-team-tier-${group.tier}`}
-            className="font-os font-semibold text-os-text"
-            style={H2_STYLE}
-          >
-            {teamGroupHeadingLabel(group.tier, activeRuleset.leagues)}
-          </h3>
-          <div className="flex flex-col gap-os-5">
-            {group.teams.map((team) => (
-              <TeamRow key={team.id} team={team} onToast={setToast} />
-            ))}
-          </div>
-        </section>
-      ))}
+      {tierGroups.length === 0 ? (
+        <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+          검색 결과가 없습니다. 구단 이름을 다시 확인해 주세요.
+        </p>
+      ) : (
+        tierGroups.map((group) => {
+          const headingId = `settings-team-tier-${group.id}`;
+          const panelId = `${headingId}-panel`;
+          const open = openTiers.has(group.id);
+          return (
+            <section key={group.id} className="flex flex-col gap-os-3" aria-labelledby={headingId}>
+              <h3 id={headingId} className="m-0">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-os-2 rounded-os-s px-os-2 py-os-2 text-left font-os font-semibold text-os-text"
+                  style={{ minHeight: 'var(--os-touch-min)' }}
+                  aria-expanded={open}
+                  aria-controls={panelId}
+                  onClick={() => toggleTier(group.id)}
+                >
+                  <span style={H2_STYLE}>{teamGroupHeadingLabel(group)}</span>
+                  <span aria-hidden="true">{open ? '−' : '+'}</span>
+                </button>
+              </h3>
+              <div id={panelId} hidden={!open} className="flex flex-col gap-os-5">
+                {group.teams.map((team) => (
+                  <TeamRow key={team.id} team={team} onToast={setToast} />
+                ))}
+              </div>
+            </section>
+          );
+        })
+      )}
 
       {toast !== null ? (
         <Toast variant={toast.variant} message={toast.message} onDismiss={() => setToast(null)} />

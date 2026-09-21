@@ -88,7 +88,7 @@ export async function fillPlayerInfo(
   await page.getByLabel('이름', { exact: true }).fill(name);
   await page.locator('summary').filter({ hasText: '상세 프로필' }).click();
   await page.getByLabel('성별', { exact: true }).selectOption('MALE');
-  await page.getByLabel('국적').selectOption('KR');
+  await page.getByLabel('국적', { exact: true }).selectOption('KR');
   await page.getByRole('radio', { name: '왼발' }).click();
   await page.getByRole('radio', { name: /윙어/ }).click();
 }
@@ -328,7 +328,7 @@ export async function fillPreseasonPlan(page: Page, focusLabel: string): Promise
   await expect(lifeHeading.or(legacyHeading)).toBeVisible();
   if (await lifeHeading.isVisible()) {
     const state = await readCurrentCareerState(page);
-    expect(['3.0.0', '3.1.0', '3.2.0', '3.3.0']).toContain(state.rulesetVersion);
+    expect(['3.0.0', '3.1.0', '3.2.0', '3.3.0', '3.4.0']).toContain(state.rulesetVersion);
     await expect(
       page.getByRole('button', { name: '새 시즌 훈련장으로', exact: true }),
     ).toBeVisible();
@@ -350,6 +350,40 @@ export async function fillPreseasonPlan(page: Page, focusLabel: string): Promise
   await expect(page.getByRole('heading', { level: 1, name: '시즌 준비' })).toBeVisible();
   // SCR-011 인수 조건: 훈련 계획은 시즌 결산 때 능력에 반영된다.
   await expect(page.getByText('훈련 계획은 시즌 결산 때 능력에 반영됩니다.')).toBeVisible();
+}
+
+/** Start either the legacy SCR-011 flow or the current 3.3 player-life flow.
+ * The latter opens a season from the life entry, then records each of the three
+ * development blocks on the dashboard before a role proposal can appear. */
+export async function startSeasonForCurrentFlow(page: Page): Promise<void> {
+  const legacyStart = page.getByRole('button', { name: '시즌 시작', exact: true });
+  const lifeStart = page.getByRole('button', { name: '새 시즌 훈련장으로', exact: true });
+  await legacyStart.or(lifeStart).first().waitFor({ state: 'visible' });
+
+  if (await legacyStart.isVisible()) {
+    await legacyStart.click();
+    return;
+  }
+
+  await lifeStart.click();
+  await expectRoute(page, /\/career\/[^/]+$/);
+  for (let block = 0; block < 3; block += 1) {
+    const develop = page.getByRole('button', { name: '이 계획으로 훈련하기', exact: true });
+    if (!(await develop.isVisible())) break;
+    await expect(develop).toBeEnabled();
+    await develop.click();
+    await Promise.race([
+      expect(develop).toBeEnabled(),
+      page.getByRole('link', { name: '감독 제안 보기', exact: true }).waitFor({ state: 'visible' }),
+    ]);
+  }
+  // 3.3 keeps the proposal CTA on the dashboard after the final development
+  // block; the next screen is not opened until this explicit user action.
+  const proposalLink = page.getByRole('link', { name: '제안 보기', exact: true });
+  if (await proposalLink.isVisible()) {
+    await proposalLink.click();
+    await expectRoute(page, /\/career\/[^/]+\/role$/);
+  }
 }
 
 export async function startPlannedSeason(page: Page): Promise<void> {
@@ -378,7 +412,14 @@ export async function continueToPreseason(page: Page): Promise<void> {
  * 수락의 두 번째 명령이 실패한 경우에는 복구용 /role이 남아 이 함수가 "확인"으로 마무리한다. */
 export async function resolveRoleProposal(page: Page): Promise<void> {
   await expectRoute(page, /\/career\/[^/]+(?:\/role)?$/);
-  if (!(await currentRoute(page)).endsWith('/role')) return;
+  if ((await currentRoute(page)).endsWith('/role')) {
+    // Continue below with the explicit proposal screen.
+  } else {
+    const proposalLink = page.getByRole('link', { name: '감독 제안 보기', exact: true });
+    if (!(await proposalLink.isVisible())) return;
+    await proposalLink.click();
+    await expectRoute(page, /\/career\/[^/]+\/role$/);
+  }
   // KEEP은 "확인" 하나, POSITION_CHANGE·ROLE_CHANGE는 "거절"·"수락" 둘을 보여준다 — 어느 쪽이든
   // 받아들이는 버튼을 하나의 locator로 묶어 렌더 경합 없이 기다린다(count() 스냅샷은 로더 직후
   // 첫 렌더 전에 0을 읽을 수 있다).
@@ -421,7 +462,9 @@ export async function resolveCurrentChapterScreen(page: Page): Promise<void> {
     await current.click();
 
     if (role === 'radio') {
-      await page.getByRole('button', { name: '확정', exact: true }).click();
+      const confirmButton = page.getByRole('button', { name: '확정', exact: true });
+      await expect(confirmButton).toBeEnabled();
+      await confirmButton.click();
       // 확정 뒤 결과(다음 판단·경기 결과 버튼)로 전환되길 기다린다 — 이 대기 없이 곧장 다음 루프로
       // 가면 라디오가 checked·disabled로 전환되는 프레임을 "아직 안 골랐다"로 오판해 같은 라디오를
       // 다시 클릭해 버린다(사라지기 직전 라디오를 잡는 detach 경합).
@@ -465,8 +508,17 @@ export async function advanceThroughSeasonToSettlement(
 ): Promise<void> {
   const progressButton = page.getByRole('button', { name: '진행', exact: true });
   const settleButton = page.getByRole('button', { name: '결산하기', exact: true });
+  const developButton = page.getByRole('button', { name: '이 계획으로 훈련하기', exact: true });
+  const importantMomentButton = page.getByRole('button', {
+    name: '다음 중요한 순간까지',
+    exact: true,
+  });
+  const roleProposalLink = page.getByRole('link', { name: '제안 보기', exact: true });
   const currentStepCaption = page.getByRole('progressbar', { name: '시즌 진행', exact: true });
-  for (let step = 0; step < 20; step += 1) {
+  // Current 3.3 flows can spend several steps in each of the three training
+  // segments, plus event/chapter and offer transitions. Keep this bounded
+  // while covering that observed path without changing assertion timeouts.
+  for (let step = 0; step < 40; step += 1) {
     const pathnameBefore = (await currentRoute(page)).split('?')[0]!;
     if (pathnameBefore.endsWith('/chapter')) {
       await resolveCurrentChapterScreen(page);
@@ -483,15 +535,51 @@ export async function advanceThroughSeasonToSettlement(
       await signFirstOffer(page);
       continue;
     }
+    if (await importantMomentButton.isVisible()) {
+      await expect(importantMomentButton).toBeEnabled();
+      await importantMomentButton.click();
+      // The current 3.3 dashboard may keep the same route while its command
+      // advances the season, or may open a chapter/event. Wait for an
+      // observable next state rather than assuming either behavior.
+      await Promise.race([
+        waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, {
+          timeout: 60_000,
+        }),
+        importantMomentButton.waitFor({ state: 'hidden', timeout: 60_000 }),
+        roleProposalLink.waitFor({ state: 'visible', timeout: 60_000 }),
+        developButton.waitFor({ state: 'visible', timeout: 60_000 }),
+        settleButton.waitFor({ state: 'visible', timeout: 60_000 }),
+      ]);
+      continue;
+    }
+    if (await developButton.isVisible()) {
+      await expect(developButton).toBeEnabled({ timeout: 60_000 });
+      await developButton.click();
+      await expect(
+        importantMomentButton.or(roleProposalLink).or(settleButton).or(developButton).first(),
+      ).toBeVisible({ timeout: 60_000 });
+      continue;
+    }
+    if (await roleProposalLink.isVisible()) {
+      await roleProposalLink.click();
+      await resolveRoleProposal(page);
+      continue;
+    }
     if (await settleButton.isVisible()) return;
     // 병렬 워커로 같이 도는 다른 테스트와 CPU를 나눠 쓰면 mutateAsync가 기본 5s보다 오래 걸릴 수
     // 있다 — 넉넉히 기다린다.
     await Promise.race([
       waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect(progressButton).toBeEnabled({ timeout: 60_000 }),
+      importantMomentButton.waitFor({ state: 'visible', timeout: 60_000 }),
+      developButton.waitFor({ state: 'visible', timeout: 60_000 }),
+      roleProposalLink.waitFor({ state: 'visible', timeout: 60_000 }),
       settleButton.waitFor({ state: 'visible', timeout: 60_000 }),
     ]);
     if ((await currentRoute(page)).split('?')[0]! !== pathnameBefore) continue;
+    if (await importantMomentButton.isVisible()) continue;
+    if (await developButton.isVisible()) continue;
+    if (await roleProposalLink.isVisible()) continue;
     if (await settleButton.isVisible()) return;
     const stepTextBefore = await currentStepCaption.getAttribute('aria-valuenow');
     // 클릭 액션 자체의 actionability 재확인 도중에도(디스패치 전) advance 성공→화면 전환이 끼어들어

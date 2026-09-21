@@ -16,6 +16,7 @@ const currentVersion = { rulesetVersion: '1.7.2', contentPackVersion: '0.6.6' };
 const roleBalanceVersion = { rulesetVersion: '1.7.3', contentPackVersion: '0.6.7' };
 const simulatorVersion = { rulesetVersion: '2.0.0', contentPackVersion: '0.7.0' };
 const eventVarietyVersion = { rulesetVersion: '1.7.4', contentPackVersion: '0.6.8' };
+const finalVersion = { rulesetVersion: '3.4.0', contentPackVersion: '0.13.0' };
 
 describe('production season version compatibility', () => {
   // fail-closed 게이트: 승인 목록의 pair는 번들 레지스트리에 실제로 있어야 한다. 이 파일은 Production
@@ -45,6 +46,8 @@ describe('production season version compatibility', () => {
     expect(isAcceptedSeasonVersion('svc_season_1', eventVarietyVersion, roleBalanceVersion)).toBe(
       true,
     );
+    expect(isAcceptedSeasonVersion('svc_season_1', finalVersion, currentVersion)).toBe(true);
+    expect(isAcceptedSeasonVersion('svc_season_1', currentVersion, finalVersion)).toBe(true);
     // 최초 공개부터 현재까지 어느 승격 지점으로 롤백해도 미동기화 최초 sync를 보호한다.
     const history = [
       firstVersion,
@@ -63,6 +66,7 @@ describe('production season version compatibility', () => {
       { rulesetVersion: '3.1.0', contentPackVersion: '0.10.0' },
       { rulesetVersion: '3.2.0', contentPackVersion: '0.11.0' },
       { rulesetVersion: '3.3.0', contentPackVersion: '0.12.0' },
+      finalVersion,
     ];
     for (const seasonVersion of history) {
       for (const requestedVersion of history) {

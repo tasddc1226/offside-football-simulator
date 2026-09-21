@@ -97,6 +97,8 @@ export type ChapterSelectionRules = {
   version: 'LRU_V1';
   /** A resolution `n` seasons ago remains ineligible when `n <= repeatCooldownSeasons`. */
   repeatCooldownSeasons: number;
+  /** Candidate packs may replay a cooled-down variant instead of exhausting its id forever. */
+  allowResolvedChapterRepeat?: boolean | undefined;
 };
 
 // T-2-002 D-34: 컵 대회 하나. `rounds`는 항상 4라운드 고정 순서(R1 → R2 → SEMI → FINAL)다(content
@@ -170,6 +172,16 @@ export type SelectionRules = {
      * 선발 자리가 있는 인접 포지션의 실제 projectedRole이 더 좋으면 변경을 제안한다.
      * 키가 없는 과거 룰셋은 기존 제안과 해시를 그대로 보존한다. */
     zeroSlotAdjacentFallback?: boolean | undefined;
+    /** Candidate rulesets may put a healthy rookie on the bench for a bounded trial window. */
+    earlyOpportunity?:
+      | {
+          version: 'ROOKIE_TRIAL_V1';
+          maxAge: number;
+          maxSeason: number;
+          maxMatchesWithoutMinutes: number;
+          eligibleRoles: SquadRole[];
+        }
+      | undefined;
   };
 };
 
@@ -362,6 +374,13 @@ export type MarketValueRules = {
 // forced pending, 재활 이동, 재발 창·후유증 계산은 이 규칙셋을 유일한 정본으로 사용한다.
 export type InjuryRules = {
   event: { id: string; version: number };
+  contextualEvents?:
+    | {
+        byBodyPart?: Partial<Record<InjuryBodyPart, { id: string; version: number }>> | undefined;
+        byAgeFrom?: Array<{ age: number; event: { id: string; version: number } }> | undefined;
+        recurrence?: { id: string; version: number } | undefined;
+      }
+    | undefined;
   severityWeights: { MINOR: number; MODERATE: number; MAJOR: number };
   matchesOut: {
     MINOR: { min: number; max: number };
@@ -406,6 +425,8 @@ export type RelationshipRules = {
   logMax: number;
   memoryTagsMax: number;
   captainAppointment: { minCaptain: number; minSeasons: number };
+  /** Candidate rulesets can make earned captaincy reachable without promoting every player. */
+  captainSeasonStarterDelta?: number | undefined;
   /** T-4-003 Phase 4 커리어 태그 판정 기준. */
   tagThresholds: {
     glassPotential: number;
@@ -429,6 +450,8 @@ export type ReputationRules = {
     starterSeasonCenti: number;
     ratingAbove70Centi: number;
     titleCenti: number;
+    /** Reward a truthful promotion-zone finish; it never changes the player's league. */
+    promotionCenti?: number | undefined;
     decayCenti: number;
   };
 };
@@ -520,7 +543,15 @@ export type Ruleset = {
   overseasRules?: { version: 'WORLD_JOURNEY_V1' } | undefined;
   developmentRules?: { version: 'PLAYER_LIFE_V1' } | undefined;
   matchDecisionRules?: { version: 'LATE_MATCH_V1' } | undefined;
-  characterMemoryRules?: { version: 'COACH_MEMORY_V1'; memoryMax: number; reactionMax: number; successTrustDelta: number; failTrustDelta: number } | undefined;
+  characterMemoryRules?:
+    | {
+        version: 'COACH_MEMORY_V1';
+        memoryMax: number;
+        reactionMax: number;
+        successTrustDelta: number;
+        failTrustDelta: number;
+      }
+    | undefined;
   eventSelectionRules?: EventSelectionRules | undefined;
   version: string;
   initialAge?: number | undefined;

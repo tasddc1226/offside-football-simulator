@@ -165,7 +165,15 @@ export const authAttempts = sqliteTable(
     // T-2-012: ANALYTICS_EVENTS(분당 60회/clientId, D-55)가 추가한 kind. text 컬럼이라 마이그레이션은
     // 필요 없다(SQLite는 이 enum을 CHECK 제약으로 만들지 않는다 — TS 타입에서만 강제).
     kind: text('kind', {
-      enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START', 'ANALYTICS_EVENTS', 'CAREER_PUBLICATION', 'FRIENDLY_START'],
+      enum: [
+        'RECOVERY_ISSUE',
+        'RECOVERY_REDEEM',
+        'GOOGLE_START',
+        'ANALYTICS_EVENTS',
+        'CAREER_PUBLICATION',
+        'FRIENDLY_START',
+        'COMPETITION_ENTRY',
+      ],
     }).notNull(),
     subject: text('subject').notNull(),
     windowStart: text('window_start').notNull(),
@@ -267,7 +275,10 @@ export const careerArchives = sqliteTable('career_archives', {
 /** Explicitly published whitelist. Ownership follows careers through profile merges. */
 export const careerPublications = sqliteTable('career_publications', {
   id: text('id').primaryKey(),
-  careerId: text('career_id').notNull().unique().references(() => careers.id, { onDelete: 'cascade' }),
+  careerId: text('career_id')
+    .notNull()
+    .unique()
+    .references(() => careers.id, { onDelete: 'cascade' }),
   articleJson: text('article_json').notNull(),
   createdAt: text('created_at').notNull(),
 });
@@ -275,7 +286,9 @@ export const careerPublications = sqliteTable('career_publications', {
 /** Atomic challenge replay guard; follows child career deletion, not source publication. */
 export const careerChallengeAdmissions = sqliteTable('career_challenge_admissions', {
   keyHash: text('key_hash').primaryKey(),
-  careerId: text('career_id').notNull().references(() => careers.id, { onDelete: 'cascade' }),
+  careerId: text('career_id')
+    .notNull()
+    .references(() => careers.id, { onDelete: 'cascade' }),
   requestHash: text('request_hash').notNull(),
   responseJson: text('response_json').notNull(),
 });
@@ -298,12 +311,105 @@ export const lockerTeams = sqliteTable(
   (table) => [index('locker_teams_owner_idx').on(table.ownerProfileId)],
 );
 
+/** Private account-owned player note; the career FK keeps it out of public career articles and
+ * profile deletion/merge moves it with the owning account. */
+export const lockerPlayerNotes = sqliteTable('locker_player_notes', {
+  careerId: text('career_id')
+    .primaryKey()
+    .references(() => careers.id, { onDelete: 'cascade' }),
+  note: text('note').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
 /** Private immutable friendly receipts survive team/career deletion, but never profile deletion. */
-export const friendlyMatches = sqliteTable('friendly_matches', {
-  id: text('id').primaryKey(),
-  ownerProfileId: text('owner_profile_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
-  requestKeyHash: text('request_key_hash').notNull().unique(),
-  requestHash: text('request_hash').notNull(),
-  receiptJson: text('receipt_json').notNull(),
-  createdAt: text('created_at').notNull(),
-}, (table) => [index('friendly_matches_owner_idx').on(table.ownerProfileId, table.createdAt)]);
+export const friendlyMatches = sqliteTable(
+  'friendly_matches',
+  {
+    id: text('id').primaryKey(),
+    ownerProfileId: text('owner_profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    requestKeyHash: text('request_key_hash').notNull().unique(),
+    requestHash: text('request_hash').notNull(),
+    receiptJson: text('receipt_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('friendly_matches_owner_idx').on(table.ownerProfileId, table.createdAt)],
+);
+
+/** Immutable daily definitions. `scenario_json` includes the private match inputs; routes project it safely. */
+export const competitionChallengeVersions = sqliteTable(
+  'competition_challenge_versions',
+  {
+    id: text('id').primaryKey(),
+    dayKey: text('day_key').notNull(),
+    weekKey: text('week_key').notNull(),
+    startsAt: text('starts_at').notNull(),
+    endsAt: text('ends_at').notNull(),
+    rulesetVersion: text('ruleset_version').notNull(),
+    contentPackVersion: text('content_pack_version').notNull(),
+    scoringPolicyVersion: text('scoring_policy_version').notNull(),
+    scenarioJson: text('scenario_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [uniqueIndex('competition_challenge_versions_day_unique').on(table.dayKey)],
+);
+
+/** One server-owned, revisioned entry per profile and challenge version. */
+export const competitionEntries = sqliteTable(
+  'competition_entries',
+  {
+    id: text('id').primaryKey(),
+    challengeVersionId: text('challenge_version_id')
+      .notNull()
+      .references(() => competitionChallengeVersions.id, { onDelete: 'cascade' }),
+    ownerProfileId: text('owner_profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    actionIdsJson: text('action_ids_json').notNull(),
+    revision: integer('revision').notNull().default(0),
+    stateJson: text('state_json').notNull(),
+    resultJson: text('result_json'),
+    resultHash: text('result_hash'),
+    score: integer('score'),
+    maxScore: integer('max_score'),
+    verificationStatus: text('verification_status', { enum: ['IN_PROGRESS', 'VERIFIED'] }).notNull(),
+    publicOptIn: integer('public_opt_in').notNull().default(0),
+    publicAlias: text('public_alias').notNull(),
+    submittedAt: text('submitted_at'),
+  },
+  (table) => [
+    uniqueIndex('competition_entries_profile_challenge_unique').on(
+      table.ownerProfileId,
+      table.challengeVersionId,
+    ),
+    index('competition_entries_challenge_public_idx').on(
+      table.challengeVersionId,
+      table.verificationStatus,
+      table.publicOptIn,
+      table.score,
+    ),
+  ],
+);
+
+/** Body-bound action idempotency and immutable per-revision audit trail. */
+export const competitionActions = sqliteTable(
+  'competition_actions',
+  {
+    id: text('id').primaryKey(),
+    entryId: text('entry_id')
+      .notNull()
+      .references(() => competitionEntries.id, { onDelete: 'cascade' }),
+    revision: integer('revision').notNull(),
+    actionId: text('action_id').notNull(),
+    expectedRevision: integer('expected_revision').notNull(),
+    requestKeyHash: text('request_key_hash').notNull().unique(),
+    requestHash: text('request_hash').notNull(),
+    responseJson: text('response_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('competition_actions_entry_revision_unique').on(table.entryId, table.revision),
+    index('competition_actions_entry_idx').on(table.entryId, table.revision),
+  ],
+);

@@ -36,7 +36,9 @@ function baseEpisode(overrides: Partial<InjuryEpisode> = {}): InjuryEpisode {
 
 describe('onMatchInjury', () => {
   function state(seed = 'injury-test', overrides: Partial<CareerState> = {}): CareerState {
-    const attributes = Object.fromEntries(ATTRIBUTE_KEYS.map((key) => [key, 50])) as CareerState['attributes'];
+    const attributes = Object.fromEntries(
+      ATTRIBUTE_KEYS.map((key) => [key, 50]),
+    ) as CareerState['attributes'];
     const archetype = rulesetProto.archetypes[0]!;
     return {
       age: 17,
@@ -124,7 +126,9 @@ describe('onMatchInjury', () => {
   it('ACTIVE/REHAB episode에 remainingMatches가 없으면 다음 시즌 carry를 거부한다', () => {
     const incomplete = { ...baseEpisode() };
     delete incomplete.remainingMatches;
-    expect(() => injuryAvailabilityFromHealth({ episodes: [incomplete] })).toThrow(/remainingMatches/);
+    expect(() => injuryAvailabilityFromHealth({ episodes: [incomplete] })).toThrow(
+      /remainingMatches/,
+    );
   });
 
   it('심각도·부위·이탈기간 순으로 3회 roll하고 에피소드/availability/timeline을 만든다', () => {
@@ -151,15 +155,75 @@ describe('onMatchInjury', () => {
     const minor = resultFor(fixedSeeds.minor);
     expect(minor.health.episodes[0]).toMatchObject({ rehab: 'STANDARD', status: 'REHAB' });
     const severe = resultFor(fixedSeeds.severe);
-    expect(severe.forcedPending).toMatchObject({ kind: 'INJURY', eventId: 'EVT-INJ-001', version: 1 });
+    expect(severe.forcedPending).toMatchObject({
+      kind: 'INJURY',
+      eventId: 'EVT-INJ-001',
+      version: 1,
+    });
     expect(severe.injuryCount).toBe(1);
   });
 
+  it('후보 ruleset은 부위·재발 맥락에 맞는 이벤트를 선택하고 실제 선택지는 보존한다', () => {
+    const contextualRuleset = {
+      ...rulesetProto,
+      injuryRules: {
+        ...rulesetProto.injuryRules,
+        contextualEvents: {
+          byBodyPart: {
+            KNEE: { id: 'EVT-INJ-131', version: 1 },
+            HAMSTRING: { id: 'EVT-INJ-132', version: 1 },
+          },
+          recurrence: { id: 'EVT-INJ-133', version: 1 },
+        },
+      },
+    };
+    const knee = Array.from({ length: 500 }, (_, index) => {
+      const seed = `contextual-knee-${index}`;
+      return onMatchInjury({
+        state: state(seed),
+        seasonIndex: 1,
+        step: 3,
+        match: match(seed),
+        availability: null,
+        injuryCount: 0,
+        ruleset: contextualRuleset,
+        rng: seedRng(seed),
+      });
+    }).find(
+      (result) =>
+        result.health.episodes[0]?.severity === 'MAJOR' &&
+        result.health.episodes[0]?.bodyPart === 'KNEE',
+    );
+    expect(knee).toBeDefined();
+    if (knee === undefined) throw new Error('deterministic knee seed search failed');
+    expect(knee.forcedPending?.eventId).toBe('EVT-INJ-131');
+    expect(knee.forcedPending?.version).toBe(1);
+    expect(knee.health.episodes[0]?.bodyPart).toBe('KNEE');
+  });
+
   it('위험 보정은 경계값을 지키고 심각도 가중치 합을 항상 10000으로 유지한다', () => {
-    expect(adjustedSeverityWeights(rulesetProto.injuryRules, state('risk-base'))).toEqual({ MINOR: 6000, MODERATE: 3000, MAJOR: 1000 });
-    expect(adjustedSeverityWeights(rulesetProto.injuryRules, state('risk-durability', { attributes: { ...state('risk-durability').attributes, durability: 49 } }))).toEqual({ MINOR: 5960, MODERATE: 3030, MAJOR: 1010 });
-    expect(adjustedSeverityWeights(rulesetProto.injuryRules, state('risk-fitness', { state: { form: 50, fitness: 49, morale: 50 } }))).toEqual({ MINOR: 5000, MODERATE: 3750, MAJOR: 1250 });
-    expect(adjustedSeverityWeights(rulesetProto.injuryRules, state('risk-age', { age: 31 }))).toEqual({ MINOR: 5800, MODERATE: 3150, MAJOR: 1050 });
+    expect(adjustedSeverityWeights(rulesetProto.injuryRules, state('risk-base'))).toEqual({
+      MINOR: 6000,
+      MODERATE: 3000,
+      MAJOR: 1000,
+    });
+    expect(
+      adjustedSeverityWeights(
+        rulesetProto.injuryRules,
+        state('risk-durability', {
+          attributes: { ...state('risk-durability').attributes, durability: 49 },
+        }),
+      ),
+    ).toEqual({ MINOR: 5960, MODERATE: 3030, MAJOR: 1010 });
+    expect(
+      adjustedSeverityWeights(
+        rulesetProto.injuryRules,
+        state('risk-fitness', { state: { form: 50, fitness: 49, morale: 50 } }),
+      ),
+    ).toEqual({ MINOR: 5000, MODERATE: 3750, MAJOR: 1250 });
+    expect(
+      adjustedSeverityWeights(rulesetProto.injuryRules, state('risk-age', { age: 31 })),
+    ).toEqual({ MINOR: 5800, MODERATE: 3150, MAJOR: 1050 });
 
     const capped = adjustedSeverityWeights(
       rulesetProto.injuryRules,
@@ -197,9 +261,13 @@ describe('onMatchInjury', () => {
       { id: 'SHOULDER', min: 75, max: 90 },
       { id: 'HEAD', min: 90, max: 100 },
     ] as const;
-    expect(rulesetProto.injuryRules.bodyParts.map((bodyPart) => bodyPart.id)).toEqual(expected.map((bodyPart) => bodyPart.id));
+    expect(rulesetProto.injuryRules.bodyParts.map((bodyPart) => bodyPart.id)).toEqual(
+      expected.map((bodyPart) => bodyPart.id),
+    );
     for (const bodyPart of expected) {
-      expect(resultFor(fixedSeeds.bodyPart[bodyPart.id]).health.episodes[0]?.bodyPart).toBe(bodyPart.id);
+      expect(resultFor(fixedSeeds.bodyPart[bodyPart.id]).health.episodes[0]?.bodyPart).toBe(
+        bodyPart.id,
+      );
     }
   });
 
@@ -256,17 +324,27 @@ describe('onMatchInjury', () => {
       revision: 9,
       rng: seedRng('recovery-match'),
     });
-    expect(result.health.episodes[0]).toMatchObject({ status: 'RECOVERED', recurrenceChecksRemaining: 6, permanentDelta: [{ key: 'durability', delta: -1 }] });
+    expect(result.health.episodes[0]).toMatchObject({
+      status: 'RECOVERED',
+      recurrenceChecksRemaining: 6,
+      permanentDelta: [{ key: 'durability', delta: -1 }],
+    });
     expect(result.attributes.durability).toBe(49);
     expect(result.timeline[0]).toMatchObject({ kind: 'RECOVERED', refId: episode.id, revision: 9 });
     expect(result.rng.draws).toBe(0);
   });
 
   it('재발은 duration roll 1회로 같은 부위의 한 단계 높은 새 에피소드와 forced pending을 만든다', () => {
-    const original = baseEpisode({ status: 'RECOVERED', rehab: 'STANDARD', recurrenceChecksRemaining: 6 });
+    const original = baseEpisode({
+      status: 'RECOVERED',
+      rehab: 'STANDARD',
+      recurrenceChecksRemaining: 6,
+    });
     const rng = seedRng('recurrence');
     const source = state('recurrence');
-    const cbArchetype = rulesetProto.archetypes.find((candidate) => candidate.id === 'cb-aerial-dominator')!;
+    const cbArchetype = rulesetProto.archetypes.find(
+      (candidate) => candidate.id === 'cb-aerial-dominator',
+    )!;
     const recurrenceState: CareerState = {
       ...source,
       attributes: { ...source.attributes, jumping: 51, strength: 51, tackling: 51 },
@@ -293,12 +371,24 @@ describe('onMatchInjury', () => {
       revision: 10,
     });
     expect(result.rng.draws - rng.draws).toBe(1);
-    expect(result.health.episodes[0]).toMatchObject({ status: 'RECURRED', recurrenceChecksRemaining: 0 });
-    expect(result.health.episodes[1]).toMatchObject({ severity: 'MAJOR', bodyPart: original.bodyPart, occurredAt: { matchId: 'm-recur' } });
-    expect(result.forcedPending).toMatchObject({ kind: 'INJURY', episodeId: result.health.episodes[1]!.id });
+    expect(result.health.episodes[0]).toMatchObject({
+      status: 'RECURRED',
+      recurrenceChecksRemaining: 0,
+    });
+    expect(result.health.episodes[1]).toMatchObject({
+      severity: 'MAJOR',
+      bodyPart: original.bodyPart,
+      occurredAt: { matchId: 'm-recur' },
+    });
+    expect(result.forcedPending).toMatchObject({
+      kind: 'INJURY',
+      episodeId: result.health.episodes[1]!.id,
+    });
     expect(result.health.episodes[1]!.permanentDelta).toEqual([{ key: 'durability', delta: -2 }]);
     expect(result.attributes.durability).toBe(48);
-    const archetype = rulesetProto.archetypes.find((candidate) => candidate.id === recurrenceState.player.profile?.archetypeId)!;
+    const archetype = rulesetProto.archetypes.find(
+      (candidate) => candidate.id === recurrenceState.player.profile?.archetypeId,
+    )!;
     expect(result.profile?.baseOvr).toBe(computeBaseOvr(result.attributes, archetype.roleWeights));
     expect(result.profile?.baseOvr).toBe(50);
 
@@ -318,11 +408,17 @@ describe('onMatchInjury', () => {
       rng: result.rng,
     });
     expect(recovered.attributes.durability).toBe(48);
-    expect(recovered.health.episodes[1]!.permanentDelta).toEqual([{ key: 'durability', delta: -2 }]);
+    expect(recovered.health.episodes[1]!.permanentDelta).toEqual([
+      { key: 'durability', delta: -2 },
+    ]);
   });
 
   it('새 별도 부상은 기존 RECOVERED 재발 창을 닫고 새 회복 창만 연다', () => {
-    const older = baseEpisode({ id: 'INJ-older', status: 'RECOVERED', recurrenceChecksRemaining: 4 });
+    const older = baseEpisode({
+      id: 'INJ-older',
+      status: 'RECOVERED',
+      recurrenceChecksRemaining: 4,
+    });
     const source = state('overlap-new-injury', { health: { episodes: [older] } });
     const created = onMatchInjury({
       state: source,
@@ -335,24 +431,47 @@ describe('onMatchInjury', () => {
       rng: seedRng('overlap-new-0'),
     });
     expect(created.health.episodes.at(-1)?.severity).toBe('MINOR');
-    expect(created.health.episodes[0]).toMatchObject({ id: 'INJ-older', status: 'RECOVERED', recurrenceChecksRemaining: 0 });
+    expect(created.health.episodes[0]).toMatchObject({
+      id: 'INJ-older',
+      status: 'RECOVERED',
+      recurrenceChecksRemaining: 0,
+    });
 
     const newEpisode = created.health.episodes[1]!;
     const recovered = onInjuryRecovered({
       state: { ...source, health: created.health },
-      availability: { kind: 'INJURY', matchesRemaining: 0, sinceMatchId: newEpisode.occurredAt.matchId },
+      availability: {
+        kind: 'INJURY',
+        matchesRemaining: 0,
+        sinceMatchId: newEpisode.occurredAt.matchId,
+      },
       match: match('overlap-new-return'),
       ruleset: rulesetProto,
       step: 8,
       rng: created.rng,
     });
-    expect(recovered.health.episodes[0]).toMatchObject({ id: 'INJ-older', recurrenceChecksRemaining: 0 });
-    expect(recovered.health.episodes[1]).toMatchObject({ status: 'RECOVERED', recurrenceChecksRemaining: 6 });
+    expect(recovered.health.episodes[0]).toMatchObject({
+      id: 'INJ-older',
+      recurrenceChecksRemaining: 0,
+    });
+    expect(recovered.health.episodes[1]).toMatchObject({
+      status: 'RECOVERED',
+      recurrenceChecksRemaining: 6,
+    });
   });
 
   it('재발 성공도 다른 RECOVERED 창을 직렬 연장하지 않고 닫는다', () => {
-    const older = baseEpisode({ id: 'INJ-older', status: 'RECOVERED', recurrenceChecksRemaining: 4 });
-    const newer = baseEpisode({ id: 'INJ-newer', status: 'RECOVERED', occurredAt: { seasonIndex: 1, step: 6, matchId: 'm-newer' }, recurrenceChecksRemaining: 6 });
+    const older = baseEpisode({
+      id: 'INJ-older',
+      status: 'RECOVERED',
+      recurrenceChecksRemaining: 4,
+    });
+    const newer = baseEpisode({
+      id: 'INJ-newer',
+      status: 'RECOVERED',
+      occurredAt: { seasonIndex: 1, step: 6, matchId: 'm-newer' },
+      recurrenceChecksRemaining: 6,
+    });
     const source = state('overlap-recurrence', { health: { episodes: [older, newer] } });
     const result = onMatchRecurrence({
       state: source,
@@ -365,12 +484,24 @@ describe('onMatchInjury', () => {
       rng: seedRng('overlap-recurrence-roll'),
       allowForcedPending: false,
     });
-    expect(result.health.episodes[0]).toMatchObject({ id: 'INJ-older', recurrenceChecksRemaining: 0 });
-    expect(result.health.episodes[1]).toMatchObject({ id: 'INJ-newer', status: 'RECURRED', recurrenceChecksRemaining: 0 });
+    expect(result.health.episodes[0]).toMatchObject({
+      id: 'INJ-older',
+      recurrenceChecksRemaining: 0,
+    });
+    expect(result.health.episodes[1]).toMatchObject({
+      id: 'INJ-newer',
+      status: 'RECURRED',
+      recurrenceChecksRemaining: 0,
+    });
   });
 
   it('MINOR 재발은 MODERATE로 상승하고 재발 창 실패는 0에서 더 줄지 않는다', () => {
-    const original = baseEpisode({ severity: 'MINOR', status: 'RECOVERED', rehab: 'STANDARD', recurrenceChecksRemaining: 6 });
+    const original = baseEpisode({
+      severity: 'MINOR',
+      status: 'RECOVERED',
+      rehab: 'STANDARD',
+      recurrenceChecksRemaining: 6,
+    });
     const source = state('minor-recurrence');
     const result = onMatchRecurrence({
       state: { ...source, health: { episodes: [original] } },
@@ -383,36 +514,82 @@ describe('onMatchInjury', () => {
       rng: seedRng('minor-recurrence-roll'),
       allowForcedPending: false,
     });
-    expect(result.health.episodes[1]).toMatchObject({ severity: 'MODERATE', status: 'REHAB', rehab: 'STANDARD', permanentDelta: [{ key: 'durability', delta: -1 }] });
+    expect(result.health.episodes[1]).toMatchObject({
+      severity: 'MODERATE',
+      status: 'REHAB',
+      rehab: 'STANDARD',
+      permanentDelta: [{ key: 'durability', delta: -1 }],
+    });
     expect(result.attributes.durability).toBe(49);
 
-    const failedOnce = onRecurrenceCheckFailed({ ...source, health: { episodes: [original] } }, original.id);
+    const failedOnce = onRecurrenceCheckFailed(
+      { ...source, health: { episodes: [original] } },
+      original.id,
+    );
     expect(failedOnce.episodes[0]?.recurrenceChecksRemaining).toBe(5);
     const failedToZero = onRecurrenceCheckFailed({ ...source, health: failedOnce }, original.id);
     expect(failedToZero.episodes[0]?.recurrenceChecksRemaining).toBe(4);
     let expired = failedToZero;
-    for (let i = 0; i < 4; i += 1) expired = onRecurrenceCheckFailed({ ...source, health: expired }, original.id);
+    for (let i = 0; i < 4; i += 1)
+      expired = onRecurrenceCheckFailed({ ...source, health: expired }, original.id);
     expect(expired.episodes[0]?.recurrenceChecksRemaining).toBe(0);
-    expect(onRecurrenceCheckFailed({ ...source, health: expired }, original.id).episodes[0]?.recurrenceChecksRemaining).toBe(0);
+    expect(
+      onRecurrenceCheckFailed({ ...source, health: expired }, original.id).episodes[0]
+        ?.recurrenceChecksRemaining,
+    ).toBe(0);
   });
 
   it('CONSERVATIVE risk survives recurrence and only the contiguous same-body chain counts', () => {
-    const original = baseEpisode({ id: 'INJ-original', status: 'RECOVERED', rehab: 'CONSERVATIVE', recurrenceRiskBp: 1500, recurrenceChecksRemaining: 6 });
+    const original = baseEpisode({
+      id: 'INJ-original',
+      status: 'RECOVERED',
+      rehab: 'CONSERVATIVE',
+      recurrenceRiskBp: 1500,
+      recurrenceChecksRemaining: 6,
+    });
     const source = state('bounded-conservative', { health: { episodes: [original] } });
-    const policyRuleset = { ...rulesetProto, injuryRules: { ...rulesetProto.injuryRules, recurrenceMaxChain: 2 } };
-    const result = onMatchRecurrence({ state: source, seasonIndex: 1, step: 8, match: match('m-bounded'), episodeId: original.id, injuryCount: 2, ruleset: policyRuleset, rng: seedRng('bounded-conservative-roll'), allowForcedPending: false });
+    const policyRuleset = {
+      ...rulesetProto,
+      injuryRules: { ...rulesetProto.injuryRules, recurrenceMaxChain: 2 },
+    };
+    const result = onMatchRecurrence({
+      state: source,
+      seasonIndex: 1,
+      step: 8,
+      match: match('m-bounded'),
+      episodeId: original.id,
+      injuryCount: 2,
+      ruleset: policyRuleset,
+      rng: seedRng('bounded-conservative-roll'),
+      allowForcedPending: false,
+    });
     expect(result.health.episodes[1]!.recurrenceRiskBp).toBe(1500);
     const next = { ...result.health.episodes[1]!, status: 'RECOVERED' as const };
     expect(recurrenceChainLength([result.health.episodes[0]!, next], next.id)).toBe(1);
     const fresh = baseEpisode({ id: 'INJ-fresh', bodyPart: 'ANKLE', status: 'RECOVERED' });
     expect(recurrenceChainLength([result.health.episodes[0]!, next, fresh], fresh.id)).toBe(0);
 
-    const legacy = onMatchRecurrence({ state: source, seasonIndex: 1, step: 8, match: match('m-legacy'), episodeId: original.id, injuryCount: 2, ruleset: rulesetProto, rng: seedRng('bounded-conservative-roll'), allowForcedPending: false });
+    const legacy = onMatchRecurrence({
+      state: source,
+      seasonIndex: 1,
+      step: 8,
+      match: match('m-legacy'),
+      episodeId: original.id,
+      injuryCount: 2,
+      ruleset: rulesetProto,
+      rng: seedRng('bounded-conservative-roll'),
+      allowForcedPending: false,
+    });
     expect(legacy.health.episodes[1]!.recurrenceRiskBp).toBe(3000);
   });
 
   it('HEAD 후유증 없음과 clamp 경계의 실제 delta를 기록한다', () => {
-    const head = baseEpisode({ severity: 'MAJOR', bodyPart: 'HEAD', status: 'REHAB', rehab: 'STANDARD' });
+    const head = baseEpisode({
+      severity: 'MAJOR',
+      bodyPart: 'HEAD',
+      status: 'REHAB',
+      rehab: 'STANDARD',
+    });
     const headState = state('head-recovery', { health: { episodes: [head] } });
     const headResult = onInjuryRecovered({
       state: headState,
@@ -428,8 +605,14 @@ describe('onMatchInjury', () => {
 
     const clamped = onMatchRecurrence({
       state: {
-        ...state('clamp-recurrence', { attributes: { ...state('clamp-recurrence').attributes, durability: 1 } }),
-        health: { episodes: [baseEpisode({ status: 'RECOVERED', rehab: 'STANDARD', recurrenceChecksRemaining: 6 })] },
+        ...state('clamp-recurrence', {
+          attributes: { ...state('clamp-recurrence').attributes, durability: 1 },
+        }),
+        health: {
+          episodes: [
+            baseEpisode({ status: 'RECOVERED', rehab: 'STANDARD', recurrenceChecksRemaining: 6 }),
+          ],
+        },
       },
       seasonIndex: 1,
       step: 8,
@@ -447,7 +630,8 @@ describe('onMatchInjury', () => {
   it('동일 입력 hook 결과의 canonical hash가 결정론적으로 같다', () => {
     const first = resultFor('injury-hash-determinism');
     const second = resultFor('injury-hash-determinism');
-    const digest = (result: ReturnType<typeof onMatchInjury>) => sha256Hex(canonicalize(result as unknown as JsonValue));
+    const digest = (result: ReturnType<typeof onMatchInjury>) =>
+      sha256Hex(canonicalize(result as unknown as JsonValue));
     expect(first).toEqual(second);
     expect(digest(first)).toBe(digest(second));
   });
@@ -455,32 +639,50 @@ describe('onMatchInjury', () => {
 
 describe('applyRehabPlan', () => {
   it('EARLY: 원 diagnosisRange를 보존하고 returnShiftMatches만큼 복귀 범위만 당긴다', () => {
-    const episode = baseEpisode({ diagnosisRange: { minMatches: 3, maxMatches: 6 }, recurrenceRiskBp: 3000 });
+    const episode = baseEpisode({
+      diagnosisRange: { minMatches: 3, maxMatches: 6 },
+      recurrenceRiskBp: 3000,
+    });
     const updated = applyRehabPlan(episode, 'EARLY', rulesetProto.injuryRules);
     // EARLY: returnShiftMatches -2, recurrenceAddBp +1500(룰셋 injuryRules.rehab.EARLY).
     expect(updated.diagnosisRange).toEqual({ minMatches: 3, maxMatches: 6 });
-    expect(rehabDurationRange(updated, 'EARLY', rulesetProto.injuryRules)).toEqual({ minMatches: 1, maxMatches: 4 });
+    expect(rehabDurationRange(updated, 'EARLY', rulesetProto.injuryRules)).toEqual({
+      minMatches: 1,
+      maxMatches: 4,
+    });
     expect(updated.recurrenceRiskBp).toBe(4500);
     expect(updated.status).toBe('REHAB');
     expect(updated.rehab).toBe('EARLY');
   });
 
   it('STANDARD: 원 diagnosisRange를 보존하고 이동 없는 복귀 범위를 사용한다', () => {
-    const episode = baseEpisode({ diagnosisRange: { minMatches: 3, maxMatches: 6 }, recurrenceRiskBp: 3000 });
+    const episode = baseEpisode({
+      diagnosisRange: { minMatches: 3, maxMatches: 6 },
+      recurrenceRiskBp: 3000,
+    });
     const updated = applyRehabPlan(episode, 'STANDARD', rulesetProto.injuryRules);
     expect(updated.diagnosisRange).toEqual({ minMatches: 3, maxMatches: 6 });
-    expect(rehabDurationRange(updated, 'STANDARD', rulesetProto.injuryRules)).toEqual({ minMatches: 3, maxMatches: 6 });
+    expect(rehabDurationRange(updated, 'STANDARD', rulesetProto.injuryRules)).toEqual({
+      minMatches: 3,
+      maxMatches: 6,
+    });
     expect(updated.recurrenceRiskBp).toBe(3000);
     expect(updated.status).toBe('REHAB');
     expect(updated.rehab).toBe('STANDARD');
   });
 
   it('CONSERVATIVE: 원 diagnosisRange를 보존하고 returnShiftMatches만큼 복귀 범위만 늘린다', () => {
-    const episode = baseEpisode({ diagnosisRange: { minMatches: 3, maxMatches: 6 }, recurrenceRiskBp: 3000 });
+    const episode = baseEpisode({
+      diagnosisRange: { minMatches: 3, maxMatches: 6 },
+      recurrenceRiskBp: 3000,
+    });
     const updated = applyRehabPlan(episode, 'CONSERVATIVE', rulesetProto.injuryRules);
     // CONSERVATIVE: returnShiftMatches +2, recurrenceAddBp -1000.
     expect(updated.diagnosisRange).toEqual({ minMatches: 3, maxMatches: 6 });
-    expect(rehabDurationRange(updated, 'CONSERVATIVE', rulesetProto.injuryRules)).toEqual({ minMatches: 5, maxMatches: 8 });
+    expect(rehabDurationRange(updated, 'CONSERVATIVE', rulesetProto.injuryRules)).toEqual({
+      minMatches: 5,
+      maxMatches: 8,
+    });
     expect(updated.recurrenceRiskBp).toBe(2000);
   });
 
@@ -488,14 +690,25 @@ describe('applyRehabPlan', () => {
     const episode = baseEpisode({ diagnosisRange: { minMatches: 1, maxMatches: 2 } });
     const updated = applyRehabPlan(episode, 'EARLY', rulesetProto.injuryRules);
     expect(updated.diagnosisRange).toEqual({ minMatches: 1, maxMatches: 2 });
-    expect(rehabDurationRange(updated, 'EARLY', rulesetProto.injuryRules)).toEqual({ minMatches: 1, maxMatches: 1 });
+    expect(rehabDurationRange(updated, 'EARLY', rulesetProto.injuryRules)).toEqual({
+      minMatches: 1,
+      maxMatches: 1,
+    });
   });
 
   it('recurrenceRiskBp는 0~10000으로 clamp된다', () => {
-    const high = applyRehabPlan(baseEpisode({ recurrenceRiskBp: 9500 }), 'EARLY', rulesetProto.injuryRules);
+    const high = applyRehabPlan(
+      baseEpisode({ recurrenceRiskBp: 9500 }),
+      'EARLY',
+      rulesetProto.injuryRules,
+    );
     expect(high.recurrenceRiskBp).toBe(10000);
 
-    const low = applyRehabPlan(baseEpisode({ recurrenceRiskBp: 200 }), 'CONSERVATIVE', rulesetProto.injuryRules);
+    const low = applyRehabPlan(
+      baseEpisode({ recurrenceRiskBp: 200 }),
+      'CONSERVATIVE',
+      rulesetProto.injuryRules,
+    );
     expect(low.recurrenceRiskBp).toBe(0);
   });
 

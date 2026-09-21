@@ -12,6 +12,8 @@ import {
   type Offer,
   type Ruleset,
   type ScheduleEntry,
+  type SeasonAward,
+  type CareerMilestone,
   type StandingRow,
 } from '@offside/domain';
 import { encodeSnapshot, MemoryLocalStore, inlineSimulator } from '@offside/engine-client';
@@ -675,6 +677,7 @@ describe('SCR-029 다음 결정 카드 분기', () => {
       expect(within(hint).getByText('현재 42 · 기준 83 이상')).toBeInTheDocument();
       expect(within(hint).getByText(/주장 · 주장단으로 마친 시즌 2/)).toBeInTheDocument();
       expect(within(hint).getByText(/현재 주장입니다/)).toBeInTheDocument();
+      expect(within(hint).queryByText(/만 23세 이후/)).not.toBeInTheDocument();
 
       rulesetSpy.mockReturnValue({
         ...storedRuleset,
@@ -1566,6 +1569,59 @@ describe('RES-BUG-001과 같은 정책: 라커룸 기억 태그(state.tags)는 �
     expect(await screen.findByText('프로 데뷔')).toBeInTheDocument();
     expect(screen.queryByText('프로_데뷔')).not.toBeInTheDocument();
     expect(screen.queryByText('internal_unmapped_tag')).not.toBeInTheDocument();
+  });
+});
+
+describe('career recognition summary', () => {
+  it('renders saved award and milestone labels in the career trophies tab', async () => {
+    const engine = setTestEngine();
+    const careerId = await settlementPendingCareerId(engine);
+    const settled = await settleSeason(engine, careerId);
+    if (!settled.ok) throw new Error('settleSeason 실패');
+
+    renderAt(`/career/${careerId}?view=trophies`);
+    await screen.findByRole('tab', { name: '우승 연혁' });
+    const options = careerQueryOptions(careerId);
+    const current = queryClient.getQueryData(options.queryKey);
+    const summary = current?.state.seasonHistory.at(-1);
+    if (current === undefined || summary === undefined) throw new Error('시즌 결산이 있어야 한다');
+    const award: SeasonAward = {
+      awardId: 'SEASON_MVP',
+      recipientId: 'PLAYER',
+      recipientName: '김서준',
+      recipientGroup: 'FW',
+      score: 900,
+      criteria: {
+        eligibility: 'POSITION_STATS',
+        comparison: 'PLAYER_ACTUAL',
+        playerMinutes: 900,
+        playerScore: 900,
+        winningScore: 900,
+        contenderCount: 1,
+        minimumAppearances: 1,
+        minimumMinutes: 90,
+      },
+    };
+    const milestone: CareerMilestone = {
+      milestoneId: 'FIRST_APPEARANCE',
+      seasonIndex: summary.index,
+      criteria: { realAppearances: 1, goals: 0, teamId: summary.teamId },
+    };
+    act(() => {
+      queryClient.setQueryData(options.queryKey, {
+        ...current,
+        state: {
+          ...current.state,
+          seasonHistory: [
+            ...current.state.seasonHistory.slice(0, -1),
+            { ...summary, result: { ...summary.result, awards: [award], milestones: [milestone] } },
+          ],
+        },
+      });
+    });
+
+    expect(await screen.findByText('시즌 MVP · 1회')).toBeInTheDocument();
+    expect(screen.getByText('프로 첫 실출전 · 1회')).toBeInTheDocument();
   });
 });
 

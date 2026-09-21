@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Command, DomainSnapshot, Effect, FootballSeason, InjuryEpisode, SimulationResult } from '@offside/domain';
-import { hashState, seedRng, simulate } from '@offside/domain';
+import { hashState, seedRng, selectChapter, simulate } from '@offside/domain';
 import { selectChapterCandidates } from './select-chapter-candidates.ts';
 import { selectEligibleEvents } from './select-eligible-events.ts';
 import { ChapterDefinitionSchema, type ChapterDefinition } from '../schema/chapter.ts';
@@ -79,6 +79,30 @@ function makeInjuryEpisode(overrides: Partial<InjuryEpisode> = {}): InjuryEpisod
 }
 
 describe('selectChapterCandidates: 필터·정렬', () => {
+  it('candidate 3.4 FAST variants are reachable from real played-match/tag facts', () => {
+    const ruleset = loadRuleset('3.4.0');
+    const pack = loadContentPack('0.13.0');
+    const step = { index: 3, phase: 'LEAGUE' as const, windowOpen: false, decisionSlots: [{ kind: 'CHAPTER' as const, required: false }], summary: null };
+    const match = {
+      id: 'candidate-variant-match', step: 3, order: 1, competitionId: 'LEAGUE', kind: 'LEAGUE' as const, round: null,
+      opponent: { id: 'candidate-opponent', name: '상대 팀', strength: 50 }, home: true,
+      result: { goalsFor: 1, goalsAgainst: 0, outcome: 'WIN' as const }, appearance: 'START' as const, outReason: null,
+      minutes: 90, involvement: 50, stats: { group: 'FW' as const, goals: 1, assists: 0, xgCenti: 30, shots: 2, offsides: 0 },
+      ratingTenths: 70, cards: { yellow: 0 as const, red: false }, injuredOff: false, chapterId: null,
+    };
+    for (const id of ['CHP-MATCH-120', 'CHP-MATCH-121', 'CHP-MATCH-122', 'CHP-MATCH-123', 'CHP-MATCH-124', 'CHP-MATCH-125']) {
+      const chapter = pack.chaptersById.get(id)!;
+      const tag = chapter.trigger.kind === 'TAG' ? chapter.trigger.tag : '해외_도전';
+      const result = selectChapter({
+        step, steps: [step], seasonIndex: 5, mode: 'FAST', matchesThisStep: [match], matchesBeforeThisStep: [], competitions: [],
+        candidates: [{ chapterId: chapter.id, version: chapter.version, importance: chapter.importance, trigger: chapter.trigger, weight: chapter.weight, ...(chapter.rotationGroup === undefined ? {} : { rotationGroup: chapter.rotationGroup }), decisionsTotal: chapter.decisions.length }],
+        tags: [tag], resolvedChapterIds: [], existingChapterIds: [], league: ruleset.leagues[0]!,
+        chapterSelectionRules: ruleset.chapterSelectionRules,
+      });
+      expect(result?.chapterId, id).toBe(id);
+    }
+  });
+
   it('status가 ACTIVE가 아니면 빈 배열이다', () => {
     const pack = makeContentPack([makeChapter({ id: 'CHP-MATCH-001' })]);
     expect(selectChapterCandidates(pack, buildTestState({ status: 'DRAFT' }))).toEqual([]);

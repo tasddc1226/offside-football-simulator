@@ -3,6 +3,7 @@ import { buttonClassName, buttonStyle } from '@offside/ui';
 import { Link } from '@tanstack/react-router';
 import { ClubBadge } from './ClubBadge.js';
 import { formatKrw } from './format.js';
+import { ScoreScale, managerTrustScore, tacticalFitScore } from './qualitative-scale.js';
 import {
   LEAGUE_TIER_LABEL_KO,
   POSITION_LABELS,
@@ -111,6 +112,8 @@ export function CompactOfferCard({
       row.label !== '상태' &&
       row.label !== '유효 기간',
   );
+  const tacticalFit = details.find((row) => row.label === '전술 적합도');
+  const remainingDetails = details.filter((row) => row.label !== '전술 적합도');
   const pending = state.pending;
   const projectionNotice =
     pending !== null && (pending.kind === 'OFFERS' || pending.kind === 'CONTRACT')
@@ -157,13 +160,13 @@ export function CompactOfferCard({
       </dl>
       <details>
         <summary className="cursor-pointer font-os font-semibold text-os-text">
-          나머지 조건 {details.length}개
+          나머지 조건 {remainingDetails.length}개
         </summary>
         <dl
           className="mt-os-2 grid grid-cols-2 gap-os-2 font-os text-os-text-2"
           style={{ fontSize: 'var(--os-fs-caption)', lineHeight: 'var(--os-lh-caption)' }}
         >
-          {details.map((row) => (
+          {remainingDetails.map((row) => (
             <div key={row.label}>
               <dt>{row.label}</dt>
               <dd className="text-os-text">{row.value}</dd>
@@ -171,6 +174,19 @@ export function CompactOfferCard({
           ))}
         </dl>
       </details>
+      {tacticalFit !== undefined ? (
+        <ScoreScale label="전술 적합도" score={tacticalFitScore(Number(tacticalFit.value))} />
+      ) : null}
+      {state.contract !== null ? (
+        <ScoreScale
+          label="현재 감독 신뢰"
+          score={managerTrustScore(state.relationships.managerTrust)}
+        >
+          <span className="font-os text-os-text-2" style={{ fontSize: 'var(--os-fs-caption)' }}>
+            현재 소속 감독과의 관계 점수입니다. 새 제안의 성공 확률을 뜻하지 않습니다.
+          </span>
+        </ScoreScale>
+      ) : null}
       {projectionNotice ? (
         <p
           className="font-os text-os-text-2"

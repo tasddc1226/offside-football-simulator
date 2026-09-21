@@ -140,6 +140,7 @@ export function applyFixedAddressLocation(location: FixedAddressLocation): void 
     // replaceState라 가드용 엔트리는 늘지 않는다(브리프 4번: "pushState로 주소를 바꾸지 않는다").
     window.history.replaceState(window.history.state, '', mirroredAddressHref(location));
   }
+  platform.lifecycle.onNavigation?.();
 }
 
 /** history가 바뀔 때마다 위 세 가지를 적용한다. 부팅 직후 1회도 여기서 호출한다. */

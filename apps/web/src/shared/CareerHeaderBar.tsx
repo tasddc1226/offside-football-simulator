@@ -17,6 +17,7 @@ import { CareerTabs } from './CareerTabs.js';
 import { useIsCommittingGuardActive } from './committing-guard.js';
 import { currentTeamId, currentTeamName } from './current-team.js';
 import { DASHBOARD_TAB_ITEMS, normalizeDashboardTab, type DashboardTab } from './dashboard-tabs.js';
+import { GENDER_LABELS } from './labels.js';
 import { isCareerDashboardPathname } from './career-pathname.js';
 import { SkipLink } from './SkipLink.js';
 import { useUiStore } from './ui-store.js';
@@ -104,6 +105,14 @@ export function CareerHeaderBar({
         teamId={currentTeamId(state, ruleset)}
         roleLabel={careerHeaderRoleLabel(state)}
         age={state.age}
+        nationalityName={
+          ruleset.nationalities.find(
+            (candidate) => candidate.code === state.player.profile?.nationalityCode,
+          )?.name
+        }
+        genderLabel={
+          state.player.profile === null ? undefined : GENDER_LABELS[state.player.profile.gender]
+        }
         ovr={careerHeaderOvr(state)}
         playingNow={playingNow}
         homeDisabled={mutating}

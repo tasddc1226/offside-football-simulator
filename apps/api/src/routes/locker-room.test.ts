@@ -9,7 +9,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { deleteCareerCascade } from '../db/repos/careers.js';
 import { upsertServiceSeason } from '../db/repos/serviceSeasons.js';
-import { careers, lockerTeams, sessions, snapshots } from '../db/schema.js';
+import {
+  careers,
+  careerPublications,
+  lockerPlayerNotes,
+  lockerTeams,
+  sessions,
+  snapshots,
+} from '../db/schema.js';
 import { moveCareersAndRebind, moveCareersAndRotateWebSession } from '../profile/merge.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -28,41 +35,37 @@ async function player(
   status: 'ACTIVE' | 'RETIRED' | 'DRAFT' = 'ACTIVE',
   position = 'ST',
 ) {
-  await ctx.db
-    .insert(careers)
-    .values({
-      id,
-      ownerProfileId: owner,
-      status,
-      revision: 2,
-      createdServiceSeasonId: 'svc_test',
+  await ctx.db.insert(careers).values({
+    id,
+    ownerProfileId: owner,
+    status,
+    revision: 2,
+    createdServiceSeasonId: 'svc_test',
+    rulesetVersion: '3.1.0',
+    contentPackVersion: '0.10.0',
+    lastSyncedAt: now,
+    createdAt: now,
+    updatedAt: now,
+  });
+  for (const revision of [1, 2])
+    await ctx.db.insert(snapshots).values({
+      id: `${id}:${revision}`,
+      careerId: id,
+      revision,
+      checkpoint: 'STEP_BOUNDARY',
+      state: JSON.stringify({
+        age: 25,
+        seasonHistory: [{}, {}],
+        player: {
+          profile: { name: id, primaryPosition: position, baseOvr: revision === 2 ? 77 : 60 },
+        },
+      }),
+      stateHash: 'test',
+      rngStateJson: '{}',
       rulesetVersion: '3.1.0',
       contentPackVersion: '0.10.0',
-      lastSyncedAt: now,
       createdAt: now,
-      updatedAt: now,
     });
-  for (const revision of [1, 2])
-    await ctx.db
-      .insert(snapshots)
-      .values({
-        id: `${id}:${revision}`,
-        careerId: id,
-        revision,
-        checkpoint: 'STEP_BOUNDARY',
-        state: JSON.stringify({
-          age: 25,
-          seasonHistory: [{}, {}],
-          player: {
-            profile: { name: id, primaryPosition: position, baseOvr: revision === 2 ? 77 : 60 },
-          },
-        }),
-        stateHash: 'test',
-        rngStateJson: '{}',
-        rulesetVersion: '3.1.0',
-        contentPackVersion: '0.10.0',
-        createdAt: now,
-      });
 }
 function request(
   cookie: string,
@@ -92,7 +95,7 @@ const input = (id: string | null = null) => ({
   lineup: Array.from({ length: 18 }, (_, i) => (i === 9 ? id : null)),
 });
 async function room(cookie: string) {
-  const res = await request(cookie, 'GET', '/v1/locker-room');
+  const res = await request(cookie, 'GET', '/v1/locker-room?includeRecognition=1');
   expect(res.status).toBe(200);
   return successEnvelope(LockerRoomSchema).parse(await res.json()).data;
 }
@@ -130,6 +133,165 @@ describe('account locker room', () => {
     expect(data.players.map((p) => p.careerId)).toEqual(['active', 'retired']);
     expect(data.players.every((p) => p.ovr === 77 && p.age === 25 && p.seasons === 2)).toBe(true);
     expect(data.players[1]?.status).toBe('RETIRED');
+    expect(data.players.every((p) => p.awardCount === 0 && p.milestoneCount === 0)).toBe(true);
+    const recognition = await request(a.cookie, 'GET', '/v1/locker-room?includeRecognition=1');
+    const recognitionData = successEnvelope(LockerRoomSchema).parse(await recognition.json()).data;
+    expect(recognitionData.players.every((p) => p.awardCount === 0 && p.milestoneCount === 0)).toBe(true);
+    await player(a.id, 'awarded');
+    await ctx.db
+      .update(snapshots)
+      .set({
+        state: JSON.stringify({
+          age: 25,
+          seasonHistory: [{ result: { awards: [{ recipientId: 'PLAYER' }, { recipientId: 'NPC' }], milestones: [{}] } }],
+          player: { profile: { name: 'awarded', primaryPosition: 'ST', baseOvr: 77 } },
+        }),
+      })
+      .where(eq(snapshots.id, 'awarded:2'));
+    const awardedResponse = await request(a.cookie, 'GET', '/v1/locker-room?includeRecognition=1');
+    const awardedData = successEnvelope(LockerRoomSchema).parse(await awardedResponse.json()).data;
+    expect(awardedData.players.find((p) => p.careerId === 'awarded')).toMatchObject({ awardCount: 1, milestoneCount: 1 });
+  });
+  it('keeps the legacy default response to the original eight player keys', async () => {
+    const a = await account();
+    await player(a.id, 'legacy');
+    const response = await request(a.cookie, 'GET', '/v1/locker-room');
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as { data: { players: Array<Record<string, unknown>> } };
+    expect(payload.data.players[0]).toEqual({
+      careerId: 'legacy',
+      name: 'legacy',
+      position: 'ST',
+      ovr: 77,
+      age: 25,
+      status: 'ACTIVE',
+      seasons: 2,
+      isTest: false,
+    });
+  });
+  it('exposes peak evidence only from stored season results and leaves unsupported fields unknown', async () => {
+    const a = await account();
+    await player(a.id, 'evidence');
+    await ctx.db
+      .update(snapshots)
+      .set({
+        state: JSON.stringify({
+          age: 28,
+          seasonHistory: [
+            {
+              index: 1,
+              result: {
+                baseOvr: { before: 70, after: 78 },
+                legacy: { ageAtStart: 20 },
+                playerStats: { ratedMatches: 9, ratingSumTenths: 720, minutes: 700 },
+              },
+            },
+            {
+              index: 2,
+              result: {
+                baseOvr: { before: 78, after: 84 },
+                legacy: { ageAtStart: 21 },
+                playerStats: { ratedMatches: 10, ratingSumTenths: 760, minutes: 900 },
+              },
+            },
+          ],
+          player: { profile: { name: 'evidence', primaryPosition: 'ST', baseOvr: 84 } },
+        }),
+      })
+      .where(eq(snapshots.id, 'evidence:2'));
+    const data = await room(a.cookie);
+    expect(data.players[0]).toMatchObject({
+      peakOvr: 84,
+      peakAge: 21,
+      bestSeasonIndex: 2,
+      note: null,
+    });
+  });
+  it('isolates note lifecycle by owner, validates input, and leaves snapshots/public articles unchanged', async () => {
+    const a = await account();
+    const b = await account();
+    await player(a.id, 'owned');
+    await player(b.id, 'foreign');
+    const before = await ctx.db.select().from(snapshots).where(eq(snapshots.careerId, 'owned'));
+    expect((await request('', 'GET', '/v1/locker-room')).status).toBe(401);
+    expect(
+      (await request('', 'PUT', '/v1/locker-room/players/owned/note', { note: 'x' })).status,
+    ).toBe(401);
+    expect((await request('', 'DELETE', '/v1/locker-room/players/owned/note')).status).toBe(401);
+    expect(
+      (await request(b.cookie, 'PUT', '/v1/locker-room/players/owned/note', { note: '외부 메모' }))
+        .status,
+    ).toBe(404);
+    expect((await request(b.cookie, 'DELETE', '/v1/locker-room/players/owned/note')).status).toBe(
+      204,
+    );
+    expect(
+      (await request(a.cookie, 'PUT', '/v1/locker-room/players/owned/note', { note: '' })).status,
+    ).toBe(400);
+    expect(
+      (
+        await request(a.cookie, 'PUT', '/v1/locker-room/players/owned/note', {
+          note: 'x'.repeat(141),
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await request(a.cookie, 'PUT', '/v1/locker-room/players/owned/note', {
+          note: '비공개 메모',
+        })
+      ).status,
+    ).toBe(200);
+    expect((await room(a.cookie)).players.find((p) => p.careerId === 'owned')?.note).toBe(
+      '비공개 메모',
+    );
+    expect(await ctx.db.select().from(snapshots).where(eq(snapshots.careerId, 'owned'))).toEqual(
+      before,
+    );
+    await ctx.db.insert(careerPublications).values({
+      id: '00000000-0000-4000-8000-000000000001',
+      careerId: 'owned',
+      articleJson: JSON.stringify({
+        id: '00000000-0000-4000-8000-000000000001',
+        playerName: 'owned',
+        initialPosition: 'ST',
+        seasons: 1,
+        playedMatches: 1,
+        minutes: 90,
+        averageRatingTenths: null,
+        clubCount: 1,
+        highlights: [],
+        publishedAt: now,
+        challenge: {
+          seed: 'seed',
+          rulesetVersion: '3.1.0',
+          contentPackVersion: '0.10.0',
+          simulationMode: 'FAST',
+          draft: {
+            gender: 'MALE',
+            nationalityCode: 'KR',
+            preferredFoot: 'RIGHT',
+            position: 'ST',
+            archetypeId: 'poacher',
+            backgroundId: 'ACADEMY',
+          },
+        },
+      }),
+      createdAt: now,
+    });
+    const article = await app.request(
+      '/v1/articles/00000000-0000-4000-8000-000000000001',
+      {},
+      ctx.env,
+    );
+    expect(await article.text()).not.toContain('비공개 메모');
+    expect((await request(a.cookie, 'DELETE', '/v1/locker-room/players/owned/note')).status).toBe(
+      204,
+    );
+    expect((await request(a.cookie, 'DELETE', '/v1/locker-room/players/owned/note')).status).toBe(
+      204,
+    );
+    expect((await room(a.cookie)).players.find((p) => p.careerId === 'owned')?.note).toBeNull();
   });
   it('saves partial teams idempotently, rejects stale updates, and isolates all mutations by owner', async () => {
     const a = await account();
@@ -193,6 +355,13 @@ describe('account locker room', () => {
       const a = await account();
       const b = await account();
       await player(a.id, 'striker');
+      expect(
+        (
+          await request(a.cookie, 'PUT', '/v1/locker-room/players/striker/note', {
+            note: '첫 경기의 기억',
+          })
+        ).status,
+      ).toBe(200);
       const original = await team(a.cookie, 'striker');
       await team(b.cookie);
       const [session] = await ctx.db.select().from(sessions).where(eq(sessions.profileId, a.id));
@@ -206,6 +375,7 @@ describe('account locker room', () => {
       else await moveCareersAndRotateWebSession(ctx.db, args);
       const data = await room(b.cookie);
       expect(data.players).toHaveLength(1);
+      expect(data.players[0]?.note).toBe('첫 경기의 기억');
       expect(data.teams).toHaveLength(2);
       expect(data.teams.find((t) => t.id === original.id)?.lineup[9]).toBe('striker');
       expect(
@@ -216,6 +386,14 @@ describe('account locker room', () => {
   it('erases teams with account deletion while preserving other accounts', async () => {
     const a = await account();
     const b = await account();
+    await player(a.id, 'noted-player');
+    expect(
+      (
+        await request(a.cookie, 'PUT', '/v1/locker-room/players/noted-player/note', {
+          note: '비공개 메모',
+        })
+      ).status,
+    ).toBe(200);
     await team(a.cookie);
     await team(b.cookie);
     const [session] = await ctx.db.select().from(sessions).where(eq(sessions.profileId, a.id));
@@ -229,6 +407,12 @@ describe('account locker room', () => {
     await executeProfileDeletion(ctx.db, { ...args, confirmToken });
     expect(
       await ctx.db.select().from(lockerTeams).where(eq(lockerTeams.ownerProfileId, a.id)),
+    ).toHaveLength(0);
+    expect(
+      await ctx.db
+        .select()
+        .from(lockerPlayerNotes)
+        .where(eq(lockerPlayerNotes.careerId, 'noted-player')),
     ).toHaveLength(0);
     expect((await room(b.cookie)).teams).toHaveLength(1);
   });

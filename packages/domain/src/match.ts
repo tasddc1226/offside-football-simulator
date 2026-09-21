@@ -20,7 +20,14 @@ import {
 /** 브리프 5번 규칙: 포지션군별 통계 항목의 고정 키 순서(roll 순서·합산 순서 둘 다 이 순서를 쓴다). */
 const STAT_KEYS: Record<StatGroup, readonly string[]> = {
   FW: ['goals', 'assists', 'xgCenti', 'shots', 'offsides'],
-  MF: ['assists', 'chancesCreated', 'progressivePasses', 'passesAttempted', 'passesCompleted', 'ballRecoveries'],
+  MF: [
+    'assists',
+    'chancesCreated',
+    'progressivePasses',
+    'passesAttempted',
+    'passesCompleted',
+    'ballRecoveries',
+  ],
   DF: ['tackles', 'interceptions', 'aerialsWon', 'goalsConcededInvolved'],
   GK: ['saves', 'psxgMinusGoalsCenti', 'crossesClaimed', 'buildUpPasses'],
 };
@@ -54,6 +61,8 @@ export type PlayMatchInput = {
   lastRatingTenths: number | null;
   /** 회복 직후 실제 출전의 재발 검사. 이 값이 있으면 새 부상 판정보다 먼저 1회 소비한다. */
   recurrenceCheck?: { episodeId: string; riskBp: number };
+  /** Candidate rulesets only: a healthy rookie may be offered a bounded bench trial. */
+  earlyOpportunity?: boolean;
 };
 
 export type PlayMatchResult = {
@@ -83,9 +92,23 @@ function zeroStatsForGroup(group: StatGroup): PositionStats {
         ballRecoveries: 0,
       };
     case 'DF':
-      return { group: 'DF', tackles: 0, interceptions: 0, aerialsWon: 0, goalsConcededInvolved: 0, cleanSheet: false };
+      return {
+        group: 'DF',
+        tackles: 0,
+        interceptions: 0,
+        aerialsWon: 0,
+        goalsConcededInvolved: 0,
+        cleanSheet: false,
+      };
     case 'GK':
-      return { group: 'GK', saves: 0, psxgMinusGoalsCenti: 0, cleanSheet: false, crossesClaimed: 0, buildUpPasses: 0 };
+      return {
+        group: 'GK',
+        saves: 0,
+        psxgMinusGoalsCenti: 0,
+        cleanSheet: false,
+        crossesClaimed: 0,
+        buildUpPasses: 0,
+      };
   }
 }
 
@@ -100,9 +123,13 @@ function rollStatValue(
   if (table === undefined) {
     throw new RangeError(`rollStatValue: matchRules.statTables.${group}.${key}가 없다.`);
   }
-  const bucket = table.find((candidate) => involvement >= candidate.min && involvement <= candidate.max);
+  const bucket = table.find(
+    (candidate) => involvement >= candidate.min && involvement <= candidate.max,
+  );
   if (bucket === undefined) {
-    throw new RangeError(`rollStatValue: involvement ${involvement}을 담는 ${group}.${key} 구간이 없다.`);
+    throw new RangeError(
+      `rollStatValue: involvement ${involvement}을 담는 ${group}.${key} 구간이 없다.`,
+    );
   }
   const rolled = rollInt(state, bucket.values.length);
   return { value: bucket.values[rolled.value]!, state: rolled.state };
@@ -164,7 +191,14 @@ function rollStatsForGroup(
       const assists = Math.min(raw.assists!, Math.max(0, goalsFor - goals));
       return {
         state: s,
-        stats: { group: 'FW', goals, assists, xgCenti: raw.xgCenti!, shots: raw.shots!, offsides: raw.offsides! },
+        stats: {
+          group: 'FW',
+          goals,
+          assists,
+          xgCenti: raw.xgCenti!,
+          shots: raw.shots!,
+          offsides: raw.offsides!,
+        },
       };
     }
     case 'MF': {
@@ -240,7 +274,11 @@ export function computeRatingTenths(
     if (cleanSheetWeight !== undefined) raw += cleanSheetWeight;
   }
   raw += weights.resultBonusTenths[outcome];
-  raw -= cards.red ? weights.cardPenaltyTenths.red : cards.yellow > 0 ? weights.cardPenaltyTenths.yellow : 0;
+  raw -= cards.red
+    ? weights.cardPenaltyTenths.red
+    : cards.yellow > 0
+      ? weights.cardPenaltyTenths.yellow
+      : 0;
   return clamp(Math.round(raw), 40, 100);
 }
 
@@ -283,7 +321,11 @@ export function playMatch(input: PlayMatchInput): PlayMatchResult {
   const outcomeRoll = roll100(state);
   state = outcomeRoll.state;
   const outcome: 'WIN' | 'DRAW' | 'LOSS' =
-    outcomeRoll.value <= resultRow.win ? 'WIN' : outcomeRoll.value <= resultRow.win + resultRow.draw ? 'DRAW' : 'LOSS';
+    outcomeRoll.value <= resultRow.win
+      ? 'WIN'
+      : outcomeRoll.value <= resultRow.win + resultRow.draw
+        ? 'DRAW'
+        : 'LOSS';
 
   let goalsFor: number;
   let goalsAgainst: number;
@@ -330,6 +372,7 @@ export function playMatch(input: PlayMatchInput): PlayMatchResult {
     squadStatus: input.squadStatus,
     competitors: input.competitors,
     excluded,
+    earlyOpportunity: input.earlyOpportunity,
   });
   const playerCandidate = selection.candidates.find((candidate) => candidate.id === 'PLAYER')!;
   const appearance = playerCandidate.appearance;
@@ -368,7 +411,15 @@ export function playMatch(input: PlayMatchInput): PlayMatchResult {
   const statGroup = statGroupOf(input.primaryPosition);
   let stats: PositionStats;
   if (minutes > 0) {
-    const rolled = rollStatsForGroup(state, statGroup, involvement, ruleset, goalsFor, goalsAgainst, minutes);
+    const rolled = rollStatsForGroup(
+      state,
+      statGroup,
+      involvement,
+      ruleset,
+      goalsFor,
+      goalsAgainst,
+      minutes,
+    );
     state = rolled.state;
     stats = rolled.stats;
   } else {
@@ -404,7 +455,11 @@ export function playMatch(input: PlayMatchInput): PlayMatchResult {
       cards = { yellow: 0, red: true };
       const lengthRoll = rollRange(state, rules.redSuspension.min, rules.redSuspension.max);
       state = lengthRoll.state;
-      nextAvailability = { kind: 'SUSPENSION', matchesRemaining: lengthRoll.value, sinceMatchId: matchId };
+      nextAvailability = {
+        kind: 'SUSPENSION',
+        matchesRemaining: lengthRoll.value,
+        sinceMatchId: matchId,
+      };
     }
   }
 
@@ -421,7 +476,8 @@ export function playMatch(input: PlayMatchInput): PlayMatchResult {
     }
     if (!recurrenceTriggered) {
       const threshold =
-        rules.injury.perMatchPercent + (input.fitness < rules.injury.lowFitnessBelow ? rules.injury.lowFitnessExtraPercent : 0);
+        rules.injury.perMatchPercent +
+        (input.fitness < rules.injury.lowFitnessBelow ? rules.injury.lowFitnessExtraPercent : 0);
       const injuryRoll = roll100(state);
       state = injuryRoll.state;
       if (injuryRoll.value <= threshold) {
@@ -431,7 +487,8 @@ export function playMatch(input: PlayMatchInput): PlayMatchResult {
   }
 
   // 8. 평점(roll 없음). 0분이면 ratingTenths는 null이고 season.lastRatingTenths는 그대로 유지한다.
-  const ratingTenths = minutes > 0 ? computeRatingTenths(statGroup, stats, outcome, cards, ruleset) : null;
+  const ratingTenths =
+    minutes > 0 ? computeRatingTenths(statGroup, stats, outcome, cards, ruleset) : null;
   const nextLastRatingTenths = minutes > 0 ? ratingTenths : input.lastRatingTenths;
 
   const nextSquadStatus = computeSquadStatus(
@@ -444,7 +501,11 @@ export function playMatch(input: PlayMatchInput): PlayMatchResult {
     ruleset.contractRules.squadStatusByRole,
   );
 
-  const nextCompetitors = applyCompetitorFormDrift(input.competitors, input.matchIndex, rules.competitorFormDrift.amplitude);
+  const nextCompetitors = applyCompetitorFormDrift(
+    input.competitors,
+    input.matchIndex,
+    rules.competitorFormDrift.amplitude,
+  );
 
   const match: MatchRecord = {
     id: matchId,

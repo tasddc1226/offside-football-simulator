@@ -509,6 +509,10 @@ function HubScreen() {
             <strong>내 라커룸 · 팀 꾸리기</strong>
             <span>키운 선수들을 모아 나만의 팀 편성</span>
           </Link>
+          <Link to="/competition" className="os-home-tool">
+            <strong>오늘의 경기 운영</strong>
+            <span>같은 조건으로 도전하고 주간 랭킹 확인</span>
+          </Link>
           <Link to="/" search={{ tab: 'squad' }} className="os-home-tool">
             <strong>선수단 관리</strong>
             <span>현역 선수와 다른 커리어 보기</span>

@@ -56,6 +56,23 @@ describe('RadioGroup', () => {
     expect(screen.getByRole('radio', { name: 'A' })).toHaveAttribute('aria-checked', 'false');
   });
 
+  it('selects an item through the browser pointer path on the first click', async () => {
+    const user = userEvent.setup();
+    const handleValueChange = vi.fn();
+    render(
+      <RadioGroup defaultValue="a" aria-label="테스트 그룹" onValueChange={handleValueChange}>
+        <RadioGroupItem value="a">A</RadioGroupItem>
+        <RadioGroupItem value="b">B</RadioGroupItem>
+      </RadioGroup>,
+    );
+
+    await user.click(screen.getByRole('radio', { name: 'B' }));
+
+    expect(handleValueChange).toHaveBeenCalledTimes(1);
+    expect(handleValueChange).toHaveBeenCalledWith('b');
+    expect(screen.getByRole('radio', { name: 'B' })).toHaveAttribute('aria-checked', 'true');
+  });
+
   it('does nothing when Enter is pressed on the already-selected item', async () => {
     const user = userEvent.setup();
     const handleValueChange = vi.fn();

@@ -430,6 +430,7 @@ export const SELECTION_REASON_LABEL_KO: Record<SelectionReasonComponent, string>
   MANAGER_TRUST: '감독 신뢰',
   EXPECTED_PERFORMANCE: '경기 예상치',
   SQUAD_STATUS: '스쿼드 상태',
+  EARLY_OPPORTUNITY: '신인 제한 기회',
 };
 
 /** 이슈 145 SCR-031 경기 결과: 출전 약속 이행 전망(`computeAppearancePromiseOutlook.status`) 문구. */

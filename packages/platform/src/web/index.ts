@@ -5,6 +5,10 @@ import { createDexieLocalStore, deleteDexieLocalStore } from './dexie-store.js';
 export type { Platform };
 
 const backHandlers = new Set<() => boolean>();
+// A popstate can also be produced when the user returns to this document with the
+// browser Forward button.  Keep that case distinct from consuming our guard entry:
+// there is no application back action to replay when the guard was not armed.
+let backGuardArmed = false;
 
 /**
  * T-7-039 뒤로가기 가드. 라우터가 메모리 히스토리로 바뀌면서 브라우저 뒤로가기는 더 이상 라우터를
@@ -65,12 +69,32 @@ function createWindowBackGuardHost(): BackGuardHost {
 }
 
 function handlePopState(): void {
-  handleBackGuardPopState(createWindowBackGuardHost(), backHandlers);
+  const host = createWindowBackGuardHost();
+  if (!backGuardArmed) {
+    armBackGuard(host);
+    backGuardArmed = true;
+    return;
+  }
+
+  // The browser has just consumed the guard entry.  A handler that handles the
+  // event will arm a replacement below; a false result intentionally permits the
+  // legitimate exit from the root screen.
+  backGuardArmed = false;
+  handleBackGuardPopState(host, backHandlers);
+  if (isBackGuardState(host.getState())) backGuardArmed = true;
 }
 
 if (typeof window !== 'undefined') {
   armBackGuard(createWindowBackGuardHost());
+  backGuardArmed = true;
   window.addEventListener('popstate', handlePopState);
+  // Forward navigation and BFCache restores can return to the app without a
+  // guard entry.  Re-arm at that lifecycle boundary so later in-app navigation
+  // retains browser Back behavior.
+  window.addEventListener('pageshow', () => {
+    armBackGuard(createWindowBackGuardHost());
+    backGuardArmed = true;
+  });
 }
 
 /**
@@ -105,6 +129,15 @@ export function createWebPlatform(options: { analyticsEndpoint: string; dev?: bo
       onBackPressed(handler) {
         backHandlers.add(handler);
         return () => backHandlers.delete(handler);
+      },
+      onNavigation() {
+        // The browser can have no prior document entry (for example after a
+        // direct-entry tab reaches home).  A root back then exhausts native
+        // history without another popstate.  Every later in-app navigation is
+        // a new boundary, so make sure its guard entry exists again.
+        const host = createWindowBackGuardHost();
+        armBackGuard(host);
+        backGuardArmed = true;
       },
       async confirmExit() {
         return true;

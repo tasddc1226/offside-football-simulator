@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { rulesetProto } from './__fixtures__/career-01.js';
-import { matchesTrigger, resolveChapter, selectChapter, type ChapterCandidateInput, type SelectChapterInput,
+import {
+  matchesTrigger,
+  resolveChapter,
+  selectChapter,
+  type ChapterCandidateInput,
+  type SelectChapterInput,
 } from './chapter.js';
 import { hashState } from './hash.js';
 import { computeRatingTenths } from './match.js';
@@ -8,7 +13,9 @@ import { rollInt, seedRng } from './rng.js';
 import { findLeague } from './schedule.js';
 import {
   buildInitialCompetitions,
-  walkToNextDecision, type ChapterWalkContext, type PlayStepMatches,
+  walkToNextDecision,
+  type ChapterWalkContext,
+  type PlayStepMatches,
 } from './season.js';
 import { initialSeasonPlayerStats, applyMatchToPlayerStats } from './season-stats.js';
 import { simulate } from './simulate.js';
@@ -111,19 +118,26 @@ describe('matchesTrigger', () => {
   it('DEBUT은 첫 시즌·첫 출전에서만 맞는다', () => {
     const match = makeMatch();
     expect(matchesTrigger({ kind: 'DEBUT' }, match, ctx)).toBe(true);
-    expect(matchesTrigger({ kind: 'DEBUT' }, match, { ...ctx, isFirstCareerAppearance: false }),
+    expect(
+      matchesTrigger({ kind: 'DEBUT' }, match, { ...ctx, isFirstCareerAppearance: false }),
     ).toBe(false);
     expect(matchesTrigger({ kind: 'DEBUT' }, match, { ...ctx, seasonIndex: 2 })).toBe(false);
   });
 
   it('DERBY는 rivalOpponentIndex 상대(리그 경기)에서만 맞는다', () => {
-    const rivalMatch = makeMatch({ opponent: { id: 'league-youth-opp-4', name: 'Rival', strength: 50 },
+    const rivalMatch = makeMatch({
+      opponent: { id: 'league-youth-opp-4', name: 'Rival', strength: 50 },
     });
     expect(matchesTrigger({ kind: 'DERBY' }, rivalMatch, ctx)).toBe(true);
-    const otherMatch = makeMatch({ opponent: { id: 'league-youth-opp-1', name: 'Other', strength: 50 },
+    const otherMatch = makeMatch({
+      opponent: { id: 'league-youth-opp-1', name: 'Other', strength: 50 },
     });
     expect(matchesTrigger({ kind: 'DERBY' }, otherMatch, ctx)).toBe(false);
-    const cupVsRival = makeMatch({ kind: 'CUP', competitionId: 'CUP', round: 'R1', opponent: { id: 'league-youth-opp-4', name: 'Rival', strength: 50 },
+    const cupVsRival = makeMatch({
+      kind: 'CUP',
+      competitionId: 'CUP',
+      round: 'R1',
+      opponent: { id: 'league-youth-opp-4', name: 'Rival', strength: 50 },
     });
     expect(matchesTrigger({ kind: 'DERBY' }, cupVsRival, ctx)).toBe(false);
   });
@@ -133,10 +147,12 @@ describe('matchesTrigger', () => {
   // 맞지 않는다. rivalTeamId가 없는 경우(위 테스트, 기존 픽스처)는 동작이 그대로다.
   it('ctx.rivalTeamId가 정의되면 그 팀과의 경기만 DERBY로 맞는다(이름 있는 라이벌)', () => {
     const namedRivalCtx = { ...ctx, rivalTeamId: 'suwon-hwahong-fc' };
-    const namedRivalMatch = makeMatch({ opponent: { id: 'suwon-hwahong-fc', name: '수원 화홍 FC', strength: 83 },
+    const namedRivalMatch = makeMatch({
+      opponent: { id: 'suwon-hwahong-fc', name: '수원 화홍 FC', strength: 83 },
     });
     expect(matchesTrigger({ kind: 'DERBY' }, namedRivalMatch, namedRivalCtx)).toBe(true);
-    const unnamedMatch = makeMatch({ opponent: { id: 'league-youth-opp-4', name: 'Rival', strength: 50 },
+    const unnamedMatch = makeMatch({
+      opponent: { id: 'league-youth-opp-4', name: 'Rival', strength: 50 },
     });
     expect(matchesTrigger({ kind: 'DERBY' }, unnamedMatch, namedRivalCtx)).toBe(false);
   });
@@ -144,11 +160,14 @@ describe('matchesTrigger', () => {
   it('DECIDER는 마지막 리그 step이고 경계 ±maxRankGap 안일 때만 맞는다', () => {
     const match = makeMatch();
     const trigger: ChapterTrigger = { kind: 'DECIDER', maxRankGap: 1 };
-    expect(matchesTrigger(trigger, match, { ...ctx, isLastLeagueStep: true, leaguePosition: 2 }),
+    expect(
+      matchesTrigger(trigger, match, { ...ctx, isLastLeagueStep: true, leaguePosition: 2 }),
     ).toBe(true);
-    expect(matchesTrigger(trigger, match, { ...ctx, isLastLeagueStep: true, leaguePosition: 4 }),
+    expect(
+      matchesTrigger(trigger, match, { ...ctx, isLastLeagueStep: true, leaguePosition: 4 }),
     ).toBe(false);
-    expect(matchesTrigger(trigger, match, { ...ctx, isLastLeagueStep: false, leaguePosition: 2 }),
+    expect(
+      matchesTrigger(trigger, match, { ...ctx, isLastLeagueStep: false, leaguePosition: 2 }),
     ).toBe(false);
   });
 
@@ -162,17 +181,18 @@ describe('matchesTrigger', () => {
     const match = makeMatch({ id: 'm-return' });
     for (const recurrenceOutcome of ['SUCCESS', 'FAIL'] as const) {
       expect(
-        matchesTrigger(
-          { kind: 'INJURY_RETURN' },
-          match,
-          { ...ctx, injuryReturnMatchId: 'm-return',
+        matchesTrigger({ kind: 'INJURY_RETURN' }, match, {
+          ...ctx,
+          injuryReturnMatchId: 'm-return',
         }),
         recurrenceOutcome,
       ).toBe(true);
     }
-    expect(matchesTrigger({ kind: 'INJURY_RETURN' }, match, { ...ctx, injuryReturnMatchId: null }),
+    expect(
+      matchesTrigger({ kind: 'INJURY_RETURN' }, match, { ...ctx, injuryReturnMatchId: null }),
     ).toBe(false);
-    expect(matchesTrigger({ kind: 'INJURY_RETURN' }, match, { ...ctx, injuryReturnMatchId: 'm-other' }),
+    expect(
+      matchesTrigger({ kind: 'INJURY_RETURN' }, match, { ...ctx, injuryReturnMatchId: 'm-other' }),
     ).toBe(false);
   });
 });
@@ -190,7 +210,8 @@ describe('selectChapter', () => {
 
     // 이 step 이전에 이미 minutes>0 출전이 있었다면 "첫 출전"이 아니다.
     expect(
-      selectChapter(baseSelectInput({ matchesBeforeThisStep: [makeMatch({ id: 'm0', step: 1, minutes: 45 })] }),
+      selectChapter(
+        baseSelectInput({ matchesBeforeThisStep: [makeMatch({ id: 'm0', step: 1, minutes: 45 })] }),
       ),
     ).toBeNull();
 
@@ -199,11 +220,16 @@ describe('selectChapter', () => {
   });
 
   it('DERBY: rivalOpponentIndex 상대에서만 열린다', () => {
-    const candidate = makeCandidate({ chapterId: 'CHP-MATCH-002', importance: 'MINOR', trigger: { kind: 'DERBY' },
+    const candidate = makeCandidate({
+      chapterId: 'CHP-MATCH-002',
+      importance: 'MINOR',
+      trigger: { kind: 'DERBY' },
     });
-    const rivalMatch = makeMatch({ opponent: { id: 'league-youth-opp-4', name: 'Rival', strength: 50 },
+    const rivalMatch = makeMatch({
+      opponent: { id: 'league-youth-opp-4', name: 'Rival', strength: 50 },
     });
-    expect(selectChapter(baseSelectInput({ candidates: [candidate], matchesThisStep: [rivalMatch] })),
+    expect(
+      selectChapter(baseSelectInput({ candidates: [candidate], matchesThisStep: [rivalMatch] })),
     ).toEqual({
       chapterId: 'CHP-MATCH-002',
       version: 1,
@@ -213,16 +239,20 @@ describe('selectChapter', () => {
       trigger: 'DERBY',
     });
 
-    const otherMatch = makeMatch({ opponent: { id: 'league-youth-opp-1', name: 'Other', strength: 50 },
+    const otherMatch = makeMatch({
+      opponent: { id: 'league-youth-opp-1', name: 'Other', strength: 50 },
     });
-    expect(selectChapter(baseSelectInput({ candidates: [candidate], matchesThisStep: [otherMatch] })),
+    expect(
+      selectChapter(baseSelectInput({ candidates: [candidate], matchesThisStep: [otherMatch] })),
     ).toBeNull();
   });
 
   it('DECIDER: 마지막 LEAGUE step에서 경계 ±maxRankGap일 때만 열리고, 경계 밖이면 null이다', () => {
     const earlyStep = makeStep({ index: 3 });
     const lastStep = makeStep({ index: 7 });
-    const candidate = makeCandidate({ chapterId: 'CHP-MATCH-004', trigger: { kind: 'DECIDER', maxRankGap: 1 },
+    const candidate = makeCandidate({
+      chapterId: 'CHP-MATCH-004',
+      trigger: { kind: 'DECIDER', maxRankGap: 1 },
     });
     const nearPromotion: CompetitionRecord = {
       competitionId: 'LEAGUE',
@@ -239,17 +269,31 @@ describe('selectChapter', () => {
 
     expect(
       selectChapter(
-        baseSelectInput({ step: lastStep, steps: [earlyStep, lastStep], candidates: [candidate], competitions: [nearPromotion],
+        baseSelectInput({
+          step: lastStep,
+          steps: [earlyStep, lastStep],
+          candidates: [candidate],
+          competitions: [nearPromotion],
         }),
       ),
-    ).toEqual({ chapterId: 'CHP-MATCH-004', version: 1, importance: 'MAJOR', matchId: 'm1', decisionsTotal: 1, trigger: 'DECIDER',
+    ).toEqual({
+      chapterId: 'CHP-MATCH-004',
+      version: 1,
+      importance: 'MAJOR',
+      matchId: 'm1',
+      decisionsTotal: 1,
+      trigger: 'DECIDER',
     });
 
     // 경계에서 멀다(4위, promotionSpots=2·relegationBoundary=7에서 모두 maxRankGap=1 밖).
     const farFromBoundary: CompetitionRecord = { ...nearPromotion, position: 4 };
     expect(
       selectChapter(
-        baseSelectInput({ step: lastStep, steps: [earlyStep, lastStep], candidates: [candidate], competitions: [farFromBoundary],
+        baseSelectInput({
+          step: lastStep,
+          steps: [earlyStep, lastStep],
+          candidates: [candidate],
+          competitions: [farFromBoundary],
         }),
       ),
     ).toBeNull();
@@ -257,7 +301,11 @@ describe('selectChapter', () => {
     // 마지막 리그 step이 아니면 경계 안이어도 열리지 않는다.
     expect(
       selectChapter(
-        baseSelectInput({ step: earlyStep, steps: [earlyStep, lastStep], candidates: [candidate], competitions: [nearPromotion],
+        baseSelectInput({
+          step: earlyStep,
+          steps: [earlyStep, lastStep],
+          candidates: [candidate],
+          competitions: [nearPromotion],
         }),
       ),
     ).toBeNull();
@@ -265,11 +313,13 @@ describe('selectChapter', () => {
 
   it('FAST 모드는 MAJOR 챕터만 열고, MINOR 후보는 거른다', () => {
     const minorCandidate = makeCandidate({ importance: 'MINOR' });
-    expect(selectChapter(baseSelectInput({ mode: 'FAST', candidates: [minorCandidate] })),
+    expect(
+      selectChapter(baseSelectInput({ mode: 'FAST', candidates: [minorCandidate] })),
     ).toBeNull();
 
     const majorCandidate = makeCandidate({ importance: 'MAJOR' });
-    expect(selectChapter(baseSelectInput({ mode: 'FAST', candidates: [majorCandidate] })),
+    expect(
+      selectChapter(baseSelectInput({ mode: 'FAST', candidates: [majorCandidate] })),
     ).not.toBeNull();
   });
 
@@ -277,11 +327,19 @@ describe('selectChapter', () => {
     // 브리프 golden·fixture 절차: "FAST 모드 재생에서 MINOR 더비 챕터가 열리지 않는 것을 같은 seed의
     // CHAPTER/FAST 쌍으로 검증한다" — selectChapter 단위 테스트(위)와 달리, 여기서는 실제
     // walkToNextDecision을 같은 rngState·같은 경기 데이터로 두 번(CHAPTER/FAST) 돌려 pending 차이를 본다.
-    const derbyCandidate = makeCandidate({ chapterId: 'CHP-MATCH-002', importance: 'MINOR', trigger: { kind: 'DERBY' },
+    const derbyCandidate = makeCandidate({
+      chapterId: 'CHP-MATCH-002',
+      importance: 'MINOR',
+      trigger: { kind: 'DERBY' },
     });
-    const derbyMatch = makeMatch({ id: 'm-derby', step: 6, opponent: { id: 'league-youth-opp-4', name: 'Rival', strength: 50 },
+    const derbyMatch = makeMatch({
+      id: 'm-derby',
+      step: 6,
+      opponent: { id: 'league-youth-opp-4', name: 'Rival', strength: 50 },
     });
-    const derbyStep = makeStep({ index: 6, decisionSlots: [{ kind: 'CHAPTER', required: false, importance: 'MINOR' }],
+    const derbyStep = makeStep({
+      index: 6,
+      decisionSlots: [{ kind: 'CHAPTER', required: false, importance: 'MINOR' }],
     });
     const trailingSteps = [7, 8, 9, 10, 11].map((index) =>
       makeStep({ index, decisionSlots: [{ kind: 'EVENT', required: false }] }),
@@ -290,9 +348,19 @@ describe('selectChapter', () => {
 
     const playStepMatches: PlayStepMatches = (stepIndex) =>
       stepIndex === 6
-        ? { results: [], records: [derbyMatch], competitions: [], forcedPending: null, injuryReturnMatchId: null,
+        ? {
+            results: [],
+            records: [derbyMatch],
+            competitions: [],
+            forcedPending: null,
+            injuryReturnMatchId: null,
           }
-        : { results: [], records: [], competitions: [], forcedPending: null, injuryReturnMatchId: null,
+        : {
+            results: [],
+            records: [],
+            competitions: [],
+            forcedPending: null,
+            injuryReturnMatchId: null,
           };
 
     const chapterContext: ChapterWalkContext = {
@@ -307,14 +375,40 @@ describe('selectChapter', () => {
     const sameSeedRngState = seedRng('chapter-fast-vs-chapter-same-seed');
 
     const chapterWalk = walkToNextDecision(
-      steps, 6, 'CHAPTER', [], sameSeedRngState, 1, null, playStepMatches, [], chapterContext, makeState(), rulesetProto,
+      steps,
+      6,
+      'CHAPTER',
+      [],
+      sameSeedRngState,
+      1,
+      null,
+      playStepMatches,
+      [],
+      chapterContext,
+      makeState(),
+      rulesetProto,
     );
     const fastWalk = walkToNextDecision(
-      steps, 6, 'FAST', [], sameSeedRngState, 1, null, playStepMatches, [], chapterContext, makeState(), rulesetProto,
+      steps,
+      6,
+      'FAST',
+      [],
+      sameSeedRngState,
+      1,
+      null,
+      playStepMatches,
+      [],
+      chapterContext,
+      makeState(),
+      rulesetProto,
     );
 
     // 같은 seed·같은 playStepMatches이므로 두 모드의 경기 결과 자체는 동일하다(챕터 개폐만 갈린다).
-    expect(chapterWalk.pending).toMatchObject({ kind: 'CHAPTER', chapterId: 'CHP-MATCH-002', matchId: 'm-derby', step: 6,
+    expect(chapterWalk.pending).toMatchObject({
+      kind: 'CHAPTER',
+      chapterId: 'CHP-MATCH-002',
+      matchId: 'm-derby',
+      step: 6,
     });
     expect(fastWalk.pending?.kind).not.toBe('CHAPTER');
     expect(fastWalk.pending).toEqual({ kind: 'SETTLEMENT', step: 12 });
@@ -325,7 +419,8 @@ describe('selectChapter', () => {
     const majorLowWeight = makeCandidate({ chapterId: 'CHP-B', importance: 'MAJOR', weight: 50 });
     const majorHighWeight = makeCandidate({ chapterId: 'CHP-A', importance: 'MAJOR', weight: 100 });
 
-    const winner = selectChapter(baseSelectInput({ candidates: [minorHighWeight, majorLowWeight, majorHighWeight] }),
+    const winner = selectChapter(
+      baseSelectInput({ candidates: [minorHighWeight, majorLowWeight, majorHighWeight] }),
     );
     expect(winner?.chapterId).toBe('CHP-A'); // MAJOR 우선, 그중 weight가 가장 크다.
 
@@ -551,9 +646,39 @@ describe('selectChapter', () => {
       'CHP-MATCH-008',
     );
   });
+
+  it('3.4.0 repeat opt-in은 영구 existingChapterIds 필터를 제거하되 cooldown은 유지한다', () => {
+    const candidate = makeCandidate({
+      chapterId: 'CHP-MATCH-008',
+      rotationGroup: 'POST_DEBUT',
+      trigger: { kind: 'TAG', tag: '프로_데뷔' },
+    });
+    const common = {
+      seasonIndex: 3,
+      tags: ['프로_데뷔'],
+      candidates: [candidate],
+      existingChapterIds: ['CHP-MATCH-008'],
+      resolvedChapterIds: ['CHP-MATCH-008@1'],
+      chapterSelectionRules: {
+        version: 'LRU_V1',
+        repeatCooldownSeasons: 1,
+        allowResolvedChapterRepeat: true,
+      } as const,
+    };
+    expect(selectChapter(baseSelectInput(common))?.chapterId).toBe('CHP-MATCH-008');
+    expect(
+      selectChapter(
+        baseSelectInput({
+          ...common,
+          chapterSelectionRules: { version: 'LRU_V1', repeatCooldownSeasons: 1 },
+        }),
+      ),
+    ).toBeNull();
+  });
 });
 
-function makePendingChapter(overrides: Partial<Extract<Pending, { kind: 'CHAPTER' }>> = {},
+function makePendingChapter(
+  overrides: Partial<Extract<Pending, { kind: 'CHAPTER' }>> = {},
 ): Extract<Pending, { kind: 'CHAPTER' }> {
   return {
     kind: 'CHAPTER',
@@ -569,7 +694,13 @@ function makePendingChapter(overrides: Partial<Extract<Pending, { kind: 'CHAPTER
   };
 }
 
-const FW_STATS: PositionStats = { group: 'FW', goals: 1, assists: 0, xgCenti: 30, shots: 3, offsides: 0,
+const FW_STATS: PositionStats = {
+  group: 'FW',
+  goals: 1,
+  assists: 0,
+  xgCenti: 30,
+  shots: 3,
+  offsides: 0,
 };
 
 function makeSeason(overrides: Partial<FootballSeason> = {}): FootballSeason {
@@ -684,7 +815,14 @@ function makeState(overrides: Partial<CareerState> = {}): CareerState {
     rulesetVersion: '1.0.0',
     contentPackVersion: '0.1.0',
     player: {
-      draft: { name: null, gender: null, nationalityCode: null, preferredFoot: null, position: null, archetypeId: null, backgroundId: null,
+      draft: {
+        name: null,
+        gender: null,
+        nationalityCode: null,
+        preferredFoot: null,
+        position: null,
+        archetypeId: null,
+        backgroundId: null,
       },
       profile: null,
     },
@@ -739,7 +877,8 @@ describe('resolveChapter', () => {
     const state = makeState({
       pending: makePendingChapter({
         decisionsTotal: 2,
-        resolved: [{ decisionId: 'D1', optionId: 'OPT-A', outcomeId: 'A', roll: 0, outcomeKind: 'SUCCESS' },
+        resolved: [
+          { decisionId: 'D1', optionId: 'OPT-A', outcomeId: 'A', roll: 0, outcomeKind: 'SUCCESS' },
         ],
       }),
     });
@@ -786,7 +925,11 @@ describe('resolveChapter', () => {
         kind: 'CONTRACT',
         step: 3,
         offers: [],
-        market: { openedAtRevision: 1, seasonIndex: 0, reason: 'PRE_NEGOTIATION', safeOfferId: null,
+        market: {
+          openedAtRevision: 1,
+          seasonIndex: 0,
+          reason: 'PRE_NEGOTIATION',
+          safeOfferId: null,
         },
       },
     });
@@ -804,7 +947,12 @@ describe('resolveChapter', () => {
 
   it('ratingDeltaTenths는 clamp(40,100) 이후 실제 변화량이고, ratingSumTenths는 matches.ratingTenths 합(null 제외)과 같다', () => {
     const otherMatch = makeMatch({ id: 'm0', order: 0, ratingTenths: 65 });
-    const baseline = computeRatingTenths('FW', FW_STATS, 'WIN', { yellow: 0, red: false }, rulesetProto,
+    const baseline = computeRatingTenths(
+      'FW',
+      FW_STATS,
+      'WIN',
+      { yellow: 0, red: false },
+      rulesetProto,
     );
     const chapterMatch = makeMatch({ id: 'm1', order: 1, stats: FW_STATS, ratingTenths: baseline });
     const season = makeSeason({
@@ -834,7 +982,9 @@ describe('resolveChapter', () => {
     expect(upperMatch.ratingTenths).toBe(100);
     expect(upperResult.state.season!.chapters).toHaveLength(1);
     expect(upperResult.state.season!.chapters[0]!.ratingDeltaTenths).toBe(100 - baseline);
-    const upperSum = upperResult.state.season!.matches.reduce((sum, m) => (m.ratingTenths === null ? sum : sum + m.ratingTenths), 0,
+    const upperSum = upperResult.state.season!.matches.reduce(
+      (sum, m) => (m.ratingTenths === null ? sum : sum + m.ratingTenths),
+      0,
     );
     expect(upperResult.state.season!.playerStats.ratingSumTenths).toBe(upperSum);
 
@@ -853,7 +1003,9 @@ describe('resolveChapter', () => {
     const lowerMatch = lowerResult.state.season!.matches.find((m) => m.id === 'm1')!;
     expect(lowerMatch.ratingTenths).toBe(40);
     expect(lowerResult.state.season!.chapters[0]!.ratingDeltaTenths).toBe(40 - baseline);
-    const lowerSum = lowerResult.state.season!.matches.reduce((sum, m) => (m.ratingTenths === null ? sum : sum + m.ratingTenths), 0,
+    const lowerSum = lowerResult.state.season!.matches.reduce(
+      (sum, m) => (m.ratingTenths === null ? sum : sum + m.ratingTenths),
+      0,
     );
     expect(lowerResult.state.season!.playerStats.ratingSumTenths).toBe(lowerSum);
   });
@@ -927,41 +1079,47 @@ describe('resolveChapter', () => {
         });
       }
       const initialSnapshot: DomainSnapshot = {
-      revision: 5,
-      checkpoint: 'CHAPTER_DECISION',
-      state,
-      stateHash: hashState(state),
-      rulesetVersion: state.rulesetVersion,
-      contentPackVersion: state.contentPackVersion,
-    };
+        revision: 5,
+        checkpoint: 'CHAPTER_DECISION',
+        state,
+        stateHash: hashState(state),
+        rulesetVersion: state.rulesetVersion,
+        contentPackVersion: state.contentPackVersion,
+      };
 
-    let snapshot = initialSnapshot;
-    for (const decisionId of ['D1', 'D2', 'D3']) {
-      const input = {
-        snapshot,
-        command: {
-          type: 'RESOLVE_CHAPTER' as const,
-          commandId: `cmd-${decisionId}`,
-          expectedRevision: snapshot.revision,
-          payload: {
-            chapterId: 'CHP-MATCH-001',
-            definitionVersion: 1,
-            decisionId,
-            optionId: 'OPT-A',
-            outcomes: [{ id: `${decisionId}-OUT`, kind: 'SUCCESS' as const, weight: 1, effects: [], ratingDeltaTenths: 1,
+      let snapshot = initialSnapshot;
+      for (const decisionId of ['D1', 'D2', 'D3']) {
+        const input = {
+          snapshot,
+          command: {
+            type: 'RESOLVE_CHAPTER' as const,
+            commandId: `cmd-${decisionId}`,
+            expectedRevision: snapshot.revision,
+            payload: {
+              chapterId: 'CHP-MATCH-001',
+              definitionVersion: 1,
+              decisionId,
+              optionId: 'OPT-A',
+              outcomes: [
+                {
+                  id: `${decisionId}-OUT`,
+                  kind: 'SUCCESS' as const,
+                  weight: 1,
+                  effects: [],
+                  ratingDeltaTenths: 1,
                 },
               ],
+            },
           },
-        },
-        ruleset,
-        rulesetVersion: rulesetProto.version,
-        contentPackVersion: '0.1.0',
-      };
+          ruleset,
+          rulesetVersion: rulesetProto.version,
+          contentPackVersion: '0.1.0',
+        };
         const result = simulate(input);
         expect(simulate(JSON.parse(JSON.stringify(input)))).toEqual(result);
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      snapshot = result.snapshot;
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        snapshot = result.snapshot;
         if (causal) {
           const match = snapshot.state.season!.matches[0]!;
           expect(match.result.goalsFor).toBe(Number(decisionId.slice(1)));
@@ -976,12 +1134,13 @@ describe('resolveChapter', () => {
         }
       }
 
-    expect(snapshot.state.pending).toBeNull();
-    expect(snapshot.state.season!.chapters).toHaveLength(1);
-    expect(snapshot.state.season!.chapters[0]!.decisions).toHaveLength(3);
-    const timelineEntries = snapshot.state.timeline.filter((entry) => entry.kind === 'CHAPTER_RESOLVED',
+      expect(snapshot.state.pending).toBeNull();
+      expect(snapshot.state.season!.chapters).toHaveLength(1);
+      expect(snapshot.state.season!.chapters[0]!.decisions).toHaveLength(3);
+      const timelineEntries = snapshot.state.timeline.filter(
+        (entry) => entry.kind === 'CHAPTER_RESOLVED',
       );
-    expect(timelineEntries).toHaveLength(3);
+      expect(timelineEntries).toHaveLength(3);
       if (causal) {
         const season = snapshot.state.season!;
         expect(season.matches[0]!.result).toEqual({ goalsFor: 3, goalsAgainst: 1, outcome: 'WIN' });

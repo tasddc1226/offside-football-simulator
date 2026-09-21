@@ -165,4 +165,19 @@ describe('createBackButtonGuardHandler', () => {
     expect(handler()).toBe(false);
     expect(history.location.pathname).toBe('/');
   });
+
+  it('직접 진입 후 홈을 거쳐 다시 이동해도 앱 내 뒤로가기가 다시 작동한다', () => {
+    // Direct-entry tabs start with a single hidden route.  Reaching `/` consumes
+    // that route with replace; a later in-app navigation must still be handled by
+    // the same guard rather than falling through to browser history.
+    const history = createMemoryHistory({ initialEntries: ['/career/direct/style'] });
+    const handler = createBackButtonGuardHandler(history);
+
+    expect(handler()).toBe(true);
+    expect(history.location.pathname).toBe('/');
+
+    history.push('/settings');
+    expect(handler()).toBe(true);
+    expect(history.location.pathname).toBe('/');
+  });
 });

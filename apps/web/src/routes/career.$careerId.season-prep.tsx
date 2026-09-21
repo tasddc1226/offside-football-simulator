@@ -114,7 +114,11 @@ function SeasonPrepScreen() {
       });
       if (!result.ok) {
         if (isRetirementDecisionRequiredError(result.error)) {
-          void navigate({ to: '/career/$careerId/retirement', params: { careerId }, replace: true });
+          void navigate({
+            to: '/career/$careerId/retirement',
+            params: { careerId },
+            replace: true,
+          });
           return;
         }
         const details = result.error.details;
@@ -127,15 +131,25 @@ function SeasonPrepScreen() {
         if (marketIsOpen) {
           // 다른 탭/요청이 먼저 시장을 연 경합이면 stale 화면을 재시도하지 않고,
           // 최신 저장 상태가 가리키는 시장 화면으로 보낸다.
-          const latest = await queryClient.fetchQuery({ ...careerQueryOptions(careerId), staleTime: 0 });
+          const latest = await queryClient.fetchQuery({
+            ...careerQueryOptions(careerId),
+            staleTime: 0,
+          });
           const target = screenForCareer(latest.state);
-          void navigate({ to: SCREEN_ROUTES[target.screenId], params: target.params, replace: true });
+          void navigate({
+            to: SCREEN_ROUTES[target.screenId],
+            params: target.params,
+            replace: true,
+          });
           return;
         }
         setErrorMessage('시즌을 시작하지 못했습니다. 다시 시도해 주세요.');
         return;
       }
-      platform.analytics.track('season_started', { simulationMode: FIXED_SIMULATION_MODE, trainingFocus: focus });
+      platform.analytics.track('season_started', {
+        simulationMode: FIXED_SIMULATION_MODE,
+        trainingFocus: focus,
+      });
       await recordFunnelReached(careerId, 'SEASON_STARTED');
       await recordSeasonStart(careerId);
       let nextState = result.domainSnapshot.state;
@@ -216,8 +230,13 @@ function SeasonPrepScreen() {
       {state.clubMeeting?.seasonIndex === state.seasonHistory.length + 1 ? (
         <section className="os-panel flex flex-col gap-os-2" aria-label="구단 면담 계획">
           <p className="os-eyebrow">구단 면담 계획</p>
-          <p>{state.clubMeeting.response === 'ACCEPTED' ? '구단 수락' : '구단 거절'} · 시즌 출전 확인 기준 {state.clubMeeting.goal.targetMinutesShareBp / 100}%</p>
-          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>실제 역할과 출전은 프리시즌 경쟁 후 조정될 수 있습니다.</p>
+          <p>
+            {state.clubMeeting.response === 'ACCEPTED' ? '구단 수락' : '구단 거절'} · 시즌 출전 확인
+            기준 {state.clubMeeting.goal.targetMinutesShareBp / 100}%
+          </p>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            실제 역할과 출전은 프리시즌 경쟁 후 조정될 수 있습니다.
+          </p>
         </section>
       ) : null}
 
@@ -231,12 +250,33 @@ function SeasonPrepScreen() {
         </p>
       </section>
 
+      {state.seasonHistory.length === 0 ? (
+        <section
+          className="os-panel flex flex-col gap-os-1"
+          aria-labelledby="first-season-record-title"
+        >
+          <h2
+            id="first-season-record-title"
+            className="font-os font-semibold text-os-text"
+            style={H2_STYLE}
+          >
+            첫 시즌 기록을 기다리고 있어요
+          </h2>
+          <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
+            시즌을 시작하고 결산하면 출전·성장·우승 기록이 이 커리어에 남습니다.
+          </p>
+        </section>
+      ) : null}
+
       <details className="os-panel">
-        <summary className="cursor-pointer font-os font-semibold text-os-text">12 step 일정과 컵 일정 보기</summary>
+        <summary className="cursor-pointer font-os font-semibold text-os-text">
+          12 step 일정과 컵 일정 보기
+        </summary>
         <div className="mt-os-3 flex flex-col gap-os-3">
           <SeasonTimeline steps={previewSteps} currentStep={0} />
           <p className="font-os text-os-text-2" style={CAPTION_STYLE}>
-            컵 일정: {ruleset.leagueCalendar.cupRounds
+            컵 일정:{' '}
+            {ruleset.leagueCalendar.cupRounds
               .map((round) => `${CUP_ROUND_LABEL_KO[round.round]} step ${round.step}`)
               .join(' · ')}
           </p>
@@ -247,8 +287,14 @@ function SeasonPrepScreen() {
 
       {committing ? (
         <GamePending
-          title={confirmingKeep ? '변경 없는 역할은 유지하고 시작합니다' : '시즌을 시작하고 있습니다'}
-          detail={confirmingKeep ? '현재 포지션과 역할을 확인해 시즌 준비를 마칩니다.' : `${TRAINING_FOCUS_LABEL_KO[focus]} 계획과 시즌 일정을 저장하고 있습니다.`}
+          title={
+            confirmingKeep ? '변경 없는 역할은 유지하고 시작합니다' : '시즌을 시작하고 있습니다'
+          }
+          detail={
+            confirmingKeep
+              ? '현재 포지션과 역할을 확인해 시즌 준비를 마칩니다.'
+              : `${TRAINING_FOCUS_LABEL_KO[focus]} 계획과 시즌 일정을 저장하고 있습니다.`
+          }
         />
       ) : null}
 

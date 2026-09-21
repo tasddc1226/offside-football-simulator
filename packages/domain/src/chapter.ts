@@ -122,17 +122,25 @@ function isWithinChapterCooldown(
 
 function stepAllowsImportance(step: SeasonStep, importance: 'MAJOR' | 'MINOR'): boolean {
   return step.decisionSlots.some(
-    (slot) => slot.kind === 'CHAPTER' && !slot.skippedByBudget && (slot.importance === undefined || slot.importance === importance),
+    (slot) =>
+      slot.kind === 'CHAPTER' &&
+      !slot.skippedByBudget &&
+      (slot.importance === undefined || slot.importance === importance),
   );
 }
 
 /** DECIDER 경계: 승격 마지노선(promotionSpots)·강등 마지노선(teamCount - relegationSpots + 1) 중 하나에서 maxRankGap 이내. */
-function isNearPromotionOrRelegation(league: League, position: number | null, maxRankGap: number,
+function isNearPromotionOrRelegation(
+  league: League,
+  position: number | null,
+  maxRankGap: number,
 ): boolean {
   if (position === null) return false;
-  const nearPromotion = league.promotionSpots > 0 && Math.abs(position - league.promotionSpots) <= maxRankGap;
+  const nearPromotion =
+    league.promotionSpots > 0 && Math.abs(position - league.promotionSpots) <= maxRankGap;
   const relegationBoundary = league.teamCount - league.relegationSpots + 1;
-  const nearRelegation = league.relegationSpots > 0 && Math.abs(position - relegationBoundary) <= maxRankGap;
+  const nearRelegation =
+    league.relegationSpots > 0 && Math.abs(position - relegationBoundary) <= maxRankGap;
   return nearPromotion || nearRelegation;
 }
 
@@ -161,7 +169,10 @@ type TriggerContext = {
  * `trigger`가 `match`에 맞는지 본다. 모든 트리거는 그 경기에 실제로 출전(minutes > 0)했을 때만
  * 맞는다 — 판단이 그 경기에서 선수가 겪은 순간을 다루므로 0분 경기는 대상이 아니다.
  */
-export function matchesTrigger(trigger: ChapterTrigger, match: MatchRecord, ctx: TriggerContext,
+export function matchesTrigger(
+  trigger: ChapterTrigger,
+  match: MatchRecord,
+  ctx: TriggerContext,
 ): boolean {
   if (match.minutes <= 0) return false;
   switch (trigger.kind) {
@@ -175,7 +186,8 @@ export function matchesTrigger(trigger: ChapterTrigger, match: MatchRecord, ctx:
       return match.kind === 'CUP' && match.round === 'FINAL';
     case 'DECIDER':
       return (
-        ctx.isLastLeagueStep && isNearPromotionOrRelegation(ctx.league, ctx.leaguePosition, trigger.maxRankGap)
+        ctx.isLastLeagueStep &&
+        isNearPromotionOrRelegation(ctx.league, ctx.leaguePosition, trigger.maxRankGap)
       );
     case 'INJURY_RETURN':
       return ctx.injuryReturnMatchId === match.id;
@@ -196,44 +208,58 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
     input.firstMeaningfulAppearance ??
     !input.matchesBeforeThisStep.some((match) => match.minutes > 0);
   const isLastLeagueStep = input.step.index === lastLeagueStepIndex(input.steps);
-  const leaguePosition = input.competitions.find((c) => c.competitionId === 'LEAGUE')?.position ?? null;
+  const leaguePosition =
+    input.competitions.find((c) => c.competitionId === 'LEAGUE')?.position ?? null;
   const orderedMatches = [...input.matchesThisStep].sort((a, b) => a.order - b.order);
 
   const eligibleCandidates = input.candidates.filter((candidate) => {
     if (input.mode === 'FAST' && candidate.importance !== 'MAJOR') return false;
     if (!stepAllowsImportance(input.step, candidate.importance)) return false;
-    if (input.resolvedChapterIds.includes(`${candidate.chapterId}@${input.seasonIndex}`)) return false;
-    if (input.existingChapterIds.includes(candidate.chapterId)) return false;
-    if (candidate.trigger.kind === 'NATIONAL_DEBUT' && input.nationalDebutReservation === null) return false;
-    if (candidate.trigger.kind === 'NATIONAL_DEBUT' && input.nationalDebutReservation === undefined) return false;
+    if (input.resolvedChapterIds.includes(`${candidate.chapterId}@${input.seasonIndex}`))
+      return false;
+    if (
+      input.existingChapterIds.includes(candidate.chapterId) &&
+      input.chapterSelectionRules?.allowResolvedChapterRepeat !== true
+    )
+      return false;
+    if (candidate.trigger.kind === 'NATIONAL_DEBUT' && input.nationalDebutReservation === null)
+      return false;
+    if (candidate.trigger.kind === 'NATIONAL_DEBUT' && input.nationalDebutReservation === undefined)
+      return false;
     return true;
   });
 
-  const opened: Array<{ candidate: ChapterCandidateInput; matchId: string; virtualOpponent?: NationalDebutReservation;
+  const opened: Array<{
+    candidate: ChapterCandidateInput;
+    matchId: string;
+    virtualOpponent?: NationalDebutReservation;
   }> = [];
   for (const candidate of eligibleCandidates) {
     let isFirstCareerAppearance = isFirstCareerAppearanceAtStepStart;
     for (const match of orderedMatches) {
       if (
-        matchesTrigger(
-          candidate.trigger,
-          match,
-          {
-            seasonIndex: input.seasonIndex,
-            isFirstCareerAppearance,
-            isLastLeagueStep,
-            league: input.league,
-            leaguePosition,
-            tags: input.tags,
-            rivalTeamId: input.rivalTeamId,
-            ...(input.injuryReturnMatchId === undefined ? {} : { injuryReturnMatchId: input.injuryReturnMatchId }),
-            ...(input.nationalDebutReservation === undefined ? {} : { nationalDebutReservation: input.nationalDebutReservation }),
-          })
+        matchesTrigger(candidate.trigger, match, {
+          seasonIndex: input.seasonIndex,
+          isFirstCareerAppearance,
+          isLastLeagueStep,
+          league: input.league,
+          leaguePosition,
+          tags: input.tags,
+          rivalTeamId: input.rivalTeamId,
+          ...(input.injuryReturnMatchId === undefined
+            ? {}
+            : { injuryReturnMatchId: input.injuryReturnMatchId }),
+          ...(input.nationalDebutReservation === undefined
+            ? {}
+            : { nationalDebutReservation: input.nationalDebutReservation }),
+        })
       ) {
         opened.push({
           candidate,
           matchId: match.id,
-          ...(candidate.trigger.kind === 'NATIONAL_DEBUT' && input.nationalDebutReservation !== null && input.nationalDebutReservation !== undefined
+          ...(candidate.trigger.kind === 'NATIONAL_DEBUT' &&
+          input.nationalDebutReservation !== null &&
+          input.nationalDebutReservation !== undefined
             ? { virtualOpponent: input.nationalDebutReservation }
             : {}),
         });
@@ -279,7 +305,8 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
     const aNationalDebut = a.candidate.trigger.kind === 'NATIONAL_DEBUT';
     const bNationalDebut = b.candidate.trigger.kind === 'NATIONAL_DEBUT';
     if (aNationalDebut !== bNationalDebut) return aNationalDebut ? -1 : 1;
-    if (a.candidate.importance !== b.candidate.importance) return a.candidate.importance === 'MAJOR' ? -1 : 1;
+    if (a.candidate.importance !== b.candidate.importance)
+      return a.candidate.importance === 'MAJOR' ? -1 : 1;
     if (a.candidate.weight !== b.candidate.weight) return b.candidate.weight - a.candidate.weight;
     return compareCodePoints(a.candidate.chapterId, b.candidate.chapterId);
   });
@@ -289,21 +316,23 @@ export function selectChapter(input: SelectChapterInput): ChapterOpenResult | nu
   const rotationCandidates =
     rotationGroup === undefined || isReservedChapterTrigger(leader.candidate.trigger)
       ? [leader]
-      : opened.filter(
-          (entry) =>
-            entry.candidate.rotationGroup === rotationGroup &&
-            !isReservedChapterTrigger(entry.candidate.trigger) &&
-            entry.candidate.importance === leader.candidate.importance &&
-            entry.candidate.weight === leader.candidate.weight,
-        ).filter(
-          (entry) =>
-            !isWithinChapterCooldown(
-              entry.candidate,
-              input.seasonIndex,
-              input.resolvedChapterIds,
-              input.chapterSelectionRules!,
-            ),
-        );
+      : opened
+          .filter(
+            (entry) =>
+              entry.candidate.rotationGroup === rotationGroup &&
+              !isReservedChapterTrigger(entry.candidate.trigger) &&
+              entry.candidate.importance === leader.candidate.importance &&
+              entry.candidate.weight === leader.candidate.weight,
+          )
+          .filter(
+            (entry) =>
+              !isWithinChapterCooldown(
+                entry.candidate,
+                input.seasonIndex,
+                input.resolvedChapterIds,
+                input.chapterSelectionRules!,
+              ),
+          );
   if (rotationCandidates.length === 0) return null;
   rotationCandidates.sort((a, b) => {
     const aLastSeason = latestResolvedSeason(input.resolvedChapterIds, a.candidate.chapterId);
@@ -347,7 +376,8 @@ export type ResolveChapterInput = {
   outcomes: ResolveChapterOutcome[];
 };
 
-export type ResolveChapterFailureReason = 'NO_PENDING_CHAPTER' | 'PENDING_CHAPTER_MISMATCH' | 'DECISION_ALREADY_RESOLVED';
+export type ResolveChapterFailureReason =
+  'NO_PENDING_CHAPTER' | 'PENDING_CHAPTER_MISMATCH' | 'DECISION_ALREADY_RESOLVED';
 
 // 브리프가 정한 reason 값은 3개뿐이다(가중치 검사 실패는 `resolveEvent`처럼 reason 없이 message만
 // 돌려준다 — simulate.ts는 reason이 없으면 fail()에 details를 붙이지 않는다).
@@ -372,7 +402,10 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
     return { ok: false, message: '해소할 pending 챕터가 없다.', reason: 'NO_PENDING_CHAPTER' };
   }
   if (pending.chapterId !== input.chapterId || pending.version !== input.definitionVersion) {
-    return { ok: false, message: 'pending 챕터와 요청이 다르다.', reason: 'PENDING_CHAPTER_MISMATCH',
+    return {
+      ok: false,
+      message: 'pending 챕터와 요청이 다르다.',
+      reason: 'PENDING_CHAPTER_MISMATCH',
     };
   }
   if (pending.resolved.some((entry) => entry.decisionId === input.decisionId)) {
@@ -401,8 +434,15 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
     return { ok: false, message: 'outcomes가 비어 있다.' };
   }
 
-  const lessonState = input.ruleset.developmentRules === undefined ? state : recordMatchLesson(state, input.optionId, outcomes, chosen.kind);
-  const effectResult = applyEffects(lessonState, chosen.effects, { step: state.currentStep }, input.ruleset.relationshipRules,
+  const lessonState =
+    input.ruleset.developmentRules === undefined
+      ? state
+      : recordMatchLesson(state, input.optionId, outcomes, chosen.kind);
+  const effectResult = applyEffects(
+    lessonState,
+    chosen.effects,
+    { step: state.currentStep },
+    input.ruleset.relationshipRules,
   );
 
   let tags = effectResult.state.tags;
@@ -436,7 +476,11 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
   const beforeRating = match.ratingTenths;
   const isNationalDebut = pending.trigger === 'NATIONAL_DEBUT';
   const afterRating =
-    isNationalDebut || beforeRating === null ? beforeRating : clamp(beforeRating + chosen.ratingDeltaTenths +
+    isNationalDebut || beforeRating === null
+      ? beforeRating
+      : clamp(
+          beforeRating +
+            chosen.ratingDeltaTenths +
             (affectsMatch
               ? computeRatingTenths(
                   match.stats.group,
@@ -460,7 +504,9 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
   const matches = isNationalDebut
     ? season.matches
     : season.matches.map((candidate, index) =>
-        index === matchIndex ? { ...match,
+        index === matchIndex
+          ? {
+              ...match,
               ratingTenths: afterRating,
               ...(match.decisionWindow === undefined
                 ? {}
@@ -484,10 +530,15 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
       ? afterRating
       : season.lastRatingTenths;
 
-  const ratingSumDelta = isNationalDebut || beforeRating === null || afterRating === null ? 0 : afterRating - beforeRating;
+  const ratingSumDelta =
+    isNationalDebut || beforeRating === null || afterRating === null
+      ? 0
+      : afterRating - beforeRating;
   const playerStats = isNationalDebut
     ? season.playerStats
-    : { ...season.playerStats, ratingSumTenths: season.playerStats.ratingSumTenths + ratingSumDelta,
+    : {
+        ...season.playerStats,
+        ratingSumTenths: season.playerStats.ratingSumTenths + ratingSumDelta,
       };
 
   const resolvedEntry = {
@@ -510,10 +561,19 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
     // 않는 값이라 순수 함수로 재도출할 수 있다)과 최종 평점의 차이다.
     const originalRating = affectsMatch
       ? match.decisionImpact!.originalRatingTenths
-      : match.minutes > 0 ? computeRatingTenths(match.stats.group, match.stats, match.result.outcome, match.cards, input.ruleset,
-          ) : null;
+      : match.minutes > 0
+        ? computeRatingTenths(
+            match.stats.group,
+            match.stats,
+            match.result.outcome,
+            match.cards,
+            input.ruleset,
+          )
+        : null;
     const chapterRatingDeltaTenths =
-      isNationalDebut || originalRating === null || afterRating === null ? 0 : afterRating - originalRating;
+      isNationalDebut || originalRating === null || afterRating === null
+        ? 0
+        : afterRating - originalRating;
 
     const chapterRecord: ChapterRecord = {
       chapterId: pending.chapterId,
@@ -529,10 +589,14 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
         outcomeKind: entry.outcomeKind,
       })),
       ratingDeltaTenths: chapterRatingDeltaTenths,
-      ...(pending.virtualOpponent === undefined ? {} : { virtualOpponent: pending.virtualOpponent }),
+      ...(pending.virtualOpponent === undefined
+        ? {}
+        : { virtualOpponent: pending.virtualOpponent }),
     };
     chapters = [...season.chapters, chapterRecord];
-    resolvedChapterIds = sortUniqueTags([...state.resolvedChapterIds, `${pending.chapterId}@${season.index}`,
+    resolvedChapterIds = sortUniqueTags([
+      ...state.resolvedChapterIds,
+      `${pending.chapterId}@${season.index}`,
     ]);
     if (pending.trigger === 'NATIONAL_DEBUT') {
       if (nationalTeam.pendingDebut === null) {
@@ -555,8 +619,20 @@ export function resolveChapter(input: ResolveChapterInput): ResolveChapterResult
     season: { ...season, matches, playerStats, lastRatingTenths, chapters },
   };
 
-  const remembered = affectsMatch ? rememberCoachChoice(nextState, input.ruleset, { chapterId: pending.chapterId, decisionId: input.decisionId, optionId: input.optionId, match }) : nextState;
-  return { ok: true, state: affectsMatch ? reconcileMatchDecision(remembered, input.ruleset) : remembered, roll: rolled.value, outcomeId: chosen.id, appliedEffects: effectResult.applied,
+  const remembered = affectsMatch
+    ? rememberCoachChoice(nextState, input.ruleset, {
+        chapterId: pending.chapterId,
+        decisionId: input.decisionId,
+        optionId: input.optionId,
+        match,
+      })
+    : nextState;
+  return {
+    ok: true,
+    state: affectsMatch ? reconcileMatchDecision(remembered, input.ruleset) : remembered,
+    roll: rolled.value,
+    outcomeId: chosen.id,
+    appliedEffects: effectResult.applied,
   };
 }
 import { rememberCoachChoice } from './character-memory.js';
