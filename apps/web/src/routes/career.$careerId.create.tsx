@@ -6,9 +6,11 @@ import { CreationForm, type CreationValues } from '../shared/creation-form.js';
 import { platform } from '../platform/index.js';
 import { shouldResetArchetype } from '../shared/player-draft.js';
 import { useCareerStepGuard } from '../shared/use-career-guard.js';
+import { useTabScopedStorageKey } from '../shared/tab-scoped-storage.js';
 export const Route = createFileRoute('/career/$careerId/create')({ component: CreatePlayerScreen });
 function CreatePlayerScreen() {
   const { careerId } = Route.useParams();
+  const storageKey = useTabScopedStorageKey(`offside:player-creation:${careerId}`);
   const query = useCareer(careerId);
   const navigate = useNavigate();
   const mutation = useCareerMutation('updateDraft');
@@ -37,7 +39,7 @@ function CreatePlayerScreen() {
       });
       if (!result.ok) throw new Error(result.error.message);
       try {
-        sessionStorage.removeItem(`offside:player-creation:${careerId}`);
+        sessionStorage.removeItem(storageKey);
       } catch {
         /* no-op */
       }
@@ -50,10 +52,10 @@ function CreatePlayerScreen() {
   }
   return (
     <CreationForm
-      key={careerId}
+      key={storageKey}
       draft={state.player.draft}
       ruleset={ruleset}
-      storageKey={`offside:player-creation:${careerId}`}
+      storageKey={storageKey}
       busy={mutation.isPending}
       error={error}
       onSubmit={(values) => void submit(values)}

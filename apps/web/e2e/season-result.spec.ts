@@ -13,6 +13,7 @@ import {
   META,
   planPreseason,
   resolveRoleProposal,
+  startSeasonForCurrentFlow,
 } from './helpers/player-creation.js';
 
 /** CompareCards assertions need a settlement without a random post-season market; this DEV-only seed was replayed
@@ -29,7 +30,10 @@ async function statValue(page: Page, label: string): Promise<number> {
 
 /** CountUp이 채운 dd 안의 `[data-value]`를 읽는다(애니메이션 중에도 확정값이 이미 들어있다). */
 async function countUpValue(page: Page, dtLabel: string): Promise<number> {
-  const value = await page.locator(`dt:text-is("${dtLabel}") + dd [data-value]`).first().getAttribute('data-value');
+  const value = await page
+    .locator(`dt:text-is("${dtLabel}") + dd [data-value]`)
+    .first()
+    .getAttribute('data-value');
   if (value === null) throw new Error(`CountUp data-value를 찾지 못했다: ${dtLabel}`);
   return Number(value);
 }
@@ -37,7 +41,7 @@ async function countUpValue(page: Page, dtLabel: string): Promise<number> {
 /** 계약 체결 뒤 프리시즌 계획→시즌 시작→역할 제안→진행 반복→결산하기로 SCR-015에 도착한다. */
 async function settleOneSeason(page: Page): Promise<void> {
   await planPreseason(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startSeasonForCurrentFlow(page);
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
   // 결산 전 일정의 실제 분 수를 독립 기준으로 삼는다. 저장 집계의 잘못된 total을
@@ -53,12 +57,18 @@ async function settleOneSeason(page: Page): Promise<void> {
   expect(matches.length).toBeGreaterThan(0);
   await page.getByRole('button', { name: '결산하기' }).click();
   await expectRoute(page, /\/career\/.+\/season-result$/);
-  expect(await countUpValue(page, '출전')).toBe(matches.filter((match) => match.minutes > 0).length);
-  expect(await statValue(page, '교체')).toBe(matches.filter((match) => match.appearance === '교체' && match.minutes > 0).length);
+  expect(await countUpValue(page, '출전')).toBe(
+    matches.filter((match) => match.minutes > 0).length,
+  );
+  expect(await statValue(page, '교체')).toBe(
+    matches.filter((match) => match.appearance === '교체' && match.minutes > 0).length,
+  );
   expect(await statValue(page, '0분')).toBe(matches.filter((match) => match.minutes === 0).length);
 }
 
-test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보여주고 헤더 OVR과 일치한다', async ({ page }) => {
+test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보여주고 헤더 OVR과 일치한다', async ({
+  page,
+}) => {
   // 준비 단계의 마일스톤만 모션 감소로 진행한다. 결산 카운트업은 기본 모션으로 검증한다.
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript((seed) => {
@@ -134,7 +144,10 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
 
   // 대시보드로 돌아가 헤더 OVR이 결산 after와 같은지 확인한다(홈 탭에는 StatusStrip OVR이 없다).
   await page.goto((await currentRoute(page)).replace(/\/preseason.*$/, ''));
-  const headerOvrText = await page.locator('header').getByText(/^OVR \d+$/).textContent();
+  const headerOvrText = await page
+    .locator('header')
+    .getByText(/^OVR \d+$/)
+    .textContent();
   expect(headerOvrText?.replace(/^OVR /, '').trim()).toBe(afterOvrValue);
 
   // 다이어리: 이번 시즌 연대기에 "시즌 정산" 항목이 SCR-015로 연결된다. UX-014(2026-09-14):
@@ -147,7 +160,9 @@ test('SCR-015 프로 시즌 결과: 결산 요약·비교·카운트업을 보�
   await expect(page.getByTestId('season-result')).toHaveAttribute('data-result-hash', /.+/);
 });
 
-test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그먼트를 전환한다', async ({ page }) => {
+test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그먼트를 전환한다', async ({
+  page,
+}) => {
   // 이 검사는 모션이 아닌 두 시즌 결과의 세그먼트 상태를 검증한다. 반복되는 화면 전환이 전체
   // 테스트 예산을 소모하지 않도록 사용자 모션 감소 선호를 에뮬레이션한다.
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -163,7 +178,7 @@ test('두 번째 시즌: CompareCards가 "지난 시즌"·"계약 약속" 세그
   await page.getByRole('link', { name: '다음 시즌' }).click();
   await continueToPreseason(page);
   await fillPreseasonPlan(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startSeasonForCurrentFlow(page);
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기' }).click();
@@ -208,10 +223,16 @@ test('결산 PUT 응답 유실: 재시도 뒤에도 같은 result.hash로 SCR-01
       await route.continue();
       return;
     }
-    const body = route.request().postDataJSON() as { snapshot: { revision: number }; commands: { commandType: string }[] };
+    const body = route.request().postDataJSON() as {
+      snapshot: { revision: number };
+      commands: { commandType: string }[];
+    };
     const isSettle = body.commands.at(-1)?.commandType === 'SETTLE_SEASON';
     if (!isSettle) {
-      await fulfillJson(route, 200, { data: { revision: body.snapshot.revision, syncedAt: '2026-09-03T00:00:00Z' }, meta: META });
+      await fulfillJson(route, 200, {
+        data: { revision: body.snapshot.revision, syncedAt: '2026-09-03T00:00:00Z' },
+        meta: META,
+      });
       return;
     }
     attempt += 1;
@@ -220,12 +241,15 @@ test('결산 PUT 응답 유실: 재시도 뒤에도 같은 result.hash로 SCR-01
       await route.abort('failed');
       return;
     }
-    await fulfillJson(route, 200, { data: { revision: body.snapshot.revision, syncedAt: '2026-09-03T00:00:00Z' }, meta: META });
+    await fulfillJson(route, 200, {
+      data: { revision: body.snapshot.revision, syncedAt: '2026-09-03T00:00:00Z' },
+      meta: META,
+    });
   });
 
   await completeOnboardingThroughContract(page);
   await planPreseason(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startSeasonForCurrentFlow(page);
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
 

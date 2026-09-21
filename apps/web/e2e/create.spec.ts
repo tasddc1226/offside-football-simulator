@@ -6,7 +6,7 @@
 // 그래서 도착 지점은 screenForCareer가 매핑하는 SCR-007 계열 라우트(path·tryout·event) 중
 // 하나인지로 검증한다.
 import { expect, test } from '@playwright/test';
-import { expectRoute } from './helpers/route.js';
+import { currentRoute, expectRoute } from './helpers/route.js';
 import {
   fillPlayerInfo,
   fulfillJson,
@@ -116,4 +116,30 @@ test('SCR-002: 저장한 뒤 새로고침해도 draft가 그대로 보인다', a
   await expect(page.getByLabel('출발 배경')).toHaveValue('club-academy');
   await expect(page.getByRole('radio', { name: '왼발' })).toBeChecked();
   await expect(page.getByRole('radio', { name: /윙어/ })).toBeChecked();
+});
+
+test('같은 커리어를 복제한 두 탭은 선수 생성 draft를 서로 덮어쓰지 않는다', async ({ page }) => {
+  await goToConfirm(page);
+  await page.goBack();
+  await expectRoute(page, /\/career\/.+\/style$/);
+  await page.getByRole('link', { name: '수정', exact: true }).click();
+  await expectRoute(page, /\/career\/.+\/create$/);
+
+  const route = await currentRoute(page);
+  const incumbentScope = await page.evaluate(() => sessionStorage.getItem('offside:tab-scope'));
+  if (incumbentScope === null) throw new Error('tab scope was not initialized');
+
+  // Same browser context shares the career database/localStorage, while the
+  // init script models a duplicate tab cloning sessionStorage.
+  const duplicate = await page.context().newPage();
+  await duplicate.addInitScript((scope) => {
+    sessionStorage.setItem('offside:tab-scope', scope);
+  }, incumbentScope);
+  await duplicate.goto(route);
+  await expectRoute(duplicate, /\/career\/.+\/create$/);
+  await duplicate.getByLabel('이름', { exact: true }).fill('이하준');
+
+  await expect(page.getByLabel('이름', { exact: true })).toHaveValue('김서준');
+  await expect(duplicate.getByLabel('이름', { exact: true })).toHaveValue('이하준');
+  await duplicate.close();
 });

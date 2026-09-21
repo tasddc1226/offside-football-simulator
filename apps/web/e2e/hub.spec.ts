@@ -104,6 +104,17 @@ test('T-7-039: 커리어 화면에서 주소창은 `/`로 고정되고, 새로�
       .getByRole('button', { name: '커리어 시작' })
       .or(page.getByRole('heading', { level: 2, name: '김서준' })),
   ).toBeVisible();
+
+  // T-7-039 regression: once the first guard pop reaches home, a later
+  // in-app transition must re-arm the guard so browser Back still returns to
+  // home instead of becoming an external/document exit.
+  const startCareer = page.getByRole('button', { name: '커리어 시작' });
+  if (await startCareer.isVisible()) {
+    await startCareer.click();
+    await expectRoute(page, /\/onboarding$/);
+    await page.goBack();
+    await expectRoute(page, /^\/$/);
+  }
 });
 
 test('공지 API가 실패하면(캐시 없음) 빈 목록 문구로 대체된다', async ({ page }) => {

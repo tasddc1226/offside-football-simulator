@@ -15,6 +15,7 @@ import {
   planPreseason,
   resolveRoleProposal,
   startNewCareer,
+  startSeasonForCurrentFlow,
 } from './helpers/player-creation.js';
 import { E2E_META, fulfillJson, triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
 import { advanceToChapter, seedDeterministicChapterRun } from './helpers/chapter.js';
@@ -362,7 +363,9 @@ test('SCR-010 계약 화면·SCR-029 대시보드(기본·휴대폰 탭)에 axe 
 test('SCR-005 프리시즌 계획 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   await completeOnboardingThroughContract(page);
   await page.getByRole('link', { name: '계획하러 가기' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: '프리시즌 계획' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: /^(프리시즌 계획|이번 시즌, 어떤 선수가 될까?)$/ }),
+  ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-005');
 });
@@ -371,7 +374,9 @@ test('SCR-011 시즌 준비 화면에 axe serious·critical 위반이 없다', a
   await completeOnboardingThroughContract(page);
   await page.getByRole('link', { name: '계획하러 가기' }).click();
   await fillPreseasonPlan(page, '역할 집중');
-  await expect(page.getByRole('heading', { level: 1, name: '시즌 준비' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: /^(시즌 준비|이번 시즌, 어떤 선수가 될까?)$/ }),
+  ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-011');
 });
@@ -395,7 +400,7 @@ test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', a
   }, E2E_ROLE_CHANGE_SEED);
   await completeOnboardingThroughContract(page);
   await planPreseason(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startSeasonForCurrentFlow(page);
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기' }).click();
@@ -404,7 +409,7 @@ test('SCR-012 역할 제안 화면에 axe serious·critical 위반이 없다', a
   await page.getByRole('link', { name: '다음 시즌' }).click();
   await continueToPreseason(page);
   await fillPreseasonPlan(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startSeasonForCurrentFlow(page);
   await expectRoute(page, /\/career\/.+\/role$/);
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-012');
@@ -425,7 +430,7 @@ test('SCR-033 능력치 상세 화면에 axe serious·critical 위반이 없다'
 test('SCR-015 프로 시즌 결과 화면에 axe serious·critical 위반이 없다', async ({ page }) => {
   await completeOnboardingThroughContract(page);
   await planPreseason(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startSeasonForCurrentFlow(page);
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기' }).click();
@@ -643,7 +648,7 @@ test.describe('SCR-031 핵심 경기 챕터', () => {
     await seedDeterministicChapterRun(page);
     await completeOnboardingThroughContract(page);
     await planPreseason(page, '역할 집중');
-    await page.getByRole('button', { name: '시즌 시작' }).click();
+    await startSeasonForCurrentFlow(page);
     await resolveRoleProposal(page);
     await expectRoute(page, /\/career\/[^/]+$/);
 
