@@ -431,6 +431,32 @@ describe('ROOKIE_TRIAL_V1 — 건강한 루키의 제한된 벤치 기회(#242)'
     },
   );
 
+  it('자연 포지션 선발 자리가 0이어도 실제 벤치 1자리를 보존한 채 RESERVE 루키를 SUB로 올린다', () => {
+    const makeCandidate = (id: string, score: number) => ({
+      id,
+      name: id,
+      baseOvr: score,
+      tacticalFit: score,
+      managerTrust: score,
+      expectedPerformance: score,
+      squadStatus: score,
+      score,
+      excluded: null,
+    });
+    const ranking = rankSelection(
+      [makeCandidate('RIVAL-START', 90), makeCandidate('RIVAL-BENCH', 80), makeCandidate('PLAYER', 10)],
+      'CM',
+      0,
+      1,
+      rules,
+      true,
+    );
+    expect(ranking.candidates.filter((candidate) => candidate.appearance === 'START')).toHaveLength(0);
+    expect(ranking.candidates.filter((candidate) => candidate.appearance === 'SUB')).toHaveLength(1);
+    expect(ranking.candidates.find((candidate) => candidate.id === 'PLAYER')?.appearance).toBe('SUB');
+    expect(ranking.playerReason).toEqual({ component: 'EARLY_OPPORTUNITY', delta: 0 });
+  });
+
   it('does not invent a trial slot when the position has no bench capacity', () => {
     const ranking = rankPositionForPlayer({
       ruleset: RULESET,

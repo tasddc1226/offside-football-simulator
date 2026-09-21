@@ -183,9 +183,9 @@ describe('loadRuleset: 3.4.0 unpublished gameplay/content candidate', () => {
     expect(candidate.selectionRules.roleProposal.earlyOpportunity).toEqual({
       version: 'ROOKIE_TRIAL_V1',
       maxAge: 21,
-      maxSeason: 1,
+      maxSeason: 2,
       maxMatchesWithoutMinutes: 3,
-      eligibleRoles: ['STARTER', 'ROTATION', 'BENCH'],
+      eligibleRoles: ['STARTER', 'ROTATION', 'BENCH', 'RESERVE'],
     });
     expect(candidate.chapterSelectionRules).toEqual({
       version: 'LRU_V1',

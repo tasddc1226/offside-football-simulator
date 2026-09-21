@@ -11,7 +11,7 @@
   "exclusionTags": [],
   "cooldown": { "seasons": 2 },
   "weight": 38,
-  "minAge": 29,
+  "minAge": 23,
   "safety": { "minorSafe": true },
   "presentation": "LOCKER_ROOM",
   "authoring": "PROTOTYPE",

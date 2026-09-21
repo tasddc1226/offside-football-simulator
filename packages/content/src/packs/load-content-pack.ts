@@ -4,6 +4,7 @@ import injury131v013 from '../../packs/0.13.0/events/EVT-INJ-131.json' with { ty
 import injury132v013 from '../../packs/0.13.0/events/EVT-INJ-132.json' with { type: 'json' };
 import injury133v013 from '../../packs/0.13.0/events/EVT-INJ-133.json' with { type: 'json' };
 import injury134v013 from '../../packs/0.13.0/events/EVT-INJ-134.json' with { type: 'json' };
+import eventRel131v013 from '../../packs/0.13.0/events/EVT-REL-131.json' with { type: 'json' };
 import manifest0110 from '../../packs/0.11.0/manifest.json' with { type: 'json' };
 import causal0 from '../../packs/0.11.0/chapters/CHP-MATCH-100.json' with { type: 'json' };
 import causal1 from '../../packs/0.11.0/chapters/CHP-MATCH-101.json' with { type: 'json' };
@@ -1313,7 +1314,8 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       veteranContext125,
     ],
     events: [
-      ...PACK_SOURCES_THROUGH_0110['0.11.0'].events,
+      ...PACK_SOURCES_THROUGH_0110['0.11.0'].events.filter((event) => event.id !== 'EVT-REL-131'),
+      eventRel131v013,
       injury131v013,
       injury132v013,
       injury133v013,

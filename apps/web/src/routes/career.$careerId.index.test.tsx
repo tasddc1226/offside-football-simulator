@@ -675,6 +675,7 @@ describe('SCR-029 다음 결정 카드 분기', () => {
       expect(within(hint).getByText('현재 42 · 기준 83 이상')).toBeInTheDocument();
       expect(within(hint).getByText(/주장 · 주장단으로 마친 시즌 2/)).toBeInTheDocument();
       expect(within(hint).getByText(/현재 주장입니다/)).toBeInTheDocument();
+      expect(within(hint).queryByText(/만 23세 이후/)).not.toBeInTheDocument();
 
       rulesetSpy.mockReturnValue({
         ...storedRuleset,

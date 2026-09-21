@@ -2987,9 +2987,9 @@
       "earlyOpportunity": {
         "version": "ROOKIE_TRIAL_V1",
         "maxAge": 21,
-        "maxSeason": 1,
+        "maxSeason": 2,
         "maxMatchesWithoutMinutes": 3,
-        "eligibleRoles": ["STARTER", "ROTATION", "BENCH"]
+        "eligibleRoles": ["STARTER", "ROTATION", "BENCH", "RESERVE"]
       }
     }
   },
