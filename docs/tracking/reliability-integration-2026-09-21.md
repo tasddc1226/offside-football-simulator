@@ -34,4 +34,4 @@ Verified candidate checksums:
 - pack `0.13.0`: `ba395ac1dc4f26379fbcc17b60cf132ab987177255bd474c0ef2fd8b6acfb9e6`
 - ruleset `3.4.0`: `a94ac12b535b692a6bfa31140a68480642aeb001d0d965b4aad153918f101e2c`
 
-Final branch SHA: `16c5affa8cbbdc31d557e560ffcbb27cb31fc8fe`; root owns final browser/release authorization.
+Final branch SHA: `78084683bb5bcc6658004c21255ae06b7257b59a`; root owns final browser/release authorization.
