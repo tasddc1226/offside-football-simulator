@@ -148,6 +148,21 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
 
   async function doExecute(request: ExecuteRequest): Promise<ExecuteResult> {
     const { careerId, command } = request;
+    const authority = await store.transaction('readonly', (tx) => tx.careers.get(careerId));
+    if (
+      authority?.authority === 'SERVER_ANNUAL' ||
+      authority?.rulesetVersion === '3.5.0' ||
+      authority?.contentPackVersion === '0.14.0' ||
+      (command.type === 'CREATE_CAREER' &&
+        (command.payload.rulesetVersion === '3.5.0' ||
+          command.payload.contentPackVersion === '0.14.0'))
+    ) {
+      return {
+        ok: false,
+        error: { code: 'VALIDATION_FAILED', message: '이 커리어는 서버에서만 진행할 수 있습니다.' },
+      };
+    }
+
     const requestHash = sha256Hex(canonicalize({ careerId, command } as unknown as JsonValue));
     const reusedIdError: EngineError = {
       code: 'COMMAND_ALREADY_RESOLVED', message: '이미 사용한 commandId에 다른 요청을 보낼 수 없다.',
@@ -293,6 +308,18 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       }
 
       const currentCareer = await tx.careers.get(careerId);
+      if (
+        currentCareer?.authority === 'SERVER_ANNUAL' ||
+        currentCareer?.rulesetVersion === '3.5.0'
+      ) {
+        return {
+          kind: 'rejected',
+          error: {
+            code: 'VALIDATION_FAILED',
+            message: '이 커리어는 서버에서만 진행할 수 있습니다.',
+          },
+        } as const;
+      }
 
       if (command.type === 'CREATE_CAREER') {
         if (currentCareer !== undefined) {
@@ -485,6 +512,13 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
       if (career === undefined) {
         throw new Error(`buildSyncBody: career ${careerId}를 찾을 수 없다.`);
       }
+
+      if (
+        career.authority === 'SERVER_ANNUAL' ||
+        career.rulesetVersion === '3.5.0' ||
+        career.contentPackVersion === '0.14.0'
+      )
+        return null;
 
       const commands = await tx.commandLog.listSince(careerId, career.lastSyncedRevision);
       if (commands.length === 0) {

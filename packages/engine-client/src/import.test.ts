@@ -28,6 +28,74 @@ function makeIdGenerator(prefix: string): () => string {
 const CAREER_ID = career01.createCareer.careerId;
 const NOW = '2026-09-02T00:00:00.000Z';
 
+describe('server annual authority cache', () => {
+  it('preserves authority, blocks local execution/upload, never imports a stale receipt', async () => {
+    const source = await runGoldenOnFreshStore();
+    const response = {
+      ...(await buildGetCareerResponse(source.store, CAREER_ID)),
+      authority: 'SERVER_ANNUAL' as const,
+    };
+    const store = new MemoryLocalStore();
+    await store.transaction('readwrite', (tx) => tx.kv.put('profile:id', 'owner-a'));
+    const meta = { now: NOW, ownerProfileId: 'owner-a', expectedProfileId: 'owner-a' };
+    expect((await importCareerFromServer(store, response, meta)).ok).toBe(true);
+    const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
+    const record = (await engine.listCareers())[0]!;
+    expect(record.authority).toBe('SERVER_ANNUAL');
+    expect(record.ownerProfileId).toBe('owner-a');
+    expect(await engine.buildSyncBody(CAREER_ID)).toBeNull();
+    expect(
+      (
+        await engine.execute({
+          careerId: CAREER_ID,
+          command: {
+            type: 'ADVANCE',
+            payload: { eligibleEvents: [] },
+            expectedRevision: record.revision,
+            commandId: 'forbidden-local',
+          },
+        })
+      ).ok,
+    ).toBe(false);
+    await store.transaction('readwrite', async (tx) => {
+      await tx.careers.put({
+        ...record,
+        revision: record.revision + 1,
+        lastSyncedRevision: record.revision + 1,
+      });
+    });
+    expect(await importCareerFromServer(store, response, meta)).toEqual({
+      ok: true,
+      revision: record.revision + 1,
+    });
+    expect((await engine.listCareers())[0]!.revision).toBe(record.revision + 1);
+    await store.transaction('readwrite', (tx) => tx.kv.put('profile:id', 'owner-b'));
+    expect((await importCareerFromServer(store, response, meta)).ok).toBe(false);
+  });
+  it('reserves annual version creation for the server without running the simulator', async () => {
+    const store = new MemoryLocalStore();
+    const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });
+    const result = await engine.execute({
+      careerId: 'annual-new',
+      createdServiceSeasonId: 'svc',
+      command: {
+        type: 'CREATE_CAREER',
+        commandId: 'annual-create',
+        expectedRevision: 0,
+        payload: {
+          careerId: 'annual-new',
+          seed: 'forged',
+          simulationMode: 'FAST',
+          rulesetVersion: '3.5.0',
+          contentPackVersion: '0.14.0',
+        },
+      },
+    });
+    expect(result.ok).toBe(false);
+    expect(await engine.listCareers()).toEqual([]);
+  });
+});
+
 async function runGoldenOnFreshStore(): Promise<{ store: MemoryLocalStore; engine: EngineClient }> {
   const store = new MemoryLocalStore();
   const engine = createEngineClient({ store, simulator: inlineSimulator, ruleset: rulesetProto });

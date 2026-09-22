@@ -36,6 +36,9 @@ import {
   updateDraft,
 } from './career-actions.js';
 import { getAppEngine } from './engine.js';
+import { ensureProfile } from '../api/profile.js';
+import { queryClient } from '../shared/query-client.js';
+import { cacheAnnualCareer } from './annual.js';
 
 export type CareerSummary = { record: LocalCareerRecord; state: CareerState };
 
@@ -50,7 +53,13 @@ export const careersQueryOptions = queryOptions({
   queryFn: async (): Promise<CareerSummary[]> => {
     const engine = await getAppEngine();
     const records = await engine.client.listCareers();
-    const loads = await Promise.all(records.map((record) => engine.client.loadCareer(record.id)));
+    const owner = await engine.store.transaction('readonly', (tx) =>
+      tx.kv.get<string>('profile:id'),
+    );
+    const visible = records.filter(
+      (record) => record.authority !== 'SERVER_ANNUAL' || record.ownerProfileId === owner,
+    );
+    const loads = await Promise.all(visible.map((record) => engine.client.loadCareer(record.id)));
     const summaries: CareerSummary[] = [];
     for (const load of loads) {
       if (load.ok) {
@@ -66,7 +75,28 @@ export function careerQueryOptions(careerId: string) {
     queryKey: ['career', careerId] as const,
     queryFn: async (): Promise<CareerSummary> => {
       const engine = await getAppEngine();
-      const load = await engine.client.loadCareer(careerId);
+      let load = await engine.client.loadCareer(careerId);
+      if (load.ok && load.career.authority === 'SERVER_ANNUAL') {
+        const owner = await engine.store.transaction('readonly', (tx) =>
+          tx.kv.get<string>('profile:id'),
+        );
+        if (!owner || load.career.ownerProfileId !== owner) {
+          if (!owner) throw new Error('현재 프로필을 확인해 주세요.');
+          await cacheAnnualCareer(owner, careerId, undefined, false);
+          load = await engine.client.loadCareer(careerId);
+        }
+      }
+      if (!load.ok && load.error.code === 'CAREER_NOT_FOUND') {
+        if (!(await ensureProfile(engine.store, queryClient)))
+          throw new Error('서버의 커리어를 확인하려면 인터넷 연결이 필요합니다.');
+        const owner = await engine.store.transaction('readonly', (tx) =>
+          tx.kv.get<string>('profile:id'),
+        );
+        if (owner) {
+          await cacheAnnualCareer(owner, careerId, undefined, false);
+          load = await engine.client.loadCareer(careerId);
+        }
+      }
       if (!load.ok) {
         throw new Error(load.error.message);
       }
@@ -118,7 +148,10 @@ type RequestClubMeetingVariables = { careerId: string; request: ClubMeetingReque
 async function runCareerMutation(kind: CareerMutationKind, variables: unknown) {
   const engine = await getAppEngine();
   switch (kind) {
-    case 'develop': { const { careerId, plan } = variables as { careerId: string; plan: DevelopmentPlan }; return develop(engine, careerId, plan); }
+    case 'develop': {
+      const { careerId, plan } = variables as { careerId: string; plan: DevelopmentPlan };
+      return develop(engine, careerId, plan);
+    }
     case 'create':
       return createCareer(engine, variables as CreateVariables);
     case 'updateDraft': {
@@ -201,29 +234,31 @@ type MutationDataFor<K extends CareerMutationKind> = K extends 'create'
       ? Awaited<ReturnType<typeof confirmPlayer>>
       : void;
 
-type MutationVariablesFor<K extends CareerMutationKind> = K extends 'develop' ? { careerId: string; plan: DevelopmentPlan } : K extends 'create'
-  ? CreateVariables
-  : K extends 'updateDraft'
-    ? UpdateDraftVariables
-    : K extends 'resolveEvent'
-      ? ResolveEventVariables
-      : K extends 'acceptOffer'
-        ? AcceptOfferVariables
-        : K extends 'negotiateOffer'
-          ? NegotiateOfferVariables
-          : K extends 'rejectOffer'
-            ? RejectOfferVariables
-            : K extends 'resolveLoanReturn'
-              ? ResolveLoanReturnVariables
-              : K extends 'startSeason'
-                ? StartSeasonVariables
-                : K extends 'resolveRole'
-                  ? ResolveRoleVariables
-                  : K extends 'requestClubMeeting'
-                    ? RequestClubMeetingVariables
-                    : K extends 'resolveChapter'
-                      ? ResolveChapterVariables
-                      : CareerIdVariables;
+type MutationVariablesFor<K extends CareerMutationKind> = K extends 'develop'
+  ? { careerId: string; plan: DevelopmentPlan }
+  : K extends 'create'
+    ? CreateVariables
+    : K extends 'updateDraft'
+      ? UpdateDraftVariables
+      : K extends 'resolveEvent'
+        ? ResolveEventVariables
+        : K extends 'acceptOffer'
+          ? AcceptOfferVariables
+          : K extends 'negotiateOffer'
+            ? NegotiateOfferVariables
+            : K extends 'rejectOffer'
+              ? RejectOfferVariables
+              : K extends 'resolveLoanReturn'
+                ? ResolveLoanReturnVariables
+                : K extends 'startSeason'
+                  ? StartSeasonVariables
+                  : K extends 'resolveRole'
+                    ? ResolveRoleVariables
+                    : K extends 'requestClubMeeting'
+                      ? RequestClubMeetingVariables
+                      : K extends 'resolveChapter'
+                        ? ResolveChapterVariables
+                        : CareerIdVariables;
 
 /**
  * 액션 실행 후 ['careers']와(있다면) ['career', careerId] 쿼리를 무효화한다. 'delete'는

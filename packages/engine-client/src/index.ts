@@ -1,4 +1,5 @@
 export const ENGINE_CLIENT_VERSION = '0.1.0';
+export { isServerAnnual } from './types.js';
 
 export { loadLocalCareerArchive, type RetirementArtifactsResolver } from './retirement-archive.js';
 

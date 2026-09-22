@@ -13,6 +13,28 @@ function freshDbName(): string {
 runLocalStoreContractTests('dexie', () => createDexieLocalStore(freshDbName()));
 
 describe('createDexieLocalStore', () => {
+  it('round trips additive server authority without changing the historical store schema', async () => {
+    const name = freshDbName();
+    const first = await createDexieLocalStore(name);
+    const record = {
+      id: 'server-career',
+      authority: 'SERVER_ANNUAL' as const,
+      ownerProfileId: 'owner-a',
+      status: 'ACTIVE' as const,
+      revision: 3,
+      lastSyncedRevision: 3,
+      createdServiceSeasonId: 'svc',
+      rulesetVersion: '3.5.0',
+      contentPackVersion: '0.14.0',
+      createdAt: '2026-09-22',
+      updatedAt: '2026-09-22',
+    };
+    await first.transaction('readwrite', (tx) => tx.careers.put(record));
+    await first.close();
+    const second = await createDexieLocalStore(name);
+    expect(await second.transaction('readonly', (tx) => tx.careers.get(record.id))).toEqual(record);
+    await second.close();
+  });
   it('같은 DB 이름을 다시 열어도 데이터가 남아 있다', async () => {
     const dbName = freshDbName();
 
@@ -39,7 +61,9 @@ describe('createDexieLocalStore', () => {
         ...(command.type === 'CREATE_CAREER' ? { createdServiceSeasonId: 'season-2025-26' } : {}),
       });
       if (!result.ok) {
-        throw new Error(`golden 명령 실패: ${command.type} ${result.error.code} ${result.error.message}`);
+        throw new Error(
+          `golden 명령 실패: ${command.type} ${result.error.code} ${result.error.message}`,
+        );
       }
     }
 

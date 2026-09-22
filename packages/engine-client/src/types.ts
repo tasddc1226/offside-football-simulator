@@ -3,6 +3,8 @@ import type { Command, DomainSnapshot, Effect } from '@offside/domain';
 
 export type LocalCareerRecord = {
   id: string;
+  /** Absent only on historical client-owned saves. */
+  authority?: 'CLIENT_LOCAL' | 'SERVER_ANNUAL';
   ownerProfileId: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'RETIRED' | 'ARCHIVED';
   revision: number;
@@ -13,6 +15,18 @@ export type LocalCareerRecord = {
   createdAt: string;
   updatedAt: string;
 };
+
+export function isServerAnnual(career: {
+  authority?: string;
+  rulesetVersion: string;
+  contentPackVersion: string;
+}): boolean {
+  return (
+    career.authority === 'SERVER_ANNUAL' ||
+    career.rulesetVersion === '3.5.0' ||
+    career.contentPackVersion === '0.14.0'
+  );
+}
 
 export type IdempotencyRecord = {
   commandId: string;

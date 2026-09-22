@@ -6,6 +6,7 @@ import type { AnalyticsEventsBody, PutCareerBody, ServiceSeasonCurrent } from '@
 import { E2E_META, fulfillJson } from './helpers/sync-conflict.js';
 import { completeOnboardingAndConfirm, readCurrentCareerState } from './helpers/player-creation.js';
 import { expectRoute } from './helpers/route.js';
+import { createServerAnnualCareer } from './helpers/annual-career.js';
 
 const WITH_API = process.env.E2E_WITH_API === '1';
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8787';
@@ -124,6 +125,9 @@ test('시즌이 LOCKED면 커리어 시작 버튼이 비활성화되고 안내 �
 test('CONFIRM_PLAYER·선택지 확정이 분석 이벤트로 전송되고 본문 어디에도 선수 이름이 없다', async ({
   page,
 }) => {
+  await page.route('**/v1/service-seasons/current', (route) =>
+    fulfillJson(route, 200, { data: TEST_SEASON, meta: E2E_META }),
+  );
   const capturedEvents: AnalyticsEventsBody['events'] = [];
   const capturedRawBodies: string[] = [];
   await page.route('**/v1/analytics/events', async (route) => {
@@ -170,19 +174,10 @@ test.describe('실제 api로 서비스 시즌·분석 이벤트 확인', () => {
     const currentBody = (await current.json()) as { data: ServiceSeasonCurrent };
     expect(currentBody.data.id).toBe('svc_kickoff');
     expect(currentBody.data.isTest).toBe(false);
-    expect(currentBody.data.rulesetVersion).toBe('3.4.0');
-    expect(currentBody.data.contentPackVersion).toBe('0.13.0');
+    expect(currentBody.data.rulesetVersion).toBe('3.5.0');
+    expect(currentBody.data.contentPackVersion).toBe('0.14.0');
 
-    await page.goto('/onboarding');
-    await page.getByLabel('이름').fill('김서준');
-    const [putResponse] = await Promise.all([
-      page.waitForResponse(
-        (response) =>
-          response.url().includes('/v1/careers/') && response.request().method() === 'PUT',
-      ),
-      page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click(),
-    ]);
-    expect(putResponse.status()).toBe(200);
+    await createServerAnnualCareer(page);
 
     const [analyticsResponse] = await Promise.all([
       page.waitForResponse((response) => response.url().includes('/v1/analytics/events')),

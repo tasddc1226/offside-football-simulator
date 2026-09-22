@@ -30,7 +30,11 @@ vi.mock('./engine.js', () => ({
   getAppEngine: () =>
     Promise.resolve({
       client: { listCareers: () => listCareersMock(), deleteCareer: deleteCareerMock },
-      store: { kind: 'actual' },
+      store: {
+        kind: 'actual',
+        transaction: async (_mode: unknown, run: (tx: unknown) => unknown) =>
+          run({ kv: { get: async () => 'profile-test' } }),
+      },
     }),
 }));
 
@@ -252,7 +256,7 @@ describe('reconcileAfterRecovery', () => {
 
     expect(importCareerFromServerMock).toHaveBeenCalledOnce();
     expect(importCareerFromServerMock).toHaveBeenCalledWith(
-      { kind: 'actual' },
+      expect.objectContaining({ kind: 'actual' }),
       expect.objectContaining({ snapshot: { careerId: 'car_same' } }),
       expect.objectContaining({ replaceLocal: true }),
     );

@@ -6,6 +6,7 @@ import { loadRuleset } from '@offside/content';
 import { importCareerFromServer } from '@offside/engine-client';
 import { Button } from '@offside/ui';
 import { apiFetch } from '../api/client.js';
+import { assertAnnualOwner, cacheAnnualCareer } from '../engine/annual.js';
 import { ensureProfile } from '../api/profile.js';
 import { getAppEngine } from '../engine/engine.js';
 import { advance } from '../engine/career-actions.js';
@@ -22,6 +23,13 @@ function ArticlePage() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const requestKey = useRef(crypto.randomUUID());
+  const ownerIntent = useRef<string | null>(null);
+  const lifetime = useRef(new AbortController());
+  useEffect(() => {
+    const abort = new AbortController();
+    lifetime.current = abort;
+    return () => abort.abort();
+  }, [articleId]);
   const viewed = useRef(false);
   const query = useQuery({
     queryKey: ['public-article', articleId],
@@ -52,20 +60,36 @@ function ArticlePage() {
   }, [query.data]);
   const challenge = useMutation({
     mutationFn: async () => {
+      const signal = lifetime.current.signal;
       const engine = await getAppEngine();
       if (!(await ensureProfile(engine.store, cache)))
         throw new Error('연결을 확인한 뒤 다시 시도해 주세요.');
+      const profileId = await engine.store.transaction('readonly', (tx) =>
+        tx.kv.get<string>('profile:id'),
+      );
+      if (!profileId) throw new Error('프로필을 확인해 주세요.');
+      if (ownerIntent.current && ownerIntent.current !== profileId)
+        throw new Error('프로필이 변경되었습니다. 기사를 다시 열어 주세요.');
+      ownerIntent.current = profileId;
       const result = await apiFetch(
         `/v1/articles/${encodeURIComponent(articleId)}/challenge`,
         {
           method: 'POST',
+          signal,
           headers: { 'Idempotency-Key': requestKey.current },
-          body: JSON.stringify({ name }),
+          body: JSON.stringify({ name, expectedProfileId: ownerIntent.current }),
         },
         GetCareerResponseSchema,
       );
       if (!result.ok) throw new Error(result.error.message);
+      if (signal.aborted) throw new Error('화면이 변경되어 응답을 사용하지 않았습니다.');
       const careerId = result.data.snapshot.careerId;
+      if (result.data.authority === 'SERVER_ANNUAL') {
+        await assertAnnualOwner(profileId, signal);
+        await cacheAnnualCareer(profileId, careerId, signal);
+        await navigate({ to: '/career/$careerId', params: { careerId } });
+        return;
+      }
       let loaded = await engine.client.loadCareer(careerId);
       if (!loaded.ok) {
         if (loaded.error.code !== 'CAREER_NOT_FOUND') throw new Error(loaded.error.message);

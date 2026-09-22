@@ -9,8 +9,14 @@ import { getSyncClient } from './sync.js';
 
 export type ReconcileChoice = 'MOVE_TO_LINKED' | 'KEEP_LINKED_ONLY' | 'NONE';
 
-export type ReconcileLocalCareer = { id: string; revision: number; lastSyncedRevision: number };
-export type ReconcileServerCareer = { id: string; revision: number };
+export type ReconcileLocalCareer = {
+  id: string;
+  revision: number;
+  lastSyncedRevision: number;
+  authority?: string;
+  rulesetVersion?: string;
+};
+export type ReconcileServerCareer = { id: string; revision: number; authority?: string };
 
 export type ReconcilePlan = {
   /** KEEP_LINKED_ONLY일 때만: 서버 목록에 없는 로컬 커리어(로컬만 삭제, 서버 호출 없음). */
@@ -41,7 +47,12 @@ export function planReconciliation(
     choice === 'KEEP_LINKED_ONLY'
       ? []
       : local
-          .filter((career) => career.revision > career.lastSyncedRevision)
+          .filter(
+            (career) =>
+              career.authority !== 'SERVER_ANNUAL' &&
+              career.rulesetVersion !== '3.5.0' &&
+              career.revision > career.lastSyncedRevision,
+          )
           .map((career) => career.id);
 
   const toReplace =
@@ -55,6 +66,8 @@ export function planReconciliation(
       if (localCareer === undefined) return true;
       if (choice === 'KEEP_LINKED_ONLY') return false;
       const hasUnsent = localCareer.revision > localCareer.lastSyncedRevision;
+      if (summary.authority === 'SERVER_ANNUAL')
+        return localCareer.revision < summary.revision || localCareer.authority !== 'SERVER_ANNUAL';
       return localCareer.revision < summary.revision && !hasUnsent;
     })
     .map((summary) => summary.id);
@@ -69,7 +82,11 @@ async function fetchAllRemoteCareers(): Promise<ReconcileServerCareer[] | null> 
     const result = await listRemoteCareers(cursor);
     if (!result.ok) return null;
     for (const item of result.data.items) {
-      items.push({ id: item.id, revision: item.revision });
+      items.push({
+        id: item.id,
+        revision: item.revision,
+        ...(item.authority ? { authority: item.authority } : {}),
+      });
     }
     if (result.data.nextCursor === null) return items;
     cursor = result.data.nextCursor;
@@ -85,7 +102,14 @@ export async function reconcileAfterRecovery(
   queryClient: QueryClient,
 ): Promise<{ ok: true } | { ok: false; failed: string[] }> {
   const engine = await getAppEngine();
+  const intendedOwner = await engine.store.transaction('readonly', (tx) =>
+    tx.kv.get<string>('profile:id'),
+  );
   const serverCareers = await fetchAllRemoteCareers();
+  const ownerUnchanged = async () =>
+    (await engine.store.transaction('readonly', (tx) => tx.kv.get<string>('profile:id'))) ===
+    intendedOwner;
+  if (!(await ownerUnchanged())) return { ok: false, failed: [] };
   if (serverCareers === null) {
     // 세션은 이미 새 프로필로 바뀐 뒤다(recoverProfile 성공) — 커리어 대조는 못 했어도 프로필
     // 쪽 캐시(발급일·linked 등)는 갱신해야 옛 프로필 상태로 남지 않는다.
@@ -98,6 +122,8 @@ export async function reconcileAfterRecovery(
     id: record.id,
     revision: record.revision,
     lastSyncedRevision: record.lastSyncedRevision,
+    ...(record.authority ? { authority: record.authority } : {}),
+    rulesetVersion: record.rulesetVersion,
   }));
 
   const plan = planReconciliation(choice, local, serverCareers);
@@ -105,12 +131,14 @@ export async function reconcileAfterRecovery(
   if (plan.toNotifyCommitted.length > 0) {
     const sync = await getSyncClient();
     for (const careerId of plan.toNotifyCommitted) {
+      if (!(await ownerUnchanged())) return { ok: false, failed: [] };
       const load = await engine.client.loadCareer(careerId);
       if (load.ok) sync.notifyCommitted(careerId, load.snapshot);
     }
   }
 
   const now = new Date().toISOString();
+  const profileId = intendedOwner;
   const failed: string[] = [];
   for (const careerId of plan.toReplace) {
     const result = await getRemoteCareer(careerId);
@@ -118,7 +146,9 @@ export async function reconcileAfterRecovery(
       failed.push(careerId);
       continue;
     }
+    if (!(await ownerUnchanged())) return { ok: false, failed: [] };
     const imported = await importCareerFromServer(engine.store, result.data, {
+      ...(profileId ? { ownerProfileId: profileId, expectedProfileId: profileId } : {}),
       rulesetForVersion: loadRuleset,
       retirementArtifacts: (versions) =>
         loadRetirementArtifacts(versions.rulesetVersion, versions.contentPackVersion),
@@ -134,7 +164,9 @@ export async function reconcileAfterRecovery(
         failed.push(careerId);
         continue;
       }
+      if (!(await ownerUnchanged())) return { ok: false, failed: [] };
       const imported = await importCareerFromServer(engine.store, result.data, {
+        ...(profileId ? { ownerProfileId: profileId, expectedProfileId: profileId } : {}),
         rulesetForVersion: loadRuleset,
         retirementArtifacts: (versions) =>
           loadRetirementArtifacts(versions.rulesetVersion, versions.contentPackVersion),
@@ -150,6 +182,7 @@ export async function reconcileAfterRecovery(
   // Google 저장본의 fetch·검증·import가 하나라도 실패하면 원래 익명 프로필의 로컬 전용
   // 커리어를 남겨 재시도·복구할 수 있게 한다. 모두 준비된 뒤에만 명시한 기기 정리를 적용한다.
   if (failed.length === 0) {
+    if (!(await ownerUnchanged())) return { ok: false, failed: [] };
     for (const careerId of plan.toDelete) {
       await engine.client.deleteCareer(careerId);
     }
