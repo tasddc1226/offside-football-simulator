@@ -540,6 +540,7 @@ export type LeagueCalendar = {
 
 // D-8: 룰셋 데이터는 콘텐츠 패키지가 소유하고, domain은 이 타입으로 입력만 받는다.
 export type Ruleset = {
+  annualRules?: { version: 'ANNUAL_V1'; trainingShareBp: number } | undefined;
   overseasRules?: { version: 'WORLD_JOURNEY_V1' } | undefined;
   developmentRules?: { version: 'PLAYER_LIFE_V1' } | undefined;
   matchDecisionRules?: { version: 'LATE_MATCH_V1' } | undefined;

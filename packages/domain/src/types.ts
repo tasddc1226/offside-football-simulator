@@ -1010,6 +1010,7 @@ export type CoachMemoryState = {
 };
 
 export type CareerState = {
+  annualStories?: import('./annual-stories.js').AnnualStories;
   /** Opt-in actor snapshots; absent on historical careers, never inferred from generic relation logs. */
   characterMemory?: CoachMemoryState | undefined;
   development?: DevelopmentState | undefined;

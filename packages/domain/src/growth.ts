@@ -113,8 +113,14 @@ export function computeGrowth(input: GrowthInput, ruleset: Ruleset): GrowthResul
     );
     const ageMultBp = ageMultBpOf(rules, group, input.age);
 
-    const trainingCenti = Math.trunc(((budgetCenti * shareBp) / 10000) * (ageMultBp / 10000));
-    const minutesCenti = Math.trunc((trainingCenti * minutesBp) / 10000) - trainingCenti;
+    const fullDevelopmentCenti = Math.trunc(((budgetCenti * shareBp) / 10000) * (ageMultBp / 10000));
+    // ANNUAL_V1 separates modest training from positive, actual playing exposure.
+    // Historical rules retain the exact old floor and arithmetic.
+    const trainingCenti = ruleset.annualRules === undefined ? fullDevelopmentCenti
+      : Math.trunc(fullDevelopmentCenti * ruleset.annualRules.trainingShareBp / 10000);
+    const minutesCenti = ruleset.annualRules === undefined
+      ? Math.trunc((trainingCenti * minutesBp) / 10000) - trainingCenti
+      : Math.trunc((fullDevelopmentCenti - trainingCenti) * minutesBp / 10000);
     const experienceCenti = Math.trunc(((experienceCentiSeason * shareBp) / 10000) * (ageMultBp / 10000));
     const decline = rules.decline[group];
     const declineCenti = Math.max(0, input.age - decline.startAge) * decline.perYearCenti;

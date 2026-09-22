@@ -1,5 +1,12 @@
 import manifest0120 from '../../packs/0.12.0/manifest.json' with { type: 'json' };
 import manifest0130 from '../../packs/0.13.0/manifest.json' with { type: 'json' };
+import manifest0140 from '../../packs/0.14.0/manifest.json' with { type: 'json' };
+import story140 from '../../packs/0.14.0/events/EVT-DEV-140.json' with { type: 'json' };
+import story141 from '../../packs/0.14.0/events/EVT-DEV-141.json' with { type: 'json' };
+import story142 from '../../packs/0.14.0/events/EVT-MGR-142.json' with { type: 'json' };
+import story143 from '../../packs/0.14.0/events/EVT-MGR-143.json' with { type: 'json' };
+import story144 from '../../packs/0.14.0/events/EVT-REL-144.json' with { type: 'json' };
+import story145 from '../../packs/0.14.0/events/EVT-REL-145.json' with { type: 'json' };
 import injury131v013 from '../../packs/0.13.0/events/EVT-INJ-131.json' with { type: 'json' };
 import injury132v013 from '../../packs/0.13.0/events/EVT-INJ-132.json' with { type: 'json' };
 import injury133v013 from '../../packs/0.13.0/events/EVT-INJ-133.json' with { type: 'json' };
@@ -333,6 +340,7 @@ export const PACK_VERSIONS = [
   '0.11.0',
   '0.12.0',
   '0.13.0',
+  '0.14.0',
 ] as const;
 export type PackVersion = (typeof PACK_VERSIONS)[number];
 
@@ -355,7 +363,7 @@ type PackSource = {
 const PACK_SOURCES_THROUGH_066: Record<
   Exclude<
     PackVersion,
-    '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0' | '0.6.7' | '0.6.8' | '0.7.0'
+    '0.14.0' | '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0' | '0.6.7' | '0.6.8' | '0.7.0'
   >,
   PackSource
 > = {
@@ -1117,7 +1125,7 @@ const PACK_SOURCES_THROUGH_066: Record<
 const PACK_SOURCES_WITHOUT_068: Record<
   Exclude<
     PackVersion,
-    '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0' | '0.6.8' | '0.7.0'
+    '0.14.0' | '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0' | '0.6.8' | '0.7.0'
   >,
   PackSource
 > = {
@@ -1129,7 +1137,7 @@ const PACK_SOURCES_WITHOUT_068: Record<
 };
 
 const PACK_SOURCES_THROUGH_068: Record<
-  Exclude<PackVersion, '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0' | '0.7.0'>,
+  Exclude<PackVersion, '0.14.0' | '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0' | '0.7.0'>,
   PackSource
 > = {
   ...PACK_SOURCES_WITHOUT_068,
@@ -1163,7 +1171,7 @@ const PACK_SOURCES_THROUGH_068: Record<
 };
 
 const PACK_SOURCES_THROUGH_070: Record<
-  Exclude<PackVersion, '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0'>,
+  Exclude<PackVersion, '0.14.0' | '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0' | '0.9.0' | '0.8.0'>,
   PackSource
 > = {
   ...PACK_SOURCES_THROUGH_068,
@@ -1180,7 +1188,7 @@ const PACK_SOURCES_THROUGH_070: Record<
 };
 
 const PACK_SOURCES_THROUGH_080: Record<
-  Exclude<PackVersion, '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0' | '0.9.0'>,
+  Exclude<PackVersion, '0.14.0' | '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0' | '0.9.0'>,
   PackSource
 > = {
   ...PACK_SOURCES_THROUGH_070,
@@ -1212,7 +1220,7 @@ const PACK_SOURCES_THROUGH_080: Record<
  * 있다. CLI 전용 `cli/load-pack.ts`(디렉터리를 `readdirSync`로 스캔)와는 별개다.
  */
 const PACK_SOURCES_THROUGH_090: Record<
-  Exclude<PackVersion, '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0'>,
+  Exclude<PackVersion, '0.14.0' | '0.13.0' | '0.12.0' | '0.11.0' | '0.10.0'>,
   PackSource
 > = {
   ...PACK_SOURCES_THROUGH_080,
@@ -1225,7 +1233,7 @@ const PACK_SOURCES_THROUGH_090: Record<
   },
 };
 const PACK_SOURCES_THROUGH_0100: Record<
-  Exclude<PackVersion, '0.13.0' | '0.12.0' | '0.11.0'>,
+  Exclude<PackVersion, '0.14.0' | '0.13.0' | '0.12.0' | '0.11.0'>,
   PackSource
 > = {
   ...PACK_SOURCES_THROUGH_090,
@@ -1265,7 +1273,7 @@ const PACK_SOURCES_THROUGH_0100: Record<
   },
 };
 
-const PACK_SOURCES_THROUGH_0110: Record<Exclude<PackVersion, '0.13.0' | '0.12.0'>, PackSource> = {
+const PACK_SOURCES_THROUGH_0110: Record<Exclude<PackVersion, '0.14.0' | '0.13.0' | '0.12.0'>, PackSource> = {
   ...PACK_SOURCES_THROUGH_0100,
   '0.11.0': {
     ...PACK_SOURCES_THROUGH_0100['0.10.0'],
@@ -1298,7 +1306,7 @@ const PACK_SOURCES_THROUGH_0110: Record<Exclude<PackVersion, '0.13.0' | '0.12.0'
   },
 };
 
-const PACK_SOURCES: Record<PackVersion, PackSource> = {
+const PACK_SOURCES_THROUGH_0130: Record<Exclude<PackVersion, '0.14.0'>, PackSource> = {
   ...PACK_SOURCES_THROUGH_0110,
   '0.12.0': { ...PACK_SOURCES_THROUGH_0110['0.11.0'], manifest: manifest0120 },
   '0.13.0': {
@@ -1324,6 +1332,12 @@ const PACK_SOURCES: Record<PackVersion, PackSource> = {
       injury134v013,
     ],
   },
+};
+
+const PACK_SOURCES: Record<PackVersion, PackSource> = {
+  ...PACK_SOURCES_THROUGH_0130,
+  '0.14.0': { ...PACK_SOURCES_THROUGH_0130['0.13.0'], manifest: manifest0140,
+    events: [...PACK_SOURCES_THROUGH_0130['0.13.0'].events, story140, story141, story142, story143, story144, story145] },
 };
 
 export function loadContentPack(version: string): ContentPack {

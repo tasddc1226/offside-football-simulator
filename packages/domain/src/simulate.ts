@@ -1,4 +1,5 @@
 import { developPlayer, needsDevelopment, type DevelopmentPlan } from './development.js';
+import { openAnnualStory, resolveAnnualStory, isAnnualStoryEvent } from './annual-stories.js';
 import { compareCodePoints, type JsonValue } from './canonical.js';
 import { clamp } from './clamp.js';
 import {
@@ -1243,7 +1244,18 @@ function startSeason(input: SimulationInput, snapshot: DomainSnapshot): Simulati
 
   const calendar = ruleset.leagueCalendar;
   const mode = command.payload.simulationMode;
-  const initialSteps = buildSeasonSteps(calendar, mode);
+  let initialSteps = buildSeasonSteps(calendar, mode);
+  if (ruleset.annualRules !== undefined) {
+    // No annual renewal appointment. Only the expiring contract has a discussion
+    // window; trust determines how early that club approaches the player.
+    const finalContractYear = state.contract.kind !== 'LOAN' &&
+      computeContractSeasonsRemaining(state.contract.lengthSeasons, state.contract.signedAtRevision, state.timeline) <= 1;
+    const discussionStep = managerTrust >= 60 ? 6 : managerTrust >= 40 ? 8 : 10;
+    initialSteps = initialSteps.map((step) => ({ ...step, decisionSlots: [
+      ...step.decisionSlots.filter((slot) => slot.kind !== 'CONTRACT'),
+      ...(finalContractYear && step.index === discussionStep ? [{ kind: 'CONTRACT' as const, required: true }] : []),
+    ] }));
+  }
   const nextRevision = snapshot.revision + 1;
   const roleContext = buildRoleContext(
     stateAfterSelection,
@@ -1628,24 +1640,25 @@ function advanceInSeason(
   // 먼저 재개한다. walkToNextDecision 불변식상 그 resume만 경기 재실행 없이 현재 step을 다시 본다.
   const currentStep = findSeasonStep(steps, currentStepIndex);
   const lastTimelineEntry = state.timeline[state.timeline.length - 1];
+  const storyResume = input.ruleset.annualRules !== undefined && state.annualStories?.resumeStep === currentStepIndex
+    ? state.annualStories.resumeReason : null;
   const resumesInjuryStep =
     state.pending === null &&
     currentStep.summary === null &&
-    lastTimelineEntry?.kind === 'REHAB_CHOSEN' &&
-    lastTimelineEntry.step === currentStepIndex;
+    lastTimelineEntry?.kind === 'REHAB_CHOSEN' && lastTimelineEntry.step === currentStepIndex;
   const resumesNationalTeamStep =
     state.pending === null &&
     currentStep.summary === null &&
-    (lastTimelineEntry?.kind === 'NATIONAL_TEAM_CALLED' ||
+    ((lastTimelineEntry?.kind === 'NATIONAL_TEAM_CALLED' ||
       lastTimelineEntry?.kind === 'NATIONAL_TEAM_DECLINED') &&
-    lastTimelineEntry.step === currentStepIndex;
+    lastTimelineEntry.step === currentStepIndex);
   const resumesChapterStep =
     input.ruleset.matchDecisionRules !== undefined &&
     state.pending === null &&
     currentStep.summary === null &&
-    lastTimelineEntry?.kind === 'CHAPTER_RESOLVED' &&
-    lastTimelineEntry.step === currentStepIndex;
+    (storyResume === 'CHAPTER' || (lastTimelineEntry?.kind === 'CHAPTER_RESOLVED' && lastTimelineEntry.step === currentStepIndex));
   const resumesSameStep =
+    (input.ruleset.annualRules !== undefined && state.annualStories?.resumeStep === currentStepIndex) ||
     resumesChapterStep ||
     resumesInjuryStep ||
     resumesNationalTeamStep ||
@@ -1890,6 +1903,7 @@ function advanceInSeason(
 
   const nextState: CareerState = {
     ...expiredState,
+    ...(expiredState.annualStories === undefined ? {} : { annualStories: { ...expiredState.annualStories, resumeStep: null, resumeReason: null } }),
     season: nextSeason,
     currentStep: nextSeason.currentStep,
     seasonPhase: nextSeason.phase,
@@ -1958,7 +1972,13 @@ function advance(input: SimulationInput, snapshot: DomainSnapshot): SimulationRe
   }
 
   if (state.season !== null) {
-    return advanceInSeason(input, snapshot, state.season);
+    const storyState = openAnnualStory(state, command.payload.eligibleEvents, snapshot.revision + 1);
+    if (storyState.pending?.kind === 'EVENT' && isAnnualStoryEvent(storyState.pending.eventId)) {
+      return { ok: true, snapshot: buildSnapshot(storyState, snapshot.revision + 1, 'EVENT_OFFERED'), appliedEffects: [], nextAction: 'DECISION' };
+    }
+    // Story-only candidates are not calendar events; they have their own causal pacing.
+    const storyInput = input.ruleset.annualRules === undefined ? input : { ...input, command: { ...command, payload: { ...command.payload, eligibleEvents: command.payload.eligibleEvents.filter((event) => !isAnnualStoryEvent(event.eventId)) } } };
+    return advanceInSeason(storyInput, { ...snapshot, state: storyState }, state.season);
   }
 
   const rawEligibleEvents = command.payload.eligibleEvents;
@@ -2456,7 +2476,7 @@ function resolveEvent(input: SimulationInput, snapshot: DomainSnapshot): Simulat
 
   return {
     ok: true,
-    snapshot: buildSnapshot(nextState, nextRevision, 'EVENT_RESOLVED'),
+    snapshot: buildSnapshot(resolveAnnualStory(nextState, command.payload.eventId, command.payload.choiceId, chosen.kind, nextRevision), nextRevision, 'EVENT_RESOLVED'),
     roll: rolled.value,
     outcomeId: chosen.id,
     appliedEffects: effectResult.applied,

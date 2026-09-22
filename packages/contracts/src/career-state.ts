@@ -1261,6 +1261,17 @@ export const NationalTeamStateSchema = z.strictObject({
  * 정확한 형태를 강제한다. 서로 다른 용도이므로 하나로 합치지 않는다.
  */
 const CareerStateShapeSchema = z.strictObject({
+  annualStories: z.strictObject({
+    version: z.literal('STORIES_V1'), evaluatedWindows: z.array(z.string()).max(48), resumeStep: z.number().int().nullable(),
+    resumeReason: z.enum(['CHAPTER', 'DEVELOPMENT']).nullable(),
+    threads: z.array(z.strictObject({
+      id: z.string(), family: z.enum(['OPPORTUNITY', 'ROLE_TENSION', 'SCOUT_INTEREST']),
+      actor: z.strictObject({ id: z.string(), name: z.string(), teamId: z.string() }),
+      sourceRevision: z.number().int(), sourceSeason: z.number().int(), sourceStep: z.number().int(), sourceMinutes: z.number().int(),
+      stage: z.enum(['OPEN', 'FOLLOW_UP', 'CLOSED', 'CANCELLED']), dueCareerStep: z.number().int(),
+      choiceId: z.string().nullable(), outcome: z.enum(['SUCCESS', 'NEUTRAL', 'FAIL', 'FIXED']).nullable(), resolvedRevision: z.number().int().nullable(),
+    })).max(24),
+  }).optional(),
   schemaVersion: z.literal(1),
   careerId: z.string().min(1),
   status: z.enum(['DRAFT', 'ACTIVE', 'RETIRED', 'ARCHIVED']),

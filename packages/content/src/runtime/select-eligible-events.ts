@@ -3,6 +3,7 @@ import { evaluateCondition } from '../schema/condition.ts';
 import type { EventDefinition } from '../schema/event.ts';
 import type { ContentPack } from '../packs/load-content-pack.ts';
 import { buildConditionContext } from './condition-context.ts';
+import { annualStoryCandidates } from './annual-stories.ts';
 
 export type EligibleEvent = {
   eventId: string;
@@ -223,7 +224,8 @@ export function selectEligibleEvents(pack: ContentPack, state: CareerState): Eli
   const localStories = ['0.10.0', '0.11.0', '0.12.0'].includes(pack.manifest.contentPackVersion)
     ? pool.filter((event) => /^EVT-REL-4[0-2][0-9]$/.test(event.id) || event.id === 'EVT-CON-310')
       : [];
-  return (localStories.length > 0 ? localStories : pool)
+  const result = (localStories.length > 0 ? localStories : pool)
+    .filter((event) => pack.manifest.contentPackVersion !== '0.14.0' || !/^EVT-(DEV|MGR|REL)-14[0-5]$/.test(event.id))
     .map((event) => ({
       eventId: event.id,
       version: event.version,
@@ -231,4 +233,5 @@ export function selectEligibleEvents(pack: ContentPack, state: CareerState): Eli
       ...(event.presentation === 'RUMOUR' ? { slot: 'TRANSFER_WINDOW' as const } : {}),
     }))
     .sort(compareEventId);
+  return [...result, ...annualStoryCandidates(pack, state)].sort(compareEventId);
 }

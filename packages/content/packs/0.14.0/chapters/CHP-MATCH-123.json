@@ -1,0 +1,16 @@
+{
+  "id": "CHP-MATCH-123",
+  "version": 1,
+  "importance": "MAJOR",
+  "trigger": { "kind": "TAG", "tag": "MENTOR_SUCCESS:11" },
+  "weight": 100,
+  "rotationGroup": "RELATION_CONTEXT",
+  "decisions": [{
+    "id": "D1",
+    "prompt": "라커룸에서 서로 다른 목소리가 다음 경기의 계획을 흔든다. 오래 지켜본 동료로서 무엇을 할까?",
+    "options": [
+      { "id": "MEDIATE", "label": "공통 목표부터 다시 세운다", "riskLabel": "LOW", "priorProbability": null, "previewEffects": [{ "label": "감독 신뢰 +2", "target": "managerTrust" }, { "label": "조율에 집중해 체력 -2", "target": "fitness" }], "outcomes": [{ "id": "MEDIATE-FIXED", "kind": "FIXED", "weight": 100, "title": "공통 목표가 다시 보였다", "ratingDeltaTenths": 0, "effects": [{ "kind": "RELATION", "sourceId": "CHP-MATCH-123.D1.MEDIATE.FIXED", "target": "managerTrust", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }, { "kind": "CURRENT", "sourceId": "CHP-MATCH-123.D1.MEDIATE.FIXED.FITNESS", "target": "fitness", "delta": -2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }], "narrative": { "situation": "공통 목표가 다시 보였다. 함께 조율한 목소리가 경기장에서 한 방향으로 이어졌지만, 조율에 집중한 만큼 체력이 줄었다." } }] },
+      { "id": "QUIET", "label": "먼저 듣고 필요한 말만 보탠다", "riskLabel": "MEDIUM", "priorProbability": null, "previewEffects": [{ "label": "감독 신뢰 +1", "target": "managerTrust" }, { "label": "동료의 판단을 존중해 체력 +2", "target": "fitness" }], "outcomes": [{ "id": "QUIET-FIXED", "kind": "FIXED", "weight": 100, "title": "조용한 말이 균형을 잡았다", "ratingDeltaTenths": 0, "effects": [{ "kind": "RELATION", "sourceId": "CHP-MATCH-123.D1.QUIET.FIXED", "target": "managerTrust", "delta": 1, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }, { "kind": "CURRENT", "sourceId": "CHP-MATCH-123.D1.QUIET.FIXED.FITNESS", "target": "fitness", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "SUM" }], "narrative": { "situation": "조용한 말이 균형을 잡았다. 서로를 살피는 관계가 팀의 긴장을 덜어냈고, 체력도 아꼈다." } }] }
+    ]
+  }]
+}
