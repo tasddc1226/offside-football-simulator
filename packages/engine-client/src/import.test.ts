@@ -14,7 +14,7 @@ import {
 } from '@offside/domain';
 import ruleset170Raw from '../../content/rulesets/1.7.0/ruleset.json' with { type: 'json' };
 import ruleset171Raw from '../../content/rulesets/1.7.1/ruleset.json' with { type: 'json' };
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createEngineClient, type EngineClient } from './engine.js';
 import { importCareerFromServer } from './import.js';
 import { inlineSimulator } from './simulator/index.js';
@@ -29,6 +29,31 @@ const CAREER_ID = career01.createCareer.careerId;
 const NOW = '2026-09-02T00:00:00.000Z';
 
 describe('server annual authority cache', () => {
+  it('refuses a fetched snapshot when deletion was queued before the import transaction', async () => {
+    const source = await runGoldenOnFreshStore();
+    const response = { ...await buildGetCareerResponse(source.store, CAREER_ID), authority: 'SERVER_ANNUAL' as const };
+    const store = new MemoryLocalStore();
+    await store.transaction('readwrite', tx => tx.kv.put('sync:pending-delete', [CAREER_ID]));
+    expect(await importCareerFromServer(store, response, { now: NOW, pendingDeleteKey: 'sync:pending-delete' })).toMatchObject({ ok: false, error: { code: 'CAREER_NOT_FOUND' } });
+    expect(await store.transaction('readonly', tx => tx.careers.get(CAREER_ID))).toBeUndefined();
+    expect(await store.transaction('readonly', tx => tx.snapshots.getLatest(CAREER_ID))).toBeUndefined();
+  });
+  it('does not simulate or persist recovery of a corrupt server cache; canonical import repairs it', async () => {
+    const source = await runGoldenOnFreshStore();
+    const response = {...await buildGetCareerResponse(source.store, CAREER_ID), authority: 'SERVER_ANNUAL' as const};
+    const store = new MemoryLocalStore();
+    await importCareerFromServer(store, response, {now: NOW});
+    await store.transaction('readwrite', tx => tx.snapshots.put({...response.snapshot, stateHash: 'corrupt'}));
+    const simulator = {simulate: vi.fn(inlineSimulator.simulate)};
+    const engine = createEngineClient({store, simulator, ruleset: rulesetProto});
+    const result = await engine.loadCareer(CAREER_ID);
+    expect(result).toMatchObject({ok: false, error: {code: 'VERIFICATION_FAILED', details: {reason: 'SERVER_CACHE_RELOAD_REQUIRED'}}});
+    expect(simulator.simulate).not.toHaveBeenCalled();
+    expect((await store.transaction('readonly', tx => tx.snapshots.getLatest(CAREER_ID)))?.stateHash).toBe('corrupt');
+    expect((await importCareerFromServer(store, response, {now: NOW})).ok).toBe(true);
+    expect((await engine.loadCareer(CAREER_ID)).ok).toBe(true);
+    expect(simulator.simulate).not.toHaveBeenCalled();
+  });
   it('preserves authority, blocks local execution/upload, never imports a stale receipt', async () => {
     const source = await runGoldenOnFreshStore();
     const response = {

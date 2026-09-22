@@ -274,7 +274,7 @@ export function AnnualCareerScreen({
   const tokens = buildNarrativeTokens(state, pack, rulesetForCareer(state));
   const year = current?.targetSeasonIndex ?? state.seasonHistory.length + 1;
   return (
-    <main className="flex flex-col gap-os-3">
+    <div className="flex flex-col gap-os-3">
       <header className="os-panel">
         <p>서버 연간 커리어</p>
         <h1>{state.player.profile?.name}의 커리어</h1>
@@ -426,6 +426,6 @@ export function AnnualCareerScreen({
         </details>
       )}
       <Link to="/">내 선수 목록으로</Link>
-    </main>
+    </div>
   );
 }

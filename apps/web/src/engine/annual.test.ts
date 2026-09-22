@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_ANNUAL_POLICY } from '@offside/domain';
 import type { AnnualRunResponse } from '@offside/contracts';
-import { AnnualController, isForwardAnnual } from './annual.js';
+import { AnnualController, cacheAnnualCareer, isForwardAnnual } from './annual.js';
 
 const mocks = vi.hoisted(() => ({
   owner: 'owner-a',
   api: vi.fn(),
   remote: vi.fn(),
   imported: vi.fn(),
+  pendingDeletes: [] as string[],
 }));
 vi.mock('../api/client.js', () => ({
   apiFetch: (...args: unknown[]) => mocks.api(...args),
@@ -18,7 +19,7 @@ vi.mock('./engine.js', () => ({
   getAppEngine: async () => ({
     store: {
       transaction: async (_mode: unknown, run: (tx: unknown) => unknown) =>
-        run({ kv: { get: async () => mocks.owner } }),
+        run({ kv: { get: async (key: string) => key === 'sync:pending-delete' ? mocks.pendingDeletes : mocks.owner } }),
     },
   }),
 }));
@@ -55,10 +56,24 @@ function run(revision = 1, careerRevision = 5, id = 'run-one'): AnnualRunRespons
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.owner = 'owner-a';
+  mocks.pendingDeletes = [];
   mocks.remote.mockResolvedValue({ ok: true, data: {} });
   mocks.imported.mockResolvedValue({ ok: true, revision: 5 });
 });
 describe('annual controller authority and continuation', () => {
+  it('does not resurrect a career deleted while canonical GET was in flight', async () => {
+    let finish!: (value: unknown) => void;
+    mocks.remote.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    mocks.imported.mockImplementation(async (_store, _response, meta) => {
+      expect(meta.pendingDeleteKey).toBe('sync:pending-delete');
+      return { ok: false, error: { code: 'CAREER_NOT_FOUND', message: 'deleted' } };
+    });
+    const request = cacheAnnualCareer('owner-a', 'career-one');
+    await vi.waitFor(() => expect(mocks.remote).toHaveBeenCalled());
+    mocks.pendingDeletes = ['career-one'];
+    finish({ ok: true, data: {} });
+    await expect(request).rejects.toMatchObject({ code: 'CAREER_NOT_FOUND' });
+  });
   it('coalesces duplicate start and accepts only canonical GET after an old receipt', async () => {
     const current = run(2, 8);
     mocks.api.mockImplementation(async (_path: string, init: RequestInit) => ({

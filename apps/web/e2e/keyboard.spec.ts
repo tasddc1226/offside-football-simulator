@@ -13,7 +13,12 @@
 // 키 목록(Tab·Shift+Tab·Enter·Space·화살표)에 없어 쓰지 않고, 대화상자의 "닫기" 버튼을 Tab+Enter로
 // 눌러서 닫는다.
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { expectFirstContractHeading, fulfillJson, META } from './helpers/player-creation.js';
+import {
+  expectFirstContractHeading,
+  fulfillJson,
+  META,
+  pinServiceSeasonPair,
+} from './helpers/player-creation.js';
 import { currentRoute, expectRoute, waitForRoute } from './helpers/route.js';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
@@ -53,6 +58,8 @@ test('키보드만으로 온보딩→계약→대시보드까지 완주한다(�
     }),
   );
 
+  // This keyboard journey covers the preserved client-local creation screens.
+  await pinServiceSeasonPair(page, '3.4.0', '0.13.0');
   await page.goto('/onboarding');
 
   // T-7-039 후속(스킵 링크 접근성 회귀 수정): 스킵 링크는 라우터 이동이 아니라 순수 앵커 +

@@ -10,6 +10,7 @@ export async function createServerAnnualCareer(page: Page): Promise<string> {
   const pending = page.waitForResponse(
     (response) =>
       response.url().endsWith('/v1/careers/server') && response.request().method() === 'POST',
+    { timeout: 15_000 },
   );
   await page.getByRole('button', { name: '선수 만들기', exact: true }).click();
   const response = await pending;
@@ -48,8 +49,8 @@ export async function finishFirstAnnualYear(page: Page): Promise<number> {
   expect(decisions).toBeGreaterThan(0);
   await expect(result).toBeVisible();
   await expect(result).toContainText('실제 출전');
-  const saved = await result.innerText();
+  const saved = await result.textContent();
   await page.reload();
-  await expect(result).toHaveText(saved);
+  await expect(result).toHaveText(saved!);
   return decisions;
 }

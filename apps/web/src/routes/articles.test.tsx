@@ -27,7 +27,7 @@ vi.mock('@offside/engine-client', () => ({
   importCareerFromServer: (...args: unknown[]) => mocks.import(...args),
 }));
 vi.mock('../engine/engine.js', () => ({
-  getAppEngine: async () => ({ store: {}, client: { loadCareer: mocks.load } }),
+  getAppEngine: async () => ({ store: {transaction: async (_mode: unknown, run: (tx: unknown) => unknown) => run({kv: {get: async () => 'article-owner'}})}, client: { loadCareer: mocks.load } }),
 }));
 vi.mock('../engine/career-actions.js', () => ({
   advance: (...args: unknown[]) => mocks.advance(...args),

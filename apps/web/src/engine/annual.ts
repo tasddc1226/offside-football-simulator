@@ -12,6 +12,7 @@ import type { AnnualPolicy } from '@offside/domain';
 import { apiFetch, getProfile, getRemoteCareer } from '../api/client.js';
 import { queryClient } from '../shared/query-client.js';
 import { getAppEngine } from './engine.js';
+import { assertNotPendingDelete, pendingDeleteKey } from './pending-delete.js';
 
 export const annualPair = (value: { rulesetVersion: string; contentPackVersion: string }) =>
   value.rulesetVersion === '3.5.0' && value.contentPackVersion === '0.14.0';
@@ -39,20 +40,22 @@ export async function cacheAnnualCareer(
   signal?: AbortSignal,
   invalidate = true,
 ) {
+  const engine = await getAppEngine();
+  await assertNotPendingDelete(engine.store, careerId);
   await assertAnnualOwner(owner, signal);
   const response = await getRemoteCareer(careerId);
   if (!response.ok) throw Object.assign(new Error(response.error.message), {code: response.error.code});
   await assertAnnualOwner(owner, signal);
-  const engine = await getAppEngine();
   const imported = await importCareerFromServer(engine.store, response.data, {
     now: new Date().toISOString(),
     ownerProfileId: owner,
     expectedProfileId: owner,
+    pendingDeleteKey,
     rulesetForVersion: loadRuleset,
     retirementArtifacts: (versions) =>
       loadRetirementArtifacts(versions.rulesetVersion, versions.contentPackVersion),
   });
-  if (!imported.ok) throw new Error(imported.error.message);
+  if (!imported.ok) throw Object.assign(new Error(imported.error.message), { code: imported.error.code });
   if (invalidate) {
     await queryClient.invalidateQueries({ queryKey: ['career', careerId] });
     await queryClient.invalidateQueries({ queryKey: ['careers'] });

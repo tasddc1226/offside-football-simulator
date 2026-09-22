@@ -36,6 +36,8 @@ export async function importCareerFromServer(
     ownerProfileId?: string;
     /** Fail closed if account recovery changed the active owner during the request. */
     expectedProfileId?: string;
+    /** Optional host deletion queue; checked atomically with the import writes. */
+    pendingDeleteKey?: string;
     retirementArtifacts?: RetirementArtifactsResolver;
     /** 지원 버전의 roster/league/schedule binding을 저장 전에 검증한다. */
     rulesetForVersion?: (version: string) => Ruleset;
@@ -130,6 +132,9 @@ export async function importCareerFromServer(
   }
 
   return store.transaction('readwrite', async (tx) => {
+    if (meta.pendingDeleteKey && (await tx.kv.get<string[]>(meta.pendingDeleteKey))?.includes(careerId)) {
+      return { ok: false, error: { code: 'CAREER_NOT_FOUND', message: '삭제를 요청한 커리어입니다.' } };
+    }
     if (
       meta.expectedProfileId &&
       (await tx.kv.get<string>('profile:id')) !== meta.expectedProfileId

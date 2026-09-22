@@ -18,6 +18,7 @@ import {
   expectFirstContractHeading,
   fulfillJson,
   META,
+  pinServiceSeasonPair,
   planPreseason,
   resolveRoleProposal,
 } from './helpers/player-creation.js';
@@ -71,6 +72,8 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
     }),
   );
 
+  // Measure the historical manual journey, not the separate server annual flow.
+  await pinServiceSeasonPair(page, '3.4.0', '0.13.0');
   const startedAt = performance.now();
 
   await page.goto('/onboarding');

@@ -4,6 +4,12 @@ import type { CareerState } from '@offside/domain';
 import { currentRoute, expectRoute, waitForRoute } from './route.js';
 
 export const META = { requestId: 'e2e-req' };
+const explicitServicePairs = new WeakSet<Page>();
+
+/** Preserve a test's custom service metadata when using the shared local journey. */
+export function markServiceSeasonPinned(page: Page): void {
+  explicitServicePairs.add(page);
+}
 
 /** Version-sensitive mechanics tests pin the service response, not just the engine debug default. */
 export async function pinServiceSeasonPair(
@@ -11,6 +17,7 @@ export async function pinServiceSeasonPair(
   rulesetVersion: string,
   contentPackVersion: string,
 ): Promise<void> {
+  markServiceSeasonPinned(page);
   await page.route('**/v1/service-seasons/current', (route) =>
     fulfillJson(route, 200, {
       data: {
@@ -62,7 +69,19 @@ export async function fulfillJson(route: Route, status: number, body: unknown): 
 }
 
 /** 생성 폼을 연다. 실제 커리어는 폼 제출 때 만들어진다. */
-export async function startNewCareer(page: Page): Promise<void> {
+export async function startNewCareer(
+  page: Page,
+  options: { serviceSeasonPinned?: boolean } = {},
+): Promise<void> {
+  // This helper tests historical client-local style/confirm/manual-season screens.
+  // Annual creation has its own real-server helper and must never inherit this fixture.
+  if (
+    process.env.E2E_WITH_API !== '1' &&
+    !options.serviceSeasonPinned &&
+    !explicitServicePairs.has(page)
+  ) {
+    await pinServiceSeasonPair(page, '3.4.0', '0.13.0');
+  }
   await page.goto('/onboarding');
   await expect(page.getByRole('heading', { name: '선수 생성' })).toBeVisible();
 }

@@ -451,6 +451,9 @@ export function createEngineClient(deps: EngineClientDeps): EngineClient {
     if (readOutcome.kind === 'healthy') {
       return { ok: true, career: readOutcome.career, snapshot: readOutcome.snapshot, recovered: null };
     }
+    if (readOutcome.career.authority === 'SERVER_ANNUAL' || readOutcome.career.rulesetVersion === '3.5.0' || readOutcome.career.contentPackVersion === '0.14.0') {
+      return { ok: false, error: { code: 'VERIFICATION_FAILED', message: '서버의 커리어 기록을 다시 받아야 합니다.', details: { reason: 'SERVER_CACHE_RELOAD_REQUIRED' } } };
+    }
 
     const versions: Versions = {
       rulesetVersion: readOutcome.career.rulesetVersion,

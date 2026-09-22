@@ -178,6 +178,17 @@ describe('planReconciliation', () => {
 });
 
 describe('reconcileAfterRecovery', () => {
+  it.each(['NONE', 'KEEP_LINKED_ONLY'] as const)('passes the atomic queued-delete fence on %s imports', async (choice) => {
+    listCareersMock.mockResolvedValue(choice === 'NONE' ? [] : [{ id: 'queued', revision: 1, lastSyncedRevision: 1 }]);
+    listRemoteCareersMock.mockResolvedValue({ ok: true, data: { items: [{ id: 'queued', revision: 2 }], nextCursor: null } });
+    getRemoteCareerMock.mockResolvedValue({ ok: true, data: { snapshot: { careerId: 'queued' }, commands: [] } });
+    importCareerFromServerMock.mockImplementation(async (_store, _response, meta) => {
+      expect(meta.pendingDeleteKey).toBe('sync:pending-delete');
+      return { ok: false, error: { code: 'CAREER_NOT_FOUND', message: 'queued deletion' } };
+    });
+    const client = { invalidateQueries: vi.fn().mockResolvedValue(undefined) } as unknown as QueryClient;
+    expect(await reconcileAfterRecovery(choice, client)).toEqual({ ok: false, failed: ['queued'] });
+  });
   beforeEach(() => {
     listRemoteCareersMock.mockReset();
     getRemoteCareerMock.mockReset();
@@ -258,7 +269,7 @@ describe('reconcileAfterRecovery', () => {
     expect(importCareerFromServerMock).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'actual' }),
       expect.objectContaining({ snapshot: { careerId: 'car_same' } }),
-      expect.objectContaining({ replaceLocal: true }),
+      expect.objectContaining({ replaceLocal: true, pendingDeleteKey: 'sync:pending-delete' }),
     );
     expect(deleteCareerMock).not.toHaveBeenCalledWith('car_same');
   });

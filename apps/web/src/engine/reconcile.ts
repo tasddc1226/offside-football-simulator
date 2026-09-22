@@ -6,6 +6,7 @@ import { importCareerFromServer } from '@offside/engine-client';
 import { getRemoteCareer, listRemoteCareers } from '../api/client.js';
 import { getAppEngine } from './engine.js';
 import { getSyncClient } from './sync.js';
+import { pendingDeleteKey } from './pending-delete.js';
 
 export type ReconcileChoice = 'MOVE_TO_LINKED' | 'KEEP_LINKED_ONLY' | 'NONE';
 
@@ -148,6 +149,7 @@ export async function reconcileAfterRecovery(
     }
     if (!(await ownerUnchanged())) return { ok: false, failed: [] };
     const imported = await importCareerFromServer(engine.store, result.data, {
+      pendingDeleteKey,
       ...(profileId ? { ownerProfileId: profileId, expectedProfileId: profileId } : {}),
       rulesetForVersion: loadRuleset,
       retirementArtifacts: (versions) =>
@@ -166,6 +168,7 @@ export async function reconcileAfterRecovery(
       }
       if (!(await ownerUnchanged())) return { ok: false, failed: [] };
       const imported = await importCareerFromServer(engine.store, result.data, {
+        pendingDeleteKey,
         ...(profileId ? { ownerProfileId: profileId, expectedProfileId: profileId } : {}),
         rulesetForVersion: loadRuleset,
         retirementArtifacts: (versions) =>

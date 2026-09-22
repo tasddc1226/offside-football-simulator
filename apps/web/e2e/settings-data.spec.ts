@@ -9,6 +9,7 @@
 import { expect, test } from '@playwright/test';
 import { E2E_META, fulfillJson } from './helpers/sync-conflict.js';
 import { expectRoute } from './helpers/route.js';
+import { pinServiceSeasonPair } from './helpers/player-creation.js';
 
 test('복구 코드 재발급: 확인 → 코드 대화상자 → 복사 → 닫힘, 발급일이 갱신된다', async ({
   page,
@@ -213,6 +214,8 @@ test('프로필 삭제: 1단계 → 확인 대화상자 → 2단계 → 온보�
 });
 
 test('이 기기 데이터 삭제: 확인 → 온보딩 → 허브가 빈 상태로 돌아온다', async ({ page }) => {
+  // This deletion fixture creates a preserved client-local career.
+  await pinServiceSeasonPair(page, '3.4.0', '0.13.0');
   await page.route('**/v1/careers/*', async (route) => {
     if (route.request().method() === 'PUT') {
       const baseRevision = Number(route.request().headers()['if-match'] ?? 0);

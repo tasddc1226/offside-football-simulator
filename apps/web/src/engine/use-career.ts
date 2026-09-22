@@ -39,6 +39,7 @@ import { getAppEngine } from './engine.js';
 import { ensureProfile } from '../api/profile.js';
 import { queryClient } from '../shared/query-client.js';
 import { cacheAnnualCareer } from './annual.js';
+import { assertNotPendingDelete } from './pending-delete.js';
 
 export type CareerSummary = { record: LocalCareerRecord; state: CareerState };
 
@@ -86,7 +87,11 @@ export function careerQueryOptions(careerId: string) {
           load = await engine.client.loadCareer(careerId);
         }
       }
-      if (!load.ok && load.error.code === 'CAREER_NOT_FOUND') {
+      const serverCacheBroken = !load.ok && load.error.code === 'VERIFICATION_FAILED' &&
+        typeof load.error.details === 'object' && load.error.details !== null &&
+        'reason' in load.error.details && load.error.details.reason === 'SERVER_CACHE_RELOAD_REQUIRED';
+      if (!load.ok && (load.error.code === 'CAREER_NOT_FOUND' || serverCacheBroken)) {
+        await assertNotPendingDelete(engine.store, careerId);
         if (!(await ensureProfile(engine.store, queryClient)))
           throw new Error('서버의 커리어를 확인하려면 인터넷 연결이 필요합니다.');
         const owner = await engine.store.transaction('readonly', (tx) =>

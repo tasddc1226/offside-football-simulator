@@ -2,12 +2,15 @@
 // (a) 생성 즉시 저장 (b) 다른 기기 진행 가져오기 (c) 이 기기 진행 유지(fork) (d) 오프라인·온라인
 // (e) 401 → 로컬 전용.
 import { expect, type Page, test } from '@playwright/test';
-import { fillPlayerInfo } from './helpers/player-creation.js';
+import {
+  fillPlayerInfo,
+  startNewCareer as startHistoricalCareer,
+} from './helpers/player-creation.js';
 import { E2E_META, fulfillJson, triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
 import { expectRoute } from './helpers/route.js';
 
 async function startNewCareer(page: Page): Promise<void> {
-  await page.goto('/onboarding');
+  await startHistoricalCareer(page);
   await fillPlayerInfo(page);
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
   await expectRoute(page, /\/style$/);

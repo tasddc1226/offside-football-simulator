@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
+  markServiceSeasonPinned,
   planPreseason,
   resolveRoleProposal,
 } from './helpers/player-creation.js';
@@ -32,6 +33,7 @@ test('새 육성 시즌: 짧은 허브, 훈련 선택, 경기 진행, 실제 성
       }),
     }),
   );
+  markServiceSeasonPinned(page);
   await completeOnboardingThroughContract(page);
   await expect(page.getByRole('region', { name: '이번 시즌 기록' })).toBeVisible();
   await expect(page.locator('.sim-hub')).toHaveAttribute('data-ruleset-version', '2.0.0');

@@ -45,7 +45,7 @@ test('1.7.2/0.6.6: 진로 선택 뒤 스카우트 평가 1건만 뜨고 곧장 �
     });
   });
 
-  await startNewCareer(page);
+  await startNewCareer(page, { serviceSeasonPinned: true });
   // 아카데미 배경의 "남아 추가 평가를 받는다"(A)를 고른다 — EVT-CON-023(스카우트 평가) 브리지로
   // followUp이 확정 연결돼 있어 RNG 없이 결정론적이다(1.7.2/0.6.6 조합 한정, 다른 배경·선택도
   // 각자 브리지 이벤트 1건으로 끝난다).

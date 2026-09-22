@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { buildAnnualContentContext, loadContentPack, loadRuleset } from '@offside/content';
@@ -15,6 +16,9 @@ import { AnnualCareerScreen, AnnualReport } from './annual-career.js';
 import { ATTRIBUTE_LABELS } from './labels.js';
 
 const mocks = vi.hoisted(() => ({ career: vi.fn(), cache: vi.fn() }));
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
+}));
 vi.mock('../engine/use-career.js', () => ({ useCareer: () => mocks.career() }));
 vi.mock('../engine/engine.js', () => ({
   getAppEngine: async () => ({
@@ -29,6 +33,8 @@ vi.mock('../engine/annual.js', () => ({
   cacheAnnualCareer: (...args: unknown[]) => mocks.cache(...args),
   AnnualController: class {
     abort = new AbortController();
+    async refresh() { return null; }
+    async history() { return []; }
     dispose() {
       this.abort.abort();
     }
@@ -101,6 +107,15 @@ function naturalReport() {
 const fixture = naturalReport();
 beforeEach(() => vi.clearAllMocks());
 describe('independent annual presentation regressions', () => {
+  it('uses the application shell main landmark without nesting another main', async () => {
+    mocks.career.mockReturnValue({data:{record:{revision:fixture.report.endRevision,ownerProfileId:'new-owner'},state:fixture.state}});
+    mocks.cache.mockResolvedValue({});
+    const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    client.setQueryData(['profile'],{id:'new-owner'});
+    render(<QueryClientProvider client={client}><main aria-label="본문"><AnnualCareerScreen careerId="presentation-career" /></main></QueryClientProvider>);
+    await screen.findByRole('button',{name:'1년 진행'});
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+  });
   it('renders a real completed-year DTO and all 20 annual attribute rows plus settlement causes', () => {
     render(<AnnualReport {...fixture} />);
     expect(screen.getByRole('region', { name: '1년차 결과' })).toHaveTextContent(

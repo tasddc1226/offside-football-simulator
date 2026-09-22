@@ -1831,3 +1831,8 @@ it.each([
   expect((await settleSeason(engine,id)).ok).toBe(true);
 },30000,
 );
+// This suite exercises historical CLIENT_LOCAL screens, not server annual creation.
+vi.mock('./versions.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./versions.js')>();
+  return {...actual, FALLBACK_SERVICE_SEASON: {...actual.FALLBACK_SERVICE_SEASON, rulesetVersion: '3.4.0', contentPackVersion: '0.13.0'}};
+});

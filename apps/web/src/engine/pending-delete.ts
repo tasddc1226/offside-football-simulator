@@ -4,6 +4,12 @@ import type { LocalStore } from '@offside/engine-client';
 import { deleteCareerOnServer, type ApiResult } from '../api/client.js';
 
 const PENDING_DELETE_KEY = 'sync:pending-delete';
+export const pendingDeleteKey = PENDING_DELETE_KEY;
+
+export async function assertNotPendingDelete(store: LocalStore, careerId: string): Promise<void> {
+  if ((await readPending(store)).includes(careerId))
+    throw Object.assign(new Error('삭제를 요청한 커리어입니다.'), { code: 'CAREER_NOT_FOUND' });
+}
 
 export type DeleteOutcome = 'success' | 'retry' | 'drop';
 
