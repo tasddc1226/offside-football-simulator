@@ -75,6 +75,7 @@ export type PutCareerResponse = z.infer<typeof PutCareerResponseSchema>;
 
 /** API-CAR-001. */
 export const CareerSummarySchema = z.strictObject({
+  authority: z.enum(['CLIENT_LOCAL', 'SERVER_ANNUAL']).exactOptional(),
   id: ClientIdSchema,
   status: z.enum(['DRAFT', 'ACTIVE', 'RETIRED', 'ARCHIVED']),
   revision: z.number().int().nonnegative(),
@@ -95,6 +96,7 @@ export type CareerSummaryList = z.infer<typeof CareerSummaryListSchema>;
 
 /** API-CAR-002. */
 export const GetCareerResponseSchema = z.strictObject({
+  authority: z.enum(['CLIENT_LOCAL', 'SERVER_ANNUAL']).exactOptional(),
   /** Immutable creation cohort. Recovery must never substitute the current service-season pointer. */
   createdServiceSeasonId: z.string().min(1),
   snapshot: CareerSnapshotSchema,

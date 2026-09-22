@@ -47,6 +47,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       data: {
         items: items.map((item) => ({
           id: item.id,
+          authority: item.authority,
           status: item.status,
           revision: item.revision,
           lastSyncedAt: item.lastSyncedAt,
@@ -86,6 +87,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const body = successEnvelope(GetCareerResponseSchema).parse({
       data: {
         createdServiceSeasonId: career.createdServiceSeasonId,
+        authority: career.authority,
         ...(archive === undefined ? {} : { retirementArchive: { archive: archive.archiveJson, legacy: archive.legacyJson } }),
         snapshot: {
           id: snapshot.id,

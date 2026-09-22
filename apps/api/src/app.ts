@@ -18,6 +18,7 @@ import { registerPresenceRoutes } from './routes/presence.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { registerServiceSeasonRoutes } from './routes/service-seasons.js';
 import { registerCompetitionRoutes } from './routes/competition.js';
+import { registerAnnualCareerRoutes } from './routes/annual-career.js';
 
 export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -40,6 +41,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerLockerRoomRoutes(app);
   registerFriendlyRoutes(app);
   registerCareerRoutes(app);
+  registerAnnualCareerRoutes(app);
   registerCareerPublicationRoutes(app);
   registerAuthRoutes(app);
   registerServiceSeasonRoutes(app);

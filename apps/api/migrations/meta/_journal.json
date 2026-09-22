@@ -99,6 +99,13 @@
       "when": 1789997907012,
       "tag": "0013_daily_competition",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1790070200499,
+      "tag": "0014_redundant_lightspeed",
+      "breakpoints": true
     }
   ]
 }

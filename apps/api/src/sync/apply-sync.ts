@@ -10,6 +10,7 @@ import { buildRetirementRows } from './retirement.js';
 import { AppError } from '../errors.js';
 import { verifyIncomingSnapshot } from './verify-snapshot.js';
 import { isAcceptedSeasonVersion } from './season-version-compatibility.js';
+import { annualVersionReserved } from '../annual-career.js';
 
 export type ApplySyncInput = {
   profileId: string;
@@ -69,6 +70,12 @@ export async function applySync(
   { profileId, careerId, body, now }: ApplySyncInput,
 ): Promise<ApplySyncResult> {
   const existing = await getCareer(db, careerId);
+
+  // Authority comes from the stored row/registered version, never caller snapshot fields.
+  // This check precedes the old already-applied fast path.
+  if (existing?.authority === 'SERVER_ANNUAL' || annualVersionReserved(body.rulesetVersion, body.contentPackVersion)) {
+    throw new AppError({ code: 'VALIDATION_FAILED', status: 409, message: '서버 연간 커리어는 클라이언트 저장으로 수정할 수 없습니다.', details: { reason: 'SERVER_AUTHORITY_REQUIRED' } });
+  }
 
   if (!existing) {
     if (body.baseRevision !== 0) {

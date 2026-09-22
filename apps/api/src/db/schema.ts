@@ -65,6 +65,7 @@ export const careers = sqliteTable(
   'careers',
   {
     id: text('id').primaryKey(),
+    authority: text('authority', { enum: ['CLIENT_LOCAL', 'SERVER_ANNUAL'] }).notNull().default('CLIENT_LOCAL'),
     ownerProfileId: text('owner_profile_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
@@ -91,6 +92,38 @@ export const careers = sqliteTable(
     ),
   ],
 );
+
+/** Server-only fixed-year jobs. Ownership follows the career across account merges. */
+export const annualRuns = sqliteTable('annual_runs', {
+  id: text('id').primaryKey(),
+  careerId: text('career_id').notNull().references(() => careers.id, { onDelete: 'cascade' }),
+  startRevision: integer('start_revision').notNull(),
+  revision: integer('revision').notNull(),
+  careerRevision: integer('career_revision').notNull(),
+  status: text('status', { enum: ['RUNNING', 'WAITING_DECISION', 'COMPLETED'] }).notNull(),
+  checkpointJson: text('checkpoint_json').notNull(),
+  startSnapshotJson: text('start_snapshot_json').notNull(),
+  decisionJson: text('decision_json'),
+  reportJson: text('report_json'),
+  commandCount: integer('command_count').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => [uniqueIndex('annual_runs_career_start_unique').on(table.careerId, table.startRevision)]);
+
+/** Durable atomic receipts, never an expiring post-response cache. */
+export const annualRequests = sqliteTable('annual_requests', {
+  id: text('id').primaryKey(),
+  careerId: text('career_id').notNull().references(() => careers.id, { onDelete: 'cascade' }),
+  runId: text('run_id').references(() => annualRuns.id, { onDelete: 'cascade' }),
+  fromRevision: integer('from_revision'),
+  requestKeyHash: text('request_key_hash').notNull(),
+  requestHash: text('request_hash').notNull(),
+  responseJson: text('response_json').notNull(),
+  createdAt: text('created_at').notNull(),
+}, (table) => [
+  uniqueIndex('annual_requests_key_unique').on(table.requestKeyHash),
+  uniqueIndex('annual_requests_run_revision_unique').on(table.runId, table.fromRevision),
+]);
 
 /** 05 Snapshot 계약. `id`는 `${careerId}:${revision}`. */
 export const snapshots = sqliteTable(

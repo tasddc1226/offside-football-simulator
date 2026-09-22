@@ -28,6 +28,8 @@ function firstMigrationStatements(): string[] {
 
 /** 브리프 표의 컬럼 목록과 같다(snake_case). */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
+  annual_runs: ['id', 'career_id', 'start_revision', 'revision', 'career_revision', 'status', 'checkpoint_json', 'start_snapshot_json', 'decision_json', 'report_json', 'command_count', 'created_at', 'updated_at'],
+  annual_requests: ['id', 'career_id', 'run_id', 'from_revision', 'request_key_hash', 'request_hash', 'response_json', 'created_at'],
   profiles: [
     'id',
     'recovery_code_hash',
@@ -108,6 +110,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   ],
   careers: [
     'id',
+    'authority',
     'owner_profile_id',
     'status',
     'revision',
