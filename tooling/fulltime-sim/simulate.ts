@@ -32,7 +32,7 @@ import {
   EVENTS,
 } from '../../apps/web/src/game/index.js';
 import { pick, ri, createRng, setActiveRng, freshSeed } from '../../apps/web/src/game/rng.js';
-import type { GameState } from '../../apps/web/src/game/types.js';
+import type { GameState, MarketOption, OfferOption } from '../../apps/web/src/game/types.js';
 
 // ───────── Node 환경에 localStorage 스텁 (retire()/HOF 저장용, season.ts 는 이미 try/catch 로 감싸지만 예외 비용을 피한다) ─────────
 if (typeof (globalThis as Record<string, unknown>).localStorage === 'undefined') {
@@ -205,25 +205,25 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
     });
     return best;
   }
-  function pickOption(s: GameState, m: { options: Record<string, unknown>[] }): Record<string, unknown> {
+  function pickOption(s: GameState, m: { options: MarketOption[] }): MarketOption {
     const milO = m.options.find((o) => o.kind === 'sangmu' && o.due)
       || m.options.find((o) => o.kind === 'serve')
       || (smart ? m.options.find((o) => o.kind === 'sangmu' && s.age >= 25) : undefined);
     if (milO) return milO;
-    const offers = m.options.filter((o) => o.kind === 'offer');
+    const offers = m.options.filter((o): o is OfferOption => o.kind === 'offer');
     const stay = m.options.find((o) => o.kind === 'stay' || o.kind === 'renew');
     if (smart) {
-      const good = offers.filter((o) => o.role !== '벤치 경쟁').sort((a, b) => (b.str as number) - (a.str as number))[0];
-      if (good && (!stay || (good.str as number) > s.club.str + 1)) return good;
+      const good = offers.filter((o) => o.role !== '벤치 경쟁').sort((a, b) => b.str - a.str)[0];
+      if (good && (!stay || good.str > s.club.str + 1)) return good;
       return stay || good || offers[0] || m.options.find((o) => o.kind !== 'sangmu') || m.options[0]!;
     }
-    const best = offers.sort((a, b) => (b.str as number) - (a.str as number))[0];
-    return best && (!stay || (best.str as number) > s.club.str + 2) ? best : stay || m.options.find((o) => o.kind !== 'sangmu') || m.options[0]!;
+    const best = offers.sort((a, b) => b.str - a.str)[0];
+    return best && (!stay || best.str > s.club.str + 2) ? best : stay || m.options.find((o) => o.kind !== 'sangmu') || m.options[0]!;
   }
-  function anyJob(o: Record<string, unknown>): boolean {
-    return ['offer', 'renew', 'stay', 'uni', 'sangmu', 'army', 'serve'].includes(o.kind as string);
+  function anyJob(o: MarketOption): boolean {
+    return (['offer', 'renew', 'stay', 'uni', 'sangmu', 'army', 'serve'] as MarketOption['kind'][]).includes(o.kind);
   }
-  function realJob(o: Record<string, unknown>): boolean {
+  function realJob(o: MarketOption): boolean {
     if (o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve') return true;
     const L = o.kind === 'offer' ? LEAGUES.find((l) => l.id === o.leagueId) : leagueOf(s_cur!.leagueId);
     return !!L && L.tier >= 1 && anyJob(o);

@@ -27,7 +27,7 @@ import {
   endSeason, market, acceptOption, marketValue, retire, legendScore, legendTitle, saveKey, loadKey, loadHOF,
 } from './season.js';
 import { initSubs, legacyOvr } from './attributes.js';
-import type { GameState, CareerRecord, NatTour, HofEntry } from './types.js';
+import type { GameState, CareerRecord, NatTour, HofEntry, MarketOption } from './types.js';
 import { esc } from './dom.js';
 
 const $app = document.getElementById('app')!;
@@ -656,24 +656,30 @@ function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
     [{ label: '이적 시장으로 →', cls: 'btn-primary', fn: () => { (G!.pending as { res: unknown }).res = null; save(); nextPending(); } }]);
 }
 
-function showMarket(m: { options: Record<string, unknown>[]; note: string; canRetire: boolean }) {
+function showMarket(m: { options: MarketOption[]; note: string; canRetire: boolean }) {
   const opts = m.options;
   let html = `<div class="eyebrow">${seasonLabel(G!)} Transfer Window</div><h2>다음 시즌, 어디서 뛸까요?</h2><p class="muted">${esc(m.note)}</p><div class="stack">`;
   html += opts.map((o, i) => {
-    if (o.kind === 'offer' || o.kind === 'renew') {
-      const lg = o.kind === 'renew' ? leagueOf(G!.leagueId).name : leagueOf(o.leagueId as string).name;
-      return `<button class="offer" data-opt="${i}"><div><b>${esc(o.name)}</b><div class="lg">${lg}${o.kind === 'offer' ? ` · 팀 전력 ${o.str}` : ''}</div></div>
-        <div class="sal">${fmtMoney(o.salary as number)}<div class="lg" style="text-align:right">연봉</div></div>
-        <div class="sub">${o.years}년 계약${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtMoney(o.fee as number)}` : o.kind === 'offer' && G!.contract && !leagueOf(G!.leagueId).amateur ? ' · 자유계약(FA)' : ''}</div></button>`;
+    if (o.kind === 'offer') {
+      const lg = leagueOf(o.leagueId).name;
+      return `<button class="offer" data-opt="${i}"><div><b>${esc(o.name)}</b><div class="lg">${lg} · 팀 전력 ${o.str}</div></div>
+        <div class="sal">${fmtMoney(o.salary)}<div class="lg" style="text-align:right">연봉</div></div>
+        <div class="sub">${o.years}년 계약${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtMoney(o.fee)}` : G!.contract && !leagueOf(G!.leagueId).amateur ? ' · 자유계약(FA)' : ''}</div></button>`;
     }
-    return `<button class="offer" data-opt="${i}"><div><b>${esc(o.name)}</b><div class="lg">${esc((o.desc as string) || '')}</div></div></button>`;
+    if (o.kind === 'renew') {
+      const lg = leagueOf(G!.leagueId).name;
+      return `<button class="offer" data-opt="${i}"><div><b>${esc(o.name)}</b><div class="lg">${lg}</div></div>
+        <div class="sal">${fmtMoney(o.salary)}<div class="lg" style="text-align:right">연봉</div></div>
+        <div class="sub">${o.years}년 계약</div></button>`;
+    }
+    return `<button class="offer" data-opt="${i}"><div><b>${esc(o.name)}</b><div class="lg">${esc(o.desc ?? '')}</div></div></button>`;
   }).join('');
   html += `</div>`;
   const btns = m.canRetire ? [{ label: '은퇴를 선언한다', fn: () => doRetire() }] : [];
   showSheet(html, btns);
   $sheet.querySelectorAll<HTMLButtonElement>('[data-opt]').forEach((b) => b.addEventListener('click', () => {
     const o = opts[+b.dataset.opt!]!;
-    const r = acceptOption(G!, o) as { text: string; ok?: boolean; reopen?: boolean } | null;
+    const r = acceptOption(G!, o);
     if (r) {
       G!.training = 'rest';
       if (r.reopen) {

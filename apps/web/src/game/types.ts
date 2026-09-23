@@ -135,6 +135,49 @@ export interface Flags {
 
 export type Foot = '오른발' | '왼발' | '양발';
 
+// ───────── 이적 시장 옵션 (판별 유니온) ─────────
+// season.ts의 market()/acceptOption()이 다루는 선택지. kind로 구분되는 판별 유니온이라, kind로
+// 좁히면 나머지 필드에 캐스팅 없이 접근할 수 있다.
+export interface OfferOption {
+  kind: 'offer';
+  clubId: string;
+  name: string;
+  leagueId: string;
+  str: number;
+  years: number;
+  salary: number;
+  role: string;
+  fee: number;
+  trust?: number;
+}
+export interface UniOption {
+  kind: 'uni';
+  name: string;
+  desc: string;
+}
+export interface StayOption {
+  kind: 'stay';
+  name: string;
+  desc: string;
+}
+export interface RenewOption {
+  kind: 'renew';
+  name: string;
+  years: number;
+  salary: number;
+  desc: string;
+}
+export type MilOptionKind = 'sangmu' | 'army' | 'serve';
+/** military.ts의 병역 관련 선택지. market()이 다루는 MarketOption의 한 갈래이기도 하다. */
+export interface MilOption {
+  kind: MilOptionKind;
+  name: string;
+  desc?: string;
+  due?: boolean;
+  first?: boolean;
+}
+export type MarketOption = OfferOption | UniOption | StayOption | RenewOption | MilOption;
+
 export interface GameState {
   v: 1;
   halves: number;

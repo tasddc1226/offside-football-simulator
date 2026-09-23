@@ -3,7 +3,7 @@ import { clamp, ri, chance } from './rng.js';
 import { EVENTS } from './events-data.js';
 import { leagueOf, log, salaryFor, schedule, addAttr, addStat, newSeason } from './engine.js';
 import { ovr as ovrCalc } from './attributes.js';
-import type { GameState } from './types.js';
+import type { GameState, MarketOption, MilOption } from './types.js';
 
 export const SANGMU = { id: 'sangmu', name: '김천 상무 (국군체육부대)', leagueId: 'k1', str: 63 };
 const MIL_AGE = 28;
@@ -44,13 +44,6 @@ export function milStatusText(s: GameState): string {
   return leagueOf(s.leagueId).amateur ? '미필' : `미필 · 만 ${MIL_AGE}세까지 이행 필요`;
 }
 
-export interface MilOption {
-  kind: 'sangmu' | 'army' | 'serve';
-  name: string;
-  desc?: string;
-  due?: boolean;
-  first?: boolean;
-}
 export function milOptions(s: GameState): MilOption[] {
   if (milDone(s) || s.mil.serving || leagueOf(s.leagueId).amateur || s.age < SANGMU_MIN_AGE) return [];
   const due = s.age >= MIL_AGE, abroad = milAbroad(s);
@@ -125,7 +118,7 @@ export function milSeasonEnd(s: GameState): string | null {
 }
 
 export interface MarketResult {
-  options: unknown[];
+  options: MarketOption[];
   note: string;
   canRetire: boolean;
 }

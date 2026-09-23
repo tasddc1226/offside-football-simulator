@@ -6,7 +6,7 @@ import { leagueOf, clubsIn, fmtMoney, salaryFor, addStat, addAttr, log, bloomTic
 import { seasonSetup, compGoals, seasonAwards, checkMilestones, retireMilestones } from './comps.js';
 import { natInit, natSeasonEnd } from './national.js';
 import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
-import type { GameState, CareerRecord, HofEntry } from './types.js';
+import type { GameState, CareerRecord, HofEntry, MarketOption, OfferOption } from './types.js';
 
 export function endSeason(s: GameState) {
   natInit(s);
@@ -101,11 +101,11 @@ export function makeOffers(s: GameState) {
       .sort((a, b) => Math.abs(a.str - (value + 1)) - Math.abs(b.str - (value + 1)))[0] ?? null;
     s.flags.coachOffer = false;
   }
-  const list = chosen.map((c) => offerFrom(s, c)) as Record<string, unknown>[];
+  const list: OfferOption[] = chosen.map((c) => offerFrom(s, c));
   if (coach) list.push({ ...offerFrom(s, coach), role: '은사의 부름 · 감독 신뢰 두터움', trust: 3 });
-  return list.sort((a, b) => (b.str as number) - (a.str as number));
+  return list.sort((a, b) => b.str - a.str);
 }
-export function offerFrom(s: GameState, c: (typeof CLUBS)[number]) {
+export function offerFrom(s: GameState, c: (typeof CLUBS)[number]): OfferOption {
   const o = ovr(s), old = s.age >= 31;
   const d = o - c.str;
   return {
@@ -120,15 +120,15 @@ export function offerFrom(s: GameState, c: (typeof CLUBS)[number]) {
 export function marketValue(s: GameState) {
   return Math.round(salaryFor(leagueOf(s.leagueId).amateur ? 'k2' : s.leagueId, ovr(s)) * (s.age <= 24 ? 5 : s.age <= 29 ? 4 : 2) / 100) * 100;
 }
-export function market(s: GameState): { options: Record<string, unknown>[]; note: string; canRetire: boolean } {
+export function market(s: GameState): { options: MarketOption[]; note: string; canRetire: boolean } {
   natInit(s);
   const L = leagueOf(s.leagueId), o = ovr(s);
-  const options: Record<string, unknown>[] = [];
+  const options: MarketOption[] = [];
   let note: string;
   if (s.mil.serving) return { options: [{ kind: 'serve', name: '김천 상무 복무 계속', desc: `전역까지 ${s.mil.left}시즌 · 군 복무 중에는 이적할 수 없습니다` }], note: '국군체육부대 소속으로 복무 중입니다.', canRetire: false };
   const enlist = milEnlistMarket(s);
-  if (enlist) return enlist as { options: Record<string, unknown>[]; note: string; canRetire: boolean };
-  if (milDue(s)) return { options: milOptions(s) as unknown as Record<string, unknown>[], note: `만 ${s.age}세. 더 이상 입영을 미룰 수 없습니다. 병역 의무를 이행해야 합니다.`, canRetire: s.age >= 32 };
+  if (enlist) return enlist;
+  if (milDue(s)) return { options: milOptions(s), note: `만 ${s.age}세. 더 이상 입영을 미룰 수 없습니다. 병역 의무를 이행해야 합니다.`, canRetire: s.age >= 32 };
   const offers = makeOffers(s);
 
   if (s.leagueId === 'hs') {
@@ -165,34 +165,33 @@ export function market(s: GameState): { options: Record<string, unknown>[]; note
       }
     }
   }
-  if (!L.amateur) options.push(...(milOptions(s) as unknown as Record<string, unknown>[]));
+  if (!L.amateur) options.push(...milOptions(s));
   const lastUni = s.leagueId === 'uni' && s.uniYears >= 4;
   const canRetire = (!L.amateur && (s.age >= 30 || L.tier === 0 || !options.length)) || lastUni;
   const forced = s.age >= 41 || (!options.length && (!L.amateur || lastUni));
   return { options: forced ? [] : options, note: forced ? '더 이상 불러주는 팀이 없습니다. 은퇴를 결정할 시간입니다.' : note, canRetire: canRetire || forced };
 }
 
-export function acceptOption(s: GameState, opt: Record<string, unknown>): { text: string; ok?: boolean; reopen?: boolean } | null {
-  const kind = opt.kind as string;
-  if (['sangmu', 'army', 'serve'].includes(kind)) {
-    return acceptMilitary(s, opt as never);
+export function acceptOption(s: GameState, opt: MarketOption): { text: string; ok?: boolean; reopen?: boolean } | null {
+  if (opt.kind === 'sangmu' || opt.kind === 'army' || opt.kind === 'serve') {
+    return acceptMilitary(s, opt);
   }
-  if (kind === 'uni') {
+  if (opt.kind === 'uni') {
     const c = pick(clubsIn('uni'));
     s.leagueId = 'uni'; s.club = { ...c }; s.uniYears = 1; s.trust = 0;
     log(s, `${c.name}에 진학했습니다.`, 'big');
-  } else if (kind === 'renew') {
-    s.contract = { years: opt.years as number, salary: opt.salary as number };
+  } else if (opt.kind === 'renew') {
+    s.contract = { years: opt.years, salary: opt.salary };
     addStat(s, 'trust', 1);
-    log(s, `${s.club.name}와 ${opt.years}년 재계약 (연봉 ${fmtMoney(opt.salary as number)})`, 'big');
-  } else if (kind === 'offer') {
+    log(s, `${s.club.name}와 ${opt.years}년 재계약 (연봉 ${fmtMoney(opt.salary)})`, 'big');
+  } else if (opt.kind === 'offer') {
     const c = CLUBS.find((x) => x.id === opt.clubId)!;
     const from = s.club.name, wasAm = leagueOf(s.leagueId).amateur;
-    s.leagueId = c.leagueId; s.club = { ...c }; s.trust = (opt.trust as number) || 0;
-    s.contract = { years: opt.years as number, salary: opt.salary as number };
+    s.leagueId = c.leagueId; s.club = { ...c }; s.trust = opt.trust || 0;
+    s.contract = { years: opt.years, salary: opt.salary };
     addStat(s, 'fame', Math.max(1, leagueOf(c.leagueId).tier * 1.5));
-    log(s, wasAm ? `${c.name}(${leagueOf(c.leagueId).name}) 입단! ${opt.years}년 · 연봉 ${fmtMoney(opt.salary as number)}`
-                 : `${from} → ${c.name}(${leagueOf(c.leagueId).name}) 이적! ${opt.fee ? `이적료 ${fmtMoney(opt.fee as number)} · ` : '자유계약 · '}${opt.years}년 · 연봉 ${fmtMoney(opt.salary as number)}`, 'big');
+    log(s, wasAm ? `${c.name}(${leagueOf(c.leagueId).name}) 입단! ${opt.years}년 · 연봉 ${fmtMoney(opt.salary)}`
+                 : `${from} → ${c.name}(${leagueOf(c.leagueId).name}) 이적! ${opt.fee ? `이적료 ${fmtMoney(opt.fee)} · ` : '자유계약 · '}${opt.years}년 · 연봉 ${fmtMoney(opt.salary)}`, 'big');
   }
   s.season = newSeason(s);
   s.phase = 0;

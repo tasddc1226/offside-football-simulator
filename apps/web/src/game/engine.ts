@@ -61,12 +61,14 @@ const jit = (v: number): number => (!JITTER ? v : JITTER === 'safe' && v > 0 ? v
 export function addAttr(s: GameState, k: AttrKey, v: number) {
   spreadAttr(s, k, jit(v));
 }
-export function addStat(s: GameState, k: string, v: number) {
+/** addStat()이 다룰 수 있는 실제 숫자 스탯 키. */
+export type StatKey = 'money' | 'trust' | 'fame' | 'cond' | 'morale';
+export function addStat(s: GameState, k: StatKey, v: number) {
   if (k !== 'money') v = jit(v);
   if (k === 'money') s.money = Math.round(s.money + v);
   else if (k === 'trust') s.trust = clamp(s.trust + v, -6, 6);
   else if (k === 'fame') s.fame = clamp(s.fame + v * (v > 0 && s.trait === 'star' ? 1.5 : v > 0 && s.trait === 'early' && s.age <= 23 ? 1.4 : 1), 0, 100);
-  else (s as unknown as Record<string, number>)[k] = clamp(((s as unknown as Record<string, number>)[k] ?? 0) + v, 0, 100);
+  else s[k] = clamp((s[k] ?? 0) + v, 0, 100);
 }
 export function log(s: GameState, text: string, kind = '', ph = s.phase) {
   s.log.unshift({ t: `${s.year} ${PHASES[ph] ?? ''}`, text, kind });
@@ -109,16 +111,22 @@ export function newGame(o: { name: string; number: number; pos: Pos; foot: GameS
   const club = pick(clubsIn('hs'));
   const pot = clamp(Math.round(74 + gauss() * 8), 55, 96);
   const scouted = clamp(Math.round(pot + gauss() * BLOOM_SCOUT), 55, 96);
-  const s = {
+  // sub/season/seasonStartSub은 initSubs()/newSeason() 호출로만 실제 값이 정해진다(둘 다 RNG를
+  // 소모하므로, 그 호출 순서를 바꾸지 않기 위해 이 시점엔 아직 실행하지 않는다). 여기서는 타입을
+  // 만족하는 빈 기본값을 채워 두고, 아래에서 원래 순서 그대로 덮어쓴다 — 캐스팅(타입 우회) 없이도
+  // 리터럴이 GameState를 완전히 만족한다.
+  const s: GameState = {
     v: 1, halves: 1, name: o.name, number: o.number, pos: o.pos, foot: o.foot, type: o.type, trait: o.trait,
-    age: 18, year: 2026, attrs, pot: scouted, bloom: pot - scouted, cond: 90, morale: 70, fame: 3, trust: 0, money: 300,
+    age: 18, year: 2026, attrs, sub: {}, pot: scouted, bloom: pot - scouted, cond: 90, morale: 70, fame: 3, trust: 0, money: 300,
     leagueId: 'hs', club: { ...club }, contract: null, phase: 0, uniYears: 0,
-    season: null as unknown as Season, career: [], trophies: [], awards: [], nat: { caps: 0, goals: 0, assists: 0, tours: [], qual: { 2026: true }, captain: false, debutYear: null },
+    season: { apps: 0, starts: 0, goals: 0, assists: 0, ratingSum: 0, cs: 0, mins: 0, played: 0, pts: 0, w: 0, d: 0, l: 0, rivals: [], honors: [] },
+    seasonStart: { ...attrs }, seasonStartSub: {},
+    career: [], trophies: [], awards: [], nat: { caps: 0, goals: 0, assists: 0, tours: [], qual: { 2026: true }, captain: false, debutYear: null },
     mil: { exempt: null, served: false, serving: false, left: 0, type: null, prevClub: null },
     injury: 0, log: [] as LogEntry[], pending: null,
     flags: {}, peak: 0, training: 'rest', retired: false, chains: [], story: {}, storyLog: [],
     rng: { seed },
-  } as unknown as GameState;
+  };
   initSubs(s, attrs, legacyOvr(o.pos, attrs));
   s.seasonStart = { ...s.attrs };
   s.seasonStartSub = { ...s.sub };
