@@ -20,54 +20,48 @@ afterEach(() => {
 });
 
 describe('findDependencyViolations', () => {
-  it('reports a violation when ui depends on domain', () => {
+  it('reports a violation when web depends directly on contracts', () => {
     workDir = mkdtempSync(path.join(tmpdir(), 'check-deps-violation-'));
 
-    writePackage(workDir, 'packages', 'ui', {
-      name: '@offside/ui',
+    writePackage(workDir, 'apps', 'web', {
+      name: '@offside/web',
       dependencies: {
-        '@offside/domain': 'workspace:*',
+        '@offside/contracts': 'workspace:*',
       },
     });
 
     const violations = findDependencyViolations(workDir);
 
-    expect(violations).toEqual([{ package: '@offside/ui', dependency: '@offside/domain' }]);
+    expect(violations).toEqual([{ package: '@offside/web', dependency: '@offside/contracts' }]);
   });
 
   it('reports no violations for an allowed dependency direction', () => {
     workDir = mkdtempSync(path.join(tmpdir(), 'check-deps-valid-'));
 
-    writePackage(workDir, 'packages', 'ui', {
-      name: '@offside/ui',
-      dependencies: {
-        '@offside/contracts': 'workspace:*',
-      },
-    });
     writePackage(workDir, 'apps', 'api', {
       name: '@offside/api',
       dependencies: {
         '@offside/contracts': 'workspace:*',
       },
     });
+    writePackage(workDir, 'apps', 'web', {
+      name: '@offside/web',
+      dependencies: {},
+    });
 
     const violations = findDependencyViolations(workDir);
 
     expect(violations).toEqual([]);
   });
 
-  it('allows a test-only package as a devDependency', () => {
-    workDir = mkdtempSync(path.join(tmpdir(), 'check-deps-test-only-dev-'));
+  it('allows the shared tooling packages as devDependencies anywhere', () => {
+    workDir = mkdtempSync(path.join(tmpdir(), 'check-deps-tooling-'));
 
-    writePackage(workDir, 'packages', 'engine-client', {
-      name: '@offside/engine-client',
-      dependencies: {
-        '@offside/domain': 'workspace:*',
-        '@offside/contracts': 'workspace:*',
-        '@offside/content': 'workspace:*',
-      },
+    writePackage(workDir, 'apps', 'web', {
+      name: '@offside/web',
       devDependencies: {
-        '@offside/fixtures': 'workspace:*',
+        '@offside/tsconfig': 'workspace:*',
+        '@offside/eslint-config': 'workspace:*',
       },
     });
 
@@ -76,27 +70,21 @@ describe('findDependencyViolations', () => {
     expect(violations).toEqual([]);
   });
 
-  it('reports a violation when a test-only package is a runtime dependency', () => {
-    workDir = mkdtempSync(path.join(tmpdir(), 'check-deps-test-only-runtime-'));
+  it('reports a violation for an unknown @offside dependency', () => {
+    workDir = mkdtempSync(path.join(tmpdir(), 'check-deps-unknown-'));
 
-    writePackage(workDir, 'packages', 'engine-client', {
-      name: '@offside/engine-client',
+    writePackage(workDir, 'apps', 'api', {
+      name: '@offside/api',
       dependencies: {
-        '@offside/domain': 'workspace:*',
         '@offside/contracts': 'workspace:*',
-        '@offside/content': 'workspace:*',
-        '@offside/fixtures': 'workspace:*',
+        '@offside/does-not-exist': 'workspace:*',
       },
     });
 
     const violations = findDependencyViolations(workDir);
 
     expect(violations).toEqual([
-      {
-        package: '@offside/engine-client',
-        dependency: '@offside/fixtures',
-        reason: '테스트 전용 패키지는 devDependencies에서만 허용된다.',
-      },
+      { package: '@offside/api', dependency: '@offside/does-not-exist' },
     ]);
   });
 });

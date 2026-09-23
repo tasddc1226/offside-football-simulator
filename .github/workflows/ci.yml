@@ -44,13 +44,14 @@ jobs:
           dest: ${{ runner.tool_cache }}/offside-pnpm
       - if: steps.scope.outputs.code_changed == 'true'
         run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
-      - name: Lint and typecheck
+      - name: Lint, typecheck and test
         if: steps.scope.outputs.code_changed == 'true'
         run: |
           node --test .github/scripts/*.test.mjs
           pnpm lint
           pnpm lint:deps
           pnpm typecheck
+          pnpm test
 
   deploy-staging:
     name: Main checks and staging deploy
@@ -102,33 +103,31 @@ jobs:
           dest: ${{ runner.tool_cache }}/offside-pnpm
       - if: steps.scope.outputs.code_changed == 'true'
         run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
-      - name: Static and content checks
+      - name: Lint, typecheck and test
         if: steps.scope.outputs.code_changed == 'true'
         run: |
           node --test .github/scripts/*.test.mjs
           pnpm lint
           pnpm lint:deps
           pnpm typecheck
-          pnpm content:validate
-      - name: Existing critical save and replay tests
-        if: steps.scope.outputs.code_changed == 'true'
-        run: |
-          pnpm --filter @offside/domain exec vitest run src/season-determinism.test.ts src/career-13-integration-determinism.test.ts
-          pnpm --filter @offside/engine-client exec vitest run src/engine.test.ts src/snapshot.test.ts src/import.test.ts
-          pnpm --filter @offside/api exec vitest run src/sync/season-sync.test.ts src/sync/verify-snapshot.test.ts src/routes/profile-recovery.test.ts src/routes/locker-room.test.ts src/db/migrations.test.ts
-          pnpm --filter @offside/web exec vitest run src/engine/versions.test.ts src/routes/locker-room.test.tsx
+          pnpm test
       - name: Build before remote writes
         if: steps.scope.outputs.code_changed == 'true'
         run: |
           pnpm --filter @offside/api db:check
-          VITE_API_BASE_URL="https://offside-api-staging.tasddc1569.workers.dev" pnpm --filter @offside/web build
+          pnpm build
           pnpm --filter @offside/web check:bundle
           pnpm --filter @offside/web exec playwright install chromium
+          pnpm --filter @offside/web e2e
+        env:
+          CI: 'true'
+      - name: Fulltime balance smoke (N=2000, random)
+        if: steps.scope.outputs.code_changed == 'true'
+        run: node tooling/scripts/sim-smoke.mjs 2000 ci-staging-${{ github.run_id }}
       - name: Migrate and deploy staging
         if: steps.scope.outputs.code_changed == 'true'
         run: |
           pnpm --filter @offside/api db:migrate:staging
-          pnpm --filter @offside/api exec wrangler d1 execute offside-staging --remote --env staging --file seeds/bootstrap-non-production.sql
           pnpm --filter @offside/api deploy:staging
           pnpm --filter @offside/web deploy:staging
         env:
@@ -141,10 +140,11 @@ jobs:
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
             "https://offside-api-staging.tasddc1569.workers.dev/v1/health" >/dev/null
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
-            "https://offside-web-staging.tasddc1569.workers.dev/" >/dev/null
-          pnpm --filter @offside/web exec playwright test --config playwright.smoke.config.ts
-        env:
-          CI: 'true'
+            "https://offside-api-staging.tasddc1569.workers.dev/v1/profile" >/dev/null
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            "https://offside-web-staging.tasddc1569.workers.dev/" | grep -qF '오프사이드'
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            "https://offside-web-staging.tasddc1569.workers.dev/guide/" >/dev/null
       - uses: actions/upload-artifact@v4
         if: failure() && steps.scope.outputs.code_changed == 'true'
         with:

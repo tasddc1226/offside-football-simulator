@@ -8,23 +8,11 @@ import { fileURLToPath } from 'node:url';
  * @type {Record<string, string[]>}
  */
 export const ALLOWED_DEPENDENCIES = {
-  // T-9-001a: @offside/api는 이제 프로필·Google 로그인만 다룬다 — @offside/domain·@offside/content
-  // 의존이 없다. @offside/web은 아직 별도 작업(T-9-001b)이 진행 중이라 옛 표를 그대로 둔다(그 작업이
-  // 끝나면 이 표도 함께 정리되어야 한다).
-  '@offside/web': [
-    '@offside/platform',
-    '@offside/engine-client',
-    '@offside/ui',
-    '@offside/contracts',
-    '@offside/domain',
-    '@offside/content',
-  ],
+  // T-9-001c: T-9-001a/b가 @offside/domain·content·engine-client·fixtures·ui·platform을 모두
+  // 삭제했다. 남은 워크스페이스는 web(클라이언트 전용, localStorage 저장)·api(프로필/Google 로그인)·
+  // contracts뿐이다.
+  '@offside/web': [],
   '@offside/api': ['@offside/contracts'],
-  '@offside/platform': ['@offside/engine-client', '@offside/contracts'],
-  '@offside/engine-client': ['@offside/domain', '@offside/contracts', '@offside/content'],
-  '@offside/ui': ['@offside/contracts'],
-  '@offside/domain': [],
-  '@offside/content': ['@offside/domain'],
   '@offside/contracts': [],
 };
 
@@ -37,34 +25,15 @@ const WORKSPACE_DIRS = ['apps', 'packages'];
 const TOOLING_PACKAGES = new Set(['@offside/tsconfig', '@offside/eslint-config']);
 
 /**
- * 테스트 전용 패키지(ADR-005 표 밖). 어떤 워크스페이스든 devDependencies로는 허용하고,
- * dependencies로 선언하면(런타임 번들에 섞여 들어갈 수 있으므로) 위반이다.
- * @type {Set<string>}
- */
-const TEST_ONLY_PACKAGES = new Set(['@offside/fixtures']);
-
-/**
  * @param {string} pkgName
  * @param {Record<string, string> | undefined} deps
  * @param {Set<string>} allowed
- * @param {'dependencies' | 'devDependencies'} field
  * @returns {{ package: string; dependency: string; reason?: string }[]}
  */
-function checkDeps(pkgName, deps, allowed, field) {
+function checkDeps(pkgName, deps, allowed) {
   const violations = [];
   for (const dependencyName of Object.keys(deps ?? {})) {
     if (!dependencyName.startsWith('@offside/') || TOOLING_PACKAGES.has(dependencyName)) continue;
-
-    if (TEST_ONLY_PACKAGES.has(dependencyName)) {
-      if (field === 'dependencies') {
-        violations.push({
-          package: pkgName,
-          dependency: dependencyName,
-          reason: '테스트 전용 패키지는 devDependencies에서만 허용된다.',
-        });
-      }
-      continue;
-    }
 
     if (!allowed.has(dependencyName)) {
       violations.push({ package: pkgName, dependency: dependencyName });
@@ -104,8 +73,8 @@ export function findDependencyViolations(repoRoot) {
 
       const allowed = new Set(ALLOWED_DEPENDENCIES[pkg.name]);
 
-      violations.push(...checkDeps(pkg.name, pkg.dependencies, allowed, 'dependencies'));
-      violations.push(...checkDeps(pkg.name, pkg.devDependencies, allowed, 'devDependencies'));
+      violations.push(...checkDeps(pkg.name, pkg.dependencies, allowed));
+      violations.push(...checkDeps(pkg.name, pkg.devDependencies, allowed));
     }
   }
 

@@ -57,15 +57,15 @@ describe('candidate web propagation guard', () => {
     } finally { vi.useRealTimers(); }
   });
 
-  it('places the guard after web deployment and before production CAS and staging UI', () => {
+  it('places the guard after web deployment and before production read-back and staging smoke checks', () => {
     const production = readFileSync(new URL('../../.github/workflows/deploy-production.yml', import.meta.url), 'utf8');
     const staging = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');
     const guard = production.indexOf('node tooling/scripts/web-readiness.mjs');
     expect(guard).toBeGreaterThan(production.indexOf('name: Deploy production web'));
-    expect(guard).toBeLessThan(production.indexOf('name: Compare-and-set the production season manifest'));
+    expect(guard).toBeLessThan(production.indexOf('name: Read-back health, profile and web checks'));
     expect(production.slice(production.lastIndexOf('- name:', guard), guard)).toContain("if: inputs.mode == 'deploy'");
     expect(staging.indexOf('node tooling/scripts/web-readiness.mjs')).toBeGreaterThan(staging.indexOf('name: Migrate and deploy staging'));
-    expect(staging.indexOf('node tooling/scripts/web-readiness.mjs')).toBeLessThan(staging.indexOf('pnpm --filter @offside/web exec playwright test --config playwright.smoke.config.ts'));
+    expect(staging.indexOf('node tooling/scripts/web-readiness.mjs')).toBeLessThan(staging.lastIndexOf('/guide/'));
     expect(production).not.toContain('web-readiness.mjs "$PRODUCTION_WEB_URL" apps/web/dist ||');
   });
 });
