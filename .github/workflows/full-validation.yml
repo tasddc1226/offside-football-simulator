@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   full-validation:
-    name: Full quality and browser regression
+    name: Full quality, balance and browser regression
     runs-on: [self-hosted, macOS, ARM64, offside]
     timeout-minutes: 30
     steps:
@@ -32,13 +32,14 @@ jobs:
       - run: pnpm lint
       - run: pnpm lint:deps
       - run: pnpm typecheck
-      - run: pnpm content:validate
-      - run: pnpm turbo run test --filter='!@offside/api' --filter='!@offside/domain'
-      - run: pnpm --filter @offside/api test
-      - run: pnpm --filter @offside/domain test
+      - run: pnpm test
       - run: pnpm build
       - run: pnpm --filter @offside/web check:bundle
       - run: pnpm --filter @offside/api db:check
+      - name: Fulltime balance regression (N=20000, random, parity vs reference/random-v4.json)
+        run: |
+          pnpm --filter @offside/fulltime-sim exec tsx simulate.ts 20000 random full-validation-${{ github.run_id }}
+          pnpm --filter @offside/fulltime-sim run check-parity full-validation-${{ github.run_id }}
       - run: pnpm --filter @offside/web exec playwright install chromium
       - run: pnpm --filter @offside/web exec playwright test --workers=1
         env:
