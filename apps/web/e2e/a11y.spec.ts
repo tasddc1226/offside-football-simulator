@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { startCareer } from './helpers.js';
 
 async function expectNoSeriousViolations(page: import('@playwright/test').Page) {
   const results = await new AxeBuilder({ page }).analyze();
@@ -13,9 +14,7 @@ test('홈 화면에 심각한 접근성 위반이 없다', async ({ page }) => {
 });
 
 test('선수 탭에 심각한 접근성 위반이 없다', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();
-  await page.locator('[data-act="start"]').click();
+  await startCareer(page);
   await page.locator('[data-tab="player"]').click();
   await expectNoSeriousViolations(page);
 });

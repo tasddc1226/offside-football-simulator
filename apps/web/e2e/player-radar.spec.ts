@@ -1,10 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { startCareer } from './helpers.js';
 
 test('선수 탭에 레이더 차트가 렌더링된다', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();
-  await page.locator('[data-act="start"]').click();
-  await expect(page.locator('.player h2')).toBeVisible();
+  await startCareer(page);
 
   await page.locator('[data-tab="player"]').click();
 

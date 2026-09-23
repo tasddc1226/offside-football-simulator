@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { startCareer } from './helpers.js';
 
 // 프리시즌 → 전반기 → 후반기를 여러 시즌 돌리는 동안 확률 이벤트 선택지, 오퍼/시트 버튼,
 // 애니메이션 건너뛰기 버튼이 그때그때 나타난다 — 매 스텝마다 "지금 보이는 걸 하나 고른다"는
@@ -28,11 +29,7 @@ async function clickWhateverIsNext(page: Page): Promise<boolean> {
 
 test('커리어 생성 후 2시즌 이상 진행한다', async ({ page }) => {
   test.setTimeout(120_000);
-  await page.goto('/');
-  await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();
-  await page.locator('[data-act="start"]').click();
-
-  await expect(page.locator('.player h2')).toBeVisible();
+  await startCareer(page);
 
   const initialYear = await page.evaluate(() => {
     const raw = localStorage.getItem('ft_save');
