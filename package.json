@@ -15,10 +15,7 @@
     "lint:deps": "node tooling/scripts/check-deps.mjs",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
-    "content:validate": "turbo run content:validate",
     "db:migrate": "turbo run db:migrate",
-    "sim:career": "pnpm --filter @offside/scripts sim:career --",
-    "sim:report": "pnpm --filter @offside/scripts sim:report --",
     "dev:simulator": "pnpm --filter @offside/web dev:simulator"
   },
   "devDependencies": {

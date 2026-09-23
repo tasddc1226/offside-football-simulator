@@ -1,21 +1,9 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { signConfirmToken, verifyConfirmToken } from '../auth/confirm-token.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
-import { listCareerIdsByOwner } from '../db/repos/careers.js';
 import { runBatch } from '../db/repos/batch.js';
-import {
-  auditLog,
-  careers,
-  commandLog,
-  idempotency,
-  profiles,
-  sessions,
-  snapshots,
-  lockerTeams,
-  friendlyMatches,
-  competitionEntries,
-} from '../db/schema.js';
+import { auditLog, idempotency, profiles, sessions } from '../db/schema.js';
 import { AppError } from '../errors.js';
 
 const CONFIRM_TOKEN_TTL_MS = 10 * 60 * 1000;
@@ -49,8 +37,8 @@ export type ExecuteProfileDeletionInput = {
 };
 
 /**
- * API-PRO-005 2단계. `deleted_at` 기록·커리어/Snapshot/명령 로그/idempotency 삭제·세션 전부 폐기·
- * 감사 로그를 한 트랜잭션(runBatch)으로 묶는다.
+ * API-PRO-005 2단계. `deleted_at` 기록·idempotency 삭제·세션 전부 폐기·감사 로그를 한
+ * 트랜잭션(runBatch)으로 묶는다. T-9-001a: 커리어 등 서버 소유 게임 데이터는 더 이상 없다.
  */
 export async function executeProfileDeletion(
   db: Db,
@@ -69,8 +57,6 @@ export async function executeProfileDeletion(
     });
   }
 
-  const careerIds = await listCareerIdsByOwner(db, input.profileId);
-
   await runBatch(db, [
     // T-1-013 D-21: google_sub·email·linked_at도 비운다 — 그러지 않으면 unique index
     // (profiles_google_sub_unique)가 같은 Google 계정의 재연결을 막는다.
@@ -78,16 +64,6 @@ export async function executeProfileDeletion(
       .update(profiles)
       .set({ deletedAt: input.now, googleSub: null, email: null, linkedAt: null })
       .where(eq(profiles.id, input.profileId)),
-    ...(careerIds.length > 0
-      ? [
-          db.delete(snapshots).where(inArray(snapshots.careerId, careerIds)),
-          db.delete(commandLog).where(inArray(commandLog.careerId, careerIds)),
-        ]
-      : []),
-    db.delete(lockerTeams).where(eq(lockerTeams.ownerProfileId, input.profileId)),
-    db.delete(friendlyMatches).where(eq(friendlyMatches.ownerProfileId, input.profileId)),
-    db.delete(competitionEntries).where(eq(competitionEntries.ownerProfileId, input.profileId)),
-    db.delete(careers).where(eq(careers.ownerProfileId, input.profileId)),
     db.delete(idempotency).where(eq(idempotency.ownerProfileId, input.profileId)),
     db
       .update(sessions)

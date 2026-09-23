@@ -26,10 +26,19 @@ function firstMigrationStatements(): string[] {
   );
 }
 
-/** 브리프 표의 컬럼 목록과 같다(snake_case). */
+/** T-9-001a: 0000의 첫 문장은 이제 0015에서 DROP된 `careers`라 재적용해도 실패하지 않는다.
+ * 최종까지 남는 `profiles` CREATE 문을 대신 고른다. */
+function firstProfilesCreateStatement(): string {
+  const statement = firstMigrationStatements().find((s) => s.startsWith('CREATE TABLE `profiles`'));
+  if (!statement) throw new Error('expected a CREATE TABLE `profiles` statement in the first migration');
+  return statement;
+}
+
+/**
+ * T-9-001a: 로그인·프로필만 남기고(0015에서 나머지 테이블을 모두 DROP) 최종 테이블 집합은 이
+ * 5개뿐이다. 컬럼 목록은 schema.ts와 같다(snake_case).
+ */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
-  annual_runs: ['id', 'career_id', 'start_revision', 'revision', 'career_revision', 'status', 'checkpoint_json', 'start_snapshot_json', 'decision_json', 'report_json', 'command_count', 'created_at', 'updated_at'],
-  annual_requests: ['id', 'career_id', 'run_id', 'from_revision', 'request_key_hash', 'request_hash', 'response_json', 'created_at'],
   profiles: [
     'id',
     'recovery_code_hash',
@@ -44,58 +53,6 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'last_seen_at',
     'deleted_at',
   ],
-  auth_attempts: ['id', 'kind', 'subject', 'window_start', 'count'],
-  locker_teams: [
-    'id',
-    'owner_profile_id',
-    'name',
-    'formation',
-    'lineup_json',
-    'revision',
-    'created_at',
-    'updated_at',
-  ],
-  locker_player_notes: ['career_id', 'note', 'updated_at'],
-  competition_challenge_versions: [
-    'id',
-    'day_key',
-    'week_key',
-    'starts_at',
-    'ends_at',
-    'ruleset_version',
-    'content_pack_version',
-    'scoring_policy_version',
-    'scenario_json',
-    'created_at',
-  ],
-  competition_entries: [
-    'id',
-    'challenge_version_id',
-    'owner_profile_id',
-    'action_ids_json',
-    'revision',
-    'state_json',
-    'result_json',
-    'result_hash',
-    'score',
-    'max_score',
-    'verification_status',
-    'public_opt_in',
-    'public_alias',
-    'submitted_at',
-  ],
-  competition_actions: [
-    'id',
-    'entry_id',
-    'revision',
-    'action_id',
-    'expected_revision',
-    'request_key_hash',
-    'request_hash',
-    'response_json',
-    'created_at',
-  ],
-  audit_log: ['id', 'kind', 'profile_id', 'payload_json', 'created_at'],
   sessions: [
     'id',
     'profile_id',
@@ -105,45 +62,9 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'expires_at',
     'revoked_at',
     'last_seen_at',
-    'pending_merge_profile_id',
-    'pending_merge_expires_at',
   ],
-  careers: [
-    'id',
-    'authority',
-    'owner_profile_id',
-    'status',
-    'revision',
-    'created_service_season_id',
-    'ruleset_version',
-    'content_pack_version',
-    'verification_status',
-    'last_synced_at',
-    'created_at',
-    'updated_at',
-    'archived_at',
-  ],
-  snapshots: [
-    'id',
-    'career_id',
-    'revision',
-    'checkpoint',
-    'state',
-    'state_hash',
-    'ruleset_version',
-    'content_pack_version',
-    'rng_state_json',
-    'created_at',
-  ],
-  command_log: [
-    'career_id',
-    'revision',
-    'command_id',
-    'command_type',
-    'payload_json',
-    'result_hash',
-    'created_at',
-  ],
+  auth_attempts: ['id', 'kind', 'subject', 'window_start', 'count'],
+  audit_log: ['id', 'kind', 'profile_id', 'payload_json', 'created_at'],
   idempotency: [
     'owner_profile_id',
     'key',
@@ -152,26 +73,6 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'response_body',
     'created_at',
     'expires_at',
-  ],
-  service_seasons: [
-    'id',
-    'name',
-    'status',
-    'starts_at',
-    'ends_at',
-    'ruleset_version',
-    'content_pack_version',
-    'challenge_set_id',
-    'is_test',
-  ],
-  analytics_events: [
-    'id',
-    'client_id',
-    'profile_id',
-    'name',
-    'props_json',
-    'client_ts',
-    'received_at',
   ],
 };
 
@@ -196,10 +97,19 @@ describe('migrations', () => {
     }
   });
 
+  it('전체 마이그레이션을 적용한 최종 테이블 집합은 정확히 이 5개뿐이다(0015: 게임 데이터 테이블 DROP)', async () => {
+    const result = await ctx.db.$client
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '\\_cf\\_%' ESCAPE '\\'",
+      )
+      .all<{ name: string }>();
+    const tables = result.results.map((row) => row.name).sort();
+    expect(tables).toEqual(Object.keys(EXPECTED_COLUMNS).sort());
+  });
+
   it('is not idempotent: reapplying the migration on the same DB fails', async () => {
-    const [createCareers] = firstMigrationStatements();
-    if (!createCareers) throw new Error('expected at least one statement');
-    await expect(ctx.db.$client.exec(createCareers)).rejects.toThrow();
+    const createProfiles = firstProfilesCreateStatement();
+    await expect(ctx.db.$client.exec(createProfiles)).rejects.toThrow();
   });
 
   it('makes ends_at nullable without losing an existing career and its evidence', async () => {

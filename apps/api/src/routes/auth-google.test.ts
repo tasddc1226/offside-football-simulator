@@ -5,13 +5,10 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import type { Bindings } from '../env.js';
-import { insertCareer } from '../db/repos/careers.js';
-import { upsertServiceSeason } from '../db/repos/serviceSeasons.js';
-import { auditLog, careers, profiles, sessions } from '../db/schema.js';
+import { auditLog, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
-const SERVICE_SEASON_ID = 'svc_test';
 const rotatedCookies = new Map<string, string>();
 
 function currentCookie(cookie: string): string {
@@ -49,35 +46,6 @@ async function issueCookie(ctx: TestD1): Promise<{ cookie: string; profileId: st
   const cookie = extractCookiePair(res.headers.get('Set-Cookie') ?? '', 'offside_session');
   const body = successEnvelope(ProfileSchema).parse(await res.json());
   return { cookie, profileId: body.data.id };
-}
-
-async function ensureServiceSeason(ctx: TestD1): Promise<void> {
-  await upsertServiceSeason(ctx.db, {
-    id: SERVICE_SEASON_ID,
-    name: 'Test season',
-    status: 'ACTIVE',
-    startsAt: '2026-01-01T00:00:00Z',
-    endsAt: '2026-12-31T23:59:59Z',
-    rulesetVersion: '1.0.0',
-    contentPackVersion: '0.1.0',
-    challengeSetId: 'cs_test',
-  });
-}
-
-async function addCareer(ctx: TestD1, ownerProfileId: string, careerId: string): Promise<void> {
-  const now = new Date().toISOString();
-  await insertCareer(ctx.db, {
-    id: careerId,
-    ownerProfileId,
-    status: 'ACTIVE',
-    revision: 1,
-    createdServiceSeasonId: SERVICE_SEASON_ID,
-    rulesetVersion: '1.0.0',
-    contentPackVersion: '0.1.0',
-    lastSyncedAt: now,
-    createdAt: now,
-    updatedAt: now,
-  });
 }
 
 async function getProfile(ctx: TestD1, cookie: string) {
@@ -423,25 +391,7 @@ describe('GET /v1/auth/google/callback', () => {
     expect(profileViaA.id).toBe(b.profileId);
   });
 
-  it('같은 sub가 B에 있고 A 커리어 1개 이상 → merge_required, pending이 세션에 남는다', async () => {
-    await ensureServiceSeason(ctx);
-    const b = await issueCookie(ctx);
-    await linkGoogle(ctx, b.cookie, 'sub-merge');
-
-    const a = await issueCookie(ctx);
-    await addCareer(ctx, a.profileId, 'car_merge_a1');
-
-    const location = await linkGoogle(ctx, a.cookie, 'sub-merge');
-    expect(location.searchParams.get('google')).toBe('merge_required');
-    expect(location.searchParams.get('current')).toBe('1');
-    expect(location.searchParams.get('target')).toBe('0');
-
-    const profile = await getProfile(ctx, a.cookie);
-    expect(profile.pendingMerge).toEqual({ targetCareerCount: 0 });
-  });
-
   it('삭제된 프로필의 sub로도 재연결할 수 있다', async () => {
-    await ensureServiceSeason(ctx);
     const owner = await issueCookie(ctx);
     await linkGoogle(ctx, owner.cookie, 'sub-deleted');
 
@@ -475,167 +425,6 @@ describe('GET /v1/auth/google/callback', () => {
     expect(location.pathname).toBe('/settings');
     expect(location.searchParams.get('reason')).toBe('state');
     expect(res.headers.get('Set-Cookie')).toContain('offside_oauth=;');
-  });
-});
-
-describe('POST /v1/auth/merge', () => {
-  let ctx: TestD1;
-
-  beforeEach(async () => {
-    rotatedCookies.clear();
-    ctx = await createTestD1();
-    await ensureServiceSeason(ctx);
-  });
-
-  afterEach(async () => {
-    await ctx.dispose();
-  });
-
-  async function setUpMergeRequired(): Promise<{
-    a: { cookie: string; profileId: string };
-    b: { cookie: string; profileId: string };
-  }> {
-    const b = await issueCookie(ctx);
-    await linkGoogle(ctx, b.cookie, 'sub-merge-route');
-    const a = await issueCookie(ctx);
-    await addCareer(ctx, a.profileId, 'car_route_a1');
-    const location = await linkGoogle(ctx, a.cookie, 'sub-merge-route');
-    expect(location.searchParams.get('google')).toBe('merge_required');
-    return { a, b };
-  }
-
-  it('MOVE_TO_LINKED: 커리어 이동·감사 로그·pending 삭제', async () => {
-    const { a, b } = await setUpMergeRequired();
-    const app = createApp();
-
-    const res = await app.request(
-      '/v1/auth/merge',
-      jsonInit({ body: { mergeChoice: 'MOVE_TO_LINKED' }, cookie: a.cookie }),
-      ctx.env,
-    );
-    expect(res.status).toBe(200);
-    recordRotation(a.cookie, res);
-    const body = (await res.json()) as { data: { profileId: string; careerCount: number } };
-    expect(body.data.profileId).toBe(b.profileId);
-    expect(body.data.careerCount).toBe(1);
-
-    const bCareers = await ctx.db
-      .select()
-      .from(careers)
-      .where(eq(careers.ownerProfileId, b.profileId));
-    expect(bCareers.map((row) => row.id)).toEqual(['car_route_a1']);
-
-    const mergedLogs = await ctx.db
-      .select()
-      .from(auditLog)
-      .where(eq(auditLog.kind, 'PROFILE_MERGED'));
-    expect(mergedLogs).toHaveLength(1);
-
-    const profile = await getProfile(ctx, a.cookie);
-    expect(profile.id).toBe(b.profileId);
-    expect(profile.pendingMerge).toBeNull();
-
-    const replay = await app.request(
-      '/v1/auth/merge',
-      jsonInit({ body: { mergeChoice: 'MOVE_TO_LINKED' }, cookie: a.cookie }),
-      ctx.env,
-    );
-    expect(replay.status).toBe(200);
-    expect(replay.headers.get('Idempotent-Replayed')).toBe('true');
-  });
-
-  it('KEEP_LINKED_ONLY: 재바인딩만, A의 커리어는 그대로 A 소유로 남는다', async () => {
-    const { a, b } = await setUpMergeRequired();
-    const app = createApp();
-
-    const res = await app.request(
-      '/v1/auth/merge',
-      jsonInit({ body: { mergeChoice: 'KEEP_LINKED_ONLY' }, cookie: a.cookie }),
-      ctx.env,
-    );
-    expect(res.status).toBe(200);
-    recordRotation(a.cookie, res);
-    const body = (await res.json()) as { data: { profileId: string; careerCount: number } };
-    expect(body.data.profileId).toBe(b.profileId);
-    expect(body.data.careerCount).toBe(0);
-
-    const aCareers = await ctx.db
-      .select()
-      .from(careers)
-      .where(eq(careers.ownerProfileId, a.profileId));
-    expect(aCareers.map((row) => row.id)).toEqual(['car_route_a1']);
-
-    const profile = await getProfile(ctx, a.cookie);
-    expect(profile.id).toBe(b.profileId);
-  });
-
-  it('대기 중인 병합이 없으면 400 VALIDATION_FAILED(NO_PENDING_MERGE)', async () => {
-    const { cookie } = await issueCookie(ctx);
-    const app = createApp();
-
-    const res = await app.request(
-      '/v1/auth/merge',
-      jsonInit({ body: { mergeChoice: 'KEEP_LINKED_ONLY' }, cookie }),
-      ctx.env,
-    );
-    expect(res.status).toBe(400);
-    const body = ErrorEnvelopeSchema.parse(await res.json());
-    expect(body.error.code).toBe('VALIDATION_FAILED');
-    expect(body.error.details).toEqual({ reason: 'NO_PENDING_MERGE' });
-  });
-
-  it('pending 만료 뒤에는 400 VALIDATION_FAILED(NO_PENDING_MERGE)', async () => {
-    const { a } = await setUpMergeRequired();
-    await ctx.db
-      .update(sessions)
-      .set({ pendingMergeExpiresAt: '2020-01-01T00:00:00Z' })
-      .where(eq(sessions.profileId, a.profileId));
-    const app = createApp();
-
-    const res = await app.request(
-      '/v1/auth/merge',
-      jsonInit({ body: { mergeChoice: 'MOVE_TO_LINKED' }, cookie: a.cookie }),
-      ctx.env,
-    );
-    expect(res.status).toBe(400);
-    expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({
-      reason: 'NO_PENDING_MERGE',
-    });
-  });
-
-  it('대상 프로필이 확정 전에 삭제되면 400 VALIDATION_FAILED(NO_PENDING_MERGE)', async () => {
-    const { a, b } = await setUpMergeRequired();
-    await ctx.db
-      .update(profiles)
-      .set({ deletedAt: new Date().toISOString() })
-      .where(eq(profiles.id, b.profileId));
-    const app = createApp();
-
-    const res = await app.request(
-      '/v1/auth/merge',
-      jsonInit({ body: { mergeChoice: 'MOVE_TO_LINKED' }, cookie: a.cookie }),
-      ctx.env,
-    );
-    expect(res.status).toBe(400);
-    expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({
-      reason: 'NO_PENDING_MERGE',
-    });
-
-    const aCareers = await ctx.db
-      .select()
-      .from(careers)
-      .where(eq(careers.ownerProfileId, a.profileId));
-    expect(aCareers.map((row) => row.id)).toEqual(['car_route_a1']);
-  });
-
-  it('세션이 없으면 401', async () => {
-    const app = createApp();
-    const res = await app.request(
-      '/v1/auth/merge',
-      jsonInit({ body: { mergeChoice: 'KEEP_LINKED_ONLY' } }),
-      ctx.env,
-    );
-    expect(res.status).toBe(401);
   });
 });
 

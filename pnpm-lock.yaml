@@ -29,15 +29,9 @@ importers:
 
   apps/api:
     dependencies:
-      '@offside/content':
-        specifier: workspace:*
-        version: link:../../packages/content
       '@offside/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@offside/domain':
-        specifier: workspace:*
-        version: link:../../packages/domain
       arctic:
         specifier: 3.7.0
         version: 3.7.0
@@ -51,9 +45,6 @@ importers:
       '@cloudflare/workers-types':
         specifier: 5.20260831.1
         version: 5.20260831.1
-      '@offside/fixtures':
-        specifier: workspace:*
-        version: link:../../packages/fixtures
       '@offside/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
@@ -173,92 +164,11 @@ importers:
         specifier: 4.127.1
         version: 4.127.1(@cloudflare/workers-types@5.20260831.1)
 
-  packages/content:
-    dependencies:
-      zod:
-        specifier: 4.5.4
-        version: 4.5.4
-    devDependencies:
-      '@offside/domain':
-        specifier: workspace:*
-        version: link:../domain
-      '@offside/tsconfig':
-        specifier: workspace:*
-        version: link:../../tooling/tsconfig
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: 4.1.11
-        version: 4.1.11(@types/node@22.20.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13))
-
   packages/contracts:
     dependencies:
       zod:
         specifier: 4.5.4
         version: 4.5.4
-    devDependencies:
-      '@offside/domain':
-        specifier: workspace:*
-        version: link:../domain
-      '@offside/fixtures':
-        specifier: workspace:*
-        version: link:../fixtures
-      '@offside/tsconfig':
-        specifier: workspace:*
-        version: link:../../tooling/tsconfig
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: 4.1.11
-        version: 4.1.11(@types/node@22.20.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13))
-
-  packages/domain:
-    devDependencies:
-      '@offside/tsconfig':
-        specifier: workspace:*
-        version: link:../../tooling/tsconfig
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: 4.1.11
-        version: 4.1.11(@types/node@22.20.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13))
-
-  packages/engine-client:
-    dependencies:
-      '@offside/content':
-        specifier: workspace:*
-        version: link:../content
-      '@offside/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@offside/domain':
-        specifier: workspace:*
-        version: link:../domain
-    devDependencies:
-      '@offside/fixtures':
-        specifier: workspace:*
-        version: link:../fixtures
-      '@offside/tsconfig':
-        specifier: workspace:*
-        version: link:../../tooling/tsconfig
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: 4.1.11
-        version: 4.1.11(@types/node@22.20.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13))
-
-  packages/fixtures:
-    dependencies:
-      '@offside/content':
-        specifier: workspace:*
-        version: link:../content
-      '@offside/domain':
-        specifier: workspace:*
-        version: link:../domain
     devDependencies:
       '@offside/tsconfig':
         specifier: workspace:*
@@ -370,9 +280,6 @@ importers:
 
   tooling/scripts:
     devDependencies:
-      tsx:
-        specifier: 4.23.13
-        version: 4.23.13
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@types/node@22.20.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13))

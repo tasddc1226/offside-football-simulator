@@ -18,6 +18,3 @@ export const CORS_EXPOSED_HEADERS = [REQUEST_ID_HEADER] as const;
 
 /** 07 "공통 규칙": 요청 본문 상한 1MB. */
 export const REQUEST_BODY_MAX_BYTES = 1_048_576;
-
-/** 07 "공통 규칙": Snapshot은 압축 전 256KB 권장 상한. */
-export const SNAPSHOT_STATE_RECOMMENDED_BYTES = 262_144;

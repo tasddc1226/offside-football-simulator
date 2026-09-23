@@ -20,9 +20,10 @@ const proposal = validateProposal({
 describe('production release guards', () => {
   it('keeps non-production seeds and staging expectations on the release target', () => {
     const expectedPair = "'3.5.0', '0.14.0'";
+    // T-9-001a: apps/api/seeds/bootstrap-non-production.sql·local.sql은 service_seasons와 함께
+    // 삭제되었다(마이그레이션 0015). production-release.mjs 자체는 이 태스크의 범위 밖이라 손대지
+    // 않았지만, 이제 존재하지 않는 시즌 테이블을 다루는 죽은 코드다 — 오케스트레이터 검토 필요.
     const synchronizedFiles = [
-      '../../apps/api/seeds/bootstrap-non-production.sql',
-      '../../apps/api/seeds/local.sql',
       '../../apps/web/playwright.smoke.config.ts',
       '../../apps/web/e2e/staging-rehearsal.spec.ts',
       '../../apps/web/e2e/service-season.spec.ts',
