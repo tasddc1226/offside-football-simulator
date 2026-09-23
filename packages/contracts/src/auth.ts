@@ -84,4 +84,4 @@ export type DeleteProfileConfirmBody = z.infer<typeof DeleteProfileConfirmBodySc
 
 // POST /auth/logout(API-AUTH-004)은 요청 본문이 없고 응답이 204(본문 없음)라 이 파일에 스키마가
 // 없다. T-9-001a: 서버에는 병합할 게임 데이터가 더 이상 없어 계정 병합 흐름(구 API-AUTH-003,
-// pendingMerge)을 없앴다 — 같은 Google 계정으로 로그인하면 그 프로필로 바로 전환한다.;
+// pendingMerge)을 없앴다 — 같은 Google 계정으로 로그인하면 그 프로필로 바로 전환한다.
