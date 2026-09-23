@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { quantile, pearson, share as shareOf } from './metrics.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const pol = process.argv[2] || 'random';
@@ -20,26 +21,16 @@ const rows: Row[] = lines.slice(1).filter(Boolean).map((l) => {
 });
 const A = JSON.parse(fs.readFileSync(path.join(dir, `aggregate-${pol}.json`), 'utf8')) as Record<string, unknown>;
 const N = rows.length;
-const pct = (x: number) => (x / N * 100).toFixed(1) + '%';
-const q = (arr: (string | number)[], p: number) => {
-  const a = (arr.filter((x) => x !== '') as number[]).sort((x, y) => x - y);
-  return a[Math.floor((a.length - 1) * p)];
-};
+const q = (arr: (string | number)[], p: number) => quantile(arr, p);
 const dist = (k: string) => { const a = rows.map((r) => r[k]!); return `p10 ${q(a, 0.1)} · p50 ${q(a, 0.5)} · p90 ${q(a, 0.9)} · max ${q(a, 1)}`; };
-const share = (f: (r: Row) => boolean) => pct(rows.filter(f).length);
+const share = (f: (r: Row) => boolean) => shareOf(rows, f).toFixed(1) + '%';
 const by = (k: string, v: string) => {
   const g: Record<string, number[]> = {};
   rows.forEach((r) => { (g[String(r[k])] = g[String(r[k])] || []).push(r[v] as number); });
   return Object.entries(g).map(([a, b]) => `${a} ${(b.reduce((x, y) => x + y, 0) / b.length).toFixed(1)}`).join(' | ');
 };
 const top = (o: Record<string, number>, n = 12) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => `${k} ${v}`).join(', ');
-const corr = (a: string, b: string) => {
-  const x = rows.map((r) => r[a] as number), y = rows.map((r) => r[b] as number);
-  const mx = x.reduce((s, v) => s + v, 0) / N, my = y.reduce((s, v) => s + v, 0) / N;
-  let sxy = 0, sx = 0, sy = 0;
-  for (let i = 0; i < N; i++) { sxy += (x[i]! - mx) * (y[i]! - my); sx += (x[i]! - mx) ** 2; sy += (y[i]! - my) ** 2; }
-  return (sxy / Math.sqrt(sx * sy)).toFixed(2);
-};
+const corr = (a: string, b: string) => pearson(rows, a, b).toFixed(2);
 const out: string[] = [];
 const P = (...a: unknown[]) => out.push(a.join(' '));
 
