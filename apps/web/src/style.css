@@ -32,7 +32,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 
 /* top bar */
 .topbar { display: flex; align-items: center; gap: 10px; padding-block: 14px 4px; }
-.badge { width: 38px; height: 38px; border-radius: 10px; background: var(--pitch); color: var(--on-pitch); display: grid; place-items: center; font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .04em; }
+.badge { width: 38px; height: 38px; border-radius: 10px; display: block; object-fit: cover; }
 .brand small { display: block; font-size: 12px; letter-spacing: .02em; color: var(--muted); line-height: 1.2; }
 .brand b { font-family: var(--display); font-size: 22px; font-weight: 700; letter-spacing: .02em; line-height: 1.1; }
 .topbar .spacer { flex: 1; }

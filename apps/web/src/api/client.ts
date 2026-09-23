@@ -1,8 +1,7 @@
 // API 클라이언트 최소본 (계정: 로그인/프로필/연동 해제/로그아웃/삭제 만). 게임 상태는 전부
-// localStorage에 남고 서버로 보내지 않는다. `@offside/contracts`는 profile/auth/health/errors/
-// envelope/headers/primitives 스코프만 쓴다 — 나머지(career 등)는 이 worktree(T-9-001b)의
-// 범위 밖이라 일부러 로컬 타입으로 정의해 스키마 변경(T-9-001a)에 결합되지 않게 한다.
-import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts';
+// localStorage에 남고 서버로 보내지 않는다. 응답 타입은 로컬에 정의해 API 계약 패키지와 번들 결합을 피한다.
+// @offside/contracts 전체를 가져오면 zod까지 번들에 들어오므로 헤더 이름만 직접 둔다(API와 동일한 값).
+const IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key';
 import { resolveApiBaseUrl } from './base-url.js';
 
 export const API_BASE_URL = resolveApiBaseUrl(
