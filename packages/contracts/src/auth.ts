@@ -51,9 +51,6 @@ export const RecoveryCodeInputSchema = z.string().transform((value, ctx) => {
   return normalized;
 });
 
-export const MergeChoiceSchema = z.enum(['MOVE_TO_LINKED', 'KEEP_LINKED_ONLY']);
-export type MergeChoice = z.infer<typeof MergeChoiceSchema>;
-
 /** API-PRO-003 응답. 원문 코드는 발급 응답에 한 번만 담긴다(D-14). */
 export const IssueRecoveryCodeResponseSchema = z.strictObject({
   code: z.string().regex(RECOVERY_CODE_DISPLAY_PATTERN, 'OFS-XXXX-XXXX-XXXX 형식이어야 한다.'),
@@ -61,25 +58,16 @@ export const IssueRecoveryCodeResponseSchema = z.strictObject({
 });
 export type IssueRecoveryCodeResponse = z.infer<typeof IssueRecoveryCodeResponseSchema>;
 
-/** API-PRO-004 요청 본문. `mergeChoice` 없이 충돌하면 409 `RECOVERY_CONFLICT`. */
+/** API-PRO-004 요청 본문. */
 export const RecoverProfileBodySchema = z.strictObject({
   code: RecoveryCodeInputSchema,
-  mergeChoice: MergeChoiceSchema.optional(),
 });
 export type RecoverProfileBody = z.infer<typeof RecoverProfileBodySchema>;
 
 export const RecoverProfileResponseSchema = z.strictObject({
   profileId: z.string().min(1),
-  careerCount: z.number().int().nonnegative(),
 });
 export type RecoverProfileResponse = z.infer<typeof RecoverProfileResponseSchema>;
-
-/** 409 `RECOVERY_CONFLICT` 오류의 `details`(D-14). */
-export const RecoveryConflictDetailsSchema = z.strictObject({
-  currentCareerCount: z.number().int().nonnegative(),
-  targetCareerCount: z.number().int().nonnegative(),
-});
-export type RecoveryConflictDetails = z.infer<typeof RecoveryConflictDetailsSchema>;
 
 /** API-PRO-005 1단계(본문 없음) 응답. `confirmToken`은 10분 뒤 만료(D-15). */
 export const DeleteProfileStartResponseSchema = z.strictObject({
@@ -94,24 +82,6 @@ export const DeleteProfileConfirmBodySchema = z.strictObject({
 });
 export type DeleteProfileConfirmBody = z.infer<typeof DeleteProfileConfirmBodySchema>;
 
-// POST /auth/logout(API-AUTH-004)과 DELETE /careers/{id}(API-CAR-005)는 요청 본문이 없고 응답이
-// 204(본문 없음)라 이 파일에 스키마가 없다.
-
-/** API-AUTH-003 요청 본문(D-21). */
-export const MergeRequestBodySchema = z.strictObject({
-  mergeChoice: MergeChoiceSchema,
-});
-export type MergeRequestBody = z.infer<typeof MergeRequestBodySchema>;
-
-/** API-AUTH-003 응답. RecoverProfileResponseSchema와 같은 모양이다(D-21). */
-export const MergeResponseSchema = z.strictObject({
-  profileId: z.string().min(1),
-  careerCount: z.number().int().nonnegative(),
-});
-export type MergeResponse = z.infer<typeof MergeResponseSchema>;
-
-/** `GET /v1/profile`의 `pendingMerge` 필드(D-21): 콜백이 `merge_required`로 끝났을 때만 채워진다. */
-export const PendingMergeSchema = z.strictObject({
-  targetCareerCount: z.number().int().nonnegative(),
-});
-export type PendingMerge = z.infer<typeof PendingMergeSchema>;
+// POST /auth/logout(API-AUTH-004)은 요청 본문이 없고 응답이 204(본문 없음)라 이 파일에 스키마가
+// 없다. T-9-001a: 서버에는 병합할 게임 데이터가 더 이상 없어 계정 병합 흐름(구 API-AUTH-003,
+// pendingMerge)을 없앴다 — 같은 Google 계정으로 로그인하면 그 프로필로 바로 전환한다.;

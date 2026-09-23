@@ -15,8 +15,6 @@
     "zod": "4.5.4"
   },
   "devDependencies": {
-    "@offside/domain": "workspace:*",
-    "@offside/fixtures": "workspace:*",
     "@offside/tsconfig": "workspace:*",
     "typescript": "5.9.3",
     "vitest": "4.1.11"

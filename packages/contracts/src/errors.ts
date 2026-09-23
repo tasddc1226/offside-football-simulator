@@ -1,32 +1,20 @@
 import { z } from 'zod';
 
-/** 07 "오류 코드" 표와 같은 순서. */
+/** T-9-001a: 로그인·프로필 API에서 실제로 쓰는 오류 코드만 남겼다(07 문서 표의 부분집합). */
 export const ERROR_CODES = [
   'VALIDATION_FAILED',
   'RECOVERY_CODE_INVALID',
   'TOSS_KEY_INVALID',
   'ORIGIN_NOT_ALLOWED',
   'PROFILE_REQUIRED',
-  'CAREER_NOT_OWNED',
-  'CAREER_NOT_FOUND',
-  'CAREER_REVISION_CONFLICT',
-  'COMMAND_ALREADY_RESOLVED',
-  'RECOVERY_CONFLICT',
-  'MERGE_REQUIRED',
-  'CAREER_ARCHIVED',
-  'VERSION_MISMATCH',
-  'VERIFICATION_FAILED',
   'RATE_LIMITED',
   'SERVICE_UNAVAILABLE',
-  // T-2-012 D-54: 서비스 시즌 포인터 라우트·커리어 생성 검증이 쓴다(07 문서에는 없다 — 이 브리프로 추가).
-  'SERVICE_SEASON_UNAVAILABLE',
-  'SERVICE_SEASON_CLOSED',
 ] as const;
 
 export const ErrorCodeSchema = z.enum(ERROR_CODES);
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;
 
-type HttpStatus = 400 | 401 | 403 | 404 | 409 | 422 | 429 | 503;
+type HttpStatus = 400 | 401 | 403 | 429 | 503;
 
 /** 07 "오류 코드" 표의 HTTP 열. */
 export const HTTP_STATUS_BY_CODE: Record<ErrorCode, HttpStatus> = {
@@ -35,19 +23,8 @@ export const HTTP_STATUS_BY_CODE: Record<ErrorCode, HttpStatus> = {
   TOSS_KEY_INVALID: 401,
   ORIGIN_NOT_ALLOWED: 403,
   PROFILE_REQUIRED: 401,
-  CAREER_NOT_OWNED: 403,
-  CAREER_NOT_FOUND: 404,
-  CAREER_REVISION_CONFLICT: 409,
-  COMMAND_ALREADY_RESOLVED: 409,
-  RECOVERY_CONFLICT: 409,
-  MERGE_REQUIRED: 409,
-  CAREER_ARCHIVED: 409,
-  VERSION_MISMATCH: 422,
-  VERIFICATION_FAILED: 422,
   RATE_LIMITED: 429,
   SERVICE_UNAVAILABLE: 503,
-  SERVICE_SEASON_UNAVAILABLE: 503,
-  SERVICE_SEASON_CLOSED: 409,
 };
 
 /** RATE_LIMITED, SERVICE_UNAVAILABLE만 재시도 가능. */
@@ -57,17 +34,6 @@ export const RETRYABLE_BY_CODE: Record<ErrorCode, boolean> = {
   TOSS_KEY_INVALID: false,
   ORIGIN_NOT_ALLOWED: false,
   PROFILE_REQUIRED: false,
-  CAREER_NOT_OWNED: false,
-  CAREER_NOT_FOUND: false,
-  CAREER_REVISION_CONFLICT: false,
-  COMMAND_ALREADY_RESOLVED: false,
-  RECOVERY_CONFLICT: false,
-  MERGE_REQUIRED: false,
-  CAREER_ARCHIVED: false,
-  VERSION_MISMATCH: false,
-  VERIFICATION_FAILED: false,
   RATE_LIMITED: true,
   SERVICE_UNAVAILABLE: true,
-  SERVICE_SEASON_UNAVAILABLE: true,
-  SERVICE_SEASON_CLOSED: false,
 };
