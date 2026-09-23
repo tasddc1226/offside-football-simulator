@@ -9,8 +9,13 @@ import { defineConfig, devices } from '@playwright/test';
 // 공개 페이지/접근성 테스트가 통과하려면 빌드본이 필요하다. 게임 로직만 빠르게 반복할 때는
 // E2E_DEV=1로 HMR dev 서버를 쓸 수 있다(이 경우 공개 페이지 테스트는 실패한다 — 의도된 동작).
 //
+// CI(ci.yml, full-validation.yml)는 e2e 이전 단계에서 이미 `pnpm build`를 한 번 돌린다 —
+// E2E_PREBUILT=1이면 webServer가 그 dist를 그대로 preview만 하고 다시 빌드하지 않는다.
+// 로컬 `pnpm e2e`는 기본값(E2E_PREBUILT 미설정)이라 여전히 매번 빌드한다.
+//
 // 워크트리 병행 투입 시 여러 세션이 동시에 e2e를 돌리면 기본 포트가 충돌한다 — E2E_PORT로 오버라이드.
 const WITH_DEV = process.env.E2E_DEV === '1';
+const PREBUILT = process.env.E2E_PREBUILT === '1';
 const PORT = Number(process.env.E2E_PORT) || (WITH_DEV ? 5174 : 5175);
 const BASE_URL = `http://localhost:${PORT}`;
 
@@ -30,7 +35,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: WITH_DEV ? `vite dev --port ${PORT}` : `pnpm build && vite preview --port ${PORT}`,
+    command: WITH_DEV
+      ? `vite dev --port ${PORT}`
+      : PREBUILT
+        ? `vite preview --port ${PORT}`
+        : `pnpm build && vite preview --port ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: WITH_DEV ? 30_000 : 120_000,

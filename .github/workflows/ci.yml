@@ -121,6 +121,7 @@ jobs:
           pnpm --filter @offside/web e2e
         env:
           CI: 'true'
+          E2E_PREBUILT: '1'
       - name: Fulltime balance smoke (N=2000, random)
         if: steps.scope.outputs.code_changed == 'true'
         run: node tooling/scripts/sim-smoke.mjs 2000 ci-staging-${{ github.run_id }}
