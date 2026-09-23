@@ -18,8 +18,10 @@ import {
   expectFirstContractHeading,
   fulfillJson,
   META,
+  pinServiceSeasonPair,
   planPreseason,
   resolveRoleProposal,
+  startPlannedSeason,
 } from './helpers/player-creation.js';
 import { seedDeterministicChapterRun } from './helpers/chapter.js';
 
@@ -71,6 +73,8 @@ test('온보딩 건너뛰기 → 첫 프로 계약: 자동화 시간과 최소 �
     }),
   );
 
+  // Measure the historical manual journey, not the separate server annual flow.
+  await pinServiceSeasonPair(page, '3.4.0', '0.13.0');
   const startedAt = performance.now();
 
   await page.goto('/onboarding');
@@ -196,7 +200,7 @@ test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간(FAST �
     const startedAt = performance.now();
 
     await planPreseason(page, '역할 집중');
-    await page.getByRole('button', { name: '시즌 시작' }).click();
+    await startPlannedSeason(page);
     await resolveRoleProposal(page);
     await expectRoute(page, /\/career\/[^/]+$/);
 

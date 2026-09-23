@@ -33,6 +33,11 @@ export async function importCareerFromServer(
   response: GetCareerResponse,
   meta: {
     now: string;
+    ownerProfileId?: string;
+    /** Fail closed if account recovery changed the active owner during the request. */
+    expectedProfileId?: string;
+    /** Optional host deletion queue; checked atomically with the import writes. */
+    pendingDeleteKey?: string;
     retirementArtifacts?: RetirementArtifactsResolver;
     /** 지원 버전의 roster/league/schedule binding을 저장 전에 검증한다. */
     rulesetForVersion?: (version: string) => Ruleset;
@@ -67,7 +72,10 @@ export async function importCareerFromServer(
     } catch {
       return {
         ok: false,
-        error: { code: 'VERIFICATION_FAILED', message: '서버 Snapshot의 리그 원장을 검증할 수 없다.' },
+        error: {
+          code: 'VERIFICATION_FAILED',
+          message: '서버 Snapshot의 리그 원장을 검증할 수 없다.',
+        },
       };
     }
   }
@@ -124,7 +132,30 @@ export async function importCareerFromServer(
   }
 
   return store.transaction('readwrite', async (tx) => {
+    if (meta.pendingDeleteKey && (await tx.kv.get<string[]>(meta.pendingDeleteKey))?.includes(careerId)) {
+      return { ok: false, error: { code: 'CAREER_NOT_FOUND', message: '삭제를 요청한 커리어입니다.' } };
+    }
+    if (
+      meta.expectedProfileId &&
+      (await tx.kv.get<string>('profile:id')) !== meta.expectedProfileId
+    ) {
+      return {
+        ok: false,
+        error: {
+          code: 'CAREER_REVISION_CONFLICT',
+          message: '프로필이 변경되어 응답을 저장하지 않았습니다.',
+        },
+      };
+    }
     const existing = await tx.careers.get(careerId);
+    // Durable request receipts may predate a newer canonical cache. Never roll annual state back.
+    if (
+      (response.authority === 'SERVER_ANNUAL' || existing?.authority === 'SERVER_ANNUAL') &&
+      existing &&
+      existing.revision > revision
+    ) {
+      return { ok: true, revision: existing.revision };
+    }
     if (
       meta.replaceLocal !== true &&
       existing !== undefined &&
@@ -186,7 +217,8 @@ export async function importCareerFromServer(
 
     const record: LocalCareerRecord = {
       id: careerId,
-      ownerProfileId: null,
+      authority: response.authority ?? existing?.authority ?? 'CLIENT_LOCAL',
+      ownerProfileId: meta.ownerProfileId ?? existing?.ownerProfileId ?? null,
       status: decoded.snapshot.state.status,
       revision,
       lastSyncedRevision: revision,

@@ -1,4 +1,6 @@
 export const DOMAIN_VERSION = '0.1.0';
+export * from './annual-career.js';
+export * from './annual-stories.js';
 export * from './friendly-match.js';
 export {
   COMPETITION_CHOICE_CATALOG,

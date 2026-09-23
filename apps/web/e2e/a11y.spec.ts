@@ -364,7 +364,7 @@ test('SCR-005 프리시즌 계획 화면에 axe serious·critical 위반이 없�
   await completeOnboardingThroughContract(page);
   await page.getByRole('link', { name: '계획하러 가기' }).click();
   await expect(
-    page.getByRole('heading', { level: 1, name: /^(프리시즌 계획|이번 시즌, 어떤 선수가 될까?)$/ }),
+    page.getByRole('heading', { level: 1, name: /^(프리시즌 계획|이번 시즌, 어떤 선수가 될까\?)$/ }),
   ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-005');
@@ -375,7 +375,7 @@ test('SCR-011 시즌 준비 화면에 axe serious·critical 위반이 없다', a
   await page.getByRole('link', { name: '계획하러 가기' }).click();
   await fillPreseasonPlan(page, '역할 집중');
   await expect(
-    page.getByRole('heading', { level: 1, name: /^(시즌 준비|이번 시즌, 어떤 선수가 될까?)$/ }),
+    page.getByRole('heading', { level: 1, name: /^(시즌 준비|이번 시즌, 어떤 선수가 될까\?)$/ }),
   ).toBeVisible();
 
   await expectNoSeriousOrCriticalViolations(page, 'SCR-011');

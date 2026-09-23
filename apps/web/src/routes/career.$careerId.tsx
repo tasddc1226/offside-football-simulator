@@ -2,9 +2,11 @@
 // 깊은 링크가 커리어 단계와 맞지 않을 때의 리다이렉트는 각 화면 작업이 screenForCareer로 처리한다.
 // T-1-011: 이 커리어의 동기화 배지·충돌 대화상자를 여기 둔다(모든 하위 화면이 공유).
 import { useState } from 'react';
-import { createFileRoute, notFound, Outlet } from '@tanstack/react-router';
+import { createFileRoute, notFound, Outlet, useLocation } from '@tanstack/react-router';
 import { Toast } from '@offside/ui';
-import { careerQueryOptions } from '../engine/use-career.js';
+import { careerQueryOptions, useCareer } from '../engine/use-career.js';
+import { isServerAnnual } from '@offside/engine-client';
+import { AnnualCareerScreen } from '../shared/annual-career.js';
 import { useSyncState } from '../engine/use-sync.js';
 import { queryClient } from '../shared/query-client.js';
 import { SyncBadge } from '../shared/SyncBadge.js';
@@ -15,8 +17,9 @@ export const Route = createFileRoute('/career/$careerId')({
   loader: async ({ params }) => {
     try {
       await queryClient.ensureQueryData(careerQueryOptions(params.careerId));
-    } catch {
-      throw notFound();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'CAREER_NOT_FOUND') throw notFound();
+      throw error;
     }
   },
   component: CareerLayout,
@@ -24,8 +27,25 @@ export const Route = createFileRoute('/career/$careerId')({
 
 function CareerLayout() {
   const { careerId } = Route.useParams();
+  const career = useCareer(careerId);
+  const location = useLocation();
   const syncState = useSyncState(careerId);
   const [toast, setToast] = useState<SyncToast | null>(null);
+
+  // Do not mount any legacy action screen for server-owned careers, even via an old deep link.
+  if (career.data && isServerAnnual(career.data.record)) {
+    return (
+      <AnnualCareerScreen
+        key={careerId}
+        careerId={careerId}
+        readOnlyContent={
+          /\/(retirement|legacy|timeline|final-profile|attributes)$/.test(location.pathname) ? (
+            <Outlet />
+          ) : undefined
+        }
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-os-3">

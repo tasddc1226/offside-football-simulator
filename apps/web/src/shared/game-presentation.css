@@ -7,8 +7,10 @@
 .os-game-reveal-cue { min-height: 7.5rem; }
 
 @keyframes os-game-result-enter {
-  from { opacity: 0; transform: translateY(0.5rem); }
-  to { opacity: 1; transform: translateY(0); }
+  /* Results become readable immediately; fading the entire text layer breaks
+     contrast while the already-interactive screen is entering. */
+  from { transform: translateY(0.5rem); }
+  to { transform: translateY(0); }
 }
 
 .os-game-pending-dot {

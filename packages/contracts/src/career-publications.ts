@@ -33,6 +33,7 @@ export const CareerArticleSchema = z.strictObject({
 export type CareerArticle = z.infer<typeof CareerArticleSchema>;
 export const PublishCareerSchema = z.strictObject({ consent: z.literal(true) });
 export const StartCareerChallengeSchema = z.strictObject({
+  expectedProfileId: z.string().min(1).optional(),
   name: z.string().trim().min(1).max(20),
 });
 export const CareerPublicationStatusSchema = z.strictObject({

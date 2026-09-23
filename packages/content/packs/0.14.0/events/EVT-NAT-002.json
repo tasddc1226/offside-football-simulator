@@ -1,0 +1,84 @@
+{
+  "id": "EVT-NAT-002",
+  "version": 1,
+  "phases": ["IN_SEASON"],
+  "triggers": { "gte": ["reputation.popularityCenti", 5200] },
+  "exclusionTags": [],
+  "cooldown": { "seasons": 1 },
+  "weight": 15,
+  "safety": { "minorSafe": true },
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "대표팀 일정에 집중한다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        { "label": "협회 관계 상승", "target": "agent", "direction": "UP" },
+        { "label": "체력 하락", "target": "fitness", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "대표팀 일정을 우선했다",
+          "cause": "대표팀 집중",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-NAT-002.A.A1.0", "target": "agent", "delta": 4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "CURRENT", "sourceId": "EVT-NAT-002.A.A1.1", "target": "fitness", "delta": -6, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "구단과 일정을 조율한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        { "label": "감독 신뢰 상승", "target": "managerTrust", "direction": "UP" },
+        { "label": "체력 소폭 하락", "target": "fitness", "direction": "DOWN" }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "구단과 협의해 일정을 조정했다",
+          "cause": "구단 조율",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-NAT-002.B.B1.0", "target": "managerTrust", "delta": 3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "RELATION", "sourceId": "EVT-NAT-002.B.B1.1", "target": "agent", "delta": 1, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "CURRENT", "sourceId": "EVT-NAT-002.B.B1.2", "target": "fitness", "delta": -3, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "제한된 시간만 참가한다",
+      "riskLabel": "HIGH",
+      "previewEffects": [
+        { "label": "협회 관계 하락", "target": "agent", "direction": "DOWN" },
+        { "label": "감독 신뢰 상승", "target": "managerTrust", "direction": "UP" }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "구단을 우선해 참가 시간을 줄였다",
+          "cause": "제한 출전",
+          "effects": [
+            { "kind": "RELATION", "sourceId": "EVT-NAT-002.C.C1.0", "target": "agent", "delta": -4, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "RELATION", "sourceId": "EVT-NAT-002.C.C1.1", "target": "managerTrust", "delta": 2, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" },
+            { "kind": "CURRENT", "sourceId": "EVT-NAT-002.C.C1.2", "target": "fitness", "delta": -1, "clamp": { "min": 0, "max": 100 }, "appliesAt": { "kind": "IMMEDIATE" }, "expiresAt": null, "stackingRule": "ONCE_PER_SOURCE" }
+          ]
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "국제대회 일정이 소속팀의 핵심 일정과 겹친다. 대표팀과 구단 사이에서 이번 소집을 어떻게 다룰지 정해야 한다."
+  }
+}

@@ -9,6 +9,7 @@ async function requeueUnsynced(sync: SyncClient): Promise<void> {
   const engine = await getAppEngine();
   const records = await engine.client.listCareers();
   for (const record of records) {
+    if (record.authority === 'SERVER_ANNUAL' || record.rulesetVersion === '3.5.0') continue;
     if (record.revision > record.lastSyncedRevision) {
       const load = await engine.client.loadCareer(record.id);
       if (load.ok) {

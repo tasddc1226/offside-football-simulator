@@ -8,13 +8,17 @@ import {
   expectFirstContractHeading,
   fillPreseasonPlan,
   planPreseason,
+  pinServiceSeasonPair,
   resolveCurrentChapterScreen,
   resolveCurrentEventScreen,
   resolveRoleProposal,
+  startPlannedSeason,
   signFirstOffer,
 } from './helpers/player-creation.js';
 
 const CAREER_10_SEED = 't10-search-1';
+// These seeds and the renewal/loan/transfer expectations were calibrated on 1.0.0.
+test.beforeEach(async ({ page }) => pinServiceSeasonPair(page, '1.0.0', '0.1.0'));
 // Domain prefilter with runtime loadRuleset(1.0.0) + UI verification: A+B, first contract 3 seasons,
 // INTEREST LOAN, then LOAN_RETURN.
 const CAREER_11_SEED = 't11-search-61';
@@ -121,7 +125,7 @@ async function reachFirstContractOffers(page: Page): Promise<void> {
 async function advanceToSettlementRejectingRenewal(page: Page): Promise<void> {
   const progressButton = page.getByRole('button', { name: '진행', exact: true });
   const settleButton = page.getByRole('button', { name: '결산하기', exact: true });
-  const stepCaption = page.getByText(/\d+\/12 단계/);
+  const stepCaption = page.getByRole('progressbar', { name: '시즌 진행', exact: true });
   for (let step = 0; step < 20; step += 1) {
     const pathnameBefore = (await currentRoute(page)).split('?')[0]!;
     if (pathnameBefore.endsWith('/chapter')) {
@@ -140,7 +144,7 @@ async function advanceToSettlementRejectingRenewal(page: Page): Promise<void> {
       continue;
     }
     if (await settleButton.isVisible()) return;
-    const before = await stepCaption.textContent();
+    const before = await stepCaption.getAttribute('aria-valuenow');
     await Promise.race([
       waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect(progressButton).toBeEnabled({ timeout: 60_000 }),
@@ -151,7 +155,7 @@ async function advanceToSettlementRejectingRenewal(page: Page): Promise<void> {
     await progressButton.click({ timeout: 15_000 }).catch(() => {});
     await Promise.race([
       waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
-      expect(stepCaption).not.toHaveText(before ?? '', { timeout: 60_000 }),
+      expect(stepCaption).not.toHaveAttribute('aria-valuenow', before ?? '', { timeout: 60_000 }),
     ]);
   }
   throw new Error('시즌 결산에 도달하지 못했다(최대 20회 시도)');
@@ -186,7 +190,7 @@ test('TEST-E2E-003(a): 3개 이상 제안 비교→협상→FREE_AGENT 확정→
   await expectFirstContractHeading(page);
   await signFirstOffer(page);
   await planPreseason(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startPlannedSeason(page);
   await resolveRoleProposal(page);
   await expectRoute(page, /\/career\/[^/]+$/);
   await advanceToSettlementRejectingRenewal(page);
@@ -267,7 +271,7 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   await signFirstOffer(page, { preferredMinLengthSeasons: 3 });
   const loanCareerId = await careerIdFromUrl(page);
   await planPreseason(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startPlannedSeason(page);
   await resolveRoleProposal(page);
   await advanceToSettlementRejectingRenewal(page);
   await settleAndOpenOffers(page);
@@ -321,7 +325,7 @@ test('TEST-E2E-003(b): LOAN 수락→임대 시즌→LOAN_RETURN→RETURN→SCR-
   await expectRoute(page, /\/career\/.+\/preseason$/);
 
   await fillPreseasonPlan(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startPlannedSeason(page);
   await resolveRoleProposal(page);
   await advanceToSettlementRejectingRenewal(page);
   await settleAndOpenLoanReturn(page);
@@ -383,7 +387,7 @@ test('TEST-E2E-003(c): INTEREST 시장 안전 잔류(STAY) 수락 → SCR-020 �
   await signFirstOffer(page);
   const careerId = await careerIdFromUrl(page);
   await planPreseason(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startPlannedSeason(page);
   await resolveRoleProposal(page);
   await expectRoute(page, /\/career\/[^/]+$/);
   await advanceToSettlementRejectingRenewal(page);

@@ -17,6 +17,7 @@ import ruleset172Manifest from '../rulesets/1.7.2/manifest.json' with { type: 'j
 import ruleset173Manifest from '../rulesets/1.7.3/manifest.json' with { type: 'json' };
 import ruleset174Manifest from '../rulesets/1.7.4/manifest.json' with { type: 'json' };
 import ruleset340Manifest from '../rulesets/3.4.0/manifest.json' with { type: 'json' };
+import ruleset350Manifest from '../rulesets/3.5.0/manifest.json' with { type: 'json' };
 import { loadLegacyReferencePopulation } from './legacy/load-population.ts';
 import { loadContentPack } from './packs/load-content-pack.ts';
 import { loadRuleset } from './rulesets/load-ruleset.ts';
@@ -54,6 +55,7 @@ const RULESET_MANIFESTS: Readonly<Record<string, unknown>> = Object.freeze({
   '3.2.0': ruleset320Manifest,
   '3.3.0': ruleset330Manifest,
   '3.4.0': ruleset340Manifest,
+  '3.5.0': ruleset350Manifest,
 });
 
 /** Return existing registry checksums, not a second hash dialect of parsed objects.
@@ -92,6 +94,7 @@ export function loadRetirementArtifacts(
     (rulesetVersion === '3.2.0' && contentPackVersion === '0.11.0') ||
     (rulesetVersion === '3.3.0' && contentPackVersion === '0.12.0') ||
     (rulesetVersion === '3.4.0' && contentPackVersion === '0.13.0') ||
+    (rulesetVersion === '3.5.0' && contentPackVersion === '0.14.0') ||
     (rulesetVersion === '3.1.0' && contentPackVersion === '0.10.0') ||
     (rulesetVersion === '3.0.0' && contentPackVersion === '0.9.0');
   const activatesLegacy110WithoutPopulation =

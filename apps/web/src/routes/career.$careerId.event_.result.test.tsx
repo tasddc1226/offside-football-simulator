@@ -181,3 +181,8 @@ describe('SCR-014 "다음" 실패 처리', () => {
     expect(router.state.location.href).toBe(url);
   });
 });
+// This suite exercises historical CLIENT_LOCAL screens, not server annual creation.
+vi.mock('../engine/versions.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../engine/versions.js')>();
+  return {...actual, FALLBACK_SERVICE_SEASON: {...actual.FALLBACK_SERVICE_SEASON, rulesetVersion: '3.4.0', contentPackVersion: '0.13.0'}};
+});

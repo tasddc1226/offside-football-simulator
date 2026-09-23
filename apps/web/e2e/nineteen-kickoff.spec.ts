@@ -8,6 +8,7 @@ import {
   fillPlayerInfo,
   META,
   planPreseason,
+  readCurrentCareerState,
   resolveCurrentEventScreen,
   resolveRoleProposal,
   signFirstOffer,
@@ -61,7 +62,7 @@ test('1.2/0.4 새 인생: 19세 도입과 첫 진로를 거쳐 첫 시즌 뒤 20
     });
   });
 
-  await startNewCareer(page);
+  await startNewCareer(page, { serviceSeasonPinned: true });
   await expect(page.getByRole('heading', { name: '선수 생성' })).toBeVisible();
   await fillPlayerInfo(page);
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
@@ -97,7 +98,8 @@ test('1.2/0.4 새 인생: 19세 도입과 첫 진로를 거쳐 첫 시즌 뒤 20
   await page.getByRole('button', { name: '결산하기' }).click();
   await expectRoute(page, /\/career\/.+\/season-result$/);
   await page.getByRole('link', { name: '대시보드' }).click();
-  await expect(page.getByText(/^20세 ·/)).toBeVisible();
+  expect((await readCurrentCareerState(page)).age).toBe(20);
+  await expect(page.getByRole('banner').getByText(/(?:^| )20세 ·/)).toBeVisible();
 });
 
 test('1.2/0.4.1 지역 무대 배경: 새로고침 뒤에도 고유 도입과 후속 이야기가 이어진다', async ({
@@ -122,7 +124,7 @@ test('1.2/0.4.1 지역 무대 배경: 새로고침 뒤에도 고유 도입과 �
     });
   });
 
-  await startNewCareer(page);
+  await startNewCareer(page, { serviceSeasonPinned: true });
   await fillPlayerInfo(page, '지역출발', /지역 무대에서 온 훈련 초대/);
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: '선수 생성' })).toBeVisible();
@@ -177,7 +179,7 @@ test('1.3/0.5 새 인생: 성인 팀과 계약해 첫 시즌 뒤 20세가 된다
     });
   });
 
-  await startNewCareer(page);
+  await startNewCareer(page, { serviceSeasonPinned: true });
   await fillPlayerInfo(page, '성인진로', /아카데미의 추가 평가/);
   await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
   await page.getByRole('button', { name: '3장 모두 열기' }).click();
@@ -208,5 +210,6 @@ test('1.3/0.5 새 인생: 성인 팀과 계약해 첫 시즌 뒤 20세가 된다
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기' }).click();
   await page.getByRole('link', { name: '대시보드' }).click();
-  await expect(page.getByText(/^20세 ·/)).toBeVisible();
+  expect((await readCurrentCareerState(page)).age).toBe(20);
+  await expect(page.getByRole('banner').getByText(/(?:^| )20세 ·/)).toBeVisible();
 });

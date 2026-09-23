@@ -142,7 +142,9 @@ export function developPlayer(
   ]) {
     const delta = Math.max(
       0,
-      Math.min(gain, Math.min(99, state.player.profile.truePotential + 5) - attributes[attribute]),
+      // Annual training still affects fitness, relationships and mastery; permanent
+      // skill growth is accounted once at settlement with actual minutes/age/caps.
+      Math.min(ruleset.annualRules === undefined ? gain : 0, Math.min(99, state.player.profile.truePotential + 5) - attributes[attribute]),
     );
     attributes[attribute] += delta;
     if (delta > 0) gains.push({ attribute, delta });

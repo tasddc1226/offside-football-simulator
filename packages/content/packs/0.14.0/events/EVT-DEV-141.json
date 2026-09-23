@@ -1,0 +1,163 @@
+{
+  "id": "EVT-DEV-141",
+  "version": 1,
+  "phases": [
+    "IN_SEASON",
+    "TRANSFER_WINDOW"
+  ],
+  "triggers": {
+    "gte": [
+      "season.step",
+      1
+    ]
+  },
+  "exclusionTags": [],
+  "cooldown": {
+    "seasons": 2
+  },
+  "weight": 60,
+  "safety": {
+    "minorSafe": true
+  },
+  "authoring": "PROTOTYPE",
+  "choices": [
+    {
+      "id": "A",
+      "label": "현재 준비 과정을 이어간다",
+      "riskLabel": "MEDIUM",
+      "previewEffects": [
+        {
+          "label": "새 기회와 적응 부담"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "A1",
+          "kind": "SUCCESS",
+          "weight": 60,
+          "title": "제안한 방향으로 준비를 이어간다",
+          "effects": [
+            {
+              "kind": "RELATION",
+              "sourceId": "EVT-DEV-141.0.success",
+              "target": "managerTrust",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "SUM"
+            }
+          ]
+        },
+        {
+          "id": "A2",
+          "kind": "FAIL",
+          "weight": 40,
+          "title": "기대했던 만큼 의견이 맞지 않았다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-141.0.fail",
+              "target": "morale",
+              "delta": -3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "SUM"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "기본기와 회복을 다시 챙긴다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "현재 준비 과정 조정"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "B1",
+          "kind": "SUCCESS",
+          "weight": 85,
+          "title": "준비 방침을 조율했다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-141.1.success",
+              "target": "fitness",
+              "delta": 5,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "SUM"
+            }
+          ]
+        },
+        {
+          "id": "B2",
+          "kind": "FAIL",
+          "weight": 15,
+          "title": "기대했던 만큼 의견이 맞지 않았다",
+          "effects": [
+            {
+              "kind": "CURRENT",
+              "sourceId": "EVT-DEV-141.1.fail",
+              "target": "morale",
+              "delta": -3,
+              "clamp": {
+                "min": 0,
+                "max": 100
+              },
+              "appliesAt": {
+                "kind": "IMMEDIATE"
+              },
+              "expiresAt": null,
+              "stackingRule": "SUM"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "이번 논의를 마무리한다",
+      "riskLabel": "LOW",
+      "previewEffects": [
+        {
+          "label": "변화 없이 논의 종료"
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "C1",
+          "kind": "FIXED",
+          "weight": 100,
+          "title": "당장의 변화를 선택하지 않았다",
+          "effects": []
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "situation": "출전 기회를 이야기한 뒤 시간이 흘렀다. 감독과 당시의 선택, 그동안 실제로 뛴 시간을 함께 되짚는다."
+  }
+}

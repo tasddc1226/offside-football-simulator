@@ -4,6 +4,12 @@ import type { CareerState } from '@offside/domain';
 import { currentRoute, expectRoute, waitForRoute } from './route.js';
 
 export const META = { requestId: 'e2e-req' };
+const explicitServicePairs = new WeakSet<Page>();
+
+/** Preserve a test's custom service metadata when using the shared local journey. */
+export function markServiceSeasonPinned(page: Page): void {
+  explicitServicePairs.add(page);
+}
 
 /** Version-sensitive mechanics tests pin the service response, not just the engine debug default. */
 export async function pinServiceSeasonPair(
@@ -11,6 +17,7 @@ export async function pinServiceSeasonPair(
   rulesetVersion: string,
   contentPackVersion: string,
 ): Promise<void> {
+  markServiceSeasonPinned(page);
   await page.route('**/v1/service-seasons/current', (route) =>
     fulfillJson(route, 200, {
       data: {
@@ -62,7 +69,19 @@ export async function fulfillJson(route: Route, status: number, body: unknown): 
 }
 
 /** 생성 폼을 연다. 실제 커리어는 폼 제출 때 만들어진다. */
-export async function startNewCareer(page: Page): Promise<void> {
+export async function startNewCareer(
+  page: Page,
+  options: { serviceSeasonPinned?: boolean } = {},
+): Promise<void> {
+  // This helper tests historical client-local style/confirm/manual-season screens.
+  // Annual creation has its own real-server helper and must never inherit this fixture.
+  if (
+    process.env.E2E_WITH_API !== '1' &&
+    !options.serviceSeasonPinned &&
+    !explicitServicePairs.has(page)
+  ) {
+    await pinServiceSeasonPair(page, '3.4.0', '0.13.0');
+  }
   await page.goto('/onboarding');
   await expect(page.getByRole('heading', { name: '선수 생성' })).toBeVisible();
 }
@@ -415,8 +434,9 @@ export async function resolveRoleProposal(page: Page): Promise<void> {
   if ((await currentRoute(page)).endsWith('/role')) {
     // Continue below with the explicit proposal screen.
   } else {
-    const proposalLink = page.getByRole('link', { name: '감독 제안 보기', exact: true });
-    if (!(await proposalLink.isVisible())) return;
+    const proposalLink = page.locator('a[href$="/role"]');
+    if ((await readCurrentCareerState(page)).pending?.kind !== 'ROLE_PROPOSAL') return;
+    await expect(proposalLink).toBeVisible();
     await proposalLink.click();
     await expectRoute(page, /\/career\/[^/]+\/role$/);
   }
@@ -426,6 +446,8 @@ export async function resolveRoleProposal(page: Page): Promise<void> {
   const acceptButton = page.getByRole('button', { name: /^(확인|수락)$/ });
   await acceptButton.first().waitFor({ state: 'visible' });
   await acceptButton.first().click();
+  // Do not let the next season-loop iteration submit the departing proposal again.
+  await waitForRoute(page, (route) => !route.split('?')[0]!.endsWith('/role'));
 }
 
 /** SCR-031(핵심 경기 챕터): T-2-008 이전에는 advance가 chapterCandidates를 채우지 않아 이 슬롯이
@@ -520,6 +542,10 @@ export async function advanceThroughSeasonToSettlement(
   // while covering that observed path without changing assertion timeouts.
   for (let step = 0; step < 40; step += 1) {
     const pathnameBefore = (await currentRoute(page)).split('?')[0]!;
+    if (pathnameBefore.endsWith('/role')) {
+      await resolveRoleProposal(page);
+      continue;
+    }
     if (pathnameBefore.endsWith('/chapter')) {
       await resolveCurrentChapterScreen(page);
       continue;

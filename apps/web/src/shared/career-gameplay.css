@@ -9,8 +9,45 @@
 /* T-7-035: 사건 본문은 SheetContent의 내부 스크롤을 쓰고, 확정 독은 그 스크롤의
    마지막 안전 지점에 고정한다. 시트 재질과 다른 페이지 배경색이 비치지 않게 맞춘다. */
 .os-event-dialog {
-  /* 시트 진입 중 opacity 합성 상태에서도 작은 보조 문구가 WCAG AA 4.5:1을 유지한다. */
+  /* 작은 선택 효과 문구도 본문과 같은 대비를 사용한다. */
   --os-text-2: var(--os-text);
+}
+
+/* 선택지는 열리는 순간부터 읽고 조작할 수 있다. 시트 전체의 opacity를 낮추면
+   본문 토큰도 배경과 합성되어 대비가 깨지므로, 진입은 위치/크기만 움직인다.
+   SheetContent의 reduced-motion/keyboard animation:none 규칙은 그대로 적용된다. */
+.os-event-dialog[data-state='open'] {
+  animation-name: os-event-mobile-in;
+}
+
+@keyframes os-event-mobile-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 720px) {
+  .os-event-dialog[data-state='open'] {
+    animation-name: os-event-desktop-in;
+  }
+
+  @keyframes os-event-desktop-in {
+    from {
+      transform: translate(-50%, -50%) translateY(8px) scale(0.97);
+    }
+    to {
+      transform: translate(-50%, -50%) translateY(0) scale(1);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os-event-dialog[data-state='open'] {
+    animation: none;
+  }
 }
 
 .os-event-dialog .os-action-dock {

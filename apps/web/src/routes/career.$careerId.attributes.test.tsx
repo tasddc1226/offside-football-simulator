@@ -168,3 +168,8 @@ describe('SCR-033 능력치 상세', () => {
     expect(await screen.findByText(/^정찰 범위: \d+~\d+$/)).toBeInTheDocument();
   });
 });
+// This suite exercises historical CLIENT_LOCAL screens, not server annual creation.
+vi.mock('../engine/versions.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../engine/versions.js')>();
+  return {...actual, FALLBACK_SERVICE_SEASON: {...actual.FALLBACK_SERVICE_SEASON, rulesetVersion: '3.4.0', contentPackVersion: '0.13.0'}};
+});

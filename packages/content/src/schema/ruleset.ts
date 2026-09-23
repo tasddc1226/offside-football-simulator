@@ -1221,6 +1221,7 @@ export const RulesetSchema = z
   .strictObject({
     version: SemverSchema,
     overseasRules: z.strictObject({ version: z.literal('WORLD_JOURNEY_V1') }).optional(),
+    annualRules: z.strictObject({ version: z.literal('ANNUAL_V1'), trainingShareBp: z.number().int().min(0).max(10000) }).optional(),
     developmentRules: z.strictObject({ version: z.literal('PLAYER_LIFE_V1') }).optional(),
     matchDecisionRules: z.strictObject({ version: z.literal('LATE_MATCH_V1') }).optional(),
     characterMemoryRules: z

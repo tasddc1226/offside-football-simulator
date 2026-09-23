@@ -263,7 +263,9 @@ test('대시보드 스와이프는 구역만 바꾸고 경기 진행을 실행�
   await expect
     .poll(() => page.locator('[role="tab"][aria-selected="true"]').textContent())
     .toBe('커리어');
-  await swipe(surface, -150);
+  // This panel starts with a protected disclosure summary. Swipe its visible
+  // non-interactive career caption, not the disclosure's click target.
+  await swipe(surface.locator('.os-career-home > p').first(), -150);
   await expect(page.getByRole('tab', { name: '선수', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',

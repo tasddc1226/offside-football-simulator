@@ -26,6 +26,7 @@ import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { articleFromArchive, buildChallengeStart } from '../publications.js';
+import { isAnnualPair, persistAnnualChallenge } from '../annual-career.js';
 
 function unavailable(): never {
   throw new AppError({
@@ -159,6 +160,8 @@ export function registerCareerPublicationRoutes(app: Hono<AppEnv>) {
     const input = parseWithAppError(StartCareerChallengeSchema, body(c.get('rawBody')));
     const db = getDb(c);
     const owner = getSessionOrThrow(c).profileId;
+    if (input.expectedProfileId !== undefined && input.expectedProfileId !== owner)
+      throw new AppError({ code: 'CAREER_REVISION_CONFLICT', status: 409, message: '프로필이 변경되었습니다. 도전을 다시 확인해 주세요.' });
     const now = new Date().toISOString();
     const keyHash = sha256Hex(JSON.stringify([owner, requestKey]));
     const requestHash = sha256Hex(JSON.stringify([c.req.param('id'), input.name]));
@@ -184,6 +187,9 @@ export function registerCareerPublicationRoutes(app: Hono<AppEnv>) {
       .from(careerPublications)
       .where(eq(careerPublications.id, c.req.param('id')));
     if (!row) unavailable();
+    const sourceArticle = CareerArticleSchema.parse(JSON.parse(row.articleJson));
+    if (isAnnualPair(sourceArticle.challenge.rulesetVersion, sourceArticle.challenge.contentPackVersion) && input.expectedProfileId === undefined)
+      throw new AppError({ code: 'VALIDATION_FAILED', message: '서버 연간 도전은 expectedProfileId가 필요합니다.' });
     const season = await getServiceSeasonById(db, c.env.ACTIVE_SERVICE_SEASON_ID ?? '');
     if (!season || (season.status !== 'ACTIVE' && season.status !== 'PRESEASON'))
       throw new AppError({
@@ -192,7 +198,7 @@ export function registerCareerPublicationRoutes(app: Hono<AppEnv>) {
       });
     const id = crypto.randomUUID();
     const started = buildChallengeStart(
-      CareerArticleSchema.parse(JSON.parse(row.articleJson)),
+      sourceArticle,
       id,
       input.name,
       season.id,
@@ -200,6 +206,9 @@ export function registerCareerPublicationRoutes(app: Hono<AppEnv>) {
     );
     const snapshot = started.snapshot;
     try {
+      if (started.authority === 'SERVER_ANNUAL') {
+        await persistAnnualChallenge({ d1: c.env.DB, db, session: getSessionOrThrow(c) }, started, row.id, keyHash, requestHash);
+      } else {
       await runBatch(db, [
         db
           .insert(careers)
@@ -235,6 +244,7 @@ export function registerCareerPublicationRoutes(app: Hono<AppEnv>) {
           .insert(careerChallengeAdmissions)
           .values({ keyHash, careerId: id, requestHash, responseJson: JSON.stringify(started) }),
       ]);
+      }
     } catch (error) {
       const winner = await replay();
       if (winner) return c.json({ data: winner, meta: { requestId: c.get('requestId') } }, 201);

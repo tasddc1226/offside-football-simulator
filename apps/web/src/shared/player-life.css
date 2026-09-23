@@ -41,7 +41,8 @@
   text-align: center;
   border: 1px solid currentColor;
   border-radius: 8px;
-  opacity: 0.55;
+  /* Future phases are still readable information, not disabled controls. */
+  opacity: 1;
 }
 .life-blocks span[data-active='true'] {
   background: var(--os-surface);

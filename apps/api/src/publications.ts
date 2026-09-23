@@ -16,6 +16,7 @@ import {
 } from '@offside/domain';
 import type { CareerRecord } from './db/repos/careers.js';
 import { AppError } from './errors.js';
+import { isAnnualPair } from './annual-career.js';
 
 export function articleFromArchive(
   career: CareerRecord,
@@ -166,6 +167,7 @@ export function buildChallengeStart(
   const final = snapshot as DomainSnapshot | null;
   if (final === null) throw new Error('Missing challenge snapshot');
   return GetCareerResponseSchema.parse({
+    authority: isAnnualPair(initial.rulesetVersion, initial.contentPackVersion) ? 'SERVER_ANNUAL' : 'CLIENT_LOCAL',
     createdServiceSeasonId: serviceSeasonId,
     snapshot: {
       ...final,

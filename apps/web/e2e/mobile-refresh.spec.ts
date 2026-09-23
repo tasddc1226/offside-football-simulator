@@ -10,6 +10,7 @@ import {
   META,
   planPreseason,
   resolveRoleProposal,
+  startPlannedSeason,
   startNewCareer,
 } from './helpers/player-creation.js';
 
@@ -299,7 +300,7 @@ test('계약 대시보드와 시즌 결과도 모바일 프레임을 유지한�
   await expectNoHorizontalOverflow(page);
   await page.setViewportSize({ width: 360, height: 780 });
   await planPreseason(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startPlannedSeason(page);
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기', exact: true }).click();
