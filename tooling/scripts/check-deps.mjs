@@ -8,6 +8,9 @@ import { fileURLToPath } from 'node:url';
  * @type {Record<string, string[]>}
  */
 export const ALLOWED_DEPENDENCIES = {
+  // T-9-001a: @offside/api는 이제 프로필·Google 로그인만 다룬다 — @offside/domain·@offside/content
+  // 의존이 없다. @offside/web은 아직 별도 작업(T-9-001b)이 진행 중이라 옛 표를 그대로 둔다(그 작업이
+  // 끝나면 이 표도 함께 정리되어야 한다).
   '@offside/web': [
     '@offside/platform',
     '@offside/engine-client',
@@ -16,14 +19,13 @@ export const ALLOWED_DEPENDENCIES = {
     '@offside/domain',
     '@offside/content',
   ],
-  '@offside/api': ['@offside/domain', '@offside/contracts', '@offside/content'],
+  '@offside/api': ['@offside/contracts'],
   '@offside/platform': ['@offside/engine-client', '@offside/contracts'],
   '@offside/engine-client': ['@offside/domain', '@offside/contracts', '@offside/content'],
   '@offside/ui': ['@offside/contracts'],
   '@offside/domain': [],
   '@offside/content': ['@offside/domain'],
-  '@offside/contracts': ['@offside/domain'],
-  '@offside/fixtures': ['@offside/domain', '@offside/content'],
+  '@offside/contracts': [],
 };
 
 const WORKSPACE_DIRS = ['apps', 'packages'];

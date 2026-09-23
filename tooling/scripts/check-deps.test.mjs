@@ -44,10 +44,10 @@ describe('findDependencyViolations', () => {
         '@offside/contracts': 'workspace:*',
       },
     });
-    writePackage(workDir, 'packages', 'contracts', {
-      name: '@offside/contracts',
+    writePackage(workDir, 'apps', 'api', {
+      name: '@offside/api',
       dependencies: {
-        '@offside/domain': 'workspace:*',
+        '@offside/contracts': 'workspace:*',
       },
     });
 
