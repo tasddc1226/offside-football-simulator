@@ -1,7 +1,7 @@
 # ADR-011. 소속 리그 결과 원장과 커리어 피드백의 분리
 
 - 상태: Superseded by ADR-013 (2026-09-24). 제안 (2026-09-14). 구현 전 계약 검토 대상이며 기존 운영/저장 규칙은 변경하지 않는다.
-- 관련: [PRD](../product/career-world-prd.md), [작업 계획](../development/20-career-world-plan.md), [ADR-003](ADR-003-simulation-location.md), [ADR-004](ADR-004-content-format.md), [시간 모델](../development/11-time-model-and-pacing.md), [WORLD STAGE](../development/15-world-stage-expansion.md)
+- 관련: [PRD](../archive/offside/product/career-world-prd.md), [작업 계획](../archive/offside/development/20-career-world-plan.md), [ADR-003](ADR-003-simulation-location.md), [ADR-004](ADR-004-content-format.md), [시간 모델](../archive/offside/development/11-time-model-and-pacing.md), [WORLD STAGE](../archive/offside/development/15-world-stage-expansion.md)
 - 조사 기준: main `cb6d2995c127a225a0cb926830ed47d808424ddd`
 
 ## 맥락

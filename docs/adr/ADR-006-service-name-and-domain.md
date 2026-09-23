@@ -1,7 +1,7 @@
 # ADR-006. 서비스명 표기와 도메인
 
 - 상태: Reaffirmed by ADR-013 (2026-09-24, 풀타임 전환에도 워드마크 OFFSIDE와 offside-lab.com 도메인 유지). 확정 (2026-09-02). 도메인 가용성 확인은 사용자 액션으로 남김
-- 관련: [브랜드 가이드](../development/12-brand-guidelines.md), [ADR-007](ADR-007-hosting-and-infra.md)
+- 관련: [브랜드 가이드](../archive/offside/development/12-brand-guidelines.md), [ADR-007](ADR-007-hosting-and-infra.md)
 
 ## 결정
 

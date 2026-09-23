@@ -1,7 +1,7 @@
 # ADR-002. 영속 저장소와 비로그인 사용자 식별
 
 - 상태: Amended by ADR-013 (2026-09-24, 게임 저장은 localStorage로 단순화, 서버는 프로필만). 확정 (2026-09-02)
-- 관련: [ADR-003](ADR-003-simulation-location.md), [ADR-007](ADR-007-hosting-and-infra.md), [ADR-008](ADR-008-auth-and-account-merge.md), [저장·버전](../development/05-save-and-versioning.md)
+- 관련: [ADR-003](ADR-003-simulation-location.md), [ADR-007](ADR-007-hosting-and-infra.md), [ADR-008](ADR-008-auth-and-account-merge.md), [저장·버전](../archive/offside/development/05-save-and-versioning.md)
 
 ## 맥락
 

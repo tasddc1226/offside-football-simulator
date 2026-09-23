@@ -1,7 +1,7 @@
 # ADR-007. 호스팅·인프라·CI·비용
 
 - 상태: Amended by ADR-013 (2026-09-24, D1에 게임 데이터 없음 — 마이그레이션 0015). 확정 (2026-09-02, Workers Static Assets 전환 2026-09-04)
-- 관련: [ADR-002](ADR-002-persistence-and-identity.md), [ADR-005](ADR-005-monorepo-boundaries.md), [배포·운영](../development/09-deployment-and-operations.md)
+- 관련: [ADR-002](ADR-002-persistence-and-identity.md), [ADR-005](ADR-005-monorepo-boundaries.md), [배포·운영](../archive/offside/development/09-deployment-and-operations.md)
 
 ## 결정
 

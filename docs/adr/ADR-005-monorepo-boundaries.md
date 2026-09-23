@@ -1,7 +1,7 @@
 # ADR-005. 모노레포와 패키지 경계
 
 - 상태: Amended by ADR-013 (2026-09-24, 패키지 목록 축소: apps/web·apps/api·packages/contracts·tooling/scripts·tooling/fulltime-sim만 남음). 확정 (2026-09-02)
-- 관련: [시스템 아키텍처](../development/01-system-architecture.md), [ADR-001](ADR-001-web-framework.md), [ADR-007](ADR-007-hosting-and-infra.md)
+- 관련: [시스템 아키텍처](../archive/offside/development/01-system-architecture.md), [ADR-001](ADR-001-web-framework.md), [ADR-007](ADR-007-hosting-and-infra.md)
 
 ## 결정
 
