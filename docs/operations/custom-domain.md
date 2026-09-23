@@ -10,7 +10,9 @@
 | `https://offside-web.tasddc1569.workers.dev` | `https://offside-api.tasddc1569.workers.dev` | 기존 기록 접근·이전 호환 |
 
 두 주소는 같은 `offside-web`, `offside-api`, D1 `offside-production`을 사용한다.
-시즌 1은 종료일 미정이며 규칙·콘텐츠 버전과 선수 기록을 변경하지 않는다.
+T-9-001(풀타임 마이그레이션) 이후 게임 진행은 서버가 아닌 브라우저 localStorage에만 저장된다.
+서비스 시즌/ruleset/content pack 개념은 migration `0015`로 사라졌으므로 도메인 전환은 프로필·세션
+메타데이터에만 영향을 준다.
 Wrangler production `custom_domain` 경로로 DNS/TLS를 관리하고 `workers_dev: true`를 유지한다.
 구매 확인 당시 DNS 레코드는 0개였다. 다른 도메인과 이메일 자원은 변경하지 않는다.
 
@@ -30,8 +32,9 @@ Wrangler production `custom_domain` 경로로 DNS/TLS를 관리하고 `workers_d
 
 1. GCP 새 callback 저장 후 다시 열어 두 callback이 유지되는지 확인한다.
 2. PR #117 SEO 기반 및 도메인 호환 변경을 검증 후 main에 병합한다.
-3. production workflow를 정확한 main SHA로 실행한다. 기존 Time Travel/시즌 CAS 보호를 유지한다.
-4. 새 웹/API TLS와 health, CORS host pairing, 시즌 1 종료일 미정, 기존 URL 접근을 확인한다.
+3. production workflow(`deploy-production.yml`)를 정확한 main SHA로 실행한다. 기존 Time Travel
+   bookmark·스키마·집계 건수 확인을 유지한다.
+4. 새 웹/API TLS와 health, CORS host pairing, 기존 URL 접근을 확인한다.
 5. 새 주소에서 저장·새로고침·복원 및 Google 반환 경로를 확인한다. 계정 확인이 필요하면 사용자에게 요청한다.
 6. `VITE_PUBLIC_SITE_URL=https://offside-lab.com`을 사용하되 검색 허용은 검증 후 별도 변경한다.
    OFF 상태 robots는 Disallow, sitemap은 404다. 공개 시 canonical/사이트맵은 대표 주소 3페이지만 포함한다.
