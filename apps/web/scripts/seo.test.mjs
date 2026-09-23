@@ -5,9 +5,25 @@ import {
   createHeadMarkup,
   createRobotsTxt,
   createSitemapXml,
+  pageHtml,
   parsePublicSiteUrl,
   resolveSeoConfig,
 } from './seo.mjs';
+
+const FAKE_BASE_HTML = `<!doctype html>
+<html lang="ko">
+  <head>
+    <title>오프사이드 — 풀타임 축구 커리어</title>
+    <link rel="modulepreload" crossorigin href="/assets/shared-abc123.js">
+    <script type="module" crossorigin src="/assets/index-abc123.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-abc123.css">
+  <!-- offside-seo:start --><!-- offside-seo:end -->
+</head>
+  <body>
+    <div id="app"></div>
+    <div id="modal"></div>
+  </body>
+</html>`;
 
 test('accepts only an HTTPS origin', () => {
   assert.equal(parsePublicSiteUrl('https://play.example.com/'), 'https://play.example.com');
@@ -46,6 +62,22 @@ test('indexing is opt-in and production-only', () => {
     false,
   );
   assert.throws(() => resolveSeoConfig({ mode: 'production', enableSearchIndexing: 'true' }));
+});
+
+test('public static pages do not load the app bundle, but index.html does', () => {
+  const config = { origin: undefined, indexingEnabled: false };
+  const guide = pageHtml(FAKE_BASE_HTML, config, '/guide/', '<p><a href="/">홈으로</a></p>');
+  assert.doesNotMatch(guide, /<script type="module"/);
+  assert.doesNotMatch(guide, /modulepreload/);
+  assert.match(guide, /<link rel="stylesheet"/);
+  assert.match(guide, /href="\/"/);
+
+  const appShell = pageHtml(FAKE_BASE_HTML, config, '/', '<p>loading</p>', {
+    forceNoIndex: true,
+    keepAppBundle: true,
+  });
+  assert.match(appShell, /<script type="module"[^>]*src="\/assets\/index-abc123\.js"><\/script>/);
+  assert.match(appShell, /modulepreload/);
 });
 
 test('production discovery files contain the public pages', () => {
