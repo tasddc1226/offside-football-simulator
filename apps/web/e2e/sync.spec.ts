@@ -2,8 +2,10 @@
 // (a) 생성 즉시 저장 (b) 다른 기기 진행 가져오기 (c) 이 기기 진행 유지(fork) (d) 오프라인·온라인
 // (e) 401 → 로컬 전용.
 import { expect, type Page, test } from '@playwright/test';
+import type { PutCareerBody } from '@offside/contracts';
 import {
   fillPlayerInfo,
+  pinServiceSeasonPair,
   startNewCareer as startHistoricalCareer,
 } from './helpers/player-creation.js';
 import { E2E_META, fulfillJson, triggerConflictAndOpenDialog } from './helpers/sync-conflict.js';
@@ -19,8 +21,9 @@ async function startNewCareer(page: Page): Promise<void> {
 test('(a) 커리어 생성 즉시 저장하고 배지가 "저장됨"으로 바뀐다', async ({ page }) => {
   await page.route('**/v1/careers/*', async (route) => {
     if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as PutCareerBody;
       await fulfillJson(route, 200, {
-        data: { revision: 1, syncedAt: '2026-09-02T00:00:00Z' },
+        data: { revision: body.snapshot.revision, syncedAt: '2026-09-02T00:00:00Z' },
         meta: E2E_META,
       });
       return;
@@ -134,8 +137,9 @@ test('(d) 오프라인이면 배지가 오프라인으로, 온라인 복귀 뒤 
   await page.route('**/v1/careers/*', async (route) => {
     if (route.request().method() === 'PUT') {
       putCount += 1;
+      const body = route.request().postDataJSON() as PutCareerBody;
       await fulfillJson(route, 200, {
-        data: { revision: putCount, syncedAt: '2026-09-02T00:00:00Z' },
+        data: { revision: body.snapshot.revision, syncedAt: '2026-09-02T00:00:00Z' },
         meta: E2E_META,
       });
       return;
@@ -143,13 +147,12 @@ test('(d) 오프라인이면 배지가 오프라인으로, 온라인 복귀 뒤 
     await route.continue();
   });
 
-  await page.goto('/onboarding');
+  await pinServiceSeasonPair(page, '3.4.0', '0.13.0');
+  await startHistoricalCareer(page);
   await setE2eOnline(page, false);
-
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: /이 선수로 시작/ }).click();
-  await expectRoute(page, /\/career\/.+\/create$/);
+  await fillPlayerInfo(page);
+  await page.getByRole('button', { name: /다음 · 후보 카드 열기/ }).click();
+  await expectRoute(page, /\/career\/.+\/style$/);
 
   await expect(page.getByText('오프라인 · 이 기기에만 저장됨')).toBeVisible();
   expect(putCount).toBe(0);

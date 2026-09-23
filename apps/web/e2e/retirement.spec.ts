@@ -8,6 +8,7 @@ import {
   completeOnboardingThroughContract,
   planPreseason,
   resolveRoleProposal,
+  startPlannedSeason,
   signFirstOffer,
 } from './helpers/player-creation.js';
 
@@ -30,7 +31,7 @@ test('deterministic settled career can retire, reload its Legacy views, and retu
 
   await completeOnboardingThroughContract(page);
   await planPreseason(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startPlannedSeason(page);
   await resolveRoleProposal(page);
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기' }).click();
@@ -100,7 +101,11 @@ test('deterministic settled career can retire, reload its Legacy views, and retu
   await expect(page.getByText('장기성', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: '커리어를 대표하는 기록 보기' }).click();
-  await expectRoute(page, /\/career\/[^/]+\/timeline#revision-\d+$/);
+  await expectRoute(page, /\/career\/[^/]+\/timeline$/);
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('offside:last-location')))
+    .toMatch(/\/timeline#revision-\d+$/);
+  const anchor = await page.evaluate(() => sessionStorage.getItem('offside:last-location')!.split('#')[1]!);
+  await expect(page.locator(`[id="${anchor}"]`)).toBeVisible();
   await expect(page.getByRole('list', { name: '커리어 연대기' })).toBeVisible();
   await expectNoSeriousOrCriticalViolations(page, 'Timeline');
 

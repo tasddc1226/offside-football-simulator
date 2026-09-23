@@ -6,6 +6,7 @@ import {
   fulfillJson,
   goToConfirm,
   META,
+  readCurrentCareerState,
   startNewCareer,
 } from './helpers/player-creation.js';
 
@@ -189,6 +190,7 @@ test('(d) 명령 응답 대기 중(COMMITTING) 뒤로 가기: 재진입하면 �
   // 같은 기법이다).
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 30 });
+  const confirmedRoute = await currentRoute(page);
 
   await page.getByRole('button', { name: /이 선수로 시작/ }).click();
   await expect(page.getByText('선수 등록을 완료합니다')).toBeVisible({ timeout: 10_000 });
@@ -202,6 +204,10 @@ test('(d) 명령 응답 대기 중(COMMITTING) 뒤로 가기: 재진입하면 �
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  await expect.poll(async () => (await readCurrentCareerState(page)).pending?.kind,
+    { timeout: 15_000 }).toBe('EVENT');
+  // Re-enter the saved route explicitly; leaving COMMITTING must not force navigation.
+  await page.goto(confirmedRoute);
 
   // 확정(CONFIRM_PLAYER+ADVANCE)은 컴포넌트가 언마운트돼도 백그라운드에서 끝까지 실행된다. 재진입하면
   // useCareerStepGuard가 최신 상태로 이벤트 화면까지 자동으로 데려간다.

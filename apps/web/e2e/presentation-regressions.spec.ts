@@ -6,6 +6,8 @@ import {
   fulfillJson,
   goToConfirm,
   planPreseason,
+  pinServiceSeasonPair,
+  startPlannedSeason,
   resolveCurrentEventScreen,
   signFirstOffer,
   META,
@@ -20,6 +22,9 @@ for (const choice of [0, 2]) {
     await page.addInitScript(() =>
       window.localStorage.setItem('offside:e2e-seed', 'e2e-season-result-01'),
     );
+    // This regression specifically exercises the immutable v1 legacy copy adapter
+    // (EVT-CON-002 has A/B/C), not the later two-choice club-academy path.
+    await pinServiceSeasonPair(page, '1.0.0', '0.1.0');
     await completeOnboardingAndConfirm(page);
 
     let sawPath = false;
@@ -69,6 +74,8 @@ test.describe('저장 성공 전환', () => {
     await page.addInitScript(() =>
       window.localStorage.setItem('offside:e2e-seed', 'e2e-season-result-01'),
     );
+    // SCR-011's completion transition is a historical manual-plan screen.
+    await pinServiceSeasonPair(page, '1.7.2', '0.6.6');
     await goToConfirm(page);
     await page.route('**/v1/profile', (route) =>
       fulfillJson(route, 503, {
@@ -93,7 +100,7 @@ test.describe('저장 성공 전환', () => {
     await signFirstOffer(page);
     await planPreseason(page, '역할 집중');
 
-    await page.getByRole('button', { name: '시즌 시작' }).click();
+    await startPlannedSeason(page);
     await expect(page.getByText('시즌 준비 완료')).toBeVisible();
     await expectRoute(page, /\/career\/[^/]+(?:\/role)?$/);
   });

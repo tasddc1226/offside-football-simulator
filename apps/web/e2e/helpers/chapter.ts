@@ -48,7 +48,7 @@ export async function advanceToChapter(page: Page): Promise<void> {
   for (let step = 0; step < 20; step += 1) {
     const pathnameBefore = (await currentRoute(page)).split('?')[0]!;
     if (pathnameBefore.endsWith('/chapter')) return;
-    if (pathnameBefore.endsWith('/role')) {
+    if (pathnameBefore.endsWith('/role') || (await readCurrentCareerState(page)).pending?.kind === 'ROLE_PROPOSAL') {
       await resolveRoleProposal(page);
       await expectRoute(page, /\/career\/[^/]+$/);
       continue;
@@ -68,8 +68,11 @@ export async function advanceToChapter(page: Page): Promise<void> {
     await Promise.race([
       waitForRoute(page, (route) => route.split('?')[0]! !== pathnameBefore, { timeout: 60_000 }),
       expect(nextButton).toBeEnabled({ timeout: 60_000 }),
+      training.waitFor({ state: 'visible', timeout: 60_000 }),
     ]);
     if ((await currentRoute(page)).split('?')[0]! !== pathnameBefore) continue;
+    // 3.2 may finish a role transition on this route by opening training, not progress.
+    if (await training.isVisible()) continue;
     const stepBefore = (await readCurrentCareerState(page)).season?.currentStep;
     // 클릭 액션 자체의 actionability 재확인 도중에도(디스패치 전) advance 성공→화면 전환이 끼어들어
     // 버튼이 사라질 수 있다 — 그 detach는 실패로 삼키고(클릭이 실제로 먹혔는지는 다음 스텝 진입 시

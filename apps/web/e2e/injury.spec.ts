@@ -7,9 +7,11 @@ import {
   advanceThroughSeasonToSettlement,
   completeOnboardingThroughContract,
   fillPreseasonPlan,
+  pinServiceSeasonPair,
   resolveCurrentChapterScreen,
   resolveCurrentEventScreen,
   resolveRoleProposal,
+  startPlannedSeason,
   signFirstOffer,
 } from './helpers/player-creation.js';
 
@@ -75,7 +77,6 @@ async function readLatestCareerSnapshot(page: Page): Promise<StoredCareerSnapsho
 /** 대시보드에서 진행해 generic event 화면에 실제 forced INJURY pending이 열릴 때까지 찾는다. */
 async function reachForcedInjury(page: Page): Promise<void> {
   const progressButton = page.getByRole('button', { name: '진행', exact: true });
-  const stepCaption = page.getByText(/\d+\/12 단계/);
 
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const pathname = (await currentRoute(page)).split('?')[0]!;
@@ -101,7 +102,7 @@ async function reachForcedInjury(page: Page): Promise<void> {
       continue;
     }
 
-    const before = await stepCaption.textContent({ timeout: 15_000 }).catch(() => null);
+    const before = (await readLatestCareerSnapshot(page)).revision;
     // RESOLVE_ROLE 직후 엔진이 이미 첫 ADVANCE를 처리 중일 수 있다. 그 결과가 챕터로
     // 전환되는 동안 대시보드 locator만 기다리면 정상 화면을 놓치고 60초를 소비하므로,
     // 경로 전환과 진행 버튼 활성화를 함께 기다린다.
@@ -117,7 +118,7 @@ async function reachForcedInjury(page: Page): Promise<void> {
       .poll(
         async () => {
           if ((await currentRoute(page)).split('?')[0]! !== pathname) return true;
-          return (await stepCaption.textContent({ timeout: 1_000 }).catch(() => null)) !== before;
+          return (await readLatestCareerSnapshot(page)).revision > before;
         },
         { timeout: 60_000 },
       )
@@ -139,11 +140,13 @@ test('career-12 고정 seed의 실제 forced INJURY pending은 generic event에�
   await page.addInitScript((seed) => {
     window.localStorage.setItem('offside:e2e-seed', seed);
   }, CAREER_12_FORCED_INJURY_SEED);
+  // career-12's immutable seed fixture is pinned to this historical ruleset/pack.
+  await pinServiceSeasonPair(page, '1.0.0', '0.1.0');
 
   await completeOnboardingThroughContract(page);
   await page.getByRole('link', { name: '계획하러 가기' }).click();
   await fillPreseasonPlan(page, '역할 집중');
-  await page.getByRole('button', { name: '시즌 시작' }).click();
+  await startPlannedSeason(page);
   await resolveRoleProposal(page);
 
   await reachForcedInjury(page);

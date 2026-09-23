@@ -154,7 +154,7 @@ export function decideSeason(candidateRows, proposal) {
     return {
       action: 'activate',
       sql: `UPDATE service_seasons\nSET ruleset_version = ${quote(proposal.rulesetVersion)}, content_pack_version = ${quote(proposal.contentPackVersion)}\nWHERE ${fixedWhere}\n  AND ruleset_version = ${quote(PREVIOUS_PRODUCTION_VERSION.rulesetVersion)}\n  AND content_pack_version = ${quote(PREVIOUS_PRODUCTION_VERSION.contentPackVersion)};\n`,
-      rollbackSql: `UPDATE service_seasons\nSET ruleset_version = ${quote(PREVIOUS_PRODUCTION_VERSION.rulesetVersion)}, content_pack_version = ${quote(PREVIOUS_PRODUCTION_VERSION.contentPackVersion)}\nWHERE ${fixedWhere}\n  AND ruleset_version = ${quote(proposal.rulesetVersion)}\n  AND content_pack_version = ${quote(proposal.contentPackVersion)};\n`,
+      rollbackSql: `-- CREATION MANIFEST ONLY: retain the annual-capable API, web and migration 0014.\n-- Never restore pre-annual binaries or the database after SERVER_ANNUAL careers exist.\nUPDATE service_seasons\nSET ruleset_version = ${quote(PREVIOUS_PRODUCTION_VERSION.rulesetVersion)}, content_pack_version = ${quote(PREVIOUS_PRODUCTION_VERSION.contentPackVersion)}\nWHERE ${fixedWhere}\n  AND ruleset_version = ${quote(proposal.rulesetVersion)}\n  AND content_pack_version = ${quote(proposal.contentPackVersion)};\n`,
     };
   }
   throw new Error('The existing ACTIVE svc_season_1 row is required for an in-place release.');

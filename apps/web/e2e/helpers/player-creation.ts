@@ -434,8 +434,9 @@ export async function resolveRoleProposal(page: Page): Promise<void> {
   if ((await currentRoute(page)).endsWith('/role')) {
     // Continue below with the explicit proposal screen.
   } else {
-    const proposalLink = page.getByRole('link', { name: '감독 제안 보기', exact: true });
-    if (!(await proposalLink.isVisible())) return;
+    const proposalLink = page.locator('a[href$="/role"]');
+    if ((await readCurrentCareerState(page)).pending?.kind !== 'ROLE_PROPOSAL') return;
+    await expect(proposalLink).toBeVisible();
     await proposalLink.click();
     await expectRoute(page, /\/career\/[^/]+\/role$/);
   }
@@ -445,6 +446,8 @@ export async function resolveRoleProposal(page: Page): Promise<void> {
   const acceptButton = page.getByRole('button', { name: /^(확인|수락)$/ });
   await acceptButton.first().waitFor({ state: 'visible' });
   await acceptButton.first().click();
+  // Do not let the next season-loop iteration submit the departing proposal again.
+  await waitForRoute(page, (route) => !route.split('?')[0]!.endsWith('/role'));
 }
 
 /** SCR-031(핵심 경기 챕터): T-2-008 이전에는 advance가 chapterCandidates를 채우지 않아 이 슬롯이
@@ -539,6 +542,10 @@ export async function advanceThroughSeasonToSettlement(
   // while covering that observed path without changing assertion timeouts.
   for (let step = 0; step < 40; step += 1) {
     const pathnameBefore = (await currentRoute(page)).split('?')[0]!;
+    if (pathnameBefore.endsWith('/role')) {
+      await resolveRoleProposal(page);
+      continue;
+    }
     if (pathnameBefore.endsWith('/chapter')) {
       await resolveCurrentChapterScreen(page);
       continue;

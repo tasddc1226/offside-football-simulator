@@ -8,6 +8,7 @@ import {
   fillPlayerInfo,
   META,
   planPreseason,
+  readCurrentCareerState,
   resolveCurrentEventScreen,
   resolveRoleProposal,
   signFirstOffer,
@@ -97,7 +98,8 @@ test('1.2/0.4 새 인생: 19세 도입과 첫 진로를 거쳐 첫 시즌 뒤 20
   await page.getByRole('button', { name: '결산하기' }).click();
   await expectRoute(page, /\/career\/.+\/season-result$/);
   await page.getByRole('link', { name: '대시보드' }).click();
-  await expect(page.getByText(/^20세 ·/)).toBeVisible();
+  expect((await readCurrentCareerState(page)).age).toBe(20);
+  await expect(page.getByRole('banner').getByText(/(?:^| )20세 ·/)).toBeVisible();
 });
 
 test('1.2/0.4.1 지역 무대 배경: 새로고침 뒤에도 고유 도입과 후속 이야기가 이어진다', async ({
@@ -208,5 +210,6 @@ test('1.3/0.5 새 인생: 성인 팀과 계약해 첫 시즌 뒤 20세가 된다
   await advanceThroughSeasonToSettlement(page);
   await page.getByRole('button', { name: '결산하기' }).click();
   await page.getByRole('link', { name: '대시보드' }).click();
-  await expect(page.getByText(/^20세 ·/)).toBeVisible();
+  expect((await readCurrentCareerState(page)).age).toBe(20);
+  await expect(page.getByRole('banner').getByText(/(?:^| )20세 ·/)).toBeVisible();
 });

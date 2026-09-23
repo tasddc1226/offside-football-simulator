@@ -21,6 +21,7 @@ import {
   pinServiceSeasonPair,
   planPreseason,
   resolveRoleProposal,
+  startPlannedSeason,
 } from './helpers/player-creation.js';
 import { seedDeterministicChapterRun } from './helpers/chapter.js';
 
@@ -199,7 +200,7 @@ test.describe('T-2-011 8번: 시즌 완주 스크립트 플레이 시간(FAST �
     const startedAt = performance.now();
 
     await planPreseason(page, '역할 집중');
-    await page.getByRole('button', { name: '시즌 시작' }).click();
+    await startPlannedSeason(page);
     await resolveRoleProposal(page);
     await expectRoute(page, /\/career\/[^/]+$/);
 

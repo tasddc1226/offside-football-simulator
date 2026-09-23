@@ -126,6 +126,9 @@ describe('production release guards', () => {
     expect(decision.rollbackSql).toContain("content_pack_version = '0.14.0'");
     expect(decision.rollbackSql).toContain("starts_at = '2026-09-05T15:00:00Z'");
     expect(decision.rollbackSql).toContain('ends_at IS NULL');
+    expect(decision.rollbackSql).toContain('CREATION MANIFEST ONLY');
+    expect(decision.rollbackSql).toContain('retain the annual-capable API, web and migration 0014');
+    expect(decision.rollbackSql).not.toMatch(/\b(?:DROP|DELETE|ALTER)\b/);
     expect(() => decideSeason([{ ...previous, contentPackVersion: '0.4.0' }], proposal)).toThrow(
       'different ACTIVE',
     );

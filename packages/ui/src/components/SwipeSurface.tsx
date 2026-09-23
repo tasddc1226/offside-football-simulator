@@ -39,14 +39,19 @@ const INTERACTIVE = [
   '[role="radio"]',
   '[role="menuitem"]',
   '[contenteditable]:not([contenteditable="false"])',
-  '[tabindex]:not([tabindex="-1"]):not([role="tabpanel"])',
   '[data-swipe-ignore]',
 ].join(',');
+const FOCUSABLE = '[tabindex]:not([tabindex="-1"]):not([role="tabpanel"])';
 
 function ignoresSwipe(target: EventTarget | null, surface: HTMLElement): boolean {
   if (!(target instanceof Element)) return true;
   if (target.closest('[data-swipe-surface]') !== surface || target.closest(INTERACTIVE))
     return true;
+  // The outer scroll landmark is keyboard-focusable (main tabindex=0), but it is not a
+  // control inside this gesture region. Still protect custom focusable descendants;
+  // semantic controls/forms above the surface remain blocked by INTERACTIVE.
+  const focusable = target.closest(FOCUSABLE);
+  if (focusable && surface.contains(focusable)) return true;
   for (let element: Element | null = target; element; element = element.parentElement) {
     if (element.scrollWidth > element.clientWidth + 1) {
       const overflow = getComputedStyle(element).overflowX;

@@ -189,9 +189,42 @@ describe('SwipeSurface', () => {
     <div key="tab" role="tab" tabIndex={0}>
       조작
     </div>,
+    <div key="focusable" tabIndex={0}>
+      조작
+    </div>,
   ])('ignores interactive and editable content %#', (children) => {
     const { onSwipe } = setup({ children });
     swipe(screen.getByText('조작'));
+    expect(onSwipe).not.toHaveBeenCalled();
+  });
+
+  it('allows swiping inside a keyboard-focusable outer scroll landmark', () => {
+    const onSwipe = vi.fn();
+    render(
+      <main tabIndex={0} aria-label="본문">
+        <SwipeSurface canSwipeRight onSwipe={onSwipe}>
+          <p>스크롤 영역 안의 기록</p>
+        </SwipeSurface>
+      </main>,
+    );
+    const text = screen.getByText('스크롤 영역 안의 기록');
+    const surface = text.closest('[data-swipe-surface]')!;
+    vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 360 } as DOMRect);
+    swipe(text);
+    expect(onSwipe).toHaveBeenCalledExactlyOnceWith('right');
+    expect(screen.getByRole('main')).toHaveAttribute('tabindex', '0');
+  });
+
+  it('still protects a semantic form wrapping the whole swipe surface', () => {
+    const onSwipe = vi.fn();
+    render(
+      <form>
+        <SwipeSurface canSwipeRight onSwipe={onSwipe}>
+          <p>양식 설명</p>
+        </SwipeSurface>
+      </form>,
+    );
+    swipe(screen.getByText('양식 설명'));
     expect(onSwipe).not.toHaveBeenCalled();
   });
 

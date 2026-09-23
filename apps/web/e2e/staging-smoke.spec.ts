@@ -56,14 +56,19 @@ test('staging health와 current service-season manifest/CORS가 실제 Worker �
   });
 });
 
-test('staging 선수 생성이 입력을 복원하고 pageerror 없이 후보 카드를 공개한다', async ({
+test('staging 서버 선수 생성·첫 중요 결정이 저장되고 새로고침으로 복원된다', async ({
   page,
 }, testInfo) => {
   // 실제 Worker의 초기 로드와 reload를 모두 포함한다. 개별 UI 단언의 5초 제한은 유지한다.
   test.setTimeout(60_000);
   const smoke = smokeMetadata(testInfo);
   const pageErrors: string[] = [];
+  const legacyWrites: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('request', (request) => {
+    if (request.method() === 'PUT' && request.url().includes('/v1/careers/'))
+      legacyWrites.push(request.url());
+  });
 
   const serviceResponsePromise = page.waitForResponse(
     (response) =>
@@ -76,18 +81,34 @@ test('staging 선수 생성이 입력을 복원하고 pageerror 없이 후보 �
   await expect(page.getByRole('heading', { level: 1, name: '선수 생성' })).toBeVisible();
   const nameInput = page.getByLabel('이름', { exact: true });
   const nextButton = page.getByRole('button', { name: '다음 · 후보 카드 열기', exact: true });
-  await nameInput.fill('김서준');
+  await nameInput.fill('QA연간스모크');
   await page.getByRole('radio', { name: '왼발', exact: true }).click();
   await expect(nextButton).toBeEnabled();
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { level: 1, name: '선수 생성' })).toBeVisible();
-  await expect(nameInput).toHaveValue('김서준');
+  await expect(nameInput).toHaveValue('QA연간스모크');
   await expect(page.getByRole('radio', { name: '왼발', exact: true })).toBeChecked();
   await nextButton.click();
-  await expectRoute(page, /\/career\/[^/]+\/style$/);
-  await expect(page.getByRole('heading', { level: 1, name: '세 가지 가능성' })).toBeVisible();
-  await page.getByRole('button', { name: '3장 모두 열기', exact: true }).click();
-  await expect(page.getByRole('button', { name: /후보 선택$/ })).toHaveCount(3);
-  await expect(page.getByRole('button', { name: /이 후보로 진행/ })).toBeEnabled();
+  await expect(page.getByRole('heading', { name: '어떤 선수로 출발할까요?' })).toBeVisible();
+  const createdResponse = page.waitForResponse((response) =>
+    response.url() === `${smoke.apiUrl}/v1/careers/server` && response.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: '선수 만들기', exact: true }).click();
+  const created = await createdResponse;
+  expect(created.status()).toBe(201);
+  const career = (await created.json()).data;
+  expect(career.authority).toBe('SERVER_ANNUAL');
+  expect(career.snapshot.rulesetVersion).toBe(smoke.expectedSeason.rulesetVersion);
+  expect(career.snapshot.contentPackVersion).toBe(smoke.expectedSeason.contentPackVersion);
+  await expectRoute(page, /\/career\/[^/]+$/);
+  await page.getByRole('button', { name: '1년 진행', exact: true }).click();
+  const decision = page.getByRole('region', { name: '중요한 결정', exact: true });
+  await expect(decision).toBeVisible({ timeout: 30_000 });
+  await expect(decision).toContainText('같은 1년차');
+  const title = await decision.locator('h2').textContent();
+  await page.reload();
+  await expect(decision.locator('h2')).toHaveText(title!);
+  await expect(decision.getByRole('button').first()).toBeEnabled();
+  expect(legacyWrites).toEqual([]);
   expect(pageErrors).toEqual([]);
 });

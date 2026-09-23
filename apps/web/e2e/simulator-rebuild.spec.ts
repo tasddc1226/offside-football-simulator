@@ -5,6 +5,7 @@ import {
   completeOnboardingThroughContract,
   markServiceSeasonPinned,
   planPreseason,
+  readCurrentCareerState,
   resolveRoleProposal,
 } from './helpers/player-creation.js';
 
@@ -40,13 +41,19 @@ test('새 육성 시즌: 짧은 허브, 훈련 선택, 경기 진행, 실제 성
   await expect(page.locator('.sim-hub')).toHaveAttribute('data-content-pack-version', '0.7.0');
   const action = page.getByRole('link', { name: '계획하러 가기' });
   await expect(action).toBeInViewport();
+  await page.getByRole('tab', { name: '선수', exact: true }).click();
   await expect(page.getByLabel('선수 성장')).toBeVisible();
+  await page.getByRole('tab', { name: '시즌', exact: true }).click();
   await expect(page.getByLabel('시즌 진행 12 step')).not.toBeVisible();
-  const details = page.locator('summary').filter({ hasText: '일정 · 리그 · 시즌 상세' });
+  await page.getByRole('tab', { name: '커리어', exact: true }).click();
+  const details = page.locator('summary').filter({ hasText: '이번 시즌 일정 · 경기 기록' });
+  await expect(details.locator('..')).toHaveAttribute('open', '');
   await details.focus();
   await details.press('Enter');
-  await expect(details.locator('..')).toHaveAttribute('open', '');
+  await expect(details.locator('..')).not.toHaveAttribute('open', '');
   await details.press('Enter');
+  await expect(details.locator('..')).toHaveAttribute('open', '');
+  await page.getByRole('tab', { name: '시즌', exact: true }).click();
   expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
   await planPreseason(page, '기술');
   await page.getByRole('button', { name: '시즌 시작', exact: true }).click();
@@ -56,7 +63,10 @@ test('새 육성 시즌: 짧은 허브, 훈련 선택, 경기 진행, 실제 성
   await page.reload();
   await expect(progress).toHaveAttribute('aria-valuenow', value!);
   await advanceThroughSeasonToSettlement(page);
-  await expect(page.getByLabel('최근 경기')).toBeVisible();
+  expect((await readCurrentCareerState(page)).season?.matches.length).toBeGreaterThan(0);
+  await page.getByRole('tab', { name: '커리어', exact: true }).click();
+  await expect(page.getByText(/\d+:\d+ · (선발|교체|결장|부상)/).first()).toBeVisible();
+  await page.getByRole('tab', { name: '시즌', exact: true }).click();
   await page.screenshot({ path: testInfo.outputPath('season-played.png'), fullPage: true });
   await expect(page.getByRole('button', { name: '결산하기' })).toBeInViewport();
   await page.getByRole('button', { name: '결산하기' }).click();
