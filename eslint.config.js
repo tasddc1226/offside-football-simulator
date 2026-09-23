@@ -1,10 +1,6 @@
 import { base } from '@offside/eslint-config';
 
-// T-9-001c: T-9-001a/b가 packages/domain·ui·engine-client·platform과 toss/channel 분기를 모두
-// 삭제했다. domainPurityRules/noTossSdkImportRules/noChannelBranchRules/uiNoRuleEngineImportRules는
-// 그 삭제된 트리만 대상으로 하던 규칙이라 전부 제거한다(함수 자체는 tooling/eslint-config에 남아있지만
-// 이제 어느 glob도 매칭되지 않는 죽은 설정이었다). 남은 워크스페이스(web/api/contracts) 경계는
-// 표준 no-restricted-imports로 직접 적는다.
+// 워크스페이스(web/api/contracts) 경계는 표준 no-restricted-imports로 직접 적는다(ADR-013).
 export default [
   ...base,
   {

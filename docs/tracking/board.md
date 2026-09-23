@@ -16,15 +16,14 @@
 |---|---|---|
 | T-9-001a | `apps/api` — health·profile·Google 로그인만 남기고 계정 병합·게임 라우트 제거, D1 마이그레이션 0015 | done |
 | T-9-001b | `apps/web` — vanilla Vite + TypeScript로 전환, `src/game/*` 게임 모듈, 34개 세부 능력치·육각형 레이더·포지션 OVR, 이벤트·국가대표·병역·이적 시장·로컬 명예의 전당, 공개 정적 페이지 | done |
-| T-9-001c | CI/운영 — 파이프라인·배포 설정을 새 구조에 맞게 정리 | in progress (다른 워커 소유) |
-| T-9-001d | 문서 — 이 작업. 아카이브, ADR-013, 트래킹 갱신, 루트 문서 재작성 | in progress |
+| T-9-001c | CI/운영 — 파이프라인·배포 설정을 새 구조에 맞게 정리 | done (통합 브랜치 병합) |
+| T-9-001d | 문서 — 아카이브, ADR-013, 트래킹 갱신, 루트 문서 재작성 | done (통합 브랜치 병합) |
 
 ### 오너 수동 컷오버 절차
 
 운영 배포·D1 마이그레이션 적용·도메인 전환 같은 수동 컷오버 단계는
-[`docs/operations/fulltime-cutover.md`](../operations/fulltime-cutover.md)를 따른다
-(T-9-001c 담당 워커가 작성 중). 이 문서가 준비되기 전에는 운영 배포를 진행하지
-않는다.
+[`docs/operations/fulltime-cutover.md`](../operations/fulltime-cutover.md)를 따른다.
+오너가 직접 실행하며, 0015 적용(게임 테이블 삭제)은 되돌릴 수 없다.
 
 ### 취소·중단된 과거 작업
 
