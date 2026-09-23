@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { buildAnnualContentContext, loadContentPack, loadRuleset } from '@offside/content';
-import { AnnualReportSchema } from '@offside/contracts';
+import { AnnualReportSchema, type AnnualRunResponse } from '@offside/contracts';
 import {
   ATTRIBUTE_KEYS,
   nextAnnualAction,
@@ -15,7 +15,7 @@ import {
 import { AnnualCareerScreen, AnnualReport } from './annual-career.js';
 import { ATTRIBUTE_LABELS } from './labels.js';
 
-const mocks = vi.hoisted(() => ({ career: vi.fn(), cache: vi.fn() }));
+const mocks = vi.hoisted(() => ({ career: vi.fn(), cache: vi.fn(), history: vi.fn(), result: null as AnnualRunResponse | null, owner: 'new-owner' }));
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
 }));
@@ -24,7 +24,7 @@ vi.mock('../engine/engine.js', () => ({
   getAppEngine: async () => ({
     store: {
       transaction: async (_mode: unknown, fn: (tx: unknown) => unknown) =>
-        fn({ kv: { get: async () => 'new-owner' } }),
+        fn({ kv: { get: async () => mocks.owner } }),
     },
   }),
 }));
@@ -32,9 +32,11 @@ vi.mock('../api/profile.js', () => ({ ensureProfile: async () => true }));
 vi.mock('../engine/annual.js', () => ({
   cacheAnnualCareer: (...args: unknown[]) => mocks.cache(...args),
   AnnualController: class {
+    constructor(_owner: string, _careerId: string, readonly update: (value: AnnualRunResponse | null) => void) {}
     abort = new AbortController();
     async refresh() { return null; }
-    async history() { return []; }
+    async history() { return mocks.history(); }
+    async start() { this.update(mocks.result); return mocks.result; }
     dispose() {
       this.abort.abort();
     }
@@ -105,8 +107,64 @@ function naturalReport() {
   throw new Error('Natural report exceeded bounded test');
 }
 const fixture = naturalReport();
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  mocks.history.mockResolvedValue([]);
+  mocks.owner = 'new-owner';
+  mocks.result = null;
+});
+
+function screenFixture(status: 'WAITING_DECISION' | 'COMPLETED') {
+  mocks.career.mockReturnValue({data:{record:{revision:fixture.report.endRevision,ownerProfileId:mocks.owner},state:fixture.state}});
+  mocks.cache.mockResolvedValue({});
+  mocks.result = {
+    run: {
+      id: 'flow-run', careerId: 'presentation-career', revision: 1,
+      careerRevision: fixture.report.endRevision, status, targetSeasonIndex: 1,
+      completedCommands: 1, currentStep: 12,
+      policy: { training: { drill: 'CONTROL', load: 'BALANCED', partner: 'COACH' }, routineChoice: 'CAUTIOUS' },
+      decision: status === 'WAITING_DECISION' ? { key:'flow-decision', revision:fixture.report.endRevision, kind:'EVENT', title:'정본 검증을 마친 결정', choices:[{id:'A',label:'같은 해 이어가기'}] } : null,
+      report: status === 'COMPLETED' ? fixture.report : null,
+    },
+  };
+  const client = new QueryClient({defaultOptions:{queries:{retry:false}}});
+  client.setQueryData(['profile'],{id:mocks.owner});
+  render(<QueryClientProvider client={client}><AnnualCareerScreen careerId="presentation-career" /></QueryClientProvider>);
+  return client;
+}
+
 describe('independent annual presentation regressions', () => {
+  it.each(['deferred', 'failed'])('shows a paused decision without fetching unchanged %s history', async (mode) => {
+    mocks.history.mockResolvedValueOnce([]).mockImplementation(() => mode === 'deferred' ? new Promise(() => {}) : Promise.reject(new Error('history unavailable')));
+    screenFixture('WAITING_DECISION');
+    fireEvent.click(await screen.findByRole('button',{name:'1년 진행'}));
+    expect(await screen.findByRole('region',{name:'중요한 결정'})).toHaveTextContent('정본 검증을 마친 결정');
+    expect(mocks.history).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+  it('retains initial history and refreshes historical reports when a year completes', async () => {
+    const oldReport = AnnualReportSchema.parse({...fixture.report,targetSeasonIndex:7});
+    const reports = [{runId:'previous',report:oldReport},{runId:'flow-run',report:fixture.report}];
+    mocks.history.mockResolvedValue(reports);
+    screenFixture('COMPLETED');
+    expect(await screen.findByRole('region',{name:'7년차 결과',hidden:true})).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button',{name:'1년 진행'}));
+    await waitFor(()=>expect(mocks.history).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('region',{name:'1년차 결과'})).toBeInTheDocument();
+    expect(screen.getByRole('region',{name:'7년차 결과',hidden:true})).toBeInTheDocument();
+  });
+  it('does not publish a completed history response after the owner changes', async () => {
+    let resolveHistory!: (value: unknown) => void;
+    const pending = new Promise((resolve) => { resolveHistory = resolve; });
+    mocks.history.mockResolvedValueOnce([]).mockReturnValueOnce(pending).mockResolvedValue([]);
+    const client = screenFixture('COMPLETED');
+    fireEvent.click(await screen.findByRole('button',{name:'1년 진행'}));
+    await waitFor(()=>expect(mocks.history).toHaveBeenCalledTimes(2));
+    await act(async () => { mocks.owner='another-owner'; client.setQueryData(['profile'],{id:mocks.owner}); });
+    await waitFor(()=>expect(mocks.history).toHaveBeenCalledTimes(3));
+    await act(async () => { resolveHistory([{runId:'foreign',report:{...fixture.report,targetSeasonIndex:7}},{runId:'flow-run',report:fixture.report}]); });
+    expect(screen.queryByRole('region',{name:'7년차 결과',hidden:true})).not.toBeInTheDocument();
+  });
   it('uses the application shell main landmark without nesting another main', async () => {
     mocks.career.mockReturnValue({data:{record:{revision:fixture.report.endRevision,ownerProfileId:'new-owner'},state:fixture.state}});
     mocks.cache.mockResolvedValue({});

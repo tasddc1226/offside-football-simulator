@@ -225,14 +225,19 @@ export function AnnualCareerScreen({
     setBusy(true);
     setError(null);
     try {
-      if (kind === 'start') await instance.start(career.data.record.revision, policy);
-      else if (kind === 'choice' && choiceId) await instance.choose(choiceId);
+      let result: AnnualRunResponse | null;
+      if (kind === 'start') result = await instance.start(career.data.record.revision, policy);
+      else if (kind === 'choice' && choiceId) result = await instance.choose(choiceId);
       else {
         await instance.refresh();
-        await instance.advance();
+        result = await instance.advance();
       }
-      const reports = await instance.history();
-      if (!instance.abort.signal.aborted) setHistory(reports);
+      // Historical reports change only when a year completes. The action already awaited
+      // canonical career/owner verification; unrelated history must not delay a paused choice.
+      if (result?.run.status === 'COMPLETED') {
+        const reports = await instance.history();
+        if (!instance.abort.signal.aborted) setHistory(reports);
+      }
     } catch (cause) {
       if (!instance.abort.signal.aborted)
         setError(cause instanceof Error ? cause.message : '진행 상태를 다시 확인해 주세요.');
