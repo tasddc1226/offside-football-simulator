@@ -28,12 +28,11 @@ import {
 } from './season.js';
 import { initSubs, legacyOvr } from './attributes.js';
 import type { GameState, CareerRecord, NatTour, HofEntry } from './types.js';
+import { esc } from './dom.js';
 
 const $app = document.getElementById('app')!;
 const $modal = document.getElementById('modal')!;
 const $sheet = document.getElementById('sheet')!;
-const esc = (t: unknown): string =>
-  String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 // ───────── 저장 로드 + 마이그레이션 ─────────
 let G: GameState | null = loadKey<GameState>('ft_save') || loadKey<GameState>('sl_save');

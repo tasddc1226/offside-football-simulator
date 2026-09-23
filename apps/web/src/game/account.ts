@@ -3,10 +3,13 @@
 // 상태뿐이다. 오프라인/서버 오류에도 게임 자체는 그대로 플레이할 수 있어야 하므로, 실패 시 조용히
 // "로그아웃 상태" 취급하고 게임 화면을 막지 않는다.
 import { getProfile, unlinkGoogle, logout, startProfileDeletion, confirmProfileDeletion, googleStartUrl, type Profile } from '../api/client.js';
+import { esc } from './dom.js';
 
-const esc = (t: unknown): string => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-
-let cached: Profile | null | 'error' = null;
+// `undefined`는 "아직 한 번도 불러오지 않음"을, `null`은 "확인 결과 로그인 안 됨"을 뜻한다.
+// 홈 화면은 매번 다시 그려지며 그때마다 mountAccount가 불린다 — 이미 알고 있는 상태가 있으면
+// (undefined가 아니면) 그 상태를 즉시 보여 주고, 조용히 백그라운드에서 재검증만 한다. "확인 중…"
+// 플레이스홀더는 이 모듈이 처음 로드를 시작할 때만 보인다.
+let cached: Profile | null | 'error' | undefined;
 
 function render(el: HTMLElement, profile: Profile | null | 'error') {
   if (profile === 'error') {
@@ -34,8 +37,10 @@ function render(el: HTMLElement, profile: Profile | null | 'error') {
   el.querySelector('#acct-delete')?.addEventListener('click', () => void doDeleteFlow(el));
 }
 
-async function load(el: HTMLElement) {
-  el.innerHTML = `<div class="account"><div class="eyebrow">Account</div><p class="muted" style="font-size:13px">확인 중…</p></div>`;
+async function load(el: HTMLElement, { silent = false }: { silent?: boolean } = {}) {
+  if (!silent) {
+    el.innerHTML = `<div class="account"><div class="eyebrow">Account</div><p class="muted" style="font-size:13px">확인 중…</p></div>`;
+  }
   const r = await getProfile();
   cached = r.ok ? r.data : 'error';
   render(el, cached);
@@ -63,5 +68,10 @@ async function doDeleteFlow(el: HTMLElement) {
 }
 
 export function mountAccount(el: HTMLElement) {
-  void load(el);
+  if (cached === undefined) {
+    void load(el);
+    return;
+  }
+  render(el, cached);
+  void load(el, { silent: true });
 }
