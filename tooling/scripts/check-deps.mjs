@@ -11,7 +11,7 @@ export const ALLOWED_DEPENDENCIES = {
   // T-9-001c: T-9-001a/b가 @offside/domain·content·engine-client·fixtures·ui·platform을 모두
   // 삭제했다. 남은 워크스페이스는 web(클라이언트 전용, localStorage 저장)·api(프로필/Google 로그인)·
   // contracts뿐이다.
-  '@offside/web': [],
+  '@offside/web': ['@offside/contracts'],
   '@offside/api': ['@offside/contracts'],
   '@offside/contracts': [],
 };

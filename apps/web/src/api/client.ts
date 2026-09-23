@@ -1,21 +1,20 @@
-// API 클라이언트 최소본 (계정: 로그인/프로필/연동 해제/로그아웃/삭제 만). 게임 상태는 전부
-// localStorage에 남고 서버로 보내지 않는다. 응답 타입은 로컬에 정의해 API 계약 패키지와 번들 결합을 피한다.
-// @offside/contracts 전체를 가져오면 zod까지 번들에 들어오므로 헤더 이름만 직접 둔다(API와 동일한 값).
-const IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key';
+import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
+import type { Profile as ContractProfile } from '@offside/contracts';
 import { resolveApiBaseUrl } from './base-url.js';
 
+// API 클라이언트 최소본 (계정: 로그인/프로필/연동 해제/로그아웃/삭제 만). 게임 상태는 전부
+// localStorage에 남고 서버로 보내지 않는다. `@offside/contracts` 전체를 값으로 가져오면 zod까지
+// 번들에 들어오므로, 헤더 이름은 zod 없는 `./headers` 서브패스에서, 응답 타입은 type-only import로
+// 가져온다(타입 전용 import는 컴파일 시 제거되어 번들 비용이 없다).
 export const API_BASE_URL = resolveApiBaseUrl(
   import.meta.env.VITE_API_BASE_URL as string | undefined,
   typeof window === 'undefined' ? undefined : window.location.hostname,
 );
 
-export interface Profile {
-  id: string;
-  linked: { google: boolean };
-  googleEmailMasked: string | null;
-  recoveryCodeIssuedAt: string | null;
-  createdAt: string;
-}
+export type Profile = Pick<
+  ContractProfile,
+  'id' | 'linked' | 'googleEmailMasked' | 'recoveryCodeIssuedAt' | 'createdAt'
+>;
 
 export type ApiErrorCode = string;
 export type ApiError = { code: ApiErrorCode; message: string; retryable: boolean };

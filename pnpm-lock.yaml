@@ -68,6 +68,10 @@ importers:
         version: 4.127.1(@cloudflare/workers-types@5.20260831.1)
 
   apps/web:
+    dependencies:
+      '@offside/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
     devDependencies:
       '@axe-core/playwright':
         specifier: 4.13.0
