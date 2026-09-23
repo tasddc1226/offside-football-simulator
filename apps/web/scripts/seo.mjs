@@ -122,10 +122,15 @@ const privacyBody = `<div class="os-screen"><header><p class="os-eyebrow">LEGAL<
 // 그 청크들에 대한 modulepreload 링크. /guide, /faq, /legal/* 는 크롤러·noscript용 정적
 // 페이지라 이 태그들이 남아 있으면 실제 브라우저(JS 켠 사용자)에서 main.ts가 즉시 실행되어
 // 이 정적 콘텐츠를 홈 화면으로 덮어써 버린다. 스타일시트는 페이지가 제대로 보이도록 유지한다.
+// 속성 순서와 무관하게 src가 있는 모든 <script>와 modulepreload를 지우고, 하나라도 남으면 빌드를
+// 실패시킨다 — Vite 출력 형태가 바뀌어도 앱이 정적 페이지를 덮어쓰는 상태로 조용히 배포되지 않는다.
 export function stripAppBundle(html) {
-  return html
-    .replace(/\s*<script type="module"[^>]*src="[^"]*"[^>]*><\/script>/g, '')
-    .replace(/\s*<link rel="modulepreload"[^>]*>/g, '');
+  const out = html
+    .replace(/\s*<script\b[^>]*\bsrc=[^>]*>\s*<\/script>/gi, '')
+    .replace(/\s*<link\b[^>]*\brel=["']?modulepreload["']?[^>]*>/gi, '');
+  if (/<script\b[^>]*\bsrc=/i.test(out) || /modulepreload/i.test(out))
+    throw new Error('seo: 공개 페이지에서 앱 번들 태그를 모두 제거하지 못했습니다.');
+  return out;
 }
 
 export function pageHtml(baseHtml, config, path, body, { forceNoIndex = false, keepAppBundle = false } = {}) {

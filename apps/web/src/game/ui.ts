@@ -659,19 +659,16 @@ function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
 function showMarket(m: { options: MarketOption[]; note: string; canRetire: boolean }) {
   const opts = m.options;
   let html = `<div class="eyebrow">${seasonLabel(G!)} Transfer Window</div><h2>다음 시즌, 어디서 뛸까요?</h2><p class="muted">${esc(m.note)}</p><div class="stack">`;
+  const contractCard = (i: number, name: string, lg: string, salary: number, sub: string) =>
+    `<button class="offer" data-opt="${i}"><div><b>${esc(name)}</b><div class="lg">${lg}</div></div>
+        <div class="sal">${fmtMoney(salary)}<div class="lg" style="text-align:right">연봉</div></div>
+        <div class="sub">${sub}</div></button>`;
   html += opts.map((o, i) => {
     if (o.kind === 'offer') {
-      const lg = leagueOf(o.leagueId).name;
-      return `<button class="offer" data-opt="${i}"><div><b>${esc(o.name)}</b><div class="lg">${lg} · 팀 전력 ${o.str}</div></div>
-        <div class="sal">${fmtMoney(o.salary)}<div class="lg" style="text-align:right">연봉</div></div>
-        <div class="sub">${o.years}년 계약${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtMoney(o.fee)}` : G!.contract && !leagueOf(G!.leagueId).amateur ? ' · 자유계약(FA)' : ''}</div></button>`;
+      const extra = `${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtMoney(o.fee)}` : G!.contract && !leagueOf(G!.leagueId).amateur ? ' · 자유계약(FA)' : ''}`;
+      return contractCard(i, o.name, `${leagueOf(o.leagueId).name} · 팀 전력 ${o.str}`, o.salary, `${o.years}년 계약${extra}`);
     }
-    if (o.kind === 'renew') {
-      const lg = leagueOf(G!.leagueId).name;
-      return `<button class="offer" data-opt="${i}"><div><b>${esc(o.name)}</b><div class="lg">${lg}</div></div>
-        <div class="sal">${fmtMoney(o.salary)}<div class="lg" style="text-align:right">연봉</div></div>
-        <div class="sub">${o.years}년 계약</div></button>`;
-    }
+    if (o.kind === 'renew') return contractCard(i, o.name, leagueOf(G!.leagueId).name, o.salary, `${o.years}년 계약`);
     return `<button class="offer" data-opt="${i}"><div><b>${esc(o.name)}</b><div class="lg">${esc(o.desc ?? '')}</div></div></button>`;
   }).join('');
   html += `</div>`;

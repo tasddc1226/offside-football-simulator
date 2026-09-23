@@ -10,6 +10,9 @@ import { esc } from './dom.js';
 // (undefined가 아니면) 그 상태를 즉시 보여 주고, 조용히 백그라운드에서 재검증만 한다. "확인 중…"
 // 플레이스홀더는 이 모듈이 처음 로드를 시작할 때만 보인다.
 let cached: Profile | null | 'error' | undefined;
+// 홈은 탭 이동마다 다시 그려지므로, 백그라운드 재검증은 이 간격이 지났을 때만 한다.
+const REVALIDATE_MS = 30_000;
+let fetchedAt = 0;
 
 function render(el: HTMLElement, profile: Profile | null | 'error') {
   if (profile === 'error') {
@@ -43,6 +46,7 @@ async function load(el: HTMLElement, { silent = false }: { silent?: boolean } = 
   }
   const r = await getProfile();
   cached = r.ok ? r.data : 'error';
+  fetchedAt = Date.now();
   render(el, cached);
 }
 
@@ -73,5 +77,5 @@ export function mountAccount(el: HTMLElement) {
     return;
   }
   render(el, cached);
-  void load(el, { silent: true });
+  if (Date.now() - fetchedAt > REVALIDATE_MS) void load(el, { silent: true });
 }

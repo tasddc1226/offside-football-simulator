@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  stripAppBundle,
   createHeaders,
   createHeadMarkup,
   createRobotsTxt,
@@ -91,4 +92,12 @@ test('production discovery files contain the public pages', () => {
     createSitemapXml(config.origin),
     /<loc>https:\/\/play\.example\.com\/guide\/<\/loc>/,
   );
+});
+
+test('stripAppBundle은 속성 순서와 무관하게 앱 스크립트·modulepreload를 지운다', () => {
+  const html = '<head><script crossorigin src="/assets/a.js" type="module"></script><link href="/assets/b.js" rel="modulepreload"><script>inline()</script></head>';
+  const out = stripAppBundle(html);
+  assert.ok(!out.includes('/assets/a.js'));
+  assert.ok(!out.includes('modulepreload'));
+  assert.ok(out.includes('inline()'));
 });
