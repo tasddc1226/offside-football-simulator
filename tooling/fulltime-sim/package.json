@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "sim": "tsx simulate.ts",
-    "analyze": "tsx analyze.ts"
+    "analyze": "tsx analyze.ts",
+    "check-parity": "tsx check-parity.mjs"
   },
   "devDependencies": {
     "tsx": "4.23.13"
