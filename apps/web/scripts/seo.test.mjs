@@ -48,10 +48,10 @@ test('indexing is opt-in and production-only', () => {
   assert.throws(() => resolveSeoConfig({ mode: 'production', enableSearchIndexing: 'true' }));
 });
 
-test('production discovery files contain the three public pages', () => {
+test('production discovery files contain the public pages', () => {
   const config = { origin: 'https://play.example.com', indexingEnabled: true };
   assert.match(createRobotsTxt(config), /Sitemap: https:\/\/play\.example\.com\/sitemap\.xml/);
-  assert.equal((createSitemapXml(config.origin).match(/<url>/g) ?? []).length, 3);
+  assert.equal((createSitemapXml(config.origin).match(/<url>/g) ?? []).length, 5);
   assert.match(createSitemapXml(config.origin), /<loc>https:\/\/play\.example\.com\/<\/loc>/);
   assert.match(createHeaders(config), /\/\*\n[ ]{2}X-Robots-Tag: noindex/);
   assert.match(createHeaders(config), /\/\n[ ]{2}X-Robots-Tag: index, follow/);

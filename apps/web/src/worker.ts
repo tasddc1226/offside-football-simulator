@@ -13,17 +13,17 @@ const PUBLIC_PATHS = new Set([
   '/faq',
   '/faq/',
   '/faq/index.html',
+  '/legal/terms',
+  '/legal/terms/',
+  '/legal/terms/index.html',
+  '/legal/privacy',
+  '/legal/privacy/',
+  '/legal/privacy/index.html',
 ]);
-const APP_PATHS = [
-  /^\/locker-room\/?$/,
-  /^\/friendlies\/?$/,
-  /^\/competition\/?$/,
-  /^\/articles\/[^/]+\/?$/,
-  /^\/onboarding\/?$/,
-  /^\/settings\/?$/,
-  /^\/legal\/(terms|privacy)\/?$/,
-  /^\/career\/[^/]+(?:\/.*)?$/,
-];
+// 앱 셸(오프사이드/풀타임 SPA)로 서빙해야 하는 경로. 게임 자체는 `/`에서 로드되고,
+// `/settings`는 구글 OAuth 콜백(`?google=linked|switched|error&reason=...`)이
+// 돌아오는 목적지라 앱 셸로 떨어져야 한다.
+const APP_PATHS = [/^\/settings\/?$/];
 
 function withRobots(response: Response, value: string): Response {
   const result = new Response(response.body, response);
