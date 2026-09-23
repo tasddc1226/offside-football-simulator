@@ -137,6 +137,7 @@ jobs:
       - name: Verify deployed health and UI
         if: steps.scope.outputs.code_changed == 'true'
         run: |
+          node tooling/scripts/web-readiness.mjs "https://offside-web-staging.tasddc1569.workers.dev" apps/web/dist
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
             "https://offside-api-staging.tasddc1569.workers.dev/v1/health" >/dev/null
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \

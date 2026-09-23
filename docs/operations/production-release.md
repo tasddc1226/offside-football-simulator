@@ -13,10 +13,29 @@ PR #276의 목표는 신규 생성 버전을 `3.4.0/0.13.0`에서 `3.5.0/0.14.0`
    `2026-09-05T15:00:00Z`, 종료일은 비움, challenge set은 `cs_season_1`이다. 최신 D1 행의
    모든 metadata와 단일 ACTIVE 상태, bookmark/schema/집계를 확인하고 값이 다르면 중단한다.
 3. 승인 후 같은 SHA로 `deploy`를 실행한다. 순서는 **추가형 migration 0014 → 새 API → 새 web
-   → 신규 생성 manifest CAS**다. build/호환 검사는 원격 변경 전에 끝나야 한다. CAS 전제는
+   → 후보 웹 자산 readiness 검증 → 신규 생성 manifest CAS**다. build/호환 검사는 원격 변경 전에 끝나야 한다. CAS 전제는
    정확한 `3.4.0/0.13.0`이며, read-back plan=noop와 health/CORS/current/web을 확인한다.
 4. 배포 뒤 실제 서버 생성, 중요한 결정에서 중단, 같은 job/연도 재개 및 기존 저장의
    revision/hash 보존을 별도로 확인한다. workflow의 health 성공만으로 이를 대체하지 않는다.
+
+### 웹 자산 전파와 활성화 순서
+
+PR #276은 `aa79561e4111c69034ef570bbf4f9488ba538201`로 병합됐다. 최초 staging run
+`35808731464`는 migration/API/web 배포와 health/manifest/CORS는 성공했지만 배포 직후
+UI가 이전 `engine-BeQEhzai.js`를 받아 `알 수 없는 rulesetVersion: 3.5.0`으로 실패했다.
+CI가 실제 빌드·업로드한 후보는 `engine-CtFXSszj.js`였고, 이후 원격 응답의 SHA-256
+`2f42d169dd8dad94e2438ab2d95b860d9163c618051e3d529b795ef3a836ea08`이 빌드 파일과 일치했다.
+이는 배포 명령 성공/HTTP 200만으로 새 웹 도달을 보장할 수 없다는 실제 전파 지연 증거다.
+
+`tooling/scripts/web-readiness.mjs`는 승인된 staging/production 웹 origin에 GET만 수행한다.
+로컬 `dist/app-shell.html`의 module entry·modulepreload·CSS URL 집합을 `/onboarding` 응답과
+비교하고, 해당 자산의 SHA-256을 모두 비교한다. 2회 연속 일치해야 통과한다. redirect는
+거부하며 요청별 10초, 전체 180초 한도다. staging UI 검증 전, production 웹 배포 후 **CAS 전**에
+실행한다. 실패하면 운영 생성 manifest는 이전 버전을 유지한 채 작업이 실패한다.
+
+이 검사는 실행 지점에서 관측한 후보 자산의 증거다. 모든 CDN edge의 동시 전파나 이미 열려
+있는 구버전 탭의 자동 갱신을 보장하지 않는다. 실제 생성·중요 결정·동일 연도 재개 검증은
+별도로 필요하며, 이 gate를 끄거나 이전 자산 hash를 허용해 진행하면 안 된다.
 
 ### 이번 승격의 롤백 제한 — 과거 절차보다 우선
 

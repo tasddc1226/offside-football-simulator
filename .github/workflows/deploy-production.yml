@@ -245,6 +245,10 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: pnpm --filter @offside/web deploy:production
 
+      - name: Verify candidate web assets before manifest activation
+        if: inputs.mode == 'deploy'
+        run: node tooling/scripts/web-readiness.mjs "$PRODUCTION_WEB_URL" apps/web/dist
+
       - name: Compare-and-set the production season manifest
         if: inputs.mode == 'deploy'
         env:
