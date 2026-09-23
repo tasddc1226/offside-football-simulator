@@ -7,14 +7,12 @@ import type { Db } from '../client.js';
  *
  * ```ts
  * await runBatch(db, [
- *   db.update(careers).set({ revision: to, updatedAt }).where(and(eq(careers.id, id), eq(careers.revision, from))),
- *   db.insert(snapshots).values(snapshotRow),
- *   db.insert(commandLog).values(commandRow),
+ *   db.update(profiles).set({ deletedAt: now }).where(eq(profiles.id, id)),
+ *   db.delete(idempotency).where(eq(idempotency.ownerProfileId, id)),
  * ]);
  * ```
  *
- * `command_log(career_id, revision)` PK와 `snapshots(career_id, revision)` UNIQUE가 동시 쓰기를
- * 실패시켜 낙관적 잠금을 완성한다. batch는 단일 SQL 트랜잭션으로 실행되므로 항목 하나가 실패하면 전부 롤백된다.
+ * batch는 단일 SQL 트랜잭션으로 실행되므로 항목 하나가 실패하면 전부 롤백된다.
  */
 export async function runBatch(db: Db, statements: BatchItem<'sqlite'>[]): Promise<unknown[]> {
   if (statements.length === 0) return [];

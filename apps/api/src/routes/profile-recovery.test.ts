@@ -4,13 +4,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { signConfirmToken } from '../auth/confirm-token.js';
 import { createApp } from '../app.js';
 import { sha256Hex } from '../db/hash.js';
-import { insertCareer } from '../db/repos/careers.js';
-import { upsertServiceSeason } from '../db/repos/serviceSeasons.js';
-import { auditLog, careers, sessions } from '../db/schema.js';
+import { auditLog, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
-const SERVICE_SEASON_ID = 'svc_test';
 
 function extractSessionToken(setCookie: string): string {
   const token = /offside_session=([^;]+)/.exec(setCookie)?.[1];
@@ -24,35 +21,6 @@ async function issueCookie(ctx: TestD1): Promise<{ token: string; profileId: str
   const token = extractSessionToken(res.headers.get('Set-Cookie') ?? '');
   const body = successEnvelope(ProfileSchema).parse(await res.json());
   return { token, profileId: body.data.id, cookie: `offside_session=${token}` };
-}
-
-async function ensureServiceSeason(ctx: TestD1): Promise<void> {
-  await upsertServiceSeason(ctx.db, {
-    id: SERVICE_SEASON_ID,
-    name: 'Test season',
-    status: 'ACTIVE',
-    startsAt: '2026-01-01T00:00:00Z',
-    endsAt: '2026-12-31T23:59:59Z',
-    rulesetVersion: '1.0.0',
-    contentPackVersion: '0.1.0',
-    challengeSetId: 'cs_test',
-  });
-}
-
-async function addCareer(ctx: TestD1, ownerProfileId: string, careerId: string): Promise<void> {
-  const now = new Date().toISOString();
-  await insertCareer(ctx.db, {
-    id: careerId,
-    ownerProfileId,
-    status: 'ACTIVE',
-    revision: 1,
-    createdServiceSeasonId: SERVICE_SEASON_ID,
-    rulesetVersion: '1.0.0',
-    contentPackVersion: '0.1.0',
-    lastSyncedAt: now,
-    createdAt: now,
-    updatedAt: now,
-  });
 }
 
 function jsonInit(input: {
@@ -154,7 +122,6 @@ describe('POST /v1/profile/recover', () => {
 
   beforeEach(async () => {
     ctx = await createTestD1();
-    await ensureServiceSeason(ctx);
   });
 
   afterEach(async () => {
@@ -180,9 +147,8 @@ describe('POST /v1/profile/recover', () => {
 
     const res = await app.request('/v1/profile/recover', jsonInit({ method: 'POST', body: { code }, cookie: other.cookie }), ctx.env);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { profileId: string; careerCount: number } };
+    const body = (await res.json()) as { data: { profileId: string } };
     expect(body.data.profileId).toBe(owner.profileId);
-    expect(body.data.careerCount).toBe(0);
 
     // 재바인딩 확인: 같은 쿠키로 /v1/profile을 부르면 이제 owner 프로필이다.
     const profileRes = await app.request('/v1/profile', { headers: { Cookie: other.cookie } }, ctx.env);
@@ -262,74 +228,6 @@ describe('POST /v1/profile/recover', () => {
     expect(deletedBody.error).toEqual(notFoundBody.error);
   });
 
-  it('현재 프로필에 커리어가 있으면 mergeChoice 없이는 409 RECOVERY_CONFLICT', async () => {
-    const target = await issueCookie(ctx);
-    const code = await issueRecoveryCode(target.cookie);
-    const current = await issueCookie(ctx);
-    await addCareer(ctx, current.profileId, 'car_conflict_1');
-    const app = createApp();
-
-    const res = await app.request('/v1/profile/recover', jsonInit({ method: 'POST', body: { code }, cookie: current.cookie }), ctx.env);
-    expect(res.status).toBe(409);
-    const body = ErrorEnvelopeSchema.parse(await res.json());
-    expect(body.error.code).toBe('RECOVERY_CONFLICT');
-    expect(body.error.details).toEqual({ currentCareerCount: 1, targetCareerCount: 0 });
-  });
-
-  it('MOVE_TO_LINKED: 대상 프로필로 커리어가 이동하고 원 프로필에는 남지 않으며 감사 로그 1건', async () => {
-    const target = await issueCookie(ctx);
-    const code = await issueRecoveryCode(target.cookie);
-    const current = await issueCookie(ctx);
-    await addCareer(ctx, current.profileId, 'car_move_1');
-    const app = createApp();
-
-    const res = await app.request(
-      '/v1/profile/recover',
-      jsonInit({ method: 'POST', body: { code, mergeChoice: 'MOVE_TO_LINKED' }, cookie: current.cookie }),
-      ctx.env,
-    );
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { profileId: string; careerCount: number } };
-    expect(body.data.profileId).toBe(target.profileId);
-    expect(body.data.careerCount).toBe(1);
-
-    const targetCareers = await ctx.db.select().from(careers).where(eq(careers.ownerProfileId, target.profileId));
-    expect(targetCareers.map((row) => row.id)).toEqual(['car_move_1']);
-    const currentCareers = await ctx.db.select().from(careers).where(eq(careers.ownerProfileId, current.profileId));
-    expect(currentCareers).toHaveLength(0);
-
-    const listRes = await app.request('/v1/careers', { headers: { Cookie: current.cookie } }, ctx.env);
-    const listBody = (await listRes.json()) as { data: { items: { id: string }[] } };
-    expect(listBody.data.items.map((item) => item.id)).toEqual(['car_move_1']);
-
-    const mergedLogs = await ctx.db.select().from(auditLog).where(eq(auditLog.kind, 'PROFILE_MERGED'));
-    expect(mergedLogs).toHaveLength(1);
-    expect(mergedLogs[0]?.profileId).toBe(target.profileId);
-    const payload = JSON.parse(mergedLogs[0]!.payloadJson) as { fromProfileId: string; toProfileId: string; careerIds: string[] };
-    expect(payload).toEqual({ fromProfileId: current.profileId, toProfileId: target.profileId, careerIds: ['car_move_1'] });
-  });
-
-  it('KEEP_LINKED_ONLY: 원 프로필 커리어는 그대로 남는다', async () => {
-    const target = await issueCookie(ctx);
-    const code = await issueRecoveryCode(target.cookie);
-    const current = await issueCookie(ctx);
-    await addCareer(ctx, current.profileId, 'car_keep_1');
-    const app = createApp();
-
-    const res = await app.request(
-      '/v1/profile/recover',
-      jsonInit({ method: 'POST', body: { code, mergeChoice: 'KEEP_LINKED_ONLY' }, cookie: current.cookie }),
-      ctx.env,
-    );
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { profileId: string; careerCount: number } };
-    expect(body.data.profileId).toBe(target.profileId);
-    expect(body.data.careerCount).toBe(0);
-
-    const currentCareers = await ctx.db.select().from(careers).where(eq(careers.ownerProfileId, current.profileId));
-    expect(currentCareers.map((row) => row.id)).toEqual(['car_keep_1']);
-  });
-
   it('실패 시도 6번째(IP+세션 기준)는 429, 다른 IP는 영향 없음', async () => {
     const current = await issueCookie(ctx);
     const app = createApp();
@@ -373,16 +271,14 @@ describe('POST /v1/profile/delete', () => {
 
   beforeEach(async () => {
     ctx = await createTestD1();
-    await ensureServiceSeason(ctx);
   });
 
   afterEach(async () => {
     await ctx.dispose();
   });
 
-  it('본문 없음 → confirmToken 발급, 본문 confirmToken → 204이고 세션 401·커리어 0건', async () => {
+  it('본문 없음 → confirmToken 발급, 본문 confirmToken → 204이고 이후 세션은 401', async () => {
     const owner = await issueCookie(ctx);
-    await addCareer(ctx, owner.profileId, 'car_delete_1');
     const app = createApp();
 
     const tokenRes = await app.request(
@@ -407,12 +303,13 @@ describe('POST /v1/profile/delete', () => {
     );
     expect(confirmRes.status).toBe(204);
 
-    const careersRes = await app.request('/v1/careers', { headers: { Cookie: owner.cookie } }, ctx.env);
-    expect(careersRes.status).toBe(401);
-    expect(ErrorEnvelopeSchema.parse(await careersRes.json()).error.code).toBe('PROFILE_REQUIRED');
-
-    const remainingCareers = await ctx.db.select().from(careers).where(eq(careers.ownerProfileId, owner.profileId));
-    expect(remainingCareers).toHaveLength(0);
+    const settingsRes = await app.request(
+      '/v1/profile/settings',
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: ALLOWED_ORIGIN, Cookie: owner.cookie }, body: '{}' },
+      ctx.env,
+    );
+    expect(settingsRes.status).toBe(401);
+    expect(ErrorEnvelopeSchema.parse(await settingsRes.json()).error.code).toBe('PROFILE_REQUIRED');
 
     const deletedLogs = await ctx.db.select().from(auditLog).where(eq(auditLog.kind, 'PROFILE_DELETED'));
     expect(deletedLogs.some((row) => row.profileId === owner.profileId)).toBe(true);

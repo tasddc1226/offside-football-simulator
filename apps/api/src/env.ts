@@ -16,9 +16,6 @@ export type Bindings = {
   WEB_APP_URL: string;
   /** 로컬 전용. `'1'`이면 ENVIRONMENT === 'local'과 함께 가짜 OIDC를 쓴다. */
   GOOGLE_FAKE?: string;
-  /** T-2-012 D-54: 현재 서비스 시즌 포인터. production은 비워 둔다 — 라우트가 503
-   * SERVICE_SEASON_UNAVAILABLE을 돌려준다(출시 게이트 전 실수 방지, 09 런북). */
-  ACTIVE_SERVICE_SEASON_ID?: string;
 };
 
 export type SessionContext = {

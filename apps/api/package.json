@@ -14,7 +14,6 @@
     "db:query:staging": "wrangler d1 execute offside-staging --remote --env staging --command",
     "db:query:production": "wrangler d1 execute offside-production --remote --env production --command",
     "db:migrate": "wrangler d1 migrations apply offside-local --local",
-    "db:seed": "wrangler d1 execute offside-local --local --file seeds/local.sql",
     "db:migrate:staging": "wrangler d1 migrations apply offside-staging --remote --env staging",
     "db:migrate:production": "wrangler d1 migrations apply offside-production --remote --env production",
     "deploy:staging": "wrangler deploy --env staging",
@@ -22,16 +21,13 @@
     "db:check": "drizzle-kit generate && test -z \"$(git status --porcelain -- migrations)\""
   },
   "dependencies": {
-    "@offside/content": "workspace:*",
     "@offside/contracts": "workspace:*",
-    "@offside/domain": "workspace:*",
     "arctic": "3.7.0",
     "drizzle-orm": "0.45.2",
     "hono": "4.13.5"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260831.1",
-    "@offside/fixtures": "workspace:*",
     "@offside/tsconfig": "workspace:*",
     "drizzle-kit": "0.31.10",
     "esbuild": "0.28.1",
