@@ -1,7 +1,7 @@
 # ADR-008. 인증과 계정 연결·병합
 
-- 상태: 확정 (2026-09-02)
-- 관련: [ADR-002](ADR-002-persistence-and-identity.md), [ADR-007](ADR-007-hosting-and-infra.md), [화면 SCR-030](../screens/05-hub-and-support.md)
+- 상태: Amended by ADR-013 (2026-09-24, 계정 연결·병합 플로우 및 /v1/auth/merge 제거). 확정 (2026-09-02)
+- 관련: [ADR-002](ADR-002-persistence-and-identity.md), [ADR-007](ADR-007-hosting-and-infra.md), [화면 SCR-030](../archive/offside/screens/05-hub-and-support.md)
 
 ## 맥락
 

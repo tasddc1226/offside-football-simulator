@@ -4,83 +4,110 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-OFFSIDE — 축구 선수 커리어 시뮬레이션 웹 게임. Vite + React SPA가 브라우저 Web Worker에서 결정론적 시뮬레이션을 실행하고 IndexedDB에 로컬 우선 저장한다. Cloudflare Workers(Hono) + D1 서버는 프로필·Google 로그인·checkpoint 동기화·보관·서비스 시즌만 담당한다. 같은 SPA 번들을 앱인토스 미니앱(toss 채널)으로도 배포할 수 있는 구조다.
+OFFSIDE — 부제 "풀타임: 휘슬이 울릴 때까지". 확률/이벤트 기반 축구 선수 커리어
+시뮬레이션 웹 게임. `apps/web`은 Vite + TypeScript vanilla 앱(React 없음)이고
+게임 로직은 `apps/web/src/game/*`에 있다. 세이브는 브라우저 `localStorage`에만
+저장한다(서버 동기화 없음). `apps/api`(Hono on Cloudflare Workers + D1)는
+health·profile(익명 프로필·설정·복구 코드·복구·삭제)·Google 로그인(시작·콜백·
+연결 해제·로그아웃)만 다룬다. 계정 병합 플로우는 없다.
 
-pnpm workspaces + Turborepo 모노레포. Node 22, TypeScript strict.
+pnpm workspaces + Turborepo 모노레포. Node ≥22.13, TypeScript strict.
+
+2026-09-24 Phase 9에서 원작 OFFSIDE(React 19 + TanStack, Web Worker 결정론
+시뮬레이터, 버전 고정 콘텐츠 팩, 서버 체크포인트 동기화·리그 원장·서버 연간
+커리어)를 이 구조로 전면 교체했다. 배경은
+[`docs/adr/ADR-013-fulltime-replacement.md`](docs/adr/ADR-013-fulltime-replacement.md),
+원작 문서는 [`docs/archive/offside/`](docs/archive/offside/README.md)를 본다.
 
 ## 자주 쓰는 명령
 
 ```bash
-pnpm dev                  # web(vite, :5173) + api(wrangler dev, :8787) 동시 실행
+pnpm dev                  # web(vite) + api(wrangler dev) 동시 실행
 pnpm test                 # 전체 Vitest (turbo)
 pnpm lint                 # ESLint 전체
-pnpm lint:deps            # ADR-005 패키지 의존 방향 검사 (tooling/scripts/check-deps.mjs)
+pnpm lint:deps            # 패키지 의존 방향 검사 (tooling/scripts/check-deps.mjs)
 pnpm typecheck            # tsc --noEmit 전체
 pnpm build                # 전체 빌드
-pnpm content:validate     # 콘텐츠 팩·ruleset Zod 검증
 pnpm format               # prettier --write .
 
 # 단일 패키지 테스트
-pnpm --filter @offside/domain test
-# 단일 테스트 파일
-pnpm --filter @offside/domain exec vitest run src/growth.test.ts
+pnpm --filter @offside/web test
+pnpm --filter @offside/api test
+pnpm --filter @offside/contracts test
 
-# e2e (apps/web, Playwright, 뷰포트 360x780 고정)
-pnpm --filter @offside/web e2e                      # 스텁 API, 포트 5174
-pnpm --filter @offside/web e2e:api                  # 실제 api 포함, 포트 5173/8787
-pnpm --filter @offside/web exec playwright test e2e/season.spec.ts   # 단일 spec
-# 병행 세션 포트 충돌 시 E2E_PORT/E2E_API_URL 오버라이드 가능
+# e2e (apps/web, Playwright)
+pnpm --filter @offside/web e2e
+pnpm --filter @offside/web exec playwright test e2e/career.spec.ts   # 단일 spec
 
 pnpm --filter @offside/web check:bundle             # 초기 청크 예산 검사
 pnpm --filter @offside/api db:migrate               # 로컬 D1 마이그레이션
 pnpm --filter @offside/api db:check                 # drizzle-kit generate 후 migrations diff 없음 확인
+
+# 밸런스 시뮬레이션 (apps/web/src/game/*을 그대로 import)
+pnpm --filter @offside/fulltime-sim sim
+pnpm --filter @offside/fulltime-sim analyze
 ```
 
 머지 전 전체 검증 체인: `pnpm install --frozen-lockfile && pnpm lint && pnpm lint:deps && pnpm typecheck && pnpm test && pnpm build && pnpm --filter @offside/web check:bundle` + e2e.
 
-## 아키텍처와 패키지 경계 (ADR-005, lint로 강제됨)
-
-의존 방향은 아래로만 허용. `tooling/scripts/check-deps.mjs`의 `ALLOWED_DEPENDENCIES`가 정본이고 `pnpm lint:deps`가 검사한다.
-
-```
-apps/web        → platform, engine-client, ui, contracts, domain, content
-apps/api        → domain, contracts, content        (Hono on Cloudflare Workers + D1 + Drizzle)
-platform        → engine-client(LocalStore 포트 타입만), contracts
-engine-client   → domain, contracts, content
-ui              → contracts(타입만)
-content         → domain(타입만)
-contracts       → domain(타입만)
-domain          → (없음 — 완전 순수)
-fixtures        → domain, content                   (테스트 전용: devDependencies로만 허용)
-```
-
-핵심 규칙 (ESLint `no-restricted-*`로 강제, `tooling/eslint-config/index.mjs`):
-
-- **`packages/domain`은 순수 TypeScript.** 외부 import, Node·브라우저 API, `Date.now()`, `Math.random()`, `new Date()` 전부 금지. 시간·난수는 입력으로만 받는다. 시뮬레이션은 `seed + rulesetVersion + contentPackVersion + command`로 완전 결정론적이어야 한다 — 서버가 명령 로그를 리플레이해 state hash를 검증한다(ADR-003). 부동소수점 대신 정수/고정 소수점, 정렬은 안정 키.
-- **채널 분기 금지.** 화면·엔진·ui는 `channel`을 비교하거나 `@offside/platform/web`·`/toss`를 직접 import하지 않는다. 채널 조립은 `apps/web/src/platform/index.ts` 한 곳. `@apps-in-toss/*`는 `packages/platform/src/toss/`에서만 import 가능.
-- **`ui`는 게임 규칙을 계산하지 않는다.** 표시 값은 props로만.
-- `apps/*`끼리 서로 import 금지.
-
 ## 주요 구성 요소
 
-- **`packages/engine-client`**: 명령 실행기·멱등성·복구, `LocalStore` 포트 정의(구현은 platform), Web Worker 시뮬레이터 프로토콜(`./worker`), 동기화 클라이언트. 로컬 IndexedDB가 플레이 중 정본이고 checkpoint마다 `PUT /careers/{id}`(If-Match revision, 409면 충돌 해소)로 서버 동기화(ADR-002).
-- **`packages/content`**: 콘텐츠 팩(`packs/<version>/`)과 ruleset(`rulesets/<version>/`) JSON 원본 + Zod 스키마(정본) + validate CLI. 조건은 JSON 연산자 트리 DSL — 스크립트 실행 없음. `rulesetVersion`·`contentPackVersion`은 Career 생성 시 고정되며 과거 커리어는 과거 버전으로 재현된다. 콘텐츠 확장은 기존 팩 수정이 아니라 **새 팩 버전**으로 만든다(병행 중인 fixture·golden 보호).
-- **`packages/fixtures`**: golden fixture·결정론 벡터. 어느 패키지든 devDependencies로만.
-- **`apps/web`**: TanStack Router 파일 기반 라우트(`src/routes/career.$careerId.*.tsx`), TanStack Query, Zustand. 빌드 모드 3종: 기본(web), `--mode expanded`, `--mode toss`.
-- **`apps/api`**: 세션 미들웨어는 `Authorization` Bearer(toss) 먼저, 없으면 쿠키(web). 비로그인 익명 프로필이 1급이고 Google 로그인은 복구·동기화 수단. 마이그레이션은 drizzle-kit generate 산출물을 커밋(`db:check`로 검증).
+- **`apps/web/src/game`**: 게임 로직 배럴(`index.ts`). data → rng → attributes →
+  engine → events-data → events → stories → military → realevents →
+  positional → national → comps → season 순서로 로드된다. 시드 RNG
+  (`RngSaveState`)는 세이브 상태 안에 저장돼 저장/재개 후에도 이어진다.
+- **`apps/web/src/api`**: `apps/api`와 통신하는 클라이언트(로그인·프로필만).
+- **`apps/api`**: 세션 미들웨어(`middleware/session.ts`), 익명 프로필 1급 +
+  Google 로그인은 복구·기기 이동 수단(`profile/`, `auth/`). D1 스키마는
+  `db/schema.ts`, 마이그레이션은 `migrations/`(최신 `0015`가 게임 테이블을
+  전부 드롭하고 `profiles`·`sessions`·`auth_attempts`·`audit_log`·
+  `idempotency`만 남긴다). 마이그레이션은 drizzle-kit generate 산출물을
+  커밋한다(`db:check`로 검증).
+- **`packages/contracts`**: API 요청·응답 Zod 스키마. `auth`·`profile`·
+  `health`·`errors`·`envelope`·`headers`·`primitives`로 축소돼 있다.
+- **`tooling/fulltime-sim`**: 헤드리스 밸런스 시뮬레이터. `apps/web/src/game/*`
+  ES 모듈을 DOM 없이 그대로 import해 대량 커리어를 시뮬레이션한다.
+
+## 저장·밸런스 규칙
+
+원작의 "콘텐츠 팩·ruleset 불변 버전 고정", "리플레이 결정론 검증" 규칙은
+서버 시뮬레이션·서버 저장 구조와 함께 폐기됐다(ADR-013). 대신:
+
+- **세이브 호환성**: 세이브 포맷을 바꾸는 변경은 `apps/web/src/game`의
+  마이그레이션 코드가 이전 버전 `localStorage` 세이브를 계속 읽을 수 있게
+  해야 한다. 마이그레이션 없이 기존 세이브를 깨뜨리는 배포는 하지 않는다.
+- **밸런스 검증**: 확률·성장·이벤트 가중치처럼 밸런스에 영향을 주는 변경은
+  `pnpm --filter @offside/fulltime-sim sim`(대량 커리어 시뮬레이션)과
+  `analyze`(분포 집계)를 돌려 확인한다. 이 시뮬레이터는 원작 풀타임 v4와의
+  패리티 기준선(2만 커리어, peak p50 74, corr 0.85, Europe 74.7%,
+  capped 68.0%)을 참고 기준으로 유지한다.
+- **RNG는 입력이 아니라 상태다.** 원작 domain 패키지의 "시간·난수는 입력으로만
+  받는다"는 순수성 규칙은 더 이상 적용되지 않는다 — `apps/web/src/game`은
+  일반 TypeScript 모듈이며, RNG 시드는 게임 상태의 일부로 저장·복원된다.
 
 ## 문서 정본 우선순위
 
-문서 충돌 시: `docs/development/` > `docs/phases/` > `docs/screens/` > `docs/content/` > 통합 설계서. 기술 스택·인프라 확정 결정은 `docs/adr/`(ADR-001~010)이 개발 명세의 "권장"보다 우선한다. 진행 상태·역할·워커 위임 규칙은 `docs/tracking/`(보드는 `board.md`, 결정은 `decision-log.md`)이 정본이다.
+문서 충돌 시: [`docs/adr/`](docs/adr/README.md)(ADR-001~013) >
+[`docs/tracking/`](docs/tracking/README.md)(보드는 `board.md`, 결정은
+`decision-log.md`) > [`docs/operations/`](docs/operations)(런북) 순이다.
+
+`docs/archive/offside/`(원작 개발 명세·phases·screens·content)는 **아카이브이며
+정본이 아니다.** 참고용으로만 연다 — 코드나 규칙 판단의 근거로 쓰지 않는다.
 
 ## 개발·운영 규칙 (docs/tracking/README.md)
 
-- 작업 ID는 `T-<Phase>-<번호>`. 브랜치는 작업 ID로 시작(`T-0-003-domain-skeleton`), PR 제목은 `T-0-003: 설명` 형식. 머지는 squash.
-- 모든 작업은 요구사항 ID(FR·RULE·SCR·API·DATA·TEST)를 참조한다.
-- PR 직전 `git fetch origin && git merge origin/main`. `pnpm-lock.yaml` 충돌은 손으로 고치지 말고 `git checkout origin/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile`로 재생성 후 전체 체인 재실행.
-- 리뷰 체크리스트 요점: domain 순수성, 결정론 테스트(같은 입력 → 같은 hash), 정상·빈 상태·오류·재시도·중복 요청 테스트, 화면은 360px·키보드·모션 감소·시각 토큰만 사용, UI 문자열에 폐기 어휘(`VAR CHECK` 등) 금지, 로그에 쿠키·복구 코드·선수명 원문 금지.
-- CI는 self-hosted macOS runner(`self-hosted, macOS, ARM64, offside`). main push가 staging 자동 배포까지 수행한다. 문서만 바뀐 커밋은 코드 검사·배포를 건너뛴다(`.github/scripts/ci-scope.mjs`).
-
-## 앱인토스(toss 채널) 제약 (ADR-009)
-
-SDK가 필요 없는 검토 규칙은 web 채널에서도 지킨다: 초기 청크 300KB 이하·콘텐츠 팩 지연 로드, 진입 직후 모달 금지, Safe Area 침범 금지, `eval`·외부 코드 실행 금지, 약관·개인정보는 SPA 내부 라우트, 런타임 생성형 AI 텍스트 노출 금지(서사는 저작된 콘텐츠 팩만).
+- 작업 ID는 `T-<Phase>-<번호>`(서브트랙이 있으면 글자 접미사, 예: `T-9-001d`).
+  브랜치는 작업 ID로 시작, PR 제목·커밋 메시지는 `T-9-001d: 설명` 형식(한국어).
+  머지는 squash.
+- PR 직전 `git fetch origin && git merge origin/main`. `pnpm-lock.yaml` 충돌은
+  손으로 고치지 말고 `git checkout origin/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile`로
+  재생성 후 전체 체인 재실행.
+- **구현은 Claude Sonnet 5 서브에이전트에게 위임하고, 오케스트레이션·리뷰·검증은
+  Claude 메인 세션(코디네이터)이 맡는다.** 서브에이전트는 격리 worktree에서
+  브리프 범위만 구현하고, 명세를 스스로 바꾸지 않는다. 이 규칙이
+  `AGENTS.md`의 위임 대상을 정의한다(2026-09-24, ADR-013).
+- 리뷰 체크리스트 요점: 세이브 마이그레이션 보존, 밸런스 변경 시
+  `tooling/fulltime-sim` 실행, 정상·빈 상태·오류 테스트, UI 문자열에 폐기
+  어휘 없음, 로그에 쿠키·복구 코드·선수명 원문 금지.
+- CI는 self-hosted macOS runner(`self-hosted, macOS, ARM64, offside`)를 쓴다.
+  문서만 바뀐 커밋은 코드 검사·배포를 건너뛴다(`.github/scripts/ci-scope.mjs`).
