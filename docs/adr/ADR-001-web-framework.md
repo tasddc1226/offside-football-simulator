@@ -1,6 +1,6 @@
 # ADR-001. 웹 프레임워크와 렌더링
 
-- 상태: 확정 (2026-09-02)
+- 상태: Superseded by ADR-013 (2026-09-24). 확정 (2026-09-02)
 - 관련: [ADR-003](ADR-003-simulation-location.md), [ADR-005](ADR-005-monorepo-boundaries.md), [시각 디자인 시스템](../development/13-visual-design-system.md)
 
 ## 맥락

@@ -1,6 +1,6 @@
 # ADR-009. 앱인토스 미니앱 대응 구조와 출시 준비
 
-- 상태: 확정 (2026-09-02, 같은 날 범위 조정). 구조 결정은 지금 적용한다. 출시 준비 항목은 사용자가 미니앱 출시를 결정한 뒤 착수한다
+- 상태: Amended by ADR-013 (2026-09-24, 출시 보류 유지, `packages/platform` 채널 어댑터는 코드에서 제거됨 — 필요 시 git 이력에서 복원). 확정 (2026-09-02, 같은 날 범위 조정). 구조 결정은 지금 적용한다. 출시 준비 항목은 사용자가 미니앱 출시를 결정한 뒤 착수한다
 - 관련: [ADR-001](ADR-001-web-framework.md), [ADR-002](ADR-002-persistence-and-identity.md), [ADR-007](ADR-007-hosting-and-infra.md), [ADR-008](ADR-008-auth-and-account-merge.md), [배포·운영](../development/09-deployment-and-operations.md)
 - 근거 문서: 앱인토스 개발자센터(2026-09-02 열람). 정책은 수시로 개정되므로 검토 요청 전에 [서비스 오픈 정책](https://developers-apps-in-toss.toss.im/intro/guide)과 [게임 출시 가이드](https://developers-apps-in-toss.toss.im/checklist/app-game)를 다시 확인한다.
 

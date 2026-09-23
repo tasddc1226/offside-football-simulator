@@ -1,6 +1,6 @@
 # ADR-012: New server-authoritative annual careers
 
-Status: accepted for T-7-040 implementation; production activation is separate.
+Status: Superseded by ADR-013 (2026-09-24). Previously: accepted for T-7-040 implementation; production activation is separate.
 
 ## Scope
 

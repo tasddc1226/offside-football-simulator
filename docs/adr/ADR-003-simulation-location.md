@@ -1,6 +1,6 @@
 # ADR-003. 시뮬레이션 실행 위치
 
-- 상태: 확정 (2026-09-02)
+- 상태: Superseded by ADR-013 (2026-09-24). 확정 (2026-09-02)
 - 관련: [ADR-002](ADR-002-persistence-and-identity.md), [시뮬레이션 엔진](../development/03-game-simulation-engine.md), [이벤트 엔진](../development/04-event-engine.md)
 
 ## 맥락
