@@ -172,11 +172,10 @@ export function market(s: GameState): { options: Record<string, unknown>[]; note
   return { options: forced ? [] : options, note: forced ? '더 이상 불러주는 팀이 없습니다. 은퇴를 결정할 시간입니다.' : note, canRetire: canRetire || forced };
 }
 
-export function acceptOption(s: GameState, opt: Record<string, unknown>): null {
+export function acceptOption(s: GameState, opt: Record<string, unknown>): { text: string; ok?: boolean; reopen?: boolean } | null {
   const kind = opt.kind as string;
   if (['sangmu', 'army', 'serve'].includes(kind)) {
-    acceptMilitary(s, opt as never);
-    return null;
+    return acceptMilitary(s, opt as never);
   }
   if (kind === 'uni') {
     const c = pick(clubsIn('uni'));
