@@ -59,8 +59,9 @@ test('staging health와 current service-season manifest/CORS가 실제 Worker �
 test('staging 서버 선수 생성·첫 중요 결정이 저장되고 새로고침으로 복원된다', async ({
   page,
 }, testInfo) => {
-  // 실제 Worker의 초기 로드와 reload를 모두 포함한다. 개별 UI 단언의 5초 제한은 유지한다.
-  test.setTimeout(60_000);
+  // 원격 소유권 확인/정본 복원/첫 결정/reload 합계가 실측 60초를 넘는다.
+  // 이 원격 smoke만 120초로 제한하며 각 단계의 제한과 실제 상태 단언은 유지한다.
+  test.setTimeout(120_000);
   const smoke = smokeMetadata(testInfo);
   const pageErrors: string[] = [];
   const legacyWrites: string[] = [];
@@ -100,14 +101,22 @@ test('staging 서버 선수 생성·첫 중요 결정이 저장되고 새로고�
   expect(career.authority).toBe('SERVER_ANNUAL');
   expect(career.snapshot.rulesetVersion).toBe(smoke.expectedSeason.rulesetVersion);
   expect(career.snapshot.contentPackVersion).toBe(smoke.expectedSeason.contentPackVersion);
+  // POST 201은 로컬 복원 완료가 아니다. 실제 원격 소유권 검증/정본 다운로드를 관찰한다.
+  const canonical = await page.waitForResponse((response) =>
+    response.url() === `${smoke.apiUrl}/v1/careers/${career.snapshot.careerId}` &&
+    response.request().method() === 'GET' && response.status() === 200,
+  );
+  expect((await canonical.json()).data.snapshot.careerId).toBe(career.snapshot.careerId);
+  const startYear = page.getByRole('button', { name: '1년 진행', exact: true });
+  await expect(startYear).toBeEnabled({ timeout: 45_000 });
   await expectRoute(page, /\/career\/[^/]+$/);
-  await page.getByRole('button', { name: '1년 진행', exact: true }).click();
+  await startYear.click();
   const decision = page.getByRole('region', { name: '중요한 결정', exact: true });
   await expect(decision).toBeVisible({ timeout: 30_000 });
   await expect(decision).toContainText('같은 1년차');
   const title = await decision.locator('h2').textContent();
   await page.reload();
-  await expect(decision.locator('h2')).toHaveText(title!);
+  await expect(decision.locator('h2')).toHaveText(title!, { timeout: 20_000 });
   await expect(decision.getByRole('button').first()).toBeEnabled();
   expect(legacyWrites).toEqual([]);
   expect(pageErrors).toEqual([]);
