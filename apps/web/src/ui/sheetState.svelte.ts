@@ -8,6 +8,7 @@ import { clubsIn, fmtMoney, leagueOf, roundRange } from '../game/engine.js';
 import { PHASES } from '../game/data.js';
 import { esc } from '../game/dom.js';
 import type { GameState } from '../game/types.js';
+import { motionOK } from './motion.js';
 
 export type SheetButton = { label: string; cls?: string; fn: () => void };
 export type Chip = { label: string; d: number; money?: boolean; text?: string; bad?: boolean };
@@ -73,13 +74,7 @@ export function showSheet(html: string, btns: SheetButton[]) {
 }
 
 // ───────── 진행 연출 ─────────
-const motionOK = (() => {
-  try {
-    return !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  } catch {
-    return true;
-  }
-})();
+// motionOK(감속 모션 판정)는 motion.ts로 옮겨 화면·탭·시트 전환 애니메이션과 공유한다.
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, motionOK ? ms : 0));
 
 type MatchGame = { rd: number; res: 'W' | 'D' | 'L'; mins: number; g: number; a: number; rating: number; cs?: boolean; inj?: boolean };
