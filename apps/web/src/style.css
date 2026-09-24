@@ -111,12 +111,23 @@ button.hof-row { width: 100%; background: none; border-inline: 0; border-bottom:
 /* create */
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label, .field .lbl { font-size: 13px; font-weight: 600; color: var(--muted); }
-input[type=text], input[type=number] { border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 11px 12px; font: inherit; color: var(--ink); width: 100%; }
+input[type=text], input[type=number], select { border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 11px 12px; font: inherit; color: var(--ink); width: 100%; }
 .seg { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); }
 .opt { border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; min-height: 44px; text-align: left; display: flex; flex-direction: column; gap: 1px; justify-content: center; }
 .opt small { color: var(--muted); font-size: 12px; line-height: 1.35; }
 .seg.four { grid-template-columns: repeat(4, 1fr); }
 .seg.three { grid-template-columns: repeat(3, 1fr); }
+/* T-10-009 클럽 엠블럼 · 클럽 편집 */
+.club-badge { display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 30%; font-weight: 800; line-height: 1; vertical-align: -0.25em; object-fit: cover; letter-spacing: -0.02em; }
+.offer-club { display: flex; align-items: center; gap: 10px; }
+.club-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.club-row { border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+.club-main { display: flex; align-items: center; gap: 8px; }
+.club-main input { flex: 1; min-width: 0; }
+.club-logo-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
+.club-logo-edit label { display: inline-flex; align-items: center; gap: 4px; }
+.club-logo-edit input[type="text"] { width: 4.5em; }
+.club-logo-edit input[type="color"] { width: 36px; height: 30px; padding: 0; border: 0; background: none; }
 .opt[aria-pressed="true"] { border-color: var(--pitch); background: color-mix(in srgb, var(--pitch) 8%, var(--surface)); box-shadow: inset 0 0 0 1px var(--pitch); }
 :root[data-theme="dark"] .opt[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .opt[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); } }

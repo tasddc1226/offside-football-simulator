@@ -90,6 +90,6 @@ export type SheetView =
       kind: 'market';
       eyebrow: string;
       note: string;
-      options: { name: string; lg: string; salary: string | null; sub: string | null }[];
+      options: { clubId?: string; name: string; lg: string; salary: string | null; sub: string | null }[];
     }
   | { kind: 'notice'; eyebrow: string; title?: string; big?: { text: string; ok: boolean }; text?: string; muted?: boolean };

@@ -1,0 +1,137 @@
+<script lang="ts">
+  // 게임 설정 화면(T-10-009). 지금은 "리그·클럽 편집" 한 섹션 — 리그별 클럽 이름·엠블럼을 바꾸고,
+  // 에디트 파일(JSON)로 내보내거나 가져온다. 설정은 이 기기에만 저장된다.
+  import { LEAGUES } from '../game/data.js';
+  import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '../game/clubs.js';
+  import { clubsIn } from '../game/engine.js';
+  import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
+  import { goHome } from './actions.js';
+  import { toast } from './helpers.js';
+  import Topbar from './Topbar.svelte';
+  import ClubBadge from './ClubBadge.svelte';
+
+  let leagueId = $state(LEAGUES[LEAGUES.length - 1]!.id);
+  let open = $state<string | null>(null);
+  // 이름 편집 결과가 다시 CLUBS에서 읽히도록 clubCustom.map을 의존성에 건다.
+  const clubs = $derived((void clubCustom.map, clubsIn(leagueId).map((c) => ({ ...c }))));
+
+  const fail = () => toast('저장 공간이 부족해 저장하지 못했어요');
+
+  function rename(id: string, value: string) {
+    if (!setClubCustom(id, { name: value })) fail();
+  }
+  function editLogo(club: { id: string; name: string }, patch: Partial<ClubLogo>) {
+    if (!setClubCustom(club.id, { logo: { ...logoOf(club, clubCustom.map), ...patch } })) fail();
+  }
+  function dropImage(club: { id: string; name: string }) {
+    const logo = { ...logoOf(club, clubCustom.map) };
+    delete logo.img;
+    if (!setClubCustom(club.id, { logo })) fail();
+  }
+  function resetClub(id: string) {
+    resetClubCustom([id]);
+  }
+
+  // 업로드 이미지는 64×64로 가운데를 잘라 줄인다 — localStorage 용량(약 5MB)에 200개 클럽이 다 들어가게.
+  async function upload(club: { id: string; name: string }, e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      const bmp = await createImageBitmap(file);
+      const side = Math.min(bmp.width, bmp.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 64;
+      canvas.getContext('2d')!.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 64, 64);
+      editLogo(club, { img: canvas.toDataURL('image/webp', 0.85) });
+    } catch {
+      toast('이미지를 읽지 못했어요');
+    }
+  }
+
+  function exportFile() {
+    const url = URL.createObjectURL(new Blob([exportClubCustom()], { type: 'application/json' }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: 'offside-clubs.json' });
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  async function importFile(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    const n = importClubCustom(await file.text());
+    toast(n < 0 ? '에디트 파일 형식이 올바르지 않아요' : `클럽 ${n}개 설정을 불러왔어요`);
+  }
+  function resetLeague() {
+    resetClubCustom(clubsIn(leagueId).map((c) => c.id));
+    toast('이 리그를 기본값으로 되돌렸어요');
+  }
+  function resetAll() {
+    if (!confirm('모든 리그의 클럽 이름·엠블럼을 기본값으로 되돌릴까요?')) return;
+    resetClubCustom();
+    toast('모든 클럽을 기본값으로 되돌렸어요');
+  }
+</script>
+
+<div class="wrap">
+  <Topbar>
+    {#snippet right()}
+      <button class="icon-btn" data-act="home" onclick={goHome}>← 홈</button>
+    {/snippet}
+  </Topbar>
+  <section class="card stack" style="gap:14px">
+    <div>
+      <div class="eyebrow">Settings</div>
+      <h1>게임 설정</h1>
+    </div>
+    <div class="stack" style="gap:10px">
+      <h2 style="margin:0">리그 · 클럽 편집</h2>
+      <p class="muted" style="font-size:13px;margin:0">클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새 이름이 쓰이고, 설정은 이 기기에만 저장됩니다.</p>
+      <div class="field">
+        <label for="club-league">리그</label>
+        <select id="club-league" bind:value={leagueId} onchange={() => (open = null)}>
+          {#each LEAGUES as L (L.id)}
+            <option value={L.id}>{L.name} ({clubsIn(L.id).length}개 클럽)</option>
+          {/each}
+        </select>
+      </div>
+      <ul class="club-list">
+        {#each clubs as c (c.id)}
+          {@const logo = logoOf(c, clubCustom.map)}
+          <li class="club-row" data-club={c.id}>
+            <div class="club-main">
+              <ClubBadge club={c} size={34} />
+              <input
+                type="text"
+                aria-label="{c.baseName} 이름"
+                maxlength={CLUB_NAME_MAX}
+                placeholder={c.baseName}
+                value={clubCustom.map[c.id]?.name ?? ''}
+                onchange={(e) => rename(c.id, e.currentTarget.value)}
+              />
+              <button class="icon-btn" data-act="logo" aria-expanded={open === c.id} onclick={() => (open = open === c.id ? null : c.id)}>엠블럼</button>
+            </div>
+            {#if open === c.id}
+              <div class="club-logo-edit">
+                <label>글자 <input type="text" maxlength={LOGO_TEXT_MAX} value={logo.text} onchange={(e) => editLogo(c, { text: e.currentTarget.value })} /></label>
+                <label>바탕 <input type="color" value={logo.bg} onchange={(e) => editLogo(c, { bg: e.currentTarget.value })} /></label>
+                <label>글자색 <input type="color" value={logo.fg} onchange={(e) => editLogo(c, { fg: e.currentTarget.value })} /></label>
+                <label class="icon-btn">이미지 올리기<input type="file" accept="image/*" hidden onchange={(e) => upload(c, e)} /></label>
+                {#if logo.img}<button class="icon-btn" onclick={() => dropImage(c)}>이미지 빼기</button>{/if}
+                <button class="icon-btn" onclick={() => resetClub(c.id)}>기본값</button>
+              </div>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+      <div class="row" style="flex-wrap:wrap;gap:8px">
+        <button class="icon-btn" onclick={resetLeague}>이 리그 초기화</button>
+        <button class="icon-btn" data-act="export-clubs" onclick={exportFile}>에디트 파일 내보내기</button>
+        <label class="icon-btn">에디트 파일 가져오기<input type="file" accept="application/json,.json" hidden onchange={importFile} /></label>
+        <button class="icon-btn" onclick={resetAll}>전체 초기화</button>
+      </div>
+    </div>
+  </section>
+</div>

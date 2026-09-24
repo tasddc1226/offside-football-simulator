@@ -7,8 +7,11 @@ import { createRng, freshSeed, setActiveRng } from '../game/rng.js';
 import type { GameState } from '../game/types.js';
 import { appState } from './state.svelte.js';
 import { uploadRetirement } from './helpers.js';
+import { loadClubCustom } from './clubCustom.svelte.js';
 
 export function loadGame() {
+  // T-10-009: 유저 클럽 이름을 먼저 CLUBS에 반영해야 아래 '현재 소속 최신 이름' 갱신이 커스텀 이름을 읽는다.
+  loadClubCustom();
   let G: GameState | null = loadKey<GameState>('ft_save') || loadKey<GameState>('sl_save');
   if (G && G.v !== 1) G = null;
   if (G) {

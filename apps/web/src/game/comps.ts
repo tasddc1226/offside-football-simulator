@@ -27,6 +27,15 @@ const CONT_SLOTS: Record<string, [string, number][]> = {
   k1: [['ACLE', 3], ['ACL2', 1]], j1: [['ACLE', 3], ['ACL2', 1]],
 };
 
+// 첫 시즌 예상 순위: 리그 내 전력 순위를 6단계 표(1,3,5,8,11,14)에 비례해 옮긴다 — 클럽 수가 6이면
+// 예전 고정표와 같다(T-10-009에서 리그별 팀 수가 늘어도 같은 범위를 유지).
+const RANK_STEPS = [1, 3, 5, 8, 11, 14];
+export function expectedRank(idx: number, n: number): number {
+  const p = n > 1 ? (Math.max(0, idx) * (RANK_STEPS.length - 1)) / (n - 1) : 0;
+  const lo = Math.floor(p);
+  return Math.round(RANK_STEPS[lo]! + (RANK_STEPS[Math.min(lo + 1, RANK_STEPS.length - 1)]! - RANK_STEPS[lo]!) * (p - lo));
+}
+
 export function seasonSetup(s: GameState, S: Season) {
   const L = leagueOf(s.leagueId);
   S.trophiesMid = [];
@@ -35,8 +44,9 @@ export function seasonSetup(s: GameState, S: Season) {
   if (L.amateur || s.club.id === 'sangmu') return;
   const last = s.career[s.career.length - 1];
   const same = last && last.club === s.club.name && last.league === L.name;
-  const idx = clubsIn(s.leagueId).sort((a, b) => b.str - a.str).findIndex((c) => c.id === s.club.id);
-  const rank = same ? (last!.rank as number) : ([1, 3, 5, 8, 11, 14][Math.max(0, idx)] ?? 14);
+  const league = clubsIn(s.leagueId).sort((a, b) => b.str - a.str);
+  const idx = league.findIndex((c) => c.id === s.club.id);
+  const rank = same ? (last!.rank as number) : expectedRank(idx, league.length);
   let acc = 0;
   for (const [k, n] of CONT_SLOTS[L.id] ?? []) {
     if (rank <= acc + n) {

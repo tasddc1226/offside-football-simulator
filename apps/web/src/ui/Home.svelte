@@ -3,7 +3,7 @@
   import { PHASES, LAST_PHASE } from '../game/data.js';
   import { ovr } from '../game/attributes.js';
   import { appState } from './state.svelte.js';
-  import { goNew, goContinue } from './actions.js';
+  import { goNew, goContinue, goSettings } from './actions.js';
   import Topbar from './Topbar.svelte';
   import HallOfFame from './HallOfFame.svelte';
   import type { Component } from 'svelte';
@@ -17,7 +17,11 @@
 </script>
 
 <div class="wrap">
-  <Topbar />
+  <Topbar>
+    {#snippet right()}
+      <button class="icon-btn" data-act="settings" onclick={goSettings}>설정</button>
+    {/snippet}
+  </Topbar>
   <section class="hero-home">
     <div class="chalk"></div>
     <div class="eyebrow">Kick-off · 0′</div>
