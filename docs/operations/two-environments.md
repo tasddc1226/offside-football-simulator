@@ -21,8 +21,7 @@ Worker들은 staging D1을 공유했으므로 D1 자체는 삭제하거나 초�
 - 새 PR preview와 expanded 배포 workflow·script·Wrangler environment는 없다.
 - `cleanup-preview.yml`은 전환 전 PR Worker 잔재만 정리하며 새 preview를 만들지 않는다.
 
-staging의 서비스 시즌 포인터(`ACTIVE_SERVICE_SEASON_ID` → `svc_line_test`)는 바꾸지 않는다. 그 행의
-ruleset/content pack은 `apps/api/seeds/bootstrap-non-production.sql`이 정하며, 2026-09-13 룰셋 1.5.0 승격
-준비(`release-ruleset-1-5-0`, #208 K리그식 리그·팀 구조 위에 스택)에서 운영 승격 목표 manifest(1.5.0/0.6.0)와
-맞췄다. main 머지마다 CI가 이 seed를 staging D1에 upsert하므로 staging은 운영보다 먼저 새 manifest로 새
-커리어를 만든다. 절차는 [production-release.md](production-release.md)의 "시즌 1 manifest 3차 승격"을 따른다.
+T-9-001(풀타임 마이그레이션) 이후 `apps/web`은 게임 진행을 서버가 아닌 브라우저 localStorage에만
+저장한다. `apps/api`는 health·profile·Google 로그인만 다루며, 서비스 시즌/ruleset/content pack
+포인터와 seed upsert는 migration `0015`로 모두 사라졌다. staging/production 두 환경 모두 D1에는
+`profiles`·`sessions`·`auth_attempts`·`audit_log`·`idempotency` 다섯 테이블만 남는다.

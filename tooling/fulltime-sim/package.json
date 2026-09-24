@@ -1,0 +1,14 @@
+{
+  "name": "@offside/fulltime-sim",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "sim": "tsx simulate.ts",
+    "analyze": "tsx analyze.ts",
+    "check-parity": "tsx check-parity.ts"
+  },
+  "devDependencies": {
+    "tsx": "4.23.13"
+  }
+}

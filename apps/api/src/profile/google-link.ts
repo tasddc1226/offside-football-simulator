@@ -1,16 +1,9 @@
 import type { Db } from '../db/client.js';
 import { insertAuditLog } from '../db/repos/auditLog.js';
-import { countCareersByOwner } from '../db/repos/careers.js';
 import { getProfile, getProfileByGoogleSub, linkGoogleAccount } from '../db/repos/profiles.js';
-import { setPendingMerge } from '../db/repos/sessions.js';
 import { AppError } from '../errors.js';
 
-const PENDING_MERGE_TTL_MS = 10 * 60 * 1000;
-
-export type GoogleCallbackOutcome =
-  | { kind: 'linked' }
-  | { kind: 'switched'; profileId: string }
-  | { kind: 'merge_required'; currentCareerCount: number; targetCareerCount: number };
+export type GoogleCallbackOutcome = { kind: 'linked' } | { kind: 'switched'; profileId: string };
 
 export type ResolveGoogleCallbackInput = {
   sub: string;
@@ -28,10 +21,9 @@ function emailDomain(email: string | null): string | null {
 }
 
 /**
- * D-21, ADR-008 "연결·병합 규칙" 표. `sub`가 처음이거나 이미 현재 프로필(A)에 연결돼 있으면
- * `linked`. 다른 프로필(B)에 연결돼 있으면 A의 커리어 유무로 `switched`(A가 비어 있음, 세션을 B로
- * 즉시 재바인딩) 또는 `merge_required`(A에 커리어가 있어 선택이 필요 — 세션에 대기 병합을 남긴다)로
- * 갈린다.
+ * T-9-001a: 프로필에는 더 이상 서버 소유 데이터(커리어 등)가 없으므로 병합 충돌이 없다. `sub`가
+ * 처음이거나 이미 현재 프로필에 연결돼 있으면 `linked`. 다른 프로필에 연결돼 있으면 그 프로필로
+ * 바로 전환한다(`switched`).
  */
 export async function resolveGoogleCallback(
   db: Db,
@@ -60,13 +52,5 @@ export async function resolveGoogleCallback(
     return { kind: 'linked' };
   }
 
-  const currentCareerCount = await countCareersByOwner(db, input.currentProfileId);
-  if (currentCareerCount === 0) {
-    return { kind: 'switched', profileId: target.id };
-  }
-
-  const targetCareerCount = await countCareersByOwner(db, target.id);
-  const expiresAt = new Date(Date.parse(input.now) + PENDING_MERGE_TTL_MS).toISOString();
-  await setPendingMerge(db, input.sessionId, { targetProfileId: target.id, expiresAt });
-  return { kind: 'merge_required', currentCareerCount, targetCareerCount };
+  return { kind: 'switched', profileId: target.id };
 }

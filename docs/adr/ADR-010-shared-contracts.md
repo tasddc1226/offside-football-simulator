@@ -1,7 +1,7 @@
 # ADR-010. Phase 3 이후 병렬화를 위한 공유 계약
 
 - 상태: 확정 (2026-09-03)
-- 관련: [로드맵 "Phase 3 이후 병렬화"](../development/00-development-roadmap.md#phase-3-이후-병렬화), [03 게임 시뮬레이션 엔진](../development/03-game-simulation-engine.md), [04 이벤트 엔진](../development/04-event-engine.md), [14 Legacy Score와 엔딩](../development/14-legacy-score-and-endings.md), [ADR-005](ADR-005-monorepo-boundaries.md)
+- 관련: [로드맵 "Phase 3 이후 병렬화"](../archive/offside/development/00-development-roadmap.md#phase-3-이후-병렬화), [03 게임 시뮬레이션 엔진](../archive/offside/development/03-game-simulation-engine.md), [04 이벤트 엔진](../archive/offside/development/04-event-engine.md), [14 Legacy Score와 엔딩](../archive/offside/development/14-legacy-score-and-endings.md), [ADR-005](ADR-005-monorepo-boundaries.md)
 
 ## 배경
 

@@ -51,7 +51,11 @@ describe('POST /v1/auth/logout', () => {
     expect(setCookie).toContain('offside_session=');
     expect(setCookie).toContain('Max-Age=0');
 
-    const after = await app.request('/v1/careers', { headers: { Cookie: cookie } }, ctx.env);
+    const after = await app.request(
+      '/v1/profile/settings',
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: ALLOWED_ORIGIN, Cookie: cookie }, body: '{}' },
+      ctx.env,
+    );
     expect(after.status).toBe(401);
     expect(ErrorEnvelopeSchema.parse(await after.json()).error.code).toBe('PROFILE_REQUIRED');
   });

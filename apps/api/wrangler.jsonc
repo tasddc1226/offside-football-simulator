@@ -21,8 +21,6 @@
     "WEB_APP_URL": "http://localhost:5173",
     "GOOGLE_REDIRECT_URI": "http://localhost:8787/v1/auth/google/callback",
     "GOOGLE_FAKE": "1",
-    // T-2-012 D-54: local·CI 테스트는 svc_kickoff(기존 테스트 불변), staging은 svc_line_test.
-    "ACTIVE_SERVICE_SEASON_ID": "svc_kickoff",
   },
   "env": {
     "staging": {
@@ -41,7 +39,6 @@
         "WEB_APP_URL": "https://offside-web-staging.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api-staging.tasddc1569.workers.dev/v1/auth/google/callback",
         "GOOGLE_FAKE": "0",
-        "ACTIVE_SERVICE_SEASON_ID": "svc_line_test",
       },
     },
     "production": {
@@ -62,8 +59,6 @@
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",
         "GOOGLE_FAKE": "0",
-        // 운영 배포 workflow가 정확히 일치하는 ACTIVE 행을 INSERT-only로 보장한 뒤 API를 배포한다.
-        "ACTIVE_SERVICE_SEASON_ID": "svc_season_1",
       },
     },
   },

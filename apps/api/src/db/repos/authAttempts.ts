@@ -9,10 +9,6 @@ export type AuthAttemptKind = (typeof authAttempts.$inferSelect)['kind'];
 export const RATE_LIMIT_MAX = 5;
 export const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
-/** T-2-012 D-55: 분석 이벤트 수집은 분당 60요청/clientId. */
-export const ANALYTICS_RATE_LIMIT_MAX = 60;
-export const ANALYTICS_RATE_LIMIT_WINDOW_MS = 60 * 1000;
-
 function windowExpired(windowStart: string, now: string, windowMs: number): boolean {
   return Date.parse(now) - Date.parse(windowStart) >= windowMs;
 }

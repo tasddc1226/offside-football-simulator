@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./headers": "./src/headers.ts"
   },
   "scripts": {
     "test": "vitest run",
@@ -15,8 +16,6 @@
     "zod": "4.5.4"
   },
   "devDependencies": {
-    "@offside/domain": "workspace:*",
-    "@offside/fixtures": "workspace:*",
     "@offside/tsconfig": "workspace:*",
     "typescript": "5.9.3",
     "vitest": "4.1.11"

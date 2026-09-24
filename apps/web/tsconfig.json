@@ -4,7 +4,9 @@
     "rootDir": "src",
     "baseUrl": ".",
     "types": ["vite/client", "node"],
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": false
   },
   "include": ["src"]
 }

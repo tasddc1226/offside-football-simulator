@@ -1,9 +1,0 @@
-{
-  "extends": "@offside/tsconfig/browser.json",
-  "compilerOptions": {
-    "rootDir": ".",
-    "types": ["node"],
-    "allowImportingTsExtensions": true
-  },
-  "include": ["."]
-}

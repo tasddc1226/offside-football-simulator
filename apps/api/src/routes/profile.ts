@@ -9,17 +9,14 @@ import {
   RecoverProfileResponseSchema,
   successEnvelope,
   type DeleteProfileConfirmBody,
-  type PendingMerge,
   type Profile,
   type ProfileSettings,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
-import type { Db } from '../db/client.js';
 import { sha256Hex } from '../db/hash.js';
-import { countCareersByOwner } from '../db/repos/careers.js';
 import { getProfile, createProfile, touchLastSeen, updateSettings, type ProfileRecord } from '../db/repos/profiles.js';
-import { getSessionById, revokeSession } from '../db/repos/sessions.js';
+import { revokeSession } from '../db/repos/sessions.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
@@ -31,25 +28,7 @@ import { recoverProfile } from '../profile/recover.js';
 
 const LAST_SEEN_REFRESH_MS = 60 * 60 * 1000;
 
-/**
- * D-21: `sessionId`가 있고 그 세션에 만료되지 않은 대기 병합(`pending_merge_*`)이 있으면
- * `pendingMerge`를 채운다. 새 프로필을 막 발급한 요청(세션 없음)은 항상 null이다.
- */
-async function resolvePendingMerge(db: Db, sessionId: string | undefined, now: string): Promise<PendingMerge | null> {
-  if (sessionId === undefined) return null;
-  const sessionRow = await getSessionById(db, sessionId);
-  if (
-    !sessionRow ||
-    sessionRow.pendingMergeProfileId === null ||
-    sessionRow.pendingMergeExpiresAt === null ||
-    sessionRow.pendingMergeExpiresAt <= now
-  ) {
-    return null;
-  }
-  return { targetCareerCount: await countCareersByOwner(db, sessionRow.pendingMergeProfileId) };
-}
-
-async function buildProfileResponse(db: Db, record: ProfileRecord, sessionId: string | undefined, now: string): Promise<Profile> {
+function buildProfileResponse(record: ProfileRecord): Profile {
   return {
     id: record.id,
     settings: record.settings,
@@ -57,7 +36,6 @@ async function buildProfileResponse(db: Db, record: ProfileRecord, sessionId: st
     recoveryCodeIssuedAt: record.recoveryCodeIssuedAt,
     createdAt: record.createdAt,
     googleEmailMasked: maskEmail(record.email),
-    pendingMerge: await resolvePendingMerge(db, sessionId, now),
   };
 }
 
@@ -90,7 +68,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     }
 
     const body = successEnvelope(ProfileSchema).parse({
-      data: await buildProfileResponse(db, record, existingSession?.id, now),
+      data: buildProfileResponse(record),
       meta: { requestId: c.get('requestId') },
     });
     return c.json(body, 200);
@@ -117,7 +95,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     const updated = await updateSettings(db, session.profileId, definedPatch);
 
     const body = successEnvelope(ProfileSchema).parse({
-      data: await buildProfileResponse(db, updated, session.id, new Date().toISOString()),
+      data: buildProfileResponse(updated),
       meta: { requestId: c.get('requestId') },
     });
     return c.json(body, 200);
@@ -155,7 +133,6 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
 
     const result = await recoverProfile(db, {
       code: parsed.code,
-      ...(parsed.mergeChoice !== undefined ? { mergeChoice: parsed.mergeChoice } : {}),
       currentProfileId: session.profileId,
       sessionId: session.id,
       ip,

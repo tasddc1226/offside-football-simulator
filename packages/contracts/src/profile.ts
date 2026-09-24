@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { PendingMergeSchema } from './auth.js';
 import { IsoUtcSchema } from './primitives.js';
 
 /** 02 `ProfileSettings`. */
@@ -13,9 +12,8 @@ export const ProfileSettingsSchema = z.strictObject({
 export type ProfileSettings = z.infer<typeof ProfileSettingsSchema>;
 
 /**
- * API-PRO-001. 클라이언트에 노출되는 필드만(02 `LocalProfile` 전체가 아니다). `googleEmailMasked`·
- * `pendingMerge`(D-21)는 `.default(null)`로 옵셔널 호환이다 — 두 필드가 없는 옛 응답·테스트 스텁도
- * 그대로 파싱된다.
+ * API-PRO-001. 클라이언트에 노출되는 필드만(02 `LocalProfile` 전체가 아니다). `googleEmailMasked`는
+ * `.default(null)`로 옵셔널 호환이다 — 이 필드가 없는 옛 응답·테스트 스텁도 그대로 파싱된다.
  */
 export const ProfileSchema = z.strictObject({
   id: z.string().min(1),
@@ -24,7 +22,6 @@ export const ProfileSchema = z.strictObject({
   recoveryCodeIssuedAt: IsoUtcSchema.nullable(),
   createdAt: IsoUtcSchema,
   googleEmailMasked: z.string().nullable().default(null),
-  pendingMerge: PendingMergeSchema.nullable().default(null),
 });
 
 export type Profile = z.infer<typeof ProfileSchema>;

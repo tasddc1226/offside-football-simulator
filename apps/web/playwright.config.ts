@@ -1,47 +1,28 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// D-18: E2E_WITH_API=1이면 recovery-api.spec.ts가 실제 apps/api(wrangler dev, 포트 8787)를 쓴다.
-// apps/api/wrangler.jsonc의 ALLOWED_ORIGINS는 5173만 허용한다(apps/api는 T-1-012 범위 밖이라
-// 고치지 않는다) — 그래서 이 모드에서만 웹도 5173(vite 기본 포트)으로 띄운다. 기본(스텁 API) 모드는
-// 그대로 5174를 써 개발자가 따로 띄워 둔 `pnpm dev`(5173)와 충돌하지 않는다.
+// T-9-001b: 계정 UI(e2e)는 실제 apps/api를 띄우지 않고 page.route로 스텁한다 — 게임 데이터는
+// 전부 브라우저 localStorage에 남고, 서버가 아는 것은 로그인 상태뿐이라 API 목업만으로 충분하다.
+// 그래서 옛 E2E_WITH_API(wrangler dev 동시 기동) 모드는 제거했다.
 //
-// T-1-014: E2E_PREVIEW=1이면 perf.spec.ts가 실제 빌드(vite build && vite preview, 포트 5175)를
-// 쓴다 — dev 서버(HMR·미압축 번들)로는 LCP·CLS가 실제 배포본과 다르게 나온다.
+// 기본값은 실제 빌드(vite build && vite preview)로 띄운다 — /guide, /faq, /legal/* 정적 페이지는
+// scripts/seo.mjs의 빌드 후 처리(closeBundle)로만 생성되고 `vite dev`에는 존재하지 않으므로,
+// 공개 페이지/접근성 테스트가 통과하려면 빌드본이 필요하다. 게임 로직만 빠르게 반복할 때는
+// E2E_DEV=1로 HMR dev 서버를 쓸 수 있다(이 경우 공개 페이지 테스트는 실패한다 — 의도된 동작).
 //
-// T-2-007: 워크트리 병행 투입 시 여러 세션이 동시에 e2e를 돌리면 기본 포트가 충돌한다 —
-// E2E_PORT/E2E_API_URL로 오버라이드할 수 있게 연다(기본값은 그대로, reuseExistingServer 동작도
-// 그대로 — apps/web/e2e/README.md 참고).
-const WITH_API = process.env.E2E_WITH_API === '1';
-const WITH_PREVIEW = process.env.E2E_PREVIEW === '1';
-const PORT = Number(process.env.E2E_PORT) || (WITH_PREVIEW ? 5175 : WITH_API ? 5173 : 5174);
+// CI(ci.yml, full-validation.yml)는 e2e 이전 단계에서 이미 `pnpm build`를 한 번 돌린다 —
+// E2E_PREBUILT=1이면 webServer가 그 dist를 그대로 preview만 하고 다시 빌드하지 않는다.
+// 로컬 `pnpm e2e`는 기본값(E2E_PREBUILT 미설정)이라 여전히 매번 빌드한다.
+//
+// 워크트리 병행 투입 시 여러 세션이 동시에 e2e를 돌리면 기본 포트가 충돌한다 — E2E_PORT로 오버라이드.
+const WITH_DEV = process.env.E2E_DEV === '1';
+const PREBUILT = process.env.E2E_PREBUILT === '1';
+const PORT = Number(process.env.E2E_PORT) || (WITH_DEV ? 5174 : 5175);
 const BASE_URL = `http://localhost:${PORT}`;
-const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8787';
-
-const webServer: NonNullable<ReturnType<typeof defineConfig>['webServer']> = [
-  {
-    command: WITH_PREVIEW ? `pnpm build && vite preview --port ${PORT}` : `vite dev --port ${PORT}`,
-    url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
-    timeout: WITH_PREVIEW ? 120_000 : 30_000,
-  },
-];
-
-if (WITH_API) {
-  webServer.push({
-    command: 'pnpm --filter @offside/api dev',
-    url: `${API_URL}/v1/health`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
-  });
-}
 
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   reporter: 'list',
-  // Remote rehearsal/smoke use their dedicated configs. Default full regression
-  // must never connect to staging or create remote QA careers.
-  testIgnore: /staging-(rehearsal|smoke)\.spec\.ts/,
   use: {
     baseURL: BASE_URL,
     viewport: { width: 360, height: 780 },
@@ -53,5 +34,14 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 360, height: 780 } },
     },
   ],
-  webServer,
+  webServer: {
+    command: WITH_DEV
+      ? `vite dev --port ${PORT}`
+      : PREBUILT
+        ? `vite preview --port ${PORT}`
+        : `pnpm build && vite preview --port ${PORT}`,
+    url: BASE_URL,
+    reuseExistingServer: !process.env.CI,
+    timeout: WITH_DEV ? 30_000 : 120_000,
+  },
 });

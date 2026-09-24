@@ -36,10 +36,10 @@ client ID·secret은 메모리에서 CLI 표준 입력으로 GitHub production e
 | Google Cloud 소유 계정 / 지원 연락처 | `tasddc1569@gmail.com`                                               |
 | 앱 이름                              | 오프사이드 (OFFSIDE)                                                 |
 | 클라이언트 유형                      | 웹 애플리케이션                                                      |
-| 운영 웹                              | `https://offside-web.tasddc1569.workers.dev`                         |
-| 승인된 리디렉션 URI                  | `https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback` |
-| 개인정보 처리방침                    | `https://offside-web.tasddc1569.workers.dev/legal/privacy`           |
-| 이용약관                             | `https://offside-web.tasddc1569.workers.dev/legal/terms`             |
+| 운영 웹                              | `https://offside-lab.com` (기존 `https://offside-web.tasddc1569.workers.dev`도 유지)     |
+| 승인된 리디렉션 URI                  | `https://api.offside-lab.com/v1/auth/google/callback` (기존 `https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback`도 유지) |
+| 개인정보 처리방침                    | `https://offside-lab.com/legal/privacy/`                             |
+| 이용약관                             | `https://offside-lab.com/legal/terms/`                               |
 | 요청 scope                           | `openid email`                                                       |
 | Worker                               | `offside-api`, Wrangler environment `production`                     |
 | 자격 증명 이름                       | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                           |
@@ -69,8 +69,9 @@ Google 계정의 안정적인 `sub`를 연결 키로 사용하고 이메일로 �
    별도 클라이언트와 정확한 환경별 callback을 준비한다. `GOOGLE_FAKE=1`은 local에서만 허용한다.
 5. secret 변경도 인증 동작을 바꾸는 운영 변경이다. 배포 및 연결 검증 결과를 아래 표에 남긴다.
 
-기존 [운영 배포 런북](production-release.md)의 시즌·D1 보존 규칙을 그대로 따른다.
-이번 작업으로 `svc_season_1`의 종료일, 게임 버전, 커리어·엔딩·Legacy 기록을 바꾸지 않는다.
+기존 [운영 배포 런북](production-release.md)의 배포 순서·read-back 검증을 그대로 따른다.
+T-9-001(풀타임 마이그레이션) 이후 게임 진행은 서버가 아닌 브라우저 localStorage에만 저장되므로,
+Google 연결/해제는 로그인 상태와 프로필 메타데이터에만 영향을 준다.
 
 ## 최소 인수 검증
 

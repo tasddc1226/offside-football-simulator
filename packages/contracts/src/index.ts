@@ -17,123 +17,22 @@ export {
   type ErrorCode,
 } from './errors.js';
 
-export { SemverSchema, VersionTripleSchema, CLIENT_MIN_VERSION_HEADER, type VersionTriple } from './versions.js';
-
-export {
-  CHECKPOINT_TYPES,
-  CheckpointTypeSchema,
-  RngStateSchema,
-  SNAPSHOT_STATE_MAX_BYTES,
-  CareerSnapshotSchema,
-  SnapshotStateEnvelopeSchema,
-  type CheckpointType,
-  type RngState,
-  type CareerSnapshot,
-  type SnapshotStateEnvelope,
-} from './snapshot.js';
-
-export {
-  COMMAND_TYPES,
-  CommandTypeSchema,
-  CommandRequestSchema,
-  CommandLogEntrySchema,
-  NextActionSchema,
-  CommandResponseSchema,
-  CreateCareerPayloadSchema,
-  UpdatePlayerDraftPayloadSchema,
-  ConfirmPlayerPayloadSchema,
-  AdvancePayloadSchema,
-  ResolveEventPayloadSchema,
-  AcceptOfferPayloadSchema,
-  NationalTeamCallUpSchema,
-  COMMAND_PAYLOAD_SCHEMAS,
-  type CommandType,
-  type CommandRequest,
-  type CommandLogEntry,
-  type NextAction,
-  type CommandResponse,
-  type CommandPayloadByType,
-  type Phase1CommandType,
-} from './commands.js';
-
-export {
-  PositionSchema,
-  PositionGroupSchema,
-  PreferredFootSchema,
-  PlayerGenderSchema,
-  PlayerDraftSchema,
-  PlayerProfileSchema,
-  PlayerPublicSchema,
-  toPlayerPublic,
-  type PlayerDraft,
-  type PlayerPublic,
-} from './player.js';
-
-export {
-  SquadRoleSchema,
-  LeagueTierSchema,
-  OfferSchema,
-  ContractSchema,
-  ClubStintSchema,
-  PendingSchema,
-  TimelineEntrySchema,
-  EffectSchema,
-  CAREER_STATE_ATTRIBUTE_KEYS,
-  AttributesSchema,
-  CareerStateSchema,
-  getCareerStateInvariantIssues,
-  SeasonManagerSchema,
-  InjurySeveritySchema,
-  InjuryBodyPartSchema,
-  RehabPlanSchema,
-  InjuryEpisodeSchema,
-  RelationTargetSchema,
-  RelationshipLogEntrySchema,
-  ReputationSchema,
-  type CareerState,
-} from './career-state.js';
-
 export {
   RECOVERY_CODE_ALPHABET,
   normalizeRecoveryCode,
   formatRecoveryCode,
   RecoveryCodeInputSchema,
-  MergeChoiceSchema,
   IssueRecoveryCodeResponseSchema,
   RecoverProfileBodySchema,
   RecoverProfileResponseSchema,
-  RecoveryConflictDetailsSchema,
   DeleteProfileStartResponseSchema,
   DeleteProfileConfirmBodySchema,
-  MergeRequestBodySchema,
-  MergeResponseSchema,
-  PendingMergeSchema,
-  type MergeChoice,
   type IssueRecoveryCodeResponse,
   type RecoverProfileBody,
   type RecoverProfileResponse,
-  type RecoveryConflictDetails,
   type DeleteProfileStartResponse,
   type DeleteProfileConfirmBody,
-  type MergeRequestBody,
-  type MergeResponse,
-  type PendingMerge,
 } from './auth.js';
-
-export {
-  PutCareerBodySchema,
-  PutCareerResponseSchema,
-  CareerSummarySchema,
-  CareerSummaryListSchema,
-  GetCareerResponseSchema,
-  RevisionConflictDetailsSchema,
-  type PutCareerBody,
-  type PutCareerResponse,
-  type CareerSummary,
-  type CareerSummaryList,
-  type GetCareerResponse,
-  type RevisionConflictDetails,
-} from './careers.js';
 
 export {
   ProfileSettingsSchema,
@@ -157,51 +56,8 @@ export {
   CORS_ALLOWED_HEADERS,
   CORS_EXPOSED_HEADERS,
   REQUEST_BODY_MAX_BYTES,
-  SNAPSHOT_STATE_RECOMMENDED_BYTES,
 } from './headers.js';
 
 export { HealthDataSchema, HealthResponseSchema, type HealthData, type HealthResponse } from './health.js';
 
 export { IsoUtcSchema, Hex64Schema, Uint32Schema, ClientIdSchema } from './primitives.js';
-
-export {
-  SERVICE_SEASON_NOTICE_KEYS,
-  ServiceSeasonNoticeKeySchema,
-  ServiceSeasonCurrentSchema,
-  type ServiceSeasonNoticeKey,
-  type ServiceSeasonCurrent,
-} from './service-seasons.js';
-
-export {
-  LivePresenceSchema,
-  GetLivePresenceResponseSchema,
-  type LivePresence,
-  type GetLivePresenceResponse,
-} from './presence.js';
-
-export {
-  NoticeSchema,
-  NoticesResponseSchema,
-  NOTICES_DEFAULT_LIMIT,
-  NOTICES_MAX_LIMIT,
-  type Notice,
-  type NoticesResponse,
-} from './notices.js';
-
-export {
-  ANALYTICS_EVENT_NAMES,
-  AnalyticsEventNameSchema,
-  ANALYTICS_EVENT_PROPS_SCHEMAS,
-  AnalyticsEventInputSchema,
-  ANALYTICS_EVENTS_MAX_COUNT,
-  AnalyticsEventsBodySchema,
-  type AnalyticsEventName,
-  type AnalyticsEventInput,
-  type AnalyticsEventsBody,
-} from './analytics.js';
-
-export * from './locker-room.js';
-export * from './career-publications.js';
-export * from './friendly-match.js';
-export * from './competition.js';
-export * from './annual-career.js';

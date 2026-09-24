@@ -1,7 +1,7 @@
 # ADR-004. 규칙·이벤트 콘텐츠 포맷
 
-- 상태: 확정 (2026-09-02)
-- 관련: [이벤트 엔진](../development/04-event-engine.md), [콘텐츠 README](../content/README.md), [ADR-007](ADR-007-hosting-and-infra.md)
+- 상태: Superseded by ADR-013 (2026-09-24). 확정 (2026-09-02)
+- 관련: [이벤트 엔진](../archive/offside/development/04-event-engine.md), [콘텐츠 README](../archive/offside/content/README.md), [ADR-007](ADR-007-hosting-and-infra.md)
 
 ## 결정
 

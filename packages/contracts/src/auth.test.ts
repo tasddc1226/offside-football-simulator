@@ -4,13 +4,11 @@ import {
   DeleteProfileStartResponseSchema,
   formatRecoveryCode,
   IssueRecoveryCodeResponseSchema,
-  MergeChoiceSchema,
   normalizeRecoveryCode,
   RECOVERY_CODE_ALPHABET,
   RecoverProfileBodySchema,
   RecoverProfileResponseSchema,
   RecoveryCodeInputSchema,
-  RecoveryConflictDetailsSchema,
 } from './auth.js';
 
 describe('RECOVERY_CODE_ALPHABET', () => {
@@ -83,24 +81,14 @@ describe('나머지 스키마 스모크', () => {
     expect(result.success).toBe(false);
   });
 
-  it('MergeChoiceSchema', () => {
-    expect(MergeChoiceSchema.safeParse('MOVE_TO_LINKED').success).toBe(true);
-    expect(MergeChoiceSchema.safeParse('DELETE').success).toBe(false);
-  });
-
-  it('RecoverProfileBodySchema는 mergeChoice 없이도 성공한다', () => {
+  it('RecoverProfileBodySchema', () => {
     const result = RecoverProfileBodySchema.safeParse({ code: 'OFS-ABCD-2345-EFGH' });
     expect(result.success).toBe(true);
   });
 
   it('RecoverProfileResponseSchema', () => {
-    expect(RecoverProfileResponseSchema.safeParse({ profileId: 'prof_1', careerCount: 2 }).success).toBe(true);
-    expect(RecoverProfileResponseSchema.safeParse({ profileId: 'prof_1', careerCount: -1 }).success).toBe(false);
-  });
-
-  it('RecoveryConflictDetailsSchema', () => {
-    const result = RecoveryConflictDetailsSchema.safeParse({ currentCareerCount: 1, targetCareerCount: 0 });
-    expect(result.success).toBe(true);
+    expect(RecoverProfileResponseSchema.safeParse({ profileId: 'prof_1' }).success).toBe(true);
+    expect(RecoverProfileResponseSchema.safeParse({ profileId: '' }).success).toBe(false);
   });
 
   it('DeleteProfileStartResponseSchema', () => {
