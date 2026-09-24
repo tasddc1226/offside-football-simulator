@@ -6,6 +6,7 @@ import { leagueOf, clubsIn, fmtMoney, salaryFor, addStat, addAttr, log, bloomTic
 import { seasonSetup, compGoals, seasonAwards, checkMilestones, retireMilestones } from './comps.js';
 import { natInit, natSeasonEnd } from './national.js';
 import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
+import { detectCareerHighs } from './records.js';
 import type { GameState, CareerRecord, HofEntry, MarketOption, OfferOption } from './types.js';
 
 export function endSeason(s: GameState) {
@@ -39,6 +40,7 @@ export function endSeason(s: GameState) {
     pro: !L.amateur, comps, caps: s.nat.caps - (S.capsStart || 0),
   } as CareerRecord;
   s.career.push(rec);
+  rec.ch = detectCareerHighs(s, rec);
   const miles = checkMilestones(s, rec as unknown as { pro?: boolean; apps: number; goals: number; club: string });
   log(s, `${s.year} 시즌 종료 · ${L.name} ${rank}위 · 공식전 ${rec.apps}경기 ${rec.goals}골 ${rec.assists}도움`, 'big');
   const mil = milSeasonEnd(s);
@@ -202,12 +204,31 @@ export function acceptOption(s: GameState, opt: MarketOption): { text: string; o
 const LEGEND_W: Record<string, { g: number; a: number; cs: number }> = {
   FW: { g: .42, a: .35, cs: 0 }, MF: { g: .65, a: .75, cs: 0 }, DF: { g: .9, a: .5, cs: .9 }, GK: { g: 1, a: .6, cs: .95 },
 };
-export function legendScore(s: GameState): number {
+export interface LegendBreakdownItem { key: string; label: string; value: number }
+/** legendScore()를 구성하는 각 항의 값을 그대로 나열한다 — 총합은 legendScore()와 항상 같다
+ * (반올림도 legendScore()와 동일하게 마지막에 한 번만 적용). T-10-002 은퇴 리포트용. */
+export function legendScoreBreakdown(s: GameState): { items: LegendBreakdownItem[]; total: number } {
   const t = s.career.reduce((a, r) => ({ g: a.g + r.goals, a: a.a + r.assists, p: a.p + r.apps, cs: a.cs + (r.cs || 0) }), { g: 0, a: 0, p: 0, cs: 0 });
   const w = LEGEND_W[s.pos] || LEGEND_W.MF!;
-  return Math.round(t.g * w.g + t.a * w.a + t.cs * w.cs + t.p * .05 + s.trophies.length * 10 + s.awards.length * 12 + s.nat.caps * .4 + s.peak * 2
-    + s.awards.filter((x) => x.t === '발롱도르').length * 60 + (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0) * .6
-    + s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length * 60 + (s.nat.caps >= 100 ? 25 : 0));
+  const items: LegendBreakdownItem[] = [
+    { key: 'goals', label: '골 기여', value: t.g * w.g },
+    { key: 'assists', label: '도움 기여', value: t.a * w.a },
+    { key: 'cs', label: '무실점 기여', value: t.cs * w.cs },
+    { key: 'apps', label: '출전', value: t.p * .05 },
+    { key: 'trophies', label: '우승 트로피', value: s.trophies.length * 10 },
+    { key: 'awards', label: '개인 수상', value: s.awards.length * 12 },
+    { key: 'caps', label: 'A매치', value: s.nat.caps * .4 },
+    { key: 'peak', label: '최고 OVR', value: s.peak * 2 },
+    { key: 'ballonWin', label: '발롱도르 수상', value: s.awards.filter((x) => x.t === '발롱도르').length * 60 },
+    { key: 'ballonRank', label: '발롱도르 순위', value: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0) * .6 },
+    { key: 'wc', label: '월드컵 우승', value: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length * 60 },
+    { key: 'century', label: '센추리 클럽', value: s.nat.caps >= 100 ? 25 : 0 },
+  ].filter((it) => it.value !== 0);
+  const total = Math.round(items.reduce((sum, it) => sum + it.value, 0));
+  return { items, total };
+}
+export function legendScore(s: GameState): number {
+  return legendScoreBreakdown(s).total;
 }
 export function retire(s: GameState): HofEntry {
   s.retired = true;

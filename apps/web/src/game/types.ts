@@ -66,6 +66,9 @@ export interface CareerRecord {
   comps?: SeasonComp[];
   caps?: number;
   mil?: boolean;
+  /** T-10-002. 이 시즌에 경신한 개인 커리어 하이(CH) 지표 키 목록(goals/assists/apps/rating/cs).
+   * 옛 저장 데이터의 과거 시즌 레코드에는 없을 수 있다 — 없으면 그냥 배지를 표시하지 않는다. */
+  ch?: string[];
 }
 
 export interface NatTour {

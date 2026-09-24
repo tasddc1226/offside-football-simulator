@@ -2,11 +2,13 @@
   // ui.ts careerTab() 포트 (371~387줄)
   import type { GameState } from '../../game/types.js';
   import { seasonLabelOf, totals } from '../format.js';
+  import { nextMilestones } from '../../game/records.js';
 
   const { s }: { s: GameState } = $props();
   const t = $derived(totals(s));
   const rows = $derived(s.career.slice().reverse());
   const miles = $derived((s.miles || []).slice().reverse());
+  const next = $derived(nextMilestones(s));
 </script>
 
 <section class="card stack">
@@ -21,6 +23,21 @@
     {/if}
     <div><b>{s.trophies.length + s.awards.length}</b><span>수상</span></div>
   </div>
+</section>
+{#if next.length}
+  <section class="card stack">
+    <div><div class="eyebrow">Next Goals</div><h2>다음 목표</h2></div>
+    <div class="mile-next">
+      {#each next as m (m.key)}
+        <div class="mile-row">
+          <div class="mile-lbl"><b>{m.label}</b><span>{m.have} / {m.target} · 남은 {m.remaining}</span></div>
+          <div class="legend-bar"><i style="width:{Math.min(100, Math.round((m.have / m.target) * 100))}%"></i></div>
+        </div>
+      {/each}
+    </div>
+  </section>
+{/if}
+<section class="card stack">
   {#if s.career.length}
     <div class="table-wrap">
       <table>
@@ -30,7 +47,7 @@
         <tbody>
           {#each rows as r, i (i)}
             <tr>
-              <td>{r.mil ? r.year : seasonLabelOf(r)} <span class="muted">({r.age})</span></td>
+              <td>{r.mil ? r.year : seasonLabelOf(r)} <span class="muted">({r.age})</span>{#if r.ch?.length}<br /><span class="badge-ch">CH×{r.ch.length}</span>{/if}</td>
               <td>{r.club}<div class="muted" style="font-size:11px">{r.league}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
               <td class="n">{r.apps}</td>
               <td class="n">{r.goals}</td>
