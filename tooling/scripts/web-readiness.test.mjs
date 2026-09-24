@@ -16,7 +16,7 @@ function harness(shells = [html], mutate = (value) => value) {
     expect(options.method).toBe('GET');
     expect(options.cache).toBe('no-store');
     const path = new URL(url).pathname;
-    const body = path === '/onboarding' ? shells[Math.min(shellCount++, shells.length - 1)] : assets.get(path);
+    const body = path === '/settings' ? shells[Math.min(shellCount++, shells.length - 1)] : assets.get(path);
     return mutate({ status: 200, redirected: false, url, arrayBuffer: async () => new TextEncoder().encode(body) }, path);
   });
   return { origin, candidate, fetchImpl, timeoutMs: 50, intervalMs: 10,

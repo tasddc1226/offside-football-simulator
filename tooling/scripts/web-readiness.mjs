@@ -78,7 +78,7 @@ export async function waitForWebCandidate({
   while (now() < deadline) {
     attempts++;
     try {
-      const paths = candidatePaths(new TextDecoder().decode(await get('/onboarding')));
+      const paths = candidatePaths(new TextDecoder().decode(await get('/settings')));
       if (JSON.stringify(paths) !== JSON.stringify([...candidate.keys()].sort()))
         throw new Error('OLD_OR_DIFFERENT_SHELL');
       // Sequential requests bound network pressure and share the same overall deadline.
