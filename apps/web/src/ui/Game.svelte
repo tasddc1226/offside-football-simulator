@@ -9,6 +9,7 @@
   import { goHome } from './actions.js';
   import { advance, nextPending } from './actions.js';
   import { buzz, dur } from './motion.js';
+  import ClubBadge from './ClubBadge.svelte';
   import Topbar from './Topbar.svelte';
   import TabIcon from './TabIcon.svelte';
   import SeasonTab from './tabs/SeasonTab.svelte';
@@ -60,7 +61,7 @@
     <div>
       <div class="shirt">No.{s.number} · {POS[s.pos].label}</div>
       <h1>{s.name}</h1>
-      <div class="meta">{s.age}세 · {s.club.name}<br />{L.name}{contract ? ` · ${contract}` : ''}</div>
+      <div class="meta">{s.age}세 · <ClubBadge club={s.club} size={16} /> {s.club.name}<br />{L.name}{contract ? ` · ${contract}` : ''}</div>
     </div>
     <div class="ovr"><div class="n num">{Math.round(ovrTween.current)}</div><div class="l">OVR</div></div>
     <div class="foot">

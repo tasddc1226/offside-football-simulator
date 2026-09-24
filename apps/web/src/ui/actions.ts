@@ -223,9 +223,9 @@ function showMarket(m: { options: MarketOption[]; note: string; canRetire: boole
       options: m.options.map((o) => {
         if (o.kind === 'offer') {
           const extra = `${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtMoney(o.fee)}` : G.contract && !leagueOf(G.leagueId).amateur ? ' · 자유계약(FA)' : ''}`;
-          return { name: o.name, lg: `${leagueOf(o.leagueId).name} · 팀 전력 ${o.str}`, salary: fmtMoney(o.salary), sub: `${o.years}년 계약${extra}` };
+          return { clubId: o.clubId, name: o.name, lg: `${leagueOf(o.leagueId).name} · 팀 전력 ${o.str}`, salary: fmtMoney(o.salary), sub: `${o.years}년 계약${extra}` };
         }
-        if (o.kind === 'renew') return { name: o.name, lg: leagueOf(G.leagueId).name, salary: fmtMoney(o.salary), sub: `${o.years}년 계약` };
+        if (o.kind === 'renew') return { clubId: G.club.id, name: o.name, lg: leagueOf(G.leagueId).name, salary: fmtMoney(o.salary), sub: `${o.years}년 계약` };
         return { name: o.name, lg: o.desc ?? '', salary: null, sub: null };
       }),
     },
@@ -318,6 +318,10 @@ export function goContinue() {
 export function goHome() {
   appState.screen = 'home';
   closeSheet();
+}
+export function goSettings() {
+  appState.screen = 'settings';
+  window.scrollTo(0, 0);
 }
 export function startCareer(name: string, number: number, presetAttrs?: Record<AttrKey, number>) {
   const finalName = name.trim() || randomName();

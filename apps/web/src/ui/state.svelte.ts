@@ -8,7 +8,7 @@ import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
 import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
 
-export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend';
+export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
 
 export interface DraftCharacter {

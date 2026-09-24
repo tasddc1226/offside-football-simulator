@@ -1,5 +1,5 @@
 // ───────── 시즌 종료 · 이적 시장 · 은퇴 · 저장 ─────────
-import { CLUBS, LEAGUES } from './data.js';
+import { CLUBS, LEAGUES, type Club } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, rnd } from './rng.js';
 import { leagueOf, clubsIn, fmtMoney, salaryFor, addStat, addAttr, log, bloomTick, newSeason, finalRank } from './engine.js';
@@ -68,6 +68,19 @@ export function endSeason(s: GameState) {
 }
 
 // ───────── 이적 시장 ─────────
+// T-10-009: 스카우트·에이전트가 붙여 주는 "갈 수 있는 가장 강한 유럽 클럽". 전력 값이 촘촘해져(리그당 팀 증가)
+// 상한에 딱 맞는 클럽이 늘 있으므로 상한을 1 낮춰 예전 평균 간격을 맞춘다(유럽 진출률 기준선 유지). 같은 전력의
+// 클럽이 여러 리그에 생겼으므로, 최고 전력 동률 리그 중 하나를 리그 자금력(wealth) 비례로 고른다 —
+// CLUBS 순서면 에레디비시가, 상위 리그 우선이면 PL이 늘 이겨 PL 진출률이 26%/52%로 틀어졌다(기준 35%).
+function bestEuropeClub(s: GameState, cap: number, taken: Club[]): Club | undefined {
+  const cands = CLUBS.filter((c) => leagueOf(c.leagueId).tier >= 4 && c.str <= cap && !taken.includes(c) && c.id !== s.club.id);
+  if (!cands.length) return undefined;
+  const top = Math.max(...cands.map((c) => c.str));
+  const perLeague = [...new Map(cands.filter((c) => c.str === top).map((c) => [c.leagueId, c] as const)).values()];
+  const w = (c: Club) => leagueOf(c.leagueId).wealth;
+  let x = rnd() * perLeague.reduce((t, c) => t + w(c), 0);
+  return perLeague.find((c) => (x -= w(c)) <= 0) ?? perLeague[perLeague.length - 1];
+}
 export function makeOffers(s: GameState) {
   const last = s.career.filter((r) => !r.mil).pop();
   const o = ovr(s);
@@ -86,14 +99,12 @@ export function makeOffers(s: GameState) {
     chosen.push(pool.splice(Math.max(0, idx), 1)[0]!);
   }
   if (s.flags.scouted) {
-    const eu = CLUBS.filter((c) => leagueOf(c.leagueId).tier >= 4 && c.str <= value + 2 && !chosen.includes(c) && c.id !== s.club.id)
-      .sort((a, b) => b.str - a.str)[0];
+    const eu = bestEuropeClub(s, value + 1, chosen);
     if (eu) chosen.push(eu);
     s.flags.scouted = false;
   }
   if (s.flags.agent) {
-    const eu = CLUBS.filter((c) => leagueOf(c.leagueId).tier >= 4 && c.str <= value + 3 && !chosen.includes(c) && c.id !== s.club.id)
-      .sort((a, b) => b.str - a.str)[0];
+    const eu = bestEuropeClub(s, value + 2, chosen);
     if (eu) chosen.push(eu);
     s.flags.agent = false;
   }
@@ -271,8 +282,9 @@ export function legendTitle(score: number): string {
 }
 
 // ───────── 저장 ─────────
-export function saveKey(k: string, v: unknown) {
-  try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ }
+/** 저장 성공 여부를 돌려준다(용량 초과·저장소 차단이면 false). */
+export function saveKey(k: string, v: unknown): boolean {
+  try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; }
 }
 export function loadKey<T = unknown>(k: string): T | null {
   try {
