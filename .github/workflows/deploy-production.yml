@@ -28,7 +28,7 @@ concurrency:
 jobs:
   production-release:
     name: ${{ inputs.mode == 'deploy' && 'Deploy production' || 'Preflight production' }}
-    runs-on: [self-hosted, macOS, ARM64, offside]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
       name: production

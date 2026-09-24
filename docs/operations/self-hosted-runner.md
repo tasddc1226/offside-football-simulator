@@ -1,5 +1,9 @@
 # macOS self-hosted Actions runner
 
+> **사용 중단 (2026-09-24)**: 저장소를 공개로 전환하면서 모든 워크플로를 GitHub-hosted `ubuntu-latest`로 옮겼다.
+> 공개 저장소에서 self-hosted runner를 쓰면 외부 PR 코드가 로컬 Mac에서 실행될 수 있으므로 다시 붙이지 않는다.
+> 아래 내용은 기록용으로 남긴다.
+
 2026-09-05 사용자 승인: GitHub-hosted Actions의 계정 결제/지출 한도 차단에 대응해 현재 Mac에서 CI를 실행한다.
 전환 당시 저장소 공개 전환, 유료 한도 변경, 검사 생략은 하지 않았다. GitHub 결제 상태 자체가 해결된 것은 아니다.
 이후 사용자 승인으로 검사 빈도를 경량화했다. 현재 정책은 [CI와 staging](ci-and-staging.md)을 따른다.

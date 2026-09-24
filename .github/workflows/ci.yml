@@ -18,7 +18,7 @@ jobs:
   pr-checks:
     name: PR quick checks
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, macOS, ARM64, offside]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
@@ -56,7 +56,7 @@ jobs:
   deploy-staging:
     name: Main checks and staging deploy
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, macOS, ARM64, offside]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
@@ -117,7 +117,7 @@ jobs:
           pnpm --filter @offside/api db:check
           pnpm build
           pnpm --filter @offside/web check:bundle
-          pnpm --filter @offside/web exec playwright install chromium
+          pnpm --filter @offside/web exec playwright install --with-deps chromium
           pnpm --filter @offside/web e2e
         env:
           CI: 'true'
