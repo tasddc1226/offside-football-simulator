@@ -1,5 +1,5 @@
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
-import type { Profile as ContractProfile } from '@offside/contracts';
+import type { Profile as ContractProfile, HofDetailResponse, HofListResponse } from '@offside/contracts';
 import { resolveApiBaseUrl } from './base-url.js';
 
 // API 클라이언트 최소본 (계정: 로그인/프로필/연동 해제/로그아웃/삭제 만). 게임 상태는 전부
@@ -89,4 +89,12 @@ export function confirmProfileDeletion(confirmToken: string): Promise<ApiResult<
 }
 export function googleStartUrl(): string {
   return `${API_BASE_URL}/v1/auth/google/start`;
+}
+
+// ───────── T-10-005 공개 명예의 전당 (로그인 불필요) ─────────
+export function getHof(limit = 50): Promise<ApiResult<HofListResponse>> {
+  return apiFetch<HofListResponse>(`/v1/hof?limit=${limit}`, { method: 'GET' });
+}
+export function getHofDetail(careerId: string): Promise<ApiResult<HofDetailResponse>> {
+  return apiFetch<HofDetailResponse>(`/v1/hof/${encodeURIComponent(careerId)}`, { method: 'GET' });
 }

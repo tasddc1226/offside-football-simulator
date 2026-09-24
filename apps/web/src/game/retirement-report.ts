@@ -1,6 +1,6 @@
 // ───────── 은퇴 리포트: 전성기·베스트 시즌·개인 기록·연도별 타임라인 (T-10-002) ─────────
 // 순수 함수만 있다 — s.career(이미 기록된 시즌들)만 읽고 RNG를 전혀 쓰지 않는다.
-import type { CareerRecord, GameState } from './types.js';
+import type { CareerRecord, LegendSource } from './types.js';
 
 export interface PersonalBest {
   key: string;
@@ -10,7 +10,7 @@ export interface PersonalBest {
   age: number;
 }
 /** 시즌별 스탯 중 개인 최고 기록(연도/나이 포함)을 뽑는다. */
-export function personalBests(s: GameState): PersonalBest[] {
+export function personalBests(s: LegendSource): PersonalBest[] {
   const rows = s.career;
   if (!rows.length) return [];
   const pick = (key: string, label: string, f: (r: CareerRecord) => number): PersonalBest | null => {
@@ -34,7 +34,7 @@ export function personalBests(s: GameState): PersonalBest[] {
 // 시즌 기여도(전성기·베스트 시즌 선정 공통 기준).
 const score = (r: CareerRecord) => r.goals + r.assists * 0.8 + r.rating * r.apps * 0.3;
 
-export function primeSeasons(s: GameState, windowSize = 3): CareerRecord[] {
+export function primeSeasons(s: LegendSource, windowSize = 3): CareerRecord[] {
   const rows = s.career;
   if (rows.length <= windowSize) return rows.slice();
   let bestStart = 0, bestSum = -Infinity;
@@ -47,7 +47,7 @@ export function primeSeasons(s: GameState, windowSize = 3): CareerRecord[] {
 }
 
 /** 베스트 3시즌(반드시 연속일 필요는 없음): 위 score 기준 상위 3개, 연대순 정렬해 반환. */
-export function bestSeasons(s: GameState, n = 3): CareerRecord[] {
+export function bestSeasons(s: LegendSource, n = 3): CareerRecord[] {
   const rows = s.career;
   return rows.slice().sort((a, b) => score(b) - score(a)).slice(0, n).sort((a, b) => a.year - b.year);
 }
@@ -59,7 +59,7 @@ export interface TimelineRow {
   summary: string;
   ch: string[];
 }
-export function careerTimeline(s: GameState): TimelineRow[] {
+export function careerTimeline(s: LegendSource): TimelineRow[] {
   return s.career.map((r) => ({
     year: r.year,
     age: r.age,

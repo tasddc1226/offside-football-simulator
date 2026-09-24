@@ -1,14 +1,15 @@
 <script lang="ts">
   // ui.ts careerTab() 포트 (371~387줄)
-  import type { GameState } from '../../game/types.js';
+  import type { GameState, LegendSource } from '../../game/types.js';
   import { seasonLabelOf, totals } from '../format.js';
   import { nextMilestones } from '../../game/records.js';
 
-  const { s }: { s: GameState } = $props();
+  // 은퇴 상세(LegendSource)에는 '다음 목표'가 없다 — 진행 중인 커리어(GameState)에서만 계산한다.
+  const { s }: { s: LegendSource | GameState } = $props();
   const t = $derived(totals(s));
   const rows = $derived(s.career.slice().reverse());
   const miles = $derived((s.miles || []).slice().reverse());
-  const next = $derived(nextMilestones(s));
+  const next = $derived('attrs' in s && !s.retired ? nextMilestones(s) : []);
 </script>
 
 <section class="card stack">

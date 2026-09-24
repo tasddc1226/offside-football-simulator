@@ -7,6 +7,7 @@
   import Create from './Create.svelte';
   import Game from './Game.svelte';
   import Retired from './Retired.svelte';
+  import Legend from './Legend.svelte';
 </script>
 
 <!-- 화면 전환 모션(T-10-003 goal 3): appState.screen을 key로 써서 화면이 바뀔 때만 새로 마운트해
@@ -22,6 +23,8 @@
       <Create />
     {:else if appState.screen === 'retired'}
       <Retired />
+    {:else if appState.screen === 'legend'}
+      <Legend />
     {:else}
       <Game />
     {/if}

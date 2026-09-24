@@ -5,10 +5,10 @@
 import type { Pos } from '../game/data.js';
 import { pick } from '../game/rng.js';
 import { SURNAMES, GIVEN } from '../game/data.js';
-import type { GameState, HofEntry } from '../game/types.js';
+import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
 
-export type Screen = 'home' | 'create' | 'retired' | 'game';
+export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
 
 export interface DraftCharacter {
@@ -24,11 +24,27 @@ export function randomName(): string {
   return pick(SURNAMES) + pick(GIVEN);
 }
 
+/** T-10-005 은퇴 선수 상세 화면에 띄울 대상. 내 선수(로컬 ft_hof)면 `own`이 있고 이름 공개를 바꿀 수 있다. */
+export interface LegendView {
+  name: string;
+  number: number | null;
+  pos: Pos;
+  age: number;
+  lastClub: string;
+  score: number;
+  peak: number;
+  /** 시즌별 상세. 옛 기록(스냅샷 없음)은 null — 요약만 보여 준다. */
+  d: LegendSource | null;
+  totals: { apps: number; goals: number; assists: number; trophies: number; awards: number; caps: number };
+  own: HofEntry | null;
+}
+
 export const appState = $state<{
   G: GameState | null;
   screen: Screen;
   tab: Tab;
   lastRetired: HofEntry | null;
+  legend: LegendView | null;
   C: DraftCharacter;
   /** T-10-002. 선수 생성 후보 카드 3장(같은 능력치 총합, 다른 분포) — 생성 화면을 벗어나면 null. */
   candidates: Candidate[] | null;
@@ -39,6 +55,7 @@ export const appState = $state<{
   screen: 'home',
   tab: 'season',
   lastRetired: null,
+  legend: null,
   C: {
     name: randomName(),
     number: 10,

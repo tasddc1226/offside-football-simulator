@@ -1,8 +1,8 @@
 <script lang="ts">
   // ui.ts trophyTab() 포트 (388~395줄)
-  import type { GameState } from '../../game/types.js';
+  import type { LegendSource } from '../../game/types.js';
 
-  const { s }: { s: GameState } = $props();
+  const { s }: { s: LegendSource } = $props();
   const trophies = $derived(s.trophies.slice().reverse());
   const awards = $derived(s.awards.slice().reverse());
   const ballon = $derived((s.ballon || []).slice().reverse());

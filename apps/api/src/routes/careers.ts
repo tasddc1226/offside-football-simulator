@@ -12,6 +12,7 @@ import { getCareer, getCareerOwner, putCareerSeason, putRetirement } from '../db
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
+import { isAcceptablePublicName } from './hof.js';
 
 function parseJsonBody(rawBody: string): unknown {
   try {
@@ -88,10 +89,17 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
 
     const rawBody = c.get('rawBody') ?? '';
     const json = parseJsonBody(rawBody);
-    const summary = parseWithAppError(PutRetirementBodySchema, json);
+    const { publicName, snapshot, ...summary } = parseWithAppError(PutRetirementBodySchema, json);
+    if (publicName && !isAcceptablePublicName(publicName)) {
+      throw new AppError({
+        code: 'VALIDATION_FAILED',
+        message: '공개할 수 없는 이름입니다.',
+        details: { reason: 'PUBLIC_NAME_REJECTED' },
+      });
+    }
     const now = new Date().toISOString();
 
-    await putRetirement(db, { careerId, summary, now });
+    await putRetirement(db, { careerId, summary, publicName, snapshot, now });
 
     const responseBody = successEnvelope(RetirementResponseSchema).parse({
       data: { careerId, status: 'retired' },

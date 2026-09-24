@@ -2,10 +2,11 @@
 import { clubsIn, leagueOf } from '../game/engine.js';
 import { initSubs, legacyOvr } from '../game/attributes.js';
 import { natInit } from '../game/national.js';
-import { loadKey } from '../game/season.js';
+import { legendSnapshot, loadHOF, loadKey, saveKey } from '../game/season.js';
 import { createRng, freshSeed, setActiveRng } from '../game/rng.js';
 import type { GameState } from '../game/types.js';
 import { appState } from './state.svelte.js';
+import { uploadRetirement } from './helpers.js';
 
 export function loadGame() {
   let G: GameState | null = loadKey<GameState>('ft_save') || loadKey<GameState>('sl_save');
@@ -48,6 +49,19 @@ export function loadGame() {
       .concat(clubsIn('hs'))
       .find((x) => x.id === gClubId);
     if (c) G.club.name = c.name;
+    // T-10-005: 은퇴 상세 스냅샷 도입 전에 은퇴한 선수. 세이브(ft_save)에 남아 있는 마지막 은퇴 선수만
+    // 되살릴 수 있다 — 명예의 전당 항목에 커리어 ID와 상세를 붙이고 서버에도 다시 올린다(기본 익명).
+    if (G.retired) {
+      const s = G;
+      const hof = loadHOF();
+      const h = hof.find((x) => !x.id && x.name === s.name && x.age === s.age && x.peak === s.peak);
+      if (h) {
+        h.id = s.cid;
+        h.detail = legendSnapshot(s);
+        saveKey('ft_hof', hof);
+        uploadRetirement(s.cid, h);
+      }
+    }
   } else {
     setActiveRng(createRng(freshSeed()));
   }

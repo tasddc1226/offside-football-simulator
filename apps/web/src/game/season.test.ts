@@ -63,3 +63,19 @@ describe('저장/불러오기 라운드트립', () => {
     expect(loadKey('ft_hof')).toEqual(hof);
   });
 });
+
+describe('T-10-005 은퇴 스냅샷', () => {
+  it('서버 계약(LegendSnapshotSchema)을 통과하고 CareerRecord 부가 필드는 빠진다', async () => {
+    const { LegendSnapshotSchema } = await import('@offside/contracts');
+    const { legendSnapshot } = await import('./season.js');
+    setActiveRng(createRng(3));
+    const g = newGame({ name: '스냅샷', number: 11, pos: 'DF', foot: '왼발', type: 'stopper', trait: 'late' }, 3);
+    g.career.push({ year: 2026, age: 18, club: 'A', league: '고교리그', apps: 10, goals: 1, assists: 2, cs: 4, lgApps: 8, rating: 7, rank: 2, ovr: 60, honors: [], pro: false, comps: [], ch: ['cs'] } as never);
+    g.trophies.push({ year: 2026, t: '우승', club: 'A' });
+    const snap = legendSnapshot(g);
+    expect(() => LegendSnapshotSchema.parse(snap)).not.toThrow();
+    expect(snap.career[0]).not.toHaveProperty('lgApps');
+    expect(snap.career[0]).not.toHaveProperty('comps');
+    expect(snap).not.toHaveProperty('name');
+  });
+});

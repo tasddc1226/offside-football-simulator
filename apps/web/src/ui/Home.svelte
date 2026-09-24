@@ -1,15 +1,14 @@
 <script lang="ts">
   // ui.ts renderHome() 포트 (156~182줄)
-  import { PHASES, LAST_PHASE, POS } from '../game/data.js';
+  import { PHASES, LAST_PHASE } from '../game/data.js';
   import { ovr } from '../game/attributes.js';
-  import { loadHOF } from '../game/season.js';
   import { appState } from './state.svelte.js';
   import { goNew, goContinue } from './actions.js';
   import Topbar from './Topbar.svelte';
+  import HallOfFame from './HallOfFame.svelte';
   import type { Component } from 'svelte';
 
   const live = $derived(!!appState.G && !appState.G.retired);
-  const hof = loadHOF();
 
   // ui.ts의 mountAccount()처럼 계정 패널은 메인 청크와 분리된 동적 import로 불러온다(원본 주석:
   // account.ts는 게임 로직과 무관한 로그인 UI라 초기 번들에서 제외한다).
@@ -36,24 +35,7 @@
     <div class="tile"><span class="eyebrow">How to play</span><b>구간마다 훈련 선택</b><span class="muted" style="font-size:13px">한 시즌 = 프리시즌 + 전반기 + 후반기</span></div>
     <div class="tile"><span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted" style="font-size:13px">선택지마다 성공 확률 공개</span></div>
   </div>
-  <section class="card">
-    <div class="eyebrow">Legends</div>
-    <h2 style="margin-bottom:8px">명예의 전당</h2>
-    {#if hof.length}
-      {#each hof.slice(0, 10) as h, i (h.name + i)}
-        <div class="hof-row">
-          <div class="hof-rank">{i + 1}</div>
-          <div>
-            <b>{h.name}</b> <span class="pill">{POS[h.pos].label}</span>
-            <div class="muted" style="font-size:12px">{h.apps}경기 {h.goals}골 {h.assists}도움 · 트로피 {h.trophies} · 최고 OVR {h.peak}{h.ballon ? ` · 발롱도르 ${h.ballon}회` : ''}</div>
-          </div>
-          <div class="num" style="font-size:22px;font-weight:700">{h.score}</div>
-        </div>
-      {/each}
-    {:else}
-      <p class="empty">아직 은퇴한 선수가 없습니다. 첫 번째 레전드가 되어보세요.</p>
-    {/if}
-  </section>
+  <HallOfFame />
   <section class="card" id="account-slot">
     {#if Account}
       <Account />

@@ -2,6 +2,7 @@
 // 풀타임 원본은 선수 상태를 하나의 거대한 객체(G)로 다루며 필드를 느슨하게 추가합니다.
 // 완전한 판별 유니온으로 다시 모델링하면 포팅 리스크가 커지므로, 여기서는 알려진 필드는 구체적으로
 // 타이핑하고 나머지(로그 라인 종류가 다양한 필드, 이벤트별 임시 플래그 등)는 폭넓게 둡니다.
+import type { LegendSnapshot } from '@offside/contracts';
 import type { AttrKey, Pos, Club } from './data.js';
 
 export interface RngSaveState {
@@ -65,10 +66,10 @@ export interface CareerRecord {
   pro?: boolean;
   comps?: SeasonComp[];
   caps?: number;
-  mil?: boolean;
+  mil?: boolean | undefined;
   /** T-10-002. 이 시즌에 경신한 개인 커리어 하이(CH) 지표 키 목록(goals/assists/apps/rating/cs).
    * 옛 저장 데이터의 과거 시즌 레코드에는 없을 수 있다 — 없으면 그냥 배지를 표시하지 않는다. */
-  ch?: string[];
+  ch?: string[] | undefined;
 }
 
 export interface NatTour {
@@ -266,7 +267,19 @@ export interface HofEntry {
   lastClub: string;
   score: number;
   date: string;
+  /** T-10-005. 커리어 ID(G.cid) — 서버 명예의 전당 행과 같은 키. 옛 항목에는 없다. */
+  id?: string;
+  /** T-10-005. 은퇴 상세(시즌별 기록·수상·여정). 옛 항목에는 없어 요약만 보여 준다. */
+  detail?: LegendSnapshot;
+  /** T-10-005. 전체 명예의 전당에 선수 이름을 공개했는지(기본 false = 익명). */
+  public?: boolean;
 }
+
+/** 은퇴 리포트(레전드 점수 구성·시즌별 기록·수상·여정)가 읽는 필드. 진행 중인 GameState와 저장된
+ * 은퇴 스냅샷(LegendSnapshot) 둘 다 이 모양을 만족한다. */
+export type LegendSource = Pick<GameState, 'pos' | 'peak' | 'career' | 'trophies' | 'awards' | 'ballon' | 'storyLog' | 'miles'> & {
+  nat: { caps: number };
+};
 
 export interface Choice {
   label: string | ((s: GameState) => string);
