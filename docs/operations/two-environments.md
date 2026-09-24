@@ -19,7 +19,7 @@ Worker들은 staging D1을 공유했으므로 D1 자체는 삭제하거나 초�
 - main의 검증된 코드는 staging에 배포하고 smoke test를 수행한다.
 - production은 별도 workflow와 승인 절차로 배포한다.
 - 새 PR preview와 expanded 배포 workflow·script·Wrangler environment는 없다.
-- `cleanup-preview.yml`은 전환 전 PR Worker 잔재만 정리하며 새 preview를 만들지 않는다.
+- 전환 전 PR Preview Worker는 2026-09-24에 모두 삭제했고 정리용 workflow도 제거했다.
 
 T-9-001(풀타임 마이그레이션) 이후 `apps/web`은 게임 진행을 서버가 아닌 브라우저 localStorage에만
 저장한다. `apps/api`는 health·profile·Google 로그인만 다루며, 서비스 시즌/ruleset/content pack

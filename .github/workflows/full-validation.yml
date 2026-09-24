@@ -14,20 +14,18 @@ concurrency:
 jobs:
   full-validation:
     name: Full quality, balance and browser regression
-    runs-on: [self-hosted, macOS, ARM64, offside]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - uses: pnpm/action-setup@v4
-        with:
-          dest: ${{ runner.tool_cache }}/offside-pnpm
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          package-manager-cache: false
-      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: node --test .github/scripts/*.test.mjs
       - run: pnpm lint
       - run: pnpm lint:deps
@@ -40,7 +38,7 @@ jobs:
         run: |
           pnpm --filter @offside/fulltime-sim exec tsx simulate.ts 20000 random full-validation-${{ github.run_id }}
           pnpm --filter @offside/fulltime-sim run check-parity full-validation-${{ github.run_id }}
-      - run: pnpm --filter @offside/web exec playwright install chromium
+      - run: pnpm --filter @offside/web exec playwright install --with-deps chromium
       - run: pnpm --filter @offside/web exec playwright test
         env:
           CI: 'true'
