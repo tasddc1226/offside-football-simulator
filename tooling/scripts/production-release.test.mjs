@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { EXPECTED_TABLES, inspectCounts, inspectSchema } from './production-release.mjs';
 
 describe('production release guards', () => {
-  it('lists exactly the tables expected to survive migration 0015', () => {
+  it('lists exactly the tables expected to survive migration 0015 + 0016(T-9-009 careers·career_seasons)', () => {
     expect([...EXPECTED_TABLES].sort()).toEqual(
-      ['audit_log', 'auth_attempts', 'idempotency', 'profiles', 'sessions'].sort(),
+      ['audit_log', 'auth_attempts', 'careers', 'career_seasons', 'idempotency', 'profiles', 'sessions'].sort(),
     );
   });
 
-  it('passes when the production schema is exactly the expected post-0015 table set', () => {
+  it('passes when the production schema is exactly the expected post-0016 table set', () => {
     const result = inspectSchema([
       {
         results: EXPECTED_TABLES.map((name) => ({ name })),
@@ -40,13 +40,13 @@ describe('production release guards', () => {
     expect(result.unexpected).toEqual([]);
   });
 
-  it('flags a leftover game table (for example a dropped service_seasons row)', () => {
+  it('flags a leftover game table (for example a dropped snapshots row)', () => {
     const result = inspectSchema([
-      { results: [...EXPECTED_TABLES, 'service_seasons'].map((name) => ({ name })) },
+      { results: [...EXPECTED_TABLES, 'snapshots'].map((name) => ({ name })) },
     ]);
     expect(result.matchesExpected).toBe(false);
     expect(result.missing).toEqual([]);
-    expect(result.unexpected).toEqual(['service_seasons']);
+    expect(result.unexpected).toEqual(['snapshots']);
   });
 
   it('recognizes an empty production schema without treating it as an error', () => {

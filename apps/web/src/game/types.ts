@@ -178,8 +178,25 @@ export interface MilOption {
 }
 export type MarketOption = OfferOption | UniOption | StayOption | RenewOption | MilOption;
 
+/**
+ * T-9-009. 시즌 중 버퍼링되는 선택 로그 한 줄. 서버 계약(`@offside/contracts` `EventLogEntrySchema`)과
+ * 필드가 같아야 한다. 자유 텍스트는 담지 않는다.
+ */
+export interface EventLogEntry {
+  /** 종류: 'ev'(이벤트) | 'mkt'(이적시장) | 'mil'(병역) 등. */
+  k: string;
+  id: string;
+  c: number | string;
+  ok?: boolean;
+  /** 발생 시점(halves/phase 인덱스). */
+  h: number;
+}
+
 export interface GameState {
   v: 1;
+  /** T-9-009. 커리어 고유 ID(`crypto.randomUUID()`). 서버 업로드의 URL 키다. 시드 RNG를 절대
+   * 소모하지 않고 만든다 — RNG 시퀀스가 이 변경으로 바뀌면 안 된다. */
+  cid: string;
   halves: number;
   name: string;
   number: number;
@@ -224,6 +241,9 @@ export interface GameState {
   storyLog: { year: number; key: string; name: string; ending: string }[];
   miles?: { year: number; t: string }[];
   rng: RngSaveState;
+  /** T-9-009. 이번 시즌 버퍼링된 선택 로그(`ft_save`와 함께 자동 저장). 시즌 종료 시 업로드 페이로드로
+   * 옮겨지고 비워진다. 최대 300개, 넘치면 가장 오래된 것부터 버린다. */
+  evBuf?: EventLogEntry[];
   [k: string]: unknown;
 }
 

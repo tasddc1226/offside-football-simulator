@@ -60,4 +60,30 @@ export {
 
 export { HealthDataSchema, HealthResponseSchema, type HealthData, type HealthResponse } from './health.js';
 
+export {
+  CareerPosSchema,
+  CareerFootSchema,
+  CareerMetaSchema,
+  CareerHonorSchema,
+  CareerSeasonPayloadSchema,
+  EventLogEntrySchema,
+  PutCareerSeasonBodySchema,
+  CareerUpsertResponseSchema,
+  RetirementSummarySchema,
+  PutRetirementBodySchema,
+  RetirementResponseSchema,
+  CareerIdParamSchema,
+  CareerYearParamSchema,
+  type CareerPos,
+  type CareerFoot,
+  type CareerMeta,
+  type CareerSeasonPayload,
+  type EventLogEntry,
+  type PutCareerSeasonBody,
+  type CareerUpsertResponse,
+  type RetirementSummary,
+  type PutRetirementBody,
+  type RetirementResponse,
+} from './careers.js';
+
 export { IsoUtcSchema, Hex64Schema, Uint32Schema, ClientIdSchema } from './primitives.js';
