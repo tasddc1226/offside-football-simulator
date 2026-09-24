@@ -26,7 +26,7 @@
   <div class="chalk"></div>
   <div>
     <div class="shirt">Full Time{v.number != null ? ` · No.${v.number}` : ''}</div>
-    <h2>{v.name}</h2>
+    <h1>{v.name}</h1>
     <div class="meta">{v.age}세 은퇴 · 마지막 소속 {v.lastClub}</div>
   </div>
   <div class="ovr"><div class="n">{v.score}</div><div class="l">LEGEND</div></div>

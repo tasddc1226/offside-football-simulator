@@ -8,7 +8,8 @@ import { gzipSync } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const LIMIT_BYTES = 150 * 1024;
+// T-10-004: Svelte 이전 후 초기 청크는 ~69KB — 회귀를 빨리 잡도록 예산을 150KB에서 85KB로 좁혔다.
+const LIMIT_BYTES = 85 * 1024;
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(scriptDir, '../dist');

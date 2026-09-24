@@ -31,12 +31,22 @@ function withRobots(response: Response, value: string): Response {
   return result;
 }
 
+// T-10-004: Vite 산출물(/assets/*)은 파일명에 내용 해시가 들어가 내용이 바뀌면 URL도 바뀐다 —
+// 재방문 때 재검증 없이 캐시를 그대로 쓰도록 1년 immutable로 내려 준다.
+function withImmutableCache(response: Response): Response {
+  const result = new Response(response.body, response);
+  result.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+  return result;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const asset = await env.ASSETS.fetch(request);
     const isPublicPage = PUBLIC_PATHS.has(url.pathname);
     const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
+    if (url.pathname.startsWith('/assets/') && asset.status === 200)
+      return withRobots(withImmutableCache(asset), 'noindex, nofollow');
     if (!isPublicPage && !isDiscovery && asset.status !== 404)
       return withRobots(asset, 'noindex, nofollow');
     let indexingEnabled = false;

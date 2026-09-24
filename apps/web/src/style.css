@@ -2,7 +2,7 @@
 :root {
   --bg: #E9EEE8; --surface: #FFFFFF; --surface-2: #F3F6F2; --ink: #14201A; --muted: #5C6B62; --line: #D5DDD6;
   --pitch: #1C4A35; --pitch-2: #245C43; --chalk: rgba(255,255,255,.22); --on-pitch: #F2F6F1;
-  --accent: #D99A12; --accent-text: #8A5C0A; --accent-ink: #2A1C00; --good: #23875A; --bad: #C0392F; --warn: #96600A;
+  --accent: #D99A12; --accent-text: #8A5C0A; --accent-ink: #2A1C00; --good: #1E7A50; --bad: #C0392F; --warn: #96600A;
   --shadow: 0 1px 0 rgba(20,32,26,.05), 0 8px 24px -14px rgba(20,32,26,.28);
   --display: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
   --body: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
@@ -124,7 +124,8 @@ input[type=text], input[type=number] { border: 1px solid var(--line); background
 .player { background: var(--pitch); color: var(--on-pitch); border-radius: 20px; padding: 18px 18px 16px; position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr auto; gap: 12px; }
 .player > *:not(.chalk) { position: relative; }
 .player .shirt { font-family: var(--display); font-size: 15px; font-weight: 600; opacity: .75; letter-spacing: .06em; }
-.player h2 { font-size: 24px; margin-top: 2px; }
+/* T-10-004: 선수 이름은 화면의 h1(axe page-has-heading-one) — 크기·행간은 예전 h2 그대로. */
+.player h1 { font-size: 24px; margin-top: 2px; line-height: inherit; }
 .player .meta { font-size: 13px; opacity: .85; margin-top: 4px; }
 .ovr { text-align: right; }
 .ovr .n { font-family: var(--display); font-weight: 700; font-size: 58px; line-height: .9; color: var(--accent); }
@@ -242,7 +243,7 @@ table { border-collapse: collapse; width: 100%; font-size: 13px; white-space: no
 th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 6px; border-bottom: 1px solid var(--line); }
 td { padding: 7px 6px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 td.n, th.n { text-align: right; }
-.honor { color: var(--accent); font-weight: 600; }
+.honor { color: var(--accent-text); font-weight: 600; }
 .totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .totals div { background: var(--surface-2); border-radius: 10px; padding: 8px; text-align: center; }
 .totals b { display: block; font-family: var(--display); font-size: 26px; font-weight: 700; line-height: 1.1; }
@@ -290,11 +291,14 @@ td.n, th.n { text-align: right; }
 @keyframes bump { 40% { transform: scale(1.25); color: var(--accent); } }
 .ticker { display: flex; flex-direction: column; gap: 4px; min-height: 124px; font-size: 13px; font-variant-numeric: tabular-nums; }
 .ticker div { display: grid; grid-template-columns: 34px 30px 1fr; gap: 8px; align-items: center; animation: tick .25s ease both; }
-.ticker div:not(:first-child) { opacity: .55; }
+/* T-10-004: 지난 경기 줄은 반투명 대신 muted 색으로 눌러 둔다(opacity .55는 명도 대비 2~3:1). */
+.ticker div:not(:first-child) { color: var(--muted); }
+.ticker div:first-child { font-weight: 600; }
 .ticker .rd { color: var(--muted); font-family: var(--display); font-weight: 600; }
 .res { display: inline-grid; place-items: center; width: 24px; height: 20px; border-radius: 5px; font-size: 11px; font-weight: 700; color: #fff; }
 .res.W { background: var(--good); } .res.D { background: var(--muted); } .res.L { background: var(--bad); }
-@keyframes tick { from { opacity: 0; transform: translateY(-6px); } }
+/* T-10-004: 등장 모션은 transform만 쓴다 — opacity 중간값이 axe 명도 대비를 흔들지 않게. */
+@keyframes tick { from { transform: translateY(-6px); } }
 .steps { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .steps div { color: var(--muted); } .steps div.on { color: var(--ink); } .steps div.on::before { content: '▸ '; color: var(--accent); }
 .steps div.done::before { content: '✓ '; color: var(--good); }
@@ -305,7 +309,7 @@ td.n, th.n { text-align: right; }
 .needle { position: absolute; top: -3px; bottom: -3px; width: 3px; border-radius: 2px; background: var(--ink); left: 0; box-shadow: 0 0 0 2px var(--surface); }
 .judge-lbl { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: -8px; }
 .chip.pop { animation: pop .32s cubic-bezier(.3,1.6,.5,1) both; animation-delay: var(--d, 0ms); }
-@keyframes pop { from { opacity: 0; transform: scale(.6); } }
+@keyframes pop { from { transform: scale(.6); } }
 .result-big.pop { animation: pop .35s cubic-bezier(.3,1.6,.5,1) both; }
 .twist { font-size: 13px; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); border: 1px dashed var(--line); }
 @media (prefers-reduced-motion: reduce) { .chip.pop, .result-big.pop, .ticker div, .tally b.bump { animation: none; } .prog i { transition: none; } }
