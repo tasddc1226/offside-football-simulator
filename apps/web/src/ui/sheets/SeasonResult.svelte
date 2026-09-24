@@ -32,7 +32,7 @@
     <div class="eyebrow" style="margin-bottom:6px">국가대표 · 국제대회</div>
     {#each v.tours as x, i (i)}
       <div class="stack" style="gap:2px">
-        <p><b>{x.name}</b> — {x.stage}{#if x.note}&#32;<span class="muted">({x.note})</span>{/if}</p>
+        <p><b>{x.name}</b> — {x.stage}{#if x.note}<span class="muted" style="margin-left:.25em">({x.note})</span>{/if}</p>
         {#each x.lines as l, j (j)}<div class="muted" style="font-size:12px">{l}</div>{/each}
       </div>
     {/each}

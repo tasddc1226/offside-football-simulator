@@ -213,9 +213,7 @@ function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
   );
 }
 
-let marketOptions: MarketOption[] = [];
 function showMarket(m: { options: MarketOption[]; note: string; canRetire: boolean }) {
-  marketOptions = m.options;
   const G = appState.G!;
   showSheet(
     {
@@ -236,7 +234,8 @@ function showMarket(m: { options: MarketOption[]; note: string; canRetire: boole
 }
 
 export function pickOption(i: number) {
-  const o = marketOptions[i];
+  // 이적시장 옵션은 G.pending.m에 이미 저장돼 있다(nextPending이 만든 그 목록).
+  const o = (appState.G?.pending as { m?: { options: MarketOption[] } } | null)?.m?.options[i];
   if (!o || !appState.G) return;
   const r = acceptOption(appState.G, o);
   const logEntry: EventLogEntry = {
