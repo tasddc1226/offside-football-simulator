@@ -12,7 +12,7 @@ export function seasonLabelOf(r: CareerRecord): string {
   return L && L.tier >= 4 ? `${r.year}-${String((r.year + 1) % 100).padStart(2, '0')}` : `${r.year}`;
 }
 
-export function totals(s: GameState) {
+export function totals(s: Pick<GameState, 'career'>) {
   return s.career.reduce(
     (a, r) => ({ p: a.p + r.apps, g: a.g + r.goals, a: a.a + r.assists, cs: a.cs + (r.cs || 0) }),
     { p: 0, g: 0, a: 0, cs: 0 },

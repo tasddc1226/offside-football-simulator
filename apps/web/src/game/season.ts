@@ -7,7 +7,8 @@ import { seasonSetup, compGoals, seasonAwards, checkMilestones, retireMilestones
 import { natInit, natSeasonEnd } from './national.js';
 import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
 import { detectCareerHighs } from './records.js';
-import type { GameState, CareerRecord, HofEntry, MarketOption, OfferOption } from './types.js';
+import type { LegendSnapshot } from '@offside/contracts';
+import type { GameState, CareerRecord, HofEntry, LegendSource, MarketOption, OfferOption } from './types.js';
 
 export function endSeason(s: GameState) {
   natInit(s);
@@ -207,7 +208,7 @@ const LEGEND_W: Record<string, { g: number; a: number; cs: number }> = {
 export interface LegendBreakdownItem { key: string; label: string; value: number }
 /** legendScore()를 구성하는 각 항의 값을 그대로 나열한다 — 총합은 legendScore()와 항상 같다
  * (반올림도 legendScore()와 동일하게 마지막에 한 번만 적용). T-10-002 은퇴 리포트용. */
-export function legendScoreBreakdown(s: GameState): { items: LegendBreakdownItem[]; total: number } {
+export function legendScoreBreakdown(s: LegendSource): { items: LegendBreakdownItem[]; total: number } {
   const t = s.career.reduce((a, r) => ({ g: a.g + r.goals, a: a.a + r.assists, p: a.p + r.apps, cs: a.cs + (r.cs || 0) }), { g: 0, a: 0, p: 0, cs: 0 });
   const w = LEGEND_W[s.pos] || LEGEND_W.MF!;
   const items: LegendBreakdownItem[] = [
@@ -227,7 +228,7 @@ export function legendScoreBreakdown(s: GameState): { items: LegendBreakdownItem
   const total = Math.round(items.reduce((sum, it) => sum + it.value, 0));
   return { items, total };
 }
-export function legendScore(s: GameState): number {
+export function legendScore(s: LegendSource): number {
   return legendScoreBreakdown(s).total;
 }
 export function retire(s: GameState): HofEntry {
@@ -239,12 +240,31 @@ export function retire(s: GameState): HofEntry {
     name: s.name, pos: s.pos, number: s.number, peak: s.peak, age: s.age, apps: t.p, goals: t.g, assists: t.a,
     trophies: s.trophies.length, awards: s.awards.length, caps: s.nat.caps, ballon: s.awards.filter((x) => x.t === '발롱도르').length,
     lastClub: s.club.name, score: legendScore(s), date: new Date().toISOString().slice(0, 10),
+    id: s.cid, detail: legendSnapshot(s),
   };
   const hof = loadHOF();
   hof.push(entry);
   hof.sort((a, b) => b.score - a.score);
   saveKey('ft_hof', hof.slice(0, 30));
   return entry;
+}
+/** T-10-005. 은퇴 상세를 다시 그리는 데 필요한 필드만 복사한다(서버 계약 LegendSnapshotSchema와 같은
+ * 모양 — strictObject라 CareerRecord의 부가 필드(comps·lgApps 등)는 빼고 옮긴다). 선수 이름은 넣지 않는다. */
+export function legendSnapshot(s: GameState): LegendSnapshot {
+  return {
+    number: s.number, pos: s.pos, age: s.age, peak: s.peak, lastClub: s.club.name,
+    career: s.career.map((r) => ({
+      year: r.year, age: r.age, club: r.club, league: r.league, apps: r.apps, goals: r.goals, assists: r.assists,
+      cs: r.cs || 0, rating: r.rating, rank: r.rank, ovr: r.ovr, honors: r.honors,
+      ...(r.mil ? { mil: true } : {}), ...(r.ch?.length ? { ch: r.ch } : {}),
+    })),
+    trophies: s.trophies.map(({ year, t, club }) => ({ year, t, club })),
+    awards: s.awards.map(({ year, t }) => ({ year, t })),
+    ballon: (s.ballon || []).map(({ year, rank }) => ({ year, rank })),
+    nat: { caps: s.nat.caps },
+    storyLog: (s.storyLog || []).map(({ year, key, name, ending }) => ({ year, key, name, ending })),
+    miles: (s.miles || []).map(({ year, t }) => ({ year, t })),
+  };
 }
 export function legendTitle(score: number): string {
   return score >= 840 ? '역대 최고의 전설' : score >= 590 ? '월드클래스 레전드' : score >= 425 ? '클럽 레전드' : score >= 305 ? '성실한 프로' : '평범한 축구 커리어';

@@ -1,5 +1,5 @@
-import type { CareerMeta, CareerSeasonPayload, RetirementSummary } from '@offside/contracts';
-import { eq, inArray } from 'drizzle-orm';
+import type { CareerMeta, CareerSeasonPayload, LegendSnapshot, PublicHofEntry, RetirementSummary } from '@offside/contracts';
+import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { careers, careerSeasons } from '../schema.js';
@@ -102,17 +102,21 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
 export type PutRetirementInput = {
   careerId: string;
   summary: RetirementSummary;
+  /** undefined면 기존 값을 그대로 둔다(옛 클라이언트 본문). null이면 익명으로 되돌린다. */
+  publicName?: string | null | undefined;
+  snapshot?: LegendSnapshot | undefined;
   now: string;
 };
 
-/** `PUT /v1/careers/:careerId/retirement`. 소유권 확인은 라우트가 미리 끝낸다. */
+/** `PUT /v1/careers/:careerId/retirement`. 소유권 확인은 라우트가 미리 끝낸다. 같은 커리어로 다시
+ * 보내도(이름 공개 토글) 최초 은퇴 시각은 바뀌지 않는다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
-  const { careerId, summary, now } = input;
+  const { careerId, summary, publicName, snapshot, now } = input;
   await db
     .update(careers)
     .set({
       status: 'retired',
-      retiredAt: now,
+      retiredAt: sql`coalesce(${careers.retiredAt}, ${now})`,
       updatedAt: now,
       retireAge: summary.retireAge,
       peak: summary.peak,
@@ -125,8 +129,74 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
       caps: summary.caps,
       ballon: summary.ballon,
       lastClub: summary.lastClub,
+      ...(publicName !== undefined ? { publicName } : {}),
+      ...(snapshot ? { snapshotJson: JSON.stringify(snapshot), shirtNumber: snapshot.number } : {}),
     })
     .where(eq(careers.id, careerId));
+}
+
+// ───────── T-10-005 공개 명예의 전당 (로그인 불필요 · 읽기 전용) ─────────
+
+const publicColumns = {
+  id: careers.id,
+  name: careers.publicName,
+  pos: careers.pos,
+  number: careers.shirtNumber,
+  retireAge: careers.retireAge,
+  peak: careers.peak,
+  legendScore: careers.legendScore,
+  apps: careers.apps,
+  goals: careers.goals,
+  assists: careers.assists,
+  trophies: careers.trophies,
+  awards: careers.awards,
+  caps: careers.caps,
+  ballon: careers.ballon,
+  lastClub: careers.lastClub,
+  retiredAt: careers.retiredAt,
+  hasDetail: sql<number>`${careers.snapshotJson} is not null`,
+};
+type PublicRow = { [K in keyof typeof publicColumns]: unknown };
+
+function toPublicEntry(r: PublicRow): PublicHofEntry {
+  const n = (v: unknown) => Number(v ?? 0);
+  return {
+    id: String(r.id),
+    name: (r.name as string | null) ?? null,
+    pos: r.pos as PublicHofEntry['pos'],
+    number: r.number == null ? null : Number(r.number),
+    retireAge: n(r.retireAge),
+    peak: n(r.peak),
+    legendScore: n(r.legendScore),
+    apps: n(r.apps),
+    goals: n(r.goals),
+    assists: n(r.assists),
+    trophies: n(r.trophies),
+    awards: n(r.awards),
+    caps: n(r.caps),
+    ballon: n(r.ballon),
+    lastClub: String(r.lastClub ?? ''),
+    retiredAt: String(r.retiredAt ?? ''),
+    hasDetail: Boolean(r.hasDetail),
+  };
+}
+
+const isPublicRetired = and(eq(careers.status, 'retired'), isNotNull(careers.legendScore));
+
+/** 전체 유저의 은퇴 선수를 레전드 점수 순으로. */
+export async function listPublicHof(db: Db, limit: number): Promise<PublicHofEntry[]> {
+  const rows = await db.select(publicColumns).from(careers).where(isPublicRetired).orderBy(desc(careers.legendScore), careers.retiredAt).limit(limit);
+  return rows.map(toPublicEntry);
+}
+
+export async function getPublicHof(db: Db, careerId: string): Promise<{ entry: PublicHofEntry; snapshot: LegendSnapshot | null } | undefined> {
+  const [row] = await db
+    .select({ ...publicColumns, snapshotJson: careers.snapshotJson })
+    .from(careers)
+    .where(and(eq(careers.id, careerId), isPublicRetired));
+  if (!row) return undefined;
+  const { snapshotJson, ...rest } = row;
+  return { entry: toPublicEntry(rest), snapshot: snapshotJson ? (JSON.parse(snapshotJson) as LegendSnapshot) : null };
 }
 
 /** 프로필 삭제 시 커리어·시즌 데이터를 명시적으로 지운다(소프트 삭제라 FK CASCADE가 트리거되지

@@ -118,8 +118,16 @@ export const careers = sqliteTable(
     caps: integer('caps'),
     ballon: integer('ballon'),
     lastClub: text('last_club'),
+    // T-10-005 공개 명예의 전당. publicName은 유저가 이름 공개를 고른 경우에만 채운다(기본 NULL = 익명).
+    // snapshotJson은 은퇴 상세(시즌별 기록·수상·여정) — 선수 이름은 들어 있지 않다.
+    publicName: text('public_name'),
+    shirtNumber: integer('shirt_number'),
+    snapshotJson: text('snapshot_json'),
   },
-  (table) => [index('careers_profile_id_idx').on(table.profileId)],
+  (table) => [
+    index('careers_profile_id_idx').on(table.profileId),
+    index('careers_status_legend_idx').on(table.status, table.legendScore),
+  ],
 );
 
 /**

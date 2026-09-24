@@ -59,9 +59,10 @@ export function uploadSeason(s: GameState, rec: CareerRecord) {
   );
 }
 
-export function uploadRetirement(s: GameState, entry: HofEntry) {
+/** 은퇴 요약 + 상세 스냅샷을 서버 명예의 전당으로 보낸다. 이름은 `entry.public`일 때만 보낸다(기본 익명). */
+export function uploadRetirement(careerId: string, entry: HofEntry) {
   void import('../game/outbox.js').then((m) =>
-    m.enqueueRetirement(s.cid, {
+    m.enqueueRetirement(careerId, {
       retireAge: entry.age,
       peak: entry.peak,
       legendScore: entry.score,
@@ -73,6 +74,8 @@ export function uploadRetirement(s: GameState, entry: HofEntry) {
       caps: entry.caps,
       ballon: entry.ballon,
       lastClub: entry.lastClub,
+      publicName: entry.public ? entry.name : null,
+      ...(entry.detail ? { snapshot: entry.detail } : {}),
     }),
   );
 }

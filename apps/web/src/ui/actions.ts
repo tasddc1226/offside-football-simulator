@@ -271,7 +271,7 @@ export function pickOption(i: number) {
 
 export function doRetire() {
   appState.lastRetired = retire(appState.G!);
-  uploadRetirement(appState.G!, appState.lastRetired);
+  uploadRetirement(appState.G!.cid, appState.lastRetired);
   appState.G!.pending = null;
   save();
   closeSheet();
