@@ -16,7 +16,7 @@ import {
 const FAKE_BASE_HTML = `<!doctype html>
 <html lang="ko">
   <head>
-    <title>오프사이드 — 풀타임 축구 커리어</title>
+    <title>오프사이드 - 축구선수 커리어 시뮬레이션 게임</title>
     <link rel="modulepreload" crossorigin href="/assets/shared-abc123.js">
     <script type="module" crossorigin src="/assets/index-abc123.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-abc123.css">
