@@ -1,6 +1,7 @@
-// ───────── 게임 진행 액션 (ui.ts 583~863줄 포트) ─────────
+// ───────── 게임 진행 액션 ─────────
+// 게임 로직을 호출하고, 그 결과를 시트 뷰 모델(sheets/types.ts)로 바꿔 showSheet에 넘긴다.
+// 게임 로직 호출 순서(=RNG 소비 순서)는 포팅 전 ui.ts와 동일하게 유지한다.
 import { PHASES, LAST_PHASE, type AttrKey } from '../game/data.js';
-import { esc } from '../game/dom.js';
 import { clamp, createRng, freshSeed, setActiveRng } from '../game/rng.js';
 import { generateCandidates } from '../game/candidates.js';
 import {
@@ -18,12 +19,13 @@ import { appState, randomName } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { seasonLabelOf } from './format.js';
 import {
-  busyAnim, chipsHtml, closeSheet, getSheetEl, playBlock, playJudge, playSteps, showSheet,
-  type BlockResultLike, type Chip, type SheetButton,
+  closeSheet, playBlock, playJudge, playSteps, sheetState, showSheet,
+  type BlockResultLike, type Chip,
 } from './sheetState.svelte.js';
+import type { NatView, TourView } from './sheets/types.js';
 
 export async function advance() {
-  if (busyAnim || !appState.G) return;
+  if (sheetState.busy || !appState.G) return;
   const s = appState.G,
     ph = s.phase;
   const before = snapshot(s);
@@ -49,17 +51,17 @@ export async function advance() {
   if (b) await playBlock(s, ph, b, extras);
   else await playSteps(`${s.year} · 프리시즌 진행 중`, [isPro(s) ? '전지훈련 캠프 입소' : '동계 훈련 시작', '체력 테스트', '전술 훈련', '연습 경기', ...extras]);
   showSheet(
-    `<div class="eyebrow">${s.year} · ${title}</div>
-    ${
-      b
-        ? `<div class="row" style="align-items:baseline;gap:14px"><span class="result-big">${b.w}<span class="muted" style="font-size:20px">승</span> ${b.d}<span class="muted" style="font-size:20px">무</span> ${b.l}<span class="muted" style="font-size:20px">패</span></span></div>
-      <p>${b.apps}경기 출전 · <b>${b.goals}골 ${b.assists}도움</b>${b.apps ? ` · 평균 평점 <b>${(b.rs / b.apps).toFixed(2)}</b>` : ''}${b.cs ? ` · 무실점 ${b.cs}` : ''}</p>
-      ${b.hl.map((h) => `<p class="hl">${esc(h)}</p>`).join('')}`
-        : `<h2>시즌 준비를 마쳤습니다</h2><p class="muted">예상 역할: ${roleOf(s)}</p>`
-    }
-    ${comp.length ? `<div><div class="eyebrow" style="margin-bottom:6px">컵 · 대륙 대회</div>${comp.map((c) => `<p class="${c.k === 'good' ? 'hl' : 'muted'}">${esc(c.t)}</p>`).join('')}</div>` : ''}
-    ${ntHtml(nt)}
-    <div><div class="eyebrow" style="margin-bottom:6px">변화</div>${chipsHtml(chips, true) || '<p class="muted">큰 변화 없음</p>'}</div>`,
+    {
+      kind: 'phase',
+      eyebrow: `${s.year} · ${title}`,
+      block: b
+        ? { w: b.w, d: b.d, l: b.l, apps: b.apps, goals: b.goals, assists: b.assists, rating: b.apps ? (b.rs / b.apps).toFixed(2) : null, cs: b.cs, hl: b.hl }
+        : null,
+      role: roleOf(s),
+      comps: comp.map((c) => ({ t: c.t, good: c.k === 'good' })),
+      nat: natViews(nt),
+      chips: chips as Chip[],
+    },
     [{ label: '계속 →', cls: 'btn-primary', fn: nextPending }],
   );
 }
@@ -74,7 +76,7 @@ export function nextPending() {
   }
   if (p.type === 'event') return showEvent(p as { type: 'event'; id: string });
   if (p.type === 'seasonEnd') {
-    if (busyAnim) return;
+    if (sheetState.busy) return;
     const res = endSeason(s);
     uploadSeason(s, res.rec);
     s.pending = { type: 'market', res, m: null };
@@ -96,40 +98,24 @@ export function nextPending() {
 function showEvent(p: { type: 'event'; id: string }) {
   const s = appState.G!;
   const ev = EVENTS.find((e) => e.id === p.id)!;
-  const tag = ev.story ? `<div class="story-tag">스토리 · ${STORY_NAME(ev.story)} <b>${ev.stage}/${STORY_TOTAL(ev.story)}</b></div>` : '';
-  showSheet(
-    `${tag}<div class="eyebrow">Event · ${s.year} ${PHASES[Math.max(0, s.phase - 1)]}</div><h2>${ev.title}</h2><p>${esc(ev.text(s))}</p>
-    <div class="stack">${ev.choices
-      .map(
-        (c, i) =>
-          `<button class="choice" data-choice="${i}"><span>${esc(txt(c.label, s))}</span>${c.p ? `<span class="odds">${Math.round(c.p(s) * 100)}%</span>` : isSafe(ev, c) ? '<span class="odds" title="확정이지만 보상이 줄고 가끔 대가가 따릅니다">안전</span>' : '<span class="odds">확정</span>'}</button>`,
-      )
-      .join('')}</div>`,
-    [],
-  );
-}
-
-// 이벤트 선택지(data-choice)는 시트가 열려 있는 동안 내용만 {@html}로 교체되고 DOM 컨테이너
-// 자체는 계속 같은 노드이므로(ui.ts처럼 매번 innerHTML을 통째로 갈아끼우는 것과 달리), 호출마다
-// 리스너를 새로 붙이면 쌓인다. 앱 생명주기 동안 단 하나만 붙는 위임 리스너로 처리한다(원본의
-// document 전역 클릭 위임과 동일한 패턴).
-if (typeof document !== 'undefined') {
-  document.addEventListener('click', (e) => {
-    const t = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-choice]');
-    if (!t) return;
-    void chooseEvent(+t.dataset.choice!);
+  showSheet({
+    kind: 'event',
+    eyebrow: `Event · ${s.year} ${PHASES[Math.max(0, s.phase - 1)]}`,
+    title: ev.title,
+    text: ev.text(s),
+    story: ev.story ? { name: STORIES[ev.story]!.name, stage: ev.stage ?? 0, total: STORIES[ev.story]!.total } : null,
+    choices: ev.choices.map((c) =>
+      c.p
+        ? { label: txt(c.label, s), odds: `${Math.round(c.p(s) * 100)}%` }
+        : isSafe(ev, c)
+          ? { label: txt(c.label, s), odds: '안전', hint: '확정이지만 보상이 줄고 가끔 대가가 따릅니다' }
+          : { label: txt(c.label, s), odds: '확정' },
+    ),
   });
 }
 
-function STORY_NAME(k: string): string {
-  return STORIES[k]!.name;
-}
-function STORY_TOTAL(k: string): number {
-  return STORIES[k]!.total;
-}
-
-async function chooseEvent(i: number) {
-  if (busyAnim || !appState.G) return;
+export async function chooseEvent(i: number) {
+  if (sheetState.busy || !appState.G) return;
   const s = appState.G,
     p = s.pending as { type: 'event'; id: string; then?: string | null };
   const c = EVENTS.find((e) => e.id === p.id)!.choices[i]!,
@@ -140,61 +126,79 @@ async function chooseEvent(i: number) {
   save();
   if (r.p < 1) await playJudge(label, r.p, r.roll);
   showSheet(
-    `<div class="eyebrow">결과 · ${esc(label)}</div><div class="result-big pop ${r.ok ? 'ok' : 'ng'}">${r.p < 1 ? (r.ok ? '성공' : '실패') : '결정'}</div>
-    <p>${esc(r.text)}</p>${chipsHtml(r.chips as Chip[], true)}${r.twist ? `<p class="twist">${esc(r.twist)}</p>` : ''}${storyNote(r.story)}`,
+    {
+      kind: 'eventResult',
+      label,
+      outcome: r.p < 1 ? (r.ok ? '성공' : '실패') : '결정',
+      ok: r.ok,
+      text: r.text,
+      chips: r.chips as Chip[],
+      twist: r.twist || null,
+      story: r.story,
+    },
     [{ label: '확인', cls: 'btn-primary', fn: nextPending }],
   );
 }
-function storyNote(st: { name: string; ending: string | null; started: boolean } | null): string {
-  if (!st) return '';
-  if (st.ending) return `<div class="story-end"><span class="eyebrow">스토리 완결 · ${st.name}</span><b>${esc(st.ending)}</b></div>`;
-  return `<div class="story-next">${st.started ? `새 스토리 시작: <b>${st.name}</b> — ` : ''}이 이야기는 다음에 이어집니다…</div>`;
-}
 
-function ntHtml(nt: unknown): string {
-  if (!nt) return '';
-  if (Array.isArray(nt)) return nt.map(ntHtml).join('');
+function natViews(nt: unknown): NatView[] {
+  if (!nt) return [];
+  if (Array.isArray(nt)) return nt.flatMap(natViews);
   const x = nt as { called: boolean; name: string; comp: string; games: IntlResult[] };
-  if (!x.called) return `<div><div class="eyebrow" style="margin-bottom:6px">${x.name}</div><p class="muted">이번 A매치 명단에서 제외됐습니다.</p></div>`;
-  return `<div><div class="eyebrow" style="margin-bottom:6px">${x.name} · ${esc(x.comp)}</div>
-    ${x.games.map((m) => `<p class="${m.res === 'W' ? 'hl' : ''}">${esc(scoreLine(m))} <span class="muted">· ${m.mins ? `${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''} · 평점 ${m.rating}` : '벤치'}</span></p>`).join('')}</div>`;
+  return [
+    {
+      name: x.name,
+      comp: x.comp,
+      called: x.called,
+      games: x.called
+        ? x.games.map((m) => ({
+            line: scoreLine(m),
+            hl: m.res === 'W',
+            detail: m.mins ? `${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''} · 평점 ${m.rating}` : '벤치',
+          }))
+        : [],
+    },
+  ];
 }
-function tourHtml(x: NatTour): string {
-  const matches = (x.matches || []) as IntlResult[];
-  const ms = matches
-    .map(
-      (m) =>
-        `<div class="muted" style="font-size:12px">${(m as unknown as { stage?: string }).stage || '조별리그'} · ${esc(scoreLine(m))}${m.mins ? ` · ${m.g ? m.g + '골 ' : ''}${m.a ? m.a + '도움 ' : ''}평점 ${m.rating}` : ''}</div>`,
-    )
-    .join('');
-  return `<div class="stack" style="gap:2px"><p><b>${esc(x.name)}</b> — ${x.stage}${x.inSquad ? '' : x.why ? ` <span class="muted">(${x.why})</span>` : matches.length ? ' <span class="muted">(명단 외)</span>' : ''}</p>${x.inSquad ? ms : ''}</div>`;
+function tourView(x: NatTour): TourView {
+  const matches = (x.matches || []) as (IntlResult & { stage?: string })[];
+  return {
+    name: x.name,
+    stage: x.stage,
+    note: x.inSquad ? '' : x.why ? x.why : matches.length ? '명단 외' : '',
+    lines: x.inSquad
+      ? matches.map((m) => `${m.stage || '조별리그'} · ${scoreLine(m)}${m.mins ? ` · ${m.g ? m.g + '골 ' : ''}${m.a ? m.a + '도움 ' : ''}평점 ${m.rating}` : ''}`)
+      : [],
+  };
 }
 
 function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
   const { rec, trophies, awards, notes, gala = [], tours = [], miles = [] } = p.res;
   const s = appState.G!;
-  const [colVal, colLabel] = s.pos === 'GK' || s.pos === 'DF' ? [rec.cs, '무실점'] : [rec.assists, '도움'];
+  const [col, colLabel] = s.pos === 'GK' || s.pos === 'DF' ? [rec.cs, '무실점'] : [rec.assists, '도움'];
   const idx = s.career.indexOf(rec);
   const prev = idx > 0 ? s.career[idx - 1] : null;
-  const fanLines = pickFanLines(s, rec, {
+  const fans = pickFanLines(s, rec, {
     gotTrophy: trophies.length > 0,
     injuredThisSeason: s.log.some((l) => l.t.startsWith(String(rec.year)) && l.text.includes('부상')),
     transferredThisSeason: !!prev && prev.club !== rec.club,
     hasMilestone: miles.length > 0,
   });
-  const chBadges = (rec.ch || []).map((k) => `<span class="badge-ch">CH · ${esc(chLabel(k))}</span>`).join(' ');
   showSheet(
-    `<div class="eyebrow">${seasonLabelOf(rec)} Season Review</div><h2>${esc(rec.club)} · ${rec.league} ${rec.rank}위</h2>
-    ${chBadges ? `<div class="row" style="gap:4px">${chBadges}</div>` : ''}
-    <div class="stats" style="grid-template-columns:repeat(4,1fr)"><div><b>${rec.apps}</b><span>출전</span></div><div><b>${rec.goals}</b><span>골</span></div><div><b>${colVal}</b><span>${colLabel}</span></div><div><b>${rec.rating ? rec.rating.toFixed(2) : '-'}</b><span>평점</span></div></div>
-    ${trophies.length || awards.length ? `<div class="stack">${[...trophies, ...awards].map((t) => `<p class="hl"><b>${t}</b></p>`).join('')}</div>` : '<p class="muted">이번 시즌 수상은 없었습니다.</p>'}
-    ${(rec.comps || []).length ? `<div><div class="eyebrow" style="margin-bottom:6px">대회별 성적</div>${(rec.comps || []).map((c) => `<p class="muted">${esc(c.name)} · ${c.stage} · ${c.apps}경기 ${c.g}골 ${c.a}도움</p>`).join('')}</div>` : ''}
-    ${tours.length ? `<div><div class="eyebrow" style="margin-bottom:6px">국가대표 · 국제대회</div>${tours.map(tourHtml).join('')}</div>` : ''}
-    ${gala.length ? `<div><div class="eyebrow" style="margin-bottom:6px">Ballon d'Or 시상식</div>${gala.map((g) => `<p class="hl"><b>${g}</b></p>`).join('')}</div>` : ''}
-    ${miles.length ? `<div><div class="eyebrow" style="margin-bottom:6px">커리어 여정</div>${miles.map((m) => `<p>· ${esc(m)}</p>`).join('')}</div>` : ''}
-    ${notes.length ? `<p class="muted">${notes.join(' · ')}</p>` : ''}
-    <div><div class="eyebrow" style="margin-bottom:6px">팬 반응</div><div class="fan-feed">${fanLines.map((f) => `<div class="fan-line"><b>팬</b>${esc(f)}</div>`).join('')}</div></div>
-    <p class="muted">나이 ${appState.G!.age}세가 되었습니다. 이제 다음 시즌을 준비합니다.</p>`,
+    {
+      kind: 'season',
+      eyebrow: `${seasonLabelOf(rec)} Season Review`,
+      title: `${rec.club} · ${rec.league} ${rec.rank}위`,
+      ch: (rec.ch || []).map(chLabel),
+      stats: { apps: rec.apps, goals: rec.goals, col: col ?? 0, colLabel, rating: rec.rating ? rec.rating.toFixed(2) : '-' },
+      honors: [...trophies, ...awards],
+      comps: (rec.comps || []).map((c) => `${c.name} · ${c.stage} · ${c.apps}경기 ${c.g}골 ${c.a}도움`),
+      tours: tours.map(tourView),
+      gala,
+      miles,
+      notes,
+      fans,
+      age: s.age,
+    },
     [
       {
         label: '이적 시장으로 →',
@@ -208,64 +212,62 @@ function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
     ],
   );
 }
+
+let marketOptions: MarketOption[] = [];
 function showMarket(m: { options: MarketOption[]; note: string; canRetire: boolean }) {
-  const opts = m.options;
-  let html = `<div class="eyebrow">${seasonLabel(appState.G!)} Transfer Window</div><h2>다음 시즌, 어디서 뛸까요?</h2><p class="muted">${esc(m.note)}</p><div class="stack">`;
-  const contractCard = (i: number, name: string, lg: string, salary: number, sub: string) =>
-    `<button class="offer" data-opt="${i}"><div><b>${esc(name)}</b><div class="lg">${lg}</div></div>
-        <div class="sal">${fmtMoney(salary)}<div class="lg" style="text-align:right">연봉</div></div>
-        <div class="sub">${sub}</div></button>`;
-  html += opts
-    .map((o, i) => {
-      if (o.kind === 'offer') {
-        const extra = `${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtMoney(o.fee)}` : appState.G!.contract && !leagueOf(appState.G!.leagueId).amateur ? ' · 자유계약(FA)' : ''}`;
-        return contractCard(i, o.name, `${leagueOf(o.leagueId).name} · 팀 전력 ${o.str}`, o.salary, `${o.years}년 계약${extra}`);
-      }
-      if (o.kind === 'renew') return contractCard(i, o.name, leagueOf(appState.G!.leagueId).name, o.salary, `${o.years}년 계약`);
-      return `<button class="offer" data-opt="${i}"><div><b>${esc(o.name)}</b><div class="lg">${esc(o.desc ?? '')}</div></div></button>`;
-    })
-    .join('');
-  html += `</div>`;
-  const btns: SheetButton[] = m.canRetire ? [{ label: '은퇴를 선언한다', fn: () => doRetire() }] : [];
-  showSheet(html, btns);
-  queueMicrotask(() => {
-    const el = getSheetEl();
-    el?.querySelectorAll<HTMLButtonElement>('[data-opt]').forEach((b) =>
-      b.addEventListener('click', () => {
-        const o = opts[+b.dataset.opt!]!;
-        const r = acceptOption(appState.G!, o);
-        const logEntry: EventLogEntry = {
-          k: o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' ? 'mil' : 'mkt',
-          id: o.kind,
-          c: o.kind === 'offer' ? o.clubId : +b.dataset.opt!,
-          h: appState.G!.phase,
-        };
-        if (r?.ok !== undefined) logEntry.ok = r.ok;
-        pushEvLog(appState.G!, logEntry);
-        if (r) {
-          appState.G!.training = 'rest';
-          if (r.reopen) {
-            appState.G!.pending = { type: 'market', res: null, m: market(appState.G!) };
-            save();
-            return showSheet(`<div class="eyebrow">병역</div><p>${esc(r.text)}</p>`, [{ label: '이적 시장으로 →', cls: 'btn-primary', fn: nextPending }]);
-          }
-          appState.G!.pending = null;
-          save();
-          appState.tab = 'season';
-          return showSheet(
-            `<div class="eyebrow">병역</div><div class="result-big ${r.ok === false ? 'ng' : 'ok'}">${o.kind === 'serve' ? '복무' : r.ok ? '합격' : '결정'}</div><p>${esc(r.text)}</p>`,
-            [{ label: `${appState.G!.year} 시즌 시작 →`, cls: 'btn-primary', fn: () => closeSheet() }],
-          );
+  marketOptions = m.options;
+  const G = appState.G!;
+  showSheet(
+    {
+      kind: 'market',
+      eyebrow: `${seasonLabel(G)} Transfer Window`,
+      note: m.note,
+      options: m.options.map((o) => {
+        if (o.kind === 'offer') {
+          const extra = `${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtMoney(o.fee)}` : G.contract && !leagueOf(G.leagueId).amateur ? ' · 자유계약(FA)' : ''}`;
+          return { name: o.name, lg: `${leagueOf(o.leagueId).name} · 팀 전력 ${o.str}`, salary: fmtMoney(o.salary), sub: `${o.years}년 계약${extra}` };
         }
-        appState.G!.pending = null;
-        appState.G!.training = 'rest';
-        save();
-        closeSheet();
-        appState.tab = 'season';
-        toast(`${appState.G!.year} 시즌 시작!`);
+        if (o.kind === 'renew') return { name: o.name, lg: leagueOf(G.leagueId).name, salary: fmtMoney(o.salary), sub: `${o.years}년 계약` };
+        return { name: o.name, lg: o.desc ?? '', salary: null, sub: null };
       }),
+    },
+    m.canRetire ? [{ label: '은퇴를 선언한다', fn: () => doRetire() }] : [],
+  );
+}
+
+export function pickOption(i: number) {
+  const o = marketOptions[i];
+  if (!o || !appState.G) return;
+  const r = acceptOption(appState.G, o);
+  const logEntry: EventLogEntry = {
+    k: o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' ? 'mil' : 'mkt',
+    id: o.kind,
+    c: o.kind === 'offer' ? o.clubId : i,
+    h: appState.G.phase,
+  };
+  if (r?.ok !== undefined) logEntry.ok = r.ok;
+  pushEvLog(appState.G, logEntry);
+  if (r) {
+    appState.G.training = 'rest';
+    if (r.reopen) {
+      appState.G.pending = { type: 'market', res: null, m: market(appState.G) };
+      save();
+      return showSheet({ kind: 'notice', eyebrow: '병역', text: r.text }, [{ label: '이적 시장으로 →', cls: 'btn-primary', fn: nextPending }]);
+    }
+    appState.G.pending = null;
+    save();
+    appState.tab = 'season';
+    return showSheet(
+      { kind: 'notice', eyebrow: '병역', big: { text: o.kind === 'serve' ? '복무' : r.ok ? '합격' : '결정', ok: r.ok !== false }, text: r.text },
+      [{ label: `${appState.G.year} 시즌 시작 →`, cls: 'btn-primary', fn: () => closeSheet() }],
     );
-  });
+  }
+  appState.G.pending = null;
+  appState.G.training = 'rest';
+  save();
+  closeSheet();
+  appState.tab = 'season';
+  toast(`${appState.G.year} 시즌 시작!`);
 }
 
 export function doRetire() {
@@ -280,7 +282,7 @@ export function doRetire() {
 
 export function confirmNew() {
   showSheet(
-    `<div class="eyebrow">New Life</div><h2>새로 시작하시겠습니까?</h2><p class="muted">진행 중인 ${esc(appState.G!.name)} 선수의 커리어는 사라집니다. 명예의 전당에는 은퇴한 선수만 남습니다.</p>`,
+    { kind: 'notice', eyebrow: 'New Life', title: '새로 시작하시겠습니까?', muted: true, text: `진행 중인 ${appState.G!.name} 선수의 커리어는 사라집니다. 명예의 전당에는 은퇴한 선수만 남습니다.` },
     [
       {
         label: '새 커리어 시작',
@@ -299,7 +301,7 @@ export function confirmNew() {
 }
 
 export function retireAsk() {
-  showSheet(`<div class="eyebrow">Retirement</div><h2>정말 은퇴하시겠어요?</h2><p class="muted">은퇴하면 이 선수의 커리어는 명예의 전당에 기록되고 더 이상 플레이할 수 없습니다.</p>`, [
+  showSheet({ kind: 'notice', eyebrow: 'Retirement', title: '정말 은퇴하시겠어요?', muted: true, text: '은퇴하면 이 선수의 커리어는 명예의 전당에 기록되고 더 이상 플레이할 수 없습니다.' }, [
     { label: '은퇴한다', cls: 'btn-primary', fn: doRetire },
     { label: '조금 더 뛴다', fn: closeSheet },
   ]);

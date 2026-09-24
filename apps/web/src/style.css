@@ -370,6 +370,15 @@ td.n, th.n { text-align: right; }
 .fan-feed { display: flex; flex-direction: column; gap: 6px; }
 .fan-line { font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
 .fan-line b { color: var(--accent-text, var(--accent)); font-weight: 700; margin-right: 2px; }
+/* T-10-003b: 시즌 결산 시트의 CH 배지 팝 · 팬 반응 순차 등장, 마일스톤 막대 채우기.
+   opacity를 쓰지 않는다(전환 중간 프레임에 axe color-contrast가 걸리는 문제, T-10-003 참고). */
+.badge-ch.pop { animation: pop-in .34s cubic-bezier(.3,1.6,.5,1) both; animation-delay: var(--d, 0ms); }
+@keyframes pop-in { from { transform: scale(.4); } }
+.fan-line.in { animation: slide-in .32s ease-out both; animation-delay: var(--d, 0ms); }
+@keyframes slide-in { from { transform: translateX(-14px); } }
+.mile-row .legend-bar i { animation: fill .7s cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--d, 0ms); }
+@keyframes fill { from { width: 0; } }
+@media (prefers-reduced-motion: reduce) { .badge-ch.pop, .fan-line.in, .mile-row .legend-bar i { animation: none; } }
 .mile-next { display: flex; flex-direction: column; gap: 10px; }
 .mile-row { display: flex; flex-direction: column; gap: 4px; }
 .mile-row .mile-lbl { display: flex; justify-content: space-between; font-size: 13px; }

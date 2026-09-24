@@ -6,7 +6,8 @@
   // #modal의 hidden 속성과 배경 클릭-닫기 동작을 이펙트로 관리한다(원본 ui.ts의
   // `$modal.addEventListener` 포트).
   import { fly } from 'svelte/transition';
-  import { busyAnim, closeSheet, registerSheetEl, sheetState } from './sheetState.svelte.js';
+  import { closeSheet, registerSheetEl, sheetState } from './sheetState.svelte.js';
+  import SheetBody from './sheets/SheetBody.svelte';
   import { appState } from './state.svelte.js';
   import { buzz, dur } from './motion.js';
 
@@ -23,7 +24,7 @@
 
   // 이 시트가 "선택 필수"(이벤트·이적시장 등)가 아니라 끌어서/배경 클릭으로 닫을 수 있는지 여부.
   // 배경 클릭 닫기 조건(Sheet.svelte 원래 로직)과 동일한 기준을 스와이프-다운에도 그대로 쓴다.
-  const dismissible = $derived(!busyAnim && !(appState.G && appState.G.pending));
+  const dismissible = $derived(!sheetState.busy && !(appState.G && appState.G.pending));
 
   $effect(() => {
     registerSheetEl(sheetEl);
@@ -112,11 +113,7 @@
       ontouchcancel={onTouchEnd}
     >
       <div class="sheet-handle" aria-hidden="true"></div>
-      <!-- sheetState.html은 앱 코드(actions.ts/sheetState.svelte.ts)가 직접 조립하는 신뢰된 마크업이다.
-           사용자 입력(선수 이름 등)은 game/dom.ts의 esc()로 이미 이스케이프해 끼워 넣으므로 원본
-           ui.ts의 innerHTML 대입과 동일한 신뢰 경계를 유지한다. -->
-      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-      {@html sheetState.html}
+      {#if sheetState.view}<SheetBody v={sheetState.view} />{/if}
       {#each sheetState.buttons as b, i (i)}
         <button class="btn {b.cls || ''} btn-block" data-sheet={i} onclick={() => clickButton(b)}>{b.label}</button>
       {/each}
