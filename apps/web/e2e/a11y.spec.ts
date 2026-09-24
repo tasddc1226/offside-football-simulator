@@ -2,11 +2,15 @@ import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { startCareer } from './helpers.js';
 
-async function expectNoSeriousViolations(page: import('@playwright/test').Page) {
+// 정적 공개 페이지는 serious/critical만, 게임 화면(T-10-004)은 moderate까지 위반 0을 요구한다.
+async function expectNoViolations(page: Page, where: string, { seriousOnly = false } = {}) {
   const results = await new AxeBuilder({ page }).analyze();
-  const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
-  expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
+  const found = results.violations
+    .filter((v) => !seriousOnly || v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => `${where}: ${v.id} (${v.impact}) ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+  expect(found).toEqual([]);
 }
+const expectNoSeriousViolations = (page: Page) => expectNoViolations(page, page.url(), { seriousOnly: true });
 
 test('홈 화면에 심각한 접근성 위반이 없다', async ({ page }) => {
   await page.goto('/');
@@ -20,11 +24,6 @@ test('선수 탭에 심각한 접근성 위반이 없다', async ({ page }) => {
 });
 
 // T-10-004: 게임 화면은 moderate(랜드마크·h1 등)까지 위반 0을 유지한다 — 라이트/다크 둘 다.
-async function expectNoViolations(page: Page, where: string) {
-  const results = await new AxeBuilder({ page }).analyze();
-  const found = results.violations.map((v) => `${where}: ${v.id} (${v.impact}) ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
-  expect(found).toEqual([]);
-}
 const HOF_API = 'http://localhost:8787';
 const HOF_ID = '0f2d7a51-6c1e-4a8b-9d3f-2b7c5e8a1d44';
 const hofEntry = {
