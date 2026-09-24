@@ -32,6 +32,14 @@ describe('production release guards', () => {
     expect(result.unexpected).toEqual([]);
   });
 
+  it('ignores the wrangler d1_migrations history table', () => {
+    const result = inspectSchema([
+      { results: [...EXPECTED_TABLES, 'd1_migrations'].map((name) => ({ name })) },
+    ]);
+    expect(result.matchesExpected).toBe(true);
+    expect(result.unexpected).toEqual([]);
+  });
+
   it('flags a leftover game table (for example a dropped service_seasons row)', () => {
     const result = inspectSchema([
       { results: [...EXPECTED_TABLES, 'service_seasons'].map((name) => ({ name })) },

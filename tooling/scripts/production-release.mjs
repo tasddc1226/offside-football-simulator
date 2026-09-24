@@ -13,6 +13,9 @@ export const EXPECTED_TABLES = Object.freeze([
   'sessions',
 ]);
 
+// wrangler가 적용한 migration 이력을 기록하는 내부 테이블. 앱 스키마가 아니므로 비교에서 뺀다.
+const WRANGLER_MIGRATIONS_TABLE = 'd1_migrations';
+
 function rowsFromWrangler(value) {
   const blocks = Array.isArray(value) ? value : [value];
   if (blocks.length === 0) throw new Error('Wrangler returned an empty response envelope.');
@@ -31,12 +34,12 @@ function rowsFromWrangler(value) {
 
 /**
  * `SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'`
- * 결과를 검사한다. 정확히 EXPECTED_TABLES와 같아야 통과다(순서 무관).
+ * 결과를 검사한다. wrangler의 d1_migrations를 뺀 나머지가 정확히 EXPECTED_TABLES와 같아야 통과다(순서 무관).
  */
 export function inspectSchema(json) {
   const tables = rowsFromWrangler(json)
     .map((row) => row.name)
-    .filter((name) => typeof name === 'string')
+    .filter((name) => typeof name === 'string' && name !== WRANGLER_MIGRATIONS_TABLE)
     .sort();
   const expected = [...EXPECTED_TABLES].sort();
   const missing = expected.filter((name) => !tables.includes(name));
