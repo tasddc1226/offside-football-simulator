@@ -1,8 +1,10 @@
-import { base } from '@offside/eslint-config';
+import { base, svelteConfig } from '@offside/eslint-config';
 
 // 워크스페이스(web/api/contracts) 경계는 표준 no-restricted-imports로 직접 적는다(ADR-013).
 export default [
   ...base,
+  // T-10-001: apps/web UI가 Svelte 5(runes)로 옮겨오며 .svelte 파일에도 린트를 켠다.
+  ...svelteConfig(['apps/web/src/**/*.svelte']),
   {
     // 클라이언트 전용 web은 서버(api) 코드를 직접 import하지 않는다 — 둘은 별도 Cloudflare Worker다.
     files: ['apps/web/src/**/*.ts'],
