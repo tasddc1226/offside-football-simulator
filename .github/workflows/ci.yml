@@ -125,8 +125,9 @@ jobs:
       - name: Fulltime balance smoke (N=2000, random)
         if: steps.scope.outputs.code_changed == 'true'
         run: node tooling/scripts/sim-smoke.mjs 2000 ci-staging-${{ github.run_id }}
+      # staging 배포는 일시 중지 상태다. 저장소 변수 STAGING_ENABLED=true로 다시 켠다.
       - name: Migrate and deploy staging
-        if: steps.scope.outputs.code_changed == 'true'
+        if: steps.scope.outputs.code_changed == 'true' && vars.STAGING_ENABLED == 'true'
         run: |
           pnpm --filter @offside/api db:migrate:staging
           pnpm --filter @offside/api deploy:staging
@@ -135,7 +136,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Verify deployed health and UI
-        if: steps.scope.outputs.code_changed == 'true'
+        if: steps.scope.outputs.code_changed == 'true' && vars.STAGING_ENABLED == 'true'
         run: |
           node tooling/scripts/web-readiness.mjs "https://offside-web-staging.tasddc1569.workers.dev" apps/web/dist
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \

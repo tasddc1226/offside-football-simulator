@@ -1,5 +1,10 @@
 # 가벼운 PR 검증과 main 전용 자동 배포
 
+> **staging 배포 일시 중지 (2026-09-24)**: main push는 검사, 빌드, e2e, 밸런스 스모크까지만 수행한다.
+> staging D1 migrate·배포·배포 후 확인 단계는 저장소 변수 `STAGING_ENABLED`가 `true`일 때만 실행한다(기본은 미설정이라 꺼짐).
+> staging Worker와 D1(`offside-staging`)은 삭제하지 않고 그대로 둔다. 다시 쓰려면
+> `gh variable set STAGING_ENABLED --body true`를 실행하고, 그다음 main push부터 아래 절차가 그대로 동작한다.
+
 T-9-001(풀타임 마이그레이션) 이후 버전. `apps/web`은 localStorage 저장 클라이언트 전용 게임이고
 `apps/api`는 health·profile·Google 로그인만 다룬다. 옛 domain/content/engine-client/ui/platform
 패키지, 서비스 시즌, seed upsert, replay 회귀는 모두 삭제됐다 — 아래 정책은 `.github/workflows/ci.yml`
