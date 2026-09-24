@@ -1,9 +1,12 @@
 <script lang="ts">
   // ui.ts renderCreate() 포트 (184~204줄)
+  import { scale } from 'svelte/transition';
+  import { quintOut } from 'svelte/easing';
   import { POS, TYPES, TRAITS, ATTR_LABEL, GK_LABEL, ATTR_KEYS } from '../game/data.js';
   import type { Pos } from '../game/data.js';
   import { appState } from './state.svelte.js';
   import { goHome, startCareer, rollCandidates } from './actions.js';
+  import { dur } from './motion.js';
   import Topbar from './Topbar.svelte';
 
   const C = appState.C;
@@ -117,12 +120,15 @@
       <div class="cand-grid">
         {#each appState.candidates as cand, i (i)}
           {#if appState.candidatesOpen[i]}
+            <!-- 카드 오픈 모션(T-10-003 goal 3): 뒤집히듯 살짝 축소된 상태에서 확대되며 나타난다.
+                 감속 모션이면 duration 0(즉시 표시, 기존 동작과 동일). -->
             <button
               class="cand-card open"
               class:picked={appState.candidatePick === i}
               data-cand={i}
               data-cand-open="true"
               onclick={() => pick(i)}
+              in:scale={{ start: 0.86, duration: dur(220), easing: quintOut }}
             >
               <div class="cand-open-head"><b>후보 {i + 1}</b>{#if appState.candidatePick === i}<span class="pill good">선택됨</span>{/if}</div>
               {#each ATTR_KEYS as k (k)}

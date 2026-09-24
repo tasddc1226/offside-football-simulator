@@ -46,7 +46,8 @@ export function radarData(s: GameState) {
   const rings = [20, 40, 60, 80, 100].map((r) => poly(order.map(() => r)));
   const spokes = order.map((_, i) => pt(i, 100));
   const prev = s.seasonStart ? poly(order.map((k) => s.seasonStart[k])) : null;
-  const now = poly(order.map((k) => s.attrs[k]));
+  const nowVals = order.map((k) => s.attrs[k]);
+  const now = poly(nowVals);
   const dots = order.map((k, i) => pt(i, s.attrs[k]));
   const points: RadarPoint[] = order.map((k, i) => {
     const [x, y] = pt(i, 126);
@@ -55,7 +56,11 @@ export function radarData(s: GameState) {
     const anchor = Math.abs(x - CX) < 4 ? 'middle' : x > CX ? 'start' : 'end';
     return { key: k, labelKr: labelOf(s, k), abbr: abbr[k]!, x, y, labelX: x, labelY: y - 7, anchor, value: v, delta: d };
   });
-  return { CX, rings, spokes, prev, now, dots, points, ariaLabel: order.map((k) => `${labelOf(s, k)} ${Math.round(s.attrs[k])}`).join(', ') };
+  // T-10-003: 능력치가 바뀔 때(훈련·이벤트) rd-now 폴리곤을 즉시 스냅하지 않고 부드럽게 모핑하기
+  // 위해, Radar.svelte가 nowVals(순서대로의 숫자 배열)를 직접 트윈하고 poly()와 같은 방식으로
+  // 각 프레임의 좌표 문자열을 다시 계산할 수 있도록 toPoly를 함께 내보낸다.
+  const toPoly = (vals: number[]) => poly(vals);
+  return { CX, rings, spokes, prev, now, nowVals, toPoly, dots, points, ariaLabel: order.map((k) => `${labelOf(s, k)} ${Math.round(s.attrs[k])}`).join(', ') };
 }
 
 

@@ -1,10 +1,16 @@
 <script lang="ts">
   // ui.ts radarSvg() 포트 (262~291줄)
+  import { Tween } from 'svelte/motion';
   import { radarData } from './format.js';
+  import { dur } from './motion.js';
   import type { GameState } from '../game/types.js';
 
   const { s }: { s: GameState } = $props();
   const d = $derived(radarData(s));
+  // T-10-003 goal 3: 레이더의 rd-now 폴리곤(현재 능력치)을 시즌 시작 대비 값에서 순간 이동시키지
+  // 않고 부드럽게 모핑한다. 점(dot)도 같은 트윈 값을 써서 폴리곤과 함께 움직인다.
+  const nowTween = Tween.of(() => d.nowVals, { duration: dur(550) });
+  const nowPoly = $derived(d.toPoly(nowTween.current));
 </script>
 
 <svg class="radar" viewBox="0 0 300 300" role="img" aria-label={d.ariaLabel}>
@@ -17,7 +23,7 @@
   {#if d.prev}
     <polygon class="rd-prev" points={d.prev} />
   {/if}
-  <polygon class="rd-now" points={d.now} />
+  <polygon class="rd-now" points={nowPoly} />
   {#each d.dots as [x, y], i (i)}
     <circle class="rd-dot" cx={x.toFixed(1)} cy={y.toFixed(1)} r="3" />
   {/each}
