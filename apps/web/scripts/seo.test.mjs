@@ -106,8 +106,9 @@ test('stripAppBundle은 속성 순서와 무관하게 앱 스크립트·modulepr
 });
 
 test('in-app badge uses the current brand version', () => {
-  const ui = readFileSync(new URL('../src/game/ui.ts', import.meta.url), 'utf8');
-  assert.match(ui, new RegExp(`/brand/offside-flag-${BRAND_VERSION}-64\\.png`));
+  // T-10-001: 인앱 배지 마크업은 ui.ts에서 Topbar.svelte로 옮겨졌다.
+  const topbar = readFileSync(new URL('../src/ui/Topbar.svelte', import.meta.url), 'utf8');
+  assert.match(topbar, new RegExp(`/brand/offside-flag-${BRAND_VERSION}-64\\.png`));
 });
 
 test('structured data: home is a free web game, FAQ mirrors visible Q&A, no-index shells get none', () => {
