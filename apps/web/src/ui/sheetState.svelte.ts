@@ -1,83 +1,51 @@
-// ───────── 모달 시트 (ui.ts 416~581줄 포트) ─────────
-// 이벤트/이적시장/진행 연출(playSteps·playBlock·playJudge)은 프레임 단위 타이밍과 DOM 클래스
-// 토글에 크게 의존하는 명령형 연출이라, Svelte 선언형 템플릿으로 옮기면 타이밍이나 스킵 동작이
-// 미묘하게 달라질 위험이 크다. 원본과 동일하게 시트 DOM 노드를 직접 조작하는 방식을 유지하고,
-// 반응형 상태(모달 표시 여부 · 버튼 목록)만 Svelte runes로 노출해 Sheet.svelte가 마운트를 맡는다.
+// ───────── 모달 시트 상태 + 진행 연출 ─────────
+// 시트 본문은 타입이 있는 뷰 모델(SheetView)로 표현하고, 실제 마크업은 ui/sheets/*.svelte가
+// 그린다. 진행 연출(playSteps·playBlock·playJudge)은 반응형 뷰 상태를 원본과 같은 타이밍으로
+// 갱신하는 async 함수라, 호출하는 쪽은 여전히 연출이 끝날 때까지 await 한다.
+import { tick } from 'svelte';
 import { clamp, ri } from '../game/rng.js';
-import { clubsIn, fmtMoney, leagueOf, roundRange } from '../game/engine.js';
+import { clubsIn, leagueOf, roundRange } from '../game/engine.js';
 import { PHASES } from '../game/data.js';
-import { esc } from '../game/dom.js';
 import type { GameState } from '../game/types.js';
 import { motionOK } from './motion.js';
+import type { SheetView } from './sheets/types.js';
 
 export type SheetButton = { label: string; cls?: string; fn: () => void };
 export type Chip = { label: string; d: number; money?: boolean; text?: string; bad?: boolean };
+export type { SheetView } from './sheets/types.js';
 
-export const sheetState = $state<{ open: boolean; html: string; buttons: SheetButton[] }>({
+export const sheetState = $state<{ open: boolean; busy: boolean; view: SheetView | null; buttons: SheetButton[] }>({
   open: false,
-  html: '',
+  busy: false,
+  view: null,
   buttons: [],
 });
 
-export let busyAnim = false;
-function setBusy(v: boolean) {
-  busyAnim = v;
-}
-
 let sheetEl: HTMLElement | null = null;
-/** Sheet.svelte가 마운트될 때 실제 시트 DOM 노드를 등록한다(playSteps/playBlock/playJudge가 직접 쓴다). */
+/** Sheet.svelte가 실제 시트 노드를 등록한다(열릴 때 스크롤·포커스 초기화용). */
 export function registerSheetEl(el: HTMLElement | null) {
   sheetEl = el;
 }
-/** 이벤트 선택지(data-choice)·이적시장 옵션(data-opt) 클릭 위임을 붙이기 위해 실제 시트 노드를 준다. */
-export function getSheetEl(): HTMLElement | null {
-  return sheetEl;
-}
-const qOne = <T extends Element = Element>(sel: string): T | null => (sheetEl ? sheetEl.querySelector<T>(sel) : null);
-const qAll = <T extends Element = Element>(sel: string): T[] => (sheetEl ? [...sheetEl.querySelectorAll<T>(sel)] : []);
 
-export function openSheet(html: string) {
-  sheetState.html = html;
-  sheetState.buttons = [];
+export function showSheet(view: SheetView, buttons: SheetButton[] = []) {
+  sheetState.view = view;
+  sheetState.buttons = buttons;
   sheetState.open = true;
-  queueMicrotask(() => {
+  void tick().then(() => {
     if (sheetEl) sheetEl.scrollTop = 0;
-    const b = sheetEl?.querySelector<HTMLButtonElement>('button');
-    if (b) b.focus({ preventScroll: true });
+    sheetEl?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
   });
 }
 export function closeSheet() {
   sheetState.open = false;
-  sheetState.html = '';
+  sheetState.view = null;
   sheetState.buttons = [];
-}
-export function chipsHtml(chips: Chip[], pop = false): string {
-  if (!chips.length) return '';
-  return `<div class="chips">${chips
-    .map(
-      (c, i) =>
-        `<span class="chip ${pop ? 'pop' : ''} ${c.bad || c.d < 0 ? 'down' : 'up'}" style="--d:${i * 70}ms">${c.label} ${
-          c.text || (c.money ? (c.d > 0 ? '+' : '') + fmtMoney(c.d) : (c.d > 0 ? '+' : '') + c.d)
-        }</span>`,
-    )
-    .join('')}</div>`;
-}
-export function showSheet(html: string, btns: SheetButton[]) {
-  sheetState.html = html;
-  sheetState.buttons = btns;
-  sheetState.open = true;
-  queueMicrotask(() => {
-    if (sheetEl) sheetEl.scrollTop = 0;
-    const b = sheetEl?.querySelector<HTMLButtonElement>('button');
-    if (b) b.focus({ preventScroll: true });
-  });
 }
 
 // ───────── 진행 연출 ─────────
-// motionOK(감속 모션 판정)는 motion.ts로 옮겨 화면·탭·시트 전환 애니메이션과 공유한다.
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, motionOK ? ms : 0));
 
-type MatchGame = { rd: number; res: 'W' | 'D' | 'L'; mins: number; g: number; a: number; rating: number; cs?: boolean; inj?: boolean };
+export type MatchGame = { rd: number; res: 'W' | 'D' | 'L'; mins: number; g: number; a: number; rating: number; cs?: boolean; inj?: boolean };
 function fakeScore(m: MatchGame): string {
   let gf = Math.max(m.g || 0, m.res === 'W' ? ri(1, 3) : ri(0, 2));
   let ga: number;
@@ -89,20 +57,19 @@ function fakeScore(m: MatchGame): string {
   return `${gf}-${ga}`;
 }
 
+/** 단계 목록을 하나씩 켰다 끄며 진행률 막대를 채운다. */
 export async function playSteps(title: string, steps: string[], ms = 380) {
-  setBusy(true);
-  openSheet(`<div class="eyebrow">${title}</div><div class="prog"><i id="an-bar"></i></div><div class="steps">${steps.map((t) => `<div>${t}</div>`).join('')}</div>`);
-  await new Promise<void>((r) => queueMicrotask(() => r()));
-  const rows = qAll<HTMLElement>('.steps div');
-  for (let i = 0; i < rows.length; i++) {
-    rows[i]!.className = 'on';
-    const bar = qOne<HTMLElement>('#an-bar');
-    if (bar) bar.style.width = `${((i + 1) / rows.length) * 100}%`;
+  sheetState.busy = true;
+  showSheet({ kind: 'steps', title, steps, active: -1, progress: 0 });
+  const v = sheetState.view as Extract<SheetView, { kind: 'steps' }>;
+  for (let i = 0; i < steps.length; i++) {
+    v.active = i;
+    v.progress = (i + 1) / steps.length;
     await wait(ms);
-    rows[i]!.className = 'done';
   }
+  v.active = steps.length;
   await wait(150);
-  setBusy(false);
+  sheetState.busy = false;
 }
 
 export interface BlockResultLike {
@@ -118,112 +85,95 @@ export interface BlockResultLike {
   rs: number;
   hl: string[];
 }
+/** 구간 경기를 한 경기씩 문자중계처럼 흘려보낸다. 건너뛰기를 누르면 즉시 끝난다. */
 export function playBlock(s: GameState, ph: number, b: BlockResultLike, extras: string[]): Promise<void> {
   return new Promise((resolve) => {
-    setBusy(true);
+    sheetState.busy = true;
     const back = s.pos === 'DF' || s.pos === 'GK';
     const opps = clubsIn(s.leagueId).filter((c) => c.id !== s.club.id);
     const n = b.games.length,
       step = clamp(2600 / Math.max(1, n), 70, 170);
-    openSheet(`<div class="eyebrow">${s.year} · ${PHASES[ph]} 진행 중</div><h2>${roundRange(s, ph)} · ${n}경기</h2>
-      <div class="prog"><i id="an-bar"></i></div><div class="prog-meta"><span id="an-rd">킥오프</span><span id="an-wdl">0승 0무 0패</span></div>
-      <div class="tally"><div><b id="t-apps">0</b><span>출전</span></div><div><b id="t-g">0</b><span>골</span></div><div><b id="t-a">0</b><span>${back ? '무실점' : '도움'}</span></div><div><b id="t-r">-</b><span>평점</span></div></div>
-      <div class="ticker" id="an-tk"></div><div class="steps" id="an-steps"></div>
-      <button class="skip" id="an-skip">건너뛰기</button>`);
-    let i = 0,
-      w = 0,
-      d = 0,
-      l = 0,
-      apps = 0,
-      g = 0,
-      a = 0,
-      cs = 0,
-      rs = 0,
-      timer: ReturnType<typeof setTimeout> | null = null,
-      done = false;
-    const set = (id: string, v: string | number) => {
-      const el = qOne<HTMLElement>(id);
-      if (el && el.textContent !== String(v)) {
-        el.textContent = String(v);
-        el.classList.remove('bump');
-        void el.offsetWidth;
-        el.classList.add('bump');
-      }
-    };
+    let timer: ReturnType<typeof setTimeout> | null = null,
+      done = false,
+      i = 0,
+      rs = 0;
     const finish = async (skipped: boolean) => {
       if (done) return;
       done = true;
       if (timer) clearTimeout(timer);
-      if (!skipped && extras.length) {
-        const box = qOne<HTMLElement>('#an-steps');
+      v.skip = null;
+      if (!skipped) {
         for (const t of extras) {
-          if (!box) break;
-          box.insertAdjacentHTML('beforeend', `<div class="on">${t}</div>`);
+          v.extras.push({ text: t, done: false });
           await wait(420);
-          (box.lastElementChild as HTMLElement).className = 'done';
+          v.extras[v.extras.length - 1]!.done = true;
         }
-        await wait(200);
+        if (extras.length) await wait(200);
       }
-      setBusy(false);
+      sheetState.busy = false;
       resolve();
     };
-    const tick = () => {
-      if (!qOne('#an-tk')) return void finish(true);
+    showSheet({
+      kind: 'block',
+      eyebrow: `${s.year} · ${PHASES[ph]} 진행 중`,
+      title: `${roundRange(s, ph)} · ${n}경기`,
+      back,
+      progress: 0,
+      round: '킥오프',
+      wdl: { w: 0, d: 0, l: 0 },
+      tally: { apps: 0, g: 0, a: 0, cs: 0, rating: '-' },
+      ticker: [],
+      extras: [],
+      skip: () => void finish(true),
+    });
+    const v = sheetState.view as Extract<SheetView, { kind: 'block' }>;
+    const tickOnce = () => {
+      // 시트가 다른 내용으로 바뀌었거나 닫혔으면(원본: #an-tk가 사라짐) 건너뛴 것으로 끝낸다.
+      if (sheetState.view !== v) return void finish(true);
       if (i >= n) return void finish(false);
       const m = b.games[i++]!;
-      if (m.res === 'W') w++;
-      else if (m.res === 'D') d++;
-      else l++;
+      if (m.res === 'W') v.wdl.w++;
+      else if (m.res === 'D') v.wdl.d++;
+      else v.wdl.l++;
       if (m.mins) {
-        apps++;
-        g += m.g;
-        a += m.a;
+        v.tally.apps++;
+        v.tally.g += m.g;
+        v.tally.a += m.a;
         rs += m.rating;
-        if (m.cs) cs++;
+        if (m.cs) v.tally.cs++;
+        v.tally.rating = (rs / v.tally.apps).toFixed(2);
       }
       const opp = opps.length ? opps[m.rd % opps.length]!.name : '상대 팀';
-      const info = m.mins ? `${m.mins}분${m.g ? ` · <b>${m.g}골</b>` : ''}${m.a ? ` · ${m.a}도움` : ''} · ${m.rating}` : m.inj ? '부상 결장' : '출전 없음';
-      qOne('#an-tk')!.insertAdjacentHTML('afterbegin', `<div><span class="rd">${m.rd}R</span><span class="res ${m.res}">${{ W: '승', D: '무', L: '패' }[m.res]}</span><span>${esc(opp)} ${fakeScore(m)} <span class="muted">· ${info}</span></span></div>`);
-      const tk = qOne('#an-tk')!;
-      while (tk.children.length > 5) tk.lastElementChild!.remove();
-      qOne<HTMLElement>('#an-bar')!.style.width = `${(i / n) * 100}%`;
-      qOne('#an-rd')!.textContent = `${m.rd}R / ${leagueOf(s.leagueId).matches}R`;
-      qOne('#an-wdl')!.textContent = `${w}승 ${d}무 ${l}패`;
-      set('#t-apps', apps);
-      set('#t-g', g);
-      set('#t-a', back ? cs : a);
-      set('#t-r', apps ? (rs / apps).toFixed(2) : '-');
-      timer = setTimeout(tick, motionOK ? step : 0);
+      v.ticker.unshift({ key: i, rd: m.rd, res: m.res, opp, score: fakeScore(m), mins: m.mins, g: m.g, a: m.a, rating: m.rating, inj: !!m.inj });
+      if (v.ticker.length > 5) v.ticker.length = 5;
+      v.progress = i / n;
+      v.round = `${m.rd}R / ${leagueOf(s.leagueId).matches}R`;
+      timer = setTimeout(tickOnce, motionOK ? step : 0);
     };
-    queueMicrotask(() => {
-      qOne('#an-skip')?.addEventListener('click', () => finish(true));
-      tick();
-    });
+    void tick().then(tickOnce);
   });
 }
+
+/** 성공 확률 막대 위에서 바늘이 흔들리다 실제 판정값(roll)에 멈춘다. */
 export function playJudge(label: string, p: number, roll: number): Promise<void> {
   return new Promise((resolve) => {
-    setBusy(true);
-    openSheet(`<div class="eyebrow">판정 중</div><h2>${esc(label)}</h2>
-      <div class="judge"><div class="ok" style="width:${p * 100}%"></div><div class="ng"></div><i class="needle"></i></div>
-      <div class="judge-lbl"><span>성공 ${Math.round(p * 100)}%</span><span>실패 ${100 - Math.round(p * 100)}%</span></div>`);
-    queueMicrotask(() => {
-      const needle = qOne<HTMLElement>('.needle'),
-        dur = motionOK ? 1150 : 0,
-        t0 = performance.now();
-      const frame = () => {
-        const t = dur ? Math.min(1, (performance.now() - t0) / dur) : 1,
-          ease = 1 - Math.pow(1 - t, 3);
-        const sweep = (Math.sin(t * 17) + 1) / 2;
-        if (needle) needle.style.left = `calc(${(sweep * (1 - ease) + roll * ease) * 100}% - 1px)`;
-        if (t < 1) setTimeout(frame, 16);
-        else
-          setTimeout(() => {
-            setBusy(false);
-            resolve();
-          }, motionOK ? 280 : 0);
-      };
-      frame();
-    });
+    sheetState.busy = true;
+    showSheet({ kind: 'judge', label, p, pos: 0 });
+    const v = sheetState.view as Extract<SheetView, { kind: 'judge' }>;
+    const dur = motionOK ? 1150 : 0,
+      t0 = performance.now();
+    const frame = () => {
+      const t = dur ? Math.min(1, (performance.now() - t0) / dur) : 1,
+        ease = 1 - Math.pow(1 - t, 3);
+      const sweep = (Math.sin(t * 17) + 1) / 2;
+      v.pos = sweep * (1 - ease) + roll * ease;
+      if (t < 1) setTimeout(frame, 16);
+      else
+        setTimeout(() => {
+          sheetState.busy = false;
+          resolve();
+        }, motionOK ? 280 : 0);
+    };
+    void tick().then(frame);
   });
 }

@@ -28,10 +28,10 @@
   <section class="card stack">
     <div><div class="eyebrow">Next Goals</div><h2>다음 목표</h2></div>
     <div class="mile-next">
-      {#each next as m (m.key)}
+      {#each next as m, i (m.key)}
         <div class="mile-row">
           <div class="mile-lbl"><b>{m.label}</b><span>{m.have} / {m.target} · 남은 {m.remaining}</span></div>
-          <div class="legend-bar"><i style="width:{Math.min(100, Math.round((m.have / m.target) * 100))}%"></i></div>
+          <div class="legend-bar"><i style="width:{Math.min(100, Math.round((m.have / m.target) * 100))}%;--d:{i * 90}ms"></i></div>
         </div>
       {/each}
     </div>

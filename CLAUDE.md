@@ -102,10 +102,9 @@ pnpm --filter @offside/fulltime-sim analyze
 - PR 직전 `git fetch origin && git merge origin/main`. `pnpm-lock.yaml` 충돌은
   손으로 고치지 말고 `git checkout origin/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile`로
   재생성 후 전체 체인 재실행.
-- **구현은 Claude Sonnet 5 서브에이전트에게 위임하고, 오케스트레이션·리뷰·검증은
-  Claude 메인 세션(코디네이터)이 맡는다.** 서브에이전트는 격리 worktree에서
-  브리프 범위만 구현하고, 명세를 스스로 바꾸지 않는다. 이 규칙이
-  `AGENTS.md`의 위임 대상을 정의한다(2026-09-24, ADR-013).
+- **구현은 Claude 메인 세션이 직접 한다(2026-09-24 변경).** 서브에이전트는 서로 독립적이라
+  병렬로 돌릴 수 있는 작업(문구 작성, 테스트 보강, 무관한 기능)에만 쓰고, 재위임 없이 직접
+  구현하게 한다. 이 규칙이 `AGENTS.md`의 작업 방식을 정의한다.
 - 리뷰 체크리스트 요점: 세이브 마이그레이션 보존, 밸런스 변경 시
   `tooling/fulltime-sim` 실행, 정상·빈 상태·오류 테스트, UI 문자열에 폐기
   어휘 없음, 로그에 쿠키·복구 코드·선수명 원문 금지.
