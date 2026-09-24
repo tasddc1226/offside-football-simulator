@@ -6,6 +6,7 @@ import { leagueOf, clubsIn, fmtMoney, salaryFor, addStat, addAttr, log, bloomTic
 import { seasonSetup, compGoals, seasonAwards, checkMilestones, retireMilestones } from './comps.js';
 import { natInit, natSeasonEnd } from './national.js';
 import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
+import { detectCareerHighs } from './records.js';
 import type { GameState, CareerRecord, HofEntry, MarketOption, OfferOption } from './types.js';
 
 export function endSeason(s: GameState) {
@@ -39,6 +40,7 @@ export function endSeason(s: GameState) {
     pro: !L.amateur, comps, caps: s.nat.caps - (S.capsStart || 0),
   } as CareerRecord;
   s.career.push(rec);
+  rec.ch = detectCareerHighs(s, rec);
   const miles = checkMilestones(s, rec as unknown as { pro?: boolean; apps: number; goals: number; club: string });
   log(s, `${s.year} 시즌 종료 · ${L.name} ${rank}위 · 공식전 ${rec.apps}경기 ${rec.goals}골 ${rec.assists}도움`, 'big');
   const mil = milSeasonEnd(s);
