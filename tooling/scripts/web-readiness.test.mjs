@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { candidatePaths, waitForWebCandidate } from './web-readiness.mjs';
+import { SHELL_PATH, candidatePaths, waitForWebCandidate } from './web-readiness.mjs';
 
 const origin = 'https://offside-web-staging.tasddc1569.workers.dev';
 const html = '<script type="module" src="/assets/index-new.js"></script><link rel="modulepreload" href="/assets/engine-new.js"><link rel="stylesheet" href="/assets/index-new.css">';
@@ -16,7 +16,7 @@ function harness(shells = [html], mutate = (value) => value) {
     expect(options.method).toBe('GET');
     expect(options.cache).toBe('no-store');
     const path = new URL(url).pathname;
-    const body = path === '/settings' ? shells[Math.min(shellCount++, shells.length - 1)] : assets.get(path);
+    const body = path === SHELL_PATH ? shells[Math.min(shellCount++, shells.length - 1)] : assets.get(path);
     return mutate({ status: 200, redirected: false, url, arrayBuffer: async () => new TextEncoder().encode(body) }, path);
   });
   return { origin, candidate, fetchImpl, timeoutMs: 50, intervalMs: 10,

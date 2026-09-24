@@ -7,6 +7,8 @@ const ORIGINS = new Set([
   'https://offside-web-staging.tasddc1569.workers.dev',
   'https://offside-lab.com',
 ]);
+// 앱 셸을 서빙하는 경로. apps/web/src/worker.ts의 APP_PATHS와 맞춰야 한다.
+export const SHELL_PATH = '/settings';
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 export function candidatePaths(html) {
@@ -78,7 +80,7 @@ export async function waitForWebCandidate({
   while (now() < deadline) {
     attempts++;
     try {
-      const paths = candidatePaths(new TextDecoder().decode(await get('/settings')));
+      const paths = candidatePaths(new TextDecoder().decode(await get(SHELL_PATH)));
       if (JSON.stringify(paths) !== JSON.stringify([...candidate.keys()].sort()))
         throw new Error('OLD_OR_DIFFERENT_SHELL');
       // Sequential requests bound network pressure and share the same overall deadline.
