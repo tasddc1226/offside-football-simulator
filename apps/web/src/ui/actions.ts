@@ -82,7 +82,7 @@ export function nextPending() {
     s.pending = { type: 'market', res, m: null };
     save();
     const steps = ['리그 최종 순위 확정', ...((res.tours ?? []).length ? ['국제 대회 결과 반영'] : []), '시즌 시상식', '커리어 기록 정리'];
-    void playSteps(`${res.rec.year} · 시즌 결산 중`, steps, 420).then(nextPending);
+    void playSteps(`${res.rec.year} · 시즌 결산 중`, steps, 560).then(nextPending);
     return;
   }
   if (p.type === 'market') {
