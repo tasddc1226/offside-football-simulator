@@ -1,10 +1,9 @@
 <script lang="ts">
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
   import { PHASES, LAST_PHASE } from '../../game/data.js';
-  import { leagueOf, teamRank, roundRange, blockMatches, TRAININGS, trainingLabel, trainingDesc, STORIES, turnNo } from '../../game/engine.js';
+  import { teamRank, roundRange, TRAININGS, trainingLabel, trainingDesc, STORIES, turnNo } from '../../game/engine.js';
   import { EVENTS } from '../../game/events-data.js';
   import type { GameState } from '../../game/types.js';
-  import { advance, nextPending } from '../actions.js';
   import { save, seasonLabel } from '../helpers.js';
 
   const { s }: { s: GameState } = $props();
@@ -14,11 +13,7 @@
   const rank = $derived(teamRank(s));
   const phase = $derived(Math.min(s.phase, LAST_PHASE));
   const label = $derived(phase === 0 ? '프리시즌' : `${PHASES[phase]} · ${roundRange(s, phase)}`);
-  const busy = $derived(!!s.pending);
   const lastCol = $derived((s.pos === 'GK' || s.pos === 'DF' ? ['무실점', S.cs] : ['도움', S.assists]) as [string, number]);
-  const btnLabel = $derived(
-    phase === 0 ? '프리시즌 훈련 진행' : `훈련 후 ${phase >= LAST_PHASE ? leagueOf(s.leagueId).matches - S.played : Math.min(blockMatches(s), leagueOf(s.leagueId).matches - S.played)}경기 진행`,
-  );
   const comps = $derived(s.season.comps || []);
   const activeStories = $derived(Object.entries(s.story || {}).filter(([, v]) => !v.done));
   const t = $derived(turnNo(s));
@@ -113,9 +108,7 @@
       </button>
     {/each}
   </div>
-  <button class="btn btn-primary btn-block" data-act={busy ? 'resume' : 'advance'} onclick={() => (busy ? nextPending() : advance())}>
-    {busy ? '진행 중인 이벤트 보기' : btnLabel} →
-  </button>
+  <p class="muted" style="font-size:12px">진행 버튼은 화면 아래 고정 액션바에 있습니다.</p>
 </section>
 
 <section class="card">
