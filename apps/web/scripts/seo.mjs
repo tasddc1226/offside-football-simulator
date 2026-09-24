@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 const BRAND_SOURCE = fileURLToPath(
-  new URL('../brand/offside-app-icon-flag-v5.png', import.meta.url),
+  new URL('../brand/offside-app-icon-fulltime-v6.svg', import.meta.url),
 );
-const BRAND_VERSION = 'v5';
+const BRAND_VERSION = 'v6';
 
 export const PUBLIC_PAGES = {
   '/': {
@@ -159,16 +159,15 @@ async function createBrandAssets(outputDirectory) {
     );
   }
   const favicon64 = resized.get(64);
-  const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><image width="64" height="64" href="data:image/png;base64,${favicon64.toString('base64')}"/></svg>`;
-  await writeFile(join(outputDirectory, 'favicon.svg'), faviconSvg);
+  await writeFile(join(outputDirectory, 'favicon.svg'), await readFile(BRAND_SOURCE));
   await writeFile(join(outputDirectory, 'favicon.png'), favicon64);
   const ogPath = join(outputDirectory, `og-offside-flag-${BRAND_VERSION}.png`);
-  await sharp({ create: { width: 1200, height: 630, channels: 4, background: '#101722' } })
+  await sharp({ create: { width: 1200, height: 630, channels: 4, background: '#0D1511' } })
     .composite([
       { input: await sharp(BRAND_SOURCE).resize(260, 260).png().toBuffer(), left: 84, top: 185 },
       {
         input: Buffer.from(
-          `<svg width="760" height="260"><text x="0" y="112" fill="#f3f6fa" font-family="Arial,sans-serif" font-size="112" font-weight="800">OFFSIDE</text><text x="4" y="184" fill="#8ebcf0" font-family="Arial,sans-serif" font-size="40">FOOTBALL CAREER STORY</text></svg>`,
+          `<svg width="760" height="260"><text x="0" y="112" fill="#E9EEE8" font-family="Arial,sans-serif" font-size="112" font-weight="800">OFFSIDE</text><text x="4" y="184" fill="#F2B632" font-family="Arial,sans-serif" font-size="40">FULLTIME · FOOTBALL CAREER</text></svg>`,
         ),
         left: 390,
         top: 192,
@@ -184,8 +183,8 @@ async function createBrandAssets(outputDirectory) {
       short_name: 'OFFSIDE',
       start_url: '/',
       display: 'standalone',
-      background_color: '#101722',
-      theme_color: '#101722',
+      background_color: '#0D1511',
+      theme_color: '#0D1511',
       icons: [
         {
           src: `/brand/offside-flag-${BRAND_VERSION}-192.png`,

@@ -102,7 +102,7 @@ function toast(t: string) {
 }
 
 function topbar(right = ''): string {
-  return `<header class="topbar"><img class="badge" src="/brand/offside-flag-v5-64.png" alt="" width="38" height="38" />
+  return `<header class="topbar"><img class="badge" src="/brand/offside-flag-v6-64.png" alt="" width="38" height="38" />
     <div class="brand"><small>풀타임: 휘슬이 울릴 때까지</small><b>오프사이드</b></div><div class="spacer"></div>${right}</header>`;
 }
 function render() {
