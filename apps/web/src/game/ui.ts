@@ -30,9 +30,9 @@ import { initSubs, legacyOvr } from './attributes.js';
 import type { GameState, CareerRecord, NatTour, HofEntry, MarketOption, EventLogEntry } from './types.js';
 import { esc } from './dom.js';
 
-// T-9-009: 게임 로직/UI 코드에는 앱 버전 상수가 따로 없어 web 패키지 버전을 그대로 쓴다(빌드 시
-// 정확한 배포 버전을 박아 넣는 파이프라인은 이 작업 범위 밖 — 판단 근거는 최종 보고 참고).
-const APP_VERSION = '0.0.0';
+// T-9-009: 빌드 시 vite define으로 커밋 SHA가 들어온다(vite.config.ts). 테스트 등 define이 없는 환경은 'dev'.
+declare const __APP_VERSION__: string | undefined;
+const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
 const EV_BUF_CAP = 300;
 function pushEvLog(s: GameState, entry: EventLogEntry) {
   const buf = (s.evBuf = s.evBuf || []);

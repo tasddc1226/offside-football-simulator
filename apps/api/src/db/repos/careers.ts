@@ -1,5 +1,5 @@
 import type { CareerMeta, CareerSeasonPayload, RetirementSummary } from '@offside/contracts';
-import { and, eq, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { careers, careerSeasons } from '../schema.js';
@@ -146,5 +146,5 @@ export async function getCareer(db: Db, careerId: string): Promise<CareerRow | u
 }
 
 export async function listCareerSeasons(db: Db, careerId: string) {
-  return db.select().from(careerSeasons).where(and(eq(careerSeasons.careerId, careerId)));
+  return db.select().from(careerSeasons).where(eq(careerSeasons.careerId, careerId));
 }

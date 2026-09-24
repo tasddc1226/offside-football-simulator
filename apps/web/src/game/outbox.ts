@@ -45,9 +45,14 @@ function pathFor(item: OutboxItem): string {
 
 /** GET /v1/profile을 먼저 호출해 세션·익명 프로필이 있는지 확인한다(account.ts와 같은 흐름 — 실패해도
  * throw하지 않는다). 쿠키가 없으면 이 호출이 새로 발급한다. */
+let profileReady = false;
+
 async function ensureProfile(): Promise<boolean> {
+  // 페이지당 한 번만 확인한다 — 세션이 한번 확인되면 이후 flush는 추가 GET 없이 보낸다.
+  if (profileReady) return true;
   try {
     const res = await fetch(`${apiBaseUrl()}/v1/profile`, { method: 'GET', credentials: 'include' });
+    profileReady = res.ok;
     return res.ok;
   } catch {
     return false;
@@ -68,6 +73,11 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
     if (res.ok) return 'ok';
     // 4xx(검증 실패·409 소유권 충돌 포함)는 재시도해도 같은 결과이므로 버린다.
     if (res.status >= 500) return 'retry';
+    // 세션 만료: 다음 flush에서 프로필을 다시 확인하고 재시도한다(버리지 않는다).
+    if (res.status === 401) {
+      profileReady = false;
+      return 'retry';
+    }
     return 'drop';
   } catch {
     return 'retry';
