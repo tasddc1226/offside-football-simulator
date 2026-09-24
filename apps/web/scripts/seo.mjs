@@ -253,12 +253,12 @@ async function createBrandAssets(outputDirectory) {
   await writeFile(join(outputDirectory, 'favicon.svg'), brandSvg);
   await writeFile(join(outputDirectory, 'favicon.png'), resized.get(64));
   // PNG를 그대로 담은 단일 이미지 ICO — /favicon.ico를 직접 요청하는 크롤러·브라우저용.
-  const png = await sharp(brandSvg).resize(48, 48).png().toBuffer();
+  const png = resized.get(64);
   const ico = Buffer.alloc(22);
   ico.writeUInt16LE(1, 2);
   ico.writeUInt16LE(1, 4);
-  ico.writeUInt8(48, 6);
-  ico.writeUInt8(48, 7);
+  ico.writeUInt8(64, 6);
+  ico.writeUInt8(64, 7);
   ico.writeUInt16LE(1, 10);
   ico.writeUInt16LE(32, 12);
   ico.writeUInt32LE(png.length, 14);
