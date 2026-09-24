@@ -10,6 +10,6 @@ test.describe('앱 로드', () => {
 
   test('페이지 타이틀이 올바르다', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle('오프사이드 — 풀타임 축구 커리어');
+    await expect(page).toHaveTitle('오프사이드 - 축구선수 커리어 시뮬레이션 게임');
   });
 });
