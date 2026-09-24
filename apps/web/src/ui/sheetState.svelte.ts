@@ -43,7 +43,17 @@ export function closeSheet() {
 }
 
 // ───────── 진행 연출 ─────────
-const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, motionOK ? ms : 0));
+// T-10-007: 진행 템포(단계·경기가 하나씩 나오는 간격)는 "정보를 읽는 시간"이라 감속 모션이어도
+// 유지한다. 예전에는 감속 모션이면 0ms로 건너뛰어 결과가 한순간에 지나갔다. 감속 모션에서 빼는 것은
+// 움직임(바늘 흔들기·CSS 등장 모션)뿐이다. 건너뛰기 버튼으로 언제든 끝낼 수 있다.
+const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+// 템포 값(ms). 원래 값(단계 380·구간 2.6s)이 결과를 읽기엔 빠르다는 피드백으로 약 1.4배 늘렸다.
+/** 프리시즌 단계·구간 뒤 부가 줄(컵 결과·A매치 소집 등) 하나가 머무는 시간. */
+const STEP_MS = 520;
+/** 한 구간(시즌 절반) 문자중계 총 길이 목표와 경기당 간격 범위. */
+const BLOCK_TOTAL_MS = 3600;
+const BLOCK_STEP_MIN = 120;
+const BLOCK_STEP_MAX = 260;
 
 export type MatchGame = { rd: number; res: 'W' | 'D' | 'L'; mins: number; g: number; a: number; rating: number; cs?: boolean; inj?: boolean };
 function fakeScore(m: MatchGame): string {
@@ -58,7 +68,7 @@ function fakeScore(m: MatchGame): string {
 }
 
 /** 단계 목록을 하나씩 켰다 끄며 진행률 막대를 채운다. */
-export async function playSteps(title: string, steps: string[], ms = 380) {
+export async function playSteps(title: string, steps: string[], ms = STEP_MS) {
   sheetState.busy = true;
   showSheet({ kind: 'steps', title, steps, active: -1, progress: 0 });
   const v = sheetState.view as Extract<SheetView, { kind: 'steps' }>;
@@ -92,7 +102,7 @@ export function playBlock(s: GameState, ph: number, b: BlockResultLike, extras: 
     const back = s.pos === 'DF' || s.pos === 'GK';
     const opps = clubsIn(s.leagueId).filter((c) => c.id !== s.club.id);
     const n = b.games.length,
-      step = clamp(2600 / Math.max(1, n), 70, 170);
+      step = clamp(BLOCK_TOTAL_MS / Math.max(1, n), BLOCK_STEP_MIN, BLOCK_STEP_MAX);
     let timer: ReturnType<typeof setTimeout> | null = null,
       done = false,
       i = 0,
@@ -105,7 +115,7 @@ export function playBlock(s: GameState, ph: number, b: BlockResultLike, extras: 
       if (!skipped) {
         for (const t of extras) {
           v.extras.push({ text: t, done: false });
-          await wait(420);
+          await wait(STEP_MS);
           v.extras[v.extras.length - 1]!.done = true;
         }
         if (extras.length) await wait(200);
@@ -148,7 +158,7 @@ export function playBlock(s: GameState, ph: number, b: BlockResultLike, extras: 
       if (v.ticker.length > 5) v.ticker.length = 5;
       v.progress = i / n;
       v.round = `${m.rd}R / ${leagueOf(s.leagueId).matches}R`;
-      timer = setTimeout(tickOnce, motionOK ? step : 0);
+      timer = setTimeout(tickOnce, step);
     };
     void tick().then(tickOnce);
   });
@@ -172,7 +182,8 @@ export function playJudge(label: string, p: number, roll: number): Promise<void>
         setTimeout(() => {
           sheetState.busy = false;
           resolve();
-        }, motionOK ? 280 : 0);
+          // 감속 모션이면 바늘이 흔들리지 않고 곧장 판정값에 서므로, 결과를 읽을 시간을 조금 더 준다.
+        }, motionOK ? 280 : 700);
     };
     void tick().then(frame);
   });
