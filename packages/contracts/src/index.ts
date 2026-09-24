@@ -66,6 +66,8 @@ export {
   CareerMetaSchema,
   CareerHonorSchema,
   CareerSeasonPayloadSchema,
+  SeasonCompSchema,
+  type SeasonComp,
   EventLogEntrySchema,
   PutCareerSeasonBodySchema,
   CareerUpsertResponseSchema,

@@ -154,6 +154,13 @@ export const careerSeasons = sqliteTable(
     honorsJson: text('honors_json').notNull(),
     mil: integer('mil').notNull(),
     eventsJson: text('events_json').notNull(),
+    // T-10-006 시즌 상세. 이 컬럼 이전에 쌓인 행·옛 클라이언트 업로드는 NULL(= 기록 없음).
+    cs: integer('cs'),
+    lgApps: integer('lg_apps'),
+    lgGoals: integer('lg_goals'),
+    caps: integer('caps'),
+    compsJson: text('comps_json'),
+    chJson: text('ch_json'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [primaryKey({ columns: [table.careerId, table.year] })],

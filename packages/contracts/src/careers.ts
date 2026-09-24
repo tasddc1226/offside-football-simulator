@@ -28,6 +28,17 @@ export type CareerMeta = z.infer<typeof CareerMetaSchema>;
 
 export const CareerHonorSchema = z.string().max(60);
 
+/** T-10-006. 시즌 한 줄의 컵·대륙 대회 기록(game/types.ts `SeasonComp`에서 기록용 필드만). */
+export const SeasonCompSchema = z.strictObject({
+  type: z.enum(['cup', 'cont', 'super']),
+  name: ShortStringSchema,
+  stage: z.string().max(20),
+  apps: z.number().int().min(0).max(200),
+  g: z.number().int().min(0).max(200),
+  a: z.number().int().min(0).max(200),
+});
+export type SeasonComp = z.infer<typeof SeasonCompSchema>;
+
 /** season.ts `endSeason()`이 만드는 `CareerRecord`에서 뽑아낸 한 시즌 요약. */
 export const CareerSeasonPayloadSchema = z.strictObject({
   age: z.number().int().min(0).max(100),
@@ -42,6 +53,17 @@ export const CareerSeasonPayloadSchema = z.strictObject({
   ovr: z.number().int().min(0).max(200),
   honors: z.array(CareerHonorSchema).max(30),
   mil: z.boolean().optional(),
+  // T-10-006: 시즌 상세. 옛 클라이언트·재시도 큐에 남은 옛 페이로드는 없을 수 있어 모두 선택 필드다.
+  /** 무실점 경기 수(GK·DF 위주, 다른 포지션도 집계된다). */
+  cs: z.number().int().min(0).max(1000).optional(),
+  /** 리그 경기만 센 출전·득점(apps/goals는 컵·대륙 대회 포함 합계). */
+  lgApps: z.number().int().min(0).max(1000).optional(),
+  lgGoals: z.number().int().min(0).max(1000).optional(),
+  /** 그 시즌 A매치 출전 수. */
+  caps: z.number().int().min(0).max(200).optional(),
+  comps: z.array(SeasonCompSchema).max(10).optional(),
+  /** 이 시즌에 경신한 커리어 하이 지표 키(goals/assists/apps/rating/cs). */
+  ch: z.array(z.string().min(1).max(12)).max(10).optional(),
 });
 export type CareerSeasonPayload = z.infer<typeof CareerSeasonPayloadSchema>;
 
