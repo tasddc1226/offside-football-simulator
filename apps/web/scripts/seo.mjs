@@ -6,7 +6,8 @@ import sharp from 'sharp';
 const BRAND_SOURCE = fileURLToPath(
   new URL('../brand/offside-app-icon-fulltime-v6.svg', import.meta.url),
 );
-const BRAND_VERSION = 'v6';
+export const BRAND_VERSION = 'v6';
+const BRAND_BG = '#0D1511';
 
 export const PUBLIC_PAGES = {
   '/': {
@@ -150,21 +151,21 @@ export function pageHtml(baseHtml, config, path, body, { forceNoIndex = false, k
 async function createBrandAssets(outputDirectory) {
   const sizes = [64, 180, 192, 512];
   const resized = new Map();
+  const brandSvg = await readFile(BRAND_SOURCE);
   for (const size of sizes) {
-    const buffer = await sharp(BRAND_SOURCE).resize(size, size).png().toBuffer();
+    const buffer = await sharp(brandSvg).resize(size, size).png().toBuffer();
     resized.set(size, buffer);
     await writeFile(
       join(outputDirectory, 'brand', `offside-flag-${BRAND_VERSION}-${size}.png`),
       buffer,
     );
   }
-  const favicon64 = resized.get(64);
-  await writeFile(join(outputDirectory, 'favicon.svg'), await readFile(BRAND_SOURCE));
-  await writeFile(join(outputDirectory, 'favicon.png'), favicon64);
+  await writeFile(join(outputDirectory, 'favicon.svg'), brandSvg);
+  await writeFile(join(outputDirectory, 'favicon.png'), resized.get(64));
   const ogPath = join(outputDirectory, `og-offside-flag-${BRAND_VERSION}.png`);
-  await sharp({ create: { width: 1200, height: 630, channels: 4, background: '#0D1511' } })
+  await sharp({ create: { width: 1200, height: 630, channels: 4, background: BRAND_BG } })
     .composite([
-      { input: await sharp(BRAND_SOURCE).resize(260, 260).png().toBuffer(), left: 84, top: 185 },
+      { input: await sharp(brandSvg).resize(260, 260).png().toBuffer(), left: 84, top: 185 },
       {
         input: Buffer.from(
           `<svg width="760" height="260"><text x="0" y="112" fill="#E9EEE8" font-family="Arial,sans-serif" font-size="112" font-weight="800">OFFSIDE</text><text x="4" y="184" fill="#F2B632" font-family="Arial,sans-serif" font-size="40">FULLTIME · FOOTBALL CAREER</text></svg>`,
@@ -183,8 +184,8 @@ async function createBrandAssets(outputDirectory) {
       short_name: 'OFFSIDE',
       start_url: '/',
       display: 'standalone',
-      background_color: '#0D1511',
-      theme_color: '#0D1511',
+      background_color: BRAND_BG,
+      theme_color: BRAND_BG,
       icons: [
         {
           src: `/brand/offside-flag-${BRAND_VERSION}-192.png`,
