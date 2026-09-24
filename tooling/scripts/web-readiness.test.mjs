@@ -26,6 +26,9 @@ function harness(shells = [html], mutate = (value) => value) {
 describe('candidate web propagation guard', () => {
   it('extracts module entry, modulepreload and CSS only with safe local paths', () => {
     expect(candidatePaths(`${html}<link rel="icon" href="/favicon.svg">`)).toEqual([...candidate.keys()]);
+    expect(
+      candidatePaths(`${html}<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=X">`),
+    ).toEqual([...candidate.keys()]);
     expect(() => candidatePaths(html.replace('/assets/index-new.js', 'https://elsewhere.invalid/app.js'))).toThrow('INVALID_CANDIDATE_ASSET_PATH');
     expect(() => candidatePaths(html.replace('/assets/index-new.js', '/assets/../app.js'))).toThrow('INVALID_CANDIDATE_ASSET_PATH');
   });

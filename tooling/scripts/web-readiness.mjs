@@ -16,6 +16,8 @@ export function candidatePaths(html) {
     const link = /^<link\b/i.test(tag) && /\brel=["'](?:modulepreload|stylesheet)["']/i.test(tag);
     if (!script && !link) continue;
     const value = tag.match(/\b(?:src|href)=["']([^"']+)["']/i)?.[1];
+    // 외부 https 스타일시트(예: Google Fonts)는 배포 산출물이 아니므로 비교에서 뺀다. 외부 스크립트는 계속 거부한다.
+    if (link && /\brel=["']stylesheet["']/i.test(tag) && value && /^https:\/\//i.test(value)) continue;
     if (!value || !/^\/assets\/[A-Za-z0-9_.-]+\.(?:js|css)$/.test(value))
       throw new Error('INVALID_CANDIDATE_ASSET_PATH');
     paths.push(value);
