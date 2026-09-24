@@ -76,6 +76,59 @@ function escapeHtml(value) {
 const absoluteUrl = (origin, path) =>
   origin ? `${origin}${path === '/' ? '/' : path}` : undefined;
 
+// schema.org 구조화 데이터. 실제 화면에 있는 내용만 담는다(가짜 평점·통계 금지).
+// FAQPage는 /faq/ 본문과 같은 FAQ_ITEMS에서 만들어 화면과 어긋나지 않게 한다.
+export function createStructuredData(origin, path) {
+  const url = absoluteUrl(origin, path);
+  const home = absoluteUrl(origin, '/');
+  if (path === '/')
+    return [
+      { '@type': 'WebSite', name: '오프사이드', alternateName: 'OFFSIDE', url, inLanguage: 'ko' },
+      {
+        '@type': 'VideoGame',
+        name: PUBLIC_PAGES['/'].title,
+        description: PUBLIC_PAGES['/'].description,
+        url,
+        image: `${origin}/og-offside-flag-${BRAND_VERSION}.png`,
+        inLanguage: 'ko',
+        genre: ['스포츠', '시뮬레이션'],
+        gamePlatform: 'Web browser',
+        applicationCategory: 'GameApplication',
+        operatingSystem: 'Web',
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' },
+      },
+    ];
+  const breadcrumb = {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '홈', item: home },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: PUBLIC_PAGES[path].title.split(' | ')[0],
+        item: url,
+      },
+    ],
+  };
+  if (path !== '/faq/') return [breadcrumb];
+  const text = (html) => html.replace(/<[^>]+>/g, '');
+  return [
+    breadcrumb,
+    {
+      '@type': 'FAQPage',
+      mainEntity: FAQ_ITEMS.map(([q, a]) => ({
+        '@type': 'Question',
+        name: q,
+        acceptedAnswer: { '@type': 'Answer', text: text(a) },
+      })),
+    },
+  ];
+}
+function jsonLd(origin, path) {
+  const graph = createStructuredData(origin, path);
+  return `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replaceAll('<', '\\u003c')}</script>`;
+}
+
 export function createHeadMarkup(config, path = '/', forceNoIndex = false) {
   const page = PUBLIC_PAGES[path] ?? PUBLIC_PAGES['/'];
   const robots =
@@ -94,7 +147,7 @@ export function createHeadMarkup(config, path = '/', forceNoIndex = false) {
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/brand/offside-flag-${BRAND_VERSION}-64.png" type="image/png" sizes="64x64" />
     <link rel="apple-touch-icon" href="/brand/offside-flag-${BRAND_VERSION}-180.png" sizes="180x180" />
-    <link rel="manifest" href="/site.webmanifest" /><!-- offside-seo:end -->`;
+    <link rel="manifest" href="/site.webmanifest" />${canonical && path in PUBLIC_PAGES ? jsonLd(config.origin, path) : ''}<!-- offside-seo:end -->`;
 }
 export function createRobotsTxt({ origin, indexingEnabled }) {
   return !indexingEnabled || !origin
@@ -107,6 +160,11 @@ export function createSitemapXml(origin) {
   ).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
+export function createLlmsTxt(origin) {
+  const link = (path) =>
+    `- [${PUBLIC_PAGES[path].title}](${absoluteUrl(origin, path)}): ${PUBLIC_PAGES[path].description}`;
+  return `# 오프사이드 (OFFSIDE · 풀타임)\n\n> ${PUBLIC_PAGES['/'].description}\n\n웹 브라우저에서 무료로 플레이하는 한국어 축구 선수 커리어 스토리 시뮬레이션 게임이다. 설치나 로그인 없이 바로 시작할 수 있다.\n\n## 문서\n\n${['/guide/', '/faq/'].map(link).join('\n')}\n\n## 정책\n\n${['/legal/terms/', '/legal/privacy/'].map(link).join('\n')}\n`;
+}
 export function createHeaders({ indexingEnabled }) {
   const publicHeaders = PUBLIC_PATHS.map(
     (path) => `${path}\n  X-Robots-Tag: ${indexingEnabled ? 'index, follow' : 'noindex, nofollow'}`,
@@ -115,7 +173,33 @@ export function createHeaders({ indexingEnabled }) {
 }
 
 const guideBody = `<div class="os-screen"><header><p class="os-eyebrow">HOW TO PLAY</p><h1>게임 가이드</h1><p>고교 3학년 킥오프부터 은퇴까지, 한 명의 축구 선수를 만들고 이어 가는 기본 흐름입니다.</p></header><section class="os-panel"><h2>1. 선수 생성</h2><p>이름, 등번호, 포지션(FW·MF·DF·GK), 주발, 플레이 유형(강점·약점), 성장 특성을 정하고 고교 3학년 시즌을 시작합니다. 잠재력은 숨겨져 있고 스카우트 평가로만 짐작할 수 있습니다.</p></section><section class="os-panel"><h2>2. 시즌 진행 — 프리시즌 · 전반기 · 후반기</h2><p>한 시즌은 프리시즌과 전반기·후반기 두 구간으로 진행됩니다. 구간마다 훈련 방향(체력·기술·전술 등)을 고르고 진행하면, 그 구간의 경기 결과가 한 번에 시뮬레이션되어 출전·골·도움·평점으로 쌓입니다.</p></section><section class="os-panel"><h2>3. 확률 이벤트와 스토리</h2><p>구간을 진행할 때마다 무작위 이벤트가 등장할 수 있습니다. 선택지마다 성공 확률이 공개되며, 일부 이벤트는 여러 시즌에 걸쳐 이어지는 연속 스토리로 발전합니다.</p></section><section class="os-panel"><h2>4. 능력치 성장</h2><p>OVR 하나가 아니라 스피드·슈팅·패스·드리블·수비·피지컬 같은 카드 능력치와, 그 아래 세부 능력치(포지션별 역할 OVR에 반영)가 함께 성장합니다. 육각형 레이더로 현재 능력치와 시즌 시작 시점을 비교할 수 있습니다.</p></section><section class="os-panel"><h2>5. 컵 대회 · 대륙 대회</h2><p>소속 리그에 따라 국내 컵, 슈퍼컵, 대륙 클럽 대회(챔피언스리그 등)에 함께 출전하며, 시즌이 끝나면 득점왕·MVP·발롱도르 같은 개인상을 노려볼 수 있습니다.</p></section><section class="os-panel"><h2>6. 이적 시장 · 계약</h2><p>시즌이 끝나면 잔류·재계약·이적 제안 중에서 다음 행선지를 정합니다. 성적과 평판에 따라 해외 리그로 도약할 수도 있습니다.</p></section><section class="os-panel"><h2>7. 국가대표 · 병역</h2><p>대표팀에 발탁되면 A매치·아시안컵·월드컵 등 국제 대회에 출전합니다. 병역 의무가 있는 나이가 되면 김천 상무 입대, 일반 입대, 국제대회 병역 특례 등 병역 관련 선택을 만나게 됩니다.</p></section><section class="os-panel"><h2>8. 은퇴와 명예의 전당</h2><p>나이가 들거나 더 이상 팀을 찾지 못하면 은퇴를 선언합니다. 통산 기록과 트로피, 수상 경력을 바탕으로 레전드 점수가 매겨지고, 명예의 전당에 이름이 남습니다.</p></section><section class="os-panel"><h2>진행 상황 저장</h2><p>진행 상황(세이브)은 이 브라우저(기기)에만 저장되며, 다른 기기로 옮기려면 같은 브라우저를 사용해야 합니다. 다만 커리어·시즌 요약 기록과 플레이 중 선택 기록은 서비스 개선·밸런스 분석을 위해 익명 프로필 단위로 서버에도 함께 저장됩니다(선수 이름은 저장하지 않습니다). 자세한 내용은 <a href="/legal/privacy/">개인정보처리방침</a>을 확인해 주세요.</p></section><p><a href="/">첫 커리어 시작</a></p><nav><a href="/">홈</a> · <a href="/faq/">자주 묻는 질문</a></nav></div>`;
-const faqBody = `<div class="os-screen"><header><p class="os-eyebrow">HELP</p><h1>자주 묻는 질문</h1><p>게임을 시작하거나 이어 할 때 필요한 답을 모았습니다.</p></header><section class="os-panel"><h2>어떤 게임인가요?</h2><p>고교 3학년부터 은퇴까지, 한 축구 선수의 입장에서 매 시즌 훈련 방향을 고르고 확률 이벤트에 반응하며 커리어를 만들어 가는 스토리 시뮬레이션입니다.</p><h2>진행 내용은 어디에 저장되나요?</h2><p>플레이 중인 세이브(선수 능력치, 진행 중인 시즌 등)는 이 브라우저의 로컬 저장소에만 남습니다. 저장소를 지우거나 기기를 바꾸면 세이브 자체는 이어갈 수 없습니다. 다만 커리어·시즌 요약 기록과 선택 기록은 익명 프로필 단위로 서버(Cloudflare D1)에도 저장되어 서비스 개선과 밸런스 분석에 쓰입니다. 선수 이름은 저장하지 않으며, 계정을 삭제하면 이 기록도 함께 삭제됩니다.</p><h2>구글 로그인은 왜 있나요?</h2><p>구글 계정 연결은 로그인 상태만을 위한 것으로, 게임 진행 데이터와는 별개입니다. 계정을 연결·해제하거나 로그아웃해도 이 기기의 게임 저장 데이터는 그대로 남습니다.</p><h2>이벤트 성공 확률은 어떻게 정해지나요?</h2><p>선택지마다 표시되는 퍼센트가 실제 성공 확률입니다. 확률이 없는 선택지는 확정 결과(안전하지만 보상이 낮을 수 있음)입니다.</p><h2>세이브가 꼬였어요 / 예전 버전 저장을 불러올 수 있나요?</h2><p>과거 버전의 저장 데이터(세부 능력치·병역·반기제 도입 이전 등)도 불러오는 즉시 자동으로 최신 형식으로 변환됩니다. 별도로 조치할 필요는 없습니다.</p><h2>문제가 생겼어요.</h2><p><a href="mailto:tasddc1569@gmail.com">tasddc1569@gmail.com</a>으로 사용 환경과 문제가 발생한 화면을 보내 주세요.</p></section><p><a href="/">게임 시작</a></p><nav><a href="/">홈</a> · <a href="/guide/">게임 가이드</a></nav></div>`;
+const FAQ_ITEMS = [
+  [
+    '어떤 게임인가요?',
+    '고교 3학년부터 은퇴까지, 한 축구 선수의 입장에서 매 시즌 훈련 방향을 고르고 확률 이벤트에 반응하며 커리어를 만들어 가는 스토리 시뮬레이션입니다.',
+  ],
+  [
+    '진행 내용은 어디에 저장되나요?',
+    '플레이 중인 세이브(선수 능력치, 진행 중인 시즌 등)는 이 브라우저의 로컬 저장소에만 남습니다. 저장소를 지우거나 기기를 바꾸면 세이브 자체는 이어갈 수 없습니다. 다만 커리어·시즌 요약 기록과 선택 기록은 익명 프로필 단위로 서버(Cloudflare D1)에도 저장되어 서비스 개선과 밸런스 분석에 쓰입니다. 선수 이름은 저장하지 않으며, 계정을 삭제하면 이 기록도 함께 삭제됩니다.',
+  ],
+  [
+    '구글 로그인은 왜 있나요?',
+    '구글 계정 연결은 로그인 상태만을 위한 것으로, 게임 진행 데이터와는 별개입니다. 계정을 연결·해제하거나 로그아웃해도 이 기기의 게임 저장 데이터는 그대로 남습니다.',
+  ],
+  [
+    '이벤트 성공 확률은 어떻게 정해지나요?',
+    '선택지마다 표시되는 퍼센트가 실제 성공 확률입니다. 확률이 없는 선택지는 확정 결과(안전하지만 보상이 낮을 수 있음)입니다.',
+  ],
+  [
+    '세이브가 꼬였어요 / 예전 버전 저장을 불러올 수 있나요?',
+    '과거 버전의 저장 데이터(세부 능력치·병역·반기제 도입 이전 등)도 불러오는 즉시 자동으로 최신 형식으로 변환됩니다. 별도로 조치할 필요는 없습니다.',
+  ],
+  [
+    '문제가 생겼어요.',
+    '<a href="mailto:tasddc1569@gmail.com">tasddc1569@gmail.com</a>으로 사용 환경과 문제가 발생한 화면을 보내 주세요.',
+  ],
+];
+const faqBody = `<div class="os-screen"><header><p class="os-eyebrow">HELP</p><h1>자주 묻는 질문</h1><p>게임을 시작하거나 이어 할 때 필요한 답을 모았습니다.</p></header><section class="os-panel">${FAQ_ITEMS.map(([q, a]) => `<h2>${q}</h2><p>${a}</p>`).join('')}</section><p><a href="/">게임 시작</a></p><nav><a href="/">홈</a> · <a href="/guide/">게임 가이드</a></nav></div>`;
 const termsBody = `<div class="os-screen"><header><p class="os-eyebrow">LEGAL</p><h1>이용약관</h1><p>시행일: 2026년 9월 24일</p></header><section class="os-panel"><h2>1. 서비스</h2><p>오프사이드(풀타임)는 웹 브라우저에서 이용하는 무료 축구 커리어 스토리 시뮬레이션 게임입니다. 플레이 중인 세이브(게임 진행) 자체는 이용자의 기기(브라우저 저장소)에만 저장됩니다. 다만 커리어·시즌 요약 기록과 플레이 중 선택 기록은 익명 프로필 단위로 서버(Cloudflare D1)에도 저장되어 서비스 개선과 밸런스 분석에 쓰이며, 선수 이름은 저장하지 않습니다. 자세한 내용은 개인정보처리방침을 따릅니다.</p></section><section class="os-panel"><h2>2. 계정</h2><p>게임은 로그인 없이 바로 이용할 수 있습니다. 구글 계정을 연결하면 로그인 상태만 서버에 남고, 게임 진행 데이터는 여전히 이용자의 기기에만 남습니다.</p></section><section class="os-panel"><h2>3. 이용자의 의무</h2><p>서비스를 부정한 목적으로 이용하거나 타인의 계정을 도용해서는 안 됩니다.</p></section><section class="os-panel"><h2>4. 서비스 변경·중단</h2><p>운영상·기술상 필요에 따라 서비스 내용이 변경되거나 중단될 수 있으며, 이 경우 합리적인 방법으로 안내합니다. 게임 데이터가 기기에만 저장되는 특성상, 서비스 중단이 곧바로 이용자의 진행 데이터 손실로 이어지지는 않습니다(단, 브라우저 저장소 삭제·기기 변경 시에는 데이터가 사라질 수 있습니다).</p></section><section class="os-panel"><h2>5. 면책</h2><p>본 서비스는 현 상태(AS-IS)로 제공되며, 게임 결과나 확률적 연출로 인한 손해에 대해 책임지지 않습니다.</p></section><section class="os-panel"><h2>6. 문의</h2><p><a href="mailto:tasddc1569@gmail.com">tasddc1569@gmail.com</a></p></section><nav><a href="/">홈</a> · <a href="/legal/privacy/">개인정보처리방침</a></nav></div>`;
 const privacyBody = `<div class="os-screen"><header><p class="os-eyebrow">LEGAL</p><h1>개인정보처리방침</h1><p>시행일: 2026년 9월 24일</p></header><section class="os-panel"><h2>1. 수집하는 정보</h2><p>게임은 로그인 없이 이용할 수 있으며, 이 경우 별도의 개인정보를 수집하지 않습니다. 구글 계정으로 로그인하는 경우에만 구글이 제공하는 고유 식별자(sub)와 이메일 주소를 수집합니다. 플레이 중인 세이브(선수 능력치, 진행 중인 시즌 등) 자체는 서버로 전송되지 않고 이용자의 브라우저에만 저장됩니다. 그와 별개로, 커리어·시즌 요약 기록(포지션·소속·기록·수상 등)과 플레이 중 선택 기록은 서비스 개선과 밸런스 분석을 위해 로그인 여부와 관계없이 익명 프로필 단위로 서버(Cloudflare D1)에 저장됩니다. 이 기록에는 선수 이름을 포함하지 않습니다.</p></section><section class="os-panel"><h2>2. 자동 수집 정보</h2><p>서비스 운영과 보안을 위해 접속 세션 정보와 요청 로그(접속 시각, IP, 오류 로그 등)를 일정 기간 보관합니다.</p></section><section class="os-panel"><h2>3. 이용 목적</h2><p>로그인 상태 유지, 계정 연동·해제, 부정 이용 방지 및 서비스 안정성 확보를 위해서만 위 정보를 이용합니다.</p></section><section class="os-panel"><h2>4. 제3자 제공 및 국외 이전</h2><p>서비스는 Cloudflare(호스팅·인프라)와 Google(로그인)을 이용하며, 이 과정에서 위 정보가 해당 사업자의 해외 서버로 이전되어 처리될 수 있습니다.</p></section><section class="os-panel"><h2>5. 보유 기간</h2><p>계정 정보와 커리어·시즌 요약·선택 기록은 이용자가 계정 삭제를 요청할 때까지 보관하며, 요청 시 지체 없이 함께 삭제합니다. 플레이 중인 세이브는 이용자의 브라우저에만 있으므로, 브라우저 저장소를 지우면 즉시 삭제됩니다.</p></section><section class="os-panel"><h2>6. 이용자의 권리</h2><p>설정 화면에서 언제든 구글 계정 연동 해제, 로그아웃, 계정 삭제를 요청할 수 있습니다. 계정 삭제는 확인 절차를 거쳐 처리됩니다.</p></section><section class="os-panel"><h2>7. 문의</h2><p>개인정보 관련 문의는 <a href="mailto:tasddc1569@gmail.com">tasddc1569@gmail.com</a>으로 연락해 주세요.</p></section><nav><a href="/">홈</a> · <a href="/legal/terms/">이용약관</a></nav></div>`;
 
@@ -134,7 +218,13 @@ export function stripAppBundle(html) {
   return out;
 }
 
-export function pageHtml(baseHtml, config, path, body, { forceNoIndex = false, keepAppBundle = false } = {}) {
+export function pageHtml(
+  baseHtml,
+  config,
+  path,
+  body,
+  { forceNoIndex = false, keepAppBundle = false } = {},
+) {
   const page = PUBLIC_PAGES[path] ?? PUBLIC_PAGES['/'];
   const html = keepAppBundle ? baseHtml : stripAppBundle(baseHtml);
   return html
@@ -162,6 +252,18 @@ async function createBrandAssets(outputDirectory) {
   }
   await writeFile(join(outputDirectory, 'favicon.svg'), brandSvg);
   await writeFile(join(outputDirectory, 'favicon.png'), resized.get(64));
+  // PNG를 그대로 담은 단일 이미지 ICO — /favicon.ico를 직접 요청하는 크롤러·브라우저용.
+  const png = await sharp(brandSvg).resize(48, 48).png().toBuffer();
+  const ico = Buffer.alloc(22);
+  ico.writeUInt16LE(1, 2);
+  ico.writeUInt16LE(1, 4);
+  ico.writeUInt8(48, 6);
+  ico.writeUInt8(48, 7);
+  ico.writeUInt16LE(1, 10);
+  ico.writeUInt16LE(32, 12);
+  ico.writeUInt32LE(png.length, 14);
+  ico.writeUInt32LE(22, 18);
+  await writeFile(join(outputDirectory, 'favicon.ico'), Buffer.concat([ico, png]));
   const ogPath = join(outputDirectory, `og-offside-flag-${BRAND_VERSION}.png`);
   await sharp({ create: { width: 1200, height: 630, channels: 4, background: BRAND_BG } })
     .composite([
@@ -233,6 +335,8 @@ export function seoPlugin(config) {
         }),
       );
       await writeFile(join(outputDirectory, 'robots.txt'), createRobotsTxt(config));
+      if (config.origin)
+        await writeFile(join(outputDirectory, 'llms.txt'), createLlmsTxt(config.origin));
       await writeFile(join(outputDirectory, '_headers'), createHeaders(config));
       await writeFile(
         join(outputDirectory, 'seo-policy.json'),

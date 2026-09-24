@@ -97,7 +97,8 @@ test('production discovery files contain the public pages', () => {
 });
 
 test('stripAppBundle은 속성 순서와 무관하게 앱 스크립트·modulepreload를 지운다', () => {
-  const html = '<head><script crossorigin src="/assets/a.js" type="module"></script><link href="/assets/b.js" rel="modulepreload"><script>inline()</script></head>';
+  const html =
+    '<head><script crossorigin src="/assets/a.js" type="module"></script><link href="/assets/b.js" rel="modulepreload"><script>inline()</script></head>';
   const out = stripAppBundle(html);
   assert.ok(!out.includes('/assets/a.js'));
   assert.ok(!out.includes('modulepreload'));
@@ -107,4 +108,13 @@ test('stripAppBundle은 속성 순서와 무관하게 앱 스크립트·modulepr
 test('in-app badge uses the current brand version', () => {
   const ui = readFileSync(new URL('../src/game/ui.ts', import.meta.url), 'utf8');
   assert.match(ui, new RegExp(`/brand/offside-flag-${BRAND_VERSION}-64\\.png`));
+});
+
+test('structured data: home is a free web game, FAQ mirrors visible Q&A, no-index shells get none', () => {
+  const config = { origin: 'https://play.example.com', indexingEnabled: true };
+  const graph = (head) =>
+    JSON.parse(head.match(/ld\+json">(.*?)<\/script>/)[1])['@graph'].map((g) => g['@type']);
+  assert.deepEqual(graph(createHeadMarkup(config, '/')), ['WebSite', 'VideoGame']);
+  assert.deepEqual(graph(createHeadMarkup(config, '/faq/')), ['BreadcrumbList', 'FAQPage']);
+  assert.doesNotMatch(createHeadMarkup(config, '/', true), /ld\+json/);
 });
