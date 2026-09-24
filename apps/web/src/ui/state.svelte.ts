@@ -2,9 +2,9 @@
 // 원본은 module-level `let G/screen/tab/...` + 수동 render() 호출로 화면을 갱신했다. Svelte 5
 // runes로 옮기면서 같은 상태를 하나의 반응형 객체에 모아 두고, 화면 갱신은 컴포넌트가 이 상태를
 // 구독하는 것으로 대신한다(수동 render() 호출은 더 이상 필요 없다).
-import type { Pos } from '../game/data.js';
+import type { AttrKey, Pos } from '../game/data.js';
 import { pick } from '../game/rng.js';
-import { SURNAMES, GIVEN } from '../game/data.js';
+import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
 import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
 
@@ -16,7 +16,8 @@ export interface DraftCharacter {
   number: number;
   pos: Pos;
   foot: GameState['foot'];
-  type: string;
+  /** T-10-008. 키우고 싶은 주력 능력치(FOCUS_PICK개). */
+  focus: AttrKey[];
   trait: string;
 }
 
@@ -61,7 +62,7 @@ export const appState = $state<{
     number: 10,
     pos: 'FW',
     foot: '오른발',
-    type: 'poacher',
+    focus: defaultFocus('FW'),
     trait: 'late',
   },
   candidates: null,
