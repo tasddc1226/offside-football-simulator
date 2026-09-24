@@ -116,7 +116,8 @@ export function newGame(o: { name: string; number: number; pos: Pos; foot: GameS
   // 만족하는 빈 기본값을 채워 두고, 아래에서 원래 순서 그대로 덮어쓴다 — 캐스팅(타입 우회) 없이도
   // 리터럴이 GameState를 완전히 만족한다.
   const s: GameState = {
-    v: 1, halves: 1, name: o.name, number: o.number, pos: o.pos, foot: o.foot, type: o.type, trait: o.trait,
+    // cid는 crypto.randomUUID()로 만든다 — 시드 RNG(rnd/ri/gauss 등)를 절대 소모하지 않는다.
+    v: 1, cid: crypto.randomUUID(), halves: 1, name: o.name, number: o.number, pos: o.pos, foot: o.foot, type: o.type, trait: o.trait,
     age: 18, year: 2026, attrs, sub: {}, pot: scouted, bloom: pot - scouted, cond: 90, morale: 70, fame: 3, trust: 0, money: 300,
     leagueId: 'hs', club: { ...club }, contract: null, phase: 0, uniYears: 0,
     season: { apps: 0, starts: 0, goals: 0, assists: 0, ratingSum: 0, cs: 0, mins: 0, played: 0, pts: 0, w: 0, d: 0, l: 0, rivals: [], honors: [] },

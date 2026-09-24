@@ -3,6 +3,7 @@ import { signConfirmToken, verifyConfirmToken } from '../auth/confirm-token.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { runBatch } from '../db/repos/batch.js';
+import { deleteCareersStatements } from '../db/repos/careers.js';
 import { auditLog, idempotency, profiles, sessions } from '../db/schema.js';
 import { AppError } from '../errors.js';
 
@@ -64,6 +65,9 @@ export async function executeProfileDeletion(
       .update(profiles)
       .set({ deletedAt: input.now, googleSub: null, email: null, linkedAt: null })
       .where(eq(profiles.id, input.profileId)),
+    // T-9-009: profiles는 소프트 삭제(deletedAt만 세팅)라 FK ON DELETE CASCADE가 트리거되지 않는다.
+    // 커리어·시즌 데이터는 이 batch에서 명시적으로 지운다.
+    ...deleteCareersStatements(db, input.profileId),
     db.delete(idempotency).where(eq(idempotency.ownerProfileId, input.profileId)),
     db
       .update(sessions)

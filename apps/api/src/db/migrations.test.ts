@@ -74,6 +74,49 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
     'expires_at',
   ],
+  // T-9-009: 커리어·시즌 요약 저장(익명 포함 전체 사용자).
+  careers: [
+    'id',
+    'profile_id',
+    'pos',
+    'foot',
+    'type',
+    'trait',
+    'start_year',
+    'status',
+    'app_version',
+    'created_at',
+    'updated_at',
+    'retired_at',
+    'retire_age',
+    'peak',
+    'legend_score',
+    'apps',
+    'goals',
+    'assists',
+    'trophies',
+    'awards',
+    'caps',
+    'ballon',
+    'last_club',
+  ],
+  career_seasons: [
+    'career_id',
+    'year',
+    'age',
+    'club',
+    'league',
+    'apps',
+    'goals',
+    'assists',
+    'rating',
+    'rank',
+    'ovr',
+    'honors_json',
+    'mil',
+    'events_json',
+    'created_at',
+  ],
 };
 
 describe('migrations', () => {
@@ -97,7 +140,7 @@ describe('migrations', () => {
     }
   });
 
-  it('전체 마이그레이션을 적용한 최종 테이블 집합은 정확히 이 5개뿐이다(0015: 게임 데이터 테이블 DROP)', async () => {
+  it('전체 마이그레이션을 적용한 최종 테이블 집합은 정확히 이 7개뿐이다(0015: 게임 데이터 테이블 DROP, 0016: careers·career_seasons 추가)', async () => {
     const result = await ctx.db.$client
       .prepare(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '\\_cf\\_%' ESCAPE '\\'",

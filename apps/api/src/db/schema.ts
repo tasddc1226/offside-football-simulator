@@ -1,4 +1,4 @@
-import { index, primaryKey, sqliteTable, text, uniqueIndex, integer } from 'drizzle-orm/sqlite-core';
+import { index, primaryKey, sqliteTable, text, uniqueIndex, integer, real } from 'drizzle-orm/sqlite-core';
 
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
 export const profiles = sqliteTable(
@@ -83,6 +83,72 @@ export const authAttempts = sqliteTable(
     count: integer('count').notNull(),
   },
   (table) => [uniqueIndex('auth_attempts_kind_subject_unique').on(table.kind, table.subject)],
+);
+
+/**
+ * T-9-009. 익명 포함 전체 사용자의 플레이 데이터. 세이브 전체가 아니라 커리어 메타 + 은퇴 요약만
+ * 담는다(선수 이름 제외 — 실명일 수 있다). 시즌별 상세는 `careerSeasons`.
+ */
+export const careers = sqliteTable(
+  'careers',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    pos: text('pos', { enum: ['FW', 'MF', 'DF', 'GK'] }).notNull(),
+    foot: text('foot', { enum: ['오른발', '왼발', '양발'] }).notNull(),
+    type: text('type').notNull(),
+    trait: text('trait').notNull(),
+    startYear: integer('start_year').notNull(),
+    status: text('status', { enum: ['active', 'retired'] }).notNull(),
+    appVersion: text('app_version').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    retiredAt: text('retired_at'),
+    // 은퇴 요약(NULL until retired).
+    retireAge: integer('retire_age'),
+    peak: integer('peak'),
+    legendScore: integer('legend_score'),
+    apps: integer('apps'),
+    goals: integer('goals'),
+    assists: integer('assists'),
+    trophies: integer('trophies'),
+    awards: integer('awards'),
+    caps: integer('caps'),
+    ballon: integer('ballon'),
+    lastClub: text('last_club'),
+  },
+  (table) => [index('careers_profile_id_idx').on(table.profileId)],
+);
+
+/**
+ * T-9-009. 시즌 한 줄 요약 + 그 시즌에 버퍼링된 선택 로그(`eventsJson`). D1 free plan은 행 단위로
+ * 쓰기를 과금하므로 이벤트별 행을 만들지 않고 시즌당 한 행에 JSON TEXT로 합친다.
+ */
+export const careerSeasons = sqliteTable(
+  'career_seasons',
+  {
+    careerId: text('career_id')
+      .notNull()
+      .references(() => careers.id, { onDelete: 'cascade' }),
+    year: integer('year').notNull(),
+    age: integer('age').notNull(),
+    club: text('club').notNull(),
+    league: text('league').notNull(),
+    apps: integer('apps').notNull(),
+    goals: integer('goals').notNull(),
+    assists: integer('assists').notNull(),
+    rating: real('rating').notNull(),
+    // game/types.ts `CareerRecord.rank`가 number|string이라 텍스트로 저장한다.
+    rank: text('rank').notNull(),
+    ovr: integer('ovr').notNull(),
+    honorsJson: text('honors_json').notNull(),
+    mil: integer('mil').notNull(),
+    eventsJson: text('events_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.careerId, table.year] })],
 );
 
 /** T-1-004, ADR-008. `PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`·`GOOGLE_LINKED`·`GOOGLE_UNLINKED`(T-1-013). */

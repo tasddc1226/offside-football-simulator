@@ -2,6 +2,34 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-24 (D-87 — T-9-009 플레이 데이터 적재)
+
+- **커리어·시즌 요약 + 선택 로그를 익명 포함 전체 사용자 단위로 서버(D1)에 저장한다.**
+  세이브 전체(클라우드 세이브)는 아니다 — `careers`(커리어 메타 + 은퇴 요약)·
+  `career_seasons`(시즌 한 줄 요약 + 그 시즌 선택 로그 JSON) 두 테이블을
+  migration `0016`으로 추가(additive, 기존 테이블 무변경). 선수 이름은
+  저장하지 않는다(실명일 수 있음).
+- **API**: `PUT /v1/careers/:careerId/seasons/:year`, `PUT /v1/careers/:careerId/retirement`.
+  두 라우트 모두 URL 키로 자연 멱등이라 `Idempotency-Key` 미들웨어를 걷지 않는다.
+  careerId가 다른 프로필 소유면 409 `CAREER_OWNER_MISMATCH`(신규 오류 코드). 시즌
+  upsert는 `careers.status`를 `retired→active`로 되돌리지 않는다.
+  `REQUEST_BODY_MAX_BYTES`(1MB)는 그대로 둔다 — 이벤트 300개 + honors 30개
+  worst-case 페이로드가 약 32KB로 여유가 충분하다.
+- **웹**: `GameState.cid`(`crypto.randomUUID()`, 시드 RNG 비소모)를 커리어 식별자로
+  추가. 이벤트/이적시장/병역 선택마다 `evBuf`(시즌당 최대 300개, 초과 시 가장
+  오래된 것부터 폐기)에 압축 로그를 쌓고 시즌 종료·은퇴 시점에 업로드 큐
+  (`localStorage['ft_outbox']`, 최대 100개)에 넣는다. 네트워킹 코드는
+  `apps/web/src/game/outbox.ts`로 분리하고 동적 import로만 불러 메인 번들
+  청크에 zod·fetch 코드가 섞이지 않게 했다.
+- **정책 문구**: `/guide`·`/faq`·이용약관·개인정보처리방침(`apps/web/scripts/seo.mjs`)의
+  "게임 데이터는 서버로 전송되지 않는다" 류 문구를 커리어·시즌 요약과 선택
+  기록은 서버에 저장되지만 세이브(게임 진행) 자체는 여전히 기기에만 남는다는
+  내용으로 고쳤다. 시행일은 이미 2026년 9월 24일이라 별도 갱신 없음.
+- 범위 축소(오너 지시, 작업 중 반영): 계약 zod 단위 테스트·멱등 재전송/재오픈
+  전용 테스트·웹 이벤트 버퍼 단위 테스트·e2e 스위트는 이번 작업에서 생략하고
+  핵심 경로(성공·409·400 한 건·프로필 삭제 연쇄 삭제, 아웃박스 enqueue→flush
+  성공/네트워크 실패 유지)만 테스트로 남겼다.
+
 ## 2026-09-24 (D-86 — Phase 9 풀타임 전환, 서브트랙 착수 — 오너 결정)
 
 - Phase 9(T-9-001) 착수. 서브트랙: a(api) done, b(web) done, c(CI/운영) 진행 중,

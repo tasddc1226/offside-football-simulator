@@ -27,8 +27,18 @@ import {
   endSeason, market, acceptOption, marketValue, retire, legendScore, legendTitle, saveKey, loadKey, loadHOF,
 } from './season.js';
 import { initSubs, legacyOvr } from './attributes.js';
-import type { GameState, CareerRecord, NatTour, HofEntry, MarketOption } from './types.js';
+import type { GameState, CareerRecord, NatTour, HofEntry, MarketOption, EventLogEntry } from './types.js';
 import { esc } from './dom.js';
+
+// T-9-009: 빌드 시 vite define으로 커밋 SHA가 들어온다(vite.config.ts). 테스트 등 define이 없는 환경은 'dev'.
+declare const __APP_VERSION__: string | undefined;
+const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
+const EV_BUF_CAP = 300;
+function pushEvLog(s: GameState, entry: EventLogEntry) {
+  const buf = (s.evBuf = s.evBuf || []);
+  buf.push(entry);
+  while (buf.length > EV_BUF_CAP) buf.shift();
+}
 
 const $app = document.getElementById('app')!;
 const $modal = document.getElementById('modal')!;
@@ -66,6 +76,9 @@ if (G) {
     });
     G.halves = 1;
   }
+  // T-9-009: cid(커리어 고유 ID) 도입 이전 저장에는 cid가 없다 — 새로 만들어 채운다. RNG는
+  // 절대 쓰지 않는다(crypto.randomUUID()).
+  if (!G.cid) G.cid = crypto.randomUUID();
   // 구단 이름이 바뀌어도 기존 저장의 현재 소속은 최신 이름으로
   const gClubId = G.club.id;
   const c = clubsIn(G.leagueId).concat(clubsIn('hs')).find((x) => x.id === gClubId);
@@ -90,6 +103,33 @@ function randomName(): string {
 function save() {
   if (G) G.rng = getActiveRng().getState();
   saveKey('ft_save', G);
+}
+
+// T-9-009: 시즌 종료 직후(RNG 소모 없는 지점) 커리어 요약 + 버퍼링된 선택 로그를 업로드 큐에
+// 넣는다. outbox.ts는 zod 값을 쓰지 않지만, 동적 import로 메인 청크와 분리해 둔다.
+function uploadSeason(s: GameState, rec: CareerRecord) {
+  const events = (s.evBuf || []).slice();
+  s.evBuf = [];
+  void import('./outbox.js').then((m) =>
+    m.enqueueSeason(s.cid, rec.year, {
+      career: { pos: s.pos, foot: s.foot, type: s.type, trait: s.trait, startYear: s.career[0]?.year ?? rec.year, appVersion: APP_VERSION },
+      season: {
+        age: rec.age, club: rec.club, league: rec.league, apps: rec.apps, goals: rec.goals, assists: rec.assists,
+        rating: rec.rating, rank: rec.rank, ovr: rec.ovr, honors: rec.honors, mil: !!rec.mil,
+      },
+      events,
+    }),
+  );
+}
+
+function uploadRetirement(s: GameState, entry: HofEntry) {
+  void import('./outbox.js').then((m) =>
+    m.enqueueRetirement(s.cid, {
+      retireAge: entry.age, peak: entry.peak, legendScore: entry.score, apps: entry.apps, goals: entry.goals,
+      assists: entry.assists, trophies: entry.trophies, awards: entry.awards, caps: entry.caps, ballon: entry.ballon,
+      lastClub: entry.lastClub,
+    }),
+  );
 }
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 function toast(t: string) {
@@ -585,6 +625,7 @@ function nextPending() {
   if (p.type === 'seasonEnd') {
     if (busyAnim) return;
     const res = endSeason(s);
+    uploadSeason(s, res.rec);
     s.pending = { type: 'market', res, m: null };
     save();
     render();
@@ -614,6 +655,7 @@ async function chooseEvent(i: number) {
   const s = G, p = s.pending as { type: 'event'; id: string; then?: string | null };
   const c = EVENTS.find((e) => e.id === p.id)!.choices[i]!, label = txt(c.label, s);
   const r = resolveChoice(s, p.id, i);
+  pushEvLog(s, { k: 'ev', id: p.id, c: i, ok: r.ok, h: s.phase });
   s.pending = p.then === 'seasonEnd' ? { type: 'seasonEnd' } : null;
   save();
   render();
@@ -677,6 +719,9 @@ function showMarket(m: { options: MarketOption[]; note: string; canRetire: boole
   $sheet.querySelectorAll<HTMLButtonElement>('[data-opt]').forEach((b) => b.addEventListener('click', () => {
     const o = opts[+b.dataset.opt!]!;
     const r = acceptOption(G!, o);
+    const logEntry: EventLogEntry = { k: o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' ? 'mil' : 'mkt', id: o.kind, c: o.kind === 'offer' ? o.clubId : +b.dataset.opt!, h: G!.phase };
+    if (r?.ok !== undefined) logEntry.ok = r.ok;
+    pushEvLog(G!, logEntry);
     if (r) {
       G!.training = 'rest';
       if (r.reopen) {
@@ -703,6 +748,7 @@ function showMarket(m: { options: MarketOption[]; note: string; canRetire: boole
 
 function doRetire() {
   lastRetired = retire(G!);
+  uploadRetirement(G!, lastRetired);
   G!.pending = null;
   save();
   closeSheet();
@@ -812,4 +858,6 @@ function handleOAuthReturn() {
 export function start() {
   handleOAuthReturn();
   render();
+  // T-9-009: 이전 세션에서 못 보낸 업로드를 앱 시작 시 한 번 재시도한다(실패해도 게임은 계속된다).
+  void import('./outbox.js').then((m) => m.flushOutbox()).catch(() => {});
 }

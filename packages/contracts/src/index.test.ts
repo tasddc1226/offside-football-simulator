@@ -50,10 +50,11 @@ describe('오류 코드 표', () => {
     PROFILE_REQUIRED: { httpStatus: 401, retryable: false },
     RATE_LIMITED: { httpStatus: 429, retryable: true },
     SERVICE_UNAVAILABLE: { httpStatus: 503, retryable: true },
+    CAREER_OWNER_MISMATCH: { httpStatus: 409, retryable: false },
   };
 
-  it('7개 모두 있다', () => {
-    expect(ERROR_CODES.length).toBe(7);
+  it('8개 모두 있다', () => {
+    expect(ERROR_CODES.length).toBe(8);
   });
 
   it.each(ERROR_CODES)(

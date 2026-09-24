@@ -11,5 +11,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [seoPlugin(seoConfig)],
+    // T-9-009: 플레이 데이터에 어느 배포에서 온 기록인지 남긴다. CI에서는 커밋 SHA, 로컬은 'dev'.
+    define: { __APP_VERSION__: JSON.stringify((process.env.GITHUB_SHA ?? 'dev').slice(0, 7)) },
   };
 });
