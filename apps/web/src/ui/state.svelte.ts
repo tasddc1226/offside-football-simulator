@@ -6,6 +6,7 @@ import type { Pos } from '../game/data.js';
 import { pick } from '../game/rng.js';
 import { SURNAMES, GIVEN } from '../game/data.js';
 import type { GameState, HofEntry } from '../game/types.js';
+import type { Candidate } from '../game/candidates.js';
 
 export type Screen = 'home' | 'create' | 'retired' | 'game';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
@@ -29,6 +30,10 @@ export const appState = $state<{
   tab: Tab;
   lastRetired: HofEntry | null;
   C: DraftCharacter;
+  /** T-10-002. 선수 생성 후보 카드 3장(같은 능력치 총합, 다른 분포) — 생성 화면을 벗어나면 null. */
+  candidates: Candidate[] | null;
+  candidatesOpen: boolean[];
+  candidatePick: number | null;
 }>({
   G: null,
   screen: 'home',
@@ -42,6 +47,9 @@ export const appState = $state<{
     type: 'poacher',
     trait: 'late',
   },
+  candidates: null,
+  candidatesOpen: [],
+  candidatePick: null,
 });
 
 export const toastState = $state<{ text: string; visible: boolean }>({ text: '', visible: false });

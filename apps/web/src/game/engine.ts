@@ -104,10 +104,21 @@ export function diffChips(s: GameState, a: Snapshot, b: Snapshot): Chip[] {
 }
 
 // ───────── 새 커리어 ─────────
-export function newGame(o: { name: string; number: number; pos: Pos; foot: GameState['foot']; type: string; trait: string }, seed: number): GameState {
+// T-10-002: presetAttrs가 주어지면(선수 생성 후보 카드에서 고른 분포) ri(-4,4) 루프를 건너뛰고
+// 그 값을 그대로 쓴다 — presetAttrs를 넘기지 않는 기존 호출(특히 tooling/fulltime-sim이 직접
+// 부르는 경로)은 RNG 소비 순서가 한 글자도 바뀌지 않는다(결정성/패리티 보존).
+export function newGame(
+  o: { name: string; number: number; pos: Pos; foot: GameState['foot']; type: string; trait: string },
+  seed: number,
+  presetAttrs?: Record<AttrKey, number>,
+): GameState {
   const attrs = {} as Record<AttrKey, number>;
   const type = TYPES_OF(o.pos).find((t) => t.id === o.type)!;
-  for (const k of ATTR_KEYS) attrs[k] = clamp(POS[o.pos].base[k] + (type.mod[k] ?? 0) + ri(-4, 4), 20, 70);
+  if (presetAttrs) {
+    for (const k of ATTR_KEYS) attrs[k] = clamp(presetAttrs[k], 20, 70);
+  } else {
+    for (const k of ATTR_KEYS) attrs[k] = clamp(POS[o.pos].base[k] + (type.mod[k] ?? 0) + ri(-4, 4), 20, 70);
+  }
   const club = pick(clubsIn('hs'));
   const pot = clamp(Math.round(74 + gauss() * 8), 55, 96);
   const scouted = clamp(Math.round(pot + gauss() * BLOOM_SCOUT), 55, 96);

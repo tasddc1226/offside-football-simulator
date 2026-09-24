@@ -1,7 +1,8 @@
 // ───────── 게임 진행 액션 (ui.ts 583~863줄 포트) ─────────
-import { PHASES, LAST_PHASE } from '../game/data.js';
+import { PHASES, LAST_PHASE, type AttrKey } from '../game/data.js';
 import { esc } from '../game/dom.js';
 import { clamp, createRng, freshSeed, setActiveRng } from '../game/rng.js';
+import { generateCandidates } from '../game/candidates.js';
 import {
   leagueOf, fmtMoney, snapshot, diffChips, log, newGame, isPro,
   applyTraining, simBlock, isSafe, rollEvent, resolveChoice, txt, roleOf, STORIES,
@@ -303,17 +304,25 @@ export function goHome() {
   appState.screen = 'home';
   closeSheet();
 }
-export function startCareer(name: string, number: number) {
+export function startCareer(name: string, number: number, presetAttrs?: Record<AttrKey, number>) {
   const finalName = name.trim() || randomName();
   const finalNumber = clamp(+number || 10, 1, 99);
   const seed = freshSeed();
   setActiveRng(createRng(seed));
-  appState.G = newGame({ ...appState.C, name: finalName, number: finalNumber }, seed);
+  appState.G = newGame({ ...appState.C, name: finalName, number: finalNumber }, seed, presetAttrs);
   save();
   appState.screen = 'game';
   appState.tab = 'season';
+  appState.candidates = null;
   window.scrollTo(0, 0);
   toast('고교 마지막 시즌이 시작됩니다');
+}
+
+// ───────── 후보 선수 카드 (T-10-002) ─────────
+export function rollCandidates() {
+  appState.candidates = generateCandidates(appState.C.pos, appState.C.type);
+  appState.candidatesOpen = [false, false, false];
+  appState.candidatePick = null;
 }
 
 // ───────── 구글 OAuth 콜백 (/settings?google=linked|switched|error) ─────────
