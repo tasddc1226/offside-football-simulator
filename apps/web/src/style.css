@@ -391,3 +391,11 @@ td.n, th.n { text-align: right; }
 .os-panel h2:first-child { margin-top: 0; }
 .os-panel p { margin: 0; color: var(--muted); font-size: 0.9375rem; line-height: 1.6; }
 .os-screen nav a, .os-screen p a { color: var(--accent-text, var(--accent)); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+/* 모바일: 커리어 표가 가로 스크롤 없이 들어오도록 소속 칸만 줄바꿈하고 여백을 줄인다. */
+@media (max-width: 440px) {
+  table { font-size: 12px; }
+  th, td { padding-inline: 4px; }
+  td:nth-child(2) { white-space: normal; min-width: 5.5em; }
+}
+/* 게임 화면에서는 토스트가 하단 탭바·액션바를 가리지 않게 그 위로 올린다. */
+body:has(nav.tabs) .toast { bottom: calc(var(--tabbar-h) + var(--actionbar-h) + var(--safe-b) + 12px); }
