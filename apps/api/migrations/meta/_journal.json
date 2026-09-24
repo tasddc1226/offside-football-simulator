@@ -127,6 +127,13 @@
       "when": 1790242930214,
       "tag": "0017_public_hof",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1790246117145,
+      "tag": "0018_season_detail",
+      "breakpoints": true
     }
   ]
 }

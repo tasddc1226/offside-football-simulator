@@ -29,6 +29,15 @@ export type PutCareerSeasonInput = {
  */
 export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Promise<void> {
   const { careerId, profileId, year, meta, season, eventsJson, now } = input;
+  // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
+  const detail = {
+    cs: season.cs ?? null,
+    lgApps: season.lgApps ?? null,
+    lgGoals: season.lgGoals ?? null,
+    caps: season.caps ?? null,
+    compsJson: season.comps ? JSON.stringify(season.comps) : null,
+    chJson: season.ch ? JSON.stringify(season.ch) : null,
+  };
 
   await runBatch(db, [
     db
@@ -76,6 +85,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         honorsJson: JSON.stringify(season.honors),
         mil: season.mil ? 1 : 0,
         eventsJson,
+        ...detail,
         createdAt: now,
       })
       .onConflictDoUpdate({
@@ -93,6 +103,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           honorsJson: JSON.stringify(season.honors),
           mil: season.mil ? 1 : 0,
           eventsJson,
+          ...detail,
           // 같은 시즌을 다시 보내면 덮어써 결과는 같다(멱등). createdAt은 최초값을 유지한다.
         },
       }),

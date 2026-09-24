@@ -119,6 +119,12 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'mil',
     'events_json',
     'created_at',
+    'cs',
+    'lg_apps',
+    'lg_goals',
+    'caps',
+    'comps_json',
+    'ch_json',
   ],
 };
 

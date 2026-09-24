@@ -78,6 +78,42 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     await ctx.dispose();
   });
 
+  it('T-10-006: 시즌 상세(무실점·리그 기록·A매치·대회별·커리어 하이)를 저장한다', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const detail = {
+      cs: 12,
+      lgApps: 18,
+      lgGoals: 8,
+      caps: 3,
+      comps: [{ type: 'cup', name: '코리아컵', stage: '8강', apps: 2, g: 2, a: 1 }],
+      ch: ['goals', 'cs'],
+    };
+    const body = seasonBody();
+    const res = await app.request(
+      `/v1/careers/${CAREER_ID}/seasons/2026`,
+      jsonInit({ method: 'PUT', body: { ...body, season: { ...body.season, ...detail } }, cookie: owner.cookie }),
+      ctx.env,
+    );
+    expect(res.status).toBe(200);
+    const [row] = await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID));
+    expect(row).toMatchObject({ cs: 12, lgApps: 18, lgGoals: 8, caps: 3 });
+    expect(JSON.parse(row!.compsJson!)).toEqual(detail.comps);
+    expect(JSON.parse(row!.chJson!)).toEqual(detail.ch);
+  });
+
+  it('T-10-006: 대회 기록 형식이 틀리면 400', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const body = seasonBody();
+    const res = await app.request(
+      `/v1/careers/${CAREER_ID}/seasons/2026`,
+      jsonInit({ method: 'PUT', body: { ...body, season: { ...body.season, comps: [{ type: 'league', name: 'x', stage: '', apps: 1, g: 0, a: 0 }] } }, cookie: owner.cookie }),
+      ctx.env,
+    );
+    expect(res.status).toBe(400);
+  });
+
   it('happy path: 시즌 upsert 후 은퇴까지 정상 처리된다', async () => {
     const owner = await issueCookie(ctx);
     const app = createApp();
@@ -99,6 +135,9 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     const seasonRows = await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID));
     expect(seasonRows).toHaveLength(1);
     expect(seasonRows[0]?.goals).toBe(10);
+    // T-10-006: 상세 필드가 없는 옛 페이로드는 NULL로 남는다.
+    expect(seasonRows[0]?.cs).toBeNull();
+    expect(seasonRows[0]?.compsJson).toBeNull();
 
     const retireRes = await app.request(
       `/v1/careers/${CAREER_ID}/retirement`,

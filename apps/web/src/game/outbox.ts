@@ -3,8 +3,9 @@
 // 모듈이다. `@offside/contracts`는 타입만 가져온다(런타임 zod 값 import 없음 — type-only import는
 // 컴파일 시 제거돼 번들 비용이 없다). ui.ts에서 동적 import로만 불러 메인 청크를 무겁게 하지 않는다.
 // 실패는 절대 게임 루프로 throw하지 않는다 — 실패해도 게임은 그대로 진행돼야 한다(fire-and-forget).
-import type { PutCareerSeasonBody, PutRetirementBody } from '@offside/contracts';
+import type { CareerSeasonPayload, PutCareerSeasonBody, PutRetirementBody } from '@offside/contracts';
 import { resolveApiBaseUrl } from '../api/base-url.js';
+import type { CareerRecord } from './types.js';
 
 const OUTBOX_KEY = 'ft_outbox';
 const OUTBOX_CAP = 100;
@@ -12,6 +13,30 @@ const OUTBOX_CAP = 100;
 export type OutboxItem =
   | { kind: 'season'; careerId: string; year: number; body: PutCareerSeasonBody }
   | { kind: 'retirement'; careerId: string; body: PutRetirementBody };
+
+/** 시즌 한 줄(`CareerRecord`) → 업로드 페이로드. T-10-006부터 시즌 상세(무실점·리그 기록·A매치·
+ * 대회별·커리어 하이)도 함께 보낸다. 대회 기록은 진행 상태 필드(alive/pts/played 등)를 뺀다. */
+export function seasonPayload(rec: CareerRecord): CareerSeasonPayload {
+  return {
+    age: rec.age,
+    club: rec.club,
+    league: rec.league,
+    apps: rec.apps,
+    goals: rec.goals,
+    assists: rec.assists,
+    rating: rec.rating,
+    rank: rec.rank,
+    ovr: rec.ovr,
+    honors: rec.honors,
+    mil: !!rec.mil,
+    cs: rec.cs,
+    lgApps: rec.lgApps ?? rec.apps,
+    lgGoals: rec.lgGoals ?? rec.goals,
+    caps: rec.caps ?? 0,
+    comps: (rec.comps ?? []).map((c) => ({ type: c.type, name: c.name, stage: c.stage, apps: c.apps, g: c.g, a: c.a })),
+    ch: rec.ch ?? [],
+  };
+}
 
 function apiBaseUrl(): string {
   return resolveApiBaseUrl(
