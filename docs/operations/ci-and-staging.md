@@ -83,7 +83,5 @@ gh workflow run full-validation.yml --ref main
 
 ## 이전 Preview 정리
 
-새 PR에는 Preview를 만들지 않는다. `cleanup-preview.yml`은 전환 당시 남아 있던 PR #77/#92/#99의
-Worker 잔재만 정리하는 hook이며, 새 PR 종료에는 runner를 배정하지 않는다. 필요한 과거 Preview는
-main의 `Cleanup Cloudflare Preview` 수동 실행에 정확한 PR 번호를 넣어 정리한다. KV/D1·staging·
-production 자원은 삭제 대상이 아니며 404만 이미 없음으로 처리한다.
+새 PR에는 Preview를 만들지 않는다. 남아 있던 PR Preview Worker 18개는 2026-09-24에 모두 삭제했고,
+정리용 `cleanup-preview.yml` workflow와 script도 함께 제거했다.

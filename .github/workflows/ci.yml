@@ -40,10 +40,14 @@ jobs:
         run: echo 'Documentation-only change; game checks and deployment are not required.' >> "$GITHUB_STEP_SUMMARY"
       - uses: pnpm/action-setup@v4
         if: steps.scope.outputs.code_changed == 'true'
+      - uses: actions/cache@v4
+        if: steps.scope.outputs.code_changed == 'true'
         with:
-          dest: ${{ runner.tool_cache }}/offside-pnpm
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
       - if: steps.scope.outputs.code_changed == 'true'
-        run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
+        run: pnpm install --frozen-lockfile
       - name: Lint, typecheck and test
         if: steps.scope.outputs.code_changed == 'true'
         run: |
@@ -99,10 +103,14 @@ jobs:
         run: echo 'No undeployed code changes; skipped game checks and Cloudflare deployment.' >> "$GITHUB_STEP_SUMMARY"
       - uses: pnpm/action-setup@v4
         if: steps.scope.outputs.code_changed == 'true'
+      - uses: actions/cache@v4
+        if: steps.scope.outputs.code_changed == 'true'
         with:
-          dest: ${{ runner.tool_cache }}/offside-pnpm
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
       - if: steps.scope.outputs.code_changed == 'true'
-        run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
+        run: pnpm install --frozen-lockfile
       - name: Lint, typecheck and test
         if: steps.scope.outputs.code_changed == 'true'
         run: |

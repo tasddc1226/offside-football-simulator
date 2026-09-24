@@ -86,13 +86,11 @@ jobs:
           echo "sync=$CLIENT_SET" >> "$GITHUB_OUTPUT"
 
       - uses: pnpm/action-setup@v4
-        with:
-          dest: ${{ runner.tool_cache }}/offside-pnpm
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           package-manager-cache: false
-      - run: pnpm install --frozen-lockfile --store-dir "${RUNNER_TOOL_CACHE:?}/offside-pnpm-store"
+      - run: pnpm install --frozen-lockfile
 
       - name: Validate critical compatibility
         run: |
