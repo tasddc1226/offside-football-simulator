@@ -7,6 +7,8 @@
   import { anonName, openLocalLegend, openPublicLegend } from './legend.js';
 
   type Tab = 'all' | 'mine';
+  type Pos = keyof typeof POS;
+  type RowStats = Pick<PublicHofEntry, 'apps' | 'goals' | 'assists' | 'trophies' | 'peak' | 'ballon'>;
   const mine = loadHOF();
   let tab = $state<Tab>('all');
   let all = $state<PublicHofEntry[] | null>(null);
@@ -21,6 +23,16 @@
 
   const myIds = new Set(mine.map((h) => h.id).filter(Boolean));
 </script>
+
+{#snippet row(i: number, name: string, pos: Pos, tag: string | null, t: RowStats, score: number)}
+  <div class="hof-rank">{i + 1}</div>
+  <div>
+    <b>{name}</b> <span class="pill">{POS[pos].label}</span>
+    {#if tag}<span class="pill">{tag}</span>{/if}
+    <div class="muted" style="font-size:12px">{t.apps}경기 {t.goals}골 {t.assists}도움 · 트로피 {t.trophies} · 최고 OVR {t.peak}{t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}</div>
+  </div>
+  <div class="num" style="font-size:22px;font-weight:700">{score}</div>
+{/snippet}
 
 <section class="card">
   <div class="eyebrow">Legends</div>
@@ -38,13 +50,7 @@
     {:else if all && all.length}
       {#each all as h, i (h.id)}
         <button class="hof-row" data-hof-id={h.id} onclick={() => void openPublicLegend(h)}>
-          <div class="hof-rank">{i + 1}</div>
-          <div>
-            <b>{h.name ?? anonName(h.pos, h.number)}</b> <span class="pill">{POS[h.pos].label}</span>
-            {#if myIds.has(h.id)}<span class="pill">내 선수</span>{/if}
-            <div class="muted" style="font-size:12px">{h.apps}경기 {h.goals}골 {h.assists}도움 · 트로피 {h.trophies} · 최고 OVR {h.peak}{h.ballon ? ` · 발롱도르 ${h.ballon}회` : ''}</div>
-          </div>
-          <div class="num" style="font-size:22px;font-weight:700">{h.legendScore}</div>
+          {@render row(i, h.name ?? anonName(h.pos, h.number), h.pos, myIds.has(h.id) ? '내 선수' : null, h, h.legendScore)}
         </button>
       {/each}
     {:else}
@@ -53,13 +59,7 @@
   {:else if mine.length}
     {#each mine.slice(0, 30) as h, i (h.id ?? h.name + i)}
       <button class="hof-row" data-hof-mine={i} onclick={() => openLocalLegend(h)}>
-        <div class="hof-rank">{i + 1}</div>
-        <div>
-          <b>{h.name}</b> <span class="pill">{POS[h.pos].label}</span>
-          {#if h.public}<span class="pill">공개</span>{/if}
-          <div class="muted" style="font-size:12px">{h.apps}경기 {h.goals}골 {h.assists}도움 · 트로피 {h.trophies} · 최고 OVR {h.peak}{h.ballon ? ` · 발롱도르 ${h.ballon}회` : ''}</div>
-        </div>
-        <div class="num" style="font-size:22px;font-weight:700">{h.score}</div>
+        {@render row(i, h.name, h.pos, h.public ? '공개' : null, h, h.score)}
       </button>
     {/each}
   {:else}
