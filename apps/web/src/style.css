@@ -116,6 +116,7 @@ input[type=text], input[type=number] { border: 1px solid var(--line); background
 .opt { border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; min-height: 44px; text-align: left; display: flex; flex-direction: column; gap: 1px; justify-content: center; }
 .opt small { color: var(--muted); font-size: 12px; line-height: 1.35; }
 .seg.four { grid-template-columns: repeat(4, 1fr); }
+.seg.three { grid-template-columns: repeat(3, 1fr); }
 .opt[aria-pressed="true"] { border-color: var(--pitch); background: color-mix(in srgb, var(--pitch) 8%, var(--surface)); box-shadow: inset 0 0 0 1px var(--pitch); }
 :root[data-theme="dark"] .opt[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .opt[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); } }

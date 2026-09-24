@@ -130,6 +130,50 @@ export const TYPES: Record<Pos, TypeDef[]> = {
   ],
 };
 
+// ───────── 주력 능력치 (T-10-008) ─────────
+// 선수 생성 때 유형 대신 "키우고 싶은 능력치" FOCUS_PICK개를 고른다. 초기 분포는 주력 능력치에
+// +FOCUS_UP씩 얹고, 그 포지션에서 OVR 가중치가 가장 낮은 비주력 능력치 두 개에서 FOCUS_DOWN만큼
+// 뺀다(순합 +5 — 기존 유형 mod 순합 2~7과 같은 폭). 성장은 engine.applyTraining이 주력 훈련에
+// FOCUS_GROWTH, 비주력 훈련에 OFF_FOCUS_GROWTH를 곱한다 — 6개 중 2개라 무작위 훈련의 기대 배율은 1이다.
+// `type`은 저장·서버 계약·역할/이벤트 조건 호환을 위해 주력 조합에서 가장 가까운 유형으로 계속 채운다.
+export const FOCUS_PICK = 2;
+export const FOCUS_UP = 6;
+const FOCUS_DOWN = [4, 3] as const;
+export const FOCUS_GROWTH = 1.2;
+export const OFF_FOCUS_GROWTH = 0.9;
+
+export function focusMod(pos: Pos, focus: readonly AttrKey[]): Partial<Record<AttrKey, number>> {
+  const mod: Partial<Record<AttrKey, number>> = {};
+  for (const k of focus) mod[k] = FOCUS_UP;
+  const w = POS[pos].w;
+  const weakest = ATTR_KEYS.filter((k) => !focus.includes(k)).sort((a, b) => (w[a] ?? 0) - (w[b] ?? 0));
+  FOCUS_DOWN.forEach((d, i) => {
+    const k = weakest[i];
+    if (k) mod[k] = -d;
+  });
+  return mod;
+}
+
+/** 포지션 기본 주력 — OVR 가중치가 가장 큰 FOCUS_PICK개. */
+export const defaultFocus = (pos: Pos): AttrKey[] =>
+  ATTR_KEYS.slice()
+    .sort((a, b) => (POS[pos].w[b] ?? 0) - (POS[pos].w[a] ?? 0))
+    .slice(0, FOCUS_PICK);
+
+/** 주력 조합에 가장 가까운 기존 유형(동점이면 목록 앞쪽). */
+export function typeForFocus(pos: Pos, focus: readonly AttrKey[]): string {
+  const score = (t: TypeDef) => focus.reduce((sum, k) => sum + (t.mod[k] ?? 0), 0);
+  return TYPES[pos].reduce((best, t) => (score(t) > score(best) ? t : best)).id;
+}
+
+/** 유형에서 주력 능력치를 거꾸로 구한다(옛 저장본·시뮬레이터용) — mod가 큰 순 상위 FOCUS_PICK개. */
+export function focusOfType(pos: Pos, typeId: string): AttrKey[] {
+  const mod = (TYPES[pos].find((t) => t.id === typeId) ?? TYPES[pos][0]!).mod;
+  return ATTR_KEYS.filter((k) => (mod[k] ?? 0) > 0)
+    .sort((a, b) => mod[b]! - mod[a]!)
+    .slice(0, FOCUS_PICK);
+}
+
 export interface TraitDef {
   id: string;
   name: string;

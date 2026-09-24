@@ -1,7 +1,7 @@
 // ───────── 핵심 시뮬레이션 엔진 (engine.js 포트 + 스토리/체인 헬퍼 + 이벤트 추첨) ─────────
 // 순환 import를 피하려고 원본 stories.js/events.js에 있던 몇몇 범용 헬퍼(turnNo, schedule, STORIES,
 // rollEvent, resolveChoice, bestKey/weakKey 등)를 이 모듈로 모았습니다. 동작은 원본과 동일합니다.
-import { LEAGUES, CLUBS, POS, TYPES, ATTR_KEYS, PHASES, LAST_PHASE, type AttrKey, type Pos, type League, type Club } from './data.js';
+import { LEAGUES, CLUBS, POS, TYPES, ATTR_KEYS, PHASES, LAST_PHASE, FOCUS_GROWTH, OFF_FOCUS_GROWTH, focusMod, focusOfType, typeForFocus, type AttrKey, type Pos, type League, type Club } from './data.js';
 import { ovr, wOf, initSubs, legacyOvr, spreadAttr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
 import { EVENTS } from './events-data.js';
@@ -9,6 +9,8 @@ import type { GameState, Season, LogEntry, Choice, EventDef } from './types.js';
 
 export const leagueOf = (id: string): League => LEAGUES.find((l) => l.id === id)!;
 export const clubsIn = (id: string): Club[] => CLUBS.filter((c) => c.leagueId === id);
+/** 주력 능력치 — 옛 저장본(focus 없음)은 유형에서 거꾸로 구한다. */
+export const focusOf = (s: GameState): AttrKey[] => s.focus ?? focusOfType(s.pos, s.type);
 export const labelOf = (s: GameState, k: AttrKey): string => (s.pos === 'GK' ? { pac: '반사 신경', sho: '스피드', pas: '킥', dri: '위치 선정', def: '다이빙', phy: '핸들링' } : { pac: '스피드', sho: '슈팅', pas: '패스', dri: '드리블', def: '수비', phy: '피지컬' })[k];
 
 export function potGrade(s: GameState): string {
@@ -107,17 +109,21 @@ export function diffChips(s: GameState, a: Snapshot, b: Snapshot): Chip[] {
 // T-10-002: presetAttrs가 주어지면(선수 생성 후보 카드에서 고른 분포) ri(-4,4) 루프를 건너뛰고
 // 그 값을 그대로 쓴다 — presetAttrs를 넘기지 않는 기존 호출(특히 tooling/fulltime-sim이 직접
 // 부르는 경로)은 RNG 소비 순서가 한 글자도 바뀌지 않는다(결정성/패리티 보존).
+// T-10-008: 화면은 focus(주력 능력치)를 넘기고 type은 그 조합에서 파생한다. type만 넘기는 기존
+// 호출(시뮬레이터·테스트)은 유형 mod·RNG 소비가 그대로이고, focus는 유형에서 거꾸로 구한다.
 export function newGame(
-  o: { name: string; number: number; pos: Pos; foot: GameState['foot']; type: string; trait: string },
+  o: { name: string; number: number; pos: Pos; foot: GameState['foot']; trait: string } & ({ type: string; focus?: undefined } | { type?: undefined; focus: AttrKey[] }),
   seed: number,
   presetAttrs?: Record<AttrKey, number>,
 ): GameState {
   const attrs = {} as Record<AttrKey, number>;
-  const type = TYPES_OF(o.pos).find((t) => t.id === o.type)!;
+  const typeId = o.focus ? typeForFocus(o.pos, o.focus) : o.type;
+  const focus = o.focus ? [...o.focus] : focusOfType(o.pos, typeId);
+  const mod = o.focus ? focusMod(o.pos, o.focus) : TYPES[o.pos].find((t) => t.id === typeId)!.mod;
   if (presetAttrs) {
     for (const k of ATTR_KEYS) attrs[k] = clamp(presetAttrs[k], 20, 70);
   } else {
-    for (const k of ATTR_KEYS) attrs[k] = clamp(POS[o.pos].base[k] + (type.mod[k] ?? 0) + ri(-4, 4), 20, 70);
+    for (const k of ATTR_KEYS) attrs[k] = clamp(POS[o.pos].base[k] + (mod[k] ?? 0) + ri(-4, 4), 20, 70);
   }
   const club = pick(clubsIn('hs'));
   const pot = clamp(Math.round(74 + gauss() * 8), 55, 96);
@@ -128,7 +134,7 @@ export function newGame(
   // 리터럴이 GameState를 완전히 만족한다.
   const s: GameState = {
     // cid는 crypto.randomUUID()로 만든다 — 시드 RNG(rnd/ri/gauss 등)를 절대 소모하지 않는다.
-    v: 1, cid: crypto.randomUUID(), halves: 1, name: o.name, number: o.number, pos: o.pos, foot: o.foot, type: o.type, trait: o.trait,
+    v: 1, cid: crypto.randomUUID(), halves: 1, name: o.name, number: o.number, pos: o.pos, foot: o.foot, type: typeId, focus, trait: o.trait,
     age: 18, year: 2026, attrs, sub: {}, pot: scouted, bloom: pot - scouted, cond: 90, morale: 70, fame: 3, trust: 0, money: 300,
     leagueId: 'hs', club: { ...club }, contract: null, phase: 0, uniYears: 0,
     season: { apps: 0, starts: 0, goals: 0, assists: 0, ratingSum: 0, cs: 0, mins: 0, played: 0, pts: 0, w: 0, d: 0, l: 0, rivals: [], honors: [] },
@@ -147,7 +153,6 @@ export function newGame(
   log(s, `${club.name} 3학년 ${POS[s.pos].label} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`, 'big');
   return s;
 }
-const TYPES_OF = (pos: Pos) => TYPES[pos];
 
 export function newSeason(s: GameState): Season {
   const L = leagueOf(s.leagueId);
@@ -185,7 +190,9 @@ export function trainingLabel(s: GameState, t: TrainingDef): string {
 }
 export function trainingDesc(s: GameState, t: TrainingDef): string {
   if (t.id === 'coach') return `비용 ${fmtMoney(coachCost(s))}`;
-  return t.attr ? `${labelOf(s, t.attr)} 집중 성장 · OVR 반영 ${Math.round(wOf(s)[t.attr] * 100)}%` : t.desc!;
+  if (!t.attr) return t.desc!;
+  const main = focusOf(s).includes(t.attr) ? `주력 · 성장 +${Math.round((FOCUS_GROWTH - 1) * 100)}% · ` : '';
+  return `${main}${labelOf(s, t.attr)} 집중 성장 · OVR 반영 ${Math.round(wOf(s)[t.attr] * 100)}%`;
 }
 export function coachCost(s: GameState): number {
   return Math.max(200, Math.round(((s.contract ? s.contract.salary : 0) * 0.06) / 10) * 10);
@@ -220,7 +227,7 @@ export function applyTraining(s: GameState) {
     addStat(s, 'cond', -6);
     return;
   }
-  addAttr(s, t as AttrKey, (1.6 + rnd() * 2.6) * g * TRAIN_X);
+  addAttr(s, t as AttrKey, (1.6 + rnd() * 2.6) * g * TRAIN_X * (focusOf(s).includes(t as AttrKey) ? FOCUS_GROWTH : OFF_FOCUS_GROWTH));
   if (t === 'phy') addAttr(s, 'pac', rnd() * g * TRAIN_X);
   if (chance(0.5)) addAttr(s, pick(ATTR_KEYS), rnd() * g * TRAIN_X);
   addStat(s, 'cond', t === 'phy' ? -12 : -8);

@@ -335,7 +335,7 @@ export function startCareer(name: string, number: number, presetAttrs?: Record<A
 
 // ───────── 후보 선수 카드 (T-10-002) ─────────
 export function rollCandidates() {
-  appState.candidates = generateCandidates(appState.C.pos, appState.C.type);
+  appState.candidates = generateCandidates(appState.C.pos, appState.C.focus);
   appState.candidatesOpen = [false, false, false];
   appState.candidatePick = null;
 }

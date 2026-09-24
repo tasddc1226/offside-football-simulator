@@ -2,8 +2,8 @@
   // ui.ts renderCreate() 포트 (184~204줄)
   import { scale } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
-  import { POS, TYPES, TRAITS, ATTR_LABEL, GK_LABEL, ATTR_KEYS } from '../game/data.js';
-  import type { Pos } from '../game/data.js';
+  import { POS, TRAITS, ATTR_LABEL, GK_LABEL, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, defaultFocus, focusMod } from '../game/data.js';
+  import type { AttrKey, Pos } from '../game/data.js';
   import { appState } from './state.svelte.js';
   import { goHome, startCareer, rollCandidates } from './actions.js';
   import { dur } from './motion.js';
@@ -12,10 +12,10 @@
   const C = appState.C;
   const posKeys = Object.keys(POS) as Pos[];
   const feet = ['오른발', '왼발', '양발'] as const;
-  const types = $derived(TYPES[C.pos]);
-  $effect(() => {
-    if (!types.find((t) => t.id === C.type)) C.type = types[0]!.id;
-  });
+  const focusReady = $derived(C.focus.length === FOCUS_PICK);
+  // 고른 조합이 초기 분포를 어떻게 바꾸는지 버튼마다 미리 보여준다(▲ 주력 / ▼ 가장 덜 쓰는 능력치).
+  const preview = $derived(focusReady ? focusMod(C.pos, C.focus) : {});
+  const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
 
   // 1단계(프로필 입력) → 2단계(후보 카드 선택). appState.candidates가 있으면 2단계.
   const step = $derived<'form' | 'candidates'>(appState.candidates ? 'candidates' : 'form');
@@ -23,13 +23,15 @@
 
   function setPos(v: Pos) {
     C.pos = v;
-    C.type = TYPES[v][0]!.id;
+    C.focus = defaultFocus(v);
   }
   function setFoot(v: typeof C.foot) {
     C.foot = v;
   }
-  function setType(v: string) {
-    C.type = v;
+  // 이미 두 개를 골랐으면 먼저 고른 쪽을 밀어낸다 — 한 번의 탭으로 바꿔 끼울 수 있게.
+  function toggleFocus(k: AttrKey) {
+    if (C.focus.includes(k)) C.focus = C.focus.filter((f) => f !== k);
+    else C.focus = [...C.focus, k].slice(-FOCUS_PICK);
   }
   function setTrait(v: string) {
     C.trait = v;
@@ -89,12 +91,16 @@
         </div>
       </div>
       <div class="field">
-        <span class="lbl">플레이 유형 · 강점과 약점</span>
-        <div class="seg">
-          {#each types as t (t.id)}
-            <button class="opt" data-set="type" data-val={t.id} aria-pressed={C.type === t.id} onclick={() => setType(t.id)}><b>{t.name}</b><small>{t.desc}</small></button>
+        <span class="lbl">주력 능력치 · {FOCUS_PICK}개 선택</span>
+        <div class="seg three">
+          {#each ATTR_KEYS as k (k)}
+            {@const d = preview[k] ?? 0}
+            <button class="opt" data-set="focus" data-val={k} aria-pressed={C.focus.includes(k)} onclick={() => toggleFocus(k)}>
+              <b>{labels[k]}</b><small>{d > 0 ? `▲ +${d}` : d < 0 ? `▼ ${d}` : '±0'}</small>
+            </button>
           {/each}
         </div>
+        <small class="muted">주력으로 고른 능력치는 시작 수치가 높고, 훈련 성장도 {growthPct}% 빠릅니다.</small>
       </div>
       <div class="field">
         <span class="lbl">성장 특성</span>
@@ -105,7 +111,7 @@
         </div>
       </div>
       <p class="muted" style="font-size:13px">잠재력은 숨겨져 있습니다. 스카우트 평가로만 짐작할 수 있어요.</p>
-      <button class="btn btn-primary btn-block" data-act="next-candidates" onclick={toCandidates}>후보 선수 보기 →</button>
+      <button class="btn btn-primary btn-block" data-act="next-candidates" disabled={!focusReady} onclick={toCandidates}>{focusReady ? '후보 선수 보기 →' : `주력 능력치를 ${FOCUS_PICK}개 고르세요`}</button>
     </section>
   {:else if appState.candidates}
     <section class="card stack" style="gap:16px">

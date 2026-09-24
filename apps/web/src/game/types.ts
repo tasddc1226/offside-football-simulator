@@ -206,7 +206,10 @@ export interface GameState {
   number: number;
   pos: Pos;
   foot: Foot;
+  /** 주력 조합에서 파생된 호환용 유형 id(역할·이벤트 조건·서버 meta). */
   type: string;
+  /** T-10-008. 선수 생성 때 고른 주력 능력치. 옛 저장본엔 없다 — engine.focusOf()로 읽는다. */
+  focus?: AttrKey[];
   trait: string;
   age: number;
   year: number;

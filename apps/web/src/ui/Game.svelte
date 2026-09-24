@@ -2,9 +2,9 @@
   // ui.ts renderGame() 포트 (207~222줄)
   import { fly } from 'svelte/transition';
   import { Tween } from 'svelte/motion';
-  import { POS, TYPES, LAST_PHASE } from '../game/data.js';
+  import { POS, LAST_PHASE } from '../game/data.js';
   import { ovr } from '../game/attributes.js';
-  import { leagueOf, roleOf, fmtMoney, potGrade, blockMatches } from '../game/engine.js';
+  import { leagueOf, roleOf, fmtMoney, potGrade, blockMatches, focusOf, labelOf } from '../game/engine.js';
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './actions.js';
   import { advance, nextPending } from './actions.js';
@@ -23,7 +23,7 @@
   const L = $derived(leagueOf(s.leagueId));
   const role = $derived(roleOf(s));
   const contract = $derived(s.contract ? `연봉 ${fmtMoney(s.contract.salary)}` : L.amateur ? '아마추어' : '');
-  const typeName = $derived(TYPES[s.pos].find((t) => t.id === s.type)?.name ?? '');
+  const focusName = $derived(`주력 ${focusOf(s).map((k) => labelOf(s, k)).join('·')}`);
 
   // 엄지 영역 스티키 액션바: "시즌" 탭에서만 노출되는 메인 진행 버튼(원래 SeasonTab 안에 있던
   // 버튼을 화면 어디서나 손 닿는 위치로 끌어올린다). 다른 탭에서 시즌 진행 중 이벤트가 대기 중이면
@@ -66,7 +66,7 @@
     <div class="foot">
       <span class="pill role-{role}">{role}</span>
       {#if s.injury}<span class="pill" style="background:var(--bad);border-color:var(--bad)">부상 {s.injury}경기</span>{/if}
-      <span class="pill">{typeName}</span><span class="pill">잠재력 {potGrade(s)}</span>
+      <span class="pill">{focusName}</span><span class="pill">잠재력 {potGrade(s)}</span>
     </div>
   </section>
   <!-- 탭 전환 모션(T-10-003 goal 3): appState.tab을 key로 써서 탭이 바뀔 때만 새로 마운트해
