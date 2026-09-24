@@ -59,7 +59,7 @@
     <div class="chalk"></div>
     <div>
       <div class="shirt">No.{s.number} · {POS[s.pos].label}</div>
-      <h2>{s.name}</h2>
+      <h1>{s.name}</h1>
       <div class="meta">{s.age}세 · {s.club.name}<br />{L.name}{contract ? ` · ${contract}` : ''}</div>
     </div>
     <div class="ovr"><div class="n num">{Math.round(ovrTween.current)}</div><div class="l">OVR</div></div>

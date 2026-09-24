@@ -20,6 +20,23 @@ export type TickerRow = {
   inj: boolean;
 };
 
+/** T-10-004: 시트 dialog의 접근 가능한 이름(axe aria-dialog-name). 화면의 제목 줄과 같은 문구. */
+export function sheetLabel(v: SheetView): string {
+  switch (v.kind) {
+    case 'judge':
+    case 'eventResult':
+      return v.label;
+    case 'phase':
+      return v.eyebrow;
+    case 'market':
+      return '다음 시즌, 어디서 뛸까요?';
+    case 'notice':
+      return v.title ?? v.eyebrow;
+    default:
+      return v.title;
+  }
+}
+
 export type SheetView =
   | { kind: 'steps'; title: string; steps: string[]; active: number; progress: number }
   | {

@@ -9,5 +9,5 @@ export async function startCareer(page: Page): Promise<void> {
   await page.locator('[data-act="next-candidates"]').click();
   await page.locator('[data-cand="0"]').click();
   await page.locator('[data-act="start"]').click();
-  await expect(page.locator('.player h2')).toBeVisible();
+  await expect(page.locator('.player h1')).toBeVisible();
 }

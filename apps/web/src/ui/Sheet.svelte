@@ -8,6 +8,7 @@
   import { fly } from 'svelte/transition';
   import { closeSheet, registerSheetEl, sheetState } from './sheetState.svelte.js';
   import SheetBody from './sheets/SheetBody.svelte';
+  import { sheetLabel } from './sheets/types.js';
   import { appState } from './state.svelte.js';
   import { buzz, dur } from './motion.js';
 
@@ -103,6 +104,7 @@
       id="sheet"
       role="dialog"
       aria-modal="true"
+      aria-label={sheetState.view ? sheetLabel(sheetState.view) : undefined}
       tabindex="-1"
       bind:this={sheetEl}
       style={dragY ? `transform:translateY(${dragY}px)` : undefined}

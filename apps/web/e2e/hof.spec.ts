@@ -29,7 +29,7 @@ test('전체 명예의 전당에서 다른 유저의 은퇴 선수 상세를 연
   const row = page.locator(`[data-hof-id="${ID}"]`);
   await expect(row).toContainText('익명의');
   await row.click();
-  await expect(page.locator('.player h2')).toContainText('익명의');
+  await expect(page.locator('.player h1')).toContainText('익명의');
   await expect(page.getByRole('heading', { name: '레전드 점수 구성' })).toBeVisible();
   await expect(page.locator('table')).toContainText('K리그1');
   await page.locator('[data-act="hof-back"]').click();
@@ -45,6 +45,6 @@ test('내 선수 탭: 상세 없는 옛 기록은 요약만 보여 준다', asyn
   await expect(page.locator('.card').filter({ hasText: '명예의 전당' })).toContainText('불러오지 못했습니다');
   await page.locator('[data-hof-tab="mine"]').click();
   await page.locator('[data-hof-mine="0"]').click();
-  await expect(page.locator('.player h2')).toHaveText('옛선수');
+  await expect(page.locator('.player h1')).toHaveText('옛선수');
   await expect(page.getByText('요약만 보여 드립니다')).toBeVisible();
 });

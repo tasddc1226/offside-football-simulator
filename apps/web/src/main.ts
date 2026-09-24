@@ -9,7 +9,10 @@ import { handleOAuthReturn } from './ui/actions.js';
 handleOAuthReturn();
 loadGame();
 
-mount(App, { target: document.getElementById('app')! });
+// T-10-004: index.html의 정적 홈 히어로(첫 페인트용)와 noscript를 걷어 내고 앱을 마운트한다.
+const appEl = document.getElementById('app')!;
+appEl.textContent = '';
+mount(App, { target: appEl });
 
 // index.html의 정적 `<div id="modal" ...><div class="sheet" id="sheet">...</div></div>`는 SEO
 // 프리렌더 스크립트가 `#app` 뒤에 이어지는 `#modal`을 찾는 정규식 대상일 뿐, 실제 시트 마크업은
