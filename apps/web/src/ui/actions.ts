@@ -173,7 +173,7 @@ function tourHtml(x: NatTour): string {
 function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
   const { rec, trophies, awards, notes, gala = [], tours = [], miles = [] } = p.res;
   const s = appState.G!;
-  const cols = s.pos === 'GK' || s.pos === 'DF' ? `${rec.cs} 무실점` : `${rec.assists} 도움`;
+  const [colVal, colLabel] = s.pos === 'GK' || s.pos === 'DF' ? [rec.cs, '무실점'] : [rec.assists, '도움'];
   const idx = s.career.indexOf(rec);
   const prev = idx > 0 ? s.career[idx - 1] : null;
   const fanLines = pickFanLines(s, rec, {
@@ -186,7 +186,7 @@ function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
   showSheet(
     `<div class="eyebrow">${seasonLabelOf(rec)} Season Review</div><h2>${esc(rec.club)} · ${rec.league} ${rec.rank}위</h2>
     ${chBadges ? `<div class="row" style="gap:4px">${chBadges}</div>` : ''}
-    <div class="stats" style="grid-template-columns:repeat(4,1fr)"><div><b>${rec.apps}</b><span>출전</span></div><div><b>${rec.goals}</b><span>골</span></div><div><b>${cols.split(' ')[0]}</b><span>${cols.split(' ')[1]}</span></div><div><b>${rec.rating ? rec.rating.toFixed(2) : '-'}</b><span>평점</span></div></div>
+    <div class="stats" style="grid-template-columns:repeat(4,1fr)"><div><b>${rec.apps}</b><span>출전</span></div><div><b>${rec.goals}</b><span>골</span></div><div><b>${colVal}</b><span>${colLabel}</span></div><div><b>${rec.rating ? rec.rating.toFixed(2) : '-'}</b><span>평점</span></div></div>
     ${trophies.length || awards.length ? `<div class="stack">${[...trophies, ...awards].map((t) => `<p class="hl"><b>${t}</b></p>`).join('')}</div>` : '<p class="muted">이번 시즌 수상은 없었습니다.</p>'}
     ${(rec.comps || []).length ? `<div><div class="eyebrow" style="margin-bottom:6px">대회별 성적</div>${(rec.comps || []).map((c) => `<p class="muted">${esc(c.name)} · ${c.stage} · ${c.apps}경기 ${c.g}골 ${c.a}도움</p>`).join('')}</div>` : ''}
     ${tours.length ? `<div><div class="eyebrow" style="margin-bottom:6px">국가대표 · 국제대회</div>${tours.map(tourHtml).join('')}</div>` : ''}

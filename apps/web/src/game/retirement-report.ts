@@ -31,10 +31,12 @@ export function personalBests(s: GameState): PersonalBest[] {
 
 /** 3시즌 연속 구간 중 (골+도움*0.8+평점*apps*0.3)이 가장 높은 구간을 "전성기"로 본다. 시즌이
  * 3개 미만이면 있는 만큼만 반환한다. */
+// 시즌 기여도(전성기·베스트 시즌 선정 공통 기준).
+const score = (r: CareerRecord) => r.goals + r.assists * 0.8 + r.rating * r.apps * 0.3;
+
 export function primeSeasons(s: GameState, windowSize = 3): CareerRecord[] {
   const rows = s.career;
   if (rows.length <= windowSize) return rows.slice();
-  const score = (r: CareerRecord) => r.goals + r.assists * 0.8 + r.rating * r.apps * 0.3;
   let bestStart = 0, bestSum = -Infinity;
   for (let i = 0; i <= rows.length - windowSize; i++) {
     let sum = 0;
@@ -47,7 +49,6 @@ export function primeSeasons(s: GameState, windowSize = 3): CareerRecord[] {
 /** 베스트 3시즌(반드시 연속일 필요는 없음): 위 score 기준 상위 3개, 연대순 정렬해 반환. */
 export function bestSeasons(s: GameState, n = 3): CareerRecord[] {
   const rows = s.career;
-  const score = (r: CareerRecord) => r.goals + r.assists * 0.8 + r.rating * r.apps * 0.3;
   return rows.slice().sort((a, b) => score(b) - score(a)).slice(0, n).sort((a, b) => a.year - b.year);
 }
 
