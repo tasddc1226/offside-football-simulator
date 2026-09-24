@@ -1,4 +1,5 @@
 // ───────── 순수 포맷/집계 헬퍼 (ui.ts의 문자열 템플릿 함수들을 컴포넌트가 쓰기 좋은 형태로 분리) ─────────
+import { labelOf } from '../game/engine.js';
 import { LEAGUES } from '../game/data.js';
 import type { AttrKey } from '../game/data.js';
 import {
@@ -52,16 +53,11 @@ export function radarData(s: GameState) {
     const v = Math.round(s.attrs[k]);
     const d = s.seasonStart ? v - Math.round(s.seasonStart[k]) : 0;
     const anchor = Math.abs(x - CX) < 4 ? 'middle' : x > CX ? 'start' : 'end';
-    return { key: k, labelKr: labelOfAttr(s, k), abbr: abbr[k]!, x, y, labelX: x, labelY: y - 7, anchor, value: v, delta: d };
+    return { key: k, labelKr: labelOf(s, k), abbr: abbr[k]!, x, y, labelX: x, labelY: y - 7, anchor, value: v, delta: d };
   });
-  return { CX, rings, spokes, prev, now, dots, points, ariaLabel: order.map((k) => `${labelOfAttr(s, k)} ${Math.round(s.attrs[k])}`).join(', ') };
+  return { CX, rings, spokes, prev, now, dots, points, ariaLabel: order.map((k) => `${labelOf(s, k)} ${Math.round(s.attrs[k])}`).join(', ') };
 }
 
-// engine.ts의 labelOf는 GameState를 요구하는 시그니처라 여기서 재수출하지 않고 얇게 감싼다.
-import { labelOf } from '../game/engine.js';
-function labelOfAttr(s: GameState, k: AttrKey): string {
-  return labelOf(s, k);
-}
 
 export interface AttrGroupRow {
   key: string;
@@ -98,7 +94,7 @@ export function attrData(s: GameState) {
         const v = Math.round(s.sub[k]!);
         return { key: k, name: SUBS[k]!, value: v, tier: tier(v), bold: (W[k] || 0) >= 0.05 };
       });
-    return { key: g, abbr: abbr[g]!, labelKr: labelOfAttr(s, g), value: Math.round(s.attrs[g]), tier: tier(s.attrs[g]), rows };
+    return { key: g, abbr: abbr[g]!, labelKr: labelOf(s, g), value: Math.round(s.attrs[g]), tier: tier(s.attrs[g]), rows };
   });
   return { role, roleName: ROLE_NAME[role], roles, groups };
 }

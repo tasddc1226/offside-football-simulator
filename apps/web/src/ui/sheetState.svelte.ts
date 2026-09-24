@@ -73,7 +73,7 @@ export function showSheet(html: string, btns: SheetButton[]) {
 }
 
 // ───────── 진행 연출 ─────────
-export const motionOK = (() => {
+const motionOK = (() => {
   try {
     return !matchMedia('(prefers-reduced-motion: reduce)').matches;
   } catch {

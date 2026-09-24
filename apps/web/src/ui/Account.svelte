@@ -12,63 +12,43 @@
   // `undefined`는 "아직 한 번도 불러오지 않음"을, `null`은 "확인 결과 로그인 안 됨"을 뜻한다. 홈은
   // 화면을 벗어났다 돌아오면 이 컴포넌트가 다시 마운트되므로, 모듈 스코프에 캐시를 둬 재검증
   // 간격이 지나기 전까지는 "확인 중…" 이 다시 보이지 않게 한다(원본 account.ts와 동일한 캐시 정책).
-  let cached: Profile | null | 'error' | undefined = accountCache.value;
   const REVALIDATE_MS = 30_000;
+  type ProfileState = Profile | null | 'error' | undefined;
 
-  let profile = $state<Profile | null | 'error' | undefined>(cached);
+  let profile = $state<ProfileState>(accountCache.value);
+  // 화면 상태와 모듈 캐시를 항상 함께 갱신한다.
+  const set = (v: ProfileState) => {
+    accountCache.value = v;
+    profile = v;
+  };
 
   async function load(silent = false) {
     if (!silent) profile = undefined;
     const r = await getProfile();
-    cached = r.ok ? r.data : 'error';
-    accountCache.value = cached;
     accountCache.fetchedAt = Date.now();
-    profile = cached;
+    set(r.ok ? r.data : 'error');
   }
 
   $effect(() => {
-    if (cached === undefined) {
-      void load();
-      return;
-    }
-    profile = cached;
-    if (Date.now() - accountCache.fetchedAt > REVALIDATE_MS) void load(true);
+    if (accountCache.value === undefined) void load();
+    else if (Date.now() - accountCache.fetchedAt > REVALIDATE_MS) void load(true);
   });
 
   async function doUnlink() {
     const r = await unlinkGoogle();
     if (r.ok) await load();
-    else {
-      cached = 'error';
-      accountCache.value = 'error';
-      profile = 'error';
-    }
+    else set('error');
   }
   async function doLogout() {
     await logout();
-    cached = null;
-    accountCache.value = null;
-    profile = null;
+    set(null);
   }
   async function doDeleteFlow() {
     if (!window.confirm('정말 계정을 삭제할까요? 이 기기의 게임 저장 데이터는 남지만, 계정 연동은 완전히 사라집니다.')) return;
     const start = await startProfileDeletion();
-    if (!start.ok) {
-      cached = 'error';
-      accountCache.value = 'error';
-      profile = 'error';
-      return;
-    }
+    if (!start.ok) return set('error');
     const confirmResult = await confirmProfileDeletion(start.data.confirmToken);
-    if (confirmResult.ok) {
-      cached = null;
-      accountCache.value = null;
-      profile = null;
-    } else {
-      cached = 'error';
-      accountCache.value = 'error';
-      profile = 'error';
-    }
+    set(confirmResult.ok ? null : 'error');
   }
 </script>
 
