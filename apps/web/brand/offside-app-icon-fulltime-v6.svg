@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="pitch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22573F"/>
+      <stop offset="1" stop-color="#123325"/>
+    </linearGradient>
+    <clipPath id="flag"><path d="M178 112 H392 L352 192 L392 272 H178 Z"/></clipPath>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#pitch)"/>
+  <g fill="none" stroke="#E9EEE8" stroke-opacity="0.13" stroke-width="10">
+    <path d="M0 404 H512"/>
+    <circle cx="256" cy="404" r="96"/>
+  </g>
+  <rect x="146" y="96" width="30" height="330" rx="15" fill="#E9EEE8"/>
+  <circle cx="161" cy="96" r="22" fill="#E9EEE8"/>
+  <g clip-path="url(#flag)">
+    <rect x="176" y="112" width="220" height="160" fill="#F2B632"/>
+    <rect x="176" y="112" width="92" height="80" fill="#0D1511"/>
+    <rect x="268" y="192" width="92" height="80" fill="#0D1511"/>
+  </g>
+</svg>

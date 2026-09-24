@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import {
+  BRAND_VERSION,
   stripAppBundle,
   createHeaders,
   createHeadMarkup,
@@ -34,9 +36,9 @@ test('accepts only an HTTPS origin', () => {
 
 test('brand discovery uses the versioned approved flag assets', () => {
   const head = createHeadMarkup({ origin: undefined, indexingEnabled: false });
-  assert.match(head, /offside-flag-v5-64\.png/);
-  assert.match(head, /offside-flag-v5-180\.png/);
-  assert.match(head, /og-offside-flag-v5\.png/);
+  assert.match(head, /offside-flag-v6-64\.png/);
+  assert.match(head, /offside-flag-v6-180\.png/);
+  assert.match(head, /og-offside-flag-v6\.png/);
   assert.match(head, /site\.webmanifest/);
   assert.doesNotMatch(head, /favicon\.svg/);
 });
@@ -100,4 +102,9 @@ test('stripAppBundle은 속성 순서와 무관하게 앱 스크립트·modulepr
   assert.ok(!out.includes('/assets/a.js'));
   assert.ok(!out.includes('modulepreload'));
   assert.ok(out.includes('inline()'));
+});
+
+test('in-app badge uses the current brand version', () => {
+  const ui = readFileSync(new URL('../src/game/ui.ts', import.meta.url), 'utf8');
+  assert.match(ui, new RegExp(`/brand/offside-flag-${BRAND_VERSION}-64\\.png`));
 });
