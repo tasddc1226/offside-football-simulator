@@ -72,3 +72,7 @@ pnpm --filter @offside/fulltime-sim check-parity <tag>      # 원작 v4 기준�
 교체했다([ADR-013](docs/adr/ADR-013-fulltime-replacement.md)). 원작 문서는
 [`docs/archive/offside/`](docs/archive/offside/README.md)에, 원작의 마지막 main 커밋은
 `offside-final` 태그에 남아 있다.
+
+## 라이선스
+
+All Rights Reserved — 오픈소스가 아니다. 자세한 내용은 [`LICENSE`](LICENSE).

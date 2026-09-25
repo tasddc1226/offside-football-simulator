@@ -93,4 +93,4 @@
 - `functional-04-radio-keyboard-noop.png` — 이벤트 선택 화면, 포커스된 라디오가 Enter/Space에 반응하지 않는 상태
 - `functional-05-settings-dark-green.png` — 설정 변경(다크 테마·그린 포인트 색상) 적용 후 새로고침으로 유지 확인한 화면
 
-(경로: `/private/tmp/claude-501/-Users-suyoung-orca-workspaces-offside-football-simulator-main-2/4ef62756-c765-49a5-baf6-5eabacf98b2d/scratchpad/qa-shots/`)
+(경로: `<로컬 임시 폴더>`)

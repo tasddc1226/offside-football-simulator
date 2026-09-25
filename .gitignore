@@ -40,3 +40,21 @@ tooling/sim-out/
 
 # 풀타임 시뮬레이션 산출물
 tooling/fulltime-sim/results/
+
+# 비밀값·운영 데이터 (공개 저장소 — 절대 커밋하지 않는다)
+.env*
+!.env.example
+*.pem
+*.key
+*.p12
+prod-d1*.sql
+*-dump*.sql
+*.sqlite*
+
+# 로컬 에이전트·도구 설정
+.claude/settings.local.json
+.codegraph/
+
+# 홍보물 작업 폴더(인스타 캡처·슬라이드) — 저장소 밖에 보관한다
+apps/web/public/__promo/
+tooling/fulltime-sim/__*.ts

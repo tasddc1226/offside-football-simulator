@@ -1,7 +1,7 @@
 #!/bin/bash
 # usage: docs/tracking/scripts/redispatch.sh <TASK_ID> <message>   — 기존 워크트리에 새 워커 터미널을 띄우고 메시지를 보낸다(워커 TUI가 멈췄을 때)
 set -euo pipefail
-export PATH=/Users/suyoung/.nvm/versions/node/v22.23.1/bin:$PATH
+export PATH=~/.nvm/versions/node/v22.23.1/bin:$PATH
 S=${ORCH_STATE_DIR:-$HOME/.offside-orch}; mkdir -p "$S"
 REPO=id:41200e35-ac29-475d-8c7f-6cd38f9bc9e1
 T=$1; MSG=$2
