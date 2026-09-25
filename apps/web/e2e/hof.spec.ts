@@ -147,3 +147,42 @@ test('명예의 전당: 내 선수도 홈에선 TOP 3, 전체 보기에서 전�
   await expect(page.locator('[data-hof-mine]')).toHaveCount(5);
   await expect(page.locator('.hof-pager')).toHaveCount(0);
 });
+
+// 전체 보기에서 순위 유형을 바꾸면 서버에 sort로 묻고 그 기록을 오른쪽에 보여 준다. 내 선수는 기기에서 같은 규칙으로 정렬.
+test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)을 바꾼다', async ({ page }) => {
+  const asked: string[] = [];
+  await page.route(HOF_LIST, (r) => {
+    const u = new URL(r.request().url());
+    asked.push(u.search);
+    const entries = u.searchParams.get('sort') === 'goals' ? [{ ...entry, goals: 401 }, { ...entry, id: '00000000-0000-4000-8000-000000000002', goals: 99 }] : [entry];
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries, total: entries.length } }) });
+  });
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { linked: false, entries: [] } }) }));
+  await page.addInitScript(() => {
+    const base = { pos: 'DF', number: 4, peak: 78, age: 33, apps: 300, goals: 10, assists: 5, trophies: 1, awards: 0, caps: 3, lastClub: 'FC', date: '2026-09-24' };
+    localStorage.setItem('ft_hof', JSON.stringify([
+      { ...base, name: '점수왕', score: 900, ballon: 0 },
+      { ...base, name: '발롱1회', score: 300, ballon: 1 },
+      { ...base, name: '발롱3회', score: 200, ballon: 3 },
+    ]));
+  });
+  await page.goto('/');
+  await expect(page.locator('[data-hof="home"] [data-hof-sort]')).toHaveCount(0);
+  await page.locator('[data-act="hof-all"]').click();
+  const full = page.locator('[data-hof="full"]');
+  await expect(full.locator('[data-hof-sort="score"]')).toHaveAttribute('aria-pressed', 'true');
+
+  await full.locator('[data-hof-sort="goals"]').click();
+  await expect(full.locator('.hof-source')).toContainText('득점 기록이 있는 선수 2명 · 득점 순');
+  await expect(full.locator('.hof-row').first().locator('.hof-value')).toHaveText('401골');
+  expect(asked.at(-1)).toBe('?limit=100&sort=goals');
+  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+
+  // 탭을 바꿔도 유형은 그대로. 발롱도르 0회는 빠지고 많이 받은 순.
+  await full.locator('[data-hof-sort="ballon"]').click();
+  await full.locator('[data-hof-tab="mine"]').click();
+  await expect(full.locator('[data-hof-sort="ballon"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(full.locator('[data-hof-mine]')).toHaveCount(2);
+  await expect(full.locator('[data-hof-mine="0"]')).toContainText('발롱3회');
+  await expect(full.locator('[data-hof-mine="0"] .hof-value')).toHaveText('3회');
+});

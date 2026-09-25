@@ -129,6 +129,11 @@ button.hof-row { width: 100%; background: none; border-inline: 0; border-bottom:
 .hof-row:has(.medal.silver) { background: linear-gradient(90deg, color-mix(in srgb, #A7B1BA 14%, transparent), transparent 70%); }
 .hof-row:has(.medal.bronze) { background: linear-gradient(90deg, color-mix(in srgb, #C27A3E 12%, transparent), transparent 70%); }
 .hof-row:has(.medal) { border-radius: 10px; }
+.hof-value { font-size: 22px; font-weight: 700; white-space: nowrap; }
+.hof-value small { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 2px; }
+.hof-sorts { display: flex; flex-wrap: wrap; gap: 6px; margin-block: 10px 6px; }
+.hof-sort { font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); cursor: pointer; }
+.hof-sort[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--surface); }
 .hof-pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
 .hof-pager .num { font-weight: 700; }
 .hof-rank { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--accent-text); text-align: center; }

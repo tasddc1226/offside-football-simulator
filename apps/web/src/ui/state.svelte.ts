@@ -2,6 +2,7 @@
 // 원본은 module-level `let G/screen/tab/...` + 수동 render() 호출로 화면을 갱신했다. Svelte 5
 // runes로 옮기면서 같은 상태를 하나의 반응형 객체에 모아 두고, 화면 갱신은 컴포넌트가 이 상태를
 // 구독하는 것으로 대신한다(수동 render() 호출은 더 이상 필요 없다).
+import type { HofSort } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import type { OutboxItem } from '../game/outbox.js';
 import type { AttrKey, Pos } from '../game/data.js';
@@ -60,8 +61,8 @@ export const appState = $state<{
   boardPost: string | null;
   /** T-10-013. 진행 중 커리어가 다른 계정 소유라 서버가 거절한 시즌 업로드(홈에서 처리를 고른다). */
   ownerConflict: OutboxItem[] | null;
-  /** 명예의 전당 전체 보기 화면의 탭·페이지(1부터). 선수 상세에서 돌아와도 그대로다. */
-  hof: { tab: HofTab; page: number };
+  /** 명예의 전당 전체 보기 화면의 탭·페이지(1부터)·순위 유형. 선수 상세에서 돌아와도 그대로다. */
+  hof: { tab: HofTab; page: number; sort: HofSort };
   /** 선수 상세의 '← 명예의 전당'이 돌아갈 화면. */
   legendBack: 'home' | 'hof';
 }>({
@@ -84,7 +85,7 @@ export const appState = $state<{
   board: 'notice',
   boardPost: null,
   ownerConflict: null,
-  hof: { tab: 'all', page: 1 },
+  hof: { tab: 'all', page: 1, sort: 'score' },
   legendBack: 'home',
 });
 

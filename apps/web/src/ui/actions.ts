@@ -336,7 +336,7 @@ export function goDex() {
 }
 /** 명예의 전당 전체 보기(100명씩 페이지). */
 export function openHof(tab: HofTab) {
-  appState.hof = { tab, page: 1 };
+  appState.hof = { tab, page: 1, sort: 'score' };
   appState.screen = 'hof';
   window.scrollTo(0, 0);
 }

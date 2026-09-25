@@ -4,6 +4,7 @@ import {
   HofListQuerySchema,
   HofListResponseSchema,
   HofPageQuerySchema,
+  HofSortSchema,
   successEnvelope,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
@@ -19,7 +20,8 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/hof', async (c) => {
     const limit = parseWithAppError(HofListQuerySchema, c.req.query('limit'));
     const page = parseWithAppError(HofPageQuerySchema, c.req.query('page'));
-    const data = await listPublicHof(getDb(c), limit, page);
+    const sort = parseWithAppError(HofSortSchema, c.req.query('sort'));
+    const data = await listPublicHof(getDb(c), limit, page, sort);
     const body = successEnvelope(HofListResponseSchema).parse({ data, meta: { requestId: c.get('requestId') } });
     c.header('Cache-Control', CACHE);
     return c.json(body, 200);

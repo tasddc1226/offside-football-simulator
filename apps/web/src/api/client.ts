@@ -1,5 +1,5 @@
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
-import type { Profile as ContractProfile, HofDetailResponse, HofListResponse, MyCareersResponse } from '@offside/contracts';
+import type { Profile as ContractProfile, HofDetailResponse, HofListResponse, HofSort, MyCareersResponse } from '@offside/contracts';
 import { resolveApiBaseUrl } from './base-url.js';
 
 // API 클라이언트 최소본 (계정: 로그인/프로필/연동 해제/로그아웃/삭제 만). 게임 상태는 전부
@@ -92,8 +92,9 @@ export function googleStartUrl(): string {
 }
 
 // ───────── T-10-005 공개 명예의 전당 (로그인 불필요) ─────────
-export function getHof(limit = 50, page = 1): Promise<ApiResult<HofListResponse>> {
-  return apiFetch<HofListResponse>(`/v1/hof?limit=${limit}${page > 1 ? `&page=${page}` : ''}`, { method: 'GET' });
+export function getHof(limit = 50, page = 1, sort: HofSort = 'score'): Promise<ApiResult<HofListResponse>> {
+  const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}`;
+  return apiFetch<HofListResponse>(`/v1/hof?${q}`, { method: 'GET' });
 }
 /** T-10-013. 이 계정의 은퇴 선수. 익명 프로필이면 linked=false. */
 export function getMyCareers(): Promise<ApiResult<MyCareersResponse>> {

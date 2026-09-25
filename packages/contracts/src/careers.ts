@@ -220,5 +220,9 @@ export const MyCareersResponseSchema = z.strictObject({ linked: z.boolean(), ent
 export type MyCareersResponse = z.infer<typeof MyCareersResponseSchema>;
 
 export const HofListQuerySchema = z.coerce.number().int().min(1).max(100).default(50);
+/** `GET /v1/hof?sort=` 명예의 전당 순위 유형. score(레전드 점수) 말고는 그 기록이 0인 선수는 빠진다.
+ * ga = 공격포인트(골 + 도움). */
+export const HofSortSchema = z.enum(['score', 'goals', 'assists', 'ga', 'apps', 'trophies', 'awards', 'ballon', 'caps', 'peak']).default('score');
+export type HofSort = z.infer<typeof HofSortSchema>;
 /** `GET /v1/hof?page=` 1부터 시작하는 페이지 번호(한 페이지 = limit명). */
 export const HofPageQuerySchema = z.coerce.number().int().min(1).max(10000).default(1);
