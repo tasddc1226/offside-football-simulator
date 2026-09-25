@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 // 운영 배포마다 붙이는 릴리즈 태그: KST 날짜 + 그날의 배포 순번 (v2026.09.25.1, v2026.09.25.2 …).
 const TAG_PATTERN = /^v(\d{4})\.(\d{2})\.(\d{2})\.(\d+)$/;
-const SHA_PATTERN = /^[0-9a-f]{40}$/i;
+const SHA_PATTERN = /^[0-9a-f]{40}$/;
 
 /** KST(UTC+9) 기준 날짜를 YYYY.MM.DD 로. */
 export function kstDate(now) {
@@ -26,7 +26,7 @@ export function planReleaseTag(tags, sha, now) {
       for (let i = 1; i <= 4; i++) if (+a.m[i] !== +b.m[i]) return +a.m[i] - +b.m[i];
       return 0;
     });
-  const same = ours.find((t) => t.sha.toLowerCase() === sha.toLowerCase());
+  const same = ours.find((t) => t.sha === sha);
   if (same) return { tag: same.name, existing: true, previous: null };
   const day = kstDate(now);
   const seq = ours.filter((t) => t.name.startsWith(`v${day}.`)).length + 1;
@@ -39,7 +39,7 @@ async function main() {
   const sha = process.argv[2] ?? '';
   let raw = '';
   for await (const chunk of process.stdin) raw += chunk;
-  const refs = JSON.parse(raw || '[]');
+  const refs = JSON.parse(raw);
   const tags = refs.map((r) => ({ name: r.ref.replace(/^refs\/tags\//, ''), sha: r.object.sha }));
   const plan = planReleaseTag(tags, sha, new Date());
   process.stdout.write(

@@ -45,7 +45,7 @@ test('순번은 문자열이 아니라 숫자로 비교한다', () => {
 
 test('같은 커밋을 다시 배포하면 새 태그를 만들지 않는다', () => {
   const tags = [{ name: 'v2026.09.25.1', sha: B }];
-  assert.deepEqual(planReleaseTag(tags, B.toUpperCase(), new Date('2026-09-25T11:00:00Z')), {
+  assert.deepEqual(planReleaseTag(tags, B, new Date('2026-09-25T11:00:00Z')), {
     tag: 'v2026.09.25.1',
     existing: true,
     previous: null,

@@ -219,6 +219,8 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
+    env:
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -230,7 +232,6 @@ jobs:
         id: plan
         env:
           GH_TOKEN: ${{ github.token }}
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v" \
             | node .github/scripts/release-tag.mjs "$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
@@ -240,7 +241,6 @@ jobs:
         if: steps.plan.outputs.existing != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
           TAG: ${{ steps.plan.outputs.tag }}
           PREVIOUS: ${{ steps.plan.outputs.previous }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
