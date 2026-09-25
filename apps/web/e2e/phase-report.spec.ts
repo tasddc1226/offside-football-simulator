@@ -35,6 +35,9 @@ test('구간 결과가 팝업이 아니라 시즌 탭 리포트로 나오고, �
 
   // 등장 애니메이션이 끝난 뒤 리포트 카드에 접근성 위반이 없어야 한다(moderate까지).
   await page.waitForTimeout(2500);
-  const results = await new AxeBuilder({ page }).include('[data-report]').analyze();
-  expect(results.violations.map((v) => `${v.id} ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    const results = await new AxeBuilder({ page }).include('[data-report]').analyze();
+    expect(results.violations.map((v) => `${colorScheme} ${v.id} ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  }
 });
