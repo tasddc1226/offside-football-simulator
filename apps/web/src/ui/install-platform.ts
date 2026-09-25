@@ -15,8 +15,8 @@ export const INSTALL_STEPS: Record<Platform, string[]> = {
   ],
   android: [
     '오른쪽 위 ⋮ 메뉴를 눌러요.',
-    "'홈 화면에 추가' 또는 '앱 설치'를 골라요.",
-    "'추가'(또는 '설치')를 누르면 끝이에요.",
+    "'홈 화면에 추가'를 골라요.",
+    "'추가'를 누르면 끝이에요.",
   ],
   other: [
     '휴대폰 브라우저로 offside-lab.com 에 들어와요.',
