@@ -94,6 +94,14 @@ p { margin: 0; }
 .hero-home h1 { font-size: 30px; margin-top: 6px; }
 .hero-home p { margin-top: 6px; opacity: .8; max-width: 30ch; }
 .hero-home .btn { margin-top: 18px; }
+.hero-current h1 { display: flex; flex-direction: column; gap: 2px; }
+.hero-current h1 span { font-size: 17px; font-weight: 600; opacity: .8; }
+.hero-current h1 b { font-weight: 600; font-size: 22px; }
+.hero-current h1 strong { font-size: 32px; font-weight: 700; }
+.hero-current .hero-meta { font-size: 13px; opacity: .65; margin-top: 2px; }
+.hero-current .hero-new { margin-top: 8px; background: transparent; color: var(--on-pitch); border-color: color-mix(in srgb, var(--on-pitch) 35%, transparent); }
+.hero-play { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+.hero-play path { fill: currentColor; stroke: none; }
 .chalk { position: absolute; inset: 0; pointer-events: none; }
 .chalk::before { content: ''; position: absolute; right: -60px; top: 50%; width: 160px; height: 160px; border: 2px solid var(--chalk); border-radius: 50%; transform: translateY(-50%); }
 .chalk::after { content: ''; position: absolute; right: 19px; top: 0; bottom: 0; border-left: 2px solid var(--chalk); }

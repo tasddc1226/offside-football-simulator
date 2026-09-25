@@ -103,3 +103,11 @@ export function attrData(s: GameState) {
   });
   return { role, roleName: ROLE_NAME[role], roles, groups };
 }
+
+/** 이름 뒤에 '로/으로'를 붙인다. 받침이 없거나 ㄹ이면 '로', 한글이 아니면 '(으)로'. */
+export function withRo(name: string): string {
+  const code = name.charCodeAt(name.length - 1) - 0xac00;
+  if (!(code >= 0 && code <= 11171)) return `${name}(으)로`;
+  const jong = code % 28;
+  return `${name}${jong === 0 || jong === 8 ? '로' : '으로'}`;
+}
