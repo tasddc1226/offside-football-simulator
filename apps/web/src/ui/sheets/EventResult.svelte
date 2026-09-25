@@ -9,6 +9,7 @@
 <p>{v.text}</p>
 <Chips chips={v.chips} pop />
 {#if v.twist}<p class="twist">{v.twist}</p>{/if}
+{#if v.dexNew}<p class="dex-new" data-dex-new>📖 도감 새 항목 · <b>{v.dexNew}</b> <span class="muted">— 홈의 확률 도감에서 볼 수 있어요</span></p>{/if}
 {#if v.story}
   {#if v.story.ending}
     <div class="story-end"><span class="eyebrow">스토리 완결 · {v.story.name}</span><b>{v.story.ending}</b></div>

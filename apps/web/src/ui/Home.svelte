@@ -3,7 +3,7 @@
   import { PHASES, LAST_PHASE } from '../game/data.js';
   import { ovr } from '../game/attributes.js';
   import { appState } from './state.svelte.js';
-  import { goNew, goContinue, goSettings, goBoard } from './actions.js';
+  import { goNew, goContinue, goSettings, goBoard, goDex } from './actions.js';
   import Topbar from './Topbar.svelte';
   import HallOfFame from './HallOfFame.svelte';
   import type { Component } from 'svelte';
@@ -38,7 +38,9 @@
   {/if}
   <div class="tiles">
     <div class="tile"><span class="eyebrow">How to play</span><b>구간마다 훈련 선택</b><span class="muted" style="font-size:13px">한 시즌 = 프리시즌 + 전반기 + 후반기</span></div>
-    <div class="tile"><span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted" style="font-size:13px">선택지마다 성공 확률 공개</span></div>
+    <button class="tile tile-link" data-act="dex" onclick={goDex}>
+      <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted" style="font-size:13px">선택지마다 성공 확률 공개 · 확률 도감 보기 →</span>
+    </button>
   </div>
   <HallOfFame />
   <section class="card" id="account-slot">

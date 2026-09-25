@@ -15,6 +15,11 @@
   $effect(() => {
     if (appState.screen === 'settings' && !Settings) void import('./Settings.svelte').then((m) => (Settings = m.default));
   });
+  // T-10-012: 확률 도감도 처음 열 때 불러온다(확률 분석 코드 포함).
+  let Dex = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'dex' && !Dex) void import('./EventDex.svelte').then((m) => (Dex = m.default));
+  });
   // T-10-011: 소식(게시판)도 같은 방식으로 처음 열 때 불러온다.
   let Board = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -40,6 +45,8 @@
       <Legend />
     {:else if appState.screen === 'settings'}
       {#if Settings}<Settings />{/if}
+    {:else if appState.screen === 'dex'}
+      {#if Dex}<Dex />{/if}
     {:else if appState.screen === 'board'}
       {#if Board}<Board />{/if}
     {:else}
