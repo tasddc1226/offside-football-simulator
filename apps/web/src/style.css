@@ -469,7 +469,6 @@ td.n, th.n { text-align: right; }
 .notice-check { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 14px; color: var(--muted); cursor: pointer; }
 .notice-check input { width: 18px; height: 18px; accent-color: var(--pitch); }
 .notice-steps li::marker { color: var(--accent-text); font-weight: 700; }
-.g-btn { display: inline-flex; align-items: center; gap: 8px; }
 
 /* ───────── 후보 선수 카드 (T-10-002) ───────── */
 .cand-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }

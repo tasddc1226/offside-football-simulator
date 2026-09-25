@@ -10,7 +10,8 @@ test('다크 모드: 시스템이 라이트여도 켜면 어둡게, 새로 고�
 
   await toggle.click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await expect(page.locator('meta[name="theme-color"]').first()).toHaveAttribute('content', '#0D1511');
+  await expect(page.locator('meta[name="theme-color"][data-scheme="dark"]')).toHaveAttribute('media', 'all');
+  await expect(page.locator('meta[name="theme-color"][data-scheme="light"]')).toHaveAttribute('media', 'not all');
 
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');

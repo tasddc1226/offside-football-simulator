@@ -1,12 +1,11 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { onMount } from 'svelte';
   // ───────── 계정 영역: 구글 로그인 · 프로필 · 연동 해제 · 로그아웃 · 탈퇴 (account.ts 포트) ─────────
   // 게임 데이터는 전부 localStorage에 남고, 여기서 다루는 건 로그인 상태뿐이다. 오프라인/서버
   // 오류에도 게임 자체는 그대로 플레이할 수 있어야 하므로, 실패 시 조용히 "로그아웃 상태" 취급하고
   // 게임 화면을 막지 않는다.
   import {
     getProfile, unlinkGoogle, logout, startProfileDeletion, confirmProfileDeletion, googleStartUrl,
-    type Profile,
   } from '../api/client.js';
   import { accountCache } from './account-state.svelte.js';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
@@ -16,29 +15,21 @@
   // 간격이 지나기 전까지는 "확인 중…" 이 다시 보이지 않게 한다(원본 account.ts와 동일한 캐시 정책).
   // 로그인 상태는 OAuth 복귀(전체 새로고침)나 이 패널의 버튼으로만 바뀐다 — 설정을 오갈 때마다 다시 묻지 않는다.
   const REVALIDATE_MS = 5 * 60_000;
-  type ProfileState = Profile | null | 'error' | undefined;
-
-  let profile = $state<ProfileState>(accountCache.value);
-  // 화면 상태와 모듈 캐시를 항상 함께 갱신한다.
-  const set = (v: ProfileState) => {
-    accountCache.value = v;
-    profile = v;
-  };
+  // 화면은 반응형 모듈 캐시를 그대로 그린다(설정의 운영 도구 입구도 같은 값을 본다).
+  const profile = $derived(accountCache.value);
+  const set = (v: typeof accountCache.value) => (accountCache.value = v);
 
   async function load(silent = false) {
-    if (!silent) profile = undefined;
+    if (!silent) set(undefined);
     const r = await getProfile();
     accountCache.fetchedAt = Date.now();
     set(r.ok ? r.data : 'error');
   }
 
-  // 캐시가 반응형이라 읽기를 untrack으로 감싸 마운트 때 한 번만 돈다.
-  $effect(() =>
-    untrack(() => {
-      if (accountCache.value === undefined) void load();
-      else if (Date.now() - accountCache.fetchedAt > REVALIDATE_MS) void load(true);
-    }),
-  );
+  onMount(() => {
+    if (accountCache.value === undefined) void load();
+    else if (Date.now() - accountCache.fetchedAt > REVALIDATE_MS) void load(true);
+  });
 
   async function doUnlink() {
     const r = await unlinkGoogle();
@@ -78,7 +69,7 @@
 {:else if !profile || !profile.linked.google}
   <div class="account-card">
     <div class="who"><b>로그인하지 않았어요</b><span class="muted">구글 계정을 연결하면 은퇴한 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.</span></div>
-    <a class="btn btn-primary g-btn" href={googleStartUrl()}>구글로 로그인</a>
+    <a class="btn btn-primary" href={googleStartUrl()}>구글로 로그인</a>
   </div>
 {:else}
   <div class="account-card">

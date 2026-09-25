@@ -4,15 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#E9EEE8" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0D1511" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#E9EEE8" media="(prefers-color-scheme: light)" data-scheme="light" />
+    <meta name="theme-color" content="#0D1511" media="(prefers-color-scheme: dark)" data-scheme="dark" />
     <script>
       // T-10-021: 설정의 다크 모드 선택(ft_theme, src/ui/theme.ts)을 첫 페인트 전에 적용한다. 고른 적이 없으면 시스템 설정을 따른다.
       try {
         var t = localStorage.getItem('ft_theme');
         if (t === 'dark' || t === 'light') {
           document.documentElement.dataset.theme = t;
-          document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = t === 'dark' ? '#0D1511' : '#E9EEE8'; });
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.media = m.dataset.scheme === t ? 'all' : 'not all'; });
         }
       } catch (e) {}
     </script>

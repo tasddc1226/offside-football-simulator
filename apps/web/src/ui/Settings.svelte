@@ -16,21 +16,20 @@
   import { fetchBoardViewer } from '../api/boards.js';
   import { appState } from './state.svelte.js';
   import { accountCache } from './account-state.svelte.js';
-  import type { Component } from 'svelte';
+  import Account from './Account.svelte';
 
   let sfx = $state(sfxEnabled());
   let dark = $state(isDark());
-  // 계정 패널은 게임 로직과 무관한 로그인 UI라 메인 청크와 분리된 동적 import로 불러온다.
-  let Account = $state<Component<Record<string, never>> | null>(null);
-  void import('./Account.svelte').then((m) => (Account = m.default));
-
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
   // 바꾸면 다시 판단한다.
   let admin = $state(false);
-  $effect(() => {
+  const linked = $derived.by(() => {
     const acct = accountCache.value;
-    if (acct && acct !== 'error' && acct.linked.google) void fetchBoardViewer().then((r) => (admin = r.ok && r.data.admin));
+    return !!acct && acct !== 'error' && acct.linked.google;
+  });
+  $effect(() => {
+    if (linked) void fetchBoardViewer().then((r) => (admin = linked && r.ok && r.data.admin));
     else admin = false;
   });
 
@@ -122,9 +121,7 @@
   </header>
 
   <section class="card settings-card" id="account-slot" aria-label="계정">
-    {#if Account}
-      <Account />
-    {/if}
+    <Account />
   </section>
 
   <section class="card settings-card">
