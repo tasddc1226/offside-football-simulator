@@ -26,6 +26,7 @@ import {
   updatePost,
 } from '../db/repos/boards.js';
 import { getDb, type AppEnv } from '../env.js';
+import { envelope, nowIso } from './shared.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
@@ -38,14 +39,12 @@ const COMMENT_LIMIT = 10;
 const notFound = (what: string) =>
   new AppError({ code: 'VALIDATION_FAILED', status: 404, message: `${what}을(를) 찾을 수 없습니다.`, details: { reason: 'BOARD_NOT_FOUND' } });
 
-const envelope = (c: Context<AppEnv>, data: unknown) => ({ data, meta: { requestId: c.get('requestId') } });
 const idParam = (c: Context<AppEnv>, name: string) => parseWithAppError(BoardIdParamSchema, c.req.param(name));
-const nowIso = () => new Date().toISOString();
 /** 목록 엣지 캐시는 첫 페이지(웹 기본 limit)만 — 글·댓글을 쓰고 지울 때 지우는 키와 정확히 같다.
  * '더 보기'(before)나 다른 limit은 드물어 그냥 읽는다. */
 const LIST_TTL = 60;
 const DEFAULT_LIMIT = 20;
-const firstPagePath = (board: string) => `/v1/boards/${board}/posts?limit=${DEFAULT_LIMIT}`;
+export const firstPagePath = (board: string) => `/v1/boards/${board}/posts?limit=${DEFAULT_LIMIT}`;
 const purgeList = (c: Context<AppEnv>, board: string) => purgeEdge(c, [firstPagePath(board)]);
 
 async function postOr404(c: Context<AppEnv>, id: string) {

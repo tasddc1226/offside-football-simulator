@@ -181,13 +181,13 @@ export const careerSeasons = sqliteTable(
   (table) => [primaryKey({ columns: [table.careerId, table.year] })],
 );
 
-/** T-1-004, ADR-008. `PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`·`GOOGLE_LINKED`·`GOOGLE_UNLINKED`(T-1-013)·`CAREERS_MERGED`(T-10-013). */
+/** T-1-004, ADR-008. `PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`·`GOOGLE_LINKED`·`GOOGLE_UNLINKED`(T-1-013)·`CAREERS_MERGED`(T-10-013)·`BALANCE_ACTIVATED`·`COMMENTS_PURGED`(T-10-016). */
 export const auditLog = sqliteTable(
   'audit_log',
   {
     id: text('id').primaryKey(),
     kind: text('kind', {
-      enum: ['PROFILE_DELETED', 'RECOVERY_CODE_ISSUED', 'GOOGLE_LINKED', 'GOOGLE_UNLINKED', 'CAREERS_MERGED'],
+      enum: ['PROFILE_DELETED', 'RECOVERY_CODE_ISSUED', 'GOOGLE_LINKED', 'GOOGLE_UNLINKED', 'CAREERS_MERGED', 'BALANCE_ACTIVATED', 'COMMENTS_PURGED'],
     }).notNull(),
     profileId: text('profile_id').notNull(),
     payloadJson: text('payload_json').notNull(),
@@ -242,5 +242,25 @@ export const boardComments = sqliteTable(
   (table) => [
     index('board_comments_post_created_idx').on(table.postId, table.createdAt),
     index('board_comments_profile_idx').on(table.profileId),
+    // T-10-016 운영 도구: 전체 게시판의 최근 댓글.
+    index('board_comments_created_idx').on(table.createdAt),
   ],
+);
+
+/** T-10-016. 서버에서 조정하는 게임 밸런스 설정. version이 곧 버전 번호다. 초안(draft)만 고칠 수 있고,
+ * 활성(active)은 늘 하나다 — 다른 버전을 활성화하면 이전 활성은 archived가 된다(되돌리기 = 옛 버전 재활성화).
+ * values_json은 기본값과 다른 값만 담는다(@offside/contracts/balance). */
+export const balanceVersions = sqliteTable(
+  'balance_versions',
+  {
+    version: integer('version').primaryKey({ autoIncrement: true }),
+    status: text('status', { enum: ['draft', 'active', 'archived'] }).notNull(),
+    note: text('note').notNull().default(''),
+    valuesJson: text('values_json').notNull(),
+    createdBy: text('created_by').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    activatedAt: text('activated_at'),
+  },
+  (table) => [index('balance_versions_status_idx').on(table.status)],
 );

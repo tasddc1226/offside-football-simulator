@@ -10,8 +10,16 @@
   import Topbar from './Topbar.svelte';
   import ClubBadge from './ClubBadge.svelte';
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
+  import { fetchBoardViewer } from '../api/boards.js';
+  import { appState } from './state.svelte.js';
+  import { accountCache } from './account-state.js';
 
   let sfx = $state(sfxEnabled());
+  // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
+  // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다).
+  let admin = $state(false);
+  const acct = accountCache.value;
+  if (acct && acct !== 'error' && acct.linked.google) void fetchBoardViewer().then((r) => (admin = r.ok && r.data.admin));
 
   let leagueId = $state(LEAGUES[LEAGUES.length - 1]!.id);
   let open = $state<string | null>(null);
@@ -154,5 +162,11 @@
         <button class="icon-btn" onclick={resetAll}>전체 초기화</button>
       </div>
     </div>
+    {#if admin}
+      <div class="stack" style="gap:6px">
+        <h2 style="margin:0">운영</h2>
+        <button class="btn" style="align-self:flex-start" data-act="admin" onclick={() => (appState.screen = 'admin')}>운영 도구 열기</button>
+      </div>
+    {/if}
   </section>
 </div>

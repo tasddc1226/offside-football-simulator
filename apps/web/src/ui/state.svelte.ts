@@ -11,7 +11,7 @@ import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
 import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
 
-export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex' | 'hof';
+export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex' | 'hof' | 'admin';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
 export type HofTab = 'all' | 'mine';
 

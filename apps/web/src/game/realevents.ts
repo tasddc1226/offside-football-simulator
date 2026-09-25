@@ -3,11 +3,36 @@ import { clamp, ri, pick } from './rng.js';
 import { EVENTS } from './events-data.js';
 import { leagueOf, addStat, addAttr, isPro, byPos, adFee } from './engine.js';
 import { ovr } from './attributes.js';
-import { callupScore } from './national.js';
-import type { GameState } from './types.js';
+import { callupScore, RELEASE } from './national.js';
+import type { EventDef, GameState } from './types.js';
 
-const DERBY: Record<string, string> = { k2: '경인 더비', k1: '동해안 더비', j1: '다마가와 클라시코', ere: '데 클라시커르', l1: '르 클라시크', bl: '데어 클라시커', sa: '밀라노 더비', ll: '엘 클라시코', pl: '맨체스터 더비' };
-const CAMP = (s: GameState) => (leagueOf(s.leagueId).tier <= 3 ? pick(['튀르키예 안탈리아', '태국 치앙마이', '일본 가고시마', '제주 서귀포']) : pick(['스페인 마르베야', 'UAE 두바이', '미국 플로리다']));
+const DERBY: Record<string, string> = { k2: '경인 더비', k1: '동해안 더비', j1: '다마가와 클라시코', mls: '엘 트라피코', ere: '데 클라시커르', l1: '르 클라시크', bl: '데어 클라시커', sa: '밀라노 더비', ll: '엘 클라시코', pl: '맨체스터 더비' };
+const CAMP = (s: GameState) => (s.leagueId === 'mls' ? pick(['미국 플로리다', '미국 애리조나', '멕시코 칸쿤']) : leagueOf(s.leagueId).tier <= 3 ? pick(['튀르키예 안탈리아', '태국 치앙마이', '일본 가고시마', '제주 서귀포']) : pick(['스페인 마르베야', 'UAE 두바이', '미국 플로리다']));
+
+// 아시안게임·올림픽 남자축구는 FIFA 의무 차출 대회가 아니다 — 해외 구단 소속이면 차출을 협상해야 한다.
+// 결과는 national.ts RELEASE[key].flag + 연도 플래그로 남아 대표팀 명단 선발에 쓰인다.
+function releaseEvent(o: { id: string; title: string; key: 'ag' | 'olympic'; year: number; text: string; blessing: string; refusal: string; missed: string }): EventDef {
+  const flag = RELEASE[o.key]!.flag;
+  const set = (s: GameState, v: boolean) => (s.flags[flag + s.year] = v);
+  return {
+    id: o.id, title: o.title, w: 6,
+    cond: (s) => isPro(s) && s.year % 4 === o.year && s.nat?.qual[s.year] !== false && s.phase <= 1 && s.age <= 23 && leagueOf(s.leagueId).tier >= 3 && s.flags[flag + s.year] === undefined && !(s.mil && (s.mil.exempt || s.mil.served)) && callupScore(s) >= 62,
+    text: () => o.text,
+    choices: [
+      {
+        label: '구단 수뇌부와 직접 담판을 짓는다', p: (s) => clamp(0.4 + s.trust * 0.06 + (s.fame - 25) * 0.006, 0.15, 0.85),
+        ok: { text: o.blessing, fx: (s) => { set(s, true); addStat(s, 'morale', 8); addStat(s, 'fame', 5); } },
+        fail: { text: o.refusal, fx: (s) => { set(s, false); addStat(s, 'morale', -8); } },
+      },
+      {
+        label: '재계약 조건으로 차출을 약속받는다', p: (s) => clamp(0.95 - (s.contract ? s.contract.years : 0) * 0.15, 0.25, 0.85),
+        ok: { text: '연봉 인상 없이 계약을 1년 연장하는 조건으로 차출을 허락받았습니다.', fx: (s) => { set(s, true); if (s.contract) s.contract.years++; addStat(s, 'trust', 1); } },
+        fail: { text: o.missed, fx: (s) => { set(s, false); addStat(s, 'morale', -5); } },
+      },
+      { label: '팀에 남아 시즌에 집중한다', ok: { text: '감독이 당신의 결정에 고마워합니다.', fx: (s) => { set(s, false); addStat(s, 'trust', 1.2); } } },
+    ],
+  };
+}
 
 EVENTS.push(
   {
@@ -55,24 +80,20 @@ EVENTS.push(
       { label: '"우승을 위해 남겠습니다" 잔류를 선언한다', ok: { text: '팬들이 당신의 이름을 연호합니다. 감독의 신뢰도 한층 두터워졌습니다.', fx: (s) => { addStat(s, 'trust', 2); addStat(s, 'morale', 5); addStat(s, 'fame', 2); } } },
     ],
   },
-  {
-    id: 'ag-release', title: '아시안게임 차출 협상', w: 6,
-    cond: (s) => isPro(s) && s.year % 4 === 2 && s.phase <= 1 && s.age <= 23 && leagueOf(s.leagueId).tier >= 3 && s.flags['agRel' + s.year] === undefined && !(s.mil && (s.mil.exempt || s.mil.served)) && callupScore(s) >= 62,
-    text: () => `아시안게임 대표팀이 당신을 원합니다. 금메달이면 병역 특례. 하지만 아시안게임은 FIFA 의무 차출 대회가 아니어서, 시즌 중 차출은 소속팀 허락이 필요합니다.`,
-    choices: [
-      {
-        label: '구단 수뇌부와 직접 담판을 짓는다', p: (s) => clamp(0.4 + s.trust * 0.06 + (s.fame - 25) * 0.006, 0.15, 0.85),
-        ok: { text: '"금메달 따서 돌아와라." 구단이 차출을 허락했습니다.', fx: (s) => { s.flags['agRel' + s.year] = true; addStat(s, 'morale', 8); addStat(s, 'fame', 5); } },
-        fail: { text: '구단은 시즌 중 주전 이탈을 받아들일 수 없다며 거절했습니다.', fx: (s) => { s.flags['agRel' + s.year] = false; addStat(s, 'morale', -8); } },
-      },
-      {
-        label: '재계약 조건으로 차출을 약속받는다', p: (s) => clamp(0.95 - (s.contract ? s.contract.years : 0) * 0.15, 0.25, 0.85),
-        ok: { text: '연봉 인상 없이 계약을 1년 연장하는 조건으로 차출을 허락받았습니다.', fx: (s) => { s.flags['agRel' + s.year] = true; if (s.contract) s.contract.years++; addStat(s, 'trust', 1); } },
-        fail: { text: '협상은 결렬됐습니다. 이번 아시안게임은 TV로 지켜봐야 합니다.', fx: (s) => { s.flags['agRel' + s.year] = false; addStat(s, 'morale', -5); } },
-      },
-      { label: '팀에 남아 시즌에 집중한다', ok: { text: '감독이 당신의 결정에 고마워합니다.', fx: (s) => { s.flags['agRel' + s.year] = false; addStat(s, 'trust', 1.2); } } },
-    ],
-  },
+  releaseEvent({
+    id: 'ag-release', title: '아시안게임 차출 협상', key: 'ag', year: 2,
+    text: '아시안게임 대표팀이 당신을 원합니다. 금메달이면 병역 특례. 하지만 아시안게임은 FIFA 의무 차출 대회가 아니어서, 시즌 중 차출은 소속팀 허락이 필요합니다.',
+    blessing: '"금메달 따서 돌아와라." 구단이 차출을 허락했습니다.',
+    refusal: '구단은 시즌 중 주전 이탈을 받아들일 수 없다며 거절했습니다.',
+    missed: '협상은 결렬됐습니다. 이번 아시안게임은 TV로 지켜봐야 합니다.',
+  }),
+  releaseEvent({
+    id: 'oly-release', title: '올림픽 차출 협상', key: 'olympic', year: 0,
+    text: '올림픽 대표팀이 당신을 원합니다. 동메달 이상이면 병역 특례. 하지만 올림픽 남자축구도 FIFA 의무 차출 대회가 아니어서, 프리시즌과 겹치는 차출은 소속팀 허락이 필요합니다.',
+    blessing: '"메달 걸고 돌아와라." 구단이 차출을 허락했습니다.',
+    refusal: '구단은 새 시즌 준비에서 빠질 수 없다며 거절했습니다.',
+    missed: '협상은 결렬됐습니다. 이번 올림픽은 TV로 지켜봐야 합니다.',
+  }),
   {
     id: 'puskas', title: '원더골, 푸스카스상 후보', w: 1, cond: (s) => isPro(s) && s.phase > 0 && s.pos !== 'GK' && s.season.goals > 0 && !s.flags['puskas' + s.year],
     text: () => '35m 밖에서 때린 발리슛이 골망 구석에 꽂혔습니다. FIFA가 이 골을 푸스카스상 최종 후보로 선정했습니다. 수상자는 팬 투표와 전문가 투표로 결정됩니다.',

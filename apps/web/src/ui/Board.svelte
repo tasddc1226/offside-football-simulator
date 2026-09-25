@@ -16,10 +16,9 @@
   import { appState } from './state.svelte.js';
   import { goHome } from './actions.js';
   import { toast } from './helpers.js';
-  import { dateOf, parseBody } from './boardText.js';
+  import { BOARD_LABEL, dateOf, parseBody } from './boardText.js';
   import Topbar from './Topbar.svelte';
 
-  const LABEL: Record<BoardKey, string> = { notice: '공지사항', release: '릴리즈 노트' };
   const EYEBROW: Record<BoardKey, string> = { notice: 'Notice', release: 'Release notes' };
   const NICK_KEY = 'ft_nick';
 
@@ -129,12 +128,12 @@
   <section class="card stack" style="gap:14px" data-board={board}>
     <div>
       <div class="eyebrow">{EYEBROW[board]}</div>
-      <h1>{LABEL[board]}</h1>
+      <h1>{BOARD_LABEL[board]}</h1>
     </div>
 
     {#if editing}
       <form class="stack board-editor" style="gap:10px" onsubmit={(e) => (e.preventDefault(), void savePost())}>
-        <h2 style="margin:0">{editing.id ? '글 고치기' : `${LABEL[board]} 새 글`}</h2>
+        <h2 style="margin:0">{editing.id ? '글 고치기' : `${BOARD_LABEL[board]} 새 글`}</h2>
         <div class="field">
           <label for="post-title">제목</label>
           <input id="post-title" type="text" maxlength={POST_TITLE_MAX} required bind:value={editing.title} />

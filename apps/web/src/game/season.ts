@@ -1,5 +1,6 @@
 // ───────── 시즌 종료 · 이적 시장 · 은퇴 · 저장 ─────────
-import { CLUBS, LEAGUES, type Club } from './data.js';
+import { CLUBS, type Club } from './data.js';
+import { BAL } from './balance.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, rnd } from './rng.js';
 import { leagueOf, clubsIn, fmtMoney, salaryFor, addStat, addAttr, log, bloomTick, newSeason, finalRank } from './engine.js';
@@ -19,7 +20,7 @@ export function endSeason(s: GameState) {
   const trophies = [...(S.trophiesMid || [])], notes: string[] = [];
 
   if (rank === 1) trophies.push(`${L.name} 우승`);
-  if (s.year % 4 === 1 && s.career.some((r) => r.year === s.year - 1 && r.club === s.club.name && r.honors.some((h) => /챔피언스리그( 엘리트)? 우승/.test(h)))) {
+  if (s.year % 4 === 1 && s.career.some((r) => r.year === s.year - 1 && r.club === s.club.name && r.honors.some((h) => /챔피언스(리그( 엘리트)?|컵) 우승/.test(h)))) {
     const stage = pick(['조별리그 탈락', '16강', '8강', '4강', '준우승', '우승'].slice(L.tier >= 5 ? 2 : 0));
     notes.push(`FIFA 클럽 월드컵 ${stage}`);
     if (stage === '우승') trophies.push('FIFA 클럽 월드컵 우승');
@@ -81,15 +82,19 @@ function bestEuropeClub(s: GameState, cap: number, taken: Club[]): Club | undefi
   let x = rnd() * perLeague.reduce((t, c) => t + w(c), 0);
   return perLeague.find((c) => (x -= w(c)) <= 0) ?? perLeague[perLeague.length - 1];
 }
+/** 오퍼가 하나도 없을 때 재기 도전으로 내려가는 리그(두 단계 아래). */
+const DOWN: Record<string, string> = { j1: 'k2', mls: 'k1', ere: 'k1', l1: 'j1', bl: 'ere', sa: 'l1', ll: 'bl', pl: 'sa' };
 export function makeOffers(s: GameState) {
   const last = s.career.filter((r) => !r.mil).pop();
   const o = ovr(s);
   const value = o + clamp(((last ? last.rating : 6.8) - 6.8) * 4, -4, 5) + s.fame * .04 - (s.age >= 31 ? (s.age - 30) * 1.2 : 0);
   const am = leagueOf(s.leagueId).amateur;
   const pool = CLUBS.filter((c) => !leagueOf(c.leagueId).amateur && c.id !== s.club.id && c.str <= value + 2 && c.str >= value - 14
-    && (!am || leagueOf(c.leagueId).tier <= (value >= 66 ? 4 : 3))
+    && (!am || (leagueOf(c.leagueId).tier <= (value >= 66 ? 4 : 3) && c.leagueId !== 'mls'))
     && (leagueOf(c.leagueId).tier < 4 || leagueOf(s.leagueId).tier >= 4 || c.str <= value - 3));
-  const wt = (c: (typeof CLUBS)[number]) => Math.exp(-((c.str - (value - 3)) ** 2) / 20);
+  // T-10-016 MLS는 팀이 30개라 그대로 두면 오퍼를 쓸어 간다. 실제처럼 주로 30대 베테랑에게 오게 한다.
+  const pull = (c: Club) => (c.leagueId === 'mls' && s.age < 30 ? BAL.mlsYoungPull : 1);
+  const wt = (c: (typeof CLUBS)[number]) => pull(c) * Math.exp(-((c.str - (value - 3)) ** 2) / 20);
   const n = Math.min(pool.length, value >= 60 ? ri(1, 3) : ri(0, 2));
   const chosen: (typeof CLUBS)[number][] = [];
   for (let i = 0; i < n; i++) {
@@ -173,7 +178,7 @@ export function market(s: GameState): { options: MarketOption[]; note: string; c
       }
       options.push(...offers);
       if (!options.length && s.age < 31) {
-        const down = L.tier >= 3 ? LEAGUES[LEAGUES.indexOf(L) - 2]!.id : 'k3';
+        const down = DOWN[L.id] ?? 'k3';
         const c = clubsIn(down).sort((a, b) => Math.abs(a.str - o) - Math.abs(b.str - o))[0];
         if (c && o >= c.str - 10) options.push({ ...offerFrom(s, c), role: '하부 리그 · 재기 도전', years: 1 });
       }

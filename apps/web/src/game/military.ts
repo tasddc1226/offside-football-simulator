@@ -3,6 +3,7 @@ import { clamp, ri, chance } from './rng.js';
 import { EVENTS } from './events-data.js';
 import { leagueOf, log, salaryFor, schedule, addAttr, addStat, newSeason } from './engine.js';
 import { ovr as ovrCalc } from './attributes.js';
+import { BAL } from './balance.js';
 import type { GameState, MarketOption, MilOption } from './types.js';
 
 export const SANGMU = { id: 'sangmu', name: '김천 상무 (국군체육부대)', leagueId: 'k1', str: 63 };
@@ -17,7 +18,7 @@ export function milAbroad(s: GameState): boolean {
 }
 export function sangmuChance(s: GameState): number {
   const L = leagueOf(s.leagueId);
-  let p = 0.28 + (ovrCalc(s) - 63) * 0.035 + (s.fame - 30) * 0.002;
+  let p = BAL.sangmuBase + (ovrCalc(s) - 63) * 0.035 + (s.fame - 30) * 0.002;
   if (L.id === 'k1' || L.id === 'k2') p += 0.1;
   else if (L.tier >= 3) p -= 0.15;
   else p -= 0.1;
@@ -177,7 +178,7 @@ function milExemptHope(s: GameState): string[] {
     const age = s.age + (y - s.year);
     if (age > 23) break;
     if (y % 4 === 2) out.push(`${y} 아시안게임`);
-    if (y % 4 === 0) out.push(`${y} 올림픽`);
+    if (y % 4 === 0 && s.nat?.qual[y] !== false) out.push(`${y} 올림픽`);
   }
   return out;
 }

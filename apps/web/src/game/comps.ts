@@ -6,25 +6,27 @@ import { leagueOf, clubsIn, roleOf, addStat } from './engine.js';
 import type { GameState, Season, SeasonComp, NatTour } from './types.js';
 
 const CUPS: Record<string, string[]> = {
-  hs: ['전국고교축구선수권'], uni: ['전국대학축구선수권'], k3: ['코리아컵'], k2: ['코리아컵'], k1: ['코리아컵'], j1: ['일왕배', 'J리그컵'],
+  hs: ['전국고교축구선수권'], uni: ['전국대학축구선수권'], k3: ['코리아컵'], k2: ['코리아컵'], k1: ['코리아컵'], j1: ['일왕배', 'J리그컵'], mls: ['US 오픈컵', '리그스컵'],
   ere: ['KNVB컵'], l1: ['쿠프 드 프랑스'], bl: ['DFB-포칼'], sa: ['코파 이탈리아'], ll: ['코파 델 레이'], pl: ['FA컵', 'EFL컵'],
 };
 const SUPERCUP: Record<string, string> = { pl: 'FA 커뮤니티 실드', ll: '수페르코파 데 에스파냐', sa: '수페르코파 이탈리아나', bl: 'DFL 슈퍼컵', l1: '트로페 데 샹피옹', ere: '요한 크라위프 스할', j1: '재팬 슈퍼컵' };
-const TOP_SCORER: Record<string, string> = { pl: '프리미어리그 골든부트', ll: '피치치 트로피', sa: '카포칸노니에레', bl: '토르예거카논', l1: '리그 1 득점왕', ere: '에레디비시 득점왕', j1: 'J리그 득점왕', k1: 'K리그1 득점왕', k2: 'K리그2 득점왕', k3: 'K3리그 득점왕' };
-const POTY: Record<string, string> = { pl: 'PFA 올해의 선수', ll: '라리가 올해의 선수', sa: '세리에 A MVP', bl: '분데스리가 올해의 선수', l1: 'UNFP 올해의 선수', ere: '에레디비시 올해의 선수', j1: 'J리그 MVP', k1: 'K리그1 MVP', k2: 'K리그2 MVP', k3: 'K3리그 MVP' };
+const TOP_SCORER: Record<string, string> = { pl: '프리미어리그 골든부트', ll: '피치치 트로피', sa: '카포칸노니에레', bl: '토르예거카논', l1: '리그 1 득점왕', ere: '에레디비시 득점왕', j1: 'J리그 득점왕', mls: 'MLS 골든부트', k1: 'K리그1 득점왕', k2: 'K리그2 득점왕', k3: 'K3리그 득점왕' };
+const POTY: Record<string, string> = { pl: 'PFA 올해의 선수', ll: '라리가 올해의 선수', sa: '세리에 A MVP', bl: '분데스리가 올해의 선수', l1: 'UNFP 올해의 선수', ere: '에레디비시 올해의 선수', j1: 'J리그 MVP', mls: 'MLS MVP', k1: 'K리그1 MVP', k2: 'K리그2 MVP', k3: 'K3리그 MVP' };
 const YOUNG: Record<string, string> = { pl: 'PFA 올해의 영플레이어', k1: 'K리그1 영플레이어상', k2: 'K리그2 영플레이어상', j1: 'J리그 베스트 영플레이어상' };
-const CONT: Record<string, { name: string; avg: number; games: number; top: number; po: number | null }> = {
+/** ko: 리그 페이즈 없이 전 라운드 녹아웃(전반기 1라운드 · 후반기 16강~결승). */
+const CONT: Record<string, { name: string; avg: number; games: number; top: number; po: number | null; ko?: boolean }> = {
   UCL: { name: 'UEFA 챔피언스리그', avg: 80, games: 8, top: 16, po: 10 },
   UEL: { name: 'UEFA 유로파리그', avg: 74, games: 8, top: 16, po: 10 },
   UECL: { name: 'UEFA 컨퍼런스리그', avg: 69, games: 6, top: 12, po: 8 },
   ACLE: { name: 'AFC 챔피언스리그 엘리트', avg: 64, games: 8, top: 11, po: null },
   ACL2: { name: 'AFC 챔피언스리그 2', avg: 59, games: 6, top: 10, po: null },
+  CCC: { name: 'CONCACAF 챔피언스컵', avg: 63, games: 0, top: 0, po: null, ko: true },
 };
 const BIG5: [string, number][] = [['UCL', 4], ['UEL', 2], ['UECL', 1]];
 const CONT_SLOTS: Record<string, [string, number][]> = {
   pl: BIG5, ll: BIG5, bl: BIG5, sa: BIG5,
   l1: [['UCL', 3], ['UEL', 1], ['UECL', 1]], ere: [['UCL', 2], ['UEL', 1], ['UECL', 2]],
-  k1: [['ACLE', 3], ['ACL2', 1]], j1: [['ACLE', 3], ['ACL2', 1]],
+  k1: [['ACLE', 3], ['ACL2', 1]], j1: [['ACLE', 3], ['ACL2', 1]], mls: [['CCC', 6]],
 };
 
 // 첫 시즌 예상 순위: 리그 내 전력 순위를 6단계 표(1,3,5,8,11,14)에 비례해 옮긴다 — 클럽 수가 6이면
@@ -50,7 +52,7 @@ export function seasonSetup(s: GameState, S: Season) {
   let acc = 0;
   for (const [k, n] of CONT_SLOTS[L.id] ?? []) {
     if (rank <= acc + n) {
-      S.comps.push({ type: 'cont', key: k, name: CONT[k]!.name, alive: true, stage: '리그 페이즈', pts: 0, played: 0, apps: 0, g: 0, a: 0 });
+      S.comps.push({ type: 'cont', key: k, name: CONT[k]!.name, alive: true, stage: CONT[k]!.ko ? '1라운드' : '리그 페이즈', pts: 0, played: 0, apps: 0, g: 0, a: 0 });
       break;
     }
     acc += n;
@@ -140,6 +142,17 @@ export function compsPhase(s: GameState): { t: string; k: string }[] {
 }
 function contPhase(s: GameState, c: SeasonComp, lines: { t: string; k: string }[]) {
   const C = CONT[c.key!]!, S = s.season;
+  if (s.phase === 1 && C.ko) {
+    if (tie(s, c, C.avg - 2 + gauss() * 2, 2)) {
+      c.stage = '16강 진출';
+      lines.push({ t: `${c.name} 1라운드 통과, 16강 진출`, k: 'good' });
+    } else {
+      c.alive = false;
+      c.stage = '1라운드 탈락';
+      lines.push({ t: `${c.name} 1라운드 탈락`, k: 'bad' });
+    }
+    return;
+  }
   if (s.phase === 1) {
     for (let i = 0; i < C.games; i++) {
       const m = compMatch(s, C.avg + gauss() * 5, startChance(s, 'cont'));
@@ -227,8 +240,10 @@ export function seasonAwards(s: GameState, ctx: { rank: number; avg: number; tro
   if (s.pos === 'GK' && enough && avg >= 7.1 && rank <= 4 && chance(0.45)) awards.push(`${L.name} 올해의 골키퍼`);
   const kfa = s.nat.caps > 0 && (ballonRank <= 30 || (o >= 80 && avg >= 7.2)) && chance(0.5);
   if (kfa) awards.push('대한축구협회 올해의 선수');
-  if (L.tier >= 4 && o >= 80 && enough && avg >= 7.1 && chance(0.35)) awards.push('AFC 올해의 국제선수');
-  if (L.tier <= 3 && o >= 72 && enough && avg >= 7.3 && chance(0.25)) awards.push('AFC 올해의 선수');
+  // AFC 올해의 선수는 아시아 리그 소속, 국제선수상은 아시아 밖(유럽 · MLS)에서 뛰는 선수 몫이다.
+  const outsideAsia = L.tier >= 4 || L.id === 'mls';
+  if (outsideAsia && o >= 80 && enough && avg >= 7.1 && chance(0.35)) awards.push('AFC 올해의 국제선수');
+  if (!outsideAsia && o >= 72 && enough && avg >= 7.3 && chance(0.25)) awards.push('AFC 올해의 선수');
   return { awards, gala, allG, allA };
 }
 
@@ -257,6 +272,7 @@ export function checkMilestones(s: GameState, rec: { pro?: boolean; apps: number
   for (const n of [50, 100, 150, 200, 300]) if (T.g >= n) add('goals' + n, `프로 통산 ${n}골`, n / 50);
   if (L.tier >= 4) add('europe', `유럽 무대 진출 (${L.name})`, 2);
   if (L.tier >= 5) add('big5', `유럽 5대 리그 입성 (${L.name})`, 2);
+  if (L.id === 'mls') add('mls', `미국 무대 진출 (${L.name})`, 2);
   const cont = (s.season.comps ?? []).find((c) => c.type === 'cont');
   if (cont && cont.apps) add('cont_' + cont.key, `${cont.name} 데뷔`, 3);
   if (cont && cont.g) add('contG_' + cont.key, `${cont.name} 데뷔골`, 3);

@@ -4,9 +4,10 @@ import { ovr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
 import { EVENTS } from './events-data.js';
 import { leagueOf, addStat, log } from './engine.js';
+import { BAL } from './balance.js';
 import type { GameState, NatTour } from './types.js';
 
-const KOREA_STR = 75, KOREA_U23 = 69, NT_THRESHOLD = 80;
+const NT_THRESHOLD = 80;
 const AFC_NT: [string, number][] = [
   ['일본', 77], ['이란', 74], ['호주', 73], ['사우디아라비아', 69], ['우즈베키스탄', 68], ['카타르', 68], ['이라크', 67],
   ['요르단', 67], ['UAE', 66], ['오만', 64], ['바레인', 63], ['중국', 62], ['태국', 61], ['베트남', 60], ['팔레스타인', 60], ['쿠웨이트', 58], ['키르기스스탄', 58],
@@ -108,14 +109,14 @@ function natOne(s: GameState, name: string) {
     addStat(s, 'fame', 5);
     log(s, `생애 첫 A대표팀 발탁! (${name})`, 'big');
   }
-  const games = [o1, o2].map((o) => simIntl(s, o, role, KOREA_STR, comp));
+  const games = [o1, o2].map((o) => simIntl(s, o, role, BAL.koreaStr, comp));
   addStat(s, 'cond', -6);
   games.forEach((m) => log(s, `[${comp}] ${scoreLine(m)}${m.mins ? ` · ${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''}` : ' · 벤치'}`));
   return { name, comp, called: true, role, games };
 }
 
 interface TournamentDef {
-  label: (y: number) => string; team: number; youth: boolean;
+  label: (y: number) => string; youth: boolean;
   group: () => [string, number][]; adv: (pts: number) => boolean;
   rounds: [string, [string, number][]][]; trophy: string; bronze?: [string, number][]; exempt?: (stage: string) => boolean;
 }
@@ -126,33 +127,39 @@ function pickDistinct<T>(pool: T[], n: number): T[] {
 }
 const TOURNAMENTS: Record<string, TournamentDef> = {
   wc: {
-    label: (y) => `${y} FIFA 월드컵 (${HOSTS.wc[y] ?? '개최지 미정'})`, team: KOREA_STR, youth: false,
+    label: (y) => `${y} FIFA 월드컵 (${HOSTS.wc[y] ?? '개최지 미정'})`, youth: false,
     group: () => [pick(WORLD_NT.slice(0, 10)), pick(WORLD_NT.slice(10, 22)), pick(WORLD_NT.slice(22).concat(AFC_NT.slice(3, 8)))],
     adv: (pts) => pts >= 6 || (pts >= 4 && chance(0.9)) || (pts === 3 && chance(0.45)),
     rounds: [['32강', WORLD_NT.slice(8, 30)], ['16강', WORLD_NT.slice(4, 22)], ['8강', WORLD_NT.slice(0, 14)], ['4강', WORLD_NT.slice(0, 9)], ['결승', WORLD_NT.slice(0, 6)]],
     trophy: 'FIFA 월드컵 우승',
   },
   asian: {
-    label: (y) => `${y} AFC 아시안컵${HOSTS.asian[y] ? ` (${HOSTS.asian[y]})` : ''}`, team: KOREA_STR, youth: false,
+    label: (y) => `${y} AFC 아시안컵${HOSTS.asian[y] ? ` (${HOSTS.asian[y]})` : ''}`, youth: false,
     group: () => pickDistinct(AFC_NT.slice(4), 3),
     adv: (pts) => pts >= 4 || (pts === 3 && chance(0.6)),
     rounds: [['16강', AFC_NT.slice(3, 12)], ['8강', AFC_NT.slice(1, 9)], ['4강', AFC_NT.slice(0, 6)], ['결승', AFC_NT.slice(0, 3)]],
     trophy: 'AFC 아시안컵 우승',
   },
   ag: {
-    label: (y) => `${y} 아시안게임 (${HOSTS.ag[y] ?? '개최지 미정'})`, team: KOREA_U23, youth: true,
+    label: (y) => `${y} 아시안게임 (${HOSTS.ag[y] ?? '개최지 미정'})`, youth: true,
     group: () => pickDistinct(AFC_NT.slice(8), 3).map(u23),
     adv: (pts) => pts >= 4 || (pts === 3 && chance(0.6)),
     rounds: [['16강', AFC_NT.slice(4, 14).map(u23)], ['8강', AFC_NT.slice(2, 10).map(u23)], ['4강', AFC_NT.slice(0, 6).map(u23)], ['결승', AFC_NT.slice(0, 3).map(u23)]],
     trophy: '아시안게임 금메달', exempt: (stage) => stage === '우승',
   },
   olympic: {
-    label: (y) => `${y} 올림픽 남자축구 (${HOSTS.olympic[y] ?? '개최지 미정'})`, team: KOREA_U23, youth: true,
+    label: (y) => `${y} 올림픽 남자축구 (${HOSTS.olympic[y] ?? '개최지 미정'})`, youth: true,
     group: () => [pick(WORLD_NT.slice(0, 10)), pick(WORLD_NT.slice(10, 24)), pick(AFC_NT.slice(0, 6).concat(WORLD_NT.slice(24)))].map(u23),
     adv: (pts) => pts >= 6 || (pts >= 4 && chance(0.7)) || (pts === 3 && chance(0.2)),
     rounds: [['8강', WORLD_NT.slice(0, 20).map(u23)], ['4강', WORLD_NT.slice(0, 10).map(u23)], ['결승', WORLD_NT.slice(0, 6).map(u23)]],
     bronze: WORLD_NT.slice(0, 14).map(u23), trophy: '올림픽 금메달', exempt: (stage) => ['금메달', '은메달', '동메달'].includes(stage),
   },
+};
+
+/** 차출 협상이 필요한 대회: 협상 결과 플래그 접두어와, 협상 이벤트 없이 해외 구단이 허락할 확률. */
+export const RELEASE: Record<string, { flag: string; p: () => number }> = {
+  ag: { flag: 'agRel', p: () => BAL.agRelease },
+  olympic: { flag: 'olyRel', p: () => BAL.olyRelease },
 };
 
 function squadRole(s: GameState, key: string): { role: 'starter' | 'sub' | 'none'; why: string } {
@@ -163,9 +170,12 @@ function squadRole(s: GameState, key: string): { role: 'starter' | 'sub' | 'none
     const young = s.age <= 23;
     const need = young ? 68 : 84;
     if (sc < need + gauss() * 1.5) return { role: 'none', why: young ? '최종 명단 탈락' : '' };
-    if (key === 'ag') {
-      const rel = s.flags['agRel' + s.year] as boolean | undefined;
-      const ok = rel !== undefined ? rel : leagueOf(s.leagueId).tier <= 2 || chance(0.6);
+    // 아시안게임·올림픽 남자축구는 FIFA 의무 차출 대회가 아니라 해외 구단은 거절할 수 있다(T-10-016 올림픽 추가).
+    // 올림픽은 7~8월이라 유럽 프리시즌과 겹쳐 시즌 중인 아시안게임(9월)보다 조금 더 잘 보내 준다.
+    const release = RELEASE[key];
+    if (release) {
+      const rel = s.flags[release.flag + s.year] as boolean | undefined;
+      const ok = rel !== undefined ? rel : leagueOf(s.leagueId).tier <= 2 || chance(release.p());
       if (!ok) return { role: 'none', why: '소속팀이 차출을 거부' };
     }
     return { role: sc >= need + 6 || !young ? 'starter' : chance(0.5) ? 'starter' : 'sub', why: young ? '' : '와일드카드 발탁' };
@@ -179,7 +189,7 @@ function runTournament(s: GameState, key: string) {
   const { role, why } = squadRole(s, key);
   const matches: IntlResult[] = [];
   const play = (opp: [string, number], stage: string) => {
-    const m = simIntl(s, opp, role, T.team, T.label(y), stage);
+    const m = simIntl(s, opp, role, T.youth ? BAL.koreaU23 : BAL.koreaStr, T.label(y), stage);
     matches.push(m);
     return m;
   };
@@ -230,17 +240,24 @@ export function natSeasonEnd(s: GameState) {
   if (y % 4 === 2 && s.nat.qual[y] !== false) keys.push('wc');
   if (y % 4 === 2) keys.push('ag');
   if (y % 4 === 3) keys.push('asian');
-  if (y % 4 === 0) keys.push('olympic');
+  if (y % 4 === 0 && s.nat.qual[y] !== false) keys.push('olympic');
   if (y % 4 === 2 && s.nat.qual[y] === false) out.push({ year: y, name: `${y} FIFA 월드컵`, stage: '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
+  if (y % 4 === 0 && s.nat.qual[y] === false) out.push({ year: y, name: `${y} 올림픽 남자축구`, stage: '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
   for (const k of keys) {
     const { rec, trophy } = runTournament(s, k);
     out.push(rec);
     if (trophy) trophies.push(trophy);
   }
   if (y % 4 === 1) {
-    const ok = chance(0.9);
+    const ok = chance(BAL.wcQual);
     s.nat.qual[y + 1] = ok;
     out.push({ year: y, name: `${y + 1} 월드컵 아시아 예선`, stage: ok ? '본선 진출 확정' : '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
+  }
+  if (y % 4 === 3) {
+    // 올림픽 아시아 예선(AFC U-23 아시안컵) — 한국은 1988~2020 10회 연속 진출, 2024 파리 예선 탈락.
+    const ok = chance(BAL.olympicQual);
+    s.nat.qual[y + 1] = ok;
+    out.push({ year: y, name: `${y + 1} 올림픽 아시아 예선 (AFC U-23 아시안컵)`, stage: ok ? '본선 진출 확정' : '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
   }
   if (!s.nat.captain && s.nat.caps >= 40 && ovr(s) >= 78 && chance(0.35)) {
     s.nat.captain = true;

@@ -3,6 +3,7 @@
 // 완전한 판별 유니온으로 다시 모델링하면 포팅 리스크가 커지므로, 여기서는 알려진 필드는 구체적으로
 // 타이핑하고 나머지(로그 라인 종류가 다양한 필드, 이벤트별 임시 플래그 등)는 폭넓게 둡니다.
 import type { LegendSnapshot } from '@offside/contracts';
+import type { CareerBalance } from './balance.js';
 import type { AttrKey, Pos, Club } from './data.js';
 
 export interface RngSaveState {
@@ -197,6 +198,8 @@ export interface EventLogEntry {
 }
 
 export interface GameState {
+  /** T-10-016 이 커리어에 적용 중인 서버 밸런스 버전(없으면 코드 기본값 = 버전 0). */
+  bal?: CareerBalance;
   v: 1;
   /** T-9-009. 커리어 고유 ID(`crypto.randomUUID()`). 서버 업로드의 URL 키다. 시드 RNG를 절대
    * 소모하지 않고 만든다 — RNG 시퀀스가 이 변경으로 바뀌면 안 된다. */

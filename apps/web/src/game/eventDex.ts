@@ -6,6 +6,7 @@ import { ATTR_KEYS, ATTR_LABEL, CLUBS, LEAGUES, POS, TRAITS, TYPES, type AttrKey
 import { initSubs, spreadAttr, syncFace } from './attributes.js';
 import { STORIES, isSafe, leagueOf, newGame, txt } from './engine.js';
 import { EVENTS } from './events-data.js';
+import { choiceOdds } from './balance.js';
 import { groupOf, posOf, type DexGroup } from './dexGroups.js';
 import { createRng, getActiveRng, setActiveRng } from './rng.js';
 import type { Choice, EventDef, GameState } from './types.js';
@@ -207,10 +208,11 @@ function labelOf(c: Choice, s: GameState): string {
   }
 }
 
-function analyzeChoice(ev: EventDef, c: Choice, states: GameState[]): DexChoice {
+function analyzeChoice(ev: EventDef, c: Choice, idx: number, states: GameState[]): DexChoice {
   const label = labelOf(c, states[0]!);
   if (!c.p) return { label, kind: isSafe(ev, c) ? 'safe' : 'sure', min: 100, max: 100, factors: [] };
-  const p = safely(c.p);
+  const raw = c.p;
+  const p = safely((s: GameState) => choiceOdds(raw(s), ev.id, idx));
   const values = states.map(p).filter((v) => !Number.isNaN(v));
   if (!values.length) return { label, kind: 'odds', min: null, max: null, factors: [] };
   const pct = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 100);
@@ -273,7 +275,7 @@ export function eventDex(): DexEntry[] {
         pos,
         story,
         dependsOnPast,
-        choices: ev.choices.map((c) => analyzeChoice(ev, c, states)),
+        choices: ev.choices.map((c, i) => analyzeChoice(ev, c, i, states)),
       };
     });
   });
