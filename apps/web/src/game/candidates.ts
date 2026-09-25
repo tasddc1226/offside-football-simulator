@@ -22,14 +22,14 @@ function localRng(seed: number): () => number {
 export interface Candidate {
   attrs: Record<AttrKey, number>;
   total: number;
-  /** 카드가 뒤집히기 전 표시할 짧은 스카우트 힌트(강점 2개). */
+  /** 가장 높은 능력치 2개 — 열린 후보 카드에서 막대를 강조한다. */
   hintKeys: AttrKey[];
 }
 
 const CLAMP = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** pos/주력 능력치에 대한 "기준 분포"(랜덤 없음) — 세 후보 모두 이 총합을 공유한다. */
-function baseline(pos: Pos, focus: readonly AttrKey[]): Record<AttrKey, number> {
+export function baseline(pos: Pos, focus: readonly AttrKey[]): Record<AttrKey, number> {
   const mod = focusMod(pos, focus);
   const out = {} as Record<AttrKey, number>;
   for (const k of ATTR_KEYS) out[k] = CLAMP(POS[pos].base[k] + (mod[k] ?? 0), 20, 70);

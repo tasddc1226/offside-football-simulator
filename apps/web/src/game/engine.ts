@@ -1,7 +1,7 @@
 // ───────── 핵심 시뮬레이션 엔진 (engine.js 포트 + 스토리/체인 헬퍼 + 이벤트 추첨) ─────────
 // 순환 import를 피하려고 원본 stories.js/events.js에 있던 몇몇 범용 헬퍼(turnNo, schedule, STORIES,
 // rollEvent, resolveChoice, bestKey/weakKey 등)를 이 모듈로 모았습니다. 동작은 원본과 동일합니다.
-import { LEAGUES, CLUBS, POS, TYPES, ATTR_KEYS, PHASES, LAST_PHASE, FOCUS_GROWTH, OFF_FOCUS_GROWTH, focusMod, focusOfType, typeForFocus, type AttrKey, type Pos, type League, type Club } from './data.js';
+import { LEAGUES, CLUBS, POS, TYPES, ATTR_KEYS, PHASES, LAST_PHASE, FOCUS_GROWTH, OFF_FOCUS_GROWTH, focusMod, focusOfType, typeForFocus, attrLabels, type AttrKey, type Pos, type League, type Club } from './data.js';
 import { ovr, wOf, initSubs, legacyOvr, spreadAttr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
 import { EVENTS } from './events-data.js';
@@ -12,7 +12,7 @@ export const leagueOf = (id: string): League => LEAGUES.find((l) => l.id === id)
 export const clubsIn = (id: string): Club[] => CLUBS.filter((c) => c.leagueId === id);
 /** 주력 능력치 — 옛 저장본(focus 없음)은 유형에서 거꾸로 구한다. */
 export const focusOf = (s: GameState): AttrKey[] => s.focus ?? focusOfType(s.pos, s.type);
-export const labelOf = (s: GameState, k: AttrKey): string => (s.pos === 'GK' ? { pac: '반사 신경', sho: '스피드', pas: '킥', dri: '위치 선정', def: '다이빙', phy: '핸들링' } : { pac: '스피드', sho: '슈팅', pas: '패스', dri: '드리블', def: '수비', phy: '피지컬' })[k];
+export const labelOf = (s: GameState, k: AttrKey): string => attrLabels(s.pos)[k];
 
 export function potGrade(s: GameState): string {
   const p = s.pot + (s.flags.potBonus ?? 0);
