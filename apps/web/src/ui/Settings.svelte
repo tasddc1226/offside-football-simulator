@@ -1,7 +1,7 @@
 <script lang="ts">
-  // 환경설정 화면(T-10-009, T-10-021). 계정(구글 로그인) 카드 아래로 항목마다 카드를 둔다 — 효과음 켜기/끄기,
+  // 환경설정 화면(T-10-009, T-10-021). 계정(구글 로그인) 카드 아래로 항목마다 카드를 둔다 — 다크 모드·효과음 켜기/끄기,
   // 접히는 "구단 이름·엠블럼 변경"(리그별 클럽 이름·엠블럼, 에디트 파일 내보내기/가져오기), 운영 도구(관리자),
-  // 도움말·서비스 정책 링크. 효과음 설정은 이 기기에만 저장된다.
+  // 도움말·서비스 정책 링크. 다크 모드·효과음 설정은 이 기기에만 저장된다.
   import { LEAGUES } from '../game/data.js';
   import { CLUB_NAME_MAX, IMG_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '../game/clubs.js';
   import { clubsIn } from '../game/engine.js';
@@ -11,12 +11,14 @@
   import Topbar from './Topbar.svelte';
   import ClubBadge from './ClubBadge.svelte';
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
+  import { isDark, setDark } from './theme.js';
   import { fetchBoardViewer } from '../api/boards.js';
   import { appState } from './state.svelte.js';
   import { accountCache } from './account-state.svelte.js';
   import type { Component } from 'svelte';
 
   let sfx = $state(sfxEnabled());
+  let dark = $state(isDark());
   // 계정 패널은 게임 로직과 무관한 로그인 UI라 메인 청크와 분리된 동적 import로 불러온다.
   let Account = $state<Component<Record<string, never>> | null>(null);
   void import('./Account.svelte').then((m) => (Account = m.default));
@@ -122,6 +124,17 @@
     {#if Account}
       <Account />
     {/if}
+  </section>
+
+  <section class="card settings-card">
+    <div class="settings-row">
+      <div class="settings-label">
+        <small class="eyebrow">Display</small>
+        <strong id="dark-label">다크 모드</strong>
+        <span class="muted">어두운 화면으로 봐요. 이 기기에 저장됩니다.</span>
+      </div>
+      <button class="switch" role="switch" aria-checked={dark} aria-labelledby="dark-label" data-setting="dark" onclick={() => setDark((dark = !dark))}></button>
+    </div>
   </section>
 
   <section class="card settings-card">
