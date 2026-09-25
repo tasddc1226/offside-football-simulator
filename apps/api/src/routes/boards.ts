@@ -41,11 +41,12 @@ const notFound = (what: string) =>
 const envelope = (c: Context<AppEnv>, data: unknown) => ({ data, meta: { requestId: c.get('requestId') } });
 const idParam = (c: Context<AppEnv>, name: string) => parseWithAppError(BoardIdParamSchema, c.req.param(name));
 const nowIso = () => new Date().toISOString();
-/** 목록 엣지 캐시. 첫 페이지(웹 기본 limit)는 글·댓글을 쓰고 지울 때 바로 지운다. */
+/** 목록 엣지 캐시는 첫 페이지(웹 기본 limit)만 — 글·댓글을 쓰고 지울 때 지우는 키와 정확히 같다.
+ * '더 보기'(before)나 다른 limit은 드물어 그냥 읽는다. */
 const LIST_TTL = 60;
 const DEFAULT_LIMIT = 20;
-const listPath = (board: string, limit: number, before?: string) => `/v1/boards/${board}/posts?limit=${limit}${before ? `&before=${before}` : ''}`;
-const purgeList = (c: Context<AppEnv>, board: string) => purgeEdge(c, [listPath(board, DEFAULT_LIMIT)]);
+const firstPagePath = (board: string) => `/v1/boards/${board}/posts?limit=${DEFAULT_LIMIT}`;
+const purgeList = (c: Context<AppEnv>, board: string) => purgeEdge(c, [firstPagePath(board)]);
 
 async function postOr404(c: Context<AppEnv>, id: string) {
   const post = await getPost(getDb(c), id);
@@ -62,7 +63,8 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/boards/:board/posts', async (c) => {
     const board = parseWithAppError(BoardKeySchema, c.req.param('board'));
     const q = parseWithAppError(BoardListQuerySchema, c.req.query());
-    const data = await edgeCached(c, listPath(board, q.limit, q.before), LIST_TTL, () => listPosts(getDb(c), board, q.limit, q.before));
+    const load = () => listPosts(getDb(c), board, q.limit, q.before);
+    const data = q.limit === DEFAULT_LIMIT && !q.before ? await edgeCached(c, firstPagePath(board), LIST_TTL, load) : await load();
     return c.json(successEnvelope(BoardListResponseSchema).parse(envelope(c, data)), 200);
   });
 

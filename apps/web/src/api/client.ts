@@ -28,6 +28,7 @@ function failure<T>(code: ApiErrorCode, message: string, retryable: boolean): Ap
 // 때마다 같은 목록을 다시 받지 않는다. 실패는 담지 않는다. 쓰기(POST/PUT/PATCH/DELETE)가 성공하면 전부
 // 비운다: 무엇이 바뀌었는지 따지지 않고 "쓰면 다시 읽는다"로 단순하게 맞춘다(쓰기는 드물다).
 const memo = new Map<string, { until: number; result: Promise<ApiResult<unknown>> }>();
+const MEMO_SWEEP_AT = 100;
 
 export function clearApiCache(): void {
   memo.clear();
@@ -38,6 +39,8 @@ export function cachedGet<T>(path: string, ttlMs: number): Promise<ApiResult<T>>
   const hit = memo.get(path);
   if (hit && Date.now() < hit.until) return hit.result as Promise<ApiResult<T>>;
   const result = apiFetch<T>(path, { method: 'GET' });
+  // 선수 상세를 많이 열면 키가 늘어난다 — 일정 크기를 넘으면 만료된 것만 걷어 낸다.
+  if (memo.size >= MEMO_SWEEP_AT) for (const [k, v] of memo) if (Date.now() >= v.until) memo.delete(k);
   memo.set(path, { until: Date.now() + ttlMs, result });
   void result.then((r) => {
     if (!r.ok && memo.get(path)?.result === result) memo.delete(path);
