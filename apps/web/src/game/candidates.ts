@@ -29,7 +29,7 @@ export interface Candidate {
 const CLAMP = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** pos/주력 능력치에 대한 "기준 분포"(랜덤 없음) — 세 후보 모두 이 총합을 공유한다. */
-function baseline(pos: Pos, focus: readonly AttrKey[]): Record<AttrKey, number> {
+export function baseline(pos: Pos, focus: readonly AttrKey[]): Record<AttrKey, number> {
   const mod = focusMod(pos, focus);
   const out = {} as Record<AttrKey, number>;
   for (const k of ATTR_KEYS) out[k] = CLAMP(POS[pos].base[k] + (mod[k] ?? 0), 20, 70);

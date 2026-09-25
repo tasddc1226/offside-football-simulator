@@ -470,22 +470,84 @@ td.n, th.n { text-align: right; }
 .notice-check input { width: 18px; height: 18px; accent-color: var(--pitch); }
 .notice-steps li::marker { color: var(--accent-text); font-weight: 700; }
 
-/* ───────── 후보 선수 카드 (T-10-002) ───────── */
-.cand-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.cand-card {
-  border: 1.5px solid var(--line); background: var(--pitch); color: var(--on-pitch); border-radius: 14px;
-  padding: 14px 8px; min-height: 108px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 6px; text-align: center; position: relative; overflow: hidden;
+/* ───────── 선수 생성: 라이브 카드 · 입력 · 후보 카드 (T-10-002 → T-10-022) ───────── */
+.wrap.has-cta { padding-bottom: calc(96px + var(--safe-b)); }
+.live-card {
+  position: sticky; top: calc(8px + var(--safe-t)); z-index: 4;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center;
+  background: var(--pitch); color: var(--on-pitch); border-radius: 18px; padding: 14px 16px; overflow: hidden;
+  box-shadow: 0 10px 24px -14px rgba(0,0,0,.55);
 }
-.cand-card .cand-n { font-family: var(--display); font-size: 26px; font-weight: 700; }
-.cand-card .cand-lbl { font-size: 11px; opacity: .8; letter-spacing: .06em; }
-.cand-card.open { background: var(--surface); color: var(--ink); border-color: var(--pitch); align-items: stretch; text-align: left; padding: 12px; min-height: auto; }
-.cand-card.open.picked { border-color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
-.cand-open-head { display: flex; justify-content: space-between; align-items: baseline; }
-.cand-open-head b { font-family: var(--display); font-size: 20px; }
-.cand-attr-row { display: flex; justify-content: space-between; font-size: 12px; padding-block: 1px; }
-.cand-attr-row b { font-variant-numeric: tabular-nums; }
-.cand-badge { margin-top: 6px; align-self: flex-start; }
+.live-card > *:not(.chalk) { position: relative; }
+.lc-num { display: flex; flex-direction: column; align-items: center; min-width: 48px; }
+.lc-num b { font-size: 40px; line-height: 1; font-weight: 700; }
+.lc-num span { font-family: var(--display); font-weight: 700; letter-spacing: .12em; font-size: 13px; color: var(--accent); }
+.lc-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lc-name { font-size: 20px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lc-meta { font-size: 13px; opacity: .75; }
+.lc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.lc-tag { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--on-pitch) 30%, transparent); white-space: nowrap; }
+.lc-side { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.lc-ovr { font-size: 11px; opacity: .85; white-space: nowrap; }
+.lc-ovr b { font-size: 17px; color: var(--accent); margin-left: 2px; }
+.live-card .mr-ring { stroke: color-mix(in srgb, var(--on-pitch) 25%, transparent); }
+.mini-radar { display: block; overflow: visible; }
+.mr-ring { fill: none; stroke: var(--line); stroke-width: 1; }
+.mr-now { fill: color-mix(in srgb, var(--accent) 35%, transparent); stroke: var(--accent); stroke-width: 1.8; stroke-linejoin: round; }
+
+.create-form { gap: 18px; }
+.name-input { position: relative; }
+.name-input input { width: 100%; padding-right: 48px; }
+.name-input .dice { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: transparent; font-size: 20px; border-radius: 10px; }
+.name-input .dice:active { transform: translateY(-50%) rotate(-25deg) scale(.92); }
+.seg.two { grid-template-columns: repeat(2, 1fr); }
+.pos-opt { position: relative; padding-right: 44px; }
+.pos-opt .pos-code { position: absolute; right: 10px; top: 8px; font-size: 15px; font-weight: 700; letter-spacing: .06em; color: var(--muted); }
+.pos-opt[aria-pressed="true"] .pos-code { color: var(--accent-text); }
+.focus-opt small.up { color: var(--good); font-weight: 600; }
+.focus-opt small.down { color: var(--bad); }
+.create-cta {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  padding: 12px 16px calc(12px + var(--safe-b));
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid var(--line);
+}
+.create-cta .btn { display: flex; max-width: 448px; margin: 0 auto; }
+@media (min-width: 720px) { .create-cta .btn { max-width: 528px; } }
+
+.cand-intro { flex-wrap: nowrap; align-items: flex-start; }
+.cand-intro p { flex: 1; font-size: 13px; }
+.cand-intro .icon-btn { flex: none; }
+.cand-list { display: flex; flex-direction: column; gap: 10px; }
+.cand-card {
+  width: 100%; border: 1.5px solid var(--line); border-radius: 16px; background: var(--pitch); color: var(--on-pitch);
+  padding: 16px; display: flex; align-items: center; gap: 14px; text-align: left; position: relative;
+}
+.cand-card .cand-n {
+  flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center;
+  border: 2px dashed color-mix(in srgb, var(--on-pitch) 40%, transparent); font-family: var(--display); font-size: 26px; font-weight: 700;
+}
+.cc-closed { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.cc-closed b { font-size: 16px; }
+.cc-closed small { font-size: 12px; opacity: .75; }
+.cc-tap { font-size: 11px; font-weight: 600; opacity: .7; white-space: nowrap; }
+.cand-card.open { background: var(--surface); color: var(--ink); display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.cand-card.open.picked { border-color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent), var(--shadow); }
+.cc-head { display: flex; align-items: center; gap: 8px; }
+.cc-no { font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: .02em; }
+.cc-ovr { margin-left: auto; font-size: 12px; color: var(--muted); }
+.cc-ovr b { font-size: 22px; color: var(--ink); margin-left: 2px; }
+.cc-scout { font-size: 14px; font-weight: 600; color: var(--accent-text); }
+.cc-body { display: flex; align-items: center; gap: 14px; }
+.cc-bars { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cc-bar { display: grid; grid-template-columns: 56px 1fr 26px; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.cc-bar span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cc-bar i { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.cc-bar em { display: block; height: 100%; border-radius: 3px; background: color-mix(in srgb, var(--pitch) 55%, var(--muted)); }
+.cc-bar b { text-align: right; font-size: 15px; color: var(--ink); }
+.cc-bar.hi { color: var(--ink); font-weight: 600; }
+.cc-bar.hi em { background: var(--accent); }
 
 /* ───────── CH(커리어 하이) 배지 · 팬 반응 · 마일스톤 진행도 (T-10-002) ───────── */
 .badge-ch {
