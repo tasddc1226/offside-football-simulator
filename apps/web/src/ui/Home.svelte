@@ -9,14 +9,8 @@
   import HomeNews from './HomeNews.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { withRo } from './format.js';
-  import type { Component } from 'svelte';
 
   const live = $derived(!!appState.G && !appState.G.retired);
-
-  // ui.ts의 mountAccount()처럼 계정 패널은 메인 청크와 분리된 동적 import로 불러온다(원본 주석:
-  // account.ts는 게임 로직과 무관한 로그인 UI라 초기 번들에서 제외한다).
-  let Account = $state<Component<Record<string, never>> | null>(null);
-  void import('./Account.svelte').then((m) => (Account = m.default));
 </script>
 
 <div class="wrap">
@@ -68,9 +62,4 @@
   <HallOfFame />
   <HomeNews board="notice" eyebrow="Notice" title="공지사항" />
   <HomeNews board="release" eyebrow="Release notes" title="릴리즈 노트" />
-  <section class="card" id="account-slot">
-    {#if Account}
-      <Account />
-    {/if}
-  </section>
 </div>

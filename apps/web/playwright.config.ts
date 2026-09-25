@@ -7,7 +7,7 @@ import { defineConfig, devices } from '@playwright/test';
 // 기본값은 실제 빌드(vite build && vite preview)로 띄운다 — /guide, /faq, /legal/* 정적 페이지는
 // scripts/seo.mjs의 빌드 후 처리(closeBundle)로만 생성되고 `vite dev`에는 존재하지 않으므로,
 // 공개 페이지/접근성 테스트가 통과하려면 빌드본이 필요하다. 게임 로직만 빠르게 반복할 때는
-// E2E_DEV=1로 HMR dev 서버를 쓸 수 있다(이 경우 공개 페이지 테스트는 실패한다 — 의도된 동작).
+// E2E_DEV=1로 HMR dev 서버를 쓸 수 있다(T-10-021부터 seoPlugin이 dev에서도 공개 페이지를 낸다).
 //
 // CI(ci.yml, full-validation.yml)는 e2e 이전 단계에서 이미 `pnpm build`를 한 번 돌린다 —
 // E2E_PREBUILT=1이면 webServer가 그 dist를 그대로 preview만 하고 다시 빌드하지 않는다.

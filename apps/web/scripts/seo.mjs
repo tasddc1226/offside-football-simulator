@@ -303,12 +303,33 @@ async function createBrandAssets(outputDirectory) {
     }),
   );
 }
+const STATIC_PAGES = {
+  '/guide/': guideBody,
+  '/faq/': faqBody,
+  '/legal/terms/': termsBody,
+  '/legal/privacy/': privacyBody,
+};
+
 export function seoPlugin(config) {
   let outputDirectory = 'dist';
   return {
     name: 'offside-seo',
     configResolved(c) {
       outputDirectory = c.build.outDir;
+    },
+    // 정적 공개 페이지는 빌드 때만 만들어져 로컬 dev 서버에서는 SPA 홈으로 떨어졌다 — dev에서도 같은 본문을 낸다.
+    // 앱 번들을 걷어 내면 CSS도 빠지므로(dev는 main.ts가 CSS를 주입한다) 스타일시트를 직접 건다.
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const pathname = (req.url ?? '').split('?')[0];
+        const path = pathname.endsWith('/') ? pathname : `${pathname}/`;
+        const body = STATIC_PAGES[path];
+        if (!body) return next();
+        const base = await server.transformIndexHtml(path, await readFile(join(server.config.root, 'index.html'), 'utf8'));
+        const html = pageHtml(base, config, path, body).replace('</head>', '<link rel="stylesheet" href="/src/style.css" />\n</head>');
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.end(html);
+      });
     },
     transformIndexHtml(html) {
       return html
@@ -317,12 +338,7 @@ export function seoPlugin(config) {
     },
     async closeBundle() {
       const base = await readFile(join(outputDirectory, 'index.html'), 'utf8');
-      for (const [path, body] of [
-        ['/guide/', guideBody],
-        ['/faq/', faqBody],
-        ['/legal/terms/', termsBody],
-        ['/legal/privacy/', privacyBody],
-      ]) {
+      for (const [path, body] of Object.entries(STATIC_PAGES)) {
         const directory = join(outputDirectory, path.slice(1));
         await mkdir(directory, { recursive: true });
         await writeFile(join(directory, 'index.html'), pageHtml(base, config, path, body));

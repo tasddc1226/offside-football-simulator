@@ -31,5 +31,7 @@ mount(Toast, { target: document.getElementById('toast')! });
 void import('./ui/clubCustom.svelte.js').then((m) => m.syncClubCustom()).catch(() => {});
 // T-10-013: 다른 계정 소유 커리어 알림은 첫 flush 전에 듣기 시작한다.
 watchOwnerConflicts();
+// T-10-021: 모바일 브라우저로 홈 화면을 열면 '홈 화면에 추가' 안내를 띄운다('다시 보지 않기' 전까지).
+void import('./ui/install.js').then((m) => m.maybeShowInstallOnboarding()).catch(() => {});
 // T-9-009: 이전 세션에서 못 보낸 업로드를 앱 시작 시 한 번 재시도한다(실패해도 게임은 계속된다).
 void import('./game/outbox.js').then((m) => m.flushOutbox()).catch(() => {});
