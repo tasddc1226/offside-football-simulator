@@ -30,7 +30,7 @@ import { envelope, nowIso } from './shared.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
-import { hasProfanity, isAcceptablePublicName } from '../content-filter.js';
+import { hasProfanity } from '../content-filter.js';
 
 // T-10-011 게시판(공지·릴리즈 노트). 읽기는 누구나, 글은 관리자만, 댓글은 프로필이 있는 누구나.
 // 댓글은 프로필당 시간당 COMMENT_LIMIT개까지(관리자 제외).
@@ -55,8 +55,8 @@ async function postOr404(c: Context<AppEnv>, id: string) {
 
 export function registerBoardRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/boards/viewer', async (c) => {
-    const { admin } = await getViewer(c);
-    return c.json(successEnvelope(BoardViewerResponseSchema).parse(envelope(c, { admin })), 200);
+    const { admin, google, nickname } = await getViewer(c);
+    return c.json(successEnvelope(BoardViewerResponseSchema).parse(envelope(c, { admin, google, nickname })), 200);
   });
 
   app.get('/v1/boards/:board/posts', async (c) => {
@@ -105,11 +105,15 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/boards/posts/:postId/comments', requireProfile, async (c) => {
     const postId = idParam(c, 'postId');
     const db = getDb(c);
-    const input = parseWithAppError(CommentInputSchema, parseJsonBody(c.get('rawBody') ?? ''));
-    if (!isAcceptablePublicName(input.nickname) || hasProfanity(input.body)) {
+    const { body } = parseWithAppError(CommentInputSchema, parseJsonBody(c.get('rawBody') ?? ''));
+    if (hasProfanity(body)) {
       throw new AppError({ code: 'VALIDATION_FAILED', message: '쓸 수 없는 표현이 들어 있습니다.', details: { reason: 'BLOCKED_WORD' } });
     }
     const [viewer, post] = await Promise.all([getViewer(c), postOr404(c, postId)]);
+    // T-10-028: 댓글은 구글 로그인한 프로필만, 그 프로필의 닉네임으로.
+    if (!viewer.google) throw new AppError({ code: 'FORBIDDEN', message: '구글로 로그인하면 댓글을 쓸 수 있어요.', details: { reason: 'GOOGLE_LOGIN_REQUIRED' } });
+    const nickname = viewer.nickname;
+    if (!nickname) throw new AppError({ code: 'FORBIDDEN', message: '댓글에 쓸 닉네임을 먼저 정해 주세요.', details: { reason: 'NICKNAME_REQUIRED' } });
     const profileId = getSessionOrThrow(c).profileId;
     const now = nowIso();
     if (!viewer.admin) {
@@ -118,9 +122,9 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       }
       await recordAttempt(db, 'BOARD_COMMENT', profileId, now);
     }
-    const id = await createComment(db, { postId, profileId, ...input, admin: viewer.admin }, now);
+    const id = await createComment(db, { postId, profileId, nickname, body, admin: viewer.admin }, now);
     purgeList(c, post.board); // 댓글 수가 바뀐다.
-    const comment = { id, nickname: input.nickname, body: input.body, admin: viewer.admin, deletable: true, createdAt: now };
+    const comment = { id, nickname, body, admin: viewer.admin, deletable: true, createdAt: now };
     return c.json(successEnvelope(CommentSchema).parse(envelope(c, comment)), 201);
   });
 

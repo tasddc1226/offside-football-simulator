@@ -366,3 +366,60 @@ describe('PATCH /v1/profile/settings', () => {
     expect(third.headers.get('Idempotent-Replayed')).toBe('true');
   });
 });
+
+describe('PUT /v1/profile/nickname', () => {
+  let ctx: TestD1;
+  const app = createApp();
+
+  beforeEach(async () => {
+    ctx = await createTestD1();
+  });
+  afterEach(async () => {
+    await ctx.dispose();
+  });
+
+  const put = (token: string, nickname: unknown) =>
+    app.request(
+      '/v1/profile/nickname',
+      {
+        method: 'PUT',
+        headers: { Origin: ALLOWED_ORIGIN, 'Content-Type': 'application/json', Cookie: `offside_session=${token}` },
+        body: JSON.stringify({ nickname }),
+      },
+      ctx.env,
+    );
+  async function googleUser() {
+    const who = await issueCookie(ctx);
+    await ctx.db.update(profiles).set({ googleSub: `sub-${who.profileId}`, linkedAt: '2026-09-25T00:00:00.000Z' }).where(eq(profiles.id, who.profileId));
+    return who;
+  }
+  const errorOf = async (res: Response) => {
+    const body = ErrorEnvelopeSchema.parse(await res.json());
+    return { status: res.status, code: body.error.code, reason: (body.error.details as { reason?: string } | undefined)?.reason };
+  };
+
+  it('구글 로그인한 프로필만 닉네임을 정하고, GET /v1/profile에 실린다', async () => {
+    const anon = await issueCookie(ctx);
+    expect(await errorOf(await put(anon.token, '루키'))).toEqual({ status: 403, code: 'FORBIDDEN', reason: 'GOOGLE_LOGIN_REQUIRED' });
+
+    const user = await googleUser();
+    const res = await put(user.token, '  루키  ');
+    expect(res.status).toBe(200);
+    expect(successEnvelope(ProfileSchema).parse(await res.json()).data.nickname).toBe('루키');
+    const me = await app.request('/v1/profile', { headers: { Cookie: `offside_session=${user.token}` } }, ctx.env);
+    expect(successEnvelope(ProfileSchema).parse(await me.json()).data.nickname).toBe('루키');
+    // 같은 닉네임으로 다시 정해도 된다(자기 자신과는 겹치지 않는다).
+    expect((await put(user.token, '루키')).status).toBe(200);
+  });
+
+  it('대소문자만 달라도 겹치면 409, 금칙어·형식 오류는 400', async () => {
+    const a = await googleUser();
+    const b = await googleUser();
+    expect((await put(a.token, 'Rookie')).status).toBe(200);
+    expect(await errorOf(await put(b.token, 'rookie'))).toEqual({ status: 409, code: 'VALIDATION_FAILED', reason: 'NICKNAME_TAKEN' });
+    expect(await errorOf(await put(b.token, 'www.spam.com'))).toMatchObject({ status: 400, reason: 'BLOCKED_WORD' });
+    expect((await put(b.token, 'a')).status).toBe(400);
+    expect((await put(b.token, '<b>굵게</b>')).status).toBe(400);
+    expect((await put(b.token, '열세글자가넘는아주긴닉네임')).status).toBe(400);
+  });
+});

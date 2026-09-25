@@ -9,6 +9,7 @@
   } from '../api/client.js';
   import { accountCache } from './account-state.svelte.js';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
+  import NicknameForm from './NicknameForm.svelte';
 
   // `undefined`는 "아직 한 번도 불러오지 않음"을, `null`은 "확인 결과 로그인 안 됨"을 뜻한다. 설정 화면은
   // 벗어났다 돌아오면 이 컴포넌트가 다시 마운트되므로, 모듈 스코프에 캐시를 둬 재검증
@@ -75,6 +76,10 @@
   <div class="account-card">
     <div class="who"><b>{profile.googleEmailMasked ?? '구글 계정'}</b><span class="muted">Google 계정으로 로그인했어요.</span></div>
     <button class="btn btn-primary" data-act="logout" onclick={askLogout}>로그아웃</button>
+  </div>
+  <div class="account-nick">
+    <span class="muted">댓글 닉네임{profile.nickname ? '' : ' — 정하면 소식 게시판에 댓글을 쓸 수 있어요'}</span>
+    {#key profile.nickname}<NicknameForm current={profile.nickname} />{/key}
   </div>
   <div class="account-more">
     <button class="link-btn" onclick={doUnlink}>구글 연동 해제</button>

@@ -13,7 +13,7 @@ export const API_BASE_URL = resolveApiBaseUrl(
 
 export type Profile = Pick<
   ContractProfile,
-  'id' | 'linked' | 'googleEmailMasked' | 'recoveryCodeIssuedAt' | 'createdAt'
+  'id' | 'linked' | 'googleEmailMasked' | 'recoveryCodeIssuedAt' | 'createdAt' | 'nickname'
 >;
 
 export type ApiErrorCode = string;
@@ -111,6 +111,10 @@ export function startProfileDeletion(): Promise<ApiResult<{ confirmToken: string
 }
 export function confirmProfileDeletion(confirmToken: string): Promise<ApiResult<undefined>> {
   return apiFetch('/v1/profile/delete', { method: 'POST', body: JSON.stringify({ confirmToken }) });
+}
+/** T-10-028 댓글에 쓰는 닉네임. 구글 로그인한 프로필만 정할 수 있다(겹치면 409 NICKNAME_TAKEN). */
+export function putNickname(nickname: string): Promise<ApiResult<Profile>> {
+  return apiFetch('/v1/profile/nickname', { method: 'PUT', body: JSON.stringify({ nickname }) });
 }
 export function googleStartUrl(): string {
   return `${API_BASE_URL}/v1/auth/google/start`;

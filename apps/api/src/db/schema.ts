@@ -18,9 +18,12 @@ export const profiles = sqliteTable(
     lastSeenAt: text('last_seen_at').notNull(),
     /** T-1-004 API-PRO-005. NULL이 아니면 삭제된 프로필이다(09 문서: 사용자 요청 삭제는 즉시). */
     deletedAt: text('deleted_at'),
+    /** T-10-028 댓글에 쓰는 닉네임(구글 로그인한 프로필만 정한다). 대소문자만 다른 닉네임도 겹치지 못한다. */
+    nickname: text('nickname'),
   },
   (table) => [
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
+    uniqueIndex('profiles_nickname_unique').on(sql`lower(${table.nickname})`),
     uniqueIndex('profiles_toss_anon_key_hash_unique').on(table.tossAnonKeyHash),
   ],
 );

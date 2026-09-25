@@ -393,6 +393,24 @@ export function rollCandidates() {
 }
 
 // ───────── 구글 OAuth 콜백 (/settings?google=linked|switched|error) ─────────
+/** T-10-028 소식 화면에서 댓글을 쓰려고 로그인하면, 돌아와서 그 글을 다시 연다. */
+const BOARD_RETURN_KEY = 'ft_board_return';
+export function rememberBoardReturn(board: BoardKey, postId: string | null) {
+  try {
+    sessionStorage.setItem(BOARD_RETURN_KEY, JSON.stringify({ board, postId }));
+  } catch {
+    // 저장소를 못 쓰면 평소처럼 설정 화면으로 돌아온다.
+  }
+}
+function takeBoardReturn(): { board: BoardKey; postId: string | null } | null {
+  try {
+    const raw = sessionStorage.getItem(BOARD_RETURN_KEY);
+    sessionStorage.removeItem(BOARD_RETURN_KEY);
+    return raw ? (JSON.parse(raw) as { board: BoardKey; postId: string | null }) : null;
+  } catch {
+    return null;
+  }
+}
 export function handleOAuthReturn() {
   const url = new URL(window.location.href);
   const google = url.searchParams.get('google');
@@ -406,6 +424,8 @@ export function handleOAuthReturn() {
         : `구글 로그인에 실패했습니다${reason ? ` (${reason})` : ''}.`;
   toast(msg);
   window.history.replaceState({}, '', '/');
+  const back = takeBoardReturn();
+  if (back && google !== 'error') return openBoard(back.board, back.postId);
   // 계정 패널이 설정 화면에 있으므로, 로그인을 마치고 돌아오면 설정 화면을 연다.
   appState.screen = 'settings';
 }

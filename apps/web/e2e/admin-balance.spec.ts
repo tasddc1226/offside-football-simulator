@@ -23,12 +23,12 @@ async function mockApi(page: Page, opts: { linked: boolean; admin: boolean }) {
   const sent: { method: string; path: string; body: unknown }[] = [];
   const versions: V[] = [{ version: 1, status: 'active', note: '첫 설정', values: { koreaStr: 76 }, createdAt: T, updatedAt: T, activatedAt: T }];
   await page.route(`${API}/v1/profile`, (route) =>
-    route.fulfill(ok({ id: 'u1', linked: { google: opts.linked }, googleEmailMasked: opts.linked ? 'ad***@gmail.com' : null, recoveryCodeIssuedAt: null, createdAt: T })),
+    route.fulfill(ok({ id: 'u1', linked: { google: opts.linked }, googleEmailMasked: opts.linked ? 'ad***@gmail.com' : null, recoveryCodeIssuedAt: null, createdAt: T, nickname: null })),
   );
   await page.route(`${API}/v1/boards/**`, (route) => {
     const path = new URL(route.request().url()).pathname;
     sent.push({ method: 'GET', path, body: null });
-    if (path === '/v1/boards/viewer') return route.fulfill(ok({ admin: opts.admin }));
+    if (path === '/v1/boards/viewer') return route.fulfill(ok({ admin: opts.admin, google: opts.linked, nickname: null }));
     return route.fulfill(ok({ posts: [], hasMore: false }));
   });
   const comments = [

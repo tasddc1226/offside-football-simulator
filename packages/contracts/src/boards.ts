@@ -2,7 +2,6 @@ import { z } from 'zod';
 import {
   BOARD_KEYS,
   COMMENT_BODY_MAX,
-  COMMENT_NICKNAME_MAX,
   POST_BODY_MAX,
   POST_TITLE_MAX,
   POST_VERSION_MAX,
@@ -37,8 +36,9 @@ export const PostInputSchema = z.strictObject({
 });
 export type PostInput = z.input<typeof PostInputSchema>;
 
+/** T-10-028: 닉네임은 로그인한 프로필의 것을 서버가 쓴다. 옛 클라이언트가 보내는 nickname은 받아 두되 무시한다. */
 export const CommentInputSchema = z.strictObject({
-  nickname: trimmed(COMMENT_NICKNAME_MAX),
+  nickname: z.string().optional(),
   body: trimmed(COMMENT_BODY_MAX),
 });
 export type CommentInput = z.infer<typeof CommentInputSchema>;
@@ -76,5 +76,6 @@ export type BoardListResponse = z.infer<typeof BoardListResponseSchema>;
 export const PostDetailResponseSchema = z.object({ post: PostSchema, comments: z.array(CommentSchema) });
 export type PostDetailResponse = z.infer<typeof PostDetailResponseSchema>;
 
-export const BoardViewerResponseSchema = z.object({ admin: z.boolean() });
+/** google: 구글 로그인한 프로필(댓글을 쓸 수 있다), nickname: 그 프로필의 댓글 닉네임(없으면 먼저 정해야 한다). */
+export const BoardViewerResponseSchema = z.object({ admin: z.boolean(), google: z.boolean().default(false), nickname: z.string().nullable().default(null) });
 export type BoardViewerResponse = z.infer<typeof BoardViewerResponseSchema>;

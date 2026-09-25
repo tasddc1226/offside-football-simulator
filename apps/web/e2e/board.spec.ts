@@ -9,14 +9,22 @@ const NOTICE = { id: 'pst_00000000-0000-0000-0000-000000000001', board: 'notice'
 const RELEASE = { id: 'pst_00000000-0000-0000-0000-000000000002', board: 'release', title: '클럽 동기화', version: 'v1.4.0', pinned: false, commentCount: 0, createdAt: T, updatedAt: T };
 const COMMENT = { id: 'cmt_00000000-0000-0000-0000-000000000009', nickname: '운영자', body: '곧 끝나요', admin: true, deletable: false, createdAt: T };
 
-async function mockBoards(page: Page, opts: { admin?: boolean; empty?: boolean } = {}) {
+async function mockBoards(page: Page, opts: { admin?: boolean; empty?: boolean; google?: boolean; nickname?: string | null } = {}) {
   const sent: { method: string; url: string; body: unknown }[] = [];
+  let nickname = opts.nickname ?? null;
+  await page.route(`${API}/v1/profile/nickname`, async (route: Route) => {
+    const req = route.request();
+    const body = req.postDataJSON() as { nickname: string };
+    sent.push({ method: req.method(), url: '/v1/profile/nickname', body });
+    nickname = body.nickname.trim();
+    return route.fulfill(ok({ id: 'prf_e2e', linked: { google: true }, googleEmailMasked: 'f***@example.com', recoveryCodeIssuedAt: null, createdAt: T, nickname }));
+  });
   await page.route(`${API}/v1/boards/**`, async (route: Route) => {
     const req = route.request();
     const url = new URL(req.url());
     const method = req.method();
     if (method !== 'GET') sent.push({ method, url: url.pathname, body: req.postDataJSON() });
-    if (url.pathname === '/v1/boards/viewer') return route.fulfill(ok({ admin: !!opts.admin }));
+    if (url.pathname === '/v1/boards/viewer') return route.fulfill(ok({ admin: !!opts.admin, google: !!opts.google || !!opts.admin, nickname }));
     if (opts.empty && url.pathname.endsWith('/posts') && method === 'GET') return route.fulfill(ok({ posts: [], hasMore: false }));
     if (url.pathname === '/v1/boards/notice/posts' && method === 'POST') {
       return route.fulfill(ok({ ...NOTICE, id: 'pst_00000000-0000-0000-0000-000000000004', pinned: false, body: '본문' }, 201));
@@ -31,8 +39,8 @@ async function mockBoards(page: Page, opts: { admin?: boolean; empty?: boolean }
     }
     if (url.pathname === `/v1/boards/posts/${RELEASE.id}`) return route.fulfill(ok({ post: { ...RELEASE, body: '본문' }, comments: [] }));
     if (url.pathname === `/v1/boards/posts/${NOTICE.id}/comments`) {
-      const b = req.postDataJSON() as { nickname: string; body: string };
-      return route.fulfill(ok({ id: 'cmt_00000000-0000-0000-0000-000000000010', ...b, admin: false, deletable: true, createdAt: T }, 201));
+      const b = req.postDataJSON() as { body: string };
+      return route.fulfill(ok({ id: 'cmt_00000000-0000-0000-0000-000000000010', nickname, body: b.body, admin: false, deletable: true, createdAt: T }, 201));
     }
     if (url.pathname === '/v1/boards/release/posts' && method === 'POST') {
       return route.fulfill(ok({ ...RELEASE, id: 'pst_00000000-0000-0000-0000-000000000003', body: '본문' }, 201));
@@ -46,7 +54,7 @@ async function mockBoards(page: Page, opts: { admin?: boolean; empty?: boolean }
 }
 
 test('소식: 공지사항 전체 보기 → 글 → 댓글, 릴리즈 노트 전체 보기는 릴리즈 노트만', async ({ page }) => {
-  const sent = await mockBoards(page);
+  const sent = await mockBoards(page, { google: true, nickname: '팬1' });
   await page.goto('/');
   await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
   await expect(page.locator('h1')).toHaveText('공지사항');
@@ -61,18 +69,49 @@ test('소식: 공지사항 전체 보기 → 글 → 댓글, 릴리즈 노트 �
   await expect(post.locator('.board-body p')).toHaveText('<b>그대로</b>');
   await expect(page.locator('.board-comment').first()).toContainText('운영자');
 
-  await page.getByLabel('닉네임').fill('팬1');
+  // 닉네임은 입력하지 않는다 — 로그인한 프로필의 닉네임으로 남는다.
+  await expect(page.getByLabel('닉네임')).toHaveCount(0);
+  await expect(page.locator('.board-comments form')).toContainText('팬1');
   await page.getByLabel('댓글 내용').fill('수고하세요');
   await page.locator('[data-act="send-comment"]').click();
   await expect(page.locator('.board-comment')).toHaveCount(2);
+  await expect(page.locator('.board-comment').last()).toContainText('팬1');
   await expect(page.locator('.board-comment').last()).toContainText('수고하세요');
-  expect(sent.at(-1)).toMatchObject({ method: 'POST', body: { nickname: '팬1', body: '수고하세요' } });
+  expect(sent.at(-1)).toEqual({ method: 'POST', url: `/v1/boards/posts/${NOTICE.id}/comments`, body: { body: '수고하세요' } });
 
   await page.locator('[data-act="home"]').click();
   await page.locator('[data-home-news="release"] [data-act="news-all"]').click();
   await expect(page.locator('h1')).toHaveText('릴리즈 노트');
   await expect(page.locator(`[data-post-row="${RELEASE.id}"]`)).toContainText('v1.4.0');
   await expect(page.locator(`[data-post-row="${NOTICE.id}"]`)).toHaveCount(0);
+});
+
+test('소식: 구글 로그인 전엔 댓글 대신 로그인 안내가 뜬다', async ({ page }) => {
+  await mockBoards(page);
+  await page.goto('/');
+  await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
+  await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
+  await expect(page.locator('[data-comment-gate="login"]')).toContainText('구글로 로그인하면 댓글을 쓸 수 있어요');
+  await expect(page.locator('[data-act="comment-login"]')).toBeVisible();
+  await expect(page.getByLabel('댓글 내용')).toHaveCount(0);
+});
+
+test('소식: 닉네임을 정하면 바로 그 이름으로 댓글을 쓴다', async ({ page }) => {
+  const sent = await mockBoards(page, { google: true });
+  await page.goto('/');
+  await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
+  await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
+  const gate = page.locator('[data-comment-gate="nickname"]');
+  await expect(gate).toBeVisible();
+  await expect(page.getByLabel('댓글 내용')).toHaveCount(0);
+  expect((await new AxeBuilder({ page }).include('.board-comments').analyze()).violations.map((v) => v.id)).toEqual([]);
+  await gate.getByLabel('댓글 닉네임').fill(' 루키 ');
+  await gate.locator('[data-act="save-nickname"]').click();
+  expect(sent.at(-1)).toEqual({ method: 'PUT', url: '/v1/profile/nickname', body: { nickname: ' 루키 ' } });
+  await expect(page.locator('.board-comments form')).toContainText('루키');
+  await page.getByLabel('댓글 내용').fill('반가워요');
+  await page.locator('[data-act="send-comment"]').click();
+  await expect(page.locator('.board-comment').last()).toContainText('루키');
 });
 
 test('소식: 관리자는 새 글을 쓴다', async ({ page }) => {
