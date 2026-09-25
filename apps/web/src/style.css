@@ -597,3 +597,13 @@ td.n, th.n { text-align: right; }
 }
 /* 게임 화면에서는 토스트가 하단 탭바·액션바를 가리지 않게 그 위로 올린다. */
 body:has(nav.tabs) .toast { bottom: calc(var(--tabbar-h) + var(--actionbar-h) + var(--safe-b) + 12px); }
+
+/* ───────── 새 버전 안내 배너 (T-10-023) ───────── */
+.update-banner {
+  position: fixed; top: calc(8px + var(--safe-t)); left: 50%; transform: translateX(-50%); z-index: 8;
+  width: min(448px, calc(100% - 32px)); display: flex; align-items: center; gap: 12px;
+  background: var(--pitch); color: var(--on-pitch); border-radius: 14px; padding: 10px 10px 10px 16px;
+  box-shadow: 0 12px 28px -12px rgba(0,0,0,.5); font-size: 14px; line-height: 1.4;
+}
+.update-banner span { flex: 1; }
+.update-banner .btn { min-height: 40px; padding: 8px 14px; flex: none; }

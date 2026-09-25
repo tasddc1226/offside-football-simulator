@@ -31,11 +31,9 @@ function withRobots(response: Response, value: string): Response {
   return result;
 }
 
-// T-10-004: Vite 산출물(/assets/*)은 파일명에 내용 해시가 들어가 내용이 바뀌면 URL도 바뀐다 —
-// 재방문 때 재검증 없이 캐시를 그대로 쓰도록 1년 immutable로 내려 준다.
-function withImmutableCache(response: Response): Response {
+function withCacheControl(response: Response, value: string): Response {
   const result = withRobots(response, 'noindex, nofollow');
-  result.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+  result.headers.set('Cache-Control', value);
   return result;
 }
 
@@ -45,8 +43,12 @@ export default {
     const asset = await env.ASSETS.fetch(request);
     const isPublicPage = PUBLIC_PATHS.has(url.pathname);
     const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
+    // T-10-004: Vite 산출물(/assets/*)은 파일명에 내용 해시가 들어가 내용이 바뀌면 URL도 바뀐다 —
+    // 재방문 때 재검증 없이 캐시를 그대로 쓰도록 1년 immutable로 내려 준다.
     if (url.pathname.startsWith('/assets/') && asset.status === 200)
-      return withImmutableCache(asset);
+      return withCacheControl(asset, 'public, max-age=31536000, immutable');
+    // T-10-023: 새 배포 감지용 — 항상 최신 값을 받아야 한다.
+    if (url.pathname === '/version.json' && asset.status === 200) return withCacheControl(asset, 'no-store');
     if (!isPublicPage && !isDiscovery && asset.status !== 404)
       return withRobots(asset, 'noindex, nofollow');
     let indexingEnabled = false;
