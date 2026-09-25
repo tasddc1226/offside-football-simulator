@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import type { Bindings } from '../env.js';
-import { auditLog, sessions } from '../db/schema.js';
+import { auditLog, careers, profiles, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
@@ -389,6 +389,40 @@ describe('GET /v1/auth/google/callback', () => {
 
     const profileViaA = await getProfile(ctx, a.cookie);
     expect(profileViaA.id).toBe(b.profileId);
+  });
+
+  async function insertCareer(id: string, profileId: string) {
+    const now = new Date().toISOString();
+    await ctx.db.insert(careers).values({
+      id, profileId, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late', startYear: 2026, status: 'active', appVersion: '1.0.0', createdAt: now, updatedAt: now,
+    });
+  }
+  const ownerOf = async (id: string) => (await ctx.db.select().from(careers).where(eq(careers.id, id)))[0]?.profileId;
+
+  it('T-10-013: 익명 프로필에서 기존 계정으로 전환하면 익명 때 커리어를 그 계정으로 옮긴다', async () => {
+    const b = await issueCookie(ctx);
+    await linkGoogle(ctx, b.cookie, 'sub-merge');
+    const a = await issueCookie(ctx);
+    await insertCareer('c-anon', a.profileId);
+    await insertCareer('c-b', b.profileId);
+
+    const location = await linkGoogle(ctx, a.cookie, 'sub-merge');
+    expect(location.searchParams.get('google')).toBe('switched');
+    expect(await ownerOf('c-anon')).toBe(b.profileId);
+    expect(await ownerOf('c-b')).toBe(b.profileId);
+    const merged = (await ctx.db.select().from(auditLog).where(eq(auditLog.profileId, b.profileId))).filter((r) => r.kind === 'CAREERS_MERGED');
+    expect(merged.map((r) => JSON.parse(r.payloadJson))).toEqual([{ fromProfileId: a.profileId, count: 1 }]);
+  });
+
+  it('T-10-013: 복구 코드가 있는 프로필의 커리어는 옮기지 않는다(그 코드로 다시 찾아갈 수 있다)', async () => {
+    const b = await issueCookie(ctx);
+    await linkGoogle(ctx, b.cookie, 'sub-keep');
+    const a = await issueCookie(ctx);
+    await ctx.db.update(profiles).set({ recoveryCodeHash: 'hash' }).where(eq(profiles.id, a.profileId));
+    await insertCareer('c-kept', a.profileId);
+
+    expect((await linkGoogle(ctx, a.cookie, 'sub-keep')).searchParams.get('google')).toBe('switched');
+    expect(await ownerOf('c-kept')).toBe(a.profileId);
   });
 
   it('삭제된 프로필의 sub로도 재연결할 수 있다', async () => {

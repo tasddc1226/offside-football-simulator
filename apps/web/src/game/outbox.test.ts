@@ -69,6 +69,52 @@ describe('outbox', () => {
   });
 });
 
+describe('T-10-013 소유권 충돌', () => {
+  const ok = () => new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 });
+  const conflict = (code: string) => new Response(JSON.stringify({ error: { code, message: 'x', retryable: false } }), { status: 409 });
+  const flush = async () => {
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+  };
+
+  // node의 globalThis는 EventTarget이 아니다 — dispatchEvent만 흉내 낸다.
+  const stubDispatch = () => {
+    const dispatch = vi.fn();
+    vi.stubGlobal('dispatchEvent', dispatch);
+    return () => dispatch.mock.calls.map(([e]) => [(e as CustomEvent).type, (e as CustomEvent).detail]);
+  };
+
+  it('CAREER_OWNER_MISMATCH는 버리고 그 항목으로 이벤트를 알린다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(conflict('CAREER_OWNER_MISMATCH')));
+    const dispatched = stubDispatch();
+    const { enqueueSeason } = await import('./outbox.js');
+    enqueueSeason('33333333-3333-3333-3333-333333333333', 2027, seasonBody);
+    await flush();
+    expect(JSON.parse(localStorage.getItem('ft_outbox') ?? '[]')).toEqual([]);
+    expect(dispatched()).toEqual([
+      ['offside:owner-conflict', [{ kind: 'season', careerId: '33333333-3333-3333-3333-333333333333', year: 2027, body: seasonBody }]],
+    ]);
+  });
+
+  it('다른 409는 알리지 않는다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(conflict('VALIDATION_FAILED')));
+    const dispatched = stubDispatch();
+    const { enqueueSeason } = await import('./outbox.js');
+    enqueueSeason('44444444-4444-4444-4444-444444444444', 2027, seasonBody);
+    await flush();
+    expect(dispatched()).toEqual([]);
+  });
+
+  it('pendingRetirementIds는 큐에 남은 은퇴 기록의 커리어 ID다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    const { enqueueRetirement, pendingRetirementIds } = await import('./outbox.js');
+    const summary = { retireAge: 34, peak: 80, legendScore: 300, apps: 1, goals: 1, assists: 1, trophies: 0, awards: 0, caps: 0, ballon: 0, lastClub: 'FC' };
+    enqueueRetirement('55555555-5555-5555-5555-555555555555', summary);
+    await flush();
+    expect([...pendingRetirementIds()]).toEqual(['55555555-5555-5555-5555-555555555555']);
+  });
+});
+
 describe('T-10-006 seasonPayload', () => {
   // 실제 커리어를 은퇴까지 헤드리스로 돌려(fulltime-sim 랜덤 정책의 축약판) 모든 시즌 페이로드가
   // 서버 계약을 통과하는지 본다. SEASON_PAYLOAD_CAREERS로 표본 수를 늘려 대량 검증할 수 있다.

@@ -6,6 +6,7 @@
   import { goNew, goContinue, goSettings, goBoard, goDex } from './actions.js';
   import Topbar from './Topbar.svelte';
   import HallOfFame from './HallOfFame.svelte';
+  import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import type { Component } from 'svelte';
 
   const live = $derived(!!appState.G && !appState.G.retired);
@@ -30,6 +31,16 @@
     <p>고교 3학년의 킥오프부터 은퇴의 종료 휘슬까지. 선택과 확률이 한 선수의 커리어를 만듭니다.</p>
     <button class="btn btn-accent btn-block" data-act="new" onclick={goNew}>새 커리어 킥오프 →</button>
   </section>
+  {#if live && appState.G && appState.ownerConflict}
+    <section class="card owner-conflict" data-owner-conflict>
+      <b>이 커리어는 다른 계정에 기록돼 있어요</b>
+      <p class="muted">로그인한 계정이 바뀌어서 {appState.G.name} 선수의 기록이 서버에 저장되지 않고 있어요. 원래 계정으로 다시 로그인하면 그대로 이어져요.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="btn btn-accent" data-act="adopt-career" onclick={adoptCareer}>지금 계정으로 이어서 기록</button>
+        <button class="icon-btn" data-act="keep-on-device" onclick={keepOnDevice}>이 기기에만 두기</button>
+      </div>
+    </section>
+  {/if}
   {#if live && appState.G}
     <button class="tile" data-act="continue" style="width:100%" onclick={goContinue}>
       <span class="eyebrow">Continue</span><b>{appState.G.name} · {appState.G.age}세 · {appState.G.club.name}</b>

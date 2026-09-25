@@ -213,4 +213,9 @@ export const HofDetailResponseSchema = z.strictObject({
 });
 export type HofDetailResponse = z.infer<typeof HofDetailResponseSchema>;
 
+/** T-10-013 `GET /v1/careers/mine`. 이 계정(프로필)의 은퇴 선수. `linked`가 false면 익명 프로필이라
+ * 웹은 기기 기록(ft_hof)을 그대로 보여 준다. 이름은 서버에 없으므로(공개를 고른 경우만) 같은 기기의 기록이 채운다. */
+export const MyCareersResponseSchema = z.strictObject({ linked: z.boolean(), entries: z.array(PublicHofEntrySchema) });
+export type MyCareersResponse = z.infer<typeof MyCareersResponseSchema>;
+
 export const HofListQuerySchema = z.coerce.number().int().min(1).max(100).default(50);

@@ -3,6 +3,7 @@
 // runes로 옮기면서 같은 상태를 하나의 반응형 객체에 모아 두고, 화면 갱신은 컴포넌트가 이 상태를
 // 구독하는 것으로 대신한다(수동 render() 호출은 더 이상 필요 없다).
 import type { BoardKey } from '@offside/contracts/board-limits';
+import type { OutboxItem } from '../game/outbox.js';
 import type { AttrKey, Pos } from '../game/data.js';
 import { pick } from '../game/rng.js';
 import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
@@ -54,6 +55,8 @@ export const appState = $state<{
   candidatePick: number | null;
   /** T-10-011. 소식 화면에서 마지막으로 본 게시판. */
   board: BoardKey;
+  /** T-10-013. 진행 중 커리어가 다른 계정 소유라 서버가 거절한 시즌 업로드(홈에서 처리를 고른다). */
+  ownerConflict: OutboxItem[] | null;
 }>({
   G: null,
   screen: 'home',
@@ -72,6 +75,7 @@ export const appState = $state<{
   candidatesOpen: [],
   candidatePick: null,
   board: 'notice',
+  ownerConflict: null,
 });
 
 export const toastState = $state<{ text: string; visible: boolean }>({ text: '', visible: false });
