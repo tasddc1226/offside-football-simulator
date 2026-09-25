@@ -1,6 +1,6 @@
 <script lang="ts">
-  // 게임 설정 화면(T-10-009). 효과음 켜기/끄기와 "리그·클럽 편집" — 리그별 클럽 이름·엠블럼을 바꾸고,
-  // 에디트 파일(JSON)로 내보내거나 가져온다. 효과음 설정은 이 기기에만 저장된다.
+  // 게임 설정 화면(T-10-009). 계정(구글 로그인), 효과음 켜기/끄기와 "리그·클럽 편집" — 리그별 클럽 이름·엠블럼을
+  // 바꾸고, 에디트 파일(JSON)로 내보내거나 가져온다. 효과음 설정은 이 기기에만 저장된다.
   import { LEAGUES } from '../game/data.js';
   import { CLUB_NAME_MAX, IMG_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '../game/clubs.js';
   import { clubsIn } from '../game/engine.js';
@@ -12,14 +12,23 @@
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
   import { fetchBoardViewer } from '../api/boards.js';
   import { appState } from './state.svelte.js';
-  import { accountCache } from './account-state.js';
+  import { accountCache } from './account-state.svelte.js';
+  import type { Component } from 'svelte';
 
   let sfx = $state(sfxEnabled());
+  // 계정 패널은 게임 로직과 무관한 로그인 UI라 메인 청크와 분리된 동적 import로 불러온다.
+  let Account = $state<Component<Record<string, never>> | null>(null);
+  void import('./Account.svelte').then((m) => (Account = m.default));
+
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
-  // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다).
+  // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
+  // 바꾸면 다시 판단한다.
   let admin = $state(false);
-  const acct = accountCache.value;
-  if (acct && acct !== 'error' && acct.linked.google) void fetchBoardViewer().then((r) => (admin = r.ok && r.data.admin));
+  $effect(() => {
+    const acct = accountCache.value;
+    if (acct && acct !== 'error' && acct.linked.google) void fetchBoardViewer().then((r) => (admin = r.ok && r.data.admin));
+    else admin = false;
+  });
 
   let leagueId = $state(LEAGUES[LEAGUES.length - 1]!.id);
   let open = $state<string | null>(null);
@@ -102,6 +111,11 @@
       <button class="icon-btn" data-act="home" onclick={goHome}>← 홈</button>
     {/snippet}
   </Topbar>
+  <section class="card" id="account-slot">
+    {#if Account}
+      <Account />
+    {/if}
+  </section>
   <section class="card stack" style="gap:14px">
     <div>
       <div class="eyebrow">Settings</div>

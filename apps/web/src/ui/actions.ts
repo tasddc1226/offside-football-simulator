@@ -383,4 +383,6 @@ export function handleOAuthReturn() {
         : `구글 로그인에 실패했습니다${reason ? ` (${reason})` : ''}.`;
   toast(msg);
   window.history.replaceState({}, '', '/');
+  // 계정 패널이 설정 화면에 있으므로, 로그인을 마치고 돌아오면 설정 화면을 연다.
+  appState.screen = 'settings';
 }

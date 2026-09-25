@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 const PROFILE_URL = 'http://localhost:8787/v1/profile';
 
-test('계정 영역: 로그아웃 상태(API 스텁)', async ({ page }) => {
+test('계정 영역: 홈이 아니라 설정 화면에 있다 — 로그아웃 상태(API 스텁)', async ({ page }) => {
   await page.route(PROFILE_URL, (route) =>
     route.fulfill({
       status: 200,
@@ -14,6 +14,9 @@ test('계정 영역: 로그아웃 상태(API 스텁)', async ({ page }) => {
   );
 
   await page.goto('/');
+  await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
+  await expect(page.locator('#account-slot')).toHaveCount(0);
+  await page.locator('[data-act="settings"]').click();
   const account = page.locator('#account-slot .account');
   await expect(account).toContainText('구글로 로그인');
   await expect(account.getByRole('link', { name: '구글로 로그인' })).toHaveAttribute(
@@ -43,6 +46,7 @@ test('/settings?google=linked: 토스트 표시 후 URL 정리', async ({ page }
 
   await expect(page.locator('#toast')).toContainText('구글 계정을 연결했습니다');
   await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator('h1')).toHaveText('게임 설정');
 
   const account = page.locator('#account-slot .account');
   await expect(account).toContainText('연동 해제');

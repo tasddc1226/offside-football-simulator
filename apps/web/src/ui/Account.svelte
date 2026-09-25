@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   // ───────── 계정 영역: 구글 로그인 · 프로필 · 연동 해제 · 로그아웃 · 탈퇴 (account.ts 포트) ─────────
   // 게임 데이터는 전부 localStorage에 남고, 여기서 다루는 건 로그인 상태뿐이다. 오프라인/서버
   // 오류에도 게임 자체는 그대로 플레이할 수 있어야 하므로, 실패 시 조용히 "로그아웃 상태" 취급하고
@@ -7,12 +8,12 @@
     getProfile, unlinkGoogle, logout, startProfileDeletion, confirmProfileDeletion, googleStartUrl,
     type Profile,
   } from '../api/client.js';
-  import { accountCache } from './account-state.js';
+  import { accountCache } from './account-state.svelte.js';
 
-  // `undefined`는 "아직 한 번도 불러오지 않음"을, `null`은 "확인 결과 로그인 안 됨"을 뜻한다. 홈은
-  // 화면을 벗어났다 돌아오면 이 컴포넌트가 다시 마운트되므로, 모듈 스코프에 캐시를 둬 재검증
+  // `undefined`는 "아직 한 번도 불러오지 않음"을, `null`은 "확인 결과 로그인 안 됨"을 뜻한다. 설정 화면은
+  // 벗어났다 돌아오면 이 컴포넌트가 다시 마운트되므로, 모듈 스코프에 캐시를 둬 재검증
   // 간격이 지나기 전까지는 "확인 중…" 이 다시 보이지 않게 한다(원본 account.ts와 동일한 캐시 정책).
-  // 로그인 상태는 OAuth 복귀(전체 새로고침)나 이 패널의 버튼으로만 바뀐다 — 홈을 오갈 때마다 다시 묻지 않는다.
+  // 로그인 상태는 OAuth 복귀(전체 새로고침)나 이 패널의 버튼으로만 바뀐다 — 설정을 오갈 때마다 다시 묻지 않는다.
   const REVALIDATE_MS = 5 * 60_000;
   type ProfileState = Profile | null | 'error' | undefined;
 
@@ -30,10 +31,13 @@
     set(r.ok ? r.data : 'error');
   }
 
-  $effect(() => {
-    if (accountCache.value === undefined) void load();
-    else if (Date.now() - accountCache.fetchedAt > REVALIDATE_MS) void load(true);
-  });
+  // 캐시가 반응형이라 읽기를 untrack으로 감싸 마운트 때 한 번만 돈다.
+  $effect(() =>
+    untrack(() => {
+      if (accountCache.value === undefined) void load();
+      else if (Date.now() - accountCache.fetchedAt > REVALIDATE_MS) void load(true);
+    }),
+  );
 
   async function doUnlink() {
     const r = await unlinkGoogle();
