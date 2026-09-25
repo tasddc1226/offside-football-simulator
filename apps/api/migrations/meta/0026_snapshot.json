@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "82daa5f9-f166-4962-a63e-b439611ce98b",
+  "id": "df48181d-aaf1-446d-a54d-2c785d9ad6e9",
   "prevId": "6d319e93-b80c-45de-89eb-068988f3ddb5",
   "tables": {
     "app_meta": {
@@ -878,6 +878,29 @@
             "status",
             "peak",
             "legend_score"
+          ],
+          "isUnique": false
+        },
+        "careers_status_updated_idx": {
+          "name": "careers_status_updated_idx",
+          "columns": [
+            "status",
+            "updated_at"
+          ],
+          "isUnique": false
+        },
+        "careers_created_idx": {
+          "name": "careers_created_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "careers_status_retired_idx": {
+          "name": "careers_status_retired_idx",
+          "columns": [
+            "status",
+            "retired_at"
           ],
           "isUnique": false
         }

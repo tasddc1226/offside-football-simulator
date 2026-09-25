@@ -3,7 +3,7 @@
   // 상세 화면이 함께 쓴다 — 진행 중 세이브(G)든 저장된 스냅샷이든 LegendView 하나로 그린다.
   // T-10-029: 은퇴 직후(credits)에는 영화 크레딧처럼 섹션이 하나씩 올라오고 숫자가 카운트업, 점수 막대가
   // 차오른다. 화면이 새 섹션을 따라 내려가고(사용자가 직접 스크롤하면 멈춘다), 건너뛰기로 한 번에 펼친다.
-  import { onMount, tick } from 'svelte';
+  import { onMount, tick, type Snippet } from 'svelte';
   import { legendScoreBreakdown, legendTitle } from '../game/season.js';
   import { personalBests, primeSeasons, bestSeasons, careerTimeline } from '../game/retirement-report.js';
   import { totals, seasonLabelOf } from './format.js';
@@ -15,11 +15,8 @@
   import CountUp from './CountUp.svelte';
   import { motionOK } from './motion.js';
 
-  const {
-    v,
-    credits = false,
-    ondone,
-  }: { v: LegendView; credits?: boolean; ondone?: (skipped: boolean) => void } = $props();
+  // end: 리포트 맨 아래(크레딧이면 크레딧이 끝난 뒤 마지막으로 올라온다).
+  const { v, credits = false, end }: { v: LegendView; credits?: boolean; end?: Snippet } = $props();
   const d = $derived(v.d);
   const back = $derived(v.pos === 'GK' || v.pos === 'DF');
   const t = $derived(d ? totals(d) : null);
@@ -57,7 +54,10 @@
   // svelte-ignore state_referenced_locally
   const playing = credits && motionOK;
   let step = $state(playing ? 0 : Infinity);
-  const on = (key: string) => step >= order.indexOf(key);
+  const on = (key: string) => {
+    const i = order.indexOf(key);
+    return i >= 0 && step >= i;
+  };
   const running = $derived(step < order.length);
   /** 섹션 하나가 무대에 머무는 시간 — 숫자·막대·줄이 다 차오를 만큼. */
   function hold(key: string | undefined): number {
@@ -69,10 +69,12 @@
   }
   let timer: ReturnType<typeof setTimeout> | undefined;
   let follow = true;
+  let endEl = $state<HTMLElement | null>(null);
   function finish(skipped: boolean) {
     clearTimeout(timer);
     step = Infinity;
-    ondone?.(skipped);
+    // 끝까지 흘러갔으면 마지막(end)까지 따라 내려간다.
+    if (!skipped && follow) void tick().then(() => endEl?.scrollIntoView({ behavior: 'smooth', block: 'end' }));
   }
   function next() {
     step++;
@@ -87,10 +89,7 @@
     timer = setTimeout(next, hold(key));
   }
   onMount(() => {
-    if (!playing) {
-      if (credits) ondone?.(false);
-      return;
-    }
+    if (!playing) return;
     const stopFollow = () => (follow = false);
     window.addEventListener('wheel', stopFollow, { passive: true });
     window.addEventListener('touchmove', stopFollow, { passive: true });
@@ -160,7 +159,7 @@
   </section>
   {/if}
 
-  {#if bests.length && on('bests')}
+  {#if on('bests')}
     <section class="card stack" class:credit-in={playing} data-credit="bests">
       <div><div class="eyebrow">Personal Bests</div><h2>개인 최고 기록</h2></div>
       <div class="pb-grid">
@@ -171,7 +170,7 @@
     </section>
   {/if}
 
-  {#if prime.length && on('prime')}
+  {#if on('prime')}
     <section class="card stack" class:credit-in={playing} data-credit="prime">
       <div><div class="eyebrow">Prime</div><h2>전성기 {prime.length}시즌</h2></div>
       {#each prime as r, i (i)}
@@ -180,7 +179,7 @@
     </section>
   {/if}
 
-  {#if best3.length && on('best3')}
+  {#if on('best3')}
     <section class="card stack" class:credit-in={playing} data-credit="best3">
       <div><div class="eyebrow">Best Seasons</div><h2>베스트 시즌 TOP {best3.length}</h2></div>
       {#each best3 as r, i (i)}
@@ -189,7 +188,7 @@
     </section>
   {/if}
 
-  {#if timeline.length && on('timeline')}
+  {#if on('timeline')}
     <section class="card" class:credit-in={playing} data-credit="timeline">
       <div class="eyebrow">Timeline</div>
       <h2 style="margin-bottom:4px">연도별 커리어</h2>
@@ -205,7 +204,7 @@
     </section>
   {/if}
 
-  {#if titles.length && on('titles')}
+  {#if on('titles')}
     <section class="card" class:credit-in={playing} data-credit="titles" data-legend-titles>
       <div class="eyebrow">Titles</div>
       <h2 style="margin-bottom:8px">획득한 칭호 {titles.length}개</h2>
@@ -214,4 +213,7 @@
   {/if}
   {#if on('trophies')}<div class="credit-wrap" class:credit-in={playing} data-credit="trophies"><TrophyTab s={d} /></div>{/if}
   {#if on('career')}<div class="credit-wrap" class:credit-in={playing} data-credit="career"><CareerTab s={d} /></div>{/if}
+{/if}
+{#if end && !running}
+  <div class="credit-wrap" class:credit-in={playing} data-credit="end" bind:this={endEl}>{@render end()}</div>
 {/if}

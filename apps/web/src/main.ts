@@ -12,7 +12,8 @@ import { watchForUpdates } from './ui/update.svelte.js';
 
 installClickSound();
 loadGame();
-// OAuth 복귀는 세이브를 읽은 뒤에 처리한다(돌아갈 곳이 로컬 명예의 전당 선수일 수 있다).
+// OAuth 복귀는 세이브를 읽은 뒤에 처리한다 — 돌아갈 곳이 로컬 명예의 전당 선수일 수 있고, loadGame이
+// 옛 은퇴 선수에 커리어 id를 붙인다(ft_hof).
 handleOAuthReturn();
 routeSharedCareer();
 syncBalance();

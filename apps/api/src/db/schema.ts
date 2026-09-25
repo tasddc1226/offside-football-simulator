@@ -147,6 +147,10 @@ export const careers = sqliteTable(
     index('careers_hof_ballon_idx').on(table.status, table.ballon, table.legendScore),
     index('careers_hof_caps_idx').on(table.status, table.caps, table.legendScore),
     index('careers_hof_peak_idx').on(table.status, table.peak, table.legendScore),
+    // T-10-030 홈 라이브 현황: 지금 뛰는 중·오늘 새 선수·오늘 은퇴와 최근 은퇴 소식을 시각 범위로 찾는다.
+    index('careers_status_updated_idx').on(table.status, table.updatedAt),
+    index('careers_created_idx').on(table.createdAt),
+    index('careers_status_retired_idx').on(table.status, table.retiredAt),
   ],
 );
 

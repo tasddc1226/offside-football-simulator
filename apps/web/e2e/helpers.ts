@@ -11,3 +11,24 @@ export async function startCareer(page: Page): Promise<void> {
   await page.locator('[data-act="start"]').click();
   await expect(page.locator('.player h1')).toBeVisible();
 }
+
+/** T-10-029 새 커리어를 고교 첫 시즌 직후(이적 시장 대기) 저장본으로 만들고 이어하기로 이적 시장을 연다. */
+export async function openMarket(page: Page): Promise<void> {
+  await startCareer(page);
+  await page.evaluate(() => {
+    const g = JSON.parse(localStorage.getItem('ft_save')!);
+    g.pending = { type: 'market', res: null, m: null };
+    localStorage.setItem('ft_save', JSON.stringify(g));
+  });
+  await page.reload();
+  // 이어하기를 누르면 대기 중인 이적 시장이 바로 열린다.
+  await page.locator('[data-act="continue"]').click();
+}
+
+/** 이적 시장에서 바로 은퇴한다(은퇴 크레딧이 시작된다). */
+export async function retireFromMarket(page: Page): Promise<void> {
+  await openMarket(page);
+  const sheet = page.locator('#sheet');
+  await sheet.getByRole('button', { name: '은퇴하기' }).click();
+  await sheet.getByRole('button', { name: '은퇴한다' }).click();
+}

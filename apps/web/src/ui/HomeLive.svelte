@@ -76,21 +76,19 @@
 
   onMount(() => {
     void load();
-    const poll = setInterval(() => {
+    const loadIfVisible = () => {
       if (document.visibilityState === 'visible') void load();
-    }, POLL_MS);
+    };
+    const poll = setInterval(loadIfVisible, POLL_MS);
     const step = setInterval(() => {
       now = Date.now();
       if (rolling && !paused && !holding && document.visibilityState === 'visible') shifting = true;
     }, STEP_MS);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void load();
-    };
-    document.addEventListener('visibilitychange', onVisible);
+    document.addEventListener('visibilitychange', loadIfVisible);
     return () => {
       clearInterval(poll);
       clearInterval(step);
-      document.removeEventListener('visibilitychange', onVisible);
+      document.removeEventListener('visibilitychange', loadIfVisible);
     };
   });
 

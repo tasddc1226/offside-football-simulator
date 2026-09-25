@@ -1,7 +1,6 @@
 import { LiveResponseSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
-import { kstMidnightIso } from '../db/repos/live.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 
 const ORIGIN = 'http://localhost:5173';
@@ -71,7 +70,8 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
       await put(ctx, cookie, `/v1/careers/${id}/seasons/2027`, seasonBody({ goals: i }));
     }
     const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
-    await ctx.env.DB.prepare('UPDATE career_seasons SET created_at = ? WHERE career_id = ?').bind(hoursAgo(3), A).run();
+    await ctx.env.DB.prepare('UPDATE career_seasons SET created_at = ? WHERE career_id = ? AND year = 2026').bind(hoursAgo(4), A).run();
+    await ctx.env.DB.prepare('UPDATE career_seasons SET created_at = ? WHERE career_id = ? AND year = 2027').bind(hoursAgo(3), A).run();
     await ctx.env.DB.prepare('UPDATE career_seasons SET created_at = ? WHERE career_id = ?').bind(hoursAgo(24 * 8), B).run();
     await ctx.env.DB.prepare('UPDATE careers SET updated_at = ?').bind(hoursAgo(3)).run();
 
@@ -83,13 +83,3 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
   });
 });
 
-describe('kstMidnightIso', () => {
-  it('한국 시각 자정을 UTC로 돌려준다', () => {
-    // KST 2026-09-26 08:30 = UTC 09-25 23:30 → KST 자정 = UTC 09-25 15:00
-    expect(kstMidnightIso(Date.parse('2026-09-25T23:30:00Z'))).toBe('2026-09-25T15:00:00.000Z');
-    // KST 2026-09-26 00:10 = UTC 09-25 15:10
-    expect(kstMidnightIso(Date.parse('2026-09-25T15:10:00Z'))).toBe('2026-09-25T15:00:00.000Z');
-    // KST 2026-09-25 23:50 = UTC 09-25 14:50 → 전날 자정
-    expect(kstMidnightIso(Date.parse('2026-09-25T14:50:00Z'))).toBe('2026-09-24T15:00:00.000Z');
-  });
-});

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { startCareer } from './helpers.js';
+import { retireFromMarket } from './helpers.js';
 
 // T-10-029: 은퇴 화면 맨 아래 — 로그인하지 않았으면 로그인을 권하고, 구글 로그인했으면 보기 전용 공유 링크
 // (/career/<id>)를 만든다. 링크를 연 사람은 크레딧 연출로 리포트를 보고 자기 커리어를 시작할 수 있다.
@@ -34,17 +34,7 @@ async function stubApi(page: Page, state: { google: boolean }) {
 }
 
 async function retireNow(page: Page) {
-  await startCareer(page);
-  await page.evaluate(() => {
-    const g = JSON.parse(localStorage.getItem('ft_save')!);
-    g.pending = { type: 'market', res: null, m: null };
-    localStorage.setItem('ft_save', JSON.stringify(g));
-  });
-  await page.reload();
-  await page.locator('[data-act="continue"]').click();
-  const sheet = page.locator('#sheet');
-  await sheet.getByRole('button', { name: '은퇴하기' }).click();
-  await sheet.getByRole('button', { name: '은퇴한다' }).click();
+  await retireFromMarket(page);
   await page.locator('[data-act="credits-skip"]').click();
 }
 

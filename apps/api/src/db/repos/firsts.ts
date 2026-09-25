@@ -41,7 +41,7 @@ const seasonColumns = {
 };
 type SeasonRow = Pick<typeof careerSeasons.$inferSelect, keyof typeof seasonColumns>;
 
-function honorsOf(json: string): string[] {
+export function honorsOf(json: string): string[] {
   try {
     const v: unknown = JSON.parse(json);
     return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
