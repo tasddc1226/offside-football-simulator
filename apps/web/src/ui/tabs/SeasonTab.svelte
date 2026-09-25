@@ -5,6 +5,8 @@
   import { EVENTS } from '../../game/events-data.js';
   import type { GameState } from '../../game/types.js';
   import { save, seasonLabel } from '../helpers.js';
+  import { appState } from '../state.svelte.js';
+  import PhaseReport from './PhaseReport.svelte';
 
   const { s }: { s: GameState } = $props();
 
@@ -36,6 +38,12 @@
     return c.at <= t ? '곧 이어짐' : `약 ${c.at - t}구간 후`;
   }
 </script>
+
+{#if appState.report && appState.report.year === s.year}
+  {#key appState.report.key}
+    <PhaseReport r={appState.report} />
+  {/key}
+{/if}
 
 <section class="card">
   <div class="row" style="justify-content:space-between">

@@ -607,3 +607,19 @@ body:has(nav.tabs) .toast { bottom: calc(var(--tabbar-h) + var(--actionbar-h) + 
 }
 .update-banner span { flex: 1; }
 .update-banner .btn { min-height: 40px; padding: 8px 14px; flex: none; }
+
+/* ───────── 구간 리포트 (T-10-024) ───────── */
+.report { display: flex; flex-direction: column; gap: 14px; border: 1.5px solid color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.rp-rank.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
+.rp-rank.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+.rp-dots { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.rp-dots li { width: 26px; height: 26px; border-radius: 50%; animation: pop .3s cubic-bezier(.3,1.6,.5,1) both; animation-delay: calc(var(--i) * 60ms); }
+.rp-wdl { font-family: var(--display); font-size: 40px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.rp-wdl small { font-size: 20px; color: var(--muted); margin-right: 6px; }
+.rp-later { animation: rp-in .35s ease both; animation-delay: var(--after, 0ms); }
+.report .chip.pop { animation-delay: calc(var(--after, 0ms) + var(--d, 0ms)); }
+@keyframes rp-in { from { transform: translateY(8px); } }
+.rp-games summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); padding: 4px 0; }
+.rp-games .ticker { min-height: 0; margin-top: 8px; }
+.rp-games .ticker div { animation: none; color: var(--ink); font-weight: 400; }
+@media (prefers-reduced-motion: reduce) { .rp-dots li, .rp-later, .report .chip.pop { animation: none; } }

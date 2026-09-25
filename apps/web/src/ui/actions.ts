@@ -7,7 +7,7 @@ import { clamp, createRng, freshSeed, setActiveRng } from '../game/rng.js';
 import { generateCandidates } from '../game/candidates.js';
 import {
   leagueOf, fmtMoney, snapshot, diffChips, log, newGame, isPro,
-  applyTraining, simBlock, isSafe, rollEvent, resolveChoice, txt, roleOf, STORIES,
+  applyTraining, simBlock, isSafe, rollEvent, resolveChoice, txt, roleOf, STORIES, teamRank, roundRange,
 } from '../game/engine.js';
 import { EVENTS } from '../game/events-data.js';
 import { choiceOdds } from '../game/balance.js';
@@ -22,17 +22,21 @@ import type { NatTour, EventLogEntry, MarketOption } from '../game/types.js';
 import { appState, randomName, type HofTab } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { seasonLabelOf } from './format.js';
+import { motionOK } from './motion.js';
 import {
-  closeSheet, playBlock, playJudge, playSteps, sheetState, showSheet,
+  closeSheet, matchRows, playJudge, playSteps, sheetState, showSheet,
   type BlockResultLike, type Chip,
 } from './sheetState.svelte.js';
 import type { NatView, TourView } from './sheets/types.js';
 
+// T-10-024: 구간 진행은 짧은 진행 시트만 보여 주고 닫은 뒤, 결과를 시즌 탭 맨 위 리포트 카드로
+// 그린다. 이벤트·시즌 결산은 액션바 버튼으로 이어서 연다(nextPending).
 export async function advance() {
   if (sheetState.busy || !appState.G) return;
   const s = appState.G,
     ph = s.phase;
   const before = snapshot(s);
+  const rankBefore = teamRank(s);
   applyTraining(s);
   const block = s.phase > 0 ? (simBlock(s) as unknown as BlockResultLike) : null;
   const comp = compsPhase(s);
@@ -52,22 +56,29 @@ export async function advance() {
     ...(nt ? ['A매치 소집 명단 발표'] : []),
     ...(ev ? ['주변에서 무언가 일이 벌어지고 있습니다…'] : []),
   ];
-  if (b) await playBlock(s, ph, b, extras);
+  const games = b ? matchRows(s, b) : [];
+  const range = b ? roundRange(s, ph) : '';
+  if (b) await playSteps(`${s.year} · ${PHASES[ph]} 진행 중`, ['훈련 · 컨디션 관리', `${range} 리그 ${b.n}경기`, ...extras]);
   else await playSteps(`${s.year} · 프리시즌 진행 중`, [isPro(s) ? '전지훈련 캠프 입소' : '동계 훈련 시작', '체력 테스트', '전술 훈련', '연습 경기', ...extras]);
-  showSheet(
-    {
-      kind: 'phase',
-      eyebrow: `${s.year} · ${title}`,
-      block: b
-        ? { w: b.w, d: b.d, l: b.l, apps: b.apps, goals: b.goals, assists: b.assists, rating: b.apps ? (b.rs / b.apps).toFixed(2) : null, cs: b.cs, hl: b.hl }
-        : null,
-      role: roleOf(s),
-      comps: comp.map((c) => ({ t: c.t, good: c.k === 'good' })),
-      nat: natViews(nt),
-      chips: chips as Chip[],
-    },
-    [{ label: '계속 →', cls: 'btn-primary', fn: nextPending }],
-  );
+  closeSheet();
+  appState.report = {
+    key: Date.now(),
+    year: s.year,
+    eyebrow: `${s.year} · ${title}`,
+    title: b ? `${range} · ${b.n}경기` : '시즌 준비를 마쳤습니다',
+    back: s.pos === 'DF' || s.pos === 'GK',
+    block: b
+      ? { w: b.w, d: b.d, l: b.l, apps: b.apps, goals: b.goals, assists: b.assists, rating: b.apps ? (b.rs / b.apps).toFixed(2) : null, cs: b.cs, hl: b.hl }
+      : null,
+    games,
+    rank: { before: rankBefore, after: teamRank(s) },
+    role: roleOf(s),
+    comps: comp.map((c) => ({ t: c.t, good: c.k === 'good' })),
+    nat: natViews(nt),
+    chips: chips as Chip[],
+  };
+  appState.tab = 'season';
+  window.scrollTo({ top: 0, behavior: motionOK ? 'smooth' : 'auto' });
 }
 
 export function nextPending() {
@@ -81,6 +92,7 @@ export function nextPending() {
   if (p.type === 'event') return showEvent(p as { type: 'event'; id: string });
   if (p.type === 'seasonEnd') {
     if (sheetState.busy) return;
+    appState.report = null;
     const res = endSeason(s);
     uploadSeason(s, res.rec);
     s.pending = { type: 'market', res, m: null };
@@ -358,6 +370,7 @@ export function startCareer(name: string, number: number, presetAttrs?: Record<A
   appState.screen = 'game';
   appState.tab = 'season';
   appState.candidates = null;
+  appState.report = null;
   window.scrollTo(0, 0);
   toast('고교 마지막 시즌이 시작됩니다');
 }

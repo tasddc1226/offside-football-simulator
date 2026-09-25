@@ -34,6 +34,8 @@
   const btnLabel = $derived(
     phase === 0 ? '프리시즌 훈련 진행' : `훈련 후 ${phase >= LAST_PHASE ? leagueOf(s.leagueId).matches - s.season.played : Math.min(blockMatches(s), leagueOf(s.leagueId).matches - s.season.played)}경기 진행`,
   );
+  // T-10-024: 구간 결과는 시즌 탭 리포트로 보여 주고, 이어지는 이벤트·시즌 결산은 이 버튼으로 연다.
+  const pendingLabel = $derived(s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기');
   const showAction = $derived(appState.tab === 'season' || busy);
 
   const tabs: [Tab, string][] = [
@@ -92,8 +94,8 @@
 {#if showAction}
   <div class="action-bar" transition:fly={{ y: 20, duration: dur(180) }}>
     <div class="action-bar-inner">
-      <button class="btn btn-primary btn-block" data-act={busy ? 'resume' : 'advance'} onclick={onAdvanceClick}>
-        {busy ? '진행 중인 이벤트 보기' : btnLabel} →
+      <button class="btn btn-block {busy ? 'btn-accent' : 'btn-primary'}" data-act={busy ? 'resume' : 'advance'} onclick={onAdvanceClick}>
+        {busy ? pendingLabel : btnLabel} →
       </button>
     </div>
   </div>

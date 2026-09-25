@@ -10,6 +10,7 @@ import { pick } from '../game/rng.js';
 import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
 import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
+import type { PhaseReport } from './sheets/types.js';
 
 export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex' | 'hof' | 'admin';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
@@ -65,6 +66,8 @@ export const appState = $state<{
   hof: { tab: HofTab; page: number; sort: HofSort };
   /** 선수 상세의 '← 명예의 전당'이 돌아갈 화면. */
   legendBack: 'home' | 'hof';
+  /** T-10-024. 방금 끝난 구간 리포트(시즌 탭 맨 위). 저장하지 않는다 — 새로고침하면 사라진다. */
+  report: PhaseReport | null;
 }>({
   G: null,
   screen: 'home',
@@ -87,6 +90,7 @@ export const appState = $state<{
   ownerConflict: null,
   hof: { tab: 'all', page: 1, sort: 'score' },
   legendBack: 'home',
+  report: null,
 });
 
 export const toastState = $state<{ text: string; visible: boolean }>({ text: '', visible: false });

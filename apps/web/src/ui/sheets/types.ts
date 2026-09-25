@@ -20,14 +20,30 @@ export type TickerRow = {
   inj: boolean;
 };
 
+/** T-10-024: 구간(프리시즌·전반기·후반기)을 마친 뒤 시즌 탭 맨 위에 그리는 리포트. */
+export type PhaseReport = {
+  /** 새 리포트마다 바뀌어 카드 애니메이션을 처음부터 다시 건다. */
+  key: number;
+  year: number;
+  eyebrow: string;
+  title: string;
+  /** 수비수·골키퍼는 도움 대신 무실점을 보여 준다. */
+  back: boolean;
+  block: { w: number; d: number; l: number; apps: number; goals: number; assists: number; rating: string | null; cs: number; hl: string[] } | null;
+  games: TickerRow[];
+  rank: { before: number | null; after: number | null };
+  role: string;
+  comps: { t: string; good: boolean }[];
+  nat: NatView[];
+  chips: Chip[];
+};
+
 /** T-10-004: 시트 dialog의 접근 가능한 이름(axe aria-dialog-name). 화면의 제목 줄과 같은 문구. */
 export function sheetLabel(v: SheetView): string {
   switch (v.kind) {
     case 'judge':
     case 'eventResult':
       return v.label;
-    case 'phase':
-      return v.eyebrow;
     case 'market':
       return '다음 시즌, 어디서 뛸까요?';
     case 'notice':
@@ -39,29 +55,7 @@ export function sheetLabel(v: SheetView): string {
 
 export type SheetView =
   | { kind: 'steps'; title: string; steps: string[]; active: number; progress: number }
-  | {
-      kind: 'block';
-      eyebrow: string;
-      title: string;
-      back: boolean;
-      progress: number;
-      round: string;
-      wdl: { w: number; d: number; l: number };
-      tally: { apps: number; g: number; a: number; cs: number; rating: string };
-      ticker: TickerRow[];
-      extras: { text: string; done: boolean }[];
-      skip: (() => void) | null;
-    }
   | { kind: 'judge'; label: string; p: number; pos: number }
-  | {
-      kind: 'phase';
-      eyebrow: string;
-      block: { w: number; d: number; l: number; apps: number; goals: number; assists: number; rating: string | null; cs: number; hl: string[] } | null;
-      role: string;
-      comps: { t: string; good: boolean }[];
-      nat: NatView[];
-      chips: Chip[];
-    }
   | {
       kind: 'event';
       eyebrow: string;
