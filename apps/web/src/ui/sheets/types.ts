@@ -57,6 +57,20 @@ export function sheetLabel(v: SheetView): string {
 
 export type SheetView =
   | { kind: 'steps'; title: string; steps: string[]; active: number; progress: number }
+  | {
+      /** T-10-028: 구간 경기를 한 경기씩 흘려보내는 중계 시트(T-10-024 전의 연출). 끝나면 리포트로 넘어간다. */
+      kind: 'block';
+      eyebrow: string;
+      title: string;
+      back: boolean;
+      progress: number;
+      round: string;
+      wdl: { w: number; d: number; l: number };
+      tally: { apps: number; g: number; a: number; cs: number; rating: string };
+      ticker: TickerRow[];
+      extras: { text: string; done: boolean }[];
+      skip: (() => void) | null;
+    }
   | { kind: 'judge'; label: string; p: number; pos: number }
   | {
       kind: 'event';

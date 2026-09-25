@@ -1,7 +1,7 @@
 // ───────── 모션 공통 유틸 (T-10-003) ─────────
 // prefers-reduced-motion 판정을 한 곳에 모은다. 화면·탭·시트 전환 애니메이션과 playJudge의 바늘
 // 흔들기가 이 값을 공유해, "감속 모션" 설정이 앱 전체에서 일관되게 적용되게 한다(매체 쿼리를 매번 새로
-// 만들지 않는다). 진행 템포(playSteps 간격)는 움직임이 아니라 읽는 시간이라 유지한다(T-10-007).
+// 만들지 않는다). 진행 템포(playSteps/playBlock 간격)는 움직임이 아니라 읽는 시간이라 유지한다(T-10-007).
 export const motionOK = (() => {
   try {
     return !matchMedia('(prefers-reduced-motion: reduce)').matches;

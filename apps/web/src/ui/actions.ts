@@ -25,12 +25,12 @@ import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } f
 import { seasonLabelOf } from './format.js';
 import { motionOK } from './motion.js';
 import {
-  closeSheet, matchRows, playJudge, playSteps, sheetState, showSheet,
+  closeSheet, matchRows, playBlock, playJudge, playSteps, sheetState, showSheet,
   type BlockResultLike, type Chip,
 } from './sheetState.svelte.js';
 import type { NatView, TourView } from './sheets/types.js';
 
-// T-10-024: 구간 진행은 짧은 진행 시트만 보여 주고 닫은 뒤, 결과를 시즌 탭 맨 위 리포트 카드로
+// T-10-024: 구간 진행 시트(T-10-028부터 경기는 중계 시트)를 닫은 뒤, 결과를 시즌 탭 맨 위 리포트 카드로
 // 그린다. 이벤트·시즌 결산은 액션바 버튼으로 이어서 연다(nextPending).
 export async function advance() {
   if (sheetState.busy || !appState.G) return;
@@ -61,7 +61,16 @@ export async function advance() {
   ];
   const games = b ? matchRows(s, b) : [];
   const range = b ? roundRange(s, ph) : '';
-  if (b) await playSteps(`${s.year} · ${PHASES[ph]} 진행 중`, ['훈련 · 컨디션 관리', `${range} 리그 ${b.n}경기`, ...extras]);
+  const back = s.pos === 'DF' || s.pos === 'GK';
+  // T-10-028: 경기는 중계 시트로 한 경기씩 보여 주고(승무패·스코어가 쌓이는 맛), 끝나면 리포트로 넘어간다.
+  if (b) {
+    await playBlock(
+      { eyebrow: `${s.year} · ${PHASES[ph]} 진행 중`, title: `${range} · ${b.n}경기`, back, matches: leagueOf(s.leagueId).matches },
+      b,
+      games,
+      extras,
+    );
+  }
   else await playSteps(`${s.year} · 프리시즌 진행 중`, [isPro(s) ? '전지훈련 캠프 입소' : '동계 훈련 시작', '체력 테스트', '전술 훈련', '연습 경기', ...extras]);
   closeSheet();
   appState.report = {
@@ -69,7 +78,7 @@ export async function advance() {
     year: s.year,
     eyebrow: `${s.year} · ${title}`,
     title: b ? `${range} · ${b.n}경기` : '시즌 준비를 마쳤습니다',
-    back: s.pos === 'DF' || s.pos === 'GK',
+    back,
     block: b
       ? { w: b.w, d: b.d, l: b.l, apps: b.apps, goals: b.goals, assists: b.assists, rating: b.apps ? (b.rs / b.apps).toFixed(2) : null, cs: b.cs, hl: b.hl }
       : null,

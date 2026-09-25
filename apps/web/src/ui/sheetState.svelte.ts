@@ -1,9 +1,9 @@
 // ───────── 모달 시트 상태 + 진행 연출 ─────────
 // 시트 본문은 타입이 있는 뷰 모델(SheetView)로 표현하고, 실제 마크업은 ui/sheets/*.svelte가
-// 그린다. 진행 연출(playSteps·playJudge)은 반응형 뷰 상태를 원본과 같은 타이밍으로
+// 그린다. 진행 연출(playSteps·playBlock·playJudge)은 반응형 뷰 상태를 원본과 같은 타이밍으로
 // 갱신하는 async 함수라, 호출하는 쪽은 여전히 연출이 끝날 때까지 await 한다.
 import { tick } from 'svelte';
-import { ri } from '../game/rng.js';
+import { clamp, ri } from '../game/rng.js';
 import { clubsIn } from '../game/engine.js';
 import type { GameState } from '../game/types.js';
 import { motionOK } from './motion.js';
@@ -42,13 +42,17 @@ export function closeSheet() {
 }
 
 // ───────── 진행 연출 ─────────
-// T-10-007: 진행 템포(단계가 하나씩 켜지는 간격)는 "정보를 읽는 시간"이라 감속 모션이어도
+// T-10-007: 진행 템포(단계·경기가 하나씩 나오는 간격)는 "정보를 읽는 시간"이라 감속 모션이어도
 // 유지한다. 예전에는 감속 모션이면 0ms로 건너뛰어 결과가 한순간에 지나갔다. 감속 모션에서 빼는 것은
-// 움직임(바늘 흔들기·CSS 등장 모션)뿐이다.
+// 움직임(바늘 흔들기·CSS 등장 모션)뿐이다. 경기 중계는 건너뛰기 버튼으로 언제든 끝낼 수 있다.
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 // 템포 값(ms). 원래 값(단계 380·구간 2.6s)이 결과를 읽기엔 빠르다는 피드백으로 약 1.4배 늘렸다.
 /** 프리시즌 단계·구간 뒤 부가 줄(컵 결과·A매치 소집 등) 하나가 머무는 시간. */
 const STEP_MS = 520;
+/** 한 구간(시즌 절반) 문자중계 총 길이 목표와 경기당 간격 범위. */
+const BLOCK_TOTAL_MS = 3600;
+const BLOCK_STEP_MIN = 120;
+const BLOCK_STEP_MAX = 260;
 
 export type MatchGame = { rd: number; res: 'W' | 'D' | 'L'; mins: number; g: number; a: number; rating: number; cs?: boolean; inj?: boolean };
 function fakeScore(m: MatchGame): string {
@@ -105,6 +109,80 @@ export function matchRows(s: GameState, b: BlockResultLike): TickerRow[] {
     rating: m.rating,
     inj: !!m.inj,
   }));
+}
+
+/**
+ * T-10-028: 구간 경기를 한 경기씩 문자중계처럼 흘려보내며 승무패·출전 기록을 쌓는다(T-10-024에서 뺐던
+ * 연출을 되살림). rows는 리포트와 같은 줄이라 스코어가 두 화면에서 같다. 건너뛰기를 누르면 즉시 끝난다.
+ */
+export function playBlock(
+  head: { eyebrow: string; title: string; back: boolean; matches: number },
+  b: BlockResultLike,
+  rows: TickerRow[],
+  extras: string[],
+): Promise<void> {
+  return new Promise((resolve) => {
+    sheetState.busy = true;
+    const n = rows.length,
+      step = clamp(BLOCK_TOTAL_MS / Math.max(1, n), BLOCK_STEP_MIN, BLOCK_STEP_MAX);
+    let timer: ReturnType<typeof setTimeout> | null = null,
+      done = false,
+      i = 0,
+      rs = 0;
+    const finish = async (skipped: boolean) => {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      v.skip = null;
+      if (!skipped) {
+        for (const t of extras) {
+          v.extras.push({ text: t, done: false });
+          await wait(STEP_MS);
+          v.extras[v.extras.length - 1]!.done = true;
+        }
+        if (extras.length) await wait(200);
+      }
+      sheetState.busy = false;
+      resolve();
+    };
+    showSheet({
+      kind: 'block',
+      eyebrow: head.eyebrow,
+      title: head.title,
+      back: head.back,
+      progress: 0,
+      round: '킥오프',
+      wdl: { w: 0, d: 0, l: 0 },
+      tally: { apps: 0, g: 0, a: 0, cs: 0, rating: '-' },
+      ticker: [],
+      extras: [],
+      skip: () => void finish(true),
+    });
+    const v = sheetState.view as Extract<SheetView, { kind: 'block' }>;
+    const tickOnce = () => {
+      // 시트가 다른 내용으로 바뀌었거나 닫혔으면 건너뛴 것으로 끝낸다.
+      if (sheetState.view !== v) return void finish(true);
+      if (i >= n) return void finish(false);
+      const m = b.games[i]!,
+        row = rows[i]!;
+      i++;
+      v.wdl[m.res === 'W' ? 'w' : m.res === 'D' ? 'd' : 'l']++;
+      if (m.mins) {
+        v.tally.apps++;
+        v.tally.g += m.g;
+        v.tally.a += m.a;
+        rs += m.rating;
+        if (m.cs) v.tally.cs++;
+        v.tally.rating = (rs / v.tally.apps).toFixed(2);
+      }
+      v.ticker.unshift(row);
+      if (v.ticker.length > 5) v.ticker.length = 5;
+      v.progress = i / n;
+      v.round = `${m.rd}R / ${head.matches}R`;
+      timer = setTimeout(tickOnce, step);
+    };
+    void tick().then(tickOnce);
+  });
 }
 
 /** 성공 확률 막대 위에서 바늘이 흔들리다 실제 판정값(roll)에 멈춘다. */

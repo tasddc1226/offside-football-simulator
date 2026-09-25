@@ -385,6 +385,17 @@ td.n, th.n { text-align: right; }
 .ticker { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-variant-numeric: tabular-nums; }
 .ticker div { display: grid; grid-template-columns: 34px 30px 1fr; gap: 8px; align-items: center; }
 .ticker .rd { color: var(--muted); font-family: var(--display); font-weight: 600; }
+/* T-10-028 경기 중계 시트: 새 경기 줄이 위에 붙고, 지난 줄은 muted로 누른다(opacity 대신 — 명도 대비). */
+.prog-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: -6px; }
+.tally b.bump { animation: bump .3s ease; }
+@keyframes bump { 40% { transform: scale(1.25); color: var(--accent); } }
+.ticker.live { min-height: 124px; }
+.ticker.live div { animation: tick .25s ease both; }
+.ticker.live div:not(:first-child) { color: var(--muted); }
+.ticker.live div:first-child { font-weight: 600; }
+/* 등장 모션은 transform만 쓴다 — opacity 중간값이 axe 명도 대비를 흔들지 않게. */
+@keyframes tick { from { transform: translateY(-6px); } }
+.skip { align-self: center; border: 0; background: none; color: var(--muted); font-size: 12px; text-decoration: underline; padding: 4px; }
 /* 글자색을 surface로 두면 라이트(흰 글자)·다크(짙은 글자) 모두 배경색 대비 4.5:1 이상이다. */
 .res { display: inline-grid; place-items: center; width: 24px; height: 20px; border-radius: 5px; font-size: 11px; font-weight: 700; color: var(--surface); }
 .res.W { background: var(--good); } .res.D { background: var(--muted); } .res.L { background: var(--bad); }
@@ -400,7 +411,7 @@ td.n, th.n { text-align: right; }
 @keyframes pop { from { transform: scale(.6); } }
 .result-big.pop { animation: pop .35s cubic-bezier(.3,1.6,.5,1) both; }
 .twist { font-size: 13px; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); border: 1px dashed var(--line); }
-@media (prefers-reduced-motion: reduce) { .chip.pop, .result-big.pop { animation: none; } .prog i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .chip.pop, .result-big.pop, .ticker.live div, .tally b.bump { animation: none; } .prog i { transition: none; } }
 .choice { border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 12px 14px; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 600; }
 .choice:hover { border-color: var(--pitch-2); }
 .odds { font-family: var(--display); font-size: 15px; font-weight: 700; padding: 2px 8px; border-radius: 8px; background: var(--surface-2); flex-shrink: 0; }
