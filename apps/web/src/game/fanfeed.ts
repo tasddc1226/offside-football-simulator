@@ -3,16 +3,8 @@
 // RNG 소비 순서에 영향 없음). 같은 커리어의 같은 시즌은 항상 같은 팬 반응을 보여준다.
 import { FAN_LINES, type FanBucket } from './fanfeed-data.js';
 import type { CareerRecord, GameState } from './types.js';
+import { hashStr } from './rng.js';
 
-/** 문자열을 32비트 정수로 접는 간단한 FNV-1a 해시. 암호학적 용도 아님 — 결정적 인덱스 선택용. */
-function hashStr(str: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return h >>> 0;
-}
 function pickLine(seed: string, bucket: FanBucket): string {
   const lines = FAN_LINES[bucket];
   const idx = hashStr(seed + '/' + bucket) % lines.length;
