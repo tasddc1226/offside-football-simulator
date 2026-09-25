@@ -2,7 +2,7 @@ import type { CareerMeta, CareerSeasonPayload, HofSort, LegendSnapshot, PublicHo
 import { and, desc, eq, inArray, isNotNull, sql, type AnyColumn, type SQL } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
-import { careers, careerSeasons } from '../schema.js';
+import { careers, careerSeasons, goalsPlusAssists } from '../schema.js';
 
 export type CareerRow = typeof careers.$inferSelect;
 
@@ -198,7 +198,7 @@ const HOF_SORT: Record<HofSort, AnyColumn | SQL> = {
   score: careers.legendScore,
   goals: careers.goals,
   assists: careers.assists,
-  ga: sql`coalesce(${careers.goals}, 0) + coalesce(${careers.assists}, 0)`,
+  ga: goalsPlusAssists(careers),
   apps: careers.apps,
   trophies: careers.trophies,
   awards: careers.awards,
