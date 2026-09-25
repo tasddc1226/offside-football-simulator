@@ -109,6 +109,15 @@ pnpm --filter @offside/fulltime-sim analyze
   `analyze`(분포 집계)를 돌려 확인한다. 이 시뮬레이터는 원작 풀타임 v4와의
   패리티 기준선(2만 커리어, peak p50 74, corr 0.85, Europe 74.7%,
   capped 68.0%)을 참고 기준으로 유지한다.
+- **서버 밸런스 설정 (T-10-016)**: 운영 중 조정할 수치는 코드 배포 대신
+  운영 도구(설정 → 운영 도구 → 밸런스)에서 버전으로 바꾼다. 스펙(키·기본값·
+  범위)은 `packages/contracts/src/balance-spec.ts` 한 곳이고, 게임 코드는
+  `BAL.<키>`(`apps/web/src/game/balance.ts`)를 읽는다. 새 버전은 진행 중인
+  커리어에 **다음 시즌 시작부터**(`newSeason`), 새 커리어에는 바로 적용되며
+  커리어마다 `GameState.bal`에 버전이 저장된다. 수치를 새로 열 때는 스펙에
+  키를 더하고 기본값을 지금 하드코딩 값과 같게 둔 뒤, `SEED=<n>`로 시뮬레이터를
+  변경 전후 돌려 결과가 똑같은지 확인한다. 적용 전 초안은
+  `BALANCE=<values json> pnpm --filter @offside/fulltime-sim sim`으로 미리 돌려 본다.
 - **RNG는 입력이 아니라 상태다.** 원작 domain 패키지의 "시간·난수는 입력으로만
   받는다"는 순수성 규칙은 더 이상 적용되지 않는다 — `apps/web/src/game`은
   일반 TypeScript 모듈이며, RNG 시드는 게임 상태의 일부로 저장·복원된다.

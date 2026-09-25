@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./headers": "./src/headers.ts",
-    "./board-limits": "./src/board-limits.ts"
+    "./board-limits": "./src/board-limits.ts",
+    "./balance": "./src/balance-spec.ts"
   },
   "scripts": {
     "test": "vitest run",

@@ -10,6 +10,7 @@ import {
   applyTraining, simBlock, isSafe, rollEvent, resolveChoice, txt, roleOf, STORIES,
 } from '../game/engine.js';
 import { EVENTS } from '../game/events-data.js';
+import { choiceOdds } from '../game/balance.js';
 import { isHiddenEvent } from '../game/dexGroups.js';
 import { markDexSeen } from './dex.js';
 import { natWindow, scoreLine, type IntlResult } from '../game/national.js';
@@ -107,9 +108,9 @@ function showEvent(p: { type: 'event'; id: string }) {
     title: ev.title,
     text: ev.text(s),
     story: ev.story ? { name: STORIES[ev.story]!.name, stage: ev.stage ?? 0, total: STORIES[ev.story]!.total } : null,
-    choices: ev.choices.map((c) =>
+    choices: ev.choices.map((c, i) =>
       c.p
-        ? { label: txt(c.label, s), odds: `${Math.round(c.p(s) * 100)}%` }
+        ? { label: txt(c.label, s), odds: `${Math.round(choiceOdds(c.p(s), ev.id, i) * 100)}%` }
         : isSafe(ev, c)
           ? { label: txt(c.label, s), odds: '안전', hint: '확정이지만 보상이 줄고 가끔 대가가 따릅니다' }
           : { label: txt(c.label, s), odds: '확정' },

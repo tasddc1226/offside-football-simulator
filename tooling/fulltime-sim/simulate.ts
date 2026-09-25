@@ -32,6 +32,7 @@ import {
   EVENTS,
 } from '../../apps/web/src/game/index.js';
 import { pick, ri, createRng, setActiveRng, freshSeed } from '../../apps/web/src/game/rng.js';
+import { setLatestBalance } from '../../apps/web/src/game/balance.js';
 import type { GameState, MarketOption, OfferOption } from '../../apps/web/src/game/types.js';
 
 // ───────── Node 환경에 localStorage 스텁 (retire()/HOF 저장용, season.ts 는 이미 try/catch 로 감싸지만 예외 비용을 피한다) ─────────
@@ -45,6 +46,15 @@ if (typeof (globalThis as Record<string, unknown>).localStorage === 'undefined')
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// SEED=<정수>: 같은 시드면 같은 결과(코드 변경 전후를 잡음 없이 비교할 때).
+// BALANCE=<json 파일>: 그 밸런스 값으로 돌린다 — 어드민 초안의 values(또는 {values}) 그대로(T-10-016).
+const master = process.env.SEED ? createRng(+process.env.SEED) : null;
+const nextSeed = () => (master ? (master.next() * 0x100000000) >>> 0 : freshSeed());
+if (process.env.BALANCE) {
+  const raw = JSON.parse(fs.readFileSync(process.env.BALANCE, 'utf8'));
+  setLatestBalance({ version: 1, values: raw.values ?? raw });
+}
 
 type Agg = Record<string, number | Record<string, number> | Record<string, Record<string, number>>>;
 
@@ -72,11 +82,11 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
   let s_cur: GameState | null = null;
 
   for (let iter = 0; iter < N; iter++) {
-    setActiveRng(createRng(freshSeed()));
+    setActiveRng(createRng(nextSeed()));
     const pos = pick(['FW', 'MF', 'DF', 'GK'] as const);
     const type = pick(TYPES[pos]).id;
     const trait = pick(TRAITS).id;
-    const seed = freshSeed();
+    const seed = nextSeed();
     let s = newGame({ name: 'SIM', number: 9, pos, foot: '오른발', type, trait }, seed);
     const pot0 = s.pot;
     const seen: Record<string, 1> = {};

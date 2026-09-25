@@ -5,6 +5,7 @@ import { LEAGUES, CLUBS, POS, TYPES, ATTR_KEYS, PHASES, LAST_PHASE, FOCUS_GROWTH
 import { ovr, wOf, initSubs, legacyOvr, spreadAttr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
 import { EVENTS } from './events-data.js';
+import { BAL, adoptLatestBalance, choiceOdds, eventWeight } from './balance.js';
 import type { GameState, Season, LogEntry, Choice, EventDef } from './types.js';
 
 export const leagueOf = (id: string): League => LEAGUES.find((l) => l.id === id)!;
@@ -158,6 +159,8 @@ export function newGame(
 }
 
 export function newSeason(s: GameState): Season {
+  // T-10-016 서버의 새 밸런스 버전은 시즌이 바뀔 때만 커리어에 들어온다.
+  if (adoptLatestBalance(s) && s.career.length) log(s, `밸런스 패치 v${s.bal!.v}가 이번 시즌부터 적용됩니다.`);
   const L = leagueOf(s.leagueId);
   const rivals: number[] = [];
   for (let i = 0; i < 19; i++) rivals.push(L.avg + gauss() * L.spread);
@@ -174,7 +177,7 @@ export function growthFactor(s: GameState): number {
   const pot = truePot(s);
   f *= clamp((pot - ovr(s)) / 12, 0.04, 1.3);
   f *= 0.75 + s.morale / 200;
-  return f;
+  return f * BAL.growthScale;
 }
 export interface TrainingDef {
   id: string;
@@ -323,9 +326,9 @@ export function simBlock(s: GameState): BlockResult {
       if (cs && s.pos === 'GK' && rating >= 8) r.hl.push(`${S.played}R 슈퍼 세이브 쇼, 무실점 (평점 ${rating})`);
       addStat(s, 'cond', -(mins / 90) * 3.2);
       r.games.push({ rd: S.played, res, mins, g, a, rating, cs });
-      const ip = 0.012 * (s.cond < 40 ? 2.5 : 1) * (s.trait === 'iron' ? 0.35 : 1) * (s.age >= 31 ? 1.4 : 1);
+      const ip = BAL.injuryRate * (s.cond < 40 ? 2.5 : 1) * (s.trait === 'iron' ? 0.35 : 1) * (s.age >= 31 ? 1.4 : 1);
       if (chance(ip)) {
-        const big = chance(0.12);
+        const big = chance(BAL.bigInjuryShare);
         s.injury = big ? ri(8, 18) : ri(1, 5);
         r.injured = true;
         r.hl.push(`${S.played}R ${big ? '심각한 부상' : '부상'}으로 교체 아웃… ${s.injury}경기 결장 예상`);
@@ -438,11 +441,21 @@ export function agentFee(s: GameState): number {
 /** 이벤트 규칙. 확률 도감(T-10-012)이 이 값을 그대로 읽어 공개한다 — 숫자를 바꾸면 도감도 따라 바뀐다. */
 export const EVENT_RULES = {
   /** 구간마다 이벤트가 생길 확률(프리시즌 / 전·후반기). 연쇄 이벤트는 예정대로 따로 온다. */
-  rate: { preseason: 0.55, season: 0.7 },
+  // T-10-016 확률 세 개는 서버 밸런스 설정(BAL)을 읽는다.
+  rate: {
+    get preseason() {
+      return BAL.eventRatePreseason;
+    },
+    get season() {
+      return BAL.eventRateSeason;
+    },
+  },
   /** 같은 이벤트가 다시 나오기까지 최소 구간 수. 이미 본 이벤트는 가중치가 1/(1+본 횟수)로 준다. */
   cooldown: 9,
   /** 선택 뒤 반전이 붙을 확률. 안전한 선택은 먼저 이 확률로 대가를 치른다. */
-  twist: 0.3,
+  get twist() {
+    return BAL.eventTwist;
+  },
   /** 반전이 능력치 변화일 때 오를 확률(안전 / 도전 성공·확정 / 도전 실패). */
   twistUp: { safe: 0.3, ok: 0.65, fail: 0.4 },
   /** 안전한 선택의 대가(셋 중 하나, 폭 안에서 무작위). */
@@ -472,7 +485,7 @@ export function rollEvent(s: GameState): string | null {
   const seen = (s.flags.evSeen = s.flags.evSeen || {});
   const pool = EVENTS.filter((e) => !e.chain && e.cond(s) && s.flags.lastEvent !== e.id && !(seen[e.id] && t - seen[e.id]!.t < EV_COOLDOWN));
   if (!pool.length) return null;
-  const weightOf = (e: EventDef) => e.w / (1 + (seen[e.id] ? seen[e.id]!.n : 0));
+  const weightOf = (e: EventDef) => (e.w * eventWeight(e.id)) / (1 + (seen[e.id] ? seen[e.id]!.n : 0));
   const tot = pool.reduce((a, e) => a + weightOf(e), 0);
   let x = rnd() * tot;
   const ev = pool.find((e) => (x -= weightOf(e)) <= 0) || pool[0]!;
@@ -492,7 +505,7 @@ export interface ResolveResult {
 export function resolveChoice(s: GameState, evId: string, idx: number): ResolveResult {
   const ev = EVENTS.find((e) => e.id === evId)!;
   const c = ev.choices[idx]!;
-  const p = c.p ? c.p(s) : 1;
+  const p = choiceOdds(c.p?.(s), evId, idx);
   const roll = rnd();
   const ok = roll < p;
   const out = ok || !c.fail ? c.ok : c.fail;

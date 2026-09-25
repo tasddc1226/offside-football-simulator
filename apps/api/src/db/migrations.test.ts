@@ -130,6 +130,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   // T-10-011: 게시판.
   board_posts: ['id', 'board', 'title', 'body', 'version', 'pinned', 'author_profile_id', 'created_at', 'updated_at', 'deleted_at'],
   board_comments: ['id', 'post_id', 'profile_id', 'nickname', 'body', 'admin', 'created_at', 'deleted_at'],
+  balance_versions: ['version', 'status', 'note', 'values_json', 'created_by', 'created_at', 'updated_at', 'activated_at'],
 };
 
 describe('migrations', () => {

@@ -26,6 +26,11 @@
   $effect(() => {
     if (appState.screen === 'board' && !Board) void import('./Board.svelte').then((m) => (Board = m.default));
   });
+  // T-10-016: 운영 도구(관리자 전용).
+  let Admin = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'admin' && !Admin) void import('./Admin.svelte').then((m) => (Admin = m.default));
+  });
 </script>
 
 <!-- 화면 전환 모션(T-10-003 goal 3): appState.screen을 key로 써서 화면이 바뀔 때만 새로 마운트해
@@ -52,6 +57,8 @@
       {#if Dex}<Dex />{/if}
     {:else if appState.screen === 'board'}
       {#if Board}<Board />{/if}
+    {:else if appState.screen === 'admin'}
+      {#if Admin}<Admin />{/if}
     {:else}
       <Game />
     {/if}

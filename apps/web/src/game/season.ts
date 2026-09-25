@@ -1,5 +1,6 @@
 // ───────── 시즌 종료 · 이적 시장 · 은퇴 · 저장 ─────────
 import { CLUBS, type Club } from './data.js';
+import { BAL } from './balance.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, rnd } from './rng.js';
 import { leagueOf, clubsIn, fmtMoney, salaryFor, addStat, addAttr, log, bloomTick, newSeason, finalRank } from './engine.js';
@@ -92,7 +93,7 @@ export function makeOffers(s: GameState) {
     && (!am || (leagueOf(c.leagueId).tier <= (value >= 66 ? 4 : 3) && c.leagueId !== 'mls'))
     && (leagueOf(c.leagueId).tier < 4 || leagueOf(s.leagueId).tier >= 4 || c.str <= value - 3));
   // T-10-016 MLS는 팀이 30개라 그대로 두면 오퍼를 쓸어 간다. 실제처럼 주로 30대 베테랑에게 오게 한다.
-  const pull = (c: Club) => (c.leagueId === 'mls' && s.age < 30 ? 0.1 : 1);
+  const pull = (c: Club) => (c.leagueId === 'mls' && s.age < 30 ? BAL.mlsYoungPull : 1);
   const wt = (c: (typeof CLUBS)[number]) => pull(c) * Math.exp(-((c.str - (value - 3)) ** 2) / 20);
   const n = Math.min(pool.length, value >= 60 ? ri(1, 3) : ri(0, 2));
   const chosen: (typeof CLUBS)[number][] = [];

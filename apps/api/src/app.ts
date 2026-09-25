@@ -7,6 +7,7 @@ import { logger } from './middleware/logger.js';
 import { originGuard } from './middleware/originGuard.js';
 import { requestId } from './middleware/requestId.js';
 import { registerAuthRoutes } from './routes/auth.js';
+import { registerBalanceRoutes } from './routes/balance.js';
 import { registerBoardRoutes } from './routes/boards.js';
 import { registerCareerRoutes } from './routes/careers.js';
 import { registerClubCustomRoutes } from './routes/clubCustom.js';
@@ -35,6 +36,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerHofRoutes(app);
   registerClubCustomRoutes(app);
   registerBoardRoutes(app);
+  registerBalanceRoutes(app);
 
   if (options.testRoutes) {
     app.get('/v1/test/throw', () => {
