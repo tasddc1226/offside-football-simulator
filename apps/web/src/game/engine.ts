@@ -359,6 +359,12 @@ export function simBlock(s: GameState): BlockResult {
 // RNG 소비(finalRank의 난수)는 19개 모두에 대해 그대로 일어난다.
 const basePpg = (L: League, str: number) => 1.35 + (str - L.avg) * 0.06;
 
+function strHash(t: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
 /** 순위에 들어가는 상대 인덱스(S.rivals 기준, 강한 순). */
 function rankedRivals(s: GameState): number[] {
   const R = s.season.rivals;
@@ -376,22 +382,25 @@ export interface TableRow {
   pts: number;
 }
 
-/** 현재까지의 리그 순위표. 상대 팀 승점은 전력으로 기대 승점을 매긴 값이고(난수 없음), 승점이 같으면
+/** 현재까지의 리그 순위표. 상대 팀 승점은 전력으로 매긴 기대 승점에 팀별 고정 편차를 더한 값이고(난수 없음), 승점이 같으면
  * 내 팀이 위다. 상대 팀 이름은 리그 클럽을 전력 순으로 짝지어 붙인다. */
 export function leagueTable(s: GameState): TableRow[] {
   const L = leagueOf(s.leagueId), S = s.season, P = S.played;
   const names = clubsIn(s.leagueId).filter((c) => c.id !== s.club.id).sort((a, b) => b.str - a.str).map((c) => c.name);
   const rows: TableRow[] = rankedRivals(s).map((ri, k) => {
-    const ppg = clamp(basePpg(L, S.rivals[ri]!), 0.4, 2.6);
-    const pts = Math.round(ppg * P);
-    // 무승부는 경기의 20~28% — 전력이 중간일수록 많다. 승점이 정확히 맞도록 승·무를 나눈다.
-    let w = Math.max(0, Math.floor((pts - Math.round(P * (0.28 - Math.abs(ppg - 1.35) * 0.06))) / 3));
+    const name = names[k] ?? `${L.name} ${k + 1}`;
+    // 팀·시즌·경기 수로 정해지는 고정 편차(난수 아님) — 같은 전력대 팀들이 똑같은 전적으로 겹치지 않게.
+    const h = strHash(`${name}|${s.year}`);
+    const jitter = P ? ((h + P * 7) % 5) - 2 : 0;
+    const pts = clamp(Math.round(clamp(basePpg(L, S.rivals[ri]!), 0.4, 2.6) * P) + jitter, 0, 3 * P);
+    // 무승부는 경기의 18~32%(팀마다 다름). 승점이 정확히 맞도록 승·무를 나눈다.
+    let w = Math.max(0, Math.floor((pts - Math.round(P * (0.18 + (h % 15) / 100))) / 3));
     let d = pts - 3 * w;
     while (w + d > P && d >= 3) {
       w++;
       d -= 3;
     }
-    return { name: names[k] ?? `${L.name} ${k + 1}`, me: false, p: P, w, d, l: P - w - d, pts };
+    return { name, me: false, p: P, w, d, l: P - w - d, pts };
   });
   rows.push({ name: s.club.name, me: true, p: P, w: S.w, d: S.d, l: S.l, pts: S.pts });
   return rows.sort((a, b) => b.pts - a.pts || Number(b.me) - Number(a.me));
