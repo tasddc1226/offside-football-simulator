@@ -18,6 +18,7 @@ import { compsPhase } from '../game/comps.js';
 import { endSeason, market, acceptOption, retire } from '../game/season.js';
 import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
+import { checkTitles, titleView } from '../game/titles.js';
 import type { NatTour, EventLogEntry, MarketOption } from '../game/types.js';
 import { appState, randomName, type HofTab } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
@@ -44,6 +45,8 @@ export async function advance() {
   const nt = natWindow(s);
   const chips = diffChips(s, before, snapshot(s));
   const ev = rollEvent(s);
+  // 칭호 판정은 이벤트 추첨 뒤에 한다 — 칭호 인기 보상이 이벤트 조건(인기 N 이상)을 바꿔 RNG 흐름이 달라지지 않게.
+  const titles = checkTitles(s).map(titleView);
   const title = s.phase === 0 ? '프리시즌 완료' : `${PHASES[s.phase]} 결과`;
   if (block) log(s, `${PHASES[s.phase]} ${block.n}경기 ${block.w}승 ${block.d}무 ${block.l}패 · 출전 ${block.apps} · ${block.goals}골 ${block.assists}도움`);
   if (block) block.hl.forEach((h) => log(s, h, 'good'));
@@ -76,6 +79,7 @@ export async function advance() {
     comps: comp.map((c) => ({ t: c.t, good: c.k === 'good' })),
     nat: natViews(nt),
     chips: chips as Chip[],
+    titles,
   };
   appState.tab = 'season';
   window.scrollTo({ top: 0, behavior: motionOK ? 'smooth' : 'auto' });
@@ -192,7 +196,7 @@ function tourView(x: NatTour): TourView {
 }
 
 function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
-  const { rec, trophies, awards, notes, gala = [], tours = [], miles = [] } = p.res;
+  const { rec, trophies, awards, notes, gala = [], tours = [], miles = [], titles = [] } = p.res;
   const s = appState.G!;
   const [col, colLabel] = s.pos === 'GK' || s.pos === 'DF' ? [rec.cs, '무실점'] : [rec.assists, '도움'];
   const idx = s.career.indexOf(rec);
@@ -215,6 +219,7 @@ function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
       tours: tours.map(tourView),
       gala,
       miles,
+      titles,
       notes,
       fans,
       age: s.age,

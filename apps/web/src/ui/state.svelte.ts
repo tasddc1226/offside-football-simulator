@@ -43,6 +43,8 @@ export interface LegendView {
   d: LegendSource | null;
   totals: { apps: number; goals: number; assists: number; trophies: number; awards: number; caps: number };
   own: HofEntry | null;
+  /** T-10-026 대표 칭호 id. */
+  title: string | null;
 }
 
 export const appState = $state<{

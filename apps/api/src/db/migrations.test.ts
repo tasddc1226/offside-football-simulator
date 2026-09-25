@@ -102,6 +102,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'public_name',
     'shirt_number',
     'snapshot_json',
+    'title',
   ],
   career_seasons: [
     'career_id',

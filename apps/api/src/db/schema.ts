@@ -128,6 +128,8 @@ export const careers = sqliteTable(
     publicName: text('public_name'),
     shirtNumber: integer('shirt_number'),
     snapshotJson: text('snapshot_json'),
+    // T-10-026 은퇴 때의 대표 칭호 id(web game/titles.ts). 옛 은퇴 기록은 NULL.
+    title: text('title'),
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),

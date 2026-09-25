@@ -5,6 +5,7 @@ import { ovr } from './attributes.js';
 import { clamp, ri, pick, rnd } from './rng.js';
 import { leagueOf, clubsIn, fmtMoney, salaryFor, addStat, addAttr, log, bloomTick, newSeason, finalRank, fameEff } from './engine.js';
 import { seasonSetup, compGoals, seasonAwards, checkMilestones, retireMilestones } from './comps.js';
+import { checkTitles, legendBand, mainTitle, titleView } from './titles.js';
 import { natInit, natSeasonEnd } from './national.js';
 import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
 import { detectCareerHighs } from './records.js';
@@ -44,6 +45,7 @@ export function endSeason(s: GameState) {
   s.career.push(rec);
   rec.ch = detectCareerHighs(s, rec);
   const miles = checkMilestones(s, rec as unknown as { pro?: boolean; apps: number; goals: number; club: string });
+  const titles = checkTitles(s).map(titleView);
   log(s, `${s.year} 시즌 종료 · ${L.name} ${rank}위 · 공식전 ${rec.apps}경기 ${rec.goals}골 ${rec.assists}도움`, 'big');
   const mil = milSeasonEnd(s);
   if (mil) notes.push(mil);
@@ -65,7 +67,7 @@ export function endSeason(s: GameState) {
   s.morale = Math.round((s.morale + 65) / 2);
   s.injury = Math.min(s.injury, 4);
   s.seasonStart = { ...s.attrs }; s.seasonStartSub = { ...s.sub };
-  return { rec, trophies, awards, notes, gala, tours: tours.filter((t) => t.inSquad || (t.matches?.length ?? 0) === 0 || t.stage === '우승' || t.stage === '금메달'), miles };
+  return { rec, trophies, awards, notes, gala, tours: tours.filter((t) => t.inSquad || (t.matches?.length ?? 0) === 0 || t.stage === '우승' || t.stage === '금메달'), miles, titles };
 }
 
 // ───────── 이적 시장 ─────────
@@ -250,12 +252,14 @@ export function legendScore(s: LegendSource): number {
 export function retire(s: GameState): HofEntry {
   s.retired = true;
   retireMilestones(s);
+  const score = legendScore(s);
+  checkTitles(s, { score });
   log(s, `${s.age}세, 정든 그라운드를 떠납니다.`, 'big');
   const t = s.career.reduce((a, r) => ({ g: a.g + r.goals, a: a.a + r.assists, p: a.p + r.apps }), { g: 0, a: 0, p: 0 });
   const entry: HofEntry = {
     name: s.name, pos: s.pos, number: s.number, peak: s.peak, age: s.age, apps: t.p, goals: t.g, assists: t.a,
     trophies: s.trophies.length, awards: s.awards.length, caps: s.nat.caps, ballon: s.awards.filter((x) => x.t === '발롱도르').length,
-    lastClub: s.club.name, score: legendScore(s), date: new Date().toISOString().slice(0, 10),
+    lastClub: s.club.name, score, title: mainTitle(s)?.id, date: new Date().toISOString().slice(0, 10),
     id: s.cid, detail: legendSnapshot(s),
   };
   const hof = loadHOF();
@@ -280,10 +284,11 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
     nat: { caps: s.nat.caps },
     storyLog: (s.storyLog || []).map(({ year, key, name, ending }) => ({ year, key, name, ending })),
     miles: (s.miles || []).map(({ year, t }) => ({ year, t })),
+    titles: (s.titles || []).map(({ id, year }) => ({ id, year })),
   };
 }
 export function legendTitle(score: number): string {
-  return score >= 840 ? '역대 최고의 전설' : score >= 590 ? '월드클래스 레전드' : score >= 425 ? '클럽 레전드' : score >= 305 ? '성실한 프로' : '평범한 축구 커리어';
+  return legendBand(score).name;
 }
 
 // ───────── 저장 ─────────

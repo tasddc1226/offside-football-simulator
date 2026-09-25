@@ -147,7 +147,7 @@ export function newGame(
     leagueId: 'hs', club: { ...club }, contract: null, phase: 0, uniYears: 0,
     season: { apps: 0, starts: 0, goals: 0, assists: 0, ratingSum: 0, cs: 0, mins: 0, played: 0, pts: 0, w: 0, d: 0, l: 0, rivals: [], honors: [] },
     seasonStart: { ...attrs }, seasonStartSub: {},
-    career: [], trophies: [], awards: [], nat: { caps: 0, goals: 0, assists: 0, tours: [], qual: { 2026: true }, captain: false, debutYear: null },
+    career: [], trophies: [], awards: [], titles: [], nat: { caps: 0, goals: 0, assists: 0, tours: [], qual: { 2026: true }, captain: false, debutYear: null },
     mil: { exempt: null, served: false, serving: false, left: 0, type: null, prevClub: null },
     injury: 0, log: [] as LogEntry[], pending: null,
     flags: {}, peak: 0, training: 'rest', retired: false, chains: [], story: {}, storyLog: [],

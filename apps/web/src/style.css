@@ -624,3 +624,32 @@ body:has(nav.tabs) .toast { bottom: calc(var(--tabbar-h) + var(--actionbar-h) + 
 .league-table tr.me td { background: color-mix(in srgb, var(--pitch) 10%, var(--surface)); font-weight: 700; }
 .league-table tr.me td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .league-table .lt-gap td { color: var(--muted); padding: 2px; line-height: 1; }
+
+/* ───────── 칭호 (T-10-026) ───────── */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* 등급 색: 일반·희귀(파랑)·영웅(보라)·전설(금). 두 테마 모두 surface 대비 4.5:1 이상. */
+:root { --r1: var(--muted); --r2: #1F63A8; --r3: #7336B0; --r4: var(--accent-text); }
+:root[data-theme="dark"] { --r2: #72B4F2; --r3: #C8A0F7; --r4: #F0B437; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --r2: #72B4F2; --r3: #C8A0F7; --r4: #F0B437; } }
+.title-tag { display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 9px; background: var(--surface-2); color: var(--rc); border: 1px solid color-mix(in srgb, var(--rc) 45%, transparent); white-space: nowrap; }
+.r1 { --rc: var(--r1); } .r2 { --rc: var(--r2); } .r3 { --rc: var(--r3); } .r4 { --rc: var(--r4); }
+.title-tag.r4 { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+.title-tag.pop { animation: pop .32s cubic-bezier(.3,1.6,.5,1) both; animation-delay: var(--d, 0ms); }
+.report .title-tag.pop { animation-delay: calc(var(--after, 0ms) + var(--d, 0ms)); }
+.card-title { display: inline-block; margin-top: 4px; padding: 0; border: 0; background: none; color: var(--pitch-accent); font-weight: 700; font-size: 13px; text-align: left; }
+.card-title::before { content: '‘'; } .card-title::after { content: '’'; }
+.card-title:hover { text-decoration: underline; }
+.title-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.title-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.title-item { width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 10px; padding: 8px 10px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface); color: inherit; font: inherit; text-align: left; }
+button.title-item:hover { border-color: var(--pitch-2); }
+.title-item[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.title-desc { font-size: 12px; color: var(--muted); min-width: 0; }
+.title-year { font-size: 12px; color: var(--muted); }
+.title-item.locked { grid-template-columns: 1fr auto; background: var(--surface-2); border-style: dashed; }
+.title-item.locked .title-name { font-size: 13px; font-weight: 700; color: var(--muted); }
+.title-item.locked .title-desc { grid-column: 1 / -1; grid-row: 2; }
+.title-prog { grid-column: 1; height: 6px; border-radius: 3px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+.title-prog i { display: block; height: 100%; background: var(--accent); }
+.title-locked summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); padding: 4px 0; }
+@media (prefers-reduced-motion: reduce) { .title-tag.pop { animation: none; } }

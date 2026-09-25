@@ -140,6 +140,8 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
       caps: summary.caps,
       ballon: summary.ballon,
       lastClub: summary.lastClub,
+      // 옛 클라이언트(칭호 없음)의 재전송이 이미 저장된 칭호를 지우지 않게, 보낸 경우에만 바꾼다.
+      ...(summary.title !== undefined ? { title: summary.title } : {}),
       ...(publicName !== undefined ? { publicName } : {}),
       ...(snapshot ? { snapshotJson: JSON.stringify(snapshot), shirtNumber: snapshot.number } : {}),
     })
@@ -166,6 +168,7 @@ const publicColumns = {
   lastClub: careers.lastClub,
   retiredAt: careers.retiredAt,
   hasDetail: sql<number>`${careers.snapshotJson} is not null`,
+  title: careers.title,
 };
 type PublicRow = { [K in keyof typeof publicColumns]: unknown };
 
@@ -189,6 +192,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     lastClub: String(r.lastClub ?? ''),
     retiredAt: String(r.retiredAt ?? ''),
     hasDetail: Boolean(r.hasDetail),
+    title: (r.title as string | null) ?? null,
   };
 }
 

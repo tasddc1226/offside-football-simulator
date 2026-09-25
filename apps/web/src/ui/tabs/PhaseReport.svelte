@@ -5,6 +5,7 @@
   import { Tween } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
   import Chips from '../sheets/Chips.svelte';
+  import NewTitles from '../titles/NewTitles.svelte';
   import { dur } from '../motion.js';
   import type { PhaseReport } from '../sheets/types.js';
 
@@ -89,6 +90,8 @@
       {/if}
     </div>
   {/each}
+
+  {#if r.titles.length}<div class="rp-later"><NewTitles titles={r.titles} pop /></div>{/if}
 
   <div class="rp-later">
     <div class="eyebrow" style="margin-bottom:6px">변화</div>

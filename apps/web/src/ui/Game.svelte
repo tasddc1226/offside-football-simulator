@@ -16,6 +16,8 @@
   import PlayerTab from './tabs/PlayerTab.svelte';
   import CareerTab from './tabs/CareerTab.svelte';
   import TrophyTab from './tabs/TrophyTab.svelte';
+  import TitleDex from './titles/TitleDex.svelte';
+  import { mainTitle } from '../game/titles.js';
 
   const s = $derived(appState.G!);
   // OVR 숫자 트윈(T-10-003 goal 3): 훈련·이벤트 결과로 능력치가 바뀔 때마다 즉시 점프하는 대신
@@ -24,6 +26,12 @@
   const L = $derived(leagueOf(s.leagueId));
   const role = $derived(roleOf(s));
   const contract = $derived(s.contract ? `연봉 ${fmtMoney(s.contract.salary)}` : L.amateur ? '아마추어' : '');
+  const title = $derived(mainTitle(s));
+  // 대표 칭호를 누르면 트로피 탭의 칭호 도감으로 간다.
+  function openTitles() {
+    appState.tab = 'trophy';
+    requestAnimationFrame(() => document.getElementById('titles')?.scrollIntoView({ block: 'start' }));
+  }
   const focusName = $derived(`주력 ${focusOf(s).map((k) => labelOf(s, k)).join('·')}`);
 
   // 엄지 영역 스티키 액션바: "시즌" 탭에서만 노출되는 메인 진행 버튼(원래 SeasonTab 안에 있던
@@ -62,6 +70,7 @@
     <div class="chalk"></div>
     <div>
       <div class="shirt">No.{s.number} · {POS[s.pos].label}</div>
+      {#if title}<button class="card-title r{title.rarity}" data-act="titles" aria-label="대표 칭호 {title.name}, 칭호 도감 열기" onclick={openTitles}>{title.name}</button>{/if}
       <h1>{s.name}</h1>
       <div class="meta">{s.age}세 · <ClubBadge club={s.club} size={16} /> {s.club.name}<br />{L.name}{contract ? ` · ${contract}` : ''}</div>
     </div>
@@ -85,6 +94,7 @@
       {:else if appState.tab === 'career'}
         <CareerTab {s} />
       {:else}
+        <TitleDex {s} />
         <TrophyTab {s} />
       {/if}
     </div>

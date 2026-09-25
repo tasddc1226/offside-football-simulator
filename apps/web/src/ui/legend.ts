@@ -9,6 +9,7 @@ import { getHofDetail } from '../api/client.js';
 import { appState, type LegendView } from './state.svelte.js';
 import { toast, uploadRetirement } from './helpers.js';
 import { totals } from './format.js';
+import { mainTitle } from '../game/titles.js';
 
 export function anonName(pos: Pos, number: number | null): string {
   return `익명의 ${POS[pos].label}${number != null ? ` No.${number}` : ''}`;
@@ -26,6 +27,7 @@ export function viewFromEntry(h: HofEntry): LegendView {
     d: h.detail ?? null,
     totals: { apps: h.apps, goals: h.goals, assists: h.assists, trophies: h.trophies, awards: h.awards, caps: h.caps },
     own: h,
+    title: h.title ?? null,
   };
 }
 
@@ -43,6 +45,7 @@ export function viewFromGame(s: GameState): LegendView {
     d: s,
     totals: { apps: t.p, goals: t.g, assists: t.a, trophies: s.trophies.length, awards: s.awards.length, caps: s.nat.caps },
     own: loadHOF().find((x) => x.id === s.cid) ?? null,
+    title: mainTitle(s)?.id ?? null,
   };
 }
 
@@ -61,6 +64,7 @@ function viewFromPublic(e: PublicHofEntry, d: LegendView['d']): LegendView {
     d,
     totals: { apps: e.apps, goals: e.goals, assists: e.assists, trophies: e.trophies, awards: e.awards, caps: e.caps },
     own: null,
+    title: e.title ?? null,
   };
 }
 

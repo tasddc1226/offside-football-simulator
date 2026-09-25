@@ -79,6 +79,7 @@ export {
   PublicNameSchema,
   LegendSnapshotSchema,
   PublicHofEntrySchema,
+  TitleIdSchema,
   HofListResponseSchema,
   MyCareersResponseSchema,
   HofDetailResponseSchema,
