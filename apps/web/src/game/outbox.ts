@@ -5,6 +5,7 @@
 // 실패는 절대 게임 루프로 throw하지 않는다 — 실패해도 게임은 그대로 진행돼야 한다(fire-and-forget).
 import type { CareerSeasonPayload, PutCareerSeasonBody, PutRetirementBody } from '@offside/contracts';
 import { resolveApiBaseUrl } from '../api/base-url.js';
+import { clearApiCache } from '../api/client.js';
 import type { CareerRecord } from './types.js';
 import { OWNER_CONFLICT_EVENT } from './syncEvents.js';
 
@@ -96,7 +97,11 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
       credentials: 'include',
       keepalive: true,
     });
-    if (res.ok) return 'ok';
+    if (res.ok) {
+      // 은퇴가 올라가면 명예의 전당 · 내 선수 메모가 낡는다(T-10-015).
+      if (item.kind === 'retirement') clearApiCache();
+      return 'ok';
+    }
     // T-10-013: 다른 계정 소유 커리어. 버리되 UI에 알린다(이 계정으로 이어서 기록할지 고르게).
     if (res.status === 409) {
       const body = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;

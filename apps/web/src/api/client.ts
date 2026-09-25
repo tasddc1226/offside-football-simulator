@@ -24,6 +24,30 @@ function failure<T>(code: ApiErrorCode, message: string, retryable: boolean): Ap
   return { ok: false, error: { code, message, retryable } };
 }
 
+// T-10-015. 공개 조회 결과를 메모리에 잠깐 두고, 같은 요청이 동시에 나가면 하나로 합친다 — 화면을 오갈
+// 때마다 같은 목록을 다시 받지 않는다. 실패는 담지 않는다. 쓰기(POST/PUT/PATCH/DELETE)가 성공하면 전부
+// 비운다: 무엇이 바뀌었는지 따지지 않고 "쓰면 다시 읽는다"로 단순하게 맞춘다(쓰기는 드물다).
+const memo = new Map<string, { until: number; result: Promise<ApiResult<unknown>> }>();
+const MEMO_SWEEP_AT = 100;
+
+export function clearApiCache(): void {
+  memo.clear();
+}
+
+/** GET을 ttlMs 동안 메모한다. 같은 path의 진행 중 요청도 함께 쓴다. */
+export function cachedGet<T>(path: string, ttlMs: number): Promise<ApiResult<T>> {
+  const hit = memo.get(path);
+  if (hit && Date.now() < hit.until) return hit.result as Promise<ApiResult<T>>;
+  const result = apiFetch<T>(path, { method: 'GET' });
+  // 선수 상세를 많이 열면 키가 늘어난다 — 일정 크기를 넘으면 만료된 것만 걷어 낸다.
+  if (memo.size >= MEMO_SWEEP_AT) for (const [k, v] of memo) if (Date.now() >= v.until) memo.delete(k);
+  memo.set(path, { until: Date.now() + ttlMs, result });
+  void result.then((r) => {
+    if (!r.ok && memo.get(path)?.result === result) memo.delete(path);
+  });
+  return result;
+}
+
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<ApiResult<T>> {
   const method = (init.method ?? 'GET').toUpperCase();
   const isMutation = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
@@ -50,6 +74,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     return failure('NETWORK_ERROR', '서버에 연결할 수 없습니다.', true);
   }
 
+  if (isMutation && response.ok) clearApiCache();
   if (response.status === 204) return { ok: true, data: undefined as T };
 
   let json: unknown;
@@ -94,12 +119,12 @@ export function googleStartUrl(): string {
 // ───────── T-10-005 공개 명예의 전당 (로그인 불필요) ─────────
 export function getHof(limit = 50, page = 1, sort: HofSort = 'score'): Promise<ApiResult<HofListResponse>> {
   const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}`;
-  return apiFetch<HofListResponse>(`/v1/hof?${q}`, { method: 'GET' });
+  return cachedGet<HofListResponse>(`/v1/hof?${q}`, 60_000);
 }
 /** T-10-013. 이 계정의 은퇴 선수. 익명 프로필이면 linked=false. */
 export function getMyCareers(): Promise<ApiResult<MyCareersResponse>> {
-  return apiFetch<MyCareersResponse>('/v1/careers/mine', { method: 'GET' });
+  return cachedGet<MyCareersResponse>('/v1/careers/mine', 60_000);
 }
 export function getHofDetail(careerId: string): Promise<ApiResult<HofDetailResponse>> {
-  return apiFetch<HofDetailResponse>(`/v1/hof/${encodeURIComponent(careerId)}`, { method: 'GET' });
+  return cachedGet<HofDetailResponse>(`/v1/hof/${encodeURIComponent(careerId)}`, 300_000);
 }

@@ -17,6 +17,7 @@ import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
+import { resolveSession } from '../middleware/session.js';
 import { resolveGoogleCallback } from '../profile/google-link.js';
 import { resolveRequestHostPair } from '../production-hosts.js';
 
@@ -100,7 +101,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
       return c.redirect(url.toString(), 302);
     }
 
-    const session = c.get('session');
+    const session = await resolveSession(c);
     if (!session) return redirectToSettings({ google: 'error', reason: 'state' });
     const db = getDb(c);
 

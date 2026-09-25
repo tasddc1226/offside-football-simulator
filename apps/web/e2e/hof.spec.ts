@@ -186,3 +186,30 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
   await expect(full.locator('[data-hof-mine="0"]')).toContainText('발롱3회');
   await expect(full.locator('[data-hof-mine="0"] .hof-value')).toHaveText('3회');
 });
+
+// T-10-015: 화면을 오가도 같은 공개 조회는 다시 보내지 않는다(메모 60초).
+test('홈 ↔ 전체 보기 ↔ 상세를 오가도 같은 목록을 다시 요청하지 않는다', async ({ page }) => {
+  const asked: string[] = [];
+  page.on('request', (req) => {
+    const u = new URL(req.url());
+    if (u.origin === API) asked.push(u.pathname + u.search);
+  });
+  await page.route(HOF_LIST, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries: [entry], total: 1 } }) }));
+  await page.route(`${API}/v1/hof/${ID}`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entry, snapshot } }) }));
+  await page.route(`${API}/v1/boards/**`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { posts: [], hasMore: false } }) }));
+  await page.goto('/');
+  await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(1);
+  for (let i = 0; i < 2; i++) {
+    await page.locator('[data-act="hof-all"]').click();
+    await page.locator(`[data-hof="full"] [data-hof-id="${ID}"]`).click();
+    await page.locator('[data-act="hof-back"]').click();
+    await page.locator('[data-act="home"]').click();
+    await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(1);
+  }
+  const count = (p: string) => asked.filter((a) => a === p).length;
+  expect(count('/v1/hof?limit=3')).toBe(1);
+  expect(count('/v1/hof?limit=100')).toBe(1);
+  expect(count(`/v1/hof/${ID}`)).toBe(1);
+  expect(count('/v1/boards/notice/posts')).toBe(1);
+  expect(count('/v1/boards/release/posts')).toBe(1);
+});

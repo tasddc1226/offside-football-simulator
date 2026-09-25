@@ -14,6 +14,8 @@ import { getProfile, isLinked } from '../db/repos/profiles.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
+import { purgeEdge } from '../edgeCache.js';
+import { hofDetailPath } from './hof.js';
 import { isAcceptablePublicName } from '../content-filter.js';
 
 /** 소유권 확인: careerId가 이미 다른 프로필 소유면 409. 없으면(새 커리어) 통과. */
@@ -107,6 +109,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const now = new Date().toISOString();
 
     await putRetirement(db, { careerId, summary, publicName, snapshot, now });
+    purgeEdge(c, [hofDetailPath(careerId)]); // 이름 공개 토글이 바로 보이게.
 
     const responseBody = successEnvelope(RetirementResponseSchema).parse({
       data: { careerId, status: 'retired' },

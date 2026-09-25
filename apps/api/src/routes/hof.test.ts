@@ -125,6 +125,21 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect((await createApp().request('/v1/hof?sort=name', {}, ctx.env)).status).toBe(400);
   });
 
+  it('공개 목록은 쿠키가 있어도 세션·프로필을 읽지 않는다(T-10-015)', async () => {
+    const seen: string[] = [];
+    const DB = new Proxy(ctx.env.DB, {
+      get(target, key) {
+        if (key === 'prepare') return (query: string) => (seen.push(query), target.prepare(query));
+        const v = Reflect.get(target, key) as unknown;
+        return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v;
+      },
+    });
+    const res = await createApp().request('/v1/hof', { headers: { Cookie: cookie } }, { ...ctx.env, DB });
+    expect(res.status).toBe(200);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.filter((q) => /"sessions"|"profiles"/.test(q))).toEqual([]);
+  });
+
   it('링크·욕설이 든 공개 이름은 거절한다', async () => {
     const res = await put(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, { ...summary, publicName: 'www.spam.com' });
     expect(res.status).toBe(400);

@@ -6,7 +6,6 @@ import { cors } from './middleware/cors.js';
 import { logger } from './middleware/logger.js';
 import { originGuard } from './middleware/originGuard.js';
 import { requestId } from './middleware/requestId.js';
-import { session } from './middleware/session.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerBoardRoutes } from './routes/boards.js';
 import { registerCareerRoutes } from './routes/careers.js';
@@ -22,7 +21,6 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   app.use('*', cors);
   app.use('*', originGuard);
   app.use('*', bodyGuard);
-  app.use('*', session);
 
   app.get('/v1/health', (c) => {
     return c.json({

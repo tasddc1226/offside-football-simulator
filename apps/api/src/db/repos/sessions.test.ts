@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestD1, type TestD1 } from '../../test/d1.js';
 import { createProfile } from './profiles.js';
-import { createSession, findActiveSession, revokeSession } from './sessions.js';
+import { createSession, findLiveSession, revokeSession } from './sessions.js';
 
 describe('sessions repo', () => {
   let ctx: TestD1;
@@ -24,7 +24,7 @@ describe('sessions repo', () => {
       expiresAt: '2027-01-01T00:00:00Z',
     });
 
-    const found = await findActiveSession(ctx.db, session.tokenHash, '2026-09-02T00:00:00Z');
+    const found = await findLiveSession(ctx.db, session.tokenHash, '2026-09-02T00:00:00Z');
     expect(found?.id).toBe(session.id);
   });
 
@@ -36,7 +36,7 @@ describe('sessions repo', () => {
       expiresAt: '2026-01-01T00:00:00Z',
     });
 
-    const found = await findActiveSession(ctx.db, session.tokenHash, '2026-09-02T00:00:00Z');
+    const found = await findLiveSession(ctx.db, session.tokenHash, '2026-09-02T00:00:00Z');
     expect(found).toBeUndefined();
   });
 
@@ -50,7 +50,7 @@ describe('sessions repo', () => {
 
     await revokeSession(ctx.db, session.id, '2026-09-02T00:00:00Z');
 
-    const found = await findActiveSession(ctx.db, session.tokenHash, '2026-09-02T01:00:00Z');
+    const found = await findLiveSession(ctx.db, session.tokenHash, '2026-09-02T01:00:00Z');
     expect(found).toBeUndefined();
   });
 });

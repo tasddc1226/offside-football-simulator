@@ -2,10 +2,11 @@ import { createMiddleware } from 'hono/factory';
 import type { Context } from 'hono';
 import { AppError } from '../errors.js';
 import type { AppEnv, SessionContext } from '../env.js';
+import { resolveSession } from './session.js';
 
 /** 결정 2: GET /profile을 제외한 보호 라우트는 세션이 없으면 새로 만들지 않고 401을 낸다. */
 export const requireProfile = createMiddleware<AppEnv>(async (c, next) => {
-  if (!c.get('session')) {
+  if (!(await resolveSession(c))) {
     throw new AppError({ code: 'PROFILE_REQUIRED', message: '프로필 세션이 필요합니다.' });
   }
   await next();
