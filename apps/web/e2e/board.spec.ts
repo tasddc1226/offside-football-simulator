@@ -9,7 +9,7 @@ const NOTICE = { id: 'pst_00000000-0000-0000-0000-000000000001', board: 'notice'
 const RELEASE = { id: 'pst_00000000-0000-0000-0000-000000000002', board: 'release', title: '클럽 동기화', version: 'v1.4.0', pinned: false, commentCount: 0, createdAt: T, updatedAt: T };
 const COMMENT = { id: 'cmt_00000000-0000-0000-0000-000000000009', nickname: '운영자', body: '곧 끝나요', admin: true, deletable: false, createdAt: T };
 
-async function mockBoards(page: Page, opts: { admin?: boolean } = {}) {
+async function mockBoards(page: Page, opts: { admin?: boolean; empty?: boolean } = {}) {
   const sent: { method: string; url: string; body: unknown }[] = [];
   await page.route(`${API}/v1/boards/**`, async (route: Route) => {
     const req = route.request();
@@ -17,6 +17,13 @@ async function mockBoards(page: Page, opts: { admin?: boolean } = {}) {
     const method = req.method();
     if (method !== 'GET') sent.push({ method, url: url.pathname, body: req.postDataJSON() });
     if (url.pathname === '/v1/boards/viewer') return route.fulfill(ok({ admin: !!opts.admin }));
+    if (opts.empty && url.pathname.endsWith('/posts') && method === 'GET') return route.fulfill(ok({ posts: [], hasMore: false }));
+    if (url.pathname === '/v1/boards/notice/posts' && method === 'POST') {
+      return route.fulfill(ok({ ...NOTICE, id: 'pst_00000000-0000-0000-0000-000000000004', pinned: false, body: '본문' }, 201));
+    }
+    if (url.pathname === '/v1/boards/posts/pst_00000000-0000-0000-0000-000000000004') {
+      return route.fulfill(ok({ post: { ...NOTICE, id: 'pst_00000000-0000-0000-0000-000000000004', title: '첫 공지', pinned: false, body: '본문' }, comments: [] }));
+    }
     if (url.pathname === '/v1/boards/notice/posts' && method === 'GET') return route.fulfill(ok({ posts: [NOTICE], hasMore: false }));
     if (url.pathname === '/v1/boards/release/posts' && method === 'GET') return route.fulfill(ok({ posts: [RELEASE], hasMore: false }));
     if (url.pathname === `/v1/boards/posts/${NOTICE.id}`) {
@@ -80,6 +87,21 @@ test('소식: 관리자는 새 글을 쓴다', async ({ page }) => {
   await expect(page.locator('[data-post="pst_00000000-0000-0000-0000-000000000003"] h2')).toHaveText('새 버전');
   expect(sent.at(-1)).toMatchObject({ method: 'POST', url: '/v1/boards/release/posts', body: { title: '새 버전', version: 'v1.5.0', body: '본문', pinned: false } });
   await expect(page.locator('[data-act="edit-post"]')).toBeVisible();
+});
+
+test('소식: 글이 하나도 없어도 전체 보기로 들어가 관리자가 첫 글을 쓴다', async ({ page }) => {
+  const sent = await mockBoards(page, { admin: true, empty: true });
+  await page.goto('/');
+  const notice = page.locator('[data-home-news="notice"]');
+  await expect(notice).toContainText('아직 올라온 글이 없어요');
+  await notice.locator('[data-act="news-all"]').click();
+  await expect(page.locator('h1')).toHaveText('공지사항');
+  await page.locator('[data-act="new-post"]').click();
+  await page.locator('#post-title').fill('첫 공지');
+  await page.locator('#post-body').fill('본문');
+  await page.locator('[data-act="save-post"]').click();
+  await expect(page.locator('[data-post="pst_00000000-0000-0000-0000-000000000004"] h2')).toHaveText('첫 공지');
+  expect(sent.at(-1)).toMatchObject({ method: 'POST', url: '/v1/boards/notice/posts', body: { title: '첫 공지', body: '본문', pinned: false } });
 });
 
 test('소식: 목록·글 화면에 접근성 위반이 없다', async ({ page }) => {
