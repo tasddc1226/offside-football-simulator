@@ -156,4 +156,4 @@ pnpm --filter @offside/fulltime-sim analyze
 - **공개 저장소다(All Rights Reserved, `LICENSE`).** 개인 메일·실명·로컬 경로(`/Users/…`, 에이전트 임시
   폴더)·운영 사용자 ID·비밀값·DB 덤프·다른 서비스 화면 캡처를 커밋하지 않는다. CI의
   `public-hygiene` 단계(`.github/scripts/public-hygiene.mjs`)가 메일·경로를 잡는다. 운영자 공개
-  연락처는 `apps/web/scripts/seo.mjs`에만 둔다.
+  연락처는 도메인 메일 `contact@offside-lab.com`(Cloudflare Email Routing으로 전달)만 쓴다.

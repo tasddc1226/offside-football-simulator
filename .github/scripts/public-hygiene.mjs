@@ -13,24 +13,20 @@ const RULES = [
   { kind: 'email', re: /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g },
 ];
 
-// 가짜·예약 도메인과 서비스 주소는 허용한다.
+// 가짜·예약 도메인, 서비스 주소, 운영자 도메인 메일(contact@offside-lab.com)만 허용한다.
 const ALLOWED_EMAIL =
-  /@(?:(?:[a-z0-9-]+\.)*(?:example\.(?:com|org|net)|test|invalid|localhost)|users\.noreply\.github\.com|anthropic\.com)$/i;
+  /@(?:(?:[a-z0-9-]+\.)*(?:example\.(?:com|org|net)|test|invalid|localhost)|offside-lab\.com|users\.noreply\.github\.com|anthropic\.com)$/i;
 
 // 검사하지 않는 파일: 해시만 가득한 lockfile, 규칙 예시를 일부러 담은 이 검사의 테스트.
 const SKIP_FILES = new Set(['pnpm-lock.yaml', '.github/scripts/public-hygiene.test.mjs']);
 
-// 운영자 공개 연락처(이용약관·개인정보처리방침)는 이 파일에만 둔다.
-const EMAIL_ALLOWED_FILES = new Set(['apps/web/scripts/seo.mjs']);
-
 /** 한 파일의 텍스트에서 위반을 찾는다. [{ line, kind }] */
-export function findViolations(path, text) {
+export function findViolations(text) {
   const out = [];
   text.split('\n').forEach((lineText, i) => {
     for (const { kind, re } of RULES) {
       for (const [match] of lineText.matchAll(re)) {
-        if (kind === 'email' && (ALLOWED_EMAIL.test(match) || EMAIL_ALLOWED_FILES.has(path)))
-          continue;
+        if (kind === 'email' && ALLOWED_EMAIL.test(match)) continue;
         out.push({ line: i + 1, kind });
       }
     }
@@ -52,7 +48,7 @@ function main() {
       continue; // 삭제 예정·심볼릭 링크 등
     }
     if (buf.includes(0)) continue; // 바이너리
-    for (const v of findViolations(path, buf.toString('utf8'))) {
+    for (const v of findViolations(buf.toString('utf8'))) {
       console.error(`${path}:${v.line}: ${v.kind}`);
       failures++;
     }
