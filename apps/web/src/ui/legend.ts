@@ -80,7 +80,12 @@ export function openLocalLegend(h: HofEntry) {
 
 export async function openPublicLegend(e: PublicHofEntry) {
   if (!e.hasDetail) return show(viewFromPublic(e, null));
-  const r = await getHofDetail(e.id);
+  return openPublicLegendById(e.id);
+}
+
+/** T-10-030 홈 라이브 피드의 은퇴 소식처럼 id만 아는 선수를 연다. */
+export async function openPublicLegendById(careerId: string) {
+  const r = await getHofDetail(careerId);
   if (!r.ok) {
     toast('상세 기록을 불러오지 못했습니다.');
     return;

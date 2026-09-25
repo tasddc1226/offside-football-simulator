@@ -1,0 +1,1 @@
+CREATE INDEX `career_seasons_created_idx` ON `career_seasons` (`created_at`);

@@ -183,7 +183,11 @@ export const careerSeasons = sqliteTable(
     chJson: text('ch_json'),
     createdAt: text('created_at').notNull(),
   },
-  (table) => [primaryKey({ columns: [table.careerId, table.year] })],
+  (table) => [
+    primaryKey({ columns: [table.careerId, table.year] }),
+    // T-10-030 홈 라이브 현황: 최근 올라온 시즌(피드·오늘 시즌 수)을 시각 순으로 찾는다.
+    index('career_seasons_created_idx').on(table.createdAt),
+  ],
 );
 
 /** T-1-004, ADR-008. `PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`·`GOOGLE_LINKED`·`GOOGLE_UNLINKED`(T-1-013)·`CAREERS_MERGED`(T-10-013)·`BALANCE_ACTIVATED`·`COMMENTS_PURGED`(T-10-016). */
