@@ -65,6 +65,7 @@ export function uploadRetirement(careerId: string, entry: HofEntry) {
       caps: entry.caps,
       ballon: entry.ballon,
       lastClub: entry.lastClub,
+      title: entry.title ?? null,
       publicName: entry.public ? entry.name : null,
       ...(entry.detail ? { snapshot: entry.detail } : {}),
     }),

@@ -83,6 +83,24 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect(entries[0]).toMatchObject({ name: null, number: null, hasDetail: false });
   });
 
+  it('대표 칭호와 획득 칭호를 저장하고, 칭호 없이 다시 보내도 지우지 않는다 (T-10-026)', async () => {
+    const titles = [{ id: 'goals100', year: 2034 }, { id: 'debut', year: 0 }];
+    await put(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, { ...summary, title: 'goals100', publicName: null, snapshot: { ...snapshot, titles } });
+    const list = successEnvelope(HofListResponseSchema).parse(await (await createApp().request('/v1/hof', {}, ctx.env)).json()).data;
+    expect(list.entries[0]?.title).toBe('goals100');
+    await put(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, { ...summary, publicName: '김오프' });
+    const detail = successEnvelope(HofDetailResponseSchema).parse(await (await createApp().request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).json()).data;
+    expect(detail.entry.title).toBe('goals100');
+    expect(detail.snapshot?.titles).toEqual(titles);
+    expect((await put(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, { ...summary, title: '<b>칭호</b>' })).status).toBe(400);
+  });
+
+  it('칭호 없이 은퇴한 옛 기록은 title이 null이다', async () => {
+    await put(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, summary);
+    const { entries } = successEnvelope(HofListResponseSchema).parse(await (await createApp().request('/v1/hof', {}, ctx.env)).json()).data;
+    expect(entries[0]?.title).toBeNull();
+  });
+
   it('은퇴하지 않은 커리어·없는 ID는 404', async () => {
     expect((await createApp().request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).status).toBe(404);
     const { entries } = successEnvelope(HofListResponseSchema).parse(await (await createApp().request('/v1/hof', {}, ctx.env)).json()).data;

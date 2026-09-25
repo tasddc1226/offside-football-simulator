@@ -4,12 +4,15 @@
   // 서버에는 선수 이름이 없어(공개를 고른 경우만) 같은 기기의 기록이 있으면 그 이름·공개 설정을 쓴다.
   // 홈에서는 레전드 점수 TOP 3만 보여 주고, '전체 보기'(full)에서는 순위 유형(득점·도움·발롱도르…)을 골라
   // 100명씩 페이지로 나눠 보여 준다. score가 아닌 유형은 그 기록이 0인 선수를 뺀다(서버와 같은 규칙).
+  import TitleTag from './titles/TitleTag.svelte';
+  import { titleById } from '../game/titles.js';
   import type { HofSort, PublicHofEntry } from '@offside/contracts';
   import { POS } from '../game/data.js';
   import { loadHOF } from '../game/season.js';
   import type { HofEntry } from '../game/types.js';
   import { getHof, getMyCareers } from '../api/client.js';
-  import { anonName, openLocalLegend, openPublicLegend } from './legend.js';
+  import { openLocalLegend, openPublicLegend } from './legend.js';
+  import { anonName } from './format.js';
   import { openHof } from './actions.js';
   import Laurel from './Laurel.svelte';
   import { appState, type HofTab } from './state.svelte.js';
@@ -21,7 +24,7 @@
 
   type Pos = keyof typeof POS;
   type RowStats = Pick<PublicHofEntry, 'apps' | 'goals' | 'assists' | 'trophies' | 'awards' | 'caps' | 'peak' | 'ballon'> & { score: number };
-  type MineRow = { key: string; name: string; pos: Pos; tag: string | null; stats: RowStats; open: () => void };
+  type MineRow = { key: string; name: string; pos: Pos; tag: string | null; stats: RowStats; title: string | null; open: () => void };
   const SORTS: Record<HofSort, { label: string; unit: string; get: (s: RowStats) => number }> = {
     score: { label: '레전드 점수', unit: '', get: (s) => s.score },
     goals: { label: '득점', unit: '골', get: (s) => s.goals },
@@ -55,6 +58,7 @@
     pos: h.pos,
     tag: h.public ? '공개' : null,
     stats: h,
+    title: h.title ?? null,
     open: () => openLocalLegend(h),
   });
   const serverRow = (e: PublicHofEntry): MineRow => ({
@@ -63,6 +67,7 @@
     pos: e.pos,
     tag: e.name ? '공개' : null,
     stats: { ...e, score: e.legendScore },
+    title: e.title ?? null,
     open: () => void openPublicLegend(e),
   });
   const deviceRows = local.map(localRow);
@@ -129,7 +134,8 @@
   const hasRows = $derived(tab === 'all' ? !!all?.length : source !== 'idle' && source !== 'loading' && mineAll.length > 0);
 </script>
 
-{#snippet row(i: number, name: string, pos: Pos, tag: string | null, t: RowStats)}
+{#snippet row(i: number, name: string, pos: Pos, tag: string | null, t: RowStats, titleId: string | null | undefined)}
+  {@const tt = titleById(titleId)}
   {#if i < MEDAL.length}
     <div class="hof-rank medal {MEDAL[i]}"><Laurel /><span>{i + 1}</span></div>
   {:else}
@@ -138,6 +144,7 @@
   <div>
     <b>{name}</b> <span class="pill">{POS[pos].label}</span>
     {#if tag}<span class="pill">{tag}</span>{/if}
+    {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
     <div class="muted" style="font-size:12px">{t.apps}경기 {t.goals}골 {t.assists}도움 · 트로피 {t.trophies} · 최고 OVR {t.peak}{t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}{sort !== 'score' ? ` · 레전드 ${t.score}` : ''}</div>
   </div>
   <div class="num hof-value">{by.get(t)}{#if by.unit}<small>{by.unit}</small>{/if}</div>
@@ -184,7 +191,7 @@
       {#if full}<p class="muted hof-source">{sort === 'score' ? '은퇴 선수' : `${by.label} 기록이 있는 선수`} {total}명 · {by.label} 순</p>{/if}
       {#each all as h, i (h.id)}
         <button class="hof-row" data-hof-id={h.id} onclick={() => void openPublicLegend(h)}>
-          {@render row(offset + i, h.name ?? anonName(h.pos, h.number), h.pos, myIds.has(h.id) ? '내 선수' : null, { ...h, score: h.legendScore })}
+          {@render row(offset + i, h.name ?? anonName(h.pos, h.number), h.pos, myIds.has(h.id) ? '내 선수' : null, { ...h, score: h.legendScore }, h.title)}
         </button>
       {/each}
       {@render pager()}
@@ -203,7 +210,7 @@
     </p>
     {#each mineShown as r, i (r.key)}
       <button class="hof-row" data-hof-mine={offset + i} onclick={r.open}>
-        {@render row(offset + i, r.name, r.pos, r.tag, r.stats)}
+        {@render row(offset + i, r.name, r.pos, r.tag, r.stats, r.title)}
       </button>
     {:else}
       <p class="empty">{emptyText}</p>

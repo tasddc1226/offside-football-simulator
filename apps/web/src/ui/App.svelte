@@ -27,6 +27,11 @@
   $effect(() => {
     if (appState.screen === 'board' && !Board) void import('./Board.svelte').then((m) => (Board = m.default));
   });
+  // T-10-027: 서버 최초 기록.
+  let Firsts = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'firsts' && !Firsts) void import('./firsts/Firsts.svelte').then((m) => (Firsts = m.default));
+  });
   // T-10-016: 운영 도구(관리자 전용).
   let Admin = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -58,6 +63,8 @@
       {#if Dex}<Dex />{/if}
     {:else if appState.screen === 'board'}
       {#if Board}<Board />{/if}
+    {:else if appState.screen === 'firsts'}
+      {#if Firsts}<Firsts />{/if}
     {:else if appState.screen === 'admin'}
       {#if Admin}<Admin />{/if}
     {:else}

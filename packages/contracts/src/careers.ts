@@ -93,6 +93,9 @@ export const CareerUpsertResponseSchema = z.strictObject({
 });
 export type CareerUpsertResponse = z.infer<typeof CareerUpsertResponseSchema>;
 
+/** T-10-026 칭호 id(web `game/titles.ts` 레지스트리 키). 서버는 모양만 검사하고 뜻은 웹이 해석한다. */
+export const TitleIdSchema = z.string().regex(/^[a-z0-9_]{1,32}$/);
+
 /** season.ts `retire()`가 만드는 `HofEntry` + `legendScore()`에서 뽑아낸 은퇴 요약. */
 export const RetirementSummarySchema = z.strictObject({
   retireAge: z.number().int().min(0).max(100),
@@ -106,6 +109,8 @@ export const RetirementSummarySchema = z.strictObject({
   caps: z.number().int().min(0).max(10000),
   ballon: z.number().int().min(0).max(1000),
   lastClub: ShortStringSchema,
+  /** T-10-026 은퇴 때의 대표 칭호. 옛 클라이언트는 보내지 않는다. */
+  title: TitleIdSchema.nullable().optional(),
 });
 export type RetirementSummary = z.infer<typeof RetirementSummarySchema>;
 
@@ -171,6 +176,8 @@ export const LegendSnapshotSchema = z.strictObject({
     .array(z.strictObject({ year: z.number().int().min(2000).max(2200), key: z.string().max(32), name: z.string().max(40), ending: z.string().max(80) }))
     .max(80),
   miles: z.array(YearTextSchema).max(300),
+  /** T-10-026 획득한 칭호(year 0 = 칭호 도입 전 기록). 옛 스냅샷엔 없다. */
+  titles: z.array(z.strictObject({ id: TitleIdSchema, year: z.number().int().min(0).max(2200) })).max(200).optional(),
 });
 export type LegendSnapshot = z.infer<typeof LegendSnapshotSchema>;
 
@@ -201,6 +208,8 @@ export const PublicHofEntrySchema = z.strictObject({
   lastClub: z.string(),
   retiredAt: z.string(),
   hasDetail: z.boolean(),
+  /** T-10-026 대표 칭호 id(없으면 null). */
+  title: z.string().nullable(),
 });
 export type PublicHofEntry = z.infer<typeof PublicHofEntrySchema>;
 
@@ -226,3 +235,24 @@ export const HofSortSchema = z.enum(['score', 'goals', 'assists', 'ga', 'apps', 
 export type HofSort = z.infer<typeof HofSortSchema>;
 /** `GET /v1/hof?page=` 1부터 시작하는 페이지 번호(한 페이지 = limit명). */
 export const HofPageQuerySchema = z.coerce.number().int().min(1).max(10000).default(1);
+
+// ───────── T-10-027 서버 최초 기록 ─────────
+
+export const ServerFirstCatSchema = z.enum(['total', 'season', 'honor']);
+export type ServerFirstCat = z.infer<typeof ServerFirstCatSchema>;
+
+/** 기록 하나. 아직 아무도 못 채웠으면 achievedAt·holder가 null. 이름은 명예의 전당에 이름 공개를 고른 경우만. */
+export const ServerFirstSchema = z.strictObject({
+  id: z.string().min(1).max(32),
+  cat: ServerFirstCatSchema,
+  label: z.string().max(80),
+  achievedAt: z.string().nullable(),
+  holder: z
+    .strictObject({ careerId: z.string().min(1), name: z.string().nullable(), pos: CareerPosSchema, number: z.number().int().nullable() })
+    .nullable(),
+});
+export type ServerFirst = z.infer<typeof ServerFirstSchema>;
+
+/** `GET /v1/firsts`. items는 규칙 순서 그대로(미달성 포함 — 달성 개수는 holder로 센다). */
+export const FirstsResponseSchema = z.strictObject({ items: z.array(ServerFirstSchema) });
+export type FirstsResponse = z.infer<typeof FirstsResponseSchema>;

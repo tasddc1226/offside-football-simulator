@@ -2,17 +2,13 @@
 // 은퇴 상세 화면(Legend.svelte)과 은퇴 직후 화면(Retired.svelte)이 같은 LegendView를 그린다.
 // 내 선수는 로컬 ft_hof 항목(HofEntry)에서, 다른 유저의 선수는 서버 /v1/hof에서 만든다.
 import type { PublicHofEntry } from '@offside/contracts';
-import { POS, type Pos } from '../game/data.js';
 import { legendScore, loadHOF, saveKey } from '../game/season.js';
 import type { GameState, HofEntry } from '../game/types.js';
 import { getHofDetail } from '../api/client.js';
 import { appState, type LegendView } from './state.svelte.js';
 import { toast, uploadRetirement } from './helpers.js';
-import { totals } from './format.js';
-
-export function anonName(pos: Pos, number: number | null): string {
-  return `익명의 ${POS[pos].label}${number != null ? ` No.${number}` : ''}`;
-}
+import { anonName, totals } from './format.js';
+import { mainTitle } from '../game/titles.js';
 
 export function viewFromEntry(h: HofEntry): LegendView {
   return {
@@ -26,6 +22,7 @@ export function viewFromEntry(h: HofEntry): LegendView {
     d: h.detail ?? null,
     totals: { apps: h.apps, goals: h.goals, assists: h.assists, trophies: h.trophies, awards: h.awards, caps: h.caps },
     own: h,
+    title: h.title ?? null,
   };
 }
 
@@ -43,6 +40,7 @@ export function viewFromGame(s: GameState): LegendView {
     d: s,
     totals: { apps: t.p, goals: t.g, assists: t.a, trophies: s.trophies.length, awards: s.awards.length, caps: s.nat.caps },
     own: loadHOF().find((x) => x.id === s.cid) ?? null,
+    title: mainTitle(s)?.id ?? null,
   };
 }
 
@@ -61,6 +59,7 @@ function viewFromPublic(e: PublicHofEntry, d: LegendView['d']): LegendView {
     d,
     totals: { apps: e.apps, goals: e.goals, assists: e.assists, trophies: e.trophies, awards: e.awards, caps: e.caps },
     own: null,
+    title: e.title ?? null,
   };
 }
 

@@ -7,6 +7,7 @@
   import Topbar from './Topbar.svelte';
   import HallOfFame from './HallOfFame.svelte';
   import HomeNews from './HomeNews.svelte';
+  import HomeFirsts from './firsts/HomeFirsts.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { withRo } from './format.js';
 
@@ -54,7 +55,7 @@
     </section>
   {/if}
   <div class="tiles">
-    <div class="tile"><span class="eyebrow">How to play</span><b>구간마다 훈련 선택</b><span class="muted" style="font-size:13px">한 시즌 = 프리시즌 + 전반기 + 후반기</span></div>
+    <HomeFirsts />
     <button class="tile tile-link" data-act="dex" onclick={goDex}>
       <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted" style="font-size:13px">선택지마다 성공 확률 공개 · 확률 도감 보기 →</span>
     </button>

@@ -12,7 +12,7 @@ import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
 import type { PhaseReport } from './sheets/types.js';
 
-export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex' | 'hof' | 'admin';
+export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex' | 'hof' | 'firsts' | 'admin';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
 export type HofTab = 'all' | 'mine';
 
@@ -43,6 +43,8 @@ export interface LegendView {
   d: LegendSource | null;
   totals: { apps: number; goals: number; assists: number; trophies: number; awards: number; caps: number };
   own: HofEntry | null;
+  /** T-10-026 대표 칭호 id. */
+  title: string | null;
 }
 
 export const appState = $state<{

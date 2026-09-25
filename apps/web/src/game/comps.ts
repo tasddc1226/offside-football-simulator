@@ -5,16 +5,16 @@ import { clamp, ri, chance, gauss, rnd } from './rng.js';
 import { leagueOf, clubsIn, roleOf, addStat } from './engine.js';
 import type { GameState, Season, SeasonComp, NatTour } from './types.js';
 
-const CUPS: Record<string, string[]> = {
+export const CUPS: Record<string, string[]> = {
   hs: ['전국고교축구선수권'], uni: ['전국대학축구선수권'], k3: ['코리아컵'], k2: ['코리아컵'], k1: ['코리아컵'], j1: ['일왕배', 'J리그컵'], mls: ['US 오픈컵', '리그스컵'],
   ere: ['KNVB컵'], l1: ['쿠프 드 프랑스'], bl: ['DFB-포칼'], sa: ['코파 이탈리아'], ll: ['코파 델 레이'], pl: ['FA컵', 'EFL컵'],
 };
 const SUPERCUP: Record<string, string> = { pl: 'FA 커뮤니티 실드', ll: '수페르코파 데 에스파냐', sa: '수페르코파 이탈리아나', bl: 'DFL 슈퍼컵', l1: '트로페 데 샹피옹', ere: '요한 크라위프 스할', j1: '재팬 슈퍼컵' };
-const TOP_SCORER: Record<string, string> = { pl: '프리미어리그 골든부트', ll: '피치치 트로피', sa: '카포칸노니에레', bl: '토르예거카논', l1: '리그 1 득점왕', ere: '에레디비시 득점왕', j1: 'J리그 득점왕', mls: 'MLS 골든부트', k1: 'K리그1 득점왕', k2: 'K리그2 득점왕', k3: 'K3리그 득점왕' };
-const POTY: Record<string, string> = { pl: 'PFA 올해의 선수', ll: '라리가 올해의 선수', sa: '세리에 A MVP', bl: '분데스리가 올해의 선수', l1: 'UNFP 올해의 선수', ere: '에레디비시 올해의 선수', j1: 'J리그 MVP', mls: 'MLS MVP', k1: 'K리그1 MVP', k2: 'K리그2 MVP', k3: 'K3리그 MVP' };
+export const TOP_SCORER: Record<string, string> = { pl: '프리미어리그 골든부트', ll: '피치치 트로피', sa: '카포칸노니에레', bl: '토르예거카논', l1: '리그 1 득점왕', ere: '에레디비시 득점왕', j1: 'J리그 득점왕', mls: 'MLS 골든부트', k1: 'K리그1 득점왕', k2: 'K리그2 득점왕', k3: 'K3리그 득점왕' };
+export const POTY: Record<string, string> = { pl: 'PFA 올해의 선수', ll: '라리가 올해의 선수', sa: '세리에 A MVP', bl: '분데스리가 올해의 선수', l1: 'UNFP 올해의 선수', ere: '에레디비시 올해의 선수', j1: 'J리그 MVP', mls: 'MLS MVP', k1: 'K리그1 MVP', k2: 'K리그2 MVP', k3: 'K3리그 MVP' };
 const YOUNG: Record<string, string> = { pl: 'PFA 올해의 영플레이어', k1: 'K리그1 영플레이어상', k2: 'K리그2 영플레이어상', j1: 'J리그 베스트 영플레이어상' };
 /** ko: 리그 페이즈 없이 전 라운드 녹아웃(전반기 1라운드 · 후반기 16강~결승). */
-const CONT: Record<string, { name: string; avg: number; games: number; top: number; po: number | null; ko?: boolean }> = {
+export const CONT: Record<string, { name: string; avg: number; games: number; top: number; po: number | null; ko?: boolean }> = {
   UCL: { name: 'UEFA 챔피언스리그', avg: 80, games: 8, top: 16, po: 10 },
   UEL: { name: 'UEFA 유로파리그', avg: 74, games: 8, top: 16, po: 10 },
   UECL: { name: 'UEFA 컨퍼런스리그', avg: 69, games: 6, top: 12, po: 8 },

@@ -7,6 +7,8 @@
   import type { LegendView } from './state.svelte.js';
   import CareerTab from './tabs/CareerTab.svelte';
   import TrophyTab from './tabs/TrophyTab.svelte';
+  import TitleTag from './titles/TitleTag.svelte';
+  import { titleById, type TitleDef } from '../game/titles.js';
 
   const { v }: { v: LegendView } = $props();
   const d = $derived(v.d);
@@ -20,6 +22,14 @@
   const best3 = $derived(d ? bestSeasons(d) : []);
   const bests = $derived(d ? personalBests(d) : []);
   const timeline = $derived(d ? careerTimeline(d).slice().reverse() : []);
+  const main = $derived(titleById(v.title));
+  // T-10-026 획득한 칭호(등급 높은 순). 칭호 도입 전 은퇴 기록엔 없다.
+  const titles = $derived(
+    (d?.titles ?? [])
+      .map((e) => titleById(e.id))
+      .filter((x): x is TitleDef => !!x)
+      .sort((a, b) => b.rarity - a.rarity),
+  );
 </script>
 
 <section class="player">
@@ -30,7 +40,11 @@
     <div class="meta">{v.age}세 은퇴 · 마지막 소속 {v.lastClub}</div>
   </div>
   <div class="ovr"><div class="n">{v.score}</div><div class="l">LEGEND</div></div>
-  <div class="foot"><span class="pill role-주전">{legendTitle(v.score)}</span><span class="pill">최고 OVR {v.peak}</span></div>
+  <div class="foot">
+    <span class="pill role-주전">{legendTitle(v.score)}</span>
+    {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{main.name}’</span>{/if}
+    <span class="pill">최고 OVR {v.peak}</span>
+  </div>
 </section>
 <section class="card stack">
   <div class="eyebrow">Career Highlights</div>
@@ -112,6 +126,13 @@
     </section>
   {/if}
 
+  {#if titles.length}
+    <section class="card" data-legend-titles>
+      <div class="eyebrow">Titles</div>
+      <h2 style="margin-bottom:8px">획득한 칭호 {titles.length}개</h2>
+      <div class="chips">{#each titles as x (x.id)}<TitleTag name={x.name} rarity={x.rarity} />{/each}</div>
+    </section>
+  {/if}
   <TrophyTab s={d} />
   <CareerTab s={d} />
 {/if}

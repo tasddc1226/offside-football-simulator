@@ -1,0 +1,1 @@
+ALTER TABLE `careers` ADD `title` text;

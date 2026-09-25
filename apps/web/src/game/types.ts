@@ -250,6 +250,10 @@ export interface GameState {
   story: Record<string, StoryState>;
   storyLog: { year: number; key: string; name: string; ending: string }[];
   miles?: { year: number; t: string }[];
+  /** T-10-026. 획득한 칭호(획득 순). 칭호 도입 전 저장엔 없다 — 불러올 때 titles.ensureTitles()가 채운다. */
+  titles?: { id: string; year: number }[] | undefined;
+  /** T-10-026. 유저가 고른 대표 칭호 id. 없으면 mainTitle()이 자동으로 고른다. */
+  titleSel?: string;
   rng: RngSaveState;
   /** T-9-009. 이번 시즌 버퍼링된 선택 로그(`ft_save`와 함께 자동 저장). 시즌 종료 시 업로드 페이로드로
    * 옮겨지고 비워진다. 최대 300개, 넘치면 가장 오래된 것부터 버린다. */
@@ -279,11 +283,13 @@ export interface HofEntry {
   detail?: LegendSnapshot;
   /** T-10-005. 전체 명예의 전당에 선수 이름을 공개했는지(기본 false = 익명). */
   public?: boolean;
+  /** T-10-026. 은퇴 때의 대표 칭호 id. */
+  title?: string | undefined;
 }
 
 /** 은퇴 리포트(레전드 점수 구성·시즌별 기록·수상·여정)가 읽는 필드. 진행 중인 GameState와 저장된
  * 은퇴 스냅샷(LegendSnapshot) 둘 다 이 모양을 만족한다. */
-export type LegendSource = Pick<GameState, 'pos' | 'peak' | 'career' | 'trophies' | 'awards' | 'ballon' | 'storyLog' | 'miles'> & {
+export type LegendSource = Pick<GameState, 'pos' | 'peak' | 'career' | 'trophies' | 'awards' | 'ballon' | 'storyLog' | 'miles' | 'titles'> & {
   nat: { caps: number };
 };
 

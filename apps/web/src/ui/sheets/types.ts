@@ -1,6 +1,7 @@
 // 시트 본문 뷰 모델. actions.ts가 게임 상태에서 화면에 필요한 값만 골라 만들고,
 // ui/sheets/*.svelte가 그대로 그린다(컴포넌트는 게임 로직을 직접 부르지 않는다).
 import type { Chip } from '../sheetState.svelte.js';
+import type { TitleView } from '../../game/titles.js';
 
 export type StoryTag = { name: string; stage: number; total: number };
 export type StoryNote = { name: string; ending: string | null; started: boolean };
@@ -36,6 +37,7 @@ export type PhaseReport = {
   comps: { t: string; good: boolean }[];
   nat: NatView[];
   chips: Chip[];
+  titles: TitleView[];
 };
 
 /** T-10-004: 시트 dialog의 접근 가능한 이름(axe aria-dialog-name). 화면의 제목 줄과 같은 문구. */
@@ -76,6 +78,7 @@ export type SheetView =
       tours: TourView[];
       gala: string[];
       miles: string[];
+      titles: TitleView[];
       notes: string[];
       fans: string[];
       age: number;

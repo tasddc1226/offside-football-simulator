@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { SheetView } from './types.js';
+  import NewTitles from '../titles/NewTitles.svelte';
   let { v }: { v: Extract<SheetView, { kind: 'season' }> } = $props();
 </script>
 
@@ -50,6 +51,7 @@
     {#each v.miles as m, i (i)}<p>· {m}</p>{/each}
   </div>
 {/if}
+<NewTitles titles={v.titles} pop />
 {#if v.notes.length}<p class="muted">{v.notes.join(' · ')}</p>{/if}
 <div>
   <div class="eyebrow" style="margin-bottom:6px">팬 반응</div>

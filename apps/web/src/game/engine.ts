@@ -74,9 +74,12 @@ export function addStat(s: GameState, k: StatKey, v: number) {
   if (k !== 'money') v = jit(v);
   if (k === 'money') s.money = Math.round(s.money + v);
   else if (k === 'trust') s.trust = clamp(s.trust + v, -6, 6);
-  else if (k === 'fame') s.fame = clamp(s.fame + v * (v > 0 && s.trait === 'star' ? 1.5 : v > 0 && s.trait === 'early' && s.age <= 23 ? 1.4 : 1), 0, 100);
+  // T-10-025: 인기는 상한 없이 쌓인다(하한 0만 유지). 밸런스에 닿는 공식은 fameEff()로 100까지만 반영한다.
+  else if (k === 'fame') s.fame = Math.max(0, s.fame + v * (v > 0 && s.trait === 'star' ? 1.5 : v > 0 && s.trait === 'early' && s.age <= 23 ? 1.4 : 1));
   else s[k] = clamp((s[k] ?? 0) + v, 0, 100);
 }
+/** 이적 가치·대표 선발·광고비·수당처럼 밸런스에 닿는 공식에 쓰는 인기 — 상한을 풀기 전(100) 수준까지만 반영한다. */
+export const fameEff = (s: GameState): number => Math.min(s.fame, 100);
 export function log(s: GameState, text: string, kind = '', ph = s.phase) {
   s.log.unshift({ t: `${s.year} ${PHASES[ph] ?? ''}`, text, kind });
   s.log.length = Math.min(s.log.length, 60);
@@ -144,7 +147,7 @@ export function newGame(
     leagueId: 'hs', club: { ...club }, contract: null, phase: 0, uniYears: 0,
     season: { apps: 0, starts: 0, goals: 0, assists: 0, ratingSum: 0, cs: 0, mins: 0, played: 0, pts: 0, w: 0, d: 0, l: 0, rivals: [], honors: [] },
     seasonStart: { ...attrs }, seasonStartSub: {},
-    career: [], trophies: [], awards: [], nat: { caps: 0, goals: 0, assists: 0, tours: [], qual: { 2026: true }, captain: false, debutYear: null },
+    career: [], trophies: [], awards: [], titles: [], nat: { caps: 0, goals: 0, assists: 0, tours: [], qual: { 2026: true }, captain: false, debutYear: null },
     mil: { exempt: null, served: false, serving: false, left: 0, type: null, prevClub: null },
     injury: 0, log: [] as LogEntry[], pending: null,
     flags: {}, peak: 0, training: 'rest', retired: false, chains: [], story: {}, storyLog: [],
@@ -218,7 +221,7 @@ export function applyTraining(s: GameState) {
     addStat(s, 'fame', ri(5, 9));
     addStat(s, 'cond', -5);
     addStat(s, 'morale', 3);
-    if (s.contract) addStat(s, 'money', Math.round(s.fame * 8));
+    if (s.contract) addStat(s, 'money', Math.round(fameEff(s) * 8));
     return;
   }
   if (t === 'coach') {
@@ -466,7 +469,8 @@ export const byPos = <T>(m: Partial<Record<Pos | 'def', T>>) => (s: GameState): 
 export const txt = <T>(v: T | ((s: GameState) => T), s: GameState): T => (typeof v === 'function' ? (v as (s: GameState) => T)(s) : v);
 export const isAtk = (s: GameState): boolean => s.pos === 'FW' || s.pos === 'MF';
 export function adFee(s: GameState): number {
-  return Math.round((s.fame * s.fame * 1.2) / 10) * 10 + 200;
+  const f = fameEff(s);
+  return Math.round((f * f * 1.2) / 10) * 10 + 200;
 }
 export function trainerFee(s: GameState): number {
   return Math.max(1000, Math.round(((s.contract ? s.contract.salary : 0) * 0.15) / 10) * 10);

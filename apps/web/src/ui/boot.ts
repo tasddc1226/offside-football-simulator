@@ -5,6 +5,7 @@ import { natInit } from '../game/national.js';
 import { legendSnapshot, loadHOF, loadKey, saveKey } from '../game/season.js';
 import { createRng, freshSeed, setActiveRng } from '../game/rng.js';
 import type { GameState } from '../game/types.js';
+import { ensureTitles } from '../game/titles.js';
 import { setLatestBalance, useCareerBalance } from '../game/balance.js';
 import { cachedGet } from '../api/client.js';
 import type { BalanceConfig } from '@offside/contracts';
@@ -49,6 +50,8 @@ export function loadGame() {
     // T-9-009: cid(커리어 고유 ID) 도입 이전 저장에는 cid가 없다 — 새로 만들어 채운다. RNG는
     // 절대 쓰지 않는다(crypto.randomUUID()).
     if (!G.cid) G.cid = crypto.randomUUID();
+    // T-10-026: 칭호 도입 전 저장 — 이미 채운 조건의 칭호를 조용히 채운다(RNG·인기 변화 없음).
+    ensureTitles(G);
     // 구단 이름이 바뀌어도 기존 저장의 현재 소속은 최신 이름으로
     const gClubId = G.club.id;
     const c = clubsIn(G.leagueId)
