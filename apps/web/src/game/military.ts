@@ -177,7 +177,7 @@ function milExemptHope(s: GameState): string[] {
     const age = s.age + (y - s.year);
     if (age > 23) break;
     if (y % 4 === 2) out.push(`${y} 아시안게임`);
-    if (y % 4 === 0) out.push(`${y} 올림픽`);
+    if (y % 4 === 0 && s.nat?.qual[y] !== false) out.push(`${y} 올림픽`);
   }
   return out;
 }

@@ -155,6 +155,11 @@ const TOURNAMENTS: Record<string, TournamentDef> = {
   },
 };
 
+/** 차출 협상이 필요한 대회: 협상 결과 플래그 접두어와, 협상 이벤트 없이 해외 구단이 허락할 확률. */
+export const RELEASE: Record<string, { flag: string; p: number }> = { ag: { flag: 'agRel', p: 0.6 }, olympic: { flag: 'olyRel', p: 0.7 } };
+/** 올림픽 아시아 예선(AFC U-23 아시안컵) 통과 확률 — 한국은 1988~2020 10회 연속 진출, 2024 파리 예선 탈락. */
+const OLY_QUAL = 0.85;
+
 function squadRole(s: GameState, key: string): { role: 'starter' | 'sub' | 'none'; why: string } {
   const T = TOURNAMENTS[key]!, sc = callupScore(s);
   if (leagueOf(s.leagueId).amateur && !T.youth) return { role: 'none', why: '' };
@@ -163,9 +168,12 @@ function squadRole(s: GameState, key: string): { role: 'starter' | 'sub' | 'none
     const young = s.age <= 23;
     const need = young ? 68 : 84;
     if (sc < need + gauss() * 1.5) return { role: 'none', why: young ? '최종 명단 탈락' : '' };
-    if (key === 'ag') {
-      const rel = s.flags['agRel' + s.year] as boolean | undefined;
-      const ok = rel !== undefined ? rel : leagueOf(s.leagueId).tier <= 2 || chance(0.6);
+    // 아시안게임·올림픽 남자축구는 FIFA 의무 차출 대회가 아니라 해외 구단은 거절할 수 있다(T-10-016 올림픽 추가).
+    // 올림픽은 7~8월이라 유럽 프리시즌과 겹쳐 시즌 중인 아시안게임(9월)보다 조금 더 잘 보내 준다.
+    const release = RELEASE[key];
+    if (release) {
+      const rel = s.flags[release.flag + s.year] as boolean | undefined;
+      const ok = rel !== undefined ? rel : leagueOf(s.leagueId).tier <= 2 || chance(release.p);
       if (!ok) return { role: 'none', why: '소속팀이 차출을 거부' };
     }
     return { role: sc >= need + 6 || !young ? 'starter' : chance(0.5) ? 'starter' : 'sub', why: young ? '' : '와일드카드 발탁' };
@@ -230,8 +238,9 @@ export function natSeasonEnd(s: GameState) {
   if (y % 4 === 2 && s.nat.qual[y] !== false) keys.push('wc');
   if (y % 4 === 2) keys.push('ag');
   if (y % 4 === 3) keys.push('asian');
-  if (y % 4 === 0) keys.push('olympic');
+  if (y % 4 === 0 && s.nat.qual[y] !== false) keys.push('olympic');
   if (y % 4 === 2 && s.nat.qual[y] === false) out.push({ year: y, name: `${y} FIFA 월드컵`, stage: '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
+  if (y % 4 === 0 && s.nat.qual[y] === false) out.push({ year: y, name: `${y} 올림픽 남자축구`, stage: '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
   for (const k of keys) {
     const { rec, trophy } = runTournament(s, k);
     out.push(rec);
@@ -241,6 +250,11 @@ export function natSeasonEnd(s: GameState) {
     const ok = chance(0.9);
     s.nat.qual[y + 1] = ok;
     out.push({ year: y, name: `${y + 1} 월드컵 아시아 예선`, stage: ok ? '본선 진출 확정' : '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
+  }
+  if (y % 4 === 3) {
+    const ok = chance(OLY_QUAL);
+    s.nat.qual[y + 1] = ok;
+    out.push({ year: y, name: `${y + 1} 올림픽 아시아 예선 (AFC U-23 아시안컵)`, stage: ok ? '본선 진출 확정' : '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
   }
   if (!s.nat.captain && s.nat.caps >= 40 && ovr(s) >= 78 && chance(0.35)) {
     s.nat.captain = true;
