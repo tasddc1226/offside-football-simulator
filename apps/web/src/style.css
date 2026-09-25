@@ -195,7 +195,8 @@ textarea { border: 1px solid var(--line); background: var(--surface-2); border-r
   box-shadow: 0 -6px 20px -12px rgba(20,32,26,.25);
 }
 .tabs-inner { max-width: 480px; margin: 0 auto; display: contents; }
-@media (min-width: 720px) { .tabs { max-width: 560px; margin: 0 auto; left: 50%; transform: translateX(-50%); border-inline: 1px solid var(--line); border-radius: 16px 16px 0 0; } }
+/* 데스크톱: left/right 0 + margin auto로 본문(.wrap 560px)과 같은 폭·위치에 둔다. */
+@media (min-width: 720px) { .tabs { max-width: 560px; margin-inline: auto; border-inline: 1px solid var(--line); border-radius: 16px 16px 0 0; } }
 .tabs button {
   border: 0; background: none; padding: 6px 2px; border-radius: 9px; font-weight: 600; font-size: 11px;
   color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
@@ -219,7 +220,7 @@ textarea { border: 1px solid var(--line); background: var(--surface-2); border-r
   border-top: 1px solid var(--line); padding: 10px 16px;
 }
 .action-bar-inner { max-width: 480px; margin: 0 auto; }
-@media (min-width: 720px) { .action-bar { max-width: 560px; margin: 0 auto; left: 50%; transform: translateX(-50%); } }
+@media (min-width: 720px) { .action-bar { max-width: 560px; margin-inline: auto; } .action-bar-inner { max-width: none; } }
 
 /* season */
 .track { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 10px; }
