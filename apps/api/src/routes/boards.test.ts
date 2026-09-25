@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { authAttempts, boardComments, profiles } from '../db/schema.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
 
 const ORIGIN = 'http://localhost:5173';
 const ADMIN_EMAIL = 'admin@example.com';
@@ -40,7 +40,7 @@ describe('게시판 /v1/boards', () => {
   /** 구글로 로그인한 일반 프로필. nickname이 null이면 아직 닉네임을 정하지 않은 상태. */
   async function googleUser(nickname: string | null) {
     const who = await issueCookie(ctx);
-    await ctx.db.update(profiles).set({ googleSub: `sub-${who.profileId}`, email: `${who.profileId}@example.com`, linkedAt: '2026-09-25T00:00:00.000Z', nickname }).where(eq(profiles.id, who.profileId));
+    await linkGoogle(ctx, who.profileId, { nickname });
     return who;
   }
   async function writePost(cookie: string, board = 'notice', body: Record<string, unknown> = {}) {

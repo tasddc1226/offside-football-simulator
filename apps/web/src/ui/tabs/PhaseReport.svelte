@@ -7,10 +7,10 @@
   import Chips from '../sheets/Chips.svelte';
   import NewTitles from '../titles/NewTitles.svelte';
   import { dur } from '../motion.js';
-  import type { PhaseReport } from '../sheets/types.js';
+  import TickerLine from '../sheets/TickerLine.svelte';
+  import { RES_LABEL as RES, type PhaseReport } from '../sheets/types.js';
 
   const { r }: { r: PhaseReport } = $props();
-  const RES = { W: '승', D: '무', L: '패' } as const;
   const DOT_MS = 60;
   // 점이 다 켜진 뒤에 다음 요소가 나오도록 지연을 잡는다.
   const afterDots = $derived(dur(Math.min(r.games.length * DOT_MS, 1200) + 150));
@@ -103,15 +103,7 @@
       <summary>경기별 기록 {r.games.length}경기</summary>
       <div class="ticker">
         {#each r.games as m (m.key)}
-          <div>
-            <span class="rd">{m.rd}R</span><span class="res {m.res}">{RES[m.res]}</span>
-            <span
-              >{m.opp} {m.score}
-              <span class="muted"
-                >· {#if m.mins}{m.mins}분{#if m.g} · <b>{m.g}골</b>{/if}{#if m.a} · {m.a}도움{/if} · {m.rating}{:else if m.inj}부상 결장{:else}출전 없음{/if}</span
-              ></span
-            >
-          </div>
+          <TickerLine {m} />
         {/each}
       </div>
     </details>

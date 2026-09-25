@@ -38,7 +38,6 @@ export {
   ProfileSettingsSchema,
   ProfileSchema,
   PatchProfileSettingsBodySchema,
-  NicknameSchema,
   PutNicknameBodySchema,
   type PutNicknameBody,
   TossSessionBodySchema,

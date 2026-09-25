@@ -9,8 +9,11 @@
   } from '../api/client.js';
   import { accountCache } from './account-state.svelte.js';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
-  import { ADMIN_NICKNAME } from '@offside/contracts/board-limits';
   import NicknameForm from './NicknameForm.svelte';
+  import { rememberBoardReturn } from './actions.js';
+
+  /** 관리자 계정(설정 화면이 확인한다)은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다. */
+  let { admin = false }: { admin?: boolean } = $props();
 
   // `undefined`는 "아직 한 번도 불러오지 않음"을, `null`은 "확인 결과 로그인 안 됨"을 뜻한다. 설정 화면은
   // 벗어났다 돌아오면 이 컴포넌트가 다시 마운트되므로, 모듈 스코프에 캐시를 둬 재검증
@@ -71,7 +74,8 @@
 {:else if !profile || !profile.linked.google}
   <div class="account-card">
     <div class="who"><b>로그인하지 않았어요</b><span class="muted">구글 계정을 연결하면 은퇴한 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.</span></div>
-    <a class="btn btn-primary" href={googleStartUrl()}>구글로 로그인</a>
+    <!-- 설정에서 로그인하면 설정으로 돌아온다(소식에서 로그인하다 그만둔 기록을 지운다). -->
+    <a class="btn btn-primary" href={googleStartUrl()} onclick={() => rememberBoardReturn(null)}>구글로 로그인</a>
   </div>
 {:else}
   <div class="account-card">
@@ -80,8 +84,7 @@
   </div>
   <div class="account-nick">
     <span class="muted">댓글 닉네임{profile.nickname ? '' : ' — 정하면 소식 게시판에 댓글을 쓸 수 있어요'}</span>
-    <!-- '운영자'는 관리자 계정만 받는 예약 닉네임이라 바꿀 수 없다. -->
-    {#if profile.nickname === ADMIN_NICKNAME}<b>{ADMIN_NICKNAME} · 운영자 계정은 고정이에요</b>
+    {#if admin}<b>{profile.nickname} · 운영자 계정은 고정이에요</b>
     {:else}{#key profile.nickname}<NicknameForm current={profile.nickname} />{/key}{/if}
   </div>
   <div class="account-more">

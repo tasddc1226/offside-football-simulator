@@ -167,9 +167,12 @@ test("운영자 계정은 댓글 닉네임이 '운영자'로 고정돼 바꾸는
       body: JSON.stringify({ data: { id: 'u1', linked: { google: true }, googleEmailMasked: 'ad***@gmail.com', recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z', nickname: '운영자' } }),
     }),
   );
+  await page.route('http://localhost:8787/v1/boards/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { admin: true, google: true, nickname: '운영자' } }) }),
+  );
   await page.goto('/');
   await page.locator('[data-act="settings"]').click();
   const account = page.locator('#account-slot');
-  await expect(account).toContainText('운영자 계정은 고정이에요');
+  await expect(account).toContainText('운영자 · 운영자 계정은 고정이에요');
   await expect(account.getByLabel('댓글 닉네임')).toHaveCount(0);
 });

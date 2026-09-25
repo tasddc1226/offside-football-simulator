@@ -7,7 +7,7 @@ import { sha256Hex } from '../db/hash.js';
 import { createProfile } from '../db/repos/profiles.js';
 import { createSession } from '../db/repos/sessions.js';
 import { idempotency, profiles, sessions } from '../db/schema.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
 
@@ -392,7 +392,7 @@ describe('PUT /v1/profile/nickname', () => {
     );
   async function googleUser(email: string | null = null) {
     const who = await issueCookie(ctx);
-    await ctx.db.update(profiles).set({ googleSub: `sub-${who.profileId}`, email, linkedAt: '2026-09-25T00:00:00.000Z' }).where(eq(profiles.id, who.profileId));
+    await linkGoogle(ctx, who.profileId, { email });
     return who;
   }
   const errorOf = async (res: Response) => {

@@ -1,5 +1,5 @@
 import { ProfileSettingsSchema, type ProfileSettings } from '@offside/contracts';
-import { and, eq, ne, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
 import { profiles } from '../schema.js';
@@ -84,17 +84,13 @@ export async function updateSettings(
 
 /** T-10-028 댓글 닉네임을 정한다. 다른 프로필이 (대소문자만 달라도) 쓰고 있으면 'taken'. */
 export async function setNickname(db: Db, id: string, nickname: string): Promise<ProfileRecord | 'taken'> {
-  const [other] = await db
-    .select({ id: profiles.id })
-    .from(profiles)
-    .where(and(sql`lower(${profiles.nickname}) = lower(${nickname})`, ne(profiles.id, id)));
-  if (other) return 'taken';
   try {
     const [row] = await db.update(profiles).set({ nickname }).where(eq(profiles.id, id)).returning();
     return toRecord(row!);
   } catch (err) {
-    // 동시에 같은 닉네임을 고른 경우 유니크 인덱스가 막는다.
-    if (String(err).includes('UNIQUE')) return 'taken';
+    // lower(nickname) 유니크 인덱스가 겹침을 막는다(자기 자신의 같은 닉네임은 겹치지 않는다).
+    // drizzle는 D1 오류를 "Failed query: …"로 감싸고 원래 메시지를 cause에 둔다.
+    if (`${String(err)} ${String((err as { cause?: unknown }).cause ?? '')}`.includes('UNIQUE')) return 'taken';
     throw err;
   }
 }

@@ -3,7 +3,7 @@ import type { BoardListResponse, BoardViewerResponse, Comment, CommentInput, Pos
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { apiFetch, cachedGet } from './client.js';
 
-export type { BoardKey, Comment, Post, PostInput };
+export type { BoardKey, BoardViewerResponse, Comment, Post, PostInput };
 export type PostSummary = BoardListResponse['posts'][number];
 
 export const fetchBoardViewer = () => cachedGet<BoardViewerResponse>('/v1/boards/viewer', 600_000);

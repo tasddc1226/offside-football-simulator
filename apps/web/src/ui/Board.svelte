@@ -10,7 +10,7 @@
     POST_VERSION_MAX,
   } from '@offside/contracts/board-limits';
   import * as api from '../api/boards.js';
-  import type { BoardKey, Comment, Post, PostSummary } from '../api/boards.js';
+  import type { BoardKey, BoardViewerResponse, Comment, Post, PostSummary } from '../api/boards.js';
   import { getProfile, googleStartUrl } from '../api/client.js';
   import { appState } from './state.svelte.js';
   import { goHome, rememberBoardReturn } from './actions.js';
@@ -23,9 +23,9 @@
 
   // 홈의 공지사항 · 릴리즈 노트 섹션에서 고른 게시판 하나만 보여 준다.
   const board = appState.board;
-  let admin = $state(false);
-  /** 댓글 자격: 구글 로그인 여부와 댓글 닉네임. 불러오기 전엔 null(폼을 그리지 않는다). */
-  let viewer = $state<{ google: boolean; nickname: string | null } | null>(null);
+  /** 관리자 여부와 댓글 자격(구글 로그인·닉네임). 불러오기 전엔 null(댓글 폼을 그리지 않는다). */
+  let viewer = $state<BoardViewerResponse | null>(null);
+  const admin = $derived(!!viewer?.admin);
   let posts = $state<PostSummary[]>([]);
   let hasMore = $state(false);
   let status = $state<'loading' | 'ready' | 'error'>('loading');
@@ -36,10 +36,7 @@
   let busy = $state(false);
 
   onMount(() => {
-    void api.fetchBoardViewer().then((r) => {
-      admin = r.ok && r.data.admin;
-      viewer = r.ok ? { google: r.data.google, nickname: r.data.nickname } : { google: false, nickname: null };
-    });
+    void api.fetchBoardViewer().then((r) => (viewer = r.ok ? r.data : { admin: false, google: false, nickname: null }));
     void load();
     if (appState.boardPost) void open(appState.boardPost);
     appState.boardPost = null;
@@ -109,7 +106,7 @@
   // 구글 로그인은 프로필 세션이 있어야 시작된다 — 없으면 GET /v1/profile이 익명 프로필을 만든다.
   // 로그인을 마치고 돌아오면 보던 글로 다시 연다.
   async function login() {
-    rememberBoardReturn(board, detail?.post.id ?? null);
+    rememberBoardReturn({ board, postId: detail?.post.id ?? null });
     await getProfile();
     window.location.assign(googleStartUrl());
   }

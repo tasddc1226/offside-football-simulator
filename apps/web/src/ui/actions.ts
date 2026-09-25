@@ -404,9 +404,11 @@ export function rollCandidates() {
 // ───────── 구글 OAuth 콜백 (/settings?google=linked|switched|error) ─────────
 /** T-10-028 소식 화면에서 댓글을 쓰려고 로그인하면, 돌아와서 그 글을 다시 연다. */
 const BOARD_RETURN_KEY = 'ft_board_return';
-export function rememberBoardReturn(board: BoardKey, postId: string | null) {
+/** null이면 기록을 지운다(설정에서 로그인할 때). */
+export function rememberBoardReturn(to: { board: BoardKey; postId: string | null } | null) {
   try {
-    sessionStorage.setItem(BOARD_RETURN_KEY, JSON.stringify({ board, postId }));
+    if (to) sessionStorage.setItem(BOARD_RETURN_KEY, JSON.stringify(to));
+    else sessionStorage.removeItem(BOARD_RETURN_KEY);
   } catch {
     // 저장소를 못 쓰면 평소처럼 설정 화면으로 돌아온다.
   }

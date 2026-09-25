@@ -1,5 +1,4 @@
 import {
-  ADMIN_NICKNAME,
   AUTHORIZATION_HEADER,
   DeleteProfileConfirmBodySchema,
   DeleteProfileStartResponseSchema,
@@ -15,7 +14,7 @@ import {
   type ProfileSettings,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { isAdminEmail } from '../auth/admin.js';
+import { commentIdentity } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
 import { sha256Hex } from '../db/hash.js';
 import { getProfile, createProfile, setNickname, touchLastSeen, updateSettings, type ProfileRecord } from '../db/repos/profiles.js';
@@ -33,9 +32,6 @@ import { recoverProfile } from '../profile/recover.js';
 
 const LAST_SEEN_REFRESH_MS = 60 * 60 * 1000;
 
-/** 관리자(ADMIN_EMAILS) 계정인가 — 댓글 닉네임이 '운영자'로 고정된다. */
-const isAdminProfile = (record: ProfileRecord, adminEmails: string | undefined) => record.googleSub !== null && isAdminEmail(adminEmails, record.email);
-
 function buildProfileResponse(record: ProfileRecord, adminEmails: string | undefined): Profile {
   return {
     id: record.id,
@@ -44,7 +40,7 @@ function buildProfileResponse(record: ProfileRecord, adminEmails: string | undef
     recoveryCodeIssuedAt: record.recoveryCodeIssuedAt,
     createdAt: record.createdAt,
     googleEmailMasked: maskEmail(record.email),
-    nickname: isAdminProfile(record, adminEmails) ? ADMIN_NICKNAME : record.googleSub !== null ? record.nickname : null,
+    nickname: commentIdentity(record, adminEmails).nickname,
   };
 }
 
@@ -116,14 +112,15 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     const session = getSessionOrThrow(c);
     const { nickname } = parseWithAppError(PutNicknameBodySchema, parseJsonBody(c.get('rawBody') ?? ''));
     const profile = await getProfile(db, session.profileId);
-    if (!profile?.googleSub) {
+    const identity = commentIdentity(profile, c.env.ADMIN_EMAILS);
+    if (!profile || !identity.google) {
       throw new AppError({ code: 'FORBIDDEN', message: '구글로 로그인하면 닉네임을 정할 수 있어요.', details: { reason: 'GOOGLE_LOGIN_REQUIRED' } });
     }
-    if (isAdminProfile(profile, c.env.ADMIN_EMAILS)) {
-      throw new AppError({ code: 'FORBIDDEN', message: `운영자 계정의 댓글 닉네임은 '${ADMIN_NICKNAME}'로 고정돼요.`, details: { reason: 'ADMIN_NICKNAME_FIXED' } });
+    if (identity.admin) {
+      throw new AppError({ code: 'FORBIDDEN', message: `운영자 계정의 댓글 닉네임은 '${identity.nickname}'로 고정돼요.`, details: { reason: 'ADMIN_NICKNAME_FIXED' } });
     }
     if (isReservedNickname(nickname)) {
-      throw new AppError({ code: 'VALIDATION_FAILED', message: `'${ADMIN_NICKNAME}'처럼 운영진으로 보이는 닉네임은 쓸 수 없어요.`, details: { reason: 'RESERVED_NICKNAME' } });
+      throw new AppError({ code: 'VALIDATION_FAILED', message: `'운영자'처럼 운영진으로 보이는 닉네임은 쓸 수 없어요.`, details: { reason: 'RESERVED_NICKNAME' } });
     }
     if (!isAcceptablePublicName(nickname)) {
       throw new AppError({ code: 'VALIDATION_FAILED', message: '쓸 수 없는 닉네임이에요.', details: { reason: 'BLOCKED_WORD' } });

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { kstDays } from '../db/repos/admin.js';
 import { auditLog, careers, profiles } from '../db/schema.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
 
 const ORIGIN = 'http://localhost:5173';
 const ADMIN_EMAIL = 'admin@example.com';
@@ -40,7 +40,7 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
   }
   async function googleUser(nickname: string) {
     const who = await issueCookie(ctx);
-    await ctx.db.update(profiles).set({ googleSub: `sub-${who.profileId}`, linkedAt: '2026-09-25T00:00:00.000Z', nickname }).where(eq(profiles.id, who.profileId));
+    await linkGoogle(ctx, who.profileId, { nickname });
     return who;
   }
   async function writePost(cookie: string) {

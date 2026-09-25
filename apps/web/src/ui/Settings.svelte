@@ -121,7 +121,7 @@
   </header>
 
   <section class="card settings-card" id="account-slot" aria-label="계정">
-    <Account />
+    <Account {admin} />
   </section>
 
   <section class="card settings-card">

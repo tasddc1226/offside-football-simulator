@@ -1,8 +1,8 @@
 <script lang="ts">
   // T-10-028 경기 중계 시트 — 구간 경기가 한 경기씩 올라오며 승무패·출전 기록이 쌓인다.
+  import TickerLine from './TickerLine.svelte';
   import type { SheetView } from './types.js';
   let { v }: { v: Extract<SheetView, { kind: 'block' }> } = $props();
-  const RES = { W: '승', D: '무', L: '패' } as const;
   const tally = $derived([
     { k: v.tally.apps, l: '출전' },
     { k: v.tally.g, l: '골' },
@@ -23,15 +23,7 @@
 </div>
 <div class="ticker live">
   {#each v.ticker as m (m.key)}
-    <div>
-      <span class="rd">{m.rd}R</span><span class="res {m.res}">{RES[m.res]}</span>
-      <span
-        >{m.opp} {m.score}
-        <span class="muted"
-          >· {#if m.mins}{m.mins}분{#if m.g} · <b>{m.g}골</b>{/if}{#if m.a} · {m.a}도움{/if} · {m.rating}{:else if m.inj}부상 결장{:else}출전 없음{/if}</span
-        ></span
-      >
-    </div>
+    <TickerLine {m} />
   {/each}
 </div>
 <div class="steps">
