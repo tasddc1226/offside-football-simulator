@@ -433,12 +433,38 @@ td.n, th.n { text-align: right; }
 .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 20; }
 
 /* ───────── 계정 영역 (구글 로그인) — 풀타임에는 없던 새 UI ───────── */
-.account { display: flex; flex-direction: column; gap: 10px; }
-.account-row { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
-.account-row .who { display: flex; flex-direction: column; gap: 2px; }
-.account-row .who b { font-size: 14px; }
-.account-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.account-actions .btn { flex: 1; padding: 9px 12px; font-size: 13px; }
+/* 환경설정(T-10-021): 계정 카드 + 항목별 카드 + 정책 링크 */
+.settings-head { padding: 4px 2px 2px; }
+.settings-head h1 { margin: 2px 0 0; }
+.settings-card { padding: 16px 18px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
+.settings-label { display: flex; flex-direction: column; gap: 3px; min-width: 0; text-align: left; }
+.settings-label .eyebrow { font-size: 11px; color: var(--accent-text); }
+.settings-label strong { font-size: 17px; }
+.settings-label .muted { font-size: 13px; }
+.settings-trigger { border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer; min-height: 44px; }
+.settings-chev { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--surface-2); color: var(--accent-text); font-style: normal; font-size: 12px; transition: transform .2s; }
+.settings-trigger[aria-expanded="true"] .settings-chev { transform: rotate(180deg); }
+.settings-body { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.settings-group { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.settings-group .eyebrow { color: var(--accent-text); padding-inline: 2px; }
+.settings-group h2 { margin: 0 0 8px; padding-inline: 2px; }
+.settings-links { padding: 0; display: flex; flex-direction: column; }
+.settings-links a { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 18px; color: inherit; text-decoration: none; font-weight: 600; font-size: 15px; }
+.settings-links a + a { border-top: 1px solid var(--line); }
+.settings-links a span { color: var(--accent-text); }
+.settings-foot { text-align: center; font-size: 12px; color: var(--muted); padding: 8px 0 20px; display: flex; flex-direction: column; gap: 4px; }
+.settings-foot p { margin: 0; }
+.settings-foot a { color: var(--accent-text); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .settings-chev { transition: none; } }
+.account-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.account-card .who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.account-card .who b { font-size: 16px; overflow-wrap: anywhere; }
+.account-card .who .muted { font-size: 13px; }
+.account-card .btn { flex: none; min-height: 44px; padding: 9px 16px; font-size: 14px; }
+.account-more { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.link-btn { border: 0; background: none; padding: 6px 2px; font: inherit; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.link-btn.bad { color: var(--bad); }
 .g-btn { display: inline-flex; align-items: center; gap: 8px; }
 
 /* ───────── 후보 선수 카드 (T-10-002) ───────── */

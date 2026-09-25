@@ -17,7 +17,7 @@ test('계정 영역: 홈이 아니라 설정 화면에 있다 — 로그아웃 �
   await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
   await expect(page.locator('#account-slot')).toHaveCount(0);
   await page.locator('[data-act="settings"]').click();
-  const account = page.locator('#account-slot .account');
+  const account = page.locator('#account-slot');
   await expect(account).toContainText('구글로 로그인');
   await expect(account.getByRole('link', { name: '구글로 로그인' })).toHaveAttribute(
     'href',
@@ -46,9 +46,9 @@ test('/settings?google=linked: 토스트 표시 후 URL 정리', async ({ page }
 
   await expect(page.locator('#toast')).toContainText('구글 계정을 연결했습니다');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('h1')).toHaveText('게임 설정');
+  await expect(page.locator('h1')).toHaveText('환경설정');
 
-  const account = page.locator('#account-slot .account');
+  const account = page.locator('#account-slot');
   await expect(account).toContainText('연동 해제');
   await expect(account).toContainText('te***@gmail.com');
 });
@@ -88,7 +88,7 @@ test('로그아웃은 확인 창에서 한 번 더 확인한다', async ({ page 
 
   await page.goto('/');
   await page.locator('[data-act="settings"]').click();
-  const account = page.locator('#account-slot .account');
+  const account = page.locator('#account-slot');
   await account.locator('[data-act="logout"]').click();
   await expect(page.locator('#sheet')).toContainText('로그아웃할까요?');
   await page.locator('#sheet [data-sheet="1"]').click();

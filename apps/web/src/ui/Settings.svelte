@@ -1,6 +1,7 @@
 <script lang="ts">
-  // 게임 설정 화면(T-10-009). 계정(구글 로그인), 효과음 켜기/끄기와 "리그·클럽 편집" — 리그별 클럽 이름·엠블럼을
-  // 바꾸고, 에디트 파일(JSON)로 내보내거나 가져온다. 효과음 설정은 이 기기에만 저장된다.
+  // 환경설정 화면(T-10-009, T-10-021). 계정(구글 로그인) 카드 아래로 항목마다 카드를 둔다 — 효과음 켜기/끄기,
+  // 접히는 "구단 이름·엠블럼 변경"(리그별 클럽 이름·엠블럼, 에디트 파일 내보내기/가져오기), 운영 도구(관리자),
+  // 도움말·서비스 정책 링크. 효과음 설정은 이 기기에만 저장된다.
   import { LEAGUES } from '../game/data.js';
   import { CLUB_NAME_MAX, IMG_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '../game/clubs.js';
   import { clubsIn } from '../game/engine.js';
@@ -30,6 +31,7 @@
     else admin = false;
   });
 
+  let clubsOpen = $state(false);
   let leagueId = $state(LEAGUES[LEAGUES.length - 1]!.id);
   let open = $state<string | null>(null);
   // 이름 편집 결과가 다시 CLUBS에서 읽히도록 clubCustom.map을 의존성에 건다.
@@ -111,76 +113,119 @@
       <button class="icon-btn" data-act="home" onclick={goHome}>← 홈</button>
     {/snippet}
   </Topbar>
-  <section class="card" id="account-slot">
+  <header class="settings-head">
+    <div class="eyebrow">Settings</div>
+    <h1>환경설정</h1>
+  </header>
+
+  <section class="card settings-card" id="account-slot" aria-label="계정">
     {#if Account}
       <Account />
     {/if}
   </section>
-  <section class="card stack" style="gap:14px">
-    <div>
-      <div class="eyebrow">Settings</div>
-      <h1>게임 설정</h1>
-    </div>
-    <div class="stack" style="gap:6px">
-      <h2 style="margin:0">효과음</h2>
-      <div class="row" style="justify-content:space-between;align-items:center;gap:12px">
-        <span id="sfx-label">버튼을 누를 때 클릭 소리 내기</span>
-        <button class="switch" role="switch" aria-checked={sfx} aria-labelledby="sfx-label" data-setting="sfx" onclick={() => setSfxEnabled((sfx = !sfx))}></button>
+
+  <section class="card settings-card">
+    <div class="settings-row">
+      <div class="settings-label">
+        <small class="eyebrow">Sound</small>
+        <strong id="sfx-label">효과음</strong>
+        <span class="muted">버튼을 누를 때 클릭 소리를 내요.</span>
       </div>
+      <button class="switch" role="switch" aria-checked={sfx} aria-labelledby="sfx-label" data-setting="sfx" onclick={() => setSfxEnabled((sfx = !sfx))}></button>
     </div>
-    <div class="stack" style="gap:10px">
-      <h2 style="margin:0">리그 · 클럽 편집</h2>
-      <p class="muted" style="font-size:13px;margin:0">클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새 이름이 쓰입니다.</p>
-      <p class="muted" style="font-size:12px;margin:0" data-club-sync={clubCustom.status} aria-live="polite">{SYNC_TEXT[clubCustom.status]}</p>
-      <div class="field">
-        <label for="club-league">리그</label>
-        <select id="club-league" bind:value={leagueId} onchange={() => (open = null)}>
-          {#each LEAGUES as L (L.id)}
-            <option value={L.id}>{L.name} ({clubsIn(L.id).length}개 클럽)</option>
-          {/each}
-        </select>
-      </div>
-      <ul class="club-list">
-        {#each clubs as c (c.id)}
-          {@const logo = logoOf(c, clubCustom.map)}
-          <li class="club-row" data-club={c.id}>
-            <div class="club-main">
-              <ClubBadge club={c} size={34} />
-              <input
-                type="text"
-                aria-label="{c.baseName} 이름"
-                maxlength={CLUB_NAME_MAX}
-                placeholder={c.baseName}
-                value={clubCustom.map[c.id]?.name ?? ''}
-                onchange={(e) => rename(c.id, e.currentTarget.value)}
-              />
-              <button class="icon-btn" data-act="logo" aria-expanded={open === c.id} onclick={() => (open = open === c.id ? null : c.id)}>엠블럼</button>
-            </div>
-            {#if open === c.id}
-              <div class="club-logo-edit">
-                <label>글자 <input type="text" maxlength={LOGO_TEXT_MAX} value={logo.text} onchange={(e) => editLogo(c, { text: e.currentTarget.value })} /></label>
-                <label>바탕 <input type="color" value={logo.bg} onchange={(e) => editLogo(c, { bg: e.currentTarget.value })} /></label>
-                <label>글자색 <input type="color" value={logo.fg} onchange={(e) => editLogo(c, { fg: e.currentTarget.value })} /></label>
-                <label class="icon-btn">이미지 올리기<input type="file" accept="image/*" hidden onchange={(e) => upload(c, e)} /></label>
-                {#if logo.img}<button class="icon-btn" onclick={() => dropImage(c)}>이미지 빼기</button>{/if}
-                <button class="icon-btn" onclick={() => resetClub(c.id)}>기본값</button>
+  </section>
+
+  <section class="card settings-card">
+    <button class="settings-row settings-trigger" aria-expanded={clubsOpen} aria-controls="settings-clubs" data-settings-open="clubs" onclick={() => (clubsOpen = !clubsOpen)}>
+      <span class="settings-label">
+        <small class="eyebrow">Team settings</small>
+        <strong>구단 이름·엠블럼 변경</strong>
+      </span>
+      <i class="settings-chev" aria-hidden="true">▼</i>
+    </button>
+    {#if clubsOpen}
+      <div class="stack settings-body" id="settings-clubs" style="gap:10px">
+        <p class="muted" style="font-size:13px;margin:0">클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새 이름이 쓰입니다.</p>
+        <p class="muted" style="font-size:12px;margin:0" data-club-sync={clubCustom.status} aria-live="polite">{SYNC_TEXT[clubCustom.status]}</p>
+        <div class="field">
+          <label for="club-league">리그</label>
+          <select id="club-league" bind:value={leagueId} onchange={() => (open = null)}>
+            {#each LEAGUES as L (L.id)}
+              <option value={L.id}>{L.name} ({clubsIn(L.id).length}개 클럽)</option>
+            {/each}
+          </select>
+        </div>
+        <ul class="club-list">
+          {#each clubs as c (c.id)}
+            {@const logo = logoOf(c, clubCustom.map)}
+            <li class="club-row" data-club={c.id}>
+              <div class="club-main">
+                <ClubBadge club={c} size={34} />
+                <input
+                  type="text"
+                  aria-label="{c.baseName} 이름"
+                  maxlength={CLUB_NAME_MAX}
+                  placeholder={c.baseName}
+                  value={clubCustom.map[c.id]?.name ?? ''}
+                  onchange={(e) => rename(c.id, e.currentTarget.value)}
+                />
+                <button class="icon-btn" data-act="logo" aria-expanded={open === c.id} onclick={() => (open = open === c.id ? null : c.id)}>엠블럼</button>
               </div>
-            {/if}
-          </li>
-        {/each}
-      </ul>
-      <div class="row" style="flex-wrap:wrap;gap:8px">
-        <button class="icon-btn" onclick={resetLeague}>이 리그 초기화</button>
-        <button class="icon-btn" data-act="export-clubs" onclick={exportFile}>에디트 파일 내보내기</button>
-        <label class="icon-btn">에디트 파일 가져오기<input type="file" accept="application/json,.json" hidden onchange={importFile} /></label>
-        <button class="icon-btn" onclick={resetAll}>전체 초기화</button>
-      </div>
-    </div>
-    {#if admin}
-      <div class="stack" style="gap:6px">
-        <h2 style="margin:0">운영</h2>
-        <button class="btn" style="align-self:flex-start" data-act="admin" onclick={() => (appState.screen = 'admin')}>운영 도구 열기</button>
+              {#if open === c.id}
+                <div class="club-logo-edit">
+                  <label>글자 <input type="text" maxlength={LOGO_TEXT_MAX} value={logo.text} onchange={(e) => editLogo(c, { text: e.currentTarget.value })} /></label>
+                  <label>바탕 <input type="color" value={logo.bg} onchange={(e) => editLogo(c, { bg: e.currentTarget.value })} /></label>
+                  <label>글자색 <input type="color" value={logo.fg} onchange={(e) => editLogo(c, { fg: e.currentTarget.value })} /></label>
+                  <label class="icon-btn">이미지 올리기<input type="file" accept="image/*" hidden onchange={(e) => upload(c, e)} /></label>
+                  {#if logo.img}<button class="icon-btn" onclick={() => dropImage(c)}>이미지 빼기</button>{/if}
+                  <button class="icon-btn" onclick={() => resetClub(c.id)}>기본값</button>
+                </div>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+        <div class="row" style="flex-wrap:wrap;gap:8px">
+          <button class="icon-btn" onclick={resetLeague}>이 리그 초기화</button>
+          <button class="icon-btn" data-act="export-clubs" onclick={exportFile}>에디트 파일 내보내기</button>
+          <label class="icon-btn">에디트 파일 가져오기<input type="file" accept="application/json,.json" hidden onchange={importFile} /></label>
+          <button class="icon-btn" onclick={resetAll}>전체 초기화</button>
+        </div>
       </div>
     {/if}
   </section>
+
+  {#if admin}
+    <section class="card settings-card">
+      <button class="settings-row settings-trigger" data-act="admin" onclick={() => (appState.screen = 'admin')}>
+        <span class="settings-label">
+          <small class="eyebrow">Admin</small>
+          <strong>운영 도구</strong>
+        </span>
+        <i class="settings-chev" aria-hidden="true">›</i>
+      </button>
+    </section>
+  {/if}
+
+  <section class="settings-group" aria-labelledby="settings-help">
+    <div class="eyebrow">Help</div>
+    <h2 id="settings-help">도움말</h2>
+    <nav class="card settings-links" aria-label="도움말">
+      <a href="/guide/">게임 가이드 <span aria-hidden="true">›</span></a>
+      <a href="/faq/">자주 묻는 질문 <span aria-hidden="true">›</span></a>
+    </nav>
+  </section>
+
+  <section class="settings-group" aria-labelledby="settings-legal">
+    <div class="eyebrow">Legal</div>
+    <h2 id="settings-legal">서비스 정책</h2>
+    <nav class="card settings-links" aria-label="서비스 정책">
+      <a href="/legal/terms/">이용약관 <span aria-hidden="true">›</span></a>
+      <a href="/legal/privacy/">개인정보 처리방침 <span aria-hidden="true">›</span></a>
+    </nav>
+  </section>
+
+  <footer class="settings-foot">
+    <p>문의 <a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a></p>
+    <p>Instagram <a href="https://www.instagram.com/offside.lab.kr/" target="_blank" rel="noopener noreferrer">@offside.lab.kr</a></p>
+  </footer>
 </div>

@@ -110,7 +110,7 @@ test('운영 도구: 구글 연결이 없으면 관리자 여부를 묻지도 �
   const sent = await mockApi(page, { linked: false, admin: false });
   await page.goto('/');
   await page.locator('[data-act="settings"]').click();
-  await expect(page.locator('h1')).toHaveText('게임 설정');
+  await expect(page.locator('h1')).toHaveText('환경설정');
   await expect(page.locator('[data-act="admin"]')).toHaveCount(0);
   expect(sent.some((s) => s.path === '/v1/boards/viewer')).toBe(false);
 });

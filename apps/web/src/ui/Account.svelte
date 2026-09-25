@@ -69,27 +69,25 @@
 </script>
 
 {#if profile === undefined}
-  <div class="account"><div class="eyebrow">Account</div><p class="muted" style="font-size:13px">확인 중…</p></div>
+  <div class="account-card"><div class="who"><b>계정</b><span class="muted">확인 중…</span></div></div>
 {:else if profile === 'error'}
-  <div class="account">
-    <div class="eyebrow">Account</div>
-    <p class="muted" style="font-size:13px">서버에 연결할 수 없어 로그인 상태를 확인하지 못했습니다. 게임은 계속 즐길 수 있어요 — 저장은 이 기기에만 남습니다.</p>
-    <div class="account-actions"><button class="btn" onclick={() => load()}>다시 시도</button></div>
+  <div class="account-card">
+    <div class="who"><b>연결할 수 없어요</b><span class="muted">서버에 연결하지 못해 로그인 상태를 확인하지 못했어요. 게임은 계속 즐길 수 있고, 저장은 이 기기에 남습니다.</span></div>
+    <button class="btn" onclick={() => load()}>다시 시도</button>
   </div>
 {:else if !profile || !profile.linked.google}
-  <div class="account">
-    <div class="eyebrow">Account</div>
-    <p class="muted" style="font-size:13px">구글 계정을 연결하면 다른 기기에서도 로그인할 수 있어요. (게임 진행은 이 기기에만 저장됩니다.)</p>
-    <div class="account-actions"><a class="btn btn-primary g-btn" href={googleStartUrl()}>구글로 로그인</a></div>
+  <div class="account-card">
+    <div class="who"><b>로그인하지 않았어요</b><span class="muted">구글 계정을 연결하면 은퇴한 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.</span></div>
+    <a class="btn btn-primary g-btn" href={googleStartUrl()}>구글로 로그인</a>
   </div>
 {:else}
-  <div class="account">
-    <div class="eyebrow">Account</div>
-    <div class="account-row"><div class="who"><b>{profile.googleEmailMasked ?? '구글 계정'}</b><span class="muted" style="font-size:12px">연결됨</span></div></div>
-    <div class="account-actions">
-      <button class="btn" onclick={doUnlink}>연동 해제</button>
-      <button class="btn" data-act="logout" onclick={askLogout}>로그아웃</button>
-      <button class="btn" style="color:var(--bad)" onclick={doDeleteFlow}>계정 삭제</button>
-    </div>
+  <div class="account-card">
+    <div class="who"><b>{profile.googleEmailMasked ?? '구글 계정'}</b><span class="muted">Google 계정으로 로그인했어요.</span></div>
+    <button class="btn btn-primary" data-act="logout" onclick={askLogout}>로그아웃</button>
+  </div>
+  <div class="account-more">
+    <button class="link-btn" onclick={doUnlink}>구글 연동 해제</button>
+    <span aria-hidden="true">·</span>
+    <button class="link-btn bad" onclick={doDeleteFlow}>계정 삭제</button>
   </div>
 {/if}
