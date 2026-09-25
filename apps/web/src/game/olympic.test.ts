@@ -48,4 +48,13 @@ describe('올림픽 예선 · 차출 (T-10-016)', () => {
     expect(ev.cond!(s)).toBe(false);
     expect(ev.cond!(youngster(5, 2028, 'k1'))).toBe(false); // K리그는 협상 없이 보내 준다.
   });
+
+  it('올림픽·아시안게임(U-23) 경기는 대회 기록에만 남고 A매치 출전·골로 세지 않는다', () => {
+    const s = youngster(6, 2028, 'k1');
+    s.nat.qual[2028] = true;
+    const oly = olympicOf(s)!;
+    expect(oly.inSquad).toBe(true);
+    expect(oly.apps).toBeGreaterThan(0);
+    expect(s.nat).toMatchObject({ caps: 0, goals: 0, assists: 0 });
+  });
 });

@@ -48,8 +48,8 @@ export function callupScore(s: GameState): number {
 export interface IntlResult {
   comp: string; stage: string; opp: string; kg: number; og: number; res: string; pso: string | null; mins: number; g: number; a: number; rating: number | null;
 }
-function simIntl(s: GameState, opp: [string, number], role: 'starter' | 'sub' | 'none', teamStr: number, comp: string, stage = ''): IntlResult {
-  const P = POS[s.pos], o = ovr(s);
+function simIntl(s: GameState, opp: [string, number], role: 'starter' | 'sub' | 'none', comp: string, stage = '', youth = false): IntlResult {
+  const P = POS[s.pos], o = ovr(s), teamStr = youth ? BAL.koreaU23 : BAL.koreaStr;
   let mins = 0;
   if (role === 'starter') mins = chance(0.82) ? 90 : ri(60, 85);
   else if (role === 'sub') mins = chance(0.6) ? ri(10, 35) : 0;
@@ -72,7 +72,8 @@ function simIntl(s: GameState, opp: [string, number], role: 'starter' | 'sub' | 
   }
   const win = res === 'W' || res === 'PW';
   const rating = mins ? clamp(Math.round((6.3 + g * 0.9 + a * 0.5 + (o - teamStr) * 0.03 + (win ? 0.25 : res === 'D' ? 0 : -0.25) + gauss() * 0.3) * 10) / 10, 4.5, 10) : null;
-  if (mins) {
+  // 아시안게임·올림픽(U-23)은 A매치가 아니다 — 대회 기록(tours)에만 남기고 A매치 출전·골·도움에는 넣지 않는다.
+  if (mins && !youth) {
     s.nat.caps++;
     s.nat.goals += g;
     s.nat.assists += a;
@@ -109,7 +110,7 @@ function natOne(s: GameState, name: string) {
     addStat(s, 'fame', 5);
     log(s, `생애 첫 A대표팀 발탁! (${name})`, 'big');
   }
-  const games = [o1, o2].map((o) => simIntl(s, o, role, BAL.koreaStr, comp));
+  const games = [o1, o2].map((o) => simIntl(s, o, role, comp));
   addStat(s, 'cond', -6);
   games.forEach((m) => log(s, `[${comp}] ${scoreLine(m)}${m.mins ? ` · ${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''}` : ' · 벤치'}`));
   return { name, comp, called: true, role, games };
@@ -189,7 +190,7 @@ function runTournament(s: GameState, key: string) {
   const { role, why } = squadRole(s, key);
   const matches: IntlResult[] = [];
   const play = (opp: [string, number], stage: string) => {
-    const m = simIntl(s, opp, role, T.youth ? BAL.koreaU23 : BAL.koreaStr, T.label(y), stage);
+    const m = simIntl(s, opp, role, T.label(y), stage, T.youth);
     matches.push(m);
     return m;
   };
