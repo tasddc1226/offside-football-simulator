@@ -5,13 +5,14 @@ import { pathToFileURL } from 'node:url';
 // T-9-001c: migration 0015가 모든 게임 테이블(careers/snapshots/service_seasons 등)을 드롭한 뒤
 // 운영 D1에 남아야 하는 테이블. T-9-009가 migration 0016에서 careers·career_seasons를 다시
 // 추가했다(이번엔 커리어 원장이 아니라 플레이 데이터 요약 — ownerProfileId 대신 profileId,
-// revision·snapshot 없음). 이 목록 밖의 테이블이 나타나거나 이 목록의 테이블이 없으면 preflight/deploy
+// revision·snapshot 없음). T-10-010이 0019에서 club_customs(클럽 커스텀 동기화)를 추가했다. 이 목록 밖의 테이블이 나타나거나 이 목록의 테이블이 없으면 preflight/deploy
 // 모두 실패로 취급해야 한다(사람이 직접 스키마를 검토해야 하는 신호).
 export const EXPECTED_TABLES = Object.freeze([
   'audit_log',
   'auth_attempts',
   'careers',
   'career_seasons',
+  'club_customs',
   'idempotency',
   'profiles',
   'sessions',
