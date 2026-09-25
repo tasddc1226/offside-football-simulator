@@ -38,9 +38,9 @@
     {:else if !admin}
       <p class="muted">운영자 계정으로 로그인해야 볼 수 있어요.</p>
     {:else}
-      <div class="seg three admin-tabs" role="tablist" aria-label="운영 도구">
+      <div class="seg three admin-tabs" role="group" aria-label="운영 도구">
         {#each TABS as t (t.id)}
-          <button class="opt" role="tab" aria-selected={tab === t.id} data-admin-tab={t.id} onclick={() => (tab = t.id)}>{t.label}</button>
+          <button class="opt" aria-pressed={tab === t.id} data-admin-tab={t.id} onclick={() => (tab = t.id)}>{t.label}</button>
         {/each}
       </div>
       {#if tab === 'dashboard'}<AdminDashboard />
@@ -50,11 +50,3 @@
   </section>
 </div>
 
-<style>
-  .opt { align-items: center; font-weight: 600; }
-  .opt[aria-selected='true'] { border-color: var(--pitch); background: color-mix(in srgb, var(--pitch) 8%, var(--surface)); box-shadow: inset 0 0 0 1px var(--pitch); }
-  :global(:root[data-theme='dark']) .opt[aria-selected='true'] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-  @media (prefers-color-scheme: dark) {
-    :global(:root:not([data-theme='light'])) .opt[aria-selected='true'] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-  }
-</style>

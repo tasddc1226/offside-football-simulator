@@ -7,20 +7,19 @@ import {
   BOARD_KEYS,
   successEnvelope,
 } from '@offside/contracts';
-import type { Context, Hono } from 'hono';
+import type { Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
 import { getAdminStats, listRecentComments, purgeCommentsBy } from '../db/repos/admin.js';
 import { getActiveBalance } from '../db/repos/balance.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
+import { envelope, nowIso } from './shared.js';
 import { parseJsonBody, parseWithAppError } from '../errors.js';
 import { firstPagePath } from './boards.js';
 
 // T-10-016 운영 도구: 대시보드와 댓글 관리. 댓글 하나 지우기는 게시판의 DELETE /v1/boards/comments/:id를 쓴다.
 const STATS_PATH = '/v1/admin/stats';
 const STATS_TTL = 60;
-
-const envelope = (c: Context<AppEnv>, data: unknown) => ({ data, meta: { requestId: c.get('requestId') } });
 
 export function registerAdminRoutes(app: Hono<AppEnv>): void {
   // 관리자 확인을 먼저 하므로 엣지 캐시는 관리자에게만 나간다. 집계라 1분 늦어도 된다.
@@ -44,7 +43,7 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/admin/comments/purge', async (c) => {
     const viewer = await requireAdmin(c);
     const { profileId } = parseWithAppError(AdminCommentPurgeInputSchema, parseJsonBody(c.get('rawBody') ?? ''));
-    const deleted = await purgeCommentsBy(getDb(c), profileId, viewer.profileId!, new Date().toISOString());
+    const deleted = await purgeCommentsBy(getDb(c), profileId, viewer.profileId!, nowIso());
     if (deleted) purgeEdge(c, BOARD_KEYS.map(firstPagePath)); // 목록의 댓글 수가 바뀐다.
     return c.json(successEnvelope(AdminCommentPurgeResultSchema).parse(envelope(c, { deleted })), 200);
   });

@@ -6,8 +6,7 @@
   import type { AdminComment } from '../../api/admin.js';
   import { deleteComment } from '../../api/boards.js';
   import { toast } from '../helpers.js';
-
-  const BOARD: Record<string, string> = { notice: '공지', release: '릴리즈' };
+  import { BOARD_LABEL, kstDateTime as kst } from '../boardText.js';
 
   let comments = $state<AdminComment[]>([]);
   let hasMore = $state(false);
@@ -57,7 +56,6 @@
   }
 
   const short = (profileId: string) => profileId.slice(4, 12);
-  const kst = (iso: string) => new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', dateStyle: 'short', timeStyle: 'short' });
 </script>
 
 <div class="stack" style="gap:12px" data-admin="comments">
@@ -89,7 +87,7 @@
             <span class="muted" style="font-size:12px">{short(c.profileId)} · {kst(c.createdAt)}</span>
           </div>
           <p>{c.body}</p>
-          <span class="muted" style="font-size:12px">[{BOARD[c.board] ?? c.board}] {c.postTitle}</span>
+          <span class="muted" style="font-size:12px">[{BOARD_LABEL[c.board]}] {c.postTitle}</span>
           <div class="row" style="gap:6px">
             <button class="icon-btn" data-act="delete-comment" disabled={busy} onclick={() => remove(c)}>삭제</button>
             {#if !author}<button class="icon-btn" data-act="filter-author" onclick={() => filterBy(c)}>이 작성자 댓글</button>{/if}

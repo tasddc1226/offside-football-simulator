@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import * as api from '../../api/admin.js';
   import type { AdminStats } from '../../api/admin.js';
+  import { kstDateTime as kst } from '../boardText.js';
 
   const AUDIT: Record<string, string> = {
     PROFILE_DELETED: '프로필 삭제',
@@ -34,7 +35,6 @@
     status = 'ready';
   }
 
-  const kst = (iso: string) => new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', dateStyle: 'short', timeStyle: 'short' });
   const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : '—');
   const maxOf = (s: AdminStats, key: (typeof SERIES)[number]['key']) => Math.max(1, ...s.daily.map((d) => d[key]));
 </script>

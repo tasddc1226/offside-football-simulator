@@ -2,7 +2,7 @@ import type { AdminComment, AdminStats } from '@offside/contracts';
 import { and, desc, eq, isNull, lt, sql, type SQL } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import type { Db } from '../client.js';
-import { newId } from '../ids.js';
+import { insertAuditLog } from './auditLog.js';
 import { auditLog, boardComments, boardPosts, careers, profiles } from '../schema.js';
 
 // T-10-016 운영 도구. 관리자만 드물게 여는 화면이라 집계는 테이블을 한 번씩 훑는다(쿼리당 한 번,
@@ -131,13 +131,7 @@ export async function purgeCommentsBy(db: Db, target: string, adminProfileId: st
     .where(and(eq(boardComments.profileId, target), isNull(boardComments.deletedAt)));
   const deleted = res.meta.changes;
   if (deleted > 0) {
-    await db.insert(auditLog).values({
-      id: newId('aud'),
-      kind: 'COMMENTS_PURGED',
-      profileId: adminProfileId,
-      payloadJson: JSON.stringify({ target, deleted }),
-      createdAt: now,
-    });
+    await insertAuditLog(db, { kind: 'COMMENTS_PURGED', profileId: adminProfileId, payload: { target, deleted }, createdAt: now });
   }
   return deleted;
 }

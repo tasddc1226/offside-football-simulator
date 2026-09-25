@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   BALANCE_KEYS,
+  BALANCE_NOTE_MAX,
   BALANCE_SPEC,
   CHOICE_BONUS_RANGE,
   CHOICE_KEY_PATTERN,
@@ -29,8 +30,7 @@ export const BalanceConfigSchema = z.object({
 });
 export type BalanceConfig = z.infer<typeof BalanceConfigSchema>;
 
-export const BalanceStatusSchema = z.enum(['draft', 'active', 'archived']);
-export const BALANCE_NOTE_MAX = 200;
+const BalanceStatusSchema = z.enum(['draft', 'active', 'archived']);
 
 export const BalanceVersionSchema = z.object({
   version: z.number().int().min(1),

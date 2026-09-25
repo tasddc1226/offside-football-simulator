@@ -20,9 +20,6 @@ export function applyBalance(values: BalanceOverrides = {}): void {
 export function setLatestBalance(cfg: { version: number; values: unknown } | null): void {
   latest = cfg ? { v: cfg.version, values: sanitizeBalance(cfg.values) } : null;
 }
-export function latestBalanceVersion(): number | null {
-  return latest?.v ?? null;
-}
 
 /** 저장된 커리어를 불러올 때: 그 커리어의 값으로 맞춘다. */
 export function useCareerBalance(s: GameState | null): void {
@@ -31,11 +28,10 @@ export function useCareerBalance(s: GameState | null): void {
 
 /** 새 시즌 시작 · 새 커리어: 최신 버전이 다르면 그 커리어에 적용한다. 바뀌었으면 true. */
 export function adoptLatestBalance(s: GameState): boolean {
-  const cur = s.bal?.v ?? 0;
-  const changed = !!latest && latest.v !== cur;
-  if (changed) s.bal = { v: latest!.v, values: latest!.values };
+  const next = latest && latest.v !== (s.bal?.v ?? 0) ? latest : null;
+  if (next) s.bal = { ...next };
   applyBalance(s.bal?.values);
-  return changed;
+  return !!next;
 }
 
 /** 선택지 성공 확률: 이벤트 정의의 확률 + 서버 가감(choiceBonus). 확률이 없는(확정) 선택지는 1. */

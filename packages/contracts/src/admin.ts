@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BoardKeySchema } from './boards.js';
 import { IsoUtcSchema } from './primitives.js';
 
 /** T-10-016 운영 도구(관리자 전용) — 대시보드 · 댓글 관리. 밸런스 설정은 ./balance.ts. */
@@ -6,7 +7,7 @@ import { IsoUtcSchema } from './primitives.js';
 const count = z.number().int().min(0);
 
 /** 날짜는 한국 시간(KST) 기준 YYYY-MM-DD. */
-export const AdminDailySchema = z.object({
+const AdminDailySchema = z.object({
   day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   profiles: count,
   careers: count,
@@ -25,7 +26,7 @@ export const AdminStatsSchema = z.object({
 });
 export type AdminStats = z.infer<typeof AdminStatsSchema>;
 
-export const ProfileIdSchema = z.string().regex(/^prf_[0-9a-f-]{36}$/);
+const ProfileIdSchema = z.string().regex(/^prf_[0-9a-f-]{36}$/);
 
 export const AdminCommentQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(30),
@@ -39,7 +40,7 @@ export const AdminCommentSchema = z.object({
   id: z.string(),
   postId: z.string(),
   postTitle: z.string(),
-  board: z.string(),
+  board: BoardKeySchema,
   profileId: z.string(),
   nickname: z.string(),
   body: z.string(),

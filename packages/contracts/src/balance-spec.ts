@@ -51,6 +51,8 @@ export const EVENT_WEIGHT_RANGE = { min: 0, max: 5 } as const;
 export const CHOICE_BONUS_RANGE = { min: -0.5, max: 0.5 } as const;
 export const EVENT_ID_PATTERN = /^[a-z0-9-]{1,40}$/;
 export const CHOICE_KEY_PATTERN = /^[a-z0-9-]{1,40}:\d{1,2}$/;
+/** 버전 메모 최대 길이. */
+export const BALANCE_NOTE_MAX = 200;
 
 /** 서버에 저장·전송되는 형태: 기본값과 다른 값만(zod 스키마의 추론 타입과 맞도록 undefined도 허용). */
 export type BalanceOverrides = { [K in BalanceKey]?: number | undefined } & {
@@ -63,7 +65,7 @@ export type BalanceValues = Record<BalanceKey, number> & {
   choiceBonus: Record<string, number>;
 };
 
-const clampTo = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+export const clampTo = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 function sanitizeMap(raw: unknown, pattern: RegExp, range: { min: number; max: number }): Record<string, number> {

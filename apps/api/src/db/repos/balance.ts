@@ -28,20 +28,24 @@ export async function listBalanceVersions(db: Db): Promise<BalanceVersion[]> {
   return rows.map(toVersion);
 }
 
-export async function createBalanceDraft(db: Db, input: { note: string; values: unknown }, profileId: string, now: string) {
+export async function createBalanceDraft(db: Db, input: { note: string; values: unknown }, profileId: string, now: string): Promise<BalanceVersion> {
   const [row] = await db
     .insert(balanceVersions)
     .values({ status: 'draft', note: input.note, valuesJson: JSON.stringify(sanitizeBalance(input.values)), createdBy: profileId, createdAt: now, updatedAt: now })
-    .returning({ version: balanceVersions.version });
-  return row!.version;
+    .returning();
+  return toVersion(row!);
 }
 
 const draft = (version: number) => and(eq(balanceVersions.version, version), eq(balanceVersions.status, 'draft'));
 
-/** 초안만 고친다. 없거나 초안이 아니면 false. */
-export async function updateBalanceDraft(db: Db, version: number, input: { note: string; values: unknown }, now: string) {
-  const res = await db.update(balanceVersions).set({ note: input.note, valuesJson: JSON.stringify(sanitizeBalance(input.values)), updatedAt: now }).where(draft(version));
-  return res.meta.changes > 0;
+/** 초안만 고친다. 없거나 초안이 아니면 undefined. */
+export async function updateBalanceDraft(db: Db, version: number, input: { note: string; values: unknown }, now: string): Promise<BalanceVersion | undefined> {
+  const [row] = await db
+    .update(balanceVersions)
+    .set({ note: input.note, valuesJson: JSON.stringify(sanitizeBalance(input.values)), updatedAt: now })
+    .where(draft(version))
+    .returning();
+  return row && toVersion(row);
 }
 
 export async function deleteBalanceDraft(db: Db, version: number) {

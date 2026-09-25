@@ -7,6 +7,7 @@ import { createRng, freshSeed, setActiveRng } from '../game/rng.js';
 import type { GameState } from '../game/types.js';
 import { setLatestBalance, useCareerBalance } from '../game/balance.js';
 import { cachedGet } from '../api/client.js';
+import type { BalanceConfig } from '@offside/contracts';
 import { appState } from './state.svelte.js';
 import { uploadRetirement } from './helpers.js';
 import { loadClubCustom } from './clubCustom.svelte.js';
@@ -77,7 +78,7 @@ export function loadGame() {
 /** T-10-016. 앱을 열 때 한 번 최신 밸런스 버전을 받는다. 각 커리어는 다음 시즌 시작부터 이 값을 쓴다.
  * 실패하면(오프라인 등) 저장된 값으로 계속한다. */
 export function syncBalance(): void {
-  void cachedGet<{ version: number; values: unknown }>('/v1/balance', 3_600_000).then((r) => {
+  void cachedGet<BalanceConfig>('/v1/balance', 3_600_000).then((r) => {
     if (r.ok) setLatestBalance(r.data);
   });
 }

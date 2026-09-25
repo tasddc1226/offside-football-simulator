@@ -112,7 +112,7 @@ p { margin: 0; }
 .hof-row { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding-block: 10px; border-top: 1px solid var(--line); }
 .hof-row:first-child { border-top: 0; }
 .hof-tabs { grid-template-columns: 1fr 1fr; margin-bottom: 6px; }
-.hof-tabs .opt { align-items: center; font-weight: 600; min-height: 40px; }
+.hof-tabs .opt, .admin-tabs .opt { align-items: center; font-weight: 600; min-height: 40px; }
 button.hof-row { width: 100%; background: none; border-inline: 0; border-bottom: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
 /* 1~3위: 금·은·동 월계관 + 옅은 메달 빛. --medal은 잎, --medal-text는 숫자(배경 대비 3:1 이상). */
 .medal.gold { --medal: #D9A21B; --medal-text: #8A5C0A; }

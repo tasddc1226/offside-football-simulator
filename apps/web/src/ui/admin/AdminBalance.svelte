@@ -5,8 +5,10 @@
   import {
     BALANCE_GROUPS,
     BALANCE_KEYS,
+    BALANCE_NOTE_MAX,
     BALANCE_SPEC,
     CHOICE_BONUS_RANGE,
+    clampTo,
     EVENT_ID_PATTERN,
     EVENT_WEIGHT_RANGE,
     resolveBalance,
@@ -19,19 +21,23 @@
   import type { BalanceVersion } from '../../api/admin.js';
   import { EVENTS } from '../../game/events-data.js';
   import { toast } from '../helpers.js';
+  import { kstDateTime } from '../boardText.js';
 
   const STATUS = { draft: ['초안', 'warn'], active: ['적용 중', 'good'], archived: ['보관', ''] } as const;
   const GROUPS = Object.entries(BALANCE_GROUPS) as [BalanceGroup, string][];
   const keysOf = (g: BalanceGroup) => BALANCE_KEYS.filter((k) => BALANCE_SPEC[k].group === g);
 
-  // 확률 선택지가 있는 이벤트만 선택지 보정 대상이다.
   const EVENT_LIST = EVENTS.filter((e) => EVENT_ID_PATTERN.test(e.id)).sort((a, b) => a.title.localeCompare(b.title, 'ko'));
-  const eventTitle = (id: string) => EVENTS.find((e) => e.id === id)?.title ?? id;
+  // 확률 선택지가 있는 이벤트만 선택지 보정 대상이다.
+  const PROB_EVENTS = EVENT_LIST.filter((e) => e.choices.some((c) => c.p));
+  const EVENT_BY_ID = new Map(EVENTS.map((e) => [e.id, e]));
+  const eventTitle = (id: string) => EVENT_BY_ID.get(id)?.title ?? id;
+  const labelOf = (label: unknown, i: number) => (typeof label === 'string' ? label : `선택지 ${i + 1}`);
   const choiceLabel = (key: string) => {
-    const [id, i] = key.split(':');
-    const c = EVENTS.find((e) => e.id === id)?.choices[+i!];
-    return `${eventTitle(id!)} — ${typeof c?.label === 'string' ? c.label : `선택지 ${+i! + 1}`}`;
+    const [id, i] = key.split(':') as [string, string];
+    return `${eventTitle(id)} — ${labelOf(EVENT_BY_ID.get(id)?.choices[+i]?.label, +i)}`;
   };
+  const discardOk = () => !dirty || confirm('저장하지 않은 변경을 버릴까요?');
 
   let versions = $state<BalanceVersion[]>([]);
   let status = $state<'loading' | 'ready' | 'error'>('loading');
@@ -48,7 +54,7 @@
   const editable = $derived(current?.status === 'draft');
   const activeValues = $derived(resolveBalance(active?.values));
   const probChoices = $derived(
-    (EVENTS.find((e) => e.id === addChoiceEvent)?.choices ?? []).flatMap((c, i) => (c.p ? [{ i, label: typeof c.label === 'string' ? c.label : `선택지 ${i + 1}` }] : [])),
+    (EVENT_BY_ID.get(addChoiceEvent)?.choices ?? []).flatMap((c, i) => (c.p ? [{ i, label: labelOf(c.label, i) }] : [])),
   );
 
   onMount(() => void load());
@@ -65,7 +71,7 @@
   }
 
   function pick(version: number | null) {
-    if (dirty && version !== selected && !confirm('저장하지 않은 변경을 버릴까요?')) return;
+    if (version !== selected && !discardOk()) return;
     selected = version;
     const v = versions.find((x) => x.version === version);
     work = { note: v?.note ?? '', values: $state.snapshot(v?.values) ?? {} };
@@ -79,7 +85,7 @@
     const next = { ...work.values };
     if (raw.trim() === '' || !Number.isFinite(n)) delete next[k];
     else {
-      const v = Math.min(spec.max, Math.max(spec.min, Math.round(n / spec.step) * spec.step));
+      const v = clampTo(Math.round(n / spec.step) * spec.step, spec.min, spec.max);
       const fixed = +v.toFixed(6);
       if (fixed === spec.def) delete next[k];
       else next[k] = fixed;
@@ -97,7 +103,7 @@
     work.values = next;
     dirty = true;
   }
-  const clampRange = (raw: string, r: { min: number; max: number }) => Math.min(r.max, Math.max(r.min, Number(raw) || 0));
+  const clampRange = (raw: string, r: { min: number; max: number }) => clampTo(Number(raw) || 0, r.min, r.max);
 
   /** 적용 중인 버전과 비교한 변경 목록. */
   function diffLines(values: BalanceOverrides): string[] {
@@ -128,7 +134,7 @@
   }
 
   async function newDraft(from: BalanceOverrides, note: string) {
-    if (dirty && !confirm('저장하지 않은 변경을 버릴까요?')) return;
+    if (!discardOk()) return;
     const v = await run(api.createBalanceDraft({ note, values: sanitizeBalance($state.snapshot(from)) }));
     if (!v) return;
     dirty = false;
@@ -160,7 +166,7 @@
     selected = null;
     await load();
   }
-  const dateOf = (iso: string | null) => (iso ? new Date(iso).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) : '');
+  const dateOf = (iso: string | null) => (iso ? kstDateTime(iso) : '');
 </script>
 
 <div class="stack" style="gap:14px" data-admin="balance">
@@ -211,7 +217,7 @@
         </div>
         <div class="field">
           <label for="bal-note">메모</label>
-          <input id="bal-note" type="text" maxlength="200" disabled={!editable} bind:value={work.note} oninput={() => (dirty = true)} placeholder="무엇을 왜 바꾸는지" />
+          <input id="bal-note" type="text" maxlength={BALANCE_NOTE_MAX} disabled={!editable} bind:value={work.note} oninput={() => (dirty = true)} placeholder="무엇을 왜 바꾸는지" />
         </div>
 
         {#each GROUPS as [g, name] (g)}
@@ -276,7 +282,7 @@
             <div class="stack" style="gap:6px">
               <select aria-label="보정할 이벤트" bind:value={addChoiceEvent} onchange={() => (addChoiceIdx = '')}>
                 <option value="">이벤트 고르기…</option>
-                {#each EVENT_LIST.filter((e) => e.choices.some((c) => c.p)) as e (e.id)}<option value={e.id}>{e.title} ({e.id})</option>{/each}
+                {#each PROB_EVENTS as e (e.id)}<option value={e.id}>{e.title} ({e.id})</option>{/each}
               </select>
               <div class="row" style="gap:6px;flex-wrap:nowrap">
                 <select aria-label="보정할 선택지" bind:value={addChoiceIdx} disabled={!addChoiceEvent}>
