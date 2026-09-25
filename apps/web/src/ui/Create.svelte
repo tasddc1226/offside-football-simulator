@@ -7,7 +7,7 @@
   import { baseline } from '../game/candidates.js';
   import { appState, randomName } from './state.svelte.js';
   import { goHome, startCareer, rollCandidates } from './actions.js';
-  import { POS_BLURB, TRAIT_UI, attrLabels, scoutLine, startOvr } from './create-view.js';
+  import { POS_BLURB, TRAIT_UI, attrLabels, hiddenStrength, scoutLine, startOvr } from './create-view.js';
   import { dur } from './motion.js';
   import Topbar from './Topbar.svelte';
   import MiniRadar from './MiniRadar.svelte';
@@ -75,8 +75,7 @@
     <h1>{step === 'form' ? '고교 3학년, 나는 어떤 선수인가' : '스카우트 리포트를 비교해 보세요'}</h1>
   </div>
 
-  <section class="live-card" aria-label="내 선수 미리보기">
-    <div class="chalk"></div>
+  <section class="live-card" class:sticky={step === 'form'} aria-label="내 선수 미리보기">
     <div class="lc-num">
       <b class="num">{C.number || '–'}</b>
       <span>{C.pos}</span>
@@ -196,7 +195,7 @@
             <span class="cand-n">?</span>
             <span class="cc-closed">
               <b>후보 {i + 1}</b>
-              <small>스카우트 메모: {cand.hintKeys.map((k) => labels[k]).join('·')} 강점</small>
+              <small>스카우트 메모: 숨은 무기는 {labels[hiddenStrength(cand.attrs, C.focus)]}</small>
             </span>
             <span class="cc-tap" aria-hidden="true">탭해서 열기</span>
           </button>

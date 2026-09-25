@@ -4,7 +4,7 @@ import { defaultFocus, type Pos } from '../game/data.js';
 import { newGame } from '../game/engine.js';
 import { ovr } from '../game/attributes.js';
 import { createRng, setActiveRng } from '../game/rng.js';
-import { hexPoints, iGa, radarOrder, scoutLine, startOvr } from './create-view.js';
+import { hexPoints, hiddenStrength, iGa, radarOrder, scoutLine, startOvr } from './create-view.js';
 
 describe('선수 생성 표시 로직', () => {
   it('받침에 따라 이/가를 고른다', () => {
@@ -27,6 +27,10 @@ describe('선수 생성 표시 로직', () => {
         expect(Math.abs(ovr(g) - startOvr(pos, cand.attrs))).toBeLessThanOrEqual(1);
       }
     }
+  });
+
+  it('숨은 무기는 주력을 뺀 가장 높은 능력치다', () => {
+    expect(hiddenStrength({ pac: 56, sho: 58, pas: 39, dri: 48, def: 24, phy: 49 }, ['sho', 'pac'])).toBe('phy');
   });
 
   it('미니 레이더는 꼭짓점 6개를 만든다', () => {

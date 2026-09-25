@@ -46,6 +46,11 @@ export function scoutLine(pos: Pos, attrs: Record<AttrKey, number>): string {
   return `${L[a]}${iGa(L[a])} 특출난 ${kind}`;
 }
 
+/** 주력이 아닌 능력치 중 가장 높은 것 — 주력은 세 후보 모두 비슷해서, 닫힌 카드의 힌트로는 이쪽이 변별력이 있다. */
+export function hiddenStrength(attrs: Record<AttrKey, number>, focus: readonly AttrKey[]): AttrKey {
+  return ATTR_KEYS.filter((k) => !focus.includes(k)).sort((a, b) => attrs[b] - attrs[a])[0]!;
+}
+
 export const radarOrder = (pos: Pos): AttrKey[] => (pos === 'GK' ? RADAR_ORDER.GK : RADAR_ORDER.field);
 
 /** 미니 레이더(육각형) 좌표. radarOrder 순서의 0~100 값을 중심 c, 반지름 r에 매핑한다. */

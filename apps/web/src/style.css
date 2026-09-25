@@ -473,12 +473,11 @@ td.n, th.n { text-align: right; }
 /* ───────── 선수 생성: 라이브 카드 · 입력 · 후보 카드 (T-10-002 → T-10-022) ───────── */
 .wrap.has-cta { padding-bottom: calc(96px + var(--safe-b)); }
 .live-card {
-  position: sticky; top: calc(8px + var(--safe-t)); z-index: 4;
   display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center;
   background: var(--pitch); color: var(--on-pitch); border-radius: 18px; padding: 14px 16px; overflow: hidden;
   box-shadow: 0 10px 24px -14px rgba(0,0,0,.55);
 }
-.live-card > *:not(.chalk) { position: relative; }
+.live-card.sticky { position: sticky; top: calc(8px + var(--safe-t)); z-index: 4; }
 .lc-num { display: flex; flex-direction: column; align-items: center; min-width: 48px; }
 .lc-num b { font-size: 40px; line-height: 1; font-weight: 700; }
 .lc-num span { font-family: var(--display); font-weight: 700; letter-spacing: .12em; font-size: 13px; color: var(--accent); }
