@@ -7,7 +7,7 @@ import { sha256Hex } from '../db/hash.js';
 import { createProfile } from '../db/repos/profiles.js';
 import { createSession } from '../db/repos/sessions.js';
 import { idempotency, profiles, sessions } from '../db/schema.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
 
@@ -364,5 +364,75 @@ describe('PATCH /v1/profile/settings', () => {
     );
     expect(third.status).toBe(200);
     expect(third.headers.get('Idempotent-Replayed')).toBe('true');
+  });
+});
+
+describe('PUT /v1/profile/nickname', () => {
+  let ctx: TestD1;
+  const app = createApp();
+
+  beforeEach(async () => {
+    ctx = await createTestD1();
+  });
+  afterEach(async () => {
+    await ctx.dispose();
+  });
+
+  const ADMIN_EMAIL = 'admin@example.com';
+  const env = () => ({ ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL });
+  const put = (token: string, nickname: unknown) =>
+    app.request(
+      '/v1/profile/nickname',
+      {
+        method: 'PUT',
+        headers: { Origin: ALLOWED_ORIGIN, 'Content-Type': 'application/json', Cookie: `offside_session=${token}` },
+        body: JSON.stringify({ nickname }),
+      },
+      env(),
+    );
+  async function googleUser(email: string | null = null) {
+    const who = await issueCookie(ctx);
+    await linkGoogle(ctx, who.profileId, { email });
+    return who;
+  }
+  const errorOf = async (res: Response) => {
+    const body = ErrorEnvelopeSchema.parse(await res.json());
+    return { status: res.status, code: body.error.code, reason: (body.error.details as { reason?: string } | undefined)?.reason };
+  };
+
+  it('구글 로그인한 프로필만 닉네임을 정하고, GET /v1/profile에 실린다', async () => {
+    const anon = await issueCookie(ctx);
+    expect(await errorOf(await put(anon.token, '루키'))).toEqual({ status: 403, code: 'FORBIDDEN', reason: 'GOOGLE_LOGIN_REQUIRED' });
+
+    const user = await googleUser();
+    const res = await put(user.token, '  루키  ');
+    expect(res.status).toBe(200);
+    expect(successEnvelope(ProfileSchema).parse(await res.json()).data.nickname).toBe('루키');
+    const me = await app.request('/v1/profile', { headers: { Cookie: `offside_session=${user.token}` } }, ctx.env);
+    expect(successEnvelope(ProfileSchema).parse(await me.json()).data.nickname).toBe('루키');
+    // 같은 닉네임으로 다시 정해도 된다(자기 자신과는 겹치지 않는다).
+    expect((await put(user.token, '루키')).status).toBe(200);
+  });
+
+  it('대소문자만 달라도 겹치면 409, 금칙어·형식 오류는 400', async () => {
+    const a = await googleUser();
+    const b = await googleUser();
+    expect((await put(a.token, 'Rookie')).status).toBe(200);
+    expect(await errorOf(await put(b.token, 'rookie'))).toEqual({ status: 409, code: 'VALIDATION_FAILED', reason: 'NICKNAME_TAKEN' });
+    expect(await errorOf(await put(b.token, 'www.spam.com'))).toMatchObject({ status: 400, reason: 'BLOCKED_WORD' });
+    expect((await put(b.token, 'a')).status).toBe(400);
+    expect((await put(b.token, '<b>굵게</b>')).status).toBe(400);
+    expect((await put(b.token, '열세글자가넘는아주긴닉네임')).status).toBe(400);
+  });
+
+  it("'운영자' 같은 운영진 닉네임은 막고, 관리자 계정은 언제나 '운영자'다", async () => {
+    const user = await googleUser();
+    for (const name of ['운영자', '운 영 자', '진짜운영자', '관리자', '운영진']) {
+      expect(await errorOf(await put(user.token, name)), name).toEqual({ status: 400, code: 'VALIDATION_FAILED', reason: 'RESERVED_NICKNAME' });
+    }
+    const admin = await googleUser(ADMIN_EMAIL);
+    const me = await app.request('/v1/profile', { headers: { Cookie: `offside_session=${admin.token}` } }, env());
+    expect(successEnvelope(ProfileSchema).parse(await me.json()).data.nickname).toBe('운영자');
+    expect(await errorOf(await put(admin.token, '루키'))).toEqual({ status: 403, code: 'FORBIDDEN', reason: 'ADMIN_NICKNAME_FIXED' });
   });
 });

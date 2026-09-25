@@ -52,6 +52,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
     'last_seen_at',
     'deleted_at',
+    'nickname',
   ],
   sessions: [
     'id',

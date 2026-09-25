@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { kstDays } from '../db/repos/admin.js';
 import { auditLog, careers, profiles } from '../db/schema.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
 
 const ORIGIN = 'http://localhost:5173';
 const ADMIN_EMAIL = 'admin@example.com';
@@ -38,12 +38,17 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     await ctx.db.update(profiles).set({ googleSub: 'sub-admin', email: ADMIN_EMAIL, linkedAt: '2026-09-25T00:00:00.000Z' }).where(eq(profiles.id, who.profileId));
     return who;
   }
+  async function googleUser(nickname: string) {
+    const who = await issueCookie(ctx);
+    await linkGoogle(ctx, who.profileId, { nickname });
+    return who;
+  }
   async function writePost(cookie: string) {
     const res = await call('POST', '/v1/boards/notice/posts', { cookie, body: { title: '점검 안내', body: '오늘 밤 점검합니다.' } });
     return (await data<{ id: string }>(res)).id;
   }
   async function comment(cookie: string, postId: string, body: string) {
-    const res = await call('POST', `/v1/boards/posts/${postId}/comments`, { cookie, body: { nickname: '팬', body } });
+    const res = await call('POST', `/v1/boards/posts/${postId}/comments`, { cookie, body: { body } });
     expect(res.status).toBe(201);
     return (await data<{ id: string }>(res)).id;
   }
@@ -70,7 +75,7 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
 
   it('대시보드: 가입·활동·커리어·댓글 수와 최근 14일(KST) 추이', async () => {
     const admin = await makeAdmin();
-    const user = await issueCookie(ctx);
+    const user = await googleUser('팬');
     const now = new Date().toISOString();
     const row = { profileId: user.profileId, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late', startYear: 2026, appVersion: 'test', createdAt: now, updatedAt: now } as const;
     await ctx.db.insert(careers).values([
@@ -83,7 +88,7 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     const res = await call('GET', '/v1/admin/stats', { cookie: admin.cookie });
     expect(res.status).toBe(200);
     const s = await data<AdminStats>(res);
-    expect(s.profiles).toEqual({ total: 2, linked: 1, new24h: 2, new7d: 2, active24h: 2, active7d: 2 });
+    expect(s.profiles).toEqual({ total: 2, linked: 2, new24h: 2, new7d: 2, active24h: 2, active7d: 2 });
     expect(s.careers).toEqual({ total: 2, active: 1, retired: 1, new7d: 2, retired7d: 1 });
     expect(s.board).toEqual({ posts: 1, comments: 1, comments7d: 1 });
     expect(s.daily).toHaveLength(14);
@@ -100,8 +105,8 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
 
   it('댓글 관리: 전체 최근 댓글 · 작성자별 · 작성자 댓글 모두 지우기(감사 로그)', async () => {
     const admin = await makeAdmin();
-    const spammer = await issueCookie(ctx);
-    const fan = await issueCookie(ctx);
+    const spammer = await googleUser('광고맨');
+    const fan = await googleUser('팬');
     const postId = await writePost(admin.cookie);
     await comment(spammer.cookie, postId, '광고1');
     await comment(fan.cookie, postId, '응원해요');

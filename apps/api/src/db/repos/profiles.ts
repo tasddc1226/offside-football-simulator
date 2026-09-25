@@ -17,6 +17,7 @@ export type ProfileRecord = {
   createdAt: string;
   lastSeenAt: string;
   deletedAt: string | null;
+  nickname: string | null;
 };
 
 /** 로그인 수단(구글·토스)이 연결된 프로필. */
@@ -43,6 +44,7 @@ function toRecord(row: typeof profiles.$inferSelect): ProfileRecord {
     createdAt: row.createdAt,
     lastSeenAt: row.lastSeenAt,
     deletedAt: row.deletedAt,
+    nickname: row.nickname,
   };
 }
 
@@ -78,6 +80,19 @@ export async function updateSettings(
     .where(eq(profiles.id, id))
     .returning();
   return toRecord(row!);
+}
+
+/** T-10-028 댓글 닉네임을 정한다. 다른 프로필이 (대소문자만 달라도) 쓰고 있으면 'taken'. */
+export async function setNickname(db: Db, id: string, nickname: string): Promise<ProfileRecord | 'taken'> {
+  try {
+    const [row] = await db.update(profiles).set({ nickname }).where(eq(profiles.id, id)).returning();
+    return toRecord(row!);
+  } catch (err) {
+    // lower(nickname) 유니크 인덱스가 겹침을 막는다(자기 자신의 같은 닉네임은 겹치지 않는다).
+    // drizzle는 D1 오류를 "Failed query: …"로 감싸고 원래 메시지를 cause에 둔다.
+    if (`${String(err)} ${String((err as { cause?: unknown }).cause ?? '')}`.includes('UNIQUE')) return 'taken';
+    throw err;
+  }
 }
 
 export async function touchLastSeen(db: Db, id: string, at: string): Promise<void> {

@@ -21,6 +21,8 @@ export type TickerRow = {
   inj: boolean;
 };
 
+export const RES_LABEL = { W: '승', D: '무', L: '패' } as const;
+
 /** T-10-024: 구간(프리시즌·전반기·후반기)을 마친 뒤 시즌 탭 맨 위에 그리는 리포트. */
 export type PhaseReport = {
   /** 새 리포트마다 바뀌어 카드 애니메이션을 처음부터 다시 건다. */
@@ -57,6 +59,20 @@ export function sheetLabel(v: SheetView): string {
 
 export type SheetView =
   | { kind: 'steps'; title: string; steps: string[]; active: number; progress: number }
+  | {
+      /** T-10-028: 구간 경기를 한 경기씩 흘려보내는 중계 시트(T-10-024 전의 연출). 끝나면 리포트로 넘어간다. */
+      kind: 'block';
+      eyebrow: string;
+      title: string;
+      back: boolean;
+      progress: number;
+      round: string;
+      wdl: { w: number; d: number; l: number };
+      tally: { apps: number; g: number; a: number; cs: number; rating: string };
+      ticker: TickerRow[];
+      extras: { text: string; done: boolean }[];
+      skip: (() => void) | null;
+    }
   | { kind: 'judge'; label: string; p: number; pos: number }
   | {
       kind: 'event';

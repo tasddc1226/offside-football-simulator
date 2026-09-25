@@ -65,7 +65,7 @@ export async function executeProfileDeletion(
     // (profiles_google_sub_unique)가 같은 Google 계정의 재연결을 막는다.
     db
       .update(profiles)
-      .set({ deletedAt: input.now, googleSub: null, email: null, linkedAt: null })
+      .set({ deletedAt: input.now, googleSub: null, email: null, linkedAt: null, nickname: null })
       .where(eq(profiles.id, input.profileId)),
     // T-9-009: profiles는 소프트 삭제(deletedAt만 세팅)라 FK ON DELETE CASCADE가 트리거되지 않는다.
     // 커리어·시즌 데이터는 이 batch에서 명시적으로 지운다.

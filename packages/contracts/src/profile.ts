@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { COMMENT_NICKNAME_MAX } from './board-limits.js';
 import { IsoUtcSchema } from './primitives.js';
 
 /** 02 `ProfileSettings`. */
@@ -22,9 +23,21 @@ export const ProfileSchema = z.strictObject({
   recoveryCodeIssuedAt: IsoUtcSchema.nullable(),
   createdAt: IsoUtcSchema,
   googleEmailMasked: z.string().nullable().default(null),
+  /** T-10-028 댓글 닉네임(구글 로그인한 프로필만). 옛 응답엔 없다. */
+  nickname: z.string().nullable().default(null),
 });
 
 export type Profile = z.infer<typeof ProfileSchema>;
+
+/** T-10-028 댓글 닉네임: 2~12자, 제어 문자·꺾쇠 없이. */
+export const NicknameSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(COMMENT_NICKNAME_MAX)
+  .regex(/^[^\p{Cc}<>]+$/u, '닉네임에 쓸 수 없는 문자가 있습니다.');
+export const PutNicknameBodySchema = z.strictObject({ nickname: NicknameSchema });
+export type PutNicknameBody = z.infer<typeof PutNicknameBodySchema>;
 
 /** API-PRO-002. */
 export const PatchProfileSettingsBodySchema = ProfileSettingsSchema.partial();

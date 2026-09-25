@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { authAttempts, boardComments, profiles } from '../db/schema.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
 
 const ORIGIN = 'http://localhost:5173';
 const ADMIN_EMAIL = 'admin@example.com';
@@ -31,9 +31,16 @@ describe('게시판 /v1/boards', () => {
       env,
     );
 
+  // 관리자는 프로필 닉네임과 무관하게 '운영자'로 댓글을 쓴다(일부러 다른 닉네임을 넣어 둔다).
   async function makeAdmin() {
     const who = await issueCookie(ctx);
-    await ctx.db.update(profiles).set({ googleSub: 'sub-admin', email: ADMIN_EMAIL, linkedAt: '2026-09-25T00:00:00.000Z' }).where(eq(profiles.id, who.profileId));
+    await ctx.db.update(profiles).set({ googleSub: 'sub-admin', email: ADMIN_EMAIL, linkedAt: '2026-09-25T00:00:00.000Z', nickname: '관리' }).where(eq(profiles.id, who.profileId));
+    return who;
+  }
+  /** 구글로 로그인한 일반 프로필. nickname이 null이면 아직 닉네임을 정하지 않은 상태. */
+  async function googleUser(nickname: string | null) {
+    const who = await issueCookie(ctx);
+    await linkGoogle(ctx, who.profileId, { nickname });
     return who;
   }
   async function writePost(cookie: string, board = 'notice', body: Record<string, unknown> = {}) {
@@ -105,17 +112,18 @@ describe('게시판 /v1/boards', () => {
     expect((await call('DELETE', `/v1/boards/posts/${id}`, { cookie: admin.cookie })).status).toBe(404);
   });
 
-  it('댓글: 누구나 쓰고, 본인·관리자만 지운다. 관리자 댓글은 표시된다', async () => {
+  it('댓글: 구글 로그인한 사람이 프로필 닉네임으로 쓰고, 본인·관리자만 지운다. 관리자 댓글은 표시된다', async () => {
     const admin = await makeAdmin();
     const id = await writePost(admin.cookie);
-    expect((await call('POST', `/v1/boards/posts/${id}/comments`, { body: { nickname: '팬', body: '좋아요' } })).status).toBe(401);
+    expect((await call('POST', `/v1/boards/posts/${id}/comments`, { body: { body: '좋아요' } })).status).toBe(401);
 
-    const alice = await issueCookie(ctx);
-    const bob = await issueCookie(ctx);
-    const res = await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: alice.cookie, body: { nickname: '앨리스', body: '기대돼요' } });
+    const alice = await googleUser('앨리스');
+    const bob = await googleUser('밥');
+    // 옛 클라이언트가 보내는 nickname은 무시하고 프로필 닉네임을 쓴다.
+    const res = await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: alice.cookie, body: { nickname: '가짜', body: '기대돼요' } });
     expect(res.status).toBe(201);
     const commentId = ((await res.json()) as { data: { id: string } }).data.id;
-    await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: admin.cookie, body: { nickname: '운영자', body: '감사합니다' } });
+    await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: admin.cookie, body: { body: '감사합니다' } });
 
     const asBob = (await (await call('GET', `/v1/boards/posts/${id}`, { cookie: bob.cookie })).json()) as {
       data: { post: { commentCount: number }; comments: { nickname: string; admin: boolean; deletable: boolean }[] };
@@ -131,28 +139,49 @@ describe('게시판 /v1/boards', () => {
     expect(after.data.comments).toHaveLength(1);
   });
 
+  it('댓글: 구글 로그인이 없으면 403, 닉네임이 없으면 403 — viewer가 그 상태를 알려 준다', async () => {
+    const admin = await makeAdmin();
+    const id = await writePost(admin.cookie);
+    const reasonOf = async (res: Response) => {
+      expect(res.status).toBe(403);
+      return (ErrorEnvelopeSchema.parse(await res.json()).error.details as { reason?: string } | undefined)?.reason;
+    };
+    const viewerOf = async (cookie?: string) =>
+      ((await (await call('GET', '/v1/boards/viewer', cookie ? { cookie } : {})).json()) as { data: { admin: boolean; google: boolean; nickname: string | null } }).data;
+
+    const anon = await issueCookie(ctx);
+    expect(await reasonOf(await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: anon.cookie, body: { body: '안녕' } }))).toBe('GOOGLE_LOGIN_REQUIRED');
+    expect(await viewerOf(anon.cookie)).toEqual({ admin: false, google: false, nickname: null });
+    expect(await viewerOf()).toEqual({ admin: false, google: false, nickname: null });
+
+    const fresh = await googleUser(null);
+    expect(await reasonOf(await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: fresh.cookie, body: { body: '안녕' } }))).toBe('NICKNAME_REQUIRED');
+    expect(await viewerOf(fresh.cookie)).toEqual({ admin: false, google: true, nickname: null });
+    expect(await viewerOf(admin.cookie)).toEqual({ admin: true, google: true, nickname: '운영자' });
+  });
+
   it('댓글 필터·횟수 제한·없는 글', async () => {
     const admin = await makeAdmin();
     const id = await writePost(admin.cookie);
-    const user = await issueCookie(ctx);
-    const blocked = await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: user.cookie, body: { nickname: 'www.spam.com', body: '안녕' } });
+    const user = await googleUser('팬');
+    const blocked = await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: user.cookie, body: { body: '씨 발 뭐야' } });
     expect(blocked.status).toBe(400);
-    expect((await call('POST', '/v1/boards/posts/pst_00000000-0000-0000-0000-000000000000/comments', { cookie: user.cookie, body: { nickname: 'a', body: 'b' } })).status).toBe(404);
+    expect((await call('POST', '/v1/boards/posts/pst_00000000-0000-0000-0000-000000000000/comments', { cookie: user.cookie, body: { body: 'b' } })).status).toBe(404);
 
     await ctx.db.insert(authAttempts).values({ id: 'att_x', kind: 'BOARD_COMMENT', subject: user.profileId, windowStart: new Date().toISOString(), count: 10 });
-    const limited = await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: user.cookie, body: { nickname: '팬', body: '또' } });
+    const limited = await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: user.cookie, body: { body: '또' } });
     expect(limited.status).toBe(429);
     // 관리자는 제한이 없다.
     for (let i = 0; i < 11; i++) {
-      expect((await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: admin.cookie, body: { nickname: '운영자', body: `${i}` } })).status).toBe(201);
+      expect((await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: admin.cookie, body: { body: `${i}` } })).status).toBe(201);
     }
   });
 
   it('프로필을 지우면 그 사람의 댓글도 지워진다', async () => {
     const admin = await makeAdmin();
     const id = await writePost(admin.cookie);
-    const user = await issueCookie(ctx);
-    await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: user.cookie, body: { nickname: '팬', body: '안녕' } });
+    const user = await googleUser('팬');
+    expect((await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: user.cookie, body: { body: '안녕' } })).status).toBe(201);
     const headers = (key: string) => ({ 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: user.cookie, 'Idempotency-Key': key });
     const tokenRes = await app.request('/v1/profile/delete', { method: 'POST', headers: headers('idem-board-del-token'), body: '{}' }, env);
     const { confirmToken } = ((await tokenRes.json()) as { data: { confirmToken: string } }).data;

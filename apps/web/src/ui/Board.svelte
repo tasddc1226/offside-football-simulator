@@ -1,42 +1,42 @@
 <script lang="ts">
   // T-10-011 소식 화면 — 공지사항·릴리즈 노트 게시판. 읽기는 누구나, 글은 관리자만(수정·삭제 포함),
-  // 댓글은 누구나(첫 댓글 때 프로필 세션을 만든다). 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
+  // 댓글은 구글로 로그인하고 닉네임을 정한 사람만(T-10-028). 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
   import { onMount } from 'svelte';
   import {
+    ADMIN_NICKNAME,
     COMMENT_BODY_MAX,
-    COMMENT_NICKNAME_MAX,
     POST_BODY_MAX,
     POST_TITLE_MAX,
     POST_VERSION_MAX,
   } from '@offside/contracts/board-limits';
   import * as api from '../api/boards.js';
-  import type { BoardKey, Comment, Post, PostSummary } from '../api/boards.js';
-  import { getProfile } from '../api/client.js';
-  import { loadKey, saveKey } from '../game/season.js';
+  import type { BoardKey, BoardViewerResponse, Comment, Post, PostSummary } from '../api/boards.js';
+  import { getProfile, googleStartUrl } from '../api/client.js';
   import { appState } from './state.svelte.js';
-  import { goHome } from './actions.js';
+  import { goHome, rememberBoardReturn } from './actions.js';
   import { toast } from './helpers.js';
   import { BOARD_LABEL, dateOf, parseBody } from './boardText.js';
   import Topbar from './Topbar.svelte';
+  import NicknameForm from './NicknameForm.svelte';
 
   const EYEBROW: Record<BoardKey, string> = { notice: 'Notice', release: 'Release notes' };
-  const NICK_KEY = 'ft_nick';
 
   // 홈의 공지사항 · 릴리즈 노트 섹션에서 고른 게시판 하나만 보여 준다.
   const board = appState.board;
-  let admin = $state(false);
+  /** 관리자 여부와 댓글 자격(구글 로그인·닉네임). 불러오기 전엔 null(댓글 폼을 그리지 않는다). */
+  let viewer = $state<BoardViewerResponse | null>(null);
+  const admin = $derived(!!viewer?.admin);
   let posts = $state<PostSummary[]>([]);
   let hasMore = $state(false);
   let status = $state<'loading' | 'ready' | 'error'>('loading');
   let detail = $state<{ post: Post; comments: Comment[] } | null>(null);
   /** 관리자 편집기. id가 없으면 새 글. */
   let editing = $state<{ id?: string; title: string; body: string; version: string; pinned: boolean } | null>(null);
-  let nickname = $state(loadKey<string>(NICK_KEY) ?? '');
   let commentText = $state('');
   let busy = $state(false);
 
   onMount(() => {
-    void api.fetchBoardViewer().then((r) => (admin = r.ok && r.data.admin));
+    void api.fetchBoardViewer().then((r) => (viewer = r.ok ? r.data : { admin: false, google: false, nickname: null }));
     void load();
     if (appState.boardPost) void open(appState.boardPost);
     appState.boardPost = null;
@@ -97,14 +97,18 @@
     if (!detail || busy) return;
     const post = detail.post;
     busy = true;
-    // 댓글은 프로필 세션이 있어야 한다 — 없으면 GET /v1/profile이 익명 프로필을 만든다.
-    let r = await api.addComment(post.id, { nickname, body: commentText });
-    if (!r.ok && r.error.code === 'PROFILE_REQUIRED' && (await getProfile()).ok) r = await api.addComment(post.id, { nickname, body: commentText });
+    const r = await api.addComment(post.id, { body: commentText });
     busy = false;
     if (!r.ok) return toast(r.error.message);
-    saveKey(NICK_KEY, nickname.trim());
     commentText = '';
     if (detail?.post.id === post.id) detail.comments = [...detail.comments, r.data];
+  }
+  // 구글 로그인은 프로필 세션이 있어야 시작된다 — 없으면 GET /v1/profile이 익명 프로필을 만든다.
+  // 로그인을 마치고 돌아오면 보던 글로 다시 연다.
+  async function login() {
+    rememberBoardReturn({ board, postId: detail?.post.id ?? null });
+    await getProfile();
+    window.location.assign(googleStartUrl());
   }
   async function removeComment(c: Comment) {
     if (!confirm('이 댓글을 지울까요?')) return;
@@ -185,8 +189,8 @@
         {#each detail.comments as c (c.id)}
           <div class="board-comment" data-comment={c.id}>
             <div class="row" style="gap:6px;align-items:center">
-              <b>{c.nickname}</b>
-              {#if c.admin}<span class="pill good">운영자</span>{/if}
+              <!-- 관리자 댓글은 닉네임 대신 운영자 배지만(예전에 누구나 '운영자'라고 쓴 댓글과 구분된다). -->
+              {#if c.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{c.nickname}</b>{/if}
               <span class="muted" style="font-size:12px">{dateOf(c.createdAt)}</span>
               {#if c.deletable}<button class="icon-btn board-comment-del" onclick={() => removeComment(c)}>삭제</button>{/if}
             </div>
@@ -195,11 +199,25 @@
         {:else}
           <p class="muted" style="margin:0;font-size:13px">첫 댓글을 남겨 보세요.</p>
         {/each}
-        <form class="stack" style="gap:8px" onsubmit={(e) => (e.preventDefault(), void sendComment())}>
-          <input type="text" aria-label="닉네임" placeholder="닉네임" maxlength={COMMENT_NICKNAME_MAX} required bind:value={nickname} />
-          <textarea aria-label="댓글 내용" placeholder="댓글을 남겨 주세요" rows="3" maxlength={COMMENT_BODY_MAX} required bind:value={commentText}></textarea>
-          <button class="btn btn-accent" type="submit" data-act="send-comment" disabled={busy}>댓글 달기</button>
-        </form>
+        {#if !viewer}
+          <!-- 댓글 자격을 확인하는 중 -->
+        {:else if !viewer.google}
+          <div class="comment-gate" data-comment-gate="login">
+            <p class="muted">구글로 로그인하면 댓글을 쓸 수 있어요.</p>
+            <button class="btn btn-primary" data-act="comment-login" onclick={login}>구글로 로그인</button>
+          </div>
+        {:else if !viewer.nickname}
+          <div class="comment-gate" data-comment-gate="nickname">
+            <p class="muted">댓글에 쓸 닉네임을 먼저 정해 주세요. 설정의 계정에서 바꿀 수 있어요.</p>
+            <NicknameForm onsaved={(n) => viewer && (viewer.nickname = n)} />
+          </div>
+        {:else}
+          <form class="stack" style="gap:8px" onsubmit={(e) => (e.preventDefault(), void sendComment())}>
+            <span class="muted" style="font-size:12px"><b>{viewer.nickname}</b> 이름으로 남겨요</span>
+            <textarea aria-label="댓글 내용" placeholder="댓글을 남겨 주세요" rows="3" maxlength={COMMENT_BODY_MAX} required bind:value={commentText}></textarea>
+            <button class="btn btn-accent" type="submit" data-act="send-comment" disabled={busy}>댓글 달기</button>
+          </form>
+        {/if}
       </section>
     {:else}
       {#if admin}

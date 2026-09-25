@@ -5,6 +5,7 @@ import {
   IssueRecoveryCodeResponseSchema,
   PatchProfileSettingsBodySchema,
   ProfileSchema,
+  PutNicknameBodySchema,
   RecoverProfileBodySchema,
   RecoverProfileResponseSchema,
   successEnvelope,
@@ -13,12 +14,14 @@ import {
   type ProfileSettings,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
+import { commentIdentity } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
 import { sha256Hex } from '../db/hash.js';
-import { getProfile, createProfile, touchLastSeen, updateSettings, type ProfileRecord } from '../db/repos/profiles.js';
+import { getProfile, createProfile, setNickname, touchLastSeen, updateSettings, type ProfileRecord } from '../db/repos/profiles.js';
+import { isAcceptablePublicName, isReservedNickname } from '../content-filter.js';
 import { revokeSession } from '../db/repos/sessions.js';
 import { getDb, type AppEnv } from '../env.js';
-import { AppError, parseWithAppError } from '../errors.js';
+import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
@@ -29,7 +32,7 @@ import { recoverProfile } from '../profile/recover.js';
 
 const LAST_SEEN_REFRESH_MS = 60 * 60 * 1000;
 
-function buildProfileResponse(record: ProfileRecord): Profile {
+function buildProfileResponse(record: ProfileRecord, adminEmails: string | undefined): Profile {
   return {
     id: record.id,
     settings: record.settings,
@@ -37,6 +40,7 @@ function buildProfileResponse(record: ProfileRecord): Profile {
     recoveryCodeIssuedAt: record.recoveryCodeIssuedAt,
     createdAt: record.createdAt,
     googleEmailMasked: maskEmail(record.email),
+    nickname: commentIdentity(record, adminEmails).nickname,
   };
 }
 
@@ -69,7 +73,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     }
 
     const body = successEnvelope(ProfileSchema).parse({
-      data: buildProfileResponse(record),
+      data: buildProfileResponse(record, c.env.ADMIN_EMAILS),
       meta: { requestId: c.get('requestId') },
     });
     return c.json(body, 200);
@@ -96,9 +100,36 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     const updated = await updateSettings(db, session.profileId, definedPatch);
 
     const body = successEnvelope(ProfileSchema).parse({
-      data: buildProfileResponse(updated),
+      data: buildProfileResponse(updated, c.env.ADMIN_EMAILS),
       meta: { requestId: c.get('requestId') },
     });
+    return c.json(body, 200);
+  });
+
+  // T-10-028 댓글 닉네임. 구글 로그인한 프로필만 정할 수 있고, 다른 사람과 겹치면 409.
+  app.put('/v1/profile/nickname', requireProfile, async (c) => {
+    const db = getDb(c);
+    const session = getSessionOrThrow(c);
+    const { nickname } = parseWithAppError(PutNicknameBodySchema, parseJsonBody(c.get('rawBody') ?? ''));
+    const profile = await getProfile(db, session.profileId);
+    const identity = commentIdentity(profile, c.env.ADMIN_EMAILS);
+    if (!profile || !identity.google) {
+      throw new AppError({ code: 'FORBIDDEN', message: '구글로 로그인하면 닉네임을 정할 수 있어요.', details: { reason: 'GOOGLE_LOGIN_REQUIRED' } });
+    }
+    if (identity.admin) {
+      throw new AppError({ code: 'FORBIDDEN', message: `운영자 계정의 댓글 닉네임은 '${identity.nickname}'로 고정돼요.`, details: { reason: 'ADMIN_NICKNAME_FIXED' } });
+    }
+    if (isReservedNickname(nickname)) {
+      throw new AppError({ code: 'VALIDATION_FAILED', message: `'운영자'처럼 운영진으로 보이는 닉네임은 쓸 수 없어요.`, details: { reason: 'RESERVED_NICKNAME' } });
+    }
+    if (!isAcceptablePublicName(nickname)) {
+      throw new AppError({ code: 'VALIDATION_FAILED', message: '쓸 수 없는 닉네임이에요.', details: { reason: 'BLOCKED_WORD' } });
+    }
+    const updated = await setNickname(db, profile.id, nickname);
+    if (updated === 'taken') {
+      throw new AppError({ code: 'VALIDATION_FAILED', status: 409, message: '이미 쓰고 있는 닉네임이에요.', details: { reason: 'NICKNAME_TAKEN' } });
+    }
+    const body = successEnvelope(ProfileSchema).parse({ data: buildProfileResponse(updated, c.env.ADMIN_EMAILS), meta: { requestId: c.get('requestId') } });
     return c.json(body, 200);
   });
 
