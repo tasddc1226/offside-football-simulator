@@ -1,6 +1,7 @@
 {
   "name": "@offside/eslint-config",
   "private": true,
+  "license": "UNLICENSED",
   "version": "0.0.0",
   "type": "module",
   "main": "./index.mjs",
