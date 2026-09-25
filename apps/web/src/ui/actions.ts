@@ -323,6 +323,10 @@ export function goSettings() {
   appState.screen = 'settings';
   window.scrollTo(0, 0);
 }
+export function goBoard() {
+  appState.screen = 'board';
+  window.scrollTo(0, 0);
+}
 export function startCareer(name: string, number: number, presetAttrs?: Record<AttrKey, number>) {
   const finalName = name.trim() || randomName();
   const finalNumber = clamp(+number || 10, 1, 99);

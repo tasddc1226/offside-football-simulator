@@ -11,6 +11,8 @@ export const ERROR_CODES = [
   'SERVICE_UNAVAILABLE',
   /** T-9-009: careerId가 다른 프로필 소유로 이미 존재한다(한 커리어를 두 프로필이 겹쳐 쓰지 못하게). */
   'CAREER_OWNER_MISMATCH',
+  /** T-10-011: 관리자만 할 수 있는 요청(게시판 글쓰기)이거나 남의 댓글을 지우려 했다. */
+  'FORBIDDEN',
 ] as const;
 
 export const ErrorCodeSchema = z.enum(ERROR_CODES);
@@ -28,6 +30,7 @@ export const HTTP_STATUS_BY_CODE: Record<ErrorCode, HttpStatus> = {
   RATE_LIMITED: 429,
   SERVICE_UNAVAILABLE: 503,
   CAREER_OWNER_MISMATCH: 409,
+  FORBIDDEN: 403,
 };
 
 /** RATE_LIMITED, SERVICE_UNAVAILABLE만 재시도 가능. */
@@ -40,4 +43,5 @@ export const RETRYABLE_BY_CODE: Record<ErrorCode, boolean> = {
   RATE_LIMITED: true,
   SERVICE_UNAVAILABLE: true,
   CAREER_OWNER_MISMATCH: false,
+  FORBIDDEN: false,
 };

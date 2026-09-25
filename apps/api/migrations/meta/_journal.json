@@ -141,6 +141,13 @@
       "when": 1790295770117,
       "tag": "0019_club_customs",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1790307380751,
+      "tag": "0020_boards",
+      "breakpoints": true
     }
   ]
 }

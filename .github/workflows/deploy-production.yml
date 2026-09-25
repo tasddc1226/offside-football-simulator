@@ -165,6 +165,19 @@ jobs:
           node -e 'process.stdout.write(JSON.stringify({ GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET }))' \
             | pnpm --filter @offside/api exec wrangler secret bulk --env production
 
+      # T-10-011: 게시판 관리자(쉼표 구분 구글 이메일). 레포가 공개라 코드에 두지 않고 GitHub secret에서 옮긴다.
+      # secret이 없으면 건너뛴다(기존 Worker secret 유지).
+      - name: Sync admin emails secret
+        if: inputs.mode == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
+        run: |
+          if [ -z "${ADMIN_EMAILS:-}" ]; then echo "ADMIN_EMAILS secret not set; skipping."; exit 0; fi
+          node -e 'process.stdout.write(JSON.stringify({ ADMIN_EMAILS: process.env.ADMIN_EMAILS }))' \
+            | pnpm --filter @offside/api exec wrangler secret bulk --env production
+
       - name: Deploy production web
         if: inputs.mode == 'deploy'
         env:

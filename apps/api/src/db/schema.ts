@@ -76,7 +76,7 @@ export const authAttempts = sqliteTable(
   {
     id: text('id').primaryKey(),
     kind: text('kind', {
-      enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START'],
+      enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START', 'BOARD_COMMENT'],
     }).notNull(),
     subject: text('subject').notNull(),
     windowStart: text('window_start').notNull(),
@@ -190,3 +190,42 @@ export const clubCustoms = sqliteTable('club_customs', {
   clubsJson: text('clubs_json').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+/** T-10-011. 게시판 글(공지·릴리즈 노트 …). 관리자만 쓴다. 지우면 deleted_at만 채운다(댓글과 함께 숨김). */
+export const boardPosts = sqliteTable(
+  'board_posts',
+  {
+    id: text('id').primaryKey(),
+    board: text('board').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    version: text('version'),
+    pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+    authorProfileId: text('author_profile_id').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    deletedAt: text('deleted_at'),
+  },
+  (table) => [index('board_posts_board_created_idx').on(table.board, table.createdAt)],
+);
+
+/** T-10-011. 글마다 달리는 댓글. 프로필이 있는 누구나 쓰고, 본인·관리자가 지운다(deleted_at). */
+export const boardComments = sqliteTable(
+  'board_comments',
+  {
+    id: text('id').primaryKey(),
+    postId: text('post_id')
+      .notNull()
+      .references(() => boardPosts.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id').notNull(),
+    nickname: text('nickname').notNull(),
+    body: text('body').notNull(),
+    admin: integer('admin', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+    deletedAt: text('deleted_at'),
+  },
+  (table) => [
+    index('board_comments_post_created_idx').on(table.postId, table.createdAt),
+    index('board_comments_profile_idx').on(table.profileId),
+  ],
+);
