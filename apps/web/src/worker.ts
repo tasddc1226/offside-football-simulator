@@ -47,6 +47,12 @@ export default {
     const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
     if (url.pathname.startsWith('/assets/') && asset.status === 200)
       return withImmutableCache(asset);
+    // T-10-023: 새 배포 감지용 — 항상 최신 값을 받아야 한다.
+    if (url.pathname === '/version.json' && asset.status === 200) {
+      const result = withRobots(asset, 'noindex, nofollow');
+      result.headers.set('Cache-Control', 'no-store');
+      return result;
+    }
     if (!isPublicPage && !isDiscovery && asset.status !== 404)
       return withRobots(asset, 'noindex, nofollow');
     let indexingEnabled = false;
