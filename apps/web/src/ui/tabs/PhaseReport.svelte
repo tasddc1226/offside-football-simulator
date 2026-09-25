@@ -13,14 +13,15 @@
   const DOT_MS = 60;
   // 점이 다 켜진 뒤에 다음 요소가 나오도록 지연을 잡는다.
   const afterDots = $derived(dur(Math.min(r.games.length * DOT_MS, 1200) + 150));
-  const b = $derived(r.block);
   const rankDelta = $derived(r.rank.before != null && r.rank.after != null ? r.rank.before - r.rank.after : 0);
 
   // 숫자는 0에서 카운트업한다. 카드는 리포트마다 {#key}로 새로 마운트되므로 마운트 때 한 번만 목표를 준다.
   const tween = () => new Tween(0, { duration: dur(900), easing: cubicOut });
   const t = { w: tween(), d: tween(), l: tween(), apps: tween(), goals: tween(), col: tween(), rating: tween() };
+  // 리포트는 {#key}로 매번 새로 마운트되므로 r은 이 카드가 살아 있는 동안 바뀌지 않는다.
+  const b = $derived(r.block);
   onMount(() => {
-    const x = r.block;
+    const x = b;
     if (!x) return;
     void Promise.all([
       t.w.set(x.w), t.d.set(x.d), t.l.set(x.l), t.apps.set(x.apps), t.goals.set(x.goals),
@@ -54,7 +55,7 @@
         <li class="res {m.res}" style="--i:{i}" title="{m.rd}R {m.opp} {m.score}">{RES[m.res]}</li>
       {/each}
     </ol>
-    <div class="rp-wdl num" aria-hidden="true">
+    <div class="result-big rp-wdl num" aria-hidden="true">
       {Math.round(t.w.current)}<small>승</small> {Math.round(t.d.current)}<small>무</small> {Math.round(t.l.current)}<small>패</small>
     </div>
     <div class="tally">

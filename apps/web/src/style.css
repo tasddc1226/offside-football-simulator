@@ -374,28 +374,19 @@ td.n, th.n { text-align: right; }
 /* 진행 연출 */
 .prog { height: 8px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
 .prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--pitch-2), var(--accent)); transition: width .12s linear; }
-.prog-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: -6px; }
 .tally { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
 .tally div { background: var(--surface-2); border-radius: 10px; padding: 8px 4px; }
 .tally b { display: block; font-family: var(--display); font-size: 24px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .tally span { font-size: 11px; color: var(--muted); }
-.tally b.bump { animation: bump .3s ease; }
-@keyframes bump { 40% { transform: scale(1.25); color: var(--accent); } }
-.ticker { display: flex; flex-direction: column; gap: 4px; min-height: 124px; font-size: 13px; font-variant-numeric: tabular-nums; }
-.ticker div { display: grid; grid-template-columns: 34px 30px 1fr; gap: 8px; align-items: center; animation: tick .25s ease both; }
-/* T-10-004: 지난 경기 줄은 반투명 대신 muted 색으로 눌러 둔다(opacity .55는 명도 대비 2~3:1). */
-.ticker div:not(:first-child) { color: var(--muted); }
-.ticker div:first-child { font-weight: 600; }
+.ticker { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.ticker div { display: grid; grid-template-columns: 34px 30px 1fr; gap: 8px; align-items: center; }
 .ticker .rd { color: var(--muted); font-family: var(--display); font-weight: 600; }
 /* 글자색을 surface로 두면 라이트(흰 글자)·다크(짙은 글자) 모두 배경색 대비 4.5:1 이상이다. */
 .res { display: inline-grid; place-items: center; width: 24px; height: 20px; border-radius: 5px; font-size: 11px; font-weight: 700; color: var(--surface); }
 .res.W { background: var(--good); } .res.D { background: var(--muted); } .res.L { background: var(--bad); }
-/* T-10-004: 등장 모션은 transform만 쓴다 — opacity 중간값이 axe 명도 대비를 흔들지 않게. */
-@keyframes tick { from { transform: translateY(-6px); } }
 .steps { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .steps div { color: var(--muted); } .steps div.on { color: var(--ink); } .steps div.on::before { content: '▸ '; color: var(--accent); }
 .steps div.done::before { content: '✓ '; color: var(--good); }
-.skip { align-self: center; border: 0; background: none; color: var(--muted); font-size: 12px; text-decoration: underline; padding: 4px; }
 /* 판정 게이지 */
 .judge { position: relative; height: 14px; border-radius: 7px; overflow: hidden; display: flex; }
 .judge .ok { background: color-mix(in srgb, var(--good) 55%, transparent); } .judge .ng { flex: 1; background: color-mix(in srgb, var(--bad) 45%, transparent); }
@@ -405,7 +396,7 @@ td.n, th.n { text-align: right; }
 @keyframes pop { from { transform: scale(.6); } }
 .result-big.pop { animation: pop .35s cubic-bezier(.3,1.6,.5,1) both; }
 .twist { font-size: 13px; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); border: 1px dashed var(--line); }
-@media (prefers-reduced-motion: reduce) { .chip.pop, .result-big.pop, .ticker div, .tally b.bump { animation: none; } .prog i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .chip.pop, .result-big.pop { animation: none; } .prog i { transition: none; } }
 .choice { border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 12px 14px; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 600; }
 .choice:hover { border-color: var(--pitch-2); }
 .odds { font-family: var(--display); font-size: 15px; font-weight: 700; padding: 2px 8px; border-radius: 8px; background: var(--surface-2); flex-shrink: 0; }
@@ -611,27 +602,22 @@ body:has(nav.tabs) .toast { bottom: calc(var(--tabbar-h) + var(--actionbar-h) + 
 
 /* ───────── 구간 리포트 (T-10-024) ───────── */
 .report { display: flex; flex-direction: column; gap: 14px; border: 1.5px solid color-mix(in srgb, var(--accent) 45%, var(--line)); }
-.rp-rank.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
-.rp-rank.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
 .rp-dots { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
 .rp-dots li { width: 26px; height: 26px; border-radius: 50%; animation: pop .3s cubic-bezier(.3,1.6,.5,1) both; animation-delay: calc(var(--i) * 60ms); }
-.rp-wdl { font-family: var(--display); font-size: 40px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .rp-wdl small { font-size: 20px; color: var(--muted); margin-right: 6px; }
 .rp-later { animation: rp-in .35s ease both; animation-delay: var(--after, 0ms); }
 .report .chip.pop { animation-delay: calc(var(--after, 0ms) + var(--d, 0ms)); }
 @keyframes rp-in { from { transform: translateY(8px); } }
 .rp-games summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); padding: 4px 0; }
-.rp-games .ticker { min-height: 0; margin-top: 8px; }
-.rp-games .ticker div { animation: none; color: var(--ink); font-weight: 400; }
+.rp-games .ticker { margin-top: 8px; }
 @media (prefers-reduced-motion: reduce) { .rp-dots li, .rp-later, .report .chip.pop { animation: none; } }
 
 /* ───────── 리그 순위표 (T-10-024) ───────── */
 .league-table { display: flex; flex-direction: column; gap: 10px; }
-.league-table table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-.league-table th { font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; padding: 4px 2px; border-bottom: 1px solid var(--line); }
-.league-table td { text-align: center; padding: 7px 2px; border-bottom: 1px solid var(--line); }
+.league-table th { font-size: 11px; text-align: center; padding: 4px 2px; }
+.league-table td { text-align: center; padding-inline: 2px; }
 .league-table .lt-team { text-align: left; padding-left: 6px; max-width: 0; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.league-table td.num { font-family: var(--display); font-size: 15px; width: 32px; }
+.league-table td.num { font-size: 15px; width: 32px; }
 .league-table th:not(.lt-team) { width: 32px; }
 .league-table .lt-pts { font-weight: 700; }
 .league-table tr.top td:first-child { color: var(--accent-text); font-weight: 700; }

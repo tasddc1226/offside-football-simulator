@@ -3,7 +3,7 @@
 // rollEvent, resolveChoice, bestKey/weakKey 등)를 이 모듈로 모았습니다. 동작은 원본과 동일합니다.
 import { LEAGUES, CLUBS, POS, TYPES, ATTR_KEYS, PHASES, LAST_PHASE, FOCUS_GROWTH, OFF_FOCUS_GROWTH, focusMod, focusOfType, typeForFocus, attrLabels, type AttrKey, type Pos, type League, type Club } from './data.js';
 import { ovr, wOf, initSubs, legacyOvr, spreadAttr } from './attributes.js';
-import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
+import { clamp, ri, pick, chance, gauss, poisson, rnd, hashStr } from './rng.js';
 import { EVENTS } from './events-data.js';
 import { BAL, adoptLatestBalance, choiceOdds, eventWeight } from './balance.js';
 import type { GameState, Season, LogEntry, Choice, EventDef } from './types.js';
@@ -359,12 +359,6 @@ export function simBlock(s: GameState): BlockResult {
 // RNG 소비(finalRank의 난수)는 19개 모두에 대해 그대로 일어난다.
 const basePpg = (L: League, str: number) => 1.35 + (str - L.avg) * 0.06;
 
-function strHash(t: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
-
 /** 순위에 들어가는 상대 인덱스(S.rivals 기준, 강한 순). */
 function rankedRivals(s: GameState): number[] {
   const R = s.season.rivals;
@@ -390,7 +384,7 @@ export function leagueTable(s: GameState): TableRow[] {
   const rows: TableRow[] = rankedRivals(s).map((ri, k) => {
     const name = names[k] ?? `${L.name} ${k + 1}`;
     // 팀·시즌·경기 수로 정해지는 고정 편차(난수 아님) — 같은 전력대 팀들이 똑같은 전적으로 겹치지 않게.
-    const h = strHash(`${name}|${s.year}`);
+    const h = hashStr(`${name}|${s.year}`);
     const jitter = P ? ((h + P * 7) % 5) - 2 : 0;
     const pts = clamp(Math.round(clamp(basePpg(L, S.rivals[ri]!), 0.4, 2.6) * P) + jitter, 0, 3 * P);
     // 무승부는 경기의 18~32%(팀마다 다름). 승점이 정확히 맞도록 승·무를 나눈다.

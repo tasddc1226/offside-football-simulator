@@ -1,12 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 import { startCareer } from './helpers.js';
 
-// 프리시즌 → 전반기 → 후반기를 여러 시즌 돌리는 동안 확률 이벤트 선택지, 오퍼/시트 버튼,
-// 애니메이션 건너뛰기 버튼이 그때그때 나타난다 — 매 스텝마다 "지금 보이는 걸 하나 고른다"는
+// 프리시즌 → 전반기 → 후반기를 여러 시즌 돌리는 동안 확률 이벤트 선택지, 오퍼/시트 버튼이
+// 그때그때 나타난다 — 매 스텝마다 "지금 보이는 걸 하나 고른다"는
 // 방식으로 진행한다. 순수 UI 폴링이라 애니메이션 타이밍에 흔들리지 않는다.
 async function clickWhateverIsNext(page: Page): Promise<boolean> {
   const candidates = [
-    '#an-skip',
     '.choice:visible',
     '[data-opt]:visible',
     '#sheet [data-sheet]:visible',

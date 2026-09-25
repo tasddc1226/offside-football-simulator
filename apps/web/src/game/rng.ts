@@ -44,6 +44,15 @@ export function getActiveRng(): Rng {
 }
 
 export const rnd = (): number => active.next();
+/** 문자열을 32비트 정수로 접는 FNV-1a 해시. 암호학적 용도 아님 — RNG를 소비하지 않는 결정적 선택용. */
+export function hashStr(str: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
 export const clamp = (v: number, a: number, b: number): number => Math.max(a, Math.min(b, v));
 export const ri = (a: number, b: number): number => Math.floor(a + rnd() * (b - a + 1));
 export function pick<T>(a: readonly T[]): T {
