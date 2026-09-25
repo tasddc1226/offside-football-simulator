@@ -5,13 +5,16 @@ import Sheet from './ui/Sheet.svelte';
 import Toast from './ui/Toast.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
 import { handleOAuthReturn } from './ui/actions.js';
+import { routeSharedCareer } from './ui/legend.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';
 import { installClickSound } from './ui/sfx.js';
 import { watchForUpdates } from './ui/update.svelte.js';
 
-handleOAuthReturn();
 installClickSound();
 loadGame();
+// OAuth 복귀는 세이브를 읽은 뒤에 처리한다(돌아갈 곳이 로컬 명예의 전당 선수일 수 있다).
+handleOAuthReturn();
+routeSharedCareer();
 syncBalance();
 
 // T-10-004: index.html의 정적 홈 히어로(첫 페인트용)와 noscript를 걷어 내고 앱을 마운트한다.

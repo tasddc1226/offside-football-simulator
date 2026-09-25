@@ -22,8 +22,8 @@ const PUBLIC_PATHS = new Set([
 ]);
 // 앱 셸(오프사이드/풀타임 SPA)로 서빙해야 하는 경로. 게임 자체는 `/`에서 로드되고,
 // `/settings`는 구글 OAuth 콜백(`?google=linked|switched|error&reason=...`)이
-// 돌아오는 목적지라 앱 셸로 떨어져야 한다.
-const APP_PATHS = [/^\/settings\/?$/];
+// 돌아오는 목적지라 앱 셸로 떨어져야 한다. `/career/<id>`는 T-10-029 은퇴 커리어 공유 링크(보기 전용).
+const APP_PATHS = [/^\/settings\/?$/, /^\/career\/[0-9a-f-]{36}\/?$/i];
 
 function withRobots(response: Response, value: string): Response {
   const result = new Response(response.body, response);

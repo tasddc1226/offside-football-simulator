@@ -11,9 +11,8 @@
   } from '@offside/contracts/board-limits';
   import * as api from '../api/boards.js';
   import type { BoardKey, BoardViewerResponse, Comment, Post, PostSummary } from '../api/boards.js';
-  import { getProfile, googleStartUrl } from '../api/client.js';
   import { appState } from './state.svelte.js';
-  import { goHome, rememberBoardReturn } from './actions.js';
+  import { goHome, startGoogleLogin } from './actions.js';
   import { toast } from './helpers.js';
   import { BOARD_LABEL, dateOf, parseBody } from './boardText.js';
   import Topbar from './Topbar.svelte';
@@ -103,13 +102,8 @@
     commentText = '';
     if (detail?.post.id === post.id) detail.comments = [...detail.comments, r.data];
   }
-  // 구글 로그인은 프로필 세션이 있어야 시작된다 — 없으면 GET /v1/profile이 익명 프로필을 만든다.
   // 로그인을 마치고 돌아오면 보던 글로 다시 연다.
-  async function login() {
-    rememberBoardReturn({ board, postId: detail?.post.id ?? null });
-    await getProfile();
-    window.location.assign(googleStartUrl());
-  }
+  const login = () => startGoogleLogin({ board, postId: detail?.post.id ?? null });
   async function removeComment(c: Comment) {
     if (!confirm('이 댓글을 지울까요?')) return;
     const r = await api.deleteComment(c.id);

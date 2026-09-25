@@ -7,6 +7,7 @@
   import Topbar from './Topbar.svelte';
   import LegendReport from './LegendReport.svelte';
   import PublishCard from './PublishCard.svelte';
+  import ShareCard from './ShareCard.svelte';
 
   const v = $derived(viewFromGame(appState.G!));
   // T-10-029: 크레딧이 끝나면 명예의 전당 공개·다음 버튼이 마지막으로 올라온다.
@@ -23,7 +24,7 @@
   <LegendReport {v} credits ondone={onDone} />
   {#if done}
     <div class="credit-wrap credit-in" data-credit="end" bind:this={endEl}>
-      {#if v.own?.id}<PublishCard h={v.own} />{/if}
+      {#if v.own?.id}<PublishCard h={v.own} /><ShareCard h={v.own} />{/if}
       <button class="btn btn-primary btn-block" data-act="new" onclick={goNew}>새 커리어 킥오프 →</button>
       <button class="btn btn-block" data-act="home" onclick={goHome}>명예의 전당 보기</button>
     </div>

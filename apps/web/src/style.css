@@ -700,3 +700,7 @@ button.title-item:hover { border-color: var(--pitch-2); }
   box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
 }
 @media (prefers-reduced-motion: reduce) { .credit-in, .credit-late, .credit-in .legend-bar i, .credit-in .timeline-row { animation: none; } }
+
+/* T-10-029 은퇴 커리어 공유 */
+.share-url { width: 100%; font: inherit; font-size: 13px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.shared-note { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--muted); text-align: center; }
