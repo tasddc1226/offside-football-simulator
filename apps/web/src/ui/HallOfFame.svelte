@@ -10,11 +10,13 @@
   import { getHof, getMyCareers } from '../api/client.js';
   import { anonName, openLocalLegend, openPublicLegend } from './legend.js';
   import { openHof } from './actions.js';
+  import Laurel from './Laurel.svelte';
   import { appState, type HofTab } from './state.svelte.js';
 
   let { full = false }: { full?: boolean } = $props();
   const TOP = 3;
   const PER_PAGE = 100;
+  const MEDAL = ['gold', 'silver', 'bronze'];
 
   type Pos = keyof typeof POS;
   type RowStats = Pick<PublicHofEntry, 'apps' | 'goals' | 'assists' | 'trophies' | 'peak' | 'ballon'>;
@@ -104,7 +106,11 @@
 </script>
 
 {#snippet row(i: number, name: string, pos: Pos, tag: string | null, t: RowStats, score: number)}
-  <div class="hof-rank">{i + 1}</div>
+  {#if i < MEDAL.length}
+    <div class="hof-rank medal {MEDAL[i]}"><Laurel /><span>{i + 1}</span></div>
+  {:else}
+    <div class="hof-rank">{i + 1}</div>
+  {/if}
   <div>
     <b>{name}</b> <span class="pill">{POS[pos].label}</span>
     {#if tag}<span class="pill">{tag}</span>{/if}
