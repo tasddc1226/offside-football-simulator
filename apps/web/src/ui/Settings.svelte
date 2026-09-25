@@ -2,7 +2,7 @@
   // 게임 설정 화면(T-10-009). 지금은 "리그·클럽 편집" 한 섹션 — 리그별 클럽 이름·엠블럼을 바꾸고,
   // 에디트 파일(JSON)로 내보내거나 가져온다. 설정은 이 기기에만 저장된다.
   import { LEAGUES } from '../game/data.js';
-  import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '../game/clubs.js';
+  import { CLUB_NAME_MAX, IMG_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '../game/clubs.js';
   import { clubsIn } from '../game/engine.js';
   import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
   import { goHome } from './actions.js';
@@ -16,6 +16,12 @@
   const clubs = $derived((void clubCustom.map, clubsIn(leagueId).map((c) => ({ ...c }))));
 
   const fail = () => toast('저장 공간이 부족해 저장하지 못했어요');
+  const SYNC_TEXT = {
+    local: '이 기기에만 저장됩니다 — 구글 계정으로 로그인하면 다른 기기와 동기화돼요.',
+    syncing: '계정과 동기화하는 중…',
+    synced: '계정에 저장됨 — 같은 계정으로 로그인한 기기에서 함께 쓰여요.',
+    error: '동기화하지 못했어요 — 이 기기에는 저장됐고, 다음에 다시 시도합니다.',
+  } as const;
 
   function rename(id: string, value: string) {
     if (!setClubCustom(id, { name: value })) fail();
@@ -44,7 +50,11 @@
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = 64;
       canvas.getContext('2d')!.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 64, 64);
-      editLogo(club, { img: canvas.toDataURL('image/webp', 0.85) });
+      // WebP 인코딩을 못 하는 브라우저(PNG로 떨어짐)나 한도를 넘으면 JPEG로 다시 줄인다.
+      let img = canvas.toDataURL('image/webp', 0.85);
+      if (!img.startsWith('data:image/webp') || img.length > IMG_MAX) img = canvas.toDataURL('image/jpeg', 0.8);
+      if (img.length > IMG_MAX) return toast('이미지가 너무 복잡해 저장할 수 없어요');
+      editLogo(club, { img });
     } catch {
       toast('이미지를 읽지 못했어요');
     }
@@ -88,7 +98,8 @@
     </div>
     <div class="stack" style="gap:10px">
       <h2 style="margin:0">리그 · 클럽 편집</h2>
-      <p class="muted" style="font-size:13px;margin:0">클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새 이름이 쓰이고, 설정은 이 기기에만 저장됩니다.</p>
+      <p class="muted" style="font-size:13px;margin:0">클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새 이름이 쓰입니다.</p>
+      <p class="muted" style="font-size:12px;margin:0" data-club-sync={clubCustom.status} aria-live="polite">{SYNC_TEXT[clubCustom.status]}</p>
       <div class="field">
         <label for="club-league">리그</label>
         <select id="club-league" bind:value={leagueId} onchange={() => (open = null)}>

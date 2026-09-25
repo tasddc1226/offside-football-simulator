@@ -180,3 +180,13 @@ export const auditLog = sqliteTable(
   },
   (table) => [index('audit_log_profile_id_idx').on(table.profileId)],
 );
+
+/** T-10-010. 프로필별 클럽 이름·엠블럼 커스텀(JSON 통째 저장, 최신 쓰기 우선). updated_at은 클라이언트가
+ * 마지막으로 바꾼 시각이다(서버 수신 시각이 아니다 — 기기 간 비교 기준). */
+export const clubCustoms = sqliteTable('club_customs', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  clubsJson: text('clubs_json').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});

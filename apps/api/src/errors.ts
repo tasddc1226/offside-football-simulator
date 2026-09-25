@@ -87,3 +87,12 @@ export function notFoundHandler(c: Context<AppEnv>): Response {
   };
   return c.json(body, 404);
 }
+
+/** bodyGuard가 담아 둔 rawBody를 JSON으로 읽는다(빈 본문은 {}). */
+export function parseJsonBody(rawBody: string): unknown {
+  try {
+    return rawBody.length > 0 ? JSON.parse(rawBody) : {};
+  } catch {
+    throw new AppError({ code: 'VALIDATION_FAILED', message: '요청 본문이 올바른 JSON이 아닙니다.' });
+  }
+}
