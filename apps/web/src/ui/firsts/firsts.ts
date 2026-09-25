@@ -1,6 +1,7 @@
 // T-10-027 서버 최초 기록 화면의 순수 계산(정렬·날짜 묶기·표시 이름). 컴포넌트와 테스트가 같이 쓴다.
 import type { ServerFirst, ServerFirstCat } from '@offside/contracts';
 import { anonName } from '../format.js';
+import { kstParts } from '../boardText.js';
 
 export type FirstsTab = 'recent' | ServerFirstCat;
 export const FIRSTS_TABS: { id: FirstsTab; label: string }[] = [
@@ -12,16 +13,6 @@ export const FIRSTS_TABS: { id: FirstsTab; label: string }[] = [
 
 type Holder = NonNullable<ServerFirst['holder']>;
 export type AchievedFirst = ServerFirst & { achievedAt: string; holder: Holder };
-
-const pad = (n: number) => String(n).padStart(2, '0');
-/** 한국 시간 기준 날짜(26.09.25)·시각(14:05). 모두가 같은 기록을 보므로 보는 사람 시간대 대신 한 기준으로 맞춘다. */
-export function kstParts(iso: string): { day: string; time: string } {
-  const d = new Date(new Date(iso).getTime() + 9 * 3600_000);
-  return {
-    day: `${pad(d.getUTCFullYear() % 100)}.${pad(d.getUTCMonth() + 1)}.${pad(d.getUTCDate())}`,
-    time: `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`,
-  };
-}
 
 /** 달성된 기록만, 최근 것부터. */
 export const achievedList = (items: ServerFirst[]): AchievedFirst[] =>

@@ -17,7 +17,7 @@ test('홈 카드 → 서버 최초 기록 화면(연대기·분류 탭·내 선�
   await startCareer(page);
   const cid = await page.evaluate(() => (JSON.parse(localStorage.getItem('ft_save')!) as { cid: string }).cid);
   await page.route(`${API}/v1/firsts`, (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { items: items(cid), achieved: 3 } }) }),
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { items: items(cid) } }) }),
   );
   await page.goto('/');
 

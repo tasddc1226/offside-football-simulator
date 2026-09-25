@@ -10,8 +10,9 @@
   $effect(() => {
     void getFirsts().then((r) => {
       if (!r.ok) return;
-      latest = achievedList(r.data.items)[0] ?? null;
-      count = { done: r.data.achieved, total: r.data.items.length };
+      const done = achievedList(r.data.items);
+      latest = done[0] ?? null;
+      count = { done: done.length, total: r.data.items.length };
     });
   });
 </script>

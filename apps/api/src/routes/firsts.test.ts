@@ -27,6 +27,7 @@ const read = async (ctx: TestD1) => {
   expect(res.headers.get('Cache-Control')).toContain('public');
   return successEnvelope(FirstsResponseSchema).parse(await res.json()).data;
 };
+const achieved = (data: Awaited<ReturnType<typeof read>>) => data.items.filter((x) => x.holder).length;
 const holderOf = (data: Awaited<ReturnType<typeof read>>, id: string) => data.items.find((x) => x.id === id)?.holder ?? null;
 
 describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
@@ -43,7 +44,7 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
 
   it('로그인 없이 읽고, 아무 기록도 없으면 모든 항목이 미달성이다', async () => {
     const data = await read(ctx);
-    expect(data.achieved).toBe(0);
+    expect(achieved(data)).toBe(0);
     expect(data.items.map((x) => x.id)).toEqual(FIRSTS.map((d) => d.id));
     expect(data.items.every((x) => x.holder === null && x.achievedAt === null)).toBe(true);
   });
@@ -54,7 +55,7 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     const data = await read(ctx);
     expect(holderOf(data, 'sgoals30')).toEqual({ careerId: A, name: null, pos: 'FW', number: null });
     expect(holderOf(data, 'sgoals40')?.careerId).toBe(B);
-    expect(data.achieved).toBe(2);
+    expect(achieved(data)).toBe(2);
   });
 
   it('은퇴 때 레전드 점수 기록을 판정하고, 이름은 공개를 고른 경우에만 보인다', async () => {
@@ -79,6 +80,6 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     expect(data.items.find((x) => x.id === 'sgoals30')?.achievedAt).toBe('2026-01-01T00:00:00.000Z');
     // 두 번째 조회는 버전이 같아 다시 훑지 않는다.
     await db.prepare('DELETE FROM server_firsts').run();
-    expect((await read(ctx)).achieved).toBe(0);
+    expect(achieved(await read(ctx))).toBe(0);
   });
 });

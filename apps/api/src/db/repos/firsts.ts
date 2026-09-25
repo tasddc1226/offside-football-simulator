@@ -1,4 +1,4 @@
-import type { FirstsResponse, ServerFirst } from '@offside/contracts';
+import type { ServerFirst } from '@offside/contracts';
 import { eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
@@ -12,16 +12,14 @@ const META_KEY = 'server_firsts_backfill';
 
 type Claim = { id: string; careerId: string; at: string; year: number | null };
 
-/** 같은 기록이면 시각이 더 이른 쪽만 남긴다(동시 업로드·재계산 순서와 상관없이 결과가 같다). */
-function upsertEarlier(db: Db, c: Claim) {
+/** earlierOnly면 같은 기록은 시각이 더 이른 쪽만 남긴다(동시 업로드 순서와 상관없이 결과가 같다).
+ * 전체 재계산(소급)은 계산 결과가 곧 정본이라 그대로 덮어쓴다. */
+function upsertFirst(db: Db, c: Claim, earlierOnly: boolean) {
+  const set = { careerId: c.careerId, achievedAt: c.at, year: c.year };
   return db
     .insert(serverFirsts)
-    .values({ id: c.id, careerId: c.careerId, achievedAt: c.at, year: c.year })
-    .onConflictDoUpdate({
-      target: serverFirsts.id,
-      set: { careerId: c.careerId, achievedAt: c.at, year: c.year },
-      setWhere: sql`excluded.achieved_at < ${serverFirsts.achievedAt}`,
-    });
+    .values({ id: c.id, ...set })
+    .onConflictDoUpdate({ target: serverFirsts.id, set, ...(earlierOnly ? { setWhere: sql`excluded.achieved_at < ${serverFirsts.achievedAt}` } : {}) });
 }
 
 const seasonColumns = {
@@ -64,13 +62,20 @@ function toCareers(cs: { id: string; legendScore: number | null; retiredAt: stri
   return [...by.values()];
 }
 
-/** 한 커리어를 다시 판정해 더 이른 기록이면 반영한다. 바뀐 게 있으면 true(목록 캐시를 지울지 판단용). */
-export async function recordCareerFirsts(db: Db, careerId: string): Promise<boolean> {
-  const cs = await db.select({ id: careers.id, legendScore: careers.legendScore, retiredAt: careers.retiredAt }).from(careers).where(eq(careers.id, careerId));
-  if (!cs.length) return false;
-  const rows = await db.select(seasonColumns).from(careerSeasons).where(eq(careerSeasons.careerId, careerId));
+const careerColumns = { id: careers.id, legendScore: careers.legendScore, retiredAt: careers.retiredAt };
+
+/** 한 커리어를 다시 판정해 더 이른 기록이면 반영한다. 바뀐 게 있으면 true(목록 캐시를 지울지 판단용).
+ * legendOnly: 은퇴 때는 새로 가능해지는 기록이 레전드 점수뿐이라 시즌을 읽지 않는다. */
+export async function recordCareerFirsts(db: Db, careerId: string, { legendOnly = false } = {}): Promise<boolean> {
+  const [cs, rows] = legendOnly
+    ? [await db.select(careerColumns).from(careers).where(eq(careers.id, careerId)), []]
+    : await db.batch([
+        db.select(careerColumns).from(careers).where(eq(careers.id, careerId)),
+        db.select(seasonColumns).from(careerSeasons).where(eq(careerSeasons.careerId, careerId)),
+      ]);
   const [career] = toCareers(cs, rows);
-  const got = evaluateCareer(career!);
+  if (!career) return false;
+  const got = evaluateCareer(career);
   if (!got.length) return false;
   const held = await db
     .select({ id: serverFirsts.id, careerId: serverFirsts.careerId, at: serverFirsts.achievedAt })
@@ -82,7 +87,7 @@ export async function recordCareerFirsts(db: Db, careerId: string): Promise<bool
     const h = cur.get(g.id);
     return !h || (h.careerId !== careerId && g.at < h.at);
   });
-  await runBatch(db, wins.map((g) => upsertEarlier(db, { ...g, careerId })));
+  await runBatch(db, wins.map((g) => upsertFirst(db, { ...g, careerId }, true)));
   return wins.length > 0;
 }
 
@@ -90,8 +95,7 @@ export async function recordCareerFirsts(db: Db, careerId: string): Promise<bool
 export async function ensureFirstsBackfilled(db: Db): Promise<void> {
   const [meta] = await db.select({ value: appMeta.value }).from(appMeta).where(eq(appMeta.key, META_KEY));
   if (meta?.value === BACKFILL_VERSION) return;
-  const cs = await db.select({ id: careers.id, legendScore: careers.legendScore, retiredAt: careers.retiredAt }).from(careers);
-  const rows = await db.select(seasonColumns).from(careerSeasons);
+  const [cs, rows] = await db.batch([db.select(careerColumns).from(careers), db.select(seasonColumns).from(careerSeasons)]);
   const best = new Map<string, Claim>();
   for (const c of toCareers(cs, rows)) {
     for (const g of evaluateCareer(c)) {
@@ -102,19 +106,14 @@ export async function ensureFirstsBackfilled(db: Db): Promise<void> {
   // 규칙에서 빠졌거나 이제 아무도 채우지 못한 기록은 지운다(재계산 결과가 곧 정본).
   const stale = FIRSTS.map((d) => d.id).filter((id) => !best.has(id));
   await runBatch(db, [
-    ...[...best.values()].map((c) =>
-      db
-        .insert(serverFirsts)
-        .values({ id: c.id, careerId: c.careerId, achievedAt: c.at, year: c.year })
-        .onConflictDoUpdate({ target: serverFirsts.id, set: { careerId: c.careerId, achievedAt: c.at, year: c.year } }),
-    ),
+    ...[...best.values()].map((c) => upsertFirst(db, c, false)),
     ...(stale.length ? [db.delete(serverFirsts).where(inArray(serverFirsts.id, stale))] : []),
     db.insert(appMeta).values({ key: META_KEY, value: BACKFILL_VERSION }).onConflictDoUpdate({ target: appMeta.key, set: { value: BACKFILL_VERSION } }),
   ]);
 }
 
 /** 공개 목록: 규칙 전체(미달성 포함) + 달성자. 이름은 유저가 공개를 고른 경우에만. */
-export async function listFirsts(db: Db): Promise<FirstsResponse> {
+export async function listFirsts(db: Db): Promise<ServerFirst[]> {
   const rows = await db
     .select({
       id: serverFirsts.id,
@@ -127,7 +126,7 @@ export async function listFirsts(db: Db): Promise<FirstsResponse> {
     .from(serverFirsts)
     .innerJoin(careers, eq(careers.id, serverFirsts.careerId));
   const by = new Map(rows.map((r) => [r.id, r]));
-  const items = FIRSTS.map((d): ServerFirst => {
+  return FIRSTS.map((d): ServerFirst => {
     const r = by.get(d.id);
     return {
       id: d.id,
@@ -137,5 +136,4 @@ export async function listFirsts(db: Db): Promise<FirstsResponse> {
       holder: r ? { careerId: r.careerId, name: r.name, pos: r.pos, number: r.number } : null,
     };
   });
-  return { items, achieved: items.filter((x) => x.holder).length };
 }

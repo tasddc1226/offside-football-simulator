@@ -63,10 +63,16 @@ const honorCount = (h: string, times: number) => cumulative((s) => s.honors.filt
 
 const ladder = (cat: FirstCat, key: string, steps: number[], get: (s: FirstSeason) => number, label: (v: string) => string): FirstDef[] =>
   steps.map((v) => ({ id: `${key}${v}`, cat, label: label(n(v)), at: cumulative(get, v) }));
+/** 한 시즌 값이 처음 target 이상이 된 시즌. */
+const seasonLadder = (key: string, steps: number[], get: (s: FirstSeason) => number, label: (v: number) => string): FirstDef[] =>
+  steps.map((v) => ({ id: `${key}${v}`, cat: 'season', label: label(v), at: firstSeason((s) => get(s) >= v) }));
 const range = (from: number, to: number, step: number) => Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
 
-const BIG_LEAGUE_WIN = ['프리미어리그', '라리가', '세리에 A', '분데스리가', '리그 1'].map((l) => `${l} 우승`);
-const LEAGUE_WIN = [...BIG_LEAGUE_WIN, 'K리그1 우승', 'K리그2 우승', 'K3리그 우승', 'J1리그 우승', 'MLS 우승', '에레디비시 우승'];
+// 우승 이름은 web game/data.ts LEAGUES · game/comps.ts CUPS·CONT의 `${이름} 우승`과 같다(트레블은 web 칭호와 같은 정의).
+const LEAGUE_WIN = ['프리미어리그', '라리가', '세리에 A', '분데스리가', '리그 1', 'K리그1', 'K리그2', 'K3리그', 'J1리그', 'MLS', '에레디비시'].map((l) => `${l} 우승`);
+const CUP_WIN = ['코리아컵', '일왕배', 'J리그컵', 'US 오픈컵', '리그스컵', 'KNVB컵', '쿠프 드 프랑스', 'DFB-포칼', '코파 이탈리아', '코파 델 레이', 'FA컵', 'EFL컵'].map((c) => `${c} 우승`);
+const TOP_CONT_WIN = ['UEFA 챔피언스리그', 'AFC 챔피언스리그 엘리트', 'CONCACAF 챔피언스컵'].map((c) => `${c} 우승`);
+const hasAny = (honors: string[], names: string[]) => honors.some((h) => names.includes(h));
 
 export const FIRSTS: FirstDef[] = [
   // 통산
@@ -78,13 +84,13 @@ export const FIRSTS: FirstDef[] = [
   ...ladder('total', 'trophies', [10, 20, 30], (s) => s.honors.filter(isTrophy).length, (v) => `우승 트로피 ${v}개 최초 달성!`),
   ...ladder('total', 'awards', [10, 20, 30], (s) => s.honors.filter((h) => !isTrophy(h)).length, (v) => `개인상 ${v}개 최초 달성!`),
   // 시즌 · 나이
-  ...[30, 40, 50, 60].map((v): FirstDef => ({ id: `sgoals${v}`, cat: 'season', label: `한 시즌 ${v}골 최초 달성!`, at: firstSeason((s) => s.goals >= v) })),
-  ...[20, 25, 30].map((v): FirstDef => ({ id: `sassists${v}`, cat: 'season', label: `한 시즌 ${v}도움 최초 달성!`, at: firstSeason((s) => s.assists >= v) })),
-  ...[20, 25].map((v): FirstDef => ({ id: `scs${v}`, cat: 'season', label: `한 시즌 무실점 ${v}경기 최초 달성!`, at: firstSeason((s) => (s.cs ?? 0) >= v) })),
+  ...seasonLadder('sgoals', [30, 40, 50, 60], (s) => s.goals, (v) => `한 시즌 ${v}골 최초 달성!`),
+  ...seasonLadder('sassists', [20, 25, 30], (s) => s.assists, (v) => `한 시즌 ${v}도움 최초 달성!`),
+  ...seasonLadder('scs', [20, 25], (s) => s.cs ?? 0, (v) => `한 시즌 무실점 ${v}경기 최초 달성!`),
   ...[8, 8.5].map((v): FirstDef => ({
     id: `srating${v * 10}`, cat: 'season', label: `시즌 평균 평점 ${v.toFixed(1)} 최초 달성!`, at: firstSeason((s) => s.apps >= 15 && s.rating >= v),
   })),
-  ...[85, 90, 95, 99].map((v): FirstDef => ({ id: `ovr${v}`, cat: 'season', label: `OVR ${v} 최초 도달!`, at: firstSeason((s) => s.ovr >= v) })),
+  ...seasonLadder('ovr', [85, 90, 95, 99], (s) => s.ovr, (v) => `OVR ${v} 최초 도달!`),
   { id: 'teen20', cat: 'season', label: '20세 이하 한 시즌 20골 최초 달성!', at: firstSeason((s) => s.age <= 20 && s.goals >= 20) },
   { id: 'age38', cat: 'season', label: '38세 현역 출전 최초 달성!', at: firstSeason((s) => s.age >= 38 && s.apps > 0) },
   { id: 'age40', cat: 'season', label: '40세 현역 출전 최초 달성!', at: firstSeason((s) => s.age >= 40 && s.apps > 0) },
@@ -119,7 +125,7 @@ export const FIRSTS: FirstDef[] = [
   { id: 'leaguewins5', cat: 'honor', label: '리그 우승 5회 최초 달성!', at: cumulative((s) => s.honors.filter((h) => LEAGUE_WIN.includes(h)).length, 5) },
   {
     id: 'treble', cat: 'honor', label: '트레블 최초 달성!',
-    at: firstSeason((s) => s.honors.includes('UEFA 챔피언스리그 우승') && s.honors.some((h) => BIG_LEAGUE_WIN.includes(h)) && s.honors.filter((h) => h.endsWith('우승')).length >= 3),
+    at: firstSeason((s) => hasAny(s.honors, LEAGUE_WIN) && hasAny(s.honors, CUP_WIN) && hasAny(s.honors, TOP_CONT_WIN)),
   },
   ...[840, 1000].map((v): FirstDef => ({
     id: `legend${v}`, cat: 'honor', label: `레전드 점수 ${n(v)}점 은퇴 최초 달성!`,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ServerFirst } from '@offside/contracts';
-import { achievedList, byDay, holderLabel, kstParts } from './firsts.js';
+import { kstParts } from '../boardText.js';
+import { achievedList, byDay, holderLabel } from './firsts.js';
 
 const f = (id: string, achievedAt: string | null): ServerFirst => ({
   id, cat: 'total', label: id, achievedAt, holder: achievedAt ? { careerId: `c-${id}`, name: null, pos: 'GK', number: 1 } : null,

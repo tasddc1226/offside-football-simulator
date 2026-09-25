@@ -7,7 +7,8 @@
   import { goHome } from '../actions.js';
   import { appState } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
-  import { FIRSTS_TABS, achievedList, byDay, holderLabel, kstParts, type FirstsTab } from './firsts.js';
+  import { kstParts } from '../boardText.js';
+  import { FIRSTS_TABS, achievedList, byDay, holderLabel, type FirstsTab } from './firsts.js';
 
   let data = $state<FirstsResponse | null>(null);
   let failed = $state(false);
@@ -27,7 +28,9 @@
   ]);
 
   const total = $derived(data?.items.length ?? 0);
-  const days = $derived(data ? byDay(achievedList(data.items)) : []);
+  const achieved = $derived(data ? achievedList(data.items) : []);
+  const done = $derived(achieved.length);
+  const days = $derived(byDay(achieved));
   const list = $derived(data && tab !== 'recent' ? data.items.filter((x) => x.cat === tab) : []);
 </script>
 
@@ -48,7 +51,7 @@
         <div class="eyebrow">Server firsts</div>
         <h1 style="margin-bottom:4px">서버 최초 업적</h1>
       </div>
-      {#if data}<span class="first-count num" data-firsts-count>{data.achieved}/{total}</span>{/if}
+      {#if data}<span class="first-count num" data-firsts-count>{done}/{total}</span>{/if}
     </div>
     <p class="muted" style="font-size:13px;margin:0 0 10px">
       모든 플레이어를 통틀어 가장 먼저 세운 기록만 남아요. 이름은 명예의 전당에 이름을 공개한 선수만 보여요.

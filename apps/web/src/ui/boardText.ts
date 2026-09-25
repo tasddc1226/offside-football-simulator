@@ -32,4 +32,13 @@ export const dateOf = (iso: string) => {
 export const kstDateTime = (iso: string) =>
   new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', dateStyle: 'short', timeStyle: 'short' });
 
+const KST_PARTS = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Seoul', year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+});
+/** 한국 시간 날짜(26.09.25)·시각(14:05)을 따로 — 모두가 같은 기록을 보는 화면(서버 최초 기록)에서 기준을 맞출 때. */
+export function kstParts(iso: string): { day: string; time: string } {
+  const p = Object.fromEntries(KST_PARTS.formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  return { day: `${p.year}.${p.month}.${p.day}`, time: `${p.hour}:${p.minute}` };
+}
+
 export const BOARD_LABEL: Record<BoardKey, string> = { notice: '공지사항', release: '릴리즈 노트' };

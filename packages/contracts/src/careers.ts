@@ -253,6 +253,6 @@ export const ServerFirstSchema = z.strictObject({
 });
 export type ServerFirst = z.infer<typeof ServerFirstSchema>;
 
-/** `GET /v1/firsts`. items는 규칙 순서 그대로(미달성 포함), achieved는 달성된 개수. */
-export const FirstsResponseSchema = z.strictObject({ items: z.array(ServerFirstSchema), achieved: z.number().int().min(0) });
+/** `GET /v1/firsts`. items는 규칙 순서 그대로(미달성 포함 — 달성 개수는 holder로 센다). */
+export const FirstsResponseSchema = z.strictObject({ items: z.array(ServerFirstSchema) });
 export type FirstsResponse = z.infer<typeof FirstsResponseSchema>;

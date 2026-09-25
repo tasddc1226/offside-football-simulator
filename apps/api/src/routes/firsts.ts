@@ -11,9 +11,9 @@ const TTL = 60;
 
 /** 시즌·은퇴 업로드 뒤에 부른다. 판정이 실패해도 업로드 응답은 그대로 성공시키고 로그로만 남긴다
  * (빠진 기록은 다음 업로드나 BACKFILL_VERSION 재계산이 채운다). */
-export async function recordFirsts(c: Context<AppEnv>, careerId: string): Promise<void> {
+export async function recordFirsts(c: Context<AppEnv>, careerId: string, opts?: { legendOnly?: boolean }): Promise<void> {
   try {
-    if (await recordCareerFirsts(getDb(c), careerId)) purgeEdge(c, [FIRSTS_PATH]);
+    if (await recordCareerFirsts(getDb(c), careerId, opts)) purgeEdge(c, [FIRSTS_PATH]);
   } catch (err) {
     c.set('storeFailure', { code: 'SERVER_FIRSTS_FAILED', message: err instanceof Error ? err.message : String(err) });
   }
@@ -24,10 +24,10 @@ export function registerFirstsRoutes(app: Hono<AppEnv>): void {
     const data = await edgeCached(c, FIRSTS_PATH, TTL, async () => {
       const db = getDb(c);
       await ensureFirstsBackfilled(db);
-      return listFirsts(db);
+      return { items: await listFirsts(db) };
     });
     const body = successEnvelope(FirstsResponseSchema).parse({ data, meta: { requestId: c.get('requestId') } });
-    c.header('Cache-Control', 'public, max-age=60');
+    c.header('Cache-Control', `public, max-age=${TTL}`);
     return c.json(body, 200);
   });
 }

@@ -606,7 +606,7 @@ body:has(nav.tabs) .toast { bottom: calc(var(--tabbar-h) + var(--actionbar-h) + 
 .rp-dots li { width: 26px; height: 26px; border-radius: 50%; animation: pop .3s cubic-bezier(.3,1.6,.5,1) both; animation-delay: calc(var(--i) * 60ms); }
 .rp-wdl small { font-size: 20px; color: var(--muted); margin-right: 6px; }
 .rp-later { animation: rp-in .35s ease both; animation-delay: var(--after, 0ms); }
-.report .chip.pop { animation-delay: calc(var(--after, 0ms) + var(--d, 0ms)); }
+.report .chip.pop, .report .title-tag.pop { animation-delay: calc(var(--after, 0ms) + var(--d, 0ms)); }
 @keyframes rp-in { from { transform: translateY(8px); } }
 .rp-games summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); padding: 4px 0; }
 .rp-games .ticker { margin-top: 8px; }
@@ -635,7 +635,6 @@ body:has(nav.tabs) .toast { bottom: calc(var(--tabbar-h) + var(--actionbar-h) + 
 .r1 { --rc: var(--r1); } .r2 { --rc: var(--r2); } .r3 { --rc: var(--r3); } .r4 { --rc: var(--r4); }
 .title-tag.r4 { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
 .title-tag.pop { animation: pop .32s cubic-bezier(.3,1.6,.5,1) both; animation-delay: var(--d, 0ms); }
-.report .title-tag.pop { animation-delay: calc(var(--after, 0ms) + var(--d, 0ms)); }
 .card-title { display: inline-block; margin-top: 4px; padding: 0; border: 0; background: none; color: var(--pitch-accent); font-weight: 700; font-size: 13px; text-align: left; }
 .card-title::before { content: '‘'; } .card-title::after { content: '’'; }
 .card-title:hover { text-decoration: underline; }
@@ -648,7 +647,7 @@ button.title-item:hover { border-color: var(--pitch-2); }
 .title-year { font-size: 12px; color: var(--muted); }
 .title-list.compact { gap: 4px; }
 /* 잠긴 칭호는 한 줄짜리로 촘촘하게: [이름 · 조건 … 진행 수치] + 아래 얇은 진행 막대 */
-.title-item.locked { grid-template-columns: auto 1fr auto; gap: 2px 8px; padding: 6px 10px; background: var(--surface-2); border-style: dashed; border-width: 1px; }
+.title-item.locked { gap: 2px 8px; padding: 6px 10px; background: var(--surface-2); border-style: dashed; border-width: 1px; }
 .title-item.locked .title-name { font-size: 13px; font-weight: 700; color: var(--muted); }
 .title-item.locked .title-desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .title-item.locked .title-year { grid-column: 3; grid-row: 1; }

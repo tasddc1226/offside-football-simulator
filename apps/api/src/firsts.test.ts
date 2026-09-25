@@ -37,10 +37,11 @@ describe('서버 최초 기록 규칙 (T-10-027)', () => {
     expect(ids(career(leagues))).toContain('leagues5');
   });
 
-  it('수상·우승: 횟수, 트레블(챔스 + 5대 리그 + 우승 3개)', () => {
+  it('수상·우승: 횟수, 트레블(리그 + 국내 컵 + 대륙 최상위 대회)', () => {
     const treble = season({ honors: ['발롱도르', 'UEFA 챔피언스리그 우승', '프리미어리그 우승', 'FA컵 우승'] });
     expect(ids(career([treble]))).toEqual(expect.arrayContaining(['ballon', 'ucl', 'win_pl', 'treble']));
-    expect(ids(career([season({ honors: ['UEFA 챔피언스리그 우승', 'K리그1 우승', 'FA컵 우승'] })]))).not.toContain('treble');
+    expect(ids(career([season({ honors: ['UEFA 챔피언스리그 우승', 'K리그1 우승', '코리아컵 우승'] })]))).toContain('treble'); // web 칭호와 같은 정의
+    expect(ids(career([season({ honors: ['UEFA 챔피언스리그 우승', '프리미어리그 우승', 'FA 커뮤니티 실드 우승'] })]))).not.toContain('treble'); // 슈퍼컵은 컵이 아니다
     const b = Array.from({ length: 3 }, () => season({ honors: ['발롱도르'] }));
     expect(ids(career(b))).toEqual(expect.arrayContaining(['ballon', 'ballon3']));
   });

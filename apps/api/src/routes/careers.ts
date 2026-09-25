@@ -111,7 +111,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const now = new Date().toISOString();
 
     await putRetirement(db, { careerId, summary, publicName, snapshot, now });
-    await recordFirsts(c, careerId); // 레전드 점수 기록은 은퇴 때 판정한다.
+    await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
     purgeEdge(c, [hofDetailPath(careerId), FIRSTS_PATH]); // 이름 공개 토글이 바로 보이게(최초 기록의 이름 포함).
 
     const responseBody = successEnvelope(RetirementResponseSchema).parse({
