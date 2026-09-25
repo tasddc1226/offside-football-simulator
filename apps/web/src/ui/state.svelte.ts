@@ -12,7 +12,7 @@ import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
 import type { PhaseReport } from './sheets/types.js';
 
-export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex' | 'hof' | 'admin';
+export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex' | 'hof' | 'firsts' | 'admin';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
 export type HofTab = 'all' | 'mine';
 

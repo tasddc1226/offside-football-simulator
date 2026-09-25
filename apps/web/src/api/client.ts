@@ -1,5 +1,5 @@
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
-import type { Profile as ContractProfile, HofDetailResponse, HofListResponse, HofSort, MyCareersResponse } from '@offside/contracts';
+import type { Profile as ContractProfile, FirstsResponse, HofDetailResponse, HofListResponse, HofSort, MyCareersResponse } from '@offside/contracts';
 import { resolveApiBaseUrl } from './base-url.js';
 
 // API 클라이언트 최소본 (계정: 로그인/프로필/연동 해제/로그아웃/삭제 만). 게임 상태는 전부
@@ -127,4 +127,8 @@ export function getMyCareers(): Promise<ApiResult<MyCareersResponse>> {
 }
 export function getHofDetail(careerId: string): Promise<ApiResult<HofDetailResponse>> {
   return cachedGet<HofDetailResponse>(`/v1/hof/${encodeURIComponent(careerId)}`, 300_000);
+}
+/** T-10-027 서버 최초 기록(로그인 불필요). */
+export function getFirsts(): Promise<ApiResult<FirstsResponse>> {
+  return cachedGet<FirstsResponse>('/v1/firsts', 60_000);
 }

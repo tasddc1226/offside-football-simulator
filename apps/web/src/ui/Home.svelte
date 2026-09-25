@@ -7,6 +7,7 @@
   import Topbar from './Topbar.svelte';
   import HallOfFame from './HallOfFame.svelte';
   import HomeNews from './HomeNews.svelte';
+  import HomeFirsts from './firsts/HomeFirsts.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { withRo } from './format.js';
 
@@ -59,6 +60,7 @@
       <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted" style="font-size:13px">선택지마다 성공 확률 공개 · 확률 도감 보기 →</span>
     </button>
   </div>
+  <HomeFirsts />
   <HallOfFame />
   <HomeNews board="notice" eyebrow="Notice" title="공지사항" />
   <HomeNews board="release" eyebrow="Release notes" title="릴리즈 노트" />

@@ -352,6 +352,11 @@ export function goDex() {
   appState.screen = 'dex';
   window.scrollTo(0, 0);
 }
+/** T-10-027 서버 최초 기록. */
+export function goFirsts() {
+  appState.screen = 'firsts';
+  window.scrollTo(0, 0);
+}
 /** 명예의 전당 전체 보기(100명씩 페이지). */
 export function openHof(tab: HofTab) {
   appState.hof = { tab, page: 1, sort: 'score' };

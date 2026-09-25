@@ -235,3 +235,24 @@ export const HofSortSchema = z.enum(['score', 'goals', 'assists', 'ga', 'apps', 
 export type HofSort = z.infer<typeof HofSortSchema>;
 /** `GET /v1/hof?page=` 1부터 시작하는 페이지 번호(한 페이지 = limit명). */
 export const HofPageQuerySchema = z.coerce.number().int().min(1).max(10000).default(1);
+
+// ───────── T-10-027 서버 최초 기록 ─────────
+
+export const ServerFirstCatSchema = z.enum(['total', 'season', 'honor']);
+export type ServerFirstCat = z.infer<typeof ServerFirstCatSchema>;
+
+/** 기록 하나. 아직 아무도 못 채웠으면 achievedAt·holder가 null. 이름은 명예의 전당에 이름 공개를 고른 경우만. */
+export const ServerFirstSchema = z.strictObject({
+  id: z.string().min(1).max(32),
+  cat: ServerFirstCatSchema,
+  label: z.string().max(80),
+  achievedAt: z.string().nullable(),
+  holder: z
+    .strictObject({ careerId: z.string().min(1), name: z.string().nullable(), pos: CareerPosSchema, number: z.number().int().nullable() })
+    .nullable(),
+});
+export type ServerFirst = z.infer<typeof ServerFirstSchema>;
+
+/** `GET /v1/firsts`. items는 규칙 순서 그대로(미달성 포함), achieved는 달성된 개수. */
+export const FirstsResponseSchema = z.strictObject({ items: z.array(ServerFirstSchema), achieved: z.number().int().min(0) });
+export type FirstsResponse = z.infer<typeof FirstsResponseSchema>;

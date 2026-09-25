@@ -11,7 +11,8 @@
   import { loadHOF } from '../game/season.js';
   import type { HofEntry } from '../game/types.js';
   import { getHof, getMyCareers } from '../api/client.js';
-  import { anonName, openLocalLegend, openPublicLegend } from './legend.js';
+  import { openLocalLegend, openPublicLegend } from './legend.js';
+  import { anonName } from './format.js';
   import { openHof } from './actions.js';
   import Laurel from './Laurel.svelte';
   import { appState, type HofTab } from './state.svelte.js';

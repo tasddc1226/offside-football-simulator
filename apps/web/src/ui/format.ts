@@ -1,11 +1,16 @@
 // ───────── 순수 포맷/집계 헬퍼 (ui.ts의 문자열 템플릿 함수들을 컴포넌트가 쓰기 좋은 형태로 분리) ─────────
 import { labelOf } from '../game/engine.js';
-import { LEAGUES } from '../game/data.js';
-import type { AttrKey } from '../game/data.js';
+import { LEAGUES, POS } from '../game/data.js';
+import type { AttrKey, Pos } from '../game/data.js';
 import {
   ovrRole, mainRole, ROLES, ROLE_NAME, POS_ROLES, faceOf, radarOrder, FACE_ABBR, GK_ABBR, SUBS,
 } from '../game/attributes.js';
 import type { CareerRecord, GameState } from '../game/types.js';
+
+/** 이름을 공개하지 않은 선수 표기(명예의 전당·서버 최초 기록). */
+export function anonName(pos: Pos, number: number | null): string {
+  return `익명의 ${POS[pos].label}${number != null ? ` No.${number}` : ''}`;
+}
 
 export function seasonLabelOf(r: CareerRecord): string {
   const L = LEAGUES.find((l) => l.name === r.league);

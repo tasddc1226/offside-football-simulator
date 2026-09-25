@@ -266,3 +266,24 @@ export const balanceVersions = sqliteTable(
   },
   (table) => [index('balance_versions_status_idx').on(table.status)],
 );
+
+/** T-10-027 서버 최초 기록. 기록 id(src/firsts.ts FIRSTS)마다 가장 먼저 달성한 커리어 한 줄. 커리어가 지워지면
+ * 함께 지워지고, 다음 재계산(app_meta 버전) 때 그다음으로 이른 커리어가 채운다. */
+export const serverFirsts = sqliteTable(
+  'server_firsts',
+  {
+    id: text('id').primaryKey(),
+    careerId: text('career_id')
+      .notNull()
+      .references(() => careers.id, { onDelete: 'cascade' }),
+    achievedAt: text('achieved_at').notNull(),
+    year: integer('year'),
+  },
+  (table) => [index('server_firsts_achieved_idx').on(table.achievedAt)],
+);
+
+/** T-10-027 서버 내부 상태 한 줄씩(예: 서버 최초 기록 전체 재계산 버전). */
+export const appMeta = sqliteTable('app_meta', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+});
