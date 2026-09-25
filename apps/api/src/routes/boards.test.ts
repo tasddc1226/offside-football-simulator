@@ -31,9 +31,10 @@ describe('게시판 /v1/boards', () => {
       env,
     );
 
-  async function makeAdmin(nickname: string | null = '운영자') {
+  // 관리자는 프로필 닉네임과 무관하게 '운영자'로 댓글을 쓴다(일부러 다른 닉네임을 넣어 둔다).
+  async function makeAdmin() {
     const who = await issueCookie(ctx);
-    await ctx.db.update(profiles).set({ googleSub: 'sub-admin', email: ADMIN_EMAIL, linkedAt: '2026-09-25T00:00:00.000Z', nickname }).where(eq(profiles.id, who.profileId));
+    await ctx.db.update(profiles).set({ googleSub: 'sub-admin', email: ADMIN_EMAIL, linkedAt: '2026-09-25T00:00:00.000Z', nickname: '관리' }).where(eq(profiles.id, who.profileId));
     return who;
   }
   /** 구글로 로그인한 일반 프로필. nickname이 null이면 아직 닉네임을 정하지 않은 상태. */

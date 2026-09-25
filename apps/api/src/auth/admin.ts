@@ -1,3 +1,4 @@
+import { ADMIN_NICKNAME } from '@offside/contracts';
 import type { Context } from 'hono';
 import { getProfile } from '../db/repos/profiles.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -19,12 +20,9 @@ export async function getViewer(c: Context<AppEnv>): Promise<Viewer> {
   if (!session) return { profileId: null, admin: false, google: false, nickname: null };
   const profile = await getProfile(getDb(c), session.profileId);
   const google = !!profile?.googleSub && !profile.deletedAt;
-  return {
-    profileId: session.profileId,
-    admin: google && isAdminEmail(c.env.ADMIN_EMAILS, profile.email),
-    google,
-    nickname: google ? profile.nickname : null,
-  };
+  const admin = google && isAdminEmail(c.env.ADMIN_EMAILS, profile.email);
+  // 관리자 댓글은 언제나 '운영자'로 남는다(프로필 닉네임과 무관).
+  return { profileId: session.profileId, admin, google, nickname: admin ? ADMIN_NICKNAME : google ? profile.nickname : null };
 }
 
 export async function requireAdmin(c: Context<AppEnv>): Promise<Viewer> {

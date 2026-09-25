@@ -378,6 +378,8 @@ describe('PUT /v1/profile/nickname', () => {
     await ctx.dispose();
   });
 
+  const ADMIN_EMAIL = 'admin@example.com';
+  const env = () => ({ ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL });
   const put = (token: string, nickname: unknown) =>
     app.request(
       '/v1/profile/nickname',
@@ -386,11 +388,11 @@ describe('PUT /v1/profile/nickname', () => {
         headers: { Origin: ALLOWED_ORIGIN, 'Content-Type': 'application/json', Cookie: `offside_session=${token}` },
         body: JSON.stringify({ nickname }),
       },
-      ctx.env,
+      env(),
     );
-  async function googleUser() {
+  async function googleUser(email: string | null = null) {
     const who = await issueCookie(ctx);
-    await ctx.db.update(profiles).set({ googleSub: `sub-${who.profileId}`, linkedAt: '2026-09-25T00:00:00.000Z' }).where(eq(profiles.id, who.profileId));
+    await ctx.db.update(profiles).set({ googleSub: `sub-${who.profileId}`, email, linkedAt: '2026-09-25T00:00:00.000Z' }).where(eq(profiles.id, who.profileId));
     return who;
   }
   const errorOf = async (res: Response) => {
@@ -421,5 +423,16 @@ describe('PUT /v1/profile/nickname', () => {
     expect((await put(b.token, 'a')).status).toBe(400);
     expect((await put(b.token, '<b>굵게</b>')).status).toBe(400);
     expect((await put(b.token, '열세글자가넘는아주긴닉네임')).status).toBe(400);
+  });
+
+  it("'운영자' 같은 운영진 닉네임은 막고, 관리자 계정은 언제나 '운영자'다", async () => {
+    const user = await googleUser();
+    for (const name of ['운영자', '운 영 자', '진짜운영자', '관리자', '운영진']) {
+      expect(await errorOf(await put(user.token, name)), name).toEqual({ status: 400, code: 'VALIDATION_FAILED', reason: 'RESERVED_NICKNAME' });
+    }
+    const admin = await googleUser(ADMIN_EMAIL);
+    const me = await app.request('/v1/profile', { headers: { Cookie: `offside_session=${admin.token}` } }, env());
+    expect(successEnvelope(ProfileSchema).parse(await me.json()).data.nickname).toBe('운영자');
+    expect(await errorOf(await put(admin.token, '루키'))).toEqual({ status: 403, code: 'FORBIDDEN', reason: 'ADMIN_NICKNAME_FIXED' });
   });
 });

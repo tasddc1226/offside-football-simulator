@@ -3,6 +3,7 @@
   // 댓글은 구글로 로그인하고 닉네임을 정한 사람만(T-10-028). 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
   import { onMount } from 'svelte';
   import {
+    ADMIN_NICKNAME,
     COMMENT_BODY_MAX,
     POST_BODY_MAX,
     POST_TITLE_MAX,
@@ -191,8 +192,8 @@
         {#each detail.comments as c (c.id)}
           <div class="board-comment" data-comment={c.id}>
             <div class="row" style="gap:6px;align-items:center">
-              <b>{c.nickname}</b>
-              {#if c.admin}<span class="pill good">운영자</span>{/if}
+              <!-- 관리자 댓글은 닉네임 대신 운영자 배지만(예전에 누구나 '운영자'라고 쓴 댓글과 구분된다). -->
+              {#if c.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{c.nickname}</b>{/if}
               <span class="muted" style="font-size:12px">{dateOf(c.createdAt)}</span>
               {#if c.deletable}<button class="icon-btn board-comment-del" onclick={() => removeComment(c)}>삭제</button>{/if}
             </div>

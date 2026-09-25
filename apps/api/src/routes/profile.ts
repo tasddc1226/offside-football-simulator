@@ -1,4 +1,5 @@
 import {
+  ADMIN_NICKNAME,
   AUTHORIZATION_HEADER,
   DeleteProfileConfirmBodySchema,
   DeleteProfileStartResponseSchema,
@@ -14,10 +15,11 @@ import {
   type ProfileSettings,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
+import { isAdminEmail } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
 import { sha256Hex } from '../db/hash.js';
 import { getProfile, createProfile, setNickname, touchLastSeen, updateSettings, type ProfileRecord } from '../db/repos/profiles.js';
-import { isAcceptablePublicName } from '../content-filter.js';
+import { isAcceptablePublicName, isReservedNickname } from '../content-filter.js';
 import { revokeSession } from '../db/repos/sessions.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
@@ -31,7 +33,10 @@ import { recoverProfile } from '../profile/recover.js';
 
 const LAST_SEEN_REFRESH_MS = 60 * 60 * 1000;
 
-function buildProfileResponse(record: ProfileRecord): Profile {
+/** 관리자(ADMIN_EMAILS) 계정인가 — 댓글 닉네임이 '운영자'로 고정된다. */
+const isAdminProfile = (record: ProfileRecord, adminEmails: string | undefined) => record.googleSub !== null && isAdminEmail(adminEmails, record.email);
+
+function buildProfileResponse(record: ProfileRecord, adminEmails: string | undefined): Profile {
   return {
     id: record.id,
     settings: record.settings,
@@ -39,7 +44,7 @@ function buildProfileResponse(record: ProfileRecord): Profile {
     recoveryCodeIssuedAt: record.recoveryCodeIssuedAt,
     createdAt: record.createdAt,
     googleEmailMasked: maskEmail(record.email),
-    nickname: record.googleSub !== null ? record.nickname : null,
+    nickname: isAdminProfile(record, adminEmails) ? ADMIN_NICKNAME : record.googleSub !== null ? record.nickname : null,
   };
 }
 
@@ -72,7 +77,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     }
 
     const body = successEnvelope(ProfileSchema).parse({
-      data: buildProfileResponse(record),
+      data: buildProfileResponse(record, c.env.ADMIN_EMAILS),
       meta: { requestId: c.get('requestId') },
     });
     return c.json(body, 200);
@@ -99,7 +104,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     const updated = await updateSettings(db, session.profileId, definedPatch);
 
     const body = successEnvelope(ProfileSchema).parse({
-      data: buildProfileResponse(updated),
+      data: buildProfileResponse(updated, c.env.ADMIN_EMAILS),
       meta: { requestId: c.get('requestId') },
     });
     return c.json(body, 200);
@@ -114,6 +119,12 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     if (!profile?.googleSub) {
       throw new AppError({ code: 'FORBIDDEN', message: '구글로 로그인하면 닉네임을 정할 수 있어요.', details: { reason: 'GOOGLE_LOGIN_REQUIRED' } });
     }
+    if (isAdminProfile(profile, c.env.ADMIN_EMAILS)) {
+      throw new AppError({ code: 'FORBIDDEN', message: `운영자 계정의 댓글 닉네임은 '${ADMIN_NICKNAME}'로 고정돼요.`, details: { reason: 'ADMIN_NICKNAME_FIXED' } });
+    }
+    if (isReservedNickname(nickname)) {
+      throw new AppError({ code: 'VALIDATION_FAILED', message: `'${ADMIN_NICKNAME}'처럼 운영진으로 보이는 닉네임은 쓸 수 없어요.`, details: { reason: 'RESERVED_NICKNAME' } });
+    }
     if (!isAcceptablePublicName(nickname)) {
       throw new AppError({ code: 'VALIDATION_FAILED', message: '쓸 수 없는 닉네임이에요.', details: { reason: 'BLOCKED_WORD' } });
     }
@@ -121,7 +132,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     if (updated === 'taken') {
       throw new AppError({ code: 'VALIDATION_FAILED', status: 409, message: '이미 쓰고 있는 닉네임이에요.', details: { reason: 'NICKNAME_TAKEN' } });
     }
-    const body = successEnvelope(ProfileSchema).parse({ data: buildProfileResponse(updated), meta: { requestId: c.get('requestId') } });
+    const body = successEnvelope(ProfileSchema).parse({ data: buildProfileResponse(updated, c.env.ADMIN_EMAILS), meta: { requestId: c.get('requestId') } });
     return c.json(body, 200);
   });
 

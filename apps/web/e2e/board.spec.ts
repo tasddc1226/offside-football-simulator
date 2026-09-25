@@ -67,7 +67,7 @@ test('소식: 공지사항 전체 보기 → 글 → 댓글, 릴리즈 노트 �
   await expect(post.locator('.board-body h3')).toHaveText('일정');
   await expect(post.locator('.board-body li')).toHaveText(['새벽 2시', '30분']);
   await expect(post.locator('.board-body p')).toHaveText('<b>그대로</b>');
-  await expect(page.locator('.board-comment').first()).toContainText('운영자');
+  await expect(page.locator('.board-comment').first().locator('.pill.good')).toHaveText('운영자');
 
   // 닉네임은 입력하지 않는다 — 로그인한 프로필의 닉네임으로 남는다.
   await expect(page.getByLabel('닉네임')).toHaveCount(0);

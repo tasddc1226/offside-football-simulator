@@ -158,3 +158,18 @@ test('소식에서 댓글을 쓰려고 로그인하면, 돌아와서 보던 글�
   await expect(page.locator('h1')).toHaveText('릴리즈 노트');
   await expect(page.locator(`[data-post="${POST}"] h2`)).toHaveText('260926 릴리즈 노트');
 });
+
+test("운영자 계정은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다 (T-10-028)", async ({ page }) => {
+  await page.route(PROFILE_URL, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { id: 'u1', linked: { google: true }, googleEmailMasked: 'ad***@gmail.com', recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z', nickname: '운영자' } }),
+    }),
+  );
+  await page.goto('/');
+  await page.locator('[data-act="settings"]').click();
+  const account = page.locator('#account-slot');
+  await expect(account).toContainText('운영자 계정은 고정이에요');
+  await expect(account.getByLabel('댓글 닉네임')).toHaveCount(0);
+});
