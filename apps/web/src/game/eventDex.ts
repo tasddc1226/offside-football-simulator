@@ -44,17 +44,8 @@ const FACTOR_SAMPLES = 60;
 /** 이만큼(확률 0.4%p) 이상 움직여야 영향 요인으로 본다. */
 const EPS = 0.004;
 
-function mulberry(seed: number) {
-  return () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 function sampleStates(pos: Pos | null, n: number, seed: number): GameState[] {
-  const r = mulberry(seed);
+  const r = createRng(seed).next;
   const at = <T>(a: readonly T[]) => a[Math.floor(r() * a.length)]!;
   const out: GameState[] = [];
   for (let i = 0; i < n; i++) {
@@ -86,7 +77,7 @@ function sampleStates(pos: Pos | null, n: number, seed: number): GameState[] {
 /** 상태를 조금 바꾸고 되돌리는 함수를 돌려준다(복제 비용 없이 같은 상태를 재사용). 적용할 수 없으면 null. */
 type Bump = (s: GameState) => (() => void) | null;
 const statBump =
-  (k: 'trust' | 'morale' | 'fame' | 'cond' | 'age', d: number): Bump =>
+  (k: 'trust' | 'morale' | 'fame' | 'cond' | 'age' | 'injury', d: number): Bump =>
   (s) => {
     const v = s[k];
     s[k] = v + d;
@@ -109,7 +100,14 @@ const attrBump =
     };
   };
 const FACTORS: { label: string; bump: Bump }[] = [
-  { label: '소속팀 전력', bump: (s) => ((v) => ((s.club.str = v + 5), () => (s.club.str = v)))(s.club.str) },
+  {
+    label: '소속팀 전력',
+    bump: (s) => {
+      const v = s.club.str;
+      s.club.str = v + 5;
+      return () => (s.club.str = v);
+    },
+  },
   {
     label: '리그 수준',
     bump: (s) => {
@@ -125,7 +123,7 @@ const FACTORS: { label: string; bump: Bump }[] = [
   { label: '명성', bump: statBump('fame', 15) },
   { label: '컨디션', bump: statBump('cond', 15) },
   { label: '나이', bump: statBump('age', 3) },
-  { label: '부상 정도', bump: (s) => ((v) => ((s.injury = v + 2), () => (s.injury = v)))(s.injury) },
+  { label: '부상 정도', bump: statBump('injury', 2) },
   {
     label: '남은 계약 기간',
     bump: (s) => {
@@ -222,7 +220,7 @@ function analyzeChoice(ev: EventDef, c: Choice, states: GameState[]): DexChoice 
 /** 스토리 2단계 이후는 앞 단계를 먼저 겪은 상태가 있어야 확률이 계산된다 — 앞 단계 선택을 무작위로 밟아 둔다. */
 function withPastStages(ev: EventDef, states: GameState[], seed: number): GameState[] {
   const past = EVENTS.filter((e) => e.story === ev.story && (e.stage ?? 0) < (ev.stage ?? 0)).sort((a, b) => (a.stage ?? 0) - (b.stage ?? 0));
-  const r = mulberry(seed);
+  const r = createRng(seed).next;
   for (const s of states) {
     for (const e of past) {
       const c = e.choices[Math.floor(r() * e.choices.length)]!;
