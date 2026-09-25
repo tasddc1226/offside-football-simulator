@@ -9,6 +9,8 @@ import {
   applyTraining, simBlock, isSafe, rollEvent, resolveChoice, txt, roleOf, STORIES,
 } from '../game/engine.js';
 import { EVENTS } from '../game/events-data.js';
+import { isHiddenEvent } from '../game/dexGroups.js';
+import { markDexSeen } from './dex.js';
 import { natWindow, scoreLine, type IntlResult } from '../game/national.js';
 import { compsPhase } from '../game/comps.js';
 import { endSeason, market, acceptOption, retire } from '../game/season.js';
@@ -118,9 +120,12 @@ export async function chooseEvent(i: number) {
   if (sheetState.busy || !appState.G) return;
   const s = appState.G,
     p = s.pending as { type: 'event'; id: string; then?: string | null };
-  const c = EVENTS.find((e) => e.id === p.id)!.choices[i]!,
+  const ev = EVENTS.find((e) => e.id === p.id)!,
+    c = ev.choices[i]!,
     label = txt(c.label, s);
   const r = resolveChoice(s, p.id, i);
+  // T-10-012: 처음 겪은 스토리·특별 이벤트는 도감에서 열린다 — 결과 시트 안에서 알린다(토스트는 확인 버튼을 가린다).
+  const dexNew = markDexSeen(p.id) && isHiddenEvent(ev) ? ev.title : null;
   pushEvLog(s, { k: 'ev', id: p.id, c: i, ok: r.ok, h: s.phase });
   s.pending = p.then === 'seasonEnd' ? { type: 'seasonEnd' } : null;
   save();
@@ -135,6 +140,7 @@ export async function chooseEvent(i: number) {
       chips: r.chips as Chip[],
       twist: r.twist || null,
       story: r.story,
+      dexNew,
     },
     [{ label: '확인', cls: 'btn-primary', fn: nextPending }],
   );
@@ -321,6 +327,10 @@ export function goHome() {
 }
 export function goSettings() {
   appState.screen = 'settings';
+  window.scrollTo(0, 0);
+}
+export function goDex() {
+  appState.screen = 'dex';
   window.scrollTo(0, 0);
 }
 export function goBoard() {

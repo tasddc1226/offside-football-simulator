@@ -70,7 +70,7 @@ export type SheetView =
       story: StoryTag | null;
       choices: { label: string; odds: string; hint?: string }[];
     }
-  | { kind: 'eventResult'; label: string; outcome: string; ok: boolean; text: string; chips: Chip[]; twist: string | null; story: StoryNote | null }
+  | { kind: 'eventResult'; label: string; outcome: string; ok: boolean; text: string; chips: Chip[]; twist: string | null; story: StoryNote | null; dexNew: string | null }
   | {
       kind: 'season';
       eyebrow: string;

@@ -59,7 +59,10 @@ export let JITTER: boolean | 'safe' = false;
 export function setJitter(v: boolean | 'safe') {
   JITTER = v;
 }
-const jit = (v: number): number => (!JITTER ? v : JITTER === 'safe' && v > 0 ? v * (0.4 + rnd() * 0.5) : v * (0.5 + rnd()));
+/** 이벤트 결과 수치의 변동 폭(배수). 안전한 선택의 이득은 줄어든다. 확률 도감(T-10-012)이 그대로 보여 준다. */
+export const JITTER_RANGE = { safe: [0.4, 0.9], normal: [0.5, 1.5] } as const;
+const jitIn = (v: number, [lo, hi]: readonly [number, number]) => v * (lo + rnd() * (hi - lo));
+const jit = (v: number): number => (!JITTER ? v : JITTER === 'safe' && v > 0 ? jitIn(v, JITTER_RANGE.safe) : jitIn(v, JITTER_RANGE.normal));
 export function addAttr(s: GameState, k: AttrKey, v: number) {
   spreadAttr(s, k, jit(v));
 }
@@ -432,7 +435,24 @@ export function agentFee(s: GameState): number {
   return Math.max(500, Math.round(((s.contract ? s.contract.salary : 0) * 0.1) / 10) * 10);
 }
 
-const EV_COOLDOWN = 9;
+/** 이벤트 규칙. 확률 도감(T-10-012)이 이 값을 그대로 읽어 공개한다 — 숫자를 바꾸면 도감도 따라 바뀐다. */
+export const EVENT_RULES = {
+  /** 구간마다 이벤트가 생길 확률(프리시즌 / 전·후반기). 연쇄 이벤트는 예정대로 따로 온다. */
+  rate: { preseason: 0.55, season: 0.7 },
+  /** 같은 이벤트가 다시 나오기까지 최소 구간 수. 이미 본 이벤트는 가중치가 1/(1+본 횟수)로 준다. */
+  cooldown: 9,
+  /** 선택 뒤 반전이 붙을 확률. 안전한 선택은 먼저 이 확률로 대가를 치른다. */
+  twist: 0.3,
+  /** 반전이 능력치 변화일 때 오를 확률(안전 / 도전 성공·확정 / 도전 실패). */
+  twistUp: { safe: 0.3, ok: 0.65, fail: 0.4 },
+  /** 안전한 선택의 대가(셋 중 하나, 폭 안에서 무작위). */
+  safeCost: [
+    { k: 'morale', label: '사기', min: 3, max: 6, why: '도전하지 않은 아쉬움' },
+    { k: 'trust', label: '감독 신뢰', min: 1, max: 1, why: '감독의 미지근한 평가' },
+    { k: 'fame', label: '명성', min: 2, max: 4, why: '"무난했다"는 평가' },
+  ],
+} as const;
+const EV_COOLDOWN = EVENT_RULES.cooldown;
 export const isSafe = (ev: EventDef, c: Choice): boolean => !c.fail && ev.choices.some((x) => !!x.fail);
 export function rollEvent(s: GameState): string | null {
   const t = turnNo(s);
@@ -448,7 +468,7 @@ export function rollEvent(s: GameState): string | null {
     s.flags.lastEvent = due.id;
     return due.id;
   }
-  if (!chance(s.phase === 0 ? 0.55 : 0.7)) return null;
+  if (!chance(s.phase === 0 ? EVENT_RULES.rate.preseason : EVENT_RULES.rate.season)) return null;
   const seen = (s.flags.evSeen = s.flags.evSeen || {});
   const pool = EVENTS.filter((e) => !e.chain && e.cond(s) && s.flags.lastEvent !== e.id && !(seen[e.id] && t - seen[e.id]!.t < EV_COOLDOWN));
   if (!pool.length) return null;
@@ -487,17 +507,14 @@ export function resolveChoice(s: GameState, evId: string, idx: number): ResolveR
     setJitter(false);
   }
   let twist: string | null = null;
-  if (safe && chance(0.3)) {
-    const [k, d, why] = pick([
-      ['morale', -ri(3, 6), '도전하지 않은 아쉬움'],
-      ['trust', -1, '감독의 미지근한 평가'],
-      ['fame', -ri(2, 4), '"무난했다"는 평가'],
-    ] as const);
-    addStat(s, k, d as number);
+  if (safe && chance(EVENT_RULES.twist)) {
+    // 폭이 있는 항목만 RNG를 쓴다(원래 호출 순서: 사기 → 명성 → pick).
+    const [k, d, why] = pick(EVENT_RULES.safeCost.map(({ k, min, max, why }) => [k, -(min === max ? min : ri(min, max)), why] as const));
+    addStat(s, k, d);
     twist = '안전한 선택의 대가 · ' + why;
-  } else if (chance(0.3)) {
+  } else if (chance(EVENT_RULES.twist)) {
     const k = pick(ATTR_KEYS.filter((x) => wOf(s)[x] > 0.09));
-    const up = chance(safe ? 0.3 : ok ? 0.65 : 0.4);
+    const up = chance(safe ? EVENT_RULES.twistUp.safe : ok ? EVENT_RULES.twistUp.ok : EVENT_RULES.twistUp.fail);
     const d = up ? ri(1, 2) : -1;
     addAttr(s, k, d);
     twist = up ? `뜻밖의 수확 · ${labelOf(s, k)} +${d}` : `예상 못 한 여파 · ${labelOf(s, k)} ${d}`;
