@@ -42,16 +42,14 @@ tooling/sim-out/
 tooling/fulltime-sim/results/
 
 # 비밀값·운영 데이터 (공개 저장소 — 절대 커밋하지 않는다)
-.env
-.env.*
+.env*
 !.env.example
 *.pem
 *.key
 *.p12
 prod-d1*.sql
 *-dump*.sql
-*.sqlite
-*.sqlite3
+*.sqlite*
 
 # 로컬 에이전트·도구 설정
 .claude/settings.local.json

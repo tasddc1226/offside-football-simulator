@@ -7,7 +7,7 @@ describe('maskEmail', () => {
   });
 
   it('첫 글자 + *** + @도메인', () => {
-    expect(maskEmail('alice@gmail.com')).toBe('a***@gmail.com');
+    expect(maskEmail('alice@mail.example.org')).toBe('a***@mail.example.org');
   });
 
   it('로컬 파트가 한 글자여도 첫 글자만 남긴다', () => {

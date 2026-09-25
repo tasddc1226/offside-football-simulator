@@ -1,7 +1,6 @@
 {
   "name": "@offside/tsconfig",
   "private": true,
-  "license": "UNLICENSED",
   "version": "0.0.0",
   "files": [
     "base.json",

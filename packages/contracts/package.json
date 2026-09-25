@@ -1,7 +1,6 @@
 {
   "name": "@offside/contracts",
   "private": true,
-  "license": "UNLICENSED",
   "version": "0.0.0",
   "type": "module",
   "exports": {

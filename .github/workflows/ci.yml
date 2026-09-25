@@ -29,6 +29,9 @@ jobs:
         with:
           node-version-file: .node-version
           package-manager-cache: false
+      # 공개 저장소: 개인 메일·로컬 경로 유출 검사. 문서만 바뀐 PR에서도 돌린다.
+      - name: Public repository hygiene
+        run: node .github/scripts/public-hygiene.mjs
       - name: Detect code changes
         id: scope
         run: node .github/scripts/ci-scope.mjs

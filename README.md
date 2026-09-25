@@ -75,5 +75,4 @@ pnpm --filter @offside/fulltime-sim check-parity <tag>      # 원작 v4 기준�
 
 ## 라이선스
 
-All Rights Reserved. 이 저장소는 참고용으로 공개했을 뿐 오픈소스가 아니다. 코드·게임 데이터·
-그래픽·OFFSIDE 이름을 허락 없이 사용·복제·배포할 수 없다. 자세한 내용은 [`LICENSE`](LICENSE).
+All Rights Reserved — 오픈소스가 아니다. 자세한 내용은 [`LICENSE`](LICENSE).

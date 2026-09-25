@@ -2,7 +2,7 @@ import sys, json, re, subprocess, time, os
 # 워커 터미널 감시. 상태 파일은 ORCH_STATE_DIR(기본 ~/.offside-orch). 45초마다 active.txt의 태스크 화면을 읽어
 # RESULT(HEAD 변경·PR URL) / DIALOG / ERROR / IDLE-LONG 이벤트를 stdout에 한 줄씩 낸다.
 S = os.environ.get("ORCH_STATE_DIR") or os.path.expanduser("~/.offside-orch")
-os.environ["PATH"] = "~/.nvm/versions/node/v22.23.1/bin:" + os.environ["PATH"]
+os.environ["PATH"] = os.path.expanduser("~/.nvm/versions/node/v22.23.1/bin:") + os.environ["PATH"]
 # BUSY는 스피너 줄만 본다: '✳ Musing… (12m 25s · …)', '⏺ Reading 1 file, running 2 shell commands…', 'esc to interrupt'.
 # 예전 단어 목록(Running·Working·Thinking…)은 워커의 산문("Running the single allowed /review:pr")에 오탐해
 # 2026-09-03 새벽 T-1-012 질문 대화상자와 T-1-009 완료 보고를 7시간 놓쳤다.
@@ -11,7 +11,7 @@ DIALOG = re.compile(r'AskUserQuestion|Do you want to|❯ 1\.|Yes, and|Esc to can
 DONE = re.compile(r'수정 완료|github\.com/\S+/pull/\d+')
 ERR = re.compile(r'API Error|Connection lost|rate limit|usage limit')
 DIR = {}
-BASE = "~/orca/workspaces/offside-football-simulator/"
+BASE = os.path.expanduser("~/orca/workspaces/offside-football-simulator/")
 def wdir(t):
     if t in DIR: return BASE+DIR[t]
     try: return open(f"{S}/{t}.dir").read().strip()
