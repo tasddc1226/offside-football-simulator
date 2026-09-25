@@ -75,7 +75,7 @@
 <section class="card meters">
   <div class="meter"><span>컨디션</span><div class="bar"><i class={meterCls(s.cond, 40, 65)} style="width:{Math.round(s.cond)}%"></i></div><span class="v">{Math.round(s.cond)}</span></div>
   <div class="meter"><span>사기</span><div class="bar"><i class={meterCls(s.morale, 40, 60)} style="width:{Math.round(s.morale)}%"></i></div><span class="v">{Math.round(s.morale)}</span></div>
-  <div class="meter"><span>인기</span><div class="bar"><i class="acc" style="width:{Math.round(s.fame)}%"></i></div><span class="v">{Math.round(s.fame)}</span></div>
+  <div class="meter"><span>인기</span><div class="bar"><i class="acc" style="width:{Math.min(100, Math.round(s.fame))}%"></i></div><span class="v">{Math.round(s.fame)}</span></div>
 </section>
 
 {#if comps.length}

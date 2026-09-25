@@ -3,7 +3,7 @@ import { POS, LAST_PHASE } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
 import { EVENTS } from './events-data.js';
-import { leagueOf, addStat, log } from './engine.js';
+import { leagueOf, addStat, log, fameEff } from './engine.js';
 import { BAL } from './balance.js';
 import type { GameState, NatTour } from './types.js';
 
@@ -42,7 +42,7 @@ const u23 = (t: [string, number]): [string, number] => [`${t[0]} U-23`, t[1] - 6
 
 export function callupScore(s: GameState): number {
   const S = s.season, form = S.apps ? S.ratingSum / S.apps : 6.6;
-  return ovr(s) + (form - 6.8) * 4 + leagueOf(s.leagueId).tier * 0.6 + s.fame * 0.02 - (s.age >= 33 ? (s.age - 32) * 2 : 0);
+  return ovr(s) + (form - 6.8) * 4 + leagueOf(s.leagueId).tier * 0.6 + fameEff(s) * 0.02 - (s.age >= 33 ? (s.age - 32) * 2 : 0);
 }
 
 export interface IntlResult {

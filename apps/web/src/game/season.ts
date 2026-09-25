@@ -3,7 +3,7 @@ import { CLUBS, type Club } from './data.js';
 import { BAL } from './balance.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, rnd } from './rng.js';
-import { leagueOf, clubsIn, fmtMoney, salaryFor, addStat, addAttr, log, bloomTick, newSeason, finalRank } from './engine.js';
+import { leagueOf, clubsIn, fmtMoney, salaryFor, addStat, addAttr, log, bloomTick, newSeason, finalRank, fameEff } from './engine.js';
 import { seasonSetup, compGoals, seasonAwards, checkMilestones, retireMilestones } from './comps.js';
 import { natInit, natSeasonEnd } from './national.js';
 import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
@@ -87,7 +87,7 @@ const DOWN: Record<string, string> = { j1: 'k2', mls: 'k1', ere: 'k1', l1: 'j1',
 export function makeOffers(s: GameState) {
   const last = s.career.filter((r) => !r.mil).pop();
   const o = ovr(s);
-  const value = o + clamp(((last ? last.rating : 6.8) - 6.8) * 4, -4, 5) + s.fame * .04 - (s.age >= 31 ? (s.age - 30) * 1.2 : 0);
+  const value = o + clamp(((last ? last.rating : 6.8) - 6.8) * 4, -4, 5) + fameEff(s) * .04 - (s.age >= 31 ? (s.age - 30) * 1.2 : 0);
   const am = leagueOf(s.leagueId).amateur;
   const pool = CLUBS.filter((c) => !leagueOf(c.leagueId).amateur && c.id !== s.club.id && c.str <= value + 2 && c.str >= value - 14
     && (!am || (leagueOf(c.leagueId).tier <= (value >= 66 ? 4 : 3) && c.leagueId !== 'mls'))

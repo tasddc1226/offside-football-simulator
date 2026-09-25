@@ -74,9 +74,12 @@ export function addStat(s: GameState, k: StatKey, v: number) {
   if (k !== 'money') v = jit(v);
   if (k === 'money') s.money = Math.round(s.money + v);
   else if (k === 'trust') s.trust = clamp(s.trust + v, -6, 6);
-  else if (k === 'fame') s.fame = clamp(s.fame + v * (v > 0 && s.trait === 'star' ? 1.5 : v > 0 && s.trait === 'early' && s.age <= 23 ? 1.4 : 1), 0, 100);
+  // T-10-025: 인기는 상한 없이 쌓인다(하한 0만 유지). 밸런스에 닿는 공식은 fameEff()로 100까지만 반영한다.
+  else if (k === 'fame') s.fame = Math.max(0, s.fame + v * (v > 0 && s.trait === 'star' ? 1.5 : v > 0 && s.trait === 'early' && s.age <= 23 ? 1.4 : 1));
   else s[k] = clamp((s[k] ?? 0) + v, 0, 100);
 }
+/** 이적 가치·대표 선발처럼 밸런스에 닿는 공식에 쓰는 인기 — 상한을 풀기 전(100) 수준까지만 반영한다. */
+export const fameEff = (s: GameState): number => Math.min(s.fame, 100);
 export function log(s: GameState, text: string, kind = '', ph = s.phase) {
   s.log.unshift({ t: `${s.year} ${PHASES[ph] ?? ''}`, text, kind });
   s.log.length = Math.min(s.log.length, 60);
