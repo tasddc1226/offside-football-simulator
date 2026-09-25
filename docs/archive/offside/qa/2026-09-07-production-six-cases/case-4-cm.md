@@ -120,4 +120,4 @@
 - `case4-04-locker-room-PROMISE_BREACH-enum-leak.png` — 라커룸 "PROMISE_BREACH" enum 노출
 - `case4-05-final-season8-complete-27yo.png` — 8시즌 완료 시점 커리어 홈 화면(27세)
 
-(파일 경로: `/private/tmp/claude-501/-Users-suyoung-orca-workspaces-offside-football-simulator-main-2/4ef62756-c765-49a5-baf6-5eabacf98b2d/scratchpad/qa6-shots/`)
+(파일 경로: `<로컬 임시 폴더>`)

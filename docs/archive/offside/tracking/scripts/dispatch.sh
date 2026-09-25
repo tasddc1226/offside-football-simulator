@@ -2,7 +2,7 @@
 # usage: docs/tracking/scripts/dispatch.sh <TASK_ID> <worktree-name-suffix>   e.g. dispatch.sh T-1-011 sync-wiring
 # 상태 파일(<T>.handle, <T>.dir, active.txt)은 ORCH_STATE_DIR(기본 ~/.offside-orch)에 둔다.
 set -euo pipefail
-export PATH=/Users/suyoung/.nvm/versions/node/v22.23.1/bin:$PATH
+export PATH=~/.nvm/versions/node/v22.23.1/bin:$PATH
 S=${ORCH_STATE_DIR:-$HOME/.offside-orch}; mkdir -p "$S"
 REPO=id:41200e35-ac29-475d-8c7f-6cd38f9bc9e1
 T=$1; NAME="$1-$2"

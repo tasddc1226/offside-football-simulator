@@ -179,7 +179,7 @@
 
 ## 캡처 목록
 
-모든 파일은 `/private/tmp/claude-501/-Users-suyoung-orca-workspaces-offside-football-simulator-main-2/4ef62756-c765-49a5-baf6-5eabacf98b2d/scratchpad/qa-shots/` 아래에 있습니다.
+모든 파일은 `<로컬 임시 폴더>` 아래에 있습니다.
 
 - design-01-landing-desktop.png
 - design-02-onboarding-intro1-desktop.png

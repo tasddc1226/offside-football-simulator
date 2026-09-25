@@ -9,7 +9,7 @@ import re, json, subprocess, datetime, html, os, sys
 # 없으면 이 파일 옆 dashboard.html(.gitignore 대상). 오케스트레이터가 머지·투입 때마다 실행해 아티팩트로 재게시한다.
 _HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.environ.get("DASHBOARD_ROOT") or (
-    os.path.abspath(os.path.join(_HERE, "..", "..", "..")) if os.path.basename(_HERE) == "dashboard" else "/Users/suyoung/orca/workspaces/offside-football-simulator/main-2"
+    os.path.abspath(os.path.join(_HERE, "..", "..", "..")) if os.path.basename(_HERE) == "dashboard" else "~/orca/workspaces/offside-football-simulator/main-2"
 )
 OUT = os.environ.get("DASHBOARD_OUT") or os.path.join(_HERE, "dashboard.html")
 GH = "https://github.com/tasddc1226/offside-football-simulator"

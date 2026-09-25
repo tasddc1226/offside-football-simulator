@@ -22,7 +22,7 @@ Dexie(IndexedDB)에 저장하며, 서버는 체크포인트 동기화·보관함
 옮긴 것:
 
 - `content/`, `phases/`, `screens/`, `development/`, `product/`, `research/`, `design/`, `qa/` — 원작의 기획·화면 계약·콘텐츠 저작·개발 명세·QA 기록 전체
-- `offside-football-simulator-design.docx`/`.pdf` — 73페이지 통합 설계서
+- ~~`offside-football-simulator-design.docx`/`.pdf`~~ — 73페이지 통합 설계서. 다른 서비스 화면 캡처가 많이 들어 있어 공개 저장소 정리 때 제거했다.
 - `tracking/` — 원작 진행 보드(`board-pre-phase9.md`), 워커 브리프 118건, 결정 로그에 딸린 대량 시뮬레이션 증거, phase 계획·완료 감사, 레거시 위임 스크립트(`dispatch.sh`/`redispatch.sh`/`watch.py`), 현황판 생성기
 
 옮기지 않고 제자리에 남긴 것: 여전히 유효한 브랜드·인프라·운영 문서(`docs/adr/`,
