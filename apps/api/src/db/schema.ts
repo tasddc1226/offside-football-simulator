@@ -181,13 +181,13 @@ export const careerSeasons = sqliteTable(
   (table) => [primaryKey({ columns: [table.careerId, table.year] })],
 );
 
-/** T-1-004, ADR-008. `PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`·`GOOGLE_LINKED`·`GOOGLE_UNLINKED`(T-1-013)·`CAREERS_MERGED`(T-10-013)·`BALANCE_ACTIVATED`(T-10-016). */
+/** T-1-004, ADR-008. `PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`·`GOOGLE_LINKED`·`GOOGLE_UNLINKED`(T-1-013)·`CAREERS_MERGED`(T-10-013)·`BALANCE_ACTIVATED`·`COMMENTS_PURGED`(T-10-016). */
 export const auditLog = sqliteTable(
   'audit_log',
   {
     id: text('id').primaryKey(),
     kind: text('kind', {
-      enum: ['PROFILE_DELETED', 'RECOVERY_CODE_ISSUED', 'GOOGLE_LINKED', 'GOOGLE_UNLINKED', 'CAREERS_MERGED', 'BALANCE_ACTIVATED'],
+      enum: ['PROFILE_DELETED', 'RECOVERY_CODE_ISSUED', 'GOOGLE_LINKED', 'GOOGLE_UNLINKED', 'CAREERS_MERGED', 'BALANCE_ACTIVATED', 'COMMENTS_PURGED'],
     }).notNull(),
     profileId: text('profile_id').notNull(),
     payloadJson: text('payload_json').notNull(),
@@ -242,6 +242,8 @@ export const boardComments = sqliteTable(
   (table) => [
     index('board_comments_post_created_idx').on(table.postId, table.createdAt),
     index('board_comments_profile_idx').on(table.profileId),
+    // T-10-016 운영 도구: 전체 게시판의 최근 댓글.
+    index('board_comments_created_idx').on(table.createdAt),
   ],
 );
 

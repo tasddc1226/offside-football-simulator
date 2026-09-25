@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "aa5b5168-dee3-428c-8024-67432c13d2f3",
+  "id": "c775ac7b-0894-46a2-a209-d0e8a1ea7160",
   "prevId": "fed3665c-51d0-4191-bb6b-1f4340a2846e",
   "tables": {
     "audit_log": {
@@ -260,6 +260,13 @@
           "name": "board_comments_profile_idx",
           "columns": [
             "profile_id"
+          ],
+          "isUnique": false
+        },
+        "board_comments_created_idx": {
+          "name": "board_comments_created_idx",
+          "columns": [
+            "created_at"
           ],
           "isUnique": false
         }

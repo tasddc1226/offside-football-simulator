@@ -6,9 +6,15 @@
   import { appState } from './state.svelte.js';
   import Topbar from './Topbar.svelte';
   import AdminBalance from './admin/AdminBalance.svelte';
+  import AdminComments from './admin/AdminComments.svelte';
+  import AdminDashboard from './admin/AdminDashboard.svelte';
 
-  const TABS = [{ id: 'balance', label: '밸런스' }] as const;
-  let tab = $state<(typeof TABS)[number]['id']>('balance');
+  const TABS = [
+    { id: 'dashboard', label: '대시보드' },
+    { id: 'comments', label: '댓글' },
+    { id: 'balance', label: '밸런스' },
+  ] as const;
+  let tab = $state<(typeof TABS)[number]['id']>('dashboard');
   let admin = $state<boolean | null>(null);
 
   onMount(() => {
@@ -32,12 +38,23 @@
     {:else if !admin}
       <p class="muted">운영자 계정으로 로그인해야 볼 수 있어요.</p>
     {:else}
-      <div class="seg admin-tabs" role="tablist" aria-label="운영 도구">
+      <div class="seg three admin-tabs" role="tablist" aria-label="운영 도구">
         {#each TABS as t (t.id)}
           <button class="opt" role="tab" aria-selected={tab === t.id} data-admin-tab={t.id} onclick={() => (tab = t.id)}>{t.label}</button>
         {/each}
       </div>
-      {#if tab === 'balance'}<AdminBalance />{/if}
+      {#if tab === 'dashboard'}<AdminDashboard />
+      {:else if tab === 'comments'}<AdminComments />
+      {:else}<AdminBalance />{/if}
     {/if}
   </section>
 </div>
+
+<style>
+  .opt { align-items: center; font-weight: 600; }
+  .opt[aria-selected='true'] { border-color: var(--pitch); background: color-mix(in srgb, var(--pitch) 8%, var(--surface)); box-shadow: inset 0 0 0 1px var(--pitch); }
+  :global(:root[data-theme='dark']) .opt[aria-selected='true'] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme='light'])) .opt[aria-selected='true'] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  }
+</style>

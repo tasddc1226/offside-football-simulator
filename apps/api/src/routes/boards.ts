@@ -45,7 +45,7 @@ const nowIso = () => new Date().toISOString();
  * '더 보기'(before)나 다른 limit은 드물어 그냥 읽는다. */
 const LIST_TTL = 60;
 const DEFAULT_LIMIT = 20;
-const firstPagePath = (board: string) => `/v1/boards/${board}/posts?limit=${DEFAULT_LIMIT}`;
+export const firstPagePath = (board: string) => `/v1/boards/${board}/posts?limit=${DEFAULT_LIMIT}`;
 const purgeList = (c: Context<AppEnv>, board: string) => purgeEdge(c, [firstPagePath(board)]);
 
 async function postOr404(c: Context<AppEnv>, id: string) {
