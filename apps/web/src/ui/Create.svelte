@@ -2,12 +2,12 @@
   // 선수 생성(T-10-022): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
   // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
   import { cubicOut } from 'svelte/easing';
-  import { POS, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, defaultFocus, focusMod } from '../game/data.js';
+  import { POS, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod } from '../game/data.js';
   import type { AttrKey, Pos } from '../game/data.js';
   import { baseline } from '../game/candidates.js';
   import { appState, randomName } from './state.svelte.js';
   import { goHome, startCareer, rollCandidates } from './actions.js';
-  import { POS_BLURB, TRAIT_UI, attrLabels, hiddenStrength, scoutLine, startOvr } from './create-view.js';
+  import { hiddenStrength, scoutLine, startOvr } from './create-view.js';
   import { dur } from './motion.js';
   import Topbar from './Topbar.svelte';
   import MiniRadar from './MiniRadar.svelte';
@@ -36,8 +36,7 @@
     if (C.focus.includes(k)) C.focus = C.focus.filter((f) => f !== k);
     else C.focus = [...C.focus, k].slice(-FOCUS_PICK);
   }
-  function focusNote(k: AttrKey): string {
-    const d = preview[k] ?? 0;
+  function focusNote(k: AttrKey, d: number): string {
     if (C.focus.includes(k)) return `시작 +${d} · 성장 +${growthPct}%`;
     return d < 0 ? `시작 ${d}` : '변화 없음';
   }
@@ -84,7 +83,7 @@
       <b class="lc-name">{C.name.trim() || '이름 없음'}</b>
       <span class="lc-meta">{POS[C.pos].label} · {C.foot}</span>
       <div class="lc-tags">
-        {#if trait}<span class="lc-tag">{TRAIT_UI[trait.id]?.icon} {trait.name}</span>{/if}
+        {#if trait}<span class="lc-tag">{trait.icon} {trait.name}</span>{/if}
         {#if C.focus.length}<span class="lc-tag">주력 {C.focus.map((k) => labels[k]).join('·')}</span>{/if}
       </div>
     </div>
@@ -115,7 +114,7 @@
         <div class="seg two">
           {#each posKeys as k (k)}
             <button class="opt pos-opt" data-set="pos" data-val={k} aria-pressed={C.pos === k} onclick={() => setPos(k)}>
-              <span class="pos-code num">{k}</span><b>{POS[k].label}</b><small>{POS_BLURB[k]}</small>
+              <span class="pos-code num">{k}</span><b>{POS[k].label}</b><small>{POS[k].blurb}</small>
             </button>
           {/each}
         </div>
@@ -136,7 +135,7 @@
           {#each ATTR_KEYS as k (k)}
             {@const d = preview[k] ?? 0}
             <button class="opt focus-opt" data-set="focus" data-val={k} aria-pressed={C.focus.includes(k)} onclick={() => toggleFocus(k)}>
-              <b>{labels[k]}</b><small class:up={d > 0} class:down={d < 0}>{focusNote(k)}</small>
+              <b>{labels[k]}</b><small class:up={d > 0} class:down={d < 0}>{focusNote(k, d)}</small>
             </button>
           {/each}
         </div>
@@ -147,7 +146,7 @@
         <div class="seg two">
           {#each TRAITS as t (t.id)}
             <button class="opt trait-opt" data-set="trait" data-val={t.id} aria-pressed={C.trait === t.id} title={t.desc} onclick={() => (C.trait = t.id)}>
-              <b><span aria-hidden="true">{TRAIT_UI[t.id]?.icon}</span> {t.name}</b><small>{TRAIT_UI[t.id]?.short ?? t.desc}</small>
+              <b><span aria-hidden="true">{t.icon}</span> {t.name}</b><small>{t.short}</small>
             </button>
           {/each}
         </div>
@@ -155,10 +154,12 @@
       <p class="muted" style="font-size:13px">잠재력은 숨겨져 있어요. 스카우트 평가로만 짐작할 수 있어요.</p>
     </section>
 
-    <div class="create-cta">
-      <button class="btn btn-primary btn-block" data-act="next-candidates" disabled={focusLeft > 0} onclick={rollCandidates}>
-        {focusLeft > 0 ? `주력 능력치를 ${focusLeft}개 더 골라주세요` : '후보 3명 보기 →'}
-      </button>
+    <div class="action-bar at-bottom">
+      <div class="action-bar-inner">
+        <button class="btn btn-primary btn-block" data-act="next-candidates" disabled={focusLeft > 0} onclick={rollCandidates}>
+          {focusLeft > 0 ? `주력 능력치를 ${focusLeft}개 더 골라주세요` : '후보 3명 보기 →'}
+        </button>
+      </div>
     </div>
   {:else if appState.candidates}
     <div class="row cand-intro">
@@ -181,10 +182,11 @@
               <MiniRadar pos={C.pos} attrs={cand.attrs} size={84} />
               <span class="cc-bars">
                 {#each ATTR_KEYS as k (k)}
+                  {@const v = Math.round(cand.attrs[k])}
                   <span class="cc-bar" class:hi={cand.hintKeys.includes(k)}>
                     <span>{labels[k]}</span>
-                    <i><em style:width="{Math.round(cand.attrs[k])}%"></em></i>
-                    <b class="num">{Math.round(cand.attrs[k])}</b>
+                    <i><em style:width="{v}%"></em></i>
+                    <b class="num">{v}</b>
                   </span>
                 {/each}
               </span>
@@ -203,10 +205,12 @@
       {/each}
     </div>
 
-    <div class="create-cta">
-      <button class="btn btn-primary btn-block" data-act="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
-        {appState.candidatePick == null ? '후보를 한 명 골라주세요' : `후보 ${appState.candidatePick + 1}로 킥오프 →`}
-      </button>
+    <div class="action-bar at-bottom">
+      <div class="action-bar-inner">
+        <button class="btn btn-primary btn-block" data-act="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
+          {appState.candidatePick == null ? '후보를 한 명 골라주세요' : `후보 ${appState.candidatePick + 1}로 킥오프 →`}
+        </button>
+      </div>
     </div>
   {/if}
 </div>

@@ -22,7 +22,7 @@ function localRng(seed: number): () => number {
 export interface Candidate {
   attrs: Record<AttrKey, number>;
   total: number;
-  /** 카드가 뒤집히기 전 표시할 짧은 스카우트 힌트(강점 2개). */
+  /** 가장 높은 능력치 2개 — 열린 후보 카드에서 막대를 강조한다. */
   hintKeys: AttrKey[];
 }
 

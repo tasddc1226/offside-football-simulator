@@ -4,7 +4,8 @@ import { defaultFocus, type Pos } from '../game/data.js';
 import { newGame } from '../game/engine.js';
 import { ovr } from '../game/attributes.js';
 import { createRng, setActiveRng } from '../game/rng.js';
-import { hexPoints, hiddenStrength, iGa, radarOrder, scoutLine, startOvr } from './create-view.js';
+import { hiddenStrength, scoutLine, startOvr } from './create-view.js';
+import { iGa, polyPoints } from './format.js';
 
 describe('선수 생성 표시 로직', () => {
   it('받침에 따라 이/가를 고른다', () => {
@@ -34,7 +35,7 @@ describe('선수 생성 표시 로직', () => {
   });
 
   it('미니 레이더는 꼭짓점 6개를 만든다', () => {
-    const pts = hexPoints(radarOrder('FW').map(() => 100), 10).split(' ');
+    const pts = polyPoints([100, 100, 100, 100, 100, 100], 10, 10).split(' ');
     expect(pts).toHaveLength(6);
     expect(pts[0]).toBe('10.0,0.0');
   });

@@ -2,6 +2,7 @@
 :root {
   --bg: #E9EEE8; --surface: #FFFFFF; --surface-2: #F3F6F2; --ink: #14201A; --muted: #5C6B62; --line: #D5DDD6;
   --pitch: #1C4A35; --pitch-2: #245C43; --chalk: rgba(255,255,255,.22); --on-pitch: #F2F6F1;
+  --pitch-accent: #F0B437; /* 초록 그라운드 위 금색 글자 — 두 테마 모두 대비 4.5:1 이상 */
   --accent: #D99A12; --accent-text: #8A5C0A; --accent-ink: #2A1C00; --good: #1E7A50; --bad: #C0392F; --warn: #96600A;
   --shadow: 0 1px 0 rgba(20,32,26,.05), 0 8px 24px -14px rgba(20,32,26,.28);
   --display: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
@@ -24,7 +25,6 @@
 :root {
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px;
   --tabbar-h: 60px;
-  --pitch-accent: #F0B437; /* 초록 그라운드 위 금색 글자 — 두 테마 모두 대비 4.5:1 이상 */
   --actionbar-h: 68px;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -154,7 +154,6 @@ input[type=text], input[type=number], select { border: 1px solid var(--line); ba
 .seg { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); }
 .opt { border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; min-height: 44px; text-align: left; display: flex; flex-direction: column; gap: 1px; justify-content: center; }
 .opt small { color: var(--muted); font-size: 12px; line-height: 1.35; }
-.seg.four { grid-template-columns: repeat(4, 1fr); }
 .seg.three { grid-template-columns: repeat(3, 1fr); }
 /* T-10-009 클럽 엠블럼 · 클럽 편집 */
 .club-badge { display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 30%; font-weight: 800; line-height: 1; vertical-align: -0.25em; object-fit: cover; letter-spacing: -0.02em; }
@@ -259,6 +258,8 @@ textarea { border: 1px solid var(--line); background: var(--surface-2); border-r
   border-top: 1px solid var(--line); padding: 10px 16px;
 }
 .action-bar-inner { max-width: 480px; margin: 0 auto; }
+/* 탭바가 없는 화면(선수 생성)에서는 화면 맨 아래에 붙는다 */
+.action-bar.at-bottom { bottom: 0; padding-bottom: calc(10px + var(--safe-b)); }
 @media (min-width: 720px) { .action-bar { max-width: 560px; margin-inline: auto; } .action-bar-inner { max-width: none; } }
 
 /* season */
@@ -490,9 +491,8 @@ td.n, th.n { text-align: right; }
 .lc-side { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .lc-ovr { font-size: 11px; color: color-mix(in srgb, var(--on-pitch) 85%, transparent); white-space: nowrap; }
 .lc-ovr b { font-size: 17px; color: var(--pitch-accent); margin-left: 2px; }
-.live-card .mr-ring { stroke: color-mix(in srgb, var(--on-pitch) 25%, transparent); }
+.live-card .rd-ring { stroke: color-mix(in srgb, var(--on-pitch) 25%, transparent); }
 .mini-radar { display: block; overflow: visible; }
-.mr-ring { fill: none; stroke: var(--line); stroke-width: 1; }
 .mr-now { fill: color-mix(in srgb, var(--accent) 35%, transparent); stroke: var(--accent); stroke-width: 1.8; stroke-linejoin: round; }
 
 .create-form { gap: 18px; }
@@ -506,15 +506,6 @@ td.n, th.n { text-align: right; }
 .pos-opt[aria-pressed="true"] .pos-code { color: var(--accent-text); }
 .focus-opt small.up { color: var(--good); font-weight: 600; }
 .focus-opt small.down { color: var(--bad); }
-.create-cta {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
-  padding: 12px 16px calc(12px + var(--safe-b));
-  background: color-mix(in srgb, var(--bg) 90%, transparent);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  border-top: 1px solid var(--line);
-}
-.create-cta .btn { display: flex; max-width: 448px; margin: 0 auto; }
-@media (min-width: 720px) { .create-cta .btn { max-width: 528px; } }
 
 .cand-intro { flex-wrap: nowrap; align-items: flex-start; }
 .cand-intro p { flex: 1; font-size: 13px; }
@@ -532,7 +523,7 @@ td.n, th.n { text-align: right; }
 .cc-closed b { font-size: 16px; }
 .cc-closed small { font-size: 12px; opacity: .75; }
 .cc-tap { font-size: 11px; font-weight: 600; opacity: .7; white-space: nowrap; }
-.cand-card.open { background: var(--surface); color: var(--ink); display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.cand-card.open { background: var(--surface); color: var(--ink); flex-direction: column; align-items: stretch; gap: 8px; }
 .cand-card.open.picked { border-color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent), var(--shadow); }
 .cc-head { display: flex; align-items: center; gap: 8px; }
 .cc-no { font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: .02em; }

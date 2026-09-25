@@ -120,8 +120,12 @@ export const ATTR_LABEL: Record<AttrKey, string> = { pac: '스피드', sho: '슈
 export const GK_LABEL: Record<AttrKey, string> = { pac: '반사 신경', sho: '스피드', pas: '킥', dri: '위치 선정', def: '다이빙', phy: '핸들링' };
 
 export type Pos = 'FW' | 'MF' | 'DF' | 'GK';
+/** 골키퍼는 같은 여섯 능력치를 다른 이름으로 부른다. */
+export const attrLabels = (pos: Pos): Record<AttrKey, string> => (pos === 'GK' ? GK_LABEL : ATTR_LABEL);
 export interface PosDef {
   label: string;
+  /** 선수 생성 화면의 한 줄 설명. */
+  blurb: string;
   base: Record<AttrKey, number>;
   w: Partial<Record<AttrKey, number>>;
   goal: number;
@@ -131,6 +135,7 @@ export interface PosDef {
 export const POS: Record<Pos, PosDef> = {
   FW: {
     label: '공격수',
+    blurb: '골로 말하는 해결사',
     base: { pac: 50, sho: 52, pas: 42, dri: 48, def: 28, phy: 46 },
     w: { sho: 0.34, pac: 0.2, dri: 0.24, phy: 0.1, pas: 0.1, def: 0.02 },
     goal: 0.34,
@@ -139,6 +144,7 @@ export const POS: Record<Pos, PosDef> = {
   },
   MF: {
     label: '미드필더',
+    blurb: '패스로 경기를 조율',
     base: { pac: 46, sho: 42, pas: 52, dri: 48, def: 40, phy: 44 },
     w: { pas: 0.32, dri: 0.2, sho: 0.12, def: 0.14, phy: 0.1, pac: 0.12 },
     goal: 0.14,
@@ -147,6 +153,7 @@ export const POS: Record<Pos, PosDef> = {
   },
   DF: {
     label: '수비수',
+    blurb: '실점을 막는 벽',
     base: { pac: 44, sho: 30, pas: 42, dri: 38, def: 54, phy: 52 },
     w: { def: 0.42, phy: 0.22, pac: 0.16, pas: 0.14, dri: 0.04, sho: 0.02 },
     goal: 0.05,
@@ -155,6 +162,7 @@ export const POS: Record<Pos, PosDef> = {
   },
   GK: {
     label: '골키퍼',
+    blurb: '마지막 방어선',
     base: { pac: 48, sho: 30, pas: 38, dri: 40, def: 54, phy: 48 },
     w: { def: 0.45, pac: 0.25, phy: 0.15, pas: 0.1, dri: 0.05, sho: 0 },
     goal: 0,
@@ -240,12 +248,15 @@ export interface TraitDef {
   id: string;
   name: string;
   desc: string;
+  /** 선수 생성 화면 태그 카드용 아이콘·짧은 설명. */
+  icon: string;
+  short: string;
 }
 export const TRAITS: TraitDef[] = [
-  { id: 'early', name: '조기 성장', desc: '어릴 때 빠르게 크고 일찍 주목받지만, 일찍 꺾입니다.' },
-  { id: 'late', name: '대기만성', desc: '늦게 피지만 전성기가 길어요.' },
-  { id: 'iron', name: '강철 체력', desc: '부상 확률이 크게 낮습니다.' },
-  { id: 'star', name: '스타성', desc: '인기와 스폰서가 잘 따라옵니다.' },
+  { id: 'early', name: '조기 성장', desc: '어릴 때 빠르게 크고 일찍 주목받지만, 일찍 꺾입니다.', icon: '⚡', short: '빨리 크고 일찍 꺾여요' },
+  { id: 'late', name: '대기만성', desc: '늦게 피지만 전성기가 길어요.', icon: '🌱', short: '늦게 피고 오래 가요' },
+  { id: 'iron', name: '강철 체력', desc: '부상 확률이 크게 낮습니다.', icon: '🛡️', short: '부상이 크게 줄어요' },
+  { id: 'star', name: '스타성', desc: '인기와 스폰서가 잘 따라옵니다.', icon: '⭐', short: '인기·스폰서가 따라와요' },
 ];
 
 export const PHASES = ['프리시즌', '전반기', '후반기', '시즌 종료'];

@@ -33,6 +33,7 @@ export const RADAR_ORDER: { field: AttrKey[]; GK: AttrKey[] } = {
   field: ['pac', 'sho', 'pas', 'dri', 'def', 'phy'],
   GK: ['def', 'phy', 'pas', 'pac', 'sho', 'dri'],
 };
+export const radarOrder = (pos: Pos): AttrKey[] => (pos === 'GK' ? RADAR_ORDER.GK : RADAR_ORDER.field);
 export const FACE_ABBR: Record<AttrKey, string> = { pac: 'PAC', sho: 'SHO', pas: 'PAS', dri: 'DRI', def: 'DEF', phy: 'PHY' };
 export const GK_ABBR: Record<AttrKey, string> = { def: 'DIV', phy: 'HAN', pas: 'KIC', pac: 'REF', sho: 'SPD', dri: 'POS' };
 
