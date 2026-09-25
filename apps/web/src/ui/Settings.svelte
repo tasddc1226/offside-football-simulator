@@ -224,7 +224,7 @@
     <div class="eyebrow">Help</div>
     <h2 id="settings-help">도움말</h2>
     <nav class="card settings-links" aria-label="도움말">
-      <button data-act="install-guide" onclick={showInstallGuide}>홈 화면에 추가하기 <span aria-hidden="true">›</span></button>
+      <button data-act="install-guide" onclick={() => showInstallGuide()}>홈 화면에 추가하기 <span aria-hidden="true">›</span></button>
       <a href="/guide/">게임 가이드 <span aria-hidden="true">›</span></a>
       <a href="/faq/">자주 묻는 질문 <span aria-hidden="true">›</span></a>
     </nav>
