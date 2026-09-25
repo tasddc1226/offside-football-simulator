@@ -48,9 +48,10 @@ export function salaryFor(leagueId: string, o: number): number {
 export function fmtMoney(man: number): string {
   const m = Math.round(man);
   if (Math.abs(m) >= 10000) {
-    const e = Math.floor(m / 10000);
-    const r = Math.round((m % 10000) / 1000) * 1000;
-    return r ? `${e}억 ${r.toLocaleString()}만` : `${e}억`;
+    // 천만 단위로 먼저 반올림해야 9,770만 → '1억'으로 올라간다('18억 10,000만' 방지). 음수는 부호만 앞에 붙인다.
+    const t = Math.round(Math.abs(m) / 1000) * 1000;
+    const e = Math.floor(t / 10000), r = t % 10000;
+    return `${m < 0 ? '-' : ''}${e}억${r ? ` ${r.toLocaleString()}만` : ''}`;
   }
   return `${m.toLocaleString()}만`;
 }
