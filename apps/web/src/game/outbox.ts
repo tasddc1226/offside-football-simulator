@@ -6,6 +6,7 @@
 import type { CareerSeasonPayload, PutCareerSeasonBody, PutRetirementBody } from '@offside/contracts';
 import { resolveApiBaseUrl } from '../api/base-url.js';
 import type { CareerRecord } from './types.js';
+import { OWNER_CONFLICT_EVENT } from './syncEvents.js';
 
 const OUTBOX_KEY = 'ft_outbox';
 const OUTBOX_CAP = 100;
@@ -84,7 +85,7 @@ async function ensureProfile(): Promise<boolean> {
   }
 }
 
-type SendResult = 'ok' | 'retry' | 'drop';
+type SendResult = 'ok' | 'retry' | 'drop' | 'conflict';
 
 async function sendItem(item: OutboxItem): Promise<SendResult> {
   try {
@@ -96,6 +97,11 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
       keepalive: true,
     });
     if (res.ok) return 'ok';
+    // T-10-013: 다른 계정 소유 커리어. 버리되 UI에 알린다(이 계정으로 이어서 기록할지 고르게).
+    if (res.status === 409) {
+      const body = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;
+      if (body?.error?.code === 'CAREER_OWNER_MISMATCH') return 'conflict';
+    }
     // 4xx(검증 실패·409 소유권 충돌 포함)는 재시도해도 같은 결과이므로 버린다.
     if (res.status >= 500) return 'retry';
     // 세션 만료: 다음 flush에서 프로필을 다시 확인하고 재시도한다(버리지 않는다).
@@ -123,6 +129,7 @@ export async function flushOutbox(): Promise<void> {
     if (!profileOk) return; // 세션 확인 실패 — 큐는 그대로 두고 다음 기회에 다시 시도한다.
 
     const remaining: OutboxItem[] = [];
+    const conflicts: OutboxItem[] = [];
     for (const item of items) {
       const result = await sendItem(item);
       if (result === 'ok') continue;
@@ -130,9 +137,14 @@ export async function flushOutbox(): Promise<void> {
         remaining.push(item);
         continue;
       }
+      if (result === 'conflict') {
+        conflicts.push(item);
+        continue;
+      }
       console.warn('[outbox] 4xx 응답으로 항목을 버립니다', item.kind, item.careerId);
     }
     saveOutbox(remaining);
+    if (conflicts.length) globalThis.dispatchEvent?.(new CustomEvent(OWNER_CONFLICT_EVENT, { detail: conflicts }));
   } catch (err) {
     console.error('[outbox] flush 실패', err);
   } finally {
@@ -151,6 +163,11 @@ function enqueue(item: OutboxItem): void {
     return;
   }
   void flushOutbox();
+}
+
+/** T-10-013. 아직 서버에 못 보낸 은퇴 기록의 커리어 ID(명예의 전당 '내 선수'가 계정 목록에 잠깐 더한다). */
+export function pendingRetirementIds(): Set<string> {
+  return new Set(loadOutbox().flatMap((i) => (i.kind === 'retirement' ? [i.careerId] : [])));
 }
 
 export function enqueueSeason(careerId: string, year: number, body: PutCareerSeasonBody): void {

@@ -2,6 +2,7 @@
 import { leagueOf } from '../game/engine.js';
 import { saveKey } from '../game/season.js';
 import { getActiveRng } from '../game/rng.js';
+import type { PutCareerSeasonBody } from '@offside/contracts';
 import type { CareerRecord, EventLogEntry, GameState, HofEntry } from '../game/types.js';
 import { appState, toastState } from './state.svelte.js';
 
@@ -31,20 +32,22 @@ export const seasonLabel = (s: GameState, y = s.year): string =>
 export function uploadSeason(s: GameState, rec: CareerRecord) {
   const events = (s.evBuf || []).slice();
   s.evBuf = [];
-  void import('../game/outbox.js').then((m) =>
-    m.enqueueSeason(s.cid, rec.year, {
-      career: {
-        pos: s.pos,
-        foot: s.foot,
-        type: s.type,
-        trait: s.trait,
-        startYear: s.career[0]?.year ?? rec.year,
-        appVersion: APP_VERSION,
-      },
-      season: m.seasonPayload(rec),
-      events,
-    }),
-  );
+  void import('../game/outbox.js').then((m) => m.enqueueSeason(s.cid, rec.year, seasonBody(m, s, rec, events)));
+}
+
+export function seasonBody(m: typeof import('../game/outbox.js'), s: GameState, rec: CareerRecord, events: PutCareerSeasonBody['events']): PutCareerSeasonBody {
+  return {
+    career: {
+      pos: s.pos,
+      foot: s.foot,
+      type: s.type,
+      trait: s.trait,
+      startYear: s.career[0]?.year ?? rec.year,
+      appVersion: APP_VERSION,
+    },
+    season: m.seasonPayload(rec),
+    events,
+  };
 }
 
 /** 은퇴 요약 + 상세 스냅샷을 서버 명예의 전당으로 보낸다. 이름은 `entry.public`일 때만 보낸다(기본 익명). */

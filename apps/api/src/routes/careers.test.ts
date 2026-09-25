@@ -1,8 +1,8 @@
-import { ErrorEnvelopeSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { ErrorEnvelopeSchema, MyCareersResponseSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
-import { careers, careerSeasons } from '../db/schema.js';
+import { careers, careerSeasons, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
@@ -231,5 +231,62 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(careerRows).toHaveLength(0);
     const seasonRows = await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID));
     expect(seasonRows).toHaveLength(0);
+  });
+});
+
+describe('GET /v1/careers/mine (T-10-013)', () => {
+  let ctx: TestD1;
+
+  beforeEach(async () => {
+    ctx = await createTestD1();
+  });
+
+  afterEach(async () => {
+    await ctx.dispose();
+  });
+
+  async function retire(cookie: string, careerId: string, legendScore: number) {
+    const app = createApp();
+    expect((await app.request(`/v1/careers/${careerId}/seasons/2026`, jsonInit({ method: 'PUT', body: seasonBody(), cookie }), ctx.env)).status).toBe(200);
+    const body = { ...retirementBody(), legendScore };
+    expect((await app.request(`/v1/careers/${careerId}/retirement`, jsonInit({ method: 'PUT', body, cookie }), ctx.env)).status).toBe(200);
+  }
+  async function mine(cookie?: string) {
+    const app = createApp();
+    return app.request('/v1/careers/mine', cookie ? { headers: { Cookie: cookie } } : {}, ctx.env);
+  }
+
+  it('세션이 없으면 401', async () => {
+    expect((await mine()).status).toBe(401);
+  });
+
+  it('익명 프로필은 linked=false, 목록은 비운다(웹은 기기 기록을 쓴다)', async () => {
+    const me = await issueCookie(ctx);
+    await retire(me.cookie, CAREER_ID, 300);
+    const res = await mine(me.cookie);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+    expect(successEnvelope(MyCareersResponseSchema).parse(await res.json()).data).toEqual({ linked: false, entries: [] });
+  });
+
+  it('계정에 연결된 프로필은 자기 은퇴 선수만 점수순으로 받는다', async () => {
+    const me = await issueCookie(ctx);
+    const other = await issueCookie(ctx);
+    await ctx.db.update(profiles).set({ googleSub: 'sub-me' }).where(eq(profiles.id, me.profileId));
+    const low = '11111111-1111-4111-8111-111111111111';
+    const high = '22222222-2222-4222-8222-222222222222';
+    await retire(me.cookie, low, 100);
+    await retire(me.cookie, high, 500);
+    await retire(other.cookie, '33333333-3333-4333-8333-333333333333', 900);
+    // 은퇴하지 않은 커리어는 빠진다.
+    const app = createApp();
+    await app.request('/v1/careers/44444444-4444-4444-8444-444444444444/seasons/2026', jsonInit({ method: 'PUT', body: seasonBody(), cookie: me.cookie }), ctx.env);
+
+    const data = successEnvelope(MyCareersResponseSchema).parse(await (await mine(me.cookie)).json()).data;
+    expect(data.linked).toBe(true);
+    expect(data.entries.map((e) => [e.id, e.legendScore])).toEqual([
+      [high, 500],
+      [low, 100],
+    ]);
   });
 });

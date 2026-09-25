@@ -210,6 +210,23 @@ export async function getPublicHof(db: Db, careerId: string): Promise<{ entry: P
   return { entry: toPublicEntry(rest), snapshot: snapshotJson ? (JSON.parse(snapshotJson) as LegendSnapshot) : null };
 }
 
+/** T-10-013. 한 프로필의 은퇴 선수(명예의 전당 '내 선수'). */
+export async function listOwnHof(db: Db, profileId: string, limit = 100): Promise<PublicHofEntry[]> {
+  const rows = await db
+    .select(publicColumns)
+    .from(careers)
+    .where(and(eq(careers.profileId, profileId), isPublicRetired))
+    .orderBy(desc(careers.legendScore), careers.retiredAt)
+    .limit(limit);
+  return rows.map(toPublicEntry);
+}
+
+/** T-10-013. 커리어 소유권을 통째로 옮긴다(익명 프로필 → 로그인한 계정). 옮긴 수를 돌려준다. */
+export async function moveCareers(db: Db, fromProfileId: string, toProfileId: string): Promise<number> {
+  const moved = await db.update(careers).set({ profileId: toProfileId }).where(eq(careers.profileId, fromProfileId)).returning({ id: careers.id });
+  return moved.length;
+}
+
 /** 프로필 삭제 시 커리어·시즌 데이터를 명시적으로 지운다(소프트 삭제라 FK CASCADE가 트리거되지
  * 않으므로, `executeProfileDeletion`의 batch에 이 두 statement를 함께 넣어 쓴다). */
 export function deleteCareersStatements(db: Db, profileId: string) {
