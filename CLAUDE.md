@@ -57,7 +57,7 @@ pnpm --filter @offside/fulltime-sim analyze
   positional → national → comps → season 순서로 로드된다. 시드 RNG
   (`RngSaveState`)는 세이브 상태 안에 저장돼 저장/재개 후에도 이어진다.
 - **`apps/web/src/api`**: `apps/api`와 통신하는 클라이언트(로그인·프로필만).
-- **`apps/api`**: 세션 미들웨어(`middleware/session.ts`), 익명 프로필 1급 +
+- **`apps/api`**: 세션 지연 조회(`middleware/session.ts`의 `resolveSession`), 익명 프로필 1급 +
   Google 로그인은 복구·기기 이동 수단(`profile/`, `auth/`). D1 스키마는
   `db/schema.ts`, 마이그레이션은 `migrations/`(최신 `0015`가 게임 테이블을
   전부 드롭하고 `profiles`·`sessions`·`auth_attempts`·`audit_log`·
@@ -67,6 +67,34 @@ pnpm --filter @offside/fulltime-sim analyze
   `health`·`errors`·`envelope`·`headers`·`primitives`로 축소돼 있다.
 - **`tooling/fulltime-sim`**: 헤드리스 밸런스 시뮬레이터. `apps/web/src/game/*`
   ES 모듈을 DOM 없이 그대로 import해 대량 커리어를 시뮬레이션한다.
+
+## 백엔드 보호 · 요청 최소화 규칙 (2026-09-25, T-10-015)
+
+서버(Workers·D1) 자원과 네트워크는 **데이터가 정말 필요할 때만** 쓴다. 새 화면·API를
+만들거나 고칠 때 아래를 기본값으로 지킨다. 어길 이유가 있으면 PR 본문에 적는다.
+
+- **필요할 때만 요청한다.** 화면·탭·섹션이 실제로 열릴 때 불러온다. 보이지 않는 데이터를
+  미리 부르거나, 화면에 들어올 때마다 같은 데이터를 다시 부르지 않는다. 목록 응답으로
+  충분하면 항목마다 상세를 따로 부르지 않는다(N+1 금지). 폴링·주기적 재검증은 되도록
+  두지 않고, 꼭 필요하면 분 단위로 둔다(계정 재검증 5분).
+- **웹 읽기는 메모를 거친다.** `apps/web/src/api`의 GET은 `cachedGet(path, ttlMs)`로
+  부른다(같은 요청 동시 호출은 하나로 합치고, 실패는 기억하지 않는다). 데이터를 바꾸는
+  요청은 `apiFetch`가 성공 시 메모를 비운다. `apiFetch` 밖(outbox 등)에서 서버 상태를
+  바꾸면 `clearApiCache()`를 직접 부른다.
+- **공개 조회는 세션·DB를 건드리지 않는다.** 세션은 필요한 핸들러에서만
+  `await resolveSession(c)`로 조회한다(요청당 1회 메모). 모든 요청에 DB를 조회하는 전역
+  미들웨어를 새로 만들지 않는다.
+- **모두에게 같은 공개 GET은 엣지 캐시한다.** `apps/api/src/edgeCache.ts`의
+  `edgeCached(c, path, ttlSec, load)`로 감싸고, 캐시 키는 쿼리를 정규화한 경로로 만든다.
+  사용자마다 다른 응답·404는 캐시하지 않는다. 그 데이터를 바꾸는 쓰기 경로는
+  `purgeEdge(c, paths)`로 해당 키를 지운다. 캐시 키가 무한히 늘지 않게 캐시 대상을
+  기본 페이지 크기·첫 페이지처럼 좁힌다.
+- **DB는 적게, 인덱스와 함께.** 요청당 쿼리는 필요한 만큼만(순차 조회보다 join·batch),
+  목록에는 `limit` 상한을 둔다. 새 정렬·필터 쿼리는 그 쿼리를 받치는 인덱스
+  마이그레이션을 함께 낸다(예: `0021_hof_sort_indexes.sql`).
+- **테스트로 고정한다.** 새 화면은 e2e에서 반복 이동 시 같은 API를 다시 부르지 않는지
+  요청 횟수로 확인한다(`apps/web/e2e/hof.spec.ts`). 새 공개 API는 쿠키가 있어도
+  `sessions`·`profiles`를 조회하지 않는지 확인한다(`apps/api/src/routes/hof.test.ts`).
 
 ## 저장·밸런스 규칙
 
@@ -107,6 +135,7 @@ pnpm --filter @offside/fulltime-sim analyze
   구현하게 한다. 이 규칙이 `AGENTS.md`의 작업 방식을 정의한다.
 - 리뷰 체크리스트 요점: 세이브 마이그레이션 보존, 밸런스 변경 시
   `tooling/fulltime-sim` 실행, 정상·빈 상태·오류 테스트, UI 문자열에 폐기
-  어휘 없음, 로그에 쿠키·복구 코드·선수명 원문 금지.
+  어휘 없음, 로그에 쿠키·복구 코드·선수명 원문 금지, 불필요한 API 호출·세션 조회·
+  캐시 무효화 누락 없음(위 "백엔드 보호 · 요청 최소화 규칙").
 - CI는 self-hosted macOS runner(`self-hosted, macOS, ARM64, offside`)를 쓴다.
   문서만 바뀐 커밋은 코드 검사·배포를 건너뛴다(`.github/scripts/ci-scope.mjs`).
