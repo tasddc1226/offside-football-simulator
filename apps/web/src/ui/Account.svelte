@@ -9,6 +9,7 @@
     type Profile,
   } from '../api/client.js';
   import { accountCache } from './account-state.svelte.js';
+  import { closeSheet, showSheet } from './sheetState.svelte.js';
 
   // `undefined`는 "아직 한 번도 불러오지 않음"을, `null`은 "확인 결과 로그인 안 됨"을 뜻한다. 설정 화면은
   // 벗어났다 돌아오면 이 컴포넌트가 다시 마운트되므로, 모듈 스코프에 캐시를 둬 재검증
@@ -45,8 +46,18 @@
     else set('error');
   }
   async function doLogout() {
+    closeSheet();
     await logout();
     set(null);
+  }
+  function askLogout() {
+    showSheet(
+      { kind: 'notice', eyebrow: 'Account', title: '로그아웃할까요?', muted: true, text: '이 기기에 저장된 게임 진행은 그대로 남아요. 같은 구글 계정으로 다시 로그인하면 계정에 저장된 기록을 다시 볼 수 있어요.' },
+      [
+        { label: '로그아웃', cls: 'btn-primary', fn: () => void doLogout() },
+        { label: '취소', fn: closeSheet },
+      ],
+    );
   }
   async function doDeleteFlow() {
     if (!window.confirm('정말 계정을 삭제할까요? 이 기기의 게임 저장 데이터는 남지만, 계정 연동은 완전히 사라집니다.')) return;
@@ -77,7 +88,7 @@
     <div class="account-row"><div class="who"><b>{profile.googleEmailMasked ?? '구글 계정'}</b><span class="muted" style="font-size:12px">연결됨</span></div></div>
     <div class="account-actions">
       <button class="btn" onclick={doUnlink}>연동 해제</button>
-      <button class="btn" onclick={doLogout}>로그아웃</button>
+      <button class="btn" data-act="logout" onclick={askLogout}>로그아웃</button>
       <button class="btn" style="color:var(--bad)" onclick={doDeleteFlow}>계정 삭제</button>
     </div>
   </div>
