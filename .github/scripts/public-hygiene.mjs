@@ -17,6 +17,9 @@ const RULES = [
 const ALLOWED_EMAIL =
   /@(?:(?:[a-z0-9-]+\.)*(?:example\.(?:com|org|net)|test|invalid|localhost)|users\.noreply\.github\.com|anthropic\.com)$/i;
 
+// 검사하지 않는 파일: 해시만 가득한 lockfile, 규칙 예시를 일부러 담은 이 검사의 테스트.
+const SKIP_FILES = new Set(['pnpm-lock.yaml', '.github/scripts/public-hygiene.test.mjs']);
+
 // 운영자 공개 연락처(이용약관·개인정보처리방침)는 이 파일에만 둔다.
 const EMAIL_ALLOWED_FILES = new Set(['apps/web/scripts/seo.mjs']);
 
@@ -41,7 +44,7 @@ function main() {
     .filter(Boolean);
   let failures = 0;
   for (const path of files) {
-    if (path === 'pnpm-lock.yaml') continue;
+    if (SKIP_FILES.has(path)) continue;
     let buf;
     try {
       buf = readFileSync(path);
