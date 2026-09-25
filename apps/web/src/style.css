@@ -658,11 +658,6 @@ button.title-item:hover { border-color: var(--pitch-2); }
 @media (prefers-reduced-motion: reduce) { .title-tag.pop { animation: none; } }
 
 /* T-10-027 서버 최초 기록 */
-.firsts-home { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; width: 100%; text-align: left; font: inherit; color: inherit; border: 0; cursor: pointer; border-left: 4px solid var(--accent); }
-.firsts-home > :not(.firsts-go) { grid-column: 1; }
-.firsts-home b { font-size: 17px; }
-.firsts-home .muted { font-size: 13px; }
-.firsts-go { grid-column: 2; grid-row: 1 / span 3; font-size: 22px; font-weight: 700; color: var(--accent-text); }
 .first-count { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--accent-text); }
 .first-day { font-size: 13px; font-weight: 700; color: var(--muted); margin: 14px 0 2px; }
 .first-list { list-style: none; margin: 0; padding: 0; }
