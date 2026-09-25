@@ -10,17 +10,9 @@ import {
 import type { Hono } from 'hono';
 import { getCareer, getCareerOwner, putCareerSeason, putRetirement } from '../db/repos/careers.js';
 import { getDb, type AppEnv } from '../env.js';
-import { AppError, parseWithAppError } from '../errors.js';
+import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { isAcceptablePublicName } from './hof.js';
-
-function parseJsonBody(rawBody: string): unknown {
-  try {
-    return rawBody.length > 0 ? JSON.parse(rawBody) : {};
-  } catch {
-    throw new AppError({ code: 'VALIDATION_FAILED', message: '요청 본문이 올바른 JSON이 아닙니다.' });
-  }
-}
 
 /** 소유권 확인: careerId가 이미 다른 프로필 소유면 409. 없으면(새 커리어) 통과. */
 async function assertOwnable(db: ReturnType<typeof getDb>, careerId: string, profileId: string): Promise<void> {

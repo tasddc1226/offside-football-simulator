@@ -11,12 +11,13 @@ export async function getClubCustom(db: Db, profileId: string): Promise<{ clubs:
 /** 최신 쓰기 우선: 저장된 updated_at보다 오래된 쓰기(늦게 도착한 다른 기기의 옛 변경)는 무시한다.
  * 결과로 서버에 남은 값을 돌려준다(무시됐으면 기존 값). */
 export async function putClubCustom(db: Db, profileId: string, clubs: ClubCustomMap, updatedAt: string) {
+  const clubsJson = JSON.stringify(clubs);
   await db
     .insert(clubCustoms)
-    .values({ profileId, clubsJson: JSON.stringify(clubs), updatedAt })
+    .values({ profileId, clubsJson, updatedAt })
     .onConflictDoUpdate({
       target: clubCustoms.profileId,
-      set: { clubsJson: JSON.stringify(clubs), updatedAt },
+      set: { clubsJson, updatedAt },
       setWhere: sql`${clubCustoms.updatedAt} <= ${updatedAt}`,
     });
   return (await getClubCustom(db, profileId))!;
