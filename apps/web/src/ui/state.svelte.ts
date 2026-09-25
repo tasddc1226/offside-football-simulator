@@ -55,6 +55,8 @@ export const appState = $state<{
   candidatePick: number | null;
   /** T-10-011. 소식 화면에서 마지막으로 본 게시판. */
   board: BoardKey;
+  /** 소식 화면을 열 때 바로 펼칠 글(홈의 소식 섹션에서 누른 글). */
+  boardPost: string | null;
   /** T-10-013. 진행 중 커리어가 다른 계정 소유라 서버가 거절한 시즌 업로드(홈에서 처리를 고른다). */
   ownerConflict: OutboxItem[] | null;
 }>({
@@ -75,6 +77,7 @@ export const appState = $state<{
   candidatesOpen: [],
   candidatePick: null,
   board: 'notice',
+  boardPost: null,
   ownerConflict: null,
 });
 

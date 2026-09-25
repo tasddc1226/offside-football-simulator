@@ -38,6 +38,8 @@
   onMount(() => {
     void api.fetchBoardViewer().then((r) => (admin = r.ok && r.data.admin));
     void load();
+    if (appState.boardPost) void open(appState.boardPost);
+    appState.boardPost = null;
   });
 
   async function load(more = false) {
