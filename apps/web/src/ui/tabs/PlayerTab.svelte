@@ -66,5 +66,5 @@
 </section>
 
 {#if s.age >= 32 && !L.amateur}
-  <button class="btn btn-block" data-act="retire-ask" onclick={retireAsk}>은퇴 선언하기</button>
+  <button class="btn btn-block" data-act="retire-ask" onclick={() => retireAsk()}>은퇴 선언하기</button>
 {/if}

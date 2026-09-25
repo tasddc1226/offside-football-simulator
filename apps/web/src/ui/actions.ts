@@ -263,7 +263,8 @@ function showMarket(m: { options: MarketOption[]; note: string; canRetire: boole
         return { name: o.name, lg: o.desc ?? '', salary: null, sub: null };
       }),
     },
-    m.canRetire ? [{ label: '은퇴를 선언한다', fn: () => doRetire() }] : [],
+    // T-10-029: 은퇴는 언제든 고를 수 있다. 은퇴할 때가 아니면(canRetire=false) 한 번 더 묻고, 취소하면 이 창으로 돌아온다.
+    [{ label: '은퇴하기', fn: () => (m.canRetire ? doRetire() : retireAsk(nextPending)) }],
   );
 }
 
@@ -333,10 +334,11 @@ export function confirmNew() {
   );
 }
 
-export function retireAsk() {
+/** 은퇴 확인. onCancel: '조금 더 뛴다'를 누르면 할 일(기본은 닫기, 이적 시장에선 시장으로 돌아간다). */
+export function retireAsk(onCancel: () => void = closeSheet) {
   showSheet({ kind: 'notice', eyebrow: 'Retirement', title: '정말 은퇴하시겠어요?', muted: true, text: '은퇴하면 이 선수의 커리어는 명예의 전당에 기록되고 더 이상 플레이할 수 없습니다.' }, [
     { label: '은퇴한다', cls: 'btn-primary', fn: doRetire },
-    { label: '조금 더 뛴다', fn: closeSheet },
+    { label: '조금 더 뛴다', fn: onCancel },
   ]);
 }
 
