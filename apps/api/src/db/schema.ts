@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { index, primaryKey, sqliteTable, text, uniqueIndex, integer, real } from 'drizzle-orm/sqlite-core';
 
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
@@ -127,6 +128,16 @@ export const careers = sqliteTable(
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
+    // 명예의 전당 순위 유형(GET /v1/hof?sort=): status로 은퇴만 좁히고 기록 내림차순 → 레전드 점수로 동점을 가린다.
+    index('careers_hof_goals_idx').on(table.status, table.goals, table.legendScore),
+    index('careers_hof_assists_idx').on(table.status, table.assists, table.legendScore),
+    index('careers_hof_ga_idx').on(table.status, sql`coalesce(${table.goals}, 0) + coalesce(${table.assists}, 0)`, table.legendScore),
+    index('careers_hof_apps_idx').on(table.status, table.apps, table.legendScore),
+    index('careers_hof_trophies_idx').on(table.status, table.trophies, table.legendScore),
+    index('careers_hof_awards_idx').on(table.status, table.awards, table.legendScore),
+    index('careers_hof_ballon_idx').on(table.status, table.ballon, table.legendScore),
+    index('careers_hof_caps_idx').on(table.status, table.caps, table.legendScore),
+    index('careers_hof_peak_idx').on(table.status, table.peak, table.legendScore),
   ],
 );
 
