@@ -3,7 +3,6 @@
   // 댓글은 누구나(첫 댓글 때 프로필 세션을 만든다). 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
   import { onMount } from 'svelte';
   import {
-    BOARD_KEYS,
     COMMENT_BODY_MAX,
     COMMENT_NICKNAME_MAX,
     POST_BODY_MAX,
@@ -21,9 +20,11 @@
   import Topbar from './Topbar.svelte';
 
   const LABEL: Record<BoardKey, string> = { notice: '공지사항', release: '릴리즈 노트' };
+  const EYEBROW: Record<BoardKey, string> = { notice: 'Notice', release: 'Release notes' };
   const NICK_KEY = 'ft_nick';
 
-  let board = $state<BoardKey>(appState.board);
+  // 홈의 공지사항 · 릴리즈 노트 섹션에서 고른 게시판 하나만 보여 준다.
+  const board = appState.board;
   let admin = $state(false);
   let posts = $state<PostSummary[]>([]);
   let hasMore = $state(false);
@@ -54,14 +55,6 @@
     posts = more ? [...posts, ...r.data.posts] : r.data.posts;
     hasMore = r.data.hasMore;
     status = 'ready';
-  }
-
-  function pickBoard(key: BoardKey) {
-    if (key === board && !detail && !editing) return;
-    board = appState.board = key;
-    detail = editing = null;
-    posts = [];
-    void load();
   }
 
   async function open(id: string) {
@@ -135,13 +128,8 @@
   </Topbar>
   <section class="card stack" style="gap:14px" data-board={board}>
     <div>
-      <div class="eyebrow">News</div>
-      <h1>소식</h1>
-    </div>
-    <div class="seg hof-tabs" role="group" aria-label="게시판">
-      {#each BOARD_KEYS as key (key)}
-        <button class="opt" aria-pressed={board === key} data-board-tab={key} onclick={() => pickBoard(key)}>{LABEL[key]}</button>
-      {/each}
+      <div class="eyebrow">{EYEBROW[board]}</div>
+      <h1>{LABEL[board]}</h1>
     </div>
 
     {#if editing}

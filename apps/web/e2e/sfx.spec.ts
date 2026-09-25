@@ -20,8 +20,9 @@ test('클릭 효과음: 버튼에서만 나고, 설정에서 끌 수 있다', as
 
   await page.locator('[data-act="settings"]').click();
   const toggle = page.locator('[data-setting="sfx"]');
-  await expect(toggle).toBeChecked();
-  await toggle.uncheck();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
   const after = await clicks();
   await page.locator('[data-act="home"]').click();
   await page.locator('[data-hof-tab="mine"]').click();

@@ -101,9 +101,10 @@
     </div>
     <div class="stack" style="gap:6px">
       <h2 style="margin:0">효과음</h2>
-      <label class="row" style="gap:8px;align-items:center">
-        <input type="checkbox" data-setting="sfx" bind:checked={sfx} onchange={() => setSfxEnabled(sfx)} /> 버튼을 누를 때 클릭 소리 내기
-      </label>
+      <div class="row" style="justify-content:space-between;align-items:center;gap:12px">
+        <span id="sfx-label">버튼을 누를 때 클릭 소리 내기</span>
+        <button class="switch" role="switch" aria-checked={sfx} aria-labelledby="sfx-label" data-setting="sfx" onclick={() => setSfxEnabled((sfx = !sfx))}></button>
+      </div>
     </div>
     <div class="stack" style="gap:10px">
       <h2 style="margin:0">리그 · 클럽 편집</h2>
