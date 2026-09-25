@@ -54,7 +54,7 @@
 <div>
   <div class="eyebrow" style="margin-bottom:6px">팬 반응</div>
   <div class="fan-feed">
-    {#each v.fans as f, i (i)}<div class="fan-line in" style="--d:{200 + i * 110}ms"><b>팬</b>{f}</div>{/each}
+    {#each v.fans as f, i (i)}<div class="fan-line in" style="--d:{200 + i * 110}ms"><span class="fan-heart" aria-hidden="true">💗</span>{f}</div>{/each}
   </div>
 </div>
 <p class="muted">나이 {v.age}세가 되었습니다. 이제 다음 시즌을 준비합니다.</p>
