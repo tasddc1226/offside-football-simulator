@@ -12,7 +12,8 @@
   // `undefined`는 "아직 한 번도 불러오지 않음"을, `null`은 "확인 결과 로그인 안 됨"을 뜻한다. 홈은
   // 화면을 벗어났다 돌아오면 이 컴포넌트가 다시 마운트되므로, 모듈 스코프에 캐시를 둬 재검증
   // 간격이 지나기 전까지는 "확인 중…" 이 다시 보이지 않게 한다(원본 account.ts와 동일한 캐시 정책).
-  const REVALIDATE_MS = 30_000;
+  // 로그인 상태는 OAuth 복귀(전체 새로고침)나 이 패널의 버튼으로만 바뀐다 — 홈을 오갈 때마다 다시 묻지 않는다.
+  const REVALIDATE_MS = 5 * 60_000;
   type ProfileState = Profile | null | 'error' | undefined;
 
   let profile = $state<ProfileState>(accountCache.value);

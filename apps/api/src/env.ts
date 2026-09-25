@@ -31,6 +31,8 @@ export type Variables = {
   /** `getDb(c)`로만 채운다. health 같은 DB 없는 라우트가 `env.DB` 없이도 동작하도록 지연 생성한다. */
   db?: Db;
   session?: SessionContext;
+  /** middleware/session.ts `resolveSession`의 요청당 메모. */
+  sessionLookup?: Promise<SessionContext | undefined>;
   startedAt: number;
   /** bodyGuard가 읽은 상태 변경 요청의 본문. 라우트가 다시 읽지 않도록 전달한다. */
   rawBody?: string;

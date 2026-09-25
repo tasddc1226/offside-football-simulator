@@ -1,7 +1,7 @@
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
-import { sessions } from '../schema.js';
+import { profiles, sessions } from '../schema.js';
 
 export type SessionRecord = typeof sessions.$inferSelect;
 export type SessionChannel = SessionRecord['channel'];
@@ -32,6 +32,20 @@ export async function findActiveSession(db: Db, tokenHash: string, now: string):
     .select()
     .from(sessions)
     .where(and(eq(sessions.tokenHash, tokenHash), isNull(sessions.revokedAt), gt(sessions.expiresAt, now)));
+  return row;
+}
+
+/** 유효한 세션 + 삭제되지 않은 프로필을 한 번의 조회로(세션 → 프로필 두 번 왕복하지 않는다). */
+export async function findLiveSession(
+  db: Db,
+  tokenHash: string,
+  now: string,
+): Promise<Pick<SessionRecord, 'id' | 'profileId' | 'channel'> | undefined> {
+  const [row] = await db
+    .select({ id: sessions.id, profileId: sessions.profileId, channel: sessions.channel })
+    .from(sessions)
+    .innerJoin(profiles, eq(profiles.id, sessions.profileId))
+    .where(and(eq(sessions.tokenHash, tokenHash), isNull(sessions.revokedAt), gt(sessions.expiresAt, now), isNull(profiles.deletedAt)));
   return row;
 }
 

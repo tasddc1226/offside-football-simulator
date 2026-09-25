@@ -21,6 +21,7 @@ import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
+import { resolveSession } from '../middleware/session.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
 import { issueRecoveryCode } from '../profile/issue-recovery-code.js';
 import { maskEmail } from '../profile/mask-email.js';
@@ -43,7 +44,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/profile', async (c) => {
     const db = getDb(c);
     const now = new Date().toISOString();
-    const existingSession = c.get('session');
+    const existingSession = await resolveSession(c);
     const bearerPresent = Boolean(c.req.header(AUTHORIZATION_HEADER));
 
     // 결정 3: Bearer가 왔는데 무효면 쿠키로 폴백하지 않고 401이다.
