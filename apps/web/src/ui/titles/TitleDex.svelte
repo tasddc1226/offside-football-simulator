@@ -58,17 +58,17 @@
       <summary>아직 얻지 못한 칭호 {TITLES.length - earned.length}개</summary>
       {#each locked as c (c.id)}
         <div class="eyebrow" style="margin:12px 0 4px">{c.label}</div>
-        <ul class="title-list">
+        <ul class="title-list compact">
           {#each c.list as d (d.id)}
             {@const p = d.progress?.(s)}
             <li class="title-item locked" data-title-locked={d.id}>
               <span class="title-name">{d.hidden ? '???' : d.name}</span>
               <span class="title-desc">{d.hidden ? '숨겨진 칭호' : d.desc} · {RARITY_LABEL[d.rarity]}</span>
               {#if p && !d.hidden}
+                <span class="title-year num">{p[0]}/{p[1]}</span>
                 <span class="title-prog" role="progressbar" aria-label="{d.name} 진행도" aria-valuemin={0} aria-valuemax={p[1]} aria-valuenow={p[0]}
                   ><i style="width:{Math.round((p[0] / p[1]) * 100)}%"></i></span
                 >
-                <span class="title-year num">{p[0]}/{p[1]}</span>
               {/if}
             </li>
           {/each}
