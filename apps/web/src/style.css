@@ -24,6 +24,7 @@
 :root {
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px;
   --tabbar-h: 60px;
+  --pitch-accent: #F0B437; /* 초록 그라운드 위 금색 글자 — 두 테마 모두 대비 4.5:1 이상 */
   --actionbar-h: 68px;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -480,15 +481,15 @@ td.n, th.n { text-align: right; }
 .live-card.sticky { position: sticky; top: calc(8px + var(--safe-t)); z-index: 4; }
 .lc-num { display: flex; flex-direction: column; align-items: center; min-width: 48px; }
 .lc-num b { font-size: 40px; line-height: 1; font-weight: 700; }
-.lc-num span { font-family: var(--display); font-weight: 700; letter-spacing: .12em; font-size: 13px; color: var(--accent); }
+.lc-num span { font-family: var(--display); font-weight: 700; letter-spacing: .12em; font-size: 13px; color: var(--pitch-accent); }
 .lc-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .lc-name { font-size: 20px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lc-meta { font-size: 13px; opacity: .75; }
 .lc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .lc-tag { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--on-pitch) 30%, transparent); white-space: nowrap; }
 .lc-side { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.lc-ovr { font-size: 11px; opacity: .85; white-space: nowrap; }
-.lc-ovr b { font-size: 17px; color: var(--accent); margin-left: 2px; }
+.lc-ovr { font-size: 11px; color: color-mix(in srgb, var(--on-pitch) 85%, transparent); white-space: nowrap; }
+.lc-ovr b { font-size: 17px; color: var(--pitch-accent); margin-left: 2px; }
 .live-card .mr-ring { stroke: color-mix(in srgb, var(--on-pitch) 25%, transparent); }
 .mini-radar { display: block; overflow: visible; }
 .mr-ring { fill: none; stroke: var(--line); stroke-width: 1; }
