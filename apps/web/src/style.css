@@ -624,3 +624,16 @@ body:has(nav.tabs) .toast { bottom: calc(var(--tabbar-h) + var(--actionbar-h) + 
 .rp-games .ticker { min-height: 0; margin-top: 8px; }
 .rp-games .ticker div { animation: none; color: var(--ink); font-weight: 400; }
 @media (prefers-reduced-motion: reduce) { .rp-dots li, .rp-later, .report .chip.pop { animation: none; } }
+
+/* ───────── 리그 순위표 (T-10-024) ───────── */
+.league-table { display: flex; flex-direction: column; gap: 10px; }
+.league-table table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.league-table th { font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; padding: 4px 2px; border-bottom: 1px solid var(--line); }
+.league-table td { text-align: center; padding: 7px 2px; border-bottom: 1px solid var(--line); }
+.league-table .lt-team { text-align: left; padding-left: 6px; max-width: 0; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.league-table td.num { font-family: var(--display); font-size: 15px; width: 30px; }
+.league-table .lt-pts { font-weight: 700; }
+.league-table tr.top td:first-child { color: var(--accent-text); font-weight: 700; }
+.league-table tr.me td { background: color-mix(in srgb, var(--pitch) 10%, var(--surface)); font-weight: 700; }
+.league-table tr.me td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.league-table .lt-gap td { color: var(--muted); padding: 2px; line-height: 1; }

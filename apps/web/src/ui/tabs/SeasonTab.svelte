@@ -7,6 +7,7 @@
   import { save, seasonLabel } from '../helpers.js';
   import { appState } from '../state.svelte.js';
   import PhaseReport from './PhaseReport.svelte';
+  import LeagueTable from './LeagueTable.svelte';
 
   const { s }: { s: GameState } = $props();
 
@@ -68,6 +69,8 @@
     <div><b>{avg}</b><span>평점</span></div>
   </div>
 </section>
+
+<LeagueTable {s} />
 
 <section class="card meters">
   <div class="meter"><span>컨디션</span><div class="bar"><i class={meterCls(s.cond, 40, 65)} style="width:{Math.round(s.cond)}%"></i></div><span class="v">{Math.round(s.cond)}</span></div>
