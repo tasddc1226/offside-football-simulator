@@ -6,8 +6,8 @@ import { ovr } from './attributes.js';
 import { callupScore } from './national.js';
 import type { GameState } from './types.js';
 
-const DERBY: Record<string, string> = { k2: '경인 더비', k1: '동해안 더비', j1: '다마가와 클라시코', ere: '데 클라시커르', l1: '르 클라시크', bl: '데어 클라시커', sa: '밀라노 더비', ll: '엘 클라시코', pl: '맨체스터 더비' };
-const CAMP = (s: GameState) => (leagueOf(s.leagueId).tier <= 3 ? pick(['튀르키예 안탈리아', '태국 치앙마이', '일본 가고시마', '제주 서귀포']) : pick(['스페인 마르베야', 'UAE 두바이', '미국 플로리다']));
+const DERBY: Record<string, string> = { k2: '경인 더비', k1: '동해안 더비', j1: '다마가와 클라시코', mls: '엘 트라피코', ere: '데 클라시커르', l1: '르 클라시크', bl: '데어 클라시커', sa: '밀라노 더비', ll: '엘 클라시코', pl: '맨체스터 더비' };
+const CAMP = (s: GameState) => (s.leagueId === 'mls' ? pick(['미국 플로리다', '미국 애리조나', '멕시코 칸쿤']) : leagueOf(s.leagueId).tier <= 3 ? pick(['튀르키예 안탈리아', '태국 치앙마이', '일본 가고시마', '제주 서귀포']) : pick(['스페인 마르베야', 'UAE 두바이', '미국 플로리다']));
 
 EVENTS.push(
   {

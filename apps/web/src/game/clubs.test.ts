@@ -5,7 +5,7 @@ import { expectedRank } from './comps.js';
 
 describe('리그별 클럽 구성 (T-10-009)', () => {
   it('리그마다 실제 참가 팀 수만큼 클럽이 있다', () => {
-    const want: Record<string, number> = { hs: 12, uni: 12, k3: 14, k2: 17, k1: 11, j1: 20, ere: 18, l1: 18, bl: 18, sa: 20, ll: 20, pl: 20 };
+    const want: Record<string, number> = { hs: 12, uni: 12, k3: 14, k2: 17, k1: 11, j1: 20, mls: 30, ere: 18, l1: 18, bl: 18, sa: 20, ll: 20, pl: 20 };
     for (const L of LEAGUES) expect(CLUBS.filter((c) => c.leagueId === L.id).length, L.id).toBe(want[L.id]);
   });
   it('클럽 id·이름이 모두 고유하고, 리그 안 전력은 +9 ~ -6 범위로 내려간다', () => {
