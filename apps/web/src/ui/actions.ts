@@ -1,6 +1,7 @@
 // ───────── 게임 진행 액션 ─────────
 // 게임 로직을 호출하고, 그 결과를 시트 뷰 모델(sheets/types.ts)로 바꿔 showSheet에 넘긴다.
 // 게임 로직 호출 순서(=RNG 소비 순서)는 포팅 전 ui.ts와 동일하게 유지한다.
+import type { BoardKey } from '@offside/contracts/board-limits';
 import { PHASES, LAST_PHASE, type AttrKey } from '../game/data.js';
 import { clamp, createRng, freshSeed, setActiveRng } from '../game/rng.js';
 import { generateCandidates } from '../game/candidates.js';
@@ -17,7 +18,7 @@ import { endSeason, market, acceptOption, retire } from '../game/season.js';
 import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
 import type { NatTour, EventLogEntry, MarketOption } from '../game/types.js';
-import { appState, randomName } from './state.svelte.js';
+import { appState, randomName, type HofTab } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { seasonLabelOf } from './format.js';
 import {
@@ -333,7 +334,16 @@ export function goDex() {
   appState.screen = 'dex';
   window.scrollTo(0, 0);
 }
-export function goBoard() {
+/** 명예의 전당 전체 보기(100명씩 페이지). */
+export function openHof(tab: HofTab) {
+  appState.hof = { tab, page: 1, sort: 'score' };
+  appState.screen = 'hof';
+  window.scrollTo(0, 0);
+}
+/** 소식 화면을 연다. postId가 있으면 그 글을 바로 연다(홈의 소식 섹션에서). */
+export function openBoard(board: BoardKey, postId: string | null = null) {
+  appState.board = board;
+  appState.boardPost = postId;
   appState.screen = 'board';
   window.scrollTo(0, 0);
 }

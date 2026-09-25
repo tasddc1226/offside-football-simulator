@@ -1,4 +1,5 @@
-import { index, primaryKey, sqliteTable, text, uniqueIndex, integer, real } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import { index, primaryKey, sqliteTable, text, uniqueIndex, integer, real, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
 export const profiles = sqliteTable(
@@ -89,6 +90,10 @@ export const authAttempts = sqliteTable(
  * T-9-009. 익명 포함 전체 사용자의 플레이 데이터. 세이브 전체가 아니라 커리어 메타 + 은퇴 요약만
  * 담는다(선수 이름 제외 — 실명일 수 있다). 시즌별 상세는 `careerSeasons`.
  */
+/** 명예의 전당 공격포인트(골 + 도움). 식 인덱스는 쿼리 식과 똑같아야 쓰이므로 인덱스·쿼리가 이 함수를 함께 쓴다. */
+export const goalsPlusAssists = (t: { goals: AnySQLiteColumn; assists: AnySQLiteColumn }) =>
+  sql`coalesce(${t.goals}, 0) + coalesce(${t.assists}, 0)`;
+
 export const careers = sqliteTable(
   'careers',
   {
@@ -127,6 +132,16 @@ export const careers = sqliteTable(
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
+    // 명예의 전당 순위 유형(GET /v1/hof?sort=): status로 은퇴만 좁히고 기록 내림차순 → 레전드 점수로 동점을 가린다.
+    index('careers_hof_goals_idx').on(table.status, table.goals, table.legendScore),
+    index('careers_hof_assists_idx').on(table.status, table.assists, table.legendScore),
+    index('careers_hof_ga_idx').on(table.status, goalsPlusAssists(table), table.legendScore),
+    index('careers_hof_apps_idx').on(table.status, table.apps, table.legendScore),
+    index('careers_hof_trophies_idx').on(table.status, table.trophies, table.legendScore),
+    index('careers_hof_awards_idx').on(table.status, table.awards, table.legendScore),
+    index('careers_hof_ballon_idx').on(table.status, table.ballon, table.legendScore),
+    index('careers_hof_caps_idx').on(table.status, table.caps, table.legendScore),
+    index('careers_hof_peak_idx').on(table.status, table.peak, table.legendScore),
   ],
 );
 

@@ -6,8 +6,10 @@ import Toast from './ui/Toast.svelte';
 import { loadGame } from './ui/boot.js';
 import { handleOAuthReturn } from './ui/actions.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';
+import { installClickSound } from './ui/sfx.js';
 
 handleOAuthReturn();
+installClickSound();
 loadGame();
 
 // T-10-004: index.html의 정적 홈 히어로(첫 페인트용)와 noscript를 걷어 내고 앱을 마운트한다.

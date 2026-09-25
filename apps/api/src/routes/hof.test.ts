@@ -89,6 +89,42 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect(entries).toHaveLength(0);
   });
 
+  it('page·limit으로 레전드 점수 순 페이지를 나눠 읽고 전체 인원을 준다', async () => {
+    const ids = ['0a000000-0000-4000-8000-000000000001', '0a000000-0000-4000-8000-000000000002', '0a000000-0000-4000-8000-000000000003'];
+    for (const [i, id] of ids.entries()) {
+      await put(ctx, cookie, `/v1/careers/${id}/seasons/2026`, season);
+      await put(ctx, cookie, `/v1/careers/${id}/retirement`, { ...summary, legendScore: 100 * (i + 1) });
+    }
+    const read = async (q: string) =>
+      successEnvelope(HofListResponseSchema).parse(await (await createApp().request(`/v1/hof?${q}`, {}, ctx.env)).json()).data;
+    const p1 = await read('limit=2');
+    expect(p1.total).toBe(3);
+    expect(p1.entries.map((e) => e.legendScore)).toEqual([300, 200]);
+    const p2 = await read('limit=2&page=2');
+    expect(p2.entries.map((e) => e.legendScore)).toEqual([100]);
+    expect((await createApp().request('/v1/hof?page=0', {}, ctx.env)).status).toBe(400);
+  });
+
+  it('sort로 기록별 순위를 매기고, 그 기록이 0인 선수는 뺀다', async () => {
+    const rows = [
+      { id: '0b000000-0000-4000-8000-000000000001', legendScore: 300, goals: 50, assists: 5, ballon: 0 },
+      { id: '0b000000-0000-4000-8000-000000000002', legendScore: 200, goals: 200, assists: 0, ballon: 2 },
+      { id: '0b000000-0000-4000-8000-000000000003', legendScore: 100, goals: 10, assists: 90, ballon: 1 },
+    ];
+    for (const { id, ...s } of rows) {
+      await put(ctx, cookie, `/v1/careers/${id}/seasons/2026`, season);
+      await put(ctx, cookie, `/v1/careers/${id}/retirement`, { ...summary, ...s });
+    }
+    const read = async (q: string) =>
+      successEnvelope(HofListResponseSchema).parse(await (await createApp().request(`/v1/hof?${q}`, {}, ctx.env)).json()).data;
+    expect((await read('sort=goals')).entries.map((e) => e.goals)).toEqual([200, 50, 10]);
+    expect((await read('sort=ga')).entries.map((e) => e.legendScore)).toEqual([200, 100, 300]);
+    const ballon = await read('sort=ballon');
+    expect(ballon.total).toBe(2);
+    expect(ballon.entries.map((e) => e.ballon)).toEqual([2, 1]);
+    expect((await createApp().request('/v1/hof?sort=name', {}, ctx.env)).status).toBe(400);
+  });
+
   it('링크·욕설이 든 공개 이름은 거절한다', async () => {
     const res = await put(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, { ...summary, publicName: 'www.spam.com' });
     expect(res.status).toBe(400);

@@ -8,6 +8,7 @@
   import Game from './Game.svelte';
   import Retired from './Retired.svelte';
   import Legend from './Legend.svelte';
+  import Hof from './Hof.svelte';
   import type { Component } from 'svelte';
 
   // T-10-009: 설정(클럽 편집)은 자주 안 여는 화면이라 메인 번들에서 떼어 처음 열 때 불러온다.
@@ -43,6 +44,8 @@
       <Retired />
     {:else if appState.screen === 'legend'}
       <Legend />
+    {:else if appState.screen === 'hof'}
+      <Hof />
     {:else if appState.screen === 'settings'}
       {#if Settings}<Settings />{/if}
     {:else if appState.screen === 'dex'}

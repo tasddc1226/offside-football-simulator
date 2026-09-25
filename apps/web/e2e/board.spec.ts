@@ -22,6 +22,7 @@ async function mockBoards(page: Page, opts: { admin?: boolean } = {}) {
     if (url.pathname === `/v1/boards/posts/${NOTICE.id}`) {
       return route.fulfill(ok({ post: { ...NOTICE, body: '## 일정\n- 새벽 2시\n- 30분\n\n<b>그대로</b>' }, comments: [COMMENT] }));
     }
+    if (url.pathname === `/v1/boards/posts/${RELEASE.id}`) return route.fulfill(ok({ post: { ...RELEASE, body: '본문' }, comments: [] }));
     if (url.pathname === `/v1/boards/posts/${NOTICE.id}/comments`) {
       const b = req.postDataJSON() as { nickname: string; body: string };
       return route.fulfill(ok({ id: 'cmt_00000000-0000-0000-0000-000000000010', ...b, admin: false, deletable: true, createdAt: T }, 201));
@@ -37,11 +38,12 @@ async function mockBoards(page: Page, opts: { admin?: boolean } = {}) {
   return sent;
 }
 
-test('소식: 공지 목록 → 글 → 댓글 달기, 릴리즈 노트 탭', async ({ page }) => {
+test('소식: 공지사항 전체 보기 → 글 → 댓글, 릴리즈 노트 전체 보기는 릴리즈 노트만', async ({ page }) => {
   const sent = await mockBoards(page);
   await page.goto('/');
-  await page.locator('[data-act="board"]').click();
-  await expect(page.locator('[data-board-tab="notice"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
+  await expect(page.locator('h1')).toHaveText('공지사항');
+  await expect(page.locator(`[data-post-row="${RELEASE.id}"]`)).toHaveCount(0);
   await expect(page.locator('[data-act="new-post"]')).toHaveCount(0);
 
   await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
@@ -59,15 +61,17 @@ test('소식: 공지 목록 → 글 → 댓글 달기, 릴리즈 노트 탭', as
   await expect(page.locator('.board-comment').last()).toContainText('수고하세요');
   expect(sent.at(-1)).toMatchObject({ method: 'POST', body: { nickname: '팬1', body: '수고하세요' } });
 
-  await page.locator('[data-board-tab="release"]').click();
+  await page.locator('[data-act="home"]').click();
+  await page.locator('[data-home-news="release"] [data-act="news-all"]').click();
+  await expect(page.locator('h1')).toHaveText('릴리즈 노트');
   await expect(page.locator(`[data-post-row="${RELEASE.id}"]`)).toContainText('v1.4.0');
+  await expect(page.locator(`[data-post-row="${NOTICE.id}"]`)).toHaveCount(0);
 });
 
 test('소식: 관리자는 새 글을 쓴다', async ({ page }) => {
   const sent = await mockBoards(page, { admin: true });
   await page.goto('/');
-  await page.locator('[data-act="board"]').click();
-  await page.locator('[data-board-tab="release"]').click();
+  await page.locator('[data-home-news="release"] [data-act="news-all"]').click();
   await page.locator('[data-act="new-post"]').click();
   await page.locator('#post-title').fill('새 버전');
   await page.locator('#post-version').fill('v1.5.0');
@@ -81,10 +85,22 @@ test('소식: 관리자는 새 글을 쓴다', async ({ page }) => {
 test('소식: 목록·글 화면에 접근성 위반이 없다', async ({ page }) => {
   await mockBoards(page, { admin: true });
   await page.goto('/');
-  await page.locator('[data-act="board"]').click();
+  await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
   await expect(page.locator(`[data-post-row="${NOTICE.id}"]`)).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
   await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
   await expect(page.locator('.board-comment')).toHaveCount(1);
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+});
+
+test('홈: 공지사항·릴리즈 노트 섹션에서 글을 누르면 바로 열린다', async ({ page }) => {
+  await mockBoards(page);
+  await page.goto('/');
+  await expect(page.locator('[data-act="board"]')).toHaveCount(0);
+  await expect(page.locator('[data-home-news="notice"]')).toContainText('서버 점검 안내');
+  const release = page.locator('[data-home-news="release"]');
+  await expect(release).toContainText('v1.4.0');
+  await release.locator(`[data-post-row="${RELEASE.id}"]`).click();
+  await expect(page.locator('h1')).toHaveText('릴리즈 노트');
+  await expect(page.locator(`[data-post="${RELEASE.id}"] h2`)).toHaveText('클럽 동기화');
 });

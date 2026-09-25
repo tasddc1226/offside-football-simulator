@@ -1,6 +1,6 @@
 <script lang="ts">
-  // 게임 설정 화면(T-10-009). 지금은 "리그·클럽 편집" 한 섹션 — 리그별 클럽 이름·엠블럼을 바꾸고,
-  // 에디트 파일(JSON)로 내보내거나 가져온다. 설정은 이 기기에만 저장된다.
+  // 게임 설정 화면(T-10-009). 효과음 켜기/끄기와 "리그·클럽 편집" — 리그별 클럽 이름·엠블럼을 바꾸고,
+  // 에디트 파일(JSON)로 내보내거나 가져온다. 효과음 설정은 이 기기에만 저장된다.
   import { LEAGUES } from '../game/data.js';
   import { CLUB_NAME_MAX, IMG_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '../game/clubs.js';
   import { clubsIn } from '../game/engine.js';
@@ -9,6 +9,9 @@
   import { toast } from './helpers.js';
   import Topbar from './Topbar.svelte';
   import ClubBadge from './ClubBadge.svelte';
+  import { setSfxEnabled, sfxEnabled } from './sfx.js';
+
+  let sfx = $state(sfxEnabled());
 
   let leagueId = $state(LEAGUES[LEAGUES.length - 1]!.id);
   let open = $state<string | null>(null);
@@ -95,6 +98,13 @@
     <div>
       <div class="eyebrow">Settings</div>
       <h1>게임 설정</h1>
+    </div>
+    <div class="stack" style="gap:6px">
+      <h2 style="margin:0">효과음</h2>
+      <div class="row" style="justify-content:space-between;align-items:center;gap:12px">
+        <span id="sfx-label">버튼을 누를 때 클릭 소리 내기</span>
+        <button class="switch" role="switch" aria-checked={sfx} aria-labelledby="sfx-label" data-setting="sfx" onclick={() => setSfxEnabled((sfx = !sfx))}></button>
+      </div>
     </div>
     <div class="stack" style="gap:10px">
       <h2 style="margin:0">리그 · 클럽 편집</h2>
