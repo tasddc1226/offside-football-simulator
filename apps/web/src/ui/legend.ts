@@ -66,6 +66,7 @@ function viewFromPublic(e: PublicHofEntry, d: LegendView['d']): LegendView {
 
 function show(v: LegendView) {
   appState.legend = v;
+  appState.legendBack = appState.screen === 'hof' ? 'hof' : 'home';
   appState.screen = 'legend';
   window.scrollTo(0, 0);
 }

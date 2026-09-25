@@ -92,8 +92,8 @@ export function googleStartUrl(): string {
 }
 
 // ───────── T-10-005 공개 명예의 전당 (로그인 불필요) ─────────
-export function getHof(limit = 50): Promise<ApiResult<HofListResponse>> {
-  return apiFetch<HofListResponse>(`/v1/hof?limit=${limit}`, { method: 'GET' });
+export function getHof(limit = 50, page = 1): Promise<ApiResult<HofListResponse>> {
+  return apiFetch<HofListResponse>(`/v1/hof?limit=${limit}${page > 1 ? `&page=${page}` : ''}`, { method: 'GET' });
 }
 /** T-10-013. 이 계정의 은퇴 선수. 익명 프로필이면 linked=false. */
 export function getMyCareers(): Promise<ApiResult<MyCareersResponse>> {

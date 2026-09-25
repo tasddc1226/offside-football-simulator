@@ -40,7 +40,7 @@ for (const scheme of ['light', 'dark'] as const) {
   test(`게임 화면 전체에 접근성 위반이 없다 (${scheme})`, async ({ page }) => {
     test.setTimeout(60_000);
     await page.emulateMedia({ colorScheme: scheme });
-    await page.route(`${HOF_API}/v1/hof?limit=50`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries: [hofEntry] } }) }));
+    await page.route(/\/v1\/hof\?/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries: [hofEntry] } }) }));
     await page.route(`${HOF_API}/v1/hof/${HOF_ID}`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entry: hofEntry, snapshot: hofSnapshot } }) }));
     await page.goto('/');
     await expect(page.locator(`[data-hof-id="${HOF_ID}"]`)).toBeVisible();

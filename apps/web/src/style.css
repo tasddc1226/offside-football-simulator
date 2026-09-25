@@ -106,7 +106,9 @@ p { margin: 0; }
 .hof-tabs { grid-template-columns: 1fr 1fr; margin-bottom: 6px; }
 .hof-tabs .opt { align-items: center; font-weight: 600; min-height: 40px; }
 button.hof-row { width: 100%; background: none; border-inline: 0; border-bottom: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
-.hof-rank { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--accent); text-align: center; }
+.hof-pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.hof-pager .num { font-weight: 700; }
+.hof-rank { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--accent-text); text-align: center; }
 
 /* create */
 .field { display: flex; flex-direction: column; gap: 6px; }

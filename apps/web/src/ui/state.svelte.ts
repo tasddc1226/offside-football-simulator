@@ -10,8 +10,9 @@ import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
 import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
 
-export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex';
+export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex' | 'hof';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
+export type HofTab = 'all' | 'mine';
 
 export interface DraftCharacter {
   name: string;
@@ -59,6 +60,10 @@ export const appState = $state<{
   boardPost: string | null;
   /** T-10-013. 진행 중 커리어가 다른 계정 소유라 서버가 거절한 시즌 업로드(홈에서 처리를 고른다). */
   ownerConflict: OutboxItem[] | null;
+  /** 명예의 전당 전체 보기 화면의 탭·페이지(1부터). 선수 상세에서 돌아와도 그대로다. */
+  hof: { tab: HofTab; page: number };
+  /** 선수 상세의 '← 명예의 전당'이 돌아갈 화면. */
+  legendBack: 'home' | 'hof';
 }>({
   G: null,
   screen: 'home',
@@ -79,6 +84,8 @@ export const appState = $state<{
   board: 'notice',
   boardPost: null,
   ownerConflict: null,
+  hof: { tab: 'all', page: 1 },
+  legendBack: 'home',
 });
 
 export const toastState = $state<{ text: string; visible: boolean }>({ text: '', visible: false });

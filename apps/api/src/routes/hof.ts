@@ -3,6 +3,7 @@ import {
   HofDetailResponseSchema,
   HofListQuerySchema,
   HofListResponseSchema,
+  HofPageQuerySchema,
   successEnvelope,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
@@ -17,8 +18,9 @@ const CACHE = 'public, max-age=60';
 export function registerHofRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/hof', async (c) => {
     const limit = parseWithAppError(HofListQuerySchema, c.req.query('limit'));
-    const entries = await listPublicHof(getDb(c), limit);
-    const body = successEnvelope(HofListResponseSchema).parse({ data: { entries }, meta: { requestId: c.get('requestId') } });
+    const page = parseWithAppError(HofPageQuerySchema, c.req.query('page'));
+    const data = await listPublicHof(getDb(c), limit, page);
+    const body = successEnvelope(HofListResponseSchema).parse({ data, meta: { requestId: c.get('requestId') } });
     c.header('Cache-Control', CACHE);
     return c.json(body, 200);
   });

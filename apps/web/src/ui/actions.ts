@@ -18,7 +18,7 @@ import { endSeason, market, acceptOption, retire } from '../game/season.js';
 import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
 import type { NatTour, EventLogEntry, MarketOption } from '../game/types.js';
-import { appState, randomName } from './state.svelte.js';
+import { appState, randomName, type HofTab } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { seasonLabelOf } from './format.js';
 import {
@@ -332,6 +332,12 @@ export function goSettings() {
 }
 export function goDex() {
   appState.screen = 'dex';
+  window.scrollTo(0, 0);
+}
+/** 명예의 전당 전체 보기(100명씩 페이지). */
+export function openHof(tab: HofTab) {
+  appState.hof = { tab, page: 1 };
+  appState.screen = 'hof';
   window.scrollTo(0, 0);
 }
 /** 소식 화면을 연다. postId가 있으면 그 글을 바로 연다(홈의 소식 섹션에서). */

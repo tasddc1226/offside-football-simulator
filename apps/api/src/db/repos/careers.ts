@@ -194,10 +194,19 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
 
 const isPublicRetired = and(eq(careers.status, 'retired'), isNotNull(careers.legendScore));
 
-/** 전체 유저의 은퇴 선수를 레전드 점수 순으로. */
-export async function listPublicHof(db: Db, limit: number): Promise<PublicHofEntry[]> {
-  const rows = await db.select(publicColumns).from(careers).where(isPublicRetired).orderBy(desc(careers.legendScore), careers.retiredAt).limit(limit);
-  return rows.map(toPublicEntry);
+/** 전체 유저의 은퇴 선수를 레전드 점수 순으로, page(1부터)번째 limit명과 전체 인원. */
+export async function listPublicHof(db: Db, limit: number, page = 1): Promise<{ entries: PublicHofEntry[]; total: number }> {
+  const [rows, [count]] = await Promise.all([
+    db
+      .select(publicColumns)
+      .from(careers)
+      .where(isPublicRetired)
+      .orderBy(desc(careers.legendScore), careers.retiredAt)
+      .limit(limit)
+      .offset((page - 1) * limit),
+    db.select({ n: sql<number>`count(*)` }).from(careers).where(isPublicRetired),
+  ]);
+  return { entries: rows.map(toPublicEntry), total: Number(count?.n ?? 0) };
 }
 
 export async function getPublicHof(db: Db, careerId: string): Promise<{ entry: PublicHofEntry; snapshot: LegendSnapshot | null } | undefined> {
@@ -211,7 +220,7 @@ export async function getPublicHof(db: Db, careerId: string): Promise<{ entry: P
 }
 
 /** T-10-013. 한 프로필의 은퇴 선수(명예의 전당 '내 선수'). */
-export async function listOwnHof(db: Db, profileId: string, limit = 100): Promise<PublicHofEntry[]> {
+export async function listOwnHof(db: Db, profileId: string, limit = 500): Promise<PublicHofEntry[]> {
   const rows = await db
     .select(publicColumns)
     .from(careers)

@@ -204,7 +204,8 @@ export const PublicHofEntrySchema = z.strictObject({
 });
 export type PublicHofEntry = z.infer<typeof PublicHofEntrySchema>;
 
-export const HofListResponseSchema = z.strictObject({ entries: z.array(PublicHofEntrySchema) });
+/** `total`은 공개 명예의 전당 전체 인원(페이지 수 계산용). */
+export const HofListResponseSchema = z.strictObject({ entries: z.array(PublicHofEntrySchema), total: z.number().int().min(0) });
 export type HofListResponse = z.infer<typeof HofListResponseSchema>;
 
 export const HofDetailResponseSchema = z.strictObject({
@@ -219,3 +220,5 @@ export const MyCareersResponseSchema = z.strictObject({ linked: z.boolean(), ent
 export type MyCareersResponse = z.infer<typeof MyCareersResponseSchema>;
 
 export const HofListQuerySchema = z.coerce.number().int().min(1).max(100).default(50);
+/** `GET /v1/hof?page=` 1부터 시작하는 페이지 번호(한 페이지 = limit명). */
+export const HofPageQuerySchema = z.coerce.number().int().min(1).max(10000).default(1);

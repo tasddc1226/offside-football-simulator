@@ -83,6 +83,7 @@ export {
   MyCareersResponseSchema,
   HofDetailResponseSchema,
   HofListQuerySchema,
+  HofPageQuerySchema,
   type LegendSnapshot,
   type PublicHofEntry,
   type HofListResponse,
