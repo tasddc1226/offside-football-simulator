@@ -92,4 +92,4 @@ export type SheetView =
       note: string;
       options: { clubId?: string; name: string; lg: string; salary: string | null; sub: string | null }[];
     }
-  | { kind: 'notice'; eyebrow: string; title?: string; big?: { text: string; ok: boolean }; text?: string; muted?: boolean };
+  | { kind: 'notice'; eyebrow: string; title?: string; big?: { text: string; ok: boolean }; steps?: string[]; text?: string; muted?: boolean };
