@@ -3,6 +3,7 @@ import { signConfirmToken, verifyConfirmToken } from '../auth/confirm-token.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { runBatch } from '../db/repos/batch.js';
+import { deleteBoardCommentsStatement } from '../db/repos/boards.js';
 import { deleteCareersStatements } from '../db/repos/careers.js';
 import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
 import { auditLog, idempotency, profiles, sessions } from '../db/schema.js';
@@ -70,6 +71,7 @@ export async function executeProfileDeletion(
     // 커리어·시즌 데이터는 이 batch에서 명시적으로 지운다.
     ...deleteCareersStatements(db, input.profileId),
     deleteClubCustomStatement(db, input.profileId),
+    deleteBoardCommentsStatement(db, input.profileId),
     db.delete(idempotency).where(eq(idempotency.ownerProfileId, input.profileId)),
     db
       .update(sessions)

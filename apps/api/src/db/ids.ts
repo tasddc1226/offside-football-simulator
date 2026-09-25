@@ -1,4 +1,4 @@
-export type IdPrefix = 'prf' | 'ses' | 'svc' | 'req' | 'att' | 'aud' | 'ana';
+export type IdPrefix = 'prf' | 'ses' | 'svc' | 'req' | 'att' | 'aud' | 'ana' | 'pst' | 'cmt';
 
 export function newId(prefix: IdPrefix): string {
   return `${prefix}_${crypto.randomUUID()}`;

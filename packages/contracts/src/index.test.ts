@@ -51,10 +51,11 @@ describe('오류 코드 표', () => {
     RATE_LIMITED: { httpStatus: 429, retryable: true },
     SERVICE_UNAVAILABLE: { httpStatus: 503, retryable: true },
     CAREER_OWNER_MISMATCH: { httpStatus: 409, retryable: false },
+    FORBIDDEN: { httpStatus: 403, retryable: false },
   };
 
-  it('8개 모두 있다', () => {
-    expect(ERROR_CODES.length).toBe(8);
+  it('9개 모두 있다', () => {
+    expect(ERROR_CODES.length).toBe(9);
   });
 
   it.each(ERROR_CODES)(

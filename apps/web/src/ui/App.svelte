@@ -15,6 +15,11 @@
   $effect(() => {
     if (appState.screen === 'settings' && !Settings) void import('./Settings.svelte').then((m) => (Settings = m.default));
   });
+  // T-10-011: 소식(게시판)도 같은 방식으로 처음 열 때 불러온다.
+  let Board = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'board' && !Board) void import('./Board.svelte').then((m) => (Board = m.default));
+  });
 </script>
 
 <!-- 화면 전환 모션(T-10-003 goal 3): appState.screen을 key로 써서 화면이 바뀔 때만 새로 마운트해
@@ -35,6 +40,8 @@
       <Legend />
     {:else if appState.screen === 'settings'}
       {#if Settings}<Settings />{/if}
+    {:else if appState.screen === 'board'}
+      {#if Board}<Board />{/if}
     {:else}
       <Game />
     {/if}

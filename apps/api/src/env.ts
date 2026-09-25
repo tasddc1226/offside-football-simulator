@@ -16,6 +16,8 @@ export type Bindings = {
   WEB_APP_URL: string;
   /** 로컬 전용. `'1'`이면 ENVIRONMENT === 'local'과 함께 가짜 OIDC를 쓴다. */
   GOOGLE_FAKE?: string;
+  /** T-10-011. secret. 쉼표 구분 관리자 구글 이메일(게시판 글쓰기). 비어 있으면 관리자가 없다. */
+  ADMIN_EMAILS?: string;
 };
 
 export type SessionContext = {

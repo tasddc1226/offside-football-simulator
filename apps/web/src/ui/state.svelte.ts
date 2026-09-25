@@ -2,13 +2,14 @@
 // 원본은 module-level `let G/screen/tab/...` + 수동 render() 호출로 화면을 갱신했다. Svelte 5
 // runes로 옮기면서 같은 상태를 하나의 반응형 객체에 모아 두고, 화면 갱신은 컴포넌트가 이 상태를
 // 구독하는 것으로 대신한다(수동 render() 호출은 더 이상 필요 없다).
+import type { BoardKey } from '@offside/contracts/board-limits';
 import type { AttrKey, Pos } from '../game/data.js';
 import { pick } from '../game/rng.js';
 import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
 import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
 
-export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings';
+export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
 
 export interface DraftCharacter {
@@ -51,6 +52,8 @@ export const appState = $state<{
   candidates: Candidate[] | null;
   candidatesOpen: boolean[];
   candidatePick: number | null;
+  /** T-10-011. 소식 화면에서 마지막으로 본 게시판. */
+  board: BoardKey;
 }>({
   G: null,
   screen: 'home',
@@ -68,6 +71,7 @@ export const appState = $state<{
   candidates: null,
   candidatesOpen: [],
   candidatePick: null,
+  board: 'notice',
 });
 
 export const toastState = $state<{ text: string; visible: boolean }>({ text: '', visible: false });

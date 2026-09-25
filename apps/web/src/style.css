@@ -120,6 +120,17 @@ input[type=text], input[type=number], select { border: 1px solid var(--line); ba
 /* T-10-009 클럽 엠블럼 · 클럽 편집 */
 .club-badge { display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 30%; font-weight: 800; line-height: 1; vertical-align: -0.25em; object-fit: cover; letter-spacing: -0.02em; }
 .offer-club { display: flex; align-items: center; gap: 10px; }
+/* T-10-011 소식(게시판) */
+textarea { border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 11px 12px; font: inherit; color: var(--ink); width: 100%; resize: vertical; }
+.board-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.board-row { width: 100%; display: flex; flex-direction: column; gap: 4px; padding: 12px 2px; background: none; border: 0; border-bottom: 1px solid var(--line); text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.board-body { line-height: 1.6; overflow-wrap: anywhere; }
+.board-body h3 { margin: 14px 0 4px; font-size: 16px; }
+.board-body p, .board-body ul { margin: 0 0 10px; }
+.board-body ul { padding-left: 20px; }
+.board-comment { border-top: 1px solid var(--line); padding-top: 8px; }
+.board-comment p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.board-comment-del { margin-left: auto; min-height: 0; padding: 2px 8px; font-size: 12px; }
 .club-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .club-row { border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
 .club-main { display: flex; align-items: center; gap: 8px; }

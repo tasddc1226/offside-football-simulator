@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./headers": "./src/headers.ts"
+    "./headers": "./src/headers.ts",
+    "./board-limits": "./src/board-limits.ts"
   },
   "scripts": {
     "test": "vitest run",

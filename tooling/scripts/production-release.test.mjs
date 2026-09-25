@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { EXPECTED_TABLES, inspectCounts, inspectSchema } from './production-release.mjs';
 
 describe('production release guards', () => {
-  it('lists exactly the tables expected to survive migration 0015 + 0016(T-9-009 careers·career_seasons) + 0019(T-10-010 club_customs)', () => {
+  it('lists exactly the tables expected to survive migration 0015 + 0016(T-9-009 careers·career_seasons) + 0019(T-10-010 club_customs) + 0020(T-10-011 board_posts·board_comments)', () => {
     expect([...EXPECTED_TABLES].sort()).toEqual(
-      ['audit_log', 'auth_attempts', 'careers', 'career_seasons', 'club_customs', 'idempotency', 'profiles', 'sessions'].sort(),
+      ['audit_log', 'auth_attempts', 'board_comments', 'board_posts', 'careers', 'career_seasons', 'club_customs', 'idempotency', 'profiles', 'sessions'].sort(),
     );
   });
 

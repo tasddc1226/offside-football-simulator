@@ -15,11 +15,14 @@ import { AppError, parseWithAppError } from '../errors.js';
 const CACHE = 'public, max-age=60';
 
 // 공개 이름 최소 필터: 링크·연락처 홍보와 흔한 욕설만 막는다(완벽한 검열이 목적이 아니다).
-const BLOCKED = [/https?:|www\.|\.(com|net|kr|io|gg)\b/i, /(시발|씨발|ㅅㅂ|병신|ㅂㅅ|개새|좆|지랄|fuck|shit|bitch)/i];
+const LINK = /https?:|www\.|\.(com|net|kr|io|gg)\b/i;
+const PROFANITY = /(시발|씨발|ㅅㅂ|병신|ㅂㅅ|개새|좆|지랄|fuck|shit|bitch)/i;
 export function isAcceptablePublicName(name: string): boolean {
   const compact = name.replace(/\s+/g, '');
-  return !BLOCKED.some((re) => re.test(compact));
+  return !LINK.test(compact) && !PROFANITY.test(compact);
 }
+/** 긴 글(게시판 댓글)용 — 링크는 허용하고 흔한 욕설만 막는다. */
+export const hasProfanity = (text: string): boolean => PROFANITY.test(text.replace(/\s+/g, ''));
 
 export function registerHofRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/hof', async (c) => {
