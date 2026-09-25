@@ -137,7 +137,10 @@ export async function flushOutbox(): Promise<void> {
         remaining.push(item);
         continue;
       }
-      if (result === 'conflict') conflicts.push(item);
+      if (result === 'conflict') {
+        conflicts.push(item);
+        continue;
+      }
       console.warn('[outbox] 4xx 응답으로 항목을 버립니다', item.kind, item.careerId);
     }
     saveOutbox(remaining);

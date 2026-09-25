@@ -19,6 +19,9 @@ export type ProfileRecord = {
   deletedAt: string | null;
 };
 
+/** 로그인 수단(구글·토스)이 연결된 프로필. */
+export const isLinked = (p: ProfileRecord): boolean => p.googleSub !== null || p.tossAnonKeyHash !== null;
+
 const DEFAULT_SETTINGS: ProfileSettings = ProfileSettingsSchema.parse({
   reducedMotion: 'SYSTEM',
   textScale: 100,

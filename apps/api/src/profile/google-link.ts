@@ -1,7 +1,7 @@
 import type { Db } from '../db/client.js';
 import { insertAuditLog } from '../db/repos/auditLog.js';
 import { moveCareers } from '../db/repos/careers.js';
-import { getProfile, getProfileByGoogleSub, linkGoogleAccount, type ProfileRecord } from '../db/repos/profiles.js';
+import { getProfile, getProfileByGoogleSub, isLinked, linkGoogleAccount, type ProfileRecord } from '../db/repos/profiles.js';
 import { AppError } from '../errors.js';
 
 export type GoogleCallbackOutcome = { kind: 'linked' } | { kind: 'switched'; profileId: string };
@@ -22,7 +22,7 @@ function emailDomain(email: string | null): string | null {
 }
 
 /** 구글·토스 연결도 복구 코드도 없는 프로필 — 이 브라우저 세션 말고는 다시 찾아갈 방법이 없다. */
-const isAnonymous = (p: ProfileRecord) => p.googleSub === null && p.tossAnonKeyHash === null && p.recoveryCodeHash === null;
+const isAnonymous = (p: ProfileRecord) => !isLinked(p) && p.recoveryCodeHash === null;
 
 /**
  * T-9-001a: 프로필에는 더 이상 서버 소유 데이터(커리어 등)가 없으므로 병합 충돌이 없다. `sub`가

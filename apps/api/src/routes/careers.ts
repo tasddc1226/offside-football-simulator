@@ -10,7 +10,7 @@ import {
 } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { getCareer, getCareerOwner, listOwnHof, putCareerSeason, putRetirement } from '../db/repos/careers.js';
-import { getProfile } from '../db/repos/profiles.js';
+import { getProfile, isLinked } from '../db/repos/profiles.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
@@ -34,7 +34,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const session = getSessionOrThrow(c);
     const profile = await getProfile(db, session.profileId);
-    const linked = !!profile && (profile.googleSub !== null || profile.tossAnonKeyHash !== null);
+    const linked = !!profile && isLinked(profile);
     const entries = linked ? await listOwnHof(db, session.profileId) : [];
     const body = successEnvelope(MyCareersResponseSchema).parse({ data: { linked, entries }, meta: { requestId: c.get('requestId') } });
     c.header('Cache-Control', 'private, no-store');

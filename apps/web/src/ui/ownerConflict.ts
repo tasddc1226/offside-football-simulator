@@ -14,9 +14,10 @@ export function watchOwnerConflicts() {
   window.addEventListener(OWNER_CONFLICT_EVENT, (e) => {
     const items = (e as CustomEvent<OutboxItem[]>).detail;
     const G = appState.G;
-    const active = G && !G.retired ? items.filter((i) => i.kind === 'season' && i.careerId === G.cid) : [];
+    const cid = G && !G.retired ? G.cid : null;
+    const active = items.filter((i) => i.kind === 'season' && i.careerId === cid);
     if (active.length < items.length) toast('다른 계정의 선수라 서버에 반영하지 못했어요. 그 계정으로 로그인하면 반영돼요.');
-    if (!active.length || loadKey<string>(SKIP_KEY) === G!.cid) return;
+    if (!active.length || loadKey<string>(SKIP_KEY) === cid) return;
     appState.ownerConflict = [...(appState.ownerConflict ?? []), ...active];
     toast('이 커리어는 다른 계정에 기록돼 있어요. 홈에서 확인해 주세요.');
   });
