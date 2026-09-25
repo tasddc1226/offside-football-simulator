@@ -208,3 +208,45 @@ jobs:
             .release/schema-after.json
           if-no-files-found: ignore
           retention-days: 30
+
+  # 운영 배포가 끝까지 성공했을 때만 릴리즈 태그(KST 날짜 + 그날 순번, 예: v2026.09.25.1)와
+  # GitHub 릴리즈를 만든다. 같은 커밋을 다시 배포하면 새 태그를 만들지 않는다.
+  release-tag:
+    name: Tag production release
+    needs: production-release
+    if: inputs.mode == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.expected_sha }}
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Plan release tag
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v" \
+            | node .github/scripts/release-tag.mjs "$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        if: steps.plan.outputs.existing != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          PREVIOUS: ${{ steps.plan.outputs.previous }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          notes="운영 배포 \`${EXPECTED_SHA:0:7}\` · [배포 실행]($RUN_URL) · https://offside-lab.com"
+          args=(--repo "$GITHUB_REPOSITORY" --target "$EXPECTED_SHA" --title "$TAG" --notes "$notes" --generate-notes --latest)
+          if [ -n "$PREVIOUS" ]; then args+=(--notes-start-tag "$PREVIOUS"); fi
+          gh release create "$TAG" "${args[@]}"
+          echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)" >> "$GITHUB_STEP_SUMMARY"

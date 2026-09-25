@@ -5,11 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 프로젝트 개요
 
 OFFSIDE — 부제 "풀타임: 휘슬이 울릴 때까지". 확률/이벤트 기반 축구 선수 커리어
-시뮬레이션 웹 게임. `apps/web`은 Vite + TypeScript vanilla 앱(React 없음)이고
-게임 로직은 `apps/web/src/game/*`에 있다. 세이브는 브라우저 `localStorage`에만
-저장한다(서버 동기화 없음). `apps/api`(Hono on Cloudflare Workers + D1)는
-health·profile(익명 프로필·설정·복구 코드·복구·삭제)·Google 로그인(시작·콜백·
-연결 해제·로그아웃)만 다룬다. 계정 병합 플로우는 없다.
+시뮬레이션 웹 게임. `apps/web`은 Svelte 5 SPA(Vite)이고 게임 로직은
+`apps/web/src/game/*`(순수 TS), 화면은 `apps/web/src/ui/*`에 있다. 게임은 전부
+브라우저에서 돌고 세이브는 `localStorage`에 있다. `apps/api`(Hono on Cloudflare
+Workers + D1)는 게임을 시뮬레이션하지 않고 익명 프로필·Google 로그인·복구 코드,
+커리어·시즌 요약 적재, 명예의 전당, 공지·업데이트 게시판, 구단명 커스텀, 서버
+밸런스 설정, 운영 도구를 다룬다. 계정 병합 플로우는 없다.
 
 pnpm workspaces + Turborepo 모노레포. Node ≥22.13, TypeScript strict.
 
@@ -56,15 +57,16 @@ pnpm --filter @offside/fulltime-sim analyze
   engine → events-data → events → stories → military → realevents →
   positional → national → comps → season 순서로 로드된다. 시드 RNG
   (`RngSaveState`)는 세이브 상태 안에 저장돼 저장/재개 후에도 이어진다.
-- **`apps/web/src/api`**: `apps/api`와 통신하는 클라이언트(로그인·프로필만).
+- **`apps/web/src/api`**: `apps/api`와 통신하는 클라이언트. GET은 `cachedGet`으로 부른다.
+  시즌·은퇴 요약 업로드 큐는 `src/game/outbox.ts`.
 - **`apps/api`**: 세션 지연 조회(`middleware/session.ts`의 `resolveSession`), 익명 프로필 1급 +
   Google 로그인은 복구·기기 이동 수단(`profile/`, `auth/`). D1 스키마는
-  `db/schema.ts`, 마이그레이션은 `migrations/`(최신 `0015`가 게임 테이블을
-  전부 드롭하고 `profiles`·`sessions`·`auth_attempts`·`audit_log`·
-  `idempotency`만 남긴다). 마이그레이션은 drizzle-kit generate 산출물을
-  커밋한다(`db:check`로 검증).
-- **`packages/contracts`**: API 요청·응답 Zod 스키마. `auth`·`profile`·
-  `health`·`errors`·`envelope`·`headers`·`primitives`로 축소돼 있다.
+  `db/schema.ts`, 마이그레이션은 `migrations/`(`0015`가 원작 게임 테이블을 드롭한 뒤
+  `0016`~ 에서 커리어·명예의 전당·게시판·구단명·밸런스 테이블을 다시 쌓았다. 운영 배포가
+  기대하는 테이블 목록은 `tooling/scripts/production-release.mjs`의 `EXPECTED_TABLES`).
+  마이그레이션은 drizzle-kit generate 산출물을 커밋한다(`db:check`로 검증).
+- **`packages/contracts`**: API 요청·응답 Zod 스키마와 밸런스 스펙
+  (`@offside/contracts/balance`, zod 없는 서브패스).
 - **`tooling/fulltime-sim`**: 헤드리스 밸런스 시뮬레이터. `apps/web/src/game/*`
   ES 모듈을 DOM 없이 그대로 import해 대량 커리어를 시뮬레이션한다.
 
@@ -148,3 +150,6 @@ pnpm --filter @offside/fulltime-sim analyze
   캐시 무효화 누락 없음(위 "백엔드 보호 · 요청 최소화 규칙").
 - CI는 self-hosted macOS runner(`self-hosted, macOS, ARM64, offside`)를 쓴다.
   문서만 바뀐 커밋은 코드 검사·배포를 건너뛴다(`.github/scripts/ci-scope.mjs`).
+- 운영 배포는 `deploy-production.yml`(preflight → 같은 SHA로 deploy). 배포가 성공하면
+  `release-tag` 잡이 릴리즈 태그 `vYYYY.MM.DD.N`(KST 날짜 + 그날 순번)과 GitHub 릴리즈를
+  만든다(`.github/scripts/release-tag.mjs`). 태그를 손으로 만들지 않는다.

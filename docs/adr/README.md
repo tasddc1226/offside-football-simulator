@@ -20,11 +20,11 @@
 | [ADR-010](ADR-010-shared-contracts.md) | Phase 3 이후 병렬화를 위한 공유 계약: Effect 만료·중첩·타깃 소유권, 시장가치 입력 소유권, CareerTag 카탈로그·부여 인터페이스 | Superseded by ADR-013 (원작 domain 구조 자체가 제거됨) |
 | [ADR-011](ADR-011-league-ledger-and-career-feedback.md) | 소속 리그 결과 원장, 결정론·저장·사건·모션의 분리 | Superseded by ADR-013 |
 | [ADR-012](ADR-012-server-annual-careers.md) | 서버 권위 연간 커리어 진행 | Superseded by ADR-013 |
-| [ADR-013](ADR-013-fulltime-replacement.md) | 원작 OFFSIDE → 풀타임 전면 교체, 서버는 로그인·프로필만, 구현은 Sonnet 5 서브에이전트에게 위임 | 확정 |
+| [ADR-013](ADR-013-fulltime-replacement.md) | 원작 OFFSIDE → 풀타임 전면 교체, 서버는 로그인·프로필만, 구현은 Sonnet 5 서브에이전트에게 위임 | 확정. 서버 범위는 D-87 이후 확장, 구현 위임 규칙은 2026-09-24 메인 세션 직접 구현으로 변경 |
 
 ## 한 줄 요약
 
-브라우저가 게임(풀타임)을 실행하고 `localStorage`에 저장한다. 서버(Cloudflare Workers + D1)는 익명 프로필·Google 로그인·프로필 복구만 다루며 게임 데이터를 갖지 않는다. 브랜드는 OFFSIDE, 도메인은 offside-lab.com을 그대로 쓴다. 원작의 결정론 엔진·콘텐츠 팩·서버 동기화·리그 원장·서버 연간 커리어 구조는 ADR-013으로 폐기됐다.
+브라우저가 게임(풀타임, Svelte 5 SPA)을 실행하고 `localStorage`에 저장한다. 서버(Cloudflare Workers + D1)는 게임을 시뮬레이션하지 않는다. 익명 프로필·Google 로그인·프로필 복구에 더해, 이후 결정으로 커리어·시즌 요약 적재(D-87), 명예의 전당, 공지·업데이트 게시판, 구단명 커스텀, 서버 밸런스 설정(T-10-016)이 추가됐다([결정 로그](../tracking/decision-log.md)). 브랜드는 OFFSIDE, 도메인은 offside-lab.com을 그대로 쓴다. 원작의 결정론 엔진·콘텐츠 팩·서버 동기화·리그 원장·서버 연간 커리어 구조는 ADR-013으로 폐기됐다.
 
 ## 결정 원칙
 
