@@ -120,6 +120,11 @@
   }
 </script>
 
+{#snippet tags(p: PostSummary)}
+  {#if p.pinned}<span class="pill warn">고정</span>{/if}
+  {#if p.version}<span class="pill">{p.version}</span>{/if}
+{/snippet}
+
 <div class="wrap">
   <Topbar>
     {#snippet right()}
@@ -167,8 +172,7 @@
         <button class="icon-btn" style="align-self:flex-start" data-act="back-list" onclick={backToList}>← 목록</button>
         <div class="stack" style="gap:4px">
           <div class="row" style="gap:6px;flex-wrap:wrap">
-            {#if post.pinned}<span class="pill warn">고정</span>{/if}
-            {#if post.version}<span class="pill">{post.version}</span>{/if}
+            {@render tags(post)}
             <span class="muted" style="font-size:12px">{dateOf(post.createdAt)}{post.updatedAt !== post.createdAt ? ' · 수정됨' : ''}</span>
           </div>
           <h2 style="margin:0">{post.title}</h2>
@@ -225,8 +229,7 @@
             <li>
               <button class="board-row" data-post-row={p.id} onclick={() => open(p.id)}>
                 <span class="row" style="gap:6px;flex-wrap:wrap">
-                  {#if p.pinned}<span class="pill warn">고정</span>{/if}
-                  {#if p.version}<span class="pill">{p.version}</span>{/if}
+                  {@render tags(p)}
                   <b>{p.title}</b>
                 </span>
                 <span class="muted" style="font-size:12px">{dateOf(p.createdAt)}{p.commentCount ? ` · 댓글 ${p.commentCount}` : ''}</span>

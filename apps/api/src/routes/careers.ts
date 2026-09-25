@@ -12,7 +12,7 @@ import { getCareer, getCareerOwner, putCareerSeason, putRetirement } from '../db
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
-import { isAcceptablePublicName } from './hof.js';
+import { isAcceptablePublicName } from '../content-filter.js';
 
 /** 소유권 확인: careerId가 이미 다른 프로필 소유면 409. 없으면(새 커리어) 통과. */
 async function assertOwnable(db: ReturnType<typeof getDb>, careerId: string, profileId: string): Promise<void> {

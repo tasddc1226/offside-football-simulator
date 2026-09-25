@@ -28,7 +28,7 @@ import {
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
-import { hasProfanity, isAcceptablePublicName } from './hof.js';
+import { hasProfanity, isAcceptablePublicName } from '../content-filter.js';
 
 // T-10-011 게시판(공지·릴리즈 노트). 읽기는 누구나, 글은 관리자만, 댓글은 프로필이 있는 누구나.
 // 댓글은 프로필당 시간당 COMMENT_LIMIT개까지(관리자 제외).

@@ -6,16 +6,14 @@ import { apiFetch } from './client.js';
 export type { BoardKey, Comment, Post, PostInput };
 export type PostSummary = BoardListResponse['posts'][number];
 
-const json = (body: unknown) => JSON.stringify(body);
-
 export const fetchBoardViewer = () => apiFetch<{ admin: boolean }>('/v1/boards/viewer');
 export const fetchPosts = (board: BoardKey, before?: string) =>
   apiFetch<BoardListResponse>(`/v1/boards/${board}/posts${before ? `?before=${encodeURIComponent(before)}` : ''}`);
 export const fetchPost = (id: string) => apiFetch<PostDetailResponse>(`/v1/boards/posts/${id}`);
 export const createPost = (board: BoardKey, input: PostInput) =>
-  apiFetch<Post>(`/v1/boards/${board}/posts`, { method: 'POST', body: json(input) });
-export const updatePost = (id: string, input: PostInput) => apiFetch<Post>(`/v1/boards/posts/${id}`, { method: 'PUT', body: json(input) });
+  apiFetch<Post>(`/v1/boards/${board}/posts`, { method: 'POST', body: JSON.stringify(input) });
+export const updatePost = (id: string, input: PostInput) => apiFetch<Post>(`/v1/boards/posts/${id}`, { method: 'PUT', body: JSON.stringify(input) });
 export const deletePost = (id: string) => apiFetch<undefined>(`/v1/boards/posts/${id}`, { method: 'DELETE' });
 export const addComment = (postId: string, input: CommentInput) =>
-  apiFetch<Comment>(`/v1/boards/posts/${postId}/comments`, { method: 'POST', body: json(input) });
+  apiFetch<Comment>(`/v1/boards/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify(input) });
 export const deleteComment = (id: string) => apiFetch<undefined>(`/v1/boards/comments/${id}`, { method: 'DELETE' });
