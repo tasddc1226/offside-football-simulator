@@ -1,0 +1,78 @@
+import { ClubCustomResponseSchema, ErrorEnvelopeSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { eq } from 'drizzle-orm';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createApp } from '../app.js';
+import { clubCustoms } from '../db/schema.js';
+import { createTestD1, type TestD1 } from '../test/d1.js';
+
+const ORIGIN = 'http://localhost:5173';
+const Res = successEnvelope(ClubCustomResponseSchema);
+
+async function issueCookie(ctx: TestD1): Promise<{ profileId: string; cookie: string }> {
+  const res = await createApp().request('/v1/profile', {}, ctx.env);
+  const token = /offside_session=([^;]+)/.exec(res.headers.get('Set-Cookie') ?? '')?.[1];
+  const body = successEnvelope(ProfileSchema).parse(await res.json());
+  return { profileId: body.data.id, cookie: `offside_session=${token}` };
+}
+const get = (ctx: TestD1, cookie?: string) =>
+  createApp().request('/v1/club-custom', { headers: { Origin: ORIGIN, ...(cookie ? { Cookie: cookie } : {}) } }, ctx.env);
+const put = (ctx: TestD1, cookie: string, body: unknown) =>
+  createApp().request('/v1/club-custom', { method: 'PUT', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie }, body: JSON.stringify(body) }, ctx.env);
+
+const CLUBS = { 'pl-0': { name: '우리 동네 FC', logo: { text: '우', bg: '#112233', fg: '#ffffff' } }, 'k1-3': { name: '서울 불꽃' } };
+
+describe('/v1/club-custom (T-10-010)', () => {
+  let ctx: TestD1;
+  beforeEach(async () => {
+    ctx = await createTestD1();
+  });
+  afterEach(async () => {
+    await ctx.dispose();
+  });
+
+  it('세션이 없으면 401 PROFILE_REQUIRED', async () => {
+    const res = await get(ctx);
+    expect(res.status).toBe(401);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('PROFILE_REQUIRED');
+  });
+
+  it('저장 전에는 빈 값, 저장 후에는 같은 값을 돌려준다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    expect(Res.parse(await (await get(ctx, cookie)).json()).data).toEqual({ clubs: {}, updatedAt: null });
+    const r = await put(ctx, cookie, { clubs: CLUBS, updatedAt: '2026-09-25T00:00:00.000Z' });
+    expect(r.status).toBe(200);
+    expect(Res.parse(await (await get(ctx, cookie)).json()).data).toEqual({ clubs: CLUBS, updatedAt: '2026-09-25T00:00:00.000Z' });
+  });
+
+  it('더 오래된 updatedAt의 쓰기는 무시하고 서버 값을 돌려준다(최신 쓰기 우선)', async () => {
+    const { cookie } = await issueCookie(ctx);
+    await put(ctx, cookie, { clubs: CLUBS, updatedAt: '2026-09-25T10:00:00.000Z' });
+    const stale = await put(ctx, cookie, { clubs: {}, updatedAt: '2026-09-25T09:00:00.000Z' });
+    expect(Res.parse(await stale.json()).data).toEqual({ clubs: CLUBS, updatedAt: '2026-09-25T10:00:00.000Z' });
+  });
+
+  it('형식이 틀린 값(색·id·외부 이미지 URL)은 VALIDATION_FAILED', async () => {
+    const { cookie } = await issueCookie(ctx);
+    for (const clubs of [
+      { 'pl-0': { logo: { text: 'A', bg: 'red', fg: '#ffffff' } } },
+      { 'bad id': { name: 'x' } },
+      { 'pl-0': { logo: { text: 'A', bg: '#000000', fg: '#ffffff', img: 'https://evil.example/x.png' } } },
+    ]) {
+      const res = await put(ctx, cookie, { clubs, updatedAt: '2026-09-25T00:00:00.000Z' });
+      expect(res.status).toBe(400);
+      expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('VALIDATION_FAILED');
+    }
+  });
+
+  it('프로필 삭제 시 함께 지워진다', async () => {
+    const { cookie, profileId } = await issueCookie(ctx);
+    await put(ctx, cookie, { clubs: CLUBS, updatedAt: '2026-09-25T00:00:00.000Z' });
+    const app = createApp();
+    const h = (key: string) => ({ 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie, 'Idempotency-Key': key });
+    const tokenRes = await app.request('/v1/profile/delete', { method: 'POST', headers: h('idem-club-del-token'), body: '{}' }, ctx.env);
+    const { data } = (await tokenRes.json()) as { data: { confirmToken: string } };
+    const confirm = await app.request('/v1/profile/delete', { method: 'POST', headers: h('idem-club-del-confirm'), body: JSON.stringify({ confirmToken: data.confirmToken }) }, ctx.env);
+    expect(confirm.status).toBe(204);
+    expect(await ctx.db.select().from(clubCustoms).where(eq(clubCustoms.profileId, profileId))).toHaveLength(0);
+  });
+});

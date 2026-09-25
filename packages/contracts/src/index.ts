@@ -98,4 +98,21 @@ export {
   type RetirementResponse,
 } from './careers.js';
 
+export {
+  CLUB_CUSTOM_MAX_CLUBS,
+  CLUB_CUSTOM_NAME_MAX,
+  CLUB_CUSTOM_LOGO_TEXT_MAX,
+  CLUB_CUSTOM_IMG_MAX,
+  ClubLogoSchema,
+  ClubCustomSchema,
+  ClubCustomMapSchema,
+  PutClubCustomBodySchema,
+  ClubCustomResponseSchema,
+  type ClubLogo,
+  type ClubCustom,
+  type ClubCustomMap,
+  type PutClubCustomBody,
+  type ClubCustomResponse,
+} from './clubs.js';
+
 export { IsoUtcSchema, Hex64Schema, Uint32Schema, ClientIdSchema } from './primitives.js';

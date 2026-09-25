@@ -23,5 +23,7 @@ mount(Sheet, { target: modalEl });
 
 mount(Toast, { target: document.getElementById('toast')! });
 
+// T-10-010: 클럽 커스텀을 계정과 맞춘다(세션이 없으면 조용히 로컬 모드).
+void import('./ui/clubCustom.svelte.js').then((m) => m.syncClubCustom()).catch(() => {});
 // T-9-009: 이전 세션에서 못 보낸 업로드를 앱 시작 시 한 번 재시도한다(실패해도 게임은 계속된다).
 void import('./game/outbox.js').then((m) => m.flushOutbox()).catch(() => {});

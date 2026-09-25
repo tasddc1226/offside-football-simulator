@@ -25,7 +25,8 @@ export type ClubCustomMap = Record<string, ClubCustom>;
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const IMG = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
-const IMG_MAX = 60_000;
+// 서버 계약(contracts CLUB_CUSTOM_IMG_MAX)과 같은 한도 — 64px 엠블럼이면 넉넉하다.
+export const IMG_MAX = 16_000;
 
 function cleanLogo(v: unknown): ClubLogo | undefined {
   if (!v || typeof v !== 'object') return undefined;
