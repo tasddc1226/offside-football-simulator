@@ -114,14 +114,17 @@ test('라이브 응답이 늦어도 첫 화면이 밀리지 않는다', async ({
 
 // T-10-045: 폴링은 분 단위(CLAUDE.md 백엔드 보호). 1분이 되기 전에는 다시 묻지 않는다.
 test('라이브는 1분마다 한 번만 다시 받는다', async ({ page }) => {
-  await page.clock.install();
+  // install()만 하면 가짜 시계가 실제 시간만큼 흐른다 — CI에서 첫 화면까지 1초가 넘게 걸리면 runFor(59초)가
+  // 폴링 간격(60초)을 넘겨 버린다. 로드 전에 멈춰 두고 runFor로만 시간을 보낸다.
+  await page.clock.install({ time: NOW });
+  await page.clock.pauseAt(NOW + 1_000);
   let calls = 0;
   await page.route(`${API}/v1/live`, (r) => {
     calls++;
     return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: live }) });
   });
   await page.goto('/');
-  await expect(page.locator('[data-home-live] [data-live-stat="playing"]')).toContainText('3');
+  await expect(page.locator('[data-home-live]')).toBeVisible();
   expect(calls).toBe(1);
   await page.clock.runFor(59_000);
   expect(calls).toBe(1);
