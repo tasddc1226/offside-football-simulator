@@ -1,10 +1,9 @@
 // ───────── 병역: 국군체육부대(김천 상무) · 현역 입대 · 체육요원 특례 ─────────
 import { clamp, ri, chance } from './rng.js';
-import { EVENTS } from './events-data.js';
 import { leagueOf, log, salaryFor, schedule, addAttr, addStat, newSeason, fameEff } from './engine.js';
 import { ovr as ovrCalc } from './attributes.js';
 import { BAL } from './balance.js';
-import type { GameState, MarketOption, MilOption } from './types.js';
+import type { EventDef, GameState, MarketResult, MilOption } from './types.js';
 
 export const SANGMU = { id: 'sangmu', name: '김천 상무 (국군체육부대)', leagueId: 'k1', str: 63 };
 const MIL_AGE = 28;
@@ -118,11 +117,6 @@ export function milSeasonEnd(s: GameState): string | null {
   return `${early ? '조기 전역' : '상무 만기 전역'} → ${s.club.name} ${prev.abroad ? '복귀 협상' : '복귀'}`;
 }
 
-export interface MarketResult {
-  options: MarketOption[];
-  note: string;
-  canRetire: boolean;
-}
 export function milEnlistMarket(s: GameState): MarketResult | null {
   if (s.mil.armyNext) {
     s.mil.armyNext = false;
@@ -213,7 +207,7 @@ const MIL_ARMY = {
     fx: (s: GameState) => { s.mil.armyNext = true; addStat(s, 'morale', 2); },
   },
 };
-EVENTS.push(
+export const MILITARY_EVENTS: EventDef[] = [
   { id: 'mil-notice', title: '국군체육부대 선수 모집 공고', w: 0, chain: true, cond: (s) => milCanApply(s) && sangmuChance(s) >= MIL_LOW, text: milNoticeText, choices: [MIL_APPLY, MIL_DEFER] },
   { id: 'mil-notice-low', title: '국군체육부대 선수 모집 공고', w: 0, chain: true, cond: (s) => milCanApply(s) && sangmuChance(s) < MIL_LOW, text: milNoticeText, choices: [MIL_APPLY, MIL_DEFER, MIL_ARMY] },
-);
+];

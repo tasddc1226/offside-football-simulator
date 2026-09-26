@@ -1,6 +1,5 @@
 // ───────── 실제 축구계에서 일어나는 사건들 ─────────
 import { clamp, ri, pick } from './rng.js';
-import { EVENTS } from './events-data.js';
 import { leagueOf, addStat, addAttr, isPro, byPos, adFee } from './engine.js';
 import { ovr } from './attributes.js';
 import { callupScore, RELEASE } from './national.js';
@@ -34,7 +33,7 @@ function releaseEvent(o: { id: string; title: string; key: 'ag' | 'olympic'; yea
   };
 }
 
-EVENTS.push(
+export const REAL_EVENTS: EventDef[] = [
   {
     id: 'var', title: 'VAR 온필드 리뷰', w: 2, cond: (s) => isPro(s) && s.phase > 0,
     text: byPos<string>({
@@ -151,4 +150,4 @@ EVENTS.push(
       { label: '컨디션 관리에 집중한다', ok: { text: '짧게 인사만 하고 훈련에 집중했습니다.', fx: (s) => { addStat(s, 'cond', 6); addStat(s, 'fame', 2); addStat(s, 'morale', 2); } } },
     ],
   },
-);
+];

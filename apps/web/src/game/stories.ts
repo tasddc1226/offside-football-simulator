@@ -2,14 +2,11 @@
 import { SURNAMES, GIVEN, POS } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick } from './rng.js';
-import { EVENTS } from './events-data.js';
 import {
-  addStat, addAttr, startStory, advanceStory, endStory, schedule, storyActive, STORIES,
+  addStat, addAttr, startStory, advanceStory, endStory, schedule, storyActive,
   byPos, bestKey, weakKey, agentFee, leagueOf, fmtMoney, labelOf, isPro,
 } from './engine.js';
-import type { GameState } from './types.js';
-
-export { STORIES };
+import type { EventDef, GameState, StoryState } from './types.js';
 
 function rivalName(s: GameState): string {
   if (!s.flags.rivalName) {
@@ -19,9 +16,9 @@ function rivalName(s: GameState): string {
   }
   return s.flags.rivalName as string;
 }
-const rv = (s: GameState) => s.story.rival as unknown as { gap: number; tone: string };
+const rv = (s: GameState) => s.story.rival as StoryState & { gap: number; tone: string };
 
-EVENTS.push(
+export const STORY_EVENTS: EventDef[] = [
   // ── 평생의 라이벌 ──
   {
     id: 'rival-1', story: 'rival', stage: 1, title: '또래 라이벌의 등장', w: 2,
@@ -81,7 +78,7 @@ EVENTS.push(
     text: (s) => `재활 센터의 하루하루가 길기만 합니다. 팀은 당신 없이 경기를 치르고 있습니다.${s.injury ? ` (남은 결장 ${s.injury}경기)` : ''}`,
     choices: [
       {
-        label: '조기 복귀를 강행한다', p: (s) => clamp(((s.story.rehab as unknown as { surgery: boolean }).surgery ? 0.6 : 0.4) + (s.attrs.phy - 65) * 0.015 - (s.age - 26) * 0.02, 0.15, 0.85),
+        label: '조기 복귀를 강행한다', p: (s) => clamp((s.story.rehab!.surgery ? 0.6 : 0.4) + (s.attrs.phy - 65) * 0.015 - (s.age - 26) * 0.02, 0.15, 0.85),
         ok: { text: '의료진의 예상을 깨고 훈련장에 돌아왔습니다.', fx: (s) => { s.injury = 0; addStat(s, 'trust', 1.5); addStat(s, 'morale', 5); advanceStory(s, 'rehab', 2); schedule(s, 'rehab-3', 1, 12); } },
         fail: { text: '너무 서둘렀습니다. 같은 부위가 다시 올라왔습니다.', fx: (s) => { s.injury += ri(3, 6); addStat(s, 'morale', -10); advanceStory(s, 'rehab', 2); schedule(s, 'rehab-3', 1, 12); } },
       },
@@ -180,7 +177,7 @@ EVENTS.push(
       { label: '남아서 팀을 지킨다', ok: { text: '새 감독이 오지만, 구단은 남아 준 당신에게 부주장 완장을 맡겼습니다. 팬들도 떠나지 않은 당신을 기억할 겁니다.', fx: (s) => { s.trust = Math.round((s.trust * 0.6 + 1) * 10) / 10; addStat(s, 'fame', 3); addStat(s, 'morale', 4); endStory(s, 'mentor', '홀로서기'); } } },
     ],
   },
-);
+];
 
 function weakKeyLabel(s: GameState): string {
   return labelOf(s, weakKey(s));

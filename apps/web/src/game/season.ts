@@ -11,8 +11,9 @@ import { natInit, natSeasonEnd } from './national.js';
 import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
 import { detectCareerHighs } from './records.js';
 import type { LegendSnapshot } from '@offside/contracts';
-import type { GameState, CareerRecord, HofEntry, LegendSource, MarketOption, OfferOption } from './types.js';
+import type { GameState, CareerRecord, HofEntry, LegendSource, MarketOption, MarketResult, OfferOption } from './types.js';
 
+export type SeasonEndResult = ReturnType<typeof endSeason>;
 export function endSeason(s: GameState) {
   natInit(s);
   const L = leagueOf(s.leagueId), S = s.season, o = ovr(s);
@@ -45,7 +46,7 @@ export function endSeason(s: GameState) {
   } as CareerRecord;
   s.career.push(rec);
   rec.ch = detectCareerHighs(s, rec);
-  const miles = checkMilestones(s, rec as unknown as { pro?: boolean; apps: number; goals: number; club: string });
+  const miles = checkMilestones(s, rec);
   const titles = checkTitles(s).map(titleView);
   log(s, `${s.year} 시즌 종료 · ${L.name} ${rank}위 · 공식전 ${rec.apps}경기 ${rec.goals}골 ${rec.assists}도움`, 'big');
   const mil = milSeasonEnd(s);
@@ -142,7 +143,7 @@ export function offerFrom(s: GameState, c: (typeof CLUBS)[number]): OfferOption 
 export function marketValue(s: GameState) {
   return Math.round(salaryFor(leagueOf(s.leagueId).amateur ? 'k2' : s.leagueId, ovr(s)) * (s.age <= 24 ? 5 : s.age <= 29 ? 4 : 2) / 100) * 100;
 }
-export function market(s: GameState): { options: MarketOption[]; note: string; canRetire: boolean } {
+export function market(s: GameState): MarketResult {
   natInit(s);
   const L = leagueOf(s.leagueId), o = ovr(s);
   const options: MarketOption[] = [];

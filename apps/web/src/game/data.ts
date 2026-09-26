@@ -1,4 +1,8 @@
 // ───────── 정적 데이터: 리그 · 클럽 · 포지션 · 유형 · 특성 ─────────
+
+/** 세이브(ft_save) 형식 버전. 다른 값이면 저장본을 버리고 새로 시작한다(ui/boot.ts). 형식 변환은 save.ts migrateSave. */
+export const SAVE_VERSION = 1;
+
 export interface League {
   id: string;
   name: string;

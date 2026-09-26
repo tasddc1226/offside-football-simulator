@@ -2,7 +2,6 @@
 import { POS, LAST_PHASE } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
-import { EVENTS } from './events-data.js';
 import { leagueOf, addStat, log, fameEff, atkOf, creOf } from './engine.js';
 import { BAL } from './balance.js';
 import type { GameState, NatTour } from './types.js';
@@ -25,12 +24,6 @@ export const HOSTS = {
   olympic: { 2028: '미국 LA', 2032: '호주 브리즈번' } as Record<number, string>,
 };
 const WINDOW_NAME: string[][] = [[], ['9월 A매치', '10월 A매치'], ['11월 A매치', '3월 A매치']];
-
-// 기존 단순 '국가대표 발탁' 이벤트는 실제 소집 시스템으로 대체
-{
-  const i = EVENTS.findIndex((e) => e.id === 'national');
-  if (i >= 0) EVENTS.splice(i, 1);
-}
 
 export function natInit(s: GameState) {
   s.nat = Object.assign({ caps: 0, goals: 0, assists: 0, tours: [], qual: { 2026: true }, captain: false, debutYear: null }, s.nat || {});
@@ -220,7 +213,7 @@ function runTournament(s: GameState, key: string) {
   if (key === 'olympic') stage = stage === '우승' ? '금메달' : stage === '준우승' ? '은메달' : stage;
   const inSquad = role !== 'none';
   const mine = matches.filter((m) => m.mins);
-  const rec: NatTour = { year: y, key, name: T.label(y), stage, inSquad, why, apps: mine.length, goals: mine.reduce((t, m) => t + m.g, 0), matches } as NatTour;
+  const rec: NatTour = { year: y, key, name: T.label(y), stage, inSquad, why, apps: mine.length, goals: mine.reduce((t, m) => t + m.g, 0), matches };
   s.nat.tours.push({ year: y, name: rec.name, stage, inSquad, apps: rec.apps, goals: rec.goals });
   const trophy = inSquad && (stage === '우승' || stage === '금메달') ? T.trophy : inSquad && key === 'olympic' && ['은메달', '동메달'].includes(stage) ? `올림픽 ${stage}` : null;
   if (inSquad) addStat(s, 'fame', ({ '조별리그 탈락': 1, '32강': 3, '16강': 4, '8강': 7, '4강': 10, '동메달': 10, '4위': 8, '준우승': 12, '은메달': 12, '우승': 18, '금메달': 18 } as Record<string, number>)[stage] ?? 2);

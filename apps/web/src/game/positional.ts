@@ -1,15 +1,14 @@
 // ───────── 포지션 전용 이벤트: 공격수 · 미드필더 · 수비수 · 골키퍼 ─────────
 import { clamp } from './rng.js';
-import { EVENTS } from './events-data.js';
 import { addStat, addAttr, pkWin, leagueOf, roleOf } from './engine.js';
 import { ovr } from './attributes.js';
 import type { Pos } from './data.js';
-import type { GameState } from './types.js';
+import type { EventDef, GameState } from './types.js';
 
 const inGame = (s: GameState) => s.phase > 0 && s.injury === 0;
 const posIs = (...p: Pos[]) => (s: GameState) => p.includes(s.pos);
 
-EVENTS.push(
+export const POSITIONAL_EVENTS: EventDef[] = [
   // ── 공격수 ──
   {
     id: 'fw-drought', title: '골 가뭄', w: 3, cond: (s) => posIs('FW')(s) && s.phase >= 1 && s.season.apps >= 6 && s.season.goals <= s.season.apps * 0.2,
@@ -233,7 +232,7 @@ EVENTS.push(
       },
     ],
   },
-);
+];
 
 function isAmateur(s: GameState): boolean {
   return !!leagueOf(s.leagueId).amateur;

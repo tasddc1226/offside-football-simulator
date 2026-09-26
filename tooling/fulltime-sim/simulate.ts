@@ -15,14 +15,9 @@ import {
   ATTR_KEYS,
   LAST_PHASE,
   newGame,
-  applyTraining,
-  simBlock,
-  rollEvent,
   resolveChoice,
   leagueOf,
   ovr,
-  compsPhase,
-  natWindow,
   endSeason,
   market,
   acceptOption,
@@ -30,6 +25,7 @@ import {
   legendScore,
   legendTitle,
   EVENTS,
+  playPhase,
 } from '../../apps/web/src/game/index.js';
 import { pick, ri, createRng, setActiveRng, freshSeed } from '../../apps/web/src/game/rng.js';
 import { setLatestBalance } from '../../apps/web/src/game/balance.js';
@@ -99,15 +95,13 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
       for (let y = 0; y < 30 && !s.retired; y++) {
         for (let ph = 0; ph <= LAST_PHASE; ph++) {
           s.training = pickTraining(s);
-          applyTraining(s);
-          if (s.phase > 0) {
+          // T-10-046: 화면과 같은 game/turn.ts playPhase로 진행한다(칭호 판정 포함 — 전에는 빠져 있었다).
+          const { block: b, condBeforeMatches, ev: e } = playPhase(s);
+          if (b) {
             (A.blocks as number)++;
-            if (s.cond < 40) (A.condLow as number)++;
-            const b = simBlock(s);
+            if (condBeforeMatches < 40) (A.condLow as number)++;
             if (b.injured) { injuries++; (A.injBlocks as number)++; }
           }
-          compsPhase(s); natWindow(s);
-          const e = rollEvent(s); s.phase++;
           if (e) {
             const E = EVENTS.find((x) => x.id === e)!;
             const idx = pickChoice(s, E);
