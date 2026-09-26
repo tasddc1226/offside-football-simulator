@@ -13,11 +13,4 @@ import { STORY_EVENTS } from './stories.js';
 import { REAL_EVENTS } from './realevents.js';
 import { POSITIONAL_EVENTS } from './positional.js';
 
-if (!EVENTS.length)
-  EVENTS.push(
-    ...MILITARY_EVENTS,
-    ...BASE_EVENTS,
-    ...STORY_EVENTS,
-    ...REAL_EVENTS,
-    ...POSITIONAL_EVENTS,
-  );
+EVENTS.push(...MILITARY_EVENTS, ...BASE_EVENTS, ...STORY_EVENTS, ...REAL_EVENTS, ...POSITIONAL_EVENTS);

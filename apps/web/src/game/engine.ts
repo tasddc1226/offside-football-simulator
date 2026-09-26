@@ -2,7 +2,7 @@
 // T-10-046: 역할별 모듈로 나눴다 — 조회·파생 값(player), 상태 변경(stats), 훈련(training), 경기 구간(match),
 // 순위(table), 스토리/체인(story), 이벤트 헬퍼·추첨·해결(event-runner). 이 모듈은 새 커리어 생성만 남기고
 // 나머지를 그대로 다시 내보내 기존 import 경로(`./engine.js`)를 유지한다.
-import { POS, TYPES, ATTR_KEYS, focusMod, focusOfType, typeForFocus, type AttrKey, type Pos } from './data.js';
+import { POS, TYPES, ATTR_KEYS, SAVE_VERSION, focusMod, focusOfType, typeForFocus, type AttrKey, type Pos } from './data.js';
 import { ovr, initSubs, legacyOvr } from './attributes.js';
 import { clamp, ri, pick, gauss } from './rng.js';
 import { adoptLatestBalance } from './balance.js';
@@ -47,7 +47,7 @@ export function newGame(
   // 리터럴이 GameState를 완전히 만족한다.
   const s: GameState = {
     // cid는 crypto.randomUUID()로 만든다 — 시드 RNG(rnd/ri/gauss 등)를 절대 소모하지 않는다.
-    v: 1, cid: crypto.randomUUID(), halves: 1, name: o.name, number: o.number, pos: o.pos, foot: o.foot, type: typeId, focus, trait: o.trait,
+    v: SAVE_VERSION, cid: crypto.randomUUID(), halves: 1, name: o.name, number: o.number, pos: o.pos, foot: o.foot, type: typeId, focus, trait: o.trait,
     age: 18, year: 2026, attrs, sub: {}, pot: scouted, bloom: pot - scouted, cond: 90, morale: 70, fame: 3, trust: 0, money: 300,
     leagueId: 'hs', club: { ...club }, contract: null, phase: 0, uniYears: 0,
     season: { apps: 0, starts: 0, goals: 0, assists: 0, ratingSum: 0, cs: 0, mins: 0, played: 0, pts: 0, w: 0, d: 0, l: 0, rivals: [], honors: [] },

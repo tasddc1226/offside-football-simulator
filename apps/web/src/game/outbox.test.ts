@@ -255,12 +255,7 @@ describe('T-10-006 seasonPayload', () => {
       for (let y = 0; y < 30 && !s.retired; y++) {
         for (let ph = 0; ph <= g.LAST_PHASE; ph++) {
           s.training = s.cond < 45 ? 'rest' : pick(g.ATTR_KEYS);
-          g.applyTraining(s);
-          if (s.phase > 0) g.simBlock(s);
-          g.compsPhase(s);
-          g.natWindow(s);
-          const e = g.rollEvent(s);
-          s.phase++;
+          const { ev: e } = g.playPhase(s);
           if (e) g.resolveChoice(s, e, ri(0, g.EVENTS.find((x) => x.id === e)!.choices.length - 1));
         }
         const { rec } = g.endSeason(s);

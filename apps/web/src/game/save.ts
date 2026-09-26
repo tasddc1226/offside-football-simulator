@@ -9,9 +9,6 @@ import { createRng, freshSeed, setActiveRng } from './rng.js';
 import { ensureTitles } from './titles.js';
 import type { GameState } from './types.js';
 
-/** 읽을 수 있는 저장 형식 버전. 다른 값이면 저장본을 버리고 새로 시작한다. */
-export const SAVE_VERSION = 1;
-
 /** 저장본을 제자리에서 고치고 활성 RNG를 저장된 시드로 되돌린다. newCid: 커리어 ID를 이번에 새로 만들었는지
  * (부른 쪽이 바로 저장해야 한다 — 안 그러면 다음 부팅 때 또 다른 ID가 생겨 서버 기록과 어긋난다). */
 export function migrateSave(G: GameState): { newCid: boolean } {

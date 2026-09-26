@@ -4,7 +4,7 @@
 // 타이핑하고 나머지(로그 라인 종류가 다양한 필드, 이벤트별 임시 플래그 등)는 폭넓게 둡니다.
 import type { LegendSnapshot } from '@offside/contracts';
 import type { CareerBalance } from './balance.js';
-import type { AttrKey, Pos, Club } from './data.js';
+import type { AttrKey, Pos, Club, SAVE_VERSION } from './data.js';
 import type { SeasonEndResult } from './season.js';
 
 export interface RngSaveState {
@@ -204,8 +204,6 @@ export interface EventLogEntry {
   h: number;
 }
 
-/** 화면이 이어서 열어야 하는 결정(이벤트·시즌 결산·이적 시장). 저장에 남아 새로고침해도 같은 시트로 돌아온다.
- * market의 res(시즌 결산 결과)·m(이적 옵션)은 한 번 계산하면 저장해 두고 다시 굴리지 않는다. */
 /** 이적 시장 한 번의 선택지(season.market·military.milEnlistMarket). */
 export interface MarketResult {
   options: MarketOption[];
@@ -213,6 +211,8 @@ export interface MarketResult {
   canRetire: boolean;
 }
 
+/** 화면이 이어서 열어야 하는 결정(이벤트·시즌 결산·이적 시장). 저장에 남아 새로고침해도 같은 시트로 돌아온다.
+ * market의 res(시즌 결산 결과)·m(이적 옵션)은 한 번 계산하면 저장해 두고 다시 굴리지 않는다. */
 export type Pending =
   | { type: 'event'; id: string; then?: 'seasonEnd' | null }
   | { type: 'seasonEnd' }
@@ -221,7 +221,7 @@ export type Pending =
 export interface GameState {
   /** T-10-016 이 커리어에 적용 중인 서버 밸런스 버전(없으면 코드 기본값 = 버전 0). */
   bal?: CareerBalance;
-  v: 1;
+  v: typeof SAVE_VERSION;
   /** T-9-009. 커리어 고유 ID(`crypto.randomUUID()`). 서버 업로드의 URL 키다. 시드 RNG를 절대
    * 소모하지 않고 만든다 — RNG 시퀀스가 이 변경으로 바뀌면 안 된다. */
   cid: string;

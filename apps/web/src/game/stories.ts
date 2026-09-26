@@ -3,12 +3,10 @@ import { SURNAMES, GIVEN, POS } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick } from './rng.js';
 import {
-  addStat, addAttr, startStory, advanceStory, endStory, schedule, storyActive, STORIES,
+  addStat, addAttr, startStory, advanceStory, endStory, schedule, storyActive,
   byPos, bestKey, weakKey, agentFee, leagueOf, fmtMoney, labelOf, isPro,
 } from './engine.js';
 import type { EventDef, GameState, StoryState } from './types.js';
-
-export { STORIES };
 
 function rivalName(s: GameState): string {
   if (!s.flags.rivalName) {

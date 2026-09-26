@@ -2,7 +2,8 @@
 import { legendSnapshot, loadHOF, loadKey, saveKey } from '../game/season.js';
 import { createRng, freshSeed, setActiveRng } from '../game/rng.js';
 import type { GameState } from '../game/types.js';
-import { migrateSave, SAVE_VERSION } from '../game/save.js';
+import { SAVE_VERSION } from '../game/data.js';
+import { migrateSave } from '../game/save.js';
 import { setLatestBalance, useCareerBalance } from '../game/balance.js';
 import { cachedGet } from '../api/client.js';
 import type { BalanceConfig } from '@offside/contracts';

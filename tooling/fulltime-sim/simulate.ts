@@ -25,9 +25,9 @@ import {
   legendScore,
   legendTitle,
   EVENTS,
+  playPhase,
 } from '../../apps/web/src/game/index.js';
 import { pick, ri, createRng, setActiveRng, freshSeed } from '../../apps/web/src/game/rng.js';
-import { playPhase } from '../../apps/web/src/game/turn.js';
 import { setLatestBalance } from '../../apps/web/src/game/balance.js';
 import type { GameState, MarketOption, OfferOption } from '../../apps/web/src/game/types.js';
 

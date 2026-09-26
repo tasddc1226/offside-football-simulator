@@ -20,7 +20,7 @@ export interface PhaseResult {
   /** 이번 구간 리그 경기(프리시즌이면 null). */
   block: BlockResult | null;
   /** 컵·대륙 대회 결과 줄(로그에도 남는다). */
-  comp: { t: string; k: string }[];
+  comp: ReturnType<typeof compsPhase>;
   nt: ReturnType<typeof natWindow>;
   /** 훈련을 마친 뒤, 경기 전 컨디션(시뮬레이터 집계용). */
   condBeforeMatches: number;

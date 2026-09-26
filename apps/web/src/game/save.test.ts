@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import fixture from '../../e2e/fixtures/save-fw26.json';
 import { SUB_KEYS } from './attributes.js';
+import { SAVE_VERSION } from './data.js';
 import { leagueOf } from './engine.js';
 import './event-registry.js';
 import { createRng, rnd } from './rng.js';
-import { migrateSave, SAVE_VERSION } from './save.js';
+import { migrateSave } from './save.js';
 import type { GameState } from './types.js';
 
 // T-10-046: 저장본 마이그레이션. 지금 형식의 저장본은 그대로 두고, 옛 형식은 빠진 필드를 채운다.
