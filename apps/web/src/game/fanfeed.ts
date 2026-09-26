@@ -54,12 +54,11 @@ export function pickFanLines(s: GameState, rec: CareerRecord, ctx: FanFeedContex
   const lines = ordered.slice(0, max).map((b) => pickLine(seed, b));
   // 성적에 맞는 버킷이 min개보다 적으면(예: 평범한 시즌) 성적과 무관한 응원(general)으로 채운다.
   // T-10-034: 예전엔 아무 버킷에서나 채워 평범한 시즌에도 "우승이라니…", "부상 소식…"이 섞였다.
-  const general = FAN_LINES.general
-    .map((line, i) => ({ line, k: hashStr(`${seed}/general/${i}`) }))
-    .sort((x, y) => x.k - y.k);
-  for (const { line } of general) {
-    if (lines.length >= min) break;
-    lines.push(line);
+  if (lines.length < min) {
+    const general = FAN_LINES.general
+      .map((line, i) => ({ line, k: hashStr(`${seed}/general/${i}`) }))
+      .sort((x, y) => x.k - y.k);
+    for (const { line } of general.slice(0, min - lines.length)) lines.push(line);
   }
   return lines;
 }

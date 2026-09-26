@@ -23,6 +23,9 @@ const seasonBody = {
   events: [],
 };
 
+const ok = () => new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 });
+const queue = () => JSON.parse(localStorage.getItem('ft_outbox') ?? '[]') as unknown[];
+
 beforeEach(() => {
   (globalThis as unknown as { localStorage: MemoryStorage }).localStorage = new MemoryStorage();
 });
@@ -70,8 +73,6 @@ describe('outbox', () => {
 });
 
 describe('T-10-034 전송 중 enqueue', () => {
-  const ok = () => new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 });
-  const queue = () => JSON.parse(localStorage.getItem('ft_outbox') ?? '[]') as unknown[];
 
   it('동기 루프로 여러 시즌을 넣어도 모두 보내고 큐를 비운다(이 계정으로 이어서 기록)', async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(ok()));
@@ -107,7 +108,6 @@ describe('T-10-034 전송 중 enqueue', () => {
 });
 
 describe('T-10-013 소유권 충돌', () => {
-  const ok = () => new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 });
   const conflict = (code: string) => new Response(JSON.stringify({ error: { code, message: 'x', retryable: false } }), { status: 409 });
   const flush = async () => {
     await new Promise((r) => setTimeout(r, 0));
@@ -127,7 +127,7 @@ describe('T-10-013 소유권 충돌', () => {
     const { enqueueSeason } = await import('./outbox.js');
     enqueueSeason('33333333-3333-3333-3333-333333333333', 2027, seasonBody);
     await flush();
-    expect(JSON.parse(localStorage.getItem('ft_outbox') ?? '[]')).toEqual([]);
+    expect(queue()).toEqual([]);
     expect(dispatched()).toEqual([
       ['offside:owner-conflict', [{ kind: 'season', careerId: '33333333-3333-3333-3333-333333333333', year: 2027, body: seasonBody }]],
     ]);

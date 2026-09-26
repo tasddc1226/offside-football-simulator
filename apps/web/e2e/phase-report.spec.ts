@@ -1,19 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { startCareer } from './helpers.js';
+import { clearPendingEvent, startCareer } from './helpers.js';
 
 // T-10-024: 구간 진행 시트가 닫힌 뒤, 결과는 시즌 탭 맨 위 리포트 카드에 그린다. 이어지는 이벤트는
 // 액션바 버튼(이벤트 확인)으로 연다. T-10-028: 경기 구간은 중계 시트로 한 경기씩 보여 준 뒤 리포트로 넘어간다.
-async function clearPendingEvent(page: Page) {
-  const resume = page.locator('[data-act="resume"]');
-  if (!(await resume.count())) return;
-  await expect(resume).toContainText('이벤트 확인');
-  await resume.click();
-  await page.locator('.choice').first().click();
-  await page.locator('#sheet [data-sheet]').first().click();
-  await expect(page.locator('#sheet')).toBeHidden();
-}
-
 test('경기 중계 시트가 끝나면 확인을 눌러 시즌 탭 리포트로 넘어가고, 이벤트는 버튼으로 연다', async ({ page }) => {
   await startCareer(page);
   const report = page.locator('[data-report]');

@@ -36,3 +36,14 @@ export async function retireFromMarket(page: Page, age?: number): Promise<void> 
   await sheet.getByRole('button', { name: '은퇴하기' }).click();
   await sheet.getByRole('button', { name: '은퇴한다' }).click();
 }
+
+/** 구간 진행 뒤 이어지는 이벤트가 있으면(액션바 '이벤트 확인') 첫 선택지로 넘기고 결과 시트를 닫는다. */
+export async function clearPendingEvent(page: Page): Promise<void> {
+  const resume = page.locator('[data-act="resume"]');
+  if (!(await resume.count())) return;
+  await expect(resume).toContainText('이벤트 확인');
+  await resume.click();
+  await page.locator('.choice').first().click();
+  await page.locator('#sheet [data-sheet]').first().click();
+  await expect(page.locator('#sheet')).toBeHidden();
+}
