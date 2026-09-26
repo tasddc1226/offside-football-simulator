@@ -114,7 +114,7 @@ pnpm --filter @offside/fulltime-sim analyze
 - **밸런스 검증**: 확률·성장·이벤트 가중치처럼 밸런스에 영향을 주는 변경은
   `pnpm --filter @offside/fulltime-sim sim`(대량 커리어 시뮬레이션)과
   `analyze`(분포 집계)를 돌려 확인한다. 이 시뮬레이터는 원작 풀타임 v4와의
-  패리티 기준선(`tooling/fulltime-sim/reference/random-v5.json`, 2만 커리어 ×
+  패리티 기준선(`tooling/fulltime-sim/reference/random.json`, 2만 커리어 ×
   시드 5개 평균)을 참고 기준으로 유지한다. 수치는 문서에 옮겨 적지 않는다.
 - **서버 밸런스 설정 (T-10-016)**: 운영 중 조정할 수치는 코드 배포 대신
   운영 도구(설정 → 운영 도구 → 밸런스)에서 버전으로 바꾼다. 스펙(키·기본값·

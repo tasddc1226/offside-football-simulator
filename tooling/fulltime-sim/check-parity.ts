@@ -1,4 +1,4 @@
-// T-9-001c: simulate.ts가 쓴 careers-<policy>.csv를 reference/<policy>-v5.json의 밸런스 기준선과
+// T-9-001c: simulate.ts가 쓴 careers-<policy>.csv를 reference/<policy>.json의 밸런스 기준선과
 // 비교한다. simulate.ts/analyze.ts는 손대지 않는다 — 이 스크립트는 그 산출물만 읽는 별도 도구다.
 // quantile/pearson/share는 analyze.ts와 공유하는 ./metrics.ts 구현을 쓴다(예전엔 이 파일에 따로
 // 구현돼 있었고 undefined 처리 방식이 analyze.ts와 어긋나 있었다).
@@ -98,14 +98,14 @@ function main() {
   const csvPath = path.join(__dirname, 'results', tag, `careers-${policy}.csv`);
   const refPath = referenceFile
     ? path.resolve(referenceFile)
-    : path.join(__dirname, 'reference', `${policy}-v5.json`);
+    : path.join(__dirname, 'reference', `${policy}.json`);
 
   const rows = readCsv(csvPath);
-  const reference = JSON.parse(fs.readFileSync(refPath, 'utf8')) as { metrics: Metrics };
+  const reference = JSON.parse(fs.readFileSync(refPath, 'utf8')) as { version?: number; metrics: Metrics };
   const actual = computeMetrics(rows);
   const { ok, results } = compareMetrics(actual, reference.metrics);
 
-  console.log(`[check-parity] ${rows.length} careers (${policy}) vs ${path.basename(refPath)}`);
+  console.log(`[check-parity] ${rows.length} careers (${policy}) vs ${path.basename(refPath)}${reference.version ? ` v${reference.version}` : ''}`);
   for (const r of results) {
     const status = r.ok ? 'ok  ' : 'FAIL';
     console.log(
