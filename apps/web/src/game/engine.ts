@@ -202,13 +202,30 @@ export function trainingDesc(s: GameState, t: TrainingDef): string {
   if (t.id === 'coach') return `비용 ${fmtMoney(coachCost(s))}`;
   if (!t.attr) return t.desc!;
   const main = focusOf(s).includes(t.attr) ? `주력 · 성장 +${Math.round((FOCUS_GROWTH - 1) * 100)}% · ` : '';
-  return `${main}${labelOf(s, t.attr)} 집중 성장 · OVR 반영 ${Math.round(wOf(s)[t.attr] * 100)}%`;
+  const bf = balanceFactor(s, t.attr);
+  const lop = bf < 0.95 ? `치우침 · 성장 −${Math.round((1 - bf) * 100)}% · ` : '';
+  return `${main}${lop}${labelOf(s, t.attr)} 집중 성장 · OVR 반영 ${Math.round(wOf(s)[t.attr] * 100)}%`;
 }
 export function coachCost(s: GameState): number {
   return Math.max(200, Math.round(((s.contract ? s.contract.salary : 0) * 0.06) / 10) * 10);
 }
 
 const TRAIN_X = 5 / 3;
+/** T-10-042 한 능력치 몰아주기 억제. 훈련하는 능력치가 나머지 핵심 능력치(포지션 가중치 0.1 이상) 평균보다
+ * 앞선 정도가 타입 기본형(포지션 기본치 + 주력 보정)보다 BALANCE_KNEE 넘게 커지면, BALANCE_RANGE에 걸쳐 성장이
+ * BALANCE_MIN배까지 줄어든다. 타입 개성은 그대로 두고, 슈팅만 올린 공격수가 고르게 키운 선수보다 레전드 점수가
+ * 훨씬 높던 것을 뒤집는다. */
+export const BALANCE_KNEE = 10, BALANCE_RANGE = 25, BALANCE_MIN = 0.25;
+const leadOf = (pos: Pos, a: Record<AttrKey, number>, k: AttrKey): number => {
+  const core = ATTR_KEYS.filter((x) => x !== k && (POS[pos].w[x] ?? 0) >= 0.1);
+  return a[k] - core.reduce((t, x) => t + a[x], 0) / core.length;
+};
+export function balanceFactor(s: GameState, k: AttrKey): number {
+  const mod = focusMod(s.pos, focusOf(s));
+  const base = Object.fromEntries(ATTR_KEYS.map((x) => [x, POS[s.pos].base[x] + (mod[x] ?? 0)])) as Record<AttrKey, number>;
+  const excess = leadOf(s.pos, s.attrs, k) - Math.max(0, leadOf(s.pos, base, k));
+  return clamp(1 - (excess - BALANCE_KNEE) / BALANCE_RANGE, BALANCE_MIN, 1);
+}
 export function applyTraining(s: GameState) {
   const g = growthFactor(s);
   const t = s.training;
@@ -237,7 +254,7 @@ export function applyTraining(s: GameState) {
     addStat(s, 'cond', -6);
     return;
   }
-  addAttr(s, t as AttrKey, (1.6 + rnd() * 2.6) * g * TRAIN_X * (focusOf(s).includes(t as AttrKey) ? FOCUS_GROWTH : OFF_FOCUS_GROWTH));
+  addAttr(s, t as AttrKey, (1.6 + rnd() * 2.6) * g * TRAIN_X * (focusOf(s).includes(t as AttrKey) ? FOCUS_GROWTH : OFF_FOCUS_GROWTH) * balanceFactor(s, t as AttrKey));
   if (t === 'phy') addAttr(s, 'pac', rnd() * g * TRAIN_X);
   if (chance(0.5)) addAttr(s, pick(ATTR_KEYS), rnd() * g * TRAIN_X);
   addStat(s, 'cond', t === 'phy' ? -12 : -8);
@@ -257,12 +274,17 @@ export function roundRange(s: GameState, phase: number): string {
 
 /** 득점·도움 기대값에 들어가는 '리그(상대) 평균 대비 우위'. DOMINANCE_KNEE를 넘는 몫은 DOMINANCE_SLOPE만 반영한다
  * (T-10-039). 보통 커리어에선 우위가 이 기준을 넘는 일이 드물지만, 상무 복무처럼 OVR 90 선수가 평균 63인 K리그1에 들어가면 25를 넘어
- * 기대값이 지수로 불어나 한 시즌 80골이 나왔다 — 압도적인 선수도 경기당 득점에는 한계가 있다. */
+ * 기대값이 지수로 불어나 한 시즌 80골이 나왔다 — 압도적인 선수도 경기당 득점에는 한계가 있다.
+ * T-10-042부터 공격(창의) 능력치 우위는 더 이른 attackEdge()로 줄이고, 이 함수는 경기력(OVR 우위)에만 쓴다. */
 export const DOMINANCE_KNEE = 14, DOMINANCE_SLOPE = 0.15;
+/** T-10-042: 공격(창의) 능력치 우위는 ATTACK_KNEE부터 ATTACK_SLOPE만 반영한다 — 리그 최정상 공격수도 시즌
+ * 경기당 1골 안팎에서 멈추게(시뮬레이션 시즌 경기당 1골 초과 1.3~2% → 0.2~0.4%, 시즌 최다 63골 → 49골). */
+export const ATTACK_KNEE = 8, ATTACK_SLOPE = 0.3;
+export const attackEdge = (gap: number): number => (gap <= ATTACK_KNEE ? gap : ATTACK_KNEE + (gap - ATTACK_KNEE) * ATTACK_SLOPE);
 export const dominance = (gap: number): number => (gap <= DOMINANCE_KNEE ? gap : DOMINANCE_KNEE + (gap - DOMINANCE_KNEE) * DOMINANCE_SLOPE);
 /** 득점·도움 기대값 배수. atk는 공격(또는 창의) 능력치, perf는 경기력(평균 대비 OVR 우위 o - avg를 포함)이다. */
 export function scoreBoost(atk: number, o: number, perf: number, avg: number): number {
-  return Math.exp(dominance(atk - avg) / 20 + (perf + (dominance(o - avg) - (o - avg)) / 10) * 0.2);
+  return Math.exp(attackEdge(atk - avg) / 20 + (perf + (dominance(o - avg) - (o - avg)) / 10) * 0.2);
 }
 
 export interface MatchGame {

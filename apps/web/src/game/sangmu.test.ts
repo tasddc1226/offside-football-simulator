@@ -44,9 +44,9 @@ describe('상무 득점 폭증 (T-10-039)', () => {
     expect(dominance(DOMINANCE_KNEE)).toBe(DOMINANCE_KNEE);
     expect(dominance(DOMINANCE_KNEE + 10)).toBeGreaterThan(DOMINANCE_KNEE);
     expect(dominance(DOMINANCE_KNEE + 10)).toBeLessThan(DOMINANCE_KNEE + 3);
-    // 보통 시즌(우위 기준 이하)의 기대값은 이전 공식과 같다.
-    expect(scoreBoost(75, 72, 1.1, 63)).toBeCloseTo(
-      Math.exp((75 - 63) / 20) * Math.exp(1.1 * 0.2),
+    // 보통 시즌(우위 기준 이하 — T-10-042부터 공격 우위는 ATTACK_KNEE 8)의 기대값은 이전 공식과 같다.
+    expect(scoreBoost(70, 72, 1.1, 63)).toBeCloseTo(
+      Math.exp((70 - 63) / 20) * Math.exp(1.1 * 0.2),
       12,
     );
   });
