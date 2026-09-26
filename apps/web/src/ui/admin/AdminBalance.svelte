@@ -180,7 +180,7 @@
     </p>
   </div>
 
-  <LoadState {status} failText="밸런스 설정을 불러오지 못했어요." retry={() => load()}>
+  <LoadState {status} failText="밸런스 설정을 불러오지 못했어요." retry={load}>
     <div class="row" style="gap:8px">
       <button class="btn btn-accent" data-act="new-draft" disabled={busy} onclick={() => newDraft(active?.values ?? {}, '')}>
         {active ? `v${active.version}에서 새 초안` : '새 초안'}

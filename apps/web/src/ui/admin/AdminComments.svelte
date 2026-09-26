@@ -71,7 +71,7 @@
     </div>
   {/if}
 
-  <LoadState {status} failText="댓글을 불러오지 못했어요." retry={() => load()}>
+  <LoadState {status} failText="댓글을 불러오지 못했어요." retry={load}>
     <ul class="admin-comments">
       {#each comments as c (c.id)}
         <li data-admin-comment={c.id}>

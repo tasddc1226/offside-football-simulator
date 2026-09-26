@@ -1,6 +1,7 @@
 <script lang="ts">
   // T-10-016 운영 대시보드: 가입·활동·커리어·댓글 수와 최근 14일(KST) 추이. 집계는 서버에서 1분 캐시된다.
   import { onMount } from 'svelte';
+  import type { LoadStatus } from '../LoadState.svelte';
   import * as api from '../../api/admin.js';
   import type { AdminStats } from '../../api/admin.js';
   import { kstDateTime as kst } from '../boardText.js';
@@ -21,7 +22,7 @@
   ] as const;
 
   let stats = $state<AdminStats | null>(null);
-  let status = $state<'loading' | 'ready' | 'error'>('loading');
+  let status = $state<LoadStatus>('loading');
 
   onMount(() => void load());
 

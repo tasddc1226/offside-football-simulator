@@ -5,7 +5,7 @@ export default [
   ...base,
   // T-10-001: apps/web UI가 Svelte 5(runes)로 옮겨오며 .svelte 파일에도 린트를 켠다.
   ...svelteConfig(['apps/web/src/**/*.svelte']),
-  ...typedConfig(['apps/*/src/**/*.ts', 'packages/contracts/src/**/*.ts'], import.meta.dirname),
+  ...typedConfig(['apps/*/src/**/*.ts', 'packages/contracts/src/**/*.ts', 'tooling/fulltime-sim/*.ts'], import.meta.dirname),
   {
     // 클라이언트 전용 web은 서버(api) 코드를 직접 import하지 않는다 — 둘은 별도 Cloudflare Worker다.
     files: ['apps/web/src/**/*.ts'],

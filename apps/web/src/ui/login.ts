@@ -1,3 +1,5 @@
+// ───────── 구글 로그인 ─────────
+// 시작(startGoogleLogin), 로그인 뒤 돌아올 곳 기억, OAuth 콜백(/settings?google=linked|switched|error) 처리.
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { getProfile, googleStartUrl } from '../api/client.js';
 import { loadHOF } from '../game/season.js';
@@ -6,9 +8,8 @@ import { openLocalLegend, shareFocus } from './legend.js';
 import { openBoard } from './nav.js';
 import { appState } from './state.svelte.js';
 
-// ───────── 구글 OAuth 콜백 (/settings?google=linked|switched|error) ─────────
 /** 로그인을 마치고 돌아와 다시 열 곳. T-10-028 소식 글(댓글), T-10-029 내 은퇴 선수(공유). */
-export type LoginReturn = { board: BoardKey; postId: string | null } | { career: string };
+type LoginReturn = { board: BoardKey; postId: string | null } | { career: string };
 const LOGIN_RETURN_KEY = 'ft_board_return';
 /** null이면 기록을 지운다(설정에서 로그인할 때). */
 export function rememberLoginReturn(to: LoginReturn | null) {

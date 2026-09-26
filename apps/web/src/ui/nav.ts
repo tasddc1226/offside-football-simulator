@@ -1,5 +1,6 @@
 // ───────── 화면 전환 ─────────
-// 화면(appState.screen)을 바꾸는 곳. 새 화면으로 갈 때는 맨 위부터 보인다.
+// 화면(appState.screen)을 바꾸는 곳. go·openHof·openBoard는 맨 위로 올리고, goHome·goNew·goContinue는
+// 스크롤을 그대로 둔다(원래 동작).
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { confirmNew, nextPending } from './actions.js';
 import { closeSheet } from './sheetState.svelte.js';

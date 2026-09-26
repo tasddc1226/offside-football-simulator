@@ -219,7 +219,7 @@
       {#if admin}
         <button class="btn btn-accent" data-act="new-post" onclick={() => startEdit()}>새 글 쓰기</button>
       {/if}
-      <LoadState {status} failText="소식을 불러오지 못했어요." retry={() => load()}>
+      <LoadState {status} failText="소식을 불러오지 못했어요." retry={load}>
         <ul class="board-list">
           {#each posts as p (p.id)}
             <li>

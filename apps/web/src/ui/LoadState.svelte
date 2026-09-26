@@ -14,7 +14,7 @@
 {:else if status === 'error'}
   <div class="stack" style="gap:8px">
     <p class="muted" style="margin:0">{failText}</p>
-    <button class="icon-btn" style="align-self:flex-start" onclick={retry}>다시 시도</button>
+    <button class="icon-btn" style="align-self:flex-start" onclick={() => retry()}>다시 시도</button>
   </div>
 {:else}
   {@render children()}

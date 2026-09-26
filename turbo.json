@@ -10,7 +10,11 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
     "lint": {
+      "dependsOn": ["transit"],
       "outputs": []
     },
     "typecheck": {
