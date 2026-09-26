@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run && node --test scripts/seo.test.mjs",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json --threshold error",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e && svelte-check --tsconfig ./tsconfig.json --threshold error",
     "check:bundle": "node scripts/check-bundle.mjs",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
