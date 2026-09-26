@@ -42,8 +42,6 @@
   const stats = $derived(data ? STATS.map((s) => ({ ...s, n: s.of(data!) })).filter((s) => s.n > 0) : []);
   /** 첫 응답 전 — 같은 높이의 자리표시 카드를 그린다. */
   const pending = $derived(!data && !failed);
-  /** 받은 데이터 없이 실패했다 — 자리표시 그대로 안내만 띄우고 30초 재조회를 기다린다. */
-  const offline = $derived(!data && failed);
 
   const keyOf = (e: LiveEvent) => `${e.kind}:${e.at}:${e.kind === 'retire' ? e.careerId : `${e.club}:${e.goals}:${e.apps}`}`;
   const who = (e: LiveEvent) => (e.kind === 'retire' ? (e.name ?? anonName(e.pos, e.number)) : anonName(e.pos, null));
@@ -113,7 +111,7 @@
     class="card live"
     data-home-live={pending ? undefined : ''}
     data-home-live-pending={pending ? '' : undefined}
-    data-home-live-offline={offline ? '' : undefined}
+    data-home-live-offline={!data && failed ? '' : undefined}
     aria-hidden={pending || undefined}
     aria-labelledby={pending ? undefined : 'live-title'}
   >
@@ -130,8 +128,12 @@
       {/if}
     </div>
     {#if !data}
+      <!-- 자리표시·실패 안내도 숫자 칸과 티커 높이(3줄)를 그대로 잡아 둔다. 실패하면 30초 재조회를 기다린다. -->
       <div class="live-stats">
         {#each STATS as s (s.key)}<div><b class="num">–</b><span>{s.label}</span></div>{/each}
+      </div>
+      <div class="live-rows-wrap" class:live-offline={failed}>
+        {#if failed}<p class="muted">지금은 현황을 불러오지 못했어요. 잠시 뒤 다시 확인할게요.</p>{/if}
       </div>
     {:else if stats.length}
       <div class="live-stats">
@@ -140,12 +142,7 @@
         {/each}
       </div>
     {/if}
-    <!-- 자리표시에서도 티커 높이(3줄)를 잡아 둔다. -->
-    {#if pending}
-      <div class="live-rows-wrap"></div>
-    {:else if offline}
-      <div class="live-rows-wrap live-offline"><p class="muted">지금은 현황을 불러오지 못했어요. 잠시 뒤 다시 확인할게요.</p></div>
-    {:else if feed.length}
+    {#if data && feed.length}
       <div
         class="live-rows-wrap"
         role="presentation"
