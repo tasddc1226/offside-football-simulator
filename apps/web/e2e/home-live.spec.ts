@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { ok, API } from './helpers.js';
 
 // T-10-030 홈 라이브 현황: 서버 숫자(0은 숨김) + 소식 티커(한 줄씩 올라감, 일시정지·감속 모션이면 멈춤).
-const API = 'http://localhost:8787';
 const ID = '5a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
 // 응답의 now와 소식 시각을 같은 기준 시각에서 만든다 — 따로 Date.now()를 읽으면 ms가 넘어가 '30분 전'이 '29분 전'으로 내려간다.
 const NOW = Date.now();
@@ -64,7 +64,7 @@ test('은퇴 소식을 누르면 그 선수 상세가 열린다', async ({ page 
     id: ID, name: '김오프', pos: 'MF', number: 8, retireAge: 35, peak: 88, legendScore: 540, apps: 500, goals: 90, assists: 150,
     trophies: 4, awards: 2, caps: 40, ballon: 0, lastClub: '테스트 FC', retiredAt: ago(0), hasDetail: false,
   };
-  await page.route(`${API}/v1/hof/${ID}`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entry, snapshot: null } }) }));
+  await page.route(`${API}/v1/hof/${ID}`, (r) => r.fulfill(ok({ entry, snapshot: null })));
   await page.goto('/');
   // 감속 모션이면 움직이지 않고 최신 3줄만, 일시정지 버튼도 없다.
   await expect(page.locator('[data-home-live] .live-row')).toHaveCount(3);
@@ -95,7 +95,7 @@ test('라이브 응답이 늦어도 첫 화면이 밀리지 않는다', async ({
   await page.setViewportSize({ width: 412, height: 823 });
   await page.route(`${API}/v1/live`, async (r) => {
     await new Promise((res) => setTimeout(res, 800));
-    await r.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: live }) });
+    await r.fulfill(ok(live));
   });
   await page.addInitScript(() => {
     (window as unknown as { __cls: number }).__cls = 0;
@@ -121,7 +121,7 @@ test('라이브는 1분마다 한 번만 다시 받는다', async ({ page }) => 
   let calls = 0;
   await page.route(`${API}/v1/live`, (r) => {
     calls++;
-    return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: live }) });
+    return r.fulfill(ok(live));
   });
   await page.goto('/');
   await expect(page.locator('[data-home-live]')).toBeVisible();

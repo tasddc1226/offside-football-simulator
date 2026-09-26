@@ -1,10 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { retireFromMarket } from './helpers.js';
+import { retireFromMarket, API } from './helpers.js';
 
 // T-10-029: 은퇴 화면 맨 아래 — 로그인하지 않았으면 로그인을 권하고, 구글 로그인했으면 보기 전용 공유 링크
 // (/career/<id>)를 만든다. 링크를 연 사람은 크레딧 연출로 리포트를 보고 자기 커리어를 시작할 수 있다.
-const API = 'http://localhost:8787';
 const profile = (google: boolean) => ({
   data: { id: 'u1', linked: { google, toss: false }, googleEmailMasked: google ? 'te***@gmail.com' : null, recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z', nickname: null },
 });

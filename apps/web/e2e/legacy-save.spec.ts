@@ -1,9 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { retireFromMarket, startCareer } from './helpers.js';
+import { retireFromMarket, startCareer, API } from './helpers.js';
 
 // 옛 저장본 이관(T-10-036). 커리어 ID(cid) 도입 전에 은퇴한 선수는 서버에 커리어가 없어 은퇴만 보내면 400으로
 // 버려졌다. 아주 오래된 저장 키(sl_save)는 ft_save가 비어 있을 때마다 되살아났다.
-const API = 'http://localhost:8787';
 const json = (body: unknown, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
 const profile = { data: { id: 'u1', linked: { google: false, toss: false }, googleEmailMasked: null, recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z', nickname: null } };
 

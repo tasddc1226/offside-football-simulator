@@ -1,5 +1,15 @@
 import { expect, type Page } from '@playwright/test';
 
+/** e2e 기본 API 주소 — 실제 서버 없이 page.route로 흉내 낸다. */
+export const API = 'http://localhost:8787';
+/** 성공 응답(route.fulfill 인자). 서버처럼 { data, meta } 봉투로 담는다. */
+export const ok = (data: unknown, status = 200) => ({ status, json: { data, meta: { requestId: 'req_e2e' } } });
+/** 오류 응답(route.fulfill 인자). */
+export const fail = (status: number, code: string, message: string) => ({
+  status,
+  json: { error: { code, message, retryable: false }, meta: { requestId: 'req_e2e' } },
+});
+
 /** 홈 화면에서 새 커리어를 킥오프하고 선수 화면이 뜰 때까지 기다린다.
  * T-10-002: 생성 화면이 프로필 입력(1/2) → 후보 카드 선택(2/2) 2단계 플로우가 되어, 후보 카드를
  * 하나 열어 고른 뒤에야 [data-act="start"]가 활성화된다. */

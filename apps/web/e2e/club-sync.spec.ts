@@ -1,8 +1,8 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
+import { fail, ok } from './helpers.js';
 
 // T-10-010: 클럽 커스텀 계정 동기화. API는 route로 흉내 낸다(e2e 기본 API 주소 localhost:8787).
 const API = /localhost:8787\/v1\/club-custom/;
-const envelope = (data: unknown) => ({ data, meta: { requestId: 'req_e2e' } });
 
 // 이 기기에서 프로필 조회가 성공한 적이 있다는 표시(T-10-037) — 있어야 부팅 때 계정과 맞춘다.
 const withSessionHint = (page: Page) => page.addInitScript(() => localStorage.setItem('ft_session', '1'));
@@ -23,7 +23,7 @@ test('로그인 상태면 계정에 저장된 클럽 이름을 받아 오고, �
       puts.push(body);
       server = body as typeof server;
     }
-    await route.fulfill({ json: envelope(server) });
+    await route.fulfill(ok(server));
   });
 
   await withSessionHint(page);
@@ -46,7 +46,7 @@ test('세션이 없으면 이 기기에만 저장하고 서버로 보내지 않�
   await page.route(API, async (route: Route) => {
     if (route.request().method() === 'PUT') putCount++;
     else getCount++;
-    await route.fulfill({ status: 401, json: { error: { code: 'PROFILE_REQUIRED', message: '프로필 세션이 필요합니다.', retryable: false }, meta: { requestId: 'req_e2e' } } });
+    await route.fulfill(fail(401, 'PROFILE_REQUIRED', '프로필 세션이 필요합니다.'));
   });
   await openPl(page);
   await expect(page.locator('[data-club-sync]')).toHaveAttribute('data-club-sync', 'local');
@@ -66,7 +66,7 @@ test('세션 표시가 있어도 서버가 세션이 없다고 하면 표시를 
   let getCount = 0;
   await page.route(API, async (route: Route) => {
     getCount++;
-    await route.fulfill({ status: 401, json: { error: { code: 'PROFILE_REQUIRED', message: '프로필 세션이 필요합니다.', retryable: false }, meta: { requestId: 'req_e2e' } } });
+    await route.fulfill(fail(401, 'PROFILE_REQUIRED', '프로필 세션이 필요합니다.'));
   });
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('ft_session', '1'));
@@ -82,7 +82,7 @@ test('엠블럼 이미지 합계가 서버 한도를 넘으면 보내지 않고,
   let putCount = 0;
   await page.route(API, async (route: Route) => {
     if (route.request().method() === 'PUT') putCount++;
-    await route.fulfill({ json: envelope({ clubs: {}, updatedAt: null }) });
+    await route.fulfill(ok({ clubs: {}, updatedAt: null }));
   });
   // 64px 엠블럼 한도(16,000자)에 가까운 이미지 55개 ≈ 82만 자 > 합계 한도 80만 자.
   await page.addInitScript(() => {

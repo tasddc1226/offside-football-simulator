@@ -1,9 +1,8 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { startCareer } from './helpers.js';
+import { startCareer, ok, API } from './helpers.js';
 
 // T-10-027 서버 최초 기록: 홈 카드(최근 기록) → 전체 화면 날짜별 연대기 → 분류 탭(미달성 포함), 내 선수 표시.
-const API = 'http://localhost:8787';
 const OTHER = '0b000000-0000-4000-8000-00000000000b';
 const holder = (careerId: string, name: string | null) => ({ careerId, name, pos: 'FW', number: name ? 9 : null });
 const items = (mine: string) => [
@@ -17,7 +16,7 @@ test('홈 카드 → 서버 최초 기록 화면(연대기·분류 탭·내 선�
   await startCareer(page);
   const cid = await page.evaluate(() => (JSON.parse(localStorage.getItem('ft_save')!) as { cid: string }).cid);
   await page.route(`${API}/v1/firsts`, (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { items: items(cid) } }) }),
+    r.fulfill(ok({ items: items(cid) })),
   );
   await page.goto('/');
 
