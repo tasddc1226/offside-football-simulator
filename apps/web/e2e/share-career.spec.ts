@@ -34,7 +34,7 @@ async function stubApi(page: Page, state: { google: boolean }) {
 }
 
 async function retireNow(page: Page) {
-  await retireFromMarket(page);
+  await retireFromMarket(page, 34); // 짧은 커리어는 공유 카드 대신 안내가 나온다(T-10-032).
   await page.locator('[data-act="credits-skip"]').click();
 }
 

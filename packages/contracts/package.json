@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./headers": "./src/headers.ts",
     "./board-limits": "./src/board-limits.ts",
-    "./balance": "./src/balance-spec.ts"
+    "./balance": "./src/balance-spec.ts",
+    "./hof-rules": "./src/hof-rules.ts"
   },
   "scripts": {
     "test": "vitest run",

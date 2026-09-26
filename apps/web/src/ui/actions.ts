@@ -2,6 +2,7 @@
 // 게임 로직을 호출하고, 그 결과를 시트 뷰 모델(sheets/types.ts)로 바꿔 showSheet에 넘긴다.
 // 게임 로직 호출 순서(=RNG 소비 순서)는 포팅 전 ui.ts와 동일하게 유지한다.
 import type { BoardKey } from '@offside/contracts/board-limits';
+import { HOF_MIN_RETIRE_AGE, isHofEligible } from '@offside/contracts/hof-rules';
 import { getProfile, googleStartUrl } from '../api/client.js';
 import { PHASES, LAST_PHASE, type AttrKey } from '../game/data.js';
 import { clamp, createRng, freshSeed, setActiveRng } from '../game/rng.js';
@@ -338,7 +339,11 @@ export function confirmNew() {
 
 /** 은퇴 확인. onCancel: '조금 더 뛴다'를 누르면 할 일(기본은 닫기, 이적 시장에선 시장으로 돌아간다). */
 export function retireAsk(onCancel: () => void = closeSheet) {
-  showSheet({ kind: 'notice', eyebrow: 'Retirement', title: '정말 은퇴하시겠어요?', muted: true, text: '은퇴하면 이 선수의 커리어는 명예의 전당에 기록되고 더 이상 플레이할 수 없습니다.' }, [
+  // T-10-032: 짧은 커리어는 전체 명예의 전당에 오르지 않는다 — 은퇴 전에 미리 알린다.
+  const text = isHofEligible(appState.G!.age)
+    ? '은퇴하면 이 선수의 커리어는 명예의 전당에 기록되고 더 이상 플레이할 수 없습니다.'
+    : `은퇴하면 더 이상 플레이할 수 없습니다. 만 ${HOF_MIN_RETIRE_AGE}세 전에 은퇴한 짧은 커리어는 전체 명예의 전당과 공유 링크에 오르지 않고 '내 선수'에만 남습니다.`;
+  showSheet({ kind: 'notice', eyebrow: 'Retirement', title: '정말 은퇴하시겠어요?', muted: true, text }, [
     { label: '은퇴한다', cls: 'btn-primary', fn: doRetire },
     { label: '조금 더 뛴다', fn: onCancel },
   ]);

@@ -1,5 +1,6 @@
 import type { CareerMeta, CareerSeasonPayload, HofSort, LegendSnapshot, PublicHofEntry, RetirementSummary } from '@offside/contracts';
-import { and, desc, eq, inArray, isNotNull, sql, type AnyColumn, type SQL } from 'drizzle-orm';
+import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
+import { and, desc, eq, gte, inArray, isNotNull, sql, type AnyColumn, type SQL } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { careers, careerSeasons, goalsPlusAssists } from '../schema.js';
@@ -196,7 +197,10 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
   };
 }
 
-const isPublicRetired = and(eq(careers.status, 'retired'), isNotNull(careers.legendScore));
+/** 공개 명예의 전당(목록·상세·공유 링크·홈 라이브 은퇴 소식)에 오르는 은퇴. 짧은 커리어(T-10-032)는 내 선수에만 남는다. */
+export const isPublicRetired = and(eq(careers.status, 'retired'), isNotNull(careers.legendScore), gte(careers.retireAge, HOF_MIN_RETIRE_AGE));
+/** 내 선수 목록은 짧은 커리어도 보여 준다. */
+const isOwnRetired = and(eq(careers.status, 'retired'), isNotNull(careers.legendScore));
 
 const HOF_SORT: Record<HofSort, AnyColumn | SQL> = {
   score: careers.legendScore,
@@ -244,7 +248,7 @@ export async function listOwnHof(db: Db, profileId: string, limit = 500): Promis
   const rows = await db
     .select(publicColumns)
     .from(careers)
-    .where(and(eq(careers.profileId, profileId), isPublicRetired))
+    .where(and(eq(careers.profileId, profileId), isOwnRetired))
     .orderBy(desc(careers.legendScore), careers.retiredAt)
     .limit(limit);
   return rows.map(toPublicEntry);

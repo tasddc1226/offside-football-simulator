@@ -64,6 +64,14 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
     expect(data.feed.filter((e) => e.kind === 'season').every((e) => !('careerId' in e))).toBe(true);
   });
 
+  it('짧은 커리어 은퇴는 오늘 숫자에만 세고 은퇴 소식에는 올리지 않는다 (T-10-032)', async () => {
+    await put(ctx, cookie, `/v1/careers/${A}/seasons/2026`, seasonBody());
+    await put(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, retireAge: 21 });
+    const data = await read(ctx);
+    expect(data.stats.retiredToday).toBe(1);
+    expect(data.feed).toEqual([]);
+  });
+
   it('최근 1시간이 한산하면 기간을 넓혀 채우고, 7일보다 오래된 기록은 빠진다', async () => {
     for (const [i, id] of [A, B].entries()) {
       await put(ctx, cookie, `/v1/careers/${id}/seasons/2026`, seasonBody());
