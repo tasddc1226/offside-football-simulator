@@ -15,7 +15,7 @@ T-9-001(풀타임 마이그레이션) 이후 버전. `apps/web`은 localStorage 
 | 상황                | 자동 실행                                                                          |
 | ------------------- | ----------------------------------------------------------------------------------- |
 | 순수 문서 PR        | checkout·변경 분류 후 성공 보고. 패키지 설치·검사·배포 없음                         |
-| 코드 PR(Draft 포함) | `pr-checks` job: lint·lint:deps·typecheck·test. E2E·배포 없음                      |
+| 코드 PR(Draft 포함) | `pr-checks` job: lint·lint:deps·format:check·typecheck·test → db:check·build·check:bundle. E2E·배포 없음|
 | main 코드 변경      | `deploy-staging` job: 위 검사 → build → check:bundle → e2e → 풀타임 밸런스 스모크 → staging D1 migrate → staging 배포 → API/web 스모크 |
 | main 문서 변경      | 마지막 성공 main 이후 미배포 코드가 없을 때 검사·배포 생략                          |
 | 전체 회귀           | `Full Validation (manual)`을 필요할 때 실행. 전체 테스트·E2E·N=20000 밸런스 회귀, 배포 없음 |
@@ -46,7 +46,7 @@ main 성공 기록 조회에만 `actions: read`를 추가하며, Cloudflare secr
 
 ## main 배포 전 핵심 검사
 
-1. `node --test .github/scripts/*.test.mjs`, `pnpm lint`, `pnpm lint:deps`, `pnpm typecheck`, `pnpm test`
+1. `node --test .github/scripts/*.test.mjs`, `pnpm lint`, `pnpm lint:deps`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`
    (turbo가 web/api/contracts/scripts 전체를 돈다).
 2. `pnpm --filter @offside/api db:check` — 스키마 변경에 필요한 migration 파일 누락 확인
    (원격 데이터 복구 검사는 아니다).
