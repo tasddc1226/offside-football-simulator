@@ -87,7 +87,8 @@ async function ensureProfile(): Promise<boolean> {
   }
 }
 
-type SendResult = 'ok' | 'retry' | 'drop' | 'conflict';
+/** retry: 이 커리어만 다음 회차로 미룬다(5xx). abort: 이번 회차를 멈춘다(오프라인·세션 만료 — 뒤 항목도 같은 결과다). */
+type SendResult = 'ok' | 'retry' | 'abort' | 'drop' | 'conflict';
 
 async function sendItem(item: OutboxItem): Promise<SendResult> {
   try {
@@ -113,11 +114,11 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
     // 세션 만료: 다음 flush에서 프로필을 다시 확인하고 재시도한다(버리지 않는다).
     if (res.status === 401) {
       profileReady = false;
-      return 'retry';
+      return 'abort';
     }
     return 'drop';
   } catch {
-    return 'retry';
+    return 'abort';
   }
 }
 
@@ -160,6 +161,7 @@ async function flushOnce(): Promise<void> {
     for (const item of items) {
       if (blocked.has(item.careerId)) continue;
       const result = await sendItem(item);
+      if (result === 'abort') break;
       if (result === 'retry') {
         blocked.add(item.careerId);
         continue;

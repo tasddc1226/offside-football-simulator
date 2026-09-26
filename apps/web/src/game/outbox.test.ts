@@ -194,6 +194,19 @@ describe('T-10-045 재시도·버림·한도', () => {
     expect(queue()).toEqual([]);
   });
 
+  it('오프라인·401이면 이번 회차를 멈춘다 — 다른 커리어 항목도 보내지 않는다', async () => {
+    for (const fail of [() => Promise.reject(new Error('offline')), () => Promise.resolve(status(401))]) {
+      const fetchMock = vi.fn().mockResolvedValueOnce(ok()).mockImplementationOnce(fail).mockResolvedValue(ok());
+      vi.stubGlobal('fetch', fetchMock);
+      seed([season(CID, 2026), season(OTHER, 2026)]);
+      const { flushOutbox } = await import('./outbox.js');
+      await flushOutbox();
+      expect(puts(fetchMock)).toEqual([`${CID}/seasons/2026`]);
+      expect(queue()).toEqual([season(CID, 2026), season(OTHER, 2026)]);
+      vi.resetModules();
+    }
+  });
+
   it('409가 아닌 4xx는 재시도해도 같으므로 버린다', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(status(422)));
     vi.spyOn(console, 'warn').mockImplementation(() => {});
