@@ -23,6 +23,7 @@
   import { toast } from '../helpers.js';
   import { kstDateTime } from '../boardText.js';
   import { withEulReul, withRo } from '../format.js';
+  import LoadState, { type LoadStatus } from '../LoadState.svelte';
 
   const STATUS = { draft: ['초안', 'warn'], active: ['적용 중', 'good'], archived: ['보관', ''] } as const;
   const GROUPS = Object.entries(BALANCE_GROUPS) as [BalanceGroup, string][];
@@ -41,7 +42,7 @@
   const discardOk = () => !dirty || confirm('저장하지 않은 변경을 버릴까요?');
 
   let versions = $state<BalanceVersion[]>([]);
-  let status = $state<'loading' | 'ready' | 'error'>('loading');
+  let status = $state<LoadStatus>('loading');
   let selected = $state<number | null>(null);
   let work = $state<{ note: string; values: BalanceOverrides }>({ note: '', values: {} });
   let dirty = $state(false);
@@ -179,14 +180,7 @@
     </p>
   </div>
 
-  {#if status === 'loading'}
-    <p class="muted" aria-live="polite">불러오는 중…</p>
-  {:else if status === 'error'}
-    <div class="stack" style="gap:8px">
-      <p class="muted" style="margin:0">밸런스 설정을 불러오지 못했어요.</p>
-      <button class="icon-btn" style="align-self:flex-start" onclick={() => load()}>다시 시도</button>
-    </div>
-  {:else}
+  <LoadState {status} failText="밸런스 설정을 불러오지 못했어요." retry={() => load()}>
     <div class="row" style="gap:8px">
       <button class="btn btn-accent" data-act="new-draft" disabled={busy} onclick={() => newDraft(active?.values ?? {}, '')}>
         {active ? `v${active.version}에서 새 초안` : '새 초안'}
@@ -318,7 +312,7 @@
         </div>
       </section>
     {/if}
-  {/if}
+  </LoadState>
 </div>
 
 <style>
