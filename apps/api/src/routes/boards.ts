@@ -30,7 +30,8 @@ import { envelope, nowIso } from './shared.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
-import { BOARD_PAGE_LIMIT, EDGE, STALE } from '../edgeKeys.js';
+import { BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
+import { EDGE, STALE } from '../edgeKeys.js';
 import { hasProfanity } from '@offside/contracts/content-filter';
 
 // T-10-011 게시판(공지·릴리즈 노트). 읽기는 누구나, 글은 관리자만, 댓글은 프로필이 있는 누구나.

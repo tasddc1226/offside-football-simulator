@@ -9,8 +9,9 @@
   import { openPublicLegendById } from './legend.js';
   import { motionOK } from './motion.js';
   import CountUp from './CountUp.svelte';
+  import { LIVE_POLL_SEC } from '@offside/contracts/polling';
 
-  const POLL_MS = 60_000;
+  const POLL_MS = LIVE_POLL_SEC * 1000;
   const STEP_MS = 3_500;
   const VISIBLE = 3;
 

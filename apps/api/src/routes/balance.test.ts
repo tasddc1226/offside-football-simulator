@@ -123,7 +123,7 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
     expect((await data<Version>(await call('GET', '/v1/balance'))).values).toEqual({ injuryRate: 0.05 });
   });
 
-  it('T-10-045: 활성화하면 공개 설정과 운영 대시보드(활성 버전을 담는다)의 엣지 캐시를 함께 지운다', async () => {
+  it('T-10-045: 활성화하면 운영 대시보드가 엣지 캐시와 무관하게 새 활성 버전을 보여 준다', async () => {
     const edge = installFakeEdgeCache();
     try {
       const admin = await makeAdmin();
