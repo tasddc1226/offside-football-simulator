@@ -1,7 +1,7 @@
 // T-10-021 '홈 화면에 추가' 안내. 주소를 입력하지 않고 아이콘으로 바로 열 수 있게, 모바일 브라우저로 홈 화면에
 // 다시 들어올 때마다 보여 준다('다시 보지 않기'를 체크하면 이 브라우저에서는 그만). 홈 화면 앱으로 연 경우와 데스크톱은
 // 띄우지 않고, 설정 > 도움말에서는 언제든 다시 연다.
-import { loadKey, saveKey } from '../game/season.js';
+import { hasKey, loadKey, saveKey } from '../game/season.js';
 import { closeSheet, showSheet } from './sheetState.svelte.js';
 import { INSTALL_STEPS, detectPlatform } from './install-platform.js';
 import { appState } from './state.svelte.js';
@@ -33,6 +33,6 @@ export function showInstallGuide(withOptOut = false) {
  * 첫 화면 LCP가 됐다), 한 번 플레이하고 다시 찾아온 사람에게 권한다. */
 export function maybeShowInstallOnboarding() {
   if (appState.screen !== 'home' || loadKey<boolean>(HIDE_KEY) || isStandalone() || detectPlatform(navigator.userAgent) === 'other') return;
-  if (localStorage.getItem('ft_save') == null) return;
+  if (!hasKey('ft_save')) return;
   showInstallGuide(true);
 }

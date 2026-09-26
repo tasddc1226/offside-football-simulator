@@ -81,12 +81,12 @@ function withCacheControl(response: Response, value: string): Response {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    return withPreconnect(await route(request, env), new URL(request.url));
+    const url = new URL(request.url);
+    return withPreconnect(await route(request, env, url), url);
   },
 };
 
-async function route(request: Request, env: Env): Promise<Response> {
-  const url = new URL(request.url);
+async function route(request: Request, env: Env, url: URL): Promise<Response> {
   const asset = await env.ASSETS.fetch(request);
   const isPublicPage = PUBLIC_PATHS.has(url.pathname);
   const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';

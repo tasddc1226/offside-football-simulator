@@ -302,6 +302,10 @@ export function legendTitle(score: number): string {
 export function saveKey(k: string, v: unknown): boolean {
   try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; }
 }
+/** 값을 읽지 않고(큰 세이브를 파싱하지 않고) 키가 있는지만 본다. */
+export function hasKey(k: string): boolean {
+  try { return localStorage.getItem(k) != null; } catch { return false; }
+}
 export function loadKey<T = unknown>(k: string): T | null {
   try {
     const raw = localStorage.getItem(k);
