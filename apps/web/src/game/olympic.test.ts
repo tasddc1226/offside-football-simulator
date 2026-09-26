@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import './index.js';
 import { CLUBS } from './data.js';
-import { EVENTS } from './events-data.js';
+import { eventById } from './events-data.js';
 import { newGame, newSeason } from './engine.js';
 import { natInit, natSeasonEnd } from './national.js';
 import { createRng, setActiveRng } from './rng.js';
@@ -41,7 +41,7 @@ describe('올림픽 예선 · 차출 (T-10-016)', () => {
   });
 
   it('올림픽 해에 해외파 U-23 대표 후보에게 차출 협상 이벤트가 뜬다 — 예선 탈락이면 뜨지 않는다', () => {
-    const ev = EVENTS.find((e) => e.id === 'oly-release')!;
+    const ev = eventById('oly-release')!;
     const s = youngster(4, 2028, 'bl');
     expect(ev.cond!(s)).toBe(true);
     s.nat.qual[2028] = false;

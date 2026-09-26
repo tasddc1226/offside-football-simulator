@@ -24,12 +24,12 @@ import {
   retire,
   legendScore,
   legendTitle,
-  EVENTS,
+  eventById,
   playPhase,
 } from '../../apps/web/src/game/index.js';
 import { pick, ri, createRng, setActiveRng, freshSeed } from '../../apps/web/src/game/rng.js';
 import { setLatestBalance } from '../../apps/web/src/game/balance.js';
-import type { GameState, MarketOption, OfferOption } from '../../apps/web/src/game/types.js';
+import type { EventDef, GameState, MarketOption, OfferOption } from '../../apps/web/src/game/types.js';
 
 // ───────── Node 환경에 localStorage 스텁 (retire()/HOF 저장용, season.ts 는 이미 try/catch 로 감싸지만 예외 비용을 피한다) ─────────
 if (typeof (globalThis as Record<string, unknown>).localStorage === 'undefined') {
@@ -103,7 +103,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
             if (b.injured) { injuries++; (A.injBlocks as number)++; }
           }
           if (e) {
-            const E = EVENTS.find((x) => x.id === e)!;
+            const E = eventById(e)!;
             const idx = pickChoice(s, E);
             const r = resolveChoice(s, e, idx);
             events++; if (r.ok) evOk++;
@@ -125,7 +125,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
         inc(A.ovrByAge as Record<string, number>, rec.age, rec.ovr);
         inc(A.nByAge as Record<string, number>, rec.age);
         inc2(A.tierByAge as Record<string, Record<string, number>>, rec.age, L ? L.tier : -1);
-        res.tours.forEach((t: { inSquad: boolean; name: string; stage: string }) => {
+        res.tours.forEach((t) => {
           if (t.inSquad) inc(A.tours as Record<string, number>, t.name.replace(/^\d+ /, '').replace(/ \(.*/, '') + ':' + t.stage);
         });
         s_cur = s;
@@ -136,8 +136,8 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
             retireReason = s.age >= 35 ? 'age35' : 'washout'; retire(s); break;
           }
           const opt = pickOption(s, m);
-          const r = acceptOption(s, opt) as { reopen?: boolean } | null;
-          if (r && r.reopen && g++ < 5) { m = market(s); continue; }
+          const r = acceptOption(s, opt);
+          if (r?.reopen && g++ < 5) { m = market(s); continue; }
           break;
         }
       }
@@ -197,7 +197,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
       + Math.log10(Math.max(1, x.money)) * 2 + (S.goals || 0) * 0.5 + (S.assists || 0) * 0.3 + (S.cs || 0) * 0.3 - x.injury * 0.8
       + (x.nat ? x.nat.caps * 0.2 : 0) + (x.flags && x.flags.scouted ? 2 : 0) + (x.awards ? x.awards.length * 3 : 0);
   }
-  function pickChoice(s: GameState, E: (typeof EVENTS)[number]): number {
+  function pickChoice(s: GameState, E: EventDef): number {
     if (!smart) return ri(0, E.choices.length - 1);
     const snap = JSON.stringify(s);
     let best = 0, bv = -1e9;
