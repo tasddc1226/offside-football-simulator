@@ -57,6 +57,7 @@ jobs:
           node --test .github/scripts/*.test.mjs
           pnpm lint
           pnpm lint:deps
+          pnpm format:check
           pnpm typecheck
           pnpm test
       # 빌드·번들 크기·마이그레이션 검사는 main에서만 돌던 것 — 머지 전에 잡는다(e2e는 main에서).
@@ -127,6 +128,7 @@ jobs:
           node --test .github/scripts/*.test.mjs
           pnpm lint
           pnpm lint:deps
+          pnpm format:check
           pnpm typecheck
           pnpm test
       - name: Build before remote writes

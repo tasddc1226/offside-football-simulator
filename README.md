@@ -39,7 +39,7 @@ pnpm install
 pnpm db:migrate           # 로컬 D1 마이그레이션 (apps/api)
 pnpm dev                  # web(vite) + api(wrangler dev)
 
-pnpm lint && pnpm lint:deps && pnpm typecheck && pnpm test && pnpm build   # 머지 전 검증 체인
+pnpm lint && pnpm lint:deps && pnpm format:check && pnpm typecheck && pnpm test && pnpm build   # 머지 전 검증 체인
 pnpm --filter @offside/web e2e                                              # Playwright e2e
 
 pnpm --filter @offside/fulltime-sim sim 20000 random <tag>   # 밸런스 시뮬레이션
