@@ -8,7 +8,7 @@ import {
   RetirementResponseSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { ok, readBody } from './shared.js';
+import { ok, readBody, nowIso } from './shared.js';
 import { getCareer, getCareerOwner, listOwnHof, putCareerSeason, putRetirement } from '../db/repos/careers.js';
 import { getProfile, isLinked } from '../db/repos/profiles.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -39,8 +39,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const profile = await getProfile(db, session.profileId);
     const linked = !!profile && isLinked(profile);
     const entries = linked ? await listOwnHof(db, session.profileId) : [];
-    c.header('Cache-Control', 'private, no-store');
-    return ok(c, MyCareersResponseSchema, { linked, entries });
+    return ok(c, MyCareersResponseSchema, { linked, entries }, 200, 'private, no-store');
   });
 
   // 두 라우트 모두 URL 키(career_id+year, career_id)로 이미 자연스럽게 멱등이라 Idempotency-Key
@@ -54,7 +53,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     await assertOwnable(db, careerId, session.profileId);
 
     const body = readBody(c, PutCareerSeasonBodySchema);
-    const now = new Date().toISOString();
+    const now = nowIso();
 
     await putCareerSeason(db, {
       careerId,
@@ -99,7 +98,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'PUBLIC_NAME_REJECTED' },
       });
     }
-    const now = new Date().toISOString();
+    const now = nowIso();
 
     await putRetirement(db, { careerId, summary, publicName, snapshot, now });
     await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.

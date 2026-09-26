@@ -19,7 +19,6 @@ export function registerLiveRoutes(app: Hono<AppEnv>): void {
       const [stats, feed] = await Promise.all([liveStats(db, now), liveFeed(db, now)]);
       return { now: new Date(now).toISOString(), stats, feed };
     });
-    c.header('Cache-Control', `public, max-age=${TTL}`);
-    return ok(c, LiveResponseSchema, data);
+    return ok(c, LiveResponseSchema, data, 200, `public, max-age=${TTL}`);
   });
 }

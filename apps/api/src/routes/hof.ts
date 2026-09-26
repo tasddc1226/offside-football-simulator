@@ -27,8 +27,7 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
     const page = parseWithAppError(HofPageQuerySchema, c.req.query('page'));
     const sort = parseWithAppError(HofSortSchema, c.req.query('sort'));
     const data = await edgeCached(c, EDGE.hofList(limit, page, sort), LIST_TTL, () => listPublicHof(getDb(c), limit, page, sort));
-    c.header('Cache-Control', CACHE);
-    return ok(c, HofListResponseSchema, data);
+    return ok(c, HofListResponseSchema, data, 200, CACHE);
   });
 
   app.get('/v1/hof/:careerId', async (c) => {
@@ -42,7 +41,6 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'HOF_NOT_FOUND' },
       });
     }
-    c.header('Cache-Control', CACHE);
-    return ok(c, HofDetailResponseSchema, found);
+    return ok(c, HofDetailResponseSchema, found, 200, CACHE);
   });
 }

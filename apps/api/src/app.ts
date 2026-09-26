@@ -1,3 +1,4 @@
+import { HealthDataSchema } from '@offside/contracts';
 import { Hono } from 'hono';
 import type { AppEnv } from './env.js';
 import { errorHandler, notFoundHandler } from './errors.js';
@@ -16,6 +17,7 @@ import { registerHofRoutes } from './routes/hof.js';
 import { registerFirstsRoutes } from './routes/firsts.js';
 import { registerLiveRoutes } from './routes/live.js';
 import { registerProfileRoutes } from './routes/profile.js';
+import { ok } from './routes/shared.js';
 
 export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -26,12 +28,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   app.use('*', originGuard);
   app.use('*', bodyGuard);
 
-  app.get('/v1/health', (c) => {
-    return c.json({
-      data: { ok: true },
-      meta: { requestId: c.get('requestId') },
-    });
-  });
+  app.get('/v1/health', (c) => ok(c, HealthDataSchema, { ok: true }));
 
   registerProfileRoutes(app);
   registerAuthRoutes(app);

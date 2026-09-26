@@ -1,17 +1,33 @@
 import { successEnvelope } from '@offside/contracts';
 import type { Context } from 'hono';
 import type { AppEnv } from '../env.js';
-import { parseJsonBody, parseWithAppError, type SchemaLike } from '../errors.js';
+import { AppError, parseWithAppError, type SchemaLike } from '../errors.js';
 
-/** 성공 응답 봉투. */
-const envelope = (c: Context<AppEnv>, data: unknown) => ({ data, meta: { requestId: c.get('requestId') } });
 export const nowIso = () => new Date().toISOString();
 
-/** 성공 응답: 봉투에 담아 contracts 스키마로 검사한 뒤 보낸다. */
-export const ok = (c: Context<AppEnv>, schema: Parameters<typeof successEnvelope>[0], data: unknown, status: 200 | 201 = 200) =>
-  c.json(successEnvelope(schema).parse(envelope(c, data)), status);
+/** 성공 응답: 봉투에 담아 contracts 스키마로 검사한 뒤 보낸다. Cache-Control은 검사를 통과한 뒤에 붙인다 —
+ * 먼저 붙이면 검사 실패(503) 응답에도 공개 캐시 헤더가 따라간다. */
+export function ok(
+  c: Context<AppEnv>,
+  schema: Parameters<typeof successEnvelope>[0],
+  data: unknown,
+  status: 200 | 201 = 200,
+  cacheControl?: string,
+) {
+  const body = successEnvelope(schema).parse({ data, meta: { requestId: c.get('requestId') } });
+  if (cacheControl) c.header('Cache-Control', cacheControl);
+  return c.json(body, status);
+}
 
 /** bodyGuard가 담아 둔 요청 본문을 JSON으로 읽는다(빈 본문은 {}). */
-export const readJson = (c: Context<AppEnv>): unknown => parseJsonBody(c.get('rawBody') ?? '');
+export function readJson(c: Context<AppEnv>): unknown {
+  const raw = c.get('rawBody') ?? '';
+  try {
+    return raw.length > 0 ? JSON.parse(raw) : {};
+  } catch {
+    throw new AppError({ code: 'VALIDATION_FAILED', message: '요청 본문이 올바른 JSON이 아닙니다.' });
+  }
+}
+
 /** 요청 본문을 JSON으로 읽고 스키마로 검사한다. */
 export const readBody = <T>(c: Context<AppEnv>, schema: SchemaLike<T>): T => parseWithAppError(schema, readJson(c));

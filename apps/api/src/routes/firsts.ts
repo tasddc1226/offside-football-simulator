@@ -27,7 +27,6 @@ export function registerFirstsRoutes(app: Hono<AppEnv>): void {
       await ensureFirstsBackfilled(db);
       return { items: await listFirsts(db) };
     });
-    c.header('Cache-Control', `public, max-age=${TTL}`);
-    return ok(c, FirstsResponseSchema, data);
+    return ok(c, FirstsResponseSchema, data, 200, `public, max-age=${TTL}`);
   });
 }

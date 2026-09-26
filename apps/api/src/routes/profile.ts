@@ -13,7 +13,7 @@ import {
   type ProfileSettings,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { ok, readBody, readJson } from './shared.js';
+import { ok, readBody, readJson, nowIso } from './shared.js';
 import { commentIdentity } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
 import { sha256Hex } from '../db/hash.js';
@@ -50,7 +50,7 @@ function buildProfileResponse(record: ProfileRecord, adminEmails: string | undef
 export function registerProfileRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/profile', async (c) => {
     const db = getDb(c);
-    const now = new Date().toISOString();
+    const now = nowIso();
     const existingSession = await resolveSession(c);
     const bearerPresent = Boolean(c.req.header(AUTHORIZATION_HEADER));
 
@@ -121,7 +121,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/profile/recovery-code', requireProfile, idempotency, async (c) => {
     const db = getDb(c);
     const session = getSessionOrThrow(c);
-    const now = new Date().toISOString();
+    const now = nowIso();
 
     const result = await issueRecoveryCode(db, { profileId: session.profileId, now });
 
@@ -132,7 +132,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const session = getSessionOrThrow(c);
     const parsed = readBody(c, RecoverProfileBodySchema);
-    const now = new Date().toISOString();
+    const now = nowIso();
     const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
 
     const result = await recoverProfile(db, {
@@ -150,7 +150,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const session = getSessionOrThrow(c);
     const body = parseDeleteBody(readJson(c));
-    const now = new Date().toISOString();
+    const now = nowIso();
     const rawToken = readSessionToken(c);
     if (!rawToken) {
       throw new AppError({ code: 'PROFILE_REQUIRED', message: '프로필 세션이 필요합니다.' });
