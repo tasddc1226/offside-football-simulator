@@ -7,7 +7,14 @@ import { initSubs, legacyOvr } from './attributes.js';
 import { natInit } from './national.js';
 import { createRng, freshSeed, setActiveRng } from './rng.js';
 import { ensureTitles } from './titles.js';
+import { SAVE_VERSION } from './data.js';
 import type { GameState } from './types.js';
+
+/** 불러온 저장본을 받을지 정하고 지금 형식으로 고친다. 버전이 다르면(또는 없으면) null — 새로 시작한다. */
+export function loadSave(raw: GameState | null): { G: GameState; newCid: boolean } | null {
+  if (!raw || raw.v !== SAVE_VERSION) return null;
+  return { G: raw, ...migrateSave(raw) };
+}
 
 /** 저장본을 제자리에서 고치고 활성 RNG를 저장된 시드로 되돌린다. newCid: 커리어 ID를 이번에 새로 만들었는지
  * (부른 쪽이 바로 저장해야 한다 — 안 그러면 다음 부팅 때 또 다른 ID가 생겨 서버 기록과 어긋난다). */

@@ -2,8 +2,7 @@
 import { legendSnapshot, loadHOF, loadKey, saveKey } from '../game/season.js';
 import { createRng, freshSeed, setActiveRng } from '../game/rng.js';
 import type { GameState } from '../game/types.js';
-import { SAVE_VERSION } from '../game/data.js';
-import { migrateSave } from '../game/save.js';
+import { loadSave } from '../game/save.js';
 import { setLatestBalance, useCareerBalance } from '../game/balance.js';
 import { cachedGet } from '../api/client.js';
 import type { BalanceConfig } from '@offside/contracts';
@@ -28,14 +27,13 @@ export function loadGame() {
   // T-10-009: 유저 클럽 이름을 먼저 CLUBS에 반영해야 아래 '현재 소속 최신 이름' 갱신이 커스텀 이름을 읽는다.
   loadClubCustom();
   migrateLegacySave();
-  let G: GameState | null = loadKey<GameState>('ft_save');
-  if (G && G.v !== SAVE_VERSION) G = null;
-  if (G) {
-    const { newCid } = migrateSave(G);
+  const loaded = loadSave(loadKey<GameState>('ft_save'));
+  const G = loaded?.G ?? null;
+  if (loaded) {
+    const { G: s, newCid } = loaded;
     // T-10-005: 은퇴 상세 스냅샷 도입 전에 은퇴한 선수. 세이브(ft_save)에 남아 있는 마지막 은퇴 선수만
     // 되살릴 수 있다 — 명예의 전당 항목에 커리어 ID와 상세를 붙이고 서버에도 다시 올린다(기본 익명).
-    if (G.retired) {
-      const s = G;
+    if (s.retired) {
       const hof = loadHOF();
       const h = hof.find((x) => !x.id && x.name === s.name && x.age === s.age && x.peak === s.peak);
       if (h) {
@@ -49,7 +47,7 @@ export function loadGame() {
       }
     }
     // 새로 만든 cid는 바로 저장한다 — 안 그러면 다음 부팅 때 또 다른 cid가 생겨 서버 기록과 어긋난다.
-    if (newCid) saveKey('ft_save', G);
+    if (newCid) saveKey('ft_save', s);
   } else {
     setActiveRng(createRng(freshSeed()));
   }

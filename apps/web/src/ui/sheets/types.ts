@@ -2,9 +2,10 @@
 // ui/sheets/*.svelte가 그대로 그린다(컴포넌트는 게임 로직을 직접 부르지 않는다).
 import type { Chip } from '../sheetState.svelte.js';
 import type { TitleView } from '../../game/titles.js';
+import type { ResolveResult } from '../../game/event-runner.js';
 
 export type StoryTag = { name: string; stage: number; total: number };
-export type StoryNote = { name: string; ending: string | null; started: boolean };
+export type StoryNote = NonNullable<ResolveResult['story']>;
 export type NatGameView = { line: string; hl: boolean; detail: string };
 export type NatView = { name: string; comp: string; called: boolean; games: NatGameView[] };
 export type TourView = { name: string; stage: string; note: string; lines: string[] };

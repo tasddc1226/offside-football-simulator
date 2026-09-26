@@ -5,7 +5,7 @@ import { SAVE_VERSION } from './data.js';
 import { leagueOf } from './engine.js';
 import './event-registry.js';
 import { createRng, rnd } from './rng.js';
-import { migrateSave } from './save.js';
+import { loadSave, migrateSave } from './save.js';
 import type { GameState } from './types.js';
 
 // T-10-046: 저장본 마이그레이션. 지금 형식의 저장본은 그대로 두고, 옛 형식은 빠진 필드를 채운다.
@@ -63,6 +63,12 @@ describe('migrateSave (T-10-046)', () => {
     expect(at(2, tot / 2 - 1)).toBe(1);
     expect(at(3, tot / 2)).toBe(2);
     expect(at(5, tot)).toBe(3);
+  });
+
+  it('loadSave: 버전이 다르거나 없으면 버리고, 맞으면 고쳐서 돌려준다', () => {
+    expect(loadSave(null)).toBeNull();
+    expect(loadSave({ ...current(), v: 2 } as unknown as GameState)).toBeNull();
+    expect(loadSave(legacy())).toMatchObject({ newCid: true });
   });
 
   it('구단 이름이 바뀌었으면 현재 소속을 최신 이름으로', () => {
