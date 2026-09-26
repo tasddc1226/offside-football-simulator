@@ -4,12 +4,14 @@ import AxeBuilder from '@axe-core/playwright';
 // T-10-030 홈 라이브 현황: 서버 숫자(0은 숨김) + 소식 티커(한 줄씩 올라감, 일시정지·감속 모션이면 멈춤).
 const API = 'http://localhost:8787';
 const ID = '5a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
-const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+// 응답의 now와 소식 시각을 같은 기준 시각에서 만든다 — 따로 Date.now()를 읽으면 ms가 넘어가 '30분 전'이 '29분 전'으로 내려간다.
+const NOW = Date.now();
+const ago = (min: number) => new Date(NOW - min * 60_000).toISOString();
 const season = (min: number, over: Record<string, unknown> = {}) => ({
   kind: 'season', at: ago(min), pos: 'FW', club: '테스트 FC', league: 'K리그1', apps: 30, goals: 12, assists: 4, cs: null, honor: null, first: false, ...over,
 });
 const live = {
-  now: new Date().toISOString(),
+  now: new Date(NOW).toISOString(),
   stats: { playing: 3, seasonsToday: 17, newToday: 0, retiredToday: 2 },
   feed: [
     { kind: 'retire', at: ago(0), careerId: ID, name: '김오프', pos: 'MF', number: 8, score: 540, lastClub: '테스트 FC' },
