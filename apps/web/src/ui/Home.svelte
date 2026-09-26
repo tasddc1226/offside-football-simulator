@@ -8,6 +8,7 @@
   import HallOfFame from './HallOfFame.svelte';
   import HomeNews from './HomeNews.svelte';
   import HomeFirsts from './firsts/HomeFirsts.svelte';
+  import HomeLive from './HomeLive.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { withRo } from './format.js';
 
@@ -54,6 +55,7 @@
       </div>
     </section>
   {/if}
+  <HomeLive />
   <div class="tiles">
     <HomeFirsts />
     <button class="tile tile-link" data-act="dex" onclick={goDex}>

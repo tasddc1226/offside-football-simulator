@@ -113,7 +113,9 @@ export function matchRows(s: GameState, b: BlockResultLike): TickerRow[] {
 
 /**
  * T-10-028: 구간 경기를 한 경기씩 문자중계처럼 흘려보내며 승무패·출전 기록을 쌓는다(T-10-024에서 뺐던
- * 연출을 되살림). rows는 리포트와 같은 줄이라 스코어가 두 화면에서 같다. 건너뛰기를 누르면 즉시 끝난다.
+ * 연출을 되살림). rows는 리포트와 같은 줄이라 스코어가 두 화면에서 같다.
+ * T-10-029: 다 나온 뒤엔 바로 닫지 않고 '확인' 버튼을 눌러야 끝난다(결과를 읽을 시간). 건너뛰기는 남은
+ * 경기를 한 번에 채워 최종 기록을 보여 주고 같은 확인 버튼을 띄운다.
  */
 export function playBlock(
   head: { eyebrow: string; title: string; back: boolean; matches: number },
@@ -129,40 +131,8 @@ export function playBlock(
       done = false,
       i = 0,
       rs = 0;
-    const finish = async (skipped: boolean) => {
-      if (done) return;
-      done = true;
-      if (timer) clearTimeout(timer);
-      v.skip = null;
-      if (!skipped) {
-        for (const t of extras) {
-          v.extras.push({ text: t, done: false });
-          await wait(STEP_MS);
-          v.extras[v.extras.length - 1]!.done = true;
-        }
-        if (extras.length) await wait(200);
-      }
-      sheetState.busy = false;
-      resolve();
-    };
-    showSheet({
-      kind: 'block',
-      eyebrow: head.eyebrow,
-      title: head.title,
-      back: head.back,
-      progress: 0,
-      round: '킥오프',
-      wdl: { w: 0, d: 0, l: 0 },
-      tally: { apps: 0, g: 0, a: 0, cs: 0, rating: '-' },
-      ticker: [],
-      extras: [],
-      skip: () => void finish(true),
-    });
-    const v = sheetState.view as Extract<SheetView, { kind: 'block' }>;
-    const tickOnce = () => {
-      // 시트가 다른 내용으로 바뀌었거나 닫혔으면 건너뛴 것으로 끝낸다.
-      if (sheetState.view !== v) return void finish(true);
-      if (i >= n) return void finish(false);
+    /** 다음 경기 하나를 기록에 더한다. */
+    const playNext = () => {
       const m = b.games[i]!,
         row = rows[i]!;
       i++;
@@ -179,6 +149,58 @@ export function playBlock(
       if (v.ticker.length > 5) v.ticker.length = 5;
       v.progress = i / n;
       v.round = `${m.rd}R / ${head.matches}R`;
+    };
+    const finish = async (skipped: boolean) => {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      v.skip = null;
+      if (skipped) {
+        while (i < n) playNext();
+        v.extras.push(...extras.map((text) => ({ text, done: true })));
+      } else {
+        for (const t of extras) {
+          v.extras.push({ text: t, done: false });
+          await wait(STEP_MS);
+          v.extras[v.extras.length - 1]!.done = true;
+        }
+      }
+      // 확인을 누를 때까지 busy로 두어 배경 클릭·스와이프로 닫히지 않게 한다.
+      sheetState.buttons = [
+        {
+          label: '확인',
+          cls: 'btn-primary',
+          fn: () => {
+            sheetState.busy = false;
+            resolve();
+          },
+        },
+      ];
+      void tick().then(() => sheetEl?.querySelector<HTMLButtonElement>('[data-sheet="0"]')?.focus({ preventScroll: true }));
+    };
+    showSheet({
+      kind: 'block',
+      eyebrow: head.eyebrow,
+      title: head.title,
+      back: head.back,
+      progress: 0,
+      round: '킥오프',
+      wdl: { w: 0, d: 0, l: 0 },
+      tally: { apps: 0, g: 0, a: 0, cs: 0, rating: '-' },
+      ticker: [],
+      extras: [],
+      skip: () => void finish(true),
+    });
+    const v = sheetState.view as Extract<SheetView, { kind: 'block' }>;
+    const tickOnce = () => {
+      // 시트가 다른 내용으로 바뀌었거나 닫혔으면 확인 없이 끝낸다.
+      if (sheetState.view !== v) {
+        done = true;
+        sheetState.busy = false;
+        return resolve();
+      }
+      if (i >= n) return void finish(false);
+      playNext();
       timer = setTimeout(tickOnce, step);
     };
     void tick().then(tickOnce);

@@ -12,7 +12,7 @@ import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
 import type { PhaseReport } from './sheets/types.js';
 
-export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex' | 'hof' | 'firsts' | 'admin';
+export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex' | 'hof' | 'firsts' | 'admin' | 'shared';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
 export type HofTab = 'all' | 'mine';
 
@@ -68,6 +68,8 @@ export const appState = $state<{
   hof: { tab: HofTab; page: number; sort: HofSort };
   /** 선수 상세의 '← 명예의 전당'이 돌아갈 화면. */
   legendBack: 'home' | 'hof';
+  /** T-10-029. 공유 링크(/career/:id)로 들어온 은퇴 선수 id — 보기 전용 화면(SharedCareer)이 읽는다. */
+  sharedCareer: string | null;
   /** T-10-024. 방금 끝난 구간 리포트(시즌 탭 맨 위). 저장하지 않는다 — 새로고침하면 사라진다. */
   report: PhaseReport | null;
 }>({
@@ -92,6 +94,7 @@ export const appState = $state<{
   ownerConflict: null,
   hof: { tab: 'all', page: 1, sort: 'score' },
   legendBack: 'home',
+  sharedCareer: null,
   report: null,
 });
 

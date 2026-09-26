@@ -9,6 +9,7 @@ import { appState, type LegendView } from './state.svelte.js';
 import { toast, uploadRetirement } from './helpers.js';
 import { anonName, totals } from './format.js';
 import { mainTitle } from '../game/titles.js';
+import { SHARE_PATH } from '../share-path.js';
 
 export function viewFromEntry(h: HofEntry): LegendView {
   return {
@@ -47,7 +48,11 @@ export function viewFromGame(s: GameState): LegendView {
 function viewFromPublic(e: PublicHofEntry, d: LegendView['d']): LegendView {
   // 내 기기에 있는 선수면 로컬 항목을 우선한다(이름 공개 토글 가능).
   const own = loadHOF().find((x) => x.id === e.id);
-  if (own) return viewFromEntry(own);
+  return own ? viewFromEntry(own) : publicView(e, d);
+}
+
+/** 다른 유저에게 보이는 그대로(공개하지 않은 이름은 익명). */
+function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
   return {
     name: e.name ?? anonName(e.pos, e.number),
     number: e.number,
@@ -76,7 +81,12 @@ export function openLocalLegend(h: HofEntry) {
 
 export async function openPublicLegend(e: PublicHofEntry) {
   if (!e.hasDetail) return show(viewFromPublic(e, null));
-  const r = await getHofDetail(e.id);
+  return openPublicLegendById(e.id);
+}
+
+/** T-10-030 홈 라이브 피드의 은퇴 소식처럼 id만 아는 선수를 연다. */
+export async function openPublicLegendById(careerId: string) {
+  const r = await getHofDetail(careerId);
   if (!r.ok) {
     toast('상세 기록을 불러오지 못했습니다.');
     return;
@@ -96,3 +106,26 @@ export function setLegendPublic(h: HofEntry, on: boolean) {
   uploadRetirement(h.id, h);
   toast(on ? '명예의 전당에 이름을 공개했습니다.' : '명예의 전당에서 익명으로 바꿨습니다.');
 }
+
+// ───────── T-10-029 은퇴 커리어 공유 링크 ─────────
+// 링크는 `/career/<커리어 id>` — 공개 명예의 전당 상세(/v1/hof/:id)를 보기 전용 화면(SharedCareer)으로
+// 그린다. 커리어 id는 클라이언트가 만든 UUID라 추측할 수 없다. 워커(worker.ts APP_PATHS)가 앱 셸로 내려 준다.
+export const shareUrl = (careerId: string) => `${window.location.origin}/career/${careerId}`;
+
+/** 공유 링크로 들어왔으면 보기 전용 화면을 연다(앱 시작 때 한 번). */
+export function routeSharedCareer() {
+  const m = SHARE_PATH.exec(window.location.pathname);
+  if (!m) return;
+  appState.sharedCareer = m[1]!.toLowerCase();
+  appState.screen = 'shared';
+}
+
+/** 공유된 선수를 받는다 — 링크를 연 사람이 선수 주인이어도 다른 사람에게 보이는 그대로 그린다. */
+export async function loadSharedLegend(careerId: string): Promise<LegendView | 'missing' | 'error'> {
+  const r = await getHofDetail(careerId);
+  if (r.ok) return publicView(r.data.entry, r.data.snapshot);
+  return r.error.retryable ? 'error' : 'missing';
+}
+
+/** 공유하려고 로그인하고 돌아왔을 때 선수 상세의 공유 카드로 화면을 옮기라는 표시(ShareCard가 지운다). */
+export const shareFocus = { pending: false };

@@ -37,6 +37,11 @@
   $effect(() => {
     if (appState.screen === 'admin' && !Admin) void import('./Admin.svelte').then((m) => (Admin = m.default));
   });
+  // T-10-029: 공유 링크로 들어온 은퇴 커리어(보기 전용).
+  let Shared = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'shared' && !Shared) void import('./SharedCareer.svelte').then((m) => (Shared = m.default));
+  });
 </script>
 
 <!-- 화면 전환 모션(T-10-003 goal 3): appState.screen을 key로 써서 화면이 바뀔 때만 새로 마운트해
@@ -65,6 +70,8 @@
       {#if Board}<Board />{/if}
     {:else if appState.screen === 'firsts'}
       {#if Firsts}<Firsts />{/if}
+    {:else if appState.screen === 'shared'}
+      {#if Shared}<Shared />{/if}
     {:else if appState.screen === 'admin'}
       {#if Admin}<Admin />{/if}
     {:else}

@@ -14,7 +14,7 @@ async function clearPendingEvent(page: Page) {
   await expect(page.locator('#sheet')).toBeHidden();
 }
 
-test('경기 중계 시트가 끝나면 시즌 탭 리포트로 넘어가고, 이벤트는 버튼으로 연다', async ({ page }) => {
+test('경기 중계 시트가 끝나면 확인을 눌러 시즌 탭 리포트로 넘어가고, 이벤트는 버튼으로 연다', async ({ page }) => {
   await startCareer(page);
   const report = page.locator('[data-report]');
 
@@ -24,21 +24,22 @@ test('경기 중계 시트가 끝나면 시즌 탭 리포트로 넘어가고, �
   await expect(report).toContainText('시즌 준비를 마쳤습니다');
   await clearPendingEvent(page);
 
-  // 중계 시트에서 마지막으로 보인 승무패를 기록해 두고, 리포트의 승무패와 맞춰 본다.
-  await page.evaluate(() => {
-    new MutationObserver(() => {
-      const el = document.querySelector('[data-block-wdl]');
-      if (el) (window as unknown as { lastWdl: string }).lastWdl = el.textContent ?? '';
-    }).observe(document.body, { subtree: true, childList: true, characterData: true });
-  });
   await page.locator('[data-act="advance"]').click();
-  await expect(page.locator('#sheet')).toContainText('전반기 진행 중');
-  await expect(page.locator('#sheet .ticker.live > div').first()).toBeVisible();
+  const sheet = page.locator('#sheet');
+  await expect(sheet).toContainText('전반기 진행 중');
+  await expect(sheet.locator('.ticker.live > div').first()).toBeVisible();
   await expect(page.locator('#an-skip')).toBeVisible();
-  await expect(page.locator('#sheet')).toBeHidden({ timeout: 15_000 });
+  // T-10-029: 다 나오면 바로 닫히지 않고 확인 버튼을 기다린다. 중계의 최종 승무패가 리포트와 같다.
+  const ok = sheet.locator('[data-sheet="0"]');
+  await expect(ok).toHaveText('확인', { timeout: 15_000 });
+  await expect(page.locator('#an-skip')).toHaveCount(0);
+  const finalWdl = (await sheet.locator('[data-block-wdl]').textContent())!;
+  await page.waitForTimeout(500);
+  await expect(sheet).toBeVisible();
+  await ok.click();
+  await expect(sheet).toBeHidden();
   await expect(report).toContainText('전반기 결과');
-  const lastWdl = await page.evaluate(() => (window as unknown as { lastWdl?: string }).lastWdl);
-  await expect(report.locator('.rp-dots')).toHaveAttribute('aria-label', `경기 결과 ${lastWdl}`);
+  await expect(report.locator('.rp-dots')).toHaveAttribute('aria-label', `경기 결과 ${finalWdl}`);
   const games = await report.locator('.rp-dots li').count();
   expect(games).toBeGreaterThan(0);
   await report.getByText(`경기별 기록 ${games}경기`).click();
@@ -65,7 +66,7 @@ test('경기 중계 시트가 끝나면 시즌 탭 리포트로 넘어가고, �
   }
 });
 
-test('경기 중계는 건너뛰기로 바로 끝내고 리포트로 간다 (T-10-028)', async ({ page }) => {
+test('경기 중계는 건너뛰기로 최종 기록까지 채우고, 확인을 누르면 리포트로 간다 (T-10-029)', async ({ page }) => {
   await startCareer(page);
   await page.locator('[data-act="advance"]').click();
   await expect(page.locator('#sheet')).toBeHidden({ timeout: 10_000 });
@@ -73,7 +74,12 @@ test('경기 중계는 건너뛰기로 바로 끝내고 리포트로 간다 (T-1
 
   await page.locator('[data-act="advance"]').click();
   await page.locator('#an-skip').click();
-  await expect(page.locator('#sheet')).toBeHidden({ timeout: 1_500 });
+  // 건너뛰면 남은 경기를 한 번에 채워 최종 기록과 확인 버튼을 보여 준다.
+  const ok = page.locator('#sheet [data-sheet="0"]');
+  await expect(ok).toHaveText('확인', { timeout: 1_500 });
+  await expect(page.locator('#sheet .prog i')).toHaveAttribute('style', /width:\s*100%/);
+  await ok.click();
+  await expect(page.locator('#sheet')).toBeHidden();
   await expect(page.locator('[data-report]')).toContainText('전반기 결과');
 });
 

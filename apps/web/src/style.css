@@ -682,3 +682,50 @@ button.title-item:hover { border-color: var(--pitch-2); }
 .first-time { font-size: 13px; color: var(--muted); }
 .first-who { grid-column: 1; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .first-row.locked .first-label { color: var(--muted); font-weight: 600; }
+
+/* ───────── 은퇴 크레딧 (T-10-029) ─────────
+   섹션이 아래에서 크게 떠오르고, 점수 막대가 차례로 차오르고, 등급 배지가 점수 카운트업 뒤에 튀어나온다.
+   opacity를 쓰지 않는다(전환 중간 프레임의 axe 명도 대비, T-10-003 참고) — 등장 전 배지는 scale(0)로 숨긴다. */
+.credit-wrap { display: flex; flex-direction: column; gap: 14px; }
+.credit-in { animation: credit-rise .9s cubic-bezier(.16,.84,.24,1) both; scroll-margin-block: 16px 88px; }
+@keyframes credit-rise { from { transform: translateY(72px) scale(.97); } }
+.credit-late { animation: credit-pop .45s cubic-bezier(.3,1.6,.5,1) both; animation-delay: 1.5s; }
+@keyframes credit-pop { from { transform: scale(0); } }
+.credit-in .legend-bar i { animation: fill 1s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 90ms + 250ms); }
+.credit-in .timeline-row { animation: slide-in .4s ease-out both; animation-delay: calc(var(--i, 0) * 70ms); }
+.credits-skip {
+  position: fixed; right: 16px; bottom: calc(16px + var(--safe-b)); z-index: 5;
+  border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; min-height: 40px;
+  background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 600;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+}
+@media (prefers-reduced-motion: reduce) { .credit-in, .credit-late, .credit-in .legend-bar i, .credit-in .timeline-row { animation: none; } }
+
+/* T-10-029 은퇴 커리어 공유 */
+.share-url { width: 100%; font: inherit; font-size: 13px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.shared-note { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--muted); text-align: center; }
+
+/* T-10-030 홈 라이브 현황 */
+.live { display: flex; flex-direction: column; gap: 12px; }
+.live-head { display: flex; align-items: center; gap: 10px; }
+.live-head h2 { margin: 0; font-size: 17px; }
+.live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bad); flex-shrink: 0; animation: live-pulse 1.8s ease-out infinite; }
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(192, 57, 47, .45); } 70%, 100% { box-shadow: 0 0 0 9px rgba(192, 57, 47, 0); } }
+.live-pause { font-size: 12px; }
+.live-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; }
+.live-stats div { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; }
+.live-stats b { font-family: var(--display); font-size: 22px; line-height: 1.1; }
+.live-stats span { font-size: 11px; color: var(--muted); }
+.live-rows-wrap { --row: 44px; height: calc(var(--row) * 3); overflow: hidden; }
+.live-rows { list-style: none; margin: 0; padding: 0; }
+.live-rows.shift { transform: translateY(calc(var(--row) * -1)); transition: transform .55s cubic-bezier(.3, .7, .3, 1); }
+.live-row { height: var(--row); display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--line); font-size: 13px; }
+.live-row .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.what { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; text-decoration: underline dotted var(--line); text-underline-offset: 3px; }
+.live-row time { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.live-kind { width: 7px; height: 7px; border-radius: 50%; background: var(--line); flex-shrink: 0; }
+.live-kind.retire { background: var(--accent); }
+.live-kind.honor { background: var(--good); }
+.live-kind.first { background: var(--pitch-2); }
+.live-row.fresh .live-kind { animation: pop .6s cubic-bezier(.2, 1.6, .4, 1); }
+@media (prefers-reduced-motion: reduce) { .live-dot, .live-row.fresh .live-kind { animation: none; } .live-rows.shift { transition: none; } }

@@ -2,6 +2,7 @@
 // 게임 로직을 호출하고, 그 결과를 시트 뷰 모델(sheets/types.ts)로 바꿔 showSheet에 넘긴다.
 // 게임 로직 호출 순서(=RNG 소비 순서)는 포팅 전 ui.ts와 동일하게 유지한다.
 import type { BoardKey } from '@offside/contracts/board-limits';
+import { getProfile, googleStartUrl } from '../api/client.js';
 import { PHASES, LAST_PHASE, type AttrKey } from '../game/data.js';
 import { clamp, createRng, freshSeed, setActiveRng } from '../game/rng.js';
 import { generateCandidates } from '../game/candidates.js';
@@ -15,7 +16,7 @@ import { isHiddenEvent } from '../game/dexGroups.js';
 import { markDexSeen } from './dex.js';
 import { natWindow, scoreLine, type IntlResult } from '../game/national.js';
 import { compsPhase } from '../game/comps.js';
-import { endSeason, market, acceptOption, retire } from '../game/season.js';
+import { endSeason, market, acceptOption, retire, loadHOF } from '../game/season.js';
 import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
 import { checkTitles, titleView } from '../game/titles.js';
@@ -24,6 +25,7 @@ import { appState, randomName, type HofTab } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { seasonLabelOf } from './format.js';
 import { motionOK } from './motion.js';
+import { openLocalLegend, shareFocus } from './legend.js';
 import {
   closeSheet, matchRows, playBlock, playJudge, playSteps, sheetState, showSheet,
   type BlockResultLike, type Chip,
@@ -263,7 +265,8 @@ function showMarket(m: { options: MarketOption[]; note: string; canRetire: boole
         return { name: o.name, lg: o.desc ?? '', salary: null, sub: null };
       }),
     },
-    m.canRetire ? [{ label: '은퇴를 선언한다', fn: () => doRetire() }] : [],
+    // T-10-029: 은퇴는 언제든 고를 수 있다. 은퇴할 때가 아니면(canRetire=false) 한 번 더 묻고, 취소하면 이 창으로 돌아온다.
+    [{ label: '은퇴하기', fn: () => (m.canRetire ? doRetire() : retireAsk(nextPending)) }],
   );
 }
 
@@ -333,10 +336,11 @@ export function confirmNew() {
   );
 }
 
-export function retireAsk() {
+/** 은퇴 확인. onCancel: '조금 더 뛴다'를 누르면 할 일(기본은 닫기, 이적 시장에선 시장으로 돌아간다). */
+export function retireAsk(onCancel: () => void = closeSheet) {
   showSheet({ kind: 'notice', eyebrow: 'Retirement', title: '정말 은퇴하시겠어요?', muted: true, text: '은퇴하면 이 선수의 커리어는 명예의 전당에 기록되고 더 이상 플레이할 수 없습니다.' }, [
     { label: '은퇴한다', cls: 'btn-primary', fn: doRetire },
-    { label: '조금 더 뛴다', fn: closeSheet },
+    { label: '조금 더 뛴다', fn: onCancel },
   ]);
 }
 
@@ -402,25 +406,33 @@ export function rollCandidates() {
 }
 
 // ───────── 구글 OAuth 콜백 (/settings?google=linked|switched|error) ─────────
-/** T-10-028 소식 화면에서 댓글을 쓰려고 로그인하면, 돌아와서 그 글을 다시 연다. */
-const BOARD_RETURN_KEY = 'ft_board_return';
+/** 로그인을 마치고 돌아와 다시 열 곳. T-10-028 소식 글(댓글), T-10-029 내 은퇴 선수(공유). */
+export type LoginReturn = { board: BoardKey; postId: string | null } | { career: string };
+const LOGIN_RETURN_KEY = 'ft_board_return';
 /** null이면 기록을 지운다(설정에서 로그인할 때). */
-export function rememberBoardReturn(to: { board: BoardKey; postId: string | null } | null) {
+export function rememberLoginReturn(to: LoginReturn | null) {
   try {
-    if (to) sessionStorage.setItem(BOARD_RETURN_KEY, JSON.stringify(to));
-    else sessionStorage.removeItem(BOARD_RETURN_KEY);
+    if (to) sessionStorage.setItem(LOGIN_RETURN_KEY, JSON.stringify(to));
+    else sessionStorage.removeItem(LOGIN_RETURN_KEY);
   } catch {
     // 저장소를 못 쓰면 평소처럼 설정 화면으로 돌아온다.
   }
 }
-function takeBoardReturn(): { board: BoardKey; postId: string | null } | null {
+function takeLoginReturn(): LoginReturn | null {
   try {
-    const raw = sessionStorage.getItem(BOARD_RETURN_KEY);
-    sessionStorage.removeItem(BOARD_RETURN_KEY);
-    return raw ? (JSON.parse(raw) as { board: BoardKey; postId: string | null }) : null;
+    const raw = sessionStorage.getItem(LOGIN_RETURN_KEY);
+    sessionStorage.removeItem(LOGIN_RETURN_KEY);
+    return raw ? (JSON.parse(raw) as LoginReturn) : null;
   } catch {
     return null;
   }
+}
+/** 구글 로그인을 시작한다. 로그인은 프로필 세션이 있어야 시작된다 — 없으면 GET /v1/profile이 익명
+ * 프로필을 만든다. */
+export async function startGoogleLogin(back: LoginReturn | null) {
+  rememberLoginReturn(back);
+  await getProfile();
+  window.location.assign(googleStartUrl());
 }
 export function handleOAuthReturn() {
   const url = new URL(window.location.href);
@@ -435,8 +447,16 @@ export function handleOAuthReturn() {
         : `구글 로그인에 실패했습니다${reason ? ` (${reason})` : ''}.`;
   toast(msg);
   window.history.replaceState({}, '', '/');
-  const back = takeBoardReturn();
-  if (back && google !== 'error') return openBoard(back.board, back.postId);
+  const back = takeLoginReturn();
+  if (back && google !== 'error') {
+    if ('board' in back) return openBoard(back.board, back.postId);
+    // 은퇴 화면에서 공유하려고 로그인했으면 그 선수의 상세(공유 카드가 있다)로 돌아온다.
+    const h = loadHOF().find((x) => x.id === back.career);
+    if (h) {
+      shareFocus.pending = true;
+      return openLocalLegend(h);
+    }
+  }
   // 계정 패널이 설정 화면에 있으므로, 로그인을 마치고 돌아오면 설정 화면을 연다.
   appState.screen = 'settings';
 }

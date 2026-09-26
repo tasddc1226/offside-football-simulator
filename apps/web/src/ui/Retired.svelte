@@ -6,14 +6,19 @@
   import Topbar from './Topbar.svelte';
   import LegendReport from './LegendReport.svelte';
   import PublishCard from './PublishCard.svelte';
+  import ShareCard from './ShareCard.svelte';
 
   const v = $derived(viewFromGame(appState.G!));
 </script>
 
 <div class="wrap">
   <Topbar />
-  <LegendReport {v} />
-  {#if v.own?.id}<PublishCard h={v.own} />{/if}
-  <button class="btn btn-primary btn-block" data-act="new" onclick={goNew}>새 커리어 킥오프 →</button>
-  <button class="btn btn-block" data-act="home" onclick={goHome}>명예의 전당 보기</button>
+  <!-- T-10-029: 크레딧이 끝나면 명예의 전당 공개·공유·다음 버튼이 마지막으로 올라온다. -->
+  <LegendReport {v} credits>
+    {#snippet end()}
+      {#if v.own?.id}<PublishCard h={v.own} /><ShareCard h={v.own} />{/if}
+      <button class="btn btn-primary btn-block" data-act="new" onclick={goNew}>새 커리어 킥오프 →</button>
+      <button class="btn btn-block" data-act="home" onclick={goHome}>명예의 전당 보기</button>
+    {/snippet}
+  </LegendReport>
 </div>
