@@ -8,22 +8,9 @@ import { createProfile } from '../db/repos/profiles.js';
 import { createSession } from '../db/repos/sessions.js';
 import { idempotency, profiles, sessions } from '../db/schema.js';
 import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
+import { issueCookie } from '../test/http.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
-
-function extractSessionToken(setCookie: string): string {
-  const token = /offside_session=([^;]+)/.exec(setCookie)?.[1];
-  if (!token) throw new Error('Set-Cookie에 offside_session이 없습니다.');
-  return token;
-}
-
-async function issueCookie(ctx: TestD1): Promise<{ token: string; profileId: string }> {
-  const app = createApp();
-  const res = await app.request('/v1/profile', {}, ctx.env);
-  const token = extractSessionToken(res.headers.get('Set-Cookie') ?? '');
-  const body = successEnvelope(ProfileSchema).parse(await res.json());
-  return { token, profileId: body.data.id };
-}
 
 describe('GET /v1/profile', () => {
   let ctx: TestD1;

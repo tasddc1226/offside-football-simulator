@@ -1,19 +1,14 @@
-import { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX, ClubCustomResponseSchema, ErrorEnvelopeSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX, ClubCustomResponseSchema, ErrorEnvelopeSchema, successEnvelope } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { clubCustoms } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { issueCookie } from '../test/http.js';
 
 const ORIGIN = 'http://localhost:5173';
 const Res = successEnvelope(ClubCustomResponseSchema);
 
-async function issueCookie(ctx: TestD1): Promise<{ profileId: string; cookie: string }> {
-  const res = await createApp().request('/v1/profile', {}, ctx.env);
-  const token = /offside_session=([^;]+)/.exec(res.headers.get('Set-Cookie') ?? '')?.[1];
-  const body = successEnvelope(ProfileSchema).parse(await res.json());
-  return { profileId: body.data.id, cookie: `offside_session=${token}` };
-}
 const get = (ctx: TestD1, cookie?: string) =>
   createApp().request('/v1/club-custom', { headers: { Origin: ORIGIN, ...(cookie ? { Cookie: cookie } : {}) } }, ctx.env);
 const put = (ctx: TestD1, cookie: string, body: unknown) =>

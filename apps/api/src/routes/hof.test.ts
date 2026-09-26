@@ -1,17 +1,11 @@
-import { HofDetailResponseSchema, HofListResponseSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { HofDetailResponseSchema, HofListResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { issueCookie } from '../test/http.js';
 
 const ORIGIN = 'http://localhost:5173';
 const CAREER_ID = '3b1d6c1e-2a4f-4f7e-9a0b-7c8d9e0f1a2b';
-
-async function issueCookie(ctx: TestD1): Promise<string> {
-  const res = await createApp().request('/v1/profile', {}, ctx.env);
-  const token = /offside_session=([^;]+)/.exec(res.headers.get('Set-Cookie') ?? '')?.[1];
-  successEnvelope(ProfileSchema).parse(await res.json());
-  return `offside_session=${token}`;
-}
 
 function put(ctx: TestD1, cookie: string, path: string, body: unknown) {
   return createApp().request(
@@ -48,7 +42,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
 
   beforeEach(async () => {
     ctx = await createTestD1();
-    cookie = await issueCookie(ctx);
+    cookie = (await issueCookie(ctx)).cookie;
     expect((await put(ctx, cookie, `/v1/careers/${CAREER_ID}/seasons/2026`, season)).status).toBe(200);
   });
   afterEach(async () => {

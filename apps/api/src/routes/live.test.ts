@@ -1,18 +1,14 @@
-import { LiveResponseSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { LiveResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { issueCookie } from '../test/http.js';
 
 const ORIGIN = 'http://localhost:5173';
 const A = '0c000000-0000-4000-8000-00000000000a';
 const B = '0c000000-0000-4000-8000-00000000000b';
 const C = '0c000000-0000-4000-8000-00000000000c';
 
-async function issueCookie(ctx: TestD1): Promise<string> {
-  const res = await createApp().request('/v1/profile', {}, ctx.env);
-  successEnvelope(ProfileSchema).parse(await res.json());
-  return `offside_session=${/offside_session=([^;]+)/.exec(res.headers.get('Set-Cookie') ?? '')?.[1]}`;
-}
 const put = (ctx: TestD1, cookie: string, path: string, body: unknown) =>
   createApp().request(path, { method: 'PUT', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie }, body: JSON.stringify(body) }, ctx.env);
 const seasonBody = (over: Record<string, unknown> = {}) => ({
@@ -34,7 +30,7 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
 
   beforeEach(async () => {
     ctx = await createTestD1();
-    cookie = await issueCookie(ctx);
+    cookie = (await issueCookie(ctx)).cookie;
   });
   afterEach(async () => {
     await ctx.dispose();

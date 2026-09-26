@@ -1,25 +1,12 @@
-import { ErrorEnvelopeSchema, MyCareersResponseSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { ErrorEnvelopeSchema, MyCareersResponseSchema, successEnvelope } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { careers, careerSeasons, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { issueCookie } from '../test/http.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
-
-function extractSessionToken(setCookie: string): string {
-  const token = /offside_session=([^;]+)/.exec(setCookie)?.[1];
-  if (!token) throw new Error('Set-Cookie에 offside_session이 없습니다.');
-  return token;
-}
-
-async function issueCookie(ctx: TestD1): Promise<{ profileId: string; cookie: string }> {
-  const app = createApp();
-  const res = await app.request('/v1/profile', {}, ctx.env);
-  const token = extractSessionToken(res.headers.get('Set-Cookie') ?? '');
-  const body = successEnvelope(ProfileSchema).parse(await res.json());
-  return { profileId: body.data.id, cookie: `offside_session=${token}` };
-}
 
 function jsonInit(input: { method: 'PUT' | 'POST'; body?: unknown; cookie?: string; origin?: string | null }): RequestInit {
   const { method, body, cookie, origin = ALLOWED_ORIGIN } = input;
