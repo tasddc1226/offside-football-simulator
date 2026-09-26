@@ -89,12 +89,12 @@ export function natWindow(s: GameState) {
   natInit(s);
   if (leagueOf(s.leagueId).amateur || s.phase < 1 || s.phase > LAST_PHASE) return null;
   const names = WINDOW_NAME[s.phase] ?? [];
-  const out = names.map((name) => natOne(s, name)).filter(Boolean);
+  const out = names.map((name) => natOne(s, name)).filter((x) => x !== null);
   return out.length ? out : null;
 }
 function natOne(s: GameState, name: string) {
   const sc = callupScore(s), thr = NT_THRESHOLD + gauss() * 1.2;
-  if (s.injury > 0 || sc < thr) return s.nat.caps && sc >= thr - 4 ? { name, called: false } : null;
+  if (s.injury > 0 || sc < thr) return s.nat.caps && sc >= thr - 4 ? { name, called: false as const } : null;
   const qual = isQualYear(s.year);
   const comp = qual ? `${nextWC(s.year)} 월드컵 아시아 예선` : '친선 A매치';
   const role: 'starter' | 'sub' = sc >= 85 || s.nat.captain ? 'starter' : chance(0.45) ? 'starter' : 'sub';
@@ -110,7 +110,7 @@ function natOne(s: GameState, name: string) {
   const games = [o1, o2].map((o) => simIntl(s, o, role, comp));
   addStat(s, 'cond', -6);
   games.forEach((m) => log(s, `[${comp}] ${scoreLine(m)}${m.mins ? ` · ${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''}` : ' · 벤치'}`));
-  return { name, comp, called: true, role, games };
+  return { name, comp, called: true as const, role, games };
 }
 
 interface TournamentDef {

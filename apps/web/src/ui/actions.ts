@@ -9,13 +9,12 @@ import {
   leagueOf, fmtMoney, snapshot, diffChips, newGame, isPro,
   isSafe, resolveChoice, txt, roleOf, STORIES, teamRank, roundRange,
 } from '../game/engine.js';
-import { playPhase } from '../game/turn.js';
+import { playPhase, type PhaseResult } from '../game/turn.js';
 import { eventById } from '../game/events-data.js';
-import '../game/event-registry.js';
 import { choiceOdds } from '../game/balance.js';
 import { isHiddenEvent } from '../game/dexGroups.js';
 import { markDexSeen } from './dex.js';
-import { scoreLine, type natWindow, type NatTourResult } from '../game/national.js';
+import { scoreLine, type NatTourResult } from '../game/national.js';
 import { endSeason, market, acceptOption, retire, type SeasonEndResult } from '../game/season.js';
 import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
@@ -166,29 +165,24 @@ export async function chooseEvent(i: number) {
   );
 }
 
-function natViews(nt: ReturnType<typeof natWindow>): NatView[] {
-  return (nt ?? []).flatMap((x): NatView[] =>
-    x
-      ? [
-          {
-            name: x.name,
-            // 명단에서 빠진 차출(called: false)은 대회명·경기가 없다.
-            comp: x.comp ?? '',
-            called: x.called,
-            games: x.called && x.games
-              ? x.games.map((m) => ({
-                  line: scoreLine(m),
-                  hl: m.res === 'W',
-                  detail: m.mins ? `${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''} · 평점 ${m.rating}` : '벤치',
-                }))
-              : [],
-          },
-        ]
+function natViews(nt: PhaseResult['nt']): NatView[] {
+  // 명단에서 빠진 차출(called: false)은 대회명·경기가 없다.
+  return (nt ?? []).map((x) => ({
+    name: x.name,
+    comp: x.called ? x.comp : '',
+    called: x.called,
+    games: x.called
+      ? x.games.map((m) => ({
+          line: scoreLine(m),
+          hl: m.res === 'W',
+          detail: m.mins ? `${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''} · 평점 ${m.rating}` : '벤치',
+        }))
       : [],
-  );
+  }));
 }
 function tourView(x: NatTourResult): TourView {
-  const matches = x.matches;
+  // 저장된 결산 시트(pending.res)에서 복원한 옛 세이브는 필드가 비어 있을 수 있다.
+  const matches = x.matches ?? [];
   return {
     name: x.name,
     stage: x.stage,
@@ -200,7 +194,8 @@ function tourView(x: NatTourResult): TourView {
 }
 
 function showSeasonEnd(res: SeasonEndResult) {
-  const { rec, trophies, awards, notes, gala, tours, miles, titles } = res;
+  // pending.res로 복원된 옛 세이브에는 뒤에 추가된 필드(titles 등)가 없을 수 있다.
+  const { rec, trophies, awards, notes, gala = [], tours = [], miles = [], titles = [] } = res;
   const s = appState.G!;
   const [col, colLabel] = s.pos === 'GK' || s.pos === 'DF' ? [rec.cs, '무실점'] : [rec.assists, '도움'];
   // T-10-034: indexOf(rec)는 $state 프록시라 늘 -1이었다(이적 팬 반응이 안 나옴) — 연도로 찾는다.

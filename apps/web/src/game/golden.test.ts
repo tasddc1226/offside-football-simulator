@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { ATTR_KEYS, LAST_PHASE, TRAITS, TYPES } from './data.js';
 import { newGame, resolveChoice } from './engine.js';
 import { eventById } from './events-data.js';
-import './event-registry.js';
 import { acceptOption, endSeason, legendScore, market, retire } from './season.js';
 import { playPhase } from './turn.js';
 import { createRng, pick, ri, setActiveRng } from './rng.js';
