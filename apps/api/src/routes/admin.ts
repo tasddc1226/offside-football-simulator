@@ -18,7 +18,7 @@ import { parseJsonBody, parseWithAppError } from '../errors.js';
 import { firstPagePath } from './boards.js';
 
 // T-10-016 운영 도구: 대시보드와 댓글 관리. 댓글 하나 지우기는 게시판의 DELETE /v1/boards/comments/:id를 쓴다.
-const STATS_PATH = '/v1/admin/stats';
+export const STATS_PATH = '/v1/admin/stats';
 const STATS_TTL = 60;
 
 export function registerAdminRoutes(app: Hono<AppEnv>): void {

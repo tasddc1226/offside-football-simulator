@@ -21,6 +21,7 @@ import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
 import { envelope, nowIso } from './shared.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
+import { STATS_PATH } from './admin.js';
 
 // T-10-016 서버 밸런스 설정. 게임은 GET /v1/balance를 앱을 열 때 한 번 받고, 새 버전은 각 커리어의
 // 다음 시즌 시작부터 적용한다. 관리자는 초안을 만들고 고친 뒤 활성화한다(되돌리기 = 옛 버전 재활성화).
@@ -93,7 +94,8 @@ export function registerBalanceRoutes(app: Hono<AppEnv>): void {
     if (target.status === 'active') return c.json(successEnvelope(BalanceVersionSchema).parse(envelope(c, target)), 200);
     const now = nowIso();
     await activateBalance(db, version, active?.version ?? null, viewer.profileId!, now);
-    purgeEdge(c, [PUBLIC_PATH]);
+    // 운영 대시보드도 활성 버전을 담는다(T-10-045).
+    purgeEdge(c, [PUBLIC_PATH, STATS_PATH]);
     const activated = { ...target, status: 'active', activatedAt: now, updatedAt: now };
     return c.json(successEnvelope(BalanceVersionSchema).parse(envelope(c, activated)), 200);
   });
