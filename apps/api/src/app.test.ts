@@ -2,6 +2,7 @@ import { ErrorEnvelopeSchema } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.js';
 import { createTestD1, type TestD1 } from './test/d1.js';
+import { issueCookie } from './test/http.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
 const DISALLOWED_ORIGIN = 'https://evil.example';
@@ -144,10 +145,7 @@ describe('로그', () => {
 
   it('쿠키·토큰·Authorization 값·이메일 문자열이 로그에 없다', async () => {
     const app = createApp();
-    const first = await app.request('/v1/profile', {}, ctx.env);
-    const setCookie = first.headers.get('Set-Cookie') ?? '';
-    const token = /offside_session=([^;]+)/.exec(setCookie)?.[1] ?? '';
-    expect(token.length).toBeGreaterThan(0);
+    const { token } = await issueCookie(ctx);
 
     logSpy.mockClear();
     const bearerValue = `Bearer ${token}`;

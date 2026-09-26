@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { kstDays } from '../db/repos/admin.js';
 import { auditLog, careers } from '../db/schema.js';
-import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
-import { ADMIN_EMAIL, issueAdminCookie, issueCookie } from '../test/http.js';
+import { createTestD1, type TestD1 } from '../test/d1.js';
+import { ADMIN_EMAIL, issueAdminCookie, issueCookie, issueGoogleCookie } from '../test/http.js';
 
 const ORIGIN = 'http://localhost:5173';
 
@@ -27,11 +27,7 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
   const data = async <T>(res: Response) => ((await res.json()) as { data: T }).data;
 
   const makeAdmin = () => issueAdminCookie(ctx);
-  async function googleUser(nickname: string) {
-    const who = await issueCookie(ctx);
-    await linkGoogle(ctx, who.profileId, { nickname });
-    return who;
-  }
+  const googleUser = (nickname: string) => issueGoogleCookie(ctx, { nickname });
   async function writePost(cookie: string) {
     const res = await call('POST', '/v1/boards/notice/posts', { cookie, body: { title: '점검 안내', body: '오늘 밤 점검합니다.' } });
     return (await data<{ id: string }>(res)).id;

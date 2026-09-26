@@ -7,8 +7,8 @@ import { sha256Hex } from '../db/hash.js';
 import { createProfile } from '../db/repos/profiles.js';
 import { createSession } from '../db/repos/sessions.js';
 import { idempotency, profiles, sessions } from '../db/schema.js';
-import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
-import { ADMIN_EMAIL, issueCookie } from '../test/http.js';
+import { createTestD1, type TestD1 } from '../test/d1.js';
+import { ADMIN_EMAIL, issueCookie, issueGoogleCookie } from '../test/http.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
 
@@ -376,11 +376,7 @@ describe('PUT /v1/profile/nickname', () => {
       },
       env(),
     );
-  async function googleUser(email: string | null = null) {
-    const who = await issueCookie(ctx);
-    await linkGoogle(ctx, who.profileId, { email });
-    return who;
-  }
+  const googleUser = (email: string | null = null) => issueGoogleCookie(ctx, { email });
   const errorOf = async (res: Response) => {
     const body = ErrorEnvelopeSchema.parse(await res.json());
     return { status: res.status, code: body.error.code, reason: (body.error.details as { reason?: string } | undefined)?.reason };
