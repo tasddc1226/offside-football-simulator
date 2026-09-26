@@ -7,10 +7,11 @@ import { LEAGUES } from './data.js';
 import { CONT, CUPS, POTY, TOP_SCORER } from './comps.js';
 import { STORIES } from './engine.js';
 import type { GameState } from './types.js';
+import { LEGEND_BANDS, legendBand, type Rarity } from './legend-bands.js';
 
 export type TitleCat = 'record' | 'journey' | 'award' | 'trophy' | 'nation' | 'story' | 'fame' | 'legend';
 /** 1 일반 · 2 희귀 · 3 영웅 · 4 전설 */
-export type Rarity = 1 | 2 | 3 | 4;
+export type { Rarity };
 export interface TitleCtx {
   /** 은퇴 때만 넘어오는 레전드 점수. 레전드 등급 칭호는 이 값이 있을 때만 판정한다. */
   score?: number;
@@ -89,18 +90,7 @@ const t = (id: string, name: string, cat: TitleCat, rarity: Rarity, desc: string
 const n = (id: string, name: string, cat: TitleCat, rarity: Rarity, desc: string, get: (s: GameState) => number, target: number): TitleDef =>
   t(id, name, cat, rarity, desc, (s) => get(s) >= target, (s) => cap(get(s), target));
 
-const LEGEND_BANDS: [string, string, Rarity, number][] = [
-  ['lg_goat', '역대 최고의 전설', 4, 840],
-  ['lg_world', '월드클래스 레전드', 4, 590],
-  ['lg_club', '클럽 레전드', 3, 425],
-  ['lg_pro', '성실한 프로', 2, 305],
-  ['lg_plain', '평범한 축구 커리어', 1, 0],
-];
-/** 은퇴 리포트의 레전드 등급 이름. 칭호의 은퇴 등급과 같은 표를 쓴다. */
-export function legendBand(score: number): { id: string; name: string } {
-  const b = LEGEND_BANDS.find(([, , , min]) => score >= min)!;
-  return { id: b[0], name: b[1] };
-}
+export { legendBand };
 
 export const TITLES: TitleDef[] = [
   // 기록

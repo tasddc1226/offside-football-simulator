@@ -1,3 +1,6 @@
+import type { PublicHofEntry } from '@offside/contracts';
+import { resolveApiBaseUrl } from './api/base-url.js';
+import { careerShareMeta, injectShareMeta } from './share-meta.js';
 import { SHARE_PATH } from './share-path.js';
 
 interface AssetFetcher {
@@ -31,6 +34,30 @@ function withRobots(response: Response, value: string): Response {
   const result = new Response(response.body, response);
   result.headers.set('X-Robots-Tag', value);
   return result;
+}
+
+// T-10-031: 링크 미리보기 봇은 JS를 돌리지 않으므로 공유 링크의 셸 메타를 그 선수 기록으로 바꿔 준다.
+// API가 없거나(로컬·미등록 호스트) 늦거나 실패하면 원래 셸을 그대로 내려 보기 전용 화면은 영향이 없다.
+async function withShareMeta(shell: Response, id: string, url: URL): Promise<Response> {
+  if (!shell.ok) return shell;
+  try {
+    const api = resolveApiBaseUrl(undefined, url.hostname);
+    const res = await fetch(`${api}/v1/hof/${id}`, {
+      signal: AbortSignal.timeout(2000),
+      cf: { cacheTtl: 300, cacheEverything: true },
+    } as RequestInit);
+    if (!res.ok) return shell;
+    const body = (await res.json()) as { data?: { entry?: PublicHofEntry } };
+    if (!body.data?.entry) return shell;
+    const meta = careerShareMeta(body.data.entry, url.origin); // 셸 본문을 읽기 전에 — 여기서 실패해도 셸은 그대로 쓸 수 있다.
+    const html = injectShareMeta(await shell.text(), meta);
+    const headers = new Headers(shell.headers);
+    headers.delete('Content-Length');
+    headers.delete('ETag');
+    return new Response(html, { status: shell.status, headers });
+  } catch {
+    return shell;
+  }
 }
 
 function withCacheControl(response: Response, value: string): Response {
@@ -87,6 +114,8 @@ export default {
       );
     }
     const shell = await env.ASSETS.fetch(new Request(new URL('/app-shell', url.origin), request));
+    const shareId = SHARE_PATH.exec(url.pathname)?.[1];
+    if (shareId) return withRobots(await withShareMeta(shell, shareId, url), 'noindex, nofollow');
     if (APP_PATHS.some((pattern) => pattern.test(url.pathname))) {
       return withRobots(shell, 'noindex, nofollow');
     }
