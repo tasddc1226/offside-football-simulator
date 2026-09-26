@@ -10,6 +10,7 @@ import {
 import type { Hono } from 'hono';
 import { getPublicHof, listPublicHof } from '../db/repos/careers.js';
 import { edgeCached } from '../edgeCache.js';
+import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 
@@ -18,15 +19,14 @@ import { AppError, parseWithAppError } from '../errors.js';
 const CACHE = 'public, max-age=60';
 /** 엣지 캐시 TTL(초). 목록은 새 은퇴가 1분 안에 보이게, 상세는 은퇴 PUT(이름 공개 토글) 때 지운다. */
 const LIST_TTL = 60;
-export const DETAIL_TTL = 300;
-export const hofDetailPath = (careerId: string) => `/v1/hof/${careerId}`;
+const DETAIL_TTL = 300;
 
 export function registerHofRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/hof', async (c) => {
     const limit = parseWithAppError(HofListQuerySchema, c.req.query('limit'));
     const page = parseWithAppError(HofPageQuerySchema, c.req.query('page'));
     const sort = parseWithAppError(HofSortSchema, c.req.query('sort'));
-    const data = await edgeCached(c, `/v1/hof?limit=${limit}&page=${page}&sort=${sort}`, LIST_TTL, () => listPublicHof(getDb(c), limit, page, sort));
+    const data = await edgeCached(c, EDGE.hofList(limit, page, sort), LIST_TTL, () => listPublicHof(getDb(c), limit, page, sort));
     const body = successEnvelope(HofListResponseSchema).parse({ data, meta: { requestId: c.get('requestId') } });
     c.header('Cache-Control', CACHE);
     return c.json(body, 200);
@@ -34,7 +34,7 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
 
   app.get('/v1/hof/:careerId', async (c) => {
     const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
-    const found = await edgeCached(c, hofDetailPath(careerId), DETAIL_TTL, () => getPublicHof(getDb(c), careerId));
+    const found = await edgeCached(c, EDGE.hofDetail(careerId), DETAIL_TTL, () => getPublicHof(getDb(c), careerId));
     if (!found) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
