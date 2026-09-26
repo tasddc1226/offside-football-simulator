@@ -5,7 +5,7 @@ import type { OutboxItem } from '../game/outbox.js';
 import { loadKey, saveKey } from '../game/season.js';
 import { OWNER_CONFLICT_EVENT } from '../game/syncEvents.js';
 import { appState } from './state.svelte.js';
-import { save, seasonBody, toast } from './helpers.js';
+import { enqueueAllSeasons, save, toast } from './helpers.js';
 
 /** '이 기기에만 두기'를 고른 커리어 ID — 이 커리어는 다시 묻지 않는다. */
 const SKIP_KEY = 'ft_conflict_skip';
@@ -31,9 +31,7 @@ export function adoptCareer() {
   const events = new Map(conflicts.flatMap((i) => (i.kind === 'season' ? [[i.year, i.body.events] as const] : [])));
   G.cid = crypto.randomUUID();
   save();
-  void import('../game/outbox.js').then((m) => {
-    for (const rec of G.career) m.enqueueSeason(G.cid, rec.year, seasonBody(m, G, rec, events.get(rec.year) ?? []));
-  });
+  void import('../game/outbox.js').then((m) => enqueueAllSeasons(m, G, (year) => events.get(year) ?? []));
   appState.ownerConflict = null;
   toast('지금 계정으로 이어서 기록할게요.');
 }

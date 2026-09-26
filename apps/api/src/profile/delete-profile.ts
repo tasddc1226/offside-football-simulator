@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { signConfirmToken, verifyConfirmToken } from '../auth/confirm-token.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
@@ -7,7 +7,7 @@ import { deleteBoardCommentsStatement } from '../db/repos/boards.js';
 import { deleteCareersStatements } from '../db/repos/careers.js';
 import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
 import { resetFirstsBackfillStatement } from '../db/repos/firsts.js';
-import { auditLog, careers, idempotency, profiles, serverFirsts, sessions } from '../db/schema.js';
+import { auditLog, boardComments, careers, idempotency, profiles, serverFirsts, sessions } from '../db/schema.js';
 import { AppError } from '../errors.js';
 
 const CONFIRM_TOKEN_TTL_MS = 10 * 60 * 1000;
@@ -40,12 +40,13 @@ export type ExecuteProfileDeletionInput = {
   now: string;
 };
 
+/** 지운 것 — 라우트가 공개 조회 캐시를 필요한 만큼만 비우고, 최초 기록을 다시 계산하는 데 쓴다. */
+export type ExecuteProfileDeletionResult = { careerIds: string[]; heldFirsts: boolean; hadComments: boolean };
+
 /**
  * API-PRO-005 2단계. `deleted_at` 기록·idempotency 삭제·세션 전부 폐기·감사 로그를 한
  * 트랜잭션(runBatch)으로 묶는다. T-9-001a: 커리어 등 서버 소유 게임 데이터는 더 이상 없다.
  */
-/** 지운 커리어 ID — 라우트가 공개 조회 캐시(명예의 전당 상세·최초 기록)를 비우는 데 쓴다. */
-export type ExecuteProfileDeletionResult = { careerIds: string[] };
 
 export async function executeProfileDeletion(
   db: Db,
@@ -64,11 +65,17 @@ export async function executeProfileDeletion(
     });
   }
 
-  const careerIds = (await db.select({ id: careers.id }).from(careers).where(eq(careers.profileId, input.profileId))).map((r) => r.id);
-  // 서버 최초 기록은 커리어와 함께 지워진다(FK cascade). 가진 게 있었으면 전체 재계산으로 제 주인을 찾게 한다.
-  const heldFirsts = careerIds.length
-    ? (await db.select({ id: serverFirsts.id }).from(serverFirsts).where(inArray(serverFirsts.careerId, careerIds)).limit(1)).length > 0
-    : false;
+  // 지울 커리어와 그 커리어가 가진 서버 최초 기록(FK cascade로 함께 지워진다), 댓글 유무를 한 번에 읽는다.
+  const [owned, comments] = await db.batch([
+    db
+      .select({ id: careers.id, first: serverFirsts.id })
+      .from(careers)
+      .leftJoin(serverFirsts, eq(serverFirsts.careerId, careers.id))
+      .where(eq(careers.profileId, input.profileId)),
+    db.select({ id: boardComments.id }).from(boardComments).where(eq(boardComments.profileId, input.profileId)).limit(1),
+  ]);
+  const careerIds = [...new Set(owned.map((r) => r.id))];
+  const heldFirsts = owned.some((r) => r.first !== null);
 
   await runBatch(db, [
     // T-1-013 D-21: google_sub·email·linked_at도 비운다 — 그러지 않으면 unique index
@@ -94,7 +101,8 @@ export async function executeProfileDeletion(
       payloadJson: '{}',
       createdAt: input.now,
     }),
+    // 가진 최초 기록이 있었으면 소급 표시를 지워, 라우트가 전체를 다시 계산해 실제 가장 이른 달성자에게 돌려준다.
     ...(heldFirsts ? [resetFirstsBackfillStatement(db)] : []),
   ]);
-  return { careerIds };
+  return { careerIds, heldFirsts, hadComments: comments.length > 0 };
 }

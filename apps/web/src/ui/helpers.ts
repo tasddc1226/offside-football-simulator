@@ -79,9 +79,18 @@ export function uploadRetirement(careerId: string, entry: HofEntry) {
  * 먼저 큐에 넣어 커리어를 만든 뒤 은퇴를 보낸다(큐는 넣은 순서대로 보낸다). 선택 로그는 남아 있지 않다. */
 export function uploadLegacyRetirement(s: GameState, entry: HofEntry) {
   void import('../game/outbox.js').then((m) => {
-    for (const rec of s.career) m.enqueueSeason(s.cid, rec.year, seasonBody(m, s, rec, []));
+    enqueueAllSeasons(m, s);
     uploadRetirement(s.cid, entry);
   });
+}
+
+/** 커리어의 모든 시즌을 지금 cid로 업로드 큐에 넣는다. eventsOf: 연도별 선택 로그(남아 있는 것만). */
+export function enqueueAllSeasons(
+  m: typeof import('../game/outbox.js'),
+  s: GameState,
+  eventsOf: (year: number) => PutCareerSeasonBody['events'] = () => [],
+) {
+  for (const rec of s.career) m.enqueueSeason(s.cid, rec.year, seasonBody(m, s, rec, eventsOf(rec.year)));
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;

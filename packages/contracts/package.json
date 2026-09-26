@@ -9,7 +9,8 @@
     "./board-limits": "./src/board-limits.ts",
     "./balance": "./src/balance-spec.ts",
     "./hof-rules": "./src/hof-rules.ts",
-    "./content-filter": "./src/content-filter.ts"
+    "./content-filter": "./src/content-filter.ts",
+    "./club-limits": "./src/club-limits.ts"
   },
   "scripts": {
     "test": "vitest run",

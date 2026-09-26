@@ -30,6 +30,7 @@ import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/dele
 import { purgeEdge } from '../edgeCache.js';
 import { firstPagePath } from './boards.js';
 import { FIRSTS_PATH } from './firsts.js';
+import { ensureFirstsBackfilled } from '../db/repos/firsts.js';
 import { hofDetailPath } from './hof.js';
 import { issueRecoveryCode } from '../profile/issue-recovery-code.js';
 import { maskEmail } from '../profile/mask-email.js';
@@ -212,15 +213,21 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       return c.json(responseBody, 200);
     }
 
-    const { careerIds } = await executeProfileDeletion(db, {
+    const { careerIds, heldFirsts, hadComments } = await executeProfileDeletion(db, {
       profileId: session.profileId,
       sessionId: session.id,
       sessionTokenHash,
       confirmToken: body.confirmToken,
       now,
     });
-    // 지운 선수의 공개 상세·최초 기록·게시판 댓글 수가 캐시에 남지 않게 한다(명예의 전당 목록은 TTL 1분).
-    purgeEdge(c, [FIRSTS_PATH, ...careerIds.map(hofDetailPath), ...BOARD_KEYS.map(firstPagePath)]);
+    // 지운 최초 기록은 여기서 한 번 다시 계산한다 — 다음 공개 조회(여러 데이터센터에서 동시에 올 수 있다)가
+    // 전체 재계산을 떠안지 않게. 그다음 바뀐 공개 캐시만 비운다(명예의 전당 목록은 TTL 1분).
+    if (heldFirsts) await ensureFirstsBackfilled(db);
+    purgeEdge(c, [
+      ...careerIds.map(hofDetailPath),
+      ...(heldFirsts ? [FIRSTS_PATH] : []),
+      ...(hadComments ? BOARD_KEYS.map(firstPagePath) : []),
+    ]);
     return c.body(null, 204);
   });
 }

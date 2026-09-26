@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from './club-limits.js';
 import { IsoUtcSchema } from './primitives.js';
 
 /**
@@ -9,9 +10,7 @@ import { IsoUtcSchema } from './primitives.js';
 export const CLUB_CUSTOM_MAX_CLUBS = 250;
 export const CLUB_CUSTOM_NAME_MAX = 20;
 export const CLUB_CUSTOM_LOGO_TEXT_MAX = 3;
-export const CLUB_CUSTOM_IMG_MAX = 16_000;
-/** 업로드 이미지 합계 한도 — 요청 본문 한도(REQUEST_BODY_MAX_BYTES, 1MiB) 안에 이름·색까지 들어가게 둔다. */
-export const CLUB_CUSTOM_IMG_TOTAL_MAX = 800_000;
+export { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX } from './club-limits.js';
 
 const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
@@ -34,7 +33,7 @@ export const ClubCustomSchema = z.strictObject({
 export const ClubCustomMapSchema = z
   .record(z.string().regex(/^[a-z0-9]{1,6}-\d{1,3}$/), ClubCustomSchema)
   .refine((m) => Object.keys(m).length <= CLUB_CUSTOM_MAX_CLUBS, { message: `클럽은 최대 ${CLUB_CUSTOM_MAX_CLUBS}개입니다.` })
-  .refine((m) => Object.values(m).reduce((n, c) => n + (c.logo?.img?.length ?? 0), 0) <= CLUB_CUSTOM_IMG_TOTAL_MAX, {
+  .refine((m) => clubImgTotal(m) <= CLUB_CUSTOM_IMG_TOTAL_MAX, {
     message: '엠블럼 이미지가 너무 많습니다.',
   });
 
