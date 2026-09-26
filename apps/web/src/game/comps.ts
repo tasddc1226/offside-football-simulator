@@ -2,7 +2,8 @@
 import { ovr } from './attributes.js';
 import { clamp, ri, chance, gauss, rnd } from './rng.js';
 import { leagueOf, clubsIn, roleOf, addStat, atkOf, creOf, rollScoring, START_P } from './engine.js';
-import type { GameState, Season, SeasonComp, NatTour } from './types.js';
+import type { GameState, Season, SeasonComp } from './types.js';
+import type { NatTourResult } from './national.js';
 
 export const CUPS: Record<string, string[]> = {
   hs: ['전국고교축구선수권'], uni: ['전국대학축구선수권'], k3: ['코리아컵'], k2: ['코리아컵'], k1: ['코리아컵'], j1: ['일왕배', 'J리그컵'], mls: ['US 오픈컵', '리그스컵'],
@@ -189,7 +190,7 @@ export function compGoals(S: Season) {
 // ───────── 시즌 개인상 · 발롱도르 시상식 ─────────
 // T-10-042에서 한 시즌 득점·도움 상한이 낮아진 만큼 기준도 낮춰, 수상 빈도를 그 이전(T-10-039) 수준에 맞췄다.
 const TOP_G = 0.57, TOP_A = 0.34, BALLON_BAR = 164.8, MULLER_BAR = 36, SHOE_BAR = 56.5;
-export function seasonAwards(s: GameState, ctx: { rank: number; avg: number; trophies: string[]; tours: NatTour[] }) {
+export function seasonAwards(s: GameState, ctx: { rank: number; avg: number; trophies: string[]; tours: NatTourResult[] }) {
   const L = leagueOf(s.leagueId), S = s.season, m = L.matches, o = ovr(s);
   const { rank, avg, trophies, tours } = ctx, awards: string[] = [], gala: string[] = [];
   const cg = compGoals(S), allG = S.goals + cg.g, allA = S.assists + cg.a;
