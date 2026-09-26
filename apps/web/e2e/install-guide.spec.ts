@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { startCareer } from './helpers.js';
 
 // T-10-021 '홈 화면에 추가' 안내: 모바일 브라우저 홈 화면에서('다시 보지 않기' 전까지), 설정 > 도움말에서 언제든.
 const IOS_CHROME = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/129.0 Mobile/15E148 Safari/604.1';
@@ -6,9 +7,15 @@ const IOS_CHROME = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Apple
 test.describe('아이폰 Chrome', () => {
   test.use({ userAgent: IOS_CHROME });
 
-  test("홈에 올 때마다 뜨고, '다시 보지 않기'를 체크하면 그만 뜬다. 설정 도움말에서는 언제든 연다", async ({ page }) => {
-    await page.goto('/');
+  test("처음 온 방문엔 안 뜨고, 다시 찾아오면 홈에 올 때마다 뜬다. '다시 보지 않기'를 체크하면 그만, 설정 도움말에서는 언제든", async ({ page }) => {
     const sheet = page.locator('#sheet');
+    // T-10-037: 세이브가 없는 첫 방문은 첫 화면을 가리지 않는다.
+    await page.goto('/');
+    await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
+    await expect(sheet).toBeHidden();
+
+    await startCareer(page);
+    await page.reload();
     await expect(sheet).toContainText('홈 화면에 추가하고 앱처럼 열기');
     await expect(sheet.locator('.notice-steps li')).toHaveCount(4);
     await expect(sheet.locator('.notice-steps li').nth(1)).toContainText('더 보기');

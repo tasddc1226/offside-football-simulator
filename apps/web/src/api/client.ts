@@ -89,6 +89,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     if (json && typeof json === 'object' && 'error' in json) {
       const e = (json as { error: { code?: string; message?: string; retryable?: boolean; details?: { reason?: unknown } } }).error;
       const reason = typeof e.details?.reason === 'string' ? e.details.reason : undefined;
+      if (e.code === 'PROFILE_REQUIRED') noteSession(false);
       return failure(e.code ?? 'UNKNOWN', e.message ?? '요청이 실패했습니다.', !!e.retryable, reason);
     }
     return failure('INVALID_RESPONSE', `요청이 실패했습니다(${response.status}).`, response.status >= 500);
@@ -99,8 +100,30 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   return { ok: true, data: (json as { data: unknown }).data as T };
 }
 
-export function getProfile(): Promise<ApiResult<Profile>> {
-  return apiFetch<Profile>('/v1/profile', { method: 'GET' });
+export async function getProfile(): Promise<ApiResult<Profile>> {
+  const r = await apiFetch<Profile>('/v1/profile', { method: 'GET' });
+  if (r.ok) noteSession(true);
+  return r;
+}
+
+// T-10-037: 세션 쿠키는 API 도메인의 httpOnly라 웹에서 읽을 수 없다. 프로필 조회가 한 번이라도 성공했으면
+// 표시를 남겨 두고, 표시가 없는 첫 방문자에게는 부팅 때 세션 전용 요청(→ 401)을 보내지 않는다. 어느 요청이든
+// 서버가 세션이 없다고(PROFILE_REQUIRED) 하면 apiFetch가 지운다.
+const SESSION_HINT = 'ft_session';
+export function hasSessionHint(): boolean {
+  try {
+    return localStorage.getItem(SESSION_HINT) === '1';
+  } catch {
+    return false;
+  }
+}
+export function noteSession(on: boolean) {
+  try {
+    if (on) localStorage.setItem(SESSION_HINT, '1');
+    else localStorage.removeItem(SESSION_HINT);
+  } catch {
+    // 저장소를 못 쓰면 표시 없이 그대로 둔다.
+  }
 }
 export function unlinkGoogle(): Promise<ApiResult<undefined>> {
   return apiFetch('/v1/auth/google/unlink', { method: 'POST' });

@@ -5,6 +5,7 @@ import Sheet from './ui/Sheet.svelte';
 import Toast from './ui/Toast.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
 import { handleOAuthReturn } from './ui/actions.js';
+import { hasSessionHint } from './api/client.js';
 import { routeSharedCareer } from './ui/legend.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';
 import { installClickSound } from './ui/sfx.js';
@@ -32,8 +33,8 @@ mount(Sheet, { target: modalEl });
 
 mount(Toast, { target: document.getElementById('toast')! });
 
-// T-10-010: 클럽 커스텀을 계정과 맞춘다(세션이 없으면 조용히 로컬 모드).
-void import('./ui/clubCustom.svelte.js').then((m) => m.syncClubCustom()).catch(() => {});
+// T-10-010: 클럽 커스텀을 계정과 맞춘다. 세션이 있었던 기기만 — 첫 방문자는 로컬 모드 그대로다(T-10-037).
+if (hasSessionHint()) void import('./ui/clubCustom.svelte.js').then((m) => m.syncClubCustom()).catch(() => {});
 // T-10-013: 다른 계정 소유 커리어 알림은 첫 flush 전에 듣기 시작한다.
 watchOwnerConflicts();
 // T-10-023: 열어 둔 탭이 새 배포를 알아채면 새로고침 배너를 띄운다.

@@ -60,6 +60,19 @@ async function withShareMeta(shellP: Promise<Response>, id: string, url: URL): P
   }
 }
 
+// T-10-037: 연결 미리 열기를 HTML이 아니라 응답 헤더로 알린다 — Cloudflare가 HTML의 fonts preconnect 태그를
+// 지워 내보내고(존 설정), 헤더는 그대로 둔다. 폰트 파일(gstatic)은 폰트 CSS를 읽은 뒤에야 요청되고, API는
+// 번들이 돈 뒤에 부르므로 둘 다 미리 열어 두면 그만큼 기다리지 않는다. API는 쿠키를 싣는 요청이라 crossorigin 없이.
+function withPreconnect(response: Response, url: URL): Response {
+  if (!response.headers.get('Content-Type')?.startsWith('text/html')) return response;
+  const result = new Response(response.body, response);
+  result.headers.append(
+    'Link',
+    `<https://fonts.gstatic.com>; rel=preconnect; crossorigin, <${resolveApiBaseUrl(undefined, url.hostname)}>; rel=preconnect`,
+  );
+  return result;
+}
+
 function withCacheControl(response: Response, value: string): Response {
   const result = withRobots(response, 'noindex, nofollow');
   result.headers.set('Cache-Control', value);
@@ -69,60 +82,66 @@ function withCacheControl(response: Response, value: string): Response {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const asset = await env.ASSETS.fetch(request);
-    const isPublicPage = PUBLIC_PATHS.has(url.pathname);
-    const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
-    // T-10-004: Vite 산출물(/assets/*)은 파일명에 내용 해시가 들어가 내용이 바뀌면 URL도 바뀐다 —
-    // 재방문 때 재검증 없이 캐시를 그대로 쓰도록 1년 immutable로 내려 준다.
-    if (url.pathname.startsWith('/assets/') && asset.status === 200)
-      return withCacheControl(asset, 'public, max-age=31536000, immutable');
-    // T-10-023: 새 배포 감지용 — 항상 최신 값을 받아야 한다.
-    if (url.pathname === '/version.json' && asset.status === 200) return withCacheControl(asset, 'no-store');
-    if (!isPublicPage && !isDiscovery && asset.status !== 404)
-      return withRobots(asset, 'noindex, nofollow');
-    const appShell = () => env.ASSETS.fetch(new Request(new URL('/app-shell', url.origin), request));
-    const shareId = asset.status === 404 ? SHARE_PATH.exec(url.pathname)?.[1] : undefined;
-    if (shareId) return withRobots(await withShareMeta(appShell(), shareId, url), 'noindex, nofollow');
-    let indexingEnabled = false;
-    try {
-      const policyUrl = new URL('/seo-policy.json', url.origin);
-      const policy = await env.ASSETS.fetch(new Request(policyUrl, { method: 'GET' }));
-      const value = (await policy.json()) as { indexingEnabled?: boolean; origin?: string };
-      indexingEnabled = Boolean(value.indexingEnabled && value.origin === url.origin);
-    } catch {
-      /* Fail closed: indexing stays disabled. */
-    }
-
-    if (url.pathname === '/robots.txt' && !indexingEnabled) {
-      return new Response('User-agent: *\nDisallow: /\n', {
-        headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'X-Robots-Tag': 'noindex, nofollow',
-        },
-      });
-    }
-    if (url.pathname === '/sitemap.xml' && !indexingEnabled) {
-      return new Response('Not Found', {
-        status: 404,
-        headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'X-Robots-Tag': 'noindex, nofollow',
-        },
-      });
-    }
-    if (asset.status !== 404) {
-      return withRobots(
-        asset,
-        isPublicPage && indexingEnabled ? 'index, follow' : 'noindex, nofollow',
-      );
-    }
-    const shell = await appShell();
-    if (APP_PATHS.some((pattern) => pattern.test(url.pathname))) {
-      return withRobots(shell, 'noindex, nofollow');
-    }
-    // 이슈 155: 알 수 없는 경로도 평문 "Not Found" 대신 앱 셸을 404로 내려 SPA의 not-found 화면
-    // (routes/__root.tsx notFoundComponent)이 셸 안에서 그려지게 한다. 상태 코드·noindex는 유지.
-    const notFound = new Response(shell.body, { status: 404, headers: shell.headers });
-    return withRobots(notFound, 'noindex, nofollow');
+    return withPreconnect(await route(request, env, url), url);
   },
 };
+
+async function route(request: Request, env: Env, url: URL): Promise<Response> {
+  const asset = await env.ASSETS.fetch(request);
+  const isPublicPage = PUBLIC_PATHS.has(url.pathname);
+  const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
+  // T-10-004: Vite 산출물(/assets/*)은 파일명에 내용 해시가 들어가 내용이 바뀌면 URL도 바뀐다 —
+  // 재방문 때 재검증 없이 캐시를 그대로 쓰도록 1년 immutable로 내려 준다.
+  if (url.pathname.startsWith('/assets/') && asset.status === 200)
+    return withCacheControl(asset, 'public, max-age=31536000, immutable');
+  // T-10-023: 새 배포 감지용 — 항상 최신 값을 받아야 한다.
+  if (url.pathname === '/version.json' && asset.status === 200)
+    return withCacheControl(asset, 'no-store');
+  if (!isPublicPage && !isDiscovery && asset.status !== 404)
+    return withRobots(asset, 'noindex, nofollow');
+  const appShell = () => env.ASSETS.fetch(new Request(new URL('/app-shell', url.origin), request));
+  const shareId = asset.status === 404 ? SHARE_PATH.exec(url.pathname)?.[1] : undefined;
+  if (shareId)
+    return withRobots(await withShareMeta(appShell(), shareId, url), 'noindex, nofollow');
+  let indexingEnabled = false;
+  try {
+    const policyUrl = new URL('/seo-policy.json', url.origin);
+    const policy = await env.ASSETS.fetch(new Request(policyUrl, { method: 'GET' }));
+    const value = (await policy.json()) as { indexingEnabled?: boolean; origin?: string };
+    indexingEnabled = Boolean(value.indexingEnabled && value.origin === url.origin);
+  } catch {
+    /* Fail closed: indexing stays disabled. */
+  }
+
+  if (url.pathname === '/robots.txt' && !indexingEnabled) {
+    return new Response('User-agent: *\nDisallow: /\n', {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Robots-Tag': 'noindex, nofollow',
+      },
+    });
+  }
+  if (url.pathname === '/sitemap.xml' && !indexingEnabled) {
+    return new Response('Not Found', {
+      status: 404,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Robots-Tag': 'noindex, nofollow',
+      },
+    });
+  }
+  if (asset.status !== 404) {
+    return withRobots(
+      asset,
+      isPublicPage && indexingEnabled ? 'index, follow' : 'noindex, nofollow',
+    );
+  }
+  const shell = await appShell();
+  if (APP_PATHS.some((pattern) => pattern.test(url.pathname))) {
+    return withRobots(shell, 'noindex, nofollow');
+  }
+  // 이슈 155: 알 수 없는 경로도 평문 "Not Found" 대신 앱 셸을 404로 내려 SPA의 not-found 화면
+  // (routes/__root.tsx notFoundComponent)이 셸 안에서 그려지게 한다. 상태 코드·noindex는 유지.
+  const notFound = new Response(shell.body, { status: 404, headers: shell.headers });
+  return withRobots(notFound, 'noindex, nofollow');
+}

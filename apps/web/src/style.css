@@ -306,7 +306,7 @@ textarea { border: 1px solid var(--line); background: var(--surface-2); border-r
 .rd-now { fill: color-mix(in srgb, var(--accent) 28%, transparent); stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
 .rd-dot { fill: var(--accent); }
 .rd-abbr { font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: .08em; fill: var(--muted); }
-.rd-kr { font-family: var(--body); font-weight: 500; letter-spacing: 0; }
+.rd-kr { font-family: var(--body); font-weight: 600; letter-spacing: 0; }
 .rd-val { font-family: var(--display); font-size: 20px; font-weight: 700; fill: var(--ink); font-variant-numeric: tabular-nums; }
 .rd-up { fill: var(--good); font-size: 13px; } .rd-down { fill: var(--bad); font-size: 13px; }
 .radar-legend { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 12px; }
@@ -709,8 +709,10 @@ button.title-item:hover { border-color: var(--pitch-2); }
 .live { display: flex; flex-direction: column; gap: 12px; }
 .live-head { display: flex; align-items: center; gap: 10px; }
 .live-head h2 { margin: 0; font-size: 17px; }
-.live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bad); flex-shrink: 0; animation: live-pulse 1.8s ease-out infinite; }
-@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(192, 57, 47, .45); } 70%, 100% { box-shadow: 0 0 0 9px rgba(192, 57, 47, 0); } }
+.live-dot { position: relative; width: 10px; height: 10px; border-radius: 50%; background: var(--bad); flex-shrink: 0; }
+/* 퍼지는 고리는 transform·opacity만 움직여 합성 레이어에서 돈다(box-shadow는 매 프레임 다시 칠한다). */
+.live-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: live-pulse 1.8s ease-out infinite; }
+@keyframes live-pulse { 0% { transform: scale(1); opacity: .45; } 70%, 100% { transform: scale(2.8); opacity: 0; } }
 .live-pause { font-size: 12px; }
 .live-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; }
 .live-stats div { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; }
@@ -728,4 +730,4 @@ button.what { background: none; border: 0; padding: 0; font: inherit; color: inh
 .live-kind.honor { background: var(--good); }
 .live-kind.first { background: var(--pitch-2); }
 .live-row.fresh .live-kind { animation: pop .6s cubic-bezier(.2, 1.6, .4, 1); }
-@media (prefers-reduced-motion: reduce) { .live-dot, .live-row.fresh .live-kind { animation: none; } .live-rows.shift { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .live-dot::after, .live-row.fresh .live-kind { animation: none; } .live-rows.shift { transition: none; } }
