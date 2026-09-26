@@ -152,6 +152,69 @@ describe('T-10-013 소유권 충돌', () => {
   });
 });
 
+describe('T-10-045 재시도·버림·한도', () => {
+  const CID = '88888888-8888-8888-8888-888888888888';
+  const OTHER = '99999999-9999-9999-9999-999999999999';
+  const summary = { retireAge: 34, peak: 80, legendScore: 300, apps: 1, goals: 1, assists: 1, trophies: 0, awards: 0, caps: 0, ballon: 0, lastClub: 'FC' };
+  const status = (n: number) => new Response('{}', { status: n });
+  const seed = (items: unknown[]) => localStorage.setItem('ft_outbox', JSON.stringify(items));
+  const season = (careerId: string, year: number) => ({ kind: 'season', careerId, year, body: seasonBody });
+  const retirement = (careerId: string) => ({ kind: 'retirement', careerId, body: summary });
+  const puts = (m: ReturnType<typeof vi.fn>) =>
+    m.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PUT').map(([url]) => String(url).replace(/^.*\/v1\/careers\//, ''));
+
+  it('시즌 PUT이 재시도 대상이면 같은 커리어의 은퇴는 보내지 않고 남긴다(서버에 커리어가 없어 400으로 버려지지 않게)', async () => {
+    // 첫 시즌 PUT이 5xx → 커리어가 아직 서버에 없다. 은퇴를 이어서 보내면 CAREER_NOT_FOUND(400)로 영구히 버려졌다.
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(status(503)).mockResolvedValue(status(400));
+    vi.stubGlobal('fetch', fetchMock);
+    seed([season(CID, 2026), retirement(CID), season(OTHER, 2026)]);
+    const { flushOutbox } = await import('./outbox.js');
+    await flushOutbox();
+    // 다른 커리어는 막지 않는다.
+    expect(puts(fetchMock)).toEqual([`${CID}/seasons/2026`, `${OTHER}/seasons/2026`]);
+    expect(queue()).toEqual([season(CID, 2026), retirement(CID)]);
+
+    // 다음 flush에서 시즌이 올라가면 은퇴가 이어서 올라간다.
+    fetchMock.mockReset().mockResolvedValue(ok());
+    await flushOutbox();
+    expect(puts(fetchMock)).toEqual([`${CID}/seasons/2026`, `${CID}/retirement`]);
+    expect(queue()).toEqual([]);
+  });
+
+  it('401이면 버리지 않고, 다음 flush에서 프로필을 다시 확인한 뒤 보낸다', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(status(401)).mockResolvedValue(ok());
+    vi.stubGlobal('fetch', fetchMock);
+    seed([season(CID, 2026)]);
+    const { flushOutbox } = await import('./outbox.js');
+    await flushOutbox();
+    expect(queue()).toHaveLength(1);
+    await flushOutbox();
+    const urls = fetchMock.mock.calls.map(([url]) => String(url).replace(/^.*\/v1\//, ''));
+    expect(urls).toEqual(['profile', `careers/${CID}/seasons/2026`, 'profile', `careers/${CID}/seasons/2026`]);
+    expect(queue()).toEqual([]);
+  });
+
+  it('409가 아닌 4xx는 재시도해도 같으므로 버린다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(status(422)));
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    seed([season(CID, 2026)]);
+    const { flushOutbox } = await import('./outbox.js');
+    await flushOutbox();
+    expect(queue()).toEqual([]);
+  });
+
+  it('큐는 100개까지만 두고 오래된 항목부터 지운다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    seed(Array.from({ length: 100 }, (_, i) => season(CID, 1900 + i)));
+    const { enqueueSeason } = await import('./outbox.js');
+    enqueueSeason(CID, 2026, seasonBody);
+    const years = (queue() as { year: number }[]).map((x) => x.year);
+    expect(years).toHaveLength(100);
+    expect(years[0]).toBe(1901);
+    expect(years.at(-1)).toBe(2026);
+  });
+});
+
 describe('T-10-006 seasonPayload', () => {
   // 실제 커리어를 은퇴까지 헤드리스로 돌려(fulltime-sim 랜덤 정책의 축약판) 모든 시즌 페이로드가
   // 서버 계약을 통과하는지 본다. SEASON_PAYLOAD_CAREERS로 표본 수를 늘려 대량 검증할 수 있다.

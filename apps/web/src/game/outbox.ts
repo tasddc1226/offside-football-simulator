@@ -154,9 +154,16 @@ async function flushOnce(): Promise<void> {
 
     const settled = new Set<string>();
     const conflicts: OutboxItem[] = [];
+    // T-10-045: 한 커리어의 항목은 순서대로만 보낸다. 첫 시즌 PUT이 재시도 대상인데 은퇴를 이어서 보내면
+    // 서버에 커리어가 아직 없어 400(CAREER_NOT_FOUND)으로 버려진다 — 그 커리어의 뒤 항목은 다음 회차로 미룬다.
+    const blocked = new Set<string>();
     for (const item of items) {
+      if (blocked.has(item.careerId)) continue;
       const result = await sendItem(item);
-      if (result === 'retry') continue;
+      if (result === 'retry') {
+        blocked.add(item.careerId);
+        continue;
+      }
       settled.add(JSON.stringify(item));
       if (result === 'conflict') conflicts.push(item);
       else if (result === 'drop') console.warn('[outbox] 4xx 응답으로 항목을 버립니다', item.kind, item.careerId);
