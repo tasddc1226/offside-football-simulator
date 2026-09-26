@@ -70,7 +70,7 @@ function compMatch(s: GameState, oppStr: number, startP: number) {
   }
   if (mins) {
     perf = (o - oppStr) / 10 + gauss() * 0.8 + (s.cond - 70) / 60;
-    ({ g, a } = rollScoring(s, atkOf(s), creOf(s), o, perf, oppStr, mins));
+    ({ g, a } = rollScoring(s, { atk: atkOf(s), cre: creOf(s), o }, perf, oppStr, mins));
   }
   return { mins, g, a, edge: (s.club.str - oppStr) * 0.03 + (mins ? perf * 0.03 + g * 0.1 : 0) };
 }
