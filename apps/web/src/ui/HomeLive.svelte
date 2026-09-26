@@ -15,6 +15,8 @@
   const VISIBLE = 3;
 
   let data = $state<LiveResponse | null>(null);
+  /** 조회가 실패한 적이 있다. 받은 데이터가 없을 때만 카드 자리를 거두는 데 쓴다. */
+  let failed = $state(false);
   /** 서버 시각 - 이 기기 시각. '몇 분 전'을 서버 기준으로 센다. */
   let skew = 0;
   let now = $state(Date.now());
@@ -31,16 +33,15 @@
   const rows = $derived(
     rolling ? Array.from({ length: VISIBLE + 1 }, (_, k) => feed[(cursor + k) % feed.length]!) : feed.slice(0, VISIBLE),
   );
-  const stats = $derived(
-    data
-      ? [
-          { key: 'playing', label: '지금 뛰는 중', n: data.stats.playing },
-          { key: 'seasons', label: '오늘 치른 시즌', n: data.stats.seasonsToday },
-          { key: 'new', label: '오늘 새 선수', n: data.stats.newToday },
-          { key: 'retired', label: '오늘 은퇴', n: data.stats.retiredToday },
-        ].filter((s) => s.n > 0)
-      : [],
-  );
+  const STATS = [
+    { key: 'playing', label: '지금 뛰는 중', of: (d: LiveResponse) => d.stats.playing },
+    { key: 'seasons', label: '오늘 치른 시즌', of: (d: LiveResponse) => d.stats.seasonsToday },
+    { key: 'new', label: '오늘 새 선수', of: (d: LiveResponse) => d.stats.newToday },
+    { key: 'retired', label: '오늘 은퇴', of: (d: LiveResponse) => d.stats.retiredToday },
+  ];
+  const stats = $derived(data ? STATS.map((s) => ({ ...s, n: s.of(data!) })).filter((s) => s.n > 0) : []);
+  /** 첫 응답 전 — 같은 높이의 자리표시 카드를 그린다. */
+  const pending = $derived(!data && !failed);
 
   const keyOf = (e: LiveEvent) => `${e.kind}:${e.at}:${e.kind === 'retire' ? e.careerId : `${e.club}:${e.goals}:${e.apps}`}`;
   const who = (e: LiveEvent) => (e.kind === 'retire' ? (e.name ?? anonName(e.pos, e.number)) : anonName(e.pos, null));
@@ -62,7 +63,10 @@
 
   async function load() {
     const r = await getLive();
-    if (!r.ok) return;
+    if (!r.ok) {
+      failed = true;
+      return;
+    }
     skew = Date.parse(r.data.now) - Date.now();
     const before = new Set(feed.map(keyOf));
     const added = data ? r.data.feed.map(keyOf).filter((k) => !before.has(k)) : [];
@@ -99,8 +103,16 @@
   }
 </script>
 
-{#if data && (stats.length || feed.length)}
-  <section class="card live" data-home-live aria-labelledby="live-title">
+<!-- T-10-038: 응답 전에도 같은 높이의 카드를 먼저 그려 둔다(pending) — 늦게 끼어들면 아래 타일·명예의 전당이
+     밀려 첫 화면 CLS가 0.3까지 올랐다. 첫 조회가 실패하거나 보여 줄 게 없으면 자리를 거둔다. -->
+{#if pending || stats.length || feed.length}
+  <section
+    class="card live"
+    data-home-live={pending ? undefined : ''}
+    data-home-live-pending={pending ? '' : undefined}
+    aria-hidden={pending || undefined}
+    aria-labelledby={pending ? undefined : 'live-title'}
+  >
     <div class="live-head">
       <span class="live-dot" aria-hidden="true"></span>
       <div style="flex:1;min-width:0">
@@ -113,14 +125,21 @@
         </button>
       {/if}
     </div>
-    {#if stats.length}
+    {#if pending}
+      <div class="live-stats">
+        {#each STATS as s (s.key)}<div><b class="num">–</b><span>{s.label}</span></div>{/each}
+      </div>
+    {:else if stats.length}
       <div class="live-stats">
         {#each stats as s (s.key)}
           <div data-live-stat={s.key}><b class="num"><CountUp value={s.n} ms={900} /></b><span>{s.label}</span></div>
         {/each}
       </div>
     {/if}
-    {#if feed.length}
+    <!-- 자리표시에서도 티커 높이(3줄)를 잡아 둔다. -->
+    {#if pending}
+      <div class="live-rows-wrap"></div>
+    {:else if feed.length}
       <div
         class="live-rows-wrap"
         role="presentation"

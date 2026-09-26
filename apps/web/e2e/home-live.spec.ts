@@ -85,3 +85,25 @@ test('서버에 연결하지 못하거나 아무 활동이 없으면 카드를 �
   await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
   await expect(page.locator('[data-home-live]')).toHaveCount(0);
 });
+
+// T-10-038: 응답이 늦게 와도 카드가 끼어들며 아래 타일을 밀지 않는다(PageSpeed 모바일 CLS 0.3).
+test('라이브 응답이 늦어도 첫 화면이 밀리지 않는다', async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 823 });
+  await page.route(`${API}/v1/live`, async (r) => {
+    await new Promise((res) => setTimeout(res, 800));
+    await r.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: live }) });
+  });
+  await page.addInitScript(() => {
+    (window as unknown as { __cls: number }).__cls = 0;
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) {
+        if (!e.hadRecentInput) (window as unknown as { __cls: number }).__cls += e.value;
+      }
+    }).observe({ type: 'layout-shift', buffered: true });
+  });
+  await page.goto('/');
+  await expect(page.locator('[data-home-live] [data-live-stat="playing"]')).toContainText('3');
+  await page.waitForTimeout(300);
+  // 카드가 끼어들던 때는 모바일에서 0.23+였다. 남는 값은 웹폰트 교체로 히어로 문단 줄바꿈이 바뀌는 몫(~0.04)이다.
+  expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBeLessThan(0.1);
+});
