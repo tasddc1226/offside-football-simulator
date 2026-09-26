@@ -1,10 +1,9 @@
 // ───────── 병역: 국군체육부대(김천 상무) · 현역 입대 · 체육요원 특례 ─────────
 import { clamp, ri, chance } from './rng.js';
-import { EVENTS } from './events-data.js';
 import { leagueOf, log, salaryFor, schedule, addAttr, addStat, newSeason, fameEff } from './engine.js';
 import { ovr as ovrCalc } from './attributes.js';
 import { BAL } from './balance.js';
-import type { GameState, MarketOption, MilOption } from './types.js';
+import type { EventDef, GameState, MarketOption, MilOption } from './types.js';
 
 export const SANGMU = { id: 'sangmu', name: '김천 상무 (국군체육부대)', leagueId: 'k1', str: 63 };
 const MIL_AGE = 28;
@@ -213,7 +212,7 @@ const MIL_ARMY = {
     fx: (s: GameState) => { s.mil.armyNext = true; addStat(s, 'morale', 2); },
   },
 };
-EVENTS.push(
+export const MILITARY_EVENTS: EventDef[] = [
   { id: 'mil-notice', title: '국군체육부대 선수 모집 공고', w: 0, chain: true, cond: (s) => milCanApply(s) && sangmuChance(s) >= MIL_LOW, text: milNoticeText, choices: [MIL_APPLY, MIL_DEFER] },
   { id: 'mil-notice-low', title: '국군체육부대 선수 모집 공고', w: 0, chain: true, cond: (s) => milCanApply(s) && sangmuChance(s) < MIL_LOW, text: milNoticeText, choices: [MIL_APPLY, MIL_DEFER, MIL_ARMY] },
-);
+];

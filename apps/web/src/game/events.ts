@@ -2,13 +2,13 @@
 import { ATTR_KEYS, POS } from './data.js';
 import { ovr, wOf } from './attributes.js';
 import { clamp, ri, pick, chance } from './rng.js';
-import { EVENTS } from './events-data.js';
 import {
   leagueOf, roleOf, labelOf, addStat, addAttr, fmtMoney, adFee, trainerFee, bestKey, weakKey,
   isPro, byPos, isAtk, startStory, schedule, storyActive, pkWin,
 } from './engine.js';
+import type { EventDef } from './types.js';
 
-EVENTS.push(
+export const BASE_EVENTS: EventDef[] = [
   {
     id: 'bench-talk', title: '감독실 노크', w: 3, cond: (s) => roleOf(s) !== '주전' && s.phase > 0,
     text: () => `출전 시간이 좀처럼 늘지 않습니다. 감독실 문 앞에 섰습니다.`,
@@ -235,4 +235,4 @@ EVENTS.push(
       { label: '동료를 살리는 플레이', ok: { text: '팀이 하나로 뭉쳤습니다. 감독은 "진짜 에이스는 동료를 빛나게 한다"며 당신을 추천서 맨 위에 올렸습니다.', fx: (s) => { s.flags['final' + s.year] = 1; addStat(s, 'fame', 6); addStat(s, 'morale', 6); addStat(s, 'trust', 2); } } },
     ],
   },
-);
+];

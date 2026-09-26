@@ -2,7 +2,6 @@
 import { POS, LAST_PHASE } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
-import { EVENTS } from './events-data.js';
 import { leagueOf, addStat, log, fameEff, atkOf, creOf } from './engine.js';
 import { BAL } from './balance.js';
 import type { GameState, NatTour } from './types.js';
@@ -25,12 +24,6 @@ export const HOSTS = {
   olympic: { 2028: '미국 LA', 2032: '호주 브리즈번' } as Record<number, string>,
 };
 const WINDOW_NAME: string[][] = [[], ['9월 A매치', '10월 A매치'], ['11월 A매치', '3월 A매치']];
-
-// 기존 단순 '국가대표 발탁' 이벤트는 실제 소집 시스템으로 대체
-{
-  const i = EVENTS.findIndex((e) => e.id === 'national');
-  if (i >= 0) EVENTS.splice(i, 1);
-}
 
 export function natInit(s: GameState) {
   s.nat = Object.assign({ caps: 0, goals: 0, assists: 0, tours: [], qual: { 2026: true }, captain: false, debutYear: null }, s.nat || {});

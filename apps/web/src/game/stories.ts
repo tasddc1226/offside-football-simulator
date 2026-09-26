@@ -2,12 +2,11 @@
 import { SURNAMES, GIVEN, POS } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick } from './rng.js';
-import { EVENTS } from './events-data.js';
 import {
   addStat, addAttr, startStory, advanceStory, endStory, schedule, storyActive, STORIES,
   byPos, bestKey, weakKey, agentFee, leagueOf, fmtMoney, labelOf, isPro,
 } from './engine.js';
-import type { GameState } from './types.js';
+import type { EventDef, GameState } from './types.js';
 
 export { STORIES };
 
@@ -21,7 +20,7 @@ function rivalName(s: GameState): string {
 }
 const rv = (s: GameState) => s.story.rival as unknown as { gap: number; tone: string };
 
-EVENTS.push(
+export const STORY_EVENTS: EventDef[] = [
   // ── 평생의 라이벌 ──
   {
     id: 'rival-1', story: 'rival', stage: 1, title: '또래 라이벌의 등장', w: 2,
@@ -180,7 +179,7 @@ EVENTS.push(
       { label: '남아서 팀을 지킨다', ok: { text: '새 감독이 오지만, 구단은 남아 준 당신에게 부주장 완장을 맡겼습니다. 팬들도 떠나지 않은 당신을 기억할 겁니다.', fx: (s) => { s.trust = Math.round((s.trust * 0.6 + 1) * 10) / 10; addStat(s, 'fame', 3); addStat(s, 'morale', 4); endStory(s, 'mentor', '홀로서기'); } } },
     ],
   },
-);
+];
 
 function weakKeyLabel(s: GameState): string {
   return labelOf(s, weakKey(s));
