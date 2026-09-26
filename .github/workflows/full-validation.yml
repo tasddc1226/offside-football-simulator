@@ -34,7 +34,7 @@ jobs:
       - run: pnpm build
       - run: pnpm --filter @offside/web check:bundle
       - run: pnpm --filter @offside/api db:check
-      - name: Fulltime balance regression (N=20000, random, parity vs reference/random-v4.json)
+      - name: Fulltime balance regression (N=20000, random, parity vs reference/random-v5.json)
         run: |
           pnpm --filter @offside/fulltime-sim exec tsx simulate.ts 20000 random full-validation-${{ github.run_id }}
           pnpm --filter @offside/fulltime-sim run check-parity full-validation-${{ github.run_id }}
