@@ -66,6 +66,7 @@ export function snapshot(s: GameState): Snapshot {
     stories: Object.keys(s.story || {}).filter((k) => !s.story[k]!.done),
   } as Snapshot;
 }
+const NAMED_CHIPS = [['ovr', 'OVR'], ['cond', '컨디션'], ['morale', '사기'], ['fame', '인기'], ['trust', '감독 신뢰']] as const;
 export type Chip = { label: string; d: number; money?: boolean; text?: string; bad?: boolean };
 export function diffChips(s: GameState, a: Snapshot, b: Snapshot): Chip[] {
   const out: Chip[] = [];
@@ -73,11 +74,9 @@ export function diffChips(s: GameState, a: Snapshot, b: Snapshot): Chip[] {
     const d = Math.round(b[k]!) - Math.round(a[k]!);
     if (d) out.push({ label: labelOf(s, k), d });
   }
-  const named: Record<string, string> = { ovr: 'OVR', cond: '컨디션', morale: '사기', fame: '인기', trust: '감독 신뢰' };
-  const av = a as unknown as Record<string, number>, bv = b as unknown as Record<string, number>;
-  for (const k in named) {
-    const d = Math.round(bv[k]! - av[k]!);
-    if (d) out.push({ label: named[k]!, d });
+  for (const [k, label] of NAMED_CHIPS) {
+    const d = Math.round(b[k] - a[k]);
+    if (d) out.push({ label, d });
   }
   if (b.money !== a.money) out.push({ label: '자금', d: b.money! - a.money!, money: true });
   if (b.injury! > a.injury!) out.push({ label: '부상', d: b.injury! - a.injury!, text: `${b.injury}경기 결장`, bad: true });

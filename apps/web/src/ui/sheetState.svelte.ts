@@ -5,13 +5,14 @@
 import { tick } from 'svelte';
 import { clamp, ri } from '../game/rng.js';
 import { clubsIn } from '../game/engine.js';
+import type { BlockResult, MatchGame } from '../game/match.js';
 import type { GameState } from '../game/types.js';
 import { motionOK } from './motion.js';
 import type { SheetView, TickerRow } from './sheets/types.js';
 
 export type SheetButton = { label: string; cls?: string; fn: () => void };
-export type Chip = { label: string; d: number; money?: boolean; text?: string; bad?: boolean };
 export type { SheetView } from './sheets/types.js';
+export type { Chip } from '../game/stats.js';
 
 export const sheetState = $state<{ open: boolean; busy: boolean; view: SheetView | null; buttons: SheetButton[] }>({
   open: false,
@@ -54,7 +55,6 @@ const BLOCK_TOTAL_MS = 3600;
 const BLOCK_STEP_MIN = 120;
 const BLOCK_STEP_MAX = 260;
 
-export type MatchGame = { rd: number; res: 'W' | 'D' | 'L'; mins: number; g: number; a: number; rating: number; cs?: boolean; inj?: boolean };
 function fakeScore(m: MatchGame): string {
   let gf = Math.max(m.g || 0, m.res === 'W' ? ri(1, 3) : ri(0, 2));
   let ga: number;
@@ -81,21 +81,8 @@ export async function playSteps(title: string, steps: string[], ms = STEP_MS) {
   sheetState.busy = false;
 }
 
-export interface BlockResultLike {
-  games: MatchGame[];
-  n: number;
-  w: number;
-  d: number;
-  l: number;
-  apps: number;
-  goals: number;
-  assists: number;
-  cs: number;
-  rs: number;
-  hl: string[];
-}
 /** 구간 경기를 리포트의 경기별 기록 줄로 바꾼다(상대 팀 이름·스코어를 붙인다). */
-export function matchRows(s: GameState, b: BlockResultLike): TickerRow[] {
+export function matchRows(s: GameState, b: BlockResult): TickerRow[] {
   const opps = clubsIn(s.leagueId).filter((c) => c.id !== s.club.id);
   return b.games.map((m, i) => ({
     key: i,
@@ -119,7 +106,7 @@ export function matchRows(s: GameState, b: BlockResultLike): TickerRow[] {
  */
 export function playBlock(
   head: { eyebrow: string; title: string; back: boolean; matches: number },
-  b: BlockResultLike,
+  b: BlockResult,
   rows: TickerRow[],
   extras: string[],
 ): Promise<void> {
@@ -139,9 +126,9 @@ export function playBlock(
       v.wdl[m.res === 'W' ? 'w' : m.res === 'D' ? 'd' : 'l']++;
       if (m.mins) {
         v.tally.apps++;
-        v.tally.g += m.g;
-        v.tally.a += m.a;
-        rs += m.rating;
+        v.tally.g += m.g ?? 0;
+        v.tally.a += m.a ?? 0;
+        rs += m.rating ?? 0;
         if (m.cs) v.tally.cs++;
         v.tally.rating = (rs / v.tally.apps).toFixed(2);
       }

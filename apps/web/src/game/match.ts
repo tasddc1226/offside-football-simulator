@@ -110,8 +110,9 @@ export function simBlock(s: GameState): BlockResult {
     const dp = (1 - wp) * 0.38;
     const x = rnd();
     const res: 'W' | 'D' | 'L' = x < wp ? 'W' : x < wp + dp ? 'D' : 'L';
-    (S as unknown as Record<string, number>)[res.toLowerCase()] = ((S as unknown as Record<string, number>)[res.toLowerCase()] ?? 0) + 1;
-    (r as unknown as Record<string, number>)[res.toLowerCase()] = ((r as unknown as Record<string, number>)[res.toLowerCase()] ?? 0) + 1;
+    const k = res === 'W' ? 'w' : res === 'D' ? 'd' : 'l';
+    S[k] = (S[k] ?? 0) + 1;
+    r[k] = (r[k] ?? 0) + 1;
     S.pts += res === 'W' ? 3 : res === 'D' ? 1 : 0;
     if (mins > 0) {
       if ((s.pos === 'DF' || s.pos === 'GK') && res !== 'L' && chance(0.32 + (s.club.str - L.avg) * 0.015 + (s.attrs.def - L.avg) * 0.006)) {

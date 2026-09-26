@@ -18,11 +18,11 @@ import { choiceOdds } from '../game/balance.js';
 import { isHiddenEvent } from '../game/dexGroups.js';
 import { markDexSeen } from './dex.js';
 import { scoreLine, type IntlResult } from '../game/national.js';
-import { endSeason, market, acceptOption, retire, loadHOF } from '../game/season.js';
+import { endSeason, market, acceptOption, retire, loadHOF, type SeasonEndResult } from '../game/season.js';
 import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
 import { titleView } from '../game/titles.js';
-import type { NatTour, EventLogEntry, MarketOption } from '../game/types.js';
+import type { NatTour, EventLogEntry, MarketResult } from '../game/types.js';
 import { appState, randomName, type HofTab } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { seasonLabelOf } from './format.js';
@@ -30,7 +30,6 @@ import { motionOK } from './motion.js';
 import { openLocalLegend, shareFocus } from './legend.js';
 import {
   closeSheet, matchRows, playBlock, playJudge, playSteps, sheetState, showSheet,
-  type BlockResultLike, type Chip,
 } from './sheetState.svelte.js';
 import type { NatView, TourView } from './sheets/types.js';
 
@@ -44,14 +43,12 @@ export async function advance() {
   const rankBefore = teamRank(s);
   // T-10-046: 한 구간의 게임 로직(훈련 → 경기 → 대회 → A매치 → 이벤트 추첨 → 칭호)은 game/turn.ts가 진행한다.
   const r = playPhase(s);
-  const block = r.block as unknown as BlockResultLike | null;
-  const { comp, nt, ev } = r;
+  const { block: b, comp, nt, ev } = r;
   const chips = diffChips(s, before, r.after);
   const titles = r.titles.map(titleView);
   const title = ph === 0 ? '프리시즌 완료' : `${PHASES[ph]} 결과`;
   s.pending = ev ? { type: 'event', id: ev, then: s.phase > LAST_PHASE ? 'seasonEnd' : null } : s.phase > LAST_PHASE ? { type: 'seasonEnd' } : null;
   save();
-  const b = block;
   const extras = [
     ...(comp.length ? ['컵 · 대륙 대회 결과 집계'] : []),
     ...(nt ? ['A매치 소집 명단 발표'] : []),
@@ -85,7 +82,7 @@ export async function advance() {
     role: roleOf(s),
     comps: comp.map((c) => ({ t: c.t, good: c.k === 'good' })),
     nat: natViews(nt),
-    chips: chips as Chip[],
+    chips,
     titles,
   };
   appState.tab = 'season';
@@ -100,7 +97,7 @@ export function nextPending() {
     closeSheet();
     return;
   }
-  if (p.type === 'event') return showEvent(p as { type: 'event'; id: string });
+  if (p.type === 'event') return showEvent(p.id);
   if (p.type === 'seasonEnd') {
     if (sheetState.busy) return;
     appState.report = null;
@@ -113,18 +110,18 @@ export function nextPending() {
     return;
   }
   if (p.type === 'market') {
-    if (p.res) return showSeasonEnd(p as { res: ReturnType<typeof endSeason> });
+    if (p.res) return showSeasonEnd(p.res);
     if (!p.m) {
       p.m = market(s);
       save();
     }
-    return showMarket(p.m as ReturnType<typeof market>);
+    return showMarket(p.m);
   }
 }
 
-function showEvent(p: { type: 'event'; id: string }) {
+function showEvent(id: string) {
   const s = appState.G!;
-  const ev = EVENTS.find((e) => e.id === p.id)!;
+  const ev = EVENTS.find((e) => e.id === id)!;
   showSheet({
     kind: 'event',
     eyebrow: `Event · ${s.year} ${PHASES[Math.max(0, s.phase - 1)]}`,
@@ -144,7 +141,8 @@ function showEvent(p: { type: 'event'; id: string }) {
 export async function chooseEvent(i: number) {
   if (sheetState.busy || !appState.G) return;
   const s = appState.G,
-    p = s.pending as { type: 'event'; id: string; then?: string | null };
+    p = s.pending;
+  if (p?.type !== 'event') return;
   const ev = EVENTS.find((e) => e.id === p.id)!,
     c = ev.choices[i]!,
     label = txt(c.label, s);
@@ -162,7 +160,7 @@ export async function chooseEvent(i: number) {
       outcome: r.p < 1 ? (r.ok ? '성공' : '실패') : '결정',
       ok: r.ok,
       text: r.text,
-      chips: r.chips as Chip[],
+      chips: r.chips,
       twist: r.twist || null,
       story: r.story,
       dexNew,
@@ -202,8 +200,8 @@ function tourView(x: NatTour): TourView {
   };
 }
 
-function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
-  const { rec, trophies, awards, notes, gala = [], tours = [], miles = [], titles = [] } = p.res;
+function showSeasonEnd(res: SeasonEndResult) {
+  const { rec, trophies, awards, notes, gala = [], tours = [], miles = [], titles = [] } = res;
   const s = appState.G!;
   const [col, colLabel] = s.pos === 'GK' || s.pos === 'DF' ? [rec.cs, '무실점'] : [rec.assists, '도움'];
   // T-10-034: indexOf(rec)는 $state 프록시라 늘 -1이었다(이적 팬 반응이 안 나옴) — 연도로 찾는다.
@@ -237,7 +235,8 @@ function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
         label: '이적 시장으로 →',
         cls: 'btn-primary',
         fn: () => {
-          (appState.G!.pending as { res: unknown }).res = null;
+          const p = appState.G!.pending;
+          if (p?.type === 'market') p.res = null;
           save();
           nextPending();
         },
@@ -246,7 +245,7 @@ function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
   );
 }
 
-function showMarket(m: { options: MarketOption[]; note: string; canRetire: boolean }) {
+function showMarket(m: MarketResult) {
   const G = appState.G!;
   showSheet(
     {
@@ -269,7 +268,8 @@ function showMarket(m: { options: MarketOption[]; note: string; canRetire: boole
 
 export function pickOption(i: number) {
   // 이적시장 옵션은 G.pending.m에 이미 저장돼 있다(nextPending이 만든 그 목록).
-  const o = (appState.G?.pending as { m?: { options: MarketOption[] } } | null)?.m?.options[i];
+  const p = appState.G?.pending;
+  const o = p?.type === 'market' ? p.m?.options[i] : undefined;
   if (!o || !appState.G) return;
   const r = acceptOption(appState.G, o);
   const logEntry: EventLogEntry = {

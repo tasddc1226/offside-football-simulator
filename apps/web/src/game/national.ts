@@ -213,7 +213,7 @@ function runTournament(s: GameState, key: string) {
   if (key === 'olympic') stage = stage === '우승' ? '금메달' : stage === '준우승' ? '은메달' : stage;
   const inSquad = role !== 'none';
   const mine = matches.filter((m) => m.mins);
-  const rec: NatTour = { year: y, key, name: T.label(y), stage, inSquad, why, apps: mine.length, goals: mine.reduce((t, m) => t + m.g, 0), matches } as NatTour;
+  const rec: NatTour = { year: y, key, name: T.label(y), stage, inSquad, why, apps: mine.length, goals: mine.reduce((t, m) => t + m.g, 0), matches };
   s.nat.tours.push({ year: y, name: rec.name, stage, inSquad, apps: rec.apps, goals: rec.goals });
   const trophy = inSquad && (stage === '우승' || stage === '금메달') ? T.trophy : inSquad && key === 'olympic' && ['은메달', '동메달'].includes(stage) ? `올림픽 ${stage}` : null;
   if (inSquad) addStat(s, 'fame', ({ '조별리그 탈락': 1, '32강': 3, '16강': 4, '8강': 7, '4강': 10, '동메달': 10, '4위': 8, '준우승': 12, '은메달': 12, '우승': 18, '금메달': 18 } as Record<string, number>)[stage] ?? 2);

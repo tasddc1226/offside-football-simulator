@@ -5,6 +5,7 @@
 import type { LegendSnapshot } from '@offside/contracts';
 import type { CareerBalance } from './balance.js';
 import type { AttrKey, Pos, Club } from './data.js';
+import type { SeasonEndResult } from './season.js';
 
 export interface RngSaveState {
   seed: number;
@@ -75,6 +76,8 @@ export interface CareerRecord {
 
 export interface NatTour {
   year: number;
+  /** 대회 종류(wc·ag·asian·olympic). 시즌 결산 결과에만 있고 s.nat.tours 기록엔 없다. */
+  key?: string;
   name: string;
   stage: string;
   inSquad: boolean;
@@ -115,7 +118,11 @@ export interface StoryState {
   stage: number;
   done: boolean;
   ending?: string;
-  [k: string]: unknown;
+  /** rival: 라이벌과의 격차(양수면 라이벌이 앞선다)·선전포고 여부. */
+  gap?: number;
+  tone?: 'loud' | 'quiet';
+  /** rehab: 수술을 받았는지. */
+  surgery?: boolean;
 }
 
 export interface ChainEvent {
@@ -197,6 +204,20 @@ export interface EventLogEntry {
   h: number;
 }
 
+/** 화면이 이어서 열어야 하는 결정(이벤트·시즌 결산·이적 시장). 저장에 남아 새로고침해도 같은 시트로 돌아온다.
+ * market의 res(시즌 결산 결과)·m(이적 옵션)은 한 번 계산하면 저장해 두고 다시 굴리지 않는다. */
+/** 이적 시장 한 번의 선택지(season.market·military.milEnlistMarket). */
+export interface MarketResult {
+  options: MarketOption[];
+  note: string;
+  canRetire: boolean;
+}
+
+export type Pending =
+  | { type: 'event'; id: string; then?: 'seasonEnd' | null }
+  | { type: 'seasonEnd' }
+  | { type: 'market'; res: SeasonEndResult | null; m: MarketResult | null };
+
 export interface GameState {
   /** T-10-016 이 커리어에 적용 중인 서버 밸런스 버전(없으면 코드 기본값 = 버전 0). */
   bal?: CareerBalance;
@@ -241,7 +262,7 @@ export interface GameState {
   mil: MilState;
   injury: number;
   log: LogEntry[];
-  pending: { type: 'event' | 'seasonEnd' | 'market'; id?: string; then?: string | null; res?: unknown; m?: unknown } | null;
+  pending: Pending | null;
   flags: Flags;
   peak: number;
   training: string;
@@ -258,7 +279,6 @@ export interface GameState {
   /** T-9-009. 이번 시즌 버퍼링된 선택 로그(`ft_save`와 함께 자동 저장). 시즌 종료 시 업로드 페이로드로
    * 옮겨지고 비워진다. 최대 300개, 넘치면 가장 오래된 것부터 버린다. */
   evBuf?: EventLogEntry[];
-  [k: string]: unknown;
 }
 
 export interface HofEntry {

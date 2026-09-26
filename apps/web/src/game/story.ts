@@ -1,6 +1,6 @@
 import { LAST_PHASE } from './data.js';
 import { EVENTS } from './events-data.js';
-import type { GameState } from './types.js';
+import type { GameState, StoryState } from './types.js';
 import { log } from './stats.js';
 
 // ───────── 스토리/체인 헬퍼 (원본 stories.js) ─────────
@@ -26,7 +26,7 @@ export function schedule(s: GameState, id: string, delay: number, window = 6) {
 export function storyActive(s: GameState, key: string): boolean {
   return !!(s.story && s.story[key] && !s.story[key]!.done);
 }
-export function startStory(s: GameState, key: string, data: Record<string, unknown> = {}) {
+export function startStory(s: GameState, key: string, data: Pick<StoryState, 'gap' | 'tone' | 'surgery'> = {}) {
   s.story = s.story || {};
   s.story[key] = { stage: 1, done: false, ...data };
 }

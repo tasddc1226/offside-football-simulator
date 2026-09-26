@@ -206,7 +206,7 @@ export function seasonAwards(s: GameState, ctx: { rank: number; avg: number; tro
   if (L.amateur) return { awards, gala };
 
   const big = (t: string) => (trophies.includes(t) ? 1 : 0);
-  const ntBonus = (tours ?? []).filter((t) => t.inSquad).reduce((b, t) => b + (({ 우승: 12, 금메달: 4, 준우승: 7, '4강': 5, '8강': 3 } as Record<string, number>)[t.stage] ?? 0) * ((t as unknown as { key?: string }).key === 'wc' ? 1 : 0.5), 0);
+  const ntBonus = (tours ?? []).filter((t) => t.inSquad).reduce((b, t) => b + (({ 우승: 12, 금메달: 4, 준우승: 7, '4강': 5, '8강': 3 } as Record<string, number>)[t.stage] ?? 0) * (t.key === 'wc' ? 1 : 0.5), 0);
   const cont = (S.comps ?? []).find((c) => c.type === 'cont');
   const score = o + S.goals * 0.45 + S.assists * 0.28 + (cont ? cont.g * 0.7 + cont.a * 0.3 : 0) + avg * 5 + L.tier * 1.2 +
     big('UEFA 챔피언스리그 우승') * 12 + (rank === 1 ? 6 : 0) + ntBonus + (cont && cont.key === 'UCL' && /4강|결승|준우승/.test(cont.stage) ? 4 : 0) +

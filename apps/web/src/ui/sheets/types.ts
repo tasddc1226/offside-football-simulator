@@ -15,9 +15,10 @@ export type TickerRow = {
   opp: string;
   score: string;
   mins: number;
-  g: number;
-  a: number;
-  rating: number;
+  /** 출전한 경기(mins > 0)에만 있다. */
+  g?: number | undefined;
+  a?: number | undefined;
+  rating?: number | undefined;
   inj: boolean;
 };
 
