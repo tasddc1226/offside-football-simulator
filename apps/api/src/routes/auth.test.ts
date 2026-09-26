@@ -6,7 +6,6 @@ import { getProfile } from '../db/repos/profiles.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { extractSessionToken, issueCookie, ORIGIN } from '../test/http.js';
 
-
 function postInit(input: { idempotencyKey?: string | null; cookie?: string; origin?: string | null }): RequestInit {
   const { idempotencyKey = 'idem-key-0001', cookie, origin = ORIGIN } = input;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };

@@ -3,14 +3,14 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { authAttempts, boardComments, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { ADMIN_EMAIL, callJson, issueAdminCookie, issueCookie, issueGoogleCookie } from '../test/http.js';
+import { ADMIN_EMAIL, callJson, deleteProfile, issueAdminCookie, issueCookie, issueGoogleCookie } from '../test/http.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 import { STALE } from '../edgeKeys.js';
 
 describe('게시판 /v1/boards', () => {
   let ctx: TestD1;
   let env: TestD1['env'];
-  const call = (method: string, path: string, opts: { cookie?: string; body?: unknown } = {}) => callJson(env, method, path, opts);
+  const call = (method: string, path: string, opts?: Parameters<typeof callJson>[3]) => callJson(env, method, path, opts);
 
   // 관리자는 프로필 닉네임과 무관하게 '운영자'로 댓글을 쓴다(일부러 다른 닉네임을 넣어 둔다).
   const makeAdmin = () => issueAdminCookie(ctx, { nickname: '관리' });
@@ -171,11 +171,7 @@ describe('게시판 /v1/boards', () => {
     const id = await writePost(admin.cookie);
     const user = await googleUser('팬');
     expect((await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: user.cookie, body: { body: '안녕' } })).status).toBe(201);
-    const withKey = (key: string) => ({ cookie: user.cookie, headers: { 'Idempotency-Key': key } });
-    const tokenRes = await call('POST', '/v1/profile/delete', withKey('idem-board-del-token'));
-    const { confirmToken } = ((await tokenRes.json()) as { data: { confirmToken: string } }).data;
-    const del = await call('POST', '/v1/profile/delete', { ...withKey('idem-board-del-confirm'), body: { confirmToken } });
-    expect(del.status).toBe(204);
+    expect((await deleteProfile(env, user.cookie, 'idem-board-del')).status).toBe(204);
     expect(await ctx.db.select().from(boardComments).where(eq(boardComments.profileId, user.profileId))).toHaveLength(0);
   });
 });

@@ -9,7 +9,7 @@ import { ADMIN_EMAIL, callJson, issueAdminCookie, issueCookie, issueGoogleCookie
 describe('운영 도구 /v1/admin (T-10-016)', () => {
   let ctx: TestD1;
   let env: TestD1['env'];
-  const call = (method: string, path: string, opts: { cookie?: string; body?: unknown } = {}) => callJson(env, method, path, opts);
+  const call = (method: string, path: string, opts?: Parameters<typeof callJson>[3]) => callJson(env, method, path, opts);
   const data = async <T>(res: Response) => ((await res.json()) as { data: T }).data;
 
   const makeAdmin = () => issueAdminCookie(ctx);

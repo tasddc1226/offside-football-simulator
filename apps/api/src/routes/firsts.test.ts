@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { FIRSTS } from '../firsts.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie, ORIGIN, putJson, TEST_CAREER } from '../test/http.js';
+import { deleteProfile, issueCookie, putJson, TEST_CAREER } from '../test/http.js';
 
 const A = '0b000000-0000-4000-8000-00000000000a';
 const B = '0b000000-0000-4000-8000-00000000000b';
@@ -69,12 +69,7 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     await putJson(ctx, other, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 35 }));
     expect(holderOf(await read(ctx), 'sgoals30')?.careerId).toBe(A);
 
-    const app = createApp();
-    const h = (key: string) => ({ 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie, 'Idempotency-Key': key });
-    const tokenRes = await app.request('/v1/profile/delete', { method: 'POST', headers: h('idem-firsts-del-token'), body: '{}' }, ctx.env);
-    const { data } = (await tokenRes.json()) as { data: { confirmToken: string } };
-    const confirm = await app.request('/v1/profile/delete', { method: 'POST', headers: h('idem-firsts-del-confirm'), body: JSON.stringify({ confirmToken: data.confirmToken }) }, ctx.env);
-    expect(confirm.status).toBe(204);
+    expect((await deleteProfile(ctx.env, cookie, 'idem-firsts-del')).status).toBe(204);
 
     await putJson(ctx, late, `/v1/careers/${C}/seasons/2030`, seasonBody({ goals: 31 }));
     expect(holderOf(await read(ctx), 'sgoals30')?.careerId).toBe(B);

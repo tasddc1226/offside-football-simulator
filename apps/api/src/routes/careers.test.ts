@@ -4,8 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { careers, careerSeasons, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie, ORIGIN, TEST_CAREER } from '../test/http.js';
-
+import { deleteProfile, issueCookie, ORIGIN, TEST_CAREER } from '../test/http.js';
 
 function jsonInit(input: { method: 'PUT' | 'POST'; body?: unknown; cookie?: string; origin?: string | null }): RequestInit {
   const { method, body, cookie, origin = ORIGIN } = input;
@@ -196,22 +195,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       ctx.env,
     );
 
-    const tokenRes = await app.request(
-      '/v1/profile/delete',
-      { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: owner.cookie, 'Idempotency-Key': 'idem-del-token' }, body: '{}' },
-      ctx.env,
-    );
-    const { data: tokenData } = (await tokenRes.json()) as { data: { confirmToken: string } };
-    const confirmRes = await app.request(
-      '/v1/profile/delete',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: owner.cookie, 'Idempotency-Key': 'idem-del-confirm' },
-        body: JSON.stringify({ confirmToken: tokenData.confirmToken }),
-      },
-      ctx.env,
-    );
-    expect(confirmRes.status).toBe(204);
+    expect((await deleteProfile(ctx.env, owner.cookie, 'idem-del')).status).toBe(204);
 
     const careerRows = await ctx.db.select().from(careers).where(eq(careers.profileId, owner.profileId));
     expect(careerRows).toHaveLength(0);

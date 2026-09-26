@@ -8,7 +8,6 @@ import { auditLog, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { issueCookie, ORIGIN } from '../test/http.js';
 
-
 function jsonInit(input: {
   method: 'POST' | 'DELETE';
   body?: unknown;

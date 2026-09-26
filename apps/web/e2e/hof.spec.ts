@@ -58,11 +58,7 @@ test('내 선수 탭: 계정 기록(서버) + 이 기기 이름 덮어쓰기', a
   const OTHER = '7c2e5a10-1b3d-4e5f-8a9b-0c1d2e3f4a5b';
   await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [] })));
   await page.route(`${API}/v1/careers/mine`, (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: { linked: true, entries: [entry, { ...entry, id: OTHER, legendScore: 100, pos: 'GK', number: 1 }] } }),
-    }),
+    r.fulfill(ok({ linked: true, entries: [entry, { ...entry, id: OTHER, legendScore: 100, pos: 'GK', number: 1 }] })),
   );
   await page.addInitScript((id) => {
     const base = { pos: 'FW', number: 7, peak: 91, age: 35, apps: 540, goals: 301, assists: 120, trophies: 9, awards: 5, caps: 88, ballon: 1, lastClub: '테스트 FC', score: 612, date: '2026-09-24' };

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { API } from './helpers.js';
+import { API, ok } from './helpers.js';
 
 // T-10-044: UI 구조 기준선 — 리팩터링(화면 분할·공용 컴포넌트 추출·내비게이션 정리)의 안전망.
 // 고정 세이브를 넣고 주요 화면의 접근성 트리를 스냅샷(structure.spec.ts-snapshots/*.aria.yml)으로 고정한다.
@@ -74,11 +74,7 @@ async function setup(page: Page, pending: unknown = null): Promise<string[]> {
     const path = url.pathname;
     requests.push(`${r.request().method()} ${path}${url.search}`);
     const data = path === '/v1/profile' ? profile : path === '/v1/live' ? live : null;
-    return r.fulfill(
-      data
-        ? { status: 200, contentType: 'application/json', body: JSON.stringify({ data }) }
-        : { status: 503, body: '' },
-    );
+    return r.fulfill(data ? ok(data) : { status: 503, body: '' });
   });
   await page.addInitScript(
     ([save, pending]) => {

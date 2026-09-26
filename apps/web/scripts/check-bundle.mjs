@@ -2,7 +2,7 @@
 // 첫 화면에 내려받는 JS(index.html의 진입 스크립트 + modulepreload) gzip 합이 예산을 넘지 않는지 검사한다.
 // T-10-051: 예전엔 index-*.js만 셌다 — 번들러가 공유 모듈을 정적 청크로 떼어 내면 실제 첫 화면 크기는 그대로인데
 // 숫자만 오르내렸다. 동적 import 청크(account, 도감, 관리자 등)는 첫 화면에 받지 않으므로 넣지 않는다.
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,14 +14,10 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(scriptDir, '../dist');
 const distAssetsDir = path.resolve(distDir, 'assets');
 
-let entries;
-try {
-  entries = readdirSync(distAssetsDir);
-} catch {
-  console.error('dist/assets를 찾지 못했다. 먼저 pnpm --filter @offside/web build를 실행하라.');
+if (!existsSync(path.join(distDir, 'index.html'))) {
+  console.error('dist/index.html을 찾지 못했다. 먼저 pnpm --filter @offside/web build를 실행하라.');
   process.exit(1);
 }
-
 
 // T-10-033: 이벤트 정의는 import 부수효과로 EVENTS에 등록된다. 게임 경로에서 import가 빠지면 정의가
 // 지연 청크(EventDex)로만 가고 일반 플레이에서 이벤트가 안 뜬다 — 모듈마다 첫 이벤트 id로 확인한다.
@@ -30,7 +26,7 @@ try {
 const EVENT_MARKERS = ['knock', 'rival-1', 'var', 'fw-drought'];
 const indexHtml = readFileSync(path.join(distDir, 'index.html'), 'utf8');
 const initialFiles = [...indexHtml.matchAll(/(?:src|href)="\/?assets\/([^"]+\.js)"/g)].map((m) => m[1]);
-if (!initialFiles.some((f) => entries.includes(f) && /^index-.*\.js$/.test(f))) {
+if (!initialFiles.some((f) => /^index-/.test(f))) {
   console.error('index.html이 가리키는 index-*.js를 dist/assets에서 찾지 못했다.');
   process.exit(1);
 }

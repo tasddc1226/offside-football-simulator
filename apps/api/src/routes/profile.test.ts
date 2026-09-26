@@ -10,7 +10,6 @@ import { idempotency, profiles, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, issueCookie, issueGoogleCookie, ORIGIN } from '../test/http.js';
 
-
 describe('GET /v1/profile', () => {
   let ctx: TestD1;
 

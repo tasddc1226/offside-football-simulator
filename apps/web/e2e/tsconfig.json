@@ -1,8 +1,7 @@
 {
   "extends": "@offside/tsconfig/browser.json",
   "compilerOptions": {
-    "types": ["node"],
-    "allowImportingTsExtensions": true
+    "types": ["node"]
   },
   "include": ["**/*.ts", "../playwright.config.ts"]
 }

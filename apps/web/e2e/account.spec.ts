@@ -5,13 +5,7 @@ const PROFILE_URL = `${API}/v1/profile`;
 
 test('계정 영역: 홈이 아니라 설정 화면에 있다 — 로그아웃 상태(API 스텁)', async ({ page }) => {
   await page.route(PROFILE_URL, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: { id: 'u1', linked: { google: false }, googleEmailMasked: null, recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z' },
-      }),
-    }),
+    route.fulfill(ok({ id: 'u1', linked: { google: false }, googleEmailMasked: null, recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z' })),
   );
 
   await page.goto('/');
@@ -28,19 +22,13 @@ test('계정 영역: 홈이 아니라 설정 화면에 있다 — 로그아웃 �
 
 test('/settings?google=linked: 토스트 표시 후 URL 정리', async ({ page }) => {
   await page.route(PROFILE_URL, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: {
+    route.fulfill(ok({
           id: 'u1',
           linked: { google: true },
           googleEmailMasked: 'te***@gmail.com',
           recoveryCodeIssuedAt: null,
           createdAt: '2026-01-01T00:00:00.000Z',
-        },
-      }),
-    }),
+        })),
   );
 
   await page.goto('/settings?google=linked');
@@ -56,13 +44,7 @@ test('/settings?google=linked: 토스트 표시 후 URL 정리', async ({ page }
 
 test('/settings?google=error&reason=state: 실패 토스트가 이유와 함께 표시된다', async ({ page }) => {
   await page.route(PROFILE_URL, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: { id: 'u1', linked: { google: false }, googleEmailMasked: null, recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z' },
-      }),
-    }),
+    route.fulfill(ok({ id: 'u1', linked: { google: false }, googleEmailMasked: null, recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z' })),
   );
 
   await page.goto('/settings?google=error&reason=state');
@@ -73,13 +55,7 @@ test('/settings?google=error&reason=state: 실패 토스트가 이유와 함께 
 
 test('로그아웃은 확인 창에서 한 번 더 확인한다', async ({ page }) => {
   await page.route(PROFILE_URL, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: { id: 'u1', linked: { google: true }, googleEmailMasked: 'te***@gmail.com', recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z' },
-      }),
-    }),
+    route.fulfill(ok({ id: 'u1', linked: { google: true }, googleEmailMasked: 'te***@gmail.com', recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z' })),
   );
   let logouts = 0;
   await page.route(`${API}/v1/auth/logout`, (route) => {
@@ -161,11 +137,7 @@ test('소식에서 댓글을 쓰려고 로그인하면, 돌아와서 보던 글�
 
 test("운영자 계정은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다 (T-10-028)", async ({ page }) => {
   await page.route(PROFILE_URL, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: { id: 'u1', linked: { google: true }, googleEmailMasked: 'ad***@gmail.com', recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z', nickname: '운영자' } }),
-    }),
+    route.fulfill(ok({ id: 'u1', linked: { google: true }, googleEmailMasked: 'ad***@gmail.com', recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z', nickname: '운영자' })),
   );
   await page.route(`${API}/v1/boards/**`, (route) =>
     route.fulfill(ok({ admin: true, google: true, nickname: '운영자' })),

@@ -26,6 +26,13 @@ export function callJson(
   );
 }
 
+/** 프로필 삭제 2단계(확인 토큰 → 확정)를 밟고 확정 응답을 돌려준다. 멱등 키는 `${key}-token`·`${key}-confirm`. */
+export async function deleteProfile(env: TestD1['env'], cookie: string, key: string) {
+  const tokenRes = await callJson(env, 'POST', '/v1/profile/delete', { cookie, headers: { 'Idempotency-Key': `${key}-token` } });
+  const { confirmToken } = ((await tokenRes.json()) as { data: { confirmToken: string } }).data;
+  return callJson(env, 'POST', '/v1/profile/delete', { cookie, headers: { 'Idempotency-Key': `${key}-confirm` }, body: { confirmToken } });
+}
+
 /** 로그인한 쿠키로 JSON을 PUT한다(시즌·은퇴 업로드 등). */
 export const putJson = (ctx: TestD1, cookie: string, path: string, body: unknown) => callJson(ctx.env, 'PUT', path, { cookie, body });
 
