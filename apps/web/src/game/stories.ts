@@ -51,7 +51,7 @@ EVENTS.push(
     choices: [
       {
         label: '끝까지 경쟁한다', p: (s) => clamp(0.45 - rv(s).gap * 0.12 + (s.cond - 60) / 300, 0.08, 0.9),
-        ok: { text: '주전 조끼는 당신의 것이었습니다. 긴 경쟁의 끝에서 한 단계 더 성장했습니다.', fx: (s) => { addAttr(s, bestKey(s), 3); addStat(s, 'fame', 8); s.nat.caps += 2; s.flags.potBonus = (s.flags.potBonus ?? 0) + 1; endStory(s, 'rival', '끝내 넘어선 벽'); } },
+        ok: { text: '주전 조끼는 당신의 것이었습니다. 긴 경쟁의 끝에서 한 단계 더 성장했습니다.', fx: (s) => { addAttr(s, bestKey(s), 3); addStat(s, 'fame', 8); if (s.nat.debutYear) s.nat.caps += 2; s.flags.potBonus = (s.flags.potBonus ?? 0) + 1; endStory(s, 'rival', '끝내 넘어선 벽'); } },
         fail: { text: '이번에도 한 끗 차이. 하지만 그 한 끗이 당신을 계속 달리게 합니다.', fx: (s) => { addStat(s, 'morale', -8); addStat(s, 'trust', -1); addAttr(s, weakKey(s), 1); endStory(s, 'rival', '영원한 2인자'); } },
       },
       {

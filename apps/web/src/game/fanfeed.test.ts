@@ -33,3 +33,18 @@ describe('pickFanLines', () => {
     expect(after).toEqual(before);
   });
 });
+
+// T-10-034: 맞는 버킷이 모자라면 아무 버킷에서나 채워 평범한 시즌에도 우승·이적·부상 반응이 섞였다.
+it('평범한 시즌에는 성적과 무관한 응원으로만 채운다(우승·이적·부상 반응 없음)', async () => {
+  const { FAN_LINES } = await import('./fanfeed-data.js');
+  const wrong = new Set([...FAN_LINES.rank_champion, ...FAN_LINES.trophy, ...FAN_LINES.transfer, ...FAN_LINES.injury, ...FAN_LINES.milestone]);
+  setActiveRng(createRng(9));
+  const s = newGame({ name: 'a', number: 1, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, 9);
+  for (let i = 0; i < 300; i++) {
+    s.cid = `cid-${i}`;
+    const lines = pickFanLines(s, makeRec({ year: 2026 + (i % 10), rank: 9, rating: 6.9, goals: 4, apps: 20 }), ctx);
+    expect(lines.length).toBeGreaterThanOrEqual(3);
+    expect(new Set(lines).size).toBe(lines.length);
+    expect(lines.filter((l) => wrong.has(l))).toEqual([]);
+  }
+});

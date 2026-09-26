@@ -79,3 +79,28 @@ describe('T-10-005 은퇴 스냅샷', () => {
     expect(snap).not.toHaveProperty('name');
   });
 });
+
+// T-10-034: 진학할 때 1학년으로 시작해 시즌 끝마다 +1 되는 바람에 3시즌 만에 졸업하고, 학년 표시가 한 해씩 앞섰다.
+describe('대학 4년', () => {
+  it('진학 후 네 시즌을 뛸 수 있고, 학년 표시가 마친 학년과 같다', async () => {
+    await import('./index.js');
+    const { acceptOption, endSeason, market } = await import('./season.js');
+    setActiveRng(createRng(3));
+    const s = newGame({ name: '대학생', number: 7, pos: 'MF', foot: '오른발', type: 'maker', trait: 'late' }, 3);
+    acceptOption(s, { kind: 'uni', name: '대학 진학', desc: '' });
+    const notes: string[] = [];
+    for (let year = 1; year <= 4; year++) {
+      endSeason(s);
+      const m = market(s);
+      notes.push(m.note);
+      const stay = m.options.find((o) => o.kind === 'stay');
+      if (year < 4) {
+        expect(stay?.desc).toBe(`${year + 1}학년으로 한 시즌 더`);
+        acceptOption(s, stay!);
+      } else {
+        expect(stay).toBeUndefined();
+      }
+    }
+    expect(notes[0]).toContain('대학 1학년을 마쳤습니다');
+  });
+});

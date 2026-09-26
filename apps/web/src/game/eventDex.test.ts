@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import './index.js';
 import { EVENTS } from './events-data.js';
 import { eventDex, isHiddenEvent } from './eventDex.js';
@@ -45,4 +45,17 @@ describe('확률 도감', () => {
     expect([rnd(), rnd()]).toEqual(expected);
     setActiveRng(prev);
   });
+});
+
+// T-10-034: 표본 선수의 newGame → newSeason이 전역 BAL을 최신 밸런스로 바꿔, 진행 중인 커리어가 시즌 도중 다른 수치로 돌았다.
+it('도감을 계산해도 진행 중인 커리어의 밸런스 값은 그대로다', async () => {
+  vi.resetModules();
+  await import('./index.js');
+  const { applyBalance, BAL, setLatestBalance } = await import('./balance.js');
+  const dex = await import('./eventDex.js');
+  setLatestBalance(null);
+  applyBalance({ growthScale: 1.5 });
+  dex.eventDex();
+  expect(BAL.growthScale).toBe(1.5);
+  applyBalance();
 });

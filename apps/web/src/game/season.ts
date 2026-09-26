@@ -200,7 +200,8 @@ export function acceptOption(s: GameState, opt: MarketOption): { text: string; o
   }
   if (opt.kind === 'uni') {
     const c = pick(clubsIn('uni'));
-    s.leagueId = 'uni'; s.club = { ...c }; s.uniYears = 1; s.trust = 0;
+    // T-10-034: 마친 학년 수. endSeason이 시즌마다 1씩 올린다 — 1로 시작하면 3시즌 만에 4학년 졸업이 됐다.
+    s.leagueId = 'uni'; s.club = { ...c }; s.uniYears = 0; s.trust = 0;
     log(s, `${c.name}에 진학했습니다.`, 'big');
   } else if (opt.kind === 'renew') {
     s.contract = { years: opt.years, salary: opt.salary };
