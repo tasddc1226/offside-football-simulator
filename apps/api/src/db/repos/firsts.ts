@@ -98,7 +98,11 @@ export const resetFirstsBackfillStatement = (db: Db) => db.delete(appMeta).where
 /** 규칙 버전이 바뀌었으면 모든 커리어를 다시 훑어 채운다(첫 배포 때 이전 기록 소급 포함). */
 export async function ensureFirstsBackfilled(db: Db): Promise<void> {
   const [meta] = await db.select({ value: appMeta.value }).from(appMeta).where(eq(appMeta.key, META_KEY));
-  if (meta?.value === BACKFILL_VERSION) return;
+  if (meta?.value !== BACKFILL_VERSION) await recomputeFirsts(db);
+}
+
+/** 모든 커리어를 다시 훑어 최초 기록을 채우고 소급 표시를 남긴다. */
+export async function recomputeFirsts(db: Db): Promise<void> {
   const [cs, rows] = await db.batch([db.select(careerColumns).from(careers), db.select(seasonColumns).from(careerSeasons)]);
   const best = new Map<string, Claim>();
   for (const c of toCareers(cs, rows)) {

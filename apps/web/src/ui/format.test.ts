@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eulReul, iGa, withRo } from './format.js';
+import { iGa, withEulReul, withRo } from './format.js';
 
 describe('withRo', () => {
   it('받침에 맞춰 로/으로를 붙인다', () => {
@@ -13,8 +13,8 @@ describe('withRo', () => {
     expect(withRo('후보 2')).toBe('후보 2로');
     expect(withRo('v7')).toBe('v7로');
     expect(withRo('v10')).toBe('v10으로');
-    expect(eulReul('v2')).toBe('를');
-    expect(eulReul('v3')).toBe('을');
+    expect(withEulReul('v2')).toBe('v2를');
+    expect(withEulReul('v3')).toBe('v3을');
     expect(iGa('v1')).toBe('이');
   });
 });

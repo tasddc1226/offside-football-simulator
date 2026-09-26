@@ -22,10 +22,7 @@
   import { EVENTS } from '../../game/events-data.js';
   import { toast } from '../helpers.js';
   import { kstDateTime } from '../boardText.js';
-  import { eulReul, withRo } from '../format.js';
-
-  /** 'v2를', 'v3을'처럼 버전 번호에 맞는 목적격 조사를 붙인다. */
-  const vEul = (n: number) => `v${n}${eulReul(`v${n}`)}`;
+  import { withEulReul, withRo } from '../format.js';
 
   const STATUS = { draft: ['초안', 'warn'], active: ['적용 중', 'good'], archived: ['보관', ''] } as const;
   const GROUPS = Object.entries(BALANCE_GROUPS) as [BalanceGroup, string][];
@@ -142,7 +139,7 @@
     const v = await run(api.createBalanceDraft({ note, values: sanitizeBalance($state.snapshot(from)) }));
     if (!v) return;
     dirty = false;
-    toast(`초안 ${vEul(v.version)} 만들었어요`);
+    toast(`초안 ${withEulReul(`v${v.version}`)} 만들었어요`);
     await load(v.version);
   }
   async function save(): Promise<boolean> {
@@ -156,15 +153,15 @@
   async function activate(v: BalanceVersion) {
     if (v.status === 'draft' && dirty && !(await save())) return;
     const lines = diffLines(v.status === 'draft' ? work.values : v.values);
-    const what = v.status === 'archived' ? `${withRo(`v${v.version}`)} 되돌릴까요?` : `${vEul(v.version)} 적용할까요?`;
+    const what = v.status === 'archived' ? `${withRo(`v${v.version}`)} 되돌릴까요?` : `${withEulReul(`v${v.version}`)} 적용할까요?`;
     const body = lines.length ? lines.join('\n') : '적용 중인 버전과 값이 같습니다.';
     if (!confirm(`${what}\n\n${body}\n\n진행 중인 커리어는 다음 시즌부터, 새 커리어는 바로 적용됩니다.`)) return;
     if (!(await run(api.activateBalance(v.version)))) return;
-    toast(`${vEul(v.version)} 적용했어요`);
+    toast(`${withEulReul(`v${v.version}`)} 적용했어요`);
     await load(v.version);
   }
   async function remove(v: BalanceVersion) {
-    if (!confirm(`초안 ${vEul(v.version)} 지울까요?`)) return;
+    if (!confirm(`초안 ${withEulReul(`v${v.version}`)} 지울까요?`)) return;
     if ((await run(api.deleteBalanceDraft(v.version))) === null) return;
     dirty = false;
     selected = null;

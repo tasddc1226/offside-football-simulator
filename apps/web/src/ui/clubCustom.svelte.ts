@@ -4,7 +4,8 @@
 // 로컬에만 남고(게임은 그대로), 다음 부팅·다음 변경 때 다시 맞춘다. 에디트 파일(JSON)로도 옮길 수 있다.
 import { loadKey, saveKey } from '../game/season.js';
 import { CLUBS } from '../game/data.js';
-import { applyClubNames, IMG_TOTAL_MAX, imgTotal, sanitizeClubCustom, type ClubCustom, type ClubCustomMap } from '../game/clubs.js';
+import { applyClubNames, sanitizeClubCustom, type ClubCustom, type ClubCustomMap } from '../game/clubs.js';
+import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
 import { apiFetch } from '../api/client.js';
 import { appState } from './state.svelte.js';
 import { save } from './helpers.js';
@@ -114,7 +115,7 @@ async function push(): Promise<void> {
   pushTimer = null;
   if (!meta.dirty || !meta.updatedAt) return;
   // 서버가 받지 못하는 크기면 보내지 않는다(dirty는 남겨, 이미지를 지우면 다음 변경 때 다시 보낸다).
-  if (imgTotal(clubCustom.map) > IMG_TOTAL_MAX) {
+  if (clubImgTotal(clubCustom.map) > CLUB_CUSTOM_IMG_TOTAL_MAX) {
     clubCustom.status = 'full';
     return;
   }

@@ -27,10 +27,10 @@ import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
-import { purgeEdge } from '../edgeCache.js';
+import { purgeEdge, waitUntil } from '../edgeCache.js';
 import { firstPagePath } from './boards.js';
 import { FIRSTS_PATH } from './firsts.js';
-import { ensureFirstsBackfilled } from '../db/repos/firsts.js';
+import { recomputeFirsts } from '../db/repos/firsts.js';
 import { hofDetailPath } from './hof.js';
 import { issueRecoveryCode } from '../profile/issue-recovery-code.js';
 import { maskEmail } from '../profile/mask-email.js';
@@ -220,14 +220,11 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       confirmToken: body.confirmToken,
       now,
     });
-    // 지운 최초 기록은 여기서 한 번 다시 계산한다 — 다음 공개 조회(여러 데이터센터에서 동시에 올 수 있다)가
-    // 전체 재계산을 떠안지 않게. 그다음 바뀐 공개 캐시만 비운다(명예의 전당 목록은 TTL 1분).
-    if (heldFirsts) await ensureFirstsBackfilled(db);
-    purgeEdge(c, [
-      ...careerIds.map(hofDetailPath),
-      ...(heldFirsts ? [FIRSTS_PATH] : []),
-      ...(hadComments ? BOARD_KEYS.map(firstPagePath) : []),
-    ]);
+    // 지운 최초 기록은 응답 뒤에 다시 계산하고 그 캐시를 비운다. 소급 표시는 삭제 배치에서 이미 지웠으니,
+    // 재계산이 끝나기 전·실패한 뒤의 공개 조회도 스스로 다시 계산한다. 나머지는 바뀐 공개 캐시만 비운다
+    // (명예의 전당 목록은 TTL 1분).
+    if (heldFirsts) waitUntil(c, recomputeFirsts(db).finally(() => purgeEdge(c, [FIRSTS_PATH])));
+    purgeEdge(c, [...careerIds.map(hofDetailPath), ...(hadComments ? BOARD_KEYS.map(firstPagePath) : [])]);
     return c.body(null, 204);
   });
 }

@@ -47,7 +47,6 @@ export type ExecuteProfileDeletionResult = { careerIds: string[]; heldFirsts: bo
  * API-PRO-005 2단계. `deleted_at` 기록·idempotency 삭제·세션 전부 폐기·감사 로그를 한
  * 트랜잭션(runBatch)으로 묶는다. T-9-001a: 커리어 등 서버 소유 게임 데이터는 더 이상 없다.
  */
-
 export async function executeProfileDeletion(
   db: Db,
   input: ExecuteProfileDeletionInput,

@@ -136,5 +136,5 @@ export function withRo(name: string): string {
 
 /** 받침이 있으면 '이', 없으면(한글이 아니어도) '가'. */
 export const iGa = (word: string): string => (jongOf(word) > 0 ? '이' : '가');
-/** 받침이 있으면 '을', 없으면(한글이 아니어도) '를'. */
-export const eulReul = (word: string): string => (jongOf(word) > 0 ? '을' : '를');
+/** 단어 뒤에 '을/를'을 붙인다. 받침이 있으면 '을', 없으면(한글이 아니어도) '를'. */
+export const withEulReul = (word: string): string => `${word}${jongOf(word) > 0 ? '을' : '를'}`;
