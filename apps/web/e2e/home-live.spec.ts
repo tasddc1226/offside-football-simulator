@@ -109,3 +109,20 @@ test('라이브 응답이 늦어도 첫 화면이 밀리지 않는다', async ({
   // 카드가 끼어들던 때는 모바일에서 0.23+였다. 남는 값은 웹폰트 교체로 히어로 문단 줄바꿈이 바뀌는 몫(~0.04)이다.
   expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBeLessThan(0.1);
 });
+
+// T-10-045: 폴링은 분 단위(CLAUDE.md 백엔드 보호). 1분이 되기 전에는 다시 묻지 않는다.
+test('라이브는 1분마다 한 번만 다시 받는다', async ({ page }) => {
+  await page.clock.install();
+  let calls = 0;
+  await page.route(`${API}/v1/live`, (r) => {
+    calls++;
+    return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: live }) });
+  });
+  await page.goto('/');
+  await expect(page.locator('[data-home-live] [data-live-stat="playing"]')).toContainText('3');
+  expect(calls).toBe(1);
+  await page.clock.runFor(59_000);
+  expect(calls).toBe(1);
+  await page.clock.runFor(2_000);
+  await expect.poll(() => calls).toBe(2);
+});

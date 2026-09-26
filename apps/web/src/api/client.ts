@@ -1,4 +1,5 @@
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
+import { LIVE_POLL_SEC } from '@offside/contracts/polling';
 import type { Profile as ContractProfile, FirstsResponse, HofDetailResponse, HofListResponse, HofSort, LiveResponse, MyCareersResponse } from '@offside/contracts';
 import { resolveApiBaseUrl } from './base-url.js';
 
@@ -161,7 +162,8 @@ export function getHofDetail(careerId: string): Promise<ApiResult<HofDetailRespo
 export function getFirsts(): Promise<ApiResult<FirstsResponse>> {
   return cachedGet<FirstsResponse>('/v1/firsts', 60_000);
 }
-/** T-10-030 홈 라이브 현황(로그인 불필요). 홈이 30초마다 묻는다 — 서버 엣지 캐시와 같은 간격. */
+/** T-10-030 홈 라이브 현황(로그인 불필요). 홈이 1분마다 묻는다 — 서버 엣지 캐시와 같은 간격(T-10-045). */
 export function getLive(): Promise<ApiResult<LiveResponse>> {
-  return cachedGet<LiveResponse>('/v1/live', 25_000);
+  // 메모는 폴링 간격보다 조금 짧게 — 다음 폴링이 메모가 아니라 서버(엣지)를 읽는다.
+  return cachedGet<LiveResponse>('/v1/live', LIVE_POLL_SEC * 1000 - 5_000);
 }

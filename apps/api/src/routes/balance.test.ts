@@ -5,6 +5,7 @@ import { createApp } from '../app.js';
 import { auditLog, balanceVersions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, issueAdminCookie, issueCookie } from '../test/http.js';
+import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 
 const ORIGIN = 'http://localhost:5173';
 
@@ -120,5 +121,21 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
     await ctx.db.update(balanceVersions).set({ valuesJson: JSON.stringify({ injuryRate: 0.4, retiredKnob: 3 }) }).where(eq(balanceVersions.version, v1.version));
     await call('POST', `/v1/admin/balance/${v1.version}/activate`, { cookie: admin.cookie });
     expect((await data<Version>(await call('GET', '/v1/balance'))).values).toEqual({ injuryRate: 0.05 });
+  });
+
+  it('T-10-045: 활성화하면 운영 대시보드가 엣지 캐시와 무관하게 새 활성 버전을 보여 준다', async () => {
+    const edge = installFakeEdgeCache();
+    try {
+      const admin = await makeAdmin();
+      const stats = async () => (await data<{ balance: { version: number } | null }>(await call('GET', '/v1/admin/stats', { cookie: admin.cookie }))).balance;
+      expect(await stats()).toBeNull();
+      await flushEdge();
+      const v1 = await draft(admin.cookie, {});
+      await call('POST', `/v1/admin/balance/${v1.version}/activate`, { cookie: admin.cookie });
+      await flushEdge();
+      expect(await stats()).toMatchObject({ version: v1.version });
+    } finally {
+      edge.uninstall();
+    }
   });
 });

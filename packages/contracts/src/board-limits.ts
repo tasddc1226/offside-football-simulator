@@ -4,6 +4,8 @@
  */
 export const BOARD_KEYS = ['notice', 'release'] as const;
 export type BoardKey = (typeof BOARD_KEYS)[number];
+/** 게시판 목록 한 페이지 기본 크기. 서버는 이 크기의 첫 페이지만 엣지에 담는다(T-10-047). */
+export const BOARD_PAGE_LIMIT = 20;
 
 export const POST_TITLE_MAX = 80;
 export const POST_BODY_MAX = 5000;

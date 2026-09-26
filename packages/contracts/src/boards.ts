@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   BOARD_KEYS,
+  BOARD_PAGE_LIMIT,
   COMMENT_BODY_MAX,
   POST_BODY_MAX,
   POST_TITLE_MAX,
@@ -20,7 +21,7 @@ export const BoardKeySchema = z.enum(BOARD_KEYS);
 export const BoardIdParamSchema = z.string().regex(/^(pst|cmt)_[0-9a-f-]{36}$/);
 
 export const BoardListQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(50).default(20),
+  limit: z.coerce.number().int().min(1).max(50).default(BOARD_PAGE_LIMIT),
   /** 이전 페이지 마지막 글의 createdAt. 고정 글은 첫 페이지에만 온다. */
   before: IsoUtcSchema.optional(),
 });

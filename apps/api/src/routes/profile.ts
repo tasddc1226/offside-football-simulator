@@ -1,6 +1,5 @@
 import {
   AUTHORIZATION_HEADER,
-  BOARD_KEYS,
   DeleteProfileConfirmBodySchema,
   DeleteProfileStartResponseSchema,
   IssueRecoveryCodeResponseSchema,
@@ -28,10 +27,8 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { resolveSession } from '../middleware/session.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
 import { purgeEdge, waitUntil } from '../edgeCache.js';
-import { firstPagePath } from './boards.js';
-import { FIRSTS_PATH } from './firsts.js';
+import { STALE } from '../edgeKeys.js';
 import { recomputeFirsts } from '../db/repos/firsts.js';
-import { hofDetailPath } from './hof.js';
 import { issueRecoveryCode } from '../profile/issue-recovery-code.js';
 import { maskEmail } from '../profile/mask-email.js';
 import { recoverProfile } from '../profile/recover.js';
@@ -223,8 +220,8 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     // 지운 최초 기록은 응답 뒤에 다시 계산하고 그 캐시를 비운다. 소급 표시는 삭제 배치에서 이미 지웠으니,
     // 재계산이 끝나기 전·실패한 뒤의 공개 조회도 스스로 다시 계산한다. 나머지는 바뀐 공개 캐시만 비운다
     // (명예의 전당 목록은 TTL 1분).
-    if (heldFirsts) waitUntil(c, recomputeFirsts(db).finally(() => purgeEdge(c, [FIRSTS_PATH])));
-    purgeEdge(c, [...careerIds.map(hofDetailPath), ...(hadComments ? BOARD_KEYS.map(firstPagePath) : [])]);
+    if (heldFirsts) waitUntil(c, recomputeFirsts(db).finally(() => purgeEdge(c, STALE.firstsChanged())));
+    purgeEdge(c, STALE.profileDeleted(careerIds, hadComments));
     return c.body(null, 204);
   });
 }

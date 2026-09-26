@@ -15,8 +15,8 @@ import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { purgeEdge } from '../edgeCache.js';
-import { hofDetailPath } from './hof.js';
-import { FIRSTS_PATH, recordFirsts } from './firsts.js';
+import { recordFirsts } from './firsts.js';
+import { STALE } from '../edgeKeys.js';
 import { isAcceptablePublicName } from '@offside/contracts/content-filter';
 
 /** 소유권 확인: careerId가 이미 다른 프로필 소유면 409. 없으면(새 커리어) 통과. */
@@ -112,7 +112,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
 
     await putRetirement(db, { careerId, summary, publicName, snapshot, now });
     await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
-    purgeEdge(c, [hofDetailPath(careerId), FIRSTS_PATH]); // 이름 공개 토글이 바로 보이게(최초 기록의 이름 포함).
+    purgeEdge(c, STALE.retirementPut(careerId));
 
     const responseBody = successEnvelope(RetirementResponseSchema).parse({
       data: { careerId, status: 'retired' },

@@ -10,7 +10,8 @@
     "./balance": "./src/balance-spec.ts",
     "./hof-rules": "./src/hof-rules.ts",
     "./content-filter": "./src/content-filter.ts",
-    "./club-limits": "./src/club-limits.ts"
+    "./club-limits": "./src/club-limits.ts",
+    "./polling": "./src/polling.ts"
   },
   "scripts": {
     "test": "vitest run",

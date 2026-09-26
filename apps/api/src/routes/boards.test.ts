@@ -5,6 +5,8 @@ import { createApp } from '../app.js';
 import { authAttempts, boardComments, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, issueAdminCookie, issueCookie, issueGoogleCookie } from '../test/http.js';
+import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
+import { STALE } from '../edgeKeys.js';
 
 const ORIGIN = 'http://localhost:5173';
 
@@ -130,14 +132,14 @@ describe('게시판 /v1/boards', () => {
     const alice = await googleUser('앨리스');
     const res = await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: alice.cookie, body: { body: '기대돼요' } });
     const commentId = ((await res.json()) as { data: { id: string } }).data.id;
-    const purged: string[] = [];
-    (globalThis as { caches?: unknown }).caches = { default: { delete: async (k: string) => (purged.push(k), true) } };
+    const edge = installFakeEdgeCache();
     try {
       expect((await call('DELETE', `/v1/boards/comments/${commentId}`, { cookie: alice.cookie })).status).toBe(204);
+      await flushEdge();
     } finally {
-      delete (globalThis as { caches?: unknown }).caches;
+      edge.uninstall();
     }
-    expect(purged).toEqual([expect.stringMatching(/\/v1\/boards\/release\/posts\?limit=\d+$/)]);
+    expect(edge.purged).toEqual(STALE.boardChanged('release').map((path) => `http://localhost${path}`));
   });
 
   it('댓글: 구글 로그인이 없으면 403, 닉네임이 없으면 403 — viewer가 그 상태를 알려 준다', async () => {
