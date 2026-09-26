@@ -15,6 +15,8 @@
   const VISIBLE = 3;
 
   let data = $state<LiveResponse | null>(null);
+  /** 첫 조회가 실패했다(카드 자리를 거둔다). */
+  let failed = $state(false);
   /** 서버 시각 - 이 기기 시각. '몇 분 전'을 서버 기준으로 센다. */
   let skew = 0;
   let now = $state(Date.now());
@@ -62,7 +64,10 @@
 
   async function load() {
     const r = await getLive();
-    if (!r.ok) return;
+    if (!r.ok) {
+      if (!data) failed = true;
+      return;
+    }
     skew = Date.parse(r.data.now) - Date.now();
     const before = new Set(feed.map(keyOf));
     const added = data ? r.data.feed.map(keyOf).filter((k) => !before.has(k)) : [];
@@ -99,7 +104,25 @@
   }
 </script>
 
-{#if data && (stats.length || feed.length)}
+<!-- T-10-037: 응답 전에도 같은 높이의 카드를 먼저 그려 둔다 — 늦게 끼어들면 아래 타일·명예의 전당이 밀려
+     첫 화면 CLS가 0.3까지 올랐다. 첫 조회가 실패하거나 보여 줄 게 없으면 자리를 거둔다. -->
+{#if !data && !failed}
+  <section class="card live" aria-hidden="true" data-home-live-pending>
+    <div class="live-head">
+      <span class="live-dot"></span>
+      <div style="flex:1;min-width:0">
+        <div class="eyebrow">Live</div>
+        <h2>지금 오프사이드에서는</h2>
+      </div>
+    </div>
+    <div class="live-stats">
+      {#each ['지금 뛰는 중', '오늘 치른 시즌', '오늘 새 선수', '오늘 은퇴'] as label (label)}
+        <div><b class="num">–</b><span>{label}</span></div>
+      {/each}
+    </div>
+    <div class="live-rows-wrap"></div>
+  </section>
+{:else if data && (stats.length || feed.length)}
   <section class="card live" data-home-live aria-labelledby="live-title">
     <div class="live-head">
       <span class="live-dot" aria-hidden="true"></span>
