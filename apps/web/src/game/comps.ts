@@ -2,7 +2,7 @@
 import { POS } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, chance, gauss, rnd } from './rng.js';
-import { leagueOf, clubsIn, roleOf, addStat } from './engine.js';
+import { leagueOf, clubsIn, roleOf, addStat, scoreBoost } from './engine.js';
 import type { GameState, Season, SeasonComp, NatTour } from './types.js';
 
 export const CUPS: Record<string, string[]> = {
@@ -72,8 +72,8 @@ function compMatch(s: GameState, oppStr: number, startP: number) {
     perf = (o - oppStr) / 10 + gauss() * 0.8 + (s.cond - 70) / 60;
     const atk = Object.entries(P.atk).reduce((t, [k, w]) => t + s.attrs[k as keyof typeof s.attrs] * (w as number), 0);
     const cre = s.attrs.pas * 0.7 + s.attrs.dri * 0.3;
-    g = poissonLocal(P.goal * Math.exp((atk - oppStr) / 20) * (mins / 90) * Math.exp(perf * 0.2));
-    a = poissonLocal(P.assist * Math.exp((cre - oppStr) / 20) * (mins / 90) * Math.exp(perf * 0.2));
+    g = poissonLocal(P.goal * scoreBoost(atk, o, perf, oppStr) * (mins / 90));
+    a = poissonLocal(P.assist * scoreBoost(cre, o, perf, oppStr) * (mins / 90));
   }
   return { mins, g, a, edge: (s.club.str - oppStr) * 0.03 + (mins ? perf * 0.03 + g * 0.1 : 0) };
 }

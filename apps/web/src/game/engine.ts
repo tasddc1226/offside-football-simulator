@@ -255,6 +255,16 @@ export function roundRange(s: GameState, phase: number): string {
   return `${a}–${b}R`;
 }
 
+/** 득점·도움 기대값에 들어가는 '리그(상대) 평균 대비 우위'. DOMINANCE_KNEE를 넘는 몫은 DOMINANCE_SLOPE만 반영한다
+ * (T-10-039). 보통 커리어에선 우위가 이 기준을 넘는 일이 드물지만, 상무 복무처럼 OVR 90 선수가 평균 63인 K리그1에 들어가면 25를 넘어
+ * 기대값이 지수로 불어나 한 시즌 80골이 나왔다 — 압도적인 선수도 경기당 득점에는 한계가 있다. */
+export const DOMINANCE_KNEE = 14, DOMINANCE_SLOPE = 0.15;
+export const dominance = (gap: number): number => (gap <= DOMINANCE_KNEE ? gap : DOMINANCE_KNEE + (gap - DOMINANCE_KNEE) * DOMINANCE_SLOPE);
+/** 득점·도움 기대값 배수. atk는 공격(또는 창의) 능력치, perf는 경기력(평균 대비 OVR 우위 o - avg를 포함)이다. */
+export function scoreBoost(atk: number, o: number, perf: number, avg: number): number {
+  return Math.exp(dominance(atk - avg) / 20 + (perf + (dominance(o - avg) - (o - avg)) / 10) * 0.2);
+}
+
 export interface MatchGame {
   rd: number;
   res: 'W' | 'D' | 'L';
@@ -304,8 +314,8 @@ export function simBlock(s: GameState): BlockResult {
     let perf = 0, g = 0, a = 0, cs = false;
     if (mins > 0) {
       perf = (o - L.avg) / 10 + gauss() * 0.8 + (s.cond - 70) / 60 + (s.morale - 60) / 90;
-      g = poisson(P.goal * Math.exp((atk - L.avg) / 20) * (mins / 90) * Math.exp(perf * 0.2));
-      a = poisson(P.assist * Math.exp((cre - L.avg) / 20) * (mins / 90) * Math.exp(perf * 0.2));
+      g = poisson(P.goal * scoreBoost(atk, o, perf, L.avg) * (mins / 90));
+      a = poisson(P.assist * scoreBoost(cre, o, perf, L.avg) * (mins / 90));
     }
     const wp = clamp(0.38 + (s.club.str - L.avg) * 0.024 + (mins ? perf * 0.035 + g * 0.12 : 0), 0.07, 0.88);
     const dp = (1 - wp) * 0.38;
