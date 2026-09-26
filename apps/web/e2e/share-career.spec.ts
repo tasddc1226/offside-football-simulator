@@ -61,8 +61,15 @@ test('로그인하지 않았으면 은퇴 화면 맨 아래에서 로그인을 �
 
 test('로그인했으면 공유 링크를 만들고, 링크를 연 사람은 보기 전용 리포트를 본다', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  // 브라우저 공유 시트 대신 클립보드 복사 경로를 쓴다.
-  await page.addInitScript(() => Object.defineProperty(navigator, 'share', { value: undefined }));
+  // 공유 시트를 지원하는 브라우저여도 띄우지 않고 링크 복사만 한다.
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, 'share', {
+      value: () => {
+        (window as unknown as { __shared: boolean }).__shared = true;
+        return Promise.resolve();
+      },
+    }),
+  );
   const uploaded = await stubApi(page, { google: true });
   await retireNow(page);
   await expect(page.locator('[data-share="login"]')).toHaveCount(0);
@@ -71,6 +78,7 @@ test('로그인했으면 공유 링크를 만들고, 링크를 연 사람은 보
   const url = await page.locator('.share-url').inputValue();
   expect(url).toMatch(/^http:\/\/localhost:\d+\/career\/[0-9a-f-]{36}$/);
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
+  expect(await page.evaluate(() => (window as unknown as { __shared?: boolean }).__shared)).toBeUndefined();
   expect(uploaded.has(url.split('/').pop()!)).toBe(true);
 
   // 링크를 연다: 이름을 공개하지 않았으니 익명, 주인 기능(이름 공개·공유)은 없다.
