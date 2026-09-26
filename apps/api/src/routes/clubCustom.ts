@@ -14,7 +14,12 @@ export function registerClubCustomRoutes(app: Hono<AppEnv>): void {
 
   app.put('/v1/club-custom', requireProfile, async (c) => {
     const input = readBody(c, PutClubCustomBodySchema);
-    const saved = await putClubCustom(getDb(c), getSessionOrThrow(c).profileId, input.clubs, input.updatedAt);
+    const saved = await putClubCustom(
+      getDb(c),
+      getSessionOrThrow(c).profileId,
+      input.clubs,
+      input.updatedAt,
+    );
     return ok(c, ClubCustomResponseSchema, saved);
   });
 }

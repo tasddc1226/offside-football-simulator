@@ -31,8 +31,12 @@ export function appShellPlugin({ define }) {
     },
     async transformIndexHtml(html) {
       // dev 공개 페이지(seo.mjs)는 #app 을 본문으로 갈아 끼우므로 표시를 미리 지워 렌더를 건너뛴다.
-      if (dev) return html.includes(APP_SHELL_MARK) ? html.replace(APP_SHELL_MARK, await renderApp(dev)) : html;
-      if (!html.includes(APP_SHELL_MARK)) throw new Error(`app-shell: index.html #app 안에 ${APP_SHELL_MARK} 표시가 없다`);
+      if (dev)
+        return html.includes(APP_SHELL_MARK)
+          ? html.replace(APP_SHELL_MARK, await renderApp(dev))
+          : html;
+      if (!html.includes(APP_SHELL_MARK))
+        throw new Error(`app-shell: index.html #app 안에 ${APP_SHELL_MARK} 표시가 없다`);
       // 빌드: 클라이언트 번들과 따로 SSR용 Vite 서버를 잠깐 띄워 렌더한다.
       const server = await createServer({
         root,

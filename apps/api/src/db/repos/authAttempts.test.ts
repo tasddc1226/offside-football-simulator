@@ -19,10 +19,14 @@ describe('authAttempts repo', () => {
     expect(await getAttemptCount(ctx.db, 'RECOVERY_ISSUE', subject, t0)).toBe(0);
 
     await recordAttempt(ctx.db, 'RECOVERY_ISSUE', subject, t0);
-    expect(await getAttemptCount(ctx.db, 'RECOVERY_ISSUE', subject, '2026-09-02T00:30:00.000Z')).toBe(1);
+    expect(
+      await getAttemptCount(ctx.db, 'RECOVERY_ISSUE', subject, '2026-09-02T00:30:00.000Z'),
+    ).toBe(1);
 
     await recordAttempt(ctx.db, 'RECOVERY_ISSUE', subject, '2026-09-02T00:30:00.000Z');
-    expect(await getAttemptCount(ctx.db, 'RECOVERY_ISSUE', subject, '2026-09-02T00:59:00.000Z')).toBe(2);
+    expect(
+      await getAttemptCount(ctx.db, 'RECOVERY_ISSUE', subject, '2026-09-02T00:59:00.000Z'),
+    ).toBe(2);
   });
 
   it('윈도우(1시간)가 지나면 카운트가 리셋된다', async () => {

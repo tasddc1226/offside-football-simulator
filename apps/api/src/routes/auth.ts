@@ -47,10 +47,13 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
 
   app.get('/v1/auth/google/start', requireProfile, async (c) => {
     const hostPair = resolveRequestHostPair(c.req.url, c.env);
-    const oidc = hostPair === null ? null : selectGoogleOidc({
-      ...c.env,
-      GOOGLE_REDIRECT_URI: hostPair.googleRedirectUri,
-    });
+    const oidc =
+      hostPair === null
+        ? null
+        : selectGoogleOidc({
+            ...c.env,
+            GOOGLE_REDIRECT_URI: hostPair.googleRedirectUri,
+          });
     if (oidc === null) {
       throw new AppError({
         code: 'SERVICE_UNAVAILABLE',
@@ -88,7 +91,10 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
     const local = isLocalEnv(c.env);
     const hostPair = resolveRequestHostPair(c.req.url, c.env);
     if (hostPair === null) {
-      throw new AppError({ code: 'SERVICE_UNAVAILABLE', message: 'Google 로그인을 사용할 수 없습니다.' });
+      throw new AppError({
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Google 로그인을 사용할 수 없습니다.',
+      });
     }
     const callbackWebOrigin = hostPair.webOrigin;
 

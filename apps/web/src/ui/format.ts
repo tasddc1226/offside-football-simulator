@@ -3,7 +3,16 @@ import { labelOf } from '../game/engine.js';
 import { LEAGUES } from '../game/data.js';
 import type { AttrKey } from '../game/data.js';
 import {
-  ovrRole, mainRole, ROLES, ROLE_NAME, POS_ROLES, faceOf, radarOrder, FACE_ABBR, GK_ABBR, SUBS,
+  ovrRole,
+  mainRole,
+  ROLES,
+  ROLE_NAME,
+  POS_ROLES,
+  faceOf,
+  radarOrder,
+  FACE_ABBR,
+  GK_ABBR,
+  SUBS,
 } from '../game/attributes.js';
 import type { CareerRecord, GameState } from '../game/types.js';
 
@@ -11,7 +20,9 @@ export { anonName } from '../game/pos-label.js';
 
 export function seasonLabelOf(r: CareerRecord): string {
   const L = LEAGUES.find((l) => l.name === r.league);
-  return L && L.tier >= 4 ? `${r.year}-${String((r.year + 1) % 100).padStart(2, '0')}` : `${r.year}`;
+  return L && L.tier >= 4
+    ? `${r.year}-${String((r.year + 1) % 100).padStart(2, '0')}`
+    : `${r.year}`;
 }
 
 export function totals(s: Pick<GameState, 'career'>) {
@@ -56,15 +67,36 @@ export function radarData(s: GameState) {
     const v = Math.round(s.attrs[k]);
     const d = s.seasonStart ? v - Math.round(s.seasonStart[k]) : 0;
     const anchor = Math.abs(x - CX) < 4 ? 'middle' : x > CX ? 'start' : 'end';
-    return { key: k, labelKr: labelOf(s, k), abbr: abbr[k]!, x, y, labelX: x, labelY: y - 7, anchor, value: v, delta: d };
+    return {
+      key: k,
+      labelKr: labelOf(s, k),
+      abbr: abbr[k]!,
+      x,
+      y,
+      labelX: x,
+      labelY: y - 7,
+      anchor,
+      value: v,
+      delta: d,
+    };
   });
   // T-10-003: 능력치가 바뀔 때(훈련·이벤트) rd-now 폴리곤을 즉시 스냅하지 않고 부드럽게 모핑하기
   // 위해, Radar.svelte가 nowVals(순서대로의 숫자 배열)를 직접 트윈하고 poly()와 같은 방식으로
   // 각 프레임의 좌표 문자열을 다시 계산할 수 있도록 toPoly를 함께 내보낸다.
   const toPoly = (vals: number[]) => poly(vals);
-  return { CX, rings, spokes, prev, now, nowVals, toPoly, dots, points, ariaLabel: order.map((k) => `${labelOf(s, k)} ${Math.round(s.attrs[k])}`).join(', ') };
+  return {
+    CX,
+    rings,
+    spokes,
+    prev,
+    now,
+    nowVals,
+    toPoly,
+    dots,
+    points,
+    ariaLabel: order.map((k) => `${labelOf(s, k)} ${Math.round(s.attrs[k])}`).join(', '),
+  };
 }
-
 
 export interface AttrGroupRow {
   key: string;
@@ -87,7 +119,8 @@ export function attrData(s: GameState) {
     F = faceOf(s);
   const order = radarOrder(s.pos);
   const abbr = s.pos === 'GK' ? GK_ABBR : FACE_ABBR;
-  const tier = (v: number): 't1' | 't2' | 't3' | 't4' => (v >= 80 ? 't4' : v >= 70 ? 't3' : v >= 50 ? 't2' : 't1');
+  const tier = (v: number): 't1' | 't2' | 't3' | 't4' =>
+    v >= 80 ? 't4' : v >= 70 ? 't3' : v >= 50 ? 't2' : 't1';
   const roles = [...new Set([role, ...POS_ROLES[s.pos]])].map((r) => ({
     role: r,
     on: r === role,
@@ -101,7 +134,14 @@ export function attrData(s: GameState) {
         const v = Math.round(s.sub[k]!);
         return { key: k, name: SUBS[k]!, value: v, tier: tier(v), bold: (W[k] || 0) >= 0.05 };
       });
-    return { key: g, abbr: abbr[g]!, labelKr: labelOf(s, g), value: Math.round(s.attrs[g]), tier: tier(s.attrs[g]), rows };
+    return {
+      key: g,
+      abbr: abbr[g]!,
+      labelKr: labelOf(s, g),
+      value: Math.round(s.attrs[g]),
+      tier: tier(s.attrs[g]),
+      rows,
+    };
   });
   return { role, roleName: ROLE_NAME[role], roles, groups };
 }

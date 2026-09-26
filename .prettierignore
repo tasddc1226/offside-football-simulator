@@ -8,3 +8,9 @@ pnpm-lock.yaml
 # 테스트 스냅샷은 도구가 생성한다(T-10-044)
 **/__snapshots__
 **/*-snapshots
+# drizzle-kit가 생성한다 — 손대지 않는다
+apps/api/migrations
+# 과거 기록 문서(서식을 바꾸지 않는다)
+docs/archive
+# 배포되는 HTML(SSR 셸 포함) — 서식이 곧 응답 바이트라 손으로 관리한다
+apps/web/index.html

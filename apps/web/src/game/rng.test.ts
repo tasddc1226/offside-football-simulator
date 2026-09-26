@@ -41,7 +41,14 @@ describe('시드 기반 PRNG', () => {
   });
 
   it('같은 시드로 newGame을 두 번 호출하면 동일한 커리어 초기 상태가 나온다', () => {
-    const opts = { name: '테스트선수', number: 7, pos: 'FW' as const, foot: '오른발' as const, type: 'poacher', trait: 'late' };
+    const opts = {
+      name: '테스트선수',
+      number: 7,
+      pos: 'FW' as const,
+      foot: '오른발' as const,
+      type: 'poacher',
+      trait: 'late',
+    };
     setActiveRng(createRng(42));
     const g1 = newGame({ ...opts }, 42);
     setActiveRng(createRng(42));
@@ -53,7 +60,14 @@ describe('시드 기반 PRNG', () => {
   });
 
   it('다른 시드로 newGame을 호출하면 (거의 항상) 다른 결과가 나온다', () => {
-    const opts = { name: '테스트선수', number: 7, pos: 'FW' as const, foot: '오른발' as const, type: 'poacher', trait: 'late' };
+    const opts = {
+      name: '테스트선수',
+      number: 7,
+      pos: 'FW' as const,
+      foot: '오른발' as const,
+      type: 'poacher',
+      trait: 'late',
+    };
     setActiveRng(createRng(1));
     const g1 = newGame({ ...opts }, 1);
     setActiveRng(createRng(2));

@@ -3,7 +3,9 @@ import { toErrorEnvelope } from './errors.js';
 
 describe('toErrorEnvelope unknown errors (T-2-015)', () => {
   it('SQL 전문 대신 고정 문구를 503으로 돌려준다', () => {
-    const err = new Error('Failed query: insert into "analytics_events" ("id","client_id") values (?,?)');
+    const err = new Error(
+      'Failed query: insert into "analytics_events" ("id","client_id") values (?,?)',
+    );
     const { status, body } = toErrorEnvelope(err, 'req_test');
 
     expect(status).toBe(503);

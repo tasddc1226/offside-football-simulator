@@ -25,12 +25,16 @@ if (!existsSync(path.join(distDir, 'index.html'))) {
 // 첫 화면 청크 어디에든 있으면 된다.
 const EVENT_MARKERS = ['knock', 'rival-1', 'var', 'fw-drought'];
 const indexHtml = readFileSync(path.join(distDir, 'index.html'), 'utf8');
-const initialFiles = [...indexHtml.matchAll(/(?:src|href)="\/?assets\/([^"]+\.js)"/g)].map((m) => m[1]);
+const initialFiles = [...indexHtml.matchAll(/(?:src|href)="\/?assets\/([^"]+\.js)"/g)].map(
+  (m) => m[1],
+);
 if (!initialFiles.some((f) => /^index-/.test(f))) {
   console.error('index.html이 가리키는 index-*.js를 dist/assets에서 찾지 못했다.');
   process.exit(1);
 }
-const initialSource = initialFiles.map((f) => readFileSync(path.join(distAssetsDir, f), 'utf8')).join('\n');
+const initialSource = initialFiles
+  .map((f) => readFileSync(path.join(distAssetsDir, f), 'utf8'))
+  .join('\n');
 let totalGzipBytes = 0;
 for (const file of initialFiles) {
   const bytes = readFileSync(path.join(distAssetsDir, file));
@@ -47,9 +51,13 @@ if (totalGzipBytes > LIMIT_BYTES) {
   process.exit(1);
 }
 
-const missing = EVENT_MARKERS.filter((id) => !new RegExp(`id:\\s*["'\`]${id}["'\`]`).test(initialSource));
+const missing = EVENT_MARKERS.filter(
+  (id) => !new RegExp(`id:\\s*["'\`]${id}["'\`]`).test(initialSource),
+);
 if (missing.length) {
-  console.error(`초기 청크에 이벤트 정의가 없다(${missing.join(', ')}) — 진입점(main.ts → ui/actions.ts → game/turn.ts)에서 game/event-registry.js가 정적으로 import되는지 확인하라.`);
+  console.error(
+    `초기 청크에 이벤트 정의가 없다(${missing.join(', ')}) — 진입점(main.ts → ui/actions.ts → game/turn.ts)에서 game/event-registry.js가 정적으로 import되는지 확인하라.`,
+  );
   process.exit(1);
 }
 

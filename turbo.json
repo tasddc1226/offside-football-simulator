@@ -15,7 +15,11 @@
     },
     "lint": {
       "dependsOn": ["transit"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/eslint.config.js", "$TURBO_ROOT$/tooling/eslint-config/index.mjs"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/eslint.config.js",
+        "$TURBO_ROOT$/tooling/eslint-config/index.mjs"
+      ],
       "outputs": []
     },
     "typecheck": {

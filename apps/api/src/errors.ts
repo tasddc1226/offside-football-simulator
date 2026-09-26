@@ -15,7 +15,12 @@ export class AppError extends Error {
   readonly details?: unknown;
   readonly status?: ErrorStatus;
 
-  constructor(input: { code: ErrorCode; message?: string; details?: unknown; status?: ErrorStatus }) {
+  constructor(input: {
+    code: ErrorCode;
+    message?: string;
+    details?: unknown;
+    status?: ErrorStatus;
+  }) {
     super(input.message ?? input.code);
     this.name = 'AppError';
     this.code = input.code;
@@ -30,7 +35,8 @@ export class AppError extends Error {
 
 /** zod를 직접 의존하지 않고 구조적 타입으로 `safeParse`를 받는다(브리프: 새 의존성 없음). */
 type SafeParseIssue = { path: PropertyKey[]; message: string };
-type SafeParseResult<T> = { success: true; data: T } | { success: false; error: { issues: SafeParseIssue[] } };
+type SafeParseResult<T> =
+  { success: true; data: T } | { success: false; error: { issues: SafeParseIssue[] } };
 export type SchemaLike<T> = { safeParse: (data: unknown) => SafeParseResult<T> };
 
 /** Zod 실패를 AppError(VALIDATION_FAILED)로 바꾼다. 값은 담지 않고 path·message만 담는다. */
@@ -40,7 +46,9 @@ export function parseWithAppError<T>(schema: SchemaLike<T>, data: unknown): T {
     throw new AppError({
       code: 'VALIDATION_FAILED',
       message: '입력값이 올바르지 않습니다.',
-      details: { issues: result.error.issues.map((issue) => ({ path: issue.path, message: issue.message })) },
+      details: {
+        issues: result.error.issues.map((issue) => ({ path: issue.path, message: issue.message })),
+      },
     });
   }
   return result.data;
@@ -50,7 +58,10 @@ export function parseWithAppError<T>(schema: SchemaLike<T>, data: unknown): T {
  * middleware/logger.ts가 서버 로그로만 남긴다. */
 const UNKNOWN_ERROR_MESSAGE = '일시적인 오류입니다. 잠시 후 다시 시도해 주세요.';
 
-export function toErrorEnvelope(err: unknown, requestId: string): { status: ErrorStatus; body: ErrorEnvelope } {
+export function toErrorEnvelope(
+  err: unknown,
+  requestId: string,
+): { status: ErrorStatus; body: ErrorEnvelope } {
   if (err instanceof AppError) {
     return {
       status: err.status ?? HTTP_STATUS_BY_CODE[err.code],

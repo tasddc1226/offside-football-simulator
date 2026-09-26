@@ -8,8 +8,19 @@ describe('edgeCached (T-10-015)', () => {
   let cache: ReturnType<typeof installFakeEdgeCache>;
   let loads = 0;
   const app = new Hono<AppEnv>();
-  app.get('/v1/x', async (c) => c.json(await edgeCached(c, `/v1/x?k=${c.req.query('k') ?? ''}`, 60, async () => (loads++, { n: loads }))));
-  app.get('/v1/miss', async (c) => c.json((await edgeCached(c, '/v1/miss', 60, async () => (loads++, undefined))) ?? null));
+  app.get('/v1/x', async (c) =>
+    c.json(
+      await edgeCached(
+        c,
+        `/v1/x?k=${c.req.query('k') ?? ''}`,
+        60,
+        async () => (loads++, { n: loads }),
+      ),
+    ),
+  );
+  app.get('/v1/miss', async (c) =>
+    c.json((await edgeCached(c, '/v1/miss', 60, async () => (loads++, undefined))) ?? null),
+  );
   app.post('/v1/x', (c) => (purgeEdge(c, ['/v1/x?k=a']), c.body(null, 204)));
 
   beforeEach(() => {
@@ -20,7 +31,8 @@ describe('edgeCached (T-10-015)', () => {
     cache.uninstall();
   });
 
-  const read = async (q: string) => (await (await app.request(`http://api.test/v1/x?${q}`)).json()) as { n: number };
+  const read = async (q: string) =>
+    (await (await app.request(`http://api.test/v1/x?${q}`)).json()) as { n: number };
 
   it('같은 키는 한 번만 읽고, 모르는 쿼리를 붙여도 정규화한 키로 캐시를 탄다', async () => {
     expect(await read('k=a')).toEqual({ n: 1 });

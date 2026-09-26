@@ -7,10 +7,13 @@ async function expectNoViolations(page: Page, where: string, { seriousOnly = fal
   const results = await new AxeBuilder({ page }).analyze();
   const found = results.violations
     .filter((v) => !seriousOnly || v.impact === 'serious' || v.impact === 'critical')
-    .map((v) => `${where}: ${v.id} (${v.impact}) ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+    .map(
+      (v) => `${where}: ${v.id} (${v.impact}) ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`,
+    );
   expect(found).toEqual([]);
 }
-const expectNoSeriousViolations = (page: Page) => expectNoViolations(page, page.url(), { seriousOnly: true });
+const expectNoSeriousViolations = (page: Page) =>
+  expectNoViolations(page, page.url(), { seriousOnly: true });
 
 test('홈 화면에 심각한 접근성 위반이 없다', async ({ page }) => {
   await page.goto('/');
@@ -26,13 +29,53 @@ test('선수 탭에 심각한 접근성 위반이 없다', async ({ page }) => {
 // T-10-004: 게임 화면은 moderate(랜드마크·h1 등)까지 위반 0을 유지한다 — 라이트/다크 둘 다.
 const HOF_ID = '0f2d7a51-6c1e-4a8b-9d3f-2b7c5e8a1d44';
 const hofEntry = {
-  id: HOF_ID, name: null, pos: 'MF', number: 10, retireAge: 36, peak: 88, legendScore: 540, apps: 600, goals: 120, assists: 210,
-  trophies: 7, awards: 4, caps: 90, ballon: 0, lastClub: '테스트 FC', retiredAt: '2026-09-24T00:00:00.000Z', hasDetail: true,
+  id: HOF_ID,
+  name: null,
+  pos: 'MF',
+  number: 10,
+  retireAge: 36,
+  peak: 88,
+  legendScore: 540,
+  apps: 600,
+  goals: 120,
+  assists: 210,
+  trophies: 7,
+  awards: 4,
+  caps: 90,
+  ballon: 0,
+  lastClub: '테스트 FC',
+  retiredAt: '2026-09-24T00:00:00.000Z',
+  hasDetail: true,
 };
 const hofSnapshot = {
-  number: 10, pos: 'MF', age: 36, peak: 88, lastClub: '테스트 FC',
-  career: [{ year: 2026, age: 18, club: '테스트 고교', league: '고교리그', apps: 20, goals: 6, assists: 9, cs: 0, rating: 7.2, rank: 1, ovr: 57, honors: ['고교리그 우승'], ch: ['assists'] }],
-  trophies: [{ year: 2026, t: '고교리그 우승', club: '테스트 고교' }], awards: [], ballon: [], nat: { caps: 90 }, storyLog: [], miles: [],
+  number: 10,
+  pos: 'MF',
+  age: 36,
+  peak: 88,
+  lastClub: '테스트 FC',
+  career: [
+    {
+      year: 2026,
+      age: 18,
+      club: '테스트 고교',
+      league: '고교리그',
+      apps: 20,
+      goals: 6,
+      assists: 9,
+      cs: 0,
+      rating: 7.2,
+      rank: 1,
+      ovr: 57,
+      honors: ['고교리그 우승'],
+      ch: ['assists'],
+    },
+  ],
+  trophies: [{ year: 2026, t: '고교리그 우승', club: '테스트 고교' }],
+  awards: [],
+  ballon: [],
+  nat: { caps: 90 },
+  storyLog: [],
+  miles: [],
 };
 
 for (const scheme of ['light', 'dark'] as const) {
@@ -40,7 +83,9 @@ for (const scheme of ['light', 'dark'] as const) {
     test.setTimeout(60_000);
     await page.emulateMedia({ colorScheme: scheme });
     await page.route(/\/v1\/hof\?/, (r) => r.fulfill(ok({ entries: [hofEntry] })));
-    await page.route(`${API}/v1/hof/${HOF_ID}`, (r) => r.fulfill(ok({ entry: hofEntry, snapshot: hofSnapshot })));
+    await page.route(`${API}/v1/hof/${HOF_ID}`, (r) =>
+      r.fulfill(ok({ entry: hofEntry, snapshot: hofSnapshot })),
+    );
     await page.goto('/');
     await expect(page.locator(`[data-hof-id="${HOF_ID}"]`)).toBeVisible();
     await expectNoViolations(page, 'home');

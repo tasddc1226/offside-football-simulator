@@ -19,7 +19,12 @@ export function callJson(
     path,
     {
       method,
-      headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...(opts.cookie ? { Cookie: opts.cookie } : {}), ...opts.headers },
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: ORIGIN,
+        ...(opts.cookie ? { Cookie: opts.cookie } : {}),
+        ...opts.headers,
+      },
       ...(method === 'GET' ? {} : { body: JSON.stringify(opts.body ?? {}) }),
     },
     env,
@@ -28,16 +33,31 @@ export function callJson(
 
 /** 프로필 삭제 2단계(확인 토큰 → 확정)를 밟고 확정 응답을 돌려준다. 멱등 키는 `${key}-token`·`${key}-confirm`. */
 export async function deleteProfile(env: TestD1['env'], cookie: string, key: string) {
-  const tokenRes = await callJson(env, 'POST', '/v1/profile/delete', { cookie, headers: { 'Idempotency-Key': `${key}-token` } });
+  const tokenRes = await callJson(env, 'POST', '/v1/profile/delete', {
+    cookie,
+    headers: { 'Idempotency-Key': `${key}-token` },
+  });
   const { confirmToken } = ((await tokenRes.json()) as { data: { confirmToken: string } }).data;
-  return callJson(env, 'POST', '/v1/profile/delete', { cookie, headers: { 'Idempotency-Key': `${key}-confirm` }, body: { confirmToken } });
+  return callJson(env, 'POST', '/v1/profile/delete', {
+    cookie,
+    headers: { 'Idempotency-Key': `${key}-confirm` },
+    body: { confirmToken },
+  });
 }
 
 /** 로그인한 쿠키로 JSON을 PUT한다(시즌·은퇴 업로드 등). */
-export const putJson = (ctx: TestD1, cookie: string, path: string, body: unknown) => callJson(ctx.env, 'PUT', path, { cookie, body });
+export const putJson = (ctx: TestD1, cookie: string, path: string, body: unknown) =>
+  callJson(ctx.env, 'PUT', path, { cookie, body });
 
 /** 시즌·은퇴 업로드 본문의 career 머리(테스트 공용). */
-export const TEST_CAREER = { pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late', startYear: 2026, appVersion: '1.0.0' };
+export const TEST_CAREER = {
+  pos: 'FW',
+  foot: '오른발',
+  type: 'poacher',
+  trait: 'late',
+  startYear: 2026,
+  appVersion: '1.0.0',
+};
 
 /** Set-Cookie에서 쿠키 하나의 값(빈 값일 수 있다). 없으면 던진다. */
 export function extractCookie(setCookie: string, name: string): string {
@@ -73,4 +93,5 @@ export async function issueGoogleCookie(ctx: TestD1, opts: Parameters<typeof lin
 }
 
 /** ADMIN_EMAIL로 구글 연결한 새 프로필(관리자). */
-export const issueAdminCookie = (ctx: TestD1, opts: { nickname?: string } = {}) => issueGoogleCookie(ctx, { email: ADMIN_EMAIL, ...opts });
+export const issueAdminCookie = (ctx: TestD1, opts: { nickname?: string } = {}) =>
+  issueGoogleCookie(ctx, { email: ADMIN_EMAIL, ...opts });

@@ -7,5 +7,6 @@ export const CLUB_CUSTOM_IMG_MAX = 16_000;
 export const CLUB_CUSTOM_IMG_TOTAL_MAX = 800_000;
 
 /** 클럽 커스텀 맵에 담긴 업로드 이미지(data URL) 길이의 합. */
-export const clubImgTotal = (clubs: Record<string, { logo?: { img?: string | undefined } | undefined }>): number =>
-  Object.values(clubs).reduce((n, c) => n + (c.logo?.img?.length ?? 0), 0);
+export const clubImgTotal = (
+  clubs: Record<string, { logo?: { img?: string | undefined } | undefined }>,
+): number => Object.values(clubs).reduce((n, c) => n + (c.logo?.img?.length ?? 0), 0);

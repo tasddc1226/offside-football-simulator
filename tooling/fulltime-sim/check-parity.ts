@@ -54,15 +54,27 @@ function readCsv(csvPath: string): Row[] {
 
 export function computeMetrics(rows: Row[]): Metrics {
   return {
-    peakP10: quantile(rows.map((r) => r.peak), 0.1),
-    peakP50: quantile(rows.map((r) => r.peak), 0.5),
-    peakP90: quantile(rows.map((r) => r.peak), 0.9),
+    peakP10: quantile(
+      rows.map((r) => r.peak),
+      0.1,
+    ),
+    peakP50: quantile(
+      rows.map((r) => r.peak),
+      0.5,
+    ),
+    peakP90: quantile(
+      rows.map((r) => r.peak),
+      0.9,
+    ),
     corrPotPeak: pearson(rows, 'pot', 'peak'),
     europeShare: share(rows, (r) => (r.maxTier as number) >= 4),
     plShare: share(rows, (r) => r.maxTier === 8),
     cappedShare: share(rows, (r) => (r.caps as number) > 0),
     ballonWinShare: share(rows, (r) => (r.ballon as number) > 0),
-    retireAgeP50: quantile(rows.map((r) => r.retireAge), 0.5),
+    retireAgeP50: quantile(
+      rows.map((r) => r.retireAge),
+      0.5,
+    ),
   };
 }
 
@@ -83,7 +95,14 @@ export function compareMetrics(
   const results = (Object.keys(expected) as MetricKey[]).map((key) => {
     const tol = tolerances[key] ?? 0;
     const diff = Math.abs(actual[key] - expected[key]);
-    return { key, actual: actual[key], expected: expected[key], tolerance: tol, diff, ok: diff <= tol };
+    return {
+      key,
+      actual: actual[key],
+      expected: expected[key],
+      tolerance: tol,
+      diff,
+      ok: diff <= tol,
+    };
   });
   return { ok: results.every((r) => r.ok), results };
 }
@@ -101,11 +120,16 @@ function main() {
     : path.join(__dirname, 'reference', `${policy}.json`);
 
   const rows = readCsv(csvPath);
-  const reference = JSON.parse(fs.readFileSync(refPath, 'utf8')) as { version?: number; metrics: Metrics };
+  const reference = JSON.parse(fs.readFileSync(refPath, 'utf8')) as {
+    version?: number;
+    metrics: Metrics;
+  };
   const actual = computeMetrics(rows);
   const { ok, results } = compareMetrics(actual, reference.metrics);
 
-  console.log(`[check-parity] ${rows.length} careers (${policy}) vs ${path.basename(refPath)}${reference.version ? ` v${reference.version}` : ''}`);
+  console.log(
+    `[check-parity] ${rows.length} careers (${policy}) vs ${path.basename(refPath)}${reference.version ? ` v${reference.version}` : ''}`,
+  );
   for (const r of results) {
     const status = r.ok ? 'ok  ' : 'FAIL';
     console.log(

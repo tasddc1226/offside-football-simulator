@@ -19,7 +19,11 @@ function upsertFirst(db: Db, c: Claim, earlierOnly: boolean) {
   return db
     .insert(serverFirsts)
     .values({ id: c.id, ...set })
-    .onConflictDoUpdate({ target: serverFirsts.id, set, ...(earlierOnly ? { setWhere: sql`excluded.achieved_at < ${serverFirsts.achievedAt}` } : {}) });
+    .onConflictDoUpdate({
+      target: serverFirsts.id,
+      set,
+      ...(earlierOnly ? { setWhere: sql`excluded.achieved_at < ${serverFirsts.achievedAt}` } : {}),
+    });
 }
 
 const seasonColumns = {
@@ -50,23 +54,46 @@ export function honorsOf(json: string): string[] {
   }
 }
 
-function toCareers(cs: { id: string; legendScore: number | null; retiredAt: string | null }[], rows: SeasonRow[]): FirstCareer[] {
+function toCareers(
+  cs: { id: string; legendScore: number | null; retiredAt: string | null }[],
+  rows: SeasonRow[],
+): FirstCareer[] {
   const by = new Map<string, FirstCareer>(cs.map((c) => [c.id, { ...c, seasons: [] }]));
   for (const r of rows) {
     by.get(r.careerId)?.seasons.push({
-      year: r.year, age: r.age, club: r.club, league: r.league, apps: r.apps, goals: r.goals, assists: r.assists,
-      cs: r.cs, caps: r.caps, rating: r.rating, ovr: r.ovr, honors: honorsOf(r.honorsJson), mil: r.mil === 1, createdAt: r.createdAt,
+      year: r.year,
+      age: r.age,
+      club: r.club,
+      league: r.league,
+      apps: r.apps,
+      goals: r.goals,
+      assists: r.assists,
+      cs: r.cs,
+      caps: r.caps,
+      rating: r.rating,
+      ovr: r.ovr,
+      honors: honorsOf(r.honorsJson),
+      mil: r.mil === 1,
+      createdAt: r.createdAt,
     });
   }
   for (const c of by.values()) c.seasons.sort((a, b) => a.year - b.year);
   return [...by.values()];
 }
 
-const careerColumns = { id: careers.id, legendScore: careers.legendScore, retiredAt: careers.retiredAt };
+const careerColumns = {
+  id: careers.id,
+  legendScore: careers.legendScore,
+  retiredAt: careers.retiredAt,
+};
 
 /** 한 커리어를 다시 판정해 더 이른 기록이면 반영한다. 바뀐 게 있으면 true(목록 캐시를 지울지 판단용).
  * legendOnly: 은퇴 때는 새로 가능해지는 기록이 레전드 점수뿐이라 시즌을 읽지 않는다. */
-export async function recordCareerFirsts(db: Db, careerId: string, { legendOnly = false } = {}): Promise<boolean> {
+export async function recordCareerFirsts(
+  db: Db,
+  careerId: string,
+  { legendOnly = false } = {},
+): Promise<boolean> {
   const [cs, rows] = legendOnly
     ? [await db.select(careerColumns).from(careers).where(eq(careers.id, careerId)), []]
     : await db.batch([
@@ -80,30 +107,45 @@ export async function recordCareerFirsts(db: Db, careerId: string, { legendOnly 
   const held = await db
     .select({ id: serverFirsts.id, careerId: serverFirsts.careerId, at: serverFirsts.achievedAt })
     .from(serverFirsts)
-    .where(inArray(serverFirsts.id, got.map((g) => g.id)));
+    .where(
+      inArray(
+        serverFirsts.id,
+        got.map((g) => g.id),
+      ),
+    );
   const cur = new Map(held.map((h) => [h.id, h]));
   // 이미 이 커리어가 가졌거나 더 이른 기록이 있으면 쓰지 않는다.
   const wins = got.filter((g) => {
     const h = cur.get(g.id);
     return !h || (h.careerId !== careerId && g.at < h.at);
   });
-  await runBatch(db, wins.map((g) => upsertFirst(db, { ...g, careerId }, true)));
+  await runBatch(
+    db,
+    wins.map((g) => upsertFirst(db, { ...g, careerId }, true)),
+  );
   return wins.length > 0;
 }
 
 /** 기록을 가진 커리어가 지워지면(프로필 삭제) 그 자리는 다음 업로더가 아니라 실제로 가장 이른 달성자에게
  * 가야 한다 — 소급 표시를 지워 다음 목록 조회 때 전체를 다시 계산하게 한다. */
-export const resetFirstsBackfillStatement = (db: Db) => db.delete(appMeta).where(eq(appMeta.key, META_KEY));
+export const resetFirstsBackfillStatement = (db: Db) =>
+  db.delete(appMeta).where(eq(appMeta.key, META_KEY));
 
 /** 규칙 버전이 바뀌었으면 모든 커리어를 다시 훑어 채운다(첫 배포 때 이전 기록 소급 포함). */
 export async function ensureFirstsBackfilled(db: Db): Promise<void> {
-  const [meta] = await db.select({ value: appMeta.value }).from(appMeta).where(eq(appMeta.key, META_KEY));
+  const [meta] = await db
+    .select({ value: appMeta.value })
+    .from(appMeta)
+    .where(eq(appMeta.key, META_KEY));
   if (meta?.value !== BACKFILL_VERSION) await recomputeFirsts(db);
 }
 
 /** 모든 커리어를 다시 훑어 최초 기록을 채우고 소급 표시를 남긴다. */
 export async function recomputeFirsts(db: Db): Promise<void> {
-  const [cs, rows] = await db.batch([db.select(careerColumns).from(careers), db.select(seasonColumns).from(careerSeasons)]);
+  const [cs, rows] = await db.batch([
+    db.select(careerColumns).from(careers),
+    db.select(seasonColumns).from(careerSeasons),
+  ]);
   const best = new Map<string, Claim>();
   for (const c of toCareers(cs, rows)) {
     for (const g of evaluateCareer(c)) {
@@ -116,7 +158,10 @@ export async function recomputeFirsts(db: Db): Promise<void> {
   await runBatch(db, [
     ...[...best.values()].map((c) => upsertFirst(db, c, false)),
     ...(stale.length ? [db.delete(serverFirsts).where(inArray(serverFirsts.id, stale))] : []),
-    db.insert(appMeta).values({ key: META_KEY, value: BACKFILL_VERSION }).onConflictDoUpdate({ target: appMeta.key, set: { value: BACKFILL_VERSION } }),
+    db
+      .insert(appMeta)
+      .values({ key: META_KEY, value: BACKFILL_VERSION })
+      .onConflictDoUpdate({ target: appMeta.key, set: { value: BACKFILL_VERSION } }),
   ]);
 }
 

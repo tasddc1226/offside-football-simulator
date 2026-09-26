@@ -7,7 +7,15 @@ import { deleteBoardCommentsStatement } from '../db/repos/boards.js';
 import { deleteCareersStatements } from '../db/repos/careers.js';
 import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
 import { resetFirstsBackfillStatement } from '../db/repos/firsts.js';
-import { auditLog, boardComments, careers, idempotency, profiles, serverFirsts, sessions } from '../db/schema.js';
+import {
+  auditLog,
+  boardComments,
+  careers,
+  idempotency,
+  profiles,
+  serverFirsts,
+  sessions,
+} from '../db/schema.js';
 import { AppError } from '../errors.js';
 
 const CONFIRM_TOKEN_TTL_MS = 10 * 60 * 1000;
@@ -41,7 +49,11 @@ export type ExecuteProfileDeletionInput = {
 };
 
 /** 지운 것 — 라우트가 공개 조회 캐시를 필요한 만큼만 비우고, 최초 기록을 다시 계산하는 데 쓴다. */
-export type ExecuteProfileDeletionResult = { careerIds: string[]; heldFirsts: boolean; hadComments: boolean };
+export type ExecuteProfileDeletionResult = {
+  careerIds: string[];
+  heldFirsts: boolean;
+  hadComments: boolean;
+};
 
 /**
  * API-PRO-005 2단계. `deleted_at` 기록·idempotency 삭제·세션 전부 폐기·감사 로그를 한
@@ -71,7 +83,11 @@ export async function executeProfileDeletion(
       .from(careers)
       .leftJoin(serverFirsts, eq(serverFirsts.careerId, careers.id))
       .where(eq(careers.profileId, input.profileId)),
-    db.select({ id: boardComments.id }).from(boardComments).where(eq(boardComments.profileId, input.profileId)).limit(1),
+    db
+      .select({ id: boardComments.id })
+      .from(boardComments)
+      .where(eq(boardComments.profileId, input.profileId))
+      .limit(1),
   ]);
   const careerIds = [...new Set(owned.map((r) => r.id))];
   const heldFirsts = owned.some((r) => r.first !== null);

@@ -3,7 +3,10 @@ import { expect, type Page } from '@playwright/test';
 /** e2e 기본 API 주소 — 실제 서버 없이 page.route로 흉내 낸다. */
 export const API = 'http://localhost:8787';
 /** 성공 응답(route.fulfill 인자). 서버처럼 { data, meta } 봉투로 담는다. */
-export const ok = (data: unknown, status = 200) => ({ status, json: { data, meta: { requestId: 'req_e2e' } } });
+export const ok = (data: unknown, status = 200) => ({
+  status,
+  json: { data, meta: { requestId: 'req_e2e' } },
+});
 /** 오류 응답(route.fulfill 인자). */
 export const fail = (status: number, code: string, message: string) => ({
   status,
@@ -35,7 +38,10 @@ export async function resumeWithSave(page: Page, patch: Record<string, unknown>)
 
 /** T-10-029 새 커리어를 고교 첫 시즌 직후(이적 시장 대기) 저장본으로 만들고 이어하기로 이적 시장을 연다. */
 export async function openMarket(page: Page, age?: number): Promise<void> {
-  await resumeWithSave(page, { pending: { type: 'market', res: null, m: null }, ...(age ? { age } : {}) });
+  await resumeWithSave(page, {
+    pending: { type: 'market', res: null, m: null },
+    ...(age ? { age } : {}),
+  });
 }
 
 /** 이적 시장에서 바로 은퇴한다(은퇴 크레딧이 시작된다). age를 주면 그 나이로 바꿔 은퇴한다 — 고교 선수라

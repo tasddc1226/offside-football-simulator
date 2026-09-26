@@ -14,7 +14,12 @@ export type SheetButton = { label: string; cls?: string; fn: () => void };
 export type { SheetView } from './sheets/types.js';
 export type { Chip } from '../game/stats.js';
 
-export const sheetState = $state<{ open: boolean; busy: boolean; view: SheetView | null; buttons: SheetButton[] }>({
+export const sheetState = $state<{
+  open: boolean;
+  busy: boolean;
+  view: SheetView | null;
+  buttons: SheetButton[];
+}>({
   open: false,
   busy: false,
   view: null,
@@ -163,7 +168,11 @@ export function playBlock(
           },
         },
       ];
-      void tick().then(() => sheetEl?.querySelector<HTMLButtonElement>('[data-sheet="0"]')?.focus({ preventScroll: true }));
+      void tick().then(() =>
+        sheetEl
+          ?.querySelector<HTMLButtonElement>('[data-sheet="0"]')
+          ?.focus({ preventScroll: true }),
+      );
     };
     showSheet({
       kind: 'block',
@@ -209,11 +218,14 @@ export function playJudge(label: string, p: number, roll: number): Promise<void>
       v.pos = sweep * (1 - ease) + roll * ease;
       if (t < 1) setTimeout(frame, 16);
       else
-        setTimeout(() => {
-          sheetState.busy = false;
-          resolve();
-          // 감속 모션이면 바늘이 흔들리지 않고 곧장 판정값에 서므로, 결과를 읽을 시간을 조금 더 준다.
-        }, motionOK ? 280 : 700);
+        setTimeout(
+          () => {
+            sheetState.busy = false;
+            resolve();
+            // 감속 모션이면 바늘이 흔들리지 않고 곧장 판정값에 서므로, 결과를 읽을 시간을 조금 더 준다.
+          },
+          motionOK ? 280 : 700,
+        );
     };
     void tick().then(frame);
   });

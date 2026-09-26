@@ -6,7 +6,11 @@ import { getProfile } from '../db/repos/profiles.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { extractSessionToken, issueCookie, ORIGIN } from '../test/http.js';
 
-function postInit(input: { idempotencyKey?: string | null; cookie?: string; origin?: string | null }): RequestInit {
+function postInit(input: {
+  idempotencyKey?: string | null;
+  cookie?: string;
+  origin?: string | null;
+}): RequestInit {
   const { idempotencyKey = 'idem-key-0001', cookie, origin = ORIGIN } = input;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (origin !== null) headers.Origin = origin;
@@ -38,7 +42,11 @@ describe('POST /v1/auth/logout', () => {
 
     const after = await app.request(
       '/v1/profile/settings',
-      { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie }, body: '{}' },
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
+        body: '{}',
+      },
       ctx.env,
     );
     expect(after.status).toBe(401);
@@ -60,14 +68,27 @@ describe('POST /v1/auth/logout', () => {
 
     const res = await app.request(
       '/v1/auth/logout',
-      { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, 'Idempotency-Key': 'idem-toss-logout', Authorization: `Bearer ${bearerToken}` }, body: '{}' },
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: ORIGIN,
+          'Idempotency-Key': 'idem-toss-logout',
+          Authorization: `Bearer ${bearerToken}`,
+        },
+        body: '{}',
+      },
       ctx.env,
     );
     expect(res.status).toBe(204);
     expect(res.headers.get('Set-Cookie')).toBeNull();
 
     // web 쿠키 세션은 영향받지 않는다.
-    const stillWorks = await app.request('/v1/profile', { headers: { Cookie: `offside_session=${webToken}` } }, ctx.env);
+    const stillWorks = await app.request(
+      '/v1/profile',
+      { headers: { Cookie: `offside_session=${webToken}` } },
+      ctx.env,
+    );
     expect(stillWorks.status).toBe(200);
   });
 

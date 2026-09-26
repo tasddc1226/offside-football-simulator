@@ -8,38 +8,121 @@ import type { GameState, NatTour } from './types.js';
 
 const NT_THRESHOLD = 80;
 const AFC_NT: [string, number][] = [
-  ['일본', 77], ['이란', 74], ['호주', 73], ['사우디아라비아', 69], ['우즈베키스탄', 68], ['카타르', 68], ['이라크', 67],
-  ['요르단', 67], ['UAE', 66], ['오만', 64], ['바레인', 63], ['중국', 62], ['태국', 61], ['베트남', 60], ['팔레스타인', 60], ['쿠웨이트', 58], ['키르기스스탄', 58],
+  ['일본', 77],
+  ['이란', 74],
+  ['호주', 73],
+  ['사우디아라비아', 69],
+  ['우즈베키스탄', 68],
+  ['카타르', 68],
+  ['이라크', 67],
+  ['요르단', 67],
+  ['UAE', 66],
+  ['오만', 64],
+  ['바레인', 63],
+  ['중국', 62],
+  ['태국', 61],
+  ['베트남', 60],
+  ['팔레스타인', 60],
+  ['쿠웨이트', 58],
+  ['키르기스스탄', 58],
 ];
 const WORLD_NT: [string, number][] = [
-  ['아르헨티나', 88], ['프랑스', 88], ['스페인', 88], ['잉글랜드', 86], ['브라질', 86], ['포르투갈', 85], ['네덜란드', 84], ['독일', 84],
-  ['벨기에', 82], ['이탈리아', 82], ['크로아티아', 81], ['모로코', 81], ['우루과이', 80], ['콜롬비아', 80], ['덴마크', 80], ['스위스', 79],
-  ['멕시코', 78], ['미국', 78], ['세네갈', 78], ['오스트리아', 78], ['노르웨이', 78], ['에콰도르', 77], ['튀르키예', 77], ['파라과이', 76],
-  ['캐나다', 75], ['코트디부아르', 74], ['가나', 72], ['튀니지', 72], ['카메룬', 72], ['코스타리카', 70],
+  ['아르헨티나', 88],
+  ['프랑스', 88],
+  ['스페인', 88],
+  ['잉글랜드', 86],
+  ['브라질', 86],
+  ['포르투갈', 85],
+  ['네덜란드', 84],
+  ['독일', 84],
+  ['벨기에', 82],
+  ['이탈리아', 82],
+  ['크로아티아', 81],
+  ['모로코', 81],
+  ['우루과이', 80],
+  ['콜롬비아', 80],
+  ['덴마크', 80],
+  ['스위스', 79],
+  ['멕시코', 78],
+  ['미국', 78],
+  ['세네갈', 78],
+  ['오스트리아', 78],
+  ['노르웨이', 78],
+  ['에콰도르', 77],
+  ['튀르키예', 77],
+  ['파라과이', 76],
+  ['캐나다', 75],
+  ['코트디부아르', 74],
+  ['가나', 72],
+  ['튀니지', 72],
+  ['카메룬', 72],
+  ['코스타리카', 70],
 ];
 export const HOSTS = {
-  wc: { 2026: '미국·캐나다·멕시코', 2030: '스페인·포르투갈·모로코', 2034: '사우디아라비아' } as Record<number, string>,
+  wc: {
+    2026: '미국·캐나다·멕시코',
+    2030: '스페인·포르투갈·모로코',
+    2034: '사우디아라비아',
+  } as Record<number, string>,
   asian: { 2027: '사우디아라비아' } as Record<number, string>,
-  ag: { 2026: '일본 아이치·나고야', 2030: '카타르 도하', 2034: '사우디아라비아 리야드' } as Record<number, string>,
+  ag: { 2026: '일본 아이치·나고야', 2030: '카타르 도하', 2034: '사우디아라비아 리야드' } as Record<
+    number,
+    string
+  >,
   olympic: { 2028: '미국 LA', 2032: '호주 브리즈번' } as Record<number, string>,
 };
 const WINDOW_NAME: string[][] = [[], ['9월 A매치', '10월 A매치'], ['11월 A매치', '3월 A매치']];
 
 export function natInit(s: GameState) {
-  s.nat = Object.assign({ caps: 0, goals: 0, assists: 0, tours: [], qual: { 2026: true }, captain: false, debutYear: null }, s.nat || {});
-  s.mil = s.mil || { exempt: null, served: false, serving: false, left: 0, type: null, prevClub: null };
+  s.nat = Object.assign(
+    {
+      caps: 0,
+      goals: 0,
+      assists: 0,
+      tours: [],
+      qual: { 2026: true },
+      captain: false,
+      debutYear: null,
+    },
+    s.nat || {},
+  );
+  s.mil = s.mil || {
+    exempt: null,
+    served: false,
+    serving: false,
+    left: 0,
+    type: null,
+    prevClub: null,
+  };
 }
 const isQualYear = (y: number) => y % 4 === 0 || y % 4 === 1;
-export const nextWC = (y: number) => y + (((2 - (y % 4) + 4) % 4) || 4);
+export const nextWC = (y: number) => y + ((2 - (y % 4) + 4) % 4 || 4);
 const u23 = (t: [string, number]): [string, number] => [`${t[0]} U-23`, t[1] - 6];
 
 export function callupScore(s: GameState): number {
-  const S = s.season, form = S.apps ? S.ratingSum / S.apps : 6.6;
-  return ovr(s) + (form - 6.8) * 4 + leagueOf(s.leagueId).tier * 0.6 + fameEff(s) * 0.02 - (s.age >= 33 ? (s.age - 32) * 2 : 0);
+  const S = s.season,
+    form = S.apps ? S.ratingSum / S.apps : 6.6;
+  return (
+    ovr(s) +
+    (form - 6.8) * 4 +
+    leagueOf(s.leagueId).tier * 0.6 +
+    fameEff(s) * 0.02 -
+    (s.age >= 33 ? (s.age - 32) * 2 : 0)
+  );
 }
 
 export interface IntlResult {
-  comp: string; stage: string; opp: string; kg: number; og: number; res: string; pso: string | null; mins: number; g: number; a: number; rating: number | null;
+  comp: string;
+  stage: string;
+  opp: string;
+  kg: number;
+  og: number;
+  res: string;
+  pso: string | null;
+  mins: number;
+  g: number;
+  a: number;
+  rating: number | null;
 }
 /** 시즌 결산의 대회 결과 — 저장 기록(NatTour)에 대회 종류(wc·ag·asian·olympic)·경기·명단 제외 사유를 더한 것. */
 export interface NatTourResult extends NatTour {
@@ -47,14 +130,25 @@ export interface NatTourResult extends NatTour {
   matches: IntlResult[];
   why?: string;
 }
-function simIntl(s: GameState, opp: [string, number], role: 'starter' | 'sub' | 'none', comp: string, stage = '', youth = false): IntlResult {
-  const P = POS[s.pos], o = ovr(s), teamStr = youth ? BAL.koreaU23 : BAL.koreaStr;
+function simIntl(
+  s: GameState,
+  opp: [string, number],
+  role: 'starter' | 'sub' | 'none',
+  comp: string,
+  stage = '',
+  youth = false,
+): IntlResult {
+  const P = POS[s.pos],
+    o = ovr(s),
+    teamStr = youth ? BAL.koreaU23 : BAL.koreaStr;
   let mins = 0;
   if (role === 'starter') mins = chance(0.82) ? 90 : ri(60, 85);
   else if (role === 'sub') mins = chance(0.6) ? ri(10, 35) : 0;
   const diff = teamStr + (mins ? (o - teamStr) * 0.12 * (mins / 90) : 0) - opp[1];
-  const kg = poisson(clamp(1.3 + diff * 0.04, 0.25, 3.2)), og = poisson(clamp(1.1 - diff * 0.04, 0.2, 3.2));
-  let g = 0, a = 0;
+  const kg = poisson(clamp(1.3 + diff * 0.04, 0.25, 3.2)),
+    og = poisson(clamp(1.1 - diff * 0.04, 0.2, 3.2));
+  let g = 0,
+    a = 0;
   if (mins) {
     g = Math.min(kg, poisson(P.goal * Math.exp((atkOf(s) - opp[1]) / 20) * (mins / 90)));
     a = Math.min(kg - g, poisson(P.assist * Math.exp((creOf(s) - opp[1]) / 20) * (mins / 90)));
@@ -63,12 +157,27 @@ function simIntl(s: GameState, opp: [string, number], role: 'starter' | 'sub' | 
   let pso: string | null = null;
   if (res === 'D' && stage) {
     const win = chance(0.5 + (s.pos === 'GK' && mins ? (s.attrs.def - 70) * 0.012 : 0));
-    const w = ri(3, 5), l = w - ri(1, 2);
+    const w = ri(3, 5),
+      l = w - ri(1, 2);
     pso = win ? `${w}-${l}` : `${l}-${w}`;
     res = win ? 'PW' : 'PL';
   }
   const win = res === 'W' || res === 'PW';
-  const rating = mins ? clamp(Math.round((6.3 + g * 0.9 + a * 0.5 + (o - teamStr) * 0.03 + (win ? 0.25 : res === 'D' ? 0 : -0.25) + gauss() * 0.3) * 10) / 10, 4.5, 10) : null;
+  const rating = mins
+    ? clamp(
+        Math.round(
+          (6.3 +
+            g * 0.9 +
+            a * 0.5 +
+            (o - teamStr) * 0.03 +
+            (win ? 0.25 : res === 'D' ? 0 : -0.25) +
+            gauss() * 0.3) *
+            10,
+        ) / 10,
+        4.5,
+        10,
+      )
+    : null;
   // 아시안게임·올림픽(U-23)은 A매치가 아니다 — 대회 기록(tours)에만 남기고 A매치 출전·골·도움에는 넣지 않는다.
   if (mins && !youth) {
     s.nat.caps++;
@@ -93,15 +202,19 @@ export function natWindow(s: GameState) {
   return out.length ? out : null;
 }
 function natOne(s: GameState, name: string) {
-  const sc = callupScore(s), thr = NT_THRESHOLD + gauss() * 1.2;
-  if (s.injury > 0 || sc < thr) return s.nat.caps && sc >= thr - 4 ? { name, called: false as const } : null;
+  const sc = callupScore(s),
+    thr = NT_THRESHOLD + gauss() * 1.2;
+  if (s.injury > 0 || sc < thr)
+    return s.nat.caps && sc >= thr - 4 ? { name, called: false as const } : null;
   const qual = isQualYear(s.year);
   const comp = qual ? `${nextWC(s.year)} 월드컵 아시아 예선` : '친선 A매치';
-  const role: 'starter' | 'sub' = sc >= 85 || s.nat.captain ? 'starter' : chance(0.45) ? 'starter' : 'sub';
+  const role: 'starter' | 'sub' =
+    sc >= 85 || s.nat.captain ? 'starter' : chance(0.45) ? 'starter' : 'sub';
   const pool = qual ? AFC_NT.slice(0, 14) : chance(0.55) ? WORLD_NT : AFC_NT.slice(0, 8);
   const o1 = pick(pool);
   let o2: [string, number];
-  do o2 = pick(pool); while (o2 === o1);
+  do o2 = pick(pool);
+  while (o2 === o1);
   if (!s.nat.debutYear) {
     s.nat.debutYear = s.year;
     addStat(s, 'fame', 5);
@@ -109,48 +222,95 @@ function natOne(s: GameState, name: string) {
   }
   const games = [o1, o2].map((o) => simIntl(s, o, role, comp));
   addStat(s, 'cond', -6);
-  games.forEach((m) => log(s, `[${comp}] ${scoreLine(m)}${m.mins ? ` · ${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''}` : ' · 벤치'}`));
+  games.forEach((m) =>
+    log(
+      s,
+      `[${comp}] ${scoreLine(m)}${m.mins ? ` · ${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''}` : ' · 벤치'}`,
+    ),
+  );
   return { name, comp, called: true as const, role, games };
 }
 
 interface TournamentDef {
-  label: (y: number) => string; youth: boolean;
-  group: () => [string, number][]; adv: (pts: number) => boolean;
-  rounds: [string, [string, number][]][]; trophy: string; bronze?: [string, number][]; exempt?: (stage: string) => boolean;
+  label: (y: number) => string;
+  youth: boolean;
+  group: () => [string, number][];
+  adv: (pts: number) => boolean;
+  rounds: [string, [string, number][]][];
+  trophy: string;
+  bronze?: [string, number][];
+  exempt?: (stage: string) => boolean;
 }
 function pickDistinct<T>(pool: T[], n: number): T[] {
-  const p = pool.slice(), out: T[] = [];
+  const p = pool.slice(),
+    out: T[] = [];
   while (out.length < n && p.length) out.push(p.splice(Math.floor(rnd() * p.length), 1)[0]!);
   return out;
 }
 const TOURNAMENTS: Record<string, TournamentDef> = {
   wc: {
-    label: (y) => `${y} FIFA 월드컵 (${HOSTS.wc[y] ?? '개최지 미정'})`, youth: false,
-    group: () => [pick(WORLD_NT.slice(0, 10)), pick(WORLD_NT.slice(10, 22)), pick(WORLD_NT.slice(22).concat(AFC_NT.slice(3, 8)))],
+    label: (y) => `${y} FIFA 월드컵 (${HOSTS.wc[y] ?? '개최지 미정'})`,
+    youth: false,
+    group: () => [
+      pick(WORLD_NT.slice(0, 10)),
+      pick(WORLD_NT.slice(10, 22)),
+      pick(WORLD_NT.slice(22).concat(AFC_NT.slice(3, 8))),
+    ],
     adv: (pts) => pts >= 6 || (pts >= 4 && chance(0.9)) || (pts === 3 && chance(0.45)),
-    rounds: [['32강', WORLD_NT.slice(8, 30)], ['16강', WORLD_NT.slice(4, 22)], ['8강', WORLD_NT.slice(0, 14)], ['4강', WORLD_NT.slice(0, 9)], ['결승', WORLD_NT.slice(0, 6)]],
+    rounds: [
+      ['32강', WORLD_NT.slice(8, 30)],
+      ['16강', WORLD_NT.slice(4, 22)],
+      ['8강', WORLD_NT.slice(0, 14)],
+      ['4강', WORLD_NT.slice(0, 9)],
+      ['결승', WORLD_NT.slice(0, 6)],
+    ],
     trophy: 'FIFA 월드컵 우승',
   },
   asian: {
-    label: (y) => `${y} AFC 아시안컵${HOSTS.asian[y] ? ` (${HOSTS.asian[y]})` : ''}`, youth: false,
+    label: (y) => `${y} AFC 아시안컵${HOSTS.asian[y] ? ` (${HOSTS.asian[y]})` : ''}`,
+    youth: false,
     group: () => pickDistinct(AFC_NT.slice(4), 3),
     adv: (pts) => pts >= 4 || (pts === 3 && chance(0.6)),
-    rounds: [['16강', AFC_NT.slice(3, 12)], ['8강', AFC_NT.slice(1, 9)], ['4강', AFC_NT.slice(0, 6)], ['결승', AFC_NT.slice(0, 3)]],
+    rounds: [
+      ['16강', AFC_NT.slice(3, 12)],
+      ['8강', AFC_NT.slice(1, 9)],
+      ['4강', AFC_NT.slice(0, 6)],
+      ['결승', AFC_NT.slice(0, 3)],
+    ],
     trophy: 'AFC 아시안컵 우승',
   },
   ag: {
-    label: (y) => `${y} 아시안게임 (${HOSTS.ag[y] ?? '개최지 미정'})`, youth: true,
+    label: (y) => `${y} 아시안게임 (${HOSTS.ag[y] ?? '개최지 미정'})`,
+    youth: true,
     group: () => pickDistinct(AFC_NT.slice(8), 3).map(u23),
     adv: (pts) => pts >= 4 || (pts === 3 && chance(0.6)),
-    rounds: [['16강', AFC_NT.slice(4, 14).map(u23)], ['8강', AFC_NT.slice(2, 10).map(u23)], ['4강', AFC_NT.slice(0, 6).map(u23)], ['결승', AFC_NT.slice(0, 3).map(u23)]],
-    trophy: '아시안게임 금메달', exempt: (stage) => stage === '우승',
+    rounds: [
+      ['16강', AFC_NT.slice(4, 14).map(u23)],
+      ['8강', AFC_NT.slice(2, 10).map(u23)],
+      ['4강', AFC_NT.slice(0, 6).map(u23)],
+      ['결승', AFC_NT.slice(0, 3).map(u23)],
+    ],
+    trophy: '아시안게임 금메달',
+    exempt: (stage) => stage === '우승',
   },
   olympic: {
-    label: (y) => `${y} 올림픽 남자축구 (${HOSTS.olympic[y] ?? '개최지 미정'})`, youth: true,
-    group: () => [pick(WORLD_NT.slice(0, 10)), pick(WORLD_NT.slice(10, 24)), pick(AFC_NT.slice(0, 6).concat(WORLD_NT.slice(24)))].map(u23),
+    label: (y) => `${y} 올림픽 남자축구 (${HOSTS.olympic[y] ?? '개최지 미정'})`,
+    youth: true,
+    group: () =>
+      [
+        pick(WORLD_NT.slice(0, 10)),
+        pick(WORLD_NT.slice(10, 24)),
+        pick(AFC_NT.slice(0, 6).concat(WORLD_NT.slice(24))),
+      ].map(u23),
     adv: (pts) => pts >= 6 || (pts >= 4 && chance(0.7)) || (pts === 3 && chance(0.2)),
-    rounds: [['8강', WORLD_NT.slice(0, 20).map(u23)], ['4강', WORLD_NT.slice(0, 10).map(u23)], ['결승', WORLD_NT.slice(0, 6).map(u23)]],
-    bronze: WORLD_NT.slice(0, 14).map(u23), trophy: '올림픽 금메달', exempt: (stage) => ['금메달', '은메달', '동메달'].includes(stage),
+    rounds: [
+      ['8강', WORLD_NT.slice(0, 20).map(u23)],
+      ['4강', WORLD_NT.slice(0, 10).map(u23)],
+      ['결승', WORLD_NT.slice(0, 6).map(u23)],
+    ],
+    bronze: WORLD_NT.slice(0, 14).map(u23),
+    trophy: '올림픽 금메달',
+    exempt: (stage) => ['금메달', '은메달', '동메달'].includes(stage),
   },
 };
 
@@ -161,7 +321,8 @@ export const RELEASE: Record<string, { flag: string; p: () => number }> = {
 };
 
 function squadRole(s: GameState, key: string): { role: 'starter' | 'sub' | 'none'; why: string } {
-  const T = TOURNAMENTS[key]!, sc = callupScore(s);
+  const T = TOURNAMENTS[key]!,
+    sc = callupScore(s);
   if (leagueOf(s.leagueId).amateur && !T.youth) return { role: 'none', why: '' };
   if (s.injury > 0) return { role: 'none', why: '부상으로 최종 명단 제외' };
   if (T.youth) {
@@ -176,14 +337,19 @@ function squadRole(s: GameState, key: string): { role: 'starter' | 'sub' | 'none
       const ok = rel !== undefined ? rel : leagueOf(s.leagueId).tier <= 2 || chance(release.p());
       if (!ok) return { role: 'none', why: '소속팀이 차출을 거부' };
     }
-    return { role: sc >= need + 6 || !young ? 'starter' : chance(0.5) ? 'starter' : 'sub', why: young ? '' : '와일드카드 발탁' };
+    return {
+      role: sc >= need + 6 || !young ? 'starter' : chance(0.5) ? 'starter' : 'sub',
+      why: young ? '' : '와일드카드 발탁',
+    };
   }
-  if (sc < NT_THRESHOLD - 1 + gauss() * 1.2) return { role: 'none', why: s.nat.caps ? '최종 명단 탈락' : '' };
+  if (sc < NT_THRESHOLD - 1 + gauss() * 1.2)
+    return { role: 'none', why: s.nat.caps ? '최종 명단 탈락' : '' };
   return { role: sc >= 85 || s.nat.captain ? 'starter' : chance(0.5) ? 'starter' : 'sub', why: '' };
 }
 
 function runTournament(s: GameState, key: string) {
-  const T = TOURNAMENTS[key]!, y = s.year;
+  const T = TOURNAMENTS[key]!,
+    y = s.year;
   const { role, why } = squadRole(s, key);
   const matches: IntlResult[] = [];
   const play = (opp: [string, number], stage: string) => {
@@ -216,31 +382,92 @@ function runTournament(s: GameState, key: string) {
       }
     }
   }
-  if (key === 'olympic') stage = stage === '우승' ? '금메달' : stage === '준우승' ? '은메달' : stage;
+  if (key === 'olympic')
+    stage = stage === '우승' ? '금메달' : stage === '준우승' ? '은메달' : stage;
   const inSquad = role !== 'none';
   const mine = matches.filter((m) => m.mins);
-  const rec: NatTourResult = { year: y, key, name: T.label(y), stage, inSquad, why, apps: mine.length, goals: mine.reduce((t, m) => t + m.g, 0), matches };
+  const rec: NatTourResult = {
+    year: y,
+    key,
+    name: T.label(y),
+    stage,
+    inSquad,
+    why,
+    apps: mine.length,
+    goals: mine.reduce((t, m) => t + m.g, 0),
+    matches,
+  };
   s.nat.tours.push({ year: y, name: rec.name, stage, inSquad, apps: rec.apps, goals: rec.goals });
-  const trophy = inSquad && (stage === '우승' || stage === '금메달') ? T.trophy : inSquad && key === 'olympic' && ['은메달', '동메달'].includes(stage) ? `올림픽 ${stage}` : null;
-  if (inSquad) addStat(s, 'fame', ({ '조별리그 탈락': 1, '32강': 3, '16강': 4, '8강': 7, '4강': 10, '동메달': 10, '4위': 8, '준우승': 12, '은메달': 12, '우승': 18, '금메달': 18 } as Record<string, number>)[stage] ?? 2);
+  const trophy =
+    inSquad && (stage === '우승' || stage === '금메달')
+      ? T.trophy
+      : inSquad && key === 'olympic' && ['은메달', '동메달'].includes(stage)
+        ? `올림픽 ${stage}`
+        : null;
+  if (inSquad)
+    addStat(
+      s,
+      'fame',
+      (
+        {
+          '조별리그 탈락': 1,
+          '32강': 3,
+          '16강': 4,
+          '8강': 7,
+          '4강': 10,
+          동메달: 10,
+          '4위': 8,
+          준우승: 12,
+          은메달: 12,
+          우승: 18,
+          금메달: 18,
+        } as Record<string, number>
+      )[stage] ?? 2,
+    );
   if (inSquad && T.exempt && T.exempt(stage) && !s.mil.exempt && !s.mil.served) {
     s.mil.exempt = key === 'ag' ? '아시안게임 금메달' : `올림픽 ${stage}`;
-    log(s, `병역 특례 대상! (${s.mil.exempt}) 기초군사훈련 3주와 544시간 봉사활동으로 병역을 대신합니다.${s.mil.serving ? ' 복무 중이던 김천 상무에서는 시즌 종료 후 조기 전역합니다.' : ''}`, 'big');
-    s.mil.applied = false; s.mil.accepted = false; s.mil.armyNext = false;
+    log(
+      s,
+      `병역 특례 대상! (${s.mil.exempt}) 기초군사훈련 3주와 544시간 봉사활동으로 병역을 대신합니다.${s.mil.serving ? ' 복무 중이던 김천 상무에서는 시즌 종료 후 조기 전역합니다.' : ''}`,
+      'big',
+    );
+    s.mil.applied = false;
+    s.mil.accepted = false;
+    s.mil.armyNext = false;
   }
   return { rec, trophy };
 }
 
 export function natSeasonEnd(s: GameState) {
   natInit(s);
-  const y = s.year, out: NatTourResult[] = [], trophies: string[] = [];
+  const y = s.year,
+    out: NatTourResult[] = [],
+    trophies: string[] = [];
   const keys: string[] = [];
   if (y % 4 === 2 && s.nat.qual[y] !== false) keys.push('wc');
   if (y % 4 === 2) keys.push('ag');
   if (y % 4 === 3) keys.push('asian');
   if (y % 4 === 0 && s.nat.qual[y] !== false) keys.push('olympic');
-  if (y % 4 === 2 && s.nat.qual[y] === false) out.push({ year: y, name: `${y} FIFA 월드컵`, stage: '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
-  if (y % 4 === 0 && s.nat.qual[y] === false) out.push({ year: y, name: `${y} 올림픽 남자축구`, stage: '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
+  if (y % 4 === 2 && s.nat.qual[y] === false)
+    out.push({
+      year: y,
+      name: `${y} FIFA 월드컵`,
+      stage: '본선 진출 실패',
+      inSquad: false,
+      apps: 0,
+      goals: 0,
+      matches: [],
+    });
+  if (y % 4 === 0 && s.nat.qual[y] === false)
+    out.push({
+      year: y,
+      name: `${y} 올림픽 남자축구`,
+      stage: '본선 진출 실패',
+      inSquad: false,
+      apps: 0,
+      goals: 0,
+      matches: [],
+    });
   for (const k of keys) {
     const { rec, trophy } = runTournament(s, k);
     out.push(rec);
@@ -249,13 +476,29 @@ export function natSeasonEnd(s: GameState) {
   if (y % 4 === 1) {
     const ok = chance(BAL.wcQual);
     s.nat.qual[y + 1] = ok;
-    out.push({ year: y, name: `${y + 1} 월드컵 아시아 예선`, stage: ok ? '본선 진출 확정' : '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
+    out.push({
+      year: y,
+      name: `${y + 1} 월드컵 아시아 예선`,
+      stage: ok ? '본선 진출 확정' : '본선 진출 실패',
+      inSquad: false,
+      apps: 0,
+      goals: 0,
+      matches: [],
+    });
   }
   if (y % 4 === 3) {
     // 올림픽 아시아 예선(AFC U-23 아시안컵) — 한국은 1988~2020 10회 연속 진출, 2024 파리 예선 탈락.
     const ok = chance(BAL.olympicQual);
     s.nat.qual[y + 1] = ok;
-    out.push({ year: y, name: `${y + 1} 올림픽 아시아 예선 (AFC U-23 아시안컵)`, stage: ok ? '본선 진출 확정' : '본선 진출 실패', inSquad: false, apps: 0, goals: 0, matches: [] });
+    out.push({
+      year: y,
+      name: `${y + 1} 올림픽 아시아 예선 (AFC U-23 아시안컵)`,
+      stage: ok ? '본선 진출 확정' : '본선 진출 실패',
+      inSquad: false,
+      apps: 0,
+      goals: 0,
+      matches: [],
+    });
   }
   if (!s.nat.captain && s.nat.caps >= 40 && ovr(s) >= 78 && chance(0.35)) {
     s.nat.captain = true;

@@ -26,7 +26,9 @@ export function normalizeRecoveryCode(input: string): string {
 /** 정규화된 12자 코드를 표시형 `OFS-XXXX-XXXX-XXXX`로 되돌린다. */
 export function formatRecoveryCode(normalized: string): string {
   if (normalized.length !== 12) {
-    throw new RangeError(`formatRecoveryCode: 정규화된 코드는 12자여야 한다. 받은 길이: ${normalized.length}`);
+    throw new RangeError(
+      `formatRecoveryCode: 정규화된 코드는 12자여야 한다. 받은 길이: ${normalized.length}`,
+    );
   }
   return `OFS-${normalized.slice(0, 4)}-${normalized.slice(4, 8)}-${normalized.slice(8, 12)}`;
 }

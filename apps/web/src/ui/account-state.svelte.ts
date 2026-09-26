@@ -3,7 +3,10 @@
 // 설정 화면이 로그인 상태에 따라 운영 도구 입구를 보이므로 반응형으로 둔다.
 import { getProfile, type Profile } from '../api/client.js';
 
-export const accountCache = $state<{ value: Profile | null | 'error' | undefined; fetchedAt: number }>({
+export const accountCache = $state<{
+  value: Profile | null | 'error' | undefined;
+  fetchedAt: number;
+}>({
   value: undefined,
   fetchedAt: 0,
 });

@@ -6,7 +6,12 @@ export type AuditLogKind = (typeof auditLog.$inferSelect)['kind'];
 
 export async function insertAuditLog(
   db: Db,
-  input: { kind: AuditLogKind; profileId: string; payload: Record<string, unknown>; createdAt: string },
+  input: {
+    kind: AuditLogKind;
+    profileId: string;
+    payload: Record<string, unknown>;
+    createdAt: string;
+  },
 ): Promise<void> {
   await db.insert(auditLog).values({
     id: newId('aud'),

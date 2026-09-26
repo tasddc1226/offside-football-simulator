@@ -9,8 +9,10 @@ test('첫 화면 제목을 다시 그리지 않고 이어받는다', async ({ pa
     w.__removed = 0;
     new MutationObserver((records) => {
       for (const r of records) {
-        for (const n of r.addedNodes) if (!w.__firstH1 && n instanceof Element && n.matches('h1')) w.__firstH1 = n;
-        for (const n of r.removedNodes) if (n instanceof Element && (n.matches('h1') || n.querySelector('h1'))) w.__removed++;
+        for (const n of r.addedNodes)
+          if (!w.__firstH1 && n instanceof Element && n.matches('h1')) w.__firstH1 = n;
+        for (const n of r.removedNodes)
+          if (n instanceof Element && (n.matches('h1') || n.querySelector('h1'))) w.__removed++;
       }
     }).observe(document, { childList: true, subtree: true });
   });
@@ -19,7 +21,10 @@ test('첫 화면 제목을 다시 그리지 않고 이어받는다', async ({ pa
   expect(
     await page.evaluate(() => {
       const w = window as unknown as { __firstH1: Element | null; __removed: number };
-      return { same: document.querySelector('.hero-home h1') === w.__firstH1, removed: w.__removed };
+      return {
+        same: document.querySelector('.hero-home h1') === w.__firstH1,
+        removed: w.__removed,
+      };
     }),
   ).toEqual({ same: true, removed: 0 });
   // 이어받은 노드에 이벤트도 붙었다.

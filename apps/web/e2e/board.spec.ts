@@ -4,11 +4,39 @@ import { ok, fail, API } from './helpers.js';
 
 // T-10-011 소식(게시판). API는 route로 흉내 낸다(e2e 기본 API 주소 localhost:8787).
 const T = '2026-09-25T03:00:00.000Z';
-const NOTICE = { id: 'pst_00000000-0000-0000-0000-000000000001', board: 'notice', title: '서버 점검 안내', version: null, pinned: true, commentCount: 1, createdAt: T, updatedAt: T };
-const RELEASE = { id: 'pst_00000000-0000-0000-0000-000000000002', board: 'release', title: '클럽 동기화', version: 'v1.4.0', pinned: false, commentCount: 0, createdAt: T, updatedAt: T };
-const COMMENT = { id: 'cmt_00000000-0000-0000-0000-000000000009', nickname: '운영자', body: '곧 끝나요', admin: true, deletable: false, createdAt: T };
+const NOTICE = {
+  id: 'pst_00000000-0000-0000-0000-000000000001',
+  board: 'notice',
+  title: '서버 점검 안내',
+  version: null,
+  pinned: true,
+  commentCount: 1,
+  createdAt: T,
+  updatedAt: T,
+};
+const RELEASE = {
+  id: 'pst_00000000-0000-0000-0000-000000000002',
+  board: 'release',
+  title: '클럽 동기화',
+  version: 'v1.4.0',
+  pinned: false,
+  commentCount: 0,
+  createdAt: T,
+  updatedAt: T,
+};
+const COMMENT = {
+  id: 'cmt_00000000-0000-0000-0000-000000000009',
+  nickname: '운영자',
+  body: '곧 끝나요',
+  admin: true,
+  deletable: false,
+  createdAt: T,
+};
 
-async function mockBoards(page: Page, opts: { admin?: boolean; empty?: boolean; google?: boolean; nickname?: string | null } = {}) {
+async function mockBoards(
+  page: Page,
+  opts: { admin?: boolean; empty?: boolean; google?: boolean; nickname?: string | null } = {},
+) {
   const sent: { method: string; url: string; body: unknown }[] = [];
   let nickname = opts.nickname ?? null;
   await page.route(`${API}/v1/profile/nickname`, async (route: Route) => {
@@ -16,43 +44,111 @@ async function mockBoards(page: Page, opts: { admin?: boolean; empty?: boolean; 
     const body = req.postDataJSON() as { nickname: string };
     sent.push({ method: req.method(), url: '/v1/profile/nickname', body });
     nickname = body.nickname.trim();
-    return route.fulfill(ok({ id: 'prf_e2e', linked: { google: true }, googleEmailMasked: 'f***@example.com', recoveryCodeIssuedAt: null, createdAt: T, nickname }));
+    return route.fulfill(
+      ok({
+        id: 'prf_e2e',
+        linked: { google: true },
+        googleEmailMasked: 'f***@example.com',
+        recoveryCodeIssuedAt: null,
+        createdAt: T,
+        nickname,
+      }),
+    );
   });
   await page.route(`${API}/v1/boards/**`, async (route: Route) => {
     const req = route.request();
     const url = new URL(req.url());
     const method = req.method();
     if (method !== 'GET') sent.push({ method, url: url.pathname, body: req.postDataJSON() });
-    if (url.pathname === '/v1/boards/viewer') return route.fulfill(ok({ admin: !!opts.admin, google: !!opts.google || !!opts.admin, nickname }));
-    if (opts.empty && url.pathname.endsWith('/posts') && method === 'GET') return route.fulfill(ok({ posts: [], hasMore: false }));
+    if (url.pathname === '/v1/boards/viewer')
+      return route.fulfill(
+        ok({ admin: !!opts.admin, google: !!opts.google || !!opts.admin, nickname }),
+      );
+    if (opts.empty && url.pathname.endsWith('/posts') && method === 'GET')
+      return route.fulfill(ok({ posts: [], hasMore: false }));
     if (url.pathname === '/v1/boards/notice/posts' && method === 'POST') {
-      return route.fulfill(ok({ ...NOTICE, id: 'pst_00000000-0000-0000-0000-000000000004', pinned: false, body: '본문' }, 201));
+      return route.fulfill(
+        ok(
+          {
+            ...NOTICE,
+            id: 'pst_00000000-0000-0000-0000-000000000004',
+            pinned: false,
+            body: '본문',
+          },
+          201,
+        ),
+      );
     }
     if (url.pathname === '/v1/boards/posts/pst_00000000-0000-0000-0000-000000000004') {
-      return route.fulfill(ok({ post: { ...NOTICE, id: 'pst_00000000-0000-0000-0000-000000000004', title: '첫 공지', pinned: false, body: '본문' }, comments: [] }));
+      return route.fulfill(
+        ok({
+          post: {
+            ...NOTICE,
+            id: 'pst_00000000-0000-0000-0000-000000000004',
+            title: '첫 공지',
+            pinned: false,
+            body: '본문',
+          },
+          comments: [],
+        }),
+      );
     }
-    if (url.pathname === '/v1/boards/notice/posts' && method === 'GET') return route.fulfill(ok({ posts: [NOTICE], hasMore: false }));
-    if (url.pathname === '/v1/boards/release/posts' && method === 'GET') return route.fulfill(ok({ posts: [RELEASE], hasMore: false }));
+    if (url.pathname === '/v1/boards/notice/posts' && method === 'GET')
+      return route.fulfill(ok({ posts: [NOTICE], hasMore: false }));
+    if (url.pathname === '/v1/boards/release/posts' && method === 'GET')
+      return route.fulfill(ok({ posts: [RELEASE], hasMore: false }));
     if (url.pathname === `/v1/boards/posts/${NOTICE.id}`) {
-      return route.fulfill(ok({ post: { ...NOTICE, body: '## 일정\n- 새벽 2시\n- 30분\n\n<b>그대로</b>' }, comments: [COMMENT] }));
+      return route.fulfill(
+        ok({
+          post: { ...NOTICE, body: '## 일정\n- 새벽 2시\n- 30분\n\n<b>그대로</b>' },
+          comments: [COMMENT],
+        }),
+      );
     }
-    if (url.pathname === `/v1/boards/posts/${RELEASE.id}`) return route.fulfill(ok({ post: { ...RELEASE, body: '본문' }, comments: [] }));
+    if (url.pathname === `/v1/boards/posts/${RELEASE.id}`)
+      return route.fulfill(ok({ post: { ...RELEASE, body: '본문' }, comments: [] }));
     if (url.pathname === `/v1/boards/posts/${NOTICE.id}/comments`) {
       const b = req.postDataJSON() as { body: string };
-      return route.fulfill(ok({ id: 'cmt_00000000-0000-0000-0000-000000000010', nickname, body: b.body, admin: false, deletable: true, createdAt: T }, 201));
+      return route.fulfill(
+        ok(
+          {
+            id: 'cmt_00000000-0000-0000-0000-000000000010',
+            nickname,
+            body: b.body,
+            admin: false,
+            deletable: true,
+            createdAt: T,
+          },
+          201,
+        ),
+      );
     }
     if (url.pathname === '/v1/boards/release/posts' && method === 'POST') {
-      return route.fulfill(ok({ ...RELEASE, id: 'pst_00000000-0000-0000-0000-000000000003', body: '본문' }, 201));
+      return route.fulfill(
+        ok({ ...RELEASE, id: 'pst_00000000-0000-0000-0000-000000000003', body: '본문' }, 201),
+      );
     }
     if (url.pathname === '/v1/boards/posts/pst_00000000-0000-0000-0000-000000000003') {
-      return route.fulfill(ok({ post: { ...RELEASE, id: 'pst_00000000-0000-0000-0000-000000000003', title: '새 버전', body: '본문' }, comments: [] }));
+      return route.fulfill(
+        ok({
+          post: {
+            ...RELEASE,
+            id: 'pst_00000000-0000-0000-0000-000000000003',
+            title: '새 버전',
+            body: '본문',
+          },
+          comments: [],
+        }),
+      );
     }
     return route.fulfill(fail(404, 'VALIDATION_FAILED', '없음'));
   });
   return sent;
 }
 
-test('소식: 공지사항 전체 보기 → 글 → 댓글, 릴리즈 노트 전체 보기는 릴리즈 노트만', async ({ page }) => {
+test('소식: 공지사항 전체 보기 → 글 → 댓글, 릴리즈 노트 전체 보기는 릴리즈 노트만', async ({
+  page,
+}) => {
   const sent = await mockBoards(page, { google: true, nickname: '팬1' });
   await page.goto('/');
   await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
@@ -76,7 +172,11 @@ test('소식: 공지사항 전체 보기 → 글 → 댓글, 릴리즈 노트 �
   await expect(page.locator('.board-comment')).toHaveCount(2);
   await expect(page.locator('.board-comment').last()).toContainText('팬1');
   await expect(page.locator('.board-comment').last()).toContainText('수고하세요');
-  expect(sent.at(-1)).toEqual({ method: 'POST', url: `/v1/boards/posts/${NOTICE.id}/comments`, body: { body: '수고하세요' } });
+  expect(sent.at(-1)).toEqual({
+    method: 'POST',
+    url: `/v1/boards/posts/${NOTICE.id}/comments`,
+    body: { body: '수고하세요' },
+  });
 
   await page.locator('[data-act="home"]').click();
   await page.locator('[data-home-news="release"] [data-act="news-all"]').click();
@@ -90,7 +190,9 @@ test('소식: 구글 로그인 전엔 댓글 대신 로그인 안내가 뜬다',
   await page.goto('/');
   await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
   await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
-  await expect(page.locator('[data-comment-gate="login"]')).toContainText('구글로 로그인하면 댓글을 쓸 수 있어요');
+  await expect(page.locator('[data-comment-gate="login"]')).toContainText(
+    '구글로 로그인하면 댓글을 쓸 수 있어요',
+  );
   await expect(page.locator('[data-act="comment-login"]')).toBeVisible();
   await expect(page.getByLabel('댓글 내용')).toHaveCount(0);
 });
@@ -103,10 +205,18 @@ test('소식: 닉네임을 정하면 바로 그 이름으로 댓글을 쓴다', 
   const gate = page.locator('[data-comment-gate="nickname"]');
   await expect(gate).toBeVisible();
   await expect(page.getByLabel('댓글 내용')).toHaveCount(0);
-  expect((await new AxeBuilder({ page }).include('.board-comments').analyze()).violations.map((v) => v.id)).toEqual([]);
+  expect(
+    (await new AxeBuilder({ page }).include('.board-comments').analyze()).violations.map(
+      (v) => v.id,
+    ),
+  ).toEqual([]);
   await gate.getByLabel('댓글 닉네임').fill(' 루키 ');
   await gate.locator('[data-act="save-nickname"]').click();
-  expect(sent.at(-1)).toEqual({ method: 'PUT', url: '/v1/profile/nickname', body: { nickname: ' 루키 ' } });
+  expect(sent.at(-1)).toEqual({
+    method: 'PUT',
+    url: '/v1/profile/nickname',
+    body: { nickname: ' 루키 ' },
+  });
   await expect(page.locator('.board-comments form')).toContainText('루키');
   await page.getByLabel('댓글 내용').fill('반가워요');
   await page.locator('[data-act="send-comment"]').click();
@@ -122,8 +232,14 @@ test('소식: 관리자는 새 글을 쓴다', async ({ page }) => {
   await page.locator('#post-version').fill('v1.5.0');
   await page.locator('#post-body').fill('본문');
   await page.locator('[data-act="save-post"]').click();
-  await expect(page.locator('[data-post="pst_00000000-0000-0000-0000-000000000003"] h2')).toHaveText('새 버전');
-  expect(sent.at(-1)).toMatchObject({ method: 'POST', url: '/v1/boards/release/posts', body: { title: '새 버전', version: 'v1.5.0', body: '본문', pinned: false } });
+  await expect(
+    page.locator('[data-post="pst_00000000-0000-0000-0000-000000000003"] h2'),
+  ).toHaveText('새 버전');
+  expect(sent.at(-1)).toMatchObject({
+    method: 'POST',
+    url: '/v1/boards/release/posts',
+    body: { title: '새 버전', version: 'v1.5.0', body: '본문', pinned: false },
+  });
   await expect(page.locator('[data-act="edit-post"]')).toBeVisible();
 });
 
@@ -138,8 +254,14 @@ test('소식: 글이 하나도 없어도 전체 보기로 들어가 관리자가
   await page.locator('#post-title').fill('첫 공지');
   await page.locator('#post-body').fill('본문');
   await page.locator('[data-act="save-post"]').click();
-  await expect(page.locator('[data-post="pst_00000000-0000-0000-0000-000000000004"] h2')).toHaveText('첫 공지');
-  expect(sent.at(-1)).toMatchObject({ method: 'POST', url: '/v1/boards/notice/posts', body: { title: '첫 공지', body: '본문', pinned: false } });
+  await expect(
+    page.locator('[data-post="pst_00000000-0000-0000-0000-000000000004"] h2'),
+  ).toHaveText('첫 공지');
+  expect(sent.at(-1)).toMatchObject({
+    method: 'POST',
+    url: '/v1/boards/notice/posts',
+    body: { title: '첫 공지', body: '본문', pinned: false },
+  });
 });
 
 test('소식: 목록·글 화면에 접근성 위반이 없다', async ({ page }) => {

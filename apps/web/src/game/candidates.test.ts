@@ -16,10 +16,11 @@ describe('generateCandidates', () => {
 
   it('각 능력치는 20~70 범위를 유지한다', () => {
     const cands = generateCandidates('GK', ['phy', 'def']);
-    for (const c of cands) for (const k of ATTR_KEYS) {
-      expect(c.attrs[k]).toBeGreaterThanOrEqual(20);
-      expect(c.attrs[k]).toBeLessThanOrEqual(70);
-    }
+    for (const c of cands)
+      for (const k of ATTR_KEYS) {
+        expect(c.attrs[k]).toBeGreaterThanOrEqual(20);
+        expect(c.attrs[k]).toBeLessThanOrEqual(70);
+      }
   });
 
   it('메인 게임 RNG(시드) 상태를 전혀 소비하지 않는다', () => {
@@ -32,9 +33,15 @@ describe('generateCandidates', () => {
 
   it('newGame()에 presetAttrs 없이 호출하면 기존 RNG 소비 동작이 그대로다(패리티 보존)', () => {
     setActiveRng(createRng(5));
-    const a = newGame({ name: 'a', number: 1, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, 5);
+    const a = newGame(
+      { name: 'a', number: 1, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      5,
+    );
     setActiveRng(createRng(5));
-    const b = newGame({ name: 'a', number: 1, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, 5);
+    const b = newGame(
+      { name: 'a', number: 1, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      5,
+    );
     expect(a.attrs).toEqual(b.attrs);
     expect(a.rng).toEqual(b.rng);
   });
@@ -84,14 +91,20 @@ describe('주력 능력치 (T-10-008)', () => {
 
   it('newGame에 focus를 넘기면 저장되고 type은 가장 가까운 유형으로 파생된다', () => {
     setActiveRng(createRng(3));
-    const s = newGame({ name: 'a', number: 1, pos: 'DF', foot: '오른발', focus: ['pac', 'pas'], trait: 'late' }, 3);
+    const s = newGame(
+      { name: 'a', number: 1, pos: 'DF', foot: '오른발', focus: ['pac', 'pas'], trait: 'late' },
+      3,
+    );
     expect(s.focus).toEqual(['pac', 'pas']);
     expect(s.type).toBe('fullback');
   });
 
   it('옛 저장본(focus 없음)은 유형에서 주력을 구한다', () => {
     setActiveRng(createRng(3));
-    const s = newGame({ name: 'a', number: 1, pos: 'FW', foot: '오른발', type: 'target', trait: 'late' }, 3);
+    const s = newGame(
+      { name: 'a', number: 1, pos: 'FW', foot: '오른발', type: 'target', trait: 'late' },
+      3,
+    );
     delete s.focus;
     expect(focusOf(s)).toEqual(['phy', 'sho']);
   });
@@ -99,7 +112,11 @@ describe('주력 능력치 (T-10-008)', () => {
   it('주력 훈련이 같은 조건의 비주력 훈련보다 더 많이 오른다', () => {
     const gain = (k: 'sho' | 'pas') => {
       setActiveRng(createRng(9));
-      const s = newGame({ name: 'a', number: 1, pos: 'FW', foot: '오른발', focus: ['sho', 'pac'], trait: 'late' }, 9, { pac: 50, sho: 50, pas: 50, dri: 50, def: 30, phy: 45 });
+      const s = newGame(
+        { name: 'a', number: 1, pos: 'FW', foot: '오른발', focus: ['sho', 'pac'], trait: 'late' },
+        9,
+        { pac: 50, sho: 50, pas: 50, dri: 50, def: 30, phy: 45 },
+      );
       s.cond = 100;
       setActiveRng(createRng(21));
       const before = s.attrs[k];

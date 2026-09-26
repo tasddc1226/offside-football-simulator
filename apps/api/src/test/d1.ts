@@ -47,9 +47,18 @@ export async function createTestD1(): Promise<TestD1> {
 }
 
 /** T-10-028 프로필을 구글 로그인한 상태로 만든다(댓글 자격). email이 ADMIN_EMAILS에 있으면 관리자다. */
-export async function linkGoogle(ctx: TestD1, profileId: string, opts: { email?: string | null; nickname?: string | null } = {}): Promise<void> {
+export async function linkGoogle(
+  ctx: TestD1,
+  profileId: string,
+  opts: { email?: string | null; nickname?: string | null } = {},
+): Promise<void> {
   await ctx.db
     .update(profiles)
-    .set({ googleSub: `sub-${profileId}`, email: opts.email ?? null, nickname: opts.nickname ?? null, linkedAt: '2026-09-25T00:00:00.000Z' })
+    .set({
+      googleSub: `sub-${profileId}`,
+      email: opts.email ?? null,
+      nickname: opts.nickname ?? null,
+      linkedAt: '2026-09-25T00:00:00.000Z',
+    })
     .where(eq(profiles.id, profileId));
 }

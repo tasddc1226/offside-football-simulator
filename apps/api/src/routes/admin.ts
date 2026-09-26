@@ -24,8 +24,14 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
   app.get(EDGE.adminStats, async (c) => {
     await requireAdmin(c);
     const db = getDb(c);
-    const [stats, active] = await Promise.all([edgeCached(c, EDGE.adminStats, STATS_TTL, () => getAdminStats(db, new Date())), getActiveBalance(db)]);
-    const data = { ...stats, balance: active ? { version: active.version, activatedAt: active.activatedAt } : null };
+    const [stats, active] = await Promise.all([
+      edgeCached(c, EDGE.adminStats, STATS_TTL, () => getAdminStats(db, new Date())),
+      getActiveBalance(db),
+    ]);
+    const data = {
+      ...stats,
+      balance: active ? { version: active.version, activatedAt: active.activatedAt } : null,
+    };
     return ok(c, AdminStatsSchema, data);
   });
 

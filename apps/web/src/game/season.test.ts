@@ -27,7 +27,10 @@ beforeEach(() => {
 describe('저장/불러오기 라운드트립', () => {
   it('저장한 상태를 그대로 복원한다', () => {
     setActiveRng(createRng(7));
-    const g = newGame({ name: '홍길동', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, 7);
+    const g = newGame(
+      { name: '홍길동', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      7,
+    );
     saveKey('ft_save', g);
     const loaded = loadKey<typeof g>('ft_save');
     expect(loaded).not.toBeNull();
@@ -69,8 +72,28 @@ describe('T-10-005 은퇴 스냅샷', () => {
     const { LegendSnapshotSchema } = await import('@offside/contracts');
     const { legendSnapshot } = await import('./season.js');
     setActiveRng(createRng(3));
-    const g = newGame({ name: '스냅샷', number: 11, pos: 'DF', foot: '왼발', type: 'stopper', trait: 'late' }, 3);
-    g.career.push({ year: 2026, age: 18, club: 'A', league: '고교리그', apps: 10, goals: 1, assists: 2, cs: 4, lgApps: 8, rating: 7, rank: 2, ovr: 60, honors: [], pro: false, comps: [], ch: ['cs'] } as never);
+    const g = newGame(
+      { name: '스냅샷', number: 11, pos: 'DF', foot: '왼발', type: 'stopper', trait: 'late' },
+      3,
+    );
+    g.career.push({
+      year: 2026,
+      age: 18,
+      club: 'A',
+      league: '고교리그',
+      apps: 10,
+      goals: 1,
+      assists: 2,
+      cs: 4,
+      lgApps: 8,
+      rating: 7,
+      rank: 2,
+      ovr: 60,
+      honors: [],
+      pro: false,
+      comps: [],
+      ch: ['cs'],
+    } as never);
     g.trophies.push({ year: 2026, t: '우승', club: 'A' });
     const snap = legendSnapshot(g);
     expect(() => LegendSnapshotSchema.parse(snap)).not.toThrow();
@@ -86,7 +109,10 @@ describe('대학 4년', () => {
     await import('./index.js');
     const { acceptOption, endSeason, market } = await import('./season.js');
     setActiveRng(createRng(3));
-    const s = newGame({ name: '대학생', number: 7, pos: 'MF', foot: '오른발', type: 'maker', trait: 'late' }, 3);
+    const s = newGame(
+      { name: '대학생', number: 7, pos: 'MF', foot: '오른발', type: 'maker', trait: 'late' },
+      3,
+    );
     acceptOption(s, { kind: 'uni', name: '대학 진학', desc: '' });
     const notes: string[] = [];
     for (let year = 1; year <= 4; year++) {
@@ -108,9 +134,15 @@ describe('대학 4년', () => {
 describe('로컬 명예의 전당 30명 한도', () => {
   it('30명이 찬 상태에서 점수가 낮은 선수로 은퇴해도 방금 은퇴한 선수는 남는다', async () => {
     const { retire, loadHOF } = await import('./season.js');
-    saveKey('ft_hof', Array.from({ length: 30 }, (_, i) => ({ name: `고수${i}`, score: 5000 - i })));
+    saveKey(
+      'ft_hof',
+      Array.from({ length: 30 }, (_, i) => ({ name: `고수${i}`, score: 5000 - i })),
+    );
     setActiveRng(createRng(5));
-    const g = newGame({ name: '막내', number: 7, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, 5);
+    const g = newGame(
+      { name: '막내', number: 7, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      5,
+    );
     const entry = retire(g);
     const hof = loadHOF();
     expect(hof).toHaveLength(30);

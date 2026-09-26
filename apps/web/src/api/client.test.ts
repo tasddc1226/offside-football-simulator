@@ -22,7 +22,10 @@ describe('cachedGet', () => {
   });
 
   it('TTL 동안 같은 path는 한 번만 요청하고 동시 요청도 합친다', async () => {
-    const [a, b] = await Promise.all([cachedGet('/v1/hof?limit=3', 60_000), cachedGet('/v1/hof?limit=3', 60_000)]);
+    const [a, b] = await Promise.all([
+      cachedGet('/v1/hof?limit=3', 60_000),
+      cachedGet('/v1/hof?limit=3', 60_000),
+    ]);
     expect(a).toEqual(b);
     await cachedGet('/v1/hof?limit=3', 60_000);
     expect(calls).toEqual(['GET /v1/hof']);

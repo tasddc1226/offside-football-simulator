@@ -10,7 +10,10 @@ const HIDE_KEY = 'ft_install_hide';
 
 /** 홈 화면 아이콘(웹 앱)으로 연 상태인지. */
 function isStandalone(): boolean {
-  return matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
+  return (
+    matchMedia('(display-mode: standalone)').matches ||
+    (navigator as { standalone?: boolean }).standalone === true
+  );
 }
 
 export function showInstallGuide(withOptOut = false) {
@@ -22,7 +25,9 @@ export function showInstallGuide(withOptOut = false) {
       steps: INSTALL_STEPS[detectPlatform(navigator.userAgent)],
       text: '홈 화면에 생긴 오프사이드 아이콘을 누르면 주소를 입력하지 않고 바로 이어서 할 수 있어요. 이 안내는 설정 > 도움말에서 다시 볼 수 있어요.',
       muted: true,
-      ...(withOptOut ? { check: { label: '다시 보지 않기', onChange: (on: boolean) => saveKey(HIDE_KEY, on) } } : {}),
+      ...(withOptOut
+        ? { check: { label: '다시 보지 않기', onChange: (on: boolean) => saveKey(HIDE_KEY, on) } }
+        : {}),
     },
     [{ label: '확인했어요', cls: 'btn-primary', fn: closeSheet }],
   );
@@ -32,7 +37,13 @@ export function showInstallGuide(withOptOut = false) {
  * T-10-037: 처음 온 방문(세이브 없음)에는 띄우지 않는다 — 첫 화면을 시트로 가리지 않고(늦게 뜬 시트 문단이
  * 첫 화면 LCP가 됐다), 한 번 플레이하고 다시 찾아온 사람에게 권한다. */
 export function maybeShowInstallOnboarding() {
-  if (appState.screen !== 'home' || loadKey<boolean>(HIDE_KEY) || isStandalone() || detectPlatform(navigator.userAgent) === 'other') return;
+  if (
+    appState.screen !== 'home' ||
+    loadKey<boolean>(HIDE_KEY) ||
+    isStandalone() ||
+    detectPlatform(navigator.userAgent) === 'other'
+  )
+    return;
   if (!hasKey('ft_save')) return;
   showInstallGuide(true);
 }

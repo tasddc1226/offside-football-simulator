@@ -1,7 +1,13 @@
 import type { Db } from '../db/client.js';
 import { insertAuditLog } from '../db/repos/auditLog.js';
 import { moveCareers } from '../db/repos/careers.js';
-import { getProfile, getProfileByGoogleSub, isLinked, linkGoogleAccount, type ProfileRecord } from '../db/repos/profiles.js';
+import {
+  getProfile,
+  getProfileByGoogleSub,
+  isLinked,
+  linkGoogleAccount,
+  type ProfileRecord,
+} from '../db/repos/profiles.js';
 import { AppError } from '../errors.js';
 
 export type GoogleCallbackOutcome = { kind: 'linked' } | { kind: 'switched'; profileId: string };
@@ -61,7 +67,12 @@ export async function resolveGoogleCallback(
   if (current && isAnonymous(current)) {
     const count = await moveCareers(db, current.id, target.id);
     if (count) {
-      await insertAuditLog(db, { kind: 'CAREERS_MERGED', profileId: target.id, payload: { fromProfileId: current.id, count }, createdAt: input.now });
+      await insertAuditLog(db, {
+        kind: 'CAREERS_MERGED',
+        profileId: target.id,
+        payload: { fromProfileId: current.id, count },
+        createdAt: input.now,
+      });
     }
   }
   return { kind: 'switched', profileId: target.id };

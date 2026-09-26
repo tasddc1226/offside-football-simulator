@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { envelope, ErrorEnvelopeSchema, successEnvelope } from './envelope.js';
-import { ERROR_CODES, ErrorCodeSchema, HTTP_STATUS_BY_CODE, RETRYABLE_BY_CODE, type ErrorCode } from './errors.js';
+import {
+  ERROR_CODES,
+  ErrorCodeSchema,
+  HTTP_STATUS_BY_CODE,
+  RETRYABLE_BY_CODE,
+  type ErrorCode,
+} from './errors.js';
 import { HealthDataSchema } from './health.js';
 import { CONTRACTS_VERSION } from './index.js';
 import { ClientIdSchema } from './primitives.js';

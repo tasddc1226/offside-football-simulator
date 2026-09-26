@@ -3,7 +3,11 @@
 // 모듈이다. `@offside/contracts`는 타입만 가져온다(런타임 zod 값 import 없음 — type-only import는
 // 컴파일 시 제거돼 번들 비용이 없다). ui.ts에서 동적 import로만 불러 메인 청크를 무겁게 하지 않는다.
 // 실패는 절대 게임 루프로 throw하지 않는다 — 실패해도 게임은 그대로 진행돼야 한다(fire-and-forget).
-import type { CareerSeasonPayload, PutCareerSeasonBody, PutRetirementBody } from '@offside/contracts';
+import type {
+  CareerSeasonPayload,
+  PutCareerSeasonBody,
+  PutRetirementBody,
+} from '@offside/contracts';
 import { resolveApiBaseUrl } from '../api/base-url.js';
 import { clearApiCache, noteSession } from '../api/client.js';
 import type { CareerRecord } from './types.js';
@@ -35,7 +39,14 @@ export function seasonPayload(rec: CareerRecord): CareerSeasonPayload {
     lgApps: rec.lgApps ?? rec.apps,
     lgGoals: rec.lgGoals ?? rec.goals,
     caps: rec.caps ?? 0,
-    comps: (rec.comps ?? []).map((c) => ({ type: c.type, name: c.name, stage: c.stage, apps: c.apps, g: c.g, a: c.a })),
+    comps: (rec.comps ?? []).map((c) => ({
+      type: c.type,
+      name: c.name,
+      stage: c.stage,
+      apps: c.apps,
+      g: c.g,
+      a: c.a,
+    })),
     ch: rec.ch ?? [],
   };
 }
@@ -78,7 +89,10 @@ async function ensureProfile(): Promise<boolean> {
   // 페이지당 한 번만 확인한다 — 세션이 한번 확인되면 이후 flush는 추가 GET 없이 보낸다.
   if (profileReady) return true;
   try {
-    const res = await fetch(`${apiBaseUrl()}/v1/profile`, { method: 'GET', credentials: 'include' });
+    const res = await fetch(`${apiBaseUrl()}/v1/profile`, {
+      method: 'GET',
+      credentials: 'include',
+    });
     profileReady = res.ok;
     if (res.ok) noteSession(true);
     return res.ok;
@@ -170,12 +184,14 @@ async function flushOnce(): Promise<void> {
       }
       settled.add(JSON.stringify(item));
       if (result === 'conflict') conflicts.push(item);
-      else if (result === 'drop') console.warn('[outbox] 4xx 응답으로 항목을 버립니다', item.kind, item.careerId);
+      else if (result === 'drop')
+        console.warn('[outbox] 4xx 응답으로 항목을 버립니다', item.kind, item.careerId);
     }
     // T-10-034: 시작할 때 읽은 목록으로 큐를 덮어쓰면 전송 중에 enqueue된 항목이 지워진다 — 지금 큐에서
     // 이번 회차에 끝낸(보냄·버림·충돌) 항목만 뺀다.
     saveOutbox(loadOutbox().filter((i) => !settled.has(JSON.stringify(i))));
-    if (conflicts.length) globalThis.dispatchEvent?.(new CustomEvent(OWNER_CONFLICT_EVENT, { detail: conflicts }));
+    if (conflicts.length)
+      globalThis.dispatchEvent?.(new CustomEvent(OWNER_CONFLICT_EVENT, { detail: conflicts }));
   } catch (err) {
     console.error('[outbox] flush 실패', err);
   }

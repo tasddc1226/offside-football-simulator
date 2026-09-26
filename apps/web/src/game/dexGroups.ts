@@ -13,6 +13,8 @@ export const DEX_GROUPS: { id: DexGroup; name: string; hidden: boolean }[] = [
 
 const POS_PREFIX: Record<string, Pos> = { fw: 'FW', mf: 'MF', df: 'DF', gk: 'GK' };
 export const posOf = (ev: EventDef): Pos | null => POS_PREFIX[ev.id.split('-')[0]!] ?? null;
-export const groupOf = (ev: EventDef): DexGroup => (ev.story ? 'story' : ev.chain ? 'special' : posOf(ev) ? 'position' : 'career');
+export const groupOf = (ev: EventDef): DexGroup =>
+  ev.story ? 'story' : ev.chain ? 'special' : posOf(ev) ? 'position' : 'career';
 /** 겪기 전에는 제목·선택지를 가리는 이벤트(스포일러 보호). */
-export const isHiddenEvent = (ev: EventDef): boolean => DEX_GROUPS.find((g) => g.id === groupOf(ev))!.hidden;
+export const isHiddenEvent = (ev: EventDef): boolean =>
+  DEX_GROUPS.find((g) => g.id === groupOf(ev))!.hidden;

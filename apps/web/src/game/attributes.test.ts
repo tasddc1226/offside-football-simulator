@@ -12,7 +12,10 @@ describe('능력치 불변식', () => {
   for (const pos of positions) {
     it(`${pos}: OVR은 항상 1..99 범위`, () => {
       setActiveRng(createRng(1000 + pos.charCodeAt(0)));
-      const g = newGame({ name: '테스트', number: 1, pos, foot: '오른발', type: typeByPos[pos], trait: 'normal' }, 1);
+      const g = newGame(
+        { name: '테스트', number: 1, pos, foot: '오른발', type: typeByPos[pos], trait: 'normal' },
+        1,
+      );
       const o = ovr(g);
       expect(o).toBeGreaterThanOrEqual(1);
       expect(o).toBeLessThanOrEqual(99);
@@ -20,7 +23,10 @@ describe('능력치 불변식', () => {
 
     it(`${pos}: 카드 능력치(attrs)는 세부 능력치(sub)의 가중 평균과 일치한다`, () => {
       setActiveRng(createRng(2000 + pos.charCodeAt(0)));
-      const g = newGame({ name: '테스트', number: 1, pos, foot: '오른발', type: typeByPos[pos], trait: 'normal' }, 1);
+      const g = newGame(
+        { name: '테스트', number: 1, pos, foot: '오른발', type: typeByPos[pos], trait: 'normal' },
+        1,
+      );
       const F = faceOf(g);
       for (const group of ATTR_KEYS) {
         let expected = 0;
@@ -32,7 +38,10 @@ describe('능력치 불변식', () => {
 
     it(`${pos}: 모든 세부 능력치는 1..99 범위`, () => {
       setActiveRng(createRng(3000 + pos.charCodeAt(0)));
-      const g = newGame({ name: '테스트', number: 1, pos, foot: '오른발', type: typeByPos[pos], trait: 'normal' }, 1);
+      const g = newGame(
+        { name: '테스트', number: 1, pos, foot: '오른발', type: typeByPos[pos], trait: 'normal' },
+        1,
+      );
       for (const v of Object.values(g.sub)) {
         expect(v).toBeGreaterThanOrEqual(1);
         expect(v).toBeLessThanOrEqual(99);

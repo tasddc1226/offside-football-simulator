@@ -25,15 +25,28 @@ export async function listPosts(db: Db, board: BoardKey, limit: number, before?:
   const [pinned, rest] = await Promise.all([
     before
       ? Promise.resolve([])
-      : db.select(summaryColumns).from(boardPosts).where(and(inBoard, eq(boardPosts.pinned, true))).orderBy(desc(boardPosts.createdAt)),
+      : db
+          .select(summaryColumns)
+          .from(boardPosts)
+          .where(and(inBoard, eq(boardPosts.pinned, true)))
+          .orderBy(desc(boardPosts.createdAt)),
     db
       .select(summaryColumns)
       .from(boardPosts)
-      .where(and(inBoard, eq(boardPosts.pinned, false), before ? lt(boardPosts.createdAt, before) : undefined))
+      .where(
+        and(
+          inBoard,
+          eq(boardPosts.pinned, false),
+          before ? lt(boardPosts.createdAt, before) : undefined,
+        ),
+      )
       .orderBy(desc(boardPosts.createdAt))
       .limit(limit + 1),
   ]);
-  return { posts: [...pinned, ...rest.slice(0, limit)] as PostSummary[], hasMore: rest.length > limit };
+  return {
+    posts: [...pinned, ...rest.slice(0, limit)] as PostSummary[],
+    hasMore: rest.length > limit,
+  };
 }
 
 export async function getPost(db: Db, id: string): Promise<Post | undefined> {
@@ -44,16 +57,40 @@ export async function getPost(db: Db, id: string): Promise<Post | undefined> {
   return row as Post | undefined;
 }
 
-export type PostFields = { title: string; body: string; version?: string | undefined; pinned: boolean };
+export type PostFields = {
+  title: string;
+  body: string;
+  version?: string | undefined;
+  pinned: boolean;
+};
 
-export async function createPost(db: Db, board: BoardKey, fields: PostFields, authorProfileId: string, now: string) {
+export async function createPost(
+  db: Db,
+  board: BoardKey,
+  fields: PostFields,
+  authorProfileId: string,
+  now: string,
+) {
   const id = newId('pst');
-  await db.insert(boardPosts).values({ id, board, ...fields, version: fields.version || null, authorProfileId, createdAt: now, updatedAt: now });
+  await db.insert(boardPosts).values({
+    id,
+    board,
+    ...fields,
+    version: fields.version || null,
+    authorProfileId,
+    createdAt: now,
+    updatedAt: now,
+  });
   return id;
 }
 
 /** 지운 글이거나 없으면 false. */
-export async function updatePost(db: Db, id: string, fields: PostFields, now: string): Promise<boolean> {
+export async function updatePost(
+  db: Db,
+  id: string,
+  fields: PostFields,
+  now: string,
+): Promise<boolean> {
   const res = await db
     .update(boardPosts)
     .set({ ...fields, version: fields.version || null, updatedAt: now })
@@ -93,7 +130,10 @@ export async function createComment(
 }
 
 /** 지울 댓글의 작성자와 게시판(목록 캐시를 비우는 데 쓴다). */
-export async function getCommentOwner(db: Db, id: string): Promise<{ profileId: string; board: string } | undefined> {
+export async function getCommentOwner(
+  db: Db,
+  id: string,
+): Promise<{ profileId: string; board: string } | undefined> {
   const [row] = await db
     .select({ profileId: boardComments.profileId, board: boardPosts.board })
     .from(boardComments)

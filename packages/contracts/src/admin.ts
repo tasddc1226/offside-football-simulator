@@ -16,12 +16,27 @@ const AdminDailySchema = z.object({
 
 export const AdminStatsSchema = z.object({
   generatedAt: IsoUtcSchema,
-  profiles: z.object({ total: count, linked: count, new24h: count, new7d: count, active24h: count, active7d: count }),
-  careers: z.object({ total: count, active: count, retired: count, new7d: count, retired7d: count }),
+  profiles: z.object({
+    total: count,
+    linked: count,
+    new24h: count,
+    new7d: count,
+    active24h: count,
+    active7d: count,
+  }),
+  careers: z.object({
+    total: count,
+    active: count,
+    retired: count,
+    new7d: count,
+    retired7d: count,
+  }),
   board: z.object({ posts: count, comments: count, comments7d: count }),
   /** 최근 14일(오늘 포함, 오래된 날부터). 기록이 없는 날도 0으로 채운다. */
   daily: z.array(AdminDailySchema),
-  balance: z.object({ version: z.number().int().min(1), activatedAt: IsoUtcSchema.nullable() }).nullable(),
+  balance: z
+    .object({ version: z.number().int().min(1), activatedAt: IsoUtcSchema.nullable() })
+    .nullable(),
   audit: z.array(z.object({ kind: z.string(), createdAt: IsoUtcSchema })),
 });
 export type AdminStats = z.infer<typeof AdminStatsSchema>;
@@ -49,7 +64,10 @@ export const AdminCommentSchema = z.object({
 });
 export type AdminComment = z.infer<typeof AdminCommentSchema>;
 
-export const AdminCommentListSchema = z.object({ comments: z.array(AdminCommentSchema), hasMore: z.boolean() });
+export const AdminCommentListSchema = z.object({
+  comments: z.array(AdminCommentSchema),
+  hasMore: z.boolean(),
+});
 export type AdminCommentList = z.infer<typeof AdminCommentListSchema>;
 
 /** 한 작성자의 댓글을 모두 지운다(도배·욕설 대응). */

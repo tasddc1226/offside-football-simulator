@@ -16,7 +16,8 @@ export function watchOwnerConflicts() {
     const G = appState.G;
     const cid = G && !G.retired ? G.cid : null;
     const active = items.filter((i) => i.kind === 'season' && i.careerId === cid);
-    if (active.length < items.length) toast('다른 계정의 선수라 서버에 반영하지 못했어요. 그 계정으로 로그인하면 반영돼요.');
+    if (active.length < items.length)
+      toast('다른 계정의 선수라 서버에 반영하지 못했어요. 그 계정으로 로그인하면 반영돼요.');
     if (!active.length || loadKey<string>(SKIP_KEY) === cid) return;
     appState.ownerConflict = [...(appState.ownerConflict ?? []), ...active];
     toast('이 커리어는 다른 계정에 기록돼 있어요. 홈에서 확인해 주세요.');
@@ -28,10 +29,14 @@ export function adoptCareer() {
   const G = appState.G;
   const conflicts = appState.ownerConflict;
   if (!G || !conflicts) return;
-  const events = new Map(conflicts.flatMap((i) => (i.kind === 'season' ? [[i.year, i.body.events] as const] : [])));
+  const events = new Map(
+    conflicts.flatMap((i) => (i.kind === 'season' ? [[i.year, i.body.events] as const] : [])),
+  );
   G.cid = crypto.randomUUID();
   save();
-  void import('../game/outbox.js').then((m) => enqueueAllSeasons(m, G, (year) => events.get(year) ?? []));
+  void import('../game/outbox.js').then((m) =>
+    enqueueAllSeasons(m, G, (year) => events.get(year) ?? []),
+  );
   appState.ownerConflict = null;
   toast('지금 계정으로 이어서 기록할게요.');
 }

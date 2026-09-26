@@ -3,7 +3,8 @@
 import { loadKey, saveKey } from '../game/season.js';
 
 const KEY = 'ft_sfx';
-const CLICKABLE = 'button, a[href], summary, label, select, [role="button"], input[type="checkbox"], input[type="radio"]';
+const CLICKABLE =
+  'button, a[href], summary, label, select, [role="button"], input[type="checkbox"], input[type="radio"]';
 
 let enabled = loadKey<boolean>(KEY) ?? true;
 let ctx: AudioContext | null = null;

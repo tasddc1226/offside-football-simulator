@@ -37,7 +37,14 @@ export async function findLiveSession(
     .select({ id: sessions.id, profileId: sessions.profileId, channel: sessions.channel })
     .from(sessions)
     .innerJoin(profiles, eq(profiles.id, sessions.profileId))
-    .where(and(eq(sessions.tokenHash, tokenHash), isNull(sessions.revokedAt), gt(sessions.expiresAt, now), isNull(profiles.deletedAt)));
+    .where(
+      and(
+        eq(sessions.tokenHash, tokenHash),
+        isNull(sessions.revokedAt),
+        gt(sessions.expiresAt, now),
+        isNull(profiles.deletedAt),
+      ),
+    );
   return row;
 }
 
@@ -51,6 +58,10 @@ export async function getSessionById(db: Db, id: string): Promise<SessionRecord 
 }
 
 /** D-14 복구: 토큰은 그대로 두고 현재 세션을 대상 프로필로 재바인딩한다. */
-export async function rebindSessionProfile(db: Db, sessionId: string, profileId: string): Promise<void> {
+export async function rebindSessionProfile(
+  db: Db,
+  sessionId: string,
+  profileId: string,
+): Promise<void> {
   await db.update(sessions).set({ profileId }).where(eq(sessions.id, sessionId));
 }

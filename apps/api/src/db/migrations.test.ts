@@ -30,7 +30,8 @@ function firstMigrationStatements(): string[] {
  * 최종까지 남는 `profiles` CREATE 문을 대신 고른다. */
 function firstProfilesCreateStatement(): string {
   const statement = firstMigrationStatements().find((s) => s.startsWith('CREATE TABLE `profiles`'));
-  if (!statement) throw new Error('expected a CREATE TABLE `profiles` statement in the first migration');
+  if (!statement)
+    throw new Error('expected a CREATE TABLE `profiles` statement in the first migration');
   return statement;
 }
 
@@ -130,9 +131,38 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   ],
   club_customs: ['profile_id', 'clubs_json', 'updated_at'],
   // T-10-011: 게시판.
-  board_posts: ['id', 'board', 'title', 'body', 'version', 'pinned', 'author_profile_id', 'created_at', 'updated_at', 'deleted_at'],
-  board_comments: ['id', 'post_id', 'profile_id', 'nickname', 'body', 'admin', 'created_at', 'deleted_at'],
-  balance_versions: ['version', 'status', 'note', 'values_json', 'created_by', 'created_at', 'updated_at', 'activated_at'],
+  board_posts: [
+    'id',
+    'board',
+    'title',
+    'body',
+    'version',
+    'pinned',
+    'author_profile_id',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+  ],
+  board_comments: [
+    'id',
+    'post_id',
+    'profile_id',
+    'nickname',
+    'body',
+    'admin',
+    'created_at',
+    'deleted_at',
+  ],
+  balance_versions: [
+    'version',
+    'status',
+    'note',
+    'values_json',
+    'created_by',
+    'created_at',
+    'updated_at',
+    'activated_at',
+  ],
   server_firsts: ['id', 'career_id', 'achieved_at', 'year'],
   app_meta: ['key', 'value'],
 };

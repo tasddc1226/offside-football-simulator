@@ -12,7 +12,8 @@ import { ATTR_KEYS, POS, focusMod, type AttrKey, type Pos } from './data.js';
 function localRng(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
@@ -38,7 +39,13 @@ export function baseline(pos: Pos, focus: readonly AttrKey[]): Record<AttrKey, n
 
 /** 총합을 유지한 채(한 능력치에서 다른 능력치로 옮기는 방식) 무작위로 재분배한다. 주력 능력치는
  * 깎지 않는다 — 어느 후보를 골라도 고른 강점이 기준선 아래로 내려가지 않는다. */
-function redistribute(base: Record<AttrKey, number>, focus: readonly AttrKey[], rand: () => number, rounds = 10, step = 3): Record<AttrKey, number> {
+function redistribute(
+  base: Record<AttrKey, number>,
+  focus: readonly AttrKey[],
+  rand: () => number,
+  rounds = 10,
+  step = 3,
+): Record<AttrKey, number> {
   const out = { ...base };
   for (let i = 0; i < rounds; i++) {
     const from = ATTR_KEYS[Math.floor(rand() * ATTR_KEYS.length)]!;
@@ -60,7 +67,11 @@ export function generateCandidates(pos: Pos, focus: readonly AttrKey[], n = 3): 
   for (let i = 0; i < n; i++) {
     const attrs = i === 0 ? { ...base } : redistribute(base, focus, rand, 8 + i * 4, 4);
     const sorted = ATTR_KEYS.slice().sort((a, b) => attrs[b] - attrs[a]);
-    out.push({ attrs, total: ATTR_KEYS.reduce((sum, k) => sum + attrs[k], 0), hintKeys: sorted.slice(0, 2) });
+    out.push({
+      attrs,
+      total: ATTR_KEYS.reduce((sum, k) => sum + attrs[k], 0),
+      hintKeys: sorted.slice(0, 2),
+    });
   }
   return out;
 }

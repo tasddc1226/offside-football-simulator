@@ -1,6 +1,14 @@
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import { LIVE_POLL_SEC } from '@offside/contracts/polling';
-import type { Profile as ContractProfile, FirstsResponse, HofDetailResponse, HofListResponse, HofSort, LiveResponse, MyCareersResponse } from '@offside/contracts';
+import type {
+  Profile as ContractProfile,
+  FirstsResponse,
+  HofDetailResponse,
+  HofListResponse,
+  HofSort,
+  LiveResponse,
+  MyCareersResponse,
+} from '@offside/contracts';
 import { resolveApiBaseUrl } from './base-url.js';
 
 // API 클라이언트 최소본 (계정: 로그인/프로필/연동 해제/로그아웃/삭제 만). 게임 상태는 전부
@@ -22,7 +30,12 @@ export type ApiErrorCode = string;
 export type ApiError = { code: ApiErrorCode; message: string; retryable: boolean; reason?: string };
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
-function failure<T>(code: ApiErrorCode, message: string, retryable: boolean, reason?: string): ApiResult<T> {
+function failure<T>(
+  code: ApiErrorCode,
+  message: string,
+  retryable: boolean,
+  reason?: string,
+): ApiResult<T> {
   return { ok: false, error: { code, message, retryable, ...(reason ? { reason } : {}) } };
 }
 
@@ -42,7 +55,8 @@ export function cachedGet<T>(path: string, ttlMs: number): Promise<ApiResult<T>>
   if (hit && Date.now() < hit.until) return hit.result as Promise<ApiResult<T>>;
   const result = apiFetch<T>(path, { method: 'GET' });
   // 선수 상세를 많이 열면 키가 늘어난다 — 일정 크기를 넘으면 만료된 것만 걷어 낸다.
-  if (memo.size >= MEMO_SWEEP_AT) for (const [k, v] of memo) if (Date.now() >= v.until) memo.delete(k);
+  if (memo.size >= MEMO_SWEEP_AT)
+    for (const [k, v] of memo) if (Date.now() >= v.until) memo.delete(k);
   memo.set(path, { until: Date.now() + ttlMs, result });
   void result.then((r) => {
     if (!r.ok && memo.get(path)?.result === result) memo.delete(path);
@@ -52,7 +66,8 @@ export function cachedGet<T>(path: string, ttlMs: number): Promise<ApiResult<T>>
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<ApiResult<T>> {
   const method = (init.method ?? 'GET').toUpperCase();
-  const isMutation = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+  const isMutation =
+    method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
   const body = isMutation && init.body === undefined ? '{}' : init.body;
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
@@ -88,12 +103,30 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
   if (!response.ok) {
     if (json && typeof json === 'object' && 'error' in json) {
-      const e = (json as { error: { code?: string; message?: string; retryable?: boolean; details?: { reason?: unknown } } }).error;
+      const e = (
+        json as {
+          error: {
+            code?: string;
+            message?: string;
+            retryable?: boolean;
+            details?: { reason?: unknown };
+          };
+        }
+      ).error;
       const reason = typeof e.details?.reason === 'string' ? e.details.reason : undefined;
       if (e.code === 'PROFILE_REQUIRED') noteSession(false);
-      return failure(e.code ?? 'UNKNOWN', e.message ?? '요청이 실패했습니다.', !!e.retryable, reason);
+      return failure(
+        e.code ?? 'UNKNOWN',
+        e.message ?? '요청이 실패했습니다.',
+        !!e.retryable,
+        reason,
+      );
     }
-    return failure('INVALID_RESPONSE', `요청이 실패했습니다(${response.status}).`, response.status >= 500);
+    return failure(
+      'INVALID_RESPONSE',
+      `요청이 실패했습니다(${response.status}).`,
+      response.status >= 500,
+    );
   }
   if (typeof json !== 'object' || json === null || !('data' in json)) {
     return failure('INVALID_RESPONSE', '서버 응답 형식이 올바르지 않습니다.', false);
@@ -132,7 +165,9 @@ export function unlinkGoogle(): Promise<ApiResult<undefined>> {
 export function logout(): Promise<ApiResult<undefined>> {
   return apiFetch('/v1/auth/logout', { method: 'POST' });
 }
-export function startProfileDeletion(): Promise<ApiResult<{ confirmToken: string; expiresAt: string }>> {
+export function startProfileDeletion(): Promise<
+  ApiResult<{ confirmToken: string; expiresAt: string }>
+> {
   return apiFetch('/v1/profile/delete', { method: 'POST' });
 }
 export function confirmProfileDeletion(confirmToken: string): Promise<ApiResult<undefined>> {
@@ -147,7 +182,11 @@ export function googleStartUrl(): string {
 }
 
 // ───────── T-10-005 공개 명예의 전당 (로그인 불필요) ─────────
-export function getHof(limit = 50, page = 1, sort: HofSort = 'score'): Promise<ApiResult<HofListResponse>> {
+export function getHof(
+  limit = 50,
+  page = 1,
+  sort: HofSort = 'score',
+): Promise<ApiResult<HofListResponse>> {
   const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}`;
   return cachedGet<HofListResponse>(`/v1/hof?${q}`, 60_000);
 }

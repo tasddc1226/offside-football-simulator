@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 // T-10-023: 열어 둔 탭이 새 배포(version.json의 버전이 다름)를 알아채면 새로고침 배너를 띄운다.
-test('배포 버전이 같으면 배너가 없고, 달라지면 탭으로 돌아왔을 때 새로고침 배너가 뜬다', async ({ page }) => {
+test('배포 버전이 같으면 배너가 없고, 달라지면 탭으로 돌아왔을 때 새로고침 배너가 뜬다', async ({
+  page,
+}) => {
   let version: string | null = null;
   await page.route('**/version.json', async (route) => {
     if (version === null) return route.continue();

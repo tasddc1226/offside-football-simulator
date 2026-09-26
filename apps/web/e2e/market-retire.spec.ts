@@ -34,7 +34,9 @@ test('이적 시장에서 언제든 은퇴할 수 있다 — 이른 은퇴는 �
   await expect(page.locator('[data-act="hof-public"]')).toHaveCount(0);
 });
 
-test('만 30세가 넘어 은퇴하면 명예의 전당에 기록된다고 묻고, 이름 공개 카드가 나온다 (T-10-032)', async ({ page }) => {
+test('만 30세가 넘어 은퇴하면 명예의 전당에 기록된다고 묻고, 이름 공개 카드가 나온다 (T-10-032)', async ({
+  page,
+}) => {
   await openMarket(page, 34);
   const sheet = page.locator('#sheet');
   await sheet.getByRole('button', { name: '은퇴하기' }).click();

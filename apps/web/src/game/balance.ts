@@ -2,7 +2,12 @@
 // 게임 코드는 BAL.<키>를 읽는다. 값은 커리어마다 저장(GameState.bal)되고, 서버의 새 버전은 다음 시즌이
 // 시작될 때(newSeason) 그 커리어에 적용된다 — 시즌 도중에는 수치가 바뀌지 않는다.
 // 서버에 연결하지 못하면 저장된 값(없으면 코드 기본값 = 버전 0)으로 계속 진행한다.
-import { resolveBalance, sanitizeBalance, type BalanceOverrides, type BalanceValues } from '@offside/contracts/balance';
+import {
+  resolveBalance,
+  sanitizeBalance,
+  type BalanceOverrides,
+  type BalanceValues,
+} from '@offside/contracts/balance';
 import type { GameState } from './types.js';
 
 export type CareerBalance = { v: number; values: BalanceOverrides };

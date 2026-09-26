@@ -23,7 +23,12 @@ export function waitUntil(c: Context<AppEnv>, p: Promise<unknown>) {
 /** 이 요청과 같은 호스트의 캐시 키. path에는 정규화한 쿼리까지 담는다. */
 export const edgeKey = (c: Context<AppEnv>, path: string) => `${new URL(c.req.url).origin}${path}`;
 
-export async function edgeCached<T>(c: Context<AppEnv>, path: string, ttlSec: number, load: () => Promise<T>): Promise<T> {
+export async function edgeCached<T>(
+  c: Context<AppEnv>,
+  path: string,
+  ttlSec: number,
+  load: () => Promise<T>,
+): Promise<T> {
   const cache = edge();
   if (!cache) return load();
   const key = edgeKey(c, path);

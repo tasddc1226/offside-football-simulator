@@ -17,7 +17,14 @@ import { ok, readBody, readJson, nowIso } from './shared.js';
 import { commentIdentity } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
 import { sha256Hex } from '../db/hash.js';
-import { getProfile, createProfile, setNickname, touchLastSeen, updateSettings, type ProfileRecord } from '../db/repos/profiles.js';
+import {
+  getProfile,
+  createProfile,
+  setNickname,
+  touchLastSeen,
+  updateSettings,
+  type ProfileRecord,
+} from '../db/repos/profiles.js';
 import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
 import { revokeSession } from '../db/repos/sessions.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -59,7 +66,9 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       throw new AppError({ code: 'PROFILE_REQUIRED', message: '세션이 유효하지 않습니다.' });
     }
 
-    let record: ProfileRecord | undefined = existingSession ? await getProfile(db, existingSession.profileId) : undefined;
+    let record: ProfileRecord | undefined = existingSession
+      ? await getProfile(db, existingSession.profileId)
+      : undefined;
 
     if (existingSession && !record) {
       // 세션은 유효하지만 프로필이 사라졌다. 세션을 폐기하고 아래에서 새로 발급한다.
@@ -100,20 +109,41 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     const profile = await getProfile(db, session.profileId);
     const identity = commentIdentity(profile, c.env.ADMIN_EMAILS);
     if (!profile || !identity.google) {
-      throw new AppError({ code: 'FORBIDDEN', message: '구글로 로그인하면 닉네임을 정할 수 있어요.', details: { reason: 'GOOGLE_LOGIN_REQUIRED' } });
+      throw new AppError({
+        code: 'FORBIDDEN',
+        message: '구글로 로그인하면 닉네임을 정할 수 있어요.',
+        details: { reason: 'GOOGLE_LOGIN_REQUIRED' },
+      });
     }
     if (identity.admin) {
-      throw new AppError({ code: 'FORBIDDEN', message: `운영자 계정의 댓글 닉네임은 '${identity.nickname}'로 고정돼요.`, details: { reason: 'ADMIN_NICKNAME_FIXED' } });
+      throw new AppError({
+        code: 'FORBIDDEN',
+        message: `운영자 계정의 댓글 닉네임은 '${identity.nickname}'로 고정돼요.`,
+        details: { reason: 'ADMIN_NICKNAME_FIXED' },
+      });
     }
     if (isReservedNickname(nickname)) {
-      throw new AppError({ code: 'VALIDATION_FAILED', message: `'운영자'처럼 운영진으로 보이는 닉네임은 쓸 수 없어요.`, details: { reason: 'RESERVED_NICKNAME' } });
+      throw new AppError({
+        code: 'VALIDATION_FAILED',
+        message: `'운영자'처럼 운영진으로 보이는 닉네임은 쓸 수 없어요.`,
+        details: { reason: 'RESERVED_NICKNAME' },
+      });
     }
     if (!isAcceptablePublicName(nickname)) {
-      throw new AppError({ code: 'VALIDATION_FAILED', message: '쓸 수 없는 닉네임이에요.', details: { reason: 'BLOCKED_WORD' } });
+      throw new AppError({
+        code: 'VALIDATION_FAILED',
+        message: '쓸 수 없는 닉네임이에요.',
+        details: { reason: 'BLOCKED_WORD' },
+      });
     }
     const updated = await setNickname(db, profile.id, nickname);
     if (updated === 'taken') {
-      throw new AppError({ code: 'VALIDATION_FAILED', status: 409, message: '이미 쓰고 있는 닉네임이에요.', details: { reason: 'NICKNAME_TAKEN' } });
+      throw new AppError({
+        code: 'VALIDATION_FAILED',
+        status: 409,
+        message: '이미 쓰고 있는 닉네임이에요.',
+        details: { reason: 'NICKNAME_TAKEN' },
+      });
     }
     return ok(c, ProfileSchema, buildProfileResponse(updated, c.env.ADMIN_EMAILS));
   });
@@ -158,7 +188,11 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     const sessionTokenHash = await sha256Hex(rawToken);
 
     if (body.confirmToken === undefined) {
-      const result = await issueDeleteConfirmToken({ sessionId: session.id, sessionTokenHash, now });
+      const result = await issueDeleteConfirmToken({
+        sessionId: session.id,
+        sessionTokenHash,
+        now,
+      });
       return ok(c, DeleteProfileStartResponseSchema, result);
     }
 
@@ -172,7 +206,11 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     // 지운 최초 기록은 응답 뒤에 다시 계산하고 그 캐시를 비운다. 소급 표시는 삭제 배치에서 이미 지웠으니,
     // 재계산이 끝나기 전·실패한 뒤의 공개 조회도 스스로 다시 계산한다. 나머지는 바뀐 공개 캐시만 비운다
     // (명예의 전당 목록은 TTL 1분).
-    if (heldFirsts) waitUntil(c, recomputeFirsts(db).finally(() => purgeEdge(c, STALE.firstsChanged())));
+    if (heldFirsts)
+      waitUntil(
+        c,
+        recomputeFirsts(db).finally(() => purgeEdge(c, STALE.firstsChanged())),
+      );
     purgeEdge(c, STALE.profileDeleted(careerIds, hadComments));
     return c.body(null, 204);
   });
@@ -180,7 +218,12 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
 
 /** 본문 없음(빈 객체)은 1단계 요청이다. 그 외에는 contracts 스키마로 검증한다. */
 function parseDeleteBody(json: unknown): { confirmToken?: string } {
-  if (json !== null && typeof json === 'object' && !Array.isArray(json) && Object.keys(json).length === 0) {
+  if (
+    json !== null &&
+    typeof json === 'object' &&
+    !Array.isArray(json) &&
+    Object.keys(json).length === 0
+  ) {
     return {};
   }
   const parsed: DeleteProfileConfirmBody = parseWithAppError(DeleteProfileConfirmBodySchema, json);

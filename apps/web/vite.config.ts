@@ -18,7 +18,11 @@ export default defineConfig(({ mode }) => {
     name: 'offside-version-json',
     apply: 'build',
     generateBundle() {
-      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version }) });
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({ version }),
+      });
     },
   };
 

@@ -6,7 +6,12 @@ import { careers, careerSeasons, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { deleteProfile, issueCookie, ORIGIN, TEST_CAREER } from '../test/http.js';
 
-function jsonInit(input: { method: 'PUT' | 'POST'; body?: unknown; cookie?: string; origin?: string | null }): RequestInit {
+function jsonInit(input: {
+  method: 'PUT' | 'POST';
+  body?: unknown;
+  cookie?: string;
+  origin?: string | null;
+}): RequestInit {
   const { method, body, cookie, origin = ORIGIN } = input;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (origin !== null) headers.Origin = origin;
@@ -77,11 +82,18 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     const body = seasonBody();
     const res = await app.request(
       `/v1/careers/${CAREER_ID}/seasons/2026`,
-      jsonInit({ method: 'PUT', body: { ...body, season: { ...body.season, ...detail } }, cookie: owner.cookie }),
+      jsonInit({
+        method: 'PUT',
+        body: { ...body, season: { ...body.season, ...detail } },
+        cookie: owner.cookie,
+      }),
       ctx.env,
     );
     expect(res.status).toBe(200);
-    const [row] = await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID));
+    const [row] = await ctx.db
+      .select()
+      .from(careerSeasons)
+      .where(eq(careerSeasons.careerId, CAREER_ID));
     expect(row).toMatchObject({ cs: 12, lgApps: 18, lgGoals: 8, caps: 3 });
     expect(JSON.parse(row!.compsJson!)).toEqual(detail.comps);
     expect(JSON.parse(row!.chJson!)).toEqual(detail.ch);
@@ -93,7 +105,17 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     const body = seasonBody();
     const res = await app.request(
       `/v1/careers/${CAREER_ID}/seasons/2026`,
-      jsonInit({ method: 'PUT', body: { ...body, season: { ...body.season, comps: [{ type: 'league', name: 'x', stage: '', apps: 1, g: 0, a: 0 }] } }, cookie: owner.cookie }),
+      jsonInit({
+        method: 'PUT',
+        body: {
+          ...body,
+          season: {
+            ...body.season,
+            comps: [{ type: 'league', name: 'x', stage: '', apps: 1, g: 0, a: 0 }],
+          },
+        },
+        cookie: owner.cookie,
+      }),
       ctx.env,
     );
     expect(res.status).toBe(400);
@@ -117,7 +139,10 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(careerRows[0]?.status).toBe('active');
     expect(careerRows[0]?.profileId).toBe(owner.profileId);
 
-    const seasonRows = await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID));
+    const seasonRows = await ctx.db
+      .select()
+      .from(careerSeasons)
+      .where(eq(careerSeasons.careerId, CAREER_ID));
     expect(seasonRows).toHaveLength(1);
     expect(seasonRows[0]?.goals).toBe(10);
     // T-10-006: 상세 필드가 없는 옛 페이로드는 NULL로 남는다.
@@ -176,7 +201,12 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       `/v1/careers/${CAREER_ID}/seasons/2026`,
       jsonInit({
         method: 'PUT',
-        body: seasonBody({ season: { ...seasonBody().season, honors: Array.from({ length: 31 }, (_, i) => `honor-${i}`) } }),
+        body: seasonBody({
+          season: {
+            ...seasonBody().season,
+            honors: Array.from({ length: 31 }, (_, i) => `honor-${i}`),
+          },
+        }),
         cookie: owner.cookie,
       }),
       ctx.env,
@@ -197,9 +227,15 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
 
     expect((await deleteProfile(ctx.env, owner.cookie, 'idem-del')).status).toBe(204);
 
-    const careerRows = await ctx.db.select().from(careers).where(eq(careers.profileId, owner.profileId));
+    const careerRows = await ctx.db
+      .select()
+      .from(careers)
+      .where(eq(careers.profileId, owner.profileId));
     expect(careerRows).toHaveLength(0);
-    const seasonRows = await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID));
+    const seasonRows = await ctx.db
+      .select()
+      .from(careerSeasons)
+      .where(eq(careerSeasons.careerId, CAREER_ID));
     expect(seasonRows).toHaveLength(0);
   });
 });
@@ -217,9 +253,25 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
 
   async function retire(cookie: string, careerId: string, legendScore: number, retireAge?: number) {
     const app = createApp();
-    expect((await app.request(`/v1/careers/${careerId}/seasons/2026`, jsonInit({ method: 'PUT', body: seasonBody(), cookie }), ctx.env)).status).toBe(200);
+    expect(
+      (
+        await app.request(
+          `/v1/careers/${careerId}/seasons/2026`,
+          jsonInit({ method: 'PUT', body: seasonBody(), cookie }),
+          ctx.env,
+        )
+      ).status,
+    ).toBe(200);
     const body = { ...retirementBody(), legendScore, ...(retireAge ? { retireAge } : {}) };
-    expect((await app.request(`/v1/careers/${careerId}/retirement`, jsonInit({ method: 'PUT', body, cookie }), ctx.env)).status).toBe(200);
+    expect(
+      (
+        await app.request(
+          `/v1/careers/${careerId}/retirement`,
+          jsonInit({ method: 'PUT', body, cookie }),
+          ctx.env,
+        )
+      ).status,
+    ).toBe(200);
   }
   async function mine(cookie?: string) {
     const app = createApp();
@@ -236,7 +288,10 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
     const res = await mine(me.cookie);
     expect(res.status).toBe(200);
     expect(res.headers.get('Cache-Control')).toBe('private, no-store');
-    expect(successEnvelope(MyCareersResponseSchema).parse(await res.json()).data).toEqual({ linked: false, entries: [] });
+    expect(successEnvelope(MyCareersResponseSchema).parse(await res.json()).data).toEqual({
+      linked: false,
+      entries: [],
+    });
   });
 
   it('계정에 연결된 프로필은 자기 은퇴 선수만 점수순으로 받는다', async () => {
@@ -250,9 +305,15 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
     await retire(other.cookie, '33333333-3333-4333-8333-333333333333', 900);
     // 은퇴하지 않은 커리어는 빠진다.
     const app = createApp();
-    await app.request('/v1/careers/44444444-4444-4444-8444-444444444444/seasons/2026', jsonInit({ method: 'PUT', body: seasonBody(), cookie: me.cookie }), ctx.env);
+    await app.request(
+      '/v1/careers/44444444-4444-4444-8444-444444444444/seasons/2026',
+      jsonInit({ method: 'PUT', body: seasonBody(), cookie: me.cookie }),
+      ctx.env,
+    );
 
-    const data = successEnvelope(MyCareersResponseSchema).parse(await (await mine(me.cookie)).json()).data;
+    const data = successEnvelope(MyCareersResponseSchema).parse(
+      await (await mine(me.cookie)).json(),
+    ).data;
     expect(data.linked).toBe(true);
     expect(data.entries.map((e) => [e.id, e.legendScore])).toEqual([
       [high, 500],

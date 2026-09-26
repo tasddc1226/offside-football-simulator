@@ -4,22 +4,35 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { kstDays } from '../db/repos/admin.js';
 import { auditLog, careers } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { ADMIN_EMAIL, callJson, issueAdminCookie, issueCookie, issueGoogleCookie } from '../test/http.js';
+import {
+  ADMIN_EMAIL,
+  callJson,
+  issueAdminCookie,
+  issueCookie,
+  issueGoogleCookie,
+} from '../test/http.js';
 
 describe('운영 도구 /v1/admin (T-10-016)', () => {
   let ctx: TestD1;
   let env: TestD1['env'];
-  const call = (method: string, path: string, opts?: Parameters<typeof callJson>[3]) => callJson(env, method, path, opts);
+  const call = (method: string, path: string, opts?: Parameters<typeof callJson>[3]) =>
+    callJson(env, method, path, opts);
   const data = async <T>(res: Response) => ((await res.json()) as { data: T }).data;
 
   const makeAdmin = () => issueAdminCookie(ctx);
   const googleUser = (nickname: string) => issueGoogleCookie(ctx, { nickname });
   async function writePost(cookie: string) {
-    const res = await call('POST', '/v1/boards/notice/posts', { cookie, body: { title: '점검 안내', body: '오늘 밤 점검합니다.' } });
+    const res = await call('POST', '/v1/boards/notice/posts', {
+      cookie,
+      body: { title: '점검 안내', body: '오늘 밤 점검합니다.' },
+    });
     return (await data<{ id: string }>(res)).id;
   }
   async function comment(cookie: string, postId: string, body: string) {
-    const res = await call('POST', `/v1/boards/posts/${postId}/comments`, { cookie, body: { body } });
+    const res = await call('POST', `/v1/boards/posts/${postId}/comments`, {
+      cookie,
+      body: { body },
+    });
     expect(res.status).toBe(201);
     return (await data<{ id: string }>(res)).id;
   }
@@ -40,7 +53,11 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       ['POST', '/v1/admin/comments/purge'],
     ] as const) {
       expect((await call(method, path)).status, path).toBe(401);
-      expect((await call(method, path, { cookie: user.cookie, body: { profileId: user.profileId } })).status, path).toBe(403);
+      expect(
+        (await call(method, path, { cookie: user.cookie, body: { profileId: user.profileId } }))
+          .status,
+        path,
+      ).toBe(403);
     }
   });
 
@@ -48,7 +65,17 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     const admin = await makeAdmin();
     const user = await googleUser('팬');
     const now = new Date().toISOString();
-    const row = { profileId: user.profileId, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late', startYear: 2026, appVersion: 'test', createdAt: now, updatedAt: now } as const;
+    const row = {
+      profileId: user.profileId,
+      pos: 'FW',
+      foot: '오른발',
+      type: 'poacher',
+      trait: 'late',
+      startYear: 2026,
+      appVersion: 'test',
+      createdAt: now,
+      updatedAt: now,
+    } as const;
     await ctx.db.insert(careers).values([
       { ...row, id: 'car-1', status: 'active' },
       { ...row, id: 'car-2', status: 'retired', retiredAt: now },
@@ -59,7 +86,14 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     const res = await call('GET', '/v1/admin/stats', { cookie: admin.cookie });
     expect(res.status).toBe(200);
     const s = await data<AdminStats>(res);
-    expect(s.profiles).toEqual({ total: 2, linked: 2, new24h: 2, new7d: 2, active24h: 2, active7d: 2 });
+    expect(s.profiles).toEqual({
+      total: 2,
+      linked: 2,
+      new24h: 2,
+      new7d: 2,
+      active24h: 2,
+      active7d: 2,
+    });
     expect(s.careers).toEqual({ total: 2, active: 1, retired: 1, new7d: 2, retired7d: 1 });
     expect(s.board).toEqual({ posts: 1, comments: 1, comments7d: 1 });
     expect(s.daily).toHaveLength(14);
@@ -83,24 +117,46 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     await comment(fan.cookie, postId, '응원해요');
     await comment(spammer.cookie, postId, '광고2');
 
-    const all = await data<AdminCommentList>(await call('GET', '/v1/admin/comments?limit=2', { cookie: admin.cookie }));
+    const all = await data<AdminCommentList>(
+      await call('GET', '/v1/admin/comments?limit=2', { cookie: admin.cookie }),
+    );
     expect(all.comments.map((c) => c.body)).toEqual(['광고2', '응원해요']);
     expect(all.hasMore).toBe(true);
-    expect(all.comments[0]).toMatchObject({ postId, postTitle: '점검 안내', board: 'notice', profileId: spammer.profileId });
-    const next = await data<AdminCommentList>(await call('GET', `/v1/admin/comments?limit=2&before=${all.comments[1]!.createdAt}`, { cookie: admin.cookie }));
+    expect(all.comments[0]).toMatchObject({
+      postId,
+      postTitle: '점검 안내',
+      board: 'notice',
+      profileId: spammer.profileId,
+    });
+    const next = await data<AdminCommentList>(
+      await call('GET', `/v1/admin/comments?limit=2&before=${all.comments[1]!.createdAt}`, {
+        cookie: admin.cookie,
+      }),
+    );
     expect(next.comments.map((c) => c.body)).toEqual(['광고1']);
 
-    const mine = await data<AdminCommentList>(await call('GET', `/v1/admin/comments?profile=${spammer.profileId}`, { cookie: admin.cookie }));
+    const mine = await data<AdminCommentList>(
+      await call('GET', `/v1/admin/comments?profile=${spammer.profileId}`, {
+        cookie: admin.cookie,
+      }),
+    );
     expect(mine.comments.map((c) => c.body)).toEqual(['광고2', '광고1']);
 
-    const purge = await call('POST', '/v1/admin/comments/purge', { cookie: admin.cookie, body: { profileId: spammer.profileId } });
+    const purge = await call('POST', '/v1/admin/comments/purge', {
+      cookie: admin.cookie,
+      body: { profileId: spammer.profileId },
+    });
     expect(await data(purge)).toEqual({ deleted: 2 });
-    const left = await data<AdminCommentList>(await call('GET', '/v1/admin/comments', { cookie: admin.cookie }));
+    const left = await data<AdminCommentList>(
+      await call('GET', '/v1/admin/comments', { cookie: admin.cookie }),
+    );
     expect(left.comments.map((c) => c.body)).toEqual(['응원해요']);
     const [log] = await ctx.db.select().from(auditLog).where(eq(auditLog.kind, 'COMMENTS_PURGED'));
     expect(JSON.parse(log!.payloadJson)).toEqual({ target: spammer.profileId, deleted: 2 });
     expect(log!.profileId).toBe(admin.profileId);
 
-    expect((await call('GET', '/v1/admin/comments?profile=nope', { cookie: admin.cookie })).status).toBe(400);
+    expect(
+      (await call('GET', '/v1/admin/comments?profile=nope', { cookie: admin.cookie })).status,
+    ).toBe(400);
   });
 });

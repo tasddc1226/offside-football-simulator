@@ -10,7 +10,8 @@ export const MetaSchema = z.looseObject({
 
 export type Meta = z.infer<typeof MetaSchema>;
 
-export const successEnvelope = <T extends z.ZodTypeAny>(data: T) => z.strictObject({ data, meta: MetaSchema });
+export const successEnvelope = <T extends z.ZodTypeAny>(data: T) =>
+  z.strictObject({ data, meta: MetaSchema });
 
 export const ErrorEnvelopeSchema = z.strictObject({
   error: z.strictObject({
@@ -24,4 +25,5 @@ export const ErrorEnvelopeSchema = z.strictObject({
 
 export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
 
-export const envelope = <T extends z.ZodTypeAny>(data: T) => z.union([successEnvelope(data), ErrorEnvelopeSchema]);
+export const envelope = <T extends z.ZodTypeAny>(data: T) =>
+  z.union([successEnvelope(data), ErrorEnvelopeSchema]);

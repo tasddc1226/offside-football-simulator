@@ -5,7 +5,10 @@ const PRODUCTION_WEB_API_ORIGINS: Readonly<Record<string, string>> = {
   'offside-web.tasddc1569.workers.dev': 'https://offside-api.tasddc1569.workers.dev',
 };
 
-export function resolveApiBaseUrl(configured: string | undefined, hostname: string | undefined): string {
+export function resolveApiBaseUrl(
+  configured: string | undefined,
+  hostname: string | undefined,
+): string {
   if (hostname && Object.hasOwn(PRODUCTION_WEB_API_ORIGINS, hostname)) {
     return PRODUCTION_WEB_API_ORIGINS[hostname]!;
   }

@@ -30,11 +30,16 @@ const DOMINANCE_SLOPE = 0.15;
 export const ATTACK_KNEE = 8;
 const ATTACK_SLOPE = 0.3;
 /** gap이 knee까지는 그대로, 넘는 몫은 slope배만 반영한다. */
-const softKnee = (gap: number, knee: number, slope: number): number => (gap <= knee ? gap : knee + (gap - knee) * slope);
+const softKnee = (gap: number, knee: number, slope: number): number =>
+  gap <= knee ? gap : knee + (gap - knee) * slope;
 export const attackEdge = (gap: number): number => softKnee(gap, ATTACK_KNEE, ATTACK_SLOPE);
 export const dominance = (gap: number): number => softKnee(gap, DOMINANCE_KNEE, DOMINANCE_SLOPE);
 /** 득점 기대값에 쓰는 공격 능력치(포지션별 가중합). */
-export const atkOf = (s: GameState): number => Object.entries(POS[s.pos].atk).reduce((t, [k, w]) => t + s.attrs[k as AttrKey] * (w as number), 0);
+export const atkOf = (s: GameState): number =>
+  Object.entries(POS[s.pos].atk).reduce(
+    (t, [k, w]) => t + s.attrs[k as AttrKey] * (w as number),
+    0,
+  );
 /** T-10-042: 공격수의 도움은 패스·드리블만이 아니라 슈팅·움직임(공격 능력치)에서도 나온다 — 득점원도 시즌 5~10도움. */
 export const FW_ATTACK_ASSIST = 0.65;
 /** 도움 기대값에 쓰는 창의 능력치. */
@@ -44,7 +49,9 @@ export const creOf = (s: GameState): number => {
 };
 /** 득점·도움 기대값 배수. atk는 공격(또는 창의) 능력치, perf는 경기력(평균 대비 OVR 우위 o - avg를 포함)이다. */
 export function scoreBoost(atk: number, o: number, perf: number, avg: number): number {
-  return Math.exp(attackEdge(atk - avg) / 20 + (perf + (dominance(o - avg) - (o - avg)) / 10) * 0.2);
+  return Math.exp(
+    attackEdge(atk - avg) / 20 + (perf + (dominance(o - avg) - (o - avg)) / 10) * 0.2,
+  );
 }
 
 export interface MatchGame {
@@ -74,19 +81,45 @@ export interface BlockResult {
 /** 역할별 선발 확률 — 리그 경기와 대륙 대회가 같다(국내 컵은 로테이션을 더 쓴다, comps.ts). */
 export const START_P = { 주전: 0.92, 로테이션: 0.5, 벤치: 0.12 } as const;
 /** 경기 골·도움을 정하는 선수 전력: 공격력(atkOf)·창의력(creOf)·OVR. */
-export interface ScoringPower { atk: number; cre: number; o: number }
+export interface ScoringPower {
+  atk: number;
+  cre: number;
+  o: number;
+}
 /** 한 경기 골·도움. 기대값은 포지션 기본값 × 우위 보정 × 출전 비율, 골을 먼저 굴린다(RNG 순서). */
-export function rollScoring(s: GameState, { atk, cre, o }: ScoringPower, perf: number, oppAvg: number, mins: number): { g: number; a: number } {
+export function rollScoring(
+  s: GameState,
+  { atk, cre, o }: ScoringPower,
+  perf: number,
+  oppAvg: number,
+  mins: number,
+): { g: number; a: number } {
   const P = POS[s.pos];
   const g = poisson(P.goal * scoreBoost(atk, o, perf, oppAvg) * (mins / 90));
   const a = poisson(P.assist * scoreBoost(cre, o, perf, oppAvg) * (mins / 90));
   return { g, a };
 }
 export function simBlock(s: GameState): BlockResult {
-  const L = leagueOf(s.leagueId), S = s.season;
-  const n = s.phase >= LAST_PHASE ? L.matches - S.played : Math.min(blockMatches(s), L.matches - S.played);
-  const role = roleOf(s), o = ovr(s);
-  const r: BlockResult = { n, apps: 0, goals: 0, assists: 0, rs: 0, w: 0, d: 0, l: 0, cs: 0, hl: [], injured: false, games: [] };
+  const L = leagueOf(s.leagueId),
+    S = s.season;
+  const n =
+    s.phase >= LAST_PHASE ? L.matches - S.played : Math.min(blockMatches(s), L.matches - S.played);
+  const role = roleOf(s),
+    o = ovr(s);
+  const r: BlockResult = {
+    n,
+    apps: 0,
+    goals: 0,
+    assists: 0,
+    rs: 0,
+    w: 0,
+    d: 0,
+    l: 0,
+    cs: 0,
+    hl: [],
+    injured: false,
+    games: [],
+  };
   const startP = START_P[role];
   const subP = { 주전: 0.05, 로테이션: 0.35, 벤치: 0.38 }[role];
   const power: ScoringPower = { atk: atkOf(s), cre: creOf(s), o };
@@ -103,12 +136,19 @@ export function simBlock(s: GameState): BlockResult {
         S.starts++;
       } else if (chance(subP)) mins = ri(8, 35);
     }
-    let perf = 0, g = 0, a = 0, cs = false;
+    let perf = 0,
+      g = 0,
+      a = 0,
+      cs = false;
     if (mins > 0) {
       perf = (o - L.avg) / 10 + gauss() * 0.8 + (s.cond - 70) / 60 + (s.morale - 60) / 90;
       ({ g, a } = rollScoring(s, power, perf, L.avg, mins));
     }
-    const wp = clamp(0.38 + (s.club.str - L.avg) * 0.024 + (mins ? perf * 0.035 + g * 0.12 : 0), 0.07, 0.88);
+    const wp = clamp(
+      0.38 + (s.club.str - L.avg) * 0.024 + (mins ? perf * 0.035 + g * 0.12 : 0),
+      0.07,
+      0.88,
+    );
     const dp = (1 - wp) * 0.38;
     const x = rnd();
     const res: 'W' | 'D' | 'L' = x < wp ? 'W' : x < wp + dp ? 'D' : 'L';
@@ -117,34 +157,61 @@ export function simBlock(s: GameState): BlockResult {
     r[k] = (r[k] ?? 0) + 1;
     S.pts += res === 'W' ? 3 : res === 'D' ? 1 : 0;
     if (mins > 0) {
-      if ((s.pos === 'DF' || s.pos === 'GK') && res !== 'L' && chance(0.32 + (s.club.str - L.avg) * 0.015 + (s.attrs.def - L.avg) * 0.006)) {
+      if (
+        (s.pos === 'DF' || s.pos === 'GK') &&
+        res !== 'L' &&
+        chance(0.32 + (s.club.str - L.avg) * 0.015 + (s.attrs.def - L.avg) * 0.006)
+      ) {
         cs = true;
         r.cs++;
         S.cs++;
       }
-      let rating = 6.2 + g * 0.9 + a * 0.5 + perf * 0.35 + (cs ? 0.45 : 0) + (s.pos === 'DF' || s.pos === 'GK' ? (s.attrs.def - L.avg) / 25 : 0) + (res === 'W' ? 0.2 : res === 'L' ? -0.2 : 0) + gauss() * 0.25;
+      let rating =
+        6.2 +
+        g * 0.9 +
+        a * 0.5 +
+        perf * 0.35 +
+        (cs ? 0.45 : 0) +
+        (s.pos === 'DF' || s.pos === 'GK' ? (s.attrs.def - L.avg) / 25 : 0) +
+        (res === 'W' ? 0.2 : res === 'L' ? -0.2 : 0) +
+        gauss() * 0.25;
       rating = clamp(Math.round(rating * 10) / 10, 4.5, 10);
-      S.apps++; S.mins += mins; S.goals += g; S.assists += a; S.ratingSum += rating;
-      r.apps++; r.goals += g; r.assists += a; r.rs += rating;
+      S.apps++;
+      S.mins += mins;
+      S.goals += g;
+      S.assists += a;
+      S.ratingSum += rating;
+      r.apps++;
+      r.goals += g;
+      r.assists += a;
+      r.rs += rating;
       if (g >= 3) r.hl.push(`${S.played}R 해트트릭! ${g}골 폭발 (평점 ${rating})`);
       else if (g === 2) r.hl.push(`${S.played}R 멀티골 (평점 ${rating})`);
       else if (rating >= 8.5) r.hl.push(`${S.played}R 경기 최우수 선수 선정 (평점 ${rating})`);
-      if (cs && s.pos === 'GK' && rating >= 8) r.hl.push(`${S.played}R 슈퍼 세이브 쇼, 무실점 (평점 ${rating})`);
+      if (cs && s.pos === 'GK' && rating >= 8)
+        r.hl.push(`${S.played}R 슈퍼 세이브 쇼, 무실점 (평점 ${rating})`);
       addStat(s, 'cond', -(mins / 90) * 3.2);
       r.games.push({ rd: S.played, res, mins, g, a, rating, cs });
-      const ip = BAL.injuryRate * (s.cond < 40 ? 2.5 : 1) * (s.trait === 'iron' ? 0.35 : 1) * (s.age >= 31 ? 1.4 : 1);
+      const ip =
+        BAL.injuryRate *
+        (s.cond < 40 ? 2.5 : 1) *
+        (s.trait === 'iron' ? 0.35 : 1) *
+        (s.age >= 31 ? 1.4 : 1);
       if (chance(ip)) {
         const big = chance(BAL.bigInjuryShare);
         s.injury = big ? ri(8, 18) : ri(1, 5);
         r.injured = true;
-        r.hl.push(`${S.played}R ${big ? '심각한 부상' : '부상'}으로 교체 아웃… ${s.injury}경기 결장 예상`);
+        r.hl.push(
+          `${S.played}R ${big ? '심각한 부상' : '부상'}으로 교체 아웃… ${s.injury}경기 결장 예상`,
+        );
       }
     }
     if (!mins) r.games.push({ rd: S.played, res, mins: 0, inj });
     addStat(s, 'cond', 1.1);
   }
   const g = growthFactor(s);
-  if (r.apps) for (const k of ATTR_KEYS) if (chance(wOf(s)[k] * 2)) addAttr(s, k, rnd() * g * (r.apps / n));
+  if (r.apps)
+    for (const k of ATTR_KEYS) if (chance(wOf(s)[k] * 2)) addAttr(s, k, rnd() * g * (r.apps / n));
   const avg = r.apps ? r.rs / r.apps : 0;
   const tierF = (L.tier + 1) / 4;
   if (r.apps) {
@@ -156,4 +223,3 @@ export function simBlock(s: GameState): BlockResult {
   if (s.contract) addStat(s, 'money', s.contract.salary / LAST_PHASE);
   return r;
 }
-

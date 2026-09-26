@@ -3,7 +3,9 @@ import AxeBuilder from '@axe-core/playwright';
 
 // T-10-012 확률 도감. 일반 이벤트는 처음부터 공개, 스토리·특별 이벤트는 겪어야(ft_dex) 열린다.
 test('확률 도감: 홈 타일 → 공통 규칙 · 선택지 확률 · 잠긴 스토리', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('ft_dex', JSON.stringify(['bench-talk', 'rival-1'])));
+  await page.addInitScript(() =>
+    localStorage.setItem('ft_dex', JSON.stringify(['bench-talk', 'rival-1'])),
+  );
   await page.goto('/');
   const tile = page.locator('[data-act="dex"]');
   await expect(tile).toContainText('확률 도감 보기');

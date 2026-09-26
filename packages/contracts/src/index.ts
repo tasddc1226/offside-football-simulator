@@ -60,7 +60,12 @@ export {
   REQUEST_BODY_MAX_BYTES,
 } from './headers.js';
 
-export { HealthDataSchema, HealthResponseSchema, type HealthData, type HealthResponse } from './health.js';
+export {
+  HealthDataSchema,
+  HealthResponseSchema,
+  type HealthData,
+  type HealthResponse,
+} from './health.js';
 
 export {
   CareerPosSchema,

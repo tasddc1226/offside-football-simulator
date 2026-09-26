@@ -114,7 +114,6 @@ export const RetirementSummarySchema = z.strictObject({
 });
 export type RetirementSummary = z.infer<typeof RetirementSummarySchema>;
 
-
 export const RetirementResponseSchema = z.strictObject({
   careerId: z.string().min(1),
   status: z.literal('retired'),
@@ -154,7 +153,10 @@ const LegendSeasonSchema = z.strictObject({
   ch: z.array(z.string().max(16)).max(10).optional(),
 });
 
-const YearTextSchema = z.strictObject({ year: z.number().int().min(2000).max(2200), t: z.string().max(80) });
+const YearTextSchema = z.strictObject({
+  year: z.number().int().min(2000).max(2200),
+  t: z.string().max(80),
+});
 
 /**
  * 은퇴 선수 상세(시즌별 기록 · 수상 · 여정)를 다시 그리는 데 필요한 커리어 스냅샷. 선수 이름은 담지
@@ -170,14 +172,31 @@ export const LegendSnapshotSchema = z.strictObject({
   career: z.array(LegendSeasonSchema).max(40),
   trophies: z.array(YearTextSchema.extend({ club: ShortStringSchema })).max(300),
   awards: z.array(YearTextSchema).max(300),
-  ballon: z.array(z.strictObject({ year: z.number().int().min(2000).max(2200), rank: z.number().int().min(1).max(30) })).max(40),
+  ballon: z
+    .array(
+      z.strictObject({
+        year: z.number().int().min(2000).max(2200),
+        rank: z.number().int().min(1).max(30),
+      }),
+    )
+    .max(40),
   nat: z.strictObject({ caps: z.number().int().min(0).max(10000) }),
   storyLog: z
-    .array(z.strictObject({ year: z.number().int().min(2000).max(2200), key: z.string().max(32), name: z.string().max(40), ending: z.string().max(80) }))
+    .array(
+      z.strictObject({
+        year: z.number().int().min(2000).max(2200),
+        key: z.string().max(32),
+        name: z.string().max(40),
+        ending: z.string().max(80),
+      }),
+    )
     .max(80),
   miles: z.array(YearTextSchema).max(300),
   /** T-10-026 획득한 칭호(year 0 = 칭호 도입 전 기록). 옛 스냅샷엔 없다. */
-  titles: z.array(z.strictObject({ id: TitleIdSchema, year: z.number().int().min(0).max(2200) })).max(200).optional(),
+  titles: z
+    .array(z.strictObject({ id: TitleIdSchema, year: z.number().int().min(0).max(2200) }))
+    .max(200)
+    .optional(),
 });
 export type LegendSnapshot = z.infer<typeof LegendSnapshotSchema>;
 
@@ -214,7 +233,10 @@ export const PublicHofEntrySchema = z.strictObject({
 export type PublicHofEntry = z.infer<typeof PublicHofEntrySchema>;
 
 /** `total`은 공개 명예의 전당 전체 인원(페이지 수 계산용). */
-export const HofListResponseSchema = z.strictObject({ entries: z.array(PublicHofEntrySchema), total: z.number().int().min(0) });
+export const HofListResponseSchema = z.strictObject({
+  entries: z.array(PublicHofEntrySchema),
+  total: z.number().int().min(0),
+});
 export type HofListResponse = z.infer<typeof HofListResponseSchema>;
 
 export const HofDetailResponseSchema = z.strictObject({
@@ -225,13 +247,18 @@ export type HofDetailResponse = z.infer<typeof HofDetailResponseSchema>;
 
 /** T-10-013 `GET /v1/careers/mine`. 이 계정(프로필)의 은퇴 선수. `linked`가 false면 익명 프로필이라
  * 웹은 기기 기록(ft_hof)을 그대로 보여 준다. 이름은 서버에 없으므로(공개를 고른 경우만) 같은 기기의 기록이 채운다. */
-export const MyCareersResponseSchema = z.strictObject({ linked: z.boolean(), entries: z.array(PublicHofEntrySchema) });
+export const MyCareersResponseSchema = z.strictObject({
+  linked: z.boolean(),
+  entries: z.array(PublicHofEntrySchema),
+});
 export type MyCareersResponse = z.infer<typeof MyCareersResponseSchema>;
 
 export const HofListQuerySchema = z.coerce.number().int().min(1).max(100).default(50);
 /** `GET /v1/hof?sort=` 명예의 전당 순위 유형. score(레전드 점수) 말고는 그 기록이 0인 선수는 빠진다.
  * ga = 공격포인트(골 + 도움). */
-export const HofSortSchema = z.enum(['score', 'goals', 'assists', 'ga', 'apps', 'trophies', 'awards', 'ballon', 'caps', 'peak']).default('score');
+export const HofSortSchema = z
+  .enum(['score', 'goals', 'assists', 'ga', 'apps', 'trophies', 'awards', 'ballon', 'caps', 'peak'])
+  .default('score');
 export type HofSort = z.infer<typeof HofSortSchema>;
 /** `GET /v1/hof?page=` 1부터 시작하는 페이지 번호(한 페이지 = limit명). */
 export const HofPageQuerySchema = z.coerce.number().int().min(1).max(10000).default(1);
@@ -248,7 +275,12 @@ export const ServerFirstSchema = z.strictObject({
   label: z.string().max(80),
   achievedAt: z.string().nullable(),
   holder: z
-    .strictObject({ careerId: z.string().min(1), name: z.string().nullable(), pos: CareerPosSchema, number: z.number().int().nullable() })
+    .strictObject({
+      careerId: z.string().min(1),
+      name: z.string().nullable(),
+      pos: CareerPosSchema,
+      number: z.number().int().nullable(),
+    })
     .nullable(),
 });
 export type ServerFirst = z.infer<typeof ServerFirstSchema>;

@@ -19,14 +19,20 @@ const count = (as: string) => sql<number>`count(*)`.as(as);
 const sumOf = (cond: SQL, as: string) => sql<number>`coalesce(sum(${cond}), 0)`.as(as);
 const since = (col: SQLiteColumn, iso: string, as: string) => sumOf(sql`${col} >= ${iso}`, as);
 /** SQL에서 UTC ISO → KST 날짜(YYYY-MM-DD). */
-const kstDay = (col: SQLiteColumn) => sql<string>`substr(datetime(${col}, '+9 hours'), 1, 10)`.as('day');
+const kstDay = (col: SQLiteColumn) =>
+  sql<string>`substr(datetime(${col}, '+9 hours'), 1, 10)`.as('day');
 
 /** now 기준 최근 days일의 KST 날짜(오래된 날부터)와 그 첫날 0시(KST)의 UTC ISO. */
 export function kstDays(now: Date, days: number): { days: string[]; startIso: string } {
   const today = new Date(now.getTime() + KST_MS);
   today.setUTCHours(0, 0, 0, 0);
-  const list = Array.from({ length: days }, (_, i) => new Date(today.getTime() - (days - 1 - i) * DAY_MS).toISOString().slice(0, 10));
-  return { days: list, startIso: new Date(today.getTime() - (days - 1) * DAY_MS - KST_MS).toISOString() };
+  const list = Array.from({ length: days }, (_, i) =>
+    new Date(today.getTime() - (days - 1 - i) * DAY_MS).toISOString().slice(0, 10),
+  );
+  return {
+    days: list,
+    startIso: new Date(today.getTime() - (days - 1) * DAY_MS - KST_MS).toISOString(),
+  };
 }
 
 export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats, 'balance'>> {
@@ -78,25 +84,39 @@ export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats,
       .from(careers)
       .where(sql`${careers.retiredAt} >= ${startIso}`)
       .groupBy(sql`1`),
-    db.select({ kind: auditLog.kind, createdAt: auditLog.createdAt }).from(auditLog).orderBy(desc(auditLog.createdAt)).limit(AUDIT_RECENT),
+    db
+      .select({ kind: auditLog.kind, createdAt: auditLog.createdAt })
+      .from(auditLog)
+      .orderBy(desc(auditLog.createdAt))
+      .limit(AUDIT_RECENT),
   ]);
 
   const byDay = (rows: { day: string; n: number }[]) => new Map(rows.map((r) => [r.day, n(r.n)]));
   const [dp, dc, dr] = [byDay(dailyProfiles), byDay(dailyCareers), byDay(dailyRetired)];
   const num = <T extends Record<string, unknown>>(row: T | undefined) =>
-    Object.fromEntries(Object.entries(row ?? {}).map(([k, v]) => [k, n(v)])) as { [K in keyof T]: number };
+    Object.fromEntries(Object.entries(row ?? {}).map(([k, v]) => [k, n(v)])) as {
+      [K in keyof T]: number;
+    };
   return {
     generatedAt: now.toISOString(),
     profiles: num(p[0]),
     careers: num(c[0]),
     board: num(b[0]),
-    daily: days.map((day) => ({ day, profiles: dp.get(day) ?? 0, careers: dc.get(day) ?? 0, retired: dr.get(day) ?? 0 })),
+    daily: days.map((day) => ({
+      day,
+      profiles: dp.get(day) ?? 0,
+      careers: dc.get(day) ?? 0,
+      retired: dr.get(day) ?? 0,
+    })),
     audit,
   };
 }
 
 /** 전체 게시판의 최근 댓글(지운 것 제외), 최신부터. profileId를 주면 그 작성자 것만. */
-export async function listRecentComments(db: Db, q: { limit: number; before?: string | undefined; profile?: string | undefined }) {
+export async function listRecentComments(
+  db: Db,
+  q: { limit: number; before?: string | undefined; profile?: string | undefined },
+) {
   const rows = await db
     .select({
       id: boardComments.id,
@@ -124,14 +144,24 @@ export async function listRecentComments(db: Db, q: { limit: number; before?: st
 }
 
 /** 한 작성자의 댓글을 모두 지우고(deleted_at) 감사 로그를 남긴다. 지운 개수를 돌려준다. */
-export async function purgeCommentsBy(db: Db, target: string, adminProfileId: string, now: string): Promise<number> {
+export async function purgeCommentsBy(
+  db: Db,
+  target: string,
+  adminProfileId: string,
+  now: string,
+): Promise<number> {
   const res = await db
     .update(boardComments)
     .set({ deletedAt: now })
     .where(and(eq(boardComments.profileId, target), isNull(boardComments.deletedAt)));
   const deleted = res.meta.changes;
   if (deleted > 0) {
-    await insertAuditLog(db, { kind: 'COMMENTS_PURGED', profileId: adminProfileId, payload: { target, deleted }, createdAt: now });
+    await insertAuditLog(db, {
+      kind: 'COMMENTS_PURGED',
+      profileId: adminProfileId,
+      payload: { target, deleted },
+      createdAt: now,
+    });
   }
   return deleted;
 }

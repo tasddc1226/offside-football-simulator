@@ -42,7 +42,9 @@ export type Variables = {
 
 export type AppEnv = { Bindings: Bindings; Variables: Variables };
 
-export function parseAllowedOrigins(env: Partial<Pick<Bindings, 'ALLOWED_ORIGINS'>> | undefined): string[] {
+export function parseAllowedOrigins(
+  env: Partial<Pick<Bindings, 'ALLOWED_ORIGINS'>> | undefined,
+): string[] {
   return (env?.ALLOWED_ORIGINS ?? '')
     .split(',')
     .map((origin) => origin.trim())

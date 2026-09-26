@@ -12,7 +12,19 @@ import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
 import type { PhaseReport } from './sheets/types.js';
 
-export type Screen = 'home' | 'create' | 'retired' | 'game' | 'legend' | 'settings' | 'board' | 'dex' | 'hof' | 'firsts' | 'admin' | 'shared';
+export type Screen =
+  | 'home'
+  | 'create'
+  | 'retired'
+  | 'game'
+  | 'legend'
+  | 'settings'
+  | 'board'
+  | 'dex'
+  | 'hof'
+  | 'firsts'
+  | 'admin'
+  | 'shared';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
 export type HofTab = 'all' | 'mine';
 
@@ -41,7 +53,14 @@ export interface LegendView {
   peak: number;
   /** 시즌별 상세. 옛 기록(스냅샷 없음)은 null — 요약만 보여 준다. */
   d: LegendSource | null;
-  totals: { apps: number; goals: number; assists: number; trophies: number; awards: number; caps: number };
+  totals: {
+    apps: number;
+    goals: number;
+    assists: number;
+    trophies: number;
+    awards: number;
+    caps: number;
+  };
   own: HofEntry | null;
   /** T-10-026 대표 칭호 id. */
   title: string | null;

@@ -26,13 +26,24 @@ import { EDGE, STALE } from '../edgeKeys.js';
 // 다음 시즌 시작부터 적용한다. 관리자는 초안을 만들고 고친 뒤 활성화한다(되돌리기 = 옛 버전 재활성화).
 const PUBLIC_TTL = 60;
 
-const versionParam = (c: Context<AppEnv>) => parseWithAppError(BalanceVersionParamSchema, c.req.param('version'));
+const versionParam = (c: Context<AppEnv>) =>
+  parseWithAppError(BalanceVersionParamSchema, c.req.param('version'));
 const draftInput = (c: Context<AppEnv>) => readBody(c, BalanceDraftInputSchema);
 
 const notFound = () =>
-  new AppError({ code: 'VALIDATION_FAILED', status: 404, message: '밸런스 버전을 찾을 수 없습니다.', details: { reason: 'BALANCE_NOT_FOUND' } });
+  new AppError({
+    code: 'VALIDATION_FAILED',
+    status: 404,
+    message: '밸런스 버전을 찾을 수 없습니다.',
+    details: { reason: 'BALANCE_NOT_FOUND' },
+  });
 const notDraft = () =>
-  new AppError({ code: 'VALIDATION_FAILED', status: 409, message: '초안만 고치거나 지울 수 있습니다. 복제해서 새 초안을 만드세요.', details: { reason: 'BALANCE_NOT_DRAFT' } });
+  new AppError({
+    code: 'VALIDATION_FAILED',
+    status: 409,
+    message: '초안만 고치거나 지울 수 있습니다. 복제해서 새 초안을 만드세요.',
+    details: { reason: 'BALANCE_NOT_DRAFT' },
+  });
 
 async function versionOr404(c: Context<AppEnv>, version: number) {
   const v = await getBalanceVersion(getDb(c), version);
@@ -44,7 +55,9 @@ export function registerBalanceRoutes(app: Hono<AppEnv>): void {
   app.get(EDGE.balance, async (c) => {
     const data = await edgeCached(c, EDGE.balance, PUBLIC_TTL, async () => {
       const active = await getActiveBalance(getDb(c));
-      return active ? { version: active.version, values: active.values, activatedAt: active.activatedAt } : { version: 0, values: {}, activatedAt: null };
+      return active
+        ? { version: active.version, values: active.values, activatedAt: active.activatedAt }
+        : { version: 0, values: {}, activatedAt: null };
     });
     return ok(c, BalanceConfigSchema, data);
   });
