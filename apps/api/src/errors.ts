@@ -31,7 +31,7 @@ export class AppError extends Error {
 /** zod를 직접 의존하지 않고 구조적 타입으로 `safeParse`를 받는다(브리프: 새 의존성 없음). */
 type SafeParseIssue = { path: PropertyKey[]; message: string };
 type SafeParseResult<T> = { success: true; data: T } | { success: false; error: { issues: SafeParseIssue[] } };
-type SchemaLike<T> = { safeParse: (data: unknown) => SafeParseResult<T> };
+export type SchemaLike<T> = { safeParse: (data: unknown) => SafeParseResult<T> };
 
 /** Zod 실패를 AppError(VALIDATION_FAILED)로 바꾼다. 값은 담지 않고 path·message만 담는다. */
 export function parseWithAppError<T>(schema: SchemaLike<T>, data: unknown): T {
@@ -86,13 +86,4 @@ export function notFoundHandler(c: Context<AppEnv>): Response {
     meta: { requestId: c.get('requestId') },
   };
   return c.json(body, 404);
-}
-
-/** bodyGuard가 담아 둔 rawBody를 JSON으로 읽는다(빈 본문은 {}). */
-export function parseJsonBody(rawBody: string): unknown {
-  try {
-    return rawBody.length > 0 ? JSON.parse(rawBody) : {};
-  } catch {
-    throw new AppError({ code: 'VALIDATION_FAILED', message: '요청 본문이 올바른 JSON이 아닙니다.' });
-  }
 }

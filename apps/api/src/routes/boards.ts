@@ -9,7 +9,6 @@ import {
   PostDetailResponseSchema,
   PostInputSchema,
   PostSchema,
-  successEnvelope,
 } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
 import { getViewer, requireAdmin } from '../auth/admin.js';
@@ -26,8 +25,8 @@ import {
   updatePost,
 } from '../db/repos/boards.js';
 import { getDb, type AppEnv } from '../env.js';
-import { envelope, nowIso } from './shared.js';
-import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
+import { ok, readBody, nowIso } from './shared.js';
+import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
@@ -55,7 +54,7 @@ async function postOr404(c: Context<AppEnv>, id: string) {
 export function registerBoardRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/boards/viewer', async (c) => {
     const { admin, google, nickname } = await getViewer(c);
-    return c.json(successEnvelope(BoardViewerResponseSchema).parse(envelope(c, { admin, google, nickname })), 200);
+    return ok(c, BoardViewerResponseSchema, { admin, google, nickname });
   });
 
   app.get('/v1/boards/:board/posts', async (c) => {
@@ -63,33 +62,33 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const q = parseWithAppError(BoardListQuerySchema, c.req.query());
     const load = () => listPosts(getDb(c), board, q.limit, q.before);
     const data = q.limit === BOARD_PAGE_LIMIT && !q.before ? await edgeCached(c, EDGE.boardFirstPage(board), LIST_TTL, load) : await load();
-    return c.json(successEnvelope(BoardListResponseSchema).parse(envelope(c, data)), 200);
+    return ok(c, BoardListResponseSchema, data);
   });
 
   app.get('/v1/boards/posts/:postId', async (c) => {
     const id = idParam(c, 'postId');
     const [post, rows, viewer] = await Promise.all([postOr404(c, id), listComments(getDb(c), id), getViewer(c)]);
     const comments = rows.map(({ profileId, ...r }) => ({ ...r, deletable: viewer.admin || profileId === viewer.profileId }));
-    return c.json(successEnvelope(PostDetailResponseSchema).parse(envelope(c, { post, comments })), 200);
+    return ok(c, PostDetailResponseSchema, { post, comments });
   });
 
   app.post('/v1/boards/:board/posts', async (c) => {
     const board = parseWithAppError(BoardKeySchema, c.req.param('board'));
     const viewer = await requireAdmin(c);
-    const input = parseWithAppError(PostInputSchema, parseJsonBody(c.get('rawBody') ?? ''));
+    const input = readBody(c, PostInputSchema);
     const id = await createPost(getDb(c), board, input, viewer.profileId!, nowIso());
     purgeList(c, board);
-    return c.json(successEnvelope(PostSchema).parse(envelope(c, await postOr404(c, id))), 201);
+    return ok(c, PostSchema, await postOr404(c, id), 201);
   });
 
   app.put('/v1/boards/posts/:postId', async (c) => {
     const id = idParam(c, 'postId');
     await requireAdmin(c);
-    const input = parseWithAppError(PostInputSchema, parseJsonBody(c.get('rawBody') ?? ''));
+    const input = readBody(c, PostInputSchema);
     if (!(await updatePost(getDb(c), id, input, nowIso()))) throw notFound('글');
     const post = await postOr404(c, id);
     purgeList(c, post.board);
-    return c.json(successEnvelope(PostSchema).parse(envelope(c, post)), 200);
+    return ok(c, PostSchema, post);
   });
 
   app.delete('/v1/boards/posts/:postId', async (c) => {
@@ -104,7 +103,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/boards/posts/:postId/comments', requireProfile, async (c) => {
     const postId = idParam(c, 'postId');
     const db = getDb(c);
-    const { body } = parseWithAppError(CommentInputSchema, parseJsonBody(c.get('rawBody') ?? ''));
+    const { body } = readBody(c, CommentInputSchema);
     if (hasProfanity(body)) {
       throw new AppError({ code: 'VALIDATION_FAILED', message: '쓸 수 없는 표현이 들어 있습니다.', details: { reason: 'BLOCKED_WORD' } });
     }
@@ -124,7 +123,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const id = await createComment(db, { postId, profileId, nickname, body, admin: viewer.admin }, now);
     purgeList(c, post.board); // 댓글 수가 바뀐다.
     const comment = { id, nickname, body, admin: viewer.admin, deletable: true, createdAt: now };
-    return c.json(successEnvelope(CommentSchema).parse(envelope(c, comment)), 201);
+    return ok(c, CommentSchema, comment, 201);
   });
 
   app.delete('/v1/boards/comments/:commentId', requireProfile, async (c) => {

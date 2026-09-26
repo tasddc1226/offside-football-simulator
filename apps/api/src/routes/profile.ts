@@ -8,12 +8,12 @@ import {
   PutNicknameBodySchema,
   RecoverProfileBodySchema,
   RecoverProfileResponseSchema,
-  successEnvelope,
   type DeleteProfileConfirmBody,
   type Profile,
   type ProfileSettings,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
+import { ok, readBody, readJson, nowIso } from './shared.js';
 import { commentIdentity } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
 import { sha256Hex } from '../db/hash.js';
@@ -21,7 +21,7 @@ import { getProfile, createProfile, setNickname, touchLastSeen, updateSettings, 
 import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
 import { revokeSession } from '../db/repos/sessions.js';
 import { getDb, type AppEnv } from '../env.js';
-import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
+import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
@@ -50,7 +50,7 @@ function buildProfileResponse(record: ProfileRecord, adminEmails: string | undef
 export function registerProfileRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/profile', async (c) => {
     const db = getDb(c);
-    const now = new Date().toISOString();
+    const now = nowIso();
     const existingSession = await resolveSession(c);
     const bearerPresent = Boolean(c.req.header(AUTHORIZATION_HEADER));
 
@@ -75,26 +75,13 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       record = { ...record, lastSeenAt: now };
     }
 
-    const body = successEnvelope(ProfileSchema).parse({
-      data: buildProfileResponse(record, c.env.ADMIN_EMAILS),
-      meta: { requestId: c.get('requestId') },
-    });
-    return c.json(body, 200);
+    return ok(c, ProfileSchema, buildProfileResponse(record, c.env.ADMIN_EMAILS));
   });
 
   app.patch('/v1/profile/settings', requireProfile, idempotency, async (c) => {
     const db = getDb(c);
     const session = getSessionOrThrow(c);
-    const rawBody = c.get('rawBody') ?? '';
-
-    let json: unknown;
-    try {
-      json = rawBody.length > 0 ? JSON.parse(rawBody) : {};
-    } catch {
-      throw new AppError({ code: 'VALIDATION_FAILED', message: '요청 본문이 올바른 JSON이 아닙니다.' });
-    }
-
-    const patch = parseWithAppError(PatchProfileSettingsBodySchema, json);
+    const patch = readBody(c, PatchProfileSettingsBodySchema);
     // zod .partial()의 추론 타입은 exactOptionalPropertyTypes에서 `key?: T | undefined`가 되어
     // `Partial<ProfileSettings>`(`key?: T`)와 어긋난다. 없는 키를 걷어내 좁힌다.
     const definedPatch = Object.fromEntries(
@@ -102,18 +89,14 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     ) as Partial<ProfileSettings>;
     const updated = await updateSettings(db, session.profileId, definedPatch);
 
-    const body = successEnvelope(ProfileSchema).parse({
-      data: buildProfileResponse(updated, c.env.ADMIN_EMAILS),
-      meta: { requestId: c.get('requestId') },
-    });
-    return c.json(body, 200);
+    return ok(c, ProfileSchema, buildProfileResponse(updated, c.env.ADMIN_EMAILS));
   });
 
   // T-10-028 댓글 닉네임. 구글 로그인한 프로필만 정할 수 있고, 다른 사람과 겹치면 409.
   app.put('/v1/profile/nickname', requireProfile, async (c) => {
     const db = getDb(c);
     const session = getSessionOrThrow(c);
-    const { nickname } = parseWithAppError(PutNicknameBodySchema, parseJsonBody(c.get('rawBody') ?? ''));
+    const { nickname } = readBody(c, PutNicknameBodySchema);
     const profile = await getProfile(db, session.profileId);
     const identity = commentIdentity(profile, c.env.ADMIN_EMAILS);
     if (!profile || !identity.google) {
@@ -132,38 +115,24 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     if (updated === 'taken') {
       throw new AppError({ code: 'VALIDATION_FAILED', status: 409, message: '이미 쓰고 있는 닉네임이에요.', details: { reason: 'NICKNAME_TAKEN' } });
     }
-    const body = successEnvelope(ProfileSchema).parse({ data: buildProfileResponse(updated, c.env.ADMIN_EMAILS), meta: { requestId: c.get('requestId') } });
-    return c.json(body, 200);
+    return ok(c, ProfileSchema, buildProfileResponse(updated, c.env.ADMIN_EMAILS));
   });
 
   app.post('/v1/profile/recovery-code', requireProfile, idempotency, async (c) => {
     const db = getDb(c);
     const session = getSessionOrThrow(c);
-    const now = new Date().toISOString();
+    const now = nowIso();
 
     const result = await issueRecoveryCode(db, { profileId: session.profileId, now });
 
-    const body = successEnvelope(IssueRecoveryCodeResponseSchema).parse({
-      data: result,
-      meta: { requestId: c.get('requestId') },
-    });
-    return c.json(body, 200);
+    return ok(c, IssueRecoveryCodeResponseSchema, result);
   });
 
   app.post('/v1/profile/recover', requireProfile, idempotency, async (c) => {
     const db = getDb(c);
     const session = getSessionOrThrow(c);
-    const rawBody = c.get('rawBody') ?? '';
-
-    let json: unknown;
-    try {
-      json = rawBody.length > 0 ? JSON.parse(rawBody) : {};
-    } catch {
-      throw new AppError({ code: 'VALIDATION_FAILED', message: '요청 본문이 올바른 JSON이 아닙니다.' });
-    }
-
-    const parsed = parseWithAppError(RecoverProfileBodySchema, json);
-    const now = new Date().toISOString();
+    const parsed = readBody(c, RecoverProfileBodySchema);
+    const now = nowIso();
     const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
 
     const result = await recoverProfile(db, {
@@ -174,27 +143,14 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       now,
     });
 
-    const body = successEnvelope(RecoverProfileResponseSchema).parse({
-      data: result,
-      meta: { requestId: c.get('requestId') },
-    });
-    return c.json(body, 200);
+    return ok(c, RecoverProfileResponseSchema, result);
   });
 
   app.post('/v1/profile/delete', requireProfile, idempotency, async (c) => {
     const db = getDb(c);
     const session = getSessionOrThrow(c);
-    const rawBody = c.get('rawBody') ?? '';
-
-    let json: unknown;
-    try {
-      json = rawBody.length > 0 ? JSON.parse(rawBody) : {};
-    } catch {
-      throw new AppError({ code: 'VALIDATION_FAILED', message: '요청 본문이 올바른 JSON이 아닙니다.' });
-    }
-
-    const body = parseDeleteBody(json);
-    const now = new Date().toISOString();
+    const body = parseDeleteBody(readJson(c));
+    const now = nowIso();
     const rawToken = readSessionToken(c);
     if (!rawToken) {
       throw new AppError({ code: 'PROFILE_REQUIRED', message: '프로필 세션이 필요합니다.' });
@@ -203,11 +159,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
 
     if (body.confirmToken === undefined) {
       const result = await issueDeleteConfirmToken({ sessionId: session.id, sessionTokenHash, now });
-      const responseBody = successEnvelope(DeleteProfileStartResponseSchema).parse({
-        data: result,
-        meta: { requestId: c.get('requestId') },
-      });
-      return c.json(responseBody, 200);
+      return ok(c, DeleteProfileStartResponseSchema, result);
     }
 
     const { careerIds, heldFirsts, hadComments } = await executeProfileDeletion(db, {

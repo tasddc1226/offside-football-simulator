@@ -6,13 +6,13 @@ import {
   PutCareerSeasonBodySchema,
   PutRetirementBodySchema,
   RetirementResponseSchema,
-  successEnvelope,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
+import { ok, readBody, nowIso } from './shared.js';
 import { getCareer, getCareerOwner, listOwnHof, putCareerSeason, putRetirement } from '../db/repos/careers.js';
 import { getProfile, isLinked } from '../db/repos/profiles.js';
 import { getDb, type AppEnv } from '../env.js';
-import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
+import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { purgeEdge } from '../edgeCache.js';
 import { recordFirsts } from './firsts.js';
@@ -39,9 +39,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const profile = await getProfile(db, session.profileId);
     const linked = !!profile && isLinked(profile);
     const entries = linked ? await listOwnHof(db, session.profileId) : [];
-    const body = successEnvelope(MyCareersResponseSchema).parse({ data: { linked, entries }, meta: { requestId: c.get('requestId') } });
-    c.header('Cache-Control', 'private, no-store');
-    return c.json(body, 200);
+    return ok(c, MyCareersResponseSchema, { linked, entries }, 200, 'private, no-store');
   });
 
   // 두 라우트 모두 URL 키(career_id+year, career_id)로 이미 자연스럽게 멱등이라 Idempotency-Key
@@ -54,10 +52,8 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
 
     await assertOwnable(db, careerId, session.profileId);
 
-    const rawBody = c.get('rawBody') ?? '';
-    const json = parseJsonBody(rawBody);
-    const body = parseWithAppError(PutCareerSeasonBodySchema, json);
-    const now = new Date().toISOString();
+    const body = readBody(c, PutCareerSeasonBodySchema);
+    const now = nowIso();
 
     await putCareerSeason(db, {
       careerId,
@@ -71,11 +67,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
 
     await recordFirsts(c, careerId);
     const career = await getCareer(db, careerId);
-    const responseBody = successEnvelope(CareerUpsertResponseSchema).parse({
-      data: { careerId, year, status: career?.status ?? 'active' },
-      meta: { requestId: c.get('requestId') },
-    });
-    return c.json(responseBody, 200);
+    return ok(c, CareerUpsertResponseSchema, { careerId, year, status: career?.status ?? 'active' });
   });
 
   app.put('/v1/careers/:careerId/retirement', requireProfile, async (c) => {
@@ -98,9 +90,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       });
     }
 
-    const rawBody = c.get('rawBody') ?? '';
-    const json = parseJsonBody(rawBody);
-    const { publicName, snapshot, ...summary } = parseWithAppError(PutRetirementBodySchema, json);
+    const { publicName, snapshot, ...summary } = readBody(c, PutRetirementBodySchema);
     if (publicName && !isAcceptablePublicName(publicName)) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
@@ -108,16 +98,12 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'PUBLIC_NAME_REJECTED' },
       });
     }
-    const now = new Date().toISOString();
+    const now = nowIso();
 
     await putRetirement(db, { careerId, summary, publicName, snapshot, now });
     await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
     purgeEdge(c, STALE.retirementPut(careerId));
 
-    const responseBody = successEnvelope(RetirementResponseSchema).parse({
-      data: { careerId, status: 'retired' },
-      meta: { requestId: c.get('requestId') },
-    });
-    return c.json(responseBody, 200);
+    return ok(c, RetirementResponseSchema, { careerId, status: 'retired' });
   });
 }

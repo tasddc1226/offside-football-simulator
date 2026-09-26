@@ -4,7 +4,6 @@ import {
   AdminCommentPurgeResultSchema,
   AdminCommentQuerySchema,
   AdminStatsSchema,
-  successEnvelope,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
@@ -12,8 +11,8 @@ import { getAdminStats, listRecentComments, purgeCommentsBy } from '../db/repos/
 import { getActiveBalance } from '../db/repos/balance.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
-import { envelope, nowIso } from './shared.js';
-import { parseJsonBody, parseWithAppError } from '../errors.js';
+import { ok, readBody, nowIso } from './shared.js';
+import { parseWithAppError } from '../errors.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 
 // T-10-016 운영 도구: 대시보드와 댓글 관리. 댓글 하나 지우기는 게시판의 DELETE /v1/boards/comments/:id를 쓴다.
@@ -27,21 +26,21 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const [stats, active] = await Promise.all([edgeCached(c, EDGE.adminStats, STATS_TTL, () => getAdminStats(db, new Date())), getActiveBalance(db)]);
     const data = { ...stats, balance: active ? { version: active.version, activatedAt: active.activatedAt } : null };
-    return c.json(successEnvelope(AdminStatsSchema).parse(envelope(c, data)), 200);
+    return ok(c, AdminStatsSchema, data);
   });
 
   app.get('/v1/admin/comments', async (c) => {
     await requireAdmin(c);
     const q = parseWithAppError(AdminCommentQuerySchema, c.req.query());
     const data = await listRecentComments(getDb(c), q);
-    return c.json(successEnvelope(AdminCommentListSchema).parse(envelope(c, data)), 200);
+    return ok(c, AdminCommentListSchema, data);
   });
 
   app.post('/v1/admin/comments/purge', async (c) => {
     const viewer = await requireAdmin(c);
-    const { profileId } = parseWithAppError(AdminCommentPurgeInputSchema, parseJsonBody(c.get('rawBody') ?? ''));
+    const { profileId } = readBody(c, AdminCommentPurgeInputSchema);
     const deleted = await purgeCommentsBy(getDb(c), profileId, viewer.profileId!, nowIso());
     if (deleted) purgeEdge(c, STALE.commentsPurged());
-    return c.json(successEnvelope(AdminCommentPurgeResultSchema).parse(envelope(c, { deleted })), 200);
+    return ok(c, AdminCommentPurgeResultSchema, { deleted });
   });
 }

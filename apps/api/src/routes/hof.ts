@@ -5,9 +5,9 @@ import {
   HofListResponseSchema,
   HofPageQuerySchema,
   HofSortSchema,
-  successEnvelope,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
+import { ok } from './shared.js';
 import { getPublicHof, listPublicHof } from '../db/repos/careers.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
@@ -27,9 +27,7 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
     const page = parseWithAppError(HofPageQuerySchema, c.req.query('page'));
     const sort = parseWithAppError(HofSortSchema, c.req.query('sort'));
     const data = await edgeCached(c, EDGE.hofList(limit, page, sort), LIST_TTL, () => listPublicHof(getDb(c), limit, page, sort));
-    const body = successEnvelope(HofListResponseSchema).parse({ data, meta: { requestId: c.get('requestId') } });
-    c.header('Cache-Control', CACHE);
-    return c.json(body, 200);
+    return ok(c, HofListResponseSchema, data, 200, CACHE);
   });
 
   app.get('/v1/hof/:careerId', async (c) => {
@@ -43,8 +41,6 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'HOF_NOT_FOUND' },
       });
     }
-    const body = successEnvelope(HofDetailResponseSchema).parse({ data: found, meta: { requestId: c.get('requestId') } });
-    c.header('Cache-Control', CACHE);
-    return c.json(body, 200);
+    return ok(c, HofDetailResponseSchema, found, 200, CACHE);
   });
 }

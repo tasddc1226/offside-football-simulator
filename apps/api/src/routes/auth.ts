@@ -1,4 +1,5 @@
 import type { Hono } from 'hono';
+import { nowIso } from './shared.js';
 import {
   clearOauthCookie,
   decodeOauthCookieValue,
@@ -32,7 +33,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/auth/logout', requireProfile, idempotency, async (c) => {
     const db = getDb(c);
     const session = getSessionOrThrow(c);
-    const now = new Date().toISOString();
+    const now = nowIso();
 
     await revokeSession(db, session.id, now);
 
@@ -59,7 +60,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
 
     const db = getDb(c);
     const session = getSessionOrThrow(c);
-    const now = new Date().toISOString();
+    const now = nowIso();
     const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
 
     const attempts = await getAttemptCount(db, 'GOOGLE_START', ip, now);
@@ -83,7 +84,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
   });
 
   app.get('/v1/auth/google/callback', async (c) => {
-    const now = new Date().toISOString();
+    const now = nowIso();
     const local = isLocalEnv(c.env);
     const hostPair = resolveRequestHostPair(c.req.url, c.env);
     if (hostPair === null) {
@@ -167,7 +168,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/auth/google/unlink', requireProfile, idempotency, async (c) => {
     const db = getDb(c);
     const session = getSessionOrThrow(c);
-    const now = new Date().toISOString();
+    const now = nowIso();
 
     await unlinkGoogleAccount(db, session.profileId);
     await insertAuditLog(db, {
