@@ -120,6 +120,27 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
     expect(data.feed).toEqual([]);
   });
 
+  it('오늘 시즌 수는 한국 시각 오늘 자정 이후에 올라온 시즌만 센다', async () => {
+    for (const year of [2026, 2027, 2028]) {
+      await putJson(ctx, cookie, `/v1/careers/${A}/seasons/${year}`, seasonBody());
+    }
+    const twoDaysAgo = new Date(Date.now() - 48 * 3_600_000).toISOString();
+    await ctx.env.DB.prepare('UPDATE career_seasons SET created_at = ? WHERE year = 2026')
+      .bind(twoDaysAgo)
+      .run();
+    expect((await read(ctx)).stats.seasonsToday).toBe(2);
+  });
+
+  it('지난 시즌을 다시 보내도 피드엔 그 선수의 마지막 시즌이 남는다', async () => {
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2026`, seasonBody({ goals: 1 }));
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2027`, seasonBody({ goals: 2 }));
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2026`, seasonBody({ goals: 1 }));
+    const data = await read(ctx);
+    expect(data.feed).toHaveLength(1);
+    expect(data.feed[0]).toMatchObject({ kind: 'season', goals: 2, first: false });
+    expect(data.stats).toMatchObject({ seasonsToday: 2, newToday: 1 });
+  });
+
   it('최근 1시간이 한산하면 기간을 넓혀 채우고, 7일보다 오래된 기록은 빠진다', async () => {
     for (const [i, id] of [A, B].entries()) {
       await putJson(ctx, cookie, `/v1/careers/${id}/seasons/2026`, seasonBody());
