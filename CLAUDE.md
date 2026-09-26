@@ -29,7 +29,8 @@ pnpm lint                 # ESLint 전체
 pnpm lint:deps            # 패키지 의존 방향 검사 (tooling/scripts/check-deps.mjs)
 pnpm typecheck            # tsc --noEmit 전체
 pnpm build                # 전체 빌드
-pnpm format               # prettier --write .
+pnpm format               # prettier --write (apps·packages·tooling·루트 설정)
+pnpm format:check         # 서식 검사 (CI가 돌린다)
 
 # 단일 패키지 테스트
 pnpm --filter @offside/web test
@@ -49,7 +50,7 @@ pnpm --filter @offside/fulltime-sim sim
 pnpm --filter @offside/fulltime-sim analyze
 ```
 
-머지 전 전체 검증 체인: `pnpm install --frozen-lockfile && pnpm lint && pnpm lint:deps && pnpm typecheck && pnpm test && pnpm build && pnpm --filter @offside/web check:bundle` + e2e.
+머지 전 전체 검증 체인: `pnpm install --frozen-lockfile && pnpm lint && pnpm lint:deps && pnpm format:check && pnpm typecheck && pnpm test && pnpm build && pnpm --filter @offside/web check:bundle` + e2e.
 
 ## 주요 구성 요소
 

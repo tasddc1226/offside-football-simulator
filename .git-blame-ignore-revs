@@ -1,0 +1,6 @@
+# git blame에서 건너뛸 서식 전용 커밋. 로컬에서는 한 번:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub blame 화면은 이 파일을 자동으로 읽는다.
+
+# T-10-052: prettier 서식 일괄 적용 (#335)
+3027fd8b956c9ff71e5fc48c56462b2f7580eb18

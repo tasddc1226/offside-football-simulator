@@ -2,7 +2,17 @@
 // T-10-046: 역할별 모듈로 나눴다 — 조회·파생 값(player), 상태 변경(stats), 훈련(training), 경기 구간(match),
 // 순위(table), 스토리/체인(story), 이벤트 헬퍼·추첨·해결(event-runner). 이 모듈은 새 커리어 생성만 남기고
 // 나머지를 그대로 다시 내보내 기존 import 경로(`./engine.js`)를 유지한다.
-import { POS, TYPES, ATTR_KEYS, SAVE_VERSION, focusMod, focusOfType, typeForFocus, type AttrKey, type Pos } from './data.js';
+import {
+  POS,
+  TYPES,
+  ATTR_KEYS,
+  SAVE_VERSION,
+  focusMod,
+  focusOfType,
+  typeForFocus,
+  type AttrKey,
+  type Pos,
+} from './data.js';
 import { ovr, initSubs, legacyOvr } from './attributes.js';
 import { clamp, ri, pick, gauss } from './rng.js';
 import { adoptLatestBalance } from './balance.js';
@@ -25,7 +35,9 @@ export * from './event-runner.js';
 // T-10-008: 화면은 focus(주력 능력치)를 넘기고 type은 그 조합에서 파생한다. type만 넘기는 기존
 // 호출(시뮬레이터·테스트)은 유형 mod·RNG 소비가 그대로이고, focus는 유형에서 거꾸로 구한다.
 export function newGame(
-  o: { name: string; number: number; pos: Pos; foot: GameState['foot']; trait: string } & ({ type: string; focus?: undefined } | { type?: undefined; focus: AttrKey[] }),
+  o: { name: string; number: number; pos: Pos; foot: GameState['foot']; trait: string } & (
+    { type: string; focus?: undefined } | { type?: undefined; focus: AttrKey[] }
+  ),
   seed: number,
   presetAttrs?: Record<AttrKey, number>,
 ): GameState {
@@ -36,7 +48,8 @@ export function newGame(
   if (presetAttrs) {
     for (const k of ATTR_KEYS) attrs[k] = clamp(presetAttrs[k], 20, 70);
   } else {
-    for (const k of ATTR_KEYS) attrs[k] = clamp(POS[o.pos].base[k] + (mod[k] ?? 0) + ri(-4, 4), 20, 70);
+    for (const k of ATTR_KEYS)
+      attrs[k] = clamp(POS[o.pos].base[k] + (mod[k] ?? 0) + ri(-4, 4), 20, 70);
   }
   const club = pick(clubsIn('hs'));
   const pot = clamp(Math.round(74 + gauss() * 8), 55, 96);
@@ -47,15 +60,74 @@ export function newGame(
   // 리터럴이 GameState를 완전히 만족한다.
   const s: GameState = {
     // cid는 crypto.randomUUID()로 만든다 — 시드 RNG(rnd/ri/gauss 등)를 절대 소모하지 않는다.
-    v: SAVE_VERSION, cid: crypto.randomUUID(), halves: 1, name: o.name, number: o.number, pos: o.pos, foot: o.foot, type: typeId, focus, trait: o.trait,
-    age: 18, year: 2026, attrs, sub: {}, pot: scouted, bloom: pot - scouted, cond: 90, morale: 70, fame: 3, trust: 0, money: 300,
-    leagueId: 'hs', club: { ...club }, contract: null, phase: 0, uniYears: 0,
-    season: { apps: 0, starts: 0, goals: 0, assists: 0, ratingSum: 0, cs: 0, mins: 0, played: 0, pts: 0, w: 0, d: 0, l: 0, rivals: [], honors: [] },
-    seasonStart: { ...attrs }, seasonStartSub: {},
-    career: [], trophies: [], awards: [], titles: [], nat: { caps: 0, goals: 0, assists: 0, tours: [], qual: { 2026: true }, captain: false, debutYear: null },
+    v: SAVE_VERSION,
+    cid: crypto.randomUUID(),
+    halves: 1,
+    name: o.name,
+    number: o.number,
+    pos: o.pos,
+    foot: o.foot,
+    type: typeId,
+    focus,
+    trait: o.trait,
+    age: 18,
+    year: 2026,
+    attrs,
+    sub: {},
+    pot: scouted,
+    bloom: pot - scouted,
+    cond: 90,
+    morale: 70,
+    fame: 3,
+    trust: 0,
+    money: 300,
+    leagueId: 'hs',
+    club: { ...club },
+    contract: null,
+    phase: 0,
+    uniYears: 0,
+    season: {
+      apps: 0,
+      starts: 0,
+      goals: 0,
+      assists: 0,
+      ratingSum: 0,
+      cs: 0,
+      mins: 0,
+      played: 0,
+      pts: 0,
+      w: 0,
+      d: 0,
+      l: 0,
+      rivals: [],
+      honors: [],
+    },
+    seasonStart: { ...attrs },
+    seasonStartSub: {},
+    career: [],
+    trophies: [],
+    awards: [],
+    titles: [],
+    nat: {
+      caps: 0,
+      goals: 0,
+      assists: 0,
+      tours: [],
+      qual: { 2026: true },
+      captain: false,
+      debutYear: null,
+    },
     mil: { exempt: null, served: false, serving: false, left: 0, type: null, prevClub: null },
-    injury: 0, log: [] as LogEntry[], pending: null,
-    flags: {}, peak: 0, training: 'rest', retired: false, chains: [], story: {}, storyLog: [],
+    injury: 0,
+    log: [] as LogEntry[],
+    pending: null,
+    flags: {},
+    peak: 0,
+    training: 'rest',
+    retired: false,
+    chains: [],
+    story: {},
+    storyLog: [],
     rng: { seed },
   };
   initSubs(s, attrs, legacyOvr(o.pos, attrs));
@@ -63,16 +135,35 @@ export function newGame(
   s.seasonStartSub = { ...s.sub };
   s.peak = ovr(s);
   s.season = newSeason(s);
-  log(s, `${club.name} 3학년 ${POS[s.pos].label} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`, 'big');
+  log(
+    s,
+    `${club.name} 3학년 ${POS[s.pos].label} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`,
+    'big',
+  );
   return s;
 }
 
 export function newSeason(s: GameState): Season {
   // T-10-016 서버의 새 밸런스 버전은 시즌이 바뀔 때만 커리어에 들어온다.
-  if (adoptLatestBalance(s) && s.career.length) log(s, `밸런스 패치 v${s.bal!.v}가 이번 시즌부터 적용됩니다.`);
+  if (adoptLatestBalance(s) && s.career.length)
+    log(s, `밸런스 패치 v${s.bal!.v}가 이번 시즌부터 적용됩니다.`);
   const L = leagueOf(s.leagueId);
   const rivals: number[] = [];
   for (let i = 0; i < 19; i++) rivals.push(L.avg + gauss() * L.spread);
-  return { apps: 0, starts: 0, goals: 0, assists: 0, ratingSum: 0, cs: 0, mins: 0, played: 0, pts: 0, w: 0, d: 0, l: 0, rivals, honors: [] };
+  return {
+    apps: 0,
+    starts: 0,
+    goals: 0,
+    assists: 0,
+    ratingSum: 0,
+    cs: 0,
+    mins: 0,
+    played: 0,
+    pts: 0,
+    w: 0,
+    d: 0,
+    l: 0,
+    rivals,
+    honors: [],
+  };
 }
-

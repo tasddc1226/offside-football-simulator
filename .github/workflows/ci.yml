@@ -51,10 +51,11 @@ jobs:
           restore-keys: pnpm-store-${{ runner.os }}-
       - if: steps.scope.outputs.code_changed == 'true'
         run: pnpm install --frozen-lockfile
-      - name: Lint, typecheck and test
+      - name: Format, lint, typecheck and test
         if: steps.scope.outputs.code_changed == 'true'
         run: |
           node --test .github/scripts/*.test.mjs
+          pnpm format:check
           pnpm lint
           pnpm lint:deps
           pnpm typecheck
@@ -121,10 +122,11 @@ jobs:
           restore-keys: pnpm-store-${{ runner.os }}-
       - if: steps.scope.outputs.code_changed == 'true'
         run: pnpm install --frozen-lockfile
-      - name: Lint, typecheck and test
+      - name: Format, lint, typecheck and test
         if: steps.scope.outputs.code_changed == 'true'
         run: |
           node --test .github/scripts/*.test.mjs
+          pnpm format:check
           pnpm lint
           pnpm lint:deps
           pnpm typecheck
