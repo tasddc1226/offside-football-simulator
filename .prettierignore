@@ -14,3 +14,5 @@ apps/api/migrations
 docs/archive
 # 배포되는 HTML(SSR 셸 포함) — 서식이 곧 응답 바이트라 손으로 관리한다
 apps/web/index.html
+# Playwright 로컬 산출물(하위 .gitignore는 prettier가 읽지 않는다)
+**/test-results
