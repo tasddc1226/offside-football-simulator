@@ -7,6 +7,7 @@ import { createTestD1, type TestD1 } from '../test/d1.js';
 const ORIGIN = 'http://localhost:5173';
 const A = '0b000000-0000-4000-8000-00000000000a';
 const B = '0b000000-0000-4000-8000-00000000000b';
+const C = '0b000000-0000-4000-8000-00000000000c';
 
 async function issueCookie(ctx: TestD1): Promise<string> {
   const res = await createApp().request('/v1/profile', {}, ctx.env);
@@ -66,6 +67,24 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     const data = await read(ctx);
     expect(holderOf(data, 'legend840')).toMatchObject({ careerId: A, name: '김오프' });
     expect(holderOf(data, 'legend1000')).toBeNull();
+  });
+
+  it('기록을 가진 프로필이 지워지면 그다음으로 이른 달성자가 이어받는다(나중에 올린 사람이 아니라)', async () => {
+    const other = await issueCookie(ctx);
+    const late = await issueCookie(ctx);
+    await put(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 }));
+    await put(ctx, other, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 35 }));
+    expect(holderOf(await read(ctx), 'sgoals30')?.careerId).toBe(A);
+
+    const app = createApp();
+    const h = (key: string) => ({ 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie, 'Idempotency-Key': key });
+    const tokenRes = await app.request('/v1/profile/delete', { method: 'POST', headers: h('idem-firsts-del-token'), body: '{}' }, ctx.env);
+    const { data } = (await tokenRes.json()) as { data: { confirmToken: string } };
+    const confirm = await app.request('/v1/profile/delete', { method: 'POST', headers: h('idem-firsts-del-confirm'), body: JSON.stringify({ confirmToken: data.confirmToken }) }, ctx.env);
+    expect(confirm.status).toBe(204);
+
+    await put(ctx, late, `/v1/careers/${C}/seasons/2030`, seasonBody({ goals: 31 }));
+    expect(holderOf(await read(ctx), 'sgoals30')?.careerId).toBe(B);
   });
 
   it('배포 전 기록은 첫 조회 때 한 번 소급하고, 업로드 순서와 상관없이 더 이른 시각이 이긴다', async () => {

@@ -139,6 +139,22 @@ describe('게시판 /v1/boards', () => {
     expect(after.data.comments).toHaveLength(1);
   });
 
+  it('댓글을 지우면 그 게시판 목록 캐시(댓글 수)도 비운다', async () => {
+    const admin = await makeAdmin();
+    const id = await writePost(admin.cookie, 'release');
+    const alice = await googleUser('앨리스');
+    const res = await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: alice.cookie, body: { body: '기대돼요' } });
+    const commentId = ((await res.json()) as { data: { id: string } }).data.id;
+    const purged: string[] = [];
+    (globalThis as { caches?: unknown }).caches = { default: { delete: async (k: string) => (purged.push(k), true) } };
+    try {
+      expect((await call('DELETE', `/v1/boards/comments/${commentId}`, { cookie: alice.cookie })).status).toBe(204);
+    } finally {
+      delete (globalThis as { caches?: unknown }).caches;
+    }
+    expect(purged).toEqual([expect.stringMatching(/\/v1\/boards\/release\/posts\?limit=\d+$/)]);
+  });
+
   it('댓글: 구글 로그인이 없으면 403, 닉네임이 없으면 403 — viewer가 그 상태를 알려 준다', async () => {
     const admin = await makeAdmin();
     const id = await writePost(admin.cookie);

@@ -4,7 +4,7 @@
 // 로컬에만 남고(게임은 그대로), 다음 부팅·다음 변경 때 다시 맞춘다. 에디트 파일(JSON)로도 옮길 수 있다.
 import { loadKey, saveKey } from '../game/season.js';
 import { CLUBS } from '../game/data.js';
-import { applyClubNames, sanitizeClubCustom, type ClubCustom, type ClubCustomMap } from '../game/clubs.js';
+import { applyClubNames, IMG_TOTAL_MAX, imgTotal, sanitizeClubCustom, type ClubCustom, type ClubCustomMap } from '../game/clubs.js';
 import { apiFetch } from '../api/client.js';
 import { appState } from './state.svelte.js';
 import { save } from './helpers.js';
@@ -12,8 +12,9 @@ import { save } from './helpers.js';
 const KEY = 'ft_clubs';
 const PUSH_DELAY_MS = 1500;
 
-/** local: 세션 없음(이 기기에만 저장) · syncing: 맞추는 중 · synced: 계정과 같음 · error: 네트워크/서버 오류. */
-export type ClubSyncStatus = 'local' | 'syncing' | 'synced' | 'error';
+/** local: 세션 없음(이 기기에만 저장) · syncing: 맞추는 중 · synced: 계정과 같음 · error: 네트워크/서버 오류 ·
+ * full: 이미지 합계가 서버 한도를 넘어 보내지 않음(이 기기에는 남는다). */
+export type ClubSyncStatus = 'local' | 'syncing' | 'synced' | 'error' | 'full';
 
 export const clubCustom = $state<{ map: ClubCustomMap; status: ClubSyncStatus }>({ map: {}, status: 'local' });
 
@@ -112,6 +113,11 @@ function fail(code: string) {
 async function push(): Promise<void> {
   pushTimer = null;
   if (!meta.dirty || !meta.updatedAt) return;
+  // 서버가 받지 못하는 크기면 보내지 않는다(dirty는 남겨, 이미지를 지우면 다음 변경 때 다시 보낸다).
+  if (imgTotal(clubCustom.map) > IMG_TOTAL_MAX) {
+    clubCustom.status = 'full';
+    return;
+  }
   const sent = meta.updatedAt;
   clubCustom.status = 'syncing';
   const r = await apiFetch<Remote>('/v1/club-custom', { method: 'PUT', body: JSON.stringify({ clubs: clubCustom.map, updatedAt: sent }) });

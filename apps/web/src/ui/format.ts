@@ -116,9 +116,14 @@ export function polyPoints(vals: readonly number[], r: number, c: number): strin
     .join(' ');
 }
 
-/** 마지막 글자의 종성 번호(0 = 받침 없음). 한글이 아니면 -1. */
+// 숫자로 끝나면 한국어 읽기(영·일·이·삼·사·오·육·칠·팔·구)의 받침을 쓴다: ㅇ(21)·ㄹ(8)·ㅁ(16)·ㄱ(1).
+const DIGIT_JONG = [21, 8, 0, 16, 0, 0, 1, 8, 8, 0];
+
+/** 마지막 글자의 종성 번호(0 = 받침 없음). 한글·숫자가 아니면 -1. */
 function jongOf(word: string): number {
-  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  const last = word.charCodeAt(word.length - 1);
+  if (last >= 48 && last <= 57) return DIGIT_JONG[last - 48]!;
+  const code = last - 0xac00;
   return code >= 0 && code <= 11171 ? code % 28 : -1;
 }
 
@@ -131,3 +136,5 @@ export function withRo(name: string): string {
 
 /** 받침이 있으면 '이', 없으면(한글이 아니어도) '가'. */
 export const iGa = (word: string): string => (jongOf(word) > 0 ? '이' : '가');
+/** 받침이 있으면 '을', 없으면(한글이 아니어도) '를'. */
+export const eulReul = (word: string): string => (jongOf(word) > 0 ? '을' : '를');

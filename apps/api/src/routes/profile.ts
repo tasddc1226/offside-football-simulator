@@ -1,5 +1,6 @@
 import {
   AUTHORIZATION_HEADER,
+  BOARD_KEYS,
   DeleteProfileConfirmBodySchema,
   DeleteProfileStartResponseSchema,
   IssueRecoveryCodeResponseSchema,
@@ -18,7 +19,7 @@ import { commentIdentity } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
 import { sha256Hex } from '../db/hash.js';
 import { getProfile, createProfile, setNickname, touchLastSeen, updateSettings, type ProfileRecord } from '../db/repos/profiles.js';
-import { isAcceptablePublicName, isReservedNickname } from '../content-filter.js';
+import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
 import { revokeSession } from '../db/repos/sessions.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
@@ -26,6 +27,10 @@ import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
+import { purgeEdge } from '../edgeCache.js';
+import { firstPagePath } from './boards.js';
+import { FIRSTS_PATH } from './firsts.js';
+import { hofDetailPath } from './hof.js';
 import { issueRecoveryCode } from '../profile/issue-recovery-code.js';
 import { maskEmail } from '../profile/mask-email.js';
 import { recoverProfile } from '../profile/recover.js';
@@ -207,13 +212,15 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       return c.json(responseBody, 200);
     }
 
-    await executeProfileDeletion(db, {
+    const { careerIds } = await executeProfileDeletion(db, {
       profileId: session.profileId,
       sessionId: session.id,
       sessionTokenHash,
       confirmToken: body.confirmToken,
       now,
     });
+    // 지운 선수의 공개 상세·최초 기록·게시판 댓글 수가 캐시에 남지 않게 한다(명예의 전당 목록은 TTL 1분).
+    purgeEdge(c, [FIRSTS_PATH, ...careerIds.map(hofDetailPath), ...BOARD_KEYS.map(firstPagePath)]);
     return c.body(null, 204);
   });
 }

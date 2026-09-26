@@ -117,6 +117,7 @@ export {
   CLUB_CUSTOM_NAME_MAX,
   CLUB_CUSTOM_LOGO_TEXT_MAX,
   CLUB_CUSTOM_IMG_MAX,
+  CLUB_CUSTOM_IMG_TOTAL_MAX,
   ClubLogoSchema,
   ClubCustomSchema,
   ClubCustomMapSchema,

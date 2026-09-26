@@ -2,6 +2,7 @@
 // 은퇴 상세 화면(Legend.svelte)과 은퇴 직후 화면(Retired.svelte)이 같은 LegendView를 그린다.
 // 내 선수는 로컬 ft_hof 항목(HofEntry)에서, 다른 유저의 선수는 서버 /v1/hof에서 만든다.
 import type { PublicHofEntry } from '@offside/contracts';
+import { isAcceptablePublicName } from '@offside/contracts/content-filter';
 import { legendScore, loadHOF, saveKey } from '../game/season.js';
 import type { GameState, HofEntry } from '../game/types.js';
 import { getHofDetail } from '../api/client.js';
@@ -95,9 +96,15 @@ export async function openPublicLegendById(careerId: string) {
 }
 
 /** 내 선수의 이름 공개 여부를 바꾼다: 로컬 ft_hof에 기록하고, 서버에는 은퇴 요약을 다시 보내 공개
- * 이름을 갱신한다(서버는 같은 커리어의 재전송을 upsert로 처리한다). */
-export function setLegendPublic(h: HofEntry, on: boolean) {
-  if (!h.id) return;
+ * 이름을 갱신한다(서버는 같은 커리어의 재전송을 upsert로 처리한다). 서버가 거부할 이름(링크·욕설)은
+ * 보내기 전에 막는다 — 업로드 큐는 4xx를 조용히 버려서, 그대로 두면 "공개했습니다"만 뜨고 실제로는 익명이다.
+ * 바꿨으면 true. */
+export function setLegendPublic(h: HofEntry, on: boolean): boolean {
+  if (!h.id) return false;
+  if (on && !isAcceptablePublicName(h.name)) {
+    toast('이 이름은 공개할 수 없어요 — 링크나 욕설이 들어간 이름은 익명으로만 올라갑니다.');
+    return false;
+  }
   const hof = loadHOF();
   const saved = hof.find((x) => x.id === h.id);
   if (saved) saved.public = on;
@@ -105,6 +112,7 @@ export function setLegendPublic(h: HofEntry, on: boolean) {
   h.public = on;
   uploadRetirement(h.id, h);
   toast(on ? '명예의 전당에 이름을 공개했습니다.' : '명예의 전당에서 익명으로 바꿨습니다.');
+  return true;
 }
 
 // ───────── T-10-029 은퇴 커리어 공유 링크 ─────────

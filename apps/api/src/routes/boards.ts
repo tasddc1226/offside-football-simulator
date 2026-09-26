@@ -30,7 +30,7 @@ import { envelope, nowIso } from './shared.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
-import { hasProfanity } from '../content-filter.js';
+import { hasProfanity } from '@offside/contracts/content-filter';
 
 // T-10-011 게시판(공지·릴리즈 노트). 읽기는 누구나, 글은 관리자만, 댓글은 프로필이 있는 누구나.
 // 댓글은 프로필당 시간당 COMMENT_LIMIT개까지(관리자 제외).
@@ -133,8 +133,9 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const [owner, viewer] = await Promise.all([getCommentOwner(db, id), getViewer(c)]);
     if (!owner) throw notFound('댓글');
-    if (owner !== viewer.profileId && !viewer.admin) throw new AppError({ code: 'FORBIDDEN', message: '내 댓글만 지울 수 있습니다.' });
+    if (owner.profileId !== viewer.profileId && !viewer.admin) throw new AppError({ code: 'FORBIDDEN', message: '내 댓글만 지울 수 있습니다.' });
     await deleteComment(db, id, nowIso());
+    purgeList(c, owner.board); // 댓글 수가 바뀐다.
     return c.body(null, 204);
   });
 }

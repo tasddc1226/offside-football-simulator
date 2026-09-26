@@ -1,4 +1,4 @@
-import { ClubCustomResponseSchema, ErrorEnvelopeSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX, ClubCustomResponseSchema, ErrorEnvelopeSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
@@ -62,6 +62,18 @@ describe('/v1/club-custom (T-10-010)', () => {
       expect(res.status).toBe(400);
       expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('VALIDATION_FAILED');
     }
+  });
+
+  it('이미지 합계가 한도를 넘으면 VALIDATION_FAILED, 한도 안이면 저장한다(요청 본문 1MiB 안)', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const img = `data:image/png;base64,${'A'.repeat(CLUB_CUSTOM_IMG_MAX - 30)}`;
+    const many = (n: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`pl-${i}`, { logo: { text: 'A', bg: '#000000', fg: '#ffffff', img } }]));
+    const fits = Math.floor(CLUB_CUSTOM_IMG_TOTAL_MAX / img.length);
+    const ok = await put(ctx, cookie, { clubs: many(fits), updatedAt: '2026-09-25T00:00:00.000Z' });
+    expect(ok.status).toBe(200);
+    const over = await put(ctx, cookie, { clubs: many(fits + 1), updatedAt: '2026-09-25T01:00:00.000Z' });
+    expect(over.status).toBe(400);
+    expect(ErrorEnvelopeSchema.parse(await over.json()).error.code).toBe('VALIDATION_FAILED');
   });
 
   it('프로필 삭제 시 함께 지워진다', async () => {

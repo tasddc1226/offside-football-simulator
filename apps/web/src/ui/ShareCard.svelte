@@ -34,7 +34,7 @@
     const r = await getHofDetail(id);
     if (!r.ok) {
       throw new Error(
-        r.error.code === 'HOF_NOT_FOUND' ? '기록을 아직 서버에 올리지 못했어요. 잠시 후 다시 시도해 주세요.' : '서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.',
+        r.error.reason === 'HOF_NOT_FOUND' ? '기록을 아직 서버에 올리지 못했어요. 잠시 후 다시 시도해 주세요.' : '서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.',
       );
     }
     return shareUrl(id);

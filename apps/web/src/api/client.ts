@@ -17,11 +17,12 @@ export type Profile = Pick<
 >;
 
 export type ApiErrorCode = string;
-export type ApiError = { code: ApiErrorCode; message: string; retryable: boolean };
+/** reason: 서버가 error.details.reason에 담아 보내는 세부 사유(예: HOF_NOT_FOUND). */
+export type ApiError = { code: ApiErrorCode; message: string; retryable: boolean; reason?: string };
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
-function failure<T>(code: ApiErrorCode, message: string, retryable: boolean): ApiResult<T> {
-  return { ok: false, error: { code, message, retryable } };
+function failure<T>(code: ApiErrorCode, message: string, retryable: boolean, reason?: string): ApiResult<T> {
+  return { ok: false, error: { code, message, retryable, ...(reason ? { reason } : {}) } };
 }
 
 // T-10-015. 공개 조회 결과를 메모리에 잠깐 두고, 같은 요청이 동시에 나가면 하나로 합친다 — 화면을 오갈
@@ -86,8 +87,9 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
   if (!response.ok) {
     if (json && typeof json === 'object' && 'error' in json) {
-      const e = (json as { error: { code?: string; message?: string; retryable?: boolean } }).error;
-      return failure(e.code ?? 'UNKNOWN', e.message ?? '요청이 실패했습니다.', !!e.retryable);
+      const e = (json as { error: { code?: string; message?: string; retryable?: boolean; details?: { reason?: unknown } } }).error;
+      const reason = typeof e.details?.reason === 'string' ? e.details.reason : undefined;
+      return failure(e.code ?? 'UNKNOWN', e.message ?? '요청이 실패했습니다.', !!e.retryable, reason);
     }
     return failure('INVALID_RESPONSE', `요청이 실패했습니다(${response.status}).`, response.status >= 500);
   }
