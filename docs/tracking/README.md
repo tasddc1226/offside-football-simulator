@@ -68,8 +68,8 @@
   `apps/web/src/game`의 마이그레이션 코드가 이전 버전 세이브를 계속 읽을 수
   있어야 한다. 기존 세이브를 깨뜨리는 변경은 마이그레이션 없이 배포하지 않는다.
 - **밸런스를 바꾸는 변경은 `tooling/fulltime-sim`을 돌려야 한다.** 이 시뮬레이터가
-  원작 풀타임 v4와의 패리티 기준선(2만 커리어, peak p50 74, corr 0.85,
-  Europe 74.7%, capped 68.0%)을 유지하는지 확인한다.
+  원작 풀타임 v4와의 패리티 기준선
+  (`tooling/fulltime-sim/reference/random-v5.json`)을 유지하는지 확인한다.
 
 ## 상태 보고
 
