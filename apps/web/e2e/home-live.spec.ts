@@ -86,7 +86,7 @@ test('서버에 연결하지 못하거나 아무 활동이 없으면 카드를 �
   await expect(page.locator('[data-home-live]')).toHaveCount(0);
 });
 
-// T-10-037: 응답이 늦게 와도 카드가 끼어들며 아래 타일을 밀지 않는다(PageSpeed 모바일 CLS 0.3).
+// T-10-038: 응답이 늦게 와도 카드가 끼어들며 아래 타일을 밀지 않는다(PageSpeed 모바일 CLS 0.3).
 test('라이브 응답이 늦어도 첫 화면이 밀리지 않는다', async ({ page }) => {
   await page.setViewportSize({ width: 412, height: 823 });
   await page.route(`${API}/v1/live`, async (r) => {
