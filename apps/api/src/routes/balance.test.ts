@@ -1,31 +1,17 @@
 import { ErrorEnvelopeSchema } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../app.js';
 import { auditLog, balanceVersions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { ADMIN_EMAIL, issueAdminCookie, issueCookie } from '../test/http.js';
+import { ADMIN_EMAIL, callJson, issueAdminCookie, issueCookie } from '../test/http.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
-
-const ORIGIN = 'http://localhost:5173';
 
 type Version = { version: number; status: string; note: string; values: Record<string, unknown>; activatedAt: string | null };
 
 describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
   let ctx: TestD1;
   let env: TestD1['env'];
-  const app = createApp();
-
-  const call = (method: string, path: string, opts: { cookie?: string; body?: unknown } = {}) =>
-    app.request(
-      path,
-      {
-        method,
-        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...(opts.cookie ? { Cookie: opts.cookie } : {}) },
-        ...(method === 'GET' ? {} : { body: JSON.stringify(opts.body ?? {}) }),
-      },
-      env,
-    );
+  const call = (method: string, path: string, opts?: Parameters<typeof callJson>[3]) => callJson(env, method, path, opts);
   const data = async <T>(res: Response) => ((await res.json()) as { data: T }).data;
 
   const makeAdmin = () => issueAdminCookie(ctx);

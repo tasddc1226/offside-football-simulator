@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { ok, API } from './helpers.js';
 
 // T-10-005 공개 명예의 전당: 전체 목록(API 스텁) → 다른 유저 선수 상세 → 돌아오기, 내 선수 탭 → 상세.
-const API = 'http://localhost:8787';
 const ID = '3b1d6c1e-2a4f-4f7e-9a0b-7c8d9e0f1a2b';
 /** 목록 요청(`/v1/hof?limit=…&page=…`). 상세(`/v1/hof/:id`)와 구분한다. */
 const HOF_LIST = /\/v1\/hof\?/;
@@ -25,8 +25,8 @@ const snapshot = {
 };
 
 test('전체 명예의 전당에서 다른 유저의 은퇴 선수 상세를 연다', async ({ page }) => {
-  await page.route(HOF_LIST, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries: [entry] } }) }));
-  await page.route(`${API}/v1/hof/${ID}`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entry, snapshot } }) }));
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry] })));
+  await page.route(`${API}/v1/hof/${ID}`, (r) => r.fulfill(ok({ entry, snapshot })));
 
   await page.goto('/');
   const row = page.locator(`[data-hof-id="${ID}"]`);
@@ -56,13 +56,9 @@ test('내 선수 탭: 상세 없는 옛 기록은 요약만 보여 준다', asyn
 // 다른 기기에서 은퇴한 선수는 익명 이름으로 보인다. 다른 계정의 이 기기 기록은 빠진다.
 test('내 선수 탭: 계정 기록(서버) + 이 기기 이름 덮어쓰기', async ({ page }) => {
   const OTHER = '7c2e5a10-1b3d-4e5f-8a9b-0c1d2e3f4a5b';
-  await page.route(HOF_LIST, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries: [] } }) }));
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [] })));
   await page.route(`${API}/v1/careers/mine`, (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: { linked: true, entries: [entry, { ...entry, id: OTHER, legendScore: 100, pos: 'GK', number: 1 }] } }),
-    }),
+    r.fulfill(ok({ linked: true, entries: [entry, { ...entry, id: OTHER, legendScore: 100, pos: 'GK', number: 1 }] })),
   );
   await page.addInitScript((id) => {
     const base = { pos: 'FW', number: 7, peak: 91, age: 35, apps: 540, goals: 301, assists: 120, trophies: 9, awards: 5, caps: 88, ballon: 1, lastClub: '테스트 FC', score: 612, date: '2026-09-24' };
@@ -81,8 +77,8 @@ test('내 선수 탭: 계정 기록(서버) + 이 기기 이름 덮어쓰기', a
 });
 
 test('내 선수 탭: 계정에 연결되지 않았으면 이 기기 기록', async ({ page }) => {
-  await page.route(HOF_LIST, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries: [] } }) }));
-  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { linked: false, entries: [] } }) }));
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [] })));
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   await page.addInitScript(() => {
     localStorage.setItem('ft_hof', JSON.stringify([{ id: '1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d', name: '기기선수', pos: 'DF', number: 4, peak: 78, age: 33, apps: 300, goals: 10, assists: 5, trophies: 1, awards: 0, caps: 3, ballon: 0, lastClub: 'FC', score: 250, date: '2026-09-24' }]));
   });
@@ -103,7 +99,7 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 100명씩 페이지', async 
     const limit = Number(u.searchParams.get('limit'));
     const p = Number(u.searchParams.get('page') ?? 1);
     const entries = Array.from({ length: Math.max(0, Math.min(limit, TOTAL - (p - 1) * limit)) }, (_, i) => nth((p - 1) * limit + i));
-    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries, total: TOTAL } }) });
+    return r.fulfill(ok({ entries, total: TOTAL }));
   });
   await page.goto('/');
   const home = page.locator('[data-hof="home"]');
@@ -133,8 +129,8 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 100명씩 페이지', async 
 });
 
 test('명예의 전당: 내 선수도 홈에선 TOP 3, 전체 보기에서 전부', async ({ page }) => {
-  await page.route(HOF_LIST, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries: [], total: 0 } }) }));
-  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { linked: false, entries: [] } }) }));
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [], total: 0 })));
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   await page.addInitScript(() => {
     const base = { pos: 'DF', number: 4, peak: 78, age: 33, apps: 300, goals: 10, assists: 5, trophies: 1, awards: 0, caps: 3, ballon: 0, lastClub: 'FC', date: '2026-09-24' };
     localStorage.setItem('ft_hof', JSON.stringify(Array.from({ length: 5 }, (_, i) => ({ ...base, name: `기기선수${i + 1}`, score: 500 - i }))));
@@ -155,9 +151,9 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
     const u = new URL(r.request().url());
     asked.push(u.search);
     const entries = u.searchParams.get('sort') === 'goals' ? [{ ...entry, goals: 401 }, { ...entry, id: '00000000-0000-4000-8000-000000000002', goals: 99 }] : [entry];
-    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries, total: entries.length } }) });
+    return r.fulfill(ok({ entries, total: entries.length }));
   });
-  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { linked: false, entries: [] } }) }));
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   await page.addInitScript(() => {
     const base = { pos: 'DF', number: 4, peak: 78, age: 33, apps: 300, goals: 10, assists: 5, trophies: 1, awards: 0, caps: 3, lastClub: 'FC', date: '2026-09-24' };
     localStorage.setItem('ft_hof', JSON.stringify([
@@ -194,9 +190,9 @@ test('홈 ↔ 전체 보기 ↔ 상세를 오가도 같은 목록을 다시 요�
     const u = new URL(req.url());
     if (u.origin === API) asked.push(u.pathname + u.search);
   });
-  await page.route(HOF_LIST, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries: [entry], total: 1 } }) }));
-  await page.route(`${API}/v1/hof/${ID}`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entry, snapshot } }) }));
-  await page.route(`${API}/v1/boards/**`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { posts: [], hasMore: false } }) }));
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry], total: 1 })));
+  await page.route(`${API}/v1/hof/${ID}`, (r) => r.fulfill(ok({ entry, snapshot })));
+  await page.route(`${API}/v1/boards/**`, (r) => r.fulfill(ok({ posts: [], hasMore: false })));
   await page.goto('/');
   await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(1);
   for (let i = 0; i < 2; i++) {

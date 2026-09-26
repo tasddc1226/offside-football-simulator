@@ -1,9 +1,8 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { ok, fail, API } from './helpers.js';
 
 // T-10-011 소식(게시판). API는 route로 흉내 낸다(e2e 기본 API 주소 localhost:8787).
-const API = 'http://localhost:8787';
-const ok = (data: unknown, status = 200) => ({ status, json: { data, meta: { requestId: 'req_e2e' } } });
 const T = '2026-09-25T03:00:00.000Z';
 const NOTICE = { id: 'pst_00000000-0000-0000-0000-000000000001', board: 'notice', title: '서버 점검 안내', version: null, pinned: true, commentCount: 1, createdAt: T, updatedAt: T };
 const RELEASE = { id: 'pst_00000000-0000-0000-0000-000000000002', board: 'release', title: '클럽 동기화', version: 'v1.4.0', pinned: false, commentCount: 0, createdAt: T, updatedAt: T };
@@ -48,7 +47,7 @@ async function mockBoards(page: Page, opts: { admin?: boolean; empty?: boolean; 
     if (url.pathname === '/v1/boards/posts/pst_00000000-0000-0000-0000-000000000003') {
       return route.fulfill(ok({ post: { ...RELEASE, id: 'pst_00000000-0000-0000-0000-000000000003', title: '새 버전', body: '본문' }, comments: [] }));
     }
-    return route.fulfill({ status: 404, json: { error: { code: 'VALIDATION_FAILED', message: '없음', retryable: false } } });
+    return route.fulfill(fail(404, 'VALIDATION_FAILED', '없음'));
   });
   return sent;
 }

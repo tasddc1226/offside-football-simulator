@@ -4,12 +4,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { careers, careerSeasons, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie } from '../test/http.js';
-
-const ALLOWED_ORIGIN = 'http://localhost:5173';
+import { deleteProfile, issueCookie, ORIGIN, TEST_CAREER } from '../test/http.js';
 
 function jsonInit(input: { method: 'PUT' | 'POST'; body?: unknown; cookie?: string; origin?: string | null }): RequestInit {
-  const { method, body, cookie, origin = ALLOWED_ORIGIN } = input;
+  const { method, body, cookie, origin = ORIGIN } = input;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (origin !== null) headers.Origin = origin;
   if (cookie) headers.Cookie = cookie;
@@ -20,7 +18,7 @@ const CAREER_ID = '9f2c9b1a-6f0f-4a4b-9c3a-1e2f3a4b5c6d';
 
 function seasonBody(overrides: Partial<Record<string, unknown>> = {}) {
   return {
-    career: { pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late', startYear: 2026, appVersion: '1.0.0' },
+    career: TEST_CAREER,
     season: {
       age: 18,
       club: '테스트 FC',
@@ -197,22 +195,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       ctx.env,
     );
 
-    const tokenRes = await app.request(
-      '/v1/profile/delete',
-      { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ALLOWED_ORIGIN, Cookie: owner.cookie, 'Idempotency-Key': 'idem-del-token' }, body: '{}' },
-      ctx.env,
-    );
-    const { data: tokenData } = (await tokenRes.json()) as { data: { confirmToken: string } };
-    const confirmRes = await app.request(
-      '/v1/profile/delete',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Origin: ALLOWED_ORIGIN, Cookie: owner.cookie, 'Idempotency-Key': 'idem-del-confirm' },
-        body: JSON.stringify({ confirmToken: tokenData.confirmToken }),
-      },
-      ctx.env,
-    );
-    expect(confirmRes.status).toBe(204);
+    expect((await deleteProfile(ctx.env, owner.cookie, 'idem-del')).status).toBe(204);
 
     const careerRows = await ctx.db.select().from(careers).where(eq(careers.profileId, owner.profileId));
     expect(careerRows).toHaveLength(0);

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { startCareer } from './helpers.js';
+import { startCareer, ok, API } from './helpers.js';
 
 // 정적 공개 페이지는 serious/critical만, 게임 화면(T-10-004)은 moderate까지 위반 0을 요구한다.
 async function expectNoViolations(page: Page, where: string, { seriousOnly = false } = {}) {
@@ -24,7 +24,6 @@ test('선수 탭에 심각한 접근성 위반이 없다', async ({ page }) => {
 });
 
 // T-10-004: 게임 화면은 moderate(랜드마크·h1 등)까지 위반 0을 유지한다 — 라이트/다크 둘 다.
-const HOF_API = 'http://localhost:8787';
 const HOF_ID = '0f2d7a51-6c1e-4a8b-9d3f-2b7c5e8a1d44';
 const hofEntry = {
   id: HOF_ID, name: null, pos: 'MF', number: 10, retireAge: 36, peak: 88, legendScore: 540, apps: 600, goals: 120, assists: 210,
@@ -40,8 +39,8 @@ for (const scheme of ['light', 'dark'] as const) {
   test(`게임 화면 전체에 접근성 위반이 없다 (${scheme})`, async ({ page }) => {
     test.setTimeout(60_000);
     await page.emulateMedia({ colorScheme: scheme });
-    await page.route(/\/v1\/hof\?/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entries: [hofEntry] } }) }));
-    await page.route(`${HOF_API}/v1/hof/${HOF_ID}`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { entry: hofEntry, snapshot: hofSnapshot } }) }));
+    await page.route(/\/v1\/hof\?/, (r) => r.fulfill(ok({ entries: [hofEntry] })));
+    await page.route(`${API}/v1/hof/${HOF_ID}`, (r) => r.fulfill(ok({ entry: hofEntry, snapshot: hofSnapshot })));
     await page.goto('/');
     await expect(page.locator(`[data-hof-id="${HOF_ID}"]`)).toBeVisible();
     await expectNoViolations(page, 'home');

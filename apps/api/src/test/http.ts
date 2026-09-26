@@ -5,6 +5,40 @@ import { linkGoogle, type TestD1 } from './d1.js';
 
 // T-10-044: 라우트 테스트 공용 HTTP 헬퍼(12개 파일에 복사돼 있던 것을 모았다).
 
+/** 테스트 요청의 브라우저 Origin — 로컬 개발 허용 목록에 들어 있다. */
+export const ORIGIN = 'http://localhost:5173';
+
+/** 브라우저처럼 JSON·Origin 헤더를 붙여 라우트를 부른다. GET이 아니면 본문(기본 {})을 보낸다. */
+export function callJson(
+  env: TestD1['env'],
+  method: string,
+  path: string,
+  opts: { cookie?: string; body?: unknown; headers?: Record<string, string> } = {},
+) {
+  return createApp().request(
+    path,
+    {
+      method,
+      headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...(opts.cookie ? { Cookie: opts.cookie } : {}), ...opts.headers },
+      ...(method === 'GET' ? {} : { body: JSON.stringify(opts.body ?? {}) }),
+    },
+    env,
+  );
+}
+
+/** 프로필 삭제 2단계(확인 토큰 → 확정)를 밟고 확정 응답을 돌려준다. 멱등 키는 `${key}-token`·`${key}-confirm`. */
+export async function deleteProfile(env: TestD1['env'], cookie: string, key: string) {
+  const tokenRes = await callJson(env, 'POST', '/v1/profile/delete', { cookie, headers: { 'Idempotency-Key': `${key}-token` } });
+  const { confirmToken } = ((await tokenRes.json()) as { data: { confirmToken: string } }).data;
+  return callJson(env, 'POST', '/v1/profile/delete', { cookie, headers: { 'Idempotency-Key': `${key}-confirm` }, body: { confirmToken } });
+}
+
+/** 로그인한 쿠키로 JSON을 PUT한다(시즌·은퇴 업로드 등). */
+export const putJson = (ctx: TestD1, cookie: string, path: string, body: unknown) => callJson(ctx.env, 'PUT', path, { cookie, body });
+
+/** 시즌·은퇴 업로드 본문의 career 머리(테스트 공용). */
+export const TEST_CAREER = { pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late', startYear: 2026, appVersion: '1.0.0' };
+
 /** Set-Cookie에서 쿠키 하나의 값(빈 값일 수 있다). 없으면 던진다. */
 export function extractCookie(setCookie: string, name: string): string {
   const match = new RegExp(`${name}=([^;]*)`).exec(setCookie);

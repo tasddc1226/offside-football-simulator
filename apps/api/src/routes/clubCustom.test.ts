@@ -1,18 +1,14 @@
 import { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX, ClubCustomResponseSchema, ErrorEnvelopeSchema, successEnvelope } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../app.js';
 import { clubCustoms } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie } from '../test/http.js';
+import { callJson, deleteProfile, issueCookie, putJson } from '../test/http.js';
 
-const ORIGIN = 'http://localhost:5173';
 const Res = successEnvelope(ClubCustomResponseSchema);
 
-const get = (ctx: TestD1, cookie?: string) =>
-  createApp().request('/v1/club-custom', { headers: { Origin: ORIGIN, ...(cookie ? { Cookie: cookie } : {}) } }, ctx.env);
-const put = (ctx: TestD1, cookie: string, body: unknown) =>
-  createApp().request('/v1/club-custom', { method: 'PUT', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie }, body: JSON.stringify(body) }, ctx.env);
+const get = (ctx: TestD1, cookie?: string) => callJson(ctx.env, 'GET', '/v1/club-custom', cookie ? { cookie } : {});
+const put = (ctx: TestD1, cookie: string, body: unknown) => putJson(ctx, cookie, '/v1/club-custom', body);
 
 const CLUBS = { 'pl-0': { name: '우리 동네 FC', logo: { text: '우', bg: '#112233', fg: '#ffffff' } }, 'k1-3': { name: '서울 불꽃' } };
 
@@ -74,12 +70,7 @@ describe('/v1/club-custom (T-10-010)', () => {
   it('프로필 삭제 시 함께 지워진다', async () => {
     const { cookie, profileId } = await issueCookie(ctx);
     await put(ctx, cookie, { clubs: CLUBS, updatedAt: '2026-09-25T00:00:00.000Z' });
-    const app = createApp();
-    const h = (key: string) => ({ 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie, 'Idempotency-Key': key });
-    const tokenRes = await app.request('/v1/profile/delete', { method: 'POST', headers: h('idem-club-del-token'), body: '{}' }, ctx.env);
-    const { data } = (await tokenRes.json()) as { data: { confirmToken: string } };
-    const confirm = await app.request('/v1/profile/delete', { method: 'POST', headers: h('idem-club-del-confirm'), body: JSON.stringify({ confirmToken: data.confirmToken }) }, ctx.env);
-    expect(confirm.status).toBe(204);
+    expect((await deleteProfile(ctx.env, cookie, 'idem-club-del')).status).toBe(204);
     expect(await ctx.db.select().from(clubCustoms).where(eq(clubCustoms.profileId, profileId))).toHaveLength(0);
   });
 });

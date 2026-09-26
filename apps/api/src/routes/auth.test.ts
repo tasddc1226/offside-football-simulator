@@ -4,12 +4,10 @@ import { issueSession } from '../auth/session.js';
 import { createApp } from '../app.js';
 import { getProfile } from '../db/repos/profiles.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie, extractSessionToken } from '../test/http.js';
-
-const ALLOWED_ORIGIN = 'http://localhost:5173';
+import { extractSessionToken, issueCookie, ORIGIN } from '../test/http.js';
 
 function postInit(input: { idempotencyKey?: string | null; cookie?: string; origin?: string | null }): RequestInit {
-  const { idempotencyKey = 'idem-key-0001', cookie, origin = ALLOWED_ORIGIN } = input;
+  const { idempotencyKey = 'idem-key-0001', cookie, origin = ORIGIN } = input;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (origin !== null) headers.Origin = origin;
   if (idempotencyKey !== null) headers['Idempotency-Key'] = idempotencyKey;
@@ -40,7 +38,7 @@ describe('POST /v1/auth/logout', () => {
 
     const after = await app.request(
       '/v1/profile/settings',
-      { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: ALLOWED_ORIGIN, Cookie: cookie }, body: '{}' },
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie }, body: '{}' },
       ctx.env,
     );
     expect(after.status).toBe(401);
@@ -62,7 +60,7 @@ describe('POST /v1/auth/logout', () => {
 
     const res = await app.request(
       '/v1/auth/logout',
-      { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ALLOWED_ORIGIN, 'Idempotency-Key': 'idem-toss-logout', Authorization: `Bearer ${bearerToken}` }, body: '{}' },
+      { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, 'Idempotency-Key': 'idem-toss-logout', Authorization: `Bearer ${bearerToken}` }, body: '{}' },
       ctx.env,
     );
     expect(res.status).toBe(204);

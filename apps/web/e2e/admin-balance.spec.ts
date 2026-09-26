@@ -1,8 +1,7 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
+import { ok, fail, API } from './helpers.js';
 
 // T-10-016 운영 도구 · 밸런스 설정. API는 route로 흉내 낸다(e2e 기본 API 주소 localhost:8787).
-const API = 'http://localhost:8787';
-const ok = (data: unknown, status = 200) => ({ status, json: { data, meta: { requestId: 'req_e2e' } } });
 const T = '2026-09-25T03:00:00.000Z';
 const SPAMMER = 'prf_00000000-0000-0000-0000-00000000000a';
 const FAN = 'prf_00000000-0000-0000-0000-00000000000b';
@@ -72,7 +71,7 @@ async function mockApi(page: Page, opts: { linked: boolean; admin: boolean }) {
       for (const x of versions) if (x.status === 'active') x.status = 'archived';
       return route.fulfill(ok(Object.assign(v, { status: 'active', activatedAt: T })));
     }
-    return route.fulfill({ status: 404, json: { error: { code: 'VALIDATION_FAILED', message: '없음', retryable: false } } });
+    return route.fulfill(fail(404, 'VALIDATION_FAILED', '없음'));
   });
   return sent;
 }

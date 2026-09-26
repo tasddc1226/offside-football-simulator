@@ -3,17 +3,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { FIRSTS } from '../firsts.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie } from '../test/http.js';
+import { deleteProfile, issueCookie, putJson, TEST_CAREER } from '../test/http.js';
 
-const ORIGIN = 'http://localhost:5173';
 const A = '0b000000-0000-4000-8000-00000000000a';
 const B = '0b000000-0000-4000-8000-00000000000b';
 const C = '0b000000-0000-4000-8000-00000000000c';
 
-const put = (ctx: TestD1, cookie: string, path: string, body: unknown) =>
-  createApp().request(path, { method: 'PUT', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie }, body: JSON.stringify(body) }, ctx.env);
 const seasonBody = (over: Record<string, unknown> = {}) => ({
-  career: { pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late', startYear: 2026, appVersion: '1.0.0' },
+  career: TEST_CAREER,
   season: { age: 22, club: '테스트 FC', league: 'K리그1', apps: 30, goals: 10, assists: 3, rating: 7.2, rank: 1, ovr: 70, honors: [], ...over },
   events: [],
 });
@@ -47,8 +44,8 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
   });
 
   it('시즌 업로드로 기록이 생기고, 나중에 같은 기록을 채운 커리어는 자리를 뺏지 못한다', async () => {
-    expect((await put(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 }))).status).toBe(200);
-    expect((await put(ctx, cookie, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 45 }))).status).toBe(200);
+    expect((await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 }))).status).toBe(200);
+    expect((await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 45 }))).status).toBe(200);
     const data = await read(ctx);
     expect(holderOf(data, 'sgoals30')).toEqual({ careerId: A, name: null, pos: 'FW', number: null });
     expect(holderOf(data, 'sgoals40')?.careerId).toBe(B);
@@ -56,10 +53,10 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
   });
 
   it('은퇴 때 레전드 점수 기록을 판정하고, 이름은 공개를 고른 경우에만 보인다', async () => {
-    await put(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody());
-    await put(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, publicName: null });
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody());
+    await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, publicName: null });
     expect(holderOf(await read(ctx), 'legend840')).toMatchObject({ careerId: A, name: null });
-    await put(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, publicName: '김오프' });
+    await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, publicName: '김오프' });
     const data = await read(ctx);
     expect(holderOf(data, 'legend840')).toMatchObject({ careerId: A, name: '김오프' });
     expect(holderOf(data, 'legend1000')).toBeNull();
@@ -68,24 +65,19 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
   it('기록을 가진 프로필이 지워지면 그다음으로 이른 달성자가 이어받는다(나중에 올린 사람이 아니라)', async () => {
     const other = (await issueCookie(ctx)).cookie;
     const late = (await issueCookie(ctx)).cookie;
-    await put(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 }));
-    await put(ctx, other, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 35 }));
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 }));
+    await putJson(ctx, other, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 35 }));
     expect(holderOf(await read(ctx), 'sgoals30')?.careerId).toBe(A);
 
-    const app = createApp();
-    const h = (key: string) => ({ 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie, 'Idempotency-Key': key });
-    const tokenRes = await app.request('/v1/profile/delete', { method: 'POST', headers: h('idem-firsts-del-token'), body: '{}' }, ctx.env);
-    const { data } = (await tokenRes.json()) as { data: { confirmToken: string } };
-    const confirm = await app.request('/v1/profile/delete', { method: 'POST', headers: h('idem-firsts-del-confirm'), body: JSON.stringify({ confirmToken: data.confirmToken }) }, ctx.env);
-    expect(confirm.status).toBe(204);
+    expect((await deleteProfile(ctx.env, cookie, 'idem-firsts-del')).status).toBe(204);
 
-    await put(ctx, late, `/v1/careers/${C}/seasons/2030`, seasonBody({ goals: 31 }));
+    await putJson(ctx, late, `/v1/careers/${C}/seasons/2030`, seasonBody({ goals: 31 }));
     expect(holderOf(await read(ctx), 'sgoals30')?.careerId).toBe(B);
   });
 
   it('배포 전 기록은 첫 조회 때 한 번 소급하고, 업로드 순서와 상관없이 더 이른 시각이 이긴다', async () => {
-    await put(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 35 }));
-    await put(ctx, cookie, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 35 }));
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 35 }));
+    await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 35 }));
     // 규칙 도입 전 상태로 되돌리고, B의 시즌이 먼저 올라온 것으로 바꾼다.
     const db = ctx.env.DB;
     await db.prepare('DELETE FROM server_firsts').run();

@@ -1,30 +1,16 @@
 import { ErrorEnvelopeSchema } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../app.js';
 import { authAttempts, boardComments, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { ADMIN_EMAIL, issueAdminCookie, issueCookie, issueGoogleCookie } from '../test/http.js';
+import { ADMIN_EMAIL, callJson, deleteProfile, issueAdminCookie, issueCookie, issueGoogleCookie } from '../test/http.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 import { STALE } from '../edgeKeys.js';
-
-const ORIGIN = 'http://localhost:5173';
 
 describe('게시판 /v1/boards', () => {
   let ctx: TestD1;
   let env: TestD1['env'];
-  const app = createApp();
-
-  const call = (method: string, path: string, opts: { cookie?: string; body?: unknown } = {}) =>
-    app.request(
-      path,
-      {
-        method,
-        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...(opts.cookie ? { Cookie: opts.cookie } : {}) },
-        ...(method === 'GET' ? {} : { body: JSON.stringify(opts.body ?? {}) }),
-      },
-      env,
-    );
+  const call = (method: string, path: string, opts?: Parameters<typeof callJson>[3]) => callJson(env, method, path, opts);
 
   // 관리자는 프로필 닉네임과 무관하게 '운영자'로 댓글을 쓴다(일부러 다른 닉네임을 넣어 둔다).
   const makeAdmin = () => issueAdminCookie(ctx, { nickname: '관리' });
@@ -185,11 +171,7 @@ describe('게시판 /v1/boards', () => {
     const id = await writePost(admin.cookie);
     const user = await googleUser('팬');
     expect((await call('POST', `/v1/boards/posts/${id}/comments`, { cookie: user.cookie, body: { body: '안녕' } })).status).toBe(201);
-    const headers = (key: string) => ({ 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: user.cookie, 'Idempotency-Key': key });
-    const tokenRes = await app.request('/v1/profile/delete', { method: 'POST', headers: headers('idem-board-del-token'), body: '{}' }, env);
-    const { confirmToken } = ((await tokenRes.json()) as { data: { confirmToken: string } }).data;
-    const del = await app.request('/v1/profile/delete', { method: 'POST', headers: headers('idem-board-del-confirm'), body: JSON.stringify({ confirmToken }) }, env);
-    expect(del.status).toBe(204);
+    expect((await deleteProfile(env, user.cookie, 'idem-board-del')).status).toBe(204);
     expect(await ctx.db.select().from(boardComments).where(eq(boardComments.profileId, user.profileId))).toHaveLength(0);
   });
 });
