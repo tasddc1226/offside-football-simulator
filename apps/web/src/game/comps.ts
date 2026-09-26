@@ -1,8 +1,7 @@
 // ───────── 실제 대회 구조: 국내 컵 · 슈퍼컵 · 대륙 클럽 대회 · 시상식 · 커리어 여정 ─────────
-import { POS } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, chance, gauss, rnd } from './rng.js';
-import { leagueOf, clubsIn, roleOf, addStat, scoreBoost, atkOf, creOf } from './engine.js';
+import { leagueOf, clubsIn, roleOf, addStat, atkOf, creOf, rollScoring, START_P } from './engine.js';
 import type { GameState, Season, SeasonComp, NatTour } from './types.js';
 
 export const CUPS: Record<string, string[]> = {
@@ -62,7 +61,7 @@ export function seasonSetup(s: GameState, S: Season) {
 }
 
 function compMatch(s: GameState, oppStr: number, startP: number) {
-  const P = POS[s.pos], o = ovr(s);
+  const o = ovr(s);
   let mins = 0, g = 0, a = 0, perf = 0;
   if (s.injury === 0) {
     if (chance(startP)) mins = chance(0.2) ? ri(60, 85) : 90;
@@ -70,24 +69,13 @@ function compMatch(s: GameState, oppStr: number, startP: number) {
   }
   if (mins) {
     perf = (o - oppStr) / 10 + gauss() * 0.8 + (s.cond - 70) / 60;
-    g = poissonLocal(P.goal * scoreBoost(atkOf(s), o, perf, oppStr) * (mins / 90));
-    a = poissonLocal(P.assist * scoreBoost(creOf(s), o, perf, oppStr) * (mins / 90));
+    ({ g, a } = rollScoring(s, atkOf(s), creOf(s), o, perf, oppStr, mins));
   }
   return { mins, g, a, edge: (s.club.str - oppStr) * 0.03 + (mins ? perf * 0.03 + g * 0.1 : 0) };
 }
-function poissonLocal(l: number): number {
-  if (l <= 0) return 0;
-  const L = Math.exp(-l);
-  let k = 0, p = 1;
-  do {
-    k++;
-    p *= rnd();
-  } while (p > L);
-  return k - 1;
-}
 function startChance(s: GameState, type: 'cup' | 'cont'): number {
   const r = roleOf(s);
-  return (type === 'cup' ? { 주전: 0.6, 로테이션: 0.8, 벤치: 0.45 } : { 주전: 0.92, 로테이션: 0.5, 벤치: 0.12 })[r];
+  return (type === 'cup' ? { 주전: 0.6, 로테이션: 0.8, 벤치: 0.45 } : START_P)[r];
 }
 function tally(c: SeasonComp, m: { mins: number; g: number; a: number }) {
   if (m.mins) {
