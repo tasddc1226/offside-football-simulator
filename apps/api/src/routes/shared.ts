@@ -6,11 +6,13 @@ import { AppError, parseWithAppError, type SchemaLike } from '../errors.js';
 export const nowIso = () => new Date().toISOString();
 
 /** 성공 응답: 봉투에 담아 contracts 스키마로 검사한 뒤 보낸다. Cache-Control은 검사를 통과한 뒤에 붙인다 —
- * 먼저 붙이면 검사 실패(503) 응답에도 공개 캐시 헤더가 따라간다. */
-export function ok(
+ * 먼저 붙이면 검사 실패(503) 응답에도 공개 캐시 헤더가 따라간다. data는 스키마 입력 타입으로 컴파일 때도 맞춘다. */
+type DataSchema = Parameters<typeof successEnvelope>[0];
+// api는 zod에 직접 의존하지 않는다 — z.input<S>와 같은 값을 스키마 타입에서 바로 읽는다.
+export function ok<S extends DataSchema>(
   c: Context<AppEnv>,
-  schema: Parameters<typeof successEnvelope>[0],
-  data: unknown,
+  schema: S,
+  data: S['_zod']['input'],
   status: 200 | 201 = 200,
   cacheControl?: string,
 ) {

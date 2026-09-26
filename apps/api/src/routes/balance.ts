@@ -93,7 +93,7 @@ export function registerBalanceRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     await activateBalance(db, version, active?.version ?? null, viewer.profileId!, now);
     purgeEdge(c, STALE.balanceActivated());
-    const activated = { ...target, status: 'active', activatedAt: now, updatedAt: now };
+    const activated = { ...target, status: 'active' as const, activatedAt: now, updatedAt: now };
     return ok(c, BalanceVersionSchema, activated);
   });
 }
