@@ -3,7 +3,7 @@ import { POS, LAST_PHASE } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
 import { EVENTS } from './events-data.js';
-import { leagueOf, addStat, log, fameEff } from './engine.js';
+import { leagueOf, addStat, log, fameEff, atkOf, creOf } from './engine.js';
 import { BAL } from './balance.js';
 import type { GameState, NatTour } from './types.js';
 
@@ -57,10 +57,8 @@ function simIntl(s: GameState, opp: [string, number], role: 'starter' | 'sub' | 
   const kg = poisson(clamp(1.3 + diff * 0.04, 0.25, 3.2)), og = poisson(clamp(1.1 - diff * 0.04, 0.2, 3.2));
   let g = 0, a = 0;
   if (mins) {
-    const atk = Object.entries(P.atk).reduce((t, [k, w]) => t + s.attrs[k as keyof typeof s.attrs] * (w as number), 0);
-    const cre = s.attrs.pas * 0.7 + s.attrs.dri * 0.3;
-    g = Math.min(kg, poisson(P.goal * Math.exp((atk - opp[1]) / 20) * (mins / 90)));
-    a = Math.min(kg - g, poisson(P.assist * Math.exp((cre - opp[1]) / 20) * (mins / 90)));
+    g = Math.min(kg, poisson(P.goal * Math.exp((atkOf(s) - opp[1]) / 20) * (mins / 90)));
+    a = Math.min(kg - g, poisson(P.assist * Math.exp((creOf(s) - opp[1]) / 20) * (mins / 90)));
   }
   let res = kg > og ? 'W' : kg < og ? 'L' : 'D';
   let pso: string | null = null;

@@ -282,6 +282,15 @@ export const DOMINANCE_KNEE = 14, DOMINANCE_SLOPE = 0.15;
 export const ATTACK_KNEE = 8, ATTACK_SLOPE = 0.3;
 export const attackEdge = (gap: number): number => (gap <= ATTACK_KNEE ? gap : ATTACK_KNEE + (gap - ATTACK_KNEE) * ATTACK_SLOPE);
 export const dominance = (gap: number): number => (gap <= DOMINANCE_KNEE ? gap : DOMINANCE_KNEE + (gap - DOMINANCE_KNEE) * DOMINANCE_SLOPE);
+/** 득점 기대값에 쓰는 공격 능력치(포지션별 가중합). */
+export const atkOf = (s: GameState): number => Object.entries(POS[s.pos].atk).reduce((t, [k, w]) => t + s.attrs[k as AttrKey] * (w as number), 0);
+/** T-10-042: 공격수의 도움은 패스·드리블만이 아니라 슈팅·움직임(공격 능력치)에서도 나온다 — 득점원도 시즌 5~10도움. */
+export const FW_ATTACK_ASSIST = 0.65;
+/** 도움 기대값에 쓰는 창의 능력치. */
+export const creOf = (s: GameState): number => {
+  const cre = s.attrs.pas * 0.7 + s.attrs.dri * 0.3;
+  return s.pos === 'FW' ? cre * (1 - FW_ATTACK_ASSIST) + atkOf(s) * FW_ATTACK_ASSIST : cre;
+};
 /** 득점·도움 기대값 배수. atk는 공격(또는 창의) 능력치, perf는 경기력(평균 대비 OVR 우위 o - avg를 포함)이다. */
 export function scoreBoost(atk: number, o: number, perf: number, avg: number): number {
   return Math.exp(attackEdge(atk - avg) / 20 + (perf + (dominance(o - avg) - (o - avg)) / 10) * 0.2);
@@ -318,8 +327,7 @@ export function simBlock(s: GameState): BlockResult {
   const r: BlockResult = { n, apps: 0, goals: 0, assists: 0, rs: 0, w: 0, d: 0, l: 0, cs: 0, hl: [], injured: false, games: [] };
   const startP = { 주전: 0.92, 로테이션: 0.5, 벤치: 0.12 }[role];
   const subP = { 주전: 0.05, 로테이션: 0.35, 벤치: 0.38 }[role];
-  const atk = Object.entries(P.atk).reduce((t, [k, w]) => t + s.attrs[k as AttrKey] * (w as number), 0);
-  const cre = s.attrs.pas * 0.7 + s.attrs.dri * 0.3;
+  const atk = atkOf(s), cre = creOf(s);
 
   for (let i = 0; i < n; i++) {
     S.played++;
