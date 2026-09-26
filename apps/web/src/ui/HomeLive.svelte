@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-10-030 홈 라이브 현황. 서버에 실제로 올라온 시즌·은퇴 기록으로 "지금 뛰는 중" 숫자와 소식 티커를
-  // 보여 준다(가짜 활동 없음). 30초마다 새로 받고, 티커는 3.5초마다 한 줄씩 올라간다 — 감속 모션이면
+  // 보여 준다(가짜 활동 없음). 1분마다 새로 받고(T-10-045: 폴링은 분 단위 — CLAUDE.md), 티커는 3.5초마다 한 줄씩 올라간다 — 감속 모션이면
   // 움직이지 않고 최신 3줄만, 마우스를 올리거나 포커스가 있거나 일시정지를 누르면 멈춘다.
   import { onMount } from 'svelte';
   import type { LiveEvent, LiveResponse } from '@offside/contracts';
@@ -10,7 +10,7 @@
   import { motionOK } from './motion.js';
   import CountUp from './CountUp.svelte';
 
-  const POLL_MS = 30_000;
+  const POLL_MS = 60_000;
   const STEP_MS = 3_500;
   const VISIBLE = 3;
 

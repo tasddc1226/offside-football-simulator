@@ -4,10 +4,10 @@ import { liveFeed, liveStats } from '../db/repos/live.js';
 import { edgeCached } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
 
-// T-10-030 홈 라이브 현황. 로그인 없이 누구나 읽는다. 홈이 30초마다 다시 묻으므로 엣지에 30초 담아
-// 데이터센터마다 D1을 30초에 한 번만 읽는다.
+// T-10-030 홈 라이브 현황. 로그인 없이 누구나 읽는다. 홈이 1분마다 다시 묻으므로 엣지에 1분 담아
+// 데이터센터마다 D1을 1분에 한 번만 읽는다(T-10-045).
 export const LIVE_PATH = '/v1/live';
-const TTL = 30;
+const TTL = 60;
 
 export function registerLiveRoutes(app: Hono<AppEnv>): void {
   app.get(LIVE_PATH, async (c) => {
