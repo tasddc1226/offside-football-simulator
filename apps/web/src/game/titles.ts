@@ -8,10 +8,10 @@ import { CONT, CUPS, POTY, TOP_SCORER } from './comps.js';
 import { STORIES } from './engine.js';
 import type { GameState } from './types.js';
 import { LEGEND_BANDS, legendBand, type Rarity } from './legend-bands.js';
+export type { Rarity } from './legend-bands.js';
 
 export type TitleCat = 'record' | 'journey' | 'award' | 'trophy' | 'nation' | 'story' | 'fame' | 'legend';
 /** 1 일반 · 2 희귀 · 3 영웅 · 4 전설 */
-export type { Rarity };
 export interface TitleCtx {
   /** 은퇴 때만 넘어오는 레전드 점수. 레전드 등급 칭호는 이 값이 있을 때만 판정한다. */
   score?: number;
@@ -90,7 +90,6 @@ const t = (id: string, name: string, cat: TitleCat, rarity: Rarity, desc: string
 const n = (id: string, name: string, cat: TitleCat, rarity: Rarity, desc: string, get: (s: GameState) => number, target: number): TitleDef =>
   t(id, name, cat, rarity, desc, (s) => get(s) >= target, (s) => cap(get(s), target));
 
-export { legendBand };
 
 export const TITLES: TitleDef[] = [
   // 기록

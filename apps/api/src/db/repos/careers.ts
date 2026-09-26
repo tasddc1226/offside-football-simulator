@@ -198,9 +198,9 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
 }
 
 /** 공개 명예의 전당(목록·상세·공유 링크·홈 라이브 은퇴 소식)에 오르는 은퇴. 짧은 커리어(T-10-032)는 내 선수에만 남는다. */
-export const isPublicRetired = and(eq(careers.status, 'retired'), isNotNull(careers.legendScore), gte(careers.retireAge, HOF_MIN_RETIRE_AGE));
 /** 내 선수 목록은 짧은 커리어도 보여 준다. */
 const isOwnRetired = and(eq(careers.status, 'retired'), isNotNull(careers.legendScore));
+export const isPublicRetired = and(isOwnRetired, gte(careers.retireAge, HOF_MIN_RETIRE_AGE));
 
 const HOF_SORT: Record<HofSort, AnyColumn | SQL> = {
   score: careers.legendScore,

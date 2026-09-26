@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { BRAND_VERSION, CAREER_OG_BANDS, createHeadMarkup } from '../scripts/seo.mjs';
 import { POS } from './game/data.js';
 import { LEGEND_BANDS } from './game/legend-bands.js';
-import { careerShareMeta, injectShareMeta, OG_VERSION, POS_LABEL } from './share-meta.js';
+import { POS_LABEL } from './game/pos-label.js';
+import { careerShareMeta, injectShareMeta, OG_VERSION } from './share-meta.js';
 
 const entry = {
   id: '0f8a3b52-6c1d-4e0a-9b7e-1a2b3c4d5e6f',
@@ -44,7 +45,7 @@ describe('careerShareMeta', () => {
   it('포지션 이름·이미지 버전·등급 이미지가 게임·빌드 설정과 맞다', () => {
     for (const [pos, label] of Object.entries(POS_LABEL)) expect(POS[pos as keyof typeof POS].label).toBe(label);
     expect(OG_VERSION).toBe(BRAND_VERSION);
-    expect(CAREER_OG_BANDS.map(([id]) => id)).toEqual(LEGEND_BANDS.map(([id]) => id));
+    expect(CAREER_OG_BANDS.map(([id, , rarity]) => [id, rarity])).toEqual(LEGEND_BANDS.map(([id, , rarity]) => [id, rarity]));
   });
 });
 

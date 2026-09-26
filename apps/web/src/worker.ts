@@ -27,8 +27,8 @@ const PUBLIC_PATHS = new Set([
 ]);
 // 앱 셸(오프사이드/풀타임 SPA)로 서빙해야 하는 경로. 게임 자체는 `/`에서 로드되고,
 // `/settings`는 구글 OAuth 콜백(`?google=linked|switched|error&reason=...`)이
-// 돌아오는 목적지라 앱 셸로 떨어져야 한다. `/career/<id>`는 T-10-029 은퇴 커리어 공유 링크(보기 전용).
-const APP_PATHS = [/^\/settings\/?$/, SHARE_PATH];
+// 돌아오는 목적지라 앱 셸로 떨어져야 한다. `/career/<id>`(T-10-029 공유 링크)는 아래에서 미리보기 메타를 넣어 따로 내린다.
+const APP_PATHS = [/^\/settings\/?$/];
 
 function withRobots(response: Response, value: string): Response {
   const result = new Response(response.body, response);
@@ -38,15 +38,15 @@ function withRobots(response: Response, value: string): Response {
 
 // T-10-031: 링크 미리보기 봇은 JS를 돌리지 않으므로 공유 링크의 셸 메타를 그 선수 기록으로 바꿔 준다.
 // API가 없거나(로컬·미등록 호스트) 늦거나 실패하면 원래 셸을 그대로 내려 보기 전용 화면은 영향이 없다.
-async function withShareMeta(shell: Response, id: string, url: URL): Promise<Response> {
-  if (!shell.ok) return shell;
+async function withShareMeta(shellP: Promise<Response>, id: string, url: URL): Promise<Response> {
+  // 셸과 선수 기록을 동시에 받는다.
+  const entryP = fetch(`${resolveApiBaseUrl(undefined, url.hostname)}/v1/hof/${id}`, {
+    signal: AbortSignal.timeout(2000),
+    cf: { cacheTtl: 300, cacheEverything: true },
+  } as RequestInit).catch(() => null);
+  const [shell, res] = await Promise.all([shellP, entryP]);
+  if (!shell.ok || !res?.ok) return shell;
   try {
-    const api = resolveApiBaseUrl(undefined, url.hostname);
-    const res = await fetch(`${api}/v1/hof/${id}`, {
-      signal: AbortSignal.timeout(2000),
-      cf: { cacheTtl: 300, cacheEverything: true },
-    } as RequestInit);
-    if (!res.ok) return shell;
     const body = (await res.json()) as { data?: { entry?: PublicHofEntry } };
     if (!body.data?.entry) return shell;
     const meta = careerShareMeta(body.data.entry, url.origin); // 셸 본문을 읽기 전에 — 여기서 실패해도 셸은 그대로 쓸 수 있다.
@@ -80,6 +80,9 @@ export default {
     if (url.pathname === '/version.json' && asset.status === 200) return withCacheControl(asset, 'no-store');
     if (!isPublicPage && !isDiscovery && asset.status !== 404)
       return withRobots(asset, 'noindex, nofollow');
+    const appShell = () => env.ASSETS.fetch(new Request(new URL('/app-shell', url.origin), request));
+    const shareId = asset.status === 404 ? SHARE_PATH.exec(url.pathname)?.[1] : undefined;
+    if (shareId) return withRobots(await withShareMeta(appShell(), shareId, url), 'noindex, nofollow');
     let indexingEnabled = false;
     try {
       const policyUrl = new URL('/seo-policy.json', url.origin);
@@ -113,9 +116,7 @@ export default {
         isPublicPage && indexingEnabled ? 'index, follow' : 'noindex, nofollow',
       );
     }
-    const shell = await env.ASSETS.fetch(new Request(new URL('/app-shell', url.origin), request));
-    const shareId = SHARE_PATH.exec(url.pathname)?.[1];
-    if (shareId) return withRobots(await withShareMeta(shell, shareId, url), 'noindex, nofollow');
+    const shell = await appShell();
     if (APP_PATHS.some((pattern) => pattern.test(url.pathname))) {
       return withRobots(shell, 'noindex, nofollow');
     }

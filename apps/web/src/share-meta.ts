@@ -3,9 +3,7 @@
 // 카드(scripts/seo.mjs CAREER_OG_BANDS)다. 게임 코드를 끌어오지 않게 순수 함수로만 둔다.
 import type { PublicHofEntry } from '@offside/contracts';
 import { legendBand } from './game/legend-bands.js';
-
-/** game/data.ts POS의 label과 같다(share-meta.test.ts가 맞춰 본다). */
-export const POS_LABEL = { FW: '공격수', MF: '미드필더', DF: '수비수', GK: '골키퍼' } as const;
+import { anonName } from './game/pos-label.js';
 
 /** scripts/seo.mjs BRAND_VERSION과 같다(미리보기 이미지 파일명). */
 export const OG_VERSION = 'v6';
@@ -13,7 +11,7 @@ export const OG_VERSION = 'v6';
 export type ShareMeta = { title: string; description: string; image: string; url: string };
 
 export function careerShareMeta(e: PublicHofEntry, origin: string): ShareMeta {
-  const who = e.name ?? `익명의 ${POS_LABEL[e.pos]}${e.number != null ? ` No.${e.number}` : ''}`;
+  const who = e.name ?? anonName(e.pos, e.number);
   const band = legendBand(e.legendScore);
   const club = e.lastClub ? ` · 마지막 소속 ${e.lastClub}` : '';
   return {
