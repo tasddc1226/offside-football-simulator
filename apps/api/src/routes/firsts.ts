@@ -1,5 +1,6 @@
-import { FirstsResponseSchema, successEnvelope } from '@offside/contracts';
+import { FirstsResponseSchema } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
+import { ok } from './shared.js';
 import { ensureFirstsBackfilled, listFirsts, recordCareerFirsts } from '../db/repos/firsts.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
@@ -26,8 +27,7 @@ export function registerFirstsRoutes(app: Hono<AppEnv>): void {
       await ensureFirstsBackfilled(db);
       return { items: await listFirsts(db) };
     });
-    const body = successEnvelope(FirstsResponseSchema).parse({ data, meta: { requestId: c.get('requestId') } });
     c.header('Cache-Control', `public, max-age=${TTL}`);
-    return c.json(body, 200);
+    return ok(c, FirstsResponseSchema, data);
   });
 }

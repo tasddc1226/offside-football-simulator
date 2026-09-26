@@ -4,7 +4,6 @@ import {
   BalanceVersionListSchema,
   BalanceVersionParamSchema,
   BalanceVersionSchema,
-  successEnvelope,
 } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
@@ -19,8 +18,8 @@ import {
 } from '../db/repos/balance.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
-import { envelope, nowIso } from './shared.js';
-import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
+import { ok, readBody, nowIso } from './shared.js';
+import { AppError, parseWithAppError } from '../errors.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 
 // T-10-016 서버 밸런스 설정. 게임은 GET /v1/balance를 앱을 열 때 한 번 받고, 새 버전은 각 커리어의
@@ -28,7 +27,7 @@ import { EDGE, STALE } from '../edgeKeys.js';
 const PUBLIC_TTL = 60;
 
 const versionParam = (c: Context<AppEnv>) => parseWithAppError(BalanceVersionParamSchema, c.req.param('version'));
-const draftInput = (c: Context<AppEnv>) => parseWithAppError(BalanceDraftInputSchema, parseJsonBody(c.get('rawBody') ?? ''));
+const draftInput = (c: Context<AppEnv>) => readBody(c, BalanceDraftInputSchema);
 
 const notFound = () =>
   new AppError({ code: 'VALIDATION_FAILED', status: 404, message: '밸런스 버전을 찾을 수 없습니다.', details: { reason: 'BALANCE_NOT_FOUND' } });
@@ -47,20 +46,20 @@ export function registerBalanceRoutes(app: Hono<AppEnv>): void {
       const active = await getActiveBalance(getDb(c));
       return active ? { version: active.version, values: active.values, activatedAt: active.activatedAt } : { version: 0, values: {}, activatedAt: null };
     });
-    return c.json(successEnvelope(BalanceConfigSchema).parse(envelope(c, data)), 200);
+    return ok(c, BalanceConfigSchema, data);
   });
 
   app.get('/v1/admin/balance', async (c) => {
     await requireAdmin(c);
     const versions = await listBalanceVersions(getDb(c));
-    return c.json(successEnvelope(BalanceVersionListSchema).parse(envelope(c, { versions })), 200);
+    return ok(c, BalanceVersionListSchema, { versions });
   });
 
   app.post('/v1/admin/balance', async (c) => {
     const viewer = await requireAdmin(c);
     const input = draftInput(c);
     const created = await createBalanceDraft(getDb(c), input, viewer.profileId!, nowIso());
-    return c.json(successEnvelope(BalanceVersionSchema).parse(envelope(c, created)), 201);
+    return ok(c, BalanceVersionSchema, created, 201);
   });
 
   app.put('/v1/admin/balance/:version', async (c) => {
@@ -72,7 +71,7 @@ export function registerBalanceRoutes(app: Hono<AppEnv>): void {
       await versionOr404(c, version);
       throw notDraft();
     }
-    return c.json(successEnvelope(BalanceVersionSchema).parse(envelope(c, updated)), 200);
+    return ok(c, BalanceVersionSchema, updated);
   });
 
   app.delete('/v1/admin/balance/:version', async (c) => {
@@ -90,11 +89,11 @@ export function registerBalanceRoutes(app: Hono<AppEnv>): void {
     const viewer = await requireAdmin(c);
     const db = getDb(c);
     const [target, active] = await Promise.all([versionOr404(c, version), getActiveBalance(db)]);
-    if (target.status === 'active') return c.json(successEnvelope(BalanceVersionSchema).parse(envelope(c, target)), 200);
+    if (target.status === 'active') return ok(c, BalanceVersionSchema, target);
     const now = nowIso();
     await activateBalance(db, version, active?.version ?? null, viewer.profileId!, now);
     purgeEdge(c, STALE.balanceActivated());
     const activated = { ...target, status: 'active', activatedAt: now, updatedAt: now };
-    return c.json(successEnvelope(BalanceVersionSchema).parse(envelope(c, activated)), 200);
+    return ok(c, BalanceVersionSchema, activated);
   });
 }

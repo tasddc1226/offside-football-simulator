@@ -1,6 +1,7 @@
-import { LiveResponseSchema, successEnvelope } from '@offside/contracts';
+import { LiveResponseSchema } from '@offside/contracts';
 import { LIVE_POLL_SEC } from '@offside/contracts/polling';
 import type { Hono } from 'hono';
+import { ok } from './shared.js';
 import { liveFeed, liveStats } from '../db/repos/live.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
@@ -18,8 +19,7 @@ export function registerLiveRoutes(app: Hono<AppEnv>): void {
       const [stats, feed] = await Promise.all([liveStats(db, now), liveFeed(db, now)]);
       return { now: new Date(now).toISOString(), stats, feed };
     });
-    const body = successEnvelope(LiveResponseSchema).parse({ data, meta: { requestId: c.get('requestId') } });
     c.header('Cache-Control', `public, max-age=${TTL}`);
-    return c.json(body, 200);
+    return ok(c, LiveResponseSchema, data);
   });
 }

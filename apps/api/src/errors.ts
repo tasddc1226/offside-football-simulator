@@ -31,7 +31,7 @@ export class AppError extends Error {
 /** zod를 직접 의존하지 않고 구조적 타입으로 `safeParse`를 받는다(브리프: 새 의존성 없음). */
 type SafeParseIssue = { path: PropertyKey[]; message: string };
 type SafeParseResult<T> = { success: true; data: T } | { success: false; error: { issues: SafeParseIssue[] } };
-type SchemaLike<T> = { safeParse: (data: unknown) => SafeParseResult<T> };
+export type SchemaLike<T> = { safeParse: (data: unknown) => SafeParseResult<T> };
 
 /** Zod 실패를 AppError(VALIDATION_FAILED)로 바꾼다. 값은 담지 않고 path·message만 담는다. */
 export function parseWithAppError<T>(schema: SchemaLike<T>, data: unknown): T {
