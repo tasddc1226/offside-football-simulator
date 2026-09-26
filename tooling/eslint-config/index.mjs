@@ -32,6 +32,21 @@ export const base = [
   },
 ];
 
+// T-10-049: 타입 정보가 있어야 잡히는 비동기 실수(await 없이 버린 Promise, onclick 등에 넘긴 async 함수,
+// Promise가 아닌 값을 await). .ts 파일에만 켠다 — .svelte는 아래 이유로 비타입 규칙만.
+/** @param {string[]} files 적용할 glob  @param {string} tsconfigRootDir 레포 루트 */
+export const typedConfig = (files, tsconfigRootDir) => [
+  {
+    files,
+    languageOptions: { parserOptions: { projectService: true, tsconfigRootDir } },
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
+      '@typescript-eslint/await-thenable': 'error',
+    },
+  },
+];
+
 // T-10-001: Svelte 5(runes) 소비 패키지가 켤 수 있는 .svelte 린트. 타입 인식(typed) 규칙은 svelte
 // 파일 전체를 프로젝트 tsconfig 그래프에 태워 느려지므로 켜지 않는다 — 스크립트 블록은 base의
 // 비타입 recommended 규칙과 동일한 수준으로만 검사한다.

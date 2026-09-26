@@ -59,6 +59,13 @@ jobs:
           pnpm lint:deps
           pnpm typecheck
           pnpm test
+      # 빌드·번들 크기·마이그레이션 검사는 main에서만 돌던 것 — 머지 전에 잡는다(e2e는 main에서).
+      - name: Build and bundle check
+        if: steps.scope.outputs.code_changed == 'true'
+        run: |
+          pnpm --filter @offside/api db:check
+          pnpm build
+          pnpm --filter @offside/web check:bundle
 
   deploy-staging:
     name: Main checks and staging deploy
