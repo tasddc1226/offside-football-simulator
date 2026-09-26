@@ -30,9 +30,15 @@ if (entryFiles.length === 0) {
   process.exit(1);
 }
 
+// T-10-033: 이벤트 정의는 import 부수효과로 EVENTS에 등록된다. 게임 경로에서 import가 빠지면 정의가
+// 지연 청크(EventDex)로만 가고 일반 플레이에서 이벤트가 안 뜬다 — 모듈마다 첫 이벤트 id로 확인한다.
+// military.ts는 season.ts가 정적으로 import해 공유 청크로 가므로 여기서는 나머지 네 모듈만 본다.
+const EVENT_MARKERS = ['knock', 'rival-1', 'var', 'fw-drought'];
+let entrySource = '';
 let totalGzipBytes = 0;
 for (const file of entryFiles.sort()) {
   const bytes = readFileSync(path.join(distAssetsDir, file));
+  entrySource += bytes.toString('utf8');
   const gzipBytes = gzipSync(bytes).length;
   totalGzipBytes += gzipBytes;
   console.log(`${file}: ${(gzipBytes / 1024).toFixed(2)} KB gzip`);
@@ -43,6 +49,12 @@ console.log(`합계: ${totalKb} KB gzip (예산 ${LIMIT_BYTES / 1024} KB)`);
 
 if (totalGzipBytes > LIMIT_BYTES) {
   console.error(`초기 청크 gzip 합이 ${LIMIT_BYTES / 1024}KB 예산을 초과했다.`);
+  process.exit(1);
+}
+
+const missing = EVENT_MARKERS.filter((id) => !new RegExp(`id:\\s*["'\`]${id}["'\`]`).test(entrySource));
+if (missing.length) {
+  console.error(`초기 청크에 이벤트 정의가 없다(${missing.join(', ')}) — 진입점(main.ts → ui/actions.ts)에서 game/event-registry.js가 정적으로 import되는지 확인하라.`);
   process.exit(1);
 }
 

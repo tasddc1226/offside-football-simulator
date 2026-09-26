@@ -12,6 +12,7 @@ import {
   applyTraining, simBlock, isSafe, rollEvent, resolveChoice, txt, roleOf, STORIES, teamRank, roundRange,
 } from '../game/engine.js';
 import { EVENTS } from '../game/events-data.js';
+import '../game/event-registry.js';
 import { choiceOdds } from '../game/balance.js';
 import { isHiddenEvent } from '../game/dexGroups.js';
 import { markDexSeen } from './dex.js';

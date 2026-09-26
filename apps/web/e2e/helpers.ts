@@ -12,18 +12,20 @@ export async function startCareer(page: Page): Promise<void> {
   await expect(page.locator('.player h1')).toBeVisible();
 }
 
+/** 새 커리어를 만들고 저장본에 patch를 덮어쓴 뒤 다시 불러와 이어하기를 누른다(대기 중인 시트가 있으면 바로 열린다). */
+export async function resumeWithSave(page: Page, patch: Record<string, unknown>): Promise<void> {
+  await startCareer(page);
+  await page.evaluate((patch) => {
+    const g = JSON.parse(localStorage.getItem('ft_save')!);
+    localStorage.setItem('ft_save', JSON.stringify(Object.assign(g, patch)));
+  }, patch);
+  await page.reload();
+  await page.locator('[data-act="continue"]').click();
+}
+
 /** T-10-029 새 커리어를 고교 첫 시즌 직후(이적 시장 대기) 저장본으로 만들고 이어하기로 이적 시장을 연다. */
 export async function openMarket(page: Page, age?: number): Promise<void> {
-  await startCareer(page);
-  await page.evaluate((age) => {
-    const g = JSON.parse(localStorage.getItem('ft_save')!);
-    g.pending = { type: 'market', res: null, m: null };
-    if (age) g.age = age;
-    localStorage.setItem('ft_save', JSON.stringify(g));
-  }, age);
-  await page.reload();
-  // 이어하기를 누르면 대기 중인 이적 시장이 바로 열린다.
-  await page.locator('[data-act="continue"]').click();
+  await resumeWithSave(page, { pending: { type: 'market', res: null, m: null }, ...(age ? { age } : {}) });
 }
 
 /** 이적 시장에서 바로 은퇴한다(은퇴 크레딧이 시작된다). age를 주면 그 나이로 바꿔 은퇴한다 — 고교 선수라
