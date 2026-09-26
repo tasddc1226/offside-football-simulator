@@ -131,6 +131,16 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
     expect((await read(ctx)).stats.seasonsToday).toBe(2);
   });
 
+  it('지난 시즌을 다시 보내도 피드엔 그 선수의 마지막 시즌이 남는다', async () => {
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2026`, seasonBody({ goals: 1 }));
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2027`, seasonBody({ goals: 2 }));
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2026`, seasonBody({ goals: 1 }));
+    const data = await read(ctx);
+    expect(data.feed).toHaveLength(1);
+    expect(data.feed[0]).toMatchObject({ kind: 'season', goals: 2, first: false });
+    expect(data.stats).toMatchObject({ seasonsToday: 2, newToday: 1 });
+  });
+
   it('최근 1시간이 한산하면 기간을 넓혀 채우고, 7일보다 오래된 기록은 빠진다', async () => {
     for (const [i, id] of [A, B].entries()) {
       await putJson(ctx, cookie, `/v1/careers/${id}/seasons/2026`, seasonBody());
