@@ -7,6 +7,15 @@ const BRAND_SOURCE = fileURLToPath(
   new URL('../brand/offside-app-icon-fulltime-v6.svg', import.meta.url),
 );
 export const BRAND_VERSION = 'v6';
+// T-10-031 공유 링크(/career/<id>) 미리보기 카드 — 레전드 등급(src/game/legend-bands.ts LEGEND_BANDS)마다 한 장.
+// CI에 한글 폰트가 없을 수 있어 이미지 글자는 영어로 두고, 선수 이름·기록은 워커가 og:title/description에 넣는다.
+export const CAREER_OG_BANDS = [
+  ['lg_goat', 'GREATEST OF ALL TIME', 4],
+  ['lg_world', 'WORLD CLASS LEGEND', 4],
+  ['lg_club', 'CLUB LEGEND', 3],
+  ['lg_pro', 'TRUE PROFESSIONAL', 2],
+  ['lg_plain', 'FULL TIME CAREER', 1],
+];
 const BRAND_BG = '#0D1511';
 
 export const PUBLIC_PAGES = {
@@ -279,6 +288,28 @@ async function createBrandAssets(outputDirectory) {
     .png()
     .toFile(ogPath);
   await writeFile(join(outputDirectory, 'og-offside.png'), await readFile(ogPath));
+  const flag = await sharp(brandSvg).resize(96, 96).png().toBuffer();
+  for (const [id, label, rarity] of CAREER_OG_BANDS) {
+    const stars = '★'.repeat(rarity) + '☆'.repeat(4 - rarity);
+    await sharp({ create: { width: 1200, height: 630, channels: 4, background: BRAND_BG } })
+      .composite([
+        { input: flag, left: 84, top: 72 },
+        {
+          input: Buffer.from(
+            `<svg width="1200" height="630"><text x="200" y="136" fill="#E9EEE8" font-family="Arial,sans-serif" font-size="48" font-weight="800">OFFSIDE</text>` +
+              `<text x="84" y="300" fill="#9FB0A4" font-family="Arial,sans-serif" font-size="34" letter-spacing="6">RETIRED · HALL OF FAME</text>` +
+              `<text x="84" y="392" fill="#F2B632" font-family="Arial,sans-serif" font-size="76" font-weight="800">${label}</text>` +
+              `<text x="84" y="470" fill="#F2B632" font-family="Arial,sans-serif" font-size="44">${stars}</text>` +
+              `<rect x="84" y="522" width="1032" height="2" fill="#2A3A30"/>` +
+              `<text x="84" y="572" fill="#9FB0A4" font-family="Arial,sans-serif" font-size="30">offside-lab.com · FOOTBALL CAREER SIMULATOR</text></svg>`,
+          ),
+          left: 0,
+          top: 0,
+        },
+      ])
+      .png()
+      .toFile(join(outputDirectory, `og-career-${id}-${BRAND_VERSION}.png`));
+  }
   await writeFile(
     join(outputDirectory, 'site.webmanifest'),
     JSON.stringify({

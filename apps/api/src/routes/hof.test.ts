@@ -101,6 +101,15 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect(entries[0]?.title).toBeNull();
   });
 
+  it('30세 전에 은퇴한 짧은 커리어는 목록·상세(공유 링크)에 오르지 않는다 (T-10-032)', async () => {
+    await put(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, { ...summary, retireAge: 29, publicName: null, snapshot });
+    expect((await createApp().request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).status).toBe(404);
+    const list = successEnvelope(HofListResponseSchema).parse(await (await createApp().request('/v1/hof', {}, ctx.env)).json()).data;
+    expect(list).toEqual({ entries: [], total: 0 });
+    await put(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, { ...summary, retireAge: 30, publicName: null, snapshot });
+    expect((await createApp().request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).status).toBe(200);
+  });
+
   it('은퇴하지 않은 커리어·없는 ID는 404', async () => {
     expect((await createApp().request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).status).toBe(404);
     const { entries } = successEnvelope(HofListResponseSchema).parse(await (await createApp().request('/v1/hof', {}, ctx.env)).json()).data;

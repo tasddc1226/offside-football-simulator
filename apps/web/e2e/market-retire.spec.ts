@@ -11,6 +11,8 @@ test('이적 시장에서 언제든 은퇴할 수 있다 — 이른 은퇴는 �
   const retire = sheet.getByRole('button', { name: '은퇴하기' });
   await retire.click();
   await expect(sheet).toContainText('정말 은퇴하시겠어요?');
+  // T-10-032: 만 30세 전 은퇴는 짧은 커리어라 전체 명예의 전당에 오르지 않는다고 미리 알린다.
+  await expect(sheet).toContainText('짧은 커리어는 전체 명예의 전당과 공유 링크에 오르지 않고');
   await sheet.getByRole('button', { name: '조금 더 뛴다' }).click();
   await expect(sheet.locator('h2')).toHaveText('다음 시즌, 어디서 뛸까요?');
 
@@ -27,6 +29,20 @@ test('이적 시장에서 언제든 은퇴할 수 있다 — 이른 은퇴는 �
   await expect(page.locator('[data-act="credits-skip"]')).toHaveCount(0);
   await expect(page.locator('[data-credit="career"]')).toBeVisible();
   await expect(page.locator('[data-act="new"]')).toHaveText(/새 커리어 킥오프/);
+  // 이름 공개·공유 카드 대신 '내 선수에만 남는 기록' 안내.
+  await expect(page.locator('[data-share="short"]')).toContainText('내 선수에만 남는 기록');
+  await expect(page.locator('[data-act="hof-public"]')).toHaveCount(0);
+});
+
+test('만 30세가 넘어 은퇴하면 명예의 전당에 기록된다고 묻고, 이름 공개 카드가 나온다 (T-10-032)', async ({ page }) => {
+  await openMarket(page, 34);
+  const sheet = page.locator('#sheet');
+  await sheet.getByRole('button', { name: '은퇴하기' }).click();
+  await expect(sheet).toContainText('명예의 전당에 기록되고');
+  await sheet.getByRole('button', { name: '은퇴한다' }).click();
+  await page.locator('[data-act="credits-skip"]').click();
+  await expect(page.locator('[data-act="hof-public"]')).toBeVisible();
+  await expect(page.locator('[data-share="short"]')).toHaveCount(0);
 });
 
 test('은퇴 크레딧은 끝까지 흘러가면 마지막에 다음 버튼이 올라온다', async ({ page }) => {

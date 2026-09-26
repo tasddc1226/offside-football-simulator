@@ -245,10 +245,10 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
     await ctx.dispose();
   });
 
-  async function retire(cookie: string, careerId: string, legendScore: number) {
+  async function retire(cookie: string, careerId: string, legendScore: number, retireAge?: number) {
     const app = createApp();
     expect((await app.request(`/v1/careers/${careerId}/seasons/2026`, jsonInit({ method: 'PUT', body: seasonBody(), cookie }), ctx.env)).status).toBe(200);
-    const body = { ...retirementBody(), legendScore };
+    const body = { ...retirementBody(), legendScore, ...(retireAge ? { retireAge } : {}) };
     expect((await app.request(`/v1/careers/${careerId}/retirement`, jsonInit({ method: 'PUT', body, cookie }), ctx.env)).status).toBe(200);
   }
   async function mine(cookie?: string) {
@@ -276,7 +276,7 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
     const low = '11111111-1111-4111-8111-111111111111';
     const high = '22222222-2222-4222-8222-222222222222';
     await retire(me.cookie, low, 100);
-    await retire(me.cookie, high, 500);
+    await retire(me.cookie, high, 500, 22); // 짧은 커리어도 내 선수에는 남는다(T-10-032).
     await retire(other.cookie, '33333333-3333-4333-8333-333333333333', 900);
     // 은퇴하지 않은 커리어는 빠진다.
     const app = createApp();

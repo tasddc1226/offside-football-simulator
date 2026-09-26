@@ -13,21 +13,23 @@ export async function startCareer(page: Page): Promise<void> {
 }
 
 /** T-10-029 새 커리어를 고교 첫 시즌 직후(이적 시장 대기) 저장본으로 만들고 이어하기로 이적 시장을 연다. */
-export async function openMarket(page: Page): Promise<void> {
+export async function openMarket(page: Page, age?: number): Promise<void> {
   await startCareer(page);
-  await page.evaluate(() => {
+  await page.evaluate((age) => {
     const g = JSON.parse(localStorage.getItem('ft_save')!);
     g.pending = { type: 'market', res: null, m: null };
+    if (age) g.age = age;
     localStorage.setItem('ft_save', JSON.stringify(g));
-  });
+  }, age);
   await page.reload();
   // 이어하기를 누르면 대기 중인 이적 시장이 바로 열린다.
   await page.locator('[data-act="continue"]').click();
 }
 
-/** 이적 시장에서 바로 은퇴한다(은퇴 크레딧이 시작된다). */
-export async function retireFromMarket(page: Page): Promise<void> {
-  await openMarket(page);
+/** 이적 시장에서 바로 은퇴한다(은퇴 크레딧이 시작된다). age를 주면 그 나이로 바꿔 은퇴한다 — 고교 선수라
+ * 몇 살이든 은퇴할 때가 아니어서 한 번 더 묻는다. 만 30세 전이면 짧은 커리어(T-10-032)다. */
+export async function retireFromMarket(page: Page, age?: number): Promise<void> {
+  await openMarket(page, age);
   const sheet = page.locator('#sheet');
   await sheet.getByRole('button', { name: '은퇴하기' }).click();
   await sheet.getByRole('button', { name: '은퇴한다' }).click();

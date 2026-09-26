@@ -1,7 +1,8 @@
 import type { LiveEvent, LiveStats } from '@offside/contracts';
-import { and, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { careers, careerSeasons } from '../schema.js';
+import { isPublicRetired } from './careers.js';
 import { kstDays } from './admin.js';
 import { honorsOf } from './firsts.js';
 
@@ -70,7 +71,7 @@ export async function liveFeed(db: Db, nowMs: number): Promise<LiveEvent[]> {
         lastClub: careers.lastClub,
       })
       .from(careers)
-      .where(and(eq(careers.status, 'retired'), isNotNull(careers.legendScore), gte(careers.retiredAt, since)))
+      .where(and(isPublicRetired, gte(careers.retiredAt, since)))
       .orderBy(desc(careers.retiredAt))
       .limit(FEED_MAX),
   ]);

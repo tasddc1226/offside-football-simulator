@@ -3,8 +3,7 @@
   import { appState } from './state.svelte.js';
   import Topbar from './Topbar.svelte';
   import LegendReport from './LegendReport.svelte';
-  import PublishCard from './PublishCard.svelte';
-  import ShareCard from './ShareCard.svelte';
+  import OwnHofCards from './OwnHofCards.svelte';
 
   const v = $derived(appState.legend);
 </script>
@@ -14,6 +13,6 @@
   <button class="btn btn-block" data-act="hof-back" onclick={() => (appState.screen = appState.legendBack)}>← 명예의 전당</button>
   {#if v}
     <LegendReport {v} />
-    {#if v.own?.id}<PublishCard h={v.own} /><ShareCard h={v.own} />{/if}
+    {#if v.own?.id}<OwnHofCards h={v.own} />{/if}
   {/if}
 </div>
