@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { appShellPlugin } from './scripts/app-shell.mjs';
 import { resolveSeoConfig, seoPlugin } from './scripts/seo.mjs';
 
 export default defineConfig(({ mode }) => {
@@ -21,8 +22,9 @@ export default defineConfig(({ mode }) => {
     },
   };
 
+  const define = { __APP_VERSION__: JSON.stringify(version) };
   return {
-    plugins: [svelte(), seoPlugin(seoConfig), versionJson],
-    define: { __APP_VERSION__: JSON.stringify(version) },
+    plugins: [svelte(), appShellPlugin({ define }), seoPlugin(seoConfig), versionJson],
+    define,
   };
 });

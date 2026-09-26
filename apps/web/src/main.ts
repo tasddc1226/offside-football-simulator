@@ -1,4 +1,4 @@
-import { mount } from 'svelte';
+import { hydrate, mount } from 'svelte';
 import './style.css';
 import App from './ui/App.svelte';
 import Sheet from './ui/Sheet.svelte';
@@ -19,10 +19,10 @@ handleOAuthReturn();
 routeSharedCareer();
 syncBalance();
 
-// T-10-004: index.html의 정적 홈 히어로(첫 페인트용)와 noscript를 걷어 내고 앱을 마운트한다.
-const appEl = document.getElementById('app')!;
-appEl.textContent = '';
-mount(App, { target: appEl });
+// T-10-041: index.html의 첫 화면은 빌드 때 넣은 App 서버 렌더 결과다(scripts/app-shell.mjs). 지우고 다시
+// 그리지 않고 hydrate로 이어받아야 첫 페인트의 제목이 LCP로 남는다. 셸이 없거나(app-shell.html) 상태가 달라도
+// Svelte가 비우고 새로 그리거나 다른 갈래만 바꿔 복구한다.
+hydrate(App, { target: document.getElementById('app')! });
 
 // index.html의 정적 `<div id="modal" ...><div class="sheet" id="sheet">...</div></div>`는 SEO
 // 프리렌더 스크립트가 `#app` 뒤에 이어지는 `#modal`을 찾는 정규식 대상일 뿐, 실제 시트 마크업은

@@ -39,23 +39,9 @@
           <p><a href="/guide/">게임 가이드</a> · <a href="/faq/">자주 묻는 질문</a></p>
         </div>
       </noscript>
-      <!-- T-10-004: 첫 화면(홈 히어로)을 JS 실행 전에 그려 FCP/LCP를 앞당긴다. 부팅은 항상 홈에서
-           시작하고 main.ts가 마운트 직전에 #app을 비우므로, Home.svelte·Topbar.svelte와 같은 마크업을
-           유지해야 레이아웃 이동이 없다(src/boot-shell.test.ts가 문구 일치를 검사한다). -->
-      <div class="wrap">
-        <header class="topbar">
-          <img class="badge" src="/brand/offside-flag-v6-64.png" alt="" width="38" height="38" />
-          <div class="brand"><small>풀타임: 휘슬이 울릴 때까지</small><b>오프사이드</b></div>
-          <div class="spacer"></div>
-        </header>
-        <section class="hero-home">
-          <div class="chalk"></div>
-          <div class="eyebrow">Kick-off · 0′</div>
-          <h1>당신의 90분이<br />지금 시작됩니다</h1>
-          <p>고교 3학년의 킥오프부터 은퇴의 종료 휘슬까지. 선택과 확률이 한 선수의 커리어를 만듭니다.</p>
-          <button class="btn btn-accent btn-block" type="button">새 커리어 킥오프 →</button>
-        </section>
-      </div>
+      <!-- T-10-041: 빌드 때 scripts/app-shell.mjs가 첫 화면(홈)의 Svelte 서버 렌더 결과로 바꾸고, main.ts가
+           hydrate로 이어받는다(첫 페인트 노드를 다시 그리지 않는다). -->
+      <!-- app-shell -->
     </div>
     <div id="modal" class="modal" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
