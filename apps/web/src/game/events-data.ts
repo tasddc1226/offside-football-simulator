@@ -4,3 +4,6 @@
 import type { EventDef } from './types.js';
 
 export const EVENTS: EventDef[] = [];
+
+/** id로 이벤트 정의를 찾는다. */
+export const eventById = (id: string): EventDef | undefined => EVENTS.find((e) => e.id === id);

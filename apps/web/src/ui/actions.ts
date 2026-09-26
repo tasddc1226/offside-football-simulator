@@ -10,7 +10,7 @@ import {
   isSafe, resolveChoice, txt, roleOf, STORIES, teamRank, roundRange,
 } from '../game/engine.js';
 import { playPhase } from '../game/turn.js';
-import { EVENTS } from '../game/events-data.js';
+import { eventById } from '../game/events-data.js';
 import '../game/event-registry.js';
 import { choiceOdds } from '../game/balance.js';
 import { isHiddenEvent } from '../game/dexGroups.js';
@@ -118,7 +118,7 @@ export function nextPending() {
 
 function showEvent(id: string) {
   const s = appState.G!;
-  const ev = EVENTS.find((e) => e.id === id)!;
+  const ev = eventById(id)!;
   showSheet({
     kind: 'event',
     eyebrow: `Event · ${s.year} ${PHASES[Math.max(0, s.phase - 1)]}`,
@@ -140,7 +140,7 @@ export async function chooseEvent(i: number) {
   const s = appState.G,
     p = s.pending;
   if (p?.type !== 'event') return;
-  const ev = EVENTS.find((e) => e.id === p.id)!,
+  const ev = eventById(p.id)!,
     c = ev.choices[i]!,
     label = txt(c.label, s);
   const r = resolveChoice(s, p.id, i);

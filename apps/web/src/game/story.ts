@@ -1,5 +1,5 @@
 import { LAST_PHASE } from './data.js';
-import { EVENTS } from './events-data.js';
+import { eventById } from './events-data.js';
 import type { GameState, StoryState } from './types.js';
 import { log } from './stats.js';
 
@@ -41,7 +41,7 @@ export function endStory(s: GameState, key: string, ending: string) {
   s.storyLog = s.storyLog || [];
   s.storyLog.push({ year: s.year, key, name: STORIES[key]!.name, ending });
   s.chains = (s.chains || []).filter((c) => {
-    const e = EVENTS.find((x) => x.id === c.id);
+    const e = eventById(c.id);
     return !e || e.story !== key;
   });
   log(s, `[스토리 완결] ${STORIES[key]!.name} · ${ending}`, 'big', Math.max(0, s.phase - 1));

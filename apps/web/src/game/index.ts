@@ -4,7 +4,7 @@ export * from './data.js';
 export * from './rng.js';
 export * from './attributes.js';
 export * from './engine.js';
-export { EVENTS } from './events-data.js';
+export { EVENTS, eventById } from './events-data.js';
 import './event-registry.js';
 export * from './military.js';
 export * from './realevents.js';

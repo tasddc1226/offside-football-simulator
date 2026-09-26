@@ -2,7 +2,7 @@
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
   import { PHASES, LAST_PHASE } from '../../game/data.js';
   import { teamRank, roundRange, TRAININGS, trainingLabel, trainingDesc, STORIES, turnNo } from '../../game/engine.js';
-  import { EVENTS } from '../../game/events-data.js';
+  import { eventById } from '../../game/events-data.js';
   import type { GameState } from '../../game/types.js';
   import { save, seasonLabel } from '../helpers.js';
   import { appState } from '../state.svelte.js';
@@ -32,7 +32,7 @@
 
   function waitText(k: string): string {
     const c = (s.chains || []).find((x) => {
-      const e = EVENTS.find((y) => y.id === x.id);
+      const e = eventById(x.id);
       return e && e.story === k;
     });
     if (!c) return '';
