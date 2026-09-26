@@ -212,7 +212,8 @@ function showSeasonEnd(p: { res: ReturnType<typeof endSeason> }) {
   const { rec, trophies, awards, notes, gala = [], tours = [], miles = [], titles = [] } = p.res;
   const s = appState.G!;
   const [col, colLabel] = s.pos === 'GK' || s.pos === 'DF' ? [rec.cs, '무실점'] : [rec.assists, '도움'];
-  const idx = s.career.indexOf(rec);
+  // T-10-034: indexOf(rec)는 $state 프록시라 늘 -1이었다(이적 팬 반응이 안 나옴) — 연도로 찾는다.
+  const idx = s.career.findIndex((r) => r.year === rec.year);
   const prev = idx > 0 ? s.career[idx - 1] : null;
   const fans = pickFanLines(s, rec, {
     gotTrophy: trophies.length > 0,

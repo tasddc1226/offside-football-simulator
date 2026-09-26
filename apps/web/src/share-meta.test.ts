@@ -63,4 +63,13 @@ describe('injectShareMeta', () => {
     expect(html.match(/og:url/g)).toHaveLength(1);
     expect(html).toContain('noindex');
   });
+
+  // T-10-034: 치환 문자열로 넣으면 이름 속 `$'`·`$&`가 문서 나머지를 제목 안으로 끌어왔다.
+  it('이름에 $ 치환 패턴이 있어도 그대로 들어간다', () => {
+    const html = injectShareMeta(shell, careerShareMeta({ ...entry, name: "A$'B$&C$1" } as PublicHofEntry, 'https://offside-lab.com'));
+    expect(html).toContain("<title>A$'B$&amp;C$1 · ");
+    expect(html).toContain(`<meta property="og:title" content="A$'B$&amp;C$1 · `);
+    expect(html.match(/<title>/g)).toHaveLength(1);
+    expect(html.length).toBeLessThan(shell.length + 1000);
+  });
 });

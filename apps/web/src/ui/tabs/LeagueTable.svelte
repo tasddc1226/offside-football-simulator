@@ -15,7 +15,7 @@
     const out: ({ gap: true; key: string } | { gap: false; key: string; rank: number; r: (typeof rows)[number] })[] = [];
     rows.forEach((r, i) => {
       const rank = i + 1;
-      if (full || keep(rank)) out.push({ gap: false, key: r.name, rank, r });
+      if (full || keep(rank)) out.push({ gap: false, key: `row-${rank}`, rank, r }); // 구단 이름은 유저가 겹치게 바꿀 수 있다(T-10-034).
       else if (!out.at(-1)?.gap) out.push({ gap: true, key: `gap-${rank}` });
     });
     return out;

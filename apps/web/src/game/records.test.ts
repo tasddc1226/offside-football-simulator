@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+// @ts-expect-error -- $state가 쓰는 Svelte 내부 proxy(). 공개 타입 선언이 없다.
+import { proxy } from 'svelte/internal/client';
 import { newGame } from './engine.js';
 import { createRng, setActiveRng } from './rng.js';
 import { detectCareerHighs, nextMilestones } from './records.js';
-import type { CareerRecord } from './types.js';
+import type { CareerRecord, GameState } from './types.js';
 
 function makeRec(over: Partial<CareerRecord>): CareerRecord {
   return {
@@ -40,6 +42,17 @@ describe('detectCareerHighs', () => {
     const rec2 = makeRec({ year: 2027, cs: 9 });
     df.career.push(rec2);
     expect(detectCareerHighs(df, rec2)).toContain('cs');
+  });
+
+  // T-10-034: 앱은 게임 상태를 Svelte $state(깊은 프록시)로 들고 있다 — push된 원소가 rec과 다른 객체가 된다.
+  it('Svelte $state 프록시로 감싼 상태에서도 CH를 잡는다', () => {
+    setActiveRng(createRng(1));
+    const app = proxy({ G: null as GameState | null });
+    app.G = newGame({ name: 'a', number: 1, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, 1);
+    app.G.career.push(makeRec({ year: 2026, goals: 5 }));
+    const rec2 = makeRec({ year: 2027, goals: 12 });
+    app.G.career.push(rec2);
+    expect(detectCareerHighs(app.G, rec2)).toContain('goals');
   });
 });
 

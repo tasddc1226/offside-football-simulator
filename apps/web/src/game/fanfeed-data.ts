@@ -7,7 +7,9 @@ export type FanBucket =
   | 'goals_high' | 'assists_high' | 'cs_high'
   | 'rank_champion' | 'rank_mid' | 'rank_low'
   | 'role_main' | 'role_bench'
-  | 'trophy' | 'injury' | 'transfer' | 'milestone';
+  | 'trophy' | 'injury' | 'transfer' | 'milestone'
+  // T-10-034: 성적과 무관한 응원. 맞는 버킷이 모자랄 때 채우는 용도로만 쓴다(사실을 주장하지 않는다).
+  | 'general';
 
 export const FAN_LINES: Record<FanBucket, string[]> = {
   rating_high: [
@@ -98,6 +100,14 @@ export const FAN_LINES: Record<FanBucket, string[]> = {
     '이적 소식에 팬들 반응이 뜨겁던데.',
     '새로운 도전 응원한다, 잘 적응하길.',
     '떠나는 건 아쉽지만 더 큰 무대로 가는 거니까.',
+  ],
+  general: [
+    '올 시즌도 끝까지 뛰어줘서 고맙다.',
+    '다음 시즌 유니폼은 이 선수 이름으로 산다.',
+    '경기장 가면 이 선수 이름부터 찾게 돼.',
+    '꾸준히 성장하는 과정을 보는 재미가 있다.',
+    '비시즌 동안 몸 잘 만들어서 돌아와.',
+    '어디서 뛰든 응원은 계속된다.',
   ],
   milestone: [
     '기록 하나 또 새로 썼네, 대단하다.',

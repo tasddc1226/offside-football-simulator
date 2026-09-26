@@ -43,28 +43,22 @@ function applicableBuckets(s: GameState, rec: CareerRecord, ctx: FanFeedContext)
 }
 
 /** 이번 시즌 성적에 맞는 팬 반응 3~5줄을 고른다. 항상 같은 입력에 같은 결과(결정적). */
-const ALL_BUCKETS = Object.keys(FAN_LINES) as FanBucket[];
-
 export function pickFanLines(s: GameState, rec: CareerRecord, ctx: FanFeedContext, min = 3, max = 5): string[] {
   const buckets = new Set(applicableBuckets(s, rec, ctx));
   const seed = `${s.cid}:${rec.year}`;
-  // 성적에 맞는 버킷이 min개보다 적으면(예: 평범한 시즌), 나머지는 결정적 해시 순서로 일반
-  // 버킷(role_main/rank_mid 등)을 채워 항상 3~5줄이 나오게 한다.
-  if (buckets.size < min) {
-    const filler = ALL_BUCKETS
-      .filter((b) => !buckets.has(b))
-      .map((b) => ({ b, k: hashStr(seed + '/fill/' + b) }))
-      .sort((x, y) => x.k - y.k);
-    for (const { b } of filler) {
-      if (buckets.size >= min) break;
-      buckets.add(b);
-    }
-  }
   // 버킷이 max보다 많으면 해시로 안정적인 부분집합을 고른다(같은 입력엔 항상 같은 결과).
   const ordered = [...buckets]
     .map((b) => ({ b, k: hashStr(seed + '/order/' + b) }))
     .sort((x, y) => x.k - y.k)
     .map((x) => x.b);
-  const chosen = ordered.slice(0, Math.max(min, Math.min(max, ordered.length)));
-  return chosen.map((b) => pickLine(seed, b));
+  const lines = ordered.slice(0, max).map((b) => pickLine(seed, b));
+  // 성적에 맞는 버킷이 min개보다 적으면(예: 평범한 시즌) 성적과 무관한 응원(general)으로 채운다.
+  // T-10-034: 예전엔 아무 버킷에서나 채워 평범한 시즌에도 "우승이라니…", "부상 소식…"이 섞였다.
+  if (lines.length < min) {
+    const general = FAN_LINES.general
+      .map((line, i) => ({ line, k: hashStr(`${seed}/general/${i}`) }))
+      .sort((x, y) => x.k - y.k);
+    for (const { line } of general.slice(0, min - lines.length)) lines.push(line);
+  }
+  return lines;
 }

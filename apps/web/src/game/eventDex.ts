@@ -6,7 +6,7 @@ import { ATTR_KEYS, ATTR_LABEL, CLUBS, LEAGUES, POS, TRAITS, TYPES, type AttrKey
 import { initSubs, spreadAttr, syncFace } from './attributes.js';
 import { STORIES, isSafe, leagueOf, newGame, txt } from './engine.js';
 import { EVENTS } from './events-data.js';
-import { choiceOdds } from './balance.js';
+import { BAL, choiceOdds } from './balance.js';
 import { groupOf, posOf, type DexGroup } from './dexGroups.js';
 import { createRng, getActiveRng, setActiveRng } from './rng.js';
 import type { Choice, EventDef, GameState } from './types.js';
@@ -236,14 +236,17 @@ function withPastStages(ev: EventDef, states: GameState[], seed: number): GameSt
   return states;
 }
 
-/** 게임 RNG를 잠시 다른 것으로 바꿔 계산한다 — 진행 중인 커리어의 난수 흐름을 건드리지 않는다. */
+/** 게임 RNG를 잠시 다른 것으로 바꿔 계산한다 — 진행 중인 커리어의 난수 흐름을 건드리지 않는다.
+ * T-10-034: 표본 선수의 newGame이 전역 BAL을 최신 밸런스로 바꾸므로 커리어 값도 되돌린다. */
 function sandboxed<T>(fn: () => T): T {
   const prev = getActiveRng();
+  const bal = { ...BAL };
   setActiveRng(createRng(20260925));
   try {
     return fn();
   } finally {
     setActiveRng(prev);
+    Object.assign(BAL, bal);
   }
 }
 

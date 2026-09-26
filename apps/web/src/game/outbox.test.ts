@@ -23,6 +23,9 @@ const seasonBody = {
   events: [],
 };
 
+const ok = () => new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 });
+const queue = () => JSON.parse(localStorage.getItem('ft_outbox') ?? '[]') as unknown[];
+
 beforeEach(() => {
   (globalThis as unknown as { localStorage: MemoryStorage }).localStorage = new MemoryStorage();
 });
@@ -69,8 +72,42 @@ describe('outbox', () => {
   });
 });
 
+describe('T-10-034 전송 중 enqueue', () => {
+
+  it('동기 루프로 여러 시즌을 넣어도 모두 보내고 큐를 비운다(이 계정으로 이어서 기록)', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(ok()));
+    vi.stubGlobal('fetch', fetchMock);
+    const { enqueueSeason, flushOutbox } = await import('./outbox.js');
+    for (const y of [2026, 2027, 2028, 2029]) enqueueSeason('66666666-6666-6666-6666-666666666666', y, seasonBody);
+    await flushOutbox();
+    const puts = fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PUT').map(([url]) => String(url));
+    expect(puts.map((u) => u.split('/').pop())).toEqual(['2026', '2027', '2028', '2029']);
+    expect(queue()).toEqual([]);
+  });
+
+  it('PUT이 진행 중일 때 들어온 은퇴 기록이 지워지지 않고 이어서 전송된다', async () => {
+    let release!: () => void;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(ok()) // GET /v1/profile
+      .mockImplementationOnce(() => new Promise<Response>((r) => (release = () => r(ok())))) // 시즌 PUT(대기)
+      .mockImplementation(() => Promise.resolve(ok()));
+    vi.stubGlobal('fetch', fetchMock);
+    const { enqueueSeason, enqueueRetirement, flushOutbox } = await import('./outbox.js');
+    enqueueSeason('77777777-7777-7777-7777-777777777777', 2026, seasonBody);
+    await new Promise((r) => setTimeout(r, 0));
+    const summary = { retireAge: 34, peak: 80, legendScore: 300, apps: 1, goals: 1, assists: 1, trophies: 0, awards: 0, caps: 0, ballon: 0, lastClub: 'FC' };
+    enqueueRetirement('77777777-7777-7777-7777-777777777777', summary);
+    const waiting = flushOutbox(); // 진행 중인 회차 + 다시 도는 회차까지 기다린다.
+    release();
+    await waiting;
+    const urls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(urls.at(-1)).toMatch(/\/retirement$/);
+    expect(queue()).toEqual([]);
+  });
+});
+
 describe('T-10-013 소유권 충돌', () => {
-  const ok = () => new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 });
   const conflict = (code: string) => new Response(JSON.stringify({ error: { code, message: 'x', retryable: false } }), { status: 409 });
   const flush = async () => {
     await new Promise((r) => setTimeout(r, 0));
@@ -90,7 +127,7 @@ describe('T-10-013 소유권 충돌', () => {
     const { enqueueSeason } = await import('./outbox.js');
     enqueueSeason('33333333-3333-3333-3333-333333333333', 2027, seasonBody);
     await flush();
-    expect(JSON.parse(localStorage.getItem('ft_outbox') ?? '[]')).toEqual([]);
+    expect(queue()).toEqual([]);
     expect(dispatched()).toEqual([
       ['offside:owner-conflict', [{ kind: 'season', careerId: '33333333-3333-3333-3333-333333333333', year: 2027, body: seasonBody }]],
     ]);

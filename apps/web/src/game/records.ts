@@ -12,11 +12,13 @@ export function chLabel(k: string): string {
   return CH_LABEL[k as ChKey] ?? k;
 }
 
-/** 방금 push된 rec을 제외한 이전 시즌들 중 각 지표의 최고값을 구해, rec이 그 값을 경신했는지 본다.
- * 최초 시즌(이전 기록이 0개)은 비교 대상이 없으므로 CH로 치지 않는다(항상 "경신"이 되어 의미가
- * 없어지는 것을 막는다). */
+/** 방금 push된 rec(=s.career의 마지막 원소)을 제외한 이전 시즌들 중 각 지표의 최고값을 구해, rec이
+ * 그 값을 경신했는지 본다. 최초 시즌(이전 기록이 0개)은 비교 대상이 없으므로 CH로 치지 않는다(항상
+ * "경신"이 되어 의미가 없어지는 것을 막는다).
+ * T-10-034: `r !== rec` 같은 객체 동일성으로 거르면 안 된다 — 앱에서는 s가 Svelte $state 프록시라
+ * push된 원소가 rec과 다른 객체가 되어 rec 자신이 '이전 시즌'에 남고, CH가 영영 잡히지 않았다. */
 export function detectCareerHighs(s: GameState, rec: CareerRecord): ChKey[] {
-  const prior = s.career.filter((r) => r !== rec);
+  const prior = s.career.slice(0, -1);
   if (!prior.length) return [];
   const out: ChKey[] = [];
   const maxOf = (f: (r: CareerRecord) => number) => Math.max(...prior.map(f));
