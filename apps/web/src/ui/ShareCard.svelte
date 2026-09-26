@@ -5,7 +5,7 @@
   import { getHofDetail } from '../api/client.js';
   import type { HofEntry } from '../game/types.js';
   import { accountCache, refreshAccount } from './account-state.svelte.js';
-  import { startGoogleLogin } from './actions.js';
+  import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
   import { shareFocus, shareUrl } from './legend.js';
 

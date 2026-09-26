@@ -6,7 +6,7 @@
   import { EVENT_RULES, JITTER_RANGE } from '../game/engine.js';
   import { DEX_GROUPS, eventDex, type DexChoice, type DexEntry, type DexGroup } from '../game/eventDex.js';
   import { dexSeen } from './dex.js';
-  import { goHome } from './actions.js';
+  import { goHome } from './nav.js';
   import Topbar from './Topbar.svelte';
 
   const pct = (v: number) => `${Math.round(v * 100)}%`;

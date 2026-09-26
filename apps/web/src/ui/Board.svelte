@@ -12,11 +12,13 @@
   import * as api from '../api/boards.js';
   import type { BoardKey, BoardViewerResponse, Comment, Post, PostSummary } from '../api/boards.js';
   import { appState } from './state.svelte.js';
-  import { goHome, startGoogleLogin } from './actions.js';
+  import { goHome } from './nav.js';
+  import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
   import { BOARD_LABEL, dateOf, parseBody } from './boardText.js';
   import Topbar from './Topbar.svelte';
   import NicknameForm from './NicknameForm.svelte';
+  import LoadState, { type LoadStatus } from './LoadState.svelte';
 
   const EYEBROW: Record<BoardKey, string> = { notice: 'Notice', release: 'Release notes' };
 
@@ -27,7 +29,7 @@
   const admin = $derived(!!viewer?.admin);
   let posts = $state<PostSummary[]>([]);
   let hasMore = $state(false);
-  let status = $state<'loading' | 'ready' | 'error'>('loading');
+  let status = $state<LoadStatus>('loading');
   let detail = $state<{ post: Post; comments: Comment[] } | null>(null);
   /** 관리자 편집기. id가 없으면 새 글. */
   let editing = $state<{ id?: string; title: string; body: string; version: string; pinned: boolean } | null>(null);
@@ -217,14 +219,7 @@
       {#if admin}
         <button class="btn btn-accent" data-act="new-post" onclick={() => startEdit()}>새 글 쓰기</button>
       {/if}
-      {#if status === 'loading'}
-        <p class="muted" aria-live="polite">불러오는 중…</p>
-      {:else if status === 'error'}
-        <div class="stack" style="gap:8px">
-          <p class="muted" style="margin:0">소식을 불러오지 못했어요.</p>
-          <button class="icon-btn" style="align-self:flex-start" onclick={() => load()}>다시 시도</button>
-        </div>
-      {:else}
+      <LoadState {status} failText="소식을 불러오지 못했어요." retry={load}>
         <ul class="board-list">
           {#each posts as p (p.id)}
             <li>
@@ -241,7 +236,7 @@
           {/each}
         </ul>
         {#if hasMore}<button class="icon-btn" onclick={() => load(true)}>더 보기</button>{/if}
-      {/if}
+      </LoadState>
     {/if}
   </section>
 </div>

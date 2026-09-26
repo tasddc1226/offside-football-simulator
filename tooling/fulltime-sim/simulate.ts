@@ -252,4 +252,4 @@ async function main() {
   console.log(`[${tag}] ${rows.length} careers (${policy}) in ${((Date.now() - t0) / 1000).toFixed(1)}s, errors ${agg.errors}`);
 }
 
-main();
+await main();

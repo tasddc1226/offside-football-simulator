@@ -10,7 +10,7 @@
   import { accountCache, refreshAccount } from './account-state.svelte.js';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
   import NicknameForm from './NicknameForm.svelte';
-  import { rememberLoginReturn } from './actions.js';
+  import { rememberLoginReturn } from './login.js';
 
   /** 관리자 계정(설정 화면이 확인한다)은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다. */
   let { admin = false }: { admin?: boolean } = $props();

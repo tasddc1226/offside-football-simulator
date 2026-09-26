@@ -1,7 +1,7 @@
 <script lang="ts">
   // ui.ts renderRetired() 포트 (398~414줄). 리포트 본문은 LegendReport(T-10-005)로 옮겼다.
   import { appState } from './state.svelte.js';
-  import { goHome, goNew } from './actions.js';
+  import { goHome, goNew } from './nav.js';
   import { viewFromGame } from './legend.js';
   import Topbar from './Topbar.svelte';
   import LegendReport from './LegendReport.svelte';

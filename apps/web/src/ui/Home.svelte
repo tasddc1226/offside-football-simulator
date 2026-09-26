@@ -3,7 +3,7 @@
   import { PHASES, LAST_PHASE, POS } from '../game/data.js';
   import { ovr } from '../game/attributes.js';
   import { appState } from './state.svelte.js';
-  import { goNew, goContinue, goSettings, goDex } from './actions.js';
+  import { goNew, goContinue, go } from './nav.js';
   import Topbar from './Topbar.svelte';
   import HallOfFame from './HallOfFame.svelte';
   import HomeNews from './HomeNews.svelte';
@@ -18,7 +18,7 @@
 <div class="wrap">
   <Topbar>
     {#snippet right()}
-      <button class="icon-btn" data-act="settings" onclick={goSettings}>설정</button>
+      <button class="icon-btn" data-act="settings" onclick={() => go('settings')}>설정</button>
     {/snippet}
   </Topbar>
   {#if live && appState.G}
@@ -58,7 +58,7 @@
   <HomeLive />
   <div class="tiles">
     <HomeFirsts />
-    <button class="tile tile-link" data-act="dex" onclick={goDex}>
+    <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
       <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted" style="font-size:13px">선택지마다 성공 확률 공개 · 확률 도감 보기 →</span>
     </button>
   </div>

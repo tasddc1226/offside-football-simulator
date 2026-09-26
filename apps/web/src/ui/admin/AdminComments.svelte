@@ -7,10 +7,11 @@
   import { deleteComment } from '../../api/boards.js';
   import { toast } from '../helpers.js';
   import { BOARD_LABEL, kstDateTime as kst } from '../boardText.js';
+  import LoadState, { type LoadStatus } from '../LoadState.svelte';
 
   let comments = $state<AdminComment[]>([]);
   let hasMore = $state(false);
-  let status = $state<'loading' | 'ready' | 'error'>('loading');
+  let status = $state<LoadStatus>('loading');
   /** 한 작성자만 볼 때 그 프로필과 닉네임. */
   let author = $state<{ id: string; nickname: string } | null>(null);
   let busy = $state(false);
@@ -70,14 +71,7 @@
     </div>
   {/if}
 
-  {#if status === 'loading'}
-    <p class="muted" aria-live="polite">불러오는 중…</p>
-  {:else if status === 'error'}
-    <div class="stack" style="gap:8px">
-      <p class="muted" style="margin:0">댓글을 불러오지 못했어요.</p>
-      <button class="icon-btn" style="align-self:flex-start" onclick={() => load()}>다시 시도</button>
-    </div>
-  {:else}
+  <LoadState {status} failText="댓글을 불러오지 못했어요." retry={load}>
     <ul class="admin-comments">
       {#each comments as c (c.id)}
         <li data-admin-comment={c.id}>
@@ -99,7 +93,7 @@
       {/each}
     </ul>
     {#if hasMore}<button class="icon-btn" onclick={() => load(true)}>더 보기</button>{/if}
-  {/if}
+  </LoadState>
 </div>
 
 <style>
