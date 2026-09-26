@@ -21,12 +21,22 @@ export async function liveStats(db: Db, nowMs: number): Promise<LiveStats> {
   const today = kstDays(new Date(nowMs), 1).startIso;
   const recent = new Date(nowMs - PLAYING_WINDOW_MS).toISOString();
   const n = sql<number>`count(*)`;
-  const [[playing], [seasons], [created], [retired]] = await Promise.all([
+  const rowid = sql<number>`rowid`;
+  const [[playing], [firstToday], [lastSeason], [created], [retired]] = await Promise.all([
     db
       .select({ n })
       .from(careers)
       .where(and(eq(careers.status, 'active'), gte(careers.updatedAt, recent))),
-    db.select({ n }).from(careerSeasons).where(gte(careerSeasons.createdAt, today)),
+    // 오늘 시즌 수를 count(*)로 세면 오늘 올라온 시즌 수만큼 행을 읽는다(하루 수천 — D1 무료 한도를 가장 많이
+    // 쓰던 곳). 시즌은 올라온 순서대로 rowid가 붙으므로 '마지막 rowid − 오늘 첫 rowid + 1'로 두 행만 읽는다.
+    // 그사이 지워진 시즌(프로필 삭제)만큼 조금 크게 나올 수 있는데, 홈 현황 숫자라 괜찮다.
+    db
+      .select({ id: rowid })
+      .from(careerSeasons)
+      .where(gte(careerSeasons.createdAt, today))
+      .orderBy(careerSeasons.createdAt)
+      .limit(1),
+    db.select({ id: sql<number>`max(rowid)` }).from(careerSeasons),
     db.select({ n }).from(careers).where(gte(careers.createdAt, today)),
     db
       .select({ n })
@@ -35,7 +45,7 @@ export async function liveStats(db: Db, nowMs: number): Promise<LiveStats> {
   ]);
   return {
     playing: Number(playing?.n ?? 0),
-    seasonsToday: Number(seasons?.n ?? 0),
+    seasonsToday: firstToday && lastSeason ? Number(lastSeason.id) - Number(firstToday.id) + 1 : 0,
     newToday: Number(created?.n ?? 0),
     retiredToday: Number(retired?.n ?? 0),
   };
@@ -44,11 +54,13 @@ export async function liveStats(db: Db, nowMs: number): Promise<LiveStats> {
 export async function liveFeed(db: Db, nowMs: number): Promise<LiveEvent[]> {
   const since = new Date(nowMs - FEED_SPAN_MS).toISOString();
   const [seasons, retires] = await Promise.all([
-    // 한 선수가 피드를 채우지 않게 선수당 최신 시즌 하나만(SQLite는 max()와 함께 고른 나머지 컬럼을 그 행에서
-    // 가져온다). 은퇴한 선수는 은퇴 소식만 남기므로 진행 중 커리어만 본다.
+    // 한 선수가 피드를 채우지 않게 선수당 최신 시즌 하나만. 은퇴한 선수는 은퇴 소식만 남기므로 진행 중 커리어만
+    // 본다. 시즌을 올릴 때마다 커리어 updated_at이 바뀌므로 (status, updated_at) 인덱스로 최근 커리어 12명만
+    // 고르고 각자의 마지막 시즌을 붙인다 — 진행 중 커리어의 시즌 전부를 훑지 않는다. 시즌 시각 조건 앞의 +는
+    // 값을 바꾸지 않고 created_at 인덱스만 못 쓰게 해서, 플래너가 시즌 쪽부터 훑는 계획을 고르지 않게 한다.
     db
       .select({
-        at: sql<string>`max(${careerSeasons.createdAt})`,
+        at: careerSeasons.createdAt,
         pos: careers.pos,
         club: careerSeasons.club,
         league: careerSeasons.league,
@@ -60,11 +72,25 @@ export async function liveFeed(db: Db, nowMs: number): Promise<LiveEvent[]> {
         year: careerSeasons.year,
         startYear: careers.startYear,
       })
-      .from(careerSeasons)
-      .innerJoin(careers, eq(careers.id, careerSeasons.careerId))
-      .where(and(gte(careerSeasons.createdAt, since), eq(careers.status, 'active')))
-      .groupBy(careerSeasons.careerId)
-      .orderBy(desc(sql`max(${careerSeasons.createdAt})`))
+      .from(careers)
+      .innerJoin(
+        careerSeasons,
+        and(
+          eq(careerSeasons.careerId, careers.id),
+          eq(
+            careerSeasons.year,
+            sql`(select max(s2.year) from career_seasons s2 where s2.career_id = ${careers.id})`,
+          ),
+        ),
+      )
+      .where(
+        and(
+          eq(careers.status, 'active'),
+          gte(careers.updatedAt, since),
+          gte(sql`+${careerSeasons.createdAt}`, since),
+        ),
+      )
+      .orderBy(desc(careers.updatedAt))
       .limit(FEED_MAX),
     db
       .select({
