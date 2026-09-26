@@ -1,13 +1,11 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { ATTR_KEYS, LAST_PHASE, TRAITS, TYPES } from './data.js';
-import { applyTraining, newGame, resolveChoice, rollEvent, simBlock } from './engine.js';
+import { newGame, resolveChoice } from './engine.js';
 import { EVENTS } from './events-data.js';
 import './event-registry.js';
-import { compsPhase } from './comps.js';
-import { natWindow } from './national.js';
 import { acceptOption, endSeason, legendScore, market, retire } from './season.js';
-import { checkTitles } from './titles.js';
+import { playPhase } from './turn.js';
 import { createRng, pick, ri, setActiveRng } from './rng.js';
 import type { GameState, MarketOption } from './types.js';
 
@@ -15,7 +13,8 @@ import type { GameState, MarketOption } from './types.js';
 // 스냅샷으로 고정한다. 동작을 보존하는 리팩터링(파일 분할·함수 추출·타입 정리)은 이 스냅샷을 바꾸면 안 된다.
 // 스냅샷이 바뀌면 RNG 소비 순서나 게임 결과가 달라졌다는 뜻이다 — 의도한 밸런스 변경일 때만 `-u`로 갱신한다.
 //
-// 한 구간의 호출 순서는 ui/actions.ts의 advance()·chooseEvent()·pickOption()·doRetire()와 같다.
+// 한 구간은 화면과 같은 game/turn.ts playPhase로 진행하고, 이벤트·이적·은퇴는 ui/actions.ts의
+// chooseEvent()·pickOption()·doRetire()와 같은 순서로 부른다.
 // 선택(훈련·이벤트·이적)은 fulltime-sim의 random 정책처럼 시드 RNG로 고른다.
 
 const CAREERS = 32;
@@ -55,13 +54,7 @@ function playCareer(i: number): GameState {
     for (let ph = 0; ph <= LAST_PHASE; ph++) {
       // advance()
       s.training = s.cond < 45 ? 'rest' : pick(ATTR_KEYS);
-      applyTraining(s);
-      if (s.phase > 0) simBlock(s);
-      compsPhase(s);
-      natWindow(s);
-      const ev = rollEvent(s);
-      checkTitles(s);
-      s.phase++;
+      const { ev } = playPhase(s);
       // chooseEvent()
       if (ev) resolveChoice(s, ev, ri(0, EVENTS.find((e) => e.id === ev)!.choices.length - 1));
     }

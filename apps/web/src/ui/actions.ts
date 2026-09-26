@@ -8,20 +8,20 @@ import { PHASES, LAST_PHASE, type AttrKey } from '../game/data.js';
 import { clamp, createRng, freshSeed, setActiveRng } from '../game/rng.js';
 import { generateCandidates } from '../game/candidates.js';
 import {
-  leagueOf, fmtMoney, snapshot, diffChips, log, newGame, isPro,
-  applyTraining, simBlock, isSafe, rollEvent, resolveChoice, txt, roleOf, STORIES, teamRank, roundRange,
+  leagueOf, fmtMoney, snapshot, diffChips, newGame, isPro,
+  isSafe, resolveChoice, txt, roleOf, STORIES, teamRank, roundRange,
 } from '../game/engine.js';
+import { playPhase } from '../game/turn.js';
 import { EVENTS } from '../game/events-data.js';
 import '../game/event-registry.js';
 import { choiceOdds } from '../game/balance.js';
 import { isHiddenEvent } from '../game/dexGroups.js';
 import { markDexSeen } from './dex.js';
-import { natWindow, scoreLine, type IntlResult } from '../game/national.js';
-import { compsPhase } from '../game/comps.js';
+import { scoreLine, type IntlResult } from '../game/national.js';
 import { endSeason, market, acceptOption, retire, loadHOF } from '../game/season.js';
 import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
-import { checkTitles, titleView } from '../game/titles.js';
+import { titleView } from '../game/titles.js';
 import type { NatTour, EventLogEntry, MarketOption } from '../game/types.js';
 import { appState, randomName, type HofTab } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
@@ -42,19 +42,13 @@ export async function advance() {
     ph = s.phase;
   const before = snapshot(s);
   const rankBefore = teamRank(s);
-  applyTraining(s);
-  const block = s.phase > 0 ? (simBlock(s) as unknown as BlockResultLike) : null;
-  const comp = compsPhase(s);
-  comp.forEach((c) => log(s, c.t, c.k));
-  const nt = natWindow(s);
-  const chips = diffChips(s, before, snapshot(s));
-  const ev = rollEvent(s);
-  // 칭호 판정은 이벤트 추첨 뒤에 한다 — 칭호 인기 보상이 이벤트 조건(인기 N 이상)을 바꿔 RNG 흐름이 달라지지 않게.
-  const titles = checkTitles(s).map(titleView);
-  const title = s.phase === 0 ? '프리시즌 완료' : `${PHASES[s.phase]} 결과`;
-  if (block) log(s, `${PHASES[s.phase]} ${block.n}경기 ${block.w}승 ${block.d}무 ${block.l}패 · 출전 ${block.apps} · ${block.goals}골 ${block.assists}도움`);
-  if (block) block.hl.forEach((h) => log(s, h, 'good'));
-  s.phase++;
+  // T-10-046: 한 구간의 게임 로직(훈련 → 경기 → 대회 → A매치 → 이벤트 추첨 → 칭호)은 game/turn.ts가 진행한다.
+  const r = playPhase(s);
+  const block = r.block as unknown as BlockResultLike | null;
+  const { comp, nt, ev } = r;
+  const chips = diffChips(s, before, r.after);
+  const titles = r.titles.map(titleView);
+  const title = ph === 0 ? '프리시즌 완료' : `${PHASES[ph]} 결과`;
   s.pending = ev ? { type: 'event', id: ev, then: s.phase > LAST_PHASE ? 'seasonEnd' : null } : s.phase > LAST_PHASE ? { type: 'seasonEnd' } : null;
   save();
   const b = block;
