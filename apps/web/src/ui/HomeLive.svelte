@@ -15,7 +15,7 @@
   const VISIBLE = 3;
 
   let data = $state<LiveResponse | null>(null);
-  /** 조회가 실패한 적이 있다. 받은 데이터가 없을 때만 카드 자리를 거두는 데 쓴다. */
+  /** 조회가 실패한 적이 있다. 받은 데이터가 없을 때만 안내 문구를 띄우는 데 쓴다. */
   let failed = $state(false);
   /** 서버 시각 - 이 기기 시각. '몇 분 전'을 서버 기준으로 센다. */
   let skew = 0;
@@ -104,12 +104,14 @@
 </script>
 
 <!-- T-10-038: 응답 전에도 같은 높이의 카드를 먼저 그려 둔다(pending) — 늦게 끼어들면 아래 타일·명예의 전당이
-     밀려 첫 화면 CLS가 0.3까지 올랐다. 첫 조회가 실패하거나 보여 줄 게 없으면 자리를 거둔다. -->
-{#if pending || stats.length || feed.length}
+     밀려 첫 화면 CLS가 0.3까지 올랐다. T-10-041: 조회가 실패해도 자리를 거두지 않고(거두면 아래가 한꺼번에
+     올라간다) 같은 카드에 안내만 띄운다. 받아 온 뒤 보여 줄 게 없을 때만 숨긴다. -->
+{#if !data || stats.length || feed.length}
   <section
     class="card live"
     data-home-live={pending ? undefined : ''}
     data-home-live-pending={pending ? '' : undefined}
+    data-home-live-offline={!data && failed ? '' : undefined}
     aria-hidden={pending || undefined}
     aria-labelledby={pending ? undefined : 'live-title'}
   >
@@ -125,9 +127,13 @@
         </button>
       {/if}
     </div>
-    {#if pending}
+    {#if !data}
+      <!-- 자리표시·실패 안내도 숫자 칸과 티커 높이(3줄)를 그대로 잡아 둔다. 실패하면 30초 재조회를 기다린다. -->
       <div class="live-stats">
         {#each STATS as s (s.key)}<div><b class="num">–</b><span>{s.label}</span></div>{/each}
+      </div>
+      <div class="live-rows-wrap" class:live-offline={failed}>
+        {#if failed}<p class="muted">지금은 현황을 불러오지 못했어요. 잠시 뒤 다시 확인할게요.</p>{/if}
       </div>
     {:else if stats.length}
       <div class="live-stats">
@@ -136,10 +142,7 @@
         {/each}
       </div>
     {/if}
-    <!-- 자리표시에서도 티커 높이(3줄)를 잡아 둔다. -->
-    {#if pending}
-      <div class="live-rows-wrap"></div>
-    {:else if feed.length}
+    {#if data && feed.length}
       <div
         class="live-rows-wrap"
         role="presentation"

@@ -73,11 +73,13 @@ test('은퇴 소식을 누르면 그 선수 상세가 열린다', async ({ page 
   await expect(page.locator('[data-home-live]')).toBeVisible();
 });
 
-test('서버에 연결하지 못하거나 아무 활동이 없으면 카드를 숨긴다', async ({ page }) => {
+// T-10-041: 실패하면 카드를 거두던 때는 아래 타일·명예의 전당이 한꺼번에 올라가 CLS 0.23이 났다.
+test('서버에 연결하지 못하면 같은 자리에 안내를 띄우고, 아무 활동이 없으면 카드를 숨긴다', async ({ page }) => {
   await stub(page, null, 503);
   await page.goto('/');
   await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
-  await expect(page.locator('[data-home-live]')).toHaveCount(0);
+  await expect(page.locator('[data-home-live-offline]')).toContainText('불러오지 못했어요');
+  await expect(page.locator('[data-home-live-offline] .live-stats b').first()).toHaveText('–');
 
   await page.unroute(`${API}/v1/live`);
   await stub(page, { now: new Date().toISOString(), stats: { playing: 0, seasonsToday: 0, newToday: 0, retiredToday: 0 }, feed: [] });

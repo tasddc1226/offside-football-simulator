@@ -719,6 +719,7 @@ button.title-item:hover { border-color: var(--pitch-2); }
 .live-stats b { font-family: var(--display); font-size: 22px; line-height: 1.1; }
 .live-stats span { font-size: 11px; color: var(--muted); }
 .live-rows-wrap { --row: 44px; height: calc(var(--row) * 3); overflow: hidden; }
+.live-offline { display: grid; place-items: center; text-align: center; font-size: 13px; }
 .live-rows { list-style: none; margin: 0; padding: 0; }
 .live-rows.shift { transform: translateY(calc(var(--row) * -1)); transition: transform .55s cubic-bezier(.3, .7, .3, 1); }
 .live-row { height: var(--row); display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--line); font-size: 13px; }
