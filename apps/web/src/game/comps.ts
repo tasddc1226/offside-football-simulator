@@ -2,7 +2,7 @@
 import { POS } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, chance, gauss, rnd } from './rng.js';
-import { leagueOf, clubsIn, roleOf, addStat } from './engine.js';
+import { leagueOf, clubsIn, roleOf, addStat, scoreBoost, atkOf, creOf } from './engine.js';
 import type { GameState, Season, SeasonComp, NatTour } from './types.js';
 
 export const CUPS: Record<string, string[]> = {
@@ -70,10 +70,8 @@ function compMatch(s: GameState, oppStr: number, startP: number) {
   }
   if (mins) {
     perf = (o - oppStr) / 10 + gauss() * 0.8 + (s.cond - 70) / 60;
-    const atk = Object.entries(P.atk).reduce((t, [k, w]) => t + s.attrs[k as keyof typeof s.attrs] * (w as number), 0);
-    const cre = s.attrs.pas * 0.7 + s.attrs.dri * 0.3;
-    g = poissonLocal(P.goal * Math.exp((atk - oppStr) / 20) * (mins / 90) * Math.exp(perf * 0.2));
-    a = poissonLocal(P.assist * Math.exp((cre - oppStr) / 20) * (mins / 90) * Math.exp(perf * 0.2));
+    g = poissonLocal(P.goal * scoreBoost(atkOf(s), o, perf, oppStr) * (mins / 90));
+    a = poissonLocal(P.assist * scoreBoost(creOf(s), o, perf, oppStr) * (mins / 90));
   }
   return { mins, g, a, edge: (s.club.str - oppStr) * 0.03 + (mins ? perf * 0.03 + g * 0.1 : 0) };
 }
@@ -201,12 +199,14 @@ export function compGoals(S: Season) {
 }
 
 // ───────── 시즌 개인상 · 발롱도르 시상식 ─────────
+// T-10-042에서 한 시즌 득점·도움 상한이 낮아진 만큼 기준도 낮춰, 수상 빈도를 그 이전(T-10-039) 수준에 맞췄다.
+const TOP_G = 0.57, TOP_A = 0.34, BALLON_BAR = 164.8, MULLER_BAR = 36, SHOE_BAR = 56.5;
 export function seasonAwards(s: GameState, ctx: { rank: number; avg: number; trophies: string[]; tours: NatTour[] }) {
   const L = leagueOf(s.leagueId), S = s.season, m = L.matches, o = ovr(s);
   const { rank, avg, trophies, tours } = ctx, awards: string[] = [], gala: string[] = [];
   const cg = compGoals(S), allG = S.goals + cg.g, allA = S.assists + cg.a;
   const enough = S.apps >= m * 0.55, back = s.pos === 'DF' || s.pos === 'GK';
-  const topG = m * 0.62 + gauss() * 3, topA = m * 0.36 + gauss() * 2;
+  const topG = m * TOP_G + gauss() * 3, topA = m * TOP_A + gauss() * 2;
   if (S.goals >= Math.max(topG, 6)) awards.push(L.amateur ? '득점왕' : TOP_SCORER[L.id]!);
   if (S.assists >= Math.max(topA, 5)) awards.push(L.amateur ? '도움왕' : `${L.name} 도움왕`);
   if (enough && avg >= 7.55 && (rank <= 3 || S.goals >= topG) && chance(0.5)) awards.push(L.amateur ? '대회 MVP' : POTY[L.id]!);
@@ -223,7 +223,7 @@ export function seasonAwards(s: GameState, ctx: { rank: number; avg: number; tro
   const score = o + S.goals * 0.45 + S.assists * 0.28 + (cont ? cont.g * 0.7 + cont.a * 0.3 : 0) + avg * 5 + L.tier * 1.2 +
     big('UEFA 챔피언스리그 우승') * 12 + (rank === 1 ? 6 : 0) + ntBonus + (cont && cont.key === 'UCL' && /4강|결승|준우승/.test(cont.stage) ? 4 : 0) +
     (s.pos === 'GK' ? 3 : s.pos === 'DF' ? 2 : 0) + gauss() * 3;
-  const ballonRank = clamp(Math.round(1 + (166 - score) / 0.8), 1, 99);
+  const ballonRank = clamp(Math.round(1 + (BALLON_BAR - score) / 0.8), 1, 99);
   if (L.tier >= 4 && ballonRank <= 30 && enough) {
     s.ballon = (s.ballon ?? []).concat({ year: s.year, rank: ballonRank });
     gala.push(ballonRank === 1 ? '발롱도르 수상!' : `발롱도르 ${ballonRank}위 (30인 후보)`);
@@ -233,9 +233,9 @@ export function seasonAwards(s: GameState, ctx: { rank: number; avg: number; tro
     if (ballonRank <= 2 && chance(0.7)) awards.push('FIFA 더 베스트 남자 선수');
     if (ballonRank <= 12 && chance(0.8)) awards.push('FIFPRO 월드 11');
   }
-  if (L.tier >= 4 && allG >= 40 + gauss() * 3) awards.push('게르트 뮐러 트로피');
+  if (L.tier >= 4 && allG >= MULLER_BAR + gauss() * 3) awards.push('게르트 뮐러 트로피');
   const shoe = S.goals * (L.tier >= 5 ? 2 : 1.5);
-  if (L.tier >= 4 && shoe >= 62 + gauss() * 4) awards.push('유러피언 골든슈');
+  if (L.tier >= 4 && shoe >= SHOE_BAR + gauss() * 4) awards.push('유러피언 골든슈');
   if (s.pos === 'DF' && L.tier >= 5 && enough && avg >= 7.15 && rank <= 3 && chance(0.45)) awards.push(`${L.name} 올해의 수비수`);
   if (s.pos === 'GK' && enough && avg >= 7.1 && rank <= 4 && chance(0.45)) awards.push(`${L.name} 올해의 골키퍼`);
   const kfa = s.nat.caps > 0 && (ballonRank <= 30 || (o >= 80 && avg >= 7.2)) && chance(0.5);
