@@ -5,7 +5,7 @@
 // 실패는 절대 게임 루프로 throw하지 않는다 — 실패해도 게임은 그대로 진행돼야 한다(fire-and-forget).
 import type { CareerSeasonPayload, PutCareerSeasonBody, PutRetirementBody } from '@offside/contracts';
 import { resolveApiBaseUrl } from '../api/base-url.js';
-import { clearApiCache } from '../api/client.js';
+import { clearApiCache, noteSession } from '../api/client.js';
 import type { CareerRecord } from './types.js';
 import { OWNER_CONFLICT_EVENT } from './syncEvents.js';
 
@@ -80,6 +80,7 @@ async function ensureProfile(): Promise<boolean> {
   try {
     const res = await fetch(`${apiBaseUrl()}/v1/profile`, { method: 'GET', credentials: 'include' });
     profileReady = res.ok;
+    if (res.ok) noteSession(true);
     return res.ok;
   } catch {
     return false;

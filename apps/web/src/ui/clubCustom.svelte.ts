@@ -6,7 +6,7 @@ import { loadKey, saveKey } from '../game/season.js';
 import { CLUBS } from '../game/data.js';
 import { applyClubNames, sanitizeClubCustom, type ClubCustom, type ClubCustomMap } from '../game/clubs.js';
 import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
-import { apiFetch } from '../api/client.js';
+import { apiFetch, noteSession } from '../api/client.js';
 import { appState } from './state.svelte.js';
 import { save } from './helpers.js';
 
@@ -108,6 +108,7 @@ function adopt(remote: Remote) {
   if (remote.updatedAt && remote.updatedAt !== meta.updatedAt) commit(remote.clubs, { updatedAt: remote.updatedAt, dirty: false });
 }
 function fail(code: string) {
+  if (code === 'PROFILE_REQUIRED') noteSession(false);
   clubCustom.status = code === 'PROFILE_REQUIRED' ? 'local' : 'error';
 }
 
