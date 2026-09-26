@@ -21,11 +21,10 @@ describe('edgeCached (T-10-015)', () => {
   });
 
   const read = async (q: string) => (await (await app.request(`http://api.test/v1/x?${q}`)).json()) as { n: number };
-  const flush = flushEdge;
 
   it('같은 키는 한 번만 읽고, 모르는 쿼리를 붙여도 정규화한 키로 캐시를 탄다', async () => {
     expect(await read('k=a')).toEqual({ n: 1 });
-    await flush();
+    await flushEdge();
     expect(await read('k=a&junk=1')).toEqual({ n: 1 });
     expect(loads).toBe(1);
     expect([...cache.store.keys()]).toEqual(['http://api.test/v1/x?k=a']);
@@ -33,9 +32,9 @@ describe('edgeCached (T-10-015)', () => {
 
   it('purgeEdge 뒤에는 다시 읽는다', async () => {
     await read('k=a');
-    await flush();
+    await flushEdge();
     await app.request('http://api.test/v1/x', { method: 'POST' });
-    await flush();
+    await flushEdge();
     expect(await read('k=a')).toEqual({ n: 2 });
   });
 

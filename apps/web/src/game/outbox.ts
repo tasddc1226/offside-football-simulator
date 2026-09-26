@@ -118,7 +118,9 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
     }
     return 'drop';
   } catch {
-    return 'abort';
+    // 브라우저가 오프라인이라고 알려 주면 뒤 항목도 같다 — 회차를 멈춘다. 그 밖의 예외(한 항목에서만 나는
+    // 오류일 수 있다)는 그 커리어만 미뤄 다른 커리어의 업로드를 막지 않는다.
+    return globalThis.navigator?.onLine === false ? 'abort' : 'retry';
   }
 }
 

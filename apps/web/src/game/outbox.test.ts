@@ -25,6 +25,10 @@ const seasonBody = {
 
 const ok = () => new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 });
 const queue = () => JSON.parse(localStorage.getItem('ft_outbox') ?? '[]') as unknown[];
+const summary = { retireAge: 34, peak: 80, legendScore: 300, apps: 1, goals: 1, assists: 1, trophies: 0, awards: 0, caps: 0, ballon: 0, lastClub: 'FC' };
+/** 보낸 PUT의 경로(/v1/careers/ 뒤). */
+const puts = (m: ReturnType<typeof vi.fn>) =>
+  m.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PUT').map(([url]) => String(url).replace(/^.*\/v1\/careers\//, ''));
 
 beforeEach(() => {
   (globalThis as unknown as { localStorage: MemoryStorage }).localStorage = new MemoryStorage();
@@ -80,8 +84,7 @@ describe('T-10-034 전송 중 enqueue', () => {
     const { enqueueSeason, flushOutbox } = await import('./outbox.js');
     for (const y of [2026, 2027, 2028, 2029]) enqueueSeason('66666666-6666-6666-6666-666666666666', y, seasonBody);
     await flushOutbox();
-    const puts = fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PUT').map(([url]) => String(url));
-    expect(puts.map((u) => u.split('/').pop())).toEqual(['2026', '2027', '2028', '2029']);
+    expect(puts(fetchMock).map((u) => u.split('/').pop())).toEqual(['2026', '2027', '2028', '2029']);
     expect(queue()).toEqual([]);
   });
 
@@ -96,7 +99,6 @@ describe('T-10-034 전송 중 enqueue', () => {
     const { enqueueSeason, enqueueRetirement, flushOutbox } = await import('./outbox.js');
     enqueueSeason('77777777-7777-7777-7777-777777777777', 2026, seasonBody);
     await new Promise((r) => setTimeout(r, 0));
-    const summary = { retireAge: 34, peak: 80, legendScore: 300, apps: 1, goals: 1, assists: 1, trophies: 0, awards: 0, caps: 0, ballon: 0, lastClub: 'FC' };
     enqueueRetirement('77777777-7777-7777-7777-777777777777', summary);
     const waiting = flushOutbox(); // 진행 중인 회차 + 다시 도는 회차까지 기다린다.
     release();
@@ -145,7 +147,6 @@ describe('T-10-013 소유권 충돌', () => {
   it('pendingRetirementIds는 큐에 남은 은퇴 기록의 커리어 ID다', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
     const { enqueueRetirement, pendingRetirementIds } = await import('./outbox.js');
-    const summary = { retireAge: 34, peak: 80, legendScore: 300, apps: 1, goals: 1, assists: 1, trophies: 0, awards: 0, caps: 0, ballon: 0, lastClub: 'FC' };
     enqueueRetirement('55555555-5555-5555-5555-555555555555', summary);
     await flush();
     expect([...pendingRetirementIds()]).toEqual(['55555555-5555-5555-5555-555555555555']);
@@ -155,13 +156,10 @@ describe('T-10-013 소유권 충돌', () => {
 describe('T-10-045 재시도·버림·한도', () => {
   const CID = '88888888-8888-8888-8888-888888888888';
   const OTHER = '99999999-9999-9999-9999-999999999999';
-  const summary = { retireAge: 34, peak: 80, legendScore: 300, apps: 1, goals: 1, assists: 1, trophies: 0, awards: 0, caps: 0, ballon: 0, lastClub: 'FC' };
   const status = (n: number) => new Response('{}', { status: n });
   const seed = (items: unknown[]) => localStorage.setItem('ft_outbox', JSON.stringify(items));
   const season = (careerId: string, year: number) => ({ kind: 'season', careerId, year, body: seasonBody });
   const retirement = (careerId: string) => ({ kind: 'retirement', careerId, body: summary });
-  const puts = (m: ReturnType<typeof vi.fn>) =>
-    m.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PUT').map(([url]) => String(url).replace(/^.*\/v1\/careers\//, ''));
 
   it('시즌 PUT이 재시도 대상이면 같은 커리어의 은퇴는 보내지 않고 남긴다(서버에 커리어가 없어 400으로 버려지지 않게)', async () => {
     // 첫 시즌 PUT이 5xx → 커리어가 아직 서버에 없다. 은퇴를 이어서 보내면 CAREER_NOT_FOUND(400)로 영구히 버려졌다.
@@ -195,6 +193,7 @@ describe('T-10-045 재시도·버림·한도', () => {
   });
 
   it('오프라인·401이면 이번 회차를 멈춘다 — 다른 커리어 항목도 보내지 않는다', async () => {
+    vi.stubGlobal('navigator', { onLine: false });
     for (const fail of [() => Promise.reject(new Error('offline')), () => Promise.resolve(status(401))]) {
       const fetchMock = vi.fn().mockResolvedValueOnce(ok()).mockImplementationOnce(fail).mockResolvedValue(ok());
       vi.stubGlobal('fetch', fetchMock);
@@ -205,6 +204,16 @@ describe('T-10-045 재시도·버림·한도', () => {
       expect(queue()).toEqual([season(CID, 2026), season(OTHER, 2026)]);
       vi.resetModules();
     }
+  });
+
+  it('온라인인데 한 항목에서 예외가 나면 그 커리어만 미룬다', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok()).mockRejectedValueOnce(new TypeError('body too large')).mockResolvedValue(ok());
+    vi.stubGlobal('fetch', fetchMock);
+    seed([season(CID, 2026), retirement(CID), season(OTHER, 2026)]);
+    const { flushOutbox } = await import('./outbox.js');
+    await flushOutbox();
+    expect(puts(fetchMock)).toEqual([`${CID}/seasons/2026`, `${OTHER}/seasons/2026`]);
+    expect(queue()).toEqual([season(CID, 2026), retirement(CID)]);
   });
 
   it('409가 아닌 4xx는 재시도해도 같으므로 버린다', async () => {
