@@ -1,6 +1,6 @@
 {
   "$schema": "https://turborepo.com/schema.json",
-  "globalDependencies": ["eslint.config.js", "tooling/eslint-config/index.mjs", ".node-version"],
+  "globalDependencies": [".node-version"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -15,6 +15,7 @@
     },
     "lint": {
       "dependsOn": ["transit"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/eslint.config.js", "$TURBO_ROOT$/tooling/eslint-config/index.mjs"],
       "outputs": []
     },
     "typecheck": {
