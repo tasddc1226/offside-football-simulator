@@ -11,7 +11,8 @@ export function isDark(): boolean {
 export function setDark(on: boolean) {
   const theme = on ? 'dark' : 'light';
   document.documentElement.dataset.theme = theme;
-  for (const m of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) m.media = m.dataset.scheme === theme ? 'all' : 'not all';
+  for (const m of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'))
+    m.media = m.dataset.scheme === theme ? 'all' : 'not all';
   try {
     localStorage.setItem(KEY, theme);
   } catch {

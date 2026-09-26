@@ -16,7 +16,9 @@ export type AchievedFirst = ServerFirst & { achievedAt: string; holder: Holder }
 
 /** 달성된 기록만, 최근 것부터. */
 export const achievedList = (items: ServerFirst[]): AchievedFirst[] =>
-  items.filter((x): x is AchievedFirst => !!x.holder && !!x.achievedAt).sort((a, b) => b.achievedAt.localeCompare(a.achievedAt));
+  items
+    .filter((x): x is AchievedFirst => !!x.holder && !!x.achievedAt)
+    .sort((a, b) => b.achievedAt.localeCompare(a.achievedAt));
 
 /** 최근 기록 탭: 한국 날짜별로 묶는다(입력 순서 유지). */
 export function byDay(list: AchievedFirst[]): { day: string; items: AchievedFirst[] }[] {
@@ -31,7 +33,12 @@ export function byDay(list: AchievedFirst[]): { day: string; items: AchievedFirs
 }
 
 /** 내 선수(이 기기의 커리어)면 이 기기에 있는 이름을, 아니면 공개 이름 또는 익명 표기를 쓴다. */
-export function holderLabel(h: Holder, mine: ReadonlyMap<string, string>): { name: string; mine: boolean } {
+export function holderLabel(
+  h: Holder,
+  mine: ReadonlyMap<string, string>,
+): { name: string; mine: boolean } {
   const own = mine.get(h.careerId);
-  return own ? { name: own, mine: true } : { name: h.name ?? anonName(h.pos, h.number), mine: false };
+  return own
+    ? { name: own, mine: true }
+    : { name: h.name ?? anonName(h.pos, h.number), mine: false };
 }

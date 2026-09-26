@@ -306,7 +306,10 @@ export interface HofEntry {
 
 /** 은퇴 리포트(레전드 점수 구성·시즌별 기록·수상·여정)가 읽는 필드. 진행 중인 GameState와 저장된
  * 은퇴 스냅샷(LegendSnapshot) 둘 다 이 모양을 만족한다. */
-export type LegendSource = Pick<GameState, 'pos' | 'peak' | 'career' | 'trophies' | 'awards' | 'ballon' | 'storyLog' | 'miles' | 'titles'> & {
+export type LegendSource = Pick<
+  GameState,
+  'pos' | 'peak' | 'career' | 'trophies' | 'awards' | 'ballon' | 'storyLog' | 'miles' | 'titles'
+> & {
   nat: { caps: number };
 };
 

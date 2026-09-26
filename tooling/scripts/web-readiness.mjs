@@ -19,7 +19,8 @@ export function candidatePaths(html) {
     if (!script && !link) continue;
     const value = tag.match(/\b(?:src|href)=["']([^"']+)["']/i)?.[1];
     // 외부 https 스타일시트(예: Google Fonts)는 배포 산출물이 아니므로 비교에서 뺀다. 외부 스크립트는 계속 거부한다.
-    if (link && /\brel=["']stylesheet["']/i.test(tag) && value && /^https:\/\//i.test(value)) continue;
+    if (link && /\brel=["']stylesheet["']/i.test(tag) && value && /^https:\/\//i.test(value))
+      continue;
     if (!value || !/^\/assets\/[A-Za-z0-9_.-]+\.(?:js|css)$/.test(value))
       throw new Error('INVALID_CANDIDATE_ASSET_PATH');
     paths.push(value);
@@ -32,15 +33,25 @@ export function candidatePaths(html) {
 
 export async function loadCandidate(dist) {
   const html = await readFile(resolve(dist, 'app-shell.html'), 'utf8');
-  return new Map(await Promise.all(candidatePaths(html).map(async (path) => [
-    path, digest(await readFile(resolve(dist, `.${path}`))),
-  ])));
+  return new Map(
+    await Promise.all(
+      candidatePaths(html).map(async (path) => [
+        path,
+        digest(await readFile(resolve(dist, `.${path}`))),
+      ]),
+    ),
+  );
 }
 
 /** Read-only, bounded propagation check. It does not prove every CDN edge or upgrade open tabs. */
 export async function waitForWebCandidate({
-  origin, candidate, fetchImpl = fetch, timeoutMs = 180_000, requestTimeoutMs = 10_000,
-  intervalMs = 3_000, now = Date.now,
+  origin,
+  candidate,
+  fetchImpl = fetch,
+  timeoutMs = 180_000,
+  requestTimeoutMs = 10_000,
+  intervalMs = 3_000,
+  now = Date.now,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 }) {
   if (!ORIGINS.has(origin)) throw new Error('UNAPPROVED_WEB_ORIGIN');
@@ -62,7 +73,10 @@ export async function waitForWebCandidate({
       return await Promise.race([
         (async () => {
           const response = await fetchImpl(`${origin}${path}`, {
-            method: 'GET', redirect: 'error', cache: 'no-store', signal: abort.signal,
+            method: 'GET',
+            redirect: 'error',
+            cache: 'no-store',
+            signal: abort.signal,
             headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
           });
           if (response.status !== 200 || response.redirected || response.url !== `${origin}${path}`)
@@ -70,7 +84,10 @@ export async function waitForWebCandidate({
           return new Uint8Array(await response.arrayBuffer());
         })(),
         new Promise((_, reject) => {
-          timer = setTimeout(() => { abort.abort(); reject(new Error('REQUEST_TIMEOUT')); }, remaining);
+          timer = setTimeout(() => {
+            abort.abort();
+            reject(new Error('REQUEST_TIMEOUT'));
+          }, remaining);
         }),
       ]);
     } finally {
@@ -88,11 +105,19 @@ export async function waitForWebCandidate({
         if (digest(await get(path)) !== expected) throw new Error('ASSET_HASH_MISMATCH');
       }
       consecutive++;
-      if (consecutive === 2 && now() < deadline) return { attempts, assets: candidate.size, consecutive };
+      if (consecutive === 2 && now() < deadline)
+        return { attempts, assets: candidate.size, consecutive };
     } catch (error) {
       consecutive = 0;
-      lastFailure = ['OLD_OR_DIFFERENT_SHELL', 'ASSET_HASH_MISMATCH', 'REQUEST_TIMEOUT', 'READINESS_TIMEOUT', 'UNEXPECTED_WEB_RESPONSE']
-        .includes(error.message) ? error.message : 'WEB_FETCH_OR_PARSE_FAILED';
+      lastFailure = [
+        'OLD_OR_DIFFERENT_SHELL',
+        'ASSET_HASH_MISMATCH',
+        'REQUEST_TIMEOUT',
+        'READINESS_TIMEOUT',
+        'UNEXPECTED_WEB_RESPONSE',
+      ].includes(error.message)
+        ? error.message
+        : 'WEB_FETCH_OR_PARSE_FAILED';
     }
     const remaining = deadline - now();
     if (remaining > 0) await sleep(Math.min(intervalMs, remaining));
@@ -103,7 +128,8 @@ export async function waitForWebCandidate({
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
     const [origin, dist] = process.argv.slice(2);
-    if (!origin || !dist) throw new Error('USAGE: web-readiness.mjs approved-origin dist-directory');
+    if (!origin || !dist)
+      throw new Error('USAGE: web-readiness.mjs approved-origin dist-directory');
     const result = await waitForWebCandidate({ origin, candidate: await loadCandidate(dist) });
     console.log(JSON.stringify({ webReadiness: 'verified', origin, ...result }));
   } catch (error) {

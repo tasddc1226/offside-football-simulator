@@ -22,7 +22,10 @@ export type RecoverProfileResult = { profileId: string };
  * 프로필에는 서버 소유 데이터(커리어 등)가 더 이상 없으므로 병합 충돌 없이 항상 세션을
  * 대상 프로필로 재바인딩한다.
  */
-export async function recoverProfile(db: Db, input: RecoverProfileInput): Promise<RecoverProfileResult> {
+export async function recoverProfile(
+  db: Db,
+  input: RecoverProfileInput,
+): Promise<RecoverProfileResult> {
   const subject = `${input.ip}:${input.sessionId}`;
   const attempts = await getAttemptCount(db, 'RECOVERY_REDEEM', subject, input.now);
   if (attempts >= RATE_LIMIT_MAX) {
@@ -34,7 +37,10 @@ export async function recoverProfile(db: Db, input: RecoverProfileInput): Promis
 
   if (!target || target.deletedAt !== null) {
     await recordAttempt(db, 'RECOVERY_REDEEM', subject, input.now);
-    throw new AppError({ code: 'RECOVERY_CODE_INVALID', message: '복구 코드가 올바르지 않습니다.' });
+    throw new AppError({
+      code: 'RECOVERY_CODE_INVALID',
+      message: '복구 코드가 올바르지 않습니다.',
+    });
   }
 
   if (target.id === input.currentProfileId) {

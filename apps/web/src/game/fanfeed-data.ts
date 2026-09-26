@@ -3,11 +3,20 @@
 // game/fanfeed.ts가 시즌 성적에 맞는 버킷을 고른 뒤 그 안에서 결정적으로(RNG 미사용) 한 줄을
 // 뽑는다. 각 버킷 최소 5줄 이상, 전체 60줄 이상을 유지한다.
 export type FanBucket =
-  | 'rating_high' | 'rating_low'
-  | 'goals_high' | 'assists_high' | 'cs_high'
-  | 'rank_champion' | 'rank_mid' | 'rank_low'
-  | 'role_main' | 'role_bench'
-  | 'trophy' | 'injury' | 'transfer' | 'milestone'
+  | 'rating_high'
+  | 'rating_low'
+  | 'goals_high'
+  | 'assists_high'
+  | 'cs_high'
+  | 'rank_champion'
+  | 'rank_mid'
+  | 'rank_low'
+  | 'role_main'
+  | 'role_bench'
+  | 'trophy'
+  | 'injury'
+  | 'transfer'
+  | 'milestone'
   // T-10-034: 성적과 무관한 응원. 맞는 버킷이 모자랄 때 채우는 용도로만 쓴다(사실을 주장하지 않는다).
   | 'general';
 

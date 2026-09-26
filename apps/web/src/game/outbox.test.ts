@@ -18,17 +18,50 @@ class MemoryStorage {
 }
 
 const seasonBody = {
-  career: { pos: 'FW' as const, foot: '오른발' as const, type: 'poacher', trait: 'late', startYear: 2026, appVersion: '0.0.0' },
-  season: { age: 18, club: '테스트 FC', league: '고교리그', apps: 10, goals: 3, assists: 1, rating: 7.1, rank: 1, ovr: 55, honors: [] },
+  career: {
+    pos: 'FW' as const,
+    foot: '오른발' as const,
+    type: 'poacher',
+    trait: 'late',
+    startYear: 2026,
+    appVersion: '0.0.0',
+  },
+  season: {
+    age: 18,
+    club: '테스트 FC',
+    league: '고교리그',
+    apps: 10,
+    goals: 3,
+    assists: 1,
+    rating: 7.1,
+    rank: 1,
+    ovr: 55,
+    honors: [],
+  },
   events: [],
 };
 
-const ok = () => new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 });
+const ok = () =>
+  new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 });
 const queue = () => JSON.parse(localStorage.getItem('ft_outbox') ?? '[]') as unknown[];
-const summary = { retireAge: 34, peak: 80, legendScore: 300, apps: 1, goals: 1, assists: 1, trophies: 0, awards: 0, caps: 0, ballon: 0, lastClub: 'FC' };
+const summary = {
+  retireAge: 34,
+  peak: 80,
+  legendScore: 300,
+  apps: 1,
+  goals: 1,
+  assists: 1,
+  trophies: 0,
+  awards: 0,
+  caps: 0,
+  ballon: 0,
+  lastClub: 'FC',
+};
 /** 보낸 PUT의 경로(/v1/careers/ 뒤). */
 const puts = (m: ReturnType<typeof vi.fn>) =>
-  m.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PUT').map(([url]) => String(url).replace(/^.*\/v1\/careers\//, ''));
+  m.mock.calls
+    .filter(([, init]) => (init as RequestInit | undefined)?.method === 'PUT')
+    .map(([url]) => String(url).replace(/^.*\/v1\/careers\//, ''));
 
 beforeEach(() => {
   (globalThis as unknown as { localStorage: MemoryStorage }).localStorage = new MemoryStorage();
@@ -41,7 +74,11 @@ afterEach(() => {
 
 describe('outbox', () => {
   it('enqueue 후 flush에 성공하면 큐가 비워진다', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 }),
+      );
     vi.stubGlobal('fetch', fetchMock);
     const { enqueueSeason } = await import('./outbox.js');
 
@@ -60,7 +97,9 @@ describe('outbox', () => {
     const fetchMock = vi
       .fn()
       // GET /v1/profile은 성공(세션 확인).
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: {}, meta: { requestId: 'r' } }), { status: 200 }),
+      )
       // PUT 업로드는 네트워크 오류.
       .mockRejectedValueOnce(new Error('network down'));
     vi.stubGlobal('fetch', fetchMock);
@@ -77,14 +116,19 @@ describe('outbox', () => {
 });
 
 describe('T-10-034 전송 중 enqueue', () => {
-
   it('동기 루프로 여러 시즌을 넣어도 모두 보내고 큐를 비운다(이 계정으로 이어서 기록)', async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(ok()));
     vi.stubGlobal('fetch', fetchMock);
     const { enqueueSeason, flushOutbox } = await import('./outbox.js');
-    for (const y of [2026, 2027, 2028, 2029]) enqueueSeason('66666666-6666-6666-6666-666666666666', y, seasonBody);
+    for (const y of [2026, 2027, 2028, 2029])
+      enqueueSeason('66666666-6666-6666-6666-666666666666', y, seasonBody);
     await flushOutbox();
-    expect(puts(fetchMock).map((u) => u.split('/').pop())).toEqual(['2026', '2027', '2028', '2029']);
+    expect(puts(fetchMock).map((u) => u.split('/').pop())).toEqual([
+      '2026',
+      '2027',
+      '2028',
+      '2029',
+    ]);
     expect(queue()).toEqual([]);
   });
 
@@ -110,7 +154,10 @@ describe('T-10-034 전송 중 enqueue', () => {
 });
 
 describe('T-10-013 소유권 충돌', () => {
-  const conflict = (code: string) => new Response(JSON.stringify({ error: { code, message: 'x', retryable: false } }), { status: 409 });
+  const conflict = (code: string) =>
+    new Response(JSON.stringify({ error: { code, message: 'x', retryable: false } }), {
+      status: 409,
+    });
   const flush = async () => {
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
@@ -120,23 +167,40 @@ describe('T-10-013 소유권 충돌', () => {
   const stubDispatch = () => {
     const dispatch = vi.fn();
     vi.stubGlobal('dispatchEvent', dispatch);
-    return () => dispatch.mock.calls.map(([e]) => [(e as CustomEvent).type, (e as CustomEvent).detail]);
+    return () =>
+      dispatch.mock.calls.map(([e]) => [(e as CustomEvent).type, (e as CustomEvent).detail]);
   };
 
   it('CAREER_OWNER_MISMATCH는 버리고 그 항목으로 이벤트를 알린다', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(conflict('CAREER_OWNER_MISMATCH')));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(conflict('CAREER_OWNER_MISMATCH')),
+    );
     const dispatched = stubDispatch();
     const { enqueueSeason } = await import('./outbox.js');
     enqueueSeason('33333333-3333-3333-3333-333333333333', 2027, seasonBody);
     await flush();
     expect(queue()).toEqual([]);
     expect(dispatched()).toEqual([
-      ['offside:owner-conflict', [{ kind: 'season', careerId: '33333333-3333-3333-3333-333333333333', year: 2027, body: seasonBody }]],
+      [
+        'offside:owner-conflict',
+        [
+          {
+            kind: 'season',
+            careerId: '33333333-3333-3333-3333-333333333333',
+            year: 2027,
+            body: seasonBody,
+          },
+        ],
+      ],
     ]);
   });
 
   it('다른 409는 알리지 않는다', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(conflict('VALIDATION_FAILED')));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(conflict('VALIDATION_FAILED')),
+    );
     const dispatched = stubDispatch();
     const { enqueueSeason } = await import('./outbox.js');
     enqueueSeason('44444444-4444-4444-4444-444444444444', 2027, seasonBody);
@@ -158,12 +222,21 @@ describe('T-10-045 재시도·버림·한도', () => {
   const OTHER = '99999999-9999-9999-9999-999999999999';
   const status = (n: number) => new Response('{}', { status: n });
   const seed = (items: unknown[]) => localStorage.setItem('ft_outbox', JSON.stringify(items));
-  const season = (careerId: string, year: number) => ({ kind: 'season', careerId, year, body: seasonBody });
+  const season = (careerId: string, year: number) => ({
+    kind: 'season',
+    careerId,
+    year,
+    body: seasonBody,
+  });
   const retirement = (careerId: string) => ({ kind: 'retirement', careerId, body: summary });
 
   it('시즌 PUT이 재시도 대상이면 같은 커리어의 은퇴는 보내지 않고 남긴다(서버에 커리어가 없어 400으로 버려지지 않게)', async () => {
     // 첫 시즌 PUT이 5xx → 커리어가 아직 서버에 없다. 은퇴를 이어서 보내면 CAREER_NOT_FOUND(400)로 영구히 버려졌다.
-    const fetchMock = vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(status(503)).mockResolvedValue(status(400));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(ok())
+      .mockResolvedValueOnce(status(503))
+      .mockResolvedValue(status(400));
     vi.stubGlobal('fetch', fetchMock);
     seed([season(CID, 2026), retirement(CID), season(OTHER, 2026)]);
     const { flushOutbox } = await import('./outbox.js');
@@ -180,7 +253,11 @@ describe('T-10-045 재시도·버림·한도', () => {
   });
 
   it('401이면 버리지 않고, 다음 flush에서 프로필을 다시 확인한 뒤 보낸다', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(status(401)).mockResolvedValue(ok());
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(ok())
+      .mockResolvedValueOnce(status(401))
+      .mockResolvedValue(ok());
     vi.stubGlobal('fetch', fetchMock);
     seed([season(CID, 2026)]);
     const { flushOutbox } = await import('./outbox.js');
@@ -188,14 +265,26 @@ describe('T-10-045 재시도·버림·한도', () => {
     expect(queue()).toHaveLength(1);
     await flushOutbox();
     const urls = fetchMock.mock.calls.map(([url]) => String(url).replace(/^.*\/v1\//, ''));
-    expect(urls).toEqual(['profile', `careers/${CID}/seasons/2026`, 'profile', `careers/${CID}/seasons/2026`]);
+    expect(urls).toEqual([
+      'profile',
+      `careers/${CID}/seasons/2026`,
+      'profile',
+      `careers/${CID}/seasons/2026`,
+    ]);
     expect(queue()).toEqual([]);
   });
 
   it('오프라인·401이면 이번 회차를 멈춘다 — 다른 커리어 항목도 보내지 않는다', async () => {
     vi.stubGlobal('navigator', { onLine: false });
-    for (const fail of [() => Promise.reject(new Error('offline')), () => Promise.resolve(status(401))]) {
-      const fetchMock = vi.fn().mockResolvedValueOnce(ok()).mockImplementationOnce(fail).mockResolvedValue(ok());
+    for (const fail of [
+      () => Promise.reject(new Error('offline')),
+      () => Promise.resolve(status(401)),
+    ]) {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(ok())
+        .mockImplementationOnce(fail)
+        .mockResolvedValue(ok());
       vi.stubGlobal('fetch', fetchMock);
       seed([season(CID, 2026), season(OTHER, 2026)]);
       const { flushOutbox } = await import('./outbox.js');
@@ -207,7 +296,11 @@ describe('T-10-045 재시도·버림·한도', () => {
   });
 
   it('온라인인데 한 항목에서 예외가 나면 그 커리어만 미룬다', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(ok()).mockRejectedValueOnce(new TypeError('body too large')).mockResolvedValue(ok());
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(ok())
+      .mockRejectedValueOnce(new TypeError('body too large'))
+      .mockResolvedValue(ok());
     vi.stubGlobal('fetch', fetchMock);
     seed([season(CID, 2026), retirement(CID), season(OTHER, 2026)]);
     const { flushOutbox } = await import('./outbox.js');
@@ -251,7 +344,17 @@ describe('T-10-006 seasonPayload', () => {
     for (let i = 0; i < N; i++) {
       setActiveRng(createRng(1000 + i));
       const pos = pick(['FW', 'MF', 'DF', 'GK'] as const);
-      const s = g.newGame({ name: 'T', number: 9, pos, foot: '오른발', type: pick(g.TYPES[pos]).id, trait: pick(g.TRAITS).id }, 1000 + i);
+      const s = g.newGame(
+        {
+          name: 'T',
+          number: 9,
+          pos,
+          foot: '오른발',
+          type: pick(g.TYPES[pos]).id,
+          trait: pick(g.TRAITS).id,
+        },
+        1000 + i,
+      );
       for (let y = 0; y < 30 && !s.retired; y++) {
         for (let ph = 0; ph <= g.LAST_PHASE; ph++) {
           s.training = s.cond < 45 ? 'rest' : pick(g.ATTR_KEYS);

@@ -9,8 +9,14 @@ describe('확률 도감', () => {
     const dex = eventDex();
     expect(dex.flatMap((e) => e.ids).sort()).toEqual(EVENTS.map((e) => e.id).sort());
     expect(EVENTS.filter(isHiddenEvent).every((e) => !!(e.story || e.chain))).toBe(true);
-    expect(dex.find((e) => e.ids.includes('rival-2'))).toMatchObject({ group: 'story', story: { name: '평생의 라이벌', stage: 2 } });
-    expect(dex.find((e) => e.ids.includes('fw-drought'))).toMatchObject({ group: 'position', pos: 'FW' });
+    expect(dex.find((e) => e.ids.includes('rival-2'))).toMatchObject({
+      group: 'story',
+      story: { name: '평생의 라이벌', stage: 2 },
+    });
+    expect(dex.find((e) => e.ids.includes('fw-drought'))).toMatchObject({
+      group: 'position',
+      pos: 'FW',
+    });
   });
 
   it('선택지 확률 범위와 영향 요인을 식에서 뽑는다', () => {
@@ -26,10 +32,14 @@ describe('확률 도감', () => {
     expect(f['감독 신뢰']).toBe(true);
 
     // 고정 확률은 범위가 한 점이고 요인이 없다.
-    const fixed = eventDex().flatMap((e) => e.choices).find((c) => c.label === '잠깐만 들른다')!;
+    const fixed = eventDex()
+      .flatMap((e) => e.choices)
+      .find((c) => c.label === '잠깐만 들른다')!;
     expect(fixed).toMatchObject({ min: 70, max: 70, factors: [] });
     // 특성으로만 갈리는 확률(강철 체력 80% / 그 외 50%).
-    const tough = eventDex().flatMap((e) => e.choices).find((c) => c.label === '참고 다음 경기에 뛴다')!;
+    const tough = eventDex()
+      .flatMap((e) => e.choices)
+      .find((c) => c.label === '참고 다음 경기에 뛴다')!;
     expect(tough).toMatchObject({ min: 50, max: 80 });
     expect(tough.factors).toEqual([{ label: "특성 '강철 체력'", up: true }]);
   });

@@ -41,6 +41,9 @@ export async function putIdempotent(db: Db, input: PutIdempotentInput): Promise<
 }
 
 export async function purgeExpired(db: Db, now: string): Promise<number> {
-  const deleted = await db.delete(idempotency).where(lte(idempotency.expiresAt, now)).returning({ key: idempotency.key });
+  const deleted = await db
+    .delete(idempotency)
+    .where(lte(idempotency.expiresAt, now))
+    .returning({ key: idempotency.key });
   return deleted.length;
 }

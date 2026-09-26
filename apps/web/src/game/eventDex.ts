@@ -2,7 +2,17 @@
 // 이벤트 선택지의 성공 확률은 선수 상태로 계산하는 식이라 숫자 하나로 적을 수 없다. 그래서 가상의
 // 선수 상태를 넣어 "나올 수 있는 범위"와 "무엇이 확률을 올리고 내리는지"를 코드에서 직접 뽑는다 —
 // 밸런스를 바꾸면 도감도 자동으로 따라간다. 계산은 게임 RNG를 건드리지 않도록 따로 돌린다.
-import { ATTR_KEYS, ATTR_LABEL, CLUBS, LEAGUES, POS, TRAITS, TYPES, type AttrKey, type Pos } from './data.js';
+import {
+  ATTR_KEYS,
+  ATTR_LABEL,
+  CLUBS,
+  LEAGUES,
+  POS,
+  TRAITS,
+  TYPES,
+  type AttrKey,
+  type Pos,
+} from './data.js';
 import { initSubs, spreadAttr, syncFace } from './attributes.js';
 import { STORIES, isSafe, leagueOf, newGame, txt } from './engine.js';
 import { EVENTS } from './events-data.js';
@@ -51,13 +61,24 @@ function sampleStates(pos: Pos | null, n: number, seed: number): GameState[] {
   const out: GameState[] = [];
   for (let i = 0; i < n; i++) {
     const p = pos ?? at(Object.keys(POS) as Pos[]);
-    const s = newGame({ name: '도감', number: 10, pos: p, foot: '오른발', trait: at(TRAITS).id, type: at(TYPES[p]).id }, 1);
+    const s = newGame(
+      {
+        name: '도감',
+        number: 10,
+        pos: p,
+        foot: '오른발',
+        trait: at(TRAITS).id,
+        type: at(TYPES[p]).id,
+      },
+      1,
+    );
     const L = at(LEAGUES);
     s.leagueId = L.id;
     s.club = { ...at(CLUBS.filter((c) => c.leagueId === L.id)) };
     const level = L.avg + (r() - 0.5) * 20;
     const base = {} as Record<AttrKey, number>;
-    for (const k of ATTR_KEYS) base[k] = Math.max(25, Math.min(95, Math.round(level + (r() - 0.5) * 24)));
+    for (const k of ATTR_KEYS)
+      base[k] = Math.max(25, Math.min(95, Math.round(level + (r() - 0.5) * 24)));
     // 능력치는 세부 능력치(sub)에서 나온다 — OVR·얼굴 능력치가 서로 맞도록 sub부터 만든다.
     initSubs(s, base);
     syncFace(s);
@@ -159,11 +180,14 @@ function factorsOf(p: (s: GameState) => number, states: GameState[]): DexFactor[
     if (Math.abs(e) > EPS) found.push({ label: f.label, e });
   }
   // 능력치: 여러 능력치가 비슷하게 움직이면 종합 능력치(OVR)로, 한두 개만 크게 움직이면 그 능력치로 적는다.
-  const per = ATTR_KEYS.map((k) => ({ k, e: effect(p, states, attrBump(k, 10)) })).filter((x) => Math.abs(x.e) > EPS);
+  const per = ATTR_KEYS.map((k) => ({ k, e: effect(p, states, attrBump(k, 10)) })).filter(
+    (x) => Math.abs(x.e) > EPS,
+  );
   if (per.length > 3) {
     found.push({ label: '종합 능력치(OVR)', e: effect(p, states, attrBump(null, 5)) });
     const mid = per.map((x) => Math.abs(x.e)).sort((a, b) => a - b)[Math.floor(per.length / 2)]!;
-    for (const x of per) if (Math.abs(x.e) >= mid * 2.5) found.push({ label: ATTR_LABEL[x.k], e: x.e });
+    for (const x of per)
+      if (Math.abs(x.e) >= mid * 2.5) found.push({ label: ATTR_LABEL[x.k], e: x.e });
   } else for (const x of per) found.push({ label: ATTR_LABEL[x.k], e: x.e });
   // 특성은 크기가 없으니 가장 유리한 특성 하나만 적는다.
   const byTrait = TRAITS.map((t) => {
@@ -210,18 +234,27 @@ function labelOf(c: Choice, s: GameState): string {
 
 function analyzeChoice(ev: EventDef, c: Choice, idx: number, states: GameState[]): DexChoice {
   const label = labelOf(c, states[0]!);
-  if (!c.p) return { label, kind: isSafe(ev, c) ? 'safe' : 'sure', min: 100, max: 100, factors: [] };
+  if (!c.p)
+    return { label, kind: isSafe(ev, c) ? 'safe' : 'sure', min: 100, max: 100, factors: [] };
   const raw = c.p;
   const p = safely((s: GameState) => choiceOdds(raw(s), ev.id, idx));
   const values = states.map(p).filter((v) => !Number.isNaN(v));
   if (!values.length) return { label, kind: 'odds', min: null, max: null, factors: [] };
   const pct = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 100);
-  return { label, kind: 'odds', min: pct(Math.min(...values)), max: pct(Math.max(...values)), factors: factorsOf(p, states.slice(0, FACTOR_SAMPLES)) };
+  return {
+    label,
+    kind: 'odds',
+    min: pct(Math.min(...values)),
+    max: pct(Math.max(...values)),
+    factors: factorsOf(p, states.slice(0, FACTOR_SAMPLES)),
+  };
 }
 
 /** 스토리 2단계 이후는 앞 단계를 먼저 겪은 상태가 있어야 확률이 계산된다 — 앞 단계 선택을 무작위로 밟아 둔다. */
 function withPastStages(ev: EventDef, states: GameState[], seed: number): GameState[] {
-  const past = EVENTS.filter((e) => e.story === ev.story && (e.stage ?? 0) < (ev.stage ?? 0)).sort((a, b) => (a.stage ?? 0) - (b.stage ?? 0));
+  const past = EVENTS.filter((e) => e.story === ev.story && (e.stage ?? 0) < (ev.stage ?? 0)).sort(
+    (a, b) => (a.stage ?? 0) - (b.stage ?? 0),
+  );
   const r = createRng(seed).next;
   for (const s of states) {
     for (const e of past) {
@@ -264,13 +297,16 @@ export function eventDex(): DexEntry[] {
       const pos = posOf(ev);
       const dependsOnPast = !!ev.story && (ev.stage ?? 0) > 1;
       let states: GameState[];
-      if (dependsOnPast) states = withPastStages(ev, sampleStates(pos, SAMPLES, 5000 + i), 9000 + i);
+      if (dependsOnPast)
+        states = withPastStages(ev, sampleStates(pos, SAMPLES, 5000 + i), 9000 + i);
       else {
         const key = pos ?? 'any';
         if (!shared.has(key)) shared.set(key, sampleStates(pos, SAMPLES, 1000 + i));
         states = shared.get(key)!;
       }
-      const story = ev.story ? { name: STORIES[ev.story]!.name, stage: ev.stage ?? 0, total: STORIES[ev.story]!.total } : null;
+      const story = ev.story
+        ? { name: STORIES[ev.story]!.name, stage: ev.stage ?? 0, total: STORIES[ev.story]!.total }
+        : null;
       return {
         ids: evs.map((e) => e.id),
         title: ev.title,

@@ -21,7 +21,8 @@ export type ProfileRecord = {
 };
 
 /** 로그인 수단(구글·토스)이 연결된 프로필. */
-export const isLinked = (p: ProfileRecord): boolean => p.googleSub !== null || p.tossAnonKeyHash !== null;
+export const isLinked = (p: ProfileRecord): boolean =>
+  p.googleSub !== null || p.tossAnonKeyHash !== null;
 
 const DEFAULT_SETTINGS: ProfileSettings = ProfileSettingsSchema.parse({
   reducedMotion: 'SYSTEM',
@@ -48,12 +49,20 @@ function toRecord(row: typeof profiles.$inferSelect): ProfileRecord {
   };
 }
 
-export async function createProfile(db: Db, input?: { settings?: ProfileSettings }): Promise<ProfileRecord> {
+export async function createProfile(
+  db: Db,
+  input?: { settings?: ProfileSettings },
+): Promise<ProfileRecord> {
   const now = new Date().toISOString();
   const settings = input?.settings ? ProfileSettingsSchema.parse(input.settings) : DEFAULT_SETTINGS;
   const [row] = await db
     .insert(profiles)
-    .values({ id: newId('prf'), settingsJson: JSON.stringify(settings), createdAt: now, lastSeenAt: now })
+    .values({
+      id: newId('prf'),
+      settingsJson: JSON.stringify(settings),
+      createdAt: now,
+      lastSeenAt: now,
+    })
     .returning();
   return toRecord(row!);
 }
@@ -83,14 +92,23 @@ export async function updateSettings(
 }
 
 /** T-10-028 댓글 닉네임을 정한다. 다른 프로필이 (대소문자만 달라도) 쓰고 있으면 'taken'. */
-export async function setNickname(db: Db, id: string, nickname: string): Promise<ProfileRecord | 'taken'> {
+export async function setNickname(
+  db: Db,
+  id: string,
+  nickname: string,
+): Promise<ProfileRecord | 'taken'> {
   try {
-    const [row] = await db.update(profiles).set({ nickname }).where(eq(profiles.id, id)).returning();
+    const [row] = await db
+      .update(profiles)
+      .set({ nickname })
+      .where(eq(profiles.id, id))
+      .returning();
     return toRecord(row!);
   } catch (err) {
     // lower(nickname) 유니크 인덱스가 겹침을 막는다(자기 자신의 같은 닉네임은 겹치지 않는다).
     // drizzle는 D1 오류를 "Failed query: …"로 감싸고 원래 메시지를 cause에 둔다.
-    if (`${String(err)} ${String((err as { cause?: unknown }).cause ?? '')}`.includes('UNIQUE')) return 'taken';
+    if (`${String(err)} ${String((err as { cause?: unknown }).cause ?? '')}`.includes('UNIQUE'))
+      return 'taken';
     throw err;
   }
 }
@@ -112,7 +130,10 @@ export async function setRecoveryCode(
 }
 
 /** 삭제된 프로필(`deletedAt` not null)도 존재 여부 판정을 위해 그대로 돌려준다. 호출자가 판단한다. */
-export async function getProfileByRecoveryCodeHash(db: Db, hash: string): Promise<ProfileRecord | undefined> {
+export async function getProfileByRecoveryCodeHash(
+  db: Db,
+  hash: string,
+): Promise<ProfileRecord | undefined> {
   const [row] = await db.select().from(profiles).where(eq(profiles.recoveryCodeHash, hash));
   return row ? toRecord(row) : undefined;
 }
@@ -127,7 +148,10 @@ export async function softDeleteProfile(db: Db, id: string, at: string): Promise
  * sub를 "처음 보는 sub"로 취급해 재연결을 허용한다(delete-profile.ts가 삭제 시 google_sub를 이미
  * null로 비우므로 실무에서는 겹치지 않지만, 방어적으로 호출자가 다시 판단한다).
  */
-export async function getProfileByGoogleSub(db: Db, sub: string): Promise<ProfileRecord | undefined> {
+export async function getProfileByGoogleSub(
+  db: Db,
+  sub: string,
+): Promise<ProfileRecord | undefined> {
   const [row] = await db.select().from(profiles).where(eq(profiles.googleSub, sub));
   return row ? toRecord(row) : undefined;
 }
@@ -146,5 +170,8 @@ export async function linkGoogleAccount(
 
 /** API-AUTH-006: `google_sub`·`email`·`linked_at`을 비운다. */
 export async function unlinkGoogleAccount(db: Db, id: string): Promise<void> {
-  await db.update(profiles).set({ googleSub: null, email: null, linkedAt: null }).where(eq(profiles.id, id));
+  await db
+    .update(profiles)
+    .set({ googleSub: null, email: null, linkedAt: null })
+    .where(eq(profiles.id, id));
 }

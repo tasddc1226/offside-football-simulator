@@ -2,7 +2,12 @@
 // 이름은 game/data.ts POS의 label과 같다(share-meta.test.ts가 맞춰 본다).
 import type { Pos } from './data.js';
 
-export const POS_LABEL: Record<Pos, string> = { FW: '공격수', MF: '미드필더', DF: '수비수', GK: '골키퍼' };
+export const POS_LABEL: Record<Pos, string> = {
+  FW: '공격수',
+  MF: '미드필더',
+  DF: '수비수',
+  GK: '골키퍼',
+};
 
 /** 이름을 공개하지 않은 선수 표기(명예의 전당·서버 최초 기록·공유 링크 미리보기). */
 export function anonName(pos: Pos, number: number | null): string {

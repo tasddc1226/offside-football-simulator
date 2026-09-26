@@ -6,7 +6,14 @@ test('구단 이름이 겹쳐도 순위표가 그려진다', async ({ page }) =>
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() =>
-    localStorage.setItem('ft_clubs', JSON.stringify({ clubs: { 'hs-0': { name: '같은 이름 FC' }, 'hs-1': { name: '같은 이름 FC' } }, updatedAt: null, dirty: false })),
+    localStorage.setItem(
+      'ft_clubs',
+      JSON.stringify({
+        clubs: { 'hs-0': { name: '같은 이름 FC' }, 'hs-1': { name: '같은 이름 FC' } },
+        updatedAt: null,
+        dirty: false,
+      }),
+    ),
   );
   await startCareer(page);
   const sheet = page.locator('#sheet');
@@ -19,7 +26,8 @@ test('구단 이름이 겹쳐도 순위표가 그려진다', async ({ page }) =>
   await expect(sheet).toBeHidden();
   const table = page.locator('[data-league-table]');
   const toggle = table.locator('[data-act="table-toggle"]');
-  if ((await toggle.count()) && (await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click();
+  if ((await toggle.count()) && (await toggle.getAttribute('aria-expanded')) === 'false')
+    await toggle.click();
   await expect(table.locator('tbody tr', { hasText: '같은 이름 FC' })).toHaveCount(2);
   expect(errors).toEqual([]);
 });

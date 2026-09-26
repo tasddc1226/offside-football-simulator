@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { sha256Hex } from '../db/hash.js';
-import { generateRecoveryCode, normalizeRecoveryCode, pickAlphabetChar, type RandomByteSource } from './recovery-code.js';
+import {
+  generateRecoveryCode,
+  normalizeRecoveryCode,
+  pickAlphabetChar,
+  type RandomByteSource,
+} from './recovery-code.js';
 
 describe('generateRecoveryCode', () => {
   it('OFS-XXXX-XXXX-XXXX 형식, 12자리 본문', () => {
@@ -22,7 +27,12 @@ describe('generateRecoveryCode', () => {
 describe('normalizeRecoveryCode', () => {
   it('소문자·공백·하이픈·ofs 접두 변형 4종이 같은 해시를 낸다', async () => {
     const canonical = 'OFS-AB3D-9F2K-7Q4T';
-    const variants = ['OFS-AB3D-9F2K-7Q4T', 'ofs ab3d 9f2k 7q4t', 'OFSAB3D9F2K7Q4T', 'AB3D-9F2K-7Q4T'];
+    const variants = [
+      'OFS-AB3D-9F2K-7Q4T',
+      'ofs ab3d 9f2k 7q4t',
+      'OFSAB3D9F2K7Q4T',
+      'AB3D-9F2K-7Q4T',
+    ];
 
     const canonicalHash = await sha256Hex(normalizeRecoveryCode(canonical));
     for (const variant of variants) {

@@ -34,7 +34,17 @@ export type PhaseReport = {
   title: string;
   /** 수비수·골키퍼는 도움 대신 무실점을 보여 준다. */
   back: boolean;
-  block: { w: number; d: number; l: number; apps: number; goals: number; assists: number; rating: string | null; cs: number; hl: string[] } | null;
+  block: {
+    w: number;
+    d: number;
+    l: number;
+    apps: number;
+    goals: number;
+    assists: number;
+    rating: string | null;
+    cs: number;
+    hl: string[];
+  } | null;
   games: TickerRow[];
   rank: { before: number | null; after: number | null };
   role: string;
@@ -84,7 +94,17 @@ export type SheetView =
       story: StoryTag | null;
       choices: { label: string; odds: string; hint?: string }[];
     }
-  | { kind: 'eventResult'; label: string; outcome: string; ok: boolean; text: string; chips: Chip[]; twist: string | null; story: StoryNote | null; dexNew: string | null }
+  | {
+      kind: 'eventResult';
+      label: string;
+      outcome: string;
+      ok: boolean;
+      text: string;
+      chips: Chip[];
+      twist: string | null;
+      story: StoryNote | null;
+      dexNew: string | null;
+    }
   | {
       kind: 'season';
       eyebrow: string;
@@ -105,6 +125,21 @@ export type SheetView =
       kind: 'market';
       eyebrow: string;
       note: string;
-      options: { clubId?: string; name: string; lg: string; salary: string | null; sub: string | null }[];
+      options: {
+        clubId?: string;
+        name: string;
+        lg: string;
+        salary: string | null;
+        sub: string | null;
+      }[];
     }
-  | { kind: 'notice'; eyebrow: string; title?: string; big?: { text: string; ok: boolean }; steps?: string[]; text?: string; muted?: boolean; check?: { label: string; onChange: (on: boolean) => void } };
+  | {
+      kind: 'notice';
+      eyebrow: string;
+      title?: string;
+      big?: { text: string; ok: boolean };
+      steps?: string[];
+      text?: string;
+      muted?: boolean;
+      check?: { label: string; onChange: (on: boolean) => void };
+    };

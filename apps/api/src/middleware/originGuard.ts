@@ -10,9 +10,12 @@ export const originGuard = createMiddleware<AppEnv>(async (c, next) => {
   if (STATE_CHANGING_METHODS.has(c.req.method)) {
     const origin = c.req.header('Origin');
     const pair = resolveRequestHostPair(c.req.url, c.env);
-    const allowed = c.env.ENVIRONMENT === 'production'
-      ? pair === null ? [] : [pair.webOrigin]
-      : parseAllowedOrigins(c.env);
+    const allowed =
+      c.env.ENVIRONMENT === 'production'
+        ? pair === null
+          ? []
+          : [pair.webOrigin]
+        : parseAllowedOrigins(c.env);
     if (!origin || !allowed.includes(origin)) {
       throw new AppError({ code: 'ORIGIN_NOT_ALLOWED', message: '허용되지 않은 origin입니다.' });
     }

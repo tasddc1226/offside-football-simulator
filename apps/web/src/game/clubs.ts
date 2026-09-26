@@ -30,10 +30,14 @@ const IMG = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 function cleanLogo(v: unknown): ClubLogo | undefined {
   if (!v || typeof v !== 'object') return undefined;
   const o = v as Record<string, unknown>;
-  const text = typeof o.text === 'string' ? [...o.text.trim()].slice(0, LOGO_TEXT_MAX).join('') : '';
+  const text =
+    typeof o.text === 'string' ? [...o.text.trim()].slice(0, LOGO_TEXT_MAX).join('') : '';
   const bg = typeof o.bg === 'string' && HEX.test(o.bg) ? o.bg : null;
   const fg = typeof o.fg === 'string' && HEX.test(o.fg) ? o.fg : null;
-  const img = typeof o.img === 'string' && o.img.length <= CLUB_CUSTOM_IMG_MAX && IMG.test(o.img) ? o.img : undefined;
+  const img =
+    typeof o.img === 'string' && o.img.length <= CLUB_CUSTOM_IMG_MAX && IMG.test(o.img)
+      ? o.img
+      : undefined;
   if (!bg || !fg) return undefined;
   return img ? { text, bg, fg, img } : { text, bg, fg };
 }
@@ -70,11 +74,18 @@ function hslHex(h: number, s: number, l: number): string {
   const f = (n: number) => {
     const k = (n + h / 30) % 12;
     const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-    return Math.round(c * 255).toString(16).padStart(2, '0');
+    return Math.round(c * 255)
+      .toString(16)
+      .padStart(2, '0');
   };
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 export function defaultLogo(club: Pick<Club, 'id' | 'name'>): ClubLogo {
-  return { text: [...club.name.replace(/^FC\s+/, '')][0] ?? '?', bg: hslHex(hue(club.id), 0.55, 0.32), fg: '#ffffff' };
+  return {
+    text: [...club.name.replace(/^FC\s+/, '')][0] ?? '?',
+    bg: hslHex(hue(club.id), 0.55, 0.32),
+    fg: '#ffffff',
+  };
 }
-export const logoOf = (club: Pick<Club, 'id' | 'name'>, map: ClubCustomMap): ClubLogo => map[club.id]?.logo ?? defaultLogo(club);
+export const logoOf = (club: Pick<Club, 'id' | 'name'>, map: ClubCustomMap): ClubLogo =>
+  map[club.id]?.logo ?? defaultLogo(club);

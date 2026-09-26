@@ -6,12 +6,19 @@ import { createTestD1, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, callJson, issueAdminCookie, issueCookie } from '../test/http.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 
-type Version = { version: number; status: string; note: string; values: Record<string, unknown>; activatedAt: string | null };
+type Version = {
+  version: number;
+  status: string;
+  note: string;
+  values: Record<string, unknown>;
+  activatedAt: string | null;
+};
 
 describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
   let ctx: TestD1;
   let env: TestD1['env'];
-  const call = (method: string, path: string, opts?: Parameters<typeof callJson>[3]) => callJson(env, method, path, opts);
+  const call = (method: string, path: string, opts?: Parameters<typeof callJson>[3]) =>
+    callJson(env, method, path, opts);
   const data = async <T>(res: Response) => ((await res.json()) as { data: T }).data;
 
   const makeAdmin = () => issueAdminCookie(ctx);
@@ -38,7 +45,10 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
   it('관리자만 초안을 만들고 목록을 본다 — 세션 없음 401, 일반 프로필 403', async () => {
     expect((await call('GET', '/v1/admin/balance')).status).toBe(401);
     const user = await issueCookie(ctx);
-    const res = await call('POST', '/v1/admin/balance', { cookie: user.cookie, body: { values: {} } });
+    const res = await call('POST', '/v1/admin/balance', {
+      cookie: user.cookie,
+      body: { values: {} },
+    });
     expect(res.status).toBe(403);
     expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('FORBIDDEN');
     expect((await call('GET', '/v1/admin/balance', { cookie: user.cookie })).status).toBe(403);
@@ -46,8 +56,16 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
 
   it('범위 밖 값·모르는 키·잘못된 이벤트 키는 거절한다', async () => {
     const admin = await makeAdmin();
-    for (const values of [{ injuryRate: 0.9 }, { unknownKnob: 1 }, { eventWeight: { 'Bad Id': 1 } }, { choiceBonus: { knock: 0.1 } }]) {
-      const res = await call('POST', '/v1/admin/balance', { cookie: admin.cookie, body: { values } });
+    for (const values of [
+      { injuryRate: 0.9 },
+      { unknownKnob: 1 },
+      { eventWeight: { 'Bad Id': 1 } },
+      { choiceBonus: { knock: 0.1 } },
+    ]) {
+      const res = await call('POST', '/v1/admin/balance', {
+        cookie: admin.cookie,
+        body: { values },
+      });
       expect(res.status, JSON.stringify(values)).toBe(400);
     }
   });
@@ -55,23 +73,41 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
   it('초안 → 수정 → 활성화하면 공개 설정이 바뀌고, 이전 활성은 archived, 감사 로그가 남는다', async () => {
     const admin = await makeAdmin();
     const v1 = await draft(admin.cookie, { growthScale: 1.1 }, '성장 소폭 상향');
-    expect(v1).toMatchObject({ status: 'draft', note: '성장 소폭 상향', values: { growthScale: 1.1 } });
+    expect(v1).toMatchObject({
+      status: 'draft',
+      note: '성장 소폭 상향',
+      values: { growthScale: 1.1 },
+    });
 
     const put = await call('PUT', `/v1/admin/balance/${v1.version}`, {
       cookie: admin.cookie,
-      body: { note: '성장 상향', values: { growthScale: 1.2, eventWeight: { knock: 2 }, choiceBonus: { 'knock:0': -0.1 } } },
+      body: {
+        note: '성장 상향',
+        values: { growthScale: 1.2, eventWeight: { knock: 2 }, choiceBonus: { 'knock:0': -0.1 } },
+      },
     });
     expect(put.status).toBe(200);
-    expect((await data<Version>(put)).values).toEqual({ growthScale: 1.2, eventWeight: { knock: 2 }, choiceBonus: { 'knock:0': -0.1 } });
+    expect((await data<Version>(put)).values).toEqual({
+      growthScale: 1.2,
+      eventWeight: { knock: 2 },
+      choiceBonus: { 'knock:0': -0.1 },
+    });
 
-    const act = await call('POST', `/v1/admin/balance/${v1.version}/activate`, { cookie: admin.cookie });
+    const act = await call('POST', `/v1/admin/balance/${v1.version}/activate`, {
+      cookie: admin.cookie,
+    });
     expect(act.status).toBe(200);
     expect(await data<Version>(act)).toMatchObject({ status: 'active' });
-    expect(await data(await call('GET', '/v1/balance'))).toMatchObject({ version: v1.version, values: { growthScale: 1.2 } });
+    expect(await data(await call('GET', '/v1/balance'))).toMatchObject({
+      version: v1.version,
+      values: { growthScale: 1.2 },
+    });
 
     const v2 = await draft(admin.cookie, { koreaStr: 80 });
     await call('POST', `/v1/admin/balance/${v2.version}/activate`, { cookie: admin.cookie });
-    const list = await data<{ versions: Version[] }>(await call('GET', '/v1/admin/balance', { cookie: admin.cookie }));
+    const list = await data<{ versions: Version[] }>(
+      await call('GET', '/v1/admin/balance', { cookie: admin.cookie }),
+    );
     expect(list.versions.map((v) => [v.version, v.status])).toEqual([
       [v2.version, 'active'],
       [v1.version, 'archived'],
@@ -92,28 +128,53 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
     const admin = await makeAdmin();
     const v1 = await draft(admin.cookie, {});
     await call('POST', `/v1/admin/balance/${v1.version}/activate`, { cookie: admin.cookie });
-    expect((await call('PUT', `/v1/admin/balance/${v1.version}`, { cookie: admin.cookie, body: { values: {} } })).status).toBe(409);
-    expect((await call('DELETE', `/v1/admin/balance/${v1.version}`, { cookie: admin.cookie })).status).toBe(409);
+    expect(
+      (
+        await call('PUT', `/v1/admin/balance/${v1.version}`, {
+          cookie: admin.cookie,
+          body: { values: {} },
+        })
+      ).status,
+    ).toBe(409);
+    expect(
+      (await call('DELETE', `/v1/admin/balance/${v1.version}`, { cookie: admin.cookie })).status,
+    ).toBe(409);
 
     const v2 = await draft(admin.cookie, { wcQual: 0.8 });
-    expect((await call('DELETE', `/v1/admin/balance/${v2.version}`, { cookie: admin.cookie })).status).toBe(204);
-    expect((await call('DELETE', `/v1/admin/balance/${v2.version}`, { cookie: admin.cookie })).status).toBe(404);
-    expect((await call('POST', '/v1/admin/balance/999/activate', { cookie: admin.cookie })).status).toBe(404);
+    expect(
+      (await call('DELETE', `/v1/admin/balance/${v2.version}`, { cookie: admin.cookie })).status,
+    ).toBe(204);
+    expect(
+      (await call('DELETE', `/v1/admin/balance/${v2.version}`, { cookie: admin.cookie })).status,
+    ).toBe(404);
+    expect(
+      (await call('POST', '/v1/admin/balance/999/activate', { cookie: admin.cookie })).status,
+    ).toBe(404);
   });
 
   it('저장된 값이 나중에 좁아진 범위를 벗어나거나 사라진 키면 읽을 때 걸러 낸다', async () => {
     const admin = await makeAdmin();
     const v1 = await draft(admin.cookie, {});
-    await ctx.db.update(balanceVersions).set({ valuesJson: JSON.stringify({ injuryRate: 0.4, retiredKnob: 3 }) }).where(eq(balanceVersions.version, v1.version));
+    await ctx.db
+      .update(balanceVersions)
+      .set({ valuesJson: JSON.stringify({ injuryRate: 0.4, retiredKnob: 3 }) })
+      .where(eq(balanceVersions.version, v1.version));
     await call('POST', `/v1/admin/balance/${v1.version}/activate`, { cookie: admin.cookie });
-    expect((await data<Version>(await call('GET', '/v1/balance'))).values).toEqual({ injuryRate: 0.05 });
+    expect((await data<Version>(await call('GET', '/v1/balance'))).values).toEqual({
+      injuryRate: 0.05,
+    });
   });
 
   it('T-10-045: 활성화하면 운영 대시보드가 엣지 캐시와 무관하게 새 활성 버전을 보여 준다', async () => {
     const edge = installFakeEdgeCache();
     try {
       const admin = await makeAdmin();
-      const stats = async () => (await data<{ balance: { version: number } | null }>(await call('GET', '/v1/admin/stats', { cookie: admin.cookie }))).balance;
+      const stats = async () =>
+        (
+          await data<{ balance: { version: number } | null }>(
+            await call('GET', '/v1/admin/stats', { cookie: admin.cookie }),
+          )
+        ).balance;
       expect(await stats()).toBeNull();
       await flushEdge();
       const v1 = await draft(admin.cookie, {});

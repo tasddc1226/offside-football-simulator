@@ -2,7 +2,8 @@
 //   "## 제목" → 소제목, "- 항목"·"* 항목" → 목록, 빈 줄 → 문단 구분, 그 밖의 줄 → 문단(줄바꿈 유지)
 import type { BoardKey } from '@offside/contracts/board-limits';
 
-export type Block = { kind: 'h'; text: string } | { kind: 'ul'; items: string[] } | { kind: 'p'; lines: string[] };
+export type Block =
+  { kind: 'h'; text: string } | { kind: 'ul'; items: string[] } | { kind: 'p'; lines: string[] };
 
 export function parseBody(body: string): Block[] {
   const out: Block[] = [];
@@ -30,14 +31,26 @@ export const dateOf = (iso: string) => {
 
 /** 26. 9. 25. 오후 12:00 형식(한국 시간) — 운영 도구처럼 기준 시간대를 맞춰 볼 때. */
 export const kstDateTime = (iso: string) =>
-  new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', dateStyle: 'short', timeStyle: 'short' });
+  new Date(iso).toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    dateStyle: 'short',
+    timeStyle: 'short',
+  });
 
 const KST_PARTS = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'Asia/Seoul', year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  timeZone: 'Asia/Seoul',
+  year: '2-digit',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
 });
 /** 한국 시간 날짜(26.09.25)·시각(14:05)을 따로 — 모두가 같은 기록을 보는 화면(서버 최초 기록)에서 기준을 맞출 때. */
 export function kstParts(iso: string): { day: string; time: string } {
-  const p = Object.fromEntries(KST_PARTS.formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  const p = Object.fromEntries(
+    KST_PARTS.formatToParts(new Date(iso)).map((x) => [x.type, x.value]),
+  );
   return { day: `${p.year}.${p.month}.${p.day}`, time: `${p.hour}:${p.minute}` };
 }
 

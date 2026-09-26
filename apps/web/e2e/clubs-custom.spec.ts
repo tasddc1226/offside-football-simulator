@@ -12,7 +12,9 @@ test('설정에서 고교 클럽 이름을 모두 바꾸면 새 커리어 소속
   await expect(rows).toHaveCount(12);
 
   const axe = await new AxeBuilder({ page }).analyze();
-  expect(axe.violations.map((v) => `${v.id} ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  expect(
+    axe.violations.map((v) => `${v.id} ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
+  ).toEqual([]);
 
   // 새 커리어의 첫 소속은 고교 12개 중 무작위 — 전부 같은 접두어로 바꿔 둔다.
   for (let i = 0; i < 12; i++) {
@@ -31,7 +33,9 @@ test('설정에서 고교 클럽 이름을 모두 바꾸면 새 커리어 소속
   await page.locator('[data-act="settings"]').click();
   await page.locator('[data-settings-open="clubs"]').click();
   await page.locator('#club-league').selectOption('hs');
-  await expect(page.locator('.club-row').first().locator('input[type="text"]')).toHaveValue('우리고0');
+  await expect(page.locator('.club-row').first().locator('input[type="text"]')).toHaveValue(
+    '우리고0',
+  );
 
   await page.locator('[data-act="home"]').click();
   await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();

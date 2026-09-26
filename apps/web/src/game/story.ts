@@ -26,7 +26,11 @@ export function schedule(s: GameState, id: string, delay: number, window = 6) {
 export function storyActive(s: GameState, key: string): boolean {
   return !!(s.story && s.story[key] && !s.story[key]!.done);
 }
-export function startStory(s: GameState, key: string, data: Pick<StoryState, 'gap' | 'tone' | 'surgery'> = {}) {
+export function startStory(
+  s: GameState,
+  key: string,
+  data: Pick<StoryState, 'gap' | 'tone' | 'surgery'> = {},
+) {
   s.story = s.story || {};
   s.story[key] = { stage: 1, done: false, ...data };
 }
@@ -46,4 +50,3 @@ export function endStory(s: GameState, key: string, ending: string) {
   });
   log(s, `[스토리 완결] ${STORIES[key]!.name} · ${ending}`, 'big', Math.max(0, s.phase - 1));
 }
-

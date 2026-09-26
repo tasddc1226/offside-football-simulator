@@ -8,6 +8,7 @@ export function isAcceptablePublicName(name: string): boolean {
 }
 /** T-10-028 운영자를 사칭하는 닉네임(공백·대소문자 무시, 포함 여부로 본다). 관리자 계정만 '운영자'로 쓴다. */
 const RESERVED_NICKNAME = /(운영자|관리자|운영진)/i;
-export const isReservedNickname = (name: string): boolean => RESERVED_NICKNAME.test(name.replace(/\s+/g, ''));
+export const isReservedNickname = (name: string): boolean =>
+  RESERVED_NICKNAME.test(name.replace(/\s+/g, ''));
 /** 긴 글(게시판 댓글)용 — 링크는 허용하고 흔한 욕설만 막는다. */
 export const hasProfanity = (text: string): boolean => PROFANITY.test(text.replace(/\s+/g, ''));

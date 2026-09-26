@@ -40,7 +40,11 @@ describe('POST /v1/profile/recovery-code', () => {
     const { cookie, profileId } = await issueCookie(ctx);
     const app = createApp();
 
-    const res = await app.request('/v1/profile/recovery-code', jsonInit({ method: 'POST', cookie }), ctx.env);
+    const res = await app.request(
+      '/v1/profile/recovery-code',
+      jsonInit({ method: 'POST', cookie }),
+      ctx.env,
+    );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { code: string; issuedAt: string } };
     expect(body.data.code).toMatch(/^OFS-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
@@ -62,7 +66,11 @@ describe('POST /v1/profile/recovery-code', () => {
     );
     const firstBody = (await first.json()) as { data: { code: string } };
 
-    await app.request('/v1/profile/recovery-code', jsonInit({ method: 'POST', cookie, idempotencyKey: 'idem-issue-2' }), ctx.env);
+    await app.request(
+      '/v1/profile/recovery-code',
+      jsonInit({ method: 'POST', cookie, idempotencyKey: 'idem-issue-2' }),
+      ctx.env,
+    );
 
     const recoverRes = await app.request(
       '/v1/profile/recover',
@@ -70,7 +78,9 @@ describe('POST /v1/profile/recovery-code', () => {
       ctx.env,
     );
     expect(recoverRes.status).toBe(400);
-    expect(ErrorEnvelopeSchema.parse(await recoverRes.json()).error.code).toBe('RECOVERY_CODE_INVALID');
+    expect(ErrorEnvelopeSchema.parse(await recoverRes.json()).error.code).toBe(
+      'RECOVERY_CODE_INVALID',
+    );
   });
 
   it('시간당 5회 초과(6번째 호출)는 429 RATE_LIMITED', async () => {
@@ -97,7 +107,11 @@ describe('POST /v1/profile/recovery-code', () => {
 
   it('세션이 없으면 401', async () => {
     const app = createApp();
-    const res = await app.request('/v1/profile/recovery-code', jsonInit({ method: 'POST' }), ctx.env);
+    const res = await app.request(
+      '/v1/profile/recovery-code',
+      jsonInit({ method: 'POST' }),
+      ctx.env,
+    );
     expect(res.status).toBe(401);
   });
 });
@@ -130,13 +144,21 @@ describe('POST /v1/profile/recover', () => {
     const other = await issueCookie(ctx);
     const app = createApp();
 
-    const res = await app.request('/v1/profile/recover', jsonInit({ method: 'POST', body: { code }, cookie: other.cookie }), ctx.env);
+    const res = await app.request(
+      '/v1/profile/recover',
+      jsonInit({ method: 'POST', body: { code }, cookie: other.cookie }),
+      ctx.env,
+    );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { profileId: string } };
     expect(body.data.profileId).toBe(owner.profileId);
 
     // 재바인딩 확인: 같은 쿠키로 /v1/profile을 부르면 이제 owner 프로필이다.
-    const profileRes = await app.request('/v1/profile', { headers: { Cookie: other.cookie } }, ctx.env);
+    const profileRes = await app.request(
+      '/v1/profile',
+      { headers: { Cookie: other.cookie } },
+      ctx.env,
+    );
     const profileBody = successEnvelope(ProfileSchema).parse(await profileRes.json());
     expect(profileBody.data.id).toBe(owner.profileId);
   });
@@ -163,7 +185,11 @@ describe('POST /v1/profile/recover', () => {
     const code = await issueRecoveryCode(owner.cookie);
     const app = createApp();
 
-    const res = await app.request('/v1/profile/recover', jsonInit({ method: 'POST', body: { code }, cookie: owner.cookie }), ctx.env);
+    const res = await app.request(
+      '/v1/profile/recover',
+      jsonInit({ method: 'POST', body: { code }, cookie: owner.cookie }),
+      ctx.env,
+    );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { profileId: string } };
     expect(body.data.profileId).toBe(owner.profileId);
@@ -176,7 +202,12 @@ describe('POST /v1/profile/recover', () => {
 
     const notFoundRes = await app.request(
       '/v1/profile/recover',
-      jsonInit({ method: 'POST', body: { code: 'OFS-ZZZZ-ZZZZ-ZZZZ' }, cookie: currentA.cookie, idempotencyKey: 'idem-not-found' }),
+      jsonInit({
+        method: 'POST',
+        body: { code: 'OFS-ZZZZ-ZZZZ-ZZZZ' },
+        cookie: currentA.cookie,
+        idempotencyKey: 'idem-not-found',
+      }),
       ctx.env,
     );
     expect(notFoundRes.status).toBe(400);
@@ -205,7 +236,12 @@ describe('POST /v1/profile/recover', () => {
 
     const deletedRes = await app.request(
       '/v1/profile/recover',
-      jsonInit({ method: 'POST', body: { code: deletedCode }, cookie: currentB.cookie, idempotencyKey: 'idem-del-recover' }),
+      jsonInit({
+        method: 'POST',
+        body: { code: deletedCode },
+        cookie: currentB.cookie,
+        idempotencyKey: 'idem-del-recover',
+      }),
       ctx.env,
     );
     expect(deletedRes.status).toBe(400);
@@ -221,7 +257,13 @@ describe('POST /v1/profile/recover', () => {
     for (let i = 1; i <= 5; i++) {
       const res = await app.request(
         '/v1/profile/recover',
-        jsonInit({ method: 'POST', body: { code: badCode }, cookie: current.cookie, ip: 'ip-1', idempotencyKey: `idem-redeem-${i}` }),
+        jsonInit({
+          method: 'POST',
+          body: { code: badCode },
+          cookie: current.cookie,
+          ip: 'ip-1',
+          idempotencyKey: `idem-redeem-${i}`,
+        }),
         ctx.env,
       );
       expect(res.status).toBe(400);
@@ -229,7 +271,13 @@ describe('POST /v1/profile/recover', () => {
 
     const sixth = await app.request(
       '/v1/profile/recover',
-      jsonInit({ method: 'POST', body: { code: badCode }, cookie: current.cookie, ip: 'ip-1', idempotencyKey: 'idem-redeem-6' }),
+      jsonInit({
+        method: 'POST',
+        body: { code: badCode },
+        cookie: current.cookie,
+        ip: 'ip-1',
+        idempotencyKey: 'idem-redeem-6',
+      }),
       ctx.env,
     );
     expect(sixth.status).toBe(429);
@@ -237,16 +285,28 @@ describe('POST /v1/profile/recover', () => {
 
     const otherIp = await app.request(
       '/v1/profile/recover',
-      jsonInit({ method: 'POST', body: { code: badCode }, cookie: current.cookie, ip: 'ip-2', idempotencyKey: 'idem-redeem-other-ip' }),
+      jsonInit({
+        method: 'POST',
+        body: { code: badCode },
+        cookie: current.cookie,
+        ip: 'ip-2',
+        idempotencyKey: 'idem-redeem-other-ip',
+      }),
       ctx.env,
     );
     expect(otherIp.status).toBe(400);
-    expect(ErrorEnvelopeSchema.parse(await otherIp.json()).error.code).toBe('RECOVERY_CODE_INVALID');
+    expect(ErrorEnvelopeSchema.parse(await otherIp.json()).error.code).toBe(
+      'RECOVERY_CODE_INVALID',
+    );
   });
 
   it('세션이 없으면 401', async () => {
     const app = createApp();
-    const res = await app.request('/v1/profile/recover', jsonInit({ method: 'POST', body: { code: 'OFS-0000-0000-0000' } }), ctx.env);
+    const res = await app.request(
+      '/v1/profile/recover',
+      jsonInit({ method: 'POST', body: { code: 'OFS-0000-0000-0000' } }),
+      ctx.env,
+    );
     expect(res.status).toBe(401);
   });
 });
@@ -272,7 +332,9 @@ describe('POST /v1/profile/delete', () => {
       ctx.env,
     );
     expect(tokenRes.status).toBe(200);
-    const { data: tokenData } = (await tokenRes.json()) as { data: { confirmToken: string; expiresAt: string } };
+    const { data: tokenData } = (await tokenRes.json()) as {
+      data: { confirmToken: string; expiresAt: string };
+    };
     expect(tokenData.confirmToken).toBeTruthy();
     expect(tokenData.expiresAt).toBeTruthy();
 
@@ -290,13 +352,20 @@ describe('POST /v1/profile/delete', () => {
 
     const settingsRes = await app.request(
       '/v1/profile/settings',
-      { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: owner.cookie }, body: '{}' },
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: owner.cookie },
+        body: '{}',
+      },
       ctx.env,
     );
     expect(settingsRes.status).toBe(401);
     expect(ErrorEnvelopeSchema.parse(await settingsRes.json()).error.code).toBe('PROFILE_REQUIRED');
 
-    const deletedLogs = await ctx.db.select().from(auditLog).where(eq(auditLog.kind, 'PROFILE_DELETED'));
+    const deletedLogs = await ctx.db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.kind, 'PROFILE_DELETED'));
     expect(deletedLogs.some((row) => row.profileId === owner.profileId)).toBe(true);
   });
 
@@ -322,7 +391,10 @@ describe('POST /v1/profile/delete', () => {
     // 위 발급 호출과 같은 세션에 대해, 과거 expiresAt으로 직접 서명한 토큰을 만든다.
     // sessionId는 응답에 없지만 signConfirmToken(위조 아님, 같은 세션의 tokenHash를 그대로 쓴다)로
     // 만들려면 sessionId가 필요하다. 세션 id는 DB에서 tokenHash로 조회한다.
-    const [sessionRow] = await ctx.db.select().from(sessions).where(eq(sessions.tokenHash, tokenHash));
+    const [sessionRow] = await ctx.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.tokenHash, tokenHash));
     const expiredToken = await signConfirmToken({
       sessionId: sessionRow!.id,
       sessionTokenHash: tokenHash,
@@ -331,7 +403,12 @@ describe('POST /v1/profile/delete', () => {
 
     const confirmRes = await app.request(
       '/v1/profile/delete',
-      jsonInit({ method: 'POST', body: { confirmToken: expiredToken }, cookie: owner.cookie, idempotencyKey: 'idem-expired-confirm' }),
+      jsonInit({
+        method: 'POST',
+        body: { confirmToken: expiredToken },
+        cookie: owner.cookie,
+        idempotencyKey: 'idem-expired-confirm',
+      }),
       ctx.env,
     );
     expect(confirmRes.status).toBe(400);
@@ -345,7 +422,11 @@ describe('POST /v1/profile/delete', () => {
 
     const tokenRes = await app.request(
       '/v1/profile/delete',
-      jsonInit({ method: 'POST', cookie: owner.cookie, idempotencyKey: 'idem-other-session-token' }),
+      jsonInit({
+        method: 'POST',
+        cookie: owner.cookie,
+        idempotencyKey: 'idem-other-session-token',
+      }),
       ctx.env,
     );
     const { data: tokenData } = (await tokenRes.json()) as { data: { confirmToken: string } };

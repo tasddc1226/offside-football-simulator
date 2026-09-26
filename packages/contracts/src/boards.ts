@@ -71,12 +71,22 @@ export const CommentSchema = z.object({
 });
 export type Comment = z.infer<typeof CommentSchema>;
 
-export const BoardListResponseSchema = z.object({ posts: z.array(PostSummarySchema), hasMore: z.boolean() });
+export const BoardListResponseSchema = z.object({
+  posts: z.array(PostSummarySchema),
+  hasMore: z.boolean(),
+});
 export type BoardListResponse = z.infer<typeof BoardListResponseSchema>;
 
-export const PostDetailResponseSchema = z.object({ post: PostSchema, comments: z.array(CommentSchema) });
+export const PostDetailResponseSchema = z.object({
+  post: PostSchema,
+  comments: z.array(CommentSchema),
+});
 export type PostDetailResponse = z.infer<typeof PostDetailResponseSchema>;
 
 /** google: 구글 로그인한 프로필(댓글을 쓸 수 있다), nickname: 그 프로필의 댓글 닉네임(없으면 먼저 정해야 한다). */
-export const BoardViewerResponseSchema = z.object({ admin: z.boolean(), google: z.boolean().default(false), nickname: z.string().nullable().default(null) });
+export const BoardViewerResponseSchema = z.object({
+  admin: z.boolean(),
+  google: z.boolean().default(false),
+  nickname: z.string().nullable().default(null),
+});
 export type BoardViewerResponse = z.infer<typeof BoardViewerResponseSchema>;

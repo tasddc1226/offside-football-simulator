@@ -358,9 +358,15 @@ export function seoPlugin(config) {
         const body = STATIC_PAGES[path];
         if (!body) return next();
         // #app 은 pageHtml이 본문으로 갈아 끼우므로 앱 셸 렌더(T-10-041)는 건너뛴다.
-        const index = (await readFile(join(server.config.root, 'index.html'), 'utf8')).replace(APP_SHELL_MARK, '');
+        const index = (await readFile(join(server.config.root, 'index.html'), 'utf8')).replace(
+          APP_SHELL_MARK,
+          '',
+        );
         const base = await server.transformIndexHtml(path, index);
-        const html = pageHtml(base, config, path, body).replace('</head>', '<link rel="stylesheet" href="/src/style.css" />\n</head>');
+        const html = pageHtml(base, config, path, body).replace(
+          '</head>',
+          '<link rel="stylesheet" href="/src/style.css" />\n</head>',
+        );
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         res.end(html);
       });

@@ -5,8 +5,23 @@ import { expectedRank } from './comps.js';
 
 describe('리그별 클럽 구성 (T-10-009)', () => {
   it('리그마다 실제 참가 팀 수만큼 클럽이 있다', () => {
-    const want: Record<string, number> = { hs: 12, uni: 12, k3: 14, k2: 17, k1: 11, j1: 20, mls: 30, ere: 18, l1: 18, bl: 18, sa: 20, ll: 20, pl: 20 };
-    for (const L of LEAGUES) expect(CLUBS.filter((c) => c.leagueId === L.id).length, L.id).toBe(want[L.id]);
+    const want: Record<string, number> = {
+      hs: 12,
+      uni: 12,
+      k3: 14,
+      k2: 17,
+      k1: 11,
+      j1: 20,
+      mls: 30,
+      ere: 18,
+      l1: 18,
+      bl: 18,
+      sa: 20,
+      ll: 20,
+      pl: 20,
+    };
+    for (const L of LEAGUES)
+      expect(CLUBS.filter((c) => c.leagueId === L.id).length, L.id).toBe(want[L.id]);
   });
   it('클럽 id·이름이 모두 고유하고, 리그 안 전력은 +9 ~ -6 범위로 내려간다', () => {
     expect(new Set(CLUBS.map((c) => c.id)).size).toBe(CLUBS.length);
@@ -40,7 +55,9 @@ describe('클럽 커스터마이즈 (T-10-009)', () => {
     const map = sanitizeClubCustom({
       'pl-0': { name: '  가'.padEnd(40, '나') },
       'xx-9': { name: '없는 클럽' },
-      'k1-0': { logo: { text: 'ABCD', bg: '#112233', fg: '#ffffff', img: 'https://evil.example/x.png' } },
+      'k1-0': {
+        logo: { text: 'ABCD', bg: '#112233', fg: '#ffffff', img: 'https://evil.example/x.png' },
+      },
       'k1-1': { logo: { text: 'A', bg: 'red', fg: '#ffffff' } },
     });
     expect(Object.keys(map).sort()).toEqual(['k1-0', 'pl-0']);
@@ -52,6 +69,8 @@ describe('클럽 커스터마이즈 (T-10-009)', () => {
     const c = { id: 'k1-3', name: 'FC 서울시티' };
     expect(defaultLogo(c).text).toBe('서');
     expect(defaultLogo(c).bg).toMatch(/^#[0-9a-f]{6}$/);
-    expect(logoOf(c, { 'k1-3': { logo: { text: 'S', bg: '#000000', fg: '#ffffff' } } }).text).toBe('S');
+    expect(logoOf(c, { 'k1-3': { logo: { text: 'S', bg: '#000000', fg: '#ffffff' } } }).text).toBe(
+      'S',
+    );
   });
 });

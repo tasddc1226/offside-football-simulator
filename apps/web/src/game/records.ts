@@ -7,7 +7,13 @@ import type { CareerRecord, GameState } from './types.js';
 
 export type ChKey = 'goals' | 'assists' | 'apps' | 'rating' | 'cs';
 
-const CH_LABEL: Record<ChKey, string> = { goals: '커리어 최다골', assists: '커리어 최다도움', apps: '커리어 최다출전', rating: '커리어 최고평점', cs: '커리어 최다무실점' };
+const CH_LABEL: Record<ChKey, string> = {
+  goals: '커리어 최다골',
+  assists: '커리어 최다도움',
+  apps: '커리어 최다출전',
+  rating: '커리어 최고평점',
+  cs: '커리어 최다무실점',
+};
 export function chLabel(k: string): string {
   return CH_LABEL[k as ChKey] ?? k;
 }
@@ -26,7 +32,8 @@ export function detectCareerHighs(s: GameState, rec: CareerRecord): ChKey[] {
   if (rec.assists > 0 && rec.assists > maxOf((r) => r.assists)) out.push('assists');
   if (rec.apps > 0 && rec.apps > maxOf((r) => r.apps)) out.push('apps');
   if (rec.rating > 0 && rec.rating > maxOf((r) => r.rating)) out.push('rating');
-  if ((s.pos === 'GK' || s.pos === 'DF') && rec.cs > 0 && rec.cs > maxOf((r) => r.cs || 0)) out.push('cs');
+  if ((s.pos === 'GK' || s.pos === 'DF') && rec.cs > 0 && rec.cs > maxOf((r) => r.cs || 0))
+    out.push('cs');
   return out;
 }
 
@@ -38,16 +45,46 @@ export interface NextMilestone {
   target: number;
   remaining: number;
 }
-interface Threshold { key: string; label: (n: number) => string; get: (t: { p: number; g: number; a: number; caps: number; trophies: number }) => number; targets: number[] }
+interface Threshold {
+  key: string;
+  label: (n: number) => string;
+  get: (t: { p: number; g: number; a: number; caps: number; trophies: number }) => number;
+  targets: number[];
+}
 
 const THRESHOLDS_BY_POS: Record<Pos, Threshold[]> = (() => {
   const common: Threshold[] = [
-    { key: 'apps', label: (n) => `통산 ${n}경기 출전`, get: (t) => t.p, targets: [100, 200, 300, 400, 500, 600, 700] },
-    { key: 'caps', label: (n) => `A매치 ${n}경기 출전`, get: (t) => t.caps, targets: [10, 30, 50, 100] },
-    { key: 'trophy', label: (n) => `우승 트로피 ${n}회`, get: (t) => t.trophies, targets: [1, 3, 5, 10] },
+    {
+      key: 'apps',
+      label: (n) => `통산 ${n}경기 출전`,
+      get: (t) => t.p,
+      targets: [100, 200, 300, 400, 500, 600, 700],
+    },
+    {
+      key: 'caps',
+      label: (n) => `A매치 ${n}경기 출전`,
+      get: (t) => t.caps,
+      targets: [10, 30, 50, 100],
+    },
+    {
+      key: 'trophy',
+      label: (n) => `우승 트로피 ${n}회`,
+      get: (t) => t.trophies,
+      targets: [1, 3, 5, 10],
+    },
   ];
-  const goals: Threshold = { key: 'goals', label: (n) => `통산 ${n}골`, get: (t) => t.g, targets: [10, 30, 50, 100, 150, 200, 300] };
-  const assists: Threshold = { key: 'assists', label: (n) => `통산 ${n}도움`, get: (t) => t.a, targets: [10, 30, 50, 100, 150] };
+  const goals: Threshold = {
+    key: 'goals',
+    label: (n) => `통산 ${n}골`,
+    get: (t) => t.g,
+    targets: [10, 30, 50, 100, 150, 200, 300],
+  };
+  const assists: Threshold = {
+    key: 'assists',
+    label: (n) => `통산 ${n}도움`,
+    get: (t) => t.a,
+    targets: [10, 30, 50, 100, 150],
+  };
   return {
     FW: [goals, assists, ...common],
     MF: [assists, goals, ...common],
@@ -60,7 +97,13 @@ const THRESHOLDS_BY_POS: Record<Pos, Threshold[]> = (() => {
  * 다음 미달성 구간만). RNG 없음 — 저장된 통산 합계만 읽는다. */
 export function nextMilestones(s: GameState, max = 4): NextMilestone[] {
   const t = s.career.reduce(
-    (a, r) => ({ p: a.p + r.apps, g: a.g + r.goals, a: a.a + r.assists, caps: s.nat.caps, trophies: s.trophies.length }),
+    (a, r) => ({
+      p: a.p + r.apps,
+      g: a.g + r.goals,
+      a: a.a + r.assists,
+      caps: s.nat.caps,
+      trophies: s.trophies.length,
+    }),
     { p: 0, g: 0, a: 0, caps: s.nat.caps, trophies: s.trophies.length },
   );
   const out: NextMilestone[] = [];

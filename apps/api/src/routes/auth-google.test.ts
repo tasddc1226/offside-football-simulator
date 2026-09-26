@@ -34,7 +34,8 @@ function withoutGoogleFake(env: Bindings, overrides: Partial<Bindings> = {}): Bi
   return clone;
 }
 
-const extractCookiePair = (setCookie: string, name: string) => `${name}=${extractCookie(setCookie, name)}`;
+const extractCookiePair = (setCookie: string, name: string) =>
+  `${name}=${extractCookie(setCookie, name)}`;
 
 async function getProfile(ctx: TestD1, cookie: string) {
   const app = createApp();
@@ -118,13 +119,16 @@ describe('GET /v1/auth/google/start', () => {
   it.each([
     ['https://api.offside-lab.com', 'https://offside-lab.com'],
     ['https://offside-api.tasddc1569.workers.dev', 'https://offside-web.tasddc1569.workers.dev'],
-  ])('production callback on %s returns only to its paired web origin', async (apiOrigin, webOrigin) => {
-    const app = createApp();
-    const env = { ...ctx.env, ENVIRONMENT: 'production' };
-    const res = await app.request(`${apiOrigin}/v1/auth/google/callback`, {}, env);
-    expect(res.status).toBe(302);
-    expect(new URL(res.headers.get('Location') ?? '').origin).toBe(webOrigin);
-  });
+  ])(
+    'production callback on %s returns only to its paired web origin',
+    async (apiOrigin, webOrigin) => {
+      const app = createApp();
+      const env = { ...ctx.env, ENVIRONMENT: 'production' };
+      const res = await app.request(`${apiOrigin}/v1/auth/google/callback`, {}, env);
+      expect(res.status).toBe(302);
+      expect(new URL(res.headers.get('Location') ?? '').origin).toBe(webOrigin);
+    },
+  );
 
   it('302, offside_oauth 쿠키(HttpOnly·로컬은 Secure 없음·Path 제한), 가짜 콜백으로 리다이렉트', async () => {
     const { cookie } = await issueCookie(ctx);
@@ -169,7 +173,10 @@ describe('GET /v1/auth/google/start', () => {
 
   it.each([
     ['https://api.offside-lab.com', 'https://api.offside-lab.com/v1/auth/google/callback'],
-    ['https://offside-api.tasddc1569.workers.dev', 'https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback'],
+    [
+      'https://offside-api.tasddc1569.workers.dev',
+      'https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback',
+    ],
   ])('production host %s uses only its paired Google callback', async (apiOrigin, redirectUri) => {
     const { cookie } = await issueCookie(ctx);
     const app = createApp();
@@ -178,16 +185,30 @@ describe('GET /v1/auth/google/start', () => {
       GOOGLE_CLIENT_ID: 'test-client-id',
       GOOGLE_CLIENT_SECRET: 'test-secret',
     });
-    const res = await app.request(`${apiOrigin}/v1/auth/google/start`, { headers: { Cookie: cookie } }, env);
+    const res = await app.request(
+      `${apiOrigin}/v1/auth/google/start`,
+      { headers: { Cookie: cookie } },
+      env,
+    );
     expect(res.status).toBe(302);
-    expect(new URL(res.headers.get('Location') ?? '').searchParams.get('redirect_uri')).toBe(redirectUri);
+    expect(new URL(res.headers.get('Location') ?? '').searchParams.get('redirect_uri')).toBe(
+      redirectUri,
+    );
   });
 
   it('rejects Google auth on an unknown production API hostname', async () => {
     const { cookie } = await issueCookie(ctx);
     const app = createApp();
-    const env = withoutGoogleFake(ctx.env, { ENVIRONMENT: 'production', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'secret' });
-    const res = await app.request('https://unknown.example/v1/auth/google/start', { headers: { Cookie: cookie } }, env);
+    const env = withoutGoogleFake(ctx.env, {
+      ENVIRONMENT: 'production',
+      GOOGLE_CLIENT_ID: 'id',
+      GOOGLE_CLIENT_SECRET: 'secret',
+    });
+    const res = await app.request(
+      'https://unknown.example/v1/auth/google/start',
+      { headers: { Cookie: cookie } },
+      env,
+    );
     expect(res.status).toBe(503);
   });
 
@@ -245,9 +266,7 @@ describe('GET /v1/auth/google/start', () => {
     );
     expect(res.status).toBe(429);
     expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('RATE_LIMITED');
-  }, // 워크트리가 테스트·빌드를 돌리는 공유 머신에서 특히). 로직 자체의 타임아웃이 아니라 // 순차 요청 31회 × 로컬 D1 왕복이라 vitest 기본 5000ms로는 부족할 때가 있다(동시에 여러
-  // 테스트 예산만 넉넉히 잡는다.
-  20_000);
+  }, 20_000); // 테스트 예산만 넉넉히 잡는다. // 워크트리가 테스트·빌드를 돌리는 공유 머신에서 특히). 로직 자체의 타임아웃이 아니라 // 순차 요청 31회 × 로컬 D1 왕복이라 vitest 기본 5000ms로는 부족할 때가 있다(동시에 여러
 });
 
 describe('GET /v1/auth/google/callback', () => {
@@ -382,10 +401,21 @@ describe('GET /v1/auth/google/callback', () => {
   async function insertCareer(id: string, profileId: string) {
     const now = new Date().toISOString();
     await ctx.db.insert(careers).values({
-      id, profileId, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late', startYear: 2026, status: 'active', appVersion: '1.0.0', createdAt: now, updatedAt: now,
+      id,
+      profileId,
+      pos: 'FW',
+      foot: '오른발',
+      type: 'poacher',
+      trait: 'late',
+      startYear: 2026,
+      status: 'active',
+      appVersion: '1.0.0',
+      createdAt: now,
+      updatedAt: now,
     });
   }
-  const ownerOf = async (id: string) => (await ctx.db.select().from(careers).where(eq(careers.id, id)))[0]?.profileId;
+  const ownerOf = async (id: string) =>
+    (await ctx.db.select().from(careers).where(eq(careers.id, id)))[0]?.profileId;
 
   it('T-10-013: 익명 프로필에서 기존 계정으로 전환하면 익명 때 커리어를 그 계정으로 옮긴다', async () => {
     const b = await issueCookie(ctx);
@@ -398,18 +428,27 @@ describe('GET /v1/auth/google/callback', () => {
     expect(location.searchParams.get('google')).toBe('switched');
     expect(await ownerOf('c-anon')).toBe(b.profileId);
     expect(await ownerOf('c-b')).toBe(b.profileId);
-    const merged = (await ctx.db.select().from(auditLog).where(eq(auditLog.profileId, b.profileId))).filter((r) => r.kind === 'CAREERS_MERGED');
-    expect(merged.map((r) => JSON.parse(r.payloadJson))).toEqual([{ fromProfileId: a.profileId, count: 1 }]);
+    const merged = (
+      await ctx.db.select().from(auditLog).where(eq(auditLog.profileId, b.profileId))
+    ).filter((r) => r.kind === 'CAREERS_MERGED');
+    expect(merged.map((r) => JSON.parse(r.payloadJson))).toEqual([
+      { fromProfileId: a.profileId, count: 1 },
+    ]);
   });
 
   it('T-10-013: 복구 코드가 있는 프로필의 커리어는 옮기지 않는다(그 코드로 다시 찾아갈 수 있다)', async () => {
     const b = await issueCookie(ctx);
     await linkGoogle(ctx, b.cookie, 'sub-keep');
     const a = await issueCookie(ctx);
-    await ctx.db.update(profiles).set({ recoveryCodeHash: 'hash' }).where(eq(profiles.id, a.profileId));
+    await ctx.db
+      .update(profiles)
+      .set({ recoveryCodeHash: 'hash' })
+      .where(eq(profiles.id, a.profileId));
     await insertCareer('c-kept', a.profileId);
 
-    expect((await linkGoogle(ctx, a.cookie, 'sub-keep')).searchParams.get('google')).toBe('switched');
+    expect((await linkGoogle(ctx, a.cookie, 'sub-keep')).searchParams.get('google')).toBe(
+      'switched',
+    );
     expect(await ownerOf('c-kept')).toBe(a.profileId);
   });
 

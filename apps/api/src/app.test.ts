@@ -150,7 +150,13 @@ describe('로그', () => {
     const bearerValue = `Bearer ${token}`;
     await app.request(
       '/v1/profile',
-      { headers: { Cookie: `offside_session=${token}`, Authorization: bearerValue, 'X-Fake-Email': 'user@example.com' } },
+      {
+        headers: {
+          Cookie: `offside_session=${token}`,
+          Authorization: bearerValue,
+          'X-Fake-Email': 'user@example.com',
+        },
+      },
       ctx.env,
     );
 

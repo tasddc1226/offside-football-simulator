@@ -1,14 +1,24 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import './index.js';
 import { BALANCE_SPEC, resolveBalance, sanitizeBalance } from '@offside/contracts/balance';
-import { BAL, adoptLatestBalance, choiceOdds, eventWeight, setLatestBalance, useCareerBalance } from './balance.js';
+import {
+  BAL,
+  adoptLatestBalance,
+  choiceOdds,
+  eventWeight,
+  setLatestBalance,
+  useCareerBalance,
+} from './balance.js';
 import { newGame, newSeason } from './engine.js';
 import { createRng, setActiveRng } from './rng.js';
 
 // T-10-016 서버 밸런스: 커리어마다 버전을 저장하고, 새 버전은 다음 시즌 시작부터 적용한다.
 const game = (seed = 1) => {
   setActiveRng(createRng(seed));
-  return newGame({ name: '홍길동', number: 7, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, seed);
+  return newGame(
+    { name: '홍길동', number: 7, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+    seed,
+  );
 };
 
 afterEach(() => {
@@ -18,7 +28,15 @@ afterEach(() => {
 
 describe('밸런스 설정 (T-10-016)', () => {
   it('서버 값은 알려진 키만 남기고 범위로 자른다', () => {
-    expect(sanitizeBalance({ injuryRate: 0.9, growthScale: 1.2, bogus: 1, eventWeight: { knock: 9, 'Bad Id': 1 }, choiceBonus: { 'knock:0': -0.1, knock: 0.2 } })).toEqual({
+    expect(
+      sanitizeBalance({
+        injuryRate: 0.9,
+        growthScale: 1.2,
+        bogus: 1,
+        eventWeight: { knock: 9, 'Bad Id': 1 },
+        choiceBonus: { 'knock:0': -0.1, knock: 0.2 },
+      }),
+    ).toEqual({
       injuryRate: BALANCE_SPEC.injuryRate.max,
       growthScale: 1.2,
       eventWeight: { knock: 5 },
@@ -59,7 +77,10 @@ describe('밸런스 설정 (T-10-016)', () => {
 
   it('선택지 확률 보정과 이벤트 가중치', () => {
     const s = game();
-    setLatestBalance({ version: 1, values: { choiceBonus: { 'knock:0': 0.2, 'knock:1': -0.9 }, eventWeight: { knock: 0 } } });
+    setLatestBalance({
+      version: 1,
+      values: { choiceBonus: { 'knock:0': 0.2, 'knock:1': -0.9 }, eventWeight: { knock: 0 } },
+    });
     adoptLatestBalance(s);
     expect(choiceOdds(0.5, 'knock', 0)).toBeCloseTo(0.7);
     expect(choiceOdds(0.3, 'knock', 1)).toBe(0.01); // -0.9는 -0.5로 잘리고, 결과는 1% 아래로 가지 않는다.

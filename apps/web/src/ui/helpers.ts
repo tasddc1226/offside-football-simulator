@@ -35,10 +35,17 @@ export const seasonLabel = (s: GameState, y = s.year): string =>
 export function uploadSeason(s: GameState, rec: CareerRecord) {
   const events = (s.evBuf || []).slice();
   s.evBuf = [];
-  void import('../game/outbox.js').then((m) => m.enqueueSeason(s.cid, rec.year, seasonBody(m, s, rec, events)));
+  void import('../game/outbox.js').then((m) =>
+    m.enqueueSeason(s.cid, rec.year, seasonBody(m, s, rec, events)),
+  );
 }
 
-export function seasonBody(m: typeof import('../game/outbox.js'), s: GameState, rec: CareerRecord, events: PutCareerSeasonBody['events']): PutCareerSeasonBody {
+export function seasonBody(
+  m: typeof import('../game/outbox.js'),
+  s: GameState,
+  rec: CareerRecord,
+  events: PutCareerSeasonBody['events'],
+): PutCareerSeasonBody {
   return {
     career: {
       pos: s.pos,
@@ -90,7 +97,8 @@ export function enqueueAllSeasons(
   s: GameState,
   eventsOf: (year: number) => PutCareerSeasonBody['events'] = () => [],
 ) {
-  for (const rec of s.career) m.enqueueSeason(s.cid, rec.year, seasonBody(m, s, rec, eventsOf(rec.year)));
+  for (const rec of s.career)
+    m.enqueueSeason(s.cid, rec.year, seasonBody(m, s, rec, eventsOf(rec.year)));
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;

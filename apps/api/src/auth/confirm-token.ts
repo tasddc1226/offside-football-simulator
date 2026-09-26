@@ -22,7 +22,11 @@ function fromBase64Url(encoded: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-async function sign(sessionTokenHash: string, sessionId: string, expiresAt: string): Promise<string> {
+async function sign(
+  sessionTokenHash: string,
+  sessionId: string,
+  expiresAt: string,
+): Promise<string> {
   return sha256Hex(`${sessionTokenHash}${DELIMITER}${sessionId}${DELIMITER}${expiresAt}`);
 }
 

@@ -22,18 +22,25 @@ export function careerShareMeta(e: PublicHofEntry, origin: string): ShareMeta {
   };
 }
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const esc = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /** 앱 셸 HTML의 제목·설명·og 메타를 바꾸고 og:url을 붙인다. 없는 태그는 건드리지 않는다.
  * 값은 유저 입력(공개 이름·구단 이름)이라 치환 문자열이 아닌 함수로 넣는다 — `$'` 같은 패턴이
  * 문서 나머지를 끌어오지 않게(T-10-034). */
 export function injectShareMeta(html: string, m: ShareMeta): string {
   const setMeta = (h: string, attr: string, key: string, value: string) =>
-    h.replace(new RegExp(`(<meta ${attr}="${key}" content=")[^"]*(")`), (_, open: string, close: string) => open + esc(value) + close);
+    h.replace(
+      new RegExp(`(<meta ${attr}="${key}" content=")[^"]*(")`),
+      (_, open: string, close: string) => open + esc(value) + close,
+    );
   let out = html.replace(/<title>[\s\S]*?<\/title>/, () => `<title>${esc(m.title)}</title>`);
   out = setMeta(out, 'name', 'description', m.description);
   out = setMeta(out, 'property', 'og:title', m.title);
   out = setMeta(out, 'property', 'og:description', m.description);
   out = setMeta(out, 'property', 'og:image', m.image);
-  return out.replace(/<meta property="og:image" [^>]*>/, (tag) => `${tag}<meta property="og:url" content="${esc(m.url)}" />`);
+  return out.replace(
+    /<meta property="og:image" [^>]*>/,
+    (tag) => `${tag}<meta property="og:url" content="${esc(m.url)}" />`,
+  );
 }

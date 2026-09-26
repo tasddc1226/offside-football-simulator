@@ -38,9 +38,15 @@ import { hasProfanity } from '@offside/contracts/content-filter';
 const COMMENT_LIMIT = 10;
 
 const notFound = (what: string) =>
-  new AppError({ code: 'VALIDATION_FAILED', status: 404, message: `${what}을(를) 찾을 수 없습니다.`, details: { reason: 'BOARD_NOT_FOUND' } });
+  new AppError({
+    code: 'VALIDATION_FAILED',
+    status: 404,
+    message: `${what}을(를) 찾을 수 없습니다.`,
+    details: { reason: 'BOARD_NOT_FOUND' },
+  });
 
-const idParam = (c: Context<AppEnv>, name: string) => parseWithAppError(BoardIdParamSchema, c.req.param(name));
+const idParam = (c: Context<AppEnv>, name: string) =>
+  parseWithAppError(BoardIdParamSchema, c.req.param(name));
 /** 목록은 첫 페이지만 엣지에 담는다 — 키와 지우는 규칙은 edgeKeys.ts. '더 보기'(before)나 다른 limit은 드물어 그냥 읽는다. */
 const LIST_TTL = 60;
 const purgeList = (c: Context<AppEnv>, board: string) => purgeEdge(c, STALE.boardChanged(board));
@@ -61,14 +67,24 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const board = parseWithAppError(BoardKeySchema, c.req.param('board'));
     const q = parseWithAppError(BoardListQuerySchema, c.req.query());
     const load = () => listPosts(getDb(c), board, q.limit, q.before);
-    const data = q.limit === BOARD_PAGE_LIMIT && !q.before ? await edgeCached(c, EDGE.boardFirstPage(board), LIST_TTL, load) : await load();
+    const data =
+      q.limit === BOARD_PAGE_LIMIT && !q.before
+        ? await edgeCached(c, EDGE.boardFirstPage(board), LIST_TTL, load)
+        : await load();
     return ok(c, BoardListResponseSchema, data);
   });
 
   app.get('/v1/boards/posts/:postId', async (c) => {
     const id = idParam(c, 'postId');
-    const [post, rows, viewer] = await Promise.all([postOr404(c, id), listComments(getDb(c), id), getViewer(c)]);
-    const comments = rows.map(({ profileId, ...r }) => ({ ...r, deletable: viewer.admin || profileId === viewer.profileId }));
+    const [post, rows, viewer] = await Promise.all([
+      postOr404(c, id),
+      listComments(getDb(c), id),
+      getViewer(c),
+    ]);
+    const comments = rows.map(({ profileId, ...r }) => ({
+      ...r,
+      deletable: viewer.admin || profileId === viewer.profileId,
+    }));
     return ok(c, PostDetailResponseSchema, { post, comments });
   });
 
@@ -105,22 +121,43 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const { body } = readBody(c, CommentInputSchema);
     if (hasProfanity(body)) {
-      throw new AppError({ code: 'VALIDATION_FAILED', message: '쓸 수 없는 표현이 들어 있습니다.', details: { reason: 'BLOCKED_WORD' } });
+      throw new AppError({
+        code: 'VALIDATION_FAILED',
+        message: '쓸 수 없는 표현이 들어 있습니다.',
+        details: { reason: 'BLOCKED_WORD' },
+      });
     }
     const [viewer, post] = await Promise.all([getViewer(c), postOr404(c, postId)]);
     // T-10-028: 댓글은 구글 로그인한 프로필만, 그 프로필의 닉네임으로.
-    if (!viewer.google) throw new AppError({ code: 'FORBIDDEN', message: '구글로 로그인하면 댓글을 쓸 수 있어요.', details: { reason: 'GOOGLE_LOGIN_REQUIRED' } });
+    if (!viewer.google)
+      throw new AppError({
+        code: 'FORBIDDEN',
+        message: '구글로 로그인하면 댓글을 쓸 수 있어요.',
+        details: { reason: 'GOOGLE_LOGIN_REQUIRED' },
+      });
     const nickname = viewer.nickname;
-    if (!nickname) throw new AppError({ code: 'FORBIDDEN', message: '댓글에 쓸 닉네임을 먼저 정해 주세요.', details: { reason: 'NICKNAME_REQUIRED' } });
+    if (!nickname)
+      throw new AppError({
+        code: 'FORBIDDEN',
+        message: '댓글에 쓸 닉네임을 먼저 정해 주세요.',
+        details: { reason: 'NICKNAME_REQUIRED' },
+      });
     const profileId = getSessionOrThrow(c).profileId;
     const now = nowIso();
     if (!viewer.admin) {
       if ((await getAttemptCount(db, 'BOARD_COMMENT', profileId, now)) >= COMMENT_LIMIT) {
-        throw new AppError({ code: 'RATE_LIMITED', message: '댓글을 너무 자주 쓰고 있어요. 잠시 뒤에 다시 시도해 주세요.' });
+        throw new AppError({
+          code: 'RATE_LIMITED',
+          message: '댓글을 너무 자주 쓰고 있어요. 잠시 뒤에 다시 시도해 주세요.',
+        });
       }
       await recordAttempt(db, 'BOARD_COMMENT', profileId, now);
     }
-    const id = await createComment(db, { postId, profileId, nickname, body, admin: viewer.admin }, now);
+    const id = await createComment(
+      db,
+      { postId, profileId, nickname, body, admin: viewer.admin },
+      now,
+    );
     purgeList(c, post.board); // 댓글 수가 바뀐다.
     const comment = { id, nickname, body, admin: viewer.admin, deletable: true, createdAt: now };
     return ok(c, CommentSchema, comment, 201);
@@ -131,7 +168,8 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const [owner, viewer] = await Promise.all([getCommentOwner(db, id), getViewer(c)]);
     if (!owner) throw notFound('댓글');
-    if (owner.profileId !== viewer.profileId && !viewer.admin) throw new AppError({ code: 'FORBIDDEN', message: '내 댓글만 지울 수 있습니다.' });
+    if (owner.profileId !== viewer.profileId && !viewer.admin)
+      throw new AppError({ code: 'FORBIDDEN', message: '내 댓글만 지울 수 있습니다.' });
     await deleteComment(db, id, nowIso());
     purgeList(c, owner.board); // 댓글 수가 바뀐다.
     return c.body(null, 204);

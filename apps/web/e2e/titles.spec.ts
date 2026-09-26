@@ -42,11 +42,21 @@ test('구간 진행 후 새 칭호 → 선수 카드 대표 칭호 → 도감에
   await page.locator('.player [data-act="titles"]').click();
   await dex.getByText(/아직 얻지 못한 칭호/).click();
   await expect(dex.locator('[data-title-locked="st_rival_second"]')).toContainText('???');
-  await expect(dex.locator('[data-title-locked="fame300"] [role="progressbar"]')).toHaveAttribute('aria-valuenow', /\d+/);
+  await expect(dex.locator('[data-title-locked="fame300"] [role="progressbar"]')).toHaveAttribute(
+    'aria-valuenow',
+    /\d+/,
+  );
 
   for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme });
-    const axe = await new AxeBuilder({ page }).include('[data-title-dex]').include('.player').analyze();
-    expect(axe.violations.map((v) => `${scheme}: ${v.id} ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+    const axe = await new AxeBuilder({ page })
+      .include('[data-title-dex]')
+      .include('.player')
+      .analyze();
+    expect(
+      axe.violations.map(
+        (v) => `${scheme}: ${v.id} ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`,
+      ),
+    ).toEqual([]);
   }
 });

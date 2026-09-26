@@ -5,7 +5,15 @@ const PROFILE_URL = `${API}/v1/profile`;
 
 test('계정 영역: 홈이 아니라 설정 화면에 있다 — 로그아웃 상태(API 스텁)', async ({ page }) => {
   await page.route(PROFILE_URL, (route) =>
-    route.fulfill(ok({ id: 'u1', linked: { google: false }, googleEmailMasked: null, recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z' })),
+    route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: false },
+        googleEmailMasked: null,
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ),
   );
 
   await page.goto('/');
@@ -22,13 +30,15 @@ test('계정 영역: 홈이 아니라 설정 화면에 있다 — 로그아웃 �
 
 test('/settings?google=linked: 토스트 표시 후 URL 정리', async ({ page }) => {
   await page.route(PROFILE_URL, (route) =>
-    route.fulfill(ok({
-          id: 'u1',
-          linked: { google: true },
-          googleEmailMasked: 'te***@gmail.com',
-          recoveryCodeIssuedAt: null,
-          createdAt: '2026-01-01T00:00:00.000Z',
-        })),
+    route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: true },
+        googleEmailMasked: 'te***@gmail.com',
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ),
   );
 
   await page.goto('/settings?google=linked');
@@ -42,9 +52,19 @@ test('/settings?google=linked: 토스트 표시 후 URL 정리', async ({ page }
   await expect(account).toContainText('te***@gmail.com');
 });
 
-test('/settings?google=error&reason=state: 실패 토스트가 이유와 함께 표시된다', async ({ page }) => {
+test('/settings?google=error&reason=state: 실패 토스트가 이유와 함께 표시된다', async ({
+  page,
+}) => {
   await page.route(PROFILE_URL, (route) =>
-    route.fulfill(ok({ id: 'u1', linked: { google: false }, googleEmailMasked: null, recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z' })),
+    route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: false },
+        googleEmailMasked: null,
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ),
   );
 
   await page.goto('/settings?google=error&reason=state');
@@ -55,7 +75,15 @@ test('/settings?google=error&reason=state: 실패 토스트가 이유와 함께 
 
 test('로그아웃은 확인 창에서 한 번 더 확인한다', async ({ page }) => {
   await page.route(PROFILE_URL, (route) =>
-    route.fulfill(ok({ id: 'u1', linked: { google: true }, googleEmailMasked: 'te***@gmail.com', recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z' })),
+    route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: true },
+        googleEmailMasked: 'te***@gmail.com',
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ),
   );
   let logouts = 0;
   await page.route(`${API}/v1/auth/logout`, (route) => {
@@ -80,7 +108,14 @@ test('로그아웃은 확인 창에서 한 번 더 확인한다', async ({ page 
 
 test('계정 카드에서 댓글 닉네임을 정하고 바꾼다 (T-10-028)', async ({ page }) => {
   let nickname: string | null = null;
-  const profile = () => ({ id: 'u1', linked: { google: true }, googleEmailMasked: 'te***@gmail.com', recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z', nickname });
+  const profile = () => ({
+    id: 'u1',
+    linked: { google: true },
+    googleEmailMasked: 'te***@gmail.com',
+    recoveryCodeIssuedAt: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    nickname,
+  });
   await page.route(PROFILE_URL, (route) => route.fulfill(ok(profile())));
   const puts: unknown[] = [];
   await page.route(`${PROFILE_URL}/nickname`, (route) => {
@@ -114,17 +149,42 @@ test('계정 카드에서 댓글 닉네임을 정하고 바꾼다 (T-10-028)', a
 test('소식에서 댓글을 쓰려고 로그인하면, 돌아와서 보던 글을 연다 (T-10-028)', async ({ page }) => {
   const POST = 'pst_00000000-0000-0000-0000-000000000001';
   const T = '2026-09-25T03:00:00.000Z';
-  const summary = { id: POST, board: 'release', title: '260926 릴리즈 노트', version: null, pinned: false, commentCount: 0, createdAt: T, updatedAt: T };
-  await page.route(PROFILE_URL, (route) => route.fulfill(ok({ id: 'u1', linked: { google: true }, googleEmailMasked: 'te***@gmail.com', recoveryCodeIssuedAt: null, createdAt: T, nickname: null })));
+  const summary = {
+    id: POST,
+    board: 'release',
+    title: '260926 릴리즈 노트',
+    version: null,
+    pinned: false,
+    commentCount: 0,
+    createdAt: T,
+    updatedAt: T,
+  };
+  await page.route(PROFILE_URL, (route) =>
+    route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: true },
+        googleEmailMasked: 'te***@gmail.com',
+        recoveryCodeIssuedAt: null,
+        createdAt: T,
+        nickname: null,
+      }),
+    ),
+  );
   await page.route(`${API}/v1/boards/**`, (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === '/v1/boards/viewer') return route.fulfill(ok({ admin: false, google: false, nickname: null }));
-    if (path === `/v1/boards/posts/${POST}`) return route.fulfill(ok({ post: { ...summary, body: '본문' }, comments: [] }));
+    if (path === '/v1/boards/viewer')
+      return route.fulfill(ok({ admin: false, google: false, nickname: null }));
+    if (path === `/v1/boards/posts/${POST}`)
+      return route.fulfill(ok({ post: { ...summary, body: '본문' }, comments: [] }));
     return route.fulfill(ok({ posts: [summary], hasMore: false }));
   });
   // 구글 로그인 시작은 콜백 결과로 곧장 돌려보낸다(실제로는 구글을 거친다).
   await page.route(`${API}/v1/auth/google/start`, (route) =>
-    route.fulfill({ status: 302, headers: { Location: `${new URL(page.url()).origin}/settings?google=linked` } }),
+    route.fulfill({
+      status: 302,
+      headers: { Location: `${new URL(page.url()).origin}/settings?google=linked` },
+    }),
   );
 
   await page.goto('/');
@@ -135,9 +195,20 @@ test('소식에서 댓글을 쓰려고 로그인하면, 돌아와서 보던 글�
   await expect(page.locator(`[data-post="${POST}"] h2`)).toHaveText('260926 릴리즈 노트');
 });
 
-test("운영자 계정은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다 (T-10-028)", async ({ page }) => {
+test("운영자 계정은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다 (T-10-028)", async ({
+  page,
+}) => {
   await page.route(PROFILE_URL, (route) =>
-    route.fulfill(ok({ id: 'u1', linked: { google: true }, googleEmailMasked: 'ad***@gmail.com', recoveryCodeIssuedAt: null, createdAt: '2026-01-01T00:00:00.000Z', nickname: '운영자' })),
+    route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: true },
+        googleEmailMasked: 'ad***@gmail.com',
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        nickname: '운영자',
+      }),
+    ),
   );
   await page.route(`${API}/v1/boards/**`, (route) =>
     route.fulfill(ok({ admin: true, google: true, nickname: '운영자' })),

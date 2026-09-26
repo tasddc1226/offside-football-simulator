@@ -10,7 +10,10 @@ import type { GameState } from './types.js';
 // T-10-016 올림픽: 아시아 예선(AFC U-23 아시안컵)을 통과해야 본선에 나가고, 해외 구단 소속이면 차출 협상이 필요하다.
 const youngster = (seed: number, year: number, leagueId: string): GameState => {
   setActiveRng(createRng(seed));
-  const s = newGame({ name: '홍길동', number: 7, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, seed);
+  const s = newGame(
+    { name: '홍길동', number: 7, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+    seed,
+  );
   for (const k of Object.keys(s.sub)) s.sub[k] = 80; // U-23 대표팀 주전급
   s.leagueId = leagueId;
   s.club = { ...CLUBS.find((c) => c.leagueId === leagueId)! };
@@ -19,12 +22,15 @@ const youngster = (seed: number, year: number, leagueId: string): GameState => {
   natInit(s);
   return s;
 };
-const olympicOf = (s: GameState) => natSeasonEnd(s).tours.find((t) => t.name.includes('올림픽 남자축구'));
+const olympicOf = (s: GameState) =>
+  natSeasonEnd(s).tours.find((t) => t.name.includes('올림픽 남자축구'));
 
 describe('올림픽 예선 · 차출 (T-10-016)', () => {
   it('올림픽 전 해에 아시아 예선 결과가 정해지고, 예선에서 떨어지면 본선도 특례도 없다', () => {
     const s = youngster(1, 2027, 'k1');
-    const qual = natSeasonEnd(s).tours.find((t) => t.name === '2028 올림픽 아시아 예선 (AFC U-23 아시안컵)')!;
+    const qual = natSeasonEnd(s).tours.find(
+      (t) => t.name === '2028 올림픽 아시아 예선 (AFC U-23 아시안컵)',
+    )!;
     expect(qual.stage).toBe(s.nat.qual[2028] ? '본선 진출 확정' : '본선 진출 실패');
 
     const out = youngster(2, 2028, 'k1');

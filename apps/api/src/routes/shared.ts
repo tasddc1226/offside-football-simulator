@@ -28,9 +28,13 @@ export function readJson(c: Context<AppEnv>): unknown {
   try {
     return raw.length > 0 ? JSON.parse(raw) : {};
   } catch {
-    throw new AppError({ code: 'VALIDATION_FAILED', message: '요청 본문이 올바른 JSON이 아닙니다.' });
+    throw new AppError({
+      code: 'VALIDATION_FAILED',
+      message: '요청 본문이 올바른 JSON이 아닙니다.',
+    });
   }
 }
 
 /** 요청 본문을 JSON으로 읽고 스키마로 검사한다. */
-export const readBody = <T>(c: Context<AppEnv>, schema: SchemaLike<T>): T => parseWithAppError(schema, readJson(c));
+export const readBody = <T>(c: Context<AppEnv>, schema: SchemaLike<T>): T =>
+  parseWithAppError(schema, readJson(c));

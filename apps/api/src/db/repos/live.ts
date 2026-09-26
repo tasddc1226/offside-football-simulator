@@ -22,10 +22,16 @@ export async function liveStats(db: Db, nowMs: number): Promise<LiveStats> {
   const recent = new Date(nowMs - PLAYING_WINDOW_MS).toISOString();
   const n = sql<number>`count(*)`;
   const [[playing], [seasons], [created], [retired]] = await Promise.all([
-    db.select({ n }).from(careers).where(and(eq(careers.status, 'active'), gte(careers.updatedAt, recent))),
+    db
+      .select({ n })
+      .from(careers)
+      .where(and(eq(careers.status, 'active'), gte(careers.updatedAt, recent))),
     db.select({ n }).from(careerSeasons).where(gte(careerSeasons.createdAt, today)),
     db.select({ n }).from(careers).where(gte(careers.createdAt, today)),
-    db.select({ n }).from(careers).where(and(eq(careers.status, 'retired'), gte(careers.retiredAt, today))),
+    db
+      .select({ n })
+      .from(careers)
+      .where(and(eq(careers.status, 'retired'), gte(careers.retiredAt, today))),
   ]);
   return {
     playing: Number(playing?.n ?? 0),

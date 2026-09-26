@@ -22,7 +22,14 @@ export function viewFromEntry(h: HofEntry): LegendView {
     score: h.score,
     peak: h.peak,
     d: h.detail ?? null,
-    totals: { apps: h.apps, goals: h.goals, assists: h.assists, trophies: h.trophies, awards: h.awards, caps: h.caps },
+    totals: {
+      apps: h.apps,
+      goals: h.goals,
+      assists: h.assists,
+      trophies: h.trophies,
+      awards: h.awards,
+      caps: h.caps,
+    },
     own: h,
     title: h.title ?? null,
   };
@@ -40,7 +47,14 @@ export function viewFromGame(s: GameState): LegendView {
     score: legendScore(s),
     peak: s.peak,
     d: s,
-    totals: { apps: t.p, goals: t.g, assists: t.a, trophies: s.trophies.length, awards: s.awards.length, caps: s.nat.caps },
+    totals: {
+      apps: t.p,
+      goals: t.g,
+      assists: t.a,
+      trophies: s.trophies.length,
+      awards: s.awards.length,
+      caps: s.nat.caps,
+    },
     own: loadHOF().find((x) => x.id === s.cid) ?? null,
     title: mainTitle(s)?.id ?? null,
   };
@@ -63,7 +77,14 @@ function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
     score: e.legendScore,
     peak: e.peak,
     d,
-    totals: { apps: e.apps, goals: e.goals, assists: e.assists, trophies: e.trophies, awards: e.awards, caps: e.caps },
+    totals: {
+      apps: e.apps,
+      goals: e.goals,
+      assists: e.assists,
+      trophies: e.trophies,
+      awards: e.awards,
+      caps: e.caps,
+    },
     own: null,
     title: e.title ?? null,
   };
@@ -129,7 +150,9 @@ export function routeSharedCareer() {
 }
 
 /** 공유된 선수를 받는다 — 링크를 연 사람이 선수 주인이어도 다른 사람에게 보이는 그대로 그린다. */
-export async function loadSharedLegend(careerId: string): Promise<LegendView | 'missing' | 'error'> {
+export async function loadSharedLegend(
+  careerId: string,
+): Promise<LegendView | 'missing' | 'error'> {
   const r = await getHofDetail(careerId);
   if (r.ok) return publicView(r.data.entry, r.data.snapshot);
   return r.error.retryable ? 'error' : 'missing';

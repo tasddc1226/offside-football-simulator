@@ -12,11 +12,18 @@ const TTL = 60;
 
 /** 시즌·은퇴 업로드 뒤에 부른다. 판정이 실패해도 업로드 응답은 그대로 성공시키고 로그로만 남긴다
  * (빠진 기록은 다음 업로드나 BACKFILL_VERSION 재계산이 채운다). */
-export async function recordFirsts(c: Context<AppEnv>, careerId: string, opts?: { legendOnly?: boolean }): Promise<void> {
+export async function recordFirsts(
+  c: Context<AppEnv>,
+  careerId: string,
+  opts?: { legendOnly?: boolean },
+): Promise<void> {
   try {
     if (await recordCareerFirsts(getDb(c), careerId, opts)) purgeEdge(c, STALE.firstsChanged());
   } catch (err) {
-    c.set('storeFailure', { code: 'SERVER_FIRSTS_FAILED', message: err instanceof Error ? err.message : String(err) });
+    c.set('storeFailure', {
+      code: 'SERVER_FIRSTS_FAILED',
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 

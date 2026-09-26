@@ -46,7 +46,10 @@ describe('라이벌 3단계 대표팀 경쟁', () => {
     const { createRng, setActiveRng } = await import('./rng.js');
     const { newGame, startStory } = await import('./engine.js');
     setActiveRng(createRng(5));
-    const s = newGame({ name: 'a', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, 5);
+    const s = newGame(
+      { name: 'a', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      5,
+    );
     startStory(s, 'rival', { gap: 0, tone: 'loud' });
     s.nat.debutYear = debutYear;
     eventById('rival-3')!.choices[0]!.ok.fx(s);

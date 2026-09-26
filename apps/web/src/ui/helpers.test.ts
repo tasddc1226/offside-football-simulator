@@ -14,7 +14,10 @@ describe('pushEvLog', () => {
   it('Svelte $state 프록시 상태에서도 첫 선택 로그를 남긴다', () => {
     setActiveRng(createRng(1));
     const app = proxy({ G: null as GameState | null });
-    app.G = newGame({ name: 'a', number: 1, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, 1);
+    app.G = newGame(
+      { name: 'a', number: 1, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      1,
+    );
     const entry = { k: 'ev', id: 'knock', c: 0, h: 1 };
     pushEvLog(app.G, entry);
     pushEvLog(app.G, entry);

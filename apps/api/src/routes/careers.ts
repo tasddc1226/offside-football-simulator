@@ -9,7 +9,13 @@ import {
 } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { ok, readBody, nowIso } from './shared.js';
-import { getCareer, getCareerOwner, listOwnHof, putCareerSeason, putRetirement } from '../db/repos/careers.js';
+import {
+  getCareer,
+  getCareerOwner,
+  listOwnHof,
+  putCareerSeason,
+  putRetirement,
+} from '../db/repos/careers.js';
 import { getProfile, isLinked } from '../db/repos/profiles.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
@@ -20,7 +26,11 @@ import { STALE } from '../edgeKeys.js';
 import { isAcceptablePublicName } from '@offside/contracts/content-filter';
 
 /** 소유권 확인: careerId가 이미 다른 프로필 소유면 409. 없으면(새 커리어) 통과. */
-async function assertOwnable(db: ReturnType<typeof getDb>, careerId: string, profileId: string): Promise<void> {
+async function assertOwnable(
+  db: ReturnType<typeof getDb>,
+  careerId: string,
+  profileId: string,
+): Promise<void> {
   const owner = await getCareerOwner(db, careerId);
   if (owner !== undefined && owner !== profileId) {
     throw new AppError({
@@ -67,7 +77,11 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
 
     await recordFirsts(c, careerId);
     const career = await getCareer(db, careerId);
-    return ok(c, CareerUpsertResponseSchema, { careerId, year, status: career?.status ?? 'active' });
+    return ok(c, CareerUpsertResponseSchema, {
+      careerId,
+      year,
+      status: career?.status ?? 'active',
+    });
   });
 
   app.put('/v1/careers/:careerId/retirement', requireProfile, async (c) => {

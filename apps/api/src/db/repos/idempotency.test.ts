@@ -30,7 +30,12 @@ describe('idempotency repo', () => {
     });
 
     const first = await getIdempotent(ctx.db, ownerProfileId, 'idem-key-1', '2026-09-01T00:00:01Z');
-    const second = await getIdempotent(ctx.db, ownerProfileId, 'idem-key-1', '2026-09-01T00:00:02Z');
+    const second = await getIdempotent(
+      ctx.db,
+      ownerProfileId,
+      'idem-key-1',
+      '2026-09-01T00:00:02Z',
+    );
     expect(first?.responseStatus).toBe(200);
     expect(second).toEqual(first);
   });
@@ -46,7 +51,9 @@ describe('idempotency repo', () => {
       expiresAt: '2026-01-02T00:00:00Z',
     });
 
-    await expect(getIdempotent(ctx.db, ownerProfileId, 'idem-key-expired', '2026-09-01T00:00:00Z')).resolves.toBeUndefined();
+    await expect(
+      getIdempotent(ctx.db, ownerProfileId, 'idem-key-expired', '2026-09-01T00:00:00Z'),
+    ).resolves.toBeUndefined();
   });
 
   it('purgeExpired removes expired rows from the table', async () => {

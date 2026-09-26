@@ -21,7 +21,9 @@ function backfill(): string[] {
 export function dexSeen(): Set<string> {
   if (!seen) {
     const raw = loadKey<unknown>(KEY);
-    seen = new Set(Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : backfill());
+    seen = new Set(
+      Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : backfill(),
+    );
     if (!Array.isArray(raw) && seen.size) saveKey(KEY, [...seen]);
   }
   return seen;

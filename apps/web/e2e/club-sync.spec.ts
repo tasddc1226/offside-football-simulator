@@ -5,7 +5,8 @@ import { fail, ok } from './helpers.js';
 const API = /localhost:8787\/v1\/club-custom/;
 
 // 이 기기에서 프로필 조회가 성공한 적이 있다는 표시(T-10-037) — 있어야 부팅 때 계정과 맞춘다.
-const withSessionHint = (page: Page) => page.addInitScript(() => localStorage.setItem('ft_session', '1'));
+const withSessionHint = (page: Page) =>
+  page.addInitScript(() => localStorage.setItem('ft_session', '1'));
 
 async function openPl(page: Page) {
   await page.goto('/');
@@ -14,12 +15,14 @@ async function openPl(page: Page) {
   await page.locator('#club-league').selectOption('pl');
 }
 
-test('로그인 상태면 계정에 저장된 클럽 이름을 받아 오고, 바꾸면 계정으로 보낸다', async ({ page }) => {
+test('로그인 상태면 계정에 저장된 클럽 이름을 받아 오고, 바꾸면 계정으로 보낸다', async ({
+  page,
+}) => {
   let server = { clubs: { 'pl-0': { name: '서버 FC' } }, updatedAt: '2026-09-25T00:00:00.000Z' };
   const puts: { clubs: Record<string, { name?: string }>; updatedAt: string }[] = [];
   await page.route(API, async (route: Route) => {
     if (route.request().method() === 'PUT') {
-      const body = route.request().postDataJSON() as typeof puts[number];
+      const body = route.request().postDataJSON() as (typeof puts)[number];
       puts.push(body);
       server = body as typeof server;
     }
@@ -62,7 +65,9 @@ test('세션이 없으면 이 기기에만 저장하고 서버로 보내지 않�
   expect(getCount).toBe(0); // 세션이 있었던 적 없는 기기는 부팅 때 묻지 않는다(콘솔 401 없음)
 });
 
-test('세션 표시가 있어도 서버가 세션이 없다고 하면 표시를 지워 다음 부팅부터 묻지 않는다', async ({ page }) => {
+test('세션 표시가 있어도 서버가 세션이 없다고 하면 표시를 지워 다음 부팅부터 묻지 않는다', async ({
+  page,
+}) => {
   let getCount = 0;
   await page.route(API, async (route: Route) => {
     getCount++;
@@ -78,7 +83,9 @@ test('세션 표시가 있어도 서버가 세션이 없다고 하면 표시를 
   expect(getCount).toBe(1);
 });
 
-test('엠블럼 이미지 합계가 서버 한도를 넘으면 보내지 않고, 이 기기에만 남았다고 알린다', async ({ page }) => {
+test('엠블럼 이미지 합계가 서버 한도를 넘으면 보내지 않고, 이 기기에만 남았다고 알린다', async ({
+  page,
+}) => {
   let putCount = 0;
   await page.route(API, async (route: Route) => {
     if (route.request().method() === 'PUT') putCount++;
@@ -87,9 +94,16 @@ test('엠블럼 이미지 합계가 서버 한도를 넘으면 보내지 않고,
   // 64px 엠블럼 한도(16,000자)에 가까운 이미지 55개 ≈ 82만 자 > 합계 한도 80만 자.
   await page.addInitScript(() => {
     const img = `data:image/png;base64,${'A'.repeat(14_950)}`;
-    const ids = ['pl', 'll', 'sa'].flatMap((l) => Array.from({ length: 20 }, (_, i) => `${l}-${i}`)).slice(0, 55);
-    const clubs = Object.fromEntries(ids.map((id) => [id, { logo: { text: 'A', bg: '#123456', fg: '#ffffff', img } }]));
-    localStorage.setItem('ft_clubs', JSON.stringify({ clubs, updatedAt: new Date().toISOString(), dirty: true }));
+    const ids = ['pl', 'll', 'sa']
+      .flatMap((l) => Array.from({ length: 20 }, (_, i) => `${l}-${i}`))
+      .slice(0, 55);
+    const clubs = Object.fromEntries(
+      ids.map((id) => [id, { logo: { text: 'A', bg: '#123456', fg: '#ffffff', img } }]),
+    );
+    localStorage.setItem(
+      'ft_clubs',
+      JSON.stringify({ clubs, updatedAt: new Date().toISOString(), dirty: true }),
+    );
   });
   await withSessionHint(page);
   await openPl(page);

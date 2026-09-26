@@ -27,20 +27,132 @@ export interface BalanceKnob {
 }
 
 export const BALANCE_SPEC = {
-  eventRatePreseason: { group: 'event', label: '프리시즌 이벤트 확률', desc: '프리시즌 구간마다 확률 이벤트가 생길 확률', def: 0.55, min: 0, max: 1, step: 0.01 },
-  eventRateSeason: { group: 'event', label: '전·후반기 이벤트 확률', desc: '전반기·후반기 구간마다 확률 이벤트가 생길 확률', def: 0.7, min: 0, max: 1, step: 0.01 },
-  eventTwist: { group: 'event', label: '선택 뒤 반전 확률', desc: '선택지를 고른 뒤 능력치 반전이 붙을 확률', def: 0.3, min: 0, max: 1, step: 0.01 },
-  growthScale: { group: 'growth', label: '성장 배율', desc: '경기·훈련으로 오르는 능력치에 곱하는 값', def: 1, min: 0.5, max: 1.5, step: 0.01 },
-  injuryRate: { group: 'growth', label: '경기당 부상 확률', desc: '한 경기를 뛸 때 다칠 기본 확률(체력·나이·특성 보정 전)', def: 0.012, min: 0, max: 0.05, step: 0.001 },
-  bigInjuryShare: { group: 'growth', label: '큰 부상 비율', desc: '부상 중 8~18경기 결장하는 큰 부상의 비율', def: 0.12, min: 0, max: 0.5, step: 0.01 },
-  mlsYoungPull: { group: 'transfer', label: '30세 미만 MLS 오퍼 가중치', desc: '30세 미만 선수에게 MLS 구단이 오퍼를 낼 가중치(30세 이상은 1)', def: 0.1, min: 0, max: 1, step: 0.01 },
-  koreaStr: { group: 'national', label: 'A대표팀 전력', desc: '월드컵·아시안컵·A매치에서 한국 대표팀 전력', def: 75, min: 60, max: 90, step: 1 },
-  koreaU23: { group: 'national', label: 'U-23 대표팀 전력', desc: '아시안게임·올림픽에서 한국 U-23 대표팀 전력', def: 69, min: 55, max: 85, step: 1 },
-  wcQual: { group: 'national', label: '월드컵 예선 통과 확률', desc: '월드컵 아시아 예선을 통과할 확률', def: 0.9, min: 0, max: 1, step: 0.01 },
-  olympicQual: { group: 'national', label: '올림픽 예선 통과 확률', desc: '올림픽 아시아 예선(AFC U-23 아시안컵)을 통과할 확률', def: 0.85, min: 0, max: 1, step: 0.01 },
-  agRelease: { group: 'national', label: '아시안게임 해외 구단 차출 허락', desc: '협상 이벤트 없이 해외 구단이 아시안게임 차출을 허락할 확률', def: 0.6, min: 0, max: 1, step: 0.01 },
-  olyRelease: { group: 'national', label: '올림픽 해외 구단 차출 허락', desc: '협상 이벤트 없이 해외 구단이 올림픽 차출을 허락할 확률', def: 0.7, min: 0, max: 1, step: 0.01 },
-  sangmuBase: { group: 'military', label: '상무 기본 합격률', desc: 'OVR 63 · 명성 30 기준 상무 합격률(리그·나이 보정 전)', def: 0.28, min: 0, max: 1, step: 0.01 },
+  eventRatePreseason: {
+    group: 'event',
+    label: '프리시즌 이벤트 확률',
+    desc: '프리시즌 구간마다 확률 이벤트가 생길 확률',
+    def: 0.55,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  eventRateSeason: {
+    group: 'event',
+    label: '전·후반기 이벤트 확률',
+    desc: '전반기·후반기 구간마다 확률 이벤트가 생길 확률',
+    def: 0.7,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  eventTwist: {
+    group: 'event',
+    label: '선택 뒤 반전 확률',
+    desc: '선택지를 고른 뒤 능력치 반전이 붙을 확률',
+    def: 0.3,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  growthScale: {
+    group: 'growth',
+    label: '성장 배율',
+    desc: '경기·훈련으로 오르는 능력치에 곱하는 값',
+    def: 1,
+    min: 0.5,
+    max: 1.5,
+    step: 0.01,
+  },
+  injuryRate: {
+    group: 'growth',
+    label: '경기당 부상 확률',
+    desc: '한 경기를 뛸 때 다칠 기본 확률(체력·나이·특성 보정 전)',
+    def: 0.012,
+    min: 0,
+    max: 0.05,
+    step: 0.001,
+  },
+  bigInjuryShare: {
+    group: 'growth',
+    label: '큰 부상 비율',
+    desc: '부상 중 8~18경기 결장하는 큰 부상의 비율',
+    def: 0.12,
+    min: 0,
+    max: 0.5,
+    step: 0.01,
+  },
+  mlsYoungPull: {
+    group: 'transfer',
+    label: '30세 미만 MLS 오퍼 가중치',
+    desc: '30세 미만 선수에게 MLS 구단이 오퍼를 낼 가중치(30세 이상은 1)',
+    def: 0.1,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  koreaStr: {
+    group: 'national',
+    label: 'A대표팀 전력',
+    desc: '월드컵·아시안컵·A매치에서 한국 대표팀 전력',
+    def: 75,
+    min: 60,
+    max: 90,
+    step: 1,
+  },
+  koreaU23: {
+    group: 'national',
+    label: 'U-23 대표팀 전력',
+    desc: '아시안게임·올림픽에서 한국 U-23 대표팀 전력',
+    def: 69,
+    min: 55,
+    max: 85,
+    step: 1,
+  },
+  wcQual: {
+    group: 'national',
+    label: '월드컵 예선 통과 확률',
+    desc: '월드컵 아시아 예선을 통과할 확률',
+    def: 0.9,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  olympicQual: {
+    group: 'national',
+    label: '올림픽 예선 통과 확률',
+    desc: '올림픽 아시아 예선(AFC U-23 아시안컵)을 통과할 확률',
+    def: 0.85,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  agRelease: {
+    group: 'national',
+    label: '아시안게임 해외 구단 차출 허락',
+    desc: '협상 이벤트 없이 해외 구단이 아시안게임 차출을 허락할 확률',
+    def: 0.6,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  olyRelease: {
+    group: 'national',
+    label: '올림픽 해외 구단 차출 허락',
+    desc: '협상 이벤트 없이 해외 구단이 올림픽 차출을 허락할 확률',
+    def: 0.7,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  sangmuBase: {
+    group: 'military',
+    label: '상무 기본 합격률',
+    desc: 'OVR 63 · 명성 30 기준 상무 합격률(리그·나이 보정 전)',
+    def: 0.28,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
 } as const satisfies Record<string, BalanceKnob>;
 
 export type BalanceKey = keyof typeof BALANCE_SPEC;
@@ -68,10 +180,15 @@ export type BalanceValues = Record<BalanceKey, number> & {
 export const clampTo = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
-function sanitizeMap(raw: unknown, pattern: RegExp, range: { min: number; max: number }): Record<string, number> {
+function sanitizeMap(
+  raw: unknown,
+  pattern: RegExp,
+  range: { min: number; max: number },
+): Record<string, number> {
   const out: Record<string, number> = {};
   if (!raw || typeof raw !== 'object') return out;
-  for (const [k, v] of Object.entries(raw)) if (pattern.test(k) && isNum(v)) out[k] = clampTo(v, range.min, range.max);
+  for (const [k, v] of Object.entries(raw))
+    if (pattern.test(k) && isNum(v)) out[k] = clampTo(v, range.min, range.max);
   return out;
 }
 
@@ -93,7 +210,10 @@ export function sanitizeBalance(raw: unknown): BalanceOverrides {
 
 export function resolveBalance(overrides: BalanceOverrides = {}): BalanceValues {
   const o = sanitizeBalance(overrides);
-  const values = { eventWeight: o.eventWeight ?? {}, choiceBonus: o.choiceBonus ?? {} } as BalanceValues;
+  const values = {
+    eventWeight: o.eventWeight ?? {},
+    choiceBonus: o.choiceBonus ?? {},
+  } as BalanceValues;
   for (const k of BALANCE_KEYS) values[k] = o[k] ?? BALANCE_SPEC[k].def;
   return values;
 }

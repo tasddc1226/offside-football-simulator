@@ -32,7 +32,9 @@ export const ClubCustomSchema = z.strictObject({
 
 export const ClubCustomMapSchema = z
   .record(z.string().regex(/^[a-z0-9]{1,6}-\d{1,3}$/), ClubCustomSchema)
-  .refine((m) => Object.keys(m).length <= CLUB_CUSTOM_MAX_CLUBS, { message: `클럽은 최대 ${CLUB_CUSTOM_MAX_CLUBS}개입니다.` })
+  .refine((m) => Object.keys(m).length <= CLUB_CUSTOM_MAX_CLUBS, {
+    message: `클럽은 최대 ${CLUB_CUSTOM_MAX_CLUBS}개입니다.`,
+  })
   .refine((m) => clubImgTotal(m) <= CLUB_CUSTOM_IMG_TOTAL_MAX, {
     message: '엠블럼 이미지가 너무 많습니다.',
   });

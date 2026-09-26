@@ -4,7 +4,21 @@ import { EXPECTED_TABLES, inspectCounts, inspectSchema } from './production-rele
 describe('production release guards', () => {
   it('lists exactly the tables expected to survive migration 0015 + 0016(T-9-009 careers·career_seasons) + 0019(T-10-010 club_customs) + 0020(T-10-011 board_posts·board_comments) + 0022(T-10-016 balance_versions) + 0024(T-10-027 server_firsts·app_meta)', () => {
     expect([...EXPECTED_TABLES].sort()).toEqual(
-      ['app_meta', 'audit_log', 'auth_attempts', 'balance_versions', 'board_comments', 'board_posts', 'careers', 'career_seasons', 'club_customs', 'idempotency', 'profiles', 'server_firsts', 'sessions'].sort(),
+      [
+        'app_meta',
+        'audit_log',
+        'auth_attempts',
+        'balance_versions',
+        'board_comments',
+        'board_posts',
+        'careers',
+        'career_seasons',
+        'club_customs',
+        'idempotency',
+        'profiles',
+        'server_firsts',
+        'sessions',
+      ].sort(),
     );
   });
 

@@ -4,7 +4,12 @@
 // 로컬에만 남고(게임은 그대로), 다음 부팅·다음 변경 때 다시 맞춘다. 에디트 파일(JSON)로도 옮길 수 있다.
 import { loadKey, saveKey } from '../game/season.js';
 import { CLUBS } from '../game/data.js';
-import { applyClubNames, sanitizeClubCustom, type ClubCustom, type ClubCustomMap } from '../game/clubs.js';
+import {
+  applyClubNames,
+  sanitizeClubCustom,
+  type ClubCustom,
+  type ClubCustomMap,
+} from '../game/clubs.js';
 import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
 import { apiFetch } from '../api/client.js';
 import { appState } from './state.svelte.js';
@@ -17,7 +22,10 @@ const PUSH_DELAY_MS = 1500;
  * full: 이미지 합계가 서버 한도를 넘어 보내지 않음(이 기기에는 남는다). */
 export type ClubSyncStatus = 'local' | 'syncing' | 'synced' | 'error' | 'full';
 
-export const clubCustom = $state<{ map: ClubCustomMap; status: ClubSyncStatus }>({ map: {}, status: 'local' });
+export const clubCustom = $state<{ map: ClubCustomMap; status: ClubSyncStatus }>({
+  map: {},
+  status: 'local',
+});
 
 // 저장 형식: { clubs, updatedAt, dirty }. T-10-009 첫 형식(클럽 맵 그대로)도 읽는다.
 interface Stored {
@@ -33,7 +41,11 @@ function readStored(): Stored {
   const raw = loadKey<unknown>(KEY);
   if (raw && typeof raw === 'object' && 'clubs' in raw) {
     const o = raw as Partial<Stored>;
-    return { clubs: sanitizeClubCustom(o.clubs), updatedAt: typeof o.updatedAt === 'string' ? o.updatedAt : null, dirty: !!o.dirty };
+    return {
+      clubs: sanitizeClubCustom(o.clubs),
+      updatedAt: typeof o.updatedAt === 'string' ? o.updatedAt : null,
+      dirty: !!o.dirty,
+    };
   }
   const clubs = sanitizeClubCustom(raw);
   return { clubs, updatedAt: null, dirty: Object.keys(clubs).length > 0 };
@@ -80,7 +92,8 @@ export function resetClubCustom(ids?: string[]): boolean {
   return commitLocal(next);
 }
 
-export const exportClubCustom = (): string => JSON.stringify({ v: 1, clubs: clubCustom.map }, null, 1);
+export const exportClubCustom = (): string =>
+  JSON.stringify({ v: 1, clubs: clubCustom.map }, null, 1);
 /** 가져온 파일로 통째로 바꾼다. 적용된 클럽 수를 돌려준다(형식이 틀리면 -1). */
 export function importClubCustom(text: string): number {
   let raw: unknown;
@@ -89,7 +102,8 @@ export function importClubCustom(text: string): number {
   } catch {
     return -1;
   }
-  const clubs = raw && typeof raw === 'object' && 'clubs' in raw ? (raw as { clubs: unknown }).clubs : raw;
+  const clubs =
+    raw && typeof raw === 'object' && 'clubs' in raw ? (raw as { clubs: unknown }).clubs : raw;
   const map = sanitizeClubCustom(clubs);
   return commitLocal(map) ? Object.keys(map).length : -1;
 }
@@ -105,7 +119,8 @@ function schedulePush() {
 
 /** 서버가 돌려준 값이 로컬보다 새로우면(다른 기기의 변경) 그걸로 바꾼다. */
 function adopt(remote: Remote) {
-  if (remote.updatedAt && remote.updatedAt !== meta.updatedAt) commit(remote.clubs, { updatedAt: remote.updatedAt, dirty: false });
+  if (remote.updatedAt && remote.updatedAt !== meta.updatedAt)
+    commit(remote.clubs, { updatedAt: remote.updatedAt, dirty: false });
 }
 function fail(code: string) {
   clubCustom.status = code === 'PROFILE_REQUIRED' ? 'local' : 'error';
@@ -121,7 +136,10 @@ async function push(): Promise<void> {
   }
   const sent = meta.updatedAt;
   clubCustom.status = 'syncing';
-  const r = await apiFetch<Remote>('/v1/club-custom', { method: 'PUT', body: JSON.stringify({ clubs: clubCustom.map, updatedAt: sent }) });
+  const r = await apiFetch<Remote>('/v1/club-custom', {
+    method: 'PUT',
+    body: JSON.stringify({ clubs: clubCustom.map, updatedAt: sent }),
+  });
   if (!r.ok) return fail(r.error.code);
   // 보내는 사이 또 바뀌었으면 dirty를 남겨 다음 push가 보낸다.
   if (meta.updatedAt === sent) commit(clubCustom.map, { updatedAt: sent, dirty: false });
@@ -135,7 +153,8 @@ export async function syncClubCustom(): Promise<void> {
   const r = await apiFetch<Remote>('/v1/club-custom', { method: 'GET' });
   if (!r.ok) return fail(r.error.code);
   const remote = r.data;
-  const localNewer = meta.dirty && meta.updatedAt && (!remote.updatedAt || meta.updatedAt >= remote.updatedAt);
+  const localNewer =
+    meta.dirty && meta.updatedAt && (!remote.updatedAt || meta.updatedAt >= remote.updatedAt);
   if (localNewer) return push();
   adopt(remote);
   if (!remote.updatedAt && meta.dirty) return push();

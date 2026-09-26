@@ -10,10 +10,26 @@ import type { GameState } from './types.js';
 
 const fresh = (): GameState => {
   setActiveRng(createRng(7));
-  return newGame({ name: '홍길동', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, 7);
+  return newGame(
+    { name: '홍길동', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+    7,
+  );
 };
 const rec = (over: Partial<GameState['career'][number]> = {}): GameState['career'][number] => ({
-  year: 2030, age: 22, club: '테스트 FC', league: 'K리그1', apps: 30, goals: 10, assists: 5, cs: 0, rating: 7, rank: 3, ovr: 70, honors: [], pro: true, ...over,
+  year: 2030,
+  age: 22,
+  club: '테스트 FC',
+  league: 'K리그1',
+  apps: 30,
+  goals: 10,
+  assists: 5,
+  cs: 0,
+  rating: 7,
+  rank: 3,
+  ovr: 70,
+  honors: [],
+  pro: true,
+  ...over,
 });
 
 describe('칭호 레지스트리 (T-10-026)', () => {
@@ -26,13 +42,18 @@ describe('칭호 레지스트리 (T-10-026)', () => {
   it('스토리의 모든 결말 문자열이 칭호로 이어진다', () => {
     const src = readFileSync(new URL('./stories.ts', import.meta.url), 'utf8');
     const endings = new Set<string>();
-    for (const m of src.matchAll(/endStory\(s, '([a-z]+)', ([^)]*)\)/g)) for (const q of m[2]!.matchAll(/'([^']+)'/g)) if (!/^[A-Z]{2}$/.test(q[1]!)) endings.add(`${m[1]}|${q[1]}`); // 'GK'·'DF' 같은 포지션 비교는 뺀다
+    for (const m of src.matchAll(/endStory\(s, '([a-z]+)', ([^)]*)\)/g))
+      for (const q of m[2]!.matchAll(/'([^']+)'/g))
+        if (!/^[A-Z]{2}$/.test(q[1]!)) endings.add(`${m[1]}|${q[1]}`); // 'GK'·'DF' 같은 포지션 비교는 뺀다
     for (const m of src.matchAll(/expireEnding: '([^']+)'/g)) endings.add(`europe|${m[1]}`);
     const s = fresh();
     for (const e of endings) {
       const [key, ending] = e.split('|') as [string, string];
       s.storyLog = [{ year: 2030, key, name: '', ending }];
-      expect(TITLES.some((d) => d.cat === 'story' && d.earned(s, {})), e).toBe(true);
+      expect(
+        TITLES.some((d) => d.cat === 'story' && d.earned(s, {})),
+        e,
+      ).toBe(true);
     }
   });
 
@@ -82,7 +103,11 @@ describe('칭호 판정', () => {
 
   it('대표 칭호: 직접 고른 것 > 가장 높은 등급 중 최근 것', () => {
     const s = fresh();
-    s.titles = [{ id: 'debut', year: 2027 }, { id: 'season30', year: 2029 }, { id: 'goals100', year: 2031 }];
+    s.titles = [
+      { id: 'debut', year: 2027 },
+      { id: 'season30', year: 2029 },
+      { id: 'goals100', year: 2031 },
+    ];
     expect(mainTitle(s)?.id).toBe('season30');
     s.titles.push({ id: 'cs100', year: 2032 });
     expect(mainTitle(s)?.id).toBe('cs100');

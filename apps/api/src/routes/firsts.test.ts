@@ -11,18 +11,44 @@ const C = '0b000000-0000-4000-8000-00000000000c';
 
 const seasonBody = (over: Record<string, unknown> = {}) => ({
   career: TEST_CAREER,
-  season: { age: 22, club: '테스트 FC', league: 'K리그1', apps: 30, goals: 10, assists: 3, rating: 7.2, rank: 1, ovr: 70, honors: [], ...over },
+  season: {
+    age: 22,
+    club: '테스트 FC',
+    league: 'K리그1',
+    apps: 30,
+    goals: 10,
+    assists: 3,
+    rating: 7.2,
+    rank: 1,
+    ovr: 70,
+    honors: [],
+    ...over,
+  },
   events: [],
 });
-const summary = { retireAge: 34, peak: 88, legendScore: 900, apps: 300, goals: 120, assists: 60, trophies: 1, awards: 0, caps: 30, ballon: 0, lastClub: '테스트 FC' };
+const summary = {
+  retireAge: 34,
+  peak: 88,
+  legendScore: 900,
+  apps: 300,
+  goals: 120,
+  assists: 60,
+  trophies: 1,
+  awards: 0,
+  caps: 30,
+  ballon: 0,
+  lastClub: '테스트 FC',
+};
 const read = async (ctx: TestD1) => {
   const res = await createApp().request('/v1/firsts', {}, ctx.env);
   expect(res.status).toBe(200);
   expect(res.headers.get('Cache-Control')).toContain('public');
   return successEnvelope(FirstsResponseSchema).parse(await res.json()).data;
 };
-const achieved = (data: Awaited<ReturnType<typeof read>>) => data.items.filter((x) => x.holder).length;
-const holderOf = (data: Awaited<ReturnType<typeof read>>, id: string) => data.items.find((x) => x.id === id)?.holder ?? null;
+const achieved = (data: Awaited<ReturnType<typeof read>>) =>
+  data.items.filter((x) => x.holder).length;
+const holderOf = (data: Awaited<ReturnType<typeof read>>, id: string) =>
+  data.items.find((x) => x.id === id)?.holder ?? null;
 
 describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
   let ctx: TestD1;
@@ -44,10 +70,21 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
   });
 
   it('시즌 업로드로 기록이 생기고, 나중에 같은 기록을 채운 커리어는 자리를 뺏지 못한다', async () => {
-    expect((await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 }))).status).toBe(200);
-    expect((await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 45 }))).status).toBe(200);
+    expect(
+      (await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 })))
+        .status,
+    ).toBe(200);
+    expect(
+      (await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 45 })))
+        .status,
+    ).toBe(200);
     const data = await read(ctx);
-    expect(holderOf(data, 'sgoals30')).toEqual({ careerId: A, name: null, pos: 'FW', number: null });
+    expect(holderOf(data, 'sgoals30')).toEqual({
+      careerId: A,
+      name: null,
+      pos: 'FW',
+      number: null,
+    });
     expect(holderOf(data, 'sgoals40')?.careerId).toBe(B);
     expect(achieved(data)).toBe(2);
   });
@@ -81,10 +118,17 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     // 규칙 도입 전 상태로 되돌리고, B의 시즌이 먼저 올라온 것으로 바꾼다.
     const db = ctx.env.DB;
     await db.prepare('DELETE FROM server_firsts').run();
-    await db.prepare("UPDATE career_seasons SET created_at = '2026-01-01T00:00:00.000Z' WHERE career_id = ?").bind(B).run();
+    await db
+      .prepare(
+        "UPDATE career_seasons SET created_at = '2026-01-01T00:00:00.000Z' WHERE career_id = ?",
+      )
+      .bind(B)
+      .run();
     const data = await read(ctx);
     expect(holderOf(data, 'sgoals30')?.careerId).toBe(B);
-    expect(data.items.find((x) => x.id === 'sgoals30')?.achievedAt).toBe('2026-01-01T00:00:00.000Z');
+    expect(data.items.find((x) => x.id === 'sgoals30')?.achievedAt).toBe(
+      '2026-01-01T00:00:00.000Z',
+    );
     // 두 번째 조회는 버전이 같아 다시 훑지 않는다.
     await db.prepare('DELETE FROM server_firsts').run();
     expect(achieved(await read(ctx))).toBe(0);

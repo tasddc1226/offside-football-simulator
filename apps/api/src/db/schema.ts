@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { index, primaryKey, sqliteTable, text, uniqueIndex, integer, real, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+  integer,
+  real,
+  type AnySQLiteColumn,
+} from 'drizzle-orm/sqlite-core';
 
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
 export const profiles = sqliteTable(
@@ -200,7 +209,15 @@ export const auditLog = sqliteTable(
   {
     id: text('id').primaryKey(),
     kind: text('kind', {
-      enum: ['PROFILE_DELETED', 'RECOVERY_CODE_ISSUED', 'GOOGLE_LINKED', 'GOOGLE_UNLINKED', 'CAREERS_MERGED', 'BALANCE_ACTIVATED', 'COMMENTS_PURGED'],
+      enum: [
+        'PROFILE_DELETED',
+        'RECOVERY_CODE_ISSUED',
+        'GOOGLE_LINKED',
+        'GOOGLE_UNLINKED',
+        'CAREERS_MERGED',
+        'BALANCE_ACTIVATED',
+        'COMMENTS_PURGED',
+      ],
     }).notNull(),
     profileId: text('profile_id').notNull(),
     payloadJson: text('payload_json').notNull(),

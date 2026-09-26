@@ -15,7 +15,8 @@
     "lint": "turbo run lint",
     "lint:deps": "node tooling/scripts/check-deps.mjs",
     "typecheck": "turbo run typecheck",
-    "format": "prettier --write .",
+    "format": "prettier --write apps packages tooling \"*.{js,mjs,json,yaml,yml}\"",
+    "format:check": "prettier --check apps packages tooling \"*.{js,mjs,json,yaml,yml}\"",
     "db:migrate": "turbo run db:migrate",
     "dev:simulator": "pnpm --filter @offside/web dev:simulator"
   },

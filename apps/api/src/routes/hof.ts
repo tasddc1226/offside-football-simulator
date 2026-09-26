@@ -26,13 +26,17 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
     const limit = parseWithAppError(HofListQuerySchema, c.req.query('limit'));
     const page = parseWithAppError(HofPageQuerySchema, c.req.query('page'));
     const sort = parseWithAppError(HofSortSchema, c.req.query('sort'));
-    const data = await edgeCached(c, EDGE.hofList(limit, page, sort), LIST_TTL, () => listPublicHof(getDb(c), limit, page, sort));
+    const data = await edgeCached(c, EDGE.hofList(limit, page, sort), LIST_TTL, () =>
+      listPublicHof(getDb(c), limit, page, sort),
+    );
     return ok(c, HofListResponseSchema, data, 200, CACHE);
   });
 
   app.get('/v1/hof/:careerId', async (c) => {
     const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
-    const found = await edgeCached(c, EDGE.hofDetail(careerId), DETAIL_TTL, () => getPublicHof(getDb(c), careerId));
+    const found = await edgeCached(c, EDGE.hofDetail(careerId), DETAIL_TTL, () =>
+      getPublicHof(getDb(c), careerId),
+    );
     if (!found) {
       throw new AppError({
         code: 'VALIDATION_FAILED',

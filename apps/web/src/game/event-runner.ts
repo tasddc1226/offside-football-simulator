@@ -5,13 +5,26 @@ import { EVENTS, eventById } from './events-data.js';
 import { BAL, choiceOdds, eventWeight } from './balance.js';
 import type { GameState, Choice, EventDef } from './types.js';
 import { leagueOf, labelOf } from './player.js';
-import { setJitter, addAttr, addStat, fameEff, log, snapshot, diffChips, type Chip } from './stats.js';
+import {
+  setJitter,
+  addAttr,
+  addStat,
+  fameEff,
+  log,
+  snapshot,
+  diffChips,
+  type Chip,
+} from './stats.js';
 import { STORIES, turnNo, storyActive, endStory } from './story.js';
 
 // ───────── 이벤트 문구/조건 공용 헬퍼 (원본 events.js) ─────────
 export const isPro = (s: GameState): boolean => !leagueOf(s.leagueId).amateur;
-export const byPos = <T>(m: Partial<Record<Pos | 'def', T>>) => (s: GameState): T => (m[s.pos] ?? m.def) as T;
-export const txt = <T>(v: T | ((s: GameState) => T), s: GameState): T => (typeof v === 'function' ? (v as (s: GameState) => T)(s) : v);
+export const byPos =
+  <T>(m: Partial<Record<Pos | 'def', T>>) =>
+  (s: GameState): T =>
+    (m[s.pos] ?? m.def) as T;
+export const txt = <T>(v: T | ((s: GameState) => T), s: GameState): T =>
+  typeof v === 'function' ? (v as (s: GameState) => T)(s) : v;
 export const isAtk = (s: GameState): boolean => s.pos === 'FW' || s.pos === 'MF';
 export function adFee(s: GameState): number {
   const f = fameEff(s);
@@ -58,10 +71,12 @@ export const EVENT_RULES = {
   ],
 } as const;
 const EV_COOLDOWN = EVENT_RULES.cooldown;
-export const isSafe = (ev: EventDef, c: Choice): boolean => !c.fail && ev.choices.some((x) => !!x.fail);
+export const isSafe = (ev: EventDef, c: Choice): boolean =>
+  !c.fail && ev.choices.some((x) => !!x.fail);
 export function rollEvent(s: GameState): string | null {
   // 정의 모듈은 event-registry.ts가 EVENTS에 채운다. 그 import가 빠지면 이벤트가 조용히 하나도 안 나오므로 바로 알린다.
-  if (!EVENTS.length) throw new Error('EVENTS가 비어 있다 — game/event-registry.js를 import해야 한다');
+  if (!EVENTS.length)
+    throw new Error('EVENTS가 비어 있다 — game/event-registry.js를 import해야 한다');
   const t = turnNo(s);
   s.chains = s.chains || [];
   for (const c of s.chains.filter((c) => c.until < t)) {
@@ -79,9 +94,16 @@ export function rollEvent(s: GameState): string | null {
   // 대입식의 값(원본 객체)이 아니라 다시 읽은 값을 쓴다 — s가 Svelte $state 프록시면 원본에 쓴 값이 반영되지 않을 수 있다.
   if (!s.flags.evSeen) s.flags.evSeen = {};
   const seen = s.flags.evSeen;
-  const pool = EVENTS.filter((e) => !e.chain && e.cond(s) && s.flags.lastEvent !== e.id && !(seen[e.id] && t - seen[e.id]!.t < EV_COOLDOWN));
+  const pool = EVENTS.filter(
+    (e) =>
+      !e.chain &&
+      e.cond(s) &&
+      s.flags.lastEvent !== e.id &&
+      !(seen[e.id] && t - seen[e.id]!.t < EV_COOLDOWN),
+  );
   if (!pool.length) return null;
-  const weightOf = (e: EventDef) => (e.w * eventWeight(e.id)) / (1 + (seen[e.id] ? seen[e.id]!.n : 0));
+  const weightOf = (e: EventDef) =>
+    (e.w * eventWeight(e.id)) / (1 + (seen[e.id] ? seen[e.id]!.n : 0));
   const tot = pool.reduce((a, e) => a + weightOf(e), 0);
   let x = rnd() * tot;
   const ev = pool.find((e) => (x -= weightOf(e)) <= 0) || pool[0]!;
@@ -118,19 +140,29 @@ export function resolveChoice(s: GameState, evId: string, idx: number): ResolveR
   let twist: string | null = null;
   if (safe && chance(EVENT_RULES.twist)) {
     // 폭이 있는 항목만 RNG를 쓴다(원래 호출 순서: 사기 → 명성 → pick).
-    const [k, d, why] = pick(EVENT_RULES.safeCost.map(({ k, min, max, why }) => [k, -(min === max ? min : ri(min, max)), why] as const));
+    const [k, d, why] = pick(
+      EVENT_RULES.safeCost.map(
+        ({ k, min, max, why }) => [k, -(min === max ? min : ri(min, max)), why] as const,
+      ),
+    );
     addStat(s, k, d);
     twist = '안전한 선택의 대가 · ' + why;
   } else if (chance(EVENT_RULES.twist)) {
     const k = pick(ATTR_KEYS.filter((x) => wOf(s)[x] > 0.09));
-    const up = chance(safe ? EVENT_RULES.twistUp.safe : ok ? EVENT_RULES.twistUp.ok : EVENT_RULES.twistUp.fail);
+    const up = chance(
+      safe ? EVENT_RULES.twistUp.safe : ok ? EVENT_RULES.twistUp.ok : EVENT_RULES.twistUp.fail,
+    );
     const d = up ? ri(1, 2) : -1;
     addAttr(s, k, d);
     twist = up ? `뜻밖의 수확 · ${labelOf(s, k)} +${d}` : `예상 못 한 여파 · ${labelOf(s, k)} ${d}`;
   }
-  const key = ev.story || Object.keys(s.story || {}).find((k) => !before.stories.includes(k) && storyActive(s, k));
+  const key =
+    ev.story ||
+    Object.keys(s.story || {}).find((k) => !before.stories.includes(k) && storyActive(s, k));
   const st = key ? s.story[key] : undefined;
-  const story = st ? { name: STORIES[key!]!.name, ending: st.done ? st.ending! : null, started: !ev.story } : null;
+  const story = st
+    ? { name: STORIES[key!]!.name, ending: st.done ? st.ending! : null, started: !ev.story }
+    : null;
   return { ok, text, chips: diffChips(s, before, snapshot(s)), p, roll, story, twist };
 }
 export function pkWin(s: GameState) {
@@ -141,4 +173,3 @@ export function pkWin(s: GameState) {
     S.pts += 2;
   }
 }
-

@@ -43,7 +43,13 @@ function applicableBuckets(s: GameState, rec: CareerRecord, ctx: FanFeedContext)
 }
 
 /** 이번 시즌 성적에 맞는 팬 반응 3~5줄을 고른다. 항상 같은 입력에 같은 결과(결정적). */
-export function pickFanLines(s: GameState, rec: CareerRecord, ctx: FanFeedContext, min = 3, max = 5): string[] {
+export function pickFanLines(
+  s: GameState,
+  rec: CareerRecord,
+  ctx: FanFeedContext,
+  min = 3,
+  max = 5,
+): string[] {
   const buckets = new Set(applicableBuckets(s, rec, ctx));
   const seed = `${s.cid}:${rec.year}`;
   // 버킷이 max보다 많으면 해시로 안정적인 부분집합을 고른다(같은 입력엔 항상 같은 결과).

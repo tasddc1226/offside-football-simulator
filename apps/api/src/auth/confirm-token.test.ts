@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { signConfirmToken, verifyConfirmToken } from './confirm-token.js';
 
-const BASE = { sessionId: 'ses_1', sessionTokenHash: 'a'.repeat(64), expiresAt: '2026-09-02T00:10:00.000Z' };
+const BASE = {
+  sessionId: 'ses_1',
+  sessionTokenHash: 'a'.repeat(64),
+  expiresAt: '2026-09-02T00:10:00.000Z',
+};
 
 describe('confirm-token', () => {
   it('올바른 세션·시각으로 검증하면 ok', async () => {
