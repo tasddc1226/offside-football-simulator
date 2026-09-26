@@ -54,7 +54,7 @@ if (totalGzipBytes > LIMIT_BYTES) {
 
 const missing = EVENT_MARKERS.filter((id) => !new RegExp(`id:\\s*["'\`]${id}["'\`]`).test(entrySource));
 if (missing.length) {
-  console.error(`초기 청크에 이벤트 정의가 없다(${missing.join(', ')}) — ui/actions.ts가 game/event-registry.js를 import하는지 확인하라.`);
+  console.error(`초기 청크에 이벤트 정의가 없다(${missing.join(', ')}) — 진입점(main.ts → ui/actions.ts)에서 game/event-registry.js가 정적으로 import되는지 확인하라.`);
   process.exit(1);
 }
 

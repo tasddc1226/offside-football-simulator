@@ -1,19 +1,12 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { startCareer } from './helpers.js';
+import { resumeWithSave } from './helpers.js';
 
 // T-10-026 칭호: 조건을 채우고 구간을 진행하면 리포트에 "새 칭호"가 뜨고, 선수 카드에 대표 칭호가 붙고,
 // 트로피 탭 도감에서 대표 칭호를 바꿀 수 있다.
 test('구간 진행 후 새 칭호 → 선수 카드 대표 칭호 → 도감에서 대표 칭호 변경', async ({ page }) => {
-  await startCareer(page);
   // 인기 조건(50·100)을 채운 저장본으로 다시 불러온다.
-  await page.evaluate(() => {
-    const g = JSON.parse(localStorage.getItem('ft_save')!);
-    g.fame = 120;
-    localStorage.setItem('ft_save', JSON.stringify(g));
-  });
-  await page.reload();
-  await page.locator('[data-act="continue"]').click();
+  await resumeWithSave(page, { fame: 120 });
   await expect(page.locator('.player h1')).toBeVisible();
 
   await page.locator('[data-act="advance"]').click();
@@ -34,7 +27,13 @@ test('구간 진행 후 새 칭호 → 선수 카드 대표 칭호 → 도감에
   await expect(dex.locator('[data-title="fame50"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(cardTitle).toHaveText('떠오르는 스타');
   await expect(dex.locator('.title-main')).toContainText('직접 고름');
-  // 새로 고쳐도 유지된다(저장).
+  // 새로 고쳐도 유지된다(저장). 구간 진행 중 랜덤 이벤트가 대기로 남았으면 이어하기가 이벤트 시트를
+  // 먼저 여니, 칭호만 보도록 대기 이벤트를 비운다.
+  await page.evaluate(() => {
+    const g = JSON.parse(localStorage.getItem('ft_save')!);
+    if (g.pending?.type === 'event') g.pending = null;
+    localStorage.setItem('ft_save', JSON.stringify(g));
+  });
   await page.reload();
   await page.locator('[data-act="continue"]').click();
   await expect(page.locator('.player [data-act="titles"]')).toHaveText('떠오르는 스타');

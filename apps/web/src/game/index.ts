@@ -1,6 +1,5 @@
 // ───────── 게임 모듈 배럴: 로드 순서가 중요합니다 ─────────
-// data → rng → attributes → engine → events-data → events → stories → military
-// → realevents → positional → national(마지막에 legacy 'national' 이벤트를 EVENTS에서 splice) → comps → season
+// data → rng → attributes → engine → events-data → event-registry → national → comps → season
 export * from './data.js';
 export * from './rng.js';
 export * from './attributes.js';
