@@ -1,21 +1,14 @@
-import { ErrorEnvelopeSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { ErrorEnvelopeSchema } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
-import { auditLog, balanceVersions, profiles } from '../db/schema.js';
+import { auditLog, balanceVersions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { ADMIN_EMAIL, issueAdminCookie, issueCookie } from '../test/http.js';
 
 const ORIGIN = 'http://localhost:5173';
-const ADMIN_EMAIL = 'admin@example.com';
 
 type Version = { version: number; status: string; note: string; values: Record<string, unknown>; activatedAt: string | null };
-
-async function issueCookie(ctx: TestD1) {
-  const res = await createApp().request('/v1/profile', {}, ctx.env);
-  const token = /offside_session=([^;]+)/.exec(res.headers.get('Set-Cookie') ?? '')?.[1];
-  const body = successEnvelope(ProfileSchema).parse(await res.json());
-  return { profileId: body.data.id, cookie: `offside_session=${token}` };
-}
 
 describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
   let ctx: TestD1;
@@ -34,11 +27,7 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
     );
   const data = async <T>(res: Response) => ((await res.json()) as { data: T }).data;
 
-  async function makeAdmin() {
-    const who = await issueCookie(ctx);
-    await ctx.db.update(profiles).set({ googleSub: 'sub-admin', email: ADMIN_EMAIL, linkedAt: '2026-09-25T00:00:00.000Z' }).where(eq(profiles.id, who.profileId));
-    return who;
-  }
+  const makeAdmin = () => issueAdminCookie(ctx);
   async function draft(cookie: string, values: Record<string, unknown>, note = '') {
     const res = await call('POST', '/v1/admin/balance', { cookie, body: { note, values } });
     expect(res.status).toBe(201);

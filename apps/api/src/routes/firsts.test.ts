@@ -1,19 +1,15 @@
-import { FirstsResponseSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { FirstsResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { FIRSTS } from '../firsts.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { issueCookie } from '../test/http.js';
 
 const ORIGIN = 'http://localhost:5173';
 const A = '0b000000-0000-4000-8000-00000000000a';
 const B = '0b000000-0000-4000-8000-00000000000b';
 const C = '0b000000-0000-4000-8000-00000000000c';
 
-async function issueCookie(ctx: TestD1): Promise<string> {
-  const res = await createApp().request('/v1/profile', {}, ctx.env);
-  successEnvelope(ProfileSchema).parse(await res.json());
-  return `offside_session=${/offside_session=([^;]+)/.exec(res.headers.get('Set-Cookie') ?? '')?.[1]}`;
-}
 const put = (ctx: TestD1, cookie: string, path: string, body: unknown) =>
   createApp().request(path, { method: 'PUT', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie }, body: JSON.stringify(body) }, ctx.env);
 const seasonBody = (over: Record<string, unknown> = {}) => ({
@@ -37,7 +33,7 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
 
   beforeEach(async () => {
     ctx = await createTestD1();
-    cookie = await issueCookie(ctx);
+    cookie = (await issueCookie(ctx)).cookie;
   });
   afterEach(async () => {
     await ctx.dispose();
@@ -70,8 +66,8 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
   });
 
   it('기록을 가진 프로필이 지워지면 그다음으로 이른 달성자가 이어받는다(나중에 올린 사람이 아니라)', async () => {
-    const other = await issueCookie(ctx);
-    const late = await issueCookie(ctx);
+    const other = (await issueCookie(ctx)).cookie;
+    const late = (await issueCookie(ctx)).cookie;
     await put(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 }));
     await put(ctx, other, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 35 }));
     expect(holderOf(await read(ctx), 'sgoals30')?.careerId).toBe(A);

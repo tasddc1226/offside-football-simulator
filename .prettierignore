@@ -5,3 +5,6 @@ build
 .wrangler
 coverage
 pnpm-lock.yaml
+# 테스트 스냅샷은 도구가 생성한다(T-10-044)
+**/__snapshots__
+**/*-snapshots

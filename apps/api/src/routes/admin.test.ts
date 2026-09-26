@@ -1,20 +1,13 @@
-import { ProfileSchema, successEnvelope, type AdminCommentList, type AdminStats } from '@offside/contracts';
+import { type AdminCommentList, type AdminStats } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { kstDays } from '../db/repos/admin.js';
-import { auditLog, careers, profiles } from '../db/schema.js';
-import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
+import { auditLog, careers } from '../db/schema.js';
+import { createTestD1, type TestD1 } from '../test/d1.js';
+import { ADMIN_EMAIL, issueAdminCookie, issueCookie, issueGoogleCookie } from '../test/http.js';
 
 const ORIGIN = 'http://localhost:5173';
-const ADMIN_EMAIL = 'admin@example.com';
-
-async function issueCookie(ctx: TestD1) {
-  const res = await createApp().request('/v1/profile', {}, ctx.env);
-  const token = /offside_session=([^;]+)/.exec(res.headers.get('Set-Cookie') ?? '')?.[1];
-  const body = successEnvelope(ProfileSchema).parse(await res.json());
-  return { profileId: body.data.id, cookie: `offside_session=${token}` };
-}
 
 describe('운영 도구 /v1/admin (T-10-016)', () => {
   let ctx: TestD1;
@@ -33,16 +26,8 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     );
   const data = async <T>(res: Response) => ((await res.json()) as { data: T }).data;
 
-  async function makeAdmin() {
-    const who = await issueCookie(ctx);
-    await ctx.db.update(profiles).set({ googleSub: 'sub-admin', email: ADMIN_EMAIL, linkedAt: '2026-09-25T00:00:00.000Z' }).where(eq(profiles.id, who.profileId));
-    return who;
-  }
-  async function googleUser(nickname: string) {
-    const who = await issueCookie(ctx);
-    await linkGoogle(ctx, who.profileId, { nickname });
-    return who;
-  }
+  const makeAdmin = () => issueAdminCookie(ctx);
+  const googleUser = (nickname: string) => issueGoogleCookie(ctx, { nickname });
   async function writePost(cookie: string) {
     const res = await call('POST', '/v1/boards/notice/posts', { cookie, body: { title: '점검 안내', body: '오늘 밤 점검합니다.' } });
     return (await data<{ id: string }>(res)).id;

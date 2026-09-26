@@ -1,0 +1,38 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`결정성 골든 (T-10-044) > 고정 시드 커리어 32개의 최종 상태가 바뀌지 않는다 1`] = `
+[
+  "0 FW age35 peak63 seasons17 g102 caps0 score232 titles9 fd3e6fe6006dae06",
+  "1 MF age35 peak77 seasons17 g86 caps22 score323 titles11 44c56403c31734ad",
+  "2 DF age35 peak71 seasons17 g9 caps0 score301 titles10 c4127b366699ab5b",
+  "3 GK age35 peak60 seasons17 g0 caps0 score258 titles5 039394e7db5b6125",
+  "4 FW age35 peak69 seasons17 g149 caps0 score337 titles13 f415b955c321c033",
+  "5 MF age35 peak56 seasons17 g46 caps0 score241 titles7 1c69e8cd40d22301",
+  "6 DF age35 peak62 seasons17 g10 caps0 score226 titles7 18e921f3a7f508b3",
+  "7 GK age35 peak61 seasons17 g0 caps0 score205 titles5 121a3dac22b01de2",
+  "8 FW age35 peak57 seasons17 g139 caps0 score275 titles7 a221aa25c0a80c06",
+  "9 MF age35 peak79 seasons17 g73 caps58 score386 titles16 61817f348b42aa53",
+  "10 DF age35 peak66 seasons17 g10 caps0 score304 titles7 226a197e0e9f7465",
+  "11 GK age35 peak81 seasons17 g0 caps113 score816 titles23 79b5682232a2be23",
+  "12 FW age35 peak77 seasons17 g184 caps83 score417 titles16 a38be46a0a5b5fa1",
+  "13 MF age35 peak80 seasons17 g104 caps79 score537 titles21 e9126dafbfcda03e",
+  "14 DF age35 peak79 seasons17 g6 caps90 score389 titles14 a578b663faf9c8e8",
+  "15 GK age35 peak74 seasons17 g0 caps79 score530 titles14 c876df15b1246529",
+  "16 FW age35 peak78 seasons17 g238 caps69 score508 titles20 8e748122f5efbcb1",
+  "17 MF age35 peak66 seasons17 g46 caps0 score271 titles4 e61c6632b1b7870f",
+  "18 DF age35 peak79 seasons17 g7 caps106 score504 titles17 cb00bd026b4fa832",
+  "19 GK age35 peak78 seasons17 g0 caps82 score420 titles16 08739e6a5732ce24",
+  "20 FW age35 peak67 seasons17 g180 caps0 score389 titles11 b491149c8cc39c42",
+  "21 MF age35 peak77 seasons17 g55 caps24 score361 titles12 a8f7252ea69c5760",
+  "22 DF age35 peak72 seasons17 g24 caps0 score442 titles11 e0dd11928eed3679",
+  "23 GK age35 peak77 seasons17 g0 caps27 score449 titles12 c7c732d5c861db5a",
+  "24 FW age35 peak78 seasons17 g195 caps41 score451 titles18 3c22ac3323f29840",
+  "25 MF age35 peak68 seasons17 g38 caps0 score279 titles8 db903a2ec4e06e6b",
+  "26 DF age35 peak77 seasons17 g4 caps87 score545 titles18 9201b687ebcb5fed",
+  "27 GK age35 peak62 seasons17 g0 caps0 score257 titles3 6daa9255d83ab930",
+  "28 FW age35 peak86 seasons17 g286 caps106 score763 titles23 5a416f6690a83819",
+  "29 MF age35 peak80 seasons17 g68 caps75 score530 titles18 d75e2918cedb22e2",
+  "30 DF age35 peak86 seasons17 g15 caps131 score796 titles23 3a418a33635ef023",
+  "31 GK age35 peak77 seasons17 g0 caps88 score489 titles16 877ad624ff5da4ce",
+]
+`;

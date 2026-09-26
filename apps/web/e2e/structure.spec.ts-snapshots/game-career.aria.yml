@@ -1,0 +1,104 @@
+- main:
+  - text: "풀타임: 휘슬이 울릴 때까지 오프사이드"
+  - button "메뉴"
+  - text: /No\.\d+ · 공격수/
+  - button "대표 칭호 슈퍼스타, 칭호 도감 열기": ‘슈퍼스타’
+  - heading "구조테스트" [level=1]
+  - text: /\d+세 · 런던 해머스 프리미어리그 · 연봉 \d+억 \d+,\d+만 \d+ OVR 로테이션 부상 4경기 주력 슈팅·드리블 잠재력 C Career/
+  - heading "통산 기록" [level=2]
+  - text: /\d+ 경기 \d+ 골 \d+ 도움 \d+ 수상 Next Goals/
+  - heading "다음 목표" [level=2]
+  - text: /통산 \d+골 \d+ \/ \d+ · 남은 4 통산 \d+경기 출전 \d+ \/ \d+ · 남은 \d+ 우승 트로피 5회 4 \/ 5 · 남은 1 통산 \d+도움 \d+ \/ \d+ · 남은 \d+/
+  - table:
+    - rowgroup:
+      - row "시즌 소속 경기 골 도움 평점 순위 OVR":
+        - columnheader "시즌"
+        - columnheader "소속"
+        - columnheader "경기"
+        - columnheader "골"
+        - columnheader "도움"
+        - columnheader "평점"
+        - columnheader "순위"
+        - columnheader "OVR"
+    - rowgroup:
+      - row /\d+-\d+ \(\d+\) 리버풀 토피스 프리미어리그 \d+ 2 0 \d+\.\d+ \d+ \d+/:
+        - cell /\d+-\d+ \(\d+\)/
+        - cell "리버풀 토피스 프리미어리그"
+        - cell /\d+/
+        - cell "2"
+        - cell "0"
+        - cell /\d+\.\d+/
+        - cell /\d+/
+        - cell /\d+/
+      - row /\d+ \(\d+\) 김천 상무 \(국군체육부대\) K리그1 · K리그1 득점왕, K리그1 베스트 \d+ \d+ \d+ 6 \d+\.\d+ 9 \d+/:
+        - cell /\d+ \(\d+\)/
+        - cell /김천 상무 \(국군체육부대\) K리그1 · K리그1 득점왕, K리그1 베스트 \d+/
+        - cell /\d+/
+        - cell /\d+/
+        - cell "6"
+        - cell /\d+\.\d+/
+        - cell "9"
+        - cell /\d+/
+      - row /\d+ \(\d+\) CH×1 김천 상무 \(국군체육부대\) K리그1 · K리그1 득점왕, K리그1 도움왕, K리그1 베스트 \d+, AFC 올해의 선수 \d+ \d+ \d+ \d+\.\d+ 8 \d+/:
+        - cell /\d+ \(\d+\) CH×1/
+        - cell /김천 상무 \(국군체육부대\) K리그1 · K리그1 득점왕, K리그1 도움왕, K리그1 베스트 \d+, AFC 올해의 선수/
+        - cell /\d+/
+        - cell /\d+/
+        - cell /\d+/
+        - cell /\d+\.\d+/
+        - cell "8"
+        - cell /\d+/
+      - row /\d+ \(\d+\) CH×1 우라와 다이아몬즈 J1리그 · AFC 챔피언스리그 엘리트 우승, J1리그 우승, J리그 MVP, J1리그 베스트 \d+ \d+ \d+ 5 \d+\.\d+ 1 \d+/:
+        - cell /\d+ \(\d+\) CH×1/
+        - cell /우라와 다이아몬즈 J1리그 · AFC 챔피언스리그 엘리트 우승, J1리그 우승, J리그 MVP, J1리그 베스트 \d+/
+        - cell /\d+/
+        - cell /\d+/
+        - cell "5"
+        - cell /\d+\.\d+/
+        - cell "1"
+        - cell /\d+/
+      - row /\d+-\d+ \(\d+\) 레체 살렌티니 세리에 A \d+ 8 4 \d+\.\d+ \d+ \d+/:
+        - cell /\d+-\d+ \(\d+\)/
+        - cell "레체 살렌티니 세리에 A"
+        - cell /\d+/
+        - cell "8"
+        - cell "4"
+        - cell /\d+\.\d+/
+        - cell /\d+/
+        - cell /\d+/
+      - row /\d+ \(\d+\) CH×1 가시마 사슴뿔 J1리그 · 일왕배 우승 \d+ \d+ 1 \d+\.\d+ 3 \d+/:
+        - cell /\d+ \(\d+\) CH×1/
+        - cell "가시마 사슴뿔 J1리그 · 일왕배 우승"
+        - cell /\d+/
+        - cell /\d+/
+        - cell "1"
+        - cell /\d+\.\d+/
+        - cell "3"
+        - cell /\d+/
+      - row /\d+ \(\d+\) CH×1 포항 스틸웨이브 K리그1 \d+ 5 1 \d+\.\d+ 6 \d+/:
+        - cell /\d+ \(\d+\) CH×1/
+        - cell "포항 스틸웨이브 K리그1"
+        - cell /\d+/
+        - cell "5"
+        - cell "1"
+        - cell /\d+\.\d+/
+        - cell "6"
+        - cell /\d+/
+      - row /\d+ \(\d+\) 서해공고 고교 리그 · 전국고교축구선수권 우승, 득점왕, 대회 MVP, 대회 베스트 \d+ \d+ \d+ 7 \d+\.\d+ 3 \d+/:
+        - cell /\d+ \(\d+\)/
+        - cell /서해공고 고교 리그 · 전국고교축구선수권 우승, 득점왕, 대회 MVP, 대회 베스트 \d+/
+        - cell /\d+/
+        - cell /\d+/
+        - cell "7"
+        - cell /\d+\.\d+/
+        - cell "3"
+        - cell /\d+/
+  - paragraph: 경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다.
+  - text: Journey
+  - heading "커리어 여정" [level=2]
+  - text: /\d+ 프로 통산 \d+골 \d+ 프로 통산 \d+경기 출전 \d+ 월드컵 본선 출전 \d+ A매치 데뷔 \d+ 프로 통산 \d+골 \d+ 유럽 5대 리그 입성 \(세리에 A\) \d+ 유럽 무대 진출 \(세리에 A\) \d+ 프로 통산 \d+경기 출전 \d+ AFC 챔피언스리그 엘리트 데뷔골 \d+ AFC 챔피언스리그 엘리트 데뷔 \d+ 프로 데뷔골 \d+ 프로 데뷔 \(포항 스틸웨이브\)/
+  - tablist:
+    - tab "시즌"
+    - tab "선수"
+    - tab "커리어" [selected]
+    - tab "트로피"

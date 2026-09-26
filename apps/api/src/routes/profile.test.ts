@@ -7,23 +7,10 @@ import { sha256Hex } from '../db/hash.js';
 import { createProfile } from '../db/repos/profiles.js';
 import { createSession } from '../db/repos/sessions.js';
 import { idempotency, profiles, sessions } from '../db/schema.js';
-import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
+import { createTestD1, type TestD1 } from '../test/d1.js';
+import { ADMIN_EMAIL, issueCookie, issueGoogleCookie } from '../test/http.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
-
-function extractSessionToken(setCookie: string): string {
-  const token = /offside_session=([^;]+)/.exec(setCookie)?.[1];
-  if (!token) throw new Error('Set-Cookie에 offside_session이 없습니다.');
-  return token;
-}
-
-async function issueCookie(ctx: TestD1): Promise<{ token: string; profileId: string }> {
-  const app = createApp();
-  const res = await app.request('/v1/profile', {}, ctx.env);
-  const token = extractSessionToken(res.headers.get('Set-Cookie') ?? '');
-  const body = successEnvelope(ProfileSchema).parse(await res.json());
-  return { token, profileId: body.data.id };
-}
 
 describe('GET /v1/profile', () => {
   let ctx: TestD1;
@@ -378,7 +365,6 @@ describe('PUT /v1/profile/nickname', () => {
     await ctx.dispose();
   });
 
-  const ADMIN_EMAIL = 'admin@example.com';
   const env = () => ({ ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL });
   const put = (token: string, nickname: unknown) =>
     app.request(
@@ -390,11 +376,7 @@ describe('PUT /v1/profile/nickname', () => {
       },
       env(),
     );
-  async function googleUser(email: string | null = null) {
-    const who = await issueCookie(ctx);
-    await linkGoogle(ctx, who.profileId, { email });
-    return who;
-  }
+  const googleUser = (email: string | null = null) => issueGoogleCookie(ctx, { email });
   const errorOf = async (res: Response) => {
     const body = ErrorEnvelopeSchema.parse(await res.json());
     return { status: res.status, code: body.error.code, reason: (body.error.details as { reason?: string } | undefined)?.reason };

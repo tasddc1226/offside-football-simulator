@@ -32,7 +32,7 @@ function main() {
   const run = spawnSync(
     'pnpm',
     ['--filter', '@offside/fulltime-sim', 'exec', 'tsx', 'simulate.ts', String(n), 'random', tag],
-    { cwd: repoRoot, stdio: 'inherit' },
+    { cwd: repoRoot, stdio: 'inherit', env: { ...process.env, STRICT: '1' } },
   );
   if (run.status !== 0) {
     console.error(`sim-smoke: simulate.ts exited with status ${run.status}`);

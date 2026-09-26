@@ -1,0 +1,61 @@
+- main:
+  - text: "풀타임: 휘슬이 울릴 때까지 오프사이드"
+  - button "메뉴"
+  - text: /No\.\d+ · 공격수/
+  - button "대표 칭호 슈퍼스타, 칭호 도감 열기": ‘슈퍼스타’
+  - heading "구조테스트" [level=1]
+  - text: /\d+세 · 런던 해머스 프리미어리그 · 연봉 \d+억 \d+,\d+만 \d+ OVR 로테이션 부상 4경기 주력 슈팅·드리블 잠재력 C Titles/
+  - heading "칭호 도감" [level=2]
+  - text: /\d+ \/ \d+/
+  - paragraph: 대표 칭호 영웅 칭호 슈퍼스타 자동
+  - paragraph: 칭호를 누르면 대표 칭호로 정해져 선수 카드와 명예의 전당에 표시됩니다.
+  - list:
+    - listitem:
+      - button /영웅 칭호 슈퍼스타 인기 \d+ \d+/ [pressed]
+    - listitem:
+      - button /영웅 칭호 골든부트 콜렉터 리그 득점왕 3회 \d+/
+    - listitem:
+      - button /영웅 칭호 수상 제조기 개인상 \d+개 \d+/
+    - listitem:
+      - button /영웅 칭호 득점 기계 한 시즌 공식전 \d+골 \d+/
+    - listitem:
+      - button /영웅 칭호 대륙 챔피언 대륙 최상위 클럽 대회 우승 \d+/
+    - listitem:
+      - button /영웅 칭호 빅리거 유럽 5대 리그 입성 \d+/
+    - listitem:
+      - button /영웅 칭호 리그 MVP 리그 올해의 선수 \d+/
+    - listitem:
+      - button /희귀 칭호 골잡이 프로 통산 \d+골 \d+/
+    - listitem:
+      - button /희귀 칭호 저니맨 프로 클럽 5곳을 거치기 \d+/
+    - listitem:
+      - button /희귀 칭호 국민 스타 인기 \d+ \d+/
+    - listitem:
+      - button /희귀 칭호 유럽파 유럽 무대 진출 \d+/
+    - listitem:
+      - button /희귀 칭호 득점왕 리그 득점왕 \d+/
+    - listitem:
+      - button /일반 칭호 군필 병역 의무를 마치기 \d+/
+    - listitem:
+      - button /일반 칭호 태극전사 A매치 데뷔 \d+/
+    - listitem:
+      - button /일반 칭호 챔피언 리그 우승 \d+/
+    - listitem:
+      - button /일반 칭호 떠오르는 스타 인기 \d+ \d+/
+    - listitem:
+      - button /일반 칭호 프로 선수 프로 무대 데뷔 \d+/
+    - listitem:
+      - button /일반 칭호 컵 위너 국내 컵 대회 우승 \d+/
+  - group: /아직 얻지 못한 칭호 \d+개/
+  - text: Team Honours
+  - heading "우승 연혁" [level=2]
+  - text: /\d+ J1리그 우승 우라와 다이아몬즈 \d+ AFC 챔피언스리그 엘리트 우승 우라와 다이아몬즈 \d+ 일왕배 우승 가시마 사슴뿔 \d+ 전국고교축구선수권 우승 서해공고 Individual/
+  - heading "개인 수상" [level=2]
+  - text: /\d+ K리그1 베스트 \d+ \d+ K리그1 득점왕 \d+ AFC 올해의 선수 \d+ K리그1 베스트 \d+ \d+ K리그1 도움왕 \d+ K리그1 득점왕 \d+ J1리그 베스트 \d+ \d+ J리그 MVP \d+ 대회 베스트 \d+ \d+ 대회 MVP \d+ 득점왕 Story Album/
+  - heading "완결된 스토리" [level=2]
+  - paragraph: 아직 없습니다.
+  - tablist:
+    - tab "시즌"
+    - tab "선수"
+    - tab "커리어"
+    - tab "트로피" [selected]

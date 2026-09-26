@@ -7,6 +7,7 @@ import { createApp } from '../app.js';
 import type { Bindings } from '../env.js';
 import { auditLog, careers, profiles, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { extractCookie, issueCookie } from '../test/http.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
 const rotatedCookies = new Map<string, string>();
@@ -34,19 +35,7 @@ function withoutGoogleFake(env: Bindings, overrides: Partial<Bindings> = {}): Bi
   return clone;
 }
 
-function extractCookiePair(setCookie: string, name: string): string {
-  const match = new RegExp(`${name}=([^;]*)`).exec(setCookie);
-  if (!match) throw new Error(`Set-Cookie에 ${name}이 없습니다.`);
-  return `${name}=${match[1] ?? ''}`;
-}
-
-async function issueCookie(ctx: TestD1): Promise<{ cookie: string; profileId: string }> {
-  const app = createApp();
-  const res = await app.request('/v1/profile', {}, ctx.env);
-  const cookie = extractCookiePair(res.headers.get('Set-Cookie') ?? '', 'offside_session');
-  const body = successEnvelope(ProfileSchema).parse(await res.json());
-  return { cookie, profileId: body.data.id };
-}
+const extractCookiePair = (setCookie: string, name: string) => `${name}=${extractCookie(setCookie, name)}`;
 
 async function getProfile(ctx: TestD1, cookie: string) {
   const app = createApp();

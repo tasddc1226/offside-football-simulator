@@ -1,19 +1,12 @@
-import { ErrorEnvelopeSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { ErrorEnvelopeSchema } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { authAttempts, boardComments, profiles } from '../db/schema.js';
-import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
+import { createTestD1, type TestD1 } from '../test/d1.js';
+import { ADMIN_EMAIL, issueAdminCookie, issueCookie, issueGoogleCookie } from '../test/http.js';
 
 const ORIGIN = 'http://localhost:5173';
-const ADMIN_EMAIL = 'admin@example.com';
-
-async function issueCookie(ctx: TestD1) {
-  const res = await createApp().request('/v1/profile', {}, ctx.env);
-  const token = /offside_session=([^;]+)/.exec(res.headers.get('Set-Cookie') ?? '')?.[1];
-  const body = successEnvelope(ProfileSchema).parse(await res.json());
-  return { profileId: body.data.id, cookie: `offside_session=${token}` };
-}
 
 describe('게시판 /v1/boards', () => {
   let ctx: TestD1;
@@ -32,17 +25,9 @@ describe('게시판 /v1/boards', () => {
     );
 
   // 관리자는 프로필 닉네임과 무관하게 '운영자'로 댓글을 쓴다(일부러 다른 닉네임을 넣어 둔다).
-  async function makeAdmin() {
-    const who = await issueCookie(ctx);
-    await ctx.db.update(profiles).set({ googleSub: 'sub-admin', email: ADMIN_EMAIL, linkedAt: '2026-09-25T00:00:00.000Z', nickname: '관리' }).where(eq(profiles.id, who.profileId));
-    return who;
-  }
+  const makeAdmin = () => issueAdminCookie(ctx, { nickname: '관리' });
   /** 구글로 로그인한 일반 프로필. nickname이 null이면 아직 닉네임을 정하지 않은 상태. */
-  async function googleUser(nickname: string | null) {
-    const who = await issueCookie(ctx);
-    await linkGoogle(ctx, who.profileId, { nickname });
-    return who;
-  }
+  const googleUser = (nickname: string | null) => issueGoogleCookie(ctx, { nickname });
   async function writePost(cookie: string, board = 'notice', body: Record<string, unknown> = {}) {
     const res = await call('POST', `/v1/boards/${board}/posts`, { cookie, body: { title: '점검 안내', body: '오늘 밤 점검합니다.', ...body } });
     expect(res.status).toBe(201);
