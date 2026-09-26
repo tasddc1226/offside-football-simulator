@@ -120,40 +120,52 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
   }
 }
 
-let flushing = false;
+let running: Promise<void> | null = null;
+let again = false;
 
 /** 큐를 순서대로 전송한다. 네트워크 오류·5xx는 큐에 남겨 다음 flush에서 재시도하고, 4xx는 버리고
- * 경고만 남긴다. 동시 호출은 무시한다(이미 진행 중이면 조용히 리턴). */
-export async function flushOutbox(): Promise<void> {
-  if (flushing) return;
-  flushing = true;
+ * 경고만 남긴다. 진행 중에 다시 부르면(전송 중 새 항목 enqueue 등) 지금 회차가 끝난 뒤 한 번 더
+ * 돌리고, 호출한 쪽은 그 회차까지 끝나기를 기다린다. */
+export function flushOutbox(): Promise<void> {
+  if (running) {
+    again = true;
+    return running;
+  }
+  running = (async () => {
+    try {
+      do {
+        again = false;
+        await flushOnce();
+      } while (again);
+    } finally {
+      running = null;
+    }
+  })();
+  return running;
+}
+
+async function flushOnce(): Promise<void> {
   try {
     const items = loadOutbox();
     if (!items.length) return;
     const profileOk = await ensureProfile();
     if (!profileOk) return; // 세션 확인 실패 — 큐는 그대로 두고 다음 기회에 다시 시도한다.
 
-    const remaining: OutboxItem[] = [];
+    const settled = new Set<string>();
     const conflicts: OutboxItem[] = [];
     for (const item of items) {
       const result = await sendItem(item);
-      if (result === 'ok') continue;
-      if (result === 'retry') {
-        remaining.push(item);
-        continue;
-      }
-      if (result === 'conflict') {
-        conflicts.push(item);
-        continue;
-      }
-      console.warn('[outbox] 4xx 응답으로 항목을 버립니다', item.kind, item.careerId);
+      if (result === 'retry') continue;
+      settled.add(JSON.stringify(item));
+      if (result === 'conflict') conflicts.push(item);
+      else if (result === 'drop') console.warn('[outbox] 4xx 응답으로 항목을 버립니다', item.kind, item.careerId);
     }
-    saveOutbox(remaining);
+    // T-10-034: 시작할 때 읽은 목록으로 큐를 덮어쓰면 전송 중에 enqueue된 항목이 지워진다 — 지금 큐에서
+    // 이번 회차에 끝낸(보냄·버림·충돌) 항목만 뺀다.
+    saveOutbox(loadOutbox().filter((i) => !settled.has(JSON.stringify(i))));
     if (conflicts.length) globalThis.dispatchEvent?.(new CustomEvent(OWNER_CONFLICT_EVENT, { detail: conflicts }));
   } catch (err) {
     console.error('[outbox] flush 실패', err);
-  } finally {
-    flushing = false;
   }
 }
 
