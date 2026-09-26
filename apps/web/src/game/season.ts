@@ -6,15 +6,25 @@ import { clamp, ri, pick, rnd } from './rng.js';
 import { leagueOf, clubsIn, fmtMoney, salaryFor, addStat, addAttr, log, bloomTick, newSeason, finalRank, fameEff } from './engine.js';
 import { seasonSetup, compGoals, seasonAwards, checkMilestones, retireMilestones } from './comps.js';
 import { legendBand } from './legend-bands.js';
-import { checkTitles, mainTitle, titleView } from './titles.js';
-import { natInit, natSeasonEnd } from './national.js';
+import { checkTitles, mainTitle, titleView, type TitleView } from './titles.js';
+import { natInit, natSeasonEnd, type NatTourResult } from './national.js';
 import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
 import { detectCareerHighs } from './records.js';
 import type { LegendSnapshot } from '@offside/contracts';
 import type { GameState, CareerRecord, HofEntry, LegendSource, MarketOption, MarketResult, OfferOption } from './types.js';
 
-export type SeasonEndResult = ReturnType<typeof endSeason>;
-export function endSeason(s: GameState) {
+/** 시즌 결산 결과 — 결산 시트가 그린다. tours는 명단에 들었거나 경기가 없던(예선 결과) 대회와 우승 대회만. */
+export interface SeasonEndResult {
+  rec: CareerRecord;
+  trophies: string[];
+  awards: string[];
+  notes: string[];
+  gala: string[];
+  tours: NatTourResult[];
+  miles: string[];
+  titles: TitleView[];
+}
+export function endSeason(s: GameState): SeasonEndResult {
   natInit(s);
   const L = leagueOf(s.leagueId), S = s.season, o = ovr(s);
   if (!S.comps) seasonSetup(s, S);
@@ -69,7 +79,7 @@ export function endSeason(s: GameState) {
   s.morale = Math.round((s.morale + 65) / 2);
   s.injury = Math.min(s.injury, 4);
   s.seasonStart = { ...s.attrs }; s.seasonStartSub = { ...s.sub };
-  return { rec, trophies, awards, notes, gala, tours: tours.filter((t) => t.inSquad || (t.matches?.length ?? 0) === 0 || t.stage === '우승' || t.stage === '금메달'), miles, titles };
+  return { rec, trophies, awards, notes, gala, tours: tours.filter((t) => t.inSquad || t.matches.length === 0 || t.stage === '우승' || t.stage === '금메달'), miles, titles };
 }
 
 // ───────── 이적 시장 ─────────

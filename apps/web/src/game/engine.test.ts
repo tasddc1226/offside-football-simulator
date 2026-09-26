@@ -42,14 +42,14 @@ describe('인기 (T-10-025)', () => {
 describe('라이벌 3단계 대표팀 경쟁', () => {
   const win = async (debutYear: number | null) => {
     await import('./index.js');
-    const { EVENTS } = await import('./events-data.js');
+    const { eventById } = await import('./events-data.js');
     const { createRng, setActiveRng } = await import('./rng.js');
     const { newGame, startStory } = await import('./engine.js');
     setActiveRng(createRng(5));
     const s = newGame({ name: 'a', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, 5);
     startStory(s, 'rival', { gap: 0, tone: 'loud' });
     s.nat.debutYear = debutYear;
-    EVENTS.find((e) => e.id === 'rival-3')!.choices[0]!.ok.fx(s);
+    eventById('rival-3')!.choices[0]!.ok.fx(s);
     return s.nat.caps;
   };
   it('A대표 데뷔 전이면 A매치 기록이 늘지 않는다', async () => {

@@ -41,6 +41,12 @@ export function callupScore(s: GameState): number {
 export interface IntlResult {
   comp: string; stage: string; opp: string; kg: number; og: number; res: string; pso: string | null; mins: number; g: number; a: number; rating: number | null;
 }
+/** 시즌 결산의 대회 결과 — 저장 기록(NatTour)에 대회 종류(wc·ag·asian·olympic)·경기·명단 제외 사유를 더한 것. */
+export interface NatTourResult extends NatTour {
+  key?: string;
+  matches: IntlResult[];
+  why?: string;
+}
 function simIntl(s: GameState, opp: [string, number], role: 'starter' | 'sub' | 'none', comp: string, stage = '', youth = false): IntlResult {
   const P = POS[s.pos], o = ovr(s), teamStr = youth ? BAL.koreaU23 : BAL.koreaStr;
   let mins = 0;
@@ -83,12 +89,12 @@ export function natWindow(s: GameState) {
   natInit(s);
   if (leagueOf(s.leagueId).amateur || s.phase < 1 || s.phase > LAST_PHASE) return null;
   const names = WINDOW_NAME[s.phase] ?? [];
-  const out = names.map((name) => natOne(s, name)).filter(Boolean);
+  const out = names.map((name) => natOne(s, name)).filter((x) => x !== null);
   return out.length ? out : null;
 }
 function natOne(s: GameState, name: string) {
   const sc = callupScore(s), thr = NT_THRESHOLD + gauss() * 1.2;
-  if (s.injury > 0 || sc < thr) return s.nat.caps && sc >= thr - 4 ? { name, called: false } : null;
+  if (s.injury > 0 || sc < thr) return s.nat.caps && sc >= thr - 4 ? { name, called: false as const } : null;
   const qual = isQualYear(s.year);
   const comp = qual ? `${nextWC(s.year)} 월드컵 아시아 예선` : '친선 A매치';
   const role: 'starter' | 'sub' = sc >= 85 || s.nat.captain ? 'starter' : chance(0.45) ? 'starter' : 'sub';
@@ -104,7 +110,7 @@ function natOne(s: GameState, name: string) {
   const games = [o1, o2].map((o) => simIntl(s, o, role, comp));
   addStat(s, 'cond', -6);
   games.forEach((m) => log(s, `[${comp}] ${scoreLine(m)}${m.mins ? ` · ${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''}` : ' · 벤치'}`));
-  return { name, comp, called: true, role, games };
+  return { name, comp, called: true as const, role, games };
 }
 
 interface TournamentDef {
@@ -213,7 +219,7 @@ function runTournament(s: GameState, key: string) {
   if (key === 'olympic') stage = stage === '우승' ? '금메달' : stage === '준우승' ? '은메달' : stage;
   const inSquad = role !== 'none';
   const mine = matches.filter((m) => m.mins);
-  const rec: NatTour = { year: y, key, name: T.label(y), stage, inSquad, why, apps: mine.length, goals: mine.reduce((t, m) => t + m.g, 0), matches };
+  const rec: NatTourResult = { year: y, key, name: T.label(y), stage, inSquad, why, apps: mine.length, goals: mine.reduce((t, m) => t + m.g, 0), matches };
   s.nat.tours.push({ year: y, name: rec.name, stage, inSquad, apps: rec.apps, goals: rec.goals });
   const trophy = inSquad && (stage === '우승' || stage === '금메달') ? T.trophy : inSquad && key === 'olympic' && ['은메달', '동메달'].includes(stage) ? `올림픽 ${stage}` : null;
   if (inSquad) addStat(s, 'fame', ({ '조별리그 탈락': 1, '32강': 3, '16강': 4, '8강': 7, '4강': 10, '동메달': 10, '4위': 8, '준우승': 12, '은메달': 12, '우승': 18, '금메달': 18 } as Record<string, number>)[stage] ?? 2);
@@ -227,7 +233,7 @@ function runTournament(s: GameState, key: string) {
 
 export function natSeasonEnd(s: GameState) {
   natInit(s);
-  const y = s.year, out: NatTour[] = [], trophies: string[] = [];
+  const y = s.year, out: NatTourResult[] = [], trophies: string[] = [];
   const keys: string[] = [];
   if (y % 4 === 2 && s.nat.qual[y] !== false) keys.push('wc');
   if (y % 4 === 2) keys.push('ag');

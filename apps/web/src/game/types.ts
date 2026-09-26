@@ -74,17 +74,14 @@ export interface CareerRecord {
   ch?: string[] | undefined;
 }
 
+/** s.nat.tours에 남기는 대회 기록. 시즌 결산이 돌려주는 더 자세한 결과는 national.ts NatTourResult. */
 export interface NatTour {
   year: number;
-  /** 대회 종류(wc·ag·asian·olympic). 시즌 결산 결과에만 있고 s.nat.tours 기록엔 없다. */
-  key?: string;
   name: string;
   stage: string;
   inSquad: boolean;
   apps: number;
   goals: number;
-  matches?: unknown[];
-  why?: string;
 }
 
 export interface NatState {

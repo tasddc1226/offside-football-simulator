@@ -73,8 +73,10 @@ export interface BlockResult {
 }
 /** 역할별 선발 확률 — 리그 경기와 대륙 대회가 같다(국내 컵은 로테이션을 더 쓴다, comps.ts). */
 export const START_P = { 주전: 0.92, 로테이션: 0.5, 벤치: 0.12 } as const;
+/** 경기 골·도움을 정하는 선수 전력: 공격력(atkOf)·창의력(creOf)·OVR. */
+export interface ScoringPower { atk: number; cre: number; o: number }
 /** 한 경기 골·도움. 기대값은 포지션 기본값 × 우위 보정 × 출전 비율, 골을 먼저 굴린다(RNG 순서). */
-export function rollScoring(s: GameState, atk: number, cre: number, o: number, perf: number, oppAvg: number, mins: number): { g: number; a: number } {
+export function rollScoring(s: GameState, { atk, cre, o }: ScoringPower, perf: number, oppAvg: number, mins: number): { g: number; a: number } {
   const P = POS[s.pos];
   const g = poisson(P.goal * scoreBoost(atk, o, perf, oppAvg) * (mins / 90));
   const a = poisson(P.assist * scoreBoost(cre, o, perf, oppAvg) * (mins / 90));
@@ -87,7 +89,7 @@ export function simBlock(s: GameState): BlockResult {
   const r: BlockResult = { n, apps: 0, goals: 0, assists: 0, rs: 0, w: 0, d: 0, l: 0, cs: 0, hl: [], injured: false, games: [] };
   const startP = START_P[role];
   const subP = { 주전: 0.05, 로테이션: 0.35, 벤치: 0.38 }[role];
-  const atk = atkOf(s), cre = creOf(s);
+  const power: ScoringPower = { atk: atkOf(s), cre: creOf(s), o };
 
   for (let i = 0; i < n; i++) {
     S.played++;
@@ -104,7 +106,7 @@ export function simBlock(s: GameState): BlockResult {
     let perf = 0, g = 0, a = 0, cs = false;
     if (mins > 0) {
       perf = (o - L.avg) / 10 + gauss() * 0.8 + (s.cond - 70) / 60 + (s.morale - 60) / 90;
-      ({ g, a } = rollScoring(s, atk, cre, o, perf, L.avg, mins));
+      ({ g, a } = rollScoring(s, power, perf, L.avg, mins));
     }
     const wp = clamp(0.38 + (s.club.str - L.avg) * 0.024 + (mins ? perf * 0.035 + g * 0.12 : 0), 0.07, 0.88);
     const dp = (1 - wp) * 0.38;

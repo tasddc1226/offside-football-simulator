@@ -1,6 +1,7 @@
 // ───────── 이벤트 정의 등록 ─────────
-// 각 정의 모듈은 목록만 내보내고, 여기서 한 번에 EVENTS(events-data.ts)에 채운다. 게임을 진행하는 경로
-// (ui/actions.ts)와 배럴(index.ts)이 이 모듈을 import해야 한다 — 빠지면 rollEvent가 이벤트를 하나도 못 본다.
+// 각 정의 모듈은 목록만 내보내고, 여기서 한 번에 EVENTS(events-data.ts)에 채운다. 한 구간을 진행하는
+// turn.ts와 배럴(index.ts)이 이 모듈을 import한다 — 빠지면 rollEvent가 바로 에러를 낸다. 소비 모듈이
+// 여기서 직접 EVENTS를 받지 않는 건 정의 모듈이 engine.js를 거쳐 event-runner를 import해 순환이 되기 때문이다.
 //
 // 순서가 곧 가중 추첨 순서라 같은 시드의 결과를 정한다. T-10-046에서 import 부수효과(push)를 이 목록으로
 // 바꾸며 배포 번들의 실제 순서를 그대로 옮겼다(번들은 military가 든 청크가 먼저 실행된다). 병역 이벤트는

@@ -12,6 +12,8 @@ import {
   type Snapshot,
 } from './engine.js';
 import { compsPhase } from './comps.js';
+// 구간을 진행하는 모든 경로(화면·시뮬·골든 테스트)가 이 모듈을 거치므로 이벤트 정의 등록을 여기서 보장한다.
+import './event-registry.js';
 import { natWindow } from './national.js';
 import { checkTitles, type TitleDef } from './titles.js';
 import type { GameState } from './types.js';

@@ -1,7 +1,7 @@
 import { ATTR_KEYS, type AttrKey, type Pos } from './data.js';
 import { wOf } from './attributes.js';
 import { ri, pick, chance, rnd } from './rng.js';
-import { EVENTS } from './events-data.js';
+import { EVENTS, eventById } from './events-data.js';
 import { BAL, choiceOdds, eventWeight } from './balance.js';
 import type { GameState, Choice, EventDef } from './types.js';
 import { leagueOf, labelOf } from './player.js';
@@ -60,14 +60,16 @@ export const EVENT_RULES = {
 const EV_COOLDOWN = EVENT_RULES.cooldown;
 export const isSafe = (ev: EventDef, c: Choice): boolean => !c.fail && ev.choices.some((x) => !!x.fail);
 export function rollEvent(s: GameState): string | null {
+  // 정의 모듈은 event-registry.ts가 EVENTS에 채운다. 그 import가 빠지면 이벤트가 조용히 하나도 안 나오므로 바로 알린다.
+  if (!EVENTS.length) throw new Error('EVENTS가 비어 있다 — game/event-registry.js를 import해야 한다');
   const t = turnNo(s);
   s.chains = s.chains || [];
   for (const c of s.chains.filter((c) => c.until < t)) {
-    const e = EVENTS.find((x) => x.id === c.id);
+    const e = eventById(c.id);
     if (e && e.story) endStory(s, e.story, e.expireEnding || '흐지부지 끝난 이야기');
   }
   s.chains = s.chains.filter((c) => c.until >= t);
-  const due = s.chains.find((c) => c.at <= t && EVENTS.find((e) => e.id === c.id)!.cond(s));
+  const due = s.chains.find((c) => c.at <= t && eventById(c.id)!.cond(s));
   if (due) {
     s.chains = s.chains.filter((c) => c !== due);
     s.flags.lastEvent = due.id;
@@ -97,7 +99,7 @@ export interface ResolveResult {
   twist: string | null;
 }
 export function resolveChoice(s: GameState, evId: string, idx: number): ResolveResult {
-  const ev = EVENTS.find((e) => e.id === evId)!;
+  const ev = eventById(evId)!;
   const c = ev.choices[idx]!;
   const p = choiceOdds(c.p?.(s), evId, idx);
   const roll = rnd();

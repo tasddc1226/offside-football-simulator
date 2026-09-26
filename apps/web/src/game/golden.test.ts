@@ -2,8 +2,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { ATTR_KEYS, LAST_PHASE, TRAITS, TYPES } from './data.js';
 import { newGame, resolveChoice } from './engine.js';
-import { EVENTS } from './events-data.js';
-import './event-registry.js';
+import { eventById } from './events-data.js';
 import { acceptOption, endSeason, legendScore, market, retire } from './season.js';
 import { playPhase } from './turn.js';
 import { createRng, pick, ri, setActiveRng } from './rng.js';
@@ -56,7 +55,7 @@ function playCareer(i: number): GameState {
       s.training = s.cond < 45 ? 'rest' : pick(ATTR_KEYS);
       const { ev } = playPhase(s);
       // chooseEvent()
-      if (ev) resolveChoice(s, ev, ri(0, EVENTS.find((e) => e.id === ev)!.choices.length - 1));
+      if (ev) resolveChoice(s, ev, ri(0, eventById(ev)!.choices.length - 1));
     }
     endSeason(s);
     // pickOption() / doRetire()
