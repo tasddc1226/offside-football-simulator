@@ -5,6 +5,7 @@ import { LEAGUES, CLUBS, POS, TYPES, ATTR_KEYS, PHASES, LAST_PHASE, FOCUS_GROWTH
 import { ovr, wOf, initSubs, legacyOvr, spreadAttr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd, hashStr } from './rng.js';
 import { EVENTS } from './events-data.js';
+import { baseline } from './candidates.js';
 import { BAL, adoptLatestBalance, choiceOdds, eventWeight } from './balance.js';
 import type { GameState, Season, LogEntry, Choice, EventDef } from './types.js';
 
@@ -215,15 +216,14 @@ const TRAIN_X = 5 / 3;
  * 앞선 정도가 타입 기본형(포지션 기본치 + 주력 보정)보다 BALANCE_KNEE 넘게 커지면, BALANCE_RANGE에 걸쳐 성장이
  * BALANCE_MIN배까지 줄어든다. 타입 개성은 그대로 두고, 슈팅만 올린 공격수가 고르게 키운 선수보다 레전드 점수가
  * 훨씬 높던 것을 뒤집는다. */
-export const BALANCE_KNEE = 10, BALANCE_RANGE = 25, BALANCE_MIN = 0.25;
+const BALANCE_KNEE = 10, BALANCE_RANGE = 25;
+export const BALANCE_MIN = 0.25;
 const leadOf = (pos: Pos, a: Record<AttrKey, number>, k: AttrKey): number => {
   const core = ATTR_KEYS.filter((x) => x !== k && (POS[pos].w[x] ?? 0) >= 0.1);
   return a[k] - core.reduce((t, x) => t + a[x], 0) / core.length;
 };
 export function balanceFactor(s: GameState, k: AttrKey): number {
-  const mod = focusMod(s.pos, focusOf(s));
-  const base = Object.fromEntries(ATTR_KEYS.map((x) => [x, POS[s.pos].base[x] + (mod[x] ?? 0)])) as Record<AttrKey, number>;
-  const excess = leadOf(s.pos, s.attrs, k) - Math.max(0, leadOf(s.pos, base, k));
+  const excess = leadOf(s.pos, s.attrs, k) - Math.max(0, leadOf(s.pos, baseline(s.pos, focusOf(s)), k));
   return clamp(1 - (excess - BALANCE_KNEE) / BALANCE_RANGE, BALANCE_MIN, 1);
 }
 export function applyTraining(s: GameState) {
@@ -276,12 +276,16 @@ export function roundRange(s: GameState, phase: number): string {
  * (T-10-039). 보통 커리어에선 우위가 이 기준을 넘는 일이 드물지만, 상무 복무처럼 OVR 90 선수가 평균 63인 K리그1에 들어가면 25를 넘어
  * 기대값이 지수로 불어나 한 시즌 80골이 나왔다 — 압도적인 선수도 경기당 득점에는 한계가 있다.
  * T-10-042부터 공격(창의) 능력치 우위는 더 이른 attackEdge()로 줄이고, 이 함수는 경기력(OVR 우위)에만 쓴다. */
-export const DOMINANCE_KNEE = 14, DOMINANCE_SLOPE = 0.15;
+export const DOMINANCE_KNEE = 14;
+const DOMINANCE_SLOPE = 0.15;
 /** T-10-042: 공격(창의) 능력치 우위는 ATTACK_KNEE부터 ATTACK_SLOPE만 반영한다 — 리그 최정상 공격수도 시즌
  * 경기당 1골 안팎에서 멈추게(시뮬레이션 시즌 경기당 1골 초과 1.3~2% → 0.2~0.4%, 시즌 최다 63골 → 49골). */
-export const ATTACK_KNEE = 8, ATTACK_SLOPE = 0.3;
-export const attackEdge = (gap: number): number => (gap <= ATTACK_KNEE ? gap : ATTACK_KNEE + (gap - ATTACK_KNEE) * ATTACK_SLOPE);
-export const dominance = (gap: number): number => (gap <= DOMINANCE_KNEE ? gap : DOMINANCE_KNEE + (gap - DOMINANCE_KNEE) * DOMINANCE_SLOPE);
+export const ATTACK_KNEE = 8;
+const ATTACK_SLOPE = 0.3;
+/** gap이 knee까지는 그대로, 넘는 몫은 slope배만 반영한다. */
+const softKnee = (gap: number, knee: number, slope: number): number => (gap <= knee ? gap : knee + (gap - knee) * slope);
+export const attackEdge = (gap: number): number => softKnee(gap, ATTACK_KNEE, ATTACK_SLOPE);
+export const dominance = (gap: number): number => softKnee(gap, DOMINANCE_KNEE, DOMINANCE_SLOPE);
 /** 득점 기대값에 쓰는 공격 능력치(포지션별 가중합). */
 export const atkOf = (s: GameState): number => Object.entries(POS[s.pos].atk).reduce((t, [k, w]) => t + s.attrs[k as AttrKey] * (w as number), 0);
 /** T-10-042: 공격수의 도움은 패스·드리블만이 아니라 슈팅·움직임(공격 능력치)에서도 나온다 — 득점원도 시즌 5~10도움. */
